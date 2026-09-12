@@ -8,6 +8,7 @@
 
 import 'server-only';
 
+import { LEGAL_ENTITY_NAME, PRODUCT_NAME } from '@/constants/product-identity';
 import { publicOrigin } from '@/lib/http/public-origin';
 
 // ============================================================================
@@ -152,7 +153,9 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
     ? companyLogoUrlOverride
     : `${baseUrl}/images/pagonis-energo-logo.png`;
   const appLogoUrl = `${baseUrl}${NESTOR_APP_LOGO_PATH}`;
-  const appName = 'Nestor App';
+  // ADR-857 — από τη ρίζα. ⚠️ Το `companyName ?? appName` παρακάτω **μένει**: η εταιρεία του
+  // πελάτη είναι **δεδομένα ενοίκου** και προηγείται· το όνομα του προϊόντος είναι η εφεδρεία.
+  const appName = PRODUCT_NAME;
 
   const phones: EmailContactPhone[] =
     companyPhones && companyPhones.length > 0
@@ -233,7 +236,9 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
             </td>
           </tr>
 
-          <!-- APP BRANDING — Nestor App logo + copyright -->
+          <!-- APP BRANDING — λογότυπο προϊόντος + πνευματικά δικαιώματα.
+               ⚠️ ADR-857: το όνομα του **προϊόντος** και το **νομικό πρόσωπο** είναι ΔΥΟ
+               πράγματα. Η γραμμή «©» ονομάζει **πρόσωπο** — δικαιώματα δεν ανήκουν σε προϊόν. -->
           <tr>
             <td style="padding:16px 32px 20px;text-align:center;">
               <!--[if !mso]><!-- Fallback: show logo only when hosted on production -->
@@ -244,7 +249,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
               </span>
               <br/>
               <span style="font-size:10px;color:${BRAND.border};">
-                &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+                &copy; ${new Date().getFullYear()} ${LEGAL_ENTITY_NAME}. All rights reserved.
               </span>
             </td>
           </tr>

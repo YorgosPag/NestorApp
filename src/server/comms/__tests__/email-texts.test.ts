@@ -17,6 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { KNOWN_PAST_SPELLINGS, PRODUCT_NAME } from '@/constants/product-identity';
 import {
   DEFAULT_LANGUAGE,
   HUMAN_LANGUAGES,
@@ -138,27 +139,33 @@ describe('ADR-777 §8.29 — τα λόγια, ανά γλώσσα', () => {
 
 describe('Β — το θέμα σφραγίζεται μία φορά, από τον αποστολέα', () => {
   it('Β1 🔑 — το θέμα αποκτά την υπογραφή', () => {
-    expect(brandedSubject('el', 'Νέα αγγελία')).toBe('Νέα αγγελία — ΝΕΣΤΩΡ');
+    expect(brandedSubject('Νέα αγγελία')).toBe(`Νέα αγγελία — ${PRODUCT_NAME}`);
   });
 
   it('Β2 🔴 ΑΜΕΤΑΒΛΗΤΗ ΠΡΑΞΗ — θέμα που υπογράφει ήδη ΔΕΝ υπογράφει δεύτερη φορά', () => {
-    // Τα ήδη γραμμένα `pending` έγγραφα της ουράς κουβαλούν το παλιό, χειρόγραφο
-    // επίθεμα **για πάντα**· και οι επώνυμες κοινοποιήσεις φέρνουν δικό τους θέμα.
-    const once = brandedSubject('el', 'Νέα αγγελία — ΝΕΣΤΩΡ');
-    expect(once).toBe('Νέα αγγελία — ΝΕΣΤΩΡ');
-    expect(brandedSubject('el', once)).toBe(once);
+    // Οι επώνυμες κοινοποιήσεις ακινήτων φέρνουν **δικό τους** θέμα από το `email-templates`.
+    const once = brandedSubject(`Νέα αγγελία — ${PRODUCT_NAME}`);
+    expect(once).toBe(`Νέα αγγελία — ${PRODUCT_NAME}`);
+    expect(brandedSubject(once)).toBe(once);
   });
 
-  it('Β3 🔴 ΜΕΤΑΛΛΑΞΗ ΓΛΩΣΣΑΣ — η υπογραφή ακολουθεί τον ΠΑΡΑΛΗΠΤΗ', () => {
-    // Κανένας από τους 4 παραγωγούς δεν το έκανε αυτό: έγραφαν «ΝΕΣΤΩΡ» σε κάθε
-    // παραλήπτη, ανεξαρτήτως γλώσσας.
-    expect(brandedSubject('en', 'A new listing')).toBe('A new listing — Nestor');
-    expect(brandedSubject('en', 'A new listing')).not.toContain('ΝΕΣΤΩΡ');
+  it('Β3 🔴 ADR-857 — η υπογραφή ΔΕΝ εξαρτάται από γλώσσα (ήταν πεδίο ανά γλώσσα, και απέκλινε)', () => {
+    // ⚠️ Η **παλιά** Β3 απαιτούσε το αντίθετο: «η υπογραφή ακολουθεί τον παραλήπτη».
+    //    Ήταν λάθος ερώτηση — το όνομα του προϊόντος **δεν μεταφράζεται**, και το πεδίο ανά
+    //    γλώσσα είχε ήδη αποκλίνει σε `ΝΕΣΤΩΡ` / `Nestor` ενώ το υποσέλιδο έλεγε `Nestor App`.
+    expect(brandedSubject('A new listing')).toBe(`A new listing — ${PRODUCT_NAME}`);
+    expect(brandedSubject('Νέα αγγελία')).toBe(`Νέα αγγελία — ${PRODUCT_NAME}`);
+    expect(brandedSubject('Θέμα')).not.toContain('ΝΕΣΤΩΡ');
   });
 
-  it('Β4 — κάθε γλώσσα έχει όνομα μάρκας, και ο φρουρός το απαιτεί', () => {
-    for (const language of HUMAN_LANGUAGES) {
-      expect(emailTextsFor(language).brand.trim().length).toBeGreaterThan(0);
+  it('Β4 🔴🔴 Ο ΦΡΟΥΡΟΣ ΤΗΣ ΟΥΡΑΣ — θέμα με ΠΑΛΙΑ γραφή ΔΕΝ διπλοϋπογράφεται', () => {
+    // 🔴 Ο πραγματικός κίνδυνος της μετονομασίας (ADR-857 §3 Δ): τα ήδη γραμμένα `pending`
+    //    έγγραφα κουβαλούν το παλιό επίθεμα **για πάντα**. Χωρίς αυτόν τον φρουρό, ένα
+    //    ουραγμένο «Νέα αγγελία — ΝΕΣΤΩΡ» θα έφευγε ως «… — ΝΕΣΤΩΡ — Nestor App».
+    // ⚠️ Ο έλεγχος είναι `endsWith`, ΠΟΤΕ `contains`: το «Nestor» είναι **υποσυμβολοσειρά**
+    //    του «Nestor App», οπότε ένα `not.toContain` θα ήταν μονίμως κόκκινο.
+    for (const past of KNOWN_PAST_SPELLINGS) {
+      expect(brandedSubject(`Νέα αγγελία — ${past}`)).toBe(`Νέα αγγελία — ${past}`);
     }
     expect(everyLanguageHasWording()).toBe(true);
   });

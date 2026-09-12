@@ -50,7 +50,7 @@ const MATCH_URL = `${ORIGIN}/n/listing_match%3Au1%3Al1`;
 // ============================================================================
 
 describe('Α — σύνοψη: κάθε γραμμή είναι σύνδεσμος προς ΤΟ ΔΙΚΟ της αντικείμενο', () => {
-  const html = renderDigestHtml([MATCH, INTEREST], 'el', '2 νέες ειδοποιήσεις — ΝΕΣΤΩΡ', LINKS);
+  const html = renderDigestHtml([MATCH, INTEREST], 'el', '2 νέες ειδοποιήσεις — Nestor App', LINKS);
   const text = renderDigestText([MATCH, INTEREST], 'el', LINKS);
 
   it('Α1 🔑 — ο ΤΙΤΛΟΣ είναι το κείμενο του συνδέσμου (WebAIM: ποτέ «πάτα εδώ»)', () => {
@@ -94,12 +94,13 @@ describe('Α — σύνοψη: κάθε γραμμή είναι σύνδεσμο
 // ============================================================================
 
 describe('Β — μεμονωμένο: ένα κουμπί που αντέχει το Outlook και το σκοτεινό θέμα', () => {
-  const html = renderSoloHtml(MATCH, 'el', `${MATCH.subject} — ΝΕΣΤΩΡ`, LINKS);
+  const html = renderSoloHtml(MATCH, 'el', `${MATCH.subject} — Nestor App`, LINKS);
 
   it('Β1 🔑 — κουμπί VML για το Outlook ΚΑΙ <a> για τους υπόλοιπους, προς τον ίδιο προορισμό', () => {
     expect(html).toContain('v:roundrect');
     expect(html.split(`href="${MATCH_URL}"`).length - 1).toBe(2);
-    expect(html).toContain('Άνοιγμα στον Νέστορα');
+    // ADR-857 — τα ελληνικά **έκλιναν** το όνομα («στον Νέστορα»)· το `Nestor App` είναι άκλιτο.
+    expect(html).toContain('Άνοιγμα στο Nestor App');
   });
 
   it('Β2 — στόχος αφής 44px, ρητό φόντο, lang, color-scheme', () => {
@@ -124,7 +125,9 @@ describe('Β — μεμονωμένο: ένα κουμπί που αντέχει
   it('Β5 — αγγλικά: lang και ετικέτα κουμπιού στη γλώσσα του παραλήπτη', () => {
     const english = renderSoloHtml(MATCH, 'en', 'x', LINKS);
     expect(english).toContain('<html lang="en">');
-    expect(english).toContain('Open in Nestor');
+    // ⚠️ **Ακριβές επίτηδες**: το «Open in Nestor» είναι **υποσυμβολοσειρά** του «Open in Nestor
+    //    App», οπότε ο παλιός έλεγχος θα περνούσε **πράσινος χωρίς να ελέγχει τίποτα** (ADR-857).
+    expect(english).toContain('Open in Nestor App');
   });
 });
 

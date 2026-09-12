@@ -30,7 +30,7 @@ describe('Α — το δικό μας email, στη γλώσσα του παρα
 
   it('Α2 — ελληνικά: θέμα με την υπογραφή, `lang="el"`, ο σύνδεσμος, η διεύθυνση', () => {
     const email = buildAuthActionEmail({ kind: 'resetPassword', language: 'el', address: 'maria@example.com', link: LINK });
-    expect(email.subject).toBe('Ορισμός νέου κωδικού πρόσβασης — ΝΕΣΤΩΡ');
+    expect(email.subject).toBe('Ορισμός νέου κωδικού πρόσβασης — Nestor App');
     expect(email.html).toContain('<html lang="el">');
     expect(email.html).toContain('Ορισμός νέου κωδικού');
     expect(email.html).toContain('maria@example.com');
@@ -39,7 +39,8 @@ describe('Α — το δικό μας email, στη γλώσσα του παρα
 
   it('🔑 Α3 — αγγλικά: ΟΛΟ το μήνυμα αγγλικά, και το `<html lang>` το λέει (WCAG 3.1.1)', () => {
     const email = buildAuthActionEmail({ kind: 'verifyEmail', language: 'en', address: 'john@example.com', link: LINK });
-    expect(email.subject).toBe('Verify your email address — Nestor');
+    // ⚠️ ADR-857 — το όνομα είναι **το ίδιο** στα αγγλικά: δεν μεταφράζεται.
+    expect(email.subject).toBe('Verify your email address — Nestor App');
     expect(email.html).toContain('<html lang="en">');
     expect(email.html).toContain('Verify email');
     expect(email.html).not.toContain('Επιβεβαίωση');
@@ -64,7 +65,7 @@ describe('Φ — το πρότυπο της Firebase', () => {
     const template = buildFirebaseAuthTemplate('changeEmail');
     expect(template.subject).not.toMatch(/Επαναφορά κωδικού/);
     expect(template.subject).toBe(
-      'Η διεύθυνση email του λογαριασμού σας άλλαξε / Your account email address was changed — ΝΕΣΤΩΡ',
+      'Η διεύθυνση email του λογαριασμού σας άλλαξε / Your account email address was changed — Nestor App',
     );
   });
 

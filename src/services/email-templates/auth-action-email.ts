@@ -54,9 +54,9 @@ export function buildAuthActionEmail(input: AuthActionEmailInput): ConfirmationE
   const addressHtml = `<strong>${escapeHtml(input.address)}</strong>`;
 
   return {
-    subject: brandedSubject(language, wording.subject),
+    subject: brandedSubject(wording.subject),
     html: wrapInAppFrame(renderMessageSection(wording, addressHtml, input.link, null), language),
-    text: messagePlainText(wording, input.address, input.link, language),
+    text: messagePlainText(wording, input.address, input.link),
   };
 }
 
@@ -94,7 +94,7 @@ export function buildFirebaseAuthTemplate(kind: AuthActionEmailKind): FirebaseAu
 
   const subject = languages.map((language) => authActionWordingFor(language, kind).subject).join(' / ');
   return {
-    subject: brandedSubject(DEFAULT_LANGUAGE, subject),
+    subject: brandedSubject(subject),
     body: wrapInAppFrame(sections, DEFAULT_LANGUAGE),
   };
 }

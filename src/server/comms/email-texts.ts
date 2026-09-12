@@ -40,6 +40,7 @@
  * @see i18n/languages — ποιες γλώσσες υπάρχουν, και γιατί όχι το `pseudo`
  */
 
+import { PRODUCT_NAME, alreadySignedByProduct } from '@/constants/product-identity';
 import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 
 /** Τα λόγια που χρειάζεται ένα αυτόματο email, σε **μία** γλώσσα. */
@@ -52,14 +53,13 @@ export interface EmailWording {
    */
   readonly fallbackSubject: string;
   /**
-   * **Το αποτύπωμα του αποστολέα στο θέμα** — «ΝΕΣΤΩΡ», «Nestor».
+   * ⚠️ **ΤΟ `brand` ΔΙΑΓΡΑΦΗΚΕ ΑΠΟ ΕΔΩ (ADR-857) — ΚΑΙ ΔΕΝ ΞΑΝΑΜΠΑΙΝΕΙ.**
    *
-   * ⚠️ **Είναι το ΟΝΟΜΑ, όχι το επίθεμα.** Το πώς κολλάει στο θέμα (παύλα; κενά;
-   * παρένθεση;) το αποφασίζει το {@link brandedSubject}, σε **ένα** σημείο. Αν το
-   * επίθεμα ζούσε εδώ ολόκληρο («— ΝΕΣΤΩΡ»), μια αλλαγή στίξης θα ήταν αλλαγή σε
-   * **κάθε** γλώσσα — δηλαδή η ίδια απόφαση, γραμμένη όσες φορές και οι στήλες.
+   * Ήταν πεδίο **ανά γλώσσα** για μια τιμή που **δεν εξαρτάται από γλώσσα** — δηλαδή
+   * δομή που **επιτρέπει** απόκλιση. Και είχε ήδη αποκλίνει: `ΝΕΣΤΩΡ` στα ελληνικά,
+   * `Nestor` στα αγγλικά, ενώ το υποσέλιδο του **ίδιου** email έλεγε `Nestor App`.
+   * Η ρίζα είναι πλέον το `constants/product-identity.ts`.
    */
-  readonly brand: string;
   readonly digest: {
     /** ⚠️ **Πάντα πληθυντικός** — η σύνοψη είναι εξ ορισμού ≥2 (`MIN_DIGEST_SIZE`). */
     readonly subject: (count: number) => string;
@@ -102,32 +102,32 @@ export interface EmailWording {
 const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
   el: {
     fallbackSubject: 'Ειδοποίηση',
-    brand: 'ΝΕΣΤΩΡ',
     digest: {
       subject: (count) => `${count} νέες ειδοποιήσεις`,
       intro: (count) => `Έχετε ${count} νέες ειδοποιήσεις:`,
-      footer: 'Αυτό το μήνυμα στάλθηκε αυτόματα από το Nestor.',
+      footer: `Αυτό το μήνυμα στάλθηκε αυτόματα από το ${PRODUCT_NAME}.`,
     },
     links: {
-      open: 'Άνοιγμα στον Νέστορα',
+      // ⚠️ ADR-857 — τα ελληνικά **έκλιναν** το όνομα («στον Νέστορα»). Το `Nestor App` είναι
+      //    άκλιτο, οπότε οι προτάσεις **ξαναγράφτηκαν**· δεν έγινε αντικατάσταση λέξης.
+      open: `Άνοιγμα στο ${PRODUCT_NAME}`,
       openPlain: 'Άνοιγμα',
-      whyReceived: 'Λαμβάνετε αυτό το email επειδή έχετε ενεργές τις ειδοποιήσεις email στον Νέστορα.',
+      whyReceived: `Λαμβάνετε αυτό το email επειδή έχετε ενεργές τις ειδοποιήσεις email στο ${PRODUCT_NAME}.`,
       manage: 'Διαχείριση ειδοποιήσεων email',
       manageType: 'Να μη λαμβάνω τέτοια email',
     },
   },
   en: {
     fallbackSubject: 'Notification',
-    brand: 'Nestor',
     digest: {
       subject: (count) => `${count} new notifications`,
       intro: (count) => `You have ${count} new notifications:`,
-      footer: 'This message was sent automatically by Nestor.',
+      footer: `This message was sent automatically by ${PRODUCT_NAME}.`,
     },
     links: {
-      open: 'Open in Nestor',
+      open: `Open in ${PRODUCT_NAME}`,
       openPlain: 'Open',
-      whyReceived: 'You are receiving this email because email notifications are turned on in Nestor.',
+      whyReceived: `You are receiving this email because email notifications are turned on in ${PRODUCT_NAME}.`,
       manage: 'Manage email notifications',
       manageType: 'Stop emails like this',
     },
@@ -175,15 +175,13 @@ export function emailTextsFor(language: unknown): EmailWording {
  * θέμα που ήδη υπογράφει θα υπέγραφε **δύο φορές**. Και τα ήδη γραμμένα `pending`
  * έγγραφα της ουράς κουβαλούν το παλιό, χειρόγραφο επίθεμα **για πάντα**.
  */
-export function brandedSubject(language: unknown, subject: string): string {
-  const { brand } = emailTextsFor(language);
+export function brandedSubject(subject: string): string {
   const trimmed = subject.trim();
-  // ⚠️ Ο έλεγχος γίνεται στο **όνομα**, όχι στο πλήρες επίθεμα: το χειρόγραφο
-  // παρελθόν έγραφε «— ΝΕΣΤΩΡ» με παύλα em, αλλά ένα μελλοντικό (ή ξένο) θέμα
-  // μπορεί να υπογράφει αλλιώς. Η ερώτηση είναι «υπογράφει ήδη;», όχι «υπογράφει
-  // ΜΕ ΤΟΝ ΔΙΚΟ ΜΑΣ ΤΡΟΠΟ;».
-  if (trimmed.endsWith(brand)) return trimmed;
-  return `${trimmed} — ${brand}`;
+  // ⚠️ Ο έλεγχος γίνεται στο **όνομα** (και σε κάθε **παλιό** όνομα), όχι στο πλήρες
+  // επίθεμα: το χειρόγραφο παρελθόν έγραφε «— ΝΕΣΤΩΡ» με παύλα em, αλλά ένα μελλοντικό
+  // (ή ξένο) θέμα μπορεί να υπογράφει αλλιώς. Η ερώτηση είναι «υπογράφει ήδη;», όχι
+  // «υπογράφει ΜΕ ΤΟΝ ΔΙΚΟ ΜΑΣ ΤΡΟΠΟ;» — δες `alreadySignedByProduct`.
+  return alreadySignedByProduct(trimmed) ? trimmed : `${trimmed} — ${PRODUCT_NAME}`;
 }
 
 /**
@@ -201,8 +199,6 @@ export function everyLanguageHasWording(): boolean {
     return (
       typeof wording?.fallbackSubject === 'string' &&
       wording.fallbackSubject.length > 0 &&
-      typeof wording.brand === 'string' &&
-      wording.brand.length > 0 &&
       typeof wording.digest?.footer === 'string' &&
       wording.digest.footer.length > 0 &&
       typeof wording.digest.subject(2) === 'string' &&

@@ -27,6 +27,7 @@ import { doc, getDoc, updateDoc, Firestore } from 'firebase/firestore';
 import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EnterpriseTwoFactorService');
 import { API_ROUTES } from '@/config/domain-constants';
@@ -59,7 +60,15 @@ import {
 // CONSTANTS
 // =============================================================================
 
-const APP_NAME = 'Nestor Pagonis';
+/**
+ * Ο **εκδότης** (`issuer`) του TOTP — το όνομα που βλέπει ο άνθρωπος **μέσα στο Google
+ * Authenticator** (ADR-857, κλάση Α).
+ *
+ * ⚠️ **Δηλωμένο όριο**: η αλλαγή επηρεάζει **μόνο νέες** εγγραφές. Όποιος έχει ήδη σαρώσει QR
+ * κρατά την **παλιά** ετικέτα στο τηλέφωνό του για πάντα — το μυστικό και η ετικέτα είναι ήδη
+ * αποθηκευμένα εκεί (Key Uri Format). **Κανένα ενεργό 2FA δεν σπάει**· η κατάσταση μένει μικτή.
+ */
+const APP_NAME = PRODUCT_NAME;
 const FIRESTORE_COLLECTION = COLLECTIONS.USER_2FA_SETTINGS;
 
 // =============================================================================

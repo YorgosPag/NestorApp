@@ -130,7 +130,7 @@ export function digestHeaders(
  */
 export function soloEnvelope(message: PendingEmail, links: EmailLinks = NO_LINKS): EmailEnvelope {
   const language = resolveHumanLanguage(message.language);
-  const subject = brandedSubject(language, message.subject);
+  const subject = brandedSubject(message.subject);
 
   // Ό,τι ΔΕΝ είναι ειδοποίηση φεύγει όπως έφευγε: δεν του ανήκουν οι σύνδεσμοί μας.
   if (message.category !== MESSAGE_CATEGORIES.NOTIFICATION) {

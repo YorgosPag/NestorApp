@@ -49,7 +49,7 @@ describe('Α — μεμονωμένη ειδοποίηση', () => {
   it('Α1 🔑 — HTML, υπογεγραμμένο θέμα και ΚΑΙ ΟΙ ΔΥΟ κεφαλίδες του RFC 8058', () => {
     const envelope = soloEnvelope(pending(), LINKS);
 
-    expect(envelope.subject).toBe('Νέα αγγελία ταιριάζει στη ζήτησή σας — ΝΕΣΤΩΡ');
+    expect(envelope.subject).toBe('Νέα αγγελία ταιριάζει στη ζήτησή σας — Nestor App');
     expect(envelope.html).toContain(`${ORIGIN}/n/listing_match%3Au1%3Al1`);
     expect(envelope.headers).toEqual({
       'List-Unsubscribe': `<${ORIGIN}/api/notifications/email/subscription?t=tok-u1>`,
@@ -73,7 +73,7 @@ describe('Α — μεμονωμένη ειδοποίηση', () => {
       pending({ category: 'marketing', content: 'Το δικό του σώμα' }),
       LINKS,
     );
-    expect(envelope).toEqual({ subject: 'Νέα αγγελία ταιριάζει στη ζήτησή σας — ΝΕΣΤΩΡ', text: 'Το δικό του σώμα' });
+    expect(envelope).toEqual({ subject: 'Νέα αγγελία ταιριάζει στη ζήτησή σας — Nestor App', text: 'Το δικό του σώμα' });
   });
 });
 

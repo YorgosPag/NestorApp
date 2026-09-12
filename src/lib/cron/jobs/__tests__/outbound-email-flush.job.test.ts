@@ -379,7 +379,7 @@ describe('Σ — η σύνοψη φεύγει ως ΕΝΑ email', () => {
     //    προσθέτει ο αποστολέας. Πριν, το «— ΝΕΣΤΩΡ» ερχόταν χειρόγραφο από 3 στους
     //    4 παραγωγούς — και έλειπε από τον τέταρτο.
     expect((sendEmail.mock.calls[0][0] as { subject: string }).subject).toBe(
-      'Το πραγματικό θέμα — ΝΕΣΤΩΡ',
+      'Το πραγματικό θέμα — Nestor App',
     );
     expect(result.metrics).toMatchObject({ sent: 1, emailsSent: 1, digested: 0 });
   });
@@ -400,7 +400,7 @@ describe('Σ — η σύνοψη φεύγει ως ΕΝΑ email', () => {
 
     expect(result.metrics).toMatchObject({ sent: 3, emailsSent: 2, digested: 2 });
     const subjects = sendEmail.mock.calls.map((call) => (call[0] as { subject: string }).subject);
-    expect(subjects).toContain('Παραβίαση λογαριασμού — ΝΕΣΤΩΡ');
+    expect(subjects).toContain('Παραβίαση λογαριασμού — Nestor App');
   });
 
   it('Σ5β 🔴 §8.54 — ΜΗΝΥΜΑ ΧΩΡΙΣ ΣΩΜΑ φεύγει μοναχικό με ΤΟ ΘΕΜΑ ΤΟΥ ως σώμα', async () => {
@@ -416,7 +416,7 @@ describe('Σ — η σύνοψη φεύγει ως ΕΝΑ email', () => {
     // ⚠️ Το πεδίο λέγεται `content` **σε αυτό το σύνορο**: ο κρίκος του παρόχου
     //    μεταφράζει το `text` της αλυσίδας. Ίδιο ιδίωμα με το Σ3.
     const job = sendEmail.mock.calls[0][0] as { subject: string; content: string };
-    expect(job.subject).toBe('Θέμα δίχως σώμα — ΝΕΣΤΩΡ');
+    expect(job.subject).toBe('Θέμα δίχως σώμα — Nestor App');
     // ⚠️ Το σώμα παίρνει το **ασφράγιστο** θέμα: η υπογραφή ανήκει στον φάκελο.
     expect(job.content).toBe('Θέμα δίχως σώμα');
   });

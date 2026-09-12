@@ -17,6 +17,7 @@ import { auth, db } from '@/lib/firebase';
 import { twoFactorService } from '@/services/two-factor';
 import type { UserTwoFactorState, TotpSecretInfo } from '@/services/two-factor';
 import { AUTH_EVENTS } from '@/config/domain-constants';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
@@ -78,6 +79,38 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
     loadTwoFactorState();
   }, [loadTwoFactorState]);
 
+  /**
+   * **Γράψε το claim `mfaEnrolled` και κάνε το να ΦΤΑΣΕΙ στη συνεδρία.**
+   *
+   * ⚠️ **Τα τρία βήματα είναι ΕΝΑ και αδιαίρετο**: γράψιμο του claim · **αναγκαστική**
+   * ανανέωση του token (`getIdToken(true)`) · ειδοποίηση της συνεδρίας. Αν λείψει το
+   * δεύτερο, το claim υπάρχει στον διακομιστή και η οθόνη κρατά **παλιό** token — δηλαδή
+   * ο χρήστης είναι εγγεγραμμένος και το app δεν το ξέρει. Γι' αυτό δεν είναι τρεις
+   * γραμμές που τυχαίνει να γειτονεύουν: είναι **μία πράξη**.
+   *
+   * 🧹 Εξήχθη 2026-09-12 (CHECK 3.28 — 9 γραμμές / 57 tokens σε **δύο** σημεία αυτού του
+   * αρχείου: το effect συγχρονισμού και το χειροκίνητο κουμπί). Ο καλών παίρνει τον
+   * χρήστη **ως όρισμα** επειδή το `auth.currentUser` μπορεί να έχει αλλάξει μετά το
+   * `await` — και τα δύο σημεία τον έχουν ήδη ελέγξει.
+   *
+   * @returns `true` αν το claim έφτασε· `false` αν όχι — **το μήνυμα σφάλματος έχει ήδη
+   *          μπει στο state**, ο καλών απλώς σταματά.
+   */
+  const claimMfaEnrollment = useCallback(
+    async (user: NonNullable<typeof auth.currentUser>): Promise<boolean> => {
+      const syncResult = await twoFactorService.syncMfaEnrollmentClaim();
+      if (!syncResult.success) {
+        setError(syncResult.error || t('twoFactor.errors.syncFailed'));
+        return false;
+      }
+
+      await user.getIdToken(true);
+      window.dispatchEvent(new CustomEvent(AUTH_EVENTS.REFRESH_SESSION));
+      return true;
+    },
+    [t],
+  );
+
   // Sync custom claims if user is enrolled but token is stale
   useEffect(() => {
     const syncClaimsIfNeeded = async () => {
@@ -89,20 +122,14 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
         return;
       }
 
+      const user = auth.currentUser;
       setClaimsSyncing(true);
       try {
-        const tokenResult = await auth.currentUser.getIdTokenResult(true);
+        const tokenResult = await user.getIdTokenResult(true);
         const mfaEnrolled = tokenResult.claims.mfaEnrolled === true;
 
-        if (!mfaEnrolled) {
-          const syncResult = await twoFactorService.syncMfaEnrollmentClaim();
-          if (!syncResult.success) {
-            setError(syncResult.error || t('twoFactor.errors.syncFailed'));
-            return;
-          }
-
-          await auth.currentUser.getIdToken(true);
-          window.dispatchEvent(new CustomEvent(AUTH_EVENTS.REFRESH_SESSION));
+        if (!mfaEnrolled && !(await claimMfaEnrollment(user))) {
+          return;
         }
 
         setClaimsSynced(true);
@@ -114,7 +141,7 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
     };
 
     syncClaimsIfNeeded();
-  }, [twoFactorState, claimsSynced, claimsSyncing, t]);
+  }, [twoFactorState, claimsSynced, claimsSyncing, t, claimMfaEnrollment]);
 
   // Start enrollment
   const handleStartEnrollment = async () => {
@@ -194,7 +221,7 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
 
   // Download backup codes
   const handleDownloadBackupCodes = () => {
-    const content = `Nestor Pagonis - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\n${t('twoFactor.backupFileNote')}\n\nGenerated: ${nowISO()}`;
+    const content = `${PRODUCT_NAME} - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\n${t('twoFactor.backupFileNote')}\n\nGenerated: ${nowISO()}`;
 
     const blob = new Blob([content], { type: 'text/plain' });
     triggerExportDownload({ blob, filename: 'nestor-backup-codes.txt' });
@@ -224,7 +251,8 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
   };
 
   const handleSyncClaims = async () => {
-    if (!auth.currentUser || claimsSyncing) {
+    const user = auth.currentUser;
+    if (!user || claimsSyncing) {
       return;
     }
 
@@ -233,14 +261,10 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
     setSyncMessage(null);
 
     try {
-      const syncResult = await twoFactorService.syncMfaEnrollmentClaim();
-      if (!syncResult.success) {
-        setError(syncResult.error || t('twoFactor.errors.syncFailed'));
+      if (!(await claimMfaEnrollment(user))) {
         return;
       }
 
-      await auth.currentUser.getIdToken(true);
-      window.dispatchEvent(new CustomEvent(AUTH_EVENTS.REFRESH_SESSION));
       setClaimsSynced(true);
       setSyncMessage(t('twoFactor.syncSuccess'));
     } catch (err) {

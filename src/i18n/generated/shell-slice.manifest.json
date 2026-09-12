@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8f5d532fd3677915a172f3f736b0283933b3c4d4c938722d29f8cee2a778ea47",
+  "inputsSha256": "6a8d306c866b3ee0df598926f7a7ad0c4ce172c896e43f617e168f03621ed820",
   "languages": [
     "el"
   ],
@@ -477,7 +477,7 @@
     "src/server/auth/auth-action-link.ts": "3bd06c0b7b2da10a8a15f0a4d3fe6209afdba1d2189616dda5db872dda71e8c9",
     "src/server/auth/citizen-identity.ts": "446401bcc8d6c967c2f663a43ebeb1eda963267cc75d90f48f48d49f9cf057a7",
     "src/server/auth/mailbox-proof-custody.ts": "6e7cb2b7e60df6a68186c112ac1103eb77b5302a78792f431402583bafe519e7",
-    "src/server/comms/email-texts.ts": "b6fdce4f0e23ba64c5a478183302fbf3b9832e902de3950d7098a5db73e0d6fa",
+    "src/server/comms/email-texts.ts": "13d0118d8622d4a1b60e25c2abc3fa64fd26f6dafc375548eda46e672294c414",
     "src/server/comms/orchestrator.ts": "3c544030adad04ccf05d648eab10ca6e1e637de7e0fe0ee75cc4075f9f958ff6",
     "src/server/notifications/email-delivery-window.ts": "0643f6c455c8ee15c9764af9d79354ac0ca6df7870edf4da6be1f6565aaaad8c",
     "src/server/notifications/email-subscription.ts": "15ab670e8d7793906023044bb53a73ce678b6c30f153814cbf8586c66666b241",
@@ -503,7 +503,7 @@
     "src/services/contacts-query.service.ts": "e205fb92132590d84bbd946dfbd3c3d628cd46a6efd31cf52b35a3b372e99a0a",
     "src/services/demand/property-demand.service.ts": "1cdc6982f7aa1ad93f90d86dcf4258b5e427830a04198968eea4b243bdc55d67",
     "src/services/email-templates/account-secured.ts": "8d721dc51ba94655eedac2243a82bc56bc31075dc10e6a926e65ddc38f2d8a29",
-    "src/services/email-templates/base-email-template.ts": "615ac5f11672f6960973461b8b64aa545d806c3133456ce791664f82c9b08908",
+    "src/services/email-templates/base-email-template.ts": "2045773438dc94facffa06171a129965abd79a108b1583afca8741e89bb8b469",
     "src/services/email-templates/confirmation-email-shared.ts": "9f13f8748ff8bfa21b39b09a895a9a81e66f517a819591073b22efc644ec65a2",
     "src/services/email-templates/showcase-email-shared.ts": "9f13f8748ff8bfa21b39b09a895a9a81e66f517a819591073b22efc644ec65a2",
     "src/services/error-tracker-integrations.ts": "406d24f8af7671bf872bc617d4db2ce2dfa0eaa8d7e56ed66396c9ac333ac54a",
@@ -4460,6 +4460,7 @@
     "src/constants/legal-phases.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/operational-statuses.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/priority-levels.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/constants/product-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/professional-registries.ts": "bae0875a639d45863c8ec9a5b74f26f4012c394b36a5610b8eed6f1e97b9a15e",
     "src/constants/project-statuses.ts": "81b4b10be469b7104a0fcfa3c228726bb914e93d969ca678ee5ff1273ab76fd6",
     "src/constants/project-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -4778,7 +4779,7 @@
     "src/services/session/session-helpers.ts": "2a0255aba0dd13ee63552ecbdc23115f4eab7b88fe10404ec73f4dc122cae750",
     "src/services/session/session.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/sharing/showcase-surfaces.ts": "468902387af626019d2a1d395c41a60cfb604cc55ece512b4f0f8afbfdb4d8a0",
-    "src/services/two-factor/EnterpriseTwoFactorService.ts": "cd74aab2a814b3b28f7557e39ab467732a309105645abac1b13d03cde94471ec",
+    "src/services/two-factor/EnterpriseTwoFactorService.ts": "8f8fafcd70a1ff5c015092d449535a634971a274ce7c3d4a4502f50f4fea091c",
     "src/services/two-factor/two-factor-helpers.ts": "4eef9c13bdeb101a43cae7b92010ccb0d0901c1bbf7992749ec307129462c69c",
     "src/services/two-factor/two-factor.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/upload/utils/file-display-name-core.ts": "e65ae649159dd190ba52e715efbe18751e05e54d1c7f056c0bd4631320dfab35",
@@ -4907,7 +4908,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 178,
     "routeBoundaries": 0,
-    "shellFiles": 630,
+    "shellFiles": 631,
     "sliceBytes": 410015
   },
   "unresolvableKeys": [

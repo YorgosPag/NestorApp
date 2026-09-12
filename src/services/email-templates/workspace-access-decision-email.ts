@@ -83,9 +83,9 @@ export function buildWorkspaceAccessDecisionEmail(input: {
   const wording = DECISION_TEXTS[language][input.decision];
   const addressHtml = `<strong>${escapeHtml(input.address)}</strong>`;
   return {
-    subject: brandedSubject(language, wording.subject),
+    subject: brandedSubject(wording.subject),
     html: wrapInAppFrame(renderMessageSection(wording, addressHtml, link, null), language),
-    text: messagePlainText(wording, input.address, link, language),
+    text: messagePlainText(wording, input.address, link),
   };
 }
 

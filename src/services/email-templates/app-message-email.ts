@@ -10,9 +10,9 @@
 
 import 'server-only';
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { HumanLanguage } from '@/i18n/languages';
 import { publicUrl } from '@/lib/http/public-origin';
-import { emailTextsFor } from '@/server/comms/email-texts';
 
 import type { AppMessageWording } from './app-message-wording';
 import { BRAND, NESTOR_APP_LOGO_PATH, escapeHtml, wrapInBrandedTemplate } from './base-email-template';
@@ -38,14 +38,23 @@ export function renderMessageSection(
 export function wrapInAppFrame(contentHtml: string, language: HumanLanguage): string {
   return wrapInBrandedTemplate({
     contentHtml,
-    companyName: emailTextsFor(language).brand,
+    // ADR-857 — το όνομα του **προϊόντος**, από τη ρίζα. Ήταν πεδίο `brand` ανά γλώσσα, δηλαδή
+    // δομή που επέτρεπε απόκλιση· και είχε ήδη αποκλίνει (`ΝΕΣΤΩΡ` / `Nestor` / `Nestor App`).
+    companyName: PRODUCT_NAME,
     companyLogoUrl: publicUrl(NESTOR_APP_LOGO_PATH) ?? undefined,
     lang: language,
   });
 }
 
-/** Το απλό κείμενο ενός μηνύματος — ίδια σειρά με το HTML. */
-export function messagePlainText(wording: AppMessageWording, address: string, link: string, language: HumanLanguage): string {
+/**
+ * Το απλό κείμενο ενός μηνύματος — ίδια σειρά με το HTML.
+ *
+ * ⚠️ **ADR-857 — η παράμετρος `language` ΑΦΑΙΡΕΘΗΚΕ**: το μόνο που τη χρειαζόταν ήταν η
+ * υπογραφή, και το όνομα του προϊόντος **δεν εξαρτάται από γλώσσα**. Μια παράμετρος που δεν
+ * χρησιμοποιείται **υπόσχεται** εξάρτηση που δεν υπάρχει — τα λόγια έρχονται ήδη έτοιμα,
+ * στη γλώσσα του παραλήπτη, μέσα στο `wording`.
+ */
+export function messagePlainText(wording: AppMessageWording, address: string, link: string): string {
   return [
     wording.heading,
     '',
@@ -55,6 +64,6 @@ export function messagePlainText(wording: AppMessageWording, address: string, li
     '',
     wording.footnote,
     '',
-    emailTextsFor(language).brand,
+    PRODUCT_NAME,
   ].join('\n');
 }

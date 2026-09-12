@@ -322,7 +322,7 @@ async function deliverDigest(
     to: entry.to,
     // 🔑 §8.54 — **μία** υπογραφή για ολόκληρη τη σύνοψη. Πριν, το «— ΝΕΣΤΩΡ»
     // ερχόταν από τους παραγωγούς και επαναλαμβανόταν σε **κάθε γραμμή** του σώματος.
-    subject: brandedSubject(entry.language, entry.subject),
+    subject: brandedSubject(entry.subject),
     text: entry.content,
     html: entry.html,
     ...(headers ? { headers } : {}),

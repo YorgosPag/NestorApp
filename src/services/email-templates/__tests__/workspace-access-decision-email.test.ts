@@ -34,7 +34,7 @@ describe('buildWorkspaceAccessDecisionEmail', () => {
 
   it('Ε3 — στη γλώσσα του παραλήπτη, με το `<html lang>` της', () => {
     const email = buildWorkspaceAccessDecisionEmail({ decision: 'denied', language: 'en', address: 'a@example.com' });
-    expect(email?.subject).toBe('Your access request was not approved — Nestor');
+    expect(email?.subject).toBe('Your access request was not approved — Nestor App');
     expect(email?.html).toContain('<html lang="en">');
   });
 
