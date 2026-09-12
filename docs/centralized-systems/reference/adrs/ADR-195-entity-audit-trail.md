@@ -39,7 +39,7 @@
 - **Collection**: `/companies/{companyId}/audit_logs/{autoId}` (tenant-scoped)
 - **Τι κάνει**: Authorization events (role_changed, permission_granted/revoked), system bootstrap, migrations, data fixes, communications (created/approved/rejected), webhooks
 - **Entry**: `companyId`, `action`, `actorId`, `targetId`, `targetType`, `previousValue`, `newValue`, `timestamp`, `metadata` (ipAddress, userAgent, path, reason)
-- **Pattern**: `removeUndefinedValues()` sanitizer, console fallback αν Firebase Admin unavailable
+- **Pattern**: `stripUndefinedDeepPlainOnly()` sanitizer *(ήταν `removeUndefinedValues` — μετονομασία ADR-852 §4.7: ήταν **τριπλό ομώνυμο** με τρεις διαφορετικές εγγυήσεις)*, console fallback αν Firebase Admin unavailable
 - **Αξιολόγηση**: Πολύ mature, αλλά εστιάζει σε auth events, όχι σε entity field changes
 
 #### System 3: AI Pipeline Audit Service

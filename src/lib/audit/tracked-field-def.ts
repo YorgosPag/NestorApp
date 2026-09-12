@@ -49,10 +49,15 @@ import type { AuditFieldChange } from '@/types/audit-trail';
  * για κάθε ήδη γραμμένη εγγραφή. Η ασυμμετρία είναι η ίδια με του ADR-677 §7.2:
  * ξεχασμένη δήλωση = **ορατό ωμό** (μια γραμμή διόρθωση), ποτέ **σιωπηλή αλλοίωση**.
  *
- * ⚠️ **ΜΗΝ γράψεις ποτέ `quantity: undefined` στο Firestore.** Το `removeUndefinedValues`
- * **δεν μπαίνει σε πίνακες** (`search-index-config.ts:47`), το `changes[]` γράφεται
- * αυτούσιο, και το `ignoreUndefinedProperties` δεν ορίζεται πουθενά ⇒ το write του Admin
- * SDK θα έσκαγε. Τα νέα πεδία μπαίνουν **μόνο** με conditional spread (ADR-852 §4.4).
+ * ⚠️ **ΜΗΝ γράψεις ποτέ `quantity: undefined` στο Firestore.** Ο καθαριστής του writer
+ * είναι το **ρηχό** `stripUndefinedShallow` (`services/entity-audit.service.ts`) και
+ * εφαρμόζεται στο top-level `entry` ⇒ το `changes[]` γράφεται **αυτούσιο**, και το
+ * `ignoreUndefinedProperties` δεν ορίζεται πουθενά ⇒ το write του Admin SDK θα έσκαγε.
+ * Τα νέα πεδία μπαίνουν **μόνο** με conditional spread (ADR-852 §4.4).
+ * *(🔴 Αυτή η παραπομπή έλεγε «`removeUndefinedValues` — δεν μπαίνει σε πίνακες,
+ * `search-index-config.ts:47`»: **λάθος αρχείο ΚΑΙ λάθος αιτιολόγηση**. Το ADR-852 το
+ * διόρθωσε στη Φ3, το σχόλιο **δεν** ακολούθησε· τα τρία ομώνυμα έγιναν τρία ονόματα
+ * στη §4.7 ώστε η παραπομπή να είναι πλέον **επαληθεύσιμη χωρίς άνοιγμα αρχείου**.)*
  */
 interface TrackedFieldDescriptor {
   /**
@@ -169,8 +174,8 @@ export type AuditFieldChannels = Pick<AuditFieldChange, 'label' | 'quantity'>;
  * το §4.4 φοβήθηκε («η μία θα ξεχνιόταν»), από πόρτα που κανείς δεν είχε κοιτάξει.
  * Με **μία** συνάρτηση, η απόκλιση των δύο διαδρομών γίνεται **μη εκφράσιμη**.
  *
- * ⛔ **ΠΟΤΕ `quantity: undefined`.** Το `removeUndefinedValues` του writer
- * (`entity-audit.service.ts:59`) είναι **ΡΗΧΟ** — σκέτος βρόχος στα top-level κλειδιά —
+ * ⛔ **ΠΟΤΕ `quantity: undefined`.** Ο καθαριστής του writer, το `stripUndefinedShallow`
+ * (`entity-audit.service.ts`), είναι **ΡΗΧΟ** — σκέτος βρόχος στα top-level κλειδιά —
  * και εφαρμόζεται στο `entry`, άρα ο πίνακας `changes[]` περνά **αυτούσιος**· το
  * `ignoreUndefinedProperties` δεν ορίζεται πουθενά. Ένα `undefined` **μέσα** σε εγγραφή
  * φτάνει στον Admin SDK και **ρίχνει το write**. Γι' αυτό conditional spread, πάντα.

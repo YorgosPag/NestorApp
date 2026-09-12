@@ -20,8 +20,10 @@
 Μέχρι σήμερα η πραγματική διατήρηση των audit logs ήταν **άπειρη** για ΔΥΟ ανεξάρτητους λόγους — ο καθένας
 αρκετός από μόνος του για να ακυρώσει το retention, χωρίς τον άλλον:
 
-**(α) Code-side — το `expiresAt` δεν γραφόταν ΠΟΤΕ στο document.** Η `removeUndefinedValues()` στο
-`src/lib/auth/audit-core.ts` αναδρομούσε σε κάθε τιμή με `typeof value === 'object'` και πετούσε κάθε
+**(α) Code-side — το `expiresAt` δεν γραφόταν ΠΟΤΕ στο document.** Ο καθαριστής του
+`src/lib/auth/audit-core.ts` *(τότε `removeUndefinedValues`· σήμερα **`stripUndefinedDeepPlainOnly`** —
+μετονομάστηκε στο ADR-852 §4.7 γιατί ήταν **τριπλό ομώνυμο** με τρεις διαφορετικές εγγυήσεις)*
+αναδρομούσε σε κάθε τιμή με `typeof value === 'object'` και πετούσε κάθε
 κλειδί του οποίου η αναδρομή έδινε άδειο αντικείμενο. Τα `Date` instances και τα
 `FieldValue.serverTimestamp()` sentinels δεν έχουν own enumerable properties —
 `Object.entries(new Date())` → `[]` — άρα **ΚΑΙ το `expiresAt` ΚΑΙ το `timestamp`** αφαιρούνταν σιωπηλά
@@ -64,7 +66,7 @@ anchor: `src/lib/auth/__tests__/audit-core-persistence.test.ts` — επαληθ
 
 **Lesson learned.** Ένα write path που πετάει σιωπηλά ένα πεδίο είναι αόρατο στο type checking όταν η
 επιστροφή του helper (`Partial<T>` — που *σωστά* δηλώνει «μπορεί να λείπουν πεδία») γίνεται cast πίσω στον
-πλήρη τύπο της εγγραφής στο σημείο κλήσης (`removeUndefinedValues(rawEntry) as PersistableAuditEntry`). Το
+πλήρη τύπο της εγγραφής στο σημείο κλήσης (`stripUndefinedDeepPlainOnly(rawEntry) as PersistableAuditEntry`). Το
 cast έκρυβε ακριβώς την απώλεια που ο τύπος `Partial<T>` προσπαθούσε να δηλώσει — ο compiler δεν είχε καμία
 πιθανότητα να το πιάσει.
 
@@ -418,7 +420,7 @@ server-only tainting. Tests ή οποιοσδήποτε isomorphic κατανα�
   pending. (Opus, implementation report βάσει οδηγιών lead)
 - **2026-07-20** — **Root-cause correction (post-review), το ΠΡΑΓΜΑΤΙΚΟ σημαντικότερο εύρημα της ημέρας.**
   Adversarial review αμφισβήτησε την §0 του v2 και βρήκε ότι το ADR είχε λάθος διάγνωση: δεν έφταιγε ΜΟΝΟ
-  το GCP config. Η `removeUndefinedValues()` στο `audit-core.ts` αναδρομούσε σε ό,τι είχε
+  το GCP config. Ο καθαριστής του `audit-core.ts` *(σήμερα `stripUndefinedDeepPlainOnly`, ADR-852 §4.7)* αναδρομούσε σε ό,τι είχε
   `typeof value === 'object'` και πετούσε `Date`/`FieldValue.serverTimestamp()` sentinels σαν να ήταν
   κενά αντικείμενα (`Object.entries(new Date()) === []`) — άρα **τόσο το `expiresAt` όσο και το
   `timestamp`** έλειπαν σιωπηλά από κάθε audit document που γράφτηκε από τις 2026-06-10 έως σήμερα. Δύο

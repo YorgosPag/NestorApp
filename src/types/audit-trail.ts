@@ -183,7 +183,8 @@ export interface AuditFieldChange {
    * ερώτημα = CHECK 3.59. Δες `lib/audit/tracked-field-def.ts` για το πλήρες σκεπτικό.
    *
    * ⛔ Γράφεται **μόνο** με conditional spread — ποτέ `quantity: undefined` (ο Admin SDK
-   * απορρίπτει `undefined` και το `removeUndefinedValues` του writer είναι **ρηχό**).
+   * απορρίπτει `undefined` και ο καθαριστής του writer, το `stripUndefinedShallow`, είναι
+   * **ρηχός** εκ συμβολαίου· ADR-852 §4.7, άγκυρα `entity-audit-write-shallow.test.ts`).
    */
   quantity?: QuantitySpec;
 }
