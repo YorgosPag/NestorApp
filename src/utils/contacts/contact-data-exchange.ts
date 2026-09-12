@@ -15,6 +15,7 @@ import type { Contact, ContactType } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 const logger = createModuleLogger('contact-data-exchange');
 
@@ -114,7 +115,14 @@ export async function exportContacts(
     metadata: {
       title: 'Contacts Export',
       description: `Exported ${contacts.length} contacts`,
-      company: 'Nestor Construct',
+      // 🔴 **ΕΝΑΤΟΣ ΕΞΑΓΩΓΕΑΣ — Η Φ5 ΤΟΝ ΕΧΑΣΕ** (ADR-857, βρέθηκε στη Φ4/Φ7).
+      //    Είναι **ακριβώς** η ίδια ερώτηση με το `workbook.creator` που μετατράπηκε σε
+      //    οκτώ εξαγωγείς: «ποιο πρόγραμμα **παρήγαγε** αυτό το αρχείο;» ⇒ όνομα
+      //    **προϊόντος** (κλάση Α), όχι δεδομένα ενοίκου — είναι σκληρό, χωρίς env και
+      //    χωρίς αναζήτηση εταιρείας. Ήταν **αόρατο** στην απογραφή της Φ5 επειδή
+      //    περνά από το γενικό `exportService.exportData({ metadata })` αντί από
+      //    `workbook.creator` — δηλαδή grep στο **όνομα του συμβόλου** δεν το έβρισκε.
+      company: PRODUCT_NAME,
     },
   });
 

@@ -32,13 +32,17 @@ import type { StoredAddressPosition } from '@/types/address-position';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactAddressType } from '@/types/contacts/address-types';
 import {
+  overwriteAdminHierarchy,
   projectAddressVocabulary,
   resolveCityFromHierarchy,
 } from '@/utils/address/administrative-hierarchy';
+import { provedHierarchyValue } from '@/components/shared/addresses/address-hierarchy-field-ops';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
-import { DRAG_RESOLVED_HIERARCHY_RESET } from './addresses-section-form-mapping';
+// ⚠️ Το `DRAG_RESOLVED_HIERARCHY_RESET` **δεν εισάγεται πλέον**: ο μηδενισμός δεν είναι
+//    χειρόγραφη λίστα αλλά **προβολή του πίνακα** (δες `flatHierarchyPatch`). Ο πίνακας μένει
+//    εξαγόμενος για τον «Καθαρισμό» της έδρας — **άλλη πράξη, άλλος λόγος**.
 import {
   applyDraggedToContactAddress,
   contactAddressList,
@@ -88,7 +92,15 @@ function hierarchyToHqBranch(
     number: addr.number,
     postalCode: addr.postalCode,
     city,
-    region: addr.regionName,
+    // 🔴 **ΕΔΩ ΕΓΡΑΦΕ `region: addr.regionName` — ΔΕΥΤΕΡΟΣ ΔΙΕΚΔΙΚΗΤΗΣ ΤΟΥ ΙΔΙΟΥ ΠΕΔΙΟΥ.**
+    //    Η αλυσίδα ανάγνωσης του `companyAddress` είναι `['regionName','region']` (ADR-772):
+    //    το `regionName` κρατά **αποδεδειγμένο** όνομα, το `region` **ελεύθερο ταχυδρομικό**
+    //    κείμενο. Γράφοντας το πρώτο **μέσα** στο δεύτερο, κανένας αναγνώστης δεν μπορούσε
+    //    πια να ξεχωρίσει «όνομα από ιεραρχία» από «ετικέτα μηχανής» — και το `region` ήταν
+    //    **αθάνατο**: ο πίνακας γράφει **μόνο** το κανονικό πεδίο (`write` → `slot[0]`), άρα
+    //    τίποτα δεν μπορούσε να το καθαρίσει. Το `regionName` το θέτει **ήδη** η προβολή
+    //    παραπάνω. Είναι ο κανόνας «κανένα πεδίο με δύο διεκδικητές» που το ίδιο το λεξιλόγιο
+    //    επιβάλλει για το `neighborhood` — και που το `region` παραβίαζε **έξω** από τον πίνακα.
     country: toStoredCountryCode(addr.country),
   };
 }
@@ -105,6 +117,9 @@ function resolvedToDragged(addr: ResolvedAddressFields): DragResolvedAddress {
     neighborhood: addr.neighborhood ?? '',
     region: addr.region ?? '',
     country: addr.country ?? '',
+    // ⚠️ **Ο δρόμος επιστροφής**: ό,τι απέδειξε ο διακομιστής ταξίδεψε μέσα από τον editor
+    //    και πρέπει να φτάσει στον γραφέα — αλλιώς η έδρα μηδενίζει ιεραρχία που **ξέρουμε**.
+    ...(addr.admin !== undefined ? { admin: addr.admin } : {}),
   };
 }
 
@@ -124,7 +139,40 @@ function confirmedDragState(
   const next = applyDraggedToContactAddress(current, dragged, point);
   const written = withContactAddressAt(formData, index, next);
   if (index !== 0) return written;
-  return { ...written, settlement: next.city, neighborhood: dragged.neighborhood, ...DRAG_RESOLVED_HIERARCHY_RESET };
+  return {
+    ...written,
+    ...flatHierarchyPatch(dragged),
+    // ⚠️ **Μετά τον πίνακα, επίτηδες**: το `settlement` είναι το όνομα του οικισμού **και**
+    //    το ελεύθερο κείμενο «Οικισμός / Πόλη» σε αυτό το λεξιλόγιο. Το `next.city` κουβαλά
+    //    ήδη τη σωστή απόφαση — όνομα **μητρώου** αν αποδείχθηκε, αλλιώς της μηχανής.
+    settlement: next.city,
+    neighborhood: dragged.neighborhood,
+  };
+}
+
+/**
+ * Η ιεραρχία στα **επίπεδα πεδία** της έδρας — ο **ίδιος** κανόνας με την εγγραφή της λίστας.
+ *
+ * 🔴 **Ζ4γ**: εδώ εφαρμοζόταν το `DRAG_RESOLVED_HIERARCHY_RESET` **άνευ όρων**. Πλέον
+ * γράφεται ό,τι αποδείχθηκε και καθαρίζεται ό,τι όχι — με την προβολή στο λεξιλόγιο
+ * `contactFlat` να γίνεται από **τον πίνακα** (ADR-772), που ξέρει ότι εδώ κρατιούνται
+ * **δύο** ταυτότητες και τα υπόλοιπα έξι επίπεδα είναι μόνο ονόματα.
+ *
+ * ⚠️ **Το `?? []` είναι η ίδια απόφαση με το `contactHierarchyPatch`** — και για τον ίδιο
+ * λόγο: αυτή η διαδρομή τρέχει **μόνο** όταν το κείμενο αντικαθίσταται, οπότε καμία απόδειξη
+ * σημαίνει **καθάρισμα**, όχι κληρονομιά *(ADR-277)*.
+ *
+ * ✅ **Και το αποτέλεσμα είναι ΤΑΥΤΟΣΗΜΟ με το `DRAG_RESOLVED_HIERARCHY_RESET`** όταν δεν
+ * αποδεικνύεται τίποτα: το ίδιο σύνολο πεδίων, καθαρισμένο από **τον πίνακα** αντί από
+ * χειρόγραφη λίστα. Ο παλιός πίνακας μένει για τον «Καθαρισμό» της έδρας, που είναι **άλλη
+ * πράξη με άλλον λόγο** *(ρητή πρόθεση ανθρώπου)*.
+ */
+function flatHierarchyPatch(dragged: DragResolvedAddress): Partial<ContactFormData> {
+  return overwriteAdminHierarchy(
+    provedHierarchyValue(dragged.admin ?? []),
+    'form',
+    'contactFlat',
+  ) as Partial<ContactFormData>;
 }
 
 /** Το `placement` του editor της έδρας: σημείο, αναίρεση, και η αφετηρία της συνεδρίας. */

@@ -3,14 +3,15 @@
  * @module components/contacts/details/contact-pin-drop
  * @enterprise ADR-332 D27 Βήμα Β-ΙΙ
  *
- * Ο χάρτης δίνει `PinDrop<Partial<PartialProjectAddress>>` (λεξιλόγιο έργου). Οι επαφές το
+ * Ο χάρτης δίνει `PinDrop<DraggedAddressText>` (λεξιλόγιο έργου + οι αποδείξεις). Οι επαφές το
  * μεταφράζουν **μία φορά**, στο σύνορο του `ContactAddressMapPreview`, και από εκεί και πέρα
  * ταξιδεύει ολόκληρο το `PinDrop` — μαζί με το σημείο, τη χειρονομία και τις εκβάσεις χωρίς
  * κείμενο (ως το Β-ΙΙ το σημείο και οι εκβάσεις αυτές **πετιούνταν** εδώ).
  */
 
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
-import type { PartialProjectAddress } from '@/types/project/addresses';
+import type { ProvedAdminLevel } from '@/lib/geocoding/geocoding-types';
+import type { DraggedAddressText } from '@/components/shared/addresses/pin-drop';
 import { splitStreetAndNumber } from '@/utils/address/address-parse';
 
 /** Η διεύθυνση που πρότεινε η αντίστροφη γεωκωδικοποίηση, με όλα τα πεδία παρόντα. */
@@ -22,6 +23,13 @@ export interface DragResolvedAddress {
   neighborhood: string;
   region: string;
   country: string;
+  /**
+   * **Η διοικητική ιεραρχία που ΑΠΟΔΕΙΧΘΗΚΕ** στον διακομιστή (ADR-332 D27 Φάση Β′).
+   *
+   * ⚠️ **Απών ≠ κενός πίνακας** *(N.12)*: **απών** ⇒ «δεν ρωτήθηκε» ⇒ ο γραφέας **ΔΕΝ
+   * αγγίζει** ταυτότητες· **κενός** ⇒ «ρωτήθηκε, τίποτα» ⇒ ο γραφέας **καθαρίζει**.
+   */
+  admin?: readonly ProvedAdminLevel[];
 }
 
 /**
@@ -31,7 +39,7 @@ export interface DragResolvedAddress {
  * «Οδός 12» περνά από τη **μία** γραμματική αριθμού του έργου (`splitStreetAndNumber`) — εδώ
  * ζούσε ένα τρίτο, ιδιωτικό regex που δεν ήξερε το «25ης Μαρτίου 12» ή το «8-10».
  */
-export function toContactDraggedAddress(data: Partial<PartialProjectAddress>): DragResolvedAddress {
+export function toContactDraggedAddress(data: DraggedAddressText): DragResolvedAddress {
   const rawStreet = (data.street ?? '').trim();
   const rawNumber = (data.number ?? '').trim();
   const split = !rawNumber && rawStreet ? splitStreetAndNumber(rawStreet) : null;
@@ -39,10 +47,18 @@ export function toContactDraggedAddress(data: Partial<PartialProjectAddress>): D
     street: split?.street ?? rawStreet,
     number: rawNumber || split?.number || '',
     postalCode: data.postalCode ?? '',
-    city: data.neighborhood || data.city || '',
+    // 🔴 **Ζ2 — ΕΝΑΣ ιδιοκτήτης της αλυσίδας «ποιο κλειδί OSM είναι ο οικισμός».**
+    //    Εδώ έγραφε `data.neighborhood || data.city`: **δεύτερη, ασυντόνιστη απόφαση**, τη
+    //    στιγμή που το `api/geocoding/reverse` **έχει ήδη** αποφασίσει — με τεκμηριωμένο
+    //    σχόλιο και με τη γνώση των έξι κλειδιών. Δύο ιδιοκτήτες ήταν το σφάλμα: η συνοικία
+    //    «Λαδάδικα» καταλάμβανε την Πόλη, και επειδή **καμία** συνοικία Αθήνας/Θεσσαλονίκης
+    //    δεν είναι οικισμός ΕΛΣΤΑΤ *(μετρημένο: 0 από 9 δείγματα)*, η ταυτοποίηση γινόταν
+    //    **δομικά αδύνατη**. Η συνοικία ζει **μόνο** στο `neighborhood`.
+    city: data.city ?? '',
     neighborhood: data.neighborhood ?? '',
     region: data.region ?? '',
     country: data.country ?? '',
+    ...(data.admin !== undefined ? { admin: data.admin } : {}),
   };
 }
 
@@ -56,5 +72,8 @@ export function contactDraggedToResolved(addr: DragResolvedAddress): ResolvedAdd
     neighborhood: addr.neighborhood,
     region: addr.region,
     country: addr.country,
+    // ⚠️ **Οι αποδείξεις ταξιδεύουν ΜΑΖΙ με το κείμενο** (ADR-332 D27 Φάση Β′): η έδρα περνά
+    //    από τον κοινό `AddressEditor`, και ό,τι δεν μπει εδώ σταματά στο σύνορό του.
+    ...(addr.admin !== undefined ? { admin: addr.admin } : {}),
   };
 }

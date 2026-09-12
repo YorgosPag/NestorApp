@@ -16,10 +16,12 @@
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { humanPlacedPatch } from '@/components/shared/addresses/pin-drop';
+import { provedHierarchyValue } from '@/components/shared/addresses/address-hierarchy-field-ops';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
+import { overwriteAdminHierarchy } from '@/utils/address/administrative-hierarchy';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
 import type { DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
-import { COMPANY_ADDRESS_HIERARCHY_CLEARED, hqEntryFromFlatFields } from './addresses-section-form-mapping';
+import { hqEntryFromFlatFields } from './addresses-section-form-mapping';
 
 /**
  * Σημείο που επιβεβαίωσε άνθρωπος → η εγγραφή το **δηλώνει** (`source: 'dragged'`) και χάνει τα
@@ -52,15 +54,53 @@ export function applyDraggedToContactAddress(
   const pinned = point ? withHumanPoint(address, point) : address;
   return {
     ...pinned,
-    ...COMPANY_ADDRESS_HIERARCHY_CLEARED,
+    ...contactHierarchyPatch(dragged),
     street: dragged.street,
     number: dragged.number,
     postalCode: dragged.postalCode,
-    city: dragged.city,
     neighborhood: dragged.neighborhood,
+    // 🔴 **Ζ4β — Ο ΕΝΑΣ ΙΔΙΟΚΤΗΤΗΣ ΑΝΑ ΠΕΔΙΟ.** Το `region` είναι το **ελεύθερο ταχυδρομικό**
+    //    πεδίο και γράφεται **πάντα**, ακόμη κενό: έτσι δεν μπορεί να μείνει μπαγιάτικο από
+    //    προηγούμενη τοποθεσία. Το **αποδεδειγμένο** όνομα πάει στο `regionName`, που είναι
+    //    το **κανονικό** (πρώτο της αλυσίδας `['regionName','region']`, ADR-772) και γι' αυτό
+    //    **νικά στην ανάγνωση**. Ως τη Φάση Β′ γραφόταν η ωμή ετικέτα εδώ **δίπλα σε κενό
+    //    `regionName`**, οπότε η ετικέτα της μηχανής **νικούσε σιωπηλά**.
     region: dragged.region,
     country: toStoredCountryCode(dragged.country) ?? toStoredCountryCode(address.country),
   };
+}
+
+/**
+ * **Η ιεραρχία της εγγραφής: γράψε ό,τι αποδείχθηκε, καθάρισε ό,τι ΔΕΝ αποδείχθηκε.**
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 **Ζ4γ** — ως τη Φάση Β′ εδώ εφαρμοζόταν το `COMPANY_ADDRESS_HIERARCHY_CLEARED`
+ * **άνευ όρων**, και το αποτέλεσμα ήταν το μετρημένο *«το υποκατάστημα χάνει δήμο»*: νέα οδός
+ * από τη μηχανή, **κενή** ιεραρχία δίπλα της. Ο μηδενισμός ήταν **σωστός** όσο δεν είχαμε
+ * ταυτότητες *(ADR-277: όνομα μιας περιοχής με ταυτότητα άλλης)* — τώρα **έχουμε**.
+ *
+ * 🔴 **ΤΟ `?? []` ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΑΜΥΝΤΙΚΟΣ ΘΟΡΥΒΟΣ.** Αυτή η συνάρτηση καλείται **μόνο**
+ * όταν ο άνθρωπος επέλεξε «**Ναι, ενημέρωσε**», δηλαδή όταν το κείμενο **αντικαθίσταται**.
+ * Εκεί «δεν ρωτήθηκε» *(η ιεραρχία δεν διαβάστηκε)* και «ρωτήθηκα και δεν έμαθα» καταλήγουν
+ * στο **ίδιο**: δεν έχουμε απόδειξη για τη **νέα** διεύθυνση ⇒ καθαρίζουμε. Το να
+ * κληρονομούσαμε την παλιά ταυτότητα δίπλα σε **νέα οδό** είναι ακριβώς το ελάττωμα του
+ * **ADR-277**, και είναι **αόρατο** σε κάθε οθόνη. *(Το «Μόνο η θέση» **δεν** περνά από εδώ
+ * — δες `confirmedDragState`: χωρίς `dragged` γράφεται μόνο σημείο.)*
+ *
+ * 🔑 **Η προβολή γίνεται από τον πίνακα, όχι με το χέρι** *(ADR-772)*: ό,τι το
+ * `companyAddress` δεν κρατά *(έξι από τα οκτώ `*Id`)* το πετά **το λεξιλόγιο**.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+function contactHierarchyPatch(dragged: DragResolvedAddress): Partial<CompanyAddress> {
+  const form = provedHierarchyValue(dragged.admin ?? []);
+  const projected = overwriteAdminHierarchy(form, 'form', 'companyAddress') as Partial<CompanyAddress>;
+
+  // 🔴 **Η «Πόλη» ΕΙΝΑΙ το όνομα του οικισμού σε αυτό το δοχείο** — ένα πεδίο, δύο ρόλοι
+  //    *(`ADMIN_LEVEL_VOCABULARY.settlement.companyAddress.name = ['city']`)*. Άρα: οικισμός
+  //    αποδεδειγμένος ⇒ **όνομα μητρώου**· αλλιώς ⇒ **μένει το κείμενο της μηχανής** και
+  //    καθαρίζει **μόνο** το `settlementId`. Άγνοια δικαιολογεί σβήσιμο **ταυτότητας**,
+  //    ποτέ σβήσιμο **κειμένου** που είναι ό,τι μόνο έχουμε.
+  return { ...projected, city: form.settlementName || dragged.city };
 }
 
 /**

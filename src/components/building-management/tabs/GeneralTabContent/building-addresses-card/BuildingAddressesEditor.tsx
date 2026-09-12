@@ -12,6 +12,7 @@ import type {
   ResolvedAddressFields,
 } from '@/components/shared/addresses/editor';
 import { mapPinDropText, pendingPinAddress } from '@/components/shared/addresses/pin-drop';
+import { buildingHierarchyAfterDrag } from './building-address-drag';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import {
@@ -219,19 +220,24 @@ export function BuildingAddressesEditor({
     notifyParent(updated, type, blockSide, label, isPrimary);
   }, [hierarchy, notifyParent, type, blockSide, label, isPrimary]);
 
-  // Drag confirmed → clear ELSTAT hierarchy, set basic fields
+  /**
+   * Σύρσιμο επιβεβαιωμένο → **γράψε ό,τι αποδείχθηκε, καθάρισε ό,τι ΔΕΝ αποδείχθηκε**.
+   *
+   * 🔴 **ADR-332 D27 Φάση Β′** — εδώ μηδενιζόταν **ΟΛΟ** το σετ ΕΛΣΤΑΤ *(εννέα πεδία,
+   * γραμμένα με το χέρι)* με σχόλιο «clear ELSTAT hierarchy». Ήταν η **τέταρτη** από τις
+   * τέσσερις διαδρομές συρσίματος που έσβηνε ιεραρχία χωρίς να ρωτήσει κανέναν — και η
+   * μόνη που τη μηδένιζε **ολόκληρη**.
+   *
+   * ⚠️ **Το `?? []` είναι απόφαση**: εδώ φτάνουμε **μόνο** μετά από «Ναι, ενημέρωσε», δηλαδή
+   * όταν το κείμενο **αντικαθίσταται**. Καμία απόδειξη ⇒ **καθάρισμα** — το να κρατούσαμε
+   * την ταυτότητα της **προηγούμενης** διεύθυνσης δίπλα σε νέα οδό είναι ακριβώς το
+   * ελάττωμα του **ADR-277**, και είναι αόρατο σε κάθε οθόνη.
+   */
   const handleDragApplied = useCallback((resolved: ResolvedAddressFields) => {
-    const updated: Partial<AddressWithHierarchyValue> = {
-      street: resolved.street ?? '',
-      number: resolved.number ?? '',
-      postalCode: resolved.postalCode ?? '',
-      settlementName: resolved.city ?? '',
-      communityName: resolved.neighborhood ?? '',
-      regionName: resolved.region ?? '',
-      communityId: null, municipalUnitName: '', municipalUnitId: null,
-      municipalityName: '', municipalityId: null, regionalUnitName: '',
-      regionalUnitId: null, regionId: null, decentAdminName: '', majorGeoName: '',
-    };
+    // 🔑 Η λογική ζει σε **καθαρή** συνάρτηση *(`building-address-drag.ts`)* — όχι για
+    //    αισθητική: το μόνο test που αναφέρει αυτό το component **το αντικαθιστά με
+    //    κατάσκοπο**, άρα κώδικας γραμμένος εδώ **δεν εκτελείται ΠΟΤΕ** από τη σουίτα.
+    const updated = buildingHierarchyAfterDrag(hierarchy, resolved);
     setHierarchy(updated);
     const partial = hierarchyToPartial(updated, { type, blockSide, label, isPrimary });
     onChange(partial);
