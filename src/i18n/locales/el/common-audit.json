@@ -129,6 +129,8 @@
       "securityFeatures": "Χαρακτηριστικά Ασφαλείας",
       "systemsOverride": "Εγκαταστάσεις",
       "company": "Εταιρεία",
+      "plan": "Πακέτο",
+      "createdBy": "Δημιουργήθηκε από",
       "linkedCompanyId": "Συνδεδεμένη Εταιρεία",
       "linkedCompanyName": "Επωνυμία Συνδ. Εταιρείας",
       "location": "Τοποθεσία",
@@ -395,6 +397,19 @@
         "neighborhood": "Περιοχή / Συνοικία",
         "blockSide": "Πλευρά Οικοδομικού Τετραγώνου",
         "floor": "Όροφος"
+      },
+      "text_template": {
+        "name": "Όνομα",
+        "category": "Κατηγορία",
+        "scope": "Εμβέλεια",
+        "placeholders": "Πλήθος placeholders",
+        "content": {
+          "paragraphs": "Πλήθος παραγράφων"
+        }
+      },
+      "custom_dictionary_entry": {
+        "term": "Όρος",
+        "language": "Γλώσσα"
       }
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."

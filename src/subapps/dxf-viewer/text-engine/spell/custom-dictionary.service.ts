@@ -63,8 +63,10 @@ function dictionaryCollection() {
 
 function buildCreationChanges(doc: CustomDictionaryEntryDoc): AuditFieldChange[] {
   return [
-    fieldChange('term', null, doc.term, 'Όρος'),
-    fieldChange('language', null, doc.language, 'Γλώσσα'),
+    // ADR-852 §4.8 — καμία ετικέτα εδώ: λύνεται ζωντανά από το i18n
+    // (`audit.fields.custom_dictionary_entry.*`), σε **δύο** γλώσσες.
+    fieldChange('term', null, doc.term),
+    fieldChange('language', null, doc.language),
   ];
 }
 
@@ -74,18 +76,18 @@ function buildUpdateChanges(
 ): AuditFieldChange[] {
   const changes: AuditFieldChange[] = [];
   if (before.term !== after.term) {
-    changes.push(fieldChange('term', before.term, after.term, 'Όρος'));
+    changes.push(fieldChange('term', before.term, after.term));
   }
   if (before.language !== after.language) {
-    changes.push(fieldChange('language', before.language, after.language, 'Γλώσσα'));
+    changes.push(fieldChange('language', before.language, after.language));
   }
   return changes;
 }
 
 function buildDeletionChanges(doc: CustomDictionaryEntryDoc): AuditFieldChange[] {
   return [
-    fieldChange('term', doc.term, null, 'Όρος'),
-    fieldChange('language', doc.language, null, 'Γλώσσα'),
+    fieldChange('term', doc.term, null),
+    fieldChange('language', doc.language, null),
   ];
 }
 

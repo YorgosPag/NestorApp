@@ -60,10 +60,14 @@ function templateCollection() {
 /** Build the field-change list for a "created" audit entry. */
 function buildCreationChanges(doc: UserTextTemplateDoc): AuditFieldChange[] {
   return [
-    fieldChange('name', null, doc.name, 'Όνομα'),
-    fieldChange('category', null, doc.category, 'Κατηγορία'),
-    fieldChange('scope', null, doc.scope, 'Εμβέλεια'),
-    fieldChange('placeholders', null, doc.placeholders.length, 'Πλήθος placeholders'),
+    // ADR-852 §4.8 — καμία ετικέτα εδώ: λύνεται ζωντανά από το i18n
+    // (`audit.fields.text_template.*`), σε **δύο** γλώσσες. Τα ωμά ελληνικά που ήταν εδώ
+    // δεν μεταφράζονταν ΠΟΤΕ (N.11), και το μητρώο `TEXT_TEMPLATE_TRACKED_FIELDS` δίνει
+    // πλέον περιγραφέα στον reader.
+    fieldChange('name', null, doc.name),
+    fieldChange('category', null, doc.category),
+    fieldChange('scope', null, doc.scope),
+    fieldChange('placeholders', null, doc.placeholders.length),
   ];
 }
 
@@ -105,15 +109,15 @@ function buildUpdateChanges(
 ): AuditFieldChange[] {
   const changes: AuditFieldChange[] = [];
   if (before.name !== after.name) {
-    changes.push(fieldChange('name', before.name, after.name, 'Όνομα'));
+    changes.push(fieldChange('name', before.name, after.name));
   }
   if (before.category !== after.category) {
-    changes.push(fieldChange('category', before.category, after.category, 'Κατηγορία'));
+    changes.push(fieldChange('category', before.category, after.category));
   }
   // ADR-651 Φάση Θ — η «δημοσίευση» στη βιβλιοθήκη γραφείου είναι η πιο βαριά ενέργεια που
   // μπορεί να κάνει ο χρήστης (το πρότυπο γίνεται ορατό σε ΟΛΑ τα έργα): μπαίνει στο audit.
   if (before.scope !== after.scope) {
-    changes.push(fieldChange('scope', before.scope, after.scope, 'Εμβέλεια'));
+    changes.push(fieldChange('scope', before.scope, after.scope));
   }
   if (before.content !== after.content) {
     changes.push(
@@ -121,7 +125,6 @@ function buildUpdateChanges(
         'content.paragraphs',
         before.content.paragraphs.length,
         after.content.paragraphs.length,
-        'Πλήθος παραγράφων',
       ),
     );
     if (before.placeholders.length !== after.placeholders.length) {
@@ -130,7 +133,6 @@ function buildUpdateChanges(
           'placeholders',
           before.placeholders.length,
           after.placeholders.length,
-          'Πλήθος placeholders',
         ),
       );
     }
@@ -141,8 +143,8 @@ function buildUpdateChanges(
 /** Build the field-change list for a "deleted" audit entry. */
 function buildDeletionChanges(doc: UserTextTemplateDoc): AuditFieldChange[] {
   return [
-    fieldChange('name', doc.name, null, 'Όνομα'),
-    fieldChange('category', doc.category, null, 'Κατηγορία'),
+    fieldChange('name', doc.name, null),
+    fieldChange('category', doc.category, null),
   ];
 }
 

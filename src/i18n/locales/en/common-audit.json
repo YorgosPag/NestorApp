@@ -129,6 +129,8 @@
       "securityFeatures": "Security Features",
       "systemsOverride": "Systems (Heating/Cooling)",
       "company": "Company",
+      "plan": "Plan",
+      "createdBy": "Created by",
       "linkedCompanyId": "Linked Company",
       "linkedCompanyName": "Linked Company Name",
       "location": "Location",
@@ -395,6 +397,19 @@
         "neighborhood": "Neighborhood",
         "blockSide": "Block side",
         "floor": "Floor"
+      },
+      "text_template": {
+        "name": "Name",
+        "category": "Category",
+        "scope": "Scope",
+        "placeholders": "Placeholder count",
+        "content": {
+          "paragraphs": "Paragraph count"
+        }
+      },
+      "custom_dictionary_entry": {
+        "term": "Term",
+        "language": "Language"
       }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."

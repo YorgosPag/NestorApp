@@ -1135,6 +1135,63 @@ const BIM_FAMILY_TYPE_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const BIM_FAMILY_TYPE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(BIM_FAMILY_TYPE_TRACKED_FIELDS_RAW, {});
 
+// ============================================================================
+// ADR-852 ΕΡΓΑΣΙΑ Β — οι τρεις οντότητες που ΕΓΡΑΦΑΝ ιστορικό ΧΩΡΙΣ μητρώο
+// ============================================================================
+
+/**
+ * 🔴 **ΓΙΑΤΙ ΜΠΗΚΑΝ (ADR-852 §4.8).** Και οι τρεις γράφουν **ήδη** στο Firestore μέσω
+ * απευθείας `EntityAuditService.recordChange`, χτίζοντας το `changes[]` **με το χέρι** —
+ * άρα ο δρομολογητής επέστρεφε `null` και ο reader δεν είχε **ποτέ** περιγραφέα γι' αυτές.
+ * Δύο από αυτές (`text_template`, `custom_dictionary_entry`) κουβαλούσαν **ωμά ελληνικά
+ * μέσα σε `.ts`** ως ετικέτες, δηλαδή κείμενο που **δεν μεταφραζόταν ποτέ** στα αγγλικά.
+ *
+ * 🔑 **Η ετικέτα ΔΕΝ έρχεται από εδώ** — έρχεται από το i18n
+ * (`audit.fields.{οντότητα}.{πεδίο}`, βήμα 2 του `resolveFieldLabel`), όπως και για τις
+ * **8** υπάρχουσες φωλιές. Οι τιμές παρακάτω είναι **field identifiers**, ακριβώς όπως
+ * και στα άλλα 30 μητρώα (ADR-852 §4.6.1 — «το `label === field` είναι το κενό, όχι
+ * στιγμιότυπο»). ⚠️ **ΜΗΝ προσθέσεις `labelKey`**: το κλειδί **παράγεται** από
+ * `entityType`+`field`· ρητή δήλωση θα ήταν **δεύτερη απάντηση** στο ίδιο ερώτημα, που
+ * μπορεί να διαφωνήσει — σχήμα CHECK 3.59. Καμία από τις 8 φωλιές δεν το κάνει.
+ */
+const COMPANY_TRACKED_FIELDS_RAW: Record<string, string> = {
+  name: 'name',
+  contactId: 'contactId',
+  status: 'status',
+  plan: 'plan',
+  createdBy: 'createdBy',
+};
+
+/** Company audit registry — τα 5 πεδία του `buildCreationChanges` (ADR-210). */
+export const COMPANY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(COMPANY_TRACKED_FIELDS_RAW, {});
+
+/**
+ * `text_template` (ADR-651 Φάση Θ). Το `content.paragraphs` είναι **dot-notation**: το
+ * `content` είναι βαθύ AST και η υπηρεσία καταγράφει **σύνοψη** (πλήθος παραγράφων), όχι
+ * το δέντρο. Το i18n το ακολουθεί με φωλιά-σε-φωλιά — ίδιο πρότυπο με το
+ * `audit.fields.property.commercial.*`.
+ */
+const TEXT_TEMPLATE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  name: 'name',
+  category: 'category',
+  scope: 'scope',
+  placeholders: 'placeholders',
+  'content.paragraphs': 'content.paragraphs',
+};
+
+export const TEXT_TEMPLATE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(TEXT_TEMPLATE_TRACKED_FIELDS_RAW, {});
+
+/** `custom_dictionary_entry` (ADR-344 — προσωπικό λεξικό ορθογραφίας). */
+const CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS_RAW: Record<string, string> = {
+  term: 'term',
+  language: 'language',
+};
+
+export const CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -1213,6 +1270,13 @@ export function getTrackedFieldsForEntityAuditType(
       return STAIR_TRACKED_FIELDS;
     case 'bim_family_type':
       return BIM_FAMILY_TYPE_TRACKED_FIELDS;
+    // ADR-852 §4.8 — οι τρεις που ΕΓΡΑΦΑΝ ιστορικό χωρίς μητρώο.
+    case 'company':
+      return COMPANY_TRACKED_FIELDS;
+    case 'text_template':
+      return TEXT_TEMPLATE_TRACKED_FIELDS;
+    case 'custom_dictionary_entry':
+      return CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS;
     default:
       return null;
   }
