@@ -92,10 +92,37 @@ describe('Π — βαθμονόμηση σε πραγματικό ιστορικ
     const stillInCommon = JSON.parse(fs.readFileSync(`${ROOT}/src/i18n/locales/el/common.json`, 'utf8'));
     expect(stillInCommon.audit.fields).toBeUndefined();
 
-    const leafCount = (o) => (o && typeof o === 'object' && !Array.isArray(o)
-      ? Object.values(o).reduce((n, v) => n + leafCount(v), 0) : 1);
-    const gained = leafCount(after.audit.fields) - leafCount(before.audit.fields);
-    expect(`ανακτήθηκαν ${gained}`).toBe('ανακτήθηκαν 177');
+    // 🔴 **ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΠΛΗΘΟΣ — διορθώθηκε ADR-852 §4.8 (2026-09-12).**
+    //
+    // Η πρώτη γραφή ρωτούσε `gained === 177`, δηλαδή **πόσα** φύλλα έχει σήμερα το αρχείο
+    // μείον όσα είχε ο «νικητής». Αυτό είναι **change-detector**: έσπαγε σε κάθε **νόμιμη**
+    // προσθήκη κλειδιού — χωρίς να έχει βρει ποτέ σφάλμα — και έσπασε όντως με **9** νέα
+    // κλειδιά (`text_template`/`custom_dictionary_entry`/`plan`/`createdBy`), που είναι
+    // ακριβώς η θεραπεία που το ADR-852 επιδιώκει. Θα ξανάσπαγε στη Φ4 (133 πεδία BIM).
+    //
+    // ⚠️ ΚΑΙ ΗΤΑΝ ΤΑΥΤΟΧΡΟΝΑ **ΧΑΛΑΡΟ**: το πλήθος είναι τυφλό στην **ανταλλαγή**. Αν
+    // χανόταν το `project.name` και προστίθετο ένα οποιοδήποτε άλλο κλειδί, ο αριθμός θα
+    // έμενε ίδιος και η άγκυρα **πράσινη πάνω σε πραγματική απώλεια** — δηλαδή ακριβώς η
+    // βλάβη που το ADR-810 υπάρχει για να μην ξανασυμβεί.
+    //
+    // 🔑 Η ερώτηση είναι **«ανακτήθηκαν τα χαμένα;»**, και απαντιέται με **ΠΟΙΑ**, όχι με
+    // **πόσα**. Ίδιο δόγμα με CHECK 3.59 (*ταυτότητα `<όνομα>@<ρίζα>`, ΠΟΤΕ σκέτο πλήθος*)
+    // και CHECK 3.78 (*ratchet κατά ταυτότητα: «155 → 155» με ανταλλαγή ΜΠΛΟΚΑΡΕΙ*).
+    const flat = (o, pre = '', acc = new Map()) => {
+      for (const [k, v] of Object.entries(o || {})) {
+        const q = pre ? `${pre}.${k}` : k;
+        if (v && typeof v === 'object' && !Array.isArray(v)) flat(v, q, acc);
+        else acc.set(q, v);
+      }
+      return acc;
+    };
+    const lost = [...flat(before.audit.fields).keys()].filter((k) => !flat(after.audit.fields).has(k));
+
+    // ΠΑΡΟΝΟΜΑΣΤΗΣ: κενό `before` θα έκανε το φίλτρο να περάσει δωρεάν — «πράσινο επειδή
+    // κανείς δεν κοίταξε». Ο νικητής της συγχώνευσης είχε **196** κλειδιά· αν αυτό πέσει,
+    // η βαθμονόμηση δείχνει σε λάθος commit και η άγκυρα δεν μετράει τίποτα.
+    expect(flat(before.audit.fields).size).toBeGreaterThan(150);
+    expect(lost).toEqual([]);
   });
 });
 
