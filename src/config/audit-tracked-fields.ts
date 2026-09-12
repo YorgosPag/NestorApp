@@ -48,7 +48,20 @@ function mergeDefs(
 // PROPERTY TRACKED FIELDS (Centralized — previously in properties/[id]/route.ts)
 // ============================================================================
 
-/** Fields tracked for property audit trail (raw field → Greek label) */
+/**
+ * Fields tracked for property audit trail (raw field → **field identifier**).
+ *
+ * ⚠️ **ΟΧΙ ετικέτες** — ADR-852 §4.6.1, διορθωμένο 2026-09-12. Αυτό το σχόλιο έγραφε
+ * «raw field → Greek label» και **διαψευδόταν από το ίδιο του το περιεχόμενο**:
+ * `name: 'name'`, `'commercial.askingPrice': 'commercial.askingPrice'`. Η τιμή γίνεται
+ * `TrackedFieldDef.label` και γράφεται **αυτούσια** σε κάθε `AuditFieldChange` ⇒ το
+ * **χρονικό** κανάλι του audit είναι σήμερα άδειο εδώ, όπως παντού στο έργο.
+ *
+ * 🔑 Ότι οι οθόνες CRM **δείχνουν** σωστές ετικέτες δεν το οφείλουν σε αυτόν τον πίνακα:
+ * το οφείλουν στο **i18n** (`audit.fields.*`, 174 κλειδιά — το **ζωντανό** κανάλι). Γι'
+ * αυτό το BIM σπάει και το CRM όχι, και γι' αυτό τα 133 κενά είναι **όντως** BIM.
+ * *(Το ομόλογο σχόλιο του contact παρακάτω το έλεγε ήδη σωστά.)*
+ */
 const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Core fields
   name: 'name',
@@ -89,7 +102,8 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
 // ============================================================================
 
 /**
- * Fields tracked for project audit trail (field → Greek label).
+ * Fields tracked for project audit trail (field → **field identifier**, όχι ετικέτα —
+ * δες `PROPERTY_TRACKED_FIELDS_RAW` παραπάνω· ADR-852 §4.6.1, διορθωμένο 2026-09-12).
  *
  * Used by `/api/projects/[projectId]` PATCH handler via
  * `EntityAuditService.diffFields()` / `diffFieldsWithResolution()`.
