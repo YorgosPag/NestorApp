@@ -55,6 +55,10 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { issueWorkspaceInvitation } from '@/server/auth/workspace-invitation';
+import {
+  notifyWorkspaceInvitation,
+  type InvitationNoticeOutcome,
+} from '@/server/auth/workspace-invitation-notice';
 import { INVITABLE_ROLES } from '@/types/workspace-invitation';
 
 const logger = createModuleLogger('WORKSPACE_INVITATION_ISSUE');
@@ -85,9 +89,37 @@ type IssueResponse =
       readonly expiresAt: string;
       /** Πόσες προηγούμενες ζωντανές ακυρώθηκαν στην ίδια συναλλαγή (§7.3). */
       readonly supersededCount: number;
+      /**
+       * 🔑 **ΤΙ ΑΠΕΓΙΝΕ ΤΟ ΜΗΝΥΜΑ — ΟΝΟΜΑΣΤΙΚΑ, ΚΑΙ ΠΟΤΕ «ΣΤΑΛΘΗΚΕ»** (Φ5).
+       *
+       * Η πρόσκληση **υπάρχει** ό,τι κι αν λέει αυτό το πεδίο — γι' αυτό η απάντηση
+       * μένει **201**. Αλλά ο διαχειριστής πρέπει να μάθει **αμέσως** αν το μήνυμα
+       * δεν έφυγε: αλλιώς περιμένει άνθρωπο που **δεν έλαβε ποτέ** τίποτα, και το
+       * μόνο που βλέπει είναι «σε αναμονή».
+       *
+       * ⚠️ Η τιμή `accepted` σημαίνει *«ο πάροχος το δέχτηκε προς αποστολή»*, **όχι**
+       * «παραδόθηκε» — δες τον λόγο, γραμμένο στο `workspace-invitation-notice.ts`.
+       */
+      readonly delivery: InvitationNoticeOutcome;
     }
   | { readonly error: 'ROLE_NOT_INVITABLE' | 'ROLE_ABOVE_INVITER' }
   | { readonly error: 'INVITE_NOT_ISSUED' };
+
+/** Η έκβαση της υπηρεσίας **όταν εκδόθηκε** — με το ωμό token μέσα. */
+type IssuedOutcome = Extract<Awaited<ReturnType<typeof issueWorkspaceInvitation>>, { kind: 'issued' }>;
+
+/**
+ * Ό,τι φτάνει στον {@link respond}.
+ *
+ * 🔑 **ΓΙΑΤΙ ΕΜΠΛΟΥΤΙΣΜΕΝΗ ΕΝΩΣΗ ΚΑΙ ΟΧΙ ΔΕΥΤΕΡΗ ΠΑΡΑΜΕΤΡΟΣ**: η έκβαση της παράδοσης
+ * υπάρχει **μόνο** όταν υπάρχει πρόσκληση. Μια παράμετρος `delivery: … | null` θα
+ * επέτρεπε `null` στον κλάδο της επιτυχίας — δηλαδή θα ζητούσε από τον επόμενο ένα
+ * `?? 'failed'`, που είναι **ψέμα σε τύπο**. Έτσι ο μεταγλωττιστής κρατά το
+ * **κλειστό σύνολο** ακέραιο: τέταρτη έκβαση **δεν μεταγλωττίζεται**.
+ */
+type IssueResult =
+  | { readonly kind: 'issued'; readonly issued: IssuedOutcome; readonly delivery: InvitationNoticeOutcome }
+  | Extract<Awaited<ReturnType<typeof issueWorkspaceInvitation>>, { kind: 'refused' }>;
 
 async function handler(request: NextRequest, ctx: AuthContext): Promise<NextResponse<IssueResponse>> {
   const parsed = await readJsonBody(request, issueBodySchema);
@@ -115,7 +147,32 @@ async function handler(request: NextRequest, ctx: AuthContext): Promise<NextResp
     return NextResponse.json({ error: 'INVITE_NOT_ISSUED' } as const, { status: 503 });
   }
 
-  return respond(outcome);
+  if (outcome.kind === 'refused') return respond(outcome);
+
+  // 🔑 **ΠΕΡΙΜΕΝΟΥΜΕ ΤΟ EMAIL — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΑΒΛΕΨΙΑ** (N.7.2 #6).
+  //
+  // Το `after()` θα έδινε ταχύτερη απόκριση και **λάθος** πληροφορία: ο διαχειριστής θα
+  // έβλεπε «η πρόσκληση δημιουργήθηκε» και θα περίμενε άνθρωπο που **δεν έλαβε ποτέ**
+  // τίποτα — η ακριβής βλάβη που η Atlassian χρειάστηκε να λύσει εκ των υστέρων με
+  // ξεχωριστό *«admin email audit»*. Εδώ η πληροφορία ταξιδεύει **με την ίδια απάντηση**.
+  //
+  // ⚠️ **Η αναμονή είναι φραγμένη**: ο `sendReplyViaMailgun` φορά πλέον
+  // `AbortSignal.timeout(PROVIDER_TIMEOUT_MS)` — χωρίς αυτό, ένας **σιωπηλός** πάροχος θα
+  // κρατούσε το αίτημα του διαχειριστή ανοιχτό μέχρι να το κόψει η πλατφόρμα.
+  //
+  // ⚠️ **Και δεν πετά ΠΟΤΕ**: το έγγραφο έχει ήδη γραφτεί και η προηγούμενη ζωντανή έχει
+  // ανακληθεί στην ίδια συναλλαγή (§7.3). Εξαίρεση εδώ θα έλεγε «απέτυχε» για πράξη που
+  // **πέτυχε**, και ο διαχειριστής θα ξαναπατούσε — ακυρώνοντας σιωπηλά το token που
+  // μόλις έφυγε.
+  const delivery = await notifyWorkspaceInvitation({
+    invitation: outcome.invitation,
+    token: outcome.token,
+    // Η στιγμή της έκδοσης, από το **ίδιο** το έγγραφο: κανένα δεύτερο ρολόι, ώστε οι
+    // «ημέρες που απομένουν» του μηνύματος να μετρούν από εκεί που μετρά και η λήξη.
+    nowISOValue: outcome.invitation.createdAt,
+  });
+
+  return respond({ kind: 'issued', issued: outcome, delivery });
 }
 
 /**
@@ -124,20 +181,22 @@ async function handler(request: NextRequest, ctx: AuthContext): Promise<NextResp
  * ⚠️ Κλειστό σύνολο: **τέταρτη** έκβαση της υπηρεσίας **δεν μεταγλωττίζεται** μέχρι κάποιος
  * να πει τι σημαίνει για το δίκτυο. Ίδιο ιδίωμα με το `first-contacts/guest/confirm`.
  */
-export function respond(
-  outcome: Awaited<ReturnType<typeof issueWorkspaceInvitation>>,
-): NextResponse<IssueResponse> {
-  switch (outcome.kind) {
+export function respond(result: IssueResult): NextResponse<IssueResponse> {
+  switch (result.kind) {
     case 'issued':
-      // ⚠️ **201**: η πρόσκληση **δημιουργήθηκε**. Το ότι το email φεύγει αργότερα (Φ5) δεν
-      //    αλλάζει το ότι η οντότητα υπάρχει και έχει ταυτότητα.
+      // ⚠️ **201 ΑΚΟΜΗ ΚΑΙ ΟΤΑΝ ΤΟ EMAIL ΔΕΝ ΕΦΥΓΕ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΣΩΣΤΟ**: η οντότητα
+      //    **δημιουργήθηκε** και έχει ταυτότητα· η παράδοση είναι **άλλο** γεγονός, και
+      //    ταξιδεύει με **δικό της** όνομα στο `delivery`. Ένα 500 εδώ θα έλεγε ψέματα
+      //    για τη γραφή, και θα έσπρωχνε τον διαχειριστή να ξαναπατήσει — γεννώντας
+      //    δεύτερη πρόσκληση που ακυρώνει την πρώτη (§7.3).
       return NextResponse.json(
         {
-          invitationId: outcome.invitation.id,
-          inviteeEmail: outcome.invitation.inviteeEmail,
-          role: outcome.invitation.role,
-          expiresAt: outcome.invitation.expiresAt,
-          supersededCount: outcome.supersededCount,
+          invitationId: result.issued.invitation.id,
+          inviteeEmail: result.issued.invitation.inviteeEmail,
+          role: result.issued.invitation.role,
+          expiresAt: result.issued.invitation.expiresAt,
+          supersededCount: result.issued.supersededCount,
+          delivery: result.delivery,
         },
         { status: 201 },
       );
@@ -149,7 +208,7 @@ export function respond(
       //    πρόσκληση» (ο `super_admin` είναι break-glass, όχι βαθμίδα).
       return NextResponse.json(
         {
-          error: outcome.reason === 'role-above-inviter' ? 'ROLE_ABOVE_INVITER' : 'ROLE_NOT_INVITABLE',
+          error: result.reason === 'role-above-inviter' ? 'ROLE_ABOVE_INVITER' : 'ROLE_NOT_INVITABLE',
         } as const,
         { status: 422 },
       );

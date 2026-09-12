@@ -19,6 +19,7 @@ import 'server-only';
 
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { PROVIDER_TIMEOUT_MS } from '@/server/comms/email-provider-chain';
 
 const logger = createModuleLogger('PIPELINE_MAILGUN_SENDER');
 
@@ -110,12 +111,23 @@ export async function sendReplyViaMailgun(
       }
     }
 
+    // 🔴 **ΤΟ ΟΡΙΟ ΧΡΟΝΟΥ ΕΛΕΙΠΕ, ΚΑΙ ΤΟ ΠΛΗΡΩΝΑΝ ΚΑΙ ΟΙ ΕΝΝΕΑ ΚΑΤΑΝΑΛΩΤΕΣ** (2026-09-12,
+    //    ADR-853 Φ5). Η κλήση ήταν **γυμνό `fetch`**: η συνηθέστερη βλάβη παρόχου δεν είναι
+    //    το «όχι», είναι η **σιωπή** — και χωρίς όριο η σιωπή γίνεται αίτημα που δεν
+    //    τελειώνει. Το ίδιο ακριβώς περιστατικό είναι ήδη γραμμένο στο έργο (2026-04-19,
+    //    *«Resend hung silently → 408 in UI»*) και γέννησε το `PROVIDER_TIMEOUT_MS`· εκείνο
+    //    όμως φυλούσε **μόνο** την αλυσίδα παρόχων, ενώ **αυτός** ο αποστολέας — που τον
+    //    καλούν τα email λογαριασμού, η πρώτη επαφή, τα τιμολόγια και πλέον η πρόσκληση —
+    //    ήταν **αφύλακτος**.
+    // 🔑 **Η ΙΔΙΑ σταθερά, όχι δεύτερος αριθμός** (ADR-749): δύο όρια για το ίδιο ερώτημα
+    //    θα απέκλιναν με την πρώτη ρύθμιση.
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
       },
       body: formData,
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
 
     if (!response.ok) {
