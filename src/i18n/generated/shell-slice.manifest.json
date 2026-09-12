@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5faa7275c52a3c3ec3294b042f739db56d138e665f50408f80281fec4a7a64d1",
+  "inputsSha256": "b1f16415ab759f40626627a8836099c5df3e350d4a8e815108613e8074f3c069",
   "languages": [
     "el"
   ],
@@ -4631,6 +4631,7 @@
     "src/lib/geo/geo-ring.ts": "f6003ba3244ce1d46a77f7bc2fcfa47145e8529b8844a1771cce0965b152f3b6",
     "src/lib/geo/geo-shape-relation.ts": "52b3fd6b91e33573a8b029ce033711ac2b4d4b13a8fbeaa3157ca06cfb6d07a6",
     "src/lib/geocoding/address-line-query.ts": "03eecca212491445794f7e5bf21f51bdadd1c5e607ee87ed3b75d4fe2ea73ab5",
+    "src/lib/geocoding/address-position-types.ts": "9d4f5ef27e3afaddb30cf696e90b6123ee99bdc2f522ff9d2a406b453e1fbd5c",
     "src/lib/geocoding/geocoding-service.ts": "44e06194df3d42ae880608806942c3f96a53736d13589ca4600741274fb96ae4",
     "src/lib/geocoding/geocoding-types.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/lib/hash/fnv1a.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -4821,7 +4822,7 @@
     "src/subapps/dxf-viewer/utils/scene-units.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/procurement/types/trade.ts": "09877fafb56a503091eda14932a8c302253de5d145ee80cd94df0b63c34584b0",
     "src/types/ContactFormTypes.ts": "c7ce112e748e6f25757748abaa34b628a8fbcc6f8abd74164b1528e50b6db1d7",
-    "src/types/address-position.ts": "ce242c49be232435f788216d68a35c8dadec77220bb134fb31506656eda2b458",
+    "src/types/address-position.ts": "7f6991ca6f8ab757f390f2f56c49fb9c33b875cf03a0cb6286c5f1e071b30083",
     "src/types/agency-coverage.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/types/agency-profile.ts": "c44bac4a7428ae1accb58acb736b4053fcf413830a295f47c1bc783d5b9b1292",
     "src/types/api/building-spaces.api.types.ts": "e94c6bda125749cbda26cfa7c785303dfbb4974e9fa9872197f3a2fe4702ef45",
@@ -4911,7 +4912,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 631,
+    "shellFiles": 632,
     "sliceBytes": 409913
   },
   "unresolvableKeys": [

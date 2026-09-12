@@ -18,6 +18,7 @@ import {
   type GeocodeHit,
   type GeocoderQuery,
   type PositionDrift,
+  type PositionTextVerdict,
 } from './address-position-types';
 
 type Point = { readonly lat: number; readonly lng: number };
@@ -134,8 +135,19 @@ export function humanPinned(point: Point, now: number): AddressPositionResolutio
   };
 }
 
-/** Η απάντηση της μηχανής, **ολόκληρη** — σημείο και ακρίβεια μαζί ή καθόλου. */
-export function geocodedPosition(hit: GeocodeHit, now: number): AddressPosition {
+/**
+ * Η απάντηση της μηχανής, **ολόκληρη** — σημείο, ακρίβεια **και η ερώτηση που τέθηκε**.
+ *
+ * 🔑 **Το `query` δεν είναι διακοσμητικό: είναι η ΑΠΟΔΕΙΞΗ** (ADR-332 D27 Ζ6). Χωρίς αυτό, η
+ * αποθηκευμένη ακρίβεια ήταν ισχυρισμός **χωρίς αντικείμενο** — κανείς δεν μπορούσε να πει
+ * *για ποιο κείμενο* ισχύει. Παράμετρος και όχι επανυπολογισμός από το `incoming`: αυτό που
+ * **ρωτήθηκε** είναι το μόνο που δικαιολογεί την απάντηση, και είναι ήδη φτιαγμένο (`toQuery`).
+ */
+export function geocodedPosition(
+  hit: GeocodeHit,
+  now: number,
+  query: GeocoderQuery,
+): AddressPosition {
   return {
     coordinates: { lat: hit.lat, lng: hit.lng },
     geocodingMetadata: {
@@ -143,10 +155,35 @@ export function geocodedPosition(hit: GeocodeHit, now: number): AddressPosition 
       accuracy: hit.accuracy,
       variantUsed: hit.variantUsed ?? 0,
       ...(hit.osmType ? { osmType: hit.osmType } : {}),
+      resolvedFor: query,
+      // Μόνο η **επιφύλαξη** γράφεται· η απουσία σημαίνει «ταίριαξαν όλα».
+      ...(hit.partialMatch === true ? { partialMatch: true } : {}),
     },
     source: 'geocoded',
     verifiedAt: now,
   };
+}
+
+/**
+ * **ΙΣΧΥΕΙ Η ΑΠΟΘΗΚΕΥΜΕΝΗ ΘΕΣΗ ΓΙΑ ΤΟ ΚΕΙΜΕΝΟ ΠΟΥ ΣΥΝΟΔΕΥΕΙ;** — ADR-332 D27 Ζ6.
+ *
+ * 🔑 **Καμία νέα σύγκριση.** Ρωτά τον **ίδιο** κριτή που κρίνει κάθε αλλαγή ταυτότητας
+ * ({@link addressIdentityChanged}) — το `resolvedFor` **είναι** δομικά ένα `AddressLike`. Ένας
+ * δεύτερος κανόνας εδώ θα απέκλινε σιωπηλά από τον πρώτο, και η απόκλιση θα εκδηλωνόταν ως
+ * ειδοποίηση που εμφανίζεται ή εξαφανίζεται **χωρίς να αλλάξει τίποτα** (το μάθημα του Β10).
+ *
+ * ⚠️ **Καθαρή και χωρίς δίκτυο**: τρέχει και στον διακομιστή και στον περιηγητή πάνω στα
+ * **ίδια** αποθηκευμένα δεδομένα, άρα και οι δύο πλευρές απαντούν κατ' ανάγκη το ίδιο.
+ */
+export function positionTextVerdict(address: AddressLike): PositionTextVerdict {
+  const metadata = address.geocodingMetadata;
+  // Χωρίς ισχυρισμό ακρίβειας δεν υπάρχει τίποτα να ελεγχθεί: πινέζα ανθρώπου ή καμία θέση.
+  if (!metadata) return 'not-geocoded';
+  const resolvedFor = metadata.resolvedFor;
+  // Ισχυρισμός χωρίς απόδειξη ⇒ **άγνοια**. Κάθε εγγραφή πριν το Ζ6 περνά από εδώ, και
+  // μια «differs» εδώ θα κατήγγελλε ολόκληρη τη βάση για κάτι που κανείς δεν μέτρησε.
+  if (!resolvedFor) return 'unverifiable';
+  return addressIdentityChanged(resolvedFor, address) ? 'differs' : 'matches';
 }
 
 /**

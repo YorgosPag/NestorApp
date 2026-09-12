@@ -14,6 +14,7 @@
  * PATCH το σβήνει σιωπηλά (μάθημα ADR-759 Φ3).
  */
 
+import type { AddressIdentityField } from '@/lib/geocoding/address-position';
 import type { AddressSourceType, GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 
 export interface StoredAddressPosition {
@@ -42,5 +43,14 @@ export interface StoredAddressPosition {
     accuracy: GeocodingAccuracy;
     variantUsed: number;
     osmType?: string;
+    /**
+     * **Το κείμενο για το οποίο λύθηκε αυτή η θέση** (ADR-332 D27 Ζ6) — η απόδειξη που κάνει
+     * τον ισχυρισμό ακρίβειας **ελέγξιμο**. Δες `lib/geocoding/address-position-types` για το
+     * ζωντανό εύρημα («Εγνατία 102» με τη θέση της «100») και `positionTextVerdict` για την
+     * ερώτηση. **Απουσία = άγνοια**, ποτέ «άλλαξε».
+     */
+    resolvedFor?: Partial<Record<AddressIdentityField, string>>;
+    /** Ο πάροχος δήλωσε ότι **δεν ταίριαξαν όλα** τα πεδία που ζητήθηκαν (ADR-332 D27 Ζ6-Β). */
+    partialMatch?: boolean;
   };
 }

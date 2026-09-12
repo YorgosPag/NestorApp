@@ -134,10 +134,13 @@ export type {
   AddressPositionIntent,
   AddressPositionResolution,
   AddressPositionTally,
+  PositionTextVerdict,
   ResolveAddressPositionsOptions,
   ResolvedAddressPositions,
 } from './address-position-types';
-export { addressIdentityChanged } from './address-position-rules';
+// Ζ6 — το `positionTextVerdict` είναι **δημόσια ερώτηση**: το ρωτούν και οι οθόνες, πάνω στα
+// ίδια αποθηκευμένα δεδομένα. Ίδιο σύνορο με τον κριτή που ήδη επανεξάγεται από δίπλα.
+export { addressIdentityChanged, positionTextVerdict } from './address-position-rules';
 
 // ============================================================================
 // Η ΑΠΟΦΑΣΗ
@@ -197,7 +200,9 @@ async function askMachine(
     return { outcome: 'geocoder-unavailable', position: keepStored(stored) };
   }
   if (hit === null) return { outcome: 'unresolved', position: NO_POSITION };
-  return { outcome: 'geocoded', position: geocodedPosition(hit, now) };
+  // Ζ6 — η **ερώτηση** ταξιδεύει μαζί με την απάντηση: χωρίς αυτήν η ακρίβεια είναι
+  // ισχυρισμός χωρίς αντικείμενο, και κανένας μελλοντικός αναγνώστης δεν μπορεί να τον κρίνει.
+  return { outcome: 'geocoded', position: geocodedPosition(hit, now, query) };
 }
 
 /**
