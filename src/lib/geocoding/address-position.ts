@@ -98,16 +98,21 @@ import {
   toQuery,
   withTrimmedIdentity,
 } from './address-position-rules';
+import { TimeoutError, withTimeout } from '@/lib/async-utils';
 import type {
   AddressGeocoder,
   AddressLike,
   AddressPosition,
+  AddressPositionBudget,
   AddressPositionDrift,
   AddressPositionIntent,
   AddressPositionOutcome,
   AddressPositionResolution,
   AddressPositionTally,
   GeocodeHit,
+  // ⚠️ Το όνομα χρησιμοποιείται ΤΟΠΙΚΑ (`askWithinBudget`), άρα χρειάζεται import — το
+  //    `export type {…}` παρακάτω ΕΠΑΝΕΞΑΓΕΙ, δεν δεσμεύει (CHECK 3.70, 2026-09-12).
+  GeocoderQuery,
   ResolveAddressPositionsOptions,
   ResolvedAddressPositions,
 } from './address-position-types';
@@ -125,6 +130,7 @@ export type {
   AddressPosition,
   PositionDrift,
   AddressPositionDrift,
+  AddressPositionBudget,
   AddressPositionIntent,
   AddressPositionResolution,
   AddressPositionTally,
@@ -143,19 +149,51 @@ export { addressIdentityChanged } from './address-position-rules';
  * ⚠️ **Εξαίρεση = άγνοια, όχι γνώση.** Η αποθηκευμένη θέση μένει άθικτη — δες την κεφαλίδα
  * του {@link AddressPositionOutcome} για το γιατί αυτό ΔΕΝ είναι το ίδιο με `null`.
  */
+/**
+ * Ρωτά τη μηχανή **μέσα στο υπόλοιπο του προϋπολογισμού** (ADR-332 D27 Ζ5).
+ *
+ * 🔴 **Ο έλεγχος «απομένει χρόνος;» ΠΡΙΝ την κλήση δεν αρκεί — μετρημένο ζωντανά.** Με **μία**
+ * διεύθυνση ο έλεγχος περνά μία φορά και μετά η κλήση τρέχει ανεμπόδιστη: η σκάλα των 8 παραλλαγών
+ * του Nominatim μέτρησε **29,2 δευτερόλεπτα** ενώ ο προϋπολογισμός ήταν 9. Δηλαδή η προθεσμία έφραζε
+ * «πόσες διευθύνσεις ξεκινώ», όχι «πόσο κρατά η καθεμία».
+ *
+ * 🔑 **Η κλήση που ξεπέρασε την προθεσμία ΔΕΝ πάει χαμένη**: το `withTimeout` κάνει *race*, δεν
+ * ακυρώνει — η μηχανή συνεχίζει και, όταν απαντήσει, **γεμίζει τη μνήμη** της (`geocoding-cache`).
+ * Άρα η **επόμενη** αποθήκευση τη βρίσκει έτοιμη. Παίρνουμε το όφελος του ασύγχρονου εμπλουτισμού
+ * **χωρίς** δεύτερη εγγραφή και χωρίς ουρά.
+ */
+async function askWithinBudget(
+  geocode: AddressGeocoder,
+  query: GeocoderQuery,
+  budget: AddressPositionBudget | undefined,
+): Promise<GeocodeHit | null> {
+  if (!budget) return geocode(query);
+  return withTimeout(geocode(query), budget.remainingMs());
+}
+
 async function askMachine(
   stored: AddressLike | null,
   incoming: AddressLike,
   geocode: AddressGeocoder,
   now: number,
+  budget?: AddressPositionBudget,
 ): Promise<AddressPositionResolution> {
   const query = toQuery(incoming);
   if (!query.street && !query.city) return { outcome: 'insufficient-address', position: NO_POSITION };
 
+  // Ζ5 — **ρώτα πόσο απομένει πριν ρωτήσεις τη μηχανή**. Μια ερώτηση που ξεκινά χωρίς χρόνο είναι
+  // σίγουρη σπατάλη: ο άνθρωπος θα έχει φύγει πριν απαντήσει, και το Nominatim θα έχει χρεωθεί.
+  if (budget && budget.remainingMs() <= 0) {
+    return { outcome: 'budget-exhausted', position: keepStored(stored) };
+  }
+
   let hit: GeocodeHit | null;
   try {
-    hit = await geocode(query);
-  } catch {
+    hit = await askWithinBudget(geocode, query, budget);
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      return { outcome: 'budget-exhausted', position: keepStored(stored) };
+    }
     return { outcome: 'geocoder-unavailable', position: keepStored(stored) };
   }
   if (hit === null) return { outcome: 'unresolved', position: NO_POSITION };
@@ -174,16 +212,23 @@ async function keepHumanPin(
   incoming: AddressLike,
   human: { readonly lat: number; readonly lng: number },
   geocode: AddressGeocoder,
+  budget?: AddressPositionBudget,
 ): Promise<AddressPositionResolution> {
   const position = keepStored(stored);
   const query = toQuery(incoming);
   if (!query.street && !query.city) return { outcome: 'human-kept', position };
 
+  // Ζ5 — **θέσεις πριν από συμβουλές.** Εδώ η πινέζα είναι ήδη γνωστή· το αίτημα θα αγόραζε **μόνο**
+  // τη μέτρηση απόκλισης. Όταν ο χρόνος στενεύει, αυτή φεύγει πρώτη ώστε να μείνει προϋπολογισμός για
+  // διευθύνσεις που **δεν** έχουν θέση καθόλου. Η πινέζα μένει· απλώς δεν συνοδεύεται από απόκλιση —
+  // ακριβώς ό,τι συμβαίνει ήδη όταν η μηχανή δεν απαντήσει («δεν επινοούμε αντίφαση που δεν μετρήσαμε»).
+  if (budget && budget.remainingMs() < budget.advisoryReserveMs) return { outcome: 'human-kept', position };
+
   let hit: GeocodeHit | null = null;
   try {
-    hit = await geocode(query);
+    hit = await askWithinBudget(geocode, query, budget);
   } catch {
-    // Άγνοια: η πινέζα μένει, καμία απόκλιση.
+    // Άγνοια (ή εξαντλημένος χρόνος): η πινέζα μένει, καμία απόκλιση. Δεν επινοούμε μέτρηση.
   }
   const drift = hit ? measureDrift(human, hit) : null;
   return { outcome: 'human-kept', position, ...(drift ? { drift } : {}) };
@@ -226,13 +271,15 @@ export async function resolveAddressPosition(
   if ((!identityMoved || incoming.source === 'dragged') && moved && point !== null) {
     return humanPinned(point, now);
   }
-  if (intent.relocate) return askMachine(stored, incoming, geocode, now);
+  if (intent.relocate) return askMachine(stored, incoming, geocode, now, intent.budget);
   if (!identityMoved && !moved) return { outcome: 'unchanged', position: keepStored(stored) };
   if (stored === null && point !== null && !incoming.geocodingMetadata) return humanPinned(point, now);
 
   const human = moved ? null : storedHumanPoint(stored);
-  if (stored !== null && human !== null) return keepHumanPin(stored, incoming, human, geocode);
-  return askMachine(stored, incoming, geocode, now);
+  if (stored !== null && human !== null) {
+    return keepHumanPin(stored, incoming, human, geocode, intent.budget);
+  }
+  return askMachine(stored, incoming, geocode, now, intent.budget);
 }
 
 // ============================================================================
@@ -287,6 +334,7 @@ const EMPTY_TALLY: AddressPositionTally = {
   unresolved: 0,
   'geocoder-unavailable': 0,
   'insufficient-address': 0,
+  'budget-exhausted': 0,
 };
 
 export const ADDRESS_POSITION_OUTCOMES: readonly AddressPositionOutcome[] = Object.keys(
@@ -319,6 +367,7 @@ export async function resolveAddressPositions<T extends AddressLike & { readonly
   const tally: Record<AddressPositionOutcome, number> = { ...EMPTY_TALLY };
   const resolved: T[] = [];
   const drifts: AddressPositionDrift[] = [];
+  const pendingIds: string[] = [];
 
   for (const raw of incomingAddresses) {
     // Β7 — η γραφή χωρίς κενά στα άκρα, στο ΕΝΑ σύνορο (έργα ΚΑΙ κτίρια).
@@ -326,11 +375,17 @@ export async function resolveAddressPositions<T extends AddressLike & { readonly
     const id = typeof incoming.id === 'string' && incoming.id ? incoming.id : null;
     const stored = id ? storedById.get(id) ?? null : null;
     const relocate = id !== null && options.relocateIds?.has(id) === true;
-    const { outcome, position, drift } = await resolveAddressPosition(stored, incoming, geocode, now, { relocate });
+    // Ζ5 — ο **ίδιος** προϋπολογισμός σε όλη τη σάρωση: κάθε διεύθυνση βρίσκει ό,τι άφησαν οι προηγούμενες.
+    const { outcome, position, drift } = await resolveAddressPosition(stored, incoming, geocode, now, {
+      relocate,
+      ...(options.budget ? { budget: options.budget } : {}),
+    });
     tally[outcome] += 1;
     resolved.push(applyAddressPosition(incoming, position));
     if (drift && id) drifts.push({ addressId: id, ...drift });
+    // Ζ5 — ονομαστικά, ώστε η οθόνη να μπορεί να πει **ποια** διεύθυνση περιμένει.
+    if (outcome === 'budget-exhausted' && id) pendingIds.push(id);
   }
 
-  return { addresses: resolved, tally, drifts };
+  return { addresses: resolved, tally, drifts, pendingIds };
 }

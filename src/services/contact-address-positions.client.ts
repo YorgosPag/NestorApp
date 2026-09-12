@@ -19,6 +19,7 @@ import type { Contact } from '@/types/contacts';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import {
@@ -36,9 +37,13 @@ import {
   type ContactAddressPositionsRequest,
   type ContactAddressPositionsResponse,
 } from '@/utils/contacts/contact-address-position-view';
-import { publishContactAddressAdvisories } from './contacts/contact-address-advisories';
+import {
+  publishContactAddressAdvisories,
+  publishContactAddressPending,
+} from './contacts/contact-address-advisories';
 
 const logger = createModuleLogger('ContactAddressPositionsClient');
+const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
 /**
  * Ρωτά τον γραφέα και εφαρμόζει τις αποφάσεις. `null` ⇒ δεν υπάρχει τίποτα να ρωτηθεί.
@@ -60,10 +65,24 @@ async function requestContactAddressPositions(
   const url = contactId
     ? API_ROUTES.CONTACTS.ADDRESS_POSITIONS(contactId)
     : API_ROUTES.CONTACTS.NEW_ADDRESS_POSITIONS;
-  const response = await apiClient.post<ContactAddressPositionsResponse>(url, body);
+  // ADR-332 D27 Ζ5 — **όριο πελάτη = προθεσμία διακομιστή + περιθώριο**, ίδιο σχήμα με το Β13.
+  //
+  // ⚠️ **`retry: false` και δεν είναι λεπτομέρεια**: ο πελάτης επαναλαμβάνει **3 φορές** από προεπιλογή,
+  // άρα σκέτο `timeout` θα **τριπλασίαζε** την αναμονή που μόλις φράξαμε — και θα ξαναέστελνε
+  // **ταυτόσημο** ερώτημα, ακριβώς ό,τι η πολιτική του Nominatim χαρακτηρίζει *faulty*. Η επανάληψη
+  // εδώ δεν έχει και νόημα: η επόμενη αποθήκευση ξαναλύνει ούτως ή άλλως.
+  const response = await apiClient.post<ContactAddressPositionsResponse>(url, body, {
+    timeout: GEOCODING.RESOLVER_TIMEOUT_MS + GEOCODING.RESOLVER_CLIENT_GRACE_MS,
+    retry: false,
+  });
 
   const decisions = new Map(response.positions.map((decision) => [decision.id, decision]));
-  if (contactId) publishContactAddressAdvisories(contactId, response.positionAdvisories);
+  if (contactId) {
+    publishContactAddressAdvisories(contactId, response.positionAdvisories);
+    // ADR-332 D27 Ζ5 — δημοσιεύεται **πάντα**, ακόμη και κενό: έτσι η ένδειξη της προηγούμενης
+    // αποθήκευσης σβήνει μόνη της όταν η επόμενη προλάβει να λύσει τη θέση.
+    publishContactAddressPending(contactId, response.positionsPending ?? []);
+  }
   return addresses.map((address) => {
     const decision = address.id ? decisions.get(address.id) : undefined;
     return decision ? applyContactAddressPosition(address, decision) : address;

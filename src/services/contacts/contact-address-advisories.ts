@@ -47,3 +47,33 @@ export function useContactAddressAdvisories(
   const byContact = useSyncExternalStore(store.subscribe, store.get, store.get);
   return (contactId ? byContact.get(contactId) : undefined) ?? NO_ADVISORIES;
 }
+
+// ============================================================================
+// ΕΚΚΡΕΜΕΙΣ ΘΕΣΕΙΣ — «γνωστά εκκρεμές», όχι «σιωπηλά μπαγιάτικο» (ADR-332 D27 Ζ5)
+// ============================================================================
+
+/**
+ * 🔑 **Γιατί ΔΕΥΤΕΡΟ κανάλι και όχι πεδίο στο ίδιο**: μια **απόκλιση** είναι μέτρηση («η πινέζα σου
+ * απέχει 456 μ. από τη διεύθυνση») και ο άνθρωπος **αποφασίζει** πάνω της· μια **εκκρεμότητα** είναι
+ * απουσία μέτρησης («δεν προλάβαμε να ρωτήσουμε») και δεν ζητά απόφαση, μόνο ενημέρωση. Ένα κοινό
+ * σχήμα θα ανάγκαζε το ένα να προσποιείται το άλλο.
+ *
+ * Ίδιος κύκλος ζωής με τις συμβουλές: γεγονός **της τελευταίας αποθήκευσης**, στη μνήμη της σελίδας.
+ */
+type PendingByContact = ReadonlyMap<string, readonly string[]>;
+
+const NO_PENDING: readonly string[] = [];
+const pendingStore = createExternalStore<PendingByContact>(new Map());
+
+/** Ποιες διευθύνσεις δεν πρόλαβαν να λυθούν στην τελευταία αποθήκευση — αντικαθιστά την παλιά λίστα. */
+export function publishContactAddressPending(contactId: string, addressIds: readonly string[]): void {
+  const next = new Map(pendingStore.get());
+  if (addressIds.length > 0) next.set(contactId, [...addressIds]);
+  else next.delete(contactId);
+  pendingStore.set(next);
+}
+
+export function useContactAddressPending(contactId: string | undefined): readonly string[] {
+  const byContact = useSyncExternalStore(pendingStore.subscribe, pendingStore.get, pendingStore.get);
+  return (contactId ? byContact.get(contactId) : undefined) ?? NO_PENDING;
+}

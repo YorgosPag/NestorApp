@@ -48,6 +48,15 @@ export interface ContactAddressPositionsRequest {
 export interface ContactAddressPositionsResponse {
   readonly positions: readonly ContactAddressPositionDecision[];
   readonly positionAdvisories: readonly AddressPositionDrift[];
+  /**
+   * Ταυτότητες διευθύνσεων που **δεν πρόλαβαν** να λυθούν μέσα στην προθεσμία (ADR-332 D27 Ζ5).
+   *
+   * Η θέση τους **δεν άλλαξε** — τίποτα δεν σβήστηκε — και η επόμενη αποθήκευση ξαναλύνει. Ταξιδεύουν
+   * ονομαστικά ώστε ο άνθρωπος να δει «εκκρεμεί» στη **συγκεκριμένη** διεύθυνση, αντί για σιωπή.
+   *
+   * ⚠️ Προαιρετικό στο σύρμα: παλιοί πελάτες/διακομιστές δεν σπάνε, απλώς δεν δείχνουν την ένδειξη.
+   */
+  readonly positionsPending?: readonly string[];
 }
 
 export function contactAddressPositionView(

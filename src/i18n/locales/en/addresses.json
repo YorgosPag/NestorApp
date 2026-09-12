@@ -323,6 +323,9 @@
       "relocate": "Move to the address position",
       "keep": "Keep the pin",
       "relocateFailed": "The pin was not moved — the address service did not respond. Please try again."
+    },
+    "positionPending": {
+      "message": "This address's position is pending — it will be computed on the next save."
     }
   },
   "publicMap": {
