@@ -469,6 +469,25 @@ if (!process.env.SKIP_I18N_SSR_RAW_KEYS && ssrRawKeysTriggers.length > 0)
 if (!process.env.SKIP_SHELL_BOUNDARY && allFiles.length > 0)
   addThread('3.52', 'Shell boundary', 'scripts/check-shell-boundary.js', allFiles);
 
+// CHECK 3.78 (ADR-855 Α5) — «δηλώνει αυτή η διαδρομή όριο, και συμφωνεί η δήλωση με ό,τι
+// επιβάλλεται;». Το `options.category` των επτά wrappers ΔΕΝ διαβαζόταν ποτέ: η κατηγορία
+// έβγαινε αποκλειστικά από 9 γραμμές προθεμάτων για 449 διαδρομές, και ΤΕΣΣΕΡΑ έγγραφα
+// υπόσχονταν όρια που ο κώδικας δεν επέβαλλε. Η Φ1 διόρθωσε τη μηχανή· αυτή η πύλη φυλά το
+// ΕΡΩΤΗΜΑ, ώστε η επόμενη σιωπηλή διαδρομή — ή ο επόμενος πίνακας που αποκλίνει από τις
+// δηλώσεις — να μη προσγειωθεί.
+// Σκανδάλη: ΟΠΟΙΑΔΗΠΟΤΕ διαδρομή, ο πίνακας, ή ο κώδικας της ίδιας της πύλης (αλλιώς αλλαγή
+// κριτηρίου περνά χωρίς να δοκιμαστεί ποτέ — μάθημα 3.43 · 3.57 · 3.75).
+// Κόστος: ένα πέρασμα 449 `readFileSync` + 2 parse, μηδέν spawn ⇒ Φάση 1 δίπλα στα 3.33/3.34.
+if (!process.env.SKIP_RATE_LIMIT_POLICY) {
+  const ratePolicyTriggers = allFiles.filter(f =>
+    /^src\/app\/api\/.*route\.ts$/.test(f)
+    || f === 'src/lib/middleware/rate-limit-config.ts'
+    || f.startsWith('scripts/lib/rate-limit-policy/')
+    || f === 'scripts/check-rate-limit-policy.js');
+  if (ratePolicyTriggers.length > 0)
+    addThread('3.78', 'Rate-limit policy', 'scripts/check-rate-limit-policy.js');
+}
+
 // CHECK 3.53 — ταυτότητα ενοτήτων ADR (ADR-739 §0.3 / ADR-777 §0.4).
 // ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ (`triggers()`): μια ενότητα μπορεί να μετακομίσει σε
 // οποιοδήποτε ADR/SPEC, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (σχήμα 3.34/3.37).

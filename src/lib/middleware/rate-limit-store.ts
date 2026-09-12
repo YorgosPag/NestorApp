@@ -44,6 +44,21 @@ export interface RateLimitCheckResult {
   limit: number;
   /** Milliseconds until window resets */
   resetMs: number;
+  /**
+   * 🔴 **ΤΟ `allowed` ΕΙΝΑΙ ΕΙΚΑΣΙΑ, ΟΧΙ ΜΕΤΡΗΣΗ** (ADR-855 Α3).
+   *
+   * `true` σημαίνει ότι ο μετρητής **δεν απάντησε** και το αποτέλεσμα είναι η ασφαλής
+   * προεπιλογή του store, όχι πραγματικό πλήθος. Απόν/`false` ⇒ όντως μετρήθηκε.
+   *
+   * ⚠️ **ΓΙΑΤΙ ΠΕΔΙΟ ΚΑΙ ΟΧΙ `throw`** — και είναι μετρημένη απόφαση: ο `checkQuota`
+   * (ADR-851, email ταυτότητας ανά παραλήπτη) καλεί το `store.check` **απευθείας**, χωρίς
+   * να περνά από τον wrapper. Ένα `throw` εδώ θα τον έσπαγε σιωπηλά — δηλαδή η διόρθωση
+   * ενός fail-open θα γεννούσε **νέα** βλάβη σε άλλη διαδρομή. Με πεδίο, η **πληροφορία**
+   * ταξιδεύει και την **απόφαση** την παίρνει όποιος ξέρει τη βαθμίδα.
+   *
+   * ⚠️ Και γι' αυτό είναι **προαιρετικό**: κάθε υπάρχων καταναλωτής συνεχίζει αμετάβλητος.
+   */
+  degraded?: boolean;
 }
 
 /**
@@ -288,13 +303,23 @@ class UpstashRateLimitStore implements RateLimitStore {
       };
     } catch (error) {
       logger.error('Upstash check failed', { error: String(error) });
-      // Fail open in case of error (allow the request)
-      // This prevents Upstash outage from blocking all requests
+      // 🔴 ADR-855 Α3 — **Η ΑΠΑΝΤΗΣΗ ΜΕΝΕΙ ΕΠΙΤΡΕΠΤΙΚΗ, ΑΛΛΑ ΠΑΥΕΙ ΝΑ ΕΙΝΑΙ ΣΙΩΠΗΛΗ.**
+      //
+      // Ήταν σκέτο fail-open, **καθολικά** — και το ADR-068 §4 διαφήμιζε αντ' αυτού
+      // «fallback to in-memory store (graceful degradation) ✅ Implemented», που **δεν
+      // υπάρχει**: ο store επιλέγεται μία φορά ως singleton, οπότε μια πτώση εδώ δεν έχει
+      // πού να πέσει. Αποτέλεσμα: απεριόριστες προσπάθειες σε `/api/auth/password-reset`
+      // και στον εξαψήφιο κωδικό του `first-contacts/guest/confirm`.
+      //
+      // ⚠️ Το `degraded` **δεν** αποφασίζει — **δηλώνει**. Ποιος αρνείται και ποιος περνά
+      //    το κρίνει η βαθμίδα, στο σύνορο (`getCategoryFailMode`), γιατί μόνο εκεί είναι
+      //    γνωστή. Εδώ θα ήταν καθολικό ξανά, με αντίθετο πρόσημο.
       return {
         allowed: true,
         current: 0,
         limit,
         resetMs: windowMs,
+        degraded: true,
       };
     }
   }

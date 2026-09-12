@@ -19,10 +19,17 @@ import { createHash } from 'crypto';
 import {
   checkRateLimit,
   createRateLimitResponse,
+  createRateLimitUnavailableResponse,
   getRateLimitHeaders,
   type RateLimitResult,
 } from './rate-limiter';
-import { type RateLimitCategory } from './rate-limit-config';
+// ⚠️ Απευθείας από την πηγή, **όχι** από το barrel (`./index`): μια εξαγωγή στο barrel
+//    χωρίς καταναλωτή *εκτός* του πακέτου είναι νεκρή εξαγωγή (CHECK 3.30).
+import {
+  getCategoryFailMode,
+  getEndpointCategory,
+  type RateLimitCategory,
+} from './rate-limit-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCurrentSecurityPolicy } from '@/config/environment-security-config';
 
@@ -219,9 +226,41 @@ export function withRateLimit<C = unknown>(
       //    ⚠️ Μετρημένο: **89 στις 449** διαδρομές έτρεχαν άλλο όριο από όσο δήλωναν.
       result = await checkRateLimit(identifier, endpointPath, options.category);
     } catch (error) {
-      // Log error but don't block the request
-      logger.error('Check failed, allowing request', { error: String(error) });
+      // 🔴 ADR-855 Α3 — **ΤΟ ΜΟΝΟΠΑΤΙ ΠΟΥ ΔΕΝ ΕΧΕΙ ΚΑΝ ΑΠΟΤΕΛΕΣΜΑ.** Ο store μπορεί να
+      //    ρίξει *πριν* παραχθεί `result` (ψυχρή εκκίνηση, λάθος ρύθμιση Upstash). Μέχρι
+      //    σήμερα η γραμμή ήταν «log και άσε το να περάσει», **καθολικά** — και ήταν το
+      //    δεύτερο, ανεξάρτητο fail-open δίπλα σε αυτό του store.
+      //
+      // ⚠️ Η βαθμίδα υπολογίζεται **εδώ** από τη δήλωση ή τον πίνακα: δεν υπάρχει `result`
+      //    για να τη ρωτήσουμε, και μια προεπιλογή «open» θα ξανάνοιγε την ίδια τρύπα.
+      const category = options.category ?? getEndpointCategory(endpointPath);
+      const failMode = getCategoryFailMode(category);
+      logger.error('Check failed', { error: String(error), category, failMode });
+
+      if (failMode === 'closed') {
+        return createRateLimitUnavailableResponse({
+          allowed: false, current: 0, limit: 0, resetMs: 0, degraded: true, category,
+        });
+      }
       return handler(request, context);
+    }
+
+    // 🔴 ADR-855 Α3 — **Ο ΜΕΤΡΗΤΗΣ ΑΠΑΝΤΗΣΕ «ΝΑΙ» ΧΩΡΙΣ ΝΑ ΜΕΤΡΗΣΕΙ.**
+    //
+    // Το `degraded` σημαίνει ότι το `allowed: true` είναι η ασφαλής προεπιλογή του store,
+    // όχι πραγματικό πλήθος. Για βαθμίδα `closed` αυτό **δεν** είναι αποδεκτό: εκεί ζουν οι
+    // δημόσιες πόρτες χωρίς ταυτότητα και η επιφάνεια διαπιστευτηρίων, όπου απεριόριστες
+    // προσπάθειες είναι παράκαμψη εξουσιοδότησης — *«allowing a request you couldn't
+    // authorize is a security bypass»*.
+    //
+    // ⚠️ Για βαθμίδα `open` **τίποτα δεν αλλάζει**: μια αστοχία του limiter δεν επιτρέπεται
+    //    να γίνει αστοχία του API. Η διάκριση είναι ο λόγος που η βαθμίδα κουβαλά `failMode`.
+    if (result.degraded && getCategoryFailMode(result.category) === 'closed') {
+      logger.error('Rate limiter unavailable — failing closed', {
+        endpoint: endpointPath,
+        category: result.category,
+      });
+      return createRateLimitUnavailableResponse(result);
     }
 
     // If rate limited, return 429 response

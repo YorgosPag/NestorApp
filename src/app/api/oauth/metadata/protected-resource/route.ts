@@ -28,7 +28,12 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+// 🔑 ADR-855 Α1 — **ΡΗΤΗ** βαθμίδα, επειδή ο πίνακας προθεμάτων λέει άλλο. Το `/api/oauth`
+//    δηλώνεται SENSITIVE (20/min) για την επιφάνεια ταυτότητας — σωστά για
+//    `authorize`/`token`/`consents`, **λάθος** για αυτό: είναι **στατικό JSON ανακάλυψης**
+//    (RFC 9728) που κάθε MCP client διαβάζει **πριν** από κάθε ροή. Η δήλωση κερδίζει τον
+//    πίνακα, και γι' αυτό γράφεται εδώ αντί να μπει τέταρτη γραμμή εξαίρεσης στον πίνακα.
+import { withRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
   getIssuerUrl,
   getMcpResourceUri,
@@ -55,4 +60,4 @@ async function handleGet(): Promise<NextResponse> {
   });
 }
 
-export const GET = withStandardRateLimit(handleGet);
+export const GET = withRateLimit(handleGet, { category: 'STANDARD' });

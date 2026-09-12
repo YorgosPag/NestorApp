@@ -39,11 +39,21 @@ import { RATE_LIMIT_CATEGORIES, type RateLimitCategory } from '../rate-limit-con
  */
 const seen: Array<{ key: string; limit: number; windowMs: number }> = [];
 
+/**
+ * Τι κάνει ο πλαστός store σε αυτή τη δοκιμή. `'measured'` = κανονική μέτρηση·
+ * `'degraded'` = απάντησε επιτρεπτικά **χωρίς** να μετρήσει (ό,τι κάνει το Upstash catch)·
+ * `'throws'` = δεν παρήχθη καν αποτέλεσμα (ψυχρή εκκίνηση / λάθος ρύθμιση).
+ */
+let storeMode: 'measured' | 'degraded' | 'throws' = 'measured';
+
 jest.mock('../rate-limit-store', () => ({
   getRateLimitStore: () => ({
     check: async (key: string, limit: number, windowMs: number) => {
+      if (storeMode === 'throws') throw new Error('store unreachable');
       seen.push({ key, limit, windowMs });
-      return { allowed: true, current: 1, limit, resetMs: windowMs };
+      return storeMode === 'degraded'
+        ? { allowed: true, current: 0, limit, resetMs: windowMs, degraded: true }
+        : { allowed: true, current: 1, limit, resetMs: windowMs };
     },
     reset: async () => undefined,
     getCount: async () => 0,
@@ -103,6 +113,7 @@ async function limitFor(
 
 beforeEach(() => {
   seen.length = 0;
+  storeMode = 'measured';
 });
 
 // =============================================================================
@@ -209,6 +220,86 @@ describe('Ρ — η δηλωμένη βαθμίδα', () => {
     const last = seen[seen.length - 1];
     expect(last.limit).toBe(RATE_LIMIT_CATEGORIES.HEAVY);
     expect(last.key).toContain('session:abc');
+  });
+});
+
+// =============================================================================
+// Φ — ΟΤΑΝ Ο ΜΕΤΡΗΤΗΣ ΔΕΝ ΑΠΑΝΤΑ (ADR-855 Α3 · άγκυρες Φ1 · Φ2)
+// =============================================================================
+
+describe('Φ — fail-open vs fail-closed ανά βαθμίδα', () => {
+  /**
+   * 🔴 Η ΑΓΚΥΡΑ ΤΟΥ ΔΕΥΤΕΡΟΥ ΕΥΡΗΜΑΤΟΣ. Το ADR-068 §4 υπόσχεται «fallback to in-memory
+   * store» που **δεν υπάρχει**: ο store είναι singleton, οπότε η πτώση του γινόταν
+   * σιωπηλό `allowed: true` — **και** στον εξαψήφιο κωδικό του `guest/confirm`.
+   *
+   * ΜΕΤΑΛΛΑΞΗ: σβήσε τον έλεγχο `result.degraded` από τον wrapper ⇒ κόκκινο.
+   */
+  it('🔴 Φ1 — βαθμίδα `closed` + μετρητής που ΔΕΝ μέτρησε ⇒ 503, ποτέ σιωπηλό πέρασμα', async () => {
+    storeMode = 'degraded';
+
+    const heavy = await withHeavyRateLimit(handler)(request('/api/first-contacts/guest/confirm'));
+    const sensitive = await withSensitiveRateLimit(handler)(request('/api/auth/password-reset'));
+
+    expect({ heavy: heavy.status, sensitive: sensitive.status })
+      .toEqual({ heavy: 503, sensitive: 503 });
+  });
+
+  /**
+   * 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ Φ1 — και είναι ο μισός λόγος ύπαρξης της απόφασης: καθολικό
+   * fail-closed θα έριχνε **όλη** την εφαρμογή σε μια στιγμιαία αστοχία του Upstash.
+   */
+  it('🔑 Φ2 — βαθμίδα `open` + ίδια αστοχία ⇒ το αίτημα ΠΕΡΝΑ (αμετάβλητη συμπεριφορά)', async () => {
+    storeMode = 'degraded';
+
+    const standard = await withStandardRateLimit(handler)(request('/api/projects/list'));
+    const high = await withHighRateLimit(handler)(request('/api/search'));
+
+    expect({ standard: standard.status, high: high.status })
+      .toEqual({ standard: 200, high: 200 });
+  });
+
+  it('🔴 Φ1β — ο store ΡΙΧΝΕΙ (κανένα αποτέλεσμα): `closed` ⇒ 503 · `open` ⇒ περνά', async () => {
+    storeMode = 'throws';
+
+    // Το δεύτερο, ανεξάρτητο μονοπάτι αστοχίας — δεν υπάρχει καν `result` να ρωτηθεί.
+    const closed = await withHeavyRateLimit(handler)(request('/api/vendor/quote/tok'));
+    const open = await withStandardRateLimit(handler)(request('/api/projects/list'));
+
+    expect({ closed: closed.status, open: open.status }).toEqual({ closed: 503, open: 200 });
+  });
+
+  it('🔑 Φ3 — το 503 φέρνει `Retry-After` και δηλώνει τη βαθμίδα που έκρινε', async () => {
+    storeMode = 'degraded';
+
+    const res = await withHeavyRateLimit(handler)(request('/api/attendance/qr/validate'));
+    const body = await res.json();
+
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(body).toMatchObject({ code: 'RATE_LIMIT_UNAVAILABLE', category: 'HEAVY' });
+  });
+});
+
+// =============================================================================
+// Ι — ΟΙ ΚΕΦΑΛΙΔΕΣ IETF (ADR-855 Α4 · άγκυρα Κ1)
+// =============================================================================
+
+describe('Ι — κεφαλίδες draft-ietf-httpapi-ratelimit-headers-11', () => {
+  it('🏆 Ι1 — `RateLimit-Policy` και `RateLimit` με τα ΙΔΙΑ νούμερα που επιβλήθηκαν', async () => {
+    const res = await withSensitiveRateLimit(handler)(request('/api/auth/session'));
+
+    // SENSITIVE = 20/60s, ο πλαστός store λέει current: 1 ⇒ remaining 19.
+    expect(res.headers.get('RateLimit-Policy')).toBe('"SENSITIVE";q=20;w=60');
+    expect(res.headers.get('RateLimit')).toMatch(/^"SENSITIVE";r=19;t=\d+$/);
+  });
+
+  it('🔑 Ι2 — τα legacy `X-RateLimit-*` ΔΕΝ χάθηκαν (προσθήκη, όχι αντικατάσταση)', async () => {
+    const res = await withHeavyRateLimit(handler)(request('/api/geocoding'));
+
+    expect({
+      limit: res.headers.get('X-RateLimit-Limit'),
+      category: res.headers.get('X-RateLimit-Category'),
+    }).toEqual({ limit: '10', category: 'HEAVY' });
   });
 });
 

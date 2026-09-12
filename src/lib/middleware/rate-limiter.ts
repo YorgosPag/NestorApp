@@ -230,16 +230,80 @@ export function getRateLimitStats(): {
 
 /**
  * Create rate limit headers for HTTP response.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🏆 ΔΥΟ ΛΕΞΙΛΟΓΙΑ, ΚΑΙ ΤΟ ΝΕΟΤΕΡΟ ΕΙΝΑΙ ΠΡΟΤΥΠΟ (ADR-855 Α4)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Τα `X-RateLimit-*` είναι **de facto**, και το ίδιο το IETF draft τα περιγράφει ως
+ * *«commonly used [with] significant interoperability problems due to inconsistent
+ * semantics across implementations»*. Το `draft-ietf-httpapi-ratelimit-headers-11`
+ * (Standards Track, 23 Μαΐου 2026) ορίζει δύο **Structured Fields** (RFC 9651):
+ *
+ *   RateLimit-Policy: "default";q=20;w=60     ← τι επιτρέπει η πολιτική
+ *   RateLimit:        "default";r=17;t=43     ← τι απομένει, και για πόσο
+ *
+ * `q` = quota · `w` = παράθυρο σε δευτερόλεπτα · `r` = υπόλοιπο · `t` = δευτερόλεπτα ως
+ * την επαναφορά. Το όνομα της πολιτικής είναι **η βαθμίδα μας**, ώστε ο πελάτης να
+ * διαβάζει *ποια* πολιτική τον έκρινε — πληροφορία που το legacy λεξιλόγιο δεν έχει.
+ *
+ * ⚠️ **ΠΡΟΣΘΗΚΗ, ΠΟΤΕ ΑΝΤΙΚΑΤΑΣΤΑΣΗ**: τα legacy γράφονται ήδη σε **δύο** σημεία και
+ * είναι δημόσιο συμβόλαιο σύρματος· η αφαίρεσή τους σπάει καταναλωτές εκτός αυτού του
+ * δέντρου χωρίς μετρημένο κέρδος. Κοστίζουν δύο κεφαλίδες (ADR-855 §11).
+ *
+ * 🔑 **ΚΑΙ ΟΙ ΔΥΟ ΠΑΡΑΓΟΝΤΑΙ ΑΠΟ ΤΗΝ ΙΔΙΑ ΜΕΤΡΗΣΗ** — ποτέ δύο υπολογισμοί: αλλιώς ο
+ * πελάτης θα μπορούσε να διαβάσει «remaining 3» στο ένα και «r=5» στο άλλο.
  */
 export function getRateLimitHeaders(
   result: RateLimitResult
 ): Record<string, string> {
+  const remaining = Math.max(0, result.limit - result.current);
+  const resetSeconds = Math.ceil(result.resetMs / 1000);
+  // ⚠️ Το όνομα πολιτικής είναι **συμβολοσειρά Structured Field**, άρα σε διπλά εισαγωγικά.
+  const policy = `"${result.category}"`;
+
   return {
+    // ── Legacy (de facto) — διατηρούνται ως δημόσιο συμβόλαιο ──
     'X-RateLimit-Limit': String(result.limit),
-    'X-RateLimit-Remaining': String(Math.max(0, result.limit - result.current)),
-    'X-RateLimit-Reset': String(Math.ceil(result.resetMs / 1000)),
+    'X-RateLimit-Remaining': String(remaining),
+    'X-RateLimit-Reset': String(resetSeconds),
     'X-RateLimit-Category': result.category,
+    // ── IETF draft-ietf-httpapi-ratelimit-headers-11 (Standards Track) ──
+    'RateLimit-Policy': `${policy};q=${result.limit};w=${RATE_LIMIT_CONFIG.WINDOW.SECONDS}`,
+    'RateLimit': `${policy};r=${remaining};t=${resetSeconds}`,
   };
+}
+
+/**
+ * **Ο μετρητής δεν απάντησε, και αυτή η βαθμίδα δεν επιτρέπεται να μαντέψει** — 503.
+ *
+ * 🔴 ΓΙΑΤΙ 503 ΚΑΙ ΟΧΙ 429: το 429 λέει *«μέτρησα, και ξεπέρασες»*. Εδώ **δεν μετρήσαμε**.
+ * Ένα 429 θα ήταν ψέμα προς τον πελάτη και θα τον έστελνε να περιμένει `Retry-After` που
+ * δεν αντιστοιχεί σε τίποτα· ένα 200 θα ήταν διαρροή. *«Άγνωστο ≠ κενό»* — N.12, και το
+ * ίδιο ιδίωμα με το `WORKSPACE_UNAVAILABLE` του ADR-787 Ε-5 §4 #3.
+ *
+ * ⚠️ `Retry-After` **σύντομο** (το παράθυρο): μια αστοχία μετρητή είναι συνήθως στιγμιαία,
+ * και μεγάλη τιμή θα κρατούσε τον νόμιμο χρήστη έξω πολύ μετά την αποκατάσταση.
+ */
+export function createRateLimitUnavailableResponse(result: RateLimitResult): Response {
+  const retryAfter = Math.ceil(RATE_LIMIT_CONFIG.WINDOW.MS / 1000);
+
+  return new Response(
+    JSON.stringify({
+      error: 'Rate limit unavailable',
+      code: 'RATE_LIMIT_UNAVAILABLE',
+      message: 'The rate limiter could not be consulted; this endpoint fails closed.',
+      category: result.category,
+      retryAfterSeconds: retryAfter,
+    }),
+    {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfter),
+        ...getRateLimitHeaders(result),
+      },
+    }
+  );
 }
 
 /**

@@ -143,14 +143,27 @@ src/lib/middleware/with-rate-limit.ts
 
 ### 6 Rate Limit Categories
 
-| Category | Wrapper | Limit | Window | Use Case |
-|----------|---------|-------|--------|----------|
-| **HIGH** | `withHighRateLimit` | 100 req | 60 sec | Search, list endpoints (fast, frequent) |
-| **STANDARD** | `withStandardRateLimit` | 60 req | 60 sec | CRUD operations (default) |
-| **SENSITIVE** | `withSensitiveRateLimit` | 20 req | 60 sec | Admin, financial, user management |
-| **HEAVY** | `withHeavyRateLimit` | 10 req | 60 sec | Reports, exports, migrations (CPU/memory intensive) |
-| **WEBHOOK** | `withWebhookRateLimit` | 30 req | 60 sec | External webhooks (Mailgun, SendGrid) |
-| **TELEGRAM** | `withTelegramRateLimit` | 15 req | 60 sec | Telegram bot endpoints |
+| Category | Wrapper | Limit | Window | Fail mode | Use Case |
+|----------|---------|-------|--------|-----------|----------|
+| **ASSET** | `withAssetRateLimit` | 600 req | 60 sec | open | Immutable versioned assets behind auth (ADR-655) |
+| **HIGH** | `withHighRateLimit` | 100 req | 60 sec | open | Search, list endpoints (fast, frequent) |
+| **STANDARD** | `withStandardRateLimit` | 60 req | 60 sec | open | CRUD operations (default) |
+| **SENSITIVE** | `withSensitiveRateLimit` | 20 req | 60 sec | **closed** | `/api/auth/*` · `/api/oauth/*` · admin · financial · GDPR |
+| **HEAVY** | `withHeavyRateLimit` | 10 req | 60 sec | **closed** | Public un-authenticated doors + expensive work |
+| **WEBHOOK** | `withWebhookRateLimit` | 30 req | 60 sec | open | Provider callbacks (Mailgun, Meta) |
+| **TELEGRAM** | `withTelegramRateLimit` | 15 req | 60 sec | open | Telegram bot endpoints |
+
+> 🔴 **ΔΙΟΡΘΩΣΕΙΣ 2026-09-12 (ADR-855)**. Ο πίνακας έλεγε **«6-Tier»** και ήταν **επτά**: το
+> `ASSET` (600/min, ADR-655) **έλειπε**. Και η στήλη **Fail mode** δεν υπήρχε καθόλου — ένας
+> αριθμός δεν έχει πού να κουβαλήσει την απόφαση «τι γίνεται αν πέσει ο μετρητής», οπότε
+> **η απόφαση δεν υπήρχε** (δες §4).
+>
+> ⚠️ **ΚΑΙ Η ΣΤΗΛΗ «Wrapper» ΗΤΑΝ ΔΙΑΚΟΣΜΗΤΙΚΗ ΜΕΧΡΙ ΤΗ ΦΑΣΗ 1 ΤΟΥ ADR-855**: το
+> `options.category` **δεν διαβαζόταν ποτέ** — και οι επτά wrappers ήταν η ίδια συνάρτηση με
+> επτά ονόματα, και η κατηγορία έβγαινε αποκλειστικά από τον πίνακα προθεμάτων του §6.
+> Μετρημένο σε **449** διαδρομές: **89** έτρεχαν άλλο όριο από όσο δήλωναν.
+> Η αυθεντία είναι πλέον το `RATE_LIMIT_POLICY` (`rate-limit-config.ts`)· αυτός ο πίνακας
+> είναι **προβολή** του.
 
 ### Key Extraction Strategy
 
@@ -309,7 +322,23 @@ export const DELETE = withSensitiveRateLimit(handleDelete); // Stricter for dele
 
 | Risk | Mitigation | Status |
 |------|------------|--------|
-| **Upstash Redis Down** | Fallback to in-memory store (graceful degradation) | ✅ Implemented |
+| **Upstash Redis Down** | ~~Fallback to in-memory store (graceful degradation)~~ → **fail-mode ανά βαθμίδα** (ADR-855 Α3) | 🔴 **ΔΙΟΡΘΩΘΗΚΕ 2026-09-12** |
+
+> 🔴 **Η ΑΡΧΙΚΗ ΓΡΑΜΜΗ ΗΤΑΝ ΨΕΥΔΗΣ, ΚΑΙ ΜΕΤΡΗΘΗΚΕ** (ADR-855 §4). Έγραφε *«Fallback to
+> in-memory store (graceful degradation) ✅ Implemented»*. **Δεν υπήρχε**: ο
+> `getRateLimitStore()` επιλέγει store **μία φορά**, ως singleton, στην πρώτη κλήση — αν το
+> Upstash πέσει **αργότερα**, δεν υπάρχει καμία διαδρομή προς τη μνήμη. Ο
+> `UpstashRateLimitStore.check` έπιανε το σφάλμα και επέστρεφε `{ allowed: true }`, δηλαδή
+> **fail-open καθολικά** — και στο `/api/auth/password-reset`, και στον εξαψήφιο κωδικό του
+> `first-contacts/guest/confirm`, και στο `attendance/qr/validate` που το ADR-170 ονομάζει
+> *anti-brute-force*.
+>
+> **Τι ισχύει τώρα**: κάθε βαθμίδα δηλώνει `failMode` (`RATE_LIMIT_POLICY`). Το store
+> **δηλώνει** ότι δεν μέτρησε (`degraded: true`) και η **απόφαση** παίρνεται στο σύνορο, όπου
+> η βαθμίδα είναι γνωστή: `SENSITIVE`/`HEAVY` ⇒ **503**, τα υπόλοιπα ⇒ περνούν όπως πριν.
+> Άγκυρες: `Φ1` · `Φ2` · `Φ1β` · `Φ3` στο
+> `src/lib/middleware/__tests__/rate-limit-declared-category.test.ts` (επαληθευμένες με
+> μετάλλαξη).
 | **False Positives** | Conservative limits (100/60/20/10 req/min) | ✅ Tested |
 | **Performance Impact** | Async/await (non-blocking), P95 <50ms | ✅ Measured |
 | **Cost Spikes** | Upstash free tier: 10K requests/day (sufficient for dev) | ✅ Verified |
@@ -495,6 +524,29 @@ if (companyId && userId) {
 ```
 
 ### Category Assignment Logic
+
+> 🔴 **ΑΥΤΟΣ Ο ΚΑΤΑΛΟΓΟΣ ΕΙΧΕ ΑΠΟΚΛΙΝΕΙ ΑΠΟ ΤΟΝ ΚΩΔΙΚΑ — ΜΕΤΡΗΜΕΝΟ 2026-09-12 (ADR-855 Α2).**
+>
+> Οι κανόνες παρακάτω περιγράφουν την **πρόθεση**· ο πίνακας `ENDPOINT_CATEGORY_MAPPINGS`
+> υλοποιούσε **μέρος** της:
+>
+> | Δηλωμένο εδώ | Στον πίνακα | Συνέπεια |
+> |---|---|---|
+> | `/api/auth/*` → SENSITIVE | **απόν** | 5 διαδρομές ταυτότητας στα **60/min** |
+> | `/api/pricing/*`, `/api/setup/*` → SENSITIVE | **απόντα** | — |
+> | `/api/*/export` → HEAVY | **ανέκφραστο** | το `startsWith` δεν κάνει wildcard στη μέση: το `/api/procurement/spend-analytics/export` δεν αρχίζει από `/api/export` |
+> | `/api/buildings`, `/api/quicksync` → HIGH | **απόντα** | — |
+>
+> ✅ Προστέθηκαν `/api/auth`, `/api/oauth` *(δεν υπήρχε OAuth όταν γράφτηκε αυτό — ADR-738)*,
+> `/api/pricing`, `/api/setup`. **Μετρημένη επίπτωση**: αποκλίσεις 86 → 80 — **9**
+> θεραπεύτηκαν, **3** γεννήθηκαν *(δες ADR-855 §7 Α2 ονομαστικά)*.
+>
+> 🔑 **Το `/api/*/export` ΔΕΝ λύνεται με πλουσιότερο ταίριασμα**: η θεραπεία είναι **ρητή
+> δήλωση** στη διαδρομή (ADR-855 Α1), γιατί μετά τη Φ1 η δήλωση κερδίζει τον πίνακα.
+> Πλουσιότερη γραμματική εδώ θα ήταν δεύτερη μηχανή για ερώτημα που έχει ήδη απάντηση.
+>
+> 🔒 **Φυλάσσεται πλέον από πύλη**: **CHECK 3.78** ρωτά «δηλώνει κάθε διαδρομή;» **και**
+> «λένε η δήλωση και ο πίνακας το ίδιο;» — ώστε η επόμενη απόκλιση να μη ζήσει μήνες.
 
 **Rules** (from `RATE_LIMITING_IMPLEMENTATION_PLAN.md`):
 
