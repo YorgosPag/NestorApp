@@ -1,0 +1,113 @@
+{
+  "description": "ADR-858 — baseline της CHECK 3.79 (σκιασμένα αρχεία). ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ, όχι κατά αριθμό: νέα σκίαση μπλοκάρει ακόμη κι αν το πλήθος έπεσε. Κ1 (extension-shadow) ΔΕΝ μπαίνει ποτέ εδώ — είναι zero-tolerance. Ratchet DOWN-only: σβήσε γραμμές όταν καθαρίζεις, ποτέ πρόσθεσε.",
+  "generatedBy": "node scripts/check-shadowed-modules.js --write-baseline",
+  "adr": "ADR-858",
+  "gate": "3.79",
+  "total": 13,
+  "violations": [
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/building-management/StorageTab",
+      "winner": "src/components/building-management/StorageTab.tsx",
+      "shadowed": [
+        "src/components/building-management/StorageTab/index.tsx"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/building-management/tabs/AnalyticsTabContent",
+      "winner": "src/components/building-management/tabs/AnalyticsTabContent.tsx",
+      "shadowed": [
+        "src/components/building-management/tabs/AnalyticsTabContent/index.tsx"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/building-management/tabs/MeasurementsTabContent",
+      "winner": "src/components/building-management/tabs/MeasurementsTabContent.tsx",
+      "shadowed": [
+        "src/components/building-management/tabs/MeasurementsTabContent/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/building-management/tabs/TimelineTabContent",
+      "winner": "src/components/building-management/tabs/TimelineTabContent.tsx",
+      "shadowed": [
+        "src/components/building-management/tabs/TimelineTabContent/index.tsx"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/obligations/live-preview",
+      "winner": "src/components/obligations/live-preview.tsx",
+      "shadowed": [
+        "src/components/obligations/live-preview/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/obligations/table-of-contents",
+      "winner": "src/components/obligations/table-of-contents.tsx",
+      "shadowed": [
+        "src/components/obligations/table-of-contents/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/components/ui/dropdown-menu",
+      "winner": "src/components/ui/dropdown-menu.tsx",
+      "shadowed": [
+        "src/components/ui/dropdown-menu/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/styles/design-tokens",
+      "winner": "src/styles/design-tokens.ts",
+      "shadowed": [
+        "src/styles/design-tokens/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/styles/design-tokens/canvas",
+      "winner": "src/styles/design-tokens/canvas.ts",
+      "shadowed": [
+        "src/styles/design-tokens/canvas/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/subapps/geo-canvas/floor-plan-system/types",
+      "winner": "src/subapps/geo-canvas/floor-plan-system/types.ts",
+      "shadowed": [
+        "src/subapps/geo-canvas/floor-plan-system/types/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/types/contacts",
+      "winner": "src/types/contacts.ts",
+      "shadowed": [
+        "src/types/contacts/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/types/obligations",
+      "winner": "src/types/obligations.ts",
+      "shadowed": [
+        "src/types/obligations/index.ts"
+      ]
+    },
+    {
+      "rule": "directory-shadow",
+      "specifier": "src/types/project",
+      "winner": "src/types/project.ts",
+      "shadowed": [
+        "src/types/project/index.ts"
+      ]
+    }
+  ]
+}

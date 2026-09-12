@@ -349,6 +349,8 @@
     "depcruise:cycles:baseline": "node scripts/check-depcruise-ratchet.js --gate cycles --write-baseline",
     "depcruise:boundaries": "node scripts/check-depcruise-ratchet.js --gate boundaries --check",
     "depcruise:boundaries:baseline": "node scripts/check-depcruise-ratchet.js --gate boundaries --write-baseline",
+    "test:shadowed-modules": "node scripts/check-shadowed-modules.js",
+    "shadowed-modules:baseline": "node scripts/check-shadowed-modules.js --write-baseline",
     "a11y-coverage:check": "node scripts/check-a11y-test-coverage-ratchet.js --check",
     "a11y-coverage:baseline": "node scripts/check-a11y-test-coverage-ratchet.js --write-baseline",
     "knip-deps:check": "node scripts/check-knip-deps-ratchet.js --check",

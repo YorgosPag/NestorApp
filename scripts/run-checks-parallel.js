@@ -72,6 +72,7 @@ const localeFiles         = parseList(process.env.STAGED_LOCALE_FILES);
 const queryFiles          = parseList(process.env.STAGED_QUERY_FILES);
 const srcTsFiles          = parseList(process.env.STAGED_SRC_TS_FILES);
 const allFiles            = parseList(process.env.STAGED_ALL_FILES);
+const addedFiles          = parseList(process.env.STAGED_ADDED_FILES);
 const navTriggers         = parseList(process.env.STAGED_NAV_TRIGGER_FILES);
 const rulesCovTriggers    = parseList(process.env.STAGED_RULES_COVERAGE_TRIGGERS);
 const storageCovTriggers  = parseList(process.env.STAGED_STORAGE_COVERAGE_TRIGGERS);
@@ -495,6 +496,23 @@ if (!process.env.SKIP_RATE_LIMIT_POLICY) {
     || f === 'scripts/check-rate-limit-policy.js');
   if (ratePolicyTriggers.length > 0)
     addThread('3.78', 'Rate-limit policy', 'scripts/check-rate-limit-policy.js');
+}
+
+// CHECK 3.79 (ADR-858) — «λύνουν ΔΥΟ αρχεία στο ίδιο specifier, και ξέρει κάποιος ποιο
+// κερδίζει;». Ο φάκελος `dxf-viewer/debug/` είχε `index.ts` ΚΑΙ `index.tsx`· το webpack λύνει
+// `.tsx` πριν `.ts` ⇒ το `index.ts` δεν φορτώθηκε ΠΟΤΕ, 52 καταναλωτές τραβούσαν όλο το debug
+// UI, και ο κύκλος που γεννήθηκε έριξε την παραγωγή με TDZ σε σελίδα πωλήσεων.
+// Σκανδάλη: ΠΡΟΣΘΗΚΗ/ΜΕΤΟΝΟΜΑΣΙΑ αρχείου (μόνο έτσι γεννιέται σκίαση) ή ο κώδικας της ίδιας
+// της πύλης — αλλιώς αλλαγή κριτηρίου περνά χωρίς να δοκιμαστεί ποτέ (μάθημα 3.43·3.57·3.75).
+// Κόστος: ~4,3s, ένα πέρασμα σε 16.788 αρχεία ⇒ ΔΕΝ μπαίνει σε κάθε commit επίτηδες.
+if (!process.env.SKIP_SHADOWED_MODULES) {
+  const shadowTriggers = addedFiles.filter(f => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f))
+    .concat(allFiles.filter(f =>
+      f === 'scripts/check-shadowed-modules.js'
+      || f === '.shadowed-modules-baseline.json'
+      || f.startsWith('scripts/lib/module-init/')));
+  if (shadowTriggers.length > 0)
+    addThread('3.79', 'Shadowed modules', 'scripts/check-shadowed-modules.js');
 }
 
 // CHECK 3.53 — ταυτότητα ενοτήτων ADR (ADR-739 §0.3 / ADR-777 §0.4).
