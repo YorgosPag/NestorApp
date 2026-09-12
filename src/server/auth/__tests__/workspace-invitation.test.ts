@@ -51,9 +51,26 @@ jest.mock('@/lib/auth/workspace-membership', () => ({
   decideMembership: (...args: unknown[]) => decideMembershipMock(...args),
 }));
 
+// 🔑 ADR-853 Φ4 — ο ΕΝΑΣ αναγνώστης ονόματος χώρου. Mocked επειδή το ερώτημα των αγκυρών
+//    είναι *«ζητήθηκε το όνομα από ΑΥΤΟΝ;»*, όχι «τι γράφει το `companies/{id}`» — εκείνο
+//    το κρίνει η δική του άγκυρα (Ο3), με πραγματικό έγγραφο στον πλαστό.
+const readWorkspaceNameMock = jest.fn().mockResolvedValue('Παγώνης Τεχνική');
+jest.mock('@/lib/workspace/workspace-catalog', () => ({
+  readWorkspaceName: (...args: unknown[]) => readWorkspaceNameMock(...args),
+}));
+
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { issueWorkspaceInvitation, revokeWorkspaceInvitation } from '../workspace-invitation';
-import { acceptWorkspaceInvitation, declineWorkspaceInvitation } from '../workspace-invitation-redeem';
+import {
+  issueWorkspaceInvitation,
+  listPendingWorkspaceInvitations,
+  revokeWorkspaceInvitation,
+} from '../workspace-invitation';
+import {
+  acceptWorkspaceInvitation,
+  declineWorkspaceInvitation,
+  markWorkspaceInvitationOpened,
+  previewWorkspaceInvitation,
+} from '../workspace-invitation-redeem';
 import type { WorkspaceInvitationDocument } from '@/types/workspace-invitation';
 
 process.env.WORKSPACE_INVITE_SECRET ??= 'δοκιμαστικό-μυστικό-πρόσκλησης-χώρου';
@@ -104,6 +121,7 @@ beforeEach(() => {
   grantStandalone.mockClear();
   // Προεπιλογή: **δεν** είναι μέλος πουθενά — κάθε άγκυρα αλλάζει μόνο ό,τι δοκιμάζει.
   decideMembershipMock.mockReset().mockResolvedValue({ verdict: 'not-a-member' });
+  readWorkspaceNameMock.mockClear().mockResolvedValue('Παγώνης Τεχνική');
 });
 
 // =============================================================================
@@ -448,6 +466,25 @@ describe('Α — άρνηση και ανάκληση', () => {
     expect(again).toEqual({ kind: 'already', state: 'revoked' });
   });
 
+  it('Α4β — ΑΝΑΚΛΗΜΕΝΗ ΔΕΝ ΕΜΦΑΝΙΖΕΤΑΙ ΟΥΤΕ ΩΣ ΟΨΗ — και λέει «ανακλήθηκε», όχι «άκυρος»', async () => {
+    const { token, invitation } = await issue();
+    await revokeWorkspaceInvitation({
+      invitationId: invitation.id,
+      companyId: COMPANY,
+      revokedByUid: INVITER,
+      nowISOValue: NOW,
+    });
+
+    const outcome = await previewWorkspaceInvitation({ token, nowISOValue: NOW });
+
+    // 🔑 Ο **παρονομαστής** ζει στο Ο1: η ίδια ακριβώς πρόσκληση δίνει όψη όταν δεν
+    //    ανακληθεί. Χωρίς εκείνο, αυτό εδώ θα ήταν πράσινο και για λάθος λόγο.
+    expect(outcome.kind).toBe('refused');
+    if (outcome.kind === 'refused') expect(outcome.reason).toBe('revoked');
+    // ⛔ Και **κανένα** όνομα γραφείου δεν ζητήθηκε: άρνηση δεν πληρώνει ανάγνωση.
+    expect(readWorkspaceNameMock).not.toHaveBeenCalled();
+  });
+
   it('Α4 — ανακλημένη ΔΕΝ εξαργυρώνεται', async () => {
     const { token, invitation } = await issue();
     await revokeWorkspaceInvitation({
@@ -464,5 +501,139 @@ describe('Α — άρνηση και ανάκληση', () => {
     });
 
     expect(outcome).toEqual({ kind: 'refused', reason: 'revoked' });
+  });
+});
+
+// =============================================================================
+// Λ — Η ΛΙΣΤΑ ΤΟΥ ΧΩΡΟΥ (ADR-853 Φ4 · §5 #5 κατάσταση παράδοσης)
+// =============================================================================
+
+describe('Λ — η λίστα του χώρου', () => {
+  it('🔴 Λ1 — ΜΟΝΟ οι ζωντανές: η αποδεκτή ΔΕΝ ταξιδεύει (είναι ήδη μέλος στη λίστα χρηστών)', async () => {
+    const first = await issue();
+    const second = await issue({ inviteeEmailRaw: 'maria@example.com' });
+
+    const accepted = await acceptWorkspaceInvitation({
+      token: first.token,
+      identity: identity(),
+      nowISOValue: NOW,
+    });
+    // 🔑 Ο παρονομαστής **μέσα** στην άγκυρα: αν η αποδοχή δεν είχε γίνει, το «λείπει από
+    //    τη λίστα» θα ήταν πράσινο για **λάθος λόγο**.
+    expect(accepted.kind).toBe('accepted');
+
+    const live = await listPendingWorkspaceInvitations(COMPANY, NOW);
+
+    expect(live.map((v) => v.id)).toEqual([second.invitation.id]);
+  });
+
+  it('🔴 Λ2 — `pending` με ΠΕΡΑΣΜΕΝΗ ώρα ταξιδεύει ως `expired`, και ο δίσκος μένει `pending`', async () => {
+    const { invitation } = await issue();
+
+    const early = await listPendingWorkspaceInvitations(COMPANY, NOW);
+    const late = await listPendingWorkspaceInvitations(COMPANY, TOO_LATE);
+
+    // ⚠️ Η **ίδια** πρόσκληση, δύο στιγμές: η κατάσταση **παράγεται**, δεν αντιγράφεται.
+    //    Αλλιώς ο διαχειριστής βλέπει «σε αναμονή» για σύνδεσμο που ΔΕΝ δουλεύει.
+    expect({ early: early[0]?.state, late: late[0]?.state })
+      .toEqual({ early: 'pending', late: 'expired' });
+
+    // ⛔ Και κανείς δεν «σκούπισε» τη ληγμένη: η λήξη είναι **ανάγνωση**, όχι μετάβαση.
+    expect((await stored(invitation.id)).state).toBe('pending');
+  });
+
+  it('🔑 Λ3 — η ανάγνωση ΔΕΝ γράφει: το έγγραφο μένει ταυτόσημο', async () => {
+    const { invitation } = await issue();
+    const before = await stored(invitation.id);
+
+    await listPendingWorkspaceInvitations(COMPANY, TOO_LATE);
+
+    // 🔴 Σύγκριση **ολόκληρου** του εγγράφου, ποτέ ενός πεδίου: μια λίστα δεν επιτρέπεται
+    //    να αλλάξει τον κόσμο επειδή κάποιος την κοίταξε.
+    expect(await stored(invitation.id)).toEqual(before);
+  });
+
+  it('🔒 Λ4 — ΞΕΝΟΣ χώρος ΔΕΝ εμφανίζεται (απομόνωση μισθωτή, όχι φιλτράρισμα στην οθόνη)', async () => {
+    const mine = await issue();
+    await issue({ companyId: 'comp_allou', inviteeEmailRaw: 'xenos@example.com' });
+
+    const live = await listPendingWorkspaceInvitations(COMPANY, NOW);
+
+    // ⚠️ Ο **παρονομαστής**: υπάρχουν δύο ζωντανές στη βάση — αν το ερώτημα δεν είχε
+    //    `companyId`, αυτό θα επέστρεφε **δύο**.
+    expect(live.map((v) => v.id)).toEqual([mine.invitation.id]);
+  });
+});
+
+// =============================================================================
+// Ο — Η ΟΨΗ ΠΡΙΝ ΤΗΝ ΑΠΟΦΑΣΗ (ADR-853 §5 #4 — anti-phishing, όχι ευκολία)
+// =============================================================================
+
+describe('Ο — η όψη πριν την απόφαση', () => {
+  it('Ο1 — ΠΑΡΟΝΟΜΑΣΤΗΣ: ζωντανή πρόσκληση δίνει όνομα χώρου, ρόλο και λήξη', async () => {
+    const { token, invitation } = await issue();
+
+    const outcome = await previewWorkspaceInvitation({ token, nowISOValue: NOW });
+
+    expect(outcome.kind).toBe('preview');
+    if (outcome.kind !== 'preview') return;
+    expect(outcome.preview).toEqual({
+      workspaceName: 'Παγώνης Τεχνική',
+      role: 'internal_user',
+      expiresAt: invitation.expiresAt,
+      identityAssurance: 'declared',
+    });
+    // 🔑 Το όνομα ζητήθηκε από τον **ΕΝΑ** αναγνώστη, με τον χώρο **της πρόσκλησης** —
+    //    ποτέ από τον πελατικό `useCompanyDisplayName`, που ρωτά άλλη συλλογή.
+    expect(readWorkspaceNameMock).toHaveBeenCalledWith(COMPANY);
+  });
+
+  it('🔒 Ο2 — η όψη ΔΕΝ κουβαλά email παραλήπτη, companyId ή nonceHash', async () => {
+    const { token } = await issue();
+    const outcome = await previewWorkspaceInvitation({ token, nowISOValue: NOW });
+    if (outcome.kind !== 'preview') throw new Error(`αναμενόταν όψη, ήρθε ${outcome.kind}`);
+
+    // 🔴 Ο έλεγχος είναι στο **ΣΥΝΟΛΟ ΚΛΕΙΔΙΩΝ**, όχι σε ονόματα που φαντάστηκα: πεδίο που
+    //    προστίθεται αργότερα χωρίς σκέψη **κοκκινίζει εδώ**. Μια άγκυρα που ελέγχει μόνο
+    //    ό,τι σκέφτηκε ο συγγραφέας φυλά μόνο τα λάθη που ήξερε.
+    expect(Object.keys(outcome.preview).sort())
+      .toEqual(['expiresAt', 'identityAssurance', 'role', 'workspaceName']);
+
+    // ⚠️ Και το περιεχόμενο: η όψη δίνεται σε **όποιον κρατά τον σύνδεσμο**, χωρίς
+    //    ταυτότητα — προωθημένο email δεν επιτρέπεται να αποκαλύψει διεύθυνση ανθρώπου.
+    const wire = JSON.stringify(outcome.preview);
+    expect(wire).not.toContain(EMAIL);
+    expect(wire).not.toContain(COMPANY);
+  });
+
+  it('🔴 Ο3 — η όψη ΔΕΝ καταναλώνει: μετά από ΔΥΟ ανοίγματα η πρόσκληση εξαργυρώνεται κανονικά', async () => {
+    const { token } = await issue();
+
+    // ⚠️ Δύο φορές **επίτηδες**: οι πελάτες email προ-φορτώνουν συνδέσμους (§6 #3). Αν η
+    //    ανάγνωση έκαιγε την πρόσκληση, ένας σαρωτής θα την κατανάλωνε πριν τη δει άνθρωπος.
+    await previewWorkspaceInvitation({ token, nowISOValue: NOW });
+    await previewWorkspaceInvitation({ token, nowISOValue: NOW });
+
+    const accepted = await acceptWorkspaceInvitation({
+      token,
+      identity: identity(),
+      nowISOValue: NOW,
+    });
+
+    expect(accepted.kind).toBe('accepted');
+    expect(grantInTx).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔑 Ο4 — το «ανοίχτηκε» γράφεται ΜΟΝΟ την πρώτη φορά (αλλιώς γίνεται «πότε ξαναφόρτωσε»)', async () => {
+    const { invitation } = await issue();
+
+    await markWorkspaceInvitationOpened(invitation.id, LATER);
+    const first = (await stored(invitation.id)).openedAt;
+    await markWorkspaceInvitationOpened(invitation.id, TOO_LATE);
+
+    // 🔑 Η δεύτερη κλήση **δεν** μετακινεί τη σφραγίδα: το πεδίο απαντά *«πότε το είδε
+    //    πρώτη φορά»*, και μια ανανέωση σελίδας δεν είναι νέο άνοιγμα.
+    expect({ first, second: (await stored(invitation.id)).openedAt })
+      .toEqual({ first: LATER, second: LATER });
   });
 });

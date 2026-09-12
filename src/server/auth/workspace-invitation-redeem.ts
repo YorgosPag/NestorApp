@@ -39,12 +39,17 @@ import { sha256HexOfText } from '@/lib/hash/sha256';
 import { createModuleLogger } from '@/lib/telemetry';
 import { decodeSignedToken, equalsInConstantTime, requireTokenSecret } from '@/lib/tokens/signed-token';
 import { grantWorkspaceMembershipInTx } from '@/lib/workspace/grant-membership';
+// 🔑 ADR-853 Φ4 — ο ΕΝΑΣ αναγνώστης ονόματος χώρου του διακομιστή (εξήχθη 2026-09-12).
+// ⛔ ΜΗΝ διαβάσεις εδώ το `companies/{id}` μόνος σου, και ΜΗΝ καλέσεις τον πελατικό
+//    `useCompanyDisplayName`: εκείνος ρωτά **άλλη συλλογή** (`contacts`) με άλλα πεδία.
+import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import { orgWorkspace } from '@/types/workspace-membership';
 import {
   isInvitableRole,
   readStoredInvitationState,
   type WorkspaceInvitation,
   type WorkspaceInvitationDocument,
+  type WorkspaceInvitationPreview,
   type WorkspaceInvitationRefusal,
   type WorkspaceInvitationState,
 } from '@/types/workspace-invitation';
@@ -321,4 +326,118 @@ export async function markWorkspaceInvitationOpened(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+// =============================================================================
+// 4. Η ΟΨΗ ΠΡΙΝ ΤΗΝ ΑΠΟΦΑΣΗ — «ποιος με καλεί, και για τι θέση;»
+// =============================================================================
+
+/**
+ * 🔴 **ΟΥΤΕ ΟΝΟΜΑΣΜΕΝΗ ΑΡΝΗΣΗ ΟΥΤΕ ΟΨΗ** — ίδια διάκριση με το `unavailable` της
+ * εξαργύρωσης: το «λείπει το μυστικό μας» δεν λέγεται στον άνθρωπο ως «πλαστός σύνδεσμος».
+ */
+export type InvitationPreviewOutcome =
+  | {
+      readonly kind: 'preview';
+      readonly preview: WorkspaceInvitationPreview;
+      /**
+       * ⚠️ **ΔΕΝ ταξιδεύει στο σύρμα** — ζει στην έκβαση επειδή τη χρειάζεται ο καλών για
+       * τη σήμανση «ανοίχτηκε». Δες τον τύπο {@link WorkspaceInvitationPreview}: το
+       * αναγνωριστικό δεν έχει λόγο να φτάσει σε ανώνυμο φυλλομετρητή.
+       */
+      readonly invitationId: string;
+    }
+  | { readonly kind: 'refused'; readonly reason: WorkspaceInvitationRefusal }
+  | { readonly kind: 'unavailable' };
+
+function previewRefuse(reason: WorkspaceInvitationRefusal): InvitationPreviewOutcome {
+  return { kind: 'refused', reason };
+}
+
+/**
+ * **Η όψη της πρόσκλησης, ΧΩΡΙΣ ταυτότητα και ΧΩΡΙΣ κατανάλωση** (ADR-853 §5 #4).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΔΕΝ ΕΛΕΓΧΕΙ EMAIL — ΚΑΙ ΓΙΑΤΙ Η ΔΕΣΜΕΥΣΗ ΜΕΝΕΙ ΑΚΕΡΑΙΗ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Εδώ **δεν υπάρχει συνδεδεμένος άνθρωπος**: η σελίδα ανοίγει από το email **πριν** από
+ * κάθε ταυτότητα, και ο παραλήπτης περνά από `/login` **μετά** (§6 #2). Ένας έλεγχος
+ * παραλήπτη θα ήταν δομικά αδύνατος — δεν υπάρχει ποιον να ελέγξει.
+ *
+ * ⚠️ **Η δέσμευση στο επαληθευμένο email ΔΕΝ χαλαρώνει**: κρίνεται στην **εξαργύρωση**
+ * (§7.5, άγκυρες Τ1/Τ1β), που είναι η πράξη που **γράφει**. Αυτή εδώ δεν γράφει τίποτα
+ * *(πλην της τηλεμετρίας «ανοίχτηκε»)*, άρα ό,τι μαθαίνει ο κρατών τον σύνδεσμο είναι
+ * **όνομα γραφείου, ρόλος, λήξη** — και κανένα προσωπικό δεδομένο.
+ *
+ * 🔑 **Και γι' αυτό η ανάγνωση ΔΕΝ ΚΑΙΕΙ ΤΗΝ ΠΡΟΣΚΛΗΣΗ** — ίδιο δόγμα με το
+ * `open-invite.ts` της πύλης προμηθευτών: το `pending` μένει `pending`, όσες φορές κι αν
+ * ανοίξει ο άνθρωπος τη σελίδα. Αλλιώς μια προ-φόρτωση του πελάτη email θα κατανάλωνε
+ * πρόσκληση που **κανένας άνθρωπος δεν είδε**.
+ *
+ * ⚠️ **Η υπογραφή ελέγχεται ΠΡΙΝ από κάθε ανάγνωση βάσης**: πλαστός σύνδεσμος δεν μας
+ * κοστίζει ούτε ένα αίτημα Firestore (ίδιο σκεπτικό με το `redeem`, και ρητή απαίτηση του
+ * ADR-327 §11 για τις δημόσιες πύλες).
+ */
+export async function previewWorkspaceInvitation(input: {
+  readonly token: string;
+  readonly nowISOValue?: string;
+}): Promise<InvitationPreviewOutcome> {
+  const nowValue = input.nowISOValue ?? clockNowISO();
+
+  let secret: string;
+  try {
+    secret = requireTokenSecret(SECRET_ENV);
+  } catch {
+    logger.error('Λείπει το μυστικό των προσκλήσεων — καμία όψη δεν μπορεί να δοθεί');
+    return { kind: 'unavailable' };
+  }
+
+  const verdict = decodeSignedToken(secret, input.token, 3);
+  if (!verdict.ok || verdict.fields.length !== 3) return previewRefuse('link-invalid');
+
+  const [invitationId, nonce, expiresAtMs] = verdict.fields as [string, string, string];
+  const expiryMs = Number(expiresAtMs);
+  if (!Number.isFinite(expiryMs)) return previewRefuse('link-invalid');
+  if (expiryMs <= Date.parse(nowValue)) return previewRefuse('expired');
+
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.WORKSPACE_INVITATIONS)
+    .doc(invitationId)
+    .get();
+  if (!snap.exists) return previewRefuse('invitation-unknown');
+
+  const stored = snap.data() as WorkspaceInvitationDocument;
+
+  const state = readStoredInvitationState(stored.state);
+  if (state !== 'pending') return previewRefuse(REFUSAL_BY_STATE[state]);
+
+  // ⚠️ **ΔΕΥΤΕΡΟΣ** έλεγχος λήξης, όπως στην εξαργύρωση (Τ2): ο χρόνος ζει σε δύο μέρη.
+  if (Date.parse(stored.expiresAt) <= Date.parse(nowValue)) return previewRefuse('expired');
+
+  // 🔴 Η υπογραφή αποδεικνύει ότι **εμείς** φτιάξαμε το κείμενο — **όχι** ότι δείχνει σε
+  //    αυτό το έγγραφο. Το nonce είναι εκείνο που το δένει.
+  if (!equalsInConstantTime(await sha256HexOfText(nonce), stored.nonceHash)) {
+    return previewRefuse('link-invalid');
+  }
+
+  // ⚠️ Ίδιος φρουρός με την εξαργύρωση (Μ3) και για τον **ίδιο** λόγο: ο τύπος του
+  //    εγγράφου δηλώνει τον ρόλο `string` επίτηδες. Εδώ δεν γράφεται τίποτα — αλλά μια
+  //    όψη που δείχνει ρόλο **εκτός λεξιλογίου** υπόσχεται θέση που δεν θα δοθεί ποτέ.
+  if (!isInvitableRole(stored.role)) {
+    logger.error('Πρόσκληση με ρόλο εκτός λεξιλογίου — δεν εμφανίζεται', { invitationId });
+    return { kind: 'unavailable' };
+  }
+
+  return {
+    kind: 'preview',
+    invitationId,
+    preview: {
+      workspaceName: await readWorkspaceName(stored.companyId),
+      role: stored.role,
+      expiresAt: stored.expiresAt,
+      // 🔑 §6 #4 — «καμία επαλήθευση ΓΕΜΗ/ΑΦΜ σε αυτή τη φάση». Δες τον τύπο για το
+      //    γιατί δηλώνεται ρητά αντί να παραλείπεται.
+      identityAssurance: 'declared',
+    },
+  };
 }

@@ -24,6 +24,8 @@ import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { normalizeMembership } from '@/lib/auth/workspace-membership';
 // 🎫 ADR-660 §6 — τα αιτήματα ένταξης είναι οντότητα, με tenant scope.
 import { listPendingAccessRequests } from '@/server/auth/workspace-access-request';
+// 🎫 ADR-853 Φ4 — οι προσκλήσεις είναι **τέταρτη πηγή** αυτής της μίας απάντησης.
+import { listPendingWorkspaceInvitations } from '@/server/auth/workspace-invitation';
 import type { WorkspaceMembership } from '@/types/workspace-membership';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -69,6 +71,24 @@ interface CompanyUser {
   mfaEnrolled: boolean;
   companyId: string | null; // null for unassigned users
 }
+
+/**
+ * Η γραμμή **όπως φεύγει στο σύρμα** — ο χρήστης συν τα δύο πεδία έργων.
+ *
+ * 🔴 **ΤΟ `any[]` ΕΦΥΓΕ, ΚΑΙ Η ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΔΕΝ ΕΙΝΑΙ ΚΟΣΜΗΤΙΚΗ** (N.2, Boy Scout
+ * 2026-09-12): εδώ ζούσε `projectMemberships: [] as any[]` **δύο φορές**, με σχόλιο
+ * *«Phase A: not fetched»*. Το `readonly never[]` λέει **στον τύπο** αυτό που το σχόλιο
+ * έλεγε σε πρόζα — *«κανένα στοιχείο δεν μπαίνει ποτέ»* — και τη μέρα που η Phase B
+ * αρχίσει να γεμίζει τη λίστα, ο μεταγλωττιστής **θα σταματήσει** και θα απαιτήσει
+ * δηλωμένο σχήμα. Ένα `any[]` θα το δεχόταν σιωπηλά, μαζί με ό,τι λάθος μπει μέσα.
+ */
+interface CompanyUserRow extends CompanyUser {
+  projectCount: number;
+  projectMemberships: readonly never[];
+}
+
+/** Μία σταθερή κενή λίστα — ποτέ νέος πίνακας ανά γραμμή (ADR-366: νέα ταυτότητα = βρόχος). */
+const EMPTY_MEMBERSHIPS: readonly never[] = [];
 
 // =============================================================================
 // GET — List All Company Users
@@ -192,32 +212,46 @@ export const GET = withSensitiveRateLimit(
           }
         }
 
+        // 6. ADR-853 Φ4 — ΟΙ ΖΩΝΤΑΝΕΣ ΠΡΟΣΚΛΗΣΕΙΣ **αυτού** του χώρου.
+        //
+        // 🔑 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΔΙΚΗ ΤΗΣ ΔΙΑΔΡΟΜΗ**: η οθόνη ρωτά **ένα** πράγμα —
+        //    *«ποιοι είναι στον χώρο μου;»*. Μια δεύτερη κλήση `GET /api/workspace-invitations`
+        //    θα έδινε **δύο απαντήσεις σε ένα ερώτημα**, με δύο στιγμές: η λίστα θα μπορούσε
+        //    να δείξει μέλος που μόλις δέχτηκε **και** την πρόσκλησή του ως εκκρεμή
+        //    (ADR-749). Τα αιτήματα ένταξης μπήκαν εδώ για τον **ίδιο** λόγο (βήμα 5).
+        //
+        // 🔴 **ΚΑΙ ΟΧΙ ΜΕΣΑ ΣΤΟ `users`, ΠΑΡΟΤΙ ΕΙΝΑΙ Η ΙΔΙΑ ΟΘΟΝΗ**: το `CompanyUser`
+        //    απαιτεί `uid`, και η πρόσκληση **δεν έχει uid** — φτάνει σε **email**. Αυτός
+        //    ακριβώς είναι ο λόγος που το ADR-853 §7.1 αρνήθηκε να την αποθηκεύσει ως
+        //    `workspace_members` με `status: 'invited'`. Να τη χώσουμε στο `users` θα ήταν
+        //    **το ίδιο κατηγοριακό λάθος έναν όροφο πιο ψηλά**: στο σύρμα αντί στη βάση.
+        //    Ξεχωριστό πεδίο, μία κλήση — το πρότυπο «Members / Pending invitations»
+        //    του GitHub και του Slack.
+        const invitations = await listPendingWorkspaceInvitations(ctx.companyId);
+
         // ADR-438: dedupable — idempotent listing. Το πάνελ διαχείρισης ρόλων ξαναζητά
         // την ίδια λίστα σε κάθε mount/refresh· «ο X είδε τη λίστα χρηστών» καταγράφεται
         // μία φορά ανά 5λεπτο παράθυρο. Οι ΑΛΛΑΓΕΣ ρόλων είναι security tier, αδιπλασίαστες.
         await logAuditEvent(ctx, 'data_accessed', ctx.companyId, 'user', {
           dedupable: true,
-          metadata: { reason: `Listed ${users.length} company users + ${unassignedUsers.length} unassigned` },
+          metadata: {
+            reason:
+              `Listed ${users.length} company users + ${unassignedUsers.length} unassigned`
+              + ` + ${invitations.length} pending invitations`,
+          },
         });
 
         logger.info('Company users listed', {
           companyId: ctx.companyId,
           assignedCount: users.length,
           unassignedCount: unassignedUsers.length,
+          invitationCount: invitations.length,
         });
 
         // Combine assigned + unassigned users
-        const allUsers = [
-          ...users.map((u) => ({
-            ...u,
-            projectCount: 0,
-            projectMemberships: [] as any[], // Phase A: not fetched
-          })),
-          ...unassignedUsers.map((u) => ({
-            ...u,
-            projectCount: 0,
-            projectMemberships: [] as any[],
-          })),
+        const allUsers: CompanyUserRow[] = [
+          ...users.map((u) => ({ ...u, projectCount: 0, projectMemberships: EMPTY_MEMBERSHIPS })),
+          ...unassignedUsers.map((u) => ({ ...u, projectCount: 0, projectMemberships: EMPTY_MEMBERSHIPS })),
         ];
 
         return NextResponse.json({
@@ -227,6 +261,9 @@ export const GET = withSensitiveRateLimit(
             total: allUsers.length,
             assigned: users.length,
             unassigned: unassignedUsers.length,
+            // 🎫 ADR-853 Φ4 — **αδελφό πεδίο**, ποτέ ανάμεσα στους χρήστες (δες το βήμα 6).
+            invitations,
+            invitationCount: invitations.length,
           },
         });
       } catch (error) {
