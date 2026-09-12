@@ -68,3 +68,38 @@
 - **Companion**: LocalStorageDriver (async enterprise), StorageManager (quota/cleanup)
 
 ---
+
+## 🔴 2026-09-12 — Δύο κανόνες που γεννήθηκαν από σφάλμα παραγωγής (ADR-858)
+
+### 1. Το `storage-utils` είναι **primitive** — δεν εισάγει barrel
+
+```diff
+- import { dwarn, derr } from '../debug';
++ import { dwarn, derr } from '../debug/core/UnifiedDebugManager';
+```
+
+Αυτό το αρχείο είναι το **χαμηλότερο** επίπεδο του viewer. Το barrel `../debug` ήταν η
+**κορυφή** του γράφου: επανεξήγαγε `SnapDebugLogger`, που τραβούσε ολόκληρο τον γεωμετρικό
+γράφο, που κατέληγε στο `table-ink` → `table-surface-mode` → **πίσω εδώ**.
+
+Ο κύκλος έκλεινε πάνω στο **`STORAGE_KEYS`**, και επειδή ο τελευταίος κρίκος το διάβαζε σε
+χρόνο αξιολόγησης module, η παραγωγή έσκαγε με `Cannot access 'o' before initialization`
+(TDZ) στο `/o/<χώρος>/sales/available-properties` — **σελίδα που δεν ανοίγει καν τον viewer**.
+
+⚠️ **ΜΗΝ το «τακτοποιήσεις» πίσω σε `from '../debug'`.** Το σχόλιο στο αρχείο το εξηγεί·
+το `UnifiedDebugManager.ts` έχει **μόνο** `import type` ⇒ μηδέν ακμές στον γράφο.
+
+### 2. Ποιος καταναλώνει το `STORAGE_KEYS` — και **πότε**
+
+Το `storageGet`/`storageSet` είναι SSR-safe, αλλά αυτό **δεν αρκεί**: το πρόβλημα δεν ήταν
+«τρέχει στον server;» αλλά **«τρέχει σε χρόνο αξιολόγησης module;»**. Κάθε
+`const store = …storageGet(STORAGE_KEYS.X, …)` σε module scope είναι πυροκροτητής για κάθε
+κύκλο που περνά από εδώ.
+
+✅ **Ο σωστός τρόπος ζει στο `stores/createPersistedValue.ts`** (τεμπέλικη ενυδάτωση,
+`hydrateOnce()` στην πρώτη `get`/`set`/`subscribe`). Χρησιμοποίησέ το — μην ξαναγράψεις
+χειροκίνητο `createExternalStore` + `storageGet`.
+
+📘 Πλήρες περιστατικό, απόδειξη από το bundle, και οι τέσσερις πύλες: **ADR-858**.
+
+---

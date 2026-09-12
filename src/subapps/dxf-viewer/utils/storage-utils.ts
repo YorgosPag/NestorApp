@@ -16,7 +16,19 @@
  */
 
 import { isStorageAvailable } from '@/lib/storage';
-import { dwarn, derr } from '../debug';
+// 🔴 ΒΑΘΙΑ ΕΙΣΑΓΩΓΗ ΕΠΙΤΗΔΕΣ — ΜΗΝ ΤΗΝ ΞΑΝΑΚΑΝΕΙΣ `from '../debug'`.
+//
+// Αυτό το αρχείο είναι primitive (localStorage): το πιο χαμηλό επίπεδο του viewer. Το barrel
+// `../debug` είναι η ΚΟΡΥΦΗ του γράφου — επανεξάγει `SnapDebugLogger`, που εισάγει ολόκληρο
+// τον γεωμετρικό γράφο, που καταλήγει στο `table-ink` → `table-surface-mode` → **πίσω εδώ**.
+// Ο κύκλος έκλεινε ΠΑΝΩ στο `STORAGE_KEYS`, και επειδή ο καταναλωτής το διάβαζε σε χρόνο
+// αξιολόγησης module, η παραγωγή έσκαγε με `Cannot access 'o' before initialization`
+// (TDZ) στο `/sales/available-properties` — σελίδα που δεν ανοίγει καν τον viewer.
+//
+// Το `debug/core/UnifiedDebugManager` έχει **μόνο** `import type` ⇒ μηδέν ακμές στον γράφο.
+// Αυτή η γραμμή είναι που κόβει τον κύκλο στη ρίζα.
+// @see ADR-858 — Levelization & αρχή αξιολόγησης modules
+import { dwarn, derr } from '../debug/core/UnifiedDebugManager';
 
 // ============================================================================
 // STORAGE KEYS REGISTRY

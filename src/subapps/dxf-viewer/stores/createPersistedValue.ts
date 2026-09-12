@@ -18,8 +18,11 @@
  * hand-rolled stores — only the plumbing changes.
  *
  * Behaviour vs the hand-rolled stores:
- *   - Hydration: `storageGet(key, default)` (SSR-safe, JSON) → optional `validate` normalises
- *     a corrupt/out-of-range hydrated value (e.g. finite-&-positive) exactly like the old inits.
+ *   - Hydration: **LAZY** — `storageGet(key, default)` (SSR-safe, JSON) runs on the first
+ *     `get`/`set`/`subscribe`, NOT at module-evaluation time (see the block comment on
+ *     `hydrateOnce`: an eager read here crashed production with a TDZ ReferenceError once this
+ *     factory landed inside an import cycle). `validate` then normalises a corrupt/out-of-range
+ *     hydrated value (e.g. finite-&-positive) exactly like the old inits.
  *   - `set` runs the underlying `set` (honouring `equals`), then persists ONLY when the stored
  *     snapshot actually changed — so an `equals`-suppressed or same-value write never touches
  *     localStorage (byte-identical to the `if (next === current) return` guards).
@@ -91,23 +94,68 @@ export function createPersistedValue<T>(
     ? { serialize: options.serialize, deserialize: options.deserialize }
     : null;
 
-  const hydrate = (): T => {
+  /**
+   * Διαβάζει τον δίσκο και λέει **ΚΑΙ αν βρήκε κάτι**.
+   *
+   * 🔑 Το `found` δεν είναι διακόσμηση: χωρίς αυτό, η τεμπέλικη ενυδάτωση καλεί `store.set()`
+   * ακόμη και όταν δεν υπάρχει τίποτα αποθηκευμένο — και το `createExternalStore` **χωρίς
+   * `equals` ειδοποιεί σε κάθε `set`** ⇒ κάθε `useSyncExternalStore` συνδρομητής παίρνει ένα
+   * **περιττό re-render** τη στιγμή που προσχωρεί. Το έπιασε το ίδιο το υπάρχον test
+   * («persists on set and notifies subscribers»: περίμενε 1 ειδοποίηση, πήρε 2).
+   */
+  const hydrate = (): { found: boolean; value: T } => {
+    const raw = storageGetString(key);
+    if (raw === null) return { found: false, value: defaultValue };
     if (codec) {
-      const raw = storageGetString(key);
-      if (raw === null) return defaultValue;
       try {
-        return codec.deserialize(raw);
+        return { found: true, value: codec.deserialize(raw) };
       } catch {
-        return defaultValue; // corrupt raw value → default (then validate)
+        return { found: false, value: defaultValue }; // corrupt raw value → default
       }
     }
-    return storageGet<T>(key, defaultValue);
+    return { found: true, value: storageGet<T>(key, defaultValue) };
   };
 
+  /** Ο ίδιος φρουρός αλλαγής που βλέπει και το υποκείμενο store (ποτέ δεύτερη σημασιολογία). */
+  const isUnchanged = options?.equals ?? Object.is;
+
+  // 🔴 Ο ΔΙΣΚΟΣ ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ ΕΔΩ — ΜΗΝ ΤΟ ΞΑΝΑΚΑΝΕΙΣ `createExternalStore(validate(hydrate()))`.
+  //
+  // Οι καταναλωτές γράφουν `const store = createPersistedValue(...)` σε module scope, άρα μια
+  // ανάγνωση εδώ θα γινόταν σε **χρόνο αξιολόγησης module**. Αν αυτό το module βρεθεί μέσα σε
+  // κύκλο εισαγωγών — και βρέθηκε — το `STORAGE_KEYS` που περνά ο καλών είναι ακόμα στη ζώνη
+  // TDZ, και η παραγωγή σκάει με `Cannot access 'o' before initialization` **στην αρχικοποίηση
+  // ολόκληρου του chunk**: δηλαδή ρίχνει σελίδες που δεν ακουμπούν καν τον viewer.
+  //
+  // Ίδιο μοτίβο και ίδιο σκεπτικό με το `state/table-border-pencil-store.ts` (που το έγραψε
+  // για SSR hydration mismatch). Η τεμπέλικη ανάγνωση λύνει **και τα δύο**: πρώτη χρήση =
+  // χειρισμός συμβάντος ή effect, ποτέ import.
+  // @see ADR-858 — Levelization & αρχή αξιολόγησης modules
   const store = createExternalStore<T>(
-    validate(hydrate()),
+    validate(defaultValue),
     options?.equals ? { equals: options.equals } : undefined,
   );
+
+  let hydrated = false;
+
+  /**
+   * Διαβάζει τον δίσκο **μία φορά**, την πρώτη φορά που κάποιος ζητά ή αλλάζει την τιμή.
+   *
+   * Ο φρουρός `typeof window === 'undefined'` κρατά τον server στην προεπιλογή **χωρίς** να
+   * σφραγίσει τη σημαία: ο ίδιος κώδικας που έτρεξε στον server ξαναρωτά στον client και
+   * ενυδατώνεται κανονικά εκεί.
+   */
+  const hydrateOnce = (): void => {
+    if (hydrated || typeof window === 'undefined') return;
+    hydrated = true;
+    const { found, value } = hydrate();
+    if (!found) return; // τίποτα αποθηκευμένο ⇒ η προεπιλογή ήδη ισχύει ⇒ **καμία** ειδοποίηση
+    const next = validate(value);
+    if (isUnchanged(next, store.get())) return; // ίδια τιμή ⇒ καμία ειδοποίηση
+    // Κατευθείαν στο υποκείμενο store: το persist ανήκει στο `set` του wrapper, και η
+    // ενυδάτωση ΔΕΝ είναι εγγραφή — θα ξανάγραφε στον δίσκο ό,τι μόλις διάβασε.
+    store.set(next);
+  };
 
   const persist = (value: T): void => {
     if (options?.removeOnDefault && Object.is(value, defaultValue)) {
@@ -120,10 +168,26 @@ export function createPersistedValue<T>(
   };
 
   return {
-    get: store.get,
-    subscribe: store.subscribe,
-    reset: store.reset,
+    get: (): T => {
+      hydrateOnce();
+      return store.get();
+    },
+    subscribe: (listener: () => void): (() => void) => {
+      // Ο listener καταχωρείται ΠΡΙΝ την ενυδάτωση επίτηδες: έτσι, αν ο δίσκος κρατά κάτι
+      // διαφορετικό από την προεπιλογή, ο συνδρομητής το **μαθαίνει**. Η αντίστροφη σειρά
+      // θα άφηνε κάθε `useSyncExternalStore` δείκτη να δείχνει για πάντα την προεπιλογή.
+      const unsubscribe = store.subscribe(listener);
+      hydrateOnce();
+      return unsubscribe;
+    },
+    // `reset` = «η τιμή ορίζεται ΡΗΤΑ τώρα» (jest isolation). Σφραγίζει την ενυδάτωση, αλλιώς
+    // η επόμενη `get` θα διάβαζε τον δίσκο και θα έσβηνε σιωπηλά αυτό που μόλις όρισε το test.
+    reset: (next: T): void => {
+      hydrated = true;
+      store.reset(next);
+    },
     set: (next: T): void => {
+      hydrateOnce();
       const before = store.get();
       store.set(next);
       const after = store.get();

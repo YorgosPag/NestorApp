@@ -32,8 +32,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-771-table-surface-doctrine.md §4
  */
 
-import { createExternalStore } from '../../stores/createExternalStore';
-import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
+import { createPersistedValue } from '../../stores/createPersistedValue';
+import { STORAGE_KEYS } from '../../utils/storage-utils';
 
 /**
  * Οι τρεις επιφάνειες παρουσίασης.
@@ -64,9 +64,23 @@ function sanitize(value: string | null | undefined): TableSurfaceMode {
     : DEFAULT_TABLE_SURFACE_MODE;
 }
 
-const store = createExternalStore<TableSurfaceMode>(
-  sanitize(storageGet<string>(STORAGE_KEYS.TABLE_SURFACE_MODE, DEFAULT_TABLE_SURFACE_MODE)),
-  { equals: Object.is },
+/**
+ * 🔴 SSoT ΕΜΜΟΝΗΣ — **ΜΗΝ** ξαναγράψεις χειροκίνητα `createExternalStore` + `storageGet` εδώ.
+ *
+ * Αυτό το store το έκανε ακριβώς αυτό, και ο συνδυασμός «ανάγνωση δίσκου σε χρόνο
+ * αξιολόγησης module» + κύκλος εισαγωγών (`storage-utils → debug → … → table-ink → εδώ`)
+ * ήταν που έριξε την παραγωγή: `Cannot access 'o' before initialization` στο
+ * `/sales/available-properties` — σελίδα που δεν ανοίγει καν τον viewer.
+ *
+ * Το `createPersistedValue` δίνει την ίδια συμπεριφορά με **τεμπέλικη** ενυδάτωση, και είναι
+ * το ένα σημείο που γνωρίζει «πότε διαβάζεται ο δίσκος». Το `sanitize` περνά ως `validate`:
+ * ό,τι κι αν βρεθεί στο `localStorage`, φιλτράρεται πριν σπείρει το store.
+ * @see ADR-858 — Levelization & αρχή αξιολόγησης modules
+ */
+const store = createPersistedValue<TableSurfaceMode>(
+  STORAGE_KEYS.TABLE_SURFACE_MODE,
+  DEFAULT_TABLE_SURFACE_MODE,
+  { equals: Object.is, validate: sanitize },
 );
 
 /**
@@ -84,8 +98,10 @@ export function getTableSurfaceMode(): TableSurfaceMode {
  * της επόμενης συνεδρίας — όχι την ίδια την εντολή που μόλις έδωσε.
  */
 export function setTableSurfaceMode(mode: TableSurfaceMode): void {
+  // Μία κλήση: το `createPersistedValue.set` γράφει μνήμη **και μετά** δίσκο, με την ίδια
+  // σειρά και την ίδια ανοχή σε γεμάτο/απενεργοποιημένο `localStorage` που περιγράφει το
+  // σχόλιο από πάνω — γι' αυτό δεν υπάρχει πια ξεχωριστό `storageSet` εδώ.
   store.set(sanitize(mode));
-  storageSet(STORAGE_KEYS.TABLE_SURFACE_MODE, store.get());
 }
 
 /** Συνδρομή για τον δείκτη κατάστασης (`useSyncExternalStore`). */

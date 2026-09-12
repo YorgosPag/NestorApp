@@ -119,4 +119,66 @@ describe('createPersistedValue', () => {
       expect(store.get()).toBe('cm');
     });
   });
+
+  /**
+   * 🔴 ADR-858 Φ.Α — ΤΕΜΠΕΛΙΚΗ ΕΝΥΔΑΤΩΣΗ.
+   *
+   * Το «πότε διαβάζεται ο δίσκος» **δεν είναι λεπτομέρεια υλοποίησης** εδώ: μια ανάγνωση σε
+   * χρόνο αξιολόγησης module, μέσα σε κύκλο εισαγωγών, έριξε την **παραγωγή** με
+   * `Cannot access 'o' before initialization` σε σελίδα που δεν ανοίγει καν τον viewer.
+   * Αν κάποιος «απλοποιήσει» ξανά σε eager hydration, αυτές οι άγκυρες κοκκινίζουν.
+   */
+  describe('ADR-858 — η ενυδάτωση είναι ΤΕΜΠΕΛΙΚΗ', () => {
+    it('🔴 ο δίσκος ΔΕΝ αγγίζεται στη δημιουργία — μόνο στην πρώτη χρήση', () => {
+      localStorage.setItem(KEY, JSON.stringify(7));
+      const spy = jest.spyOn(Storage.prototype, 'getItem');
+
+      const store = createPersistedValue<number>(KEY, 42);
+      expect(spy).not.toHaveBeenCalled(); // ← η ουσία του fix
+
+      expect(store.get()).toBe(7); // πρώτη χρήση ⇒ τώρα διαβάζει
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('το `subscribe` ενυδατώνει ΚΑΙ ειδοποιεί (αλλιώς ο δείκτης δείχνει για πάντα την προεπιλογή)', () => {
+      localStorage.setItem(KEY, JSON.stringify(7));
+      const store = createPersistedValue<number>(KEY, 42);
+
+      let notified = 0;
+      store.subscribe(() => { notified += 1; });
+
+      expect(notified).toBe(1);   // ο listener έμαθε την αποθηκευμένη τιμή
+      expect(store.get()).toBe(7);
+    });
+
+    it('χωρίς τίποτα αποθηκευμένο, το `subscribe` ΔΕΝ ειδοποιεί (μηδέν περιττό re-render)', () => {
+      const store = createPersistedValue<number>(KEY, 42);
+      let notified = 0;
+      store.subscribe(() => { notified += 1; });
+      expect(notified).toBe(0);
+      expect(store.get()).toBe(42);
+    });
+
+    it('🔴 το `reset` ΣΦΡΑΓΙΖΕΙ την ενυδάτωση — αλλιώς η επόμενη `get` σβήνει ό,τι όρισε το test', () => {
+      localStorage.setItem(KEY, JSON.stringify(7));
+      const store = createPersistedValue<number>(KEY, 42);
+
+      store.reset(99);
+      expect(store.get()).toBe(99); // ΟΧΙ 7 — ο δίσκος δεν ξαναδιαβάζεται
+    });
+
+    it('ενυδατώνει ΜΙΑ φορά, όσες κλήσεις κι αν γίνουν', () => {
+      localStorage.setItem(KEY, JSON.stringify(7));
+      const store = createPersistedValue<number>(KEY, 42);
+
+      store.get();
+      const spy = jest.spyOn(Storage.prototype, 'getItem');
+      store.get();
+      store.subscribe(() => {});
+      store.get();
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
 });
