@@ -20,6 +20,7 @@ import {
   flattenForTracking,
   diffTrackedFieldsLegacy,
   diffTrackedFields,
+  descriptorChannels,
   type TrackedFieldDef,
 } from '../audit-diff';
 
@@ -467,5 +468,73 @@ describe('diffTrackedFieldsLegacy — dot-notation fields', () => {
       oldValue: 100,
       newValue: 110,
     });
+  });
+});
+
+// ============================================================================
+// ΑΓΚΥΡΕΣ Γ — ADR-852 Φ3: ΤΟ ΔΙΠΛΟ ΚΑΝΑΛΙ ΣΤΗΝ ΕΓΓΡΑΦΗ
+// ============================================================================
+
+/**
+ * ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ: η Φ3 προσθέτει **χρονικό** κανάλι δίπλα στο αμετάβλητο `field`. Δύο
+ * πράγματα μπορούν να το σκοτώσουν σιωπηλά αργότερα:
+ *   1. κάποιος «απλοποιεί» το conditional spread σε `quantity: def.quantity` ⇒ κάθε
+ *      αδήλωτο πεδίο γράφει `undefined` ⇒ **ο Admin SDK ρίχνει ΟΛΟ το write**, και
+ *      επειδή το audit είναι fire-and-forget **κανείς δεν το μαθαίνει** (το σχήμα του
+ *      περιστατικού ADR-436)·
+ *   2. κάποιος δίνει ποσότητα στη legacy διαδρομή, που **δεν έχει** περιγραφέα.
+ */
+describe('ADR-852 Φ3 — descriptorChannels: η ΜΙΑ προβολή περιγραφέα → εγγραφής', () => {
+  it('Γ0 ΠΑΡΟΝΟΜΑΣΤΗΣ — δηλωμένη ποσότητα περνά· η ετικέτα περνά πάντα', () => {
+    expect(descriptorChannels({ kind: 'scalar', label: 'width', quantity: 'model-length' }))
+      .toEqual({ label: 'width', quantity: 'model-length' });
+  });
+
+  it('Γ1 🔴 — ΑΔΗΛΩΤΗ ποσότητα ⇒ το κλειδί ΛΕΙΠΕΙ, δεν είναι `undefined`', () => {
+    const channels = descriptorChannels({ kind: 'scalar', label: 'Όνομα' });
+    // ⚠️ ΟΧΙ `toBeUndefined()`: θα περνούσε και με `{ quantity: undefined }`, που είναι
+    // ΑΚΡΙΒΩΣ η τιμή που ρίχνει το Firestore write. Το ερώτημα είναι «υπάρχει κλειδί;».
+    expect('quantity' in channels).toBe(false);
+    expect(channels).toEqual({ label: 'Όνομα' });
+  });
+});
+
+describe('ADR-852 Φ3 — η ποσότητα φτάνει στην εγγραφή ΜΟΝΟ όπου δηλώθηκε', () => {
+  it('Γ2 — canonical diff: δηλωμένο πεδίο κουβαλά την ποσότητα', () => {
+    const defs: Record<string, TrackedFieldDef> = {
+      width: { kind: 'scalar', label: 'width', quantity: 'model-length' },
+    };
+    const changes = diffTrackedFields({ width: 700 }, { width: 749.9999999999927 }, defs);
+    expect(changes).toHaveLength(1);
+    expect(changes[0].quantity).toBe('model-length');
+    // Το χρονικό κανάλι της ετικέτας μένει ΑΚΡΙΒΩΣ ό,τι ήταν — μηδέν παλινδρόμηση.
+    expect(changes[0].label).toBe('width');
+  });
+
+  it('Γ3 🔴 — αδήλωτο πεδίο: καμία εφεύρεση, και το κλειδί ΑΠΟΥΣΙΑΖΕΙ', () => {
+    const defs: Record<string, TrackedFieldDef> = { name: { kind: 'scalar', label: 'Όνομα' } };
+    const changes = diffTrackedFields({ name: 'X' }, { name: 'Y' }, defs);
+    expect(changes).toHaveLength(1);
+    expect('quantity' in changes[0]).toBe(false);
+  });
+
+  it('Γ4 — η LEGACY διαδρομή δεν έχει περιγραφέα, άρα δεν εφευρίσκει ποσότητα', () => {
+    // ADR-677 §7.2: απούσα δήλωση = ορατά ωμό, ΠΟΤΕ σιωπηλή αλλοίωση.
+    const changes = diffTrackedFieldsLegacy({ width: 1 }, { width: 2 }, { width: 'width' });
+    expect(changes).toHaveLength(1);
+    expect('quantity' in changes[0]).toBe(false);
+    expect(changes[0].label).toBe('width');
+  });
+
+  it('Γ5 — οι εγγραφές ΣΥΛΛΟΓΗΣ δεν παίρνουν ποσότητα (δηλωμένη εμβέλεια, §4.6)', () => {
+    // Η τιμή τους είναι `null`· η ουσία ζει στα `subChanges`. Ποσότητα εκεί δεν έχει
+    // νόημα — και η απουσία της είναι ΑΠΟΦΑΣΗ, όχι παράλειψη.
+    const defs: Record<string, TrackedFieldDef> = {
+      tags: { kind: 'collection', label: 'Ετικέτες', keyBy: 'value' },
+    };
+    const changes = diffTrackedFields({ tags: ['a'] }, { tags: ['a', 'b'] }, defs);
+    expect(changes).toHaveLength(1);
+    expect('quantity' in changes[0]).toBe(false);
+    expect(changes[0].label).toBe('Ετικέτες');
   });
 });

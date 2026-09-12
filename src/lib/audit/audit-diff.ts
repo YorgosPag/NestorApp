@@ -21,7 +21,14 @@ import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
 // ADR-852 §4 — το ΣΧΗΜΑ του πεδίου ζει δίπλα, σε δικό του αρχείο: αυτό εδώ είναι η
 // ΜΗΧΑΝΗ (συγκρίνει καταστάσεις), εκείνο είναι το ΣΧΗΜΑ (τι ξέρουμε για ένα πεδίο).
 // Επανεξάγεται αμέσως παρακάτω ⇒ καμία διαδρομή import δεν άλλαξε για κανέναν.
-import type { TrackedFieldDef } from './tracked-field-def';
+// ⚠️ Φ1 ΜΑΘΗΜΑ (CHECK 3.70): το `export … from` **ΔΕΝ δεσμεύει το όνομα τοπικά** — και
+// το `descriptorChannels` χρησιμοποιείται **μέσα** σε αυτό το αρχείο. Άρα: `import`
+// (δεσμεύει) και **ξεχωριστό** `export` παρακάτω (σταθερότητα διαδρομής).
+import {
+  descriptorChannels,
+  type AuditFieldChannels,
+  type TrackedFieldDef,
+} from './tracked-field-def';
 
 // ============================================================================
 // TRACKED FIELD DEFINITION (ADR-195 Phase 11 — SSoT discriminated union)
@@ -36,6 +43,14 @@ import type { TrackedFieldDef } from './tracked-field-def';
  * `@/config/audit-tracked-fields` μένουν **ανέγγιχτοι**.
  */
 export type { TrackedFieldDef };
+
+/**
+ * ADR-852 Φ3 — η προβολή περιγραφέα → χρονικά κανάλια. Επανεξάγεται από **εδώ** επειδή
+ * ο δεύτερος καταναλωτής της (`bim-audit-helpers.ts`, η διαδρομή διαγραφής) εισάγει ήδη
+ * από `@/lib/audit/audit-diff` ⇒ **καμία** νέα διαδρομή import για κανέναν.
+ */
+export { descriptorChannels };
+export type { AuditFieldChannels };
 
 /**
  * Convert a `TrackedFieldDef` map back to a plain `Record<string, string>`
@@ -162,18 +177,24 @@ export function serializeScalar(value: unknown): string | number | boolean | nul
  * ⚠️ Το `?? null` μένει **εδώ μέσα**: το `serializeScalar` ήδη επιστρέφει `null` για
  * `undefined`, αλλά η ρητή μορφή κρατά τη συμπεριφορά **κατά λέξη** ίδια με τα δύο
  * σώματα που αντικατέστησε — εξαγωγή, όχι ευκαιριακή αλλαγή σημασιολογίας.
+ *
+ * 🔑 **Φ3**: δέχεται **κανάλια**, όχι σκέτη ετικέτα. Η legacy διαδρομή περνά `{ label }`
+ * (δεν **έχει** περιγραφέα — χαρτογραφεί `Record<string, string>`), η canonical περνά
+ * `descriptorChannels(def)`. Έτσι η ποσότητα φτάνει **μόνο** όπου δηλώθηκε, και η
+ * legacy διαδρομή **δεν εφευρίσκει** ποσότητα που κανείς δεν δήλωσε *(άγκυρα Γ4 — η
+ * ασυμμετρία του ADR-677 §7.2: αδήλωτο = ορατά ωμό, ποτέ σιωπηλή αλλοίωση)*.
  */
 function pushScalarChange(
   changes: AuditFieldChange[],
   field: string,
   oldValue: unknown,
   newValue: unknown,
-  label: string,
+  channels: AuditFieldChannels,
 ): void {
   const oldStr = serializeScalar(oldValue ?? null);
   const newStr = serializeScalar(newValue ?? null);
   if (oldStr === newStr) return;
-  changes.push({ field, oldValue: oldStr, newValue: newStr, label });
+  changes.push({ field, oldValue: oldStr, newValue: newStr, ...channels });
 }
 
 // ============================================================================
@@ -205,7 +226,7 @@ export function diffTrackedFieldsLegacy(
   for (const [field, label] of Object.entries(trackedFields)) {
     if (!(field in flatNew)) continue;
 
-    pushScalarChange(changes, field, flatOld[field], flatNew[field], label);
+    pushScalarChange(changes, field, flatOld[field], flatNew[field], { label });
   }
 
   return changes;
@@ -464,7 +485,7 @@ export function diffTrackedFields(
       continue;
     }
 
-    pushScalarChange(changes, field, flatOld[field], flatNew[field], def.label);
+    pushScalarChange(changes, field, flatOld[field], flatNew[field], descriptorChannels(def));
   }
 
   return changes;

@@ -25,7 +25,12 @@
  *     guard would otherwise emit nothing.)
  */
 
-import { diffTrackedFields, serializeScalar, type TrackedFieldDef } from '@/lib/audit/audit-diff';
+import {
+  descriptorChannels,
+  diffTrackedFields,
+  serializeScalar,
+  type TrackedFieldDef,
+} from '@/lib/audit/audit-diff';
 import type { AuditFieldChange } from '@/types/audit-trail';
 
 /**
@@ -85,7 +90,14 @@ export function buildBimDeletionChanges(
     if (def.kind === 'collection') continue;
     const v = serializeScalar(flat[field]);
     if (v === null) continue;
-    out.push({ field, oldValue: v, newValue: null, label: def.label });
+    // 🔴 ADR-852 Φ3 — **Η ΠΟΡΤΑ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΕΙΧΕ ΚΟΙΤΑΞΕΙ.** Αυτός ο βρόχος είναι
+    // **δεύτερος** συγγραφέας βαθμωτής εγγραφής, εκτός μηχανής diff: μέχρι τις
+    // 2026-09-12 έγραφε χειρόγραφα `label: def.label`. Το ADR §4.4 είχε ενώσει το
+    // βαθμωτό σκέλος στο `pushScalarChange()` ακριβώς για να **μην** προστεθεί το
+    // διπλό κανάλι δύο φορές — αλλά η ένωση δεν έφτανε ως εδώ, οπότε **κάθε εγγραφή
+    // διαγραφής BIM** θα έμενε χωρίς περιγραφέα. Μία προβολή, δύο καλούντες: η
+    // απόκλιση γίνεται μη εκφράσιμη. *(Άγκυρα Δ1.)*
+    out.push({ field, oldValue: v, newValue: null, ...descriptorChannels(def) });
   }
   return out;
 }

@@ -423,6 +423,22 @@ contact emails/phones/addresses, property owners, …) περνούσε μέσα
 πεδία — `kind`, `op`, `itemKey`, `itemLabel`, `subChanges`. Strictly additive:
 τα legacy scalar entries δεν αλλάζουν shape, η UI έχει fallback branch.
 
+> 🏢 **ADR-852 Φ3 (2026-09-12) — το διπλό κανάλι.** Το `AuditFieldChange` απέκτησε **έκτο**
+> optional πεδίο, `quantity?: QuantitySpec` — **τι ποσότητα** ήταν ο αριθμός, όπως το δήλωνε
+> το μητρώο **τη στιγμή της εγγραφής**. Strictly additive, όπως και τα 5 της Φ11.
+>
+> 🔑 **Το `label` αναγνωρίζεται ρητά ως ΣΤΙΓΜΙΟΤΥΠΟ**, όχι ως διακοσμητικό: είναι το ίδιο
+> ζεύγος με το `newValue`/`newValueLabel` αυτού του ADR *(«the denormalized display name at
+> the time of the change»)*, εφαρμοσμένο στο **όνομα** αντί στην **τιμή** — `field` =
+> αμετάβλητη ταυτότητα, `label` = εμφάνιση τη στιγμή εγγραφής. Γι' αυτό **δεν** προστέθηκε
+> `labelSnapshot`. Ο reader λύνει **ζωντανά** από το τρέχον μητρώο και πέφτει στο
+> αποθηκευμένο **μόνο** όταν το πεδίο αποσυρθεί — **σημασμένο** στην οθόνη.
+>
+> ⚠️ **Risk 6 απέκτησε μητρώο**: το τεκμηριωμένο fallback «αν το field δεν αναγνωρίζεται,
+> εμφάνιση raw field name» **ήταν** αυτό που έβλεπε ο χρήστης ως `width: — → 749.99…`.
+> Ο σχεδιασμός το προέβλεψε· κανείς δεν είχε φτιάξει ποτέ το μητρώο. Δες
+> **ADR-852 §4.6**.
+
 **Commit breakdown**:
 1. `284eacab` — extract shared diff primitive σε `src/lib/audit/audit-diff.ts`
 2. `897dcc74` — extend `AuditFieldChange` με collection-aware optional fields

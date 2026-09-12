@@ -295,6 +295,21 @@ export function AuditTimelineEntry({
               });
               const fieldLabel: string = label.text;
 
+              // 🏢 ADR-852 Φ3 — Η ΠΟΣΟΤΗΤΑ ΜΕ ΤΗΝ **ΙΔΙΑ** ΠΡΟΤΕΡΑΙΟΤΗΤΑ ΜΕ ΤΗΝ ΕΤΙΚΕΤΑ:
+              // ζωντανό μητρώο πρώτα, αποθηκευμένο στιγμιότυπο ως **πτώση**. Όσο το πεδίο
+              // ζει στο μητρώο, μια μελλοντική διόρθωση της δήλωσης **θεραπεύει αναδρομικά**
+              // και το ήδη γραμμένο ιστορικό (§4.1). Όταν το πεδίο **αποσυρθεί**, το
+              // αποθηκευμένο `quantity` είναι ό,τι κρατά τον αριθμό αναγνώσιμο — αλλιώς μια
+              // εγγραφή αποσυρμένου πεδίου ξαναγίνεται `749.9999999999927`, δηλαδή
+              // ανέλεγκτη από άνθρωπο, σε αρχείο που υπάρχει για να ελέγχεται.
+              //
+              // ⚠️ Δεν περνά από τον `sanitizeChange`, **σκοπίμως**: ο sanitizer υπάρχει για
+              // τιμές που **φτάνουν στην οθόνη**. Το `quantity` δεν αποδίδεται ποτέ — μόνο
+              // συγκρίνεται (`formatQuantityValue`: `if (quantity !== 'model-length') return
+              // undefined`), άρα οτιδήποτε αλλοιωμένο από legacy Firestore είναι **αδρανές
+              // εκ κατασκευής**, χωρίς φρουρό.
+              const quantity = def?.quantity ?? change.quantity;
+
               // ── Collection-aware rendering (ADR-195 Phase 11) ──
               if (change.kind === 'collection' && change.op) {
                 // safeStr: itemLabel/itemKey may be objects in legacy Firestore records
@@ -384,13 +399,13 @@ export function AuditTimelineEntry({
                   >
                     {change.oldValueLabel
                       ? safeStr(change.oldValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue, def?.quantity)}
+                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue, quantity)}
                   </span>
                   {" → "}
                   <span className="font-medium text-foreground">
                     {change.newValueLabel
                       ? safeStr(change.newValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue, def?.quantity)}
+                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue, quantity)}
                   </span>
                 </li>
               );

@@ -20,6 +20,7 @@ import {
   BEAM_TRACKED_FIELDS,
   OPENING_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields';
+import type { TrackedFieldDef } from '@/lib/audit/audit-diff';
 import type { AuditFieldChange } from '@/types/audit-trail';
 
 function fieldsOf(changes: AuditFieldChange[]): string[] {
@@ -116,6 +117,52 @@ describe('buildBimDeletionChanges', () => {
     expect(
       buildBimDeletionChanges({ kind: '' as never, params: {} }, BEAM_TRACKED_FIELDS),
     ).toEqual([]);
+  });
+});
+
+// ============================================================================
+// ΑΓΚΥΡΕΣ Δ — ADR-852 Φ3: Η ΔΙΑΓΡΑΦΗ ΕΙΝΑΙ ΔΕΥΤΕΡΟΣ ΣΥΓΓΡΑΦΕΑΣ
+// ============================================================================
+
+/**
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ — ΜΕΤΡΗΜΕΝΟ 2026-09-12. Το `buildBimDeletionChanges` γράφει βαθμωτές
+ * εγγραφές με **χειρόγραφο βρόχο, εκτός της μηχανής diff**. Το ADR-852 §4.4 είχε ενώσει
+ * το βαθμωτό σκέλος στο `pushScalarChange()` ακριβώς για να μην προστεθεί το διπλό
+ * κανάλι δύο φορές — αλλά η ένωση **δεν έφτανε ως εδώ**. Χωρίς αυτές τις άγκυρες, κάθε
+ * εγγραφή διαγραφής BIM θα έμενε χωρίς περιγραφέα, **σιωπηλά**.
+ *
+ * Η Δ3 είναι η σημαντική: δεν ελέγχει τιμή, ελέγχει **ΣΥΜΦΩΝΙΑ** των δύο συγγραφέων.
+ * Έτσι η απόκλισή τους γίνεται **μη εκφράσιμη** — αν αύριο ο ένας αποκτήσει κανάλι που
+ * ο άλλος δεν ξέρει, κοκκινίζει εδώ.
+ */
+describe('ADR-852 Φ3 — η διαγραφή περνά από τον ΙΔΙΟ περιγραφέα', () => {
+  const defs: Record<string, TrackedFieldDef> = {
+    kind: { kind: 'scalar', label: 'kind' },
+    width: { kind: 'scalar', label: 'width', quantity: 'model-length' },
+  };
+  const snapshot = { kind: 'rectangular', params: { width: 400 } };
+
+  it('Δ1 — δηλωμένη ποσότητα φτάνει ΚΑΙ στη διαγραφή (η πόρτα που έλειπε)', () => {
+    const changes = buildBimDeletionChanges(snapshot, defs);
+    expect(entryFor(changes, 'width')).toMatchObject({
+      oldValue: 400,
+      newValue: null,
+      label: 'width',
+      quantity: 'model-length',
+    });
+  });
+
+  it('Δ2 🔴 — αδήλωτο πεδίο: το κλειδί ΑΠΟΥΣΙΑΖΕΙ (ο Admin SDK ρίχνει το write σε `undefined`)', () => {
+    const kindEntry = entryFor(buildBimDeletionChanges(snapshot, defs), 'kind');
+    expect(kindEntry).toBeDefined();
+    expect('quantity' in (kindEntry as AuditFieldChange)).toBe(false);
+  });
+
+  it('Δ3 — ΔΗΜΙΟΥΡΓΙΑ και ΔΙΑΓΡΑΦΗ συμφωνούν στα κανάλια του ΙΔΙΟΥ πεδίου', () => {
+    const created = entryFor(buildBimCreationChanges(snapshot, defs), 'width');
+    const deleted = entryFor(buildBimDeletionChanges(snapshot, defs), 'width');
+    const channelsOf = (c?: AuditFieldChange) => ({ label: c?.label, quantity: c?.quantity });
+    expect(channelsOf(deleted)).toEqual(channelsOf(created));
   });
 });
 
