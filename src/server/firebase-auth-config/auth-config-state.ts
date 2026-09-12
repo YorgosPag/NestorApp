@@ -21,8 +21,30 @@
  * | `notification.sendEmail.*Template` | ❌ `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` |
  *
  * Και το PATCH που περιέχει **έστω μία** απαγορευμένη διαδρομή απορρίπτεται **ολόκληρο**.
- * ⇒ Οι διαδρομές μόνο-κονσόλας **κρίνονται** (απόκλιση = εύρημα, ημερησίως) αλλά **ποτέ** δεν
+ * ⇒ Οι **παγωμένες** διαδρομές **κρίνονται** (απόκλιση = εύρημα, ημερησίως) αλλά **ποτέ** δεν
  * μπαίνουν σε PATCH — αλλιώς θα κρατούσαν όμηρο κάθε άλλη διόρθωση.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΚΑΙ ΔΕΝ ΕΙΝΑΙ «ΜΟΝΟ ΚΟΝΣΟΛΑ» — ΤΟ PROJECT ΕΙΝΑΙ ΚΛΕΙΔΩΜΕΝΟ. ΜΕΤΡΗΜΕΝΟ 2026-09-12
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι σήμερα αυτές οι διαδρομές λέγονταν `CONSOLE_ONLY_PATHS`, και **το όνομα υποσχόταν ότι
+ * υπάρχει δρόμος**. Ο άνθρωπος τον περπάτησε: *Authentication → Templates → «Modifica indirizzo
+ * email»*, φόρμα σωστά συμπληρωμένη (επαληθεύτηκε στο DOM), **Salva**. Η κονσόλα απάντησε:
+ *
+ * > «Gli aggiornamenti dei template di email **non sono al momento disponibili per questo
+ * > progetto**. Per assistenza con le modifiche ai template, contatta l'assistenza Firebase.»
+ *
+ * Η ίδια άρνηση μετρήθηκε με **service account**, με διαπιστευτήριο **`roles/owner`**
+ * (`X-Goog-User-Project`, `GET` → 200 / `PATCH` → 400) **και** από την κονσόλα. ⇒ Η άρνηση είναι
+ * καρφωμένη **στα πεδία**, όχι στον καλούντα — και **δεν υπάρχει δρόμος**, ούτε χειροκίνητος.
+ * Γι' αυτό το όνομα είναι **`FROZEN_PATHS`**: λέει **τι ισχύει**, όχι πού είναι ένας δρόμος που
+ * δεν υπάρχει. ⚠️ **ΟΧΙ `IMMUTABLE`**, παρότι είναι η λέξη του Config Connector: εκείνος μαρκάρει
+ * «Immutable» **μόνο** το `changeEmailTemplate.body` και **αστοχεί** στο `callbackUri`.
+ *
+ * 🔑 Η **μόνη** δηλωμένη διέξοδος είναι **αίτημα στην υποστήριξη Firebase** (ADR-851 §7 #1).
+ * Μέχρι τότε η απόκλιση είναι **μόνιμη και αναμενόμενη** — δες `firebase-auth-config-drift.job.ts`
+ * για το γιατί ο ημερήσιος έλεγχος **σιωπά** όσο είναι ακριβώς αυτή.
  */
 
 import {
@@ -80,8 +102,11 @@ export const TEMPLATE_PATHS: Readonly<Record<JudgedTemplateKind, string>> = {
   changeEmail: 'notification.sendEmail.changeEmailTemplate',
 };
 
-/** **Διαδρομές που η Google ΔΕΝ δέχεται μέσω API** — δες τον πίνακα της κεφαλίδας. */
-export const CONSOLE_ONLY_PATHS: readonly string[] = [SCALAR_PATHS.callbackUri, ...Object.values(TEMPLATE_PATHS)];
+/**
+ * **Διαδρομές που η Google ΔΕΝ δέχεται ΜΕ ΚΑΝΕΝΑΝ ΤΡΟΠΟ** — ούτε μέσω API, ούτε από την κονσόλα.
+ * Δες τον πίνακα **και** τη μέτρηση της 2026-09-12 στην κεφαλίδα.
+ */
+export const FROZEN_PATHS: readonly string[] = [SCALAR_PATHS.callbackUri, ...Object.values(TEMPLATE_PATHS)];
 
 /**
  * **Ό,τι ΔΕΝ μπορεί να κριθεί από εδώ** — λέγεται, δεν σιωπάται («0 = κανείς δεν κοίταξε»).
@@ -134,14 +159,19 @@ export interface AuthConfigDrift {
   readonly actual: string;
 }
 
-/** Χωρίζει τις αποκλίσεις σε όσες γράφει ο κώδικας και όσες διορθώνει άνθρωπος στην κονσόλα. */
+/**
+ * Χωρίζει τις αποκλίσεις σε όσες **γράφει ο κώδικας** και όσες είναι **παγωμένες**.
+ *
+ * ⚠️ Οι δεύτερες **δεν διορθώνονται από άνθρωπο** — ούτε στην κονσόλα (μετρημένο 2026-09-12).
+ * Περιμένουν την υποστήριξη Firebase.
+ */
 export function partitionDrifts(drifts: readonly AuthConfigDrift[]): {
   readonly applicable: readonly AuthConfigDrift[];
-  readonly consoleOnly: readonly AuthConfigDrift[];
+  readonly frozen: readonly AuthConfigDrift[];
 } {
   return {
-    applicable: drifts.filter((drift) => !CONSOLE_ONLY_PATHS.includes(drift.path)),
-    consoleOnly: drifts.filter((drift) => CONSOLE_ONLY_PATHS.includes(drift.path)),
+    applicable: drifts.filter((drift) => !FROZEN_PATHS.includes(drift.path)),
+    frozen: drifts.filter((drift) => FROZEN_PATHS.includes(drift.path)),
   };
 }
 
@@ -230,15 +260,15 @@ function desiredValueAt(desired: DesiredAuthConfig, path: string): unknown {
 /**
  * **Το PATCH — ΜΟΝΟ ό,τι απέκλινε ΚΑΙ γράφεται.** Το `updateMask` απαριθμεί **ακριβώς** τις
  * διαδρομές του σώματος: ό,τι δεν δηλώσαμε δεν μπορεί να γραφτεί, ούτε κατά λάθος — και
- * διαδρομή μόνο-κονσόλας **αρνείται** εδώ, πριν φτάσει στη Google.
+ * **παγωμένη** διαδρομή **αρνείται** εδώ, πριν φτάσει στη Google.
  */
 export function patchForDrifts(
   desired: DesiredAuthConfig,
   drifts: readonly AuthConfigDrift[],
 ): { readonly body: Record<string, unknown>; readonly updateMask: string } {
-  const consoleOnly = drifts.find((drift) => CONSOLE_ONLY_PATHS.includes(drift.path));
-  if (consoleOnly !== undefined) {
-    throw new Error(`Console-only Firebase Auth config path cannot be patched: ${consoleOnly.path}`);
+  const frozen = drifts.find((drift) => FROZEN_PATHS.includes(drift.path));
+  if (frozen !== undefined) {
+    throw new Error(`Frozen Firebase Auth config path cannot be patched: ${frozen.path}`);
   }
   const body: Record<string, unknown> = {};
   for (const drift of drifts) setPath(body, drift.path, desiredValueAt(desired, drift.path));

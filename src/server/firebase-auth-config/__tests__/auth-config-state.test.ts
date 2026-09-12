@@ -8,11 +8,11 @@
  * - **Δ** — η σύγκριση: πιάνει το **πραγματικό** περιστατικό (Vercel · `en` · νεκρά domains),
  *   και δεν κοκκινίζει σε ό,τι δεν είναι περιεχόμενο (σειρά domains · κενά HTML).
  * - **Π** — το PATCH γράφει **μόνο** ό,τι απέκλινε **και γράφεται** — ποτέ αδήλωτο, ποτέ
- *   διαδρομή μόνο-κονσόλας (μετρημένο: η Google απορρίπτει τότε **ολόκληρο** το PATCH).
+ *   **παγωμένη** διαδρομή (μετρημένο: η Google απορρίπτει τότε **ολόκληρο** το PATCH).
  */
 
 import {
-  CONSOLE_ONLY_PATHS,
+  FROZEN_PATHS,
   NOT_JUDGED,
   SCALAR_PATHS,
   TEMPLATE_PATHS,
@@ -152,10 +152,10 @@ describe('Π — το PATCH', () => {
     expect(patch.body).toEqual({ notification: { defaultLocale: 'el' } });
   });
 
-  it('🔴 Π2 — ΜΕΤΡΗΜΕΝΟ: action URL και πρότυπο είναι ΜΟΝΟ-ΚΟΝΣΟΛΑ, και το PATCH αρνείται', () => {
-    expect(CONSOLE_ONLY_PATHS).toEqual([SCALAR_PATHS.callbackUri, TEMPLATE_PATHS.changeEmail]);
-    for (const path of CONSOLE_ONLY_PATHS) {
-      expect(() => patchForDrifts(desired(), [{ path, expected: '', actual: '' }])).toThrow(/Console-only/);
+  it('🔴 Π2 — ΜΕΤΡΗΜΕΝΟ: action URL και πρότυπο είναι ΠΑΓΩΜΕΝΑ (ούτε API ούτε κονσόλα), και το PATCH αρνείται', () => {
+    expect(FROZEN_PATHS).toEqual([SCALAR_PATHS.callbackUri, TEMPLATE_PATHS.changeEmail]);
+    for (const path of FROZEN_PATHS) {
+      expect(() => patchForDrifts(desired(), [{ path, expected: '', actual: '' }])).toThrow(/Frozen/);
     }
   });
 
@@ -165,9 +165,9 @@ describe('Π — το PATCH', () => {
     (readPath(live, 'notification.sendEmail') as Record<string, unknown>).callbackUri = 'https://dead.vercel.app/auth/action';
     live.authorizedDomains = [...config.authorizedDomains, 'dead.vercel.app'];
 
-    const { applicable, consoleOnly } = partitionDrifts(diffAuthConfig(config, live));
+    const { applicable, frozen } = partitionDrifts(diffAuthConfig(config, live));
     expect(applicable.map((drift) => drift.path)).toEqual([SCALAR_PATHS.authorizedDomains]);
-    expect(consoleOnly.map((drift) => drift.path)).toEqual([SCALAR_PATHS.callbackUri]);
+    expect(frozen.map((drift) => drift.path)).toEqual([SCALAR_PATHS.callbackUri]);
     expect(patchForDrifts(config, applicable).updateMask).toBe(SCALAR_PATHS.authorizedDomains);
   });
 

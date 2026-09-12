@@ -46,13 +46,17 @@ async function check(): Promise<number> {
     return 2;
   }
   const { partitionDrifts } = await import('@/server/firebase-auth-config/auth-config-state');
-  const { applicable, consoleOnly } = partitionDrifts(audit.drifts);
-  console.log(`Project: ${audit.projectId} · αποκλίσεις: ${applicable.length} εγγράψιμες + ${consoleOnly.length} μόνο-κονσόλα`);
+  const { applicable, frozen } = partitionDrifts(audit.drifts);
+  console.log(`Project: ${audit.projectId} · αποκλίσεις: ${applicable.length} εγγράψιμες + ${frozen.length} παγωμένες`);
   for (const drift of applicable) {
     console.log(`\n  ✗ ${drift.path}\n    δηλωμένο: ${drift.expected}\n    ζωντανό:  ${drift.actual}`);
   }
-  for (const drift of consoleOnly) {
-    console.log(`\n  ✋ ${drift.path}  (ΜΟΝΟ ΚΟΝΣΟΛΑ — η Google αρνείται ενημέρωση προτύπου μέσω API)`
+  for (const drift of frozen) {
+    // 🔴 ΜΕΤΡΗΜΕΝΟ 2026-09-12: η Google αρνείται **με κάθε τρόπο** — service account, ιδιοκτήτης,
+    //    ΚΑΙ η ίδια η κονσόλα («non sono al momento disponibili per questo progetto»). Το παλιό
+    //    μήνυμα έλεγε «ΜΟΝΟ ΚΟΝΣΟΛΑ … μέσω API» και **έστελνε τον αναγνώστη να κάνει κάτι που
+    //    δεν γίνεται**. Μόνη διέξοδος: αίτημα στην υποστήριξη Firebase (ADR-851 §7 #1).
+    console.log(`\n  🧊 ${drift.path}  (ΠΑΓΩΜΕΝΟ ΑΠΟ ΤΗΝ GOOGLE — αναμενόμενο· ούτε API ούτε κονσόλα)`
       + `\n    δηλωμένο: ${drift.expected}\n    ζωντανό:  ${drift.actual}`);
   }
   for (const item of audit.notJudged) console.log(`\n  ⚪ ΔΕΝ ΚΡΙΝΕΤΑΙ: ${item}`);
@@ -73,14 +77,16 @@ async function apply(expectDrift: number): Promise<number> {
     return 1;
   }
   console.log(outcome.paths.length === 0 ? '✅ Τίποτα εγγράψιμο.' : `✅ Γράφτηκαν: ${outcome.paths.join(', ')}`);
-  for (const drift of outcome.consoleOnly) console.log(`✋ Μένει για την κονσόλα: ${drift.path}`);
+  for (const drift of outcome.frozen) console.log(`🧊 Παγωμένο από την Google, δεν γράφεται: ${drift.path}`);
   return 0;
 }
 
 /**
- * **Γράφει τα πρότυπα προς επικόλληση στην κονσόλα** — η Google αρνείται να τα δεχτεί μέσω
- * API (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, ADR-851). Ο έλεγχος θα βγει πράσινος **μόνο** αν
- * επικολληθεί **αυτό ακριβώς**.
+ * **Γράφει τα πρότυπα προς επικόλληση στην κονσόλα** (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, ADR-851).
+ *
+ * ⚠️ **ΜΕΤΡΗΜΕΝΟ 2026-09-12: η επικόλληση ΔΕΝ περνά ούτε αυτή** — η κονσόλα απαντά «*non sono al
+ * momento disponibili per questo progetto*». Η εξαγωγή μένει γιατί είναι **η μόνη μορφή** στην
+ * οποία μπορεί να ζητηθεί το περιεχόμενο από την υποστήριξη Firebase — όχι επειδή υπάρχει δρόμος.
  */
 async function exportTemplates(dir: string): Promise<number> {
   const { mkdirSync, writeFileSync } = await import('fs');

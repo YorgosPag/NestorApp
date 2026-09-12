@@ -72,8 +72,11 @@ export type AuthConfigApplyOutcome =
   | {
       readonly kind: 'applied';
       readonly paths: readonly string[];
-      /** Αποκλίσεις που **μόνο** άνθρωπος διορθώνει στην κονσόλα — λέγονται, δεν σιωπάται. */
-      readonly consoleOnly: readonly AuthConfigDrift[];
+      /**
+       * **Παγωμένες** αποκλίσεις — λέγονται, δεν σιωπώνται.
+       * ⚠️ **Δεν** τις διορθώνει άνθρωπος: μετρήθηκε 2026-09-12 ότι αρνείται **και η κονσόλα**.
+       */
+      readonly frozen: readonly AuthConfigDrift[];
     };
 
 /**
@@ -85,7 +88,7 @@ export async function applyFirebaseAuthConfig(expectedApplicable: number): Promi
   const { live, outcome } = await desiredAndLive();
   if (outcome.kind === 'refused') return outcome;
 
-  const { applicable, consoleOnly } = partitionDrifts(diffAuthConfig(outcome.desired, live));
+  const { applicable, frozen } = partitionDrifts(diffAuthConfig(outcome.desired, live));
   if (applicable.length !== expectedApplicable) {
     return { kind: 'stale', expected: expectedApplicable, found: applicable.length };
   }
@@ -93,5 +96,5 @@ export async function applyFirebaseAuthConfig(expectedApplicable: number): Promi
     const { body, updateMask } = patchForDrifts(outcome.desired, applicable);
     await patchAuthConfig(body, updateMask);
   }
-  return { kind: 'applied', paths: applicable.map((drift) => drift.path), consoleOnly };
+  return { kind: 'applied', paths: applicable.map((drift) => drift.path), frozen };
 }
