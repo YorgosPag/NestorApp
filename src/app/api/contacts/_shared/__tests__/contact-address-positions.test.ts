@@ -79,7 +79,12 @@ const HQ_VIEW = {
 const segment = { params: Promise.resolve({ contactId: 'cont_42' }) };
 const request = (body: unknown) => ({ json: async () => body }) as unknown as NextRequest;
 
-interface Decision { id: string; coordinates?: { lat: number; lng: number }; source?: string }
+interface Decision {
+  id: string;
+  coordinates?: { lat: number; lng: number };
+  source?: string;
+  geocodingMetadata?: { accuracy?: string; partialMatch?: boolean; resolvedFor?: Record<string, string> };
+}
 async function dataOf(response: unknown): Promise<{ positions: Decision[]; positionAdvisories: Array<{ addressId: string }> }> {
   const body = await (response as { json: () => Promise<{ data: never }> }).json();
   return body.data;
@@ -159,6 +164,41 @@ describe('ADR-332 D27 Β-ΙΙ Φ2 — νέα επαφή', () => {
    * αποθήκευση. Αδήλωτο κλειδί μέσα στο `geocodingMetadata` κόβεται σιωπηλά ⇒ ο διακομιστής
    * θα το έβλεπε ως «δεν υπήρξε ποτέ» και το `keepStored` θα το **έχανε σε κάθε save**.
    */
+  /**
+   * ADR-332 D27 **Ζ6-Β2** — η επιφύλαξη του παρόχου διασχίζει **ΟΛΟΚΛΗΡΗ** την αλυσίδα.
+   *
+   * 🔑 **Εδώ εκτελείται ο ΠΡΑΓΜΑΤΙΚΟΣ μετατροπέας** (`geocodeAddress` του
+   * `address-place-writeback`): το mock σταματά στη **μηχανή**, όχι πριν. Χωρίς αυτή την
+   * άγκυρα, το `partialMatch` θα ήταν ένα πεδίο που ο τύπος δηλώνει, ο γραφέας γράφει και
+   * **κανείς δεν αποδεικνύει ότι φτάνει** — δηλαδή ακριβώς το σχήμα «φρουρός με σωστό
+   * κριτήριο και ανύπαρκτη είσοδο» που γέννησε το ίδιο το `address-position.ts`.
+   */
+  it('Ζ6-Β2 — `partialMatch` του παρόχου φτάνει ως την αποθηκευμένη θέση, μέσα από τον ΠΡΑΓΜΑΤΙΚΟ μετατροπέα', async () => {
+    geocoderVerdict = {
+      kind: 'hit',
+      result: { ...FAR_HIT.result, partialMatch: true },
+    };
+    // Μόνο κείμενο, καμία πινέζα ⇒ ο γραφέας ρωτά τη μηχανή και γράφει την απάντησή της.
+    const typed = { id: 'addr_typed', street: 'Εγνατία', number: '102', city: 'Θεσσαλονίκη', postalCode: '54002' };
+
+    const data = await dataOf(await positionsForNewContact(request({ addresses: [typed] })));
+
+    expect(data.positions[0].geocodingMetadata?.accuracy).toBe('exact');
+    expect(data.positions[0].geocodingMetadata?.partialMatch).toBe(true);
+    // …και η απόδειξη είναι ΤΟ ΕΡΩΤΗΜΑ που στάλθηκε στη μηχανή, όχι αντίγραφό του.
+    expect(data.positions[0].geocodingMetadata?.resolvedFor).toEqual({
+      street: 'Εγνατία', number: '102', city: 'Θεσσαλονίκη', postalCode: '54002',
+    });
+  });
+
+  it('Ζ6-Β2β — πλήρης αντιστοίχιση ⇒ καμία επιφύλαξη γράφεται', async () => {
+    const typed = { id: 'addr_typed', street: 'Εγνατία', number: '102', city: 'Θεσσαλονίκη' };
+
+    const data = await dataOf(await positionsForNewContact(request({ addresses: [typed] })));
+
+    expect(data.positions[0].geocodingMetadata?.partialMatch).toBeUndefined();
+  });
+
   it('Ζ6-Σ2 — η απόδειξη `resolvedFor` επιβιώνει του σχήματος του συνόρου', () => {
     // ⚠️ Η άγκυρα χτυπά ΤΟ ΣΧΗΜΑ, όχι τον εκτελεστή. Μια πρώτη εκδοχή περνούσε τη διεύθυνση
     // από το route για **νέα** επαφή: εκεί `stored === null` ⇒ ο γραφέας γεωκωδικοποιεί και
