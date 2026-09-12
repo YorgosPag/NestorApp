@@ -5,6 +5,7 @@ import {
   generateContactId,
   generateFloorId,
   generateWorkspaceId,
+  generateWorkspaceInvitationId,
   generateTaskId,
   generateSessionId,
   generateErrorId,
@@ -30,6 +31,12 @@ describe('enterprise-id-convenience', () => {
       ['generateContactId', generateContactId, ENTERPRISE_ID_PREFIXES.CONTACT],
       ['generateFloorId', generateFloorId, ENTERPRISE_ID_PREFIXES.FLOOR],
       ['generateWorkspaceId', generateWorkspaceId, ENTERPRISE_ID_PREFIXES.WORKSPACE],
+      // 🔑 ADR-853 §7.1 — **ΜΗ ντετερμινιστική**, άρα η απαρίθμηση του
+      // `enterprise-id.service.test.ts` (που σαρώνει μόνο `generateDeterministic*Id`) **ΔΕΝ
+      // την αγγίζει ΠΟΤΕ**. Χωρίς αυτή τη γραμμή ο `winv` θα ήταν γεννήτορας **χωρίς καμία
+      // άγκυρα** — και το πρόθεμα είναι ακριβώς ό,τι δεν επιτρέπεται να αστοχήσει σιωπηλά:
+      // το id **ΕΙΝΑΙ η διεύθυνση του εγγράφου** στο Firestore.
+      ['generateWorkspaceInvitationId', generateWorkspaceInvitationId, ENTERPRISE_ID_PREFIXES.WORKSPACE_INVITATION],
       ['generateTaskId', generateTaskId, ENTERPRISE_ID_PREFIXES.TASK],
       ['generateSessionId', generateSessionId, ENTERPRISE_ID_PREFIXES.SESSION],
       ['generateErrorId', generateErrorId, ENTERPRISE_ID_PREFIXES.ERROR],

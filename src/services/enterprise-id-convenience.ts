@@ -160,6 +160,11 @@ export const generateDeterministicAuthReprovisionJournalId = (normalizedEmail: s
   enterpriseIdService.generateDeterministicAuthReprovisionJournalId(normalizedEmail);
 export const generateDeterministicWorkspaceAccessRequestId = (companyId: string, uid: string) =>
   enterpriseIdService.generateDeterministicWorkspaceAccessRequestId(companyId, uid);
+// ADR-853 §7.1 — Η ΠΡΟΣΚΛΗΣΗ ΣΕ ΧΩΡΟ. Εξάγεται **μαζί** με τη μέθοδο, για τον λόγο που
+// γράφουν οι από πάνω: ταυτότητα άφταστη από το facade είναι ταυτότητα που ο επόμενος θα
+// γράψει **με το χέρι** (N.6). ⚠️ Χωρίς όρισμα — μη ντετερμινιστική, δες τη μέθοδο.
+export const generateWorkspaceInvitationId = () =>
+  enterpriseIdService.generateWorkspaceInvitationId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)

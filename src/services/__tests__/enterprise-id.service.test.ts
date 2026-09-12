@@ -229,7 +229,51 @@ describe('EnterpriseIdService', () => {
     // γεννήτορας οφείλει να κόβει την ΙΔΙΑ οντότητα με τον τυχαίο αδελφό του
     // (`generateDeterministicFooId` ⟷ `generateFooId`). Ο πίνακας θα πάλιωνε·
     // ο αδελφός ζει δίπλα στον γεννήτορα και δεν παλιώνει ποτέ.
-    it.each(DETERMINISTIC_GENERATORS)('%s mints the same kind as its random sibling', (name) => {
+    /**
+     * 🔴 **ΟΧΙ ΚΑΘΕ ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟΣ ΕΧΕΙ ΤΥΧΑΙΟ ΔΙΔΥΜΟ — Η ΥΠΟΘΕΣΗ ΗΤΑΝ ΨΕΥΔΗΣ.**
+     *
+     * Ο έλεγχος από κάτω απαιτούσε για **κάθε** `generateDeterministicFooId` έναν αδελφό
+     * `generateFooId`. Για δύο οντότητες αυτό **δεν μπορεί να ισχύει**, και δεν είναι
+     * παράλειψη αλλά **ο ορισμός τους**:
+     *
+     * | Οντότητα | Γιατί ΜΟΝΟ ντετερμινιστική |
+     * |---|---|
+     * | `arj` (ADR-844 §13.8) | **ένα ημερολόγιο ανά email** — η συνέχιση μιας διακοπείσας διεκδίκησης ξέρει μόνο το email· τυχαίο id θα γεννούσε δεύτερο ημερολόγιο και θα ορφάνευε το πρώτο |
+     * | `wacr` (ADR-660 §6) | **ένα αίτημα ανά (χώρος, πρόσωπο)** — δύο ταυτόχρονες συνδέσεις οφείλουν να συγκλίνουν στο **ίδιο** έγγραφο, χωρίς ερώτημα |
+     *
+     * ⛔ **ΜΗΝ «διορθώσεις» το κόκκινο φτιάχνοντας τους αδελφούς.** Επαληθεύτηκε
+     * (2026-09-12) ότι **δεν υπάρχουν πουθενά** στο δέντρο· γραμμένοι μόνο για να περάσει
+     * ο έλεγχος θα ήταν **exports χωρίς κανέναν καλούντα** — ακριβώς ό,τι μπλοκάρει το
+     * CHECK 3.22, και χειρότερα: θα **προσέφεραν** στον επόμενο έναν τυχαίο γεννήτορα για
+     * οντότητα που η ιδεμποτησία της απαγορεύει να είναι τυχαία.
+     */
+    const DETERMINISTIC_ONLY: readonly string[] = [
+      'generateDeterministicAuthReprovisionJournalId',
+      'generateDeterministicWorkspaceAccessRequestId',
+    ];
+
+    const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
+      (name) => !DETERMINISTIC_ONLY.includes(name),
+    );
+
+    // 🔑 ΑΜΦΙΔΡΟΜΗ, όπως η καραντίνα v5: μια λίστα εξαιρέσεων που δεν ελέγχεται
+    // **σαπίζει σιωπηλά**. Αν κάποιος δώσει αύριο τυχαίο αδελφό σε μία από τις δύο, ή
+    // σβήσει τον γεννήτορα, ΑΥΤΟ κοκκινίζει και ζητά να φύγει η γραμμή.
+    it('the deterministic-only list names only generators that EXIST', () => {
+      const ghosts = DETERMINISTIC_ONLY.filter((name) => !DETERMINISTIC_GENERATORS.includes(name));
+      expect(ghosts).toEqual([]);
+    });
+
+    it('no deterministic-only generator has secretly grown a random sibling', () => {
+      const grown = DETERMINISTIC_ONLY.filter(
+        (name) =>
+          typeof (service as unknown as Record<string, unknown>)[name.replace('Deterministic', '')]
+            === 'function',
+      );
+      expect(grown).toEqual([]);
+    });
+
+    it.each(WITH_RANDOM_SIBLING)('%s mints the same kind as its random sibling', (name) => {
       const siblingName = name.replace('Deterministic', '');
       const sibling = (service as unknown as Record<string, unknown>)[siblingName];
       expect(typeof sibling).toBe('function');
@@ -260,11 +304,24 @@ describe('EnterpriseIdService', () => {
      */
     const GOLDEN_SEED = 'anchor-seed';
     const GOLDEN_IDS: Readonly<Record<string, string>> = {
+      // ADR-844 §13.8 — v4 nibble (περνά τη μηχανή `mintDeterministicV4Id`), άρα ο
+      // επικυρωτής τον δέχεται. Ίδιο uuid με το `comp_` παρακάτω: **ίδιος σπόρος, ίδιος
+      // κατακερματισμός, άλλο πρόθεμα** — δεν είναι αντιγραφή, είναι η απόδειξη ότι η
+      // μηχανή είναι μία.
+      generateDeterministicAuthReprovisionJournalId: 'arj_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicCompanyId: 'comp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicDrawingRevisionId: 'drev_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',
       generateDeterministicFileId: 'file_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',
       generateDeterministicRailingId: 'ral_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',
       generateDeterministicSlabOpeningId: 'slbopn_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',
+      // ⚠️ ADR-660 §6 — **ΔΥΟ παράμετροι** (`companyId`, `uid`), ενώ ο `call()` δίνει
+      //    **έναν** σπόρο ⇒ ο πραγματικός σπόρος είναι `'anchor-seed:undefined'`. Είναι
+      //    άσχημο και **επίτηδες καταγεγραμμένο έτσι**: η άγκυρα δεν ρωτά «είναι όμορφη η
+      //    κλήση;» αλλά «**δίνει ο ίδιος σπόρος το ίδιο id, διαχρονικά;**» — και αυτό
+      //    ισχύει ακέραιο. Μια «διόρθωση» του harness ώστε να περνά δύο ορίσματα θα
+      //    ΑΛΛΑΖΕ την καταγεγραμμένη τιμή, δηλαδή θα έσπαγε ακριβώς την ιδιότητα που
+      //    φυλάει — το id **ΕΙΝΑΙ η διεύθυνση του εγγράφου** στο Firestore.
+      generateDeterministicWorkspaceAccessRequestId: 'wacr_aa044400-10b9-4583-865f-97901fb1d075',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

@@ -11,6 +11,8 @@
  *     ↑ extends
  *   PublicRegistryIdGenerators   (ADR-777 level Α + offers)
  *     ↑ extends
+ *   AccessLifecycleIdGenerators  (ADR-853/660/844 — οι ταυτότητες της ένταξης σε χώρο)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (this file)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engine: retry loop, cache, stats)
@@ -41,9 +43,9 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { PublicRegistryIdGenerators } from './enterprise-id-public-registry-generators';
+import { AccessLifecycleIdGenerators } from './enterprise-id-access-generators';
 
-export abstract class CompositeKeyIdGenerators extends PublicRegistryIdGenerators {
+export abstract class CompositeKeyIdGenerators extends AccessLifecycleIdGenerators {
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
   // (N.7.1 — καμία κατάσταση εδώ: ο βρόχος επανάληψης, η μνήμη και τα στατιστικά

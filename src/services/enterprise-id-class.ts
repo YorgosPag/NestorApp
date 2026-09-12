@@ -149,7 +149,7 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
     //
     // 🔑 Ξαναγράφεται **μόνο το nibble**, όχι δεύτερος κατακερματισμός: ίδιος
     // σπόρος ⇒ ίδιο id, και μηδέν διπλότυπη μηχανή (N.18).
-    return this.generateDeterministicV4Id(P.COMPANY, seed);
+    return this.mintDeterministicV4Id(P.COMPANY, seed);
   }
 
   /**
@@ -160,27 +160,25 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
    * **επικυρώνονται** (η διεκδίκηση λογαριασμού · το αίτημα ένταξης, που ταξιδεύει σε
    * διεύθυνση API). Με τον σκέτο {@link generateDeterministicId} θα ήταν v5 ⇒
    * `isValidEnterpriseId` **`false`** ⇒ η διαδρομή θα απέρριπτε **δική μας** ταυτότητα.
+   *
+   * ⛔ **ΛΕΓΕΤΑΙ `mint…`, ΟΧΙ `generateDeterministic…Id` — ΜΗΝ ΤΟ ΓΥΡΙΣΕΙΣ ΠΙΣΩ.** Η άγκυρα
+   * (`enterprise-id.service.test.ts`) σαρώνει την αλυσίδα με
+   * `/^generateDeterministic[A-Z][A-Za-z0-9]*Id$/` ώστε να πιάνει **κάθε** γεννήτορα
+   * οντότητας, και όσους μπουν αύριο· αυτή είναι **η μηχανή**, με `(prefix, seed)`.
+   * 🔴 **ΜΕΤΡΗΜΕΝΟ 2026-09-12**: με το παλιό όνομα η σάρωση της έδινε τον σπόρο **ως
+   * πρόθεμα** ⇒ `TypeError`, **4 από 9** κόκκινες· το σχόλιο της άγκυρας *«η μηχανή δεν
+   * ταιριάζει σκόπιμα»* ήταν **ψευδές από το `68230ba5`** (ADR-851). Θεραπεύτηκε το
+   * **όνομα** — χαλάρωση της σάρωσης θα άνοιγε την πόρτα σε κάθε μελλοντική μηχανή.
    */
-  protected generateDeterministicV4Id(prefix: EnterpriseIdPrefix, seed: string): string {
+  protected mintDeterministicV4Id(prefix: EnterpriseIdPrefix, seed: string): string {
     const uuid = deterministicUuid(seed);
     return `${prefix}_${uuid.slice(0, 14)}4${uuid.slice(15)}`;
   }
 
-  /**
-   * ADR-844 §13.8 — **το ημερολόγιο μιας διεκδίκησης λογαριασμού**, ένα ανά email.
-   * Ντετερμινιστικό επειδή η **συνέχιση** μιας διακοπείσας πράξης ξέρει μόνο το email.
-   */
-  generateDeterministicAuthReprovisionJournalId(normalizedEmail: string): string {
-    return this.generateDeterministicV4Id(P.AUTH_REPROVISION_JOURNAL, normalizedEmail);
-  }
+  // ⚠️ Οι ταυτότητες του **κύκλου ένταξης** (`arj` · `wacr` · `winv`) μετακόμισαν στο
+  //    `./enterprise-id-access-generators` (N.7.1 — το αρχείο άγγιξε τις 500 γραμμές).
+  //    Η **μηχανή** από πάνω έμεινε εδώ επίτηδες: δες την κεφαλίδα εκείνου του αρχείου.
 
-  /**
-   * ADR-660 §6 — **το αίτημα ένταξης** σε χώρο εργασίας, ένα ανά (χώρος, πρόσωπο).
-   * Ντετερμινιστικό ⇒ δύο συνδέσεις μαζί ανοίγουν **ένα** αίτημα, χωρίς ερώτημα.
-   */
-  generateDeterministicWorkspaceAccessRequestId(companyId: string, uid: string): string {
-    return this.generateDeterministicV4Id(P.WORKSPACE_ACCESS_REQUEST, `${companyId}:${uid}`);
-  }
   generateProjectId(): string { return this.generateId(P.PROJECT).id; }
   generateBuildingId(): string { return this.generateId(P.BUILDING).id; }
   generatePropertyId(): string { return this.generateId(P.PROPERTY).id; }

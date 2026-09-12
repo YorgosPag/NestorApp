@@ -66,6 +66,7 @@ export {
   generateFirstContactInvitationId,
   generateDeterministicAuthReprovisionJournalId,
   generateDeterministicWorkspaceAccessRequestId,
+  generateWorkspaceInvitationId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
   generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,
