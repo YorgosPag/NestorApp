@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:3bb78a5ac6bdbd0749f0d45889c5f224b9744d15b6140eb5a8d1dbc5662acf1d -->
+     fingerprint: sha256:ea30e3e4aee1c5ae42286570b0bb60abc388c941100fa125f13646bef9b6891e -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -374,6 +374,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.77** | **Πύλη κίνησης της κάμερας** (ADR-847) — «πέταξε ο χάρτης, ή πήδηξε; — η ερώτηση που καμία στατική ανάλυση δεν μπορεί να κάνει, και που δεκατρία ΠΡΑΣΙΝΑ tests δεν έκαναν» · `npm run test:camera-motion` · 📘 `docs/gates/3.77.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 | **3.78** | **Πύλη της πολιτικής ρυθμού** (ADR-855) — «δηλώνει αυτή η διαδρομή όριο — και λέει μια ΓΡΑΜΜΗ του πίνακα κάτι άλλο; (η προεπιλογή ΔΕΝ είναι γραμμή)» · `npm run test:rate-limit-policy` · `SKIP_RATE_LIMIT_POLICY=1` · 📘 `docs/gates/3.78.md` | 🔴 RATCHET κατά ταυτότητα (Κ1 + Κ2) | `.rate-limit-policy-baseline.json` |
 | **3.79** | **Πύλη του σκιασμένου αρχείου** (ADR-858) — «λύνουν ΔΥΟ αρχεία στο ίδιο specifier — και ξέρει κάποιος ποιο κερδίζει;» · `npm run test:shadowed-modules` · `SKIP_SHADOWED_MODULES=1` · 📘 `docs/gates/3.79.md` | ⛔ ZERO-TOL (Κ1) + 🔴 RATCHET κατά ταυτότητα (Κ2) | `.shadowed-modules-baseline.json` |
+| **3.80** | **Πύλη του θανάσιμου κύκλου** (ADR-858) — «θα ΣΚΑΣΕΙ αυτός ο κύκλος; — όχι «υπάρχει κύκλος;»» · `npm run test:module-init` · `SKIP_MODULE_INIT=1` · 📘 `docs/gates/3.80.md` | 🔴 RATCHET κατά ταυτότητα (ποιος διαβάζει ΤΙ από ποιον) | `.module-init-baseline.json` |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -387,8 +388,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **73** (εκτελεστής 65 + hook 21) ·
-γραμμές εδώ: **61** · αδήλωτες: **12** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **74** (εκτελεστής 66 + hook 21) ·
+γραμμές εδώ: **62** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

@@ -1,0 +1,18 @@
+{
+  "description": "ADR-858 Δ4 — baseline της CHECK 3.80 (θανάσιμοι κύκλοι: ανάγνωση εισαγόμενου binding σε χρόνο αξιολόγησης module, μέσα σε SCC). ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ (ποιος διαβάζει ΤΙ από ποιον): νέο εύρημα μπλοκάρει ακόμη κι αν το πλήθος έπεσε. Ratchet DOWN-only.",
+  "generatedBy": "node scripts/check-module-init.js --write-baseline",
+  "adr": "ADR-858",
+  "gate": "3.80",
+  "total": 1,
+  "cyclicGroups": 34,
+  "findings": [
+    {
+      "from": "src/utils/lazyRoutes.tsx",
+      "to": "src/utils/lazyRoutesAdr294.tsx",
+      "names": [
+        "lazyRoutesAdr294"
+      ],
+      "componentSize": 2
+    }
+  ]
+}

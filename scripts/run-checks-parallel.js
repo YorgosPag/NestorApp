@@ -515,6 +515,28 @@ if (!process.env.SKIP_SHADOWED_MODULES) {
     addThread('3.79', 'Shadowed modules', 'scripts/check-shadowed-modules.js');
 }
 
+// CHECK 3.80 (ADR-858 Δ4) — «ΘΑ ΣΚΑΣΕΙ αυτός ο κύκλος;», όχι «υπάρχει κύκλος;».
+// Το depcruise λέει 1159· αυτή η πύλη λέει 1, γιατί ρωτά αν κάποιο μέλος του κύκλου διαβάζει
+// εισαγόμενο binding σε ΧΡΟΝΟ ΑΞΙΟΛΟΓΗΣΗΣ module — το μόνο που κάνει έναν κύκλο θανάσιμο.
+// Ακριβώς αυτό έριξε την παραγωγή στις 2026-09-12 (TDZ σε σελίδα πωλήσεων).
+//
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΕΙΝΑΙ ΣΤΕΝΗ ΕΠΙΤΗΔΕΣ — κοστίζει ~14,6s σε 12.666 αρχεία, δεν έχει θέση σε
+// κάθε commit. Πυροδοτεί σε `index.*` (τα barrels είναι η ΓΕΝΝΗΤΡΙΑ των κύκλων: ένα barrel
+// συνδέει ό,τι επανεξάγει με ό,τι το εισάγει) και στον κώδικα της ίδιας της πύλης — αλλιώς
+// αλλαγή κριτηρίου περνά χωρίς να δοκιμαστεί ποτέ (μάθημα 3.43 · 3.57 · 3.75).
+//
+// 🔶 ΔΗΛΩΜΕΝΟ ΚΕΝΟ: ένα top-level `const` που προστίθεται σε αρχείο ΧΩΡΙΣ να αγγίξει barrel
+// δεν πυροδοτεί εδώ. Αυτό είναι ρητή ανταλλαγή κόστους/κάλυψης, όχι παράβλεψη.
+if (!process.env.SKIP_MODULE_INIT) {
+  const moduleInitTriggers = allFiles.filter(f =>
+    /(^|\/)index\.(ts|tsx|js|jsx|mjs)$/.test(f)
+    || f === 'scripts/check-module-init.js'
+    || f === '.module-init-baseline.json'
+    || f.startsWith('scripts/lib/module-init/'));
+  if (moduleInitTriggers.length > 0)
+    addThread('3.80', 'Deadly import cycles', 'scripts/check-module-init.js');
+}
+
 // CHECK 3.53 — ταυτότητα ενοτήτων ADR (ADR-739 §0.3 / ADR-777 §0.4).
 // ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ (`triggers()`): μια ενότητα μπορεί να μετακομίσει σε
 // οποιοδήποτε ADR/SPEC, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (σχήμα 3.34/3.37).

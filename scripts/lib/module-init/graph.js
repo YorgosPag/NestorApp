@@ -69,6 +69,44 @@ function resolveSpecifier(spec, fromFile, existing) {
 }
 
 /**
+ * Αφαιρεί σχόλια — **σεβόμενο strings και template literals**.
+ *
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ: 5 ΣΤΑ 6 ΕΥΡΗΜΑΤΑ ΗΤΑΝ ΣΧΟΛΙΑ.** Χωρίς αυτό, το JSDoc παράδειγμα
+ * χρήσης που γράφει κάθε καλό component —
+ * `* @example import { Spinner } from '@/components/ui/spinner';` — γινόταν **πραγματική
+ * ακμή** στον γράφο, και το αρχείο κατηγορούνταν ότι εισάγει **τον εαυτό του** από το
+ * barrel του. Δηλαδή η πύλη τιμωρούσε **ακριβώς** τα αρχεία που είναι καλά τεκμηριωμένα.
+ *
+ * ⚠️ **ΜΗΝ το αντικαταστήσεις με σκέτο `replace(/\\/\\*[\\s\\S]*?\\*\\//g, '')`**: ένα
+ * `'...//...'` ή ένα `` `${x}//y` `` μέσα σε συμβολοσειρά θα έκοβε κώδικα. Ο σαρωτής
+ * παρακολουθεί κατάσταση — είναι ο λόγος που δεν είναι μονόγραμμο regex.
+ */
+function stripComments(src) {
+  let out = '';
+  let i = 0;
+  let state = 'code'; // code | line | block | sq | dq | tpl
+  while (i < src.length) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (state === 'code') {
+      if (c === '/' && next === '/') { state = 'line'; i += 2; continue; }
+      if (c === '/' && next === '*') { state = 'block'; i += 2; continue; }
+      if (c === "'") state = 'sq';
+      else if (c === '"') state = 'dq';
+      else if (c === '`') state = 'tpl';
+      out += c; i++; continue;
+    }
+    if (state === 'line') { if (c === '\n') { state = 'code'; out += c; } i++; continue; }
+    if (state === 'block') { if (c === '*' && next === '/') { state = 'code'; i += 2; } else { if (c === '\n') out += c; i++; } continue; }
+    // μέσα σε συμβολοσειρά: escape σεβαστό, τίποτα δεν κόβεται
+    if (c === '\\') { out += c + (next ?? ''); i += 2; continue; }
+    if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) state = 'code';
+    out += c; i++;
+  }
+  return out;
+}
+
+/**
  * Οι **runtime** εισαγωγές ενός αρχείου, με τα τοπικά ονόματα που φέρνει κάθε μία.
  *
  * ⚠️ **Τα type-only imports ΔΕΝ μετράνε** — σβήνονται στη μεταγλώττιση, άρα δεν δημιουργούν
@@ -76,7 +114,8 @@ function resolveSpecifier(spec, fromFile, existing) {
  * `import { type X, Y }` (ανά όνομα). Χωρίς αυτό, ο γράφος γεμίζει ακμές που δεν υπάρχουν
  * σε χρόνο εκτέλεσης — ψευδώς θετικά που θα έκαναν την πύλη θόρυβο.
  */
-function parseImports(file, text) {
+function parseImports(file, rawText) {
+  const text = stripComments(rawText);
   const imports = [];
   // `import ... from 'x'` (named/default/namespace) — η μόνη μορφή που φέρνει bindings.
   const RE = /import\s+(type\s+)?([^'";]*?)\s*from\s*['"]([^'"]+)['"]/g;
@@ -199,4 +238,4 @@ function findSCCs(graph) {
   return sccs;
 }
 
-module.exports = { buildGraph, findSCCs, resolveSpecifier, parseImports, collectSourceFiles, PROJECT_ROOT, SRC };
+module.exports = { buildGraph, findSCCs, resolveSpecifier, parseImports, stripComments, collectSourceFiles, PROJECT_ROOT, SRC };
