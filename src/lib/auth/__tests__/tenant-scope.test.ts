@@ -195,6 +195,100 @@ describe('resolveTenantListScope — super admin', () => {
   });
 });
 
+/**
+ * 🔴🔴 ADR-787 §5.3 ζ, ΟΡΙΟ (1) — ΤΟ ΔΟΓΜΑ ΛΙΣΤΑΣ ΑΓΝΟΟΥΣΕ ΤΟΝ ΔΗΛΩΜΕΝΟ ΧΩΡΟ (2026-09-12)
+ *
+ * Το `all-tenants` ήταν η απάντηση σε **κάθε** αίτημα χωρίς `?companyId=` — και ο πελάτης
+ * στέλνει εκείνο το ερώτημα σε **ΕΝΑ** σημείο όλου του `src/` (μετρημένο:
+ * `SimpleProjectDialog.tsx`). Άρα ο super-admin μέσα στο `/o/<ΡΟΗ>/buildings` έπαιρνε
+ * **όλες** τις εταιρείες: λάθος δεδομένα κάτω από διεύθυνση που ονομάζει **μία**.
+ */
+describe('resolveTenantListScope — Ο ΔΗΛΩΜΕΝΟΣ ΧΩΡΟΣ ΜΕΤΡΑΕΙ', () => {
+  const withDeclaration = (
+    globalRole: string,
+    requestedWorkspace: AuthContext['requestedWorkspace'],
+    companyId = OWN_COMPANY,
+  ): AuthContext => ({ ...makeCtx(globalRole, companyId), requestedWorkspace });
+
+  it('Δ1 🔴 super admin σε ΔΗΛΩΜΕΝΟ χώρο ⇒ ΜΟΝΟ αυτή η εταιρεία', () => {
+    const scope = resolveTenantListScope(
+      withDeclaration('super_admin', { kind: 'org', companyId: OWN_COMPANY }),
+      null,
+    );
+
+    expect(scope).toEqual({
+      kind: 'company',
+      companyId: OWN_COMPANY,
+      isSuperAdmin: true,
+      isCrossTenant: false,
+    });
+  });
+
+  it('Δ2 — ο δηλωμένος χώρος είναι ο ΚΡΙΜΕΝΟΣ: φιλτράρει με το `ctx.companyId`', () => {
+    // ⚠️ Το `companyId` του context είναι ό,τι ενέκρινε ο `decideMembership` για τη
+    //    δήλωση — γι' αυτό η λίστα δεν διαβάζει ποτέ την **ωμή** τιμή της δήλωσης.
+    const scope = resolveTenantListScope(
+      withDeclaration('super_admin', { kind: 'org', companyId: OTHER_COMPANY }, OTHER_COMPANY),
+      null,
+    );
+
+    expect(scope).toEqual({
+      kind: 'company',
+      companyId: OTHER_COMPANY,
+      isSuperAdmin: true,
+      isCrossTenant: false,
+    });
+  });
+
+  it('Δ3 — `default` (δηλωμένη σιωπή) ⇒ η παλιά, καθολική συμπεριφορά ΑΘΙΚΤΗ', () => {
+    const scope = resolveTenantListScope(withDeclaration('super_admin', { kind: 'default' }), null);
+
+    expect(scope.kind).toBe('all-tenants');
+  });
+
+  it('Δ4 — καμία δήλωση (context εκτός HTTP) ⇒ καθολική, όπως πριν', () => {
+    expect(resolveTenantListScope(makeCtx('super_admin'), null).kind).toBe('all-tenants');
+  });
+
+  it('Δ5 — το ρητό `?companyId=` προηγείται της δήλωσης: είναι όρισμα της πράξης', () => {
+    const scope = resolveTenantListScope(
+      withDeclaration('super_admin', { kind: 'org', companyId: OWN_COMPANY }),
+      OTHER_COMPANY,
+    );
+
+    expect(scope).toEqual({
+      kind: 'company',
+      companyId: OTHER_COMPANY,
+      isSuperAdmin: true,
+      isCrossTenant: true,
+    });
+  });
+
+  /**
+   * 🔴 BELT-AND-SUSPENDERS: ο ιδιωτικός χώρος δεν φτάνει εδώ (τον αρνείται το σύνορο με
+   * 403 `MISSING_TENANT`) — και αν φτάσει, **δεν** γίνεται `all-tenants`.
+   */
+  it('Δ7 🔴 `personal` ΑΡΝΕΙΤΑΙ — ποτέ καθολική λίστα από παρακαμμένο σύνορο', () => {
+    expect(() =>
+      resolveTenantListScope(withDeclaration('super_admin', { kind: 'personal' }), null),
+    ).toThrow(TenantIsolationError);
+  });
+
+  it('Δ6 — ο απλός χρήστης δεν κερδίζει τίποτα από δήλωση ξένου χώρου', () => {
+    const scope = resolveTenantListScope(
+      withDeclaration('company_admin', { kind: 'org', companyId: OTHER_COMPANY }),
+      null,
+    );
+
+    expect(scope).toEqual({
+      kind: 'company',
+      companyId: OWN_COMPANY,
+      isSuperAdmin: false,
+      isCrossTenant: false,
+    });
+  });
+});
+
 describe('resolveTenantListScopeFromUrl', () => {
   it('reads the same documented parameter as the strict resolver', () => {
     const url = `https://app.example/api/buildings?${TENANT_SCOPE_QUERY_PARAM}=${OTHER_COMPANY}`;

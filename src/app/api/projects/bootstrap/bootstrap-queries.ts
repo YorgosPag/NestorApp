@@ -56,8 +56,11 @@ export async function fetchCompanies(
     // scan and load only the effective tenant, exactly like company_admin of
     // that tenant. (Helper applies the same rule across every project route.)
     const scope = resolveSuperAdminProjectScope(ctx);
-    if (scope.mode === "super-admin-impersonate") {
-      logger.info("[Bootstrap] Super admin switcher override - tenant-scoped impersonation", { effectiveCompanyId: ctx.companyId });
+    // 🔑 2026-09-12: το `super-admin-impersonate` μετονομάστηκε σε `super-admin-scoped` —
+    //    η κατάσταση είναι «**το αίτημα ονόμασε εταιρεία**», και ισχύει πλέον **και** όταν
+    //    ο super-admin βρίσκεται στο δικό του γραφείο (ADR-787 §5.3 ζ όριο 1).
+    if (scope.mode === "super-admin-scoped") {
+      logger.info("[Bootstrap] Super admin σε ονομασμένη εταιρεία - tenant-scoped", { effectiveCompanyId: ctx.companyId });
       return fetchCompaniesTenant(adminDb, ctx, [], new Map());
     }
 

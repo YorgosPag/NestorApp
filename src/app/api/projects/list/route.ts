@@ -149,7 +149,12 @@ export const GET = withHighRateLimit(
 
       // ADR-356 SSOT: filter decision from helper. `filterCompanyId` is `null`
       // only for super-admin-global mode (cross-tenant view); every other mode
-      // (tenant, super-admin-impersonate) emits a `where('companyId', '==', X)`.
+      // (tenant, super-admin-scoped) emits a `where('companyId', '==', X)`.
+      //
+      // 🔴 ADR-787 §5.3 ζ (όριο 1, 2026-09-12): το `super-admin-global` φτάνει πλέον **μόνο**
+      //    όταν το αίτημα **δεν ονόμασε** εταιρεία. Ο ιδιωτικός χώρος δεν φτάνει καθόλου εδώ —
+      //    τον αρνείται το `buildRequestContext` (403 `MISSING_TENANT`) **πριν** τον handler.
+      //    Ζωντανό σύμπτωμα που το γέννησε: `/o/me/projects` έδειχνε «Έργα (7)».
       logger.info('[Projects/List] Fetching projects', {
         scopeMode: scope.mode,
         filterCompanyId: scope.filterCompanyId,

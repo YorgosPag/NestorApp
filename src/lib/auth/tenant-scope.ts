@@ -30,8 +30,14 @@
  * | function | super admin, no `?companyId=` | non-admin asking for another company |
  * |---|---|---|
  * | {@link resolveTenantScope}     | their own company | silently ignored |
- * | {@link resolveTenantListScope} | **every** company (`all-tenants`) | silently ignored |
+ * | {@link resolveTenantListScope} | the **declared workspace**, else **every** company | silently ignored |
  * | {@link requireTenantScope}     | their own company | **403** |
+ *
+ * 🔴 **Η μεσαία γραμμή άλλαξε 2026-09-12** (ADR-787 §5.3 ζ όριο 1): το `all-tenants` ήταν
+ * η απάντηση σε **κάθε** αίτημα χωρίς `?companyId=` — και ο πελάτης στέλνει εκείνο το
+ * ερώτημα σε **ένα** σημείο όλου του `src/`. Άρα ο super-admin μέσα σε ονομασμένο χώρο
+ * (`/o/<εταιρεία>/buildings`) έβλεπε **όλες** τις εταιρείες. Πλέον ο δηλωμένος χώρος
+ * μετράει, και το `all-tenants` μένει μόνο για αίτημα που δεν ονόμασε **τίποτα**.
  *
  * Use `resolveTenantScope` when a company must always be named (the trash
  * bins). Use `resolveTenantListScope` for the browse endpoints, where a super
@@ -44,12 +50,14 @@
  *
  * A fourth doctrine exists and is deliberately NOT unified with these:
  *
- * | | driven by | super admin with nothing selected |
+ * | | driven by | super admin who named nothing |
  * |---|---|---|
- * | `resolveSuperAdminProjectScope` (ADR-356) | the **header** switcher (`ctx.superAdminOverride`) | `filterCompanyId: null` → all tenants |
- * | this module | the **`?companyId=` query string** | see table above |
+ * | `resolveSuperAdminProjectScope` (ADR-356) | the **declared workspace** (`ctx.requestedWorkspace`, formerly only `superAdminOverride`) | `filterCompanyId: null` → all tenants |
+ * | this module | the **`?companyId=` query string**, falling back to the declared workspace | see table above |
  *
- * Neither is a rewrite of the other; they read different inputs.
+ * Neither is a rewrite of the other; they read different inputs — but since 2026-09-12
+ * **both** honour the one declaration the client sends on every request (ADR-787 §5.3 ζ),
+ * so «all tenants» can no longer be reached by *silence*.
  *
  * ## Why the application layer is the only layer here
  *
@@ -115,6 +123,35 @@ export type TenantListScope =
     };
 
 /**
+ * 🔴 **ΔΕΥΤΕΡΗ ΓΡΑΜΜΗ ΑΜΥΝΑΣ: ο ιδιωτικός χώρος ΔΕΝ γίνεται εμβέλεια ερωτήματος.**
+ *
+ * Ο ιδιωτικός χώρος **δεν φτάνει** σε διαδρομή: τον αρνείται το `buildRequestContext` με
+ * `403 MISSING_TENANT` **πριν** τον handler (ADR-787 §5.3 ζ όριο 1). Αυτός ο φρουρός
+ * υπάρχει για την περίπτωση που κάποιος **παρακάμψει** το σύνορο — χειροποίητο context,
+ * νέα πόρτα, μελλοντικό refactor.
+ *
+ * 🔑 **Γιατί πετά και δεν επιστρέφει «κάτι ασφαλές»**: οι δύο τύποι εμβέλειας μπορούν να
+ * εκφράσουν *«μία εταιρεία»* και *«όλες»* — **όχι** «καμία». Μια σιωπηλή επιστροφή
+ * `all-tenants` θα ήταν **ακριβώς η διαρροή** που έκλεισε αυτό το όριο, και ένα κενό
+ * `companyId` θα ήταν «εταιρεία με κενό όνομα» (CHECK 3.35). Η αστοχία εδώ είναι
+ * **αδύνατη κατάσταση**, άρα οφείλει να **φανεί** (500 χωρίς δεδομένα), όχι να
+ * εξυπηρετηθεί.
+ *
+ * ⚠️ Ο ίδιος φρουρός ρωτιέται από **δύο** δόγματα (ADR-702 εδώ, ADR-356 στο
+ * `super-admin-scope.ts`). Γραμμένος δύο φορές θα ήταν δίδυμος κλώνος που αποκλίνει
+ * (N.18) — και η απόκλιση θα ήταν **αόρατη**, γιατί και οι δύο «δουλεύουν».
+ */
+export function assertQueryableWorkspace(ctx: AuthContext): void {
+  if (ctx.requestedWorkspace?.kind === 'personal') {
+    throw new TenantIsolationError(
+      'Ο ιδιωτικός χώρος δεν έχει εταιρεία: η διαδρομή όφειλε να απαντήσει MISSING_TENANT στο σύνορο',
+      403,
+      'FORBIDDEN',
+    );
+  }
+}
+
+/**
  * Resolve the company a list query must be scoped to.
  *
  * A requested company is honoured **only** for bypass roles; for everyone else
@@ -155,6 +192,7 @@ export function resolveTenantListScope(
   ctx: AuthContext,
   requestedCompanyId: string | null | undefined,
 ): TenantListScope {
+  assertQueryableWorkspace(ctx);
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
 
   if (!isSuperAdmin) {
@@ -162,6 +200,30 @@ export function resolveTenantListScope(
   }
 
   if (!requestedCompanyId) {
+    // 🔴🔴 ΤΟ ΔΟΓΜΑ ΤΗΣ ΛΙΣΤΑΣ ΑΓΝΟΟΥΣΕ ΤΟΝ ΧΩΡΟ ΤΗΣ ΔΙΕΥΘΥΝΣΗΣ (ADR-787 §5.3 ζ όριο 1,
+    //    διορθώθηκε 2026-09-12)
+    //
+    // Αυτό το δόγμα διάβαζε **μόνο** το `?companyId=`, και ο πελάτης το στέλνει σε
+    // **ΕΝΑ** σημείο σε όλο το `src/` (μετρημένο: `SimpleProjectDialog.tsx`). Άρα ένας
+    // super-admin μέσα στο `/o/<ΡΟΗ>/buildings` έπαιρνε **όλες τις εταιρείες** — λάθος
+    // δεδομένα κάτω από διεύθυνση που ονομάζει μία, δηλαδή η κλάση (α) του §9.
+    //
+    // 🔑 **Η δήλωση του χώρου είναι ΕΞΙΣΟΥ ρητή με το ερώτημα** — και έχει **κριθεί**:
+    //    το `ctx.companyId` εδώ είναι ο χώρος που ο `decideMembership` ενέκρινε. Το
+    //    `?companyId=` προηγείται επίτηδες: είναι **όρισμα της πράξης** («δείξε μου
+    //    εκείνη την εταιρεία»), ενώ ο χώρος είναι το **περιβάλλον** της.
+    //
+    // ⛔ `all-tenants` μένει **μόνο** για αίτημα που δεν ονόμασε **τίποτα** — το OWASP το
+    //    λέει κατά λέξη: *«make any cross-tenant administrative path explicit»*.
+    if (ctx.requestedWorkspace?.kind === 'org') {
+      return {
+        kind: 'company',
+        companyId: ctx.companyId,
+        isSuperAdmin: true,
+        isCrossTenant: false,
+      };
+    }
+
     return { kind: 'all-tenants', isSuperAdmin: true, isCrossTenant: true };
   }
 

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+// 🔑 ADR-809 — ο ΕΝΑΣ κριτής «σχεδιασμένη κατάσταση ή βλάβη;», κοινός με τον δρόμο της
+//    Firestore. ⛔ ΜΗΝ γράψεις εδώ έλεγχο status ή μήνυμα: brand, ποτέ κείμενο.
+import { isMissingTenantError } from '@/services/firestore/auth-context';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
 // ADR-356: shared switcher-invalidation SSOT hook for REST-backed consumers
@@ -191,6 +194,28 @@ export function useFirestoreProjects() {
         // Ignore abort errors
         if (err instanceof Error && err.name === 'AbortError') {
           logger.info('Request aborted');
+          return;
+        }
+
+        // 🔴 ΣΧΕΔΙΑΣΜΕΝΗ ΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΒΛΑΒΗ (ADR-809 · ADR-787 §5.3 ζ όριο 1)
+        //
+        // Στον **ιδιωτικό** χώρο δεν υπάρχει εταιρεία, άρα δεν υπάρχουν έργα εταιρείας. Ο
+        // διακομιστής το λέει πλέον **ρητά** (403 `MISSING_TENANT`) αντί να δίνει σιωπηλά
+        // τα δεδομένα του claim ή — για super-admin — **όλων** των εταιρειών.
+        //
+        // ⚠️ **Ο κριτής ρωτιέται ΠΡΙΝ το `logger.error`**, και είναι το μάθημα του ADR-798
+        //    §21: κόκκινη γραμμή σε σχεδιασμένη κατάσταση δεν είναι πληροφορία — είναι
+        //    θόρυβος **που κρύβει τα αληθινά σφάλματα** (μετρήθηκε σε κάθε φόρτωση σελίδας).
+        //
+        // 🔑 Ο κριτής είναι ο **ίδιος** με τον δρόμο της Firestore: ρωτά το brand
+        //    `isMissingTenant`, που πλέον το φοράει και το σφάλμα του `apiClient`. Καμία
+        //    νέα λέξη, κανένας δεύτερος κριτής.
+        if (isMissingTenantError(err)) {
+          logger.info('Ιδιωτικός χώρος — κανένα έργο εταιρείας (σχεδιασμένη κατάσταση)');
+          projectsCache.set([]);
+          setProjects([]);
+          hasLoadedOnceRef.current = true;
+          setError(null);
           return;
         }
 
