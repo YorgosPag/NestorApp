@@ -24,12 +24,21 @@
  * |---|---|---|
  * | Α | ο κριτής κόβει τη **θύρα** πριν κρίνει | `0.0.0.0:3000` κρίνεται ολόκληρο ⇒ «δρομολογήσιμο» |
  * | Β | το `NEXT_PUBLIC_APP_URL` **προηγείται** της κεφαλίδας | εμπιστοσύνη στο `x-forwarded-host` ⇒ Host header injection |
- * | Γ | το `Location` είναι **σχετικό** | επιστροφή σε `NextResponse.redirect(new URL(…, request.url))` |
+ * | Γ | το `Location` **του Node** είναι **σχετικό** | επιστροφή σε `NextResponse.redirect(new URL(…, request.url))` |
  * | Δ | το **ίδιο το `/home`** — η γραμμή του περιστατικού | το ίδιο, στον πραγματικό handler |
+ * | Ε | το `Location` **του Edge** είναι απόλυτο στο **δημόσιο** σπίτι, αλλιώς **404** | `0.0.0.0:3000` ως origin ⇒ ξανά το περιστατικό |
+ * | Η | κάθε `Location` του middleware **επιβιώνει** της ανάλυσης του Edge | σχετικό `Location` ⇒ `TypeError` ⇒ **500** στην παραγωγή |
+ * | Θ | το middleware **δεν καλεί** τον `redirectTo` | μία κλήση πίσω στην έξοδο του Node |
+ *
+ * ⚠️ **Οι γραμμές Γ και Ε δεν συγκρούονται — τις ξεχωρίζει η ΜΕΤΑΦΟΡΑ.** Στο Node το
+ * σχετικό `Location` δεν δηλώνει origin που δεν ξέρουμε· στο Edge ο προσαρμογέας το
+ * **αναλύει** και πετά. Δύο έξοδοι, μία αυθεντία.
  *
  * @module lib/http/__tests__/request-origin
  * @see lib/http/request-origin
  */
+
+import { readRepoCode } from '@/test-utils/read-source';
 
 import { publicOrigin, publicUrl } from '../public-origin';
 import {
@@ -310,23 +319,40 @@ describe('Δ — /home: η γραμμή που έστειλε άνθρωπο σ�
  * άνθρωπος· το middleware είναι η **ίδια γραφή** σε δεύτερο σημείο, που κανείς δεν
  * είχε κοιτάξει. Άγκυρα μόνο στο πρώτο θα άφηνε την κλάση ζωντανή.
  */
-describe('Ε — middleware: το δίχτυ των literal [placeholder] δεν δηλώνει ούτε αυτό origin', () => {
-  it('ανακατευθύνει στον γονέα με σχετικό Location', async () => {
+describe('Ε — middleware: το δίχτυ των literal [placeholder] δεν δηλώνει ΠΟΤΕ το host του container', () => {
+  /** Το αίτημα όπως ακριβώς φτάνει στον standalone διακομιστή πίσω από τον proxy. */
+  async function guardResponse() {
     const { NextRequest } = await import('next/server');
     const { middleware } = await import('@/middleware');
 
-    // ⚠️ **Το host ΕΙΝΑΙ το `0.0.0.0:3000` επίτηδες** — έτσι ακριβώς φτάνει το
-    //    αίτημα στον standalone διακομιστή. Αν η γραφή γυρίσει σε
-    //    `new URL(parentPath, request.url)`, αυτό το test κοκκινίζει αμέσως.
-    const response = middleware(
+    // ⚠️ **Το host ΕΙΝΑΙ το `0.0.0.0:3000` επίτηδες** — έτσι ακριβώς φτάνει το αίτημα.
+    //    Αν η γραφή γυρίσει σε `new URL(parentPath, request.url)`, το `Location` γίνεται
+    //    `http://0.0.0.0:3000/properties` και τα δύο tests παρακάτω κοκκινίζουν.
+    return middleware(
       new NextRequest('http://0.0.0.0:3000/properties/%5Bid%5D/edit', {
         headers: { host: '0.0.0.0:3000' },
       }),
     );
+  }
 
-    const location = response?.headers.get('Location') ?? '';
-    expect(location).toBe('/properties');
-    expect(declaresAuthority(location)).toBe(false);
+  it('με δηλωμένη ταυτότητα: απόλυτο Location στο ΔΗΜΟΣΙΟ σπίτι, ποτέ στο εσωτερικό', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
+
+    const location = (await guardResponse())?.headers.get('Location') ?? '';
+
+    expect(location).toBe('https://nestorconstruct.gr/properties');
+    // 🔴 Η καρδιά του ADR-819: ό,τι κι αν γίνει, **ποτέ** το host του container.
+    expect(location).not.toContain('0.0.0.0');
+  });
+
+  it('ΧΩΡΙΣ δηλωμένη ταυτότητα: 404 — άρνηση, ποτέ μαντεψιά', async () => {
+    // Το μόνο διαθέσιμο host είναι το `0.0.0.0:3000`, δηλαδή **μη δρομολογήσιμο**.
+    // Μια ανακατεύθυνση εκεί θα ήταν ακριβώς το περιστατικό· το 404 κρατά τον σκοπό
+    // («η διεύθυνση δεν ανοίγει») χωρίς να ονομάσει σπίτι που δεν ξέρουμε.
+    const response = await guardResponse();
+
+    expect(response?.status).toBe(404);
+    expect(response?.headers.get('Location')).toBeNull();
   });
 });
 
@@ -364,5 +390,121 @@ describe('Ζ — publicOrigin / publicUrl: μόνο το env, και null αντ
   it('ίδιος κανόνας ένωσης με το absoluteUrl — ένας κανόνας, δύο καταναλωτές', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
     expect(publicUrl('/x?y=1')).toBe(absoluteUrl(reqWith({}), '/x?y=1'));
+  });
+});
+
+// ============================================================================
+// Η — Ο ΚΑΤΑΝΑΛΩΤΗΣ, ΟΧΙ Ο ΠΑΡΑΓΩΓΟΣ
+// ============================================================================
+
+/**
+ * 🔴 **ΤΟ ΚΕΝΟ ΠΟΥ ΑΥΤΗ Η ΟΜΑΔΑ ΚΛΕΙΝΕΙ (μετρημένο 2026-09-12, στην παραγωγή)**
+ *
+ * Η ομάδα `Ε` **έτρεχε ήδη το πραγματικό middleware** — και **έμεινε πράσινη** ενώ
+ * κάθε `/o/me/*` έδινε **500**. Γιατί; Το jest καλεί **τη συνάρτησή μας** και κρίνει
+ * την απάντηση. Η παραγωγή δίνει την **ίδια** απάντηση στον **προσαρμογέα του Edge**,
+ * και **εκείνος** πετά. *Εκτελούσαμε τον παραγωγό, ποτέ τον καταναλωτή.*
+ *
+ * ## Τι ακριβώς κάνει ο καταναλωτής
+ *
+ * `next/dist/server/web/adapter.js:340` — για **κάθε** απόκριση με `Location`:
+ *
+ * ```js
+ * const redirectURL = new NextURL(redirect, { forceLocale: false, headers, nextConfig });
+ * ```
+ *
+ * και ο `parseURL` (`next-url.js:17`) είναι σκέτο `new URL(input, base)` με
+ * `base === undefined`. **Σχετικό `Location` ⇒ `TypeError: Invalid URL` ⇒ 500.**
+ * Upstream: **vercel/next.js#73989** (ανοιχτό).
+ *
+ * ⛔ **ΜΗΝ εισαγάγεις εδώ `next/dist/...`**: θα ήταν το **πρώτο** deep import του repo
+ * και θα έδενε την άγκυρα σε εσωτερικό μονοπάτι. Αντιγράφουμε την **πράξη**, όχι το
+ * μονοπάτι — το αναλλοίωτο («απόλυτο `Location`») ισχύει ακόμη κι αν το #73989 κλείσει.
+ */
+describe('Η — το Location του middleware επιβιώνει της ανάλυσης που κάνει το Edge', () => {
+  /** Ακριβώς η πράξη του `parseURL`: `new URL(input)` **χωρίς base**. */
+  function survivesEdgeParse(location: string): boolean {
+    try {
+      new URL(location);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Κάθε απόκριση του middleware που φέρει `Location`, από τους δύο δρόμους του. */
+  async function middlewareLocations(): Promise<readonly string[]> {
+    const { NextRequest } = await import('next/server');
+    const { middleware } = await import('@/middleware');
+
+    const paths = [
+      'http://0.0.0.0:3000/properties/%5Bid%5D/edit', // φρουρός [id]
+      'http://0.0.0.0:3000/o/me/projects', // ιδιωτικός χώρος — το ζωντανό 500
+      'http://0.0.0.0:3000/o/me',
+      'http://0.0.0.0:3000/o/ME/projects', // ψευδώνυμο σε κεφαλαία
+    ];
+
+    const found: string[] = [];
+    for (const url of paths) {
+      const response = middleware(
+        new NextRequest(url, { headers: { host: 'nestorconstruct.gr' } }),
+      );
+      const location = response?.headers.get('Location');
+      if (location !== null && location !== undefined) found.push(location);
+    }
+    return found;
+  }
+
+  it('και οι ΤΕΣΣΕΡΙΣ διαδρομές ανακατευθύνουν — καμία δεν πετά', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
+    expect(await middlewareLocations()).toHaveLength(4);
+  });
+
+  it('🔴 ΤΟ 500: κάθε Location περνά την ανάλυση του Edge χωρίς base', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
+
+    for (const location of await middlewareLocations()) {
+      expect({ location, survives: survivesEdgeParse(location) }).toEqual({
+        location,
+        survives: true,
+      });
+    }
+  });
+
+  it('αντίστροφα: ο redirectTo μένει ΣΧΕΤΙΚΟΣ — και άρα ΔΕΝ επιβιώνει εκεί', () => {
+    // 🔑 Αυτό το test είναι ο **λόγος ύπαρξης** των δύο εξόδων. Το ADR-819 δεν
+    //    ακυρώνεται: στο Node το σχετικό `Location` παραμένει η ασφαλέστερη γραφή.
+    const location = redirectTo('/offers').headers.get('Location') ?? '';
+
+    expect(location).toBe('/offers');
+    expect(survivesEdgeParse(location)).toBe(false);
+  });
+});
+
+// ============================================================================
+// Θ — ΤΟ ΣΥΝΟΡΟ ΕΙΝΑΙ ΕΝΑ ΑΡΧΕΙΟ, ΚΑΙ ΤΟ ΛΕΕΙ Ο ΚΩΔΙΚΑΣ
+// ============================================================================
+
+/**
+ * 🔑 **Γιατί άγκυρα και όχι πύλη**: απογραφή 2026-09-12 — το `src/middleware.ts` είναι
+ * το **μοναδικό** Edge surface του repo (μηδέν `export const runtime = 'edge'` σε όλο
+ * το `src/`). Πύλη για πληθυσμό **ενός** αρχείου είναι μηχανή χωρίς πληθυσμό· άγκυρα
+ * στο ένα αρχείο είναι **πλήρης**, όχι δείγμα.
+ *
+ * ⚠️ Διαβάζει **κώδικα χωρίς σχόλια** (`readRepoCode`) — αλλιώς κοκκινίζει πάνω στο
+ * ίδιο το σχόλιο που εξηγεί τον κανόνα (μάθημα CHECK 3.50 `Κ7β`).
+ */
+describe('Θ — το middleware ζητά την έξοδο του Edge, όχι του Node', () => {
+  const middlewareCode = readRepoCode('src/middleware.ts');
+
+  it('ΔΕΝ καλεί τον redirectTo — αυτός γράφει σχετικό Location και ρίχνει το Edge', () => {
+    expect(/\bredirectTo\s*\(/.test(middlewareCode)).toBe(false);
+  });
+
+  it('καλεί τον redirectFromMiddleware ΜΕ το αίτημα — η κλήση, όχι η εισαγωγή', () => {
+    // ⚠️ Ένα `toContain('redirectFromMiddleware')` θα περνούσε με **σκέτη εισαγωγή**.
+    //    Ζητάμε την **κλήση** με το αίτημα — χωρίς αυτό δεν υπάρχει origin να ρωτηθεί.
+    const calls = middlewareCode.match(/\bredirectFromMiddleware\s*\(\s*request\s*,/g);
+    expect(calls).toHaveLength(2);
   });
 });

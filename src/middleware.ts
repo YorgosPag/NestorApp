@@ -20,7 +20,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { redirectTo } from '@/lib/http/request-origin';
+// 🔴 **ΟΧΙ `redirectTo` ΕΔΩ** — αυτό είναι Edge. Ο προσαρμογέας του middleware περνά
+//    κάθε `Location` μέσα από `new NextURL(loc)` **χωρίς base** (`adapter.js:340`) και
+//    **πετά** στο σχετικό ⇒ 500 σε κάθε `/o/me/*` (μετρημένο στην παραγωγή 2026-09-12).
+//    Ο `redirectFromMiddleware` ονομάζει το σπίτι μας από τη **δηλωμένη** ταυτότητα —
+//    ποτέ από το `request.url`, που πίσω από τον proxy είναι `0.0.0.0:3000` (ADR-819).
+import { redirectFromMiddleware } from '@/lib/http/request-origin';
 // 🔑 ADR-787 §5.3 ζ (όριο 1) — το κλειστό σύνολο «τι προσφέρει ο ιδιωτικός χώρος» και η
 //    προσγείωσή του. Καθαρές σταθερές, μηδέν I/O: εκτελέσιμο στο Edge (το middleware
 //    δηλώνει ρητά «no Firestore/Firebase»).
@@ -167,10 +172,12 @@ export function middleware(request: NextRequest) {
   const decodedPath = decodeURIComponent(pathname);
   if (/\/\[[^/\]]+\]/.test(decodedPath)) {
     const parentPath = decodedPath.replace(/\/\[[^/\]]+\].*$/, '') || '/';
-    // 🔴 **ΣΧΕΤΙΚΟ `Location`** — δες `lib/http/request-origin.ts`: το
-    //    `request.url` πίσω από τον proxy του Netcup φέρει το `HOSTNAME` του
-    //    container (`0.0.0.0:3000`), όχι το `nestorconstruct.gr`.
-    return redirectTo(parentPath, 307);
+    // 🔴 **ΤΟ `Location` ΧΤΙΖΕΤΑΙ ΑΠΟ ΤΗ ΔΗΛΩΜΕΝΗ ΤΑΥΤΟΤΗΤΑ** — δες
+    //    `lib/http/request-origin.ts`: **ποτέ** από το `request.url`, που πίσω από τον
+    //    proxy του Netcup φέρει το `HOSTNAME` του container (`0.0.0.0:3000`), όχι το
+    //    `nestorconstruct.gr`. Στο Edge το απόλυτο είναι **υποχρεωτικό** (ο adapter
+    //    αναλύει το `Location`)· το σχετικό εδώ έδινε **500**, όχι ανακατεύθυνση.
+    return redirectFromMiddleware(request, parentPath, 307);
   }
 
   // ── 0β. Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΦΟΡΑ ΤΟ ΚΕΛΥΦΟΣ ΤΟΥ ΓΡΑΦΕΙΟΥ ──
@@ -197,7 +204,7 @@ export function middleware(request: NextRequest) {
   //    απάντηση αυτού του κανόνα είναι **άρνηση**. Την ταυτότητα τη φυλά το layout.
   const personalLanding = personalWorkspaceLanding(pathname);
   if (personalLanding !== null) {
-    return redirectTo(personalLanding, 307);
+    return redirectFromMiddleware(request, personalLanding, 307);
   }
 
   // ── 1. Block vulnerability scanner paths (immediate 404) ──
