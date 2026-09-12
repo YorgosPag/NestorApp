@@ -215,15 +215,21 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
 
     expect(outcome).toBe('geocoded');
     expect(position.coordinates).toEqual({ lat: 40.6401, lng: 22.9444 });
+    // ADR-332 D27 Ζ6 — **η ερώτηση ταξιδεύει με την απάντηση**: το `resolvedFor` είναι το ίδιο
+    // το ερώτημα που τέθηκε (δες `calls[0]` παρακάτω, είναι ταυτόσημο), και χωρίς αυτό η
+    // ακρίβεια ήταν ισχυρισμός χωρίς αντικείμενο.
     expect(position.geocodingMetadata).toEqual({
       confidence: 0.93,
       accuracy: 'exact',
       variantUsed: 2,
       osmType: 'way',
+      resolvedFor: { street: 'Εγνατίας', number: '147', city: 'Θεσσαλονίκη' },
     });
     expect(position.source).toBe('geocoded');
     expect(position.verifiedAt).toBe(NOW);
     expect(calls[0]).toEqual({ street: 'Εγνατίας', number: '147', city: 'Θεσσαλονίκη' });
+    // Η απόδειξη ΕΙΝΑΙ το ερώτημα, όχι αντίγραφό του — ένα δεύτερο αντίγραφο θα απέκλινε.
+    expect(position.geocodingMetadata?.resolvedFor).toEqual(calls[0]);
   });
 
   it('Κ4 — ρωτήθηκε και ΔΕΝ υπάρχει ⇒ η θέση ΣΒΗΝΕΤΑΙ (η παλιά θα ήταν ψέμα)', async () => {

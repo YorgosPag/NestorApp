@@ -184,6 +184,46 @@ describe('Ζ6 — η θέση κουβαλά ΓΙΑ ΠΟΙΟ ΚΕΙΜΕΝΟ λύ
     expect(positionTextVerdict({ ...incoming, ...position })).toBe('differs');
   });
 
+  it('Ζ6-Α4β — 🔴 ΔΕΥΤΕΡΗ σιωπή της μηχανής: η απόδειξη μένει η ΑΡΧΙΚΗ, όχι η ενδιάμεση', async () => {
+    // ⚠️ Η άγκυρα Α4 μόνη της ΔΕΝ φυλάει το συμβόλαιο: εκεί το αποθηκευμένο κείμενο και η
+    // απόδειξη **συμπίπτουν**, άρα ένα `resolvedFor: toQuery(stored)` θα περνούσε αθόρυβα
+    // (μετρημένο — η μετάλλαξη επέζησε). Ο πραγματικός κίνδυνος φαίνεται μόνο όταν το
+    // αποθηκευμένο **κείμενο** έχει ήδη αποκλίνει από την απόδειξή του: ακριβώς η κατάσταση
+    // του ζωντανού δείγματος της ALFA (κείμενο «102», θέση της «100»).
+    //
+    // 🔴 Αν εδώ η απόδειξη «φρεσκάρει» από το αποθηκευμένο κείμενο, η ψευδής πρόταση γίνεται
+    // **αυτο-επικυρωμένη**: κάθε επόμενη αποθήκευση που δεν ρωτά τη μηχανή θα «αποδείκνυε»
+    // ότι η θέση ισχύει για το κείμενο που τυχαίνει να συνοδεύει. Η σιωπή θα γινόταν μόνιμη.
+    const alreadyDrifted: AddressLike = {
+      ...HQ_AS_RESOLVED,
+      number: '102', // το κείμενο λέει 102…
+      geocodingMetadata: {
+        confidence: 0.91,
+        accuracy: 'exact',
+        variantUsed: 1,
+        // …η απόδειξη λέει 100. Αυτή είναι η ΑΛΗΘΕΙΑ και δεν επιτρέπεται να χαθεί.
+        resolvedFor: { street: 'Εγνατία', number: '100', city: 'Θεσσαλονίκη', postalCode: '54623' },
+      },
+    };
+    const incoming: AddressLike = { ...alreadyDrifted, number: '104' };
+
+    const { outcome, position } = await resolveAddressPosition(
+      alreadyDrifted,
+      incoming,
+      witness(new Error('geocoder-unavailable')),
+      NOW,
+    );
+
+    expect(outcome).toBe('geocoder-unavailable');
+    expect(position.geocodingMetadata?.resolvedFor).toEqual({
+      street: 'Εγνατία',
+      number: '100',
+      city: 'Θεσσαλονίκη',
+      postalCode: '54623',
+    });
+    expect(positionTextVerdict({ ...incoming, ...position })).toBe('differs');
+  });
+
   it('Ζ6-Β1 — ο πάροχος δήλωσε ΜΕΡΙΚΗ αντιστοίχιση ⇒ αποθηκεύεται δίπλα στην ακρίβεια', async () => {
     // Μετρημένο ζωντανά: «Εγνατία 102» με Τ.Κ. 54002 ⇒ `accuracy: 'exact'` ΚΑΙ
     // `partialMatch: true` (ο Τ.Κ. δεν ταίριαξε). Οι δύο ΔΕΝ είναι η ίδια ερώτηση:
