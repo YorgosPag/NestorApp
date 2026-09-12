@@ -266,7 +266,23 @@ export function resolveAdminChain(
   return { verdict: deepestAmbiguity ?? { kind: 'absent' }, proved: NOTHING_PROVED };
 }
 
-/** Ο νικητής **και όλοι οι πρόγονοί του** — παραγόμενα, όχι ξανα-αντιστοιχισμένα. */
+/**
+ * Ο νικητής **και όλοι οι πρόγονοί του** — παραγόμενα, όχι ξανα-αντιστοιχισμένα.
+ *
+ * 🔴 **Εξάγεται επειδή η ζωντανή μέτρηση βρήκε κενό** *(2026-09-12, ALFA → Σταυρούπολις)*:
+ * η αλυσίδα της ετικέτας απέδειξε **L5 ΔΗΜΟΣ ΠΑΥΛΟΥ ΜΕΛΑ** και ο οικισμός αποδείχθηκε
+ * **μετά**, μέσα σε αυτή την εμβέλεια. Τα **ενδιάμεσα** επίπεδα — L6 ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ
+ * ΣΤΑΥΡΟΥΠΟΛΕΩΣ και L7 — είναι **πρόγονοι του αποδεδειγμένου οικισμού**, δηλαδή
+ * **αποδεδειγμένα**· και όμως γράφονταν **κενά**, επειδή ο νικητής της αλυσίδας ήταν ο L5.
+ * Αυτό παραβίαζε την ίδια μας την αρχή: *«γράψε ό,τι αποδείχθηκε»*.
+ */
+export function provedLevelsOfPlace(
+  sources: AdminIdentitySources,
+  winner: AdminPlace,
+): ReadonlyMap<number, AdminPlace> {
+  return provedLevelsOf(sources, winner);
+}
+
 function provedLevelsOf(
   sources: AdminIdentitySources,
   winner: AdminPlace,
