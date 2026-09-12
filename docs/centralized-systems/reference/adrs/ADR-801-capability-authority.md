@@ -120,7 +120,7 @@ useCanEditText.ts:23 → capabilitiesForRole( useUserRole().user?.role )
 
 | Πού | Σύνολο | Σχόλιο |
 |---|---|---|
-| `server/auth/pending-registration.ts:63` | `['super_admin','company_admin']` | **τρίτο** `ADMIN_ROLES` |
+| ~~`server/auth/pending-registration.ts:63`~~ | ~~`['super_admin','company_admin']`~~ | ~~**τρίτο** `ADMIN_ROLES`~~ — ✅ **ΕΞΑΦΑΝΙΣΤΗΚΕ 2026-09-12** (ADR-853 Φ1): το σύνολο υπήρχε για να βρει **σε ποιον διαχειριστή** θα σταλεί η ειδοποίηση εκκρεμούς εγγραφής. Η ειδοποίηση καταργήθηκε, άρα ο κριτής **δεν θεραπεύτηκε — έπαψε να υπάρχει το ερώτημα**. Η καθαρότερη μορφή της θεραπείας, και η μόνη που δεν αφήνει νεκρό κλάδο (Κ3) |
 | `services/agent-capability/transport/mcp-identity.ts:71` | `['super_admin','company_admin']` | `ADMIN_GLOBAL_ROLES` — **άλλο όνομα, ίδιο ερώτημα** |
 | `services/communications/inbound/email-inbound-service.ts:391` | `['super_admin','company_admin']` | το ίδιο, τέταρτη φορά |
 

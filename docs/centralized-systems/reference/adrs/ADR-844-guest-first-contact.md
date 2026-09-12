@@ -127,7 +127,7 @@ creation»*· στην ΕΕ **δεν στέκει**. Η φόρμα το λέει
 | `services/contact/first-contact.service.ts` | **Ο ΕΝΑΣ γραφέας** — `openFirstContact()` |
 | `lib/auth/set-claims-with-mirror.ts` | Η **ΜΟΝΗ** νόμιμη γραφή claims (ADR-360) |
 | `app/(auth)/mandate/[token]/page.tsx` | **Πρότυπο δημόσιας σελίδας** — server component, Admin SDK, `force-dynamic`, `noindex` |
-| `services/email-templates/pending-registration-admin.ts` | **Πρότυπο email** — ελληνικά inline **by design** |
+| ~~`services/email-templates/pending-registration-admin.ts`~~ | ~~**Πρότυπο email** — ελληνικά inline **by design**~~ — ⚠️ **ΔΙΑΓΡΑΦΗΚΕ 2026-09-12** (ADR-853 Φ1): η ειδοποίηση εκκρεμούς εγγραφής καταργήθηκε μαζί με το αυτόματο αίτημα. Ζωντανό παράδειγμα της **ίδιας κλάσης**: `workspace-access-decision-email.ts` |
 | `services/ai-pipeline/shared/mailgun-sender.ts` | `sendReplyViaMailgun` — η κανονική διαδρομή για εφάπαξ email από route |
 | `lib/contact/first-contact-form-values.ts` | SSoT φόρμας — επεκτάθηκε, **δεν** διπλασιάστηκε |
 | `components/ui/hinted-field.tsx` | Το πεδίο· απέκτησε `inputMode` **αντί** για τέταρτο δίδυμο (N.0.2) |

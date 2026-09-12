@@ -24,7 +24,7 @@ function belongsToCompany(companyId) {
 
 - είναι ο **προεπιλεγμένος ρόλος κάθε αυτο-εγγραφής** (⚠️ **δείκτης ενημερωμένος 2026-08-23**: έλεγε
   `src/app/api/auth/complete-registration/route.ts`, που **διαγράφηκε** — ADR-660 §5.13· η αυτο-εγγραφή
-  ζει πλέον στο `src/server/auth/pending-registration.ts` μέσω του `POST /api/auth/session`, και **δεν**
+  ζει πλέον στο `src/server/auth/identity-record.ts` *(πρώην `pending-registration.ts` — ADR-853 Φ1)* μέσω του `POST /api/auth/session`, και **δεν**
   χορηγεί ρόλο: γεννά `status:'pending'` **χωρίς claims**),
 - έχει στο `src/lib/auth/roles.ts` **ακριβώς δύο** permissions: `projects:projects:view`, `properties:properties:view` — **μηδέν** floorplan/dxf,
 - και παρ' όλα αυτά μπορούσε, με απευθείας client SDK, να **διαβάσει και να δημιουργήσει** τοίχους, πλάκες, υποστυλώματα, MEP δίκτυα και τοπογραφικές επιφάνειες ολόκληρης της εταιρείας.

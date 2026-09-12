@@ -2,8 +2,8 @@
   "_meta": {
     "description": "i18n hardcoded UI strings baseline (JSX text, attrs, errors, toasts)",
     "generated": "2026-04-25T07:35:27Z",
-    "totalViolations": 28,
-    "totalFiles": 5,
+    "totalViolations": 26,
+    "totalFiles": 4,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "patterns": [
       "JSX text",
@@ -16,7 +16,6 @@
   "files": {
     "src/lib/obligations/content.ts": 16,
     "src/services/sales-accounting/accounting-office-notify.ts": 3,
-    "src/services/email-templates/pending-registration-admin.ts": 2,
     "src/services/email-templates/first-contact-verification.ts": 4,
     "src/services/email-templates/account-secured.ts": 3
   }

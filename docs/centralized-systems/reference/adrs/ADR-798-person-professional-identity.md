@@ -76,7 +76,7 @@ PRIVATE_SPACE_HOME`, και το `hasOrganization` *(γρ. 126)* είναι
 |---|---|---|
 | `CustomClaims` | `src/lib/auth/types.ts:245-257` | **5** πεδία: `companyId` · `globalRole` · `mfaEnrolled?` · `emailVerified?` · `permissions?` — **κανένα επαγγελματικό** |
 | `GLOBAL_ROLES` | `src/lib/auth/types.ts:13-18` | **4** τιμές, **καμία** επάγγελμα |
-| Εγγραφή | `src/server/auth/pending-registration.ts:71-76` | **4** πεδία: `uid` · `email` · `displayName` · `authProvider` |
+| Εγγραφή | `src/server/auth/identity-record.ts` *(πρώην `pending-registration.ts`, ADR-853 Φ1)* | **4** πεδία: `uid` · `email` · `displayName` · `authProvider` |
 | Φόρμα σύνδεσης | `src/auth/hooks/useAuthFormState.ts:20-26` | **5** πεδία· **καμία** ερώτηση επαγγέλματος |
 | Υπολογισμός «τι βλέπω» | `src/config/jobs-access.ts:103-116` | **3** είσοδοι: `permissions` · `isBypass` · `availableSources` |
 | Πηγές δικαιωμάτων **στον browser** | `src/hooks/useEffectivePermissions.ts:48-50` | **μία**: `globalRole` |
