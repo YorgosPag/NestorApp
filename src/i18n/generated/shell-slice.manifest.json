@@ -6,7 +6,7 @@
     "src/i18n/generated/routes/demands.el.json": "8d920afce4681d2fb27b97286b773db492257d880fc5f00c201dcc610898560c",
     "src/i18n/generated/routes/demands__demandId.el.json": "fd2d1b5b0ed4628ec4d75992eef44d0c0b33af93e956614f26b56fa718bb32ed",
     "src/i18n/generated/routes/demands__new.el.json": "a00a37bb34cebdd1e27ee54c89fbbffd9f8b0f9df761d8c601d04d5ee1e32042",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "2ee82a069e00cc3ed2be814d83ca1adeb66e428364de32ce2dde994daa7ef55d",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "74afbd65dac92c98dad2d0f920bcd7af2749da89ef83d2ec711319144a26a216",
     "src/i18n/generated/routes/invite__token.el.json": "10b3915e457027e71f08a179e0b13a024cc7901c25b3a46c1bf060ad25f8c9ac",
     "src/i18n/generated/routes/listing__id.el.json": "1922b01ba7477a6e05b9b01c123e6ca7ea9dd352e76df5b2eda710473c4c9c00",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
@@ -70,7 +70,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1af4c780a1d71e874381be75e8163a04174d02ee6b3a5c0a9dda9a5b8cc73494",
+  "inputsSha256": "d34ab523fe51a6ebd25fbdf024586a602c4db8e6d9b760193fed3d1e7e50a554",
   "languages": [
     "el"
   ],
@@ -4318,7 +4318,7 @@
   },
   "shellFiles": {
     "src/api/notificationClient.ts": "048d34aa4acec745ae14aa31a61c903866077d4d9a46ab8a90629d340aea38a0",
-    "src/app/(app)/admin/layout.tsx": "f32631e240f9572a87fbaad86622e2730dada7877d258dfdebb340eada2c2516",
+    "src/app/(app)/admin/layout.tsx": "4ef0e6241146f7aa6c45eb1a165878d7f34c803e649b9a72775bef9dc2cd99cc",
     "src/app/(app)/layout.tsx": "e14bcbd03ded08f7d1d62a955433f8925860143ab59efbf46f85c3a441be12b3",
     "src/app/(app)/o/[workspace]/account/layout.tsx": "92a9a69d8282018214a0a85bc89098299187e467f306b16a0362f93b5835d325",
     "src/app/(app)/o/[workspace]/dxf/viewer/layout.tsx": "5d8006221c9a546e995faff3a451269dd788fb8feb4a320e620d2790aa41aabc",
@@ -4330,7 +4330,7 @@
     "src/app/(light)/layout.tsx": "1426d0f8c95c31fbff7fbcc5c3db492adc4d9393dce082febda32e44a6aa62eb",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "cf1eabbc3afc6f0b57cde6075635d8e58d54b4b0e8fe49645fe60f4c79dd27fa",
-    "src/app/layout.tsx": "d90063411e742ed897b6d39da651eb17432953c843c455aed6ebca50163e9529",
+    "src/app/layout.tsx": "ad1f18e958e382671dcb08dd040b0abda8bf8a3d80be2a4eddb7638a0c1591ac",
     "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
     "src/auth/components/AuthScreenChrome.tsx": "af5374a2d172a8f9efcb85251a099c893b104b88d3a92d91d9365d030d33ccd9",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
@@ -4971,7 +4971,7 @@
     "matchedKeys": 177,
     "routeBoundaries": 0,
     "shellFiles": 632,
-    "sliceBytes": 416839
+    "sliceBytes": 416835
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
