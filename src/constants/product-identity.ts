@@ -98,3 +98,20 @@ export function alreadySignedByProduct(text: string): boolean {
 export function productQualified(qualifier: string): string {
   return `${PRODUCT_NAME} · ${qualifier}`;
 }
+
+/**
+ * Το όνομα σε μορφή **ασφαλή για όνομα αρχείου** — `NestorApp`.
+ *
+ * 🔑 **ΠΑΡΑΓΩΓΟ, ΟΧΙ ΔΕΥΤΕΡΗ ΣΤΑΘΕΡΑ** — και αυτός είναι όλος ο λόγος ύπαρξής της: ο
+ * εξαγωγέας αναφορών έγραφε `` `Nestor_${domain}_Report_${date}` `` με **δικό του** literal,
+ * δηλαδή μια γραφή που καμία αλλαγή του {@link PRODUCT_NAME} δεν θα ακολουθούσε ποτέ. Μια
+ * μετατροπή γραμμένη **στο σημείο κλήσης** είναι ακριβώς η γεννήτρια της επόμενης απόκλισης
+ * (ADR-857 §3 Γ) — γι' αυτό ζει **εδώ**, όπου υπάρχει ένας ιδιοκτήτης.
+ *
+ * ⚠️ **ΔΕΝ προστίθεται στο `KNOWN_PAST_SPELLINGS`**: δεν είναι γραφή που είπαμε ποτέ, είναι
+ * **κωδικοποίηση** της σημερινής. Αν μπει εκεί, ο φρουρός της ουράς θα θεωρούσε υπογεγραμμένο
+ * ένα θέμα που λήγει σε «NestorApp» — κάτι που κανένα email δεν έστειλε ποτέ.
+ */
+export function productFilenameToken(): string {
+  return PRODUCT_NAME.replace(/\s+/g, '');
+}

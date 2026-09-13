@@ -41,6 +41,8 @@ export default async function AdminLayout({
   }
 }
 
+// Το όνομα του προϊόντος το προσθέτει το `title.template` της ρίζας (ADR-857 Φ8α):
+// εδώ δηλώνεται ΜΟΝΟ ο προσδιορισμός. Αποδίδεται «Admin | Nestor App».
 export const metadata = {
-  title: 'Admin | Nestor',
+  title: 'Admin',
 };

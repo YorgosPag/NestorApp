@@ -10,6 +10,7 @@ import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 import { densityBootScript } from '@/lib/appearance/density-boot-script';
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 /**
  * =============================================================================
@@ -49,9 +50,26 @@ const roboto = Roboto({
   variable: "--font-sans",
 });
 
+/**
+ * 🔑 Ο ΤΙΤΛΟΣ ΕΙΝΑΙ ΠΡΟΤΥΠΟ, ΚΑΙ ΤΟ ΟΝΟΜΑ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ (ADR-857 Φ8α).
+ *
+ * Πέντε σελίδες έγραφαν το όνομα **μόνες τους** — και **είχαν ήδη αποκλίνει σε τρεις
+ * γραφές**: `'Admin | Nestor'` · `'Audit Log | Nestor Admin'` · `"Nestor App"`.
+ *
+ * Το `title.template` είναι ο μηχανισμός **του ίδιου του Next.js** γι' αυτό, οπότε καμία
+ * σελίδα δεν ξαναγράφει το όνομα: δηλώνει **μόνο τον δικό της προσδιορισμό**.
+ *
+ * ⚠️ Το `default` είναι **ΥΠΟΧΡΕΩΤΙΚΟ** όταν υπάρχει `template`, και είναι ο τίτλος
+ * **αυτού εδώ** του segment: το πρότυπο εφαρμόζεται στα **παιδιά** και **ΠΟΤΕ στον εαυτό
+ * του** (τεκμηρίωση Next.js). ⚠️ Τα πρότυπα **ΔΕΝ αλυσιδώνονται** — ένα `template` σε
+ * ενδιάμεσο layout **αντικαθιστά** αυτό της ρίζας για τα παιδιά του, δεν προστίθεται.
+ */
 export const metadata: Metadata = {
-  title: "Nestor App",
-  description: "Nestor — Enterprise Construction & Property Management Platform",
+  title: {
+    default: PRODUCT_NAME,
+    template: `%s | ${PRODUCT_NAME}`,
+  },
+  description: `${PRODUCT_NAME} — Enterprise Construction & Property Management Platform`,
   icons: {
     icon: '/images/nestor-app-logo.png',
     apple: '/images/nestor-app-logo.png',

@@ -14,7 +14,8 @@ import type { Metadata } from 'next';
 import { CheckInClient } from '@/components/attendance/check-in/CheckInClient';
 
 export const metadata: Metadata = {
-  title: 'Παρουσία Εργαζομένου | Nestor',
+  // Το όνομα του προϊόντος το προσθέτει το `title.template` της ρίζας (ADR-857 Φ8α).
+  title: 'Παρουσία Εργαζομένου',
   description: 'Check-in/Check-out στο εργοτάξιο μέσω QR code',
   robots: { index: false, follow: false },
 };

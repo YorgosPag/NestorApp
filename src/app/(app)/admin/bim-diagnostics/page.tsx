@@ -11,8 +11,9 @@
 
 import { BimDiagnosticsView } from './BimDiagnosticsView';
 
+// Το όνομα του προϊόντος το προσθέτει το `title.template` της ρίζας (ADR-857 Φ8α).
 export const metadata = {
-  title: 'BIM Diagnostics | Nestor Admin',
+  title: 'BIM Diagnostics',
 };
 
 export default function AdminBimDiagnosticsPage() {

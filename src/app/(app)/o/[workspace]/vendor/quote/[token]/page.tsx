@@ -23,7 +23,8 @@ import { VendorPortalClient } from './VendorPortalClient';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Υποβολή Προσφοράς | Nestor',
+  // Το όνομα του προϊόντος το προσθέτει το `title.template` της ρίζας (ADR-857 Φ8α).
+  title: 'Υποβολή Προσφοράς',
   description: 'Πύλη υποβολής προσφοράς προμηθευτή',
   robots: { index: false, follow: false },
 };

@@ -12,8 +12,9 @@
 
 import { GlobalAuditLogView } from '@/components/admin/audit-log/GlobalAuditLogView';
 
+// Το όνομα του προϊόντος το προσθέτει το `title.template` της ρίζας (ADR-857 Φ8α).
 export const metadata = {
-  title: 'Audit Log | Nestor Admin',
+  title: 'Audit Log',
 };
 
 export default function AdminAuditLogPage() {
