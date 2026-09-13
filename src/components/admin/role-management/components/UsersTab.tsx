@@ -41,6 +41,8 @@ import { PermissionSetManager } from './PermissionSetManager';
 import { UserDetailPanel } from './UserDetailPanel';
 import { ApproveUserDialog } from './ApproveUserDialog';
 import { DenyAccessRequestDialog } from './DenyAccessRequestDialog';
+// 🎫 ADR-853 Φ6 — οι προσκλήσεις είναι **αδελφός** πίνακας, όχι γραμμές των χρηστών.
+import { InvitationTable } from './InvitationTable';
 
 import type {
   CompanyUser,
@@ -49,6 +51,9 @@ import type {
   DialogMode,
 } from '../types';
 import { DEFAULT_FILTERS } from '../types';
+import { useInvitationActions } from '../useInvitationActions';
+import { useInviteCapability } from '../useInviteCapability';
+import type { WorkspaceInvitationView } from '@/types/workspace-invitation';
 import { GLOBAL_ROLES } from '@/lib/auth/types';
 import type { GlobalRole } from '@/lib/auth/types';
 
@@ -61,13 +66,22 @@ const companyUsersCache = createStaleCache<CompanyUser[]>('admin-users');
 
 interface UsersTabProps {
   canEdit: boolean;
+  /**
+   * 🎫 **ADR-853 Φ6 — ΣΗΜΑ, ΟΧΙ ΚΛΕΙΔΙ ΤΗΣ ΜΝΗΜΗΣ.**
+   *
+   * Η σελίδα κρατά τον διάλογο της πρόσκλησης (το `TabsContainer` δεν έχει υποδοχή
+   * ενεργειών), αλλά η μνήμη `companyUsersCache` είναι **ιδιωτική αυτού** του module.
+   * Ένας δεύτερος που την ακυρώνει από έξω θα ήταν **δεύτερος ιδιοκτήτης κύκλου ζωής**
+   * (N.7.2 #7). Έτσι η σελίδα **ζητά ανανέωση** και ο ιδιοκτήτης αποφασίζει πώς.
+   */
+  refreshNonce?: number;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function UsersTab({ canEdit }: UsersTabProps) {
+export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
   const { user } = useAuth();
   const { success, error: notifyError } = useNotifications();
   const { t } = useTranslation('admin');
@@ -82,6 +96,10 @@ export function UsersTab({ canEdit }: UsersTabProps) {
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [isLoading, setIsLoading] = useState(!companyUsersCache.hasLoaded());
   const [suspendReason, setSuspendReason] = useState('');
+  // 🎫 ADR-853 Φ6 — **δεν μπαίνουν στη μνήμη των χρηστών**: εκείνη είναι
+  //    `createStaleCache<CompanyUser[]>`, και μια πρόσκληση **δεν είναι** χρήστης (δεν έχει
+  //    `uid`). Ζουν στην κατάσταση της καρτέλας και ξαναέρχονται με κάθε ανάγνωση.
+  const [invitations, setInvitations] = useState<WorkspaceInvitationView[]>([]);
 
   // ---------------------------------------------------------------------------
   // Fetch users
@@ -98,6 +116,11 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       // ADR-300: Write to module-level cache so next remount skips spinner
       companyUsersCache.set(loaded);
       setUsers(loaded);
+      // 🎫 ADR-853 Φ6 — **αδελφό πεδίο της ΙΔΙΑΣ απάντησης**, ποτέ δεύτερη κλήση: ένα
+      //    ερώτημα («ποιοι είναι στον χώρο μου;») δεν επιτρέπεται να έχει δύο στιγμές,
+      //    αλλιώς η οθόνη δείχνει μέλος που μόλις δέχτηκε **και** την πρόσκλησή του ως
+      //    εκκρεμή (ADR-749). ⚠️ Ίδιος φρουρός πίνακα με το `users`.
+      setInvitations(Array.isArray(data?.invitations) ? data.invitations : []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load users';
       notifyError(message);
@@ -109,6 +132,23 @@ export function UsersTab({ canEdit }: UsersTabProps) {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // 🎫 ADR-853 Φ6 — η σελίδα εξέδωσε πρόσκληση ⇒ η λίστα είναι μπαγιάτικη.
+  //
+  // ⚠️ **Το `0` παραλείπεται επίτηδες**: είναι η αρχική τιμή, και χωρίς αυτόν τον φρουρό
+  //    κάθε προσάρτηση θα έκανε **δύο** ταυτόσημες κλήσεις — η δεύτερη ακυρώνοντας τη
+  //    μνήμη που μόλις γέμισε η πρώτη, δηλαδή σπινάρισμα σε κάθε επιστροφή στην καρτέλα.
+  useEffect(() => {
+    if (refreshNonce === 0) return;
+    companyUsersCache.invalidate();
+    fetchUsers();
+  }, [refreshNonce, fetchUsers]);
+
+  // 🎫 ADR-853 Φ6 — **ο ΕΝΑΣ κριτής**, ρωτημένος με την ίδια ικανότητα που φυλά τις πόρτες.
+  //    ⛔ ΟΧΙ το `canEdit`: εκείνο είναι `super_admin`-only και θα έκρυβε τον πίνακα από
+  //    τον `company_admin`, δηλαδή από αυτόν για τον οποίο γράφτηκε το ADR-853 (Α3).
+  const invite = useInviteCapability();
+  const invitationActions = useInvitationActions(fetchUsers);
 
   // ---------------------------------------------------------------------------
   // Client-side filtering
@@ -284,6 +324,17 @@ export function UsersTab({ canEdit }: UsersTabProps) {
         onViewDetails={(u) => handleOpenDialog('detail', u)}
         onApprove={(u) => handleOpenDialog('approve', u)}
         onDeny={(u) => handleOpenDialog('deny', u)}
+      />
+
+      {/* ADR-853 Φ6 — οι εκκρεμείς προσκλήσεις, ξεχωριστά από τα μέλη.
+          ⚠️ Όσο εκκρεμεί η ταυτότητα **δεν** δείχνουμε πράξεις: η κατεύθυνση είναι
+          «κλειστό → ανοιχτό», ποτέ κουμπί που εμφανίζεται και μετά εξαφανίζεται. */}
+      <InvitationTable
+        invitations={invitations}
+        canManage={invite.canInvite && !invite.pending}
+        busyId={invitationActions.busyId}
+        onRevoke={invitationActions.revoke}
+        onResend={invitationActions.resend}
       />
 
       {/* Role change dialog */}

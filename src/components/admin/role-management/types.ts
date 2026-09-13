@@ -5,6 +5,8 @@
  */
 
 import type { GlobalRole, AuditAction, AuditTargetType, AuditChangeValue, AuditMetadata } from '@/lib/auth/types';
+// 🎫 ADR-853 Φ6 — η πρόσκληση είναι **αδελφή** οντότητα του χρήστη, ποτέ γραμμή του.
+import type { WorkspaceInvitationState, WorkspaceInvitationView } from '@/types/workspace-invitation';
 
 // =============================================================================
 // USER TYPES
@@ -55,6 +57,23 @@ export interface UserListResponse {
     total: number;
     assigned?: number; // Count of assigned users
     unassigned?: number; // Count of unassigned users
+    /**
+     * 🎫 **ADR-853 Φ6 — ΤΕΤΑΡΤΗ ΠΗΓΗ ΤΗΣ ΙΔΙΑΣ ΑΠΑΝΤΗΣΗΣ, ΣΕ ΑΔΕΛΦΟ ΠΕΔΙΟ.**
+     *
+     * Η οθόνη ρωτά **ένα** πράγμα — *«ποιοι είναι στον χώρο μου;»*. Δεύτερη κλήση
+     * `GET /api/workspace-invitations` θα έδινε **δύο απαντήσεις σε ένα ερώτημα**, με δύο
+     * στιγμές: μέλος που μόλις δέχτηκε **και** η πρόσκλησή του ως εκκρεμής (ADR-749).
+     *
+     * 🔴 **ΚΑΙ ΟΧΙ ΜΕΣΑ ΣΤΟ `users`, ΠΑΡΟΤΙ ΕΙΝΑΙ Η ΙΔΙΑ ΟΘΟΝΗ**: το {@link CompanyUser}
+     * απαιτεί `uid`, και η πρόσκληση **δεν έχει uid** — φτάνει σε **email**. Αυτός ακριβώς
+     * είναι ο λόγος που το §7.1 αρνήθηκε να την αποθηκεύσει ως μέλος με `status: 'invited'`.
+     *
+     * ⚠️ **Προαιρετικό στον τύπο επίτηδες**: ο καταναλωτής το διαβάζει με φρουρό πίνακα
+     * (`Array.isArray(...)`), όπως ήδη κάνει για το `users` — μια απάντηση παλαιότερου
+     * διακομιστή δεν επιτρέπεται να ρίξει την οθόνη.
+     */
+    invitations?: WorkspaceInvitationView[];
+    invitationCount?: number;
   };
 }
 
@@ -105,11 +124,32 @@ export const STATUS_BADGE_VARIANT: Record<'active' | 'suspended' | 'pending', Ba
   pending: 'secondary',
 } as const;
 
+/**
+ * 🎫 **ADR-853 Φ6** — η κατάσταση της **πρόσκλησης** σε χρώμα.
+ *
+ * ⚠️ **ΞΕΧΩΡΙΣΤΟΣ ΠΙΝΑΚΑΣ ΑΠΟ ΤΟ `STATUS_BADGE_VARIANT`, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΔΙΠΛΟΤΥΠΟ**: τα δύο
+ * λεξιλόγια μοιράζονται **μόνο** τη λέξη `pending`, και εκεί σημαίνουν **άλλο πράγμα** —
+ * στον χρήστη *«εκκρεμεί έγκριση από εμάς»*, στην πρόσκληση *«περιμένει τον άνθρωπο»*.
+ * Ένας κοινός πίνακας θα ζητούσε από τα δύο σύνολα να μεγαλώνουν μαζί για πάντα.
+ *
+ * 🔑 `Record` πάνω στο **κλειστό** σύνολο: έκτη κατάσταση **δεν μεταγλωττίζεται** χωρίς χρώμα.
+ */
+export const INVITATION_STATE_BADGE_VARIANT: Readonly<Record<WorkspaceInvitationState, BadgeVariant>> = {
+  pending: 'secondary',
+  accepted: 'success',
+  declined: 'warning',
+  revoked: 'destructive',
+  // ⚠️ Το `expired` είναι **παραγόμενο** (άγκυρα Λ2): κανείς δεν σκουπίζει τις ληγμένες,
+  //    οπότε μια `pending` με περασμένη ώρα φτάνει εδώ ως `expired`. Χρώμα προειδοποίησης,
+  //    όχι σφάλματος — δεν φταίει κανείς, απλώς ο σύνδεσμος δεν δουλεύει πια.
+  expired: 'warning',
+};
+
 // =============================================================================
 // DIALOG MODES
 // =============================================================================
 
-export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | 'approve' | 'deny' | null;
+export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | 'approve' | 'deny' | 'invite' | null;
 
 // =============================================================================
 // TAB TYPES
