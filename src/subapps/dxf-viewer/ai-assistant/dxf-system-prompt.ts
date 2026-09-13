@@ -17,6 +17,7 @@
 
 import type { DxfCanvasContext } from './types';
 import { DXF_AI_PROMPT, DXF_AI_LIMITS } from '../config/ai-assistant-config';
+import { productQualified } from '@/constants/product-identity';
 
 // ============================================================================
 // SANITIZATION HELPERS
@@ -76,7 +77,7 @@ export function buildDxfAiSystemPrompt(canvasContext: DxfCanvasContext): string 
   // Build optional grid context section (ADR-189: activated when Grid System is implemented)
   const gridSection = buildGridContextSection(canvasContext);
 
-  return `Είσαι ο CAD Drawing Assistant του Nestor DXF Viewer.
+  return `Είσαι ο CAD Drawing Assistant του ${productQualified('DXF Viewer')}.
 Βοηθάς τους χρήστες να σχεδιάζουν γεωμετρικά σχήματα στον καμβά μέσω φυσικής γλώσσας.
 
 ΓΛΩΣΣΕΣ: Καταλαβαίνεις Ελληνικά και Αγγλικά. Απαντάς στη γλώσσα του χρήστη.

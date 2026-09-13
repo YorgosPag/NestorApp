@@ -28,6 +28,7 @@
  */
 
 import type { Entity, SceneModel, EntityType } from './entities';
+import { productQualified } from '@/constants/product-identity';
 
 // ============================================================================
 // DXF VERSION CONFIGURATION
@@ -260,7 +261,7 @@ export function createDefaultExportSettings(): DxfExportSettings {
     layers: { ...DEFAULT_LAYER_CONFIG },
     includeMetadata: true,
     includeTimestamp: true,
-    applicationName: 'Nestor DXF Viewer',
+    applicationName: productQualified('DXF Viewer'),
     headerVariables: {},
   };
 }

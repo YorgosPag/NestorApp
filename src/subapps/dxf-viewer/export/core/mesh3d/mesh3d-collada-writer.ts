@@ -27,6 +27,7 @@ import type { ExportLengthUnit } from '../../types';
 import type { ExportMaterialEntry } from './mesh3d-materials';
 import { unitScaleFromMeters } from './mesh3d-prepare';
 import { buildColladaMeshBlocks } from './mesh3d-collada-geometry';
+import { productQualified } from '@/constants/product-identity';
 
 export interface ColladaExportOptions {
   /** Μονάδα του μοντέλου — ψημένη στις κορυφές ΚΑΙ δηλωμένη στο `<unit>` (διπλή ασφάλεια R15). */
@@ -106,7 +107,7 @@ function effectElement(
 function assetElement(options: ColladaExportOptions): string {
   const meter = 1 / unitScaleFromMeters(options.unit);
   return (
-    `<asset><contributor><authoring_tool>Nestor DXF Viewer (ADR-678)</authoring_tool></contributor>` +
+    `<asset><contributor><authoring_tool>${productQualified('DXF Viewer')} (ADR-678)</authoring_tool></contributor>` +
     `<created>${options.createdIso}</created><modified>${options.createdIso}</modified>` +
     `<unit name="${UNIT_NAME[options.unit]}" meter="${meter}"/><up_axis>Y_UP</up_axis></asset>`
   );
