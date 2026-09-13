@@ -25,11 +25,13 @@ import type {
   AuthContext,
   UnauthenticatedContext,
   RequestContext,
-  GlobalRole,
   CustomClaims,
   PersonalIdentityContext,
 } from './types';
-import { isValidGlobalRole } from './types';
+// ADR-853 §14 — ο ΕΝΑΣ πίνακας «ρόλος × χώρος», κοινός με το `readPageIdentity`.
+// ⛔ ΜΗΝ ξαναγράψεις εδώ `isValidGlobalRole(...)`: ο κανόνας ζούσε αντίγραφο και στους
+//    δύο παραγωγούς, και **και οι δύο** διάβαζαν τον απόντα ρόλο ως άκυρο.
+import { classifyIdentityClaims, type IdentityClaimsVerdict } from './identity-claims';
 // ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης του claim `permissions`, κοινός με τον
 // φυλλομετρητή. ⚠️ ΜΗΝ γράψεις εδώ δικό σου `Array.isArray(...)`: αυτό ακριβώς
 // ήταν το σχήμα των τριών κανόνων που έκλεισε αυτή η φάση.
@@ -80,74 +82,44 @@ type UnauthReason = UnauthenticatedContext['reason'];
 // =============================================================================
 
 /**
- * Τα claims της **ΤΑΥΤΟΤΗΤΑΣ** — ό,τι απαντά στο *«ποιος είσαι;»*, **χωρίς τον χώρο**.
+ * 🔑 **ΤΑ CLAIMS ΤΑΥΤΟΤΗΤΑΣ ΤΑ ΚΡΙΝΕΙ Ο ΕΝΑΣ ΤΑΞΙΝΟΜΗΤΗΣ** — `lib/auth/identity-claims.ts`,
+ * κοινός με τον σελιδο-φρουρό (`server/auth/page-identity.ts`).
  *
- * 🔑 **ΓΙΑΤΙ ΞΕΧΩΡΙΣΕ ΑΠΟ ΤΟΝ ΧΩΡΟ** (ADR-817 §4.1): μέχρι τις 2026-08-26 τα δύο
- * ερωτήματα ζούσαν σε **μία** συνάρτηση, οπότε η απάντηση *«δεν έχω γραφείο»* έβγαινε
- * ως *«δεν είσαι κανείς»* — **κατηγοριακό λάθος**, ακριβώς αυτό που το ADR-807 §3.3
- * είχε ήδη διορθώσει έναν όροφο πιο πάνω, στον σελιδο-φρουρό.
+ * 🔴 **ΤΙ ΖΟΥΣΕ ΕΔΩ ΜΕΧΡΙ 2026-09-13**: `extractIdentityClaims` + `extractCustomClaims`. Ο
+ * πρώτος απέρριπτε ως `missing_claims` **και** τον **απόντα** ρόλο — δηλαδή τον νέο άνθρωπο
+ * που **κανείς δεν είχε προλάβει** να του δώσει ρόλο. Αυτό έκλεινε τις **14** προσωπικές
+ * διαδρομές (ανάμεσά τους την αποδοχή πρόσκλησης και την ίδρυση χώρου) ακριβώς στον
+ * πληθυσμό για τον οποίο υπάρχουν (ADR-853 §14). Ο σελιδο-φρουρός είχε **αντίγραφο** του
+ * ίδιου κανόνα — δύο παραγωγοί, ένας κανόνας γραμμένος δύο φορές (ADR-749).
  *
- * ⚠️ **Ο ΡΟΛΟΣ ΕΙΝΑΙ ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΧΩΡΟΣ**, και γι' αυτό κρίνεται **εδώ**: άκυρος
- * ρόλος σημαίνει cookie που δεν εμπιστευόμαστε, και **πρέπει** να απορριφθεί
- * ανεξάρτητα από το αν ο άνθρωπος έχει γραφείο (ADR-807 §3.4β). Με την αντίστροφη
- * σειρά, token με **άκυρο ρόλο** και **χωρίς** `companyId` θα έβγαινε `personal` —
- * δηλαδή η διόρθωση της γραφής θα **χαλάρωνε την ασφάλεια, σιωπηλά**.
+ * ⚠️ **ΤΑ ΔΥΟ ΣΥΜΒΟΛΑΙΑ ΜΕΝΟΥΝ ΑΚΕΡΑΙΑ, ΜΕΣΑ ΣΤΟΝ ΤΑΞΙΝΟΜΗΤΗ**:
+ *   · ο **άκυρος** ρόλος κρίνεται **ΠΡΙΝ** τον χώρο (ADR-807 §3.4β) — αλλιώς token με
+ *     άκυρο ρόλο και χωρίς `companyId` θα έβγαινε `personal`·
+ *   · το `companyId.length === 0` είναι **απουσία**, όχι μισθωτής (ADR-657 §3.5).
  */
-type IdentityClaims = Omit<CustomClaims, 'companyId'>;
-
-function extractIdentityClaims(token: DecodedIdToken): IdentityClaims | null {
-  const globalRoleRaw = token.globalRole as string | undefined;
-  if (typeof globalRoleRaw !== 'string' || !isValidGlobalRole(globalRoleRaw)) {
-    logger.warn('[AUTH_CONTEXT] DENY — missing/invalid globalRole claim', {
-      uid: token.uid,
-      globalRole: globalRoleRaw,
-    });
-    return null;
-  }
-
-  return {
-    globalRole: globalRoleRaw as GlobalRole,
-    // MFA enrollment is optional
-    mfaEnrolled: token.mfaEnrolled === true,
-    // Email verified is optional (from standard Firebase claims)
-    emailVerified: token.email_verified === true,
-    // ADR-801 §2.8 — το ρητό κανάλι παραχώρησης. Δηλωνόταν στο `CustomClaims`
-    // από την αρχή και **κανείς δεν το διάβαζε εδώ**, οπότε ο `checkPermission`
-    // έκρινε μόνο από τον ρόλο και το claim πεταγόταν. Ο αναγνώστης είναι
-    // **ένας**, κοινός με τον φυλλομετρητή — αλλιώς η άγκυρα ισοδυναμίας θα
-    // σύγκρινε άλλη είσοδο.
-    permissions: readPermissionsClaim(token.permissions),
-  };
-}
 
 /**
- * Extract RFC v6 custom claims from decoded token — **η ΕΤΑΙΡΙΚΗ ταυτότητα**.
+ * Η **ΕΤΑΙΡΙΚΗ** ταυτότητα — `null` όταν ο ταξινομητής δεν βρήκε οργανισμό.
  *
- * ⚠️ **ΑΠΟΡΡΙΠΤΕΙ fail-closed το `companyId.length === 0`** (ADR-657 §3.5) — *«κενή
- * συμβολοσειρά = **απουσία**, όχι μισθωτής»*. Ο κανόνας αυτός αναφέρεται **ονομαστικά**
- * ως πρότυπο από το `lib/routes/landing.ts` και το `lib/auth/authority.ts`, και μένει
- * **ακέραιος**.
- *
- * 🔴 **ΑΛΛΑΞΕ ΤΙ ΣΗΜΑΙΝΕΙ Η ΑΡΝΗΣΗ ΤΟΥ, ΟΧΙ ΤΟ ΚΡΙΤΗΡΙΟ ΤΟΥ** (ADR-817): το `null`
- * **δεν** είναι πλέον «δεν είσαι» — είναι **«δεν έχεις οργανισμό»**, δηλαδή ο
- * **προσωπικός** κλάδος. Για τις **319** διαδρομές που περνούν από το
- * {@link buildRequestContext} το αποτέλεσμα παραμένει **ταυτόσημο** (401 με
- * `missing_claims`)· αλλάζει μόνο ότι η κατάσταση απέκτησε **όνομα** και υπάρχει
- * **μία** πόρτα που μπορεί να τη δει ({@link buildApiIdentity}).
- *
- * ⚠️ Δέχεται τα claims ταυτότητας **ως όρισμα** και δεν τα ξαναβγάζει: αλλιώς η ίδια
- * ερώτηση θα απαντιόταν **δύο φορές** στην ίδια διαδρομή εκτέλεσης.
+ * ⚠️ **ΚΡΑΤΑ ΤΟ ΟΝΟΜΑ ΤΟΥ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (ADR-817 §7.2): το `lib/routes/landing.ts`
+ * (παγωμένο) και άλλα αρχεία το επικαλούνται **ονομαστικά** ως πρότυπο του «κενή
+ * συμβολοσειρά = απουσία». Ο κανόνας όμως **δεν** ζει πια εδώ — ζει στο
+ * `classifyIdentityClaims`· αυτή η συνάρτηση μόνο **συναρμολογεί** ό,τι εκείνος έκρινε.
+ * ⛔ ΜΗΝ ξαναγράψεις εδώ έλεγχο `companyId`/ρόλου: θα ήταν δεύτερη ερμηνεία του πίνακα.
  */
 function extractCustomClaims(
   token: DecodedIdToken,
-  identity: IdentityClaims,
+  verdict: IdentityClaimsVerdict,
 ): CustomClaims | null {
-  const companyId = token.companyId as string | undefined;
-  if (typeof companyId !== 'string' || companyId.length === 0) {
-    return null;
-  }
+  if (verdict.kind !== 'organization') return null;
 
-  return { ...identity, companyId };
+  return {
+    companyId: verdict.companyId,
+    globalRole: verdict.globalRole,
+    mfaEnrolled: token.mfaEnrolled === true,
+    emailVerified: token.email_verified === true,
+    permissions: readPermissionsClaim(token.permissions),
+  };
 }
 
 // =============================================================================
@@ -194,10 +166,16 @@ async function identityFromDecodedToken(
   }
 
   // ── ΒΗΜΑ 1: Η ΤΑΥΤΟΤΗΤΑ ────────────────────────────────────────────────────
-  // ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΥΦΟΣ** (ADR-807 §3.4β): ο ρόλος κρίνεται
-  //    **ΠΡΙΝ** τον χώρο.
-  const identity = extractIdentityClaims(decodedToken);
-  if (!identity) {
+  // ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΥΦΟΣ** (ADR-807 §3.4β): ο **άκυρος** ρόλος
+  //    απορρίπτεται **ΠΡΙΝ** τον χώρο — μέσα στον ΕΝΑ ταξινομητή. Ο **απών** ρόλος δεν
+  //    απορρίπτεται πια (ADR-853 §14): είναι ο νέος άνθρωπος, όχι cookie που δεν εμπιστευόμαστε.
+  const verdict = classifyIdentityClaims(decodedToken);
+  if (verdict.kind === 'rejected') {
+    logger.warn('[AUTH_CONTEXT] DENY — claims ταυτότητας που δεν εξουσιοδοτούνται', {
+      uid: decodedToken.uid,
+      why: verdict.why,
+      globalRole: decodedToken.globalRole,
+    });
     return { ok: false, reason: 'missing_claims' };
   }
 
@@ -222,14 +200,16 @@ async function identityFromDecodedToken(
   const base: PersonalIdentityContext = {
     uid: decodedToken.uid,
     email: decodedToken.email || '',
-    globalRole: identity.globalRole,
-    mfaEnrolled: identity.mfaEnrolled ?? false,
+    // 🔑 `null` ⇒ κανείς δεν του έδωσε ακόμη ρόλο (ADR-853 §14) — νόμιμο **μόνο** στον
+    //    προσωπικό κλάδο· ο εταιρικός τον αντικαθιστά παρακάτω με ρόλο **εγγυημένο**.
+    globalRole: verdict.globalRole,
+    mfaEnrolled: decodedToken.mfaEnrolled === true,
     isAuthenticated: true,
-    permissions: identity.permissions,
+    permissions: readPermissionsClaim(decodedToken.permissions),
   };
 
   // ── ΒΗΜΑ 2: Ο ΧΩΡΟΣ — ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΜΙΑ ΑΠΟΤΥΧΙΑ ─────────────────────
-  const claims = extractCustomClaims(decodedToken, identity);
+  const claims = extractCustomClaims(decodedToken, verdict);
   if (!claims) {
     // ⚠️ Ο ΠΡΟΣΩΠΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΠΕΡΝΑ ΑΠΟ ΤΟΝ ΕΠΙΛΥΤΗ ΕΝΕΡΓΟΥ ΧΩΡΟΥ, ΚΑΙ ΕΙΝΑΙ
     //    ΣΚΟΠΙΜΟ: η κεφαλίδα `x-super-admin-company-id` ζητά **μετακίνηση σε άλλον
@@ -248,6 +228,7 @@ async function identityFromDecodedToken(
     scope: 'organization',
     ctx: {
       ...base,
+      globalRole: claims.globalRole,
       companyId: effective.companyId,
       superAdminOverride: effective.overridden,
       membershipVerdict: effective.verdict,

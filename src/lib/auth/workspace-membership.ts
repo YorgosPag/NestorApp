@@ -98,8 +98,15 @@ export interface MembershipQuery {
   readonly uid: string;
   /** Ο χώρος που **δηλώνει το token** — η αυθεντία, όχι επιλογή του πελάτη. */
   readonly claimCompanyId: string;
-  /** Ο καθολικός ρόλος, από το υπογεγραμμένο token. */
-  readonly globalRole: string;
+  /**
+   * Ο καθολικός ρόλος, από το υπογεγραμμένο token.
+   *
+   * ⚠️ **`null` = κανείς δεν του έδωσε ρόλο** (ADR-853 §14) — νόμιμη κατάσταση του
+   * νέου ανθρώπου, που φτάνει εδώ **ακριβώς** όταν αποδέχεται πρόσκληση. ⛔ ΜΗΝ το
+   * μεταφράσεις σε `''`: φρουρός που δέχεται «κενό ρόλο» ως τιμή είναι δεύτερη ερμηνεία
+   * της απουσίας δίπλα στο `identity-claims.ts`.
+   */
+  readonly globalRole: string | null;
   /** Ο χώρος που **ζητά** ο πελάτης — αναξιόπιστη είσοδος (Ε-5). */
   readonly requested: WorkspaceRef;
   /**
@@ -156,7 +163,8 @@ async function computeDecision(query: MembershipQuery): Promise<MembershipDecisi
   // **ρητή, ονομασμένη κατάσταση** αντί να είναι *ο μηχανισμός*.
   // ⚠️ Φτάνει εδώ **μόνο** για χώρο γραφείου: ο ιδιωτικός χώρος επέστρεψε ήδη
   //    στο βήμα 1, και αυτό είναι το σημείο όπου το Ε-3 §3 γίνεται κώδικας.
-  if (isRoleBypass(globalRole)) {
+  // ⚠️ Χωρίς ρόλο (`null`, ADR-853 §14) **καμία** παράκαμψη — ρητός κλάδος, όχι `''`.
+  if (globalRole !== null && isRoleBypass(globalRole)) {
     return { verdict: 'platform-bypass', workspace: requested };
   }
 

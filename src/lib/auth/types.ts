@@ -369,8 +369,21 @@ export type PersonalIdentityContext = Omit<
   // ⚠️ Το `requestedWorkspace` φεύγει **μαζί** τους, και για τον ίδιο λόγο: είναι η
   //    απάντηση στο *«σε ποια ΕΤΑΙΡΕΙΑ ενεργώ;»*, ερώτηση που για τον άνθρωπο χωρίς
   //    οργανισμό δεν έχει νόημα. Η δήλωσή του κρίνεται στο σύνορο, δεν ταξιδεύει μαζί του.
-  'companyId' | 'superAdminOverride' | 'membershipVerdict' | 'requestedWorkspace'
->;
+  'companyId' | 'superAdminOverride' | 'membershipVerdict' | 'requestedWorkspace' | 'globalRole'
+> & {
+  /**
+   * 🔑 **`null` = ΚΑΝΕΙΣ ΔΕΝ ΤΟΥ ΕΔΩΣΕ ΡΟΛΟ — νόμιμη κατάσταση, ΟΧΙ άκυρη** (ADR-853 §14).
+   *
+   * Ο νέος άνθρωπος συνδέεται χωρίς claim ρόλου· τον ρόλο τον δίνει η **αποδοχή πρόσκλησης**
+   * ή η **ίδρυση χώρου** — που περνούν **ακριβώς** από αυτή την ταυτότητα. Αν εδώ απαιτούνταν
+   * ρόλος, οι δύο πράξεις θα ήταν δομικά ανέφικτες (κυκλική εξάρτηση, μετρημένη ζωντανά).
+   *
+   * ⚠️ **Ρητό `null`, ποτέ προαιρετικό πεδίο**: ο μεταγλωττιστής αναγκάζει κάθε καταναλωτή
+   * να χειριστεί την απουσία. ⛔ Το `AuthContext` **δεν** χαλαρώνει: ο εταιρικός χώρος
+   * εγγυάται ρόλο (`classifyIdentityClaims` ⇒ `workspace-without-role`).
+   */
+  globalRole: GlobalRole | null;
+};
 
 /** Unauthenticated context with reason. */
 export interface UnauthenticatedContext {

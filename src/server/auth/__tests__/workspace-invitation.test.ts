@@ -363,6 +363,26 @@ describe('Μ — μέλος', () => {
     expect(grantInTx).not.toHaveBeenCalled();
   });
 
+  it('🔑 Μ1δ — ADR-853 §14: ο προσκεκλημένος ΧΩΡΙΣ ρόλο αποδέχεται — είναι ο πληθυσμός της πρόσκλησης', async () => {
+    // 🔴 Μέχρι 2026-09-13 αυτή η περίπτωση **δεν δοκιμαζόταν πουθενά**: το `identity()` είχε
+    //    πάντα `external_user`. Μετρημένο ζωντανά, ο πραγματικός προσκεκλημένος δεν είχε ρόλο.
+    const { token } = await issue();
+
+    const outcome = await acceptWorkspaceInvitation({
+      token,
+      identity: identity({ globalRole: null }),
+      nowISOValue: LATER,
+    });
+
+    expect(outcome.kind).toBe('accepted');
+    expect(decideMembershipMock).toHaveBeenCalledWith(expect.objectContaining({ globalRole: null }));
+    // Ο ρόλος που γράφεται είναι της **πρόσκλησης** — ποτέ του ανθρώπου (που δεν έχει).
+    expect(grantInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ uid: INVITEE, globalRole: 'internal_user' }),
+    );
+  });
+
   it('🔴 Μ1β — `platform-bypass` ΔΕΝ είναι «ήδη μέλος» (ο υπερδιαχειριστής δεν έχει έγγραφο μέλους)', async () => {
     decideMembershipMock.mockResolvedValue({ verdict: 'platform-bypass' });
     const { token } = await issue();

@@ -72,7 +72,12 @@ export interface RedeemingIdentity {
   readonly emailVerified: boolean;
   /** Ο χώρος του **claim** του — για να κριθεί αν είναι ήδη μέλος (ποτέ από τον πελάτη). */
   readonly claimCompanyId: string;
-  readonly globalRole: string;
+  /**
+   * ⚠️ **`null` είναι ο ΣΥΝΗΘΗΣ προσκεκλημένος, όχι η εξαίρεση** (ADR-853 §14): ο νέος
+   * άνθρωπος δεν έχει ακόμη ρόλο — τον αποκτά **εδώ**. Αν ο τύπος απαιτούσε ρόλο, η
+   * αποδοχή θα ήταν ανέφικτη για τον πληθυσμό για τον οποίο γράφτηκε (§7.1).
+   */
+  readonly globalRole: string | null;
 }
 
 export type RedeemOutcome =

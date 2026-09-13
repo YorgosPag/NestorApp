@@ -65,6 +65,7 @@
 
 import { PERMISSIONS, type PermissionId } from './types';
 import { PREDEFINED_ROLES, getRolePermissions, isRoleBypass } from './roles';
+import { isAbsentRoleClaim } from './identity-claims';
 
 import type {
   CapabilityDecision,
@@ -123,9 +124,11 @@ function isKnownAction(action: string): action is PermissionId {
  * που υπάρχει απλώς **απουσία ρόλου** (νόμιμη κατάσταση: ο ιδιώτης).
  */
 function normalizeRole(raw: string | null | undefined): string | null {
-  if (typeof raw !== 'string') return null;
-  const trimmed = raw.trim();
-  return trimmed.length === 0 ? null : trimmed;
+  // 🔑 ADR-853 §14 — ο κανόνας «τι είναι απουσία» ζει **μία** φορά (`identity-claims.ts`),
+  //    κοινός με τους δύο παραγωγούς ταυτότητας του server. Πριν, ο πελάτης έλεγε «νόμιμο»
+  //    και ο server «άκυρο» για την **ίδια** τιμή.
+  if (typeof raw !== 'string' || isAbsentRoleClaim(raw)) return null;
+  return raw.trim();
 }
 
 /** Είναι ο ρόλος μέσα στο λεξιλόγιο που ξέρει να απαντήσει ο κριτής; */

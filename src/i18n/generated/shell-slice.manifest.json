@@ -70,7 +70,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d34ab523fe51a6ebd25fbdf024586a602c4db8e6d9b760193fed3d1e7e50a554",
+  "inputsSha256": "faa8a691c44e93b6863e98d355d90ce08b77039299420222db54edc9b10d7035",
   "languages": [
     "el"
   ],
@@ -369,7 +369,7 @@
     "src/lib/api/guarded-route.ts": "fb0e93872520cb173fd2c6a97fcb05b789328d0190b16233d803623a33f6afff",
     "src/lib/auth/api-denial.ts": "5e89807b90820a71e86d297caec055b0f707e45469b7287a980f2e25557dda04",
     "src/lib/auth/auth-context-workspace.ts": "cb3c3b45f8ec4d250a23fe9bef719486a54b2f15d6e1a384d263c6f7787edd0f",
-    "src/lib/auth/auth-context.ts": "fa70c0631a1f991e3c3a7f27ac7f455916aca17b13311b968622461b2ece40ff",
+    "src/lib/auth/auth-context.ts": "2b889b91751a94881f0939d89dfef530d1e8470eceeb675cd319da7ee5d9b45f",
     "src/lib/auth/brokerage-authority.ts": "147a6776dcc3e020043fb913dd34d48af38c33afaa7b66243b779e4eea412c5c",
     "src/lib/auth/claim-payload.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/middleware.ts": "7771f122af08a39fb678f1ca723ee6f25273f0987e27cf967e110031170ce9bb",
@@ -4647,8 +4647,9 @@
     "src/lib/auth/audit-core.ts": "e52d8a554d00b8c5667bbcc02546d289613c2af1ed16e679b4a53befc88511bd",
     "src/lib/auth/audit-policy.ts": "5a3b6cffa9c1d488ffd66d947ae0bcbe50a4fb9700405f042ddec9fae70cc6fd",
     "src/lib/auth/audit-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/auth/authority.ts": "25ed3436589e3ea7bb519eb84d9b0a32766befab885be03fc64c9e6224f1cf0c",
+    "src/lib/auth/authority.ts": "34b6343976b7450c8d8c9787ed76a32a8cb37b55504f276e96b526db6538a407",
     "src/lib/auth/claim-permissions.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
+    "src/lib/auth/identity-claims.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/identity-fabrication.ts": "c1f11595db5415f81c1334e9812669bd60d6355d279110707fd6928ff95797ea",
     "src/lib/auth/role-catalogue.ts": "794d368d33bfe733ccf3ca87cc35f11681de79c043fd326b055c9f07efd681bc",
     "src/lib/auth/roles.ts": "1e61e55fd5628c54d6d3e0f9e6e1b7ad1b742105586c80d2afec7e6c53967ce8",
@@ -4777,7 +4778,7 @@
     "src/server/admin/admin-guards-page-auth.ts": "45ff09fab7270ce9a4cc8fe663c1f0d2430c57d5e38954d5072e1d6fac61a5e2",
     "src/server/admin/admin-guards-types.ts": "b952c2a54691053f0dc26b60a33269788a0ebca2c1391013b6d9f77ae3e9f920",
     "src/server/admin/admin-guards.ts": "6d011e186e6a1d1f62b4efe26da0fcdce015319f8a8f86e45799976831fa1058",
-    "src/server/auth/page-identity.ts": "ccd8205fd2b96697987be09aff2871cc0cabfa834640de6a3fd0225dbc5fc124",
+    "src/server/auth/page-identity.ts": "2a2e5e79156d3ea75e805cf5e023ffa4791732b9dbed7965d19e28a78850c278",
     "src/server/auth/require-project-for-page.ts": "d30ce315030f4c1b1783a5c40956db2e22d609ec0c0d5482c0e2dd83865834cb",
     "src/services/FileNamingService.ts": "e17136476c638c631b27cea4f15b836931b51b5afeceb9231b6a21a025085180",
     "src/services/building-code/types/bonus.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -4970,7 +4971,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 632,
+    "shellFiles": 633,
     "sliceBytes": 416835
   },
   "unresolvableKeys": [

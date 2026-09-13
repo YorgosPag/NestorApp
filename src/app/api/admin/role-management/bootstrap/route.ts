@@ -26,6 +26,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logSystemBootstrap } from '@/lib/auth';
 import { BYPASS_ROLES } from '@/lib/auth/roles';
+import { readGlobalRoleClaim } from '@/lib/auth/identity-claims';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
@@ -115,11 +116,12 @@ export const POST = withSensitiveRateLimit(
             try {
               const authUser = await auth.getUser(uid);
               const claims = (authUser.customClaims ?? {}) as Record<string, unknown>;
-              if (
-                typeof claims.globalRole === 'string' &&
-                ['super_admin', 'company_admin', 'internal_user', 'external_user'].includes(claims.globalRole)
-              ) {
-                globalRole = claims.globalRole as GlobalRole;
+              // 🔑 ADR-853 §14 (Boy Scout) — ο ΕΝΑΣ αναγνώστης του claim. Εδώ ζούσε
+              //    καρφωμένο αντίγραφο του `GLOBAL_ROLES`, που θα αποκλίνε σιωπηλά την
+              //    πρώτη φορά που προστίθεται ρόλος.
+              const role = readGlobalRoleClaim(claims.globalRole);
+              if (role.kind === 'assigned') {
+                globalRole = role.role;
               }
               isDisabled = authUser.disabled;
             } catch {

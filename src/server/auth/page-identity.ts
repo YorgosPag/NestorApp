@@ -43,12 +43,11 @@ import { getDevCompanyId } from '@/config/dev-environment';
 // `'development'`, δηλαδή ως τον κλάδο **παράκαμψης** (ADR-821 §2.3).
 import { decideIdentityFabrication } from '@/lib/auth/identity-fabrication';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
-import {
-  isValidGlobalRole,
-  type GlobalRole,
-  type AuthContext,
-  type PersonalIdentityContext,
-} from '@/lib/auth/types';
+import type { AuthContext, PersonalIdentityContext } from '@/lib/auth/types';
+// ADR-853 §14 — ο ΕΝΑΣ πίνακας «ρόλος × χώρος», κοινός με το `buildApiIdentity`.
+// ⛔ ΜΗΝ ξαναγράψεις εδώ `isValidGlobalRole(...)`: ο κανόνας ήταν αντίγραφο και στα
+//    δύο αρχεία, και **και τα δύο** συνέχεαν τον απόντα ρόλο με τον άκυρο.
+import { classifyIdentityClaims } from '@/lib/auth/identity-claims';
 // ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης του claim `permissions`.
 // 🔴 ΓΙΑΤΙ ΕΙΝΑΙ ΕΔΩ: αυτό είναι ο **δεύτερος** παραγωγός `AuthContext` του
 // server (ο πρώτος είναι το `buildRequestContext`). Αν μόνο εκείνος διάβαζε το
@@ -67,7 +66,14 @@ const logger = createModuleLogger('PageIdentity');
  * μέσα σε μια ένωση που απαντά *«ποιος είσαι;»*. Ένας άνθρωπος χωρίς γραφείο
  * **έχει** ταυτότητα — απλώς δεν έχει οργανισμό.
  */
-export type PageIdentityRejection = 'no-session' | 'invalid-session' | 'invalid-role';
+export type PageIdentityRejection =
+  | 'no-session'
+  | 'invalid-session'
+  /**
+   * Ρόλος **παρών αλλά άκυρος**, ή `companyId` **χωρίς** ρόλο (ασυνεπές claim).
+   * ⚠️ **ΟΧΙ ο απών ρόλος** (ADR-853 §14): εκείνος είναι ο νέος άνθρωπος ⇒ `personal`.
+   */
+  | 'invalid-role';
 
 /**
  * Η ταυτότητα ανθρώπου **χωρίς οργανισμό**.
@@ -193,37 +199,32 @@ export async function readPageIdentity(): Promise<PageIdentity> {
   const decoded = await verifySessionCookieToken(sessionCookie);
   if (!decoded) return { ok: false, reason: 'invalid-session' };
 
-  // ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΥΦΟΣ** (ADR-807): ο ρόλος κρίνεται **ΠΡΙΝ**
-  //    τον χώρο. Ο ρόλος είναι ιδιότητα της **ταυτότητας** — άκυρος ρόλος σημαίνει
-  //    cookie που δεν εμπιστευόμαστε, και **πρέπει** να απορριφθεί ανεξάρτητα από το
-  //    αν ο άνθρωπος έχει γραφείο. Με την παλιά σειρά, ένα cookie με **άκυρο ρόλο**
-  //    και **χωρίς** companyId θα έβγαινε πλέον `personal` — δηλαδή η διόρθωση της
-  //    προσγείωσης θα είχε **χαλαρώσει την ασφάλεια**, σιωπηλά.
-  const globalRoleRaw = decoded.globalRole as string | undefined;
-  if (typeof globalRoleRaw !== 'string' || !isValidGlobalRole(globalRoleRaw)) {
-    return { ok: false, reason: 'invalid-role' };
-  }
-  const globalRole: GlobalRole = globalRoleRaw;
+  // 🔑 **ΡΟΛΟΣ × ΧΩΡΟΣ: Ο ΕΝΑΣ ΠΙΝΑΚΑΣ** (`lib/auth/identity-claims.ts`), ο ίδιος με το
+  //    σύνορο API. Μέσα του ζουν και τα δύο συμβόλαια που ζούσαν εδώ: ο **άκυρος** ρόλος
+  //    απορρίπτεται **ΠΡΙΝ** τον χώρο (ADR-807 §3.4β), και η κενή `companyId` είναι
+  //    **απουσία** (ADR-657 §3.5 — ο ίδιος κανόνας με `hasOrganization` / `landing.ts`).
+  //
+  // 🔴 **ΜΕΧΡΙ 2026-09-13 Ο ΚΑΝΟΝΑΣ ΗΤΑΝ ΓΡΑΜΜΕΝΟΣ ΕΔΩ — ΚΑΙ ΣΥΓΧΕΕ ΑΠΟΝΤΑ ΜΕ ΑΚΥΡΟ ΡΟΛΟ.**
+  //    Ο νέος προσκεκλημένος (χωρίς claim ρόλου) έβγαινε `invalid-role` ⇒ η σελίδα
+  //    `/invite/<token>` του ξαναζητούσε σύνδεση **για πάντα** (ADR-853 §14, μετρημένο).
+  const verdict = classifyIdentityClaims(decoded);
+  if (verdict.kind === 'rejected') return { ok: false, reason: 'invalid-role' };
 
-  const base = {
+  const shared = {
     uid: decoded.uid,
     email: decoded.email || '',
-    globalRole,
     mfaEnrolled: decoded.mfaEnrolled === true,
     isAuthenticated: true as const,
     permissions: readPermissionsClaim(decoded.permissions),
   };
 
-  // ── Ο ΧΩΡΟΣ: ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΜΙΑ ΑΠΟΤΥΧΙΑ ──────────────────────────────
-  // ⚠️ Η **κενή συμβολοσειρά μετρά ως απουσία**, και δεν είναι λεπτομέρεια: το
-  //    `extractCustomClaims` την απορρίπτει fail-closed ως «δεν είναι ταυτότητα
-  //    που μπορούμε να εξουσιοδοτήσουμε», και το `hasOrganization` κρίνει με τον
-  //    **ίδιο** κανόνα. Τρίτη ερμηνεία εδώ θα έστελνε στον εταιρικό χώρο κάποιον
-  //    που ο διακομιστής θεωρεί χωρίς οργανισμό (`landing.ts`).
-  const companyId = decoded.companyId as string | undefined;
-  if (typeof companyId !== 'string' || companyId.length === 0) {
-    return { ok: true, scope: 'personal', ctx: base };
+  if (verdict.kind === 'personal') {
+    return { ok: true, scope: 'personal', ctx: { ...shared, globalRole: verdict.globalRole } };
   }
 
-  return { ok: true, scope: 'organization', ctx: { ...base, companyId } };
+  return {
+    ok: true,
+    scope: 'organization',
+    ctx: { ...shared, globalRole: verdict.globalRole, companyId: verdict.companyId },
+  };
 }

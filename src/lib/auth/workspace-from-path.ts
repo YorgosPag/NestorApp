@@ -48,6 +48,17 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('workspace-from-path');
 
+/**
+ * Ό,τι χρειάζεται ο κριτής από την ταυτότητα — **το `CustomClaims`, με ρόλο που μπορεί να λείπει**.
+ *
+ * 🔴 **Γιατί όχι σκέτο `CustomClaims`** (ADR-853 §14): το καλεί το `o/[workspace]/layout.tsx`
+ * και για τον άνθρωπο του **ιδιωτικού** χώρου, που μπορεί να **μην έχει ρόλο ακόμη** (νέος
+ * λογαριασμός). Με `CustomClaims` ο layout θα έπρεπε να **επινοήσει** ρόλο — δηλαδή να πει ψέματα.
+ */
+export type PathIdentityClaims = Omit<CustomClaims, 'globalRole'> & {
+  readonly globalRole: CustomClaims['globalRole'] | null;
+};
+
 // =============================================================================
 // ΟΙ ΕΤΥΜΗΓΟΡΙΕΣ — ΤΕΣΣΕΡΙΣ, ΡΗΤΕΣ, FAIL-CLOSED
 // =============================================================================
@@ -104,7 +115,7 @@ export type PathWorkspaceResolution =
 export async function resolveWorkspaceFromPath(
   pathname: string,
   uid: string,
-  claims: CustomClaims,
+  claims: PathIdentityClaims,
 ): Promise<PathWorkspaceResolution> {
   const segment = extractWorkspaceSegment(pathname);
   if (segment === null) return { outcome: 'no-workspace' };

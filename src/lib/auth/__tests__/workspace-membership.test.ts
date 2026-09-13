@@ -158,6 +158,14 @@ describe('Κ. Οι επτά ετυμηγορίες — και οι αναγνώ�
     expect(reads).toHaveLength(0);
   });
 
+  it('Κ3β — 🔒 ΧΩΡΙΣ ρόλο (`null`, ADR-853 §14) ⇒ ΚΑΜΙΑ παράκαμψη: ρωτά το βιβλίο', async () => {
+    // Ο νέος προσκεκλημένος φτάνει εδώ **ακριβώς** τη στιγμή της αποδοχής, χωρίς εταιρεία.
+    const decision = await ask({ globalRole: null, claimCompanyId: '' });
+
+    expect(decision.verdict).toBe('not-a-member');
+    expect(reads.length).toBeGreaterThan(0);
+  });
+
   it('Κ4 — υπάρχει ενεργή εγγραφή ⇒ `member`, ΜΙΑ ανάγνωση', async () => {
     store.set(memberPath(FOREIGN, NIKOS), { uid: NIKOS, status: 'active', globalRole: NORMAL_ROLE });
 
