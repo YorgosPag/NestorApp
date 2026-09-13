@@ -121,5 +121,15 @@ export function buildExportFilename(
 ): string {
   const domainLabel = domainId.charAt(0).toUpperCase() + domainId.slice(1);
   const today = nowISO().slice(0, 10);
+  // 🔶 ΤΟ ΠΡΟΘΕΜΑ ΜΕΝΕΙ «Nestor_», ΚΑΙ ΕΙΝΑΙ ΔΗΛΩΜΕΝΗ ΑΠΟΦΑΣΗ (ADR-857 §7 #15).
+  //
+  // Το `Nestor` είναι **παλιά γραφή** — αλλά αυτό το πρόθεμα **κατεβαίνει στον δίσκο του
+  // πελάτη**. Μια δουλειά ταυτότητας δεν αλλάζει ονόματα παραδοτέων αρχείων «στον δρόμο»:
+  // είναι απόφαση **προϊόντος**, όχι τεχνική συμμόρφωση — ίδιο σχήμα με το δημοσιευμένο
+  // νομικό κείμενο του §7 #2.
+  //
+  // ⚠️ ΜΗΝ το «διορθώσεις» σε `Nestor App` ή `NestorApp` για να σιωπήσει η CHECK 3.81:
+  // δηλώνεται στο `.product-identity.json`, και το `builder-export.test.ts` κατοχυρώνει
+  // τη σύμβαση. Αν αλλάξει, αλλάζουν **μαζί** — και επειδή το ζήτησε άνθρωπος.
   return `Nestor_${domainLabel}_Report_${today}.${extension}`;
 }

@@ -1408,3 +1408,66 @@ jobs:
             echo ""
             echo "Αναφορά: \`npm run domain-vocabulary:report\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  product-identity:
+    name: 🏷️ CHECK 3.81 — ταυτότητα προϊόντος
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ Η ΕΓΚΑΤΑΣΤΑΣΗ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ: ο σαρωτής είναι AST (`ts.createSourceFile`
+      # parse-only, ΠΟΤΕ `ts.Program` — N.17) και χρειάζεται το `typescript` του repo.
+      - name: 📦 Install dependencies (TypeScript)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # ⚠️ ΑΝΕΥ ΟΡΩΝ, ΧΩΡΙΣ paths: — μια γραφή του ονόματος προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ
+      # αρχείο του src/ ή σε ΟΠΟΙΟΔΗΠΟΤΕ locale JSON, και η ρίζα μπορεί να αλλάξει χωρίς
+      # να αγγιχτεί κανένας καταναλωτής. Φίλτρο διαδρομών θα ήταν το
+      # `blocking-path-filtered` του CHECK 3.54.
+      - name: 🏷️ CHECK 3.81 — πλήρης σάρωση src/ + locales
+        run: pnpm run product-identity:report
+
+      - name: 🧪 Άγκυρες — CHECK 3.81 (μεταλλάξεις στις ΕΙΣΟΔΟΥΣ)
+        run: pnpm run test:product-identity
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Product identity::Κάθε γραφή του ονόματος είναι η ρίζα ή δηλωμένη, με λόγο"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.81 — ADR-857 Φ8 (ταυτότητα προϊόντος)"
+            echo ""
+            echo "Κάποιο σημείο **ονομάζει το προϊόν** χωρίς να ρωτήσει τη ρίζα."
+            echo ""
+            echo "- ΘΕΡΑΠΕΙΑ (1) — σχεδόν πάντα η σωστή: εισήγαγε το όνομα από τη ρίζα"
+            echo "  \`import { PRODUCT_NAME, productQualified } from '@/constants/product-identity'\`"
+            echo "- ΘΕΡΑΠΕΙΑ (2) — **μόνο** αν ΔΕΝ είναι το όνομα του προϊόντος (νομικό"
+            echo "  πρόσωπο · δεδομένα ενοίκου · αναγνωριστικό μηχανής · παγωμένο):"
+            echo "  δήλωσέ το στο \`.product-identity.json\` με **κλάση ΚΑΙ λόγο**."
+            echo "- ⚠️ Σε **locale JSON** η (1) ΔΕΝ υπάρχει: γράψε την κανονική γραφή μέσα"
+            echo "  στην πρόταση. Το ICU \`{appName}\` απορρίφθηκε ρητά στη Φ4."
+            echo "- ⚠️ **ΜΗΝ** δηλώσεις κάτι που ΕΙΝΑΙ το όνομα του προϊόντος για να περάσει:"
+            echo "  η δήλωση σημαίνει «αυτό ΔΕΝ είναι το όνομα», και ψεύδεται στον επόμενο."
+            echo "- \`root-drift\` σημαίνει ότι **η ίδια η ρίζα** άλλαξε σχήμα: ενημέρωσε"
+            echo "  μητρώο και κώδικα **στο ίδιο commit**."
+            echo ""
+            echo "Αναφορά: \`npm run product-identity:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
