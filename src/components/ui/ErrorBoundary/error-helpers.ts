@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { safeGetItem } from '@/lib/storage';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 /**
  * Retrieves current user ID from localStorage (email or ID)
@@ -85,7 +86,7 @@ ${errorDetails.componentStack ? `• Component Stack:\n${errorDetails.componentS
 ${errorDetails.stack || 'Stack trace not available'}
 
 ---
-Αυτό το email στάλθηκε αυτόματα από το Nestor Error Reporting System.
+Αυτό το email στάλθηκε αυτόματα από το ${PRODUCT_NAME} Error Reporting System.
   `.trim();
 }
 

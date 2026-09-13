@@ -118,7 +118,7 @@ export function PhotoSharePageContent() {
         {description}
       </p>
       <p className="mt-2 text-center text-sm text-muted-foreground">
-        Κοινοποιήθηκε από το <strong>Nestor Construct</strong>
+        Κοινοποιήθηκε από το <strong>{PRODUCT_NAME}</strong>
       </p>
     </div>
   );

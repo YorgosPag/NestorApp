@@ -10,6 +10,7 @@
  */
 
 import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 // ============================================================================
 // TYPES
@@ -197,7 +198,7 @@ export function buildPOEmailHtml(config: POEmailTemplateConfig): string {
 
       <!-- Footer -->
       <div style="padding:12px 24px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-        <p style="margin:0;font-size:11px;color:${BRAND.grayLight};">Powered by Nestor Construct</p>
+        <p style="margin:0;font-size:11px;color:${BRAND.grayLight};">Powered by ${PRODUCT_NAME}</p>
       </div>
     </div>`;
 }

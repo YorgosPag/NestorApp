@@ -7,6 +7,7 @@
  */
 
 import type { VendorPortalTokenInvalidReason } from '@/services/vendor-portal/vendor-portal-token-service';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 const MESSAGES_EL: Record<string, { title: string; body: string }> = {
   malformed_token: {
@@ -59,7 +60,7 @@ export function VendorPortalErrorState({ reason }: Props) {
           <p className="text-sm leading-6 text-foreground">{msg.body}</p>
         </div>
         <footer className="border-t border-border px-6 py-3 text-xs text-muted-foreground">
-          Nestor Construct
+          {PRODUCT_NAME}
         </footer>
       </section>
     </main>

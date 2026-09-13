@@ -11,6 +11,7 @@
 
 import { designTokens, borderColors } from '@/styles/design-tokens';
 import type { CompanyConfiguration, SystemConfiguration } from './types';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 /**
  * Default Company Configuration
@@ -49,7 +50,9 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfiguration = {
  */
 export const DEFAULT_SYSTEM_CONFIG: SystemConfiguration = {
   app: {
-    name: 'Nestor Enterprise',
+    // 🔴 ΕΛΕΓΕ «Nestor Enterprise» — ΠΕΜΠΤΗ γραφή του ονόματος, που ΔΕΝ υπήρχε σε
+    //    καμία απογραφή του ADR-857 (ούτε στην §1, ούτε στη Φ7). ADR-857 §7 #12.
+    name: PRODUCT_NAME,
     version: '1.0.0',
     environment: 'development',
     baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
