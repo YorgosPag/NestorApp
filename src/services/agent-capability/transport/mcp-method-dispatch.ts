@@ -36,6 +36,7 @@ import {
   type JsonRpcRequest,
   type JsonRpcResponse,
 } from './mcp-jsonrpc';
+import { productQualified } from '@/constants/product-identity';
 
 // ============================================================================
 // ΤΑΥΤΟΤΗΤΑ SERVER
@@ -50,8 +51,11 @@ import {
  * κάτι.
  */
 export const MCP_SERVER_INFO = {
+  // ⚠️ ΔΥΟ ΠΕΔΙΑ, ΔΥΟ ΚΛΑΣΕΙΣ (ADR-857 §3.Α). Το `name` είναι **αναγνωριστικό
+  //    πρωτοκόλλου** (κλάση Δ): ο client το κρατά ως κλειδί ⇒ ΔΕΝ μετονομάζεται ΠΟΤΕ.
+  //    Ο `title` είναι ό,τι **διαβάζει άνθρωπος** (κλάση Α) ⇒ έρχεται από τη ρίζα.
   name: 'nestor-boq',
-  title: 'Nestor Construct — Επιμετρήσεις',
+  title: productQualified('Επιμετρήσεις'),
   version: '1.0.0',
 } as const;
 

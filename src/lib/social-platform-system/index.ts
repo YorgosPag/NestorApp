@@ -15,6 +15,8 @@
 //
 // ============================================================================
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
+
 // ============================================================================
 // PLATFORM CONFIGURATION EXPORTS
 // ============================================================================
@@ -329,7 +331,7 @@ export default SocialPlatformSystem;
  * Inline documentation για development
  */
 export const SYSTEM_DOCUMENTATION = {
-  overview: 'Enterprise Social Platform System - Unified social media management for Nestor Construct',
+  overview: `Enterprise Social Platform System - Unified social media management for ${PRODUCT_NAME}`,
 
   features: [
     'Unified platform definitions and configurations',

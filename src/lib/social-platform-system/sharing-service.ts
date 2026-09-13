@@ -24,6 +24,7 @@ import {
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { formatCurrency } from '@/lib/intl-utils';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 const logger = createModuleLogger('sharing-service');
 
 // ============================================================================
@@ -188,7 +189,7 @@ export class SharingService {
       text += `\n\n${property.description}`;
     }
 
-    text += '\n\nΔείτε περισσότερα στο Nestor Construct!';
+    text += `\n\nΔείτε περισσότερα στο ${PRODUCT_NAME}!`;
     return text;
   }
 

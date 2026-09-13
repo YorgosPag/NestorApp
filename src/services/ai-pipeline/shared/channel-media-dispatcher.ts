@@ -22,6 +22,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import type { ChannelMediaReplyParams, ChannelReplyResult } from './channel-reply-types';
 import { sendChannelReply } from './channel-reply-dispatcher';
 import { nowISO } from '@/lib/date-local';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 const logger = createModuleLogger('CHANNEL_MEDIA_DISPATCHER');
 
@@ -224,7 +225,9 @@ async function dispatchEmailMedia(
 
     const result = await sendReplyViaMailgun({
       to: recipientEmail,
-      subject: caption ?? 'Αρχείο από Pagonis Nestor',
+      // 🔴 ΕΛΕΓΕ «Pagonis Nestor» — ΕΚΤΗ γραφή, και φεύγει σε **θέμα email πραγματικού
+      //    παραλήπτη**. Δεν υπήρχε σε καμία απογραφή του ADR-857 (§7 #12).
+      subject: caption ?? `Αρχείο από ${PRODUCT_NAME}`,
       textBody: caption ?? 'Σας αποστέλλουμε το ζητούμενο αρχείο.',
       attachments: [{
         filename: filename ?? 'attachment',

@@ -17,17 +17,23 @@ import { getPublicBaseUrl } from '@/lib/oauth/oauth-config';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { CronJobResult } from '@/types/cron-schedule';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 const logger = createModuleLogger('ONBOARDING_REMINDER_CRON');
 
+// 🔶 ΧΡΕΟΣ ΠΟΥ ΔΗΛΩΝΕΤΑΙ, ΑΝΤΙ ΝΑ ΣΙΩΠΑ (ADR-857 Φ8α · N.0.2): αυτό το μπλοκ είναι
+// ΔΙΠΛΟΤΥΠΟ του `i18n/locales/*/onboarding.json` (`reminder.subject` · `.footer`) — και τα
+// δύο σώματα **είχαν ήδη αποκλίνει ακριβώς στο όνομα**: εδώ «Nestor», εκεί «Nestor App».
+// Η ΤΑΥΤΟΤΗΤΑ διορθώνεται τώρα· η μετανάστευση στο i18n είναι δική της φέτα (N.11) και
+// δεν γίνεται μέσα σε δουλειά ταυτότητας.
 const REMINDER_TEXTS = {
-  subject: 'Υπενθύμιση: Ρύθμιση δομής οργανισμού Nestor',
+  subject: `Υπενθύμιση: Ρύθμιση δομής οργανισμού ${PRODUCT_NAME}`,
   greeting: 'Αγαπητέ διαχειριστή,',
   bodyShort: 'Το τμήμα Λογιστηρίου δεν έχει ρυθμιστεί εντός 7 ημερών.',
   bodyLong: 'Το τμήμα Λογιστηρίου δεν έχει ρυθμιστεί εντός 7 ημερών από την αρχική πρόσκληση.',
   bodyAction: 'Παρακαλούμε συνδεθείτε και ολοκληρώστε τη ρύθμιση:',
   cta: 'Ρύθμιση τώρα',
-  footer: 'Αυτό το μήνυμα στάλθηκε αυτόματα από το Nestor.',
+  footer: `Αυτό το μήνυμα στάλθηκε αυτόματα από το ${PRODUCT_NAME}.`,
 } as const;
 
 function buildReminderEmail(adminEmail: string): Parameters<EmailAdapter['sendEmail']>[0] {
