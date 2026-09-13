@@ -5,52 +5,26 @@
  * LAZY ROUTES REGISTRY - CENTRALIZED DYNAMIC IMPORT CONFIGURATION
  * =============================================================================
  *
- * SSoT for all lazy-loaded page routes in the application.
- * Skeletons extracted to lazyRouteSkeletons.tsx (SRP).
+ * SSoT for all lazy-loaded page routes in the application — **ΕΠΙΠΕΔΟ 3**, το κορυφαίο.
+ * Είναι το μόνο αρχείο της οικογένειας που ζητούν οι σελίδες (75 καταναλωτές του
+ * `LazyRoutes`, μετρημένο 2026-09-12).
+ *
+ *     lazyRouteSkeletons → lazyRouteFactory → lazyRoutesAdr294 → lazyRoutes
+ *          (επίπεδο 0)        (επίπεδο 1)        (επίπεδο 2)       (εδώ)
+ *
+ * ⚠️ **ΜΗΝ εισαγάγεις τίποτα από αυτό το αρχείο σε κατώτερο επίπεδο.** Μέχρι τις
+ * 2026-09-12 το `createLazyRoute` ζούσε εδώ και το `lazyRoutesAdr294` το εισήγαγε πίσω:
+ * αμοιβαίος κύκλος όπου το top-level `...lazyRoutesAdr294` (πηγή `export const` ⇒ **TDZ**)
+ * μπορούσε να δώσει `Cannot access … before initialization` ανάλογα με τη σειρά που
+ * επιλέγει ο bundler. Το primitive μετακόμισε στο `lazyRouteFactory.tsx` («demotion»
+ * κατά Lakos) και ο κύκλος έγινε **δομικά αδύνατος**. Φύλακας: **CHECK 3.80**.
  *
  * @module utils/lazyRoutes
- * @enterprise ADR-294 - Dynamic Imports Optimization
+ * @enterprise ADR-294 (dynamic imports) · ADR-858 §6α.2 (αρχή αξιολόγησης modules)
  */
 
-import dynamic from 'next/dynamic';
-import { ComponentType } from 'react';
-import {
-  PageLoadingSpinner,
-  DashboardLoadingSkeleton,
-  FormLoadingSkeleton,
-  ListLoadingSkeleton,
-} from './lazyRouteSkeletons';
+import { createLazyRoute } from './lazyRouteFactory';
 import { lazyRoutesAdr294 } from './lazyRoutesAdr294';
-
-// Re-export skeletons for backward compatibility
-export { PageLoadingSpinner, DashboardLoadingSkeleton, FormLoadingSkeleton, ListLoadingSkeleton };
-
-/** Type for lazy-loaded component modules — permissive to accept named/default exports */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LazyComponentModule = { default: ComponentType<any> };
-
-// Utility function to create lazy routes with different loading states
-export function createLazyRoute(
-  importFn: () => Promise<LazyComponentModule>,
-  options: {
-    loadingType?: 'spinner' | 'dashboard' | 'form' | 'list';
-    ssr?: boolean;
-  } = {}
-) {
-  const { loadingType = 'spinner', ssr = false } = options;
-  
-  const LoadingComponent = {
-    spinner: PageLoadingSpinner,
-    dashboard: DashboardLoadingSkeleton,
-    form: FormLoadingSkeleton,
-    list: ListLoadingSkeleton,
-  }[loadingType];
-
-  return dynamic(importFn, {
-    loading: () => <LoadingComponent />,
-    ssr
-  });
-}
 
 // Pre-configured lazy routes for common patterns
 export const LazyRoutes = {
@@ -206,7 +180,4 @@ export const LazyRoutes = {
 
   // ADR-294 entries (Batch 1-7) — extracted to lazyRoutesAdr294.tsx for SRP
   ...lazyRoutesAdr294,
-} as const;
-
-// Export types for TypeScript support
-export type LoadingType = 'spinner' | 'dashboard' | 'form' | 'list';
+} as const;

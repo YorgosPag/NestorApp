@@ -3,16 +3,7 @@
   "generatedBy": "node scripts/check-module-init.js --write-baseline",
   "adr": "ADR-858",
   "gate": "3.80",
-  "total": 1,
-  "cyclicGroups": 34,
-  "findings": [
-    {
-      "from": "src/utils/lazyRoutes.tsx",
-      "to": "src/utils/lazyRoutesAdr294.tsx",
-      "names": [
-        "lazyRoutesAdr294"
-      ],
-      "componentSize": 2
-    }
-  ]
+  "total": 0,
+  "cyclicGroups": 33,
+  "findings": []
 }

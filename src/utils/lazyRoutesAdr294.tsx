@@ -5,14 +5,21 @@
  * LAZY ROUTES — ADR-294 Dynamic Imports Optimization (Batch 1-7)
  * =============================================================================
  *
- * Route entries added during ADR-294 incremental code splitting.
- * Merged into the main LazyRoutes registry via spread in lazyRoutes.tsx.
+ * Route entries added during ADR-294 incremental code splitting — **ΕΠΙΠΕΔΟ 2**.
+ * Ενώνεται στο κύριο registry με spread μέσα στο `lazyRoutes.tsx`.
+ *
+ * ⚠️ **ΤΟ `createLazyRoute` ΕΡΧΕΤΑΙ ΑΠΟ ΤΟ `lazyRouteFactory`, ΟΧΙ ΑΠΟ ΤΟ `lazyRoutes`.**
+ * Η δεύτερη μορφή ήταν **η ανάποδη ακμή που έκλεινε τον κύκλο** (ADR-858 §6α.2): το
+ * `lazyRoutes` διαβάζει αυτό εδώ το `export const` σε **χρόνο αξιολόγησης** (top-level
+ * spread), άρα αν ο bundler αξιολογούσε πρώτο αυτό το αρχείο έπεφτε σε TDZ —
+ * `Cannot access 'lazyRoutesAdr294' before initialization`. Ένα αρχείο επιπέδου 2 δεν
+ * εισάγει **ποτέ** από το επίπεδο 3. Φύλακας: **CHECK 3.80** (`npm run test:module-init`).
  *
  * @module utils/lazyRoutesAdr294
- * @enterprise ADR-294 - Dynamic Imports Optimization
+ * @enterprise ADR-294 (dynamic imports) · ADR-858 §6α.2 (αρχή αξιολόγησης modules)
  */
 
-import { createLazyRoute } from './lazyRoutes';
+import { createLazyRoute } from './lazyRouteFactory';
 
 export const lazyRoutesAdr294 = {
 
