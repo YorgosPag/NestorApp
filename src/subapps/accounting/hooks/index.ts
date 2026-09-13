@@ -10,7 +10,14 @@
 export { useCompanySetup } from './useCompanySetup';
 
 // ── Invoice Hooks ────────────────────────────────────────────────────────────
-export { useInvoices } from './useInvoices';
+// ⚠️ Το `useInvoices` (πληθυντικός) **διαγράφηκε** 2026-09-14 (ADR-787 Φάση Β, Β2):
+//    ήταν αχρησιμοποίητο και **λάθος** — διάβαζε `data.invoices`, ενώ η διαδρομή
+//    απαντά `{ success, data: { items } }`, και το `createInvoice` του διάβαζε
+//    `id` ενώ η διαδρομή στέλνει `invoiceId`. Η ζωντανή οθόνη
+//    (`InvoicesPageContent.tsx`) διάβαζε **σωστά**, με δικό της κώδικα.
+//    ⛔ ΜΗΝ το αναστήσεις για να «κεντρικοποιήσεις» τη ζωντανή οθόνη: αφαίρεση με
+//    **έναν** καλούντα είναι speculative generality (Rule of Three). Αν εμφανιστεί
+//    δεύτερος, εξάγεται από τον **ζωντανό σωστό** κώδικα — όχι από το νεκρό λάθος.
 export { useInvoice } from './useInvoice';
 
 // ── Journal Entry Hooks ──────────────────────────────────────────────────────

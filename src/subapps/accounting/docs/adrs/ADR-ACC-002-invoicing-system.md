@@ -615,5 +615,6 @@ accounting/{companyId}/
 | 2026-02-09 | **Dashboard**: `AccountingDashboard` with 4 stat cards (income, expenses, VAT owed, pending invoices) + quick action buttons | Claude Code |
 | 2026-02-09 | **Shared UI**: `VATRateSelector` (24/13/6/0%), `PaymentMethodSelector`, `FiscalYearPicker`, `ExpenseCategoryPicker` (5 income + 19 expense categories) | Claude Code |
 | 2026-02-09 | **Page Routes**: 9 Next.js pages under `/accounting/` (dashboard, invoices, new, journal, vat, bank, efka, assets, reports) | Claude Code |
+| 2026-09-14 | 🗑️ **Το `useInvoices` (πληθυντικός) ΔΙΑΓΡΑΦΗΚΕ** — αχρησιμοποίητο **και** λάθος. Διάβαζε `data.invoices`, ενώ η διαδρομή απαντά `ok(result)` ⇒ `{success, data:{**items**}}`, και το `createInvoice` του διάβαζε `result.id` ενώ η διαδρομή στέλνει `created({**invoiceId**…})`. Κανένας καλών: μόνο το barrel το εξήγε — γι' αυτό **δεν** το είχε δει ούτε το knip (CHECK 3.22): το barrel export κρύβει τον νεκρό κώδικα. Η ζωντανή οθόνη `InvoicesPageContent.tsx:174` διαβάζει **σωστά** `json.data?.items` με δικό της κώδικα και **δεν** μεταναστεύει σε shared hook: αφαίρεση με **έναν** καλούντα είναι πρόωρη (Rule of Three). Το `useInvoice` (ενικός) **μένει**. Λόγος γραμμένος στο `hooks/index.ts`. Πλαίσιο: ADR-787 Φάση Β / Β2 | Claude Opus 5 |
 
 *ADR Format based on: Michael Nygard's Architecture Decision Records*

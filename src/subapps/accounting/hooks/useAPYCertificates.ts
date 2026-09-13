@@ -1,7 +1,8 @@
 /**
  * @fileoverview Accounting Subapp — useAPYCertificates Hook
  * @description Client-side hook για λίστα βεβαιώσεων παρακράτησης φόρου με φίλτρα, δημιουργία, και refetch.
- *   Ίδιο pattern με useInvoices.ts (ADR-ACC-002).
+ *   Ίδιο pattern με useInvoice.ts (ADR-ACC-002). *(Η αναφορά έδειχνε στο
+ *   `useInvoices.ts`, που διαγράφηκε 2026-09-14 — ADR-787 Φάση Β, Β2.)*
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-03-17
  * @see ADR-ACC-020 Βεβαίωση Παρακράτησης Φόρου

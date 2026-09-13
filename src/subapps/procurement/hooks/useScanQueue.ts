@@ -38,6 +38,51 @@ const SCAN_TOAST_ID = 'scan-queue';
 const POLL_MS = 3000;
 const MAX_POLLS = 20;
 
+/**
+ * **Τα δεδομένα του φακέλου απάντησης — ή `null` αν το σώμα δεν είναι φάκελος.**
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΘΕΡΑΠΕΥΕΙ: ΣΩΣΤΟ ΟΝΟΜΑ, ΛΑΘΟΣ ΒΑΘΟΣ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Και οι δύο διαδρομές αυτού του hook απαντούν με φάκελο `{ success, data }`
+ * *(`quotes/scan/route.ts:247` · `quotes/[id]/route.ts:79`)*, αλλά ο κώδικας
+ * διάβαζε στη **ρίζα**:
+ *
+ * ```ts
+ * const { quoteId } = await res.json() as { quoteId: string };   // ⇒ undefined
+ * ```
+ *
+ * ⚠️ **Το `as` ήταν η αιτία που κανένας τύπος δεν το έπιασε**: υποσχόταν σχήμα
+ * που κανείς δεν επαλήθευσε. Το `undefined` ταξίδεψε αθόρυβα στο επόμενο
+ * αίτημα ⇒ `GET /api/quotes/undefined` **20 φορές × 3s**, και ο άνθρωπος
+ * περίμενε **60 δευτερόλεπτα** για να δει «timeout» — ενώ η σάρωση **είχε
+ * πετύχει**. Ο `onSuccess` δεν καλούνταν ποτέ, άρα ούτε η λίστα ανανεωνόταν.
+ *
+ * 🔑 **Ρωτά, δεν υπόσχεται.** Ίδιο ιδίωμα με τον αδελφό κριτή του σώματος
+ * άρνησης (`apiErrorBodyOf`, ADR-834 §6.5.ε): επίτηδες **στενός** — σώμα που
+ * δεν δηλώνει ρητά `success: true` **με** αντικείμενο `data` επιστρέφει `null`
+ * και ο καλών αποφασίζει. Δεν μαντεύει «μήπως τα δεδομένα είναι στη ρίζα;»·
+ * αυτή ακριβώς η μαντεψιά ήταν το ελάττωμα.
+ *
+ * ⚠️ **Τοπικός, ΟΧΙ κοινό module — και είναι απόφαση.** Μοναδικοί καταναλωτές
+ * είναι τα δύο σημεία αυτού του αρχείου· αφαίρεση με έναν χρήστη είναι
+ * *speculative generality* (Rule of Three). Όταν το hook μεταναστεύσει στον
+ * `apiClient` (ADR-787 Φάση Β), **ο ίδιος ο μεταφορέας** ξετυλίγει τον φάκελο
+ * και αυτή η συνάρτηση **φεύγει** — είναι σκαλωσιά, όχι έπιπλο.
+ */
+function envelopeData(body: unknown): Record<string, unknown> | null {
+  if (body === null || typeof body !== 'object') return null;
+
+  const record = body as Record<string, unknown>;
+  if (record.success !== true) return null;
+
+  const { data } = record;
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) return null;
+
+  return data as Record<string, unknown>;
+}
+
 export function useScanQueue({ rfqId, projectId, onSuccess }: UseScanQueueOptions = {}): UseScanQueueResult {
   const { t } = useTranslation('quotes');
   const [items, setItems] = useState<ScanQueueItem[]>([]);
@@ -58,8 +103,16 @@ export function useScanQueue({ rfqId, projectId, onSuccess }: UseScanQueueOption
       try {
         const res = await fetch(`/api/quotes/${quoteId}`);
         if (!res.ok) continue;
-        const data = await res.json() as Record<string, unknown>;
-        if (data.extractedData || (data.status !== 'draft' && data.status !== undefined)) {
+        // ⚠️ Το σκέλος `status !== 'draft'` που ζούσε εδώ ήταν **δομικά νεκρό**, όχι
+        //    απλώς σε λάθος βάθος: το `createQuote` γράφει `'draft'`
+        //    (`quote-service.ts:106`) και το `processScanAsync` **δεν αγγίζει ποτέ το
+        //    status** — στην επιτυχία γράφει `extractedData`, και στις **δύο** αποτυχίες
+        //    μόνο `notes`. Το `'processing'` της απάντησης του `scan` δεν είναι καν
+        //    έγκυρο `QuoteStatus`· ζει μόνο στον φάκελο. Άρα η συνθήκη δεν ενεργοποιούνταν
+        //    ποτέ — και η αφαίρεσή της είναι **ισοδύναμη**, όχι αλλαγή συμπεριφοράς.
+        //    Μοναδικό έγκυρο σήμα ολοκλήρωσης: `extractedData`.
+        const quote = envelopeData(await res.json());
+        if (quote?.extractedData) {
           found = true;
           if (mountedRef.current) {
             patch(clientId, { status: 'success', resultQuoteId: quoteId, stage: null });
@@ -83,7 +136,12 @@ export function useScanQueue({ rfqId, projectId, onSuccess }: UseScanQueueOption
     try {
       const res = await fetch('/api/quotes/scan', { method: 'POST', body: form });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { quoteId } = await res.json() as { quoteId: string };
+      const accepted = envelopeData(await res.json());
+      const quoteId = typeof accepted?.quoteId === 'string' ? accepted.quoteId : null;
+      // 🔑 **Σταμάτα εδώ, μη ρωτήσεις με κενό αναγνωριστικό.** Το προηγούμενο `as`
+      //    άφηνε το `undefined` να ταξιδέψει· η ζημιά δεν φαινόταν στο σημείο που
+      //    γεννήθηκε αλλά 60 δευτερόλεπτα αργότερα, ως ψεύτικο «timeout».
+      if (!quoteId) throw new Error('scan-accepted-without-quote-id');
       await pollUntilComplete(clientId, quoteId);
     } catch (err) {
       if (mountedRef.current) patch(clientId, { status: 'error', errorMessage: String(err) });
