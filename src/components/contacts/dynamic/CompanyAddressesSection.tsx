@@ -35,6 +35,7 @@ import { AddressTypeSelector } from '@/components/contacts/addresses/AddressType
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
 import { isBlankContactAddress } from '@/utils/contacts/contact-address-blankness';
+import { contactAddressPositionView } from '@/utils/contacts/contact-address-position-view';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
@@ -368,6 +369,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                     onDelete={() => setBranchDeleteIndex(i)}
                     editLabel={t('contacts-form:addressesSection.editAddress')}
                     deleteLabel={t('contacts-form:addressesSection.removeAddress')}
+                    {...(addr.id ? { position: contactAddressPositionView({ ...addr, id: addr.id }) } : {})}
                     footer={renderCardFooter?.(addr)}
                   />
                 )}

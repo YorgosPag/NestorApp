@@ -35,6 +35,21 @@ jest.mock('@/components/shared/addresses/editor', () => {
       return R.createElement('div', null, props.children);
     }),
     AddressSourceLabel: () => null,
+    AddressCoordsBadge: () => null,
+    // ⚠️ **Ο ΠΡΑΓΜΑΤΙΚΟΣ δείκτης φρεσκάδας** (ADR-332 D27 Ζ6). Ένα `() => null` εδώ έκανε τη
+    //    μετάλλαξη «η κάρτα παίρνει την ΩΜΗ εγγραφή» να **επιζήσει**: η άγκυρα δεν μπορούσε να
+    //    δει το badge που καταγγέλλει, άρα φύλαγε μόνο το υποσέλιδο — τη μισή διαδρομή.
+    AddressFreshnessIndicator: jest.requireActual<typeof import('@/components/shared/addresses/editor/components/AddressFreshnessIndicator')>(
+      '@/components/shared/addresses/editor/components/AddressFreshnessIndicator',
+    ).AddressFreshnessIndicator,
+    // ⚠️ **ΟΧΙ στοίχημα**: το `computeFreshness` είναι ο ΠΡΑΓΜΑΤΙΚΟΣ (ADR-332 D27 Ζ6). Το mock
+    //    σκεπάζει το **barrel**, άρα σκέπαζε και τον καθαρό βοηθό — και όσο η κάρτα των επαφών
+    //    δεν έπαιρνε θέση, κανείς δεν το καλούσε, οπότε η απουσία ήταν **αόρατη**. Μόλις το Ζ6
+    //    έδωσε θέση στην κάρτα, το mock έσκασε: η ίδια η αστοχία είναι η απόδειξη ότι η αλλαγή
+    //    φτάνει στην οθόνη. Ένα `() => null` εδώ θα ήταν δεύτερος, αποκλίνων κανόνας φρεσκάδας.
+    computeFreshness: jest.requireActual<typeof import('@/components/shared/addresses/editor/helpers/computeFreshness')>(
+      '@/components/shared/addresses/editor/helpers/computeFreshness',
+    ).computeFreshness,
     AddressDragConfirmDialog: (p: { proposal: { kind: string }; onConfirm: () => void; onConfirmPositionOnly?: () => void; onCancel: () => void }) =>
       R.createElement('section', { 'data-testid': 'drag-dialog', 'data-kind': p.proposal.kind },
         R.createElement('button', { type: 'button', onClick: p.onConfirmPositionOnly }, 'position-only'),
@@ -185,5 +200,162 @@ describe('ADR-332 D27 Β-ΙΙ — «Μετακίνησε / Κράτα» (Φ2β)'
     render(<Harness />);
 
     expect(screen.queryByText('editor.positionDrift.relocate')).toBeNull();
+  });
+});
+
+/**
+ * ADR-332 D27 **Ζ6** — η **μόνιμη** κατάσταση του υποσελίδου.
+ *
+ * 🔴 Οι άλλες δύο (απόκλιση, εκκρεμότητα) είναι απαντήσεις **της τελευταίας αποθήκευσης** και
+ * δημοσιεύονται στη μνήμη. Αυτή προκύπτει από τα **ίδια τα αποθηκευμένα δεδομένα** — γι' αυτό
+ * καθόταν στη βάση της ALFA χωρίς **κανένα** σημάδι, και γι' αυτό δεν χρειάζεται δημοσίευση.
+ */
+describe('ADR-332 D27 Ζ6 — «η θέση λύθηκε για ΑΛΛΟ κείμενο»', () => {
+  /**
+   * Το ζωντανό δείγμα: κείμενο «102», απόδειξη «100», `accuracy: 'exact'`.
+   *
+   * 🔴 **Το λεξιλόγιο ΕΙΝΑΙ μέρος του δείγματος** — μετρημένο στο Firestore, όχι επινοημένο:
+   * η `CompanyAddress` λέει **`municipalityName`/`regionalUnitName`**, ενώ το `resolvedFor`
+   * (που το φτιάχνει ο **διακομιστής** από την όψη) λέει **`municipality`/`regionalUnit`**.
+   * Μια άγκυρα με μόνο `street`/`number`/`city` **δεν βλέπει** αυτή την ασυμμετρία και ήταν
+   * πράσινη ενώ η εφαρμογή καταγγέλλει **κάθε** διεύθυνση επαφής για πάντα.
+   */
+  const CONTACT_VOCABULARY = {
+    municipalityName: 'ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ',
+    regionalUnitName: 'ΠΕΡΙΦΕΡΕΙΑΚΗ ΕΝΟΤΗΤΑ ΘΕΣΣΑΛΟΝΙΚΗΣ',
+    regionName: 'ΠΕΡΙΦΕΡΕΙΑ ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ',
+  } as const;
+  const PROVED_VOCABULARY = {
+    municipality: 'ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ',
+    regionalUnit: 'ΠΕΡΙΦΕΡΕΙΑΚΗ ΕΝΟΤΗΤΑ ΘΕΣΣΑΛΟΝΙΚΗΣ',
+    region: 'ΠΕΡΙΦΕΡΕΙΑ ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ',
+  } as const;
+
+  const DRIFTED_BRANCH: CompanyAddress = {
+    ...BRANCH,
+    ...CONTACT_VOCABULARY,
+    street: 'Εγνατία',
+    number: '102',
+    city: 'Θεσσαλονίκη',
+    postalCode: '54623',
+    coordinates: HQ_POINT,
+    source: 'geocoded',
+    verifiedAt: 7,
+    geocodingMetadata: {
+      confidence: 0.91,
+      accuracy: 'exact',
+      variantUsed: 1,
+      resolvedFor: { ...PROVED_VOCABULARY, street: 'Εγνατία', number: '100', city: 'Θεσσαλονίκη', postalCode: '54623' },
+    },
+  };
+
+  /** Ίδιο κείμενο με την απόδειξη — **στα δύο λεξιλόγια**. Πρέπει να ΣΙΩΠΑ. */
+  const ALIGNED_BRANCH: CompanyAddress = {
+    ...DRIFTED_BRANCH,
+    number: '100',
+  };
+
+  /**
+   * ⚠️ **ΦΡΕΣΚΟ `verifiedAt` ΠΑΝΤΟΥ, ΚΑΙ ΕΙΝΑΙ ΜΕΡΟΣ ΤΗΣ ΑΓΚΥΡΑΣ.** Το κοινό `HQ` fixture έχει
+   * `verifiedAt: 7` (1970) ⇒ **`stale` λόγω ηλικίας**. Με αυτό μέσα, ένας έλεγχος «το badge λέει
+   * stale» είναι πράσινος **ανεξάρτητα** από το Ζ6 — μετρημένο: η πρώτη εκδοχή βρήκε δύο τέτοια
+   * badges και δεν μπορούσε να πει ποιο ήταν ποιο. Με φρέσκια επιβεβαίωση, `stale` μπορεί να
+   * σημαίνει **μόνο** «λύθηκε για άλλο κείμενο».
+   */
+  const FRESH = Date.now();
+
+  function DriftedHarness({ address }: { address: CompanyAddress }) {
+    const [formData, setFormData] = useState<ContactFormData>(() => ({
+      ...initial(),
+      companyAddresses: [{ ...HQ, verifiedAt: FRESH }, { ...address, verifiedAt: FRESH }],
+    }));
+    return (
+      <TooltipProvider>
+        <AddressesSectionWithFullscreen formData={formData} setFormData={setFormData} disabled />
+      </TooltipProvider>
+    );
+  }
+
+  it('Ζ6-Ο3 — 🔴 η ειδοποίηση φαίνεται και το «Υπολογισμός» ζητά ΑΥΤΗ τη διεύθυνση', async () => {
+    render(<DriftedHarness address={DRIFTED_BRANCH} />);
+
+    await userEvent.click(screen.getByText('editor.positionStale.resolve'));
+    expect(mockRelocate).toHaveBeenCalledWith('cont_1', 'addr_br');
+  });
+
+  it('Ζ6-Ο3α — 🔴 ΤΟ ΛΕΞΙΛΟΓΙΟ: κείμενο ίδιο με την απόδειξη ⇒ ΣΙΩΠΗ, παρότι τα ονόματα πεδίων διαφέρουν', () => {
+    // Η επαφή λέει `municipalityName`, ο διακομιστής απέδειξε `municipality`. Αν ο πελάτης
+    // κρίνει την **ωμή** εγγραφή αντί για την **όψη** (`contactAddressPositionView`), τα
+    // διοικητικά πεδία διαβάζονται ως κενά ⇒ `differs` για **κάθε** διεύθυνση, για πάντα.
+    // Μετρημένο ζωντανά: η έδρα της ALFA καταγγελλόταν ενώ `resolvedFor` ΚΑΙ κείμενο ήταν «104».
+    render(<DriftedHarness address={ALIGNED_BRANCH} />);
+
+    expect(screen.queryByText('editor.positionStale.resolve')).toBeNull();
+    // …και το **badge** το ίδιο: η κάρτα κρίνει την ίδια όψη με το υποσέλιδο.
+    expect(screen.queryByText('editor.freshness.stale')).toBeNull();
+  });
+
+  it('Ζ6-Ο3α2 — 🔴 το ΙΔΙΟ και στην ΚΑΡΤΑ: κείμενο ≠ απόδειξη ⇒ το badge λέει «stale»', () => {
+    // Δεύτερη διαδρομή προς τον ίδιο άνθρωπο. Χωρίς αυτή, μια μετάλλαξη που δίνει στην κάρτα
+    // την ωμή εγγραφή **επιζεί** — μετρημένο.
+    render(<DriftedHarness address={DRIFTED_BRANCH} />);
+
+    // Ακριβώς ΕΝΑ: η έδρα του ίδιου πίνακα είναι φρέσκια και χωρίς ισχυρισμό ⇒ σιωπά.
+    expect(screen.getAllByText('editor.freshness.stale')).toHaveLength(1);
+  });
+
+  /**
+   * 🔴 **Η ΕΔΡΑ ΕΙΝΑΙ ΑΛΛΟ COMPONENT.** Τα υποκαταστήματα τα ζωγραφίζει το
+   * `CompanyAddressesSection`, την έδρα το `AddressesSectionWithFullscreen` — **δύο** σημεία
+   * κλήσης της ίδιας κάρτας. Μια μετάλλαξη στην έδρα **επέζησε δύο φορές** επειδή όλες οι
+   * άγκυρες Ζ6 έβαζαν το δείγμα σε **υποκατάστημα**: ο έλεγχος δεν μπορούσε να κοκκινίσει
+   * για τον λόγο που ισχυριζόταν.
+   */
+  function HqHarness({ hq }: { hq: CompanyAddress }) {
+    const [formData, setFormData] = useState<ContactFormData>(() => ({
+      ...initial(),
+      companyAddresses: [{ ...hq, id: HQ.id, type: 'headquarters', verifiedAt: FRESH }, BRANCH],
+    }));
+    return (
+      <TooltipProvider>
+        <AddressesSectionWithFullscreen formData={formData} setFormData={setFormData} disabled />
+      </TooltipProvider>
+    );
+  }
+
+  it('Ζ6-Ο3α3 — 🔴 Η ΕΔΡΑ: κείμενο ≠ απόδειξη ⇒ badge «stale» ΚΑΙ ειδοποίηση στη δική της κάρτα', () => {
+    render(<HqHarness hq={DRIFTED_BRANCH} />);
+
+    expect(screen.getAllByText('editor.freshness.stale')).toHaveLength(1);
+    expect(screen.getByText('editor.positionStale.resolve')).toBeInTheDocument();
+  });
+
+  it('Ζ6-Ο3α4 — 🔴 Η ΕΔΡΑ ευθυγραμμισμένη ⇒ ΣΙΩΠΗ: η κάρτα της κρίνει την ΟΨΗ, όχι την ωμή εγγραφή', () => {
+    // ⚠️ **Η άγκυρα που λείπει είναι ΠΑΝΤΑ η θετική.** Ένα *drifted* δείγμα βγάζει `differs` και
+    // με τις δύο εκδοχές (με όψη επειδή ο αριθμός διαφέρει· με ωμή επειδή τα διοικητικά
+    // διαβάζονται κενά) ⇒ η μετάλλαξη **επέζησε δύο φορές**. Μόνο το **ευθυγραμμισμένο**
+    // δείγμα ξεχωρίζει τις δύο εκδοχές: όψη ⇒ σιωπή, ωμή ⇒ ψευδής καταγγελία.
+    render(<HqHarness hq={ALIGNED_BRANCH} />);
+
+    expect(screen.queryByText('editor.positionStale.resolve')).toBeNull();
+    expect(screen.queryByText('editor.freshness.stale')).toBeNull();
+  });
+
+  it('Ζ6-Ο3β — ΠΑΛΙΑ εγγραφή χωρίς απόδειξη ⇒ ΣΙΩΠΗ (άγνοια δεν κατηγορεί)', () => {
+    const legacy: CompanyAddress = {
+      ...DRIFTED_BRANCH,
+      geocodingMetadata: { confidence: 0.91, accuracy: 'exact', variantUsed: 1 },
+    };
+    render(<DriftedHarness address={legacy} />);
+
+    expect(screen.queryByText('editor.positionStale.resolve')).toBeNull();
+  });
+
+  it('Ζ6-Ο3γ — η ΑΠΟΚΛΙΣΗ προηγείται: μετρημένα μέτρα είναι πιο συγκεκριμένα από «δεν αντιστοιχεί»', () => {
+    publishContactAddressAdvisories('cont_1', [{ addressId: 'addr_br', distanceMetres: 800, toleranceMetres: 50 }]);
+    render(<DriftedHarness address={DRIFTED_BRANCH} />);
+
+    expect(screen.getByText('editor.positionDrift.relocate')).toBeInTheDocument();
+    expect(screen.queryByText('editor.positionStale.resolve')).toBeNull();
   });
 });

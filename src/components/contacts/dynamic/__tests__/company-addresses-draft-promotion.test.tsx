@@ -29,6 +29,14 @@ import {
 
 jest.mock('@/components/shared/addresses/editor', () => ({
   AddressEditor: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  AddressSourceLabel: () => null,
+  AddressFreshnessIndicator: () => null,
+  AddressCoordsBadge: () => null,
+  // ADR-332 D27 Ζ6 — ο ΠΡΑΓΜΑΤΙΚΟΣ βοηθός φρεσκάδας: η κάρτα παίρνει πλέον τη θέση της
+  // διεύθυνσης, άρα τον καλεί. Ένα `() => null` θα ήταν δεύτερος κανόνας φρεσκάδας στο test.
+  computeFreshness: jest.requireActual<typeof import('@/components/shared/addresses/editor/helpers/computeFreshness')>(
+    '@/components/shared/addresses/editor/helpers/computeFreshness',
+  ).computeFreshness,
 }));
 
 jest.mock('@/components/shared/addresses/AddressWithHierarchy', () => ({

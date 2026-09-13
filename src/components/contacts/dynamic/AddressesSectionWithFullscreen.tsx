@@ -31,6 +31,7 @@ import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { createProjectAddress } from '@/types/project/address-helpers';
+import { contactAddressPositionView } from '@/utils/contacts/contact-address-position-view';
 import { useClearCompanyHqAddress } from '@/components/contacts/dynamic/useClearCompanyHqAddress';
 import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hooks/useDerivedWorkAddresses';
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
@@ -279,6 +280,9 @@ export function AddressesSectionWithFullscreen({
             onClear={clearHq}
             editLabel={tContacts('contacts-form:addressesSection.editAddress')}
             clearLabel={tContacts('contacts-form:addressesSection.clearAddress')}
+            {...(effectiveAddresses[0]?.id
+              ? { position: contactAddressPositionView({ ...effectiveAddresses[0], id: effectiveAddresses[0].id }) }
+              : {})}
             footer={renderDriftFooter(effectiveAddresses[0])}
           />
         ) : (
