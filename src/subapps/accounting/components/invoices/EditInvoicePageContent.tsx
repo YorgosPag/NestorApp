@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageLoadingState } from '@/core/states';
 import { useAuth } from '@/hooks/useAuth';
-import { authorizedFetch } from '@/subapps/accounting/utils/authorized-fetch';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { InvoiceForm } from './forms/InvoiceForm';
 import type { Invoice } from '@/subapps/accounting/types';
@@ -61,10 +61,18 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
     // ADR-300: Only show spinner on first load — not on re-navigation
     if (!editInvoiceCache.hasLoaded(invoiceId)) setLoading(true);
     try {
-      const res = await authorizedFetch(user, API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId));
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const loaded: Invoice | null = data.data ?? null;
+      // ADR-787 Φάση Β: ο `apiClient` είναι ο **μόνος** που δηλώνει χώρο
+      // (`Nestor-Workspace`) — γι' αυτό γίνεται η μετανάστευση. Ξετυλίγει μόνος
+      // του τον φάκελο `ok(invoice)` ⇒ `{success, data}` και πετά σε κάθε μη-2xx,
+      // οπότε το `if (!res.ok) throw` έγινε περιττό — ο ίδιος κλάδος `catch`
+      // εξακολουθεί να το πιάνει.
+      // ⚠️ **Μία ΟΡΑΤΗ αλλαγή, δηλωμένη**: ο άνθρωπος έβλεπε «HTTP 404» *(κωδικός,
+      //    όχι μήνυμα)*· πλέον βλέπει ό,τι λέει ο διακομιστής — «Invoice not found»
+      //    από το `notFound()` της διαδρομής. Βελτίωση, αλλά **αλλαγή** — γραμμένη
+      //    εδώ ώστε να μη διαβαστεί ως αθέλητη παρενέργεια της μετανάστευσης.
+      const loaded = await apiClient.get<Invoice | null>(
+        API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId),
+      ) ?? null;
       // ADR-300: Write to module-level cache so next remount skips spinner
       if (loaded) editInvoiceCache.set(loaded, invoiceId);
       setInvoice(loaded);

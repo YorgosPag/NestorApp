@@ -7,7 +7,7 @@ import { ArrowLeft, ClipboardCheck, Ban, FileX2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
-import { authorizedFetch } from '@/subapps/accounting/utils/authorized-fetch';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
 import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
@@ -47,15 +47,23 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
     }
     if (!invoiceDetailsCache.hasLoaded(invoiceId)) setLoading(true);
     try {
-      const res = await authorizedFetch(user, API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId));
-      if (res.ok) {
-        const json = await res.json();
-        const data: Invoice | null = json.data ?? null;
-        if (data) invoiceDetailsCache.set(data, invoiceId);
-        setInvoice(data);
-      }
+      // ADR-787 Φάση Β: μετανάστευση στον `apiClient` — τον **μόνο** που δηλώνει
+      // χώρο (`Nestor-Workspace`).
+      // 🔑 **Η σιωπή διατηρείται, και δεν είναι σύμπτωση**: εδώ το `if (res.ok)`
+      //    **παρέλειπε** το μπλοκ σε μη-ok, αφήνοντας το `invoice` ως είχε· τώρα ο
+      //    `apiClient` **πετά** και ο ίδιος κενός `catch` το καταπίνει — με
+      //    **ταυτόσημο** αποτέλεσμα (κενή κατάσταση «Invoice not found»).
+      //    ⚠️ Αυτή η ισοδυναμία είναι ο λόγος που η μετανάστευση εδώ είναι ασφαλής,
+      //    ενώ το αδελφό `EditInvoicePageContent` — που **δείχνει** το σφάλμα —
+      //    αλλάζει ορατά κείμενο. Η τεκμηρίωση του παλιού `authorizedFetch` προειδοποιούσε
+      //    ρητά γι' αυτή την **αντίθετη** σημασιολογία· μετρήθηκε, και τα δύο περνούν.
+      const data = await apiClient.get<Invoice | null>(
+        API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId),
+      ) ?? null;
+      if (data) invoiceDetailsCache.set(data, invoiceId);
+      setInvoice(data);
     } catch {
-      // Error handled by empty state
+      // Άρνηση ή σφάλμα δικτύου: η κενή κατάσταση το λέει — καμία αλλαγή state.
     } finally {
       setLoading(false);
     }
