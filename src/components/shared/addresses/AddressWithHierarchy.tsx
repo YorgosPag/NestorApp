@@ -37,6 +37,19 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 import { AddressEditorContext, AddressFieldBadge } from '@/components/shared/addresses/editor';
+// 🔑 «Πόσους χαρακτήρες κρατά αυτό το πεδίο;» — ΜΙΑ δήλωση, δύο αναγνώστες: το `maxLength`
+//    του Τ.Κ. και το ωφέλιμο δάπεδο της γραμμής (ADR-332 D27 Ζ7).
+import {
+  GREEK_POSTAL_CODE_DISPLAY_LENGTH,
+} from '@/components/shared/addresses/editor/address-field-widths';
+// 🔑 Ο κανόνας «το σχόλιο δεν τρώει τον χώρο του δεδομένου» — ΕΝΑΣ, για τα τέσσερα πεδία
+//    που εδώ ήταν γραμμένος τέσσερις φορές (ADR-332 D27 Ζ7).
+import {
+  AddressFieldControlRow,
+  addressFieldGroup,
+  addressFieldCell,
+  addressFieldCellWide,
+} from '@/components/shared/addresses/editor/components/AddressFieldControlRow';
 // Re-exports for backward compatibility — consumers can still import from this file
 export type { AddressWithHierarchyValue, AddressWithHierarchyProps } from './address-with-hierarchy-config';
 
@@ -226,60 +239,69 @@ export function AddressWithHierarchy({
       <div className="space-y-3">
         {/* Row 1: Street + Number */}
         {showStreetFields && (
-          <div className="grid grid-cols-3 gap-3">
-            <fieldset className="col-span-2 space-y-1">
+          <div className={addressFieldGroup}>
+            <fieldset className={cn(addressFieldCellWide, "space-y-1")}>
               <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.street')}</Label>
-              <div className="flex items-center gap-1.5">
+              <AddressFieldControlRow
+                field="street"
+                badge={fieldStatus && <AddressFieldBadge status={fieldStatus.street} />}
+              >
                 <Input
+                  data-address-field="street"
                   value={current.street}
                   onChange={e => handleBasicChange('street', e.target.value)}
                   placeholder={t('form.streetPlaceholder')}
                   disabled={disabled}
-                  className="flex-1"
                 />
-                {fieldStatus && <AddressFieldBadge status={fieldStatus.street} />}
-              </div>
+              </AddressFieldControlRow>
             </fieldset>
-            <fieldset className="space-y-1">
+            <fieldset className={cn(addressFieldCell, "space-y-1")}>
               <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.number')}</Label>
-              <div className="flex items-center gap-1.5">
+              <AddressFieldControlRow
+                field="number"
+                badge={fieldStatus && <AddressFieldBadge status={fieldStatus.number} />}
+              >
                 <Input
+                  data-address-field="number"
                   value={current.number}
                   onChange={e => handleBasicChange('number', e.target.value)}
                   placeholder={t('form.numberPlaceholder')}
                   disabled={disabled}
-                  className="flex-1"
                 />
-                {fieldStatus && <AddressFieldBadge status={fieldStatus.number} />}
-              </div>
+              </AddressFieldControlRow>
             </fieldset>
           </div>
         )}
         {neighborhoodFieldNode}
         {/* Row 2: Postal Code + Settlement / City (same line) */}
-        <div className="grid grid-cols-3 gap-3">
-          <fieldset className="space-y-1">
+        <div className={addressFieldGroup}>
+          <fieldset className={cn(addressFieldCell, "space-y-1")}>
             <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.postalCode')}</Label>
-            <div className="flex items-center gap-1.5">
+            <AddressFieldControlRow
+              field="postalCode"
+              badge={fieldStatus && <AddressFieldBadge status={fieldStatus.postalCode} />}
+            >
               {/* Μάσκα εμφάνισης: το μοντέλο κρατά «54624», η οθόνη δείχνει
                   «546 24» (ADR-332 D16). Σε ξένη διεύθυνση περνά αυτούσιο. */}
               <Input
+                data-address-field="postalCode"
                 value={isGreekAddress ? formatGreekPostalCode(current.postalCode) : current.postalCode}
                 onChange={e => handleBasicChange('postalCode', e.target.value)}
                 placeholder={t('form.postalCodePlaceholder')}
-                maxLength={isGreekAddress ? 6 : undefined}
+                maxLength={isGreekAddress ? GREEK_POSTAL_CODE_DISPLAY_LENGTH : undefined}
                 inputMode={isGreekAddress ? 'numeric' : 'text'}
                 disabled={disabled}
-                className="flex-1"
               />
-              {fieldStatus && <AddressFieldBadge status={fieldStatus.postalCode} />}
-            </div>
+            </AddressFieldControlRow>
           </fieldset>
-          <fieldset className="col-span-2 space-y-1">
+          <fieldset className={cn(addressFieldCellWide, "space-y-1")}>
             <Label className={cn("text-xs font-medium", colors.text.muted)}>
               {t('hierarchy.settlementCity')}
             </Label>
-            <div className="flex items-center gap-1.5">
+            <AddressFieldControlRow
+              field="city"
+              badge={fieldStatus && <AddressFieldBadge status={fieldStatus.city} />}
+            >
               <SearchableCombobox
                 value={current.settlementName}
                 onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
@@ -290,10 +312,8 @@ export function AddressWithHierarchy({
                 allowFreeText
                 disabled={disabled}
                 maxDisplayed={30}
-                className="flex-1"
               />
-              {fieldStatus && <AddressFieldBadge status={fieldStatus.city} />}
-            </div>
+            </AddressFieldControlRow>
           </fieldset>
         </div>
         {/* Row 3: Country */}

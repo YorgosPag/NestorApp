@@ -1,0 +1,84 @@
+/**
+ * ADR-332 D27 Ζ7 — δομικά στυλ του οργάνου ωφέλιμου πλάτους.
+ *
+ * ⚠️ **Καμία χρωματική δήλωση εκτός tokens** (ADR-773 / CHECK 3.43): το harness μετρά
+ * **πλάτος**, δεν έχει καμία δουλειά να εισάγει νέα πηγή χρώματος.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  font-family: system-ui, sans-serif;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  min-height: 100vh;
+}
+
+.note {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8125rem;
+  max-width: 70ch;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 60rem;
+}
+
+.table caption {
+  text-align: left;
+  padding-block-end: 0.5rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.table th {
+  background: hsl(var(--card));
+}
+
+/** Οι αριθμοί στοιχίζονται δεξιά και σε ίσου πλάτους ψηφία — αλλιώς δεν συγκρίνονται. */
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.caseFrame {
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+}
+
+.caseTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding-block-end: 0.25rem;
+}
+
+/**
+ * 🔴 **ΚΑΡΦΩΜΕΝΟ ΣΕ ΕΙΚΟΝΟΣΤΟΙΧΕΙΑ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ ΤΟΥ ΟΡΓΑΝΟΥ.**
+ *
+ * Το πλάτος έρχεται **inline** από το `WIDTH_CASES` (μία σταθερά, δύο αναγνώστες). Εδώ
+ * μένει μόνο ο κανόνας ότι το δοχείο **δεν** επιτρέπεται να παρασυρθεί από τον γονέα του:
+ * χωρίς `flex: none`, ένα flex/grid περιβάλλον θα συρρίκνωνε τη μέτρηση **κάτω** από το
+ * δηλωμένο πλάτος και η πύλη θα έκρινε συνθήκες που δεν δήλωσε ποτέ.
+ *
+ * ⚠️ Τα `rem` θα άλλαζαν με τη ρύθμιση γραμματοσειράς του χρήστη· τα `px` όχι. Ένα όργανο
+ * οφείλει σταθερές συνθήκες — αριθμός χωρίς το κάδρο του δεν είναι μέτρηση.
+ */
+.caseBody {
+  flex: none;
+  max-inline-size: 100%;
+  outline: 1px dashed hsl(var(--border));
+  outline-offset: 2px;
+}

@@ -18,6 +18,9 @@ import {
   resolveReconciliationAction,
 } from './helpers/coordinatorHelpers';
 import { FormFieldRow } from './components/AddressFormFieldRow';
+// ADR-332 D27 Ζ7 — ο ίδιος κανόνας ομάδας με το `AddressWithHierarchy`: η σειρά πεδίων
+// τυλίγεται από τον **πραγματικό χώρο**, όχι από breakpoint του παραθύρου.
+import { addressFieldGroup } from './components/AddressFieldControlRow';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
@@ -396,7 +399,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
 
         {/* Form body: flat grid OR children (neighborhood delivered via context when showNeighborhoodRegion) */}
         {formOptions?.hideGrid ? children : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className={addressFieldGroup}>
             {FIELD_CONFIGS.map(({ field, labelKey, placeholderKey }) => (
               <FormFieldRow
                 key={field}

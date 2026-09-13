@@ -10,6 +10,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AddressFieldBadge } from './AddressFieldBadge';
+import { AddressFieldControlRow } from './AddressFieldControlRow';
 import type { AddressFieldStatus, ResolvedAddressFields } from '../types';
 
 interface FormFieldRowProps {
@@ -36,17 +37,22 @@ export function FormFieldRow({
       <Label htmlFor={`addr-${field}`} className="text-xs font-medium">
         {label}
       </Label>
-      <div className="flex items-center gap-1.5">
+      {/*
+        ADR-332 D27 Ζ7 — ο κανόνας «το σχόλιο δεν τρώει τον χώρο του δεδομένου» ζει στο
+        `AddressFieldControlRow`, **όχι** εδώ. Ήταν γραμμένος ως ωμό `flex items-center`
+        σε **πέντε** σημεία, και τα πέντε είχαν το ίδιο ελάττωμα.
+      */}
+      <AddressFieldControlRow field={field} badge={<AddressFieldBadge status={status} />}>
         <Input
           id={`addr-${field}`}
+          data-address-field={field}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
           className="h-8 text-sm"
         />
-        <AddressFieldBadge status={status} />
-      </div>
+      </AddressFieldControlRow>
     </div>
   );
 }

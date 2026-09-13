@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:3b362cb229f17838412f0780cef62d5c6d0b287cce98a88bf2166f7a866b2db5 -->
+     fingerprint: sha256:2087456ec7977ec8b75a46effcb13ac087d6c7b6fb13bc7cbfd9b38268e5caec -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -376,6 +376,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.79** | **Πύλη του σκιασμένου αρχείου** (ADR-858) — «λύνουν ΔΥΟ αρχεία στο ίδιο specifier — και ξέρει κάποιος ποιο κερδίζει;» · `npm run test:shadowed-modules` · `SKIP_SHADOWED_MODULES=1` · 📘 `docs/gates/3.79.md` | ⛔ ZERO-TOL (Κ1) + 🔴 RATCHET κατά ταυτότητα (Κ2) | `.shadowed-modules-baseline.json` |
 | **3.80** | **Πύλη του θανάσιμου κύκλου** (ADR-858) — «θα ΣΚΑΣΕΙ αυτός ο κύκλος; — όχι «υπάρχει κύκλος;»» · `npm run test:module-init` · `SKIP_MODULE_INIT=1` · 📘 `docs/gates/3.80.md` | 🔴 RATCHET κατά ταυτότητα (ποιος διαβάζει ΤΙ από ποιον) | `.module-init-baseline.json` |
 | **3.81** | **Πύλη ταυτότητας προϊόντος** (ADR-857) — «λέει κάθε σημείο που ονομάζει το **προϊόν** το ΙΔΙΟ όνομα — και είναι κάθε **άλλη** χρήση **δηλωμένη, με λόγο**;» · `npm run test:product-identity` · `SKIP_PRODUCT_IDENTITY=1` · 📘 `docs/gates/3.81.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
+| **3.82** | **Πύλη ωφέλιμου πλάτους πεδίων** (ADR-332) — «βλέπει ο άνθρωπος τι γράφει; — η ερώτηση που κανένα jest ΔΕΝ ΜΠΟΡΕΙ να κάνει, γιατί το jsdom δεν έχει διάταξη» · `npm run test:address-field-width` · 📘 `docs/gates/3.82.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -390,7 +391,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **75** (εκτελεστής 67 + hook 21) ·
-γραμμές εδώ: **63** · αδήλωτες: **12** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **64** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

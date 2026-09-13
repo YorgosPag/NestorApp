@@ -26,6 +26,7 @@ const DEDICATED_SPECS = {
   visualDxf: '**/dxf-viewer/e2e/dxf-visual-regression.spec.ts',
   visualBim3d: '**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts',
   cameraMotion: '**/test-harness/camera-motion/camera-motion.e2e.spec.ts',
+  addressFieldWidth: '**/test-harness/address-field-width/address-field-width.e2e.spec.ts',
 } as const;
 
 /** Ό,τι ανήκει σε ειδικό project, ΔΕΝ ανήκει στα γενικά. Παράγεται — ποτέ δεύτερη λίστα. */
@@ -172,6 +173,53 @@ export default defineConfig({
         },
       },
       testMatch: [DEDICATED_SPECS.cameraMotion],
+      timeout: 300000,
+    },
+    {
+      /*
+        ADR-332 D27 Ζ7 — η πύλη ωφέλιμου πλάτους. ΔΙΚΟ της project, για λόγους που **δεν**
+        είναι αισθητικοί:
+
+        1. 🔴 **ΤΟ ΚΑΔΡΟ ΕΙΝΑΙ Η ΜΕΤΡΗΣΗ.** Το harness δηλώνει τα πλάτη του **το ίδιο**
+           (`WIDTH_CASES`), αλλά ένα πολύ στενό viewport θα έβαζε τα δοχεία σε
+           `max-inline-size: 100%` και θα μετρούσε **άλλα** πλάτη από τα δηλωμένα. Στα
+           γενικά projects το `Mobile Chrome` (393px) θα το έκανε **σίγουρα** — δηλαδή η
+           πύλη θα κοκκίνιζε για κάδρο, όχι για ελάττωμα.
+
+        2. ⚠️ **Το `deviceScaleFactor` αλλάζει το `ch`.** Η κρίση είναι σε **χαρακτήρες**,
+           που παράγονται από `measureText('0')` στη γραμματοσειρά του πεδίου. Σταθερό 1
+           ⇒ σταθερή μονάδα.
+
+        ⚠️ ΚΑΜΙΑ `snapshotPathTemplate`: η πύλη κρίνει **αριθμούς**, όχι εικόνες — άρα δεν
+        υπάρχει golden ούτε εξάρτηση από πλατφόρμα (CHECK 3.46 ομάδα Β: `golden-default`).
+        ⚠️ Καμία σημαία WebGL: δεν υπάρχει χάρτης εδώ, μόνο DOM.
+      */
+      name: 'address-field-width',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 900 },
+        deviceScaleFactor: 1,
+        navigationTimeout: 120000,
+        /*
+          🔴 **ΕΛΛΗΝΙΚΑ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΠΡΟΤΙΜΗΣΗ — ΕΙΝΑΙ ΤΟ ΧΕΙΡΟΤΕΡΟ ΣΕΝΑΡΙΟ.**
+
+          Το πλάτος που κρίνεται είναι ό,τι **περισσεύει** αφού πάρει τον χώρο του το σήμα
+          κατάστασης — άρα εξαρτάται από το **μήκος του κειμένου** του σήματος, δηλαδή από
+          τη γλώσσα. Ελληνικά «Δεν συμπληρώθηκε» = **16** χαρακτήρες· αγγλικά «Not provided»
+          = 12. Μέτρηση στα αγγλικά θα ήταν πράσινη και η **ελληνική** παραγωγή θα έσπαγε.
+
+          ⚠️ Το γενικό `use.locale` είναι `'en-US'` (γρ. 59) και ισχύει για όλα τα άλλα
+          projects· εδώ παρακάμπτεται **επίτηδες**. Η εφαρμογή είναι ελληνόγλωσση.
+
+          🔴 **ΜΕΤΡΗΜΕΝΟ**: με `en-US` η πρώτη εκτέλεση της πύλης διάβασε ωμό κλειδί
+          (`editor.field.badge.notProvided`, **30** χαρακτήρες) — δηλαδή μετρούσε πλάτος
+          που **κανείς άνθρωπος δεν βλέπει**, και μάλιστα ψευδώς αυστηρό. Το harness πλέον
+          αρνείται να δημοσιεύσει μέτρηση με ανεπίλυτο κλειδί, αλλά η σωστή γλώσσα είναι
+          η **πρώτη** άμυνα, όχι η δεύτερη.
+        */
+        locale: 'el-GR',
+      },
+      testMatch: [DEDICATED_SPECS.addressFieldWidth],
       timeout: 300000,
     },
   ],

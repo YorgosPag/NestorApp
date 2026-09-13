@@ -1,0 +1,213 @@
+name: T2 📏 Address Field Width Gate (CHECK 3.82)
+
+# =============================================================================
+# CHECK 3.82 — ADR-332 D27 Ζ7. «ΒΛΕΠΕΙ Ο ΑΝΘΡΩΠΟΣ ΤΙ ΓΡΑΦΕΙ;»
+#
+# ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΟ ΓΕΝΝΗΣΕ
+# ------------------------------
+# Στις 2026-09-13 μετρήθηκε ζωντανά ότι τα πεδία **Οδός / Αριθμός / Τ.Κ.** της φόρμας
+# διεύθυνσης έφταναν σε **ωφέλιμο πλάτος ΜΗΔΕΝ** (`clientWidth − padding = 0`) όταν η
+# στήλη στένευε. Στο `FrontageAddressCreateDialog` (`sm:max-w-md`, **σταθερό** πλάτος)
+# αυτό ίσχυε σε **ΚΑΘΕ οθόνη**, ανεξάρτητα από το παράθυρο.
+#
+# **703 tests ήταν πράσινα.** Και δεν ήταν ατύχημα: τα tests των **δύο** πραγματικά
+# στενών σημείων (`ProjectLocationsTab.proximity`, `FrontageAddressCreateDialog.proximity`)
+# κάνουν `jest.mock` σε **ΟΛΟΚΛΗΡΟ** το `@/components/shared/addresses/editor`.
+#
+# ⚠️ ΚΑΜΙΑ ΣΤΑΤΙΚΗ ΑΝΑΛΥΣΗ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΤΟ ΔΕΙ, ΚΑΙ ΚΑΝΕΝΑ jest ΟΥΤΕ.
+# Το **jsdom δεν έχει διάταξη**: δεν υπάρχει `clientWidth`, δεν υπάρχει flexbox, δεν
+# υπάρχει `min-content`. Ένα jest test εδώ ελέγχει **ονόματα κλάσεων** — θα περνούσε με
+# σωστές κλάσεις και σπασμένη διάταξη. Ο δηλωμένος λόγος αυτής της πύλης μετριέται μόνο
+# σε **πραγματικό browser**.
+#
+# 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ
+# ------------------------------
+# Material Design 3 / Carbon / GOV.UK λένε **πού** μπαίνει η ένδειξη κατάστασης (μέσα στο
+# πεδίο ή από κάτω — **ποτέ δίπλα**). **Κανένα** design system δεν **επαληθεύει** ότι το
+# πεδίο έμεινε αναγνώσιμο: το αφήνουν στο μάτι του designer. Εδώ το κρατά σύστημα, και η
+# κρίση είναι σε **χαρακτήρες** — η ερώτηση δεν είναι «πόσα pixel;» αλλά **«χωράει αυτό
+# που κρατά το πεδίο;»**.
+#
+# ⚠️ ΚΑΝΕΝΑ `continue-on-error`. Το `coverage-ratchet.yml` κράτησε 11 tests κόκκινα στο
+# main επί έξι commits ακριβώς έτσι (ADR-587 §6.1). Το tier αλλάζει το **μέσο
+# ειδοποίησης**, ποτέ την αυστηρότητα.
+#
+# 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ: η πύλη κρίνει **τη φόρμα**, σε **τέσσερα δηλωμένα πλάτη** που
+# αντιστοιχούν σε πραγματικά σημεία της εφαρμογής. ΔΕΝ σαρώνει κάθε οθόνη της εφαρμογής
+# για στενά πεδία — αυτό θα ήταν άλλη πύλη, με άλλο κόστος.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      # Ο ΚΑΝΟΝΑΣ ΚΑΙ ΤΟ ΔΑΠΕΔΟ — τα δύο αρχεία που ορίζουν «πόσο πρέπει να χωράει».
+      - 'src/components/shared/addresses/editor/address-field-widths.ts'
+      - 'src/components/shared/addresses/editor/components/AddressFieldControlRow.tsx'
+      - 'src/components/shared/addresses/editor/components/address-field-control-row.module.css'
+      # ΟΙ ΚΑΤΑΝΑΛΩΤΕΣ — αν κάποιος ξαναγράψει τη γραμμή με το χέρι, εδώ φαίνεται.
+      - 'src/components/shared/addresses/editor/components/AddressFormFieldRow.tsx'
+      - 'src/components/shared/addresses/editor/AddressEditor.tsx'
+      - 'src/components/shared/addresses/AddressWithHierarchy.tsx'
+      # 🔑 ΤΟ ΠΛΑΤΟΣ ΤΟΥ ΑΝΤΑΓΩΝΙΣΤΗ ΚΑΙ ΤΟ PADDING ΤΟΥ ΠΕΔΙΟΥ ΕΙΝΑΙ **ΕΙΣΟΔΟΙ** ΤΗΣ
+      # ΜΕΤΡΗΣΗΣ, όχι γείτονες: το `INPUT_PADDING.default` τροφοδοτεί το `--address-field-chrome`
+      # και το `Badge` ορίζει πόσο χώρο διεκδικεί το σήμα.
+      - 'src/components/ui/input.tsx'
+      - 'src/components/ui/badge.tsx'
+      # 🔑 ΚΑΙ ΤΟ ΚΕΙΜΕΝΟ ΕΙΝΑΙ ΕΙΣΟΔΟΣ: το ωφέλιμο πλάτος είναι ό,τι ΠΕΡΙΣΣΕΥΕΙ αφού πάρει
+      # τον χώρο του το σήμα. Ένα μακρύτερο «Δεν συμπληρώθηκε» αλλάζει την απάντηση.
+      - 'src/i18n/locales/el/addresses.json'
+      - 'src/i18n/locales/en/addresses.json'
+      # ⚠️ `src/app/**/test-harness/…` ΚΑΙ ΟΧΙ `src/app/test-harness/…`: το harness ζει μέσα
+      # σε route group (`(bare)`), και ένα route group ΕΙΝΑΙ ΦΑΚΕΛΟΣ — δεν φαίνεται στο URL,
+      # φαίνεται όμως στο μονοπάτι. Το ίδιο glob γράφτηκε ήδη λάθος μία φορά στο
+      # `ui-contrast-ratchet.yml` και **δεν πυροδοτούσε ΠΟΤΕ** (ίδιο μάθημα με CHECK 3.52).
+      - 'src/app/**/test-harness/address-field-width/**'
+      # ΟΙ ΔΥΟ ΠΟΡΤΕΣ ΠΟΥ ΚΛΕΙΝΟΥΝ ΤΟ HARNESS: 403 από τον bot-blocker, 404 από τον φρουρό
+      # έκθεσης. Και οι δύο κάνουν την πύλη κόκκινη για λόγο άσχετο με το πλάτος.
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      # Η ΕΚΤΕΛΕΣΗ: το project `address-field-width` (κάδρο + `locale: el-GR`) και η εντολή.
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/address-field-width-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/shared/addresses/editor/address-field-widths.ts'
+      - 'src/components/shared/addresses/editor/components/AddressFieldControlRow.tsx'
+      - 'src/components/shared/addresses/editor/components/address-field-control-row.module.css'
+      - 'src/components/shared/addresses/editor/components/AddressFormFieldRow.tsx'
+      - 'src/components/shared/addresses/editor/AddressEditor.tsx'
+      - 'src/components/shared/addresses/AddressWithHierarchy.tsx'
+      - 'src/components/ui/input.tsx'
+      - 'src/components/ui/badge.tsx'
+      - 'src/i18n/locales/el/addresses.json'
+      - 'src/i18n/locales/en/addresses.json'
+      - 'src/app/**/test-harness/address-field-width/**'
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/address-field-width-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: address-field-width-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  usable-width:
+    name: 📏 CHECK 3.82 — μπορεί το πεδίο να δείξει ό,τι γράφεται; (5 κριτήρια)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # 🔴 ΨΕΥΤΙΚΑ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΕΠΙΤΗΔΕΣ — μετρημένο, όχι εικασία: χωρίς `apiKey` το
+    # `getAuth(app)` πετά ΚΑΤΑ ΤΗΝ ΑΠΟΤΙΜΗΣΗ του module, μέσα από την αλυσίδα
+    # `global-error.tsx → ErrorBoundary → ErrorTracker → enterprise-api-client → lib/firebase`,
+    # και **κάθε** διαδρομή απαντά 500 — ακόμη και μία που δεν αγγίζει Firebase πουθενά.
+    # (Επιβεβαιώθηκε ξανά 2026-09-13 σε git worktree χωρίς `.env.local`: το harness
+    # μεταγλωττίστηκε κανονικά και μετά έσκασε με `auth/invalid-api-key` στο SSR.)
+    #
+    # ⚠️ ΔΕΝ είναι μυστικά και ΔΕΝ πρέπει να γίνουν: η πύλη μετράει **πλάτη σε μια φόρμα** —
+    # δεν διαβάζει, δεν γράφει και δεν αυθεντικοποιεί τίποτα. Το `getAuth` δεν κάνει
+    # δικτυακή κλήση· απαιτεί μόνο να ΥΠΑΡΧΕΙ κλειδί.
+    # ⚠️ ΜΗΝ «λύσεις» μελλοντικό κόκκινο βάζοντας εδώ secrets του παραγωγικού project.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-address-field-width-no-network
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-address-field-width
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-address-field-width.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⚠️ pnpm, ΠΟΤΕ `npm ci`: το repo δεν έχει καθόλου `package-lock.json` και το `engines`
+      # λέει κατά λέξη `"npm": "please-use-pnpm"` — ένα `npm ci` σκάει πριν φτάσει σε έλεγχο.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ ΧΩΡΙΣ `--ignore-scripts`: ο Next dev server πρέπει όντως να σηκωθεί.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Μόνο chromium: το project `address-field-width` είναι Desktop Chrome. **Καμία
+      # σημαία WebGL** — εδώ δεν υπάρχει χάρτης, μόνο DOM.
+      - name: 🌐 Install chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 🚀 Start dev server
+        run: pnpm run dev > /tmp/dev-server.log 2>&1 &
+
+      # 🔑 Η ΑΝΑΜΟΝΗ ΕΙΝΑΙ ΓΙΑ ΤΗ ΣΥΓΚΕΚΡΙΜΕΝΗ ΔΙΑΔΡΟΜΗ, ΟΧΙ ΓΙΑ ΤΗ ΡΙΖΑ: «ο server απαντά»
+      # δεν σημαίνει «η διαδρομή μεταγλωττίστηκε». Και έχει δεύτερο σκοπό: **προθερμαίνει**
+      # τη σελίδα.
+      #
+      # 🔴 ΚΑΙ ΕΙΝΑΙ ΚΡΙΣΙΜΟ ΕΔΩ ΠΕΡΙΣΣΟΤΕΡΟ ΑΠΟ ΑΛΛΟΥ — ΜΕΤΡΗΜΕΝΟ 2026-09-13: η πύλη βγήκε
+      # **μη ντετερμινιστική** ακριβώς λόγω κρύας σελίδας (5/5 σε ζεστή, 4/5 σε κρύα). Το
+      # όργανο διορθώθηκε ώστε να μη δημοσιεύει **ελλιπή** μέτρηση, αλλά η προθέρμανση
+      # παραμένει η **πρώτη** άμυνα.
+      #
+      # ⚠️ ΥΠΟΧΡΕΩΤΙΚΟΣ ΠΡΑΓΜΑΤΙΚΟΣ USER-AGENT: το `src/middleware.ts` μπλοκάρει το
+      # `headlesschrome` με **403 χωρίς σώμα**, χωρίς εξαίρεση για development.
+      - name: ⏳ Wait for the harness route
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
+              http://localhost:3000/test-harness/address-field-width || echo 000)
+            [ "$code" = "200" ] && echo "harness έτοιμο μετά ${i}0s" && exit 0
+            sleep 10
+          done
+          echo "::error::το harness δεν απάντησε 200 σε 600s (τελευταίος κώδικας $code)"
+          tail -80 /tmp/dev-server.log
+          exit 1
+
+      # ⚠️ ΤΟ ΦΙΛΤΡΟ ΕΙΝΑΙ ΣΚΕΤΟ `address-field-width`, ΠΟΤΕ ΠΛΗΡΗΣ ΔΙΑΔΡΟΜΗ: το Playwright
+      # ερμηνεύει τα ορίσματα ως **regex πάνω στο μονοπάτι**, οπότε οι παρενθέσεις του route
+      # group `(bare)` γίνονται ομάδα σύλληψης και το αποτέλεσμα είναι «No tests found» —
+      # δηλαδή **πράσινο που σημαίνει «δεν έτρεξε τίποτα»**.
+      # Η εντολή ζει στο `package.json` (SSoT) και φυλάγεται από το CHECK 3.46 ομάδα Γ.
+      - name: 📏 CHECK 3.82 — η πύλη ωφέλιμου πλάτους
+        # ⚠️ `PLAYWRIGHT_WEB_SERVER_URL` = Η ΔΙΑΔΡΟΜΗ ΠΟΥ ΜΟΛΙΣ ΠΡΟΘΕΡΜΑΝΑΜΕ. Με
+        # `reuseExistingServer: true` το Playwright ρωτά πρώτα «απαντά κάτι εδώ;»· η
+        # προεπιλογή δείχνει στο harness του DXF viewer — διαδρομή που ΔΕΝ αγγίζει αυτή η
+        # πύλη και που, όσο μεταγλωττίζεται κρύα, κάνει τον server μας να μοιάζει ΚΑΤΩ ⇒ το
+        # Playwright θα σήκωνε **δεύτερο** dev server.
+        env:
+          PLAYWRIGHT_WEB_SERVER_URL: http://localhost:3000/test-harness/address-field-width
+        run: pnpm run test:address-field-width
+
+      # Η αναφορά ανεβαίνει ΠΑΝΤΑ: όταν η πύλη κοκκινίσει, η εξήγηση είναι **οι αριθμοί**
+      # (ωφέλιμο πλάτος · χαρακτήρες · ποιο σήμα πήρε τον χώρο) — χωρίς αυτούς η αιτιολόγηση
+      # θα ήταν εικασία, και ο επόμενος θα κυνηγούσε το λάθος πράγμα (όπως κυνηγήθηκε ο
+      # χειριστής εισόδου, που ήταν **σύμπτωμα** της διάταξης).
+      - name: 📤 Upload playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: address-field-width-report
+          path: |
+            playwright-report/
+            reports/junit/playwright.xml
+          if-no-files-found: warn
+
+      # Ο λόγος που σηκώθηκε ο server μπορεί να είναι και ο λόγος που έπεσε η πύλη.
+      - name: 📤 Upload dev server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: address-field-width-dev-server-log
+          path: /tmp/dev-server.log
+          if-no-files-found: warn
