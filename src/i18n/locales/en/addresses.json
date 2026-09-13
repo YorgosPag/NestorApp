@@ -326,6 +326,11 @@
     },
     "positionPending": {
       "message": "This address's position is pending — it will be computed on the next save."
+    },
+    "positionStale": {
+      "message": "The map position was computed for a different address than the one written here.",
+      "resolve": "Compute position from the address",
+      "resolveFailed": "The computation did not complete. Please try again."
     }
   },
   "publicMap": {

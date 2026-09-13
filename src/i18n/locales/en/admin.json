@@ -725,6 +725,57 @@
       "success": "The request was denied.",
       "error": "Failed to deny the request."
     },
+    "invite": {
+      "button": "Invite user",
+      "title": "Invite a user to the workspace",
+      "description": "The link is sent by email and works only for the address you enter. It expires automatically.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@company.com",
+      "roleLabel": "Role after acceptance",
+      "submit": "Send invitation",
+      "error": "The invitation was not created.",
+      "success": "The invitation was created.",
+      "superseded": "The previous invitation to the same address was revoked. The old link no longer works.",
+      "issueSetback": {
+        "roleAboveInviter": "You cannot grant a role higher than your own. Choose a lower role.",
+        "roleNotInvitable": "This role is never granted by invitation.",
+        "unavailable": "The invitation service is unavailable right now. Please notify your system administrator."
+      },
+      "revokeSetback": {
+        "alreadyResolved": "This invitation has already been closed.",
+        "notFound": "The invitation was not found.",
+        "unavailable": "The revocation did not complete. Please try again."
+      },
+      "delivery": {
+        "accepted": "The email provider accepted the message for delivery.",
+        "unaddressable": "The message was not sent: the application's public address is missing.",
+        "failed": "The message was not sent. The invitation exists — send it again."
+      },
+      "state": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "declined": "Declined",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      },
+      "list": {
+        "heading": "Pending invitations",
+        "empty": "No pending invitations.",
+        "email": "Recipient",
+        "role": "Role",
+        "state": "Status",
+        "expires": "Expires",
+        "opened": "Link opened",
+        "openedHint": "An indication, not proof: email clients pre-fetch links.",
+        "openedNever": "Not opened",
+        "actions": "Actions"
+      },
+      "actions": {
+        "revoke": "Revoke",
+        "resend": "Resend",
+        "revokeSuccess": "The invitation was revoked."
+      }
+    },
     "mfa": {
       "enabled": "MFA Enabled",
       "notEnabled": "MFA Not Enabled"
