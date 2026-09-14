@@ -44,8 +44,10 @@ export const errorReportingConfig: ErrorTrackerConfig = {
     'ResizeObserver loop limit exceeded',
     'Non-Error promise rejection captured',
     'Script error.',
-    'Loading chunk',
-    'Loading CSS chunk',
+    // ⛔ ADR-860 §Ε4 — ΤΑ 'Loading chunk' / 'Loading CSS chunk' ΑΦΑΙΡΕΘΗΚΑΝ ΕΠΙΤΗΔΕΣ.
+    // Αγνοούνταν εδώ ⇒ δύο περιστατικά deploy skew (ADR-858 §5.5 · ADR-860) δεν μετρήθηκαν ΠΟΤΕ:
+    // το «0 = κανείς δεν κοίταξε». Πλέον τα καταγράφει ο `chunk-recovery` με την ΕΚΒΑΣΗ τους
+    // (severity `warning` ⇒ κανένα email στον admin). ΜΗΝ τα ξαναπροσθέσεις «για θόρυβο».
 
     // Chrome Extension Errors
     'Extension context invalidated',
