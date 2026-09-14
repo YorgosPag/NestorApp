@@ -184,6 +184,20 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_SHOWCASE_EMAIL_CONFIRMATIONS_COLLECTION || 'showcase_email_confirmations',
 
   /**
+   * 🏆 ADR-841 §7 Α23 — **ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΓΕΜΗ**. Κλειδί: `companyId`.
+   *
+   * 🔴 **ΓΙΑΤΙ ΟΧΙ ΣΤΟ `accounting_settings/{companyId}`** (το προφίλ του οργανισμού, ADR-439):
+   * εκείνο είναι η **δήλωση** και το γράφει ο **πελάτης** (company admin). Η απάντηση της **αρχής**
+   * εκεί θα ήταν αυτο-επαλήθευση — ένα `setDoc` και η βιτρίνα θα έγραφε «επαληθευμένη από ΓΕΜΗ».
+   *
+   * 🔴 **`deny_all` και στις δύο πλευρές**: γράφει μόνο ο διακομιστής, και το έγγραφο κρατά την
+   * **έδρα** από το μητρώο (σε ατομική, συχνά η κατοικία) — δημόσια φεύγει μόνο με επιλογή του
+   * επαγγελματία. Ελαχιστοποίηση **με τύπο**: `types/company-registry.ts` (κανένα `persons`/`afm`).
+   */
+  COMPANY_REGISTRY_RECORDS:
+    process.env.NEXT_PUBLIC_COMPANY_REGISTRY_RECORDS_COLLECTION || 'company_registry_records',
+
+  /**
    * 🎯 ADR-827 §8.7 — **ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ**. IDs `mreq_*`.
    *
    * 🔴 **`read: false` ΚΑΙ `write: false` — και οι ΔΥΟ πλευρές περνούν από τον

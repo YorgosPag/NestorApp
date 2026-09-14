@@ -210,4 +210,14 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
       'ΟΛΟΥ του domain. Οι σύνδεσμοι που έχουν ήδη σταλεί απαντούν «μη διαθέσιμο».',
     consumer: 'src/services/notifications/email-subscription-token.service.ts',
   },
+  {
+    name: 'GEMI_OPENDATA_API_KEY',
+    severity: 'feature',
+    feature: 'Επαλήθευση επωνυμίας από το ΓΕΜΗ (ADR-841 Α23)',
+    consequence:
+      'Ο επαγγελματίας πατά «Επαλήθευση από ΓΕΜΗ» και διαβάζει «η επαλήθευση δεν είναι διαθέσιμη». ' +
+      'Η βιτρίνα δημοσιεύεται κανονικά, αλλά η επωνυμία μένει για πάντα «δηλωμένη»: κανένα σήμα ' +
+      '«επαληθευμένη από ΓΕΜΗ», κανένας διακριτικός τίτλος για επιλογή, και κανείς δεν μαθαίνει γιατί.',
+    consumer: 'src/services/company-registry/gemi-opendata.client.ts',
+  },
 ] as const;

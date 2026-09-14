@@ -72,7 +72,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e86927ca251a92ba4c6c6df9803dbca2a7e10153310c633652ec5cd4a9a62009",
+  "inputsSha256": "2f7aac45c0d9a77e86390d06b17962e8fe36e4ead7f1794a120e56e51154b79f",
   "languages": [
     "el"
   ],
@@ -338,7 +338,7 @@
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
-    "src/config/environment-contract.ts": "0a806d88ae631913ef0bac97e7bd7b0717aba99788f2e7309d4437cd77065551",
+    "src/config/environment-contract.ts": "2d1eefb5f7bccf853895ef0100aff99046958568d9c42aa04035e1ff9a9f79a3",
     "src/config/error-reporting.ts": "d3788019febf32f4a488395c75b897af501fe2a869bb82059d107dbcd076a74d",
     "src/config/firestore-field-constants.ts": "a2ee89e41b95ceee1a22a858557c9cc12c472c65487e20be93d0a8b329b81a58",
     "src/config/gcs-buckets.ts": "d4c16be886703d65a4bf35239a56fd439572bb5d1ca49afbc5fc10274caeb59d",

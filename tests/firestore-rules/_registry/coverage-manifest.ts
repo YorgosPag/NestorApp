@@ -297,6 +297,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-841 §7 Α23 — ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΓΕΜΗ. Ο πειρασμός εδώ είναι ο πιο επικίνδυνος της
+    // οικογένειας: ο ιδιοκτήτης να **γράψει** μόνος του την απάντηση της αρχής, δηλαδή σήμα
+    // «επαληθευμένη από ΓΕΜΗ» χωρίς ερώτηση. Η σουίτα σπέρνει έγγραφο του **ίδιου** μισθωτή.
+    collection: 'company_registry_records',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/company-registry-records.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. **Ίδιο ζεύγος με το `mandate_requests`
     // από πάνω, ΑΝΤΙΣΤΡΟΦΟΣ λόγος** — και η αντιστροφή είναι το πράγμα που πρέπει
     // να διαβαστεί, γιατί αλλιώς μοιάζει με αντιγραφή.
