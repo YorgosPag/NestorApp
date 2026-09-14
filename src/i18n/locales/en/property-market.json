@@ -500,6 +500,10 @@
         "contradicted": "You entered \"{number}\", the map found \"{resolved}\". Check the number.",
         "unconfirmed": "Number \"{number}\" was recorded, but the map data does not confirm it — the position shows the street."
       },
+      "placeRelaxed": {
+        "broader": "Found by postal code {postalCode}. \"{locality}\" is the wider area that contains it.",
+        "dropped": "Found by postal code {postalCode} only — the area \"{locality}\" did not match the address, so the point on the map needs checking."
+      },
       "coverageReach": {
         "title": "Outside your declared areas",
         "named": "It is not among the areas you have declared.",
@@ -812,11 +816,15 @@
       "cardEmailSent": "A link was sent to {email}. It is valid for {hours} hours.",
       "cardEmailSaveFirst": "Save your card to send a confirmation to this address.",
       "cardEmailConfirmHint": "Confirmation only shows visitors that the address receives messages and since when — not that the business is certified.",
+      "cardEmailReturnedOn": "Returned permanently {date} — visitors see it as declared",
+      "cardEmailReturnedResend": "I fixed it — confirm again",
+      "cardEmailReturnedHint": "The recipient's server replied that this mailbox does not exist. If you reactivated it, send a new confirmation; otherwise remove the address from your card.",
       "cardEmailIssue": {
         "without-showcase": "Publish your storefront first.",
         "email-not-on-card": "This address is not saved on your card. Save first.",
         "recipient-quota": "Enough messages were already sent to this address today. Please try tomorrow.",
         "send-failed": "The message was not sent. Please try again shortly.",
+        "mailbox-returned": "This address returned permanently. If you fixed it, choose “I fixed it — confirm again”.",
         "failed": "We could not send a confirmation right now. Please try again shortly."
       },
       "cardLoadFailed": "We could not load your card. Please try again shortly.",
@@ -1144,6 +1152,7 @@
       "listing-not-live": "The listing is withdrawn, so the agency has nothing to see. Restore it first.",
       "listing-already-brokered": "This listing is already assigned to an agency.",
       "agency-absent": "This agency was not found. It may no longer be published.",
+      "agency-closed": "According to the Greek business registry (GEMI), this business is no longer active, so it cannot take on a new mandate. You can approach another agency.",
       "agency-not-brokerage": "This agency does not practise brokerage, so it cannot take on a property. See its storefront for what you can ask it for — or approach a real-estate agency.",
       "request-already-pending": "You have already sent this agency a request for this property, with different terms. Withdraw it first — we do not change a document the agent may already be reading.",
       "request-declined-final": "This agency has given a final refusal for this listing. You can approach another agency.",
@@ -1264,6 +1273,7 @@
       "unavailable": "We could not ask right now. Try again shortly — nothing was lost.",
       "issuesHeading": "Missing or invalid",
       "target-absent": "We could not find it. The link may be old.",
+      "target-closed": "According to the Greek business registry (GEMI), this business is no longer active, so it does not accept new contacts.",
       "target-not-live": "This listing is no longer on the market — it was withdrawn or its mandate expired.",
       "contact-own-target": "This is yours. No need to reach out to yourself.",
       "capacity-full": "You have {capacity} open contacts, which is the maximum. Close one of the open ones to reach out to someone else.",

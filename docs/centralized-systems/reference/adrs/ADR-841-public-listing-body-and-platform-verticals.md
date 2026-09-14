@@ -3412,6 +3412,7 @@ OwnerPropertyMedia.kind  ──►  PublicShelfSource.material  ──►  Publi
 
 | Ημ/νία | Τι |
 |---|---|
+| **2026-09-15** | 🏆 **§7 Α21.20 — Φάση 2, Φέτα Δ: «το γραμματοκιβώτιο δεν υπάρχει πια».** Κλείνει το Α21.18.2 #1. **Ενιαία υποδομή συμβάντων παράδοσης** για την πλατφόρμα: webhook `mailgun/events` (JSON · HMAC · 401/406/200/500 ως πολιτική επανάληψης) → ημερολόγιο `email_delivery_events` + κατάσταση ανά διεύθυνση `email_recipient_standing` σε **μία** συναλλαγή, κλειδί = `sha256(ταυτότητα συμβάντος)` ⇒ επανάληψη = μηδέν εγγραφές. **Κρίνεται μόνο απόδειξη** (`bounce`/`hardfail` + 5.1.x/5.2.1)· 605/`suppress-*`/`old`/5.7.x/5.2.2 καταγράφονται χωρίς να «σκοτώνουν». Hard bounce ⇒ το δημόσιο σήμα φεύγει από **και τα δύο μισά** (νέος κοινός γραφέας `showcase-email-confirmation-store`), **μόνο** αν η επιβεβαίωση είναι **παλαιότερη** της απόδειξης (αυτοθεραπεία — καμία κολλημένη σημαία Salesforce/HubSpot) + ειδοποίηση `properties.cardEmailReturned`. Νέα αποστολή σε διεύθυνση που επέστρεψε ⇒ άρνηση `mailbox-returned`· «Το διόρθωσα» ⇒ `clearMailgunBounce` **πριν** την αποστολή (όχι σιωπηλό 605). Εξαγωγές N.0.2: `verifyMailgunSignature` (ιδιωτικό/αδοκίμαστο στο inbound) · `cardOf`/`writeConfirmation`. Δήλωση `MAILGUN_WEBHOOK_SIGNING_KEY` (health/config +1). 🔴 Η 3.70 έπιασε κανόνα ανιχνευτή χωρίς import. 🔶 3.34 κάρτα 14.104/13.070 — απόφαση Giorgio. |
 | **2026-09-14** | 🏆 **§7 Α21.19 — Φάση 2, Φέτα Γ: «Εισαγωγή από τα στοιχεία της εταιρείας».** Σύγκριση **ανά πεδίο** πάνω στο **πρόχειρο** της κάρτας — ερώτηση **μόνο** όπου υπάρχει πραγματική διαφορά, κρινόμενη μετά την κανονικοποίηση από τους **ίδιους** κριτές με τον γραφέα (Salesforce Merge χωρίς τον θόρυβο · HubSpot χωρίς την απώλεια). Κανάλια **προστίθενται** (Apple)· διεύθυνση από **ΓΕΜΗ** (Α23) πριν από το προφίλ (Stripe)· ⛔ ποτέ τόπος/όνομα/διακόπτης οδού — ο τόπος με «Εντοπισμό στον χάρτη» και κλικ ανθρώπου. Προέλευση στο πρόχειρο που σβήνει με την επεξεργασία· **ζωντανή μέτρηση διαφορών** στο κουμπί χωρίς καμία αποθήκευση· αναίρεση μόνο όσο δεν ακολούθησε επεξεργασία. Νέα: `readCompanyContactDeclaration` (ίδιος αναγνώστης ADR-439, ελαχιστοποίηση με τύπο) · `GET /api/agency-profile/card/import-source` · `lib/agency/showcase-card-import` · `showcase-card-import-source`. Jest 82/82. 🔴 Εξάρτηση: commit **μετά** την Α23. |
 | **2026-09-14** | 🏆 **§7 Α21.18 — Φάση 2, Φέτα Β: «αυτό το γραμματοκιβώτιο λαμβάνει».** Επιβεβαίωση email της κάρτας με υπογεγραμμένο σύνδεσμο (72ω, μία χρήση, 5ος καταναλωτής `signed-token`). **`GET` δείχνει / `POST` αποφασίζει** — ανοσία στους σαρωτές αλληλογραφίας που καίνε συνδέσμους. «Δεν το ζήτησα εγώ» στο ίδιο email. Δημόσιο σήμα **με ημερομηνία** («Email επιβεβαιωμένο · Σεπ 2026»), ήπια φθορά 12 μηνών, **καμία** διεύθυνση στο δημόσιο μισό. Αλλαγή email ⇒ το σήμα χάνεται **στην ίδια συναλλαγή** (`formCard` με εγχεόμενες επιβεβαιώσεις). Νέα συλλογή `showcase_email_confirmations` (`deny_all`, πρόθεμα `secf`). 🔴 N.0.2: το όριο ανά παραλήπτη **εξήχθη** από το `auth-action-mail` σε `lib/middleware/recipient-quota.ts`. Νέο SSoT `formatMonthYear`. Jest 94/95 σουίτες (1 κόκκινο εκτός φέτας, `auth-action-mail` Γ1 — ADR-857). Όρια: hard bounce · καθαρισμός αιτημάτων. |
 | **2026-09-14** | 🏆 **§7 Α22 — ΕΝΑ ΟΝΟΜΑ ΓΡΑΦΕΙΟΥ, ΜΙΑ ΔΙΕΥΘΥΝΣΗ ΒΙΤΡΙΝΑΣ.** Στιγμιότυπο Giorgio: η κάρτα έλεγε *«Από γραφείο: ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α.Ε.»* (`companies.name`) και οδηγούσε σε βιτρίνα *«Δοκιμαστικό Γραφείο Ο1-Ο9»* (`agency_profiles.displayName`) — ίδιο `companyId`, **δύο πηγές**, και το σχόλιο του τύπου έλεγε ψευδώς «ίδια πηγή». Θεραπεία (Rightmove/Zoopla/RESO `OfficeKey`→`ListOfficeName`): ο **ένας** επιλυτής `readPublicAgencyIdentity` ρωτά **πρώτα τη βιτρίνα**, μετά την εταιρεία· βιτρίνα που δεν διαβάζεται ⇒ `AgencyIdentityUnavailableError` ⇒ `failed`, **ποτέ** μαντεψιά. Ο γραφέας επιστρέφει `publicNameChanged` (κρίση μέσα στη συναλλαγή)· δημοσίευση με αλλαγμένο όνομα, απόσυρση και ανάκληση (Π2) **κατέχουν** την ανανέωση των αγγελιών μέσω του νέου SSoT `listings/agency-name-refresh` (και η μετονομασία εταιρείας μεταφέρθηκε εκεί — N.0.2). `/pro/comp_*` ⇒ **308** ⇒ `/pro/<ψευδώνυμο>` μόνο όταν η αυθεντία επιβεβαιώνει ότι το ψευδώνυμο ανήκει στο **ίδιο** γραφείο (`lib/agency/showcase-canonical-segment`, ADR-787 §5.3 ζ). Boy Scout: `FakeTransaction.flush` περιμένει τις γραφές. Απορρίφθηκαν: ψευδώνυμο μέσα στο `PublicListing`, read-through join ανά κάρτα, αυτόματη εμφάνιση νομικής επωνυμίας. |
@@ -8183,7 +8184,7 @@ labels (`agency-directory-labels`, `agency-showcase-labels`) · `property-market
 
 ##### Α21.18.2 🔶 Δηλωμένα όρια
 
-1. **Hard bounce** (Mailgun `permanent_fail`) **δεν** ακυρώνει ακόμη το σήμα — υπάρχει μόνο το `webhooks/mailgun/inbound`. Επόμενη φέτα (απόφαση Giorgio).
+1. ✅ **ΚΛΕΙΣΤΟ (2026-09-15, Α21.20)** — ~~**Hard bounce** (Mailgun `permanent_fail`) **δεν** ακυρώνει ακόμη το σήμα — υπάρχει μόνο το `webhooks/mailgun/inbound`.~~ Webhook συμβάντων παράδοσης + ημερολόγιο + ακύρωση με αυτοθεραπεία.
 2. **Καθαρισμός αιτημάτων**: τα αιτήματα `sent` που έληξαν μένουν στη συλλογή (άβλαβή — η λήξη κρίνεται τη στιγμή της ερώτησης). Cron τύπου `first-contact-invitation-expiry` αν μετρηθεί όγκος.
 3. 🔴 **Εύρημα ΕΚΤΟΣ φέτας**: το `/contact/[token]` (ADR-844) εξαργυρώνει σε `GET` — εκτεθειμένο στους σαρωτές. Καταγράφηκε στο `pending-ratchet-work.md`.
 
@@ -8269,6 +8270,95 @@ labels (`agency-directory-labels`, `agency-showcase-labels`) · `property-market
 - ⚠️ **Όχι επαληθευμένα**: tsc (N.17) · ζωντανή οθόνη σε φυλλομετρητή.
 - 🔴 **Εξάρτηση**: το `showcase-card-import-source` εισάγει το `readRegistryCheck` της **Α23** (ΓΕΜΗ) ⇒ η Α21.19 **δεν** μπαίνει σε commit πριν από την Α23.
 - 🔶 **Εύρημα ΕΚΤΟΣ φέτας (N.0.2)**: η αφαίρεση τόνων είναι γραμμένη **τρεις** φορές (`utils/greek-text` · `ai-pipeline/greek-nlp` · `accounting/matching-scoring`) — 10 αρχεία, 2 τομείς ⇒ `pending-ratchet-work.md`.
+
+#### Α21.20 🏆 **«ΤΟ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟ ΔΕΝ ΥΠΑΡΧΕΙ ΠΙΑ» — ΤΟ HARD BOUNCE ΑΚΥΡΩΝΕΙ ΤΟ ΣΗΜΑ + ΕΝΙΑΙΑ ΥΠΟΔΟΜΗ ΣΥΜΒΑΝΤΩΝ ΠΑΡΑΔΟΣΗΣ** *(2026-09-15, Φάση 2 — Φέτα Δ · κλείνει το Α21.18.2 #1)*
+
+##### Α21.20.1 Το πρόβλημα
+
+Η Α21.18 δίνει δημόσιο «Email επιβεβαιωμένο · Σεπ 2026». Αν το γραμματοκιβώτιο καταργηθεί, το σήμα λέει «λαμβάνει» σε κάθε
+επισκέπτη — ψέμα που απαγορεύει η **Α9.2**, και «επαρκής ένδειξη» ανακρίβειας που το **DSA άρθ. 30** θέλει να διορθωθεί **χωρίς
+καθυστέρηση**. Μετρημένο (grep): webhook Mailgun **μόνο** για εισερχόμενα · **κανένα** συμβάν παράδοσης · **καμία** κατάσταση ανά
+διεύθυνση · **καμία** συσχέτιση αποστολής→οντότητας (κανένα `v:`) · το «suppression» του `email-send-gate`/`email-delivery-window`
+σημαίνει **προτιμήσεις/ώρες**, όχι bounce.
+
+##### Α21.20.2 📚 Έρευνα — τι κάνουν οι μεγάλοι
+
+- **Mailgun**: HMAC-SHA256 με **ξεχωριστό** signing key πάνω στο `timestamp+token` · την προστασία επανάληψης την αφήνει σε **μας** ·
+  ~8 επαναλήψεις σε 8ω (200 ack · 406 «μην ξαναστείλεις») · hard bounce ⇒ **αυτόματη** λίστα bounces του domain και κάθε επόμενη
+  αποστολή βγαίνει `failed` με **605** χωρίς να δοκιμαστεί ([securing](https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/securing-webhooks) ·
+  [retries](https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/webhook-retries) · [605](https://help.mailgun.com/hc/en-us/articles/360012152213) ·
+  [payloads](https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/webhook-payloads)). `reason`: `bounce`/`hardfail` = παραλήπτης ·
+  `suppress-*` = δεν δοκίμασε · `old` = εξάντληση 8ω · `espblock` = πολιτική.
+- **RFC 3463**: `5.1.x` άγνωστος παραλήπτης/domain · `5.2.1` απενεργοποιημένο · `5.2.2` **γεμάτο (ζει)** · `5.7.x` πολιτική.
+- **Postmark**: `HardBounce`/`SpamComplaint` απενεργοποιούν, επανενεργοποίηση με **ρητή** κλήση ([bounces](https://postmarkapp.com/support/article/what-are-bounces-and-spam-complaints)).
+- **HubSpot**: bounce δεμένο με τη **διεύθυνση**· η παλιά μένει κολλημένη μέχρι το Support. **Salesforce**: `IsEmailBounced` φεύγει **μόνο
+  χειροκίνητα** («Save and Remove Bounce Alert»). **GitHub**: bounce ⇒ **αυτόματη ακύρωση** επαλήθευσης. **LinkedIn**: ζητά νέα επιβεβαίωση.
+- **Complaint** αποδεικνύει ότι το γραμματοκιβώτιο **ζει** (κάποιος το άνοιξε). **Soft bounce**: κανένας κοινός αριθμός (Mailchimp 7 · Zoho 3).
+
+##### Α21.20.3 ✅ Αποφάσεις (Giorgio: «όπως οι μεγάλοι, χωρίς εκπτώσεις») — και πού τους ξεπερνάμε
+
+| # | Απόφαση | Μεγάλοι | Εδώ |
+|---|---|---|---|
+| 1 | **Υποδομή πλατφόρμας**, λεξιλόγιο ανεξάρτητο παρόχου· προσαρμογέας Mailgun· πρώτος καταναλωτής η κάρτα | Postmark/SendGrid: ένα ημερολόγιο | ίδιο — επόμενος καταναλωτής = **μία γραμμή** στο `mailbox-absent-consumers` |
+| 2 | Κρίνεται **μόνο απόδειξη** `mailbox-absent` | πολλοί διαβάζουν κάθε `failed` ως νεκρό | 605/`suppress-*` · `old` · 5.7.x · 5.2.2 **καταγράφονται, δεν σκοτώνουν** |
+| 3 | Hard bounce ⇒ σήμα φεύγει δημόσια (**«Δήλωση»**, ποτέ δημόσιο «απέτυχε») + ιδιωτικό «Επέστρεψε οριστικά» + ειδοποίηση | GitHub ακυρώνει · Salesforce σημαία | **αυτοθεραπεία**: φεύγει **μόνο** επιβεβαίωση **παλαιότερη** της απόδειξης — νέα επιβεβαίωση ή νεότερη παράδοση την ακυρώνει, **κανένα** χειροκίνητο «καθάρισμα» |
+| 4 | Complaint ⇒ **τίποτα** στο σήμα · soft/`old` ⇒ μόνο καταγραφή | — | ο Mailgun ήδη ξαναδοκιμάζει 8ω |
+| 5 | Νέα αποστολή σε διεύθυνση που επέστρεψε ⇒ άρνηση `mailbox-returned`· «Το διόρθωσα» ⇒ **καθάρισμα λίστας bounces ΠΡΙΝ** την αποστολή | Postmark: ρητή επανενεργοποίηση | κανένα ψεύτικο «στάλθηκε» (605 σιωπηλό)· η άρνηση ελέγχεται **πριν** την ποσόστωση — δεν τρώει όριο |
+| 6 | Ιδεμποτένεια **δομική**: κλειδί εγγράφου = `sha256(ταυτότητα συμβάντος)` σε συναλλαγή | «dedupe με cache» | επανάληψη = **μηδέν** εγγραφές· οι καταναλωτές ξανατρέχουν όσο το συμβάν **είναι η ισχύουσα απόδειξη** (`isStandingEvidence`), άρα 5xx ⇒ επανάληψη ⇒ θεραπεία |
+
+##### Α21.20.4 SSoT audit πριν τον κώδικα — τι επαναχρησιμοποιήθηκε, τι γεννήθηκε
+
+| Υπήρχε | Χρήση |
+|---|---|
+| 🔴 `verifyMailgunSignature` **ιδιωτικό, αδοκίμαστο** μέσα στο `webhooks/mailgun/inbound` | **Εξήχθη (N.0.2)** → `lib/communications/mailgun-webhook/mailgun-signature.ts` (πρότυπο `meta-signature`, ADR-586)· inbound + events το μοιράζονται· 6 άγκυρες |
+| 🔴 `MAILGUN_WEBHOOK_SIGNING_KEY` διαβαζόταν **χωρίς δήλωση** | `environment-contract` + consumer το SSoT ⇒ **health/config declared +1** |
+| `showcase-email-confirmation-decision` (`cardOf`/`writeConfirmation` ιδιωτικά) | **Εξήχθησαν (N.0.2/N.18)** → `showcase-email-confirmation-store.ts`· απόφαση **και** ακύρωση γράφουν τα δύο μισά από **έναν** γραφέα |
+| `showcase-email-confirmation-rules` | **επέκταση**: `withoutConfirmationBefore` · `returnStands` |
+| `sendReplyViaMailgun` · `PROVIDER_TIMEOUT_MS` | **επέκταση**: `correlation` → `v:nestor-purpose/ref` · `clearMailgunBounce` (ίδιο timeout, 404 = `not-listed`) |
+| `recipient-quota` (sha256) · `normaliseChannelEmail` · `FakeFirestore` | ίδιο ιδίωμα κλειδιού · ίδια κανονικοποίηση · οι άγκυρες |
+| `enterprise-id-composite-keys` | **νέα** `emailDeliveryEventKey` · `recipientStandingKey` (prefixes `edev` · `erst`) — digest από τον καλούντα, το module μένει χωρίς `crypto` (client bundles) |
+| `dispatchNotification` · `EVENT_CATEGORY_MAP` · `notification-preference-rows` · `notification-destination-rules` | **νέο** `properties.cardEmailReturned` (προεπιλογή `true`, WARNING, γραμμή προτίμησης, κανόνας ανιχνευτή απόκλισης) |
+| `withWebhookRateLimit` (πρόθεμα `/api/communications/webhooks` ήδη `WEBHOOK`) | το νέο route το κληρονομεί (3.78) |
+
+**Νέα αρχεία**: `types/email-delivery.ts` · `lib/communications/mailgun-webhook/mailgun-signature.ts` · `lib/communications/email-delivery/{mailgun-event-read,recipient-standing}.ts` ·
+`server/comms/email-delivery/{email-delivery-ledger,mailbox-absent-consumers}.ts` · `app/api/communications/webhooks/mailgun/events/route.ts` ·
+`services/mandate/{showcase-email-confirmation-store,showcase-email-return.service}.ts` · rules suites `email-delivery-events` · `email-recipient-standing` + `seed-helpers-email-delivery`.
+**Συλλογές**: `email_delivery_events` (αναλλοίωτο, `expireAt` 400 ημ.) · `email_recipient_standing` — `deny_all` και οι δύο.
+
+##### Α21.20.5 Ροή
+
+Mailgun → `POST /api/communications/webhooks/mailgun/events` (JSON · υπογραφή ⇒ 401 · μη-JSON ⇒ 406 · άσχετο ⇒ 200) → `readMailgunEvent`
+(πίνακας απόδειξης) → `recordEmailDeliveryEvent` (**μία συναλλαγή**: συμβάν + `foldStanding`, εκτός σειράς ασφαλές) → αν το συμβάν
+**είναι η ισχύουσα απόδειξη** ⇒ `announceMailboxAbsent` → `revokeShowcaseEmailConfirmations`: αιτήματα `confirmed` της διεύθυνσης
+(δηλωμένη εξαίρεση `tenant-scope-exempt` — γεγονός του κόσμου, όχι μισθωτή) → **ανά κατάστημα μία συναλλαγή** μέσω του store (ιδιωτικό +
+δημόσιο από την ίδια λίστα) → **μετά** ειδοποίηση στον `requestedByUid` (`eventId` ανά απόδειξη). Βλάβη ⇒ 500 ⇒ ο Mailgun ξαναστέλνει.
+Οθόνη: `GET/PUT /api/agency-profile/card` επιστρέφουν `emailReturns` **παραγόμενο** από το ημερολόγιο (`null` = δεν μάθαμε) ⇒
+«Επέστρεψε οριστικά {ημερομηνία}» + «Το διόρθωσα — νέα επιβεβαίωση» (`acknowledgeReturned`).
+
+##### Α21.20.6 🧪 Άγκυρες και επαλήθευση
+
+- **Νέες άγκυρες**: υπογραφή **Υ1-Υ6** · πίνακας απόδειξης **Π1-Π7** (🔴 605 · `old` · 5.7.1 · 5.2.2 ≠ νεκρό) + ανάγνωση **Α1-Α4** · κατάσταση
+  **Σ1-Σ6** (εκτός σειράς · αυτοθεραπεία · ιδεμποτένεια) · ημερολόγιο σε πλαστό Firestore **Η1-Η4** (🔴 επανάληψη = μηδέν εγγραφές) · έκδοση
+  **Ε5-Ε7** (άρνηση · καθάρισμα **πριν** την αποστολή · βλάβη καθαρίσματος ⇒ κανένα email) · ακύρωση **Ρ1-Ρ5** (και τα δύο μισά · ιδεμποτένεια ·
+  🏆 αυτοθεραπεία · άλλη διεύθυνση · η οθόνη από το ημερολόγιο) · ανιχνευτής **Ε4** + Λ3 · 2 rules suites.
+- **Jest**: σουίτες διακομιστή **28/29 — 344/346** (τα 2 κόκκινα: `email-digest` Η1/Η3, **ΕΚΤΟΣ φέτας** — δεν εισάγει κανένα αρχείο της φέτας,
+  καμία τοπική αλλαγή· δεν επαληθεύτηκε σε καθαρό HEAD) · UI/agency **58/58 — 733/733**.
+- **Πύλες**: 3.28 `jscpd:diff` (33 αρχεία) ✅ · 3.8 ✅ · 3.71 ✅ · 3.16 (18/18) ✅ · 3.35 ✅ · 3.78 ✅ · 3.47 ✅ · 3.54 ✅ · 3.15 ✅ · 3.83 ✅ ·
+  🔴 **3.70 έπιασε δικό μου λάθος**: ο κανόνας του ανιχνευτή χωρίς `import` — το jest ήταν πράσινο γιατί η Λ3 **μετρούσε** κανόνες, δεν τους
+  **εκτελούσε**· θεραπεία: import **και** άγκυρα Ε4 που εκτελεί τον κανόνα.
+- 🔶 **3.34**: slice κάρτας **14.104 / 13.070** (+1.034) — **απόφαση Giorgio εκκρεμεί**, όπως και `generate:i18n-types` (αλλιώς μπλοκάρει η 3.33).
+- ⚠️ **Όχι επαληθευμένα**: tsc (N.17) · ζωντανό webhook · οθόνη σε φυλλομετρητή · rules suites σε εξομοιωτή (CI).
+
+##### Α21.20.7 🔶 Δηλωμένα όρια
+
+1. **Ρύθμιση Mailgun (Giorgio)**: Sending → Webhooks `permanent_fail` · `temporary_fail` · `complained` · `delivered` · `unsubscribed` →
+   `/api/communications/webhooks/mailgun/events`· το API key πρέπει να έχει δικαίωμα **bounces** (αλλιώς `clearMailgunBounce` ⇒ `failed`).
+2. **TTL**: το `expireAt` χρειάζεται πολιτική TTL στο Firestore (κονσόλα) — χωρίς αυτήν τα συμβάντα απλώς μένουν.
+3. **Resend** δεν έχει webhook ακόμη: η κάρτα στέλνει **μόνο** Mailgun, αλλά η αλυσίδα `EmailAdapter` βάζει Resend πρώτο ⇒ bounces εκεί αόρατα.
+4. **Επιβολή στην αποστολή** για τους ~19 καταναλωτές του `sendReplyViaMailgun`: όχι ακόμη (ο Mailgun ήδη μπλοκάρει με 605).
+5. **Α21.18.2 #2 (καθαρισμός αιτημάτων)**: ⛔ **ΠΟΤΕ** διαγραφή αιτημάτων `confirmed` — είναι το ευρετήριο της ακύρωσης.
+6. Κατάρρευση **ανάμεσα** στη συναλλαγή και στην ειδοποίηση ⇒ χαμένη ειδοποίηση (η επανάληψη βρίσκει «ήδη ακυρωμένο»)· η οθόνη δείχνει
+   ούτως ή άλλως «Επέστρεψε» από το ημερολόγιο. Επιλογή: η **αλήθεια** του δημόσιου σήματος προηγείται της ειδοποίησης (N.7.2 #6).
 
 
 #### Α22 🏆 **ΕΝΑ ΟΝΟΜΑ ΓΡΑΦΕΙΟΥ, ΜΙΑ ΔΙΕΥΘΥΝΣΗ ΒΙΤΡΙΝΑΣ** *(2026-09-14, ερώτημα Giorgio με στιγμιότυπο)*

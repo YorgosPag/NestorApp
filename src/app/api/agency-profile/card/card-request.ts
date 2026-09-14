@@ -18,7 +18,7 @@ import type { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import type { VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
-import type { OwnedShowcaseLocation, ShowcaseCardWire } from '@/types/showcase-card';
+import type { OwnedShowcaseLocation, ShowcaseCardWire, ShowcaseEmailReturn } from '@/types/showcase-card';
 import { locatePlace, PLACE_ERROR_STATUS, type PlaceError } from '../showcase-request';
 
 const intervalSchema = z.object({ opens: z.string().max(5), closes: z.string().max(5) });
@@ -54,7 +54,12 @@ export const cardSchema: z.ZodType<ShowcaseCardWire> = z.object({
 });
 
 export type ShowcaseCardResponse =
-  | { readonly locations: readonly OwnedShowcaseLocation[]; readonly website: string | null }
+  | {
+      readonly locations: readonly OwnedShowcaseLocation[];
+      readonly website: string | null;
+      /** Α21.20 — email που επέστρεψαν οριστικά· `null` = δεν μάθαμε (ποτέ «κανένα»). */
+      readonly emailReturns: readonly ShowcaseEmailReturn[] | null;
+    }
   | { readonly error: 'INVALID_CARD'; readonly reason: AgencyProfileRejection }
   /** Ο τόπος **ποιου** καταστήματος — η φόρμα έχει πολλά, και «κάποιος τόπος» είναι γρίφος. */
   | { readonly error: PlaceError; readonly locationIndex: number }

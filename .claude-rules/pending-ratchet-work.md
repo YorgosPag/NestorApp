@@ -2,6 +2,14 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **15/09 — ΟΡΦΑΝΑ ΚΛΕΙΔΙΑ `addresses.geocoding.attempts.*` (εύρημα ADR-332 D28)**
+
+  **Μετρημένο** (grep): το `VARIANT_I18N_KEYS` (`app/api/geocoding/geocoding-nominatim-client.ts`) γράφει **9** κλειδιά
+  στο `GeocodingAttempt.i18nKey` — **κανένα** δεν υπάρχει στα `locales/{el,en}/addresses.json` και **καμία** οθόνη δεν
+  αποδίδει το `attemptsLog`. Δηλαδή ή νεκρό συμβόλαιο ή οθόνη που δεν γράφτηκε ποτέ (ADR-332 D4 «activity log»).
+  **Θεραπεία**: απόφαση Giorgio — (α) αποδίδεται στο activity log του editor ⇒ κλειδιά el+en, ή (β) αφαιρείται το
+  `i18nKey` από το συμβόλαιο. Όχι μόνο προσθήκη κλειδιών: κλειδί χωρίς αναγνώστη είναι το ίδιο «0 = κανείς δεν κοίταξε».
+
 - 🔴 **14/09 — `/contact/[token]` ΕΞΑΡΓΥΡΩΝΕΙ ΣΕ `GET` ⇒ ΕΚΤΕΘΕΙΜΕΝΟ ΣΕ ΠΡΟΦΟΡΤΩΣΗ ΣΑΡΩΤΩΝ (ADR-844 · εύρημα audit ADR-841 Α21.18)**
 
   `app/(auth)/contact/[token]/page.tsx` καλεί `redeemGuestContactByLink` **κατά την απόδοση** — μία χρήση, μέσα σε `GET`.

@@ -38,7 +38,7 @@ async function readHandler(
   const read = await readOwnedShowcaseCard(getAdminFirestore(), ctx.companyId);
   switch (read.kind) {
     case 'owned':
-      return NextResponse.json({ locations: read.locations, website: read.website });
+      return NextResponse.json({ locations: read.locations, website: read.website, emailReturns: read.emailReturns });
     case 'without-showcase':
       return NextResponse.json({ error: 'SHOWCASE_NOT_PUBLISHED' } as const, { status: 404 });
     // 🔴 **Δεν μάθαμε** — ποτέ «δεν έχεις κάρτα»: η οθόνη θα πρότεινε να τη γράψεις από την αρχή.
@@ -67,7 +67,7 @@ async function saveHandler(
       //    Ιδεμποτής ανανέωση: γράφει μόνο αν άλλαξε κάτι· `after` ώστε η κάρτα να απαντά αμέσως.
       const companyId = ctx.companyId;
       after(() => reconcileShowcaseLegalIdentity(adminDb, companyId));
-      return NextResponse.json({ locations: result.locations, website: result.website });
+      return NextResponse.json({ locations: result.locations, website: result.website, emailReturns: result.emailReturns });
     }
     case 'rejected':
       return NextResponse.json({ error: 'INVALID_CARD', reason: result.reason } as const, { status: 422 });
