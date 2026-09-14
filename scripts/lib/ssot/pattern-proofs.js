@@ -24,6 +24,40 @@
 'use strict';
 
 module.exports = {
+  // ADR-857 Φ9 — «ΠΟΙΟΣ ΥΠΟΓΡΑΦΕΙ ΑΥΤΟ ΤΟ ΜΗΝΥΜΑ;» απαντιέται σε ΕΝΑ σημείο.
+  //
+  // 🔴 Η ΑΠΟΔΕΙΞΗ ΕΡΧΕΤΑΙ ΜΑΖΙ ΜΕ ΤΑ PATTERNS, ΣΤΗΝ ΙΔΙΑ ΔΕΣΜΕΥΣΗ — και ο λόγος είναι
+  // μετρημένος, όχι τελετουργικός: τα επτά patterns εκτελέστηκαν πρώτα σε **σκέτη
+  // `RegExp`** και βγήκαν «7/7 πιάνουν, 0 ψευδώς θετικά». Αυτό όμως είναι η **δική μου**
+  // μηχανή — ακριβώς η διάκριση που κατέρρευσε στο ADR-749, όπου το golden test επικύρωνε
+  // με `grep -E`, **διάλεκτο που κανείς δεν εκτελεί**. Εδώ κρίνει η μηχανή της πύλης.
+  //
+  // ⚠️ ΤΟ ΕΒΔΟΜΟ ΕΙΝΑΙ ΤΟ ΜΗ-ΠΡΟΦΑΝΕΣ: `${…} <${…}>` είναι η **χειρόγραφη σύνθεση** της
+  // γραμμής `From:`. Μετρήθηκε ότι εμφανίζεται πλέον σε **ΕΝΑ** σημείο σε ολόκληρο το
+  // `src/` — τη ρίζα. Κάθε άλλη είναι δεύτερη πηγή **ΚΑΙ** παρακάμπτει τον καθαρισμό
+  // έγχυσης CRLF + τα εισαγωγικά του RFC 5322 §3.2.3 — και το `senderName` έρχεται από
+  // **φόρμα χρήστη**. Οι παγίδες του `shouldSkip` είναι γι' αυτό γεμάτες interpolation
+  // (`href="${url}"`, `${origin}/api/…`, `mailto:${addr}`) που **δεν** πρέπει να πιάνονται.
+  'sender-identity': {
+    shouldMatch: `// Scanner must catch ANY sender decision taken outside the root:
+const name = process.env.FROM_NAME || 'Fallback Name';
+const email = process.env.FROM_EMAIL ?? 'info@example.gr';
+const mg = process.env.MAILGUN_FROM_EMAIL?.trim();
+const domain = process.env.COMPANY_EMAIL_DOMAIN || 'example.gr';
+const prefix = process.env.EMAIL_PREFIX || 'noreply';
+const fallbackDomain = process.env.FALLBACK_EMAIL_DOMAIN || 'company.com';
+const fromHeader = \`\${senderName} <\${fromEmail}>\`;`,
+    shouldSkip: `// Scanner must pass SSoT import + usage, and NOT trip on lookalike interpolation:
+import { resolveSenderHeader, resolveSenderIdentity } from '@/services/company/sender-identity';
+const from = resolveSenderHeader(senderName);
+const identity = resolveSenderIdentity({ name: tenantName, address: tenantAddress });
+formData.append('from', job.from || resolveSenderHeader());
+const link = \`<a href="\${portalUrl}">\${label}</a>\`;
+const path = \`\${origin}/api/notifications/email/subscription\`;
+const mailto = \`mailto:\${identity.address}\`;
+const senderSource = identity.source === 'platform' ? 'fallback' : identity.source;`,
+  },
+
   // ADR-832 — «ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;» απαντιέται σε ΕΝΑ σημείο.
   //
   // 🔴 Το σήμα είναι ο **ορισμός συνάρτησης**, όχι η κλήση, και δοκιμάστηκε το αντίθετο:

@@ -201,6 +201,8 @@
     "test:domain-vocabulary": "jest scripts/__tests__/domain-vocabulary.test.js",
     "product-identity:report": "node scripts/check-product-identity.js",
     "test:product-identity": "jest scripts/__tests__/product-identity.test.js",
+    "sender-authority:report": "node scripts/check-sender-authority.js",
+    "test:sender-authority": "jest scripts/__tests__/sender-authority.test.js",
     "listing-read-boundary:report": "node scripts/check-public-listing-read-boundary.js",
     "test:listing-read-boundary": "jest src/lib/listings/__tests__/public-listing-schema.test.ts scripts/__tests__/public-listing-read-boundary.test.js",
     "unbound:report": "node scripts/check-unbound-identifiers.js --report",

@@ -5605,6 +5605,25 @@
         "src/types/owner-property-mandate.ts",
         "src/types/stay-booking.ts"
       ]
+    },
+    "sender-identity": {
+      "addedDate": "2026-09-13",
+      "ssotFile": "src/services/company/sender-identity.ts",
+      "description": "ADR-857 Φ9 — «ΠΟΙΟΣ ΥΠΟΓΡΑΦΕΙ ΑΥΤΟ ΤΟ ΜΗΝΥΜΑ;» απαντιέται σε ΕΝΑ σημείο: `resolveSenderIdentity` (το ζεύγος όνομα+διεύθυνση με ονομασμένη προέλευση) και `senderHeader`/`resolveSenderHeader` (η γραμμή `From:` κατά RFC 5322). 🔴 ΤΟ ΕΥΡΗΜΑ, ΜΕΤΡΗΜΕΝΟ 2026-09-13: ήταν 6 ΟΙΚΟΓΕΝΕΙΕΣ · 9 ΑΡΧΕΙΑ · 8 ΕΦΕΔΡΙΚΕΣ ΤΙΜΕΣ — ενώ το ADR-857 §7 #11 έγραφε «τρεις αναγνώσεις» και το handoff «3/6/3». ΔΥΟ οικογένειες δεν υπήρχαν σε ΚΑΜΙΑ απογραφή: (α) σκληρή `'noreply@nestorconstruct.gr'` στο `server/comms/orchestrator.ts`, γραμμένη στο πεδίο `from` ΚΑΘΕ ουραγμένου εγγράφου — δηλαδή ΠΑΓΩΜΕΝΗ μέσα σε ήδη γραμμένα μηνύματα, ίδιο πρόβλημα «ουράς» με το `KNOWN_PAST_SPELLINGS`· (β) `onboarding-reminder.job.ts` χωρίς κανένα `from`, εκτεθειμένο στην 4-βάθμια εφεδρεία του `EmailAdapter` της οποίας το τελευταίο σκαλί ήταν `noreply@company.com` — ΨΕΥΤΙΚΟ DOMAIN. ⛔ ΚΑΙ Η ΠΥΛΗ 3.81 ΗΤΑΝ ΔΟΜΙΚΑ ΤΥΦΛΗ: συγκρίνει πεζά-κεφαλαία πάνω στο κλειστό σύνολο γραφών, και το `nestorconstruct.gr` σε πεζά δεν ταιριάζει σε καμία ⇒ οι διευθύνσεις πέρασαν ολόκληρο τον μηδενισμό της Φ8α αόρατες. ΑΠΑΓΟΡΕΥΕΤΑΙ: (α) ανάγνωση ΟΠΟΙΑΣΔΗΠΟΤΕ μεταβλητής περιβάλλοντος αποστολέα εκτός της ρίζας — `FROM_NAME`/`FROM_EMAIL` διαβάζονταν σε ΤΡΙΑ αρχεία ανεξάρτητα, και τα `MAILGUN_FROM_EMAIL`/`COMPANY_EMAIL_DOMAIN`/`EMAIL_PREFIX`/`FALLBACK_EMAIL_DOMAIN` σε άλλα δύο· (β) 🔴 ΧΕΙΡΟΓΡΑΦΗ ΣΥΝΘΕΣΗ `${όνομα} <${διεύθυνση}>` — μετρήθηκε ότι εμφανίζεται πλέον σε ΕΝΑ σημείο (η ίδια η ρίζα, γρ. 208)· κάθε άλλη είναι δεύτερη πηγή ΚΑΙ παρακάμπτει τον καθαρισμό έγχυσης CRLF + τα εισαγωγικά του RFC 5322 §3.2.3. ⚠️ ΤΟ `senderName` ΕΡΧΕΤΑΙ ΑΠΟ ΦΟΡΜΑ ΧΡΗΣΤΗ (`email.service.ts`) και έμπαινε ΩΜΟ στη γραμμή `From:`: ο υπάρχων φρουρός `safeHeaderEntries` φυλάει ΜΟΝΟ τις custom κεφαλίδες, ποτέ το `from`. ⛔ ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ ΤΟ `NEXT_PUBLIC_COMPANY_NAME`: ορίζεται με ΔΥΟ διαφορετικές τιμές (`.env` → «Pagonis Real Estate», `.env.local` → «Pagonis Energo»), ζει έξω από το git όπου καμία πύλη δεν το βλέπει, και ο μόνος καταναλωτής του έχει ΜΗΔΕΝ αναγνώστες — ανάγνωσή του θα ήταν ΤΡΙΤΗ πηγή ονόματος. ⏳ ΣΤΑΔΙΟ 2 (per-tenant): ο ΑΝΑΓΝΩΣΤΗΣ Firestore ζει σε ΞΕΧΩΡΙΣΤΟ server-only module και ΤΡΟΦΟΔΟΤΕΙ την `resolveSenderIdentity(tenant)` — η ρίζα μένει καθαρή/ισομορφική ώστε να τη διαβάζουν διακομιστής, cron και υπο-εφαρμογές.",
+      "forbiddenPatterns": [
+        "process\\.env\\.FROM_NAME",
+        "process\\.env\\.FROM_EMAIL",
+        "process\\.env\\.MAILGUN_FROM_EMAIL",
+        "process\\.env\\.COMPANY_EMAIL_DOMAIN",
+        "process\\.env\\.EMAIL_PREFIX",
+        "process\\.env\\.FALLBACK_EMAIL_DOMAIN",
+        "\\$\\{[^}]+\\}\\s*<\\$\\{[^}]+\\}>"
+      ],
+      "allowlist": [
+        "src/services/company/sender-identity.ts",
+        "src/services/company/__tests__/sender-identity.test.ts"
+      ],
+      "tier": 3
     }
   }
 }
