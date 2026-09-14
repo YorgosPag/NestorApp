@@ -87,7 +87,7 @@ export async function revealLocationCard(
     const stored = readLocationChannels(snapshot.data(), locationId);
     const phones = stored.phones.filter(({ e164, extension }) => revealablePhone(e164, extension) !== null);
     if (phones.length === 0 && stored.emails.length === 0) return ABSENT;
-    return { kind: 'revealed', showcase: lookup.showcase, location, channels: { phones, emails: stored.emails } };
+    return { kind: 'revealed', showcase: lookup.showcase, location, channels: { ...stored, phones } };
   } catch (error) {
     logger.error('[CARD] Τα κανάλια δεν διαβάστηκαν — άγνωστο, όχι κενό', {
       companyId,
@@ -108,5 +108,8 @@ export async function revealLocationChannels(
   const phones = card.channels.phones
     .map(({ e164, extension }) => revealablePhone(e164, extension))
     .filter((phone): phone is RevealedPhone => phone !== null);
-  return { kind: 'revealed', channels: { phones, emails: card.channels.emails } };
+  return {
+    kind: 'revealed',
+    channels: { phones, emails: card.channels.emails, emailConfirmations: card.channels.emailConfirmations },
+  };
 }

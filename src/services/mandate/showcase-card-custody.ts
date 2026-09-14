@@ -89,8 +89,17 @@ export async function saveShowcaseCard(
         return { kind: 'rejected', reason: 'agency-profile-card-without-showcase' };
       }
 
+      // 🔑 Α21.18 — τα ιδιωτικά κανάλια διαβάζονται **μέσα** στη συναλλαγή: οι επιβεβαιώσεις τους
+      //    επιβιώνουν μόνο για ίδια διεύθυνση, και μια εξαργύρωση που προλαβαίνει μπαίνει στο CAS.
+      const channelsSnapshot = await transaction.get(channelsRef);
+      const storedChannels = channelsSnapshot.data();
       const existingIds = new Set(existing.showcase.locations.map(({ id }) => id));
-      const formed = formCard(declared, existingIds, generateShowcaseLocationId);
+      const formed = formCard(
+        declared,
+        existingIds,
+        generateShowcaseLocationId,
+        (locationId) => readLocationChannels(storedChannels, locationId).emailConfirmations,
+      );
       if (isCardRejection(formed)) return { kind: 'rejected', reason: formed.reason };
 
       // ⚠️ `update` στο δημόσιο (το έγγραφο ανήκει στον γραφέα της βιτρίνας) · `set` χωρίς
