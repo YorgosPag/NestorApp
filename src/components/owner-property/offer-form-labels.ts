@@ -80,6 +80,8 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   'mandate-agreement-invalid': 'property-market:offer.invariant.mandate-agreement-invalid',
   // ── ADR-832: η εντολή ως κατάληψη πόρου ─────────────────────────────────────
   'mandate-scope-empty': 'property-market:offer.invariant.mandate-scope-empty',
+  // ⚠️ ADR-832 §8 — «διάλεξες πράξη άλλης σύμβασης», όχι «δεν διάλεξες».
+  'mandate-scope-not-brokerage': 'property-market:offer.invariant.mandate-scope-not-brokerage',
   'mandate-start-invalid': 'property-market:offer.invariant.mandate-start-invalid',
   // ⚠️ **Δικό του κλειδί, όχι μαζί με το παραπάνω** (ADR-835 Ε-10): «αντίστρεψε τα
   //    άκρα» και «πρόσθεσε διάρκεια» είναι δύο διαφορετικές κινήσεις του ανθρώπου.

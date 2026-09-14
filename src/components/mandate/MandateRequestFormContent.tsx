@@ -66,9 +66,6 @@ import {
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
-import { OFFER_KIND_I18N_KEYS } from '@/components/mandate/offer-kind-labels';
-import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
-import { FormOptionsField } from '@/components/shared/forms/form-field-primitives';
 // 🏆 ADR-832 §4 — ο ιδιοκτήτης βλέπει ΠΡΙΝ προσπαθήσει. Ο **κανόνας** ζει στο
 //    `mandate-occupancy-notice` και καλεί τον ΙΔΙΟ κριτή με τον διακομιστή· εδώ
 //    γίνεται μόνο η σύνδεση με τα πληκτρολογημένα.
@@ -89,7 +86,7 @@ import { useInFlowTaxIdentity } from '@/hooks/account/useInFlowTaxIdentity';
 
 import { formatList } from '@/lib/intl-formatting';
 import { assignableListings, listingEligibilityHint } from './listing-eligibility';
-import { CompensationField, Field } from './mandate-request-form-fields';
+import { CompensationField, Field, ScopeField } from './mandate-request-form-fields';
 import { MandateRequestOutcomeNotice } from './MandateRequestOutcomeNotice';
 import {
   MANDATE_REQUEST_NS,
@@ -380,17 +377,8 @@ export function MandateRequestFormContent({
         onScheduleFrom={(yyyyMmDd) => form.setValue('startsOn', yyyyMmDd)}
       />
 
-      <Field label={t(SCREEN_KEYS.scopeLabel)} hint={t(SCREEN_KEYS.scopeHint)}>
-        {/* 🔑 **Ο ΥΠΑΡΧΩΝ** πολλαπλός επιλογέας (Α9), ποτέ δεύτερος: το CHECK 3.28
-            μπλόκαρε ήδη μια φορά το δίδυμο `single`/`multiple`. */}
-        <FormOptionsField<MandateRequestFormValues, OfferKind>
-          control={form.control}
-          name="scope"
-          mode="multiple"
-          options={OFFER_KINDS}
-          labelOf={(kind) => t(OFFER_KIND_I18N_KEYS[kind])}
-        />
-      </Field>
+      {/* 🔴 ADR-832 §8 — μόνο πράξεις μεσιτείας, ανά είδος ακινήτου: δες `ScopeField`. */}
+      <ScopeField form={form} values={values} property={selected} />
 
       <Field label={t(SCREEN_KEYS.startsLabel)} hint={t(SCREEN_KEYS.startsHint)}>
         <Input

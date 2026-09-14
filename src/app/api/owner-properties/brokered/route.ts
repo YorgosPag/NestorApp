@@ -44,6 +44,7 @@ import {
   type MandateCatalog,
 } from '@/services/mandate/mandate-catalog.service';
 import { nowISO } from '@/lib/date-local';
+import { isMandateOfferKind } from '@/constants/mandate-offer-kinds';
 import { AGENCY_ATTESTATION } from '@/types/owner-property-mandate';
 
 import {
@@ -139,7 +140,12 @@ async function handler(
       //    προσώπου. Στη διαδρομή του ιδιώτη (`/api/mandate-requests`) το `scope`
       //    έρχεται **ρητά από αυτόν** — εκεί η παραγωγή θα του έπαιρνε δικαίωμα που
       //    δεν έδωσε.
-      scope: parsedDraft.draft.offers.map((offer) => offer.kind),
+      //
+      // 🔴 **ΜΟΝΟ οι πράξεις που ανατίθενται με μεσιτική εντολή** (ADR-832 §8): μια
+      //    διάθεση βραχυχρόνιας στην ίδια αγγελία δημοσιεύεται κανονικά, αλλά **δεν**
+      //    καταλαμβάνεται από την εντολή — ανήκει στη διαχείριση (ADR-835 §4.8).
+      //    Αγγελία μόνο με βραχυχρόνια ⇒ κενό `scope` ⇒ `mandate-scope-empty`, με όνομα.
+      scope: parsedDraft.draft.offers.map((offer) => offer.kind).filter(isMandateOfferKind),
       // ⚠️ Η εντολή αρχίζει **τώρα**: το γραφείο βεβαιώνει σύμβαση που ήδη ισχύει.
       startsAt: nowISO(),
       proof:

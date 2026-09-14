@@ -191,6 +191,8 @@ export const SCREEN_KEYS = {
   // ── ADR-832 — τα δύο νέα πεδία ────────────────────────────────────────────
   scopeLabel: 'property-market:mandate.request.scopeLabel',
   scopeHint: 'property-market:mandate.request.scopeHint',
+  /** ADR-832 §8 — διαθέσεις της αγγελίας που ανήκουν σε **άλλη** σύμβαση (διαχείριση). */
+  scopeManagementNote: 'property-market:mandate.request.scopeManagementNote',
   startsLabel: 'property-market:mandate.request.startsLabel',
   startsHint: 'property-market:mandate.request.startsHint',
 
