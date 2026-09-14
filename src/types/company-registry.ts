@@ -26,6 +26,8 @@
  * χωρίς κανέναν γραφέα που πρέπει να θυμηθεί να το σβήσει.
  */
 
+import type { RegistryAuthorityId } from '@/constants/professional-registries';
+
 /** Η πηγή. Μία σήμερα· η ένωση ανοίγει μόνο όταν έρθει **νέα αρχή**, ποτέ «χειροκίνητη». */
 export const GEMI_REGISTRY_SOURCE = 'gemi-opendata' as const;
 export type RegistrySource = typeof GEMI_REGISTRY_SOURCE;
@@ -83,6 +85,58 @@ export interface RegistryCheck {
   readonly record: RegistryCompanyRecord;
   readonly checkedAt: string;
 }
+
+/** Τι βρέθηκε αποθηκευμένο — **τρεις** καταστάσεις, όπως κάθε αναγνώστης του έργου. */
+export type RegistryCheckRead =
+  | { readonly kind: 'present'; readonly check: RegistryCheck }
+  /** Καμία ερώτηση δεν έχει αποθηκευτεί για αυτόν τον οργανισμό. */
+  | { readonly kind: 'absent' }
+  /** Η βάση δεν απάντησε **ή** το αντίγραφο χάλασε — **ποτέ** «δεν ρωτήθηκε». */
+  | { readonly kind: 'unavailable' };
+
+// =============================================================================
+// Η ΚΡΙΣΗ — «είναι η δήλωση του οργανισμού επαληθευμένη;»
+// =============================================================================
+
+/**
+ * Ποια αρχή εξέδωσε την επαλήθευση — **μέλος** του λεξιλογίου αρχών
+ * (`constants/professional-registries.ts`), ποτέ δεύτερη λίστα.
+ */
+export type RegistryIssuer = Extract<RegistryAuthorityId, 'gemi'>;
+
+/** Ό,τι **δήλωσε** ο οργανισμός στο προφίλ του (ADR-439) — η μία πλευρά της σύγκρισης. */
+export interface DeclaredRegistryIdentity {
+  readonly registrationNumber: string | null;
+  readonly legalName: string | null;
+}
+
+/**
+ * **Γιατί δεν είναι επαληθευμένη** — κάθε λόγος οδηγεί σε **διαφορετική πράξη** ανθρώπου.
+ *
+ * ⚠️ `no-registration-number` ≠ `not-checked`: ο ελεύθερος επαγγελματίας **δεν έχει** ΓΕΜΗ
+ * (και η οθόνη δεν του ζητά τίποτα)· ο οργανισμός που **έχει** αριθμό απλώς δεν ρωτήθηκε ακόμα.
+ */
+export type RegistryIdentityGap =
+  | 'no-registration-number'
+  | 'invalid-registration-number'
+  | 'not-checked'
+  | 'check-unreadable'
+  | 'not-in-registry'
+  | 'number-mismatch'
+  | 'inactive'
+  | 'status-unknown'
+  | 'name-mismatch';
+
+/**
+ * **Δύο καταστάσεις του ADR-798 §7 — καμία τέταρτη.** Το `unknown` («κανείς δεν δήλωσε»)
+ * αντιστοιχεί στο `declared` με κενό `no-registration-number`.
+ *
+ * 🔑 Το `verified` **κουβαλά την απόδειξη** (`check`: τι απάντησε η αρχή και πότε) — ποτέ
+ * «επαληθευμένο» χωρίς το ερώτημα που το έκανε επαληθευμένο.
+ */
+export type RegistryIdentityJudgment =
+  | { readonly state: 'verified'; readonly issuer: RegistryIssuer; readonly check: RegistryCheck }
+  | { readonly state: 'declared'; readonly gap: RegistryIdentityGap; readonly check: RegistryCheck | null };
 
 /** Γιατί **δεν** μάθαμε — κάθε λόγος οδηγεί σε διαφορετική πράξη ανθρώπου. */
 export type RegistryUnavailableReason =
