@@ -171,6 +171,19 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_SHOWCASE_CARD_CHANNELS_COLLECTION || 'showcase_card_channels',
 
   /**
+   * 🏆 ADR-841 §7 Α21.18 — **ΤΑ ΑΙΤΗΜΑΤΑ ΕΠΙΒΕΒΑΙΩΣΗΣ EMAIL ΤΗΣ ΚΑΡΤΑΣ**. Κλειδί: `secf_*`.
+   *
+   * 🔑 **Εφήμερο αίτημα, ΟΧΙ η απόδειξη**: η απόδειξη είναι ημερομηνία πάνω στο ίδιο το κανάλι
+   * ({@link COLLECTIONS.SHOWCASE_CARD_CHANNELS}) και στο δημόσιο κατάστημα. Εδώ ζει μόνο «σε ποια
+   * διεύθυνση στείλαμε ποιον σύνδεσμο, και τι έγινε».
+   *
+   * 🔴 **`deny_all` και στις δύο πλευρές**: το έγγραφο κρατά **διεύθυνση email** και το `nonce` του
+   * συνδέσμου. Ανάγνωση από πελάτη = τα email της κάρτας χωρίς όριο ρυθμού.
+   */
+  SHOWCASE_EMAIL_CONFIRMATIONS:
+    process.env.NEXT_PUBLIC_SHOWCASE_EMAIL_CONFIRMATIONS_COLLECTION || 'showcase_email_confirmations',
+
+  /**
    * 🎯 ADR-827 §8.7 — **ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ**. IDs `mreq_*`.
    *
    * 🔴 **`read: false` ΚΑΙ `write: false` — και οι ΔΥΟ πλευρές περνούν από τον

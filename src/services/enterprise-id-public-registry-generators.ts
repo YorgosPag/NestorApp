@@ -148,6 +148,14 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   generateShowcaseLocationId(): string { return this.generateId(P.SHOWCASE_LOCATION).id; }
 
   /**
+   * ADR-841 §7 Α21.18 — **ΑΙΤΗΜΑ ΕΠΙΒΕΒΑΙΩΣΗΣ EMAIL ΤΗΣ ΚΑΡΤΑΣ** (`secf_*`). Διακομιστής μόνο:
+   * η ταυτότητα υπογράφεται μέσα στον σύνδεσμο.
+   */
+  generateShowcaseEmailConfirmationId(): string {
+    return this.generateId(P.SHOWCASE_EMAIL_CONFIRMATION).id;
+  }
+
+  /**
    * **Η πρόσκληση** (ADR-844) — η δήλωση που περιμένει απόδειξη καναλιού.
    *
    * ⚠️ **Δεν είναι πράξη**, και γι' αυτό δεν είναι `fcon`: η πράξη μετριέται από

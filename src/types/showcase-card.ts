@@ -76,6 +76,15 @@ export interface ShowcaseLocation {
    * γραφέα — άρα δεν μπορεί να διαφωνήσει με το περιεχόμενο (ADR-749).
    */
   readonly channelKinds: readonly ShowcaseChannelKind[];
+  /**
+   * **Η νεότερη επιβεβαίωση ΤΡΕΧΟΝΤΟΣ email του καταστήματος** (Α21.18) — ISO, ή `null` = κανένα
+   * επιβεβαιωμένο. **Καμία διεύθυνση** εδώ: λέει «ένα γραμματοκιβώτιο αυτού του καταστήματος
+   * λαμβάνει, από τότε», ποτέ «επαληθευμένος επαγγελματίας» (Α9.2 · DSA 6(3)).
+   *
+   * ⚠️ Παράγεται από το **ίδιο** πέρασμα με το {@link ShowcaseLocationChannels.emailConfirmations}
+   * (κάρτα **ή** εξαργύρωση), άρα δεν μπορεί να διαφωνήσει μαζί του (ADR-749).
+   */
+  readonly emailConfirmedAt: string | null;
 }
 
 /** Ένα τηλέφωνο, **κανονικοποιημένο σε E.164** από τον διακομιστή. */
@@ -84,11 +93,25 @@ export interface ShowcasePhone {
   readonly extension: string | null;
 }
 
+/**
+ * **Ένα email που ΑΠΟΔΕΙΧΤΗΚΕ ότι λαμβάνει** (Α21.18) — πατήθηκε ο σύνδεσμος που του στείλαμε.
+ *
+ * 🔑 Κλειδί είναι **η ίδια η διεύθυνση**, όχι θέση στον πίνακα: η αναδιάταξη των email δεν
+ * μεταφέρει την επιβεβαίωση σε άλλο γραμματοκιβώτιο, και η αλλαγή ενός γράμματος τη **χάνει**.
+ */
+export interface ShowcaseEmailConfirmation {
+  readonly email: string;
+  /** ISO — η στιγμή της εξαργύρωσης, από τον διακομιστή. */
+  readonly confirmedAt: string;
+}
+
 /** **Τα κανάλια ενός καταστήματος** — ιδιωτικά. */
 export interface ShowcaseLocationChannels {
   readonly phones: readonly ShowcasePhone[];
   /** Κανονικοποιημένα με το `normaliseChannelEmail`. */
   readonly emails: readonly string[];
+  /** Μόνο για διευθύνσεις που **υπάρχουν ακόμη** στο `emails` — επιβάλλεται στον γραφέα **και** στον αναγνώστη. */
+  readonly emailConfirmations: readonly ShowcaseEmailConfirmation[];
 }
 
 /** Το έγγραφο `showcase_card_channels/{companyId}`. */
@@ -106,6 +129,8 @@ export interface RevealedPhone {
 export interface RevealedChannels {
   readonly phones: readonly RevealedPhone[];
   readonly emails: readonly string[];
+  /** Ποιες από τις παραπάνω διευθύνσεις έχουν επιβεβαιωθεί, και πότε (Α21.18). */
+  readonly emailConfirmations: readonly ShowcaseEmailConfirmation[];
 }
 
 // =============================================================================

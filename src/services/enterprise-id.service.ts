@@ -61,6 +61,7 @@ export {
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generateFirstContactId,
   generateFirstContactInvitationId,
+  generateShowcaseEmailConfirmationId,
   generateDeterministicAuthReprovisionJournalId,
   generateDeterministicWorkspaceAccessRequestId,
   generateWorkspaceInvitationId,
