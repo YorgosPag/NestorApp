@@ -18,7 +18,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "4d95f4ae5d4796fb8b0276d667765361f7210fc737a31d41dcae49319ac91336",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "5c6e0ce9b9e3755b3ae98614ba1ddf222b4e35c71f133504610be65102353152",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "d818f95c6cddf03159c26fd56b5c46d24d536eca781f7bef9fb988865989b5c2",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "6f86c3b2066bbd272fac89cddb49471e3bb123f002bd7d1709b6d9d4ab4efe69",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "8b3e7e29daeb117a826d0c1cd49d79579b9ed4944c62a7d72651ee810424f13e",
@@ -26,7 +26,7 @@
     "src/i18n/generated/routes/offers__offerId.el.json": "a5c1a7a0a251347c085f55efc8ce858b847ac1ddd5ba38320f496841f491abaf",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/pro.el.json": "424bf8260b7ccd8fcd692f23a9b62d7c74460686e4555fd27b6a4cdc3302f926",
-    "src/i18n/generated/routes/pro__alias.el.json": "ca3fecc0c6014d003aa4ccc9c99392506477d5b3c63a7001172eb526399e772c",
+    "src/i18n/generated/routes/pro__alias.el.json": "0139970b2319c7869c7da2bf2199e6f8f793b95616093eab03cc050e92535c17",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/search__results.el.json": "3c5e0b117116dec8007cb6887457b0cab64dbca93e96484d5e7c5717e3790f40",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
@@ -71,7 +71,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5deda677dfc4ce64a2ba667f96007429cb3bf595842f4fb2c9b54fb8a4de68ff",
+  "inputsSha256": "2aded94c1796b32583771a01c31e0c4d2fefcf0e7a255de45935b5f83ac4f22d",
   "languages": [
     "el"
   ],
@@ -116,7 +116,7 @@
     "src/app/(auth)/n/[notificationId]/page.tsx": "842276cc926ceb1dffb5df939953baa7270ad3c1be195e604b40049fdfef7843",
     "src/app/(light)/listing/[id]/page.tsx": "a58d8e91a3e97a78f851ae00f123ac678f0db46c270ad5a7659740e699529a62",
     "src/app/(light)/offers/new/page.tsx": "0b872b192a0a8597e8e78f9c3ecc06df6b70670a9830d3ac7cf2f7a22ae04e8c",
-    "src/app/(light)/pro/[alias]/page.tsx": "33e7c92cee8a70d503ad103323129eb51a3af69e67f1a2251f80b32b6211b9bc",
+    "src/app/(light)/pro/[alias]/page.tsx": "fa4d721860d89f8d4e571b2d58c055cb0a0dd8147751d80b0d42ec36fc6d5050",
     "src/app/(light)/pro/page.tsx": "baf1cf13f22281fcb429539f76fb0b81f096e35a027952473b502335b38d6c45",
     "src/app/(light)/search/results/page.tsx": "2d39f5895fc2a017e0bdd2d50a35b9b8262a8e6ead53ac1e2659954457010afe",
     "src/app/(me)/demands/[demandId]/page.tsx": "b8d9a14612acf5605cb72382aa9e2decc225343d3a52d9f6a0585b46f05dd435",
@@ -207,12 +207,12 @@
     "src/components/mandate/AgencyDirectoryContent.tsx": "22be452a4a783fd599436a4bc21e80b65d0c724c0b0f58ddfde3e8329e52bce9",
     "src/components/mandate/AgencyDirectoryFilters.tsx": "0c2aec66289f6b0dd1ca9e7312189804fd25f853ef67a427a99ce957465271cf",
     "src/components/mandate/AgencyFact.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/components/mandate/AgencyProfileContent.tsx": "0ca0f394ce10d1a416921f0b6c6351f8c21c189bc1a528fcdaa5b92de44c8bb9",
+    "src/components/mandate/AgencyProfileContent.tsx": "b7b519a4b5e665ef6122e1056d14fe94846a689e083f0316b7f8931895c9d011",
     "src/components/mandate/AgencyShowcaseContent.tsx": "2e029b3b290dd8b88e210b1223a46d669f8e0c63ed29cc7d16cd1a55acbcea0b",
     "src/components/mandate/AreaCombobox.tsx": "90ee09845820c43ba65d3529ef8d83581d1a55abec4f3d5c74620dc340aab793",
     "src/components/mandate/BrokeredListingPageContent.tsx": "cabb12205ba753d61180786846648792ddfc25a1ae48d4bc951d469b703cfbed",
     "src/components/mandate/BrokeredMandateFields.tsx": "f7d33f6e55bf7665d93c240916dd964555b161ffb03b995c1b3c75f52e3cd542",
-    "src/components/mandate/ChannelReveal.tsx": "0f7b48ad9d6c1a57c2ff21a9b030c70279cfaf1fca79fc605e9cf19b1634923f",
+    "src/components/mandate/ChannelReveal.tsx": "a697f520ca047dc4ca83de792add5bd7ca1c58fcf5da2be5e387305b1c0b9d99",
     "src/components/mandate/CoverageAgreementNotice.tsx": "03639f093a5ba29b1c846b19e7949b2049620bfe14d1d6a7a1dc686b1413b3cb",
     "src/components/mandate/CoverageAreaPicker.tsx": "bce2e7fba716985f38b5290271743fb0caac2da72e4a92fdf44741f1687ff49c",
     "src/components/mandate/CoverageOutlineMap.tsx": "1527436a0f6fec85ce32fac4e892a30f26832ce2ded6ce746e63b1a7955f75b5",
@@ -227,11 +227,11 @@
     "src/components/mandate/MandateRequestFormContent.tsx": "dd9d40a3de4c235ff0c4bcb4cbc311fc3554521e4f8705e316e6f61130236882",
     "src/components/mandate/MandateRequestOutcomeNotice.tsx": "899455eda7ad732bf45907b7643dbb74c2b58eb8485d286d078b3f2cd1b872ad",
     "src/components/mandate/MandateUnavailableNotice.tsx": "e371e65810939937257c57eeffd1f271901ec338356571f3148fc6137e595fbf",
-    "src/components/mandate/ShowcaseCardContent.tsx": "57d7faa8d0de7142125a6b35ace9ca8f7da58561117d951a8f895c659f669846",
+    "src/components/mandate/ShowcaseCardContent.tsx": "cc08c43e86b260fa481693f1f28de385304c9dd7e02e30b58d3aa0a6199109b3",
     "src/components/mandate/ShowcaseCardDoor.tsx": "81be4abb47736093be2c7049e1ec38416605660a69d9a9553b741d925a9ad85a",
     "src/components/mandate/ShowcaseCardSection.tsx": "df7dc685a0548232645f66126fe24c974813d3a6dc130385476e2c6901218f7a",
     "src/components/mandate/ShowcaseChannelFields.tsx": "64054496a27ab7e50cb92e61c8ca36e41b5244a29a284707fff7dd81a3ec105c",
-    "src/components/mandate/ShowcaseContactCard.tsx": "9a2eea37ad92bb8a7f04535de1491b71c8220d69d4d7912c81ee27ffc712c702",
+    "src/components/mandate/ShowcaseContactCard.tsx": "a40c8c4d79c11b62cdc7d1603af5ac95bbe40c6cc8dd3ee231126afbf2bf81e3",
     "src/components/mandate/ShowcaseCredentialField.tsx": "3d875a36891619a42b1edfd9c15a46421d9d7233d094bb24a41b805642d1228e",
     "src/components/mandate/ShowcaseIdentityFields.tsx": "32b4737c3e515cfb2d33d0a73748f7d1cea99699f71e3230cee4772ea43cf78a",
     "src/components/mandate/ShowcaseLocationEditor.tsx": "e1a17e06856dc4d810f68b597911bed4b7bf660e98aef56ebc837fb2e037fde1",
@@ -240,6 +240,8 @@
     "src/components/mandate/ShowcaseMarkPreview.tsx": "54e49bb6116fca6db5b010e68240bdfbb645e141994a1235acef0f04f3acb70a",
     "src/components/mandate/ShowcaseOpeningHours.tsx": "67f57b34a11e0c9c537353e95623b9118fbdcd9d85487426ab66a8f59a4ba2ca",
     "src/components/mandate/ShowcasePublicDoor.tsx": "a99dc3603ab5fb4c5b19e6dbbf2c7854af06047b42c137d164561e513807de3d",
+    "src/components/mandate/ShowcaseQrPanel.tsx": "646b61ccf554a4a4ea9bf8e831d91fac3fb4742d58f9b38ac04a6291c3ffec0e",
+    "src/components/mandate/ShowcaseShareDialog.tsx": "3c83d99d7fc6dea589e580152909250ebe63f30e568aa3f91c27f2a2fb17ceab",
     "src/components/mandate/WeeklyHoursField.tsx": "a5aa32e3e93e6134064340b2426b9e94b2e3661f39fe40b664d09f094a821ae2",
     "src/components/mandate/catalog/MandateCatalogRow.tsx": "2a53f0deebe217433b17498e1cc1e325cf0b9985365aebd16f961ddd8ec16fc9",
     "src/components/mandate/catalog/mandate-catalog-labels.ts": "0c0767e8a4cbde6b0173d69bcb6edb9bc0f131f84e950c85ec5606536982d09d",
@@ -250,6 +252,7 @@
     "src/components/mandate/mandate-request-form-fields.tsx": "bbd760e5a3b844fe610a5ff15db9fae888ebefce53670f80184bec400a84ccf8",
     "src/components/mandate/mandate-request-form-labels.ts": "b822c56a0fa19426be1918cf1efca4561c2420e6dbc03eefa7328fbe56e2c757",
     "src/components/mandate/offer-kind-labels.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
+    "src/components/mandate/showcase-card-paths.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/notifications/EmailPreferencesPanel.tsx": "61ed0462888cb9029b09b8aa9d9c1307131ae86ef0a9f818550f6c7b154f18c5",
     "src/components/notifications/EmailTypePreferences.tsx": "f6bb7acf05ddecd0224061b23606ae9e698944fbb9a4521f7bf92059ae49286c",
     "src/components/notifications/NotificationPermalinkUnavailable.tsx": "927d9d74450a5ed7d608ee72f0b88646551c6279f19e4e2a30225f50c5bf3cad",
@@ -296,6 +299,7 @@
     "src/components/search-results/filters/use-filter-commit.ts": "e515bf1af66ae87e2178db4e92406edf02ca845b806bf7bb51de08001615606a",
     "src/components/search-results/results-map-area.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/components/search-results/results-map-contract.ts": "43b8bd6d5a3c2dd1e86017af623fb3342c2d7719279e4dd40a4413f8b080d572",
+    "src/components/seo/JsonLdScript.tsx": "d6ebc0f4bf11cef68cb9d797ffad5990afb1ec76a3dc6930530cfdee4cd9a02e",
     "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "7e57255e158e46a57151edda2e6b81d8341b2cb6b020e3e72d5456cf002a12cd",
     "src/components/settings/brokerage/brokerage-capability-labels.ts": "de45edd5494b39681ff5ffd92cd31524dce3ff8192210feef1342608140e90aa",
     "src/components/shared/DesktopOnlyGate.tsx": "3840ff9783e8af05bfd4ec59afdb3277bfb9b361ec15de588ad1acdfb2b1f1cc",
@@ -359,6 +363,7 @@
     "src/hooks/mandate/useMandateRowActions.ts": "f828f7db5990fafbaa8c37289cbb36372ec88580ee51c1708e67a16fa26702c4",
     "src/hooks/mandate/useShowcaseCard.ts": "9c1e20c29ae51750739b40e5cd7b232cf5815a5890377ac2f910df1a8c3c13a0",
     "src/hooks/mandate/useShowcaseMark.ts": "dc82a426ef1e76b4f1561f065be65647d67080ef12043adada7ea1f493cf019f",
+    "src/hooks/mandate/useShowcaseQr.ts": "7ab256ae1124c4a8dc2a5771f26ab4510aa56977b28ca3180f4fb2dd427ed3db",
     "src/hooks/media/useSheetBackDismiss.ts": "c7046dd08105ad48417f1abeac803cc94fdc3f86b14e71eb870507203aab463f",
     "src/hooks/media/useSheetSnap.ts": "152bd8294640c5e67d6c36e8547885cdc5a7208ba2602c48a252b0a4dccba8f6",
     "src/hooks/media/useViewportClass.ts": "0769e01c621e8642ca805ff4fe8c5df5dd9b418d98bb86a71afbd7876e6cd336",
@@ -374,6 +379,7 @@
     "src/lib/agency/presence-admin-ids.ts": "632638cfcd887e103e2474c0cbeaa4208e41b60df35f19c94ebda19ecaf8ef5a",
     "src/lib/agency/showcase-card-draft.ts": "0c8fd0bc922ad910bad27023d5bef2897d13becec2c68c2d350d3790c2904729",
     "src/lib/agency/showcase-mark-fidelity.ts": "0f1a4258ff802b4685ab6a52d7c23b979b36af73b00908b6fff45e5c0ca1b988",
+    "src/lib/agency/showcase-structured-data.ts": "b29a8a3230af626bab34a074faf0de578f2b29c39ab39a570b59887cca9f0645",
     "src/lib/agency/showcase-where-voice.ts": "ca8b1932e0665aa6a61849720ba51e82338574025611c859e8d920608ba4cb6b",
     "src/lib/agency/showcase-wire.ts": "3662835ecbd902cad43319ff2c4f85954617d6ccffe418551fdb0a78ab8927ca",
     "src/lib/api/ApiErrorHandler.ts": "ab8e762bf6fb0a023c30d70c365bc474fb346d512224bb6cd0e36d2e84da9040",
@@ -418,6 +424,7 @@
     "src/lib/esco/relevance.ts": "39045eee937cc3f16d2cf9ceff6b9a374364fbeaa6860a3fb47fd7d7ed7c7910",
     "src/lib/esco/search-tokens.ts": "bf3bb21f6195403196c87747d90a3d3513fbc1e8b5f44ca2ed406d59d0f358ac",
     "src/lib/esco/token-search.ts": "b6c5daf34fba46c9bfe80fcda22ef9a0e57e3673de4da4aeed4b057dc82321b3",
+    "src/lib/exports/trigger-export-download.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
     "src/lib/forms/draft-form-labels.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/forms/draft-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/forms/draft-validation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -489,6 +496,7 @@
     "src/lib/property/property-completion-stance.ts": "e03d3e31e18bb9a51aa428bea0ff2bdc23dd6477be22e5460b10105f258cd343",
     "src/lib/routes/return-path.ts": "939c90ec07d602605e28b59ea4ad56d0e29ebabadaed01989d10b1cc547d0cd5",
     "src/lib/routes/route-param.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/seo/json-ld.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/stay/stay-availability.ts": "ae4e3d59e0b03634a4d1af8c1c34f8186a4c902ae09018fa5a26e947162678db",
     "src/lib/stay/stay-conflict.ts": "90b9a4d4a18d0591c7415c42ef3bd0476bc7e06dd796617f705ca05e28849da8",
     "src/lib/tokens/signed-token.ts": "c9f5a1fce3869194506ea66622febcc052b469949f7f0bef1009723f27a4e820",
@@ -2538,6 +2546,12 @@
             "mandate.showcase.cardPostalCodeLabel",
             "mandate.showcase.cardPublishStreet",
             "mandate.showcase.cardPublishStreetHint",
+            "mandate.showcase.cardQrAlt",
+            "mandate.showcase.cardQrDownloadPng",
+            "mandate.showcase.cardQrDownloadSvg",
+            "mandate.showcase.cardQrFailed",
+            "mandate.showcase.cardQrLead",
+            "mandate.showcase.cardQrTitle",
             "mandate.showcase.cardRemoveEmail",
             "mandate.showcase.cardRemoveInterval",
             "mandate.showcase.cardRemoveLocation",
@@ -3375,12 +3389,76 @@
     "pro__alias": {
       "page": "src/app/(light)/pro/[alias]/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "common-photos": {
           "keys": [
+            "buttons.close",
             "photoPreview.navigation.nextAria",
             "photoPreview.navigation.previousAria",
             "photoPreview.navigation.slide",
             "photos.galleryLabel"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.close"
           ],
           "prefixes": [],
           "whole": false
@@ -3419,6 +3497,7 @@
             "mandate.profile.cardRevealGone",
             "mandate.profile.cardRevealThrottled",
             "mandate.profile.cardRevealing",
+            "mandate.profile.cardSaveContact",
             "mandate.profile.cardShowEmail",
             "mandate.profile.cardShowPhone",
             "mandate.profile.cardTitle",
@@ -3457,6 +3536,14 @@
             "mandate.profile.publishedAt",
             "mandate.profile.requestCta",
             "mandate.profile.requestHint",
+            "mandate.profile.shareCopyLink",
+            "mandate.profile.shareLead",
+            "mandate.profile.shareLinkCopied",
+            "mandate.profile.shareNative",
+            "mandate.profile.shareOpen",
+            "mandate.profile.shareQrAlt",
+            "mandate.profile.shareQrFailed",
+            "mandate.profile.shareTitle",
             "registries.barAssociation.abbreviation",
             "registries.barAssociation.name",
             "registries.gemi.abbreviation",
@@ -4934,6 +5021,7 @@
     "src/lib/professional/showcase-eligibility.ts": "87ba0488672700617c0d09f350db9f6ebd38edaf96bc2786db40dee8550647b5",
     "src/lib/properties/price-resolver.ts": "46bb0913578361182cc61a022e2079b374d3a2ec6ac9c832ab17fe4d50a1c820",
     "src/lib/property/attribute-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/qr/qr-code.ts": "6c62c11529e6d57d8394379f23003ae741be4c0715e32792129c93fcdc04bce4",
     "src/lib/routes/accountRoutes.ts": "b82193379953e61a92c5adeb40bcb33597727241d6b6d920b57b2ae361242f01",
     "src/lib/routes/appRoutes.ts": "2dc8143fd2cd698db5682d92d449b51f14d6d6ba0bb6cb1a8aa1b68791f06f36",
     "src/lib/routes/authRoutes.ts": "0f66499d7df1178beb0bc1e788ab75744de0b18f7108e97f681f6764445a00a9",
@@ -5038,7 +5126,7 @@
     "src/services/session/session-helpers.ts": "2a0255aba0dd13ee63552ecbdc23115f4eab7b88fe10404ec73f4dc122cae750",
     "src/services/session/session.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/sharing/showcase-surfaces.ts": "468902387af626019d2a1d395c41a60cfb604cc55ece512b4f0f8afbfdb4d8a0",
-    "src/services/two-factor/EnterpriseTwoFactorService.ts": "8f8fafcd70a1ff5c015092d449535a634971a274ce7c3d4a4502f50f4fea091c",
+    "src/services/two-factor/EnterpriseTwoFactorService.ts": "1f5b41dde53aedc21edf837781c82b82b4a4baa95c48cc9cae454c913610b525",
     "src/services/two-factor/two-factor-helpers.ts": "4eef9c13bdeb101a43cae7b92010ccb0d0901c1bbf7992749ec307129462c69c",
     "src/services/two-factor/two-factor.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/upload/utils/file-display-name-core.ts": "e65ae649159dd190ba52e715efbe18751e05e54d1c7f056c0bd4631320dfab35",
@@ -5168,8 +5256,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 644,
-    "sliceBytes": 428225
+    "shellFiles": 645,
+    "sliceBytes": 429644
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

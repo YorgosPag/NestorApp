@@ -14,8 +14,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import QRCode from 'qrcode';
 import { withAuth } from '@/lib/auth';
+import { publicUrl } from '@/lib/http/public-origin';
+import { qrPngDataUrl } from '@/lib/qr/qr-code';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateDailyQrToken } from '@/services/attendance/qr-token-service';
@@ -84,20 +85,19 @@ const basePOST = async (request: NextRequest) => {
         // Generate or reuse existing token
         const tokenDoc = await generateDailyQrToken(body.projectId, date, ctx.uid);
 
-        // Build the check-in URL
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
-        const checkInUrl = `${baseUrl}/attendance/check-in/${encodeURIComponent(tokenDoc.token)}`;
+        // 🔴 ADR-841 §7 Α21.17 — ΠΟΤΕ μαντεμένη διεύθυνση. Η παλιά εφεδρεία ήταν το **νεκρό** Vercel URL,
+        //    δηλαδή QR τυπωμένο στο εργοτάξιο που δεν άνοιγε πουθενά. Χωρίς ρύθμιση ⇒ ρητό σφάλμα.
+        const checkInUrl = publicUrl(`/attendance/check-in/${encodeURIComponent(tokenDoc.token)}`);
+        if (checkInUrl === null) {
+          logger.error('NEXT_PUBLIC_APP_URL is not configured — refusing to issue an unreachable QR');
+          return NextResponse.json(
+            { success: false, error: 'Public URL is not configured' },
+            { status: 503 }
+          );
+        }
 
-        // Generate QR code as data URL (PNG)
-        const qrDataUrl = await QRCode.toDataURL(checkInUrl, {
-          width: 400,
-          margin: 2,
-          errorCorrectionLevel: 'M',
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF',
-          },
-        });
+        // Τυπώνεται και κολλιέται στο εργοτάξιο ⇒ χρήση `print` (διόρθωση Q, ήσυχη ζώνη 4).
+        const qrDataUrl = await qrPngDataUrl(checkInUrl, 'print', 400);
 
         return NextResponse.json({
           success: true,

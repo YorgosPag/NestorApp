@@ -4,6 +4,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { attachmentDisposition } from '@/lib/http/content-disposition';
 
 const logger = createModuleLogger('DownloadRoute');
 
@@ -124,13 +125,8 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
     // 🏢 ENTERPRISE: Get actual content type from Firebase response
     const actualContentType = response.headers.get('content-type') || 'application/octet-stream';
 
-    // 🏢 ENTERPRISE: RFC 6266 compliant Content-Disposition for UTF-8 filenames
-    // Pattern: Google Drive / Dropbox / OneDrive
-    // - filename="ASCII_FALLBACK" for legacy browsers
-    // - filename*=UTF-8''ENCODED for modern browsers (supports Greek, Chinese, etc.)
-    const asciiFilename = filename.replace(/[^\x20-\x7E]/g, '_'); // ASCII fallback
-    const utf8EncodedFilename = encodeURIComponent(filename);
-    const contentDisposition = `attachment; filename="${asciiFilename}"; filename*=UTF-8''${utf8EncodedFilename}`;
+    // 🏢 RFC 6266 + 5987 — ASCII εφεδρεία + UTF-8 όνομα. SSoT: `lib/http/content-disposition` (ADR-841 Α21.17).
+    const contentDisposition = attachmentDisposition(filename);
 
     // 🏢 ENTERPRISE HEADERS: Force download with proper filename and content type
     const headers = new Headers({
@@ -150,7 +146,6 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
 
     logger.info('DOWNLOAD SUCCESS', {
       filename,
-      asciiFilename,
       size: blob.length,
       contentType: actualContentType,
       contentDisposition,

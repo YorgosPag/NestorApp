@@ -19,8 +19,8 @@
  * @see ./stamp-image-client.ts — το αδελφό cache της σφραγίδας (ίδιο factory)
  */
 
-import QRCode from 'qrcode';
 import { createModuleLogger } from '@/lib/telemetry';
+import { qrPngDataUrl } from '@/lib/qr/qr-code';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createKeyedImageCache } from './title-block-image-cache';
 
@@ -40,11 +40,8 @@ export interface QrImage {
 
 /** Γέννηση PNG data URL από το payload (τοπικά, ντετερμινιστικά — μηδέν δίκτυο). */
 async function decodeQr(payload: string): Promise<QrImage> {
-  const dataUrl = await QRCode.toDataURL(payload, {
-    width: QR_SIZE_PX,
-    margin: 1,
-    errorCorrectionLevel: 'M',
-  });
+  // `embedded`: το κελί της πινακίδας έχει ήδη λευκό γύρω του — δες τον πίνακα του `lib/qr/qr-code` (ADR-841 Α21.17).
+  const dataUrl = await qrPngDataUrl(payload, 'embedded', QR_SIZE_PX);
   return { dataUrl, sizePx: QR_SIZE_PX };
 }
 

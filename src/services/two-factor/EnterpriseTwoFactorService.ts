@@ -24,8 +24,8 @@ import {
   EmailAuthProvider
 } from 'firebase/auth';
 import { doc, getDoc, updateDoc, Firestore } from 'firebase/firestore';
-import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
+import { qrPngDataUrl } from '@/lib/qr/qr-code';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -248,13 +248,9 @@ export class EnterpriseTwoFactorService {
 
       const qrCodeUri = totpSecret.generateQrCodeUrl(currentUser.email, APP_NAME);
 
-      const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUri, {
-        width: 200,
-        margin: 2,
-        color: {
-          dark: designTokens.colors.text.primary,
-          light: designTokens.colors.background.primary
-        }
+      const qrCodeDataUrl = await qrPngDataUrl(qrCodeUri, 'screen', 200, {
+        dark: designTokens.colors.text.primary,
+        light: designTokens.colors.background.primary
       });
 
       const secretInfo: TotpSecretInfo = {
