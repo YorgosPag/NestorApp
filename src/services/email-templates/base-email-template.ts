@@ -10,6 +10,7 @@ import 'server-only';
 
 import { LEGAL_ENTITY_NAME, PRODUCT_NAME } from '@/constants/product-identity';
 import { publicOrigin } from '@/lib/http/public-origin';
+import { MAP_SEARCH_PROVIDER_BRANDS, MAP_SEARCH_PROVIDERS, MAP_SEARCH_URLS } from '@/lib/geo/map-links';
 
 // ============================================================================
 // BRAND CONSTANTS
@@ -368,14 +369,11 @@ function buildPhoneHref(value: string): string {
 // EmailProviderPicker) are replaced in the email by an always-visible sub-row
 // of direct provider links. Brand names kept as proper nouns (no translation).
 
-const MAP_URLS: Record<string, (q: string) => string> = {
-  'Google Maps': (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`,
-  'Google Earth': (q) => `https://earth.google.com/web/search/${encodeURIComponent(q)}`,
-  'Bing Maps': (q) => `https://www.bing.com/maps?q=${encodeURIComponent(q)}`,
-  'Apple Maps': (q) => `https://maps.apple.com/?q=${encodeURIComponent(q)}`,
-  'OpenStreetMap': (q) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(q)}`,
-  'Waze': (q) => `https://www.waze.com/ul?q=${encodeURIComponent(q)}&navigate=yes`,
-};
+// 🔑 ADR-841 §7 Α21.16 (N.0.2) — ο πίνακας ήταν αντιγραμμένος αυτούσιος στο `AddressMapPicker`.
+//    Ίδια σειρά, ίδια ονόματα σημάτων, **ένας** ορισμός κάθε URL.
+const MAP_URLS: Record<string, (q: string) => string> = Object.fromEntries(
+  MAP_SEARCH_PROVIDERS.map((provider) => [MAP_SEARCH_PROVIDER_BRANDS[provider], MAP_SEARCH_URLS[provider]]),
+);
 
 const EMAIL_URLS: Record<string, (to: string) => string> = {
   'Gmail': (to) => `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}`,

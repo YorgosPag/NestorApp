@@ -14,16 +14,11 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
-type ProviderKey = 'googleMaps' | 'googleEarth' | 'bing' | 'apple' | 'osm' | 'waze';
+// 🔑 ADR-841 §7 Α21.16 (N.0.2) — ο πίνακας των παρόχων ήταν αντιγραμμένος και στο email template.
+import { MAP_SEARCH_URLS, type MapSearchProvider } from '@/lib/geo/map-links';
 
-const MAP_URLS: Record<ProviderKey, (q: string) => string> = {
-  googleMaps: (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`,
-  googleEarth: (q) => `https://earth.google.com/web/search/${encodeURIComponent(q)}`,
-  bing: (q) => `https://www.bing.com/maps?q=${encodeURIComponent(q)}`,
-  apple: (q) => `https://maps.apple.com/?q=${encodeURIComponent(q)}`,
-  osm: (q) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(q)}`,
-  waze: (q) => `https://www.waze.com/ul?q=${encodeURIComponent(q)}&navigate=yes`,
-};
+type ProviderKey = MapSearchProvider;
+const MAP_URLS = MAP_SEARCH_URLS;
 
 interface AddressMapPickerProps {
   address: string;
