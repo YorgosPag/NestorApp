@@ -263,6 +263,11 @@ export async function publishShowcase(
       //    Χωρίς μεταφορά, μια αλλαγή επωνυμίας θα έσβηνε **και τη διοικητική** απόδειξη.
       const keptPresenceAdminIds =
         existing?.outcome === 'showcase' ? existing.showcase.presenceAdminIds : [];
+      // 🔴 **ΤΡΙΤΟΣ ΚΑΤΑΝΑΛΩΤΗΣ ΤΟΥ ΙΔΙΟΥ ΜΑΘΗΜΑΤΟΣ** (ADR-841 §7 Α21.16): η κάρτα είναι
+      //    **δική της πράξη** (`showcase-card-custody`), η οθόνη της βιτρίνας δεν τη στέλνει,
+      //    και το `set` είναι χωρίς `merge` ⇒ χωρίς μεταφορά, κάθε αλλαγή επωνυμίας θα έσβηνε
+      //    έδρα, υποκαταστήματα και ωράριο. Άγκυρα: `showcase-card-survival.test.ts`.
+      const keptLocations = existing?.outcome === 'showcase' ? existing.showcase.locations : [];
 
       const showcase: PublicShowcase = {
         companyId,
@@ -279,6 +284,7 @@ export async function publishShowcase(
         presence: keptPresence,
         presenceAdminIds: keptPresenceAdminIds,
         mark: keptMark,
+        locations: keptLocations,
         publishedAt: nowISO(),
       };
 
@@ -340,7 +346,18 @@ export async function withdrawAgencyProfile(
 ): Promise<AgencyProfileWriteResult> {
   try {
     await publishShowcaseMark(companyId, null);
-    await adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId).delete();
+    // 🔴 ADR-841 §7 Α21.16 — **ΚΑΙ ΤΑ ΚΑΝΑΛΙΑ, ΑΤΟΜΙΚΑ ΜΕ ΤΟ ΕΓΓΡΑΦΟ**. Δύο σκέτα `delete` θα
+    //    άφηναν παράθυρο: μια αποθήκευση κάρτας που προλαβαίνει ανάμεσά τους ξαναγράφει τα
+    //    κανάλια, και μένουν **τηλέφωνα ανθρώπου που ανακάλεσε τη συγκατάθεσή του**, χωρίς
+    //    καμία οθόνη να τα δείχνει. Η ανάγνωση βάζει το έγγραφο στο CAS: ο γραφέας της κάρτας
+    //    (`saveShowcaseCard`) διαβάζει το ίδιο έγγραφο, οπότε όποιος χάσει **ξαναεκτελείται**.
+    const profileRef = adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId);
+    const channelsRef = adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(companyId);
+    await adminDb.runTransaction(async (transaction) => {
+      await transaction.get(profileRef);
+      transaction.delete(channelsRef);
+      transaction.delete(profileRef);
+    });
     return { kind: 'withdrawn' };
   } catch (error) {
     logger.error('[AGENCY-PROFILE] Η απόσυρση απέτυχε', {

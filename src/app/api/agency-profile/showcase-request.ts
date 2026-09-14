@@ -298,18 +298,33 @@ export async function locate(
   // χωρίς να εμφανίζεται στο φίλτρο απόστασης.
   if (place === null) return { position: null };
 
-  const treatment = PLACE_REF_TREATMENT[await verifyPlaceRef(adminDb, place)];
-  if (treatment === 'reject') {
-    return {
-      rejected: NextResponse.json({ error: 'PLACE_NOT_FOUND' } as const, { status: 422 }),
-    };
-  }
-  if (treatment === 'retry') {
-    return {
-      rejected: NextResponse.json({ error: 'PLACE_UNVERIFIED' } as const, { status: 503 }),
-    };
-  }
+  const located = await locatePlace(adminDb, place);
+  return 'placeError' in located
+    ? {
+        rejected: NextResponse.json(
+          { error: located.placeError } as const,
+          { status: PLACE_ERROR_STATUS[located.placeError] },
+        ),
+      }
+    : located;
+}
 
+/** Οι **δύο** θεραπείες ως κωδικοί δικτύου — «άλλαξέ τον» (422) ≠ «ξαναδοκίμασε» (503). */
+export const PLACE_ERROR_STATUS = { PLACE_NOT_FOUND: 422, PLACE_UNVERIFIED: 503 } as const;
+
+export type PlaceError = keyof typeof PLACE_ERROR_STATUS;
+
+/**
+ * **Η κρίση του `locate` χωρίς το δίκτυο** — ώστε δεύτερη πόρτα (η κάρτα, ADR-841 §7 Α21.16)
+ * να την ξαναχρησιμοποιεί με **δικό της** τύπο απάντησης, αντί να αντιγράψει τις τρεις θεραπείες.
+ */
+export async function locatePlace(
+  adminDb: ReturnType<typeof getAdminFirestore>,
+  place: PlaceRef,
+): Promise<{ readonly position: GeoPoint | null } | { readonly placeError: PlaceError }> {
+  const treatment = PLACE_REF_TREATMENT[await verifyPlaceRef(adminDb, place)];
+  if (treatment === 'reject') return { placeError: 'PLACE_NOT_FOUND' };
+  if (treatment === 'retry') return { placeError: 'PLACE_UNVERIFIED' };
   return { position: await readLandPosition(adminDb, place.landId) };
 }
 
