@@ -30,6 +30,8 @@ import type {
 import type { ProfessionalRegistration } from '@/types/professional-identity';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import { asCredential } from '@/lib/agency/showcase-read';
+import type { ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
+import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { resolveRegistryAuthority } from '@/config/isco-registry-authority';
 import { isChapteredRegistry } from '@/constants/professional-registries';
 import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
@@ -138,6 +140,47 @@ export function credentialFor(
       number,
     }),
   };
+}
+
+/**
+ * 🔴 **Ο ΑΡΙΘΜΟΣ ΓΕΜΗ ΔΕΝ ΕΡΧΕΤΑΙ ΑΠΟ ΤΗ ΦΟΡΜΑ ΤΗΣ ΒΙΤΡΙΝΑΣ** (ADR-841 §7 Α23, Δ1) — ζει **μία**
+ * φορά, στο προφίλ (ADR-439), και κάθε διαπιστευτήριο με αρχή `gemi` τον **διαβάζει** από εκεί.
+ *
+ * ⚠️ Ό,τι πληκτρολογήθηκε για αρχή `gemi` **αντικαθίσταται**, όχι συγχωνεύεται: ως τις 2026-09-14 το
+ * ζωντανό γραφείο είχε `123456789000` στη βιτρίνα και **κενό** στο προφίλ. Προφίλ χωρίς αριθμό ⇒
+ * κενό ⇒ ο μεσίτης παίρνει την υπάρχουσα ονομασμένη άρνηση (`registration-missing`).
+ */
+export function bindRegistryNumber(
+  declared: readonly ShowcaseCredentialDeclaration[],
+  gemiNumber: string | null,
+): ShowcaseCredentialDeclaration[] {
+  return declared.map((entry) => {
+    const verdict = resolveRegistryAuthority(entry.occupation.iscoCode);
+    const bound = verdict.kind === 'authority' && verdict.authority === 'gemi';
+    return bound ? { ...entry, registrationNumber: gemiNumber ?? '' } : entry;
+  });
+}
+
+/**
+ * **Γεμίζει την υποδοχή `verified` της Α9.2 — από την ΑΡΧΗ, όχι από διαχειριστή.**
+ *
+ * Διαπιστευτήριο `gemi` γίνεται `verified` **μόνο** όταν η νομική ταυτότητα επαληθεύτηκε από το ΓΕΜΗ
+ * **και** ο αριθμός του είναι ο ίδιος· αλλιώς `declared` — και προς τα κάτω: μια ανανέωση που έχασε
+ * την επαλήθευση **ρίχνει** το σήμα του διαπιστευτηρίου, ποτέ δεν το αφήνει «κολλημένο».
+ */
+export function attestFromRegistry(
+  credential: ShowcaseCredential,
+  identity: ShowcaseLegalIdentity | null,
+): ShowcaseCredential {
+  const { attestation } = credential;
+  if (attestation.state === 'unknown' || attestation.registration.authority !== 'gemi') return credential;
+  // `null` = η ταυτότητα **αποσύρθηκε** στην ανανέωση ⇒ καμία επαλήθευση να κληρονομηθεί.
+  const verified =
+    identity !== null &&
+    identity.attestation.state === 'verified' &&
+    canonicalGemiNumber(attestation.registration.number) === identity.gemiNumber;
+  const state = verified ? 'verified' : 'declared';
+  return asCredential(credential.occupation, { state, registration: attestation.registration }) ?? credential;
 }
 
 /**

@@ -33,6 +33,7 @@ import {
   type EntityType,
 } from '@/subapps/accounting/types/entity';
 import type { CompanyRegistryDeclaration } from '@/types/company-registry';
+import type { CompanySeatDeclaration } from '@/types/showcase-legal-identity';
 
 const logger = createModuleLogger('CompanyLegalIdentity');
 
@@ -184,12 +185,33 @@ export async function readCompanyRegistryDeclaration(
 ): Promise<CompanyRegistryDeclarationRead> {
   const read = await readProfileDocument(companyId);
   if (read.kind !== 'present') return read;
+  return { kind: 'present', declaration: registryDeclarationOf(read.data) };
+}
+
+// ============================================================================
+// PURE PARSERS — ADR-841 §7 Α23 (the profile read INSIDE a transaction)
+// ============================================================================
+
+/**
+ * The registry declaration from an **already-read** profile document.
+ *
+ * 🔑 Exported so the showcase publication can `transaction.get` the profile and judge it inside the
+ * same transaction: a concurrent rename then **retries** the publication instead of letting it write a
+ * stale legal identity. One parser for both paths — never a second reading of the same fields.
+ */
+export function registryDeclarationOf(data: FirebaseFirestore.DocumentData): CompanyRegistryDeclaration {
   return {
-    kind: 'present',
-    declaration: {
-      entityType: entityTypeOf(read.data.entityType),
-      businessName: readStringField(read.data, 'businessName') ?? null,
-      gemiNumber: readStringField(read.data, 'gemiNumber') ?? null,
-    },
+    entityType: entityTypeOf(data.entityType),
+    businessName: readStringField(data, 'businessName') ?? null,
+    gemiNumber: readStringField(data, 'gemiNumber') ?? null,
+  };
+}
+
+/** The **statutory seat** from an already-read profile document — address, city, postal code, nothing else. */
+export function seatDeclarationOf(data: FirebaseFirestore.DocumentData): CompanySeatDeclaration {
+  return {
+    address: readStringField(data, 'address') ?? null,
+    city: readStringField(data, 'city') ?? null,
+    postalCode: readStringField(data, 'postalCode') ?? null,
   };
 }

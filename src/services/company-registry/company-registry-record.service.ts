@@ -57,22 +57,40 @@ export async function recordRegistryCheck(
   return { record, checkedAt };
 }
 
+/** Το έγγραφο του αντιγράφου — εκτεθειμένο ώστε η βιτρίνα να το διαβάζει **μέσα** σε συναλλαγή. */
+export function registryRecordRef(adminDb: AdminFirestore, companyId: string) {
+  return recordRef(adminDb, companyId);
+}
+
+/**
+ * **Ο φρουρός του αποθηκευμένου αντιγράφου**, πάνω σε ήδη διαβασμένο στιγμιότυπο — ένας αναγνώστης
+ * για την απλή ανάγνωση **και** για τη συναλλαγή της βιτρίνας (ADR-841 §7 Α23).
+ *
+ * ⚠️ Σκουπίδι ⇒ `unavailable`, **ποτέ** `absent`: «δεν ρωτήθηκε» θα έλεγε στον άνθρωπο να ξαναρωτήσει
+ * κάτι που το σύστημα έχει, και θα έριχνε σιωπηλά ένα σήμα.
+ */
+export function registryCheckOf(
+  snapshot: { readonly exists: boolean; data: () => unknown },
+  companyId: string,
+): RegistryCheckRead {
+  if (!snapshot.exists) return { kind: 'absent' };
+  const data: unknown = snapshot.data();
+  const loose = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+  const record = parseStoredRegistryRecord(loose.record);
+  const checkedAt = typeof loose.checkedAt === 'string' ? loose.checkedAt : null;
+  if (record === null || checkedAt === null) {
+    logger.error('Αντίγραφο ΓΕΜΗ που δεν περνά τον φρουρό', { data: { companyId } });
+    return { kind: 'unavailable' };
+  }
+  return { kind: 'present', check: { record, checkedAt } };
+}
+
 export async function readRegistryCheck(
   adminDb: AdminFirestore,
   companyId: string,
 ): Promise<RegistryCheckRead> {
   try {
-    const snapshot = await recordRef(adminDb, companyId).get();
-    if (!snapshot.exists) return { kind: 'absent' };
-    const data: unknown = snapshot.data();
-    const loose = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
-    const record = parseStoredRegistryRecord(loose.record);
-    const checkedAt = typeof loose.checkedAt === 'string' ? loose.checkedAt : null;
-    if (record === null || checkedAt === null) {
-      logger.error('Αντίγραφο ΓΕΜΗ που δεν περνά τον φρουρό', { data: { companyId } });
-      return { kind: 'unavailable' };
-    }
-    return { kind: 'present', check: { record, checkedAt } };
+    return registryCheckOf(await recordRef(adminDb, companyId).get(), companyId);
   } catch (error) {
     logger.error('Το αντίγραφο ΓΕΜΗ δεν διαβάστηκε', { data: { companyId }, error: getErrorMessage(error) });
     return { kind: 'unavailable' };

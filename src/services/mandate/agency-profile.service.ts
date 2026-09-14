@@ -58,18 +58,17 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { showcaseOwnerId, type ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
 import type { DeclaredCoverage } from '@/types/agency-coverage';
-import type {
-  PublicShowcase,
-  PublicShowcaseLookup,
-  ShowcaseCredential,
-} from '@/types/agency-profile';
+import type { PublicShowcase, PublicShowcaseLookup } from '@/types/agency-profile';
+import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
 import { readShowcase, toStoredShowcase } from '@/lib/agency/showcase-read';
 import { publishShowcaseMark } from '@/services/mandate/showcase-mark-publication';
 // 🔑 Ο κριτής του διαπιστευτηρίου ζει **έξω** — καθαρή κρίση, μηδέν I/O (N.7.1).
+import type { ShowcaseCredentialDeclaration } from '@/services/mandate/agency-profile-credential';
+// 🔑 Α23 — η νομική ταυτότητα: αναγνώσεις μέσα στη συναλλαγή + σύνθεση με τα διαπιστευτήρια.
 import {
-  credentialFor,
-  type ShowcaseCredentialDeclaration,
-} from '@/services/mandate/agency-profile-credential';
+  formLegalShowcase,
+  readLegalIdentityInputs,
+} from '@/services/mandate/showcase-legal-identity-custody';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -97,7 +96,11 @@ const logger = createModuleLogger('agency-profile.service');
  */
 export interface ShowcaseDeclaration {
   readonly alias: string;
-  readonly displayName: string;
+  /**
+   * 🔴 **ΚΑΝΕΝΑ `displayName` ΑΠΟ ΤΟΝ ΚΑΛΟΥΝΤΑ** (ADR-841 §7 Α23, Δ5): δηλώνονται **επιλογές** — ποιο
+   * όνομα, πόση έδρα — και ο γραφέας λύνει το κείμενο από το προφίλ και το ΓΕΜΗ, μέσα στη συναλλαγή.
+   */
+  readonly legal: ShowcaseLegalDeclaration;
   /** ≥1 — το επιβάλλει ο γραφέας, με **ονομασμένη** άρνηση. */
   readonly credentials: readonly ShowcaseCredentialDeclaration[];
   readonly place: PlaceRef | null;
@@ -201,18 +204,8 @@ export async function publishShowcase(
   if (declaration.alias.trim() === '') {
     return { kind: 'rejected', reason: 'agency-profile-alias-missing' };
   }
-  if (declaration.displayName.trim() === '') {
-    return { kind: 'rejected', reason: 'agency-profile-name-missing' };
-  }
   if (declaration.credentials.length === 0) {
     return { kind: 'rejected', reason: 'agency-profile-occupation-missing' };
-  }
-
-  const credentials: ShowcaseCredential[] = [];
-  for (const declared of declaration.credentials) {
-    const formed = credentialFor(declared);
-    if ('reason' in formed) return { kind: 'rejected', reason: formed.reason };
-    credentials.push(formed.credential);
   }
 
   // 🔴 ΑΠΟ ΤΗΝ ΑΠΟΔΕΙΞΗ, ποτέ από όρισμα: αδύνατο να κριθεί ο ένας οργανισμός και
@@ -271,11 +264,22 @@ export async function publishShowcase(
       // 🔴 Α21.17 — **ΤΕΤΑΡΤΟΣ** καταναλωτής: η ιστοσελίδα γράφεται από την πράξη της κάρτας, άρα μεταφέρεται.
       const keptWebsite = existing?.outcome === 'showcase' ? existing.showcase.website : null;
 
+      // 🏆 ADR-841 §7 Α23 — **ΟΝΟΜΑ, ΝΟΜΙΚΗ ΤΑΥΤΟΤΗΤΑ ΚΑΙ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΑΠΟ ΜΙΑ ΚΡΙΣΗ.** Προφίλ και
+      //    αντίγραφο ΓΕΜΗ διαβάζονται **εδώ**, ώστε μια μετονομασία που προλαβαίνει να ξανατρέξει τη
+      //    δημοσίευση. Η έδρα `business-address` διαβάζει την κάρτα που **μεταφέρεται** παραπάνω.
+      const formed = formLegalShowcase(
+        await readLegalIdentityInputs(adminDb, transaction, companyId, keptLocations),
+        declaration.legal,
+        declaration.credentials,
+      );
+      if ('reason' in formed) return { rejected: formed.reason };
+
       const showcase: PublicShowcase = {
         companyId,
         alias: declaration.alias.trim(),
-        displayName: declaration.displayName.trim(),
-        credentials,
+        displayName: formed.displayName,
+        credentials: formed.credentials,
+        legalIdentity: formed.legalIdentity,
         place: declaration.place,
         position: declaration.position,
         // ⚠️ `?? null` και ΟΧΙ σκέτο πέρασμα: το Firestore **απορρίπτει `undefined`**, και
@@ -305,6 +309,8 @@ export async function publishShowcase(
       return { showcase, publicNameChanged };
     });
 
+    // ⚠️ Η άρνηση βγαίνει **από** τη συναλλαγή χωρίς γραφή — τίποτα δεν άγγιξε τον δίσκο.
+    if ('rejected' in written) return { kind: 'rejected', reason: written.rejected };
     return { kind: 'published', profile: written.showcase, publicNameChanged: written.publicNameChanged };
   } catch (error) {
     logger.error('[AGENCY-PROFILE] Η δημοσίευση απέτυχε', {
