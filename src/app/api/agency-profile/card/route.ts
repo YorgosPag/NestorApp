@@ -37,7 +37,7 @@ async function readHandler(
   const read = await readOwnedShowcaseCard(getAdminFirestore(), ctx.companyId);
   switch (read.kind) {
     case 'owned':
-      return NextResponse.json({ locations: read.locations });
+      return NextResponse.json({ locations: read.locations, website: read.website });
     case 'without-showcase':
       return NextResponse.json({ error: 'SHOWCASE_NOT_PUBLISHED' } as const, { status: 404 });
     // 🔴 **Δεν μάθαμε** — ποτέ «δεν έχεις κάρτα»: η οθόνη θα πρότεινε να τη γράψεις από την αρχή.
@@ -59,10 +59,10 @@ async function saveHandler(
   const verified = await verifyLocations(adminDb, parsed.data);
   if ('rejected' in verified) return verified.rejected;
 
-  const result = await saveShowcaseCard(adminDb, ctx.companyId, verified.declared);
+  const result = await saveShowcaseCard(adminDb, ctx.companyId, verified.declared, parsed.data.website);
   switch (result.kind) {
     case 'saved':
-      return NextResponse.json({ locations: result.locations });
+      return NextResponse.json({ locations: result.locations, website: result.website });
     case 'rejected':
       return NextResponse.json({ error: 'INVALID_CARD', reason: result.reason } as const, { status: 422 });
     case 'failed':

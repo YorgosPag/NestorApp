@@ -1,5 +1,5 @@
 /**
- * @fileoverview 🏆 **Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ** — ο **μόνος** γραφέας της ψηφιακής κάρτας (ADR-841 §7 Α21.16).
+ * @fileoverview 🏆 **Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ** — ο **μόνος** γραφέας της ψηφιακής κάρτας (ADR-841 §7 Α21.16 · Α21.17).
  * @related lib/agency/showcase-card-form.ts (η κρίση) · app/api/agency-profile/card/route.ts ·
  *   services/mandate/showcase-mark-custody.ts (το πρότυπο)
  * @module services/mandate/showcase-card-custody
@@ -13,7 +13,7 @@
  * `merge`), κάθε αλλαγή επωνυμίας θα έσβηνε τηλέφωνα που η οθόνη **δεν είχε από πού** να
  * ξαναστείλει — ακριβώς το περιστατικό του `mark` (Α21 Φάση 2).
  *
- * 🔑 **ΜΙΑ ΣΥΝΑΛΛΑΓΗ, ΔΥΟ ΕΓΓΡΑΦΑ**: `agency_profiles.locations` (δημόσιο) και
+ * 🔑 **ΜΙΑ ΣΥΝΑΛΛΑΓΗ, ΔΥΟ ΕΓΓΡΑΦΑ**: `agency_profiles.locations` + `website` (δημόσιο) και
  * `showcase_card_channels` (ιδιωτικό) γράφονται **ατομικά**. Αλλιώς μια αποτυχία στη μέση θα
  * άφηνε κουμπί «Εμφάνιση τηλεφώνου» που δεν φέρνει τίποτα — ή τηλέφωνα που κανένα κουμπί δεν δείχνει.
  *
@@ -30,6 +30,7 @@ import { readShowcase } from '@/lib/agency/showcase-read';
 import { readLocationChannels } from '@/lib/agency/showcase-card-channels-read';
 import {
   formCard,
+  formWebsite,
   isCardRejection,
   type VerifiedLocationDeclaration,
 } from '@/lib/agency/showcase-card-form';
@@ -39,13 +40,19 @@ import type { OwnedShowcaseLocation, ShowcaseLocation } from '@/types/showcase-c
 
 const logger = createModuleLogger('showcase-card-custody');
 
+/** Ό,τι βλέπει **ο ιδιοκτήτης** για να επεξεργαστεί: τα καταστήματα με τα κανάλια τους, και η ιστοσελίδα. */
+export interface OwnedShowcaseCard {
+  readonly locations: readonly OwnedShowcaseLocation[];
+  readonly website: string | null;
+}
+
 export type ShowcaseCardWriteResult =
-  | { readonly kind: 'saved'; readonly locations: readonly OwnedShowcaseLocation[] }
+  | ({ readonly kind: 'saved' } & OwnedShowcaseCard)
   | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection }
   | { readonly kind: 'failed' };
 
 export type OwnedShowcaseCardRead =
-  | { readonly kind: 'owned'; readonly locations: readonly OwnedShowcaseLocation[] }
+  | ({ readonly kind: 'owned' } & OwnedShowcaseCard)
   | { readonly kind: 'without-showcase' }
   | { readonly kind: 'failed' };
 
@@ -59,12 +66,18 @@ function ownedOf(locations: readonly ShowcaseLocation[], channelsRaw: unknown): 
  *
  * 🔑 **Υπάρχει βιτρίνα;** — ρωτιέται **μέσα** στη συναλλαγή: η κάρτα ζει στο έγγραφο της βιτρίνας,
  * και μια απόσυρση που προλαβαίνει δεν επιτρέπεται να αφήσει ορφανά κανάλια.
+ *
+ * @param websiteRaw Η ιστοσελίδα όπως πληκτρολογήθηκε — κρίνεται **εδώ**, με τον ίδιο κριτή που φυλά τον αναγνώστη.
  */
 export async function saveShowcaseCard(
   adminDb: AdminFirestore,
   companyId: string,
   declared: readonly VerifiedLocationDeclaration[],
+  websiteRaw: string | null,
 ): Promise<ShowcaseCardWriteResult> {
+  const website = formWebsite(websiteRaw);
+  if (isCardRejection(website)) return { kind: 'rejected', reason: website.reason };
+
   const profileRef = adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId);
   const channelsRef = adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(companyId);
 
@@ -82,9 +95,9 @@ export async function saveShowcaseCard(
 
       // ⚠️ `update` στο δημόσιο (το έγγραφο ανήκει στον γραφέα της βιτρίνας) · `set` χωρίς
       //    `merge` στο ιδιωτικό (η κάρτα είναι ολόκληρη — ένα αφαιρεμένο τηλέφωνο **φεύγει**).
-      transaction.update(profileRef, { locations: formed.locations });
+      transaction.update(profileRef, { locations: formed.locations, website });
       transaction.set(channelsRef, { locations: formed.channels.locations });
-      return { kind: 'saved', locations: ownedOf(formed.locations, formed.channels) };
+      return { kind: 'saved', locations: ownedOf(formed.locations, formed.channels), website };
     });
   } catch (error) {
     logger.error('[CARD] Η αποθήκευση της κάρτας απέτυχε', {
@@ -107,7 +120,11 @@ export async function readOwnedShowcaseCard(
     ]);
     const read = profile.exists ? readShowcase(profile.data(), companyId) : null;
     if (read?.outcome !== 'showcase') return { kind: 'without-showcase' };
-    return { kind: 'owned', locations: ownedOf(read.showcase.locations, channels.data()) };
+    return {
+      kind: 'owned',
+      locations: ownedOf(read.showcase.locations, channels.data()),
+      website: read.showcase.website,
+    };
   } catch (error) {
     logger.error('[CARD] Η ανάγνωση της κάρτας απέτυχε — άγνωστο, όχι κενό', {
       companyId,

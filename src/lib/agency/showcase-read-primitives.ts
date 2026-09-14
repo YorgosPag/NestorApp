@@ -10,11 +10,23 @@
  * είναι ένα leaf που εισάγουν και οι δύο — όχι ένα δεύτερο `text()`.
  */
 
+import { normalisePublicWebsite } from '@/lib/validation/email-validation';
 import type { PlaceRef } from '@/types/geo/public-place';
 
 /** Είναι μη-κενό κείμενο; — το σύνορο δέχεται `unknown`, όχι υποσχέσεις. */
 export function text(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+/**
+ * **Ιστοσελίδα που επιτρέπεται να δει ο κόσμος** — ο **ίδιος** κριτής με τον γραφέα (Α21.17), αλλιώς `null`.
+ *
+ * 🔴 Το έγγραφο το διαβάζει **ανώνυμος**: μια τιμή που γράφτηκε με το χέρι ή με παλιότερο κριτή
+ * (`javascript:…`, διαπιστευτήρια μέσα στο URL) **δεν** φτάνει ποτέ σε `href`.
+ */
+export function readWebsite(raw: unknown): string | null {
+  const value = text(raw);
+  return value === null ? null : normalisePublicWebsite(value);
 }
 
 /** `PlaceRef` ή `null` — το `landId` είναι το μόνο υποχρεωτικό (η γη κρατά τη θέση). */

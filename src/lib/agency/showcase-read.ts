@@ -59,7 +59,7 @@ import {
 } from '@/lib/agency/showcase-read-geo';
 import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 // 🔑 ADR-841 §7 Α21.16 — τα δύο άτομα έγιναν leaf (δεύτερος καταναλωτής: η κάρτα).
-import { readPlace, text } from '@/lib/agency/showcase-read-primitives';
+import { readPlace, readWebsite, text } from '@/lib/agency/showcase-read-primitives';
 import { readLocations } from '@/lib/agency/showcase-read-locations';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import { isRegistryAuthority, isChapteredRegistry } from '@/constants/professional-registries';
@@ -223,6 +223,8 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       mark: readMark(source.mark),
       // ⚠️ Παλιό έγγραφο χωρίς κάρτα ⇒ `[]` — καμία εγγραφή μετανάστευσης (CHECK 3.74).
       locations: readLocations(source.locations),
+      // ⚠️ Α21.17 — παλιό έγγραφο χωρίς ιστοσελίδα ⇒ `null`· άκυρη τιμή ⇒ `null`, ποτέ σε `href`.
+      website: readWebsite(source.website),
       publishedAt,
     } satisfies PublicShowcase,
   };

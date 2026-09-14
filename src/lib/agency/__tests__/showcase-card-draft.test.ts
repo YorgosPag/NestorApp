@@ -31,12 +31,12 @@ describe('showcase-card-draft', () => {
   });
 
   it('🔴 κατάστημα χωρίς τόπο ΟΝΟΜΑΖΕΤΑΙ — δεν εξαφανίζεται σιωπηλά', () => {
-    expect(wireOfDrafts([draftOfLocation(OWNED), emptyLocationDraft('branch')])).toEqual({ missingPlaceIndex: 1 });
+    expect(wireOfDrafts([draftOfLocation(OWNED), emptyLocationDraft('branch')], '')).toEqual({ missingPlaceIndex: 1 });
   });
 
   it('🔑 διακόπτης οδού κλειστός ⇒ street: null, αλλά η οδός ΚΡΑΤΙΕΤΑΙ στο πρόχειρο', () => {
     const draft = { ...draftOfLocation(OWNED), publishStreet: false };
-    const formed = wireOfDrafts([draft]);
+    const formed = wireOfDrafts([draft], '');
     if (!('wire' in formed)) throw new Error('missing place');
     expect(formed.wire.locations[0].street).toBeNull();
     expect(draft.street.street).toBe('Τσιμισκή');
@@ -52,9 +52,17 @@ describe('showcase-card-draft', () => {
   });
 
   it('κενή ετικέτα/εσωτερικό → null στο σύρμα', () => {
-    const formed = wireOfDrafts([{ ...draftOfLocation(OWNED), label: '  ', phones: [{ number: '2310123456', extension: ' ' }] }]);
+    const formed = wireOfDrafts([{ ...draftOfLocation(OWNED), label: '  ', phones: [{ number: '2310123456', extension: ' ' }] }], '');
     if (!('wire' in formed)) throw new Error('missing place');
     expect(formed.wire.locations[0].label).toBeNull();
     expect(formed.wire.locations[0].phones[0].extension).toBeNull();
+  });
+
+  it('🔑 Α21.17 — ιστοσελίδα: κενή ⇒ null (η ΑΦΑΙΡΕΣΗ είναι δήλωση), αλλιώς κομμένα κενά — η κρίση μένει στον διακομιστή', () => {
+    const empty = wireOfDrafts([draftOfLocation(OWNED)], '   ');
+    const typed = wireOfDrafts([draftOfLocation(OWNED)], '  www.vafes.gr ');
+    if (!('wire' in empty) || !('wire' in typed)) throw new Error('missing place');
+    expect(empty.wire.website).toBeNull();
+    expect(typed.wire.website).toBe('www.vafes.gr');
   });
 });

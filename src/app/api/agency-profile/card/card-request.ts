@@ -49,10 +49,12 @@ export const cardSchema: z.ZodType<ShowcaseCardWire> = z.object({
       }),
     )
     .max(32),
+  // Φρουρός πόρου (4096) — το πραγματικό ταβάνι (2048) το λέει ονομαστικά ο κριτής.
+  website: z.string().max(4096).nullable(),
 });
 
 export type ShowcaseCardResponse =
-  | { readonly locations: readonly OwnedShowcaseLocation[] }
+  | { readonly locations: readonly OwnedShowcaseLocation[]; readonly website: string | null }
   | { readonly error: 'INVALID_CARD'; readonly reason: AgencyProfileRejection }
   /** Ο τόπος **ποιου** καταστήματος — η φόρμα έχει πολλά, και «κάποιος τόπος» είναι γρίφος. */
   | { readonly error: PlaceError; readonly locationIndex: number }

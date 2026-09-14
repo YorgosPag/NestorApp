@@ -106,6 +106,7 @@ export function draftHoursDefect(draft: ShowcaseLocationDraft): WeeklyHoursDefec
  */
 export function wireOfDrafts(
   drafts: readonly ShowcaseLocationDraft[],
+  website: string,
 ): { readonly wire: ShowcaseCardWire } | { readonly missingPlaceIndex: number } {
   const missingPlaceIndex = drafts.findIndex(({ place }) => place === null);
   if (missingPlaceIndex !== -1) return { missingPlaceIndex };
@@ -125,6 +126,8 @@ export function wireOfDrafts(
         })),
         emails: draft.emails,
       })),
+      // Κενό ⇒ `null`: η **αφαίρεση** της ιστοσελίδας είναι δήλωση, όχι παράλειψη.
+      website: website.trim() === '' ? null : website.trim(),
     },
   };
 }
