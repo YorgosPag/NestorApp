@@ -16,6 +16,7 @@ import { isValidEmail, normalisePublicWebsite } from '@/lib/validation/email-val
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { normalisePhone } from '@/lib/contact/channel-phone';
 import { normalizeWeeklyHours, weeklyHoursDefect } from '@/lib/calendar/weekly-hours';
+import { carryConfirmations, latestConfirmedAt } from '@/lib/agency/showcase-email-confirmation-rules';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import {
@@ -23,6 +24,7 @@ import {
   MAX_PHONES_PER_LOCATION,
   MAX_SHOWCASE_LOCATIONS,
   type ShowcaseCardChannels,
+  type ShowcaseEmailConfirmation,
   type ShowcaseLocation,
   type ShowcaseLocationChannels,
   type ShowcaseLocationWire,
@@ -86,6 +88,7 @@ function isRejected(value: unknown): value is Rejected {
 function formLocation(
   declared: VerifiedLocationDeclaration,
   id: string,
+  previousConfirmations: readonly ShowcaseEmailConfirmation[],
 ): { readonly location: ShowcaseLocation; readonly channels: ShowcaseLocationChannels } | Rejected {
   const { wire } = declared;
   if (wire.phones.length > MAX_PHONES_PER_LOCATION || wire.emails.length > MAX_EMAILS_PER_LOCATION) {
@@ -101,6 +104,9 @@ function formLocation(
   if (isRejected(emails)) return emails;
   if (isRejected(street)) return street;
 
+  // 🔴 Α21.18 — αλλαγμένο ή αφαιρεμένο email χάνει την επιβεβαίωσή του **σε αυτό το πέρασμα**, άρα
+  //    στην ίδια συναλλαγή με τη νέα κάρτα· δημόσιο και ιδιωτικό μισό από την **ίδια** λίστα.
+  const emailConfirmations = carryConfirmations(previousConfirmations, emails);
   const location: ShowcaseLocation = {
     id,
     role: wire.role,
@@ -110,8 +116,9 @@ function formLocation(
     street,
     hours: wire.hours === null ? null : normalizeWeeklyHours(wire.hours),
     channelKinds: [...(phones.length > 0 ? ['phone' as const] : []), ...(emails.length > 0 ? ['email' as const] : [])],
+    emailConfirmedAt: latestConfirmedAt(emailConfirmations),
   };
-  return { location, channels: { phones, emails } };
+  return { location, channels: { phones, emails, emailConfirmations } };
 }
 
 /**
@@ -119,11 +126,15 @@ function formLocation(
  *
  * ⚠️ **Ταυτότητα από τον πελάτη γίνεται δεκτή ΜΟΝΟ αν υπάρχει ήδη στη βιτρίνα**: αλλιώς ένα
  * χειρόγραφο `id` θα μπορούσε να «κληρονομήσει» κανάλια άλλου καταστήματος.
+ *
+ * @param previousConfirmations Οι **αποθηκευμένες** επιβεβαιώσεις ενός καταστήματος (Α21.18) — εγχέεται
+ *   όπως το `newId`, ώστε ο κριτής να μένει χωρίς I/O. Νέο κατάστημα δεν ρωτιέται ποτέ: δεν κληρονομεί σήμα.
  */
 export function formCard(
   declared: readonly VerifiedLocationDeclaration[],
   existingIds: ReadonlySet<string>,
   newId: () => string,
+  previousConfirmations: (locationId: string) => readonly ShowcaseEmailConfirmation[],
 ): FormedCard | Rejected {
   if (declared.length > MAX_SHOWCASE_LOCATIONS) return { reason: 'agency-profile-card-too-many-locations' };
   if (declared.filter(({ wire }) => wire.role === 'headquarters').length > 1) {
@@ -133,10 +144,9 @@ export function formCard(
   const locations: ShowcaseLocation[] = [];
   const channels: Record<string, ShowcaseLocationChannels> = {};
   for (const entry of declared) {
-    const id = entry.wire.id !== null && existingIds.has(entry.wire.id) && !(entry.wire.id in channels)
-      ? entry.wire.id
-      : newId();
-    const formed = formLocation(entry, id);
+    const reused = entry.wire.id !== null && existingIds.has(entry.wire.id) && !(entry.wire.id in channels);
+    const id = reused && entry.wire.id !== null ? entry.wire.id : newId();
+    const formed = formLocation(entry, id, reused ? previousConfirmations(id) : []);
     if (isRejected(formed)) return formed;
     locations.push(formed.location);
     channels[id] = formed.channels;

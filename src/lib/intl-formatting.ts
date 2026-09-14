@@ -64,6 +64,18 @@ export const formatLongDate = (date: Date | string | number): string =>
   formatDate(date, { day: 'numeric', month: 'long', year: 'numeric' });
 
 /**
+ * **Month and year only** — "Sept 2026" / "Σεπ 2026" — for FRESHNESS statements on public surfaces
+ * (ADR-841 §7 A21.18: "email confirmed · Sept 2026").
+ *
+ * WHY NOT the day: a confirmation date is a signal of how current a claim is, not an appointment. The
+ * day adds precision nobody acts on, and on a public card it leaks the exact moment someone clicked.
+ * Same pinning discipline as `formatLongDate`: `day: undefined` is stated so `formatDate`'s default
+ * `day: '2-digit'` can never leak back in.
+ */
+export const formatMonthYear = (date: Date | string | number): string =>
+  formatDate(date, { day: undefined, month: 'short', year: 'numeric' });
+
+/**
  * The NAME of an ISO weekday (1 = Monday … 7 = Sunday) in the current locale.
  *
  * WHY Intl and not i18n keys (ADR-841 §7 A21.16): weekday names are CLDR data every browser

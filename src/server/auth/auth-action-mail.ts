@@ -26,13 +26,11 @@ import 'server-only';
  * συνεπές με την ενεργή *email enumeration protection* της Firebase).
  */
 
-import { createHash } from 'crypto';
-
 import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { AUTH_MAIL_RECIPIENT_QUOTA } from '@/lib/middleware/rate-limit-config';
-import { checkQuota } from '@/lib/middleware/rate-limiter';
+import { withinRecipientQuota } from '@/lib/middleware/recipient-quota';
 import { createModuleLogger } from '@/lib/telemetry';
 import { loadDeclaredEmailLanguage } from '@/server/notifications/user-notification-settings-store';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
@@ -54,18 +52,12 @@ export type AuthActionMailOutcome =
   | 'failed';
 
 /**
- * **Χωράει ακόμη ένα μήνυμα σε αυτόν τον παραλήπτη;** Κλειδί **κατακερματισμένο** — κανένα
- * email σε store ορίων. ⚠️ Αποτυχία του store ⇒ **επιτρέπει** (ίδια πολιτική με το
- * `withRateLimit`): η διαθεσιμότητα της επαναφοράς κωδικού δεν εξαρτάται από το Redis.
+ * **Χωράει ακόμη ένα μήνυμα σε αυτόν τον παραλήπτη;** — το SSoT `lib/middleware/recipient-quota`
+ * (hash κλειδιού, «αποτυχία store ⇒ επιτρέπει»). Εξήχθη από εδώ στην ADR-841 Α21.18, όταν το ίδιο
+ * ερώτημα χρειάστηκε δεύτερη φορά· το κλειδί μένει **ταυτόσημο** (`auth-mail:<είδος>:<hash>`).
  */
-async function withinRecipientQuota(kind: AuthActionEmailKind, recipient: string): Promise<boolean> {
-  const key = `auth-mail:${kind}:${createHash('sha256').update(recipient.trim().toLowerCase()).digest('hex')}`;
-  try {
-    return (await checkQuota(key, AUTH_MAIL_RECIPIENT_QUOTA.limit, AUTH_MAIL_RECIPIENT_QUOTA.windowMs)).allowed;
-  } catch (error: unknown) {
-    logger.warn('Ο έλεγχος ορίου παραλήπτη απέτυχε — επιτρέπεται', { error: getErrorMessage(error) });
-    return true;
-  }
+function withinAuthMailQuota(kind: AuthActionEmailKind, recipient: string): Promise<boolean> {
+  return withinRecipientQuota(`auth-mail:${kind}`, recipient, AUTH_MAIL_RECIPIENT_QUOTA);
 }
 
 function isUserNotFound(error: unknown): boolean {
@@ -125,7 +117,7 @@ export async function sendPasswordResetMail(input: {
     throw error;
   }
   if (account.disabled || !account.email) return 'skipped';
-  if (!(await withinRecipientQuota('resetPassword', account.email))) return 'throttled';
+  if (!(await withinAuthMailQuota('resetPassword', account.email))) return 'throttled';
 
   const firebaseLink = await getAdminAuth().generatePasswordResetLink(account.email);
   return deliver('resetPassword', account.email, firebaseLink, await recipientLanguage(account.uid, input.requestedLanguage));
@@ -138,7 +130,7 @@ export async function sendEmailVerificationMail(input: {
 }): Promise<AuthActionMailOutcome> {
   const record = await getAdminAuth().getUser(input.uid);
   if (!record.email || record.emailVerified || record.disabled) return 'skipped';
-  if (!(await withinRecipientQuota('verifyEmail', record.uid))) return 'throttled';
+  if (!(await withinAuthMailQuota('verifyEmail', record.uid))) return 'throttled';
 
   const firebaseLink = await getAdminAuth().generateEmailVerificationLink(record.email);
   return deliver('verifyEmail', record.email, firebaseLink, await recipientLanguage(record.uid, input.requestedLanguage));
