@@ -18,7 +18,7 @@
         "src/**/index.tsx",
         "src/middleware.ts",
         "src/app/globals.css",
-        "sentry.client.config.ts",
+        "instrumentation-client.ts",
         "sentry.server.config.ts",
         "sentry.edge.config.ts",
         "next.config.js",

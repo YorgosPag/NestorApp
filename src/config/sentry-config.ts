@@ -3,7 +3,8 @@
  * SENTRY CONFIGURATION — SSoT for all Sentry init parameters
  * =============================================================================
  *
- * Shared across sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts.
+ * Shared across instrumentation-client.ts (browser), sentry.server.config.ts, sentry.edge.config.ts.
+ * ⚠️ Το `sentry.client.config.ts` ΔΙΑΓΡΑΦΗΚΕ (2026-09-14): deprecated στο SDK 10 και νεκρό σε Turbopack.
  * Change values HERE — all 3 runtimes pick them up automatically.
  *
  * @module config/sentry-config

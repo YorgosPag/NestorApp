@@ -827,16 +827,18 @@ describe('Σ — το σύνορο των τρίτων', () => {
     // τα τέσσερα που λείπουν είναι το `@sentry-internal/feedback` με **100000** — και
     // είναι αόρατο **όχι** επειδή ο σαρωτής είναι ρηχός, αλλά επειδή δεν είναι **άμεσο**
     // dependency: έρχεται μέσα από το `@sentry/nextjs`, που ΕΙΝΑΙ runtime και ΤΡΕΧΕΙ
-    // στον browser (`sentry.client.config.ts`).
+    // στον browser (`instrumentation-client.ts` — πριν τις 2026-09-14 `sentry.client.config.ts`).
     //
     // Σήμερα δεν φορτώνεται, γιατί το Sentry v8+ φέρνει το widget **μόνο** αν το
     // `feedbackIntegration()` δηλωθεί ρητά. Απέχουμε **μία γραμμή** από το να θαφτεί
     // ολόκληρη η εφαρμογή κάτω από το 100000, με **κάθε** πύλη πράσινη. Ένα σχόλιο δεν
     // θα το θυμόταν κανείς — γι' αυτό είναι άγκυρα (μάθημα CHECK 3.36).
-    const files = ['sentry.client.config.ts', 'src/lib/telemetry/sentry.ts'];
+    // ⚠️ Όχι `continue` σε αρχείο που λείπει: μετακίνηση του init (όπως 2026-09-14) θα έκανε την
+    // άγκυρα να περνά ΚΕΝΗ — πράσινη επειδή κανείς δεν κοίταξε.
+    const files = ['instrumentation-client.ts', 'src/lib/telemetry/sentry.ts'];
     for (const rel of files) {
       const full = path.join(REPO_ROOT, rel);
-      if (!fs.existsSync(full)) continue;
+      expect(fs.existsSync(full)).toBe(true);
       expect(fs.readFileSync(full, 'utf8')).not.toMatch(/feedbackIntegration/);
     }
     // Και το ίδιο το πακέτο ΔΕΝ είναι άμεσο — αν γίνει, η απογραφή θα το δει μόνη της

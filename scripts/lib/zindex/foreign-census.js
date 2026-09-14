@@ -67,7 +67,7 @@ function walkPackage(dir, depth, onFile) {
  *       100000  @sentry-internal/feedback  → φορτώνεται **ΜΟΝΟ** αν δηλωθεί ρητά το
  *                                            `feedbackIntegration()` στα `integrations`.
  *                                            Μετρημένο: **δεν** δηλώνεται πουθενά
- *                                            (`sentry.client.config.ts` · `lib/telemetry/sentry.ts`)
+ *                                            (`instrumentation-client.ts` · `lib/telemetry/sentry.ts`)
  *         1000  dockview · dockview-core   → **ορφανά στο store**: ούτε στο `package.json`,
  *                                            ούτε τα εισάγει κανένα αρχείο του `src/`
  *

@@ -203,7 +203,9 @@ function secretsRequestedByCode(): ReadonlySet<string> {
       sf.forEachChild((node) => {
         if (!ts.isVariableStatement(node)) return;
         for (const decl of node.declarationList.declarations) {
-          if (!ts.isIdentifier(decl.name) || decl.name.text !== 'SECRET_ENV') continue;
+          // `…SECRET_ENV` και όχι μόνο `SECRET_ENV`: το ADR-848 εξάγει `EMAIL_SUBSCRIPTION_SECRET_ENV`
+          // — ακριβές όνομα θα το άφηνε αόρατο, πράσινο επειδή κανείς δεν κοίταξε.
+          if (!ts.isIdentifier(decl.name) || !decl.name.text.endsWith('SECRET_ENV')) continue;
           if (decl.initializer && ts.isStringLiteral(decl.initializer)) {
             found.add(decl.initializer.text);
           }
@@ -232,12 +234,15 @@ describe('Σ — το μητρώο ΔΕΝ επιτρέπεται να αποκλ
     expect(undeclared).toEqual([]);
   });
 
-  it('Σ2 — κάθε δηλωμένο μυστικό συνδέσμου έχει ΖΩΝΤΑΝΟ καταναλωτή', () => {
-    const orphans = ENVIRONMENT_CONTRACT.filter(
-      (r) => r.consumer.includes('token-service') || r.consumer.includes('consent.service'),
-    )
-      .map((r) => r.name)
-      .filter((name) => !requested.has(name));
+  // ⚠️ Μέχρι 2026-09-14 το φίλτρο ήταν «ο καταναλωτής λέγεται `token-service`/`consent.service`»:
+  // τα 3 από τα 6 (invitation.service · workspace-invitation · subscription-token) ΞΕΦΕΥΓΑΝ
+  // σιωπηλά. Κριτήριο πλέον = ο δηλωμένος καταναλωτής ΟΝΟΜΑΖΕΙ τη μεταβλητή ως literal.
+  it('Σ2 — κάθε δήλωση έχει ΖΩΝΤΑΝΟ καταναλωτή που ζητά ΑΥΤΟ το όνομα', () => {
+    const orphans = ENVIRONMENT_CONTRACT.filter((r) => {
+      const full = path.join(REPO, r.consumer);
+      if (!fs.existsSync(full)) return false; // το πιάνει η Σ3, με σαφέστερο μήνυμα
+      return !fs.readFileSync(full, 'utf8').includes(`'${r.name}'`);
+    }).map((r) => `${r.name} → ${r.consumer}`);
     expect(orphans).toEqual([]);
   });
 
@@ -261,5 +266,32 @@ describe('Σ — το μητρώο ΔΕΝ επιτρέπεται να αποκλ
   it('Σ5 — το μητρώο δεν κουβαλά τιμές', () => {
     const source = fs.readFileSync(path.join(REPO, 'src/config/environment-contract.ts'), 'utf8');
     expect(source).not.toMatch(/(SECRET|TOKEN|KEY)\s*[:=]\s*['"][A-Za-z0-9+/_-]{16,}['"]/);
+  });
+
+  // 🔴 Η ΑΠΟΚΛΙΣΗ ΠΟΥ ΤΟ §8.35 ΕΓΡΑΨΕ — ΚΑΙ ΞΑΝΑΓΙΝΕ. Στις 2026-08-21 λείπαν 2 μυστικά από
+  // το `.env.example`· διορθώθηκαν με το χέρι, χωρίς άγκυρα. Στις 2026-09-14 έλειπαν πάλι
+  // **3** (ADR-844 · 853 · 848). Διόρθωση χωρίς άγκυρα = υπόσχεση. Όποιος στήνει νέο
+  // περιβάλλον (Netcup, νέος υπολογιστής) διαβάζει ΑΥΤΟ το αρχείο, όχι το συμβόλαιο.
+  it('Σ6 — κάθε δηλωμένη ρύθμιση έχει γραμμή στο `.env.example`', () => {
+    const example = fs.readFileSync(path.join(REPO, '.env.example'), 'utf8');
+    const listed = new Set(
+      [...example.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]),
+    );
+    // Παρονομαστής: αν η ανάλυση σπάσει, ΜΗΔΕΝ γραμμές θα έκαναν κάθε όνομα «λείπει» —
+    // κόκκινο, αλλά για λάθος λόγο. Εδώ η βλάβη του σαρωτή ονομάζεται χωριστά.
+    expect(listed.size).toBeGreaterThan(ENVIRONMENT_CONTRACT.length);
+    const undocumented = ENVIRONMENT_CONTRACT.map((r) => r.name).filter((n) => !listed.has(n));
+    expect(undocumented).toEqual([]);
+  });
+
+  // Το `.env.example` είναι tracked και εξαιρείται από το secret-scan (`check-secret-scan.js`)
+  // ⇒ ένα αληθινό μυστικό επικολλημένο εδώ ΔΕΝ θα το έπιανε καμία άλλη πύλη.
+  it('Σ7 — το `.env.example` κουβαλά μόνο ΣΥΜΒΟΛΟ θέσης για τα δηλωμένα μυστικά', () => {
+    const example = fs.readFileSync(path.join(REPO, '.env.example'), 'utf8');
+    const leaked = ENVIRONMENT_CONTRACT.map((r) => r.name).filter((name) => {
+      const value = new RegExp(`^${name}=(.*)$`, 'm').exec(example)?.[1]?.trim() ?? '';
+      return value !== '' && !value.startsWith('your_');
+    });
+    expect(leaked).toEqual([]);
   });
 });
