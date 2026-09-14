@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
+import { clearUnsavedWork, markUnsavedWork } from '@/lib/app-version/unsaved-work-registry';
 
 interface DirtyFormContextValue {
   registerDirty: (formId: string) => void;
@@ -27,6 +28,16 @@ export function DirtyFormProvider({ children }: { children: ReactNode }) {
 
   const isAnyDirty = dirtyForms.size > 0;
   const isDirty = (formId: string) => dirtyForms.has(formId);
+
+  // ADR-860 §Ε3β — καθρέφτισμα στο μητρώο χωρίς React, που ρωτά η ανάκαμψη φόρτωσης κώδικα
+  // πριν ανανεώσει τη σελίδα μετά από deploy. Ένας ιδιοκτήτης ανά provider (όχι ανά φόρμα):
+  // αρκεί το «υπάρχει κάτι», και το cleanup του unmount δεν αφήνει ορφανή εγγραφή.
+  const ownerId = `dirty-form-provider:${useId()}`;
+  useEffect(() => {
+    if (isAnyDirty) markUnsavedWork(ownerId);
+    else clearUnsavedWork(ownerId);
+    return () => clearUnsavedWork(ownerId);
+  }, [isAnyDirty, ownerId]);
 
   useEffect(() => {
     if (!isAnyDirty) return;

@@ -1025,5 +1025,9 @@
     "showDataTable": "Show data as table",
     "dataTableCaption": "The chart data in table form",
     "saving": "Saving…"
+  },
+  "appUpdate": {
+    "message": "A new version of the app is available. Save your changes and reload the page.",
+    "reload": "Reload"
   }
 }

@@ -10,6 +10,7 @@ import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 import { densityBootScript } from '@/lib/appearance/density-boot-script';
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
+import { AppUpdateBanner } from '@/components/app-update/AppUpdateBanner';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 
 /**
@@ -150,6 +151,12 @@ export default function RootLayout({
                     ⚠️ ΜΕΣΑ στον `AuthProvider`: διαβάζει ταυτότητα (`useAuth`).
                   */}
                   <NotificationDrawer />
+                  {/*
+                    🔴 ADR-860 §Ε3β — «ΝΕΑ ΕΚΔΟΣΗ, ΑΠΟΘΗΚΕΥΣΤΕ ΚΑΙ ΑΝΑΝΕΩΣΤΕ».
+                    Εδώ και όχι σε route group: ένα deploy επηρεάζει ΚΑΘΕ καρτέλα, δημόσια ή όχι.
+                    ⚠️ ΜΗΔΕΝ DOM όσο δεν υπάρχει νέα έκδοση — το `(bare)` μένει ανέπαφο.
+                  */}
+                  <AppUpdateBanner />
                 </UserRoleProvider>
                 </SuperAdminCompanyProvider>
               </AuthProvider>

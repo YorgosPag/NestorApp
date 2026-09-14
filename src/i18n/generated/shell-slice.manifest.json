@@ -31,7 +31,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "ce873a6e274d3845f3e389b612ffbe0aea02d077abc081c517a3aefd9fb53f91",
+    "src/i18n/generated/shell-slice.el.json": "49ce59e9a11b16dc13b0275a7985892fb2215269c08878e1e7f99578fadaa531",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -70,7 +70,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1fb8ee58e9d29b221e2f2476b6d7c806d53a31104c879e67bc298e038301a780",
+  "inputsSha256": "ffdbbe32ff3169f3e3ee9534edaedf1f6e27933a145fd74e771b082ab82eb9f3",
   "languages": [
     "el"
   ],
@@ -498,7 +498,7 @@
     "src/server/notifications/notification-permalink.ts": "3a7e2b42847a2135028a98eda8f04a95c15bc387b7709d679fa04c5cc01650d5",
     "src/server/notifications/notification-read.ts": "5b6e8481da86e760dd2c16617d29d21ae37ff1105f164f8b8c37de910093766b",
     "src/server/notifications/user-notification-settings-store.ts": "f7b44fcca73e4bef37fda2eb93e50924bc8ff636a0abace1855ad06f8eb30fbc",
-    "src/services/ErrorTracker.ts": "8614830a9e1282162a1356442226b61184fbc49af7adea1aa17b3d1e8076113e",
+    "src/services/ErrorTracker.ts": "4ff1fd24ec31d0cf6a5234b143331fc599c2bcee34be0f04c73b50b8615f34c6",
     "src/services/account/tax-identity.service.ts": "96596f0ee90dc75534ab6cab64bc756a4d46028c5a4c8b4530e94e765ccb71c6",
     "src/services/ai-pipeline/shared/mailgun-sender.ts": "9f8d58e887c71e57d474683224b4ba11083d173bfaf7cc2a52106a75417da740",
     "src/services/company/company-public-name.reader.ts": "edb8c2bc3045831f4ba77fffbaf686508497d5738f7f8d9f550c6374a0039f63",
@@ -4331,7 +4331,7 @@
     "src/app/(light)/layout.tsx": "1426d0f8c95c31fbff7fbcc5c3db492adc4d9393dce082febda32e44a6aa62eb",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "cf1eabbc3afc6f0b57cde6075635d8e58d54b4b0e8fe49645fe60f4c79dd27fa",
-    "src/app/layout.tsx": "ad1f18e958e382671dcb08dd040b0abda8bf8a3d80be2a4eddb7638a0c1591ac",
+    "src/app/layout.tsx": "b31f5aac2c86ab42d7e2fac6292db57a6bf00fc728fe28938e2d120139eaeee2",
     "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
     "src/auth/components/AuthScreenChrome.tsx": "af5374a2d172a8f9efcb85251a099c893b104b88d3a92d91d9365d030d33ccd9",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
@@ -4354,6 +4354,7 @@
     "src/components/admin/layout/AdminSidebar.tsx": "17521acfe76c3e6ec90e72e601e7c4324f5cc6f3a0f77742706d658dab58ed0a",
     "src/components/app-header.tsx": "b2b3764fe88f023abfe556185a50513433d2b3384d1fbc291e4d107d6c7960aa",
     "src/components/app-sidebar.tsx": "81de2275b5a0b18f89a52d4fd53868897f8a50ae14b77560dfdf509cd4217a02",
+    "src/components/app-update/AppUpdateBanner.tsx": "2db2e15e6bc38ccaedcb167c2a14cb08e3ca24c2d86d52893386c0c4bd7a06dc",
     "src/components/core/AdvancedFilters/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/generic/config/photo-config/styling/colors.ts": "49664378ba12496215630613e47937572e59891b2f75d71303162187e99d7105",
     "src/components/header/CompanySwitcher.tsx": "2f69c84463d024f2f5e005525ebc3fdec7da909be98758cf21b52d6350dbc18a",
@@ -4640,6 +4641,8 @@
     "src/lib/api/api-client-types.ts": "980ef38f60d24138ef8db398d26ad952136a89579ad9cb23e82fd8638839d6ef",
     "src/lib/api/enterprise-api-client.ts": "c9ff0828bb3e450967f061e3592488d0097dfc8243940b901ab9453ef5301532",
     "src/lib/api/workspace-scope-source.ts": "c0fe256de1dd83877e4c075cd92cf37e50e9ba6f097036df03deb815ce8b10ae",
+    "src/lib/app-version/app-update-state.ts": "d1cd66356a29a86b09579b2eea7f47b94ae6ec30638a2b18d0d09fc30bf4d720",
+    "src/lib/app-version/deployment-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/appearance/apply-density.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/appearance/density-boot-script.ts": "7b0eec0a721a4435b2eea8f6043bc6321f3bef9705e34ed137499a8b77a3ca7a",
     "src/lib/appearance/useHydratedTheme.ts": "ddccf0cdd1064ccad3bf349d46c06aeb7b22b5c52a5fe1fe226d08fa4f4acc05",
@@ -4755,7 +4758,7 @@
     "src/lib/state/createExternalStore.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/stay/stay-availability-vocabulary.ts": "4a9e4ebf87e2bf1ed9a6958eff7f94726fe49e3de75a5a1fd761fecee7ede143",
     "src/lib/stay/stay-free-runs.ts": "69fb4bfb99da7160ef37b13f615777aa84bfca6139629fbcb0eddc122d899e01",
-    "src/lib/storage/safe-storage.ts": "879d2197935e76a9e9ff074ebd3bf5689f3bbb45166d26fab1cbe7f4c68153de",
+    "src/lib/storage/safe-storage.ts": "e3e44d65a727db008b1550477c3e1fbe6660acfc3a18235ba4281617fcd3d580",
     "src/lib/telegram/chat-id-validator.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/telemetry/Logger.ts": "8cea2ea4dca81ce41893b77846b2b927e64552429df5d13b1f77c6e758dc518d",
     "src/lib/telemetry/log-outputs.ts": "8b97eba8e9086103ebb6feaf7ab49f6d4afa12b736ed541472ace15dd4154b97",
@@ -4840,7 +4843,7 @@
     "src/services/realtime/hooks/useRealtimeProperties.ts": "e3cd736c9ae25a2ab3c62b99b69b6233bb6edfbc4fb7b48a14f8d67f6beaf03a",
     "src/services/realtime/types.ts": "3f55257ee4e425ae42d9f98089c9f64c2fe6a0f7b1ac753dbbaffe6f94e193ab",
     "src/services/routes/EnterpriseRouteConfigService.ts": "a95f777390f9e73299e31e75d65370efbca0a3ca41f6096efb2e1dce0823f090",
-    "src/services/session/EnterpriseSessionService.ts": "7142145b40bcb17ace947ea785133aacc753f030ac4f201d66f5cc254cc91cd5",
+    "src/services/session/EnterpriseSessionService.ts": "9fc8c1327580e4b3c392a5ed7e7b4a2039a64143c52a63eb9b9bed29776defff",
     "src/services/session/session-device-detection.ts": "58b6d532b84daafb819c5b0384d5f6af41f2e5e997d672782ef7327395ca5aae",
     "src/services/session/session-helpers.ts": "2a0255aba0dd13ee63552ecbdc23115f4eab7b88fe10404ec73f4dc122cae750",
     "src/services/session/session.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -4974,8 +4977,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 635,
-    "sliceBytes": 416835
+    "shellFiles": 638,
+    "sliceBytes": 417083
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -5411,6 +5414,7 @@
         "src/components/NotificationDrawer.enterprise.tsx",
         "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
         "src/components/app-header.tsx",
+        "src/components/app-update/AppUpdateBanner.tsx",
         "src/components/header/DeclaredOccupationBadge.tsx",
         "src/components/header/JobSwitch.tsx",
         "src/components/header/help-button.tsx",
@@ -5470,6 +5474,8 @@
         "account.title",
         "actions.close",
         "aiInbox",
+        "appUpdate.message",
+        "appUpdate.reload",
         "auditLog",
         "backup",
         "bimDiagnostics",
