@@ -86,6 +86,25 @@ export interface ShowcaseMarkFrame {
   readonly shape: string;
   /** Πώς γεμίζει η εικόνα το πλαίσιο — `object-fit`, ως κλάση. */
   readonly fit: string;
+  /**
+   * **Η επιφάνεια κάτω από την εικόνα** *(Α21.15)*.
+   *
+   * 🔴 **Ήταν `bg-card` για όλα, και το λογότυπο εξαφανιζόταν στο σκοτεινό θέμα**:
+   * μετρημένο στην παραγωγή, σκούρο navy «NESTOR» σε διαφανές φόντο πάνω σε `--card`
+   * `217 33% 17%` ⇒ φαινόταν μόνο το μπλε εικονόσημο. Η υπόσχεση *«επιφάνεια για να
+   * φανεί»* ίσχυε μόνο στο **φωτεινό** θέμα.
+   *
+   * 🏆 **Το λογότυπο παίρνει ΛΕΥΚΗ πλάκα και στα δύο θέματα** — ό,τι κάνουν LinkedIn,
+   * Clutch, G2 στις λίστες τους: τα λογότυπα σχεδιάζονται **για λευκό χαρτί**. Και είναι
+   * **συνεπές με το Α21.10.2**: *«διάφανο και λευκό είναι συσκευασία»* — ο καθαριστής
+   * ήδη θεωρεί το λευκό **φόντο**, οπότε η πλάκα δεν λέει κάτι που δεν λέει ήδη ο τομέας.
+   * ⚠️ **Δηλωμένο κόστος**: λογότυπο με **λευκό** μελάνι σε διαφανές θα χαθεί. Το βλέπει
+   * ο άνθρωπος **πριν** δημοσιεύσει, γιατί η προεπισκόπηση φοράει την **ίδια** πλάκα.
+   *
+   * 🔑 **Το πορτρέτο κρατά `bg-card`**: το `object-cover` το γεμίζει ολόκληρο, η πλάκα
+   * δεν φαίνεται ποτέ — λευκή θα ήταν μόνο φωτοστέφανο στη φόρτωση.
+   */
+  readonly surface: string;
 }
 
 /**
@@ -96,8 +115,8 @@ export interface ShowcaseMarkFrame {
  * αυτόν τον τομέα, η **πρώτη** ερώτηση και όχι λεπτομέρεια στιλ.
  */
 export const SHOWCASE_MARK_FRAME: Readonly<Record<ShowcaseMarkKind, ShowcaseMarkFrame>> = {
-  logo: { shape: 'rounded-lg', fit: 'object-contain' },
-  portrait: { shape: 'rounded-full', fit: 'object-cover' },
+  logo: { shape: 'rounded-lg', fit: 'object-contain', surface: 'bg-white ring-1 ring-border' },
+  portrait: { shape: 'rounded-full', fit: 'object-cover', surface: 'bg-card' },
 } as const;
 
 /**

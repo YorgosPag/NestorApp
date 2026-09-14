@@ -147,13 +147,23 @@ export function marksBand(subject: MarkBoxSubject): boolean {
  */
 export const MARK_GUARANTEED_DENSITY = 2;
 
-/**
- * Η κάρτα του καταλόγου — **44×44**, τετράγωνη **και για τη ζώνη**.
- *
- * ⚠️ Δες *«γιατί η κάρτα μένει τετράγωνη»* στο `showcase-mark-box`: σε **σειρά** από
- * κάρτες, μεταβλητό πλάτος σήματος σπάει τον κατακόρυφο ρυθμό της στήλης.
- */
+/** Η κάρτα του καταλόγου όταν το σήμα είναι **τετράγωνο** — 44×44. */
 const CARD_EDGE = 44;
+
+/**
+ * Η **ζώνη της κάρτας** — **96×48**, σταθερή *(Α21.15)*.
+ *
+ * 🔴 **Ήταν 44×44 «και για τη ζώνη», και το κόστος μετρήθηκε στην οθόνη**: λογότυπο
+ * 512×122 *(4,2:1)* έδινε μελάνι **36×9**, δηλαδή *«δεν φαίνεται»* — όχι «μικρό».
+ *
+ * 🔑 **Σταθερό πλάτος, ΟΧΙ ελεύθερο όπως στη σελίδα**: ο ρυθμός της σειράς δεν θυσιάζεται,
+ * γιατί η κάρτα δίνει **ίδια στήλη** σε κάθε σήμα *(`MARK_CARD_SLOT`)*. Το πλάτος της
+ * στήλης **είναι** αυτό το 96.
+ */
+const CARD_BAND_WIDTH = 96;
+
+/** Το **ύψος** της ζώνης της κάρτας. */
+const CARD_BAND_HEIGHT = 48;
 
 /** Η επικεφαλίδα της `/pro/<alias>` όταν το σήμα είναι **τετράγωνο** — 96×96. */
 const PAGE_EDGE = 96;
@@ -194,11 +204,17 @@ export function markFill(kind: ShowcaseMarkKind): MarkFill {
  */
 export function markSurfaces(subject: DeclaredMarkSubject): readonly ShowcaseMarkSurface[] {
   const fill = markFill(subject.kind);
-  const page: ShowcaseMarkSurface = marksBand(subject)
-    ? { name: 'page', width: BAND_MAX_WIDTH, height: BAND_HEIGHT, fill }
-    : { name: 'page', width: PAGE_EDGE, height: PAGE_EDGE, fill };
+  if (marksBand(subject)) {
+    return [
+      { name: 'card', width: CARD_BAND_WIDTH, height: CARD_BAND_HEIGHT, fill },
+      { name: 'page', width: BAND_MAX_WIDTH, height: BAND_HEIGHT, fill },
+    ];
+  }
 
-  return [{ name: 'card', width: CARD_EDGE, height: CARD_EDGE, fill }, page];
+  return [
+    { name: 'card', width: CARD_EDGE, height: CARD_EDGE, fill },
+    { name: 'page', width: PAGE_EDGE, height: PAGE_EDGE, fill },
+  ];
 }
 
 /**

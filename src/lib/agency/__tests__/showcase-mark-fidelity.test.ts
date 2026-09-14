@@ -343,8 +343,16 @@ describe('🔴 Π — ΤΟ ΠΛΑΙΣΙΟ: το σχήμα προκύπτει α
   it('🔴 το λογότυπο ΔΕΝ κόβεται και το πορτρέτο γεμίζει — οι δύο μισές αποφάσεις', () => {
     // ⚠️ Κυκλική περικοπή **κόβει γράμματα**· `contain` σε κύκλο αφήνει κενές λωρίδες.
     //    Τα δύο πεδία ταξιδεύουν μαζί γιατί απαντούν στο ίδιο ερώτημα.
-    expect(SHOWCASE_MARK_FRAME.logo).toEqual({ shape: 'rounded-lg', fit: 'object-contain' });
-    expect(SHOWCASE_MARK_FRAME.portrait).toEqual({ shape: 'rounded-full', fit: 'object-cover' });
+    expect(SHOWCASE_MARK_FRAME.logo).toEqual({
+      shape: 'rounded-lg',
+      fit: 'object-contain',
+      surface: 'bg-white ring-1 ring-border',
+    });
+    expect(SHOWCASE_MARK_FRAME.portrait).toEqual({
+      shape: 'rounded-full',
+      fit: 'object-cover',
+      surface: 'bg-card',
+    });
   });
 
   it('🔑 το «κόβει;» βγαίνει ΑΠΟ ΤΟ ΣΧΗΜΑ, όχι από λίστα ειδών', () => {
@@ -391,16 +399,26 @@ describe('🔴 Ε — ΟΙ ΕΠΙΦΑΝΕΙΕΣ ΠΟΥ Ο ΜΕΤΑΓΛΩΤΤΙΣ
     'utf8',
   );
 
-  /** Τα **τετράγωνα** κουτιά, από τις κλάσεις: `'h-11 w-11'` → 44. */
-  const squareEdges = [...RAW.matchAll(/className: 'h-(\d+) w-\d+'/g)].map(
-    (m) => Number(m[1]) * TAILWIND_UNIT,
-  );
-
-  /** Η **ζώνη**: `'h-16 w-auto max-w-[15rem]'` → ύψος 64, πλάτος 240. */
-  const bands = [...RAW.matchAll(/className: 'h-(\d+) w-auto max-w-\[(\d+)rem\]'/g)].map((m) => ({
+  /** Κάθε κουτί **σταθερών** διαστάσεων: `'h-11 w-11'` → 44×44 · `'h-12 w-24'` → 96×48. */
+  const fixedBoxes = [...RAW.matchAll(/className: 'h-(\d+) w-(\d+)'/g)].map((m) => ({
     height: Number(m[1]) * TAILWIND_UNIT,
-    width: Number(m[2]) * REM_PX,
+    width: Number(m[2]) * TAILWIND_UNIT,
   }));
+
+  /** Τα **τετράγωνα** κουτιά — `h` ίσο με `w`. */
+  const squareEdges = fixedBoxes.filter((b) => b.height === b.width).map((b) => b.height);
+
+  /**
+   * Οι **ζώνες**: `'h-16 w-auto max-w-[15rem]'` → 240×64, **και** η σταθερή ζώνη της
+   * κάρτας *(Α21.15)* — κουτί σταθερών διαστάσεων με `w` ≠ `h`.
+   */
+  const bands = [
+    ...[...RAW.matchAll(/className: 'h-(\d+) w-auto max-w-\[(\d+)rem\]'/g)].map((m) => ({
+      height: Number(m[1]) * TAILWIND_UNIT,
+      width: Number(m[2]) * REM_PX,
+    })),
+    ...fixedBoxes.filter((b) => b.height !== b.width),
+  ];
 
   it('🔴 ΟΙ ΚΛΑΣΕΙΣ ΔΙΑΒΑΖΟΝΤΑΙ — αλλιώς όλη η ομάδα είναι πράσινη χωρίς να κοιτά τίποτα', () => {
     // ⚠️ Η ίδια η άγκυρα μπορεί να «περάσει» επειδή το regex δεν ταίριαξε τίποτα. Αυτή η
@@ -422,6 +440,14 @@ describe('🔴 Ε — ΟΙ ΕΠΙΦΑΝΕΙΕΣ ΠΟΥ Ο ΜΕΤΑΓΛΩΤΤΙΣ
     const bandPage = surfaceOf({ kind: 'logo', ...wordmark(4, 100) }, 'page');
 
     expect(bands).toContainEqual({ width: bandPage.width, height: bandPage.height });
+  });
+
+  it('🔴 Α21.15 — ΚΑΙ Η ΖΩΝΗ ΤΗΣ ΚΑΡΤΑΣ: ο κριτής κρίνει το 96×48 που ζωγραφίζεται', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα την κάρτα του `markSurfaces` σε 44×44 για τη ζώνη ⇒ ο
+    //    κριτής θα έκρινε wordmark με κουτί που **δεν υπάρχει πια** στην οθόνη.
+    const bandCard = surfaceOf({ kind: 'logo', ...wordmark(4, 100) }, 'card');
+
+    expect(bands).toContainEqual({ width: bandCard.width, height: bandCard.height });
   });
 
   it('🔴 ΤΟ ΓΕΜΙΣΜΑ συμφωνεί με το πλαίσιο, για ΚΑΘΕ είδος', () => {

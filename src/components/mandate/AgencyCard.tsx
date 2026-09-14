@@ -54,6 +54,7 @@ import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
+import { MARK_CARD_SLOT } from './showcase-mark-box';
 import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { coverageRelation, type CoverageRelation } from '@/lib/agency/coverage-match';
 import {
@@ -124,7 +125,12 @@ export function AgencyCard({
         επικεφαλίδα κάρτας (ADR-777 §8.59, `bc3451be`), οπότε δεν υπάρχει αναδίπλωση
         να τη σώσει.
       */}
-      <article className="flex items-start gap-3">
+      {/*
+        🏆 ADR-841 Α21.15 — ΣΤΗΛΗ ΣΤΑΘΕΡΟΥ ΠΛΑΤΟΥΣ ΑΠΟ `sm`, ΣΤΟΙΒΑ ΣΤΟ ΚΙΝΗΤΟ.
+        Το οριζόντιο λογότυπο παίρνει ζώνη 96×48 χωρίς να σπάσει τον ρυθμό: κάθε
+        σήμα κάθεται στην ίδια στήλη, άρα κάθε τίτλος ξεκινά στο ίδιο `x`.
+      */}
+      <article className="flex flex-col gap-3 sm:flex-row sm:items-start">
         {/*
           🏆 ADR-841 §7 Α21, Φάση 2 — Η ΕΙΚΟΝΑ ΑΝ ΤΗ ΔΗΛΩΣΕ, ΤΑ ΑΡΧΙΚΑ ΑΝ ΟΧΙ.
 
@@ -133,14 +139,16 @@ export function AgencyCard({
           λείπει. Γι' αυτό οι περισσότεροι επαγγελματίες, που δεν θα δηλώσουν ποτέ σήμα,
           **δεν μένουν ανώνυμοι**.
         */}
-        <ShowcaseMarkView
-          mark={
-            profile.mark !== null
-              ? { declared: profile.mark }
-              : { lettermark: lettermarkOf(profile.companyId, profile.displayName) }
-          }
-          size="card"
-        />
+        <span className={MARK_CARD_SLOT}>
+          <ShowcaseMarkView
+            mark={
+              profile.mark !== null
+                ? { declared: profile.mark }
+                : { lettermark: lettermarkOf(profile.companyId, profile.displayName) }
+            }
+            size="card"
+          />
+        </span>
         <div className="flex min-w-0 flex-col gap-1">
           <Heading className="m-0 text-lg font-semibold text-foreground">
             {profile.displayName}

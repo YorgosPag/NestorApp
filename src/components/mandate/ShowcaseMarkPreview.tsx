@@ -88,7 +88,10 @@ export function ShowcaseMarkPreview({
       height={height}
       decoding="async"
       className={cn(
-        'shrink-0 border border-border bg-card',
+        // 🔑 **Η ΙΔΙΑ πλάκα με τον κόσμο** (Α21.15): λογότυπο με λευκό μελάνι χάνεται στη
+        //    λευκή πλάκα — ο άνθρωπος πρέπει να το δει **εδώ**, πριν δημοσιεύσει.
+        'shrink-0 border border-border',
+        frame.surface,
         frame.shape,
         frame.fit,
         box.className,

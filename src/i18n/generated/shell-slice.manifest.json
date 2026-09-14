@@ -70,7 +70,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ffdbbe32ff3169f3e3ee9534edaedf1f6e27933a145fd74e771b082ab82eb9f3",
+  "inputsSha256": "b83ac2a2764cae198a2d785a0aef87e285875712719011449754d92e74f4b74c",
   "languages": [
     "el"
   ],
@@ -4372,15 +4372,15 @@
     "src/components/layout/MainContentBridge.tsx": "87f665a53cb0f2fe310d251c86e83f9d01954287893a5348d1bb05fb37548cd9",
     "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
     "src/components/listings/ListingAuthorshipLine.tsx": "4cc48f7465d6fef354d79e1375e935b8959759a7deb8b366d594564a120fa606",
-    "src/components/mandate/AgencyCard.tsx": "9856bb62947ae9b600c688ee5b81345415b1d686c7a84c0acc366f95e959b623",
+    "src/components/mandate/AgencyCard.tsx": "fed1203175143dc47527e3bbd36bd3ca84c34fb9e14d4b93dfd90850bd739797",
     "src/components/mandate/CredibilityStatement.tsx": "ca2d50846efcdf2dc9694956a8b593d643221e2fcf6552cb9cd1800d075a9ed3",
     "src/components/mandate/OccupationSelect.tsx": "a888896ea322baf14183ecfa7ee3963839e0626de43737c4d51a8f13dab8a199",
     "src/components/mandate/ShowcaseMarkView.tsx": "50a27a45b6d388bf52d085610448d35a3241a669977f75304df20a1c8314d8f8",
     "src/components/mandate/agency-directory-labels.ts": "ef6d277cebb58461447d29045cec7fd4df58c73d43f2d7b5c72df13a3f4317b2",
     "src/components/mandate/agency-directory-route.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/components/mandate/agency-showcase-labels.ts": "66295ee183cfdb70ba7ff041bbed7840d4c1e4553d29c11b1336a0d6e3c6af8c",
-    "src/components/mandate/showcase-mark-box.ts": "5bc7ce1c4da417c75d7cf2ca8a0b0378fc2ba2d58bb4430f749d6f7c19a7a625",
-    "src/components/mandate/showcase-mark-frame.ts": "4ceed9593c2d01e478e9f4d07889997debb0002bc18bf23ca9c7d52196ca1853",
+    "src/components/mandate/showcase-mark-box.ts": "9a133849931d17a25764fcd31b8b2ae712a7d4c6e965bf3f1d63fc0da0b82cec",
+    "src/components/mandate/showcase-mark-frame.ts": "4f37a54d4d26670b5ab93878c7988daee4031ee98307deb4b10dba8892d484b5",
     "src/components/navigation/config/navigation-entities/entity-config.ts": "666ab670bc40fb30383e288c56ed288bcc5532ac8fbfdb2e0748f135718e2a9f",
     "src/components/navigation/config/navigation-entities/types.ts": "bbe5490a114cd615bf893141d249c2a0896202f151c0ad42fb8fd1f2fd1d3929",
     "src/components/navigation/core/NavigationContext.tsx": "43b1306da36d3c6ba72da69f1621b229c88bd5cc753f4e30b2d9750a2d1a937a",

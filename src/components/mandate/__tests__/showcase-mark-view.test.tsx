@@ -252,11 +252,26 @@ describe('🔴 Φάση 2 — Η ΕΙΚΟΝΑ ΜΙΛΑ, ΤΟ ΠΛΑΚΙΔΙΟ Σ
   });
 
   it('🔑 ΕΠΙΦΑΝΕΙΑ ΑΠΟ ΚΑΤΩ: το ράφι κρατά τη διαφάνεια, άρα η εικόνα χρειάζεται φόντο', () => {
+    // 🔴 **Α21.15 — ΤΟ `bg-card` ΗΤΑΝ ΤΟ ΙΔΙΟ ΤΟ ΣΦΑΛΜΑ**: στο σκοτεινό θέμα, σκούρο
+    //    λογότυπο σε διαφανές φόντο πάνω σε `--card` ήταν αόρατο *(μετρημένο στην
+    //    παραγωγή)*. Η επιφάνεια έρχεται πλέον από το πλαίσιο, ανά είδος.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: ξαναγράψε σκέτο `bg-card` στο `<img>` ⇒ κοκκινίζει το λογότυπο.
+    for (const kind of ['logo', 'portrait'] as const) {
+      const { unmount } = render(
+        <ShowcaseMarkView mark={{ declared: declaredMark(kind) }} size="card" />,
+      );
+      for (const cls of SHOWCASE_MARK_FRAME[kind].surface.split(' ')) {
+        expect(screen.getByRole('img')).toHaveClass(cls);
+      }
+      unmount();
+    }
+  });
+
+  it('🔴 Α21.15 — το ΛΟΓΟΤΥΠΟ κάθεται σε ΛΕΥΚΗ πλάκα, ανεξάρτητα από το θέμα', () => {
     render(<ShowcaseMarkView mark={{ declared: declaredMark('logo') }} size="card" />);
 
-    // ⚠️ Χωρίς αυτό, διαφανές λογότυπο με σκούρα γράμματα είναι **αόρατο** στο σκοτεινό
-    //    θέμα — και ο άνθρωπος θα νόμιζε ότι η εικόνα του χάλασε.
-    expect(screen.getByRole('img').className).toContain('bg-card');
+    expect(screen.getByRole('img')).toHaveClass('bg-white');
+    expect(screen.getByRole('img')).not.toHaveClass('bg-card');
   });
 
   it('🔴 ΠΟΤΕ ΤΑ ΔΥΟ ΜΑΖΙ: το πλακίδιο ΔΕΝ αποδίδεται όταν υπάρχει δηλωμένο σήμα', () => {
@@ -308,12 +323,15 @@ describe('Α21.9 — 🔴 ΤΟ ΚΟΥΤΙ ΦΤΑΝΕΙ ΩΣ ΤΗΝ ΟΘΟΝΗ, �
     expect(img).toHaveAttribute('sizes', '96px');
   });
 
-  it('🔴 στην ΚΑΡΤΑ ο ίδιος wordmark μένει τετράγωνος — ο ρυθμός της σειράς', () => {
+  it('🔴 Α21.15 — στην ΚΑΡΤΑ ο wordmark παίρνει ΣΤΑΘΕΡΗ ζώνη 96×48, όχι τετράγωνο 44', () => {
+    // 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ**: 512×122 σε 44×44 έδινε μελάνι 36×9 — «δεν φαίνεται».
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα το `BAND_BOX.card` σε `h-11 w-11` ⇒ κοκκινίζει.
     render(<ShowcaseMarkView mark={{ declared: wordmark() }} size="card" />);
 
     const img = screen.getByRole('img');
-    expect(img).toHaveClass('h-11');
-    expect(img).toHaveClass('w-11');
+    expect(img).toHaveClass('h-12');
+    expect(img).toHaveClass('w-24');
+    expect(img).toHaveAttribute('sizes', '96px');
   });
 
   it('🔑 οι ΠΡΑΓΜΑΤΙΚΕΣ διαστάσεις φτάνουν στα χαρακτηριστικά — όχι σταθερό 96', () => {
