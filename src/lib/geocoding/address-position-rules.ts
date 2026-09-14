@@ -8,6 +8,7 @@
 
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { focusPresentation } from '@/lib/geo/geocoding-focus';
+import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
 import { HUMAN_PIN_DRIFT_FLOOR_METRES } from './geocoding-thresholds';
 import {
   ADDRESS_IDENTITY_FIELDS,
@@ -45,10 +46,54 @@ function identityValue(address: AddressLike, field: AddressIdentityField): strin
   return typeof raw === 'string' ? raw.trim() : '';
 }
 
+/**
+ * **Η ΚΑΝΟΝΙΚΗ ΜΟΡΦΗ ενός πεδίου ταυτότητας** — *τι σημαίνει* η τιμή, όχι *τι γράφτηκε*
+ * (ADR-332 D27 **Ζ8**).
+ *
+ * 🔑 **Η δηλωμένη σημασία της ΑΠΟΥΣΙΑΣ είναι μέρος της ταυτότητας.** Για τη χώρα, το έργο
+ * το έχει **ήδη αποφασίσει** σε δύο ανεξάρτητα σημεία, πολύ πριν από αυτόν τον πίνακα:
+ * - `utils/address/country-codes.ts` `isGreekAddressCountry` — *«Η κενή χώρα μετράει ως ελληνική»*·
+ * - `app/api/geocoding/geocoding-engine.ts` — `if (!params.country || cc === 'gr')`, δηλαδή **η ίδια
+ *   η μηχανή** διακλαδώνει με «απόν ≡ gr».
+ *
+ * Ο κριτής απλώς **δεν το ήξερε**. Εδώ δεν εισάγεται σημασιολογία· ευθυγραμμίζεται με αυτή που
+ * ήδη ισχύει — αλλιώς η ίδια διεύθυνση παίρνει **δύο ετυμηγορίες** ανάλογα με το ποιο κάτοπτρο
+ * τη ρώτησε (μετρημένο ζωντανά στην ALFA, 2026-09-13).
+ *
+ * ⚠️ **ΔΕΝ είναι «αγνόησε τα κενά».** Το `isConflict` του `diffAddressFields` (Β9) το κάνει αυτό,
+ * και **σωστά** για τον δικό του σκοπό (άνθρωπος vs μηχανή). Εδώ θα ήταν **λάθος**: αν ο άνθρωπος
+ * **προσθέσει** Τ.Κ. που δεν υπήρχε, αυτό **είναι** αλλαγή και πρέπει να ξαναλυθεί. Απουσία
+ * χώρας ⇒ `'GR'` επειδή αυτό **δηλώνεται**· απουσία Τ.Κ. παραμένει απουσία.
+ */
+const IDENTITY_CANONICAL: Partial<Record<AddressIdentityField, (raw: string) => string>> = {
+  country: (raw) => toStoredCountryCode(raw) ?? DEFAULT_STORED_COUNTRY_CODE,
+};
+
+/**
+ * Η τιμή **όπως συγκρίνεται**. Ξεχωριστή από το {@link identityValue}, και η διαφορά είναι σκόπιμη:
+ *
+ * | | τι δίνει | ποιος τη θέλει |
+ * |---|---|---|
+ * | `identityValue` | **ό,τι είπε ο άνθρωπος** (trim) | `toQuery` (το ερώτημα), `withTrimmedIdentity` (η εγγραφή) |
+ * | `identityForComparison` | **τι σημαίνει** (κανονική) | `addressIdentityChanged` (η κρίση) |
+ *
+ * 🔴 **ΜΗΝ τις ενοποιήσεις.** Αν το `toQuery` άρχιζε να στέλνει κανονικοποιημένη χώρα, κάθε επαφή
+ * χωρίς ρητή χώρα θα άρχιζε να στέλνει `countrycodes=gr` στον Nominatim (`geocoding-engine.ts`
+ * γράφει την παράμετρο **μόνο** `if (countryCode)`) — δηλαδή **αλλαγή πραγματικής αναζήτησης**,
+ * όχι κοσμητική. Το ερώτημα καταγράφει τι ρωτήθηκε· η σύγκριση κρίνει τι σημαίνει.
+ */
+function identityForComparison(address: AddressLike, field: AddressIdentityField): string {
+  const raw = identityValue(address, field);
+  const canonical = IDENTITY_CANONICAL[field];
+  return canonical ? canonical(raw) : raw;
+}
+
 /** Άλλαξε η **γεωγραφική ταυτότητα**; (Το `label`, ο τύπος και η σειρά δεν μετρούν.) */
 export function addressIdentityChanged(a: AddressLike | null, b: AddressLike): boolean {
   if (a === null) return true;
-  return ADDRESS_IDENTITY_FIELDS.some((f) => identityValue(a, f) !== identityValue(b, f));
+  return ADDRESS_IDENTITY_FIELDS.some(
+    (f) => identityForComparison(a, f) !== identityForComparison(b, f),
+  );
 }
 
 /** Άλλαξε το **σημείο**; (Δύο απόντα σημεία δεν είναι αλλαγή.) */

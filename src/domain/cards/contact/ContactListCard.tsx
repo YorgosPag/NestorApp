@@ -19,6 +19,7 @@ import React, { useMemo } from 'react';
 import type { Contact } from '@/types/contacts';
 // ADR-332 Phase 10 — address enrichment mini-badges
 import { AddressSourceLabel, AddressFreshnessIndicator, computeFreshness } from '@/components/shared/addresses/editor';
+import { addressInfoPositionView } from '@/utils/contacts/address-info-position-view';
 import type { DomainCardInteraction } from '../shared/card-model.types';
 import { DomainCard } from '../shared/DomainCard';
 import { useContactCardModel } from './useContactCardModel';
@@ -40,7 +41,10 @@ export function ContactListCard({ contact, ...interaction }: ContactListCardProp
     if (!primaryAddr?.source && primaryAddr?.verifiedAt == null) return null;
     return {
       source: primaryAddr.source,
-      freshness: computeFreshness(primaryAddr),
+      // Ζ8 — ο κριτής ρωτιέται στη ΓΛΩΣΣΑ ΤΟΥ ΓΡΑΦΕΑ, ποτέ με ωμό `AddressInfo`: η απόδειξη
+      // (`resolvedFor`) γεννιέται σε εκείνη τη διάλεκτο, και το ωμό κάτοπτρο λέει άλλα πράγματα
+      // στα ίδια ονόματα (`neighborhood` = ταχυδρομική συνοικία εδώ, Κοινότητα L7 εκεί).
+      freshness: computeFreshness(addressInfoPositionView(primaryAddr)),
     };
   }, [contact.addresses]);
 
