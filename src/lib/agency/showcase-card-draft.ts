@@ -12,6 +12,7 @@
 import { revealablePhone } from '@/lib/contact/channel-phone';
 import { weeklyHoursDefect, type WeeklyHours, type WeeklyHoursDefect } from '@/lib/calendar/weekly-hours';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { ImportField, ImportOrigin } from '@/types/showcase-card-import';
 import type {
   OwnedShowcaseLocation,
   ShowcaseCardWire,
@@ -36,6 +37,16 @@ export interface ShowcaseLocationDraft {
   readonly hours: WeeklyHours;
   readonly phones: readonly PhoneDraft[];
   readonly emails: readonly string[];
+  /**
+   * Α21.19 — **από πού ήρθε** κάθε πεδίο που γέμισε η «Εισαγωγή από τα στοιχεία της εταιρείας». Ζει **μόνο** στο
+   * πρόχειρο (ποτέ στο σύρμα) και σβήνει όταν ο άνθρωπος αλλάξει το πεδίο (`withoutProvenance`).
+   */
+  readonly provenance: Readonly<Partial<Record<ImportField, ImportOrigin>>>;
+  /**
+   * Α21.19 — η διεύθυνση που **εισήχθη**, ως ερώτημα εντοπισμού: κεντράρει τον χάρτη ώστε ο άνθρωπος να πατήσει
+   * το κτίριο. ⛔ Ποτέ τόπος από μόνη της.
+   */
+  readonly placeHint: string | null;
 }
 
 /** Η προεπιλογή όταν ο άνθρωπος ανοίγει το ωράριο: Δευ–Παρ 09:00–17:00 — **πρόταση**, όχι δήλωση. */
@@ -70,6 +81,8 @@ export function emptyLocationDraft(role: ShowcaseLocationRole): ShowcaseLocation
     hours: DEFAULT_WEEK,
     phones: [{ number: '', extension: '' }],
     emails: [''],
+    provenance: {},
+    placeHint: null,
   };
 }
 
@@ -90,6 +103,8 @@ export function draftOfLocation(owned: OwnedShowcaseLocation): ShowcaseLocationD
       extension: extension ?? '',
     })),
     emails: [...owned.channels.emails],
+    provenance: {},
+    placeHint: null,
   };
 }
 
