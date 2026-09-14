@@ -37,6 +37,7 @@
  * ⛔ **ΚΑΜΙΑ** συλλογή `disclosure_log`, **ΚΑΝΕΝΑ** πεδίο `disclosedFields`.
  */
 
+import { isMandateOfferKind } from '@/constants/mandate-offer-kinds';
 import { intervalShape } from '@/lib/date-local';
 import type { ListingAgreement } from '@/types/listing-agreement';
 import { exceedsStatutoryTerm } from '@/types/owner-property-mandate';
@@ -750,6 +751,16 @@ export const MANDATE_REQUEST_INVARIANTS = [
    */
   'request-term-empty',
   /**
+   * 🔴 **Ζητά εντολή για πράξη που ΔΕΝ ανατίθεται σε μεσίτη** (ADR-832 §8) — κάτοπτρο
+   * του `mandate-scope-not-brokerage` της ίδιας της εντολής.
+   *
+   * ⚠️ **Κρίνεται εδώ, όχι στο zod της πόρτας**: η πράξη **είναι** έγκυρη τιμή του
+   * λεξιλογίου (`OFFER_KINDS`) — απλώς όχι όρος **αυτής** της σύμβασης. Ένα
+   * `z.enum(MANDATE_OFFER_KINDS)` θα την απαντούσε ως `MALFORMED_BODY`, δηλαδή ως
+   * χαλασμένο σώμα αντί για **όνομα** — ίδιο δόγμα με το `request-scope-unset`.
+   */
+  'request-scope-not-brokerage',
+  /**
    * 🔴 Αποδοχή **χωρίς** επαφή, ή άρνηση **με** επαφή. Και τα δύο σπάνε το §8.4: η
    * `cont_*` γεννιέται **μόνο** με την αποδοχή, στην **ίδια** ατομική πράξη.
    */
@@ -784,6 +795,9 @@ export function mandateRequestInvariantViolations(
 
   if (request.ownerPropertyId.trim() === '') found.push('request-listing-missing');
   if (request.agencyCompanyId.trim() === '') found.push('request-agency-missing');
+  // 🔴 ADR-832 §8 — ο ΙΔΙΟΣ κριτής με την εντολή (`isMandateOfferKind`), ώστε αίτημα
+  //    που περνά εδώ να μη σκάσει μέρες μετά στην αποδοχή, σε άλλον άνθρωπο.
+  if (!request.terms.scope.every(isMandateOfferKind)) found.push('request-scope-not-brokerage');
 
   found.push(...expiryViolations(request, nowISOValue));
 

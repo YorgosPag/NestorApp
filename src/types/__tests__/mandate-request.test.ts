@@ -506,6 +506,11 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
         }),
         NOW,
       ),
+      // ── ADR-832 §8 — πράξη που δεν ανατίθεται σε μεσίτη ──────────────────────
+      ...mandateRequestInvariantViolations(
+        request({ terms: { ...request().terms, scope: ['sell', 'leaseShort'] } }),
+        NOW,
+      ),
     ]);
 
     for (const invariant of MANDATE_REQUEST_INVARIANTS) {
