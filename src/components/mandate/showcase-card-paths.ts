@@ -24,3 +24,29 @@ export function channelRevealPath(companyId: string, locationId: string): string
 export function locationVCardPath(companyId: string, locationId: string): string {
   return locationDoorPath(companyId, locationId, 'vcard');
 }
+
+// =============================================================================
+// Α21.18 — Η ΕΠΙΒΕΒΑΙΩΣΗ EMAIL: μία σελίδα, δύο είσοδοι από το email, μία πόρτα απόφασης
+// =============================================================================
+
+/** Ο ιδιοκτήτης πατά «Αποστολή επιβεβαίωσης» (συνδεδεμένος). */
+export const EMAIL_CONFIRMATION_ISSUE_PATH = '/api/agency-profile/card/email-confirmations';
+
+function emailConfirmationPage(token: string): string {
+  return `/card-email/${encodeURIComponent(token)}`;
+}
+
+/** Ο σύνδεσμος «Επιβεβαίωση» του email — η σελίδα **δείχνει**, δεν αποφασίζει. */
+export function emailConfirmationPagePath(token: string): string {
+  return emailConfirmationPage(token);
+}
+
+/** Ο σύνδεσμος «Δεν το ζήτησα εγώ» — ίδια σελίδα, με την άρνηση προεπιλεγμένη. */
+export function emailDisownPagePath(token: string): string {
+  return `${emailConfirmationPage(token)}?answer=disown`;
+}
+
+/** Το κουμπί της σελίδας — η **μόνη** πόρτα που γράφει. */
+export function emailConfirmationDecisionPath(token: string): string {
+  return `/api/showcase-email-confirmations/${encodeURIComponent(token)}`;
+}

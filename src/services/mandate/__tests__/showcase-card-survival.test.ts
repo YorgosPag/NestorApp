@@ -153,6 +153,7 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
       channels: {
         phones: [{ display: '+30 231 012 3456', href: 'tel:+302310123456' }],
         emails: ['office@vafes.gr'],
+        emailConfirmations: [],
       },
     });
     expect(await revealLocationChannels(admin, COMPANY, 'sloc_unknown')).toEqual({ kind: 'absent' });
