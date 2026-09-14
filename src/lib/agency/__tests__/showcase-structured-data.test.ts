@@ -96,6 +96,13 @@ describe('showcaseStructuredData', () => {
     expect(broker[1]['@type']).toBe('RealEstateAgent');
   });
 
+  it('Κ6 — δηλωμένη ιστοσελίδα ⇒ `url` ΤΟΥ οργανισμού· η ταυτότητα (`@id`) μένει η βιτρίνα', () => {
+    const showcase = showcaseFixture({ website: 'https://www.vafes.gr/', locations: [location()] });
+    const [organisation, shop] = graphOf(showcaseStructuredData(showcase, CONTEXT));
+    expect(organisation).toMatchObject({ '@id': `${PROFILE_URL}#organization`, url: 'https://www.vafes.gr/' });
+    expect(shop).toMatchObject({ '@id': `${PROFILE_URL}#sloc_hq`, url: 'https://www.vafes.gr/' });
+  });
+
   it('Κ5 — λογότυπο ⇒ logo · πορτρέτο ⇒ image', () => {
     const [withLogo] = graphOf(showcaseStructuredData(showcaseFixture({ mark: mark('logo') }), CONTEXT));
     expect(withLogo).toMatchObject({ logo: 'https://cdn.example/logo.png' });

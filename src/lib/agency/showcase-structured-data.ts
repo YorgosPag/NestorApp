@@ -80,7 +80,8 @@ function organisationNode(showcase: PublicShowcase, organisationId: string, prof
     '@type': 'Organization',
     '@id': organisationId,
     name: showcase.displayName,
-    url: profileUrl,
+    // Α21.17 — η **δική του** ιστοσελίδα όταν τη δήλωσε (αυτό σημαίνει `url` για τη Google)· αλλιώς η βιτρίνα.
+    url: showcase.website ?? profileUrl,
     logo: mark?.kind === 'logo' ? mark.image.url : undefined,
     image: mark?.kind === 'portrait' ? mark.image.url : undefined,
   };
@@ -97,7 +98,7 @@ function locationNode(
     '@type': context.canHoldMandate ? 'RealEstateAgent' : 'LocalBusiness',
     '@id': `${context.profileUrl}#${location.id}`,
     name: location.label === null ? showcase.displayName : `${showcase.displayName} — ${location.label}`,
-    url: context.profileUrl,
+    url: showcase.website ?? context.profileUrl,
     parentOrganization: { '@id': organisationId },
     address: {
       '@type': 'PostalAddress',

@@ -268,6 +268,8 @@ export async function publishShowcase(
       //    και το `set` είναι χωρίς `merge` ⇒ χωρίς μεταφορά, κάθε αλλαγή επωνυμίας θα έσβηνε
       //    έδρα, υποκαταστήματα και ωράριο. Άγκυρα: `showcase-card-survival.test.ts`.
       const keptLocations = existing?.outcome === 'showcase' ? existing.showcase.locations : [];
+      // 🔴 Α21.17 — **ΤΕΤΑΡΤΟΣ** καταναλωτής: η ιστοσελίδα γράφεται από την πράξη της κάρτας, άρα μεταφέρεται.
+      const keptWebsite = existing?.outcome === 'showcase' ? existing.showcase.website : null;
 
       const showcase: PublicShowcase = {
         companyId,
@@ -285,6 +287,7 @@ export async function publishShowcase(
         presenceAdminIds: keptPresenceAdminIds,
         mark: keptMark,
         locations: keptLocations,
+        website: keptWebsite,
         publishedAt: nowISO(),
       };
 
