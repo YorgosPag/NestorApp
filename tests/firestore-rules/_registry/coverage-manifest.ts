@@ -277,6 +277,17 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-841 §7 Α21.16 — ΤΑ ΚΑΝΑΛΙΑ ΤΗΣ ΚΑΡΤΑΣ. Ίδιο ζεύγος με το `showcase_mark_sources`,
+    // ίδιος πειρασμός *(«μα είναι τα ΔΙΚΑ του τηλέφωνα!»)* — γι' αυτό η σουίτα σπέρνει
+    // έγγραφο του **ίδιου** μισθωτή. Ο λόγος του `deny_all`: το `agency_profiles` κατεβαίνει
+    // ολόκληρο σε κάθε ανώνυμο, οπότε τα κανάλια ζουν εδώ και φεύγουν μόνο από τον διακομιστή,
+    // ένα κατάστημα τη φορά, με όριο ρυθμού.
+    collection: 'showcase_card_channels',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/showcase-card-channels.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. **Ίδιο ζεύγος με το `mandate_requests`
     // από πάνω, ΑΝΤΙΣΤΡΟΦΟΣ λόγος** — και η αντιστροφή είναι το πράγμα που πρέπει
     // να διαβαστεί, γιατί αλλιώς μοιάζει με αντιγραφή.

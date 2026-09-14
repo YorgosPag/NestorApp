@@ -118,8 +118,12 @@ export const COLLECTIONS = {
    * 🔑 Ο φρουρός: **η απουσία από την προβολή είναι αδιάκριτη από την ανυπαρξία**.
    * Γραφείο που δεν δημοσιεύτηκε απαντά ταυτόσημα με ψευδώνυμο που δεν υπήρξε ποτέ.
    *
-   * ⛔ **ΚΑΜΙΑ αμοιβή, ΚΑΜΙΑ κατάταξη/βαθμολογία, ΚΑΝΕΝΑ κανάλι επικοινωνίας, ΚΑΝΕΝΑ
-   * όνομα φυσικού προσώπου** — δες `types/agency-profile.ts`. Γράφει μόνο ο διακομιστής.
+   * ⛔ **ΚΑΜΙΑ αμοιβή, ΚΑΜΙΑ κατάταξη/βαθμολογία, ΚΑΝΕΝΑ όνομα φυσικού προσώπου** — δες
+   * `types/agency-profile.ts`. Γράφει μόνο ο διακομιστής.
+   *
+   * 🔴 **ΚΑΝΕΝΑΣ αριθμός τηλεφώνου/email ΕΔΩ** (ADR-841 §7 Α21.16): τα κανάλια επιτρέπονται
+   * πλέον, αλλά αυτή η συλλογή κατεβαίνει **ολόκληρη** σε κάθε ανώνυμο — ζουν στο
+   * {@link COLLECTIONS.SHOWCASE_CARD_CHANNELS}.
    */
   AGENCY_PROFILES: process.env.NEXT_PUBLIC_AGENCY_PROFILES_COLLECTION || 'agency_profiles',
 
@@ -150,6 +154,21 @@ export const COLLECTIONS = {
    */
   SHOWCASE_MARK_SOURCES:
     process.env.NEXT_PUBLIC_SHOWCASE_MARK_SOURCES_COLLECTION || 'showcase_mark_sources',
+
+  /**
+   * 🏆 ADR-841 §7 Α21.16 — **ΤΑ ΚΑΝΑΛΙΑ ΤΗΣ ΚΑΡΤΑΣ** (τηλέφωνα · email ανά κατάστημα). Κλειδί: `companyId`.
+   *
+   * 🔴 **ΓΙΑΤΙ ΟΧΙ ΜΕΣΑ ΣΤΟ `agency_profiles`**: εκείνο είναι `read: if true` **και** ο
+   * κατάλογος το κατεβάζει **ολόκληρο** σε κάθε ανώνυμο (`usePublicAgencies`). Ένας αριθμός
+   * εκεί = **όλα τα τηλέφωνα όλων με μία κλήση SDK** — η απόκρυψη στο HTML δεν θα έσωζε
+   * τίποτα. Εδώ τα σερβίρει **μόνο** ο διακομιστής, ένα κατάστημα τη φορά, με όριο `HEAVY`.
+   *
+   * ⚠️ **Ξεχωριστή ρίζα, όχι υποσυλλογή** — ίδιο σκεπτικό με το `SHOWCASE_MARK_SOURCES`
+   * ακριβώς από πάνω. `deny_all` και στις δύο πλευρές· ούτε ο ιδιοκτήτης διαβάζει απευθείας
+   * (το `GET /api/agency-profile/card` του τα δίνει).
+   */
+  SHOWCASE_CARD_CHANNELS:
+    process.env.NEXT_PUBLIC_SHOWCASE_CARD_CHANNELS_COLLECTION || 'showcase_card_channels',
 
   /**
    * 🎯 ADR-827 §8.7 — **ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ**. IDs `mreq_*`.

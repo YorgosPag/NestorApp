@@ -114,3 +114,24 @@ export async function seedShowcaseMarkSource(
     });
   });
 }
+
+/**
+ * **ΤΑ ΚΑΝΑΛΙΑ ΤΗΣ ΚΑΡΤΑΣ** (ADR-841 §7 Α21.16) — σπέρνονται με το `companyId` του
+ * **δοκιμαζόμενου** μισθωτή, για τον λόγο ακριβώς από πάνω: χωρίς έγγραφο **του ίδιου**, η
+ * μετάλλαξη `allow read: if companyId == getUserCompanyId()` δεν θα κοκκίνιζε.
+ */
+export async function seedShowcaseCardChannels(
+  env: RulesTestEnvironment,
+  companyId: string = SAME_TENANT_COMPANY_ID,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('showcase_card_channels').doc(companyId).set({
+      locations: {
+        sloc_seed_0001: {
+          phones: [{ e164: '+302310123456', extension: null }],
+          emails: ['office@example.gr'],
+        },
+      },
+    });
+  });
+}
