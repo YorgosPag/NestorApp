@@ -268,6 +268,7 @@ export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-card-email-invalid': `${K}.rejection.agency-profile-card-email-invalid`,
   'agency-profile-card-hours-invalid': `${K}.rejection.agency-profile-card-hours-invalid`,
   'agency-profile-card-street-incomplete': `${K}.rejection.agency-profile-card-street-incomplete`,
+  'agency-profile-card-website-invalid': `${K}.rejection.agency-profile-card-website-invalid`,
 };
 
 /**
@@ -318,6 +319,19 @@ export const SHOWCASE_CARD_KEYS = {
   door: `${K}.cardDoor`,
   doorHint: `${K}.cardDoorHint`,
   backToShowcase: `${K}.cardBackToShowcase`,
+  // ── Ο ΚΩΔΙΚΟΣ QR ΤΗΣ ΒΙΤΡΙΝΑΣ (Α21.17) ─────────────────────────────────────────────────
+  qrTitle: `${K}.cardQrTitle`,
+  /** 🔑 Λέει **γιατί** δεν χρειάζεται επανεκτύπωση — ο κωδικός δείχνει στη ζωντανή σελίδα. */
+  qrLead: `${K}.cardQrLead`,
+  qrAlt: `${K}.cardQrAlt`,
+  qrDownloadSvg: `${K}.cardQrDownloadSvg`,
+  qrDownloadPng: `${K}.cardQrDownloadPng`,
+  qrFailed: `${K}.cardQrFailed`,
+  // ── Η ΙΣΤΟΣΕΛΙΔΑ ΤΟΥ ΟΡΓΑΝΙΣΜΟΥ (Α21.17) ─────────────────────────────────────────────────
+  websiteLabel: `${K}.cardWebsiteLabel`,
+  websitePlaceholder: `${K}.cardWebsitePlaceholder`,
+  /** 🔑 Λέει **πού** θα φανεί — δημόσια, στα δομημένα δεδομένα, στην επαφή. */
+  websiteHint: `${K}.cardWebsiteHint`,
 } as const;
 
 /** **Ρόλος καταστήματος → ετικέτα** — `Record` στο κλειστό σύνολο. */

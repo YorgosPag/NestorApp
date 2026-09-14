@@ -143,6 +143,7 @@
           "agency-profile-card-too-many-channels": "Έως {maxPhones} τηλέφωνα και {maxEmails} email ανά κατάστημα.",
           "agency-profile-card-too-many-locations": "Έως {maxLocations} καταστήματα ανά κάρτα.",
           "agency-profile-card-two-headquarters": "Η έδρα είναι μία. Ορίστε τα υπόλοιπα ως υποκαταστήματα.",
+          "agency-profile-card-website-invalid": "Η ιστοσελίδα δεν είναι έγκυρη διεύθυνση. Γράψτε τη π.χ. ως www.to-grafeio-sas.gr.",
           "agency-profile-card-without-showcase": "Δημοσιεύστε πρώτα τη βιτρίνα — η κάρτα εμφανίζεται μέσα σε αυτήν.",
           "agency-profile-chapter-missing": "Δηλώστε και τον σύλλογο που εξέδωσε τον αριθμό — σκέτος αριθμός δεν επαληθεύεται.",
           "agency-profile-mark-not-owned": "Το αρχείο που επιλέξατε δεν ανήκει στον χώρο σας. Ανεβάστε το ξανά από αυτή τη σελίδα.",

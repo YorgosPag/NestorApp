@@ -283,6 +283,18 @@ export const PROFILE_KEYS = {
   /** 🔴 **Όχι «κλειστό»** — αργία σημαίνει *«ίσως διαφέρει»*. */
   cardHoliday: `${P}.cardHoliday`,
   cardBrokerWritten: `${P}.cardBrokerWritten`,
+  // ── ADR-841 §7 Α21.17 — ΕΠΑΦΗ ΚΑΙ ΚΟΙΝΟΠΟΙΗΣΗ ────────────────────────────────────────────
+  /** 🔑 Μετρά ως εμφάνιση (ίδιο όριο) — γι' αυτό είναι σύνδεσμος λήψης, όχι αυτόματη προσθήκη. */
+  cardSaveContact: `${P}.cardSaveContact`,
+  shareOpen: `${P}.shareOpen`,
+  shareTitle: `${P}.shareTitle`,
+  shareLead: `${P}.shareLead`,
+  shareQrAlt: `${P}.shareQrAlt`,
+  /** ⚠️ Ο σύνδεσμος **λειτουργεί** χωρίς κωδικό — το λέμε, αλλιώς ο διάλογος μοιάζει χαλασμένος. */
+  shareQrFailed: `${P}.shareQrFailed`,
+  shareCopyLink: `${P}.shareCopyLink`,
+  shareLinkCopied: `${P}.shareLinkCopied`,
+  shareNative: `${P}.shareNative`,
   backToDirectory: `${P}.backToDirectory`,
   // ── ADR-841 §7 (Α6) — ΤΙ ΠΟΥΛΑ, ΟΧΙ ΜΟΝΟ ΠΟΙΟΣ ΕΙΝΑΙ ──────────────────────
   //
