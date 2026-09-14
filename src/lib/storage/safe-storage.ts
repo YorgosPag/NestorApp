@@ -61,6 +61,11 @@ export const STORAGE_KEYS = {
   // `lib/owner-property/owner-property-draft-memory.ts` for what that costs and why
   // it is acceptable here but would not be for anything already owned.
   OWNER_PROPERTY_DRAFT: 'nestor_owner_property_draft',
+
+  // ADR-860 §Ε3 — **sessionStorage**, όχι localStorage: «ανανέωσα ήδη αυτή την καρτέλα για την
+  // έκδοση X». Ανά καρτέλα επίτηδες — μια άλλη καρτέλα που αποτυγχάνει έχει δικό της δικαίωμα
+  // σε ΜΙΑ ανανέωση. Η τιμή είναι το deploymentId του server ⇒ βρόχος δομικά αδύνατος.
+  CHUNK_RECOVERY_RELOADED_FOR: 'nestor_chunk_recovery_reloaded_for',
 } as const;
 
 export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -81,16 +86,28 @@ export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
  * `localStorage` and throws only on write. That is why this cannot be reduced to
  * `typeof localStorage !== 'undefined'`.
  */
-export function isStorageAvailable(): boolean {
+export function isStorageAvailable(area: StorageArea = 'local'): boolean {
   if (typeof window === 'undefined') return false;
   try {
+    const storage = storageFor(area);
     const test = '__storage_test__';
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
+    storage.setItem(test, test);
+    storage.removeItem(test);
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * ADR-860 §Ε3 — **`sessionStorage` με τον ΙΔΙΟ probe**, όχι δεύτερο. Το πρώτο δικαίωμα ανάγνωσης
+ * `sessionStorage` στο repo θα γεννούσε αλλιώς αντίγραφο του `isStorageAvailable` — ακριβώς η
+ * απόκλιση που το CHECK 3.28 έπιασε στο `dxf-viewer/utils/storage-utils.ts`.
+ */
+export type StorageArea = 'local' | 'session';
+
+function storageFor(area: StorageArea): Storage {
+  return area === 'session' ? window.sessionStorage : window.localStorage;
 }
 
 // ============================================================================
@@ -142,6 +159,31 @@ export function safeRemoveItem(key: string): boolean {
   if (!isStorageAvailable()) return false;
   try {
     localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * SSR-safe `sessionStorage.getItem` — **μόνο strings** (καμία ανάγκη για JSON σήμερα).
+ * `null` όταν λείπει **ή** όταν ο χώρος δεν είναι διαθέσιμος: ο καλών δεν μπορεί να ξεχωρίσει τα
+ * δύο, και γι' αυτό το `safeSessionSetItem` επιστρέφει `boolean`.
+ */
+export function safeSessionGetItem(key: string): string | null {
+  if (!isStorageAvailable('session')) return null;
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/** SSR-safe `sessionStorage.setItem`. `true` **μόνο** αν η εγγραφή έγινε πραγματικά. */
+export function safeSessionSetItem(key: string, value: string): boolean {
+  if (!isStorageAvailable('session')) return false;
+  try {
+    window.sessionStorage.setItem(key, value);
     return true;
   } catch {
     return false;
