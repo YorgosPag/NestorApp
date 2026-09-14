@@ -56,6 +56,7 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
+import type { SenderHeader } from '@/services/company/sender-identity';
 
 const logger = createModuleLogger('EmailProviderChain');
 
@@ -66,7 +67,13 @@ export interface OutboundEmail {
   /** Απλό κείμενο — **πάντα** παρόν, για αναγνώστες χωρίς HTML. */
   readonly text: string;
   readonly html?: string;
-  readonly from?: string;
+  /**
+   * 🔑 ADR-857 Φ9 — **ΤΥΠΟΣ, ΟΧΙ ΣΥΜΒΟΛΟΣΕΙΡΑ.** Το {@link SenderHeader} κατασκευάζεται
+   * **μόνο** από το `services/company/sender-identity`, όπου έγινε ο καθαρισμός έγχυσης
+   * CRLF και η εισαγωγικοποίηση του RFC 5322 §3.2.3. Μια διαδρομή που συνθέτει μόνη της
+   * `"Όνομα <διεύθυνση>"` **δεν μεταγλωττίζεται** — δεν χρειάζεται να τη θυμηθεί κανείς.
+   */
+  readonly from?: SenderHeader;
   /**
    * Κεφαλίδες του **φακέλου** — π.χ. `List-Unsubscribe` (RFC 8058, ADR-848).
    *

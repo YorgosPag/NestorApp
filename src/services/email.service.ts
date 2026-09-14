@@ -14,7 +14,7 @@
  * @see ADR-777 §8.26
  */
 import { getErrorMessage } from '@/lib/error-utils';
-import { PRODUCT_NAME } from '@/constants/product-identity';
+import { resolveSenderHeader, resolveSenderIdentity } from '@/services/company/sender-identity';
 import { brandedSubject } from '@/server/comms/email-texts';
 import { EmailTemplatesService } from './email-templates.service';
 import { buildPhotoShareEmail } from './email-templates/photo-share';
@@ -22,11 +22,18 @@ import { describeChain, sendThroughChain } from '@/server/comms/email-provider-c
 import { defaultEmailChain } from '@/server/comms/email-providers';
 import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
 
-// Environment variables
-const FROM_EMAIL = process.env.FROM_EMAIL || 'info@nestorconstruct.gr';
-// 🔑 Εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7), όχι εφευρεμένη εταιρεία.
-const FROM_NAME = process.env.FROM_NAME || PRODUCT_NAME;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+/*
+ * 🔴 ΕΔΩ ΖΟΥΣΑΝ ΤΑ `FROM_EMAIL` / `FROM_NAME` — Η ΔΕΥΤΕΡΗ ΑΠΟ ΤΙΣ ΤΡΕΙΣ ΑΝΑΓΝΩΣΕΙΣ.
+ *
+ * Ήταν **σταθερές module-scope**, δηλαδή διάβαζαν το περιβάλλον **μία φορά, τη στιγμή
+ * της εισαγωγής**: μια μεταβλητή που έμπαινε αργότερα δεν είχε καμία επίδραση μέχρι
+ * επανεκκίνηση — το ίδιο σχήμα «η ρύθμιση λέει ψέματα» που διόρθωσε το `defaultEmailChain()`.
+ * Η ρίζα ({@link resolveSenderIdentity}) διαβάζει **σε κάθε κλήση**.
+ *
+ * @see ADR-857 §6 Φ9
+ */
 
 // New enterprise interface
 export interface EmailRequest {
@@ -86,7 +93,7 @@ export class EmailService {
       propertyLocation,
       propertyUrl,
       photoUrl,
-      senderName = FROM_NAME,
+      senderName = resolveSenderIdentity().name,
       personalMessage,
       templateType = 'residential',
       isPhoto,
@@ -129,7 +136,7 @@ export class EmailService {
           photoUrls: allPhotoUrls,
           title: propertyTitle,
           personalMessage,
-          senderName: senderName || FROM_NAME,
+          senderName: senderName || resolveSenderIdentity().name,
           recipientEmail: recipients[0],
         });
         subject = brandedSubject(propertyTitle);
@@ -145,7 +152,7 @@ export class EmailService {
           propertyTitle, propertyDescription, propertyPrice, propertyArea,
           propertyLocation, propertyUrl: propertyUrl ?? '', photoUrl,
           recipientEmail: recipients[0],
-          personalMessage, senderName: senderName || FROM_NAME
+          personalMessage, senderName: senderName || resolveSenderIdentity().name
         };
         htmlContent = EmailTemplatesService.generateEmailHtml(templateType, emailData);
         // Generic shares (contacts, projects) pass no propertyUrl. The legacy
@@ -164,7 +171,12 @@ export class EmailService {
       // απορρήτου: η παλιά διαδρομή Resend περνούσε ολόκληρο τον πίνακα ως `to`,
       // δηλαδή **κάθε παραλήπτης έβλεπε τις διευθύνσεις όλων των άλλων**. Η διαδρομή
       // Mailgun έστελνε ήδη χωριστά· οι δύο συμπεριφορές ενοποιούνται στη σωστή.
-      const fromHeader = `${senderName || FROM_NAME} <${FROM_EMAIL}>`;
+      // 🔴 ADR-857 Φ9 — **ΤΟ `senderName` ΕΡΧΕΤΑΙ ΑΠΟ ΦΟΡΜΑ ΧΡΗΣΤΗ ΚΑΙ ΕΜΠΑΙΝΕ ΩΜΟ.**
+      //    Ο φρουρός έγχυσης CRLF (`safeHeaderEntries`) φυλάει **μόνο** τις custom
+      //    κεφαλίδες· το `from` δεν περνούσε από πουθενά, άρα ένα `\r\n` μέσα στο όνομα
+      //    έγραφε **νέα κεφαλίδα** (π.χ. `Bcc:`). Η ρίζα καθαρίζει και εισαγωγικοποιεί
+      //    κατά RFC 5322 — και η **διεύθυνση** δεν επιλέγεται ποτέ από χρήστη.
+      const fromHeader = resolveSenderHeader(senderName);
       const outcomes = await Promise.all(
         recipients.map((to) =>
           sendThroughChain(chain, {
@@ -255,8 +267,15 @@ export class EmailService {
       missingProviders: status.missing,
       hasFailover: status.hasFailover,
       environment: NODE_ENV,
-      fromEmail: FROM_EMAIL,
-      fromName: FROM_NAME
+      // 🔑 ADR-857 Φ9 — **η διάγνωση λέει ό,τι ΣΤΕΛΝΕΤΑΙ, όχι ό,τι διαβάστηκε κάποτε.**
+      //    Πριν, ανέφερε τις module-scope σταθερές· αν η γραμμή `From:` άλλαζε από
+      //    αλλού, το `getStatus()` θα έδειχνε τιμές που **δεν φεύγουν** — διαγνωστική
+      //    που καθησυχάζει. Τώρα ρωτά την **ίδια** ρίζα με τον αποστολέα, και λέει
+      //    **από ποιο σκαλί** ήρθε (`tenant` · `environment` · `platform`).
+      ...(() => {
+        const sender = resolveSenderIdentity();
+        return { fromEmail: sender.address, fromName: sender.name, senderSource: sender.source };
+      })(),
     };
   }
 }

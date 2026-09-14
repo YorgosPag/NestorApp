@@ -20,6 +20,7 @@ import 'server-only';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { PROVIDER_TIMEOUT_MS } from '@/server/comms/email-provider-chain';
+import { resolveSenderHeader } from '@/services/company/sender-identity';
 
 const logger = createModuleLogger('PIPELINE_MAILGUN_SENDER');
 
@@ -84,9 +85,14 @@ export async function sendReplyViaMailgun(
     };
   }
 
-  // Derive "from" address: noreply@{MAILGUN_DOMAIN} (nestorconstruct.gr)
-  const fromEmail = process.env.MAILGUN_FROM_EMAIL?.trim()
-    ?? `noreply@${domain}`;
+  // 🔴 ADR-857 Φ9 — **ΑΥΤΗ Η ΓΡΑΜΜΗ ΕΣΤΕΛΝΕ >20 ΣΗΜΕΙΑ ΧΩΡΙΣ ΚΑΝΕΝΑ ΟΝΟΜΑ.**
+  //    Ήταν `noreply@{MAILGUN_DOMAIN}` — **γυμνή διεύθυνση**, χωρίς όνομα εμφάνισης, ενώ
+  //    από εδώ φεύγουν τιμολόγια, προσφορές, προσκλήσεις χώρου και email ταυτοποίησης.
+  //    Ο παραλήπτης έβλεπε `noreply@…` εκεί όπου άλλες διαδρομές έλεγαν «Nestor App».
+  // 🔑 Το όνομα εμφάνισης **δεν** επηρεάζει παραδοσιμότητα (αυτή κρίνεται από
+  //    SPF/DKIM/DMARC στο **domain**) — επηρεάζει **αναγνωρισιμότητα**. Άρα η προσθήκη
+  //    του είναι κέρδος χωρίς ρίσκο· η **διεύθυνση** μένει στο ίδιο επαληθευμένο domain.
+  const fromEmail = resolveSenderHeader();
 
   const region = process.env.MAILGUN_REGION === 'eu'
     ? 'api.eu.mailgun.net'

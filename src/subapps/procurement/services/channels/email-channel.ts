@@ -15,7 +15,7 @@ import { Resend } from 'resend';
 import { EmailAdapter } from '@/server/comms/email-adapter';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
-import { PRODUCT_NAME } from '@/constants/product-identity';
+import { resolveSenderHeader, resolveSenderIdentity } from '@/services/company/sender-identity';
 import { wrapInBrandedTemplate, escapeHtml, BRAND } from '@/services/email-templates/base-email-template';
 import type { ChannelDeliveryResult, MessageChannel, VendorInviteMessage } from './types';
 
@@ -23,13 +23,14 @@ const logger = createModuleLogger('VENDOR_PORTAL_EMAIL_CHANNEL');
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'info@nestorconstruct.gr';
-// 🔑 Εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7) — δεδομένα ενοίκου όταν υπάρχουν, αλλιώς
-//    εμείς. Το «Nestor Construct» εφεύρισκε εταιρεία που δεν υπάρχει.
-// ⚠️ **ΤΡΙΤΗ ανεξάρτητη ανάγνωση** των ίδιων μεταβλητών (μαζί με `email.service.ts` και
-//    `server/comms/email-providers.ts`) — χρέος SSoT, δηλωμένο στο ADR-857 §7.
-const FROM_NAME = process.env.FROM_NAME || PRODUCT_NAME;
-
+/*
+ * 🔴 ΕΔΩ ΖΟΥΣΕ Η **ΤΡΙΤΗ** ΑΝΕΞΑΡΤΗΤΗ ΑΝΑΓΝΩΣΗ ΤΩΝ `FROM_EMAIL`/`FROM_NAME` —
+ * ΚΑΙ ΤΟ ΧΡΕΟΣ ΗΤΑΝ ΗΔΗ ΓΡΑΜΜΕΝΟ ΕΔΩ, ΑΠΛΩΣ ΚΑΝΕΙΣ ΔΕΝ ΤΟ ΕΚΛΕΙΝΕ (ADR-857 §7 #11 → Φ9).
+ *
+ * Το σχόλιο που έσβησε έλεγε κατά λέξη *«ΤΡΙΤΗ ανεξάρτητη ανάγνωση … χρέος SSoT»*. Η
+ * απογραφή όμως μέτρησε **έξι** οικογένειες, όχι τρεις: το χρέος ήταν **διπλάσιο απ' όσο
+ * δήλωνε το ίδιο του το σχόλιο**.
+ */
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 const mailgunAdapter = MAILGUN_API_KEY ? new EmailAdapter() : null;
 
@@ -90,10 +91,14 @@ function compose(message: VendorInviteMessage): ComposedEmail {
 </p>
 ${declineLine}`;
 
+  // 🔑 ADR-857 Φ9 — **ο φάκελος και το υποσέλιδο λένε το ΙΔΙΟ πράγμα.** Το όνομα και η
+  //    διεύθυνση που βλέπει ο προμηθευτής **μέσα** στο μήνυμα έρχονται από την ίδια ρίζα
+  //    με τη γραμμή `From:`· ήταν ήδη το ίδιο ζεύγος, αλλά από **δεύτερη** ανάγνωση.
+  const sender = resolveSenderIdentity();
   const html = wrapInBrandedTemplate({
     contentHtml,
-    companyName: FROM_NAME,
-    companyEmail: FROM_EMAIL,
+    companyName: sender.name,
+    companyEmail: sender.address,
   });
 
   const text = `${greeting}\n\n${
@@ -116,7 +121,7 @@ class EmailVendorInviteChannel implements MessageChannel {
 
   async send(message: VendorInviteMessage): Promise<ChannelDeliveryResult> {
     const { subject, html, text } = compose(message);
-    const fromHeader = `${FROM_NAME} <${FROM_EMAIL}>`;
+    const fromHeader = resolveSenderHeader();
 
     if (resend) {
       try {

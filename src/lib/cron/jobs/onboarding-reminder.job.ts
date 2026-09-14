@@ -9,6 +9,7 @@
  * @module lib/cron/jobs/onboarding-reminder
  * @enterprise ADR-326 Phase 8
  * @see ADR-740
+ * @see ADR-857 §6 Φ9 — ο αποστολέας ρωτιέται· ήταν μία από τις έξι οικογένειες
  */
 
 import { findCompaniesNeedingReminder } from '@/services/onboarding/onboarding-state-service';
@@ -18,6 +19,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { CronJobResult } from '@/types/cron-schedule';
 import { PRODUCT_NAME } from '@/constants/product-identity';
+import { resolveSenderHeader } from '@/services/company/sender-identity';
 
 const logger = createModuleLogger('ONBOARDING_REMINDER_CRON');
 
@@ -26,6 +28,11 @@ const logger = createModuleLogger('ONBOARDING_REMINDER_CRON');
 // δύο σώματα **είχαν ήδη αποκλίνει ακριβώς στο όνομα**: εδώ «Nestor», εκεί «Nestor App».
 // Η ΤΑΥΤΟΤΗΤΑ διορθώνεται τώρα· η μετανάστευση στο i18n είναι δική της φέτα (N.11) και
 // δεν γίνεται μέσα σε δουλειά ταυτότητας.
+// ⚠️ **ΚΑΙ ΕΙΝΑΙ ΜΟΝΟΓΛΩΣΣΟ** (μετρημένο, ADR-857 Φ9): κανένα `Record<HumanLanguage, …>`,
+// καμία `resolveHumanLanguage`, καμία παράμετρος γλώσσας — ο παραλήπτης λαμβάνει **πάντα
+// ελληνικά**, ό,τι γλώσσα κι αν έχει. Τα τρία αδέλφια του (`email-texts.ts` ·
+// `auth-action-email-texts.ts` · `mandate-email-texts.ts`) έχουν **και τα τρία** τη
+// στρώση γλώσσας. Χρέος **N.11**, δηλωμένο ώστε να μη μετρηθεί ως λυμένο.
 const REMINDER_TEXTS = {
   subject: `Υπενθύμιση: Ρύθμιση δομής οργανισμού ${PRODUCT_NAME}`,
   greeting: 'Αγαπητέ διαχειριστή,',
@@ -50,6 +57,12 @@ function buildReminderEmail(adminEmail: string): Parameters<EmailAdapter['sendEm
     id: `onboarding-reminder-${adminEmail}-${Date.now()}`,
     to: adminEmail,
     subject: t.subject,
+    // 🔴 ADR-857 Φ9 — **ΕΔΩ ΔΕΝ ΥΠΗΡΧΕ ΚΑΘΟΛΟΥ `from`**, και ήταν μία από τις δύο
+    //    οικογένειες που δεν βρέθηκαν σε **καμία** απογραφή. Χωρίς αυτό, η υπενθύμιση
+    //    έπεφτε στην **4-βάθμια** εφεδρεία του `EmailAdapter`, της οποίας το τελευταίο
+    //    σκαλί είναι `noreply@company.com` — **ψεύτικο domain**: αν κάποτε έλειπε το
+    //    `MAILGUN_DOMAIN`, ο διαχειριστής θα έβλεπε μήνυμα από εταιρεία που δεν υπάρχει.
+    from: resolveSenderHeader(),
     content: [t.greeting, '', t.bodyShort, t.bodyAction, configureUrl, '', t.footer].join('\n'),
     html: [
       `<p>${t.greeting}</p>`,

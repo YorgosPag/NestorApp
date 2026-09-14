@@ -18,11 +18,11 @@
  *
  * @module server/comms/email-providers
  * @see ADR-777 §8.26
+ * @see ADR-857 §6 Φ9 — ο αποστολέας ρωτιέται, δεν μαντεύεται εδώ
  */
 
 import 'server-only';
 
-import { PRODUCT_NAME } from '@/constants/product-identity';
 import { EmailAdapter } from '@/server/comms/email-adapter';
 import {
   safeHeaderEntries,
@@ -30,6 +30,7 @@ import {
   type OutboundEmail,
   type ProviderAttempt,
 } from '@/server/comms/email-provider-chain';
+import { resolveSenderHeader } from '@/services/company/sender-identity';
 
 /** Το SDK του Resend, φορτωμένο **τεμπέλικα**. */
 type ResendSendResult = {
@@ -64,7 +65,11 @@ export function mailgunProvider(): EmailProvider {
         subject: message.subject,
         content: message.text,
         html: message.html,
-        from: message.from,
+        // 🔑 ADR-857 Φ9 — **ο ίδιος αποστολέας και στους δύο κρίκους.** Πριν, ο Resend
+        //    έπαιρνε `defaultFrom()` (`FROM_NAME`/`FROM_EMAIL`) και ο Mailgun έπεφτε
+        //    στη δική του 4-βάθμια εφεδρεία μέσα στον `EmailAdapter` ⇒ **η γραμμή
+        //    `From:` άλλαζε ανάλογα με το ποιος πάροχος ήταν όρθιος εκείνη την ώρα**.
+        from: message.from ?? resolveSenderHeader(),
         headers,
         attempts: 1,
         maxAttempts: 1,
@@ -102,7 +107,7 @@ export function resendProvider(): EmailProvider {
       const client = new Resend(apiKey);
 
       const result = (await client.emails.send({
-        from: message.from ?? defaultFrom(),
+        from: message.from ?? resolveSenderHeader(),
         to: [message.to],
         subject: message.subject,
         text: message.text,
@@ -118,17 +123,19 @@ export function resendProvider(): EmailProvider {
   };
 }
 
-/** Η διεύθυνση αποστολέα όταν ο καλών δεν ορίζει δική του. */
-function defaultFrom(): string {
-  const email = process.env.FROM_EMAIL ?? 'info@nestorconstruct.gr';
-  // 🔑 **Η ΕΦΕΔΡΕΙΑ ΕΙΝΑΙ Η ΠΛΑΤΦΟΡΜΑ, ΟΧΙ ΕΦΕΥΡΕΜΕΝΗ ΕΤΑΙΡΕΙΑ** (ADR-857 Φ7).
-  //    Έλεγε «Nestor Construct» — όνομα που **δεν αντιστοιχεί σε κανέναν ένοικο**. Η
-  //    ταυτότητα αποστολέα είναι **ανά ένοικο** (BYOD + DKIM per tenant, τεκμηριωμένη
-  //    πρακτική πολυ-ενοικιακής παράδοσης), άρα το `FROM_NAME` είναι **δεδομένα
-  //    ενοίκου**· αυτή η γραμμή τρέχει **μόνο όταν δεν υπάρχει ένοικος να ονομάσεις**.
-  const name = process.env.FROM_NAME ?? PRODUCT_NAME;
-  return `${name} <${email}>`;
-}
+/*
+ * 🔴 ΕΔΩ ΖΟΥΣΕ ΤΟ `defaultFrom()` — ΚΑΙ ΗΤΑΝ Η ΜΙΑ ΑΠΟ ΤΙΣ ΕΞΙ (ADR-857 Φ9).
+ *
+ * Διάβαζε `FROM_EMAIL`/`FROM_NAME` με δική του εφεδρεία, ενώ **τα ίδια δύο** τα
+ * διάβαζαν ανεξάρτητα το `services/email.service.ts` και το
+ * `subapps/procurement/.../email-channel.ts` — **τρεις** αναγνώσεις, και άλλες **τρεις**
+ * οικογένειες αλλού (`MAILGUN_FROM_EMAIL`, η σκληρή γραμμή του `orchestrator.ts`, το
+ * νεκρό `NEXT_PUBLIC_DEFAULT_FROM_*`). Σύνολο **6 οικογένειες · 9 αρχεία · 8 εφεδρείες**.
+ *
+ * Η απάντηση ζει πλέον **μία φορά** στο `services/company/sender-identity.ts`, γιατί
+ * «ποιος υπογράφει;» είναι ερώτημα **του ενοίκου**, όχι του κρίκου που τυχαίνει να
+ * στέλνει. ⚠️ ΜΗΝ ξαναδιαβάσεις εδώ μεταβλητή περιβάλλοντος αποστολέα.
+ */
 
 /**
  * **Η αλυσίδα του συστήματος.**

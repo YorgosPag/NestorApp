@@ -60,6 +60,7 @@ import {
   type EmailProvider,
 } from '@/server/comms/email-provider-chain';
 import { defaultEmailChain } from '@/server/comms/email-providers';
+import { adoptStoredSenderHeader, resolveSenderHeader } from '@/services/company/sender-identity';
 import {
   planCoversEveryMessage,
   planEmailDelivery,
@@ -325,6 +326,13 @@ async function deliverDigest(
     subject: brandedSubject(entry.subject),
     text: entry.content,
     html: entry.html,
+    // 🔴 ADR-857 Φ9 — **Η ΑΣΥΜΜΕΤΡΙΑ ΠΟΥ ΚΑΜΙΑ ΑΠΟΓΡΑΦΗ ΔΕΝ ΕΙΧΕ ΔΕΙ.** Η μεμονωμένη
+    //    παράδοση περνούσε `from` (ό,τι έγραψε ο ουραγός στο έγγραφο)· **αυτή εδώ δεν
+    //    περνούσε τίποτα** ⇒ έπεφτε στην εφεδρεία του παρόχου. Δηλαδή **δύο μηνύματα
+    //    του ίδιου ενοίκου έφευγαν με διαφορετική γραμμή `From:` ανάλογα με το αν
+    //    συναθροίστηκαν** — και μια σύνοψη είναι ακριβώς το μήνυμα που ο άνθρωπος
+    //    συγκρίνει με τα προηγούμενα. Τώρα ρωτούν **και οι δύο** την ίδια ρίζα.
+    from: resolveSenderHeader(),
     ...(headers ? { headers } : {}),
   });
 
@@ -445,7 +453,11 @@ async function deliverOne(
   const outcome = await sendThroughChain(chain, {
     to,
     ...envelope,
-    from: asString(data.from) ?? undefined,
+    // 🔑 ADR-857 Φ9 — **ΡΗΤΗ ΥΙΟΘΕΣΙΑ, ΟΧΙ ΣΙΩΠΗΛΟ `as`.** Ο τύπος δεν ταξιδεύει μέσα από
+    //    τη Firestore (δομικό όριο κάθε branded type), και η αποθηκευμένη τιμή μπορεί να
+    //    γράφτηκε από **παλιότερη** έκδοση. Ο υιοθετητής την ξανακαθαρίζει, ώστε ουραγμένο
+    //    έγγραφο με `\r\n` να μην μπορεί να γράψει κεφαλίδα στην έξοδο.
+    from: adoptStoredSenderHeader(data.from),
   });
 
   return settleOne(doc, outcome, attempts);

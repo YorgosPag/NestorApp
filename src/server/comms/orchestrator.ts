@@ -341,11 +341,27 @@ async function enqueueMessageForChannel(
 
 /**
  * Get appropriate "from" address based on channel
+ *
+ * 🔴 **Η ΓΡΑΜΜΗ `From:` ΔΕΝ ΑΠΟΦΑΣΙΖΕΤΑΙ ΕΔΩ ΠΙΑ** (ADR-857 Φ9).
+ *
+ * Έγραφε σκληρά `'noreply@nestorconstruct.gr'` — **καμία μεταβλητή περιβάλλοντος**, καμία
+ * σχέση με το `FROM_NAME`/`PRODUCT_NAME`, και **χωρίς όνομα εμφάνισης**. Ήταν μία από τις
+ * δύο οικογένειες που δεν βρέθηκαν σε **καμία** απογραφή, και η πιο ύπουλη: γραφόταν στο
+ * πεδίο `from` **κάθε ουραγμένου εγγράφου**, δηλαδή **πάγωνε** μέσα στα ήδη γραμμένα
+ * μηνύματα — το ίδιο πρόβλημα «ουράς» που φυλάει το `KNOWN_PAST_SPELLINGS` για τα θέματα.
+ *
+ * 🔑 **Ο ουραγός δεν ξέρει ποιος υπογράφει· ο αποστολέας ξέρει.** Ανάμεσα στο enqueue και
+ * την παράδοση μεσολαβούν λεπτά ή ώρες (παράθυρο ησυχίας, επαναλήψεις). Επιστρέφοντας
+ * `null`, η απόφαση πέφτει στη ρίζα **τη στιγμή της αποστολής** — και ένα μήνυμα που
+ * κάθεται στην ουρά δεν κουβαλά ταυτότητα που μπορεί να έχει αλλάξει.
+ *
+ * ⚠️ `null`, **ποτέ** `undefined`: η Firestore **απορρίπτει** το `undefined` σε εγγραφή
+ * (ίδιος λόγος με το `language: params.language ?? null` παραπάνω).
  */
-function getFromAddress(channel: CommunicationChannel, params: EnqueueMessageParams): string {
+function getFromAddress(channel: CommunicationChannel, params: EnqueueMessageParams): string | null {
   switch (channel) {
     case 'email':
-      return params.metadata?.email?.from || 'noreply@nestorconstruct.gr';
+      return params.metadata?.email?.from ?? null;
     case 'telegram':
       return 'bot';
     case 'whatsapp':

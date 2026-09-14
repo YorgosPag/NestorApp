@@ -5,6 +5,11 @@ import { getFirestoreHelpers } from '../../app/api/communications/webhooks/teleg
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  adoptStoredSenderHeader,
+  resolveSenderHeader,
+  type SenderHeader,
+} from '@/services/company/sender-identity';
 const logger = createModuleLogger('EmailAdapter');
 
 interface EmailJob {
@@ -13,7 +18,8 @@ interface EmailJob {
   subject: string;
   content: string;
   html?: string;
-  from?: string;
+  /** ADR-857 Φ9 — κατασκευάζεται **μόνο** από τη ρίζα ταυτότητας αποστολέα. */
+  from?: SenderHeader;
   /** Κεφαλίδες φακέλου, **ήδη ελεγμένες** (`safeHeaderEntries`). Γίνονται `h:<Όνομα>`. */
   headers?: Readonly<Record<string, string>>;
   metadata?: {
@@ -34,14 +40,10 @@ interface SendResult {
 export class EmailAdapter {
   private apiKey: string;
   private domain: string;
-  private fromEmail: string;
 
   constructor() {
     this.apiKey = process.env.MAILGUN_API_KEY || '';
     this.domain = process.env.MAILGUN_DOMAIN || '';
-
-    // 🏢 ENTERPRISE: Configurable email domain for multi-tenant deployment
-    this.fromEmail = this.getFromEmail();
 
     if (!this.apiKey) {
       logger.warn('⚠️ MAILGUN_API_KEY not found in environment');
@@ -51,31 +53,22 @@ export class EmailAdapter {
     }
   }
 
-  /**
-   * 🏢 ENTERPRISE: Dynamic from email generation with configurable domain
+  /*
+   * 🔴 ΕΔΩ ΖΟΥΣΕ ΤΟ `getFromEmail()` — ΤΕΣΣΕΡΑ ΣΚΑΛΙΑ ΕΦΕΔΡΕΙΑΣ, ΚΑΙ ΤΟ ΤΕΛΕΥΤΑΙΟ
+   * ΗΤΑΝ ΨΕΥΤΙΚΟ DOMAIN (ADR-857 Φ9).
+   *
+   * `MAILGUN_FROM_EMAIL` → `COMPANY_EMAIL_DOMAIN` → `MAILGUN_DOMAIN` →
+   * **`noreply@company.com`**. Το τελευταίο σκαλί δεν είναι εφεδρεία· είναι *εφεύρεση
+   * εταιρείας που δεν υπάρχει* — και θα έφευγε σε **αληθινό** παραλήπτη αν έλειπε μία
+   * μεταβλητή. Ίδιο σχήμα με το «Nestor Construct» που κατήργησε η Φ7: όνομα που δεν
+   * αντιστοιχεί σε κανέναν ένοικο.
+   *
+   * ⚠️ **ΚΑΙ ΔΕΝ ΥΠΟΛΟΓΙΖΕΤΑΙ ΠΙΑ ΣΤΟΝ CONSTRUCTOR.** Το
+   * `subapps/procurement/.../email-channel.ts` κατασκευάζει `EmailAdapter` σε **module
+   * scope** ⇒ ο αποστολέας πάγωνε στην πρώτη **εισαγωγή του module**, και μια μεταβλητή
+   * που έμπαινε αργότερα δεν είχε καμία επίδραση μέχρι επανεκκίνηση. Ρωτιέται πλέον
+   * **τη στιγμή της αποστολής**, όπως το `defaultEmailChain()`.
    */
-  private getFromEmail(): string {
-    // Primary: Use explicit MAILGUN_FROM_EMAIL if set
-    if (process.env.MAILGUN_FROM_EMAIL) {
-      return process.env.MAILGUN_FROM_EMAIL;
-    }
-
-    // Secondary: Generate from company domain and name
-    const domain = process.env.COMPANY_EMAIL_DOMAIN || process.env.NEXT_PUBLIC_COMPANY_EMAIL_DOMAIN;
-    const emailPrefix = process.env.EMAIL_PREFIX || 'noreply';
-
-    if (domain) {
-      return `${emailPrefix}@${domain}`;
-    }
-
-    // Fallback: Use Mailgun domain
-    if (this.domain) {
-      return `${emailPrefix}@${this.domain}`;
-    }
-
-    const fallbackDomain = process.env.FALLBACK_EMAIL_DOMAIN || 'company.com';
-    return `${emailPrefix}@${fallbackDomain}`;
-  }
 
   /**
    * 🏢 ENTERPRISE: Send email via Mailgun API
@@ -91,7 +84,7 @@ export class EmailAdapter {
 
     try {
       const formData = new FormData();
-      formData.append('from', job.from || this.fromEmail);
+      formData.append('from', job.from || resolveSenderHeader());
       formData.append('to', job.to);
       formData.append('subject', job.subject);
       formData.append('text', job.content);
@@ -199,7 +192,13 @@ export class EmailAdapter {
         to: jobData.to,
         subject: jobData.subject,
         content: jobData.content,
-        from: jobData.from,
+        // 🔴 ADR-857 Φ9 — **ΕΔΩ Ο ΤΥΠΟΣ ΠΑΡΑΚΑΜΠΤΟΤΑΝ ΑΟΡΑΤΑ.** Το `jobDoc.data()`
+        //    επιστρέφει `DocumentData`, δηλαδή `any` — και το `any` εκχωρείται σιωπηλά
+        //    σε branded πεδίο **χωρίς καν `as`**, χωρίς κανένα σημάδι σε αναθεώρηση.
+        //    Είναι το δηλωμένο όριο #1 κάθε branded type, στη χειρότερη μορφή του.
+        //    Ίδια κλάση με την ουρά (`deliverOne`): αποθηκευμένη τιμή → κεφαλίδα ⇒
+        //    ίδια θεραπεία, ο υιοθετητής που **ξανακαθαρίζει**.
+        from: adoptStoredSenderHeader(jobData.from),
         metadata: jobData.metadata,
         attempts: jobData.attempts,
         maxAttempts: jobData.maxAttempts
