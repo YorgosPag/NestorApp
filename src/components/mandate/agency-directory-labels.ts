@@ -273,6 +273,8 @@ export const PROFILE_KEYS = {
   cardRevealFailed: `${P}.cardRevealFailed`,
   cardRevealThrottled: `${P}.cardRevealThrottled`,
   cardRevealGone: `${P}.cardRevealGone`,
+  /** Α21.18 — **ένα** δημόσιο κλειδί για πριν **και** μετά την «Εμφάνιση» (56 bytes περιθώριο στο slice). */
+  cardEmailConfirmedOn: `${P}.cardEmailConfirmedOn`,
   cardHoursTitle: `${P}.cardHoursTitle`,
   cardToday: `${P}.cardToday`,
   cardClosedDay: `${P}.cardClosedDay`,

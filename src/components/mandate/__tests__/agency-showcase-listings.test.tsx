@@ -145,6 +145,7 @@ const PHONE_LOCATION: ShowcaseLocation = {
   street: null,
   hours: null,
   channelKinds: ['phone'],
+  emailConfirmedAt: null,
 };
 
 beforeEach(() => {

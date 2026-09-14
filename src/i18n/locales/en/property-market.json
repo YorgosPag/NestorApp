@@ -665,6 +665,26 @@
         "service-unavailable": "We cannot check this link right now. There is nothing wrong with your link - please try again shortly, or let the agency know."
       }
     },
+    "cardEmail": {
+      "title": "Business card email confirmation",
+      "intro": "“{agency}” publishes the address {email} on its business card and asks you to confirm that it receives messages.",
+      "explain": "Visitors to the card will only see that the address was confirmed and when. It does not certify the business.",
+      "confirm": "Confirm",
+      "disown": "I did not request this",
+      "sending": "Recording…",
+      "confirmedBody": "Thank you — the address is confirmed.",
+      "disownedBody": "Recorded. Nothing was confirmed and there is nothing else you need to do.",
+      "reason": {
+        "link-invalid": "This link is not valid.",
+        "request-unknown": "This confirmation request no longer exists.",
+        "expired": "This link has expired. The business can send a new one from its card settings.",
+        "already-confirmed": "This address is already confirmed. Nothing else is needed.",
+        "already-disowned": "You have already said you did not request this. Nothing was confirmed.",
+        "superseded": "A newer confirmation message exists. Please use the most recent link.",
+        "email-changed": "This address is no longer published on the card — there is nothing to confirm.",
+        "unavailable": "We cannot check this link right now. It is not your link's fault — please try again shortly."
+      }
+    },
     "office": {
       "newTitle": "New listing for a client",
       "newSubtitle": "You are listing a client's property. The owner will be notified.",
@@ -711,7 +731,7 @@
       "aliasLabel": "Your address",
       "aliasHint": "The link you hand out on a card, a sign or a referral. It is your workspace alias and is not changed from here.",
       "nameLabel": "Business name",
-      "nameHint": "How you want people to see you. It is written explicitly for publication — nothing is copied automatically from your company record.",
+      "nameHint": "How you want people to see you — on your storefront and on every one of your listings. It is written explicitly for publication — nothing is copied automatically from your company record.",
       "namePlaceholder": "The agency's business name",
       "gemiLabel": "GEMI number",
       "gemiHint": "The proof that the agency exists and is licensed. Without it the directory becomes names that merely claim to be agents.",
@@ -783,6 +803,22 @@
       "cardSave": "Save card",
       "cardSaving": "Saving…",
       "cardSaved": "Your card was saved.",
+      "cardEmailDeclared": "Declared — not confirmed",
+      "cardEmailConfirmedOn": "Confirmed {date}",
+      "cardEmailAged": "Confirmed {date} — more than a year ago",
+      "cardEmailSendConfirmation": "Send confirmation",
+      "cardEmailResendConfirmation": "Confirm again",
+      "cardEmailSending": "Sending…",
+      "cardEmailSent": "A link was sent to {email}. It is valid for {hours} hours.",
+      "cardEmailSaveFirst": "Save your card to send a confirmation to this address.",
+      "cardEmailConfirmHint": "Confirmation only shows visitors that the address receives messages and since when — not that the business is certified.",
+      "cardEmailIssue": {
+        "without-showcase": "Publish your storefront first.",
+        "email-not-on-card": "This address is not saved on your card. Save first.",
+        "recipient-quota": "Enough messages were already sent to this address today. Please try tomorrow.",
+        "send-failed": "The message was not sent. Please try again shortly.",
+        "failed": "We could not send a confirmation right now. Please try again shortly."
+      },
       "cardLoadFailed": "We could not load your card. Please try again shortly.",
       "cardDoor": "Business card",
       "cardDoorHint": "Head office, branches, opening hours, phone numbers and emails — as visitors to your storefront will see them.",
@@ -978,6 +1014,7 @@
       "cardRevealFailed": "We could not show it. Please try again shortly.",
       "cardRevealThrottled": "Too many attempts in a short time. Please try again in a minute.",
       "cardRevealGone": "These details are no longer published.",
+      "cardEmailConfirmedOn": "Email confirmed · {date}",
       "cardHoursTitle": "Opening hours",
       "cardToday": "Today",
       "cardClosedDay": "Closed",

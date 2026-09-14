@@ -33,6 +33,7 @@ import type { ShowcaseLocation } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { Fact } from './AgencyFact';
 import { ChannelReveal } from './ChannelReveal';
+import { EmailConfirmedNote } from './EmailConfirmedNote';
 import { SaveContactLink } from './ShowcaseContactCard';
 
 const LINK_CLASS = 'inline-flex items-center gap-2 self-start font-medium text-foreground underline underline-offset-4';
@@ -98,6 +99,7 @@ export function ContactFact({
       {primary !== null ? (
         <>
           <ChannelReveal companyId={profile.companyId} locationId={primary.id} kinds={primary.channelKinds} />
+          <EmailConfirmedNote confirmedAt={primary.emailConfirmedAt} />
           <SaveContactLink companyId={profile.companyId} location={primary} />
           {canHoldMandate && primary.channelKinds.includes('phone') ? (
             <span className="text-xs">{t(PROFILE_KEYS.cardBrokerWritten)}</span>

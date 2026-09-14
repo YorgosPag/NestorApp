@@ -332,6 +332,30 @@ export const SHOWCASE_CARD_KEYS = {
   websitePlaceholder: `${K}.cardWebsitePlaceholder`,
   /** 🔑 Λέει **πού** θα φανεί — δημόσια, στα δομημένα δεδομένα, στην επαφή. */
   websiteHint: `${K}.cardWebsiteHint`,
+  // ── Η ΕΠΙΒΕΒΑΙΩΣΗ EMAIL (Α21.18) ─────────────────────────────────────────────────────────
+  emailDeclared: `${K}.cardEmailDeclared`,
+  emailConfirmedOn: `${K}.cardEmailConfirmedOn`,
+  /** 🔑 Ήπια φθορά: η ημερομηνία μένει, το «πάνω από χρόνο» προτείνει νέα επιβεβαίωση χωρίς να κρύψει τίποτα. */
+  emailAged: `${K}.cardEmailAged`,
+  emailSendConfirmation: `${K}.cardEmailSendConfirmation`,
+  emailResendConfirmation: `${K}.cardEmailResendConfirmation`,
+  emailSending: `${K}.cardEmailSending`,
+  emailSent: `${K}.cardEmailSent`,
+  emailSaveFirst: `${K}.cardEmailSaveFirst`,
+  /** 🔑 Λέει **τι ΔΕΝ** σημαίνει το σήμα — Α9.2 · DSA 6(3). */
+  emailConfirmHint: `${K}.cardEmailConfirmHint`,
+} as const;
+
+/**
+ * **Γιατί δεν στάλθηκε η επιβεβαίωση → κείμενο** (Α21.18). `failed` = δεν μάθαμε (N.12). Ρητές τιμές, όχι
+ * σύνθεση κλειδιού, ώστε ο τεμαχιστής του ADR-744 να τις λύνει.
+ */
+export const SHOWCASE_CARD_EMAIL_ISSUE_KEYS = {
+  'without-showcase': `${K}.cardEmailIssue.without-showcase`,
+  'email-not-on-card': `${K}.cardEmailIssue.email-not-on-card`,
+  'recipient-quota': `${K}.cardEmailIssue.recipient-quota`,
+  'send-failed': `${K}.cardEmailIssue.send-failed`,
+  failed: `${K}.cardEmailIssue.failed`,
 } as const;
 
 /** **Ρόλος καταστήματος → ετικέτα** — `Record` στο κλειστό σύνολο. */
