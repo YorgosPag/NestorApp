@@ -84,7 +84,7 @@ export type ShowcaseWhereVoice =
  * κάνει αυτό το χειριστήριο;»*, το αφαιρούμενο σημάδι απαντά *«τι έχω ενεργό;»* — και
  * ένα κοινό κλειδί θα ανάγκαζε τη μία από τις δύο διατυπώσεις να διαβάζεται στραβά.
  * Ίδια απόφαση, γραμμένη ήδη δύο φορές: `coverageRadius` ⇄ `coverageDeclaredRadius`,
- * `noChannel` ⇄ `noChannelPro`.
+ * `listingsEmptyHint` ⇄ `listingsEmptyHintPro`.
  *
  * @param where Ο άξονας του τόπου — **η μία αυθεντία**, όπως έρχεται από τη διεύθυνση.
  * @param anchor Το **μετρημένο** όνομα του τόπου του κέντρου, ή `null` για «δεν ξέρω».

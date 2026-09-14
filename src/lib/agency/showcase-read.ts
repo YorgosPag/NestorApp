@@ -58,6 +58,9 @@ import {
   readPresenceAdminIds,
 } from '@/lib/agency/showcase-read-geo';
 import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
+// 🔑 ADR-841 §7 Α21.16 — τα δύο άτομα έγιναν leaf (δεύτερος καταναλωτής: η κάρτα).
+import { readPlace, text } from '@/lib/agency/showcase-read-primitives';
+import { readLocations } from '@/lib/agency/showcase-read-locations';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import { isRegistryAuthority, isChapteredRegistry } from '@/constants/professional-registries';
 
@@ -120,11 +123,6 @@ export function brokerCredentialOf(gemiNumber: string): ShowcaseCredential {
     throw new Error('ADR-841 A9 invariant: broker credential was not constructed - did the ISCO table change?');
   }
   return credential;
-}
-
-/** Είναι μη-κενό κείμενο; — το σύνορο δέχεται `unknown`, όχι υποσχέσεις. */
-function text(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 /** Διαβάζει μια ταξινομημένη ειδικότητα, ή `null` αν λείπει έστω ένα από τα τρία. */
@@ -223,6 +221,8 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       presence: readPresence(source.presence),
       presenceAdminIds: readPresenceAdminIds(source.presenceAdminIds),
       mark: readMark(source.mark),
+      // ⚠️ Παλιό έγγραφο χωρίς κάρτα ⇒ `[]` — καμία εγγραφή μετανάστευσης (CHECK 3.74).
+      locations: readLocations(source.locations),
       publishedAt,
     } satisfies PublicShowcase,
   };
@@ -309,14 +309,6 @@ function readCredentials(source: Record<string, unknown>): readonly ShowcaseCred
   if (gemiNumber === null) return [];
   // 🔑 Η ΙΔΙΑ συνάρτηση που χρησιμοποιεί ο γραφέας — μηδέν διπλότυπο.
   return [brokerCredentialOf(gemiNumber)];
-}
-
-/** `PlaceRef` ή `null` — το `landId` είναι το μόνο υποχρεωτικό (η γη κρατά τη θέση). */
-function readPlace(raw: unknown): PublicShowcase['place'] {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const source = raw as Record<string, unknown>;
-  const landId = text(source.landId);
-  return landId === null ? null : { landId, buildingId: text(source.buildingId) };
 }
 
 // =============================================================================
