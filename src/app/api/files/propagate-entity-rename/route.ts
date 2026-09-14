@@ -18,7 +18,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ADR-852 Φ4α — ο χάρτης ΠΑΡΑΓΕΤΑΙ πλέον από το μητρώο οντοτήτων.
+// ⚠️ Το `COLLECTIONS` έφυγε από εδώ **επίτηδες**: ο χειρόγραφος χάρτης που
+// αντικαταστάθηκε ήταν ο **μοναδικός** καταναλωτής του σε αυτό το αρχείο
+// (μετρημένο), και ένα import χωρίς καταναλωτή είναι νεκρός κώδικας (CHECK 3.22).
+import { RENAME_PROPAGATION_MAP } from '@/config/audit-entity-collection-map';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { EntityFileDisplayPropagator } from '@/services/filesystem/entity-file-display-propagator.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -29,57 +33,23 @@ const logger = createModuleLogger('PropagateEntityRenameRoute');
 
 export const maxDuration = 60;
 
-const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
-  contact: COLLECTIONS.CONTACTS,
-  building: COLLECTIONS.BUILDINGS,
-  property: COLLECTIONS.PROPERTIES,
-  floor: COLLECTIONS.FLOORS,
-  project: COLLECTIONS.PROJECTS,
-  company: COLLECTIONS.COMPANIES,
-  parking: COLLECTIONS.PARKING_SPACES,
-  storage: COLLECTIONS.STORAGE,
-  purchase_order: COLLECTIONS.PURCHASE_ORDERS,
-  quote: COLLECTIONS.QUOTES,
-  material: COLLECTIONS.MATERIALS,
-  framework_agreement: COLLECTIONS.FRAMEWORK_AGREEMENTS,
-  text_template: COLLECTIONS.TEXT_TEMPLATES,
-  custom_dictionary_entry: COLLECTIONS.TEXT_CUSTOM_DICTIONARY,
-  parking_spot: COLLECTIONS.PARKING_SPACES,
-  storage_unit: COLLECTIONS.STORAGE,
-  // BIM entities (ADR-363) — no rename propagation at this stage
-  wall: '',
-  opening: '',
-  slab: '',
-  'slab-opening': '',
-  column: '',
-  beam: '',
-  stair: '',
-  // Roof (ADR-417) — no rename propagation at this stage
-  roof: '',
-  // Foundation (ADR-436) — no rename propagation at this stage
-  foundation: '',
-  // MEP fixtures (ADR-406) — no rename propagation at this stage
-  'mep-fixture': '',
-  // MEP systems (ADR-408) — no rename propagation at this stage
-  'mep-system': '',
-  // Electrical panels (ADR-408 Φ3) — no rename propagation at this stage
-  'electrical-panel': '',
-  // Plumbing manifolds (ADR-408 Φ12) — no rename propagation at this stage
-  'mep-manifold': '',
-  // MEP segments (ADR-408 Φ8) — no rename propagation at this stage
-  'mep-segment': '',
-  // MEP fittings (ADR-408 Φ11) — auto-derived, no rename propagation
-  'mep-fitting': '',
-  // Floorplan symbols (ADR-415) — no rename propagation at this stage
-  'floorplan-symbol': '',
-  // BIM family types (ADR-412) — no rename propagation at this stage
-  bim_family_type: '',
-  // Performance / 3D BIM telemetry (ADR-366) — no rename propagation
-  performance_diagnostic: '',
-  performance_telemetry: '',
-  bim_dimension_3d: '',
-  bim_animation: '',
-};
+/**
+ * 🏢 ADR-852 Φ4α — **ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΤΟ ΜΗΤΡΩΟ**, δεν δηλώνεται εδώ.
+ *
+ * 🔴 **ΓΙΑΤΙ ΑΛΛΑΞΕ**: εδώ ζούσε **εξαντλητικό** `Record<AuditEntityType, string>`
+ * με **37** κλειδιά, δίδυμο με εκείνο του `incremental-backup.service.ts` (ίδια
+ * κλειδιά, παράλληλα σχόλια). Και τα δύο σταμάτησαν να ενημερώνονται στο
+ * `f2af8c5f` (11/06), ενώ το union μεγάλωσε κατά **τρία** στο `e066fbea` (22/07):
+ * `furniture` · `imported-mesh` · `generic-solid`.
+ *
+ * ⚠️ Και **δεν ήταν κοσμητικό**: το `isAuditEntityType()` παρακάτω κρίνει με
+ * `value in ENTITY_COLLECTION_MAP`, άρα ο χάρτης είναι **ο runtime validator** —
+ * τα τρία απόντα μέλη έπαιρναν **400 «Invalid entityType»** για υπαρκτές οντότητες.
+ *
+ * Το τοπικό όνομα μένει ίδιο επίτηδες: καμία άλλη γραμμή αυτής της διαδρομής δεν
+ * χρειάστηκε να αλλάξει.
+ */
+const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = RENAME_PROPAGATION_MAP;
 
 interface PropagateRenameRequest {
   readonly entityType: AuditEntityType;

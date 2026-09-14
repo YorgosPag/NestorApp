@@ -24,6 +24,10 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, IMMUTABLE_COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ADR-852 Φ4α — το `entityType → COLLECTIONS key` ΠΑΡΑΓΕΤΑΙ από το μητρώο.
+// ⚠️ Το `COLLECTIONS` μένει: το χρειάζεται ο βρόχος (`COLLECTIONS[collectionKey]`)
+// και το `IMMUTABLE_COLLECTIONS` ο έλεγχος αμεταβλητότητας.
+import { BACKUP_COLLECTION_KEY_MAP } from '@/config/audit-entity-collection-map';
 import { GCP_PROJECT_ID } from '@/config/gcs-buckets';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -53,58 +57,22 @@ const MANIFEST_VERSION = '1.0.0' as const;
 /** Max audit entries to process per query batch */
 const AUDIT_QUERY_BATCH_SIZE = 500;
 
-/** AuditEntityType → COLLECTIONS key mapping */
-const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
-  contact: 'CONTACTS',
-  building: 'BUILDINGS',
-  property: 'PROPERTIES',
-  floor: 'FLOORS',
-  project: 'PROJECTS',
-  company: 'COMPANIES',
-  parking: 'PARKING_SPACES',
-  storage: 'STORAGE',
-  purchase_order: 'PURCHASE_ORDERS',
-  quote: 'QUOTES',
-  material: 'MATERIALS',
-  framework_agreement: 'FRAMEWORK_AGREEMENTS',
-  text_template: 'TEXT_TEMPLATES',
-  custom_dictionary_entry: 'TEXT_CUSTOM_DICTIONARY',
-  parking_spot: 'PARKING_SPACES',
-  storage_unit: 'STORAGE',
-  // BIM entities (ADR-363) — not backed up via this service at this stage
-  wall: '',
-  opening: '',
-  slab: '',
-  'slab-opening': '',
-  column: '',
-  beam: '',
-  stair: '',
-  // Roof (ADR-417) — not backed up via this service at this stage
-  roof: '',
-  // Foundation (ADR-436) — not backed up via this service at this stage
-  foundation: '',
-  // MEP fixtures (ADR-406) — not backed up via this service at this stage
-  'mep-fixture': '',
-  // MEP systems (ADR-408) — not backed up via this service at this stage
-  'mep-system': '',
-  // Electrical panels (ADR-408 Φ3) — not backed up via this service at this stage
-  'electrical-panel': '',
-  // Plumbing manifolds (ADR-408 Φ12) — not backed up via this service at this stage
-  'mep-manifold': '',
-  // MEP segments (ADR-408 Φ8) — not backed up via this service at this stage
-  'mep-segment': '',
-  // MEP fittings (ADR-408 Φ11) — not backed up via this service at this stage
-  'mep-fitting': '',
-  // Floorplan symbols (ADR-415) — not backed up via this service at this stage
-  'floorplan-symbol': '',
-  // BIM family types (ADR-412) — not backed up via this service at this stage
-  bim_family_type: '',
-  // Performance / 3D BIM telemetry (ADR-366) — not backed up via this service
-  performance_diagnostic: '',
-  performance_telemetry: '',
-  bim_dimension_3d: '',
-  bim_animation: '',
-};
+/**
+ * `AuditEntityType → COLLECTIONS key` — 🏢 **ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΤΟ ΜΗΤΡΩΟ**
+ * (ADR-852 Φ4α), δεν δηλώνεται εδώ.
+ *
+ * 🔴 **ΓΙΑΤΙ**: εδώ ζούσε **εξαντλητικό** `Record<AuditEntityType, string>` με
+ * **37** κλειδιά — **δίδυμο**, κλειδί προς κλειδί, με εκείνο του
+ * `api/files/propagate-entity-rename/route.ts`, μέχρι και τα παράλληλα σχόλια
+ * («not backed up» / «no rename propagation»). Δύο σώματα, ένα ερώτημα, καμία
+ * μηχανή να τα συγκρίνει: σταμάτησαν να ενημερώνονται στο `f2af8c5f` (11/06) και
+ * το union μεγάλωσε κατά τρία στο `e066fbea` (22/07) — **έναν μήνα αργότερα**.
+ *
+ * ⚠️ Η σημασιολογία μένει **ακριβώς** ίδια: κενή συμβολοσειρά = «δεν μπαίνει στο
+ * manifest», και ο βρόχος παρακάτω τη χειρίζεται ως falsy με `logger.warn` +
+ * `continue`. Το τοπικό όνομα μένει ίδιο ώστε καμία άλλη γραμμή να μην αλλάξει.
+ */
+const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = BACKUP_COLLECTION_KEY_MAP;
 
 /** Actions that indicate a document was removed */
 const DELETE_ACTIONS = new Set(['deleted', 'soft_deleted']);
