@@ -64,6 +64,18 @@ export const formatLongDate = (date: Date | string | number): string =>
   formatDate(date, { day: 'numeric', month: 'long', year: 'numeric' });
 
 /**
+ * The NAME of an ISO weekday (1 = Monday … 7 = Sunday) in the current locale.
+ *
+ * WHY Intl and not i18n keys (ADR-841 §7 A21.16): weekday names are CLDR data every browser
+ * already ships in every language; fourteen hand-written keys would be a second, weaker copy.
+ * 2024-01-01 is a Monday — the anchor is fixed and time-zone-proof (noon UTC).
+ */
+export const formatIsoWeekday = (weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7, style: 'long' | 'short' = 'long'): string =>
+  new Intl.DateTimeFormat(getCurrentLocale(), { weekday: style, timeZone: 'UTC' }).format(
+    new Date(Date.UTC(2024, 0, weekday, 12)),
+  );
+
+/**
  * Format date and time according to current locale
  *
  * ENTERPRISE: Handles both explicit style options (dateStyle/timeStyle)
