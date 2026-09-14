@@ -19,8 +19,8 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "27d6a6cda2276712f1269ec6b95d9cedf10f68970de20fa52cc49b4b27ceb093",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "ad39670000c89cb7db3c5499e59a1dacdd6ea4084d180389c493a9c037a32129",
-    "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "6f86c3b2066bbd272fac89cddb49471e3bb123f002bd7d1709b6d9d4ab4efe69",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "2c9036e92b494281fc1da351ca4582efc2f1a5d72574f624c6c31502e6de431f",
+    "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "8b3e7e29daeb117a826d0c1cd49d79579b9ed4944c62a7d72651ee810424f13e",
     "src/i18n/generated/routes/offers__new.el.json": "3c57f4d8907533bf2b7a868e479463b38077fbce9ab9cd9a93bac64c6354c6d6",
@@ -72,7 +72,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2f7aac45c0d9a77e86390d06b17962e8fe36e4ead7f1794a120e56e51154b79f",
+  "inputsSha256": "096d49ee6c6020a5eb2a6427e31ba5b48ef3f501a5e7c13b47f27cbdbc1dbf1e",
   "languages": [
     "el"
   ],
@@ -233,14 +233,17 @@
     "src/components/mandate/MandateUnavailableNotice.tsx": "e371e65810939937257c57eeffd1f271901ec338356571f3148fc6137e595fbf",
     "src/components/mandate/ShowcaseCardContent.tsx": "cc08c43e86b260fa481693f1f28de385304c9dd7e02e30b58d3aa0a6199109b3",
     "src/components/mandate/ShowcaseCardDoor.tsx": "81be4abb47736093be2c7049e1ec38416605660a69d9a9553b741d925a9ad85a",
-    "src/components/mandate/ShowcaseCardSection.tsx": "7dc23d031b36a0a1fe5dfbd35eacc247391decb64c2a73af1cd26ac14114a483",
+    "src/components/mandate/ShowcaseCardImportControl.tsx": "50ff8e7be19071e4f5dca79dfa798b5a243dd42dd9a5e436639eda4cdcbe4e79",
+    "src/components/mandate/ShowcaseCardImportDialog.tsx": "a0847ac80febaff67c5b89129b355f0284592ce33cb2f44ca4b1d65be20e3f91",
+    "src/components/mandate/ShowcaseCardSection.tsx": "e6d6849ac39ec7b7de6da56e24e443102e265cdca0b073d24f9b2d457ffddccc",
     "src/components/mandate/ShowcaseChannelFields.tsx": "0cc38fc2e5bdb6c5b36df3edbda6e5b2c9b713fdd0c26a19d602b23add709ca0",
     "src/components/mandate/ShowcaseContactCard.tsx": "98f8cf18e55e6afa07ca40f20529d392d7ae666b3143e02f5719b22ff69decea",
     "src/components/mandate/ShowcaseCredentialField.tsx": "3d875a36891619a42b1edfd9c15a46421d9d7233d094bb24a41b805642d1228e",
     "src/components/mandate/ShowcaseEmailConfirmationContent.tsx": "808a463cb67a7d104e33d79ee26ae9d903234a0ce5cbbaaa15f773b6ddbc9205",
     "src/components/mandate/ShowcaseEmailConfirmationControl.tsx": "239d6fdaa5ceab11bb46fc63d03e363bd97e193128a90699536a36aff4bf4fb6",
     "src/components/mandate/ShowcaseIdentityFields.tsx": "32b4737c3e515cfb2d33d0a73748f7d1cea99699f71e3230cee4772ea43cf78a",
-    "src/components/mandate/ShowcaseLocationEditor.tsx": "a20e62d435276c6333329b34ebd2df94a8f6122c2714e9b4f28f6978a3bc5904",
+    "src/components/mandate/ShowcaseImportProvenance.tsx": "f78fe3fe1864777265cd9cae9d3fc79156abb60e8a6c522479374e817bb9ec72",
+    "src/components/mandate/ShowcaseLocationEditor.tsx": "56d882971dcac893dbaa83940ed23e05b49573d2a674c654e32735eeea1c83cc",
     "src/components/mandate/ShowcaseMarkFidelityNote.tsx": "18d4fbf822dddac551918e0b285db6f40f21f79c4df8ac33be5f9abd5d4cedc4",
     "src/components/mandate/ShowcaseMarkField.tsx": "fe9769686f4a646fd4ff783ccb7a0a6f147fe0f8b64bd4f706dfccba4591e25e",
     "src/components/mandate/ShowcaseMarkPreview.tsx": "54e49bb6116fca6db5b010e68240bdfbb645e141994a1235acef0f04f3acb70a",
@@ -249,6 +252,7 @@
     "src/components/mandate/ShowcaseQrPanel.tsx": "646b61ccf554a4a4ea9bf8e831d91fac3fb4742d58f9b38ac04a6291c3ffec0e",
     "src/components/mandate/ShowcaseShareDialog.tsx": "3c83d99d7fc6dea589e580152909250ebe63f30e568aa3f91c27f2a2fb17ceab",
     "src/components/mandate/WeeklyHoursField.tsx": "a5aa32e3e93e6134064340b2426b9e94b2e3661f39fe40b664d09f094a821ae2",
+    "src/components/mandate/agency-showcase-import-labels.ts": "71ce6c906bc513341f331e075038547a9c74da0234343e09a0a33ae71ba56e91",
     "src/components/mandate/catalog/MandateCatalogRow.tsx": "2a53f0deebe217433b17498e1cc1e325cf0b9985365aebd16f961ddd8ec16fc9",
     "src/components/mandate/catalog/mandate-catalog-labels.ts": "0c0767e8a4cbde6b0173d69bcb6edb9bc0f131f84e950c85ec5606536982d09d",
     "src/components/mandate/inbox/MandateInboxRow.tsx": "a856828741f26c3c7a8636a54cb770918f625190f471c5f9f2d06b5a78de1852",
@@ -306,7 +310,7 @@
     "src/components/search-results/results-map-area.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/components/search-results/results-map-contract.ts": "43b8bd6d5a3c2dd1e86017af623fb3342c2d7719279e4dd40a4413f8b080d572",
     "src/components/seo/JsonLdScript.tsx": "d6ebc0f4bf11cef68cb9d797ffad5990afb1ec76a3dc6930530cfdee4cd9a02e",
-    "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "7e57255e158e46a57151edda2e6b81d8341b2cb6b020e3e72d5456cf002a12cd",
+    "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "d3a52766fc61bda7c1b80e2242e0b4dc3957411ed5336fcdb5981e4d3331333d",
     "src/components/settings/brokerage/brokerage-capability-labels.ts": "de45edd5494b39681ff5ffd92cd31524dce3ff8192210feef1342608140e90aa",
     "src/components/shared/DesktopOnlyGate.tsx": "3840ff9783e8af05bfd4ec59afdb3277bfb9b361ec15de588ad1acdfb2b1f1cc",
     "src/components/shared/EscoOccupationPicker.tsx": "f9bd5d8cb67e53ca851e09ab9f8ea8fe1f2bcf3c62688408ce8510c234c00a3e",
@@ -353,7 +357,8 @@
     "src/core/states/PageLoadingState.tsx": "683c0e6b08a70039d9382ac5e1778d2071568a85259e02299b8b6eec54b6f399",
     "src/core/states/StaticPageLoading.tsx": "ee7014a3dbe1608ea6e6ff0600cf44e45db8b718acb43189a7f57c5524ba98a0",
     "src/hooks/account/useInFlowTaxIdentity.ts": "ab91899c84d64ad2de863c5072799d649b3cb03f046b4199ade6cc47f36b4130",
-    "src/hooks/company/useBrokerageDeclaration.ts": "d148b56564da04f304760a213a458de4cb84ccdd9be045ffcff751ea1749dc72",
+    "src/hooks/company/useBrokerageDeclaration.ts": "bee1444625724d6d6023c4ba9e5bc15d7dd81cf8b61de44531ac6bb3ca3e6090",
+    "src/hooks/company/useCompanyRegistryIdentity.ts": "2015bb9490d3cba25682e6d1a4e29610559179bae6194ac10e59696c7bf0c34d",
     "src/hooks/demand/useDemandAnswer.ts": "7f9608b9436214932b6ed162514c3dfa07aa2a3cf244026c8e68517ad74c9209",
     "src/hooks/demand/usePlaceInterest.ts": "700674a8bf48446e54041d7f09affa5b962483faecbc505e0b6c975c132bbb6e",
     "src/hooks/geo/usePlaceIdentity.ts": "e1106f132bc40d83f20c81c2de74c07710a77d6c17c14cac5da680e3ee260329",
@@ -363,6 +368,7 @@
     "src/hooks/listings/useMapAreaSearch.ts": "646e019299e2fc51541deedadd64eb2c6ba768e30d6b7c18143721edf0eb90e9",
     "src/hooks/listings/useResultsLedgers.ts": "4b4a4e7e64c1852eb7140624686417c0a6235b081372dcc19c2bd4ec1f5f163d",
     "src/hooks/mandate/useAgencyShowcase.ts": "2a4eb62351825c540b1a384730279823855a08b44e1d7205ca421c3e5aa59e73",
+    "src/hooks/mandate/useCompanyContactSource.ts": "2ddd22e9a2b11e67772194da552aadbe5064bab73aef6640fdc1fee6b891b1a6",
     "src/hooks/mandate/useEmailConfirmationSend.ts": "bd39880c9f5b9cffebb529ae45bb61a64177b569d3ff7d9984c150849c37df5e",
     "src/hooks/mandate/useMandateCatalog.ts": "a57448c1c42a23613c470f0a94ba7d16931f2de5fa315e08fd0b7b56fe9b14ea",
     "src/hooks/mandate/useMandateDetail.ts": "901506df5d1448085320ddbd498b5ff5d571f77c5dc69b41ccbb1f33a70f8e16",
@@ -386,7 +392,8 @@
     "src/lib/agency/presence-admin-ids.ts": "632638cfcd887e103e2474c0cbeaa4208e41b60df35f19c94ebda19ecaf8ef5a",
     "src/lib/agency/showcase-canonical-segment.ts": "09dd448b22de14a7872afc02d68a35411df496481e548a902772d62e0e15f952",
     "src/lib/agency/showcase-card-channels-read.ts": "2f72e88fb41d270ef03ce8f539a75ee6db23661c2335b24f86665b545e74a812",
-    "src/lib/agency/showcase-card-draft.ts": "0c8fd0bc922ad910bad27023d5bef2897d13becec2c68c2d350d3790c2904729",
+    "src/lib/agency/showcase-card-draft.ts": "06dabcc63c04da32488ad554e5449bb2925b396c97c219da13aaea565e6761d3",
+    "src/lib/agency/showcase-card-import.ts": "82abcbe4968d981a854dc523caf9f8509c6c60efaa0284d14cbe7246fdd65e33",
     "src/lib/agency/showcase-card-primary.ts": "21e5e59b4428b3a6103941f1428cf45414dbfd55a0c8223dfcac2f7af496e72e",
     "src/lib/agency/showcase-email-confirmation-rules.ts": "d99d1113184f615eab00e159677e2d35faeda3725adbe72b9bf4938f843c7771",
     "src/lib/agency/showcase-mark-fidelity.ts": "0f1a4258ff802b4685ab6a52d7c23b979b36af73b00908b6fff45e5c0ca1b988",
@@ -409,6 +416,7 @@
     "src/lib/auth/permissions/resource-lookups.ts": "3a0e1582a770027b857603c0ca9a59ba113e3fa27d3fa1687109306f3a268b3a",
     "src/lib/auth/set-claims-with-mirror.ts": "2c8d8e4d1edb1ee3024be0529b104b94c111b56db511a6db21282227d67040fe",
     "src/lib/auth/token-credentials.ts": "04ada53730e0be6f12abafcf1c22fbe14e11e4a05e082872e72697d417995402",
+    "src/lib/company/gemi-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/channel-email.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/channel-phone.ts": "60f9592e495e00e700e821f6c856ff5ca734d6b82b38cdc7bdaad0d923789bc3",
     "src/lib/contact/first-contact-capacity.ts": "dcf99f9e023a46bce73412d2b21bd080adaafd3d048ac8591bebfb143567ae27",
@@ -678,6 +686,7 @@
     "src/types/owner-property-mandate.ts": "8f5a6469e9984ac047d12d8ba616a2db613913b721ebdb8db4ba7a3d8fb35f98",
     "src/types/owner-property.ts": "ee38aac1b99d0edc7aa952d4cfa186397e5c236035f43411698302f59d4da95f",
     "src/types/property-demand.ts": "0948f8195f70b8f584d8af14030a08d8cfa58034393e06a7729108ada0c829be",
+    "src/types/showcase-card-import.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/showcase-email-confirmation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/stay-booking.ts": "69599ef2f7cf9390d7d78ec733071a54644d9c5818dcd6238d4d1d67ea68f156",
     "src/types/workspace-invitation-view.ts": "c13be681169a0d618e47e38f1debec6095f4423f832d3fc4a1a7cbd877cd8f55",
@@ -2546,6 +2555,76 @@
     "o__workspace__settings__agency-profile__card": {
       "page": "src/app/(app)/o/[workspace]/settings/agency-profile/card/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "mandate.showcase.cardAddBranch",
@@ -2581,6 +2660,39 @@
             "mandate.showcase.cardHoursDefect.time-malformed",
             "mandate.showcase.cardHoursDefect.too-many-intervals",
             "mandate.showcase.cardHoursLabel",
+            "mandate.showcase.cardImport.applied",
+            "mandate.showcase.cardImport.apply",
+            "mandate.showcase.cardImport.cancel",
+            "mandate.showcase.cardImport.checkedOn",
+            "mandate.showcase.cardImport.colCard",
+            "mandate.showcase.cardImport.colCompany",
+            "mandate.showcase.cardImport.colDecision",
+            "mandate.showcase.cardImport.colField",
+            "mandate.showcase.cardImport.companySettings",
+            "mandate.showcase.cardImport.field.emails",
+            "mandate.showcase.cardImport.field.phones",
+            "mandate.showcase.cardImport.field.street",
+            "mandate.showcase.cardImport.field.website",
+            "mandate.showcase.cardImport.keepCard",
+            "mandate.showcase.cardImport.lead",
+            "mandate.showcase.cardImport.locate",
+            "mandate.showcase.cardImport.locateFailed",
+            "mandate.showcase.cardImport.locateNotFound",
+            "mandate.showcase.cardImport.locating",
+            "mandate.showcase.cardImport.noCompanyData",
+            "mandate.showcase.cardImport.openWithCount",
+            "mandate.showcase.cardImport.origin.business-registry",
+            "mandate.showcase.cardImport.origin.company-profile",
+            "mandate.showcase.cardImport.review",
+            "mandate.showcase.cardImport.sourceFailed",
+            "mandate.showcase.cardImport.status.fill",
+            "mandate.showcase.cardImport.status.invalid-source",
+            "mandate.showcase.cardImport.status.no-room",
+            "mandate.showcase.cardImport.status.same",
+            "mandate.showcase.cardImport.takeCompany",
+            "mandate.showcase.cardImport.title",
+            "mandate.showcase.cardImport.undo",
+            "mandate.showcase.cardImport.upToDate",
             "mandate.showcase.cardLabelLabel",
             "mandate.showcase.cardLabelPlaceholder",
             "mandate.showcase.cardLead",
@@ -2708,7 +2820,10 @@
             "brokerage.capability.failure.notFound",
             "brokerage.capability.gemiHint",
             "brokerage.capability.gemiLabel",
-            "brokerage.capability.gemiPlaceholder",
+            "brokerage.capability.gemiLoading",
+            "brokerage.capability.gemiMissing",
+            "brokerage.capability.gemiProfileLink",
+            "brokerage.capability.gemiUnavailable",
             "brokerage.capability.headline.active",
             "brokerage.capability.headline.pending",
             "brokerage.capability.headline.revoked",
@@ -4816,7 +4931,7 @@
     "src/config/audit-value-catalogs.ts": "ca9f4f3294368e7bd25d64a4b62e2c78311b7f98d06bf31b90fb7192b6d6d510",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "c253b55a543e8706182af6333e6700c7c2617df31e4072c7fec2abf4f9a9f773",
+    "src/config/domain-constants.ts": "69e137b833305ac220a217f1ab131b7b36302ad19cb31a0050dd0c97cfc6b556",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
     "src/config/firestore-collections.ts": "591aa47af654250c13eaf3c790e79550d4af840fd9c3370f39f98ae58b1bdba0",
@@ -5124,7 +5239,7 @@
     "src/services/building-code/types/site.types.ts": "fad8d5e9005b96aebfb999454ed92d9036be375e24e81aa4885cb82bf6a250ee",
     "src/services/companies.service.ts": "c3256ff25dc6c2de1f1faddaf3414414a04126bd087ee861bc8f55298eca1559",
     "src/services/company-document.service.ts": "49c5bd6978bf88881a2ef1ca25ce2052186ee2159dcbf47e043cec7d576c5f64",
-    "src/services/company/company-legal-identity.ts": "0eb7ae113b345005a8941a07ec45468f4bda560a39a63efc34163d9560f3735e",
+    "src/services/company/company-legal-identity.ts": "65edf67aa470d6a177606dbab8b31a4bf3594bc9ddfadc9976b46892473b0223",
     "src/services/company/company-name-resolver.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/document-template.service.ts": "9c090cd456b28d009fe7fc9d61976e215cbc5830f2b246f8dbd77f9b4e1a62a9",
     "src/services/enterprise-id-access-generators.ts": "09e6b5a1d394dc17c2e7038d49ec1330c724a3dc8f4c061d1b7a0eae52ca2389",
@@ -5212,6 +5327,7 @@
     "src/styles/design-tokens/modules/foundations.ts": "3748a0c74a99cddef63cff715dd573379d532bbe5b97b67ab013377bfa3e6d4d",
     "src/styles/design-tokens/modules/layout.ts": "533f015e77030364139a9370f83df13e7e7d221f18b0ec60d688fd2b1962ec91",
     "src/styles/design-tokens/modules/portal-overlay.ts": "b5d469f1ea794f783e3e0f3399e150c9d99f9f4bec66573b6c994b52d9fc8e8e",
+    "src/subapps/accounting/types/entity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts": "31f5c90a905b757963db4bf4b4cebaa8ac532bf982c978a5927d128ef1d6c9d7",
     "src/subapps/dxf-viewer/config/color-math.ts": "b835d0310b123eaf65883a0cb8e4f4c7a3182c966a3f15e354140e19ccc10bf3",
     "src/subapps/dxf-viewer/config/dxf-timing.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -5229,6 +5345,7 @@
     "src/types/building/elevation.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
     "src/types/building/features.ts": "40cd17ea2ed1ab67c0228038110113c425192dc608e29fafd89ac75d48b11dad",
     "src/types/capability-authority.ts": "ea939d1981bce7790992dc108887f45e5afb8d84dc7f57504843b2b6a5439382",
+    "src/types/company-registry.ts": "86d335e18d27ed2dd2694a9d17cd8f3d5f12c79aca3b33063977305660332012",
     "src/types/company.ts": "656a19c5113289232025614cdca4214667e4620b10c1c87d327e8116accba705",
     "src/types/contacts/address-types.ts": "4b344329845d26af2c138cdddb1eb7fc2bdea7b7c79b3ee0366b37f964ad3ab7",
     "src/types/contacts/contracts.ts": "f6a86ae1b82b5d33c0539bcf05fcb03558cb5eb1e44027c53be234d4ec6df3cf",
@@ -5311,8 +5428,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 645,
-    "sliceBytes": 434641
+    "shellFiles": 647,
+    "sliceBytes": 438347
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

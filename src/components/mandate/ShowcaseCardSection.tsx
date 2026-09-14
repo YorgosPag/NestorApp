@@ -42,6 +42,9 @@ import {
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseLocationEditor } from './ShowcaseLocationEditor';
+import { ShowcaseCardImportControl } from './ShowcaseCardImportControl';
+import { ShowcaseImportProvenance } from './ShowcaseImportProvenance';
+import type { ImportOrigin } from '@/types/showcase-card-import';
 
 const LIMITS = { maxLocations: MAX_SHOWCASE_LOCATIONS, maxPhones: MAX_PHONES_PER_LOCATION, maxEmails: MAX_EMAILS_PER_LOCATION };
 
@@ -90,11 +93,21 @@ function CardFooter({
 }
 
 /** **Η ιστοσελίδα του οργανισμού** (Α21.17) — μία, πάνω από τα καταστήματα, γιατί ανήκει στον οργανισμό. */
-function WebsiteField({ value, onChange }: { readonly value: string; readonly onChange: (next: string) => void }): React.ReactElement {
+function WebsiteField({
+  value,
+  origin,
+  onChange,
+}: {
+  readonly value: string;
+  /** Α21.19 — ήρθε από την εισαγωγή· `null` μόλις ο άνθρωπος τη γράψει. */
+  readonly origin: ImportOrigin | null;
+  readonly onChange: (next: string) => void;
+}): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   return (
     <span className="flex flex-col gap-1">
       <Label htmlFor="showcase-card-website">{t(SHOWCASE_CARD_KEYS.websiteLabel)}</Label>
+      <ShowcaseImportProvenance origin={origin} />
       <Input
         id="showcase-card-website"
         type="url"
@@ -142,10 +155,18 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
   const [website, setWebsite] = React.useState('');
   // 🔑 Ίδιος κανόνας με τα πρόχειρα: κάθε απάντηση του διακομιστή γίνεται η αλήθεια της φόρμας —
   //    η αποθήκευση επιστρέφει την **κανονικοποιημένη** διεύθυνση (`www.x.gr` → `https://www.x.gr/`).
+  const [websiteOrigin, setWebsiteOrigin] = React.useState<ImportOrigin | null>(null);
   React.useEffect(() => {
     if (load.phase === 'loaded') setWebsite(load.website ?? '');
+    setWebsiteOrigin(null);
   }, [load]);
   const [missingPlace, setMissingPlace] = React.useState(false);
+  // Α21.19 — η εισαγωγή αντικαθιστά **το πρόχειρο**, ποτέ την αποθηκευμένη κάρτα.
+  const onImport = (nextDrafts: readonly ShowcaseLocationDraft[], nextWebsite: string, origin: ImportOrigin | null) => {
+    setDrafts(nextDrafts);
+    setWebsite(nextWebsite);
+    setWebsiteOrigin(origin);
+  };
   const failureText = useFailureText(failure);
 
   const onSave = () => {
@@ -166,7 +187,15 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
       {load.phase === 'failed' ? <p role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_CARD_KEYS.loadFailed)}</p> : null}
       {load.phase === 'loaded' ? (
         <>
-          <WebsiteField value={website} onChange={setWebsite} />
+          <ShowcaseCardImportControl enabled={enabled} drafts={drafts} website={website} onReplace={onImport} />
+          <WebsiteField
+            value={website}
+            origin={websiteOrigin}
+            onChange={(next) => {
+              setWebsite(next);
+              setWebsiteOrigin(null);
+            }}
+          />
           {drafts.length === 0 ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.empty)}</p> : null}
           {drafts.map((draft) => (
             <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, draft)} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
