@@ -12,6 +12,7 @@
  */
 
 import { generateSessionId } from '@/services/enterprise-id.service';
+import { getDeploymentId } from '@/lib/app-version/deployment-identity';
 import {
   collection,
   doc,
@@ -54,7 +55,10 @@ import {
 
 const logger = createModuleLogger('EnterpriseSessionService');
 
-const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0';
+// ADR-860 §Ε0 — η ΜΙΑ ταυτότητα έκδοσης (git SHA του build). Το `NEXT_PUBLIC_APP_VERSION` που
+// διαβαζόταν εδώ δεν οριζόταν ΠΟΥΘΕΝΑ ⇒ κάθε συνεδρία γραφόταν ως '1.0.0'. Η εφεδρική τιμή
+// μένει για τοπικά builds χωρίς ταυτότητα, ώστε το υποχρεωτικό `appVersion: string` να μη σπάσει.
+const APP_VERSION = getDeploymentId() ?? '1.0.0';
 
 // ============================================================================
 // ENTERPRISE SESSION SERVICE

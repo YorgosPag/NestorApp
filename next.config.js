@@ -500,26 +500,21 @@ const nextConfig = {
     }
 
     // Production: optimized caching
+    //
+    // 🔴 ADR-860 §Ε2 — ΚΑΝΕΝΑΣ ΚΑΝΟΝΑΣ `immutable` ΓΙΑ `/_next/static` Ή `*.js` / `*.css`.
+    //
+    // Υπήρχαν τρεις (`/_next/static/(.*)`, `/(.*).js`, `/(.*).css`) και ήταν **επιβλαβείς**:
+    // οι κανόνες `headers()` ταιριάζουν με **διαδρομή**, πριν και ανεξάρτητα από το status
+    // (`resolve-routes.js:508` → `router-server.js:329`). Ένα chunk που **δεν υπάρχει** έπαιρνε
+    // κι αυτό `immutable` για ένα χρόνο — μετρημένο στην παραγωγή 2026-09-14: `200` + HTML +
+    // `max-age=31536000, immutable`. Ο browser κρατούσε την αποτυχία για ένα χρόνο.
+    //
+    // ✅ Για τα αρχεία που **υπάρχουν** δεν χάνεται τίποτα: το ίδιο το Next βάζει
+    // `public, max-age=31536000, immutable` **μόνο** σε πραγματικό `nextStaticFolder`
+    // (`router-server.js:366`). Το «δεν υπάρχει» το χειρίζεται το `afterFiles` του `rewrites()`.
+    //
+    // ⛔ ΜΗΝ τους επαναφέρεις «για απόδοση». Άγκυρα: `scripts/__tests__/static-asset-caching-contract.test.js`.
     return [
-      // ── Static assets: immutable forever (hashed filenames) ──
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/(.*).js',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/(.*).css',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
       // ── Service worker: always revalidate ──
       {
         source: '/sw.js',
@@ -564,36 +559,55 @@ const nextConfig = {
   },
 
   // [PWA] PWA MANIFEST + [ADR-738] OAuth discovery
+  //
+  // 🔑 ADR-860 §Ε2 — ΣΧΗΜΑ `{ beforeFiles, afterFiles, fallback }` ΚΑΙ ΟΧΙ ΣΚΕΤΟΣ ΠΙΝΑΚΑΣ.
+  // Ο σκέτος πίνακας κανονικοποιείται **ολόκληρος** σε `afterFiles` (`load-custom-routes.js:412`),
+  // άρα οι υπάρχοντες κανόνες συμπεριφέρονται **ταυτόσημα**. Το σχήμα χρειάζεται μόνο για να
+  // είναι ρητή η θέση του κανόνα static-miss.
   async rewrites() {
-    return [
-      {
-        source: '/manifest.json',
-        destination: '/api/manifest',
-      },
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: '/manifest.json',
+          destination: '/api/manifest',
+        },
 
-      // ── ADR-738: OAuth 2.1 / MCP discovery ──────────────────────────────
-      // Rewrite αντί για φάκελο `src/app/.well-known/`: οι διαδρομές είναι
-      // υποχρεωτικές από RFC 9728 / RFC 8414, και δεν εξαρτώνται από το πώς ο
-      // App Router χειρίζεται φακέλους που ξεκινούν με τελεία.
-      //
-      // ⚠️ Το PRM σερβίρεται σε ΔΥΟ διαδρομές επίτηδες. Το πρότυπο ορίζει ότι
-      // ο client δοκιμάζει ΠΡΩΤΑ την εκδοχή με path insertion
-      // (`/.well-known/oauth-protected-resource/api/mcp`) και μόνο αν αποτύχει
-      // πέφτει στη ρίζα. Σερβίροντας μόνο τη ρίζα θα δουλεύαμε — μετά από ένα
-      // περιττό 404 σε κάθε σύνδεση.
-      {
-        source: '/.well-known/oauth-protected-resource',
-        destination: '/api/oauth/metadata/protected-resource',
-      },
-      {
-        source: '/.well-known/oauth-protected-resource/api/mcp',
-        destination: '/api/oauth/metadata/protected-resource',
-      },
-      {
-        source: '/.well-known/oauth-authorization-server',
-        destination: '/api/oauth/metadata/authorization-server',
-      },
-    ];
+        // ── ADR-738: OAuth 2.1 / MCP discovery ──────────────────────────────
+        // Rewrite αντί για φάκελο `src/app/.well-known/`: οι διαδρομές είναι
+        // υποχρεωτικές από RFC 9728 / RFC 8414, και δεν εξαρτώνται από το πώς ο
+        // App Router χειρίζεται φακέλους που ξεκινούν με τελεία.
+        //
+        // ⚠️ Το PRM σερβίρεται σε ΔΥΟ διαδρομές επίτηδες. Το πρότυπο ορίζει ότι
+        // ο client δοκιμάζει ΠΡΩΤΑ την εκδοχή με path insertion
+        // (`/.well-known/oauth-protected-resource/api/mcp`) και μόνο αν αποτύχει
+        // πέφτει στη ρίζα. Σερβίροντας μόνο τη ρίζα θα δουλεύαμε — μετά από ένα
+        // περιττό 404 σε κάθε σύνδεση.
+        {
+          source: '/.well-known/oauth-protected-resource',
+          destination: '/api/oauth/metadata/protected-resource',
+        },
+        {
+          source: '/.well-known/oauth-protected-resource/api/mcp',
+          destination: '/api/oauth/metadata/protected-resource',
+        },
+        {
+          source: '/.well-known/oauth-authorization-server',
+          destination: '/api/oauth/metadata/authorization-server',
+        },
+
+        // ── ADR-860 §Ε2: ένα `/_next/static/*` που ΔΕΝ υπάρχει → αληθινό 404, ποτέ cache ──
+        // `afterFiles` = ΜΕΤΑ τον έλεγχο αρχείων (τα υπαρκτά σερβίρονται κανονικά) και ΠΡΙΝ τα
+        // dynamic routes (δεν φτάνει στο catch-all `(app)/[...unprefixed]`, που με το
+        // `(app)/loading.tsx` κλείδωνε την απάντηση σε 200). Το `?asset=` μεταφέρει το αρχικό
+        // μονοπάτι στο log. ⛔ ΜΗΝ το μετακινήσεις σε `beforeFiles`: θα έκλεβε τα υπαρκτά.
+        {
+          source: '/_next/static/:path*',
+          destination: '/api/static-asset-miss?asset=:path*',
+        },
+      ],
+      fallback: [],
+    };
   },
 };
 

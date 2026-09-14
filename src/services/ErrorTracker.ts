@@ -15,6 +15,7 @@
 
 import { generateSessionId, generateErrorId } from '@/services/enterprise-id.service';
 import { sumByKey } from '@/utils/collection-utils';
+import { getDeploymentId } from '@/lib/app-version/deployment-identity';
 
 // Re-export types for consumers
 export type {
@@ -151,7 +152,9 @@ export class ErrorTracker {
       route: window.location.pathname,
       timestamp: Date.now(),
       sessionId: this.sessionId,
-      buildVersion: process.env.NEXT_PUBLIC_BUILD_VERSION,
+      // ADR-860 §Ε0 — η ΜΙΑ ταυτότητα έκδοσης. Το `NEXT_PUBLIC_BUILD_VERSION` που διαβαζόταν εδώ
+      // δεν οριζόταν ΠΟΥΘΕΝΑ ⇒ κάθε αναφορά σφάλματος είχε `buildVersion: undefined`.
+      buildVersion: getDeploymentId() ?? undefined,
       ...additionalContext
     };
 
