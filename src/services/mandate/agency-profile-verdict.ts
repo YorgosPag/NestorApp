@@ -99,6 +99,25 @@ export const AGENCY_PROFILE_REJECTIONS = [
    * άνθρωπο»*.
    */
   'agency-profile-mark-unpublishable',
+  // ── ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ ─────────────────────────────────────
+  //
+  // 🔑 **Τρίτος γραφέας, ίδιο λεξιλόγιο** — ο λόγος που αυτό το αρχείο έφυγε από τον
+  //    γραφέα της βιτρίνας (#1 στην κεφαλίδα) πληρώνει ξανά.
+  /** Κάρτα για βιτρίνα που **δεν υπάρχει** — ίδιο σκεπτικό με το `mark-without-showcase`. */
+  'agency-profile-card-without-showcase',
+  /** Πάνω από `MAX_SHOWCASE_LOCATIONS` καταστήματα. */
+  'agency-profile-card-too-many-locations',
+  /** **Δύο** έδρες — η έδρα είναι μία, εξ ορισμού. */
+  'agency-profile-card-two-headquarters',
+  /** Πάνω από το όριο τηλεφώνων/email **ανά κατάστημα**. */
+  'agency-profile-card-too-many-channels',
+  /** Αριθμός που **δεν μπορεί να καλεστεί** (libphonenumber `isValid`). */
+  'agency-profile-card-phone-invalid',
+  'agency-profile-card-email-invalid',
+  /** Ωράριο που δεν περνά τον **έναν** κριτή (`weeklyHoursDefect`). */
+  'agency-profile-card-hours-invalid',
+  /** Οδός δηλωμένη **μισή** (οδός χωρίς Τ.Κ. ή το αντίστροφο) — δεν μαντεύουμε το υπόλοιπο. */
+  'agency-profile-card-street-incomplete',
 ] as const;
 
 export type AgencyProfileRejection = (typeof AGENCY_PROFILE_REJECTIONS)[number];

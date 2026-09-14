@@ -1,0 +1,60 @@
+/**
+ * ADR-841 §7 Α21.16 — πρόχειρο ⇄ σύρμα: οι καταστάσεις της φόρμας που το σύρμα απαγορεύει.
+ */
+
+import {
+  draftHoursDefect,
+  draftOfLocation,
+  emptyLocationDraft,
+  wireOfDrafts,
+} from '../showcase-card-draft';
+import type { OwnedShowcaseLocation } from '@/types/showcase-card';
+
+const OWNED: OwnedShowcaseLocation = {
+  id: 'sloc_1',
+  role: 'headquarters',
+  label: null,
+  place: { landId: 'land_1', buildingId: null },
+  position: { lat: 40.63, lng: 22.94 },
+  street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
+  hours: null,
+  channelKinds: ['phone'],
+  channels: { phones: [{ e164: '+302310123456', extension: '5' }], emails: [] },
+};
+
+describe('showcase-card-draft', () => {
+  it('αποθηκευμένο → πρόχειρο: τηλέφωνο ΜΟΡΦΟΠΟΙΗΜΕΝΟ, όχι ωμό E.164', () => {
+    const draft = draftOfLocation(OWNED);
+    expect(draft.phones).toEqual([{ number: '+30 231 012 3456', extension: '5' }]);
+    expect(draft.publishStreet).toBe(true);
+    expect(draft.hoursEnabled).toBe(false);
+  });
+
+  it('🔴 κατάστημα χωρίς τόπο ΟΝΟΜΑΖΕΤΑΙ — δεν εξαφανίζεται σιωπηλά', () => {
+    expect(wireOfDrafts([draftOfLocation(OWNED), emptyLocationDraft('branch')])).toEqual({ missingPlaceIndex: 1 });
+  });
+
+  it('🔑 διακόπτης οδού κλειστός ⇒ street: null, αλλά η οδός ΚΡΑΤΙΕΤΑΙ στο πρόχειρο', () => {
+    const draft = { ...draftOfLocation(OWNED), publishStreet: false };
+    const formed = wireOfDrafts([draft]);
+    if (!('wire' in formed)) throw new Error('missing place');
+    expect(formed.wire.locations[0].street).toBeNull();
+    expect(draft.street.street).toBe('Τσιμισκή');
+  });
+
+  it('ωράριο απενεργοποιημένο ⇒ hours: null και κανένα ελάττωμα, ό,τι κι αν κρατά', () => {
+    const draft = {
+      ...draftOfLocation(OWNED),
+      hours: { 1: [{ opens: '18:00', closes: '09:00' }], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] },
+    };
+    expect(draftHoursDefect(draft)).toBeNull();
+    expect(draftHoursDefect({ ...draft, hoursEnabled: true })).toBe('interval-empty');
+  });
+
+  it('κενή ετικέτα/εσωτερικό → null στο σύρμα', () => {
+    const formed = wireOfDrafts([{ ...draftOfLocation(OWNED), label: '  ', phones: [{ number: '2310123456', extension: ' ' }] }]);
+    if (!('wire' in formed)) throw new Error('missing place');
+    expect(formed.wire.locations[0].label).toBeNull();
+    expect(formed.wire.locations[0].phones[0].extension).toBeNull();
+  });
+});
