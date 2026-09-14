@@ -164,6 +164,39 @@
       "units": "Μονάδες",
       "elevation": "Ύψος (m)",
       "monthlyRent": "Μηνιαίο Ενοίκιο",
+      "layerId": "Επίπεδο σχεδίασης",
+      "kind": "Είδος",
+      "storeyId": "Στάθμη",
+      "offsetFromStorey": "Απόκλιση από στάθμη",
+      "material": "Υλικό",
+      "width": "Πλάτος",
+      "height": "Ύψος",
+      "depth": "Βάθος",
+      "length": "Μήκος",
+      "thickness": "Πάχος",
+      "rotation": "Στροφή",
+      "shape": "Σχήμα",
+      "anchor": "Σημείο αγκύρωσης",
+      "hostId": "Φορέας",
+      "baseBinding": "Δέσμευση βάσης",
+      "topBinding": "Δέσμευση κορυφής",
+      "baseOffset": "Απόκλιση βάσης",
+      "topOffset": "Απόκλιση κορυφής",
+      "unconnectedHeight": "Ελεύθερο ύψος",
+      "bodyHeightMm": "Ύψος σώματος",
+      "mountingElevationMm": "Υψόμετρο τοποθέτησης",
+      "centerlineElevationMm": "Υψόμετρο άξονα",
+      "catalogProfile": "Διατομή καταλόγου",
+      "frameWidth": "Πλάτος κάσας",
+      "glazingPanes": "Υαλοπίνακες",
+      "fireRating": "Πυραντοχή",
+      "dna": "Σύνθεση στρώσεων",
+      "envelopeFunction": "Λειτουργία κελύφους",
+      "envelopeLayer": "Στρώση θερμομόνωσης",
+      "domain": "Δίκτυο",
+      "systemClassification": "Κατηγορία συστήματος",
+      "connectorDiameterMm": "Διάμετρος σύνδεσης",
+      "thermalOutputW": "Θερμική απόδοση",
       "commercial": {
         "askingPrice": "Τιμή Ζητούμενη",
         "finalPrice": "Τελική Τιμή",
@@ -227,7 +260,8 @@
         "landowners": "Οικοπεδούχοι",
         "bartexPercentage": "Ποσοστό αντιπαροχής",
         "projectCode": "Κωδικός Έργου",
-        "addresses": "Διεύθυνση"
+        "addresses": "Διεύθυνση",
+        "buildingCode": "Στοιχεία ΝΟΚ"
       },
       "contact": {
         "firstName": "Όνομα",
@@ -410,6 +444,139 @@
       "custom_dictionary_entry": {
         "term": "Όρος",
         "language": "Γλώσσα"
+      },
+      "wall": {
+        "flip": "Αναστροφή πλευράς",
+        "measurementLength": "Μήκος μέτρησης",
+        "startBevel": "Λοξότμηση αρχής",
+        "endBevel": "Λοξότμηση τέλους"
+      },
+      "column": {
+        "lshape": "Παράμετροι διατομής Γ",
+        "tshape": "Παράμετροι διατομής Τ",
+        "polygon": "Παράμετροι πολυγωνικής διατομής",
+        "ishape": "Παράμετροι διατομής Ι"
+      },
+      "beam": {
+        "topElevation": "Στάθμη άνω παρειάς",
+        "zOffset": "Κατακόρυφη απόκλιση",
+        "supportType": "Τύπος έδρασης",
+        "sectionType": "Τύπος διατομής",
+        "profileDesignation": "Χαρακτηρισμός διατομής"
+      },
+      "slab": {
+        "levelElevation": "Στάθμη τελειωμένου δαπέδου",
+        "heightOffsetFromLevel": "Απόκλιση από στάθμη δαπέδου",
+        "geometryType": "Τύπος γεωμετρίας",
+        "reinforcement": "Οπλισμός",
+        "slope": "Ρύση"
+      },
+      "slab-opening": {
+        "slabId": "Πλάκα",
+        "elevationOverride": "Παράκαμψη στάθμης",
+        "multiStoreyStackGroupId": "Ομάδα πολυώροφης διάτρησης",
+        "sceneUnits": "Μονάδες σκηνής"
+      },
+      "opening": {
+        "wallId": "Τοίχος",
+        "offsetFromStart": "Απόσταση από αρχή τοίχου",
+        "sillHeight": "Ύψος ποδιάς",
+        "handing": "Φορά ανοίγματος",
+        "openDirection": "Κατεύθυνση ανοίγματος",
+        "mark": "Σήμανση",
+        "markIsManual": "Χειροκίνητη σήμανση",
+        "tagVisible": "Εμφάνιση ταμπέλας",
+        "revealInsulation": "Μόνωση περβαζιού"
+      },
+      "stair": {
+        "rise": "Ύψος αναβαθμίδας",
+        "tread": "Πλάτος πατήματος",
+        "nosing": "Προεξοχή πατήματος",
+        "nosingSide": "Πλευρά προεξοχής",
+        "stepCount": "Αριθμός βαθμίδων",
+        "totalRise": "Συνολικό ύψος",
+        "totalRun": "Συνολικό μήκος",
+        "pitch": "Κλίση κλίμακας",
+        "structureType": "Τύπος κατασκευής",
+        "riserType": "Τύπος ρίχτι",
+        "codeProfile": "Προφίλ κανονισμού",
+        "nokSubType": "Υποκατηγορία ΝΟΚ",
+        "antiskidNosing": "Αντιολισθητική προεξοχή",
+        "adaContrastStrip": "Ταινία αντίθεσης προσβασιμότητας",
+        "cutPlaneHeight": "Ύψος επιπέδου τομής",
+        "occupancyLoad": "Πληθυσμός χρήσης",
+        "walklineOffset": "Απόκλιση γραμμής βάδισης",
+        "upDirection": "Φορά ανόδου",
+        "treadNumberStart": "Αρίθμηση από",
+        "treadLabelDisplay": "Εμφάνιση αρίθμησης",
+        "treadLabelEveryN": "Αρίθμηση ανά Ν βαθμίδες",
+        "treadLabelRestartPerFlight": "Επανεκκίνηση αρίθμησης ανά κλάδο",
+        "treadLabelHeight": "Ύψος αρίθμησης",
+        "variant": "Παραλλαγή",
+        "multiStoryConfig": "Ρύθμιση πολυώροφης",
+        "stringerParams": "Παράμετροι φέρουσας δοκού",
+        "materials": "Υλικά",
+        "handrails": "Κουπαστές"
+      },
+      "roof": {
+        "basePivotZ": "Στάθμη γείσου",
+        "slopeUnit": "Μονάδα κλίσης",
+        "fasciaMaterial": "Υλικό μετώπης",
+        "soffitMaterial": "Υλικό κάτω όψης γείσου",
+        "fasciaHeightMm": "Ύψος μετώπης",
+        "soffitMode": "Τρόπος κάτω όψης γείσου"
+      },
+      "foundation": {
+        "topElevationMm": "Στάθμη άνω παρειάς",
+        "thicknessMm": "Πάχος πεδίλου",
+        "profile": "Διατομή",
+        "stepped": "Κλιμακωτή διαμόρφωση",
+        "sloped": "Κεκλιμένη διαμόρφωση"
+      },
+      "railing": {
+        "totalHeightMm": "Συνολικό ύψος",
+        "baseElevationMm": "Στάθμη βάσης"
+      },
+      "floorplan-symbol": {
+        "assetId": "Σύμβολο",
+        "widthMm": "Πλάτος",
+        "depthMm": "Βάθος",
+        "rotationDeg": "Στροφή"
+      },
+      "mep-system": {
+        "systemType": "Τύπος δικτύου",
+        "sourceEntityId": "Πηγή",
+        "sourceConnectorId": "Σύνδεσμος πηγής",
+        "members": "Μέλη δικτύου",
+        "ratedVoltage": "Ονομαστική τάση",
+        "poles": "Πόλοι"
+      },
+      "mep-manifold": {
+        "outletCount": "Πλήθος εξόδων",
+        "inletDiameterMm": "Διάμετρος εισόδου",
+        "outletDiameterMm": "Διάμετρος εξόδου"
+      },
+      "mep-segment": {
+        "sectionKind": "Είδος διατομής",
+        "diameter": "Διάμετρος",
+        "wallThickness": "Πάχος τοιχώματος"
+      },
+      "mep-fitting": {
+        "junctionKey": "Κόμβος",
+        "primaryDiameterMm": "Κύρια διάμετρος",
+        "secondaryDiameterMm": "Δευτερεύουσα διάμετρος",
+        "elbowStyle": "Τύπος γωνίας"
+      },
+      "mep-underfloor": {
+        "pipeSpacingMm": "Βήμα σωληνώσεων",
+        "edgeClearanceMm": "Περιθώριο περιμέτρου",
+        "patternType": "Μοτίβο διάστρωσης",
+        "entrySide": "Πλευρά εισόδου",
+        "screedOffsetMm": "Απόκλιση από γαρμπιλόδεμα",
+        "floorId": "Όροφος"
+      },
+      "mep-water-heater": {
+        "tankCapacityL": "Χωρητικότητα δεξαμενής"
       }
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."

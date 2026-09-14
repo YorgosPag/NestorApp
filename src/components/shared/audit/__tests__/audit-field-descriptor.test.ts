@@ -19,6 +19,9 @@ import {
 // ADR-852 §4.8 (άγκυρα Ζ4) — το ΠΡΑΓΜΑΤΙΚΟ μητρώο, ώστε η κάλυψη μετάφρασης να
 // ελέγχεται πάνω στα πεδία που δηλώνονται όντως, όχι σε χειρόγραφη λίστα που παλιώνει.
 import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
+// ADR-852 Φ4 (άγκυρες Θ) — ο πληθυσμός των οντοτήτων ΠΑΡΑΓΕΤΑΙ από το μητρώο,
+// ποτέ χειρόγραφη λίστα: αυτή ακριβώς απέτυχε επτά φορές στο §4.9.
+import { AUDIT_ENTITIES } from '@/config/audit-entity-registry';
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
 
 /** Μεταφραστής που ξέρει ΜΟΝΟ τα κλειδιά του πίνακα· για κάθε άλλο επιστρέφει το κλειδί. */
@@ -275,5 +278,97 @@ describe('ADR-852 §4.8 — κάθε πεδίο του μητρώου έχει �
         expect(typeof resolved).toBe('string');
       }
     }
+  });
+
+  // ==========================================================================
+  // ΑΓΚΥΡΕΣ Θ — ADR-852 **Φ4**: ΚΑΜΙΑ οντότητα δεν δείχνει πια ωμό όνομα πεδίου
+  // ==========================================================================
+
+  /**
+   * 🔴 ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ ΤΟ Ζ4: εκείνο ρωτά για **τρεις** ονομαστικές οντότητες
+   * (`WORK_B_ENTITIES`). Η Φ4 κάλυψε **όλες** — και μια χειρόγραφη λίστα που
+   * μεγαλώνει με το χέρι είναι ακριβώς ο μηχανισμός που απέτυχε **επτά** φορές
+   * στο `BIM_AUDIT_ENTITY_TYPES` (ADR-852 §4.9). Εδώ ο πληθυσμός **παράγεται**
+   * από τον ίδιο τον δρομολογητή: μια νέα οντότητα με μητρώο μπαίνει στην πύλη
+   * **δωρεάν**, χωρίς να τη θυμηθεί κανείς.
+   *
+   * ⚠️ Η ερώτηση είναι «**λύνεται η ετικέτα;**», όχι «υπάρχει ειδικό κλειδί;» —
+   * μιμείται τη σειρά του `resolveFieldLabel` (ειδικό → γενικό), γιατί **33**
+   * κοινά πεδία (`layerId` σε 19 οντότητες, `kind` σε 18) λύνονται σκόπιμα από
+   * το **γενικό** επίπεδο: 19 αντίγραφα θα ήταν 19 ευκαιρίες απόκλισης.
+   */
+  const REGISTERED_ENTITIES: readonly string[] = Object.keys(AUDIT_ENTITIES).filter(
+    (type) => getTrackedFieldsForEntityAuditType(type) !== null,
+  );
+
+  it('Θ0 ΠΑΡΟΝΟΜΑΣΤΗΣ — ο πληθυσμός ΠΑΡΑΓΕΤΑΙ και δεν είναι κενός', () => {
+    // Χωρίς αυτό, ένα σπασμένο φίλτρο θα έκανε το Θ1 πράσινο πάνω σε ΚΑΝΕΝΑ.
+    expect(REGISTERED_ENTITIES.length).toBeGreaterThanOrEqual(30);
+  });
+
+  it('Θ1 🔴 — ΚΑΘΕ πεδίο ΚΑΘΕ εγγεγραμμένης οντότητας λύνεται σε el ΚΑΙ en', () => {
+    const unresolved: string[] = [];
+    let checked = 0;
+
+    for (const entityType of REGISTERED_ENTITIES) {
+      const registry = getTrackedFieldsForEntityAuditType(entityType) ?? {};
+      for (const field of Object.keys(registry)) {
+        for (const lang of ['el', 'en'] as const) {
+          checked += 1;
+          const resolved =
+            lookup(BUNDLES[lang], `audit.fields.${entityType}.${field}`) ??
+            lookup(BUNDLES[lang], `audit.fields.${field}`);
+          if (typeof resolved !== 'string') unresolved.push(`${lang}: ${entityType}.${field}`);
+        }
+      }
+    }
+
+    // ΠΑΡΟΝΟΜΑΣΤΗΣ: κενός βρόχος θα περνούσε δωρεάν.
+    expect(checked).toBeGreaterThan(500);
+    // Ονομαστικά, ΟΧΙ πλήθος: ο επόμενος πρέπει να μάθει ΠΟΙΟ λείπει χωρίς να
+    // ξανατρέξει τη σάρωση με το χέρι.
+    expect(unresolved).toEqual([]);
+  });
+
+  it('Θ2 🔴 — κανένα ΓΕΝΙΚΟ πεδίο δεν έχει όνομα οντότητας ΠΟΥ ΕΧΕΙ ΦΩΛΙΑ', () => {
+    // Η αμφισημία του ADR-810 §7, τρίτη εμφάνιση: το σχήμα `audit.fields.<X>`
+    // σημαίνει ΚΑΙ «οντότητα X» ΚΑΙ «πεδίο με όνομα X». Όταν συμπέσουν, το βήμα
+    // «γενικό» επιστρέφει **αντικείμενο**, ο `translated()` το απορρίπτει, και η
+    // ετικέτα **χάνεται σιωπηλά** από κάθε οντότητα που έχει αυτό το πεδίο —
+    // ακριβώς ό,τι έπαθε το `company` (§4.8.2).
+    //
+    // ⚠️ Σήμερα το `material` είναι **και** γενικό πεδίο **και** μέλος του
+    // μητρώου (οντότητα προμηθειών). Δεν είναι βλάβη: δεν έχει φωλιά. Αυτή η
+    // άγκυρα υπάρχει ώστε, αν κάποιος του δώσει φωλιά αύριο, να **κοκκινίσει**
+    // αντί να εξαφανίσει την ετικέτα «Υλικό» από 16 οντότητες BIM.
+    const broken: string[] = [];
+    let examined = 0;
+
+    for (const lang of ['el', 'en'] as const) {
+      const fields = lookup(BUNDLES[lang], 'audit.fields') as Record<string, unknown>;
+      // Ονόματα που είναι ΦΩΛΙΑ (αντικείμενο) στο γενικό επίπεδο.
+      const nests = new Set(
+        Object.keys(fields).filter((k) => typeof fields[k] === 'object' && fields[k] !== null),
+      );
+
+      for (const entityType of REGISTERED_ENTITIES) {
+        const registry = getTrackedFieldsForEntityAuditType(entityType) ?? {};
+        for (const field of Object.keys(registry)) {
+          if (!nests.has(field)) continue;
+          examined += 1;
+          // Το πεδίο έχει ομώνυμη φωλιά ⇒ το βήμα «γενικό» θα επέστρεφε
+          // ΑΝΤΙΚΕΙΜΕΝΟ. Σώζεται ΜΟΝΟ αν υπάρχει ειδικό κλειδί οντότητας.
+          const specific = lookup(BUNDLES[lang], `audit.fields.${entityType}.${field}`);
+          if (typeof specific !== 'string') broken.push(`${lang}: ${entityType}.${field}`);
+        }
+      }
+    }
+
+    // ΠΑΡΟΝΟΜΑΣΤΗΣ: αν κανένα πεδίο δεν έχει ομώνυμη φωλιά, η άγκυρα δεν εξέτασε
+    // τίποτα και το πράσινο δεν σημαίνει τίποτα. Σήμερα υπάρχουν όντως τέτοια
+    // (π.χ. `floor`, που είναι ΚΑΙ φωλιά οντότητας ΚΑΙ πεδίο σε property/storage/
+    // parking) — και σώζονται ακριβώς επειδή έχουν ειδικό κλειδί.
+    expect(examined).toBeGreaterThan(0);
+    expect(broken).toEqual([]);
   });
 });

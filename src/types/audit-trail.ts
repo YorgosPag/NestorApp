@@ -11,63 +11,40 @@
 // ADR-852 §3.1 — type-only ⇒ σβήνεται στο build· καμία εξάρτηση χρόνου εκτέλεσης για
 // τον Admin SDK. Η ρίζα του λεξιλογίου ποσοτήτων είναι leaf (μηδέν εξαρτήσεις).
 import type { QuantitySpec } from '@/constants/quantity-specs';
+// 🏢 ADR-852 Φ4α — ΤΟ UNION ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΤΟ ΜΗΤΡΩΟ (δες παρακάτω το «γιατί»).
+//
+// ⚠️ `import type` + **ξεχωριστό** `export type`, ΠΟΤΕ `export type { … } from '…'`:
+// το `AuditEntityType` χρησιμοποιείται **μέσα** σε αυτό το αρχείο (`EntityAuditEntry`,
+// `AuditCdcEntry`), και το `export … from` **δεν δεσμεύει τοπικά** — είναι κατά λέξη
+// το λάθος της Φ1 που τεκμηριώνει το §4.6 και φυλάει το **CHECK 3.70**.
+//
+// ⚠️ Και είναι `import type`, ώστε αυτό το αρχείο να μείνει **type-only**: μετρήθηκε
+// ότι **35** αρχεία το εισάγουν, **όλα** με `import type`, και το `functions/` (άλλο
+// tsconfig) δεν το εισάγει καθόλου. Μια runtime εξάρτηση εδώ θα ταξίδευε παντού.
+import type { AuditEntityType } from '@/config/audit-entity-registry';
 
 // ============================================================================
 // CORE UNION TYPES
 // ============================================================================
 
-/** Entity types that support audit trail */
-export type AuditEntityType =
-  | 'contact'
-  | 'building'
-  | 'property'
-  | 'floor'
-  | 'project'
-  | 'company'
-  | 'parking'
-  | 'parking_spot'
-  | 'storage'
-  | 'storage_unit'
-  | 'purchase_order'
-  | 'quote'
-  | 'material'
-  | 'framework_agreement'
-  | 'text_template'
-  | 'custom_dictionary_entry'
-  | 'wall'
-  | 'opening'
-  | 'slab'
-  | 'slab-opening'
-  | 'column'
-  | 'beam'
-  | 'stair'
-  // ADR-417 — parametric pitched roof (footprint ⊥ type).
-  | 'roof'
-  // ADR-436 — foundation discipline (pads / strip footings / tie-beams, top-level
-  // floorplan_foundations collection). Was missing → every foundation audit POST
-  // 400'd ("Invalid entityType"), spamming the console whenever the grid reconciler ran.
-  | 'foundation'
-  | 'mep-fixture'
-  | 'mep-system'
-  | 'electrical-panel'
-  | 'mep-segment'
-  | 'mep-fitting'
-  | 'mep-manifold'
-  // ADR-415 — pure-vector 2D floorplan symbol (WC/sanitary first).
-  | 'floorplan-symbol'
-  | 'performance_diagnostic'
-  | 'performance_telemetry'
-  | 'bim_dimension_3d'
-  | 'bim_animation'
-  // ADR-412 Φ5 — BIM family types (Revit Type/Instance). Subcollection-scoped
-  // under companies/{companyId}/bim_family_types/{typeId}.
-  | 'bim_family_type'
-  // ADR-410 / ADR-683 / ADR-684 — mesh/parametric point entities. Ήταν ΟΛΑ απόντα → κάθε audit POST
-  // τους έκανε 400 «Invalid entityType» και το ιστορικό δεν καταγραφόταν ΠΟΤΕ (fire-and-forget το
-  // έκρυβε). Ίδια «desync» κλάση με mep-fitting/foundation· προστέθηκαν μαζί με το generic-solid.
-  | 'furniture'
-  | 'imported-mesh'
-  | 'generic-solid';
+/**
+ * Entity types that support audit trail — **ΠΑΡΑΓΕΤΑΙ** από το
+ * `config/audit-entity-registry.ts`, όπου κάθε οντότητα δηλώνεται **μία** φορά
+ * μαζί με τη συλλογή της, το εύρος της και τον συγγραφέα της.
+ *
+ * 🔴 **ΓΙΑΤΙ ΕΠΑΨΕ ΝΑ ΕΙΝΑΙ ΧΕΙΡΟΓΡΑΦΟ** (ADR-852 §4.9, μετρημένο 13/09): ο τύπος
+ * δηλωνόταν σε **τέσσερα** ανεξάρτητα σώματα — εδώ (**40** μέλη), στον χάρτη του
+ * audit (**19**), και σε **δύο δίδυμα εξαντλητικά** `Record<AuditEntityType, …>`
+ * (**37** το καθένα) που σταμάτησαν να ενημερώνονται **έναν μήνα πριν** μεγαλώσει
+ * αυτό το union. Επειδή το `VALID_ENTITY_TYPES` **παράγεται** από τον χάρτη,
+ * **έξι** οντότητες με ζωντανό audit-client έπαιρναν **400** σε κάθε εγγραφή και
+ * το `.catch(() => {})` το κατάπινε: το ιστορικό τους δεν γράφτηκε **ποτέ**.
+ *
+ * 🔑 Τώρα δεν υπάρχει «το union» και «ο χάρτης» που μπορούν να αποκλίνουν, γιατί
+ * **το union ΕΙΝΑΙ ο χάρτης**. Η απόκλιση έπαψε να είναι ανιχνεύσιμη — έγινε
+ * **μη εκφράσιμη**.
+ */
+export type { AuditEntityType };
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

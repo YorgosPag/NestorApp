@@ -164,6 +164,39 @@
       "units": "Units",
       "elevation": "Elevation (m)",
       "monthlyRent": "Monthly Rent",
+      "layerId": "Drawing Layer",
+      "kind": "Kind",
+      "storeyId": "Storey",
+      "offsetFromStorey": "Offset from Storey",
+      "material": "Material",
+      "width": "Width",
+      "height": "Height",
+      "depth": "Depth",
+      "length": "Length",
+      "thickness": "Thickness",
+      "rotation": "Rotation",
+      "shape": "Shape",
+      "anchor": "Anchor Point",
+      "hostId": "Host Element",
+      "baseBinding": "Base Binding",
+      "topBinding": "Top Binding",
+      "baseOffset": "Base Offset",
+      "topOffset": "Top Offset",
+      "unconnectedHeight": "Unconnected Height",
+      "bodyHeightMm": "Body Height",
+      "mountingElevationMm": "Mounting Elevation",
+      "centerlineElevationMm": "Centerline Elevation",
+      "catalogProfile": "Catalog Profile",
+      "frameWidth": "Frame Width",
+      "glazingPanes": "Glazing Panes",
+      "fireRating": "Fire Rating",
+      "dna": "Layer Build-up",
+      "envelopeFunction": "Envelope Function",
+      "envelopeLayer": "Insulation Layer",
+      "domain": "Domain",
+      "systemClassification": "System Classification",
+      "connectorDiameterMm": "Connector Diameter",
+      "thermalOutputW": "Thermal Output",
       "commercial": {
         "askingPrice": "Asking Price",
         "finalPrice": "Final Price",
@@ -227,7 +260,8 @@
         "landowners": "Landowners",
         "bartexPercentage": "Bartex percentage",
         "projectCode": "Project code",
-        "addresses": "Address"
+        "addresses": "Address",
+        "buildingCode": "Building Code Data"
       },
       "contact": {
         "firstName": "First name",
@@ -410,6 +444,139 @@
       "custom_dictionary_entry": {
         "term": "Term",
         "language": "Language"
+      },
+      "wall": {
+        "flip": "Flip Side",
+        "measurementLength": "Measurement Length",
+        "startBevel": "Start Bevel",
+        "endBevel": "End Bevel"
+      },
+      "column": {
+        "lshape": "L-Section Parameters",
+        "tshape": "T-Section Parameters",
+        "polygon": "Polygonal Section Parameters",
+        "ishape": "I-Section Parameters"
+      },
+      "beam": {
+        "topElevation": "Top Face Elevation",
+        "zOffset": "Vertical Offset",
+        "supportType": "Support Type",
+        "sectionType": "Section Type",
+        "profileDesignation": "Profile Designation"
+      },
+      "slab": {
+        "levelElevation": "Finished Floor Level",
+        "heightOffsetFromLevel": "Offset from Floor Level",
+        "geometryType": "Geometry Type",
+        "reinforcement": "Reinforcement",
+        "slope": "Drainage Slope"
+      },
+      "slab-opening": {
+        "slabId": "Slab",
+        "elevationOverride": "Elevation Override",
+        "multiStoreyStackGroupId": "Multi-Storey Stack Group",
+        "sceneUnits": "Scene Units"
+      },
+      "opening": {
+        "wallId": "Wall",
+        "offsetFromStart": "Offset from Wall Start",
+        "sillHeight": "Sill Height",
+        "handing": "Handing",
+        "openDirection": "Opening Direction",
+        "mark": "Mark",
+        "markIsManual": "Manual Mark",
+        "tagVisible": "Show Tag",
+        "revealInsulation": "Reveal Insulation"
+      },
+      "stair": {
+        "rise": "Riser Height",
+        "tread": "Tread Depth",
+        "nosing": "Nosing Projection",
+        "nosingSide": "Nosing Side",
+        "stepCount": "Step Count",
+        "totalRise": "Total Rise",
+        "totalRun": "Total Run",
+        "pitch": "Stair Pitch",
+        "structureType": "Structure Type",
+        "riserType": "Riser Type",
+        "codeProfile": "Code Profile",
+        "nokSubType": "Building Code Subtype",
+        "antiskidNosing": "Anti-Slip Nosing",
+        "adaContrastStrip": "Accessibility Contrast Strip",
+        "cutPlaneHeight": "Cut Plane Height",
+        "occupancyLoad": "Occupancy Load",
+        "walklineOffset": "Walkline Offset",
+        "upDirection": "Up Direction",
+        "treadNumberStart": "Numbering Starts At",
+        "treadLabelDisplay": "Show Numbering",
+        "treadLabelEveryN": "Number Every N Treads",
+        "treadLabelRestartPerFlight": "Restart Numbering per Flight",
+        "treadLabelHeight": "Numbering Text Height",
+        "variant": "Variant",
+        "multiStoryConfig": "Multi-Storey Configuration",
+        "stringerParams": "Stringer Parameters",
+        "materials": "Materials",
+        "handrails": "Handrails"
+      },
+      "roof": {
+        "basePivotZ": "Eaves Level",
+        "slopeUnit": "Slope Unit",
+        "fasciaMaterial": "Fascia Material",
+        "soffitMaterial": "Soffit Material",
+        "fasciaHeightMm": "Fascia Height",
+        "soffitMode": "Soffit Mode"
+      },
+      "foundation": {
+        "topElevationMm": "Top Face Elevation",
+        "thicknessMm": "Footing Thickness",
+        "profile": "Profile",
+        "stepped": "Stepped Profile",
+        "sloped": "Sloped Profile"
+      },
+      "railing": {
+        "totalHeightMm": "Total Height",
+        "baseElevationMm": "Base Elevation"
+      },
+      "floorplan-symbol": {
+        "assetId": "Symbol",
+        "widthMm": "Width",
+        "depthMm": "Depth",
+        "rotationDeg": "Rotation"
+      },
+      "mep-system": {
+        "systemType": "System Type",
+        "sourceEntityId": "Source",
+        "sourceConnectorId": "Source Connector",
+        "members": "System Members",
+        "ratedVoltage": "Rated Voltage",
+        "poles": "Poles"
+      },
+      "mep-manifold": {
+        "outletCount": "Outlet Count",
+        "inletDiameterMm": "Inlet Diameter",
+        "outletDiameterMm": "Outlet Diameter"
+      },
+      "mep-segment": {
+        "sectionKind": "Section Kind",
+        "diameter": "Diameter",
+        "wallThickness": "Wall Thickness"
+      },
+      "mep-fitting": {
+        "junctionKey": "Junction",
+        "primaryDiameterMm": "Primary Diameter",
+        "secondaryDiameterMm": "Secondary Diameter",
+        "elbowStyle": "Elbow Style"
+      },
+      "mep-underfloor": {
+        "pipeSpacingMm": "Pipe Spacing",
+        "edgeClearanceMm": "Edge Clearance",
+        "patternType": "Layout Pattern",
+        "entrySide": "Entry Side",
+        "screedOffsetMm": "Screed Offset",
+        "floorId": "Floor"
+      },
+      "mep-water-heater": {
+        "tankCapacityL": "Tank Capacity"
       }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
