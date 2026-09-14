@@ -140,6 +140,13 @@ needs its own focused session + browser repro). The `canvas-fit-to-view {auto}` 
 5. FPS during pan/zoom unchanged (ADR-040 — no re-render regression).
 
 ## Changelog
+- **2026-09-14** — **Η ειδοποίηση του `url-query-state` έγινε ασύγχρονη (microtask, με συγχώνευση).**
+  Ο App Router του Next καλεί `history.pushState`/`replaceState` **μέσα από `useInsertionEffect`**
+  (`HistoryUpdater`). Το τύλιγμα του `patchHistoryOnce` ειδοποιούσε **σύγχρονα** ⇒ οι ακροατές του
+  `useSyncExternalStore` (`useSelectedEntityUrlState`) προγραμμάτιζαν update μέσα σε insertion effect
+  ⇒ `Console Error: useInsertionEffect must not schedule updates.` Πλέον η ειδοποίηση φεύγει σε
+  `queueMicrotask` (μετά το commit)· πολλές γραφές στο ίδιο tick ⇒ μία ειδοποίηση. Καμία απώλεια
+  τιμής: το snapshot διαβάζει πάντα το ζωντανό `window.location.search`.
 - **2026-07-26** — **Το URL primitive βγήκε από το subapp (ADR-332 D21).** Η σελίδα Επαφών
   υιοθέτησε το ίδιο μοτίβο URL-as-SSoT για την επιλεγμένη επαφή· μια δεύτερη υλοποίηση των
   `currentSearchParams` / `replaceUrlSearchParams` θα ήταν σχολικό sibling clone (N.18), οπότε

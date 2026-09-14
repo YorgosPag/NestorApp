@@ -61,9 +61,29 @@ export function currentSearchParams(): URLSearchParams {
 const urlQueryVersion = createExternalStore<number>(0);
 
 let historyPatched = false;
+let notifyScheduled = false;
 
+/**
+ * Ειδοποιεί τους ακροατές **ασύγχρονα** (microtask), με συγχώνευση.
+ *
+ * ## 🔴 Γιατί ΟΧΙ σύγχρονα
+ * Ο App Router του Next καλεί `history.pushState`/`replaceState` **μέσα από
+ * `useInsertionEffect`** (`HistoryUpdater` στο `app-router`). Σύγχρονη ειδοποίηση
+ * εκεί ⇒ οι ακροατές του `useSyncExternalStore` προγραμματίζουν update μέσα σε
+ * insertion effect ⇒ `useInsertionEffect must not schedule updates.`
+ *
+ * Το microtask τρέχει όταν αδειάσει η στοίβα, δηλαδή **μετά** το commit του React.
+ * Δεν χάνεται τίποτα: το snapshot (`getUrlQuerySnapshot`) διαβάζει πάντα το ζωντανό
+ * `window.location.search`, οπότε όποιο render συμβεί στο μεταξύ βλέπει ήδη τη νέα τιμή.
+ * Πολλές γραφές στο ίδιο tick ⇒ **μία** ειδοποίηση.
+ */
 function notifyUrlQueryListeners(): void {
-  urlQueryVersion.set(urlQueryVersion.get() + 1);
+  if (notifyScheduled) return;
+  notifyScheduled = true;
+  queueMicrotask(() => {
+    notifyScheduled = false;
+    urlQueryVersion.set(urlQueryVersion.get() + 1);
+  });
 }
 
 /**

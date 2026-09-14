@@ -20,6 +20,7 @@ import {
   currentSearchParams,
   replaceUrlQueryString,
   replaceUrlSearchParams,
+  subscribeToUrlQuery,
 } from '../url-query-state';
 
 /** Φέρνει το jsdom σε γνωστή αφετηρία πριν από κάθε test. */
@@ -30,6 +31,24 @@ function startAt(url: string, state: unknown = null): void {
 describe('url-query-state', () => {
   beforeEach(() => {
     startAt('/contacts');
+  });
+
+  describe('subscribeToUrlQuery', () => {
+    // Ο App Router καλεί pushState ΜΕΣΑ από useInsertionEffect· σύγχρονη ειδοποίηση εκεί
+    // ⇒ «useInsertionEffect must not schedule updates». Η ειδοποίηση πρέπει να είναι ασύγχρονη.
+    it('notifies AFTER the history call returns, coalescing writes of the same tick', async () => {
+      const listener = jest.fn();
+      const unsubscribe = subscribeToUrlQuery(listener);
+
+      window.history.pushState(null, '', '/contacts?a=1');
+      window.history.replaceState(null, '', '/contacts?a=2');
+      expect(listener).not.toHaveBeenCalled();
+
+      await Promise.resolve();
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      unsubscribe();
+    });
   });
 
   describe('currentSearchParams', () => {
