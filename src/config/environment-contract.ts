@@ -179,6 +179,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/contact/first-contact-invitation.service.ts',
   },
   {
+    name: 'SHOWCASE_EMAIL_CONFIRMATION_SECRET',
+    severity: 'feature',
+    feature: 'Επιβεβαίωση email της επαγγελματικής κάρτας (ADR-841 Α21.18)',
+    consequence:
+      'Ο επαγγελματίας πατά «Αποστολή επιβεβαίωσης», το email φτάνει, και ο σύνδεσμος ' +
+      'απαντά «δεν ισχύει». Κανένα email της κάρτας δεν αποκτά ποτέ ημερομηνία επιβεβαίωσης, ' +
+      'άρα κάθε κανάλι μένει «δήλωση» — και ο επαγγελματίας ψάχνει το λάθος στο γραμματοκιβώτιό του.',
+    consumer: 'src/services/mandate/showcase-email-confirmation-token.ts',
+  },
+  {
     name: 'WORKSPACE_INVITE_SECRET',
     severity: 'feature',
     feature: 'Προσκλήσεις σε χώρο εργασίας (ADR-853)',

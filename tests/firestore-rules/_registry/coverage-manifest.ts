@@ -288,6 +288,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-841 §7 Α21.18 — ΤΑ ΑΙΤΗΜΑΤΑ ΕΠΙΒΕΒΑΙΩΣΗΣ EMAIL ΤΗΣ ΚΑΡΤΑΣ. Κρατούν διεύθυνση + nonce
+    // συνδέσμου· ο πειρασμός είναι ο ιδιοκτήτης να «δει την κατάσταση» απευθείας ή να γράψει
+    // `redeemed` μόνος του. Η σουίτα σπέρνει αίτημα του **ίδιου** μισθωτή.
+    collection: 'showcase_email_confirmations',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/showcase-email-confirmations.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. **Ίδιο ζεύγος με το `mandate_requests`
     // από πάνω, ΑΝΤΙΣΤΡΟΦΟΣ λόγος** — και η αντιστροφή είναι το πράγμα που πρέπει
     // να διαβαστεί, γιατί αλλιώς μοιάζει με αντιγραφή.

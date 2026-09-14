@@ -343,6 +343,16 @@ export function getCategoryLimit(category: RateLimitCategory): number {
 export const AUTH_MAIL_RECIPIENT_QUOTA = { limit: 3, windowMs: 15 * 60 * 1000 } as const;
 
 /**
+ * **Email επιβεβαίωσης της κάρτας ανά ΠΑΡΑΛΗΠΤΗ** (ADR-841 §7 Α21.18) — ίδιο δόγμα με το από πάνω.
+ *
+ * 🔑 **Ανά 24ω και όχι ανά 15′**: εδώ ο αποστολέας είναι **συνδεδεμένος επαγγελματίας** που έχει
+ * βάλει τη διεύθυνση στη δημόσια κάρτα του — δεν λείπει «το πρώτο μήνυμα» σε λίγα λεπτά, λείπει
+ * σε ώρες. 3 ανά ημέρα καλύπτουν «δεν το βρήκα / έληξε», και κόβουν τη χρήση της κάρτας ως
+ * όπλο βομβαρδισμού **ξένου** γραμματοκιβωτίου (OWASP: ≤10/ημέρα ανά παραλήπτη).
+ */
+export const SHOWCASE_EMAIL_CONFIRMATION_RECIPIENT_QUOTA = { limit: 3, windowMs: 24 * 60 * 60 * 1000 } as const;
+
+/**
  * Get category for an endpoint path.
  */
 export function getEndpointCategory(path: string): RateLimitCategory {

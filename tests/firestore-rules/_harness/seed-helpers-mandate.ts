@@ -135,3 +135,29 @@ export async function seedShowcaseCardChannels(
     });
   });
 }
+
+/**
+ * **ΑΙΤΗΜΑ ΕΠΙΒΕΒΑΙΩΣΗΣ EMAIL ΤΗΣ ΚΑΡΤΑΣ** (ADR-841 §7 Α21.18) — του **δοκιμαζόμενου** μισθωτή, για
+ * τον ίδιο λόγο: χωρίς έγγραφο του ίδιου, η μετάλλαξη «ο ιδιοκτήτης βλέπει τα αιτήματά του» δεν κοκκινίζει.
+ */
+export async function seedShowcaseEmailConfirmation(
+  env: RulesTestEnvironment,
+  companyId: string = SAME_TENANT_COMPANY_ID,
+): Promise<string> {
+  const id = 'secf_seed_0001';
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('showcase_email_confirmations').doc(id).set({
+      id,
+      companyId,
+      locationId: 'sloc_seed_0001',
+      email: 'office@example.gr',
+      nonce: 'seed-nonce',
+      state: 'sent',
+      requestedByUid: 'seed-uid',
+      createdAt: '2026-09-14T08:00:00.000Z',
+      expiresAt: '2026-09-17T08:00:00.000Z',
+      settledAt: null,
+    });
+  });
+  return id;
+}
