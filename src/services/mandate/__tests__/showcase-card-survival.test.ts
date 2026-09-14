@@ -21,6 +21,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
 import type { VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
+import { givenCompanyProfile, LEGAL_NAME_CHOICE } from './showcase-legal-fixture';
 
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();
@@ -75,9 +76,11 @@ async function raw(fake: FakeFirestore, collection: string): Promise<Record<stri
 
 async function givenShowcase(admin: AdminFirestore, displayName = 'ΒΑΦΕΣ ΠΑΓΩΝΗ'): Promise<void> {
   const authority: ShowcaseAuthority = { kind: 'unregulated', companyId: COMPANY };
+  // 🔑 Α23 — το όνομα λύνεται από το προφίλ: «αλλαγή επωνυμίας» = νέα επωνυμία στο προφίλ + δημοσίευση.
+  givenCompanyProfile(admin, COMPANY, { businessName: displayName });
   const result = await publishShowcase(admin, authority, {
     alias: 'vafes-pagoni',
-    displayName,
+    legal: LEGAL_NAME_CHOICE,
     credentials: [{ occupation: PAINTER, registrationNumber: '', registrationChapter: '' }],
     place: null,
     position: null,

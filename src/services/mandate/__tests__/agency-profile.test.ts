@@ -36,6 +36,7 @@ import {
   type ShowcaseDeclaration,
 } from '@/services/mandate/agency-profile.service';
 import type { ClassifiedOccupation, PublicShowcase } from '@/types/agency-profile';
+import { COMPANY_PROFILE, givenCompanyProfile, LEGAL_NAME_CHOICE } from './showcase-legal-fixture';
 
 const COMPANY = 'comp_grafeio_a';
 
@@ -100,7 +101,8 @@ function declaration(
 ): ShowcaseDeclaration {
   return {
     alias: 'mesitiko-pagoni',
-    displayName: 'ΜΕΣΙΤΙΚΟ ΓΡΑΦΕΙΟ ΠΑΓΩΝΗ Ι.Κ.Ε.',
+    // 🔑 Α23 — επιλογή, όχι κείμενο: το όνομα λύνεται από το προφίλ που στήνει το `db()`.
+    legal: LEGAL_NAME_CHOICE,
     credentials,
     place: null,
     position: null,
@@ -114,8 +116,15 @@ function declaration(
 
 const BROKER_DECLARATION = declaration([declares(BROKER, '123456789000')]);
 
-function db(): { fake: FakeFirestore; admin: AdminFirestore } {
+/**
+ * ⚠️ Α23 — **κάθε** οργανισμός που δημοσιεύει εδώ έχει προφίλ εταιρείας: από αυτό λύνεται το όνομα
+ * και διαβάζεται ο αριθμός ΓΕΜΗ. Το `profile` αλλάζει πεδία του (π.χ. «χωρίς αριθμό»).
+ */
+function db(profile: Record<string, unknown> = {}): { fake: FakeFirestore; admin: AdminFirestore } {
   const fake = new FakeFirestore();
+  for (const companyId of [COMPANY, 'comp_krithike', 'comp_elaiochromatisti']) {
+    givenCompanyProfile(fake, companyId, profile);
+  }
   return { fake, admin: fake as unknown as AdminFirestore };
 }
 
@@ -153,7 +162,8 @@ describe('Π — η δημοσίευση είναι πράξη ΤΟΥ ΕΠΑΓΓ
 
     expect(result.kind).toBe('published');
     const stored = await readStored(fake, COMPANY);
-    expect(stored?.displayName).toBe(BROKER_DECLARATION.displayName);
+    // 🔴 Α23 — το όνομα είναι η επωνυμία του ΠΡΟΦΙΛ, ποτέ κείμενο του σώματος.
+    expect(stored?.displayName).toBe(COMPANY_PROFILE.businessName);
 
     // 🔴 ADR-841 Φ6-Β — Ο ΓΕΜΗ ΓΕΝΙΚΕΥΤΗΚΕ ΣΕ CREDENTIAL, δεν χάθηκε. Η απόδειξη
     //    είναι ΖΕΥΓΟΣ (αρχή, αριθμός): ένα «123456789000» χωρίς «ΓΕΜΗ» δεν
@@ -303,12 +313,13 @@ describe('Ε — ο ελαιοχρωματιστής μπαίνει, ο μεσί
   });
 
   it('🔴 Ε7α — Ο ΜΕΣΙΤΗΣ ΧΩΡΙΣ ΓΕΜΗ ΔΕΝ ΜΠΑΙΝΕΙ, με ονομασμένο λόγο', async () => {
-    const { fake, admin } = db();
+    // 🔑 Α23 — «χωρίς ΓΕΜΗ» σημαίνει πλέον **προφίλ** χωρίς αριθμό· η φόρμα δεν έχει λόγο.
+    const { fake, admin } = db({ gemiNumber: '' });
 
     const result = await publishShowcase(
       admin,
       regulatedAuthority(COMPANY),
-      declaration([declares(BROKER)]),
+      declaration([declares(BROKER, '123456789000')]),
     );
 
     expect(result.kind).toBe('rejected');
@@ -318,6 +329,18 @@ describe('Ε — ο ελαιοχρωματιστής μπαίνει, ο μεσί
     // 🔴 Και **τίποτα δεν γράφτηκε**: μισή βιτρίνα στον κατάλογο θα ήταν ακριβώς
     //    ο «επικίνδυνος αντί για χρήσιμος» κατάλογος του §9.9 β.
     expect(await readStored(fake, COMPANY)).toBeUndefined();
+  });
+
+  it('🔴 Ε7δ — Α23 Δ1: ο αριθμός ΓΕΜΗ της ΦΟΡΜΑΣ αγνοείται — γράφεται ΤΟΥ ΠΡΟΦΙΛ', async () => {
+    // Ως τις 2026-09-14 το ζωντανό γραφείο είχε `123456789000` στη βιτρίνα και κενό στο προφίλ.
+    const { fake, admin } = db({ gemiNumber: '987654321000' });
+
+    await publishShowcase(admin, regulatedAuthority(COMPANY), declaration([declares(BROKER, '123456789000')]));
+
+    expect((await storedCredentials(fake, COMPANY))[0]?.attestation).toEqual({
+      state: 'declared',
+      registration: { authorityKind: 'national', authority: 'gemi', number: '987654321000' },
+    });
   });
 
   it('🔑 Ε7β — Η ΣΙΩΠΗ ΤΟΥ ΔΙΚΗΓΟΡΟΥ ΕΙΝΑΙ ΝΟΜΙΜΗ (Α9.2): μπαίνει χωρίς αριθμό', async () => {
@@ -371,18 +394,19 @@ describe('Δ — τι αρνείται η δήλωση, και με ποιον �
   });
 
   it('Δ1 — κάθε λείπον πεδίο έχει ΔΙΚΟ ΤΟΥ κλειδί — άρνηση χωρίς λόγο δεν εξηγείται', async () => {
-    const cases = [
-      [declaration([declares(BROKER, '123456789000')], { alias: '   ' }), 'agency-profile-alias-missing'],
-      [declaration([declares(BROKER, '123456789000')], { displayName: '' }), 'agency-profile-name-missing'],
-      [declaration([]), 'agency-profile-occupation-missing'],
-      [declaration([declares(BROKER, '  ')]), 'agency-profile-registration-missing'],
+    // 🔑 Α23 — το τρίτο στοιχείο είναι το **προφίλ**: επωνυμία και αριθμός ΓΕΜΗ λείπουν πλέον από εκεί.
+    const cases: readonly (readonly [ShowcaseDeclaration, string, Record<string, unknown>])[] = [
+      [declaration([declares(BROKER)], { alias: '   ' }), 'agency-profile-alias-missing', {}],
+      [declaration([declares(BROKER)]), 'agency-profile-name-missing', { businessName: '' }],
+      [declaration([]), 'agency-profile-occupation-missing', {}],
+      [declaration([declares(BROKER, '123456789000')]), 'agency-profile-registration-missing', { gemiNumber: '' }],
       // ⚠️ Αριθμός **χωρίς** σύλλογο σε αρχή με παραρτήματα: «1234» χωρίς «ΔΣΘ»
       //    δεν επαληθεύεται από κανέναν (Α9.1).
-      [declaration([declares(LAWYER, '12345')]), 'agency-profile-chapter-missing'],
-    ] as const;
+      [declaration([declares(LAWYER, '12345')]), 'agency-profile-chapter-missing', {}],
+    ];
 
-    for (const [candidate, reason] of cases) {
-      const { fake, admin } = db();
+    for (const [candidate, reason, profile] of cases) {
+      const { fake, admin } = db(profile);
       const result = await publishShowcase(admin, regulatedAuthority(COMPANY), candidate);
 
       expect(result.kind).toBe('rejected');

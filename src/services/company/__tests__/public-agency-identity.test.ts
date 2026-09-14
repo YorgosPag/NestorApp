@@ -33,6 +33,7 @@ import {
   type ShowcaseDeclaration,
 } from '@/services/mandate/agency-profile.service';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
+import { givenCompanyProfile, LEGAL_NAME_CHOICE } from '@/services/mandate/__tests__/showcase-legal-fixture';
 
 const COMPANY = 'comp_grafeio_a';
 const LEGAL_NAME = 'ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α.Ε.';
@@ -47,10 +48,10 @@ const PAINTER: ClassifiedOccupation = {
 
 const AUTHORITY: ShowcaseAuthority = { kind: 'unregulated', companyId: COMPANY };
 
-function declaration(displayName: string, coverage: ShowcaseDeclaration['coverage'] = null): ShowcaseDeclaration {
+function declaration(coverage: ShowcaseDeclaration['coverage'] = null): ShowcaseDeclaration {
   return {
     alias: 'pagonis',
-    displayName,
+    legal: LEGAL_NAME_CHOICE,
     credentials: [{ occupation: PAINTER, registrationNumber: '', registrationChapter: '' }],
     place: null,
     position: null,
@@ -64,8 +65,14 @@ function db(): { fake: FakeFirestore; admin: AdminFirestore } {
   return { fake, admin: fake as unknown as AdminFirestore };
 }
 
+/**
+ * 🔑 Α23 — το όνομα της βιτρίνας **λύνεται** από την επωνυμία του προφίλ (`accounting_settings`). Το
+ * `companies/{id}.name` (το παράγωγο που διαβάζει ο επιλυτής χωρίς βιτρίνα) μένει `LEGAL_NAME`, ώστε
+ * η σειρά προτεραιότητας να κρίνεται με **δύο διαφορετικά** ονόματα.
+ */
 async function published(admin: AdminFirestore, displayName: string) {
-  const result = await publishShowcase(admin, AUTHORITY, declaration(displayName));
+  givenCompanyProfile(admin, COMPANY, { businessName: displayName });
+  const result = await publishShowcase(admin, AUTHORITY, declaration());
   if (result.kind !== 'published') throw new Error(`το fixture οφείλει να δημοσιεύεται: ${result.kind}`);
   return result;
 }

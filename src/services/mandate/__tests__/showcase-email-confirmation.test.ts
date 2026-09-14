@@ -18,6 +18,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
 import type { VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
+import { givenCompanyProfile, LEGAL_NAME_CHOICE } from './showcase-legal-fixture';
 
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();
@@ -86,8 +87,9 @@ async function givenCard(): Promise<Given> {
   const fake = new FakeFirestore();
   const admin = fake as unknown as AdminFirestore;
   const authority: ShowcaseAuthority = { kind: 'unregulated', companyId: COMPANY };
+  givenCompanyProfile(fake, COMPANY, { businessName: 'ΒΑΦΕΣ ΠΑΓΩΝΗ' });
   const published = await publishShowcase(admin, authority, {
-    alias: 'vafes-pagoni', displayName: 'ΒΑΦΕΣ ΠΑΓΩΝΗ',
+    alias: 'vafes-pagoni', legal: LEGAL_NAME_CHOICE,
     credentials: [{ occupation: PAINTER, registrationNumber: '', registrationChapter: '' }],
     place: null, position: null, coverage: null,
   });

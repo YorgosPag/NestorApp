@@ -41,7 +41,12 @@ import {
 const logger = createModuleLogger('listings/agency-name-refresh');
 
 /** **Γιατί** ξαναγράφονται — κλειστό σύνολο, ώστε η γραμμή log να λέει ποια πράξη το ζήτησε. */
-export type AgencyNameChangeCause = 'company-renamed' | 'showcase-published' | 'showcase-withdrawn';
+export type AgencyNameChangeCause =
+  | 'company-renamed'
+  | 'showcase-published'
+  | 'showcase-withdrawn'
+  /** ADR-841 §7 Α23 — η νομική ταυτότητα της βιτρίνας ξαναλύθηκε (αριθμός · ΓΕΜΗ · κάρτα) και το όνομα άλλαξε. */
+  | 'legal-identity-refreshed';
 
 /**
  * **Ξαναγράφει τις δημόσιες αγγελίες ενός οργανισμού ώστε να λένε το ΤΡΕΧΟΝ δημόσιο όνομα.**
