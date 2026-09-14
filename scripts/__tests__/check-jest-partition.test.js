@@ -132,15 +132,25 @@ describe('Μ0 — η πύλη είναι πράσινη στο ΠΡΑΓΜΑΤΙ�
     expect(counted).toBe(census.total);
   });
 
-  it('Μ0.3 και τα 5 e2e spec είναι playwright-owned, ΟΧΙ σιωπηλά αγνοημένα', () => {
-    const owned = census.byState['playwright-owned'].map((entry) => entry.file).sort();
-    expect(owned).toEqual([
-      'src/components/contacts/e2e/contact-mutation-impact.e2e.spec.ts',
-      'src/subapps/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts',
-      'src/subapps/dxf-viewer/e2e/dxf-visual-regression.spec.ts',
-      'src/subapps/dxf-viewer/e2e/visual-cross-browser.spec.ts',
-      'src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundCanvas.e2e.spec.ts',
-    ]);
+  it('Μ0.3 ΚΑΘΕ e2e spec είναι playwright-owned — κανένα σιωπηλά αγνοημένο', () => {
+    // 🔴 ΗΤΑΝ ΚΑΡΦΩΜΕΝΗ ΛΙΣΤΑ «τα 5 e2e spec» — και **πάλιωσε κατά δύο** (`camera-motion`,
+    //    ADR-847· `address-field-width`, ADR-332 Ζ7), αφήνοντας την πύλη **ΚΟΚΚΙΝΗ στο main**
+    //    χωρίς να το θέλει κανείς: ακριβώς το περιστατικό του ADR-587 §6.1. Η ερώτηση δεν ήταν
+    //    ποτέ «**ποια** είναι τα πέντε» — ήταν «**μένει κάποιο απ' έξω;**». Παραγόμενη πλέον:
+    //    προσθήκη νέου spec δεν χρειάζεται να θυμηθεί κανείς αυτό το αρχείο.
+    const isPlaywrightName = (file) => /\.spec\.[jt]sx?$/.test(file) || file.includes('/e2e/');
+    // Τα gitignored δεν είναι πηγαίος κώδικας του δέντρου — δεν τα διεκδικεί κανείς εξ ορισμού.
+    const IN_TREE = ALL_STATES.filter(
+      (state) => !['playwright-owned', 'build-artifact', 'ignored-not-run'].includes(state),
+    );
+
+    const stranded = IN_TREE.flatMap((state) =>
+      census.byState[state].map((entry) => entry.file),
+    ).filter(isPlaywrightName).sort();
+
+    expect(stranded).toEqual([]);
+    // ΘΕΤΙΚΟ σκέλος: μια άδεια κατηγορία θα σήμαινε «κανείς δεν κοίταξε», όχι «όλα καλά».
+    expect(census.byState['playwright-owned'].length).toBeGreaterThan(0);
   });
 
   it('Μ0.4 και τα 5 jest configs έχουν ιδιοκτησία — κανένα δεν είναι νεκρό', () => {
