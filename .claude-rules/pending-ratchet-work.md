@@ -11,6 +11,15 @@
   **Θεραπεία**: πρότυπο του αδελφού `mandate/[token]` — `GET` **επαληθεύει και δείχνει**, `POST` από κουμπί **εξαργυρώνει**
   (ίδιο σχήμα με RFC 8058). Ο εξαψήφιος κωδικός μένει εναλλακτική πόρτα. Αγγίζει ροή ADR-844 ⇒ δική του φέτα.
 
+- 🔶 **14/09 — ΑΦΑΙΡΕΣΗ ΤΟΝΩΝ ΓΡΑΜΜΕΝΗ ΤΡΕΙΣ ΦΟΡΕΣ (εύρημα audit ADR-841 Α21.19)**
+
+  **Μετρημένο** (grep): το SSoT είναι `utils/greek-text.ts` (`stripAccents` · `normalizeGreekText`)· δίδυμα με το **ίδιο**
+  `normalize('NFD').replace(/[̀-ͯ]/g, '')`: `services/ai-pipeline/shared/greek-nlp.ts` → `stripDiacritics`
+  (καταναλωτές `utility-handler` · `search-text-handler` · `lib/search/search` · `api/contacts/search-for-share`) και
+  `subapps/accounting/services/engines/matching-scoring.ts` → `normalizeGreek` (+ `rule-learning-engine`). **10 αρχεία,
+  2 τομείς** ⇒ δική του φέτα. **Θεραπεία**: re-export/αντικατάσταση από το `utils/greek-text`· αγγίζει ai-pipeline ⇒
+  `npm run test:ai-pipeline:all` (N.10). ⚠️ Το `normalizeGreek` του accounting κάνει ίσως **και** άλλα βήματα — έλεγχος πριν.
+
 - 🟡 **14/09 — `mandate-consent.test.ts` Ν1 ΑΣΤΑΘΕΣ (εύρημα Α21.17)**
 
   Κόκκινο μία φορά, πράσινο στην επανάληψη, χωρίς αλλαγή κώδικα. Ύποπτα: ρολόι/σειρά/κοινή κατάσταση πλαστού Firestore.
