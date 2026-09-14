@@ -12,15 +12,16 @@
  * The actual email processing (AI analysis, file uploads, etc.)
  * happens in the background via the email-ingestion-worker.
  *
+ * Βοηθητικά (CHECK 4 split): `inbound-form.ts` (ανάγνωση φόρμας) ·
+ * `inbound-immediate-processing.ts` (after()) · `inbound-diagnostic.ts` (GET).
+ *
  * @module api/communications/webhooks/mailgun/inbound
  */
 
 import 'server-only';
 
 import { getErrorMessage } from '@/lib/error-utils';
-import { isNonEmptyTrimmedString } from '@/lib/type-guards';
 import { NextRequest, NextResponse } from 'next/server';
-import { after } from 'next/server';
 
 /**
  * Vercel Serverless Function max duration.
@@ -28,150 +29,26 @@ import { after } from 'next/server';
  * @enterprise Required for full pipeline execution via after() callback
  */
 export const maxDuration = 60;
-import { createHmac, timingSafeEqual } from 'crypto';
 import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getCurrentSecurityPolicy } from '@/config/environment-security-config';
+import { hasMailgunSigningKey, verifyMailgunSignature } from '@/lib/communications/mailgun-webhook/mailgun-signature';
 import {
   parseAddress,
   splitAddresses,
   resolveSubject,
   resolveProviderMessageId,
   enqueueInboundEmail,
-  type InboundEmailAttachment,
-  type MailgunStorageInfo,
 } from '@/services/communications/inbound';
-import {
-  processEmailIngestionBatch,
-} from '@/server/comms/workers/email-ingestion-worker';
+
+import { buildInboundDiagnostic } from './inbound-diagnostic';
+import { buildFallbackKey, extractAttachments, extractMailgunStorageInfo, getFormString } from './inbound-form';
+import { logEnqueueResult, scheduleImmediateProcessing } from './inbound-immediate-processing';
 
 const logger = createModuleLogger('MAILGUN_INBOUND_WEBHOOK');
 
-const MAILGUN_WEBHOOK_SIGNING_KEY = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
-
-function getFormString(formData: FormData, keys: string[]): string | undefined {
-  for (const key of keys) {
-    const value = formData.get(key);
-    if (isNonEmptyTrimmedString(value)) {
-      return value.trim();
-    }
-  }
-  return undefined;
-}
-
-/**
- * Maximum age of a webhook timestamp before it's considered a replay attack.
- * 5 minutes = 300 seconds. Mailgun typically delivers within seconds.
- * @enterprise ADR-252 SV-M1: Webhook Timestamp Replay Prevention
- */
-const MAX_WEBHOOK_AGE_SECONDS = 300;
-
-function verifyMailgunSignature(params: {
-  timestamp?: string;
-  token?: string;
-  signature?: string;
-  signingKey?: string;
-}): { valid: boolean; reason?: string } {
-  const { timestamp, token, signature, signingKey } = params;
-  const policy = getCurrentSecurityPolicy();
-
-  if (policy.requireWebhookSecrets && !signingKey) {
-    return { valid: false, reason: 'webhook_secret_missing' };
-  }
-
-  if (!signingKey) {
-    return { valid: true };
-  }
-
-  if (!timestamp || !token || !signature) {
-    return { valid: false, reason: 'signature_fields_missing' };
-  }
-
-  // 🔒 SECURITY (ADR-252 SV-M1): Reject replayed webhooks older than 5 minutes
-  const webhookAge = Math.abs(Math.floor(Date.now() / 1000) - parseInt(timestamp, 10));
-  if (isNaN(webhookAge) || webhookAge > MAX_WEBHOOK_AGE_SECONDS) {
-    return { valid: false, reason: 'timestamp_expired' };
-  }
-
-  const digest = createHmac('sha256', signingKey)
-    .update(timestamp + token)
-    .digest('hex');
-
-  const provided = Buffer.from(signature);
-  const expected = Buffer.from(digest);
-
-  if (provided.length !== expected.length) {
-    return { valid: false, reason: 'signature_invalid' };
-  }
-
-  const valid = timingSafeEqual(provided, expected);
-  return valid ? { valid: true } : { valid: false, reason: 'signature_invalid' };
-}
-
-/**
- * 🏢 ENTERPRISE: Extract Mailgun storage info for deferred download
- *
- * Mailgun provides a message-url that allows retrieving the full message
- * with attachments later (up to 3 days). This enables the "Store Reference,
- * Fetch Later" pattern used by SAP, Salesforce, and enterprise systems.
- *
- * @see https://documentation.mailgun.com/en/latest/api-sending-messages.html#retrieving-stored-messages
- */
-function extractMailgunStorageInfo(formData: FormData): MailgunStorageInfo | undefined {
-  const messageUrl = getFormString(formData, ['message-url', 'Message-Url', 'message-headers']);
-
-  if (!messageUrl) {
-    return undefined;
-  }
-
-  // Extract storage key from URL (last path segment)
-  const urlMatch = messageUrl.match(/messages\/([A-Za-z0-9_-]+)$/);
-  const storageKey = urlMatch ? urlMatch[1] : undefined;
-
-  return {
-    messageUrl,
-    storageKey,
-    region: messageUrl.includes('europe') ? 'eu' : 'us',
-  };
-}
-
-function extractAttachments(formData: FormData): InboundEmailAttachment[] {
-  const attachments: InboundEmailAttachment[] = [];
-
-  for (const [key, value] of formData.entries()) {
-    if (!key.startsWith('attachment-')) continue;
-    if (!(value instanceof File)) continue;
-
-    const filename = value.name || key;
-    const contentType = value.type || 'application/octet-stream';
-    const sizeBytes = value.size;
-
-    attachments.push({
-      filename,
-      contentType,
-      sizeBytes,
-      download: async () => {
-        const buffer = Buffer.from(await value.arrayBuffer());
-        return { buffer, contentType };
-      },
-    });
-  }
-
-  return attachments;
-}
-
-function buildFallbackKey(params: {
-  senderEmail: string;
-  recipients: string[];
-  subject: string;
-  timestamp?: string;
-  content: string;
-}): string {
-  const recipientKey = params.recipients.join(',');
-  const timestamp = params.timestamp || '';
-  const content = params.content.slice(0, 256);
-  return [params.senderEmail, recipientKey, params.subject, timestamp, content].join('|');
-}
+// 🔑 ADR-841 Α21.20 (N.0.2): η επαλήθευση υπογραφής ζούσε ΕΔΩ, ιδιωτική και αδοκίμαστη. Εξήχθη στο
+//    `lib/communications/mailgun-webhook/mailgun-signature.ts` όταν τη χρειάστηκε και το route
+//    συμβάντων παράδοσης — ίδιο κλειδί, ίδιος αλγόριθμος, ίδιο παράθυρο 5′ (ADR-252 SV-M1).
 
 /**
  * Handle Mailgun Inbound Webhook
@@ -208,7 +85,6 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
       timestamp: getFormString(formData, ['timestamp']),
       token: getFormString(formData, ['token']),
       signature: getFormString(formData, ['signature']),
-      signingKey: MAILGUN_WEBHOOK_SIGNING_KEY,
     });
 
     if (!signatureCheck.valid) {
@@ -298,75 +174,10 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
     });
 
     const elapsed = Date.now() - startTime;
+    logEnqueueResult(enqueueResult, { elapsedMs: elapsed, senderEmail: sender.email, recipients });
 
-    // Log the result
     if (enqueueResult.status === 'queued') {
-      logger.info('Email enqueued successfully', {
-        queueId: enqueueResult.queueId,
-        elapsedMs: elapsed,
-        from: sender.email,
-      });
-    } else if (enqueueResult.status === 'duplicate') {
-      logger.info('Duplicate email detected, already in queue', {
-        queueId: enqueueResult.queueId,
-        elapsedMs: elapsed,
-      });
-    } else if (enqueueResult.status === 'routing_failed') {
-      logger.warn('Email routing failed - no matching routing rule', {
-        recipients,
-        elapsedMs: elapsed,
-      });
-    } else {
-      logger.error('Failed to enqueue email', {
-        status: enqueueResult.status,
-        elapsedMs: elapsed,
-      });
-    }
-
-    // 🏢 ENTERPRISE: "Respond Fast, Process After" pattern (Next.js 15 after())
-    // Vercel Hobby plan limits cron to daily, so we trigger immediate processing
-    // after responding to Mailgun. The daily cron serves as backup for retries.
-    // Pattern used by: Salesforce Platform Events, SAP Event Mesh, Google Cloud Tasks
-    if (enqueueResult.status === 'queued') {
-      after(async () => {
-        try {
-          logger.info('after(): Starting immediate email processing', {
-            queueId: enqueueResult.queueId,
-          });
-          const result = await processEmailIngestionBatch();
-          logger.info('after(): Immediate processing completed', {
-            processed: result.processed,
-            failed: result.failed,
-          });
-
-          // 🤖 ADR-080: After email processing, run AI pipeline worker
-          // Email processing feeds items to ai_pipeline_queue via EmailChannelAdapter.
-          // Process them immediately so they reach PROPOSED state for Operator Inbox.
-          if (result.processed > 0) {
-            try {
-              const { processAIPipelineBatch } = await import(
-                '@/server/ai/workers/ai-pipeline-worker'
-              );
-              const pipelineResult = await processAIPipelineBatch();
-              logger.info('after(): AI pipeline batch completed', {
-                processed: pipelineResult.processed,
-                failed: pipelineResult.failed,
-                recovered: pipelineResult.recovered,
-              });
-            } catch (pipelineError) {
-              // Non-blocking: daily cron will retry pipeline items
-              logger.warn('after(): AI pipeline processing failed (cron will retry)', {
-                error: getErrorMessage(pipelineError),
-              });
-            }
-          }
-        } catch (afterError) {
-          // Non-fatal: daily cron will retry failed items
-          logger.warn('after(): Immediate processing failed (cron will retry)', {
-            error: getErrorMessage(afterError),
-          });
-        }
-      });
+      scheduleImmediateProcessing(enqueueResult.queueId);
     }
 
     // 🏢 ENTERPRISE: Always return 200 OK to Mailgun
@@ -407,85 +218,13 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
 export const POST = withWebhookRateLimit(handleMailgunInbound);
 
 export async function GET(): Promise<Response> {
-  // Full diagnostic: routing rules + queue status
-  const diagnostic: Record<string, unknown> = {
-    routing: { rulesCount: 0, hasIntegrations: false, hasSettings: false, rules: [] as string[] },
-    queue: { total: 0, pending: 0, processing: 0, completed: 0, failed: 0, latestItem: null as string | null },
-  };
-
-  try {
-    const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
-    const { COLLECTIONS, SYSTEM_DOCS } = await import('@/config/firestore-collections');
-    const { FIELDS } = await import('@/config/firestore-field-constants');
-    const adminDb = getAdminFirestore();
-
-    // Check routing rules
-    const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc(SYSTEM_DOCS.SYSTEM_SETTINGS).get();
-    const routingInfo = diagnostic.routing as Record<string, unknown>;
-    routingInfo.hasSettings = settingsDoc.exists;
-
-    if (settingsDoc.exists) {
-      const data = settingsDoc.data();
-      routingInfo.hasIntegrations = Boolean(data?.integrations);
-      const rules = data?.integrations?.emailInboundRouting;
-      if (Array.isArray(rules)) {
-        routingInfo.rulesCount = rules.length;
-        routingInfo.rules = rules.map((r: Record<string, unknown>) =>
-          `${r.pattern} → ${typeof r.companyId === 'string' ? r.companyId.substring(0, 8) + '...' : 'none'} (active: ${r.isActive})`
-        );
-      }
-    }
-
-    // Check queue status
-    const queueRef = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
-    const queueInfo = diagnostic.queue as Record<string, unknown>;
-
-    const allItems = await queueRef.orderBy(FIELDS.CREATED_AT, 'desc').limit(10).get();
-    queueInfo.total = allItems.size;
-
-    let pending = 0, processing = 0, completed = 0, failed = 0;
-    const items: string[] = [];
-    allItems.forEach(doc => {
-      const d = doc.data();
-      const status = d.status as string;
-      if (status === 'pending') pending++;
-      else if (status === 'processing') processing++;
-      else if (status === 'completed') completed++;
-      else if (status === 'failed' || status === 'dead_letter') failed++;
-      items.push(`${doc.id}: ${status} | ${d.subject || 'no-subject'} | ${d.sender?.email || 'unknown'} | ${d.createdAt?.toDate?.()?.toISOString?.() || 'no-date'}`);
-    });
-    queueInfo.pending = pending;
-    queueInfo.processing = processing;
-    queueInfo.completed = completed;
-    queueInfo.failed = failed;
-    queueInfo.items = items;
-
-    // Try to process batch and capture any errors
-    try {
-      const { processEmailIngestionBatch } = await import('@/server/comms/workers/email-ingestion-worker');
-      const batchResult = await processEmailIngestionBatch({ batchSize: 1 });
-      diagnostic.batchProcessResult = {
-        processed: batchResult.processed,
-        failed: batchResult.failed,
-        recovered: batchResult.recovered,
-      };
-    } catch (batchError) {
-      diagnostic.batchProcessError = getErrorMessage(batchError, 'Unknown batch error');
-      // Firestore missing index errors include a URL to create the index
-      if (batchError instanceof Error && batchError.message.includes('index')) {
-        diagnostic.missingIndexUrl = batchError.message;
-      }
-    }
-
-  } catch (diagError) {
-    diagnostic.error = getErrorMessage(diagError);
-  }
+  const diagnostic = await buildInboundDiagnostic();
 
   return NextResponse.json({
     status: 'ok',
     service: 'mailgun-inbound',
     version: 'v2-queue',
-    hasSigningKey: Boolean(MAILGUN_WEBHOOK_SIGNING_KEY),
+    hasSigningKey: hasMailgunSigningKey(),
     hasMailgunDomain: Boolean(process.env.MAILGUN_DOMAIN),
     mailgunDomainValue: process.env.MAILGUN_DOMAIN?.trim() || 'NOT_SET',
     diagnostic,
