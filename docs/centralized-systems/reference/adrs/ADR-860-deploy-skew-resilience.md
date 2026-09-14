@@ -158,7 +158,10 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
   έπιασε (κάτω από 50 tokens), τα έπιασε το grep του N.0.2 πριν το «done».*
 - `DirtyFormProvider` καθρεφτίζει εκεί (ιδιοκτήτης = `useId()`).
 - `AppUpdateBanner` στο root layout — `<aside role="status">`, μηδέν DOM όσο δεν υπάρχει νέα έκδοση·
-  i18n `errors:appUpdate.*`.
+  i18n `common:appUpdate.*` — ⚠️ **όχι** `errors`: το banner ζει στο root layout, και η γεννήτρια
+  του shell slice (CHECK 3.34) αρνήθηκε νέο namespace στο κέλυφος («9 έναντι σφραγισμένων 8»).
+  Το `common` είναι ήδη εγγυημένο εκεί. ⛔ Όχι `next/dynamic` για να γλιτώσει το namespace: το
+  banner εμφανίζεται **ακριβώς** όταν η φόρτωση chunks είναι σπασμένη.
 
 ### Ε4 — Παρατηρησιμότητα
 
@@ -184,7 +187,12 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
   1. `curl -I /_next/static/chunks/doesnotexist.js` ⇒ **404**, `no-store`.
   2. `curl /api/build-info` ⇒ το SHA του commit.
   3. Μετά το **δεύτερο** deploy: ένα chunk του **πρώτου** ⇒ **200**, JavaScript.
-  4. `/_next/static/.retention.json` ⇒ δύο deployments.
+  4. Log του βήματος «Carry forward previous static assets» στο Actions ⇒ `κρατούνται N deployments`.
+     ⚠️ **ΟΧΙ** μέσω `/_next/static/.retention.json`: επιστρέφει `400` (ο static server του Next
+     αρνείται αρχεία με τελεία) — μετρημένο, και σωστό.
+  ⚠️ Για κάθε `curl` σε `/api/*`: το middleware μπλοκάρει user-agent `curl/` με `403`
+  (`middleware.ts:258`, `BLOCKED_BOT_PATTERNS`). Χρησιμοποίησε `-A` με UA browser — αλλιώς το
+  `403` μοιάζει με βλάβη του route ενώ ο κώδικας δεν έτρεξε καν.
   5. Καρτέλα ανοιχτή από το deploy N, deploy N+1, άνοιγμα 3D αγγελίας ⇒ φορτώνει χωρίς σφάλμα.
 - 🔶 **Μόνο ο `DirtyFormProvider` δηλώνει μη αποθηκευμένη δουλειά**, και είναι mounted σε **ένα**
   σημείο (`RfqDetailClient.tsx`). Κάθε editor με δική του έννοια «μη αποθηκευμένο» (DXF, φόρμες
@@ -202,3 +210,4 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-09-14 | Δημιουργία. Ε0–Ε4 υλοποιημένα· tests 5 + 28 + 13 πράσινα, μετάλλαξη Ε2 επιβεβαιωμένη. Ζωντανή επιβεβαίωση εκκρεμεί (§6). |
+| 2026-09-14 | **Πρώτο deploy (`4dfbbce1`) — ζωντανά, 3 από 5 έλεγχοι του §6 ✅.** (1) `/_next/static/chunks/doesnotexist.js` → **404** · `no-store` · `nosniff` (πριν: `200` + `immutable`). (2) `/api/build-info` → **200** · `no-store` · `{"deploymentId":"4dfbbce1…"}` = HEAD. (4) Carry-forward στο T1: **973 αρχεία (22 MB)** μεταφέρθηκαν, **2** deployments (`4dfbbce1` + `pre-retention`). 🔶 Εκκρεμούν (3) και (5): απαιτούν **δεύτερο** deploy. ⚠️ Δύο διορθώσεις κειμένου από τη μέτρηση: το μανιφέστο **δεν** σερβίρεται (`400`, dotfile) και το `403` σε `curl` ήταν ο φραγμός bots του middleware, όχι το route. Επίσης το namespace του banner διορθώθηκε στο κείμενο σε `common` (ο κώδικας ήταν ήδη σωστός). |
