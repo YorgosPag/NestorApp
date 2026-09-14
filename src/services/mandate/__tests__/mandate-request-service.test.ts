@@ -325,6 +325,26 @@ describe('Φ — οι φρουροί του Σ1', () => {
     expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(0);
   });
 
+  it('Φ5.3 — 🔴 ΚΛΕΙΣΜΕΝΟ ΣΤΟ ΓΕΜΗ ⇒ agency-closed, και ΚΑΜΙΑ γραφή (ADR-841 §7 Α23 Φ3.2)', async () => {
+    const fake = world();
+    const [profile] = fake.all<Record<string, unknown>>(COLLECTIONS.AGENCY_PROFILES);
+    fake.seed(COLLECTIONS.AGENCY_PROFILES, AGENCY, {
+      ...profile,
+      legalIdentity: {
+        publicName: 'legal-name',
+        legalName: 'ΔΟΚΙΜΑΣΤΙΚΟ ΜΕΣΙΤΙΚΟ Α.Ε.',
+        legalForm: 'ae',
+        gemiNumber: '123456789000',
+        seat: { disclosure: 'municipality', streetLine: null, postalCode: null, locality: 'Θεσσαλονίκη' },
+        attestation: { state: 'declared' },
+        registryClosure: { issuer: 'gemi', checkedAt: '2026-09-14T11:00:00.000Z' },
+      },
+    });
+
+    expect(await submit(fake)).toEqual({ kind: 'rejected', reason: 'agency-closed' });
+    expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(0);
+  });
+
   it('Φ5.2 — ΔΗΜΟΣΙΕΥΜΕΝΟ ΚΑΙ ΜΕΣΙΤΙΚΟ περνά — ο παρονομαστής του Φ5.1', async () => {
     expect((await submit(world())).kind).toBe('created');
   });

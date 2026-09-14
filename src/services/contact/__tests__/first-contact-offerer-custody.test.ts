@@ -260,6 +260,20 @@ describe('ADR-843 §10.17 — ο ΕΝΑΣ παραλήπτης της πράξη
       expect(lookupMock).toHaveBeenCalledTimes(1);
     });
 
+    it('🔴 κλεισμένη στο ΓΕΜΗ ⇒ target-closed, ΟΧΙ «δεν υπάρχει» (η σελίδα φαίνεται με ετικέτα — Α23 Φ3.2)', async () => {
+      const closure = { issuer: 'gemi', checkedAt: '2026-09-14T11:00:00.000Z' };
+      lookupMock.mockResolvedValue({ outcome: 'found', showcase: { legalIdentity: { registryClosure: closure } } } as never);
+
+      const outcome = await resolveTarget(
+        recordingDb(freshRecorder()),
+        { uid: 'user-xenos', companyId: null },
+        TARGETS.professional,
+        NOW,
+      );
+
+      expect(outcome).toEqual({ kind: 'rejected', reason: 'target-closed' });
+    });
+
     it('βλάβη στη βιτρίνα ΔΕΝ ισοπεδώνεται σε άρνηση (N.12: άγνωστο ≠ κενό)', async () => {
       lookupMock.mockResolvedValue({ outcome: 'unavailable' } as never);
 

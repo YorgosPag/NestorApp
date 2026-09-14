@@ -75,6 +75,7 @@ import {
   mayAdminister,
   type ListingActor,
 } from '@/lib/owner-property/listing-custody';
+import { registryClosureOf } from '@/lib/agency/showcase-registry-closure';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { generateMandateRequestId } from '@/services/enterprise-id-convenience';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
@@ -140,6 +141,12 @@ export async function submitMandateRequest(
   if (agency.outcome === 'unavailable') return { kind: 'unavailable' };
   if (agency.outcome === 'not-published') {
     return { kind: 'rejected', reason: 'agency-absent' };
+  }
+  // 🔴 ADR-841 §7 Α23 Φ3.2 — **ΚΛΕΙΣΜΕΝΗ ΣΤΟ ΓΕΜΗ ⇒ ΚΑΜΙΑ ΝΕΑ ΕΝΤΟΛΗ.** Πριν το «ασκεί μεσιτεία;»:
+  //    ο λόγος είναι θεμελιωδέστερος, και ένα `agency-not-brokerage` θα έστελνε τον άνθρωπο να ζητήσει
+  //    **άλλη** πράξη από επιχείρηση που δεν λειτουργεί.
+  if (registryClosureOf(agency.showcase) !== null) {
+    return { kind: 'rejected', reason: 'agency-closed' };
   }
 
   // 🔴 **Ο ΜΟΝΟΣ ΠΡΑΓΜΑΤΙΚΟΣ ΦΡΟΥΡΟΣ ΤΗΣ ΜΕΣΙΤΕΙΑΣ** (ADR-841 §7 Α5). Η βιτρίνα και η

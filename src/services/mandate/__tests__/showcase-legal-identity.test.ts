@@ -19,7 +19,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
 import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
-import { REGISTRY_CHECKED_AT } from '@/lib/company/__fixtures__/registry-record-fixture';
+import { REGISTRY_CHECKED_AT, registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
 import { givenCompanyProfile, givenRegistryCheck } from './showcase-legal-fixture';
 
 const shelf = new FakeShelfBucket();
@@ -180,6 +180,46 @@ describe('Α — η ανανέωση: το στιγμιότυπο δεν μπα�
     expect(doc.legalIdentity).toBeNull();
     expect(doc.displayName).toBe('ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ');
     expect((doc.credentials as { attestation: { state: string } }[])[0]?.attestation.state).toBe('declared');
+  });
+
+  it('🔴 Α2α — το ΓΕΜΗ λέει ΑΝΕΝΕΡΓΗ ⇒ ταυτότητα ΜΕΝΕΙ με κλείσιμο, σήμα ΠΕΦΤΕΙ, όνομα μένει (GBP «Οριστικά κλειστή»)', async () => {
+    const { fake, admin } = db();
+    givenRegistryCheck(fake, COMPANY);
+    await publish(admin);
+    givenRegistryCheck(fake, COMPANY, registryRecord({ status: { code: { id: '9', label: 'Διαγραμμένη' }, activity: 'inactive' } }));
+
+    expect(await refreshShowcaseLegalIdentity(admin, COMPANY)).toEqual({ kind: 'refreshed', publicNameChanged: false });
+
+    const doc = await stored(fake);
+    // 🔑 Το όνομα ΔΕΝ αλλάζει με το κλείσιμο (ορθογραφία του μητρώου) ⇒ καμία επανεγγραφή αγγελιών.
+    expect(doc.displayName).toBe('ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ');
+    expect(doc.legalIdentity).toMatchObject({
+      legalName: 'ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
+      attestation: { state: 'declared' },
+      registryClosure: { issuer: 'gemi', checkedAt: REGISTRY_CHECKED_AT },
+    });
+    expect((doc.credentials as { attestation: { state: string } }[])[0]?.attestation.state).toBe('declared');
+  });
+
+  it('🔴 Α2β — ο τίτλος ΔΕΝ στηρίζεται πια από το ΓΕΜΗ ⇒ όνομα = ΕΠΩΝΥΜΙΑ, και οι αγγελίες ενημερώνονται', async () => {
+    const { fake, admin } = db();
+    givenRegistryCheck(fake, COMPANY);
+    await publish(admin, { publicName: { kind: 'distinctive-title', title: 'ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ' } });
+    givenRegistryCheck(fake, COMPANY, registryRecord({ distinctiveTitles: [] }));
+
+    expect(await refreshShowcaseLegalIdentity(admin, COMPANY)).toEqual({ kind: 'refreshed', publicNameChanged: true });
+
+    const doc = await stored(fake);
+    expect(doc.displayName).toBe('ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ');
+    expect(doc.legalIdentity).toMatchObject({ publicName: 'legal-name' });
+  });
+
+  it('🔴 Δ4 — ΝΕΑ δημοσίευση κλεισμένης στο ΓΕΜΗ ⇒ registry-inactive, και ΤΙΠΟΤΑ στον δίσκο', async () => {
+    const { fake, admin } = db();
+    givenRegistryCheck(fake, COMPANY, registryRecord({ status: { code: null, activity: 'inactive' } }));
+
+    expect(await publish(admin)).toEqual({ kind: 'rejected', reason: 'agency-profile-registry-inactive' });
+    await expect(stored(fake)).rejects.toThrow('καμία βιτρίνα');
   });
 
   it('🔑 Α3 — ΙΔΕΜΠΟΤΗΣ: καμία αλλαγή εισόδου ⇒ ίδιο έγγραφο, ίδιο `publishedAt`', async () => {

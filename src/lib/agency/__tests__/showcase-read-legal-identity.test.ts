@@ -16,7 +16,10 @@ const IDENTITY = {
   gemiNumber: '123456789000',
   seat: { disclosure: 'full', streetLine: 'Σαμοθράκης 16', postalCode: '54248', locality: 'Θεσσαλονίκη' },
   attestation: { state: 'verified', issuer: 'gemi', checkedAt: '2026-09-14T09:00:00.000Z' },
+  registryClosure: null,
 };
+
+const CLOSURE = { issuer: 'gemi', checkedAt: '2026-09-14T11:00:00.000Z' };
 
 const SHOWCASE = {
   alias: 'pagonis',
@@ -70,5 +73,29 @@ describe('Ν — η νομική ταυτότητα διαβάζεται αυσ�
 
   it('🔑 Ν4 — άγνωστη νομική μορφή ⇒ `legalForm: null`, η υπόλοιπη ταυτότητα μένει', () => {
     expect(readLegalIdentity({ ...IDENTITY, legalForm: 'ike' })).toEqual({ ...IDENTITY, legalForm: null });
+  });
+});
+
+describe('Κ — το ΚΛΕΙΣΙΜΟ στο σύνορο ανάγνωσης (Φ3.2)', () => {
+  it('🔑 Κ1 — βιτρίνα πριν τη Φ3.2 (χωρίς πεδίο) ⇒ `registryClosure: null`, η ταυτότητα μένει', () => {
+    const { registryClosure: _omitted, ...legacy } = IDENTITY;
+
+    expect(readLegalIdentity(legacy)).toEqual(IDENTITY);
+  });
+
+  it('🔴 Κ2 — κλειστή ⇒ διαβάζεται ΚΑΙ ΠΟΤΕ επαληθευμένη, ακόμα κι αν ο δίσκος λέει `verified`', () => {
+    expect(readLegalIdentity({ ...IDENTITY, registryClosure: CLOSURE })).toEqual({
+      ...IDENTITY,
+      attestation: { state: 'declared' },
+      registryClosure: CLOSURE,
+    });
+  });
+
+  it.each([
+    ['χωρίς ημερομηνία ελέγχου', { issuer: 'gemi' }],
+    ['άγνωστη πηγή', { ...CLOSURE, issuer: 'admin' }],
+    ['όχι αντικείμενο', 'closed'],
+  ])('🔴 Κ3 — κλείσιμο %s ⇒ `null`: καμία ετικέτα «κλειστή» χωρίς αρχή και ημερομηνία', (_label, raw) => {
+    expect(readLegalIdentity({ ...IDENTITY, registryClosure: raw })?.registryClosure).toBeNull();
   });
 });

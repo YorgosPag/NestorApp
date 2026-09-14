@@ -11,6 +11,7 @@
 import {
   declarationOfStored,
   defaultSeatDisclosure,
+  reresolveShowcaseLegalIdentity,
   resolveShowcaseLegalIdentity,
   type LegalIdentityInputs,
   type LegalIdentityResolution,
@@ -59,6 +60,7 @@ describe('Ο — το ΟΝΟΜΑ λύνεται από τον διακομιστ
       gemiNumber: '123456789000',
       seat: { disclosure: 'full', streetLine: 'Σαμοθράκης 16', postalCode: '54248', locality: 'Θεσσαλονίκη' },
       attestation: { state: 'verified', issuer: 'gemi', checkedAt: REGISTRY_CHECKED_AT },
+      registryClosure: null,
     });
   });
 
@@ -116,10 +118,43 @@ describe('Ο — το ΟΝΟΜΑ λύνεται από τον διακομιστ
     expect(reasonOf(resolveShowcaseLegalIdentity(given, LEGAL_NAME))).toBe('agency-profile-name-missing');
   });
 
-  it('🔴 Ο7 — ΑΝΕΝΕΡΓΗ στο ΓΕΜΗ ⇒ registry-inactive: δεν δημοσιεύεται ούτε ως «δηλωμένη»', () => {
+  it('🔴 Ο7 — ΑΝΕΝΕΡΓΗ στο ΓΕΜΗ ⇒ ταυτότητα ΜΕ κλείσιμο (πηγή + ημερομηνία), σήμα `declared` — ΟΧΙ άρνηση (Φ3.2)', () => {
     const given = inputs({}, { status: { code: { id: '9', label: 'Διαγραμμένη' }, activity: 'inactive' } });
 
-    expect(reasonOf(resolveShowcaseLegalIdentity(given, LEGAL_NAME))).toBe('agency-profile-registry-inactive');
+    const { identity } = resolved(resolveShowcaseLegalIdentity(given, LEGAL_NAME));
+
+    expect(identity.registryClosure).toEqual({ issuer: 'gemi', checkedAt: REGISTRY_CHECKED_AT });
+    expect(identity.attestation).toEqual({ state: 'declared' });
+    // 🔴 Ίδια επωνυμία ⇒ ορθογραφία του ΜΗΤΡΩΟΥ: το κλείσιμο δεν μετονομάζει (Google κρατά το όνομα).
+    expect(identity.legalName).toBe('ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ');
+  });
+
+  it('🔑 Ο7γ — κλειστή με ΑΛΛΗ επωνυμία στο προφίλ ⇒ η επωνυμία του ΠΡΟΦΙΛ (το μητρώο δεν τη στηρίζει)', () => {
+    const given = inputs(
+      { declaration: { entityType: 'ae', businessName: 'ΑΛΛΗ ΕΠΩΝΥΜΙΑ Α.Ε.', gemiNumber: '123456789000' } },
+      { status: { code: null, activity: 'inactive' } },
+    );
+
+    expect(resolved(resolveShowcaseLegalIdentity(given, LEGAL_NAME)).identity.legalName).toBe('ΑΛΛΗ ΕΠΩΝΥΜΙΑ Α.Ε.');
+  });
+
+  it('🔑 Ο7α — κλειστή κρατά τον ΤΙΤΛΟ της: ανήκει στην εγγραφή του αριθμού', () => {
+    const given = inputs({}, { status: { code: null, activity: 'inactive' } });
+    const choice: ShowcaseLegalDeclaration = {
+      publicName: { kind: 'distinctive-title', title: 'ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ' },
+      seatDisclosure: null,
+    };
+
+    expect(resolved(resolveShowcaseLegalIdentity(given, choice)).displayName).toBe('ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ');
+  });
+
+  it.each([
+    ['ενεργή', inputs()],
+    ['άγνωστη κατάσταση', inputs({}, { status: { code: null, activity: 'unknown' } })],
+    ['κανένας έλεγχος', inputs({}, null)],
+    ['απάντηση για ΑΛΛΟΝ αριθμό, ανενεργή', inputs({}, { registrationNumber: '555555555000', status: { code: null, activity: 'inactive' } })],
+  ])('🔴 Ο7β — %s ⇒ `registryClosure: null` (κλείσιμο ΜΟΝΟ για αυτόν τον αριθμό)', (_label, given) => {
+    expect(resolved(resolveShowcaseLegalIdentity(given, LEGAL_NAME)).identity.registryClosure).toBeNull();
   });
 
   it('🔑 Ο8 — ελεύθερος επαγγελματίας χωρίς ΓΕΜΗ: δημοσιεύει με επωνυμία, `gemiNumber: null`, `declared`', () => {
@@ -194,5 +229,31 @@ describe('Α — η ανανέωση ξαναλύνει την ΙΔΙΑ επιλ
     const again = resolveShowcaseLegalIdentity(inputs(), declarationOfStored(first.identity, first.displayName));
 
     expect(again).toEqual(first);
+  });
+
+  const TITLE: ShowcaseLegalDeclaration = {
+    publicName: { kind: 'distinctive-title', title: 'ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ' },
+    seatDisclosure: null,
+  };
+
+  it.each([
+    ['το ΓΕΜΗ αφαίρεσε τον τίτλο', inputs({}, { distinctiveTitles: [] })],
+    ['ο αριθμός «δεν υπάρχει» πια (αντίγραφο σβήστηκε)', inputs({}, null)],
+  ])('🔴 Α2 — %s ⇒ όνομα = ΕΠΩΝΥΜΙΑ, επιλογή `legal-name` (Stripe · GBP)', (_label, later) => {
+    const first = resolved(resolveShowcaseLegalIdentity(inputs(), TITLE));
+
+    const again = resolved(reresolveShowcaseLegalIdentity(later, first.identity, first.displayName));
+
+    expect(again.identity.publicName).toBe('legal-name');
+    expect(again.displayName).toBe(again.identity.legalName);
+  });
+
+  it('🔑 Α3 — ΜΟΝΟ ο τίτλος υποχωρεί: σβησμένη επωνυμία μένει άρνηση (καμία επινόηση)', () => {
+    const first = resolved(resolveShowcaseLegalIdentity(inputs(), TITLE));
+    const later = inputs({ declaration: { entityType: 'ae', businessName: null, gemiNumber: '123456789000' } });
+
+    expect(reasonOf(reresolveShowcaseLegalIdentity(later, first.identity, first.displayName))).toBe(
+      'agency-profile-name-missing',
+    );
   });
 });
