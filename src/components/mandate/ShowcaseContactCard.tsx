@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { Navigation } from 'lucide-react';
+import { Contact, Navigation } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
@@ -27,6 +27,8 @@ import { googleMapsDirectionsUrl } from '@/lib/geo/map-links';
 import type { ShowcaseLocation } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS, PROFILE_ROLE_KEYS } from './agency-directory-labels';
 import { ChannelReveal } from './ChannelReveal';
+import { locationVCardPath } from './showcase-card-paths';
+import { primaryChannelLocation } from '@/lib/agency/showcase-card-primary';
 import { ShowcaseOpeningHours } from './ShowcaseOpeningHours';
 
 interface ShowcaseContactCardProps {
@@ -34,6 +36,31 @@ interface ShowcaseContactCardProps {
   readonly companyId: string;
   /** Περνιέται, δεν ξαναρωτιέται (ADR-841 §7 Α5) — ίδιος κριτής με το κουμπί από πάνω. */
   readonly canHoldMandate: boolean;
+}
+
+/**
+ * 🏆 **«ΑΠΟΘΗΚΕΥΣΗ ΕΠΑΦΗΣ»** (Α21.17) — ένα σημείο, δύο καταναλωτές (η κάρτα · η γραμμή «Επικοινωνία»).
+ *
+ * Σύνδεσμος λήψης προς τη **δική του** πόρτα (ίδιο όριο με την εμφάνιση): ο αριθμός δεν περνά ποτέ από τη
+ * σελίδα — πηγαίνει κατευθείαν από τον διακομιστή στις Επαφές. Χωρίς κανάλι ⇒ σιωπή.
+ */
+export function SaveContactLink({
+  companyId,
+  location,
+}: {
+  readonly companyId: string;
+  readonly location: Pick<ShowcaseLocation, 'id' | 'channelKinds'>;
+}): React.ReactElement | null {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  if (location.channelKinds.length === 0) return null;
+  return (
+    <a
+      href={locationVCardPath(companyId, location.id)}
+      className="inline-flex items-center gap-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
+    >
+      <Contact aria-hidden="true" className="h-4 w-4" /> {t(PROFILE_KEYS.cardSaveContact)}
+    </a>
+  );
 }
 
 function LocationAddress({ location }: { readonly location: ShowcaseLocation }): React.ReactElement {
@@ -55,7 +82,12 @@ function LocationCard({
   location,
   companyId,
   canHoldMandate,
-}: { readonly location: ShowcaseLocation } & Omit<ShowcaseContactCardProps, 'locations'>): React.ReactElement {
+  summarisedAbove,
+}: {
+  readonly location: ShowcaseLocation;
+  /** Α21.17 — τα κανάλια του **ανέβηκαν** στη γραμμή «Επικοινωνία»· εδώ μένουν διεύθυνση και ωράριο. */
+  readonly summarisedAbove: boolean;
+} & Omit<ShowcaseContactCardProps, 'locations'>): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const role = t(PROFILE_ROLE_KEYS[location.role]);
 
@@ -77,10 +109,16 @@ function LocationCard({
         </a>
       ) : null}
       {location.hours !== null ? <ShowcaseOpeningHours hours={location.hours} /> : null}
-      <ChannelReveal companyId={companyId} locationId={location.id} kinds={location.channelKinds} />
-      {canHoldMandate && location.channelKinds.includes('phone') ? (
-        <p className="m-0 text-xs text-muted-foreground">{t(PROFILE_KEYS.cardBrokerWritten)}</p>
-      ) : null}
+      {/* 🔴 Α21.17 — ΠΟΤΕ δεύτερη «Εμφάνιση» για το κατάστημα που ήδη συνοψίζεται ψηλά (δύο κουμπιά, δύο εισιτήρια ορίου). */}
+      {summarisedAbove ? null : (
+        <>
+          <ChannelReveal companyId={companyId} locationId={location.id} kinds={location.channelKinds} />
+          <SaveContactLink companyId={companyId} location={location} />
+          {canHoldMandate && location.channelKinds.includes('phone') ? (
+            <p className="m-0 text-xs text-muted-foreground">{t(PROFILE_KEYS.cardBrokerWritten)}</p>
+          ) : null}
+        </>
+      )}
     </article>
   );
 }
@@ -89,6 +127,8 @@ export function ShowcaseContactCard({ locations, companyId, canHoldMandate }: Sh
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   // 🔑 Χωρίς κάρτα **σιωπή** — όχι «δεν δηλώθηκε»: η απουσία καναλιού δεν είναι πια απόφαση να εξηγηθεί.
   if (locations.length === 0) return null;
+  // 🔑 Η ΙΔΙΑ συνάρτηση με τη σύνοψη — δεν μπορούν να διαφωνήσουν για το ποιο κατάστημα ανέβηκε.
+  const primaryId = primaryChannelLocation(locations)?.id ?? null;
 
   return (
     <section aria-labelledby="showcase-contact-title" className="flex flex-col gap-3">
@@ -98,7 +138,12 @@ export function ShowcaseContactCard({ locations, companyId, canHoldMandate }: Sh
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {locations.map((location) => (
           <li key={location.id}>
-            <LocationCard location={location} companyId={companyId} canHoldMandate={canHoldMandate} />
+            <LocationCard
+              location={location}
+              companyId={companyId}
+              canHoldMandate={canHoldMandate}
+              summarisedAbove={location.id === primaryId}
+            />
           </li>
         ))}
       </ul>

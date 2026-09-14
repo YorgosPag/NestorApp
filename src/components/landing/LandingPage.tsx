@@ -11,6 +11,8 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LucideIcon } from 'lucide-react';
 import { FeatureCard, PropertyShowcaseCard, type CardTone } from './LandingShowcaseCards';
+import { JsonLdScript } from '@/components/seo/JsonLdScript';
+import { publicOrigin } from '@/lib/http/public-origin';
 import '@/lib/design-system';
 
 
@@ -50,6 +52,8 @@ const SHOWCASE_PROPERTIES = [
 }[];
 
 export function LandingPage() {
+  // ADR-841 §7 Α21.17 — `null` ⇒ κανένα JSON-LD (ποτέ μαντεμένη διεύθυνση· δες το `public-origin.ts`).
+  const siteOrigin = publicOrigin();
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -325,22 +329,26 @@ export function LandingPage() {
           </nav>
         </div>
       </section>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            "name": process.env.NEXT_PUBLIC_COMPANY_NAME || process.env.NEXT_PUBLIC_SITE_NAME || "Real Estate Platform",
-            "url": process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` || "https://localhost:3000",
-            "potentialAction": {
-              "@type": "SearchAction",
-              "target": `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` || "https://localhost:3000"}/properties?search={query}`,
-              "query-input": "required name=query"
-            }
-          })
-        }}
-      />
+      {/*
+        ADR-841 §7 Α21.17 — η σειριοποίηση περνά από το SSoT (`lib/seo/json-ld`, διαφυγή `<`). Οι παλιές
+        εφεδρείες έδιναν `https://undefined` (το `${VERCEL_URL}` είναι πάντα αληθές κείμενο) — δηλαδή δομημένα
+        δεδομένα που δείχνουν σε ανύπαρκτο τόπο. Χωρίς δημόσια διεύθυνση ⇒ **κανένα** script.
+      */}
+      {siteOrigin === null ? null : (
+        <JsonLdScript
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: process.env.NEXT_PUBLIC_COMPANY_NAME || process.env.NEXT_PUBLIC_SITE_NAME || 'Real Estate Platform',
+            url: siteOrigin,
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: `${siteOrigin}/properties?search={query}`,
+              'query-input': 'required name=query',
+            },
+          }}
+        />
+      )}
     </main>
   );
 }

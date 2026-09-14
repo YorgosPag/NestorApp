@@ -2,6 +2,29 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **14/09 — `/contact/[token]` ΕΞΑΡΓΥΡΩΝΕΙ ΣΕ `GET` ⇒ ΕΚΤΕΘΕΙΜΕΝΟ ΣΕ ΠΡΟΦΟΡΤΩΣΗ ΣΑΡΩΤΩΝ (ADR-844 · εύρημα audit ADR-841 Α21.18)**
+
+  `app/(auth)/contact/[token]/page.tsx` καλεί `redeemGuestContactByLink` **κατά την απόδοση** — μία χρήση, μέσα σε `GET`.
+  Οι σαρωτές ασφαλείας αλληλογραφίας (Microsoft Defender Safe Links, Outlook, εταιρικές πύλες) **ανοίγουν τον σύνδεσμο
+  πριν τον άνθρωπο** ⇒ η πρόσκληση καίγεται από μηχανή· ο άνθρωπος βλέπει «ήδη χρησιμοποιήθηκε» (τεκμηριωμένο:
+  keycloak#41834 · zitadel discussion 11669). Το `noindex` **δεν** το καλύπτει (δεν είναι crawler).
+  **Θεραπεία**: πρότυπο του αδελφού `mandate/[token]` — `GET` **επαληθεύει και δείχνει**, `POST` από κουμπί **εξαργυρώνει**
+  (ίδιο σχήμα με RFC 8058). Ο εξαψήφιος κωδικός μένει εναλλακτική πόρτα. Αγγίζει ροή ADR-844 ⇒ δική του φέτα.
+
+- 🟡 **14/09 — `mandate-consent.test.ts` Ν1 ΑΣΤΑΘΕΣ (εύρημα Α21.17)**
+
+  Κόκκινο μία φορά, πράσινο στην επανάληψη, χωρίς αλλαγή κώδικα. Ύποπτα: ρολόι/σειρά/κοινή κατάσταση πλαστού Firestore.
+  **Θεραπεία**: επαναλαμβανόμενη εκτέλεση (`--runInBand` ×20) → εντοπισμός αιτίας → σταθεροποίηση. Όχι `retry`.
+
+- 🔶 **14/09 — `Content-Disposition` ΧΩΡΙΣ UTF-8 ΣΕ 11 ΣΗΜΕΙΑ ΤΟΥ `src/app/api` (ADR-841 §7 Α21.17)**
+
+  **Μετρημένο** κατά το audit της Φέτας Α. Το SSoT `lib/http/content-disposition.ts` (`attachmentDisposition`,
+  RFC 6266 + 5987) γεννήθηκε και το `api/download` μεταφέρθηκε. Μένουν χειρόγραφα
+  ``attachment; filename="${…}"`` σε: `admin/role-management/audit-log/export` (×2) · `files/watermark` ·
+  `files/generate-pdf` · `files/gdpr-export` · `files/batch-download` · `debug/property-showcase-photos` (inline) ·
+  `procurement/[poId]/pdf` · `procurement/spend-analytics/export` (×2). **Κίνδυνος**: ελληνικό όνομα αρχείου φτάνει
+  ακατάληπτο, και `"` μέσα στο όνομα κλείνει το πεδίο νωρίς. **Θεραπεία**: μηχανική αντικατάσταση — 8 αρχεία ⇒ δική του φέτα.
+
 - 🔶 **14/09 — URL ΣΥΝΘΕΣΗΣ GMAIL ΑΝΤΙΓΡΑΜΜΕΝΟ ΣΕ 5 ΑΡΧΕΙΑ, ΜΕ ΠΑΡΑΛΛΑΓΕΣ (ADR-841 §7 Α21.16)**
 
   **Μετρημένο** κατά το audit της κάρτας. `https://mail.google.com/mail/?view=cm…` ζει σε

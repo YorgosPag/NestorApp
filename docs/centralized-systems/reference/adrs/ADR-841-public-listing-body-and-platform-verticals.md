@@ -3412,6 +3412,7 @@ OwnerPropertyMedia.kind  ──►  PublicShelfSource.material  ──►  Publi
 
 | Ημ/νία | Τι |
 |---|---|
+| 2026-09-14 | **§7 Α21.17 — Φάση 2, Φέτα Α: η κάρτα φεύγει από τη σελίδα.** JSON-LD `Organization` + `RealEstateAgent`/`LocalBusiness` ανά κατάστημα **με οδό**, SSR μέσω του **υπάρχοντος** `lookupAgencyProfile`, **χωρίς** `telephone`/`email` (Google: συνιστώμενα, όχι απαιτούμενα)· «μόνο περιοχή» ⇒ κανένας κόμβος. vCard 3.0 ανά κατάστημα (`/api/pro/…/vcard`), **μετρά ως εμφάνιση** (ίδιο όριο `HEAVY`, ίδιες κεφαλίδες, ένας αναγνώστης `revealLocationCard`). QR προς τη **ζωντανή** βιτρίνα: διάλογος «Κοινοποίηση» (δημόσια) + λήψη SVG/PNG (ρυθμίσεις). Νέα SSoT: `lib/seo/json-ld` · `lib/qr/qr-code` (οι **3** υπάρχοντες καταναλωτές μεταφέρθηκαν) · `lib/http/content-disposition` · `lib/contact/vcard`. Διορθώθηκαν: νεκρό Vercel URL στο QR παρουσιών (→ `publicUrl`, 503 χωρίς ρύθμιση) · `https://undefined` στο JSON-LD του `LandingPage`. Απορρίφθηκαν: UTM στο QR, μετρητής αποκαλύψεων. Επόμενες: Φέτα Β (email) · Φέτα Γ (εισαγωγή). |
 | **2026-09-14** | 🏆 **§7 Α21.16 — Η ΨΗΦΙΑΚΗ ΚΑΡΤΑ ΣΤΗ ΒΙΤΡΙΝΑ (Φάση 1).** Έδρα + υποκαταστήματα με διεύθυνση ή «μόνο περιοχή», ωράριο με **«ανοιχτό τώρα»** σε ώρα Ελλάδας (σπαστό, υπολογισμένες αργίες), τηλέφωνα/email με **κλικ-για-αποκάλυψη**. Αναίρεση του «κανένα κανάλι» (**ADR-827 §9.8 · ADR-843 §6** τροποποιήθηκαν). 🔴 Audit: το `agency_profiles` κατεβαίνει ολόκληρο σε κάθε ανώνυμο ⇒ τα κανάλια σε **`deny_all` `showcase_card_channels`**, φεύγουν ένα κατάστημα τη φορά από `HEAVY` route με ταυτόσημο 404· η κάρτα **δική της πράξη**, το `publishShowcase` τη μεταφέρει, η απόσυρση σβήνει προφίλ+κανάλια **ατομικά**. Νέα SSoT: `weekly-hours` · `greek-public-holidays` · `channel-phone` (**`libphonenumber-js` MIT**) · `map-links` (N.0.2: πίνακας χαρτών ×2 κεντρικοποιήθηκε). Κανένας μετρητής reveal. **1040/1040 jest**· πύλες 3.8/3.28/3.56/3.74/3.78/3.16/3.52/3.60/3.61/3.63/3.72 πράσινες. 🔑 **3.34**: η φόρμα στη σελίδα βιτρίνας περνούσε τη σφράγιση και το καταγεγραμμένο χρέος απαγόρευε 4η ⇒ **υποσελίδα `settings/agency-profile/card`** (πρακτική GBP/GitHub/LinkedIn, απόφαση Giorgio): βιτρίνα 15.574/18.170 χωρίς νέα σφράγιση, κάρτα 6.261. Pixel/emulator **όχι** επαληθευμένα. |
 | **2026-09-14** | 🏆 **§7 Α21.15 — ΤΟ ΛΟΓΟΤΥΠΟ ΣΤΗΝ ΚΑΡΤΑ ΦΑΙΝΕΤΑΙ.** Αναφορά Giorgio με στιγμιότυπο `/pro`: *«δεν φαίνεται»*. Μετρημένα **δύο** ελαττώματα: (1) η υποχώρηση της Α21.9.4 *(κάρτα 44×44 και για ζώνη)* έδινε σε λογότυπο 512×122 μελάνι **36×9**, και η Φάση Β δεν το έλυνε *(ήταν ήδη τριμμένο)*· (2) το `bg-card` κάτω από την εικόνα **έκρυβε** σκούρο μελάνι στο σκοτεινό θέμα. **Λύση**: ζώνη κάρτας **96×48 σταθερή** σε **στήλη `sm:w-24`** *(`MARK_CARD_SLOT`)* — ο ρυθμός ζητά σταθερή θέση **τίτλου**, όχι σταθερό σχήμα σήματος· στοίβα στο κινητό. Νέο `ShowcaseMarkFrame.surface`: **λευκή πλάκα** για λογότυπο *(LinkedIn/Clutch/G2, συνεπές με Α21.10.2)*, `bg-card` για πορτρέτο. Κριτής (`markSurfaces`) ακολουθεί· θεώρημα `coversPage ⇒ coversCard` ισχύει. **352/352 + 65/65 πράσινα.** Pixel σε φυλλομετρητή **όχι** επαληθευμένα. |
 | **2026-09-11** | 🔴 **§7 Α18.16 — Ο ΠΡΟΟΡΙΣΜΟΣ ΚΟΥΒΑΛΑ ΤΟΝ ΧΩΡΟ ΤΟΥ** *(ADR-849 §6δ Β1 · ADR-848 §6α)*. Η `notification-destination-custody` έκρινε μόνο `*-notifier.service.ts` ⇒ ο ειδοποιητής PO έγραφε με το χέρι `/procurement/<id>` (**404**, ελληνική ετικέτα) πράσινος. Ανακάλυψη πλέον **ανά καλούντα** του `dispatchNotification({` · Κ2 σε **κάθε** `viewDestination(` · νέα Κ5 (προορισμός ⇒ χώρος) · Κ4 + `holderId`. Ο προορισμός έγινε **πόρτα + χώρος** (`NotificationDestination`)· οι σαρωτές δηλώνουν τον κάτοχο του χώρου όπως δηλώνουν την κατοχή. 12/12 μεταλλάξεις. |
@@ -7989,6 +7990,112 @@ bytes** (> ταβάνι 18.170, CHECK 3.34). Και η σφράγιση της 2
 vCard 3.0 (`text/vcard`, από τον διακομιστή, μετρά ως reveal) · QR προς τη **ζωντανή** βιτρίνα (υπάρχον `qrcode`) ·
 JSON-LD `LocalBusiness` ανά κατάστημα **χωρίς `telephone`** (αλλιώς ο αριθμός στο HTML ακυρώνει την Α21.16.1) ·
 επαλήθευση email με σύνδεσμο · ρητή «εισαγωγή από τα στοιχεία της εταιρείας μου» (§9.9 β: πράξη, όχι αντιγραφή) · SMS αργότερα.
+
+**Αποφάσεις Giorgio (2026-09-14)**: **τρεις φέτες** — **Α** = JSON-LD + QR + vCard ✅ (Α21.17) · **Β** = επαλήθευση email,
+σήμα **δημόσιο με ημερομηνία** 🔶 · **Γ** = εισαγωγή από την εταιρεία 🔶. QR **και** στις ρυθμίσεις **και** στη δημόσια σελίδα.
+
+#### Α21.17 🏆 **Η ΚΑΡΤΑ ΦΕΥΓΕΙ ΑΠΟ ΤΗ ΣΕΛΙΔΑ — ΔΟΜΗΜΕΝΑ ΔΕΔΟΜΕΝΑ, QR, «ΑΠΟΘΗΚΕΥΣΗ ΕΠΑΦΗΣ»** *(2026-09-14, Φάση 2 — Φέτα Α)*
+
+##### Α21.17.1 🔍 Το SSoT audit που όρισε τι ΔΕΝ γράφτηκε
+
+| Ερώτημα | Βρέθηκε | Απόφαση |
+|---|---|---|
+| vCard; | μηδέν (μόνο πεδίο Telegram) | **νέο** `lib/contact/vcard.ts` |
+| QR; | `qrcode` σε **3** σημεία, το καθένα με δικό του `margin` (2 · 2 · 1 — κάτω από την ήσυχη ζώνη 4 του ISO/IEC 18004) | **νέο** `lib/qr/qr-code.ts` με ονομασμένες χρήσεις· **οι 3 μεταφέρθηκαν** (N.0.2) |
+| JSON-LD; | ένα inline `WebSite` στο `LandingPage`, με εφεδρείες που έδιναν **`https://undefined`** | **νέο** `lib/seo/json-ld.ts` + `components/seo/JsonLdScript.tsx`· το `LandingPage` μεταφέρθηκε |
+| Content-Disposition RFC 6266; | γραμμένο **μία** φορά inline (`api/download`)· **11** άλλα σημεία χωρίς UTF-8 | **νέο** `lib/http/content-disposition.ts`· το `download` μεταφέρθηκε· τα 11 → `pending-ratchet-work.md` |
+| Server αναγνώστης βιτρίνας; | **υπήρχε** — `lookupAgencyProfile` (για το reveal) | ⇒ η δήλωση του `/pro/[alias]/page.tsx` *«θα απαιτούσε δεύτερο αναγνώστη»* **έπαψε να ισχύει** — διορθώθηκε |
+| Διαδρομή `/pro/<alias>`; | **υπήρχε** — `agencyProfileRoute` | επαναχρησιμοποίηση (και διορθώθηκε δικό μου χειρόγραφο `/pro/${…}` πριν το «done») |
+| Λήψη αρχείου στον client; | **υπήρχε** — `triggerExportDownload` | επαναχρησιμοποίηση |
+| Απόλυτη διεύθυνση; | `publicUrl` (server, χωρίς αίτημα) · `absoluteUrl` (με αίτημα) · `window.location.origin` (client — δόγμα `ShowcasePublicDoor`) | τρεις πλευρές, τρεις **υπάρχουσες** πηγές |
+| 🔴 **Νεκρό Vercel URL** | `api/attendance/qr/generate`: εφεδρεία `nestor-app.vercel.app` ⇒ QR τυπωμένο στο εργοτάξιο που δεν ανοίγει | → `publicUrl`· χωρίς ρύθμιση **503 με όνομα**, ποτέ άχρηστος κωδικός |
+
+##### Α21.17.2 🏆 Έρευνα *(2026-09-14)* — και τι ΑΠΟΡΡΙΦΘΗΚΕ
+
+| Θέμα | Πηγή | Εδώ |
+|---|---|---|
+| LocalBusiness | **Google Search Central** (πρωτογενής): υποχρεωτικά **μόνο** `name` + `address`· `telephone` = συνιστώμενο | **κανένα** `telephone`/`email` — η επιλεξιμότητα δεν πληρώνει τίποτα, η Α21.16.1 μένει ακέραιη |
+| «Μόνο περιοχή» | Google απαιτεί `address` | **κανένας κόμβος καταστήματος**· ⛔ **ούτε `areaServed` από το `displayAddress`** — ελεύθερο κείμενο που μπορεί να κρατά την οδό της κατοικίας (§9.9 β) |
+| JSON-LD & XSS | Next.js docs + issues #46377/#79593 | διαφυγή `<` `>` `&` U+2028/9 — 🔴 **μετρημένο**: η πρώτη γραφή με τους χαρακτήρες **μέσα στην πηγή** κατέληξε σε κλάση regex που **δεν τους περιείχε**· πλέον χτίζονται από κωδικό σημείο, με άγκυρα «το απλό κενό δεν αγγίζεται» |
+| vCard | RFC 6350 (πρωτογενής) · iOS εισάγει αξιόπιστα 3.0 | **3.0** + `X-ABShowAs:COMPANY` · αναδίπλωση στα 75 **octets** χωρίς κοπή ελληνικού γράμματος · **χωρίς PHOTO** · **μία επαφή ανά κατάστημα** |
+| QR | ISO/IEC 18004 · πρακτική εκτύπωσης | προς τη **ζωντανή** σελίδα, ποτέ vCard-μέσα-στο-QR (δεν παλιώνει) · `print` = διόρθωση **Q**, ζώνη 4, **SVG** |
+| ⛔ Απορρίφθηκαν | πρόταση έρευνας | `?utm_source=qr` και «συγκεντρωτικός μετρητής αποκαλύψεων» — **σπάνε την αρχή #2** (κανένας μετρητής) |
+
+##### Α21.17.3 Τι φτιάχτηκε
+
+| Κομμάτι | Πού | Κλειδί σχεδιασμού |
+|---|---|---|
+| **JSON-LD** (SSR) | `pro/[alias]/page.tsx` → `lookupAgencyProfile` → `showcaseStructuredData` | `@graph`: `Organization` (+ `logo` **μόνο** για λογότυπο, `image` για πορτρέτο) · ένα `RealEstateAgent`/`LocalBusiness` ανά κατάστημα **με οδό** (τύπος από τον **ίδιο** κριτή `acceptsMandate`) · `openingHoursSpecification` με ομαδοποίηση ημερών. Βλάβη ⇒ **κανένα** script, η σελίδα αποδίδεται κανονικά |
+| **vCard** | `GET /api/pro/{cid}/locations/{lid}/vcard` | **μετρά ως εμφάνιση**: `withHeavyRateLimit`, ίδιες κεφαλίδες (`private-response-headers.ts`, κοινές με το `channels`), ταυτόσημο 404 / 503. Ο **ένας** αναγνώστης `revealLocationCard` τροφοδοτεί **και** το `revealLocationChannels` — δεν μπορούν να διαφωνήσουν για το «υπάρχει;». Χτίζεται στο αίτημα, ποτέ αποθηκευμένη |
+| «Αποθήκευση επαφής» | `ShowcaseContactCard` | σύνδεσμος λήψης μόνο όταν `channelKinds` μη κενό· διαδρομές πορτών σε `showcase-card-paths.ts` (το `channelRevealPath` μετακόμισε εκεί) |
+| **QR — δημόσια** | `ShowcaseShareDialog` στην κεφαλίδα της βιτρίνας | ο κωδικός γεννιέται **μόνο όταν ανοίξει** ο διάλογος (δυναμική εισαγωγή `qrcode`)· αντιγραφή συνδέσμου · `navigator.share` όπου υπάρχει · **δημοσιευμένο** ψευδώνυμο, όχι αυτό της διεύθυνσης |
+| **QR — ρυθμίσεις** | `ShowcaseQrPanel` στη σελίδα κάρτας (μόνο με δημοσιευμένη βιτρίνα) | λήψη **SVG** (εκτύπωση) / **PNG** 1024 px μέσω `triggerExportDownload` |
+| Κοινή γέννηση | `hooks/mandate/useShowcaseQr.ts` | μία γέννηση για δύο οθόνες (N.18) · `<img src=data:>` αντί για `dangerouslySetInnerHTML` |
+
+⚠️ **Ορατή αλλαγή σε ξένους καταναλωτές QR** (από τη σύγκλιση στην προδιαγραφή): 2FA `margin 2 → 4` (`screen`) · παρουσίες `M → Q`, `margin 2 → 4` (`print`) · πινακίδα DXF **αμετάβλητη** (`embedded`, margin 1 — το κελί έχει ήδη λευκό γύρω του).
+
+##### Α21.17.4 Αρχεία
+
+Νέα: `lib/seo/json-ld.ts` · `components/seo/JsonLdScript.tsx` · `lib/http/content-disposition.ts` · `lib/contact/vcard.ts` · `lib/qr/qr-code.ts` ·
+`lib/agency/{showcase-structured-data,showcase-vcard}.ts` · `app/api/pro/private-response-headers.ts` · `app/api/pro/[companyId]/locations/[locationId]/vcard/route.ts` ·
+`hooks/mandate/useShowcaseQr.ts` · `components/mandate/{ShowcaseShareDialog,ShowcaseQrPanel}.tsx` · `components/mandate/showcase-card-paths.ts` · 5 σουίτες jest.
+Αλλαγές: `pro/[alias]/page.tsx` · `services/mandate/showcase-card-reveal.ts` · `channels/route.ts` · `ChannelReveal` · `ShowcaseContactCard` · `AgencyProfileContent` ·
+`ShowcaseCardContent` · `LandingPage` · `api/download` · `api/attendance/qr/generate` · `EnterpriseTwoFactorService` · `dxf-viewer/.../qr-image-client` ·
+labels (`agency-directory-labels`, `agency-showcase-labels`) · `property-market.json` el/en · σουίτα `showcase-card-survival` (+Κ6).
+
+##### Α21.17.6 🔴 Η ΕΠΙΚΟΙΝΩΝΙΑ ΑΝΕΒΑΙΝΕΙ — ΚΑΙ Η «ΕΔΡΑ» ΓΙΝΕΤΑΙ ΜΙΑ *(2026-09-14, ερώτημα Giorgio με στιγμιότυπο)*
+
+**Το ερώτημα**: *«στο πορτοκαλί πλαίσιο πρέπει να εμφανίζονται email, τηλέφωνα και ιστοσελίδα;»* — δείχνοντας τη ζώνη
+κάτω από την ταυτότητα (αριθμός μητρώου · «Έδρα: Δεν δηλώθηκε»). **Τρία ευρήματα**, μετρημένα στον κώδικα:
+
+| # | Εύρημα | Θεραπεία |
+|---|---|---|
+| 1 | Η βιτρίνα του στιγμιότυπου **δεν έχει κάρτα** ⇒ το `ShowcaseContactCard` σιωπά· επικοινωνία **πουθενά** | η γραμμή «Επικοινωνία» **ψηλά** (απόφαση Giorgio) — σιωπή όταν δεν υπάρχει τίποτα |
+| 2 | 🔴 **Δύο πηγές «Έδρας»**: η γραμμή διάβαζε το παλιό `profile.place`, η κάρτα δική της έδρα ⇒ με κάρτα, «Δεν δηλώθηκε» πάνω και διεύθυνση κάτω | `PlaceFact` → **έδρα της κάρτας** (οδός ή «μόνο περιοχή»), εφεδρεία το `place` |
+| 3 | **Κανένα πεδίο ιστοσελίδας** σε βιτρίνα ή κάρτα | `PublicShowcase.website` — **του οργανισμού**, δημόσιο |
+
+**Η ιστοσελίδα, από άκρη σε άκρη**:
+- **Κριτής** `normalisePublicWebsite` (`lib/validation/email-validation.ts`, δίπλα στο `isValidUrl`/`ensureHttpUrl`): `www.x.gr` →
+  `https://www.x.gr/` · αρνείται σχήματα εκτός http(s), **διαπιστευτήρια μέσα στο URL** (`https://bank.gr@evil.example` — το αρχαιότερο
+  σχήμα phishing), host χωρίς τελεία, > 2048. 🔑 **Ο ΙΔΙΟΣ** φυλά γραφέα (`formWebsite` → ονομασμένη άρνηση
+  `agency-profile-card-website-invalid`) **και** ανώνυμο αναγνώστη (`readWebsite` → `null`, ποτέ σε `href`).
+- **Γραφέας**: η πράξη της κάρτας (`saveShowcaseCard` — ίδια συναλλαγή με τα `locations`)· **μεταφέρεται** από το `publishShowcase`
+  (**τέταρτος** καταναλωτής του μαθήματος Κ1 — άγκυρα **Κ7**).
+- **Φόρμα**: ένα πεδίο **πάνω** από τα καταστήματα (ανήκει στον οργανισμό)· η απάντηση του διακομιστή γράφει πίσω την κανονικοποιημένη μορφή.
+- **Σελίδα**: σύνδεσμος με τον **host** (`vafes.gr`), `rel="noopener noreferrer nofollow ugc"` (δήλωση τρίτου, όχι σύσταση).
+- **JSON-LD**: `url` = η ιστοσελίδα (αυτό σημαίνει `url` για τη Google)· το `@id` μένει η βιτρίνα. **vCard**: δύο `URL` — πρώτα η ιστοσελίδα, μετά η βιτρίνα.
+
+**Νέα αρχεία / αλλαγές**: `components/mandate/AgencyContactFacts.tsx` (`PlaceFact` **μετακόμισε** εκεί + `ContactFact`) · `SaveContactLink`
+εξήχθη στο `ShowcaseContactCard` (ένα σημείο, δύο καταναλωτές) · `Fact.value` προαιρετικό · σύρμα/διαδρομή/hook/πρόχειρο κάρτας ·
+`showcase-read(-primitives)` · `agency-profile.service` · verdict + labels + locales (3 κλειδιά κάρτας + 1 άρνηση).
+⚠️ **Κανένα νέο δημόσιο κλειδί** — «Έδρα»/«Επικοινωνία» υπήρχαν (`placeLabel` · `cardTitle`)· το slice του `/pro/[alias]` δεν μεγάλωσε.
+
+🔴 **Το ελάττωμα που έπιασε η άγκυρα, πριν το «done»**: η σύνοψη ανέβασε τα κουμπιά της έδρας, αλλά η κάρτα από κάτω τα
+έδειχνε **ξανά** — δύο «Εμφάνιση τηλεφώνου» για το ίδιο κατάστημα (**δύο εισιτήρια ορίου**), και η υπενθύμιση του μεσίτη
+έμενε **κάτω**, μακριά από το τηλέφωνο που ανέβηκε (`agency-showcase-listings` Ε2: *«Found multiple elements»*).
+**Θεραπεία**: `lib/agency/showcase-card-primary.ts` (`primaryChannelLocation` — έδρα με κανάλι, αλλιώς το πρώτο που έχει)
+ρωτιέται **και** από τη σύνοψη **και** από την κάρτα· το κατάστημα που ανέβηκε κρατά κάτω μόνο διεύθυνση/οδηγίες/ωράριο,
+και η υπενθύμιση `cardBrokerWritten` ανεβαίνει **μαζί** με το τηλέφωνο (ο κριτής `acceptsMandate` περνιέται, δεν ξαναρωτιέται).
+
+##### Α21.17.5 Επαλήθευση
+
+- **Jest**: **109 σουίτες / 1406 tests πράσινα** (`components/mandate` · `lib/agency` · `lib/contact` · `lib/qr` · `lib/seo` · `lib/http` ·
+  `services/mandate` · `services/two-factor` · `dxf-viewer/.../title-block` · `api/attendance`). Νέες: `vcard` (13) · `showcase-structured-data` (5) ·
+  `qr-code` (4) · `json-ld` (3) · `content-disposition` (3) · `showcase-card-survival` **Κ6**. ⚠️ Το `mandate-consent.test.ts` (Ν1) βγήκε κόκκινο
+  **μία** φορά και πράσινο στην επανάληψη **χωρίς αλλαγή** — ασταθές, άσχετο με τη φέτα· καταγράφεται, δεν κρύβεται.
+- **Πύλες**: 3.28 `jscpd:diff` (25 αρχεία) ✅ · 3.78 ✅ · 3.61 ✅ · 3.8 ✅ · 3.70 ✅ — 🔴 **η 3.70 έπιασε δικό μου λάθος**: το `asciiFilename` είχε
+  φύγει από το `api/download` αλλά έμενε στο `logger.info` (αδέσμευτο όνομα)· διορθώθηκε πριν το «done».
+- **3.34 `--measure`**: `/pro/[alias]` **5.451 / 5.507** · κάρτα **6.879 / 7.826** — εντός ταβανιού, **καμία** σφράγιση. ⚠️ Το `/pro/[alias]` έχει
+  πλέον **56 bytes** περιθώριο: η επόμενη προσθήκη κειμένου εκεί χρειάζεται απόφαση (υποσελίδα ή σφράγιση).
+- **Ζωντανά** (Giorgio, 14:05): διάλογος «Κοινοποίηση» με QR στο `/pro/comp_…` ✅.
+- **Μετά την Α21.17.6** (ιστοσελίδα · «Έδρα» από την κάρτα · «Επικοινωνία» ψηλά): jest **131 σουίτες — 128 πράσινες / 1762 tests**
+  (νέες άγκυρες: `public-website` · `showcase-card-primary` · survival **Κ7** · structured-data **Κ6** · draft ιστοσελίδας). 3.8 ✅ · 3.28 ✅ ·
+  3.70 ✅ · slices: κάρτα **7.379 / 7.826**, `/pro/[alias]` **5.451 / 5.507 — αμετάβλητο**.
+- 🔶 **3 σουίτες κόκκινες ΕΚΤΟΣ της φέτας** (`components/search`: `LandingShowcase` · `landing-tabpanel` · `landing-occupation-field`, 8 tests):
+  σκάνε στο `AgencyCard.tsx:302` (`isNationwide(undefined)`) και στο `where.adminId` του `showcase-where-voice` — **κανένα** από τα δύο δεν
+  αγγίχθηκε εδώ· το κοινό τους fixture (`showcase-profile-fixture.ts`) χτίζει βιτρίνα `as unknown as` **χωρίς `coverage`**. ⚠️ Δεν
+  επαληθεύτηκε σε καθαρό δέντρο (κοινό working tree, χωρίς stash).
+- ⚠️ **Όχι επαληθευμένα**: αναπαραγωγή route slices (ξαναγράφει κοινά αρχεία — απόφαση Giorgio) · Rich Results Test · «Αποθήκευση επαφής» σε iOS/Android · tsc (N.17).
 
 
 #### Α21.6 🔶 ΤΑ ΕΠΟΜΕΝΑ ΣΤΑΔΙΑ — ΔΗΛΩΜΕΝΑ, ΟΧΙ ΞΕΧΑΣΜΕΝΑ

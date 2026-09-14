@@ -66,18 +66,18 @@ import {
   usePublicAgencyListings,
   type PublicListingsState,
 } from '@/services/realtime/hooks/usePublicListings';
-import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 import { ShowcaseContactCard } from './ShowcaseContactCard';
+import { ShowcaseShareDialog } from './ShowcaseShareDialog';
+import { ContactFact, PlaceFact } from './AgencyContactFacts';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
 import { CoverageFact } from './AgencyCoverageFact';
-import { Fact } from './AgencyFact';
 
 /**
  * **Η διεύθυνση της φόρμας του Σ1** — γραμμένη **εδώ**, όπου ζει το κουμπί.
@@ -147,23 +147,7 @@ function Notice({
 }
 
 /** Πού **εδρεύει** — **μία** επιπλέον ανάγνωση, μόνο για τη μία βιτρίνα. */
-function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX.Element {
-  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
-  // ⚠️ `idle` όταν `place === null` — **δεν είναι φόρτωση**, δεν υπάρχει ερώτηση.
-  const place = usePublicPlace(profile.place);
-
-  // ⚠️ Ό,τι δεν είναι `found` γίνεται «δεν δηλώθηκε» — ΚΑΙ το `error`. Εδώ αυτό είναι
-  //    σωστό και όχι χαλάρωση του N.12: η περιοχή είναι **διακοσμητική** πληροφορία
-  //    της κάρτας, όχι η απάντηση της σελίδας. Η σελίδα απαντά «υπάρχει αυτό το
-  //    γραφείο;» — και αυτό το ξέρουμε ήδη. Ένα «σφάλμα» εδώ θα φώναζε για κάτι που
-  //    δεν εμποδίζει τίποτα.
-  const value =
-    place.state === 'found' && place.land.displayAddress !== null
-      ? place.land.displayAddress
-      : t(PROFILE_KEYS.placeUnknown);
-
-  return <Fact label={t(PROFILE_KEYS.placeLabel)} value={value} />;
-}
+// 🔑 Α21.17 — το `PlaceFact` μετακόμισε στο `AgencyContactFacts` (η «Έδρα» διαβάζει πλέον την κάρτα).
 
 /**
  * **ΤΙ ΕΧΕΙ ΣΤΗΝ ΑΓΟΡΑ** — η δεύτερη μισή της βιτρίνας (ADR-841 §7 Α6).
@@ -370,6 +354,10 @@ function ShowcaseView({
             {t(PROFILE_KEYS.publishedAt, { date: formatLongDate(profile.publishedAt) })}
           </p>
         </div>
+        {/* Α21.17 — QR + σύνδεσμος. Το ΔΗΜΟΣΙΕΥΜΕΝΟ ψευδώνυμο, όχι αυτό της διεύθυνσης (μπορεί να είναι `comp_*`). */}
+        <span className="ml-auto shrink-0">
+          <ShowcaseShareDialog alias={profile.alias} displayName={profile.displayName} />
+        </span>
       </header>
 
       <dl className="m-0 flex flex-col gap-4">
@@ -384,6 +372,8 @@ function ShowcaseView({
           <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
         ))}
         <PlaceFact profile={profile} />
+        {/* Α21.17 — η επικοινωνία ΨΗΛΑ (απόφαση Giorgio): ιστοσελίδα, εμφάνιση καναλιών, αποθήκευση επαφής. */}
+        <ContactFact profile={profile} canHoldMandate={canHoldMandate} />
         {/*
           🏆 **Φ5γ — Η ΓΡΑΜΜΗ ΔΕΧΕΤΑΙ ΤΙΣ ΑΓΓΕΛΙΕΣ, ΓΙΑΤΙ Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΜΟΝΗ ΤΗΣ.**
           Μέχρι σήμερα έλεγε *«Δηλώνει: Αττική»* ενώ από κάτω παρατίθενται ακίνητα στη
