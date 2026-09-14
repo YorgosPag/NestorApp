@@ -25,6 +25,8 @@
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import type { CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
+import type { WeeklyHoursDefect } from '@/lib/calendar/weekly-hours';
+import type { ShowcaseLocationRole } from '@/types/showcase-card';
 
 /** Το namespace της βιτρίνας — **`property-market`**, το ίδιο με τον κατάλογο. */
 export const SHOWCASE_NS = 'property-market';
@@ -133,7 +135,6 @@ export const SHOWCASE_KEYS = {
    */
   coverageOutlineTooManyVertices: `${K}.coverageOutlineTooManyVertices`,
   coverageOutlineTooWide: `${K}.coverageOutlineTooWide`,
-  noChannel: `${K}.noChannel`,
   publish: `${K}.publish`,
   publishing: `${K}.publishing`,
   publishedAt: `${K}.publishedAt`,
@@ -259,6 +260,81 @@ export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-mark-unknown-kind': `${K}.rejection.agency-profile-mark-unknown-kind`,
   'agency-profile-mark-without-showcase': `${K}.rejection.agency-profile-mark-without-showcase`,
   'agency-profile-mark-unpublishable': `${K}.rejection.agency-profile-mark-unpublishable`,
+  'agency-profile-card-without-showcase': `${K}.rejection.agency-profile-card-without-showcase`,
+  'agency-profile-card-too-many-locations': `${K}.rejection.agency-profile-card-too-many-locations`,
+  'agency-profile-card-two-headquarters': `${K}.rejection.agency-profile-card-two-headquarters`,
+  'agency-profile-card-too-many-channels': `${K}.rejection.agency-profile-card-too-many-channels`,
+  'agency-profile-card-phone-invalid': `${K}.rejection.agency-profile-card-phone-invalid`,
+  'agency-profile-card-email-invalid': `${K}.rejection.agency-profile-card-email-invalid`,
+  'agency-profile-card-hours-invalid': `${K}.rejection.agency-profile-card-hours-invalid`,
+  'agency-profile-card-street-incomplete': `${K}.rejection.agency-profile-card-street-incomplete`,
+};
+
+/**
+ * 🏆 **Η ΚΑΡΤΑ** (ADR-841 §7 Α21.16) — ξεχωριστός πίνακας, για τον λόγο του {@link SHOWCASE_MARK_KEYS}:
+ * είναι ξεχωριστή πράξη, με δική της διαδρομή (`PUT /api/agency-profile/card`).
+ */
+export const SHOWCASE_CARD_KEYS = {
+  title: `${K}.cardTitle`,
+  lead: `${K}.cardLead`,
+  needsShowcase: `${K}.cardNeedsShowcase`,
+  empty: `${K}.cardEmpty`,
+  addHeadquarters: `${K}.cardAddHeadquarters`,
+  addBranch: `${K}.cardAddBranch`,
+  removeLocation: `${K}.cardRemoveLocation`,
+  labelLabel: `${K}.cardLabelLabel`,
+  labelPlaceholder: `${K}.cardLabelPlaceholder`,
+  placeLabel: `${K}.cardPlaceLabel`,
+  placeHint: `${K}.cardPlaceHint`,
+  placeMissing: `${K}.cardPlaceMissing`,
+  publishStreet: `${K}.cardPublishStreet`,
+  publishStreetHint: `${K}.cardPublishStreetHint`,
+  streetLabel: `${K}.cardStreetLabel`,
+  numberLabel: `${K}.cardNumberLabel`,
+  postalCodeLabel: `${K}.cardPostalCodeLabel`,
+  phonesLabel: `${K}.cardPhonesLabel`,
+  phonePlaceholder: `${K}.cardPhonePlaceholder`,
+  extensionPlaceholder: `${K}.cardExtensionPlaceholder`,
+  addPhone: `${K}.cardAddPhone`,
+  removePhone: `${K}.cardRemovePhone`,
+  emailsLabel: `${K}.cardEmailsLabel`,
+  emailPlaceholder: `${K}.cardEmailPlaceholder`,
+  addEmail: `${K}.cardAddEmail`,
+  removeEmail: `${K}.cardRemoveEmail`,
+  /** 🔑 Λέει **γιατί** ο αριθμός δεν γράφεται στη σελίδα — αλλιώς μοιάζει με ελάττωμα. */
+  channelsHint: `${K}.cardChannelsHint`,
+  hoursLabel: `${K}.cardHoursLabel`,
+  hoursDeclare: `${K}.cardHoursDeclare`,
+  dayClosed: `${K}.cardDayClosed`,
+  addInterval: `${K}.cardAddInterval`,
+  removeInterval: `${K}.cardRemoveInterval`,
+  opensLabel: `${K}.cardOpensLabel`,
+  closesLabel: `${K}.cardClosesLabel`,
+  save: `${K}.cardSave`,
+  saving: `${K}.cardSaving`,
+  saved: `${K}.cardSaved`,
+  loadFailed: `${K}.cardLoadFailed`,
+  // ── Η ΠΟΡΤΑ ΚΑΙ Η ΕΠΙΣΤΡΟΦΗ — η κάρτα ζει σε ΔΙΚΗ ΤΗΣ υποσελίδα (Α21.16.7) ─────────
+  door: `${K}.cardDoor`,
+  doorHint: `${K}.cardDoorHint`,
+  backToShowcase: `${K}.cardBackToShowcase`,
+} as const;
+
+/** **Ρόλος καταστήματος → ετικέτα** — `Record` στο κλειστό σύνολο. */
+export const SHOWCASE_CARD_ROLE_KEYS: Record<ShowcaseLocationRole, string> = {
+  headquarters: `${K}.cardRoleHeadquarters`,
+  branch: `${K}.cardRoleBranch`,
+};
+
+/**
+ * **Ελάττωμα ωραρίου → κλειδί** — ο **ίδιος** κριτής (`weeklyHoursDefect`) που τρέχει ο
+ * διακομιστής, λεγμένος **πριν** την υποβολή. Εδώ η ανάδραση, εκεί η εγγύηση.
+ */
+export const SHOWCASE_CARD_HOURS_DEFECT_KEYS: Record<WeeklyHoursDefect, string> = {
+  'time-malformed': `${K}.cardHoursDefect.time-malformed`,
+  'interval-empty': `${K}.cardHoursDefect.interval-empty`,
+  'intervals-overlap': `${K}.cardHoursDefect.intervals-overlap`,
+  'too-many-intervals': `${K}.cardHoursDefect.too-many-intervals`,
 };
 
 /**

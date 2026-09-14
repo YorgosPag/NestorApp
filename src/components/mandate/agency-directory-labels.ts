@@ -16,6 +16,8 @@
  */
 
 import type { CredibilityNote } from '@/lib/professional/professional-credibility';
+import type { GreekPublicHolidayId } from '@/lib/calendar/greek-public-holidays';
+import type { ShowcaseLocationRole } from '@/types/showcase-card';
 
 /** Το namespace — **`property-market`**, το ίδιο με τη βιτρίνα και τις αγγελίες. */
 export const AGENCY_PUBLIC_NS = 'property-market';
@@ -254,13 +256,33 @@ export const PROFILE_KEYS = {
   publishedAt: `${P}.publishedAt`,
   requestCta: `${P}.requestCta`,
   requestHint: `${P}.requestHint`,
-  noChannel: `${P}.noChannel`,
-  // ⚠️ **ΔΥΟ ΚΕΙΜΕΝΑ ΓΙΑ ΤΗΝ ΙΔΙΑ ΑΠΟΥΣΙΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (ADR-841 §7 Α5): το
-  //    «γιατί δεν έχει τηλέφωνο» ισχύει για **κάθε** επαγγελματία, αλλά ο **λόγος**
-  //    δεν είναι ο ίδιος. Ο μεσιτικός επικαλείται τη **μεσιτική σύμβαση** — πρόταση
-  //    που σε γραφείο φυσικού αερίου είναι απλώς **ψευδής**. Ένα κοινό κείμενο θα
-  //    ήταν λάθος στη μία από τις δύο περιπτώσεις, ό,τι κι αν διαλέγαμε.
-  noChannelPro: `${P}.noChannelPro`,
+  // ── ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ (αντικατέστησε τα `noChannel`/`noChannelPro`) ────────
+  //
+  // 🔴 Τα δύο κείμενα *«δεν δημοσιεύει τηλέφωνο — επίτηδες»* **αφαιρέθηκαν, δεν έμειναν
+  //    ψέματα**: η απόφαση αναιρέθηκε (ADR-827 §9.8 τροποποίηση). Η διάκριση μεσίτη/μη-μεσίτη
+  //    **επιβιώνει** στο `cardBrokerWritten`, που λέγεται **μόνο** όταν `acceptsMandate`.
+  cardTitle: `${P}.cardTitle`,
+  cardHeadquarters: `${P}.cardHeadquarters`,
+  cardBranch: `${P}.cardBranch`,
+  cardAreaOnly: `${P}.cardAreaOnly`,
+  cardDirections: `${P}.cardDirections`,
+  cardShowPhone: `${P}.cardShowPhone`,
+  cardShowEmail: `${P}.cardShowEmail`,
+  cardRevealing: `${P}.cardRevealing`,
+  /** ⚠️ Τρία κείμενα αποτυχίας, τρεις θεραπείες: ξαναδοκίμασε · περίμενε · δεν υπάρχει πια. */
+  cardRevealFailed: `${P}.cardRevealFailed`,
+  cardRevealThrottled: `${P}.cardRevealThrottled`,
+  cardRevealGone: `${P}.cardRevealGone`,
+  cardHoursTitle: `${P}.cardHoursTitle`,
+  cardToday: `${P}.cardToday`,
+  cardClosedDay: `${P}.cardClosedDay`,
+  cardOpenNow: `${P}.cardOpenNow`,
+  cardOpensToday: `${P}.cardOpensToday`,
+  cardOpensLater: `${P}.cardOpensLater`,
+  cardClosedWeek: `${P}.cardClosedWeek`,
+  /** 🔴 **Όχι «κλειστό»** — αργία σημαίνει *«ίσως διαφέρει»*. */
+  cardHoliday: `${P}.cardHoliday`,
+  cardBrokerWritten: `${P}.cardBrokerWritten`,
   backToDirectory: `${P}.backToDirectory`,
   // ── ADR-841 §7 (Α6) — ΤΙ ΠΟΥΛΑ, ΟΧΙ ΜΟΝΟ ΠΟΙΟΣ ΕΙΝΑΙ ──────────────────────
   //
@@ -273,7 +295,33 @@ export const PROFILE_KEYS = {
   listingsLoading: `${P}.listingsLoading`,
   listingsEmpty: `${P}.listingsEmpty`,
   listingsEmptyHint: `${P}.listingsEmptyHint`,
-  /** Ίδιος λόγος με το `noChannelPro`: το «ζήτησέ του να αναλάβει» δεν ισχύει εδώ. */
+  /** Μη-μεσιτικός επαγγελματίας: το «ζήτησέ του να αναλάβει» δεν ισχύει εδώ. */
   listingsEmptyHintPro: `${P}.listingsEmptyHintPro`,
   listingsFailed: `${P}.listingsFailed`,
 } as const;
+
+/**
+ * **Αργία → κλειδί ονόματος** (ADR-841 §7 Α21.16). Πίνακας και όχι δυναμικό κλειδί: η
+ * CHECK 3.8 διαβάζει **κυριολεκτικά** ορίσματα, και ο τύπος κάνει τη **14η** αργία να μη
+ * μεταγλωττίζεται χωρίς όνομα.
+ */
+export const PROFILE_ROLE_KEYS: Record<ShowcaseLocationRole, string> = {
+  headquarters: `${P}.cardHeadquarters`,
+  branch: `${P}.cardBranch`,
+};
+
+export const PROFILE_HOLIDAY_KEYS: Record<GreekPublicHolidayId, string> = {
+  'new-year': `${P}.holiday.new-year`,
+  epiphany: `${P}.holiday.epiphany`,
+  'clean-monday': `${P}.holiday.clean-monday`,
+  'independence-day': `${P}.holiday.independence-day`,
+  'good-friday': `${P}.holiday.good-friday`,
+  'easter-sunday': `${P}.holiday.easter-sunday`,
+  'easter-monday': `${P}.holiday.easter-monday`,
+  'labour-day': `${P}.holiday.labour-day`,
+  'whit-monday': `${P}.holiday.whit-monday`,
+  assumption: `${P}.holiday.assumption`,
+  'ochi-day': `${P}.holiday.ochi-day`,
+  christmas: `${P}.holiday.christmas`,
+  'boxing-day': `${P}.holiday.boxing-day`,
+};
