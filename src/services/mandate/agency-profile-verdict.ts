@@ -118,6 +118,8 @@ export const AGENCY_PROFILE_REJECTIONS = [
   'agency-profile-card-hours-invalid',
   /** Οδός δηλωμένη **μισή** (οδός χωρίς Τ.Κ. ή το αντίστροφο) — δεν μαντεύουμε το υπόλοιπο. */
   'agency-profile-card-street-incomplete',
+  /** Ιστοσελίδα που **δεν** είναι δημόσια διεύθυνση (σχήμα, διαπιστευτήρια μέσα στο URL, host χωρίς τελεία) — Α21.17. */
+  'agency-profile-card-website-invalid',
 ] as const;
 
 export type AgencyProfileRejection = (typeof AGENCY_PROFILE_REJECTIONS)[number];

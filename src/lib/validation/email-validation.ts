@@ -62,6 +62,28 @@ export function ensureHttpUrl(url: string): string {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+/** Longest website address a public storefront accepts — beyond this it is not an address a person types. */
+export const MAX_PUBLIC_WEBSITE_LENGTH = 2048;
+
+/**
+ * **A website that may be shown to the public** — normalised, or `null` (ADR-841 §7 Α21.17).
+ *
+ * One judge for both sides of the storefront: the card writer rejects with a named reason, the
+ * anonymous reader drops the field. If they used different rules, a value accepted today could render
+ * tomorrow as a dead link — or a value rejected by the form could still reach the page from the database.
+ *
+ * 🔴 **Credentials inside the URL are refused** (`https://bank.gr@evil.example`): the text before `@`
+ * reads like the destination to a human and is ignored by the browser — the oldest phishing shape.
+ * A host without a dot (`https://intranet`) is not a public website either.
+ */
+export function normalisePublicWebsite(raw: string): string | null {
+  const candidate = ensureHttpUrl(raw);
+  if (candidate === '' || candidate.length > MAX_PUBLIC_WEBSITE_LENGTH || !isValidUrl(candidate)) return null;
+  const url = new URL(candidate);
+  if (url.username !== '' || url.password !== '' || !url.hostname.includes('.')) return null;
+  return url.toString();
+}
+
 /**
  * Extract a web address from free text — scheme, or a bare `www.` host.
  *

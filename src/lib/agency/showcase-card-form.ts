@@ -12,7 +12,7 @@
  * μπορεί να διαφωνήσει με τα κανάλια (ιδιωτικό): παράγεται από **την ίδια** λίστα, μία φορά.
  */
 
-import { isValidEmail } from '@/lib/validation/email-validation';
+import { isValidEmail, normalisePublicWebsite } from '@/lib/validation/email-validation';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { normalisePhone } from '@/lib/contact/channel-phone';
 import { normalizeWeeklyHours, weeklyHoursDefect } from '@/lib/calendar/weekly-hours';
@@ -142,6 +142,16 @@ export function formCard(
     channels[id] = formed.channels;
   }
   return { locations, channels: { locations: channels } };
+}
+
+/**
+ * **Η ιστοσελίδα του οργανισμού** (Α21.17): κενή ⇒ `null`· άκυρη ⇒ **ονομασμένη** άρνηση — ποτέ σιωπηλή
+ * απόρριψη, αλλιώς ο άνθρωπος θα έβλεπε τη διεύθυνσή του να εξαφανίζεται μετά το «Αποθήκευση».
+ * Ο **ίδιος** κριτής (`normalisePublicWebsite`) φυλά και τον αναγνώστη.
+ */
+export function formWebsite(raw: string | null): string | null | Rejected {
+  if (raw === null || raw.trim() === '') return null;
+  return normalisePublicWebsite(raw) ?? { reason: 'agency-profile-card-website-invalid' };
 }
 
 export { isRejected as isCardRejection };

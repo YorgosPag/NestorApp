@@ -129,6 +129,8 @@ export interface ShowcaseLocationWire {
 /** **Ολόκληρη η κάρτα** — `PUT` αντικαθιστά, όπως η δήλωση της βιτρίνας. */
 export interface ShowcaseCardWire {
   readonly locations: readonly ShowcaseLocationWire[];
+  /** Η ιστοσελίδα **του οργανισμού** (Α21.17), όπως πληκτρολογήθηκε — `null` = καμία. Κρίνεται στον διακομιστή. */
+  readonly website: string | null;
 }
 
 /** Ό,τι διαβάζει πίσω **ο ιδιοκτήτης** — δημόσιο + ιδιωτικό, για να επεξεργαστεί. */
