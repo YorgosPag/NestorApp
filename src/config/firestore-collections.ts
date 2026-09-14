@@ -184,6 +184,26 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_SHOWCASE_EMAIL_CONFIRMATIONS_COLLECTION || 'showcase_email_confirmations',
 
   /**
+   * 🏆 ADR-841 §7 Α21.20 — **ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΣΥΜΒΑΝΤΩΝ ΠΑΡΑΔΟΣΗΣ** (delivered · failed · deferred ·
+   * complained). Κλειδί: `edev_<πάροχος>_<sha256 ταυτότητας συμβάντος>` — ο πάροχος ξαναστέλνει για
+   * ώρες, και το ντετερμινιστικό κλειδί κάνει την επανάληψη **ακίνδυνη**.
+   *
+   * 🔴 **`deny_all`**: κρατά διευθύνσεις παραληπτών **όλης** της πλατφόρμας. Αναλλοίωτο — γράφεται μία φορά.
+   */
+  EMAIL_DELIVERY_EVENTS:
+    process.env.NEXT_PUBLIC_EMAIL_DELIVERY_EVENTS_COLLECTION || 'email_delivery_events',
+
+  /**
+   * 🏆 ADR-841 §7 Α21.20 — **ΖΕΙ ΑΥΤΟ ΤΟ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟ;** Προβολή του ημερολογίου ανά διεύθυνση.
+   * Κλειδί: `erst_<sha256 κανονικοποιημένης διεύθυνσης>`.
+   *
+   * 🔑 **Ανά διεύθυνση, όχι ανά μισθωτή**: η ύπαρξη ενός γραμματοκιβωτίου είναι γεγονός του κόσμου —
+   * ίδια απάντηση για κάθε γραφείο που το δημοσιεύει. `deny_all`.
+   */
+  EMAIL_RECIPIENT_STANDING:
+    process.env.NEXT_PUBLIC_EMAIL_RECIPIENT_STANDING_COLLECTION || 'email_recipient_standing',
+
+  /**
    * 🏆 ADR-841 §7 Α23 — **ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΓΕΜΗ**. Κλειδί: `companyId`.
    *
    * 🔴 **ΓΙΑΤΙ ΟΧΙ ΣΤΟ `accounting_settings/{companyId}`** (το προφίλ του οργανισμού, ADR-439):

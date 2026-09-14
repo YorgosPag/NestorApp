@@ -297,6 +297,21 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-841 §7 Α21.20 — ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΣΥΜΒΑΝΤΩΝ ΠΑΡΑΔΟΣΗΣ. Διευθύνσεις όλης της πλατφόρμας· ο πειρασμός
+    // είναι πελάτης να **γράψει** ψεύτικο bounce και να σβήσει ξένο σήμα. Η σουίτα σπέρνει συμβάν.
+    collection: 'email_delivery_events',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/email-delivery-events.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-841 §7 Α21.20 — ΚΑΤΑΣΤΑΣΗ ΑΝΑ ΔΙΕΥΘΥΝΣΗ. Γεγονός του κόσμου, όχι μισθωτή· γράφει μόνο το webhook.
+    collection: 'email_recipient_standing',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/email-recipient-standing.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-841 §7 Α23 — ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΓΕΜΗ. Ο πειρασμός εδώ είναι ο πιο επικίνδυνος της
     // οικογένειας: ο ιδιοκτήτης να **γράψει** μόνος του την απάντηση της αρχής, δηλαδή σήμα
     // «επαληθευμένη από ΓΕΜΗ» χωρίς ερώτηση. Η σουίτα σπέρνει έγγραφο του **ίδιου** μισθωτή.
