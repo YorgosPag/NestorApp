@@ -878,6 +878,8 @@ function getLabelKeyForPath(path: string): string {
     'settings/shortcuts': 'shortcuts',
     'settings/company': 'company_settings',
     'settings/agency-profile': 'agency_showcase',
+    // ADR-841 §7 Α21.16 — η κάρτα είναι υποσελίδα της βιτρίνας: ίδια ετικέτα, ίδιο ενεργό στοιχείο.
+    'settings/agency-profile/card': 'agency_showcase',
 
     // Admin paths
     'admin/ai-inbox': 'ai_inbox',

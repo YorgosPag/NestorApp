@@ -107,3 +107,10 @@ export const MANDATE_INBOX_ROUTE = '/listings/mandates/requests' as const;
  * *(CHECK 3.61)*.
  */
 export const AGENCY_SHOWCASE_ROUTE = '/settings/agency-profile' as const;
+
+/**
+ * **Η ΕΠΑΓΓΕΛΜΑΤΙΚΗ ΚΑΡΤΑ** — υποσελίδα της βιτρίνας (ADR-841 §7 Α21.16.7): δική της πράξη, δικό
+ * της «Αποθήκευση», δικό της route slice. Παράγεται από το {@link AGENCY_SHOWCASE_ROUTE}, ώστε μια
+ * μετακόμιση της βιτρίνας να μην αφήσει την κάρτα σε 404.
+ */
+export const AGENCY_SHOWCASE_CARD_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/card` as const;

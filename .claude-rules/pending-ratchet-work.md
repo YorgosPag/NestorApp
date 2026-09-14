@@ -2,6 +2,23 @@
 
 **STATUS: ACTIVE**
 
+- 🔶 **14/09 — URL ΣΥΝΘΕΣΗΣ GMAIL ΑΝΤΙΓΡΑΜΜΕΝΟ ΣΕ 5 ΑΡΧΕΙΑ, ΜΕ ΠΑΡΑΛΛΑΓΕΣ (ADR-841 §7 Α21.16)**
+
+  **Μετρημένο** κατά το audit της κάρτας. `https://mail.google.com/mail/?view=cm…` ζει σε
+  `UniversalClickableField.tsx:142` · `ErrorBoundary/email-compose.ts:27` ·
+  `property-showcase/EmailProviderPicker.tsx:20` · `compositions/ContactCard/ContactCard.tsx:111` ·
+  `email-templates/base-email-template.ts:381` — **με και χωρίς `fs=1`, με και χωρίς
+  `encodeURIComponent`** (το `ContactCard` παρεμβάλλει ωμό email).
+  **Θεραπεία**: `EMAIL_COMPOSE_URLS` δίπλα στο νέο `lib/geo/map-links.ts` (το αδελφό του, για
+  χάρτες, κεντρικοποιήθηκε στην Α21.16) — ή `lib/contact/compose-links.ts`. 5 αρχεία ⇒ δική του φέτα.
+
+- 🔶 **14/09 — `config/business-hours.ts` ΔΕΝ ΜΙΛΑ ΤΟ ΝΕΟ `WeeklyHours` (ADR-841 §7 Α21.16)**
+
+  Το booking του Telegram κρατά **ένα** διάστημα/ημέρα σε δικό του σχήμα· το `lib/calendar/weekly-hours.ts`
+  (σπαστό ωράριο, ώρα Ελλάδας, αργίες) είναι πλέον ο κανονικός τύπος. Δεν είναι διπλότυπο **συμπεριφοράς**
+  σήμερα (άλλη σημασία: slots κράτησης), αλλά δεύτερο λεξιλόγιο «ωραρίου». **Θεραπεία**: το config να
+  δηλώνει `WeeklyHours` και το `generateTimeSlots` να το διαβάζει + `greekPublicHolidayOn` για τις αργίες.
+
 - 🔴 **13/09 — Η ΣΙΩΠΗ ΤΟΥ AUDIT: `.catch(() => {})` ΑΝΤΙΓΡΑΜΜΕΝΟ ΣΕ 25 CLIENTS (ADR-852 §4.9)**
 
   **Μετρημένο** κατά τη Φ4. Κάθε `*-audit-client.ts` γράφει **το δικό του**
