@@ -779,6 +779,9 @@
     "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",
     "finalTitle": "{agency} did not take on the listing \"{title}\""
   },
+  "cardEmailReturned": {
+    "title": "The email {email} on your card returned — the “Email confirmed” badge was removed"
+  },
   "quoteNotifications": {
     "quoteScanCompleted": "Quote scan completed: {vendorName}",
     "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",

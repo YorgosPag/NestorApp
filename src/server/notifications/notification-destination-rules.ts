@@ -44,6 +44,7 @@ import { listingMatchDestination } from '@/services/demand/listing-match-notifie
 import { locatePlace } from '@/services/demand/place-interest.service';
 import { mandateDecisionDestination } from '@/services/mandate/mandate-decision-notifier.service';
 import { mandateRequestDestination } from '@/services/mandate/mandate-request-notifier.service';
+import { cardEmailReturnedDestination } from '@/services/mandate/showcase-email-return.service';
 
 import type {
   ExpectedDestination,
@@ -91,6 +92,9 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(mandateRequestDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED]: mandateDecidedRule,
+  // ADR-841 §7 Α21.20 — η οντότητα είναι το γραφείο· η πόρτα, η κάρτα του στον χώρο του.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: async (_db, _notification, entityId) =>
+    expected(cardEmailReturnedDestination(entityId)),
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

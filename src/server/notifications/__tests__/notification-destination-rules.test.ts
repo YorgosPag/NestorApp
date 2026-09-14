@@ -111,6 +111,16 @@ describe('Ε — εντολές', () => {
     });
   });
 
+  it('🔴 Ε4 — email κάρτας επέστρεψε (Α21.20) ⇒ η κάρτα, στον χώρο του ΓΡΑΦΕΙΟΥ-οντότητας (ο κανόνας ΕΚΤΕΛΕΙΤΑΙ, όχι μόνο μετριέται)', async () => {
+    expect(await expectedDestinationOf(world(), notification('properties.cardEmailReturned', 'comp_9c7c'))).toEqual({
+      kind: 'expected',
+      destination: {
+        actions: [{ id: 'view', label: 'view', url: '/settings/agency-profile/card' }],
+        workspace: { kind: 'org', companyId: 'comp_9c7c' },
+      },
+    });
+  });
+
   it('Ε3 — απόφαση για αγγελία που δεν υπάρχει πια ⇒ entity-absent', async () => {
     expect(await expectedDestinationOf(world(), notification('properties.mandateDecided', 'ownp_gone'))).toEqual({
       kind: 'unresolvable',
@@ -139,8 +149,9 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
     });
   });
 
-  it('Λ3 — οι τέσσερις τύποι της βάσης (μετρημένοι 2026-09-11) έχουν κανόνα', () => {
+  it('Λ3 — οι τέσσερις τύποι της βάσης (μετρημένοι 2026-09-11) + η επιστροφή email κάρτας (Α21.20) έχουν κανόνα', () => {
     expect([...RULED_EVENT_TYPES].sort()).toEqual([
+      'properties.cardEmailReturned',
       'properties.demandInterest',
       'properties.demandListingMatch',
       'properties.mandateDecided',
