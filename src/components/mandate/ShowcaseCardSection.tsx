@@ -17,7 +17,10 @@
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { MAX_PUBLIC_WEBSITE_LENGTH } from '@/lib/validation/email-validation';
 import { useShowcaseCard, type ShowcaseCardFailure } from '@/hooks/mandate/useShowcaseCard';
 import {
   draftOfLocation,
@@ -84,6 +87,28 @@ function CardFooter({
   );
 }
 
+/** **Η ιστοσελίδα του οργανισμού** (Α21.17) — μία, πάνω από τα καταστήματα, γιατί ανήκει στον οργανισμό. */
+function WebsiteField({ value, onChange }: { readonly value: string; readonly onChange: (next: string) => void }): React.ReactElement {
+  const { t } = useTranslation([SHOWCASE_NS]);
+  return (
+    <span className="flex flex-col gap-1">
+      <Label htmlFor="showcase-card-website">{t(SHOWCASE_CARD_KEYS.websiteLabel)}</Label>
+      <Input
+        id="showcase-card-website"
+        type="url"
+        inputMode="url"
+        autoComplete="url"
+        maxLength={MAX_PUBLIC_WEBSITE_LENGTH}
+        aria-describedby="showcase-card-website-hint"
+        placeholder={t(SHOWCASE_CARD_KEYS.websitePlaceholder)}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <span id="showcase-card-website-hint" className="text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.websiteHint)}</span>
+    </span>
+  );
+}
+
 function useCardDrafts(loaded: readonly ShowcaseLocationDraft[] | null) {
   const [drafts, setDrafts] = React.useState<readonly ShowcaseLocationDraft[]>([]);
   // 🔑 Κάθε νέα απάντηση του διακομιστή (φόρτωση ή αποθήκευση) γίνεται η αλήθεια της φόρμας —
@@ -106,11 +131,17 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
     [load],
   );
   const { drafts, setDrafts, patch } = useCardDrafts(loaded);
+  const [website, setWebsite] = React.useState('');
+  // 🔑 Ίδιος κανόνας με τα πρόχειρα: κάθε απάντηση του διακομιστή γίνεται η αλήθεια της φόρμας —
+  //    η αποθήκευση επιστρέφει την **κανονικοποιημένη** διεύθυνση (`www.x.gr` → `https://www.x.gr/`).
+  React.useEffect(() => {
+    if (load.phase === 'loaded') setWebsite(load.website ?? '');
+  }, [load]);
   const [missingPlace, setMissingPlace] = React.useState(false);
   const failureText = useFailureText(failure);
 
   const onSave = () => {
-    const formed = wireOfDrafts(drafts);
+    const formed = wireOfDrafts(drafts, website);
     setMissingPlace('missingPlaceIndex' in formed);
     if ('wire' in formed) void save(formed.wire);
   };
@@ -127,6 +158,7 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
       {load.phase === 'failed' ? <p role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_CARD_KEYS.loadFailed)}</p> : null}
       {load.phase === 'loaded' ? (
         <>
+          <WebsiteField value={website} onChange={setWebsite} />
           {drafts.length === 0 ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.empty)}</p> : null}
           {drafts.map((draft) => (
             <ShowcaseLocationEditor key={draft.key} draft={draft} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />

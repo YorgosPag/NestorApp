@@ -25,6 +25,7 @@ import {
   SHOWCASE_NS,
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseCardSection } from './ShowcaseCardSection';
+import { ShowcaseQrPanel } from './ShowcaseQrPanel';
 
 // 🧩 ADR-744 §15 — PER-ROUTE SLICE, εγγεγραμμένο στο **client** component (όχι στο `page.tsx`):
 //    τα Server και Client δέντρα έχουν ξεχωριστούς γράφους module (CHECK 3.51).
@@ -51,6 +52,8 @@ export function ShowcaseCardContent(): React.ReactElement {
       {state.phase === 'published' || state.phase === 'not-published' ? (
         <ShowcaseCardSection enabled={state.phase === 'published'} />
       ) : null}
+      {/* Α21.17 — ο κωδικός δείχνει στη ΖΩΝΤΑΝΗ βιτρίνα ⇒ υπάρχει μόνο όταν υπάρχει βιτρίνα (ποτέ πόρτα σε τοίχο). */}
+      {state.phase === 'published' ? <ShowcaseQrPanel alias={state.profile.alias} /> : null}
     </section>
   );
 }

@@ -32,7 +32,8 @@ export function Fact({
   children,
 }: {
   readonly label: string;
-  readonly value: string;
+  /** Προαιρετικό (Α21.17): η γραμμή «Επικοινωνία» είναι **πράξεις** (κουμπιά, σύνδεσμοι), όχι κείμενο. */
+  readonly value?: string;
   readonly hint?: string;
   readonly children?: React.ReactNode;
 }): React.JSX.Element {
@@ -40,7 +41,7 @@ export function Fact({
     <div className="flex flex-col gap-0.5">
       <dt className="m-0 text-sm font-medium text-foreground">{label}</dt>
       <dd className="m-0 flex flex-col gap-2 text-sm text-muted-foreground">
-        <span>{value}</span>
+        {value !== undefined ? <span>{value}</span> : null}
         {/* 🧹 **Boy scout (N.0.2)**: το `hint` ήταν `<p>` **αδελφός** του `<dd>` — δηλαδή
             ακριβώς η άκυρη δομή που περιγράφει το σχόλιο παραπάνω, στο ίδιο component
             που τη γράφει. Μπήκε μέσα στο `<dd>`, όπου του επιτρέπεται να ζει. */}

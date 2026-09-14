@@ -25,6 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { splitTextIntoLinkSegments } from '@/lib/validation/text-link-segments';
 import type { RevealedChannels, ShowcaseChannelKind } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
+import { channelRevealPath } from './showcase-card-paths';
 
 type RevealState =
   | { readonly phase: 'idle' }
@@ -33,11 +34,6 @@ type RevealState =
   | { readonly phase: 'throttled' }
   | { readonly phase: 'gone' }
   | { readonly phase: 'failed' };
-
-/** Η διεύθυνση της πόρτας — `encodeURIComponent`, γιατί οι ταυτότητες ταξιδεύουν στη διαδρομή. */
-export function channelRevealPath(companyId: string, locationId: string): string {
-  return `/api/pro/${encodeURIComponent(companyId)}/locations/${encodeURIComponent(locationId)}/channels`;
-}
 
 /**
  * 🔑 Το `mailto:` το χτίζει **ο ΕΝΑΣ κατασκευαστής** του ADR-751 (`text-link-segments`), ποτέ
