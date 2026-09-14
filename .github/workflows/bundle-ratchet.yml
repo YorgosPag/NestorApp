@@ -113,6 +113,8 @@ jobs:
           # ADR-848 §10 — ίδια τιμή με το `docker-build.yml`: το bundle που μετράμε οφείλει
           # να είναι το bundle που στέλνουμε (το Next ψήνει τις `NEXT_PUBLIC_*` στο build).
           NEXT_PUBLIC_APP_URL: https://nestorconstruct.gr
+          # ADR-860 §Ε0 — ίδια γραμμή με το `docker-build.yml` (CHECK 3.57 ισοτιμία env).
+          NEXT_PUBLIC_DEPLOYMENT_ID: ${{ github.sha }}
 
       - name: 📦 Bundle-size ratchet (seed or check)
         run: |
