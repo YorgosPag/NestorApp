@@ -329,6 +329,17 @@ export class FakeTransaction {
     });
   }
 
+  /**
+   * ⚠️ **ΠΡΟΣΤΕΘΗΚΕ (ADR-841 §7 Α21.16)** — η απόσυρση βιτρίνας σβήνει πλέον προφίλ **και**
+   * κανάλια κάρτας **ατομικά**. Χωρίς αυτό, κάθε `tx.delete` έσκαγε μέσα στον `catch` του
+   * γραφέα και η απόσυρση αναφερόταν `failed` — κόκκινο για λόγο άσχετο με ό,τι ρωτά η άγκυρα.
+   */
+  delete(ref: FakeDocRef): void {
+    this.writes.push(() => {
+      void ref.delete();
+    });
+  }
+
   /** Είναι ακόμη αληθινό ό,τι διαβάσαμε; */
   readsAreStillValid(): boolean {
     for (const [key, seen] of this.reads) {

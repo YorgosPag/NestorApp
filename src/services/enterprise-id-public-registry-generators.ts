@@ -139,6 +139,15 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   generateFirstContactId(): string { return this.generateId(P.FIRST_CONTACT).id; }
 
   /**
+   * ADR-841 §7 Α21.16 — id ενός **ΚΑΤΑΣΤΗΜΑΤΟΣ ΤΗΣ ΚΑΡΤΑΣ** (`sloc_*`).
+   *
+   * 🔴 **ΔΙΑΚΟΜΙΣΤΗΣ ΜΟΝΟ**: το `agency_profiles` είναι `write: false`, και η ταυτότητα
+   * κλειδώνει τα **ιδιωτικά** κανάλια στο `showcase_card_channels`. Ταυτότητα από τον πελάτη
+   * θα μπορούσε να δείξει σε κανάλια **άλλου** καταστήματος.
+   */
+  generateShowcaseLocationId(): string { return this.generateId(P.SHOWCASE_LOCATION).id; }
+
+  /**
    * **Η πρόσκληση** (ADR-844) — η δήλωση που περιμένει απόδειξη καναλιού.
    *
    * ⚠️ **Δεν είναι πράξη**, και γι' αυτό δεν είναι `fcon`: η πράξη μετριέται από
