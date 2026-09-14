@@ -45,12 +45,22 @@ function readChannelKinds(raw: unknown): readonly ShowcaseChannelKind[] {
   return kinds.filter((kind) => raw.includes(kind));
 }
 
+/**
+ * **Η νεότερη επιβεβαίωση email** (Α21.18) — μόνο αν το κατάστημα **έχει** email και η ημερομηνία
+ * διαβάζεται. Σήμα χωρίς κανάλι θα έλεγε «λαμβάνει» για γραμματοκιβώτιο που δεν δημοσιεύεται.
+ */
+function readEmailConfirmedAt(raw: unknown, kinds: readonly ShowcaseChannelKind[]): string | null {
+  const at = text(raw);
+  return at !== null && kinds.includes('email') && Number.isFinite(Date.parse(at)) ? at : null;
+}
+
 function readLocation(raw: unknown): ShowcaseLocation | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const source = raw as Record<string, unknown>;
   const id = text(source.id);
   const place = readPlace(source.place);
   if (id === null || place === null || !isRole(source.role)) return null;
+  const channelKinds = readChannelKinds(source.channelKinds);
 
   return {
     id,
@@ -60,7 +70,8 @@ function readLocation(raw: unknown): ShowcaseLocation | null {
     position: readPosition(source.position),
     street: readStreetLine(source.street),
     hours: readWeeklyHours(source.hours),
-    channelKinds: readChannelKinds(source.channelKinds),
+    channelKinds,
+    emailConfirmedAt: readEmailConfirmedAt(source.emailConfirmedAt, channelKinds),
   };
 }
 

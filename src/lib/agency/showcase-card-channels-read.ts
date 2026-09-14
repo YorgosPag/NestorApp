@@ -8,9 +8,24 @@
  */
 
 import { text } from '@/lib/agency/showcase-read-primitives';
-import type { ShowcaseLocationChannels, ShowcasePhone } from '@/types/showcase-card';
+import { carryConfirmations } from '@/lib/agency/showcase-email-confirmation-rules';
+import type { ShowcaseEmailConfirmation, ShowcaseLocationChannels, ShowcasePhone } from '@/types/showcase-card';
 
-export const NO_CHANNELS: ShowcaseLocationChannels = { phones: [], emails: [] };
+export const NO_CHANNELS: ShowcaseLocationChannels = { phones: [], emails: [], emailConfirmations: [] };
+
+/** Οι αποθηκευμένες επιβεβαιώσεις (Α21.18) — απούσες σε κάθε έγγραφο πριν τη φέτα ⇒ `[]`. */
+function readConfirmations(raw: unknown): readonly ShowcaseEmailConfirmation[] {
+  if (!Array.isArray(raw)) return [];
+  const confirmations: ShowcaseEmailConfirmation[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const row = entry as Record<string, unknown>;
+    const email = text(row.email);
+    const confirmedAt = text(row.confirmedAt);
+    if (email !== null && confirmedAt !== null) confirmations.push({ email, confirmedAt });
+  }
+  return confirmations;
+}
 
 function readPhones(raw: unknown): readonly ShowcasePhone[] {
   if (!Array.isArray(raw)) return [];
@@ -36,5 +51,7 @@ export function readLocationChannels(raw: unknown, locationId: string): Showcase
   const emails = Array.isArray(row.emails)
     ? row.emails.map(text).filter((email): email is string => email !== null)
     : [];
-  return { phones: readPhones(row.phones), emails };
+  // ⚠️ Ο **ίδιος** κανόνας με τον γραφέα: επιβεβαίωση διεύθυνσης που δεν είναι πια στα `emails`
+  //    δεν διαβάζεται — χειροκίνητη επεξεργασία στη μέση δεν γεννά σήμα χωρίς διεύθυνση.
+  return { phones: readPhones(row.phones), emails, emailConfirmations: carryConfirmations(readConfirmations(row.emailConfirmations), emails) };
 }

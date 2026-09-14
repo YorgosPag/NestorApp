@@ -15,6 +15,7 @@ function location(id: string, overrides: Partial<ShowcaseLocation> = {}): Showca
     street: null,
     hours: null,
     channelKinds: ['phone'],
+    emailConfirmedAt: null,
     ...overrides,
   };
 }

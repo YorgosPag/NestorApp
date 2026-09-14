@@ -19,7 +19,8 @@ const OWNED: OwnedShowcaseLocation = {
   street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
   hours: null,
   channelKinds: ['phone'],
-  channels: { phones: [{ e164: '+302310123456', extension: '5' }], emails: [] },
+  emailConfirmedAt: null,
+  channels: { phones: [{ e164: '+302310123456', extension: '5' }], emails: [], emailConfirmations: [] },
 };
 
 describe('showcase-card-draft', () => {

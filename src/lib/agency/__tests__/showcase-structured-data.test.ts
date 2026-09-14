@@ -38,6 +38,7 @@ function location(overrides: Partial<ShowcaseLocation> = {}): ShowcaseLocation {
     street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
     hours: null,
     channelKinds: ['phone', 'email'],
+    emailConfirmedAt: null,
     ...overrides,
   };
 }

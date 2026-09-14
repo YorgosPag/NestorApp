@@ -86,7 +86,7 @@ describe('vcardFileName', () => {
 });
 
 describe('showcaseLocationVCard', () => {
-  const channels = { phones: [{ e164: '+302310123456', extension: null }], emails: [] };
+  const channels = { phones: [{ e164: '+302310123456', extension: null }], emails: [], emailConfirmations: [] };
 
   it('οδός που ΔΕΝ δημοσιεύτηκε ⇒ καμία διεύθυνση· χωρίς ιστοσελίδα και διεύθυνση βιτρίνας ⇒ κανένα URL', () => {
     const card = showcaseLocationVCard({ displayName: 'Α', website: null }, { label: null, street: null }, channels, null);

@@ -17,6 +17,7 @@ const STORED_LOCATION = {
   street: { street: 'Κομνηνών', number: '4', postalCode: '55131' },
   hours: null,
   channelKinds: ['email', 'phone', 'fax'],
+  emailConfirmedAt: '2026-09-10T08:00:00.000Z',
 };
 
 describe('readLocations', () => {
@@ -46,6 +47,13 @@ describe('readLocations', () => {
     expect(readLocations(many)).toHaveLength(10);
   });
 
+  it('🔴 επιβεβαίωση χωρίς κανάλι email ή με άκυρη ημερομηνία → null (Α21.18)', () => {
+    const [withoutEmail] = readLocations([{ ...STORED_LOCATION, channelKinds: ['phone'] }]);
+    const [garbage] = readLocations([{ ...STORED_LOCATION, emailConfirmedAt: 'χθες' }]);
+    const [legacy] = readLocations([{ ...STORED_LOCATION, emailConfirmedAt: undefined }]);
+    expect([withoutEmail.emailConfirmedAt, garbage.emailConfirmedAt, legacy.emailConfirmedAt]).toEqual([null, null, null]);
+  });
+
   it('μισή οδός → null («μόνο περιοχή»), ποτέ μισή διεύθυνση', () => {
     expect(readStreetLine({ street: 'Κομνηνών', number: '4', postalCode: '' })).toBeNull();
   });
@@ -53,8 +61,28 @@ describe('readLocations', () => {
 
 describe('readLocationChannels', () => {
   it('απόν έγγραφο / κατάστημα → κενά κανάλια', () => {
-    expect(readLocationChannels(undefined, 'sloc_1')).toEqual({ phones: [], emails: [] });
-    expect(readLocationChannels({ locations: {} }, 'sloc_1')).toEqual({ phones: [], emails: [] });
+    const empty = { phones: [], emails: [], emailConfirmations: [] };
+    expect(readLocationChannels(undefined, 'sloc_1')).toEqual(empty);
+    expect(readLocationChannels({ locations: {} }, 'sloc_1')).toEqual(empty);
+  });
+
+  it('🔴 επιβεβαίωση διεύθυνσης που ΔΕΝ είναι πια στα emails δεν διαβάζεται (Α21.18)', () => {
+    const raw = {
+      locations: {
+        sloc_1: {
+          phones: [],
+          emails: ['a@b.gr'],
+          emailConfirmations: [
+            { email: 'a@b.gr', confirmedAt: '2026-09-10T08:00:00.000Z' },
+            { email: 'gone@b.gr', confirmedAt: '2026-09-11T08:00:00.000Z' },
+            { email: 'a@b.gr' },
+          ],
+        },
+      },
+    };
+    expect(readLocationChannels(raw, 'sloc_1').emailConfirmations).toEqual([
+      { email: 'a@b.gr', confirmedAt: '2026-09-10T08:00:00.000Z' },
+    ]);
   });
 
   it('διαβάζει μόνο το ζητούμενο κατάστημα', () => {
@@ -67,6 +95,7 @@ describe('readLocationChannels', () => {
     expect(readLocationChannels(raw, 'sloc_1')).toEqual({
       phones: [{ e164: '+302310123456', extension: null }],
       emails: ['a@b.gr'],
+      emailConfirmations: [],
     });
   });
 });
