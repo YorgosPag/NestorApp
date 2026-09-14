@@ -15,6 +15,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { postalCodeAppearsIn, toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
 import { distinctAddressChoices } from '@/lib/geocoding/address-candidate-identity';
+import { compareAddressFields } from '@/lib/geocoding/field-match';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
@@ -22,7 +23,6 @@ import type {
   GeocodingAttempt,
   GeocodingVariant,
   ResolvedAddressFields,
-  FieldMatchKind,
   FieldMatchMap,
   ConfidenceBreakdown,
 } from '@/lib/geocoding/geocoding-types';
@@ -253,45 +253,25 @@ export function computeConfidenceBreakdown(
 }
 
 /**
- * Per-field match matrix comparing user input against Nominatim's resolved
- * fields. Case/accent-insensitive comparison.
+ * Per-field match matrix comparing user input against Nominatim's resolved fields.
+ *
+ * 🔑 **Η κρίση ζει στο `lib/geocoding/field-match`** (ADR-332 D28) — την ίδια συνάρτηση καλεί και το
+ * badge του πελάτη. Εδώ μένει μόνο η προσαρμογή του σχήματος του ερωτήματος.
  */
 export function buildFieldMatches(
   params: GeocodingRequestBody,
   resolved: ResolvedAddressFields,
 ): FieldMatchMap {
-  const matchKey = (field: keyof ResolvedAddressFields): FieldMatchKind => {
-    const userVal = params[field as keyof GeocodingRequestBody];
-    const resolvedVal = resolved[field];
-    if (!userVal) return 'not-provided';
-    if (!resolvedVal) return 'unknown';
-    return normalizeGreekText(String(userVal)) === normalizeGreekText(resolvedVal)
-      ? 'match'
-      : 'mismatch';
-  };
-
-  // Ο Τ.Κ. συγκρίνεται σε κανονική μορφή και από τις δύο πλευρές: μια
-  // αποθηκευμένη τιμή «546 24» (πριν τη μετάπτωση) δεν είναι mismatch με «54624».
-  const matchPostalCode = (): FieldMatchKind => {
-    if (!params.postalCode) return 'not-provided';
-    if (!resolved.postalCode) return 'unknown';
-    return toCanonicalGreekPostalCode(params.postalCode) === toCanonicalGreekPostalCode(resolved.postalCode)
-      ? 'match'
-      : 'mismatch';
-  };
-
-  return {
-    street: matchKey('street'),
-    number: matchKey('number'),
-    postalCode: matchPostalCode(),
-    neighborhood: matchKey('neighborhood'),
-    city: matchKey('city'),
-    county: matchKey('county'),
-    region: matchKey('region'),
-    country: matchKey('country'),
-  };
+  return compareAddressFields(params, resolved);
 }
 
+/**
+ * Επιφύλαξη = κάποιο πεδίο **αντιφάσκει** ή **δεν επιβεβαιώθηκε**.
+ *
+ * ⚠️ Το `broader` **δεν** μετρά, επίτηδες (ADR-332 D28): «Θεσσαλονίκη» για διεύθυνση στο Κορδελιό
+ * είναι **συνεπής** δήλωση. Επιφύλαξη εκεί θα ανέβαζε πάνελ «μήπως εννοούσες;» και θα αποθήκευε
+ * `partialMatch: true` για κάτι που ο άνθρωπος είπε σωστά.
+ */
 export function computePartialMatch(matches: FieldMatchMap): boolean {
   return Object.values(matches).some((m) => m === 'mismatch' || m === 'unknown');
 }

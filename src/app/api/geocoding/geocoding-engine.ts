@@ -7,10 +7,14 @@
  * provenance. Pure helpers (formatters, extractors) live in
  * `geocoding-engine-helpers.ts` to keep this file under 500 LOC.
  *
+ * 🔑 **Τρία αρχεία, τρεις ερωτήσεις** (ADR-332 D28, 2026-09-14): `geocoding-nominatim-client`
+ * = *πώς ρωτάμε* · `geocoding-ladder` = *τι και με ποια σειρά* · **εδώ** = *τι δεχόμαστε και τι
+ * σημαίνει η σιωπή*.
+ *
  * Backward compatibility: top-level fields (lat, lng, accuracy, confidence,
  * displayName, resolvedCity) preserved for legacy AddressMap consumers.
  *
- * @see ADR-332 §3.2 (type contracts), §3.4 (suggestion triggers)
+ * @see ADR-332 §3.2 (type contracts), §3.4 (suggestion triggers), D28 (postcode-anchored rung)
  * @see geocoding-engine-helpers.ts — formatters and result extractors
  * @see geocoding-types.ts — shared types
  */
@@ -18,63 +22,27 @@
 import { sleep } from '@/lib/async-utils';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import { countryNameToCode } from '@/utils/address/country-codes';
 import { cachedGeocode } from './geocoding-cache';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
   GeocodingAttempt,
-  GeocodingAttemptStatus,
   GeocodingVariant,
 } from '@/lib/geocoding/geocoding-types';
 import {
   formatTopResult,
   type NominatimResult,
 } from './geocoding-engine-helpers';
-import {
-  composeStreet,
-  toOsmStyleQuery,
-  toFreeformQuery,
-  createAccentStrippedVariant,
-  createGreeklishVariant,
-} from './geocoding-query-variants';
+import { fetchNominatim, skippedAttempt } from './geocoding-nominatim-client';
+import { buildGeocodingLadder, type LadderStep } from './geocoding-ladder';
 
 const logger = createModuleLogger('geocoding-api');
 
 // Re-export shared types so existing route.ts barrel re-export keeps working.
 export type { GeocodingRequestBody, GeocodingApiResponse } from '@/lib/geocoding/geocoding-types';
 
-// =============================================================================
-// FETCH OUTCOME (file-private)
-// =============================================================================
-
-interface NominatimFetchOutcome {
-  /** Empty array on no-results / error. */
-  results: NominatimResult[];
-  attempt: GeocodingAttempt;
-}
-
-// =============================================================================
-// CONFIGURATION
-// =============================================================================
-
-const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
-const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
-const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
 const { GEOCODING } = GEOGRAPHIC_CONFIG;
-
-// i18n keys (resolved at UI layer — engine never produces raw user-facing strings).
-const VARIANT_I18N_KEYS: Record<GeocodingVariant, string> = {
-  1: 'addresses.geocoding.attempts.osmStyle',
-  2: 'addresses.geocoding.attempts.structured',
-  3: 'addresses.geocoding.attempts.structuredDehyphenated',
-  4: 'addresses.geocoding.attempts.structuredAccentStripped',
-  5: 'addresses.geocoding.attempts.structuredGreeklish',
-  6: 'addresses.geocoding.attempts.freeformFallback',
-  7: 'addresses.geocoding.attempts.globalFreeform',
-  8: 'addresses.geocoding.attempts.cityOnlyGlobal',
-};
 
 /**
  * Ο χάρτης χωρών + το accent-insensitive ευρετήριο μετακόμισαν στο
@@ -107,98 +75,6 @@ export function sanitizeQuery(body: GeocodingRequestBody): GeocodingRequestBody 
     county: sanitizeStr(body.county), municipality: sanitizeStr(body.municipality),
     region: sanitizeStr(body.region), country: sanitizeStr(body.country),
   };
-}
-
-// =============================================================================
-// NOMINATIM URL BUILDERS
-// =============================================================================
-
-/**
- * Structured search URL.
- *
- * `postalcode` is deliberately **omitted**. Measured against live Nominatim
- * (2026-07-26): `street=Τσιμισκή 43 & city=Θεσσαλονίκη` returns a match, and
- * adding `postalcode` — in either `54623` or the Greek-canonical `546 23` form —
- * returns an empty set. As a structured filter it only ever subtracts, so the
- * postal code is used for free-form queries and for verifying the answer
- * instead. See ADR-332 D13.
- */
-function buildStructuredUrl(params: GeocodingRequestBody, countryCode: string | null): string {
-  const searchParams = new URLSearchParams({
-    format: 'json', addressdetails: '1',
-    limit: GEOCODING.NOMINATIM_RESULT_LIMIT, 'accept-language': GEOCODING.ACCEPT_LANGUAGE,
-  });
-  if (countryCode) searchParams.set('countrycodes', countryCode);
-  const street = composeStreet(params, 'number-first');
-  if (street) searchParams.set('street', street);
-  if (params.neighborhood) searchParams.set('city', params.neighborhood);
-  else if (params.city) searchParams.set('city', params.city);
-  if (params.county) searchParams.set('county', params.county);
-  if (params.region) searchParams.set('state', params.region);
-  return `${NOMINATIM_BASE_URL}/search?${searchParams.toString()}`;
-}
-
-function buildFreeformUrl(query: string, countryCode: string | null): string {
-  const searchParams = new URLSearchParams({
-    q: query, format: 'json', addressdetails: '1',
-    limit: GEOCODING.NOMINATIM_RESULT_LIMIT, 'accept-language': GEOCODING.ACCEPT_LANGUAGE,
-  });
-  if (countryCode) searchParams.set('countrycodes', countryCode);
-  return `${NOMINATIM_BASE_URL}/search?${searchParams.toString()}`;
-}
-
-// =============================================================================
-// FETCH (multi-result, instrumented)
-// =============================================================================
-
-async function fetchNominatim(
-  url: string,
-  variant: GeocodingVariant,
-): Promise<NominatimFetchOutcome> {
-  const startedAt = Date.now();
-  const i18nKey = VARIANT_I18N_KEYS[variant];
-
-  try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT },
-      signal: AbortSignal.timeout(NOMINATIM_TIMEOUT_MS),
-    });
-    const durationMs = Date.now() - startedAt;
-
-    if (!response.ok) {
-      logger.warn('Nominatim non-OK response', { data: { status: response.status, variant } });
-      return {
-        results: [],
-        attempt: makeAttempt(variant, i18nKey, 'error', durationMs),
-      };
-    }
-
-    const data: NominatimResult[] = await response.json();
-    return {
-      results: data,
-      attempt: makeAttempt(variant, i18nKey, data.length > 0 ? 'success' : 'no-results', durationMs),
-    };
-  } catch (error) {
-    const durationMs = Date.now() - startedAt;
-    logger.warn('Nominatim fetch error', { error: getErrorMessage(error), data: { variant } });
-    return {
-      results: [],
-      attempt: makeAttempt(variant, i18nKey, 'error', durationMs),
-    };
-  }
-}
-
-function makeAttempt(
-  variant: GeocodingVariant,
-  i18nKey: string,
-  status: GeocodingAttemptStatus,
-  durationMs: number,
-): GeocodingAttempt {
-  return { variant, i18nKey, status, durationMs };
-}
-
-function skippedAttempt(variant: GeocodingVariant): GeocodingAttempt {
-  return { variant, i18nKey: VARIANT_I18N_KEYS[variant], status: 'skipped', durationMs: 0 };
 }
 
 // =============================================================================
@@ -288,12 +164,30 @@ function finishWith(
   );
 }
 
+/**
+ * Η απάντηση ενός βήματος — **μαζί με ό,τι δεν ρωτήθηκε** (ADR-332 D28).
+ *
+ * 🔑 Το `relaxation` είναι το `replaced`/`inferred` της Google Address Validation: μια απάντηση
+ * που βρέθηκε **χωρίς** το τοπωνύμιο δεν επιτρέπεται να διαβαστεί σαν να το επιβεβαίωσε.
+ */
+function finishStep(
+  results: NominatimResult[],
+  step: LadderStep,
+  params: GeocodingRequestBody,
+  attempts: GeocodingAttempt[],
+  declaredCountryCode: string | null,
+): GeocodingApiResponse {
+  const response = finishWith(results, params, attempts, step.variant, declaredCountryCode);
+  if (!step.relaxation) return response;
+  return { ...response, reasoning: { ...response.reasoning, relaxation: step.relaxation } };
+}
+
 // =============================================================================
 // MAIN — multi-variant geocoding (instrumented)
 // =============================================================================
 
 /**
- * Geocode a structured address using up to 8 Nominatim variants. Returns the
+ * Geocode a structured address using the variant ladder (`geocoding-ladder.ts`). Returns the
  * top result with up to 4 alternatives + per-field match matrix + attempts log.
  *
  * 🔑 **Ρωτά τη μηχανή μόνο αν χρειάζεται** (ADR-332 D27 Ζ5): η πολιτική του Nominatim **απαιτεί** μνήμη
@@ -308,119 +202,48 @@ export async function geocodeWithVerdict(rawParams: GeocodingRequestBody): Promi
   return cachedGeocode(params, () => askNominatim(params));
 }
 
-/** Η πραγματική σκάλα των 8 παραλλαγών — εκτελείται **μόνο** σε αστοχία μνήμης. */
+/** Εκτελεί τη σκάλα **μέχρι την πρώτη αποδεκτή απάντηση** — μόνο σε αστοχία μνήμης. */
 async function askNominatim(params: GeocodingRequestBody): Promise<GeocodeVerdict> {
   const cc = countryNameToCode(params.country);
   const attempts: GeocodingAttempt[] = [];
+  const steps = buildGeocodingLadder(params, cc);
 
-  const osmQuery = toOsmStyleQuery(params);
-  if (osmQuery.trim()) {
-    logger.info('Geocoding attempt 1: OSM-style free-form', { data: { query: osmQuery } });
-    const out = await fetchNominatim(buildFreeformUrl(osmQuery, cc), 1);
-    attempts.push(out.attempt);
-    if (out.results.length > 0) {
-      return hit(finishWith(out.results, params, attempts, 1, cc));
-    }
-  } else {
-    attempts.push(skippedAttempt(1));
-  }
-
-  await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-  logger.info('Geocoding attempt 2: structured (original)');
-  const v2 = await fetchNominatim(buildStructuredUrl(params, cc), 2);
-  attempts.push(v2.attempt);
-  if (v2.results.length > 0) {
-    return hit(finishWith(v2.results, params, attempts, 2, cc));
-  }
-
-  if (params.city?.includes('-') || params.neighborhood?.includes('-')) {
-    const dh: GeocodingRequestBody = {
-      ...params,
-      city: params.city?.replace(/-/g, ' '),
-      neighborhood: params.neighborhood?.replace(/-/g, ' '),
-    };
-    logger.info('Geocoding attempt 3: structured (dehyphenated)');
-    await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-    const v3 = await fetchNominatim(buildStructuredUrl(dh, cc), 3);
-    attempts.push(v3.attempt);
-    if (v3.results.length > 0) {
-      return hit(finishWith(v3.results, params, attempts, 3, cc));
-    }
-  } else {
-    attempts.push(skippedAttempt(3));
-  }
-
-  logger.info('Geocoding attempt 4: structured (accent-stripped)');
-  await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-  const v4 = await fetchNominatim(buildStructuredUrl(createAccentStrippedVariant(params), cc), 4);
-  attempts.push(v4.attempt);
-  if (v4.results.length > 0) {
-    return hit(finishWith(v4.results, params, attempts, 4, cc));
-  }
-
-  if (!params.country || cc === 'gr') {
-    const gv = createGreeklishVariant(params);
-    if (gv) {
-      logger.info('Geocoding attempt 5: structured (greeklish→greek)');
-      await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-      const v5 = await fetchNominatim(buildStructuredUrl(gv, cc), 5);
-      attempts.push(v5.attempt);
-      if (v5.results.length > 0) {
-        return hit(finishWith(v5.results, params, attempts, 5, cc));
-      }
-    } else {
-      attempts.push(skippedAttempt(5));
-    }
-  } else {
-    attempts.push(skippedAttempt(5));
-  }
-
-  const freeformQuery = toFreeformQuery(params);
-  if (freeformQuery.trim() && freeformQuery !== osmQuery) {
-    logger.info('Geocoding attempt 6: free-form fallback', { data: { query: freeformQuery } });
-    await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-    const v6 = await fetchNominatim(buildFreeformUrl(freeformQuery, cc), 6);
-    attempts.push(v6.attempt);
-    if (v6.results.length > 0) {
-      return hit(finishWith(v6.results, params, attempts, 6, cc));
-    }
-  } else {
-    attempts.push(skippedAttempt(6));
-  }
-
-  if (cc !== null) {
-    const globalQuery = toFreeformQuery(params);
-    if (globalQuery.trim() && globalQuery !== osmQuery) {
-      logger.info('Geocoding attempt 7: global free-form (country restriction lifted)');
-      await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-      const v7 = await fetchNominatim(buildFreeformUrl(globalQuery, null), 7);
-      attempts.push(v7.attempt);
-      if (v7.results.length > 0) {
-        return hit(finishWith(v7.results, params, attempts, 7, cc));
-      }
-    } else {
-      attempts.push(skippedAttempt(7));
-    }
-
-    const cityOnly = params.city || params.neighborhood;
-    if (cityOnly) {
-      logger.info('Geocoding attempt 8: city-only global fallback');
-      await sleep(GEOCODING.NOMINATIM_DELAY_MS);
-      const v8 = await fetchNominatim(buildFreeformUrl(cityOnly, null), 8);
-      attempts.push(v8.attempt);
-      if (v8.results.length > 0) {
-        return hit(finishWith(v8.results, params, attempts, 8, cc));
-      }
-    } else {
-      attempts.push(skippedAttempt(8));
-    }
-  } else {
-    attempts.push(skippedAttempt(7));
-    attempts.push(skippedAttempt(8));
+  for (const [index, step] of steps.entries()) {
+    const accepted = await runStep(step, index, attempts);
+    if (accepted.length > 0) return hit(finishStep(accepted, step, params, attempts, cc));
   }
 
   logger.warn('All geocoding variants failed', { data: { params, attemptsCount: attempts.length } });
   return classifyFailure(attempts);
+}
+
+/**
+ * Ένα βήμα: ρώτα, κράτα **μόνο** τους αποδεκτούς, κατέγραψε τι έμαθες.
+ *
+ * ⚠️ **Η ευγένεια προς τον πάροχο ισχύει πριν από κάθε ΕΚΤΕΛΕΣΜΕΝΟ βήμα εκτός του πρώτου της
+ * σκάλας** — ακριβώς η προηγούμενη συμπεριφορά (η 2 περίμενε ακόμη κι αν η 1 παραλείφθηκε).
+ *
+ * 🔴 **Απάντηση που απορρίφθηκε ολόκληρη καταγράφεται `no-results`, όχι `success`.** Ο πάροχος
+ * απάντησε, αλλά τίποτα δεν αποδείχθηκε — δηλαδή *γνώση* («δεν υπάρχει εκεί που το ζητήσαμε»).
+ * Ένα `success` χωρίς αποτέλεσμα θα έλεγε ψέματα στο ημερολόγιο που βλέπει ο άνθρωπος.
+ */
+async function runStep(
+  step: LadderStep,
+  index: number,
+  attempts: GeocodingAttempt[],
+): Promise<NominatimResult[]> {
+  if (step.url === null) {
+    attempts.push(skippedAttempt(step.variant));
+    return [];
+  }
+  if (index > 0) await sleep(GEOCODING.NOMINATIM_DELAY_MS);
+  logger.info('Geocoding attempt', { data: { variant: step.variant } });
+
+  const out = await fetchNominatim(step.url, step.variant);
+  const accepted = step.accept ? out.results.filter(step.accept) : out.results;
+  const rejectedAll = out.results.length > 0 && accepted.length === 0;
+  attempts.push(rejectedAll ? { ...out.attempt, status: 'no-results' } : out.attempt);
+  return accepted;
 }
 
 // =============================================================================
