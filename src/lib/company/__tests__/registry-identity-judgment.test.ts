@@ -5,35 +5,21 @@
  * επαλήθευση ρίχνει το σήμα στην επόμενη ανάγνωση — χωρίς κανέναν γραφέα να το σβήσει.
  */
 
+import { registryCheck } from '@/lib/company/__fixtures__/registry-record-fixture';
 import { judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
-import {
-  GEMI_REGISTRY_SOURCE,
-  type RegistryCheck,
-  type RegistryCheckRead,
-  type RegistryCompanyRecord,
-} from '@/types/company-registry';
+import type { RegistryCheck, RegistryCheckRead, RegistryCompanyRecord } from '@/types/company-registry';
 
-const RECORD: RegistryCompanyRecord = {
-  source: GEMI_REGISTRY_SOURCE,
+// 🔑 Η κρίση ρωτά μόνο αριθμό · κατάσταση · επωνυμία — αυτά γράφονται ΡΗΤΑ· τα υπόλοιπα από το fixture.
+const CHECK: RegistryCheck = registryCheck({
   registrationNumber: '123401000',
   legalName: 'ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
-  legalNamesLatin: [],
-  distinctiveTitles: ['ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ'],
-  distinctiveTitlesLatin: [],
-  legalForm: { id: '1', label: 'ΑΕ' },
-  status: { code: { id: '3', label: 'Ενεργή' }, activity: 'active' },
-  seat: { street: null, streetNumber: null, postalCode: null, city: null, municipality: null },
-  isBranch: false,
-  selfRegistered: true,
-};
-
-const CHECK: RegistryCheck = { record: RECORD, checkedAt: '2026-09-14T10:00:00.000Z' };
+});
 const PRESENT: RegistryCheckRead = { kind: 'present', check: CHECK };
 
 const DECLARED = { registrationNumber: '000123401000', legalName: 'ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α.Ε.' };
 
 function withRecord(patch: Partial<RegistryCompanyRecord>): RegistryCheckRead {
-  return { kind: 'present', check: { ...CHECK, record: { ...RECORD, ...patch } } };
+  return { kind: 'present', check: { ...CHECK, record: { ...CHECK.record, ...patch } } };
 }
 
 describe('Ε — επαληθευμένη μόνο όταν ΟΛΑ συμφωνούν', () => {

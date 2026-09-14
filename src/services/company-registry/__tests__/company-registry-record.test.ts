@@ -16,31 +16,16 @@ import {
   readRegistryCheck,
   recordRegistryCheck,
 } from '@/services/company-registry/company-registry-record.service';
+import {
+  REGISTRY_CHECKED_AT as CHECKED_AT,
+  registryRecord,
+} from '@/lib/company/__fixtures__/registry-record-fixture';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
-import { GEMI_REGISTRY_SOURCE, type RegistryCompanyRecord } from '@/types/company-registry';
 
 const COMPANY_ID = 'comp_registry_a';
-const CHECKED_AT = '2026-09-14T10:00:00.000Z';
 
-const RECORD: RegistryCompanyRecord = {
-  source: GEMI_REGISTRY_SOURCE,
-  registrationNumber: '123456789000',
-  legalName: 'ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
-  legalNamesLatin: ['PAGONIS ENERGEIAKI KATASKEVASTIKI AE'],
-  distinctiveTitles: ['ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ'],
-  distinctiveTitlesLatin: [],
-  legalForm: { id: '1', label: 'ΑΕ' },
-  status: { code: { id: '3', label: 'Ενεργή' }, activity: 'active' },
-  seat: {
-    street: 'ΣΑΜΟΘΡΑΚΗΣ',
-    streetNumber: '16',
-    postalCode: '56334',
-    city: 'ΘΕΣΣΑΛΟΝΙΚΗ',
-    municipality: { id: '4901', label: 'ΘΕΣΣΑΛΟΝΙΚΗΣ' },
-  },
-  isBranch: false,
-  selfRegistered: true,
-};
+// 🔑 Λατινική επωνυμία ΜΗ κενή: ο φρουρός αποθήκης πρέπει να ξαναδιαβάζει ΚΑΘΕ πίνακα, όχι μόνο κενούς.
+const RECORD = registryRecord({ legalNamesLatin: ['PAGONIS AE'] });
 
 function database() {
   const fake = new FakeFirestore();

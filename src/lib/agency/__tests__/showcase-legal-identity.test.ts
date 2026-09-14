@@ -15,11 +15,8 @@ import {
   type LegalIdentityInputs,
   type LegalIdentityResolution,
 } from '@/lib/agency/showcase-legal-identity';
-import {
-  COMPANY_PROFILE,
-  REGISTRY_CHECKED_AT,
-  registryRecord,
-} from '@/services/mandate/__tests__/showcase-legal-fixture';
+import { REGISTRY_CHECKED_AT, registryCheck } from '@/lib/company/__fixtures__/registry-record-fixture';
+import { COMPANY_PROFILE } from '@/services/mandate/__tests__/showcase-legal-fixture';
 import type { RegistryCompanyRecord } from '@/types/company-registry';
 import type { ShowcaseLegalDeclaration, ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
 
@@ -35,7 +32,7 @@ function inputs(
     stored:
       record === null
         ? { kind: 'absent' }
-        : { kind: 'present', check: { record: registryRecord(record), checkedAt: REGISTRY_CHECKED_AT } },
+        : { kind: 'present', check: registryCheck(record) },
     headquarters: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
     ...overrides,
   };

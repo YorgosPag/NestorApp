@@ -18,30 +18,16 @@ import {
   verifyRegistryIdentity,
   type RegistryVerificationDeps,
 } from '@/services/company-registry/company-registry-verification.service';
+import { registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
-import {
-  GEMI_REGISTRY_SOURCE,
-  type RegistryCompanyRecord,
-  type RegistryLookupVerdict,
-} from '@/types/company-registry';
+import type { RegistryLookupVerdict } from '@/types/company-registry';
 
 const COMPANY_ID = 'comp_verify_a';
 const NOW = '2026-09-14T12:00:00.000Z';
 const EARLIER = '2026-09-01T09:00:00.000Z';
 
-const RECORD: RegistryCompanyRecord = {
-  source: GEMI_REGISTRY_SOURCE,
-  registrationNumber: '123456789000',
-  legalName: 'ΑΛΦΑ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
-  legalNamesLatin: [],
-  distinctiveTitles: ['ΑΛΦΑ'],
-  distinctiveTitlesLatin: [],
-  legalForm: { id: '1', label: 'ΑΕ' },
-  status: { code: { id: '3', label: 'Ενεργή' }, activity: 'active' },
-  seat: { street: null, streetNumber: null, postalCode: null, city: 'ΑΘΗΝΑ', municipality: null },
-  isBranch: false,
-  selfRegistered: true,
-};
+// 🔑 Η επωνυμία γράφεται ρητά: το {@link PROFILE} τη δηλώνει με άλλη ορθογραφία («Α.Ε.»).
+const RECORD = registryRecord({ legalName: 'ΑΛΦΑ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ' });
 
 const PROFILE: CompanyRegistryDeclarationRead = {
   kind: 'present',

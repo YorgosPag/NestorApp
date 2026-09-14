@@ -10,8 +10,9 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { REGISTRY_CHECKED_AT, registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
 import type { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
-import { GEMI_REGISTRY_SOURCE, type RegistryCompanyRecord } from '@/types/company-registry';
+import type { RegistryCompanyRecord } from '@/types/company-registry';
 import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
 
 /** «Η επωνυμία, με την προεπιλεγμένη έδρα» — η δήλωση που κάνει κάθε σουίτα που δεν κρίνει την ταυτότητα. */
@@ -39,33 +40,10 @@ export function givenCompanyProfile(db: unknown, companyId: string, overrides: R
   fakeOf(db).seed(COLLECTIONS.ACCOUNTING_SETTINGS, companyId, { ...COMPANY_PROFILE, ...overrides });
 }
 
-/** Η απάντηση του ΓΕΜΗ για το {@link COMPANY_PROFILE} — ίδια επωνυμία, ενεργή, με διακριτικό τίτλο. */
-export function registryRecord(overrides: Partial<RegistryCompanyRecord> = {}): RegistryCompanyRecord {
-  return {
-    source: GEMI_REGISTRY_SOURCE,
-    registrationNumber: '123456789000',
-    legalName: 'ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
-    legalNamesLatin: [],
-    distinctiveTitles: ['ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ'],
-    distinctiveTitlesLatin: [],
-    legalForm: { id: '3', label: 'ΑΕ' },
-    status: { code: { id: '3', label: 'Ενεργή' }, activity: 'active' },
-    seat: {
-      street: 'ΣΑΜΟΘΡΑΚΗΣ',
-      streetNumber: '16',
-      postalCode: '54248',
-      city: 'ΘΕΣΣΑΛΟΝΙΚΗ',
-      municipality: { id: '0501', label: 'ΘΕΣΣΑΛΟΝΙΚΗΣ' },
-    },
-    isBranch: false,
-    selfRegistered: true,
-    ...overrides,
-  };
-}
-
-export const REGISTRY_CHECKED_AT = '2026-09-14T09:00:00.000Z';
-
-/** Αποθηκεύει την απάντηση **όπως τη γράφει** το `recordRegistryCheck`. */
+/**
+ * Αποθηκεύει την απάντηση **όπως τη γράφει** το `recordRegistryCheck`. Η προεπιλεγμένη απάντηση
+ * (`lib/company/__fixtures__/registry-record-fixture`) ταιριάζει με το {@link COMPANY_PROFILE}.
+ */
 export function givenRegistryCheck(
   db: unknown,
   companyId: string,

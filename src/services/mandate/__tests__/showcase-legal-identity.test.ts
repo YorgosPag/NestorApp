@@ -19,11 +19,8 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { VerifiedLocationDeclaration } from '@/lib/agency/showcase-card-form';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
 import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
-import {
-  givenCompanyProfile,
-  givenRegistryCheck,
-  REGISTRY_CHECKED_AT,
-} from './showcase-legal-fixture';
+import { REGISTRY_CHECKED_AT } from '@/lib/company/__fixtures__/registry-record-fixture';
+import { givenCompanyProfile, givenRegistryCheck } from './showcase-legal-fixture';
 
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();
