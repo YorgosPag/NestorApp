@@ -62,6 +62,7 @@ import type { ProfessionalAttestation } from '@/types/professional-identity';
 import type { ListingImage } from '@/types/public-listing';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import type { ShowcaseLocation } from '@/types/showcase-card';
+import type { ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
 
 // =============================================================================
 // ΤΟ ΣΧΗΜΑ
@@ -440,6 +441,16 @@ export interface PublicShowcase {
    * της βιτρίνας, ακριβώς όπως το {@link PublicShowcase.locations}.
    */
   readonly website: string | null;
+  /**
+   * 🏆 **Η ΝΟΜΙΚΗ ΤΑΥΤΟΤΗΤΑ** — επωνυμία, μορφή, αριθμός ΓΕΜΗ, έδρα, απόδειξη (ADR-841 §7 Α23).
+   *
+   * `null` = βιτρίνα γραμμένη **πριν** την Α23 (ή ταυτότητα που αποσύρθηκε σε ανανέωση): δεν δείχνεται
+   * τίποτα νομικό, και η επόμενη δημοσίευση απαιτεί επιλογές. **Ποτέ** μαντεψιά από το προφίλ (§9.9β).
+   *
+   * 🔴 Το {@link PublicShowcase.displayName} είναι **παράγωγο** αυτού του πεδίου από την Α23 — το λύνει ο
+   * διακομιστής από την επιλογή `publicName`, ποτέ ελεύθερο κείμενο.
+   */
+  readonly legalIdentity: ShowcaseLegalIdentity | null;
   /** ISO — πότε δημοσιεύτηκε η βιτρίνα. */
   readonly publishedAt: string;
 }
