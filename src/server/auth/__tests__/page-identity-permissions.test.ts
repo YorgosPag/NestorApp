@@ -21,6 +21,19 @@
 
 const mockGet = jest.fn();
 const mockVerify = jest.fn();
+const mockWarn = jest.fn();
+
+// ADR-859 — οι μέθοδοι διαβάζουν το `mockWarn` ΟΤΑΝ κληθούν: το `createModuleLogger`
+// τρέχει στο σώμα του module, πριν αρχικοποιηθεί η δέσμευση (ανύψωση του jest).
+jest.mock('@/lib/telemetry', () => ({
+  ...jest.requireActual('@/lib/telemetry'),
+  createModuleLogger: () => ({
+    warn: (...args: unknown[]) => mockWarn(...args),
+    info: () => undefined,
+    error: () => undefined,
+    debug: () => undefined,
+  }),
+}));
 
 jest.mock('next/headers', () => ({
   cookies: async () => ({ get: mockGet }),
@@ -109,5 +122,39 @@ describe('ADR-801 §2.8 — readPageIdentity κουβαλά τα permissions', (
     const identity = await readPageIdentity();
 
     expect(identity).toEqual({ ok: false, reason: 'invalid-role' });
+  });
+});
+
+/**
+ * ADR-859 — **ΚΑΘΕ ΑΡΝΗΣΗ ΛΕΕΙ ΤΟΝ ΛΟΓΟ ΤΗΣ ΣΤΑ LOGS.** Μέχρι 2026-09-14 μόνο το
+ * `no-session` γραφόταν· η διάγνωση του βρόχου της πρόσκλησης **δεν μπορούσε** να
+ * ξεχωρίσει «δεν ήρθε cookie» από «ήρθε και απορρίφθηκε».
+ * Μετάλλαξη: αφαίρεση οποιουδήποτε `logger.warn` της άρνησης ⇒ Δ1 ή Δ2 κόκκινο.
+ */
+describe('ADR-859 — οι αρνήσεις δεν είναι σιωπηλές', () => {
+  it('Δ1 — cookie που δεν επαληθεύεται ⇒ `invalid-session` ΚΑΙ γραμμή στα logs', async () => {
+    mockVerify.mockResolvedValue(null);
+
+    const identity = await readPageIdentity();
+
+    expect(identity).toEqual({ ok: false, reason: 'invalid-session' });
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('DENY'));
+  });
+
+  it('Δ2 — απορριφθέντα claims ⇒ ο ταξινομημένος λόγος, με uid και ΧΩΡΙΣ email', async () => {
+    mockVerify.mockResolvedValue({ ...BASE_TOKEN, globalRole: 'admin' });
+
+    await readPageIdentity();
+
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('DENY'), { uid: 'u1', why: 'invalid-role' });
+    expect(JSON.stringify(mockWarn.mock.calls)).not.toContain(BASE_TOKEN.email);
+  });
+
+  it('Δ3 — ΠΑΡΟΝΟΜΑΣΤΗΣ: έγκυρη ταυτότητα ⇒ καμία γραμμή άρνησης', async () => {
+    mockVerify.mockResolvedValue({ ...BASE_TOKEN });
+
+    await readPageIdentity();
+
+    expect(mockWarn).not.toHaveBeenCalled();
   });
 });

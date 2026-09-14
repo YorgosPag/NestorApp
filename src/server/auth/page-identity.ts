@@ -196,8 +196,14 @@ export async function readPageIdentity(): Promise<PageIdentity> {
     };
   }
 
+  // 🔴 ADR-859 — ΚΑΘΕ ΑΡΝΗΣΗ ΛΕΕΙ ΤΟΝ ΛΟΓΟ ΤΗΣ. Μέχρι 2026-09-14 μόνο το `no-session`
+  //    γραφόταν στα logs· οι δύο από κάτω επέστρεφαν **σιωπηλά** ⇒ τα logs **δεν μπορούσαν**
+  //    να ξεχωρίσουν «δεν ήρθε cookie» από «ήρθε και απορρίφθηκε» (μετρημένο στη διάγνωση).
   const decoded = await verifySessionCookieToken(sessionCookie);
-  if (!decoded) return { ok: false, reason: 'invalid-session' };
+  if (!decoded) {
+    logger.warn('[PAGE_IDENTITY] DENY — cookie συνεδρίας που δεν επαληθεύεται');
+    return { ok: false, reason: 'invalid-session' };
+  }
 
   // 🔑 **ΡΟΛΟΣ × ΧΩΡΟΣ: Ο ΕΝΑΣ ΠΙΝΑΚΑΣ** (`lib/auth/identity-claims.ts`), ο ίδιος με το
   //    σύνορο API. Μέσα του ζουν και τα δύο συμβόλαια που ζούσαν εδώ: ο **άκυρος** ρόλος
@@ -208,7 +214,14 @@ export async function readPageIdentity(): Promise<PageIdentity> {
   //    Ο νέος προσκεκλημένος (χωρίς claim ρόλου) έβγαινε `invalid-role` ⇒ η σελίδα
   //    `/invite/<token>` του ξαναζητούσε σύνδεση **για πάντα** (ADR-853 §14, μετρημένο).
   const verdict = classifyIdentityClaims(decoded);
-  if (verdict.kind === 'rejected') return { ok: false, reason: 'invalid-role' };
+  if (verdict.kind === 'rejected') {
+    // ⚠️ Μόνο το `uid` (ψευδώνυμο) και ο ταξινομημένος λόγος — κανένα email στα logs.
+    logger.warn('[PAGE_IDENTITY] DENY — claims ρόλου/χώρου απορρίφθηκαν', {
+      uid: decoded.uid,
+      why: verdict.why,
+    });
+    return { ok: false, reason: 'invalid-role' };
+  }
 
   const shared = {
     uid: decoded.uid,
