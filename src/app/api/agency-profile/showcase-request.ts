@@ -51,6 +51,7 @@ import {
 } from '@/types/agency-coverage';
 import type { ClassifiedOccupation, PublicShowcase } from '@/types/agency-profile';
 import type { GeoPoint } from '@/types/geo/coordinates';
+import { SEAT_DISCLOSURES } from '@/types/showcase-legal-identity';
 import type { PlaceRef } from '@/types/geo/public-place';
 /**
  * **Ό,τι δηλώνει το γραφείο** — και **μόνο** αυτό.
@@ -74,7 +75,14 @@ import type { PlaceRef } from '@/types/geo/public-place';
  */
 export const publishSchema: z.ZodType<ShowcaseWireDeclaration> = z.object({
   alias: z.string().max(128),
-  displayName: z.string().max(200),
+  // 🔴 ADR-841 §7 Α23 — **επιλογή** ονόματος, ποτέ κείμενο. Ο τίτλος ταξιδεύει μόνο για να πει
+  //    **ποιος** από τους τίτλους του ΓΕΜΗ· το αν υπάρχει εκεί το κρίνει ο γραφέας, ονομαστικά.
+  publicName: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('legal-name') }),
+    z.object({ kind: z.literal('distinctive-title'), title: z.string().max(200) }),
+  ]),
+  // ⚠️ Κλειστό σύνολο **μορφής** — η οθόνη δεν παράγει άλλη τιμή. Το «λείπει» το κρίνει ο γραφέας.
+  seatDisclosure: z.enum(SEAT_DISCLOSURES).nullable().optional(),
   /**
    * 🔴 **ΜΟΝΟ `escoUri` — καμία ετικέτα, κανένας `iscoCode`.** Η ταξινόμηση
    * διαβάζεται από τον διακομιστή· ετικέτα από το σύρμα θα επέτρεπε «Δικηγόρος»

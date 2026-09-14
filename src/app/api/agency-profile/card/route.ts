@@ -16,9 +16,10 @@
 
 import 'server-only';
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 
 import { readJsonBody } from '@/lib/api/json-body';
+import { reconcileShowcaseLegalIdentity } from '@/services/company/company-rename.service';
 import { withAuth } from '@/lib/auth/middleware';
 import type { AuthContext } from '@/lib/auth/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -61,8 +62,13 @@ async function saveHandler(
 
   const result = await saveShowcaseCard(adminDb, ctx.companyId, verified.declared, parsed.data.website);
   switch (result.kind) {
-    case 'saved':
+    case 'saved': {
+      // 🔑 ADR-841 §7 Α23 — η οδός της έδρας είναι είσοδος της νομικής ταυτότητας (`business-address`).
+      //    Ιδεμποτής ανανέωση: γράφει μόνο αν άλλαξε κάτι· `after` ώστε η κάρτα να απαντά αμέσως.
+      const companyId = ctx.companyId;
+      after(() => reconcileShowcaseLegalIdentity(adminDb, companyId));
       return NextResponse.json({ locations: result.locations, website: result.website });
+    }
     case 'rejected':
       return NextResponse.json({ error: 'INVALID_CARD', reason: result.reason } as const, { status: 422 });
     case 'failed':

@@ -27,7 +27,10 @@ import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import { propagateCompanyRename } from '@/services/company/company-rename.service';
+import {
+  propagateCompanyRename,
+  reconcileShowcaseLegalIdentity,
+} from '@/services/company/company-rename.service';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
 import type { CompanySetupInput } from '@/subapps/accounting/types';
@@ -79,23 +82,33 @@ function validateSetupInput(data: Partial<CompanySetupInput>): string | null {
 }
 
 /**
- * ADR-841 §7 Α23 — η επωνυμία του προφίλ **αντιγράφεται** (`companies.name`, δημόσιες αγγελίες).
+ * ADR-841 §7 Α23 — η επωνυμία και η νομική ταυτότητα του προφίλ **αντιγράφονται** (`companies.name`,
+ * νομική ταυτότητα βιτρίνας, δημόσιες αγγελίες).
  *
  * 🔴 Ως τις 2026-09-14 αυτή η αποθήκευση άλλαζε την επωνυμία **χωρίς** να ενημερώνει κανένα
  * αντίγραφο. Με `after()`: η αλήθεια γράφτηκε, και ο άνθρωπος δεν περιμένει N αγγελίες για να δει
- * «Αποθηκεύτηκε». Αποτυχία ⇒ γραμμή `error`, και η επανασύνθεση το διορθώνει.
+ * «Αποθηκεύτηκε». Αποτυχία ⇒ γραμμή `error`, και η επόμενη πράξη το διορθώνει.
  */
-function scheduleRenamePropagation(companyId: string, actorUid: string): void {
+function scheduleConsequence(companyId: string, failure: string, task: () => Promise<unknown>): void {
   after(async () => {
     try {
-      await propagateCompanyRename(getAdminFirestore(), companyId, actorUid);
+      await task();
     } catch (error) {
-      logger.error('Η επωνυμία άλλαξε — τα αντίγραφά της δεν ενημερώθηκαν', {
-        companyId,
-        error: getErrorMessage(error),
-      });
+      logger.error(failure, { companyId, error: getErrorMessage(error) });
     }
   });
+}
+
+/**
+ * Τα πεδία του προφίλ που τροφοδοτούν τη **νομική ταυτότητα της βιτρίνας** πέρα από την επωνυμία —
+ * αριθμός ΓΕΜΗ, μορφή, καταστατική έδρα (`lib/agency/showcase-legal-identity`).
+ */
+const LEGAL_IDENTITY_FIELDS = ['entityType', 'gemiNumber', 'address', 'city', 'postalCode'] as const;
+
+function legalIdentityChanged(previous: unknown, next: CompanySetupInput): boolean {
+  const before = typeof previous === 'object' && previous !== null ? (previous as Record<string, unknown>) : {};
+  const current = next as unknown as Record<string, unknown>;
+  return LEGAL_IDENTITY_FIELDS.some((field) => (before[field] ?? null) !== (current[field] ?? null));
 }
 
 // =============================================================================
@@ -214,8 +227,15 @@ export const PUT = defineRoute({
     const auditedRepository = createAuditedRepository(repository, auth.uid, auth.companyId);
     await auditedRepository.saveCompanySetup(data);
 
+    // 🔑 Η μετονομασία **περιέχει** την ανανέωση της βιτρίνας· χωριστά μόνο όταν άλλαξε άλλη είσοδος.
     if (previous?.businessName !== data.businessName) {
-      scheduleRenamePropagation(auth.companyId, auth.uid);
+      scheduleConsequence(auth.companyId, 'Η επωνυμία άλλαξε — τα αντίγραφά της δεν ενημερώθηκαν', () =>
+        propagateCompanyRename(getAdminFirestore(), auth.companyId, auth.uid),
+      );
+    } else if (legalIdentityChanged(previous, data)) {
+      scheduleConsequence(auth.companyId, 'Η νομική ταυτότητα της βιτρίνας δεν ανανεώθηκε', () =>
+        reconcileShowcaseLegalIdentity(getAdminFirestore(), auth.companyId),
+      );
     }
 
     return ok();

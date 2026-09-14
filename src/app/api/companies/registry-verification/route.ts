@@ -22,13 +22,14 @@
 
 import 'server-only';
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { reconcileShowcaseLegalIdentity } from '@/services/company/company-rename.service';
 import {
   readRegistryIdentityReport,
   verifyRegistryIdentity,
@@ -62,6 +63,18 @@ export const GET = withStandardRateLimit(
   administered((companyId) => readRegistryIdentityReport(getAdminFirestore(), companyId)),
 );
 
+/**
+ * 🔑 ADR-841 §7 Α23 — **η πράξη κατέχει τη συνέπειά της** (Α1.6): νέα απάντηση του μητρώου αλλάζει
+ * είσοδο της νομικής ταυτότητας της βιτρίνας (σήμα · επωνυμία · τίτλος · δήμος). Μόνο όταν **ρωτήθηκε**
+ * το μητρώο — ένα `unavailable` δεν έμαθε τίποτα νέο. `after`: ο άνθρωπος βλέπει την κρίση αμέσως.
+ */
 export const POST = withSensitiveRateLimit(
-  administered((companyId) => verifyRegistryIdentity(getAdminFirestore(), companyId)),
+  administered(async (companyId) => {
+    const adminDb = getAdminFirestore();
+    const outcome = await verifyRegistryIdentity(adminDb, companyId);
+    if (outcome.kind === 'report' && outcome.report.freshness.kind === 'asked') {
+      after(() => reconcileShowcaseLegalIdentity(adminDb, companyId));
+    }
+    return outcome;
+  }),
 );

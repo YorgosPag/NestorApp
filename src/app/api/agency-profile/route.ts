@@ -122,7 +122,7 @@ async function publishHandler(
   //    που δεν μπορούσε να το ξαναστείλει **έσβηνε το λογότυπο**.
   const result = await publishShowcase(adminDb, authority, {
     alias: parsed.data.alias,
-    displayName: parsed.data.displayName,
+    legal: { publicName: parsed.data.publicName, seatDisclosure: parsed.data.seatDisclosure ?? null },
     credentials,
     place,
     position: located.position,
