@@ -18,6 +18,7 @@
         "cardClosedDay": "Κλειστά",
         "cardClosedWeek": "Κλειστό",
         "cardDirections": "Οδηγίες μετάβασης",
+        "cardEmailConfirmedOn": "Email επιβεβαιωμένο · {date}",
         "cardHeadquarters": "Έδρα",
         "cardHoliday": "Αργία ({holiday}) — το ωράριο ίσως διαφέρει",
         "cardHoursTitle": "Ωράριο",
