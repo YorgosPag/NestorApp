@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η ΚΑΤΑΘΕΣΗ ΤΗΣ ΔΗΛΩΣΗΣ — ΜΟΝΟ Η ΓΡΑΦΗ.**
- * @related ADR-824 §5.3 · §12.14 · app/api/companies/capabilities/brokerage/route.ts
+ * @related ADR-824 §5.3 · §12.14 · ADR-841 §7 Α23 · app/api/companies/capabilities/brokerage/route.ts
  * @module hooks/company/useBrokerageDeclaration
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -35,15 +35,16 @@ const logger = createModuleLogger('useBrokerageDeclaration');
 const ENDPOINT = '/api/companies/capabilities/brokerage' as const;
 
 /**
- * **Τα τρία στοιχεία που απαιτεί ο Ν. 4072/2012** — και τα τρία ταξιδεύουν μαζί.
+ * **Τα στοιχεία που μόνο ο άνθρωπος ξέρει** — και τα δύο ταξιδεύουν μαζί.
  *
  * ⚠️ Το σχήμα είναι **αντίγραφο του συμβολαίου της πόρτας**, όχι τυχαίο: ο
- * `declarationSchema` (zod) απαιτεί **και τα τρία** μη κενά. Ένα προαιρετικό πεδίο εδώ
- * θα παρήγαγε αίτημα που ο διακομιστής απορρίπτει με 422 — δηλαδή θα μετέθετε στον
- * άνθρωπο έναν έλεγχο που η οθόνη μπορεί να κάνει πριν τον ενοχλήσει.
+ * `declarationSchema` (zod) απαιτεί **και τα δύο** μη κενά.
+ *
+ * 🔑 **Ο αριθμός ΓΕΜΗ ΔΕΝ είναι εδώ** (ADR-841 §7 Α23): η πόρτα τον διαβάζει από το προφίλ
+ * της εταιρείας. Πεδίο στο σώμα θα ήταν δεύτερη αλήθεια — ακριβώς η απόκλιση που βρέθηκε
+ * ζωντανά (άλλος αριθμός στη δήλωση, κενό στο προφίλ).
  */
 export interface BrokerageDeclarationInput {
-  readonly gemiNumber: string;
   readonly chamberRegistryNumber: string;
   readonly legalRepresentativeName: string;
 }
@@ -59,12 +60,17 @@ export interface BrokerageDeclarationInput {
  * ⚠️ Το `conflict` είναι **ιδιαίτερο**: σημαίνει ότι η ζωντανή κατάσταση που βλέπει ο
  * άνθρωπος **προλάβαινε ήδη να αλλάξει** — π.χ. εγκρίθηκε όσο συμπλήρωνε τη φόρμα.
  * Δεν είναι σφάλμα του, και δεν του ζητάμε να ξαναπροσπαθήσει.
+ *
+ * ⚠️ `profileRegistrationMissing` ≠ `profileUnavailable`: το πρώτο στέλνει τον άνθρωπο στο
+ * **προφίλ** να γράψει αριθμό· το δεύτερο του λέει να **περιμένει** — ο αριθμός ίσως υπάρχει.
  */
 export type BrokerageDeclarationFailure =
   | 'invalid'
   | 'forbidden'
   | 'conflict'
   | 'notFound'
+  | 'profileRegistrationMissing'
+  | 'profileUnavailable'
   | 'failed';
 
 export interface BrokerageDeclarationForm {
@@ -73,6 +79,16 @@ export interface BrokerageDeclarationForm {
   readonly submit: (declaration: BrokerageDeclarationInput) => Promise<void>;
 }
 
+/** Τα ονόματα που γράφει η πόρτα στο σώμα → λόγος αποτυχίας. */
+const FAILURE_BY_ERROR: Readonly<Record<string, BrokerageDeclarationFailure>> = {
+  NO_ORGANIZATION: 'forbidden',
+  ILLEGAL_TRANSITION: 'conflict',
+  NOT_FOUND: 'notFound',
+  PROFILE_REGISTRATION_MISSING: 'profileRegistrationMissing',
+  PROFILE_UNAVAILABLE: 'profileUnavailable',
+  WRITE_FAILED: 'failed',
+};
+
 /**
  * **Η απάντηση της πόρτας → λόγος αποτυχίας**, ή `null` όταν πέτυχε.
  *
@@ -80,7 +96,7 @@ export interface BrokerageDeclarationForm {
  * **ονόματα** (`ILLEGAL_TRANSITION` ≠ `NO_ORGANIZATION`) ακριβώς για να μπορεί η οθόνη
  * να πει το σωστό.
  *
- * 🔑 **Το `422` δεν έχει όνομα στο σώμα** — το παράγει ο `readJsonBody` πριν φτάσει ο
+ * 🔑 **Το `422` του `readJsonBody` δεν έχει όνομα στο σώμα** — το παράγει πριν φτάσει ο
  * χειριστής. Γι' αυτό ο κωδικός διαβάζεται **μαζί** με το σώμα: το ένα από τα δύο
  * σιωπά κάθε φορά, και μόνο τα δύο μαζί καλύπτουν όλες τις εκβάσεις.
  */
@@ -88,23 +104,14 @@ async function failureOf(response: Response): Promise<BrokerageDeclarationFailur
   if (response.ok) return null;
 
   const body = (await response.json().catch(() => null)) as { error?: string } | null;
+  const named = body?.error !== undefined ? FAILURE_BY_ERROR[body.error] : undefined;
+  if (named !== undefined) return named;
 
-  switch (body?.error) {
-    case 'NO_ORGANIZATION':
-      return 'forbidden';
-    case 'ILLEGAL_TRANSITION':
-      return 'conflict';
-    case 'NOT_FOUND':
-      return 'notFound';
-    case 'WRITE_FAILED':
-      return 'failed';
-    default:
-      // ⚠️ **Ο κωδικός είναι η δεύτερη πηγή, όχι εικασία**: το 422 του `readJsonBody`
-      //    και το 403 του `withAuth` δεν περνούν από τον χειριστή, άρα δεν έχουν όνομα.
-      if (response.status === 422 || response.status === 400) return 'invalid';
-      if (response.status === 403 || response.status === 401) return 'forbidden';
-      return 'failed';
-  }
+  // ⚠️ **Ο κωδικός είναι η δεύτερη πηγή, όχι εικασία**: το 422 του `readJsonBody`
+  //    και το 403 του `withAuth` δεν περνούν από τον χειριστή, άρα δεν έχουν όνομα.
+  if (response.status === 422 || response.status === 400) return 'invalid';
+  if (response.status === 403 || response.status === 401) return 'forbidden';
+  return 'failed';
 }
 
 /**

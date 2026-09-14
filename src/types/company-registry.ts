@@ -138,6 +138,35 @@ export type RegistryIdentityJudgment =
   | { readonly state: 'verified'; readonly issuer: RegistryIssuer; readonly check: RegistryCheck }
   | { readonly state: 'declared'; readonly gap: RegistryIdentityGap; readonly check: RegistryCheck | null };
 
+// =============================================================================
+// Η ΑΝΑΦΟΡΑ — ό,τι ταξιδεύει από τη διαδρομή επαλήθευσης στην οθόνη
+// =============================================================================
+
+/**
+ * Ό,τι δήλωσε ο οργανισμός στο προφίλ (ADR-439) και **ελέγχεται απέναντι στο ΓΕΜΗ**.
+ *
+ * 🔑 Ο αριθμός ΓΕΜΗ ζει **μία φορά**, στο προφίλ. Βιτρίνα και δήλωση μεσιτείας τον **διαβάζουν**.
+ * Ζει εδώ (και όχι στον `server-only` αναγνώστη) ώστε να τον βλέπει και η οθόνη.
+ */
+export interface CompanyRegistryDeclaration {
+  /** `null` ⇒ τιμή που δεν αναγνωρίζεται· απουσία ⇒ ατομική (backward compat του repository). */
+  readonly entityType: 'sole_proprietor' | 'oe' | 'epe' | 'ae' | null;
+  readonly businessName: string | null;
+  readonly gemiNumber: string | null;
+}
+
+/** Τι έγινε με το μητρώο **σε αυτή** την κλήση. */
+export type RegistryFreshness =
+  | { readonly kind: 'not-asked' }
+  | { readonly kind: 'asked' }
+  | { readonly kind: 'unavailable'; readonly reason: RegistryUnavailableReason };
+
+export interface RegistryIdentityReport {
+  readonly declaration: CompanyRegistryDeclaration;
+  readonly judgment: RegistryIdentityJudgment;
+  readonly freshness: RegistryFreshness;
+}
+
 /** Γιατί **δεν** μάθαμε — κάθε λόγος οδηγεί σε διαφορετική πράξη ανθρώπου. */
 export type RegistryUnavailableReason =
   /** Λείπει το `GEMI_OPENDATA_API_KEY` — θέμα διαχειριστή πλατφόρμας. */

@@ -14,11 +14,16 @@
  * ακριβώς στην πόρτα του μεσίτη. Ένα πεδίο `companyId` εδώ θα σήμαινε ότι κάθε
  * συνδεδεμένος δηλώνει μεσιτεία **για ξένο γραφείο**.
  *
+ * 🔑 **ΟΥΤΕ Ο ΑΡΙΘΜΟΣ ΓΕΜΗ έρχεται από το σώμα** (ADR-841 §7 Α23): ζει **μία** φορά, στο
+ * προφίλ της εταιρείας (ADR-439), και η δήλωση τον **διαβάζει** — πρότυπο Stripe
+ * `company.registration_number`. Ως τις 2026-09-14 γραφόταν εδώ ελεύθερα, και το ζωντανό
+ * γραφείο είχε **άλλον** αριθμό στη δήλωση (`123456789000`) και **κενό** στο προφίλ.
+ *
  * 🔒 `withAuth` + `ADMINISTRATIVE_ROLES` *(**παραγόμενο** από την ικανότητα
  * `admin_access`, ποτέ χειρόγραφη λίστα ονομάτων — ADR-801 §2.11)* + sensitive rate limit.
  *
  * @module api/companies/capabilities/brokerage
- * @see ADR-824 §5.3
+ * @see ADR-824 §5.3 · ADR-841 §7 Α23
  */
 
 import 'server-only';
@@ -30,24 +35,37 @@ import { readJsonBody } from '@/lib/api/json-body';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
+import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { readCompanyRegistryDeclaration } from '@/services/company/company-legal-identity';
 import { declareBrokerage } from '@/services/company/organization-capability.service';
 
 /**
- * Τα στοιχεία που **ο νόμος** απαιτεί (Ν. 4072/2012, άρθρα 197-204).
+ * Τα στοιχεία που **ο νόμος** απαιτεί (Ν. 4072/2012, άρθρα 197-204) **και μόνο ο άνθρωπος ξέρει**.
  *
- * ⚠️ **Δεν επαληθεύονται αυτόματα σήμερα, και είναι δηλωμένο κενό** (ADR-824 §5.3):
- * **δεν** επιβεβαιώθηκε ότι υπάρχει διαθέσιμη δημόσια υπηρεσία ΓΕΜΗ. Το σχήμα το
- * δέχεται χωρίς αλλαγή — η αυτόματη επαλήθευση απλώς μετακινεί το `pending → active`
- * από **άνθρωπο** σε **μηχανή**.
+ * ⚠️ **Δεν επαληθεύονται αυτόματα σήμερα, και είναι δηλωμένο κενό** (ADR-824 §5.3). Ο αριθμός
+ * ΓΕΜΗ έχει πλέον δική του επαλήθευση από το μητρώο (ADR-841 §7 Α23), μέσα από το προφίλ.
  */
 const declarationSchema = z.object({
-  gemiNumber: z.string().trim().min(1).max(64),
   chamberRegistryNumber: z.string().trim().min(1).max(64),
   legalRepresentativeName: z.string().trim().min(1).max(200),
 });
+
+/** Ο αριθμός ΓΕΜΗ του προφίλ — ή η **ονομασμένη** άρνηση όταν λείπει/δεν διαβάστηκε. */
+async function registrationNumberOf(companyId: string): Promise<string | NextResponse> {
+  const registry = await readCompanyRegistryDeclaration(companyId);
+  // **503**, όχι 422: το προφίλ ίσως έχει αριθμό — απλώς δεν διαβάστηκε.
+  if (registry.kind === 'unavailable') {
+    return NextResponse.json({ error: 'PROFILE_UNAVAILABLE' }, { status: 503 });
+  }
+  const gemiNumber = registry.kind === 'present' ? registry.declaration.gemiNumber : null;
+  if (gemiNumber === null || canonicalGemiNumber(gemiNumber) === null) {
+    return NextResponse.json({ error: 'PROFILE_REGISTRATION_MISSING' }, { status: 422 });
+  }
+  return gemiNumber;
+}
 
 async function handler(
   request: NextRequest,
@@ -62,7 +80,11 @@ async function handler(
     return NextResponse.json({ error: 'NO_ORGANIZATION' }, { status: 403 });
   }
 
+  const gemiNumber = await registrationNumberOf(companyId);
+  if (gemiNumber instanceof NextResponse) return gemiNumber;
+
   const result = await declareBrokerage(getAdminFirestore(), companyId, {
+    gemiNumber,
     ...parsed.data,
     declaredAt: nowISO(),
     declaredByUserId: ctx.uid,
