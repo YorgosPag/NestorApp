@@ -45,7 +45,7 @@
 
 import 'server-only';
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 
 import { readJsonBody } from '@/lib/api/json-body';
 import { withAuth } from '@/lib/auth/middleware';
@@ -54,6 +54,7 @@ import { gateShowcase } from '@/lib/auth/brokerage-gate';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { showcaseOwnerId } from '@/lib/auth/brokerage-authority';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { refreshAgencyNameOnListings } from '@/services/listings/agency-name-refresh';
 import {
   publishShowcase,
   withdrawAgencyProfile,
@@ -131,8 +132,20 @@ async function publishHandler(
   // ⚠️ Κλειστό σύνολο, χωρίς `default`: πέμπτη κατάσταση του γραφέα **δεν
   //    μεταγλωττίζεται** μέχρι κάποιος να πει τι σημαίνει για το δίκτυο.
   switch (result.kind) {
-    case 'published':
+    case 'published': {
+      // 🔴 ADR-841 §7 Α22 — **ΤΟ ΟΝΟΜΑ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΙΝΑΙ ΤΟ ΟΝΟΜΑ ΤΩΝ ΑΓΓΕΛΙΩΝ**, άρα η
+      //    πράξη που το αλλάζει **κατέχει** την ανανέωσή τους (Α1.6). Μόνο όταν **άλλαξε**:
+      //    μια αλλαγή εμβέλειας δεν αξίζει επανασύνθεση όλων των αγγελιών.
+      //
+      // ⚠️ **`after`, όχι `await`**: η αλήθεια (η βιτρίνα) **γράφτηκε**· η ανανέωση είναι
+      //    παράγωγο με κόστος ανά αγγελία, και ο άνθρωπος δεν πρέπει να περιμένει N γραφές
+      //    για να δει «Αποθηκεύτηκε». Δεν πετά· αποτυχία ⇒ γραμμή `error` + η επανασύνθεση.
+      const companyId = result.profile.companyId;
+      if (result.publicNameChanged) {
+        after(() => refreshAgencyNameOnListings(adminDb, companyId, 'showcase-published'));
+      }
       return NextResponse.json({ profile: result.profile });
+    }
     case 'rejected':
       return NextResponse.json(
         { error: 'INVALID_PROFILE', reason: result.reason } as const,
@@ -178,11 +191,18 @@ async function withdrawHandler(
   _request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<AgencyProfileWriteResponse>> {
-  const result = await withdrawAgencyProfile(getAdminFirestore(), ctx.companyId);
+  const adminDb = getAdminFirestore();
+  const result = await withdrawAgencyProfile(adminDb, ctx.companyId);
 
-  return result.kind === 'withdrawn'
-    ? NextResponse.json({ withdrawn: true } as const)
-    : NextResponse.json({ error: 'WRITE_FAILED' } as const, { status: 500 });
+  if (result.kind !== 'withdrawn') {
+    return NextResponse.json({ error: 'WRITE_FAILED' } as const, { status: 500 });
+  }
+
+  // 🔴 ADR-841 §7 Α22 — οι αγγελίες έλεγαν το όνομα της βιτρίνας· από τώρα λένε ξανά την
+  //    επωνυμία της εταιρείας. Ίδιος λόγος για `after` με τη δημοσίευση παραπάνω.
+  const companyId = ctx.companyId;
+  after(() => refreshAgencyNameOnListings(adminDb, companyId, 'showcase-withdrawn'));
+  return NextResponse.json({ withdrawn: true } as const);
 }
 
 export const POST = withStandardRateLimit(withAuth<AgencyProfileWriteResponse>(publishHandler));

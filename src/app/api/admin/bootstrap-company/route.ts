@@ -32,10 +32,7 @@ import {
   adminDirectOperationRead,
   adminDirectOperationWrite,
 } from '@/lib/api/admin-operation-route';
-import {
-  republishListingsForCompany,
-  type CompanyRepublishReport,
-} from '@/services/listings/rebuild-public-listings.service';
+import { refreshAgencyNameOnListings } from '@/services/listings/agency-name-refresh';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -213,16 +210,16 @@ export const PATCH = adminDirectOperationWrite(
       //
       // ⚠️ **Τυλιγμένο**: η μετονομασία **έγινε** και δεν ακυρώνεται από αποτυχία
       //    παραγώγου· αλλά ο άνθρωπος **μαθαίνει** αν οι αγγελίες έμειναν πίσω, αντί
-      //    να το ανακαλύψει από την οθόνη.
-      let republished: CompanyRepublishReport | null = null;
-      try {
-        republished = await republishListingsForCompany(getAdminFirestore(), targetCompanyId);
-      } catch (error) {
-        logger.error('[BootstrapCompany] Η ΜΕΤΟΝΟΜΑΣΙΑ ΕΓΙΝΕ — οι αγγελίες ΕΜΕΙΝΑΝ ΜΠΑΓΙΑΤΙΚΕΣ', {
-          companyId: targetCompanyId,
-          error: getErrorMessage(error),
-        });
-      }
+      //    να το ανακαλύψει από την οθόνη. Το τύλιγμα ζει **μία φορά** στο
+      //    `agency-name-refresh` (ADR-841 §7 Α22): οι πράξεις που αλλάζουν όνομα έγιναν τρεις.
+      //
+      // 🔑 **Και από την Α22 μπορεί να ΜΗΝ αλλάξει τίποτα στην οθόνη**: αν το γραφείο έχει
+      //    δημοσιευμένη βιτρίνα, οι αγγελίες λένε το όνομα **εκείνης** — σωστά.
+      const republished = await refreshAgencyNameOnListings(
+        getAdminFirestore(),
+        targetCompanyId,
+        'company-renamed',
+      );
 
       logger.info('[BootstrapCompany] PATCH repair completed', {
         companyId: targetCompanyId,

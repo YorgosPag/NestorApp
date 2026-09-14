@@ -371,8 +371,14 @@ export async function writeListingProjection(
   }
 }
 
-/** Η **μία** διατύπωση της αποτυχίας — ώστε να μη γραφτεί σε κάθε γραφέα ξανά. */
-function reportProjectionFailure(listingId: string, error: unknown): PublishOutcome {
+/**
+ * Η **μία** διατύπωση της αποτυχίας — ώστε να μη γραφτεί σε κάθε γραφέα ξανά.
+ *
+ * ⚠️ **Εξάγεται** (ADR-841 §7 Α22) για τον γραφέα του **ιδιώτη**, που έχει πλέον κι αυτός
+ * ανάγνωση ταυτότητας που **μπορεί να πετάξει**: δεύτερη διατύπωση εκεί θα ήταν ακριβώς
+ * η επανάληψη που αυτή η συνάρτηση υπάρχει για να αποτρέψει.
+ */
+export function reportProjectionFailure(listingId: string, error: unknown): PublishOutcome {
   logger.error('Η προβολή δεν ενημερώθηκε — η αγγελία μένει ΜΠΑΓΙΑΤΙΚΗ μέχρι την επανασύνθεση', {
     propertyId: listingId,
     error: error instanceof Error ? error.message : String(error),

@@ -37,8 +37,21 @@ jest.mock('next/server', () => {
       return new MockNextResponse(body, init);
     }
   }
-  return { NextResponse: MockNextResponse, NextRequest: class {} };
+  // 🔑 Το `after` εκτελείται **αμέσως** εδώ: το ερώτημα είναι *«ζητήθηκε η ανανέωση;»*,
+  //    όχι *«πότε»* — ο προγραμματισμός μετά την απάντηση είναι δουλειά του Next.
+  return {
+    NextResponse: MockNextResponse,
+    NextRequest: class {},
+    after: (task: () => unknown) => {
+      void task();
+    },
+  };
 });
+
+const refreshMock = jest.fn();
+jest.mock('@/services/listings/agency-name-refresh', () => ({
+  refreshAgencyNameOnListings: (...args: unknown[]) => refreshMock(...args),
+}));
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({
   withStandardRateLimit: <T>(h: T) => h,
@@ -540,5 +553,68 @@ describe('Χ — η θέση παράγεται από τη ΓΗ, ποτέ απ�
 
     expect(verifyPlaceMock).not.toHaveBeenCalled();
     expect(landPositionMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// Ο — ΤΟ ΟΝΟΜΑ ΤΗΣ ΒΙΤΡΙΝΑΣ ΦΤΑΝΕΙ ΣΤΙΣ ΑΓΓΕΛΙΕΣ (ADR-841 §7 Α22)
+// ============================================================================
+
+describe('Ο — η πράξη που αλλάζει το δημόσιο όνομα ΚΑΤΕΧΕΙ την ανανέωση των αγγελιών', () => {
+  it('🔴 Ο1 — ΑΛΛΑΞΕ το όνομα ⇒ ανανέωση για ΤΟ ΓΡΑΦΕΙΟ ΤΗΣ ΑΠΟΔΕΙΞΗΣ', async () => {
+    // Το στιγμιότυπο της 2026-09-14: η κάρτα έλεγε την επωνυμία της εταιρείας, η
+    // σελίδα όπου οδηγούσε άλλο όνομα. Χωρίς αυτή την κλήση, το νέο όνομα της βιτρίνας
+    // **δεν φτάνει ποτέ** στις ήδη δημοσιευμένες αγγελίες.
+    publishMock.mockResolvedValue({
+      kind: 'published',
+      profile: { companyId: 'comp_alfa' },
+      publicNameChanged: true,
+    });
+
+    const answer = await post(BODY);
+
+    expect(answer.status).toBe(200);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+    expect(refreshMock).toHaveBeenCalledWith(expect.anything(), 'comp_alfa', 'showcase-published');
+  });
+
+  it('🔑 Ο2 — ΙΔΙΟ όνομα ⇒ ΚΑΜΙΑ ανανέωση: αλλαγή εμβέλειας δεν ξαναγράφει την αγορά', async () => {
+    publishMock.mockResolvedValue({
+      kind: 'published',
+      profile: { companyId: 'comp_alfa' },
+      publicNameChanged: false,
+    });
+
+    await post(BODY);
+
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ο3 — ΑΠΟΡΡΙΨΗ ⇒ ΚΑΜΙΑ ανανέωση: τίποτα δεν γράφτηκε, τίποτα δεν άλλαξε', async () => {
+    publishMock.mockResolvedValue({ kind: 'rejected', reason: 'agency-profile-name-missing' });
+
+    await post(BODY);
+
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ο4 — ΑΠΟΣΥΡΣΗ ⇒ οι αγγελίες ΠΑΥΟΥΝ να λένε το όνομα βιτρίνας που δεν υπάρχει', async () => {
+    const answer = await del();
+
+    expect(answer.status).toBe(200);
+    expect(refreshMock).toHaveBeenCalledWith(
+      expect.anything(),
+      authContext.companyId,
+      'showcase-withdrawn',
+    );
+  });
+
+  it('🔑 Ο5 — ΑΠΟΤΥΧΗΜΕΝΗ απόσυρση ⇒ ΚΑΜΙΑ ανανέωση: η βιτρίνα ζει ακόμη', async () => {
+    withdrawMock.mockResolvedValue({ kind: 'failed' });
+
+    const answer = await del();
+
+    expect(answer.status).toBe(500);
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 });

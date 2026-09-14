@@ -29,9 +29,11 @@ import {
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
 import {
+  reportProjectionFailure,
   writeListingProjection,
   type PublishOutcome,
 } from '@/services/listings/publish-public-listing';
+import type { PublicAgencyIdentity } from '@/types/public-listing';
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import { resolveListedAt } from '@/services/listings/listed-at-stamp';
 import type { OwnerProperty } from '@/types/owner-property';
@@ -76,7 +78,16 @@ async function republishOwnerListing(
   //
   // 🔑 **Η ταυτότητα ταξιδεύει ΜΑΖΙ με το όνομα** ώστε η επανασύνθεση να είναι
   //    **επισκευή** (ξαναρωτά την πηγή) και όχι δεύτερη μαντεψιά.
-  const agency = await readPublicAgencyIdentity(adminDb, property.authorCompanyId);
+  //
+  // 🔴 ADR-841 §7 Α22 — **Η ΑΝΑΓΝΩΣΗ ΜΠΟΡΕΙ ΠΛΕΟΝ ΝΑ ΠΕΤΑΞΕΙ**: όταν η βιτρίνα δεν διαβάζεται,
+  //    δεν ξέρουμε **ποιο** όνομα ισχύει. Μετράει ως `failed` ⇒ η προηγούμενη προβολή μένει
+  //    άθικτη — ίδιο συμβόλαιο με τον γραφέα του επαγγελματία, **μία** διατύπωση αποτυχίας.
+  let agency: PublicAgencyIdentity;
+  try {
+    agency = await readPublicAgencyIdentity(adminDb, property.authorCompanyId);
+  } catch (error) {
+    return reportProjectionFailure(property.id, error);
+  }
   const projectable = projectableFromOwnerProperty(property, at, agency);
 
   // 🔴 **Η ΣΦΡΑΓΙΔΑ ΕΙΣΟΔΟΥ ΣΤΗΝ ΑΓΟΡΑ** (ADR-777 §8.61) — **ίδια** πολιτική με τον

@@ -36,6 +36,7 @@ import {
   lookupAgencyProfile,
   withdrawAgencyProfile,
 } from '@/services/mandate/agency-profile.service';
+import { refreshAgencyNameOnListings } from '@/services/listings/agency-name-refresh';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -370,5 +371,12 @@ async function withdrawRegulatedShowcase(
   if (!regulated) return null;
 
   const outcome = await withdrawAgencyProfile(adminDb, companyId);
-  return outcome.kind === 'withdrawn' ? null : 'AGENCY_PROFILE_WITHDRAWAL_FAILED';
+  if (outcome.kind !== 'withdrawn') return 'AGENCY_PROFILE_WITHDRAWAL_FAILED';
+
+  // 🔴 ADR-841 §7 Α22 — **ΤΟ ΟΝΟΜΑ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΦΥΓΕ ΜΑΖΙ ΤΗΣ.** Οι αγγελίες το έλεγαν·
+  //    χωρίς ανανέωση, κάθε αγγελία **έργου** θα συνέχιζε να ονομάζει βιτρίνα που μόλις
+  //    σβήστηκε (το σάρωμα της ανάκλησης αγγίζει **μόνο** τις brokered). Δεν πετά και δεν
+  //    ματαιώνει τη μετάβαση: η ρυθμιστική απόφαση **δεν** εξαρτάται από παράγωγο.
+  await refreshAgencyNameOnListings(adminDb, companyId, 'showcase-withdrawn');
+  return null;
 }
