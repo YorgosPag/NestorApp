@@ -643,6 +643,8 @@ export const API_ROUTES = {
   // ── Companies ─────────────────────────────────────────────────────────
   COMPANIES: {
     LIST: '/api/companies',
+    /** ADR-841 §7 Α23 — η νομική ταυτότητα απέναντι στο ΓΕΜΗ (GET κρίση · POST επαλήθευση). */
+    REGISTRY_VERIFICATION: '/api/companies/registry-verification',
   },
 
   // ── Χώροι εργασίας (ADR-787 Κ-2) ──────────────────────────────────────

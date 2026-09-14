@@ -25,14 +25,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
-import { ensureCompanyDocument, getCompanyDocument, repairCompanyDocument } from '@/services/company-document.service';
+import { ensureCompanyDocument, getCompanyDocument } from '@/services/company-document.service';
 import { logSystemOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import {
   adminDirectOperationRead,
   adminDirectOperationWrite,
 } from '@/lib/api/admin-operation-route';
-import { refreshAgencyNameOnListings } from '@/services/listings/agency-name-refresh';
+import { propagateCompanyRename } from '@/services/company/company-rename.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -187,7 +187,9 @@ export const PATCH = adminDirectOperationWrite(
       const body = await req.json().catch(() => ({})) as { companyId?: string };
       const targetCompanyId = body.companyId ?? LEGACY_TENANT_COMPANY_ID;
 
-      const result = await repairCompanyDocument(targetCompanyId, ctx.uid);
+      // ADR-841 §7 Α23 — επισκευή + ανανέωση αγγελιών ζουν ΜΙΑ φορά στο `company-rename.service`
+      // (την ίδια πράξη κάνει πλέον και η αποθήκευση του προφίλ).
+      const result = await propagateCompanyRename(getAdminFirestore(), targetCompanyId, ctx.uid);
 
       if (!result.wasRepaired) {
         return NextResponse.json(
@@ -215,11 +217,7 @@ export const PATCH = adminDirectOperationWrite(
       //
       // 🔑 **Και από την Α22 μπορεί να ΜΗΝ αλλάξει τίποτα στην οθόνη**: αν το γραφείο έχει
       //    δημοσιευμένη βιτρίνα, οι αγγελίες λένε το όνομα **εκείνης** — σωστά.
-      const republished = await refreshAgencyNameOnListings(
-        getAdminFirestore(),
-        targetCompanyId,
-        'company-renamed',
-      );
+      const republished = result.republished;
 
       logger.info('[BootstrapCompany] PATCH repair completed', {
         companyId: targetCompanyId,
