@@ -235,7 +235,7 @@ export async function publishShowcase(
     //    ράφι και **δεν άλλαξαν** — άρα το `DeclaredShowcaseMark` που ξαναγράφεται είναι
     //    ακόμη αληθές. Ένα `reconcilePublicShelf` μέσα σε σώμα που **ξαναεκτελείται σε
     //    σύγκρουση** θα κατέβαζε και θα ξανάγραφε bytes πολλές φορές.
-    const profile = await adminDb.runTransaction(async (transaction) => {
+    const written = await adminDb.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(ref);
 
       // ⚠️ Ο **αναγνώστης**, ποτέ `as`: έγγραφο που δεν περνά τον φρουρό δίνει `null`
@@ -294,10 +294,18 @@ export async function publishShowcase(
       // 🔑 **Ο δίσκος ΔΕΝ παίρνει το `standing`** — δες `toStoredShowcase`. Μια
       //    αποθηκευμένη σημαία μπορεί να διαφωνήσει με το περιεχόμενο (ADR-749).
       transaction.set(ref, toStoredShowcase(showcase));
-      return showcase;
+
+      // 🔴 ADR-841 §7 Α22 — **ΤΟ ΟΝΟΜΑ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΙΝΑΙ ΤΟ ΟΝΟΜΑ ΤΩΝ ΑΓΓΕΛΙΩΝ.** Η σύγκριση
+      //    γίνεται **εδώ**, πάνω στο ίδιο `existing` που κλειδώνει η συναλλαγή: αλλού δεν
+      //    υπάρχει η προηγούμενη τιμή χωρίς δεύτερη ανάγνωση — και μια δεύτερη ανάγνωση θα
+      //    έβλεπε **ήδη** τη νέα. Αδημοσίευτο πριν ⇒ `true`: οι αγγελίες έλεγαν την
+      //    επωνυμία της εταιρείας.
+      const publicNameChanged =
+        existing?.outcome !== 'showcase' || existing.showcase.displayName !== showcase.displayName;
+      return { showcase, publicNameChanged };
     });
 
-    return { kind: 'published', profile };
+    return { kind: 'published', profile: written.showcase, publicNameChanged: written.publicNameChanged };
   } catch (error) {
     logger.error('[AGENCY-PROFILE] Η δημοσίευση απέτυχε', {
       companyId,

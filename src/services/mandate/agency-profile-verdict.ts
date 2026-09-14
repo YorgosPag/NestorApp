@@ -31,7 +31,20 @@ import type { PublicShowcase } from '@/types/agency-profile';
 
 /** Το αποτέλεσμα της δημοσίευσης — **ποτέ `boolean`**: μια άρνηση οφείλει να εξηγείται. */
 export type AgencyProfileWriteResult =
-  | { readonly kind: 'published'; readonly profile: PublicShowcase }
+  | {
+      readonly kind: 'published';
+      readonly profile: PublicShowcase;
+      /**
+       * 🔴 **Άλλαξε το ΔΗΜΟΣΙΟ ΟΝΟΜΑ του γραφείου;** (ADR-841 §7 Α22) — `true` και στην
+       * **πρώτη** δημοσίευση: από εκείνη τη στιγμή οι αγγελίες παύουν να λένε την
+       * επωνυμία της εταιρείας και λένε αυτό.
+       *
+       * 🔑 **Το κρίνει ο γραφέας, μέσα στη συναλλαγή** — είναι ο μόνος που κρατά **και**
+       * την προηγούμενη **και** τη νέα τιμή. Ο καλών **κατέχει** τη συνέπεια (την
+       * ανανέωση των αγγελιών), αλλά δεν μαντεύει αν χρειάζεται.
+       */
+      readonly publicNameChanged: boolean;
+    }
   | { readonly kind: 'withdrawn' }
   | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection }
   | { readonly kind: 'failed' };

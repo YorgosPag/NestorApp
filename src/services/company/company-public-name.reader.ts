@@ -32,6 +32,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import { NO_AGENCY_IDENTITY, type PublicAgencyIdentity } from '@/types/public-listing';
 
 const logger = createModuleLogger('company-public-name.reader');
@@ -85,12 +86,48 @@ export async function readCompanyPublicName(
 // ============================================================================
 
 /**
+ * **Η βιτρίνα ΔΕΝ διαβάστηκε — άρα δεν ξέρουμε ΠΟΙΟ όνομα ισχύει.** (ADR-841 §7 Α22)
+ *
+ * 🔴 **ΠΕΤΑ, ΔΕΝ ΙΣΟΠΕΔΩΝΕΤΑΙ.** Το εύκολο θα ήταν *«δεν διαβάστηκε ⇒ πάρε την επωνυμία
+ * της εταιρείας»* — και θα ήταν **ακριβώς η βλάβη που κλείνει η Α22**: σε μια στιγμιαία
+ * αστοχία, η αγγελία θα ξαναγραφόταν με **άλλο** όνομα από τη σελίδα όπου οδηγεί. *Άγνωστο
+ * ≠ κενό* (N.12). Οι γραφείς το μετρούν ως `failed`, οπότε η **προηγούμενη** προβολή μένει
+ * άθικτη — μπαγιάτικη ίσως, αλλά **συνεπής** — και η επανασύνθεση την επισκευάζει.
+ */
+export class AgencyIdentityUnavailableError extends Error {
+  constructor(readonly companyId: string) {
+    super(`AGENCY_IDENTITY_UNAVAILABLE: ${companyId}`);
+    this.name = 'AgencyIdentityUnavailableError';
+  }
+}
+
+/**
  * **Η ταυτότητα του γραφείου για δημόσια προβολή.**
  *
  * 🔑 **Δεν είναι «η επωνυμία + ένα ακόμη πεδίο».** Το {@link PublicAgencyIdentity}
  * υπάρχει ώστε το όνομα να μην μπορεί **δομικά** να ταξιδέψει με ξένη ταυτότητα· αυτή
- * η συνάρτηση είναι το **μόνο** σημείο που το ζεύγος γεννιέται, και το γεννά από **μία**
- * ανάγνωση.
+ * η συνάρτηση είναι το **μόνο** σημείο που το ζεύγος γεννιέται.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 ΠΟΙΟ ΟΝΟΜΑ — ΜΙΑ ΣΕΙΡΑ ΠΡΟΤΕΡΑΙΟΤΗΤΑΣ, ΓΡΑΜΜΕΝΗ ΣΕ ΕΝΑ ΣΗΜΕΙΟ (ADR-841 §7 Α22)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * | Βιτρίνα | Όνομα στην αγγελία |
+ * |---|---|
+ * | δημοσιευμένη | **το `displayName` της** — ό,τι λέει και η σελίδα όπου οδηγεί η κάρτα |
+ * | όχι | η επωνυμία `companies/{id}.name` *(συμπεριφορά Α1, αμετάβλητη)* |
+ * | δεν διαβάστηκε | {@link AgencyIdentityUnavailableError} — **ποτέ** μαντεψιά |
+ *
+ * 🔴 **Γιατί η βιτρίνα πρώτη**: η κάρτα είναι **σύνδεσμος** προς τη βιτρίνα *(ADR-777
+ * §8.58)*. Με δύο πηγές, ο επισκέπτης πατούσε *«ΠΑΓΩΝΗΣ Α.Ε.»* και έβρισκε *«Δοκιμαστικό
+ * Γραφείο»* — μετρημένο στη ζωντανή βάση 2026-09-14. Rightmove/Zoopla/RESO κάνουν το ίδιο:
+ * το όνομα της αγγελίας είναι το **display name του γραφείου**, όχι του μητρώου.
+ *
+ * ⚠️ **Σειριακά, όχι `Promise.all`**: η επωνυμία της εταιρείας χρειάζεται **μόνο** όταν
+ * λείπει βιτρίνα. Παράλληλα θα πλήρωνε **δύο** αναγνώσεις ανά γραφείο για να πετάξει τη μία.
+ *
+ * ⛔ **Η εντολή και η συγκατάθεση ΔΕΝ περνούν από εδώ, επίτηδες**: εκεί το όνομα είναι
+ * **συμβαλλόμενο μέρος** *(στιγμιότυπο, Α1.6)* και διαβάζεται με {@link readCompanyPublicName}.
  *
  * ⚠️ **Το `id` επιστρέφεται ΑΚΟΜΗ ΚΑΙ ΟΤΑΝ Η ΕΠΩΝΥΜΙΑ ΛΕΙΠΕΙ**, και είναι απόφαση:
  * *«γραφείο χωρίς επωνυμία»* είναι υπαρκτή κατάσταση που η οθόνη ονομάζει ήδη
@@ -108,7 +145,15 @@ export async function readPublicAgencyIdentity(
   const id = typeof companyId === 'string' && companyId.trim() !== '' ? companyId : null;
   if (id === null) return NO_AGENCY_IDENTITY;
 
-  return { id, name: await readCompanyPublicName(adminDb, id) };
+  const showcase = await lookupAgencyProfile(adminDb, id);
+  switch (showcase.outcome) {
+    case 'found':
+      return { id, name: showcase.showcase.displayName };
+    case 'not-published':
+      return { id, name: await readCompanyPublicName(adminDb, id) };
+    case 'unavailable':
+      throw new AgencyIdentityUnavailableError(id);
+  }
 }
 
 /** Ο επιλυτής ταυτότητας **ενός περάσματος**. Δες {@link createAgencyIdentityResolver}. */
