@@ -27,6 +27,8 @@ import type { ShowcaseEmailConfirmationIssueRefusal } from '@/types/showcase-ema
 const askSchema = z.object({
   locationId: z.string().min(1).max(128),
   email: z.string().min(1).max(254),
+  /** Α21.20 — «διόρθωσα το γραμματοκιβώτιο»: ρητή δήλωση, ποτέ προεπιλογή. */
+  acknowledgeReturned: z.boolean().optional(),
 });
 
 export type EmailConfirmationIssueResponse =
@@ -40,6 +42,8 @@ const REFUSAL_STATUS: Record<ShowcaseEmailConfirmationIssueRefusal, number> = {
   'email-not-on-card': 422,
   'recipient-quota': 429,
   'send-failed': 502,
+  // Α21.20 — σύγκρουση με γνωστή κατάσταση: η οθόνη ζητά ρητό «διόρθωσα» και ξαναστέλνει.
+  'mailbox-returned': 409,
 };
 
 async function handler(request: NextRequest, ctx: AuthContext): Promise<NextResponse<EmailConfirmationIssueResponse>> {
@@ -51,6 +55,7 @@ async function handler(request: NextRequest, ctx: AuthContext): Promise<NextResp
     locationId: parsed.data.locationId,
     email: parsed.data.email,
     requestedByUid: ctx.uid,
+    acknowledgeReturned: parsed.data.acknowledgeReturned === true,
   });
   switch (result.kind) {
     case 'sent':
