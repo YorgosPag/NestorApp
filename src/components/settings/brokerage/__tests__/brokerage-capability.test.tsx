@@ -53,6 +53,37 @@ jest.mock('@/i18n/generated/routes/o__workspace__settings__brokerage.el.json', (
 });
 jest.mock('@/i18n/route-slice', () => ({ registerRouteSlice: jest.fn() }));
 
+// 🔑 ADR-841 §7 Α23 — ο αριθμός ΓΕΜΗ έρχεται από το προφίλ, μέσα από ΕΝΑΝ hook.
+const registryIdentity = jest.fn();
+
+jest.mock('@/hooks/company/useCompanyRegistryIdentity', () => ({
+  useCompanyRegistryIdentity: () => registryIdentity(),
+}));
+
+// Το σύνορο πλοήγησης διαβάζει τον ενεργό χώρο από τη διεύθυνση — εδώ ρωτάμε μόνο ΠΟΥ δείχνει.
+jest.mock('@/lib/workspace/navigation', () => ({
+  Link: ({ href, children, 'data-testid': testId }: { href: string; children: React.ReactNode; 'data-testid'?: string }) => (
+    <a href={href} data-testid={testId}>
+      {children}
+    </a>
+  ),
+}));
+
+function readyWith(gemiNumber: string | null) {
+  return {
+    state: {
+      kind: 'ready',
+      report: {
+        declaration: { entityType: 'ae', businessName: 'ΑΛΦΑ ΑΕ', gemiNumber },
+        judgment: { state: 'declared', gap: 'not-checked', check: null },
+        freshness: { kind: 'not-asked' },
+      },
+    },
+    verifying: false,
+    verify: jest.fn(),
+  };
+}
+
 function disclosureOf(overrides: Partial<CapabilityDisclosure> = {}): CapabilityDisclosure {
   return {
     status: 'pending',
@@ -82,6 +113,7 @@ function offersForm(): boolean {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  registryIdentity.mockReturnValue(readyWith('123456789000'));
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     status: 200,
@@ -271,20 +303,24 @@ describe('Κ13ε — «τι εκκρεμεί»: ό,τι ονομάζει ο δι
   });
 });
 
-describe('Κ13στ — η φόρμα ΚΑΛΕΙ την πόρτα, με ΚΑΙ ΤΑ ΤΡΙΑ πεδία', () => {
+describe('Κ13στ — η φόρμα ΚΑΛΕΙ την πόρτα· ο αριθμός ΓΕΜΗ έρχεται από το ΠΡΟΦΙΛ (ADR-841 Α23)', () => {
   /**
    * 🔴 **Ελέγχει την ΚΛΗΣΗ, όχι την ύπαρξη του hook** *(άγκυρα που ζητά σκέτο όνομα
    * συνάρτησης έχει **μετρηθεί** ότι μένει πράσινη ενώ ο έλεγχος έχει αφαιρεθεί)*.
    *
-   * ⛔ ΜΕΤΑΛΛΑΞΗ: σβήσε ένα πεδίο από το σώμα του αιτήματος ⇒ κόκκινο.
+   * 🔑 **Ο αριθμός ΓΕΜΗ ΔΕΝ ταξιδεύει στο σώμα**: η πόρτα τον διαβάζει από το προφίλ. Η φόρμα
+   * τον **δείχνει** (μόνο ανάγνωση) ώστε ο άνθρωπος να ξέρει ποιον αριθμό δηλώνει.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: ξαναβάλε `gemiNumber` στο σώμα ⇒ κόκκινο.
    * ⛔ ΜΕΤΑΛΛΑΞΗ: άλλαξε τη διεύθυνση της πόρτας ⇒ κόκκινο.
    */
-  it('στέλνει gemiNumber + chamberRegistryNumber + legalRepresentativeName', async () => {
+  it('στέλνει ΜΟΝΟ chamberRegistryNumber + legalRepresentativeName, και δείχνει τον αριθμό του προφίλ', async () => {
     renderWith(null);
 
-    fireEvent.change(screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.gemiLabel), {
-      target: { value: '123456789000' },
-    });
+    const gemi = screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.gemiLabel) as HTMLInputElement;
+    expect(gemi.value).toBe('123456789000');
+    expect(gemi.readOnly).toBe(true);
+
     fireEvent.change(screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.chamberLabel), {
       target: { value: '12345' },
     });
@@ -299,7 +335,6 @@ describe('Κ13στ — η φόρμα ΚΑΛΕΙ την πόρτα, με ΚΑΙ �
     expect(url).toBe('/api/companies/capabilities/brokerage');
     expect(init.method).toBe('POST');
     expect(JSON.parse(String(init.body))).toEqual({
-      gemiNumber: '123456789000',
       chamberRegistryNumber: '12345',
       legalRepresentativeName: 'Γιώργος Παγώνης',
     });
@@ -314,16 +349,40 @@ describe('Κ13στ — η φόρμα ΚΑΛΕΙ την πόρτα, με ΚΑΙ �
   it('με ελλιπή στοιχεία ΔΕΝ καλεί την πόρτα', async () => {
     renderWith(null);
 
-    fireEvent.change(screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.gemiLabel), {
-      target: { value: '123456789000' },
+    fireEvent.change(screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.chamberLabel), {
+      target: { value: '12345' },
     });
     fireEvent.submit(screen.getByTestId('brokerage-declaration-form'));
 
     // ✅ ΘΕΤΙΚΟΣ ΣΥΝΟΔΟΣ: η φόρμα **υπάρχει και δέχτηκε είσοδο** — άρα η απουσία
     //    κλήσης είναι απόφαση, όχι οθόνη που δεν αποδόθηκε ποτέ.
     expect(screen.getByTestId('brokerage-declaration-form')).not.toBeNull();
-    expect((screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.gemiLabel) as HTMLInputElement).value)
-      .toBe('123456789000');
+    expect((screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.chamberLabel) as HTMLInputElement).value)
+      .toBe('12345');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 🔴 **ΠΡΟΦΙΛ ΧΩΡΙΣ ΑΡΙΘΜΟ ΓΕΜΗ ⇒ η φόρμα το ΛΕΕΙ και ΔΕΝ φεύγει.** Χωρίς αυτό, ο άνθρωπος
+   * θα συμπλήρωνε δύο πεδία και θα έπαιρνε 422 για κάτι που η οθόνη ήξερε από την αρχή.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε τον αριθμό του προφίλ από το `complete` ⇒ κόκκινο.
+   */
+  it('χωρίς αριθμό ΓΕΜΗ στο προφίλ: μήνυμα + σύνδεσμος στο προφίλ, και ΚΑΜΙΑ κλήση', async () => {
+    registryIdentity.mockReturnValue(readyWith(null));
+    renderWith(null);
+
+    expect(screen.getByTestId('brokerage-gemi-missing').textContent).toContain(BROKERAGE_CAPABILITY_KEYS.gemiMissing);
+    expect(screen.getByTestId('brokerage-gemi-profile-link').getAttribute('href')).toBe('/accounting/setup');
+
+    fireEvent.change(screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.chamberLabel), {
+      target: { value: '12345' },
+    });
+    fireEvent.change(screen.getByLabelText(BROKERAGE_CAPABILITY_KEYS.representativeLabel), {
+      target: { value: 'Γιώργος Παγώνης' },
+    });
+    fireEvent.submit(screen.getByTestId('brokerage-declaration-form'));
+
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

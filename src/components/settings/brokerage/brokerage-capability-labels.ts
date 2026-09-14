@@ -51,7 +51,11 @@ export const BROKERAGE_CAPABILITY_KEYS = {
   declaredAt: `${K}.declaredAt`,
   gemiLabel: `${K}.gemiLabel`,
   gemiHint: `${K}.gemiHint`,
-  gemiPlaceholder: `${K}.gemiPlaceholder`,
+  // ADR-841 §7 Α23 — ο αριθμός ΓΕΜΗ έρχεται από το προφίλ: η φόρμα λέει ΤΙ ισχύει με αυτόν.
+  gemiMissing: `${K}.gemiMissing`,
+  gemiLoading: `${K}.gemiLoading`,
+  gemiUnavailable: `${K}.gemiUnavailable`,
+  gemiProfileLink: `${K}.gemiProfileLink`,
   chamberLabel: `${K}.chamberLabel`,
   chamberHint: `${K}.chamberHint`,
   chamberPlaceholder: `${K}.chamberPlaceholder`,

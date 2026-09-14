@@ -71,8 +71,14 @@ import {
   useBrokerageDeclaration,
   type BrokerageDeclarationFailure,
 } from '@/hooks/company/useBrokerageDeclaration';
+import {
+  useCompanyRegistryIdentity,
+  type CompanyRegistryIdentityState,
+} from '@/hooks/company/useCompanyRegistryIdentity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { formatLongDate } from '@/lib/intl-formatting';
+import { Link } from '@/lib/workspace/navigation';
 import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
 import {
   canDeclareCapability,
@@ -233,16 +239,54 @@ function FiledDeclaration({
  * είναι ο **κριτής**, αυτό εδώ είναι **ευγένεια** — να μην ταξιδέψει αίτημα που ξέρουμε
  * ότι απορρίπτεται. Η άρνηση παραμένει του διακομιστή.
  */
+/**
+ * **ΤΙ ΙΣΧΥΕΙ ΜΕ ΤΟΝ ΑΡΙΘΜΟ ΓΕΜΗ ΤΟΥ ΠΡΟΦΙΛ** — ADR-841 §7 Α23.
+ *
+ * ⚠️ Τρεις διαφορετικές προτάσεις για τρία διαφορετικά πράγματα: «διαβάζεται» · «δεν
+ * διαβάστηκε» (ο αριθμός ίσως υπάρχει — **μη** στείλεις τον άνθρωπο να τον ξαναγράψει) ·
+ * «δεν υπάρχει» (με **σύνδεσμο** στο μοναδικό σημείο όπου γράφεται).
+ */
+function RegistrationNotice({
+  state,
+}: {
+  readonly state: CompanyRegistryIdentityState;
+}): React.ReactElement | null {
+  const { t } = useTranslation([BROKERAGE_CAPABILITY_NS]);
+
+  if (state.kind === 'loading') {
+    return <p className="m-0 text-sm text-muted-foreground">{t(BROKERAGE_CAPABILITY_KEYS.gemiLoading)}</p>;
+  }
+  if (state.kind !== 'ready') {
+    return (
+      <p role="alert" className="m-0 text-sm text-destructive">
+        {t(BROKERAGE_CAPABILITY_KEYS.gemiUnavailable)}
+      </p>
+    );
+  }
+  if (canonicalGemiNumber(state.report.declaration.gemiNumber) !== null) return null;
+  return (
+    <p className="m-0 flex flex-wrap gap-2 text-sm text-foreground" data-testid="brokerage-gemi-missing">
+      {t(BROKERAGE_CAPABILITY_KEYS.gemiMissing)}
+      <Link href="/accounting/setup" className="underline" data-testid="brokerage-gemi-profile-link">
+        {t(BROKERAGE_CAPABILITY_KEYS.gemiProfileLink)}
+      </Link>
+    </p>
+  );
+}
+
 function DeclarationForm({ status }: { readonly status: CapabilityStatus }): React.ReactElement {
   const { t } = useTranslation([BROKERAGE_CAPABILITY_NS]);
   const { submitting, failure, submit } = useBrokerageDeclaration();
+  // 🔑 ADR-841 §7 Α23 — ο αριθμός ΓΕΜΗ **διαβάζεται** από το προφίλ· η φόρμα δεν τον ξαναρωτά.
+  const registry = useCompanyRegistryIdentity();
+  const profileGemiNumber =
+    registry.state.kind === 'ready' ? registry.state.report.declaration.gemiNumber : null;
 
-  const [gemiNumber, setGemiNumber] = React.useState('');
   const [chamberRegistryNumber, setChamberRegistryNumber] = React.useState('');
   const [legalRepresentativeName, setLegalRepresentativeName] = React.useState('');
 
   const complete =
-    gemiNumber.trim() !== '' &&
+    canonicalGemiNumber(profileGemiNumber) !== null &&
     chamberRegistryNumber.trim() !== '' &&
     legalRepresentativeName.trim() !== '';
 
@@ -253,18 +297,17 @@ function DeclarationForm({ status }: { readonly status: CapabilityStatus }): Rea
       onSubmit={(event) => {
         event.preventDefault();
         if (!complete) return;
-        void submit({ gemiNumber, chamberRegistryNumber, legalRepresentativeName });
+        void submit({ chamberRegistryNumber, legalRepresentativeName });
       }}
     >
       <HintedField
         id="brokerage-gemi"
         label={t(BROKERAGE_CAPABILITY_KEYS.gemiLabel)}
         hint={t(BROKERAGE_CAPABILITY_KEYS.gemiHint)}
-        placeholder={t(BROKERAGE_CAPABILITY_KEYS.gemiPlaceholder)}
-        value={gemiNumber}
-        disabled={submitting}
-        onChange={setGemiNumber}
+        value={profileGemiNumber ?? ''}
+        readOnly
       />
+      <RegistrationNotice state={registry.state} />
       <HintedField
         id="brokerage-chamber"
         label={t(BROKERAGE_CAPABILITY_KEYS.chamberLabel)}
