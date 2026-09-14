@@ -27,6 +27,12 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  COMPANY_ENTITY_TYPES,
+  LEGACY_DEFAULT_ENTITY_TYPE,
+  type EntityType,
+} from '@/subapps/accounting/types/entity';
+import type { CompanyRegistryDeclaration } from '@/types/company-registry';
 
 const logger = createModuleLogger('CompanyLegalIdentity');
 
@@ -50,37 +56,140 @@ function readStringField(
 }
 
 /**
+ * What reading the per-tenant profile learned — **three** states, never two.
+ *
+ * 🔴 `unavailable` ≠ `absent` (N.12): a failed read that looked like "no profile"
+ * would invite the human to type again what the system already holds.
+ */
+type ProfileDocumentRead =
+  | { readonly kind: 'present'; readonly data: FirebaseFirestore.DocumentData }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unavailable' };
+
+/** The ONE read of `accounting_settings/{companyId}` for this module's consumers. */
+async function readProfileDocument(companyId: string): Promise<ProfileDocumentRead> {
+  try {
+    const snap = await getAdminFirestore().collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(companyId).get();
+    const data = snap.exists ? snap.data() : undefined;
+    return data ? { kind: 'present', data } : { kind: 'absent' };
+  } catch (error) {
+    logger.warn('[CompanyLegalIdentity] profile read failed', { companyId, error: getErrorMessage(error) });
+    return { kind: 'unavailable' };
+  }
+}
+
+/**
  * Read the legal identity (business / trade name) for a tenant.
  *
  * Source: per-tenant profile `accounting_settings/{companyId}` — the
  * legal-identity SSoT (ADR-439).
  *
- * @returns The identity, or `null` when no business/trade name is available.
+ * @returns The identity, or `null` when no business/trade name is available
+ *   (including a failed read — the caller falls back to a non-profile name).
  */
 export async function readCompanyLegalIdentity(
   companyId: string,
 ): Promise<CompanyLegalIdentity | null> {
-  try {
-    const db = getAdminFirestore();
-    const settings = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS);
+  const read = await readProfileDocument(companyId);
+  if (read.kind !== 'present') return null;
 
-    // Per-tenant legal-identity SSoT.
-    const snap = await settings.doc(companyId).get();
+  const businessName = readStringField(read.data, 'businessName');
+  const tradeName = readStringField(read.data, 'tradeName');
+  if (!businessName && !tradeName) return null;
 
-    if (!snap.exists) return null;
-    const data = snap.data();
-    if (!data) return null;
+  return { businessName, tradeName };
+}
 
-    const businessName = readStringField(data, 'businessName');
-    const tradeName = readStringField(data, 'tradeName');
-    if (!businessName && !tradeName) return null;
+// ============================================================================
+// CONTACT DECLARATION — ADR-841 §7 Α21.19 (import into the professional card)
+// ============================================================================
 
-    return { businessName, tradeName };
-  } catch (error) {
-    logger.warn('[CompanyLegalIdentity] read failed — falling back to non-profile name', {
-      companyId,
-      error: getErrorMessage(error),
-    });
-    return null;
-  }
+/**
+ * **Where the organisation says it can be reached** — and NOTHING else from the profile.
+ *
+ * 🔑 Minimisation by type (same doctrine as `company-public-name.reader`): the profile
+ * also carries ΑΦΜ, shareholders, ΚΑΔ and invoice series. What this shape does not
+ * name cannot leak through a `{ ...declaration }` in a response.
+ *
+ * ⚠️ `address` is **free text** ("Σαμοθράκης 16") — structure is read by the caller
+ * through `utils/address/address-parse`, never guessed here.
+ */
+export interface CompanyContactDeclaration {
+  readonly address: string | null;
+  readonly city: string | null;
+  readonly postalCode: string | null;
+  readonly phone: string | null;
+  readonly mobile: string | null;
+  readonly email: string | null;
+  readonly website: string | null;
+}
+
+export type CompanyContactDeclarationRead =
+  | { readonly kind: 'present'; readonly declaration: CompanyContactDeclaration }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unavailable' };
+
+/**
+ * Read the tenant's declared contact details from the legal-identity SSoT (ADR-439).
+ *
+ * A profile with **no** contact field at all reads as `absent`: there is nothing to import.
+ */
+export async function readCompanyContactDeclaration(companyId: string): Promise<CompanyContactDeclarationRead> {
+  const read = await readProfileDocument(companyId);
+  if (read.kind !== 'present') return read;
+
+  const field = (name: keyof CompanyContactDeclaration) => readStringField(read.data, name) ?? null;
+  const declaration: CompanyContactDeclaration = {
+    address: field('address'),
+    city: field('city'),
+    postalCode: field('postalCode'),
+    phone: field('phone'),
+    mobile: field('mobile'),
+    email: field('email'),
+    website: field('website'),
+  };
+  if (Object.values(declaration).every((value) => value === null)) return { kind: 'absent' };
+  return { kind: 'present', declaration };
+}
+
+// ============================================================================
+// REGISTRY DECLARATION — ADR-841 §7 Α23 (the declaration checked against ΓΕΜΗ)
+// ============================================================================
+
+/**
+ * 🔑 The ΓΕΜΗ number lives **once**, in the profile (the legal-identity SSoT, ADR-439). The
+ * showcase and the brokerage declaration **read** it — they never ask again (pattern: Stripe
+ * `company.registration_number`). The shape lives in `types/company-registry.ts` so screens see it.
+ */
+export type { CompanyRegistryDeclaration };
+
+export type CompanyRegistryDeclarationRead =
+  | { readonly kind: 'present'; readonly declaration: CompanyRegistryDeclaration }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unavailable' };
+
+function entityTypeOf(value: unknown): EntityType | null {
+  if (value === undefined || value === null || value === '') return LEGACY_DEFAULT_ENTITY_TYPE;
+  return COMPANY_ENTITY_TYPES.find((type) => type === value) ?? null;
+}
+
+/**
+ * Read the declaration that is judged against the registry.
+ *
+ * 🔴 Three states: a failed read must NOT look like "no ΓΕΜΗ number" — that would drop a
+ * verification badge or refuse a brokerage declaration for an organisation that has one.
+ */
+export async function readCompanyRegistryDeclaration(
+  companyId: string,
+): Promise<CompanyRegistryDeclarationRead> {
+  const read = await readProfileDocument(companyId);
+  if (read.kind !== 'present') return read;
+  return {
+    kind: 'present',
+    declaration: {
+      entityType: entityTypeOf(read.data.entityType),
+      businessName: readStringField(read.data, 'businessName') ?? null,
+      gemiNumber: readStringField(read.data, 'gemiNumber') ?? null,
+    },
+  };
 }
