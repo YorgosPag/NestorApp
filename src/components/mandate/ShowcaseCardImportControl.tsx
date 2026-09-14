@@ -16,9 +16,20 @@
  *
  * ⚠️ **Αναίρεση μόνο όσο ο άνθρωπος δεν έχει αγγίξει τίποτα μετά** (σύγκριση ταυτότητας πινάκων): αναίρεση που
  * θα έσβηνε και όσα έγραψε **μετά** την εισαγωγή θα ήταν απώλεια δουλειάς με κουμπί.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⛔ ΤΟ `dynamic` ΤΟΥ ΔΙΑΛΟΓΟΥ ΕΙΝΑΙ ΤΟ ΟΡΙΟ ΤΗΣ ΚΛΕΙΣΤΟΤΗΤΑΣ (CHECK 3.34) — ΜΗΝ ΤΟ ΚΑΝΕΙΣ ΣΤΑΤΙΚΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο πίνακας σύγκρισης (στήλες, καταστάσεις γραμμής, «κράτα/πάρε») φαίνεται **μόνο μετά από κλικ**· στατικός
+ * φούσκωνε το slice της κάρτας. Ίδιο ιδίωμα με `AccountEmailField` / `FirstContactAction` (ADR-844).
+ * 🔑 Ο διάλογος **αποδίδεται πάντα** (κλειστός): το chunk και το namespace του φορτώνουν αμέσως μετά το πρώτο
+ * βάψιμο, **πριν** μπορέσει να πατηθεί το κουμπί — όχι τη στιγμή της απόφασης. Στατικά μένουν ό,τι ζωγραφίζεται
+ * στο πρώτο καρέ: ετικέτα κουμπιού, προέλευση, εντοπισμός.
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -35,7 +46,12 @@ import { Link } from '@/lib/workspace/navigation';
 import type { ImportOrigin } from '@/types/showcase-card-import';
 import { SHOWCASE_CARD_IMPORT_KEYS } from '@/components/mandate/agency-showcase-import-labels';
 import { SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
-import { ShowcaseCardImportDialog } from './ShowcaseCardImportDialog';
+
+/** Όριο κλειστότητας (CHECK 3.34) — δες το κεφάλι του αρχείου. */
+const ShowcaseCardImportDialog = dynamic(
+  () => import('./ShowcaseCardImportDialog').then((mod) => mod.ShowcaseCardImportDialog),
+  { ssr: false },
+);
 
 export interface ShowcaseCardImportControlProps {
   readonly enabled: boolean;

@@ -18,8 +18,8 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "f8e4d78bede3f3c03a177ae0643fbd4a6ccf855057d8f6169ed4a2338e95c642",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "27d6a6cda2276712f1269ec6b95d9cedf10f68970de20fa52cc49b4b27ceb093",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "2c9036e92b494281fc1da351ca4582efc2f1a5d72574f624c6c31502e6de431f",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "8ee9852b41a15751b76b362825b526517e839b92ee4e1d9d0ae40747e041222c",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df7189506f43a1875859de881e5269d229b9ebca093675fa0d073ac12e706979",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "8b3e7e29daeb117a826d0c1cd49d79579b9ed4944c62a7d72651ee810424f13e",
@@ -72,7 +72,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "096d49ee6c6020a5eb2a6427e31ba5b48ef3f501a5e7c13b47f27cbdbc1dbf1e",
+  "inputsSha256": "ddb42a1804a5de2e661fe45a034f82defb05249c91ade4b5d7d4db87081619ae",
   "languages": [
     "el"
   ],
@@ -233,8 +233,7 @@
     "src/components/mandate/MandateUnavailableNotice.tsx": "e371e65810939937257c57eeffd1f271901ec338356571f3148fc6137e595fbf",
     "src/components/mandate/ShowcaseCardContent.tsx": "cc08c43e86b260fa481693f1f28de385304c9dd7e02e30b58d3aa0a6199109b3",
     "src/components/mandate/ShowcaseCardDoor.tsx": "81be4abb47736093be2c7049e1ec38416605660a69d9a9553b741d925a9ad85a",
-    "src/components/mandate/ShowcaseCardImportControl.tsx": "50ff8e7be19071e4f5dca79dfa798b5a243dd42dd9a5e436639eda4cdcbe4e79",
-    "src/components/mandate/ShowcaseCardImportDialog.tsx": "a0847ac80febaff67c5b89129b355f0284592ce33cb2f44ca4b1d65be20e3f91",
+    "src/components/mandate/ShowcaseCardImportControl.tsx": "78d4e13d42afe48c6709111117f88c7f74054585363649f03fc46786b103604f",
     "src/components/mandate/ShowcaseCardSection.tsx": "e6d6849ac39ec7b7de6da56e24e443102e265cdca0b073d24f9b2d457ffddccc",
     "src/components/mandate/ShowcaseChannelFields.tsx": "0cc38fc2e5bdb6c5b36df3edbda6e5b2c9b713fdd0c26a19d602b23add709ca0",
     "src/components/mandate/ShowcaseContactCard.tsx": "98f8cf18e55e6afa07ca40f20529d392d7ae666b3143e02f5719b22ff69decea",
@@ -396,10 +395,11 @@
     "src/lib/agency/showcase-card-import.ts": "82abcbe4968d981a854dc523caf9f8509c6c60efaa0284d14cbe7246fdd65e33",
     "src/lib/agency/showcase-card-primary.ts": "21e5e59b4428b3a6103941f1428cf45414dbfd55a0c8223dfcac2f7af496e72e",
     "src/lib/agency/showcase-email-confirmation-rules.ts": "d99d1113184f615eab00e159677e2d35faeda3725adbe72b9bf4938f843c7771",
+    "src/lib/agency/showcase-legal-identity.ts": "9bfa60222bd183d24ca00cb262d5171dec54c6b66176a5d21abf8f392b237dd6",
     "src/lib/agency/showcase-mark-fidelity.ts": "0f1a4258ff802b4685ab6a52d7c23b979b36af73b00908b6fff45e5c0ca1b988",
     "src/lib/agency/showcase-structured-data.ts": "b29a8a3230af626bab34a074faf0de578f2b29c39ab39a570b59887cca9f0645",
     "src/lib/agency/showcase-where-voice.ts": "ca8b1932e0665aa6a61849720ba51e82338574025611c859e8d920608ba4cb6b",
-    "src/lib/agency/showcase-wire.ts": "3662835ecbd902cad43319ff2c4f85954617d6ccffe418551fdb0a78ab8927ca",
+    "src/lib/agency/showcase-wire.ts": "b0b717a4b0a050898dfff39745b5c4141129b694c32464cedbf7a7718cc6b261",
     "src/lib/api/ApiErrorHandler.ts": "ab8e762bf6fb0a023c30d70c365bc474fb346d512224bb6cd0e36d2e84da9040",
     "src/lib/api/admin-db.ts": "2ef3d2a30545ca7a2e8766c2555ed68daeb4ed7f2d30f3a922a964571b27ebb9",
     "src/lib/api/api-error-rules.ts": "894b34f7c3c6a0551af53ac9c188ad7d7e637c989ce37ad04597a60a24e33fba",
@@ -416,7 +416,8 @@
     "src/lib/auth/permissions/resource-lookups.ts": "3a0e1582a770027b857603c0ca9a59ba113e3fa27d3fa1687109306f3a268b3a",
     "src/lib/auth/set-claims-with-mirror.ts": "2c8d8e4d1edb1ee3024be0529b104b94c111b56db511a6db21282227d67040fe",
     "src/lib/auth/token-credentials.ts": "04ada53730e0be6f12abafcf1c22fbe14e11e4a05e082872e72697d417995402",
-    "src/lib/company/gemi-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/company/legal-name-match.ts": "9440355b13b2c6dff2d9c94259cf05d05e2fb0b1bfc81e97ee7de0b8f427bb67",
+    "src/lib/company/registry-identity-judgment.ts": "d4509f1b34f0d257cc96061cfdda1e3c897b553d947fd2e36d4e453964bd54d1",
     "src/lib/contact/channel-email.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/channel-phone.ts": "60f9592e495e00e700e821f6c856ff5ca734d6b82b38cdc7bdaad0d923789bc3",
     "src/lib/contact/first-contact-capacity.ts": "dcf99f9e023a46bce73412d2b21bd080adaafd3d048ac8591bebfb143567ae27",
@@ -545,6 +546,8 @@
     "src/services/ErrorTracker.ts": "4ff1fd24ec31d0cf6a5234b143331fc599c2bcee34be0f04c73b50b8615f34c6",
     "src/services/account/tax-identity.service.ts": "96596f0ee90dc75534ab6cab64bc756a4d46028c5a4c8b4530e94e765ccb71c6",
     "src/services/ai-pipeline/shared/mailgun-sender.ts": "9f8d58e887c71e57d474683224b4ba11083d173bfaf7cc2a52106a75417da740",
+    "src/services/company-registry/company-registry-record.service.ts": "7864bd7cd8325e215f7d10b80df152f61b39fdeb710bff370cd580c7523ccf09",
+    "src/services/company-registry/gemi-opendata-parse.ts": "503bbb7ead105cd5a33351b80a4bd495b777f426929b770a7f28c59cdadd8690",
     "src/services/company/company-public-name.reader.ts": "84f955bbf880ce2b9f9dd291cd0b0a985017f6c8e401aa7c254ed245bf70f341",
     "src/services/company/sender-identity.ts": "4b1b1f014e567f19b6da02143bc0da0faf72f1b96b3c7b77a2cde74c4c8f00a8",
     "src/services/contact/first-contact-admission.ts": "3306acd8e253fac1ab93b92fd7d040bbc9ed97ebc71e0edee867d37a0d2fc25f",
@@ -593,8 +596,8 @@
     "src/services/listings/public-shelf.service.ts": "47a986c4a2f630c1087dc53c3d0cf55d135405190cb593a6439e444b44dd9b55",
     "src/services/listings/publish-public-listing-shelf.ts": "a8098f98a569f34954dbd0c7eae908d4a70c6d336b732b22aa12c7b52734f99b",
     "src/services/listings/publish-public-listing.ts": "125e33451b9c9c6c3b4f6d8073a0d4a9bb464a90b40edcb9f32de7314254d557",
-    "src/services/mandate/agency-profile-credential.ts": "513e596408cd006ab31efa97517b707a374053df05f64790896eec0405856504",
-    "src/services/mandate/agency-profile.service.ts": "2509c3edb518d432dcea98acca4c57ed4dc0d5396711ddc9b2714f894dd08217",
+    "src/services/mandate/agency-profile-credential.ts": "b7ebd2ef7d1d57c08749c44722ee782a0c82c3c1235b206b9525141d028202ca",
+    "src/services/mandate/agency-profile.service.ts": "e69a923f5a9c59afcbfb3bcc5ed9d33cb10f67138b58bafe1631fd5125bbeee2",
     "src/services/mandate/mandate-actions.service.ts": "c017fe22d216a7572e7f7e290226ca66ba3922dfaeb13e0b010d6517b5ca7793",
     "src/services/mandate/mandate-catalog.client.ts": "41c5bd36535fedb33fc332ab51abd83507c22afd982f4aa50fd4b7867d2d96b4",
     "src/services/mandate/mandate-catalog.service.ts": "2975d9316db3f60192c4de3bc4b9dfeaade64abb5022788db24085cf00680ec3",
@@ -608,6 +611,7 @@
     "src/services/mandate/mandate-request-vocabulary.ts": "4d704e90135da7facf1f3fe55f9eb3801b21ca006ce61fa0a48227b77850eb5d",
     "src/services/mandate/showcase-email-confirmation-decision.ts": "4ce897968ffb5b0807835e5ff25236d4bad902a38d01b6cb00e62c9b0dc2cde7",
     "src/services/mandate/showcase-email-confirmation-token.ts": "e3f724e6d44a1640373a041c82313a2120ccc6371d9839ae59fa46ca6b3fc4ba",
+    "src/services/mandate/showcase-legal-identity-custody.ts": "b0c6ffad811c301ed206444cb74ee10cd1b60444ab744b901c4e9fb991a1069d",
     "src/services/mandate/showcase-mark-publication.ts": "a7efa19149e02c4a1adbd495b943e19f1b02e4b2befb5156297827a63275badb",
     "src/services/mandate/showcase-mark-source.ts": "90fb6146071cb3e2d18fcfad30607a9818502af6863f4cc4e5793d27a166c119",
     "src/services/mandate/showcase-presence.service.ts": "2d05279217a4b31dbf075b547a2a1fc07590fb374379ee05f97ef392476a4a58",
@@ -2469,6 +2473,10 @@
             "mandate.showcase.rejection.agency-profile-name-missing",
             "mandate.showcase.rejection.agency-profile-occupation-missing",
             "mandate.showcase.rejection.agency-profile-registration-missing",
+            "mandate.showcase.rejection.agency-profile-registry-inactive",
+            "mandate.showcase.rejection.agency-profile-seat-address-missing",
+            "mandate.showcase.rejection.agency-profile-seat-disclosure-missing",
+            "mandate.showcase.rejection.agency-profile-title-not-in-registry",
             "mandate.showcase.removeOccupation",
             "mandate.showcase.republish",
             "mandate.showcase.statusNotPublished",
@@ -2555,76 +2563,6 @@
     "o__workspace__settings__agency-profile__card": {
       "page": "src/app/(app)/o/[workspace]/settings/agency-profile/card/page.tsx",
       "wants": {
-        "common": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-account": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-actions": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-empty-states": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-navigation": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-photos": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-sales": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-shared": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-status": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "common-validation": {
-          "keys": [
-            "buttons.close"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "property-market": {
           "keys": [
             "mandate.showcase.cardAddBranch",
@@ -2661,20 +2599,8 @@
             "mandate.showcase.cardHoursDefect.too-many-intervals",
             "mandate.showcase.cardHoursLabel",
             "mandate.showcase.cardImport.applied",
-            "mandate.showcase.cardImport.apply",
-            "mandate.showcase.cardImport.cancel",
             "mandate.showcase.cardImport.checkedOn",
-            "mandate.showcase.cardImport.colCard",
-            "mandate.showcase.cardImport.colCompany",
-            "mandate.showcase.cardImport.colDecision",
-            "mandate.showcase.cardImport.colField",
             "mandate.showcase.cardImport.companySettings",
-            "mandate.showcase.cardImport.field.emails",
-            "mandate.showcase.cardImport.field.phones",
-            "mandate.showcase.cardImport.field.street",
-            "mandate.showcase.cardImport.field.website",
-            "mandate.showcase.cardImport.keepCard",
-            "mandate.showcase.cardImport.lead",
             "mandate.showcase.cardImport.locate",
             "mandate.showcase.cardImport.locateFailed",
             "mandate.showcase.cardImport.locateNotFound",
@@ -2685,12 +2611,6 @@
             "mandate.showcase.cardImport.origin.company-profile",
             "mandate.showcase.cardImport.review",
             "mandate.showcase.cardImport.sourceFailed",
-            "mandate.showcase.cardImport.status.fill",
-            "mandate.showcase.cardImport.status.invalid-source",
-            "mandate.showcase.cardImport.status.no-room",
-            "mandate.showcase.cardImport.status.same",
-            "mandate.showcase.cardImport.takeCompany",
-            "mandate.showcase.cardImport.title",
             "mandate.showcase.cardImport.undo",
             "mandate.showcase.cardImport.upToDate",
             "mandate.showcase.cardLabelLabel",
@@ -2748,6 +2668,10 @@
             "mandate.showcase.rejection.agency-profile-name-missing",
             "mandate.showcase.rejection.agency-profile-occupation-missing",
             "mandate.showcase.rejection.agency-profile-registration-missing",
+            "mandate.showcase.rejection.agency-profile-registry-inactive",
+            "mandate.showcase.rejection.agency-profile-seat-address-missing",
+            "mandate.showcase.rejection.agency-profile-seat-disclosure-missing",
+            "mandate.showcase.rejection.agency-profile-title-not-in-registry",
             "mandate.showcase.temporarilyUnavailable"
           ],
           "prefixes": [],
@@ -5078,9 +5002,10 @@
     "src/lib/agency/showcase-mark.ts": "aebbce92be6d6d68b746ab7ce52adac098c0ec32d99a2312ed980c7f89f6d9d7",
     "src/lib/agency/showcase-presence.ts": "11978d15747d49232fec2c67cf25c6d3277d61e0ad791e187e95ab4471d7e7d5",
     "src/lib/agency/showcase-read-geo.ts": "9ec2c7a93b4cf3a66e004ccfed9dd7824ee31b3a5bb3324609c233d97aeebc46",
+    "src/lib/agency/showcase-read-legal-identity.ts": "e26cfaddc07d10ab63dbe287ba1c6b697c6d51eb15dcf1460193bc558324667b",
     "src/lib/agency/showcase-read-locations.ts": "151b1a2f18d5a8abe8b146414f4c00454829f4cc3086f2261e44d22da4464b6e",
     "src/lib/agency/showcase-read-primitives.ts": "4e12292ab88a67cb37e7611869108439fd5775cd779a2a9e0ed1a8284d629142",
-    "src/lib/agency/showcase-read.ts": "b32b3664a3861dd012253c86d6f63c9774faddead7c1202c34e6c0d4b44fd534",
+    "src/lib/agency/showcase-read.ts": "7453cabfa998ce5ef276c4ef0744a5b165b3c855065d49f8bba94d9373f04811",
     "src/lib/api/api-client-transport.ts": "4c1f4b6c42a5e621fdcbe95fdffc557c6e889ab088768e42184a5cbc133bc854",
     "src/lib/api/api-client-types.ts": "980ef38f60d24138ef8db398d26ad952136a89579ad9cb23e82fd8638839d6ef",
     "src/lib/api/enterprise-api-client.ts": "c9ff0828bb3e450967f061e3592488d0097dfc8243940b901ab9453ef5301532",
@@ -5112,6 +5037,7 @@
     "src/lib/auth/workspace-membership.ts": "b06c7adf0b256107d583687a1856d2fb7716806189bac1f6c4716126475e7e89",
     "src/lib/calendar/greek-public-holidays.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/calendar/weekly-hours.ts": "5b9f68c119e81124c103f802d23e29c700187996bb8dfc614a591255b482e47c",
+    "src/lib/company/gemi-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/first-contact-limits.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/first-contact-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/criteria/criterion-vocabulary.ts": "fa71c8ecb83e12afbfc91234df5f2949108d7d55559ede9061d58dfbfaec34ca",
@@ -5239,7 +5165,7 @@
     "src/services/building-code/types/site.types.ts": "fad8d5e9005b96aebfb999454ed92d9036be375e24e81aa4885cb82bf6a250ee",
     "src/services/companies.service.ts": "c3256ff25dc6c2de1f1faddaf3414414a04126bd087ee861bc8f55298eca1559",
     "src/services/company-document.service.ts": "49c5bd6978bf88881a2ef1ca25ce2052186ee2159dcbf47e043cec7d576c5f64",
-    "src/services/company/company-legal-identity.ts": "65edf67aa470d6a177606dbab8b31a4bf3594bc9ddfadc9976b46892473b0223",
+    "src/services/company/company-legal-identity.ts": "4e44398da30b626a2f916317fbd7542390da6dce49211a1f8f176589cdd7249b",
     "src/services/company/company-name-resolver.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/document-template.service.ts": "9c090cd456b28d009fe7fc9d61976e215cbc5830f2b246f8dbd77f9b4e1a62a9",
     "src/services/enterprise-id-access-generators.ts": "09e6b5a1d394dc17c2e7038d49ec1330c724a3dc8f4c061d1b7a0eae52ca2389",
@@ -5338,7 +5264,7 @@
     "src/types/ContactFormTypes.ts": "c7ce112e748e6f25757748abaa34b628a8fbcc6f8abd74164b1528e50b6db1d7",
     "src/types/address-position.ts": "7f6991ca6f8ab757f390f2f56c49fb9c33b875cf03a0cb6286c5f1e071b30083",
     "src/types/agency-coverage.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
-    "src/types/agency-profile.ts": "91330a0345ad11cf1cf02b7388df53350f8d094e77ab05be20870bd3886a5b65",
+    "src/types/agency-profile.ts": "504dd5691cfa203dd2d564a730824a1cff5343e8e356ee7a66cb54cb39a6ecc1",
     "src/types/api/building-spaces.api.types.ts": "e94c6bda125749cbda26cfa7c785303dfbb4974e9fa9872197f3a2fe4702ef45",
     "src/types/audit-trail.ts": "05478400aa1de60969525261398dd86ef7ddd4844dd31519fb2e9c471e90c08e",
     "src/types/building/contracts.ts": "dfad49d729bc3bcb67d579f24bfbc616de54cc4fcb1b3b424c8034cb743fe2f4",
@@ -5383,6 +5309,7 @@
     "src/types/search.ts": "35ecd4246a1349e4fc5757425facb913521b4eee27523e49bb93c52a703e953f",
     "src/types/sharing.ts": "4f540f9b2e1d98f8010b3fb17d71a4d66aa0c2e47a4a2fd863ffd3bd922b9c3e",
     "src/types/showcase-card.ts": "10f519062475b48e126ed8755714b6cb5936673ee843c346149eff562c30f021",
+    "src/types/showcase-legal-identity.ts": "be6bf11003b75cad92d2504d12334bb6e062b37bf0f7e5cbf108eb3d53487eb7",
     "src/types/sidebar.ts": "dc26a4db0101d54ccac0b49b8d89706851a14f974332f61a5213d4a69bcdd9f6",
     "src/types/soft-deletable.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/storage/contracts.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -5428,8 +5355,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 647,
-    "sliceBytes": 438347
+    "shellFiles": 650,
+    "sliceBytes": 439751
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

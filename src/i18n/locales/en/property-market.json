@@ -886,7 +886,11 @@
       "failed": "The action did not complete. Please try again.",
       "rejection": {
         "agency-profile-alias-missing": "Your workspace does not have an address yet.",
-        "agency-profile-name-missing": "Write the business name people will see.",
+        "agency-profile-name-missing": "The company profile has no business name. Add it in the company details and publish again.",
+        "agency-profile-title-not-in-registry": "The trade name must be registered in GEMI under your company's number. Run “Verify with GEMI” or choose the legal name.",
+        "agency-profile-registry-inactive": "According to GEMI the business is not active, so the showcase cannot be published. If this is wrong, check the GEMI number in the company profile.",
+        "agency-profile-seat-disclosure-missing": "Choose how much of the registered office is shown publicly. Sole proprietorships and general partnerships have no default, because the office may be your home.",
+        "agency-profile-seat-address-missing": "The address you chose for the registered office does not exist yet. Add it (in the company profile or on the card) or pick another option.",
         "agency-profile-occupation-missing": "Declare at least one occupation — without it the showcase says nothing.",
         "agency-profile-registration-missing": "This occupation requires a registry number to appear in the directory.",
         "agency-profile-chapter-missing": "Also state the chapter that issued the number — a bare number cannot be verified.",
