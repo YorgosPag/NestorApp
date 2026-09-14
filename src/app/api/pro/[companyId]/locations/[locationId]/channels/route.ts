@@ -22,6 +22,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { revealLocationChannels } from '@/services/mandate/showcase-card-reveal';
 import type { RevealedChannels } from '@/types/showcase-card';
+import { PRIVATE_CHANNEL_HEADERS as PRIVATE_HEADERS } from '@/app/api/pro/private-response-headers';
 
 interface ChannelsSegment {
   readonly params: Promise<{ readonly companyId: string; readonly locationId: string }>;
@@ -31,8 +32,6 @@ export type ChannelRevealResponse =
   | { readonly channels: RevealedChannels }
   | { readonly error: 'NOT_FOUND' }
   | { readonly error: 'UNAVAILABLE' };
-
-const PRIVATE_HEADERS = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } as const;
 
 async function revealHandler(
   _request: NextRequest,

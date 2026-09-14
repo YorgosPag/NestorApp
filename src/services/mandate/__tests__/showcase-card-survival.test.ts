@@ -38,7 +38,8 @@ const { publishShowcase, withdrawAgencyProfile } = require('../agency-profile.se
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { saveShowcaseCard } = require('../showcase-card-custody') as typeof import('../showcase-card-custody');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { revealLocationChannels } = require('../showcase-card-reveal') as typeof import('../showcase-card-reveal');
+const { revealLocationCard, revealLocationChannels } = require('../showcase-card-reveal') as
+  typeof import('../showcase-card-reveal');
 
 const COMPANY = 'comp_card_0001';
 
@@ -94,7 +95,7 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
   it('🔴 Κ1 — αλλαγή ΜΟΝΟ της επωνυμίας ΔΕΝ σβήνει την κάρτα', async () => {
     const { fake, admin } = db();
     await givenShowcase(admin);
-    expect((await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS])).kind).toBe('saved');
+    expect((await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null)).kind).toBe('saved');
     const before = (await raw(fake, COLLECTIONS.AGENCY_PROFILES))?.locations;
 
     await givenShowcase(admin, 'ΧΡΩΜΑΤΑ ΠΑΓΩΝΗ Α.Ε.');
@@ -108,7 +109,7 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
   it('🔴 Κ2 — ΤΟ ΔΗΜΟΣΙΟ ΕΓΓΡΑΦΟ ΔΕΝ ΚΡΑΤΑ ΑΡΙΘΜΟ Ή EMAIL· τα ιδιωτικά κρατούν', async () => {
     const { fake, admin } = db();
     await givenShowcase(admin);
-    await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS]);
+    await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
 
     const publicDoc = JSON.stringify(await raw(fake, COLLECTIONS.AGENCY_PROFILES));
     expect(publicDoc).not.toContain('2310123456');
@@ -123,7 +124,7 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
   it('🔴 Κ3 — η απόσυρση σβήνει ΚΑΙ τα ιδιωτικά κανάλια', async () => {
     const { fake, admin } = db();
     await givenShowcase(admin);
-    await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS]);
+    await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
 
     expect((await withdrawAgencyProfile(admin, COMPANY)).kind).toBe('withdrawn');
 
@@ -134,7 +135,7 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
   it('🔑 Κ4 — κάρτα χωρίς βιτρίνα: ονομαστική άρνηση, κανένα κανάλι στον δίσκο', async () => {
     const { fake, admin } = db();
 
-    const result = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS]);
+    const result = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
 
     expect(result).toEqual({ kind: 'rejected', reason: 'agency-profile-card-without-showcase' });
     expect(await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS)).toBeUndefined();
@@ -143,7 +144,7 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
   it('🔑 Κ5 — reveal: ΜΟΝΟ του ζητούμενου καταστήματος, και ταυτόσημο absent αλλιώς', async () => {
     const { admin } = db();
     await givenShowcase(admin);
-    const saved = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS]);
+    const saved = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
     if (saved.kind !== 'saved') throw new Error(saved.kind);
     const locationId = saved.locations[0].id;
 
@@ -158,5 +159,42 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
 
     await withdrawAgencyProfile(admin, COMPANY);
     expect(await revealLocationChannels(admin, COMPANY, locationId)).toEqual({ kind: 'absent' });
+  });
+
+  it('🔴 Κ7 — η ιστοσελίδα: κανονικοποιείται, ΕΠΙΒΙΩΝΕΙ της αλλαγής επωνυμίας, άκυρη ⇒ ονομασμένη άρνηση (Α21.17)', async () => {
+    const { fake, admin } = db();
+    await givenShowcase(admin);
+
+    expect((await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], 'www.vafes.gr')).kind).toBe('saved');
+    expect((await raw(fake, COLLECTIONS.AGENCY_PROFILES))?.website).toBe('https://www.vafes.gr/');
+
+    await givenShowcase(admin, 'ΧΡΩΜΑΤΑ ΠΑΓΩΝΗ Α.Ε.');
+    expect((await raw(fake, COLLECTIONS.AGENCY_PROFILES))?.website).toBe('https://www.vafes.gr/');
+
+    expect(await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], 'https://bank.gr@evil.example')).toEqual({
+      kind: 'rejected',
+      reason: 'agency-profile-card-website-invalid',
+    });
+    expect((await raw(fake, COLLECTIONS.AGENCY_PROFILES))?.website).toBe('https://www.vafes.gr/');
+  });
+
+  it('🔴 Κ6 — η vCard διαβάζει τον ΙΔΙΟ αναγνώστη: ίδια κανάλια, ίδιο absent (Α21.17)', async () => {
+    const { admin } = db();
+    await givenShowcase(admin);
+    const saved = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
+    if (saved.kind !== 'saved') throw new Error(saved.kind);
+    const locationId = saved.locations[0].id;
+
+    const card = await revealLocationCard(admin, COMPANY, locationId);
+    expect(card).toMatchObject({
+      kind: 'revealed',
+      showcase: { displayName: 'ΒΑΦΕΣ ΠΑΓΩΝΗ', alias: 'vafes-pagoni' },
+      location: { id: locationId, street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' } },
+      channels: { phones: [{ e164: '+302310123456', extension: null }], emails: ['office@vafes.gr'] },
+    });
+    expect(await revealLocationCard(admin, COMPANY, 'sloc_unknown')).toEqual({ kind: 'absent' });
+
+    await withdrawAgencyProfile(admin, COMPANY);
+    expect(await revealLocationCard(admin, COMPANY, locationId)).toEqual({ kind: 'absent' });
   });
 });

@@ -11,7 +11,7 @@ const CARD: VCardOrganisation = {
   phones: [{ e164: '+302310123456', extension: null }],
   emails: ['office@vafes.gr'],
   address: { streetLine: 'Τσιμισκή, 12', postalCode: '54624' },
-  url: 'https://nestorconstruct.gr/pro/vafes-pagoni',
+  urls: ['https://www.vafes.gr/', 'https://nestorconstruct.gr/pro/vafes-pagoni'],
 };
 
 const octets = (text: string): number => Buffer.byteLength(text, 'utf8');
@@ -37,7 +37,7 @@ describe('buildVCard', () => {
     expect(out).toContain('\r\nTEL;TYPE=WORK,VOICE:+302310123456,12\r\n');
     expect(out).toContain('\r\nEMAIL;TYPE=INTERNET,WORK:office@vafes.gr\r\n');
     expect(out).toContain('\r\nADR;TYPE=WORK:;;Τσιμισκή\\, 12;;;54624;\r\n');
-    expect(out).toContain('\r\nURL:https://nestorconstruct.gr/pro/vafes-pagoni\r\n');
+    expect(out).toContain('\r\nURL:https://www.vafes.gr/\r\nURL:https://nestorconstruct.gr/pro/vafes-pagoni\r\n');
   });
 
   it('🔴 «μόνο περιοχή» ⇒ ΚΑΜΙΑ γραμμή ADR', () => {
@@ -88,19 +88,23 @@ describe('vcardFileName', () => {
 describe('showcaseLocationVCard', () => {
   const channels = { phones: [{ e164: '+302310123456', extension: null }], emails: [] };
 
-  it('οδός που ΔΕΝ δημοσιεύτηκε ⇒ καμία διεύθυνση στην επαφή', () => {
-    const card = showcaseLocationVCard({ displayName: 'Α' }, { label: null, street: null }, channels, null);
+  it('οδός που ΔΕΝ δημοσιεύτηκε ⇒ καμία διεύθυνση· χωρίς ιστοσελίδα και διεύθυνση βιτρίνας ⇒ κανένα URL', () => {
+    const card = showcaseLocationVCard({ displayName: 'Α', website: null }, { label: null, street: null }, channels, null);
     expect(card.address).toBeNull();
-    expect(card.url).toBeNull();
+    expect(card.urls).toEqual([]);
   });
 
-  it('η ετικέτα του καταστήματος γίνεται τμήμα', () => {
+  it('η ετικέτα γίνεται τμήμα· URL: πρώτα η ιστοσελίδα, μετά η βιτρίνα', () => {
     const card = showcaseLocationVCard(
-      { displayName: 'Α' },
+      { displayName: 'Α', website: 'https://www.vafes.gr/' },
       { label: 'Καλαμαριά', street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' } },
       channels,
       'https://x.gr/pro/a',
     );
-    expect(card).toMatchObject({ unit: 'Καλαμαριά', address: { streetLine: 'Τσιμισκή, 12', postalCode: '54624' } });
+    expect(card).toMatchObject({
+      unit: 'Καλαμαριά',
+      address: { streetLine: 'Τσιμισκή, 12', postalCode: '54624' },
+      urls: ['https://www.vafes.gr/', 'https://x.gr/pro/a'],
+    });
   });
 });

@@ -9,6 +9,9 @@
  * ⚠️ **Η διεύθυνση μπαίνει ΜΟΝΟ με δημοσιευμένη οδό** — ίδιος κανόνας με τις οδηγίες μετάβασης στη σελίδα:
  * η επαφή δεν μεταφέρει ποτέ περισσότερα από όσα δείχνει η βιτρίνα.
  *
+ * 🔑 **Δύο URL, με σειρά**: πρώτα η ιστοσελίδα του οργανισμού (αυτό περιμένει ο άνθρωπος στις Επαφές του),
+ * μετά η ζωντανή βιτρίνα (ωράριο, υποκαταστήματα — πάντα επίκαιρα).
+ *
  * **Layering**: leaf — καθαρή αντιστοίχιση.
  */
 
@@ -18,7 +21,7 @@ import type { PublicShowcase } from '@/types/agency-profile';
 import type { ShowcaseLocation, ShowcaseLocationChannels } from '@/types/showcase-card';
 
 export function showcaseLocationVCard(
-  showcase: Pick<PublicShowcase, 'displayName'>,
+  showcase: Pick<PublicShowcase, 'displayName' | 'website'>,
   location: Pick<ShowcaseLocation, 'label' | 'street'>,
   channels: ShowcaseLocationChannels,
   profileUrl: string | null,
@@ -35,6 +38,6 @@ export function showcaseLocationVCard(
             streetLine: formatContactAddressLine({ street: location.street.street, number: location.street.number }),
             postalCode: location.street.postalCode,
           },
-    url: profileUrl,
+    urls: [showcase.website, profileUrl].filter((url): url is string => url !== null),
   };
 }

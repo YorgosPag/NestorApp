@@ -48,8 +48,8 @@ export interface VCardOrganisation {
   readonly phones: readonly VCardPhone[];
   readonly emails: readonly string[];
   readonly address: VCardAddress | null;
-  /** Απόλυτο URL της ζωντανής σελίδας — `null` αν δεν ξέρουμε ποιοι είμαστε. */
-  readonly url: string | null;
+  /** Απόλυτα URL — η ιστοσελίδα του οργανισμού και/ή η ζωντανή βιτρίνα, με σειρά προτίμησης. */
+  readonly urls: readonly string[];
 }
 
 const CRLF = '\r\n';
@@ -121,7 +121,7 @@ function placeLines(card: VCardOrganisation): string[] {
     const { streetLine, postalCode } = card.address;
     lines.push(`ADR;TYPE=WORK:;;${escapeVCardText(streetLine)};;;${escapeVCardText(postalCode)};`);
   }
-  if (card.url !== null) lines.push(`URL:${card.url}`);
+  for (const url of card.urls) lines.push(`URL:${url}`);
   return lines;
 }
 
