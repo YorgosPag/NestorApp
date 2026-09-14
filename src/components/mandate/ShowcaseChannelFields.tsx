@@ -21,6 +21,7 @@ import {
   SHOWCASE_NS,
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
+import { ShowcaseEmailConfirmationControl, type SavedEmailChannels } from './ShowcaseEmailConfirmationControl';
 
 /** Άκυρο **μόνο** όταν γράφτηκε κάτι — η κενή γραμμή είναι «δεν δηλώνω», όχι λάθος. */
 const phoneLooksInvalid = (number: string) => number.trim() !== '' && !normalisePhone(number).ok;
@@ -63,9 +64,12 @@ export function ShowcasePhoneFields({
 
 export function ShowcaseEmailFields({
   emails,
+  saved,
   onChange,
 }: {
   readonly emails: readonly string[];
+  /** Α21.18 — το αποθηκευμένο κατάστημα, για την κατάσταση επιβεβαίωσης κάθε διεύθυνσης· `null` = νέο. */
+  readonly saved: SavedEmailChannels | null;
   readonly onChange: (emails: readonly string[]) => void;
 }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
@@ -81,7 +85,9 @@ export function ShowcaseEmailFields({
           </Button>
           {emailLooksInvalid(email) ? (
             <span className="w-full text-sm text-destructive">{t(SHOWCASE_REJECTION_KEYS['agency-profile-card-email-invalid'])}</span>
-          ) : null}
+          ) : (
+            <ShowcaseEmailConfirmationControl email={email} saved={saved} />
+          )}
         </span>
       ))}
       {emails.length < MAX_EMAILS_PER_LOCATION ? (

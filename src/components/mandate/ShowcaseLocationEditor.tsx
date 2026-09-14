@@ -27,15 +27,18 @@ import {
   SHOWCASE_NS,
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseEmailFields, ShowcasePhoneFields } from './ShowcaseChannelFields';
+import type { SavedEmailChannels } from './ShowcaseEmailConfirmationControl';
 import { WeeklyHoursField } from './WeeklyHoursField';
 
 interface ShowcaseLocationEditorProps {
   readonly draft: ShowcaseLocationDraft;
+  /** Α21.18 — ό,τι είναι **αποθηκευμένο** για αυτό το κατάστημα (κατάσταση επιβεβαίωσης email)· `null` = νέο. */
+  readonly saved: SavedEmailChannels | null;
   readonly onChange: (draft: ShowcaseLocationDraft) => void;
   readonly onRemove: () => void;
 }
 
-function StreetFields({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove'>): React.ReactElement {
+function StreetFields({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove' | 'saved'>): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const id = React.useId();
   const edit = (patch: Partial<ShowcaseLocationDraft['street']>) =>
@@ -59,7 +62,7 @@ function StreetFields({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
   );
 }
 
-function HoursSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove'>): React.ReactElement {
+function HoursSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove' | 'saved'>): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const id = React.useId();
 
@@ -76,7 +79,7 @@ function HoursSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
   );
 }
 
-export function ShowcaseLocationEditor({ draft, onChange, onRemove }: ShowcaseLocationEditorProps): React.ReactElement {
+export function ShowcaseLocationEditor({ draft, saved, onChange, onRemove }: ShowcaseLocationEditorProps): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const id = React.useId();
 
@@ -94,7 +97,7 @@ export function ShowcaseLocationEditor({ draft, onChange, onRemove }: ShowcaseLo
       </section>
       <StreetFields draft={draft} onChange={onChange} />
       <ShowcasePhoneFields phones={draft.phones} onChange={(phones) => onChange({ ...draft, phones })} />
-      <ShowcaseEmailFields emails={draft.emails} onChange={(emails) => onChange({ ...draft, emails })} />
+      <ShowcaseEmailFields emails={draft.emails} saved={saved} onChange={(emails) => onChange({ ...draft, emails })} />
       <HoursSection draft={draft} onChange={onChange} />
       <Button type="button" variant="outline" className="self-start" onClick={onRemove}>
         {t(SHOWCASE_CARD_KEYS.removeLocation)}

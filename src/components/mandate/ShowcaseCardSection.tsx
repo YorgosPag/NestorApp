@@ -32,7 +32,9 @@ import {
   MAX_EMAILS_PER_LOCATION,
   MAX_PHONES_PER_LOCATION,
   MAX_SHOWCASE_LOCATIONS,
+  type OwnedShowcaseLocation,
 } from '@/types/showcase-card';
+import type { SavedEmailChannels } from './ShowcaseEmailConfirmationControl';
 import {
   SHOWCASE_CARD_KEYS,
   SHOWCASE_KEYS,
@@ -109,6 +111,12 @@ function WebsiteField({ value, onChange }: { readonly value: string; readonly on
   );
 }
 
+/** Α21.18 — το **αποθηκευμένο** μισό ενός προχείρου: μόνο αυτό μπορεί να ζητήσει επιβεβαίωση. */
+function savedOf(locations: readonly OwnedShowcaseLocation[], draft: ShowcaseLocationDraft): SavedEmailChannels | null {
+  const location = draft.id === null ? undefined : locations.find(({ id }) => id === draft.id);
+  return location === undefined ? null : { locationId: location.id, channels: location.channels };
+}
+
 function useCardDrafts(loaded: readonly ShowcaseLocationDraft[] | null) {
   const [drafts, setDrafts] = React.useState<readonly ShowcaseLocationDraft[]>([]);
   // 🔑 Κάθε νέα απάντηση του διακομιστή (φόρτωση ή αποθήκευση) γίνεται η αλήθεια της φόρμας —
@@ -161,8 +169,9 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
           <WebsiteField value={website} onChange={setWebsite} />
           {drafts.length === 0 ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.empty)}</p> : null}
           {drafts.map((draft) => (
-            <ShowcaseLocationEditor key={draft.key} draft={draft} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
+            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, draft)} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
           ))}
+          <p className="m-0 text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.emailConfirmHint)}</p>
           <span className="flex flex-wrap gap-2">
             {!hasHeadquarters ? (
               <Button type="button" variant="outline" onClick={() => setDrafts([emptyLocationDraft('headquarters'), ...drafts])}>{t(SHOWCASE_CARD_KEYS.addHeadquarters)}</Button>

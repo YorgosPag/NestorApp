@@ -26,6 +26,7 @@ import { splitTextIntoLinkSegments } from '@/lib/validation/text-link-segments';
 import type { RevealedChannels, ShowcaseChannelKind } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { channelRevealPath } from './showcase-card-paths';
+import { EmailConfirmedNote } from './EmailConfirmedNote';
 
 type RevealState =
   | { readonly phase: 'idle' }
@@ -86,8 +87,10 @@ function RevealedList({ channels }: { readonly channels: RevealedChannels }): Re
             <Mail aria-hidden="true" className="h-4 w-4" /> {email}
           </>
         );
+        // Α21.18 — σήμα **ανά διεύθυνση** μετά την «Εμφάνιση»: ποια από τις διευθύνσεις επιβεβαιώθηκε.
+        const confirmedAt = channels.emailConfirmations.find((entry) => entry.email === email)?.confirmedAt ?? null;
         return (
-          <li key={email}>
+          <li key={email} className="flex flex-wrap items-center gap-x-2">
             {href === null ? (
               <span className="inline-flex items-center gap-2 font-medium text-foreground">{content}</span>
             ) : (
@@ -95,6 +98,7 @@ function RevealedList({ channels }: { readonly channels: RevealedChannels }): Re
                 {content}
               </a>
             )}
+            <EmailConfirmedNote confirmedAt={confirmedAt} />
           </li>
         );
       })}
