@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, AlertCircle, HelpCircle, MinusCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, HelpCircle, MinusCircle, Loader2, Layers } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
@@ -34,6 +34,13 @@ const STATUS_CONFIG: Record<AddressFieldStatus['kind'], StatusConfig> = {
     labelKey: 'editor.field.badge.mismatch',
     tooltipKey: 'editor.field.tooltip.mismatch',
   },
+  // ADR-332 D28 — συνεπές, όχι επιφύλαξη: γι' αυτό ούτε `warning` ούτε το εικονίδιο της ασυμφωνίας.
+  broader: {
+    icon: Layers,
+    variant: 'info',
+    labelKey: 'editor.field.badge.broader',
+    tooltipKey: 'editor.field.tooltip.broader',
+  },
   unknown: {
     icon: HelpCircle,
     variant: 'info',
@@ -57,6 +64,9 @@ const STATUS_CONFIG: Record<AddressFieldStatus['kind'], StatusConfig> = {
 function buildTooltipParams(status: AddressFieldStatus): Record<string, string> | undefined {
   if (status.kind === 'mismatch') {
     return { userValue: status.userValue, resolvedValue: status.resolvedValue };
+  }
+  if (status.kind === 'broader') {
+    return { userValue: status.userValue };
   }
   if (status.kind === 'not-provided' && status.resolvedValue) {
     return { resolvedValue: status.resolvedValue };

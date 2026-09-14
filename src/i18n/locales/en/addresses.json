@@ -167,6 +167,7 @@
       "badge": {
         "match": "Match",
         "mismatch": "Mismatch",
+        "broader": "Wider area",
         "unknown": "Unknown",
         "notProvided": "Not provided",
         "pending": "Searching..."
@@ -174,6 +175,7 @@
       "tooltip": {
         "match": "Field matches the geocoding result",
         "mismatch": "Your value ({userValue}) differs from the system ({resolvedValue})",
+        "broader": "“{userValue}” is a wider area that contains the address found",
         "unknown": "This field was not recognised by the geocoding system",
         "notProvided": "Field is empty — system found: {resolvedValue}",
         "notProvidedEmpty": "Field is empty and no system value available",

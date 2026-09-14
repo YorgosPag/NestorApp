@@ -57,6 +57,8 @@ export type {
 export type AddressFieldStatus =
   | { kind: 'match'; userValue: string; resolvedValue: string }
   | { kind: 'mismatch'; userValue: string; resolvedValue: string }
+  /** ADR-332 D28 — the declared value names a wider area that contains the result. */
+  | { kind: 'broader'; userValue: string }
   | { kind: 'unknown'; userValue: string }
   | { kind: 'not-provided'; resolvedValue?: string }
   | { kind: 'pending' };

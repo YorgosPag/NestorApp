@@ -9,13 +9,11 @@
  *
  * Status rules per field:
  *   - phase=loading        → 'pending'
- *   - user empty + resolved empty → 'not-provided' (no resolvedValue)
- *   - user empty + resolved set   → 'not-provided' (with resolvedValue, suggesting auto-fill)
- *   - user set   + resolved empty → 'unknown'
- *   - user equals resolved  → 'match'
- *   - user differs resolved → 'mismatch'
+ *   - anything else        → the ONE comparison, `lib/geocoding/field-match`
  *
- * Comparison reuses the same normalization rules as `diffAddressFields`.
+ * 🔴 **Η σύγκριση ΔΕΝ γράφεται πια εδώ** (ADR-332 D28, 2026-09-14). Ήταν δεύτερο αντίγραφο της
+ * κρίσης του διακομιστή και είχε αποκλίνει: ο Τ.Κ. «546 24» ⇄ «54624» ήταν `match` στον διακομιστή
+ * και **«Ασυμφωνία»** στο badge. Εδώ μένει μόνο η **μετάφραση** της κρίσης σε σχήμα badge.
  *
  * @module components/shared/addresses/editor/hooks/useAddressFieldStatus
  * @see ADR-332 §3.2 AddressFieldStatus
@@ -24,7 +22,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
+import {
+  COMPARABLE_ADDRESS_FIELDS,
+  compareAddressField,
+  type ComparableAddressField,
+} from '@/lib/geocoding/field-match';
 import type {
   AddressEditorState,
   AddressFieldStatus,
@@ -32,23 +34,7 @@ import type {
   ResolvedAddressFields,
 } from '../types';
 
-const COMPARABLE_FIELDS: ReadonlyArray<keyof ResolvedAddressFields> = [
-  'street',
-  'number',
-  'postalCode',
-  'neighborhood',
-  'city',
-  'county',
-  'region',
-  'country',
-];
-
 export type AddressFieldStatusMap = Record<keyof ResolvedAddressFields, AddressFieldStatus>;
-
-function normalize(value: string | undefined): string {
-  if (!value) return '';
-  return normalizeGreekText(value.trim()).toLowerCase();
-}
 
 function extractResult(state: AddressEditorState): GeocodingApiResponse | null {
   switch (state.phase) {
@@ -64,29 +50,29 @@ function extractResult(state: AddressEditorState): GeocodingApiResponse | null {
 }
 
 function computeStatus(
+  field: ComparableAddressField,
   userValue: string | undefined,
-  resolvedValue: string | undefined,
+  resolved: ResolvedAddressFields,
 ): AddressFieldStatus {
   const userTrim = (userValue ?? '').trim();
-  const resolvedTrim = (resolvedValue ?? '').trim();
-  if (userTrim.length === 0 && resolvedTrim.length === 0) {
-    return { kind: 'not-provided' };
+  const resolvedTrim = (resolved[field] ?? '').trim();
+  const kind = compareAddressField(field, userValue, resolved);
+  switch (kind) {
+    case 'not-provided':
+      return resolvedTrim === '' ? { kind } : { kind, resolvedValue: resolvedTrim };
+    case 'unknown':
+      return { kind, userValue: userTrim };
+    case 'broader':
+      return { kind, userValue: userTrim };
+    case 'match':
+    case 'mismatch':
+      return { kind, userValue: userTrim, resolvedValue: resolvedTrim };
   }
-  if (userTrim.length === 0) {
-    return { kind: 'not-provided', resolvedValue: resolvedTrim };
-  }
-  if (resolvedTrim.length === 0) {
-    return { kind: 'unknown', userValue: userTrim };
-  }
-  if (normalize(userTrim) === normalize(resolvedTrim)) {
-    return { kind: 'match', userValue: userTrim, resolvedValue: resolvedTrim };
-  }
-  return { kind: 'mismatch', userValue: userTrim, resolvedValue: resolvedTrim };
 }
 
 function buildPendingMap(): AddressFieldStatusMap {
   const map = {} as AddressFieldStatusMap;
-  for (const field of COMPARABLE_FIELDS) {
+  for (const field of COMPARABLE_ADDRESS_FIELDS) {
     map[field] = { kind: 'pending' };
   }
   return map;
@@ -101,8 +87,8 @@ export function useAddressFieldStatus(
     const result = extractResult(state);
     const resolved: ResolvedAddressFields = result?.resolvedFields ?? {};
     const map = {} as AddressFieldStatusMap;
-    for (const field of COMPARABLE_FIELDS) {
-      map[field] = computeStatus(userInput[field], resolved[field]);
+    for (const field of COMPARABLE_ADDRESS_FIELDS) {
+      map[field] = computeStatus(field, userInput[field], resolved);
     }
     return map;
   }, [state, userInput]);
