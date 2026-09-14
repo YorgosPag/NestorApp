@@ -325,7 +325,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
       <ShowcaseActions
         busy={busy}
         published={published}
-        onPublish={() => publish(declarationOf(alias, displayName, credentials, place, coverage))}
+        onPublish={() => publish(declarationOf(alias, credentials, place, coverage))}
         onWithdraw={withdraw}
       />
     </section>
@@ -426,14 +426,15 @@ function PlaceSection({
  */
 function declarationOf(
   alias: string,
-  displayName: string,
   credentials: readonly ShowcaseCredentialDraft[],
   place: PlaceRef | null,
   coverage: DeclaredCoverage | null,
 ): ShowcaseWireDeclaration {
   return {
     alias,
-    displayName,
+    // ⚠️ ADR-841 §7 Α23 Φ3.1 — προσωρινή επιλογή· η οθόνη επιλογής ονόματος/έδρας έρχεται στη Φ3.3.
+    publicName: { kind: 'legal-name' },
+    seatDisclosure: null,
     credentials: credentials
       .filter((draft): draft is ShowcaseCredentialDraft & { escoUri: string } => draft.escoUri !== null)
       .map((draft) => ({

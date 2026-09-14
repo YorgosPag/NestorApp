@@ -137,13 +137,14 @@ const PAINTER_OCCUPATION = {
 
 const BODY = {
   alias: ALIAS,
-  displayName: 'ΜΕΣΙΤΙΚΟ ΓΡΑΦΕΙΟ ΠΑΓΩΝΗ Ι.Κ.Ε.',
+  publicName: { kind: 'legal-name' },
   credentials: [{ escoUri: BROKER_URI, registrationNumber: '123456789000' }],
 };
 
 const PAINTER_BODY = {
   alias: ALIAS,
-  displayName: 'ΒΑΨΙΜΑΤΑ ΠΑΓΩΝΗ',
+  publicName: { kind: 'legal-name' },
+  seatDisclosure: 'municipality',
   credentials: [{ escoUri: PAINTER_URI }],
 };
 
@@ -432,7 +433,7 @@ describe('Α — «λείπει πεδίο» το απαντά ο ΓΡΑΦΕΑΣ
   it('🔴 Α1 — ΚΕΝΗ ΕΠΩΝΥΜΙΑ ΦΤΑΝΕΙ ΣΤΟΝ ΓΡΑΦΕΑ, δεν κόβεται ως «κακό σώμα»', async () => {
     publishMock.mockResolvedValue({ kind: 'rejected', reason: 'agency-profile-name-missing' });
 
-    const answer = await post({ ...BODY, displayName: '   ' });
+    const answer = await post(BODY);
 
     // 🔴 Η ΑΓΚΥΡΑ ΤΟΥ «ΕΝΑΣ ΚΡΙΤΗΣ»: ένα `min(1)` στο zod θα έδινε 400
     //    `MALFORMED_BODY` και θα έκανε τους ονομαστικούς λόγους **ανεκτέλεστους** —
@@ -449,6 +450,29 @@ describe('Α — «λείπει πεδίο» το απαντά ο ΓΡΑΦΕΑΣ
     expect(answer.status).toBe(400);
     expect(answer.body.error).toBe('MALFORMED_BODY');
     expect(answer.body.malformed).toEqual(expect.arrayContaining(['alias']));
+  });
+
+  it('🔴 Α2α — Α23: `displayName` στο σώμα ΔΕΝ φτάνει στον γραφέα· φτάνουν μόνο ΕΠΙΛΟΓΕΣ', async () => {
+    // Ελεύθερο όνομα δίπλα σε σήμα «επαληθευμένο από ΓΕΜΗ» θα έκανε το σήμα ψέμα.
+    const legal = { publicName: { kind: 'distinctive-title', title: 'ΠΑΓΩΝΗΣ' }, seatDisclosure: 'municipality' };
+    await post({ ...BODY, ...legal, displayName: 'Δοκιμαστικό Γραφείο Ο1-Ο9' });
+
+    const declaration = publishMock.mock.calls[0]?.[2] as Record<string, unknown>;
+    expect(declaration.legal).toEqual(legal);
+    expect(declaration).not.toHaveProperty('displayName');
+  });
+
+  it('🔑 Α2β — χωρίς επιλογή ονόματος ⇒ 400 που ΟΝΟΜΑΖΕΙ το πεδίο· απούσα έδρα ⇒ `null` στον γραφέα', async () => {
+    const { publicName: _omitted, ...withoutName } = BODY;
+    const answer = await post(withoutName);
+    expect(answer.status).toBe(400);
+    expect(answer.body.malformed).toEqual(expect.arrayContaining(['publicName']));
+
+    await post(BODY);
+    expect((publishMock.mock.calls[0]?.[2] as { legal: unknown }).legal).toEqual({
+      publicName: { kind: 'legal-name' },
+      seatDisclosure: null,
+    });
   });
 
   it('Α3 — η αστοχία γραφής είναι 500: ο άνθρωπος δεν έχει τι να διορθώσει', async () => {

@@ -63,6 +63,7 @@ import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
 
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { givenCompanyProfile, LEGAL_NAME_CHOICE } from './showcase-legal-fixture';
 
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();
@@ -155,9 +156,11 @@ const marksOf = (companyId = COMPANY): string[] =>
 
 /** Μια δημοσιευμένη βιτρίνα ελαιοχρωματιστή, με το όνομα που δίνεται. */
 async function givenShowcase(admin: AdminFirestore, displayName = 'ΒΑΦΕΣ ΠΑΓΩΝΗ'): Promise<void> {
+  // 🔑 Α23 — το όνομα λύνεται από το προφίλ: «αλλαγή επωνυμίας» = νέα επωνυμία στο προφίλ + δημοσίευση.
+  givenCompanyProfile(admin, COMPANY, { businessName: displayName });
   const result = await publishShowcase(admin, authorityOf(COMPANY), {
     alias: 'vafes-pagoni',
-    displayName,
+    legal: LEGAL_NAME_CHOICE,
     credentials: [{ occupation: PAINTER, registrationNumber: '', registrationChapter: '' }],
     place: null,
     position: null,
@@ -264,9 +267,10 @@ describe('🔴 Α — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΤΟ ΡΑΦΙ, ΟΧΙ
     });
 
     // Η άλλη εταιρεία, με δική της βιτρίνα και δικό της σήμα.
+    givenCompanyProfile(admin, OTHER_COMPANY, { businessName: 'ΑΛΛΟ ΓΡΑΦΕΙΟ' });
     await publishShowcase(admin, authorityOf(OTHER_COMPANY), {
       alias: 'allo-grafeio',
-      displayName: 'ΑΛΛΟ ΓΡΑΦΕΙΟ',
+      legal: LEGAL_NAME_CHOICE,
       credentials: [{ occupation: PAINTER, registrationNumber: '', registrationChapter: '' }],
       place: null,
       position: null,

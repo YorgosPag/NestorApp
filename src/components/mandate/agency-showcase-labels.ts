@@ -253,6 +253,10 @@ export const SHOWCASE_MARK_ADVICE_KEYS: Record<ShowcaseMarkKind, string> = {
 export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-alias-missing': `${K}.rejection.agency-profile-alias-missing`,
   'agency-profile-name-missing': `${K}.rejection.agency-profile-name-missing`,
+  'agency-profile-title-not-in-registry': `${K}.rejection.agency-profile-title-not-in-registry`,
+  'agency-profile-registry-inactive': `${K}.rejection.agency-profile-registry-inactive`,
+  'agency-profile-seat-disclosure-missing': `${K}.rejection.agency-profile-seat-disclosure-missing`,
+  'agency-profile-seat-address-missing': `${K}.rejection.agency-profile-seat-address-missing`,
   'agency-profile-occupation-missing': `${K}.rejection.agency-profile-occupation-missing`,
   'agency-profile-registration-missing': `${K}.rejection.agency-profile-registration-missing`,
   'agency-profile-chapter-missing': `${K}.rejection.agency-profile-chapter-missing`,
