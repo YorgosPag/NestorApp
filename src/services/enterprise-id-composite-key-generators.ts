@@ -28,7 +28,7 @@
  * @version 1.0.0
  */
 
-import type { EnterpriseId } from './enterprise-id-prefixes';
+import type { EnterpriseId } from './enterprise-id-types';
 import {
   aiUsageDocKey,
   chatHistoryDocKey,

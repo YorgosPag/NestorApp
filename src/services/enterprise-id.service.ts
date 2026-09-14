@@ -4,7 +4,8 @@
  * Cryptographically secure, collision-resistant ID generation. This file is a
  * pure re-export facade over the SRP-split internal modules:
  *
- *   - `./enterprise-id-prefixes`  — prefix constants + types (leaf module)
+ *   - `./enterprise-id-prefixes`  — prefix constants + derived prefix type (leaf module)
+ *   - `./enterprise-id-types`     — `EnterpriseId` / `IdGenerationConfig` shapes
  *   - `./enterprise-id-class`     — `EnterpriseIdService` class definition
  *   - `./enterprise-id-singleton` — canonical `enterpriseIdService` instance
  *   - `./enterprise-id-convenience` — quick-access named generator functions
@@ -23,12 +24,8 @@
  * @version 2.1.0 (2026-05-06 cycle-break)
  */
 
-export {
-  ENTERPRISE_ID_PREFIXES,
-  type EnterpriseIdPrefix,
-  type EnterpriseId,
-  type IdGenerationConfig,
-} from './enterprise-id-prefixes';
+export { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
+export type { EnterpriseId, IdGenerationConfig } from './enterprise-id-types';
 
 export { EnterpriseIdService } from './enterprise-id-class';
 

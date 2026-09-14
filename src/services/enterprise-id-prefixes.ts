@@ -94,6 +94,14 @@ export const ENTERPRISE_ID_PREFIXES = {
                               // `users/{uid}.status` (AIP-216 · GitHub/Slack/Entra). Ένα πεδίο απαντούσε
                               // δύο ερωτήματα («τι ταυτότητα έχει;» + «περιμένει έγκριση;»), και η
                               // απόδειξη email του πολίτη έσβηνε σιωπηλά το δεύτερο.
+  SHOWCASE_LOCATION: 'sloc',
+                              // ADR-841 §7 Α21.16: ΕΝΑ ΚΑΤΑΣΤΗΜΑ ΤΗΣ ΚΑΡΤΑΣ (έδρα ή υποκατάστημα).
+                              // Στοιχείο πίνακα μέσα στο `agency_profiles/{companyId}`, όχι έγγραφο —
+                              // αλλά ΧΡΕΙΑΖΕΤΑΙ σταθερή ταυτότητα: το ανώνυμο reveal ζητά «τα κανάλια
+                              // ΑΥΤΟΥ του καταστήματος», και θέση στον πίνακα θα έδειχνε σε άλλο
+                              // κατάστημα μόλις ο επαγγελματίας αφαιρέσει ένα από πάνω.
+                              // ⚠️ ΞΕΧΩΡΙΣΤΟ από τις ταυτότητες διευθύνσεων των Επαφών (`CompanyAddress.id`):
+                              // εκείνες είναι εσωτερικές εγγραφές εταιρείας· αυτό είναι δημοσιευμένη δήλωση.
   FIRST_CONTACT_INVITATION: 'fcin',
                               // ADR-844: Η ΠΡΟΣΚΛΗΣΗ — Ο,ΤΙ ΔΕΝ ΕΙΝΑΙ ΑΚΟΜΗ ΠΡΑΞΗ. Ο ανώνυμος
                               // επισκέπτης έγραψε όνομα + email και πάτησε· η πράξη ΔΕΝ φεύγει
@@ -478,18 +486,4 @@ export const ENTERPRISE_ID_PREFIXES = {
 
 export type EnterpriseIdPrefix = typeof ENTERPRISE_ID_PREFIXES[keyof typeof ENTERPRISE_ID_PREFIXES];
 
-/** Enterprise ID interface for type safety */
-export interface EnterpriseId {
-  readonly id: string;
-  readonly prefix: EnterpriseIdPrefix;
-  readonly uuid: string;
-  readonly timestamp: number;
-}
-
-/** ID generation configuration */
-export interface IdGenerationConfig {
-  maxRetries: number;
-  enableLogging: boolean;
-  enableCache: boolean;
-  cacheSize: number;
-}
+// `EnterpriseId` + `IdGenerationConfig` live in `./enterprise-id-types` (N.7.1 SRP split).

@@ -24,12 +24,8 @@
  * @version 2.1.0 (2026-05-06 cycle-break)
  */
 
-import {
-  ENTERPRISE_ID_PREFIXES,
-  type EnterpriseIdPrefix,
-  type EnterpriseId,
-  type IdGenerationConfig,
-} from './enterprise-id-prefixes';
+import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
+import type { EnterpriseId, IdGenerationConfig } from './enterprise-id-types';
 import { deterministicUuid } from './enterprise-id-deterministic';
 import { CompositeKeyIdGenerators } from './enterprise-id-composite-key-generators';
 

@@ -21,11 +21,8 @@
  * @version 1.0.0
  */
 
-import {
-  ENTERPRISE_ID_PREFIXES,
-  type EnterpriseIdPrefix,
-  type EnterpriseId,
-} from './enterprise-id-prefixes';
+import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
+import type { EnterpriseId } from './enterprise-id-types';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;

@@ -14,11 +14,8 @@
  * @see ADR-017, ADR-210, ADR-294 — enterprise ID SSoT
  */
 
-import {
-  ENTERPRISE_ID_PREFIXES,
-  type EnterpriseIdPrefix,
-  type EnterpriseId,
-} from './enterprise-id-prefixes';
+import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
+import type { EnterpriseId } from './enterprise-id-types';
 
 /** UUID v4, as emitted by both branches of the class's secure-uuid generator. */
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
