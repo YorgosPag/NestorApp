@@ -33,13 +33,29 @@
  * μεταγλωττιζόταν και θα έσπαγε **στην εκτέλεση**.
  *
  * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 ΜΙΑ ΚΑΝΟΝΙΚΗ ΔΙΕΥΘΥΝΣΗ — `/pro/comp_<uuid>` ⇒ 308 ⇒ `/pro/<ψευδώνυμο>` (ADR-841 §7 Α22)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η κάρτα αγγελίας συνδέει **κατά ταυτότητα** (Α1.6: κανένα τρίτο αντίγραφο ψευδωνύμου).
+ * Όταν η βιτρίνα είναι δημοσιευμένη **και** η αυθεντία επιβεβαιώνει ότι το ψευδώνυμό της
+ * ανήκει στο **ίδιο** γραφείο, ο διακομιστής στέλνει στο ανθρώπινο όνομα — ADR-787 §5.3 ζ.
+ * Η κρίση ζει στο {@link canonicalShowcaseSegment} (καθαρή, ελεγμένη)· εδώ μόνο I/O.
+ *
+ * 🔒 **Και δεν ανοίγει μαντείο**: αδημοσίευτη βιτρίνα ⇒ **καμία** ανακατεύθυνση ⇒ ίδια
+ * οθόνη με «δεν υπάρχει», όπως πριν. Το ψευδώνυμο αποκαλύπτεται **μόνο** για ό,τι το ίδιο
+ * το γραφείο δημοσίευσε.
+ *
+ * ⛔ **Το `permanentRedirect` ΕΚΤΟΣ κάθε `try`**: πετά `NEXT_REDIRECT`, και ένα `catch`
+ * γύρω του θα το κατάπινε σιωπηλά — η σελίδα θα αποδιδόταν στη μη κανονική διεύθυνση.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
  * 🏆 ΤΑ ΔΟΜΗΜΕΝΑ ΔΕΔΟΜΕΝΑ ΕΙΝΑΙ ΤΟΥ ΔΙΑΚΟΜΙΣΤΗ (ADR-841 §7 Α21.17)
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Το JSON-LD πρέπει να βρίσκεται στο HTML που **στέλνεται** — πολλοί ανιχνευτές δεν εκτελούν
  * JavaScript. Διαβάζεται με τον **υπάρχοντα** `lookupAgencyProfile` (φρουρός `readShowcase`,
- * συγκάλυψη, CHECK 3.74) — **όχι** δεύτερος αναγνώστης. Η παλιά δήλωση *«θα απαιτούσε δεύτερο
- * αναγνώστη»* δεν ισχύει πια: ο αναγνώστης υπήρχε ήδη, για το reveal.
+ * συγκάλυψη, CHECK 3.74) — **όχι** δεύτερος αναγνώστης· και από τη Α22 η **ίδια** ανάγνωση
+ * τροφοδοτεί και την κρίση της κανονικής διεύθυνσης.
  *
  * ⚠️ **Προαιρετικό, ποτέ φράγμα**: βλάβη ή αδημοσίευτη βιτρίνα ⇒ **κανένα** script, και η σελίδα
  * αποδίδεται κανονικά (η ζωντανή ανάγνωση του πελάτη μένει η αλήθεια της οθόνης).
@@ -50,25 +66,43 @@
  * @module app/(light)/pro/[alias]/page
  */
 
+import { permanentRedirect } from 'next/navigation';
+
 import { AgencyProfileContent } from '@/components/mandate/AgencyProfileContent';
 import { agencyProfileRoute } from '@/components/mandate/agency-directory-route';
 import { JsonLdScript } from '@/components/seo/JsonLdScript';
+import { canonicalShowcaseSegment } from '@/lib/agency/showcase-canonical-segment';
 import { showcaseStructuredData } from '@/lib/agency/showcase-structured-data';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { publicUrl } from '@/lib/http/public-origin';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
-import { resolveAlias } from '@/lib/workspace/alias-registry';
+import { resolveAlias, type AliasResolution } from '@/lib/workspace/alias-registry';
 import { createModuleLogger } from '@/lib/telemetry';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
+import type { PublicShowcaseLookup } from '@/types/agency-profile';
 
-const logger = createModuleLogger('pro-alias-structured-data');
+const logger = createModuleLogger('pro-alias-page');
+
+type FoundAlias = Extract<AliasResolution, { readonly outcome: 'found' }>;
+
+/** **Η μία ανάγνωση της βιτρίνας** στον διακομιστή — βλάβη ⇒ `unavailable`, ποτέ εξαίρεση. */
+async function readShowcaseOf(companyId: string): Promise<PublicShowcaseLookup> {
+  try {
+    return await lookupAgencyProfile(getAdminFirestore(), companyId);
+  } catch (error) {
+    logger.warn('Η βιτρίνα δεν διαβάστηκε στον διακομιστή — η σελίδα αποδίδεται κανονικά', {
+      companyId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { outcome: 'unavailable' };
+  }
+}
 
 /** **Βιτρίνα → JSON-LD**, ή `null` όταν δεν υπάρχει τι να πει (ή δεν ξέρουμε ποιοι είμαστε). */
-async function structuredDataFor(companyId: string): Promise<JsonLdValue | null> {
+function structuredDataFor(lookup: PublicShowcaseLookup): JsonLdValue | null {
+  if (lookup.outcome !== 'found') return null;
   try {
-    const lookup = await lookupAgencyProfile(getAdminFirestore(), companyId);
-    if (lookup.outcome !== 'found') return null;
     const profileUrl = publicUrl(agencyProfileRoute(lookup.showcase.alias));
     if (profileUrl === null) return null;
     return showcaseStructuredData(lookup.showcase, {
@@ -77,11 +111,27 @@ async function structuredDataFor(companyId: string): Promise<JsonLdValue | null>
     });
   } catch (error) {
     logger.warn('Τα δομημένα δεδομένα παραλείφθηκαν — η σελίδα αποδίδεται κανονικά', {
-      companyId,
+      companyId: lookup.showcase.companyId,
       error: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
+}
+
+/**
+ * **Πού πρέπει να ζει αυτή η σελίδα;** — I/O μόνο όταν χρειάζεται: η αυθεντία ρωτιέται
+ * **μόνο** για διεύθυνση-ταυτότητα με δημοσιευμένο ψευδώνυμο.
+ */
+async function canonicalSegmentFor(
+  requested: FoundAlias,
+  lookup: PublicShowcaseLookup,
+): Promise<string | null> {
+  const publishedAlias = lookup.outcome === 'found' ? lookup.showcase.alias : null;
+  const publishedAliasResolution =
+    requested.form === 'identity' && publishedAlias !== null
+      ? await resolveAlias(publishedAlias).catch(() => null)
+      : null;
+  return canonicalShowcaseSegment({ requested, publishedAlias, publishedAliasResolution });
 }
 
 interface AgencyProfilePageProps {
@@ -98,13 +148,24 @@ export default async function AgencyProfilePage({ params }: AgencyProfilePagePro
     throw new Error('AGENCY_ALIAS_LOOKUP_UNAVAILABLE');
   }
 
-  const companyId = resolution.outcome === 'found' ? resolution.companyId : null;
-  const structuredData = companyId === null ? null : await structuredDataFor(companyId);
+  if (resolution.outcome === 'not-found') {
+    return <AgencyProfileContent companyId={null} alias={alias} />;
+  }
+
+  const lookup = await readShowcaseOf(resolution.companyId);
+
+  // ⛔ ΕΚΤΟΣ `try` — δες την κεφαλίδα. Η σύγκριση με το `alias` φυλά από βρόχο.
+  const canonical = await canonicalSegmentFor(resolution, lookup);
+  if (canonical !== null && canonical !== alias) {
+    permanentRedirect(agencyProfileRoute(canonical));
+  }
+
+  const structuredData = structuredDataFor(lookup);
 
   return (
     <>
       {structuredData === null ? null : <JsonLdScript data={structuredData} />}
-      <AgencyProfileContent companyId={companyId} alias={alias} />
+      <AgencyProfileContent companyId={resolution.companyId} alias={alias} />
     </>
   );
 }

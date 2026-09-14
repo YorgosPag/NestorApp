@@ -193,7 +193,7 @@ export class FakeFirestore {
       const result = await body(transaction);
 
       if (transaction.readsAreStillValid()) {
-        transaction.flush();
+        await transaction.flush();
         return result;
       }
     }
@@ -320,13 +320,11 @@ export class FakeTransaction {
    * βασίζεται στο merge για να **μη σβήνει** τα `permissionSetIds` της κονσόλας ρόλων.
    */
   set(ref: FakeDocRef, doc: Doc, options?: { readonly merge?: boolean }): void {
-    this.writes.push(() => void ref.set(doc, options));
+    this.writes.push(() => ref.set(doc, options));
   }
 
   update(ref: FakeDocRef, patch: Doc): void {
-    this.writes.push(() => {
-      void ref.update(patch);
-    });
+    this.writes.push(() => ref.update(patch));
   }
 
   /**
@@ -335,9 +333,7 @@ export class FakeTransaction {
    * γραφέα και η απόσυρση αναφερόταν `failed` — κόκκινο για λόγο άσχετο με ό,τι ρωτά η άγκυρα.
    */
   delete(ref: FakeDocRef): void {
-    this.writes.push(() => {
-      void ref.delete();
-    });
+    this.writes.push(() => ref.delete());
   }
 
   /** Είναι ακόμη αληθινό ό,τι διαβάσαμε; */
@@ -349,8 +345,21 @@ export class FakeTransaction {
     return true;
   }
 
-  flush(): void {
-    this.writes.forEach((apply) => apply());
+  /**
+   * 🔴 **ΠΕΡΙΜΕΝΕΙ ΚΑΙ ΜΕΤΑΦΕΡΕΙ ΤΗΝ ΑΠΟΤΥΧΙΑ** (ADR-841 §7 Α22, Boy Scout).
+   *
+   * Ήταν `forEach(apply)` πάνω σε γραφές `void ref.delete()`: μια γραφή που **απέρριπτε**
+   * γινόταν **ανεπεξέργαστη απόρριψη** — ο γραφέας έβλεπε επιτυχία, και ο jest worker
+   * **κατέρρεε** (`organization-capability.test.ts`, «4 child process exceptions») από τη
+   * στιγμή που η απόσυρση βιτρίνας μπήκε σε συναλλαγή (Α21.16). Στο αληθινό SDK μια
+   * αποτυχία commit **απορρίπτει** το `runTransaction`· εδώ πλέον το ίδιο.
+   *
+   * ⚠️ **Δηλωμένο όριο**: σειριακή εφαρμογή, όχι ατομική — γραφές **πριν** την αποτυχημένη
+   * έχουν ήδη εφαρμοστεί. Αρκεί για το ερώτημα των αγκυρών *(«ο γραφέας μαθαίνει ότι
+   * απέτυχε;»)*· δεν αποδεικνύει ατομικότητα.
+   */
+  async flush(): Promise<void> {
+    for (const apply of this.writes) await apply();
   }
 }
 

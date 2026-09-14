@@ -72,7 +72,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "75fe0442b51a9fb29cabd54821d62ae7afa4f6713bd2f518755b549f52c2f5ad",
+  "inputsSha256": "e86927ca251a92ba4c6c6df9803dbca2a7e10153310c633652ec5cd4a9a62009",
   "languages": [
     "el"
   ],
@@ -384,7 +384,7 @@
     "src/lib/agency/coverage-agreement.ts": "8ab8222184493be20cbd54c57e7f622b6fa1a507a10911f8dfae1f05b8c04618",
     "src/lib/agency/coverage-camera.ts": "eb9368e740c7bc5bdc817b2943812e09052f5e4e8ad7b562eaab82315693d100",
     "src/lib/agency/presence-admin-ids.ts": "632638cfcd887e103e2474c0cbeaa4208e41b60df35f19c94ebda19ecaf8ef5a",
-    "src/lib/agency/showcase-canonical-segment.ts": "423c947aa1159753281301d06bf95ad0366c08a3ef2ef4c1411686885a76969b",
+    "src/lib/agency/showcase-canonical-segment.ts": "09dd448b22de14a7872afc02d68a35411df496481e548a902772d62e0e15f952",
     "src/lib/agency/showcase-card-channels-read.ts": "2f72e88fb41d270ef03ce8f539a75ee6db23661c2335b24f86665b545e74a812",
     "src/lib/agency/showcase-card-draft.ts": "0c8fd0bc922ad910bad27023d5bef2897d13becec2c68c2d350d3790c2904729",
     "src/lib/agency/showcase-card-primary.ts": "21e5e59b4428b3a6103941f1428cf45414dbfd55a0c8223dfcac2f7af496e72e",
