@@ -10,19 +10,13 @@
  * @compliance CLAUDE.md — no inline styles, semantic HTML, zero `any`
  */
 
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { MemberRow } from './MemberRow';
+import { CompanyRosterCard } from './CompanyRosterCard';
+import { useRosterEditing } from './useRosterEditing';
 import type { Member } from '../../types/entity';
-
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
-import { cn } from '@/lib/utils';
 import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
@@ -32,6 +26,8 @@ import { nowISO } from '@/lib/date-local';
 interface MemberManagementSectionProps {
   members: Member[];
   gemiNumber: string;
+  /** ADR-841 §7 Α23 — έτοιμο κείμενο σφάλματος μορφής του αριθμού ΓΕΜΗ. */
+  gemiError?: string;
   shareCapital: number;
   onMembersChange: (members: Member[]) => void;
   onGemiNumberChange: (gemiNumber: string) => void;
@@ -61,6 +57,8 @@ function createEmptyMember(index: number): Member {
   };
 }
 
+const memberDividendShareOf = (member: Member): number => member.dividendSharePercent;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -68,71 +66,28 @@ function createEmptyMember(index: number): Member {
 export function MemberManagementSection({
   members,
   gemiNumber,
+  gemiError,
   shareCapital,
   onMembersChange,
   onGemiNumberChange,
   onShareCapitalChange,
 }: MemberManagementSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
-  const colors = useSemanticColors();
-
-  const activeShareSum = members
-    .filter((m) => m.isActive)
-    .reduce((sum, m) => sum + m.dividendSharePercent, 0);
-
-  const shareValid = Math.abs(activeShareSum - 100) <= 0.01;
-
-  const handleMemberChange = useCallback(
-    (index: number, updates: Partial<Member>) => {
-      const next = [...members];
-      next[index] = { ...next[index], ...updates };
-      onMembersChange(next);
-    },
-    [members, onMembersChange]
-  );
-
-  const handleAddMember = useCallback(() => {
-    onMembersChange([...members, createEmptyMember(members.length)]);
-  }, [members, onMembersChange]);
-
-  const handleRemoveMember = useCallback(
-    (index: number) => {
-      onMembersChange(members.filter((_, i) => i !== index));
-    },
-    [members, onMembersChange]
-  );
+  const roster = useRosterEditing(members, onMembersChange, createEmptyMember, memberDividendShareOf);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('setup.members.title')}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Double-entry notice */}
-        <div
-          className="flex items-start gap-2 rounded-md border border-ring bg-[hsl(var(--bg-info))]/20 p-3 text-sm text-primary"
-          role="status"
-        >
-          <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          {t('setup.members.doubleEntryNotice')}
-        </div>
-
-        {/* ΓΕΜΗ (υποχρεωτικό) */}
-        <fieldset className="max-w-sm space-y-1">
-          <Label htmlFor="gemiNumber">{t('setup.gemiNumber')} *</Label>
-          <Input
-            id="gemiNumber"
-            value={gemiNumber}
-            onChange={(e) => onGemiNumberChange(e.target.value)}
-            placeholder={t('setup.gemiNumberPlaceholder')}
-            required
-          />
-          <p className={cn("text-xs", colors.text.muted)}>
-            {t('setup.members.gemiRequired')}
-          </p>
-        </fieldset>
-
-        {/* Share Capital */}
+    <CompanyRosterCard
+      title={t('setup.members.title')}
+      notice={t('setup.members.doubleEntryNotice')}
+      gemi={{
+        id: 'gemiNumber',
+        value: gemiNumber,
+        required: true,
+        note: t('setup.members.gemiRequired'),
+        error: gemiError,
+        onChange: onGemiNumberChange,
+      }}
+      capital={
         <fieldset className="max-w-sm space-y-1">
           <Label htmlFor="shareCapital">{t('setup.members.shareCapital')}</Label>
           <Input
@@ -144,44 +99,25 @@ export function MemberManagementSection({
             onChange={(e) => onShareCapitalChange(parseFloat(e.target.value) || 0)}
           />
         </fieldset>
-
-        {/* Members list */}
-        <section className="space-y-3">
-          {members.map((member, index) => (
-            <MemberRow
-              key={member.memberId}
-              member={member}
-              index={index}
-              onChange={handleMemberChange}
-              onRemove={handleRemoveMember}
-            />
-          ))}
-        </section>
-
-        {/* Dividend share sum validation */}
-        {members.length > 0 && (
-          <div
-            className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
-              shareValid
-                ? 'border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
-                : 'border-destructive/50 bg-destructive/5 text-destructive'
-            }`}
-            role={shareValid ? 'status' : 'alert'}
-          >
-            {!shareValid && <AlertTriangle className="h-4 w-4 flex-shrink-0" />}
-            {t('setup.members.shareSum', { sum: activeShareSum.toFixed(2) })}
-            {shareValid
-              ? ` — ${t('setup.members.shareSumValid')}`
-              : ` — ${t('setup.members.shareSumInvalid')}`}
-          </div>
-        )}
-
-        {/* Add member button */}
-        <Button variant="outline" onClick={handleAddMember}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('setup.members.addMember')}
-        </Button>
-      </CardContent>
-    </Card>
+      }
+      rows={members.map((member, index) => (
+        <MemberRow
+          key={member.memberId}
+          member={member}
+          index={index}
+          onChange={roster.change}
+          onRemove={roster.remove}
+        />
+      ))}
+      rowCount={members.length}
+      activeShareSum={roster.activeShareSum}
+      shareSumTexts={{
+        sumLabel: t('setup.members.shareSum', { sum: roster.activeShareSum.toFixed(2) }),
+        validLabel: t('setup.members.shareSumValid'),
+        invalidLabel: t('setup.members.shareSumInvalid'),
+      }}
+      addLabel={t('setup.members.addMember')}
+      onAdd={roster.add}
+    />
   );
 }

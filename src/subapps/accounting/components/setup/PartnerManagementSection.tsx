@@ -10,14 +10,10 @@
  * @compliance CLAUDE.md — no inline styles, semantic HTML, zero `any`
  */
 
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Plus, AlertTriangle } from 'lucide-react';
 import { PartnerRow } from './PartnerRow';
+import { CompanyRosterCard } from './CompanyRosterCard';
+import { useRosterEditing } from './useRosterEditing';
 import type { Partner } from '../../types/entity';
 import { nowISO } from '@/lib/date-local';
 
@@ -28,6 +24,8 @@ import { nowISO } from '@/lib/date-local';
 interface PartnerManagementSectionProps {
   partners: Partner[];
   gemiNumber: string | null;
+  /** ADR-841 §7 Α23 — έτοιμο κείμενο σφάλματος μορφής του αριθμού ΓΕΜΗ. */
+  gemiError?: string;
   onPartnersChange: (partners: Partner[]) => void;
   onGemiNumberChange: (gemiNumber: string | null) => void;
 }
@@ -58,6 +56,8 @@ function createEmptyPartner(index: number): Partner {
   };
 }
 
+const profitShareOf = (partner: Partner): number => partner.profitSharePercent;
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -65,91 +65,42 @@ function createEmptyPartner(index: number): Partner {
 export function PartnerManagementSection({
   partners,
   gemiNumber,
+  gemiError,
   onPartnersChange,
   onGemiNumberChange,
 }: PartnerManagementSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
-
-  const activeShareSum = partners
-    .filter((p) => p.isActive)
-    .reduce((sum, p) => sum + p.profitSharePercent, 0);
-
-  const shareValid = Math.abs(activeShareSum - 100) <= 0.01;
-
-  const handlePartnerChange = useCallback(
-    (index: number, updates: Partial<Partner>) => {
-      const next = [...partners];
-      next[index] = { ...next[index], ...updates };
-      onPartnersChange(next);
-    },
-    [partners, onPartnersChange]
-  );
-
-  const handleAddPartner = useCallback(() => {
-    onPartnersChange([...partners, createEmptyPartner(partners.length)]);
-  }, [partners, onPartnersChange]);
-
-  const handleRemovePartner = useCallback(
-    (index: number) => {
-      onPartnersChange(partners.filter((_, i) => i !== index));
-    },
-    [partners, onPartnersChange]
-  );
+  const roster = useRosterEditing(partners, onPartnersChange, createEmptyPartner, profitShareOf);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('setup.partners.title')}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* ΓΕΜΗ */}
-        <div className="max-w-sm space-y-1">
-          <Label htmlFor="gemiNumber">{t('setup.gemiNumber')}</Label>
-          <Input
-            id="gemiNumber"
-            value={gemiNumber ?? ''}
-            onChange={(e) => onGemiNumberChange(e.target.value || null)}
-            placeholder={t('setup.gemiNumberPlaceholder')}
-          />
-        </div>
-
-        {/* Partners list */}
-        <section className="space-y-3">
-          {partners.map((partner, index) => (
-            <PartnerRow
-              key={partner.partnerId}
-              partner={partner}
-              index={index}
-              onChange={handlePartnerChange}
-              onRemove={handleRemovePartner}
-            />
-          ))}
-        </section>
-
-        {/* Share sum validation */}
-        {partners.length > 0 && (
-          <div
-            className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
-              shareValid
-                ? 'border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
-                : 'border-destructive/50 bg-destructive/5 text-destructive'
-            }`}
-            role={shareValid ? 'status' : 'alert'}
-          >
-            {!shareValid && <AlertTriangle className="h-4 w-4 flex-shrink-0" />}
-            {t('setup.partners.shareSum', { sum: activeShareSum.toFixed(2) })}
-            {shareValid
-              ? ` — ${t('setup.partners.shareSumValid')}`
-              : ` — ${t('setup.partners.shareSumInvalid')}`}
-          </div>
-        )}
-
-        {/* Add partner button */}
-        <Button variant="outline" onClick={handleAddPartner}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('setup.partners.addPartner')}
-        </Button>
-      </CardContent>
-    </Card>
+    <CompanyRosterCard
+      title={t('setup.partners.title')}
+      // ΓΕΜΗ — προαιρετικό στην ΟΕ: κενό ⇒ `null`
+      gemi={{
+        id: 'gemiNumber',
+        value: gemiNumber ?? '',
+        required: false,
+        error: gemiError,
+        onChange: (value) => onGemiNumberChange(value.trim() === '' ? null : value),
+      }}
+      rows={partners.map((partner, index) => (
+        <PartnerRow
+          key={partner.partnerId}
+          partner={partner}
+          index={index}
+          onChange={roster.change}
+          onRemove={roster.remove}
+        />
+      ))}
+      rowCount={partners.length}
+      activeShareSum={roster.activeShareSum}
+      shareSumTexts={{
+        sumLabel: t('setup.partners.shareSum', { sum: roster.activeShareSum.toFixed(2) }),
+        validLabel: t('setup.partners.shareSumValid'),
+        invalidLabel: t('setup.partners.shareSumInvalid'),
+      }}
+      addLabel={t('setup.partners.addPartner')}
+      onAdd={roster.add}
+    />
   );
 }

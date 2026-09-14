@@ -59,7 +59,8 @@
       "vatNumberInvalid": "Invalid VAT number (9 digits)",
       "businessNameRequired": "Business name is required",
       "taxOfficeRequired": "Tax office is required",
-      "mainKadRequired": "Main activity code is required"
+      "mainKadRequired": "Main activity code is required",
+      "gemiNumberInvalid": "Invalid GEMI number (digits only, up to 12)"
     },
     "entityType": {
       "title": "Legal Entity Type",
@@ -74,6 +75,10 @@
     },
     "gemiNumber": "GEMI Number",
     "gemiNumberPlaceholder": "e.g. 123456789000",
+    "gemiRegistration": {
+      "title": "GEMI registration",
+      "soleProprietorNote": "Fill it in if the business carries out commercial activity and is registered with GEMI. Freelance professionals without a registration leave it empty."
+    },
     "partners": {
       "title": "OE Partners",
       "partnerLabel": "Partner {number}",

@@ -10,20 +10,17 @@
  * @compliance CLAUDE.md — no inline styles, semantic HTML, zero `any`
  */
 
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Plus, AlertTriangle, Info } from 'lucide-react';
-import { ShareholderRow } from './ShareholderRow';
-import type { Shareholder } from '../../types/entity';
-
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
 import { cn } from '@/lib/utils';
 import { nowISO } from '@/lib/date-local';
+import { ShareholderRow } from './ShareholderRow';
+import { CompanyRosterCard } from './CompanyRosterCard';
+import { useRosterEditing } from './useRosterEditing';
+import type { Shareholder } from '../../types/entity';
 
 // ============================================================================
 // TYPES
@@ -32,6 +29,8 @@ import { nowISO } from '@/lib/date-local';
 interface ShareholderManagementSectionProps {
   shareholders: Shareholder[];
   gemiNumber: string;
+  /** ADR-841 §7 Α23 — έτοιμο κείμενο σφάλματος μορφής του αριθμού ΓΕΜΗ. */
+  gemiError?: string;
   shareCapital: number;
   onShareholdersChange: (shareholders: Shareholder[]) => void;
   onGemiNumberChange: (gemiNumber: string) => void;
@@ -71,6 +70,44 @@ function createEmptyShareholder(index: number): Shareholder {
   };
 }
 
+const shareholderDividendShareOf = (shareholder: Shareholder): number => shareholder.dividendSharePercent;
+
+/** Το πεδίο κεφαλαίου της ΑΕ — με το ελάχιστο των 25.000€ και την ανακοίνωσή του. */
+function AeShareCapitalField({
+  shareCapital,
+  onShareCapitalChange,
+}: {
+  readonly shareCapital: number;
+  readonly onShareCapitalChange: (shareCapital: number) => void;
+}) {
+  const { t } = useTranslation(['accounting', 'accounting-setup']);
+  const colors = useSemanticColors();
+  const capitalValid = shareCapital >= MIN_SHARE_CAPITAL;
+
+  return (
+    <fieldset className="max-w-sm space-y-1">
+      <Label htmlFor="shareCapitalAE">{t('setup.shareholders.shareCapital')}</Label>
+      <Input
+        id="shareCapitalAE"
+        type="number"
+        min={MIN_SHARE_CAPITAL}
+        step={0.01}
+        value={shareCapital}
+        onChange={(e) => onShareCapitalChange(parseFloat(e.target.value) || 0)}
+      />
+      {!capitalValid && shareCapital > 0 && (
+        <p className="flex items-center gap-1 text-xs text-destructive">
+          <AlertTriangle className="h-3 w-3" />
+          {t('setup.shareholders.minCapitalNotice')}
+        </p>
+      )}
+      {capitalValid && (
+        <p className={cn('text-xs', colors.text.muted)}>{t('setup.shareholders.minCapitalNotice')}</p>
+      )}
+    </fieldset>
+  );
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -78,135 +115,53 @@ function createEmptyShareholder(index: number): Shareholder {
 export function ShareholderManagementSection({
   shareholders,
   gemiNumber,
+  gemiError,
   shareCapital,
   onShareholdersChange,
   onGemiNumberChange,
   onShareCapitalChange,
 }: ShareholderManagementSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
-  const colors = useSemanticColors();
-
-  const activeShareSum = shareholders
-    .filter((s) => s.isActive)
-    .reduce((sum, s) => sum + s.dividendSharePercent, 0);
-
-  const shareValid = Math.abs(activeShareSum - 100) <= 0.01;
-  const capitalValid = shareCapital >= MIN_SHARE_CAPITAL;
-
+  const roster = useRosterEditing(
+    shareholders,
+    onShareholdersChange,
+    createEmptyShareholder,
+    shareholderDividendShareOf,
+  );
   const totalShares = shareholders.reduce((sum, s) => sum + s.sharesCount, 0);
 
-  const handleShareholderChange = useCallback(
-    (index: number, updates: Partial<Shareholder>) => {
-      const next = [...shareholders];
-      next[index] = { ...next[index], ...updates };
-      onShareholdersChange(next);
-    },
-    [shareholders, onShareholdersChange]
-  );
-
-  const handleAddShareholder = useCallback(() => {
-    onShareholdersChange([...shareholders, createEmptyShareholder(shareholders.length)]);
-  }, [shareholders, onShareholdersChange]);
-
-  const handleRemoveShareholder = useCallback(
-    (index: number) => {
-      onShareholdersChange(shareholders.filter((_, i) => i !== index));
-    },
-    [shareholders, onShareholdersChange]
-  );
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('setup.shareholders.title')}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Double-entry notice */}
-        <div
-          className="flex items-start gap-2 rounded-md border border-ring bg-[hsl(var(--bg-info))]/20 p-3 text-sm text-primary"
-          role="status"
-        >
-          <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          {t('setup.shareholders.doubleEntryNotice')}
-        </div>
-
-        {/* ΓΕΜΗ (υποχρεωτικό) */}
-        <fieldset className="max-w-sm space-y-1">
-          <Label htmlFor="gemiNumberAE">{t('setup.gemiNumber')} *</Label>
-          <Input
-            id="gemiNumberAE"
-            value={gemiNumber}
-            onChange={(e) => onGemiNumberChange(e.target.value)}
-            placeholder={t('setup.gemiNumberPlaceholder')}
-            required
-          />
-          <p className={cn("text-xs", colors.text.muted)}>
-            {t('setup.shareholders.gemiRequired')}
-          </p>
-        </fieldset>
-
-        {/* Share Capital (min 25.000€) */}
-        <fieldset className="max-w-sm space-y-1">
-          <Label htmlFor="shareCapitalAE">{t('setup.shareholders.shareCapital')}</Label>
-          <Input
-            id="shareCapitalAE"
-            type="number"
-            min={MIN_SHARE_CAPITAL}
-            step={0.01}
-            value={shareCapital}
-            onChange={(e) => onShareCapitalChange(parseFloat(e.target.value) || 0)}
-          />
-          {!capitalValid && shareCapital > 0 && (
-            <p className="flex items-center gap-1 text-xs text-destructive">
-              <AlertTriangle className="h-3 w-3" />
-              {t('setup.shareholders.minCapitalNotice')}
-            </p>
-          )}
-          {capitalValid && (
-            <p className={cn("text-xs", colors.text.muted)}>
-              {t('setup.shareholders.minCapitalNotice')}
-            </p>
-          )}
-        </fieldset>
-
-        {/* Shareholders list */}
-        <section className="space-y-3">
-          {shareholders.map((shareholder, index) => (
-            <ShareholderRow
-              key={shareholder.shareholderId}
-              shareholder={shareholder}
-              index={index}
-              totalShares={totalShares}
-              onChange={handleShareholderChange}
-              onRemove={handleRemoveShareholder}
-            />
-          ))}
-        </section>
-
-        {/* Dividend share sum validation */}
-        {shareholders.length > 0 && (
-          <div
-            className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
-              shareValid
-                ? 'border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
-                : 'border-destructive/50 bg-destructive/5 text-destructive'
-            }`}
-            role={shareValid ? 'status' : 'alert'}
-          >
-            {!shareValid && <AlertTriangle className="h-4 w-4 flex-shrink-0" />}
-            {t('setup.shareholders.shareSum', { sum: activeShareSum.toFixed(2) })}
-            {shareValid
-              ? ` — ${t('setup.shareholders.shareSumValid')}`
-              : ` — ${t('setup.shareholders.shareSumInvalid')}`}
-          </div>
-        )}
-
-        {/* Add shareholder button */}
-        <Button variant="outline" onClick={handleAddShareholder}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('setup.shareholders.addShareholder')}
-        </Button>
-      </CardContent>
-    </Card>
+    <CompanyRosterCard
+      title={t('setup.shareholders.title')}
+      notice={t('setup.shareholders.doubleEntryNotice')}
+      gemi={{
+        id: 'gemiNumberAE',
+        value: gemiNumber,
+        required: true,
+        note: t('setup.shareholders.gemiRequired'),
+        error: gemiError,
+        onChange: onGemiNumberChange,
+      }}
+      capital={<AeShareCapitalField shareCapital={shareCapital} onShareCapitalChange={onShareCapitalChange} />}
+      rows={shareholders.map((shareholder, index) => (
+        <ShareholderRow
+          key={shareholder.shareholderId}
+          shareholder={shareholder}
+          index={index}
+          totalShares={totalShares}
+          onChange={roster.change}
+          onRemove={roster.remove}
+        />
+      ))}
+      rowCount={shareholders.length}
+      activeShareSum={roster.activeShareSum}
+      shareSumTexts={{
+        sumLabel: t('setup.shareholders.shareSum', { sum: roster.activeShareSum.toFixed(2) }),
+        validLabel: t('setup.shareholders.shareSumValid'),
+        invalidLabel: t('setup.shareholders.shareSumInvalid'),
+      }}
+      addLabel={t('setup.shareholders.addShareholder')}
+      onAdd={roster.add}
+    />
   );
 }

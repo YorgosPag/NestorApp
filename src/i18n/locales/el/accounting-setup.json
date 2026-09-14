@@ -59,7 +59,8 @@
       "vatNumberInvalid": "Μη έγκυρο ΑΦΜ (9 ψηφία)",
       "businessNameRequired": "Η επωνυμία είναι υποχρεωτική",
       "taxOfficeRequired": "Η ΔΟΥ είναι υποχρεωτική",
-      "mainKadRequired": "Η κύρια δραστηριότητα είναι υποχρεωτική"
+      "mainKadRequired": "Η κύρια δραστηριότητα είναι υποχρεωτική",
+      "gemiNumberInvalid": "Μη έγκυρος αριθμός ΓΕΜΗ (μόνο ψηφία, έως 12)"
     },
     "entityType": {
       "title": "Νομική Μορφή",
@@ -74,6 +75,10 @@
     },
     "gemiNumber": "Αριθμός ΓΕΜΗ",
     "gemiNumberPlaceholder": "π.χ. 123456789000",
+    "gemiRegistration": {
+      "title": "Εγγραφή στο ΓΕΜΗ",
+      "soleProprietorNote": "Συμπληρώστε τον αν η επιχείρηση ασκεί εμπορική δραστηριότητα και είναι εγγεγραμμένη στο ΓΕΜΗ. Ελεύθεροι επαγγελματίες χωρίς εγγραφή το αφήνουν κενό."
+    },
     "partners": {
       "title": "Εταίροι ΟΕ",
       "partnerLabel": "Εταίρος {number}",

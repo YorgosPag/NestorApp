@@ -6,6 +6,7 @@
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-02-09
  * @updated 2026-02-10 — Collapsible dashboard via AccountingPageHeader
+ * @updated 2026-09-14 — ADR-841 §7 Α23: αριθμός ΓΕΜΗ και στην ατομική, έλεγχος μορφής
  * @see ADR-ACC-000 §2 Company Data
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
 import type { CompanySetupInput, KadEntry, EntityType, Member, Shareholder } from '../../types';
@@ -36,6 +38,7 @@ import { EntityTypeSelector } from './EntityTypeSelector';
 import { PartnerManagementSection } from './PartnerManagementSection';
 import { MemberManagementSection } from './MemberManagementSection';
 import { ShareholderManagementSection } from './ShareholderManagementSection';
+import { SoleProprietorRegistrySection } from './SoleProprietorRegistrySection';
 import { CustomCategoriesSection } from './CustomCategoriesSection';
 import { nowISO } from '@/lib/date-local';
 
@@ -71,6 +74,7 @@ function createDefaultData(): CompanySetupInput {
     fiscalYearEnd: 12,
     currency: 'EUR',
     efkaCategory: 1,
+    gemiNumber: null,
     invoiceSeries: [],
   };
 }
@@ -95,6 +99,11 @@ function validateForm(data: CompanySetupInput): Record<string, string> {
   }
   if (!data.mainKad.code.trim()) {
     errors.mainKad = 'validation.mainKadRequired';
+  }
+  // ADR-841 §7 Α23 — ίδια κρίση με τον διακομιστή (`canonicalGemiNumber`): κενό επιτρέπεται, λάθος μορφή όχι.
+  const gemiNumber = data.gemiNumber?.trim() ?? '';
+  if (gemiNumber !== '' && canonicalGemiNumber(gemiNumber) === null) {
+    errors.gemiNumber = 'validation.gemiNumberInvalid';
   }
 
   return errors;
@@ -133,9 +142,13 @@ export function SetupPageContent() {
     setSaveSuccess(false);
   }, []);
 
+  // Κοινοί χειριστές των ενοτήτων εταίρων/μελών/μετόχων (ίδιο πεδίο, ίδια γραφή).
+  const handleGemiNumberChange = useCallback((gemiNumber: string | null) => handleChange({ gemiNumber }), [handleChange]);
+  const handleShareCapitalChange = useCallback((shareCapital: number) => handleChange({ shareCapital }), [handleChange]);
+
   const handleEntityTypeChange = useCallback((newType: EntityType) => {
     setFormData((prev) => {
-       
+
       const { entityType: _e, efkaCategory: _ef, gemiNumber: _g, partners: _p, members: _m, shareholders: _sh, shareCapital: _sc, ...common } =
         prev as Record<string, unknown>;
 
@@ -162,7 +175,7 @@ export function SetupPageContent() {
       if (newType === 'oe') {
         return { ...common, entityType: 'oe', gemiNumber: null, partners: [] } as unknown as CompanySetupInput;
       }
-      return { ...common, entityType: 'sole_proprietor', efkaCategory: 1 } as unknown as CompanySetupInput;
+      return { ...common, entityType: 'sole_proprietor', efkaCategory: 1, gemiNumber: null } as unknown as CompanySetupInput;
     });
     setSaveSuccess(false);
   }, []);
@@ -303,13 +316,23 @@ export function SetupPageContent() {
             <BasicInfoSection data={formData} onChange={handleChange} errors={translatedErrors} />
             <FiscalInfoSection data={formData} onChange={handleChange} />
 
+            {/* ΓΕΜΗ ατομικής — προαιρετικό (ADR-841 §7 Α23) */}
+            {formData.entityType === 'sole_proprietor' && (
+              <SoleProprietorRegistrySection
+                gemiNumber={formData.gemiNumber}
+                error={translatedErrors.gemiNumber}
+                onGemiNumberChange={handleGemiNumberChange}
+              />
+            )}
+
             {/* Partner Management (OE only) */}
             {formData.entityType === 'oe' && (
               <PartnerManagementSection
                 partners={formData.partners}
                 gemiNumber={formData.gemiNumber}
+                gemiError={translatedErrors.gemiNumber}
                 onPartnersChange={(partners) => handleChange({ partners } as Partial<CompanySetupInput>)}
-                onGemiNumberChange={(gemiNumber) => handleChange({ gemiNumber } as Partial<CompanySetupInput>)}
+                onGemiNumberChange={handleGemiNumberChange}
               />
             )}
 
@@ -318,10 +341,11 @@ export function SetupPageContent() {
               <MemberManagementSection
                 members={(formData as { members: Member[] }).members ?? []}
                 gemiNumber={(formData as { gemiNumber: string }).gemiNumber ?? ''}
+                gemiError={translatedErrors.gemiNumber}
                 shareCapital={(formData as { shareCapital: number }).shareCapital ?? 0}
                 onMembersChange={(members) => handleChange({ members } as Partial<CompanySetupInput>)}
-                onGemiNumberChange={(gemiNumber) => handleChange({ gemiNumber } as Partial<CompanySetupInput>)}
-                onShareCapitalChange={(shareCapital) => handleChange({ shareCapital } as Partial<CompanySetupInput>)}
+                onGemiNumberChange={handleGemiNumberChange}
+                onShareCapitalChange={handleShareCapitalChange}
               />
             )}
 
@@ -330,10 +354,11 @@ export function SetupPageContent() {
               <ShareholderManagementSection
                 shareholders={(formData as { shareholders: Shareholder[] }).shareholders ?? []}
                 gemiNumber={(formData as { gemiNumber: string }).gemiNumber ?? ''}
+                gemiError={translatedErrors.gemiNumber}
                 shareCapital={(formData as { shareCapital: number }).shareCapital ?? 25000}
                 onShareholdersChange={(shareholders) => handleChange({ shareholders } as Partial<CompanySetupInput>)}
-                onGemiNumberChange={(gemiNumber) => handleChange({ gemiNumber } as Partial<CompanySetupInput>)}
-                onShareCapitalChange={(shareCapital) => handleChange({ shareCapital } as Partial<CompanySetupInput>)}
+                onGemiNumberChange={handleGemiNumberChange}
+                onShareCapitalChange={handleShareCapitalChange}
               />
             )}
 
