@@ -1,21 +1,23 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged, type MultiFactorResolver, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { sessionService, EnterpriseSessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
 import { AUTH_EVENTS } from '@/config/domain-constants';
-import type { FirebaseAuthUser, SignUpData } from '../types/auth.types';
+import type {
+  FirebaseAuthUser,
+  SecondFactorOutcome,
+  SessionPhase,
+  SignInOutcome,
+  SignUpData,
+} from '../types/auth.types';
 import { RealtimeService } from '@/services/realtime';
 import type { UserSettingsUpdatedPayload } from '@/services/realtime';
 import { userPreferencesService } from '@/services/user/EnterpriseUserPreferencesService';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  clearCorruptedUserData,
-  getAuthErrorMessage,
-  validateSession,
-} from './auth-context/auth-context-errors';
+import { clearCorruptedUserData, validateSession } from './auth-context/auth-context-errors';
 import {
   bindRefreshSessionListener,
   buildAuthUser,
@@ -32,6 +34,7 @@ import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 import i18n from '@/i18n/config';
 import { bindAuthLanguage } from '@/auth/firebase-auth-language';
 import { useAuthActions } from './auth-context/useAuthActions';
+import { useSecondFactor } from './auth-context/second-factor';
 import { useClaimsRefresh } from './auth-context/use-claims-refresh';
 
 const logger = createModuleLogger('AuthContext');
@@ -72,8 +75,14 @@ export interface AuthContextType {
   updateVatNumber: (raw: string) => Promise<string | null>;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  /**
+   * 🔴 **ADR-859 — Η ΜΙΑ ΑΠΑΝΤΗΣΗ ΣΤΟ «ΟΛΟΚΛΗΡΩΘΗΚΕ Η ΣΥΝΔΕΣΗ;»**.
+   * Γίνεται `established` **μόνο αφού** στηθεί το `__session` (ADR-819 §4.2). Καμία
+   * φόρμα δεν πλοηγεί από το αποτέλεσμα μιας πράξης· πλοηγεί από εδώ.
+   */
+  sessionPhase: SessionPhase;
+  signIn: (email: string, password: string) => Promise<SignInOutcome>;
+  signInWithGoogle: () => Promise<SignInOutcome>;
   signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -87,7 +96,7 @@ export interface AuthContextType {
   completeProfile: (givenName: string, familyName: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   mfaRequired: boolean;
-  verifyMfaCode: (code: string) => Promise<void>;
+  verifyMfaCode: (code: string) => Promise<SecondFactorOutcome>;
   cancelMfaVerification: () => void;
   clearError: () => void;
   isAuthenticated: boolean;
@@ -138,8 +147,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [vatNumber, setVatNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [sessionPhase, setSessionPhase] = useState<SessionPhase>('anonymous');
+
+  // ADR-859 — ο δεύτερος παράγοντας έχει ΕΝΑΝ κάτοχο (ήταν γραμμένος δύο φορές).
+  // ⚠️ Αποδομημένο: το αντικείμενο είναι νέο σε κάθε απόδοση, οι συναρτήσεις σταθερές —
+  //    ως εξάρτηση του `useMemo` θα ξαναέφτιαχνε το context σε ΚΑΘΕ απόδοση.
+  const {
+    mfaRequired,
+    challenge: challengeSecondFactor,
+    verify: verifyMfaCode,
+    cancel: cancelMfaVerification,
+  } = useSecondFactor({ twoFactorService, setLoading, setError });
 
   const actions = useAuthActions({
     auth,
@@ -147,9 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser,
     setLoading,
     setError,
-    setMfaRequired,
-    setMfaResolver,
-    twoFactorService,
+    challengeSecondFactor,
   });
 
   // 🌐 ADR-851 — η γλώσσα των μηνυμάτων της ίδιας της Firebase ακολουθεί την οθόνη.
@@ -192,6 +208,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           logger.error('[AuthContext] Auto-logout failed', { error: logoutError });
         }
 
+        setSessionPhase('anonymous');
         setUser(null);
         setDeclaredOccupation(null);
         setVatNumber(null);
@@ -206,12 +223,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } catch (sessionError) {
           logger.warn('[AuthContext] Failed to clear server session cookie (non-blocking)', { error: sessionError });
         }
+        setSessionPhase('anonymous');
         setUser(null);
         setDeclaredOccupation(null);
         setVatNumber(null);
         setLoading(false);
         return;
       }
+
+      // ADR-859 — ο πάροχος δέχτηκε· ό,τι ακολουθεί (claims · προφίλ · cookie) ΣΤΗΝΕΙ τη
+      // συνεδρία. Η οθόνη σύνδεσης δείχνει φόρτωση, αλλά ΔΕΝ πλοηγεί ακόμη.
+      setSessionPhase('establishing');
 
       let customClaims: Record<string, unknown> = {};
       try {
@@ -263,6 +285,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       logger.info('[AuthContext] Valid session established:', { email: authUser.email });
+      setSessionPhase('established');
       setUser(authUser);
 
       await syncActiveSession(firebaseUser);
@@ -333,6 +356,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     vatNumber,
     loading,
     error,
+    sessionPhase,
     signIn: actions.signIn,
     signInWithGoogle: actions.signInWithGoogle,
     signUp: actions.signUp,
@@ -431,36 +455,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     sendVerificationEmail: actions.sendVerificationEmail,
     mfaRequired,
-    verifyMfaCode: async (code: string) => {
-      if (!mfaResolver) {
-        setError('Δεν υπάρχει ενεργή διαδικασία MFA');
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        logger.debug('[AuthContext] Verifying MFA code...');
-        const result = await twoFactorService.verifyTotpForSignIn(mfaResolver, code, 0);
-        if (result.result === 'success') {
-          logger.info('[AuthContext] MFA verification successful');
-          setMfaResolver(null);
-          setMfaRequired(false);
-          return;
-        }
-
-        const errorMessage = result.error || 'Μη έγκυρος κωδικός επαλήθευσης';
-        setError(errorMessage);
-        logger.error('[AuthContext] MFA verification failed', { errorMessage });
-      } catch (mfaError) {
-        const message = getAuthErrorMessage(mfaError);
-        setError(message);
-        logger.error('[AuthContext] Error', { message });
-      } finally {
-        setLoading(false);
-      }
-    },
-    cancelMfaVerification: actions.cancelMfaVerification,
+    verifyMfaCode,
+    cancelMfaVerification,
     refreshToken: actions.refreshToken,
     clearError: actions.clearError,
     isAuthenticated: !!user,
@@ -469,7 +465,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // context παγώνει στο `null` της πρώτης απόδοσης, και το επάγγελμα θα
     // φαινόταν «μη δηλωμένο» για πάντα — σφάλμα που **καμία** πύλη δεν πιάνει
     // και που στην οθόνη μοιάζει με «ο χρήστης δεν έχει επάγγελμα».
-  }), [actions, declaredOccupation, error, loading, mfaRequired, mfaResolver, user, vatNumber]);
+  }), [
+    actions, cancelMfaVerification, declaredOccupation, error, loading, mfaRequired,
+    sessionPhase, user, vatNumber, verifyMfaCode,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

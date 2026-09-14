@@ -58,6 +58,7 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
     resetPassword,
     loading,
     error,
+    sessionPhase,
     clearError,
     mfaRequired,
     verifyMfaCode,
@@ -79,7 +80,6 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
   const [googleLoading, setGoogleLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
 
   /**
@@ -89,9 +89,8 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
    * στιγμή της υποβολής το `user` είναι ακόμη `null` — η ταυτότητα φτάνει **μετά**,
    * από τον `AuthContext`. Ένας στόχος παγωμένος στο closure της υποβολής θα ήταν
    * **πάντα** ο στόχος του ανώνυμου. Επειδή το `landing` είναι παράγωγο του `user`,
-   * μόλις η ταυτότητα προσγειωθεί το effect από κάτω **ξαναπυροδοτεί** με τη σωστή
-   * διεύθυνση — άρα η τελική προσγείωση είναι σωστή ακόμη κι αν η πρώτη ώθηση
-   * πρόλαβε να φύγει.
+   * το effect από κάτω πλοηγεί **μία φορά**, με τη σωστή διεύθυνση, όταν η ταυτότητα
+   * προσγειωθεί (ADR-859: καμία «πρώτη ώθηση» από τους χειριστές, πια).
    *
    * ⚠️ Το `user ?? {}` **δεν** είναι αμυντικό θόρυβος: ο ανώνυμος έχει, εξ ορισμού,
    * ταυτότητα **χωρίς** οργανισμό — και ο επιλυτής απαντά ήδη σωστά γι' αυτόν.
@@ -100,13 +99,24 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
 
   // ── Effects ──
 
-  useEffect(() => {
-    router.prefetch(landing);
-  }, [router, landing]);
-
+  /**
+   * 🔴 **ADR-859 — Η ΜΟΝΗ ΠΛΟΗΓΗΣΗ ΜΕΤΑ ΤΗ ΣΥΝΔΕΣΗ.**
+   *
+   * Μέχρι 2026-09-14 υπήρχαν **τέσσερις**: αυτή, και μία σε κάθε χειριστή (Google χωρίς
+   * αναμονή · email και MFA με `setTimeout(…, 100)`). Οι τρεις των χειριστών έφευγαν
+   * **πριν** το cookie — και, χειρότερα, **και** όταν η Google ζητούσε δεύτερο παράγοντα
+   * ή ο κωδικός ήταν λάθος. Σε δημόσιο προορισμό (`/invite/<token>`) η φόρμα του κωδικού
+   * δεν ξαναφαινόταν ποτέ. Ο `user` γίνεται μη-κενός **μόνο** μετά το `__session`
+   * (ADR-819 §4.2), άρα αυτό το effect **δεν μπορεί** να προσπεράσει τη συνεδρία.
+   *
+   * ⛔ **ΚΑΜΙΑ ΠΡΟΦΟΡΤΩΣΗ ΤΟΥ `landing` ΟΣΟ ΕΙΝΑΙ ΑΝΩΝΥΜΟΣ.** Εδώ ζούσε
+   * `router.prefetch(landing)`, και το Next κρατά ό,τι φέρνει το `router.prefetch` για
+   * `staleTimes.static` (**5′**): η **ανώνυμη** απόδοση του προορισμού («Συνδεθείτε»)
+   * μπορούσε να σερβιριστεί **μετά** τη σύνδεση — δεύτερος βρόχος, κρυμμένος πίσω από τον
+   * πρώτο. Κάθε προορισμός εδώ εξαρτάται από την ταυτότητα, άρα δεν προφορτώνεται.
+   */
   useEffect(() => {
     if (!loading && user) {
-      setIsRedirecting(true);
       router.replace(landing);
     }
   }, [loading, user, router, landing]);
@@ -157,12 +167,12 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
 
       if (mode === 'signin') {
         logger.info('[AuthForm] Sign in attempt');
-        await signIn(email, password);
-        setSuccessMessage(t('messages.signinSuccess'));
-        onSuccess?.();
-        setIsRedirecting(true);
-        logger.info('[AuthForm] Redirecting to', { landing });
-        setTimeout(() => router.push(landing), 100);
+        const outcome = await signIn(email, password);
+        // ADR-859 — ΚΑΜΙΑ πλοήγηση εδώ: την κάνει το effect, όταν στηθεί η συνεδρία.
+        if (outcome.kind === 'signed-in') {
+          setSuccessMessage(t('messages.signinSuccess'));
+          onSuccess?.();
+        }
         return;
       } else if (mode === 'signup') {
         logger.info('[AuthForm] Sign up attempt');
@@ -198,12 +208,13 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
       clearError();
 
       logger.info('[AuthForm] Google Sign-In attempt');
-      await signInWithGoogle();
+      const outcome = await signInWithGoogle();
 
-      setSuccessMessage(t('google.success'));
-      onSuccess?.();
-      setIsRedirecting(true);
-      router.push(landing);
+      // ADR-859 — `second-factor-required` ⇒ μένουμε ΕΔΩ: η φόρμα του κωδικού αποδίδεται.
+      if (outcome.kind === 'signed-in') {
+        setSuccessMessage(t('google.success'));
+        onSuccess?.();
+      }
     } catch (err) {
       logger.error('[AuthForm] Google Sign-In error', { error: err });
     } finally {
@@ -223,10 +234,9 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
     setValidationError(null);
 
     try {
-      await verifyMfaCode(mfaCode);
-      setSuccessMessage(t('mfa.verificationSuccess'));
-      setIsRedirecting(true);
-      setTimeout(() => router.push(landing), 100);
+      const outcome = await verifyMfaCode(mfaCode);
+      // ADR-859 — ο λάθος κωδικός ΔΕΝ πλοηγεί πια (μετρημένο ζωντανά: έφευγε).
+      if (outcome.kind === 'signed-in') setSuccessMessage(t('mfa.verificationSuccess'));
     } catch (err) {
       logger.error('[AuthForm] MFA verification error', { error: err });
     } finally {
@@ -250,6 +260,11 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
 
   const isLoading = loading || localLoading || googleLoading;
   const displayError = validationError || error;
+  /**
+   * ADR-859 — **παράγεται**, δεν ορίζεται από χειριστή. Η οθόνη φόρτωσης δείχνεται όσο
+   * στήνεται ή έχει στηθεί η συνεδρία· **ποτέ** όσο εκκρεμεί δεύτερος παράγοντας.
+   */
+  const isRedirecting = sessionPhase !== 'anonymous' && !mfaRequired;
 
   const titles: Record<AuthFormMode, string> = {
     signin: t('form.titles.signin'),

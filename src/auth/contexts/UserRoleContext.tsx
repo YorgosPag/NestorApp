@@ -137,8 +137,9 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       logger.info('[UserRoleContext] Login attempt', { email });
-      await signIn(email, password);
-      return true;
+      // ADR-859 — ο δεύτερος παράγοντας ΔΕΝ είναι «συνδέθηκε».
+      const outcome = await signIn(email, password);
+      return outcome.kind === 'signed-in';
     } catch (error) {
       logger.error('[UserRoleContext] Login failed', { error });
       return false;

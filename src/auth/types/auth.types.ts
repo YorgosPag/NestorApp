@@ -89,12 +89,48 @@ export interface SignUpData {
 }
 
 /**
+ * **Τι απέγινε μια απόπειρα σύνδεσης** — κλειστό σύνολο, ποτέ `void` (ADR-859).
+ *
+ * 🔴 Μέχρι 2026-09-14 οι πράξεις σύνδεσης επέστρεφαν `Promise<void>`, και ο δεύτερος
+ * παράγοντας **επέστρεφε κανονικά**: η φόρμα τον διάβαζε ως επιτυχία και έφευγε από
+ * τη σελίδα που θα τον ζητούσε (μετρημένο ζωντανά στο `/invite/<token>`).
+ * ⚠️ Το `signed-in` σημαίνει «ο πάροχος δέχτηκε» — **ΟΧΙ** «η συνεδρία στήθηκε».
+ * Την ολοκλήρωση την κατέχει **μόνο** το `SessionPhase` του `AuthContext`.
+ */
+export type SignInOutcome =
+  | { readonly kind: 'signed-in' }
+  | { readonly kind: 'second-factor-required' };
+
+/** Γιατί δεν δέχτηκε ο δεύτερος παράγοντας — κάθε λόγος διακριτός (ADR-859). */
+export type SecondFactorRejection =
+  | 'invalid-code'
+  | 'expired'
+  | 'rate-limited'
+  | 'no-pending-sign-in'
+  | 'failed';
+
+/** Το αποτέλεσμα του κωδικού MFA — η αποτυχία **δεν** μοιάζει ποτέ με επιτυχία. */
+export type SecondFactorOutcome =
+  | { readonly kind: 'signed-in' }
+  | { readonly kind: 'rejected'; readonly reason: SecondFactorRejection };
+
+/**
+ * **Πού βρίσκεται η συνεδρία** — η ΜΙΑ απάντηση στο «ολοκληρώθηκε η σύνδεση;» (ADR-859).
+ *
+ * - `anonymous` — κανένας χρήστης Firebase (και κατά τον δεύτερο παράγοντα).
+ * - `establishing` — ο πάροχος δέχτηκε· claims, προφίλ και `__session` στήνονται.
+ * - `established` — υπάρχει **και** χρήστης **και** cookie ⇒ η πλοήγηση επιτρέπεται.
+ */
+export type SessionPhase = 'anonymous' | 'establishing' | 'established';
+
+/**
  * Auth context state interface
  */
 export interface AuthContextState {
   user: FirebaseAuthUser | null;
   loading: boolean;
   error: string | null;
+  sessionPhase: SessionPhase;
   mfaRequired: boolean;
   isAuthenticated: boolean;
   needsProfileCompletion: boolean;
@@ -104,15 +140,15 @@ export interface AuthContextState {
  * Auth context actions interface
  */
 export interface AuthContextActions {
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<SignInOutcome>;
+  signInWithGoogle: () => Promise<SignInOutcome>;
   signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   completeProfile: (givenName: string, familyName: string) => Promise<void>;
-  verifyMfaCode: (code: string) => Promise<void>;
+  verifyMfaCode: (code: string) => Promise<SecondFactorOutcome>;
   cancelMfaVerification: () => void;
   refreshToken: () => Promise<void>;
   clearError: () => void;

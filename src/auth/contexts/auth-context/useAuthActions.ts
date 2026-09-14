@@ -8,11 +8,11 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
   type Auth,
-  type MultiFactorResolver,
   type UserCredential,
 } from 'firebase/auth';
 import type { Dispatch, SetStateAction } from 'react';
-import type { FirebaseAuthUser, SignUpData } from '@/auth/types/auth.types';
+import type { FirebaseAuthUser, SignInOutcome, SignUpData } from '@/auth/types/auth.types';
+import { SECOND_FACTOR_REQUIRED, SIGNED_IN } from './second-factor';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
@@ -37,12 +37,11 @@ interface UseAuthActionsParams {
   setUser: Dispatch<SetStateAction<FirebaseAuthUser | null>>;
   setLoading: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | null>>;
-  setMfaRequired: Dispatch<SetStateAction<boolean>>;
-  setMfaResolver: Dispatch<SetStateAction<MultiFactorResolver | null>>;
-  twoFactorService: {
-    getMfaResolver: (error: unknown) => MultiFactorResolver | null;
-    verifyTotpForSignIn: (resolver: MultiFactorResolver, code: string, hintIndex: number) => Promise<{ result: string; error?: string }>;
-  };
+  /**
+   * ADR-859 — `true` ⇒ το σφάλμα ήταν αίτημα δεύτερου παράγοντα και **υιοθετήθηκε**.
+   * Ο κάτοχος της κατάστασης MFA είναι το `useSecondFactor`, όχι αυτό το hook.
+   */
+  challengeSecondFactor: (error: unknown) => boolean;
 }
 
 /**
@@ -127,9 +126,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
     setUser,
     setLoading,
     setError,
-    setMfaRequired,
-    setMfaResolver,
-    twoFactorService,
+    challengeSecondFactor,
   } = params;
 
   const clearError = useCallback(() => {
@@ -142,10 +139,29 @@ export function useAuthActions(params: UseAuthActionsParams) {
     logger.error('[AuthContext] Error', { message });
   }, [setError]);
 
-  const signIn = useCallback(async (email: string, password: string): Promise<void> => {
+  /**
+   * 🔴 **ADR-859 — Ο ΕΝΑΣ ΣΚΕΛΕΤΟΣ ΚΑΘΕ ΠΟΡΤΑΣ ΣΥΝΔΕΣΗΣ.** Ο δεύτερος παράγοντας επιστρέφεται
+   * **ονομασμένος**· κάθε άλλο σφάλμα πετά. Μέχρι 2026-09-14 μόνο η Google ρωτούσε για δεύτερο
+   * παράγοντα: λογαριασμός email με MFA **δεν έφτανε ποτέ** στη φόρμα του κωδικού. Ένας
+   * σκελετός για τις δύο πόρτες ⇒ μια τρίτη πόρτα **δεν μπορεί** να ξεχάσει την ερώτηση.
+   */
+  const attemptSignIn = useCallback(async (attempt: () => Promise<void>): Promise<SignInOutcome> => {
     try {
       setLoading(true);
       setError(null);
+      await attempt();
+      return SIGNED_IN;
+    } catch (error) {
+      if (challengeSecondFactor(error)) return SECOND_FACTOR_REQUIRED;
+      handleError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [challengeSecondFactor, handleError, setError, setLoading]);
+
+  const signIn = useCallback((email: string, password: string): Promise<SignInOutcome> =>
+    attemptSignIn(async () => {
       logger.info('[AuthContext] Signing in:', { email });
       const credential = await signInWithEmailAndPassword(auth, email, password);
       // Force-refresh token so latest custom claims (companyId, globalRole) are
@@ -154,20 +170,11 @@ export function useAuthActions(params: UseAuthActionsParams) {
         await credential.user.getIdToken(true);
       }
       logger.info('[AuthContext] Sign in successful');
-    } catch (error) {
-      handleError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, handleError, setError, setLoading]);
+    }), [attemptSignIn, auth]);
 
-  const signInWithGoogle = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const signInWithGoogle = useCallback((): Promise<SignInOutcome> =>
+    attemptSignIn(async () => {
       logger.info('[AuthContext] Starting Google Sign-In');
-
       const provider = new GoogleAuthProvider();
       provider.addScope('email');
       provider.addScope('profile');
@@ -176,65 +183,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
       const credential = await signInWithPopup(auth, provider);
       adoptProviderNames(credential);
       logger.info('[AuthContext] Google Sign-In successful');
-    } catch (error) {
-      const resolver = twoFactorService.getMfaResolver(error);
-      if (resolver) {
-        logger.info('[AuthContext] MFA required - showing verification UI');
-        setMfaResolver(resolver);
-        setMfaRequired(true);
-        setLoading(false);
-        return;
-      }
-
-      handleError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, handleError, setError, setLoading, setMfaRequired, setMfaResolver, twoFactorService]);
-
-  const verifyMfaCode = useCallback(async (code: string): Promise<void> => {
-    let resolverSnapshot: MultiFactorResolver | null = null;
-    setMfaResolver((current) => {
-      resolverSnapshot = current;
-      return current;
-    });
-
-    if (!resolverSnapshot) {
-      setError('Δεν υπάρχει ενεργή διαδικασία MFA');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      logger.info('[AuthContext] Verifying MFA code...');
-
-      const result = await twoFactorService.verifyTotpForSignIn(resolverSnapshot, code, 0);
-      if (result.result === 'success') {
-        logger.info('[AuthContext] MFA verification successful');
-        setMfaResolver(null);
-        setMfaRequired(false);
-        return;
-      }
-
-      const errorMessage = result.error || 'Μη έγκυρος κωδικός επαλήθευσης';
-      setError(errorMessage);
-      logger.error('[AuthContext] MFA verification failed', { errorMessage });
-    } catch (error) {
-      handleError(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError, setError, setLoading, setMfaRequired, setMfaResolver, twoFactorService]);
-
-  const cancelMfaVerification = useCallback((): void => {
-    logger.info('[AuthContext] MFA verification cancelled');
-    setMfaResolver(null);
-    setMfaRequired(false);
-    setError(null);
-    setLoading(false);
-  }, [setError, setLoading, setMfaRequired, setMfaResolver]);
+    }), [attemptSignIn, auth]);
 
   const signUp = useCallback(async (data: SignUpData): Promise<void> => {
     try {
@@ -487,8 +436,6 @@ export function useAuthActions(params: UseAuthActionsParams) {
     updateUserPhoto,
     completeProfile,
     sendVerificationEmail: sendVerificationEmailAction,
-    verifyMfaCode,
-    cancelMfaVerification,
     refreshToken,
   };
 }

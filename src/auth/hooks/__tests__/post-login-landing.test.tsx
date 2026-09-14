@@ -24,7 +24,8 @@
  * καλούσε και **πετούσε** το αποτέλεσμα — που είναι ακριβώς το σχήμα της βλάβης.
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type { ChangeEvent, FormEvent } from 'react';
 
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
@@ -51,6 +52,7 @@ function authContext(user: { uid: string; companyId?: string } | null) {
     user,
     loading: false,
     error: null,
+    sessionPhase: user ? 'established' : 'anonymous',
     signIn: jest.fn(),
     signInWithGoogle: jest.fn(),
     signUp: jest.fn(),
@@ -100,12 +102,17 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(PRIVATE_SPACE_HOME));
   });
 
-  it('Κ3 — ο ΑΝΩΝΥΜΟΣ δεν προσγειώνεται πουθενά', async () => {
+  it('Κ3 — ο ΑΝΩΝΥΜΟΣ δεν προσγειώνεται πουθενά — και ΤΙΠΟΤΑ δεν προφορτώνεται', async () => {
+    // 🔴 ADR-859: εδώ ο ισχυρισμός ήταν `mockPrefetch toHaveBeenCalled` — δηλαδή η άγκυρα
+    //    ΦΥΛΑΓΕ τη βλάβη. Η ανώνυμη προφόρτωση κρατιέται 5′ από το Next και σερβίρει την
+    //    ανώνυμη όψη του προορισμού ΜΕΤΑ τη σύνδεση.
     mockUseAuth.mockReturnValue(authContext(null));
 
-    render();
+    const { result } = render();
 
-    await waitFor(() => expect(mockPrefetch).toHaveBeenCalled());
+    await act(async () => undefined);
+    expect(result.current.isRedirecting).toBe(false);
+    expect(mockPrefetch).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
@@ -119,6 +126,96 @@ describe('ADR-817 §9 — πού προσγειώνεται ο συνδεδεμ�
     );
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/listings/mandates'));
+  });
+});
+
+/**
+ * ADR-859 — **Η ΣΥΝΔΕΣΗ ΟΛΟΚΛΗΡΩΝΕΤΑΙ ΣΕ ΕΝΑ ΣΗΜΕΙΟ.**
+ *
+ * 🔴 Μετρημένο ζωντανά 2026-09-14 (`/invite/<token>` → Google → λογαριασμός με MFA): η
+ * φόρμα έφευγε 143ms μετά το «MFA required», χωρίς κωδικό, χωρίς cookie. Σε δημόσιο
+ * προορισμό κανείς δεν την ξανάστελνε στο `/login` ⇒ «Συνδεθείτε» για πάντα.
+ *
+ * Μεταλλάξεις που ΠΡΕΠΕΙ να κοκκινίσουν:
+ *   - `router.push(landing)` πίσω στον χειριστή Google ⇒ Λ1
+ *   - `setTimeout(() => router.push(landing))` πίσω στον χειριστή MFA ⇒ Λ2
+ *   - `isRedirecting = !loading && !!user` (αγνοεί τη φάση) ⇒ Λ4
+ */
+describe('ADR-859 — καμία πλοήγηση από το αποτέλεσμα μιας πράξης', () => {
+  const INVITE = '/invite/tok';
+  const pending = (overrides: Record<string, unknown>) => ({ ...authContext(null), ...overrides });
+  const renderAt = () =>
+    renderHook(() => useAuthFormState({ defaultMode: 'signin', redirectTo: INVITE }));
+  const noNavigation = () => {
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  };
+
+  it('Λ1 — Google ζητά δεύτερο παράγοντα ⇒ ΜΕΝΟΥΜΕ, καμία φόρτωση', async () => {
+    const signInWithGoogle = jest.fn(async () => ({ kind: 'second-factor-required' }));
+    mockUseAuth.mockReturnValue(pending({ signInWithGoogle }));
+    const { result, rerender } = renderAt();
+
+    await act(async () => {
+      await result.current.handleGoogleSignIn();
+    });
+    mockUseAuth.mockReturnValue(pending({ signInWithGoogle, mfaRequired: true }));
+    rerender();
+
+    noNavigation();
+    expect(result.current.isRedirecting).toBe(false);
+    expect(result.current.mfaRequired).toBe(true);
+  });
+
+  it('Λ2 — ΛΑΘΟΣ κωδικός MFA ⇒ καμία πλοήγηση', async () => {
+    const verifyMfaCode = jest.fn(async () => ({ kind: 'rejected', reason: 'invalid-code' }));
+    mockUseAuth.mockReturnValue(pending({ verifyMfaCode, mfaRequired: true }));
+    const { result } = renderAt();
+
+    act(() => result.current.handleMfaCodeChange('000000'));
+    await act(async () => {
+      await result.current.handleMfaVerification({ preventDefault: () => undefined } as FormEvent);
+    });
+
+    expect(verifyMfaCode).toHaveBeenCalledWith('000000');
+    noNavigation();
+  });
+
+  it('Λ3 — email ζητά δεύτερο παράγοντα ⇒ μένουμε, και το `onSuccess` ΔΕΝ καλείται', async () => {
+    const signIn = jest.fn(async () => ({ kind: 'second-factor-required' }));
+    const onSuccess = jest.fn();
+    mockUseAuth.mockReturnValue(pending({ signIn }));
+    const { result } = renderHook(() =>
+      useAuthFormState({ defaultMode: 'signin', redirectTo: INVITE, onSuccess }),
+    );
+
+    act(() => {
+      result.current.handleInputChange('email')({ target: { value: 'a@b.gr' } } as ChangeEvent<HTMLInputElement>);
+      result.current.handleInputChange('password')({ target: { value: 'secret' } } as ChangeEvent<HTMLInputElement>);
+    });
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault: () => undefined } as FormEvent);
+    });
+
+    expect(signIn).toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+    noNavigation();
+  });
+
+  it('Λ4 — ο πάροχος δέχτηκε αλλά η συνεδρία ΣΤΗΝΕΤΑΙ ⇒ φόρτωση, ΟΧΙ πλοήγηση· μετά ΜΙΑ', async () => {
+    mockUseAuth.mockReturnValue(pending({ sessionPhase: 'establishing' }));
+    const { result, rerender } = renderAt();
+    await act(async () => undefined);
+
+    expect(result.current.isRedirecting).toBe(true);
+    noNavigation();
+
+    mockUseAuth.mockReturnValue(authContext({ uid: 'uid-oe', companyId: 'comp_x' }));
+    rerender();
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(INVITE));
+    expect(mockReplace).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });
 

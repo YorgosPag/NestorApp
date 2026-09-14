@@ -66,6 +66,28 @@ export function AuthForm({
   const { t } = useTranslation('auth');
 
   // ==========================================================================
+  // RENDER: MFA Verification
+  // ==========================================================================
+  // 🔴 ADR-859 — ΠΡΙΝ από την οθόνη φόρτωσης. Μέχρι 2026-09-14 ελεγχόταν ΜΕΤΑ το
+  //    `isRedirecting`, οπότε μια σύνδεση που ζητούσε δεύτερο παράγοντα έκρυβε τη φόρμα
+  //    του κωδικού πίσω από «Φόρτωση». Το `isRedirecting` το εξαιρεί πλέον και μόνο του·
+  //    η σειρά εδώ είναι το δεύτερο δίχτυ (N.7.2 #4).
+
+  if (state.mfaRequired) {
+    return (
+      <MfaVerificationForm
+        mfaCode={state.mfaCode}
+        onMfaCodeChange={state.handleMfaCodeChange}
+        onSubmit={state.handleMfaVerification}
+        onCancel={state.handleCancelMfa}
+        isLoading={state.isLoading}
+        displayError={state.displayError}
+        successMessage={state.successMessage}
+      />
+    );
+  }
+
+  // ==========================================================================
   // RENDER: Redirect Loading Overlay
   // ==========================================================================
 
@@ -98,24 +120,6 @@ export function AuthForm({
           {t('navigation.loadingApp')}
         </p>
       </section>
-    );
-  }
-
-  // ==========================================================================
-  // RENDER: MFA Verification
-  // ==========================================================================
-
-  if (state.mfaRequired) {
-    return (
-      <MfaVerificationForm
-        mfaCode={state.mfaCode}
-        onMfaCodeChange={state.handleMfaCodeChange}
-        onSubmit={state.handleMfaVerification}
-        onCancel={state.handleCancelMfa}
-        isLoading={state.isLoading}
-        displayError={state.displayError}
-        successMessage={state.successMessage}
-      />
     );
   }
 

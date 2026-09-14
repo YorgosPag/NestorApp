@@ -19,7 +19,9 @@ import { renderHook, act } from '@testing-library/react';
 
 const updateProfileMock = jest.fn();
 const signInWithPopupMock = jest.fn();
+const signInWithEmailMock = jest.fn();
 const additionalInfoMock = jest.fn();
+const challengeMock = jest.fn();
 
 jest.mock('firebase/auth', () => ({
   GoogleAuthProvider: class {
@@ -30,7 +32,7 @@ jest.mock('firebase/auth', () => ({
   getAdditionalUserInfo: (...args: unknown[]) => additionalInfoMock(...args),
   sendEmailVerification: jest.fn(),
   sendPasswordResetEmail: jest.fn(),
-  signInWithEmailAndPassword: jest.fn(),
+  signInWithEmailAndPassword: (...args: unknown[]) => signInWithEmailMock(...args),
   signInWithPopup: (...args: unknown[]) => signInWithPopupMock(...args),
   signOut: jest.fn(),
   updateProfile: (...args: unknown[]) => updateProfileMock(...args),
@@ -71,9 +73,7 @@ function setup(currentDisplayName: string | null) {
       setUser: jest.fn(),
       setLoading: jest.fn(),
       setError: jest.fn(),
-      setMfaRequired: jest.fn(),
-      setMfaResolver: jest.fn(),
-      twoFactorService: { getMfaResolver: () => null, verifyTotpForSignIn: jest.fn() } as never,
+      challengeSecondFactor: (error: unknown) => challengeMock(error),
     }),
   );
   return result;
@@ -83,8 +83,58 @@ beforeEach(() => {
   for (const key of Object.keys(stored)) delete stored[key];
   updateProfileMock.mockReset();
   signInWithPopupMock.mockReset();
+  signInWithEmailMock.mockReset();
   additionalInfoMock.mockReset();
+  challengeMock.mockReset();
+  challengeMock.mockReturnValue(false);
   signInWithPopupMock.mockResolvedValue({ user: { uid: UID } });
+});
+
+// =============================================================================
+/**
+ * ADR-859 — **Ο ΔΕΥΤΕΡΟΣ ΠΑΡΑΓΟΝΤΑΣ ΕΠΙΣΤΡΕΦΕΤΑΙ ΟΝΟΜΑΣΜΕΝΟΣ, ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΟΡΤΕΣ.**
+ * Εδώ ζει επειδή αυτό είναι το harness του `useAuthActions` (δεύτερο θα ήταν δίδυμο).
+ * Μεταλλάξεις: αφαίρεση του `challengeSecondFactor` από το `signIn` ⇒ Ε2 κόκκινο.
+ */
+describe('ADR-859 — η σύνδεση λέει ΤΙ απέγινε', () => {
+  it('Ε1 — Google + δεύτερος παράγοντας ⇒ `second-factor-required`, όχι επιτυχία', async () => {
+    signInWithPopupMock.mockRejectedValue({ code: 'auth/multi-factor-auth-required' });
+    challengeMock.mockReturnValue(true);
+    const result = setup(null);
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.signInWithGoogle();
+    });
+    expect(outcome).toEqual({ kind: 'second-factor-required' });
+  });
+
+  it('Ε2 — EMAIL + δεύτερος παράγοντας ⇒ `second-factor-required` (πριν: σφάλμα στον άνθρωπο)', async () => {
+    signInWithEmailMock.mockRejectedValue({ code: 'auth/multi-factor-auth-required' });
+    challengeMock.mockReturnValue(true);
+    const result = setup(null);
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.signIn('a@b.gr', 'secret');
+    });
+    expect(outcome).toEqual({ kind: 'second-factor-required' });
+  });
+
+  it('Ε3 — ΠΑΡΟΝΟΜΑΣΤΗΣ: άλλο σφάλμα ΠΕΤΑ, δεν βαφτίζεται δεύτερος παράγοντας', async () => {
+    signInWithPopupMock.mockRejectedValue({ code: 'auth/popup-closed-by-user' });
+    const result = setup(null);
+    await act(async () => {
+      await expect(result.current.signInWithGoogle()).rejects.toEqual({ code: 'auth/popup-closed-by-user' });
+    });
+  });
+
+  it('Ε4 — επιτυχία ⇒ `signed-in`', async () => {
+    const result = setup(null);
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.signInWithGoogle();
+    });
+    expect(outcome).toEqual({ kind: 'signed-in' });
+  });
 });
 
 // =============================================================================
