@@ -60,6 +60,23 @@ export function toFreeformQuery(params: GeocodingRequestBody): string {
   ].filter(Boolean).join(', ');
 }
 
+/**
+ * **Οδός + αριθμός + Τ.Κ. — χωρίς κανένα τοπωνύμιο** (ADR-332 D28, βαθμίδα 9).
+ *
+ * `null` όταν η βαθμίδα **δεν έχει τι να προσφέρει**:
+ * - λείπει οδός ή Τ.Κ. ⇒ δεν υπάρχει άγκυρα·
+ * - δεν δηλώθηκε `city`/`neighborhood` ⇒ το ερώτημα θα ήταν **ταυτόσημο** με της παραλλαγής 1,
+ *   που μόλις απέτυχε — ένα αίτημα που ξέρουμε την απάντησή του παραβιάζει την πολιτική OSMF.
+ *
+ * ⚠️ Ο αριθμός μένει στο ερώτημα: είναι ό,τι ξεχωρίζει το κτίριο, και δεν συγκρούεται με την περιοχή.
+ */
+export function toPostcodeAnchoredQuery(params: GeocodingRequestBody): string | null {
+  const street = composeStreet(params, 'number-last');
+  const hasLocality = Boolean(params.city || params.neighborhood);
+  if (!street || !params.postalCode || !hasLocality) return null;
+  return `${street}, ${params.postalCode}`;
+}
+
 export function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingRequestBody {
   const n = (v: string | undefined) => v ? normalizeGreekText(v) : undefined;
   return {

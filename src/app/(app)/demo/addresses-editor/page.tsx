@@ -41,6 +41,7 @@ import type {
 const FIELD_STATUSES: Array<{ label: string; status: AddressFieldStatus }> = [
   { label: 'match', status: { kind: 'match', userValue: 'Σαμοθράκης 16', resolvedValue: 'Σαμοθράκης 16' } },
   { label: 'mismatch', status: { kind: 'mismatch', userValue: 'Σαμοθρακης', resolvedValue: 'Σαμοθράκης' } },
+  { label: 'broader', status: { kind: 'broader', userValue: 'Θεσσαλονίκη' } },
   { label: 'unknown', status: { kind: 'unknown', userValue: 'Κάποιο δρόμο' } },
   { label: 'not-provided (with suggestion)', status: { kind: 'not-provided', resolvedValue: 'Κεντρική Μακεδονία' } },
   { label: 'not-provided (empty)', status: { kind: 'not-provided' } },
