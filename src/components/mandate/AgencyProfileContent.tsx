@@ -72,6 +72,7 @@ import { FirstContactAction } from '@/components/contact/FirstContactAction';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
+import { ShowcaseContactCard } from './ShowcaseContactCard';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
@@ -435,14 +436,12 @@ function ShowcaseView({
       </section>
 
       {/*
-        🔑 ΤΟ «ΓΙΑΤΙ ΔΕΝ ΕΧΕΙ ΤΗΛΕΦΩΝΟ» ΛΕΓΕΤΑΙ ΣΤΟΝ ΕΠΙΣΚΕΠΤΗ, ΟΧΙ ΜΟΝΟ ΣΤΟ ADR.
-        Χωρίς αυτό, η απουσία καναλιού διαβάζεται ως **ελάττωμα** της πλατφόρμας —
-        και ο άνθρωπος φεύγει να ψάξει το τηλέφωνο αλλού, δηλαδή ακριβώς η πράξη που
-        το άρθρο 200 §1 αφήνει χωρίς ίχνος.
+        🏆 ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ, ΚΑΤΩ ΑΠΟ ΤΙΣ ΠΡΑΞΕΙΣ. Αντικατέστησε το «γιατί δεν έχει
+        τηλέφωνο» (η απόφαση αναιρέθηκε, ADR-827 §9.8). 🔑 **Η σειρά ΕΙΝΑΙ η απόφαση που
+        έμεινε**: το κουμπί της γραπτής πράξης είναι πρώτο, τα κανάλια από κάτω — και στον
+        μεσίτη η κάρτα θυμίζει δίπλα στο τηλέφωνο ότι η σύμβαση γίνεται γραπτώς.
       */}
-      <p className="m-0 rounded-md border border-border bg-card p-3 text-sm text-muted-foreground">
-        {t(canHoldMandate ? PROFILE_KEYS.noChannel : PROFILE_KEYS.noChannelPro)}
-      </p>
+      <ShowcaseContactCard locations={profile.locations} companyId={profile.companyId} canHoldMandate={canHoldMandate} />
 
       {/*
         🔴 **ADR-841 §7 (Α6) — Η ΒΙΤΡΙΝΑ ΔΕΙΧΝΕΙ ΤΑ ΑΚΙΝΗΤΑ ΤΗΣ.** Το ερώτημα έγινε με

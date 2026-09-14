@@ -71,7 +71,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6248516837a3ba29542fe82ced4011f473657d9d83879b697fbc64b65445e05e",
+  "inputsSha256": "5deda677dfc4ce64a2ba667f96007429cb3bf595842f4fb2c9b54fb8a4de68ff",
   "languages": [
     "el"
   ],
@@ -212,7 +212,7 @@
     "src/components/mandate/AreaCombobox.tsx": "90ee09845820c43ba65d3529ef8d83581d1a55abec4f3d5c74620dc340aab793",
     "src/components/mandate/BrokeredListingPageContent.tsx": "cabb12205ba753d61180786846648792ddfc25a1ae48d4bc951d469b703cfbed",
     "src/components/mandate/BrokeredMandateFields.tsx": "f7d33f6e55bf7665d93c240916dd964555b161ffb03b995c1b3c75f52e3cd542",
-    "src/components/mandate/ChannelReveal.tsx": "fbe654ceb1a201740f1c245f572f8c179c1bd4b00d4c0f6d537a51e358c05618",
+    "src/components/mandate/ChannelReveal.tsx": "0f7b48ad9d6c1a57c2ff21a9b030c70279cfaf1fca79fc605e9cf19b1634923f",
     "src/components/mandate/CoverageAgreementNotice.tsx": "03639f093a5ba29b1c846b19e7949b2049620bfe14d1d6a7a1dc686b1413b3cb",
     "src/components/mandate/CoverageAreaPicker.tsx": "bce2e7fba716985f38b5290271743fb0caac2da72e4a92fdf44741f1687ff49c",
     "src/components/mandate/CoverageOutlineMap.tsx": "1527436a0f6fec85ce32fac4e892a30f26832ce2ded6ce746e63b1a7955f75b5",
@@ -493,6 +493,7 @@
     "src/lib/stay/stay-conflict.ts": "90b9a4d4a18d0591c7415c42ef3bd0476bc7e06dd796617f705ca05e28849da8",
     "src/lib/tokens/signed-token.ts": "c9f5a1fce3869194506ea66622febcc052b469949f7f0bef1009723f27a4e820",
     "src/lib/url-query-state.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
+    "src/lib/validation/text-link-segments.ts": "5656aa0b6d472d37a73258f653418596cd520209dd0d3987d4401aa5f027c62e",
     "src/lib/validation/vat-validation.ts": "9bdc492297f6b380db50d1583f02f40ff7a60493a025f2daa0586c1736d32abf",
     "src/lib/workspace/grant-membership.ts": "830f3592b13d7c651209d9abd9232f937efd90105207f49ae12d6b08d4793f34",
     "src/lib/workspace/workspace-catalog.ts": "e4d073d4da9a7dfc6caa23059951cdac7c598dff868a928f4cdac05acdaf5707",

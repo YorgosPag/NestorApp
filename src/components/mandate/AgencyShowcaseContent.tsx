@@ -14,7 +14,7 @@
  *
  * | Τι λείπει | Γιατί |
  * |---|---|
- * | **κανάλι επικοινωνίας** | §9.8 — το **άρθρο 200 §1** θέλει τη σύμβαση **εγγράφως**· κατάλογος με τηλέφωνο παράγει **τηλεφώνημα**, πράξη από την οποία καμία έγκυρη σύμβαση δεν γεννιέται |
+ * | ~~κανάλι επικοινωνίας~~ | ✅ **ΑΡΘΗΚΕ** (ADR-841 §7 Α21.16) — ζει στην υποσελίδα `card` ({@link ShowcaseCardDoor}), **δική της** πράξη |
  * | **αμοιβή · βαθμολογία · κατάταξη** | §9.9 α — κατάλογος **ΓΡΑΦΕΙΩΝ** είναι μεγαλύτερη επιφάνεια *steering* από κατάλογο ακινήτων *(NAR, $418M)* |
  * | **αυτόματη συμπλήρωση από τα στοιχεία εταιρείας** | §9.9 β — μεσίτης με **ατομική επιχείρηση** είναι **φυσικό** πρόσωπο, και η έδρα του μπορεί να είναι η **κατοικία** του |
  *
@@ -54,6 +54,7 @@ import {
 } from '@/components/mandate/agency-showcase-labels';
 import { COVERAGE_MAX_OUTER_KM, COVERAGE_MAX_VERTICES } from '@/types/agency-coverage';
 import { ShowcaseMarkField } from '@/components/mandate/ShowcaseMarkField';
+import { ShowcaseCardDoor } from '@/components/mandate/ShowcaseCardDoor';
 import {
   BROKERAGE_DENY_NS,
   BROKERAGE_DENY_REASON_KEYS,
@@ -310,11 +311,10 @@ export function AgencyShowcaseContent(): React.ReactElement {
       */}
       <ShowcaseMarkField published={published?.mark ?? null} enabled={published !== null} />
 
-      {/* 🔑 Η απουσία καναλιού είναι **δηλωμένη**, όχι σιωπηλή: ο μεσίτης οφείλει να
-          ξέρει ότι δεν λείπει πεδίο — ότι έτσι γεννιέται γραπτό αίτημα (§9.8). */}
-      <p className="m-0 rounded-md border border-border bg-card p-3 text-sm text-muted-foreground">
-        {t(SHOWCASE_KEYS.noChannel)}
-      </p>
+      {/* 🏆 ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ: **δική της πράξη σε δική της υποσελίδα** (GBP · GitHub ·
+          LinkedIn: κάθε ενότητα με δικό της «Αποθήκευση»). Εδώ μόνο η πόρτα. */}
+      <ShowcaseCardDoor published={published !== null} />
+
 
       {failure !== null && (
         <p role="alert" className="m-0 text-sm text-destructive">

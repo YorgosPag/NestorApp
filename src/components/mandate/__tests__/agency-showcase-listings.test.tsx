@@ -26,6 +26,7 @@ import React from 'react';
 import { AgencyProfileContent } from '../AgencyProfileContent';
 import { PROFILE_KEYS } from '../agency-directory-labels';
 import type { PublicShowcase } from '@/types/agency-profile';
+import type { ShowcaseLocation } from '@/types/showcase-card';
 import { showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
@@ -134,6 +135,18 @@ const TRADE_PROFILE = showcaseFixture({
   credentials: [TRADE_CREDENTIAL],
 });
 
+/** ADR-841 §7 Α21.16 — ένα κατάστημα με τηλέφωνο: το **ίδιο** για μεσίτη και τεχνίτη. */
+const PHONE_LOCATION: ShowcaseLocation = {
+  id: 'sloc_fixture',
+  role: 'headquarters',
+  label: null,
+  place: { landId: 'land_fixture', buildingId: null },
+  position: null,
+  street: null,
+  hours: null,
+  channelKinds: ['phone'],
+};
+
 beforeEach(() => {
   asked.companyId = 'ΔΕΝ ΡΩΤΗΘΗΚΕ' as unknown as null;
 });
@@ -204,13 +217,13 @@ describe('Ε. Οι πράξεις της βιτρίνας (ADR-841 §7 Α5)', ()
     expect(screen.queryByText(PROFILE_KEYS.requestHint)).not.toBeInTheDocument();
   });
 
-  it('🔴 Ε2 — ούτε επικαλείται τη ΜΕΣΙΤΙΚΗ ΣΥΜΒΑΣΗ για να εξηγήσει την απουσία τηλεφώνου', () => {
-    // ⚠️ Το «γιατί δεν έχει τηλέφωνο» **παραμένει** — αλλάζει ο ΛΟΓΟΣ. Χωρίς αυτή τη
-    //    δεύτερη προσδοκία, ένα «κρύψε τα όλα» θα περνούσε ως διόρθωση.
-    paint({ listings: [] }, TRADE_PROFILE);
+  it('🔴 Ε2 — ούτε επικαλείται τη ΜΕΣΙΤΙΚΗ ΣΥΜΒΑΣΗ δίπλα στο τηλέφωνό του (Α21.16)', () => {
+    // ⚠️ Το κουμπί «Εμφάνιση τηλεφώνου» **υπάρχει** — λείπει μόνο η μεσιτική υπενθύμιση.
+    //    Χωρίς τη δεύτερη προσδοκία, ένα «κρύψε την κάρτα» θα περνούσε ως διόρθωση.
+    paint({ listings: [] }, { ...TRADE_PROFILE, locations: [PHONE_LOCATION] });
 
-    expect(screen.queryByText(PROFILE_KEYS.noChannel)).not.toBeInTheDocument();
-    expect(screen.getByText(PROFILE_KEYS.noChannelPro)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_KEYS.cardShowPhone)).toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_KEYS.cardBrokerWritten)).not.toBeInTheDocument();
   });
 
   it('🔴 Ε3 — και η κενή λίστα δεν του ζητά να «αναλάβει το δικό σας ακίνητο»', () => {
@@ -222,11 +235,11 @@ describe('Ε. Οι πράξεις της βιτρίνας (ADR-841 §7 Α5)', ()
 
   it('Ε4 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: το μεσιτικό γραφείο τα κρατά ΟΛΑ αμετάβλητα', () => {
     // 🔑 Χωρίς αυτό, ένα «κρύψε το κουμπί πάντα» θα άφηνε τα Ε1-Ε3 πράσινα.
-    paint({ listings: [] });
+    paint({ listings: [] }, { ...PROFILE, locations: [PHONE_LOCATION] });
 
     expect(screen.getByText(PROFILE_KEYS.requestCta)).toBeInTheDocument();
-    expect(screen.getByText(PROFILE_KEYS.noChannel)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_KEYS.cardBrokerWritten)).toBeInTheDocument();
     expect(screen.getByText(PROFILE_KEYS.listingsEmptyHint)).toBeInTheDocument();
-    expect(screen.queryByText(PROFILE_KEYS.noChannelPro)).not.toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_KEYS.listingsEmptyHintPro)).not.toBeInTheDocument();
   });
 });
