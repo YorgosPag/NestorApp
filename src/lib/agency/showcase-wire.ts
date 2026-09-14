@@ -26,6 +26,7 @@
 
 import type { DeclaredCoverage } from '@/types/agency-coverage';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { PublicNameChoice, SeatDisclosure } from '@/types/showcase-legal-identity';
 
 /**
  * **Ένα credential, όπως το στέλνει ο φυλλομετρητής.**
@@ -70,7 +71,13 @@ export interface ShowcaseMarkWire {
 
 export interface ShowcaseWireDeclaration {
   readonly alias: string;
-  readonly displayName: string;
+  /**
+   * 🔴 **ΕΠΙΛΟΓΗ, ΟΧΙ ΚΕΙΜΕΝΟ** (ADR-841 §7 Α23, Δ5) — το `displayName` έφυγε από το σύρμα. Ελεύθερο
+   * όνομα δίπλα σε σήμα «επαληθευμένο από ΓΕΜΗ» θα έκανε το σήμα ψέμα· ο διακομιστής λύνει το κείμενο.
+   */
+  readonly publicName: PublicNameChoice;
+  /** Πόση έδρα δημοσιεύεται. Απόν/`null` = δεν επέλεξε — δεκτό μόνο όπου υπάρχει προεπιλογή (ΑΕ · ΕΠΕ). */
+  readonly seatDisclosure?: SeatDisclosure | null;
   /** ≥1 — το επιβάλλει ο **γραφέας**, ονομαστικά, ποτέ το σχήμα (ένας κριτής ανά ερώτημα). */
   readonly credentials: readonly ShowcaseCredentialWire[];
   /**

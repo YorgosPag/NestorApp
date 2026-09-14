@@ -118,6 +118,8 @@ export function showcaseFixture(overrides: Partial<PublicShowcase> = {}): Public
     locations: [],
     // Α21.17 — «δεν δήλωσε ιστοσελίδα»: η κατάσταση κάθε βιτρίνας που γράφτηκε πριν το πεδίο.
     website: null,
+    // Α23 — «καμία νομική ταυτότητα»: η κατάσταση κάθε βιτρίνας που γράφτηκε πριν την Α23.
+    legalIdentity: null,
     publishedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
