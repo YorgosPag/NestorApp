@@ -114,3 +114,11 @@ export const AGENCY_SHOWCASE_ROUTE = '/settings/agency-profile' as const;
  * μετακόμιση της βιτρίνας να μην αφήσει την κάρτα σε 404.
  */
 export const AGENCY_SHOWCASE_CARD_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/card` as const;
+
+/**
+ * **ΤΑ ΣΤΟΙΧΕΙΑ ΤΗΣ ΕΤΑΙΡΕΙΑΣ** (ADR-439 · ADR-841 §7 Α21.19) — εκεί στέλνει η κάρτα όποιον δεν έχει δηλώσει
+ * ακόμη διεύθυνση και κανάλια, αντί να του ζητήσει να τα γράψει δεύτερη φορά.
+ *
+ * ⚠️ Χωρίς πρόθεμα χώρου — το βάζει ο `Link` του `@/lib/workspace/navigation` (CHECK 3.61).
+ */
+export const COMPANY_SETTINGS_ROUTE = '/settings/company' as const;

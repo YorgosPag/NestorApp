@@ -832,6 +832,47 @@
       "cardWebsiteLabel": "Website",
       "cardWebsitePlaceholder": "e.g. www.your-office.com",
       "cardWebsiteHint": "Shown publicly on your storefront, in the structured data for search engines and in “Save contact”.",
+      "cardImport": {
+        "openWithCount": "Import from company details · {count, plural, one {# difference} other {# differences}}",
+        "review": "Compare with company details",
+        "upToDate": "Your card matches your company details",
+        "noCompanyData": "You have not declared an address and contact details for your company yet.",
+        "companySettings": "Company details",
+        "sourceFailed": "We couldn't read your company details. Your card is not affected — try again shortly.",
+        "title": "Import from company details",
+        "lead": "Only the draft is filled in: nothing is published until you press “Save card”. The street stays unpublished unless you turn the switch on, and you choose the area on the map yourself.",
+        "colField": "Field",
+        "colCard": "Card",
+        "colCompany": "Company",
+        "colDecision": "Decision",
+        "keepCard": "Keep the card's",
+        "takeCompany": "Use the company's",
+        "checkedOn": "checked {date}",
+        "apply": "Apply to draft",
+        "cancel": "Cancel",
+        "applied": "{count, plural, one {# field filled in} other {# fields filled in}} on the draft.",
+        "undo": "Undo",
+        "locate": "Find on map",
+        "locating": "Finding…",
+        "locateNotFound": "The address was not found on the map. Search for the area below.",
+        "locateFailed": "Finding the address did not complete. Try again shortly.",
+        "field": {
+          "street": "Head office address",
+          "phones": "Phone",
+          "emails": "Email",
+          "website": "Website"
+        },
+        "status": {
+          "fill": "Add",
+          "same": "Same",
+          "no-room": "No room — up to {max} per location",
+          "invalid-source": "Invalid in company details — correct it there"
+        },
+        "origin": {
+          "company-profile": "From company details",
+          "business-registry": "From the Business Registry (GEMI)"
+        }
+      },
       "publish": "Publish to the directory",
       "publishing": "Publishing…",
       "publishedAt": "Published {date}",

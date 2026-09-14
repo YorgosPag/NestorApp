@@ -364,6 +364,9 @@ export const SHOWCASE_CARD_ROLE_KEYS: Record<ShowcaseLocationRole, string> = {
   branch: `${K}.cardRoleBranch`,
 };
 
+// ADR-841 §7 Α21.19 — οι πίνακες της «εισαγωγής από τα στοιχεία της εταιρείας» ζουν στο
+// `agency-showcase-import-labels.ts` (χωρίστηκαν στις 500 γραμμές, N.7.1).
+
 /**
  * **Ελάττωμα ωραρίου → κλειδί** — ο **ίδιος** κριτής (`weeklyHoursDefect`) που τρέχει ο
  * διακομιστής, λεγμένος **πριν** την υποβολή. Εδώ η ανάδραση, εκεί η εγγύηση.
