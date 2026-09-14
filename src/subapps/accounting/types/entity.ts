@@ -20,7 +20,16 @@
  * - `epe`: Εταιρεία Περιορισμένης Ευθύνης (Ltd) — μελλοντικό
  * - `ae`: Ανώνυμη Εταιρεία (SA) — μελλοντικό
  */
-export type EntityType = 'sole_proprietor' | 'oe' | 'epe' | 'ae';
+export const COMPANY_ENTITY_TYPES = ['sole_proprietor', 'oe', 'epe', 'ae'] as const;
+
+/** Παράγεται από τη ρίζα {@link COMPANY_ENTITY_TYPES} — καμία δεύτερη απαρίθμηση. */
+export type EntityType = (typeof COMPANY_ENTITY_TYPES)[number];
+
+/**
+ * Έγγραφο προφίλ **χωρίς** `entityType` διαβάζεται ως ατομική (backward compat του repository).
+ * Ένας κανόνας, ένα σημείο — τον χρειάζονται και ο αναγνώστης νομικής ταυτότητας (ADR-841 Α23).
+ */
+export const LEGACY_DEFAULT_ENTITY_TYPE: EntityType = 'sole_proprietor';
 
 // ============================================================================
 // PARTNER EFKA CONFIG — Ρυθμίσεις ΕΦΚΑ ανά Εταίρο

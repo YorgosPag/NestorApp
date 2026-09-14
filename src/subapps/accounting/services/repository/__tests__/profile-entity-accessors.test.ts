@@ -107,7 +107,7 @@ const base = {
 const oeProfile: OECompanyProfile = { ...base, entityType: 'oe', gemiNumber: null, partners: [partner] };
 const epeProfile: EPECompanyProfile = { ...base, entityType: 'epe', gemiNumber: '123', members: [member], shareCapital: 3000 };
 const aeProfile: AECompanyProfile = { ...base, entityType: 'ae', gemiNumber: '456', shareholders: [shareholder], shareCapital: 25000 };
-const soleProfile: SoleProprietorProfile = { ...base, entityType: 'sole_proprietor', efkaCategory: 1 };
+const soleProfile: SoleProprietorProfile = { ...base, entityType: 'sole_proprietor', efkaCategory: 1, gemiNumber: null };
 
 describe('profile-entity-accessors (ADR-440)', () => {
   describe('getProfilePartners', () => {

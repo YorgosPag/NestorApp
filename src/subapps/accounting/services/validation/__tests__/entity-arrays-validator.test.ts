@@ -81,7 +81,7 @@ function shareholder(over: Partial<Shareholder> = {}): Shareholder {
 const oe = (partners: Partner[]): OESetupInput => ({ ...base, entityType: 'oe', gemiNumber: null, partners });
 const epe = (members: Member[]): EPESetupInput => ({ ...base, entityType: 'epe', gemiNumber: '1', members, shareCapital: 3000 });
 const ae = (shareholders: Shareholder[]): AESetupInput => ({ ...base, entityType: 'ae', gemiNumber: '1', shareholders, shareCapital: 25000 });
-const sole: SoleProprietorSetupInput = { ...base, entityType: 'sole_proprietor', efkaCategory: 1 };
+const sole: SoleProprietorSetupInput = { ...base, entityType: 'sole_proprietor', efkaCategory: 1, gemiNumber: null };
 
 // ── validateCompanyEntityArrays ─────────────────────────────────────────────
 

@@ -17,6 +17,7 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { IAccountingRepository } from '../../types/interfaces';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
+import { LEGACY_DEFAULT_ENTITY_TYPE } from '../../types/entity';
 import type { TenantContext } from '../../types/common';
 import type {
   CreateJournalEntryInput,
@@ -90,9 +91,9 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
       const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(this.tenant.companyId).get();
       if (!snap.exists) return null;
       const raw = snap.data() as Record<string, unknown>;
-      // Backward compat: docs without entityType → sole_proprietor
+      // Backward compat: docs without entityType → sole_proprietor (ο ΕΝΑΣ κανόνας, ADR-841 Α23)
       if (!raw.entityType) {
-        raw.entityType = 'sole_proprietor';
+        raw.entityType = LEGACY_DEFAULT_ENTITY_TYPE;
       }
       return raw as unknown as CompanyProfile;
     }, null);
