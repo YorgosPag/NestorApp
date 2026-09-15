@@ -40,6 +40,7 @@
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import { buildPublicListing } from '@/services/listings/public-listing-projection';
 import type { OwnerProperty } from '@/types/owner-property';
+import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 
 import { ownerPropertyDraftFromRequest } from '../owner-property-draft-schema';
 import {
@@ -396,5 +397,40 @@ describe('Κ5 — η επιλογή «δημοσίευσε αυτό το αρχ�
         material: { kind: 'floorplan', at: AT },
       },
     ]);
+  });
+});
+
+// =============================================================================
+// Κ6 — ΚΑΘΕ ΕΙΔΟΣ ΔΙΑΘΕΣΗΣ ΠΕΡΝΑ ΤΟ ΣΥΝΟΡΟ (ADR-835 · περιστατικό 2026-09-15)
+// =============================================================================
+
+/**
+ * 🔴 **ΤΕΤΑΡΤΟ ΔΕΙΓΜΑ ΤΗΣ ΚΛΑΣΗΣ «ΤΟ ΣΥΝΟΡΟ ΞΕΜΕΙΝΕ ΠΙΣΩ ΑΠΟ ΤΗΝ ΟΝΤΟΤΗΤΑ».**
+ *
+ * Το `OFFER_KINDS` απέκτησε `leaseShort` και η φόρμα το έστελνε, αλλά το σχήμα είχε
+ * **τρεις** κλάδους ⇒ κάθε αγγελία βραχυχρόνιας απαντιόταν `400 MALFORMED_BODY`. Ο
+ * μεταγλωττιστής **δεν** το βλέπει: ένωση με λιγότερους κλάδους ανατίθεται στην πλήρη.
+ *
+ * 🔑 **Ρωτά την ΚΛΑΣΗ**: το `it.each(OFFER_KINDS)` κοκκινίζει και για το **πέμπτο**
+ * είδος που θα προστεθεί αύριο χωρίς κλάδο εδώ — όχι μόνο για το σημερινό.
+ */
+describe('Κ6 — κάθε είδος διάθεσης του λεξιλογίου περνά το σύνορο', () => {
+  const OFFER_BODIES: Record<OfferKind, Record<string, unknown>> = {
+    sell: { askingPrice: 170000 },
+    leaseOut: { rentPrice: 800 },
+    exchange: { percentage: 40 },
+    leaseShort: { nightlyRate: 90, minNights: 2, maxGuests: 4 },
+  };
+
+  /** ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε τον κλάδο `leaseShort` από το zod σχήμα ⇒ **κόκκινο**. */
+  it.each(OFFER_KINDS)('δέχεται διάθεση «%s» με τα πεδία της αυτούσια', (kind) => {
+    const offer = { id: `offr_${kind}`, kind, lifecycle: 'active', ...OFFER_BODIES[kind] };
+    const parsed = ownerPropertyDraftFromRequest(
+      bodyOf({ kind: 'declined' }, { offers: [offer] }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.offers).toEqual([offer]);
   });
 });

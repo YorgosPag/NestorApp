@@ -35,7 +35,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "594d98953151e39be3f349222ab013d4122428295c8d43ec3141a5da5fae40bc",
+    "src/i18n/generated/shell-slice.el.json": "a19653f657ce1e0694e45f3cb4ca9034f536ee4e57545b8274e52659fa62325c",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -74,7 +74,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "eab950a030460e1cda88f9c88ff0d314f6b190c2c2ba8172865bc23259512175",
+  "inputsSha256": "cb764ae7d8e7cdb5c8485955159ff641ce5daf7fd78db9b026b42e20ce14cb62",
   "languages": [
     "el"
   ],
@@ -562,8 +562,8 @@
     "src/lib/stay/stay-conflict.ts": "90b9a4d4a18d0591c7415c42ef3bd0476bc7e06dd796617f705ca05e28849da8",
     "src/lib/tokens/signed-token.ts": "c9f5a1fce3869194506ea66622febcc052b469949f7f0bef1009723f27a4e820",
     "src/lib/url-query-state.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
+    "src/lib/validation/greek-vat-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/validation/text-link-segments.ts": "5656aa0b6d472d37a73258f653418596cd520209dd0d3987d4401aa5f027c62e",
-    "src/lib/validation/vat-validation.ts": "9bdc492297f6b380db50d1583f02f40ff7a60493a025f2daa0586c1736d32abf",
     "src/lib/workspace/grant-membership.ts": "830f3592b13d7c651209d9abd9232f937efd90105207f49ae12d6b08d4793f34",
     "src/lib/workspace/workspace-catalog.ts": "e4d073d4da9a7dfc6caa23059951cdac7c598dff868a928f4cdac05acdaf5707",
     "src/lib/workspace/workspace-destination.ts": "54bd81f89fd6ba7f542d1e428ff40d2f10ba9ff392e6e9abdb81f4a8f2e3b0e3",
@@ -5796,7 +5796,7 @@
     "matchedKeys": 177,
     "routeBoundaries": 0,
     "shellFiles": 672,
-    "sliceBytes": 461701
+    "sliceBytes": 461709
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

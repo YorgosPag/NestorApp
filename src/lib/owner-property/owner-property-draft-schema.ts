@@ -106,6 +106,24 @@ const offer = z.discriminatedUnion('kind', [
     lifecycle,
     percentage: nullableNumber,
   }),
+  /**
+   * 🔴 **ΕΛΕΙΠΕ — ΚΑΙ ΚΑΘΕ ΑΓΓΕΛΙΑ ΒΡΑΧΥΧΡΟΝΙΑΣ ΑΠΑΝΤΙΟΤΑΝ `400 MALFORMED_BODY`**
+   * (μετρημένο 2026-09-15). Το `OFFER_KINDS` απέκτησε `leaseShort` (ADR-835) και η φόρμα
+   * το στέλνει (`owner-property-form-values.ts`), αλλά αυτό το σύνορο έμεινε στα τρία.
+   *
+   * ⚠️ **Ο μεταγλωττιστής ΔΕΝ μπορούσε να το πιάσει**, παρά τη ρητή ανάθεση στον τύπο
+   * της οντότητας: μια ένωση με **λιγότερους** κλάδους είναι **υποσύνολο**, άρα
+   * ανατίθεται χωρίς σφάλμα. Ο φρουρός «σχήμα ⇄ οντότητα» πιάνει πεδίο που **λείπει**
+   * από κλάδο, όχι κλάδο που **λείπει** από ένωση — αυτό το φυλάει μόνο άγκυρα.
+   */
+  z.object({
+    id: z.string().min(1),
+    kind: z.literal('leaseShort'),
+    lifecycle,
+    nightlyRate: nullableNumber,
+    minNights: nullableNumber,
+    maxGuests: nullableNumber,
+  }),
 ]);
 
 /**
