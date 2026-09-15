@@ -6,7 +6,9 @@
  *
  * 🔴 Ως τις 2026-09-14 το `PUT` άλλαζε την επωνυμία **χωρίς** να ενημερώνει `companies.name` ή τις
  * δημόσιες αγγελίες. Εδώ φυλάγεται: (α) ο αριθμός ΓΕΜΗ ελέγχεται ως προς τη μορφή σε **κάθε** νομική
- * μορφή, (β) αλλαγμένη επωνυμία ⇒ διάδοση, ίδια ⇒ **καμία** (N αγγελίες δεν ξαναγράφονται για τίποτα).
+ * μορφή, (β) αλλαγμένη επωνυμία ⇒ διάδοση, ίδια ⇒ **καμία** (N αγγελίες δεν ξαναγράφονται για τίποτα),
+ * (γ) Γ3 — η μάσκα πεδίων φτάνει στη συναλλαγή, άγνωστο πεδίο ⇒ 400, και οι συνέπειες κρίνονται από το
+ * «πριν/μετά» **της συναλλαγής**, ποτέ από τη φόρμα ή από δεύτερη ανάγνωση.
  *
  * 🔑 Μέσα από τον **πραγματικό** `defineRoute` (φάκελοι σφαλμάτων, `after`) — ψεύτικα μόνο το
  * repository, ο γραφέας ελέγχου και η διάδοση.
@@ -96,12 +98,19 @@ async function runAfterTasks(): Promise<void> {
   for (const task of afterTasks.splice(0)) await task();
 }
 
+/**
+ * Η συναλλαγή: «πριν» = ό,τι δίνει η δοκιμή · «μετά» = ό,τι έγραψε (προεπιλογή: η φόρμα όπως ήρθε).
+ * Ίδιο «πριν» και «μετά» ⇒ **το ίδιο αντικείμενο**, όπως όταν η συναλλαγή δεν έγραψε τίποτα.
+ */
+function givenTransaction(before: Record<string, unknown> | null, after?: Record<string, unknown>): void {
+  repo.saveCompanySetup.mockImplementation(async (data: Record<string, unknown>) => ({ before, after: after ?? data }));
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   afterTasks = [];
-  // Το προηγούμενο προφίλ = ό,τι γράφει το `VALID` — ώστε «καμία αλλαγή» να είναι πραγματικά καμία.
-  repo.getCompanySetup.mockResolvedValue({ ...VALID, gemiNumber: null });
-  repo.saveCompanySetup.mockResolvedValue(undefined);
+  // Το «πριν» = ό,τι γράφει το `VALID` — ώστε «καμία αλλαγή» να είναι πραγματικά καμία.
+  givenTransaction({ ...VALID, gemiNumber: null });
   propagateMock.mockResolvedValue({ name: 'x', wasRepaired: true, republished: null });
   reconcileMock.mockResolvedValue({ kind: 'refreshed', publicNameChanged: false });
 });
@@ -120,19 +129,46 @@ describe('Γ — ο αριθμός ΓΕΜΗ στο προφίλ', () => {
 
     expect(repo.saveCompanySetup).toHaveBeenCalledWith(
       expect.objectContaining({ entityType: 'sole_proprietor', gemiNumber: '001234567000' }),
+      expect.anything(),
     );
   });
 
   it('🔴 Γ3 — ΚΕΝΟΣ αριθμός στην ατομική/ΟΕ ⇒ `null`, ΠΟΤΕ `""` («δηλωμένος» για κάθε `!== null`)', async () => {
     await put({ ...VALID, gemiNumber: '   ' });
 
-    expect(repo.saveCompanySetup).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'oe', gemiNumber: null }));
+    expect(repo.saveCompanySetup).toHaveBeenCalledWith(
+      expect.objectContaining({ entityType: 'oe', gemiNumber: null }),
+      expect.anything(),
+    );
   });
 });
 
-describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόνο όταν ΑΛΛΑΞΕ', () => {
+describe('Φ — μάσκα πεδίων (ADR-841 Α23 Γ3 · AIP-134 / AIP-161)', () => {
+  it('🔴 Φ1 — άγνωστο πεδίο στη μάσκα ⇒ 400 με τα απορριφθέντα, και ΤΙΠΟΤΑ δεν γράφεται', async () => {
+    const answer = await put({ ...VALID, fields: ['phone', 'companyId'] });
+
+    expect(answer.status).toBe(400);
+    expect(repo.saveCompanySetup).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Φ2 — η μάσκα ΦΤΑΝΕΙ στη συναλλαγή · χωρίς μάσκα ⇒ `undefined` (πλήρης αντικατάσταση)', async () => {
+    await put({ ...VALID, fields: ['phone', 'city'] });
+    await put(VALID);
+
+    expect(repo.saveCompanySetup.mock.calls[0][1]).toEqual({ fields: ['phone', 'city'] });
+    expect(repo.saveCompanySetup.mock.calls[1][1]).toEqual({ fields: undefined });
+  });
+
+  it('🔑 Φ3 — η μάσκα ΔΕΝ μπαίνει στο έγγραφο (το σώμα χτίζεται ρητά)', async () => {
+    await put({ ...VALID, fields: ['phone'] });
+
+    expect(repo.saveCompanySetup.mock.calls[0][0]).not.toHaveProperty('fields');
+  });
+});
+
+describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόνο όταν η ΣΥΝΑΛΛΑΓΗ την έγραψε', () => {
   it('🔴 Μ1 — ΑΛΛΑΓΜΕΝΗ επωνυμία ⇒ `propagateCompanyRename` για τον οργανισμό της απόδειξης, ΜΕΤΑ την απάντηση', async () => {
-    repo.getCompanySetup.mockResolvedValue({ businessName: 'Δοκιμαστικό Γραφείο' });
+    givenTransaction({ ...VALID, businessName: 'Δοκιμαστικό Γραφείο' });
 
     const answer = await put(VALID);
 
@@ -152,7 +188,7 @@ describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόν
   });
 
   it('🔑 Μ3 — ΠΡΩΤΗ αποθήκευση (κανένα προφίλ πριν) ⇒ διάδοση', async () => {
-    repo.getCompanySetup.mockResolvedValue(null);
+    givenTransaction(null);
 
     await put(VALID);
     await runAfterTasks();
@@ -161,7 +197,7 @@ describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόν
   });
 
   it('🔴 Μ4 — αποτυχία διάδοσης ΔΕΝ ρίχνει την αποθήκευση: η αλήθεια γράφτηκε', async () => {
-    repo.getCompanySetup.mockResolvedValue({ businessName: 'Παλιά' });
+    givenTransaction({ ...VALID, businessName: 'Παλιά' });
     propagateMock.mockRejectedValue(new Error('firestore down'));
 
     const answer = await put(VALID);
@@ -184,7 +220,7 @@ describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόν
   });
 
   it('🔑 Μ7 — μετονομασία ⇒ ΜΟΝΟ η διάδοση (που περιέχει ήδη τη βιτρίνα), όχι και δεύτερη ανανέωση', async () => {
-    repo.getCompanySetup.mockResolvedValue({ ...VALID, businessName: 'Παλιά', gemiNumber: null });
+    givenTransaction({ ...VALID, businessName: 'Παλιά', gemiNumber: null });
 
     await put({ ...VALID, gemiNumber: '001234567000' });
     await runAfterTasks();
@@ -194,11 +230,28 @@ describe('Μ — η αλλαγή επωνυμίας διαδίδεται, μόν
   });
 
   it('🔴 Μ5 — άκυρη αποθήκευση ⇒ ΚΑΜΙΑ διάδοση: τίποτα δεν άλλαξε', async () => {
-    repo.getCompanySetup.mockResolvedValue({ businessName: 'Παλιά' });
+    givenTransaction({ ...VALID, businessName: 'Παλιά' });
 
     await put({ ...VALID, gemiNumber: 'ΑΒΓ' });
     await runAfterTasks();
 
     expect(propagateMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Μ8 — ΜΠΑΓΙΑΤΙΚΗ ΦΟΡΜΑ: λέει «Παλιά», η συναλλαγή κράτησε «ΓΕΜΗ» ⇒ ΚΑΜΙΑ διάδοση (κρίνει η συναλλαγή, όχι η φόρμα)', async () => {
+    const disk = { ...VALID, businessName: 'ΓΕΜΗ', gemiNumber: null };
+    givenTransaction(disk, { ...disk, phone: '2310999999' });
+
+    await put({ ...VALID, businessName: 'Παλιά', phone: '2310999999', fields: ['phone'] });
+    await runAfterTasks();
+
+    expect(propagateMock).not.toHaveBeenCalled();
+    expect(reconcileMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Μ9 — ΚΑΜΙΑ δεύτερη ανάγνωση του προφίλ: οι συνέπειες έρχονται από το «πριν/μετά» της συναλλαγής', async () => {
+    await put(VALID);
+
+    expect(repo.getCompanySetup).not.toHaveBeenCalled();
   });
 });

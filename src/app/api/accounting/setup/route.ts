@@ -13,6 +13,12 @@
  * - ο **αριθμός ΓΕΜΗ** ελέγχεται εδώ ως προς τη μορφή (και στην ατομική, όπου μπορεί να λείπει)·
  * - η **αλλαγή επωνυμίας** κατέχει τη συνέπειά της (`companies.name` + δημόσιες αγγελίες).
  *
+ * 🔑 ADR-841 §7 Α23 Φ3.2 Γ3 — **μάσκα πεδίων** (Google AIP-134 · Figma · Stripe): ο πελάτης στέλνει
+ * όλη τη φόρμα **και** `fields` = ό,τι άλλαξε ο άνθρωπος. Γράφονται **μόνο** αυτά, σε **μία**
+ * συναλλαγή μαζί με το ίχνος. Χωρίς `fields` ⇒ πλήρης αντικατάσταση (παλιός πελάτης) · άγνωστο
+ * πεδίο ⇒ 400 (AIP-161). Οι συνέπειες κρίνονται από το «πριν/μετά» **της συναλλαγής** — ποτέ από
+ * τη φόρμα, ποτέ από δεύτερη ανάγνωση.
+ *
  * @module api/accounting/setup
  * @enterprise ADR-ACC-000 §2 Company Data, M-001 Company Setup
  * @enterprise ADR-603 API Route-Handler Factory SSoT
@@ -33,7 +39,13 @@ import {
 } from '@/services/company/company-rename.service';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
+import {
+  changedProfileFields,
+  parseProfileFieldMask,
+} from '@/subapps/accounting/services/setup/company-profile-field-mask';
 import type { CompanySetupInput } from '@/subapps/accounting/types';
+import type { CompanyProfileField } from '@/subapps/accounting/types/company';
+import type { CompanySetupSaveResult } from '@/subapps/accounting/types/interfaces';
 import type { Partner, Member, Shareholder } from '@/subapps/accounting/types/entity';
 import {
   validateCompanyEntityArrays,
@@ -103,12 +115,25 @@ function scheduleConsequence(companyId: string, failure: string, task: () => Pro
  * Τα πεδία του προφίλ που τροφοδοτούν τη **νομική ταυτότητα της βιτρίνας** πέρα από την επωνυμία —
  * αριθμός ΓΕΜΗ, μορφή, καταστατική έδρα (`lib/agency/showcase-legal-identity`).
  */
-const LEGAL_IDENTITY_FIELDS = ['entityType', 'gemiNumber', 'address', 'city', 'postalCode'] as const;
+const LEGAL_IDENTITY_FIELDS: readonly CompanyProfileField[] = ['entityType', 'gemiNumber', 'address', 'city', 'postalCode'];
 
-function legalIdentityChanged(previous: unknown, next: CompanySetupInput): boolean {
-  const before = typeof previous === 'object' && previous !== null ? (previous as Record<string, unknown>) : {};
-  const current = next as unknown as Record<string, unknown>;
-  return LEGAL_IDENTITY_FIELDS.some((field) => (before[field] ?? null) !== (current[field] ?? null));
+/**
+ * 🔑 Η μετονομασία **περιέχει** την ανανέωση της βιτρίνας· χωριστά μόνο όταν άλλαξε άλλη είσοδος.
+ *
+ * 🔴 Κρίνεται από ό,τι **έγραψε η συναλλαγή** (Γ3): μια μπαγιάτικη φόρμα με παλιά επωνυμία που η μάσκα
+ * **δεν** έγραψε δεν ξαναγράφει N αγγελίες — και μια ταυτόχρονη υιοθέτηση δεν «χάνεται» σε δεύτερη ανάγνωση.
+ */
+function scheduleProfileConsequences(companyId: string, uid: string, saved: CompanySetupSaveResult): void {
+  const changed = changedProfileFields(saved.before, saved.after);
+  if (changed.includes('businessName')) {
+    scheduleConsequence(companyId, 'Η επωνυμία άλλαξε — τα αντίγραφά της δεν ενημερώθηκαν', () =>
+      propagateCompanyRename(getAdminFirestore(), companyId, uid),
+    );
+  } else if (changed.some((field) => LEGAL_IDENTITY_FIELDS.includes(field))) {
+    scheduleConsequence(companyId, 'Η νομική ταυτότητα της βιτρίνας δεν ανανεώθηκε', () =>
+      reconcileShowcaseLegalIdentity(getAdminFirestore(), companyId),
+    );
+  }
 }
 
 // =============================================================================
@@ -135,12 +160,18 @@ export const PUT = defineRoute({
   fallbackError: 'Failed to save company setup',
   handler: async ({ req, auth }) => {
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
-    const body = (await req.json()) as Partial<CompanySetupInput>;
+    const body = (await req.json()) as Partial<CompanySetupInput> & { fields?: unknown };
 
     // Validate required fields
     const validationError = validateSetupInput(body);
     if (validationError) {
       badRequest(validationError);
+    }
+
+    // ADR-841 §7 Α23 Φ3.2 Γ3: άγνωστο πεδίο στη μάσκα ⇒ 400, ποτέ γραφή αυθαίρετου κλειδιού (AIP-161).
+    const mask = parseProfileFieldMask(body.fields);
+    if (mask.kind === 'invalid') {
+      badRequest('fields contains unknown profile fields', { rejected: mask.rejected });
     }
 
     // Common fields (Firestore compliance: nullable)
@@ -218,25 +249,13 @@ export const PUT = defineRoute({
       badRequest(entityArraysError);
     }
 
-    // ADR-841 §7 Α23: η προηγούμενη επωνυμία διαβάζεται ΠΡΙΝ τη γραφή — η αποθήκευση κρίνει
-    // μόνη της αν άλλαξε όνομα (ίδιο πρότυπο με το `publicNameChanged` της βιτρίνας).
-    const previous = await repository.getCompanySetup();
-
-    // ADR-440: wrap with the audited repository so ownership/dividend changes
-    // emit a COMPANY_PROFILE_UPDATED audit entry (material data).
+    // ADR-440 · Γ3: audited repository ⇒ μία συναλλαγή — μάσκα πεδίων + ίχνος (ιδιοκτησία, επωνυμία).
     const auditedRepository = createAuditedRepository(repository, auth.uid, auth.companyId);
-    await auditedRepository.saveCompanySetup(data);
+    const saved = await auditedRepository.saveCompanySetup(data, {
+      fields: mask.kind === 'fields' ? mask.fields : undefined,
+    });
 
-    // 🔑 Η μετονομασία **περιέχει** την ανανέωση της βιτρίνας· χωριστά μόνο όταν άλλαξε άλλη είσοδος.
-    if (previous?.businessName !== data.businessName) {
-      scheduleConsequence(auth.companyId, 'Η επωνυμία άλλαξε — τα αντίγραφά της δεν ενημερώθηκαν', () =>
-        propagateCompanyRename(getAdminFirestore(), auth.companyId, auth.uid),
-      );
-    } else if (legalIdentityChanged(previous, data)) {
-      scheduleConsequence(auth.companyId, 'Η νομική ταυτότητα της βιτρίνας δεν ανανεώθηκε', () =>
-        reconcileShowcaseLegalIdentity(getAdminFirestore(), auth.companyId),
-      );
-    }
+    scheduleProfileConsequences(auth.companyId, auth.uid, saved);
 
     return ok();
   },

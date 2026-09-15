@@ -13,7 +13,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
+import { changedProfileFields } from '@/subapps/accounting/services/setup/company-profile-field-mask';
 import type { CompanyProfile, CompanySetupInput } from '@/subapps/accounting/types';
+
+/**
+ * ADR-841 §7 Α23 Φ3.2 Γ3 — ό,τι **άλλαξε ο άνθρωπος** από το προφίλ που φόρτωσε η οθόνη (μάσκα
+ * πεδίων, Google AIP-134 · Figma). Ο διακομιστής γράφει **μόνο** αυτά πάνω στο αποθηκευμένο.
+ *
+ * 🔴 Γιατί: μια οθόνη ανοιχτή πριν από την «Υιοθέτηση επωνυμίας ΓΕΜΗ» ξανάγραφε σιωπηλά την παλιά
+ * επωνυμία με το πρώτο «Αποθήκευση». Χωρίς φορτωμένη βάση (πρώτη ρύθμιση) ⇒ χωρίς μάσκα (πλήρης).
+ */
+function saveBodyOf(base: CompanyProfile | null, data: CompanySetupInput) {
+  return base === null ? data : { ...data, fields: changedProfileFields(base, data) };
+}
 
 // ============================================================================
 // TYPES
@@ -90,7 +102,7 @@ export function useCompanySetup(): UseCompanySetupReturn {
         const response = await fetch(API_ROUTES.ACCOUNTING.SETUP.BASE, {
           method: 'PUT',
           headers,
-          body: JSON.stringify(data),
+          body: JSON.stringify(saveBodyOf(profile, data)),
         });
 
         if (!response.ok) {
@@ -98,7 +110,7 @@ export function useCompanySetup(): UseCompanySetupReturn {
           throw new Error(errorData.error ?? `HTTP ${response.status}`);
         }
 
-        // Refetch to get the updated profile with server timestamps
+        // Refetch ⇒ server timestamps AND the new base of the field mask (Γ3)
         await fetchSetup();
         return true;
       } catch (err) {
@@ -109,7 +121,7 @@ export function useCompanySetup(): UseCompanySetupReturn {
         setSaving(false);
       }
     },
-    [user, getAuthHeaders, fetchSetup],
+    [user, getAuthHeaders, fetchSetup, profile],
   );
 
   // Auto-fetch on mount when user is available
