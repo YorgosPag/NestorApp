@@ -66,6 +66,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
+import { PriceReductionBadge } from './PriceReductionBadge';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { photoPositionFor } from '@/lib/listings/listing-photo-position';
@@ -223,6 +224,8 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
           {price.kind === 'priced'
             ? formatCurrency(price.headline.amount)
             : t(MISSING_PRICE_KEY[price.reason])}
+          {/* ADR-777 §8.69 — η ΙΔΙΑ σήμανση με την κάρτα της λίστας, όχι αντίγραφό της. */}
+          <PriceReductionBadge reduction={listing.priceReduction} className="ml-2" />
         </p>
 
         <p className="mt-1 text-xs text-muted-foreground">

@@ -2,6 +2,14 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **15/09 — ΤΟ FIXTURE `PublicListing` ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 20 ΑΡΧΕΙΑ TESTS (εύρημα ADR-777 §8.69)**
+
+  **Μετρημένο** (grep `as unknown as PublicListing`): **20** αρχεία tests χτίζουν αγγελία με cast, **χωρίς** κοινό builder
+  (για τις ζητήσεις υπάρχει `lib/demand/__tests__/demand-fixtures.ts`). Το cast κρύβει κάθε νέο υποχρεωτικό πεδίο: το v11
+  `priceReduction` έλειπε από **12** ⇒ 3 σουίτες του `components/search/__tests__` έσκασαν με `reading 'since'` (διορθώθηκαν
+  προσθέτοντας `priceReduction: null` στα 2 fixtures). **Θεραπεία**: ένας `publicListingFixture(overrides)` **πλήρως
+  τυποποιημένος** (όχι cast, `satisfies PublicListing`) ⇒ νέο πεδίο σχήματος κοκκινίζει στον **μεταγλωττιστή**, όχι σε runtime.
+
 - 🟡 **15/09 — ΟΡΦΑΝΑ ΚΛΕΙΔΙΑ `addresses.geocoding.attempts.*` (εύρημα ADR-332 D28)**
 
   **Μετρημένο** (grep): το `VARIANT_I18N_KEYS` (`app/api/geocoding/geocoding-nominatim-client.ts`) γράφει **9** κλειδιά

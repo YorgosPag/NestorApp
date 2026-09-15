@@ -10,6 +10,7 @@
  * |---|---|---|
  * | `properties.demandInterest` | `locatePlace` + `placeDestination` | `announceOnePlace` |
  * | `properties.demandListingMatch` | `listingMatchDestination` | `announceOneMatch` |
+ * | `properties.demandPriceDrop` | `listingMatchDestination` | `announcePriceDrop` |
  * | `properties.mandateRequestAnswered` | `mandateRequestDestination` | `announceMandateRequestAnswer` |
  * | `properties.mandateDecided` | `custodyOf` + `mandateDecisionDestination` | `announceMandateDecision` |
  *
@@ -88,6 +89,9 @@ const mandateDecidedRule: DestinationRule = async (db, _notification, entityId) 
 const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> = {
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST]: demandInterestRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH]: async (_db, notification, entityId) =>
+    expected(listingMatchDestination(entityId, notification.userId)),
+  // ADR-777 §8.69 — η μείωση οδηγεί στην **ίδια** δημόσια αγγελία, με τον **ίδιο** κανόνα.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_PRICE_DROP]: async (_db, notification, entityId) =>
     expected(listingMatchDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(mandateRequestDestination(entityId, notification.userId)),

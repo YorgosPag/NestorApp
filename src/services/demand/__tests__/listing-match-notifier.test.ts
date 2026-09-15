@@ -33,7 +33,14 @@ jest.mock('@/server/notifications/notification-orchestrator', () => ({
   dispatchNotification: (...args: unknown[]) => dispatchNotification(...args),
 }));
 jest.mock('@/lib/date-local', () => ({
+  // ⚠️ Το υπόλοιπο module μένει ΠΡΑΓΜΑΤΙΚΟ: η κρίση μείωσης (`price-history.ts`) διαβάζει
+  //    `MS_PER_DAY` από εδώ, και ένα mock που το έσβηνε θα έκανε κάθε μείωση `NaN`-μπαγιάτικη.
+  ...jest.requireActual('@/lib/date-local'),
   todayLocalDate: () => '2026-09-01',
+}));
+const readMatchLedger = jest.fn();
+jest.mock('@/services/demand/demand-match-ledger', () => ({
+  readMatchLedger: (...args: unknown[]) => readMatchLedger(...args),
 }));
 
 // eslint-disable-next-line import/first -- τα mocks πρέπει να δηλωθούν πριν τα imports
@@ -47,11 +54,11 @@ import { demandListingMatchEventId } from '@/lib/demand/demand-announcement';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 
 function demand(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return { id, authorUserId: `usr_${id}`, ...overrides };
+  return { id, authorUserId: `usr_${id}`, features: { priceMax: null }, ...overrides };
 }
 
 function listing(id: string, title = `Αγγελία ${id}`): Record<string, unknown> {
-  return { id, title };
+  return { id, title, priceReduction: null, areaSqm: null };
 }
 
 /** Το `matchDemand` επιστρέφει `matched: ListingMatchFacts[]` — το ελάχιστο σχήμα. */
@@ -76,6 +83,9 @@ beforeEach(() => {
   readLivePublicListings.mockResolvedValue({ listings: [], truncated: false });
   readLiveDemands.mockResolvedValue({ demands: [], truncated: false });
   dispatchNotification.mockResolvedValue({ success: true, skipped: false, dedupeKey: 'k' });
+  // Καθολόγιο κενό ⇒ κάθε ταίριασμα περνά από την αποστολή, όπως πριν το §8.69: οι άγκυρες
+  // εδώ δοκιμάζουν τον **αγώνα** (το `create()` βρίσκει διπλότυπο), που μένει ο φρουρός.
+  readMatchLedger.mockResolvedValue(new Map());
 });
 
 // =============================================================================
@@ -274,6 +284,7 @@ describe('Λ — listingMatchReportBalances', () => {
       demandsConsidered: 1,
       demandsTruncated: 0,
       truncated: false,
+      priceDrops: { announced: 0, 'already-known': 0, 'opted-out': 0, 'predates-match': 0, stale: 0 },
     };
     expect(listingMatchReportBalances(base)).toBe(true);
     expect(listingMatchReportBalances({ ...base, considered: 9 })).toBe(false);

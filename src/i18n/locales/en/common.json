@@ -923,6 +923,9 @@
   "notSet": "Not set",
   "invalidDate": "Invalid date",
   "invalidValue": "Invalid value",
+  "priceReduction": {
+    "was": "Previous price:"
+  },
   "filters": {
     "priceRange": "Price Range",
     "area": "Area (m²)",

@@ -137,6 +137,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     legality: legalitySignalsFor([], ['sell'], [{ propertyId: 'prop_a0000001', spaceId: null }], AT, LEGALITY_CLAIM_KINDS),
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
     ...over,
   };
 }

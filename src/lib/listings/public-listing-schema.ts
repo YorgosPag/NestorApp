@@ -58,6 +58,7 @@
 import { z } from 'zod';
 
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
+import { readPriceReduction } from '@/lib/listings/price-history';
 import type { ListedAt } from '@/types/public-listing';
 
 // ============================================================================
@@ -72,7 +73,7 @@ import type { ListedAt } from '@/types/public-listing';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 10;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 11;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -623,6 +624,27 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * διέλευση να επιστρέψει τον **ίδιο** πίνακα — καμία κατάσταση δεν χάνεται.
      */
     apply: (doc) => ({ ...doc, models: modelsArray.parse(doc.models) }),
+  },
+  {
+    to: 11,
+    adr: 'ADR-777 §8.69',
+    adds: ['priceReduction'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ «ΗΤΑΝ» — ΚΑΙ ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΟ ΕΧΟΥΝ.**
+     *
+     * 🔑 **`null` ΕΙΝΑΙ Η ΑΛΗΘΕΙΑ, ΟΧΙ ΒΟΛΙΚΗ ΠΡΟΕΠΙΛΟΓΗ** — ίδιο επιχείρημα με το
+     * `'predates-record'` του κρίκου 9: σε αυτά τα έγγραφα **κανείς δεν κατέγραφε**
+     * τιμές, άρα δεν υπάρχει ιστορικό από το οποίο να προκύπτει μείωση. Ένα έγγραφο
+     * χωρίς ιστορικό **δεν επιτρέπεται** να πει *«ήταν X €»*.
+     *
+     * ⛔ **ΚΑΙ ΡΗΤΑ ΔΕΝ ΜΑΝΤΕΥΕΙ ΑΠΟ ΤΟ `commercial`.** Μια αγγελία με `finalPrice <
+     * askingPrice` **δεν** είναι μειωμένη — είναι **πουλημένη** κάτω από τη ζητούμενη.
+     * Κρίκος που θα έβγαζε «↓» από εκεί θα ήταν **ψεύτικη μείωση σε δημόσια αγγελία**.
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ο κριτής είναι ο **ίδιος** με της ανάγνωσης
+     * (`readPriceReduction`) — έγκυρη μείωση περνά **αυτούσια**, σκουπίδι γίνεται `null`.
+     */
+    apply: (doc) => ({ ...doc, priceReduction: readPriceReduction(doc.priceReduction) }),
   },
 ];
 

@@ -117,8 +117,6 @@ export interface PropertiesNotificationSettings {
   statusChange: boolean;
   /** Notify when new property is added */
   newProperty: boolean;
-  /** Notify when property price changes */
-  priceChange: boolean;
   /** Notify when property viewing is scheduled */
   viewingScheduled: boolean;
   /** Notify when new building is created */
@@ -155,6 +153,18 @@ export interface PropertiesNotificationSettings {
    * ενόχληση, όχι υπηρεσία.
    */
   demandListingMatch: boolean;
+  /**
+   * 🎯 ADR-777 §8.69 — «**μειώθηκε η τιμή** αγγελίας που ταιριάζει στη ζήτησή σου».
+   *
+   * ⚠️ **Προεπιλογή `true`, ίδιος κανόνας με το `demandListingMatch`**: η μείωση είναι η
+   * πιο «ζεστή» είδηση για κάποιον που ήδη ψάχνει (idealista · Zillow · Zoopla τη
+   * στέλνουν εξ ορισμού). Ο χρήστης το κλείνει από τις ρυθμίσεις.
+   *
+   * ⛔ **Αντικατέστησε το νεκρό `priceChange`**: εκείνο δεν είχε **κανέναν** παραγωγό —
+   * διακόπτης στην οθόνη που δεν έκανε τίποτα. Ένα αποθηκευμένο `priceChange` σε παλιό
+   * έγγραφο **αγνοείται** από τη συγχώνευση (μόνο κλειδιά των προεπιλογών περνούν).
+   */
+  demandPriceDrop: boolean;
   /**
    * 🎯 ADR-777 §8.34 — «**ο Κώστας ενέκρινε**» / «**ο Κώστας αρνήθηκε**».
    *
@@ -384,11 +394,11 @@ export const DEFAULT_CRM_SETTINGS: CrmNotificationSettings = {
 export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   statusChange: true,
   newProperty: false,
-  priceChange: false,
   viewingScheduled: true,
   newBuilding: true,
   demandInterest: true,
   demandListingMatch: true,
+  demandPriceDrop: true,
   mandateDecided: true,
   mandateRequestAnswered: true,
   cardEmailReturned: true,

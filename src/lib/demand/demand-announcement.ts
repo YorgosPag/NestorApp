@@ -48,6 +48,9 @@
  * **Layering**: leaf — καθαρές συναρτήσεις. Καμία εξάρτηση από Firestore/δίκτυο/ρολόι.
  */
 
+import { isReductionFresh } from '@/lib/listings/price-history';
+import type { PriceReduction } from '@/types/price-history';
+
 /**
  * 🔴 **ΟΙ ΖΩΝΕΣ — κάθε μία είναι ΑΛΛΗ ΕΙΔΗΣΗ, όχι μεγαλύτερος αριθμός.**
  *
@@ -141,4 +144,78 @@ export function announcementEventId(propertyId: string, band: AnnouncementBand):
  */
 export function demandListingMatchEventId(demandId: string, listingId: string): string {
   return `${demandId}:listing:${listingId}`;
+}
+
+// ============================================================================
+// ADR-777 §8.69 — Η ΜΕΙΩΣΗ ΤΙΜΗΣ: ΤΡΙΤΗ ΕΙΔΗΣΗ, ΤΡΙΤΟ ΚΛΕΙΔΙ
+// ============================================================================
+
+/**
+ * **Το ταυτοτικό κλειδί μιας μείωσης** — ζεύγος **και** η ίδια η μείωση.
+ *
+ * 🔑 **Γιατί μέσα η τιμή ΚΑΙ η στιγμή**: η **ίδια** αγγελία μπορεί να μειωθεί **δύο
+ * φορές** (3.490.000 → 3.200.000 → 2.990.000) — δύο ειδήσεις, δύο κλειδιά. Η **ίδια**
+ * μείωση σε κάθε ωριαίο πέρασμα είναι **ένα** κλειδί ⇒ το `create()` του orchestrator
+ * τη σιωπά. Μόνο το ποσό δεν θα αρκούσε: 300.000 → 280.000 → 300.000 → 280.000 είναι
+ * δύο **διαφορετικές** μειώσεις στο **ίδιο** ποσό.
+ */
+export function demandPriceDropEventId(
+  demandId: string,
+  listingId: string,
+  reduction: Pick<PriceReduction, 'to' | 'since'>,
+): string {
+  return `${demandListingMatchEventId(demandId, listingId)}:price-drop:${reduction.to}@${reduction.since}`;
+}
+
+/**
+ * **Τι είδους μείωση είναι για ΑΥΤΗ τη ζήτηση.**
+ *
+ * 🏆 **`'into-budget'` — ΑΥΤΟ ΠΟΥ ΚΑΝΕΝΑ PORTAL ΔΕΝ ΛΕΕΙ.** Η αγγελία **ξεπερνούσε** το
+ * ανώτατο όριο της ζήτησης και η μείωση την έφερε **μέσα**. Για τον ζητούντα αυτό δεν
+ * είναι «φθήνυνε κάτι» — είναι *«υπάρχει τώρα κάτι που μπορείς να αγοράσεις»*.
+ */
+export type PriceDropKind = 'into-budget' | 'within-budget';
+
+export function priceDropKind(
+  priceMax: number | null,
+  reduction: Pick<PriceReduction, 'from' | 'to'>,
+): PriceDropKind {
+  return priceMax !== null && reduction.from > priceMax && reduction.to <= priceMax
+    ? 'into-budget'
+    : 'within-budget';
+}
+
+/**
+ * **Τι ξέρει ήδη ο ζητών για αυτή την αγγελία** — από την **ήδη γραμμένη** ειδοποίηση
+ * ταιριάσματος, ποτέ από δεύτερο πεδίο «πότε του το είπαμε» (§8.22.6).
+ *
+ * ⚠️ `atMs: null` = η ειδοποίηση **υπάρχει** αλλά η στιγμή της δεν διαβάζεται. Τότε η
+ * κρίση πάει προς τη **σιωπή**: μια μείωση που ίσως είχε ήδη αναφερθεί δεν ξαναλέγεται.
+ */
+export type MatchHistory =
+  | { readonly kind: 'never-announced' }
+  | { readonly kind: 'announced'; readonly atMs: number | null };
+
+/** Η ετυμηγορία για μια μείωση — ονομασμένη, ποτέ boolean. */
+export type PriceDropVerdict = 'announce' | 'predates-match' | 'stale';
+
+/**
+ * **Αξίζει να πούμε αυτή τη μείωση;**
+ *
+ * | Κατάσταση | Ετυμηγορία | Γιατί |
+ * |---|---|---|
+ * | η σήμανση έληξε (30 ημέρες) | `stale` | παλιά είδηση δεν είναι είδηση |
+ * | ο ζητών δεν έμαθε ποτέ για την αγγελία | `announce` | είναι η πρώτη του είδηση |
+ * | το ταίριασμα ανακοινώθηκε **πριν** τη μείωση | `announce` | η τιμή που ξέρει **άλλαξε** |
+ * | το ταίριασμα ανακοινώθηκε **μετά** τη μείωση | `predates-match` | το email ταιριάσματος **έδειξε ήδη** τη μειωμένη τιμή |
+ */
+export function priceDropVerdict(
+  reduction: PriceReduction,
+  match: MatchHistory,
+  nowMs: number,
+): PriceDropVerdict {
+  if (!isReductionFresh(reduction, nowMs)) return 'stale';
+  if (match.kind === 'never-announced') return 'announce';
+  if (match.atMs === null) return 'predates-match';
+  return Date.parse(reduction.since) > match.atMs ? 'announce' : 'predates-match';
 }

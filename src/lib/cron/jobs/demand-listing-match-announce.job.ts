@@ -41,6 +41,12 @@ function metricsOf(report: ListingMatchReport): Record<string, number> {
     demandsConsidered: report.demandsConsidered,
     demandsTruncated: report.demandsTruncated,
     truncated: report.truncated ? 1 : 0,
+    // ADR-777 §8.69 — οι μειώσεις τιμής· και οι ΣΙΩΠΕΣ μετριούνται, όχι μόνο οι αποστολές.
+    priceDropsAnnounced: report.priceDrops.announced,
+    priceDropsAlreadyKnown: report.priceDrops['already-known'],
+    priceDropsOptedOut: report.priceDrops['opted-out'],
+    priceDropsPredatesMatch: report.priceDrops['predates-match'],
+    priceDropsStale: report.priceDrops.stale,
   };
 }
 
@@ -56,7 +62,9 @@ export async function runDemandListingMatchAnnounce(): Promise<CronJobResult> {
       `opted-out ${metrics.optedOut} (considered ${metrics.considered} ζεύγη σε ` +
       `${metrics.demandsConsidered} ζητήσεις` +
       `${metrics.demandsTruncated > 0 ? `, ${metrics.demandsTruncated} ζητήσεις TRUNCATED` : ''}` +
-      `${metrics.truncated === 1 ? ', ΔΕΞΑΜΕΝΗ TRUNCATED' : ''})`,
+      `${metrics.truncated === 1 ? ', ΔΕΞΑΜΕΝΗ TRUNCATED' : ''}) · ` +
+      `price-drops announced ${metrics.priceDropsAnnounced}, already-known ` +
+      `${metrics.priceDropsAlreadyKnown}, predates-match ${metrics.priceDropsPredatesMatch}`,
     metrics,
   };
 }

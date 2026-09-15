@@ -56,6 +56,7 @@ function listing(id: string, mapped: boolean): PublicListing {
     legality: [],
     projectedAt: '2026-08-01T00:00:00.000Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
   } as PublicListing;
 }
 

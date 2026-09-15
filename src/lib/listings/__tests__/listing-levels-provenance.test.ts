@@ -193,6 +193,7 @@ function listingWith(levels: PublicListing['levels']): PublicListing {
     legality: [],
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
   };
 }
 

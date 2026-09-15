@@ -78,6 +78,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     legality: [],
     projectedAt: NOW_ISO,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
     ...overrides,
   };
 }

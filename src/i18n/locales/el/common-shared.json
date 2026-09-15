@@ -757,7 +757,12 @@
     "notificationTitle": "{count, plural, one {# άνθρωπος ψάχνει} other {# άνθρωποι ψάχνουν}} ακίνητο σαν το «{title}»"
   },
   "demandListingMatch": {
-    "notificationTitle": "Νέα αγγελία ταιριάζει στη ζήτησή σας: «{title}»"
+    "notificationTitle": "Νέα αγγελία ταιριάζει στη ζήτησή σας: «{title}»",
+    "reducedTitle": "Νέα αγγελία με μειωμένη τιμή ταιριάζει στη ζήτησή σας: «{title}»",
+    "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»"
+  },
+  "demandPriceDrop": {
+    "notificationTitle": "Μειώθηκε η τιμή αγγελίας της ζήτησής σας: «{title}»"
   },
   "mandateDecision": {
     "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",

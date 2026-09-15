@@ -154,6 +154,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.cardEmailReturned',
       'properties.demandInterest',
       'properties.demandListingMatch',
+      // ADR-777 §8.69 — η μείωση οδηγεί στην ίδια δημόσια αγγελία, με τον ίδιο κανόνα.
+      'properties.demandPriceDrop',
       'properties.mandateDecided',
       'properties.mandateRequestAnswered',
     ]);

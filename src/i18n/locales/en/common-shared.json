@@ -757,7 +757,12 @@
     "notificationTitle": "{count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”"
   },
   "demandListingMatch": {
-    "notificationTitle": "A new listing matches your demand: “{title}”"
+    "notificationTitle": "A new listing matches your demand: “{title}”",
+    "reducedTitle": "A new listing with a reduced price matches your demand: “{title}”",
+    "intoBudgetTitle": "Now within your budget: “{title}”"
+  },
+  "demandPriceDrop": {
+    "notificationTitle": "Price reduced on a listing matching your demand: “{title}”"
   },
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",

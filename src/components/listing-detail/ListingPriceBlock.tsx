@@ -28,6 +28,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveDisplayPrice, type ResolvedPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY, PRICE_ROLE_KEY } from '@/lib/listings/listing-price-keys';
 import { formatCurrency } from '@/lib/intl-formatting';
+import { ListingPriceReduction } from './ListingPriceReduction';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ListingPriceBlockProps {
@@ -65,12 +66,16 @@ export function ListingPriceBlock({ listing }: ListingPriceBlockProps) {
       </h2>
 
       {price.kind === 'priced' ? (
-        <dl className="mt-2 space-y-1">
-          <PriceRow price={price.headline} emphasis />
-          {/* Το δεύτερο ποσό υπάρχει **μόνο** όταν λέει κάτι νέο: ο SSoT πετά τη
-              ζητούμενη όταν είναι ίδια με την τελική — «το ίδιο γεγονός δύο φορές». */}
-          {price.secondary && <PriceRow price={price.secondary} emphasis={false} />}
-        </dl>
+        <>
+          <dl className="mt-2 space-y-1">
+            <PriceRow price={price.headline} emphasis />
+            {/* Το δεύτερο ποσό υπάρχει **μόνο** όταν λέει κάτι νέο: ο SSoT πετά τη
+                ζητούμενη όταν είναι ίδια με την τελική — «το ίδιο γεγονός δύο φορές». */}
+            {price.secondary && <PriceRow price={price.secondary} emphasis={false} />}
+          </dl>
+          {/* ADR-777 §8.69 — εδώ, στη «σκάβω» βαθμίδα, η μείωση λέει ΚΑΙ πότε ΚΑΙ σε σχέση με τι. */}
+          <ListingPriceReduction reduction={listing.priceReduction} />
+        </>
       ) : (
         /* Η απουσία είναι **κατάσταση με αιτία**, ποτέ «0 €» και ποτέ «επικοινωνήστε». */
         <p className="mt-2 text-lg text-muted-foreground">{t(MISSING_PRICE_KEY[price.reason])}</p>

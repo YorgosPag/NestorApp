@@ -87,6 +87,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     ...UNASKED_LISTING_ATTRIBUTES,
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
   };
 }
 

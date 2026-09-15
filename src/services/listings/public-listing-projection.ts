@@ -55,6 +55,7 @@ import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-statu
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 import { projectListingAttributes } from './public-listing-attributes';
+import { reductionForListing } from '@/lib/listings/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
 //    για το γιατί δεν ήταν απλώς «κόψιμο για να περάσει το όριο των 500 γραμμών».
 import { resolveListingPosition } from './public-listing-position';
@@ -369,6 +370,11 @@ export function projectListingShape(
     //    συγχέεται με το `'predates-record'`: ένα σπασμένο CAS οφείλει να είναι
     //    **μετρήσιμο**, όχι κρυμμένο μέσα στο κανονικό ιστορικό.
     listedAt: property.listedAt ?? { kind: 'unknown', reason: 'not-recorded' },
+    // 🔴 **ΣΥΜΠΕΡΑΣΜΑ ΑΠΟ ΤΟ ΙΣΤΟΡΙΚΟ ΤΟΥ ΑΚΙΝΗΤΟΥ** (ADR-777 §8.69) — ο κριτής ζει στο
+    //    `lib/listings/price-history.ts`, εδώ μόνο καλείται. Η τιμή λύνεται από τον ΕΝΑ
+    //    `price-resolver` πάνω στο **ίδιο** `offerKinds` που γράφει η αγγελία, ώστε η
+    //    μείωση να λέει την τιμή που θα δει η οθόνη — αλλιώς `null`.
+    priceReduction: reductionForListing(property.priceHistory, { ...property, offerKinds }),
     projectedAt,
   };
 }

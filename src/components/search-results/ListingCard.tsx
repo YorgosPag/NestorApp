@@ -33,6 +33,7 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
+import { PriceReductionBadge } from './PriceReductionBadge';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatCurrency, formatList } from '@/lib/intl-formatting';
@@ -331,6 +332,8 @@ export function ListingCard({
                 {formatCurrency(price.secondary.amount)}
               </span>
             )}
+            {/* ADR-777 §8.69 — «ήταν X, ↓%», μόνο όσο η μείωση είναι φρέσκια. */}
+            <PriceReductionBadge reduction={listing.priceReduction} className="ml-2" />
           </p>
 
           <dl className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">

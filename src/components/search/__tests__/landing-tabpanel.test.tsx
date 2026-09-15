@@ -114,6 +114,7 @@ function listing(id: string, offerKinds: readonly OfferKind[], mapped: boolean):
     legality: [],
     agencyName: null,
     agencyId: null,
+    priceReduction: null,
   } as unknown as PublicListing;
 }
 

@@ -65,7 +65,9 @@ export const NOTIFICATION_EVENT_TYPES = {
   // Properties Events
   PROPERTIES_STATUS_CHANGE: 'properties.statusChange',
   PROPERTIES_NEW_PROPERTY: 'properties.newProperty',
-  PROPERTIES_PRICE_CHANGE: 'properties.priceChange',
+  // ⛔ ADR-777 §8.69 — εδώ ζούσε το `PROPERTIES_PRICE_CHANGE: 'properties.priceChange'`:
+  //    **κανένας** παραγωγός δεν το έστελνε ποτέ, με διακόπτη στην οθόνη που δεν έκανε
+  //    τίποτα. Αντικαταστάθηκε από το ρητό `PROPERTIES_DEMAND_PRICE_DROP` πιο κάτω.
   PROPERTIES_VIEWING_SCHEDULED: 'properties.viewingScheduled',
   /** ADR-777 Ε2 · SPEC-777B §12.6 — «N άνθρωποι ζητούν το ακίνητό σας». */
   PROPERTIES_DEMAND_INTEREST: 'properties.demandInterest',
@@ -75,6 +77,16 @@ export const NOTIFICATION_EVENT_TYPES = {
    * {@link demandListingMatchEventId} το κάνει ρητό στο ίδιο το κλειδί, όχι εδώ.
    */
   PROPERTIES_DEMAND_LISTING_MATCH: 'properties.demandListingMatch',
+  /**
+   * ADR-777 §8.69 — «μειώθηκε η τιμή αγγελίας που **ήδη** ταιριάζει στη ζήτησή σου».
+   * Ένα γεγονός ανά **μείωση** — {@link demandPriceDropEventId} βάζει στο κλειδί την
+   * τιμή και τη στιγμή της, ώστε κάθε **νέα** μείωση να λέγεται μία φορά.
+   *
+   * 🏆 **Ρητό είδος ειδοποίησης, με δικό του διακόπτη** — μοντέλο Zoopla / Redfin
+   * (νέα αγγελία · μείωση τιμής · επιστροφή στην αγορά). Ο άνθρωπος που θέλει να μαθαίνει
+   * για μειώσεις αλλά όχι για κάθε νέα αγγελία **έχει δίκιο**.
+   */
+  PROPERTIES_DEMAND_PRICE_DROP: 'properties.demandPriceDrop',
   /**
    * ADR-777 §8.34 — **ο ιδιοκτήτης απάντησε στην εντολή**, ναι ή όχι.
    *
@@ -208,12 +220,6 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
-  [NOTIFICATION_EVENT_TYPES.PROPERTIES_PRICE_CHANGE]: {
-    category: 'properties',
-    settingKey: 'priceChange',
-    isMandatory: false,
-    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
-  },
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_VIEWING_SCHEDULED]: {
     category: 'properties',
     settingKey: 'viewingScheduled',
@@ -241,6 +247,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH]: {
     category: 'properties',
     settingKey: 'demandListingMatch',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  /** ⚠️ **`isMandatory: false`, ίδιος λόγος** — εμπορική είδηση, ποτέ ασφάλεια. */
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_PRICE_DROP]: {
+    category: 'properties',
+    settingKey: 'demandPriceDrop',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

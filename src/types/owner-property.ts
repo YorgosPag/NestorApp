@@ -458,6 +458,16 @@ export interface OwnerProperty {
    */
   readonly listedAt?: ListedAt;
 
+  /**
+   * **Το ιστορικό τιμής** (ADR-777 §8.69) — το γράφει **μόνο** η σφραγίδα
+   * `resolvePriceHistory`, ποτέ ο πελάτης (`allow update: if false`).
+   *
+   * ⚠️ **`unknown`, επίτηδες**: έρχεται ωμό από τη βάση και η **μόνη** ανάγνωση είναι το
+   * `readPriceHistory`. Ένας τύπος `PriceObservation[]` εδώ θα ήταν υπόσχεση που η βάση
+   * δεν δίνει — δες το `readStoredOwnerProperty`, που απλώνει το έγγραφο αυτούσιο.
+   */
+  readonly priceHistory?: unknown;
+
   readonly createdAt: string;
   readonly updatedAt: string;
 }

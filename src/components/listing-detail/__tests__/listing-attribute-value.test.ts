@@ -231,6 +231,7 @@ describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνετ�
     legality: [],
     projectedAt: '2026-09-02T00:00:00.000Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
   };
 
   it.each([...LISTING_ATTRIBUTE_KEYS])('«%s» δεν παράγει ποτέ `[object Object]`', (key) => {

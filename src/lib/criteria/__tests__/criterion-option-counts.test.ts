@@ -38,6 +38,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     legality: [],
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
     ...over,
   };
 }

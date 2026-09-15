@@ -34,6 +34,8 @@ import {
   type ListingPositionCandidate,
 } from './public-listing-projection';
 import { resolveListedAt } from './listed-at-stamp';
+import { resolvePriceHistory } from './price-history-stamp';
+import { marketPriceOf } from '@/lib/listings/price-history';
 import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
 import type { PlaceRef } from '@/types/geo/public-place';
@@ -239,9 +241,10 @@ export async function republishListing(
   resolveMedia: AgencyMediaResolver = createAgencyMediaResolver(adminDb)
 ): Promise<PublishOutcome> {
   const now = nowISO();
+  const listed = isPubliclyListed(property);
 
   try {
-    const [place, agency, publishedMedia, listedAt] = await Promise.all([
+    const [place, agency, publishedMedia, listedAt, priceHistory] = await Promise.all([
       collectPlaceKnowledge(adminDb, property, now),
       resolveAgency(property.companyId),
       // 🔑 **Η δήλωση σειράς διαβάζεται ΕΔΩ, από το έγγραφο που ήδη κρατάμε** (Α14.7.2):
@@ -257,15 +260,22 @@ export async function republishListing(
       //    **ένας** κριτής (καθαρή συνάρτηση, μηδέν κόστος), και τον ρωτά ούτως ή άλλως
       //    το `buildPublicListing` πιο κάτω. Χωρίς αυτή τη φύλαξη, ένα ακίνητο θα
       //    αποκτούσε ημερομηνία εισόδου **χωρίς ποτέ να μπει** στην αγορά.
-      isPubliclyListed(property)
+      listed
         ? resolveListedAt(adminDb, COLLECTIONS.PROPERTIES, propertyId, property.listedAt, now)
         : Promise.resolve(null),
+      // 🔴 **ΤΟ ΙΣΤΟΡΙΚΟ ΤΙΜΗΣ** (ADR-777 §8.69) — πέμπτη ανεξάρτητη ερώτηση, ίδια στιγμή.
+      //    Ρωτιέται **και** για μη δημοσιεύσιμο ακίνητο: η απόσυρση είναι **γεγονός**
+      //    («εκτός αγοράς») που κλείνει το διάστημα ισχύος της προηγούμενης τιμής.
+      resolvePriceHistory(
+        adminDb, COLLECTIONS.PROPERTIES, propertyId, property.priceHistory,
+        marketPriceOf(property, listed), now
+      ),
     ]);
 
     return await writeListingProjection(
       adminDb,
       propertyId,
-      { ...property, agency, publishedMedia, listedAt },
+      { ...property, agency, publishedMedia, listedAt, priceHistory },
       place,
       now
     );

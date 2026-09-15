@@ -68,6 +68,7 @@ import type { OfferKind } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
+import type { PriceReduction } from '@/types/price-history';
 import type {
   AmenityCodeType,
   ConditionType,
@@ -835,6 +836,19 @@ export interface PublicListing {
    * {@link PublicListing.projectedAt}.
    */
   readonly listedAt: ListedAt;
+  /**
+   * **Η μείωση τιμής σε ισχύ** — ή `null` (ADR-777 §8.69). Δες {@link PriceReduction}.
+   *
+   * 🔑 **Απόφαση αποκάλυψης, και είναι μικρή**: η τιμή «ήταν» την είδε **ήδη** ο κόσμος,
+   * πάνω σε αυτή την αγγελία, μέσα στις τελευταίες 30 ημέρες. Δεν δημοσιοποιείται
+   * τίποτα καινούργιο — μόνο **θυμόμαστε** ό,τι ήταν δημόσιο. Το **ιστορικό** μένει στο
+   * έγγραφο πηγής και δεν ταξιδεύει ποτέ.
+   *
+   * ⚠️ **Η προβολή είναι στιγμιότυπο, η σήμανση λήγει**: το πεδίο μπορεί να είναι
+   * παρόν και η μείωση **μπαγιάτικη**. Κάθε καταναλωτής ρωτά `isReductionFresh` — ποτέ
+   * σκέτο `!== null`.
+   */
+  readonly priceReduction: PriceReduction | null;
 
   // ── ΜΕΤΑΔΕΔΟΜΕΝΑ ΠΡΟΒΟΛΗΣ ─────────────────────────────────────────────────
   /** Τίτλος προς εμφάνιση. Κείμενο του κατόχου — **όχι** κλειδί i18n. */

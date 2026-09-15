@@ -29,7 +29,7 @@ import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedProject, seedProperty } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
-import { assertFails } from '@firebase/rules-unit-testing';
+import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
@@ -164,6 +164,53 @@ describe('properties.rules — admin_write_only + admin-update (crossdoc via pro
           .where('commercialStatus', 'in', ['for-sale', 'for-rent', 'for-sale-and-rent'])
           .get()
       );
+    });
+  });
+
+  // ==========================================================================
+  // 🔴 ΤΑ ΓΕΓΟΝΟΤΑ ΑΓΟΡΑΣ ΓΡΑΦΟΝΤΑΙ ΜΟΝΟ ΑΠΟ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ (ADR-777 §8.69 · §8.61)
+  // ==========================================================================
+  //
+  // Το `priceHistory` θεμελιώνει τον **δημόσιο** ισχυρισμό «ήταν X €, τώρα Y €» και το
+  // email προς κάθε ζητούντα. Ένας διαχειριστής εταιρείας που θα μπορούσε να το γράψει
+  // θα κατασκεύαζε **ψεύτικη μείωση** — ακριβώς το κόλπο που ο κανόνας των 30 ημερών
+  // αχρηστεύει. Ίδια κλάση με το `listedAt` («νέα αγγελία» με ψεύτικη ημερομηνία).
+  //
+  // ⚠️ **Ο ΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΕΙΝΑΙ Η ΜΙΣΗ ΑΓΚΥΡΑ**: χωρίς αυτόν, ένα `assertFails` θα
+  // περνούσε και για λάθος λόγο (π.χ. ο ίδιος διαχειριστής δεν γράφει **τίποτα**) — και η
+  // άγκυρα δεν θα μπορούσε ποτέ να κοκκινίσει.
+  describe('🔴 ο διαχειριστής εταιρείας ΔΕΝ πλαστογραφεί γεγονότα αγοράς', () => {
+    const PROJECT_ID = 'project-property-parent';
+    const PROPERTY_ID = 'property-market-facts';
+
+    const seed = async () => {
+      await seedProject(env, PROJECT_ID, { companyId: SAME_TENANT_COMPANY_ID });
+      await seedProperty(env, PROPERTY_ID, PROJECT_ID);
+    };
+
+    const doc = () =>
+      getContext(env, 'same_tenant_admin').firestore().collection('properties').doc(PROPERTY_ID);
+
+    it('επιτρέπει πεδίο της λίστας επιτρεπόμενων (θετικός έλεγχος)', async () => {
+      await seed();
+      await assertSucceeds(doc().update({ description: 'Επιτρεπόμενη αλλαγή' }));
+    });
+
+    it('αρνείται `priceHistory` — ψεύτικη μείωση τιμής', async () => {
+      await seed();
+      await assertFails(
+        doc().update({
+          priceHistory: [
+            { at: '2026-01-01T00:00:00.000Z', price: { role: 'sale', amount: 900_000 } },
+            { at: '2026-01-02T00:00:00.000Z', price: { role: 'sale', amount: 300_000 } },
+          ],
+        })
+      );
+    });
+
+    it('αρνείται `listedAt` — ψεύτικη ημερομηνία εισόδου στην αγορά', async () => {
+      await seed();
+      await assertFails(doc().update({ listedAt: { kind: 'known', at: '2026-09-15T00:00:00.000Z' } }));
     });
   });
 });

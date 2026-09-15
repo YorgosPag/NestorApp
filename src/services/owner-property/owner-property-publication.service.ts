@@ -36,6 +36,8 @@ import {
 import type { PublicAgencyIdentity } from '@/types/public-listing';
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import { resolveListedAt } from '@/services/listings/listed-at-stamp';
+import { resolvePriceHistory } from '@/services/listings/price-history-stamp';
+import { marketPriceOf } from '@/lib/listings/price-history';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('owner-property-publication');
@@ -99,14 +101,24 @@ async function republishOwnerListing(
   //    αποφασίσει και τη δημοσίευση δύο γραμμές πιο κάτω. Ένα δεύτερο κριτήριο εδώ θα
   //    σφράγιζε ακίνητο που δεν δημοσιεύεται — δες `owner-property-projection.ts`, που
   //    ρωτά **ήδη** έτσι το ίδιο ερώτημα.
-  const listedAt = isPubliclyListed(projectable)
-    ? await resolveListedAt(adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.listedAt, at)
-    : null;
+  const listed = isPubliclyListed(projectable);
+  const [listedAt, priceHistory] = await Promise.all([
+    listed
+      ? resolveListedAt(adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.listedAt, at)
+      : Promise.resolve(null),
+    // 🔴 **ΤΟ ΙΣΤΟΡΙΚΟ ΤΙΜΗΣ** (ADR-777 §8.69) — **ίδια** πολιτική με τον επαγγελματία,
+    //    **άλλη** διεύθυνση, ακριβώς όπως η σφραγίδα εισόδου από πάνω. Κρίνεται το
+    //    **προβαλλόμενο** σχήμα, για τον ίδιο λόγο.
+    resolvePriceHistory(
+      adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.priceHistory,
+      marketPriceOf(projectable, listed), at,
+    ),
+  ]);
 
   return writeListingProjection(
     adminDb,
     property.id,
-    { ...projectable, listedAt },
+    { ...projectable, listedAt, priceHistory },
     placeKnowledgeFromOwnerProperty(property, at),
     at,
   );

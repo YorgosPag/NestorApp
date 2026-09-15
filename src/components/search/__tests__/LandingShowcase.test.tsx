@@ -58,6 +58,7 @@ function listing(id: string, title: string): PublicListing {
     legality: [],
     agencyName: null,
     agencyId: null,
+    priceReduction: null,
   } as unknown as PublicListing;
 }
 

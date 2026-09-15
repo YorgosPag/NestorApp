@@ -923,6 +923,9 @@
   "notSet": "Δεν έχει οριστεί",
   "invalidDate": "Άκυρη ημερομηνία",
   "invalidValue": "Άκυρη τιμή",
+  "priceReduction": {
+    "was": "Προηγούμενη τιμή:"
+  },
   "filters": {
     "priceRange": "Εύρος Τιμής",
     "area": "Εμβαδόν (m²)",

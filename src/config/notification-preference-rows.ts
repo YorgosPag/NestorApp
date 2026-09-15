@@ -60,13 +60,14 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
     settings: [
       { key: 'statusChange', labelKey: 'common-account:account.notificationSettings.categories.properties.statusChange' },
       { key: 'newProperty', labelKey: 'common-account:account.notificationSettings.categories.properties.newProperty' },
-      { key: 'priceChange', labelKey: 'common-account:account.notificationSettings.categories.properties.priceChange' },
       { key: 'viewingScheduled', labelKey: 'common-account:account.notificationSettings.categories.properties.viewingScheduled' },
       { key: 'newBuilding', labelKey: 'common-account:account.notificationSettings.categories.properties.newBuilding' },
       // ADR-777 Ε2 — «N άνθρωποι ζητούν το ακίνητό σας» (το δόλωμα του §12.6).
       { key: 'demandInterest', labelKey: 'common-account:account.notificationSettings.categories.properties.demandInterest' },
       // ADR-777 — ο καθρέφτης του από πάνω: «βγήκε αυτό που ζητάς».
       { key: 'demandListingMatch', labelKey: 'common-account:account.notificationSettings.categories.properties.demandListingMatch' },
+      // ADR-777 §8.69 — «μειώθηκε η τιμή αγγελίας που ταιριάζει» (αντικατέστησε το νεκρό `priceChange`).
+      { key: 'demandPriceDrop', labelKey: 'common-account:account.notificationSettings.categories.properties.demandPriceDrop' },
       // ADR-777 §8.34 — «ο πελάτης απάντησε στην εντολή».
       { key: 'mandateDecided', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateDecided' },
       // ADR-827 §9.21 — «το γραφείο απάντησε στο αίτημά σου».
