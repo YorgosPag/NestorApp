@@ -30,13 +30,12 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCurrentEnvironment, NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES } from '@/config/notification-events';
+import { showcaseCardDestination } from '@/lib/agency/showcase-card-destination';
 import { carryConfirmations, withoutConfirmationBefore } from '@/lib/agency/showcase-email-confirmation-rules';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
-import { AGENCY_SHOWCASE_CARD_ROUTE } from '@/lib/mandate/mandate-routes';
-import { viewDestination, type NotificationDestination } from '@/lib/notifications/notification-destination';
+import type { NotificationDestination } from '@/lib/notifications/notification-destination';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
-import { orgWorkspace } from '@/types/workspace-membership';
 
 import {
   readCardWithEmail,
@@ -65,7 +64,7 @@ export interface ShowcaseEmailReturnOutcome {
 
 /** Ο προορισμός της ειδοποίησης — η κάρτα, στον χώρο του γραφείου. Εξάγεται για τον ανιχνευτή απόκλισης. */
 export function cardEmailReturnedDestination(companyId: string): NotificationDestination {
-  return viewDestination(AGENCY_SHOWCASE_CARD_ROUTE, orgWorkspace(companyId));
+  return showcaseCardDestination(companyId);
 }
 
 function text(value: unknown): string | null {

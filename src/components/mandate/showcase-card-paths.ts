@@ -9,6 +9,8 @@
  * **Layering**: leaf — χωρίς `'use client'`, χωρίς React.
  */
 
+import type { HolidayAnswerKind } from '@/lib/calendar/holiday-question';
+
 type LocationDoor = 'channels' | 'vcard';
 
 function locationDoorPath(companyId: string, locationId: string, door: LocationDoor): string {
@@ -49,4 +51,25 @@ export function emailDisownPagePath(token: string): string {
 /** Το κουμπί της σελίδας — η **μόνη** πόρτα που γράφει. */
 export function emailConfirmationDecisionPath(token: string): string {
   return `/api/showcase-email-confirmations/${encodeURIComponent(token)}`;
+}
+
+// =============================================================================
+// Α21.21 Φάση Β — Η ΕΡΩΤΗΣΗ ΑΡΓΙΩΝ: τρεις είσοδοι από το email, μία σελίδα, μία πόρτα απόφασης
+// =============================================================================
+
+function holidayQuestionPage(token: string): string {
+  return `/hours-question/${encodeURIComponent(token)}`;
+}
+
+/**
+ * Τα κουμπιά του email — η σελίδα **δείχνει** με την απάντηση προεπιλεγμένη, δεν αποφασίζει (οι σαρωτές ανοίγουν
+ * κάθε σύνδεσμο). `null` ⇒ «Άλλο ωράριο»: καμία προεπιλογή, και η σελίδα προσφέρει τη φόρμα.
+ */
+export function holidayQuestionPagePath(token: string, answer: HolidayAnswerKind | null): string {
+  return answer === null ? holidayQuestionPage(token) : `${holidayQuestionPage(token)}?answer=${answer}`;
+}
+
+/** Το κουμπί της σελίδας — η **μόνη** πόρτα που γράφει ειδικές μέρες χωρίς σύνδεση. */
+export function holidayQuestionDecisionPath(token: string): string {
+  return `/api/holiday-hours-questions/${encodeURIComponent(token)}`;
 }

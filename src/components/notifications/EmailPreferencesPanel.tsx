@@ -30,7 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { EmailTypePreferences } from '@/components/notifications/EmailTypePreferences';
 import { preferenceRowOf } from '@/services/user-notification-settings/notification-preference-table';
 import { Button } from '@/components/ui/button';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { AuthCardSection } from '@/components/ui/auth-card-section';
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/email/preferences/[token]`. Ψυχρή είσοδος
 // από email, χωρίς προηγούμενη πλοήγηση: ωμό κλειδί εδώ είναι η ΜΟΝΗ πληροφορία που θα
 // είχε ο άνθρωπος. Στατική εισαγωγή, εμβέλεια MODULE, ΠΟΤΕ στο Server Component.
@@ -133,14 +133,13 @@ function undoOf(change: EmailSubscriptionChange, previous: EmailSubscriptionStat
 }
 
 function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
-  const layout = useLayoutClasses();
   return (
     // CHECK 3.63 (ADR-797) `[page-measure]` — το πλάτος της κάρτας auth ζει ονομασμένο
-    // στο `layout.cardAuthWidth` (ίδια συμβολοσειρά με το `max-w-md`), όχι χειρόγραφο.
-    <section className={`${layout.cardAuthWidth} flex flex-col gap-4 rounded-lg border border-border bg-card p-6`}>
+    // στο `layout.cardAuthWidth`, και η ίδια η κάρτα **μία φορά** στο `AuthCardSection`.
+    <AuthCardSection gap={4}>
       <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
       {children}
-    </section>
+    </AuthCardSection>
   );
 }
 

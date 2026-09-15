@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 // Server Component, με ΞΕΧΩΡΙΣΤΟ γράφο module. Στατική εισαγωγή, εμβέλεια MODULE.
 import routeSlice from '@/i18n/generated/routes/n__notificationId.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { Link } from '@/lib/workspace/navigation';
 import { HOME_REDIRECT_ROUTE } from '@/lib/workspace/workspace-routes';
 
@@ -31,12 +31,11 @@ const NS = 'auth';
 
 export function NotificationPermalinkUnavailable(): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const layout = useLayoutClasses();
 
   return (
     // CHECK 3.63 (ADR-797) `[page-measure]` — το πλάτος της κάρτας auth ζει ονομασμένο
-    // στο `layout.cardAuthWidth` (ίδια συμβολοσειρά με το `max-w-md`), όχι χειρόγραφο.
-    <section className={`${layout.cardAuthWidth} flex flex-col gap-3 rounded-lg border border-border bg-card p-6`}>
+    // στο `layout.cardAuthWidth`, και η ίδια η κάρτα **μία φορά** στο `AuthCardSection`.
+    <AuthCardSection gap={3}>
       <h1 className="text-lg font-semibold text-card-foreground">
         {t('auth:emailLink.unavailable.title')}
       </h1>
@@ -47,6 +46,6 @@ export function NotificationPermalinkUnavailable(): React.ReactElement {
       >
         {t('auth:emailLink.unavailable.home')}
       </Link>
-    </section>
+    </AuthCardSection>
   );
 }
