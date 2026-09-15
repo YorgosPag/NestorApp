@@ -19,7 +19,7 @@
 
 import type { CoverageCell } from './coverage-manifest';
 import { cell } from './coverage-matrices';
-import { defineMatrix, type CoverageDefinition } from './coverage-completeness';
+import { defineMatrix, overrideDefinition, type CoverageDefinition } from './coverage-completeness';
 import {
   anonymousUnmeasured,
   crossTenantAdminUnmeasured,
@@ -88,8 +88,28 @@ export function fiscalPeriodMatrix(): CoverageDefinition {
 }
 
 /**
- * Matrix for accounting settings singletons (`accounting_settings`,
- * `accounting_efka_config`) — admin-only write, internal-user read.
+ * `accounting_settings` — Pattern D **plus a client-write allowlist** (ADR-841 §7 Α23 Γ3β).
+ *
+ * The browser may write ONLY `{companyId}__<type>` for the types in
+ * `CLIENT_WRITABLE_ACCOUNTING_SINGLETONS`; everything else (the company profile above
+ * all) is server-only. The harness `create` cell writes to a FRESH id
+ * (`<docId>-create-<ts>`) — a document outside the allowlist — so it is now denied for
+ * EVERY persona (`server_only`). That is the truth, not a gap: the browser cannot mint
+ * arbitrary settings documents. Creating the allowlisted document is asserted
+ * explicitly in the suite, once per allowlisted type. Read/update cells run against
+ * `{companyId}__matching_config`.
+ */
+export function accountingSettingsMatrix(): CoverageDefinition {
+  return overrideDefinition(
+    accountingSingletonMatrix(),
+    [cell('same_tenant_admin', 'create', 'deny', 'server_only')],
+    'accountingSettingsMatrix',
+  );
+}
+
+/**
+ * Matrix for accounting settings singletons (`accounting_efka_config`, and the base of
+ * `accountingSettingsMatrix`) — admin-only write, internal-user read.
  *
  * Rule shape (Pattern D):
  *   - read:   `isAuthenticated() && (isSuperAdminOnly() || isInternalUserOfCompany(companyId))`

@@ -4070,18 +4070,37 @@ service cloud.firestore {
     }
 
     // ── Pattern D: Settings Singletons — admin-only write ──────────────────
+    //
+    // 🔒 ADR-841 §7 Α23 (Φ3.2 Γ3β, 2026-09-15) — ΛΙΣΤΑ ΕΠΙΤΡΕΠΟΜΕΝΩΝ, ΟΧΙ ΛΙΣΤΑ ΑΠΑΓΟΡΕΥΣΕΩΝ.
+    // Ο browser γράφει ΜΟΝΟ τα singletons της `CLIENT_WRITABLE_ACCOUNTING_SINGLETONS`
+    // (`subapps/accounting/services/repository/accounting-doc-ids.ts`), και ΜΟΝΟ της ΔΙΚΗΣ
+    // του εταιρείας: το docId δένεται με το companyId. Όλα τα άλλα — πρώτα απ' όλα το
+    // προφίλ `{companyId}` (νομική ταυτότητα) — γράφονται ΜΟΝΟ από τον server (Admin SDK,
+    // που παρακάμπτει τους κανόνες), ώστε κάθε αλλαγή να περνά από μάσκα πεδίων + ίχνος στην
+    // ίδια συναλλαγή. Πρακτική Stripe/Google: νομικά στοιχεία αλλάζουν μόνο μέσω API.
+    // Κλείνει ΚΑΙ την κατάληψη: πριν, admin της Α δημιουργούσε πρώτος το `{B}__matching_config`
+    // με companyId Α και κλείδωνε έξω τη Β (το create δεν κοίταζε το docId).
+    // ⚠️ Νέο client-writable singleton ⇒ ΚΑΙ εδώ ΚΑΙ στη σταθερά — η σουίτα
+    //    `accounting-settings.rules.test.ts` διατρέχει τη σταθερά στον εξομοιωτή.
+    // Οι αναγνώσεις ΔΕΝ άλλαξαν.
 
     match /accounting_settings/{docId} {
+      function isClientWritableAccountingSetting(companyId) {
+        return docId == companyId + '__matching_config';
+      }
+
       allow read:   if isAuthenticated()
                     && (isSuperAdminOnly()
                         || (resource.data.keys().hasAny(['companyId'])
                             && isInternalUserOfCompany(resource.data.companyId)));
       allow create: if isCompanyAdmin()
                     && request.resource.data.companyId is string
-                    && request.resource.data.companyId == getUserCompanyId();
+                    && request.resource.data.companyId == getUserCompanyId()
+                    && isClientWritableAccountingSetting(request.resource.data.companyId);
       allow update: if resource.data.keys().hasAny(['companyId'])
                     && canWriteAccountingSingleton(resource.data.companyId)
-                    && request.resource.data.companyId == resource.data.companyId;
+                    && request.resource.data.companyId == resource.data.companyId
+                    && isClientWritableAccountingSetting(resource.data.companyId);
       allow delete: if false;
     }
 

@@ -41,6 +41,7 @@ import {
   tenantStateMachineMatrix,
 } from './coverage-matrices';
 import {
+  accountingSettingsMatrix,
   accountingSingletonMatrix,
   accountingSystemCalcMatrix,
   denyAllMatrix,
@@ -738,7 +739,8 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_settings',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-settings.rules.test.ts',
-    ...accountingSingletonMatrix(),
+    // ADR-841 §7 Α23 Γ3β — client-write allowlist on top of Pattern D.
+    ...accountingSettingsMatrix(),
   },
   {
     collection: 'accounting_efka_config',
