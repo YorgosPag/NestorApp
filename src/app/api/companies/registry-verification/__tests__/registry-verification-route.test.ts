@@ -76,7 +76,12 @@ jest.mock('@/services/company-registry/company-registry-verification.service', (
   verifyRegistryIdentity: (...args: unknown[]) => verifyReport(...args),
 }));
 
-import { GET, POST } from '../route';
+const eraseMock = jest.fn();
+jest.mock('@/services/company-registry/company-registry-retention.service', () => ({
+  eraseRegistryCopyOnRequest: (...args: unknown[]) => eraseMock(...args),
+}));
+
+import { DELETE, GET, POST } from '../route';
 
 type Handler = (request: unknown) => Promise<{ status: number; json: () => Promise<Record<string, unknown>> }>;
 
@@ -98,12 +103,14 @@ beforeEach(() => {
   authCtx.globalRole = 'company_admin';
   readReport.mockResolvedValue({ kind: 'report', report: REPORT });
   verifyReport.mockResolvedValue({ kind: 'report', report: REPORT });
+  eraseMock.mockResolvedValue('erased');
 });
 
 describe('Ε — η πόρτα της νομικής ταυτότητας', () => {
   it.each([
     ['GET', GET],
     ['POST', POST],
+    ['DELETE', DELETE],
   ])('🔑 Ε0 — %s: ο διαχειριστής παίρνει `{ success, data }` με την αναφορά', async (_verb, handler) => {
     const answer = await call(handler);
 
@@ -117,18 +124,19 @@ describe('Ε — η πόρτα της νομικής ταυτότητας', () =
     expect(verifyReport).not.toHaveBeenCalled();
 
     await call(POST);
-    expect(verifyReport).toHaveBeenCalledWith(expect.anything(), 'comp_alfa');
+    expect(verifyReport).toHaveBeenCalledWith(expect.anything(), 'comp_alfa', 'user_1');
   });
 
   it.each(['user', 'company_user'])('🔴 Ε2 — ρόλος «%s» ⇒ 403, και ΚΑΜΙΑ ανάγνωση έδρας', async (role) => {
     // Η αναφορά κουβαλά την έδρα του μητρώου — σε ατομική, συχνά την ΚΑΤΟΙΚΙΑ.
     authCtx.globalRole = role;
 
-    const [read, verify] = [await call(GET), await call(POST)];
+    const [read, verify, erase] = [await call(GET), await call(POST), await call(DELETE)];
 
-    expect([read.status, verify.status]).toEqual([403, 403]);
+    expect([read.status, verify.status, erase.status]).toEqual([403, 403, 403]);
     expect(readReport).not.toHaveBeenCalled();
     expect(verifyReport).not.toHaveBeenCalled();
+    expect(eraseMock).not.toHaveBeenCalled();
   });
 
   it.each([undefined, '', '   '])('🔴 Ε3 — οργανισμός «%s» ⇒ 403 NO_ORGANIZATION (fail-closed)', async (companyId) => {
@@ -176,6 +184,26 @@ describe('Ε — η πόρτα της νομικής ταυτότητας', () =
   it('🔑 Ε5 — βαθμίδα ρυθμού: standard η ανάγνωση, sensitive η πράξη (CHECK 3.78)', () => {
     // Κάθε POST καταναλώνει όριο του κλειδιού ΓΕΜΗ.
     const { __tiers } = jest.requireMock<{ __tiers: string[] }>('@/lib/middleware/with-rate-limit');
-    expect(__tiers).toEqual(['standard', 'sensitive']);
+    // Η διαγραφή (Α23.12) δεν αναιρείται ⇒ sensitive κι αυτή.
+    expect(__tiers).toEqual(['standard', 'sensitive', 'sensitive']);
+  });
+
+  it('🔴 Ε8 — Α23.12: DELETE σβήνει για οργανισμό + άνθρωπο της απόδειξης, απαντά με την ΤΡΕΧΟΥΣΑ κρίση, ανανεώνει τη βιτρίνα ΜΕΤΑ', async () => {
+    const answer = await call(DELETE);
+
+    expect(eraseMock).toHaveBeenCalledWith(expect.anything(), 'comp_alfa', 'user_1');
+    expect(answer.body).toEqual({ success: true, data: REPORT });
+    expect(reconcileMock).not.toHaveBeenCalled();
+    for (const task of afterTasks().splice(0)) await task();
+    expect(reconcileMock).toHaveBeenCalledWith(expect.anything(), 'comp_alfa');
+  });
+
+  it('🔑 Ε9 — ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: τίποτα να σβηστεί ⇒ 200 με την κρίση, ΚΑΜΙΑ ανανέωση βιτρίνας', async () => {
+    eraseMock.mockResolvedValue('already-absent');
+
+    const answer = await call(DELETE);
+
+    expect(answer.status).toBe(200);
+    expect(afterTasks()).toHaveLength(0);
   });
 });

@@ -24,7 +24,7 @@
  * **αγνοείται** — ποτέ δύο αιτήματα για την ίδια πρόθεση.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { useInFlightAction } from '@/hooks/useInFlightAction';
@@ -45,6 +45,9 @@ export type CompanyRegistryIdentityState =
 /** Η έκβαση της **τελευταίας** υιοθέτησης — `none` πριν από κάθε πράξη ή μετά από νέα επαλήθευση. */
 export type LegalNameAdoptionFeedback = 'none' | 'adopted' | 'registry-changed' | 'not-adoptable' | 'failed';
 
+/** Η έκβαση της **τελευταίας** διαγραφής αντιγράφου (Α23.12) — `none` πριν από κάθε πράξη ή μετά από άλλη πράξη. */
+export type RegistryCopyErasureFeedback = 'none' | 'erased' | 'failed';
+
 export interface CompanyRegistryIdentity {
   readonly state: CompanyRegistryIdentityState;
   readonly verifying: boolean;
@@ -54,6 +57,10 @@ export interface CompanyRegistryIdentity {
   readonly adoption: LegalNameAdoptionFeedback;
   /** «Υιοθέτηση επωνυμίας ΓΕΜΗ» — `expectedLegalName` = η επωνυμία της προεπισκόπησης, αυτούσια. */
   readonly adoptLegalName: (expectedLegalName: string) => Promise<void>;
+  readonly erasing: boolean;
+  readonly erasure: RegistryCopyErasureFeedback;
+  /** «Διαγραφή των στοιχείων ΓΕΜΗ που κρατάμε» (Α23.12 · GDPR άρθ. 17/21). */
+  readonly eraseCopy: () => Promise<void>;
 }
 
 interface Settled {
@@ -92,7 +99,7 @@ function logFailure(message: string, error: unknown): void {
   logger.error(message, { error: error instanceof Error ? error.message : String(error) });
 }
 
-async function requestReport(method: 'GET' | 'POST'): Promise<CompanyRegistryIdentityState> {
+async function requestReport(method: 'GET' | 'POST' | 'DELETE'): Promise<CompanyRegistryIdentityState> {
   try {
     return await stateOf(await fetch(ENDPOINT, { method }));
   } catch (error) {
@@ -128,12 +135,31 @@ function keepLastKnown(previous: CompanyRegistryIdentityState, next: CompanyRegi
   return next.kind === 'ready' || previous.kind !== 'ready' ? next : previous;
 }
 
-export function useCompanyRegistryIdentity(): CompanyRegistryIdentity {
-  const [state, setState] = useState<CompanyRegistryIdentityState>({ kind: 'loading' });
-  const [adoption, setAdoption] = useState<LegalNameAdoptionFeedback>('none');
-  const { isRunning: verifying, run: runVerify } = useInFlightAction();
-  const { isRunning: adopting, run: runAdoption } = useInFlightAction();
+/**
+ * **Η διαγραφή του αντιγράφου** (Α23.12): η απάντηση φέρνει την **τρέχουσα** κρίση · αποτυχία ⇒ `failed` και η
+ * τελευταία γνωστή κρίση **μένει** — ποτέ σιωπηλή αποτυχία σε πράξη δικαιώματος του GDPR.
+ */
+function useRegistryCopyErasure(
+  setState: Dispatch<SetStateAction<CompanyRegistryIdentityState>>,
+  setErasure: Dispatch<SetStateAction<RegistryCopyErasureFeedback>>,
+  clearFeedback: () => void,
+) {
+  const { isRunning: erasing, run } = useInFlightAction();
+  const eraseCopy = useCallback(
+    () =>
+      run(async () => {
+        clearFeedback();
+        const next = await requestReport('DELETE');
+        setState((previous) => keepLastKnown(previous, next));
+        setErasure(next.kind === 'ready' ? 'erased' : 'failed');
+      }),
+    [run, clearFeedback, setState, setErasure],
+  );
+  return { erasing, eraseCopy };
+}
 
+/** Η πρώτη ανάγνωση — αγνοείται αν η οθόνη κλείσει πριν απαντήσει. */
+function useInitialReport(setState: Dispatch<SetStateAction<CompanyRegistryIdentityState>>): void {
   useEffect(() => {
     let active = true;
     void requestReport('GET').then((next) => {
@@ -142,28 +168,43 @@ export function useCompanyRegistryIdentity(): CompanyRegistryIdentity {
     return () => {
       active = false;
     };
+  }, [setState]);
+}
+
+export function useCompanyRegistryIdentity(): CompanyRegistryIdentity {
+  const [state, setState] = useState<CompanyRegistryIdentityState>({ kind: 'loading' });
+  const [adoption, setAdoption] = useState<LegalNameAdoptionFeedback>('none');
+  const [erasure, setErasure] = useState<RegistryCopyErasureFeedback>('none');
+  const { isRunning: verifying, run: runVerify } = useInFlightAction();
+  const { isRunning: adopting, run: runAdoption } = useInFlightAction();
+  // 🔑 Κάθε νέα πράξη σβήνει τις εκβάσεις των προηγούμενων — ποτέ μπαγιάτικο μήνυμα δίπλα σε νέα κρίση.
+  const clearFeedback = useCallback(() => {
+    setAdoption('none');
+    setErasure('none');
   }, []);
+  const { erasing, eraseCopy } = useRegistryCopyErasure(setState, setErasure, clearFeedback);
+  useInitialReport(setState);
 
   const verify = useCallback(
     () =>
       runVerify(async () => {
-        setAdoption('none');
+        clearFeedback();
         const next = await requestReport('POST');
         setState((previous) => keepLastKnown(previous, next));
       }),
-    [runVerify],
+    [runVerify, clearFeedback],
   );
 
   const adoptLegalName = useCallback(
     (expectedLegalName: string) =>
       runAdoption(async () => {
-        setAdoption('none');
+        clearFeedback();
         const settled = await requestAdoption(expectedLegalName);
         setState((previous) => keepLastKnown(previous, settled.state));
         setAdoption(settled.adoption);
       }),
-    [runAdoption],
+    [runAdoption, clearFeedback],
   );
 
-  return { state, verifying, verify, adopting, adoption, adoptLegalName };
+  return { state, verifying, verify, adopting, adoption, adoptLegalName, erasing, erasure, eraseCopy };
 }

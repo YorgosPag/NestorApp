@@ -30,7 +30,7 @@
 
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { normalizeLegalName, sameLegalName } from '@/lib/company/legal-name-match';
-import { judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
+import { isAnswerForNumber, judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type {
   CompanyRegistryDeclaration,
@@ -93,8 +93,7 @@ function judgmentOf(declaration: CompanyRegistryDeclaration, stored: RegistryChe
  */
 function checkForNumber(declaration: CompanyRegistryDeclaration, stored: RegistryCheckRead): RegistryCheck | null {
   if (stored.kind !== 'present') return null;
-  const canonical = canonicalGemiNumber(declaration.gemiNumber);
-  return canonical !== null && stored.check.record.registrationNumber === canonical ? stored.check : null;
+  return isAnswerForNumber(declaration.gemiNumber, stored.check.record) ? stored.check : null;
 }
 
 /** Το κείμενο του ονόματος — ο τίτλος **με την ορθογραφία του μητρώου**, ποτέ του σώματος. */

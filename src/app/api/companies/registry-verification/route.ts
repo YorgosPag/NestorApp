@@ -1,10 +1,11 @@
 /**
  * =============================================================================
- * GET + POST /api/companies/registry-verification — Η ΝΟΜΙΚΗ ΤΑΥΤΟΤΗΤΑ ΑΠΕΝΑΝΤΙ ΣΤΟ ΓΕΜΗ
+ * GET + POST + DELETE /api/companies/registry-verification — Η ΝΟΜΙΚΗ ΤΑΥΤΟΤΗΤΑ ΑΠΕΝΑΝΤΙ ΣΤΟ ΓΕΜΗ
  * =============================================================================
  *
  * **GET** — η κρίση από τα **αποθηκευμένα** (προφίλ ⇄ τελευταία απάντηση μητρώου). Καμία κλήση ΓΕΜΗ.
  * **POST** — η **πράξη** «Επαλήθευση από ΓΕΜΗ»: ρωτά το μητρώο για τον αριθμό του προφίλ.
+ * **DELETE** — «Διαγραφή των στοιχείων ΓΕΜΗ που κρατάμε» (Α23.12): σβήνει το αντίγραφο, με ίχνος.
  *
  * ⚠️ **Ο οργανισμός ΔΕΝ έρχεται από το σώμα** — από το `ctx.companyId`, όπως η δήλωση μεσιτείας.
  * Και **ο αριθμός ΔΕΝ έρχεται από το σώμα**: ζει στο προφίλ (ADR-439)· ένα πεδίο εδώ θα ήταν
@@ -35,8 +36,9 @@ import {
   verifyRegistryIdentity,
   type RegistryReportOutcome,
 } from '@/services/company-registry/company-registry-verification.service';
+import { eraseRegistryCopyOnRequest } from '@/services/company-registry/company-registry-retention.service';
 
-type ReportAction = (companyId: string) => Promise<RegistryReportOutcome>;
+type ReportAction = (companyId: string, actorUid: string) => Promise<RegistryReportOutcome>;
 
 function respond(outcome: RegistryReportOutcome): NextResponse {
   // **503**, όχι 404: το προφίλ ίσως υπάρχει — απλώς δεν διαβάστηκε.
@@ -53,7 +55,7 @@ function administered(action: ReportAction) {
       // 🔴 fail-closed, πρότυπο `extractCustomClaims`: *«κενή συμβολοσειρά = απουσία»*.
       const companyId = ctx.companyId?.trim() ?? '';
       if (companyId === '') return NextResponse.json({ error: 'NO_ORGANIZATION' }, { status: 403 });
-      return respond(await action(companyId));
+      return respond(await action(companyId, ctx.uid));
     },
     { requiredGlobalRoles: ADMINISTRATIVE_ROLES },
   );
@@ -69,12 +71,28 @@ export const GET = withStandardRateLimit(
  * το μητρώο — ένα `unavailable` δεν έμαθε τίποτα νέο. `after`: ο άνθρωπος βλέπει την κρίση αμέσως.
  */
 export const POST = withSensitiveRateLimit(
-  administered(async (companyId) => {
+  administered(async (companyId, actorUid) => {
     const adminDb = getAdminFirestore();
-    const outcome = await verifyRegistryIdentity(adminDb, companyId);
+    const outcome = await verifyRegistryIdentity(adminDb, companyId, actorUid);
     if (outcome.kind === 'report' && outcome.report.freshness.kind === 'asked') {
       after(() => reconcileShowcaseLegalIdentity(adminDb, companyId));
     }
     return outcome;
+  }),
+);
+
+/**
+ * ⚖️ ADR-841 §7 Α23.12 — **αίτημα διαγραφής του κατόχου** (GDPR άρθ. 17 · 21): σβήνει το αντίγραφο ΓΕΜΗ με ίχνος,
+ * ιδεμποτώς, και απαντά με την **τρέχουσα** κρίση. Η βιτρίνα χάνει ό,τι στηριζόταν στο αντίγραφο (σήμα · ένδειξη
+ * κλεισίματος) — η πράξη κατέχει τη συνέπεια. **Τίποτα** δεν ξαναρωτά το μητρώο αυτόματα: μόνο νέο ρητό POST.
+ * ⏱️ `sensitive`: μη αναστρέψιμη πράξη.
+ */
+export const DELETE = withSensitiveRateLimit(
+  administered(async (companyId, actorUid) => {
+    const adminDb = getAdminFirestore();
+    if ((await eraseRegistryCopyOnRequest(adminDb, companyId, actorUid)) === 'erased') {
+      after(() => reconcileShowcaseLegalIdentity(adminDb, companyId));
+    }
+    return readRegistryIdentityReport(adminDb, companyId);
   }),
 );

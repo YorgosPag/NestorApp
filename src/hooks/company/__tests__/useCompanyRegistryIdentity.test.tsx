@@ -28,6 +28,13 @@ function report(businessName: string): RegistryIdentityReport {
 
 const INITIAL = report('Δοκιμαστικό Γραφείο');
 const FRESH = report('ΝΕΑ ΠΡΟΕΠΙΣΚΟΠΗΣΗ');
+const AFTER_ERASURE = report('ΜΕΤΑ ΤΗ ΔΙΑΓΡΑΦΗ');
+
+/** Ό,τι απαντά η διαδρομή, ανά μέθοδο. */
+function reportFor(method: string | undefined): RegistryIdentityReport {
+  if (method === 'POST') return FRESH;
+  return method === 'DELETE' ? AFTER_ERASURE : INITIAL;
+}
 
 function respond(status: number, body: unknown): Response {
   return { status, ok: status >= 200 && status < 300, json: async () => body } as unknown as Response;
@@ -38,7 +45,7 @@ const fetchMock = jest.fn();
 beforeEach(() => {
   fetchMock.mockReset();
   fetchMock.mockImplementation(async (_url: string, init?: RequestInit) =>
-    init?.method === 'POST' ? respond(200, { success: true, data: FRESH }) : respond(200, { success: true, data: INITIAL }),
+    respond(200, { success: true, data: reportFor(init?.method) }),
   );
   global.fetch = fetchMock as unknown as typeof fetch;
 });
@@ -117,5 +124,41 @@ describe('useCompanyRegistryIdentity — υιοθέτηση επωνυμίας (
 
     expect(result.current.adoption).toBe('none');
     expect(postsTo(API_ROUTES.COMPANIES.REGISTRY_VERIFICATION)).toHaveLength(1);
+  });
+});
+
+describe('useCompanyRegistryIdentity — διαγραφή αντιγράφου ΓΕΜΗ (ADR-841 Α23.12)', () => {
+  const deletes = () =>
+    fetchMock.mock.calls.filter(([url, init]) => url === API_ROUTES.COMPANIES.REGISTRY_VERIFICATION && init?.method === 'DELETE');
+
+  it('🔴 Χ6 — `eraseCopy` ⇒ DELETE στη διαδρομή ΓΕΜΗ · η τρέχουσα κρίση γίνεται κατάσταση · έκβαση `erased`', async () => {
+    const { result } = await mounted();
+
+    await act(() => result.current.eraseCopy());
+
+    expect(deletes()).toHaveLength(1);
+    expect(result.current.state).toEqual({ kind: 'ready', report: AFTER_ERASURE });
+    expect(result.current.erasure).toBe('erased');
+    expect(result.current.erasing).toBe(false);
+  });
+
+  it('🔴 Χ7 — βλάβη ⇒ `failed` (ΠΟΤΕ σιωπηλά), και η τελευταία γνωστή κρίση ΜΕΝΕΙ', async () => {
+    const { result } = await mounted();
+    fetchMock.mockResolvedValueOnce(respond(500, { error: 'INTERNAL' }));
+
+    await act(() => result.current.eraseCopy());
+
+    expect(result.current.erasure).toBe('failed');
+    expect(result.current.state).toEqual({ kind: 'ready', report: INITIAL });
+  });
+
+  it('🔑 Χ8 — νέα «Επαλήθευση» ⇒ το μήνυμα διαγραφής σβήνει (όχι «διαγράφηκαν» δίπλα σε νέο αντίγραφο)', async () => {
+    const { result } = await mounted();
+    await act(() => result.current.eraseCopy());
+    expect(result.current.erasure).toBe('erased');
+
+    await act(() => result.current.verify());
+
+    expect(result.current.erasure).toBe('none');
   });
 });
