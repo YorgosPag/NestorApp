@@ -5,11 +5,13 @@ import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn } from "@/lib/utils"
 import { getDynamicTransformClass } from '@/components/ui/utils/dynamic-styles';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import '@/lib/design-system';
 
 type ProgressProps = React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
   /** Optional className applied to the inner fill (Radix Indicator). Use to
-   * override the default `bg-primary` with semantic colors (success/warning/
+   * override the default control accent (ADR-770 §17 — was `bg-primary`, 1,18:1 on
+   * the dark track) with semantic colors (success/warning/
    * error) without fighting Tailwind specificity via child-selectors. */
   indicatorClassName?: string;
 };
@@ -35,7 +37,7 @@ const Progress = React.forwardRef<
     >
       <ProgressPrimitive.Indicator
         className={cn(
-          "h-full w-full flex-1 transition-all rounded-full bg-primary",
+          `h-full w-full flex-1 transition-all rounded-full ${COLOR_BRIDGE.selectionControl.fill}`,
           progressTransformClass,
           indicatorClassName,
         )}

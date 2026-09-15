@@ -7,7 +7,12 @@ import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { useDateFnsLocale } from "@/i18n/date-fns-locale"
+import { COLOR_BRIDGE } from "@/design-system/color-bridge"
 import '@/lib/design-system';
+
+// ☑️ ADR-770 §17: η επιλεγμένη μέρα είναι δείκτης κατάστασης — ρόλος χειριστηρίου επιλογής.
+// Ήταν `!bg-primary` ⇒ στο σκοτεινό θέμα 1,00:1 σε κάρτα, 1,18:1 σε αναδυόμενο.
+const SELECTED_DAY = `!${COLOR_BRIDGE.selectionControl.fill} !${COLOR_BRIDGE.selectionControl.fillInk} rounded-md`;
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -45,7 +50,7 @@ function Calendar({
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
         range_end: "day-range-end",
-        selected: "!bg-primary !text-primary-foreground rounded-md",
+        selected: SELECTED_DAY,
         today: "bg-accent text-accent-foreground",
         outside: "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
         disabled: "text-muted-foreground opacity-50",

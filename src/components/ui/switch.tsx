@@ -5,14 +5,13 @@ import * as SwitchPrimitives from "@radix-ui/react-switch"
 
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
-import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
-// 🏢 ADR-128: Centralized Switch Tokens
+// 🏢 ADR-128: Centralized Switch Tokens (ADR-770 §17: default = ρόλος χειριστηρίου επιλογής)
 import { COLOR_BRIDGE } from "@/design-system/color-bridge"
 import '@/lib/design-system';
 
 /**
  * 🏢 ENTERPRISE SWITCH VARIANTS (ADR-128)
- * - default: Primary color when ON, input color when OFF
+ * - default: control accent when ON, outlined track + outline thumb when OFF (ADR-770 §17, M3/Fluent 2)
  * - status: Green when ON, Red when OFF (for visibility toggles)
  * - success: Green when ON, muted when OFF
  * - destructive: Red when ON, muted when OFF
@@ -29,7 +28,6 @@ const Switch = React.forwardRef<
   SwitchProps
 >(({ className, variant = 'default', ...props }, ref) => {
   const iconSizes = useIconSizes()
-  const colors = useSemanticColors()
 
   // 🏢 ADR-128: Get variant-specific colors from centralized tokens
   const variantTokens = COLOR_BRIDGE.switch[variant];
@@ -47,7 +45,7 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        `pointer-events-none block ${iconSizes.md} rounded-full ${colors.bg.primary} shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0`
+        `pointer-events-none block ${iconSizes.md} rounded-full ${variantTokens.thumb} shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0`
       )}
     />
   </SwitchPrimitives.Root>
