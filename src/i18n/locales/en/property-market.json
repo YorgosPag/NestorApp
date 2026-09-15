@@ -839,6 +839,29 @@
         "regular": "Regular hours",
         "custom": "Different hours"
       },
+      "holidayQuestion": {
+        "title": "Will you be open on the holidays?",
+        "intro": "The “{agency}” showcase lists opening hours for the days below, but they are public holidays. Until you answer, visitors see that hours might differ.",
+        "explain": "Your answer is published on the showcase right away. You can change it at any time from the card form.",
+        "sameForAll": "Same for all days",
+        "lastYear": "Last year: {answer}",
+        "submit": "Save",
+        "sending": "Saving…",
+        "otherHours": "Different hours",
+        "otherHoursHint": "Keeping different hours? Enter them in the card form.",
+        "remaining": "Saved. {count, plural, one {# day is} other {# days are}} still unanswered.",
+        "done": "Thank you — every day has been recorded on your showcase.",
+        "formWon": "Some days had already been set in the card form — your entry there was kept.",
+        "reason": {
+          "link-invalid": "This link is not valid.",
+          "question-unknown": "This question no longer exists.",
+          "expired": "The holidays of this period have passed. Special hours can always be set from the card form.",
+          "already-answered": "Every day already has an answer — nothing else is needed.",
+          "without-showcase": "The showcase is no longer published, so there are no hours to update.",
+          "special-hours-invalid": "The card already holds the maximum number of special days. Remove one in the card form and try again.",
+          "unavailable": "We can’t check this link right now. It isn’t your link’s fault — please try again shortly."
+        }
+      },
       "cardSpecialSuggested": "Holidays without an answer",
       "cardSpecialSuggestedHint": "Public holidays in the coming year on a day you are open. Until you answer, visitors see “hours may differ”.",
       "cardSpecialSuggestion": "{holiday} · {date}",
