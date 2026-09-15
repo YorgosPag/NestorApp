@@ -903,6 +903,15 @@
         "closedTitle": "According to GEMI the business is not active",
         "closedBody": "At the latest check ({date}) GEMI recorded the business as inactive. That is why your storefront is not listed in the directory and does not accept new mandates or contacts. If the GEMI number is wrong, correct it; if the business has closed, you can withdraw the storefront.",
         "closedWithdrawHint": "Withdrawing deletes the storefront. Your listings are not affected.",
+        "erase": "Delete the GEMI data we hold",
+        "erasing": "Deleting…",
+        "eraseTitle": "Delete the GEMI data?",
+        "eraseBody": "The copy we hold from GEMI about your business (legal name, distinctive titles, legal form, status, registered seat) will be permanently deleted. Your storefront will stop showing anything based on it, such as “verified by GEMI”. We will not ask GEMI again unless you choose “Verify with GEMI” again.",
+        "eraseConfirm": "Delete",
+        "erasure": {
+          "erased": "The GEMI data was deleted.",
+          "failed": "The deletion did not complete. Please try again shortly."
+        },
         "gap": {
           "invalid-registration-number": "The profile's GEMI number is not in a valid format. Correct it in the company profile.",
           "not-checked": "The GEMI number has not been checked yet. Choose “Verify with GEMI”.",

@@ -14,7 +14,10 @@
  * **δεν μεταγλωττίζεται** χωρίς κείμενο.
  */
 
-import type { LegalNameAdoptionFeedback } from '@/hooks/company/useCompanyRegistryIdentity';
+import type {
+  LegalNameAdoptionFeedback,
+  RegistryCopyErasureFeedback,
+} from '@/hooks/company/useCompanyRegistryIdentity';
 import type { RegistryAttentionGap, RegistryStanding } from '@/lib/agency/registry-standing';
 import type { RegistryUnavailableReason } from '@/types/company-registry';
 
@@ -49,7 +52,20 @@ export const SHOWCASE_REGISTRY_KEYS = {
   closedTitle: `${K}.closedTitle`,
   closedBody: `${K}.closedBody`,
   closedWithdrawHint: `${K}.closedWithdrawHint`,
+  // ── ΔΙΑΓΡΑΦΗ ΑΝΤΙΓΡΑΦΟΥ ΓΕΜΗ (Α23.12 · GDPR άρθ. 17/21) ─────────────────────────────────────
+  erase: `${K}.erase`,
+  erasing: `${K}.erasing`,
+  eraseTitle: `${K}.eraseTitle`,
+  /** Τι σβήνεται **και** τι χάνει η βιτρίνα — ο άνθρωπος αποφασίζει ξέροντας τη συνέπεια. */
+  eraseBody: `${K}.eraseBody`,
+  eraseConfirm: `${K}.eraseConfirm`,
 } as const;
+
+/** **Τι έγινε με τη διαγραφή** — αποτυχία λέγεται, ποτέ σιωπηλά (πράξη δικαιώματος του GDPR). */
+export const SHOWCASE_REGISTRY_ERASURE_KEYS: Record<Exclude<RegistryCopyErasureFeedback, 'none'>, string> = {
+  erased: `${K}.erasure.erased`,
+  failed: `${K}.erasure.failed`,
+};
 
 /**
  * **Η ΓΡΑΜΜΗ ΚΑΤΑΣΤΑΣΗΣ ΤΗΣ ΠΟΡΤΑΣ** — η πόρτα λέει **πού στέκεται** ο οργανισμός, όχι μόνο πού οδηγεί

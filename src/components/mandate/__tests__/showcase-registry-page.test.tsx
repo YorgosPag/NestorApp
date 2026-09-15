@@ -27,7 +27,11 @@ import type { CompanyRegistryDeclaration, RegistryIdentityJudgment } from '@/typ
 import { ShowcaseRegistryContent } from '../ShowcaseRegistryContent';
 import { ShowcaseRegistryDoor } from '../ShowcaseRegistryDoor';
 import { SHOWCASE_KEYS } from '../agency-showcase-labels';
-import { SHOWCASE_REGISTRY_DOOR_KEYS, SHOWCASE_REGISTRY_KEYS } from '../agency-showcase-registry-labels';
+import {
+  SHOWCASE_REGISTRY_DOOR_KEYS,
+  SHOWCASE_REGISTRY_ERASURE_KEYS,
+  SHOWCASE_REGISTRY_KEYS,
+} from '../agency-showcase-registry-labels';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -63,7 +67,17 @@ function ready(judgment: RegistryIdentityJudgment, declaration = DECLARATION): C
 }
 
 function registryWith(state: CompanyRegistryIdentityState): CompanyRegistryIdentity {
-  return { state, verifying: false, verify: jest.fn(), adopting: false, adoption: 'none', adoptLegalName: jest.fn() };
+  return {
+    state,
+    verifying: false,
+    verify: jest.fn(),
+    adopting: false,
+    adoption: 'none',
+    adoptLegalName: jest.fn(),
+    erasing: false,
+    erasure: 'none',
+    eraseCopy: jest.fn(),
+  };
 }
 
 const VERIFIED = ready({ state: 'verified', issuer: 'gemi', check: CHECK });
@@ -129,6 +143,31 @@ describe('Ρ — ρόλος και αριθμός', () => {
     render(<ShowcaseRegistryContent />);
     fireEvent.click(screen.getByRole('button', { name: SHOWCASE_REGISTRY_KEYS.verify }));
     expect(mockRegistry.verify).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Δ — ⚖️ Α23.12: διαγραφή των στοιχείων ΓΕΜΗ που κρατάμε', () => {
+  it('Δ1 🔴 κρατάμε αντίγραφο ⇒ κουμπί · το πάτημα ΜΟΝΟ ανοίγει επιβεβαίωση · η επιβεβαίωση καλεί το hook ΜΙΑ φορά', async () => {
+    render(<ShowcaseRegistryContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: SHOWCASE_REGISTRY_KEYS.erase }));
+    expect(mockRegistry.eraseCopy).not.toHaveBeenCalled();
+    expect(await screen.findByText(SHOWCASE_REGISTRY_KEYS.eraseBody)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: SHOWCASE_REGISTRY_KEYS.eraseConfirm }));
+    expect(mockRegistry.eraseCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Δ2 🔑 ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: δεν κρατάμε αντίγραφο (δεν ρωτήθηκε) ⇒ ΚΑΝΕΝΑ κουμπί διαγραφής', () => {
+    mockRegistry = registryWith(ready({ state: 'declared', gap: 'not-checked', check: null }));
+    render(<ShowcaseRegistryContent />);
+    expect(screen.queryByRole('button', { name: SHOWCASE_REGISTRY_KEYS.erase })).toBeNull();
+  });
+
+  it('Δ3 🔑 η έκβαση λέγεται — και η αποτυχία', () => {
+    mockRegistry = { ...registryWith(ready({ state: 'declared', gap: 'not-checked', check: null })), erasure: 'failed' };
+    render(<ShowcaseRegistryContent />);
+    expect(screen.getByTestId('showcase-registry-erasure')).toHaveTextContent(SHOWCASE_REGISTRY_ERASURE_KEYS.failed);
   });
 });
 

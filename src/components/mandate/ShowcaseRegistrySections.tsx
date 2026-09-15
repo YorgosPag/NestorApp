@@ -26,11 +26,12 @@
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { CompanyRegistryIdentity } from '@/hooks/company/useCompanyRegistryIdentity';
 import { needsRegistrationFix } from '@/lib/agency/registry-standing';
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
-import { adoptableRegistryCheckOf } from '@/lib/company/registry-identity-judgment';
+import { adoptableRegistryCheckOf, holdsRegistryCopy } from '@/lib/company/registry-identity-judgment';
 import { formatLongDate } from '@/lib/intl-formatting';
 import { APP_ROUTES } from '@/lib/routes/appRoutes';
 import { Link } from '@/lib/workspace/navigation';
@@ -41,6 +42,7 @@ import { SHOWCASE_NS } from './agency-showcase-labels';
 import { ShowcaseWithdrawButton } from './ShowcaseWithdrawButton';
 import {
   SHOWCASE_REGISTRY_ADOPTION_KEYS,
+  SHOWCASE_REGISTRY_ERASURE_KEYS,
   SHOWCASE_REGISTRY_GAP_KEYS,
   SHOWCASE_REGISTRY_KEYS,
   SHOWCASE_REGISTRY_UNAVAILABLE_KEYS,
@@ -146,6 +148,43 @@ function JudgmentLine({ report }: { readonly report: RegistryIdentityReport }): 
   );
 }
 
+/**
+ * **«Διαγραφή των στοιχείων ΓΕΜΗ που κρατάμε»** (Α23.12 · GDPR άρθ. 17/21) — **μόνο** όταν κρατάμε αντίγραφο
+ * (`holdsRegistryCopy`), **πάντα** με επιβεβαίωση (`ConfirmDialog`, ADR-003): η πράξη δεν αναιρείται και ρίχνει το
+ * σήμα και την ένδειξη κλεισίματος της βιτρίνας. Πρακτική: Google/Stripe — ο κάτοχος σβήνει μόνος του, χωρίς email.
+ */
+function CopyErasureControl({
+  report,
+  registry,
+}: {
+  readonly report: RegistryIdentityReport;
+  readonly registry: CompanyRegistryIdentity;
+}): React.ReactElement | null {
+  const { t } = useTranslation([SHOWCASE_NS]);
+  const [confirming, setConfirming] = React.useState(false);
+  if (!holdsRegistryCopy(report.judgment)) return null;
+  return (
+    <>
+      <Button type="button" variant="ghost" disabled={registry.erasing} onClick={() => setConfirming(true)}>
+        {registry.erasing ? t(SHOWCASE_REGISTRY_KEYS.erasing) : t(SHOWCASE_REGISTRY_KEYS.erase)}
+      </Button>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t(SHOWCASE_REGISTRY_KEYS.eraseTitle)}
+        description={t(SHOWCASE_REGISTRY_KEYS.eraseBody)}
+        confirmText={t(SHOWCASE_REGISTRY_KEYS.eraseConfirm)}
+        variant="destructive"
+        loading={registry.erasing}
+        onConfirm={async () => {
+          setConfirming(false);
+          await registry.eraseCopy();
+        }}
+      />
+    </>
+  );
+}
+
 /** «Επαλήθευση από ΓΕΜΗ» **μόνο** με έγκυρο αριθμό· «Διόρθωση αριθμού» **μόνο** όταν εκεί είναι η θεραπεία. */
 function VerifyControls({
   report,
@@ -164,6 +203,7 @@ function VerifyControls({
         </Button>
       ) : null}
       {needsRegistrationFix(report.judgment) ? <FixNumberLink /> : null}
+      <CopyErasureControl report={report} registry={registry} />
     </footer>
   );
 }
@@ -189,6 +229,11 @@ function RegistryReportView({
       {registry.adoption !== 'none' ? (
         <p role="status" className="m-0 text-sm text-foreground" data-testid="showcase-registry-adoption">
           {t(SHOWCASE_REGISTRY_ADOPTION_KEYS[registry.adoption])}
+        </p>
+      ) : null}
+      {registry.erasure !== 'none' ? (
+        <p role="status" className="m-0 text-sm text-foreground" data-testid="showcase-registry-erasure">
+          {t(SHOWCASE_REGISTRY_ERASURE_KEYS[registry.erasure])}
         </p>
       ) : null}
       <VerifyControls report={report} registry={registry} />
