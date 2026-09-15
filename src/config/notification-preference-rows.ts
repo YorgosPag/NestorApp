@@ -74,6 +74,7 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'mandateRequestAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateRequestAnswered' },
       // ADR-841 §7 Α21.20 — «το email της κάρτας σας επέστρεψε».
       { key: 'cardEmailReturned', labelKey: 'common-account:account.notificationSettings.categories.properties.cardEmailReturned' },
+      { key: 'holidayHoursQuestion', labelKey: 'common-account:account.notificationSettings.categories.properties.holidayHoursQuestion' },
     ],
   },
   {

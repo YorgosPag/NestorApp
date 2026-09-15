@@ -150,7 +150,8 @@
           "demandPriceDrop": "The price of a listing matching my demand dropped",
           "mandateDecided": "A client answered the mandate I sent them",
           "mandateRequestAnswered": "An agency answered your mandate request",
-          "cardEmailReturned": "An email on your business card returned permanently"
+          "cardEmailReturned": "An email on your business card returned permanently",
+          "holidayHoursQuestion": "Question about your opening hours before public holidays"
         },
         "tasks": {
           "title": "Tasks",

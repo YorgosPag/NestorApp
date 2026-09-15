@@ -791,6 +791,10 @@
   "cardEmailReturned": {
     "title": "Το email {email} της κάρτας σας επέστρεψε — το σήμα «Email επιβεβαιωμένο» αφαιρέθηκε"
   },
+  "holidayHoursQuestion": {
+    "title": "Θα είστε ανοιχτά στις επόμενες αργίες;",
+    "reminderTitle": "Υπενθύμιση: θα είστε ανοιχτά στις επόμενες αργίες;"
+  },
   "quoteNotifications": {
     "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
     "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",

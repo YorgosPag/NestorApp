@@ -196,6 +196,13 @@ export interface PropertiesNotificationSettings {
    * (DSA άρθ. 30: «ζήτα διόρθωση χωρίς καθυστέρηση»).
    */
   cardEmailReturned: boolean;
+  /**
+   * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»** (ερώτηση + μία υπενθύμιση ανά περίοδο).
+   *
+   * ⚠️ **Προεπιλογή `true`**: χωρίς απάντηση η δημόσια κάρτα λέει «το ωράριο ίσως διαφέρει» σε κάθε αργία — ο
+   * επαγγελματίας δεν βλέπει τη σελίδα του όπως ο πελάτης. Κλείνει με έναν διακόπτη ή με το List-Unsubscribe.
+   */
+  holidayHoursQuestion: boolean;
 }
 
 /**
@@ -402,6 +409,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   mandateDecided: true,
   mandateRequestAnswered: true,
   cardEmailReturned: true,
+  holidayHoursQuestion: true,
 };
 
 /**

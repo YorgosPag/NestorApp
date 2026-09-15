@@ -791,6 +791,10 @@
   "cardEmailReturned": {
     "title": "The email {email} on your card returned — the “Email confirmed” badge was removed"
   },
+  "holidayHoursQuestion": {
+    "title": "Will you be open on the upcoming public holidays?",
+    "reminderTitle": "Reminder: will you be open on the upcoming public holidays?"
+  },
   "quoteNotifications": {
     "quoteScanCompleted": "Quote scan completed: {vendorName}",
     "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",

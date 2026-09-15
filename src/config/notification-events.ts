@@ -115,6 +115,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    * το δημόσιο σήμα «Email επιβεβαιωμένο» αφαιρέθηκε. Ο παραλήπτης είναι όποιος ζήτησε την επιβεβαίωση.
    */
   PROPERTIES_CARD_EMAIL_RETURNED: 'properties.cardEmailReturned',
+  /**
+   * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»**: μία ερώτηση ανά εορταστική περίοδο προς τους
+   * διαχειριστές του γραφείου, με απάντηση ενός κλικ χωρίς σύνδεση. Ερώτηση και υπενθύμιση = **ένας** διακόπτης.
+   */
+  PROPERTIES_HOLIDAY_HOURS_QUESTION: 'properties.holidayHoursQuestion',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -275,6 +280,14 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'cardEmailReturned',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-841 §7 Α21.21 Φάση Β — INFO, ΠΟΤΕ υποχρεωτικό: Ν.3471/2006 άρθ. 11 ισχύει και για νομικά πρόσωπα ⇒
+  // ο άνθρωπος το κλείνει, και το email φέρει List-Unsubscribe μόνο για αυτόν τον τύπο (ADR-849).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_HOLIDAY_HOURS_QUESTION]: {
+    category: 'properties',
+    settingKey: 'holidayHoursQuestion',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   // Tasks
   [NOTIFICATION_EVENT_TYPES.TASKS_DUE_TODAY]: {
