@@ -22,7 +22,7 @@
 | Φορολογια | Κλιμακα φυσικων προσωπων (9%-44%) | **Pass-through**: Κερδη μοιραζονται στους εταιρους, φορολογουνται ατομικα |
 | ΕΦΚΑ | 1 ασφαλισμενος | **Καθε εταιρος** πληρωνει ξεχωριστα ΕΦΚΑ |
 | Τελος Επιτηδευματος | 650€ (πολεις >200.000) | **1.000€** (νομικα προσωπα) |
-| ΓΕΜΗ | Δεν απαιτειται | **Υποχρεωτικο** αριθμο ΓΕΜΗ |
+| ΓΕΜΗ | ~~Δεν απαιτειται~~ ⚠️ **ΔΙΟΡΘΩΣΗ 2026-09-15**: απαιτειται για **εμπορικη** δραστηριοτητα (ν. 4919/2022 αρθ. 16) — `gemiNumber: string \| null`, `null` για ελευθερο επαγγελματια (βλ. §16, ADR-841 §7 Α23 Δ1) | **Υποχρεωτικο** αριθμο ΓΕΜΗ |
 | Ευθυνη | Απεριοριστη προσωπικη | Απεριοριστη **αλληλεγγυα** ολων των εταιρων |
 | Βιβλια | Β' κατηγοριας (Ε-Ε) | Β' κατηγοριας (Ε-Ε) |
 | Κλιμακα φορου | Ιδια (9%-44%) | Ιδια — εφαρμοζεται στο **μεριδιο** καθε εταιρου |
@@ -434,7 +434,7 @@ Partners αποθηκευονται σε **single document**: `accounting_settin
 **Γιατι**:
 - Type narrowing: `if (profile.entityType === 'oe') { profile.gemiNumber }` — πληρες autocomplete
 - Extensibility: Μελλοντικα `| EPECompanyProfile | AECompanyProfile` χωρις breaking changes
-- Compile-time safety: Αδυνατο να προσπελασεις `gemiNumber` σε ατομικη
+- Compile-time safety: ~~Αδυνατο να προσπελασεις `gemiNumber` σε ατομικη~~ — ⚠️ **ΑΝΑΘΕΩΡΗΘΗΚΕ 2026-09-15** (ADR-841 §7 Α23 Δ1): η ατομικη εχει πλεον `gemiNumber: string | null`· το narrowing μενει για `partners`/`members`/`shareholders`
 - Exhaustive checks: `switch (profile.entityType)` — ο compiler σε ειδοποιει αν ξεχασεις case
 
 **Εναλλακτικες που απορριφθηκαν**:
@@ -700,7 +700,7 @@ if (body.entityType === 'oe') {
 
 ### Positive
 
-- **Type safety**: Discriminated union εγγυαται compile-time ελεγχο — αδυνατο `profile.gemiNumber` σε ατομικη
+- **Type safety**: Discriminated union εγγυαται compile-time ελεγχο στα πεδια ανα μορφη *(το «αδυνατο `profile.gemiNumber` σε ατομικη» αναθεωρηθηκε 2026-09-15 — βλ. §16)*
 - **Backward compatible**: Runtime migration — μηδενικο downtime, τα υπαρχοντα δεδομενα δουλευουν
 - **Extensible**: Νεοι entity types (ΕΠΕ, ΑΕ) με απλη προσθηκη στο union
 - **Accurate taxation**: Per-partner φοροι + ξεχωριστα ΕΦΚΑ = σωστοι υπολογισμοι
@@ -728,6 +728,7 @@ if (body.entityType === 'oe') {
 | 2026-02-10 | Nullable `partnerId` on EFKAPayment for backward compatibility | Claude Code |
 | 2026-02-10 | `TaxEngine.calculatePartnershipTax()` — pass-through taxation, same scale | Claude Code |
 | 2026-02-10 | 9 new files + 16 modified files — Phase 1 OE support implemented | Claude Code |
+| 2026-09-15 | ⚠️ **Διορθωση**: η ατομικη **εχει** αριθμο ΓΕΜΗ οταν ασκει εμπορικη δραστηριοτητα (ν. 4919/2022 αρθ. 16· υποχρεωση εμφανισης αρθ. 22). `SoleProprietorProfile.gemiNumber: string \| null` (`null` = ελευθερος επαγγελματιας), ιδια πηγη αληθειας για ολες τις μορφες (ADR-439). Εφαρμοστηκε στον κωδικα 2026-09-14 — ADR-841 §7 Α23 Δ1 | Claude Code |
 | 2026-02-10 | Completion: wired PartnerTaxBreakdown + PartnerEFKATabs into pages | Claude Code |
 | 2026-02-10 | Hooks: entity-aware returns (useTaxEstimate, useEFKASummary) | Claude Code |
 | 2026-02-10 | EFKA route: discriminated response by entityType | Claude Code |
