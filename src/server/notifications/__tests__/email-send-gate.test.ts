@@ -10,7 +10,7 @@ jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn() }));
 
 import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import type { PendingEmail } from '@/server/notifications/email-digest';
-import { gateQueuedEmails, type SettingsLoader } from '@/server/notifications/email-send-gate';
+import { gateQueuedEmails, type HolidayQuestionLoader, type SettingsLoader } from '@/server/notifications/email-send-gate';
 import {
   getDefaultNotificationSettings,
   type UserNotificationSettings,
@@ -114,5 +114,47 @@ describe('Λ — λογιστική και αποτυχία', () => {
       throw new Error('firestore down');
     };
     await expect(gateQueuedEmails([message('a')], load)).rejects.toThrow('firestore down');
+  });
+});
+
+/** ADR-841 §7 Α21.21 Φάση Β — γεγονότα ερώτησης αργιών, όπως τα κρατά η ουρά. */
+const HOLIDAY = { kind: 'holiday-hours-question' as const, questionId: 'hhq_q1', nonce: 'n1' };
+
+function askingFrom(keys: readonly string[]): jest.MockedFunction<HolidayQuestionLoader> {
+  return jest.fn(async () => new Set(keys));
+}
+
+describe('Ρ — ερώτηση αργιών: «έχει ακόμη νόημα;» τη στιγμή της αποστολής', () => {
+  it('Ρ1 🔴 απαντήθηκε ΜΕΤΑ την ουρά ⇒ σιγή με ΟΝΟΜΑ· ο διπλανός ανέγγιχτος', async () => {
+    const asking = askingFrom([]);
+    const question = message('q', { facts: HOLIDAY });
+    const result = await gateQueuedEmails([question, message('m', { eventType: MANDATE_DECIDED })], loaderFrom({}), asking);
+    expect(result.suppressed).toEqual([{ message: question, reason: 'question-settled' }]);
+    expect(ids(result.deliverable)).toEqual(['m']);
+    expect(asking).toHaveBeenCalledWith([HOLIDAY]);
+  });
+
+  it('Ρ2 — ακόμη ρωτά ⇒ φεύγει', async () => {
+    const result = await gateQueuedEmails([message('q', { facts: HOLIDAY })], loaderFrom({}), askingFrom(['hhq_q1:n1']));
+    expect(ids(result.deliverable)).toEqual(['q']);
+  });
+
+  it('Ρ3 — κανένα μήνυμα με γεγονότα ⇒ ο κριτής ΔΕΝ ρωτιέται (μηδέν κόστος)', async () => {
+    const asking = askingFrom([]);
+    await gateQueuedEmails([message('a'), message('b')], loaderFrom({}), asking);
+    expect(asking).not.toHaveBeenCalled();
+  });
+
+  it('Ρ4 🔑 γεγονός του ΑΙΤΗΜΑΤΟΣ, όχι ρύθμιση: κρίνεται και το επείγον', async () => {
+    const urgent = message('q', { facts: HOLIDAY, priority: 'urgent' });
+    const result = await gateQueuedEmails([urgent], loaderFrom({}), askingFrom([]));
+    expect(result.suppressed).toEqual([{ message: urgent, reason: 'question-settled' }]);
+  });
+
+  it('Ρ5 🔴 ο κριτής αποτυγχάνει ⇒ ΡΙΧΝΕΙ — τίποτα δεν φεύγει ούτε σβήνεται', async () => {
+    const asking: HolidayQuestionLoader = async () => {
+      throw new Error('firestore down');
+    };
+    await expect(gateQueuedEmails([message('q', { facts: HOLIDAY })], loaderFrom({}), asking)).rejects.toThrow('firestore down');
   });
 });

@@ -149,13 +149,15 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
     });
   });
 
-  it('Λ3 — οι τέσσερις τύποι της βάσης (μετρημένοι 2026-09-11) + η επιστροφή email κάρτας (Α21.20) έχουν κανόνα', () => {
+  it('Λ3 — οι τέσσερις τύποι της βάσης (μετρημένοι 2026-09-11) + η επιστροφή email κάρτας (Α21.20) + η ερώτηση αργιών (Α21.21) έχουν κανόνα', () => {
     expect([...RULED_EVENT_TYPES].sort()).toEqual([
       'properties.cardEmailReturned',
       'properties.demandInterest',
       'properties.demandListingMatch',
       // ADR-777 §8.69 — η μείωση οδηγεί στην ίδια δημόσια αγγελία, με τον ίδιο κανόνα.
       'properties.demandPriceDrop',
+      // ADR-841 §7 Α21.21 Φάση Β — η ερώτηση αργιών οδηγεί στην κάρτα του γραφείου.
+      'properties.holidayHoursQuestion',
       'properties.mandateDecided',
       'properties.mandateRequestAnswered',
     ]);

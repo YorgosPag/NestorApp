@@ -45,6 +45,7 @@ import { listingMatchDestination } from '@/services/demand/listing-match-notifie
 import { locatePlace } from '@/services/demand/place-interest.service';
 import { mandateDecisionDestination } from '@/services/mandate/mandate-decision-notifier.service';
 import { mandateRequestDestination } from '@/services/mandate/mandate-request-notifier.service';
+import { holidayHoursQuestionDestination } from '@/services/mandate/holiday-hours-question-notifier';
 import { cardEmailReturnedDestination } from '@/services/mandate/showcase-email-return.service';
 
 import type {
@@ -99,6 +100,9 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   // ADR-841 §7 Α21.20 — η οντότητα είναι το γραφείο· η πόρτα, η κάρτα του στον χώρο του.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: async (_db, _notification, entityId) =>
     expected(cardEmailReturnedDestination(entityId)),
+  // ADR-841 §7 Α21.21 Φάση Β — η ερώτηση αργιών οδηγεί στην ίδια κάρτα («Άλλο ωράριο» ⇒ φόρμα).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_HOLIDAY_HOURS_QUESTION]: async (_db, _notification, entityId) =>
+    expected(holidayHoursQuestionDestination(entityId)),
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

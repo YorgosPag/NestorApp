@@ -146,7 +146,12 @@ export type SuppressReason =
   | 'email-disabled'
   | 'frequency-disabled'
   | 'category-disabled'
-  | 'type-email-disabled';
+  | 'type-email-disabled'
+  /**
+   * ADR-841 §7 Α21.21 Φάση Β — **γεγονός του αιτήματος, όχι ρύθμιση του ανθρώπου**: η ερώτηση αργιών απαντήθηκε (στη φόρμα
+   * ή από άλλον διαχειριστή), έληξε ή η βιτρίνα αποσύρθηκε **αφού** το email μπήκε στην ουρά. Ερώτηση χωρίς νόημα δεν φεύγει.
+   */
+  | 'question-settled';
 
 /**
  * Η απόφαση.

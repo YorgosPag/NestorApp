@@ -19,6 +19,11 @@
  * | Χωρίς `recipientId` (πριν το ADR-848) | ❌ | Χωρίς άνθρωπο δεν υπάρχουν ρυθμίσεις — **ποτέ** μαντεψιά από διεύθυνση |
  * | Ό,τι δεν είναι ειδοποίηση | ❌ | Δεν ανήκει σε ρυθμίσεις ειδοποιήσεων |
  *
+ * 🔑 **ΔΕΥΤΕΡΗ ΕΡΩΤΗΣΗ, ΑΝΕΞΑΡΤΗΤΗ ΑΠΟ ΡΥΘΜΙΣΕΙΣ** (ADR-841 §7 Α21.21 Φάση Β): μήνυμα με **γεγονότα** ερώτησης αργιών
+ * ρωτά τον **ίδιο** κριτή με τη σελίδα και το κουμπί — «ανοιχτή, ίδιο nonce, δεν έληξε, με μέρες που ακόμη περιμένουν στην
+ * κάρτα;». Όχι ⇒ `question-settled`. Χωρίς αυτό, «Κλειστά» στη φόρμα στις 15:00 δεν σταματούσε το email των 20:00.
+ * Ισχύει όποια κι αν είναι η προτεραιότητα ή ο παραλήπτης: είναι γεγονός **του αιτήματος**, όχι θέληση του ανθρώπου.
+ *
  * ⚠️ **Αποτυχία ανάγνωσης ⇒ ΡΙΧΝΕΙ.** Ο αγωγός τότε δεν αγγίζει τίποτα και τα μηνύματα
  * μένουν `pending` για το επόμενο πέρασμα (5′). Η εναλλακτική «στείλ' τα» θα αγνοούσε
  * τη θέληση του ανθρώπου· η «σβήσ' τα» θα ήταν σιωπηλή απώλεια.
@@ -39,6 +44,7 @@ import type { PendingEmail } from '@/server/notifications/email-digest';
 import { loadUserNotificationSettingsMany } from '@/server/notifications/user-notification-settings-store';
 import type { UserNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
+import { holidayQuestionFactsKey, type HolidayQuestionFactsRef } from '@/types/notification-email-facts';
 
 /** Ένα μήνυμα που **δεν** θα φύγει, με τον λόγο — ονομασμένο, ποτέ boolean. */
 export interface SuppressedEmail {
@@ -56,6 +62,26 @@ export interface QueueGateResult {
 export type SettingsLoader = (
   userIds: readonly string[],
 ) => Promise<ReadonlyMap<string, UserNotificationSettings>>;
+
+/**
+ * **Ποιες ερωτήσεις αργιών έχουν ακόμη νόημα;** — ένεση, όπως οι ρυθμίσεις. Επιστρέφει κλειδιά `holidayQuestionFactsKey`.
+ * ⚠️ Αποτυχία ⇒ **ρίχνει** (ίδιο δόγμα με τον φορτωτή ρυθμίσεων).
+ */
+export type HolidayQuestionLoader = (refs: readonly HolidayQuestionFactsRef[]) => Promise<ReadonlySet<string>>;
+
+/** Δυναμική εισαγωγή: ο κριτής σέρνει κάρτα/κριτή ειδικών ωρών — τα περάσματα χωρίς ερώτηση αργιών δεν τα φορτώνουν ποτέ. */
+const loadAskingHolidayQuestions: HolidayQuestionLoader = async (refs) => {
+  const [{ holidayQuestionsStillAsking }, { getAdminFirestore }] = await Promise.all([
+    import('@/services/mandate/holiday-hours-question-decision'),
+    import('@/lib/firebaseAdmin'),
+  ]);
+  return holidayQuestionsStillAsking(getAdminFirestore(), refs);
+};
+
+/** Το μήνυμα ρωτά κάτι που **δεν** περιμένει πια απάντηση; */
+function questionSuppressionOf(message: PendingEmail, asking: ReadonlySet<string>): SuppressReason | null {
+  return message.facts !== undefined && !asking.has(holidayQuestionFactsKey(message.facts)) ? 'question-settled' : null;
+}
 
 /** **Ποιος άνθρωπος κρίνεται για αυτό το μήνυμα;** — `null` αν το μήνυμα δεν κρίνεται. */
 export function judgedRecipientOf(message: PendingEmail): string | null {
@@ -91,16 +117,19 @@ function suppressionOf(
 export async function gateQueuedEmails(
   pending: readonly PendingEmail[],
   load: SettingsLoader = loadUserNotificationSettingsMany,
+  asking: HolidayQuestionLoader = loadAskingHolidayQuestions,
 ): Promise<QueueGateResult> {
   const userIds = pending.map(judgedRecipientOf).filter((id): id is string => id !== null);
-  const settingsByUser = userIds.length > 0
-    ? await load(userIds)
-    : new Map<string, UserNotificationSettings>();
+  const questions = pending.flatMap(({ facts }) => (facts === undefined ? [] : [facts]));
+  const [settingsByUser, stillAsking] = await Promise.all([
+    userIds.length > 0 ? load(userIds) : new Map<string, UserNotificationSettings>(),
+    questions.length > 0 ? asking(questions) : new Set<string>(),
+  ]);
 
   const deliverable: PendingEmail[] = [];
   const suppressed: SuppressedEmail[] = [];
   for (const message of pending) {
-    const reason = suppressionOf(message, settingsByUser);
+    const reason = questionSuppressionOf(message, stillAsking) ?? suppressionOf(message, settingsByUser);
     if (reason === null) deliverable.push(message);
     else suppressed.push({ message, reason });
   }
