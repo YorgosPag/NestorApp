@@ -246,6 +246,24 @@ export interface GeocodingReasoning {
   attemptsLog: GeocodingAttempt[];
   /** Breakdown of how the final `confidence` score was assembled. */
   confidenceBreakdown: ConfidenceBreakdown;
+  /**
+   * **Τι ΔΕΝ ρωτήθηκε για να βρεθεί αυτή η απάντηση** — ADR-332 D28.
+   *
+   * Απόν ⇒ ρωτήθηκε ολόκληρη η δηλωμένη διεύθυνση. Παρόν ⇒ τα πεδία του `dropped` **αφαιρέθηκαν**
+   * και η απάντηση έγινε δεκτή **μόνο** επειδή αποδείχθηκε το `anchor`. Είναι το `replaced`/`inferred`
+   * της Google Address Validation: η οθόνη οφείλει να το **πει**, όχι να το υπονοήσει.
+   */
+  relaxation?: GeocodingRelaxation;
+}
+
+/** Τα πεδία τοπωνυμίου μιας διεύθυνσης — από το στενότερο στο ευρύτερο. */
+export type GeocodingLocalityField = 'neighborhood' | 'city' | 'municipality' | 'county' | 'region';
+
+/** Μια χαλάρωση ερωτήματος και η απόδειξη που την επέτρεψε (ADR-332 D28). */
+export interface GeocodingRelaxation {
+  readonly dropped: readonly GeocodingLocalityField[];
+  /** Το πεδίο που **κρατήθηκε** και **επιβεβαιώθηκε** στην απάντηση. */
+  readonly anchor: 'postalCode';
 }
 
 export type FieldMatchKind =
@@ -253,6 +271,12 @@ export type FieldMatchKind =
   | 'match'
   /** User value differs from Nominatim resolved value. */
   | 'mismatch'
+  /**
+   * User value names a **wider area** that contains the result (ADR-332 D28) — «Θεσσαλονίκη» for an
+   * address in Ελευθέριο-Κορδελιό. Consistent, not a disagreement: never raises `partialMatch`.
+   * Decided by `lib/geocoding/field-match.ts`.
+   */
+  | 'broader'
   /** User provided a value, Nominatim returned no value for that field. */
   | 'unknown'
   /** User left field empty — no comparison possible. */
@@ -275,8 +299,14 @@ export interface ConfidenceBreakdown {
 // ATTEMPTS LOG — Nominatim variant tracking
 // =============================================================================
 
-/** Variant index in the engine's multi-strategy search (1..8). */
-export type GeocodingVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+/**
+ * Variant identity in the engine's multi-strategy search.
+ *
+ * ⚠️ **Ταυτότητα, όχι σειρά** (ADR-332 D28): η 9 εκτελείται **πριν** από τις 7/8. Ο αριθμός
+ * αποθηκεύεται στο `geocodingMetadata.variantUsed`, άρα **ποτέ επαναρίθμηση**. Η σειρά ζει στο
+ * `app/api/geocoding/geocoding-ladder.ts`.
+ */
+export type GeocodingVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 /** Outcome of a single variant attempt. */
 export type GeocodingAttemptStatus = 'success' | 'no-results' | 'error' | 'skipped';

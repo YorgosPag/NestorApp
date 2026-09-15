@@ -43,7 +43,13 @@ import {
   type HouseNumberStanding,
 } from '@/lib/geocoding/house-number-standing';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
+import type {
+  FieldMatchKind,
+  GeocodingAccuracy,
+  GeocodingRelaxation,
+  GeocodingRequestBody,
+} from '@/lib/geocoding/geocoding-types';
+import type { GeocodingServiceResult } from '@/lib/geocoding/geocoding-service';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
 const logger = createModuleLogger('usePlaceResolver');
@@ -105,6 +111,45 @@ export interface ResolvedPlace {
    * δηλαδή θα ζητούσε από τον άνθρωπο να διορθώσει κάτι που δεν βλέπει.
    */
   readonly resolvedNumber?: string;
+  /**
+   * **Τι ΔΕΝ ρωτήθηκε για να βρεθεί ο τόπος** — ADR-332 D28. Απόν ⇒ ρωτήθηκε ολόκληρο το κείμενο.
+   * Παρόν ⇒ η περιοχή αφαιρέθηκε και ο τόπος έγινε δεκτός **μόνο** επειδή ταίριαξε ο Τ.Κ.
+   */
+  readonly relaxation?: GeocodingRelaxation;
+  /** Η περιοχή **όπως τη δήλωσε ο άνθρωπος** — για να του πούμε τι απέγινε. */
+  readonly declaredLocality?: string;
+  /** Ο Τ.Κ. **όπως τον δήλωσε ο άνθρωπος** — η άγκυρα της χαλάρωσης. */
+  readonly declaredPostalCode?: string;
+  /** Η κρίση για τη δηλωμένη περιοχή — `broader` σημαίνει «σωστά, ευρύτερα» (`lib/geocoding/field-match`). */
+  readonly localityMatch?: FieldMatchKind;
+}
+
+/**
+ * Η απάντηση του διακομιστή → ό,τι χρειάζεται η οθόνη. **Μία** μετάφραση για όλους τους καλούντες.
+ *
+ * ⚠️ Η **γειτονιά** προηγείται της πόλης — ίδια προτεραιότητα με το ερώτημα της μηχανής
+ * (`neighborhood || city`), ώστε η κρίση να αφορά την περιοχή που **όντως** ρωτήθηκε.
+ */
+function toResolvedPlace(result: GeocodingServiceResult, request: GeocodingRequestBody): ResolvedPlace {
+  const { fieldMatches, relaxation } = result.reasoning;
+  const byNeighborhood = Boolean(request.neighborhood);
+  return {
+    lat: result.lat,
+    lng: result.lng,
+    accuracy: result.accuracy,
+    label: result.displayName,
+    extent: result.extent,
+    // ⚠️ `fieldMatches.number` είναι **προαιρετικό στον τύπο** (ο `FieldMatchMap` παράγεται από τα
+    //    προαιρετικά κλειδιά του `ResolvedAddressFields`) — γι' αυτό το `houseNumberStanding`
+    //    δέχεται `undefined` ως `'absent'`.
+    houseNumber: houseNumberStanding(fieldMatches.number),
+    declaredNumber: request.number,
+    resolvedNumber: result.resolvedFields.number,
+    relaxation,
+    declaredLocality: byNeighborhood ? request.neighborhood : request.city,
+    declaredPostalCode: request.postalCode,
+    localityMatch: byNeighborhood ? fieldMatches.neighborhood : fieldMatches.city,
+  };
 }
 
 export interface PlaceResolver {
@@ -146,19 +191,7 @@ export function usePlaceResolver(handlers: {
       const outcome = await geocodeAddressDetailed(request);
 
       if (outcome.kind === 'found') {
-        onFound({
-          lat: outcome.result.lat,
-          lng: outcome.result.lng,
-          accuracy: outcome.result.accuracy,
-          label: outcome.result.displayName,
-          extent: outcome.result.extent,
-          // ⚠️ `fieldMatches.number` είναι **προαιρετικό στον τύπο** (ο `FieldMatchMap`
-          //    παράγεται από τα προαιρετικά κλειδιά του `ResolvedAddressFields`) — γι'
-          //    αυτό το `houseNumberStanding` δέχεται `undefined` ως `'absent'`.
-          houseNumber: houseNumberStanding(outcome.result.reasoning.fieldMatches.number),
-          declaredNumber: request.number,
-          resolvedNumber: outcome.result.resolvedFields.number,
-        });
+        onFound(toResolvedPlace(outcome.result, request));
         setState('idle');
         return;
       }

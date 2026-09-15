@@ -145,6 +145,66 @@ export function stripGreekAdminPrefix(name: string): string {
   return name.trim();
 }
 
+/**
+ * **ΖΕΥΓΗ ΚΑΤΑΛΗΞΕΩΝ ΤΟΠΩΝΥΜΙΩΝ** — ονομαστική ⇄ γενική, σε **διπλωμένη** μορφή (`σ`, χωρίς τόνους).
+ *
+ * 🔴 **ΖΕΥΓΗ, ΟΧΙ ΛΙΣΤΑ ΚΑΤΑΛΗΞΕΩΝ — ΜΕΤΡΗΜΕΝΟ ΣΤΟ ΣΧΕΔΙΟ, 2026-09-14** (ADR-332 D28).
+ * Η προφανής λύση *(«κόψε ό,τι κατάληξη βρεις και σύγκρινε ρίζες»)* κάνει **Χαλάνδρι = Χάλανδρα**
+ * (ρίζα `χαλανδρ` και στα δύο) — το ίδιο ζεύγος που ο D27 κατέγραψε ως **δήμο Χίου για προάστιο της
+ * Αθήνας**. Εδώ δύο λέξεις ταυτίζονται μόνο αν διαφέρουν **κατά ένα γνωστό ζεύγος** πάνω σε **κοινή**
+ * ρίζα: `-ι ⇄ -α` δεν είναι ζεύγος, άρα Χαλάνδρι ≠ Χάλανδρα.
+ *
+ * ⚠️ **Κλειστός πίνακας, επίτηδες.** Κάθε νέα γραμμή διευρύνει το τι «ταυτίζεται» — προσθήκη μόνο με
+ * περιστατικό και αρνητική άγκυρα (`__tests__/place-name-declension.test.ts`).
+ */
+const DECLENSION_PAIRS: readonly (readonly [string, string])[] = [
+  ['η', 'ησ'], // Θεσσαλονίκη ⇄ Θεσσαλονίκης
+  ['α', 'ασ'], // Πάτρα ⇄ Πάτρας
+  ['ασ', 'α'], // Πειραιάς ⇄ Πειραιά
+  ['α', 'ων'], // Αθήνα ⇄ Αθηνών
+  ['οσ', 'ου'], // Βόλος ⇄ Βόλου
+  ['ο', 'ου'], // Κορδελιό ⇄ Κορδελιού
+  ['ι', 'ιου'], // Χαλάνδρι ⇄ Χαλανδρίου
+  ['οι', 'ων'], // Μελισσοχώρι… / Άνω Λιόσια ⇄ Άνω Λιοσίων
+  ['εσ', 'ων'], // Αχαρνές ⇄ Αχαρνών
+  ['αι', 'ων'], // Αθήναι ⇄ Αθηνών
+];
+
+/**
+ * Ρίζα κάτω από αυτό το μήκος δεν ταυτίζει τίποτα — τα σύντομα ονόματα συμπίπτουν τυχαία.
+ *
+ * ⚠️ **`3`, μετρημένο από την ίδια την άγκυρα**: με `4` η **Βόλος ⇄ Βόλου** (ρίζα `βολ`) έβγαινε
+ * «άλλος τόπος» — τρίτη μεγαλύτερη ελληνική πόλη. Η προστασία από τις τυχαίες συμπτώσεις δεν
+ * κρέμεται από το μήκος αλλά από τα **ζεύγη**: η Ίος ⇄ Ίου (ρίζα `ι`) μένει εκτός.
+ */
+const MIN_PLACE_STEM = 3;
+
+function differsByPair(a: string, b: string, [left, right]: readonly [string, string]): boolean {
+  if (!a.endsWith(left) || !b.endsWith(right)) return false;
+  const stem = a.slice(0, -left.length);
+  return stem.length >= MIN_PLACE_STEM && stem === b.slice(0, -right.length);
+}
+
+function sameDeclinedWord(a: string, b: string): boolean {
+  if (a === b) return true;
+  return DECLENSION_PAIRS.some((pair) => differsByPair(a, b, pair) || differsByPair(b, a, pair));
+}
+
+/**
+ * **ΙΔΙΟΣ ΤΟΠΟΣ;** — ανεξάρτητα από πρόθεμα βαθμίδας, τόνους, σίγμα και **πτώση** (ADR-332 D28).
+ *
+ * «Θεσσαλονίκη» ⇄ «Μητροπολιτική Ενότητα Θεσσαλονίκης» ⇒ `true`. Σύγκριση **λέξη-προς-λέξη** και
+ * **ίδιο πλήθος λέξεων**: ποτέ «περιέχει» — το «Νέα Σμύρνη» δεν είναι η «Σμύρνη».
+ *
+ * ⚠️ Αφορά **ονόματα τόπων**. Για οδούς, αριθμούς ή Τ.Κ. δεν έχει νόημα και δεν χρησιμοποιείται.
+ */
+export function samePlaceName(a: string, b: string): boolean {
+  const left = foldPlaceIdentity(stripGreekAdminPrefix(a)).split(' ').filter(Boolean);
+  const right = foldPlaceIdentity(stripGreekAdminPrefix(b)).split(' ').filter(Boolean);
+  if (left.length === 0 || left.length !== right.length) return false;
+  return left.every((word, index) => sameDeclinedWord(word, right[index]));
+}
+
 /** Η **γραφή**, όχι το όνομα: παύλα ⇄ κενό, πολλαπλά κενά, κενά στα άκρα. */
 export function foldPlaceName(name: string): string {
   return name.replace(/-/g, ' ').replace(/\s+/g, ' ').trim();

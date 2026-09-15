@@ -41,6 +41,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceResolver, type ResolvedPlace } from '@/hooks/geo/usePlaceResolver';
 import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
+import { ResolvedPlaceConfirmation } from '@/components/geo/ResolvedPlaceConfirmation';
 import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
@@ -265,67 +266,11 @@ export function OwnerPropertyPlaceField({
           </div>
 
           {/*
-            🔴 **ΕΔΩ ΕΠΑΨΑΝ ΝΑ ΦΑΙΝΟΝΤΑΙ ΔΕΚΑΔΙΚΕΣ ΣΥΝΤΕΤΑΓΜΕΝΕΣ** (2026-09-02).
-            Η προηγούμενη γραμμή έγραφε `«Εντοπίστηκε: 40.6403, 22.9444»` — δηλαδή
-            ζητούσε από τον άνθρωπο να **επαληθεύσει τη διεύθυνσή του διαβάζοντας
-            αριθμούς**, που σημαίνει ότι δεν την επαλήθευε κανείς. Το `displayName`
-            έφτανε από τον διακομιστή σε **κάθε** κλήση και πεταγόταν.
-
-            🔑 **Και η διαφορά των δύο κειμένων ΕΙΝΑΙ η επαλήθευση**: ο άνθρωπος
-            γράφει «Σαμοθράκης 16» και ο πάροχος μπορεί να απαντήσει «Σαμοθράκης,
-            Εύοσμος» — **χωρίς τον αριθμό**. Μόνο βλέποντας την απάντηση το μαθαίνει.
+            🔴 **ΕΔΩ ΕΠΑΨΑΝ ΝΑ ΦΑΙΝΟΝΤΑΙ ΔΕΚΑΔΙΚΕΣ ΣΥΝΤΕΤΑΓΜΕΝΕΣ** (2026-09-02) — και από τις
+            2026-09-14 το πλαίσιο είναι **κοινό** με τη βιτρίνα (`ResolvedPlaceConfirmation`,
+            ADR-332 D28), που καλεί τον ίδιο `usePlaceResolver` και το πετούσε.
           */}
-          {fresh !== null && accuracy !== null && (
-            <output className="flex flex-col gap-1 rounded-md border border-border bg-card p-3 text-sm">
-              <span className="font-medium text-foreground">{fresh.label}</span>
-              {/*
-                ⚠️ **Η ΑΚΡΙΒΕΙΑ ΓΡΑΦΕΤΑΙ, ΔΕΝ ΥΠΟΝΟΕΙΤΑΙ ΑΠΟ ΤΟ ΣΧΗΜΑ.** Ο κύκλος στον
-                χάρτη τη **δείχνει**· αυτή η πρόταση τη **λέει**. Τα δύο όργανα δεν
-                είναι πλεονασμός: το ένα απαιτεί να κοιτάξεις τον χάρτη και να
-                ερμηνεύσεις, το άλλο διαβάζεται — και **μόνο** το δεύτερο φτάνει σε
-                αναγνώστη οθόνης.
-              */}
-              <span className="text-muted-foreground">
-                {t(`${K}.form.placeAccuracyNote.${accuracy}`)}
-              </span>
-
-              {/*
-                🔴 **Η ΠΡΟΤΑΣΗ ΠΟΥ ΕΛΕΙΠΕ, ΚΑΙ ΠΟΥ ΚΑΝΕΝΑ PORTAL ΔΕΝ ΛΕΕΙ** (2026-09-02).
-                Ο βαθμός ακρίβειας από πάνω περιγράφει **την απάντηση** («ο δρόμος — όχι
-                το κτίριο»)· αυτή η γραμμή λέει **τι απέγινε η ερώτηση** («τον αριθμό
-                τον είπες, δεν επιβεβαιώθηκε»). Ο άνθρωπος που έγραψε «Σαμοθράκης 16»
-                και διάβαζε «ο δρόμος — όχι το κτίριο» **δεν μάθαινε ποτέ** τι έγινε ο
-                αριθμός του: υπέθετε ότι τον αγνοήσαμε, ή ότι έγραψε λάθος.
-
-                🔑 Η στάση έρχεται από τον **υπάρχοντα** πίνακα ταιριάσματος πεδίων του
-                διακομιστή — δες `lib/geocoding/house-number-standing`. Είναι το
-                `UNCONFIRMED_BUT_PLAUSIBLE` της Google, πάνω σε δωρεάν δεδομένα.
-
-                ⚠️ **Δεν εμφανίζεται σε `absent`/`confirmed`**: εκεί δεν υπάρχει κενό να
-                εξηγηθεί, και μια γραμμή που λέει το αυτονόητο εκπαιδεύει τον αναγνώστη
-                να προσπερνά **όλες** τις γραμμές αυτού του πλαισίου.
-              */}
-              {fresh.houseNumber === 'unconfirmed' && (
-                <span className="text-muted-foreground">
-                  {t(`${K}.form.placeHouseNumber.unconfirmed`, {
-                    number: fresh.declaredNumber ?? '',
-                  })}
-                </span>
-              )}
-              {fresh.houseNumber === 'contradicted' && (
-                <span className="text-foreground">
-                  {t(`${K}.form.placeHouseNumber.contradicted`, {
-                    number: fresh.declaredNumber ?? '',
-                    resolved: fresh.resolvedNumber ?? '',
-                  })}
-                </span>
-              )}
-
-              {accuracy !== 'exact' && (
-                <span className="text-muted-foreground">{t(`${K}.form.placeRefine`)}</span>
-              )}
-            </output>
-          )}
+          {fresh !== null && accuracy !== null && <ResolvedPlaceConfirmation place={fresh} />}
           {state === 'not-found' && (
             <p className="text-sm text-foreground">{t(`${K}.form.placeNotFound`)}</p>
           )}

@@ -3002,6 +3002,7 @@ Google Address Validation: `replaced`/`inferred`/`unconfirmed` ανά πεδίο
 - Το πλαίσιο επιβεβαίωσης ζούσε **μέσα** στο `OwnerPropertyPlaceField`· η βιτρίνα καλούσε τον **ίδιο** `usePlaceResolver` και **πετούσε** ό,τι κατάλαβε ο πάροχος. ⇒ κοινό `components/geo/ResolvedPlaceConfirmation.tsx`.
 - Νέα γραμμή χαλάρωσης, **δύο** προτάσεις: `broader` = ήπια («η Θεσσαλονίκη είναι η ευρύτερη περιοχή») · αλλιώς = ζητά έλεγχο («η περιοχή δεν ταίριαξε, βρέθηκε μόνο από τον Τ.Κ.»).
 - `ResolvedPlace` += `relaxation` · `declaredLocality` · `declaredPostalCode` · `localityMatch`, από **μία** μετάφραση (`toResolvedPlace`).
+- 🔒 **Όριο κλειστότητας στη βιτρίνα (CHECK 3.34, 2026-09-15)**: το στατικό import του πλαισίου στο `ShowcaseLocationEditor` ανέβαζε το slice της `/settings/agency-profile/card` σε **14.104** bytes, πάνω από το ταβάνι **13.070** (σφράγιση 10.456 + 25%). Το πλαίσιο υπάρχει **μόνο** μετά από «Εντοπισμός» και απάντηση του παρόχου, ποτέ στο πρώτο καρέ ⇒ `next/dynamic(…, { ssr: false })`, το ίδιο ιδίωμα με το `ShowcaseCardImportDialog` (ADR-841 Α21.19). Μετρημένο μετά: **12.555** bytes, **χωρίς** νέα σφράγιση. Στην προσφορά (`OwnerPropertyPlaceField`) μένει στατικό: εκεί τα κλειδιά ήδη ανήκουν στο slice της φόρμας.
 
 #### Ανοιχτά
 - Τα κλειδιά `addresses.geocoding.attempts.*` (9) **δεν υπάρχουν** στα locales και δεν τα αποδίδει καμία οθόνη — καταγράφηκαν στο `.claude-rules/pending-ratchet-work.md`.

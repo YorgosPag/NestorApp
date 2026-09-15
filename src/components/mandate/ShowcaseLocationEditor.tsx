@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,15 @@ import { ShowcaseImportProvenance } from './ShowcaseImportProvenance';
 import type { SavedEmailChannels } from './ShowcaseEmailConfirmationControl';
 import { WeeklyHoursField } from './WeeklyHoursField';
 
+/**
+ * Όριο κλειστότητας (CHECK 3.34, ADR-332 D28) — το πλαίσιο υπάρχει **μόνο** μετά από «Εντοπισμός» και
+ * απάντηση του παρόχου, ποτέ στο πρώτο καρέ. Ιδίωμα `ShowcaseCardImportDialog`.
+ */
+const ResolvedPlaceConfirmation = dynamic(
+  () => import('@/components/geo/ResolvedPlaceConfirmation').then((mod) => mod.ResolvedPlaceConfirmation),
+  { ssr: false },
+);
+
 interface ShowcaseLocationEditorProps {
   readonly draft: ShowcaseLocationDraft;
   /** Α21.18 — ό,τι είναι **αποθηκευμένο** για αυτό το κατάστημα (κατάσταση επιβεβαίωσης email)· `null` = νέο. */
@@ -54,11 +64,18 @@ interface ShowcaseLocationEditorProps {
 function PlaceSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove' | 'saved'>): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const [focus, setFocus] = React.useState<PlaceFocus | null>(null);
+  // 🔑 ADR-332 D28 — ό,τι κατάλαβε ο πάροχος **λέγεται** στον άνθρωπο (πριν: μόνο ο χάρτης κινούνταν).
+  //    Εφήμερο, όπως στο `OwnerPropertyPlaceField`: επιβεβαίωση, όχι δήλωση — δεν μπαίνει στο πρόχειρο.
+  const [resolved, setResolved] = React.useState<ResolvedPlace | null>(null);
   const { state, resolve } = usePlaceResolver({
     onFound: React.useCallback((place: ResolvedPlace) => {
       setFocus({ point: { lat: place.lat, lng: place.lng }, accuracy: place.accuracy, extent: place.extent });
+      setResolved(place);
     }, []),
-    onCleared: React.useCallback(() => setFocus(null), []),
+    onCleared: React.useCallback(() => {
+      setFocus(null);
+      setResolved(null);
+    }, []),
   });
   const placeHint = draft.place === null ? draft.placeHint : null;
 
@@ -72,6 +89,7 @@ function PlaceSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
             <MapPin aria-hidden="true" /> {t(state === 'resolving' ? SHOWCASE_CARD_IMPORT_KEYS.locating : SHOWCASE_CARD_IMPORT_KEYS.locate)}
           </Button>
           <span className="text-xs text-muted-foreground">{placeHint}</span>
+          {resolved !== null ? <ResolvedPlaceConfirmation place={resolved} className="w-full" /> : null}
           {state === 'not-found' ? <span role="status" className="w-full text-sm text-muted-foreground">{t(SHOWCASE_CARD_IMPORT_KEYS.locateNotFound)}</span> : null}
           {state === 'error' ? <span role="alert" className="w-full text-sm text-destructive">{t(SHOWCASE_CARD_IMPORT_KEYS.locateFailed)}</span> : null}
         </span>
