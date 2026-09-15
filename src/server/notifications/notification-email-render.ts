@@ -244,6 +244,29 @@ function digestItemHtml(message: RenderableMessage, links: EmailLinks): string {
   return `<li style="margin:0 0 14px;">${heading}${bodyParagraphHtml(message)}</li>`;
 }
 
+/**
+ * 🛡️ **Το δίχτυ της σύνοψης — δύο ίδιες γραμμές είναι ΜΙΑ γραμμή** (ADR-777 §8.69.12).
+ *
+ * 🔴 Ζωντανή μέτρηση 2026-09-15: σύνοψη «2 νέες ειδοποιήσεις» με **την ίδια γραμμή δύο φορές**
+ * (μία μείωση, δύο ζητήσεις του ίδιου ανθρώπου). Η **ρίζα** λύθηκε στον παραγωγό (ταυτότητα =
+ * θέμα, `listing-match-notifier`)· αυτό είναι η **δεύτερη** άμυνα (N.7.2 #4) για κάθε άλλον
+ * παραγωγό και για τα ήδη γραμμένα `pending`.
+ *
+ * 🔑 Κλειδί = **ό,τι βλέπει ο αναγνώστης**: τύπος + θέμα + σώμα. Δύο μηνύματα που δεν ξεχωρίζουν
+ * σε **τίποτα** ορατό δεν είναι δύο ειδήσεις. Κρατιέται η **πρώτη** εμφάνιση (και ο σύνδεσμός της).
+ * ⚠️ Μόνο για **απόδοση**: η λογιστική (`planCoversEveryMessage`) μετρά πάντα **όλα** τα μηνύματα.
+ */
+export function distinctDigestMembers<T extends RenderableMessage>(members: readonly T[]): readonly T[] {
+  const seen = new Set<string>();
+  return members.filter((member) => {
+    // `\n` δεν χωρά σε τύπο γεγονότος και ενώνει με ασφάλεια θέμα/σώμα (το θέμα είναι μία γραμμή).
+    const key = `${member.eventType ?? ''}\n${member.subject.trim()}\n${member.content.trim()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /** Το σώμα της σύνοψης σε **απλό κείμενο** — ο αναγνώστης χωρίς HTML, με πλήρη URL. */
 export function renderDigestText(
   members: readonly RenderableMessage[],

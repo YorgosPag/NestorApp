@@ -758,11 +758,15 @@
   },
   "demandListingMatch": {
     "notificationTitle": "Νέα αγγελία ταιριάζει στη ζήτησή σας: «{title}»",
+    "notificationTitleMany": "Νέα αγγελία ταιριάζει σε {count} ζητήσεις σας: «{title}»",
     "reducedTitle": "Νέα αγγελία με μειωμένη τιμή ταιριάζει στη ζήτησή σας: «{title}»",
+    "reducedTitleMany": "Νέα αγγελία με μειωμένη τιμή ταιριάζει σε {count} ζητήσεις σας: «{title}»",
     "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»"
   },
   "demandPriceDrop": {
-    "notificationTitle": "Μειώθηκε η τιμή αγγελίας της ζήτησής σας: «{title}»"
+    "notificationTitle": "Μειώθηκε η τιμή αγγελίας της ζήτησής σας: «{title}»",
+    "notificationTitleMany": "Μειώθηκε η τιμή αγγελίας που ταιριάζει σε {count} ζητήσεις σας: «{title}»",
+    "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»"
   },
   "mandateDecision": {
     "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",

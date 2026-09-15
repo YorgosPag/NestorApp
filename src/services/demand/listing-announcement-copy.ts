@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΤΙ ΛΕΕΙ Η ΕΙΔΟΠΟΙΗΣΗ** — θέμα, κλειδί τίτλου και σώμα, για ταίριασμα και μείωση.
- * @related ADR-777 §8.69 · services/demand/listing-match-notifier.service.ts · listing-price-drop-notifier.ts
+ * @related ADR-777 §8.69 · §8.69.12 · services/demand/listing-match-notifier.service.ts · listing-price-drop-notifier.ts
  * @module services/demand/listing-announcement-copy
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -19,9 +19,18 @@
  * 🏆 **Η πρόταση λέει ΣΕ ΣΧΕΣΗ ΜΕ ΤΙ** — *«σε σχέση με τη χαμηλότερη τιμή των τελευταίων 30
  * ημερών»*. Οι σημάνσεις μείωσης της Zillow κατηγορούνται δημόσια ότι συγκρίνουν με μπαγιάτικες
  * τιμές· εδώ η αναφορά είναι **γραμμένη** δίπλα στο ποσοστό.
+ *
+ * 🏆 §8.69.12 — **ΕΝΑ ΜΗΝΥΜΑ, ΟΙ ΛΟΓΟΙ ΜΕΣΑ**: όταν η αγγελία ταιριάζει σε πολλές ζητήσεις του
+ * ίδιου ανθρώπου, λέγεται **μία** φορά («… σε 2 ζητήσεις σας»), και το «Μπήκε στον
+ * προϋπολογισμό σας» το αποφασίζει **ένας** κριτής για ταίριασμα **και** μείωση
+ * (`strongestBudgetVerdict`).
  */
 
-import { priceDropKind, type PriceDropKind } from '@/lib/demand/demand-announcement';
+import {
+  strongestBudgetVerdict,
+  type AnnouncementReasons,
+  type BudgetVerdict,
+} from '@/lib/demand/demand-announcement';
 import { isReductionFresh } from '@/lib/listings/price-history';
 import type { PriceRole } from '@/lib/properties/price-resolver';
 import { formatEuro } from '@/services/email-templates/base-email-template';
@@ -34,9 +43,55 @@ export interface AnnouncementCopy {
   readonly title: string;
   /** Το κλειδί του κουδουνιού, χωρίς πρόθεμα namespace (`common-shared`). */
   readonly titleKey: string;
+  /** Οι παράμετροι του κλειδιού — `title` πάντα, `count` = πλήθος λόγων. */
+  readonly titleParams: Readonly<Record<string, string>>;
   /** Το σώμα — `undefined` όταν το θέμα τα λέει ήδη όλα. */
   readonly body?: string;
 }
+
+/**
+ * **Μία κεφαλίδα**: κλειδί κουδουνιού + ελληνική πρόταση θέματος, για έναν και για πολλούς λόγους.
+ *
+ * ⚠️ **Ρητό `manyKey`, ποτέ `${key}Many`**: τα κλειδιά μένουν ορατά στο grep και στους
+ * ελεγκτές reachability (CHECK 3.13).
+ */
+interface Lead {
+  readonly key: string;
+  readonly one: string;
+  /** `null` ⇒ η ίδια πρόταση και το ίδιο κλειδί για όσους λόγους κι αν υπάρχουν. */
+  readonly many: { readonly key: string; readonly lead: (count: number) => string } | null;
+}
+
+type LeadName = 'match' | 'matchReduced' | 'matchIntoBudget' | 'priceDrop' | 'priceDropIntoBudget';
+
+const LEADS: Readonly<Record<LeadName, Lead>> = {
+  match: {
+    key: 'demandListingMatch.notificationTitle',
+    one: 'Νέα αγγελία ταιριάζει στη ζήτησή σας',
+    many: {
+      key: 'demandListingMatch.notificationTitleMany',
+      lead: (count) => `Νέα αγγελία ταιριάζει σε ${count} ζητήσεις σας`,
+    },
+  },
+  matchReduced: {
+    key: 'demandListingMatch.reducedTitle',
+    one: 'Νέα αγγελία με μειωμένη τιμή ταιριάζει στη ζήτησή σας',
+    many: {
+      key: 'demandListingMatch.reducedTitleMany',
+      lead: (count) => `Νέα αγγελία με μειωμένη τιμή ταιριάζει σε ${count} ζητήσεις σας`,
+    },
+  },
+  matchIntoBudget: { key: 'demandListingMatch.intoBudgetTitle', one: 'Μπήκε στον προϋπολογισμό σας', many: null },
+  priceDrop: {
+    key: 'demandPriceDrop.notificationTitle',
+    one: 'Μειώθηκε η τιμή αγγελίας της ζήτησής σας',
+    many: {
+      key: 'demandPriceDrop.notificationTitleMany',
+      lead: (count) => `Μειώθηκε η τιμή αγγελίας που ταιριάζει σε ${count} ζητήσεις σας`,
+    },
+  },
+  priceDropIntoBudget: { key: 'demandPriceDrop.intoBudgetTitle', one: 'Μπήκε στον προϋπολογισμό σας', many: null },
+};
 
 /**
  * Η μονάδα της τιμής ανά ρόλο — εξαντλητική: τέταρτος ρόλος δεν μεταγλωττίζεται εδώ μέχρι
@@ -57,6 +112,17 @@ function subjectOf(lead: string, listingTitle: string): string {
   return listingTitle.length > 0 ? `${lead}: «${listingTitle}»` : lead;
 }
 
+/** Θέμα + κλειδί + παράμετροι μιας κεφαλίδας, για το πλήθος λόγων αυτού του θέματος. */
+function headerOf(lead: Lead, listing: PublicListing, reasons: AnnouncementReasons): AnnouncementCopy {
+  const count = reasons.demandIds.length;
+  const many = count > 1 ? lead.many : null;
+  return {
+    title: subjectOf(many ? many.lead(count) : lead.one, listing.title),
+    titleKey: many ? many.key : lead.key,
+    titleParams: { title: listing.title, count: String(count) },
+  };
+}
+
 /**
  * **Η πρόταση της μείωσης** — ποσά, ποσοστό, €/τ.μ. (μόνο στην πώληση) και η αναφορά.
  *
@@ -75,20 +141,27 @@ export function reductionSentence(reduction: PriceReduction, areaSqm: number | n
   return `${amounts}${perSqm}, σε σχέση με τη χαμηλότερη τιμή των τελευταίων 30 ημερών.`;
 }
 
-/** Η δεύτερη πρόταση του `'into-budget'`: **πόσο** κάτω από το όριο — το νούμερο που μετρά. */
-function intoBudgetSentence(priceMax: number, reduction: PriceReduction): string {
-  return `Είναι πλέον ${formatEuro(priceMax - reduction.to)} κάτω από το ανώτατο όριο της ζήτησής σας.`;
+/**
+ * Η δεύτερη πρόταση του `'into-budget'`: **πόσο** κάτω από το όριο — το νούμερο που μετρά.
+ *
+ * ⚠️ Με πολλούς λόγους το όριο **ονομάζεται**: «το ανώτατο όριο της ζήτησής σας» θα ήταν
+ * ασαφές όταν οι ζητήσεις έχουν διαφορετικά όρια.
+ */
+function intoBudgetSentence(priceMax: number, reduction: PriceReduction, reasonCount: number): string {
+  const limit =
+    reasonCount > 1 ? `το όριο ${formatEuro(priceMax)} μιας ζήτησής σας` : 'το ανώτατο όριο της ζήτησής σας';
+  return `Είναι πλέον ${formatEuro(priceMax - reduction.to)} κάτω από ${limit}.`;
 }
 
 function bodyOf(
   listing: PublicListing,
   reduction: PriceReduction,
-  kind: PriceDropKind,
-  priceMax: number | null,
+  verdict: BudgetVerdict,
+  reasons: AnnouncementReasons,
 ): string {
   const sentence = reductionSentence(reduction, listing.areaSqm);
-  return kind === 'into-budget' && priceMax !== null
-    ? `${sentence} ${intoBudgetSentence(priceMax, reduction)}`
+  return verdict.kind === 'into-budget'
+    ? `${sentence} ${intoBudgetSentence(verdict.priceMax, reduction, reasons.demandIds.length)}`
     : sentence;
 }
 
@@ -107,36 +180,29 @@ export function freshReductionOf(listing: PublicListing, nowMs: number): PriceRe
  */
 export function matchAnnouncementCopy(
   listing: PublicListing,
-  priceMax: number | null,
+  reasons: AnnouncementReasons,
   nowMs: number,
 ): AnnouncementCopy {
   const reduction = freshReductionOf(listing, nowMs);
-  if (reduction === null) {
-    return {
-      title: subjectOf('Νέα αγγελία ταιριάζει στη ζήτησή σας', listing.title),
-      titleKey: 'demandListingMatch.notificationTitle',
-    };
-  }
+  if (reduction === null) return headerOf(LEADS.match, listing, reasons);
 
-  const kind = priceDropKind(priceMax, reduction);
-  return kind === 'into-budget'
-    ? {
-        title: subjectOf('Μπήκε στον προϋπολογισμό σας', listing.title),
-        titleKey: 'demandListingMatch.intoBudgetTitle',
-        body: bodyOf(listing, reduction, kind, priceMax),
-      }
-    : {
-        title: subjectOf('Νέα αγγελία με μειωμένη τιμή ταιριάζει στη ζήτησή σας', listing.title),
-        titleKey: 'demandListingMatch.reducedTitle',
-        body: bodyOf(listing, reduction, kind, priceMax),
-      };
+  const verdict = strongestBudgetVerdict(reasons.priceMaxes, reduction);
+  const lead = verdict.kind === 'into-budget' ? LEADS.matchIntoBudget : LEADS.matchReduced;
+  return { ...headerOf(lead, listing, reasons), body: bodyOf(listing, reduction, verdict, reasons) };
 }
 
-/** **Το email μείωσης** — για αγγελία που ο ζητών **ήδη** ξέρει. */
-export function priceDropCopy(listing: PublicListing, reduction: PriceReduction): AnnouncementCopy {
-  return {
-    title: subjectOf('Μειώθηκε η τιμή αγγελίας της ζήτησής σας', listing.title),
-    titleKey: 'demandPriceDrop.notificationTitle',
-    body: reductionSentence(reduction, listing.areaSqm),
-  };
+/**
+ * **Το email μείωσης** — για αγγελία που ο ζητών **ήδη** ξέρει.
+ *
+ * 🏆 §8.69.12 — και εδώ το `'into-budget'`: αγγελία που ταίριαζε (π.χ. με την υποχώρηση
+ * τιμής του `demand-concessions.ts`) και η μείωση την έφερε **κάτω** από το όριο.
+ */
+export function priceDropCopy(
+  listing: PublicListing,
+  reduction: PriceReduction,
+  reasons: AnnouncementReasons,
+): AnnouncementCopy {
+  const verdict = strongestBudgetVerdict(reasons.priceMaxes, reduction);
+  const lead = verdict.kind === 'into-budget' ? LEADS.priceDropIntoBudget : LEADS.priceDrop;
+  return { ...headerOf(lead, listing, reasons), body: bodyOf(listing, reduction, verdict, reasons) };
 }

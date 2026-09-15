@@ -38,8 +38,10 @@ function metricsOf(report: ListingMatchReport): Record<string, number> {
     alreadyKnown: report.alreadyKnown,
     optedOut: report.optedOut,
     considered: report.considered,
+    // ADR-777 §8.69.12 — ζεύγη (ζήτηση, αγγελία) που έγιναν ΛΟΓΟΙ σε κοινό θέμα, αντί για δεύτερο email.
+    collapsedReasons: report.collapsedReasons,
     demandsConsidered: report.demandsConsidered,
-    demandsTruncated: report.demandsTruncated,
+    recipientsTruncated: report.recipientsTruncated,
     truncated: report.truncated ? 1 : 0,
     // ADR-777 §8.69 — οι μειώσεις τιμής· και οι ΣΙΩΠΕΣ μετριούνται, όχι μόνο οι αποστολές.
     priceDropsAnnounced: report.priceDrops.announced,
@@ -59,9 +61,9 @@ export async function runDemandListingMatchAnnounce(): Promise<CronJobResult> {
   return {
     summary:
       `announced ${metrics.announced}, already-known ${metrics.alreadyKnown}, ` +
-      `opted-out ${metrics.optedOut} (considered ${metrics.considered} ζεύγη σε ` +
-      `${metrics.demandsConsidered} ζητήσεις` +
-      `${metrics.demandsTruncated > 0 ? `, ${metrics.demandsTruncated} ζητήσεις TRUNCATED` : ''}` +
+      `opted-out ${metrics.optedOut} (considered ${metrics.considered} θέματα σε ` +
+      `${metrics.demandsConsidered} ζητήσεις, collapsed ${metrics.collapsedReasons}` +
+      `${metrics.recipientsTruncated > 0 ? `, ${metrics.recipientsTruncated} παραλήπτες TRUNCATED` : ''}` +
       `${metrics.truncated === 1 ? ', ΔΕΞΑΜΕΝΗ TRUNCATED' : ''}) · ` +
       `price-drops announced ${metrics.priceDropsAnnounced}, already-known ` +
       `${metrics.priceDropsAlreadyKnown}, predates-match ${metrics.priceDropsPredatesMatch}`,

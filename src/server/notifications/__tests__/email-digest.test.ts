@@ -156,7 +156,12 @@ describe('Σ — η σύνοψη λέει ό,τι έλεγαν τα μέλη τ�
   });
 
   it('Σ2 — το θέμα λέει το πλήθος', () => {
-    const plan = planEmailDelivery([msg({ id: 'a' }), msg({ id: 'b' }), msg({ id: 'c' })]);
+    // ⚠️ §8.69.12 — τρεις ΔΙΑΚΡΙΤΕΣ ειδήσεις. Τρία ταυτόσημα μέλη είναι πλέον ΜΙΑ γραμμή (Τ1).
+    const plan = planEmailDelivery([
+      msg({ id: 'a', subject: 'Θέμα Α' }),
+      msg({ id: 'b', subject: 'Θέμα Β' }),
+      msg({ id: 'c', subject: 'Θέμα Γ' }),
+    ]);
     expect(digestsOf(plan)[0].subject).toContain('3');
   });
 
@@ -273,13 +278,14 @@ describe('Γ — η σύνοψη γράφεται στη γλώσσα του π�
     // ⚠️ **Η άγκυρα που κάνει το §8.29 μη-διακοσμητικό.** Ένα test που ελέγχει
     // μόνο ελληνικά περνά ακόμη κι αν η γλώσσα αγνοείται εντελώς. Εδώ αλλάζει
     // **ένα** πεδίο της εισόδου και απαιτείται να αλλάξει ΟΛΟ το περιτύλιγμα.
+    // ⚠️ §8.69.12 — δύο ΔΙΑΚΡΙΤΑ ουδέτερα θέματα: ταυτόσημα μέλη γίνονται μία γραμμή (Τ1).
     const greek = digestFor([
       neutral({ id: 'a', language: 'el' }),
-      neutral({ id: 'b', language: 'el' }),
+      neutral({ id: 'b', language: 'el', subject: 'ABC-456' }),
     ]);
     const english = digestFor([
       neutral({ id: 'a', language: 'en' }),
-      neutral({ id: 'b', language: 'en' }),
+      neutral({ id: 'b', language: 'en', subject: 'ABC-456' }),
     ]);
 
     expect(greek.subject).not.toBe(english.subject);
@@ -324,10 +330,11 @@ describe('Γ — η σύνοψη γράφεται στη γλώσσα του π�
     // Ένα email έχει **ένα** θέμα: αν ενώνονταν, κάποιος θα αποφάσιζε σιωπηλά
     // ποια γλώσσα κερδίζει — απάντηση που θα εξαρτιόταν από τη σειρά της ουράς.
     const messages = [
-      msg({ id: 'a', to: 'ίδιος@x.gr', language: 'el' }),
-      msg({ id: 'b', to: 'ίδιος@x.gr', language: 'el' }),
-      msg({ id: 'c', to: 'ίδιος@x.gr', language: 'en' }),
-      msg({ id: 'd', to: 'ίδιος@x.gr', language: 'en' }),
+      // ⚠️ §8.69.12 — διακριτά θέματα, ώστε κάθε ομάδα να μένει σύνοψη (όχι σύμπτυξη σε μία γραμμή).
+      msg({ id: 'a', to: 'ίδιος@x.gr', language: 'el', subject: 'ABC-1' }),
+      msg({ id: 'b', to: 'ίδιος@x.gr', language: 'el', subject: 'ABC-2' }),
+      msg({ id: 'c', to: 'ίδιος@x.gr', language: 'en', subject: 'ABC-3' }),
+      msg({ id: 'd', to: 'ίδιος@x.gr', language: 'en', subject: 'ABC-4' }),
     ];
 
     const digests = digestsOf(planEmailDelivery(messages));
@@ -486,5 +493,53 @@ describe('Η — το ΘΕΜΑ δεν είναι ΣΩΜΑ', () => {
       'utf8',
     );
     expect(source).toContain("content: body ?? '',");
+  });
+});
+
+// =============================================================================
+// Τ — ADR-777 §8.69.12: ΔΥΟ ΙΔΙΕΣ ΓΡΑΜΜΕΣ ΕΙΝΑΙ ΜΙΑ ΓΡΑΜΜΗ (το δίχτυ)
+// =============================================================================
+
+describe('Τ — §8.69.12: η σύνοψη δεν λέει το ίδιο πράγμα δύο φορές', () => {
+  const DROP = 'properties.demand_price_drop';
+  const twin = (id: string): PendingEmail =>
+    msg({ id, subject: 'Μειώθηκε η τιμή: «Χ»', content: 'Από 177.000 σε 170.000', eventType: DROP });
+  const occurrences = (text: string, needle: string): number => text.split(needle).length - 1;
+
+  it('Τ1 🔴 ΤΟ ΖΩΝΤΑΝΟ ΕΥΡΗΜΑ — δύο ταυτόσημα μέλη ⇒ ΕΝΑ email με το ΔΙΚΟ του θέμα, και τα δύο μετρημένα', () => {
+    const messages = [twin('a'), twin('b')];
+
+    const plan = planEmailDelivery(messages);
+
+    const [digest] = digestsOf(plan);
+    expect(digest.members.map((member) => member.id)).toEqual(['a', 'b']);
+    expect(digest.subject).toBe('Μειώθηκε η τιμή: «Χ»');
+    expect(occurrences(digest.content, 'Από 177.000 σε 170.000')).toBe(1);
+    expect(planCoversEveryMessage(plan, messages)).toBe(true);
+  });
+
+  it('Τ2 — τρία μέλη, δύο ίδια ⇒ σύνοψη ΔΥΟ γραμμών (το θέμα μετρά γραμμές, όχι έγγραφα)', () => {
+    const other = msg({ id: 'c', subject: 'Άλλη είδηση', content: 'Άλλο σώμα', eventType: DROP });
+    const reference = digestsOf(planEmailDelivery([twin('x'), other]))[0];
+
+    const [digest] = digestsOf(planEmailDelivery([twin('a'), twin('b'), other]));
+
+    expect(digest.members).toHaveLength(3);
+    expect(digest.subject).toBe(reference.subject);
+    expect(occurrences(digest.html, 'Από 177.000 σε 170.000')).toBe(1);
+  });
+
+  it('Τ3 🔴 ΜΕΤΑΛΛΑΞΗ ΕΙΣΟΔΟΥ — ίδιο θέμα, ΑΛΛΟ σώμα ⇒ ΔΥΟ γραμμές (η ετυμηγορία ΓΥΡΙΖΕΙ)', () => {
+    const [digest] = digestsOf(planEmailDelivery([twin('a'), { ...twin('b'), content: 'Από 170.000 σε 165.000' }]));
+
+    expect(digest.subject).not.toBe('Μειώθηκε η τιμή: «Χ»');
+    expect(digest.content).toContain('Από 177.000 σε 170.000');
+    expect(digest.content).toContain('Από 170.000 σε 165.000');
+  });
+
+  it('Τ4 🔴 ΜΕΤΑΛΛΑΞΗ ΕΙΣΟΔΟΥ — ίδιο θέμα και σώμα, ΑΛΛΟΣ τύπος ⇒ ΔΥΟ γραμμές', () => {
+    const [digest] = digestsOf(planEmailDelivery([twin('a'), { ...twin('b'), eventType: 'properties.demand_listing_match' }]));
+
+    expect(occurrences(digest.content, 'Από 177.000 σε 170.000')).toBe(2);
   });
 });

@@ -1,7 +1,7 @@
 /**
  * @fileoverview **Η ΕΙΔΗΣΗ ΦΤΑΝΕΙ ΣΤΟΝ ΖΗΤΟΥΝΤΑ** — «βγήκε αγγελία που ταιριάζει
  * στη ζήτησή σου», η αντίθετη κατεύθυνση από το `interest-notifier.service.ts`.
- * @related ADR-777 §7 (Α9 · Α5) · §8.69 · SPEC-777B §12.6 · lib/demand/demand-answer.ts
+ * @related ADR-777 §7 (Α9 · Α5) · §8.69 · §8.69.12 · SPEC-777B §12.6 · lib/demand/demand-answer.ts
  * @module services/demand/listing-match-notifier.service
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -11,32 +11,33 @@
  * Η κρίση «ταιριάζει αυτή η αγγελία σε αυτή τη ζήτηση;» υπάρχει ήδη, δοκιμασμένη και
  * καθαρή: {@link matchDemand} (`demand-matching.ts`), τροφοδοτημένη από
  * {@link listingFactsFrom} + {@link knowledgeFromListings} (`demand-answer.ts`) — η
- * ίδια αλυσίδα που χρησιμοποιεί ο πελάτης (`answerDemand` → `useDemandAnswer`) όταν ο
- * χρήστης ανοίγει την οθόνη του χειροκίνητα. Εδώ **δεν** καλείται το `answerDemand`
- * ολόκληρο: εκείνο υπολογίζει επίσης υποχωρήσεις, εμπόδια απορριφθεισών και τον
- * ανταγωνισμό — τρία πράγματα άχρηστα σε μια σάρωση που νοιάζεται **μόνο** για το
- * `matched`. Δύο ανεξάρτητοι κριτές για «ταιριάζει;» θα ήταν το σχήμα του ADR-749.
+ * ίδια αλυσίδα που χρησιμοποιεί ο πελάτης (`answerDemand` → `useDemandAnswer`). Εδώ
+ * **δεν** καλείται το `answerDemand` ολόκληρο: εκείνο υπολογίζει επίσης υποχωρήσεις,
+ * εμπόδια απορριφθεισών και ανταγωνισμό — άχρηστα σε μια σάρωση που νοιάζεται **μόνο**
+ * για το `matched`. Δύο ανεξάρτητοι κριτές για «ταιριάζει;» θα ήταν το σχήμα του ADR-749.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔑 ΓΙΑΤΙ ΔΕΝ ΞΑΝΑΧΡΗΣΙΜΟΠΟΙΗΘΗΚΕ ΤΟ `announcement-pass.ts`
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Ο κοινός πυρήνας εκεί απαντά *«άλλαξε ΑΡΚΕΤΑ ένα ΜΕΓΕΘΟΣ ώστε να αξίζει νέα
- * ειδοποίηση;»* (ζώνες πλήθους). Η ερώτηση εδώ είναι διαφορετική: *«εμφανίστηκε μια
- * νέα ΤΑΥΤΟΤΗΤΑ που δεν είχαμε ξαναπεί;»* — δεν υπάρχει «λίγο παραπάνω ταίριασμα»,
- * υπάρχει μόνο «αυτή η αγγελία, σε αυτή τη ζήτηση, ξαναειπωμένη ή όχι». Το ζόρισμα
- * του υπάρχοντος πυρήνα σε αυτό το σχήμα θα έκρυβε τη διαφορά αντί να τη δηλώνει — δες
- * το σχόλιο πάνω από {@link demandListingMatchEventId} (`demand-announcement.ts`) για
- * το γιατί η ζώνη θα ήταν εδώ **λανθασμένη**, όχι απλώς περιττή.
+ * Ο κοινός πυρήνας εκεί απαντά *«άλλαξε ΑΡΚΕΤΑ ένα ΜΕΓΕΘΟΣ;»* (ζώνες πλήθους). Η ερώτηση
+ * εδώ είναι *«εμφανίστηκε μια νέα ΤΑΥΤΟΤΗΤΑ που δεν είχαμε ξαναπεί;»* — δες το σχόλιο πάνω
+ * από {@link demandListingMatchEventId} για το γιατί η ζώνη θα ήταν εδώ **λανθασμένη**.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🏆 ADR-777 §8.69 — ΚΑΙ Η ΜΕΙΩΣΗ ΤΙΜΗΣ ΠΕΡΝΑ ΑΠΟ ΤΟΝ ΙΔΙΟ ΒΡΟΧΟ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Μια μείωση ενδιαφέρει **μόνο** ζήτηση στην οποία η αγγελία **ταιριάζει ακόμη** με τη νέα
- * τιμή — άρα η ερώτηση *«σε ποιον τη λέμε;»* έχει **ήδη** απάντηση εδώ, από τον **ίδιο**
- * κριτή. Ένας δεύτερος βρόχος θα ξαναέτρεχε τη μηχανή ταιριάσματος και θα μπορούσε να
- * διαφωνήσει με αυτόν.
+ * Μια μείωση ενδιαφέρει **μόνο** αγγελία που **ταιριάζει ακόμη** με τη νέα τιμή — άρα το
+ * *«σε ποιον τη λέμε;»* έχει **ήδη** απάντηση εδώ, από τον **ίδιο** κριτή.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 ADR-777 §8.69.12 — ΕΝΑΣ ΑΝΘΡΩΠΟΣ, ΜΙΑ ΑΓΓΕΛΙΑ, ΜΙΑ ΕΙΔΗΣΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο βρόχος ήταν **ανά ζήτηση** ⇒ δύο ζητήσεις του ίδιου ανθρώπου = δύο email για την ίδια
+ * αγγελία (μετρημένο ζωντανά, §8.69.11 #1). Τώρα είναι **ανά παραλήπτη → ανά αγγελία**
+ * (`listing-match-topics.ts`), και οι ζητήσεις ταξιδεύουν ως **λόγοι** (`meta.reasons`).
  *
  * **Layering**: service — Admin SDK + orchestrator. Η **κρίση** ζει στο `lib/demand/`.
  */
@@ -48,7 +49,7 @@ import { todayLocalDate } from '@/lib/date-local';
 import { NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES, getCurrentEnvironment } from '@/config/notification-events';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import {
-  demandListingMatchEventId,
+  recipientListingMatchEventId,
   type MatchHistory,
 } from '@/lib/demand/demand-announcement';
 import {
@@ -69,55 +70,49 @@ import { readLivePublicListings } from '@/services/listings/live-public-listings
 import type { PublicListing } from '@/types/public-listing';
 import type { PropertyDemand } from '@/types/property-demand';
 
-import { readMatchLedger, type MatchLedger } from './demand-match-ledger';
+import { readRecipientLedger, type RecipientLedger, type TopicKnowledge } from './demand-match-ledger';
 import { matchAnnouncementCopy } from './listing-announcement-copy';
 import {
-  EMPTY_PRICE_DROP_TALLY,
   addPriceDropOutcome,
   announcePriceDrop,
   dispatchOutcomeOf,
   type DispatchOutcome,
-  type PriceDropTally,
 } from './listing-price-drop-notifier';
+import {
+  EMPTY_TALLY,
+  countMatch,
+  groupTopicsByRecipient,
+  mergeTallies,
+  type ListingTopic,
+  type MatchTally,
+} from './listing-match-topics';
 
 const logger = createModuleLogger('demand/listing-match-notifier');
 
 /**
- * 🔴 **Πόσα ΝΕΑ ταιριάσματα ανακοινώνονται ανά ζήτηση, ΣΕ ΕΝΑ ΠΕΡΑΣΜΑ.**
+ * 🔴 **Πόσα ΝΕΑ ταιριάσματα ανακοινώνονται ανά ΑΝΘΡΩΠΟ, ΣΕ ΕΝΑ ΠΕΡΑΣΜΑ.**
  *
  * ⚠️ **Δεν είναι το ίδιο όριο με το `MAX_ANNOUNCE_PROPERTIES` / `MAX_LIVE_LISTINGS`.**
- * Εκείνα φράζουν πόσα **υποψήφια εξετάζονται** συνολικά σε μια σάρωση. Αυτό φράζει
- * πόσα **email φτάνουν σε ΕΝΑΝ άνθρωπο** σε ένα πέρασμα — και χρειάζεται δικό του
- * όριο επειδή μια πλατιά ζήτηση («οποιοδήποτε διαμέρισμα, οπουδήποτε») μπορεί να
- * ταιριάξει με **εκατοντάδες** αγγελίες με μιας, ειδικά στο πρώτο πέρασμα πάνω από
- * ήδη υπάρχον απόθεμα (backfill).
+ * Εκείνα φράζουν πόσα **υποψήφια εξετάζονται** συνολικά. Αυτό φράζει πόσα **email φτάνουν
+ * σε ΕΝΑΝ άνθρωπο** σε ένα πέρασμα — μια πλατιά ζήτηση («οποιοδήποτε διαμέρισμα, οπουδήποτε»)
+ * μπορεί να ταιριάξει με **εκατοντάδες** αγγελίες με μιας (backfill).
  *
- * 🔴 **ΜΕΤΡΑ ΜΟΝΟ ΝΕΕΣ ΑΝΑΚΟΙΝΩΣΕΙΣ — και μέχρι 2026-09-15 δεν μετρούσε αυτό.** Το όριο
- * εφαρμοζόταν στα **πρώτα 10 ταιριάσματα**, γνωστά και άγνωστα μαζί. Από το δεύτερο
- * πέρασμα τα ίδια 10 έβγαιναν «ήδη γνωστά» και η **11η αγγελία δεν ανακοινωνόταν ποτέ**
- * — ενώ αυτό ακριβώς το σχόλιο υποσχόταν *«σε δόσεις των 10»*. Τώρα το καθολόγιο
- * (`demand-match-ledger.ts`) ξεχωρίζει τα γνωστά **πριν** από το όριο, και οι δόσεις
- * είναι **πραγματικές**. Άγκυρα: `Δ1` στο `listing-price-drop-notifier.test.ts`.
+ * 🔑 **§8.69.12 — ανά παραλήπτη, όχι ανά ζήτηση.** Ήταν «ανά ζήτηση», ενώ η πρόθεση ήταν
+ * πάντα «ανά άνθρωπο»: με 3 πλατιές ζητήσεις ο ίδιος άνθρωπος έπαιρνε 30 email.
+ *
+ * 🔴 **ΜΕΤΡΑ ΜΟΝΟ ΝΕΕΣ ΑΝΑΚΟΙΝΩΣΕΙΣ** — το καθολόγιο ξεχωρίζει τα γνωστά **πριν** από το
+ * όριο, άρα οι δόσεις είναι **πραγματικές**. Άγκυρα: `Δ1` στο `listing-price-drop-notifier.test.ts`.
  */
-export const MAX_NEW_MATCHES_PER_DEMAND = 10;
+export const MAX_NEW_MATCHES_PER_RECIPIENT = 10;
 
 /** Τι απέγινε **ένα** ταίριασμα. Ονομασμένο, ποτέ boolean. */
 export type MatchOutcome = DispatchOutcome;
 
 /** Τι έκανε το πέρασμα. **Κλειστή λογιστική.** */
-export interface ListingMatchReport {
-  readonly announced: number;
-  readonly alreadyKnown: number;
-  readonly optedOut: number;
-  /** Πόσα ζεύγη (ζήτηση, αγγελία) κρίθηκαν συνολικά — ο παρονομαστής. */
-  readonly considered: number;
+export interface ListingMatchReport extends MatchTally {
   readonly demandsConsidered: number;
-  /** Πόσες ζητήσεις χτύπησαν το {@link MAX_NEW_MATCHES_PER_DEMAND} σε αυτό το πέρασμα. */
-  readonly demandsTruncated: number;
   /** `true` όταν η ΔΕΞΑΜΕΝΗ ζητήσεων ή αγγελιών αγγίχθηκε (δες τους readers). */
   readonly truncated: boolean;
-  /** ADR-777 §8.69 — οι μειώσεις τιμής, **κάθε** κάδος, και οι σιωπές. */
-  readonly priceDrops: PriceDropTally;
 }
 
 /** Κλείνει το άθροισμα; Υπάρχει **για να αποτύχει θορυβωδώς**. */
@@ -127,9 +122,8 @@ export function listingMatchReportBalances(report: ListingMatchReport): boolean 
 
 /**
  * **Ο προορισμός ενός ταιριάσματος** (ADR-849 §6δ Β1) — η **δημόσια** αγγελία, με χώρο
- * τον **ιδιωτικό** χώρο του ζητούντος: εκεί ζει η ζήτησή του (`PROPERTY_DEMANDS`,
- * `mode: 'userId'`). Ο χώρος εδώ είναι **ετικέτα προέλευσης** — η δημόσια αγγελία
- * ανοίγει εκτός χώρου.
+ * τον **ιδιωτικό** χώρο του ζητούντος: εκεί ζουν οι ζητήσεις του (`PROPERTY_DEMANDS`,
+ * `mode: 'userId'`). Ο χώρος εδώ είναι **ετικέτα προέλευσης**.
  *
  * 🔑 Εξάγεται ώστε ο ανιχνευτής απόκλισης να ρωτά **αυτόν** τον κανόνα, όχι αντίγραφό του.
  * Τον μοιράζεται και η **μείωση τιμής** (§8.69): ίδια αγγελία, ίδια πόρτα.
@@ -141,53 +135,43 @@ export function listingMatchDestination(
   return viewDestination(listingDetailHref(listingId), personalWorkspace(recipientId));
 }
 
-/** Ό,τι μοιράζονται όλες οι ανακοινώσεις **μίας** ζήτησης σε ένα πέρασμα. */
-interface DemandPass {
-  readonly demand: PropertyDemand;
-  readonly matched: readonly PublicListing[];
-  readonly ledger: MatchLedger;
+/** Ό,τι μοιράζονται όλες οι ανακοινώσεις **ενός** ανθρώπου σε ένα πέρασμα. */
+interface RecipientPass {
+  readonly recipientId: string;
+  readonly topics: readonly ListingTopic[];
+  readonly ledger: RecipientLedger;
   readonly nowMs: number;
 }
 
 /**
- * Στέλνει **μία** ειδοποίηση για **ένα** ταίριασμα — ή τη σιωπά αν τη γνωρίζει ήδη.
+ * Στέλνει **μία** ειδοποίηση για **ένα** θέμα — ή τη σιωπά αν τη γνωρίζει ήδη.
  *
  * ⚠️ **`titleKey` χωρίς πρόθεμα namespace**, ίδιο μετρημένο λόγο με το
- * `interest-notifier.service.ts:227-230`: ο `NotificationDrawer` φορτώνει
- * `common-shared`, άρα το κλειδί ζει εκεί.
+ * `interest-notifier.service.ts`: ο `NotificationDrawer` φορτώνει `common-shared`.
  *
- * 🔑 **Το κείμενο το αποφασίζει το `matchAnnouncementCopy`** (§8.69): αγγελία που ταιριάζει
- * για πρώτη φορά **με ήδη μειωμένη τιμή** λέγεται **μία** φορά, με τη μείωση μέσα.
+ * 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΑΝΗΚΕΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ, ΟΧΙ ΣΤΟΝ ΑΝΑΓΝΩΣΤΗ** (ADR-841 §7 Α18): ο drawer
+ * αποδίδει «Προβολή» μόνο με `actions[0].url`. **ΔΗΜΟΣΙΑ** αγγελία — ο ζητών δεν κατέχει
+ * τίποτα εδώ, το `/offers/<id>` θα ήταν ψεύτικη πόρτα. Το `label` δεν φτάνει ποτέ σε οθόνη.
  */
-async function announceOneMatch(pass: DemandPass, listing: PublicListing): Promise<MatchOutcome> {
-  const { demand } = pass;
-  const copy = matchAnnouncementCopy(listing, demand.features.priceMax, pass.nowMs);
+async function announceOneMatch(pass: RecipientPass, topic: ListingTopic): Promise<MatchOutcome> {
+  const { listing, reasons } = topic;
+  const copy = matchAnnouncementCopy(listing, reasons, pass.nowMs);
 
   const result = await dispatchNotification({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH,
-    recipientId: demand.authorUserId,
+    recipientId: pass.recipientId,
     // Η ζήτηση **δεν έχει εταιρεία-παραλήπτη**· το επίπεδο απομόνωσής της είναι
     // ο συγγραφέας της (`tenant-config.ts` → `PROPERTY_DEMANDS`, `mode: 'userId'`).
-    tenantId: demand.authorUserId,
+    tenantId: pass.recipientId,
     title: copy.title,
     body: copy.body,
     titleKey: copy.titleKey,
-    titleParams: { title: listing.title },
-    // 🔑 Ζεύγος ταυτότητας, ΠΟΤΕ ζώνη — δες `demandListingMatchEventId` για το γιατί.
-    eventId: demandListingMatchEventId(demand.id, listing.id),
+    titleParams: copy.titleParams,
+    // 🔑 Θέμα, ΠΟΤΕ ζήτηση — δες `recipientListingMatchEventId`. Οι ζητήσεις είναι λόγοι.
+    eventId: recipientListingMatchEventId(listing.id),
+    reasons: reasons.demandIds,
     entityId: listing.id,
-    // 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΑΝΗΚΕΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ, ΟΧΙ ΣΤΟΝ ΑΝΑΓΝΩΣΤΗ** (ADR-841 §7 Α18).
-    //
-    // Ο `NotificationDrawer` αποδίδει το κουμπί «Προβολή» **μόνο αν** υπάρχει
-    // `actions[0].url` — και ο μηχανισμός **δούλευε ήδη**. Έλειπε **η τροφοδοσία**.
-    //
-    // ⛔ **ΜΗΝ λυθεί με ευρετική τίτλου στον drawer** — θα έσπαγε με κάθε αλλαγή κειμένου.
-    //
-    // 🔑 **ΔΗΜΟΣΙΑ αγγελία, και είναι απόφαση**: ο παραλήπτης είναι ο **ζητών** — δεν
-    //    κατέχει τίποτα εδώ. Το `/offers/<id>` θα ήταν **ψεύτικη πόρτα**.
-    //
-    // ⚠️ Το `label` **δεν φτάνει ποτέ σε οθόνη** (σταθερό αγγλικό αναγνωριστικό, N.11).
-    ...listingMatchDestination(listing.id, demand.authorUserId),
+    ...listingMatchDestination(listing.id, pass.recipientId),
     source: {
       service: SOURCE_SERVICES.CRM,
       feature: 'demand-listing-match',
@@ -210,119 +194,78 @@ function matchedListings(
   );
 }
 
-/** Ό,τι μαζεύει ο βρόχος — πριν αποκτήσει το `demandsConsidered`/`truncated` του περάσματος. */
-interface MatchTally {
-  readonly announced: number;
-  readonly alreadyKnown: number;
-  readonly optedOut: number;
-  readonly considered: number;
-  readonly demandsTruncated: number;
-  readonly priceDrops: PriceDropTally;
-}
-
-const EMPTY_TALLY: MatchTally = {
-  announced: 0,
-  alreadyKnown: 0,
-  optedOut: 0,
-  considered: 0,
-  demandsTruncated: 0,
-  priceDrops: EMPTY_PRICE_DROP_TALLY,
-};
-
-const OUTCOME_FIELD: Readonly<Record<MatchOutcome, 'announced' | 'alreadyKnown' | 'optedOut'>> = {
-  announced: 'announced',
-  'already-known': 'alreadyKnown',
-  'opted-out': 'optedOut',
-};
-
-function countMatch(tally: MatchTally, outcome: MatchOutcome): MatchTally {
-  const field = OUTCOME_FIELD[outcome];
-  return { ...tally, [field]: tally[field] + 1, considered: tally.considered + 1 };
-}
-
-function mergeTallies(a: MatchTally, b: MatchTally): MatchTally {
-  const priceDrops = { ...a.priceDrops };
-  for (const key of Object.keys(b.priceDrops) as (keyof PriceDropTally)[]) {
-    priceDrops[key] = a.priceDrops[key] + b.priceDrops[key];
-  }
-  return {
-    announced: a.announced + b.announced,
-    alreadyKnown: a.alreadyKnown + b.alreadyKnown,
-    optedOut: a.optedOut + b.optedOut,
-    considered: a.considered + b.considered,
-    demandsTruncated: a.demandsTruncated + b.demandsTruncated,
-    priceDrops,
-  };
-}
-
-/** Η μείωση μιας αγγελίας, αν υπάρχει — κριμένη με ό,τι **ήδη** ξέρει ο ζητών. */
+/** Η μείωση μιας αγγελίας, αν υπάρχει — κριμένη με ό,τι **ήδη** ξέρει ο άνθρωπος. */
 async function withPriceDrop(
   tally: MatchTally,
-  pass: DemandPass,
-  listing: PublicListing,
+  pass: RecipientPass,
+  topic: ListingTopic,
   match: MatchHistory,
 ): Promise<MatchTally> {
-  if (listing.priceReduction === null) return tally;
+  if (topic.listing.priceReduction === null) return tally;
 
   const outcome = await announcePriceDrop({
-    demandId: pass.demand.id,
-    recipientId: pass.demand.authorUserId,
-    tenantId: pass.demand.authorUserId,
-    listing,
+    recipientId: pass.recipientId,
+    listing: topic.listing,
+    reasons: topic.reasons,
     match,
-    destination: listingMatchDestination(listing.id, pass.demand.authorUserId),
+    alreadyAnnounced: knowledgeOf(pass, topic).priceDropKnown,
+    destination: listingMatchDestination(topic.listing.id, pass.recipientId),
     nowMs: pass.nowMs,
   });
   return { ...tally, priceDrops: addPriceDropOutcome(tally.priceDrops, outcome) };
 }
 
 const NEVER_ANNOUNCED: MatchHistory = { kind: 'never-announced' };
+const UNKNOWN_TOPIC: TopicKnowledge = { match: NEVER_ANNOUNCED, priceDropKnown: false };
+
+function knowledgeOf(pass: RecipientPass, topic: ListingTopic): TopicKnowledge {
+  return pass.ledger.get(topic.listing.id) ?? UNKNOWN_TOPIC;
+}
 
 /**
- * **Μία ζήτηση, ένα πέρασμα**: ό,τι είναι γνωστό κρίνεται για μείωση, ό,τι είναι νέο
+ * **Ένας άνθρωπος, ένα πέρασμα**: ό,τι είναι γνωστό κρίνεται για μείωση, ό,τι είναι νέο
  * ανακοινώνεται — μέχρι το όριο, που μετρά **μόνο** τα νέα.
  *
  * 🔑 **Κλειστός διακόπτης ταιριάσματος ⇒ σταματούν οι νέες αποστολές ταιριάσματος για
- * αυτή τη ζήτηση** (ίδιος παραλήπτης, ίδιος τύπος ⇒ ίδια απάντηση), **αλλά όχι οι
+ * αυτόν τον άνθρωπο** (ίδιος παραλήπτης, ίδιος τύπος ⇒ ίδια απάντηση), **αλλά όχι οι
  * μειώσεις**: ο άνθρωπος που θέλει μόνο μειώσεις έχει δικό του διακόπτη.
  *
  * ⚠️ **Αγγελία που περιμένει το όριο ΔΕΝ παίρνει email μείωσης**: θα ήταν *«μειώθηκε η
- * τιμή»* για αγγελία που δεν του συστήσαμε ποτέ. Θα τη μάθει με το επόμενο πέρασμα, ως
- * ταίριασμα με τη μείωση μέσα.
+ * τιμή»* για αγγελία που δεν του συστήσαμε ποτέ.
  */
-async function announceForDemand(pass: DemandPass): Promise<MatchTally> {
+async function announceForRecipient(pass: RecipientPass): Promise<MatchTally> {
   let tally = EMPTY_TALLY;
   let matchesSilenced = false;
   let capped = false;
 
-  for (const listing of pass.matched) {
-    const announcedAtMs = pass.ledger.get(listing.id);
-    if (announcedAtMs !== undefined) {
+  for (const topic of pass.topics) {
+    const { match } = knowledgeOf(pass, topic);
+    if (match.kind === 'announced') {
       tally = countMatch(tally, 'already-known');
-      tally = await withPriceDrop(tally, pass, listing, { kind: 'announced', atMs: announcedAtMs });
+      tally = await withPriceDrop(tally, pass, topic, match);
     } else if (matchesSilenced) {
-      tally = await withPriceDrop(tally, pass, listing, NEVER_ANNOUNCED);
-    } else if (tally.announced >= MAX_NEW_MATCHES_PER_DEMAND) {
+      tally = await withPriceDrop(tally, pass, topic, NEVER_ANNOUNCED);
+    } else if (tally.announced >= MAX_NEW_MATCHES_PER_RECIPIENT) {
       capped = true;
     } else {
-      const outcome = await announceOneMatch(pass, listing);
+      const outcome = await announceOneMatch(pass, topic);
       tally = countMatch(tally, outcome);
       if (outcome === 'opted-out') {
         matchesSilenced = true;
-        tally = await withPriceDrop(tally, pass, listing, NEVER_ANNOUNCED);
+        tally = await withPriceDrop(tally, pass, topic, NEVER_ANNOUNCED);
       } else if (outcome === 'already-known') {
         // Αγώνας: άλλο πέρασμα το έγραψε ανάμεσα στο καθολόγιο και το `create()`.
-        tally = await withPriceDrop(tally, pass, listing, { kind: 'announced', atMs: null });
+        tally = await withPriceDrop(tally, pass, topic, { kind: 'announced', atMs: null });
       }
     }
   }
 
-  return { ...tally, demandsTruncated: capped ? 1 : 0 };
+  return { ...tally, recipientsTruncated: capped ? 1 : 0 };
 }
 
 /**
- * Ο βρόχος που **κρίνει, στέλνει και μετράει** — χωριστός από τη συναρμολόγηση της
- * αναφοράς, ίδιο σχήμα με το `tallyAnnouncements` (`interest-notifier.service.ts`).
+ * Ο βρόχος που **κρίνει, ομαδοποιεί, στέλνει και μετράει** — χωριστός από τη συναρμολόγηση
+ * της αναφοράς, ίδιο σχήμα με το `tallyAnnouncements` (`interest-notifier.service.ts`).
  */
 async function tallyMatches(
   db: AdminFirestore,
@@ -332,19 +275,23 @@ async function tallyMatches(
 ): Promise<MatchTally> {
   const knowledge = knowledgeFromListings(listings);
   const todayDate = todayLocalDate();
+  const matches = demands
+    .map((demand) => ({ demand, matched: matchedListings(demand, listings, knowledge, todayDate) }))
+    .filter((entry) => entry.matched.length > 0);
+
   let tally = EMPTY_TALLY;
-
-  for (const demand of demands) {
-    const matched = matchedListings(demand, listings, knowledge, todayDate);
-    if (matched.length === 0) continue;
-
-    const ledger = await readMatchLedger(
+  for (const { recipientId, topics, pairs } of groupTopicsByRecipient(matches)) {
+    const ledger = await readRecipientLedger(
       db,
-      demand.authorUserId,
-      demand.id,
-      matched.map((listing) => listing.id),
+      recipientId,
+      topics.map(({ listing, reasons }) => ({
+        listingId: listing.id,
+        demandIds: reasons.demandIds,
+        reduction: listing.priceReduction,
+      })),
     );
-    tally = mergeTallies(tally, await announceForDemand({ demand, matched, ledger, nowMs }));
+    const passTally = await announceForRecipient({ recipientId, topics, ledger, nowMs });
+    tally = mergeTallies(tally, { ...passTally, collapsedReasons: pairs - topics.length });
   }
 
   return tally;
@@ -360,32 +307,32 @@ function assertReportBalances(report: ListingMatchReport): void {
   }
 }
 
-/** Τα δύο ξεχωριστά όρια που μπορεί να αγγίχθηκαν — δες `MAX_NEW_MATCHES_PER_DEMAND`. */
+/** Τα δύο ξεχωριστά όρια που μπορεί να αγγίχθηκαν — δες `MAX_NEW_MATCHES_PER_RECIPIENT`. */
 function logTruncation(report: ListingMatchReport): void {
   if (report.truncated) {
     logger.warn('Η δεξαμενή ζητήσεων ή αγγελιών αγγίχθηκε — κάποιες ΔΕΝ εξετάστηκαν', {
       data: { demandsConsidered: String(report.demandsConsidered) },
     });
   }
-  if (report.demandsTruncated > 0) {
-    logger.warn('Μερικές ζητήσεις χτύπησαν το ανώτατο όριο ΝΕΩΝ ταιριασμάτων ανά πέρασμα', {
+  if (report.recipientsTruncated > 0) {
+    logger.warn('Μερικοί παραλήπτες χτύπησαν το ανώτατο όριο ΝΕΩΝ ταιριασμάτων ανά πέρασμα', {
       data: {
-        demandsTruncated: String(report.demandsTruncated),
-        limit: String(MAX_NEW_MATCHES_PER_DEMAND),
+        recipientsTruncated: String(report.recipientsTruncated),
+        limit: String(MAX_NEW_MATCHES_PER_RECIPIENT),
       },
     });
   }
 }
 
 /**
- * **Πες σε κάθε ζητούντα ό,τι νέα αγγελία ταιριάζει στη ζήτησή του — και ό,τι μειώθηκε.**
+ * **Πες σε κάθε ζητούντα ό,τι νέα αγγελία ταιριάζει στις ζητήσεις του — και ό,τι μειώθηκε.
+ * Μία φορά ανά αγγελία, όσες ζητήσεις του κι αν ταιριάζουν.**
  *
- * ⚠️ **Idempotent**, ίδια εγγύηση με τον ειδοποιητή ιδιοκτητών: δύο διαδοχικές
- * κλήσεις χωρίς νέα αγγελία και χωρίς νέα μείωση στέλνουν **μηδέν** δεύτερα μηνύματα.
+ * ⚠️ **Idempotent**: δύο διαδοχικές κλήσεις χωρίς νέα αγγελία και χωρίς νέα μείωση
+ * στέλνουν **μηδέν** δεύτερα μηνύματα.
  *
  * 🔑 **Μία ανάγνωση ρολογιού ανά πέρασμα** (`nowMs`): η φρεσκάδα κάθε μείωσης κρίνεται
- * απέναντι στην **ίδια** στιγμή — δύο αναγνώσεις θα έκαναν το ίδιο πέρασμα να διαφωνεί με
- * τον εαυτό του σε μείωση που λήγει ακριβώς τώρα.
+ * απέναντι στην **ίδια** στιγμή.
  */
 export async function announceListingMatchesToDemandAuthors(
   db: AdminFirestore,

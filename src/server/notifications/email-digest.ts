@@ -56,8 +56,11 @@ import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
 // κοινό με το μεμονωμένο email. Εδώ μένει η ΑΠΟΦΑΣΗ «ποια φεύγουν μαζί».
 import {
   NO_LINKS,
+  distinctDigestMembers,
   renderDigestHtml,
   renderDigestText,
+  renderSoloHtml,
+  renderSoloText,
   type EmailLinks,
   type RenderableMessage,
 } from './notification-email-render';
@@ -160,6 +163,38 @@ function soloReasonOf(message: PendingEmail): Exclude<SoloReason, 'alone'> | nul
   return null;
 }
 
+type DigestContent = Pick<Extract<DeliveryPlanEntry, { kind: 'digest' }>, 'subject' | 'content' | 'html'>;
+
+/**
+ * **Τι λέει μια ομάδα** — πάνω στις **διακριτές** γραμμές της (ADR-777 §8.69.12).
+ *
+ * 🛡️ Τα `members` της εγγραφής μένουν **όλα** (κλειστή λογιστική, σήμανση `sent` σε κάθε
+ * έγγραφο)· το **κείμενο** όμως μετρά ό,τι βλέπει ο αναγνώστης. Αν μετά τη σύμπτυξη μείνει
+ * **μία** γραμμή, το email αποδίδεται **ως μεμονωμένο** — ίδιο δόγμα με το `alone`: «1 νέα
+ * ειδοποίηση» είναι αυστηρά χειρότερο από το ίδιο το θέμα.
+ */
+function digestContentOf(
+  members: readonly PendingEmail[],
+  language: HumanLanguage,
+  links: EmailLinks,
+): DigestContent {
+  const lines = distinctDigestMembers(members);
+  if (lines.length < MIN_DIGEST_SIZE) {
+    const [line] = lines;
+    return {
+      subject: line.subject,
+      content: renderSoloText(line, language, links),
+      html: renderSoloHtml(line, language, line.subject, links),
+    };
+  }
+  const subject = emailTextsFor(language).digest.subject(lines.length);
+  return {
+    subject,
+    content: renderDigestText(lines, language, links),
+    html: renderDigestHtml(lines, language, subject, links),
+  };
+}
+
 /**
  * **Ποια email φεύγουν μαζί;**
  *
@@ -220,16 +255,7 @@ export function planEmailDelivery(
       plan.push({ kind: 'solo', message: members[0], reason: 'alone' });
       continue;
     }
-    const subject = emailTextsFor(language).digest.subject(members.length);
-    plan.push({
-      kind: 'digest',
-      to,
-      language,
-      members,
-      subject,
-      content: renderDigestText(members, language, links),
-      html: renderDigestHtml(members, language, subject, links),
-    });
+    plan.push({ kind: 'digest', to, language, members, ...digestContentOf(members, language, links) });
   }
 
   // Τα μοναχικά μπαίνουν **στο τέλος**, ώστε η σειρά των ομάδων να μην εξαρτάται

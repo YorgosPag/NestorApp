@@ -141,6 +141,11 @@ export function announcementEventId(propertyId: string, band: AnnouncementBand):
  * (π.χ. μετά από επαναδημοσίευση) είναι το **ίδιο** κλειδί ⇒ το idempotent `create()`
  * του {@link dispatchNotification} τη σιωπά, όπως ακριβώς κάνει η ζώνη στην απέναντι
  * κατεύθυνση.
+ *
+ * 🗄️ **LEGACY — ΜΟΝΟ ΓΙΑ ΑΝΑΓΝΩΣΗ (§8.69.12).** Οι νέες ειδοποιήσεις γράφονται με
+ * {@link recipientListingMatchEventId}. Αυτό μένει επειδή τα **ήδη γραμμένα** έγγραφα έχουν
+ * αυτό το κλειδί, και το καθολόγιο (`demand-match-ledger.ts`) πρέπει να τα αναγνωρίζει ως
+ * «ήδη ειπωμένα» — αλλιώς κάθε παλιό ταίριασμα θα ξαναστελνόταν με το νέο κλειδί.
  */
 export function demandListingMatchEventId(demandId: string, listingId: string): string {
   return `${demandId}:listing:${listingId}`;
@@ -158,6 +163,8 @@ export function demandListingMatchEventId(demandId: string, listingId: string): 
  * μείωση σε κάθε ωριαίο πέρασμα είναι **ένα** κλειδί ⇒ το `create()` του orchestrator
  * τη σιωπά. Μόνο το ποσό δεν θα αρκούσε: 300.000 → 280.000 → 300.000 → 280.000 είναι
  * δύο **διαφορετικές** μειώσεις στο **ίδιο** ποσό.
+ *
+ * 🗄️ **LEGACY — ΜΟΝΟ ΓΙΑ ΑΝΑΓΝΩΣΗ (§8.69.12)** — δες {@link recipientPriceDropEventId}.
  */
 export function demandPriceDropEventId(
   demandId: string,
@@ -183,6 +190,69 @@ export function priceDropKind(
   return priceMax !== null && reduction.from > priceMax && reduction.to <= priceMax
     ? 'into-budget'
     : 'within-budget';
+}
+
+// ============================================================================
+// ADR-777 §8.69.12 — ΤΑΥΤΟΤΗΤΑ = ΘΕΜΑ, ΟΧΙ ΑΙΤΙΑ
+// ============================================================================
+
+/**
+ * **Γιατί του το λέμε** — οι ζητήσεις του ίδιου ανθρώπου που ταιριάζουν στην ίδια αγγελία.
+ *
+ * 🔴 **Το εύρημα (ζωντανή δοκιμή 2026-09-15, §8.69.11 #1)**: δύο ζητήσεις του ίδιου χρήστη
+ * ταίριαζαν στην ίδια αγγελία ⇒ κλειδί **ανά ζήτηση** ⇒ **δύο** ειδοποιήσεις για **μία**
+ * μείωση, και η σύνοψη έδειξε την ίδια γραμμή δύο φορές. Τα portals (Zillow, Rightmove,
+ * idealista) κάνουν ακριβώς αυτό — ένα μήνυμα ανά αποθηκευμένη αναζήτηση. Η υποδομή
+ * ειδοποιήσεων (Knock, Novu) λέει το αντίθετο: **το θέμα είναι η ταυτότητα, οι αιτίες είναι
+ * περιεχόμενο**. Εδώ οι ζητήσεις γίνονται **λόγοι μέσα** στην ειδοποίηση.
+ *
+ * ⚠️ `demandIds` και `priceMaxes` είναι **παράλληλοι** πίνακες, ταξινομημένοι κατά ζήτηση.
+ */
+export interface AnnouncementReasons {
+  readonly demandIds: readonly string[];
+  readonly priceMaxes: readonly (number | null)[];
+}
+
+/**
+ * **Το κλειδί ταιριάσματος ανά (παραλήπτη, αγγελία).** Ο παραλήπτης μπαίνει ήδη στο
+ * `dedupeKey` από τον orchestrator (`${type}:${recipient}:${eventId}`), άρα εδώ φτάνει η αγγελία.
+ *
+ * 🔑 **Δεν συγκρούεται ποτέ με το legacy {@link demandListingMatchEventId}**: εκείνο αρχίζει
+ * από το `dmnd_…` της ζήτησης, αυτό από το σταθερό `listing:`.
+ */
+export function recipientListingMatchEventId(listingId: string): string {
+  return `listing:${listingId}`;
+}
+
+/** **Το κλειδί μιας μείωσης ανά (παραλήπτη, αγγελία, μείωση)** — ποσό **και** στιγμή, όπως πριν. */
+export function recipientPriceDropEventId(
+  listingId: string,
+  reduction: Pick<PriceReduction, 'to' | 'since'>,
+): string {
+  return `${recipientListingMatchEventId(listingId)}:price-drop:${reduction.to}@${reduction.since}`;
+}
+
+/** Η ετυμηγορία προϋπολογισμού για **όλους** τους λόγους μαζί. */
+export type BudgetVerdict =
+  | { readonly kind: 'into-budget'; readonly priceMax: number }
+  | { readonly kind: 'within-budget' };
+
+/**
+ * **Ο ένας κριτής της διατύπωσης** — αν για **οποιαδήποτε** ζήτηση η μείωση είναι
+ * `'into-budget'`, αυτή κερδίζει, με το **αυστηρότερο** (χαμηλότερο) όριο από όσα την κάνουν
+ * `'into-budget'`. Το «πόσο κάτω από το όριο» λέγεται έτσι με τον **μικρότερο** αριθμό —
+ * ποτέ υπόσχεση μεγαλύτερου περιθωρίου απ' ό,τι έχει ο άνθρωπος.
+ */
+export function strongestBudgetVerdict(
+  priceMaxes: readonly (number | null)[],
+  reduction: Pick<PriceReduction, 'from' | 'to'>,
+): BudgetVerdict {
+  let strictest: number | null = null;
+  for (const priceMax of priceMaxes) {
+    if (priceMax === null || priceDropKind(priceMax, reduction) !== 'into-budget') continue;
+    if (strictest === null || priceMax < strictest) strictest = priceMax;
+  }
+  return strictest === null ? { kind: 'within-budget' } : { kind: 'into-budget', priceMax: strictest };
 }
 
 /**

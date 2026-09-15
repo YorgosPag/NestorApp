@@ -38,19 +38,19 @@ jest.mock('@/lib/date-local', () => ({
   ...jest.requireActual('@/lib/date-local'),
   todayLocalDate: () => '2026-09-01',
 }));
-const readMatchLedger = jest.fn();
+const readRecipientLedger = jest.fn();
 jest.mock('@/services/demand/demand-match-ledger', () => ({
-  readMatchLedger: (...args: unknown[]) => readMatchLedger(...args),
+  readRecipientLedger: (...args: unknown[]) => readRecipientLedger(...args),
 }));
 
 // eslint-disable-next-line import/first -- τα mocks πρέπει να δηλωθούν πριν τα imports
 import {
   announceListingMatchesToDemandAuthors,
   listingMatchReportBalances,
-  MAX_NEW_MATCHES_PER_DEMAND,
+  MAX_NEW_MATCHES_PER_RECIPIENT,
   type ListingMatchReport,
 } from '@/services/demand/listing-match-notifier.service';
-import { demandListingMatchEventId } from '@/lib/demand/demand-announcement';
+import { recipientListingMatchEventId } from '@/lib/demand/demand-announcement';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 
 function demand(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -85,14 +85,14 @@ beforeEach(() => {
   dispatchNotification.mockResolvedValue({ success: true, skipped: false, dedupeKey: 'k' });
   // Καθολόγιο κενό ⇒ κάθε ταίριασμα περνά από την αποστολή, όπως πριν το §8.69: οι άγκυρες
   // εδώ δοκιμάζουν τον **αγώνα** (το `create()` βρίσκει διπλότυπο), που μένει ο φρουρός.
-  readMatchLedger.mockResolvedValue(new Map());
+  readRecipientLedger.mockResolvedValue(new Map());
 });
 
 // =============================================================================
 // Ι — ΤΑΥΤΟΤΗΤΑ ΖΕΥΓΟΥΣ, ΠΟΤΕ ΖΩΝΗ
 // =============================================================================
 
-describe('Ι — το κλειδί idempotency είναι το ζεύγος (ζήτηση, αγγελία)', () => {
+describe('Ι — το κλειδί idempotency είναι το θέμα (παραλήπτης, αγγελία) — §8.69.12', () => {
   it('Ι1 🔑 — δύο περάσματα, ΙΔΙΟ ζεύγος ⇒ ΕΝΑ email', async () => {
     readLiveDemands.mockResolvedValue({ demands: [demand('d1')], truncated: false });
     readLivePublicListings.mockResolvedValue({ listings: [listing('l1')], truncated: false });
@@ -105,7 +105,8 @@ describe('Ι — το κλειδί idempotency είναι το ζεύγος (ζ�
     expect(pass1.announced).toBe(1);
     expect(pass1.alreadyKnown).toBe(0);
     expect(dispatchNotification.mock.calls[0][0]).toMatchObject({
-      eventId: demandListingMatchEventId('d1', 'l1'),
+      eventId: recipientListingMatchEventId('l1'),
+      reasons: ['d1'],
       recipientId: 'usr_d1',
       tenantId: 'usr_d1',
     });
@@ -189,7 +190,7 @@ describe('Ι — το κλειδί idempotency είναι το ζεύγος (ζ�
 
 describe('Φ — ο φραγμός ανά ζήτηση δηλώνεται, ποτέ σιωπηλό κόψιμο', () => {
   it('Φ1 🔴 — παραπάνω ταιριάσματα από το όριο ⇒ κόβεται ΚΑΙ σημαίνεται', async () => {
-    const listings = Array.from({ length: MAX_NEW_MATCHES_PER_DEMAND + 5 }, (_, i) =>
+    const listings = Array.from({ length: MAX_NEW_MATCHES_PER_RECIPIENT + 5 }, (_, i) =>
       listing(`l${i}`),
     );
     readLiveDemands.mockResolvedValue({ demands: [demand('d1')], truncated: false });
@@ -198,9 +199,9 @@ describe('Φ — ο φραγμός ανά ζήτηση δηλώνεται, πο�
 
     const report = await announceListingMatchesToDemandAuthors({} as never);
 
-    expect(dispatchNotification).toHaveBeenCalledTimes(MAX_NEW_MATCHES_PER_DEMAND);
-    expect(report.considered).toBe(MAX_NEW_MATCHES_PER_DEMAND);
-    expect(report.demandsTruncated).toBe(1);
+    expect(dispatchNotification).toHaveBeenCalledTimes(MAX_NEW_MATCHES_PER_RECIPIENT);
+    expect(report.considered).toBe(MAX_NEW_MATCHES_PER_RECIPIENT);
+    expect(report.recipientsTruncated).toBe(1);
     expect(listingMatchReportBalances(report)).toBe(true);
   });
 
@@ -212,7 +213,7 @@ describe('Φ — ο φραγμός ανά ζήτηση δηλώνεται, πο�
 
     const report = await announceListingMatchesToDemandAuthors({} as never);
 
-    expect(report.demandsTruncated).toBe(0);
+    expect(report.recipientsTruncated).toBe(0);
     expect(dispatchNotification).toHaveBeenCalledTimes(2);
   });
 });
@@ -281,8 +282,9 @@ describe('Λ — listingMatchReportBalances', () => {
       alreadyKnown: 1,
       optedOut: 0,
       considered: 3,
+      collapsedReasons: 0,
       demandsConsidered: 1,
-      demandsTruncated: 0,
+      recipientsTruncated: 0,
       truncated: false,
       priceDrops: { announced: 0, 'already-known': 0, 'opted-out': 0, 'predates-match': 0, stale: 0 },
     };

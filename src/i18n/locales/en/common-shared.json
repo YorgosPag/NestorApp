@@ -758,11 +758,15 @@
   },
   "demandListingMatch": {
     "notificationTitle": "A new listing matches your demand: “{title}”",
+    "notificationTitleMany": "A new listing matches {count} of your demands: “{title}”",
     "reducedTitle": "A new listing with a reduced price matches your demand: “{title}”",
+    "reducedTitleMany": "A new listing with a reduced price matches {count} of your demands: “{title}”",
     "intoBudgetTitle": "Now within your budget: “{title}”"
   },
   "demandPriceDrop": {
-    "notificationTitle": "Price reduced on a listing matching your demand: “{title}”"
+    "notificationTitle": "Price reduced on a listing matching your demand: “{title}”",
+    "notificationTitleMany": "Price reduced on a listing matching {count} of your demands: “{title}”",
+    "intoBudgetTitle": "Now within your budget: “{title}”"
   },
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",

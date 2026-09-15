@@ -69,6 +69,12 @@ export interface DispatchContent {
   titleKey?: string;
   /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
   titleParams?: Record<string, string>;
+  /**
+   * 🏆 ADR-777 §8.69.12 — **οι λόγοι** μιας ειδοποίησης που η ταυτότητά της είναι **θέμα**
+   * (π.χ. οι ζητήσεις που ταιριάζουν στην ίδια αγγελία). Γράφεται στο `meta.reasons`.
+   * Δεν συμμετέχει στο `dedupeKey`: οι λόγοι είναι **περιεχόμενο**, όχι ταυτότητα.
+   */
+  reasons?: readonly string[];
 }
 
 /**
@@ -251,6 +257,8 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
       // 🔑 ADR-849 Β1 — ο χώρος-στόχος, **δηλωμένος από τον παραγωγό**. Μέσα στο `meta`,
       //    ποτέ `companyId` στην κορυφή: ετικέτα, όχι άξονας απομόνωσης (ADR-787 Ε-3 §8).
       ...(workspace ? { workspace } : {}),
+      // 🏆 ADR-777 §8.69.12 — οι λόγοι ταξιδεύουν ΜΕΣΑ στην ειδοποίηση, ποτέ στο κλειδί της.
+      ...(request.reasons && request.reasons.length > 0 ? { reasons: [...request.reasons] } : {}),
     },
   };
 

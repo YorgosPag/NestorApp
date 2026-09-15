@@ -11,6 +11,9 @@ import {
   demandPriceDropEventId,
   priceDropKind,
   priceDropVerdict,
+  recipientListingMatchEventId,
+  recipientPriceDropEventId,
+  strongestBudgetVerdict,
 } from '../demand-announcement';
 
 const SINCE = '2026-09-10T08:00:00.000Z';
@@ -59,6 +62,44 @@ describe('Ε — το είδος της μείωσης για τη ζήτηση'
 
   it('Ε4 — ακριβώς στο όριο μετά τη μείωση ⇒ χωράει', () => {
     expect(priceDropKind(3_200_000, REDUCTION)).toBe('into-budget');
+  });
+});
+
+describe('Θ — §8.69.12: η ταυτότητα είναι ΘΕΜΑ (παραλήπτης, αγγελία), όχι ζήτηση', () => {
+  it('🔴 Θ1 — το κλειδί θέματος ΔΕΝ περιέχει ζήτηση (δύο ζητήσεις ⇒ ΕΝΑ κλειδί)', () => {
+    expect(recipientListingMatchEventId('l1')).toBe('listing:l1');
+    expect(recipientPriceDropEventId('l1', REDUCTION)).toBe(`listing:l1:price-drop:${REDUCTION.to}@${SINCE}`);
+  });
+
+  it('Θ2 — ποτέ σύγκρουση με τα legacy κλειδιά ανά ζήτηση', () => {
+    expect(recipientListingMatchEventId('l1')).not.toBe(demandListingMatchEventId('d1', 'l1'));
+    expect(recipientPriceDropEventId('l1', REDUCTION)).not.toBe(demandPriceDropEventId('d1', 'l1', REDUCTION));
+  });
+
+  it('Θ3 — ταίριασμα ≠ μείωση για το ίδιο θέμα', () => {
+    expect(recipientPriceDropEventId('l1', REDUCTION)).not.toBe(recipientListingMatchEventId('l1'));
+  });
+});
+
+describe('Β — ο ΕΝΑΣ κριτής προϋπολογισμού πάνω σε όλους τους λόγους', () => {
+  it('🏆 Β1 — into-budget για ΜΙΑ από τις ζητήσεις ⇒ into-budget', () => {
+    expect(strongestBudgetVerdict([4_000_000, 3_300_000], REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
+  });
+
+  it('🔴 Β2 — πολλά into-budget ⇒ το ΑΥΣΤΗΡΟΤΕΡΟ όριο (ποτέ υπόσχεση μεγαλύτερου περιθωρίου)', () => {
+    expect(strongestBudgetVerdict([3_400_000, 3_250_000, 3_300_000], REDUCTION)).toEqual({
+      kind: 'into-budget',
+      priceMax: 3_250_000,
+    });
+  });
+
+  it('Β3 — όριο κάτω από τη νέα τιμή ΔΕΝ κερδίζει (δεν είναι into-budget για εκείνη)', () => {
+    expect(strongestBudgetVerdict([3_000_000, 3_300_000], REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
+  });
+
+  it('Β4 — καμία into-budget / κανένα όριο ⇒ within-budget', () => {
+    expect(strongestBudgetVerdict([null, 4_000_000], REDUCTION)).toEqual({ kind: 'within-budget' });
+    expect(strongestBudgetVerdict([], REDUCTION)).toEqual({ kind: 'within-budget' });
   });
 });
 
