@@ -26,14 +26,28 @@
  * 🔑 **Λογότυπο ≠ πορτρέτο**: το σήμα-λογότυπο γίνεται `logo`· το πορτρέτο είναι **πρόσωπο** και γίνεται
  * `image` — ένα πρόσωπο δηλωμένο ως λογότυπο θα έμπαινε στο πάνελ γνώσεων ως σήμα εταιρείας.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⚖️ ΚΛΕΙΣΤΗ ΣΤΟ ΓΕΜΗ ⇒ ΜΟΝΟ Ο ΟΡΓΑΝΙΣΜΟΣ (ADR-841 §7 Α23 Φ4)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Κόμβος `LocalBusiness` με ωράριο **ισχυρίζεται ότι λειτουργεί** — και η Google ζητά δεδομένα *«up-to-date»* και
+ * *«a true representation of the page»* (Structured data policies). Το schema.org **δεν** έχει «οριστικά κλειστή»·
+ * το `dissolutionDate` θέλει την ημερομηνία **λύσης**, ενώ εμείς ξέρουμε μόνο **πότε ελέγξαμε** ⇒ θα ήταν ψέμα.
+ * ⇒ **Σιωπή, όχι ψέμα**: μένει η ταυτότητα (`Organization`), φεύγουν τα καταστήματα. **Κανένα `noindex`**: η Google
+ * λέει ρητά να μην αφαιρείται η σελίδα, ώστε ο κόσμος να μάθει την κατάσταση (Pause your business online).
+ *
  * **Layering**: leaf — καθαρή συνάρτηση, καμία ανάγνωση.
  */
 
+import { registryClosureOf } from '@/lib/agency/showcase-registry-closure';
+import { isoWeekdayOfDateKey } from '@/lib/calendar/date-key';
+import type { SpecialDay } from '@/lib/calendar/special-hours';
 import { END_OF_DAY, ISO_WEEKDAYS, type IsoWeekday, type WeeklyHours } from '@/lib/calendar/weekly-hours';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import type { PublicShowcase } from '@/types/agency-profile';
 import type { ShowcaseLocation } from '@/types/showcase-card';
+import type { ShowcaseSeat } from '@/types/showcase-legal-identity';
 
 const SCHEMA_DAY: Readonly<Record<IsoWeekday, string>> = {
   1: 'https://schema.org/Monday',
@@ -48,6 +62,8 @@ const SCHEMA_DAY: Readonly<Record<IsoWeekday, string>> = {
 export interface ShowcaseStructuredDataContext {
   /** Απόλυτο URL της βιτρίνας — η **ταυτότητα** κάθε κόμβου (`@id`). */
   readonly profileUrl: string;
+  /** Α21.21 — σήμερα **στην Ελλάδα**: περασμένες ειδικές μέρες δεν δημοσιεύονται. Εγχέεται — καθαρή συνάρτηση. */
+  readonly todayKey: string;
   /** Ο **ίδιος** κριτής με το κουμπί της σελίδας (`acceptsMandate`) — ποτέ δεύτερη κρίση εδώ. */
   readonly canHoldMandate: boolean;
 }
@@ -85,12 +101,66 @@ export function openingHoursSpecification(hours: WeeklyHours): JsonLdValue[] {
   }));
 }
 
+function specialDayNodes(day: SpecialDay, hours: WeeklyHours): JsonLdValue[] {
+  const dated = { validFrom: day.date, validThrough: day.date };
+  if (day.kind === 'closed') return [{ '@type': 'OpeningHoursSpecification', opens: '00:00', closes: '00:00', ...dated }];
+  const weekday = isoWeekdayOfDateKey(day.date);
+  const intervals = day.kind === 'custom' ? day.intervals : weekday === null ? [] : hours[weekday];
+  return intervals.map((interval) => ({
+    '@type': 'OpeningHoursSpecification',
+    opens: interval.opens,
+    closes: schemaTime(interval.closes),
+    ...dated,
+  }));
+}
+
+/**
+ * Α21.21 — **Ειδικές ώρες → `OpeningHoursSpecification` με `validFrom` = `validThrough`** (Google Search Central,
+ * LocalBusiness: κλειστά = `opens 00:00` + `closes 00:00`). **Μόνο μελλοντικές**: μια περασμένη μέρα δεν λέει τίποτα
+ * στη μηχανή — και θα έμενε στο HTML ως θόρυβος. Το «Κανονικά» γράφεται **ρητά** με τις ώρες εκείνης της ημέρας.
+ */
+export function specialOpeningHoursSpecification(
+  hours: WeeklyHours,
+  special: readonly SpecialDay[],
+  todayKey: string,
+): JsonLdValue[] {
+  return special.filter((day) => day.date >= todayKey).flatMap((day) => specialDayNodes(day, hours));
+}
+
+/**
+ * Α23 Φ4 Α2 — η **δημοσιευμένη** έδρα (ήδη κομμένη στην επιλογή, Δ7) ως `PostalAddress`· `municipality` ⇒ μόνο δήμος.
+ * ⚠️ Ό,τι δεν δημοσιεύεται **δεν γίνεται κλειδί** (ούτε `undefined`): η άγκυρα σαρώνει κλειδιά σε βάθος.
+ */
+function seatAddressOf(seat: ShowcaseSeat): JsonLdValue {
+  return {
+    '@type': 'PostalAddress',
+    ...(seat.streetLine === null ? {} : { streetAddress: seat.streetLine }),
+    ...(seat.postalCode === null ? {} : { postalCode: seat.postalCode }),
+    addressLocality: seat.locality,
+    addressCountry: 'GR',
+  };
+}
+
+/**
+ * ⚖️ Α23 Φ4 Α2 — Google Organization: `legalName` «if applicable and different from the `name`» · `address` = η έδρα.
+ * Μένουν **και σε κλειστή**: η ταυτότητα είναι αληθής — φεύγει μόνο το «λειτουργεί» (κόμβοι καταστήματος).
+ */
+function legalFieldsOf(showcase: PublicShowcase): Record<string, JsonLdValue> {
+  const legal = showcase.legalIdentity;
+  if (legal === null) return {};
+  return {
+    ...(legal.legalName === showcase.displayName ? {} : { legalName: legal.legalName }),
+    address: seatAddressOf(legal.seat),
+  };
+}
+
 function organisationNode(showcase: PublicShowcase, organisationId: string, profileUrl: string): JsonLdValue {
   const mark = showcase.mark;
   return {
     '@type': 'Organization',
     '@id': organisationId,
     name: showcase.displayName,
+    ...legalFieldsOf(showcase),
     // Α21.17 — η **δική του** ιστοσελίδα όταν τη δήλωσε (αυτό σημαίνει `url` για τη Google)· αλλιώς η βιτρίνα.
     url: showcase.website ?? profileUrl,
     logo: mark?.kind === 'logo' ? mark.image.url : undefined,
@@ -121,14 +191,24 @@ function locationNode(
       location.position === null
         ? undefined
         : { '@type': 'GeoCoordinates', latitude: location.position.lat, longitude: location.position.lng },
-    openingHoursSpecification: location.hours === null ? undefined : openingHoursSpecification(location.hours),
+    openingHoursSpecification:
+      location.hours === null
+        ? undefined
+        : [
+            ...openingHoursSpecification(location.hours),
+            ...specialOpeningHoursSpecification(location.hours, location.specialHours, context.todayKey),
+          ],
   };
 }
 
-/** **Βιτρίνα → `@graph`**: ένας οργανισμός, και ένα κατάστημα για κάθε δημοσιευμένη οδό. */
+/**
+ * **Βιτρίνα → `@graph`**: ένας οργανισμός, και ένα κατάστημα για κάθε δημοσιευμένη οδό — **εκτός** αν το ΓΕΜΗ
+ * λέει ότι έκλεισε (δες κεφαλίδα· κριτής ο **ίδιος** `registryClosureOf` με τη σελίδα).
+ */
 export function showcaseStructuredData(showcase: PublicShowcase, context: ShowcaseStructuredDataContext): JsonLdValue {
   const organisationId = `${context.profileUrl}#organization`;
-  const addressed = showcase.locations.filter(
+  const operating = registryClosureOf(showcase) === null ? showcase.locations : [];
+  const addressed = operating.filter(
     (location): location is ShowcaseLocation & { readonly street: NonNullable<ShowcaseLocation['street']> } =>
       location.street !== null,
   );

@@ -62,6 +62,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ListingCard } from '@/components/search-results/ListingCard';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
 import { CredibilityStatement } from './CredibilityStatement';
+import { LegalIdentityStatement } from './LegalIdentityStatement';
+import { credentialsBesideLegalIdentity } from '@/lib/agency/showcase-legal-presentation';
 import {
   usePublicAgencyListings,
   type PublicListingsState,
@@ -70,7 +72,7 @@ import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
-import { contactableShowcase, mandateRefusalOf } from '@/lib/agency/showcase-registry-closure';
+import { contactableShowcase, mandateRefusalOf, registryClosureOf } from '@/lib/agency/showcase-registry-closure';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 import { ShowcaseContactCard } from './ShowcaseContactCard';
 import { ShowcaseShareDialog } from './ShowcaseShareDialog';
@@ -326,6 +328,8 @@ function ShowcaseView({
   const contactable = contactableShowcase(profile);
   // 🔒 Α23 Φ3.3 — «Ανάθεση εντολής» μόνο αν ο κριτής του γραφέα λέει ναι (κλειστή ⇒ όχι· `canHoldMandate` μένει για το επάγγελμα).
   const acceptsNewMandate = mandateRefusalOf(profile) === null;
+  // ⚖️ Α23 Φ4 — ο επισκέπτης μαθαίνει ΓΙΑΤΙ λείπουν κανάλια και εντολή (GBP: «clearly shows that your business is closed»).
+  const closure = registryClosureOf(profile);
 
   return (
     <ShellSurface as="main" measure="prose" className="gap-6">
@@ -358,6 +362,12 @@ function ShowcaseView({
           <p className="m-0 text-sm text-muted-foreground">
             {t(PROFILE_KEYS.publishedAt, { date: formatLongDate(profile.publishedAt) })}
           </p>
+          {/* 🔑 Κάτω από το όνομα, όπως το «Οριστικά κλειστή» της Google· ημερομηνία = ο ΕΛΕΓΧΟΣ, όχι το κλείσιμο (δεν το ξέρουμε). */}
+          {closure === null ? null : (
+            <p className="m-0 text-sm font-medium text-destructive">
+              {t(PROFILE_KEYS.registryClosed, { date: formatLongDate(closure.checkedAt) })}
+            </p>
+          )}
         </div>
         {/* Α21.17 — QR + σύνδεσμος. Το ΔΗΜΟΣΙΕΥΜΕΝΟ ψευδώνυμο, όχι αυτό της διεύθυνσης (μπορεί να είναι `comp_*`). */}
         <span className="ml-auto shrink-0">
@@ -373,7 +383,9 @@ function ShowcaseView({
           Ίδιο component με την κάρτα του καταλόγου — αν εδώ έλεγε κάτι άλλο, ο
           ίδιος άνθρωπος θα διαβαζόταν διαφορετικά σε δύο οθόνες.
         */}
-        {profile.credentials.map((credential) => (
+        {/* ⚖️ Α23 Φ4 Α2 — ποιος είναι στον νόμο, ΠΡΙΝ από τα πιστοποιητικά· ο ίδιος αριθμός ΓΕΜΗ λέγεται μία φορά. */}
+        {profile.legalIdentity === null ? null : <LegalIdentityStatement identity={profile.legalIdentity} />}
+        {credentialsBesideLegalIdentity(profile.credentials, profile.legalIdentity).map((credential) => (
           <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
         ))}
         <PlaceFact profile={profile} />

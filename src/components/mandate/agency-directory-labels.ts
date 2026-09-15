@@ -18,6 +18,7 @@
 import type { CredibilityNote } from '@/lib/professional/professional-credibility';
 import type { GreekPublicHolidayId } from '@/lib/calendar/greek-public-holidays';
 import type { ShowcaseLocationRole } from '@/types/showcase-card';
+import type { ShowcaseLegalForm } from '@/types/showcase-legal-identity';
 
 /** Το namespace — **`property-market`**, το ίδιο με τη βιτρίνα και τις αγγελίες. */
 export const AGENCY_PUBLIC_NS = 'property-market';
@@ -195,6 +196,18 @@ export const CREDIBILITY_NOTE_KEYS: Record<CredibilityNote['kind'], string> = {
   'classification-unreadable': `${C}.note.classificationUnreadable`,
 };
 
+/**
+ * ⚖️ **Η νομική μορφή, ολογράφως** (ADR-841 §7 Α23 Φ4 Α2). Ολικός `Record` πάνω στο `ShowcaseLegalForm` ⇒ νέα μορφή στο
+ * προφίλ **δεν μεταγλωττίζεται** χωρίς κείμενο. ⚠️ Όχι τα κλειδιά του `accounting-setup` («ΕΠΕ — Εταιρεία Περ. Ευθύνης»):
+ * συντομογραφίες φόρμας λογιστηρίου, όχι δημόσια διατύπωση — και θα έφερναν δεύτερο namespace στο slice του `/pro`.
+ */
+export const LEGAL_FORM_KEYS: Record<ShowcaseLegalForm, string> = {
+  sole_proprietor: `${P}.legalForm.sole_proprietor`,
+  oe: `${P}.legalForm.oe`,
+  epe: `${P}.legalForm.epe`,
+  ae: `${P}.legalForm.ae`,
+};
+
 /** Η μία βιτρίνα — `/pro/<ψευδώνυμο>`. */
 export const PROFILE_KEYS = {
   loading: `${P}.loading`,
@@ -254,6 +267,22 @@ export const PROFILE_KEYS = {
    */
   coverageAlsoOutside: `${P}.coverageAlsoOutside`,
   publishedAt: `${P}.publishedAt`,
+  /**
+   * ⚖️ **ADR-841 §7 Α23 Φ4** — «Σύμφωνα με το ΓΕΜΗ η επιχείρηση δεν είναι ενεργή · έλεγχος {date}».
+   *
+   * 🔑 **ΤΟ ΙΔΙΟ κλειδί με την πόρτα του κατόχου** (`SHOWCASE_REGISTRY_DOOR_KEYS.closed`): κάτοχος και επισκέπτης
+   * διαβάζουν **την ίδια πρόταση** — δεν μπορούν να αποκλίνουν (άγκυρα Κ5 στο `agency-showcase-listings.test.tsx`).
+   * Η **πηγή ονομάζεται** («σύμφωνα με το ΓΕΜΗ»), ποτέ δική μας κρίση. ⚠️ Κυριολεκτικό — ο τεμαχιστής του ADR-744 το λύνει.
+   */
+  registryClosed: 'property-market:mandate.showcase.registry.doorClosed',
+  // ── ⚖️ ADR-841 §7 Α23 Φ4 Α2 — ΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ (ν. 4919/2022 άρθ. 22 §4 · Π.Δ. 131/2003 άρθ. 4) ─────────
+  //
+  // 🔑 Μόνο τίτλος, έδρα και ονόματα μορφής είναι νέα· αριθμός και βεβαίωση **επαναχρησιμοποιούν** υπάρχοντα κλειδιά
+  // (`CREDIBILITY_KEYS.claimNational` / `.claimDeclared` · `legalVerifiedOn`) — καμία δεύτερη πρόταση για το ίδιο γεγονός.
+  legalTitle: `${P}.legalTitle`,
+  legalSeat: `${P}.legalSeat`,
+  /** Η **ίδια** πρόταση με την υποσελίδα «Στοιχεία ΓΕΜΗ» του κατόχου (Α23.10) — κάτοχος και επισκέπτης δεν αποκλίνουν. */
+  legalVerifiedOn: 'property-market:mandate.showcase.registry.verifiedOn',
   requestCta: `${P}.requestCta`,
   requestHint: `${P}.requestHint`,
   // ── ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ (αντικατέστησε τα `noChannel`/`noChannelPro`) ────────
@@ -291,6 +320,12 @@ export const PROFILE_KEYS = {
   cardClosedWeek: `${P}.cardClosedWeek`,
   /** 🔴 **Όχι «κλειστό»** — αργία σημαίνει *«ίσως διαφέρει»*. */
   cardHoliday: `${P}.cardHoliday`,
+  /** Α21.21 — αργία χωρίς δήλωση **πριν** από το επόμενο άνοιγμα: «Δευτέρα: Δευτέρα του Πάσχα — ίσως διαφέρει». */
+  cardHolidayAhead: `${P}.cardHolidayAhead`,
+  /** Α21.21 — η γραμμή μιας τέτοιας μέρας στον πίνακα των 7 ημερών. */
+  cardHolidayRow: `${P}.cardHolidayRow`,
+  /** Α21.21 — σημάδι γραμμής όταν ισχύει δηλωμένο ωράριο ημερομηνίας, όχι το εβδομαδιαίο. */
+  cardSpecialDay: `${P}.cardSpecialDay`,
   cardBrokerWritten: `${P}.cardBrokerWritten`,
   // ── ADR-841 §7 Α21.17 — ΕΠΑΦΗ ΚΑΙ ΚΟΙΝΟΠΟΙΗΣΗ ────────────────────────────────────────────
   /** 🔑 Μετρά ως εμφάνιση (ίδιο όριο) — γι' αυτό είναι σύνδεσμος λήψης, όχι αυτόματη προσθήκη. */

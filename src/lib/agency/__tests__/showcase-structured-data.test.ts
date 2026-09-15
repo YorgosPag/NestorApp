@@ -6,18 +6,19 @@
  *   • Κ3 — ο τύπος ακολουθεί τον ΙΔΙΟ κριτή με τη σελίδα (μεσίτης ⇒ RealEstateAgent)
  *   • Κ4 — σπαστό ωράριο: ομαδοποίηση ημερών, κλειστή ημέρα απούσα
  *   • Κ5 — λογότυπο ⇒ `logo` · πορτρέτο ⇒ `image`, ποτέ ανάποδα
+ *   • Κ8 — ⚖️ κλειστή στο ΓΕΜΗ (Α23 Φ4) ⇒ ΜΟΝΟ ο οργανισμός· θετικός μάρτυρας: η ΙΔΙΑ βιτρίνα ενεργή
  */
 
-import { showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
+import { legalIdentityFixture, showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
 import type { WeeklyHours } from '@/lib/calendar/weekly-hours';
 import { WEEKLY_HOURS_PRESETS } from '@/lib/calendar/weekly-hours-editing';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
 import type { DeclaredShowcaseMark } from '@/types/agency-profile';
 import type { ShowcaseLocation } from '@/types/showcase-card';
-import { openingHoursSpecification, showcaseStructuredData } from '../showcase-structured-data';
+import { openingHoursSpecification, showcaseStructuredData, specialOpeningHoursSpecification } from '../showcase-structured-data';
 
 const PROFILE_URL = 'https://nestorconstruct.gr/pro/vafes-pagoni';
-const CONTEXT = { profileUrl: PROFILE_URL, canHoldMandate: false };
+const CONTEXT = { profileUrl: PROFILE_URL, canHoldMandate: false, todayKey: '2026-09-15' };
 
 const SPLIT: WeeklyHours = {
   1: [{ opens: '09:00', closes: '14:00' }, { opens: '17:00', closes: '20:30' }],
@@ -38,6 +39,7 @@ function location(overrides: Partial<ShowcaseLocation> = {}): ShowcaseLocation {
     position: { lat: 40.63, lng: 22.94 },
     street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
     hours: null,
+    specialHours: [],
     channelKinds: ['phone', 'email'],
     emailConfirmedAt: null,
     ...overrides,
@@ -114,6 +116,61 @@ describe('showcaseStructuredData', () => {
     expect(withPortrait).toMatchObject({ image: 'https://cdn.example/portrait.png' });
     expect(withPortrait.logo).toBeUndefined();
   });
+
+  describe('Κ8 (ADR-841 §7 Α23 Φ4) — κλειστή στο ΓΕΜΗ', () => {
+    const BROKER = { ...CONTEXT, canHoldMandate: true };
+    const stores = [location({ hours: SPLIT }), location({ id: 'sloc_b', role: 'branch' })];
+    const closedShowcase = showcaseFixture({
+      displayName: 'ΒΑΦΕΣ',
+      locations: stores,
+      legalIdentity: legalIdentityFixture({ registryClosure: { issuer: 'gemi', checkedAt: '2026-09-14T11:00:00.000Z' } }),
+    });
+
+    it('🔴 Κ8α — ΜΟΝΟ ο οργανισμός: κανένα «κατάστημα με ωράριο», καμία επινοημένη ημερομηνία λύσης', () => {
+      const graph = graphOf(showcaseStructuredData(closedShowcase, BROKER));
+      expect(graph).toHaveLength(1);
+      expect(graph[0]).toMatchObject({ '@type': 'Organization', name: 'ΒΑΦΕΣ' });
+      const keys = keysDeep(graph);
+      for (const forbidden of ['geo', 'openingHoursSpecification', 'dissolutionDate', 'parentOrganization']) expect(keys.has(forbidden)).toBe(false);
+      // 🔑 Α2: η ΜΟΝΗ διεύθυνση είναι η καταστατική έδρα του οργανισμού (αληθής ταυτότητα) — καμία οδός καταστήματος.
+      expect(graph[0].address).toEqual({ '@type': 'PostalAddress', addressLocality: 'Θεσσαλονίκη', addressCountry: 'GR' });
+    });
+
+    it('🔑 Κ8β — Ο ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: η ΙΔΙΑ βιτρίνα ενεργή ⇒ οργανισμός + δύο καταστήματα με ωράριο', () => {
+      const graph = graphOf(showcaseStructuredData({ ...closedShowcase, legalIdentity: legalIdentityFixture() }, BROKER));
+      expect(graph.map((node) => node['@type'])).toEqual(['Organization', 'RealEstateAgent', 'RealEstateAgent']);
+      expect(graph[1].openingHoursSpecification).toHaveLength(3);
+    });
+  });
+
+  describe('Κ9 (ADR-841 §7 Α23 Φ4 Α2) — νομικά στοιχεία στον οργανισμό', () => {
+    it('⚖️ Κ9α — `legalName` όταν διαφέρει από το όνομα · `address` = η ΔΗΜΟΣΙΕΥΜΕΝΗ έδρα (municipality ⇒ μόνο δήμος)', () => {
+      const [organisation] = graphOf(
+        showcaseStructuredData(showcaseFixture({ displayName: 'ΒΑΦΕΣ', legalIdentity: legalIdentityFixture() }), CONTEXT),
+      );
+      expect(organisation).toMatchObject({
+        legalName: 'ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
+        address: { '@type': 'PostalAddress', addressLocality: 'Θεσσαλονίκη', addressCountry: 'GR' },
+      });
+      expect(keysDeep(organisation.address).has('streetAddress')).toBe(false);
+    });
+
+    it('Κ9β — ίδια επωνυμία με το όνομα ⇒ καμία επανάληψη `legalName`', () => {
+      const [organisation] = graphOf(
+        showcaseStructuredData(
+          showcaseFixture({ displayName: 'ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ', legalIdentity: legalIdentityFixture() }),
+          CONTEXT,
+        ),
+      );
+      expect(organisation.legalName).toBeUndefined();
+    });
+
+    it('🔑 Κ9γ — Ο ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: βιτρίνα πριν την Α23 ⇒ ούτε `legalName` ούτε `address` (κανένα επινοημένο)', () => {
+      const [organisation] = graphOf(showcaseStructuredData(showcaseFixture({ displayName: 'ΒΑΦΕΣ' }), CONTEXT));
+      expect(organisation.legalName).toBeUndefined();
+      expect(organisation.address).toBeUndefined();
+    });
+  });
 });
 
 describe('openingHoursSpecification', () => {
@@ -153,6 +210,23 @@ describe('openingHoursSpecification', () => {
         closes: '23:59',
       },
     ]);
+  });
+
+  it('🏆 Κ7 (Α21.21) — ειδικές μέρες: validFrom = validThrough, κλειστά 00:00–00:00, «Κανονικά» ΡΗΤΑ, περασμένες απούσες', () => {
+    const special = [
+      { date: '2026-09-14', kind: 'closed' as const },
+      { date: '2026-12-25', kind: 'closed' as const },
+      { date: '2026-12-28', kind: 'regular' as const },
+      { date: '2026-12-31', kind: 'custom' as const, intervals: [{ opens: '09:00', closes: '24:00' }] },
+    ];
+    expect(specialOpeningHoursSpecification(SPLIT, special, '2026-09-15')).toEqual([
+      { '@type': 'OpeningHoursSpecification', opens: '00:00', closes: '00:00', validFrom: '2026-12-25', validThrough: '2026-12-25' },
+      { '@type': 'OpeningHoursSpecification', opens: '09:00', closes: '14:00', validFrom: '2026-12-28', validThrough: '2026-12-28' },
+      { '@type': 'OpeningHoursSpecification', opens: '17:00', closes: '20:30', validFrom: '2026-12-28', validThrough: '2026-12-28' },
+      { '@type': 'OpeningHoursSpecification', opens: '09:00', closes: '23:59', validFrom: '2026-12-31', validThrough: '2026-12-31' },
+    ]);
+    const [, shop] = graphOf(showcaseStructuredData(showcaseFixture({ locations: [location({ hours: SPLIT, specialHours: special })] }), CONTEXT));
+    expect(shop.openingHoursSpecification).toHaveLength(3 + 4);
   });
 
   it('Κ6 (Α21.16.8) — μετά τα μεσάνυχτα ⇒ ΜΙΑ εγγραφή με closes < opens, ποτέ σπασμένη σε δύο ημέρες', () => {

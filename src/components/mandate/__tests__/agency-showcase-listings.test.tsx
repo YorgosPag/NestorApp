@@ -24,16 +24,26 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 
 import { AgencyProfileContent } from '../AgencyProfileContent';
-import { PROFILE_KEYS } from '../agency-directory-labels';
+import { CREDIBILITY_KEYS, LEGAL_FORM_KEYS, PROFILE_KEYS } from '../agency-directory-labels';
+import { SHOWCASE_REGISTRY_DOOR_KEYS } from '../agency-showcase-registry-labels';
+import { formatLongDate } from '@/lib/intl-formatting';
 import type { PublicShowcase } from '@/types/agency-profile';
 import type { ShowcaseLocation } from '@/types/showcase-card';
-import { showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
+import { legalIdentityFixture, showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 const ALFA = 'comp_alfa';
 
+/** Α23 Φ4 — ό,τι ζητήθηκε από τον επιλυτή **με τις παραμέτρους του** (η ημερομηνία δεν φαίνεται στο κείμενο-κλειδί). */
+const mockTranslateCalls: Array<readonly [string, unknown]> = [];
+
 jest.mock('@/i18n/hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: unknown) => {
+      mockTranslateCalls.push([key, options]);
+      return key;
+    },
+  }),
 }));
 
 jest.mock('@/lib/workspace/navigation', () => ({
@@ -145,6 +155,7 @@ const PHONE_LOCATION: ShowcaseLocation = {
   position: null,
   street: null,
   hours: null,
+  specialHours: [],
   channelKinds: ['phone'],
   emailConfirmedAt: null,
 };
@@ -309,5 +320,70 @@ describe('Κ. Κλειστή στο ΓΕΜΗ (ADR-841 §7 Α23.8)', () => {
     expect(screen.queryByText(PROFILE_KEYS.requestHint)).not.toBeInTheDocument();
     // 🔑 Το επάγγελμα ΔΕΝ άλλαξε: η λίστα αγγελιών μιλά ακόμα σε μεσίτη (όχι στον τεχνίτη).
     expect(screen.getByText(PROFILE_KEYS.listingsEmptyHint)).toBeInTheDocument();
+  });
+
+  it('⚖️ Κ4 — Α23 Φ4: κλειστή ⇒ η σελίδα ΛΕΕΙ γιατί, με την ημερομηνία του ΕΛΕΓΧΟΥ (όχι της δημοσίευσης)', () => {
+    const checkedAt = '2026-09-14T11:00:00.000Z';
+    mockTranslateCalls.length = 0;
+    paint({ listings: [] }, showcaseWith(checkedAt));
+
+    expect(screen.getByText(PROFILE_KEYS.registryClosed)).toBeInTheDocument();
+    expect(mockTranslateCalls).toContainEqual([PROFILE_KEYS.registryClosed, { date: formatLongDate(checkedAt) }]);
+    // 🔑 Η σελίδα ΜΕΝΕΙ βιτρίνα (GBP): το όνομα στον τίτλο.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(PROFILE.displayName);
+  });
+
+  it('🔑 Κ5 — Ο ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: ενεργή ⇒ καμία ένδειξη· και ΜΙΑ πρόταση για κάτοχο και επισκέπτη', () => {
+    paint({ listings: [] }, showcaseWith(null));
+
+    expect(screen.queryByText(PROFILE_KEYS.registryClosed)).not.toBeInTheDocument();
+    expect(PROFILE_KEYS.registryClosed).toBe(SHOWCASE_REGISTRY_DOOR_KEYS.closed);
+  });
+});
+
+/**
+ * ⚖️ **ADR-841 §7 Α23 Φ4 Α2 — ΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ΣΤΗ ΔΗΜΟΣΙΑ ΣΕΛΙΔΑ.**
+ *
+ * 🔑 Το `PROFILE` είναι μεσίτης με αριθμό ΓΕΜΗ `123456789000` — ο **ίδιος** με του `legalIdentityFixture` ⇒ η άγκυρα βλέπει
+ * και την αφαίρεση της επανάληψης (Ν1/Ν3/Ν4).
+ */
+describe('Ν. Νομικά στοιχεία (ADR-841 §7 Α23 Φ4 Α2)', () => {
+  const VERIFIED_AT = '2026-09-10T08:00:00.000Z';
+  const withIdentity = (legalIdentity: PublicShowcase['legalIdentity']): PublicShowcase => ({ ...PROFILE, legalIdentity });
+
+  it('⚖️ Ν1 — επωνυμία · μορφή · ΓΕΜΗ (ΜΙΑ φορά) · έδρα · «επαληθεύτηκαν» με ημερομηνία ελέγχου', () => {
+    mockTranslateCalls.length = 0;
+    paint(
+      { listings: [] },
+      withIdentity(legalIdentityFixture({ attestation: { state: 'verified', issuer: 'gemi', checkedAt: VERIFIED_AT } })),
+    );
+
+    expect(screen.getByText(PROFILE_KEYS.legalTitle)).toBeInTheDocument();
+    expect(screen.getByText('ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ')).toBeInTheDocument();
+    expect(screen.getByText(LEGAL_FORM_KEYS.ae)).toBeInTheDocument();
+    expect(mockTranslateCalls).toContainEqual([PROFILE_KEYS.legalSeat, { seat: 'Θεσσαλονίκη' }]);
+    expect(mockTranslateCalls).toContainEqual([PROFILE_KEYS.legalVerifiedOn, { date: formatLongDate(VERIFIED_AT) }]);
+    expect(screen.getAllByText(CREDIBILITY_KEYS.claimNational)).toHaveLength(1);
+    expect(screen.queryByText(CREDIBILITY_KEYS.claimDeclared)).not.toBeInTheDocument();
+  });
+
+  it('🔴 Ν2 — δηλωμένη ⇒ «Δήλωση του ίδιου», ΠΟΤΕ «επαληθεύτηκαν»', () => {
+    paint({ listings: [] }, withIdentity(legalIdentityFixture()));
+
+    expect(screen.getAllByText(CREDIBILITY_KEYS.claimDeclared)).toHaveLength(1);
+    expect(screen.queryByText(PROFILE_KEYS.legalVerifiedOn)).not.toBeInTheDocument();
+  });
+
+  it('🔑 Ν3 — Ο ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: βιτρίνα πριν την Α23 ⇒ κανένα μπλοκ· ο αριθμός του μεσίτη ΜΕΝΕΙ', () => {
+    paint({ listings: [] }, PROFILE);
+
+    expect(screen.queryByText(PROFILE_KEYS.legalTitle)).not.toBeInTheDocument();
+    expect(screen.getAllByText(CREDIBILITY_KEYS.claimNational)).toHaveLength(1);
+  });
+
+  it('🔑 Ν4 — ΑΛΛΟΣ αριθμός στο πιστοποιητικό ⇒ δύο γεγονότα, δύο γραμμές', () => {
+    paint({ listings: [] }, withIdentity(legalIdentityFixture({ gemiNumber: '999999999000' })));
+
+    expect(screen.getAllByText(CREDIBILITY_KEYS.claimNational)).toHaveLength(2);
   });
 });
