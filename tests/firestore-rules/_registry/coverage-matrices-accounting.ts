@@ -18,7 +18,9 @@
  */
 
 import type { CoverageCell } from './coverage-manifest';
-import { cell } from './coverage-matrices';
+// ⚠️ Κυκλική εισαγωγή (το `coverage-matrices` επανεξάγει αυτό το αρχείο): ασφαλής, γιατί
+// τα `cell`/`roleDualMatrix` καλούνται μόνο **μέσα** σε συναρτήσεις, ποτέ στη φόρτωση.
+import { cell, roleDualMatrix } from './coverage-matrices';
 import { defineMatrix, overrideDefinition, type CoverageDefinition } from './coverage-completeness';
 import {
   anonymousUnmeasured,
@@ -51,40 +53,28 @@ import {
  * See ADR-298 §4 Phase C.1 (2026-04-13).
  */
 export function fiscalPeriodMatrix(): CoverageDefinition {
-  return defineMatrix('fiscalPeriodMatrix', [
-    // Read: canReadAccounting = isSuperAdminOnly || isInternalUserOfCompany
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
-    cell('anonymous', 'list', 'deny', 'missing_claim'),
-    // Create: isCompanyAdminOfCompany + companyId==getUserCompanyId()
-    cell('super_admin', 'create', 'deny', 'cross_tenant'),           // getUserCompanyId()='company-root' != doc companyId
-    cell('same_tenant_admin', 'create', 'allow'),
-    cell('same_tenant_user', 'create', 'deny', 'insufficient_role'), // internal_user not company_admin
-    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
-    cell('anonymous', 'create', 'deny', 'missing_claim'),
-    // Update: isInternalUserOfCompany + state-machine (test seeds status-neutral delta)
-    cell('super_admin', 'update', 'allow'),
-    cell('same_tenant_admin', 'update', 'allow'),
-    cell('same_tenant_user', 'update', 'allow'),
-    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
-    cell('anonymous', 'update', 'deny', 'missing_claim'),
-    // Delete: if false — no client deletion of fiscal periods (business invariant)
-    cell('super_admin', 'delete', 'deny', 'server_only'),
-    cell('same_tenant_admin', 'delete', 'deny', 'server_only'),
-    cell('same_tenant_user', 'delete', 'deny', 'server_only'),
-    cell('cross_tenant_admin', 'delete', 'deny', 'server_only'),
-    cell('anonymous', 'delete', 'deny', 'server_only'),
-  ], [
-    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
-    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
-  ]);
+  return overrideDefinition(roleDualMatrix(), adminCreateNoDeleteCells(), 'fiscalPeriodMatrix');
+}
+
+/**
+ * Κοινή διαφορά του `fiscalPeriodMatrix` και του `accountingSingletonMatrix` από τον
+ * `roleDualMatrix` — δηλωμένη **ΜΙΑ** φορά (ADR-841 §7 Α23.6: ήταν 4 κλώνοι / 502 tokens).
+ *
+ *   - create: ο κανόνας ζητά **διαχειριστή** εταιρείας ⇒ `same_tenant_user` (internal_user)
+ *     αρνείται με `insufficient_role`. Οι αναγνώσεις, το create των υπολοίπων και οι
+ *     εξαιρέσεις είναι **ταυτόσημα** με τον `roleDualMatrix` (επαληθευμένο κελί προς κελί).
+ *   - delete: `if false` ⇒ `server_only` για **όλα** τα personas.
+ *
+ * ⚠️ Ο singleton **δεν** χτίζεται πάνω στον fiscal: οι δύο κανόνες είναι ανεξάρτητοι, και
+ * αλλαγή στον έναν δεν πρέπει να μετακινεί σιωπηλά τα κελιά του άλλου.
+ */
+function adminCreateNoDeleteCells(): readonly CoverageCell[] {
+  // Το delete παράγεται από τα κελιά delete **της βάσης**: «κάθε persona που μετριέται» —
+  // ούτε δεύτερη λίστα personas, ούτε κλώνος πέντε γραμμών (N.18).
+  const forbiddenDeletes = roleDualMatrix()
+    .matrix.filter((c) => c.operation === 'delete')
+    .map((c) => cell(c.persona, 'delete', 'deny', 'server_only'));
+  return [cell('same_tenant_user', 'create', 'deny', 'insufficient_role'), ...forbiddenDeletes];
 }
 
 /**
@@ -125,40 +115,11 @@ export function accountingSettingsMatrix(): CoverageDefinition {
  * See ADR-298 §4 Phase C.1 (2026-04-13).
  */
 export function accountingSingletonMatrix(): CoverageDefinition {
-  return defineMatrix('accountingSingletonMatrix', [
-    // Read: isSuperAdminOnly || isInternalUserOfCompany
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
-    cell('anonymous', 'list', 'deny', 'missing_claim'),
-    // Create: isCompanyAdmin() && companyId==getUserCompanyId()
-    cell('super_admin', 'create', 'deny', 'cross_tenant'),           // getUserCompanyId() mismatch
-    cell('same_tenant_admin', 'create', 'allow'),
-    cell('same_tenant_user', 'create', 'deny', 'insufficient_role'), // internal_user != company_admin
-    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
-    cell('anonymous', 'create', 'deny', 'missing_claim'),
-    // Update: canWriteAccountingSingleton = isCompanyAdminOfCompany
-    cell('super_admin', 'update', 'allow'),                          // isSuperAdminOnly short-circuit
-    cell('same_tenant_admin', 'update', 'allow'),
-    cell('same_tenant_user', 'update', 'deny', 'insufficient_role'), // role floor = company_admin
-    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
-    cell('anonymous', 'update', 'deny', 'missing_claim'),
-    // Delete: if false
-    cell('super_admin', 'delete', 'deny', 'server_only'),
-    cell('same_tenant_admin', 'delete', 'deny', 'server_only'),
-    cell('same_tenant_user', 'delete', 'deny', 'server_only'),
-    cell('cross_tenant_admin', 'delete', 'deny', 'server_only'),
-    cell('anonymous', 'delete', 'deny', 'server_only'),
-  ], [
-    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
-    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
-  ]);
+  return overrideDefinition(roleDualMatrix(), [
+    ...adminCreateNoDeleteCells(),
+    // Update: canWriteAccountingSingleton = isCompanyAdminOfCompany — role floor = company_admin
+    cell('same_tenant_user', 'update', 'deny', 'insufficient_role'),
+  ], 'accountingSingletonMatrix');
 }
 
 /**
@@ -216,38 +177,8 @@ export function denyAllMatrix(): CoverageDefinition {
  * See ADR-298 §4 Phase C.1 (2026-04-13).
  */
 export function accountingSystemCalcMatrix(): CoverageDefinition {
-  return defineMatrix('accountingSystemCalcMatrix', [
-    // Read: same as roleDualMatrix
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
-    cell('anonymous', 'list', 'deny', 'missing_claim'),
-    // Create: canCreateAccountingSystem — no createdBy required, companyId must match
-    cell('super_admin', 'create', 'deny', 'cross_tenant'),    // 'company-root' != 'company-a'
-    cell('same_tenant_admin', 'create', 'allow'),
-    cell('same_tenant_user', 'create', 'allow'),              // isInternalUser + companyId match
-    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
-    cell('anonymous', 'create', 'deny', 'missing_claim'),
-    // Update: canUpdateAccountingSystem = isInternalUserOfCompany + companyId immutable
-    cell('super_admin', 'update', 'allow'),
-    cell('same_tenant_admin', 'update', 'allow'),
-    cell('same_tenant_user', 'update', 'allow'),
-    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
-    cell('anonymous', 'update', 'deny', 'missing_claim'),
-    // Delete: isCompanyAdminOfCompany — admin-only cleanup
-    cell('super_admin', 'delete', 'allow'),
-    cell('same_tenant_admin', 'delete', 'allow'),
+  return overrideDefinition(roleDualMatrix(), [
+    // Delete: isCompanyAdminOfCompany — admin-only cleanup (roleDual lets the author delete)
     cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
-    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
-    cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ], [
-    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
-    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
-  ]);
+  ], 'accountingSystemCalcMatrix');
 }

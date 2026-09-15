@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **15/09 — ΤΟ ΜΠΛΟΚ ΑΝΑΓΝΩΣΕΩΝ + ΕΞΑΙΡΕΣΕΩΝ ΤΩΝ ΠΙΝΑΚΩΝ ΚΑΝΟΝΩΝ ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ ~8 ΑΡΧΕΙΑ (εύρημα ADR-298 / ADR-841 Α23.6)**
+
+  **Μετρημένο** (`npx jscpd --min-tokens 50 --format typescript tests/firestore-rules/_registry/`): **63 κλώνοι / 7.413 διπλά tokens (41,7%)**
+  σε 13 αρχεία. Κυρίαρχο σχήμα: τα 10 κελιά ανάγνωσης «tenant isolation» + `crossTenantUserUnmeasured`/`externalUserOpenDecision`
+  επαναλαμβάνονται σε `coverage-matrices{,-boq,-dxf,-specialized,-system,-users}.ts`. Στο `-accounting.ts` έκλεισαν οι 4 εσωτερικοί
+  (Α23.6: `overrideDefinition(roleDualMatrix(), …)`, θετικός μάρτυρας κελί-κελί) — ο αριθμός του φακέλου **δεν** έπεσε ανάλογα γιατί
+  τα ίδια μπλοκ των άλλων αρχείων ξαναζευγαρώνουν μεταξύ τους. **Θεραπεία**: ίδιο εργαλείο (`overrideDefinition` πάνω σε υπάρχοντα
+  πρότυπο ή ένας εξαγόμενος `tenantReadCells()`), **με θετικό μάρτυρα κανονικής μορφής ανά πίνακα** (script: scratchpad
+  `dump-matrices.ts` της συνεδρίας 15/09). ⚠️ Προσοχή στη σημείωση του `adminWriteOnlyMatrix` (ο βοηθός γεννούσε νέο κλώνο). 13 αρχεία ⇒ δική του φέτα.
+
 - 🟡 **15/09 — ΤΟ FIXTURE `PublicListing` ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 20 ΑΡΧΕΙΑ TESTS (εύρημα ADR-777 §8.69)**
 
   **Μετρημένο** (grep `as unknown as PublicListing`): **20** αρχεία tests χτίζουν αγγελία με cast, **χωρίς** κοινό builder
