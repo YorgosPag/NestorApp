@@ -99,6 +99,30 @@ export function surveyRowKey(prefix: string, segments: readonly string[]): strin
   return `${prefix}_${segments.join('_')}`;
 }
 
+/** Ένα δεκαεξαδικό digest — ποτέ ωμή διεύθυνση ή ταυτότητα παρόχου σε κλειδί εγγράφου. */
+function requireDigest(name: string, digest: string): string {
+  if (!/^[0-9a-f]{64}$/.test(digest)) throw new Error(`${name}: sha256 hex digest is required`);
+  return digest;
+}
+
+/**
+ * ADR-841 §7 Α21.20: deterministic key for `email_delivery_events/{id}` — one document per
+ * (provider, provider event). The provider retries a webhook for hours; the same event must land on
+ * the **same** key so a retry is a no-op, never a second row.
+ *
+ * ⚠️ The digest is computed by the caller (server ledger): this module stays free of `crypto`
+ * because client bundles import it.
+ */
+export function emailDeliveryEventKey(provider: string, eventDigest: string): string {
+  if (!/^[a-z]+$/.test(provider)) throw new Error('emailDeliveryEventKey: provider must be a lowercase word');
+  return `${P.EMAIL_DELIVERY_EVENT}_${provider}_${requireDigest('emailDeliveryEventKey', eventDigest)}`;
+}
+
+/** ADR-841 §7 Α21.20: deterministic 1:1 key for `email_recipient_standing/{id}` — one per mailbox. */
+export function recipientStandingKey(emailDigest: string): string {
+  return `${P.EMAIL_RECIPIENT_STANDING}_${requireDigest('recipientStandingKey', emailDigest)}`;
+}
+
 /**
  * UserSettings SSoT: deterministic 1:1 key — one preferences blob per
  * (user, tenant). Used by `user_preferences/{docId}` Firestore collection

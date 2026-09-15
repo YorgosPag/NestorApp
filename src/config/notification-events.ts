@@ -98,6 +98,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    * δεν είναι σενάριο που υπάρχει. Το **ποια** απάντηση το λέει το κλειδί τίτλου.
    */
   PROPERTIES_MANDATE_REQUEST_ANSWERED: 'properties.mandateRequestAnswered',
+  /**
+   * ADR-841 §7 Α21.20 — **ένα email της επαγγελματικής κάρτας επέστρεψε οριστικά** (hard bounce) και
+   * το δημόσιο σήμα «Email επιβεβαιωμένο» αφαιρέθηκε. Ο παραλήπτης είναι όποιος ζήτησε την επιβεβαίωση.
+   */
+  PROPERTIES_CARD_EMAIL_RETURNED: 'properties.cardEmailReturned',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -250,6 +255,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'mandateRequestAnswered',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-841 §7 Α21.20 — WARNING: δημόσιο σήμα αφαιρέθηκε και θέλει ενέργεια του ανθρώπου.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: {
+    category: 'properties',
+    settingKey: 'cardEmailReturned',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
   // Tasks
   [NOTIFICATION_EVENT_TYPES.TASKS_DUE_TODAY]: {

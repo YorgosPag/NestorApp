@@ -71,6 +71,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'mandateDecided', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateDecided' },
       // ADR-827 §9.21 — «το γραφείο απάντησε στο αίτημά σου».
       { key: 'mandateRequestAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateRequestAnswered' },
+      // ADR-841 §7 Α21.20 — «το email της κάρτας σας επέστρεψε».
+      { key: 'cardEmailReturned', labelKey: 'common-account:account.notificationSettings.categories.properties.cardEmailReturned' },
     ],
   },
   {

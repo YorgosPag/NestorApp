@@ -189,6 +189,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/mandate/showcase-email-confirmation-token.ts',
   },
   {
+    name: 'MAILGUN_WEBHOOK_SIGNING_KEY',
+    severity: 'feature',
+    feature: 'Webhooks Mailgun: εισερχόμενα email και συμβάντα παράδοσης (ADR-071 · ADR-841 Α21.20)',
+    consequence:
+      'Σε παραγωγή κάθε webhook του Mailgun απορρίπτεται με 401: τα εισερχόμενα email δεν φτάνουν ' +
+      'ποτέ στην εφαρμογή, και ένα γραμματοκιβώτιο που καταργήθηκε κρατά δημόσια το σήμα «Email ' +
+      'επιβεβαιωμένο» — ο επισκέπτης γράφει σε διεύθυνση που δεν λαμβάνει.',
+    consumer: 'src/lib/communications/mailgun-webhook/mailgun-signature.ts',
+  },
+  {
     name: 'WORKSPACE_INVITE_SECRET',
     severity: 'feature',
     feature: 'Προσκλήσεις σε χώρο εργασίας (ADR-853)',

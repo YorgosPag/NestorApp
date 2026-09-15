@@ -105,6 +105,18 @@ export interface ShowcaseEmailConfirmation {
   readonly confirmedAt: string;
 }
 
+/**
+ * **Ένα email της κάρτας που επέστρεψε οριστικά** (ADR-841 §7 Α21.20) — ιδιωτικό, για τον ιδιοκτήτη.
+ *
+ * 🔑 **Δεν αποθηκεύεται στην κάρτα**: παράγεται από το ημερολόγιο συμβάντων παράδοσης τη στιγμή της
+ * ανάγνωσης. Η ύπαρξη ενός γραμματοκιβωτίου είναι γεγονός του κόσμου· δεύτερο αντίγραφο θα παλίωνε.
+ */
+export interface ShowcaseEmailReturn {
+  readonly email: string;
+  /** ISO — η στιγμή της απόδειξης (hard bounce). */
+  readonly returnedAt: string;
+}
+
 /** **Τα κανάλια ενός καταστήματος** — ιδιωτικά. */
 export interface ShowcaseLocationChannels {
   readonly phones: readonly ShowcasePhone[];

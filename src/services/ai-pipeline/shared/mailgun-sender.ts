@@ -21,6 +21,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { PROVIDER_TIMEOUT_MS } from '@/server/comms/email-provider-chain';
 import { resolveSenderHeader } from '@/services/company/sender-identity';
+import { EMAIL_DELIVERY_VARIABLES, type EmailDeliveryCorrelation } from '@/types/email-delivery';
 
 const logger = createModuleLogger('PIPELINE_MAILGUN_SENDER');
 
@@ -54,6 +55,63 @@ export interface MailgunSendParams {
   htmlBody?: string;
   /** Optional file attachments — Mailgun multipart upload */
   attachments?: MailgunAttachment[];
+  /**
+   * 🔑 ADR-841 §7 Α21.20 — **ποιος γέννησε αυτό το μήνυμα**. Ταξιδεύει ως `v:` μεταβλητές και
+   * γυρίζει σε κάθε συμβάν παράδοσης (bounce · complaint), ώστε ο δέκτης να μη μαντεύει από κείμενο.
+   */
+  correlation?: EmailDeliveryCorrelation;
+}
+
+/** Όριο της ταυτότητας συσχέτισης — ο Mailgun κόβει τις μεταβλητές πάνω από 4KB στα webhooks. */
+const CORRELATION_REF_MAX = 200;
+
+function appendCorrelation(formData: FormData, correlation: EmailDeliveryCorrelation | undefined): void {
+  if (correlation === undefined) return;
+  const ref = correlation.ref.trim();
+  if (ref === '' || ref.length > CORRELATION_REF_MAX) return;
+  formData.append(`v:${EMAIL_DELIVERY_VARIABLES.purpose}`, correlation.purpose);
+  formData.append(`v:${EMAIL_DELIVERY_VARIABLES.ref}`, ref);
+}
+
+function mailgunBaseUrl(domain: string): string {
+  const region = process.env.MAILGUN_REGION === 'eu' ? 'api.eu.mailgun.net' : 'api.mailgun.net';
+  return `https://${region}/v3/${domain}`;
+}
+
+function mailgunAuthorization(apiKey: string): string {
+  return `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`;
+}
+
+export type MailgunBounceClearance = 'cleared' | 'not-listed' | 'failed';
+
+/**
+ * **Βγάλε τη διεύθυνση από τη λίστα bounces του domain** (ADR-841 §7 Α21.20).
+ *
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ**: μετά από hard bounce ο Mailgun **αρνείται σιωπηλά** κάθε επόμενη αποστολή στη
+ * διεύθυνση (605 «Not delivering to previously bounced address») — η αποστολή επιστρέφει 200 και το
+ * email **δεν φεύγει ποτέ**. Όταν ο άνθρωπος δηλώνει ρητά ότι διόρθωσε το γραμματοκιβώτιο, το
+ * καθάρισμα **πρέπει** να προηγηθεί της αποστολής — αλλιώς το «στάλθηκε» είναι ψέμα.
+ *
+ * `404` = δεν ήταν στη λίστα ⇒ `not-listed` (καμία βλάβη).
+ */
+export async function clearMailgunBounce(address: string): Promise<MailgunBounceClearance> {
+  const apiKey = process.env.MAILGUN_API_KEY?.trim();
+  const domain = process.env.MAILGUN_DOMAIN?.trim();
+  if (!apiKey || !domain) return 'failed';
+  try {
+    const response = await fetch(`${mailgunBaseUrl(domain)}/bounces/${encodeURIComponent(address)}`, {
+      method: 'DELETE',
+      headers: { Authorization: mailgunAuthorization(apiKey) },
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+    });
+    if (response.status === 404) return 'not-listed';
+    if (response.ok) return 'cleared';
+    logger.error('Mailgun bounce clearance refused', { status: response.status });
+    return 'failed';
+  } catch (error) {
+    logger.error('Mailgun bounce clearance failed', { error: getErrorMessage(error) });
+    return 'failed';
+  }
 }
 
 // ============================================================================
@@ -94,10 +152,7 @@ export async function sendReplyViaMailgun(
   //    του είναι κέρδος χωρίς ρίσκο· η **διεύθυνση** μένει στο ίδιο επαληθευμένο domain.
   const fromEmail = resolveSenderHeader();
 
-  const region = process.env.MAILGUN_REGION === 'eu'
-    ? 'api.eu.mailgun.net'
-    : 'api.mailgun.net';
-  const url = `https://${region}/v3/${domain}/messages`;
+  const url = `${mailgunBaseUrl(domain)}/messages`;
 
   try {
     const formData = new FormData();
@@ -108,6 +163,7 @@ export async function sendReplyViaMailgun(
     if (params.htmlBody) {
       formData.append('html', params.htmlBody);
     }
+    appendCorrelation(formData, params.correlation);
     if (params.attachments && params.attachments.length > 0) {
       for (const attachment of params.attachments) {
         const blob = attachment.content instanceof Blob

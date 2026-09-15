@@ -1,12 +1,13 @@
 'use client';
 
 /**
- * @fileoverview **«ΑΠΟΣΤΟΛΗ ΕΠΙΒΕΒΑΙΩΣΗΣ» ΑΠΟ ΤΙΣ ΡΥΘΜΙΣΕΙΣ** — μία διεύθυνση, μία πράξη (ADR-841 §7 Α21.18).
+ * @fileoverview **«ΑΠΟΣΤΟΛΗ ΕΠΙΒΕΒΑΙΩΣΗΣ» ΑΠΟ ΤΙΣ ΡΥΘΜΙΣΕΙΣ** — μία διεύθυνση, μία πράξη (ADR-841 §7 Α21.18 · Α21.20).
  * @related app/api/agency-profile/card/email-confirmations/route.ts · components/mandate/ShowcaseEmailConfirmationControl.tsx
  * @module hooks/mandate/useEmailConfirmationSend
  *
  * 🔑 **Ρητές φάσεις, ποτέ `isLoading` + `error` μαζί** — ίδιο δόγμα με το `MandateConsentContent`.
  * ⚠️ `failed` ≠ άρνηση (N.12): «δεν μάθαμε» δεν λέει ποτέ στον άνθρωπο ότι η διεύθυνση είναι λάθος.
+ * 🔑 Α21.20 — `acknowledgeReturned` ταξιδεύει **μόνο** όταν ο άνθρωπος πάτησε «Το διόρθωσα»: ποτέ προεπιλογή.
  */
 
 import { useCallback, useState } from 'react';
@@ -31,17 +32,17 @@ function refusalOf(body: unknown): ShowcaseEmailConfirmationIssueRefusal | null 
 
 export function useEmailConfirmationSend(): {
   readonly phase: EmailConfirmationSendPhase;
-  readonly send: (locationId: string, email: string) => Promise<void>;
+  readonly send: (locationId: string, email: string, acknowledgeReturned?: boolean) => Promise<void>;
 } {
   const [phase, setPhase] = useState<EmailConfirmationSendPhase>({ kind: 'idle' });
 
-  const send = useCallback(async (locationId: string, email: string) => {
+  const send = useCallback(async (locationId: string, email: string, acknowledgeReturned = false) => {
     setPhase({ kind: 'sending' });
     try {
       const response = await fetch(EMAIL_CONFIRMATION_ISSUE_PATH, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locationId, email }),
+        body: JSON.stringify({ locationId, email, acknowledgeReturned }),
       });
       const body: unknown = await response.json().catch(() => null);
       if (response.ok) return setPhase({ kind: 'sent' });

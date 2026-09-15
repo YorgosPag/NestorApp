@@ -127,6 +127,12 @@ export const SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS = [
   'email-not-on-card',
   'recipient-quota',
   'send-failed',
+  /**
+   * ADR-841 §7 Α21.20 — η διεύθυνση **επέστρεψε οριστικά** (hard bounce) και ο άνθρωπος **δεν** δήλωσε ότι
+   * τη διόρθωσε. Χωρίς αυτή την άρνηση ο πάροχος θα απέρριπτε **σιωπηλά** την αποστολή (Mailgun 605) και
+   * η οθόνη θα έλεγε «στάλθηκε».
+   */
+  'mailbox-returned',
 ] as const;
 
 export type ShowcaseEmailConfirmationIssueRefusal = (typeof SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS)[number];

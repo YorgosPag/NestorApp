@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Η ΚΑΡΤΑ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ, ΑΠΟ ΤΗΝ ΟΘΟΝΗ ΡΥΘΜΙΣΕΩΝ** (ADR-841 §7 Α21.16).
+ * @fileoverview **Η ΚΑΡΤΑ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ, ΑΠΟ ΤΗΝ ΟΘΟΝΗ ΡΥΘΜΙΣΕΩΝ** (ADR-841 §7 Α21.16 · Α21.20).
  * @related app/api/agency-profile/card/route.ts · hooks/mandate/useAgencyShowcase.ts
  * @module hooks/mandate/useShowcaseCard
  *
@@ -16,12 +16,18 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
-import type { OwnedShowcaseLocation, ShowcaseCardWire } from '@/types/showcase-card';
+import type { OwnedShowcaseLocation, ShowcaseCardWire, ShowcaseEmailReturn } from '@/types/showcase-card';
 
 export type ShowcaseCardLoad =
   | { readonly phase: 'idle' }
   | { readonly phase: 'loading' }
-  | { readonly phase: 'loaded'; readonly locations: readonly OwnedShowcaseLocation[]; readonly website: string | null }
+  | {
+      readonly phase: 'loaded';
+      readonly locations: readonly OwnedShowcaseLocation[];
+      readonly website: string | null;
+      /** Α21.20 — email που επέστρεψαν οριστικά· `null` = δεν μάθαμε. */
+      readonly emailReturns: readonly ShowcaseEmailReturn[] | null;
+    }
   /** 🔴 Δεν μάθαμε — η φόρμα **κλειδώνει**, δεν δείχνει κενή κάρτα. */
   | { readonly phase: 'failed' };
 
@@ -44,6 +50,7 @@ const ENDPOINT = '/api/agency-profile/card' as const;
 interface CardBody {
   readonly locations?: readonly OwnedShowcaseLocation[];
   readonly website?: string | null;
+  readonly emailReturns?: readonly ShowcaseEmailReturn[] | null;
   readonly error?: string;
   readonly reason?: AgencyProfileRejection;
   readonly locationIndex?: number;
@@ -67,6 +74,11 @@ async function readBody(response: Response): Promise<CardBody | null> {
   return (await response.json().catch(() => null)) as CardBody | null;
 }
 
+/** Σώμα με κάρτα → φορτωμένη κατάσταση. ⚠️ Απών `emailReturns` ⇒ `null` («δεν μάθαμε»), ποτέ `[]`. */
+function loadedOf(body: CardBody & { readonly locations: readonly OwnedShowcaseLocation[] }): ShowcaseCardLoad {
+  return { phase: 'loaded', locations: body.locations, website: body.website ?? null, emailReturns: body.emailReturns ?? null };
+}
+
 export function useShowcaseCard(enabled: boolean): ShowcaseCardApi {
   const [load, setLoad] = useState<ShowcaseCardLoad>({ phase: 'idle' });
   const [busy, setBusy] = useState(false);
@@ -85,11 +97,7 @@ export function useShowcaseCard(enabled: boolean): ShowcaseCardApi {
         const response = await fetch(ENDPOINT);
         const body = await readBody(response);
         if (cancelled) return;
-        setLoad(
-          response.ok && body?.locations
-            ? { phase: 'loaded', locations: body.locations, website: body.website ?? null }
-            : { phase: 'failed' },
-        );
+        setLoad(response.ok && body?.locations ? loadedOf({ ...body, locations: body.locations }) : { phase: 'failed' });
       } catch {
         if (!cancelled) setLoad({ phase: 'failed' });
       }
@@ -111,7 +119,7 @@ export function useShowcaseCard(enabled: boolean): ShowcaseCardApi {
       });
       const body = await readBody(response);
       if (response.ok && body?.locations) {
-        setLoad({ phase: 'loaded', locations: body.locations, website: body.website ?? null });
+        setLoad(loadedOf({ ...body, locations: body.locations }));
         setSaved(true);
       } else {
         setFailure(failureOf(response.status, body));

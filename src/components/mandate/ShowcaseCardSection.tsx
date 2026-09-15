@@ -33,6 +33,7 @@ import {
   MAX_PHONES_PER_LOCATION,
   MAX_SHOWCASE_LOCATIONS,
   type OwnedShowcaseLocation,
+  type ShowcaseEmailReturn,
 } from '@/types/showcase-card';
 import type { SavedEmailChannels } from './ShowcaseEmailConfirmationControl';
 import {
@@ -124,10 +125,17 @@ function WebsiteField({
   );
 }
 
-/** Α21.18 — το **αποθηκευμένο** μισό ενός προχείρου: μόνο αυτό μπορεί να ζητήσει επιβεβαίωση. */
-function savedOf(locations: readonly OwnedShowcaseLocation[], draft: ShowcaseLocationDraft): SavedEmailChannels | null {
+/**
+ * Α21.18 — το **αποθηκευμένο** μισό ενός προχείρου: μόνο αυτό μπορεί να ζητήσει επιβεβαίωση.
+ * Α21.20 — μαζί του, όσα email της κάρτας επέστρεψαν οριστικά (`null` = δεν μάθαμε ⇒ καμία ένδειξη).
+ */
+function savedOf(
+  locations: readonly OwnedShowcaseLocation[],
+  emailReturns: readonly ShowcaseEmailReturn[] | null,
+  draft: ShowcaseLocationDraft,
+): SavedEmailChannels | null {
   const location = draft.id === null ? undefined : locations.find(({ id }) => id === draft.id);
-  return location === undefined ? null : { locationId: location.id, channels: location.channels };
+  return location === undefined ? null : { locationId: location.id, channels: location.channels, returns: emailReturns ?? [] };
 }
 
 function useCardDrafts(loaded: readonly ShowcaseLocationDraft[] | null) {
@@ -198,7 +206,7 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
           />
           {drafts.length === 0 ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.empty)}</p> : null}
           {drafts.map((draft) => (
-            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, draft)} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
+            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, load.emailReturns, draft)} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
           ))}
           <p className="m-0 text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.emailConfirmHint)}</p>
           <span className="flex flex-wrap gap-2">

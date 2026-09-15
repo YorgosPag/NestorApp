@@ -2,7 +2,8 @@
  * @fileoverview **«ΝΑΙ, ΑΥΤΟ ΤΟ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟ ΛΑΜΒΑΝΕΙ» / «ΔΕΝ ΤΟ ΖΗΤΗΣΑ ΕΓΩ»** — η απόφαση του παραλήπτη
  *   (ADR-841 §7 Α21.18).
  * @related app/(auth)/card-email/[token]/page.tsx (ανάγνωση) · app/api/showcase-email-confirmations/[token]/route.ts
- *   (απόφαση) · services/mandate/showcase-email-confirmation.service.ts (έκδοση)
+ *   (απόφαση) · services/mandate/showcase-email-confirmation.service.ts (έκδοση) ·
+ *   services/mandate/showcase-email-confirmation-store.ts (τα δύο μισά του σήματος)
  * @module services/mandate/showcase-email-confirmation-decision
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -24,16 +25,12 @@
 
 import 'server-only';
 
-import type { DocumentSnapshot, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { readLocationChannels } from '@/lib/agency/showcase-card-channels-read';
-import { latestConfirmedAt, withConfirmation } from '@/lib/agency/showcase-email-confirmation-rules';
-import { readShowcase } from '@/lib/agency/showcase-read';
-import { sameChannelEmail } from '@/lib/contact/channel-email';
+import { withConfirmation } from '@/lib/agency/showcase-email-confirmation-rules';
 import { nowISO as clockNowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { ShowcaseLocation, ShowcaseLocationChannels } from '@/types/showcase-card';
 import {
   readStoredConfirmationState,
   type ShowcaseEmailConfirmationDecision,
@@ -42,6 +39,7 @@ import {
   type ShowcaseEmailConfirmationRequest,
 } from '@/types/showcase-email-confirmation';
 
+import { readCardWithEmail, writeLocationConfirmations } from './showcase-email-confirmation-store';
 import { confirmationSecret, readConfirmationLink, type ConfirmationLinkFields } from './showcase-email-confirmation-token';
 
 const logger = createModuleLogger('showcase-email-confirmation-decision');
@@ -65,14 +63,6 @@ export type ShowcaseEmailConfirmationOutcome =
 type Refused = { readonly ok: false; readonly reason: ShowcaseEmailConfirmationRefusal | 'unavailable' };
 const refuse = (reason: ShowcaseEmailConfirmationRefusal | 'unavailable'): Refused => ({ ok: false, reason });
 
-/** Κάρτα που **ακόμη** δημοσιεύει αυτή τη διεύθυνση σε αυτό το κατάστημα — ή `null`. */
-interface CardWithEmail {
-  readonly agencyName: string;
-  readonly locations: readonly ShowcaseLocation[];
-  readonly channels: ShowcaseLocationChannels;
-  readonly storedLocations: Record<string, unknown>;
-}
-
 function readRequest(data: unknown): ShowcaseEmailConfirmationRequest {
   const raw = data as ShowcaseEmailConfirmationDocument;
   return { ...raw, state: readStoredConfirmationState(raw.state) };
@@ -86,25 +76,6 @@ function stateRefusal(request: ShowcaseEmailConfirmationRequest, now: string): S
   return !Number.isFinite(expires) || expires <= Date.parse(now) ? 'expired' : null;
 }
 
-function cardWithEmail(
-  profile: DocumentSnapshot,
-  channels: DocumentSnapshot,
-  request: ShowcaseEmailConfirmationRequest,
-): CardWithEmail | null {
-  const read = profile.exists ? readShowcase(profile.data(), request.companyId) : null;
-  if (read?.outcome !== 'showcase') return null;
-  if (!read.showcase.locations.some(({ id }) => id === request.locationId)) return null;
-  const stored = readLocationChannels(channels.data(), request.locationId);
-  if (!stored.emails.some((email) => sameChannelEmail(email, request.email))) return null;
-  const rawLocations = (channels.data() as { locations?: unknown } | undefined)?.locations;
-  return {
-    agencyName: read.showcase.displayName,
-    locations: read.showcase.locations,
-    channels: stored,
-    storedLocations: typeof rawLocations === 'object' && rawLocations !== null ? (rawLocations as Record<string, unknown>) : {},
-  };
-}
-
 function linkOf(token: string): ConfirmationLinkFields | 'unavailable' | null {
   const secret = confirmationSecret();
   if (secret === null) {
@@ -112,15 +83,6 @@ function linkOf(token: string): ConfirmationLinkFields | 'unavailable' | null {
     return 'unavailable';
   }
   return readConfirmationLink(secret, token);
-}
-
-async function cardOf(adminDb: AdminFirestore, request: ShowcaseEmailConfirmationRequest, tx?: Transaction): Promise<CardWithEmail | null> {
-  const profileRef = adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(request.companyId);
-  const channelsRef = adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(request.companyId);
-  // ⚠️ Διαδοχικά μέσα στη συναλλαγή — κάθε ανάγνωση μπαίνει στο CAS πριν από την πρώτη εγγραφή.
-  const profile = tx ? await tx.get(profileRef) : await profileRef.get();
-  const channels = tx ? await tx.get(channelsRef) : await channelsRef.get();
-  return cardWithEmail(profile, channels, request);
 }
 
 /**
@@ -142,25 +104,13 @@ export async function readShowcaseEmailConfirmation(
     if (request.nonce !== link.nonce) return refuse('link-invalid');
     const unusable = stateRefusal(request, nowISOValue);
     if (unusable !== null) return refuse(unusable);
-    const card = await cardOf(adminDb, request);
+    const card = await readCardWithEmail(adminDb, request);
     if (card === null) return refuse('email-changed');
     return { ok: true, view: { agencyName: card.agencyName, email: request.email, expiresAt: request.expiresAt } };
   } catch (error) {
     logger.error('[CARD-EMAIL] Η ανάγνωση αιτήματος απέτυχε', { error: error instanceof Error ? error.message : String(error) });
     return refuse('unavailable');
   }
-}
-
-/** Επιβεβαίωση: ημερομηνία στο ιδιωτικό κανάλι **και** στο δημόσιο κατάστημα, από την **ίδια** λίστα. */
-function writeConfirmation(adminDb: AdminFirestore, tx: Transaction, request: ShowcaseEmailConfirmationRequest, card: CardWithEmail, now: string): void {
-  const confirmations = withConfirmation(card.channels.emailConfirmations, request.email, now);
-  const emailConfirmedAt = latestConfirmedAt(confirmations);
-  tx.set(adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(request.companyId), {
-    locations: { ...card.storedLocations, [request.locationId]: { ...card.channels, emailConfirmations: confirmations } },
-  });
-  tx.update(adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(request.companyId), {
-    locations: card.locations.map((location) => (location.id === request.locationId ? { ...location, emailConfirmedAt } : location)),
-  });
 }
 
 async function decide(
@@ -179,9 +129,10 @@ async function decide(
     if (unusable !== null) return refuse(unusable);
 
     if (decision === 'confirm') {
-      const card = await cardOf(adminDb, request, tx);
+      const card = await readCardWithEmail(adminDb, request, tx);
       if (card === null) return refuse('email-changed');
-      writeConfirmation(adminDb, tx, request, card, now);
+      // Ημερομηνία στο ιδιωτικό κανάλι **και** στο δημόσιο κατάστημα, από την **ίδια** λίστα.
+      writeLocationConfirmations(adminDb, tx, request, card, withConfirmation(card.channels.emailConfirmations, request.email, now));
     }
     // 🔑 «Δεν το ζήτησα εγώ» σφραγίζει ΜΟΝΟ το αίτημα: δεν αγγίζει σήμα που υπήρχε ήδη από παλιότερη,
     //    νόμιμη επιβεβαίωση — ένας τρίτος που έστειλε σύνδεσμο δεν μπορεί να σβήσει ξένη απόδειξη.

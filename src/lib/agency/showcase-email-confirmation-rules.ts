@@ -91,6 +91,42 @@ export function withConfirmation(
 }
 
 /**
+ * **Το γραμματοκιβώτιο αποδείχθηκε ανύπαρκτο** (ADR-841 §7 Α21.20) — αφαιρεί την επιβεβαίωση αυτής της
+ * διεύθυνσης **μόνο** αν είναι **παλαιότερη** από την απόδειξη.
+ *
+ * 🏆 **ΑΥΤΟΘΕΡΑΠΕΙΑ ΚΑΤΑ ΚΑΤΑΣΚΕΥΗ**: επιβεβαίωση **νεότερη** από το bounce σημαίνει ότι κάποιος πάτησε
+ * σύνδεσμο που **έφτασε** μετά — το γραμματοκιβώτιο ξαναζεί, και καμία καθυστερημένη επανάληψη του
+ * παλιού bounce δεν επιτρέπεται να τη σβήσει.
+ *
+ * ⚠️ Μη αναγνώσιμη ημερομηνία επιβεβαίωσης ⇒ αφαιρείται (η αστοχία πηγαίνει προς το **να μη φωνάξουμε**)·
+ * μη αναγνώσιμη απόδειξη ⇒ **τίποτα** (ποτέ αφαίρεση σήματος χωρίς απόδειξη).
+ */
+export function withoutConfirmationBefore(
+  confirmations: readonly ShowcaseEmailConfirmation[],
+  email: string,
+  evidenceAt: string,
+): readonly ShowcaseEmailConfirmation[] {
+  const evidence = instantOf(evidenceAt);
+  if (evidence === null) return confirmations;
+  return confirmations.filter((entry) => {
+    if (!sameChannelEmail(entry.email, email)) return true;
+    const confirmed = instantOf(entry.confirmedAt);
+    return confirmed !== null && confirmed > evidence;
+  });
+}
+
+/**
+ * **Ισχύει ακόμη η επιστροφή;** (Α21.20) — ο ίδιος κανόνας με το {@link withoutConfirmationBefore}, από την
+ * πλευρά της οθόνης: επιβεβαίωση **νεότερη** από την επιστροφή ⇒ η επιστροφή είναι ιστορία.
+ */
+export function returnStands(returnedAt: string | null, confirmedAt: string | null): boolean {
+  const returned = returnedAt === null ? null : instantOf(returnedAt);
+  if (returned === null) return false;
+  const confirmed = confirmedAt === null ? null : instantOf(confirmedAt);
+  return confirmed === null || returned >= confirmed;
+}
+
+/**
  * **Φρέσκια ή παλιά;** — ημερολογιακοί μήνες σε UTC (`addMonthsUTC`, το SSoT με το σωστό κόψιμο
  * στο τέλος του μήνα).
  *

@@ -348,6 +348,12 @@ export const SHOWCASE_CARD_KEYS = {
   emailSaveFirst: `${K}.cardEmailSaveFirst`,
   /** 🔑 Λέει **τι ΔΕΝ** σημαίνει το σήμα — Α9.2 · DSA 6(3). */
   emailConfirmHint: `${K}.cardEmailConfirmHint`,
+  // ── ΤΟ EMAIL ΕΠΕΣΤΡΕΨΕ (Α21.20) ──────────────────────────────────────────────────────────
+  /** 🔑 Ιδιωτικό — ο επισκέπτης βλέπει απλώς «Δήλωση», ποτέ «απέτυχε». */
+  emailReturnedOn: `${K}.cardEmailReturnedOn`,
+  /** Ρητή δήλωση του ανθρώπου: καθαρίζει τη λίστα bounces του παρόχου πριν την αποστολή. */
+  emailReturnedResend: `${K}.cardEmailReturnedResend`,
+  emailReturnedHint: `${K}.cardEmailReturnedHint`,
 } as const;
 
 /**
@@ -359,6 +365,7 @@ export const SHOWCASE_CARD_EMAIL_ISSUE_KEYS = {
   'email-not-on-card': `${K}.cardEmailIssue.email-not-on-card`,
   'recipient-quota': `${K}.cardEmailIssue.recipient-quota`,
   'send-failed': `${K}.cardEmailIssue.send-failed`,
+  'mailbox-returned': `${K}.cardEmailIssue.mailbox-returned`,
   failed: `${K}.cardEmailIssue.failed`,
 } as const;
 

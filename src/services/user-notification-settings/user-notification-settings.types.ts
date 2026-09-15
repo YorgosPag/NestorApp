@@ -177,6 +177,15 @@ export interface PropertiesNotificationSettings {
    * ακριβώς η κατάσταση που ολόκληρη η Φάση Β ήρθε να τερματίσει.
    */
   mandateRequestAnswered: boolean;
+  /**
+   * 🎯 ADR-841 §7 Α21.20 — «**το email της κάρτας σας επέστρεψε — το σήμα αφαιρέθηκε**».
+   *
+   * ⚠️ **Προεπιλογή `true`, με τον ίδιο κανόνα**: ο επαγγελματίας **δομικά δεν μπορεί** να δει ότι
+   * ένα γραμματοκιβώτιό του καταργήθηκε — το email που θα του το έλεγε **δεν φτάνει** εκεί. Χωρίς
+   * ειδοποίηση, η κάρτα του λέει σιωπηλά «Δήλωση» και οι πελάτες γράφουν σε νεκρή διεύθυνση
+   * (DSA άρθ. 30: «ζήτα διόρθωση χωρίς καθυστέρηση»).
+   */
+  cardEmailReturned: boolean;
 }
 
 /**
@@ -382,6 +391,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   demandListingMatch: true,
   mandateDecided: true,
   mandateRequestAnswered: true,
+  cardEmailReturned: true,
 };
 
 /**
