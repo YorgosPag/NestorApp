@@ -1,6 +1,23 @@
 {
   "property-market": {
     "mandate": {
+      "profile": {
+        "holiday": {
+          "assumption": "Κοίμηση της Θεοτόκου",
+          "boxing-day": "Σύναξη της Θεοτόκου",
+          "christmas": "Χριστούγεννα",
+          "clean-monday": "Καθαρά Δευτέρα",
+          "easter-monday": "Δευτέρα του Πάσχα",
+          "easter-sunday": "Κυριακή του Πάσχα",
+          "epiphany": "Θεοφάνεια",
+          "good-friday": "Μεγάλη Παρασκευή",
+          "independence-day": "25η Μαρτίου",
+          "labour-day": "Πρωτομαγιά",
+          "new-year": "Πρωτοχρονιά",
+          "ochi-day": "28η Οκτωβρίου",
+          "whit-monday": "Αγίου Πνεύματος"
+        }
+      },
       "showcase": {
         "cardAddBranch": "Προσθήκη υποκαταστήματος",
         "cardAddEmail": "Προσθήκη email",
@@ -110,6 +127,28 @@
         "cardSave": "Αποθήκευση κάρτας",
         "cardSaved": "Η κάρτα αποθηκεύτηκε.",
         "cardSaving": "Αποθήκευση…",
+        "cardSpecialAdd": "Προσθήκη ημερομηνίας",
+        "cardSpecialDatePlaceholder": "Επιλέξτε ημερομηνία",
+        "cardSpecialDefect": {
+          "date-beyond-horizon": "Έως έναν χρόνο από σήμερα.",
+          "date-duplicate": "Αυτή η ημερομηνία υπάρχει ήδη.",
+          "date-invalid": "Επιλέξτε ημερομηνία.",
+          "hours-missing": "Προσθέστε τουλάχιστον ένα διάστημα ή επιλέξτε «Κλειστά».",
+          "too-many-days": "Έως {max} ειδικές ημερομηνίες ανά κατάστημα."
+        },
+        "cardSpecialHint": "Για αργίες, άδειες ή την εορτή του πολιούχου. Εκείνη τη μέρα οι επισκέπτες βλέπουν αυτό το ωράριο αντί για το εβδομαδιαίο.",
+        "cardSpecialKind": {
+          "closed": "Κλειστά",
+          "custom": "Άλλο ωράριο",
+          "regular": "Κανονικό ωράριο"
+        },
+        "cardSpecialKindLabel": "Ωράριο για {date}",
+        "cardSpecialProvisional": "μπορεί να μετατεθεί",
+        "cardSpecialRemove": "Αφαίρεση ημερομηνίας",
+        "cardSpecialSuggested": "Αργίες χωρίς απάντηση",
+        "cardSpecialSuggestedHint": "Εθνικές αργίες του επόμενου χρόνου σε μέρα που είστε ανοιχτά. Μέχρι να απαντήσετε, οι επισκέπτες βλέπουν «το ωράριο ίσως διαφέρει».",
+        "cardSpecialSuggestion": "{holiday} · {date}",
+        "cardSpecialTitle": "Ειδικές ώρες",
         "cardStreetLabel": "Οδός",
         "cardTitle": "Επαγγελματική κάρτα",
         "cardWebsiteHint": "Εμφανίζεται δημόσια στη βιτρίνα σας, στα δομημένα δεδομένα για τις μηχανές αναζήτησης και στην «Αποθήκευση επαφής».",
@@ -122,6 +161,7 @@
           "agency-profile-card-email-invalid": "Μία διεύθυνση email δεν είναι έγκυρη. Ελέγξτε την.",
           "agency-profile-card-hours-invalid": "Το ωράριο ενός καταστήματος δεν είναι έγκυρο. Ελέγξτε τις ώρες.",
           "agency-profile-card-phone-invalid": "Ένας αριθμός τηλεφώνου δεν είναι έγκυρος. Ελέγξτε τον.",
+          "agency-profile-card-special-hours-invalid": "Οι ειδικές ώρες ενός καταστήματος δεν είναι έγκυρες. Ελέγξτε τις ημερομηνίες και τις ώρες.",
           "agency-profile-card-street-incomplete": "Για να δημοσιευτεί η οδός χρειάζονται και οδός και Τ.Κ.",
           "agency-profile-card-too-many-channels": "Έως {maxPhones} τηλέφωνα και {maxEmails} email ανά κατάστημα.",
           "agency-profile-card-too-many-locations": "Έως {maxLocations} καταστήματα ανά κάρτα.",

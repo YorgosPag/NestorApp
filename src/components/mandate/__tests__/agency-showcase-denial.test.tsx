@@ -31,7 +31,7 @@
  * **τι διαβάζει ο άνθρωπος**.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 
 import { AgencyShowcaseContent } from '../AgencyShowcaseContent';
@@ -182,7 +182,10 @@ describe('Κ10 — κάθε κατάσταση που αρνείται λέει 
       answerWith(denialBody(status));
       await publishAndReadAlert();
 
-      const link = screen.getByRole('link');
+      // 🔑 **ΜΕΣΑ στην άρνηση** (ADR-841 §7 Α23.9 Φέτα Β): η σελίδα έχει πλέον και την πόρτα «Στοιχεία ΓΕΜΗ»,
+      //    πάντα ορατή. Ο σύνδεσμος που υπόσχεται το κείμενο του κριτή πρέπει να είναι **δίπλα στον λόγο** —
+      //    η στόχευση κάνει την άγκυρα αυστηρότερη, όχι χαλαρότερη.
+      const link = within(screen.getByRole('alert')).getByRole('link');
       // ✅ ΘΕΤΙΚΟΣ ΣΥΝΟΔΟΣ: ο σύνδεσμος **υπάρχει και έχει κείμενο**…
       expect(link.textContent).not.toBe('');
       // …και δείχνει **εκεί που υπόσχεται το κείμενο του κριτή**.

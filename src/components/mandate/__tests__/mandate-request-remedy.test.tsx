@@ -6,7 +6,9 @@
  * το αδιέξοδο του γραφείου με ένα **δικό του**.
  *
  *   Δ-1  🔴 Ο σύνδεσμος είναι **ΚΥΡΙΟΛΕΚΤΙΚΑ** `/profile`
- *   Δ-2  Είναι η **ΜΟΝΗ** άρνηση με διέξοδο — οι άλλες λύνονται μέσα στη φόρμα
+ *   Δ-2  **ΔΥΟ** αρνήσεις με διέξοδο (ταυτότητα · κλειστή στο ΓΕΜΗ) — οι άλλες λύνονται μέσα στη φόρμα
+ *   Δ-5  🔴 Κλειστή στο ΓΕΜΗ ⇒ **ΚΥΡΙΟΛΕΚΤΙΚΑ** `/pro`, εκτός χώρου (ADR-841 Α23.9 Φέτα Β)
+ *   Ο-4  🔴 Η ΟΘΟΝΗ: κλειστή ⇒ ο λόγος **και** «Όλα τα γραφεία»
  *   Δ-3  🔴 Το `/profile` είναι **ΕΚΤΟΣ ΧΩΡΟΥ** — αλλιώς ο σύνδεσμος του συνόρου θα
  *        παρήγαγε `/o/<ψευδώνυμο>/profile`, **διεύθυνση χωρίς σελίδα**
  *   Δ-4  Το κείμενο του συνδέσμου υπάρχει σε **el ΚΑΙ en**
@@ -68,11 +70,16 @@ describe('Δ — η διέξοδος, ως δεδομένο', () => {
     expect(REJECTION_REMEDY['identity-incomplete']?.href).toBe('/profile');
   });
 
-  it('Δ-2 είναι η ΜΟΝΗ άρνηση με διέξοδο — οι άλλες λύνονται μέσα στη φόρμα', () => {
+  it('Δ-2 ΔΥΟ αρνήσεις με διέξοδο — οι άλλες λύνονται μέσα στη φόρμα', () => {
     const withRemedy = MANDATE_REQUEST_REJECTIONS.filter(
       (code) => REJECTION_REMEDY[code] !== null,
     );
-    expect(withRemedy).toEqual(['identity-incomplete']);
+    expect(withRemedy).toEqual(['agency-closed', 'identity-incomplete']);
+  });
+
+  it('Δ-5 🔴 κλειστή στο ΓΕΜΗ ⇒ ΚΥΡΙΟΛΕΚΤΙΚΑ `/pro`, και ΕΚΤΟΣ χώρου (ADR-841 Α23.9 Φέτα Β)', () => {
+    expect(REJECTION_REMEDY['agency-closed']?.href).toBe('/pro');
+    expect(isInsideWorkspace('/pro')).toBe(false);
   });
 
   it('Δ-3 🔴 το `/profile` είναι ΕΚΤΟΣ χώρου — αλλιώς ο σύνδεσμος δείχνει σε κενό', () => {
@@ -119,5 +126,14 @@ describe('Ο — η οθόνη: ο λόγος φτάνει, και η διέξο
 
     expect(screen.getByRole('alert')).toHaveTextContent(SCREEN_KEYS.unverified);
     expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('Ο-4 🔴 κλειστή στο ΓΕΜΗ ⇒ ο λόγος ΚΑΙ «Όλα τα γραφεία» προς `/pro` (ADR-841 Α23.9 Φέτα Β)', () => {
+    render(<MandateRequestOutcomeNotice reason="agency-closed" />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(REJECTION_KEYS['agency-closed']);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/pro');
+    expect(link).toHaveTextContent('property-market:mandate.profile.backToDirectory');
   });
 });

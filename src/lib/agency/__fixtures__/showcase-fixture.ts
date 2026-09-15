@@ -23,6 +23,24 @@
  */
 
 import type { PublicShowcase, ShowcaseCredential } from '@/types/agency-profile';
+import type { ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
+
+/**
+ * **Η νομική ταυτότητα μιας ΑΕ, δηλωμένη, ενεργή** (ADR-841 §7 Α23) — N.18: ζούσε ως τοπικός βοηθός στη σουίτα
+ * του κλεισίματος, και τα «Στοιχεία ΓΕΜΗ» (Α23.9 Φέτα Β) θα τον αντέγραφαν.
+ */
+export function legalIdentityFixture(overrides: Partial<ShowcaseLegalIdentity> = {}): ShowcaseLegalIdentity {
+  return {
+    publicName: 'legal-name',
+    legalName: 'ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
+    legalForm: 'ae',
+    gemiNumber: '123456789000',
+    seat: { disclosure: 'municipality', streetLine: null, postalCode: null, locality: 'Θεσσαλονίκη' },
+    attestation: { state: 'declared' },
+    registryClosure: null,
+    ...overrides,
+  };
+}
 
 /**
  * Η **επαληθευμένη** ειδικότητα του μεσίτη *(ESCO API, 2026-09-02)* — η **ίδια**

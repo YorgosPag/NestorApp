@@ -6,7 +6,7 @@
  */
 
 import { registryCheck } from '@/lib/company/__fixtures__/registry-record-fixture';
-import { judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
+import { adoptableRegistryCheckOf, judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
 import type { RegistryCheck, RegistryCheckRead, RegistryCompanyRecord } from '@/types/company-registry';
 
 // 🔑 Η κρίση ρωτά μόνο αριθμό · κατάσταση · επωνυμία — αυτά γράφονται ΡΗΤΑ· τα υπόλοιπα από το fixture.
@@ -42,6 +42,22 @@ describe('Κ — κάθε κενό έχει όνομα', () => {
     const judgment = judgeRegistryIdentity(identity, stored);
     expect(judgment.state).toBe('declared');
     expect(judgment.state === 'declared' && judgment.gap).toBe(gap);
+  });
+});
+
+describe('Υ — υιοθετήσιμη; ο ΕΝΑΣ κανόνας φρουρού και οθόνης (ADR-841 Α23.9 Φέτα Β)', () => {
+  it('Υ1 — 🔴 name-mismatch με απάντηση ⇒ η απάντηση (η προεπισκόπηση είναι το `record.legalName`)', () => {
+    const judgment = judgeRegistryIdentity({ ...DECLARED, legalName: 'ΑΛΦΑ ΑΕ' }, PRESENT);
+    expect(adoptableRegistryCheckOf(judgment)?.record.legalName).toBe(CHECK.record.legalName);
+  });
+
+  it.each([
+    ['Υ2 επαληθευμένη', DECLARED, PRESENT],
+    ['Υ3 ανενεργή', DECLARED, withRecord({ status: { code: null, activity: 'inactive' } })],
+    ['Υ4 δεν ρωτήθηκε', DECLARED, { kind: 'absent' } as const],
+    ['Υ5 άλλος αριθμός', { ...DECLARED, registrationNumber: '999999999000' }, PRESENT],
+  ])('%s ⇒ null (κανένα κουμπί που ο διακομιστής αρνείται)', (_label, identity, stored) => {
+    expect(adoptableRegistryCheckOf(judgeRegistryIdentity(identity, stored))).toBeNull();
   });
 });
 

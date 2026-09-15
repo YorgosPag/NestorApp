@@ -5,7 +5,12 @@
  * 🔴 Ο κατάλογος, η αρχική αναζήτηση και οι δύο πόρτες ενεργειών ρωτούν **αυτή** τη συνάρτηση.
  */
 
-import { BROKER_CREDENTIAL, showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
+import {
+  BROKER_CREDENTIAL,
+  legalIdentityFixture,
+  showcaseFixture,
+  TRADE_CREDENTIAL,
+} from '@/lib/agency/__fixtures__/showcase-fixture';
 import type { ShowcaseLocation } from '@/types/showcase-card';
 import type { ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
 
@@ -19,15 +24,7 @@ import {
 const CLOSURE = { issuer: 'gemi', checkedAt: '2026-09-14T11:00:00.000Z' } as const;
 
 function identity(registryClosure: ShowcaseLegalIdentity['registryClosure']): ShowcaseLegalIdentity {
-  return {
-    publicName: 'legal-name',
-    legalName: 'ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
-    legalForm: 'ae',
-    gemiNumber: '123456789000',
-    seat: { disclosure: 'municipality', streetLine: null, postalCode: null, locality: 'Θεσσαλονίκη' },
-    attestation: { state: 'declared' },
-    registryClosure,
-  };
+  return legalIdentityFixture({ registryClosure });
 }
 
 describe('Κ — κλεισμένη στο ΓΕΜΗ', () => {
@@ -58,6 +55,7 @@ const LOCATION: ShowcaseLocation = {
   position: { lat: 40.63, lng: 22.94 },
   street: { street: 'Τσιμισκή', number: '10', postalCode: '54623' },
   hours: null,
+  specialHours: [],
   channelKinds: ['phone', 'email'],
   emailConfirmedAt: '2026-09-01T09:00:00.000Z',
 };

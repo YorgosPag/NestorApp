@@ -26,6 +26,7 @@ import {
   type FirstContactFormBlocker,
 } from '@/lib/contact/first-contact-form-values';
 import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
+import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
 import type { RejectionRemedy } from '@/types/rejection-remedy';
 import {
   FIRST_CONTACT_CHANNELS,
@@ -105,7 +106,7 @@ export const INVARIANT_KEYS: Record<FirstContactInvariant, string> = {
  * έχει, έχει»* — ο **έκτος** κωδικός θα γεννιόταν σιωπηλά χωρίς διέξοδο. Το `null`
  * είναι **απάντηση** στην ερώτηση *«μπορεί να κάνει κάτι, εδώ και τώρα;»*, όχι παράλειψη.
  *
- * ⚠️ **Τα τέσσερα `null` δεν είναι αδιαφορία**: `target-absent` ⇒ ο σύνδεσμος είναι
+ * ⚠️ **Τα `null` δεν είναι αδιαφορία**: `target-absent` ⇒ ο σύνδεσμος είναι
  * μπαγιάτικος· `contact-own-target` ⇒ δεν υπάρχει τίποτα να διορθωθεί. Σύνδεσμος εκεί
  * θα έβγαζε τον άνθρωπο από τη δουλειά του για να τον ξαναφέρει πίσω.
  * *(Ο τύπος `RejectionRemedy` ζει στο `types/rejection-remedy.ts` — κοινός με την εντολή.)*
@@ -116,7 +117,11 @@ export const INVARIANT_KEYS: Record<FirstContactInvariant, string> = {
  */
 export const REJECTION_REMEDY: Record<FirstContactRejection, RejectionRemedy | null> = {
   'target-absent': null,
-  'target-closed': null,
+  /** ADR-841 §7 Α23.9 Φέτα Β — ίδια διέξοδος με το `agency-closed` της εντολής: άλλο γραφείο. */
+  'target-closed': {
+    href: AGENCY_DIRECTORY_ROUTE,
+    labelKey: 'property-market:mandate.profile.backToDirectory',
+  },
   'target-not-live': null,
   'contact-own-target': null,
   'capacity-full': {

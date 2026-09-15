@@ -137,6 +137,15 @@ describe('🔴 Ρ — κάθε κείμενο της πρώτης επαφής �
     // ⚠️ Χωρίς αυτό, ένα σφάλμα στο `wordsForKey` θα έκανε **τα πάντα** να «υπάρχουν».
     expect(wordsForKey(el as Bundle, 'property-market:contact.first.δεν-υπάρχει')).toBeUndefined();
   });
+
+  it('🔴 Ρ5 — κλειστή στο ΓΕΜΗ ⇒ «Όλα τα γραφεία», ΚΥΡΙΟΛΕΚΤΙΚΑ `/pro`, με λέξεις σε el ΚΑΙ en (ADR-841 Α23.9)', () => {
+    // ⚠️ Κυριολεξία, όχι `AGENCY_DIRECTORY_ROUTE`: η σταθερά συγκρινόμενη με τον εαυτό της επιζεί κάθε μετάλλαξης.
+    const remedy = REJECTION_REMEDY['target-closed'];
+    expect(remedy?.href).toBe('/pro');
+    for (const bundle of [el, en]) {
+      expect(wordsForKey(bundle as Bundle, remedy?.labelKey ?? '')).toEqual(expect.any(String));
+    }
+  });
 });
 
 describe('🔴 Σ — ΤΑ ΔΥΝΑΜΙΚΑ ΚΛΕΙΔΙΑ, ΠΟΥ ΚΑΝΕΝΑΣ ΤΥΠΟΣ ΔΕΝ ΦΥΛΑΕΙ', () => {

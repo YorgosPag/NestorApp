@@ -13,9 +13,7 @@
  */
 
 import React from 'react';
-import { ChevronLeft } from 'lucide-react';
 
-import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAgencyShowcase } from '@/hooks/mandate/useAgencyShowcase';
 import { AGENCY_SHOWCASE_ROUTE } from '@/lib/mandate/mandate-routes';
@@ -25,6 +23,7 @@ import {
   SHOWCASE_NS,
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseCardSection } from './ShowcaseCardSection';
+import { ShowcaseBackLink } from './ShowcaseDoorLink';
 import { ShowcaseQrPanel } from './ShowcaseQrPanel';
 
 // 🧩 ADR-744 §15 — PER-ROUTE SLICE, εγγεγραμμένο στο **client** component (όχι στο `page.tsx`):
@@ -40,12 +39,7 @@ export function ShowcaseCardContent(): React.ReactElement {
 
   return (
     <section className="flex w-full flex-col gap-6">
-      <nav>
-        <Link href={AGENCY_SHOWCASE_ROUTE} className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline underline-offset-4">
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          {t(SHOWCASE_CARD_KEYS.backToShowcase)}
-        </Link>
-      </nav>
+      <ShowcaseBackLink href={AGENCY_SHOWCASE_ROUTE} label={t(SHOWCASE_CARD_KEYS.backToShowcase)} />
       {state.phase === 'unavailable' ? (
         <p role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_KEYS.temporarilyUnavailable)}</p>
       ) : null}

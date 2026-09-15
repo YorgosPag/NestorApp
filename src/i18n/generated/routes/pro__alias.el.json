@@ -23,6 +23,8 @@
         "cardEmailConfirmedOn": "Email επιβεβαιωμένο · {date}",
         "cardHeadquarters": "Έδρα",
         "cardHoliday": "Αργία ({holiday}) — το ωράριο ίσως διαφέρει",
+        "cardHolidayAhead": "{day}: {holiday} — το ωράριο ίσως διαφέρει",
+        "cardHolidayRow": "{holiday} — ίσως διαφέρει",
         "cardHoursTitle": "Ωράριο",
         "cardOpenAllDay": "Ανοιχτό 24 ώρες",
         "cardOpenNow": "Ανοιχτό τώρα · κλείνει στις {time}",
@@ -36,6 +38,7 @@
         "cardSaveContact": "Αποθήκευση επαφής",
         "cardShowEmail": "Εμφάνιση email",
         "cardShowPhone": "Εμφάνιση τηλεφώνου",
+        "cardSpecialDay": "Ειδικό ωράριο",
         "cardTitle": "Επικοινωνία",
         "cardToday": "Σήμερα",
         "coverageAlsoOutside": "Έχει επίσης ακίνητα εκτός αυτής της περιοχής.",
@@ -61,6 +64,14 @@
           "ochi-day": "28η Οκτωβρίου",
           "whit-monday": "Αγίου Πνεύματος"
         },
+        "legalForm": {
+          "ae": "Ανώνυμη Εταιρεία (Α.Ε.)",
+          "epe": "Εταιρεία Περιορισμένης Ευθύνης (Ε.Π.Ε.)",
+          "oe": "Ομόρρυθμη Εταιρεία (Ο.Ε.)",
+          "sole_proprietor": "Ατομική επιχείρηση"
+        },
+        "legalSeat": "Καταστατική έδρα: {seat}",
+        "legalTitle": "Νομικά στοιχεία",
         "listingsCount": "{count, plural, one {# αγγελία} other {# αγγελίες}}",
         "listingsEmpty": "Αυτό το γραφείο δεν έχει δημοσιευμένες αγγελίες αυτή τη στιγμή.",
         "listingsEmptyHint": "Δεν σημαίνει ότι δεν δουλεύει — σημαίνει ότι δεν έχει δημοσιεύσει κάτι εδώ. Μπορείτε να του ζητήσετε να αναλάβει το δικό σας ακίνητο.",
@@ -82,6 +93,12 @@
         "shareQrAlt": "Κωδικός QR για τη βιτρίνα «{name}»",
         "shareQrFailed": "Ο κωδικός QR δεν δημιουργήθηκε — ο σύνδεσμος λειτουργεί κανονικά.",
         "shareTitle": "Κοινοποίηση βιτρίνας"
+      },
+      "showcase": {
+        "registry": {
+          "doorClosed": "Σύμφωνα με το ΓΕΜΗ η επιχείρηση δεν είναι ενεργή · έλεγχος {date}",
+          "verifiedOn": "Η επωνυμία και ο αριθμός επαληθεύτηκαν από το ΓΕΜΗ · έλεγχος {date}"
+        }
       }
     }
   }

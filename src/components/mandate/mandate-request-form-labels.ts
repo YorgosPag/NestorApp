@@ -24,6 +24,7 @@ import type { DraftFormSlot, DraftFormText } from '@/lib/forms/draft-form-labels
 import type { TaxIdentityBlocker } from '@/lib/forms/draft-identity';
 import type { MandateRequestFormBlocker } from '@/lib/mandate/mandate-request-form-values';
 import { PRIVATE_PROFILE_ROUTE } from '@/lib/routes/accountRoutes';
+import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
 import type { RejectionRemedy } from '@/types/rejection-remedy';
 
@@ -166,8 +167,15 @@ export const REJECTION_REMEDY: Record<MandateRequestRejection, RejectionRemedy |
   'listing-not-live': null,
   'listing-already-brokered': null,
   'agency-absent': null,
-  // ⚠️ `null` ακόμα: η διέξοδος «Όλα τα γραφεία» θέλει κλειδί στο route slice της φόρμας ⇒ ADR-841 Α23.9 Φέτα Β (κοινό regen).
-  'agency-closed': null,
+  /**
+   * 🔑 **ADR-841 §7 Α23.9 Φέτα Β — «Όλα τα γραφεία»**: η επιχείρηση δεν λειτουργεί, άρα ο **μόνος** δρόμος είναι
+   * άλλο γραφείο (Google Business Profile: η κλειστή δείχνει εναλλακτικές). Κείμενο = το **υπάρχον** κλειδί της
+   * βιτρίνας· διεύθυνση = η **μία** σταθερά του καταλόγου (εκτός χώρου, CHECK 3.60).
+   */
+  'agency-closed': {
+    href: AGENCY_DIRECTORY_ROUTE,
+    labelKey: 'property-market:mandate.profile.backToDirectory',
+  },
   /**
    * ⚠️ **`null` ΜΕ ΛΟΓΟ**: δεν υπάρχει πεδίο να διορθώσει — **δεν έκανε λάθος**. Ο
    * μόνος άλλος δρόμος είναι **άλλο γραφείο**, και ένας σύνδεσμος στον κατάλογο θα

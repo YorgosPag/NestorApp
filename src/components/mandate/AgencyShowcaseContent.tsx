@@ -55,6 +55,8 @@ import {
 import { COVERAGE_MAX_OUTER_KM, COVERAGE_MAX_VERTICES } from '@/types/agency-coverage';
 import { ShowcaseMarkField } from '@/components/mandate/ShowcaseMarkField';
 import { ShowcaseCardDoor } from '@/components/mandate/ShowcaseCardDoor';
+import { ShowcaseRegistryDoor } from '@/components/mandate/ShowcaseRegistryDoor';
+import { ShowcaseWithdrawButton } from '@/components/mandate/ShowcaseWithdrawButton';
 import {
   BROKERAGE_DENY_NS,
   BROKERAGE_DENY_REASON_KEYS,
@@ -314,7 +316,8 @@ export function AgencyShowcaseContent(): React.ReactElement {
       {/* 🏆 ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ: **δική της πράξη σε δική της υποσελίδα** (GBP · GitHub ·
           LinkedIn: κάθε ενότητα με δικό της «Αποθήκευση»). Εδώ μόνο η πόρτα. */}
       <ShowcaseCardDoor published={published !== null} />
-
+      {/* 🏆 ADR-841 §7 Α23.9 Φέτα Β — «Στοιχεία ΓΕΜΗ»: υποσελίδα· η πόρτα λέει την ΚΑΤΑΣΤΑΣΗ (κλειστή/επαληθευμένη). */}
+      <ShowcaseRegistryDoor published={published} />
 
       {failure !== null && (
         <p role="alert" className="m-0 text-sm text-destructive">
@@ -475,16 +478,7 @@ function ShowcaseActions({
           : t(published === null ? SHOWCASE_KEYS.publish : SHOWCASE_KEYS.republish)}
       </Button>
 
-      {published !== null && (
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy !== null}
-          onClick={() => void onWithdraw()}
-        >
-          {busy === 'withdrawing' ? t(SHOWCASE_KEYS.withdrawing) : t(SHOWCASE_KEYS.withdraw)}
-        </Button>
-      )}
+      {published !== null && <ShowcaseWithdrawButton busy={busy} onWithdraw={onWithdraw} />}
 
       <span className="text-sm text-muted-foreground">
         {published === null

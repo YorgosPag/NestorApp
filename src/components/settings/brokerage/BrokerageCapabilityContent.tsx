@@ -78,6 +78,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { formatLongDate } from '@/lib/intl-formatting';
+import { APP_ROUTES } from '@/lib/routes/appRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
 import {
@@ -267,7 +268,7 @@ function RegistrationNotice({
   return (
     <p className="m-0 flex flex-wrap gap-2 text-sm text-foreground" data-testid="brokerage-gemi-missing">
       {t(BROKERAGE_CAPABILITY_KEYS.gemiMissing)}
-      <Link href="/accounting/setup" className="underline" data-testid="brokerage-gemi-profile-link">
+      <Link href={APP_ROUTES.accountingSetup} className="underline" data-testid="brokerage-gemi-profile-link">
         {t(BROKERAGE_CAPABILITY_KEYS.gemiProfileLink)}
       </Link>
     </p>

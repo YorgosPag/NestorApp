@@ -71,3 +71,14 @@ export function judgeRegistryIdentity(
     ? { state: 'verified', issuer: 'gemi', check: stored.check }
     : declared(gap, stored.check);
 }
+
+/**
+ * **Υιοθετήσιμη η επωνυμία του ΓΕΜΗ;** — ο **ΕΝΑΣ** κανόνας (ADR-841 §7 Α23.9 Φέτα Β): μόνο `name-mismatch`
+ * με αποθηκευμένη απάντηση. Επιστρέφει την απάντηση (η επωνυμία της προεπισκόπησης είναι το `record.legalName`).
+ *
+ * 🔑 Τον ρωτούν **και** ο φρουρός (`legal-name-adoption.service`) **και** η οθόνη (κουμπί + προεπισκόπηση):
+ * δύο αντίγραφα θα πρόσφεραν κουμπί που ο διακομιστής αρνείται — ή θα έκρυβαν κουμπί που δέχεται.
+ */
+export function adoptableRegistryCheckOf(judgment: RegistryIdentityJudgment): RegistryCheck | null {
+  return judgment.state === 'declared' && judgment.gap === 'name-mismatch' ? judgment.check : null;
+}

@@ -41,7 +41,7 @@ import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/fi
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
-import { judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
+import { adoptableRegistryCheckOf, judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
 import { readLegalIdentityInputs } from '@/services/mandate/showcase-legal-identity-custody';
 import { accountingAuditEntryOf } from '@/subapps/accounting/services/accounting-audit-service';
 import { legalNameChangeAudit } from '@/subapps/accounting/services/audit/company-legal-name-audit';
@@ -77,9 +77,11 @@ type NextStep =
 /** **Η απόφαση** — μόνο από την κρίση και από ό,τι είδε ο άνθρωπος. */
 function nextStepOf(judgment: RegistryIdentityJudgment, expectedLegalName: string): NextStep {
   if (judgment.state === 'verified') return { kind: 'already-adopted' };
-  if (judgment.gap !== 'name-mismatch' || judgment.check === null) return { kind: 'not-adoptable' };
-  if (judgment.check.record.legalName !== expectedLegalName) return { kind: 'registry-changed' };
-  return { kind: 'adopt', check: judgment.check };
+  // 🔑 Ο ΙΔΙΟΣ κανόνας με την οθόνη (προεπισκόπηση + κουμπί) — ADR-841 §7 Α23.9 Φέτα Β.
+  const check = adoptableRegistryCheckOf(judgment);
+  if (check === null) return { kind: 'not-adoptable' };
+  if (check.record.legalName !== expectedLegalName) return { kind: 'registry-changed' };
+  return { kind: 'adopt', check };
 }
 
 function reportOf(declaration: CompanyRegistryDeclaration, judgment: RegistryIdentityJudgment): RegistryIdentityReport {

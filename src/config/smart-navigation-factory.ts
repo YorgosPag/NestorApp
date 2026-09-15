@@ -77,6 +77,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { AGENCY_SHOWCASE_ROUTE } from '@/lib/mandate/mandate-routes';
 import { AUTH_ROUTES } from '@/lib/routes';
+import { APP_ROUTES } from '@/lib/routes/appRoutes';
 const logger = createModuleLogger('smart-navigation-factory');
 
 // 🏢 ENTERPRISE: i18n translation keys for navigation labels
@@ -595,7 +596,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               analyticsKey: 'nav_accounting',
             },
             subItems: [
-              { icon: Settings, href: '/accounting/setup' },
+              { icon: Settings, href: APP_ROUTES.accountingSetup },
               { icon: Receipt, href: '/accounting/invoices' },
               { icon: BookOpen, href: '/accounting/journal' },
               { icon: DollarSign, href: '/accounting/vat' },
@@ -880,6 +881,8 @@ function getLabelKeyForPath(path: string): string {
     'settings/agency-profile': 'agency_showcase',
     // ADR-841 §7 Α21.16 — η κάρτα είναι υποσελίδα της βιτρίνας: ίδια ετικέτα, ίδιο ενεργό στοιχείο.
     'settings/agency-profile/card': 'agency_showcase',
+    // ADR-841 §7 Α23.9 Φέτα Β — «Στοιχεία ΓΕΜΗ»: υποσελίδα της βιτρίνας, ίδιο ενεργό στοιχείο.
+    'settings/agency-profile/registry': 'agency_showcase',
 
     // Admin paths
     'admin/ai-inbox': 'ai_inbox',

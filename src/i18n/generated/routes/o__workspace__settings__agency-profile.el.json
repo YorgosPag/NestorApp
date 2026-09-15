@@ -129,6 +129,13 @@
         "publish": "Δημοσίευση στον κατάλογο",
         "publishedAt": "Δημοσιεύτηκε {date}",
         "publishing": "Δημοσίευση…",
+        "registry": {
+          "door": "Στοιχεία ΓΕΜΗ",
+          "doorAttention": "Χρειάζεται ενέργεια — δείτε τι λέει το ΓΕΜΗ",
+          "doorClosed": "Σύμφωνα με το ΓΕΜΗ η επιχείρηση δεν είναι ενεργή · έλεγχος {date}",
+          "doorHint": "Επαλήθευση της επωνυμίας και της κατάστασης της επιχείρησης από το δημόσιο μητρώο.",
+          "doorVerified": "Επαληθεύτηκε από το ΓΕΜΗ · έλεγχος {date}"
+        },
         "registryHint": "Ο αριθμός όπως τον εξέδωσε η αρχή. Τον δηλώνετε εσείς — δεν τον έχουμε ελέγξει.",
         "registryLabel": "Αριθμός μητρώου ({authority})",
         "registryNone": "Δεν τηρείται μητρώο από καμία αρχή για αυτή την ειδικότητα. Δεν σας λείπει τίποτα.",
@@ -139,6 +146,7 @@
           "agency-profile-card-email-invalid": "Μία διεύθυνση email δεν είναι έγκυρη. Ελέγξτε την.",
           "agency-profile-card-hours-invalid": "Το ωράριο ενός καταστήματος δεν είναι έγκυρο. Ελέγξτε τις ώρες.",
           "agency-profile-card-phone-invalid": "Ένας αριθμός τηλεφώνου δεν είναι έγκυρος. Ελέγξτε τον.",
+          "agency-profile-card-special-hours-invalid": "Οι ειδικές ώρες ενός καταστήματος δεν είναι έγκυρες. Ελέγξτε τις ημερομηνίες και τις ώρες.",
           "agency-profile-card-street-incomplete": "Για να δημοσιευτεί η οδός χρειάζονται και οδός και Τ.Κ.",
           "agency-profile-card-too-many-channels": "Έως {maxPhones} τηλέφωνα και {maxEmails} email ανά κατάστημα.",
           "agency-profile-card-too-many-locations": "Έως {maxLocations} καταστήματα ανά κάρτα.",

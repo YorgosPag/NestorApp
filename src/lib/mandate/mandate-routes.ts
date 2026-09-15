@@ -116,6 +116,13 @@ export const AGENCY_SHOWCASE_ROUTE = '/settings/agency-profile' as const;
 export const AGENCY_SHOWCASE_CARD_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/card` as const;
 
 /**
+ * **ΤΑ ΣΤΟΙΧΕΙΑ ΓΕΜΗ** — υποσελίδα της βιτρίνας (ADR-841 §7 Α23.9 Φέτα Β): επαλήθευση, «Υιοθέτηση επωνυμίας
+ * ΓΕΜΗ», ένδειξη κλεισίματος. Δική της πράξη και δικό της route slice, όπως η κάρτα (Google Business Profile ·
+ * Stripe: κάθε ενότητα στοιχείων επιχείρησης σε δική της οθόνη).
+ */
+export const AGENCY_SHOWCASE_REGISTRY_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/registry` as const;
+
+/**
  * **ΤΑ ΣΤΟΙΧΕΙΑ ΤΗΣ ΕΤΑΙΡΕΙΑΣ** (ADR-439 · ADR-841 §7 Α21.19) — εκεί στέλνει η κάρτα όποιον δεν έχει δηλώσει
  * ακόμη διεύθυνση και κανάλια, αντί να του ζητήσει να τα γράψει δεύτερη φορά.
  *

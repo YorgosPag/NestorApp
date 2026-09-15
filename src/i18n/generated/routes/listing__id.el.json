@@ -319,6 +319,11 @@
         "cta": "Πλησιάστε τον ιδιοκτήτη",
         "ctaPro": "Πλησιάστε το γραφείο"
       }
+    },
+    "mandate": {
+      "profile": {
+        "backToDirectory": "Όλα τα γραφεία"
+      }
     }
   },
   "search-focus": {
