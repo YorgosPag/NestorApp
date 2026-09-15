@@ -180,3 +180,16 @@ export type OESetupInput = Omit<OECompanyProfile, 'createdAt' | 'updatedAt'>;
 export type EPESetupInput = Omit<EPECompanyProfile, 'createdAt' | 'updatedAt'>;
 export type AESetupInput = Omit<AECompanyProfile, 'createdAt' | 'updatedAt'>;
 export type CompanySetupInput = SoleProprietorSetupInput | OESetupInput | EPESetupInput | AESetupInput;
+
+// ============================================================================
+// FIELD MASK — ADR-841 §7 Α23 Φ3.2 Γ3 (κανόνες: services/setup/company-profile-field-mask)
+// ============================================================================
+
+/** Κάθε κλειδί **κάθε** μέλους της ένωσης (το σκέτο `keyof` δίνει μόνο τα κοινά). */
+type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+
+/** Ένα πεδίο του προφίλ που γράφει ο άνθρωπος — **χωρίς** `createdAt/updatedAt/companyId`. */
+export type CompanyProfileField = KeysOfUnion<CompanySetupInput>;
+
+/** Η μάσκα: `undefined` = πλήρης αντικατάσταση (παλιός πελάτης, AIP-134 `*`). */
+export type CompanyProfileFieldMask = readonly CompanyProfileField[] | undefined;

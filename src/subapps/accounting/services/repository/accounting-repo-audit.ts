@@ -7,6 +7,8 @@
  * @compliance SAP CDHDR append-only pattern, ΚΦΔ Ν.4987/2022
  */
 
+import type { Firestore, Transaction } from 'firebase-admin/firestore';
+
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -22,10 +24,10 @@ import { sanitizeForFirestore } from './firestore-helpers';
 /**
  * **The stored shape of an audit entry** — tenant-stamped, sanitized (ADR-841 §7 Α23).
  *
- * One builder for both write paths: {@link createAuditEntry} and a writer that appends the
- * entry inside its own transaction (`transaction.set(ref, auditLogDocumentOf(...))`).
+ * One builder for both write paths: {@link createAuditEntry} and {@link appendAuditEntryInTransaction}.
+ * Module-private since Γ3: writers outside this module append through the in-transaction helper.
  */
-export function auditLogDocumentOf(
+function auditLogDocumentOf(
   tenant: Pick<TenantContext, 'companyId'>,
   entry: AccountingAuditEntry
 ): Record<string, unknown> {
@@ -33,6 +35,23 @@ export function auditLogDocumentOf(
     ...entry,
     companyId: tenant.companyId,
   } as unknown as Record<string, unknown>);
+}
+
+/**
+ * **The ONE in-transaction append of an audit entry** (ADR-841 §7 Α23 Φ3.2 Γ3).
+ *
+ * The material change and its trace commit together or not at all — never a change without a
+ * trace, never a trace for a change that was rolled back. Writers: «Υιοθέτηση επωνυμίας ΓΕΜΗ» ·
+ * company profile save.
+ */
+export function appendAuditEntryInTransaction(
+  db: Firestore,
+  transaction: Transaction,
+  tenant: Pick<TenantContext, 'companyId'>,
+  entry: AccountingAuditEntry
+): void {
+  const ref = db.collection(COLLECTIONS.ACCOUNTING_AUDIT_LOG).doc(entry.auditId);
+  transaction.set(ref, auditLogDocumentOf(tenant, entry));
 }
 
 /**

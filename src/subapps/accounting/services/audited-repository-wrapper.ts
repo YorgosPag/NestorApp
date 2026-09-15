@@ -9,11 +9,13 @@
 
 import type { IAccountingRepository } from '../types/interfaces';
 import type {
+  AccountingAuditEntry,
   AccountingAuditEventType,
   AuditEntityType,
 } from '../types/accounting-audit';
+import type { CompanyProfile } from '../types/company';
 import type { FiscalPeriod } from '../types/fiscal-period';
-import { logAccountingEvent } from './accounting-audit-service';
+import { accountingAuditEntryOf, logAccountingEvent } from './accounting-audit-service';
 import { diffCompanyOwnership } from './audit/company-ownership-audit';
 import { legalNameChangeAudit } from './audit/company-legal-name-audit';
 
@@ -114,29 +116,17 @@ export function createAuditedRepository(
 
     // ── Audited mutations ─────────────────────────────────────────────────
 
-    async saveCompanySetup(data) {
-      // ADR-440: ownership/dividend changes (partners/members/shareholders) are
-      // material data. Read the prior profile, persist, then audit the delta.
-      const before = await repo.getCompanySetup();
-      await repo.saveCompanySetup(data);
-
-      const audit = diffCompanyOwnership(before, data);
-      if (audit.changed) {
-        await logAudit(repo, userId, 'COMPANY_PROFILE_UPDATED', 'company_profile', companyId,
-          audit.details, audit.metadata);
-      }
-
-      // ADR-841 §7 Α23: the legal name is material data too — until 2026-09-15 a rename
-      // through this path left NO trace. Same builder as «Υιοθέτηση επωνυμίας ΓΕΜΗ».
-      const rename = legalNameChangeAudit({
-        from: before?.businessName ?? null,
-        to: data.businessName,
-        source: 'profile',
+    async saveCompanySetup(data, options) {
+      // ADR-440 · ADR-841 §7 Α23 Φ3.2 Γ3: ownership and legal name are material data. The trace is
+      // judged from the TRANSACTION's before/after and written INSIDE it — never a second read, never
+      // a change without a trace, never a trace for a value the field mask did not write.
+      return repo.saveCompanySetup(data, {
+        ...options,
+        auditOf: (before, after) => [
+          ...(options?.auditOf?.(before, after) ?? []),
+          ...companySetupAudit(before, after, userId, companyId),
+        ],
       });
-      if (rename !== null) {
-        await logAudit(repo, userId, 'COMPANY_LEGAL_NAME_CHANGED', 'company_profile', companyId,
-          rename.details, rename.metadata);
-      }
     },
 
     async createInvoice(data) {
@@ -201,8 +191,31 @@ export function createAuditedRepository(
 }
 
 // ============================================================================
-// INTERNAL HELPER
+// INTERNAL HELPERS
 // ============================================================================
+
+/** The trace of a profile save — the EXISTING pure judges, one entry builder (ADR-440 · ADR-841 Α23). */
+function companySetupAudit(
+  before: CompanyProfile | null,
+  after: CompanyProfile,
+  userId: string,
+  companyId: string
+): AccountingAuditEntry[] {
+  const subject = { entityType: 'company_profile', entityId: companyId, userId } as const;
+  const entries: AccountingAuditEntry[] = [];
+
+  const ownership = diffCompanyOwnership(before, after);
+  if (ownership.changed) {
+    entries.push(accountingAuditEntryOf({ ...subject, eventType: 'COMPANY_PROFILE_UPDATED',
+      details: ownership.details, metadata: ownership.metadata }));
+  }
+
+  const rename = legalNameChangeAudit({ from: before?.businessName ?? null, to: after.businessName, source: 'profile' });
+  if (rename !== null) {
+    entries.push(accountingAuditEntryOf({ ...subject, eventType: 'COMPANY_LEGAL_NAME_CHANGED', ...rename }));
+  }
+  return entries;
+}
 
 async function logAudit(
   repo: IAccountingRepository,

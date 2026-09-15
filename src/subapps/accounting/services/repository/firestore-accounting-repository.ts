@@ -13,11 +13,8 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import type { IAccountingRepository } from '../../types/interfaces';
-import type { CompanyProfile, CompanySetupInput } from '../../types/company';
-import { LEGACY_DEFAULT_ENTITY_TYPE } from '../../types/entity';
+import type { CompanySetupSaveOptions, IAccountingRepository } from '../../types/interfaces';
+import type { CompanySetupInput } from '../../types/company';
 import type { TenantContext } from '../../types/common';
 import type {
   CreateJournalEntryInput,
@@ -54,7 +51,6 @@ import type { FiscalPeriod } from '../../types/fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
 import type { MatchingConfig } from '../../types/matching-config';
 
-import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import {
   getProfilePartners,
   getProfileMembers,
@@ -69,6 +65,7 @@ import * as documents from './accounting-repo-documents';
 import * as balances from './accounting-repo-balances';
 import * as audit from './accounting-repo-audit';
 import * as config from './accounting-repo-config';
+import * as companySetup from './accounting-repo-company-setup';
 
 // ============================================================================
 // FIRESTORE ACCOUNTING REPOSITORY IMPLEMENTATION
@@ -86,37 +83,10 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   // ── Company Setup (M-001) ─────────────────────────────────────────────
 
-  async getCompanySetup(): Promise<CompanyProfile | null> {
-    return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(this.tenant.companyId).get();
-      if (!snap.exists) return null;
-      const raw = snap.data() as Record<string, unknown>;
-      // Backward compat: docs without entityType → sole_proprietor (ο ΕΝΑΣ κανόνας, ADR-841 Α23)
-      if (!raw.entityType) {
-        raw.entityType = LEGACY_DEFAULT_ENTITY_TYPE;
-      }
-      return raw as unknown as CompanyProfile;
-    }, null);
-  }
-
-  async saveCompanySetup(data: CompanySetupInput): Promise<void> {
-    const now = isoNow();
-    await safeFirestoreOperation(async (db) => {
-      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(this.tenant.companyId);
-      const existing = await docRef.get();
-
-      const doc = sanitizeForFirestore({
-        ...data,
-        companyId: this.tenant.companyId,
-        updatedAt: now,
-        createdAt: existing.exists
-          ? (existing.data() as CompanyProfile).createdAt
-          : now,
-      } as unknown as Record<string, unknown>);
-
-      await docRef.set(doc);
-    }, undefined);
-  }
+  // ADR-841 §7 Α23 Φ3.2 Γ3: μία συναλλαγή — μάσκα πεδίων + ίχνος στην ίδια δέσμευση.
+  getCompanySetup = () => companySetup.getCompanySetup(this.tenant);
+  saveCompanySetup = (data: CompanySetupInput, options?: CompanySetupSaveOptions) =>
+    companySetup.saveCompanySetup(this.tenant, data, options);
 
   // ── Financial: Journal Entries ─────────────────────────────────────────
   createJournalEntry = (data: CreateJournalEntryInput) =>

@@ -45,7 +45,7 @@ import { judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment'
 import { readLegalIdentityInputs } from '@/services/mandate/showcase-legal-identity-custody';
 import { accountingAuditEntryOf } from '@/subapps/accounting/services/accounting-audit-service';
 import { legalNameChangeAudit } from '@/subapps/accounting/services/audit/company-legal-name-audit';
-import { auditLogDocumentOf } from '@/subapps/accounting/services/repository/accounting-repo-audit';
+import { appendAuditEntryInTransaction } from '@/subapps/accounting/services/repository/accounting-repo-audit';
 import type {
   CompanyRegistryDeclaration,
   RegistryCheck,
@@ -112,8 +112,7 @@ function writeAdoption(
       userId: request.actorUid,
       ...audit,
     });
-    const auditRef = adminDb.collection(COLLECTIONS.ACCOUNTING_AUDIT_LOG).doc(entry.auditId);
-    transaction.set(auditRef, auditLogDocumentOf({ companyId: request.companyId }, entry));
+    appendAuditEntryInTransaction(adminDb, transaction, { companyId: request.companyId }, entry);
   }
 
   const adopted: CompanyRegistryDeclaration = { ...declaration, businessName: legalName };

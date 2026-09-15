@@ -12,7 +12,7 @@
 import type { PaginatedResult } from '@/lib/pagination';
 
 // ── Company Profile Types ────────────────────────────────────────────────────
-import type { CompanyProfile, CompanySetupInput } from './company';
+import type { CompanyProfile, CompanyProfileFieldMask, CompanySetupInput } from './company';
 import type { Partner, Member, Shareholder } from './entity';
 
 // ── Phase 1 Types ───────────────────────────────────────────────────────────
@@ -96,6 +96,24 @@ import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit
 // ============================================================================
 
 /**
+ * Επιλογές αποθήκευσης προφίλ (ADR-841 §7 Α23 Φ3.2 Γ3).
+ *
+ * - `fields` — μάσκα: γράφονται **μόνο** αυτά πάνω στο αποθηκευμένο (`undefined` = πλήρης αντικατάσταση).
+ * - `auditOf` — τα ίχνη από το πριν/μετά **της συναλλαγής**, γραμμένα στην **ίδια** συναλλαγή.
+ *   ⚠️ Καλείται σε **κάθε** επανάληψη της συναλλαγής: καθαρή συνάρτηση, καμία παρενέργεια.
+ */
+export interface CompanySetupSaveOptions {
+  readonly fields?: CompanyProfileFieldMask;
+  readonly auditOf?: (before: CompanyProfile | null, after: CompanyProfile) => readonly AccountingAuditEntry[];
+}
+
+/** Ό,τι διάβασε και ό,τι έγραψε η **ίδια** συναλλαγή — οι συνέπειες κρίνονται από εδώ, ποτέ από δεύτερη ανάγνωση. */
+export interface CompanySetupSaveResult {
+  readonly before: CompanyProfile | null;
+  readonly after: CompanyProfile;
+}
+
+/**
  * Repository interface για accounting data access
  *
  * Ακολουθεί το ίδιο pattern με ITasksRepository (src/services/crm/tasks/contracts.ts).
@@ -104,7 +122,7 @@ import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit
 export interface IAccountingRepository {
   // ── Company Setup (M-001) ─────────────────────────────────────────────
   getCompanySetup(): Promise<CompanyProfile | null>;
-  saveCompanySetup(data: CompanySetupInput): Promise<void>;
+  saveCompanySetup(data: CompanySetupInput, options?: CompanySetupSaveOptions): Promise<CompanySetupSaveResult>;
 
   // ── Journal Entries ─────────────────────────────────────────────────────
   createJournalEntry(data: CreateJournalEntryInput): Promise<{ id: string }>;

@@ -34,7 +34,7 @@ export interface AccountingEventParams {
  * **The ONE composition of an audit entry** (ADR-841 §7 Α23).
  *
  * Exported so a writer that changes material data **inside a Firestore transaction**
- * can append the entry in the SAME transaction (`auditLogDocumentOf`) — the change and
+ * can append the entry in the SAME transaction (`appendAuditEntryInTransaction`) — the change and
  * its trace commit together or not at all. Never a second entry builder.
  */
 export function accountingAuditEntryOf(params: AccountingEventParams): AccountingAuditEntry {
