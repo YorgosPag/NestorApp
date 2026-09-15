@@ -247,7 +247,7 @@ export function Section3DPanelTab() {
                           max={10}
                           step={0.1}
                           value={groupDelta}
-                          className="flex-1 accent-primary"
+                          className="flex-1 accent-control-accent"
                           onChange={(e) => setGroupDelta(parseFloat(e.target.value))}
                         />
                         <button

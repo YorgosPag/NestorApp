@@ -20,7 +20,7 @@ export const searchSystemClasses = {
     label: 'block mb-1 text-xs font-medium text-muted-foreground',
     input: 'w-full px-2 py-1 text-sm border border-border rounded-sm bg-background text-foreground focus:outline-none focus:border-primary',
     select: 'w-full px-2 py-1 text-sm border border-border rounded-sm bg-background text-foreground cursor-pointer focus:outline-none focus:border-primary',
-    checkbox: 'mr-2 cursor-pointer accent-primary',
+    checkbox: 'mr-2 cursor-pointer accent-control-accent', // ADR-770 §17 — ποτέ `accent-primary` (επιφάνεια)
     rangeContainer: 'flex items-center gap-2',
     rangeInput: 'w-20 px-2 py-1 text-sm border border-border rounded-sm bg-background text-foreground text-center focus:outline-none focus:border-primary',
     rangeLabel: 'text-sm text-muted-foreground',

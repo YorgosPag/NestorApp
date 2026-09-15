@@ -136,7 +136,7 @@ function CreateMissingToggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+        className="mt-0.5 h-4 w-4 rounded border-border accent-control-accent"
         data-testid="restore-dialog-create-missing"
       />
       <span className="flex flex-col gap-0.5">

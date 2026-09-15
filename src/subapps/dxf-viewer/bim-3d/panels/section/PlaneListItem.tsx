@@ -109,7 +109,7 @@ export function PlaneListItem({ plane, isLinked }: Props) {
             max={50}
             step={0.1}
             value={distanceM}
-            className="flex-1 accent-primary"
+            className="flex-1 accent-control-accent"
             onChange={(e) => setDistance(parseFloat(e.target.value))}
           />
           <span className="text-[10px] text-white/60 w-10 text-right tabular-nums">

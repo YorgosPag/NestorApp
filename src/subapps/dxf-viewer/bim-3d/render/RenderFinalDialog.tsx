@@ -258,7 +258,7 @@ export function RenderFinalDialog({
                 type="checkbox"
                 checked={destDisk}
                 onChange={(e) => setDestDisk(e.target.checked)}
-                className="h-4 w-4 rounded border-input accent-primary"
+                className="h-4 w-4 rounded border-input accent-control-accent"
               />
               {t('render.destination.disk')}
             </label>
@@ -267,7 +267,7 @@ export function RenderFinalDialog({
                 type="checkbox"
                 checked={destProject}
                 onChange={(e) => setDestProject(e.target.checked)}
-                className="h-4 w-4 rounded border-input accent-primary"
+                className="h-4 w-4 rounded border-input accent-control-accent"
               />
               {t('render.destination.project')}
             </label>
@@ -289,7 +289,7 @@ export function RenderFinalDialog({
                   type="checkbox"
                   checked={denoiseEnabled}
                   onChange={(e) => setDenoiseEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-input accent-primary"
+                  className="h-4 w-4 rounded border-input accent-control-accent"
                 />
                 {t('render.advanced.denoiser')}
               </label>

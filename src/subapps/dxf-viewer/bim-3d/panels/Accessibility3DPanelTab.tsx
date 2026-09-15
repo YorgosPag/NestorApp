@@ -73,7 +73,7 @@ export function Accessibility3DPanelTab() {
               value={opt}
               checked={entityNavOrder === opt}
               onChange={() => handleNavOrderChange(opt)}
-              className="accent-primary"
+              className="accent-control-accent"
             />
             {t(`accessibility.settings.entityNavOrder.${opt}`)}
           </label>
@@ -91,7 +91,7 @@ export function Accessibility3DPanelTab() {
               value={opt}
               checked={reducedMotion === opt}
               onChange={() => handleReducedMotionChange(opt)}
-              className="accent-primary"
+              className="accent-control-accent"
             />
             {t(`accessibility.settings.reducedMotion.${i18nReducedMotion(opt)}`)}
           </label>
@@ -104,7 +104,7 @@ export function Accessibility3DPanelTab() {
           type="checkbox"
           checked={announcementsEnabled}
           onChange={(e) => handleAnnouncementsChange(e.target.checked)}
-          className="accent-primary"
+          className="accent-control-accent"
         />
         {t('accessibility.settings.announcementsEnabled')}
       </label>

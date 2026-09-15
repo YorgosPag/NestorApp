@@ -287,7 +287,7 @@ export function TextOverrideEditor({
               checked={mode === m}
               onChange={() => handleModeChange(m)}
               disabled={readOnly}
-              className="accent-primary"
+              className="accent-control-accent"
             />
             {k(`mode.${m}`)}
           </Label>
