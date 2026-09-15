@@ -16,8 +16,8 @@
  *
  * | Ετυμηγορία μητρώου | Τι γράφεται | Κρίση |
  * |---|---|---|
- * | `found` | η απάντηση **αντικαθιστά** το αντίγραφο | ζεύγος προφίλ ⇄ νέα απάντηση |
- * | `absent` | το αντίγραφο **σβήνεται** (αφορούσε αριθμό που δεν υπάρχει) | `not-in-registry` |
+ * | `found` | η απάντηση **αντικαθιστά** το αντίγραφο — **μόνο** αν ο αριθμός είναι ακόμη του προφίλ (Α23.12) | ζεύγος προφίλ ⇄ νέα απάντηση |
+ * | `absent` | σβήνεται **μόνο** το αντίγραφο **αυτού** του αριθμού, με ίχνος (Α23.12) | `not-in-registry` |
  * | `unavailable` | **τίποτα** — η παλιά γνώση δεν ακυρώνεται από άγνοια | ζεύγος προφίλ ⇄ παλιό αντίγραφο, **και** η οθόνη μαθαίνει ότι η φρέσκια ερώτηση απέτυχε |
  *
  * **Layering**: service — συνθέτει αναγνώστη προφίλ, αναγνώστη ΓΕΜΗ, αποθήκη αντιγράφου, καθαρή κρίση.
@@ -43,7 +43,8 @@ import type {
   RegistryLookupVerdict,
 } from '@/types/company-registry';
 
-import { forgetRegistryCheck, readRegistryCheck, recordRegistryCheck } from './company-registry-record.service';
+import { readRegistryCheck, recordRegistryCheck } from './company-registry-record.service';
+import { forgetAbsentRegistryNumber } from './company-registry-retention.service';
 import { lookupRegistryCompany } from './gemi-opendata.client';
 
 // Οι τύποι της αναφοράς ζουν στο `types/company-registry.ts` — τους βλέπει και η οθόνη.
@@ -112,21 +113,32 @@ export async function readRegistryIdentityReport(
   return reportOf(declaration, judgeRegistryIdentity(declaredIdentityOf(declaration), stored), NOT_ASKED);
 }
 
+/** Ποιος ρωτά, για ποιον οργανισμό — ό,τι χρειάζεται η τακτοποίηση μιας απάντησης. */
+interface VerificationAct {
+  readonly adminDb: AdminFirestore;
+  readonly companyId: string;
+  /** Ο άνθρωπος της πράξης — μπαίνει στο ίχνος αν η απάντηση σβήσει αντίγραφο (Α23.12). */
+  readonly actorUid: string;
+  readonly deps: RegistryVerificationDeps;
+}
+
 async function settleVerdict(
-  adminDb: AdminFirestore,
-  companyId: string,
+  act: VerificationAct,
   declaration: CompanyRegistryDeclaration,
+  askedNumber: string,
   verdict: RegistryLookupVerdict,
-  now: () => string,
 ): Promise<RegistryReportOutcome> {
+  const { adminDb, companyId } = act;
   const identity = declaredIdentityOf(declaration);
   switch (verdict.kind) {
     case 'found': {
-      const check = await recordRegistryCheck(adminDb, companyId, verdict.record, now());
+      const check = await recordRegistryCheck(adminDb, companyId, verdict.record, act.deps.now());
+      // 🔴 Α23.12: ο αριθμός άλλαξε όσο ρωτούσαμε ⇒ η απάντηση ΔΕΝ γράφτηκε· η οθόνη μαθαίνει την τρέχουσα κρίση.
+      if (check === null) return readRegistryIdentityReport(adminDb, companyId, act.deps);
       return reportOf(declaration, judgeRegistryIdentity(identity, { kind: 'present', check }), ASKED);
     }
     case 'absent':
-      await forgetRegistryCheck(adminDb, companyId);
+      await forgetAbsentRegistryNumber(adminDb, companyId, askedNumber, act.actorUid);
       return reportOf(declaration, { state: 'declared', gap: 'not-in-registry', check: null }, ASKED);
     case 'invalid-number':
       return reportOf(declaration, judgeRegistryIdentity(identity, { kind: 'absent' }), NOT_ASKED);
@@ -142,6 +154,7 @@ async function settleVerdict(
 export async function verifyRegistryIdentity(
   adminDb: AdminFirestore,
   companyId: string,
+  actorUid: string,
   deps: RegistryVerificationDeps = LIVE_DEPS,
 ): Promise<RegistryReportOutcome> {
   const declaration = await declarationFor(deps, companyId);
@@ -152,5 +165,5 @@ export async function verifyRegistryIdentity(
     return reportOf(declaration, judgeRegistryIdentity(declaredIdentityOf(declaration), { kind: 'absent' }), NOT_ASKED);
   }
   const verdict = await deps.lookup(canonical);
-  return settleVerdict(adminDb, companyId, declaration, verdict, deps.now);
+  return settleVerdict({ adminDb, companyId, actorUid, deps }, declaration, canonical, verdict);
 }

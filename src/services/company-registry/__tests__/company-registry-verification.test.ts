@@ -6,7 +6,15 @@
  *
  * ⚠️ `FakeFirestore` + **αληθινή** αποθήκη αντιγράφου + **αληθινή** κρίση. Εγχέονται μόνο το
  * προφίλ, το μητρώο και το ρολόι.
+ *
+ * 🔑 Α23.12: η αποθήκη ξαναδιαβάζει το προφίλ **από τον δίσκο** ⇒ το `setup` το γράφει **και** εκεί, ίδιο με
+ * το εγχεόμενο. Π7/Π8 τα κάνουν να **διαφωνούν** επίτηδες (ο αριθμός άλλαξε όσο ρωτούσαμε).
  */
+
+jest.mock('@/lib/firebaseAdmin', () => ({
+  getAdminFirestore: () => ({}),
+  safeFirestoreOperation: jest.fn(),
+}));
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
@@ -20,9 +28,12 @@ import {
 } from '@/services/company-registry/company-registry-verification.service';
 import { registryRecord } from '@/lib/company/__fixtures__/registry-record-fixture';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { givenCompanyProfile, givenRegistryCheck } from '@/services/mandate/__tests__/showcase-legal-fixture';
 import type { RegistryLookupVerdict } from '@/types/company-registry';
 
 const COMPANY_ID = 'comp_verify_a';
+const ACTOR = 'user_admin';
+const OTHER_NUMBER = '999999999000';
 const NOW = '2026-09-14T12:00:00.000Z';
 const EARLIER = '2026-09-01T09:00:00.000Z';
 
@@ -36,6 +47,7 @@ const PROFILE: CompanyRegistryDeclarationRead = {
 
 function setup(profile: CompanyRegistryDeclarationRead, verdict: RegistryLookupVerdict = { kind: 'found', record: RECORD }) {
   const fake = new FakeFirestore();
+  if (profile.kind === 'present') givenCompanyProfile(fake, COMPANY_ID, { ...profile.declaration });
   const lookups: string[] = [];
   const deps: RegistryVerificationDeps = {
     readDeclaration: async () => profile,
@@ -51,7 +63,7 @@ function setup(profile: CompanyRegistryDeclarationRead, verdict: RegistryLookupV
 describe('Π — η πράξη ρωτά, αποθηκεύει, κρίνει', () => {
   it('Π1 — found + ίδια επωνυμία ⇒ verified με ΣΗΜΕΡΙΝΗ ημερομηνία, και το αντίγραφο γράφτηκε', async () => {
     const { fake, adminDb, deps, lookups } = setup(PROFILE);
-    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, deps);
+    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
 
     expect(lookups).toEqual(['123456789000']);
     expect(outcome.kind === 'report' && outcome.report.judgment).toEqual({
@@ -66,7 +78,7 @@ describe('Π — η πράξη ρωτά, αποθηκεύει, κρίνει', ()
   it('Π2 — found αλλά άλλη επωνυμία ⇒ declared/name-mismatch, και η απάντηση ΜΕΝΕΙ για «Υιοθέτηση»', async () => {
     const renamed = { ...RECORD, legalName: 'ΒΗΤΑ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ' };
     const { adminDb, deps } = setup(PROFILE, { kind: 'found', record: renamed });
-    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, deps);
+    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
 
     expect(outcome.kind === 'report' && outcome.report.judgment).toEqual({
       state: 'declared',
@@ -78,7 +90,7 @@ describe('Π — η πράξη ρωτά, αποθηκεύει, κρίνει', ()
   it('Π3 — 🔴 absent ⇒ not-in-registry, και το παλιό αντίγραφο ΣΒΗΝΕΤΑΙ', async () => {
     const { fake, adminDb, deps } = setup(PROFILE, { kind: 'absent' });
     await recordRegistryCheck(adminDb, COMPANY_ID, RECORD, EARLIER);
-    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, deps);
+    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
 
     expect(outcome.kind === 'report' && outcome.report.judgment).toEqual({
       state: 'declared',
@@ -86,12 +98,41 @@ describe('Π — η πράξη ρωτά, αποθηκεύει, κρίνει', ()
       check: null,
     });
     expect(fake.all(COLLECTIONS.COMPANY_REGISTRY_RECORDS)).toHaveLength(0);
+    // ⚖️ Α23.12 — 5(2): ποιος, γιατί, ποιον αριθμό· ποτέ επωνυμία/έδρα.
+    expect(fake.all(COLLECTIONS.ACCOUNTING_AUDIT_LOG)).toEqual([
+      expect.objectContaining({
+        eventType: 'COMPANY_REGISTRY_COPY_ERASED',
+        userId: ACTOR,
+        metadata: { reason: 'not-in-registry', registrationNumber: '123456789000', registryCheckedAt: EARLIER },
+      }),
+    ]);
+  });
+
+  it('Π7 — 🔴 Α23.12: «δεν υπάρχει» για τον ΠΑΛΙΟ αριθμό ενώ κρατάμε αντίγραφο ΑΛΛΟΥ ⇒ εκείνο ΕΠΙΖΕΙ', async () => {
+    const { fake, adminDb, deps } = setup(PROFILE, { kind: 'absent' });
+    givenRegistryCheck(fake, COMPANY_ID, { ...RECORD, registrationNumber: OTHER_NUMBER });
+
+    await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
+
+    expect(fake.all(COLLECTIONS.COMPANY_REGISTRY_RECORDS)).toHaveLength(1);
+    expect(fake.all(COLLECTIONS.ACCOUNTING_AUDIT_LOG)).toHaveLength(0);
+  });
+
+  it('Π8 — 🔴 Α23.12: ο αριθμός άλλαξε ΟΣΟ ρωτούσαμε ⇒ η απάντηση ΔΕΝ γράφεται, η οθόνη παίρνει την τρέχουσα κρίση', async () => {
+    const { fake, adminDb, deps } = setup(PROFILE);
+    givenCompanyProfile(fake, COMPANY_ID, { gemiNumber: OTHER_NUMBER });
+
+    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
+
+    expect(fake.all(COLLECTIONS.COMPANY_REGISTRY_RECORDS)).toHaveLength(0);
+    expect(outcome.kind === 'report' && outcome.report.freshness).toEqual({ kind: 'not-asked' });
+    expect(outcome.kind === 'report' && outcome.report.judgment.state).toBe('declared');
   });
 
   it('Π4 — 🔑 unavailable ΔΕΝ ακυρώνει την παλιά γνώση, αλλά ΛΕΕΙ ότι η ερώτηση απέτυχε', async () => {
     const { adminDb, deps } = setup(PROFILE, { kind: 'unavailable', reason: 'rate-limited' });
     await recordRegistryCheck(adminDb, COMPANY_ID, RECORD, EARLIER);
-    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, deps);
+    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
 
     expect(outcome.kind === 'report' && outcome.report.judgment).toEqual({
       state: 'verified',
@@ -107,7 +148,7 @@ describe('Π — η πράξη ρωτά, αποθηκεύει, κρίνει', ()
       declaration: { entityType: 'sole_proprietor', businessName: 'Γ. ΠΑΠΑΣ', gemiNumber: null },
     };
     const { adminDb, deps, lookups } = setup(noNumber);
-    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, deps);
+    const outcome = await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps);
 
     expect(lookups).toHaveLength(0);
     expect(outcome.kind === 'report' && outcome.report.judgment).toEqual({
@@ -119,7 +160,7 @@ describe('Π — η πράξη ρωτά, αποθηκεύει, κρίνει', ()
 
   it('Π6 — 🔴 το προφίλ δεν διαβάστηκε ⇒ profile-unavailable και ΚΑΜΙΑ ερώτηση (όχι «χωρίς αριθμό»)', async () => {
     const { adminDb, deps, lookups } = setup({ kind: 'unavailable' });
-    expect(await verifyRegistryIdentity(adminDb, COMPANY_ID, deps)).toEqual({ kind: 'profile-unavailable' });
+    expect(await verifyRegistryIdentity(adminDb, COMPANY_ID, ACTOR, deps)).toEqual({ kind: 'profile-unavailable' });
     expect(lookups).toHaveLength(0);
   });
 });
@@ -140,8 +181,9 @@ describe('Α — η ανάγνωση ΔΕΝ ρωτά το μητρώο', () => {
       kind: 'present',
       declaration: { ...PROFILE.declaration, gemiNumber: '999999999000' },
     };
-    const { adminDb, deps } = setup(changed);
-    await recordRegistryCheck(adminDb, COMPANY_ID, RECORD, EARLIER);
+    const { fake, adminDb, deps } = setup(changed);
+    // ⚠️ Μπαγιάτικο αντίγραφο σπαρμένο κατευθείαν: η αποθήκη (Α23.12) δεν γράφει πια απάντηση άλλου αριθμού.
+    givenRegistryCheck(fake, COMPANY_ID, RECORD);
     const outcome = await readRegistryIdentityReport(adminDb, COMPANY_ID, deps);
 
     expect(outcome.kind === 'report' && outcome.report.judgment.state).toBe('declared');

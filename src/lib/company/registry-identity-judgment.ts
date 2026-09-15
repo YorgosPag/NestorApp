@@ -73,6 +73,26 @@ export function judgeRegistryIdentity(
 }
 
 /**
+ * **Αφορά η απάντηση ΑΥΤΟΝ τον αριθμό;** — η μία ερώτηση για τον τίτλο της βιτρίνας, την αποθήκευση και τη
+ * διατήρηση του αντιγράφου (ADR-841 §7 Α23.12). Χωρίς έγκυρο αριθμό ⇒ `false`: καμία απάντηση δεν αφορά «τίποτα».
+ */
+export function isAnswerForNumber(
+  declaredNumber: string | null | undefined,
+  record: Pick<RegistryCompanyRecord, 'registrationNumber'>,
+): boolean {
+  const canonical = canonicalGemiNumber(declaredNumber);
+  return canonical !== null && record.registrationNumber === canonical;
+}
+
+/**
+ * **Κρατάμε αντίγραφο ΓΕΜΗ;** — ό,τι ρωτά η οθόνη πριν προσφέρει «Διαγραφή» (Α23.12). `check-unreadable` = το
+ * αντίγραφο **υπάρχει** αλλά δεν διαβάζεται· σβήνεται κι αυτό.
+ */
+export function holdsRegistryCopy(judgment: RegistryIdentityJudgment): boolean {
+  return judgment.state === 'verified' || judgment.check !== null || judgment.gap === 'check-unreadable';
+}
+
+/**
  * **Υιοθετήσιμη η επωνυμία του ΓΕΜΗ;** — ο **ΕΝΑΣ** κανόνας (ADR-841 §7 Α23.9 Φέτα Β): μόνο `name-mismatch`
  * με αποθηκευμένη απάντηση. Επιστρέφει την απάντηση (η επωνυμία της προεπισκόπησης είναι το `record.legalName`).
  *

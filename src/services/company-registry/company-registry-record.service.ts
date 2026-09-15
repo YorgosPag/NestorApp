@@ -14,8 +14,9 @@
  * 🔑 **Δήλωση ≠ απάντηση**, όπως στο Stripe (`company.name` που δηλώνεις ≠ αυτό που βρήκε ο
  * έλεγχος). Το «επαληθευμένη;» **δεν αποθηκεύεται**: κρίνεται στην ανάγνωση από το ζεύγος.
  *
- * ⚠️ **Δικαίωμα διαγραφής** (GDPR άρθ. 17): {@link forgetRegistryCheck}. Το αντίγραφο δεν έχει
- * άλλο λόγο ύπαρξης πέρα από την επαλήθευση της βιτρίνας.
+ * ⚠️ **Διαγραφή** (GDPR άρθ. 5(1)(ε) · 17): **δεν** ζει εδώ — `company-registry-retention.service` (Α23.12),
+ * πάντα υπό συνθήκη, μέσα σε συναλλαγή, με ίχνος. Το αντίγραφο δεν έχει άλλο λόγο ύπαρξης πέρα από την
+ * επαλήθευση του αριθμού που δηλώνει **τώρα** το προφίλ.
  *
  * **Layering**: service — Admin SDK, ανάγνωση/γραφή κατά ταυτότητα, **καμία** σάρωση.
  */
@@ -25,9 +26,11 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isAnswerForNumber } from '@/lib/company/registry-identity-judgment';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { registryDeclarationOf } from '@/services/company/company-legal-identity';
 import type {
   RegistryCheck,
   RegistryCheckRead,
@@ -46,15 +49,25 @@ function recordRef(adminDb: AdminFirestore, companyId: string) {
  * Αποθηκεύει την απάντηση — **ολόκληρη αντικατάσταση**, ποτέ συγχώνευση: πεδίο που το μητρώο
  * **έπαψε** να δίνει (π.χ. αφαιρέθηκε διακριτικός τίτλος) δεν επιτρέπεται να επιζήσει από την
  * προηγούμενη ερώτηση.
+ *
+ * 🔴 **ΜΟΝΟ αν αφορά τον αριθμό που δηλώνει ΤΩΡΑ το προφίλ** (ADR-841 §7 Α23.12) — ξαναδιαβασμένο **μέσα**
+ * στη συναλλαγή. Μια επαλήθευση του **παλιού** αριθμού που τελειώνει αφού ο άνθρωπος τον άλλαξε θα
+ * ξανάγραφε αντίγραφο χωρίς σκοπό, **για πάντα** (5(1)(ε)). `null` ⇒ δεν γράφτηκε τίποτα.
  */
 export async function recordRegistryCheck(
   adminDb: AdminFirestore,
   companyId: string,
   record: RegistryCompanyRecord,
   checkedAt: string = nowISO(),
-): Promise<RegistryCheck> {
-  await recordRef(adminDb, companyId).set({ companyId, checkedAt, record });
-  return { record, checkedAt };
+): Promise<RegistryCheck | null> {
+  const profileRef = adminDb.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(companyId);
+  return adminDb.runTransaction(async (transaction): Promise<RegistryCheck | null> => {
+    const profile = await transaction.get(profileRef);
+    const declared = profile.exists ? registryDeclarationOf(profile.data() ?? {}).gemiNumber : null;
+    if (!isAnswerForNumber(declared, record)) return null;
+    transaction.set(recordRef(adminDb, companyId), { companyId, checkedAt, record });
+    return { record, checkedAt };
+  });
 }
 
 /** Το έγγραφο του αντιγράφου — εκτεθειμένο ώστε η βιτρίνα να το διαβάζει **μέσα** σε συναλλαγή. */
@@ -95,9 +108,4 @@ export async function readRegistryCheck(
     logger.error('Το αντίγραφο ΓΕΜΗ δεν διαβάστηκε', { data: { companyId }, error: getErrorMessage(error) });
     return { kind: 'unavailable' };
   }
-}
-
-/** Σβήνει το αντίγραφο — όταν το μητρώο απάντησε «δεν υπάρχει», ή σε αίτημα διαγραφής. */
-export async function forgetRegistryCheck(adminDb: AdminFirestore, companyId: string): Promise<void> {
-  await recordRef(adminDb, companyId).delete();
 }
