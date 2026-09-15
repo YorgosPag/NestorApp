@@ -17,14 +17,19 @@
  * | Σειρά | Ερώτηση | Άρνηση |
  * |---|---|---|
  * | 1 | έχει το προφίλ επωνυμία; | `agency-profile-name-missing` |
- * | 2 | είναι ο αριθμός **ενεργή** επιχείρηση στο ΓΕΜΗ; | `agency-profile-registry-inactive` |
+ * | 2 | είναι ο αριθμός **ενεργή** επιχείρηση στο ΓΕΜΗ; | **καμία εδώ** — `registryClosure` (Φ3.2) |
  * | 3 | ο τίτλος ανήκει στο ΓΕΜΗ **αυτού του αριθμού**; | `agency-profile-title-not-in-registry` |
  * | 4 | επιλέχθηκε έδρα (ή υπάρχει προεπιλογή); | `agency-profile-seat-disclosure-missing` |
  * | 5 | υπάρχει η διεύθυνση που επιλέχθηκε; | `agency-profile-seat-address-missing` |
+ *
+ * 🔴 **Η ΑΝΕΝΕΡΓΗ ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΑΡΝΗΣΗ ΤΟΥ ΚΡΙΤΗ** (Φ3.2, Απόφαση 1). Η κρίση λέει **τι ισχύει**
+ * (`registryClosure`)· η **πολιτική** ανήκει στον καλούντα: η δημοσίευση αρνείται
+ * `agency-profile-registry-inactive` (`formLegalShowcase`), η ανανέωση **γράφει** την ετικέτα. Άρνηση
+ * εδώ θα έκανε την ανανέωση να σβήνει την ταυτότητα — και ο επισκέπτης δεν θα μάθαινε τίποτα.
  */
 
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
-import { normalizeLegalName } from '@/lib/company/legal-name-match';
+import { normalizeLegalName, sameLegalName } from '@/lib/company/legal-name-match';
 import { judgeRegistryIdentity } from '@/lib/company/registry-identity-judgment';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type {
@@ -38,6 +43,7 @@ import type {
   CompanySeatDeclaration,
   LegalIdentityAttestation,
   PublicNameChoice,
+  RegistryClosure,
   SeatDisclosure,
   ShowcaseLegalDeclaration,
   ShowcaseLegalForm,
@@ -94,7 +100,9 @@ function checkForNumber(declaration: CompanyRegistryDeclaration, stored: Registr
 /** Το κείμενο του ονόματος — ο τίτλος **με την ορθογραφία του μητρώου**, ποτέ του σώματος. */
 function publicNameOf(choice: PublicNameChoice, legalName: string, check: RegistryCheck | null): string | null {
   if (choice.kind === 'legal-name') return legalName;
-  if (check === null || check.record.status.activity !== 'active') return null;
+  // ⚠️ Η **κλεισμένη** κρατά τον τίτλο της: ανήκει στην εγγραφή του αριθμού (Google: η κλειστή επιχείρηση
+  //    κρατά το όνομά της). Νέα δημοσίευση κλειστής αρνείται αλλού. Μόνο το «άγνωστο» δεν στηρίζει τίτλο.
+  if (check === null || check.record.status.activity === 'unknown') return null;
   const wanted = normalizeLegalName(choice.title);
   if (wanted === '') return null;
   return check.record.distinctiveTitles.find((title) => normalizeLegalName(title) === wanted) ?? null;
@@ -137,6 +145,25 @@ function attestationOf(judgment: RegistryIdentityJudgment): LegalIdentityAttesta
     : { state: 'declared' };
 }
 
+/**
+ * **Η επωνυμία, με την ορθογραφία της ΑΡΧΗΣ όπου το μητρώο τη στηρίζει** — και στην κλειστή.
+ *
+ * 🔴 Χωρίς τον δεύτερο κλάδο, το κλείσιμο **άλλαζε το δημόσιο όνομα** («ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ» →
+ * «ΠΑΓΩΝΗΣ Α.Ε.») και ξανάγραφε κάθε αγγελία — μετρημένο από την άγκυρα Α2α. Το `gapOf` σταματά στο
+ * `inactive` πριν συγκρίνει ονόματα, άρα η σύγκριση γίνεται εδώ, με τον **ίδιο** κριτή ονομάτων.
+ */
+function legalNameOf(businessName: string, judgment: RegistryIdentityJudgment): string {
+  if (judgment.state === 'verified') return judgment.check.record.legalName;
+  const registry = judgment.gap === 'inactive' ? judgment.check?.record.legalName ?? null : null;
+  return registry !== null && sameLegalName(businessName, registry) ? registry : businessName;
+}
+
+/** Ανενεργή **για αυτόν τον αριθμό** ⇒ κλείσιμο, με την ημερομηνία της ερώτησης που το είπε. */
+function closureOf(judgment: RegistryIdentityJudgment): RegistryClosure | null {
+  if (judgment.state !== 'declared' || judgment.gap !== 'inactive' || judgment.check === null) return null;
+  return { issuer: 'gemi', checkedAt: judgment.check.checkedAt };
+}
+
 /** **Η κρίση.** Επιστρέφει την ταυτότητα **και** το δημόσιο όνομα — ή τον πρώτο ονομασμένο λόγο. */
 export function resolveShowcaseLegalIdentity(
   inputs: LegalIdentityInputs,
@@ -146,10 +173,7 @@ export function resolveShowcaseLegalIdentity(
   if (declaration === null || declaration.businessName === null) return { reason: 'agency-profile-name-missing' };
 
   const judgment = judgmentOf(declaration, inputs.stored);
-  // ⛔ Διαγραμμένη/ανενεργή επιχείρηση δεν δημοσιεύεται ως ζωντανή — ούτε ως «δηλωμένη».
-  if (judgment.state === 'declared' && judgment.gap === 'inactive') return { reason: 'agency-profile-registry-inactive' };
-
-  const legalName = judgment.state === 'verified' ? judgment.check.record.legalName : declaration.businessName;
+  const legalName = legalNameOf(declaration.businessName, judgment);
   const displayName = publicNameOf(choice.publicName, legalName, checkForNumber(declaration, inputs.stored));
   if (displayName === null) return { reason: 'agency-profile-title-not-in-registry' };
 
@@ -167,6 +191,7 @@ export function resolveShowcaseLegalIdentity(
       gemiNumber: canonicalGemiNumber(declaration.gemiNumber),
       seat,
       attestation: attestationOf(judgment),
+      registryClosure: closureOf(judgment),
     },
   };
 }
@@ -181,4 +206,27 @@ export function declarationOfStored(identity: ShowcaseLegalIdentity, displayName
   const publicName: PublicNameChoice =
     identity.publicName === 'legal-name' ? { kind: 'legal-name' } : { kind: 'distinctive-title', title: displayName };
   return { publicName, seatDisclosure: identity.seat.disclosure };
+}
+
+/**
+ * **Η ανανέωση: ίδια επιλογή, φρέσκες είσοδοι — με ΜΙΑ ονομασμένη υποχώρηση** (Φ3.2).
+ *
+ * 🔴 **Τίτλος που το ΓΕΜΗ δεν στηρίζει πια ⇒ η ΕΠΩΝΥΜΙΑ.** Αφαιρέθηκε από το μητρώο, άλλαξε ο αριθμός,
+ * ή ο αριθμός «δεν υπάρχει»: ο τίτλος θα έμενε δημόσιο όνομα **χωρίς αρχή** — παραπλανητικό ως προς την
+ * ταυτότητα. Stripe και Google Business Profile ζητούν δημόσιο όνομα που **ταιριάζει με τα επίσημα
+ * στοιχεία**· η Google σε ασυμφωνία **αναστέλλει** τη σελίδα. Εδώ η σελίδα **μένει** με όνομα που είναι
+ * πάντα αληθές, και η επιλογή γράφεται `legal-name` — ο τίτλος ξαναμπαίνει μόνο με **ρητή** πράξη.
+ *
+ * ⚠️ Οι άλλες αρνήσεις (επωνυμία σβήστηκε · διεύθυνση λείπει) **δεν** υποχωρούν: εκεί δεν υπάρχει αληθής
+ * εναλλακτική χωρίς επινόηση, άρα η ταυτότητα αποσύρεται (`withheld`).
+ */
+export function reresolveShowcaseLegalIdentity(
+  inputs: LegalIdentityInputs,
+  identity: ShowcaseLegalIdentity,
+  displayName: string,
+): LegalIdentityResolution {
+  const stored = declarationOfStored(identity, displayName);
+  const resolved = resolveShowcaseLegalIdentity(inputs, stored);
+  if (!('reason' in resolved) || resolved.reason !== 'agency-profile-title-not-in-registry') return resolved;
+  return resolveShowcaseLegalIdentity(inputs, { ...stored, publicName: { kind: 'legal-name' } });
 }

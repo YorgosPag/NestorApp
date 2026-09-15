@@ -41,6 +41,8 @@ export { FIRST_CONTACT_NS } from './first-contact-namespace';
  */
 export const REJECTION_KEYS: Record<FirstContactRejection, string> = {
   'target-absent': 'property-market:contact.first.target-absent',
+  /** ADR-841 §7 Α23 Φ3.2 — ονομάζει την **πηγή** («σύμφωνα με το ΓΕΜΗ»). */
+  'target-closed': 'property-market:contact.first.target-closed',
   'target-not-live': 'property-market:contact.first.target-not-live',
   'contact-own-target': 'property-market:contact.first.contact-own-target',
   /**
@@ -118,6 +120,7 @@ export interface RejectionRemedy {
  */
 export const REJECTION_REMEDY: Record<FirstContactRejection, RejectionRemedy | null> = {
   'target-absent': null,
+  'target-closed': null,
   'target-not-live': null,
   'contact-own-target': null,
   'capacity-full': {

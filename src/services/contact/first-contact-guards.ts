@@ -55,6 +55,7 @@ import {
   type FirstContactRefusal as Refusal,
   type FirstContactUnavailable as Unavailable,
 } from '@/services/contact/first-contact-vocabulary';
+import { registryClosureOf } from '@/lib/agency/showcase-registry-closure';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import type { FirstContactTarget, MatchReason } from '@/types/first-contact';
 import type { PropertyDemand } from '@/types/property-demand';
@@ -123,6 +124,7 @@ export async function resolveTarget(
  * | Είδος | Η ερώτηση | Η άρνηση | Γιατί αυτή |
  * |---|---|---|---|
  * | επαγγελματίας | «δημοσιεύτηκε η **βιτρίνα**;» | `target-absent` | **συγκάλυψη**: αδημοσίευτο και ανύπαρκτο είναι αδιάκριτα (§9.6) |
+ * | επαγγελματίας | «είναι **ενεργή** κατά το ΓΕΜΗ;» | `target-closed` | η σελίδα **ήδη** το γράφει — καμία διαρροή (Α23 Φ3.2) |
  * | αγγελία | «έχει **ζωντανή διάθεση**;» | `target-not-live` | ξεχωριστός κωδικός **επίτηδες**: «υπάρχει αλλά όχι τώρα» ≠ «δεν υπάρχει» |
  *
  * 🔑 **Καμία από τις δύο δεν γράφεται εδώ**: το `lookupAgencyProfile` κρίνει τη μία,
@@ -142,7 +144,9 @@ async function targetIsNotLive(
     case 'professional': {
       const agency = await lookupAgencyProfile(adminDb, target.agencyCompanyId);
       if (agency.outcome === 'unavailable') return UNAVAILABLE;
-      return agency.outcome === 'not-published' ? refuse('target-absent') : null;
+      if (agency.outcome === 'not-published') return refuse('target-absent');
+      // 🔴 ADR-841 §7 Α23 Φ3.2 — κλεισμένη στο ΓΕΜΗ: φαίνεται με ετικέτα, δεν δέχεται νέα επαφή.
+      return registryClosureOf(agency.showcase) === null ? null : refuse('target-closed');
     }
     case 'listing':
       // 🔴 Η ΔΗΜΟΣΙΕΥΣΗ ΚΡΙΝΕΤΑΙ ΑΠΟ ΤΟΝ ΕΝΑ ΚΡΙΤΗ — `buildPublicListing`, μέσα στον

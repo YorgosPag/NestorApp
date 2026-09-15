@@ -84,6 +84,23 @@ export type LegalIdentityAttestation =
   | { readonly state: 'verified'; readonly issuer: RegistryIssuer; readonly checkedAt: string };
 
 /**
+ * **Το ΓΕΜΗ απάντησε ότι η επιχείρηση ΔΕΝ είναι ενεργή** — με πηγή και ημερομηνία ελέγχου, πάντα
+ * (ADR-841 §7 Α23 Φ3.2, Απόφαση 1).
+ *
+ * 🔑 **Πρότυπο Google Business Profile «Οριστικά κλειστή»**: η σελίδα **μένει**, με ετικέτα, και ο
+ * σύνδεσμος δουλεύει — ούτε σιωπηλή διαγραφή ούτε ζωντανή βιτρίνα. Εκτός καταλόγου και αναζήτησης
+ * (`isListedInDirectory`), και **καμία νέα πράξη** προς αυτήν (Google Actions Center: οριστικά κλειστή
+ * δεν δέχεται κράτηση).
+ *
+ * ⚠️ **ΔΕΝ είναι τέταρτη κατάσταση του {@link LegalIdentityAttestation}** (ADR-798 §7): η βεβαίωση
+ * απαντά *«ποιος είσαι;»*, το κλείσιμο *«είσαι ακόμα ενεργός;»*. Δύο ερωτήματα, δύο πεδία.
+ */
+export interface RegistryClosure {
+  readonly issuer: RegistryIssuer;
+  readonly checkedAt: string;
+}
+
+/**
  * Η **καταστατική** έδρα όπως τη γράφει το προφίλ (ADR-439) — διεύθυνση, πόλη, Τ.Κ., τίποτα άλλο.
  * Ζει εδώ ώστε ο καθαρός κριτής **και** ο αναγνώστης του προφίλ να μιλούν για τον **ίδιο** τύπο.
  */
@@ -108,6 +125,8 @@ export interface ShowcaseLegalIdentity {
   readonly gemiNumber: string | null;
   readonly seat: ShowcaseSeat;
   readonly attestation: LegalIdentityAttestation;
+  /** `null` = το ΓΕΜΗ δεν είπε «ανενεργή» (ή δεν ρωτήθηκε). Μη-`null` ⇒ `attestation` είναι `declared`. */
+  readonly registryClosure: RegistryClosure | null;
 }
 
 /** **Ό,τι στέλνει η οθόνη** για τη νομική ταυτότητα — επιλογές, ποτέ κείμενο. */

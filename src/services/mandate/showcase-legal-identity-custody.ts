@@ -25,10 +25,16 @@
  * | «Επαλήθευση από ΓΕΜΗ» (`POST /api/companies/registry-verification`) | αντίγραφο μητρώου |
  * | αποθήκευση κάρτας (`PUT /api/agency-profile/card`) | οδός έδρας (`business-address`) |
  *
- * ⚠️ Η ανανέωση **δεν αρνείται** — δεν υπάρχει άνθρωπος να διαβάσει την άρνηση. Αν η κρίση δεν περνά
- * πια (π.χ. η επωνυμία σβήστηκε από το προφίλ), η ταυτότητα **αποσύρεται** (`legalIdentity: null`) και
- * κάθε `verified` διαπιστευτήριο πέφτει σε `declared`: **ψευδώς αρνητικό, ποτέ ψευδώς θετικό** —
- * ίδιο δόγμα με το `MAX_PRESENCE_AREAS`.
+ * ⚠️ Η ανανέωση **δεν αρνείται** — δεν υπάρχει άνθρωπος να διαβάσει την άρνηση (Φ3.2):
+ *
+ * | Τι άλλαξε | Τι γράφεται | Γιατί |
+ * |---|---|---|
+ * | το ΓΕΜΗ λέει «ανενεργή» | ταυτότητα **μένει** + `registryClosure` · σήμα πέφτει | Google Business Profile «Οριστικά κλειστή» — ο επισκέπτης **μαθαίνει** |
+ * | ο τίτλος δεν στηρίζεται πια | όνομα = **επωνυμία** | δημόσιο όνομα = επίσημα στοιχεία (Stripe · GBP) |
+ * | σβήστηκε η επωνυμία · λείπει η διεύθυνση | `legalIdentity: null` · σήμα πέφτει | καμία αληθής εναλλακτική χωρίς επινόηση |
+ *
+ * Κάθε `verified` διαπιστευτήριο πέφτει σε `declared` όταν το σήμα πέφτει: **ψευδώς αρνητικό, ποτέ
+ * ψευδώς θετικό** — ίδιο δόγμα με το `MAX_PRESENCE_AREAS`.
  */
 
 import 'server-only';
@@ -38,7 +44,7 @@ import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/fi
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { readShowcase, toStoredShowcase } from '@/lib/agency/showcase-read';
 import {
-  declarationOfStored,
+  reresolveShowcaseLegalIdentity,
   resolveShowcaseLegalIdentity,
   type LegalIdentityInputs,
 } from '@/lib/agency/showcase-legal-identity';
@@ -106,6 +112,9 @@ export function formLegalShowcase(
 ): LegalShowcaseForm {
   const resolved = resolveShowcaseLegalIdentity(inputs, legal);
   if ('reason' in resolved) return resolved;
+  // ⛔ Φ3.2 — κλεισμένη στο ΓΕΜΗ **δεν δημοσιεύεται ως νέα**. Η ήδη δημοσιευμένη κρατά την ετικέτα της
+  //    (ανανέωση)· μια νέα πράξη δημοσίευσης θα έβαζε στον κατάλογο επιχείρηση που το μητρώο λέει κλειστή.
+  if (resolved.identity.registryClosure !== null) return { reason: 'agency-profile-registry-inactive' };
 
   const credentials: ShowcaseCredential[] = [];
   for (const entry of bindRegistryNumber(declared, resolved.identity.gemiNumber)) {
@@ -128,7 +137,7 @@ const NOT_APPLICABLE: LegalIdentityRefresh = { kind: 'not-applicable' };
 
 /** Η επόμενη βιτρίνα μετά την ανανέωση — ίδια επιλογή, φρέσκες είσοδοι. */
 function refreshedShowcase(showcase: PublicShowcase, identity: ShowcaseLegalIdentity, inputs: LegalIdentityInputs) {
-  const resolved = resolveShowcaseLegalIdentity(inputs, declarationOfStored(identity, showcase.displayName));
+  const resolved = reresolveShowcaseLegalIdentity(inputs, identity, showcase.displayName);
   const legalIdentity = 'reason' in resolved ? null : resolved.identity;
   const next: PublicShowcase = {
     ...showcase,

@@ -47,6 +47,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { agencyDoorFor } from '@/lib/agency/agency-door';
 import { orderAgencies, type DirectoryViewpoint } from '@/lib/agency/agency-directory-order';
 import { readShowcase } from '@/lib/agency/showcase-read';
+import { isListedInDirectory } from '@/lib/agency/showcase-registry-closure';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { generateSessionId } from '@/services/enterprise-id-convenience';
@@ -136,10 +137,16 @@ export function usePublicAgencies(from: GeoPoint | null): PublicAgenciesState {
         const published: PublicShowcase[] = [];
         for (const document of snapshot.docs) {
           const read = readShowcase(document.data(), document.id);
-          if (read.outcome === 'showcase') published.push(read.showcase);
-          else logger.warn('Βιτρίνα χωρίς αναγνώσιμη απόδειξη — παραλείφθηκε', {
-            data: { companyId: read.companyId },
-          });
+          if (read.outcome !== 'showcase') {
+            logger.warn('Βιτρίνα χωρίς αναγνώσιμη απόδειξη — παραλείφθηκε', {
+              data: { companyId: read.companyId },
+            });
+            continue;
+          }
+          // 🔑 ADR-841 §7 Α23 Φ3.2 — ΚΛΕΙΣΜΕΝΗ ΣΤΟ ΓΕΜΗ: εκτός καταλόγου ΚΑΙ αρχικής αναζήτησης (και
+          //    οι δύο τρώνε από εδώ), ΧΩΡΙΣ διαγραφή — ο `usePublicAgency` τη βρίσκει με την ετικέτα της.
+          //    Όχι `warn`: δεν είναι βλάβη, είναι γεγονός του μητρώου.
+          if (isListedInDirectory(read.showcase)) published.push(read.showcase);
         }
         setReadable(published);
         setLoading(false);

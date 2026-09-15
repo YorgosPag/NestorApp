@@ -21,6 +21,7 @@ import {
   isSeatDisclosure,
   PUBLIC_NAME_KINDS,
   type LegalIdentityAttestation,
+  type RegistryClosure,
   type ShowcaseLegalIdentity,
   type ShowcaseSeat,
 } from '@/types/showcase-legal-identity';
@@ -53,6 +54,19 @@ function readAttestation(raw: unknown): LegalIdentityAttestation | null {
   return checkedAt === null ? null : { state: 'verified', issuer: 'gemi', checkedAt };
 }
 
+/**
+ * Το κλείσιμο (Φ3.2). Απουσία ⇒ `null` (βιτρίνα πριν τη Φ3.2 — καμία μετανάστευση).
+ *
+ * ⚠️ «Κλειστή» **χωρίς ημερομηνία ή άγνωστη πηγή** ⇒ `null`, ίδιο δόγμα με το «επαληθευμένη»: ισχυρισμός
+ * αρχής δεν δείχνεται χωρίς πότε ρωτήθηκε. Το κόστος είναι ορατό και φθηνό: μένει στον κατάλογο μέχρι την
+ * επόμενη ανανέωση, που το ξαναγράφει σωστά — ποτέ ετικέτα «κλειστή» σε ζωντανή επιχείρηση από σκουπίδι.
+ */
+function readRegistryClosure(raw: unknown): RegistryClosure | null {
+  if (!isLoose(raw) || raw.issuer !== 'gemi') return null;
+  const checkedAt = text(raw.checkedAt);
+  return checkedAt === null ? null : { issuer: 'gemi', checkedAt };
+}
+
 export function readLegalIdentity(raw: unknown): ShowcaseLegalIdentity | null {
   if (!isLoose(raw)) return null;
   const publicName = PUBLIC_NAME_KINDS.find((kind) => kind === raw.publicName);
@@ -60,12 +74,15 @@ export function readLegalIdentity(raw: unknown): ShowcaseLegalIdentity | null {
   const seat = readSeat(raw.seat);
   const attestation = readAttestation(raw.attestation);
   if (publicName === undefined || legalName === null || seat === null || attestation === null) return null;
+  const registryClosure = readRegistryClosure(raw.registryClosure);
   return {
     publicName,
     legalName,
     legalForm: COMPANY_ENTITY_TYPES.find((form) => form === raw.legalForm) ?? null,
     gemiNumber: canonicalGemiNumber(text(raw.gemiNumber)),
     seat,
-    attestation,
+    // 🔴 Κλειστή δεν δείχνεται ΠΟΤΕ ως επαληθευμένη — ούτε αν ο δίσκος λέει και τα δύο.
+    attestation: registryClosure === null ? attestation : { state: 'declared' },
+    registryClosure,
   };
 }

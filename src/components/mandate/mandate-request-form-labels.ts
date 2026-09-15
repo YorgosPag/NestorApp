@@ -108,6 +108,8 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
   'listing-not-live': 'property-market:mandate.request.listing-not-live',
   'listing-already-brokered': 'property-market:mandate.request.listing-already-brokered',
   'agency-absent': 'property-market:mandate.request.agency-absent',
+  /** ADR-841 §7 Α23 Φ3.2 — το κείμενο **ονομάζει την πηγή** («σύμφωνα με το ΓΕΜΗ»), όχι δική μας κρίση. */
+  'agency-closed': 'property-market:mandate.request.agency-closed',
   /**
    * 🔴 **ΑΔΕΛΦΟΣ ΤΟΥ ΑΠΟ ΠΑΝΩ, ΚΑΙ ΤΟ ΑΝΤΙΘΕΤΟ ΤΟΥ** (ADR-841 §7 Α5): το γραφείο
    * **φαίνεται** — απλώς δεν ασκεί μεσιτεία. Γι' αυτό το κείμενο **δεν** στέλνει
@@ -168,6 +170,8 @@ export const REJECTION_REMEDY: Record<MandateRequestRejection, RejectionRemedy |
   'listing-not-live': null,
   'listing-already-brokered': null,
   'agency-absent': null,
+  // ⚠️ `null` ΣΤΗ Φ3.2: η διέξοδος «βρείτε άλλο γραφείο» (σύνδεσμος καταλόγου) κρίνεται μαζί με την οθόνη (Φ3.3).
+  'agency-closed': null,
   /**
    * ⚠️ **`null` ΜΕ ΛΟΓΟ**: δεν υπάρχει πεδίο να διορθώσει — **δεν έκανε λάθος**. Ο
    * μόνος άλλος δρόμος είναι **άλλο γραφείο**, και ένας σύνδεσμος στον κατάλογο θα
