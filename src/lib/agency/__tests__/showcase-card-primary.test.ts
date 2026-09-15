@@ -14,6 +14,7 @@ function location(id: string, overrides: Partial<ShowcaseLocation> = {}): Showca
     position: null,
     street: null,
     hours: null,
+    specialHours: [],
     channelKinds: ['phone'],
     emailConfirmedAt: null,
     ...overrides,

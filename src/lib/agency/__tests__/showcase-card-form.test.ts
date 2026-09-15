@@ -12,8 +12,17 @@ const WIRE: ShowcaseLocationWire = {
   place: { landId: 'land_1', buildingId: null },
   street: null,
   hours: null,
+  specialHours: [],
   phones: [{ number: '2310 123456', extension: null }],
   emails: [' Office@Example.GR '],
+};
+
+/** Α21.21 — «σήμερα» στην Ελλάδα, εγχεόμενο στον κριτή. */
+const TODAY = '2026-09-15';
+
+const OFFICE = {
+  1: [{ opens: '09:00', closes: '17:00' }], 2: [{ opens: '09:00', closes: '17:00' }], 3: [{ opens: '09:00', closes: '17:00' }],
+  4: [{ opens: '09:00', closes: '17:00' }], 5: [{ opens: '09:00', closes: '17:00' }], 6: [], 7: [],
 };
 
 function declared(overrides: Partial<ShowcaseLocationWire> = {}): VerifiedLocationDeclaration {
@@ -31,7 +40,7 @@ beforeEach(() => {
 
 describe('formCard — τα δύο μισά από ΕΝΑ πέρασμα', () => {
   it('κανονικοποιεί και χωρίζει δημόσιο/ιδιωτικό', () => {
-    const formed = formCard([declared()], new Set(), newId, NONE);
+    const formed = formCard([declared()], new Set(), newId, NONE, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
 
     expect(formed.locations).toEqual([
@@ -46,7 +55,7 @@ describe('formCard — τα δύο μισά από ΕΝΑ πέρασμα', () =>
   });
 
   it('🔴 ΤΟ ΔΗΜΟΣΙΟ ΜΙΣΟ ΔΕΝ ΚΡΑΤΑ ΠΟΤΕ ΤΙΜΗ ΚΑΝΑΛΙΟΥ', () => {
-    const formed = formCard([declared()], new Set(), newId, NONE);
+    const formed = formCard([declared()], new Set(), newId, NONE, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
 
     const serialized = JSON.stringify(formed.locations);
@@ -55,8 +64,8 @@ describe('formCard — τα δύο μισά από ΕΝΑ πέρασμα', () =>
   });
 
   it('🔑 υπάρχουσα ταυτότητα διατηρείται — άγνωστη ΔΕΝ γίνεται δεκτή (κλοπή καναλιών)', () => {
-    const kept = formCard([declared({ id: 'sloc_old' })], new Set(['sloc_old']), newId, NONE);
-    const forged = formCard([declared({ id: 'sloc_somebody_else' })], new Set(['sloc_old']), newId, NONE);
+    const kept = formCard([declared({ id: 'sloc_old' })], new Set(['sloc_old']), newId, NONE, TODAY);
+    const forged = formCard([declared({ id: 'sloc_somebody_else' })], new Set(['sloc_old']), newId, NONE, TODAY);
     if (isCardRejection(kept) || isCardRejection(forged)) throw new Error('rejected');
 
     expect(kept.locations[0].id).toBe('sloc_old');
@@ -64,7 +73,7 @@ describe('formCard — τα δύο μισά από ΕΝΑ πέρασμα', () =>
   });
 
   it('ίδια ταυτότητα δύο φορές → η δεύτερη παίρνει νέα (ένα κατάστημα, ένα κλειδί καναλιών)', () => {
-    const formed = formCard([declared({ id: 'sloc_old' }), declared({ id: 'sloc_old', role: 'branch' })], new Set(['sloc_old']), newId, NONE);
+    const formed = formCard([declared({ id: 'sloc_old' }), declared({ id: 'sloc_old', role: 'branch' })], new Set(['sloc_old']), newId, NONE, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
     expect(formed.locations.map(({ id }) => id)).toEqual(['sloc_old', 'sloc_new_1']);
   });
@@ -75,6 +84,7 @@ describe('formCard — τα δύο μισά από ΕΝΑ πέρασμα', () =>
       new Set(),
       newId,
       NONE,
+      TODAY,
     );
     if (isCardRejection(formed)) throw new Error(formed.reason);
     expect(formed.channels.locations.sloc_new_1.phones).toHaveLength(1);
@@ -82,7 +92,7 @@ describe('formCard — τα δύο μισά από ΕΝΑ πέρασμα', () =>
   });
 
   it('χωρίς κανάλια → channelKinds = []', () => {
-    const formed = formCard([declared({ phones: [], emails: [] })], new Set(), newId, NONE);
+    const formed = formCard([declared({ phones: [], emails: [] })], new Set(), newId, NONE, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
     expect(formed.locations[0].channelKinds).toEqual([]);
   });
@@ -94,7 +104,7 @@ describe('formCard — οι επιβεβαιώσεις email (Α21.18)', () => {
     locationId === 'sloc_old' ? [{ email: 'office@example.gr', confirmedAt: CONFIRMED }] : [];
 
   it('🔑 ίδιο κατάστημα + ίδια διεύθυνση ⇒ η επιβεβαίωση επιβιώνει, και στα δύο μισά', () => {
-    const formed = formCard([declared({ id: 'sloc_old' })], new Set(['sloc_old']), newId, stored);
+    const formed = formCard([declared({ id: 'sloc_old' })], new Set(['sloc_old']), newId, stored, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
 
     expect(formed.channels.locations.sloc_old.emailConfirmations).toEqual([
@@ -104,7 +114,7 @@ describe('formCard — οι επιβεβαιώσεις email (Α21.18)', () => {
   });
 
   it('🔴 αλλαγμένη διεύθυνση ⇒ το σήμα ΧΑΝΕΤΑΙ στο ίδιο πέρασμα', () => {
-    const formed = formCard([declared({ id: 'sloc_old', emails: ['sales@example.gr'] })], new Set(['sloc_old']), newId, stored);
+    const formed = formCard([declared({ id: 'sloc_old', emails: ['sales@example.gr'] })], new Set(['sloc_old']), newId, stored, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
 
     expect(formed.channels.locations.sloc_old.emailConfirmations).toEqual([]);
@@ -116,7 +126,7 @@ describe('formCard — οι επιβεβαιώσεις email (Α21.18)', () => {
     const formed = formCard([declared({ id: 'sloc_somebody_else' })], new Set(['sloc_old']), newId, (id) => {
       asked.push(id);
       return stored('sloc_old');
-    });
+    }, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
 
     expect(asked).toEqual([]);
@@ -126,7 +136,7 @@ describe('formCard — οι επιβεβαιώσεις email (Α21.18)', () => {
 
 describe('formCard — οι ονομασμένες αρνήσεις', () => {
   const reasonOf = (list: readonly VerifiedLocationDeclaration[]) => {
-    const formed = formCard(list, new Set(), newId, NONE);
+    const formed = formCard(list, new Set(), newId, NONE, TODAY);
     return isCardRejection(formed) ? formed.reason : null;
   };
 
@@ -142,12 +152,31 @@ describe('formCard — οι ονομασμένες αρνήσεις', () => {
       // Α21.16.8: το 18:00–09:00 είναι πλέον ΕΓΚΥΡΗ βάρδια μετά τα μεσάνυχτα — άκυρο μένει το ίσο.
       [declared({ hours: { 1: [{ opens: '18:00', closes: '18:00' }], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] } })],
     ],
+    // Α21.21 — ο ΕΝΑΣ κριτής των ειδικών ωρών: διπλή ημερομηνία, πέρα από τον ορίζοντα, άκυρα διαστήματα.
+    [
+      'agency-profile-card-special-hours-invalid',
+      [declared({ hours: OFFICE, specialHours: [{ date: '2026-12-25', kind: 'closed' }, { date: '2026-12-25', kind: 'regular' }] })],
+    ],
+    ['agency-profile-card-special-hours-invalid', [declared({ hours: OFFICE, specialHours: [{ date: '2028-01-01', kind: 'closed' }] })]],
+    [
+      'agency-profile-card-special-hours-invalid',
+      [declared({ hours: OFFICE, specialHours: [{ date: '2026-12-24', kind: 'custom', intervals: [{ opens: '10:00', closes: '10:00' }] }] })],
+    ],
   ] as const)('%s', (reason, list) => {
     expect(reasonOf(list)).toBe(reason);
   });
 
+  it('🔑 Α21.21 — περασμένη ειδική μέρα ΚΛΑΔΕΥΕΤΑΙ (όχι άρνηση)· χωρίς εβδομαδιαίο ωράριο ΠΕΦΤΟΥΝ όλες', () => {
+    const special = [{ date: '2026-12-25', kind: 'closed' as const }, { date: '2026-09-14', kind: 'closed' as const }];
+    const kept = formCard([declared({ hours: OFFICE, specialHours: special })], new Set(), newId, NONE, TODAY);
+    const withoutWeek = formCard([declared({ hours: null, specialHours: special })], new Set(), newId, NONE, TODAY);
+    if (isCardRejection(kept) || isCardRejection(withoutWeek)) throw new Error('rejected');
+    expect(kept.locations[0].specialHours).toEqual([{ date: '2026-12-25', kind: 'closed' }]);
+    expect(withoutWeek.locations[0].specialHours).toEqual([]);
+  });
+
   it('εντελώς κενή οδός = «μόνο περιοχή», όχι άρνηση', () => {
-    const formed = formCard([declared({ street: { street: ' ', number: '', postalCode: '' } })], new Set(), newId, NONE);
+    const formed = formCard([declared({ street: { street: ' ', number: '', postalCode: '' } })], new Set(), newId, NONE, TODAY);
     if (isCardRejection(formed)) throw new Error(formed.reason);
     expect(formed.locations[0].street).toBeNull();
   });

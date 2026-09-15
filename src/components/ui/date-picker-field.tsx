@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar, type CalendarProps } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
@@ -43,6 +43,11 @@ export interface DatePickerFieldProps {
   /** Συνδέει το κουμπί με ένα εξωτερικό `<Label htmlFor>`. */
   id?: string;
   disabled?: boolean;
+  /**
+   * Ημέρες που **δεν** επιλέγονται (react-day-picker `Matcher`) — π.χ. παρελθόν και πέρα από ορίζοντα
+   * (ADR-841 §7 Α21.21). Καλύτερα να μη διαλέγεται καθόλου μια άκυρη μέρα παρά να κοκκινίζει μετά.
+   */
+  disabledDates?: CalendarProps['disabled'];
 }
 
 export function DatePickerField({
@@ -51,6 +56,7 @@ export function DatePickerField({
   placeholder,
   id,
   disabled = false,
+  disabledDates,
 }: DatePickerFieldProps) {
   const locale = useDateFnsLocale();
   const iconSizes = useIconSizes();
@@ -71,7 +77,7 @@ export function DatePickerField({
         </Button>
       </PopoverTrigger>
       <PopoverContent className={`w-auto ${sp.padding.none}`}>
-        <Calendar mode="single" selected={value} onSelect={onSelect} autoFocus />
+        <Calendar mode="single" selected={value} onSelect={onSelect} disabled={disabledDates} autoFocus />
       </PopoverContent>
     </Popover>
   );

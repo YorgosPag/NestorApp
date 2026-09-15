@@ -15,7 +15,8 @@
 import { isValidEmail, normalisePublicWebsite } from '@/lib/validation/email-validation';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { normalisePhone } from '@/lib/contact/channel-phone';
-import { normalizeWeeklyHours, weeklyHoursDefect } from '@/lib/calendar/weekly-hours';
+import { normalizeSpecialDays, specialDaysDefect, type SpecialDay } from '@/lib/calendar/special-hours';
+import { normalizeWeeklyHours, weeklyHoursDefect, type WeeklyHours } from '@/lib/calendar/weekly-hours';
 import { carryConfirmations, latestConfirmedAt } from '@/lib/agency/showcase-email-confirmation-rules';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type { GeoPoint } from '@/types/geo/coordinates';
@@ -43,7 +44,10 @@ export interface FormedCard {
   readonly channels: ShowcaseCardChannels;
 }
 
-type Rejected = { readonly reason: AgencyProfileRejection };
+/** Ονομασμένη άρνηση του κριτή — ό,τι μαθαίνει ο άνθρωπος αντί για «κάτι πήγε στραβά». */
+export type CardRejection = { readonly reason: AgencyProfileRejection };
+
+type Rejected = CardRejection;
 
 /** Τηλέφωνα: κενές γραμμές αγνοούνται, άκυρα **ονομάζονται**, διπλότυπα (ίδιο E.164) ενώνονται. */
 function formPhones(wire: ShowcaseLocationWire): readonly ShowcasePhone[] | Rejected {
@@ -85,21 +89,40 @@ function isRejected(value: unknown): value is Rejected {
   return typeof value === 'object' && value !== null && 'reason' in value;
 }
 
+/**
+ * **Εβδομάδα + ειδικές μέρες** (Α21.21) — ο **ίδιος** κριτής με τη φόρμα. Ειδικές μέρες **χωρίς** εβδομαδιαίο ωράριο
+ * πέφτουν: το «Κανονικά» δεν σημαίνει τίποτα χωρίς εβδομάδα, και ο διακόπτης «Δήλωση ωραρίου» τις κρύβει μαζί της.
+ * Οι περασμένες κλαδεύονται — ο χρόνος πέρασε, δεν είναι λάθος του ανθρώπου.
+ *
+ * 🔑 **Εξάγεται** (Α21.21 Φάση Β): η απάντηση του email «θα είστε ανοιχτά;» γράφει ειδική μέρα **χωρίς** τη φόρμα —
+ * και κρίνεται από **αυτή** τη συνάρτηση, όχι από δίδυμο που θα μπορούσε να ξεχάσει ταβάνι ή ορίζοντα.
+ */
+export function formLocationHours(
+  hours: WeeklyHours | null,
+  specialHours: readonly SpecialDay[],
+  todayKey: string,
+): Pick<ShowcaseLocation, 'hours' | 'specialHours'> | CardRejection {
+  if (hours === null) return { hours: null, specialHours: [] };
+  if (weeklyHoursDefect(hours) !== null) return { reason: 'agency-profile-card-hours-invalid' };
+  if (specialDaysDefect(specialHours, todayKey) !== null) return { reason: 'agency-profile-card-special-hours-invalid' };
+  return { hours: normalizeWeeklyHours(hours), specialHours: normalizeSpecialDays(specialHours, todayKey) };
+}
+
 function formLocation(
   declared: VerifiedLocationDeclaration,
   id: string,
   previousConfirmations: readonly ShowcaseEmailConfirmation[],
+  todayKey: string,
 ): { readonly location: ShowcaseLocation; readonly channels: ShowcaseLocationChannels } | Rejected {
   const { wire } = declared;
   if (wire.phones.length > MAX_PHONES_PER_LOCATION || wire.emails.length > MAX_EMAILS_PER_LOCATION) {
     return { reason: 'agency-profile-card-too-many-channels' };
   }
-  if (wire.hours !== null && weeklyHoursDefect(wire.hours) !== null) {
-    return { reason: 'agency-profile-card-hours-invalid' };
-  }
+  const hours = formLocationHours(wire.hours, wire.specialHours, todayKey);
   const phones = formPhones(wire);
   const emails = formEmails(wire);
   const street = formStreet(wire);
+  if (isRejected(hours)) return hours;
   if (isRejected(phones)) return phones;
   if (isRejected(emails)) return emails;
   if (isRejected(street)) return street;
@@ -114,7 +137,8 @@ function formLocation(
     place: { landId: wire.place.landId, buildingId: wire.place.buildingId },
     position: declared.position,
     street,
-    hours: wire.hours === null ? null : normalizeWeeklyHours(wire.hours),
+    hours: hours.hours,
+    specialHours: hours.specialHours,
     channelKinds: [...(phones.length > 0 ? ['phone' as const] : []), ...(emails.length > 0 ? ['email' as const] : [])],
     emailConfirmedAt: latestConfirmedAt(emailConfirmations),
   };
@@ -129,12 +153,15 @@ function formLocation(
  *
  * @param previousConfirmations Οι **αποθηκευμένες** επιβεβαιώσεις ενός καταστήματος (Α21.18) — εγχέεται
  *   όπως το `newId`, ώστε ο κριτής να μένει χωρίς I/O. Νέο κατάστημα δεν ρωτιέται ποτέ: δεν κληρονομεί σήμα.
+ * @param todayKey Η σημερινή ημέρα **στην Ελλάδα** (Α21.21) — εγχέεται, ώστε ορίζοντας και κλάδεμα των ειδικών ωρών
+ *   να κρίνονται χωρίς ρολόι μέσα στον κριτή.
  */
 export function formCard(
   declared: readonly VerifiedLocationDeclaration[],
   existingIds: ReadonlySet<string>,
   newId: () => string,
   previousConfirmations: (locationId: string) => readonly ShowcaseEmailConfirmation[],
+  todayKey: string,
 ): FormedCard | Rejected {
   if (declared.length > MAX_SHOWCASE_LOCATIONS) return { reason: 'agency-profile-card-too-many-locations' };
   if (declared.filter(({ wire }) => wire.role === 'headquarters').length > 1) {
@@ -146,7 +173,7 @@ export function formCard(
   for (const entry of declared) {
     const reused = entry.wire.id !== null && existingIds.has(entry.wire.id) && !(entry.wire.id in channels);
     const id = reused && entry.wire.id !== null ? entry.wire.id : newId();
-    const formed = formLocation(entry, id, reused ? previousConfirmations(id) : []);
+    const formed = formLocation(entry, id, reused ? previousConfirmations(id) : [], todayKey);
     if (isRejected(formed)) return formed;
     locations.push(formed.location);
     channels[id] = formed.channels;

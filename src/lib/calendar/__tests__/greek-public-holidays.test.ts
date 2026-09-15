@@ -1,14 +1,24 @@
 /**
- * ADR-841 §7 Α21.16 — οι αργίες υπολογίζονται, και οι κινητές ακολουθούν το Ορθόδοξο Πάσχα.
+ * ADR-841 §7 Α21.16 · Α21.21 — οι αργίες υπολογίζονται, οι κινητές ακολουθούν το Ορθόδοξο Πάσχα, και η
+ * Πρωτομαγιά ακολουθεί την υπουργική απόφαση όταν μετατίθεται.
  *
  * 🔑 Οι ημερομηνίες Πάσχα είναι **γνωστές εξωτερικά** (όχι παραγόμενες από τον ίδιο
  * αλγόριθμο): 2024 = 5/5 · 2025 = 20/4 · 2026 = 12/4 · 2027 = 2/5 · 2030 = 28/4.
  */
 
-import { greekPublicHolidayOn, orthodoxEasterDateKey } from '../greek-public-holidays';
+import {
+  greekPublicHolidayOn,
+  isProvisionalHoliday,
+  labourDayContested,
+  orthodoxEasterDateKey,
+} from '../greek-public-holidays';
 
 describe('orthodoxEasterDateKey', () => {
   it.each([
+    [2013, '2013-05-05'],
+    [2016, '2016-05-01'],
+    [2021, '2021-05-02'],
+    [2022, '2022-04-24'],
     [2024, '2024-05-05'],
     [2025, '2025-04-20'],
     [2026, '2026-04-12'],
@@ -22,6 +32,7 @@ describe('orthodoxEasterDateKey', () => {
 describe('greekPublicHolidayOn', () => {
   it('σταθερές αργίες', () => {
     expect(greekPublicHolidayOn('2026-03-25')).toBe('independence-day');
+    expect(greekPublicHolidayOn('2026-05-01')).toBe('labour-day');
     expect(greekPublicHolidayOn('2026-10-28')).toBe('ochi-day');
     expect(greekPublicHolidayOn('2026-12-26')).toBe('boxing-day');
   });
@@ -41,5 +52,33 @@ describe('greekPublicHolidayOn', () => {
   it('εργάσιμη μέρα και σκουπίδι → null', () => {
     expect(greekPublicHolidayOn('2026-09-14')).toBeNull();
     expect(greekPublicHolidayOn('14/09/2026')).toBeNull();
+  });
+});
+
+describe('🔴 Α21.21 — η Πρωτομαγιά μετατίθεται με υπουργική απόφαση', () => {
+  it.each([2013, 2016, 2021, 2022, 2024, 2027])('%i: κίνδυνος μετάθεσης (Κυριακή ή Μεγάλη Εβδομάδα/Πάσχα)', (year) => {
+    expect(labourDayContested(year)).toBe(true);
+  });
+
+  it.each([2025, 2026, 2030])('%i: κανένας κίνδυνος', (year) => {
+    expect(labourDayContested(year)).toBe(false);
+  });
+
+  it('με απόφαση: η αργία ζει στη ΝΕΑ μέρα, η 1η Μαΐου είναι απλή μέρα', () => {
+    expect(greekPublicHolidayOn('2024-05-07')).toBe('labour-day');
+    expect(greekPublicHolidayOn('2024-05-01')).toBeNull();
+  });
+
+  it('🔑 2016: η 1η Μαΐου ήταν Κυριακή του Πάσχα — μετά την απόφαση φαίνεται ως ΑΥΤΟ', () => {
+    expect(greekPublicHolidayOn('2016-05-01')).toBe('easter-sunday');
+    expect(greekPublicHolidayOn('2016-05-03')).toBe('labour-day');
+  });
+
+  it('🔶 2027 χωρίς απόφαση ακόμη: η 1η Μαΐου μένει αργία, ΣΗΜΑΣΜΕΝΗ ως προσωρινή', () => {
+    // ⚠️ Όταν εκδοθεί η απόφαση και μπει στο `config/greek-holiday-decisions.ts`, αυτή η άγκυρα ΠΡΕΠΕΙ να αλλάξει.
+    expect(greekPublicHolidayOn('2027-05-01')).toBe('labour-day');
+    expect(isProvisionalHoliday('2027-05-01')).toBe(true);
+    expect(isProvisionalHoliday('2026-05-01')).toBe(false);
+    expect(isProvisionalHoliday('2024-05-07')).toBe(false);
   });
 });

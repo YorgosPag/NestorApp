@@ -31,6 +31,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readShowcase } from '@/lib/agency/showcase-read';
+import { athensClockAt } from '@/lib/calendar/weekly-hours';
 import { readLocationChannels } from '@/lib/agency/showcase-card-channels-read';
 import {
   formCard,
@@ -121,6 +122,8 @@ async function writeCard(
       existingIds,
       generateShowcaseLocationId,
       (locationId) => readLocationChannels(storedChannels, locationId).emailConfirmations,
+      // Α21.21 — «σήμερα» για τις ειδικές ώρες είναι σήμερα ΣΤΗΝ ΕΛΛΑΔΑ, όχι του διακομιστή (UTC).
+      athensClockAt(new Date()).dateKey,
     );
     if (isCardRejection(formed)) return { kind: 'rejected', reason: formed.reason };
 

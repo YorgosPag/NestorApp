@@ -16,6 +16,7 @@ const STORED_LOCATION = {
   position: { lat: 40.58, lng: 22.95 },
   street: { street: 'Κομνηνών', number: '4', postalCode: '55131' },
   hours: null,
+  specialHours: [],
   channelKinds: ['email', 'phone', 'fax'],
   emailConfirmedAt: '2026-09-10T08:00:00.000Z',
 };

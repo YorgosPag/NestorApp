@@ -21,6 +21,7 @@
  * υποσυλλογή — η ασφάλεια δεν στηρίζεται στην **απουσία** ενός wildcard.
  */
 
+import type { SpecialDay } from '@/lib/calendar/special-hours';
 import type { WeeklyHours } from '@/lib/calendar/weekly-hours';
 import type { ContactAddressType } from '@/types/contacts/address-types';
 import type { PostalAddressFields } from '@/types/ContactFormTypes';
@@ -69,6 +70,11 @@ export interface ShowcaseLocation {
   readonly street: ShowcaseStreetLine | null;
   /** `null` = δεν δήλωσε ωράριο — **ποτέ** «κλειστά». */
   readonly hours: WeeklyHours | null;
+  /**
+   * **Ειδικές ώρες** (Α21.21) — ωράριο **συγκεκριμένων ημερομηνιών** (αργίες, άδειες, πολιούχος). `[]` = καμία.
+   * Μόνο **με** εβδομαδιαίο ωράριο: το «Κανονικά» δεν σημαίνει τίποτα χωρίς εβδομάδα (ο κριτής το επιβάλλει).
+   */
+  readonly specialHours: readonly SpecialDay[];
   /**
    * **Ποια κανάλια υπάρχουν** — ώστε η σελίδα να ξέρει ποιο κουμπί «Εμφάνιση» να δείξει.
    *
@@ -158,6 +164,8 @@ export interface ShowcaseLocationWire {
   readonly place: PlaceRef;
   readonly street: ShowcaseStreetLine | null;
   readonly hours: WeeklyHours | null;
+  /** Α21.21 — ο διακομιστής κλαδεύει τις περασμένες και **ονομάζει** ό,τι δεν περνά. */
+  readonly specialHours: readonly SpecialDay[];
   /** Όπως πληκτρολογήθηκαν — ο διακομιστής κανονικοποιεί και **ονομάζει** ό,τι δεν περνά. */
   readonly phones: readonly { readonly number: string; readonly extension: string | null }[];
   readonly emails: readonly string[];

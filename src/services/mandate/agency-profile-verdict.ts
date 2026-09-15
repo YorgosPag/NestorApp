@@ -144,6 +144,11 @@ export const AGENCY_PROFILE_REJECTIONS = [
   'agency-profile-card-email-invalid',
   /** Ωράριο που δεν περνά τον **έναν** κριτή (`weeklyHoursDefect`). */
   'agency-profile-card-hours-invalid',
+  /**
+   * Ειδικές ώρες (Α21.21) που δεν περνούν τον **έναν** κριτή (`specialDaysDefect`) — άκυρη/διπλή ημερομηνία, πέρα από
+   * τον ορίζοντα, πάνω από το ταβάνι, άκυρα διαστήματα. Η φόρμα λέει ήδη **ποια γραμμή**· αυτό είναι η εγγύηση.
+   */
+  'agency-profile-card-special-hours-invalid',
   /** Οδός δηλωμένη **μισή** (οδός χωρίς Τ.Κ. ή το αντίστροφο) — δεν μαντεύουμε το υπόλοιπο. */
   'agency-profile-card-street-incomplete',
   /** Ιστοσελίδα που **δεν** είναι δημόσια διεύθυνση (σχήμα, διαπιστευτήρια μέσα στο URL, host χωρίς τελεία) — Α21.17. */

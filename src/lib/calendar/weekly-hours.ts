@@ -1,6 +1,7 @@
 /**
- * @fileoverview **ΤΟ ΕΒΔΟΜΑΔΙΑΙΟ ΩΡΑΡΙΟ ΚΑΙ ΤΟ «ΑΝΟΙΧΤΟ ΤΩΡΑ;»** — ένα σχήμα, μία ώρα (ADR-841 §7 Α21.16 · Α21.16.8).
- * @related lib/calendar/weekly-hours-editing.ts · lib/calendar/greek-public-holidays.ts · types/showcase-card.ts
+ * @fileoverview **ΤΟ ΕΒΔΟΜΑΔΙΑΙΟ ΩΡΑΡΙΟ** — ένα σχήμα, ένας κριτής, μία ώρα (ADR-841 §7 Α21.16 · Α21.16.8 · Α21.21).
+ * @related lib/calendar/weekly-hours-editing.ts · lib/calendar/hours-timeline.ts («ανοιχτό τώρα;») ·
+ *   lib/calendar/special-hours.ts · types/showcase-card.ts
  * @module lib/calendar/weekly-hours
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -25,16 +26,15 @@
  * Κάθε έγγραφο που περνούσε τον παλιό κριτή περνά και τον νέο (ο παλιός ήταν αυστηρά
  * στενότερος) ⇒ **καμία μετανάστευση**.
  *
- * 🔑 **ΜΙΑ ΕΒΔΟΜΑΔΙΑΙΑ ΓΡΑΜΜΗ ΧΡΟΝΟΥ**: επικαλύψεις (και **ανάμεσα σε ημέρες**) και «ανοιχτό
- * τώρα;» κρίνονται πάνω στα ίδια λεπτά-της-εβδομάδας — ποτέ δύο αριθμητικές.
+ * 🔑 **ΜΙΑ ΕΒΔΟΜΑΔΙΑΙΑ ΓΡΑΜΜΗ ΧΡΟΝΟΥ** για τον κριτή: επικαλύψεις (και **ανάμεσα σε ημέρες**)
+ * κρίνονται πάνω στα ίδια λεπτά-της-εβδομάδας. Το «ανοιχτό τώρα;» ζει πλέον σε **ημερομηνίες**
+ * (`hours-timeline.ts`, Α21.21) — η εβδομάδα είναι κυκλική, οι ειδικές μέρες όχι.
  *
  * 🔑 **Η ΩΡΑ ΕΙΝΑΙ ΠΑΝΤΑ ΩΡΑ ΕΛΛΑΔΑΣ** — όχι του φυλλομετρητή. Ο επισκέπτης από το
  * Λονδίνο που ρωτά *«είναι ανοιχτό;»* ρωτά για το γραφείο στη Θεσσαλονίκη.
  *
  * **Layering**: leaf — καθαρές συναρτήσεις, ασφαλές και στις δύο πλευρές.
  */
-
-import { greekPublicHolidayOn, type GreekPublicHolidayId } from '@/lib/calendar/greek-public-holidays';
 
 /** ISO 8601: 1 = Δευτέρα … 7 = Κυριακή. */
 export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -118,7 +118,7 @@ export function endsNextDay(interval: DailyInterval): boolean {
 }
 
 // =============================================================================
-// Η ΕΒΔΟΜΑΔΙΑΙΑ ΓΡΑΜΜΗ ΧΡΟΝΟΥ
+// Η ΕΒΔΟΜΑΔΙΑΙΑ ΓΡΑΜΜΗ ΧΡΟΝΟΥ (του κριτή)
 // =============================================================================
 
 interface WeekSpan {
@@ -193,16 +193,41 @@ export function weeklyHoursDefect(hours: WeeklyHours): WeeklyHoursDefect | null 
   return weeklyHoursDefects(hours)[0]?.defect ?? null;
 }
 
+/**
+ * **Τα διαστήματα ΜΙΑΣ ημέρας** (ειδική μέρα, Α21.21) — από τον **ίδιο** κριτή, πάνω σε εβδομάδα που έχει
+ * μόνο αυτή. Δεύτερος κριτής διαστημάτων θα διαφωνούσε κάποτε με τον πρώτο για το ίδιο 22:00–02:00.
+ */
+export function dayIntervalsDefect(intervals: readonly DailyInterval[]): WeeklyHoursDefect | null {
+  return weeklyHoursDefect({ 1: intervals, 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] });
+}
+
+/** Τα διαστήματα μιας ημέρας **ταξινομημένα**, χωρίς ξένα πεδία — η μορφή που αποθηκεύεται. */
+export function normalizeDayIntervals(day: readonly DailyInterval[]): DailyInterval[] {
+  return [...day]
+    .map(({ opens, closes }) => ({ opens, closes }))
+    .sort((left, right) => (minutesOf(left.opens) ?? 0) - (minutesOf(right.opens) ?? 0));
+}
+
 /** Τα διαστήματα **ταξινομημένα** — η μορφή που αποθηκεύεται και εμφανίζεται. */
 export function normalizeWeeklyHours(hours: WeeklyHours): WeeklyHours {
-  const sorted = (day: readonly DailyInterval[]) =>
-    [...day]
-      .map(({ opens, closes }) => ({ opens, closes }))
-      .sort((left, right) => (minutesOf(left.opens) ?? 0) - (minutesOf(right.opens) ?? 0));
+  const sorted = normalizeDayIntervals;
   return {
     1: sorted(hours[1]), 2: sorted(hours[2]), 3: sorted(hours[3]), 4: sorted(hours[4]),
     5: sorted(hours[5]), 6: sorted(hours[6]), 7: sorted(hours[7]),
   };
+}
+
+/** **Τα διαστήματα μιας ημέρας από τον δίσκο** — `null` αν οτιδήποτε δεν έχει το σχήμα `{opens, closes}`. */
+export function readDayIntervals(raw: unknown): DailyInterval[] | null {
+  if (!Array.isArray(raw)) return null;
+  const intervals: DailyInterval[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'object' || entry === null) return null;
+    const { opens, closes } = entry as Record<string, unknown>;
+    if (typeof opens !== 'string' || typeof closes !== 'string') return null;
+    intervals.push({ opens, closes });
+  }
+  return intervals;
 }
 
 /**
@@ -216,15 +241,8 @@ export function readWeeklyHours(raw: unknown): WeeklyHours | null {
   const source = raw as Record<string, unknown>;
   const days: Partial<Record<IsoWeekday, DailyInterval[]>> = {};
   for (const weekday of ISO_WEEKDAYS) {
-    const day = source[String(weekday)];
-    if (!Array.isArray(day)) return null;
-    const intervals: DailyInterval[] = [];
-    for (const entry of day) {
-      if (typeof entry !== 'object' || entry === null) return null;
-      const { opens, closes } = entry as Record<string, unknown>;
-      if (typeof opens !== 'string' || typeof closes !== 'string') return null;
-      intervals.push({ opens, closes });
-    }
+    const intervals = readDayIntervals(source[String(weekday)]);
+    if (intervals === null) return null;
     days[weekday] = intervals;
   }
   const hours = days as WeeklyHours;
@@ -271,91 +289,4 @@ export function athensClockAt(instant: Date): AthensClock {
     weekday: WEEKDAY_OF[parts.weekday] ?? 1,
     minutes: Number(parts.hour) * 60 + Number(parts.minute),
   };
-}
-
-// =============================================================================
-// ΑΝΟΙΧΤΟ ΤΩΡΑ;
-// =============================================================================
-
-/**
- * Μια στιγμή του ωραρίου **σε σχέση με το τώρα**.
- *
- * ⚠️ **Το `inDays` δεν είναι περιττό**: Δευτέρα 20:00 με ωράριο μόνο Δευτέρα 09:00 δίνει
- * `weekday: 1` — και χωρίς απόσταση η κάρτα θα έγραφε «ανοίγει σήμερα στις 09:00».
- */
-export interface HoursMoment {
-  readonly weekday: IsoWeekday;
-  readonly time: string;
-  readonly inDays: number;
-  readonly inMinutes: number;
-}
-
-export type OpenState =
-  /** `closes = null` ⇒ ανοιχτό **συνεχώς** (24/7). */
-  | { readonly kind: 'open'; readonly closes: HoursMoment | null }
-  /** `next = null` ⇒ κλειστά **κάθε** μέρα της εβδομάδας. */
-  | { readonly kind: 'closed'; readonly next: HoursMoment | null }
-  /** 🔴 **Όχι «κλειστό»**: αργία σημαίνει *«ίσως διαφέρει»* — δεν το δήλωσε ο ίδιος. */
-  | { readonly kind: 'holiday'; readonly holiday: GreekPublicHolidayId };
-
-export function isSoon(moment: HoursMoment): boolean {
-  return moment.inMinutes <= SOON_MINUTES;
-}
-
-interface OpenBlock {
-  start: number;
-  end: number;
-}
-
-/**
- * **Συνεχή ανοίγματα** σε τρεις διαδοχικές εβδομάδες: 23:00–24:00 της Δευτέρας + 00:00–02:00 της
- * Τρίτης είναι **ένα** άνοιγμα που κλείνει Τρίτη 02:00 — όχι «κλείνει στις 24:00».
- */
-function openBlocks(hours: WeeklyHours): OpenBlock[] {
-  const spans = weekSpans(hours);
-  const unrolled = [-1, 0, 1]
-    .flatMap((week) => spans.map((span) => ({ start: span.start + week * MINUTES_PER_WEEK, end: span.end + week * MINUTES_PER_WEEK })))
-    .sort((left, right) => left.start - right.start);
-  const blocks: OpenBlock[] = [];
-  for (const span of unrolled) {
-    const last = blocks[blocks.length - 1];
-    if (last !== undefined && span.start <= last.end) last.end = Math.max(last.end, span.end);
-    else blocks.push({ ...span });
-  }
-  return blocks;
-}
-
-/** Λεπτό-της-γραμμής → στιγμή. Κλείσιμο ακριβώς στα μεσάνυχτα = `24:00` της **ίδιας** ημέρας. */
-function momentOf(target: number, now: number, edge: 'opens' | 'closes'): HoursMoment {
-  const dayIndex = Math.floor((edge === 'closes' ? target - 1 : target) / MINUTES_PER_DAY);
-  return {
-    weekday: ((((dayIndex % 7) + 7) % 7) + 1) as IsoWeekday,
-    time: formatMinutes(target - dayIndex * MINUTES_PER_DAY),
-    inDays: dayIndex - Math.floor(now / MINUTES_PER_DAY),
-    inMinutes: target - now,
-  };
-}
-
-/**
- * **Είναι ανοιχτό;** — με την **αργία πρώτη**, επειδή ό,τι λέει το εβδομαδιαίο ωράριο
- * εκείνη τη μέρα είναι ακριβώς αυτό που δεν ξέρουμε.
- */
-export function openStateAt(
-  hours: WeeklyHours,
-  instant: Date,
-  holidayOn: (dateKey: string) => GreekPublicHolidayId | null = greekPublicHolidayOn,
-): OpenState {
-  const clock = athensClockAt(instant);
-  const holiday = holidayOn(clock.dateKey);
-  if (holiday !== null) return { kind: 'holiday', holiday };
-
-  const now = (clock.weekday - 1) * MINUTES_PER_DAY + clock.minutes;
-  const blocks = openBlocks(hours);
-  const current = blocks.find((block) => block.start <= now && now < block.end);
-  if (current !== undefined) {
-    const always = current.end - current.start >= MINUTES_PER_WEEK;
-    return { kind: 'open', closes: always ? null : momentOf(current.end, now, 'closes') };
-  }
-  const next = blocks.find((block) => block.start > now);
-  return { kind: 'closed', next: next === undefined ? null : momentOf(next.start, now, 'opens') };
 }

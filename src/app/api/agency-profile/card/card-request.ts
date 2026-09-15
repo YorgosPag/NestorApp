@@ -29,6 +29,16 @@ const hoursSchema = z.object({
   1: daySchema, 2: daySchema, 3: daySchema, 4: daySchema, 5: daySchema, 6: daySchema, 7: daySchema,
 });
 
+/**
+ * Α21.21 — μία ειδική μέρα. Φρουροί πόρου μόνο (60 μέρες, 8 διαστήματα): ταβάνι, ορίζοντας και ημερομηνία
+ * κρίνονται **ονομαστικά** από τον `specialDaysDefect`.
+ */
+const specialDaySchema = z.discriminatedUnion('kind', [
+  z.object({ date: z.string().max(10), kind: z.literal('closed') }),
+  z.object({ date: z.string().max(10), kind: z.literal('regular') }),
+  z.object({ date: z.string().max(10), kind: z.literal('custom'), intervals: daySchema }),
+]);
+
 /** 🔑 `z.ZodType<ShowcaseCardWire>` — νέο πεδίο στο σύρμα **δεν μεταγλωττίζεται** εδώ σιωπηλά. */
 export const cardSchema: z.ZodType<ShowcaseCardWire> = z.object({
   locations: z
@@ -42,6 +52,7 @@ export const cardSchema: z.ZodType<ShowcaseCardWire> = z.object({
           .object({ street: z.string().max(120), number: z.string().max(16), postalCode: z.string().max(16) })
           .nullable(),
         hours: hoursSchema.nullable(),
+        specialHours: z.array(specialDaySchema).max(60),
         phones: z
           .array(z.object({ number: z.string().max(40), extension: z.string().max(10).nullable() }))
           .max(8),

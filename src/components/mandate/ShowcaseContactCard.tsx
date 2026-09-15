@@ -108,7 +108,7 @@ function LocationCard({
           <Navigation aria-hidden="true" className="h-4 w-4" /> {t(PROFILE_KEYS.cardDirections)}
         </a>
       ) : null}
-      {location.hours !== null ? <ShowcaseOpeningHours hours={location.hours} /> : null}
+      {location.hours !== null ? <ShowcaseOpeningHours hours={location.hours} special={location.specialHours} /> : null}
       {/* 🔴 Α21.17 — ΠΟΤΕ δεύτερη «Εμφάνιση» για το κατάστημα που ήδη συνοψίζεται ψηλά (δύο κουμπιά, δύο εισιτήρια ορίου). */}
       {summarisedAbove ? null : (
         <>

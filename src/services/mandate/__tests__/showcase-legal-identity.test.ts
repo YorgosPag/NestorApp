@@ -74,6 +74,7 @@ function headquarters(street: string): VerifiedLocationDeclaration {
       place: { landId: 'land_thessaloniki', buildingId: null },
       street: { street, number: '12', postalCode: '54624' },
       hours: null,
+      specialHours: [],
       phones: [],
       emails: [],
     },

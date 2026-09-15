@@ -17,6 +17,7 @@ const OWNED: OwnedShowcaseLocation = {
   position: { lat: 40.63, lng: 22.94 },
   street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
   hours: null,
+  specialHours: [{ date: '2026-12-25', kind: 'closed' }],
   channelKinds: ['phone'],
   emailConfirmedAt: null,
   channels: { phones: [{ e164: '+302310123456', extension: '5' }], emails: [], emailConfirmations: [] },
@@ -53,6 +54,16 @@ describe('showcase-card-draft', () => {
     const formed = wireOfDrafts([draft], '');
     if (!('wire' in formed)) throw new Error('missing place');
     expect(formed.wire.locations[0].hours).toBeNull();
+    // Α21.21 — οι ειδικές μέρες ΚΡΑΤΙΟΥΝΤΑΙ στο πρόχειρο αλλά ταξιδεύουν μόνο με το εβδομαδιαίο ωράριο.
+    expect(formed.wire.locations[0].specialHours).toEqual([]);
+    expect(draft.specialHours).toEqual(OWNED.specialHours);
+  });
+
+  it('🔑 Α21.21 — ωράριο ενεργό ⇒ οι ειδικές μέρες ταξιδεύουν αυτούσιες', () => {
+    const formed = wireOfDrafts([{ ...draftOfLocation(OWNED), hoursEnabled: true }], '');
+    if (!('wire' in formed)) throw new Error('missing place');
+    expect(formed.wire.locations[0].specialHours).toEqual([{ date: '2026-12-25', kind: 'closed' }]);
+    expect(emptyLocationDraft('branch').specialHours).toEqual([]);
   });
 
   it('κενή ετικέτα/εσωτερικό → null στο σύρμα', () => {

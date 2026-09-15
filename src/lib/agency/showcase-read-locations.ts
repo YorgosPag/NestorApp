@@ -12,6 +12,7 @@
  * διεύθυνση σε δημόσια κάρτα.
  */
 
+import { readSpecialDays } from '@/lib/calendar/special-hours';
 import { readWeeklyHours } from '@/lib/calendar/weekly-hours';
 import { readPosition } from '@/lib/agency/showcase-read-geo';
 import { readPlace, text } from '@/lib/agency/showcase-read-primitives';
@@ -70,6 +71,8 @@ function readLocation(raw: unknown): ShowcaseLocation | null {
     position: readPosition(source.position),
     street: readStreetLine(source.street),
     hours: readWeeklyHours(source.hours),
+    // Α21.21 — κάθε παλιό έγγραφο δεν έχει το πεδίο ⇒ `[]`, καμία μετανάστευση.
+    specialHours: readSpecialDays(source.specialHours),
     channelKinds,
     emailConfirmedAt: readEmailConfirmedAt(source.emailConfirmedAt, channelKinds),
   };

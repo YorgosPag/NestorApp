@@ -93,10 +93,8 @@ export interface EnterpriseCompanySettings {
     industry?: string;
     businessType?: 'corporation' | 'llc' | 'partnership' | 'sole_proprietorship' | 'nonprofit' | 'other';
     employeeCount?: number;
-    workingHours?: {
-      [key: string]: { open: string; close: string; closed?: boolean };
-    };
-    holidays?: Date[];
+    // ADR-841 §7 Α21.21 (N.0.2): τα `workingHours` + `holidays` αφαιρέθηκαν — μηδέν καταναλωτές, ανταγωνιστικό σχήμα.
+    // Ωράριο = `WeeklyHours` + `SpecialDay[]` ανά κατάστημα της κάρτας (lib/calendar/weekly-hours · special-hours).
     currencies?: string[];
     defaultCurrency?: string;
     languages?: string[];

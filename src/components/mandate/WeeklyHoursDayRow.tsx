@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **ΜΙΑ ΗΜΕΡΑ ΤΟΥ ΩΡΑΡΙΟΥ** — Κλειστά / Ανοιχτά / 24 ώρες, σπαστά διαστήματα, αντιγραφή (ADR-841 §7 Α21.16.8).
- * @related lib/calendar/weekly-hours-editing.ts · components/mandate/WeeklyHoursField.tsx
+ * @related lib/calendar/weekly-hours-editing.ts · components/mandate/WeeklyHoursField.tsx · DailyIntervalsEditor.tsx
  * @module components/mandate/WeeklyHoursDayRow
  *
  * 🔴 **Το εύρημα που γέννησε την Α21.16.8**: το σπαστό ωράριο υποστηριζόταν ήδη, αλλά πίσω από ένα
@@ -10,20 +10,20 @@
  * **άκυρη εκ γενετής**, άρα το πάτημα έβγαζε αμέσως κόκκινο μήνυμα. Ο άνθρωπος δεν το βρήκε.
  * Τώρα: **ορατό κείμενο**, πρόταση **πάντα έγκυρη**, ελάττωμα **δίπλα στην ημέρα του**.
  *
+ * Α21.21 — η λίστα διαστημάτων ζει πλέον στο `DailyIntervalsEditor`, κοινή με την ειδική μέρα.
+ *
  * ♿ Το όνομα της ημέρας μπαίνει ως `sr-only` **μετά** το ορατό κείμενο (WCAG 2.5.3 label-in-name).
  */
 
 import React from 'react';
-import { Copy, Plus, X } from 'lucide-react';
+import { Copy } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatIsoWeekday } from '@/lib/intl-formatting';
 import {
-  endsNextDay,
   MAX_INTERVALS_PER_DAY,
   type DailyInterval,
   type IsoWeekday,
@@ -33,7 +33,6 @@ import {
   DAY_MODES,
   dayModeOf,
   intervalsForMode,
-  proposeNextInterval,
   WEEKDAY_GROUP_IDS,
   type DayMode,
   type WeekdayGroup,
@@ -45,6 +44,7 @@ import {
   SHOWCASE_CARD_KEYS,
   SHOWCASE_NS,
 } from '@/components/mandate/agency-showcase-labels';
+import { DailyIntervalsEditor } from './DailyIntervalsEditor';
 
 export interface WeeklyHoursDayRowProps {
   readonly weekday: IsoWeekday;
@@ -91,58 +91,6 @@ function CopyDayMenu({ day, onCopy }: { readonly day: string; readonly onCopy: (
   );
 }
 
-interface IntervalInputsProps {
-  readonly interval: DailyInterval;
-  readonly errorId: string | undefined;
-  readonly onEdit: (patch: Partial<DailyInterval>) => void;
-  readonly onRemove: () => void;
-}
-
-function IntervalInputs({ interval, errorId, onEdit, onRemove }: IntervalInputsProps): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
-  const invalid = errorId !== undefined;
-  return (
-    <span className="flex flex-wrap items-center gap-1">
-      <Input type="time" className="w-28" aria-label={t(SHOWCASE_CARD_KEYS.opensLabel)} aria-invalid={invalid} aria-describedby={errorId} value={interval.opens} onChange={(event) => onEdit({ opens: event.target.value })} />
-      <span aria-hidden="true">–</span>
-      <Input type="time" className="w-28" aria-label={t(SHOWCASE_CARD_KEYS.closesLabel)} aria-invalid={invalid} aria-describedby={errorId} value={interval.closes} onChange={(event) => onEdit({ closes: event.target.value })} />
-      {endsNextDay(interval) ? <span className="text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.endsNextDay)}</span> : null}
-      <Button type="button" variant="ghost" size="icon" aria-label={t(SHOWCASE_CARD_KEYS.removeInterval)} onClick={onRemove}>
-        <X aria-hidden="true" />
-      </Button>
-    </span>
-  );
-}
-
-function IntervalList({ day, intervals, errorId, onDay }: {
-  readonly day: string;
-  readonly intervals: readonly DailyInterval[];
-  readonly errorId: string | undefined;
-  readonly onDay: (intervals: readonly DailyInterval[]) => void;
-}): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
-  const proposal = proposeNextInterval(intervals);
-  return (
-    <span className="flex flex-wrap items-center gap-2 sm:pl-28">
-      {intervals.map((interval, index) => (
-        <IntervalInputs
-          key={index}
-          interval={interval}
-          errorId={errorId}
-          onEdit={(patch) => onDay(intervals.map((current, at) => (at === index ? { ...current, ...patch } : current)))}
-          onRemove={() => onDay(intervals.filter((_, at) => at !== index))}
-        />
-      ))}
-      {proposal !== null ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => onDay([...intervals, proposal])}>
-          <Plus aria-hidden="true" /> {t(SHOWCASE_CARD_KEYS.addInterval)}
-          <span className="sr-only"> ({day})</span>
-        </Button>
-      ) : null}
-    </span>
-  );
-}
-
 export function WeeklyHoursDayRow({ weekday, intervals, defect, onDay, onCopy }: WeeklyHoursDayRowProps): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const errorId = React.useId();
@@ -161,7 +109,7 @@ export function WeeklyHoursDayRow({ weekday, intervals, defect, onDay, onCopy }:
         <DayModeSelect day={day} mode={mode} onMode={(next) => onDay(intervalsForMode(next, remembered.current))} />
         <CopyDayMenu day={day} onCopy={onCopy} />
       </span>
-      {mode === 'open' ? <IntervalList day={day} intervals={intervals} errorId={describedBy} onDay={onDay} /> : null}
+      {mode === 'open' ? <DailyIntervalsEditor day={day} intervals={intervals} errorId={describedBy} onChange={onDay} className="sm:pl-28" /> : null}
       {defect !== null ? (
         <p id={errorId} role="alert" className="m-0 text-sm text-destructive">
           {t(SHOWCASE_CARD_HOURS_DEFECT_KEYS[defect], { max: MAX_INTERVALS_PER_DAY })}

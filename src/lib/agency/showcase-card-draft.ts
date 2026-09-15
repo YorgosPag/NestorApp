@@ -10,6 +10,7 @@
  */
 
 import { revealablePhone } from '@/lib/contact/channel-phone';
+import type { SpecialDay } from '@/lib/calendar/special-hours';
 import type { WeeklyHours } from '@/lib/calendar/weekly-hours';
 import { WEEKLY_HOURS_PRESETS } from '@/lib/calendar/weekly-hours-editing';
 import type { PlaceRef } from '@/types/geo/public-place';
@@ -36,6 +37,8 @@ export interface ShowcaseLocationDraft {
   readonly street: { readonly street: string; readonly number: string; readonly postalCode: string };
   readonly hoursEnabled: boolean;
   readonly hours: WeeklyHours;
+  /** Α21.21 — κρατιούνται και με κλειστό διακόπτη ωραρίου, αλλά ταξιδεύουν **μόνο** μαζί του. */
+  readonly specialHours: readonly SpecialDay[];
   readonly phones: readonly PhoneDraft[];
   readonly emails: readonly string[];
   /**
@@ -75,6 +78,7 @@ export function emptyLocationDraft(role: ShowcaseLocationRole): ShowcaseLocation
     street: { street: '', number: '', postalCode: '' },
     hoursEnabled: false,
     hours: DEFAULT_WEEK,
+    specialHours: [],
     phones: [{ number: '', extension: '' }],
     emails: [''],
     provenance: {},
@@ -94,6 +98,7 @@ export function draftOfLocation(owned: OwnedShowcaseLocation): ShowcaseLocationD
     street: owned.street ?? { street: '', number: '', postalCode: '' },
     hoursEnabled: owned.hours !== null,
     hours: owned.hours ?? DEFAULT_WEEK,
+    specialHours: owned.specialHours,
     phones: owned.channels.phones.map(({ e164, extension }) => ({
       number: revealablePhone(e164, null)?.display ?? e164,
       extension: extension ?? '',
@@ -127,6 +132,7 @@ export function wireOfDrafts(
         place: draft.place as PlaceRef,
         street: draft.publishStreet ? draft.street : null,
         hours: draft.hoursEnabled ? draft.hours : null,
+        specialHours: draft.hoursEnabled ? draft.specialHours : [],
         phones: draft.phones.map(({ number, extension }) => ({
           number,
           extension: extension.trim() === '' ? null : extension,

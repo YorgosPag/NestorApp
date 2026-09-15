@@ -88,6 +88,29 @@ export const formatIsoWeekday = (weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7, style: 'lon
   );
 
 /**
+ * A CALENDAR DAY `YYYY-MM-DD` — "Fri 25 Dec" / "Παρ 25 Δεκ" (with `withYear`: "Fri 25 Dec 2026").
+ *
+ * WHY `timeZone: 'UTC'` (ADR-841 §7 A21.21): a calendar day has no time zone. The key is turned into UTC noon
+ * and formatted AS UTC, so a viewer west of Greenwich never sees the previous day — the same anchoring
+ * discipline as `formatIsoWeekday`. An unreadable key is returned as-is rather than throwing a RangeError
+ * inside a render.
+ */
+export const formatCalendarDay = (dateKey: string, withYear = false, locale: string = getCurrentLocale()): string => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const noon = Date.UTC(year, month - 1, day, 12);
+  if (!Number.isFinite(noon)) return dateKey;
+  // ⚠️ `locale` ρητό στον διακομιστή (ADR-841 Α21.21 Φάση Β): μία διεργασία, πολλοί παραλήπτες — η καθολική γλώσσα θα
+  //    έγραφε την ημερομηνία του ενός στη γλώσσα του άλλου (ίδιο δόγμα με το `mandate-email-texts`).
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: withYear ? 'numeric' : undefined,
+    timeZone: 'UTC',
+  }).format(new Date(noon));
+};
+
+/**
  * The day an event falls on, counted from today: "tomorrow" (CLDR `Intl.RelativeTimeFormat`,
  * `numeric: 'auto'`) when `inDays === 1`, otherwise the weekday name.
  *

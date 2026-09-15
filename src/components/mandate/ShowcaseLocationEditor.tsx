@@ -35,6 +35,7 @@ import {
 import { ShowcaseEmailFields, ShowcasePhoneFields } from './ShowcaseChannelFields';
 import { ShowcaseImportProvenance } from './ShowcaseImportProvenance';
 import type { SavedEmailChannels } from './ShowcaseEmailConfirmationControl';
+import { SpecialHoursField } from './SpecialHoursField';
 import { WeeklyHoursField } from './WeeklyHoursField';
 
 /**
@@ -150,7 +151,11 @@ function HoursSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
         <Label htmlFor={`${id}-hours`}>{t(SHOWCASE_CARD_KEYS.hoursDeclare)}</Label>
       </span>
       {draft.hoursEnabled ? (
-        <WeeklyHoursField hours={draft.hours} onChange={(hours) => onChange({ ...draft, hours })} />
+        <>
+          <WeeklyHoursField hours={draft.hours} onChange={(hours) => onChange({ ...draft, hours })} />
+          {/* Α21.21 — ειδικές ώρες ΜΟΝΟ με εβδομαδιαίο ωράριο: το «Κανονικά» δεν σημαίνει τίποτα χωρίς εβδομάδα. */}
+          <SpecialHoursField hours={draft.hours} special={draft.specialHours} onChange={(specialHours) => onChange({ ...draft, specialHours })} />
+        </>
       ) : null}
     </section>
   );

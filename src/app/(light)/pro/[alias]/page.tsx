@@ -73,6 +73,7 @@ import { agencyProfileRoute } from '@/components/mandate/agency-directory-route'
 import { JsonLdScript } from '@/components/seo/JsonLdScript';
 import { canonicalShowcaseSegment } from '@/lib/agency/showcase-canonical-segment';
 import { showcaseStructuredData } from '@/lib/agency/showcase-structured-data';
+import { athensClockAt } from '@/lib/calendar/weekly-hours';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { publicUrl } from '@/lib/http/public-origin';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
@@ -108,6 +109,7 @@ function structuredDataFor(lookup: PublicShowcaseLookup): JsonLdValue | null {
     return showcaseStructuredData(lookup.showcase, {
       profileUrl,
       canHoldMandate: acceptsMandate(lookup.showcase.credentials),
+      todayKey: athensClockAt(new Date()).dateKey,
     });
   } catch (error) {
     logger.warn('Τα δομημένα δεδομένα παραλείφθηκαν — η σελίδα αποδίδεται κανονικά', {

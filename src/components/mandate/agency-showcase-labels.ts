@@ -272,6 +272,7 @@ export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-card-phone-invalid': `${K}.rejection.agency-profile-card-phone-invalid`,
   'agency-profile-card-email-invalid': `${K}.rejection.agency-profile-card-email-invalid`,
   'agency-profile-card-hours-invalid': `${K}.rejection.agency-profile-card-hours-invalid`,
+  'agency-profile-card-special-hours-invalid': `${K}.rejection.agency-profile-card-special-hours-invalid`,
   'agency-profile-card-street-incomplete': `${K}.rejection.agency-profile-card-street-incomplete`,
   'agency-profile-card-website-invalid': `${K}.rejection.agency-profile-card-website-invalid`,
 };
@@ -417,6 +418,9 @@ export const SHOWCASE_CARD_HOURS_DEFECT_KEYS: Record<WeeklyHoursDefect, string> 
   'overlaps-previous-day': `${K}.cardHoursDefect.overlaps-previous-day`,
   'too-many-intervals': `${K}.cardHoursDefect.too-many-intervals`,
 };
+
+// ADR-841 §7 Α21.21 — οι πίνακες των «ειδικών ωρών» ζουν στο `agency-showcase-special-hours-labels.ts`
+// (αυτό το αρχείο πέρασε τις 500 γραμμές, N.7.1 — ίδιο προηγούμενο με το `agency-showcase-import-labels.ts`).
 
 /**
  * **Ετικέτα και υπόδειξη ανά είδος σήματος** — δύο `Record`, **ένα επίπεδο ο καθένας**.

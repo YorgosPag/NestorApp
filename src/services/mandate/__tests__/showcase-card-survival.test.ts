@@ -51,6 +51,17 @@ const PAINTER: ClassifiedOccupation = {
   iscoCode: '7131',
 };
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { addDaysToDateKey } = require('@/lib/calendar/date-key') as typeof import('@/lib/calendar/date-key');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { athensClockAt } = require('@/lib/calendar/weekly-hours') as typeof import('@/lib/calendar/weekly-hours');
+
+/** Α21.21 — ωράριο + ειδική μέρα, ώστε το Κ1 να αποδεικνύει ότι επιζούν ΚΑΙ αυτά μια αλλαγή επωνυμίας. */
+const WEEKDAYS_OFFICE = {
+  1: [{ opens: '09:00', closes: '17:00' }], 2: [{ opens: '09:00', closes: '17:00' }], 3: [{ opens: '09:00', closes: '17:00' }],
+  4: [{ opens: '09:00', closes: '17:00' }], 5: [{ opens: '09:00', closes: '17:00' }], 6: [], 7: [],
+};
+
 const HEADQUARTERS: VerifiedLocationDeclaration = {
   wire: {
     id: null,
@@ -58,7 +69,9 @@ const HEADQUARTERS: VerifiedLocationDeclaration = {
     label: null,
     place: { landId: 'land_thessaloniki', buildingId: null },
     street: { street: 'Τσιμισκή', number: '12', postalCode: '54624' },
-    hours: null,
+    hours: WEEKDAYS_OFFICE,
+    // Ο γραφέας κρίνει με το ΠΡΑΓΜΑΤΙΚΟ ρολόι (ορίζοντας 366 ημερών) ⇒ ημερομηνία σχετική με το σήμερα.
+    specialHours: [{ date: addDaysToDateKey(athensClockAt(new Date()).dateKey, 30) ?? '', kind: 'closed' }],
     phones: [{ number: '2310 123456', extension: null }],
     emails: ['office@vafes.gr'],
   },

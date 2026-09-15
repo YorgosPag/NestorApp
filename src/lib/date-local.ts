@@ -33,10 +33,19 @@ export const nowISO = (): string => new Date().toISOString();
  * @see ADR-777 §7 Α9 — `matchDemandAgainstListing(demand, facts, todayDate)`
  */
 export function todayLocalDate(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
+  return localDateOf(new Date());
+}
+
+/**
+ * **Η ημέρα που ΒΛΕΠΕΙ ο άνθρωπος σε μια τοπική `Date`** — `YYYY-MM-DD` από τα **τοπικά** μέρη.
+ *
+ * Ο επιλογέας ημερομηνίας (react-day-picker) επιστρέφει τοπικά μεσάνυχτα της ημέρας που πατήθηκε· το
+ * `toISOString()` θα έδινε την **προηγούμενη** ημέρα σε κάθε ζώνη ανατολικά του UTC (ADR-841 §7 Α21.21).
+ */
+export function localDateOf(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export function normalizeToDate(val: unknown): Date | null {

@@ -141,14 +141,8 @@ interface BrandingSettings {
 
 ```typescript
 interface BusinessSettings {
-  // Working hours
-  workingHours: {
-    [day: string]: {
-      open: string;
-      close: string;
-      isOpen: boolean;
-    };
-  };
+  // ⚠️ Working hours ΔΕΝ ζουν εδώ (ADR-841 §7 Α21.21): το SSoT είναι το `WeeklyHours` +
+  // `SpecialDay[]` ανά κατάστημα της κάρτας (`lib/calendar/weekly-hours.ts` · `special-hours.ts`).
 
   // Licenses & Certifications
   licenses: Array<{
