@@ -27,5 +27,6 @@ export const { GET } = createScanCronRoute({
   service: 'mandate-expiry',
   label: 'Mandate expiry sweep',
   logger: createModuleLogger('MANDATE_EXPIRY_CRON'),
+  slug: 'mandate-expiry',
   run: runMandateExpiry,
 });

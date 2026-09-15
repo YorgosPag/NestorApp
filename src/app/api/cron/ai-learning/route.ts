@@ -29,5 +29,6 @@ export const { GET } = createScanCronRoute({
   service: 'ai-learning',
   label: 'AI learning',
   logger: createModuleLogger('CRON_AI_LEARNING'),
+  slug: 'ai-learning',
   run: runAiLearning,
 });

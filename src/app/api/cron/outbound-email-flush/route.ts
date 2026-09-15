@@ -27,5 +27,6 @@ export const { GET } = createScanCronRoute({
   service: 'outbound-email-flush',
   label: 'Outbound email flush',
   logger: createModuleLogger('OUTBOUND_EMAIL_FLUSH_CRON'),
+  slug: 'outbound-email-flush',
   run: runOutboundEmailFlush,
 });

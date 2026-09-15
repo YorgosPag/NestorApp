@@ -23,5 +23,6 @@ export const { GET } = createScanCronRoute({
   service: 'firebase-auth-config-drift',
   label: 'Firebase Auth config drift audit',
   logger: createModuleLogger('FIREBASE_AUTH_CONFIG_DRIFT_CRON'),
+  slug: 'firebase-auth-config-drift',
   run: runFirebaseAuthConfigDrift,
 });

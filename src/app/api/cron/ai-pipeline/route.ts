@@ -42,6 +42,7 @@ const route = createQueueCronRoute({
   service: 'ai-pipeline-worker',
   version: 'v1',
   logger,
+  slug: 'ai-pipeline',
   run: runAiPipeline,
   readHealth: getAIPipelineQueueHealth,
   // Το διαγνωστικό **μόνο** όταν υπάρχει κάτι να διαγνωστεί: περιέχει περιεχόμενο

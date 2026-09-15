@@ -34,5 +34,6 @@ export const { GET } = createScanCronRoute({
   service: 'purge-deleted-entities',
   label: 'Entity purge',
   logger: createModuleLogger('CronPurgeDeletedEntities'),
+  slug: 'purge-deleted-entities',
   run: runPurgeDeletedEntities,
 });

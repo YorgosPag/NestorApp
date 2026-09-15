@@ -10,9 +10,11 @@
  *
  * Το CHECK 3.28 (jscpd, ADR-584) τα εντόπισε ως 17 γραμμές / 75 tokens διπλότυπο τη
  * στιγμή που έγιναν πυροκροτητές. Η διπλή γραφή δεν είναι απλώς σπατάλη: σημαίνει ότι
- * μια αλλαγή στο σχήμα της απάντησης (π.χ. προσθήκη πεδίου συσχέτισης για διάγνωση)
- * εφαρμόζεται στη μία ουρά και ξεχνιέται στην άλλη — και η ασυμμετρία φαίνεται μόνο
- * όταν κάποιος διαβάζει logs υπό πίεση.
+ * μια αλλαγή στο σχήμα της απάντησης εφαρμόζεται στη μία ουρά και ξεχνιέται στην άλλη.
+ *
+ * 🔗 ADR-777 §8.69.14 — η παρτίδα **δεν** τρέχει πια εδώ ωμά: ο καλών δίνει `execute`, που
+ * περνά από τον executor (lease + monitor + κατάσταση). Εδώ μόνο η **απάντηση**, με την ίδια
+ * αντιστοίχιση outcome → HTTP με τα routes σάρωσης (`cron-run-response.ts`).
  *
  * @module lib/cron/queue-batch-response
  * @see ADR-740
@@ -20,13 +22,14 @@
 
 import { NextResponse } from 'next/server';
 
+import { cronRunHttpStatus, cronRunResponseFields, logCronRunOutcome } from '@/lib/cron/cron-run-response';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { createModuleLogger } from '@/lib/telemetry';
-import type { CronJobResult } from '@/types/cron-schedule';
+import type { CronJobResult, CronRunOutcome } from '@/types/cron-schedule';
 
 type ModuleLogger = ReturnType<typeof createModuleLogger>;
 
-/** Ποιος ενεργοποίησε την παρτίδα — μόνο για logs και για την απάντηση. */
+/** Ποιος ενεργοποίησε την παρτίδα (HTTP ρήμα) — μόνο για logs και για την απάντηση. */
 export type QueueBatchTrigger = 'manual-post' | 'api-call';
 
 export interface QueueBatchOptions {
@@ -34,11 +37,11 @@ export interface QueueBatchOptions {
   readonly label: string;
   readonly trigger: QueueBatchTrigger;
   readonly logger: ModuleLogger;
-  /** Η εργασία. Καθαρή συνάρτηση — καμία γνώση HTTP. */
-  readonly run: () => Promise<CronJobResult>;
+  /** Η εκτέλεση **μέσα από τον executor** — ποτέ ο ωμός worker. */
+  readonly execute: () => Promise<CronRunOutcome>;
   /**
    * Προαιρετικά πρόσθετα πεδία στην **επιτυχή** απάντηση (π.χ. διαγνωστικά όταν
-   * υπάρχουν αποτυχίες). Τρέχει μόνο αν το `run` ολοκληρώθηκε.
+   * υπάρχουν αποτυχίες). Τρέχει μόνο αν η εκτέλεση ολοκληρώθηκε.
    */
   readonly augment?: (result: CronJobResult) => Promise<Record<string, unknown>>;
 }
@@ -52,27 +55,24 @@ export interface QueueBatchOptions {
 export async function respondWithQueueBatch(
   options: QueueBatchOptions
 ): Promise<NextResponse> {
-  const { label, trigger, logger, run, augment } = options;
+  const { label, trigger, logger, execute, augment } = options;
   const startTime = Date.now();
 
   logger.info(`${label} batch triggered`, { trigger });
 
   try {
-    const result = await run();
+    const outcome = await execute();
     const elapsedMs = Date.now() - startTime;
+    logCronRunOutcome(logger, `${label} batch`, outcome, elapsedMs);
 
-    logger.info(`${label} batch completed`, { trigger, summary: result.summary, elapsedMs });
+    const extra = outcome.status === 'success' && augment
+      ? await augment({ summary: outcome.summary, metrics: outcome.metrics })
+      : {};
 
-    const extra = augment ? await augment(result) : {};
-
-    return NextResponse.json({
-      ok: true,
-      trigger,
-      summary: result.summary,
-      ...result.metrics,
-      ...extra,
-      elapsedMs,
-    });
+    return NextResponse.json(
+      { ...cronRunResponseFields(outcome), trigger, ...extra, elapsedMs },
+      { status: cronRunHttpStatus(outcome) },
+    );
   } catch (error) {
     const elapsedMs = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);

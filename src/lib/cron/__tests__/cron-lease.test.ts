@@ -44,13 +44,13 @@ beforeEach(async () => {
 
 describe('acquireCronLease', () => {
   it('το παίρνει όταν δεν υπάρχει καθόλου κατάσταση', async () => {
-    const result = await acquireCronLease(SLUG, 30, 'owner-a');
+    const result = await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     expect(result.acquired).toBe(true);
   });
 
   it('ΔΕΝ το παίρνει όσο κρατείται από άλλον', async () => {
-    await acquireCronLease(SLUG, 30, 'owner-a');
-    const second = await acquireCronLease(SLUG, 30, 'owner-b');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
+    const second = await acquireCronLease(SLUG, 30, 'owner-b', 'schedule');
 
     expect(second.acquired).toBe(false);
     if (!second.acquired) expect(second.heldUntil).toBeTruthy();
@@ -64,13 +64,13 @@ describe('acquireCronLease', () => {
       leaseOwner: 'zombie',
     });
 
-    const result = await acquireCronLease(SLUG, 30, 'owner-b');
+    const result = await acquireCronLease(SLUG, 30, 'owner-b', 'schedule');
     expect(result.acquired).toBe(true);
   });
 
   it('η διάρκεια που δηλώνεται καθορίζει πράγματι τη λήξη', async () => {
     const before = Date.now();
-    const result = await acquireCronLease(SLUG, 10, 'owner-a');
+    const result = await acquireCronLease(SLUG, 10, 'owner-a', 'schedule');
 
     expect(result.acquired).toBe(true);
     if (!result.acquired) return;
@@ -87,7 +87,7 @@ describe('acquireCronLease', () => {
     const previous = Timestamp.fromMillis(Date.parse('2026-07-14T01:00:00.000Z'));
     await seed({ lastSuccessAt: previous });
 
-    const result = await acquireCronLease(SLUG, 30, 'owner-a');
+    const result = await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     expect(result.acquired).toBe(true);
     if (result.acquired) {
       expect(result.state.lastSuccessAt).toBe('2026-07-14T01:00:00.000Z');
@@ -98,7 +98,7 @@ describe('acquireCronLease', () => {
 describe('απελευθέρωση', () => {
   it('η επιτυχία ελευθερώνει το lease και μηδενίζει τις αποτυχίες', async () => {
     await seed({ consecutiveFailures: 4, lastError: 'παλιό σφάλμα' });
-    await acquireCronLease(SLUG, 30, 'owner-a');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterSuccess(SLUG);
 
     const state = await readCronJobState(SLUG);
@@ -113,7 +113,7 @@ describe('απελευθέρωση', () => {
     // `serverTimestamp()` που το fake δεν επιλύει, οπότε η ανάγνωση θα έδινε `null`
     // είτε γράφτηκε είτε όχι. Χωρίς αυτόν τον έλεγχο, μια αλλαγή σε `lastSuccessAt:
     // null` θα περνούσε αθόρυβα — και το catch-up θα ξανάτρεχε κάθε εργασία αενάως.
-    await acquireCronLease(SLUG, 30, 'owner-a');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterSuccess(SLUG);
 
     const raw = fake.dump('cron_job_state').get(SLUG);
@@ -122,7 +122,7 @@ describe('απελευθέρωση', () => {
   });
 
   it('η αποτυχία ΔΕΝ γράφει lastSuccessAt στο ωμό έγγραφο', async () => {
-    await acquireCronLease(SLUG, 30, 'owner-a');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterFailure(SLUG, 'boom');
 
     const raw = fake.dump('cron_job_state').get(SLUG);
@@ -130,17 +130,17 @@ describe('απελευθέρωση', () => {
   });
 
   it('μετά την επιτυχία, ένας άλλος μπορεί να πάρει το lease', async () => {
-    await acquireCronLease(SLUG, 30, 'owner-a');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterSuccess(SLUG);
 
-    const next = await acquireCronLease(SLUG, 30, 'owner-b');
+    const next = await acquireCronLease(SLUG, 30, 'owner-b', 'schedule');
     expect(next.acquired).toBe(true);
   });
 
   it('η αποτυχία ελευθερώνει επίσης το lease', async () => {
     // Αλλιώς μια εργασία που έσκασε στο πρώτο δευτερόλεπτο θα έμενε κλειδωμένη για
     // όσο διαρκεί το lease — π.χ. μια ώρα για το backup.
-    await acquireCronLease(SLUG, 30, 'owner-a');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterFailure(SLUG, 'κάτι έσπασε');
 
     const state = await readCronJobState(SLUG);
@@ -154,7 +154,7 @@ describe('απελευθέρωση', () => {
     const previous = Timestamp.fromMillis(Date.parse('2026-07-14T01:00:00.000Z'));
     await seed({ lastSuccessAt: previous });
 
-    await acquireCronLease(SLUG, 30, 'owner-a');
+    await acquireCronLease(SLUG, 30, 'owner-a', 'schedule');
     await releaseCronLeaseAfterFailure(SLUG, 'boom');
 
     const state = await readCronJobState(SLUG);
@@ -165,6 +165,30 @@ describe('απελευθέρωση', () => {
     await releaseCronLeaseAfterFailure(SLUG, 'x'.repeat(5_000));
     const state = await readCronJobState(SLUG);
     expect((state.lastError as string).length).toBeLessThanOrEqual(500);
+  });
+});
+
+describe('lastTrigger — «γιατί έτρεξε;» (ADR-777 §8.69.14)', () => {
+  it('🔴 το force run σημαίνεται `manual` στην κατάσταση, και ΜΕΝΕΙ μετά την απελευθέρωση', async () => {
+    const acquired = await acquireCronLease(SLUG, 30, 'manual@2026-09-15T12:00:00.000Z', 'manual');
+    expect(acquired.acquired && acquired.state.lastTrigger).toBe('manual');
+
+    await releaseCronLeaseAfterSuccess(SLUG);
+
+    expect((await readCronJobState(SLUG)).lastTrigger).toBe('manual');
+  });
+
+  it('το επόμενο χτύπημα ρολογιού το ξαναγράφει `schedule`', async () => {
+    await acquireCronLease(SLUG, 30, 'manual@x', 'manual');
+    await releaseCronLeaseAfterSuccess(SLUG);
+    await acquireCronLease(SLUG, 30, 'dispatch@y', 'schedule');
+
+    expect((await readCronJobState(SLUG)).lastTrigger).toBe('schedule');
+  });
+
+  it('άγνωστη αποθηκευμένη τιμή ⇒ `null`, ποτέ ρίψη (παλιά έγγραφα)', async () => {
+    await seed({ lastTrigger: 'cosmic-ray' });
+    expect((await readCronJobState(SLUG)).lastTrigger).toBeNull();
   });
 });
 
@@ -179,6 +203,7 @@ describe('readCronJobState', () => {
       leaseOwner: null,
       consecutiveFailures: 0,
       lastError: null,
+      lastTrigger: null,
     });
   });
 });

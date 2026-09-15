@@ -31,5 +31,6 @@ export const { GET } = createScanCronRoute({
   service: 'backup',
   label: 'Scheduled backup',
   logger: createModuleLogger('CronBackup'),
+  slug: 'backup',
   run: runBackup,
 });

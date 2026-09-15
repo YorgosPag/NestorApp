@@ -7,32 +7,29 @@
  * **ουράς** (που εκθέτουν και υγεία)· αυτό τυποποιεί τις διαδρομές **σάρωσης**:
  * μια εργασία τρέχει, επιστρέφει `CronJobResult`, τέλος.
  *
- *   GET + εξουσιοδότηση → τρέξε τη σάρωση, επίστρεψε περίληψη + metrics
+ *   GET + εξουσιοδότηση → force run ΜΕΣΑ από τον executor (lease + monitor + κατάσταση)
  *   GET χωρίς           → `200` liveness probe, **καμία** σάρωση, **κανένα** δεδομένο
+ *
+ * 🔴 ADR-777 §8.69.14 — **μέχρι 2026-09-15 εδώ καλούνταν το `run()` ΩΜΑ**: χωρίς lease, χωρίς
+ * Sentry monitor, χωρίς κατάσταση. Χειροκίνητο + προγραμματισμένο μαζί ⇒ διπλή εκτέλεση. Πλέον
+ * περνά από το `runCronJobNow` (`cron-job-executor.ts`), τον **ίδιο** executor με το ρολόι.
+ * Κλήση: `npm run cron:run -- <slug>` (ποτέ `curl` — βλ. ADR-740 §9).
  *
  * ⚠️ **Γεννήθηκε από το CHECK 3.28**, όπως και το αδελφό του: μόλις το §8.23
  * πρόσθεσε δύο πυροκροτητές (`demand-interest-announce`, `outbound-email-flush`),
- * το jscpd εντόπισε τα δίδυμα **μέσα στο ίδιο commit**. Ο κανόνας N.18 λέει ότι
- * αυτό δεν επιτρέπεται να φύγει ως «done» — και έχει δίκιο: το διπλότυπο εδώ
- * περιέχει τον **έλεγχο πρόσβασης** σε διαδρομές που **στέλνουν email σε
- * ανθρώπους**. Ένας φύλακας γραμμένος δύο φορές είναι ένας φύλακας που θα
- * διορθωθεί μία.
- *
- * ✅ **Η μετανάστευση ΕΓΙΝΕ (§8.27)** — και **δεν ήταν** η «καθαρή μηχανική δουλειά»
- * που περιέγραφε αυτό το σχόλιο. Μετρημένα, οι υποψήφιες ήταν **οκτώ**, όχι επτά
- * (το `purge-deleted-contacts` έλειπε από τη λίστα), και **δεν** ήταν πανομοιότυπες:
- * είχαν **δύο** σχήματα εξουσιοδότησης, **δύο** σχήματα απάντησης (`ok:` / `success:`)
- * και **δύο** πολιτικές ρυθμού. Το σοβαρό όμως ήταν αλλού — δες §8.27 και το
- * `onboarding-reminder`.
+ * το jscpd εντόπισε τα δίδυμα **μέσα στο ίδιο commit**. Ένας φύλακας γραμμένος δύο
+ * φορές είναι ένας φύλακας που θα διορθωθεί μία.
  *
  * @module lib/cron/scan-cron-route
  * @see lib/cron/queue-cron-route — το αδελφό, για διαδρομές ουράς
- * @see ADR-740 · ADR-777 §8.23
+ * @see ADR-740 · ADR-777 §8.23 · §8.69.14
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { verifyCronAuthorization } from '@/lib/cron-auth';
+import { runCronJobNow } from '@/lib/cron/cron-job-executor';
+import { cronRunHttpStatus, cronRunResponseFields, logCronRunOutcome } from '@/lib/cron/cron-run-response';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import type { createModuleLogger } from '@/lib/telemetry';
@@ -41,6 +38,11 @@ import type { CronJobResult } from '@/types/cron-schedule';
 type ModuleLogger = ReturnType<typeof createModuleLogger>;
 
 export interface ScanCronRouteOptions {
+  /**
+   * Το slug της εργασίας στο `CRON_SCHEDULE` — **ίδιο με τον φάκελο του route** (το επιβάλλει
+   * το `cron-route-contract.test.ts`). Είναι το κλειδί του lease και του monitor.
+   */
+  readonly slug: string;
   /** Ταυτότητα υπηρεσίας στο probe, π.χ. `outbound-email-flush`. */
   readonly service: string;
   /** Φράση για τα logs, π.χ. `Outbound email flush`. */
@@ -61,16 +63,9 @@ export interface ScanCronRoute {
  * **σκόπιμα**, ως liveness probe. Δεν είναι χαλάρωση: το σώμα δεν περιέχει κανένα
  * δεδομένο και **καμία εργασία δεν ξεκινά**.
  *
- * 🔴 **ΔΙΟΡΘΩΣΗ ΙΣΧΥΡΙΣΜΟΥ (§8.27)**: αυτό το σχόλιο έλεγε ότι το `200` είναι «η
- * διατηρημένη συμπεριφορά **όλων** των αδελφών cron routes». **Ψευδές, μετρημένο**:
- * τη στιγμή που γράφτηκε, **επτά** routes επέστρεφαν `401` και μόλις **δύο** `200`.
- * Ο ισχυρισμός δικαιολογούσε μια επιλογή επικαλούμενος πλειοψηφία που **δεν υπήρχε**
- * — το ίδιο σχήμα με τις δύο λίστες namespace του CHECK 3.34.
- *
- * Η επιλογή **κρατήθηκε** μετά τη μέτρηση, με λόγο που δεν είναι η πλειοψηφία: το
- * αδελφό `queue-cron-route` κάνει ήδη το ίδιο σε `GET`, άρα το `200` είναι η μόνη
- * τιμή που δίνει **ένα** σχήμα σε ολόκληρη την οικογένεια cron. Ένα `401` εδώ θα
- * ήταν **δεύτερο** σχήμα απάντησης για το ίδιο ερώτημα (ADR-749).
+ * 🔴 **ΔΙΟΡΘΩΣΗ ΙΣΧΥΡΙΣΜΟΥ (§8.27)**: η επιλογή `200` **κρατήθηκε** μετά τη μέτρηση επειδή το
+ * αδελφό `queue-cron-route` κάνει ήδη το ίδιο σε `GET` — **ένα** σχήμα σε ολόκληρη την
+ * οικογένεια cron (ADR-749), όχι επειδή «το κάνουν όλα» (δεν το έκαναν).
  */
 export function createScanCronRoute(options: ScanCronRouteOptions): ScanCronRoute {
   async function handleGET(request: NextRequest): Promise<Response> {
@@ -84,24 +79,19 @@ export function createScanCronRoute(options: ScanCronRouteOptions): ScanCronRout
     }
 
     const startTime = Date.now();
-    options.logger.info(`${options.label} triggered`);
+    options.logger.info(`${options.label} triggered`, { slug: options.slug });
 
     try {
-      const result = await options.run();
+      const outcome = await runCronJobNow({ slug: options.slug, run: options.run });
       const elapsedMs = Date.now() - startTime;
+      logCronRunOutcome(options.logger, options.label, outcome, elapsedMs);
 
-      options.logger.info(`${options.label} completed`, {
-        summary: result.summary,
-        elapsedMs,
-      });
-
-      return NextResponse.json({
-        ok: true,
-        summary: result.summary,
-        ...result.metrics,
-        elapsedMs,
-      });
+      return NextResponse.json(
+        { ...cronRunResponseFields(outcome), elapsedMs },
+        { status: cronRunHttpStatus(outcome) },
+      );
     } catch (error) {
+      // Μόνο αν σκάσει ο ίδιος ο executor (π.χ. η συναλλαγή lease) — η αποτυχία της ΕΡΓΑΣΙΑΣ είναι `failed`.
       const elapsedMs = Date.now() - startTime;
       const errorMessage = getErrorMessage(error);
 

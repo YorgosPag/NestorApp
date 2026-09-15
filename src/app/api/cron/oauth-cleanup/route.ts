@@ -38,5 +38,6 @@ export const { GET } = createScanCronRoute({
   service: 'oauth-cleanup',
   label: 'OAuth cleanup',
   logger: createModuleLogger('CronOAuthCleanup'),
+  slug: 'oauth-cleanup',
   run: runOAuthCleanup,
 });

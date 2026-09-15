@@ -39,6 +39,7 @@
     "backfill:first-contact-offerer": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-first-contact-offerer.ts",
     "notifications:replay": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/notifications/replay-notification.ts",
     "notifications:destination-drift": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/notifications/destination-drift.ts",
+    "cron:run": "tsx scripts/cron/run-cron-job.ts",
     "firebase-auth:config:check": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/firebase-auth/auth-config.ts",
     "firebase-auth:config:apply": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/firebase-auth/auth-config.ts --apply",
     "firebase-auth:probe:oob": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/firebase-auth/probe-oob-survival.ts",

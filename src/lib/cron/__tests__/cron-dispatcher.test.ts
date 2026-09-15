@@ -127,6 +127,7 @@ beforeEach(() => {
     leaseOwner: null,
     consecutiveFailures: 0,
     lastError: null,
+    lastTrigger: null,
   }));
   acquireCronLease.mockResolvedValue({ acquired: true, state: {} });
   runAlpha.mockResolvedValue({ summary: 'alpha ok' });
@@ -155,7 +156,7 @@ describe('dispatchCronTick — επιλογή εργασιών', () => {
     await dispatchCronTick(TICK);
 
     expect(runDisabled).not.toHaveBeenCalled();
-    expect(acquireCronLease).not.toHaveBeenCalledWith('gamma-disabled', expect.anything(), expect.anything());
+    expect(acquireCronLease).not.toHaveBeenCalledWith('gamma-disabled', expect.anything(), expect.anything(), expect.anything());
   });
 
   it('δεν τρέχει τίποτα όταν το lease κρατείται', async () => {

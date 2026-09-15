@@ -30,5 +30,6 @@ export const { GET } = createScanCronRoute({
   service: 'overdue-alerts',
   label: 'Overdue alerts scan',
   logger: createModuleLogger('OVERDUE_ALERTS_CRON'),
+  slug: 'overdue-alerts',
   run: runOverdueAlerts,
 });

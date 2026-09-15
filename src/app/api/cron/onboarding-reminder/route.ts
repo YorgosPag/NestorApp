@@ -35,5 +35,6 @@ export const { GET } = createScanCronRoute({
   service: 'onboarding-reminder',
   label: 'Onboarding reminder',
   logger: createModuleLogger('ONBOARDING_REMINDER_CRON'),
+  slug: 'onboarding-reminder',
   run: runOnboardingReminder,
 });

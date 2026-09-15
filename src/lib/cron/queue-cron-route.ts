@@ -29,6 +29,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { rejectUnauthorizedCron, verifyCronAuthorization } from '@/lib/cron-auth';
+import { runCronJobNow } from '@/lib/cron/cron-job-executor';
 import { respondWithQueueBatch } from '@/lib/cron/queue-batch-response';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -51,6 +52,11 @@ export interface QueueLivenessHealth<TStats> {
 }
 
 export interface QueueCronRouteOptions<TStats> {
+  /**
+   * Το slug της εργασίας στο `CRON_SCHEDULE` — **ίδιο με τον φάκελο του route** (ADR-777 §8.69.14).
+   * Κλειδί του lease: χειροκίνητη παρτίδα και προγραμματισμένη δεν τρέχουν ποτέ μαζί.
+   */
+  readonly slug: string;
   /** Όνομα για τα logs, π.χ. `AI pipeline`. */
   readonly label: string;
   /** Ταυτότητα υπηρεσίας στο probe, π.χ. `ai-pipeline-worker`. */
@@ -80,10 +86,12 @@ export interface QueueCronRoute {
 export function createQueueCronRoute<TStats>(
   options: QueueCronRouteOptions<TStats>
 ): QueueCronRoute {
-  const { label, service, version, logger, run, readHealth, augment } = options;
+  const { slug, label, service, version, logger, run, readHealth, augment } = options;
 
+  // 🔴 ADR-777 §8.69.14 — η παρτίδα περνά από τον ΙΔΙΟ executor με το ρολόι (lease + monitor +
+  // κατάσταση). Μέχρι 2026-09-15 έτρεχε εδώ ωμά, και μπορούσε να επικαλυφθεί με την προγραμματισμένη.
   const executeBatch = (trigger: 'manual-post' | 'api-call'): Promise<NextResponse> =>
-    respondWithQueueBatch({ label, trigger, logger, run, augment });
+    respondWithQueueBatch({ label, trigger, logger, augment, execute: () => runCronJobNow({ slug, run }) });
 
   async function handleGET(request: NextRequest): Promise<Response> {
     if (verifyCronAuthorization(request)) {

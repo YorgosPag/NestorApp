@@ -32,13 +32,9 @@ import {
   CRON_TIMEZONE,
 } from '@/config/cron-schedule';
 import { isJobDue } from '@/lib/cron/cron-due';
-import {
-  acquireCronLease,
-  readCronJobState,
-  releaseCronLeaseAfterFailure,
-  releaseCronLeaseAfterSuccess,
-} from '@/lib/cron/cron-lease';
-import { runWithMonitor, sendHeartbeat } from '@/lib/cron/cron-monitor';
+import { runCronJob } from '@/lib/cron/cron-job-executor';
+import { readCronJobState } from '@/lib/cron/cron-lease';
+import { sendHeartbeat } from '@/lib/cron/cron-monitor';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -50,55 +46,8 @@ import {
 
 const logger = createModuleLogger('CronDispatcher');
 
-/** Ταυτότητα κατόχου lease — για διάγνωση, όχι για ορθότητα (βλ. cron-lease). */
-function leaseOwnerId(tick: Date): string {
-  return `dispatch@${tick.toISOString()}`;
-}
-
-/** Εκτελεί μία εργασία: lease → monitor → ενημέρωση κατάστασης. */
-async function runOneJob(
-  job: Extract<CronJobDefinition, { enabled: true }>,
-  tick: Date
-): Promise<CronRunOutcome> {
-  const lease = await acquireCronLease(job.slug, job.leaseMinutes, leaseOwnerId(tick));
-
-  if (!lease.acquired) {
-    logger.info('Cron job skipped — lease held', {
-      slug: job.slug,
-      heldUntil: lease.heldUntil,
-    });
-    return { slug: job.slug, status: 'skipped-locked' };
-  }
-
-  const startedAt = Date.now();
-
-  try {
-    const result = await runWithMonitor(job, job.run);
-    await releaseCronLeaseAfterSuccess(job.slug);
-
-    const durationMs = Date.now() - startedAt;
-    logger.info('Cron job succeeded', {
-      slug: job.slug,
-      durationMs,
-      summary: result.summary,
-      ...result.metrics,
-    });
-
-    return { slug: job.slug, status: 'success', durationMs, summary: result.summary };
-  } catch (error) {
-    const message = getErrorMessage(error, `Cron job ${job.slug} failed`);
-    // Το lease απελευθερώνεται **και** στην αποτυχία: αλλιώς μια εργασία που έσκασε
-    // στο πρώτο δευτερόλεπτο θα έμενε κλειδωμένη για όσο διαρκεί το lease.
-    await releaseCronLeaseAfterFailure(job.slug, message);
-
-    return {
-      slug: job.slug,
-      status: 'failed',
-      durationMs: Date.now() - startedAt,
-      error: message,
-    };
-  }
-}
+// 🔗 ADR-777 §8.69.14 — ο executor μίας εργασίας (lease → monitor → κατάσταση) μετακόμισε στο
+// `cron-job-executor.ts`: τον μοιράζονται πλέον το ρολόι ΚΑΙ το «force run» των routes.
 
 /**
  * Ένα χτύπημα ρολογιού.
@@ -127,14 +76,15 @@ export async function dispatchCronTick(tick: Date = new Date()): Promise<CronDis
     }
   }
 
-  const settled = await Promise.allSettled(dueJobs.map((job) => runOneJob(job, tick)));
+  const settled = await Promise.allSettled(dueJobs.map((job) => runCronJob(job, 'schedule', tick)));
 
   const outcomes: CronRunOutcome[] = settled.map((entry, index) => {
     if (entry.status === 'fulfilled') return entry.value;
-    // Δεν πρέπει να συμβεί — το runOneJob πιάνει τα δικά του σφάλματα. Αν συμβεί,
+    // Δεν πρέπει να συμβεί — ο executor πιάνει τα δικά του σφάλματα. Αν συμβεί,
     // σημαίνει ότι απέτυχε η ίδια η Firestore (lease), και δεν το κρύβουμε.
     return {
       slug: dueJobs[index].slug,
+      trigger: 'schedule',
       status: 'failed',
       durationMs: 0,
       error: getErrorMessage(entry.reason, 'dispatcher failure'),

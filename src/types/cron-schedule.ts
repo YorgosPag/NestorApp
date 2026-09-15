@@ -108,6 +108,14 @@ export function isEnabledCronJob(
   return job.enabled;
 }
 
+/**
+ * **Ποιος ζήτησε την εκτέλεση** (ADR-777 §8.69.14).
+ *
+ * `schedule` = το χτύπημα ρολογιού (`/api/cron/dispatch`) · `manual` = «force run» μίας εργασίας
+ * (`npm run cron:run -- <slug>` → route της εργασίας). **Και τα δύο** περνούν από τον ΙΔΙΟ executor.
+ */
+export type CronTrigger = 'schedule' | 'manual';
+
 /** Κατάσταση εκτέλεσης, όπως αποθηκεύεται ανά job στη Firestore. */
 export interface CronJobState {
   readonly slug: string;
@@ -123,14 +131,31 @@ export interface CronJobState {
   readonly consecutiveFailures: number;
   /** Μήνυμα της τελευταίας αποτυχίας. */
   readonly lastError: string | null;
+  /** Ποιος ζήτησε την τελευταία απόπειρα — «γιατί έτρεξε;». `null` σε έγγραφα πριν το §8.69.14. */
+  readonly lastTrigger: CronTrigger | null;
 }
 
-/** Έκβαση μιας απόπειρας εκτέλεσης, όπως την αναφέρει ο dispatcher. */
+/** Έκβαση μιας απόπειρας εκτέλεσης, όπως την αναφέρει ο executor. */
 export type CronRunOutcome =
-  | { readonly slug: string; readonly status: 'success'; readonly durationMs: number; readonly summary: string }
-  | { readonly slug: string; readonly status: 'failed'; readonly durationMs: number; readonly error: string }
-  /** Άλλος το κρατά — φυσιολογικό, όχι σφάλμα. */
-  | { readonly slug: string; readonly status: 'skipped-locked' };
+  | {
+      readonly slug: string;
+      readonly trigger: CronTrigger;
+      readonly status: 'success';
+      readonly durationMs: number;
+      readonly summary: string;
+      readonly metrics: Readonly<Record<string, number>>;
+    }
+  | {
+      readonly slug: string;
+      readonly trigger: CronTrigger;
+      readonly status: 'failed';
+      readonly durationMs: number;
+      readonly error: string;
+    }
+  /** Άλλος το κρατά — φυσιολογικό, όχι σφάλμα. Σε force run: η εργασία **τρέχει ήδη**. */
+  | { readonly slug: string; readonly trigger: CronTrigger; readonly status: 'skipped-locked'; readonly heldUntil: string | null }
+  /** Δεν υπάρχει τέτοια εργασία στο `CRON_SCHEDULE`. */
+  | { readonly slug: string; readonly trigger: CronTrigger; readonly status: 'unknown' };
 
 /** Συγκεντρωτική απάντηση του `/api/cron/dispatch`. */
 export interface CronDispatchReport {

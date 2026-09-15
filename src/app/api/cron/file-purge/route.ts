@@ -30,5 +30,6 @@ export const { GET } = createScanCronRoute({
   service: 'file-purge',
   label: 'File purge',
   logger: createModuleLogger('CronFilePurge'),
+  slug: 'file-purge',
   run: runFilePurge,
 });

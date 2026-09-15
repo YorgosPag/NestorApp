@@ -33,6 +33,7 @@ const route = createQueueCronRoute({
   service: 'email-ingestion-worker',
   version: 'v2',
   logger,
+  slug: 'email-ingestion',
   run: runEmailIngestion,
   readHealth: getEmailIngestionQueueHealth,
 });

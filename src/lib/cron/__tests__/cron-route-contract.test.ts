@@ -230,4 +230,23 @@ describe('συμβόλαιο cron routes (ADR-740)', () => {
       },
     );
   });
+
+  // ===========================================================================
+  // 4. FORCE RUN ΜΕΣΑ ΑΠΟ ΤΟΝ ΙΔΙΟ EXECUTOR — ADR-777 §8.69.14
+  // ===========================================================================
+
+  describe('🔴 κάθε χειροκίνητη εκτέλεση περνά από τον ΙΔΙΟ executor με το ρολόι', () => {
+    /**
+     * Μέχρι 2026-09-15 τα routes καλούσαν το `run()` **ωμά** (μετρημένο ζωντανά): χωρίς lease,
+     * χωρίς monitor, χωρίς κατάσταση ⇒ χειροκίνητο + προγραμματισμένο μαζί = διπλή εκτέλεση.
+     */
+    it.each(listCronRouteSlugs())('%s δηλώνει το slug του ΙΔΙΟΥ του φακέλου (κλειδί lease + monitor)', (slug) => {
+      const code = stripComments(readRouteSource(slug));
+      expect(code).toMatch(new RegExp(`slug:\\s*'${slug}'`));
+    });
+
+    it.each(listCronRouteSlugs())('%s φτάνει στο `runCronJobNow` — ποτέ στο ωμό run()', (slug) => {
+      expect(readGuardChain(slug)).toContain('runCronJobNow(');
+    });
+  });
 });

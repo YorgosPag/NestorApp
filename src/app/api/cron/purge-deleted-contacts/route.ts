@@ -36,5 +36,6 @@ export const { GET } = createScanCronRoute({
   service: 'purge-deleted-contacts',
   label: 'Contact purge',
   logger: createModuleLogger('CronPurgeDeletedContacts'),
+  slug: 'purge-deleted-contacts',
   run: runPurgeDeletedContacts,
 });

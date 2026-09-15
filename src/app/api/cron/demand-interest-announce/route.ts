@@ -32,5 +32,6 @@ export const { GET } = createScanCronRoute({
   service: 'demand-interest-announce',
   label: 'Demand interest announcement scan',
   logger: createModuleLogger('DEMAND_INTEREST_ANNOUNCE_CRON'),
+  slug: 'demand-interest-announce',
   run: runDemandInterestAnnounce,
 });

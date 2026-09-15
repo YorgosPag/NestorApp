@@ -7,7 +7,8 @@
  *
  * Αυτό είναι **κλείδωμα αποδοτικότητας**, όχι ορθότητας. Αποτρέπει τη διπλή δουλειά
  * όταν δύο ticks επικαλύπτονται (π.χ. ένα αργό backup τρέχει ακόμη όταν χτυπά το
- * επόμενο λεπτό). **Δεν** εγγυάται «ακριβώς μία φορά».
+ * επόμενο λεπτό) — **και** όταν ένα «force run» συμπέσει με το προγραμματισμένο
+ * (ADR-777 §8.69.14). **Δεν** εγγυάται «ακριβώς μία φορά».
  *
  * Η βιβλιογραφία των κατανεμημένων συστημάτων είναι κατηγορηματική: μόνο lease **μαζί με
  * fencing token** είναι ασφαλές για ορθότητα· οτιδήποτε άλλο έχει παράθυρο όπου δύο
@@ -35,7 +36,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { CronJobState } from '@/types/cron-schedule';
+import type { CronJobState, CronTrigger } from '@/types/cron-schedule';
 
 const logger = createModuleLogger('CronLease');
 
@@ -48,6 +49,7 @@ interface CronLeaseDoc {
   leaseOwner?: string | null;
   consecutiveFailures?: number;
   lastError?: string | null;
+  lastTrigger?: string | null;
 }
 
 function docRef(slug: string): FirebaseFirestore.DocumentReference {
@@ -84,6 +86,11 @@ function toIso(value: unknown): string | null {
   return null;
 }
 
+/** Στενεύει την αποθηκευμένη τιμή σε γνωστό trigger — άγνωστο ⇒ `null`, ποτέ ρίψη. */
+function toTrigger(value: unknown): CronTrigger | null {
+  return value === 'schedule' || value === 'manual' ? value : null;
+}
+
 /** Διαβάζει την αποθηκευμένη κατάσταση μιας εργασίας (ή τα προεπιλεγμένα κενά). */
 export async function readCronJobState(slug: string): Promise<CronJobState> {
   const snapshot = await docRef(slug).get();
@@ -97,6 +104,7 @@ export async function readCronJobState(slug: string): Promise<CronJobState> {
     leaseOwner: data.leaseOwner ?? null,
     consecutiveFailures: data.consecutiveFailures ?? 0,
     lastError: data.lastError ?? null,
+    lastTrigger: toTrigger(data.lastTrigger),
   };
 }
 
@@ -117,11 +125,13 @@ export type LeaseAcquisition =
  *   Επιβάλλεται από test στο `cron-schedule`.
  * @param owner Ταυτότητα του κατόχου — **μόνο για διάγνωση**, δεν συμμετέχει στην
  *   απόφαση. Δεν είναι fencing token.
+ * @param trigger Ποιος ζήτησε την εκτέλεση — γράφεται ως `lastTrigger` (ADR-777 §8.69.14).
  */
 export async function acquireCronLease(
   slug: string,
   leaseMinutes: number,
-  owner: string
+  owner: string,
+  trigger: CronTrigger
 ): Promise<LeaseAcquisition> {
   const db = getAdminFirestore();
   const ref = docRef(slug);
@@ -155,6 +165,7 @@ export async function acquireCronLease(
         leaseExpiresAt: expiresAt,
         leaseOwner: owner,
         lastAttemptAt: FieldValue.serverTimestamp(),
+        lastTrigger: trigger,
       },
       { merge: true }
     );
@@ -169,6 +180,7 @@ export async function acquireCronLease(
         leaseOwner: owner,
         consecutiveFailures: data.consecutiveFailures ?? 0,
         lastError: data.lastError ?? null,
+        lastTrigger: trigger,
       },
     };
   });

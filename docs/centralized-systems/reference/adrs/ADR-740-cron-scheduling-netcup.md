@@ -308,6 +308,48 @@ Tokens, δικαίωμα `root`). Endpoints: `/applications`,
 (`claude-cron-setup`, root, 7 ημέρες) πρέπει να γίνει **revoke** — πέρασε από
 συνομιλία.
 
+### 9.2 Force run μίας εργασίας — `npm run cron:run -- <slug>` *(2026-09-15, ADR-777 §8.69.14)*
+
+**Το εύρημα (ζωντανή δοκιμή ADR-777 §8.69.11 #2):** το χειροκίνητο `/api/cron/<slug>` καλούσε τη συνάρτηση της
+εργασίας **ωμά** — χωρίς lease, χωρίς Sentry monitor, χωρίς κατάσταση. Ο executor με lease ζούσε **μόνο** μέσα στο
+`dispatchCronTick`. Χειροκίνητο + προγραμματισμένο μαζί ⇒ **διπλή εκτέλεση** (σε ειδοποιητή: διπλά email). Και με
+`curl` το αίτημα έτρωγε **403 σε 13ms** από το bot-block του middleware — μοιάζει με «λάθος μυστικό», δεν είναι.
+
+**Μέτρηση πριν την απόφαση:** κανένας αυτόματος καλών των per-job routes (grep σε workflows, scripts, `vercel.json`,
+Coolify: **μόνο** το `/api/cron/dispatch`). Άρα τα per-job routes είναι **αποκλειστικά** η χειροκίνητη πόρτα — και
+πρέπει να έχουν τους **ίδιους** φύλακες με το ρολόι.
+
+**Ιδίωμα:** Google Cloud Scheduler «Force run» (`jobs.run`) · `kubectl create job --from=cronjob/<name>` — η
+χειροκίνητη εκτέλεση περνά από τον **ίδιο** scheduler, στο **ίδιο** περιβάλλον.
+
+```
+npm run cron:run -- <slug> [--base-url=http://localhost:3000]
+  └─ GET /api/cron/<slug>   (Bearer CRON_SECRET · user-agent nestor-scheduler/manual)
+       └─ scan/queue-cron-route ─ verifyCronAuthorization
+            └─ runCronJobNow({ slug, run })            ← cron-job-executor.ts
+                 └─ runUnderLease: acquireCronLease(…, 'manual') → runWithMonitor → release*(state)
+dispatchCronTick ─ isJobDue ─ runCronJob(job, 'schedule', tick) ─┘  (ΙΔΙΟΣ δρόμος)
+```
+
+| Εργασία | Force run |
+|---|---|
+| ενεργή | runner **του προγράμματος** · `leaseMinutes` · Sentry monitor · κατάσταση |
+| ανενεργή (`ai-pipeline`, `purge-deleted-contacts`) | runner του route · lease `MANUAL_DISABLED_LEASE_MINUTES` (15′) · **χωρίς** monitor — το `ai-pipeline` **απαιτεί** χειροκίνητη κλήση για να ενεργοποιηθεί |
+| άγνωστη | `unknown` · 404 · τίποτα δεν τρέχει |
+| τρέχει ήδη (lease) | `skipped-locked` · **409** με `heldUntil` · **καμία** δεύτερη εκτέλεση |
+
+- **Σήμανση:** `CronRunOutcome.trigger` · κάτοχος lease `manual@<iso>` / `dispatch@<iso>` · `cron_job_state.lastTrigger`.
+- **Το «οφείλεται;» δεν ρωτιέται** σε force run (αυτό είναι το νόημά του)· το lease **ρωτιέται**.
+- ⛔ **Το `/api/cron` ΔΕΝ άνοιξε στο `isMachineEndpoint`** — ο ρητός user-agent αρκεί, όπως στο βήμα 3.
+- 🔑 Το script **δεν φορτώνει κώδικα εφαρμογής**: το path είναι `/api/cron/<slug>`, εγγυημένο από το contract test.
+  Τρέχει η εργασία **στον server** που κατέχει μυστικά και κώδικα — ποτέ τοπικός κώδικας στην κοινή βάση από λάθος.
+- **Contract test §4**: κάθε route δηλώνει `slug: '<φάκελος>'` και φτάνει στο `runCronJobNow(` — μετάλλαξη «ωμό run()» κοκκινίζει.
+
+**Επαλήθευση:** `npx jest src/lib/cron` **10/10 σουίτες · 305/305** (νέες `cron-job-executor` · `cron-run-response`, και
+`cron-lease` με `lastTrigger`, contract §4) · `jscpd:diff` 9 αρχεία **0 κλώνοι**. **Μεταλλάξεις 4/4 κοκκινίζουν:** route
+παρακάμπτει τον executor (15) · ο executor αγνοεί το lease (1) · τρέχει ο runner του route αντί του προγράμματος (3) ·
+409 → 500 (1). ❌ Κανένα `tsc` (N.17).
+
 ---
 
 ## 10. Γνωστά όρια — δηλώνονται, δεν κρύβονται
@@ -321,6 +363,9 @@ Tokens, δικαίωμα `root`). Endpoints: `/applications`,
   της μετακόμισης.
 - Το `adr-index.md` **δεν** ενημερώθηκε (ούτε για το ADR-738): είναι
   auto-generated και ο generator απαγορεύεται να τρέξει.
+- **Force run (§9.2):** κάθε per-job route εισάγει πλέον τον executor ⇒ το `CRON_SCHEDULE` ⇒ **όλες** τις εργασίες
+  (μεγαλύτερο server bundle ανά route· κοινά chunks). Αποδεκτό: ένας φύλακας για όλους αξίζει περισσότερο από λίγα KB.
+  Force run ανενεργής εργασίας γράφει `lastSuccessAt` στο δικό της έγγραφο κατάστασης — αβλαβές, δεν έχει πρόγραμμα.
 - **Προϋπάρχον κόκκινο, άσχετο με αυτό το ADR:** `npm run test:registry-golden` →
   1/102 αποτυχία στο module `date-local` (`pattern[1]` δεν ταιριάζει το
   should-match fixture). Δεν αγγίχθηκε από αυτή τη δουλειά.
@@ -357,3 +402,4 @@ Tokens, δικαίωμα `root`). Endpoints: `/applications`,
 | 2026-07-31 | `cron_job_state` — πλήρης κάλυψη κανόνων Firestore (CHECK 3.16) αντί για `PENDING`. Το `trash-list-route` allowlist μεταφέρθηκε από τα δύο `purge-deleted-*/route.ts` στα αντίστοιχα `.job.ts` — ακολουθεί τη μετακίνηση της λογικής, δεν χαλαρώνει τον κανόνα. |
 | 2026-07-31 | **Μετονομασία ADR-739 → ADR-740** (απόφαση Γιώργου «ρύθμισέ το εσύ»). Σύγκρουση αριθμού με το `ADR-739-canvas-table-system.md`, γραμμένα την ίδια μέρα. Το table κράτησε το 739 γιατί το επεξεργαζόταν **ενεργά** άλλος πράκτορας (δεκάδες uncommitted αρχεία) και **5 commits το ονομάζουν ρητά** — μετονομασία εκεί θα έκανε το git ιστορικό να λέει ψέματα. Μετακινήθηκαν **73 αναφορές σε 41 αρχεία** (cron routes, `lib/cron/**`, config, tests, `git-workflow.md`) σε **ένα πέρασμα**. Το `.ssot-registry.json` ενημερώθηκε **χειρουργικά** — περιέχει και τις δύο οικογένειες, οπότε μαζική αντικατάσταση θα έσπαγε τα table modules. Το `adr-index.md` **δεν** αγγίχθηκε: είναι auto-generated, ο generator απαγορεύεται να τρέξει, και δεν είχε ποτέ εγγραφή για το cron ADR. |
 | 2026-07-31 | **Ενεργοποίηση παραγωγής — ΟΛΟΚΛΗΡΩΘΗΚΕ** (νέο §9.1). `CRON_SECRET` + `NEXT_PUBLIC_APP_URL` (**έλειπε τελείως**) γραμμένα μέσω Coolify REST API· Scheduled Task `nestor-cron-dispatch` (`* * * * *`, uuid `re62oh7oi2q1bks5n417fcy4`)· restart απαραίτητο γιατί οι μεταβλητές γράφτηκαν *μετά* το deploy· απόδειξη 10:06 failed → 10:07/10:08 success· `401` χωρίς μυστικό. **Δύο παγίδες τεκμηριωμένες**: (α) ο πίνακας Coolify είναι Livewire με μόνιμο websocket ⇒ ποτέ `document_idle` ⇒ **απρόσιτος σε browser automation**, χρησιμοποίησε το REST API· (β) πεδία API `is_buildtime`/`is_runtime`, **όχι** `is_build_time` (`422`). Ο runbook παύει να είναι σχέδιο — είναι πλέον καταγραφή. |
+| 2026-09-15 | **Force run μέσα από τον ΙΔΙΟ executor** (νέο §9.2, ADR-777 §8.69.14). Ο executor μίας εργασίας βγήκε από τον dispatcher στο **`cron-job-executor.ts`** (`runUnderLease` → `runCronJob` για το ρολόι · `runCronJobNow` για τα routes). `scan-cron-route` / `queue-cron-route` παίρνουν `slug` και **δεν** καλούν πια `run()` ωμά· ενιαία αντιστοίχιση outcome → HTTP στο **`cron-run-response.ts`** (200 / 500 / **409 lease** / 404). `CronTrigger` (`schedule`·`manual`) στο outcome, στον κάτοχο lease και στο `lastTrigger`. Ανενεργές εργασίες τρέχουν χειροκίνητα κάτω από lease 15′ χωρίς monitor. Νέο **`npm run cron:run -- <slug>`** (`scripts/cron/run-cron-job.ts`, user-agent `nestor-scheduler/manual`, μηδέν κώδικας εφαρμογής). Contract test §4. Middleware **ανέγγιχτο**. |

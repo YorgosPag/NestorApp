@@ -28,5 +28,6 @@ export const { GET } = createScanCronRoute({
   service: 'demand-listing-match-announce',
   label: 'Demand listing match announcement scan',
   logger: createModuleLogger('DEMAND_LISTING_MATCH_ANNOUNCE_CRON'),
+  slug: 'demand-listing-match-announce',
   run: runDemandListingMatchAnnounce,
 });

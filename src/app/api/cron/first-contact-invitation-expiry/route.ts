@@ -31,5 +31,6 @@ export const { GET } = createScanCronRoute({
   service: 'first-contact-invitation-expiry',
   label: 'First-contact invitation expiry sweep',
   logger: createModuleLogger('FIRST_CONTACT_INVITATION_EXPIRY_CRON'),
+  slug: 'first-contact-invitation-expiry',
   run: runFirstContactInvitationExpiry,
 });
