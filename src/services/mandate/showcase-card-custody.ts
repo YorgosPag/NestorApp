@@ -26,7 +26,7 @@
 
 import 'server-only';
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -163,6 +163,22 @@ export async function saveShowcaseCard(
   }
   if (written.kind !== 'saved') return written;
   return { ...written, emailReturns: await emailReturnsOf(adminDb, companyId, written.locations) };
+}
+
+/**
+ * **Ειδικές μέρες από απάντηση email** (Α21.21 Φάση Β) — γράφει **μόνο** το δημόσιο `locations`, μέσα στη συναλλαγή του
+ * καλούντος. Τα κανάλια (ιδιωτικό μισό) **δεν** αγγίζονται: μια απάντηση «Κλειστά» δεν έχει λόγο να ξαναγράψει τηλέφωνα.
+ *
+ * ⚠️ **Δέχεται ΜΟΝΟ κριμένα καταστήματα**: ο καλών τα περνά πρώτα από το `applyHolidayAnswers`, δηλαδή από τον **ίδιο**
+ * κριτή ειδικών ωρών με τη φόρμα (`formLocationHours`). Ζει εδώ ώστε ο γραφέας της κάρτας να μένει **ένα** αρχείο.
+ */
+export function writeLocationSpecialHours(
+  adminDb: AdminFirestore,
+  transaction: Transaction,
+  companyId: string,
+  judged: readonly ShowcaseLocation[],
+): void {
+  transaction.update(adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId), { locations: judged });
 }
 
 /** **Ο ιδιοκτήτης διαβάζει την κάρτα του** — δημόσιο και ιδιωτικό, για να επεξεργαστεί. */
