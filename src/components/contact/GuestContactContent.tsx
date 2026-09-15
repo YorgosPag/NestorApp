@@ -46,7 +46,7 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 
 import { adoptCitizenSession } from '@/auth/citizen-session';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { Link } from '@/lib/workspace/navigation';
 import { AUTH_ROUTES } from '@/lib/routes/authRoutes';
 import { firstContactTargetHref } from '@/lib/contact/first-contact-target-href';
@@ -75,7 +75,6 @@ export function GuestContactContent({
   readonly view: GuestContactLinkView;
 }): React.ReactElement {
   const { t } = useTranslation([FIRST_CONTACT_NS]);
-  const layout = useLayoutClasses();
 
   // ⚠️ **Η εξάρτηση είναι το ΚΛΕΙΔΙ, όχι το `view`.** Το `view` έρχεται από Server
   //    Component και είναι **νέο αντικείμενο σε κάθε απόδοση**: με αυτό στις
@@ -112,7 +111,8 @@ export function GuestContactContent({
     //    **τέταρτο** αντίγραφο μιας κλίμακας που ζει ήδη ονομασμένη. Το
     //    `layout.cardAuthWidth` είναι **η ίδια ακριβώς συμβολοσειρά** — μηδέν οπτική
     //    αλλαγή, και η επόμενη αλλαγή κλίμακας γίνεται σε **ένα** σημείο.
-    <section className={`${layout.cardAuthWidth} flex flex-col gap-4 rounded-lg border border-border bg-card p-6`}>
+    //    ADR-841 §7 Α21.21 Φάση Β: η κάρτα ζει πλέον **μία φορά**, στο `AuthCardSection`.
+    <AuthCardSection gap={4}>
       {view.kind === 'done' ? (
         <DoneBody created={view.created} phase={phase} />
       ) : (
@@ -129,7 +129,7 @@ export function GuestContactContent({
           <SetbackExit target={view.target} />
         </>
       )}
-    </section>
+    </AuthCardSection>
   );
 }
 

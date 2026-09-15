@@ -13,6 +13,7 @@
 import { useCallback, useState } from 'react';
 
 import { EMAIL_CONFIRMATION_ISSUE_PATH } from '@/components/mandate/showcase-card-paths';
+import { refusalOf } from '@/lib/http/response-refusal';
 import {
   SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS,
   type ShowcaseEmailConfirmationIssueRefusal,
@@ -24,11 +25,6 @@ export type EmailConfirmationSendPhase =
   | { readonly kind: 'sent' }
   | { readonly kind: 'refused'; readonly reason: ShowcaseEmailConfirmationIssueRefusal }
   | { readonly kind: 'failed' };
-
-function refusalOf(body: unknown): ShowcaseEmailConfirmationIssueRefusal | null {
-  const reason = (body as { reason?: unknown } | null)?.reason;
-  return SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS.find((known) => known === reason) ?? null;
-}
 
 export function useEmailConfirmationSend(): {
   readonly phase: EmailConfirmationSendPhase;
@@ -46,7 +42,7 @@ export function useEmailConfirmationSend(): {
       });
       const body: unknown = await response.json().catch(() => null);
       if (response.ok) return setPhase({ kind: 'sent' });
-      const reason = refusalOf(body);
+      const reason = refusalOf(body, SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS);
       setPhase(reason === null ? { kind: 'failed' } : { kind: 'refused', reason });
     } catch {
       setPhase({ kind: 'failed' });

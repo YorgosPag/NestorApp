@@ -17,11 +17,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { Button } from '@/components/ui/button';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { emailConfirmationDecisionPath } from '@/components/mandate/showcase-card-paths';
+import { refusalOf } from '@/lib/http/response-refusal';
 import type { ShowcaseEmailConfirmationLookup } from '@/services/mandate/showcase-email-confirmation-decision';
-import type { ShowcaseEmailConfirmationDecision, ShowcaseEmailConfirmationRefusal } from '@/types/showcase-email-confirmation';
+import {
+  SHOWCASE_EMAIL_CONFIRMATION_REFUSALS,
+  type ShowcaseEmailConfirmationDecision,
+  type ShowcaseEmailConfirmationRefusal,
+} from '@/types/showcase-email-confirmation';
 
 // 🧩 ADR-744 — PER-ROUTE SLICE ΤΗΣ `/card-email/[token]`. Στατική εισαγωγή σε εμβέλεια module, στο
 //    Client Component (ίδιος λόγος με το `MandateConsentContent`): αλλιώς ωμά κλειδιά στο πρώτο καρέ.
@@ -35,6 +40,9 @@ const K = `${NS}:mandate.cardEmail`;
 
 type FailureReason = ShowcaseEmailConfirmationRefusal | 'unavailable';
 
+/** ⚠️ Μόνο **γνωστός** κωδικός γίνεται κλειδί — άγνωστος ⇒ `unavailable`, ποτέ ωμό κλειδί i18n (`refusalOf`). */
+const FAILURES: readonly FailureReason[] = [...SHOWCASE_EMAIL_CONFIRMATION_REFUSALS, 'unavailable'];
+
 type Phase =
   | { readonly kind: 'asking' }
   | { readonly kind: 'sending' }
@@ -42,8 +50,7 @@ type Phase =
   | { readonly kind: 'failed'; readonly reason: FailureReason };
 
 function reasonOf(body: unknown): FailureReason {
-  const reason = (body as { reason?: unknown } | null)?.reason;
-  return typeof reason === 'string' ? (reason as FailureReason) : 'unavailable';
+  return refusalOf(body, FAILURES) ?? 'unavailable';
 }
 
 function useDecision(token: string): { readonly phase: Phase; readonly decide: (decision: ShowcaseEmailConfirmationDecision) => Promise<void> } {
@@ -63,20 +70,6 @@ function useDecision(token: string): { readonly phase: Phase; readonly decide: (
     }
   }
   return { phase, decide };
-}
-
-/**
- * 🔑 **Το πλάτος το κατέχει η κάρτα — με ΟΝΟΜΑ** (ADR-797 / CHECK 3.63): το `(auth)/layout.tsx` δηλώνει «κανένα
- * `measure`, την κάρτα την κεντράρει και την πλαταίνει η ίδια». Ωμό `mx-auto max-w-md` θα ήταν ακόμη ένα αντίγραφο
- * της κλίμακας — ίδια θεραπεία με το αδελφό `GuestContactContent` (`layout.cardAuthWidth`).
- */
-function Shell({ children }: { readonly children: React.ReactNode }): React.ReactElement {
-  const layout = useLayoutClasses();
-  return (
-    <section className={`${layout.cardAuthWidth} flex flex-col gap-5 rounded-lg border border-border bg-card p-6`}>
-      {children}
-    </section>
-  );
 }
 
 function Decision({
@@ -131,15 +124,16 @@ export function ShowcaseEmailConfirmationContent({
 
   if (!lookup.ok) {
     return (
-      <Shell>
+      <AuthCardSection gap={5}>
         <h1 className="text-lg font-semibold text-card-foreground">{t(`${K}.title`)}</h1>
         <p role="alert" className="text-sm text-muted-foreground">{t(`${K}.reason.${lookup.reason}`)}</p>
-      </Shell>
+      </AuthCardSection>
     );
   }
 
+  // 🔑 Η κάρτα — πλάτος με όνομα (ADR-797 / CHECK 3.63) — ζει **μία φορά**, στο `AuthCardSection` (ADR-841 Α21.21 Φάση Β).
   return (
-    <Shell>
+    <AuthCardSection gap={5}>
       <header className="flex flex-col gap-2">
         <h1 className="text-lg font-semibold text-card-foreground">{t(`${K}.title`)}</h1>
         <p className="text-sm text-muted-foreground">
@@ -148,6 +142,6 @@ export function ShowcaseEmailConfirmationContent({
       </header>
       <p className="text-sm text-muted-foreground">{t(`${K}.explain`)}</p>
       <Decision phase={phase} disownFirst={disownFirst} onDecide={(decision) => void decide(decision)} />
-    </Shell>
+    </AuthCardSection>
   );
 }
