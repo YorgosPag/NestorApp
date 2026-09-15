@@ -1,0 +1,107 @@
+diff --git a/src/app/(app)/privacy-policy/page.tsx b/src/app/(app)/privacy-policy/page.tsx
+index 268b1e3e..f30fc5ca 100644
+--- a/src/app/(app)/privacy-policy/page.tsx
++++ b/src/app/(app)/privacy-policy/page.tsx
+@@ -57,6 +57,22 @@ export default function PrivacyPolicyPage() {
+       <h2>{t('privacyPolicy.dataRetention.title')}</h2>
+       <p>{t('privacyPolicy.dataRetention.content')}</p>
+ 
++      {/* ADR-841 §7 Α23.13 — ενημέρωση άρθ. 13/14 για το αντίγραφο ΓΕΜΗ· η «Διατήρηση» λέει ΜΟΝΟ ό,τι τηρεί ο κώδικας (Α23.12). */}
++      <section aria-labelledby="privacy-registry-data">
++        <h2 id="privacy-registry-data">{t('privacyPolicy.registryData.title')}</h2>
++        <p>{t('privacyPolicy.registryData.intro')}</p>
++        <ul>
++          <li>{t('privacyPolicy.registryData.source')}</li>
++          <li>{t('privacyPolicy.registryData.categories')}</li>
++          <li>{t('privacyPolicy.registryData.purpose')}</li>
++          <li>{t('privacyPolicy.registryData.legalBasis')}</li>
++          <li>{t('privacyPolicy.registryData.publication')}</li>
++          <li>{t('privacyPolicy.registryData.retention')}</li>
++          <li>{t('privacyPolicy.registryData.objection')}</li>
++        </ul>
++        <p>{t('privacyPolicy.registryData.complaint')}</p>
++      </section>
++
+       <h2>{t('privacyPolicy.yourRights.title')}</h2>
+       <p dangerouslySetInnerHTML={{ __html: t('privacyPolicy.yourRights.content') }} />
+ 
+diff --git a/src/i18n/locales/el/legal.json b/src/i18n/locales/el/legal.json
+index f23b9283..93e001d4 100644
+--- a/src/i18n/locales/el/legal.json
++++ b/src/i18n/locales/el/legal.json
+@@ -24,7 +24,7 @@
+   "privacyPolicy": {
+     "title": "Πολιτική Απορρήτου",
+     "lastUpdated": "Τελευταία ενημέρωση:",
+-    "lastUpdatedDate": "11 Φεβρουαρίου 2026",
++    "lastUpdatedDate": "15 Σεπτεμβρίου 2026",
+     "introduction": {
+       "title": "1. Εισαγωγή",
+       "content": "Το Nestor App CRM (\"εμείς\", \"μας\") σέβεται το απόρρητό σας. Αυτή η Πολιτική Απορρήτου εξηγεί πώς συλλέγουμε, χρησιμοποιούμε και προστατεύουμε τα προσωπικά σας δεδομένα όταν αλληλεπιδράτε με την εφαρμογή και τις υπηρεσίες μας, συμπεριλαμβανομένων των ενσωματώσεων με Facebook Messenger, Instagram, WhatsApp και Telegram."
+@@ -49,12 +49,24 @@
+       "title": "5. Διατήρηση Δεδομένων",
+       "content": "Διατηρούμε τα μηνύματά σας και τα στοιχεία επικοινωνίας σας για όσο διάστημα είναι απαραίτητο για την παροχή των υπηρεσιών μας. Μπορείτε να ζητήσετε τη διαγραφή των δεδομένων σας ανά πάσα στιγμή."
+     },
++    "registryData": {
++      "title": "6. Στοιχεία Επιχειρήσεων από το ΓΕΜΗ",
++      "intro": "Όταν ο διαχειριστής ενός οργανισμού πατά «Επαλήθευση από ΓΕΜΗ», ρωτάμε το Γενικό Εμπορικό Μητρώο (ΓΕΜΗ) για τον αριθμό ΓΕΜΗ που δηλώνει το προφίλ του οργανισμού και κρατάμε αντίγραφο της απάντησης. Τα στοιχεία νομικών προσώπων δεν είναι προσωπικά δεδομένα· για ατομική επιχείρηση όμως αφορούν φυσικό πρόσωπο, και γι' αυτό ισχύουν όσα ακολουθούν.",
++      "source": "Πηγή: η υπηρεσία ανοιχτών δεδομένων του ΓΕΜΗ (businessportal.gr), που είναι δημόσιο μητρώο, με άδεια Open Data Commons Attribution (ODC-BY 1.0). Τα στοιχεία αυτά δεν τα συλλέγουμε από εσάς.",
++      "categories": "Τι κρατάμε: αριθμό ΓΕΜΗ · επωνυμία και διακριτικούς τίτλους (και με λατινικούς χαρακτήρες) · νομική μορφή · κατάσταση στο μητρώο · έδρα (οδός, αριθμός, Τ.Κ., πόλη, δήμος) · αν πρόκειται για υποκατάστημα · αν το ίδιο το μητρώο δηλώνει τα στοιχεία ελλιπή · την ημερομηνία του ελέγχου. Δεν κρατάμε ονόματα εταίρων ή διαχειριστών, κεφάλαιο, μετοχές ή ΑΦΜ.",
++      "purpose": "Σκοπός: να ελέγξουμε ότι ο αριθμός και η επωνυμία του προφίλ συμφωνούν με το μητρώο και να δείξουμε στον διαχειριστή κάθε διαφορά, με δυνατότητα να υιοθετήσει την επωνυμία του μητρώου· να δείχνει η δημόσια σελίδα του γραφείου την επαλήθευση με την ημερομηνία ελέγχου· και, όταν το μητρώο δηλώνει την επιχείρηση ανενεργή, να το λέει η σελίδα της και να μην προσφέρει στοιχεία επικοινωνίας ή νέα ανάθεση εντολής.",
++      "legalBasis": "Νομική βάση: η σύμβαση με τον οργανισμό που χρησιμοποιεί την πλατφόρμα (άρθρο 6 παρ. 1 στοιχ. β΄ ΓΚΠΔ), για τον έλεγχο που ζητά ο ίδιος· και το έννομο συμφέρον (άρθρο 6 παρ. 1 στοιχ. στ΄ ΓΚΠΔ), ώστε όσοι απευθύνονται σε μια επιχείρηση μέσω της πλατφόρμας να προστατεύονται από συναλλαγή με επιχείρηση που το δημόσιο μητρώο δηλώνει ανενεργή. Δεν βασιζόμαστε σε συγκατάθεση.",
++      "publication": "Τι γίνεται δημόσιο: μόνο ό,τι επιλέγει ο οργανισμός όταν δημοσιεύει τη σελίδα του — επωνυμία, νομική μορφή, αριθμός ΓΕΜΗ και έδρα στον βαθμό που διαλέγει (πλήρης διεύθυνση, διεύθυνση καταστήματος ή μόνο δήμος) — μαζί με την ένδειξη επαλήθευσης και την ημερομηνία ελέγχου, ή την ένδειξη ότι το μητρώο δηλώνει την επιχείρηση ανενεργή.",
++      "retention": "Διατήρηση: κρατάμε το αντίγραφο μόνο όσο αφορά τον αριθμό ΓΕΜΗ που δηλώνει τώρα το προφίλ του οργανισμού. Διαγράφεται όταν αλλάξει ή σβηστεί ο αριθμός στο προφίλ (μαζί με την αποθήκευση του προφίλ), όταν το ΓΕΜΗ απαντήσει ότι ο αριθμός δεν υπάρχει, ή όταν ο διαχειριστής πατήσει «Διαγραφή των στοιχείων ΓΕΜΗ που κρατάμε» στη σελίδα «Στοιχεία ΓΕΜΗ». Απάντηση του μητρώου για αριθμό που το προφίλ δεν δηλώνει πια δεν αποθηκεύεται. Κάθε διαγραφή καταγράφεται στο ημερολόγιο ελέγχου με την αιτία, τον αριθμό ΓΕΜΗ, την ημερομηνία του ελέγχου που διαγράφηκε και τον χρήστη που την προκάλεσε — χωρίς επωνυμία ή διεύθυνση.",
++      "objection": "Διαγραφή και αντίταξη (άρθρα 17 και 21 ΓΚΠΔ): ο διαχειριστής του οργανισμού μπορεί να διαγράψει το αντίγραφο οποιαδήποτε στιγμή με το παραπάνω κουμπί· μετά τη διαγραφή δεν ρωτάμε ξανά το ΓΕΜΗ, εκτός αν πατηθεί ξανά «Επαλήθευση από ΓΕΜΗ». Αν τα στοιχεία σας αφορούν αλλά δεν είστε ο διαχειριστής, στείλτε μας email στη διεύθυνση της ενότητας «Επικοινωνία».",
++      "complaint": "Έχετε επίσης δικαίωμα να υποβάλετε καταγγελία στην Αρχή Προστασίας Δεδομένων Προσωπικού Χαρακτήρα (www.dpa.gr)."
++    },
+     "yourRights": {
+-      "title": "6. Τα Δικαιώματά σας",
++      "title": "7. Τα Δικαιώματά σας",
+       "content": "Σύμφωνα με τον GDPR, έχετε το δικαίωμα πρόσβασης, διόρθωσης ή διαγραφής των προσωπικών σας δεδομένων. Επικοινωνήστε μαζί μας στο <strong>georgios.pagonis@gmail.com</strong> για να ασκήσετε τα δικαιώματά σας."
+     },
+     "contact": {
+-      "title": "7. Επικοινωνία",
++      "title": "8. Επικοινωνία",
+       "text": "Για ερωτήσεις σχετικά με το απόρρητο, επικοινωνήστε μαζί μας στο: <strong>georgios.pagonis@gmail.com</strong>"
+     }
+   },
+diff --git a/src/i18n/locales/en/legal.json b/src/i18n/locales/en/legal.json
+index 0e3d7c2c..cc73457d 100644
+--- a/src/i18n/locales/en/legal.json
++++ b/src/i18n/locales/en/legal.json
+@@ -24,7 +24,7 @@
+   "privacyPolicy": {
+     "title": "Privacy Policy",
+     "lastUpdated": "Last updated:",
+-    "lastUpdatedDate": "February 11, 2026",
++    "lastUpdatedDate": "September 15, 2026",
+     "introduction": {
+       "title": "1. Introduction",
+       "content": "Nestor App CRM (\"we\", \"our\", \"us\") respects your privacy. This Privacy Policy explains how we collect, use, and protect your personal data when you interact with our application and services, including integrations with Facebook Messenger, Instagram, WhatsApp, and Telegram."
+@@ -49,12 +49,24 @@
+       "title": "5. Data Retention",
+       "content": "We retain your messages and contact information for as long as necessary to provide our services. You may request deletion of your data at any time."
+     },
++    "registryData": {
++      "title": "6. Business Data from the General Commercial Registry (GEMI)",
++      "intro": "When an organisation's administrator clicks \"Verify with GEMI\", we query the Greek General Commercial Registry (GEMI) for the GEMI number stated in the organisation's profile and keep a copy of the answer. Data about legal persons is not personal data; for a sole proprietorship, however, it relates to a natural person, which is why the following applies.",
++      "source": "Source: the GEMI open data service (businessportal.gr), a public registry, licensed under the Open Data Commons Attribution License (ODC-BY 1.0). We do not collect this data from you.",
++      "categories": "What we keep: GEMI number · legal name and distinctive titles (including in Latin characters) · legal form · status in the registry · registered office (street, number, postal code, city, municipality) · whether it is a branch · whether the registry itself marks the data as incomplete · the date of the check. We do not keep names of partners or managers, capital, shares or tax ID (AFM).",
++      "purpose": "Purpose: to check that the number and legal name in the profile match the registry and show the administrator any difference, with the option to adopt the registry's legal name; to let the agency's public page show the verification together with the date of the check; and, when the registry states the business is inactive, to have its page say so and not offer contact details or a new mandate.",
++      "legalBasis": "Legal basis: the contract with the organisation using the platform (Article 6(1)(b) GDPR), for the check it requests itself; and legitimate interest (Article 6(1)(f) GDPR), so that people approaching a business through the platform are protected from dealing with a business the public registry states is inactive. We do not rely on consent.",
++      "publication": "What becomes public: only what the organisation chooses when it publishes its page — legal name, legal form, GEMI number and registered office to the extent it selects (full address, shop address or municipality only) — together with the verification notice and the date of the check, or the notice that the registry states the business is inactive.",
++      "retention": "Retention: we keep the copy only while it concerns the GEMI number currently stated in the organisation's profile. It is deleted when the number in the profile is changed or removed (together with saving the profile), when GEMI answers that the number does not exist, or when the administrator clicks \"Delete the GEMI data we hold\" on the \"Business registry (GEMI)\" page. A registry answer for a number the profile no longer states is not stored. Every deletion is recorded in the audit log with the reason, the GEMI number, the date of the deleted check and the user who caused it — without legal name or address.",
++      "objection": "Erasure and objection (Articles 17 and 21 GDPR): the organisation's administrator can delete the copy at any time with the button above; after deletion we do not query GEMI again unless \"Verify with GEMI\" is clicked again. If the data relates to you but you are not the administrator, email us at the address in the \"Contact\" section.",
++      "complaint": "You also have the right to lodge a complaint with the Hellenic Data Protection Authority (www.dpa.gr)."
++    },
+     "yourRights": {
+-      "title": "6. Your Rights",
++      "title": "7. Your Rights",
+       "content": "Under GDPR, you have the right to access, correct, or delete your personal data. Contact us at <strong>georgios.pagonis@gmail.com</strong> to exercise your rights."
+     },
+     "contact": {
+-      "title": "7. Contact",
++      "title": "8. Contact",
+       "text": "For privacy-related inquiries, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+     }
+   },
