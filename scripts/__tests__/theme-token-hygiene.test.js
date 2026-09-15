@@ -33,6 +33,9 @@ const path = require('path');
 
 const { parseHslToken, hslToRgb, toHex } = require('../lib/contrast/wcag-contrast');
 const { findGluedClasses } = require('../lib/contrast/glued-class');
+const { readThemes } = require('../lib/contrast/css-token-themes');
+const { loadTailwindColors } = require('../lib/contrast/tailwind-class-resolver');
+const role = require('../lib/contrast/selection-control-role');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -177,5 +180,94 @@ describe('Ο4 — η «Αυτόματη αποθήκευση» δεν ξαναβ
   test('η στατική παλέτα ΟΝΤΩΣ κουβαλά χρώμα φωτεινού θέματος (γι᾽ αυτό απαγορεύεται inline)', () => {
     // Αν αυτό αλλάξει, ξανασκέψου τον Ο4 — μην τον σβήσεις σιωπηλά.
     expect(read('src/styles/design-tokens/modules/foundations.ts')).toMatch(/primary:\s*"#1e293b"/);
+  });
+});
+
+// ─── Ο5 — ο ρόλος χειριστηρίου επιλογής (ADR-770 §17) ─────────────────────────
+//
+// Το εύρημα: επιλογή radio ΑΟΡΑΤΗ σε ζωντανή σελίδα (ADR-841 Α21.21) — `text-primary`,
+// και το `--primary` είναι επιφάνεια (≡ --card στο σκοτεινό). Ίδια ρίζα σε checkbox,
+// switch, progress, ημερολόγιο, native `accent-primary`. Ο5 ΕΚΤΕΛΕΙ τη μηχανή WCAG στο
+// πραγματικό globals.css και ελέγχει τον ΡΟΛΟ δομικά. Κάθε κανόνας έχει μετάλλαξη.
+
+describe('Ο5 — ρόλος χειριστηρίου επιλογής: ορατός στα δύο θέματα, ποτέ επιφάνεια', () => {
+  const themes = readThemes(REPO_ROOT);
+  const palette = loadTailwindColors(REPO_ROOT);
+  const rows = role.measureControlRole(themes);
+
+  test('Ο5α — μετρήθηκαν ΟΛΑ τα ζεύγη (2 θέματα × (2 tokens × 6 ξενιστές + μελάνι))', () => {
+    expect(rows).toHaveLength(2 * (2 * role.HOST_SURFACES.length + 1));
+  });
+
+  test('Ο5α — τονισμός/περίγραμμα ≥3:1 σε κάθε ξενιστή, μελάνι ≥4,5:1 πάνω στον τονισμό', () => {
+    expect(role.roleFailures(rows)).toEqual([]);
+  });
+
+  test('Ο5α ΜΕΤΑΛΛΑΞΗ — ανοιχτό μελάνι στο σκοτεινό / --input ως περίγραμμα ⇒ κόκκινο', () => {
+    const dark = new Map(themes.dark);
+    dark.set('--control-accent-foreground', themes.dark.get('--primary-foreground'));
+    const light = new Map(themes.light);
+    light.set('--control-outline', themes.light.get('--input'));
+    const failures = role.roleFailures(role.measureControlRole({ ...themes, dark, light }));
+    expect(failures.some((f) => f.startsWith('dark: --control-accent-foreground'))).toBe(true);
+    expect(failures.some((f) => f.startsWith('light: --control-outline'))).toBe(true);
+  });
+
+  test('Ο5α ΜΕΤΑΛΛΑΞΗ — token που λείπει ΣΚΑΕΙ (fail-closed), δεν «περνά»', () => {
+    const dark = new Map(themes.dark);
+    dark.delete('--control-accent');
+    expect(() => role.measureControlRole({ ...themes, dark })).toThrow(/fail-closed/);
+  });
+
+  test('Ο5β — καμία κλάση κατάστασης / accent-* σε ΟΛΟ το src/ δεν λύνεται σε επιφάνεια', () => {
+    const offenders = [];
+    const seenDeclared = new Set();
+    for (const full of collectSourceFiles(path.join(REPO_ROOT, 'src'))) {
+      const rel = path.relative(REPO_ROOT, full).replace(/\\/g, '/');
+      const declared = role.DECLARED_OPEN_STATES[rel] || [];
+      for (const hit of role.findSurfaceStateIndicators(fs.readFileSync(full, 'utf8'), palette)) {
+        if (declared.includes(hit.token)) seenDeclared.add(`${rel}::${hit.token}`);
+        else offenders.push(`${rel}:${hit.line} ${hit.token} ⇒ ${hit.varName}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+    const declaredAll = Object.entries(role.DECLARED_OPEN_STATES).flatMap(([f, ts]) => ts.map((t) => `${f}::${t}`));
+    expect(declaredAll.filter((d) => !seenDeclared.has(d))).toEqual([]);
+  });
+
+  test('Ο5β ΜΕΤΑΛΛΑΞΗ — οι δύο ιστορικές μορφές πιάνονται', () => {
+    const hits = role.findSurfaceStateIndicators(
+      'cn("data-[state=checked]:bg-primary", "accent-primary", "data-[state=checked]:bg-control-accent")',
+      palette,
+    );
+    expect(hits.map((h) => h.token)).toEqual(['data-[state=checked]:bg-primary', 'accent-primary']);
+  });
+
+  test('Ο5γ — τα primitives του ρόλου αναφέρουν τον ρόλο και δεν ζητούν --primary', () => {
+    const violations = Object.keys(role.SELECTION_PRIMITIVES).flatMap((rel) =>
+      role.primitiveViolations(rel, read(rel), palette),
+    );
+    expect(violations).toEqual([]);
+  });
+
+  test('Ο5γ ΜΕΤΑΛΛΑΞΗ — το αρχικό σφάλμα (`text-primary` στο radio) ⇒ κόκκινο', () => {
+    const rel = 'src/components/ui/radio-group.tsx';
+    const mutated = read(rel).replace('${control.indicator}', 'text-primary');
+    expect(mutated).not.toBe(read(rel));
+    expect(role.primitiveViolations(rel, mutated, palette).join('\n')).toMatch(/text-primary ⇒ --primary/);
+  });
+
+  test('Ο5δ — το COLOR_BRIDGE (ΕΚΤΕΛΕΣΜΕΝΟ) λύνεται μόνο σε tokens του ρόλου', () => {
+    const bridge = role.loadColorBridge(REPO_ROOT);
+    const objects = { selectionControl: bridge.selectionControl, 'switch.default': bridge.switch.default };
+    expect(Object.keys(bridge.selectionControl).length).toBeGreaterThanOrEqual(6);
+    expect(role.roleAuthorityViolations(objects, palette)).toEqual([]);
+  });
+
+  test('Ο5δ ΜΕΤΑΛΛΑΞΗ — επαναφορά `bg-primary` στο switch ⇒ κόκκινο', () => {
+    const objects = { 'switch.default': { checked: 'data-[state=checked]:bg-primary' } };
+    expect(role.roleAuthorityViolations(objects, palette)).toEqual([
+      'switch.default.checked: data-[state=checked]:bg-primary ⇒ --primary',
+    ]);
   });
 });

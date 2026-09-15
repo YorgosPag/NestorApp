@@ -292,27 +292,58 @@ export const COLOR_BRIDGE = {
     },
   },
 
+  /**
+   * ☑️ ΡΟΛΟΣ ΧΕΙΡΙΣΤΗΡΙΟΥ ΕΠΙΛΟΓΗΣ (ADR-770 §17 · γενίκευση ADR-682 §5.5)
+   *
+   * Radio, checkbox, switch, progress και επιλεγμένη μέρα ημερολογίου ζητούσαν `primary`,
+   * που εδώ είναι **επιφάνεια** (`.dark --primary` ≡ `--card` ⇒ 1,00:1): η επιλογή υπήρχε
+   * και ήταν αόρατη. Material 3 (`primary`/`on-primary`/`outline`), Fluent 2 και Radix
+   * Themes (`--accent-indicator`/`--accent-contrast`) απαντούν με **έναν** ρόλο — εδώ τα
+   * `--control-*` του `globals.css`. Η άγκυρα Ο5 (`theme-token-hygiene.test.js`) εκτελεί τη
+   * μηχανή WCAG στις τιμές **και** ελέγχει ότι κανένας δείκτης κατάστασης δεν ζητά επιφάνεια.
+   */
+  selectionControl: {
+    /** Περίγραμμα ανεπίλεκτου — WCAG 1.4.11 ≥3:1 (το `--input` έδινε 1,31:1). */
+    outline: 'border-control-outline',
+    checkedOutline: 'data-[state=checked]:border-control-accent',
+    checkedFill: 'data-[state=checked]:bg-control-accent',
+    /** Μελάνι ΠΑΝΩ στον τονισμό (✓) — αντιστρέφεται σε σκούρο στο σκοτεινό θέμα. */
+    checkedInk: 'data-[state=checked]:text-control-accent-foreground',
+    /** Δείκτης που κάθεται σε επιφάνεια (κουκκίδα radio). */
+    indicator: 'text-control-accent',
+    /** Γεμάτος δείκτης χωρίς Radix state (progress, επιλεγμένη μέρα). */
+    fill: 'bg-control-accent',
+    fillInk: 'text-control-accent-foreground',
+  },
+
   /** 🔘 ENTERPRISE SWITCH TOKENS - Status-based toggle colors (ADR-128) */
   switch: {
-    // Default variant (primary/input)
+    // Default variant — ADR-770 §17: ρόλος χειριστηρίου επιλογής. OFF = περιγραμμένη τροχιά
+    // + λαβή `outline` (M3 `unselected-handle-color → outline` · Fluent `colorNeutralStrokeAccessible`)·
+    // ON = τροχιά τονισμού + λαβή `on-accent`. Ήταν `bg-primary`/`bg-input` ⇒ ON αόρατο (σκοτ.),
+    // OFF 1,33:1 (φωτ.).
     default: {
-      checked: 'data-[state=checked]:bg-primary',
-      unchecked: 'data-[state=unchecked]:bg-input',
+      checked: 'data-[state=checked]:bg-control-accent',
+      unchecked: 'data-[state=unchecked]:bg-transparent data-[state=unchecked]:border-control-outline',
+      thumb: 'data-[state=checked]:bg-control-accent-foreground data-[state=unchecked]:bg-control-outline',
     },
     // Status variant (green ON / red OFF) - for visibility toggles
     status: {
       checked: 'data-[state=checked]:bg-green-500',
       unchecked: 'data-[state=unchecked]:bg-red-500',
+      thumb: 'bg-background',
     },
     // Success variant (green ON / muted OFF)
     success: {
       checked: 'data-[state=checked]:bg-green-500',
       unchecked: 'data-[state=unchecked]:bg-input',
+      thumb: 'bg-background',
     },
     // Destructive variant (red ON / muted OFF)
     destructive: {
       checked: 'data-[state=checked]:bg-destructive',
       unchecked: 'data-[state=unchecked]:bg-input',
+      thumb: 'bg-background',
     },
   },
 

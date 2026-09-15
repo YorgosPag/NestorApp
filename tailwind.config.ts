@@ -69,6 +69,16 @@ export default {
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
+        // ☑️ ADR-770 §17 — ρόλος χειριστηρίου επιλογής. ΜΙΑ δήλωση ⇒ `bg-control-accent`,
+        // `text-control-accent-foreground`, `border-control-outline`, `accent-control-accent`.
+        // ⛔ Όχι `primary` για δείκτη κατάστασης: εδώ είναι επιφάνεια (≡ --card στο σκοτεινό).
+        control: {
+          accent: {
+            DEFAULT: 'hsl(var(--control-accent) / <alpha-value>)',
+            foreground: 'hsl(var(--control-accent-foreground) / <alpha-value>)',
+          },
+          outline: 'hsl(var(--control-outline) / <alpha-value>)',
+        },
         ring: 'hsl(var(--ring))',
         chart: {
           '1': 'hsl(var(--chart-1))',

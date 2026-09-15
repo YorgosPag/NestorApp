@@ -282,8 +282,45 @@
        The value is the app's interactive blue — same family and same light/dark
        polarity as `--link-color` (deeper on white, brighter on slate). It is
        declared, not referenced, on purpose: coupling slider colour to link colour
-       would make a typography change silently repaint every control. */
-    --slider-accent: 221 83% 53%;        /* blue-600 — vivid on light surfaces */
+       would make a typography change silently repaint every control.
+
+       ADR-682 §5.5.3 / ADR-770 §17: the slider was only the FIRST victim. Its value
+       now lives in the SELECTION-CONTROL ROLE below and the slider reads it; scoped
+       overrides (`.cut-plane-slider-accent`) still work because they redefine
+       `--slider-accent` locally. */
+    --slider-accent: var(--control-accent);
+
+    /* ☑️ ADR-770 §17 — ΡΟΛΟΣ ΧΕΙΡΙΣΤΗΡΙΟΥ ΕΠΙΛΟΓΗΣ (radio · checkbox · switch · slider ·
+       progress · επιλεγμένη μέρα ημερολογίου · native `accent-color`).
+
+       Η ΡΙΖΑ: κάθε τέτοιο primitive ζητούσε `--primary`, που σε αυτή την εφαρμογή είναι
+       ΕΠΙΦΑΝΕΙΑ (`.dark --primary` ≡ `--card`, 1,00:1). Η επιλογή υπήρχε στο DOM και ήταν
+       αόρατη — μετρημένο σε ζωντανή σελίδα (ADR-841 Α21.21, ερώτηση ωραρίου αργιών).
+
+       Ο ΡΟΛΟΣ ΕΙΝΑΙ ΤΡΙΑ TOKENS, όπως στους μεγάλους:
+         · --control-accent             M3 `primary` · Fluent 2 `colorCompoundBrandBackground`
+                                        · Radix Themes `--accent-indicator`
+         · --control-accent-foreground  M3 `on-primary` · Fluent `colorNeutralForegroundInverted`
+                                        · Radix `--accent-contrast` — ό,τι κάθεται ΠΑΝΩ στον τονισμό
+         · --control-outline            M3 `outline` · Fluent `colorNeutralStrokeAccessible` —
+                                        περίγραμμα του ΑΝΕΠΙΛΕΚΤΟΥ + λαβή switch OFF
+
+       🔑 ΤΟ ΜΕΛΑΝΙ ΑΝΤΙΣΤΡΕΦΕΤΑΙ ΣΤΟ ΣΚΟΤΕΙΝΟ: ανοιχτό πάνω σε blue-400 = 2,32:1 ❌·
+       σκούρο = 6,92:1. Χωρίς δικό του foreground η «αόρατη κουκκίδα» γίνεται «αόρατο ✓».
+       🔑 ΤΟ ΑΝΕΠΙΛΕΚΤΟ ΑΠΕΤΥΧΑΝΕ ΚΙ ΑΥΤΟ: `--input` έναντι επιφανειών 1,31–1,49 (φωτ.) /
+       1,96–2,31 (σκοτ.) — κάτω από το 3:1 του WCAG 1.4.11. Γι' αυτό υπάρχει `--control-outline`.
+
+       Μετρημένο (χειρότερο έναντι background·card·popover·muted·accent·secondary):
+         --control-accent  φωτ. 4,23 · σκοτ. 5,89   |  --control-outline  φωτ. 3,89 · σκοτ. 5,78
+         --control-accent-foreground πάνω στον τονισμό  φωτ. 4,76 · σκοτ. 6,92
+       ⚠️ ΟΙ ΑΡΙΘΜΟΙ ΑΥΤΟΙ ΕΙΝΑΙ ΣΧΟΛΙΟ — Η ΑΥΘΕΝΤΙΑ ΕΙΝΑΙ Η ΑΓΚΥΡΑ Ο5 του
+       `scripts/__tests__/theme-token-hygiene.test.js`, που ΕΚΤΕΛΕΙ τη μηχανή WCAG εδώ.
+       ⛔ ΜΗΝ τα κάνεις `var(--link-color)`/`var(--muted-foreground)`: ίδια ΟΙΚΟΓΕΝΕΙΑ είναι
+       πρόθεση, ίδια ΜΕΤΑΒΛΗΤΗ θα ξανάβαφε σιωπηλά τα χειριστήρια (ADR-682 §5.5).
+       ⛔ ΜΗΝ αλλάξεις το `--primary` — απορρίφθηκε γραπτώς (ADR-682 §5.5). */
+    --control-accent: 221 83% 53%;              /* blue-600 */
+    --control-accent-foreground: 214 95% 97%;   /* blue-50 */
+    --control-outline: 215.4 16.3% 46.9%;       /* slate-500 */
   }
 
   .dark {
@@ -325,9 +362,12 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     
-    /* 🎚️ ADR-682 §5.5: brighter in dark mode so the range separates from --card
-       (217 33% 17%). blue-400 — the same step --link-color takes for dark. */
-    --slider-accent: 213 94% 68%;
+    /* ☑️ ADR-770 §17 — σκοτεινό σκέλος του ρόλου χειριστηρίου επιλογής (βλ. :root).
+       Φωτεινότερο ώστε να ξεχωρίζει από --card· το μελάνι ΑΝΤΙΣΤΡΕΦΕΤΑΙ σε σκούρο.
+       Το --slider-accent δεν ξαναδηλώνεται: κληρονομεί `var(--control-accent)`. */
+    --control-accent: 213 94% 68%;              /* blue-400 */
+    --control-accent-foreground: 220 20% 11%;   /* = --background */
+    --control-outline: 215 20.2% 65.1%;         /* slate-400 */
 
     --border: 217 19% 27%; /* #384252 — ≈ Tailwind gray-700 (#374151), off by 1/255 per channel. Said "exactly" until 2026-08-07; it is not. */
     --input: 217 19% 35%; /* Λίγο πιο ανοιχτό για dark mode */
