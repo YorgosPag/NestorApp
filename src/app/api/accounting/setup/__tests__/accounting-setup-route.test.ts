@@ -73,6 +73,12 @@ jest.mock('@/services/company/company-rename.service', () => ({
   reconcileShowcaseLegalIdentity: (...args: unknown[]) => reconcileMock(...args),
 }));
 
+const companionMock = jest.fn();
+const companionFactoryMock = jest.fn((..._args: unknown[]) => companionMock);
+jest.mock('@/services/company-registry/company-registry-retention.service', () => ({
+  registryRetentionCompanion: (...args: unknown[]) => companionFactoryMock(...args),
+}));
+
 import { PUT } from '../route';
 
 const VALID = {
@@ -155,8 +161,16 @@ describe('Φ — μάσκα πεδίων (ADR-841 Α23 Γ3 · AIP-134 / AIP-161)
     await put({ ...VALID, fields: ['phone', 'city'] });
     await put(VALID);
 
-    expect(repo.saveCompanySetup.mock.calls[0][1]).toEqual({ fields: ['phone', 'city'] });
-    expect(repo.saveCompanySetup.mock.calls[1][1]).toEqual({ fields: undefined });
+    expect(repo.saveCompanySetup.mock.calls[0][1]).toEqual({ fields: ['phone', 'city'], companion: companionMock });
+    expect(repo.saveCompanySetup.mock.calls[1][1]).toEqual({ fields: undefined, companion: companionMock });
+  });
+
+  it('🔴 Φ4 — Α23.12: ο σύντροφος διατήρησης ΓΕΜΗ ταξιδεύει στη ΣΥΝΑΛΛΑΓΗ, για οργανισμό και άνθρωπο της απόδειξης', async () => {
+    // Χωρίς αυτόν, αλλαγή αριθμού ΓΕΜΗ αφήνει το αντίγραφο του παλιού αριθμού να ζει για πάντα (5(1)(ε)).
+    await put({ ...VALID, gemiNumber: '001234567000', fields: ['gemiNumber'] });
+
+    expect(companionFactoryMock).toHaveBeenCalledWith(expect.anything(), 'comp_alfa', 'user_1');
+    expect(repo.saveCompanySetup.mock.calls[0][1].companion).toBe(companionMock);
   });
 
   it('🔑 Φ3 — η μάσκα ΔΕΝ μπαίνει στο έγγραφο (το σώμα χτίζεται ρητά)', async () => {

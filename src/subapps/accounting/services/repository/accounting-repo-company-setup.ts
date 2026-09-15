@@ -11,6 +11,8 @@
  * - γράφονται **μόνο** τα πεδία της μάσκας (`mergeProfileFields` — Figma · AIP-134 · Protobuf `oneof`)·
  * - το ίχνος (`auditOf`) μπαίνει στην **ίδια** συναλλαγή — αλλαγή χωρίς ίχνος είναι αδύνατη·
  * - τίποτα δεν άλλαξε ⇒ **καμία** γραφή (ιδεμποτής: ούτε `updatedAt`, ούτε ίχνος).
+ * - ο **σύντροφος** (`options.companion`, Α23.12) δεσμεύεται στην **ίδια** συναλλαγή — π.χ. η διαγραφή του
+ *   αντιγράφου ΓΕΜΗ όταν άλλαξε ο αριθμός: αλλαγή αριθμού με παλιό αντίγραφο να επιζεί είναι αδύνατη.
  *
  * ⚠️ Το σώμα μπορεί να τρέξει **πολλές** φορές: μόνο αναγνώσεις/γραφές της συναλλαγής και καθαρές
  * συναρτήσεις. Οι συνέπειες (βιτρίνα, αγγελίες) ανήκουν στον καλούντα, **μετά** το commit.
@@ -76,7 +78,8 @@ async function writeCompanySetup(
   options: CompanySetupSaveOptions,
 ): Promise<CompanySetupSaveResult> {
   const ref = profileRefOf(db, tenant);
-  const snap = await transaction.get(ref);
+  // ⚠️ Firestore: όλες οι αναγνώσεις ΠΡΙΝ από κάθε γραφή — ο σύντροφος διαβάζει εδώ, γράφει στο τέλος.
+  const [snap, companionWrite] = await Promise.all([transaction.get(ref), options.companion?.(transaction)]);
   const stored = snap.exists ? (snap.data() as Record<string, unknown>) : null;
   const before = stored === null ? null : companyProfileOf(stored);
   const merged = mergeProfileFields(before, data, options.fields);
@@ -87,6 +90,7 @@ async function writeCompanySetup(
   for (const entry of options.auditOf?.(before, after) ?? []) {
     appendAuditEntryInTransaction(db, transaction, tenant, entry);
   }
+  companionWrite?.(before, after);
   return { before, after };
 }
 

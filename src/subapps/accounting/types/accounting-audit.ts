@@ -40,7 +40,10 @@ export type AccountingAuditEventType =
   | 'COMPANY_PROFILE_UPDATED'
   // ADR-841 §7 Α23: the legal name (επωνυμία) changed — typed in the profile or
   // adopted from ΓΕΜΗ. Until 2026-09-15 a rename left NO trace anywhere.
-  | 'COMPANY_LEGAL_NAME_CHANGED';
+  | 'COMPANY_LEGAL_NAME_CHANGED'
+  // ADR-841 §7 Α23.12: the stored ΓΕΜΗ copy was erased (number changed/removed in the
+  // profile · registry said «does not exist» · owner's erasure request). GDPR art. 5(2).
+  | 'COMPANY_REGISTRY_COPY_ERASED';
 
 /**
  * Entity types that can be audited

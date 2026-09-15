@@ -9,6 +9,8 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
+import type { Transaction } from 'firebase-admin/firestore';
+
 import type { PaginatedResult } from '@/lib/pagination';
 
 // ── Company Profile Types ────────────────────────────────────────────────────
@@ -102,9 +104,19 @@ import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit
  * - `auditOf` — τα ίχνη από το πριν/μετά **της συναλλαγής**, γραμμένα στην **ίδια** συναλλαγή.
  *   ⚠️ Καλείται σε **κάθε** επανάληψη της συναλλαγής: καθαρή συνάρτηση, καμία παρενέργεια.
  */
+/**
+ * **Σύντροφος της συναλλαγής του προφίλ** (ADR-841 §7 Α23.12) — ό,τι πρέπει να δεσμευτεί **μαζί** με την
+ * αλλαγή του προφίλ, ή καθόλου. Δύο φάσεις, επειδή το Firestore απαιτεί **όλες τις αναγνώσεις πριν από κάθε
+ * γραφή**: διαβάζει όταν καλείται, και επιστρέφει τον γραφέα — που τρέχει **μόνο** αν το προφίλ άλλαξε.
+ */
+export type CompanyProfileTransactionCompanion = (
+  transaction: Transaction,
+) => Promise<(before: CompanyProfile | null, after: CompanyProfile) => void>;
+
 export interface CompanySetupSaveOptions {
   readonly fields?: CompanyProfileFieldMask;
   readonly auditOf?: (before: CompanyProfile | null, after: CompanyProfile) => readonly AccountingAuditEntry[];
+  readonly companion?: CompanyProfileTransactionCompanion;
 }
 
 /** Ό,τι διάβασε και ό,τι έγραψε η **ίδια** συναλλαγή — οι συνέπειες κρίνονται από εδώ, ποτέ από δεύτερη ανάγνωση. */

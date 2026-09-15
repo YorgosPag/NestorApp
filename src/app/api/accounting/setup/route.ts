@@ -19,6 +19,9 @@
  * πεδίο ⇒ 400 (AIP-161). Οι συνέπειες κρίνονται από το «πριν/μετά» **της συναλλαγής** — ποτέ από
  * τη φόρμα, ποτέ από δεύτερη ανάγνωση.
  *
+ * ⚖️ ADR-841 §7 Α23.12 — **διατήρηση του αντιγράφου ΓΕΜΗ**: αλλαγή ή σβήσιμο του αριθμού ⇒ το αντίγραφο του
+ * παλιού αριθμού σβήνεται **στην ίδια** συναλλαγή με το προφίλ, με ίχνος (`registryRetentionCompanion`).
+ *
  * @module api/accounting/setup
  * @enterprise ADR-ACC-000 §2 Company Data, M-001 Company Setup
  * @enterprise ADR-603 API Route-Handler Factory SSoT
@@ -37,6 +40,7 @@ import {
   propagateCompanyRename,
   reconcileShowcaseLegalIdentity,
 } from '@/services/company/company-rename.service';
+import { registryRetentionCompanion } from '@/services/company-registry/company-registry-retention.service';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
 import {
@@ -253,6 +257,8 @@ export const PUT = defineRoute({
     const auditedRepository = createAuditedRepository(repository, auth.uid, auth.companyId);
     const saved = await auditedRepository.saveCompanySetup(data, {
       fields: mask.kind === 'fields' ? mask.fields : undefined,
+      // ADR-841 §7 Α23.12: αντίγραφο ΓΕΜΗ άλλου αριθμού σβήνεται ΣΤΗΝ ΙΔΙΑ συναλλαγή, με ίχνος.
+      companion: registryRetentionCompanion(getAdminFirestore(), auth.companyId, auth.uid),
     });
 
     scheduleProfileConsequences(auth.companyId, auth.uid, saved);
