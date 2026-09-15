@@ -184,6 +184,17 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_SHOWCASE_EMAIL_CONFIRMATIONS_COLLECTION || 'showcase_email_confirmations',
 
   /**
+   * 🏆 ADR-841 §7 Α21.21 Φάση Β — **ΟΙ ΕΡΩΤΗΣΕΙΣ «ΘΑ ΕΙΣΤΕ ΑΝΟΙΧΤΑ ΣΤΙΣ ΑΡΓΙΕΣ;»**. Μία ανά (γραφείο,
+   * εορταστική περίοδος), κλειδί `hhq_*` ντετερμινιστικό. Η αλήθεια (οι ειδικές μέρες) ζει στην **κάρτα**·
+   * εδώ μόνο «ρωτήσαμε, πότε, τι απάντησε».
+   *
+   * 🔴 **`deny_all` και στις δύο πλευρές**: κρατά το `nonce` των συνδέσμων. Γραφή από πελάτη = απάντηση
+   * χωρίς σύνδεσμο· ανάγνωση = σύνδεσμοι χωρίς όριο ρυθμού.
+   */
+  HOLIDAY_HOURS_QUESTIONS:
+    process.env.NEXT_PUBLIC_HOLIDAY_HOURS_QUESTIONS_COLLECTION || 'holiday_hours_questions',
+
+  /**
    * 🏆 ADR-841 §7 Α21.20 — **ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΣΥΜΒΑΝΤΩΝ ΠΑΡΑΔΟΣΗΣ** (delivered · failed · deferred ·
    * complained). Κλειδί: `edev_<πάροχος>_<sha256 ταυτότητας συμβάντος>` — ο πάροχος ξαναστέλνει για
    * ώρες, και το ντετερμινιστικό κλειδί κάνει την επανάληψη **ακίνδυνη**.

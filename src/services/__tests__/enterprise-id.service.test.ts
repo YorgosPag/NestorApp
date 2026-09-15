@@ -240,6 +240,7 @@ describe('EnterpriseIdService', () => {
      * |---|---|
      * | `arj` (ADR-844 §13.8) | **ένα ημερολόγιο ανά email** — η συνέχιση μιας διακοπείσας διεκδίκησης ξέρει μόνο το email· τυχαίο id θα γεννούσε δεύτερο ημερολόγιο και θα ορφάνευε το πρώτο |
      * | `wacr` (ADR-660 §6) | **ένα αίτημα ανά (χώρος, πρόσωπο)** — δύο ταυτόχρονες συνδέσεις οφείλουν να συγκλίνουν στο **ίδιο** έγγραφο, χωρίς ερώτημα |
+     * | `hhq` (ADR-841 §7 Α21.21 Φάση Β) | **μία ερώτηση ανά (γραφείο, εορταστική περίοδο)** — το ημερήσιο cron ξαναρωτά την ίδια περίοδο κάθε μέρα· τυχαίο id θα έστελνε **νέο email κάθε πρωί** |
      *
      * ⛔ **ΜΗΝ «διορθώσεις» το κόκκινο φτιάχνοντας τους αδελφούς.** Επαληθεύτηκε
      * (2026-09-12) ότι **δεν υπάρχουν πουθενά** στο δέντρο· γραμμένοι μόνο για να περάσει
@@ -249,6 +250,7 @@ describe('EnterpriseIdService', () => {
      */
     const DETERMINISTIC_ONLY: readonly string[] = [
       'generateDeterministicAuthReprovisionJournalId',
+      'generateDeterministicHolidayHoursQuestionId',
       'generateDeterministicWorkspaceAccessRequestId',
     ];
 
@@ -322,6 +324,9 @@ describe('EnterpriseIdService', () => {
       //    ΑΛΛΑΖΕ την καταγεγραμμένη τιμή, δηλαδή θα έσπαγε ακριβώς την ιδιότητα που
       //    φυλάει — το id **ΕΙΝΑΙ η διεύθυνση του εγγράφου** στο Firestore.
       generateDeterministicWorkspaceAccessRequestId: 'wacr_aa044400-10b9-4583-865f-97901fb1d075',
+      // ADR-841 §7 Α21.21 Φάση Β — δύο παράμετροι (`companyId`, `seasonKey`), ίδιο σχήμα με το `wacr` από πάνω: ο
+      //    πραγματικός σπόρος είναι `'anchor-seed:undefined'`, γι' αυτό το uuid **ταυτίζεται** με του `wacr`.
+      generateDeterministicHolidayHoursQuestionId: 'hhq_aa044400-10b9-4583-865f-97901fb1d075',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

@@ -78,6 +78,14 @@ export abstract class AccessLifecycleIdGenerators extends PublicRegistryIdGenera
   }
 
   /**
+   * ADR-841 §7 Α21.21 Φάση Β — **η ερώτηση αργιών**, μία ανά (γραφείο, εορταστική περίοδος).
+   * Ντετερμινιστικό ⇒ το ημερήσιο cron που ξαναρωτά την ίδια περίοδο γράφει **ένα** έγγραφο, χωρίς ερώτημα.
+   */
+  generateDeterministicHolidayHoursQuestionId(companyId: string, seasonKey: string): string {
+    return this.mintDeterministicV4Id(P.HOLIDAY_HOURS_QUESTION, `${companyId}:${seasonKey}`);
+  }
+
+  /**
    * ADR-853 §7.1 — **η πρόσκληση σε χώρο εργασίας**.
    *
    * 🔴 **ΜΗ ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ, ΑΝΤΙΘΕΤΑ ΑΠΟ ΤΟΝ ΔΙΠΛΑΝΟ ΤΟΥ `wacr` — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ

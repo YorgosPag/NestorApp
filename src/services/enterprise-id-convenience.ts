@@ -165,6 +165,9 @@ export const generateDeterministicAuthReprovisionJournalId = (normalizedEmail: s
   enterpriseIdService.generateDeterministicAuthReprovisionJournalId(normalizedEmail);
 export const generateDeterministicWorkspaceAccessRequestId = (companyId: string, uid: string) =>
   enterpriseIdService.generateDeterministicWorkspaceAccessRequestId(companyId, uid);
+// ADR-841 §7 Α21.21 Φάση Β — Η ΕΡΩΤΗΣΗ ΑΡΓΙΩΝ, μία ανά (γραφείο, περίοδος). Μαζί με τη μέθοδο.
+export const generateDeterministicHolidayHoursQuestionId = (companyId: string, seasonKey: string) =>
+  enterpriseIdService.generateDeterministicHolidayHoursQuestionId(companyId, seasonKey);
 // ADR-853 §7.1 — Η ΠΡΟΣΚΛΗΣΗ ΣΕ ΧΩΡΟ. Εξάγεται **μαζί** με τη μέθοδο, για τον λόγο που
 // γράφουν οι από πάνω: ταυτότητα άφταστη από το facade είναι ταυτότητα που ο επόμενος θα
 // γράψει **με το χέρι** (N.6). ⚠️ Χωρίς όρισμα — μη ντετερμινιστική, δες τη μέθοδο.

@@ -64,6 +64,7 @@ export {
   generateShowcaseEmailConfirmationId,
   generateDeterministicAuthReprovisionJournalId,
   generateDeterministicWorkspaceAccessRequestId,
+  generateDeterministicHolidayHoursQuestionId,
   generateWorkspaceInvitationId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,

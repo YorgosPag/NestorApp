@@ -8,6 +8,7 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "fd2d1b5b0ed4628ec4d75992eef44d0c0b33af93e956614f26b56fa718bb32ed",
     "src/i18n/generated/routes/demands__new.el.json": "a00a37bb34cebdd1e27ee54c89fbbffd9f8b0f9df761d8c601d04d5ee1e32042",
     "src/i18n/generated/routes/email__preferences__token.el.json": "0a30fc5f663f0a2da5ebc584666b4c9a86c2f97493c14058309704b885d91c23",
+    "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/invite__token.el.json": "10b3915e457027e71f08a179e0b13a024cc7901c25b3a46c1bf060ad25f8c9ac",
     "src/i18n/generated/routes/listing__id.el.json": "b19ede6fc6c3241e6bcb448fd2912d37e1070117c5f8c6b1df6583ce9dc003c8",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
@@ -20,7 +21,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "4dc3664a2345ff04af6724e2c707c8331a188c04299d44468946225700290e35",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "3b4adedac1e82eea00343eb9d825381cafcd1ee470524efdeb4b63e3f283525d",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
@@ -73,7 +74,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1201ed9268f0c92d68ab11b14579b9c445443bda9fd8f6717f64fcd1da07bee1",
+  "inputsSha256": "a79371b28f4764c0cb6bf930a44f8ab414ac23a8e898d6562075b634410a8aa8",
   "languages": [
     "el"
   ],
@@ -114,6 +115,7 @@
     "src/app/(auth)/card-email/[token]/page.tsx": "36b07a66475f1264e4369f3b92e57517dd40d8897153e5238cc5a3037e5f94c8",
     "src/app/(auth)/contact/[token]/page.tsx": "8c180c31abe63ee5a03155b5f39ccfcf7bbd9daf76ad85d035f94164e9242160",
     "src/app/(auth)/email/preferences/[token]/page.tsx": "c6d180803470d274d0696c25bfeb24e224e3651a89566796fce0a8e1ce5dbff2",
+    "src/app/(auth)/hours-question/[token]/page.tsx": "c3003b45c213089269d7b9a8bd2edbc4ed69e1ca119527acb36948a7f67e9248",
     "src/app/(auth)/invite/[token]/page.tsx": "bac47b8b3d194e5daca7c1da944a40ff20ec2d9c9eede218445564af4a6da41d",
     "src/app/(auth)/login/page.tsx": "d813088046523271933bf761e7b3e3c1bc35bb37dc4b8b13c37c56236fde5ffa",
     "src/app/(auth)/mandate/[token]/page.tsx": "92d2bf63cfeaf5dc77bd29d3f334c8270a65e9bec1cefda1379c0727c089ab77",
@@ -153,7 +155,7 @@
     "src/components/completion/completion-bucket-classes.ts": "d046fc132098ac220f1084138d0b1f5ef9b1ce6f3f53070974a0b838ca3749e1",
     "src/components/contact/FirstContactAction.tsx": "78c9f06be3c3c5c1d85dbb3a47f69e46a96bcbe011c7e01f68cea70834eb09ba",
     "src/components/contact/FirstContactOutcomeNotice.tsx": "4a74c8b1f3bb40da4b4509ef99c16618b34bbe6a24a2d088964cf354db902282",
-    "src/components/contact/GuestContactContent.tsx": "da11f8e2245970273ad70560011fed34ee07a997a4a105d7d23326ef69f17165",
+    "src/components/contact/GuestContactContent.tsx": "24a209b879820341dcaee2794a33764c3332b1fee9aa6b714f8b6519990be457",
     "src/components/contact/first-contact-guest-labels.ts": "fe1d149d0350c33d6f50b642beaa985e58e942c07510e791cc47276b9fbf4862",
     "src/components/contact/first-contact-labels.ts": "b4078af99283f39a68952fa2530293d258ffb72101638acc8393944b02de48d9",
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -228,6 +230,8 @@
     "src/components/mandate/DailyIntervalsEditor.tsx": "af004adbaf4cf96f966ff2886353f093bf279fc32dfe95dfddaf3bcbb358e935",
     "src/components/mandate/DirectoryQueryState.tsx": "800d513f203125ce39a6e646027463c582d55e113c6864f58a13e7e302036df8",
     "src/components/mandate/EmailConfirmedNote.tsx": "a3976371c672861d1f403efaffb0842469228e2c8e63c9d49582a4a266b12b9b",
+    "src/components/mandate/HolidayQuestionContent.tsx": "a830951012984d455c21346791ca578d9b4cdb127acd5e095cd2b2a29b06294e",
+    "src/components/mandate/HolidayQuestionRows.tsx": "6ea19009c4ff3005cc464ffd1fb714a18ae0cdb350de9f37315fdf420b296dd5",
     "src/components/mandate/LegalIdentityStatement.tsx": "6aa42b8f433212cb50546689335ce7aa06868f0821d044dc358f67b0b95dcdbe",
     "src/components/mandate/MandateCatalogContent.tsx": "bd551b73a57e19fdc826c2050dbb089dbb8505f9cb50ab75705e34db883cecb1",
     "src/components/mandate/MandateConsentContent.tsx": "bf0f2ec82176e32030f54a520fd38da8ce24c0442c3e3d0e35cb85ec243bc9aa",
@@ -245,7 +249,7 @@
     "src/components/mandate/ShowcaseContactCard.tsx": "98f8cf18e55e6afa07ca40f20529d392d7ae666b3143e02f5719b22ff69decea",
     "src/components/mandate/ShowcaseCredentialField.tsx": "3d875a36891619a42b1edfd9c15a46421d9d7233d094bb24a41b805642d1228e",
     "src/components/mandate/ShowcaseDoorLink.tsx": "da0e633528560512c33bbd315ba50fd98f6a2a69965e68bbf13ab231062018f2",
-    "src/components/mandate/ShowcaseEmailConfirmationContent.tsx": "808a463cb67a7d104e33d79ee26ae9d903234a0ce5cbbaaa15f773b6ddbc9205",
+    "src/components/mandate/ShowcaseEmailConfirmationContent.tsx": "dfbfc3774f54e791ca9430f06956c021e9176772717dbb88a080b830bb1ba10f",
     "src/components/mandate/ShowcaseEmailConfirmationControl.tsx": "703c600579434e549d16fbff144890a90fc2ec2c9895448f698dc9a3ad614c93",
     "src/components/mandate/ShowcaseIdentityFields.tsx": "32b4737c3e515cfb2d33d0a73748f7d1cea99699f71e3230cee4772ea43cf78a",
     "src/components/mandate/ShowcaseImportProvenance.tsx": "f78fe3fe1864777265cd9cae9d3fc79156abb60e8a6c522479374e817bb9ec72",
@@ -258,7 +262,7 @@
     "src/components/mandate/ShowcaseQrPanel.tsx": "646b61ccf554a4a4ea9bf8e831d91fac3fb4742d58f9b38ac04a6291c3ffec0e",
     "src/components/mandate/ShowcaseRegistryContent.tsx": "db49cd258fce084fac99bda144365a1b14e0d469767e922a9fb81f8e14f2e40a",
     "src/components/mandate/ShowcaseRegistryDoor.tsx": "5be570c18c227e6fcf34500fb505e4c41165395b096572d81e77f5433929b155",
-    "src/components/mandate/ShowcaseRegistrySections.tsx": "9bde8d008e3bfab135dcf098b8960f7532a089b5fd3093e00e95135cad8084bc",
+    "src/components/mandate/ShowcaseRegistrySections.tsx": "d4b134aa44283162b82c9d568d00935065ae28b9a16b62449bf1d3fa42fb1733",
     "src/components/mandate/ShowcaseShareDialog.tsx": "3c83d99d7fc6dea589e580152909250ebe63f30e568aa3f91c27f2a2fb17ceab",
     "src/components/mandate/ShowcaseWithdrawButton.tsx": "fdd752015a5ba4609136f74d02c2c38356d21ef3e5ba73b1f540d4cedb33b2f0",
     "src/components/mandate/SpecialDayRow.tsx": "d3f61095e6db3177b386fbed8d907d85ff3bf5a24b10e15c918d0a4fe31595db",
@@ -270,6 +274,7 @@
     "src/components/mandate/agency-showcase-special-hours-labels.ts": "20ffaaab13a977ab463c4094e78d95c8d998d68d982c8e5d9d5f829fd7690560",
     "src/components/mandate/catalog/MandateCatalogRow.tsx": "2a53f0deebe217433b17498e1cc1e325cf0b9985365aebd16f961ddd8ec16fc9",
     "src/components/mandate/catalog/mandate-catalog-labels.ts": "0c0767e8a4cbde6b0173d69bcb6edb9bc0f131f84e950c85ec5606536982d09d",
+    "src/components/mandate/holiday-question-labels.ts": "46fa27983958adca9c65cc6b23abd3e1b221458311948cd22d5834e3a3165ade",
     "src/components/mandate/inbox/MandateInboxRow.tsx": "a856828741f26c3c7a8636a54cb770918f625190f471c5f9f2d06b5a78de1852",
     "src/components/mandate/inbox/mandate-inbox-labels.ts": "2857f123a71a3d76278c7454928421a06824627e535c57d1945f5787e1941e87",
     "src/components/mandate/listing-agreement-labels.ts": "d30b730ed15ba1c70aab9a2c47f901808f18ac60852a6c688a77f6458f31732e",
@@ -278,9 +283,9 @@
     "src/components/mandate/mandate-request-form-labels.ts": "da1acbbdd12c7bdbe9f07df49f063dbb74286bcec7bae7c06e9094ca6401a6b8",
     "src/components/mandate/offer-kind-labels.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
     "src/components/mandate/showcase-card-paths.ts": "0ee69212d52bb3261b2172a0f6a9298fb2d99b22d733cd78efe14c95cda86b47",
-    "src/components/notifications/EmailPreferencesPanel.tsx": "61ed0462888cb9029b09b8aa9d9c1307131ae86ef0a9f818550f6c7b154f18c5",
+    "src/components/notifications/EmailPreferencesPanel.tsx": "304ec64e3b5972b5a0d60e6ed5ac1f4800c0034ad2092c667a33a623c1a2a259",
     "src/components/notifications/EmailTypePreferences.tsx": "f6bb7acf05ddecd0224061b23606ae9e698944fbb9a4521f7bf92059ae49286c",
-    "src/components/notifications/NotificationPermalinkUnavailable.tsx": "927d9d74450a5ed7d608ee72f0b88646551c6279f19e4e2a30225f50c5bf3cad",
+    "src/components/notifications/NotificationPermalinkUnavailable.tsx": "526e8252778b77f0e0681b5589f1a8b1c28535812fc5e3c47dc4c53587df6fe3",
     "src/components/owner-property/MyOwnerPropertiesContent.tsx": "5d6c9bd1aea0d87f47c292599456d2c09e758b404c90a8c5f2e24d166167116e",
     "src/components/owner-property/OwnerListingCompletion.tsx": "68f35f90e0a22585ca8064754c9c9f8665bbf60a76987b28b5b2c96c8f2b5a67",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
@@ -341,8 +346,20 @@
     "src/components/shared/pickers/picker-popover-shell.tsx": "afd97bc89864049c6b6c2a3d103283dfaf0ce4db320f0dacc042456374535be1",
     "src/components/shared/pickers/use-async-picker-search.ts": "d148b56564da04f304760a213a458de4cb84ccdd9be045ffcff751ea1749dc72",
     "src/components/shared/pickers/use-linked-single-picker.ts": "668230ffadc7763783a3054c91f463374c85f8c56ae54f680fa8c38eaeb1185f",
+    "src/components/ui/ConfirmDialog.tsx": "f8f729194c2dee0d63ec0458a0da09556ef65e8ee8ad5d7a69a0372b63481592",
     "src/components/ui/accordion.tsx": "5e870a0dbb03f0ecc4d1ac717b3eb0f2b470c5b9abfa85e511b92f90252c3cd4",
+    "src/components/ui/alert-dialog/constants.ts": "dea3f6a964d6fce80e1872b09ac1276ced1f024a8f1726b0ca2c91367877a102",
+    "src/components/ui/alert-dialog/parts/Action.tsx": "db633f87c6baad871e0dc152eeeeb2f0da98d2f92c603fd7fb6311d8f9d70bb7",
+    "src/components/ui/alert-dialog/parts/Cancel.tsx": "2c80c141037cad879cc33956a296e2ea286c5c00365aacfea75adfdfa70539fb",
+    "src/components/ui/alert-dialog/parts/Content.tsx": "90f8d39ad7db11018b724b381799b68fad1c010f846ae482984c134bf40fc4a4",
+    "src/components/ui/alert-dialog/parts/Description.tsx": "9233732f31d09b87ef6048035f453a90b28e6024b84fb8174dd4ec621092df83",
+    "src/components/ui/alert-dialog/parts/Footer.tsx": "3749f7b18ba8868967694d9c246d651eb20b04cf68b5e762fc64232b2e22b1c0",
+    "src/components/ui/alert-dialog/parts/Header.tsx": "3749f7b18ba8868967694d9c246d651eb20b04cf68b5e762fc64232b2e22b1c0",
+    "src/components/ui/alert-dialog/parts/Overlay.tsx": "9233732f31d09b87ef6048035f453a90b28e6024b84fb8174dd4ec621092df83",
+    "src/components/ui/alert-dialog/parts/Title.tsx": "9233732f31d09b87ef6048035f453a90b28e6024b84fb8174dd4ec621092df83",
+    "src/components/ui/alert-dialog/primitives.tsx": "13299d7cac927b888cc748a23a382b6a20063002b43d5af1c7d843756962faee",
     "src/components/ui/alert.tsx": "97d4eb92aaed18eb820484c17385e7f8346c0e34ef0e7ee21b75c0e43c34ad13",
+    "src/components/ui/auth-card-section.tsx": "f4f0dc247ab35023363c3e9938a7f0865589b3712d799e7de73796e8b3c3e4fc",
     "src/components/ui/calendar.tsx": "45bada8d1743736f6fd35ea7fc57e3432ff4d8417ca32ed17f4d411eb3cf00b0",
     "src/components/ui/date-picker-field.tsx": "ee1601baf5ee9b97301624cdea58fb4dda186ae8b71f400bd81b199413febfa4",
     "src/components/ui/filter-chip.tsx": "78d2c99eb285a47b9fa1b1853929c8910bc0672380a82615b21568157b561d1d",
@@ -384,7 +401,8 @@
     "src/hooks/listings/useResultsLedgers.ts": "4b4a4e7e64c1852eb7140624686417c0a6235b081372dcc19c2bd4ec1f5f163d",
     "src/hooks/mandate/useAgencyShowcase.ts": "2a4eb62351825c540b1a384730279823855a08b44e1d7205ca421c3e5aa59e73",
     "src/hooks/mandate/useCompanyContactSource.ts": "2ddd22e9a2b11e67772194da552aadbe5064bab73aef6640fdc1fee6b891b1a6",
-    "src/hooks/mandate/useEmailConfirmationSend.ts": "bd39880c9f5b9cffebb529ae45bb61a64177b569d3ff7d9984c150849c37df5e",
+    "src/hooks/mandate/useEmailConfirmationSend.ts": "d2df7ec2b2eb2b5809a09f790bd6fd3eaf139bc74f2de4735b182c8f3535f33c",
+    "src/hooks/mandate/useHolidayQuestionDecision.ts": "83ae0e63bd689f3ab2ab5e107c67ceb97367fed7c03e9c83b03c0e8cfade46e0",
     "src/hooks/mandate/useMandateCatalog.ts": "a57448c1c42a23613c470f0a94ba7d16931f2de5fa315e08fd0b7b56fe9b14ea",
     "src/hooks/mandate/useMandateDetail.ts": "901506df5d1448085320ddbd498b5ff5d571f77c5dc69b41ccbb1f33a70f8e16",
     "src/hooks/mandate/useMandateInbox.ts": "336d880546f769fd998339c41a395e33050c5f4da9a610501d265669b7b8e4c2",
@@ -411,9 +429,11 @@
     "src/lib/agency/showcase-canonical-segment.ts": "09dd448b22de14a7872afc02d68a35411df496481e548a902772d62e0e15f952",
     "src/lib/agency/showcase-card-channels-read.ts": "2f72e88fb41d270ef03ce8f539a75ee6db23661c2335b24f86665b545e74a812",
     "src/lib/agency/showcase-card-draft.ts": "5ba8cbbe5727448abf46f8ac19cc9c0f081cc5d2a1d5b7640e211c95af229b92",
+    "src/lib/agency/showcase-card-form.ts": "3eb97f3b71c23c5ebbd3572724d92dd8b98924063d124be3f723cf32ab7d9d88",
     "src/lib/agency/showcase-card-import.ts": "82abcbe4968d981a854dc523caf9f8509c6c60efaa0284d14cbe7246fdd65e33",
     "src/lib/agency/showcase-card-primary.ts": "21e5e59b4428b3a6103941f1428cf45414dbfd55a0c8223dfcac2f7af496e72e",
     "src/lib/agency/showcase-email-confirmation-rules.ts": "d99d1113184f615eab00e159677e2d35faeda3725adbe72b9bf4938f843c7771",
+    "src/lib/agency/showcase-holiday-answers.ts": "7027285e4a16cb51c117df8cbc150be97948b85d739c533496ddb6ff37c921b4",
     "src/lib/agency/showcase-legal-identity.ts": "9bfa60222bd183d24ca00cb262d5171dec54c6b66176a5d21abf8f392b237dd6",
     "src/lib/agency/showcase-legal-presentation.ts": "41f8d43fc43340dd7cbcb312ec9b75ac2aeaaa1fee59041bd4cf935ab902eab6",
     "src/lib/agency/showcase-mark-fidelity.ts": "0f1a4258ff802b4685ab6a52d7c23b979b36af73b00908b6fff45e5c0ca1b988",
@@ -438,6 +458,7 @@
     "src/lib/auth/token-credentials.ts": "04ada53730e0be6f12abafcf1c22fbe14e11e4a05e082872e72697d417995402",
     "src/lib/calendar/holiday-question.ts": "010e08d4d2d577529653efb949c0aee25c95b3a7a05e1f9a51d73d48c1adff8a",
     "src/lib/calendar/hours-timeline.ts": "f0ef2c861bf24408398e828c5fb96aaa354af3a1082734a15a6e5c9004da8015",
+    "src/lib/communications/email-delivery/recipient-standing.ts": "d521b1c657ee4f28b3d5d397ecfbb22fbe90de7446fbea5c27003be1285cd090",
     "src/lib/company/legal-name-match.ts": "9440355b13b2c6dff2d9c94259cf05d05e2fb0b1bfc81e97ee7de0b8f427bb67",
     "src/lib/company/registry-identity-judgment.ts": "d4509f1b34f0d257cc96061cfdda1e3c897b553d947fd2e36d4e453964bd54d1",
     "src/lib/contact/channel-email.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -482,6 +503,7 @@
     "src/lib/geometry/mesh3d/geometry-fingerprint.ts": "7fed79d40fcd2c38259d8857ba2fcda707d54cc2d3e3591403b9dbd70eed265a",
     "src/lib/geometry/mesh3d/triangle-soup.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/http/public-origin.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/http/response-refusal.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/layout/bottom-sheet-stops.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/declared-file-ids.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-attribute-groups.ts": "349e9f80fdf6dba48e0e7c6de19187263d4ecd3891429dbbd72726a786b327b5",
@@ -552,6 +574,7 @@
     "src/server/auth/mailbox-proof-custody.ts": "6e7cb2b7e60df6a68186c112ac1103eb77b5302a78792f431402583bafe519e7",
     "src/server/auth/workspace-invitation-notice.ts": "f60509bcae87c6da3b057e66dae4d6fafdb0e268429ec290e53aef61aaab010b",
     "src/server/auth/workspace-invitation-redeem.ts": "5498b8d113a88843c402cdb710bf275ff3b705e4dc1f88f9b158fbe4d2b34079",
+    "src/server/comms/email-delivery/email-delivery-ledger.ts": "d39e6035ba9a7d3d0ac3eb55b3723b0cf8e92b645ceed915c2f5ccf79c2bccaf",
     "src/server/comms/email-provider-chain.ts": "a6940b3c20970ef349fb93d3a62f3110c4ef03232829a4b23129ab40d0aca674",
     "src/server/comms/email-texts.ts": "13d0118d8622d4a1b60e25c2abc3fa64fd26f6dafc375548eda46e672294c414",
     "src/server/comms/orchestrator.ts": "3c544030adad04ccf05d648eab10ca6e1e637de7e0fe0ee75cc4075f9f958ff6",
@@ -565,7 +588,7 @@
     "src/services/ErrorTracker.ts": "4ff1fd24ec31d0cf6a5234b143331fc599c2bcee34be0f04c73b50b8615f34c6",
     "src/services/account/tax-identity.service.ts": "96596f0ee90dc75534ab6cab64bc756a4d46028c5a4c8b4530e94e765ccb71c6",
     "src/services/ai-pipeline/shared/mailgun-sender.ts": "517c8f9306707726dddd2837996e7ff70579d539f333c7802a870bbb40a813e5",
-    "src/services/company-registry/company-registry-record.service.ts": "7864bd7cd8325e215f7d10b80df152f61b39fdeb710bff370cd580c7523ccf09",
+    "src/services/company-registry/company-registry-record.service.ts": "d264685b0a2e7ea7f46b5a1316a87539b2c9200176e42cd4f6657aae7e305ebe",
     "src/services/company-registry/gemi-opendata-parse.ts": "503bbb7ead105cd5a33351b80a4bd495b777f426929b770a7f28c59cdadd8690",
     "src/services/company/company-public-name.reader.ts": "84f955bbf880ce2b9f9dd291cd0b0a985017f6c8e401aa7c254ed245bf70f341",
     "src/services/company/sender-identity.ts": "4b1b1f014e567f19b6da02143bc0da0faf72f1b96b3c7b77a2cde74c4c8f00a8",
@@ -618,6 +641,8 @@
     "src/services/listings/publish-public-listing.ts": "7708f90a07e5ec9f00e41e0b7907345039a3cfcfa3200edbafebd6d2d0d4ec59",
     "src/services/mandate/agency-profile-credential.ts": "b7ebd2ef7d1d57c08749c44722ee782a0c82c3c1235b206b9525141d028202ca",
     "src/services/mandate/agency-profile.service.ts": "e69a923f5a9c59afcbfb3bcc5ed9d33cb10f67138b58bafe1631fd5125bbeee2",
+    "src/services/mandate/holiday-hours-question-decision.ts": "efe1d395abcc45eed08a89070a38110caf3a2af28f716ea575d6c5e576fe3bfa",
+    "src/services/mandate/holiday-hours-question-token.ts": "e3f724e6d44a1640373a041c82313a2120ccc6371d9839ae59fa46ca6b3fc4ba",
     "src/services/mandate/mandate-actions.service.ts": "c017fe22d216a7572e7f7e290226ca66ba3922dfaeb13e0b010d6517b5ca7793",
     "src/services/mandate/mandate-catalog.client.ts": "41c5bd36535fedb33fc332ab51abd83507c22afd982f4aa50fd4b7867d2d96b4",
     "src/services/mandate/mandate-catalog.service.ts": "2975d9316db3f60192c4de3bc4b9dfeaade64abb5022788db24085cf00680ec3",
@@ -628,6 +653,7 @@
     "src/services/mandate/mandate-inbox.client.ts": "e39d58edb9e06fae3b785de2f7e46bba249e17cfdde528c78740d5829c459e62",
     "src/services/mandate/mandate-inbox.service.ts": "9e777bad2116a4822d78a4e3162ccc3a8f0887b8b008074cc473a7633c423405",
     "src/services/mandate/mandate-invitation.service.ts": "2c8edb86c7dfd354abf11d71bc68bd54f6d595c968fd36188fa5cea0608e5b6a",
+    "src/services/mandate/showcase-card-custody.ts": "76ac74c4d600af0627a4101e5f515e3f7ecfc08f5bea5dc5e69c152be8fc0116",
     "src/services/mandate/showcase-email-confirmation-decision.ts": "86cdadf264a5b145a61df332cc46c7d8e293f497496f4c5417b2a07dae56f36c",
     "src/services/mandate/showcase-email-confirmation-store.ts": "b7726369330237c380e66d80aa845224f4d31708b6cf13fe4a81fc38f9449b31",
     "src/services/mandate/showcase-email-confirmation-token.ts": "e3f724e6d44a1640373a041c82313a2120ccc6371d9839ae59fa46ca6b3fc4ba",
@@ -703,6 +729,7 @@
     "src/types/first-contact-invitation.ts": "c31f489a5c656b22862903d8133e2bb8c306177d38c31d7bc9f5c8eda1250356",
     "src/types/first-contact.ts": "4b13090991ed18e3ec7aa61c900107042849a0bec3b735746e5df7373a7b13be",
     "src/types/geo/camera-frame.ts": "bdf5291766d39aa3be9e97f0ba2003aca52a85be41680eba15e174c2a28b7bce",
+    "src/types/holiday-hours-question.ts": "48d3c4feafb0156071228c7dc26ce5e37a4d4a25387cd32764c9c669155822bf",
     "src/types/notification-email-facts.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/owner-property-invariants.ts": "a2076e0dfa133bce07a2226a14cac08e1a0d41e5dd0cb043dc1946ad53ccc719",
     "src/types/owner-property.ts": "ee38aac1b99d0edc7aa952d4cfa186397e5c236035f43411698302f59d4da95f",
@@ -1216,6 +1243,54 @@
             "account.notificationSettings.preferences.always",
             "account.notificationSettings.preferences.emailsOffNote",
             "account.notificationSettings.preferences.mandatoryNote"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "hours-question__token": {
+      "page": "src/app/(auth)/hours-question/[token]/page.tsx",
+      "wants": {
+        "property-market": {
+          "keys": [
+            "mandate.profile.cardBranch",
+            "mandate.profile.cardHeadquarters",
+            "mandate.profile.holiday.assumption",
+            "mandate.profile.holiday.boxing-day",
+            "mandate.profile.holiday.christmas",
+            "mandate.profile.holiday.clean-monday",
+            "mandate.profile.holiday.easter-monday",
+            "mandate.profile.holiday.easter-sunday",
+            "mandate.profile.holiday.epiphany",
+            "mandate.profile.holiday.good-friday",
+            "mandate.profile.holiday.independence-day",
+            "mandate.profile.holiday.labour-day",
+            "mandate.profile.holiday.new-year",
+            "mandate.profile.holiday.ochi-day",
+            "mandate.profile.holiday.whit-monday",
+            "mandate.showcase.cardSpecialKind.closed",
+            "mandate.showcase.cardSpecialKind.custom",
+            "mandate.showcase.cardSpecialKind.regular",
+            "mandate.showcase.holidayQuestion.done",
+            "mandate.showcase.holidayQuestion.explain",
+            "mandate.showcase.holidayQuestion.formWon",
+            "mandate.showcase.holidayQuestion.intro",
+            "mandate.showcase.holidayQuestion.lastYear",
+            "mandate.showcase.holidayQuestion.otherHours",
+            "mandate.showcase.holidayQuestion.otherHoursHint",
+            "mandate.showcase.holidayQuestion.reason.already-answered",
+            "mandate.showcase.holidayQuestion.reason.expired",
+            "mandate.showcase.holidayQuestion.reason.link-invalid",
+            "mandate.showcase.holidayQuestion.reason.question-unknown",
+            "mandate.showcase.holidayQuestion.reason.special-hours-invalid",
+            "mandate.showcase.holidayQuestion.reason.unavailable",
+            "mandate.showcase.holidayQuestion.reason.without-showcase",
+            "mandate.showcase.holidayQuestion.remaining",
+            "mandate.showcase.holidayQuestion.sameForAll",
+            "mandate.showcase.holidayQuestion.sending",
+            "mandate.showcase.holidayQuestion.submit",
+            "mandate.showcase.holidayQuestion.title"
           ],
           "prefixes": [],
           "whole": false
@@ -2840,6 +2915,106 @@
     "o__workspace__settings__agency-profile__registry": {
       "page": "src/app/(app)/o/[workspace]/settings/agency-profile/registry/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "mandate.showcase.cardBackToShowcase",
@@ -2857,6 +3032,13 @@
             "mandate.showcase.registry.closedBody",
             "mandate.showcase.registry.closedTitle",
             "mandate.showcase.registry.closedWithdrawHint",
+            "mandate.showcase.registry.erase",
+            "mandate.showcase.registry.eraseBody",
+            "mandate.showcase.registry.eraseConfirm",
+            "mandate.showcase.registry.eraseTitle",
+            "mandate.showcase.registry.erasing",
+            "mandate.showcase.registry.erasure.erased",
+            "mandate.showcase.registry.erasure.failed",
             "mandate.showcase.registry.fixNumber",
             "mandate.showcase.registry.forbidden",
             "mandate.showcase.registry.gap.check-unreadable",
@@ -5426,7 +5608,8 @@
     "src/services/enterprise-id-convenience.ts": "8638e7a8d454b751842f9f6fc67a623e6be81979c7ff555a67e18111dbc388c9",
     "src/services/enterprise-id-deterministic.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/enterprise-id-parse.ts": "d697167e26dbb3e9530c6ab084aa50f7e30e77bdb0ff4d1308dbec8aae785bf6",
-    "src/services/enterprise-id-prefixes.ts": "ceee174045bef4dee73b40ca83ee23f86c59154d3f9d5822036d7cbc3c666f3c",
+    "src/services/enterprise-id-prefixes-dxf-bim.ts": "496be3e53096b30c9396c4d26e9048f0b7361951585b2401732cc3e3371898b7",
+    "src/services/enterprise-id-prefixes.ts": "080282f5d30cd40d406b5f24a18c16973305c4bcb5187d6a669a90be5e00833b",
     "src/services/enterprise-id-public-registry-generators.ts": "693adeb4e52f0a5b3866fcdb8be26e2e2763e6f8638a69ede03e4caa40a97cf0",
     "src/services/enterprise-id-singleton.ts": "af633d79955de13a3b98f19e7145f0762dcf7eea2565a9d135054a12e59d5d42",
     "src/services/enterprise-id-types.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
@@ -5612,8 +5795,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 671,
-    "sliceBytes": 456730
+    "shellFiles": 672,
+    "sliceBytes": 461701
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
