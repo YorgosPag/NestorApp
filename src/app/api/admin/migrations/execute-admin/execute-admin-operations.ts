@@ -24,11 +24,13 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 const logger = createModuleLogger('ExecuteAdminMigrationRoute');
 const MIGRATION_ID = '001_fix_project_company_relationships_admin';
 const MIGRATION_NAME = 'Fix Project-Company Relationships (Admin SDK)';
-const SYSTEM_LABEL = 'Nestor Pagonis Enterprise Platform - Admin SDK';
+// ADR-861 Φ1: από τη ρίζα. ⚠️ Εγγραφές ήδη γραμμένες κρατούν «Nestor Pagonis Enterprise Platform».
+const SYSTEM_LABEL = `${PRODUCT_NAME} Enterprise Platform - Admin SDK`;
 
 interface CompanyData { id: string; companyName?: string; }
 interface ProjectData { id: string; name?: string; company?: string; companyId?: string; }

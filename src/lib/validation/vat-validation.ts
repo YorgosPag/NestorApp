@@ -21,13 +21,20 @@ import {
 import { db } from '@/lib/firebase';
 import type { Contact, ContactType } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
+import { GREEK_VAT_REGEX, normalizeVat } from '@/lib/validation/greek-vat-number';
 
 // ============================================================================
-// VALIDATION REGEXES (anchored — form inputs)
+// VALIDATION (anchored — form inputs) — ζει στο καθαρό `greek-vat-number.ts`
 // ============================================================================
 
-/** Greek VAT number: exactly 9 digits */
-export const GREEK_VAT_REGEX = /^\d{9}$/;
+// ⚠️ Επανεξαγωγή, όχι αντίγραφο: ο αλγόριθμος μετακόμισε επειδή αυτό το αρχείο εισάγει
+//    `@/lib/firebase` (αρχικοποίηση client στην εισαγωγή) — ADR-861 Φ1.
+export {
+  GREEK_VAT_REGEX,
+  isValidGreekVat,
+  isValidGreekVatCheckDigit,
+  normalizeVat,
+} from '@/lib/validation/greek-vat-number';
 
 // ============================================================================
 // EXTRACTION REGEXES (non-anchored — AI pipeline text parsing)
@@ -35,48 +42,6 @@ export const GREEK_VAT_REGEX = /^\d{9}$/;
 
 /** Extract 9-digit VAT number from free text */
 export const VAT_EXTRACT_REGEX = /\b\d{9}\b/;
-
-// ============================================================================
-// VALIDATION FUNCTIONS
-// ============================================================================
-
-/**
- * Verify the check digit of a Greek VAT number using the official
- * mod-11 weighted algorithm.
- *
- * Algorithm: Multiply digits 1–8 by 2^8, 2^7, ... 2^1 respectively,
- * sum the products, take mod 11. If result is 10, check digit is 0.
- * The 9th digit must equal the computed check digit.
- *
- * @param vat - Normalized 9-digit string (caller must ensure format)
- */
-export function isValidGreekVatCheckDigit(vat: string): boolean {
-  let sum = 0;
-  for (let i = 0; i < 8; i++) {
-    sum += Number(vat[i]) * (1 << (8 - i)); // 2^8, 2^7, ..., 2^1
-  }
-  const remainder = sum % 11;
-  const checkDigit = remainder === 10 ? 0 : remainder;
-  return Number(vat[8]) === checkDigit;
-}
-
-/**
- * Validate a Greek VAT number: format (9 digits) + check digit algorithm.
- * Strips spaces before testing.
- */
-export function isValidGreekVat(vat: string): boolean {
-  const normalized = normalizeVat(vat);
-  if (!GREEK_VAT_REGEX.test(normalized)) return false;
-  if (normalized === '000000000') return false;
-  return isValidGreekVatCheckDigit(normalized);
-}
-
-/**
- * Normalize a VAT number: trim whitespace, strip internal spaces.
- */
-export function normalizeVat(vat: string): string {
-  return vat.replace(/\s/g, '').trim();
-}
 
 // ============================================================================
 // EXTRACTION FUNCTIONS

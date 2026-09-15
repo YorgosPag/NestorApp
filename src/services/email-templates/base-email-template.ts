@@ -8,7 +8,7 @@
 
 import 'server-only';
 
-import { LEGAL_ENTITY_NAME, PRODUCT_NAME } from '@/constants/product-identity';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { publicOrigin } from '@/lib/http/public-origin';
 import { MAP_SEARCH_PROVIDER_BRANDS, MAP_SEARCH_PROVIDERS, MAP_SEARCH_URLS } from '@/lib/geo/map-links';
 
@@ -238,8 +238,9 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
           </tr>
 
           <!-- APP BRANDING — λογότυπο προϊόντος + πνευματικά δικαιώματα.
-               ⚠️ ADR-857: το όνομα του **προϊόντος** και το **νομικό πρόσωπο** είναι ΔΥΟ
-               πράγματα. Η γραμμή «©» ονομάζει **πρόσωπο** — δικαιώματα δεν ανήκουν σε προϊόν. -->
+               ⚠️ ADR-861 Φ1 (απόφαση Giorgio 2026-09-15): η γραμμή «©» γράφει το όνομα του
+               **προϊόντος**, από τη ρίζα. Ο υπεύθυνος της υπηρεσίας δηλώνεται χωριστά
+               (constants/platform-operator.ts) — αναθεωρεί το ADR-857 §3.Β. -->
           <tr>
             <td style="padding:16px 32px 20px;text-align:center;">
               <!--[if !mso]><!-- Fallback: show logo only when hosted on production -->
@@ -250,7 +251,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
               </span>
               <br/>
               <span style="font-size:10px;color:${BRAND.border};">
-                &copy; ${new Date().getFullYear()} ${LEGAL_ENTITY_NAME}. All rights reserved.
+                &copy; ${new Date().getFullYear()} ${PRODUCT_NAME}. All rights reserved.
               </span>
             </td>
           </tr>

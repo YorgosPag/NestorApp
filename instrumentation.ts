@@ -26,6 +26,10 @@
  *    δηλαδή πριν προλάβει άνθρωπος να δει «άκυρος σύνδεσμος» επειδή λείπει μια
  *    μεταβλητή. Δες `config/environment-contract.ts` για το γιατί ΔΕΝ πετά σε κάθε
  *    απουσία.
+ *
+ * 4. **Δημόσιο άνοιγμα μόνο με γραμμένη ταμπέλα** (ADR-861 Φ1). Αν έχει δηλωθεί
+ *    `NESTOR_PUBLIC_LAUNCH` και τα στοιχεία του φορέα της πλατφόρμας λείπουν ή είναι
+ *    ελλιπή, η εκκίνηση **πετά**. Αθέτη σημαία ⇒ καμία αλλαγή συμπεριφοράς.
  */
 export async function register(): Promise<void> {
   const origRepeat = String.prototype.repeat;
@@ -40,8 +44,10 @@ export async function register(): Promise<void> {
     // ⚠️ ΜΕΤΑ το Sentry, επίτηδες: αν το συμβόλαιο βρει `fatal` απουσία και πετάξει, το
     // ίδιο το γεγονός της κατάρρευσης πρέπει να **φτάσει** στην τηλεμετρία. Με
     // αντίστροφη σειρά, η μόνη απόδειξη θα ήταν ένα container που «απλώς δεν ανεβαίνει».
-    const { assertEnvironmentContract } = await import('./src/lib/environment/environment-startup');
+    const { assertEnvironmentContract, assertPublicLaunch } = await import('./src/lib/environment/environment-startup');
     assertEnvironmentContract(process.env);
+    // ADR-861 Φ1: με `NESTOR_PUBLIC_LAUNCH` δηλωμένο και φορέα χωρίς πλήρη στοιχεία ⇒ η εφαρμογή ΔΕΝ ξεκινά.
+    assertPublicLaunch(process.env);
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {

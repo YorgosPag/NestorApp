@@ -9,8 +9,11 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { nowISO } from '@/lib/date-local';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 const logger = createModuleLogger('NormalizeFloorsRoute');
+// ADR-861 Φ1: από τη ρίζα. ⚠️ Εγγραφές ήδη γραμμένες κρατούν «Nestor Pagonis Enterprise Platform».
+const SYSTEM_LABEL = `${PRODUCT_NAME} Enterprise Platform - Database Normalization`;
 
 interface BuildingRecord {
   id: string;
@@ -211,7 +214,7 @@ export async function handleFloorsNormalization(
         floorsCreated: floorsToCreate.map(f => ({ id: f.id, name: f.name, buildingName: f.buildingName, projectName: f.projectName })),
         integrity: { totalFloors: integrityResults.totalFloors, floorsFromMigration: integrityResults.floorsFromThisMigration, integrityScore: parseFloat(integrityScore.toFixed(1)), orphanFloors: integrityResults.orphanFloors }
       },
-      environment: { nodeEnv: process.env.NODE_ENV, timestamp: nowISO(), system: 'Nestor Pagonis Enterprise Platform - Database Normalization' }
+      environment: { nodeEnv: process.env.NODE_ENV, timestamp: nowISO(), system: SYSTEM_LABEL }
     });
 
   } catch (error) {
@@ -224,7 +227,7 @@ export async function handleFloorsNormalization(
         success: false,
         error: errorMessage,
         execution: { executionTimeMs: executionTime, failedAt: nowISO() },
-        environment: { nodeEnv: process.env.NODE_ENV, timestamp: nowISO(), system: 'Nestor Pagonis Enterprise Platform - Database Normalization' }
+        environment: { nodeEnv: process.env.NODE_ENV, timestamp: nowISO(), system: SYSTEM_LABEL }
       },
       { status: 500 }
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LEGAL_ENTITY_NAME } from '@/constants/product-identity';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { showcasePoweredByDefault } from '@/services/showcase-core/labels-shared';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 
@@ -59,14 +59,13 @@ export function ShowcaseFooter({
         <span className="font-semibold">{showcasePoweredByDefault(locale)}</span>
       </div>
       {/*
-        🔑 **ΤΟ `©` ΟΝΟΜΑΖΕΙ ΠΡΟΣΩΠΟ, ΟΧΙ ΠΡΟΪΟΝ** (ADR-857 Φ4, κλάση Β). Έγραφε
-        `t('showcase:brand.appName')` ⇒ «© 2026 **Nestor App**» — δηλαδή απέδιδε τα
-        πνευματικά δικαιώματα σε **λογισμικό**. Είναι **λάθος τύπου**, όχι στιλ: τα
-        δικαιώματα ανήκουν σε νομικό πρόσωπο, και γι' αυτό η ρίζα κρατά **δύο**
-        διαφορετικές τιμές που δεν είναι συνώνυμες.
+        🔑 **ΤΟ `©` ΓΡΑΦΕΙ ΤΟ ΟΝΟΜΑ ΤΟΥ ΠΡΟΪΟΝΤΟΣ, ΑΠΟ ΤΗ ΡΙΖΑ** (ADR-861 Φ1, απόφαση Giorgio
+        2026-09-15). Έγραφε `LEGAL_ENTITY_NAME` = «Nestor Pagonis», όνομα που δεν είναι
+        πρόσωπο (αναθεωρεί ADR-857 §3.Β). Ο **υπεύθυνος** της υπηρεσίας δηλώνεται χωριστά,
+        από το `constants/platform-operator.ts` — δεν χωρά σε γραμμή `©`.
       */}
       <p className="text-[10px] text-[hsl(var(--showcase-muted-fg))]/70">
-        &copy; {year} {LEGAL_ENTITY_NAME}
+        &copy; {year} {PRODUCT_NAME}
       </p>
     </footer>
   );

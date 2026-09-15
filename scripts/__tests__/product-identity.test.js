@@ -36,7 +36,9 @@ const CODE_FILES = [
   'src/app/layout.tsx',                          // καθαρό — ΚΑΙ έχει σχόλιο με παλιές γραφές
 ];
 const LOCALE_FILES = [
-  'src/i18n/locales/el/auth.json',               // δηλωμένο, κλάση Β
+  // δηλωμένο, κλάση Γ — ήταν το `el/auth.json` (κλάση Β) μέχρι 2026-09-15: με απόφαση Giorgio το
+  // υποσέλιδο γράφει πλέον «Nestor App» και η δήλωσή του σβήστηκε (ADR-861 Φ1)
+  'src/i18n/locales/el/contacts-core.json',
   'src/i18n/locales/el/onboarding.json',         // κανονική γραφή μέσα σε πρόταση
 ];
 

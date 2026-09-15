@@ -101,19 +101,22 @@ function readRoot(rootText, rootFile, canonical) {
   ts.forEachChild(sf, visit);
 
   const product = found[canonical.productSymbol];
-  const legal = found[canonical.legalSymbol];
   const past = found[canonical.pastSpellingsSymbol];
 
   if (typeof product !== 'string') return { ok: false, reason: `το «${canonical.productSymbol}» δεν βρέθηκε ως συμβολοσειρά` };
-  if (typeof legal !== 'string') return { ok: false, reason: `το «${canonical.legalSymbol}» δεν βρέθηκε ως συμβολοσειρά` };
   if (!Array.isArray(past) || past.length === 0) return { ok: false, reason: `το «${canonical.pastSpellingsSymbol}» δεν βρέθηκε ως μη κενός πίνακας` };
+
+  // ⚠️ ΤΟ `LEGAL_ENTITY_NAME` ΔΙΑΓΡΑΦΗΚΕ (ADR-861 Φ1, απόφαση Giorgio 2026-09-15: «© Nestor App»).
+  //    Ο νομικός φορέας ζει πλέον στο `constants/platform-operator.ts`, ως ΙΣΤΟΡΙΚΟ — όχι ως
+  //    γραφή του ονόματος. Το «Nestor Pagonis» ΔΕΝ βγήκε από το κλειστό σύνολο: ήταν ήδη στο
+  //    `KNOWN_PAST_SPELLINGS`, άρα κάθε δήλωση κλάσης Β/Ε που το προστατεύει μένει έγκυρη.
 
   // ⚠️ ΤΑΞΙΝΟΜΗΣΗ ΚΑΤΑ ΜΗΚΟΣ, ΦΘΙΝΟΥΣΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΑΡΑΙΤΗΤΗ: το 'Nestor' είναι
   //    ΠΡΟΘΕΜΑ του 'Nestor App' και του 'Nestor Pagonis'. Χωρίς «το μακρύτερο
   //    πρώτα», κάθε σωστή γραφή θα μετριόταν ΚΑΙ ως παλιά — δηλαδή η πύλη θα
   //    κατηγορούσε τη θεραπεία. Η ίδια η ρίζα το προειδοποιεί στο σχόλιό της.
-  const spellings = [...new Set([product, legal, ...past])].sort((a, b) => b.length - a.length);
-  return { ok: true, product, legal, past, spellings };
+  const spellings = [...new Set([product, ...past])].sort((a, b) => b.length - a.length);
+  return { ok: true, product, past, spellings };
 }
 
 // ============================================================================

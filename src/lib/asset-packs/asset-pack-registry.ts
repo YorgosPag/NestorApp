@@ -23,6 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-655-asset-packs.md
  */
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { listFurniturePlanDefs } from '@/subapps/dxf-viewer/data/furniture-plan-catalog';
 import { listPeoplePlanDefs } from '@/subapps/dxf-viewer/data/people-plan-catalog';
 import { listVehiclePlanDefs } from '@/subapps/dxf-viewer/data/vehicles-plan-catalog';
@@ -87,7 +88,7 @@ export const ASSET_PACKS: Readonly<Record<AssetPackId, AssetPackDefinition>> = {
     version: 'v1',
     titleKey: 'assetPacks.furniturePlan2d.title',
     license: {
-      holder: 'Nestor Pagonis',
+      holder: PRODUCT_NAME, // ADR-861 Φ1 — απόφαση Giorgio: τα δικαιώματα γράφουν «Nestor App»
       grantedBy: 'creator',
       grantedAt: '2007-01-01',
       redistributable: false,
@@ -100,7 +101,7 @@ export const ASSET_PACKS: Readonly<Record<AssetPackId, AssetPackDefinition>> = {
     version: 'v1',
     titleKey: 'assetPacks.peoplePlan2d.title',
     license: {
-      holder: 'Nestor Pagonis',
+      holder: PRODUCT_NAME, // ADR-861 Φ1 — απόφαση Giorgio: τα δικαιώματα γράφουν «Nestor App»
       grantedBy: 'creator',
       grantedAt: '2007-01-01',
       redistributable: false,
@@ -113,7 +114,7 @@ export const ASSET_PACKS: Readonly<Record<AssetPackId, AssetPackDefinition>> = {
     version: 'v1',
     titleKey: 'assetPacks.vehiclePlan2d.title',
     license: {
-      holder: 'Nestor Pagonis',
+      holder: PRODUCT_NAME, // ADR-861 Φ1 — απόφαση Giorgio: τα δικαιώματα γράφουν «Nestor App»
       grantedBy: 'creator',
       grantedAt: '2007-01-01',
       redistributable: false,
@@ -126,7 +127,7 @@ export const ASSET_PACKS: Readonly<Record<AssetPackId, AssetPackDefinition>> = {
     version: 'v1',
     titleKey: 'assetPacks.plantsPlan2d.title',
     license: {
-      holder: 'Nestor Pagonis',
+      holder: PRODUCT_NAME, // ADR-861 Φ1 — απόφαση Giorgio: τα δικαιώματα γράφουν «Nestor App»
       grantedBy: 'creator',
       grantedAt: '2007-01-01',
       redistributable: false,

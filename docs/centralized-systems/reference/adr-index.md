@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 809 ADRs | Last Updated: 2026-09-14
+**📊 Stats**: 810 ADRs | Last Updated: 2026-09-15
 
 ---
 
@@ -844,6 +844,7 @@
 | **ADR-858** | **Το αρχείο που δεν φορτώθηκε ΠΟΤΕ — σκίαση, κύκλοι, και η αρχή αξιολόγησης modules** — 🔴 η παραγωγή έσκασε με `Cannot access 'o' before initialization` σε **σελίδα πωλήσεων που δεν ανοίγει καν τον CAD viewer**· η αιτία ταυτοποιήθηκε **από το ίδιο το bundle** (333 KB κατεβασμένα, module ids ένα-ένα). **Τρία ελαττώματα**: ο φάκελος `debug/` είχε `index.ts` **ΚΑΙ** `index.tsx` και το webpack λύνει `.tsx` πρώτο ⇒ το «Pure TypeScript» barrel **δεν φορτώθηκε ποτέ** ενώ **52** αρχεία τραβούσαν React panels + QA runners *(μετρημένο: **κανένα** δεν ζητούσε σύμβολο του `.tsx`)*· το primitive `storage-utils` εισήγαγε **barrel**, γεννώντας κύκλο· και το `table-surface-mode` διάβαζε δίσκο σε **χρόνο αξιολόγησης module**, ο πυροκροτητής. 🔴 **Δεύτερη σκίαση, χειρότερη**: `dynamic-input/index.tsx` ήταν **stub που επέστρεφε `null`** και σκίαζε τον barrel του αληθινού component — **σβήνει λειτουργία σιωπηλά**. 🔴 **Καμία πύλη δεν μπορούσε**: το `.dependency-cruiser.cjs` δήλωνε `.ts` πριν `.tsx`, δηλαδή **ανέλυε γράφο που δεν εκτελείται**, και το ratchet μετρούσε **πλήθος** (1299) όχι ταυτότητα. 🏆 **Έρευνα: ΚΑΝΕΝΑ εργαλείο** (madge · dpdm · skott · `import/no-cycle` · dependency-cruiser) δεν ρωτά «θα **σκάσει**;» — μόνο «υπάρχει κύκλος;»· το `import defer` (TC39 Stage 3) **δεν υπάρχει** σε Next.js. **Λύση: levelization (Lakos) + ratchet ταυτότητας + CHECK 3.79 + CHECK 3.80** που μετρά **top-level ανάγνωση εισαγόμενου binding μέσα σε SCC**: **1159 → 1**. Κύκλοι **1299 → 1159 (−140)** | ✅ ✅ ΕΝΕΡΓΟ — Φ.Α/Φ.Β/Φ.Γ/Φ.Δ κλειστά (2026-09-12) | 2026-09-12 | Architecture & Build | [📄](./adrs/ADR-858-module-evaluation-authority.md) |
 | **ADR-859** | Η σύνδεση ολοκληρώνεται σε **ΕΝΑ** σημείο — ο δεύτερος παράγοντας είναι κατάσταση, όχι επιτυχία | ✅ ΥΛΟΠΟΙΗΜΕΝΟ — ζωντανή επιβεβαίωση **εκκρεμεί** (μετά το deploy) | 2026-09-14 | Security & Auth | [📄](./adrs/ADR-859-sign-in-completion-single-point.md) |
 | **ADR-860** | Ο κώδικας μιας ανοιχτής καρτέλας **επιβιώνει του deploy** — ανθεκτικότητα σε αλλαγή έκδοσης | ✅ ΥΛΟΠΟΙΗΜΕΝΟ — ζωντανή επιβεβαίωση **εκκρεμεί** (χρειάζονται **δύο** διαδοχικά deploys) | 2026-09-14 | Infrastructure & Deployment | [📄](./adrs/ADR-860-deploy-skew-resilience.md) |
+| **ADR-861** | **Ο φορέας της πλατφόρμας** — μία «ταμπέλα» με ιστορικό, και νομικά έγγραφα με εκδόσεις | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Φ1 γράφτηκε 2026-09-15 (ΟΧΙ commit)** · Φ2–Φ4 σχεδιασμένες | 2026-09-15 | Legal & Compliance · SSoT | [📄](./adrs/ADR-861-platform-operator-and-legal-versions.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

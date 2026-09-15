@@ -24,10 +24,12 @@ import { migration as storageBuildingMigration, dryRun as storageBuildingDryRun,
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { KNOWN_MIGRATION_IDS } from './execute-migration-catalog';
 
 const logger = createModuleLogger('MigrationExecuteRoute');
-const SYSTEM = 'Nestor Pagonis Enterprise Platform';
+// ADR-861 Φ1: από τη ρίζα. ⚠️ Εγγραφές ήδη γραμμένες κρατούν «Nestor Pagonis Enterprise Platform».
+const SYSTEM = `${PRODUCT_NAME} Enterprise Platform`;
 
 type MigrationObj = ReturnType<typeof createProjectCompanyRelationshipsMigration>;
 

@@ -29,9 +29,12 @@
  */
 
 import { auditEnvironment, describeMissing, type EnvironmentSource } from './environment-audit';
+import { PUBLIC_LAUNCH_ENV, readPublicLaunch } from './public-launch';
 
 import type { EnvironmentRequirement } from '@/config/environment-contract';
+import type { OperatorRecord } from '@/constants/platform-operator';
 
+import { describeReadiness, judgeLaunchReadiness } from '@/lib/platform-operator/operator-readiness';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('environment-contract');
@@ -80,4 +83,50 @@ export function assertEnvironmentContract(
       data: { configured: audit.configured, declared: audit.declared },
     });
   }
+}
+
+/**
+ * 🔴 **ΠΟΤΕ ΔΗΜΟΣΙΟ ΑΝΟΙΓΜΑ ΜΕ ΑΓΡΑΦΗ ΤΑΜΠΕΛΑ** (ADR-861 Φ1 — απόφαση Giorgio 2026-09-15).
+ *
+ * - σημαία **αθέτη** ⇒ η εφαρμογή ξεκινά όπως σήμερα· μία γραμμή λέει την κατάσταση του φορέα·
+ * - σημαία **δηλωμένη** και φορέας `ready` ⇒ ξεκινά·
+ * - σημαία **δηλωμένη** και φορέας `pending`/`incomplete` ⇒ **ΠΕΤΑ**, με τα ελαττώματα ονομασμένα·
+ * - σημαία με **άγνωστη** τιμή ⇒ **ΠΕΤΑ** (δεν μαντεύεται προς καμία κατεύθυνση).
+ *
+ * ⚠️ **Γιατί στο boot και όχι σε πύλη pre-commit**: η σημαία ζει στο περιβάλλον παραγωγής
+ * (Coolify), **έξω από το git** — καμία πύλη commit δεν τη βλέπει. Ο μόνος τόπος όπου σημαία
+ * και φορέας συναντιούνται είναι η εκκίνηση. Η εγκυρότητα του ιστορικού φυλάγεται **επιπλέον**
+ * από άγκυρες jest (`operator-readiness.test.ts` · CHECK 3.54), πριν φτάσει ποτέ εδώ.
+ */
+export function assertPublicLaunch(
+  env: EnvironmentSource,
+  now: Date = new Date(),
+  history?: readonly OperatorRecord[],
+): void {
+  const declaration = readPublicLaunch(env);
+  if (declaration === 'unrecognized') {
+    logger.error('Άγνωστη τιμή σημαίας δημόσιου ανοίγματος', { data: { name: PUBLIC_LAUNCH_ENV } });
+    throw new Error(`Unrecognized value for ${PUBLIC_LAUNCH_ENV} — accepted: 1, true, 0, false.`);
+  }
+
+  const readiness = judgeLaunchReadiness(now, history);
+  if (declaration === 'not-declared') {
+    logger.info('Η εφαρμογή δεν έχει δηλωθεί ανοιχτή στο κοινό', { data: { operator: readiness.status } });
+    return;
+  }
+  if (readiness.status === 'ready') {
+    logger.info('Δημόσιο άνοιγμα — ο φορέας είναι δηλωμένος και πλήρης', {
+      data: { effectiveFrom: readiness.record.effectiveFrom },
+    });
+    return;
+  }
+
+  const details = describeReadiness(readiness);
+  logger.error('Άρνηση δημόσιου ανοίγματος — τα στοιχεία του φορέα δεν είναι πλήρη', {
+    data: { operator: readiness.status, details },
+  });
+  throw new Error(
+    `Δηλώθηκε ${PUBLIC_LAUNCH_ENV}, αλλά ο φορέας της πλατφόρμας είναι «${readiness.status}»: ` +
+      `${details.join(' · ')}. Δες src/constants/platform-operator.ts.`,
+  );
 }
