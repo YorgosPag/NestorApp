@@ -180,7 +180,7 @@ export function FilesList({
                 type="checkbox"
                 checked={selectedIds?.has(file.id) ?? false}
                 onChange={() => onToggleSelect(file.id)}
-                className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                className="h-4 w-4 rounded border-border accent-control-accent cursor-pointer"
                 aria-label={`Select ${translateDisplayName(file)}`}
               />
             </label>

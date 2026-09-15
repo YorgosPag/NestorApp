@@ -115,7 +115,7 @@ export function VideoPlayer({ file, autoPlay = false, showControls = true, onEnd
               <button type="button" onClick={toggleMute} aria-label={state.isMuted ? t('media.unmute') : t('media.mute')} className="p-1.5 text-white/80 hover:text-white transition-colors">
                 {state.isMuted || state.volume === 0 ? <VolumeX className={iconSizes.sm} /> : <Volume2 className={iconSizes.sm} />}
               </button>
-              <input type="range" min="0" max="1" step="0.1" value={state.isMuted ? 0 : state.volume} onChange={handleVolumeChange} aria-label={t('media.volume')} className="w-16 h-1 accent-primary cursor-pointer" />
+              <input type="range" min="0" max="1" step="0.1" value={state.isMuted ? 0 : state.volume} onChange={handleVolumeChange} aria-label={t('media.volume')} className="w-16 h-1 accent-control-accent cursor-pointer" />
             </div>
 
             <span className="text-white text-xs ml-2">{formatTime(state.currentTime)} / {formatTime(state.duration)}</span>

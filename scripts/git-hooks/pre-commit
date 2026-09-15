@@ -698,7 +698,7 @@ register_area "Table Formula Library (ADR-739 §49)" \
 #
 # Triggers are the files that can reintroduce each of those, not a broad glob.
 register_area "Theme Token Hygiene (ADR-770)" \
-    "^(src/app/globals\.css$|src/components/ui/form/(action-button-config\.ts|ToolbarButtons\.tsx)$|src/styles/design-tokens/modules/(foundations|canvas-utilities)\.ts$|src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus)" \
+    "^(src/app/globals\.css$|tailwind\.config\.ts$|src/design-system/color-bridge\.ts$|src/components/ui/(radio-group|checkbox|switch|calendar|progress|slider)\.tsx$|src/components/ui/form/(action-button-config\.ts|ToolbarButtons\.tsx)$|src/styles/design-tokens/modules/(foundations|canvas-utilities)\.ts$|src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus|scripts/lib/contrast/selection-control-role\.js$)" \
     "scripts/__tests__/theme-token-hygiene\.test\.js" \
     "npm run test:theme-token-hygiene"
 
