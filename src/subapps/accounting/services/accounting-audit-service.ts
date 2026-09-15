@@ -21,24 +21,24 @@ import { isoNow } from './repository/firestore-helpers';
 // CORE AUDIT HELPER (synchronous — await, NOT fire-and-forget)
 // ============================================================================
 
+export interface AccountingEventParams {
+  eventType: AccountingAuditEventType;
+  entityType: AuditEntityType;
+  entityId: string;
+  userId: string;
+  details: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
 /**
- * Log an accounting audit event — synchronous (Q6)
+ * **The ONE composition of an audit entry** (ADR-841 §7 Α23).
  *
- * Called by the audited repository wrapper (Q7) or directly by hooks.
- * MUST be awaited — if it fails, the parent operation fails too.
+ * Exported so a writer that changes material data **inside a Firestore transaction**
+ * can append the entry in the SAME transaction (`auditLogDocumentOf`) — the change and
+ * its trace commit together or not at all. Never a second entry builder.
  */
-export async function logAccountingEvent(
-  repository: IAccountingRepository,
-  params: {
-    eventType: AccountingAuditEventType;
-    entityType: AuditEntityType;
-    entityId: string;
-    userId: string;
-    details: string;
-    metadata?: Record<string, string | number | boolean | null>;
-  }
-): Promise<void> {
-  const entry: AccountingAuditEntry = {
+export function accountingAuditEntryOf(params: AccountingEventParams): AccountingAuditEntry {
+  return {
     auditId: generateAccountingAuditLogId(),
     eventType: params.eventType,
     entityType: params.entityType,
@@ -48,6 +48,17 @@ export async function logAccountingEvent(
     details: params.details,
     metadata: params.metadata ?? {},
   };
+}
 
-  await repository.createAuditEntry(entry);
+/**
+ * Log an accounting audit event — synchronous (Q6)
+ *
+ * Called by the audited repository wrapper (Q7) or directly by hooks.
+ * MUST be awaited — if it fails, the parent operation fails too.
+ */
+export async function logAccountingEvent(
+  repository: IAccountingRepository,
+  params: AccountingEventParams
+): Promise<void> {
+  await repository.createAuditEntry(accountingAuditEntryOf(params));
 }

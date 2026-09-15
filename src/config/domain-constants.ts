@@ -645,6 +645,8 @@ export const API_ROUTES = {
     LIST: '/api/companies',
     /** ADR-841 §7 Α23 — η νομική ταυτότητα απέναντι στο ΓΕΜΗ (GET κρίση · POST επαλήθευση). */
     REGISTRY_VERIFICATION: '/api/companies/registry-verification',
+    /** ADR-841 §7 Α23 Φ3.2 Γ — «Υιοθέτηση επωνυμίας ΓΕΜΗ» (POST, CAS με `expectedLegalName`). */
+    REGISTRY_LEGAL_NAME: '/api/companies/registry-verification/legal-name',
   },
 
   // ── Χώροι εργασίας (ADR-787 Κ-2) ──────────────────────────────────────

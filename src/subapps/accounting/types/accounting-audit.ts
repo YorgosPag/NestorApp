@@ -37,7 +37,10 @@ export type AccountingAuditEventType =
   | 'BANK_RECONCILE_UNLOCKED'
   // ADR-440: ownership / dividend changes on the company profile
   // (partners / members / shareholders). Material data → audited.
-  | 'COMPANY_PROFILE_UPDATED';
+  | 'COMPANY_PROFILE_UPDATED'
+  // ADR-841 §7 Α23: the legal name (επωνυμία) changed — typed in the profile or
+  // adopted from ΓΕΜΗ. Until 2026-09-15 a rename left NO trace anywhere.
+  | 'COMPANY_LEGAL_NAME_CHANGED';
 
 /**
  * Entity types that can be audited

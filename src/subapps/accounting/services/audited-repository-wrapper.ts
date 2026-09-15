@@ -15,6 +15,7 @@ import type {
 import type { FiscalPeriod } from '../types/fiscal-period';
 import { logAccountingEvent } from './accounting-audit-service';
 import { diffCompanyOwnership } from './audit/company-ownership-audit';
+import { legalNameChangeAudit } from './audit/company-legal-name-audit';
 
 // ============================================================================
 // PERIOD STATUS → EVENT TYPE MAPPING
@@ -123,6 +124,18 @@ export function createAuditedRepository(
       if (audit.changed) {
         await logAudit(repo, userId, 'COMPANY_PROFILE_UPDATED', 'company_profile', companyId,
           audit.details, audit.metadata);
+      }
+
+      // ADR-841 §7 Α23: the legal name is material data too — until 2026-09-15 a rename
+      // through this path left NO trace. Same builder as «Υιοθέτηση επωνυμίας ΓΕΜΗ».
+      const rename = legalNameChangeAudit({
+        from: before?.businessName ?? null,
+        to: data.businessName,
+        source: 'profile',
+      });
+      if (rename !== null) {
+        await logAudit(repo, userId, 'COMPANY_LEGAL_NAME_CHANGED', 'company_profile', companyId,
+          rename.details, rename.metadata);
       }
     },
 

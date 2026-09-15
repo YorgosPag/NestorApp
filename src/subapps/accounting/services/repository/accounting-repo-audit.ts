@@ -20,6 +20,22 @@ import { sanitizeForFirestore } from './firestore-helpers';
 // ============================================================================
 
 /**
+ * **The stored shape of an audit entry** — tenant-stamped, sanitized (ADR-841 §7 Α23).
+ *
+ * One builder for both write paths: {@link createAuditEntry} and a writer that appends the
+ * entry inside its own transaction (`transaction.set(ref, auditLogDocumentOf(...))`).
+ */
+export function auditLogDocumentOf(
+  tenant: Pick<TenantContext, 'companyId'>,
+  entry: AccountingAuditEntry
+): Record<string, unknown> {
+  return sanitizeForFirestore({
+    ...entry,
+    companyId: tenant.companyId,
+  } as unknown as Record<string, unknown>);
+}
+
+/**
  * Append a single immutable audit entry
  *
  * Uses setDoc with enterprise ID (alog_ prefix).
@@ -30,14 +46,10 @@ export async function createAuditEntry(
   entry: AccountingAuditEntry
 ): Promise<void> {
   await safeFirestoreOperation(async (db) => {
-    const doc = sanitizeForFirestore({
-      ...entry,
-      companyId: tenant.companyId,
-    } as unknown as Record<string, unknown>);
     await db
       .collection(COLLECTIONS.ACCOUNTING_AUDIT_LOG)
       .doc(entry.auditId)
-      .set(doc);
+      .set(auditLogDocumentOf(tenant, entry));
   }, undefined);
 }
 

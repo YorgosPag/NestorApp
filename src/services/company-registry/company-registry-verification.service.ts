@@ -67,11 +67,13 @@ const LIVE_DEPS: RegistryVerificationDeps = {
   now: nowISO,
 };
 
-const NO_DECLARATION: CompanyRegistryDeclaration = { entityType: null, businessName: null, gemiNumber: null };
+/** Προφίλ που δεν υπάρχει = κενή δήλωση (όχι άγνοια). Κοινό με την υιοθέτηση επωνυμίας. */
+export const NO_REGISTRY_DECLARATION: CompanyRegistryDeclaration = { entityType: null, businessName: null, gemiNumber: null };
 const ASKED: RegistryFreshness = { kind: 'asked' };
-const NOT_ASKED: RegistryFreshness = { kind: 'not-asked' };
+export const NOT_ASKED: RegistryFreshness = { kind: 'not-asked' };
 
-function identityOf(declaration: CompanyRegistryDeclaration): DeclaredRegistryIdentity {
+/** Η **μία** αντιστοίχιση δήλωσης προφίλ → ταυτότητα προς κρίση. */
+export function declaredIdentityOf(declaration: CompanyRegistryDeclaration): DeclaredRegistryIdentity {
   return { registrationNumber: declaration.gemiNumber, legalName: declaration.businessName };
 }
 
@@ -93,7 +95,7 @@ async function declarationFor(
 ): Promise<CompanyRegistryDeclaration | null> {
   const profile = await deps.readDeclaration(companyId);
   if (profile.kind === 'unavailable') return null;
-  return profile.kind === 'present' ? profile.declaration : NO_DECLARATION;
+  return profile.kind === 'present' ? profile.declaration : NO_REGISTRY_DECLARATION;
 }
 
 const PROFILE_UNAVAILABLE: RegistryReportOutcome = { kind: 'profile-unavailable' };
@@ -107,7 +109,7 @@ export async function readRegistryIdentityReport(
   const declaration = await declarationFor(deps, companyId);
   if (declaration === null) return PROFILE_UNAVAILABLE;
   const stored = await readRegistryCheck(adminDb, companyId);
-  return reportOf(declaration, judgeRegistryIdentity(identityOf(declaration), stored), NOT_ASKED);
+  return reportOf(declaration, judgeRegistryIdentity(declaredIdentityOf(declaration), stored), NOT_ASKED);
 }
 
 async function settleVerdict(
@@ -117,7 +119,7 @@ async function settleVerdict(
   verdict: RegistryLookupVerdict,
   now: () => string,
 ): Promise<RegistryReportOutcome> {
-  const identity = identityOf(declaration);
+  const identity = declaredIdentityOf(declaration);
   switch (verdict.kind) {
     case 'found': {
       const check = await recordRegistryCheck(adminDb, companyId, verdict.record, now());
@@ -147,7 +149,7 @@ export async function verifyRegistryIdentity(
   const canonical = canonicalGemiNumber(declaration.gemiNumber);
   if (canonical === null) {
     // Χωρίς έγκυρο αριθμό **δεν** ρωτάμε: η κρίση ονομάζει ήδη το κενό (χωρίς/άκυρος αριθμός).
-    return reportOf(declaration, judgeRegistryIdentity(identityOf(declaration), { kind: 'absent' }), NOT_ASKED);
+    return reportOf(declaration, judgeRegistryIdentity(declaredIdentityOf(declaration), { kind: 'absent' }), NOT_ASKED);
   }
   const verdict = await deps.lookup(canonical);
   return settleVerdict(adminDb, companyId, declaration, verdict, deps.now);
