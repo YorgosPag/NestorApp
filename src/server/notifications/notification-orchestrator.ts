@@ -40,6 +40,7 @@ import {
   getDefaultNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Severity } from '@/types/notification';
+import type { NotificationEmailFacts } from '@/types/notification-email-facts';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 import type { NotificationDestination } from '@/lib/notifications/notification-destination';
 import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
@@ -69,6 +70,11 @@ export interface DispatchContent {
   titleKey?: string;
   /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
   titleParams?: Record<string, string>;
+  /**
+   * ADR-841 §7 Α21.21 Φάση Β — **γεγονότα** για κουμπιά ενέργειας στο email (π.χ. απάντηση ερώτησης αργιών). Ταξιδεύουν
+   * στην ουρά· οι σύνδεσμοι υπογράφονται τη στιγμή της αποστολής, ποτέ εδώ.
+   */
+  emailFacts?: NotificationEmailFacts;
   /**
    * 🏆 ADR-777 §8.69.12 — **οι λόγοι** μιας ειδοποίησης που η ταυτότητά της είναι **θέμα**
    * (π.χ. οι ζητήσεις που ταιριάζουν στην ίδια αγγελία). Γράφεται στο `meta.reasons`.
@@ -324,6 +330,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     // έχει προορισμό: ένα κουμπί «Άνοιγμα» που οδηγεί στο «δεν είναι διαθέσιμη» είναι
     // υπόσχεση που δεν τηρείται. Η ταυτότητα της ειδοποίησης ΕΙΝΑΙ το `dedupeKey`.
     ...(hasDestination(actions) ? { notificationId: dedupeKey } : {}),
+    ...(request.emailFacts ? { emailFacts: request.emailFacts } : {}),
   });
 
   // Η ειδοποίηση **μέσα στην εφαρμογή** έχει ήδη γραφτεί επιτυχώς· ένα σπασμένο

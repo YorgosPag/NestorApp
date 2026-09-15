@@ -45,6 +45,8 @@ import type { DeliveryPlanEntry, PendingEmail } from '@/server/notifications/ema
 import { issueEmailSubscriptionToken } from '@/services/notifications/email-subscription-token.service';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
 
+import { liveEmailActions } from './notification-email-actions';
+
 import {
   NO_LINKS,
   renderSoloHtml,
@@ -86,6 +88,8 @@ export function liveEmailLinks(): EmailLinks {
     permalink: (notificationId) => publicUrl(notificationPermalinkHref(notificationId)),
     preferences: (recipientId, scope) => withToken(recipientId, scope, emailPreferencesHref),
     oneClickUnsubscribe: (recipientId, scope) => withToken(recipientId, scope, emailOneClickHref),
+    // ADR-841 Α21.21 Φάση Β — κουμπιά ενέργειας από τα γεγονότα, υπογεγραμμένα τώρα.
+    actions: liveEmailActions,
   };
 }
 

@@ -20,6 +20,7 @@ import { emailTextsFor } from '@/server/comms/email-texts';
 import type { SuppressReason } from '@/server/notifications/email-delivery-window';
 import type { PendingEmail } from '@/server/notifications/email-digest';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
+import { readNotificationEmailFacts, type NotificationEmailFacts } from '@/types/notification-email-facts';
 
 /** Το σχήμα ενός εξερχόμενου email στην ουρά, όπως το γράφει το `enqueueMessage`. */
 interface QueuedEmail {
@@ -65,6 +66,7 @@ function queueMetadata(data: QueuedEmail): {
   notificationId: string | undefined;
   recipientId: string | undefined;
   eventType: string | undefined;
+  facts: NotificationEmailFacts | undefined;
 } {
   const raw = typeof data.metadata === 'object' && data.metadata !== null
     ? (data.metadata as Record<string, unknown>)
@@ -83,6 +85,8 @@ function queueMetadata(data: QueuedEmail): {
     recipientId: asString(raw.recipientId) ?? undefined,
     // 📧 ADR-849 — ο τύπος, για την πύλη της αποστολής· απουσία ⇒ μόνο καθολικοί έλεγχοι.
     eventType: asString(raw.eventType) ?? undefined,
+    // ADR-841 Α21.21 Φάση Β — γεγονότα για κουμπιά ενέργειας· σκουπίδι ή απουσία ⇒ email χωρίς κουμπιά, ποτέ σφάλμα.
+    facts: readNotificationEmailFacts(raw.facts),
   };
 }
 
@@ -103,6 +107,7 @@ export function toPendingEmail(doc: FlushableDoc): PendingEmail {
     notificationId: meta.notificationId,
     recipientId: meta.recipientId,
     eventType: meta.eventType,
+    ...(meta.facts ? { facts: meta.facts } : {}),
   };
 }
 

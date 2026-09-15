@@ -56,6 +56,7 @@ import {
 } from '@/server/comms/orchestrator';
 import { decideEmailDelivery } from '@/server/notifications/email-delivery-window';
 import type { UserNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
+import type { NotificationEmailFacts } from '@/types/notification-email-facts';
 
 const logger = createModuleLogger('NotificationEmailLeg');
 
@@ -120,6 +121,8 @@ export interface EmailLegRequest {
    * Γίνεται ο μόνιμος σύνδεσμος `/n/{id}` στον φάκελο· απουσία ⇒ email χωρίς κουμπί.
    */
   readonly notificationId?: string;
+  /** ADR-841 §7 Α21.21 Φάση Β — γεγονότα για κουμπιά ενέργειας· ο αποστολέας τα κάνει συνδέσμους. */
+  readonly emailFacts?: NotificationEmailFacts;
   /** Η στιγμή αναφοράς. Δίνεται, ώστε η απόφαση να είναι δοκιμάσιμη. */
   readonly now?: Date;
 }
@@ -136,13 +139,20 @@ export interface EmailLegRequest {
  */
 function emailEnvelopeFacts(
   request: EmailLegRequest,
-): { readonly recipientId: string; readonly eventType: string; readonly notificationId?: string } {
+): {
+  readonly recipientId: string;
+  readonly eventType: string;
+  readonly notificationId?: string;
+  readonly facts?: NotificationEmailFacts;
+} {
   return {
     // Η ουρά αλλιώς ξέρει μόνο **διευθύνσεις** — το token διαγραφής θέλει τον **χρήστη**.
     recipientId: request.recipientId,
     // ADR-849 — χωρίς τον τύπο, η πύλη της αποστολής θα έβλεπε μόνο τους καθολικούς διακόπτες.
     eventType: request.eventType,
     ...(request.notificationId ? { notificationId: request.notificationId } : {}),
+    // ADR-841 Α21.21 Φάση Β — γεγονότα, ποτέ URL: ο σύνδεσμος υπογράφεται τη στιγμή της αποστολής.
+    ...(request.emailFacts ? { facts: request.emailFacts } : {}),
   };
 }
 

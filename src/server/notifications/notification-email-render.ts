@@ -32,6 +32,7 @@
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
+import type { NotificationEmailFacts } from '@/types/notification-email-facts';
 import {
   emailScopeOf,
   type EmailSubscriptionScope,
@@ -61,6 +62,18 @@ export interface EmailLinks {
   permalink(notificationId: string): string | null;
   preferences(recipientId: string, scope: EmailSubscriptionScope): string | null;
   oneClickUnsubscribe(recipientId: string, scope: EmailSubscriptionScope): string | null;
+  /**
+   * ADR-841 §7 Α21.21 Φάση Β — **κουμπιά ενέργειας** από τα γεγονότα του μηνύματος (π.χ. «Κλειστά» · «Κανονικό ωράριο»).
+   * Κενό ⇒ το email έχει το **ένα** κουμπί προς τον προορισμό, όπως πριν. Προαιρετικό: κάθε σημερινός πάροχος
+   * συνδέσμων μένει έγκυρος.
+   */
+  actions?(message: RenderableMessage, language: HumanLanguage): readonly EmailActionButton[];
+}
+
+/** Ένα κουμπί ενέργειας — **πού** και **τι λέει**, λυμένα τη στιγμή της αποστολής. */
+export interface EmailActionButton {
+  readonly url: string;
+  readonly label: string;
 }
 
 /** Κανένας σύνδεσμος — η συμπεριφορά πριν το ADR-848, και η προεπιλογή των tests. */
@@ -82,6 +95,8 @@ export interface RenderableMessage {
    * έγγραφα δεν τον έχουν ⇒ εμβέλεια «όλα».
    */
   readonly eventType?: string;
+  /** ADR-841 §7 Α21.21 Φάση Β — γεγονότα για κουμπιά ενέργειας (`metadata.email.facts`)· παλιά έγγραφα δεν τα έχουν. */
+  readonly facts?: NotificationEmailFacts;
 }
 
 /** ADR-849 — ένας σύνδεσμος διαχείρισης: **πού** πάει και **τι λέει**. */
@@ -367,10 +382,12 @@ export function renderSoloText(
   const wording = emailTextsFor(language);
   const url = permalinkOf(message, links);
   const manage = soloManageLink(message, links, wording);
-  if (!url && !manage) return soloPlainBody(message);
+  const actions = links.actions?.(message, language) ?? [];
+  if (!url && !manage && actions.length === 0) return soloPlainBody(message);
 
   const lines = [soloPlainBody(message)];
-  if (url) lines.push('', `${wording.links.openPlain}: ${url}`);
+  if (actions.length > 0) lines.push('', ...actions.map(({ label, url: href }) => `${label}: ${href}`));
+  else if (url) lines.push('', `${wording.links.openPlain}: ${url}`);
   lines.push('', ...footerTextLines(wording, manage));
   return lines.join('\n');
 }
@@ -385,12 +402,17 @@ export function renderSoloHtml(
   const wording = emailTextsFor(language);
   const url = permalinkOf(message, links);
   const heading = `<h1 style="margin:0 0 8px;font-size:18px;line-height:1.35;color:${BRAND.navyDark};">${escapeHtml(message.subject)}</h1>`;
+  // ADR-841 Α21.21 Φάση Β — κουμπιά ενέργειας **αντί** για το ένα «Άνοιγμα»: η ερώτηση απαντιέται από το ίδιο το email.
+  const actions = links.actions?.(message, language) ?? [];
+  const buttons = actions.length > 0
+    ? actions.map((action) => buttonHtml(action.url, action.label)).join('')
+    : url ? buttonHtml(url, wording.links.open) : '';
 
   return documentHtml({
     language,
     title: subject,
     preheader: bodyAddsAnything(message) ? message.content : message.subject,
-    bodyHtml: `${heading}${bodyParagraphHtml(message)}${url ? buttonHtml(url, wording.links.open) : ''}`,
+    bodyHtml: `${heading}${bodyParagraphHtml(message)}${buttons}`,
     footer: footerHtml(wording, soloManageLink(message, links, wording)),
   });
 }
