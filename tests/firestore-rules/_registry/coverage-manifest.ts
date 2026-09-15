@@ -298,6 +298,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-841 §7 Α21.21 Φάση Β — ΟΙ ΕΡΩΤΗΣΕΙΣ ΑΡΓΙΩΝ. Κρατούν `nonce` συνδέσμων· ο πειρασμός είναι ο
+    // διαχειριστής να «δει» ή να «απαντήσει» απευθείας. Η σουίτα σπέρνει ερώτηση του **ίδιου** μισθωτή.
+    collection: 'holiday_hours_questions',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/holiday-hours-questions.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-841 §7 Α21.20 — ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΣΥΜΒΑΝΤΩΝ ΠΑΡΑΔΟΣΗΣ. Διευθύνσεις όλης της πλατφόρμας· ο πειρασμός
     // είναι πελάτης να **γράψει** ψεύτικο bounce και να σβήσει ξένο σήμα. Η σουίτα σπέρνει συμβάν.
     collection: 'email_delivery_events',

@@ -161,3 +161,32 @@ export async function seedShowcaseEmailConfirmation(
   });
   return id;
 }
+
+/**
+ * **ΕΡΩΤΗΣΗ ΑΡΓΙΩΝ** (ADR-841 §7 Α21.21 Φάση Β) — του **δοκιμαζόμενου** μισθωτή: χωρίς έγγραφο του ίδιου, η
+ * μετάλλαξη «ο διαχειριστής βλέπει τις ερωτήσεις του γραφείου του» δεν κοκκινίζει.
+ */
+export async function seedHolidayHoursQuestion(
+  env: RulesTestEnvironment,
+  companyId: string = SAME_TENANT_COMPANY_ID,
+): Promise<string> {
+  const id = 'hhq_seed_0001';
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('holiday_hours_questions').doc(id).set({
+      id,
+      companyId,
+      seasonKey: '2026-12-25',
+      lastDate: '2027-01-06',
+      items: [{ locationId: 'sloc_seed_0001', date: '2026-12-25', holiday: 'christmas' }],
+      nonce: 'seed-nonce',
+      state: 'open',
+      createdAt: '2026-12-04T08:00:00.000Z',
+      askedAt: '2026-12-04T08:00:00.000Z',
+      remindedAt: null,
+      settledAt: null,
+      answers: [],
+      answeredByUid: null,
+    });
+  });
+  return id;
+}

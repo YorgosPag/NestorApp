@@ -189,6 +189,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/mandate/showcase-email-confirmation-token.ts',
   },
   {
+    name: 'HOLIDAY_HOURS_QUESTION_SECRET',
+    severity: 'feature',
+    feature: 'Ερώτηση ωραρίου πριν από τις αργίες (ADR-841 Α21.21 Φάση Β)',
+    consequence:
+      'Το email «Θα είστε ανοιχτά στις αργίες;» φεύγει χωρίς κουμπιά απάντησης, και κάθε σύνδεσμος που ' +
+      'υπάρχει ήδη απαντά «μη διαθέσιμο». Ο επαγγελματίας πρέπει να συνδεθεί και να δηλώσει τις αργίες ' +
+      'στη φόρμα — όσοι δεν το κάνουν μένουν «το ωράριο ίσως διαφέρει» στη δημόσια κάρτα.',
+    consumer: 'src/services/mandate/holiday-hours-question-token.ts',
+  },
+  {
     name: 'MAILGUN_WEBHOOK_SIGNING_KEY',
     severity: 'feature',
     feature: 'Webhooks Mailgun: εισερχόμενα email και συμβάντα παράδοσης (ADR-071 · ADR-841 Α21.20)',
