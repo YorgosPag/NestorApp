@@ -44,7 +44,11 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PlaceClaimDefect } from '@/lib/places/place-claim-validation';
-import type { PlaceResolveRequest, PlaceTarget } from '@/lib/places/place-claim';
+import {
+  addressClaimAdmissible,
+  type PlaceResolveRequest,
+  type PlaceTarget,
+} from '@/lib/places/place-claim';
 import {
   mergeIntoBuilding,
   mergeIntoLand,
@@ -267,6 +271,15 @@ export async function resolvePlace(
   if (verified.kind !== 'verified') return refusalOf(verified);
 
   const facts = verified.facts;
+
+  // ── (0) ADR-332 D28 Δ — διεύθυνση πολύ αδρή για τον στόχο: άρνηση, ποτέ τόπος στο κέντρο περιοχής ──
+  //    Ο **ίδιος** κριτής με την οθόνη που προσφέρει το κουμπί· εδώ επειδή μόνο αυτή η πράξη ξέρει τον στόχο.
+  if (
+    request.claim.gesture === 'typed-address' &&
+    (facts.accuracy === null || !addressClaimAdmissible(facts.accuracy, request.target))
+  ) {
+    return { kind: 'rejected', reason: 'address-too-coarse' };
+  }
 
   try {
     // ── (α) Φυσικό κλειδί: το ίδιο στοιχείο OSM ⇒ η ίδια ταυτότητα ────────────

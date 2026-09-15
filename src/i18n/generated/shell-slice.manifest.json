@@ -19,7 +19,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "8ee9852b41a15751b76b362825b526517e839b92ee4e1d9d0ae40747e041222c",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "343f9bd92427767017f9c386bb6e08b5b22f8759b5ab1da88f8592c3ab81490f",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "b32b4fcf15301e606b9e641464c388551957cfd636ae94f7a0ea7de778e31461",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "428a4c6a88e5d3b060c20bb90cc4ffcf131a18fe135472fd787cc2e66d89b09c",
@@ -72,7 +72,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ff279e46f87ed96a91520124ac7b0818e90b27f0cee7ee9f767dc7496d8b0dc3",
+  "inputsSha256": "ecd34e3f02c6072d7413d9f929117180f782942b6fae7bfb3ad704139772adde",
   "languages": [
     "el"
   ],
@@ -182,7 +182,7 @@
     "src/components/demand/form/DemandPlaceResolver.tsx": "e8a49d65b487836ebbacfbe2b96689c463a5ab33c4b6e94d9987293b60002ac6",
     "src/components/demand/form/DemandProximityField.tsx": "4315709f7b5632b7a8c59ada912d672447e36b86640cdb13355f10271a71e53d",
     "src/components/demand/form/demand-field-primitives.tsx": "c957a677f8d4fb89a7cd32bccd1977b9dd817ae778fd70ed4d41fb0f074bd824",
-    "src/components/geo/PlaceChooser.tsx": "55a89ed396d0001d724d79139b5513b52dee1b822ac841cde0b4eabfb0c4128c",
+    "src/components/geo/PlaceChooser.tsx": "7c7f0f4362860b1cd5d1ae25deb7c3948cc695c091ef8ece1b76f4810482c8a8",
     "src/components/geo/PlaceChooserStatus.tsx": "3ac066c41b6c156c93cda7f4fa7c143fe851fff29ad6603b11ef3937a8908fb1",
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
     "src/components/geo/PlaceMap.tsx": "f80f446b6123b22ecbf1f604d9457a4b8990e61b71c7b87c8bcdcdab3f56ffcd",
@@ -235,7 +235,7 @@
     "src/components/mandate/ShowcaseCardContent.tsx": "cc08c43e86b260fa481693f1f28de385304c9dd7e02e30b58d3aa0a6199109b3",
     "src/components/mandate/ShowcaseCardDoor.tsx": "81be4abb47736093be2c7049e1ec38416605660a69d9a9553b741d925a9ad85a",
     "src/components/mandate/ShowcaseCardImportControl.tsx": "78d4e13d42afe48c6709111117f88c7f74054585363649f03fc46786b103604f",
-    "src/components/mandate/ShowcaseCardSection.tsx": "e6d6849ac39ec7b7de6da56e24e443102e265cdca0b073d24f9b2d457ffddccc",
+    "src/components/mandate/ShowcaseCardSection.tsx": "227da44d682bcde2c53f82ff489e751e9c986990e88051bce191fe1cdcb487ee",
     "src/components/mandate/ShowcaseChannelFields.tsx": "0cc38fc2e5bdb6c5b36df3edbda6e5b2c9b713fdd0c26a19d602b23add709ca0",
     "src/components/mandate/ShowcaseContactCard.tsx": "98f8cf18e55e6afa07ca40f20529d392d7ae666b3143e02f5719b22ff69decea",
     "src/components/mandate/ShowcaseCredentialField.tsx": "3d875a36891619a42b1edfd9c15a46421d9d7233d094bb24a41b805642d1228e",
@@ -243,7 +243,7 @@
     "src/components/mandate/ShowcaseEmailConfirmationControl.tsx": "703c600579434e549d16fbff144890a90fc2ec2c9895448f698dc9a3ad614c93",
     "src/components/mandate/ShowcaseIdentityFields.tsx": "32b4737c3e515cfb2d33d0a73748f7d1cea99699f71e3230cee4772ea43cf78a",
     "src/components/mandate/ShowcaseImportProvenance.tsx": "f78fe3fe1864777265cd9cae9d3fc79156abb60e8a6c522479374e817bb9ec72",
-    "src/components/mandate/ShowcaseLocationEditor.tsx": "b96fbc68f92e53c0ccfb15f84aced296379bbeefd28e7b681f09984357828d9b",
+    "src/components/mandate/ShowcaseLocationEditor.tsx": "09047bd2617d932be3400afde71a0638ecdd89ef6602d429e5a45ac8ebcd05e3",
     "src/components/mandate/ShowcaseMarkFidelityNote.tsx": "18d4fbf822dddac551918e0b285db6f40f21f79c4df8ac33be5f9abd5d4cedc4",
     "src/components/mandate/ShowcaseMarkField.tsx": "fe9769686f4a646fd4ff783ccb7a0a6f147fe0f8b64bd4f706dfccba4591e25e",
     "src/components/mandate/ShowcaseMarkPreview.tsx": "54e49bb6116fca6db5b010e68240bdfbb645e141994a1235acef0f04f3acb70a",
@@ -358,12 +358,12 @@
     "src/core/states/StaticPageLoading.tsx": "ee7014a3dbe1608ea6e6ff0600cf44e45db8b718acb43189a7f57c5524ba98a0",
     "src/hooks/account/useInFlowTaxIdentity.ts": "ab91899c84d64ad2de863c5072799d649b3cb03f046b4199ade6cc47f36b4130",
     "src/hooks/company/useBrokerageDeclaration.ts": "bee1444625724d6d6023c4ba9e5bc15d7dd81cf8b61de44531ac6bb3ca3e6090",
-    "src/hooks/company/useCompanyRegistryIdentity.ts": "2015bb9490d3cba25682e6d1a4e29610559179bae6194ac10e59696c7bf0c34d",
+    "src/hooks/company/useCompanyRegistryIdentity.ts": "e5f0824ede39a978ff4c13913509c6f658700549f74dc6d5368177db780b4308",
     "src/hooks/demand/useDemandAnswer.ts": "7f9608b9436214932b6ed162514c3dfa07aa2a3cf244026c8e68517ad74c9209",
     "src/hooks/demand/usePlaceInterest.ts": "700674a8bf48446e54041d7f09affa5b962483faecbc505e0b6c975c132bbb6e",
     "src/hooks/geo/usePlaceIdentity.ts": "e1106f132bc40d83f20c81c2de74c07710a77d6c17c14cac5da680e3ee260329",
     "src/hooks/geo/usePlaceOutline.ts": "792a38bba8f6b68d1731ad07ca0aeb94e2fd15ee4b91596369924552c8c76cf6",
-    "src/hooks/geo/usePlaceResolver.ts": "8457b73b76099bc7bea1d44a3e32ec308ae430c1934fa710ea5269a495314836",
+    "src/hooks/geo/usePlaceResolver.ts": "101786f92141582a40397b20d4db5a7df7f519e3fff8c8866b5387f41f7c6ad2",
     "src/hooks/listings/useListingFocus.ts": "3af313aabc898ab2115ac073030b62d14cd5b67299ee454b7a57ea45c5e46224",
     "src/hooks/listings/useMapAreaSearch.ts": "646e019299e2fc51541deedadd64eb2c6ba768e30d6b7c18143721edf0eb90e9",
     "src/hooks/listings/useResultsLedgers.ts": "4b4a4e7e64c1852eb7140624686417c0a6235b081372dcc19c2bd4ec1f5f163d",
@@ -385,6 +385,7 @@
     "src/hooks/useCircleAnchorName.ts": "7009f2c80c485f802d1ef1485489aa34f54568c61093cedd6ea918b012571283",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useIdentityGatedResource.ts": "d8480fc3b8a36ca7256b30090f93ae814391c74076f4793f062e79f2a842047a",
+    "src/hooks/useInFlightAction.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/i18n/route-slice.ts": "cef4139f7e7dae3606e6d8a153f72f3351646f4cb13c613e4e6560f991702459",
     "src/lib/agency/coverage-absorption.ts": "16d287d512457be259218fbff12b86a68c93fd813e7449669ef53948574b8ec8",
     "src/lib/agency/coverage-agreement.ts": "8ab8222184493be20cbd54c57e7f622b6fa1a507a10911f8dfae1f05b8c04618",
@@ -698,7 +699,7 @@
     "src/types/stay-booking.ts": "69599ef2f7cf9390d7d78ec733071a54644d9c5818dcd6238d4d1d67ea68f156",
     "src/types/workspace-invitation-view.ts": "c13be681169a0d618e47e38f1debec6095f4423f832d3fc4a1a7cbd877cd8f55",
     "src/types/workspace-invitation.ts": "ea939d1981bce7790992dc108887f45e5afb8d84dc7f57504843b2b6a5439382",
-    "src/utils/address/address-line.ts": "100f74f294f9ad387a65da56c61f2a119f12af77daf58ff44025963b9cb5bcfc",
+    "src/utils/address/address-line.ts": "84bb248c30535f754e0d18bc9f612820c30b1b80953cf71c2866103afaa038a8",
     "src/utils/address/place-name.ts": "bf3bb21f6195403196c87747d90a3d3513fbc1e8b5f44ca2ed406d59d0f358ac",
     "src/utils/collection-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/utils/file-validation.ts": "902823a7c5593c95d19097a7acc63837f94cb2c2df087c89ed77f08b52b9d582"
@@ -2006,6 +2007,28 @@
           "prefixes": [],
           "whole": false
         },
+        "common": {
+          "keys": [
+            "countries.albania",
+            "countries.australia",
+            "countries.bulgaria",
+            "countries.canada",
+            "countries.cyprus",
+            "countries.france",
+            "countries.germany",
+            "countries.greece",
+            "countries.italy",
+            "countries.northMacedonia",
+            "countries.romania",
+            "countries.serbia",
+            "countries.spain",
+            "countries.turkey",
+            "countries.uk",
+            "countries.usa"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "common-status": {
           "keys": [
             "status.loading"
@@ -2635,6 +2658,7 @@
             "mandate.showcase.cardPlaceHint",
             "mandate.showcase.cardPlaceLabel",
             "mandate.showcase.cardPlaceMissing",
+            "mandate.showcase.cardPlaceMissingHere",
             "mandate.showcase.cardPostalCodeLabel",
             "mandate.showcase.cardPublishStreet",
             "mandate.showcase.cardPublishStreetHint",
@@ -2936,6 +2960,28 @@
     "offers__new": {
       "page": "src/app/(light)/offers/new/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "countries.albania",
+            "countries.australia",
+            "countries.bulgaria",
+            "countries.canada",
+            "countries.cyprus",
+            "countries.france",
+            "countries.germany",
+            "countries.greece",
+            "countries.italy",
+            "countries.northMacedonia",
+            "countries.romania",
+            "countries.serbia",
+            "countries.spain",
+            "countries.turkey",
+            "countries.uk",
+            "countries.usa"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -3118,6 +3164,28 @@
     "offers__offerId": {
       "page": "src/app/(me)/offers/[offerId]/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "countries.albania",
+            "countries.australia",
+            "countries.bulgaria",
+            "countries.canada",
+            "countries.cyprus",
+            "countries.france",
+            "countries.germany",
+            "countries.greece",
+            "countries.italy",
+            "countries.northMacedonia",
+            "countries.romania",
+            "countries.serbia",
+            "countries.spain",
+            "countries.turkey",
+            "countries.uk",
+            "countries.usa"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties": {
           "keys": [
             "completion.aria",
@@ -4868,7 +4936,7 @@
     "src/config/audit-value-catalogs.ts": "ca9f4f3294368e7bd25d64a4b62e2c78311b7f98d06bf31b90fb7192b6d6d510",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "69e137b833305ac220a217f1ab131b7b36302ad19cb31a0050dd0c97cfc6b556",
+    "src/config/domain-constants.ts": "f07b57ffd3b0dca8a8a698b8918a3bcb5d8c4f150bdecff9226f1eea68909fd1",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
     "src/config/firestore-collections.ts": "591aa47af654250c13eaf3c790e79550d4af840fd9c3370f39f98ae58b1bdba0",
@@ -5126,7 +5194,7 @@
     "src/lib/owner-property/owner-property-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/places/admin-path.ts": "6b5919c5b88844b9ba5fb91ad94645d5c3e4a64fa6ce51462cb4300a481bc121",
     "src/lib/places/place-claim-validation.ts": "a157fcedd9f80412f18309f840076e298026c2e857bbbdddd48fb647b262fe0b",
-    "src/lib/places/place-claim.ts": "73eb20571bf6ef6cc5e04a3b4ad3647c2b73a5f5a6b64652713e96eebfea4f77",
+    "src/lib/places/place-claim.ts": "093b4ca4ec37724ab898fc7f05f32c862a4d4b9679907c3433b6943adcd83393",
     "src/lib/professional/professional-credibility.ts": "98757705df8921364a230e5b5cd27057bc781547d8fbd0bde2c11378aee2a7b8",
     "src/lib/professional/showcase-eligibility.ts": "87ba0488672700617c0d09f350db9f6ebd38edaf96bc2786db40dee8550647b5",
     "src/lib/properties/price-resolver.ts": "46bb0913578361182cc61a022e2079b374d3a2ec6ac9c832ab17fe4d50a1c820",
@@ -5370,7 +5438,7 @@
     "matchedKeys": 177,
     "routeBoundaries": 0,
     "shellFiles": 651,
-    "sliceBytes": 442590
+    "sliceBytes": 442746
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

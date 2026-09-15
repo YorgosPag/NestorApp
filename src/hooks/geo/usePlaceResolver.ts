@@ -38,6 +38,7 @@ import { useCallback, useState } from 'react';
 
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
 import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
+import { formatResolvedAddressLine } from '@/utils/address/address-line';
 import {
   houseNumberStanding,
   type HouseNumberStanding,
@@ -137,7 +138,9 @@ function toResolvedPlace(result: GeocodingServiceResult, request: GeocodingReque
     lat: result.lat,
     lng: result.lng,
     accuracy: result.accuracy,
-    label: result.displayName,
+    // ADR-332 D28 — σύντομη μορφή (οδός, στενότερη περιοχή, Τ.Κ.)· το πλήρες `display_name` είχε 12 κομμάτια.
+    //   Εφεδρεία στο πλήρες όταν ο πάροχος δεν έδωσε ούτε οδό ούτε περιοχή — ποτέ κενή ετικέτα.
+    label: formatResolvedAddressLine(result.resolvedFields) || result.displayName,
     extent: result.extent,
     // ⚠️ `fieldMatches.number` είναι **προαιρετικό στον τύπο** (ο `FieldMatchMap` παράγεται από τα
     //    προαιρετικά κλειδιά του `ResolvedAddressFields`) — γι' αυτό το `houseNumberStanding`

@@ -69,6 +69,20 @@ export function focusFirstElement(container: HTMLElement): boolean {
 }
 
 /**
+ * ♿ Reveal & Focus — μεταφέρει τον άνθρωπο στο πεδίο που ζητά δράση (GOV.UK «recover from validation errors»).
+ *
+ * Κύλιση **και** focus: μόνο το focus δεν αρκεί σε στόχο μακριά από το σημείο που πάτησε ο άνθρωπος, και μόνο η
+ * κύλιση αφήνει τον αναγνώστη οθόνης στο κουμπί. Ο στόχος χρειάζεται `tabIndex={-1}` αν δεν είναι focusable.
+ * `scrollIntoView?.` — το jsdom δεν το υλοποιεί.
+ */
+export function revealAndFocus(element: HTMLElement | null): boolean {
+  if (element === null) return false;
+  element.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  element.focus({ preventScroll: true });
+  return true;
+}
+
+/**
  * ♿ Focus Last Element
  * Εστιάζει στο τελευταίο focusable element
  */
@@ -421,6 +435,7 @@ export default {
   getFocusableElements,
   focusFirstElement,
   focusLastElement,
+  revealAndFocus,
   announceToScreenReader,
   generateId,
   FOCUSABLE_ELEMENTS_SELECTOR,

@@ -490,6 +490,12 @@
       "landAreaLabel": "Land area (m²)",
       "placeAccuracyLegend": "What was located",
       "placeRefine": "A more specific address gives a more precise location. You can also point at the building on the map below.",
+      "placeAddressOffer": {
+        "title": "Address found — one step left",
+        "body": "Use it as the place with one click, or click the building itself on the map for more precision.",
+        "use": "Use the address that was found",
+        "coarse": "The address was only found approximately, not precisely enough for a place. Click the building on the map or drop a pin."
+      },
       "placeAccuracyNote": {
         "exact": "The building. The map marker points exactly there.",
         "interpolated": "The street — not the building. The circle shows the range.",
@@ -776,6 +782,7 @@
       "cardPlaceLabel": "Area",
       "cardPlaceHint": "Pick the spot on the map. A location without an area is not saved.",
       "cardPlaceMissing": "Pick an area for every location before saving.",
+      "cardPlaceMissingHere": "This location has no area yet — pick it below.",
       "cardPublishStreet": "Publish street and number",
       "cardPublishStreetHint": "Leave this off if you do not receive visitors there (e.g. you work from home) — only the area will show.",
       "cardStreetLabel": "Street",

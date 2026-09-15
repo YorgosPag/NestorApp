@@ -73,6 +73,11 @@ export const PLACE_SOURCE_REJECTIONS = [
   'osm-not-a-building',
   /** Ο geocoder δεν βρήκε τίποτα για αυτό το κείμενο. */
   'address-not-found',
+  /**
+   * Βρέθηκε, αλλά **πολύ αδρά** για τον στόχο (`addressClaimAdmissible`, ADR-332 D28 Δ). Κρίνεται στο
+   * `resolvePlace`, που κατέχει τον στόχο — η επαλήθευση πηγής εδώ είναι ανεξάρτητη στόχου.
+   */
+  'address-too-coarse',
 ] as const;
 
 export type PlaceSourceRejection = (typeof PLACE_SOURCE_REJECTIONS)[number];

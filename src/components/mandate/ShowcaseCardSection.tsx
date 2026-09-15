@@ -42,7 +42,8 @@ import {
   SHOWCASE_NS,
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
-import { ShowcaseLocationEditor } from './ShowcaseLocationEditor';
+import { revealAndFocus } from '@/utils/accessibility';
+import { ShowcaseLocationEditor, showcasePlaceHeadingId } from './ShowcaseLocationEditor';
 import { ShowcaseCardImportControl } from './ShowcaseCardImportControl';
 import { ShowcaseImportProvenance } from './ShowcaseImportProvenance';
 import type { ImportOrigin } from '@/types/showcase-card-import';
@@ -168,7 +169,9 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
     if (load.phase === 'loaded') setWebsite(load.website ?? '');
     setWebsiteOrigin(null);
   }, [load]);
-  const [missingPlace, setMissingPlace] = React.useState(false);
+  // 🔑 GOV.UK «recover from validation errors»: η κρίση γίνεται στο «Αποθήκευση» και μετά μένει **ζωντανή** —
+  //    σβήνει μόλις το κατάστημα αποκτήσει τόπο, χωρίς δεύτερο πάτημα (ADR-332 D28 Δ).
+  const [saveAttempted, setSaveAttempted] = React.useState(false);
   // Α21.19 — η εισαγωγή αντικαθιστά **το πρόχειρο**, ποτέ την αποθηκευμένη κάρτα.
   const onImport = (nextDrafts: readonly ShowcaseLocationDraft[], nextWebsite: string, origin: ImportOrigin | null) => {
     setDrafts(nextDrafts);
@@ -179,9 +182,16 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
 
   const onSave = () => {
     const formed = wireOfDrafts(drafts, website);
-    setMissingPlace('missingPlaceIndex' in formed);
-    if ('wire' in formed) void save(formed.wire);
+    if ('missingPlaceIndex' in formed) {
+      setSaveAttempted(true);
+      // Το μήνυμα δίπλα στο κουμπί είναι μακριά από το πεδίο: ο άνθρωπος ΜΕΤΑΦΕΡΕΤΑΙ στο πρώτο κατάστημα χωρίς τόπο.
+      revealAndFocus(document.getElementById(showcasePlaceHeadingId(drafts[formed.missingPlaceIndex].key)));
+      return;
+    }
+    setSaveAttempted(false);
+    void save(formed.wire);
   };
+  const missingPlace = saveAttempted && drafts.some(({ place }) => place === null);
   const notice = missingPlace ? t(SHOWCASE_CARD_KEYS.placeMissing) : failureText;
   const hasHeadquarters = drafts.some(({ role }) => role === 'headquarters');
 
@@ -206,7 +216,7 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
           />
           {drafts.length === 0 ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.empty)}</p> : null}
           {drafts.map((draft) => (
-            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, load.emailReturns, draft)} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
+            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, load.emailReturns, draft)} placeMissing={saveAttempted && draft.place === null} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
           ))}
           <p className="m-0 text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.emailConfirmHint)}</p>
           <span className="flex flex-wrap gap-2">

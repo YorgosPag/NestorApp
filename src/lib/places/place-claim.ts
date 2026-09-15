@@ -51,6 +51,7 @@
 
 import { z } from 'zod';
 
+import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { LocationProvenance } from '@/lib/location/location-provenance';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 import type { OsmElementType } from '@/types/geo/public-place';
@@ -183,6 +184,33 @@ export const placeClaimSchema = z.discriminatedUnion('gesture', [
     query: z.string(),
   }),
 ]);
+
+// =============================================================================
+// 5. ΤΟ ΣΚΑΛΟΠΑΤΙ 1 ΩΣ ΤΟΠΟΣ — πότε μια διεύθυνση ΑΡΚΕΙ
+// =============================================================================
+
+/**
+ * **Ποιοι βαθμοί ακρίβειας επιτρέπουν σε μια γεωκωδικοποιημένη διεύθυνση να γίνει τόπος**, ανά στόχο
+ * (ADR-332 D28 Δ).
+ *
+ * 🔑 **Γη** (π.χ. «Περιοχή» καταστήματος): αρκεί η **οδός** (`interpolated`). **Κτίριο**: μόνο η **ακριβής**
+ * διεύθυνση — ένα «κτίριο» στο μέσο μιας οδού θα γεννούσε **ξεχωριστή** ταυτότητα για κάθε ιδιοκτήτη του ίδιου
+ * δρόμου (§14.5), γιατί η γεωκωδικοποιημένη γη δεν έχει περίγραμμα να πιάσει ο έλεγχος διπλοτύπου.
+ *
+ * ⛔ `approximate` (γειτονιά) και `center` (πόλη) **ποτέ**: σημείο που *μοιάζει* τόπος ενώ είναι κέντρο περιοχής.
+ */
+const ADDRESS_CLAIM_ACCURACIES: Readonly<Record<PlaceTarget, readonly GeocodingAccuracy[]>> = {
+  land: ['exact', 'interpolated'],
+  building: ['exact'],
+};
+
+/**
+ * **Αρκεί αυτή η ακρίβεια για χειρονομία `typed-address` σε αυτόν τον στόχο;** — ο **ένας** κριτής: η οθόνη τον
+ * ρωτά για να **προσφέρει** το κουμπί, ο διακομιστής για να **δεχτεί** τη χειρονομία.
+ */
+export function addressClaimAdmissible(accuracy: GeocodingAccuracy, target: PlaceTarget): boolean {
+  return ADDRESS_CLAIM_ACCURACIES[target].includes(accuracy);
+}
 
 /** Το πλήρες αίτημα εντοπισμού: **τι έκανε** ο άνθρωπος και **σε τι** αναφέρεται. */
 export const placeResolveRequestSchema = z.object({

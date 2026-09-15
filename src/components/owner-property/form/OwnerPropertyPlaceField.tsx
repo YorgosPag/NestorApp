@@ -316,6 +316,8 @@ export function OwnerPropertyPlaceField({
             <PlaceIdentityField
               chosen={placeRef ?? null}
               focus={focus}
+              // ADR-332 D28 Δ — το κείμενο που ΕΔΩΣΕ το σημείο: κάθε πλήκτρο σβήνει το σημείο, άρα τα δύο δεν διαφωνούν.
+              addressQuery={query ?? null}
               onChosen={(ref) => form.setValue('placeRef', ref, { shouldDirty: true })}
             />
           </fieldset>

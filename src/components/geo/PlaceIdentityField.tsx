@@ -62,6 +62,8 @@ export interface PlaceIdentityFieldProps {
    * έχει απάντηση γεωκωδικοποιητή να δώσει, και δεν πρέπει να επινοήσει.
    */
   readonly focus?: PlaceFocus | null;
+  /** Το κείμενο που έδωσε το `focus` — ταξιδεύει αυτούσιο στον επιλογέα (ADR-332 D28 Δ, δες `PlaceChooser`). */
+  readonly addressQuery?: string | null;
 }
 
 export function PlaceIdentityField({
@@ -69,6 +71,7 @@ export function PlaceIdentityField({
   onChosen,
   target = 'building',
   focus = null,
+  addressQuery = null,
 }: PlaceIdentityFieldProps): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [editing, setEditing] = useState(chosen === null);
@@ -101,6 +104,7 @@ export function PlaceIdentityField({
     <PlaceChooser
       target={target}
       focus={focus}
+      addressQuery={addressQuery}
       onChosen={(ref) => {
         onChosen(ref);
         setEditing(false);

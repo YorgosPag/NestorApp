@@ -292,6 +292,7 @@ export const SHOWCASE_CARD_KEYS = {
   placeLabel: `${K}.cardPlaceLabel`,
   placeHint: `${K}.cardPlaceHint`,
   placeMissing: `${K}.cardPlaceMissing`,
+  placeMissingHere: `${K}.cardPlaceMissingHere`,
   publishStreet: `${K}.cardPublishStreet`,
   publishStreetHint: `${K}.cardPublishStreetHint`,
   streetLabel: `${K}.cardStreetLabel`,

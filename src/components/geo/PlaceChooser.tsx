@@ -25,11 +25,12 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { usePlaceIdentity } from '@/hooks/geo/usePlaceIdentity';
+import { usePlaceIdentity, type PlaceIdentityState } from '@/hooks/geo/usePlaceIdentity';
 import type { PlaceClaim, PlaceTarget } from '@/lib/places/place-claim';
 import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
@@ -38,6 +39,14 @@ import type { PlaceRef } from '@/types/geo/public-place';
 import { PlaceMap } from './PlaceMap';
 import { IdentityStatus, LookupStatus } from './PlaceChooserStatus';
 import { OutlineDraftControls, useOutlineDraft } from './outline-draft';
+
+/**
+ * Όριο κλειστότητας (CHECK 3.34, ADR-332 D28 Δ) — η προσφορά υπάρχει **μόνο** μετά από εντοπισμό, ποτέ στο πρώτο
+ * καρέ, και οι τρεις από τους πέντε καταναλωτές του επιλογέα δεν τη ζητούν ποτέ. Ιδίωμα `ResolvedPlaceConfirmation`.
+ */
+const PlaceAddressOffer = dynamic(() => import('./PlaceAddressOffer').then((mod) => mod.PlaceAddressOffer), {
+  ssr: false,
+});
 
 /** Οι χειρονομίες που γίνονται **πάνω στον χάρτη** — σκαλοπάτια 4 · 2 · 3 του §21.4. */
 const MAP_GESTURES = ['pick', 'pin', 'draw'] as const;
@@ -63,7 +72,17 @@ export interface PlaceChooserProps {
    * («πού» + «πόσο») θα μπορούσαν να διαφωνήσουν· ένα δεν μπορεί.
    */
   readonly focus?: PlaceFocus | null;
+  /**
+   * **ΤΟ ΚΕΙΜΕΝΟ ΠΟΥ ΕΔΩΣΕ ΤΟ `focus`** (ADR-332 D28 Δ). Όταν υπάρχουν **και τα δύο**, ο επιλογέας προσφέρει ρητό
+   * κλικ «Χρησιμοποίησε τη διεύθυνση που βρέθηκε» — χειρονομία `typed-address`, δες {@link PlaceAddressOffer}.
+   *
+   * ⚠️ Χωρίς `focus` **σιωπά**: κείμενο που δεν εντοπίστηκε μπροστά στον άνθρωπο δεν προσφέρεται ως τόπος.
+   */
+  readonly addressQuery?: string | null;
 }
+
+/** Καταστάσεις καταχώρησης στις οποίες η προσφορά διεύθυνσης **μένει** — ερώτηση/απάντηση/άρνηση την κρύβουν. */
+const ADDRESS_OFFER_STATES: ReadonlySet<PlaceIdentityState['kind']> = new Set(['idle', 'working', 'unavailable', 'failed']);
 
 const DEFAULT_CENTER: GeoPoint = {
   lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
@@ -74,6 +93,7 @@ export function PlaceChooser({
   target,
   onChosen,
   focus = null,
+  addressQuery = null,
 }: PlaceChooserProps): React.ReactElement {
   /**
    * ⚠️ **ΤΟ ΑΡΧΙΚΟ ΑΝΟΙΓΜΑ ΚΑΙ Η ΠΤΗΣΗ ΕΙΝΑΙ ΔΥΟ ΠΡΑΞΕΙΣ, ΚΑΙ ΧΡΕΙΑΖΟΝΤΑΙ ΚΑΙ ΟΙ ΔΥΟ.**
@@ -88,6 +108,8 @@ export function PlaceChooser({
 
   const [gesture, setGesture] = useState<MapGesture>('pick');
   const [pin, setPin] = useState<GeoPoint | null>(null);
+  /** Η χειρονομία που **υποβλήθηκε** — το «Όχι, είναι άλλος» ξαναστέλνει αυτήν, όχι ό,τι δείχνει τώρα ο χάρτης. */
+  const [submitted, setSubmitted] = useState<PlaceClaim | null>(null);
   const draft = useOutlineDraft();
 
   const switchGesture = useCallback(
@@ -132,12 +154,22 @@ export function PlaceChooser({
   const shownOutline: GeoOutline | null =
     gesture === 'pick' && lookup.kind === 'found' ? lookup.outline : null;
 
-  const submit = useCallback(
-    (distinctFromNearby: boolean) => {
-      if (pending !== null) void claim(pending, target, distinctFromNearby);
+  const submitClaim = useCallback(
+    (next: PlaceClaim, distinctFromNearby: boolean) => {
+      setSubmitted(next);
+      void claim(next, target, distinctFromNearby);
     },
-    [claim, pending, target],
+    [claim, target],
   );
+
+  const trimmedQuery = addressQuery?.trim() ?? '';
+  /** Ο διακομιστής ξανάκρινε τη διεύθυνση πολύ αδρή — η προσφορά μένει, λέγοντας τι να γίνει αντί για κουμπί. */
+  const addressRefused = state.kind === 'rejected' && state.reason === 'address-too-coarse';
+  /** Η απάντηση που προσφέρεται ως τόπος — `null` όταν λείπει κείμενο, εντοπισμός, ή ο άνθρωπος ήδη δείχνει κάτι. */
+  const offered =
+    focus !== null && trimmedQuery !== '' && pending === null && (addressRefused || ADDRESS_OFFER_STATES.has(state.kind))
+      ? focus
+      : null;
 
   /**
    * Ο τόπος απέκτησε ταυτότητα — το προϊόν φεύγει προς τα πάνω.
@@ -157,6 +189,15 @@ export function PlaceChooser({
 
   return (
     <section className="space-y-3">
+      {offered !== null ? (
+        <PlaceAddressOffer
+          accuracy={offered.accuracy}
+          target={target}
+          refused={addressRefused}
+          busy={state.kind === 'working'}
+          onUse={() => submitClaim({ gesture: 'typed-address', query: trimmedQuery }, false)}
+        />
+      ) : null}
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-foreground">{t('place.legend')}</legend>
         <div className="flex flex-wrap gap-2">
@@ -210,7 +251,14 @@ export function PlaceChooser({
             <Button type="button" size="sm" onClick={() => onChosen(state.existing)}>
               {t('place.duplicate.same')}
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => submit(true)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (submitted !== null) submitClaim(submitted, true);
+              }}
+            >
               {t('place.duplicate.distinct')}
             </Button>
           </div>
@@ -218,7 +266,9 @@ export function PlaceChooser({
       ) : (
         <Button
           type="button"
-          onClick={() => submit(false)}
+          onClick={() => {
+            if (pending !== null) submitClaim(pending, false);
+          }}
           disabled={pending === null || state.kind === 'working'}
         >
           {t('place.confirm')}

@@ -119,6 +119,9 @@ export function IdentityStatus({ state }: { state: PlaceIdentityState }): React.
     case 'malformed':
       return <StatusLine tone="warn">{t(`place.defect.${state.defect}`)}</StatusLine>;
     case 'rejected':
+      // ADR-332 D28 Δ — η «πολύ αδρή διεύθυνση» έχει δική της παρουσίαση (`PlaceAddressOffer`), όπως το διπλότυπο:
+      // το κλειδί της ζει εκτός εγγυημένου κελύφους (CHECK 3.34), και δύο μηνύματα για μία άρνηση θα ήταν θόρυβος.
+      if (state.reason === 'address-too-coarse') return null;
       return <StatusLine tone="warn">{t(`place.rejection.${state.reason}`)}</StatusLine>;
     case 'unavailable':
       return <StatusLine tone="warn">{t('place.picker.unavailable')}</StatusLine>;

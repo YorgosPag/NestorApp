@@ -52,6 +52,13 @@ interface ShowcaseLocationEditorProps {
   readonly saved: SavedEmailChannels | null;
   readonly onChange: (draft: ShowcaseLocationDraft) => void;
   readonly onRemove: () => void;
+  /** Πατήθηκε «Αποθήκευση» και αυτό το κατάστημα **δεν έχει τόπο** — το μήνυμα λέγεται **εδώ**, δίπλα στο πεδίο. */
+  readonly placeMissing?: boolean;
+}
+
+/** Η ταυτότητα του τίτλου «Περιοχή» ενός καταστήματος — εκεί μεταφέρεται το focus όταν λείπει τόπος. */
+export function showcasePlaceHeadingId(draftKey: string): string {
+  return `showcase-card-place-${draftKey}`;
 }
 
 /**
@@ -61,8 +68,10 @@ interface ShowcaseLocationEditorProps {
  * πατά ο άνθρωπος — ίδιο μοτίβο με το `OwnerPropertyPlaceField`. Ελεύθερο κείμενο διεύθυνσης λογιστικής που γινόταν
  * σιωπηλά τόπος θα ήταν σημείο που *μοιάζει* σωστό.
  */
-function PlaceSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove' | 'saved'>): React.ReactElement {
+function PlaceSection({ draft, placeMissing = false, onChange }: Omit<ShowcaseLocationEditorProps, 'onRemove' | 'saved'>): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
+  const headingId = showcasePlaceHeadingId(draft.key);
+  const missingId = `${headingId}-missing`;
   const [focus, setFocus] = React.useState<PlaceFocus | null>(null);
   // 🔑 ADR-332 D28 — ό,τι κατάλαβε ο πάροχος **λέγεται** στον άνθρωπο (πριν: μόνο ο χάρτης κινούνταν).
   //    Εφήμερο, όπως στο `OwnerPropertyPlaceField`: επιβεβαίωση, όχι δήλωση — δεν μπαίνει στο πρόχειρο.
@@ -81,8 +90,12 @@ function PlaceSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="m-0 text-sm font-medium text-foreground">{t(SHOWCASE_CARD_KEYS.placeLabel)}</h3>
+      {/* `tabIndex={-1}`: στόχος focus της «Αποθήκευσης» (GOV.UK), όχι στάση στη σειρά Tab. */}
+      <h3 id={headingId} tabIndex={-1} aria-describedby={placeMissing ? missingId : undefined} className="m-0 text-sm font-medium text-foreground">
+        {t(SHOWCASE_CARD_KEYS.placeLabel)}
+      </h3>
       <p className="m-0 text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.placeHint)}</p>
+      {placeMissing ? <p id={missingId} role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_CARD_KEYS.placeMissingHere)}</p> : null}
       {placeHint !== null ? (
         <span className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" disabled={state === 'resolving'} onClick={() => void resolve(placeHint)}>
@@ -94,7 +107,8 @@ function PlaceSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
           {state === 'error' ? <span role="alert" className="w-full text-sm text-destructive">{t(SHOWCASE_CARD_IMPORT_KEYS.locateFailed)}</span> : null}
         </span>
       ) : null}
-      <PlaceIdentityField chosen={draft.place} onChosen={(place) => onChange({ ...draft, place })} target="land" focus={focus} />
+      {/* ADR-332 D28 Δ — το κείμενο ταξιδεύει ΜΟΝΟ μαζί με απάντηση που είδε ο άνθρωπος: ρητό κλικ, όχι σιωπηλός τόπος. */}
+      <PlaceIdentityField chosen={draft.place} onChosen={(place) => onChange({ ...draft, place })} target="land" focus={focus} addressQuery={resolved !== null ? placeHint : null} />
     </section>
   );
 }
@@ -142,7 +156,7 @@ function HoursSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
   );
 }
 
-export function ShowcaseLocationEditor({ draft, saved, onChange, onRemove }: ShowcaseLocationEditorProps): React.ReactElement {
+export function ShowcaseLocationEditor({ draft, saved, onChange, onRemove, placeMissing = false }: ShowcaseLocationEditorProps): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const id = React.useId();
 
@@ -153,7 +167,7 @@ export function ShowcaseLocationEditor({ draft, saved, onChange, onRemove }: Sho
         <Label htmlFor={`${id}-label`}>{t(SHOWCASE_CARD_KEYS.labelLabel)}</Label>
         <Input id={`${id}-label`} maxLength={80} placeholder={t(SHOWCASE_CARD_KEYS.labelPlaceholder)} value={draft.label} onChange={(event) => onChange({ ...draft, label: event.target.value })} />
       </span>
-      <PlaceSection draft={draft} onChange={onChange} />
+      <PlaceSection draft={draft} placeMissing={placeMissing} onChange={onChange} />
       <StreetFields draft={draft} onChange={onChange} />
       <ShowcaseImportProvenance origin={draft.provenance.phones} />
       <ShowcasePhoneFields phones={draft.phones} onChange={(phones) => onChange({ ...withoutProvenance(draft, 'phones'), phones })} />

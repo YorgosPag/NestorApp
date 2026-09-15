@@ -23,6 +23,7 @@
  */
 
 import { isGreekAddressCountry } from './country-codes';
+import { stripGreekAdminPrefix } from './place-name';
 import { formatGreekPostalCode } from './postal-code';
 
 export interface ContactAddressLineParts {
@@ -51,4 +52,47 @@ export function formatContactAddressLine(parts: ContactAddressLineParts): string
     .map((part) => part?.trim())
     .filter(Boolean)
     .join(', ');
+}
+
+/** Ό,τι **βρήκε** ο γεωκωδικοποιητής — δομικά συμβατό με το `ResolvedAddressFields`. */
+export interface ResolvedAddressLineParts {
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+}
+
+/**
+ * **«Οδός Αριθμός, Περιοχή, Τ.Κ.» — η σύντομη μορφή ΤΗΣ ΑΠΑΝΤΗΣΗΣ του παρόχου** (ADR-332 D28).
+ *
+ * 🔴 **Γιατί υπάρχει**: το πλαίσιο επιβεβαίωσης τόπου έδειχνε το `display_name` του Nominatim αυτούσιο —
+ * μετρημένο στη βιτρίνα 2026-09-15: *«Σαμοθράκης, Ελευθέριο, Ελευθέρια, Ελευθέριο-Κορδελιό, Κοινότητα …,
+ * Δημοτική Ενότητα …, Δήμος …, Μητροπολιτική Ενότητα …, Περιφέρεια …, Αποκεντρωμένη Διοίκηση …, 563 34,
+ * Ελλάδα»* — **δώδεκα** κομμάτια για να επαληθεύσει ο άνθρωπος **τρία**.
+ *
+ * ⚠️ **ΔΕΝ ενοποιείται** με τα δύο αδέλφια, για δύο **διαφορετικές** αποφάσεις:
+ * - η **περιοχή** είναι η **στενότερη** που ξέρει ο πάροχος (γειτονιά πριν από πόλη) — αυτή ξεχωρίζει
+ *   ανάμεσα σε τέσσερις ομώνυμες οδούς·
+ * - ο πάροχος γράφει την περιοχή **με πρόθεμα βαθμίδας** («Δημοτική Ενότητα Ελευθερίου - Κορδελιού») ⇒
+ *   περνά από το `stripGreekAdminPrefix`. ⛔ **Όχι** `cleanPlaceName`: εκείνο αναδιπλώνει και την παύλα
+ *   (δίπλωμα **σύγκρισης**), και το «Ελευθέριο-Κορδελιό» θα εμφανιζόταν «Ελευθέριο Κορδελιό» — αλλαγή
+ *   επίσημου ονόματος στην οθόνη που υπάρχει για να το **επαληθεύσει** ο άνθρωπος.
+ *
+ * ⚠️ **Ο αριθμός είναι ΜΟΝΟ του παρόχου**: δηλωμένος αριθμός που δεν επιβεβαιώθηκε **δεν** μπαίνει εδώ — η
+ * στάση του λέγεται χωριστά (`house-number-standing`). Αλλιώς η γραμμή θα έδειχνε «επιβεβαίωση» που δεν έγινε.
+ *
+ * @returns `''` όταν δεν υπάρχει ούτε οδός ούτε περιοχή — ο καλών κρατά τότε το πλήρες κείμενο.
+ */
+export function formatResolvedAddressLine(parts: ResolvedAddressLineParts): string {
+  const streetLine = [parts.street, parts.number].map((part) => part?.trim()).filter(Boolean).join(' ');
+  const rawLocality = parts.neighborhood?.trim() || parts.city?.trim() || '';
+  const locality = rawLocality === '' ? '' : stripGreekAdminPrefix(rawLocality);
+  if (streetLine === '' && locality === '') return '';
+
+  const postalCode = isGreekAddressCountry(parts.country)
+    ? formatGreekPostalCode(parts.postalCode)
+    : parts.postalCode?.trim();
+  return [streetLine, locality, postalCode].filter(Boolean).join(', ');
 }
