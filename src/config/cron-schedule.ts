@@ -52,6 +52,7 @@ import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
+import { runHolidayHoursQuestion } from '@/lib/cron/jobs/holiday-hours-question.job';
 import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
@@ -346,6 +347,25 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 3,
     leaseMinutes: 5,
     run: runOutboundEmailFlush,
+  },
+  {
+    slug: 'holiday-hours-question',
+    path: '/api/cron/holiday-hours-question',
+    description: 'Ερώτηση «Θα είστε ανοιχτά στις αργίες;» προς διαχειριστές γραφείων (ADR-841 §7 Α21.21 Φάση Β)',
+    enabled: true,
+    // 🔑 **Ημερήσια, και ο ρυθμός προκύπτει από τη ΜΟΝΑΔΑ ΤΗΣ ΕΡΩΤΗΣΗΣ.** Η αργία είναι **ημέρα**, και το «21 ημέρες
+    // πριν» / «7 ημέρες πριν» μετριέται σε ημέρες. Ωριαία σάρωση θα ρωτούσε 24 φορές την ίδια ερώτηση για να
+    // απαντήσει διαφορετικά μία — και η επανάληψη είναι ούτως ή άλλως ακίνδυνη (κλειδί ντετερμινιστικό).
+    //
+    // ⚠️ **09:05 και όχι νύχτα**: η ερώτηση θέλει **άνθρωπο** να απαντήσει — ένα email στις 03:30 θάβεται κάτω από την
+    // πρωινή αλληλογραφία. Οι ώρες σιωπής του παραλήπτη ισχύουν ούτως ή άλλως (`email-delivery-window`). Λεπτό **5**:
+    // το `*/10` του `outbound-email-flush` κατέχει το 0.
+    schedule: '5 9 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runHolidayHoursQuestion,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────

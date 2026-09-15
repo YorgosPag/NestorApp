@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **15/09 — «POST ΑΠΟ ΚΟΥΜΠΙ ΜΕ ΡΗΤΕΣ ΦΑΣΕΙΣ» ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 5 ΣΗΜΕΙΑ (εύρημα ADR-841 Α21.21 Φάση Β)**
+
+  **Μετρημένο** (grep `setPhase({ kind: 'sending' })`): `MandateConsentContent` · `ShowcaseEmailConfirmationContent` · `EmailPreferencesPanel` ·
+  `useEmailConfirmationSend` · `useHolidayQuestionDecision`. Ίδιο σχήμα: `sending` → `fetch POST JSON` → `json().catch(()=>null)` →
+  επιτυχία ή λόγος → `catch ⇒ unavailable`. Στην Α21.21 εξήχθη **μόνο** το κομμάτι που είχε βλάβη (`lib/http/response-refusal.ts` →
+  `refusalOf`: το `ShowcaseEmailConfirmationContent` έκανε `reason as FailureReason` ⇒ άγνωστος κωδικός = ωμό κλειδί i18n) και η
+  κάρτα (`components/ui/auth-card-section.tsx`). **Μένει**: το `MandateConsentContent` κρατά **ανοιχτό** `reason: string` (όχι κλειστό
+  σύνολο — δικό του ελάττωμα N.11) και ο βρόχος φάσεων είναι 5 αντίγραφα. **Θεραπεία**: ένα `postForDecision<TBody, TOk, TReason>(path, body,
+  { readOk, known })` χωρίς React + λεπτά hooks· κλείσιμο του συνόλου λόγων της συγκατάθεσης εντολής. 5 αρχεία σε 3 τομείς ⇒ δική του φέτα.
+
 - 🟡 **15/09 — ΤΟ ΜΠΛΟΚ ΑΝΑΓΝΩΣΕΩΝ + ΕΞΑΙΡΕΣΕΩΝ ΤΩΝ ΠΙΝΑΚΩΝ ΚΑΝΟΝΩΝ ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ ~8 ΑΡΧΕΙΑ (εύρημα ADR-298 / ADR-841 Α23.6)**
 
   **Μετρημένο** (`npx jscpd --min-tokens 50 --format typescript tests/firestore-rules/_registry/`): **63 κλώνοι / 7.413 διπλά tokens (41,7%)**

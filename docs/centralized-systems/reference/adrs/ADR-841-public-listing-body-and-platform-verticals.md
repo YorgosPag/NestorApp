@@ -3413,6 +3413,7 @@ OwnerPropertyMedia.kind  ──►  PublicShelfSource.material  ──►  Publi
 | Ημ/νία | Τι |
 |---|---|
 | **2026-09-15** | ⚖️ **§7 Α23.12 — Φ4 Φέτα Β2: διατήρηση του αντιγράφου ΓΕΜΗ δεμένη με τον σκοπό.** Αλλαγή/σβήσιμο αριθμού στο προφίλ ⇒ διαγραφή **στην ίδια συναλλαγή** (σύντροφος `saveCompanySetup`) · «δεν υπάρχει» ⇒ διαγραφή **μόνο** αυτού του αριθμού · αίτημα κατόχου ⇒ `DELETE` + κουμπί με επιβεβαίωση · απάντηση για αριθμό που δεν δηλώνεται πια **δεν γράφεται** · κλείσιμο εταιρείας = **υποχρέωση** όταν γραφτεί. Έκλεισαν **δύο race** (τυφλό `set`/`delete`). Ίχνος `COMPANY_REGISTRY_COPY_ERASED` στην ίδια δέσμευση, χωρίς επωνυμία/έδρα. `isAnswerForNumber` = ένας κριτής (N.0.2). Jest 91/91 · μεταλλάξεις **12/12** · 3.28 ✅. ⚖️ 5(1)(ε) · 5(2) · 17 · 21. |
+| **2026-09-15** | 📨 **§7 Α21.21.7–Α21.21.12 — Φάση Β Φέτα 4: η σελίδα απάντησης χωρίς σύνδεση και ο δεύτερος έλεγχος στην αποστολή.** `app/(auth)/hours-question/[token]` (GET δείχνει, τα κουμπιά του email μόνο προσυμπληρώνουν) · λίστα ανά κατάστημα × ημερομηνία με «Κλειστά / Κανονικό ωράριο» (ίδια λέξη με τη φόρμα), «Ίδιο για όλες», «Πέρσι: …», μερική απάντηση · «Άλλο ωράριο» ⇒ φόρμα στον χώρο του γραφείου μέσα από `loginHref` (χώρος χωρίς διεύθυνση ⇒ κανένα κουμπί) · η φόρμα κερδίζει **και το λέει**. Πύλη αποστολής: `holidayQuestionsStillAsking` ⇒ `question-settled` (κλείνει το ⚠️ PARTIAL της Φέτας 3). N.0.2: `AuthCardSection` (4 οθόνες) · `refusalOf` (έκλεισε cast που θα έβγαζε ωμό κλειδί). routeSlice σφραγισμένο 3.294. Jest send-gate 13/13 · υπηρεσία + σελίδα 33/33. |
 | **2026-09-15** | ⚖️ **§7 Α23.11.1 — Φ4 Φέτα Α2: «Νομικά στοιχεία» στη δημόσια σελίδα (κλείνει το Δ6).** Εύρημα: το `legalIdentity` γραφόταν αλλά **κανένα δημόσιο component δεν το απέδιδε**. Νέο `LegalIdentityStatement` (επωνυμία · μορφή · ΓΕΜΗ · καταστατική έδρα · βεβαίωση με ημερομηνία) με **υπάρχοντα** κλειδιά για αριθμό/βεβαίωση — νέα μόνο τίτλος, έδρα, 4 μορφές. Ο ίδιος αριθμός ΓΕΜΗ λέγεται **μία** φορά (`credentialsBesideLegalIdentity`). JSON-LD `Organization`: `legalName` (όταν διαφέρει) + `address` της δημοσιευμένης έδρας (Google Organization). Jest 40/40 · μεταλλάξεις **7/7** · 3.28 ✅ · slice `/pro/[alias]` 6.610/6.898 (🔶 περιθώριο 288). ⚖️ καμία νέα επεξεργασία · 5(1)(δ) · 25(2). |
 | **2026-09-15** | ⚖️ **§7 Α23.11 — Φ4 Φέτα Α: η δημόσια σελίδα λέει «κλειστή στο ΓΕΜΗ».** Ετικέτα κάτω από το όνομα (Google Business Profile), κριτής ο υπάρχων `registryClosureOf`, ημερομηνία = ο **έλεγχος** · **το ίδιο κλειδί** με την πόρτα του κατόχου (καμία νέα πρόταση, άγκυρα ισότητας). JSON-LD κλειστής = **μόνο** `Organization` (Google: δεδομένα επίκαιρα και αληθινά· `dissolutionDate` απορρίφθηκε — θα ήταν ψέμα). **Κανένα `noindex`** (Google: μην αφαιρείς τη σελίδα). Όχι στις αγγελίες — καμία επαληθευμένη πρακτική. Jest 26/26 · μεταλλάξεις **5/5** · 3.28 ✅ · slice `/pro/[alias]` 6.129/6.898. 🔶 Κοινό regen i18n σε αναμονή εντολής. ⚖️ 5(1)(δ) · 5(1)(γ) · 14(2)(στ). |
 | **2026-09-15** | 🏛️ **§7 Α23.10 — Φ3.3 Φέτα Β: «Στοιχεία ΓΕΜΗ».** Υποσελίδα της βιτρίνας (Google Business Profile · Stripe· και η σφράγιση του slice): μόνιμη ένδειξη κλεισίματος με «Διόρθωση αριθμού ΓΕΜΗ»/«Απόσυρση» · «Επαλήθευση από ΓΕΜΗ» (έκλεισε η υπόσχεση χωρίς τόπο του μηνύματος άρνησης) · «Υιοθέτηση επωνυμίας ΓΕΜΗ» με προεπισκόπηση = `expectedLegalName`. **Ένας** κανόνας «υιοθετήσιμη;» για φρουρό και οθόνη (`adoptableRegistryCheckOf`) · **μία** απάντηση «πού στέκεται» (`registryStandingOf`, κλείσιμο πρώτα). Η πόρτα στη βιτρίνα γράφει την κατάσταση. «Όλα τα γραφεία» στις αρνήσεις `agency-closed`/`target-closed` με υπάρχον κλειδί. N.0.2: `APP_ROUTES.accountingSetup` · `ShowcaseDoorLink` · `ShowcaseWithdrawButton` · `legalIdentityFixture`. Κοινό regen i18n (έγκριση Giorgio), σφράγιση διαδρομής 6.358. Jest 99/1.171 · 3.28 ✅ · μεταλλάξεις **10/10** (η πρώτη εκτέλεση ακυρώθηκε και ξανάτρεξε σωστά — δες Α23.10) · 🔶 Π5 route slices κόκκινο μέχρι το commit (untracked αρχείο). ⚖️ 14(2)(στ) · 5(1)(γ) · 5(1)(δ) · 6(1)(β). |
@@ -8520,11 +8521,91 @@ Mailgun → `POST /api/communications/webhooks/mailgun/events` (JSON · υπογ
   10:00–14:00, 17:30–21:00 · Ειδικό ωράριο» · JSON-LD `validFrom` για 16/9 (δύο διαστήματα) και 25/12 (`00:00`–`00:00`).
 - ⚠️ **Όχι επαληθευμένα**: tsc (N.17) · pixel σε κινητό · σουίτα rules (καμία αλλαγή κανόνων — `agency_profiles` = `write: if false`).
 
-##### Α21.21.6 🔶 Φάση Β — δηλωμένη
+##### Α21.21.6 ✅ Φάση Β — υλοποιήθηκε (Α21.21.7–Α21.21.12)
 
-Ένα email **ανά εορταστική περίοδο**, **μόνο** για όσα επιστρέφει το `holidaysNeedingAnswer`: token `signed-token` · `GET` δείχνει / `POST` αποφασίζει
-(Α21.18) · «Κλειστά / Κανονικά / Άλλο ωράριο» · «όπως πέρσι» · `notification-preference-rows` + `email-delivery-window` · cron στο `cron-schedule.ts`.
+Ένα email **ανά εορταστική περίοδο**, **μόνο** για όσα επιστρέφει το `holidaysNeedingAnswer`: token ανά παραλήπτη · `GET` δείχνει / `POST` αποφασίζει
+(Α21.18) · «Κλειστά / Κανονικά / Άλλο ωράριο» · «πέρσι» · `notification-preference-rows` + `email-delivery-window` · cron στο `cron-schedule.ts`.
 **Δηλωμένα όρια της Α**: τοπικές αργίες (πολιούχοι, ΠΔ ανά δήμο) = δήλωση του επαγγελματία, **κανένας** κατάλογος· έκτακτες αργίες = ίδιο.
+
+##### Α21.21.7 📚 Φάση Β — έρευνα (πρωτογενείς πηγές)
+
+| Θέμα | Πηγή | Εύρημα ⇒ απόφαση |
+|---|---|---|
+| Google «hours might differ» | support.google.com/business/answer/6333474 | προειδοποίηση σε αργίες ⇒ ίδιο «ίσως διαφέρει» ως να απαντήσει ο επαγγελματίας |
+| Google Special hours / Review | support.google.com/business/answer/6303076 | «confirm… even if same as regular» ⇒ **«Κανονικό ωράριο»** είναι απάντηση, όχι σιωπή |
+| Ρυθμός email Google / Yelp | — | **δεν βρέθηκε πρωτογενώς** — δηλώνεται, δεν εικάζεται ⇒ δική μας πολιτική 21/7 ημέρες (`config/holiday-question-policy.ts`) |
+| Yelp | business.yelp.com/resources/articles/set-holiday-special-hours-yelp | «Add special hours», προτεινόμενες αργίες· **καμία** απάντηση από email χωρίς login |
+| Microsoft Safe Links | learn.microsoft.com/en-us/defender-office-365/safe-links-about | «URLs are scanned prior to message delivery» · «detonated asynchronously» ⇒ **το GET δεν γράφει ποτέ** |
+| Gmail bulk sender rules | support.google.com/mail/answer/14229414 | one-click unsubscribe για marketing· «recipients… determine the nature» ⇒ opt-out ανά τύπο παρ' όλα αυτά |
+| Ν.3471/2006 άρθ. 11 §5 | lawspot.gr/nomothesia/n-3471-2006/arthro-11 | ισχύει **και για νομικά πρόσωπα** ⇒ διακόπτης ανά τύπο + List-Unsubscribe· οδηγία ΑΠΔΠΧ service-vs-marketing: **δεν βρέθηκε** |
+| Μετάθεση Πρωτομαγιάς | ΥΑ 18743/14-4-2021 (4/5) · ypergasias 5/4/2024 (7/5) | ανακοινώνεται ~3–5 εβδομάδες πριν ⇒ **provisional δεν ρωτιέται ποτέ** |
+
+##### Α21.21.8 ✅ Φάση Β — αποφάσεις Giorgio
+
+- Παραλήπτες = **ενεργοί διαχειριστές του χώρου** (`ADMINISTRATIVE_ROLES`), όχι το δημόσιο email της κάρτας.
+- Χρονισμός = **21 ημέρες πριν** την πρώτη αναπάντητη αργία της περιόδου + **μία** υπενθύμιση στις **7**.
+- Παραμονές (24/12, 31/12) = **όχι τώρα** (ξεχωριστή φέτα) · provisional Πρωτομαγιά = **δεν ρωτιέται** ως να μπει απόφαση στο `greek-holiday-decisions.ts`.
+
+##### Α21.21.9 🏗️ Φάση Β — αρχιτεκτονική
+
+1. **Η κάρτα είναι η αλήθεια, η ερώτηση είναι ίχνος.** `holiday_hours_questions/hhq_*` (ντετερμινιστικό ανά γραφείο × περίοδο ⇒ δύο περάσματα cron = **ένα** έγγραφο)
+   κρατά μόνο «ρωτήσαμε, πότε, τι απαντήθηκε μέσω συνδέσμου». Σελίδα, κουμπί, υπενθύμιση **και** αποστολή ξαναρωτούν τον **ίδιο** κριτή πάνω στην κάρτα
+   (`pendingHolidayItems` → `seasonItems`) — ό,τι απαντήθηκε στη φόρμα δεν ξαναρωτιέται πουθενά.
+2. **Γεγονότα, όχι URL, στην ουρά** (`types/notification-email-facts.ts`): το email που περιμένει το παράθυρο των 20:00 υπογράφει τον σύνδεσμο **τη στιγμή
+   της αποστολής** (`notification-email-actions.ts`), με το origin και το μυστικό εκείνης της στιγμής, **ένας ανά παραλήπτη**.
+3. **GET δείχνει / POST αποφασίζει.** `app/(auth)/hours-question/[token]/page.tsx` → `readHolidayQuestion` (καμία εγγραφή) · τα τρία κουμπιά του email
+   είναι **μόνο προσυμπλήρωση** (`?answer=`) · `POST /api/holiday-hours-questions/[token]` → `decideHolidayQuestion` σε **μία συναλλαγή** (ερώτηση · κάρτα ·
+   κριτής ειδικών ωρών `applyHolidayAnswers` · στενός γραφέας `writeLocationSpecialHours` · σφράγισμα). Διπλό πάτημα / δύο διαχειριστές ⇒ μία ειδική μέρα.
+4. **«Άλλο ωράριο»** ⇒ η φόρμα της κάρτας **στον χώρο του γραφείου** (`workspaceDestinationOf`, ADR-849 Β1), τυλιγμένη σε `loginHref` επειδή το
+   `o/[workspace]/layout` στέλνει τον ανώνυμο σε σκέτο `/login` και θα έχανε τον προορισμό. Χώρος χωρίς διεύθυνση ⇒ `cardFormPath: null` ⇒ **κανένα** κουμπί προς 404.
+5. **Δεύτερος έλεγχος τη στιγμή της αποστολής** (κλείνει το ⚠️ PARTIAL της Φέτας 3): `gateQueuedEmails` ρωτά `holidayQuestionsStillAsking` για **κάθε**
+   μήνυμα με γεγονότα — ανοιχτή · ίδιο nonce · δεν έληξε · βιτρίνα δημοσιευμένη · μέρες που ακόμη περιμένουν. Όχι ⇒ `suppressed: 'question-settled'`
+   (νέο `SuppressReason`, **γεγονός του αιτήματος**, κρίνεται και για επείγον). Αποτυχία ανάγνωσης ⇒ **ρίχνει**, τα μηνύματα μένουν `pending` (δόγμα ADR-849 Δ4).
+   Ο φορτωτής φορτώνεται **δυναμικά** — πέρασμα χωρίς ερώτηση αργιών δεν πληρώνει τίποτα.
+
+##### Α21.21.10 🔍 Φάση Β — SSoT audit (grep πριν από κώδικα)
+
+| Υπήρχε | Χρήση |
+|---|---|
+| `card-email/[token]` (Α21.18): σελίδα + client + slice + `force-dynamic`/`noindex` | **ίδιο σχήμα** — προστέθηκε `no-referrer` (ο σύνδεσμος είναι διαπιστευτήριο) |
+| `usableQuestion` · `showcaseOf` · `seasonItems` (ιδιωτικά) | ένα `openQuestion` για σελίδα **και** πύλη αποστολής — κανένα δίδυμο· το `usableQuestion` κρίνει πλέον με `nonce` (το κουβαλούν σύνδεσμος **και** ουρά) |
+| `SHOWCASE_SPECIAL_KIND_KEYS` · `PROFILE_HOLIDAY_KEYS` · `PROFILE_ROLE_KEYS` · `formatCalendarDay` · Radix `RadioGroup` | «Κλειστά / Κανονικό ωράριο», ονόματα αργιών, «Έδρα» — **η ίδια λέξη** με φόρμα και βιτρίνα |
+| `gateQueuedEmails` με εγχεόμενο φορτωτή · `markSuppressed` | δεύτερος εγχεόμενος φορτωτής — καμία δεύτερη πύλη |
+| 🔴 **N.0.2** `section cardAuthWidth … border rounded-lg p-6` σε **4** οθόνες | **εξήχθη** `components/ui/auth-card-section.tsx` (`gap` κλειστό σύνολο 3/4/5 — μηδέν οπτική αλλαγή)· μετακόμισαν `GuestContactContent` · `EmailPreferencesPanel` · `NotificationPermalinkUnavailable` · `ShowcaseEmailConfirmationContent` |
+| 🔴 **N.0.2** `(body as {reason?})?.reason` σε 3 client αρχεία — το `ShowcaseEmailConfirmationContent` με **`as FailureReason`** (άγνωστος κωδικός ⇒ ωμό κλειδί i18n) | **εξήχθη** `lib/http/response-refusal.ts` → `refusalOf(body, known)`· χρήση σε νέο hook · `ShowcaseEmailConfirmationContent` · `useEmailConfirmationSend` |
+| `HolidayQuestionDecisionResponse` ζούσε στο **route** | μετακόμισε στο `types/holiday-hours-question.ts` — ο πελάτης δεν εισάγει αρχείο διακομιστή |
+| Βρόχος «POST με ρητές φάσεις» σε **5** σημεία | ⚠️ **όχι** τώρα (5 αρχεία / 3 τομείς) ⇒ `.claude-rules/pending-ratchet-work.md` |
+
+**Νέα αρχεία Φέτας 4**: `app/(auth)/hours-question/[token]/page.tsx` · `components/mandate/{HolidayQuestionContent,HolidayQuestionRows}.tsx` ·
+`components/mandate/holiday-question-labels.ts` · `hooks/mandate/useHolidayQuestionDecision.ts` · `components/ui/auth-card-section.tsx` · `lib/http/response-refusal.ts` ·
+σουίτα `components/mandate/__tests__/holiday-question-content.test.tsx`. **Αλλαγές**: `holiday-hours-question-decision.ts` · `types/holiday-hours-question.ts` ·
+`types/notification-email-facts.ts` · `email-send-gate.ts` · `email-delivery-window.ts` · route της πόρτας · locales `property-market` el/en ·
+`.i18n-shell-slice.json` (routeSlice `/hours-question/[token]`, σφραγισμένο **3.294 bytes**) + παραγόμενα.
+
+##### Α21.21.11 🏆 Φάση Β — πού ξεπερνάμε τους μεγάλους
+
+- **Χωρίς σύνδεση** (Google/Yelp ζητούν λογαριασμό) — με ασφάλεια Safe Links: το άνοιγμα δεν γράφει ποτέ.
+- **«Κανονικό ωράριο» ως απάντηση** — σβήνει το «ίσως διαφέρει» χωρίς να ξαναγραφτούν ώρες, και ακολουθεί το εβδομαδιαίο αν αλλάξει.
+- **«Πέρσι: Κλειστά»** — η μνήμη ζει στις λυμένες ερωτήσεις, κινητές αργίες κατά **ταυτότητα** (`easter-monday`), όχι ημερομηνία.
+- **Ένα email ανά περίοδο**, ποτέ για provisional μέρα, ποτέ για σήμερα · «Ίδιο για όλες» · **μερική** απάντηση που κρατά τις υπόλοιπες.
+- **Η φόρμα κερδίζει — και η σελίδα το ΛΕΕΙ** («κρατήθηκε η δήλωσή σας εκεί»), αντί να αντικαταστήσει σιωπηλά ή να αποτύχει.
+- **Email που έχασε το νόημά του δεν φεύγει** — «Κλειστά» στη φόρμα στις 15:00 σταματά το email των 20:00.
+
+##### Α21.21.12 🧪 Φάση Β — επαλήθευση, όρια, changelog
+
+- **Jest**: `email-send-gate` **13/13** (νέα `Ρ1–Ρ5`: σιγή με όνομα · φεύγει όταν ρωτά · μηδέν κόστος χωρίς γεγονότα · κρίνεται και το επείγον · ρίχνει) ·
+  `holiday-hours-question` (νέα `Δ6–Δ7` προορισμός φόρμας / χώρος χωρίς διεύθυνση · `Α1–Α3` «ακόμη ρωτά;») · `holiday-question-content` (λόγοι · προσυμπλήρωση ·
+  «Ίδιο για όλες» · μερική · η φόρμα κέρδισε · άγνωστος κωδικός ⇒ `unavailable` · 200 χωρίς αριθμό ≠ επιτυχία) — υπηρεσία **15/15** + σελίδα **18/18**.
+  Αγγιγμένα γειτονικά: `outbound-email-flush.job` · `first-contact-dead-end` (AuthCardSection) · `showcase-email-confirmation` · `notification-email-actions` **75/75**.
+- **Πύλες τοπικά**: 3.28 `jscpd:diff` ✅ (17 αρχεία) · 3.8 ✅ · 3.34 `--full` ✅ · route slices `Χ0–Χ4` ✅ (μετά το regen) · 3.52 shell-boundary ✅ · 3.55 prerender ✅ ·
+  🔶 `Π5` κόκκινο **μέχρι το commit** (διαβάζει με `git grep` ⇒ το untracked `HolidayQuestionContent.tsx` είναι αόρατο — ίδιο με την Α23.10) ·
+  🔴 **εκτός φέτας, προϋπάρχον**: `shell-surface-gate` Γ-Κ6 (`/test-harness/listing-shapes/page.tsx`, αμετάβλητο στο δέντρο, τελευταίο commit `c5a09f0e`).
+- **Όχι επαληθευμένα εδώ**: tsc (N.17) · σουίτα κανόνων σε emulator · 🔶 **ζωντανή δοκιμή**: εκκρεμεί `HOLIDAY_HOURS_QUESTION_SECRET` στο `.env.local`.
+- **Δηλωμένα όρια**: παραμονές (24/12, 31/12) · **βαθύς σύνδεσμος στην ημερομηνία** μέσα στη φόρμα (το `SpecialHoursField` δεν έχει μηχανισμό query/anchor —
+  ο σύνδεσμος ανοίγει τη φόρμα, όχι τη μέρα) · το `o/[workspace]/layout` χάνει το `next` για τον ανώνυμο (παρακάμφθηκε με `loginHref`, όχι διορθώθηκε στη ρίζα) ·
+  🔴 προϋπάρχον κόκκινο εκτός φέτας: `email-digest.test.ts` Η1/Η3 (ο `digestPreheader` του ADR-849 Β4 βάζει τους τίτλους και στο preheader).
+- **Changelog** — 2026-09-15: Φέτα 4 της Φάσης Β — σελίδα απάντησης χωρίς σύνδεση, δεύτερος έλεγχος στην πύλη αποστολής (`question-settled`),
+  εξαγωγές `AuthCardSection` + `refusalOf` (N.0.2), routeSlice `/hours-question/[token]`.
 
 #### Α22 🏆 **ΕΝΑ ΟΝΟΜΑ ΓΡΑΦΕΙΟΥ, ΜΙΑ ΔΙΕΥΘΥΝΣΗ ΒΙΤΡΙΝΑΣ** *(2026-09-14, ερώτημα Giorgio με στιγμιότυπο)*
 
