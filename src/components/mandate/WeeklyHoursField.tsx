@@ -1,98 +1,80 @@
 'use client';
 
 /**
- * @fileoverview **ΤΟ ΩΡΑΡΙΟ, ΗΜΕΡΑ-ΗΜΕΡΑ** — με σπαστά διαστήματα (ADR-841 §7 Α21.16).
- * @related lib/calendar/weekly-hours.ts (ο ΕΝΑΣ κριτής)
+ * @fileoverview **ΤΟ ΩΡΑΡΙΟ, ΗΜΕΡΑ-ΗΜΕΡΑ** — σπαστά διαστήματα, 24 ώρες, μετά τα μεσάνυχτα, πρότυπα (ADR-841 §7 Α21.16 · Α21.16.8).
+ * @related lib/calendar/weekly-hours.ts (ο ΕΝΑΣ κριτής) · lib/calendar/weekly-hours-editing.ts · WeeklyHoursDayRow.tsx
  * @module components/mandate/WeeklyHoursField
  *
  * 🔑 `<input type="time">` και όχι ελεύθερο κείμενο: ο φυλλομετρητής δίνει **ήδη** `HH:mm`, με
  * πληκτρολόγιο ώρας στο κινητό — ο κριτής μένει ως **δεύτερη ζώνη** για ό,τι δεν ήρθε από εδώ.
+ *
+ * 🔑 **Τα ελαττώματα ανά ημέρα από τον ΙΔΙΟ κριτή** (`weeklyHoursDefects`) που τρέχει ο διακομιστής —
+ * εδώ η ανάδραση, εκεί η εγγύηση· κανένα δεύτερο prop που μπορεί να διαφωνήσει με τις ώρες.
  */
 
 import React from 'react';
-import { Plus, X } from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatIsoWeekday } from '@/lib/intl-formatting';
+import { ISO_WEEKDAYS, weeklyHoursDefects, type WeeklyHours } from '@/lib/calendar/weekly-hours';
 import {
-  ISO_WEEKDAYS,
-  MAX_INTERVALS_PER_DAY,
-  type DailyInterval,
-  type IsoWeekday,
-  type WeeklyHours,
-  type WeeklyHoursDefect,
-} from '@/lib/calendar/weekly-hours';
-import {
-  SHOWCASE_CARD_HOURS_DEFECT_KEYS,
-  SHOWCASE_CARD_KEYS,
-  SHOWCASE_NS,
-} from '@/components/mandate/agency-showcase-labels';
+  copyDayTo,
+  WEEKLY_HOURS_PRESET_IDS,
+  WEEKLY_HOURS_PRESETS,
+  type WeeklyHoursPreset,
+} from '@/lib/calendar/weekly-hours-editing';
+import { SHOWCASE_CARD_KEYS, SHOWCASE_CARD_PRESET_KEYS, SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
+import { WeeklyHoursDayRow } from './WeeklyHoursDayRow';
 
 interface WeeklyHoursFieldProps {
   readonly hours: WeeklyHours;
-  readonly defect: WeeklyHoursDefect | null;
   readonly onChange: (hours: WeeklyHours) => void;
 }
 
-/** Νέο διάστημα: αμέσως μετά το τελευταίο — ποτέ επικαλυπτόμενο από την ίδια την πρόταση. */
-function nextInterval(day: readonly DailyInterval[]): DailyInterval {
-  const last = day[day.length - 1];
-  return last === undefined ? { opens: '09:00', closes: '17:00' } : { opens: last.closes, closes: last.closes };
-}
-
-function DayRow({
-  weekday,
-  intervals,
-  onDay,
-}: {
-  readonly weekday: IsoWeekday;
-  readonly intervals: readonly DailyInterval[];
-  readonly onDay: (intervals: readonly DailyInterval[]) => void;
-}): React.ReactElement {
+function PresetMenu({ onPreset }: { readonly onPreset: (preset: WeeklyHoursPreset) => void }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
-  const edit = (index: number, patch: Partial<DailyInterval>) =>
-    onDay(intervals.map((interval, at) => (at === index ? { ...interval, ...patch } : interval)));
-
   return (
-    <li className="flex flex-wrap items-center gap-2">
-      <span className="w-28 text-sm font-medium text-foreground">{formatIsoWeekday(weekday)}</span>
-      {intervals.length === 0 ? <span className="text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.dayClosed)}</span> : null}
-      {intervals.map((interval, index) => (
-        <span key={index} className="flex items-center gap-1">
-          <Input type="time" className="w-28" aria-label={t(SHOWCASE_CARD_KEYS.opensLabel)} value={interval.opens} onChange={(event) => edit(index, { opens: event.target.value })} />
-          <Input type="time" className="w-28" aria-label={t(SHOWCASE_CARD_KEYS.closesLabel)} value={interval.closes} onChange={(event) => edit(index, { closes: event.target.value })} />
-          <Button type="button" variant="ghost" size="icon" aria-label={t(SHOWCASE_CARD_KEYS.removeInterval)} onClick={() => onDay(intervals.filter((_, at) => at !== index))}>
-            <X aria-hidden="true" />
-          </Button>
-        </span>
-      ))}
-      {intervals.length < MAX_INTERVALS_PER_DAY ? (
-        <Button type="button" variant="ghost" size="icon" aria-label={t(SHOWCASE_CARD_KEYS.addInterval)} onClick={() => onDay([...intervals, nextInterval(intervals)])}>
-          <Plus aria-hidden="true" />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" size="sm" className="self-start">
+          <CalendarClock aria-hidden="true" /> {t(SHOWCASE_CARD_KEYS.presets)}
         </Button>
-      ) : null}
-    </li>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {WEEKLY_HOURS_PRESET_IDS.map((preset) => (
+          <DropdownMenuItem key={preset} onSelect={() => onPreset(preset)}>{t(SHOWCASE_CARD_PRESET_KEYS[preset])}</DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-export function WeeklyHoursField({ hours, defect, onChange }: WeeklyHoursFieldProps): React.ReactElement {
+export function WeeklyHoursField({ hours, onChange }: WeeklyHoursFieldProps): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
+  const defects = React.useMemo(
+    () => new Map(weeklyHoursDefects(hours).map(({ weekday, defect }) => [weekday, defect])),
+    [hours],
+  );
 
   return (
-    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+    <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
       <legend className="text-sm font-medium text-foreground">{t(SHOWCASE_CARD_KEYS.hoursLabel)}</legend>
+      <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.hoursHint)}</p>
+      <PresetMenu onPreset={(preset) => onChange(WEEKLY_HOURS_PRESETS[preset])} />
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {ISO_WEEKDAYS.map((weekday) => (
-          <DayRow key={weekday} weekday={weekday} intervals={hours[weekday]} onDay={(day) => onChange({ ...hours, [weekday]: day })} />
+          <WeeklyHoursDayRow
+            key={weekday}
+            weekday={weekday}
+            intervals={hours[weekday]}
+            defect={defects.get(weekday) ?? null}
+            onDay={(day) => onChange({ ...hours, [weekday]: day })}
+            onCopy={(group) => onChange(copyDayTo(hours, weekday, group))}
+          />
         ))}
       </ul>
-      {defect !== null ? (
-        <p role="alert" className="m-0 text-sm text-destructive">
-          {t(SHOWCASE_CARD_HOURS_DEFECT_KEYS[defect], { max: MAX_INTERVALS_PER_DAY })}
-        </p>
-      ) : null}
     </fieldset>
   );
 }

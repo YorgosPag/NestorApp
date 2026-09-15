@@ -279,6 +279,13 @@ export const PROFILE_KEYS = {
   cardToday: `${P}.cardToday`,
   cardClosedDay: `${P}.cardClosedDay`,
   cardOpenNow: `${P}.cardOpenNow`,
+  /** Α21.16.8 — βάρδια μετά τα μεσάνυχτα: «κλείνει αύριο στις 02:00» (το «αύριο» από το CLDR, όχι κλειδί). */
+  cardClosesLater: `${P}.cardClosesLater`,
+  /** Α21.16.8 — το «σύντομα» της Google (`SOON_MINUTES`). */
+  cardClosesSoon: `${P}.cardClosesSoon`,
+  cardOpensSoon: `${P}.cardOpensSoon`,
+  /** Α21.16.8 — **ένα** κλειδί για τη γραμμή της ημέρας **και** για το 24/7. */
+  cardOpenAllDay: `${P}.cardOpenAllDay`,
   cardOpensToday: `${P}.cardOpensToday`,
   cardOpensLater: `${P}.cardOpensLater`,
   cardClosedWeek: `${P}.cardClosedWeek`,

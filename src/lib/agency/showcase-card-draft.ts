@@ -10,7 +10,8 @@
  */
 
 import { revealablePhone } from '@/lib/contact/channel-phone';
-import { weeklyHoursDefect, type WeeklyHours, type WeeklyHoursDefect } from '@/lib/calendar/weekly-hours';
+import type { WeeklyHours } from '@/lib/calendar/weekly-hours';
+import { WEEKLY_HOURS_PRESETS } from '@/lib/calendar/weekly-hours-editing';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { ImportField, ImportOrigin } from '@/types/showcase-card-import';
 import type {
@@ -49,16 +50,11 @@ export interface ShowcaseLocationDraft {
   readonly placeHint: string | null;
 }
 
-/** Η προεπιλογή όταν ο άνθρωπος ανοίγει το ωράριο: Δευ–Παρ 09:00–17:00 — **πρόταση**, όχι δήλωση. */
-export const DEFAULT_WEEK: WeeklyHours = {
-  1: [{ opens: '09:00', closes: '17:00' }],
-  2: [{ opens: '09:00', closes: '17:00' }],
-  3: [{ opens: '09:00', closes: '17:00' }],
-  4: [{ opens: '09:00', closes: '17:00' }],
-  5: [{ opens: '09:00', closes: '17:00' }],
-  6: [],
-  7: [],
-};
+/**
+ * Η προεπιλογή όταν ο άνθρωπος ανοίγει το ωράριο: Δευ–Παρ 09:00–17:00 — **πρόταση**, όχι δήλωση.
+ * Α21.16.8 (N.0.2): είναι το πρότυπο `office` — όχι δεύτερο αντίγραφο της ίδιας εβδομάδας.
+ */
+export const DEFAULT_WEEK: WeeklyHours = WEEKLY_HOURS_PRESETS.office;
 
 let draftSequence = 0;
 
@@ -108,10 +104,6 @@ export function draftOfLocation(owned: OwnedShowcaseLocation): ShowcaseLocationD
   };
 }
 
-/** Το ελάττωμα ωραρίου **πριν** την υποβολή — ο **ίδιος** κριτής με τον διακομιστή. */
-export function draftHoursDefect(draft: ShowcaseLocationDraft): WeeklyHoursDefect | null {
-  return draft.hoursEnabled ? weeklyHoursDefect(draft.hours) : null;
-}
 
 /**
  * **Πρόχειρα → σύρμα**, ή ο δείκτης του πρώτου καταστήματος **χωρίς τόπο**.

@@ -88,6 +88,18 @@ export const formatIsoWeekday = (weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7, style: 'lon
   );
 
 /**
+ * The day an event falls on, counted from today: "tomorrow" (CLDR `Intl.RelativeTimeFormat`,
+ * `numeric: 'auto'`) when `inDays === 1`, otherwise the weekday name.
+ *
+ * WHY (ADR-841 §7 A21.16.8): "closes tomorrow at 02:00" for a shift past midnight — the word
+ * "tomorrow" is CLDR data too, so it costs no i18n key and no bytes in the public route slice.
+ */
+export const formatWeekdayFromToday = (weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7, inDays: number): string =>
+  inDays === 1
+    ? new Intl.RelativeTimeFormat(getCurrentLocale(), { numeric: 'auto' }).format(1, 'day')
+    : formatIsoWeekday(weekday);
+
+/**
  * Format date and time according to current locale
  *
  * ENTERPRISE: Handles both explicit style options (dateStyle/timeStyle)

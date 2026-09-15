@@ -10,6 +10,7 @@
 
 import { showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
 import type { WeeklyHours } from '@/lib/calendar/weekly-hours';
+import { WEEKLY_HOURS_PRESETS } from '@/lib/calendar/weekly-hours-editing';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
 import type { DeclaredShowcaseMark } from '@/types/agency-profile';
 import type { ShowcaseLocation } from '@/types/showcase-card';
@@ -136,6 +137,28 @@ describe('openingHoursSpecification', () => {
         opens: '10:00',
         closes: '14:00',
       },
+    ]);
+  });
+
+  it('Κ5 (Α21.16.8) — 24 ώρες ⇒ 00:00–23:59, όπως ορίζει η Google', () => {
+    expect(openingHoursSpecification(WEEKLY_HOURS_PRESETS['always-open'])).toEqual([
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: Object.values({
+          1: 'https://schema.org/Monday', 2: 'https://schema.org/Tuesday', 3: 'https://schema.org/Wednesday',
+          4: 'https://schema.org/Thursday', 5: 'https://schema.org/Friday', 6: 'https://schema.org/Saturday',
+          7: 'https://schema.org/Sunday',
+        }),
+        opens: '00:00',
+        closes: '23:59',
+      },
+    ]);
+  });
+
+  it('Κ6 (Α21.16.8) — μετά τα μεσάνυχτα ⇒ ΜΙΑ εγγραφή με closes < opens, ποτέ σπασμένη σε δύο ημέρες', () => {
+    const friday: WeeklyHours = { 1: [], 2: [], 3: [], 4: [], 5: [{ opens: '22:00', closes: '03:00' }], 6: [], 7: [] };
+    expect(openingHoursSpecification(friday)).toEqual([
+      { '@type': 'OpeningHoursSpecification', dayOfWeek: ['https://schema.org/Friday'], opens: '22:00', closes: '03:00' },
     ]);
   });
 });

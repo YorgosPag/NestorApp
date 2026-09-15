@@ -805,10 +805,27 @@
       "cardRemoveInterval": "Remove time slot",
       "cardOpensLabel": "From",
       "cardClosesLabel": "To",
+      "cardHoursHint": "For split hours, press “Add time slot”. If the closing time is earlier than the opening time, the slot closes the next day.",
+      "cardDayModeLabel": "Hours: {day}",
+      "cardDayOpen": "Open",
+      "cardDayAllDay": "Open 24 hours",
+      "cardEndsNextDay": "the next day",
+      "cardCopyDay": "Copy to…",
+      "cardCopyTo": {
+        "weekdays": "All weekdays",
+        "every-day": "Every day"
+      },
+      "cardPresets": "Hours template",
+      "cardPreset": {
+        "office": "Office · Monday–Friday 09:00–17:00",
+        "retail-split": "Greek retail split · afternoons on Tuesday, Thursday, Friday",
+        "always-open": "Open 24 hours, 7 days"
+      },
       "cardHoursDefect": {
         "time-malformed": "Write the time as HH:MM.",
-        "interval-empty": "The closing time must be after the opening time.",
+        "interval-empty": "The opening and closing times cannot be the same.",
         "intervals-overlap": "Two time slots on the same day overlap.",
+        "overlaps-previous-day": "Overlaps a time slot from the previous day that closes after midnight.",
         "too-many-intervals": "At most {max} time slots per day."
       },
       "cardSave": "Save card",
@@ -1079,6 +1096,10 @@
       "cardToday": "Today",
       "cardClosedDay": "Closed",
       "cardOpenNow": "Open now · closes at {time}",
+      "cardClosesLater": "Open now · closes {day} at {time}",
+      "cardClosesSoon": "Closes soon · at {time}",
+      "cardOpensSoon": "Opens soon · at {time}",
+      "cardOpenAllDay": "Open 24 hours",
       "cardOpensToday": "Closed · opens at {time}",
       "cardOpensLater": "Closed · opens {day} at {time}",
       "cardClosedWeek": "Closed",

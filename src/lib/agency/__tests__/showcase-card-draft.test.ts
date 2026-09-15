@@ -3,7 +3,6 @@
  */
 
 import {
-  draftHoursDefect,
   draftOfLocation,
   emptyLocationDraft,
   wireOfDrafts,
@@ -43,13 +42,17 @@ describe('showcase-card-draft', () => {
     expect(draft.street.street).toBe('Τσιμισκή');
   });
 
-  it('ωράριο απενεργοποιημένο ⇒ hours: null και κανένα ελάττωμα, ό,τι κι αν κρατά', () => {
+  it('ωράριο απενεργοποιημένο ⇒ hours: null στο σύρμα, ό,τι κι αν κρατά το πρόχειρο', () => {
+    // Α21.16.8: η ανάδραση ανά ημέρα ζει πλέον στη φόρμα (`weeklyHoursDefects`)· εδώ μένει η εγγύηση
+    // ότι ένα ΚΛΕΙΣΤΟ ωράριο με άκυρες κρατημένες ώρες δεν φτάνει ποτέ στον διακομιστή.
     const draft = {
       ...draftOfLocation(OWNED),
-      hours: { 1: [{ opens: '18:00', closes: '09:00' }], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] },
+      hoursEnabled: false,
+      hours: { 1: [{ opens: '18:00', closes: '18:00' }], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] },
     };
-    expect(draftHoursDefect(draft)).toBeNull();
-    expect(draftHoursDefect({ ...draft, hoursEnabled: true })).toBe('interval-empty');
+    const formed = wireOfDrafts([draft], '');
+    if (!('wire' in formed)) throw new Error('missing place');
+    expect(formed.wire.locations[0].hours).toBeNull();
   });
 
   it('κενή ετικέτα/εσωτερικό → null στο σύρμα', () => {

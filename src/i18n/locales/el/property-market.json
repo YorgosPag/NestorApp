@@ -805,10 +805,27 @@
       "cardRemoveInterval": "Αφαίρεση διαστήματος",
       "cardOpensLabel": "Από",
       "cardClosesLabel": "Έως",
+      "cardHoursHint": "Για σπαστό ωράριο πατήστε «Προσθήκη διαστήματος». Αν η ώρα λήξης είναι νωρίτερα από την ώρα έναρξης, το διάστημα κλείνει την επόμενη μέρα.",
+      "cardDayModeLabel": "Ωράριο: {day}",
+      "cardDayOpen": "Ανοιχτά",
+      "cardDayAllDay": "Ανοιχτά 24 ώρες",
+      "cardEndsNextDay": "την επόμενη μέρα",
+      "cardCopyDay": "Αντιγραφή σε…",
+      "cardCopyTo": {
+        "weekdays": "Όλες τις καθημερινές",
+        "every-day": "Όλες τις ημέρες"
+      },
+      "cardPresets": "Πρότυπο ωραρίου",
+      "cardPreset": {
+        "office": "Γραφείο · Δευτέρα–Παρασκευή 09:00–17:00",
+        "retail-split": "Εμπορικό σπαστό · Τρίτη, Πέμπτη, Παρασκευή και απόγευμα",
+        "always-open": "Ανοιχτά 24 ώρες, 7 ημέρες"
+      },
       "cardHoursDefect": {
         "time-malformed": "Γράψτε την ώρα ως ΩΩ:ΛΛ.",
-        "interval-empty": "Η ώρα λήξης πρέπει να είναι μετά την ώρα έναρξης.",
+        "interval-empty": "Η ώρα έναρξης και η ώρα λήξης δεν μπορούν να είναι ίδιες.",
         "intervals-overlap": "Δύο διαστήματα της ίδιας ημέρας επικαλύπτονται.",
+        "overlaps-previous-day": "Επικαλύπτεται με διάστημα της προηγούμενης ημέρας που κλείνει μετά τα μεσάνυχτα.",
         "too-many-intervals": "Έως {max} διαστήματα ανά ημέρα."
       },
       "cardSave": "Αποθήκευση κάρτας",
@@ -1079,6 +1096,10 @@
       "cardToday": "Σήμερα",
       "cardClosedDay": "Κλειστά",
       "cardOpenNow": "Ανοιχτό τώρα · κλείνει στις {time}",
+      "cardClosesLater": "Ανοιχτό τώρα · κλείνει {day} στις {time}",
+      "cardClosesSoon": "Κλείνει σύντομα · στις {time}",
+      "cardOpensSoon": "Ανοίγει σύντομα · στις {time}",
+      "cardOpenAllDay": "Ανοιχτό 24 ώρες",
       "cardOpensToday": "Κλειστό · ανοίγει στις {time}",
       "cardOpensLater": "Κλειστό · ανοίγει {day} στις {time}",
       "cardClosedWeek": "Κλειστό",

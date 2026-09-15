@@ -29,7 +29,7 @@
  * **Layering**: leaf — καθαρή συνάρτηση, καμία ανάγνωση.
  */
 
-import { ISO_WEEKDAYS, type IsoWeekday, type WeeklyHours } from '@/lib/calendar/weekly-hours';
+import { END_OF_DAY, ISO_WEEKDAYS, type IsoWeekday, type WeeklyHours } from '@/lib/calendar/weekly-hours';
 import type { JsonLdValue } from '@/lib/seo/json-ld';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import type { PublicShowcase } from '@/types/agency-profile';
@@ -53,13 +53,24 @@ export interface ShowcaseStructuredDataContext {
 }
 
 /**
+ * Α21.16.8 — **Google Search Central (LocalBusiness)**: «ανοιχτό 24 ώρες» = `opens 00:00` + `closes 23:59`·
+ * μετά τα μεσάνυχτα = **μία** εγγραφή με `closes` μικρότερο του `opens` (το δικό μας σχήμα, αυτούσιο).
+ * Άρα η μόνη μετάφραση είναι το `24:00` του σχήματος → `23:59`.
+ */
+const SCHEMA_END_OF_DAY = '23:59';
+
+const schemaTime = (time: string): string => (time === END_OF_DAY ? SCHEMA_END_OF_DAY : time);
+
+/**
  * **Ωράριο → `openingHoursSpecification`** — ημέρες με **ίδιο** διάστημα ομαδοποιούνται (όπως στα
  * παραδείγματα της Google)· σπαστό ωράριο = μία εγγραφή ανά διάστημα. Κλειστή ημέρα **παραλείπεται**.
  */
 export function openingHoursSpecification(hours: WeeklyHours): JsonLdValue[] {
   const groups = new Map<string, { readonly opens: string; readonly closes: string; readonly days: string[] }>();
   for (const weekday of ISO_WEEKDAYS) {
-    for (const { opens, closes } of hours[weekday]) {
+    for (const interval of hours[weekday]) {
+      const opens = interval.opens;
+      const closes = schemaTime(interval.closes);
       const key = `${opens}-${closes}`;
       const group = groups.get(key) ?? { opens, closes, days: [] };
       group.days.push(SCHEMA_DAY[weekday]);

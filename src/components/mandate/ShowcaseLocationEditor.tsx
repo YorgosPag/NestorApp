@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { draftHoursDefect, type ShowcaseLocationDraft } from '@/lib/agency/showcase-card-draft';
+import type { ShowcaseLocationDraft } from '@/lib/agency/showcase-card-draft';
 import { withoutProvenance } from '@/lib/agency/showcase-card-import';
 import { usePlaceResolver, type ResolvedPlace } from '@/hooks/geo/usePlaceResolver';
 import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
@@ -150,7 +150,7 @@ function HoursSection({ draft, onChange }: Omit<ShowcaseLocationEditorProps, 'on
         <Label htmlFor={`${id}-hours`}>{t(SHOWCASE_CARD_KEYS.hoursDeclare)}</Label>
       </span>
       {draft.hoursEnabled ? (
-        <WeeklyHoursField hours={draft.hours} defect={draftHoursDefect(draft)} onChange={(hours) => onChange({ ...draft, hours })} />
+        <WeeklyHoursField hours={draft.hours} onChange={(hours) => onChange({ ...draft, hours })} />
       ) : null}
     </section>
   );

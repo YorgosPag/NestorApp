@@ -26,6 +26,7 @@ import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-v
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import type { CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
 import type { WeeklyHoursDefect } from '@/lib/calendar/weekly-hours';
+import type { DayMode, WeekdayGroup, WeeklyHoursPreset } from '@/lib/calendar/weekly-hours-editing';
 import type { ShowcaseLocationRole } from '@/types/showcase-card';
 
 /** Το namespace της βιτρίνας — **`property-market`**, το ίδιο με τον κατάλογο. */
@@ -316,6 +317,12 @@ export const SHOWCASE_CARD_KEYS = {
   removeInterval: `${K}.cardRemoveInterval`,
   opensLabel: `${K}.cardOpensLabel`,
   closesLabel: `${K}.cardClosesLabel`,
+  /** Α21.16.8 — λέει **πού** ζει το σπαστό ωράριο και τι σημαίνει λήξη πριν την έναρξη. */
+  hoursHint: `${K}.cardHoursHint`,
+  dayModeLabel: `${K}.cardDayModeLabel`,
+  endsNextDay: `${K}.cardEndsNextDay`,
+  copyDay: `${K}.cardCopyDay`,
+  presets: `${K}.cardPresets`,
   save: `${K}.cardSave`,
   saving: `${K}.cardSaving`,
   saved: `${K}.cardSaved`,
@@ -376,6 +383,26 @@ export const SHOWCASE_CARD_ROLE_KEYS: Record<ShowcaseLocationRole, string> = {
   branch: `${K}.cardRoleBranch`,
 };
 
+/** Α21.16.8 — **λειτουργία ημέρας → ετικέτα**· το «Κλειστά» είναι το ΙΔΙΟ κλειδί με τη γραμμή της ημέρας. */
+export const SHOWCASE_CARD_DAY_MODE_KEYS: Record<DayMode, string> = {
+  open: `${K}.cardDayOpen`,
+  'all-day': `${K}.cardDayAllDay`,
+  closed: `${K}.cardDayClosed`,
+};
+
+/** Α21.16.8 — **ομάδα ημερών αντιγραφής → ετικέτα**. */
+export const SHOWCASE_CARD_COPY_GROUP_KEYS: Record<WeekdayGroup, string> = {
+  weekdays: `${K}.cardCopyTo.weekdays`,
+  'every-day': `${K}.cardCopyTo.every-day`,
+};
+
+/** Α21.16.8 — **πρότυπο ωραρίου → ετικέτα**. */
+export const SHOWCASE_CARD_PRESET_KEYS: Record<WeeklyHoursPreset, string> = {
+  office: `${K}.cardPreset.office`,
+  'retail-split': `${K}.cardPreset.retail-split`,
+  'always-open': `${K}.cardPreset.always-open`,
+};
+
 // ADR-841 §7 Α21.19 — οι πίνακες της «εισαγωγής από τα στοιχεία της εταιρείας» ζουν στο
 // `agency-showcase-import-labels.ts` (χωρίστηκαν στις 500 γραμμές, N.7.1).
 
@@ -387,6 +414,7 @@ export const SHOWCASE_CARD_HOURS_DEFECT_KEYS: Record<WeeklyHoursDefect, string> 
   'time-malformed': `${K}.cardHoursDefect.time-malformed`,
   'interval-empty': `${K}.cardHoursDefect.interval-empty`,
   'intervals-overlap': `${K}.cardHoursDefect.intervals-overlap`,
+  'overlaps-previous-day': `${K}.cardHoursDefect.overlaps-previous-day`,
   'too-many-intervals': `${K}.cardHoursDefect.too-many-intervals`,
 };
 

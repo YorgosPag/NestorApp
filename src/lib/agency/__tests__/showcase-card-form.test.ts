@@ -139,7 +139,8 @@ describe('formCard — οι ονομασμένες αρνήσεις', () => {
     ['agency-profile-card-street-incomplete', [declared({ street: { street: 'Τσιμισκή', number: '12', postalCode: '' } })]],
     [
       'agency-profile-card-hours-invalid',
-      [declared({ hours: { 1: [{ opens: '18:00', closes: '09:00' }], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] } })],
+      // Α21.16.8: το 18:00–09:00 είναι πλέον ΕΓΚΥΡΗ βάρδια μετά τα μεσάνυχτα — άκυρο μένει το ίσο.
+      [declared({ hours: { 1: [{ opens: '18:00', closes: '18:00' }], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] } })],
     ],
   ] as const)('%s', (reason, list) => {
     expect(reasonOf(list)).toBe(reason);
