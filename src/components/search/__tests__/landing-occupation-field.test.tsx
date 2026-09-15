@@ -104,6 +104,8 @@ function showcase(companyId: string, credentials: readonly ShowcaseCredential[])
     place: null,
     position: { lat: 40.64, lng: 22.94 },
     publishedAt: '2026-09-01T10:00:00.000Z',
+    coverage: null,
+    mark: null,
   } as unknown as PublicShowcase;
 }
 

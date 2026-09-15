@@ -2859,6 +2859,18 @@ CHECK 3.61)* και η διαδρομή γράφεται **χωρίς** πρόθ
 
 ## 11. Changelog
 
+- **2026-09-15** — 🔴 **ΚΑΛΩΝ ΠΟΥ ΔΕΝ ΑΚΟΛΟΥΘΗΣΕ ΤΗ ΜΕΤΟΝΟΜΑΣΙΑ `near` → `where` (Φ2)**. Το
+  `components/search/PlaceSearchBox.tsx` (ADR-841 Α4.5, 09-04) έστελνε ακόμη
+  `serializeShowcaseFilters({ occupation, near })` ⇒ στην εκτέλεση `filters.where === undefined` περνούσε το
+  `!== null` ⇒ `isAdministrativeWhere(undefined)` ⇒ **TypeError στην υποβολή αναζήτησης επαγγελματιών από τη
+  ρίζα**. Το έκρυβε ότι τρεις σουίτες του `components/search/__tests__` έσκαγαν ήδη νωρίτερα (fixture αγγελίας
+  χωρίς `priceReduction`, ADR-777 §8.69). Διόρθωση: `where: { circle: { center, radiusKm } }` — το ίδιο σχήμα που
+  παράγει το `readWhere`. Δεύτερο εύρημα της ίδιας κλάσης με το `mark: null`: το κοινό
+  `showcase-profile-fixture.ts` δεν είχε `coverage` ⇒ `isNationwide(undefined)` στην `AgencyCard` ⇒ `coverage: null`
+  στο **ένα** fixture (+ στο χειρόγραφο `showcase()` του `landing-occupation-field`). Άγκυρα: οι Κ2 του
+  `landing-occupation-field.test.tsx` («ΜΟΝΟ τόπος ⇒ lat/lng/r») εκτελούν ακριβώς αυτή τη διαδρομή.
+  ⚠️ **Γιατί πέρασε**: ο τύπος είναι λάθος (υπερβάλλον `near`, λείπει `where`) — το πιάνει μόνο ο έλεγχος τύπων.
+
 - **2026-09-10** — 🔒 **Η ΑΓΚΥΡΑ ΑΠΟΔΟΣΗΣ ΠΟΥ ΕΛΕΙΠΕ ΣΤΗ ΦΑΣΗ 6** *(§8.9)*. Το ίδιο το ADR
   **δήλωνε** το κενό αντί να το κρύψει: *«**Δεν** υπάρχει άγκυρα **απόδοσης** που να εκτελεί
   το `brokered={false}` και να απαιτεί σιωπή»* — η μόνη μαρτυρία ήταν το ζωντανό περπάτημα,

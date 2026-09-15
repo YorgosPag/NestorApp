@@ -131,9 +131,12 @@ function destinationFor(
   const filters = landingModeFilters(mode, center);
 
   if (filters === null) {
+    // 🔴 ADR-846 Φ2 μετονόμασε τον άξονα `near` → `where` (κλειστή ένωση κύκλος | διοικητική
+    //    περιοχή). Αυτός ο καλών έμεινε στο `near` ⇒ `filters.where === undefined` περνούσε το
+    //    `!== null` του σειριοποιητή ⇒ `isAdministrativeWhere(undefined)` ⇒ TypeError στην υποβολή.
     const params = serializeShowcaseFilters({
       occupation,
-      near: center === null ? null : { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM },
+      where: center === null ? null : { circle: { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM } },
     });
     return agencyDirectoryHref(params.toString());
   }

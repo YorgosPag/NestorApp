@@ -46,5 +46,8 @@ export function showcaseProfile(companyId: string, displayName: string): PublicS
     alias: companyId,
     credentials: [],
     mark: null,
+    // 🔴 Ίδια κλάση με το `mark` (ADR-846): απόν `coverage` περνά το `coverage === null`
+    //    της `AgencyCard` ⇒ `isNationwide(undefined)` ⇒ η καρτέλα σκάει.
+    coverage: null,
   } as unknown as PublicShowcase;
 }
