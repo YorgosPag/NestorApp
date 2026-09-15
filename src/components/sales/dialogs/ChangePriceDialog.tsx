@@ -5,7 +5,6 @@
  * @description Dialog for updating the asking price of a unit
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
@@ -18,27 +17,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { NumericField } from '@/components/ui/numeric-field';
 import { DollarSign } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BaseDialogProps } from './sales-dialog-utils';
-import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { useSalesDialogBase } from './use-sales-dialog-base';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { nowISO } from '@/lib/date-local';
 
 export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
-  const colors = useSemanticColors();
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const iconSizes = useIconSizes();
-  const { success, error: notifyError } = useNotifications();
+  const { colors, t, iconSizes, success, notifyError, saving, setSaving, guarded } = useSalesDialogBase(unit);
+  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = guarded;
   // ADR-706: the model is a plain number and 0 means "no price yet" — the field
   // renders blank on 0 so the dialog still opens on its placeholder.
   const [askingPrice, setAskingPrice] = useState<number>(unit.commercial?.askingPrice ?? 0);
-  const [saving, setSaving] = useState(false);
-  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   // Sync state when dialog opens or unit data changes
   useEffect(() => {
@@ -68,8 +60,10 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };
-      const completed = await runExistingPropertyUpdate(unit, updates as Record<string, unknown>);
-      if (!completed) {
+      // 🔴 ADR-777 §8.69.13 — ήταν `false` ΠΡΙΝ την απόφαση ⇒ μετά το «Συνέχεια» ο διάλογος έμενε
+      // ανοιχτός ενώ η τιμή είχε αποθηκευτεί. Τώρα η έκβαση έρχεται ΜΕΤΑ την πράξη· `failed` ⇒ catch.
+      const outcome = outcomeOrThrow(await runExistingPropertyUpdate(unit, updates as Record<string, unknown>));
+      if (outcome !== 'completed') {
         return;
       }
       onOpenChange(false);

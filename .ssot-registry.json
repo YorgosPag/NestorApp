@@ -603,7 +603,7 @@
     },
     "impact-guard-hook": {
       "ssotFile": "src/hooks/impact-guard/useProjectImpactGuard.tsx",
-      "description": "Guards over ProjectMutationImpactPreview must bind useProjectImpactGuard (ADR-664). Only the SSoT renders ProjectMutationImpactDialog or declares the fail-safe preview; siblings supply scope+endpoint only. Client mirror of ADR-591 (server primitives).",
+      "description": "Guards over ProjectMutationImpactPreview must bind useProjectImpactGuard (ADR-664). Only the SSoT renders ProjectMutationImpactDialog or declares the fail-safe preview; siblings supply scope+endpoint only. Client mirror of ADR-591 (server primitives). ADR-777 §8.69.13: the decision state machine itself (preview → dialog → action → named GuardOutcome resolved AFTER the action) lives in src/hooks/impact-guard/useImpactDecision.ts + guard-result.ts, shared by the project, property and contact guards — never re-implement a deferred-action ref or a fire-and-forget confirm.",
       "forbiddenPatterns": [
         "<ProjectMutationImpactDialog",
         "buildUnavailableProjectImpactPreview\\s*\\(\\s*\\)\\s*:"

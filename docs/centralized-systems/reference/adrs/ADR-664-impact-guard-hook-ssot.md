@@ -83,5 +83,55 @@ The `src/hooks/ ↔ src/hooks/` cluster has more beyond this family — `useEnti
 - `npm run jscpd:check` → **2926/3059**. ⚠️ The tree is shared with other agents' uncommitted work, so that figure is not this ADR alone; the isolated, measured contribution is **−24 clones**.
 - ❌ No `tsc` (N.17 — agents do not run TypeScript checks).
 
+## Addendum — ONE decision core for all three guard families *(2026-09-15, ADR-777 §8.69.13)*
+
+**The defect (live test, ADR-777 §8.69.11 #3):** Sales → «Αλλαγή Τιμής» → impact dialog (`warn`) → «Συνέχεια» ⇒ `PATCH 200`,
+but the price dialog stayed open with no message. The same machine existed **three** times (this ADR merged six project
+hooks and deliberately left property + contact out) and in all three it resolved `false` **before** the human decided,
+then ran the confirmed action **fire-and-forget** (`setTimeout(() => void action())`). No caller ever learned the outcome;
+`usePropertiesSidebar` even showed «success» when the guard **blocked**.
+
+**Decision:** promise-based confirmation (Radix discussion #1328 · react-confirm) in one core, bound by all three families.
+
+| Module | Role |
+|---|---|
+| `src/hooks/impact-guard/guard-result.ts` | **Pure** (no React): `GuardOutcome = 'completed' \| 'cancelled' \| 'blocked' \| 'failed'` · `GuardResult` (`failed` carries the error) · `runGuardedAction` · `outcomeOrThrow` |
+| `src/hooks/impact-guard/useImpactDecision.ts` | The state machine: `guard({ fetchPreview, unavailablePreview, action })` resolves **after** the action; `dialogProps` for any impact dialog; `onBlockDismiss`; `checking` |
+| `useProjectImpactGuard` · `usePropertyMutationImpactGuard` · `useContactMutationImpactGuard` | Bindings: endpoint + dialog + (property/contact) when a preview is needed at all |
+
+- **INP gain kept:** dialog closes first, action runs in the next task — only the promise now resolves *after* it.
+- **Radix order:** `AlertDialogAction` runs `onClick` (confirm) **before** `onOpenChange(false)`; confirm *takes* the pending
+  decision, so the close that follows cannot cancel it (anchor Ε6).
+- **No hanging promise:** unmount / `reset` / a second call while pending ⇒ `cancelled` (newest intent wins).
+- **Caller rule:** success only on `completed`; `outcomeOrThrow` rethrows `failed` into the caller's **existing** catch
+  (`translatePropertyMutationError`); silence on `cancelled`/`blocked`.
+- **Callers fixed:** ChangePriceDialog · RevertDialog · use-sales-action-mutation · usePropertyInlineEdit · usePropertiesSidebar ·
+  usePropertyViewer · PropertyDetailsContent (building link: cancel is no longer reported as an error) · PropertyFieldsBlock ·
+  LinkedSpacesCard (rollback only after the decision) · GeneralProjectTab · ProjectBrokersTab · ProjectAssociationsTab ·
+  useTitleBlockApproval (approval now recorded after «Συνέχεια») · useContactUpdateGuards → executeGuardedContactUpdate →
+  useGuardedContactMutation → useContactSubmission / useContactDetailsController / usePersonaToggle. Landowners, labor
+  compliance and ownership-table callers report inside their own action and needed no change.
+- 🗑️ `blockedUnsafeClear` removed: its only producer always returned `false` (grep).
+- Boy-scout (CHECK 3.28 on touched files, all pre-existing): `useGuardedContactMutation` twin updaters · `ProjectBrokersTab`
+  twin agreement cards · `GeneralProjectTab` form values (initial vs sync, already diverging on `description`) · contact
+  deferred save (`utils/contactForm/deferred-save.ts`) · sales dialog header (`use-sales-dialog-base.ts`).
+
+**Anchors:** new `useImpactDecision.test.tsx` (12) · `useProjectImpactGuard.test.tsx` (13, adapted) · bindings · contact guard ·
+new caller anchors `change-price-dialog-outcome.test.tsx` (4) and `usePropertiesSidebar-outcome.test.tsx` (4).
+**Mutations 4/4 red:** resolve before the action (2) · dismiss ⇒ `completed` (4) · action error ⇒ `completed` (2) · sidebar
+ignores the outcome (2). Jest over hooks/sales/property/projects/contacts/title-block: **84/85 suites** — the one red is
+`useSelectedEntityUrlState` (unrelated: `url-query-state` went async in `8c1f8fd7`). `jscpd:diff` on every touched file: **0**.
+
+**Declared limits:**
+1. A contact update the guard *chain* hands to one of its own dialogs resolves `cancelled` for the caller — that dialog
+   (`createGuardHandlers`) reports its own outcome.
+2. Callers keep their `saving` state while the (modal) impact dialog is open.
+3. Unmount after «Συνέχεια» does not abort the scheduled action; it still runs and resolves.
+4. The registry module `impact-guard-hook` was re-described, not given a new pattern (a new pattern needs a golden example and
+   a baseline run — not an agent task, N.12).
+
 ## Changelog
+- **2026-09-15** — **ONE decision core for property, project and contact guards** (Addendum above, ADR-777 §8.69.13): named
+  outcome resolved after the action · `guard-result.ts` + `useImpactDecision.ts` · 3 families + 6 bindings + 17 callers ·
+  12+4+4 new anchors, mutations 4/4 · 5 boy-scout clone fixes.
 - **2026-07-16** — Created. New `impact-guard/useProjectImpactGuard.tsx` SSoT + 6 hook migrations + 2 test files (31 tests). Fixed dead `previewRef` in 3 hooks and unstable `reset` in 2. jscpd −24 clones in the fileset.

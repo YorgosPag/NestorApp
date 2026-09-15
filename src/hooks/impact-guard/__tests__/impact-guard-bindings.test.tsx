@@ -10,6 +10,7 @@
 import { act, renderHook } from '@testing-library/react';
 import type { ProjectMutationImpactPreview } from '@/types/project-mutation-impact';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import type { GuardResult } from '../guard-result';
 import { useProjectBrokerTerminateImpactGuard } from '../../useProjectBrokerTerminateImpactGuard';
 import { useProjectEngineerRemoveImpactGuard } from '../../useProjectEngineerRemoveImpactGuard';
 import { useProjectLandownersSaveImpactGuard } from '../../useProjectLandownersSaveImpactGuard';
@@ -93,7 +94,7 @@ const BINDINGS: readonly Binding[] = [
   },
 ];
 
-type PreviewMethod = (req: typeof REQUEST, action: () => Promise<void>) => Promise<boolean>;
+type PreviewMethod = (req: typeof REQUEST, action: () => Promise<void>) => Promise<GuardResult>;
 
 /** Renders the binding and calls its own preview method, whatever it is named. */
 async function runBinding(binding: Binding, action: () => Promise<void>): Promise<void> {

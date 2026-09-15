@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData, ViewerPassthroughProps, ViewerPassthroughPropsWithFloors } from '../types';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -42,7 +43,9 @@ export function usePropertiesSidebar(
         throw new Error(`Property ${propertyId} not found in sidebar context.`);
       }
 
-      await runExistingPropertyUpdate(currentProperty, updates);
+      // 🔴 ADR-777 §8.69.13 — εδώ έβγαινε «επιτυχία» ΚΑΙ όταν ο φύλακας μπλόκαρε ή ο άνθρωπος ακύρωσε.
+      const outcome = outcomeOrThrow(await runExistingPropertyUpdate(currentProperty, updates));
+      if (outcome !== 'completed') return;
       success(t('viewer.messages.updateSuccess'));
       logger.info(`Property ${propertyId} updated in Firestore:`, { data: Object.keys(updates) });
     } catch (error) {

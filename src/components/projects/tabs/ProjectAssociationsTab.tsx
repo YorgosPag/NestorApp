@@ -11,6 +11,7 @@
 import { useCallback } from 'react';
 import { EntityAssociationsManager } from '@/components/associations/EntityAssociationsManager';
 import { useGuardedEngineerRemoval } from '@/hooks/useGuardedEngineerRemoval';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 
 interface ProjectAssociationsTabProps {
@@ -26,7 +27,8 @@ export function ProjectAssociationsTab({ project, data }: ProjectAssociationsTab
 
   const handleRemoveIntercept = useCallback(
     (contactId: string, role: string, proceed: () => Promise<void>) => {
-      void runRemoveOperation({ contactId, role }, proceed);
+      // ADR-777 §8.69.13 — `failed` ξαναγίνεται απόρριψη, όπως ήταν πάντα η αποτυχία του `proceed`.
+      void runRemoveOperation({ contactId, role }, proceed).then(outcomeOrThrow);
     },
     [runRemoveOperation],
   );

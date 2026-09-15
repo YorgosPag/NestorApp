@@ -16,6 +16,7 @@
 
 import { useCallback } from 'react';
 import type { ReactNode } from 'react';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useProjectImpactGuard } from '@/hooks/impact-guard/useProjectImpactGuard';
 
@@ -29,9 +30,9 @@ export interface UseIkaLaborComplianceSaveImpactGuardReturn {
    *   - allow  → executes `action` immediately
    *   - warn   → shows dialog; `action` runs on confirm
    *   - block  → shows dialog; no action possible
-   * Returns true if action was executed immediately, false otherwise.
+   * Resolves a named `GuardResult` AFTER the outcome is known (ADR-777 §8.69.13).
    */
-  previewBeforeSave: (action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeSave: (action: () => Promise<void>) => Promise<GuardResult>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }

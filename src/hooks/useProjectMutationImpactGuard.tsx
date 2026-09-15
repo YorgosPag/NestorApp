@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { ProjectUpdatePayload } from '@/services/projects-client.service';
 import {
@@ -10,7 +11,7 @@ import {
 
 interface UseProjectMutationImpactGuardReturn {
   checking: boolean;
-  previewBeforeMutate: (updates: ProjectUpdatePayload, action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeMutate: (updates: ProjectUpdatePayload, action: () => Promise<void>) => Promise<GuardResult>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }

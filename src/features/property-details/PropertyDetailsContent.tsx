@@ -43,6 +43,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { usePropertyEditCapability } from '@/hooks/usePropertyEditCapability';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
@@ -194,7 +195,8 @@ export function PropertyDetailsContent({
         return;
       }
 
-      await runExistingPropertyUpdate(resolvedProperty, updates);
+      // ADR-777 §8.69.13 — `failed` (και μετά από `warn`) ⇒ στο catch του `safeOnUpdateProperty`.
+      outcomeOrThrow(await runExistingPropertyUpdate(resolvedProperty, updates));
     },
     [isReadOnly, resolvedProperty, runExistingPropertyUpdate]
   );
@@ -254,7 +256,7 @@ export function PropertyDetailsContent({
     const shouldClearCode = !nextBuildingId && !!resolvedProperty.code;
 
     try {
-      const completed = await runPreviewedMutation(
+      const outcome = outcomeOrThrow(await runPreviewedMutation(
         {
           buildingId: nextBuildingId,
           floorId: nextFloorId,
@@ -269,11 +271,11 @@ export function PropertyDetailsContent({
             clearCode: shouldClearCode,
           });
         },
-      );
+      ));
 
-      return completed
-        ? { success: true }
-        : { success: false, error: t('entityLinks.error') };
+      // ADR-777 §8.69.13 — ακύρωση/μπλοκάρισμα ΔΕΝ είναι σφάλμα: ο διάλογος εξήγησε ήδη. Πριν,
+      // έδειχνε «σφάλμα» ΚΑΙ σε `warn` που ο άνθρωπος θα επιβεβαίωνε ένα δευτερόλεπτο μετά.
+      return outcome === 'completed' ? { success: true } : { success: false };
     } catch (error) {
       const translatedError = translatePropertyMutationError(error, t);
       notifyError(translatedError);

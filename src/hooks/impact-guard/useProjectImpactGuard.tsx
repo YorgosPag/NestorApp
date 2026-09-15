@@ -14,18 +14,21 @@
  * places — endpoint, log scope, and whether the caller wants `onBlockDismiss` —
  * so those three are the parameters here and nothing else is.
  *
- * Google INP pattern: the dialog closes first, the browser yields, and only then
- * does the mutation run. Confirmed dropping INP from ~380ms to <100ms.
+ * 🔗 ADR-777 §8.69.13 — the state machine itself now lives in `useImpactDecision`,
+ * shared with the property and contact guards. This binding only says **which**
+ * endpoint and **which** dialog. `previewBefore` resolves a named `GuardResult`
+ * **after** the action has finished (never a boolean returned before the decision).
  *
- * @enterprise ADR-307 — Mutation Impact Guards · ADR-584 (N.18 de-duplication)
+ * @enterprise ADR-307 — Mutation Impact Guards · ADR-584 (N.18) · ADR-664
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectMutationImpactPreview } from '@/types/project-mutation-impact';
 import { ProjectMutationImpactDialog } from '@/components/projects/dialogs/ProjectMutationImpactDialog';
-import { createModuleLogger } from '@/lib/telemetry';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
+import { useImpactDecision, type ImpactDecisionOptions } from '@/hooks/impact-guard/useImpactDecision';
 
 /** The preview shown when the endpoint itself fails: block, with no detail to show. */
 export function buildUnavailableProjectImpactPreview(): ProjectMutationImpactPreview {
@@ -41,21 +44,18 @@ export function buildUnavailableProjectImpactPreview(): ProjectMutationImpactPre
   };
 }
 
-export interface ProjectImpactGuardOptions {
-  /** Called when the user dismisses a `block` dialog (not on warn/allow). */
-  readonly onBlockDismiss?: () => void;
-}
+export type ProjectImpactGuardOptions = ImpactDecisionOptions;
 
 export interface ProjectImpactGuard<TRequest> {
   /** True while the preview request is in-flight. */
   readonly checking: boolean;
   /**
-   * Call this instead of the raw mutation:
-   *   - allow → runs `action` immediately, resolves true
-   *   - warn  → shows the dialog; `action` runs on confirm, resolves false
-   *   - block → shows the dialog; `action` never runs, resolves false
+   * Call this instead of the raw mutation. Resolves **after** the outcome is known:
+   *   - allow → runs `action` ⇒ `completed` | `failed`
+   *   - warn  → shows the dialog ⇒ confirm runs `action` (`completed` | `failed`), dismiss ⇒ `cancelled`
+   *   - block → shows the dialog; `action` never runs ⇒ `blocked`
    */
-  readonly previewBefore: (request: TRequest, action: () => Promise<void>) => Promise<boolean>;
+  readonly previewBefore: (request: TRequest, action: () => Promise<void>) => Promise<GuardResult>;
   readonly reset: () => void;
   readonly ImpactDialog: ReactNode;
 }
@@ -65,89 +65,19 @@ export function useProjectImpactGuard<TRequest>(
   endpoint: string,
   options: ProjectImpactGuardOptions = {},
 ): ProjectImpactGuard<TRequest> {
-  const [checking, setChecking] = useState(false);
-  const [preview, setPreview] = useState<ProjectMutationImpactPreview | null>(null);
-  const [open, setOpen] = useState(false);
-  const deferredActionRef = useRef<(() => Promise<void>) | null>(null);
-  const previewRef = useRef<ProjectMutationImpactPreview | null>(null);
-
-  const logger = useMemo(() => createModuleLogger(scope), [scope]);
-
-  // Read through a ref so a caller passing an inline `{ onBlockDismiss }` literal
-  // does not re-create `reset` — and with it the whole dialog — on every render.
-  const onBlockDismissRef = useRef(options.onBlockDismiss);
-  onBlockDismissRef.current = options.onBlockDismiss;
-
-  const reset = useCallback(() => {
-    const dismissed = previewRef.current;
-    setOpen(false);
-    setPreview(null);
-    deferredActionRef.current = null;
-    previewRef.current = null;
-
-    if (dismissed?.mode === 'block') {
-      onBlockDismissRef.current?.();
-    }
-  }, []);
-
-  // Google INP pattern: close dialog first, yield to browser, then execute mutation.
-  const handleConfirm = useCallback(() => {
-    const action = deferredActionRef.current;
-    reset();
-    if (action) {
-      setTimeout(() => void action(), 0);
-    }
-  }, [reset]);
-
-  const showPreview = useCallback((next: ProjectMutationImpactPreview) => {
-    previewRef.current = next;
-    setPreview(next);
-    setOpen(true);
-    setChecking(false);
-  }, []);
+  const { checking, guard, reset, dialogProps } = useImpactDecision<ProjectMutationImpactPreview>(scope, options);
 
   const previewBefore = useCallback(
-    async (request: TRequest, action: () => Promise<void>): Promise<boolean> => {
-      setChecking(true);
-      try {
-        const impactPreview = await apiClient.post<ProjectMutationImpactPreview>(endpoint, request);
-
-        if (impactPreview.mode === 'allow') {
-          setChecking(false);
-          await action();
-          return true;
-        }
-
-        deferredActionRef.current = impactPreview.mode === 'warn' ? action : null;
-        showPreview(impactPreview);
-        return false;
-      } catch (error) {
-        if (ApiClientError.isApiClientError(error)) {
-          logger.error(`Preview failed (${error.statusCode}): ${error.message}`);
-        } else {
-          logger.error('Preview failed', { error });
-        }
-        deferredActionRef.current = null;
-        showPreview(buildUnavailableProjectImpactPreview());
-        return false;
-      }
-    },
-    [endpoint, logger, showPreview],
+    (request: TRequest, action: () => Promise<void>): Promise<GuardResult> =>
+      guard({
+        fetchPreview: () => apiClient.post<ProjectMutationImpactPreview>(endpoint, request),
+        unavailablePreview: buildUnavailableProjectImpactPreview,
+        action,
+      }),
+    [endpoint, guard],
   );
 
-  const ImpactDialog = useMemo(
-    () => (
-      <ProjectMutationImpactDialog
-        open={open}
-        preview={preview}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) reset();
-        }}
-        onConfirm={handleConfirm}
-      />
-    ),
-    [handleConfirm, open, preview, reset],
-  );
+  const ImpactDialog = useMemo(() => <ProjectMutationImpactDialog {...dialogProps} />, [dialogProps]);
 
   return { checking, previewBefore, reset, ImpactDialog };
 }

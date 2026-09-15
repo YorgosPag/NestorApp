@@ -1,33 +1,63 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+/**
+ * useContactMutationImpactGuard — φύλακας επιπτώσεων ταυτότητας επαφής (φυσικό πρόσωπο / υπηρεσία).
+ *
+ * 🔗 ADR-777 §8.69.13 — η μηχανή «preview → απόφαση → πράξη» ζει στο `useImpactDecision`, κοινή με
+ * ακίνητα και έργα. Εδώ μόνο: **πότε** χρειάζεται preview, **ποιο** endpoint, **ποιος** διάλογος.
+ * Η υπόσχεση λύνεται **μετά** την πράξη, με ονομασμένη έκβαση (ήταν `{ completed: false }`
+ * **πριν** την απόφαση, και η πράξη μετά την επιβεβαίωση έτρεχε fire-and-forget).
+ *
+ * @enterprise ADR-664 (impact-guard SSoT) · ADR-278 (η εταιρεία ανήκει στο `runGuardChain`)
+ */
+
+import { useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { detectIndividualIdentityChanges } from '@/utils/contactForm/individual-identity-guard';
 import { detectServiceIdentityChanges } from '@/utils/contactForm/service-identity-guard';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
 import { ContactIdentityImpactDialog } from '@/components/contacts/dialogs/ContactIdentityImpactDialog';
-
-interface MutationResult {
-  readonly completed: boolean;
-  readonly blockedUnsafeClear: boolean;
-}
+import { runGuardedAction, type GuardResult } from '@/hooks/impact-guard/guard-result';
+import { useImpactDecision } from '@/hooks/impact-guard/useImpactDecision';
 
 interface UseContactMutationImpactGuardReturn {
-  readonly previewBeforeMutate: (formData: ContactFormData, action: () => Promise<void>) => Promise<MutationResult>;
+  readonly previewBeforeMutate: (formData: ContactFormData, action: () => Promise<void>) => Promise<GuardResult>;
   readonly ImpactDialogs: ReactNode;
 }
 
-function logPreviewError(scope: string, error: unknown): void {
-  if (ApiClientError.isApiClientError(error)) {
-    console.error(`[${scope}] Preview failed (${error.statusCode}):`, error.message);
-    return;
+/** Πού και τι ρωτάμε — ή `null` όταν η αλλαγή δεν χρειάζεται preview. */
+interface IdentityPreviewTarget {
+  readonly endpoint: string;
+  readonly changes: unknown;
+}
+
+function identityPreviewTarget(
+  editContact: Contact | null | undefined,
+  formData: ContactFormData,
+): IdentityPreviewTarget | null {
+  if (!editContact?.id || editContact.type !== formData.type) return null;
+
+  if (editContact.type === 'individual') {
+    const detection = detectIndividualIdentityChanges(editContact, formData);
+    return detection.requiresImpactPreview
+      ? { endpoint: API_ROUTES.CONTACTS.IDENTITY_IMPACT_PREVIEW(editContact.id), changes: detection.changes }
+      : null;
   }
 
-  console.error(`[${scope}] Preview failed:`, error);
+  if (editContact.type === 'service') {
+    const detection = detectServiceIdentityChanges(editContact, formData);
+    return detection.requiresImpactPreview
+      ? { endpoint: API_ROUTES.CONTACTS.SERVICE_IDENTITY_IMPACT_PREVIEW(editContact.id), changes: detection.changes }
+      : null;
+  }
+
+  // Company identity is handled exclusively by runGuardChain (Guard #3, ADR-278)
+  // via useContactUpdateGuards. Delegate here to avoid a duplicated dialog.
+  return null;
 }
 
 function buildUnavailablePreview(
@@ -78,120 +108,24 @@ function buildUnavailablePreview(
 export function useContactMutationImpactGuard(
   editContact?: Contact | null,
 ): UseContactMutationImpactGuardReturn {
-  const [identityPreview, setIdentityPreview] = useState<ContactIdentityImpactPreview | null>(null);
-  const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
-  const deferredActionRef = useRef<(() => Promise<void>) | null>(null);
+  const { guard, dialogProps } = useImpactDecision<ContactIdentityImpactPreview>('useContactMutationImpactGuard');
 
-  const resetIdentityDialog = useCallback(() => {
-    setIdentityDialogOpen(false);
-    setIdentityPreview(null);
-    deferredActionRef.current = null;
-  }, []);
+  const previewBeforeMutate = useCallback(
+    (formData: ContactFormData, action: () => Promise<void>): Promise<GuardResult> => {
+      const target = identityPreviewTarget(editContact, formData);
+      if (target === null) return runGuardedAction(action);
 
-  // 🏢 GOOGLE-LEVEL INP: Decouple dialog dismiss from mutation execution.
-  // Close dialog first, yield to browser for paint, then execute mutation.
-  const handleIdentityConfirm = useCallback(() => {
-    const action = deferredActionRef.current;
-    resetIdentityDialog();
-    if (action) {
-      setTimeout(() => void action(), 0);
-    }
-  }, [resetIdentityDialog]);
+      return guard({
+        fetchPreview: () =>
+          apiClient.post<ContactIdentityImpactPreview>(target.endpoint, { changes: target.changes }),
+        unavailablePreview: () => buildUnavailablePreview(formData, editContact),
+        action,
+      });
+    },
+    [editContact, guard],
+  );
 
-  const previewBeforeMutate = useCallback(async (formData: ContactFormData, action: () => Promise<void>): Promise<MutationResult> => {
-    if (!editContact || !editContact.id || editContact.type !== formData.type) {
-      await action();
-      return { completed: true, blockedUnsafeClear: false };
-    }
+  const ImpactDialogs = useMemo(() => <ContactIdentityImpactDialog {...dialogProps} />, [dialogProps]);
 
-    // Company identity is handled exclusively by runGuardChain (Guard #3, ADR-278)
-    // via useContactUpdateGuards. Delegate here to avoid a duplicated dialog.
-    if (editContact.type === 'company') {
-      await action();
-      return { completed: true, blockedUnsafeClear: false };
-    }
-
-    if (editContact.type === 'individual') {
-      const detection = detectIndividualIdentityChanges(editContact, formData);
-      if (!detection.requiresImpactPreview) {
-        await action();
-        return { completed: true, blockedUnsafeClear: false };
-      }
-
-      try {
-        const preview = await apiClient.post<ContactIdentityImpactPreview>(
-          API_ROUTES.CONTACTS.IDENTITY_IMPACT_PREVIEW(editContact.id),
-          { changes: detection.changes },
-        );
-
-        if (preview.mode === 'allow') {
-          await action();
-          return { completed: true, blockedUnsafeClear: false };
-        }
-
-        deferredActionRef.current = preview.mode === 'warn' ? action : null;
-        setIdentityPreview(preview);
-        setIdentityDialogOpen(true);
-        return { completed: false, blockedUnsafeClear: false };
-      } catch (error) {
-        logPreviewError('useContactMutationImpactGuard/individual', error);
-        deferredActionRef.current = null;
-        setIdentityPreview(buildUnavailablePreview(formData, editContact));
-        setIdentityDialogOpen(true);
-        return { completed: false, blockedUnsafeClear: false };
-      }
-    }
-
-    const detection = detectServiceIdentityChanges(editContact, formData);
-    if (!detection.requiresImpactPreview) {
-      await action();
-      return { completed: true, blockedUnsafeClear: false };
-    }
-
-    try {
-      const preview = await apiClient.post<ContactIdentityImpactPreview>(
-        API_ROUTES.CONTACTS.SERVICE_IDENTITY_IMPACT_PREVIEW(editContact.id),
-        { changes: detection.changes },
-      );
-
-      if (preview.mode === 'allow') {
-        await action();
-        return { completed: true, blockedUnsafeClear: false };
-      }
-
-      deferredActionRef.current = preview.mode === 'warn' ? action : null;
-      setIdentityPreview(preview);
-      setIdentityDialogOpen(true);
-      return { completed: false, blockedUnsafeClear: false };
-    } catch (error) {
-      logPreviewError('useContactMutationImpactGuard/service', error);
-      deferredActionRef.current = null;
-      setIdentityPreview(buildUnavailablePreview(formData, editContact));
-      setIdentityDialogOpen(true);
-      return { completed: false, blockedUnsafeClear: false };
-    }
-  }, [editContact]);
-
-  const ImpactDialogs = useMemo(() => (
-    <ContactIdentityImpactDialog
-      open={identityDialogOpen}
-      preview={identityPreview}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          resetIdentityDialog();
-        }
-      }}
-      onConfirm={handleIdentityConfirm}
-    />
-  ), [
-    handleIdentityConfirm,
-    identityDialogOpen,
-    identityPreview,
-    resetIdentityDialog,
-  ]);
-
-  return {
-    previewBeforeMutate,
-    ImpactDialogs,
-  };
+  return { previewBeforeMutate, ImpactDialogs };
 }

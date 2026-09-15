@@ -13,6 +13,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property, PropertyType } from '@/types/property';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 
 interface UsePropertyInlineEditReturn {
@@ -84,8 +85,9 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
         throw new Error(t('inlineEdit.updateError'));
       }
 
-      const completed = await runExistingPropertyUpdate(editingProperty, payload);
-      if (!completed) {
+      // ADR-777 §8.69.13 — η έκβαση έρχεται ΜΕΤΑ την απόφαση και την πράξη· `failed` ⇒ catch.
+      const outcome = outcomeOrThrow(await runExistingPropertyUpdate(editingProperty, payload));
+      if (outcome !== 'completed') {
         return;
       }
 

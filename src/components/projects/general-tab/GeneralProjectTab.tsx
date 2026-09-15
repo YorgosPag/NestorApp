@@ -21,6 +21,7 @@ import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useGuardedProjectMutation } from '@/hooks/useGuardedProjectMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { useProjectCreate } from '@/hooks/useProjectCreate';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
@@ -46,6 +47,45 @@ interface ExtendedGeneralProjectTabProps extends GeneralProjectTabProps {
 function normalizeGuardValue(value: string | number | null | undefined): string {
   if (typeof value === 'number') return String(value);
   return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * **Οι τιμές της φόρμας από το έργο** — ΜΙΑ αντιστοίχιση για την αρχική κατάσταση ΚΑΙ τον συγχρονισμό
+ * (N.18 / CHECK 3.28: ήταν γραμμένη δύο φορές, με ήδη αποκλίνουσα γραφή στο `description`).
+ */
+function projectFormValuesFrom(
+  project: ExtendedGeneralProjectTabProps['project'],
+  fallbackCompanyId: string,
+): ProjectFormData {
+  return {
+    name: project.name,
+    licenseTitle: project.title,
+    description: project.description || '',
+    buildingBlock: project.buildingBlock || '',
+    protocolNumber: project.protocolNumber || '',
+    licenseNumber: project.licenseNumber || '',
+    issuingAuthority: project.issuingAuthority || '',
+    issueDate: project.issueDate || '',
+    // 🏢 Google-level create mode: no silent default. An empty status forces
+    // the user to make an explicit choice, enforced by pre-flight validation
+    // in `handleSave`. In edit mode, the existing `project.status` flows
+    // through unchanged via the sync effect.
+    status: project.status ?? '',
+    companyName: project.companyName,
+    companyId: project.companyId || fallbackCompanyId,
+    type: project.type || '',
+    priority: project.priority || '',
+    riskLevel: project.riskLevel || '',
+    complexity: project.complexity || '',
+    budget: project.budget || '',
+    totalValue: project.totalValue || '',
+    totalArea: project.totalArea || '',
+    duration: project.duration || '',
+    startDate: project.startDate || '',
+    completionDate: project.completionDate || '',
+    client: project.client || '',
+    location: project.location || '',
+  };
 }
 
 function hasImpactTrackedChanges(
@@ -85,35 +125,9 @@ export function GeneralProjectTab({
   const isEditing = externalIsEditing ?? localIsEditing;
   const setIsEditing = onSetEditing ?? setLocalIsEditing;
 
-  const [projectData, setProjectData] = useState<ProjectFormData>({
-    name: project.name,
-    licenseTitle: project.title,
-    description: project.description || '',
-    buildingBlock: project.buildingBlock || '',
-    protocolNumber: project.protocolNumber || '',
-    licenseNumber: project.licenseNumber || '',
-    issuingAuthority: project.issuingAuthority || '',
-    issueDate: project.issueDate || '',
-    // 🏢 Google-level create mode: no silent default. An empty status forces
-    // the user to make an explicit choice, enforced by pre-flight validation
-    // in `handleSave`. In edit mode, the existing `project.status` flows
-    // through unchanged via the sync effect below.
-    status: project.status ?? '',
-    companyName: project.companyName,
-    companyId: project.companyId || fallbackCompanyId,
-    type: project.type || '',
-    priority: project.priority || '',
-    riskLevel: project.riskLevel || '',
-    complexity: project.complexity || '',
-    budget: project.budget || '',
-    totalValue: project.totalValue || '',
-    totalArea: project.totalArea || '',
-    duration: project.duration || '',
-    startDate: project.startDate || '',
-    completionDate: project.completionDate || '',
-    client: project.client || '',
-    location: project.location || '',
-  });
+  const [projectData, setProjectData] = useState<ProjectFormData>(
+    () => projectFormValuesFrom(project, fallbackCompanyId),
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -249,32 +263,7 @@ export function GeneralProjectTab({
       return;
     }
     if (isEditing) return;
-    setProjectData(prev => ({
-      ...prev,
-      name: project.name,
-      licenseTitle: project.title,
-      status: project.status ?? '',
-      companyName: project.companyName,
-      companyId: project.companyId || fallbackCompanyId,
-      description: project.description ?? '',
-      buildingBlock: project.buildingBlock || '',
-      protocolNumber: project.protocolNumber || '',
-      licenseNumber: project.licenseNumber || '',
-      issuingAuthority: project.issuingAuthority || '',
-      issueDate: project.issueDate || '',
-      type: project.type || '',
-      priority: project.priority || '',
-      riskLevel: project.riskLevel || '',
-      complexity: project.complexity || '',
-      budget: project.budget || '',
-      totalValue: project.totalValue || '',
-      totalArea: project.totalArea || '',
-      duration: project.duration || '',
-      startDate: project.startDate || '',
-      completionDate: project.completionDate || '',
-      client: project.client || '',
-      location: project.location || '',
-    }));
+    setProjectData(prev => ({ ...prev, ...projectFormValuesFrom(project, fallbackCompanyId) }));
   }, [fallbackCompanyId, project, isEditing, isCreateMode]);
 
   const handleSave = useCallback(async () => {
@@ -344,7 +333,8 @@ export function GeneralProjectTab({
       }
 
       const payload = buildUpdatePayload(projectData);
-      await runExistingProjectUpdate(payload, async () => {
+      // ADR-777 §8.69.13 — `failed` (και μετά από `warn`, όπου χανόταν) ⇒ στο catch ⇒ `saveError`.
+      outcomeOrThrow(await runExistingProjectUpdate(payload, async () => {
         setIsSaving(true);
         try {
           logger.info('Updating project...', { data: projectData, payload });
@@ -359,7 +349,7 @@ export function GeneralProjectTab({
         } finally {
           setIsSaving(false);
         }
-      });
+      }));
     } catch (error) {
       logger.error('Error saving project:', { error });
       setSaveError(error instanceof Error ? error.message : 'Failed to save project');

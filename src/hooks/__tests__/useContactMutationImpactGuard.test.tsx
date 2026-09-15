@@ -6,6 +6,7 @@ import { initialFormData, type ContactFormData } from '@/types/ContactFormTypes'
 import type { CompanyContact, Contact, IndividualContact, ServiceContact } from '@/types/contacts';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 
 jest.mock('@/lib/api/enterprise-api-client', () => ({
   apiClient: {
@@ -108,16 +109,11 @@ function makeFormData(overrides: Partial<ContactFormData> = {}): ContactFormData
   };
 }
 
-interface MutationResult {
-  completed: boolean;
-  blockedUnsafeClear: boolean;
-}
-
 interface HarnessProps {
   contact: Contact;
   formData: ContactFormData;
   action: jest.MockedFunction<() => Promise<void>>;
-  onResult: (result: MutationResult) => void;
+  onResult: (result: GuardResult) => void;
 }
 
 function Harness({ contact, formData, action, onResult }: HarnessProps) {
@@ -177,7 +173,7 @@ describe('useContactMutationImpactGuard', () => {
 
     await waitFor(() => {
       expect(action).toHaveBeenCalledTimes(1);
-      expect(onResult).toHaveBeenCalledWith({ completed: true, blockedUnsafeClear: false });
+      expect(onResult).toHaveBeenCalledWith({ outcome: 'completed' });
     });
     expect(mockedApiClient.post).not.toHaveBeenCalled();
   });
@@ -220,12 +216,15 @@ describe('useContactMutationImpactGuard', () => {
 
     expect(await screen.findByTestId('identity-impact-dialog')).toHaveAttribute('data-mode', 'warn');
     expect(action).not.toHaveBeenCalled();
-    expect(onResult).toHaveBeenCalledWith({ completed: false, blockedUnsafeClear: false });
+    // 🔴 ADR-777 §8.69.13 — ΚΑΜΙΑ έκβαση πριν την απόφαση (ήταν `{ completed: false }` αμέσως, και η
+    // πράξη μετά την επιβεβαίωση έτρεχε χωρίς κανείς να μάθει αν πέτυχε).
+    expect(onResult).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByText('confirm-identity'));
 
     await waitFor(() => {
       expect(action).toHaveBeenCalledTimes(1);
+      expect(onResult).toHaveBeenCalledWith({ outcome: 'completed' });
     });
   });
 
@@ -250,7 +249,7 @@ describe('useContactMutationImpactGuard', () => {
 
     await waitFor(() => {
       expect(action).toHaveBeenCalledTimes(1);
-      expect(onResult).toHaveBeenCalledWith({ completed: true, blockedUnsafeClear: false });
+      expect(onResult).toHaveBeenCalledWith({ outcome: 'completed' });
     });
     expect(mockedApiClient.get).not.toHaveBeenCalled();
     expect(screen.queryByTestId('company-impact-dialog')).not.toBeInTheDocument();
@@ -286,7 +285,7 @@ describe('useContactMutationImpactGuard', () => {
 
     await waitFor(() => {
       expect(action).toHaveBeenCalledTimes(1);
-      expect(onResult).toHaveBeenCalledWith({ completed: true, blockedUnsafeClear: false });
+      expect(onResult).toHaveBeenCalledWith({ outcome: 'completed' });
     });
   });
 });

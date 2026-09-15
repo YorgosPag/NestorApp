@@ -96,7 +96,8 @@ jest.mock('@/hooks/useGuardedLandownersSave', () => ({
     checking: false,
     reset: jest.fn(),
     ImpactDialog: null,
-    runSaveOperation: async (_req: unknown, action: () => Promise<void>) => { await action(); return true; },
+    // ADR-777 §8.69.13 — ο φύλακας επιστρέφει ονομασμένη έκβαση, όχι boolean.
+    runSaveOperation: async (_req: unknown, action: () => Promise<void>) => { await action(); return { outcome: 'completed' }; },
   }),
 }));
 jest.mock('@/i18n/hooks/useTranslation', () => ({

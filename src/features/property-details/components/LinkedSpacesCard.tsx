@@ -33,6 +33,7 @@ import type { SpaceInclusionType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { updatePropertyLinkedSpacesWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { usePropertyNotifications } from '@/hooks/notifications/usePropertyNotifications';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
@@ -113,7 +114,9 @@ export function LinkedSpacesCard({
     if (!propertyId) return;
     setSaving(true);
     try {
-      const completed = await runPreviewedMutation({ linkedSpaces: newDraft }, async () => {
+      // 🔴 ADR-777 §8.69.13 — η επαναφορά γινόταν ΑΜΕΣΩΣ σε `warn` (πριν την απόφαση), και η επιβεβαιωμένη
+      // αποθήκευση άφηνε την οθόνη στο ΠΑΛΙΟ πρόχειρο. Τώρα κρίνεται ΜΕΤΑ την έκβαση.
+      const outcome = outcomeOrThrow(await runPreviewedMutation({ linkedSpaces: newDraft }, async () => {
         await updatePropertyLinkedSpacesWithPolicy({
           propertyId,
           currentProperty: { buildingId },
@@ -124,8 +127,8 @@ export function LinkedSpacesCard({
         propertyNotifications.linkedSpaces[action]();
         onLinkedSpacesChanged?.(newDraft);
         setTimeout(() => setSaveStatus('idle'), 3000);
-      });
-      if (!completed) {
+      }));
+      if (outcome !== 'completed') {
         setDraftLinkedSpaces(rollback);
       }
     } catch (error) {

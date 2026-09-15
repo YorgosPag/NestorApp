@@ -1,13 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { EngineerRemoveImpactRequest } from '@/lib/firestore/project-engineer-remove-impact.service';
 import { useProjectImpactGuard } from '@/hooks/impact-guard/useProjectImpactGuard';
 
 interface UseProjectEngineerRemoveImpactGuardReturn {
   checking: boolean;
-  previewBeforeRemove: (req: EngineerRemoveImpactRequest, action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeRemove: (req: EngineerRemoveImpactRequest, action: () => Promise<void>) => Promise<GuardResult>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }

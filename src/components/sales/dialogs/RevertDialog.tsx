@@ -5,8 +5,7 @@
  * @description Dialog for cancelling a sale/reservation and reverting to "for sale"
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import {
   Dialog,
@@ -18,8 +17,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Undo2 } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AppurtenancesSection } from './AppurtenancesSection';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { getPrimaryBuyerContactId, formatOwnerNames } from '@/lib/ownership/owner-utils';
@@ -27,11 +24,10 @@ import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { resolveSalesUnitProjectId as resolveProjectId } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
-import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { useSalesDialogBase } from './use-sales-dialog-base';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import {
   dispatchSalesAccountingEventWithPolicy,
@@ -42,12 +38,8 @@ import { nowISO } from '@/lib/date-local';
 const logger = createModuleLogger('RevertDialog');
 
 export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
-  const colors = useSemanticColors();
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const iconSizes = useIconSizes();
-  const { success, error: notifyError } = useNotifications();
-  const [saving, setSaving] = useState(false);
-  const { checking: previewChecking, runRevertUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
+  const { colors, t, iconSizes, success, notifyError, saving, setSaving, guarded } = useSalesDialogBase(unit);
+  const { checking: previewChecking, runRevertUpdate, ImpactDialog } = guarded;
 
   const linkedSpaces = useLinkedSpacesForSale(unit);
 
@@ -81,12 +73,10 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };
-      const completed = await runRevertUpdate(
-        unit,
-        updates,
-        (err) => notifyError(translatePropertyMutationError(err, t)),
-      );
-      if (!completed) {
+      // 🔴 ADR-777 §8.69.13 — πιστωτικό, συγχρονισμός και μήνυμα ΜΟΝΟ όταν η επαναφορά ΤΕΛΕΙΩΣΕ.
+      // Πριν, μετά από «Συνέχεια» σε `warn` δεν έτρεχε ΚΑΝΕΝΑ από αυτά. `failed` ⇒ catch.
+      const outcome = outcomeOrThrow(await runRevertUpdate(unit, updates));
+      if (outcome !== 'completed') {
         return;
       }
       onOpenChange(false);

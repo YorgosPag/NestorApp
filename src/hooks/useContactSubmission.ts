@@ -7,6 +7,7 @@ import { ContactsService } from '@/services/contacts.service';
 import { createContactWithPolicy } from '@/services/contact-mutation-gateway';
 import { mapFormDataToContact } from '@/utils/contactForm/modular/orchestrator';
 import { validateUploadState } from '@/utils/contactForm/validators';
+import { settleDeferredSave } from '@/utils/contactForm/deferred-save';
 import { calculateSubmissionState } from '@/utils/contactForm/submission-state';
 import { handleSubmissionError } from '@/utils/contactForm/submission-error-handler';
 import {
@@ -175,7 +176,7 @@ export function useContactSubmission({
         const editContactId = editContact.id;
         if (!editContactId) return;
 
-        const updateCompleted = await runExistingContactFormUpdate(
+        const updateOutcome = await runExistingContactFormUpdate(
           formData,
           'SUBMISSION',
           async () => {
@@ -183,9 +184,10 @@ export function useContactSubmission({
             contactNotifications.updateSuccess();
           },
         );
-        if (!updateCompleted) {
-          // Deferred by a guard dialog — handleUpdateSucceeded will run when
-          // the user confirms, completing the lifecycle from there.
+        if (updateOutcome !== 'completed') {
+          // ADR-777 §8.69.13 — ο φύλακας ταυτότητας περιμένει πλέον την απόφαση, άρα `completed` έρχεται
+          // ΚΑΙ μετά από «Συνέχεια». Εδώ φτάνουμε μόνο σε ακύρωση/μπλοκάρισμα, ή όταν η αλυσίδα φυλάκων
+          // παρέδωσε σε δικό της διάλογο — εκεί το `handleUpdateSucceeded` το τρέχει το `createGuardHandlers`.
           return;
         }
       } else {
@@ -207,19 +209,11 @@ export function useContactSubmission({
   const attemptPendingSave = useCallback((formData: ContactFormData) => {
     if (!pendingSave || loading) return;
 
-    const uploadValidation = validateUploadState(formData);
-    if (uploadValidation.failedUploads > 0) {
-      logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
-      setPendingSave(false);
-      contactNotifications.uploadsFailed();
-      return;
-    }
-
-    if (uploadValidation.isValid) {
-      logger.info('DEFERRED SAVE: All uploads complete — auto-submitting');
-      setPendingSave(false);
-      handleSubmitRef.current?.(formData);
-    }
+    settleDeferredSave(formData, {
+      cancelPending: () => setPendingSave(false),
+      notifyUploadsFailed: () => contactNotifications.uploadsFailed(),
+      submit: () => { void handleSubmitRef.current?.(formData); },
+    });
   }, [pendingSave, loading, contactNotifications]);
 
   const clearPendingSave = useCallback(() => {

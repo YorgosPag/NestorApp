@@ -6,6 +6,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { ContactsService } from '@/services/contacts.service';
 import { useContactUpdateGuards } from '@/hooks/useContactUpdateGuards';
 import { executeGuardedContactUpdate } from '@/utils/contactForm/execute-guarded-contact-update';
+import type { SettledGuardOutcome } from '@/hooks/impact-guard/guard-result';
 
 interface NotificationApi {
   success: (message: string) => void;
@@ -25,15 +26,21 @@ interface UseGuardedContactMutationReturn {
     formData: ContactFormData,
     logScope: string,
     action?: () => Promise<void>,
-  ) => Promise<boolean>;
+  ) => Promise<SettledGuardOutcome>;
   readonly runExistingContactPartialFormUpdate: (
     formData: ContactFormData,
     partialFormData: Partial<ContactFormData>,
     logScope: string,
     action?: () => Promise<void>,
-  ) => Promise<boolean>;
+  ) => Promise<SettledGuardOutcome>;
 }
 
+/**
+ * Φυλαγμένες ενημερώσεις υπάρχουσας επαφής.
+ *
+ * 🔗 ADR-777 §8.69.13 — επιστρέφουν **ονομασμένη** έκβαση αφού τελειώσει η πράξη (ήταν boolean που
+ * γινόταν `false` πριν απαντήσει ο άνθρωπος). `failed` ρίχνεται στο `catch` του καλούντα.
+ */
 export function useGuardedContactMutation({
   editContact,
   notifications,
@@ -47,54 +54,32 @@ export function useGuardedContactMutation({
     setLoading,
   });
 
-  const runGuardedUpdate = (
+  /**
+   * Ο **ένας** δρόμος: οι φύλακες βλέπουν ολόκληρη τη φόρμα (`formData`), η εγγραφή στέλνει
+   * `written` — ολόκληρη ή μόνο το «βρώμικο» κομμάτι (ADR-323).
+   */
+  const runExistingUpdate = async (
     formData: ContactFormData,
-    action: () => Promise<void>,
-    logScope: string,
-  ): Promise<boolean> => executeGuardedContactUpdate({
-    formData,
-    notifications,
-    previewBeforeUpdate,
-    action,
-    logScope,
-  });
-
-  const runExistingContactFormUpdate = async (
-    formData: ContactFormData,
+    written: Partial<ContactFormData>,
     logScope: string,
     action?: () => Promise<void>,
-  ): Promise<boolean> => {
+  ): Promise<SettledGuardOutcome> => {
     if (!editContact) {
       throw new Error('Existing contact context is required for guarded updates');
     }
 
     const performUpdate = action ?? (async () => {
-      await ContactsService.updateExistingContactFromForm(editContact, formData);
+      await ContactsService.updateExistingContactFromForm(editContact, written);
     });
 
-    return runGuardedUpdate(formData, performUpdate, logScope);
-  };
-
-  const runExistingContactPartialFormUpdate = async (
-    formData: ContactFormData,
-    partialFormData: Partial<ContactFormData>,
-    logScope: string,
-    action?: () => Promise<void>,
-  ): Promise<boolean> => {
-    if (!editContact) {
-      throw new Error('Existing contact context is required for guarded updates');
-    }
-
-    const performUpdate = action ?? (async () => {
-      await ContactsService.updateExistingContactFromForm(editContact, partialFormData);
-    });
-
-    return runGuardedUpdate(formData, performUpdate, logScope);
+    return executeGuardedContactUpdate({ formData, previewBeforeUpdate, action: performUpdate, logScope });
   };
 
   return {
     guardDialogs: GuardDialogs,
-    runExistingContactFormUpdate,
-    runExistingContactPartialFormUpdate,
+    runExistingContactFormUpdate: (formData, logScope, action) =>
+      runExistingUpdate(formData, formData, logScope, action),
+    runExistingContactPartialFormUpdate: (formData, partialFormData, logScope, action) =>
+      runExistingUpdate(formData, partialFormData, logScope, action),
   };
 }

@@ -6,6 +6,7 @@ import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 import type { OptimisticPersonaState } from './contact-details-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { SettledGuardOutcome } from '@/hooks/impact-guard/guard-result';
 
 const logger = createModuleLogger('ContactDetails');
 
@@ -21,7 +22,7 @@ interface UsePersonaToggleParams {
     dirtyData: Partial<ContactFormData>,
     label: string,
     action?: () => Promise<void>,
-  ) => Promise<boolean>;
+  ) => Promise<SettledGuardOutcome>;
   onContactUpdated?: () => void;
 }
 
@@ -90,7 +91,7 @@ export function usePersonaToggle({
         personaData: updatedPersonaData,
       } as ContactFormData;
 
-      const updateCompleted = await runExistingContactPartialFormUpdate(
+      const updateOutcome = await runExistingContactPartialFormUpdate(
         updatedFormData,
         {
           activePersonas: updatedActive,
@@ -99,7 +100,8 @@ export function usePersonaToggle({
         'PERSONA TOGGLE',
       );
 
-      if (!updateCompleted) {
+      // ADR-777 §8.69.13 — η αισιόδοξη εικόνα μένει ΜΟΝΟ αν η αποθήκευση ΤΕΛΕΙΩΣΕ.
+      if (updateOutcome !== 'completed') {
         setOptimisticPersonas(null);
         return;
       }

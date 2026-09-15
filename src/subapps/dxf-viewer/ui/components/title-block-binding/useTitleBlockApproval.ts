@@ -22,6 +22,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useGuardedLandownersSave } from '@/hooks/useGuardedLandownersSave';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import {
   approveTitleBlockProposal,
   listTitleBlockBindings,
@@ -174,11 +175,13 @@ export function useTitleBlockApproval(
         if (req.target.kind === 'landowner' && projectId) {
           // Ίδιος φύλακας με την καρτέλα: αν υπάρχουν πίνακες ποσοστών που μπαγιατεύουν, ο
           // άνθρωπος το βλέπει ΠΡΙΝ γραφτεί οτιδήποτε — και μπορεί να ακυρώσει.
-          const proceeded = await runSaveOperation(
+          // ADR-777 §8.69.13 — ήταν `false` ΚΑΙ σε `warn` που ο άνθρωπος επιβεβαίωνε μετά: η έγκριση δεν
+          // σημαινόταν ποτέ. Τώρα η έκβαση έρχεται ΜΕΤΑ την απόφαση· `failed` ⇒ catch ⇒ `setError`.
+          const outcome = outcomeOrThrow(await runSaveOperation(
             { landownersChanged: true, bartexChanged: false },
             capture,
-          );
-          if (!proceeded) return false;
+          ));
+          if (outcome !== 'completed') return false;
         } else {
           await capture();
         }

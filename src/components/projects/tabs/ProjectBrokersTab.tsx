@@ -28,6 +28,7 @@ import { BrokerageInlineForm } from './brokerage/BrokerageInlineForm';
 import { BrokerageAgreementCard } from './brokerage/BrokerageAgreementCard';
 import { useBrokerageAgreements } from './brokerage/useBrokerageAgreements';
 import { useGuardedBrokerTerminate } from '@/hooks/useGuardedBrokerTerminate';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -61,7 +62,8 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
 
   const guardedHandleTerminate = useCallback(
     async (id: string) => {
-      await runTerminateOperation(id, () => hook.handleTerminate(id));
+      // ADR-777 §8.69.13 — το σφάλμα της λήξης φτάνει στον καλούντα όπως πριν στο `allow` (και τώρα μετά από `warn`).
+      outcomeOrThrow(await runTerminateOperation(id, () => hook.handleTerminate(id)));
     },
     [runTerminateOperation, hook.handleTerminate],
   );
@@ -79,6 +81,35 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const unitLevel = useMemo(
     () => hook.agreements.filter((a) => a.scope === 'property'),
     [hook.agreements]
+  );
+
+  // N.18 (CHECK 3.28) — ΜΙΑ κάρτα για συμφωνίες έργου ΚΑΙ ακινήτου· διαφέρουν μόνο στο όνομα ακινήτου.
+  const renderAgreementCard = (a: (typeof hook.agreements)[number], propertyName: string | null) => (
+    <BrokerageAgreementCard
+      key={a.id}
+      agreement={a}
+      t={t}
+      propertyName={propertyName}
+      onEdit={() => hook.handleEdit(a)}
+      onTerminate={() => hook.setTerminatingId(a.id)}
+      onRenew={() => { hook.setRenewingId(a.id); hook.setRenewDate(''); }}
+      isTerminating={hook.terminatingId === a.id}
+      isRenewing={hook.renewingId === a.id}
+      renewDate={hook.renewingId === a.id ? hook.renewDate : ''}
+      onRenewDateChange={hook.setRenewDate}
+      onConfirmTerminate={() => guardedHandleTerminate(a.id)}
+      onConfirmRenew={() => hook.handleRenew(a.id)}
+      onCancelAction={hook.cancelAction}
+      isFormActive={hook.isFormVisible}
+      companyId={companyId}
+      currentUserId={user?.uid ?? ''}
+      projectId={projectId}
+      projectName={projectName}
+      isExpanded={hook.expandedAgreementId === a.id}
+      onToggleExpand={() => hook.setExpandedAgreementId(
+        hook.expandedAgreementId === a.id ? null : a.id
+      )}
+    />
   );
 
   if (!projectId) return null;
@@ -147,33 +178,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
         <article className="space-y-2">
           <h4 className={cn(typography.label.sm, colors.text.muted)}>{t('sales.legal.scopeProject')}</h4>
           <ul className="space-y-2">
-            {projectLevel.map((a) => (
-              <BrokerageAgreementCard
-                key={a.id}
-                agreement={a}
-                t={t}
-                propertyName={null}
-                onEdit={() => hook.handleEdit(a)}
-                onTerminate={() => hook.setTerminatingId(a.id)}
-                onRenew={() => { hook.setRenewingId(a.id); hook.setRenewDate(''); }}
-                isTerminating={hook.terminatingId === a.id}
-                isRenewing={hook.renewingId === a.id}
-                renewDate={hook.renewingId === a.id ? hook.renewDate : ''}
-                onRenewDateChange={hook.setRenewDate}
-                onConfirmTerminate={() => guardedHandleTerminate(a.id)}
-                onConfirmRenew={() => hook.handleRenew(a.id)}
-                onCancelAction={hook.cancelAction}
-                isFormActive={hook.isFormVisible}
-                companyId={companyId}
-                currentUserId={user?.uid ?? ''}
-                projectId={projectId}
-                projectName={projectName}
-                isExpanded={hook.expandedAgreementId === a.id}
-                onToggleExpand={() => hook.setExpandedAgreementId(
-                  hook.expandedAgreementId === a.id ? null : a.id
-                )}
-              />
-            ))}
+            {projectLevel.map((a) => renderAgreementCard(a, null))}
           </ul>
         </article>
       )}
@@ -183,32 +188,9 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
         <article className="space-y-2">
           <h4 className={cn(typography.label.sm, colors.text.muted)}>{t('sales.legal.scopeUnit')}</h4>
           <ul className="space-y-2">
-            {unitLevel.map((a) => (
-              <BrokerageAgreementCard
-                key={a.id}
-                agreement={a}
-                t={t}
-                propertyName={a.propertyId ? propertyNameMap.get(a.propertyId) ?? a.propertyId : null}
-                onEdit={() => hook.handleEdit(a)}
-                onTerminate={() => hook.setTerminatingId(a.id)}
-                onRenew={() => { hook.setRenewingId(a.id); hook.setRenewDate(''); }}
-                isTerminating={hook.terminatingId === a.id}
-                isRenewing={hook.renewingId === a.id}
-                renewDate={hook.renewingId === a.id ? hook.renewDate : ''}
-                onRenewDateChange={hook.setRenewDate}
-                onConfirmTerminate={() => guardedHandleTerminate(a.id)}
-                onConfirmRenew={() => hook.handleRenew(a.id)}
-                onCancelAction={hook.cancelAction}
-                isFormActive={hook.isFormVisible}
-                companyId={companyId}
-                currentUserId={user?.uid ?? ''}
-                projectId={projectId}
-                projectName={projectName}
-                isExpanded={hook.expandedAgreementId === a.id}
-                onToggleExpand={() => hook.setExpandedAgreementId(
-                  hook.expandedAgreementId === a.id ? null : a.id
-                )}
-              />
+            {unitLevel.map((a) => renderAgreementCard(
+              a,
+              a.propertyId ? propertyNameMap.get(a.propertyId) ?? a.propertyId : null,
             ))}
           </ul>
         </article>

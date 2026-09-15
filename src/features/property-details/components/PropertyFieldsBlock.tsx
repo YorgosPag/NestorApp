@@ -29,6 +29,7 @@ import { usePropertyFormSync } from '@/hooks/properties/usePropertyFormSync';
 import { buildFormDataFromProperty } from '@/services/property/property-form-sync';
 import { createPropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { translatePolicyError, isKnownPolicyErrorCode } from '@/lib/policy';
 // ADR-284 Batch 7: SSoT hierarchy validation + inline new-unit UI
@@ -337,7 +338,8 @@ export function PropertyFieldsBlock({
         }
         success(t('save.createSuccess'));
       } else {
-        await runExistingPropertyUpdate({
+        // ADR-777 §8.69.13 — έξοδος από επεξεργασία + μήνυμα ΜΕΣΑ στην πράξη· `failed` ⇒ catch.
+        outcomeOrThrow(await runExistingPropertyUpdate({
           commercialStatus: property.commercialStatus,
           buildingId: property.buildingId,
           floorId: property.floorId,
@@ -346,7 +348,7 @@ export function PropertyFieldsBlock({
           codeEditedByUserRef.current = false;
           if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
           success(t('save.success'));
-        });
+        }));
       }
     } catch (error) {
       notifyError(translatePropertyMutationError(error, t));

@@ -1,16 +1,22 @@
 /**
- * Behaviour lock for the shared impact-guard state machine (ADR-307 / ADR-584).
+ * Behaviour lock for the shared impact-guard state machine (ADR-307 / ADR-584 / ADR-664).
  *
  * These assertions were transcribed from the SIX pre-merge sibling hooks
  * (broker-terminate / engineer-remove / landowners-save / ownership-mutation /
  * project-mutation / ika-labor-compliance-save), which had no tests of their own.
  * They exist to prove the merge preserved each behaviour rather than assume it.
+ *
+ * 🔗 ADR-777 §8.69.13 — `previewBefore` now resolves a named `GuardResult` AFTER the
+ * decision and the action (it used to resolve `false` before the dialog was even
+ * answered). The state machine's own anchors live in `useImpactDecision.test.tsx`;
+ * these keep the project binding honest (endpoint, dialog, onBlockDismiss, INP).
  */
 import React from 'react';
 import '@testing-library/jest-dom';
 import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ProjectMutationImpactPreview } from '@/types/project-mutation-impact';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import type { GuardResult } from '../guard-result';
 import { useProjectImpactGuard, buildUnavailableProjectImpactPreview } from '../useProjectImpactGuard';
 
 jest.mock('@/lib/api/enterprise-api-client', () => ({
@@ -71,6 +77,26 @@ function renderGuard(options?: { onBlockDismiss?: () => void }) {
   return { ...view, rerenderDialog };
 }
 
+type GuardHook = ReturnType<typeof renderGuard>['result'];
+
+/**
+ * Starts the guard and lets the preview answer — WITHOUT waiting for the outcome.
+ *
+ * ⚠️ The pending promise travels INSIDE an object: an `async` function that returns a promise
+ * directly gets it flattened by `await`, and a `warn` test would then hang on the decision.
+ */
+async function start(
+  result: GuardHook,
+  action: () => Promise<void>,
+  request = { agreementId: 'a1' },
+): Promise<{ readonly pending: Promise<GuardResult> }> {
+  let pending!: Promise<GuardResult>;
+  await act(async () => {
+    pending = result.current.previewBefore(request, action);
+  });
+  return { pending };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
@@ -81,47 +107,44 @@ afterEach(() => {
 });
 
 describe('useProjectImpactGuard — preview modes', () => {
-  it('allow → runs the action immediately and resolves true, no dialog', async () => {
+  it('allow → runs the action immediately and resolves `completed`, no dialog', async () => {
     mockedPost.mockResolvedValue(makePreview('allow'));
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    const { pending } = await start(result, action);
 
-    expect(resolved).toBe(true);
+    await expect(pending).resolves.toEqual({ outcome: 'completed' });
     expect(action).toHaveBeenCalledTimes(1);
     rerenderDialog();
     expect(screen.queryByTestId('impact-dialog')).not.toBeInTheDocument();
     expect(result.current.checking).toBe(false);
   });
 
-  it('warn → defers the action, shows the dialog, resolves false', async () => {
+  it('warn → defers the action, shows the dialog, and resolves ONLY after confirm + action', async () => {
     mockedPost.mockResolvedValue(makePreview('warn'));
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    const { pending } = await start(result, action);
 
-    expect(resolved).toBe(false);
     expect(action).not.toHaveBeenCalled();
     rerenderDialog();
     expect(screen.getByTestId('impact-dialog')).toHaveAttribute('data-mode', 'warn');
+
+    act(() => { screen.getByText('confirm').click(); });
+    await act(async () => { jest.runAllTimers(); });
+
+    await expect(pending).resolves.toEqual({ outcome: 'completed' });
+    expect(action).toHaveBeenCalledTimes(1);
   });
 
-  it('block → shows the dialog and the action can never run, even on confirm', async () => {
+  it('block → shows the dialog and the action can never run, even on confirm ⇒ `blocked`', async () => {
     mockedPost.mockResolvedValue(makePreview('block'));
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    const { pending } = await start(result, action);
     rerenderDialog();
     expect(screen.getByTestId('impact-dialog')).toHaveAttribute('data-mode', 'block');
 
@@ -129,6 +152,7 @@ describe('useProjectImpactGuard — preview modes', () => {
     act(() => { jest.runAllTimers(); });
 
     expect(action).not.toHaveBeenCalled();
+    await expect(pending).resolves.toEqual({ outcome: 'blocked' });
   });
 });
 
@@ -138,9 +162,7 @@ describe('useProjectImpactGuard — Google INP deferral', () => {
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    await start(result, action);
     rerenderDialog();
 
     act(() => { screen.getByText('confirm').click(); });
@@ -161,29 +183,26 @@ describe('useProjectImpactGuard — endpoint contract', () => {
     mockedPost.mockResolvedValue(makePreview('allow'));
     const { result } = renderGuard();
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'agr_7' }, jest.fn().mockResolvedValue(undefined));
-    });
+    await start(result, jest.fn().mockResolvedValue(undefined), { agreementId: 'agr_7' });
 
     expect(mockedPost).toHaveBeenCalledWith(ENDPOINT, { agreementId: 'agr_7' });
   });
 
-  it('preview failure → unavailable block preview, action never runs', async () => {
+  it('preview failure → unavailable block preview, action never runs ⇒ `blocked`', async () => {
     mockedPost.mockRejectedValue(new Error('network down'));
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    const { pending } = await start(result, action);
 
-    expect(resolved).toBe(false);
     expect(action).not.toHaveBeenCalled();
     rerenderDialog();
     expect(screen.getByTestId('impact-dialog')).toHaveAttribute('data-mode', 'block');
     expect(screen.getByTestId('message-key')).toHaveTextContent('impactGuard.messages.unavailable');
     expect(result.current.checking).toBe(false);
+
+    act(() => { screen.getByText('dismiss').click(); });
+    await expect(pending).resolves.toEqual({ outcome: 'blocked' });
   });
 
   it('an ApiClientError failure is handled the same as a plain error', async () => {
@@ -191,9 +210,7 @@ describe('useProjectImpactGuard — endpoint contract', () => {
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    await start(result, action);
 
     rerenderDialog();
     expect(screen.getByTestId('impact-dialog')).toHaveAttribute('data-mode', 'block');
@@ -207,36 +224,31 @@ describe('useProjectImpactGuard — onBlockDismiss', () => {
     const onBlockDismiss = jest.fn();
     const { result, rerenderDialog } = renderGuard({ onBlockDismiss });
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, jest.fn().mockResolvedValue(undefined));
-    });
+    await start(result, jest.fn().mockResolvedValue(undefined));
     rerenderDialog();
     act(() => { screen.getByText('dismiss').click(); });
 
     expect(onBlockDismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('does NOT fire when a warn dialog is dismissed', async () => {
+  it('does NOT fire when a warn dialog is dismissed — and the outcome is `cancelled`', async () => {
     mockedPost.mockResolvedValue(makePreview('warn'));
     const onBlockDismiss = jest.fn();
     const { result, rerenderDialog } = renderGuard({ onBlockDismiss });
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, jest.fn().mockResolvedValue(undefined));
-    });
+    const { pending } = await start(result, jest.fn().mockResolvedValue(undefined));
     rerenderDialog();
     act(() => { screen.getByText('dismiss').click(); });
 
     expect(onBlockDismiss).not.toHaveBeenCalled();
+    await expect(pending).resolves.toEqual({ outcome: 'cancelled' });
   });
 
   it('is optional — dismissing a block without it does not throw', async () => {
     mockedPost.mockResolvedValue(makePreview('block'));
     const { result, rerenderDialog } = renderGuard();
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, jest.fn().mockResolvedValue(undefined));
-    });
+    await start(result, jest.fn().mockResolvedValue(undefined));
     rerenderDialog();
 
     expect(() => act(() => { screen.getByText('dismiss').click(); })).not.toThrow();
@@ -244,14 +256,12 @@ describe('useProjectImpactGuard — onBlockDismiss', () => {
 });
 
 describe('useProjectImpactGuard — reset', () => {
-  it('clears the dialog and drops the deferred action', async () => {
+  it('clears the dialog and drops the deferred action ⇒ `cancelled`', async () => {
     mockedPost.mockResolvedValue(makePreview('warn'));
     const action = jest.fn().mockResolvedValue(undefined);
     const { result, rerenderDialog } = renderGuard();
 
-    await act(async () => {
-      await result.current.previewBefore({ agreementId: 'a1' }, action);
-    });
+    const { pending } = await start(result, action);
     act(() => { result.current.reset(); });
 
     rerenderDialog();
@@ -259,6 +269,7 @@ describe('useProjectImpactGuard — reset', () => {
 
     act(() => { jest.runAllTimers(); });
     expect(action).not.toHaveBeenCalled();
+    await expect(pending).resolves.toEqual({ outcome: 'cancelled' });
   });
 
   it('keeps a stable identity across renders (an inline options literal must not re-create it)', async () => {

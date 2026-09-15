@@ -170,7 +170,7 @@ beforeEach(() => {
     reset: jest.fn(),
     ImpactDialog: ImpactDialogStub,
     runPreviewedMutation: jest.fn(),
-    runExistingPropertyUpdate: jest.fn().mockResolvedValue(true),
+    runExistingPropertyUpdate: jest.fn().mockResolvedValue({ outcome: 'completed' }),
     runRevertUpdate: jest.fn(),
   });
 });

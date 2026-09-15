@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { OwnershipImpactRequest } from '@/lib/firestore/project-ownership-mutation-impact.service';
 import {
@@ -10,7 +11,7 @@ import {
 
 export interface UseProjectOwnershipMutationImpactGuardReturn {
   checking: boolean;
-  previewBeforeMutate: (req: OwnershipImpactRequest, action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeMutate: (req: OwnershipImpactRequest, action: () => Promise<void>) => Promise<GuardResult>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }

@@ -10,6 +10,7 @@ import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import type { Property } from '@/types/property-viewer';
 import { DEFAULT_PROPERTY_STATS } from '@/types/property';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -170,18 +171,15 @@ export function usePropertyViewer() {
       return;
     }
 
-    const completed = await runExistingPropertyUpdate(currentProperty, updates, async () => {
+    // ADR-777 §8.69.13 — η ενημέρωση της λίστας και το μήνυμα ζουν ΜΕΣΑ στην πράξη· `failed` ⇒ προς τον καλούντα.
+    outcomeOrThrow(await runExistingPropertyUpdate(currentProperty, updates, async () => {
       const description = `Updated details for property ${propertyId}`;
       setProperties(
         properties.map((property) => (property.id === propertyId ? { ...property, ...updates } : property)),
         description,
       );
       success(t('viewer.messages.updateSuccess'));
-    });
-
-    if (!completed) {
-      return;
-    }
+    }));
   }, [notifyError, properties, runExistingPropertyUpdate, selectedProperty, setProperties, success, t]);
 
   // Εξασφαλίζουμε ότι οι τιμές που επιστρέφονται είναι πάντα προβλέψιμες και δεν είναι ποτέ null/undefined.

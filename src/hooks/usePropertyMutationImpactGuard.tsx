@@ -1,21 +1,33 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+/**
+ * usePropertyMutationImpactGuard — ο φύλακας επιπτώσεων για αλλαγές ακινήτου.
+ *
+ * 🔗 ADR-777 §8.69.13 — η μηχανή «preview → απόφαση → πράξη» ζει στο `useImpactDecision`,
+ * κοινή με έργα και επαφές. Εδώ μόνο: **ποιο** endpoint, **ποιος** διάλογος, και η παράκαμψη για
+ * ακίνητο που δεν υπάρχει ακόμη. Η υπόσχεση λύνεται **μετά** την πράξη, με ονομασμένη έκβαση.
+ *
+ * @enterprise ADR-664 (impact-guard SSoT)
+ */
+
+import { useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { PropertyMutationImpactPreview } from '@/types/property-mutation-impact';
 import { PropertyMutationImpactDialog } from '@/components/properties/dialogs/PropertyMutationImpactDialog';
+import { runGuardedAction, type GuardResult } from '@/hooks/impact-guard/guard-result';
+import { useImpactDecision } from '@/hooks/impact-guard/useImpactDecision';
 
 interface PropertyMutationPreviewTarget {
   readonly id: string;
 }
 
 interface UsePropertyMutationImpactGuardReturn {
-  checking: boolean;
-  previewBeforeMutate: (updates: Record<string, unknown>, action: () => Promise<void>, onError?: (err: unknown) => void) => Promise<boolean>;
-  reset: () => void;
-  ImpactDialog: ReactNode;
+  readonly checking: boolean;
+  readonly previewBeforeMutate: (updates: Record<string, unknown>, action: () => Promise<void>) => Promise<GuardResult>;
+  readonly reset: () => void;
+  readonly ImpactDialog: ReactNode;
 }
 
 function buildUnavailablePreview(): PropertyMutationImpactPreview {
@@ -33,88 +45,26 @@ function buildUnavailablePreview(): PropertyMutationImpactPreview {
 export function usePropertyMutationImpactGuard(
   property?: PropertyMutationPreviewTarget | null,
 ): UsePropertyMutationImpactGuardReturn {
-  const [checking, setChecking] = useState(false);
-  const [preview, setPreview] = useState<PropertyMutationImpactPreview | null>(null);
-  const [open, setOpen] = useState(false);
-  const deferredActionRef = useRef<{ execute: () => Promise<void>; onError: (err: unknown) => void } | null>(null);
+  const { checking, guard, reset, dialogProps } =
+    useImpactDecision<PropertyMutationImpactPreview>('usePropertyMutationImpactGuard');
+  const propertyId = property?.id;
 
-  const reset = useCallback(() => {
-    setOpen(false);
-    setPreview(null);
-    deferredActionRef.current = null;
-  }, []);
+  const previewBeforeMutate = useCallback(
+    (updates: Record<string, unknown>, action: () => Promise<void>): Promise<GuardResult> => {
+      // Ακίνητο που δεν υπάρχει ακόμη: δεν υπάρχουν εξαρτήσεις να προβλεφθούν.
+      if (!propertyId || propertyId === '__new__') return runGuardedAction(action);
 
-  // 🏢 GOOGLE-LEVEL INP: Decouple dialog dismiss from mutation execution.
-  // Close dialog first (visual feedback), yield to browser for paint,
-  // then execute the mutation in the next task. This drops INP from ~380ms to <100ms.
-  const handleConfirm = useCallback(() => {
-    const pending = deferredActionRef.current;
-    reset();
-    if (pending) {
-      setTimeout(() => { pending.execute().catch(pending.onError); }, 0);
-    }
-  }, [reset]);
+      return guard({
+        fetchPreview: () =>
+          apiClient.post<PropertyMutationImpactPreview>(API_ROUTES.PROPERTIES.IMPACT_PREVIEW(propertyId), updates),
+        unavailablePreview: buildUnavailablePreview,
+        action,
+      });
+    },
+    [guard, propertyId],
+  );
 
-  const previewBeforeMutate = useCallback(async (updates: Record<string, unknown>, action: () => Promise<void>, onError?: (err: unknown) => void) => {
-    const errorHandler = onError ?? ((err: unknown) => console.error('[ImpactGuard] Deferred action failed:', err));
+  const ImpactDialog = useMemo(() => <PropertyMutationImpactDialog {...dialogProps} />, [dialogProps]);
 
-    if (!property?.id || property.id === '__new__') {
-      await action();
-      return true;
-    }
-
-    setChecking(true);
-    try {
-      const impactPreview = await apiClient.post<PropertyMutationImpactPreview>(
-        API_ROUTES.PROPERTIES.IMPACT_PREVIEW(property.id),
-        updates,
-      );
-
-      if (impactPreview.mode === 'allow') {
-        setChecking(false);
-        await action();
-        return true;
-      }
-
-      deferredActionRef.current = impactPreview.mode === 'warn'
-        ? { execute: action, onError: errorHandler }
-        : null;
-      setPreview(impactPreview);
-      setOpen(true);
-      setChecking(false);
-      return false;
-    } catch (error) {
-      if (ApiClientError.isApiClientError(error)) {
-        console.error(`[usePropertyMutationImpactGuard] Preview failed (${error.statusCode}):`, error.message);
-      } else {
-        console.error('[usePropertyMutationImpactGuard] Preview failed:', error);
-      }
-
-      deferredActionRef.current = null;
-      setPreview(buildUnavailablePreview());
-      setOpen(true);
-      setChecking(false);
-      return false;
-    }
-  }, [property?.id]);
-
-  const ImpactDialog = useMemo(() => (
-    <PropertyMutationImpactDialog
-      open={open}
-      preview={preview}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          reset();
-        }
-      }}
-      onConfirm={handleConfirm}
-    />
-  ), [handleConfirm, open, preview, reset]);
-
-  return {
-    checking,
-    previewBeforeMutate,
-    reset,
-    ImpactDialog,
-  };
+  return { checking, previewBeforeMutate, reset, ImpactDialog };
 }

@@ -19,6 +19,7 @@ import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import type { SaleLineItem } from '@/services/sales-accounting/types';
 import type { UseLinkedSpacesForSaleResult } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveSalesDialogError } from './sales-dialog-utils';
 import {
@@ -138,11 +139,12 @@ export function useSalesActionMutation(
         commercial: buildSalesCommercialUpdate(unit, owners, request.commercialChanges),
       };
 
-      await runExistingPropertyUpdate(
+      // ADR-777 §8.69.13 — `onCommitted` τρέχει μέσα στην πράξη· `failed` (και μετά από `warn`) ⇒ catch.
+      outcomeOrThrow(await runExistingPropertyUpdate(
         unit,
         updates as Record<string, unknown>,
         async () => onCommitted(request),
-      );
+      ));
     } catch (err: unknown) {
       const { message, rawMessage } = resolveSalesDialogError(err, t, unknownErrorI18nKey);
       setSaveError(message);

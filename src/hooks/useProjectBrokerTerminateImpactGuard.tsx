@@ -1,13 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { BrokerTerminateImpactRequest } from '@/lib/firestore/project-broker-terminate-impact.service';
 import { useProjectImpactGuard } from '@/hooks/impact-guard/useProjectImpactGuard';
 
 interface UseProjectBrokerTerminateImpactGuardReturn {
   checking: boolean;
-  previewBeforeTerminate: (req: BrokerTerminateImpactRequest, action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeTerminate: (req: BrokerTerminateImpactRequest, action: () => Promise<void>) => Promise<GuardResult>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }

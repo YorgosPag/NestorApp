@@ -5,6 +5,13 @@ import type React from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useContactMutationImpactGuard } from '@/hooks/useContactMutationImpactGuard';
+import {
+  GUARD_BLOCKED,
+  GUARD_CANCELLED,
+  GUARD_COMPLETED,
+  runGuardedAction,
+  type GuardResult,
+} from '@/hooks/impact-guard/guard-result';
 import { runGuardChain } from '@/utils/contactForm/submission-guard-chain';
 import { createGuardHandlers } from '@/utils/contactForm/guard-confirm-factory';
 import { NameChangeCascadeDialog } from '@/components/contacts/dialogs/NameChangeCascadeDialog';
@@ -30,17 +37,12 @@ interface UseContactUpdateGuardsProps {
   setLoading?: (loading: boolean) => void;
 }
 
-interface GuardMutationResult {
-  readonly completed: boolean;
-  readonly blockedUnsafeClear: boolean;
-}
-
 interface UseContactUpdateGuardsReturn {
   readonly previewBeforeUpdate: (
     formData: ContactFormData,
     contactData: Record<string, unknown>,
     action: () => Promise<void>,
-  ) => Promise<GuardMutationResult>;
+  ) => Promise<GuardResult>;
   readonly GuardDialogs: React.ReactNode;
 }
 
@@ -111,14 +113,15 @@ export function useContactUpdateGuards({
     formData: ContactFormData,
     contactData: Record<string, unknown>,
     action: () => Promise<void>,
-  ): Promise<GuardMutationResult> => {
+  ): Promise<GuardResult> => {
     const editContactId = editContact?.id;
     if (!editContactId) {
-      await action();
-      return { completed: true, blockedUnsafeClear: false };
+      return runGuardedAction(action);
     }
 
-    let guardedActionCompleted = false;
+    // Τι έκανε η αλυσίδα φυλάκων ΜΕΣΑ στην πράξη. `deferred` = παρέδωσε σε δικό της διάλογο
+    // (`createGuardHandlers`), που αναφέρει μόνος του την έκβαση (onUpdateSucceeded / notifyError).
+    let chainOutcome: 'completed' | 'blocked' | 'deferred' = 'deferred';
 
     const guardedAction = async (): Promise<void> => {
       const guardResult = await runGuardChain({
@@ -145,6 +148,7 @@ export function useContactUpdateGuards({
       if (guardResult.blocked) {
         const errorKey = 'errorKey' in guardResult ? guardResult.errorKey : 'contacts-form.submission.updateError';
         notifications.error(errorKey);
+        chainOutcome = 'blocked';
         return;
       }
 
@@ -153,18 +157,15 @@ export function useContactUpdateGuards({
       }
 
       await action();
-      guardedActionCompleted = true;
+      chainOutcome = 'completed';
     };
 
-    const mutationResult = await previewContactMutationImpactBeforeMutate(formData, guardedAction);
-    if (mutationResult.blockedUnsafeClear) {
-      return mutationResult;
-    }
-
-    return {
-      completed: mutationResult.completed && guardedActionCompleted,
-      blockedUnsafeClear: false,
-    };
+    // 🔗 ADR-777 §8.69.13 — η έκβαση του φύλακα ταυτότητας έρχεται ΜΕΤΑ την απόφαση και την πράξη.
+    const identityResult = await previewContactMutationImpactBeforeMutate(formData, guardedAction);
+    if (identityResult.outcome !== 'completed') return identityResult;
+    if (chainOutcome === 'completed') return GUARD_COMPLETED;
+    // Μπλοκαρισμένο ⇒ το σφάλμα ειπώθηκε ήδη· παραδομένο ⇒ τίποτα άλλο για ΑΥΤΟΝ τον καλούντα.
+    return chainOutcome === 'blocked' ? GUARD_BLOCKED : GUARD_CANCELLED;
   };
 
   const GuardDialogs = useMemo(() => (

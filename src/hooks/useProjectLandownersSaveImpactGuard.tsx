@@ -1,13 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { GuardResult } from '@/hooks/impact-guard/guard-result';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { LandownersSaveImpactRequest } from '@/lib/firestore/project-landowners-save-impact.service';
 import { useProjectImpactGuard } from '@/hooks/impact-guard/useProjectImpactGuard';
 
 interface UseProjectLandownersSaveImpactGuardReturn {
   checking: boolean;
-  previewBeforeSave: (req: LandownersSaveImpactRequest, action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeSave: (req: LandownersSaveImpactRequest, action: () => Promise<void>) => Promise<GuardResult>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }

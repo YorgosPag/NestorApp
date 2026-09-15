@@ -16,6 +16,7 @@ import {
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { ContactsService } from '@/services/contacts.service';
 import { validateUploadState } from '@/utils/contactForm/validators/upload-state';
+import { settleDeferredSave } from '@/utils/contactForm/deferred-save';
 import { PendingRelationshipGuard } from '@/utils/pending-relationship-guard';
 import { openGalleryPhotoModal } from '@/core/modals';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -355,7 +356,8 @@ export function useContactDetailsController({
 
       // ADR-323: guards see merged; write sends dirty diff only.
       const dirtyOnly = editedData as Partial<ContactFormData>;
-      const updateCompleted = await runExistingContactPartialFormUpdate(
+      // ADR-777 §8.69.13 — ονομασμένη έκβαση ΜΕΤΑ την απόφαση· `failed` ρίχνεται στο catch.
+      const updateOutcome = await runExistingContactPartialFormUpdate(
         mergedFormData,
         dirtyOnly,
         'DETAILS SAVE',
@@ -364,7 +366,7 @@ export function useContactDetailsController({
           await afterUpdate();
         },
       );
-      if (!updateCompleted) {
+      if (updateOutcome !== 'completed') {
         return;
       }
     } catch (error) {
@@ -394,19 +396,11 @@ export function useContactDetailsController({
     const mergedFormData = getEditedFormData();
     if (!mergedFormData) return;
 
-    const uploadValidation = validateUploadState(mergedFormData);
-    if (uploadValidation.failedUploads > 0) {
-      logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
-      setPendingSave(false);
-      contactNotifications.uploadsFailed();
-      return;
-    }
-
-    if (uploadValidation.isValid) {
-      logger.info('DEFERRED SAVE: All uploads complete — auto-submitting');
-      setPendingSave(false);
-      handleSaveEdit();
-    }
+    settleDeferredSave(mergedFormData, {
+      cancelPending: () => setPendingSave(false),
+      notifyUploadsFailed: () => contactNotifications.uploadsFailed(),
+      submit: handleSaveEdit,
+    });
   }, [editedData, pendingSave, isEditing, getEditedFormData, handleSaveEdit, contactNotifications]);
 
   const clearFieldError = useCallback((fieldName: string) => {
