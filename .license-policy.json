@@ -1,0 +1,269 @@
+{
+  "$doc": "CHECK 12 + CHECK 3.69 / ADR-598 G13 · ADR-805 — Η ΜΙΑ ΠΟΛΙΤΙΚΗ ΑΔΕΙΩΝ (CLAUDE.md N.5). Την κρίνει η scripts/check-license-policy.js πάνω σε ΟΛΟ τον γράφο prod (`pnpm licenses list --prod`) και η scripts/check-font-assets.js πάνω σε κάθε γραμματοσειρά που διανέμουμε. Δεύτερη λίστα αδειών οπουδήποτε = ADR-749.",
+
+  "$model": [
+    "Τρία επίπεδα, όπως το ORT (OSS Review Toolkit) · κατηγορίες της Google (licenseclassifier/license_type.go):",
+    "  1) licenseCategories + categories[*].decision — τι σημαίνει κάθε άδεια.",
+    "  2) licenseMappings (καθολικές) + curations (ανά name@version) — τι άδεια ΕΙΝΑΙ πραγματικά, με τεκμήριο.",
+    "  3) exceptions / assetExceptions — ανθρώπινη έγκριση για κατηγορία που δεν επιτρέπεται αυτόματα, με ΚΑΡΦΩΜΕΝΗ άδεια, όρους και ημερομηνίες.",
+    "Κωδικοί εξόδου: 0 καθαρό · 1 παράβαση πολιτικής · 2 UNKNOWN (δεν μετρήθηκε). Σύμβαση Snyk CLI / Monitoring Plugins.",
+    "⚠️ Η εξαίρεση ΚΑΡΦΩΝΕΙ την άδεια: αν το πακέτο αλλάξει άδεια, η έγκριση ΠΑΥΕΙ (exception-license-drift) — το @sentry/cli πήγε από BSD-3-Clause σε FSL-1.1-MIT μέσα στη major 2."
+  ],
+
+  "categories": {
+    "forbidden":       { "decision": "block",     "why": "Google FORBIDDEN (+ BUSL/SSPL/Elastic). Καμία εξαίρεση — απόφαση Giorgio 2026-09-16." },
+    "restricted":      { "decision": "exception", "why": "Google RESTRICTED (GPL/LGPL/CC-BY-SA…). Μόνο ονομαστική εξαίρεση με όρους· σήμερα μόνο το sharp/libvips." },
+    "sourceAvailable": { "decision": "exception", "why": "FSL (Functional Source License). Εκτός λίστας Google· ίδια γενιά με τη BUSL. Μόνο εξαίρεση ανά κυκλοφορία με ημερομηνία μετατροπής." },
+    "byExceptionOnly": { "decision": "exception", "why": "Google BY_EXCEPTION_ONLY (Beerware, OFL-1.1, OpenVision)." },
+    "reciprocal":      { "decision": "exception", "why": "Google RECIPROCAL (MPL/EPL/CDDL): file-level copyleft· επιτρέπεται αναλλοίωτο, με εξαίρεση." },
+    "unknown":         { "decision": "block",     "why": "Άδεια που δεν αναλύεται ή δεν ταξινομείται. Θεραπεία = licenseMappings/curations με τεκμήριο, ΠΟΤΕ εξαίρεση (choosealicense.com/no-permission)." },
+    "notice":          { "decision": "allow",     "why": "Google NOTICE (MIT/BSD/Apache…)." },
+    "unencumbered":    { "decision": "allow",     "why": "Google UNENCUMBERED (CC0/Unlicense/0BSD)." }
+  },
+
+  "$licenseCategoriesAdditions": [
+    "Πέρα από τον πίνακα της Google, με λόγο:",
+    "  notice: BlueOak-1.0.0 (OSI-approved permissive· glob/lru-cache/minipass) · LicenseRef-SCOWL (βλ. curations dictionary-en).",
+    "  unencumbered: LicenseRef-Public-Domain (δήλωση δημόσιου πεδίου, μόνο μέσω curation με τεκμήριο).",
+    "  sourceAvailable: FSL-1.1-MIT, FSL-1.1-ALv2 (spdx.org/licenses/FSL-1.1-MIT.html · fsl.software).",
+    "  forbidden: BUSL-1.1, SSPL-1.0, Elastic-2.0 (source-available με περιορισμό χρήσης — απόφαση Giorgio 2026-09-16).",
+    "Τα -only / -or-later / + λύνονται στο βασικό αναγνωριστικό της Google (π.χ. LGPL-3.0-or-later → LGPL-3.0)."
+  ],
+
+  "licenseCategories": {
+    "forbidden": [
+      "AGPL-1.0", "AGPL-3.0",
+      "CC-BY-NC-1.0", "CC-BY-NC-2.0", "CC-BY-NC-2.5", "CC-BY-NC-3.0", "CC-BY-NC-4.0",
+      "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0",
+      "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0",
+      "Commons-Clause", "Facebook-2-Clause", "Facebook-3-Clause", "Facebook-Examples", "WTFPL",
+      "BUSL-1.1", "SSPL-1.0", "Elastic-2.0"
+    ],
+    "restricted": [
+      "BCL",
+      "CC-BY-ND-1.0", "CC-BY-ND-2.0", "CC-BY-ND-2.5", "CC-BY-ND-3.0", "CC-BY-ND-4.0",
+      "CC-BY-SA-1.0", "CC-BY-SA-2.0", "CC-BY-SA-2.5", "CC-BY-SA-3.0", "CC-BY-SA-4.0",
+      "GPL-1.0", "GPL-2.0", "GPL-2.0-with-autoconf-exception", "GPL-2.0-with-bison-exception",
+      "GPL-2.0-with-classpath-exception", "GPL-2.0-with-font-exception", "GPL-2.0-with-GCC-exception",
+      "GPL-3.0", "GPL-3.0-with-autoconf-exception", "GPL-3.0-with-GCC-exception",
+      "LGPL-2.0", "LGPL-2.1", "LGPL-3.0",
+      "NPL-1.0", "NPL-1.1", "OSL-1.0", "OSL-1.1", "OSL-2.0", "OSL-2.1", "OSL-3.0", "QPL-1.0", "Sleepycat"
+    ],
+    "sourceAvailable": ["FSL-1.1-MIT", "FSL-1.1-ALv2"],
+    "byExceptionOnly": ["Beerware", "OFL-1.1", "OpenVision"],
+    "reciprocal": [
+      "APSL-1.0", "APSL-1.1", "APSL-1.2", "APSL-2.0", "CDDL-1.0", "CDDL-1.1", "CPL-1.0",
+      "EPL-1.0", "EPL-2.0", "FreeImage", "IPL-1.0", "MPL-1.0", "MPL-1.1", "MPL-2.0", "Ruby"
+    ],
+    "notice": [
+      "AFL-1.1", "AFL-1.2", "AFL-2.0", "AFL-2.1", "AFL-3.0", "Apache-1.0", "Apache-1.1", "Apache-2.0",
+      "Artistic-1.0-cl8", "Artistic-1.0-Perl", "Artistic-1.0", "Artistic-2.0", "BSL-1.0",
+      "BSD-2-Clause-FreeBSD", "BSD-2-Clause-NetBSD", "BSD-2-Clause", "BSD-3-Clause-Attribution",
+      "BSD-3-Clause-Clear", "BSD-3-Clause-LBNL", "BSD-3-Clause", "BSD-4-Clause", "BSD-4-Clause-UC",
+      "BSD-Protection", "CC-BY-1.0", "CC-BY-2.0", "CC-BY-2.5", "CC-BY-3.0", "CC-BY-4.0", "FTL", "ISC",
+      "ImageMagick", "Libpng", "Lil-1.0", "Linux-OpenIB", "LPL-1.02", "LPL-1.0", "MS-PL", "MIT", "NCSA",
+      "OpenSSL", "PHP-3.01", "PHP-3.0", "PIL", "Python-2.0", "Python-2.0-complete", "PostgreSQL",
+      "SGI-B-1.0", "SGI-B-1.1", "SGI-B-2.0", "Unicode-DFS-2015", "Unicode-DFS-2016", "Unicode-TOU",
+      "UPL-1.0", "W3C-19980720", "W3C-20150513", "W3C", "X11", "Xnet", "Zend-2.0",
+      "zlib-acknowledgement", "Zlib", "ZPL-1.1", "ZPL-2.0", "ZPL-2.1",
+      "BlueOak-1.0.0", "LicenseRef-SCOWL"
+    ],
+    "unencumbered": ["CC0-1.0", "Unlicense", "0BSD", "LicenseRef-Public-Domain"]
+  },
+
+  "licenseMappings": {
+    "MIT/X11": {
+      "spdx": "MIT",
+      "evidence": [
+        "Σύμβαση της εποχής του substack (2010-2012): «MIT/X11» = το κείμενο MIT (το X11 διαφέρει μόνο στη ρήτρα ονόματος).",
+        "node_modules/.pnpm/traverse@0.3.9/node_modules/traverse/LICENSE = κείμενο MIT (επαληθευμένο 2026-09-16)."
+      ]
+    }
+  },
+
+  "curations": {
+    "buffers@0.1.1": {
+      "declared": "Unknown",
+      "concludedLicense": "MIT",
+      "evidenceGrade": "third-party-curation",
+      "evidence": [
+        "ClearlyDefined curated-data: curations/npm/npmjs/-/buffers.yaml → revisions 0.1.1 licensed.declared: MIT (commit 7c39eb58, 2019-01-19). Η ίδια πηγή τροφοδοτεί το GitHub dependency review.",
+        "Ίδιος συγγραφέας (James Halliday / substack), ίδια αλυσίδα: binary@0.3.0 = MIT, chainsaw@0.1.0 = MIT/X11.",
+        "ΑΡΝΗΤΙΚΑ (καταγράφονται, δεν κρύβονται): κανένα πεδίο license σε καμία από τις 6 εκδόσεις του registry (2011) · κανένα LICENSE στο tarball · github.com/substack/node-buffers = 404 · deps.dev (Google) χωρίς άδεια."
+      ],
+      "comment": "Πρακτική ORT/GitHub: επιμέλεια καρφωμένη στην ΑΚΡΙΒΗ έκδοση με δηλωμένο βαθμό τεκμηρίου. Έρχεται μέσω exceljs 4.4.0 → unzipper ^0.10 → binary 0.3.0. Το unzipper 0.12 δεν το χρειάζεται — η εξάλειψη μένει ανοιχτή απόφαση (ADR-598 G13).",
+      "approvedOn": "2026-09-16"
+    },
+    "@mapbox/jsonlint-lines-primitives@2.0.2": {
+      "declared": "Unknown",
+      "concludedLicense": "MIT",
+      "evidenceGrade": "upstream-declaration",
+      "evidence": [
+        "Upstream github.com/mapbox/jsonlint README: MIT (επαληθευμένο web 2026-09-16).",
+        "ClearlyDefined curated-data: curations/npm/npmjs/@mapbox/jsonlint-lines-primitives.yaml → 2.0.1 & 2.0.2 declared: MIT."
+      ],
+      "comment": "Το package.json δεν έχει πεδίο license· η δήλωση του upstream και η ανεξάρτητη επιμέλεια συμφωνούν.",
+      "approvedOn": "2026-09-16"
+    },
+    "duck@0.1.12": {
+      "declared": "BSD",
+      "concludedLicense": "BSD-2-Clause",
+      "evidenceGrade": "license-text",
+      "evidence": ["node_modules/.pnpm/duck@0.1.12/node_modules/duck/LICENSE: Copyright (c) 2013 Michael Williamson — ακριβώς ΔΥΟ ρήτρες αναδιανομής (επαληθευμένο 2026-09-16)."],
+      "comment": "Το «BSD» δεν είναι SPDX· το κείμενο το λύνει μονοσήμαντα σε BSD-2-Clause.",
+      "approvedOn": "2026-09-16"
+    },
+    "jsonify@0.0.1": {
+      "declared": "Public Domain",
+      "concludedLicense": "LicenseRef-Public-Domain",
+      "evidenceGrade": "upstream-declaration",
+      "evidence": ["node_modules/.pnpm/jsonify@0.0.1/node_modules/jsonify/README.md § license: «public domain» (βασισμένο στο json2.js του Crockford, επίσης δημόσιο πεδίο)."],
+      "comment": "Δήλωση δημόσιου πεδίου — Google UNENCUMBERED. Καρφωμένη σε αυτή την έκδοση.",
+      "approvedOn": "2026-09-16"
+    },
+    "dictionary-en@4.0.0": {
+      "declared": "(MIT AND BSD)",
+      "concludedLicense": "(MIT AND LicenseRef-SCOWL)",
+      "evidenceGrade": "license-text",
+      "evidence": [
+        "node_modules/.pnpm/dictionary-en@4.0.0/node_modules/dictionary-en/license γρ. 88-270: συλλογικό έργο SCOWL (Kevin Atkinson, άδεια τύπου HPND), Ispell (BSD), WordNet 1.6 (Princeton, permissive με notice), πολλά τμήματα σε δημόσιο πεδίο.",
+        "readme.md § License: «Dictionary and affix file: (MIT AND BSD) · Rest: MIT © Titus Wormer»."
+      ],
+      "comment": "Το «BSD» δεν είναι SPDX και το αρχείο δεν είναι μία BSD: είναι το σύνθετο κείμενο του SCOWL, όλα τα μέρη του με notice. Όνομα LicenseRef-SCOWL (SPDX §10.1) → notice.",
+      "approvedOn": "2026-09-16"
+    }
+  },
+
+  "exceptions": [
+    {
+      "id": "sharp-libvips",
+      "packages": ["@img/sharp-libvips-*"],
+      "license": "LGPL-3.0-or-later",
+      "category": "restricted",
+      "reason": "libvips προ-χτισμένο για το sharp (άμεση εξάρτηση, package.json + override). Χρήση: server-side επεξεργασία εικόνων (src/services/listings/public-shelf-sanitise.ts). Η παραγωγή (Netcup) είναι linux ⇒ εδώ ζει η πραγματική υποχρέωση.",
+      "owner": "giorgio",
+      "conditions": [
+        "δυναμική σύνδεση: η βιβλιοθήκη φορτώνεται ως ξεχωριστό κοινόχρηστο αντικείμενο, όχι στατικά",
+        "αναλλοίωτη: κανένα patch (τον έλεγχο τον κάνει η κατάσταση modified-copyleft)",
+        "αντικαταστάσιμη από τον χρήστη: το πακέτο πλατφόρμας αλλάζει χωρίς επαναμεταγλώττιση του δικού μας κώδικα",
+        "server-side: τα bytes δεν διανέμονται σε browser ή σε πελάτη (SaaS)"
+      ],
+      "approvedOn": "2026-09-16",
+      "scope": "prod",
+      "evidence": ["github.com/vercel/next.js/issues/72406", "sharp.pixelplumbing.com/install (prebuilt libvips, LGPL-3.0-or-later)"]
+    },
+    {
+      "id": "sharp-win32-bundled-libvips",
+      "packages": ["@img/sharp-win32-*"],
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "category": "restricted",
+      "reason": "Στα Windows το sharp κουβαλά το libvips μέσα στο ίδιο πακέτο πλατφόρμας (τοπική ανάπτυξη του Giorgio). Ίδια απόφαση με το sharp-libvips.",
+      "owner": "giorgio",
+      "conditions": [
+        "δυναμική σύνδεση (libvips DLL)",
+        "αναλλοίωτη",
+        "αντικαταστάσιμη",
+        "μόνο τοπική ανάπτυξη / server-side — δεν διανέμεται"
+      ],
+      "approvedOn": "2026-09-16",
+      "scope": "prod",
+      "evidence": ["pnpm licenses list --prod (2026-09-16): @img/sharp-win32-x64@0.35.3 = Apache-2.0 AND LGPL-3.0-or-later"]
+    },
+    {
+      "id": "sharp-wasm32",
+      "packages": ["@img/sharp-wasm32"],
+      "license": "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
+      "category": "restricted",
+      "reason": "Εφεδρική WebAssembly κατασκευή του sharp με ενσωματωμένο libvips (υπάρχει στο lockfile ως προαιρετική εξάρτηση πλατφόρμας). Ίδια απόφαση με το sharp-libvips.",
+      "owner": "giorgio",
+      "conditions": [
+        "αναλλοίωτη",
+        "server-side — δεν διανέμεται σε browser",
+        "ΟΧΙ φόρτωση στον client: αν ποτέ χρειαστεί, η απόφαση επανεξετάζεται"
+      ],
+      "approvedOn": "2026-09-16",
+      "scope": "prod",
+      "evidence": ["npm registry (2026-09-16): @img/sharp-wasm32@0.35.3 license = Apache-2.0 AND LGPL-3.0-or-later AND MIT"]
+    },
+    {
+      "id": "sentry-cli-fsl",
+      "packages": ["@sentry/cli@2.58.5", "@sentry/cli-*@2.58.5"],
+      "license": "FSL-1.1-MIT",
+      "category": "sourceAvailable",
+      "reason": "Φορτώνεται από το withSentryConfig (next.config.js) μέσω @sentry/nextjs → @sentry/bundler-plugin-core για ανέβασμα source maps στο build. Οι εκδόσεις 2.20.0/2.30.0 ήταν BSD-3-Clause· η 2.58.5 είναι FSL-1.1-MIT.",
+      "owner": "giorgio",
+      "conditions": [
+        "μόνο build-time: δεν εκτελείται στην παραγωγή και δεν διανέμεται",
+        "όχι ανταγωνιστική χρήση (FSL «Competing Use»): δεν προσφέρουμε υπηρεσία παρακολούθησης σφαλμάτων",
+        "νέα έκδοση ⇒ νέα ημερομηνία μετατροπής ⇒ νέα έγκριση (η εξαίρεση είναι καρφωμένη στην 2.58.5)"
+      ],
+      "approvedOn": "2026-09-16",
+      "convertsOn": "2028-02-23",
+      "convertsTo": "MIT",
+      "scope": "prod",
+      "evidence": ["npm registry: @sentry/cli@2.58.5 κυκλοφορία 2026-02-23 ⇒ MIT σε 2 χρόνια (fsl.software)", "spdx.org/licenses/FSL-1.1-MIT.html"]
+    },
+    {
+      "id": "resvg-mpl",
+      "packages": ["@resvg/resvg-js", "@resvg/resvg-js-*"],
+      "license": "MPL-2.0",
+      "category": "reciprocal",
+      "reason": "Server-side rasterization SVG→PNG για το DXF (src/services/dxf-raster/dxf-raster-generator.ts, δυναμικό require). Εγκρίθηκε αρχικά 2026-07-08 ως «Seeded»· επαναταξινομήθηκε 2026-09-16 με πραγματικό λόγο.",
+      "owner": "giorgio",
+      "conditions": [
+        "αναλλοίωτο: κανένα αρχείο του πακέτου δεν τροποποιείται (MPL-2.0 = file-level copyleft)",
+        "server-side: τα native bytes δεν διανέμονται",
+        "αν ποτέ τροποποιηθεί αρχείο του, ο πηγαίος κώδικας της τροποποίησης δημοσιεύεται"
+      ],
+      "approvedOn": "2026-07-08",
+      "scope": "prod",
+      "evidence": ["pnpm licenses list --prod (2026-09-16): @resvg/resvg-js@2.6.2 = MPL-2.0"]
+    },
+    {
+      "id": "web-ifc-mpl",
+      "packages": ["web-ifc"],
+      "license": "MPL-2.0",
+      "category": "reciprocal",
+      "reason": "Εξάρτηση prod για τη διαδρομή IFC. Μετρημένο 2026-09-16: σήμερα το εισάγει ΜΟΝΟ το src/services/ifc/__tests__/ifc-roundtrip.test.ts· η χρήση στο εξαγωγέα είναι σχεδιασμένη (ifc-exporter.service.ts, Q8.6). Εγκρίθηκε αρχικά 2026-07-08 ως «Seeded».",
+      "owner": "giorgio",
+      "conditions": [
+        "αναλλοίωτο (MPL-2.0 = file-level copyleft)",
+        "αν φορτωθεί ποτέ στον browser (WASM), η διανομή οφείλει να δείχνει την άδεια και την πηγή του web-ifc"
+      ],
+      "approvedOn": "2026-07-08",
+      "scope": "prod",
+      "evidence": ["pnpm licenses list --prod (2026-09-16): web-ifc@0.0.77 = MPL-2.0"]
+    },
+    {
+      "id": "axe-core-dev",
+      "packages": ["axe-core"],
+      "license": "MPL-2.0",
+      "category": "reciprocal",
+      "reason": "ADR-598 G11 — μηχανή a11y tests (μέσω jest-axe). Μόνο dev/test, ποτέ στο production bundle. Εγκρίθηκε Giorgio 2026-07-08.",
+      "owner": "giorgio",
+      "conditions": ["μόνο devDependencies — αν γίνει ποτέ prod, ΑΥΤΗ η εξαίρεση ΔΕΝ το καλύπτει (scope: dev)"],
+      "approvedOn": "2026-07-08",
+      "scope": "dev",
+      "evidence": ["src/test-utils/a11y.tsx"]
+    }
+  ],
+
+  "assetExceptions": [
+    {
+      "id": "liberation-fonts-ofl",
+      "paths": ["public/fonts/Liberation*.ttf"],
+      "license": "OFL-1.1",
+      "category": "byExceptionOnly",
+      "reason": "ADR-803 — οι metric-compatible στόχοι του FONT_SUBSTITUTION_TABLE (Arial/Courier New). Εγκρίθηκαν Giorgio 2026-08-25 (CHECK 3.69 / ADR-805)· η OFL-1.1 είναι BY_EXCEPTION_ONLY στην Google, άρα η έγκριση γίνεται ρητή.",
+      "owner": "giorgio",
+      "conditions": [
+        "το κείμενο της άδειας ταξιδεύει μαζί: public/fonts/LiberationFonts-OFL-LICENSE.txt (το ελέγχει η κατάσταση unattributed του CHECK 3.69)",
+        "αναλλοίωτα αρχεία — τροποποιημένη όψη δεν επιτρέπεται να φέρει το Reserved Font Name «Liberation»",
+        "δεν πωλούνται αυτοτελώς"
+      ],
+      "approvedOn": "2026-08-25",
+      "scope": "prod",
+      "evidence": ["name table κάθε αρχείου: «SIL Open Font License, Version 1.1» (CHECK 3.69, άγκυρα Α1)"]
+    }
+  ]
+}

@@ -6,9 +6,9 @@
  *
  * ## 🔴 Το τυφλό σημείο, μετρημένο
  *
- * Ο **license gate** (ADR-598 G13, CHECK 12) τρέχει `license-checker`, που διαβάζει
- * **`node_modules`**. Ένα `.ttf` μέσα στο `public/` **δεν είναι πακέτο** ⇒ είναι **δομικά
- * αόρατο**. Μετρημένο 2026-08-25, το έργο διένειμε **τρία** σύνολα bytes γραμματοσειράς με
+ * Ο **license gate** (ADR-598 G13, CHECK 12) κρίνει την απογραφή **πακέτων** του pnpm
+ * (`pnpm licenses list --prod`· ως 2026-09-16 `license-checker`). Ένα `.ttf` μέσα στο `public/`
+ * **δεν είναι πακέτο** ⇒ είναι **δομικά αόρατο** εκεί. Μετρημένο 2026-08-25, το έργο διένειμε **τρία** σύνολα bytes γραμματοσειράς με
  * **μηδενική** δηλωμένη άδεια και **κανένα** αρχείο απόδοσης πουθενά στο δέντρο:
  *
  * | bytes | ταξιδεύει |
@@ -29,8 +29,11 @@
  * άρα η ερώτηση **υπάρχει** εδώ και **δεν υπάρχει** εκεί. Η απάντηση παίρνεται από την πηγή που
  * δεν μπορεί να λέει ψέματα: το `name` table του **ίδιου του αρχείου**.
  *
- * ⚠️ **ΜΙΑ λίστα επιτρεπόμενων αδειών**: το `allowedLicenses` του `.license-allowlist.json` —
- * το **ίδιο** που κρίνει τα npm πακέτα. Δεύτερη λίστα εδώ θα ήταν ADR-749 σε μικρογραφία.
+ * ⚠️ **ΜΙΑ πολιτική αδειών** (2026-09-16): η απόφαση «επιτρέπεται;» είναι το
+ * `decideAsset` του `lib/license-policy/policy.js` πάνω στο `.license-policy.json` — η **ίδια**
+ * συνάρτηση και το **ίδιο** αρχείο που κρίνουν τα npm πακέτα. Η OFL-1.1 είναι
+ * BY_EXCEPTION_ONLY (Google) ⇒ οι Liberation περνούν με **ρητή** `assetExceptions`, όχι επειδή
+ * «είναι στη λίστα». Δεύτερη λίστα εδώ θα ήταν ADR-749 σε μικρογραφία.
  *
  * @module scripts/lib/font-assets/assets
  */
@@ -42,10 +45,11 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const E = require('./evidence');
+const LP = require('../license-policy/policy');
 const { stripComments } = require('../source-text');
 
 const REGISTRY_FILE = '.font-assets.json';
-const ALLOWLIST_FILE = '.license-allowlist.json';
+const POLICY_FILE = LP.POLICY_FILE_NAME;
 
 /** Άδειες που απαιτούν το κείμενό τους να **ταξιδεύει** με το έργο. */
 const ATTRIBUTION_REQUIRED = new Set(['Apache-2.0', 'OFL-1.1']);
@@ -146,6 +150,13 @@ function readJson(repoRoot, rel, what) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
+/** Η πολιτική που λείπει ή είναι άκυρη ⇒ σφάλμα ΜΕ ΟΝΟΜΑ, ποτέ «καμία παραβίαση». */
+function loadPolicyOrThrow(repoRoot) {
+  const loaded = LP.loadPolicy(path.join(repoRoot, POLICY_FILE));
+  if (!loaded.ok) throw new Error(`${POLICY_FILE} — η πολιτική αδειών δεν διαβάζεται: ${loaded.error}`);
+  return loaded.policy;
+}
+
 /**
  * Η απογραφή. Το `override` υπάρχει **μόνο** για τη σουίτα — η παραγωγή ρωτά πάντα το git.
  */
@@ -154,8 +165,7 @@ function takeInventory(repoRoot, override = {}) {
   //    μητρώο** — όχι να σκάει πρώτα το `git` με «spawnSync ENOENT», μήνυμα που στέλνει τον
   //    επόμενο να ψάχνει λάθος πράγμα (άγκυρα `Κ12`).
   const registry = override.registry ?? readJson(repoRoot, REGISTRY_FILE, 'το μητρώο').assets;
-  const allowlist = override.allowedLicenses
-    ?? readJson(repoRoot, ALLOWLIST_FILE, 'η λίστα αδειών').allowedLicenses;
+  const policy = override.policy ?? loadPolicyOrThrow(repoRoot);
   const files = override.files ?? tracked(repoRoot);
   const shipped = override.shipped
     ?? [...binaryAssets(files), ...base64FontModules(repoRoot)].sort();
@@ -165,7 +175,8 @@ function takeInventory(repoRoot, override = {}) {
     files,
     shipped,
     registry: registry || {},
-    allowed: new Set(allowlist || []),
+    policy,
+    now: override.now ?? Date.now(),
     evidenceOf: override.evidenceOf ?? ((rel) => E.readEvidence(repoRoot, rel)),
     attributionExists: override.attributionExists
       ?? ((rel) => !!rel && fs.existsSync(path.join(repoRoot, rel))),
@@ -188,15 +199,16 @@ function judgeDeclared(inv, rel, entry) {
     return [STATES.LICENSE_DRIFT,
       `το μητρώο λέει «${entry.spdx}», το ΑΡΧΕΙΟ λέει «${ev.spdx}»`];
   }
-  if (!inv.allowed.has(ev.spdx)) {
+  const decision = LP.decideAsset(inv.policy, rel, ev.spdx, inv.now);
+  if (!LP.isPermitted(decision)) {
     return [STATES.LICENSE_NOT_ALLOWED,
-      `«${ev.spdx}» δεν είναι στο ${ALLOWLIST_FILE} — απόφαση N.5`];
+      `${decision.detail} — ${POLICY_FILE}, απόφαση N.5`];
   }
   if (ATTRIBUTION_REQUIRED.has(ev.spdx) && !inv.attributionExists(entry.attribution)) {
     return [STATES.UNATTRIBUTED,
       `η «${ev.spdx}» απαιτεί το κείμενό της να ταξιδεύει· δεν βρέθηκε αρχείο απόδοσης`];
   }
-  return [STATES.DECLARED_ALLOWED, `${ev.spdx} · ${ev.family ?? '—'}`];
+  return [STATES.DECLARED_ALLOWED, `${ev.spdx} · ${ev.family ?? '—'} · ${decision.state === 'allowed' ? decision.category : decision.detail}`];
 }
 
 /**
@@ -249,7 +261,7 @@ function tallyOf(rows) {
 const idsOf = (verdict, state) => verdict.rows.filter((r) => r.state === state).map((r) => r.id);
 
 module.exports = {
-  REGISTRY_FILE, ALLOWLIST_FILE, ATTRIBUTION_REQUIRED,
+  REGISTRY_FILE, POLICY_FILE, ATTRIBUTION_REQUIRED,
   STATES, BLOCKING, RATCHETED,
   tracked, binaryAssets, base64FontModules, gitGrepFiles,
   takeInventory, judge, tallyOf, idsOf,

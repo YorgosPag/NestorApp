@@ -27,6 +27,27 @@ const OFL = {
   spdx: 'OFL-1.1',
 };
 
+const LP = require('../lib/license-policy/policy');
+
+const REAL_POLICY_RAW = JSON.parse(require('node:fs').readFileSync(path.join(REPO_ROOT, LP.POLICY_FILE_NAME), 'utf8'));
+
+/**
+ * Η **ΠΡΑΓΜΑΤΙΚΗ** πολιτική αδειών με **μία** αλλαγή (2026-09-16, ADR-598 G13). ⚠️ Ποτέ δεύτερη
+ * λίστα αδειών μέσα στη σουίτα: τότε θα δοκίμαζε μια πολιτική που δεν τρέχει πουθενά.
+ */
+function policyWith(mutate = () => {}) {
+  const raw = JSON.parse(JSON.stringify(REAL_POLICY_RAW));
+  mutate(raw);
+  const compiled = LP.compilePolicy(raw);
+  if (!compiled.ok) throw new Error(compiled.error);
+  return compiled.policy;
+}
+
+/** Ο συνθετικός κόσμος ονομάζει το αρχείο `A.ttf`· η πραγματική εξαίρεση OFL απλώνεται σε αυτό. */
+const WORLD_POLICY = policyWith((raw) => {
+  raw.assetExceptions.find((e) => e.id === 'liberation-fonts-ofl').paths = ['public/fonts/*.ttf'];
+});
+
 /** Συνθετικός κόσμος — κάθε άγκυρα αλλάζει **μία** είσοδο. */
 const world = (over = {}) => A.takeInventory(REPO_ROOT, {
   files: [],
@@ -34,7 +55,7 @@ const world = (over = {}) => A.takeInventory(REPO_ROOT, {
   registry: {
     'public/fonts/A.ttf': { spdx: 'OFL-1.1', family: 'Liberation Sans', attribution: 'public/fonts/OFL.txt' },
   },
-  allowedLicenses: ['MIT', 'Apache-2.0', 'OFL-1.1'],
+  policy: WORLD_POLICY,
   evidenceOf: () => ({ ...OFL }),
   attributionExists: () => true,
   existsOnDisk: () => true,
@@ -64,8 +85,9 @@ describe('CHECK 3.69 — έχει κάθε διανεμόμενη γραμματ
     expect(A.idsOf(v, A.STATES.LICENSE_DRIFT)).toEqual(['public/fonts/A.ttf']);
   });
 
-  it('Κ4: άδεια εκτός allowlist ⇒ 🔴 license-not-allowed', () => {
-    const v = A.judge(world({ allowedLicenses: ['MIT'] }));
+  /** OFL-1.1 = Google BY_EXCEPTION_ONLY: χωρίς ρητή `assetExceptions` ΔΕΝ περνά. */
+  it('Κ4: OFL-1.1 χωρίς ρητή εξαίρεση στην πολιτική ⇒ 🔴 license-not-allowed', () => {
+    const v = A.judge(world({ policy: policyWith((raw) => { raw.assetExceptions = []; }) }));
     expect(A.idsOf(v, A.STATES.LICENSE_NOT_ALLOWED)).toEqual(['public/fonts/A.ttf']);
   });
 
@@ -215,8 +237,14 @@ describe('Π — το πραγματικό δέντρο', () => {
    * διανέμουμε — και **μόνο** τη λίστα αδειών συρρικνωμένη, κάθε διανεμόμενη γραμματοσειρά
    * **οφείλει** να γίνει `license-not-allowed`. Αν η πύλη ήταν κενή, εδώ θα έβγαινε 0.
    */
-  it('Π2: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — με ΠΡΑΓΜΑΤΙΚΕΣ αποδείξεις και συρρικνωμένη allowlist, ΟΛΑ πέφτουν', () => {
-    const inv = A.takeInventory(REPO_ROOT, { allowedLicenses: ['MIT'] });
+  it('Π2: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — με ΠΡΑΓΜΑΤΙΚΕΣ αποδείξεις και αυστηρότερη πολιτική, ΟΛΑ πέφτουν', () => {
+    // Αυστηρότερη = καμία εξαίρεση αρχείου + το Apache-2.0 μετακινείται σε κατηγορία που θέλει έγκριση.
+    const strict = policyWith((raw) => {
+      raw.assetExceptions = [];
+      raw.licenseCategories.notice = raw.licenseCategories.notice.filter((id) => id !== 'Apache-2.0');
+      raw.licenseCategories.reciprocal.push('Apache-2.0');
+    });
+    const inv = A.takeInventory(REPO_ROOT, { policy: strict });
     expect(inv.shipped.length).toBeGreaterThan(0);
     const v = A.judge(inv);
     const flagged = A.idsOf(v, A.STATES.LICENSE_NOT_ALLOWED);
@@ -224,8 +252,8 @@ describe('Π — το πραγματικό δέντρο', () => {
     expect(A.idsOf(v, A.STATES.DECLARED_ALLOWED)).toEqual([]);
   });
 
-  /** Και η αντίστροφη κατεύθυνση: με την ΠΡΑΓΜΑΤΙΚΗ allowlist, κανένα δεν πέφτει. */
-  it('Π2β: με την πραγματική allowlist κάθε διανεμόμενη γραμματοσειρά είναι εγκεκριμένη', () => {
+  /** Και η αντίστροφη κατεύθυνση: με την ΠΡΑΓΜΑΤΙΚΗ πολιτική, κανένα δεν πέφτει. */
+  it('Π2β: με την πραγματική πολιτική κάθε διανεμόμενη γραμματοσειρά είναι εγκεκριμένη', () => {
     const v = A.judge(A.takeInventory(REPO_ROOT));
     expect(A.idsOf(v, A.STATES.LICENSE_NOT_ALLOWED)).toEqual([]);
     expect(A.idsOf(v, A.STATES.DECLARED_ALLOWED).length).toBeGreaterThan(0);
@@ -257,13 +285,20 @@ describe('Π — το πραγματικό δέντρο', () => {
     expect(found).not.toContain('src/subapps/accounting/services/pdf/logo-data.ts');
   });
 
-  it('Π5: η λίστα επιτρεπόμενων είναι Η ΜΙΑ — αυτή του .license-allowlist.json', () => {
+  /**
+   * 🔑 ΜΙΑ πολιτική (2026-09-16): το ΙΔΙΟ αρχείο και η ΙΔΙΑ συνάρτηση με το CHECK 12. Η απόδειξη
+   * ΕΚΤΕΛΕΙ: αφαιρώντας την εξαίρεση OFL από την πολιτική, οι Liberation πέφτουν ΕΔΩ — ενώ το
+   * Roboto (Apache-2.0 = notice) μένει, γιατί δεν χρειαζόταν ποτέ εξαίρεση.
+   */
+  it('Π5: η πολιτική αδειών είναι Η ΜΙΑ — το ίδιο αρχείο και η ίδια απόφαση με το CHECK 12', () => {
     const inv = A.takeInventory(REPO_ROOT);
-    // eslint-disable-next-line global-require
-    const allow = JSON.parse(require('node:fs').readFileSync(
-      path.join(REPO_ROOT, '.license-allowlist.json'), 'utf8',
-    ));
-    expect([...inv.allowed].sort()).toEqual([...allow.allowedLicenses].sort());
+    expect(A.POLICY_FILE).toBe(LP.POLICY_FILE_NAME);
+    expect(inv.policy.raw).toEqual(REAL_POLICY_RAW);
+
+    const v = A.judge(A.takeInventory(REPO_ROOT, { policy: policyWith((raw) => { raw.assetExceptions = []; }) }));
+    const notAllowed = A.idsOf(v, A.STATES.LICENSE_NOT_ALLOWED);
+    expect(notAllowed.filter((id) => id.includes('Liberation')).length).toBeGreaterThan(0);
+    expect(notAllowed).not.toContain('src/services/gantt-export/roboto-font-data.ts');
   });
 
   /**

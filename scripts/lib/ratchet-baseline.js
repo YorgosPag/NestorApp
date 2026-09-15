@@ -120,10 +120,18 @@ function isRegression({ current, baseline, direction, tolerancePct = 0 }) {
 function announceSlack({ adr, slack, detail, command }) {
   if (!(slack > 0)) return '';
   const line = `${detail} — κλείδωσέ το: ${command}`;
-  if (process.env.GITHUB_ACTIONS === 'true') {
-    console.log(`::warning title=${adr} — μπαγιάτικη baseline::${line}`);
-  }
+  emitCiAnnotation('warning', `${adr} — μπαγιάτικη baseline`, line);
   return `  ⬇ ${line}`;
+}
+
+/**
+ * GitHub Actions workflow command (`::warning` / `::notice` / `::error`): εμφανίζεται στο PR, όχι
+ * στο βάθος ενός log. Εκτός Actions δεν τυπώνει τίποτα. Εξήχθη από το `announceSlack`
+ * 2026-09-16, όταν το χρειάστηκε και το CHECK 12 (υπενθύμιση μετατροπής FSL) — δεύτερη
+ * γραμμή `::warning` με το χέρι θα ήταν δίδυμο (N.18).
+ */
+function emitCiAnnotation(level, title, line) {
+  if (process.env.GITHUB_ACTIONS === 'true') console.log(`::${level} title=${title}::${line}`);
 }
 
 // The whole check/write/help control-flow, parameterised by a per-gate descriptor
@@ -373,6 +381,7 @@ module.exports = {
   // baseline αρχείο και άρα ΔΕΝ περνά από `runRatchetCli`· χωρίς αυτή τη γραμμή θα
   // έγραφε **δεύτερη** υλοποίηση της ίδιας ανακοίνωσης (N.18 / CHECK 3.28).
   announceSlack,
+  emitCiAnnotation,
   runRatchetCli,
   runSetRatchetCli,
   printHelp,

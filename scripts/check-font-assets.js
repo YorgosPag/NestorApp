@@ -73,7 +73,7 @@ function printReport(m) {
       console.log(`\n   ${state}: ${row.id}\n      ${row.detail}`);
     }
   }
-  console.log(`\n   Αυθεντίες: ${A.REGISTRY_FILE} · ${A.ALLOWLIST_FILE} · το name table κάθε αρχείου`);
+  console.log(`\n   Αυθεντίες: ${A.REGISTRY_FILE} · ${A.POLICY_FILE} · το name table κάθε αρχείου`);
 }
 
 /** ⚠️ Τα ZERO-TOL **ΔΕΝ μπαίνουν ΠΟΤΕ** εδώ (πρότυπο CHECK 3.44). */

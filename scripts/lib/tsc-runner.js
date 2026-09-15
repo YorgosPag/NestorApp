@@ -48,6 +48,7 @@
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { SPAWN_OUTCOME, classifySpawnResult, combineOutput, outputTail, formatUnmeasured } = require('./spawn-outcome');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -60,11 +61,12 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
  * this enum so all three gates speak one vocabulary.
  */
 const TSC_OUTCOME = Object.freeze({
-  RAN: 'ran',
-  SPAWN_FAILED: 'spawn-failed',
+  // Οι τέσσερις γενικές τιμές ΕΙΝΑΙ του κοινού λεξιλογίου (spawn-outcome.js) — όχι αντίγραφο.
+  RAN: SPAWN_OUTCOME.RAN,
+  SPAWN_FAILED: SPAWN_OUTCOME.SPAWN_FAILED,
   OUT_OF_MEMORY: 'out-of-memory',
-  KILLED: 'killed',
-  OUTPUT_TRUNCATED: 'output-truncated',
+  KILLED: SPAWN_OUTCOME.KILLED,
+  OUTPUT_TRUNCATED: SPAWN_OUTCOME.OUTPUT_TRUNCATED,
   NO_DIAGNOSTICS: 'no-diagnostics',
   /**
    * Οι τύποι που παράγει το framework λείπουν ⇒ ο μεταγλωττιστής θα έκρινε άλλο
@@ -112,46 +114,33 @@ function resolveHeapMb(env = process.env, totalMemBytes = os.totalmem()) {
   return Math.max(MIN_TSC_HEAP_MB, Math.min(CI_TSC_HEAP_MB, derived));
 }
 
-function combineOutput(result) {
-  return `${result.stdout || ''}\n${result.stderr || ''}`;
-}
-
 function looksLikeOom(text) {
   return OOM_SIGNATURES.some((sig) => text.includes(sig));
 }
+
+/** Το OOM του V8 είναι ΚΕΙΜΕΝΟ που προηγείται του σήματος — βλ. OOM_SIGNATURES. */
+const TSC_TEXT_SIGNATURES = Object.freeze([{
+  outcome: TSC_OUTCOME.OUT_OF_MEMORY,
+  detail: 'V8 exhausted the JS heap — raise the ceiling or reduce type work',
+  match: looksLikeOom,
+}]);
 
 /**
  * Pure classifier over a spawnSync-shaped result — the whole point of keeping it
  * separate from runTsc() is that every branch is unit-testable without spending
  * five minutes of CI to reproduce a compiler crash.
  *
- * Order is load-bearing (see OOM_SIGNATURES): truncation and spawn failure are
- * decided by `error`, then OOM by TEXT, then any remaining signal, then RAN.
- * A non-zero exit status alone is NOT a failure here: `tsc` exits non-zero
- * whenever it finds type errors, which is the normal case for these gates.
+ * Η σειρά (error → κείμενο OOM → σήμα → RAN) ζει πλέον στο κοινό `spawn-outcome.js`
+ * (εξαγωγή 2026-09-16, ADR-598 G13 — το χρειάστηκε και η μηχανή αδειών). Εδώ μένει ΜΟΝΟ
+ * ό,τι είναι του tsc: η υπογραφή OOM, η σημασία του σήματος, και ότι ο μη μηδενικός
+ * κωδικός ΔΕΝ είναι αποτυχία (`tsc` βγαίνει ≠0 όποτε βρίσκει σφάλματα τύπων).
  */
 function classifyTscResult(result) {
-  if (result.error && result.error.code === 'ENOBUFS') {
-    return { outcome: TSC_OUTCOME.OUTPUT_TRUNCATED, detail: 'stdout exceeded maxBuffer — output is incomplete, parsing it would undercount' };
-  }
-  if (result.error) {
-    return { outcome: TSC_OUTCOME.SPAWN_FAILED, detail: String(result.error.message || result.error) };
-  }
-  const combined = combineOutput(result);
-  if (looksLikeOom(combined)) {
-    return { outcome: TSC_OUTCOME.OUT_OF_MEMORY, detail: 'V8 exhausted the JS heap — raise the ceiling or reduce type work' };
-  }
-  if (result.signal) {
-    return { outcome: TSC_OUTCOME.KILLED, detail: `terminated by ${result.signal} (no V8 heap message — likely the OS OOM-killer or a job timeout)` };
-  }
-  return { outcome: TSC_OUTCOME.RAN, detail: null };
-}
-
-/** Last N characters of tsc's own output — the evidence that used to be lost. */
-function outputTail(text, limit = 2000) {
-  const trimmed = String(text || '').trim();
-  if (trimmed.length <= limit) return trimmed;
-  return `…(truncated, last ${limit} chars)…\n${trimmed.slice(-limit)}`;
+  return classifySpawnResult(result, {
+    textSignatures: TSC_TEXT_SIGNATURES,
+    nonZeroIsFailure: false,
+    describeSignal: (signal) => `terminated by ${signal} (no V8 heap message — likely the OS OOM-killer or a job timeout)`,
+  });
 }
 
 /**
@@ -172,17 +161,15 @@ function formatTscFailure({ outcome, detail, command, heapMb, status, signal, ou
   // printing "no output at all" while holding the evidence in the other field,
   // i.e. the exact defect it exists to prevent (caught 2026-08-05 before commit).
   const evidence = output === undefined ? combined : output;
-  const lines = [
-    `⚠️  UNKNOWN — the measurement did not happen (state: ${outcome}).`,
-    `   This is NOT a regression: nothing was measured. Fix the run, then read the number.`,
-    `   why:     ${detail || 'no further detail'}`,
-    `   command: ${command}`,
-    `   heap:    --max-old-space-size=${heapMb} MB${process.env.TSC_HEAP_MB ? ' (from TSC_HEAP_MB)' : ' (derived from host RAM)'}`,
-    `   exit:    status=${status === undefined ? 'n/a' : status} signal=${signal || 'none'}`,
-    `   ── tsc output (tail) ─────────────────────────────────────────────`,
-    outputTail(evidence) || '   (tsc produced no output at all)',
-  ];
-  return lines.join('\n');
+  // Το σώμα του μηνύματος ζει στο κοινό `formatUnmeasured` (το χρησιμοποιεί και το CHECK 12)·
+  // εδώ μένει ό,τι είναι του tsc: τι ΔΕΝ σημαίνει («regression») και το ταβάνι heap.
+  return formatUnmeasured({
+    outcome, detail, command, status, signal, output: evidence, tool: 'tsc',
+    notice: 'This is NOT a regression: nothing was measured. Fix the run, then read the number.',
+    extraLines: [
+      `   heap:    --max-old-space-size=${heapMb} MB${process.env.TSC_HEAP_MB ? ' (from TSC_HEAP_MB)' : ' (derived from host RAM)'}`,
+    ],
+  });
 }
 
 /**
