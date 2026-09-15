@@ -24,9 +24,9 @@
  * ⚠️ ΤΙ **ΔΕΝ** ΚΑΝΕΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * **Δεν κρίνει.** Ο κριτής είναι ο `acceptsMandate` και τρέχει στη **σελίδα**
+ * **Δεν κρίνει.** Ο κριτής είναι ο `mandateRefusalOf` και τρέχει στη **σελίδα**
  * *(διακομιστής)*· εδώ γίνεται μόνο η απόδοση. **Δεν γράφει κείμενο**: ο λόγος
- * έρχεται από το `REJECTION_KEYS['agency-not-brokerage']`, το **ίδιο** που θα δει
+ * έρχεται από το `REJECTION_KEYS[reason]` (`agency-closed` · `agency-not-brokerage`), το **ίδιο** που θα δει
  * όποιος υποβάλει το αίτημα με χειρόγραφο POST — **μία** φωνή για μία άρνηση, ποτέ
  * δύο *(N.12)*.
  *
@@ -46,15 +46,20 @@ import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Link } from '@/lib/workspace/navigation';
 
+import type { MandateRefusal } from '@/lib/agency/showcase-registry-closure';
+
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { MandateRequestOutcomeNotice } from './MandateRequestOutcomeNotice';
 
 export interface MandateUnavailableNoticeProps {
+  /** **Ο λόγος** — από τον κριτή `mandateRefusalOf` της σελίδας (ADR-841 §7 Α23 Φ3.3: και `agency-closed`). */
+  readonly reason: MandateRefusal;
   /** Η διεύθυνση της βιτρίνας — **δίνεται**, δεν αναζητείται (δες docblock). */
   readonly agencyHref: string;
 }
 
 export function MandateUnavailableNotice({
+  reason,
   agencyHref,
 }: MandateUnavailableNoticeProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
@@ -68,7 +73,7 @@ export function MandateUnavailableNotice({
     //    ⛔ ΟΧΙ `h-*` ούτε `max-h-*`: το ύψος δεν είναι το πρόβλημα — η **κατανομή**
     //    είναι. Ίδιος κανόνας με το «μην ξαναγράψεις `mx-auto`» του `shell-surface.css`.
     <ShellSurface as="main" measure="prose" className="gap-4 content-start">
-      <MandateRequestOutcomeNotice reason="agency-not-brokerage" />
+      <MandateRequestOutcomeNotice reason={reason} />
       <nav>
         <Link
           href={agencyHref}

@@ -26,6 +26,7 @@ import {
   type FirstContactFormBlocker,
 } from '@/lib/contact/first-contact-form-values';
 import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
+import type { RejectionRemedy } from '@/types/rejection-remedy';
 import {
   FIRST_CONTACT_CHANNELS,
   type FirstContactChannel,
@@ -107,13 +108,8 @@ export const INVARIANT_KEYS: Record<FirstContactInvariant, string> = {
  * ⚠️ **Τα τέσσερα `null` δεν είναι αδιαφορία**: `target-absent` ⇒ ο σύνδεσμος είναι
  * μπαγιάτικος· `contact-own-target` ⇒ δεν υπάρχει τίποτα να διορθωθεί. Σύνδεσμος εκεί
  * θα έβγαζε τον άνθρωπο από τη δουλειά του για να τον ξαναφέρει πίσω.
- */
-export interface RejectionRemedy {
-  readonly href: string;
-  readonly labelKey: string;
-}
-
-/**
+ * *(Ο τύπος `RejectionRemedy` ζει στο `types/rejection-remedy.ts` — κοινός με την εντολή.)*
+ *
  * ⚠️ **Η διεύθυνση ΔΕΝ γράφεται εδώ** — ζει στο `lib/contact/first-contact-routes.ts`
  * (ADR-843 §10.19). Ζούσε ως `MY_CONTACTS_ROUTE = '/contacts'` σε αυτό το αρχείο
  * **ετικετών**, και η λάθος θέση έκρυψε τη λάθος τιμή: το `/contacts` ανήκει στο γραφείο.

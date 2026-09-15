@@ -47,7 +47,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { agencyDoorFor } from '@/lib/agency/agency-door';
 import { orderAgencies, type DirectoryViewpoint } from '@/lib/agency/agency-directory-order';
 import { readShowcase } from '@/lib/agency/showcase-read';
-import { isListedInDirectory } from '@/lib/agency/showcase-registry-closure';
+import { directoryPopulationOf } from '@/lib/agency/agency-directory-population';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { generateSessionId } from '@/services/enterprise-id-convenience';
@@ -134,21 +134,13 @@ export function usePublicAgencies(from: GeoPoint | null): PublicAgenciesState {
         //    ΧΩΡΙΣ καμία απόδειξη θα ζωγραφιζόταν ως κάρτα: ο κατάλογος που το
         //    §9.9 β ονομάζει «επικίνδυνο αντί για χρήσιμο». Παραλείπεται ΚΑΙ
         //    καταγράφεται — σιωπηλή παράλειψη θα ήταν «0 = κανείς δεν κοίταξε».
-        const published: PublicShowcase[] = [];
-        for (const document of snapshot.docs) {
-          const read = readShowcase(document.data(), document.id);
-          if (read.outcome !== 'showcase') {
-            logger.warn('Βιτρίνα χωρίς αναγνώσιμη απόδειξη — παραλείφθηκε', {
-              data: { companyId: read.companyId },
-            });
-            continue;
-          }
-          // 🔑 ADR-841 §7 Α23 Φ3.2 — ΚΛΕΙΣΜΕΝΗ ΣΤΟ ΓΕΜΗ: εκτός καταλόγου ΚΑΙ αρχικής αναζήτησης (και
-          //    οι δύο τρώνε από εδώ), ΧΩΡΙΣ διαγραφή — ο `usePublicAgency` τη βρίσκει με την ετικέτα της.
-          //    Όχι `warn`: δεν είναι βλάβη, είναι γεγονός του μητρώου.
-          if (isListedInDirectory(read.showcase)) published.push(read.showcase);
+        // 🔑 ADR-841 §7 Α23 — ΚΛΕΙΣΜΕΝΗ ΣΤΟ ΓΕΜΗ: εκτός καταλόγου ΚΑΙ αρχικής αναζήτησης (και οι δύο τρώνε
+        //    από εδώ), ΧΩΡΙΣ διαγραφή. Η κρίση ζει στο `directoryPopulationOf` (καθαρή, με άγκυρα — Φ3.3).
+        const population = directoryPopulationOf(snapshot.docs);
+        for (const companyId of population.unreadableCompanyIds) {
+          logger.warn('Βιτρίνα χωρίς αναγνώσιμη απόδειξη — παραλείφθηκε', { data: { companyId } });
         }
-        setReadable(published);
+        setReadable(population.listed);
         setLoading(false);
       },
       (err: Error) => {

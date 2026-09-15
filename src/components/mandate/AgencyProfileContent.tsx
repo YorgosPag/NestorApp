@@ -70,6 +70,7 @@ import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
+import { contactableShowcase, mandateRefusalOf } from '@/lib/agency/showcase-registry-closure';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 import { ShowcaseContactCard } from './ShowcaseContactCard';
 import { ShowcaseShareDialog } from './ShowcaseShareDialog';
@@ -321,6 +322,10 @@ function ShowcaseView({
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const canHoldMandate = acceptsMandate(profile.credentials);
   const listings = usePublicAgencyListings(profile.companyId);
+  // 🔒 Α23.8 Γ4 φέτα 2 — κλειστή στο ΓΕΜΗ ⇒ κανένα κουμπί καναλιού· **ΜΙΑ** απάντηση για «Επικοινωνία» και κάρτα.
+  const contactable = contactableShowcase(profile);
+  // 🔒 Α23 Φ3.3 — «Ανάθεση εντολής» μόνο αν ο κριτής του γραφέα λέει ναι (κλειστή ⇒ όχι· `canHoldMandate` μένει για το επάγγελμα).
+  const acceptsNewMandate = mandateRefusalOf(profile) === null;
 
   return (
     <ShellSurface as="main" measure="prose" className="gap-6">
@@ -373,7 +378,7 @@ function ShowcaseView({
         ))}
         <PlaceFact profile={profile} />
         {/* Α21.17 — η επικοινωνία ΨΗΛΑ (απόφαση Giorgio): ιστοσελίδα, εμφάνιση καναλιών, αποθήκευση επαφής. */}
-        <ContactFact profile={profile} canHoldMandate={canHoldMandate} />
+        <ContactFact profile={contactable} canHoldMandate={canHoldMandate} />
         {/*
           🏆 **Φ5γ — Η ΓΡΑΜΜΗ ΔΕΧΕΤΑΙ ΤΙΣ ΑΓΓΕΛΙΕΣ, ΓΙΑΤΙ Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΜΟΝΗ ΤΗΣ.**
           Μέχρι σήμερα έλεγε *«Δηλώνει: Αττική»* ενώ από κάτω παρατίθενται ακίνητα στη
@@ -408,7 +413,7 @@ function ShowcaseView({
           ώστε να μη ζητήσει ό,τι θα απορριφθεί (N.7.2 #4). Ο φρουρός ζει στον γραφέα
           (`mandate-request.service.ts`), όπου ο ίδιος κριτής απαντά ξανά.
         */}
-        {canHoldMandate ? (
+        {acceptsNewMandate ? (
           <>
             <Button asChild aria-describedby="agency-request-hint">
               <Link href={mandateRequestHref(alias)}>{t(PROFILE_KEYS.requestCta)}</Link>
@@ -431,7 +436,7 @@ function ShowcaseView({
         έμεινε**: το κουμπί της γραπτής πράξης είναι πρώτο, τα κανάλια από κάτω — και στον
         μεσίτη η κάρτα θυμίζει δίπλα στο τηλέφωνο ότι η σύμβαση γίνεται γραπτώς.
       */}
-      <ShowcaseContactCard locations={profile.locations} companyId={profile.companyId} canHoldMandate={canHoldMandate} />
+      <ShowcaseContactCard locations={contactable.locations} companyId={profile.companyId} canHoldMandate={canHoldMandate} />
 
       {/*
         🔴 **ADR-841 §7 (Α6) — Η ΒΙΤΡΙΝΑ ΔΕΙΧΝΕΙ ΤΑ ΑΚΙΝΗΤΑ ΤΗΣ.** Το ερώτημα έγινε με

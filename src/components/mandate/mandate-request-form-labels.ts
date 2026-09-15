@@ -25,6 +25,7 @@ import type { TaxIdentityBlocker } from '@/lib/forms/draft-identity';
 import type { MandateRequestFormBlocker } from '@/lib/mandate/mandate-request-form-values';
 import { PRIVATE_PROFILE_ROUTE } from '@/lib/routes/accountRoutes';
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
+import type { RejectionRemedy } from '@/types/rejection-remedy';
 
 export const MANDATE_REQUEST_NS = 'property-market';
 
@@ -160,17 +161,12 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
  * (CHECK 3.60) — γι' αυτό ο `Link` του συνόρου **δεν** το προθεματοποιεί με
  * `/o/<ψευδώνυμο>`, που θα ήταν διεύθυνση **χωρίς σελίδα**.
  */
-export interface RejectionRemedy {
-  readonly href: string;
-  readonly labelKey: string;
-}
-
 export const REJECTION_REMEDY: Record<MandateRequestRejection, RejectionRemedy | null> = {
   'listing-absent': null,
   'listing-not-live': null,
   'listing-already-brokered': null,
   'agency-absent': null,
-  // ⚠️ `null` ΣΤΗ Φ3.2: η διέξοδος «βρείτε άλλο γραφείο» (σύνδεσμος καταλόγου) κρίνεται μαζί με την οθόνη (Φ3.3).
+  // ⚠️ `null` ακόμα: η διέξοδος «Όλα τα γραφεία» θέλει κλειδί στο route slice της φόρμας ⇒ ADR-841 Α23.9 Φέτα Β (κοινό regen).
   'agency-closed': null,
   /**
    * ⚠️ **`null` ΜΕ ΛΟΓΟ**: δεν υπάρχει πεδίο να διορθώσει — **δεν έκανε λάθος**. Ο

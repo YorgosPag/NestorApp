@@ -41,7 +41,7 @@ import { redirect } from 'next/navigation';
 
 import { MandateRequestFormContent } from '@/components/mandate/MandateRequestFormContent';
 import { MandateUnavailableNotice } from '@/components/mandate/MandateUnavailableNotice';
-import { acceptsMandate } from '@/lib/professional/showcase-acts';
+import { mandateRefusalOf } from '@/lib/agency/showcase-registry-closure';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { resolveAlias } from '@/lib/workspace/alias-registry';
 import { AGENCY_DIRECTORY_ROUTE, agencyProfileRoute } from '@/components/mandate/agency-directory-route';
@@ -82,8 +82,11 @@ export default async function MandateRequestPage({ searchParams }: MandateReques
   // ⚠️ **ΚΑΙ ΔΕΝ ΕΙΝΑΙ `redirect`**, σε αντίθεση με τις δύο από πάνω: εκεί δεν υπάρχει
   //    τίποτα να δείξεις· εδώ ο άνθρωπος μόλις ερχόταν από αυτή τη βιτρίνα και
   //    δικαιούται να μάθει **γιατί** — δες `MandateUnavailableNotice`.
-  if (!acceptsMandate(profile.showcase.credentials)) {
-    return <MandateUnavailableNotice agencyHref={agencyProfileRoute(agency)} />;
+  //
+  // 🔒 ADR-841 §7 Α23 Φ3.3 — και **κλειστή στο ΓΕΜΗ**: ο κριτής δίνει **τον λόγο**, με την ίδια σειρά με τον γραφέα.
+  const refusal = mandateRefusalOf(profile.showcase);
+  if (refusal !== null) {
+    return <MandateUnavailableNotice reason={refusal} agencyHref={agencyProfileRoute(agency)} />;
   }
 
   return (

@@ -93,6 +93,7 @@ function listingOf(id: string, title: string): PublicListing {
     title,
     projectedAt: '2026-09-01T09:28:43.769Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    priceReduction: null,
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,
@@ -242,5 +243,71 @@ describe('Ε. Οι πράξεις της βιτρίνας (ADR-841 §7 Α5)', ()
     expect(screen.getByText(PROFILE_KEYS.cardBrokerWritten)).toBeInTheDocument();
     expect(screen.getByText(PROFILE_KEYS.listingsEmptyHint)).toBeInTheDocument();
     expect(screen.queryByText(PROFILE_KEYS.listingsEmptyHintPro)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * 🔒 **ADR-841 §7 Α23.8 — Γ4 φέτα 2: ΚΛΕΙΣΤΗ ΣΤΟ ΓΕΜΗ ⇒ ΚΑΝΕΝΑ ΚΟΥΜΠΙ ΚΑΝΑΛΙΟΥ.**
+ *
+ * ⚠️ **ΔΥΟ** καταστήματα με κανάλια: η έδρα ανεβαίνει στην «Επικοινωνία», το δεύτερο κρατά τα κουμπιά του
+ * **στην κάρτα** — έτσι η άγκυρα βλέπει **και τα δύο** σημεία της σελίδας, όχι μόνο το ένα.
+ */
+describe('Κ. Κλειστή στο ΓΕΜΗ (ADR-841 §7 Α23.8)', () => {
+  // 🔑 Η επιβεβαίωση email αποδίδεται ΜΟΝΟ στη σύνοψη ⇒ τη φέρει η έδρα (αυτή ανεβαίνει).
+  const CONFIRMED_HQ: ShowcaseLocation = {
+    ...PHONE_LOCATION,
+    channelKinds: ['phone', 'email'],
+    emailConfirmedAt: '2026-09-01T09:00:00.000Z',
+  };
+  const PHONE_BRANCH: ShowcaseLocation = { ...PHONE_LOCATION, id: 'sloc_branch', role: 'branch' };
+  const legalIdentity = (checkedAt: string | null): PublicShowcase['legalIdentity'] => ({
+    publicName: 'legal-name',
+    legalName: 'ΑΛΦΑ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ',
+    legalForm: 'ae',
+    gemiNumber: '123456789000',
+    seat: { disclosure: 'municipality', streetLine: null, postalCode: null, locality: 'Θεσσαλονίκη' },
+    attestation: { state: 'declared' },
+    registryClosure: checkedAt === null ? null : { issuer: 'gemi', checkedAt },
+  });
+  const showcaseWith = (checkedAt: string | null): PublicShowcase => ({
+    ...PROFILE,
+    website: 'https://www.alfa.gr/',
+    locations: [CONFIRMED_HQ, PHONE_BRANCH],
+    legalIdentity: legalIdentity(checkedAt),
+  });
+  const CHANNEL_KEYS = [
+    PROFILE_KEYS.cardShowPhone,
+    PROFILE_KEYS.cardShowEmail,
+    PROFILE_KEYS.cardSaveContact,
+    PROFILE_KEYS.cardBrokerWritten,
+    PROFILE_KEYS.cardEmailConfirmedOn,
+  ] as const;
+
+  it('🔴 Κ1 — κλειστή ⇒ ούτε «Εμφάνιση», ούτε «Αποθήκευση επαφής», ούτε μεσιτική υπενθύμιση — σε ΚΑΝΕΝΑ σημείο', () => {
+    paint({ listings: [] }, showcaseWith('2026-09-14T11:00:00.000Z'));
+
+    for (const key of CHANNEL_KEYS) expect(screen.queryByText(key)).not.toBeInTheDocument();
+    // 🔑 Η σελίδα ΜΕΝΕΙ (GBP): και τα δύο καταστήματα με τη διεύθυνσή τους, και η ιστοσελίδα.
+    expect(screen.getAllByText(PROFILE_KEYS.cardAreaOnly)).toHaveLength(2);
+    expect(screen.getByText('alfa.gr')).toBeInTheDocument();
+  });
+
+  it('🔑 Κ2 — Ο ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: η ΙΔΙΑ βιτρίνα ενεργή ⇒ όλα εκεί, και στα δύο σημεία', () => {
+    // Χωρίς αυτό, ένα «κρύψε τα κανάλια πάντα» ή ένα fixture χωρίς κανάλια θα άφηνε το Κ1 πράσινο.
+    paint({ listings: [] }, showcaseWith(null));
+
+    for (const key of CHANNEL_KEYS) expect(screen.queryAllByText(key).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(PROFILE_KEYS.cardShowPhone)).toHaveLength(2);
+    expect(screen.getAllByText(PROFILE_KEYS.cardAreaOnly)).toHaveLength(2);
+    expect(screen.getByText(PROFILE_KEYS.requestCta)).toBeInTheDocument();
+  });
+
+  it('🔴 Κ3 — Φ3.3: κλειστή ΜΕΣΙΤΙΚΗ ⇒ κανένα «Ανάθεση εντολής» (ο γραφέας θα αρνιόταν `agency-closed`)', () => {
+    paint({ listings: [] }, showcaseWith('2026-09-14T11:00:00.000Z'));
+
+    expect(screen.queryByText(PROFILE_KEYS.requestCta)).not.toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_KEYS.requestHint)).not.toBeInTheDocument();
+    // 🔑 Το επάγγελμα ΔΕΝ άλλαξε: η λίστα αγγελιών μιλά ακόμα σε μεσίτη (όχι στον τεχνίτη).
+    expect(screen.getByText(PROFILE_KEYS.listingsEmptyHint)).toBeInTheDocument();
   });
 });

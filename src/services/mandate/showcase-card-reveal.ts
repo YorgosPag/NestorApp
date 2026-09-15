@@ -23,6 +23,14 @@
  *
  * ⛔ **ΚΑΝΕΝΑΣ ΜΕΤΡΗΤΗΣ** (απόφαση Giorgio 2026-09-14 · ADR-843 ΠΕ2/ΠΕ3): πεδίο «πόσοι πάτησαν»
  * θα ήταν έτοιμο διάνυσμα κατάταξης, και παρακολούθηση επισκεπτών.
+ *
+ * 🔒 **ΚΛΕΙΣΤΗ ΣΤΟ ΓΕΜΗ ⇒ ΚΑΝΕΝΑ ΚΑΝΑΛΙ** (ADR-841 §7 Α23 Γ4 · Απόφαση 3 Giorgio): η σελίδα μένει με ετικέτα
+ * (Google Business Profile), αλλά τηλέφωνα/email/vCard **δεν** φεύγουν — Google Ads: location asset οριστικά
+ * κλειστής = παραβίαση πολιτικής· και η πρώτη επαφή αρνείται ήδη `target-closed`. Ο φρουρός ζει **εδώ**, στον
+ * ΕΝΑ αναγνώστη, ώστε να καλύπτει **και τις δύο** πόρτες, και κρίνει **πριν** διαβαστεί το ιδιωτικό έγγραφο
+ * (άρθ. 5(1)(γ): αριθμός που δεν θα δειχτεί δεν διαβάζεται). Απάντηση `absent` — η ετικέτα κλεισίματος είναι
+ * ήδη δημόσια, άρα καμία συγκάλυψη δεν σπάει. Τα κανάλια **μένουν** στον δίσκο: το κλείσιμο δεν είναι απόσυρση,
+ * και η επαναλειτουργία (νέα ανανέωση) τα ξαναφέρνει χωρίς να τα ξαναγράψει κανείς.
  */
 
 import 'server-only';
@@ -33,6 +41,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { revealablePhone } from '@/lib/contact/channel-phone';
 import { readLocationChannels } from '@/lib/agency/showcase-card-channels-read';
+import { registryClosureOf } from '@/lib/agency/showcase-registry-closure';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import type { PublicShowcase } from '@/types/agency-profile';
 import type {
@@ -81,6 +90,8 @@ export async function revealLocationCard(
   if (lookup.outcome !== 'found') return ABSENT;
   const location = lookup.showcase.locations.find(({ id }) => id === locationId);
   if (location === undefined) return ABSENT;
+  // 🔒 Γ4 — κλειστή στο ΓΕΜΗ: κανένα κανάλι, και καμία ανάγνωση του ιδιωτικού εγγράφου.
+  if (registryClosureOf(lookup.showcase) !== null) return ABSENT;
 
   try {
     const snapshot = await adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(companyId).get();

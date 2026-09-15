@@ -12,6 +12,7 @@
  *   • Κ3 — η απόσυρση σβήνει **και** τα ιδιωτικά κανάλια (ανάκληση συγκατάθεσης)
  *   • Κ4 — κάρτα χωρίς βιτρίνα: ονομαστική άρνηση, **τίποτα** δεν γράφεται
  *   • Κ5 — το reveal: ταυτόσημο `absent` για ανύπαρκτο κατάστημα / αποσυρμένη βιτρίνα
+ *   • Κ8 — κλειστή στο ΓΕΜΗ (ADR-841 §7 Α23 Γ4): `absent` και στις δύο πόρτες, τα κανάλια μένουν, επανέρχονται
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -200,5 +201,35 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
 
     await withdrawAgencyProfile(admin, COMPANY);
     expect(await revealLocationCard(admin, COMPANY, locationId)).toEqual({ kind: 'absent' });
+  });
+
+  it('🔒 Κ8 — κλειστή στο ΓΕΜΗ: κανένα κανάλι από ΚΑΙ τις δύο πόρτες· τα κανάλια ΜΕΝΟΥΝ και επανέρχονται (Α23 Γ4)', async () => {
+    const { fake, admin } = db();
+    await givenShowcase(admin);
+    const saved = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
+    if (saved.kind !== 'saved') throw new Error(saved.kind);
+    const locationId = saved.locations[0].id;
+    const published = await raw(fake, COLLECTIONS.AGENCY_PROFILES);
+    const legalIdentity = published?.legalIdentity as Record<string, unknown>;
+    const givenClosure = (registryClosure: unknown): Promise<void> =>
+      fake
+        .collection(COLLECTIONS.AGENCY_PROFILES)
+        .doc(COMPANY)
+        .set({ ...published, legalIdentity: { ...legalIdentity, registryClosure } });
+
+    await givenClosure({ issuer: 'gemi', checkedAt: '2026-09-14T11:00:00.000Z' });
+    // Η vCard διαβάζει το `revealLocationCard`, η «Εμφάνιση» το `revealLocationChannels` — και οι δύο σιωπούν.
+    // 🔒 5(1)(γ): αριθμός που δεν θα δειχτεί ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ — ο φρουρός κρίνει πριν ανοίξει το ιδιωτικό έγγραφο.
+    const opened = jest.spyOn(fake, 'collection');
+    expect(await revealLocationCard(admin, COMPANY, locationId)).toEqual({ kind: 'absent' });
+    expect(await revealLocationChannels(admin, COMPANY, locationId)).toEqual({ kind: 'absent' });
+    expect(opened).not.toHaveBeenCalledWith(COLLECTIONS.SHOWCASE_CARD_CHANNELS);
+    opened.mockRestore();
+    // Το κλείσιμο ΔΕΝ είναι απόσυρση: τίποτα δεν σβήνεται.
+    expect(JSON.stringify(await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS))).toContain('+302310123456');
+
+    // 🔑 Ο ΙΔΙΟΣ δρόμος γραφής ξανανοίγει ⇒ αν το «absent» ήταν χαλασμένο έγγραφο, εδώ θα κοκκίνιζε.
+    await givenClosure(null);
+    expect((await revealLocationChannels(admin, COMPANY, locationId)).kind).toBe('revealed');
   });
 });
