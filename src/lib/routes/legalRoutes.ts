@@ -25,6 +25,15 @@ export const LEGAL_ROUTES = {
   dataDeletion: '/data-deletion',
   /** Νομικά στοιχεία του φορέα (Π.Δ. 131/2003 άρθ. 4). */
   legalNotice: '/legal-notice',
+  /**
+   * Απόδοση αδειών του ανοιχτού κώδικα που ενσωματώνεται (ADR-863 Φ3).
+   *
+   * ⚠️ **ΕΠΙΠΕΔΗ, ΟΠΩΣ ΚΑΙ ΟΙ ΤΕΣΣΕΡΙΣ ΑΔΕΛΦΕΣ** — απόφαση Giorgio 2026-09-16, ρητή
+   * απόκλιση από το handoff που έγραφε `/legal/open-source`. Ένα εμφωλευμένο τμήμα θα
+   * έδινε στη **ίδια** οικογένεια δύο σχήματα διεύθυνσης, και η δεύτερη μορφή είναι
+   * ακριβώς ο τρόπος με τον οποίο ένα λεξιλόγιο αρχίζει να αποκλίνει.
+   */
+  openSource: '/open-source',
 } as const;
 
 export type LegalRouteId = keyof typeof LEGAL_ROUTES;
@@ -34,4 +43,14 @@ export type LegalRouteId = keyof typeof LEGAL_ROUTES;
  * στοιχείων). Οι ετικέτες ζουν στο UI (`components/legal/LegalLinksNav.tsx`), όχι εδώ: αυτό το
  * αρχείο είναι διαδρομές μόνο, όπως τα αδέλφια του.
  */
-export const LEGAL_LINK_ORDER: readonly LegalRouteId[] = ['privacyPolicy', 'terms', 'dataDeletion', 'legalNotice'];
+export const LEGAL_LINK_ORDER: readonly LegalRouteId[] = [
+  'privacyPolicy',
+  'terms',
+  'dataDeletion',
+  'legalNotice',
+  // ⚖️ ΤΕΛΕΥΤΑΙΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ: οι τέσσερις από πάνω δεσμεύουν τον **αναγνώστη**
+  //    (τι κάνουμε με τα δεδομένα του, τι συμφωνεί μαζί μας). Η απόδοση αδειών δεσμεύει
+  //    **εμάς** απέναντι σε τρίτους εκδότες — άλλο ακροατήριο, χαμηλότερη προτεραιότητα
+  //    ανάγνωσης, και καμία σχέση με τη συγκατάθεση που ζητούν οι από πάνω.
+  'openSource',
+];
