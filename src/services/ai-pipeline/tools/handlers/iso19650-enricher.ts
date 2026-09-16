@@ -37,23 +37,19 @@
 // `process.env.OPENAI_API_KEY` is undefined client-side → AI call short-circuits.
 
 import { AI_ANALYSIS_DEFAULTS, AI_COST_CONFIG } from '@/config/ai-analysis-config';
+// ADR-862 Φ0 Β2 — έφυγαν `CDE_STATE_VALUES` · `SUITABILITY_CODE_VALUES` · `CdeState` ·
+// `SuitabilityCode`: ο ταξινομητής δεν ονομάζει πια κατάσταση ούτε καταλληλότητα.
 import {
-  CDE_STATE_VALUES,
   DISCIPLINE_CODE_VALUES,
   DOCUMENT_SERIES_VALUES,
   ISO19650_BUDGET_CAP_USD,
-  SUITABILITY_CODE_VALUES,
-  type CdeState,
   type DisciplineCode,
   type DocumentSeries,
-  type SuitabilityCode,
 } from '@/config/iso19650-constants';
 import {
   deriveFromPurpose,
-  isCdeState,
   isDisciplineCode,
   isDocumentSeries,
-  isSuitabilityCode,
   validateBuildingCode,
   validateRevisionCode,
 } from '@/services/iso19650/validators';
@@ -85,12 +81,31 @@ export interface Iso19650SourceAudit {
   filledAt: string;
 }
 
+/**
+ * Ό,τι **ταξινομεί** ο AI για ένα αρχείο.
+ *
+ * 🔴 **ΤΟ `cdeState` ΚΑΙ ΤΟ `suitabilityCode` ΕΦΥΓΑΝ ΑΠΟ ΕΔΩ** (ADR-862 Φ0 Β2).
+ *
+ * Από τη στιγμή που η **κατάσταση CDE φρουρεί** (ADR-787 Κ-4), μια τιμή με
+ * `aiConfidence` θα ήταν **εξουσιοδότηση που κανείς δεν υπέγραψε**: λάθος `'WIP'`
+ * κρύβει το σχέδιο από τους συναδέλφους, λάθος `'PUBLISHED'` το στέλνει στο
+ * συνεργείο. Η κατάσταση είναι **ΠΡΑΞΗ** (AIP-216: output-only, αλλάζει μόνο με
+ * ονομασμένες πράξεις) — ο ΕΝΑΣ γραφέας είναι το
+ * `services/iso19650/container-transitions`.
+ *
+ * Το `suitabilityCode` φεύγει μαζί για **δύο** λόγους: (α) το ISO 19650 §6.1 το
+ * δένει με «fixed relationships» στην κατάσταση, άρα **παράγεται** από αυτήν
+ * (`lib/files/file-record-read.deriveSuitability`)· (β) **μετρημένο 2026-09-16**:
+ * ο AI το παρήγαγε και **κανένας γραφέας δεν το αποθήκευε ποτέ** — ούτε το
+ * `applyIso19650Enrichment` ούτε το backfill. Ήταν tokens που πληρώναμε για πεδίο
+ * που πεταγόταν.
+ *
+ * ✅ Μένουν τα **περιγραφικά**: ταξινομούν, δεν αποφασίζουν.
+ */
 export interface Iso19650EnrichmentResult {
   disciplineCode?: DisciplineCode;
   documentSeries?: DocumentSeries;
   revisionCode?: string;
-  suitabilityCode?: SuitabilityCode;
-  cdeState?: CdeState;
   buildingCode?: string;
   source: Iso19650SourceAudit;
 }
@@ -162,8 +177,9 @@ const SYSTEM_PROMPT =
   'documentSeries: αριθμός σειράς (100=Κατόψεις, 200=Όψεις, 300=Τομές, 400=Λεπτομέρειες, ' +
   '500=Πίνακες κουφωμάτων, 600=Διαμορφώσεις, 700=Στατικά σχέδια, 800=Η/Μ schematics, 900=As-Built). ' +
   'revisionCode: τύπος (P|T|C|R|AB) + 2 ψηφία π.χ. P01, R02, C03. ' +
-  'suitabilityCode: κωδικός καταλληλότητας BS 1192 — IFA (Για Έγκριση), IFR (Για Σχολιασμό), IFC (Για Κατασκευή), ASB (Τελικό Κατασκευής). ' +
-  'cdeState: WIP (σε εξέλιξη), SHARED (διαβούλευση), PUBLISHED (εγκεκριμένο), SUPERSEDED (αντικατασταθηκε). ' +
+  // ⛔ ADR-862 Φ0 Β2 — ΚΑΜΙΑ γραμμή για `cdeState`/`suitabilityCode`: δεν ζητάμε από
+  //    το μοντέλο κάτι που δεν πρόκειται να κρατήσουμε (και δεν πληρώνουμε tokens
+  //    γι' αυτό). Η κατάσταση είναι ανθρώπινη πράξη· η καταλληλότητα παράγεται.
   'buildingCode: κωδικός κτιρίου π.χ. Κ1, Κ1-Α, A-1. ' +
   'Απάντησε ΜΟΝΟ με JSON σύμφωνα με το schema.';
 
@@ -194,8 +210,6 @@ const ENRICHMENT_SCHEMA: Record<string, unknown> = {
       'disciplineCode',
       'documentSeries',
       'revisionCode',
-      'suitabilityCode',
-      'cdeState',
       'buildingCode',
       'confidence',
       'reasoning',
@@ -215,16 +229,6 @@ const ENRICHMENT_SCHEMA: Record<string, unknown> = {
       revisionCode: {
         type: ['string', 'null'],
         description: 'Revision tag (P|T|C|R|AB + 2 digits) or null if not present.',
-      },
-      suitabilityCode: {
-        type: ['string', 'null'],
-        enum: [...SUITABILITY_CODE_VALUES, null],
-        description: 'BS 1192 suitability code (IFA/IFR/IFC/ASB) or null if not found on document.',
-      },
-      cdeState: {
-        type: ['string', 'null'],
-        enum: [...CDE_STATE_VALUES, null],
-        description: 'CDE workflow state (WIP/SHARED/PUBLISHED/SUPERSEDED) or null.',
       },
       buildingCode: {
         type: ['string', 'null'],
@@ -361,8 +365,9 @@ function buildAiResult(
   if (isDisciplineCode(parsed.disciplineCode)) result.disciplineCode = parsed.disciplineCode;
   if (isDocumentSeries(parsed.documentSeries)) result.documentSeries = parsed.documentSeries;
   if (validateRevisionCode(parsed.revisionCode)) result.revisionCode = parsed.revisionCode;
-  if (isSuitabilityCode(parsed.suitabilityCode)) result.suitabilityCode = parsed.suitabilityCode;
-  if (isCdeState(parsed.cdeState)) result.cdeState = parsed.cdeState;
+  // ⛔ ADR-862 Φ0 Β2 — ΚΑΜΙΑ γραμμή για `cdeState`/`suitabilityCode`. Ακόμη κι αν το
+  //    μοντέλο τα επιστρέψει (παλιό cache, χαλαρό schema), **αγνοούνται σιωπηλά**:
+  //    ο φρουρός δεν εξαρτάται από το τι δεν είπε ο AI, αλλά από το τι δεν διαβάζουμε.
   if (validateBuildingCode(parsed.buildingCode)) result.buildingCode = parsed.buildingCode;
   return result;
 }

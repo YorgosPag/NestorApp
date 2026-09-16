@@ -148,13 +148,17 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
     expect(result.disciplineCode).toBe('A');
     expect(result.documentSeries).toBe(100);
     expect(result.revisionCode).toBe('P01');
-    expect(result.suitabilityCode).toBe('IFC');
-    expect(result.cdeState).toBe('WIP');
+    // 🔒 ADR-862 Φ0 Β2 — ΤΟ ΑΝΤΙΣΤΡΟΦΟ ΤΟΥ ΠΑΛΙΟΥ ΙΣΧΥΡΙΣΜΟΥ, ΟΧΙ ΣΒΗΣΙΜΟ ΤΟΥ.
+    //    Εδώ έγραφε `toBe('IFC')` και `toBe('WIP')`. Ένα **σβησμένο** test δεν πιάνει
+    //    επαναφορά· ένα **αντεστραμμένο** την πιάνει: αν κάποιος ξαναβάλει τα πεδία
+    //    στον ταξινομητή, αυτή η γραμμή κοκκινίζει.
+    expect(result).not.toHaveProperty('suitabilityCode');
+    expect(result).not.toHaveProperty('cdeState');
     expect(result.buildingCode).toBe('Κ1');
     expect(result.source.aiCostUsd).toBeGreaterThan(0);
   });
 
-  it('returns suitabilityCode null when AI returns null (document lacks title block annotation)', async () => {
+  it('🔒 ΑΓΝΟΕΙ την πρόταση PUBLISHED του AI — η κατάσταση CDE είναι ανθρώπινη πράξη (ADR-862 Φ0)', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({}),
@@ -173,7 +177,12 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
     );
     const result = await enrichFileWithIso19650Metadata(SMALL_PDF_INPUT);
     expect(result.source.filledBy).toBe('ai');
-    expect(result.suitabilityCode).toBeUndefined();
+    // 🔴 Η ΦΕΡΟΥΣΑ ΔΟΚΙΜΗ ΤΟΥ Β2: το μοντέλο **πρότεινε ρητά** `cdeState: 'PUBLISHED'`
+    //    — δηλαδή «δώσ' το στο συνεργείο». Ο ταξινομητής το **αγνοεί ολοκληρωτικά**.
+    //    Χωρίς αυτή τη γραμμή, μια επαναφορά του πεδίου θα περνούσε αθόρυβα και ένα
+    //    ημιτελές στατικό θα έφευγε στο εργοτάξιο με την υπογραφή του AI.
+    expect(result).not.toHaveProperty('cdeState');
+    expect(result).not.toHaveProperty('suitabilityCode');
     expect(result.revisionCode).toBe('R02');
   });
 
@@ -199,8 +208,9 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
     expect(result.disciplineCode).toBe('A');
     expect(result.documentSeries).toBe(100);
     expect(result.revisionCode).toBeUndefined();
-    expect(result.suitabilityCode).toBeUndefined();
-    expect(result.cdeState).toBeUndefined();
+    // Τα δύο πεδία δεν «απορρίπτονται» πλέον — **δεν υπάρχουν** (Φ0 Β2).
+    expect(result).not.toHaveProperty('suitabilityCode');
+    expect(result).not.toHaveProperty('cdeState');
     expect(result.buildingCode).toBeUndefined();
   });
 });

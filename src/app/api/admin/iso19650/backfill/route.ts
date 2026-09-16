@@ -111,7 +111,9 @@ async function applyEnrichment(
     disciplineCode: enrichment.disciplineCode ?? null,
     documentSeries: enrichment.documentSeries ?? null,
     revisionCode: enrichment.revisionCode ?? null,
-    cdeState: enrichment.cdeState ?? null,
+    // 🔴 ADR-862 Φ0 Β2 — ίδιος λόγος με το `file-record-post-finalize-hooks`: η
+    //    κατάσταση CDE φρουρεί, άρα δεν τη γράφει ταξινομητής. Ο δίδυμος γραφέας
+    //    έπρεπε να φύγει στο **ίδιο** PR (N.18) — χωριστά, ο ένας θα επιβίωνε σιωπηλά.
     buildingCode: enrichment.buildingCode ?? null,
     iso19650Source: enrichment.source,
     updatedAt: FieldValue.serverTimestamp(),

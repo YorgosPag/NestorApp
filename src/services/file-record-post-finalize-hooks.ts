@@ -129,7 +129,15 @@ async function applyIso19650Enrichment(
     disciplineCode: enrichment.disciplineCode ?? null,
     documentSeries: enrichment.documentSeries ?? null,
     revisionCode: enrichment.revisionCode ?? null,
-    cdeState: enrichment.cdeState ?? null,
+    // 🔴 ADR-862 Φ0 Β2 — ΤΟ `cdeState` ΔΕΝ ΓΡΑΦΕΤΑΙ ΠΙΑ ΑΠΟ ΤΟΝ AI.
+    //    Από τη στιγμή που η κατάσταση **φρουρεί** (ADR-787 Κ-4), μια ταξινόμηση
+    //    με `aiConfidence` θα ήταν εξουσιοδότηση που **κανείς δεν υπέγραψε**: λάθος
+    //    `'WIP'` κρύβει το σχέδιο από τους συναδέλφους, λάθος `'PUBLISHED'` το
+    //    στέλνει στο συνεργείο. Η κατάσταση είναι **ΠΡΑΞΗ** (AIP-216: output-only,
+    //    αλλάζει μόνο με ονομασμένες πράξεις) — ο ΕΝΑΣ γραφέας είναι το
+    //    `services/iso19650/container-transitions`.
+    //    ⚠️ Τα περιγραφικά πεδία (ειδικότητα · σειρά · αναθεώρηση · κτίριο) μένουν:
+    //    ταξινομούν, δεν αποφασίζουν.
     buildingCode: enrichment.buildingCode ?? null,
     iso19650Source: enrichment.source,
     updatedAt: serverTimestamp(),
