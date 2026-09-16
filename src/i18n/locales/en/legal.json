@@ -45,6 +45,38 @@
       "legalForm": "Legal form: {text}"
     }
   },
+  "openSource": {
+    "title": "Open Source Software",
+    "intro": "This service incorporates third-party open source software. Their licenses require the copyright notices and license texts to accompany every copy that is distributed — and whatever is downloaded to your device is a copy.",
+    "obligation": "This page is generated automatically from the application's own dependency tree, on every release. It is not written by hand and cannot diverge from what is actually distributed.",
+    "browserTitle": "Distributed to the browser",
+    "browserIntro": "The code of these components is downloaded to your device. It is a copy in the sense of the licenses, and attribution is an obligation.",
+    "serverTitle": "Executed on the server",
+    "serverIntro": "These components run on our infrastructure and are not distributed. They are listed for transparency, not because a license requires it.",
+    "unmeasuredTitle": "The distribution surface has not been measured yet",
+    "unmeasuredIntro": "For the components below, the measurement that shows which ones reach your device and which stay on the server has not yet been completed. Until it is, they are listed together and the full texts of their licenses are provided regardless — not knowing is not presented as an absence of obligation.",
+    "total": "Total components: {count}",
+    "generatedAt": "Generated:",
+    "fingerprint": "Input fingerprint:",
+    "fullText": "Full license texts",
+    "fullTextHint": "A text file reproducing every copyright notice verbatim.",
+    "sbom": "Machine-readable inventory",
+    "sbomHint": "CycloneDX format, at the address defined by RFC 9472.",
+    "tableCaption": "The open source components incorporated by this application.",
+    "columns": {
+      "name": "Component",
+      "version": "Version",
+      "license": "License",
+      "surface": "Where it runs"
+    },
+    "surface": {
+      "browser": "Browser",
+      "server": "Server",
+      "unknown": "Not measured"
+    },
+    "loading": "Loading the inventory…",
+    "unavailable": "The component inventory could not be loaded. The full license texts remain available from the link above."
+  },
   "privacyPolicy": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated:",
