@@ -31,6 +31,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 
 import type { AuthContext, ProjectMember, PropertyGrant } from '../types';
+import { readProjectMember } from '../project-member-read';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('permissions');
@@ -91,10 +92,37 @@ export function getDb(): Firestore | null {
 /**
  * Get project membership for a user.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΖΗΤΟΥΣΕ **ΛΑΘΟΣ ΚΛΕΙΔΙ** — ΚΑΙ ΓΙ' ΑΥΤΟ ΠΛΕΟΝ ΠΑΡΑΠΕΜΠΕΙ (ADR-862 Φ0 Β7)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μέχρι 2026-09-16 αυτή η συνάρτηση έκανε `.doc(ctx.uid).get()`. Ο **γραφέας**
+ * όμως — η **μία** πόρτα γραφής μέλους — δημιουργεί
+ * `members/{mbr_…}` με το `uid` ως **πεδίο** (N.6 + ADR-787 §5.1 γρ. 534), και ο
+ * αδελφός αναγνώστης του καταλόγου το **ήξερε** (`data.uid ?? doc.id`).
+ *
+ * ⇒ Η αναζήτηση **δεν έβρισκε ΠΟΤΕ** μέλος που πέρασε από την πόρτα γραφής.
+ * Fail-closed, άρα **καμία διαρροή** — αλλά κάθε κρίση ανά έργο ήταν **δομικά
+ * νεκρή**, σιωπηλά, με κάθε πύλη πράσινη. Το σχήμα *«`0` = κανείς δεν κοίταξε»*.
+ *
+ * ✅ **Αλλαγή συμπεριφοράς σήμερα: ΜΗΔΕΝ, μετρημένα.** Στη ζωντανή βάση υπάρχουν
+ * **0 έγγραφα μέλους σε 8/8 έργα** (μέτρηση 2026-09-16, ίδιο επιχείρημα με τη
+ * μετονομασία του ADR-787 §5.1 α), και **ένας** καταναλωτής παραγωγής της
+ * διαδρομής με `projectId` (`api/projects/[projectId]/landowner-unlink-check`).
+ *
+ * ⚠️ **ΤΟ ΣΥΜΒΟΛΑΙΟ ΠΡΟΣ ΤΟΝ `checkPermission` ΜΕΝΕΙ ΑΚΕΡΑΙΟ**: `ProjectMember |
+ * null`. Ο θεματοφύλακας ξεχωρίζει *«δεν είναι μέλος»* από *«δεν ρωτήσαμε»*·
+ * **εδώ** και τα δύο γίνονται `null`, όπως **πάντα** έκανε αυτή η συνάρτηση.
+ * 🔑 Και αυτό είναι **σωστό γι' αυτόν τον καλούντα**: ο `checkPermission`
+ * απαντά «επιτρέπεται;» και η μόνη ασφαλής απάντηση σε άγνοια είναι **όχι**. Η
+ * διάκριση **δεν χάνεται** — ζει στον θεματοφύλακα, όπου ο κριτής ορατότητας του
+ * Β7 τη **χρειάζεται** (ένα 503 «δεν μπόρεσα να ρωτήσω» δεν επιτρέπεται να
+ * μεταμφιεστεί σε «δεν συμμετέχεις»).
+ *
  * @param ctx - Auth context
  * @param projectId - Project ID
  * @param cache - Permission cache
  * @returns ProjectMember or null
+ * @see lib/auth/project-member-read — ο ΕΝΑΣ αναγνώστης και η ΜΙΑ μετάφραση
  */
 export async function getProjectMembership(
   ctx: AuthContext,
@@ -108,36 +136,29 @@ export async function getProjectMembership(
     return cache.memberships.get(cacheKey) ?? null;
   }
 
-  const db = getDb();
-  if (!db) {
-    cache.memberships.set(cacheKey, null);
-    return null;
+  // ⚠️ **Μία** απομνημόνευση, όχι δύο: κρατιέται το υπάρχον `PermissionCache`
+  //    (ανά αίτημα) και ο θεματοφύλακας καλείται **χωρίς** δική του — δύο caches
+  //    για το ίδιο έγγραφο είναι δύο απαντήσεις που μπορούν να αποκλίνουν.
+  const read = await readProjectMember({
+    companyId: ctx.companyId,
+    projectId,
+    uid: ctx.uid,
+  });
+
+  if (read.outcome === 'unknown' || read.outcome === 'unreadable') {
+    // Το ίχνος το γράφει ήδη ο θεματοφύλακας· εδώ μένει η **τοπική** αιτία, ώστε
+    // το μονοπάτι δικαιωμάτων να φαίνεται στα ερωτήματα παρατηρησιμότητας.
+    // ⚠️ Και οι **δύο** καταστάσεις γίνονται `null` — «δεν ξέρω» και «δεν
+    //    καταλαβαίνω» δίνουν την ίδια, μόνη ασφαλή απάντηση στο «επιτρέπεται;».
+    logger.error('[PERMISSIONS] Failed to get project membership', {
+      outcome: read.outcome,
+      why: read.why,
+    });
   }
 
-  try {
-    // Path: /companies/{companyId}/projects/{projectId}/members/{uid}
-    const memberDoc = await db
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(ctx.companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
-      .doc(projectId)
-      .collection(SUBCOLLECTIONS.PROJECT_MEMBERS)
-      .doc(ctx.uid)
-      .get();
-
-    if (!memberDoc.exists) {
-      cache.memberships.set(cacheKey, null);
-      return null;
-    }
-
-    const membership = memberDoc.data() as ProjectMember;
-    cache.memberships.set(cacheKey, membership);
-    return membership;
-  } catch (error) {
-    logger.error('[PERMISSIONS] Failed to get project membership', { error });
-    cache.memberships.set(cacheKey, null);
-    return null;
-  }
+  const membership = read.outcome === 'member' ? read.member : null;
+  cache.memberships.set(cacheKey, membership);
+  return membership;
 }
 
 // =============================================================================

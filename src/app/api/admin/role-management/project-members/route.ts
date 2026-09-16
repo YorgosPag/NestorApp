@@ -26,6 +26,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { PROJECT_NOT_FOUND_MESSAGE } from '@/app/api/projects/_shared/project-ownership';
+import { isCdeAudience, type CdeAudience } from '@/types/container-access';
 import type { ProjectMemberDoc, UserProfileDoc, PostBody } from './types';
 import {
   assignMember,
@@ -61,7 +62,30 @@ function validatePostBody(body: unknown): PostBody | null {
     ? (b.permissionSetIds as unknown[]).filter((id): id is string => typeof id === 'string')
     : undefined;
 
-  return { action, projectId, uid, reason, roleId, permissionSetIds };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ISO 19650 — Η ΟΜΑΔΑ ΚΑΙ ΤΟ ΑΚΡΟΑΤΗΡΙΟ (ADR-862 Φ0 Β7)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔑 **«ΑΠΟΝ» ΚΑΙ «ΑΚΥΡΟ» ΔΕΝ ΙΣΟΠΕΔΩΝΟΝΤΑΙ.** Άκυρη τιμή ⇒ **400**, ποτέ
+  //    σιωπηλή απόρριψη: ένα αγνοημένο `cdeAudience: 'crews'` (τυπογραφικό) θα
+  //    έκανε τον διαχειριστή να **νομίζει** ότι μετακίνησε άνθρωπο σε ακροατήριο
+  //    χωρίς να τον μετακινήσει — βλάβη **αντίστροφη** από τη χαλαρότητα, και
+  //    εξίσου σιωπηλή. Ίδιο δόγμα με τη διάκριση `workspace_malformed` (400)
+  //    έναντι της νόμιμης σιωπής στο `lib/auth/types.ts`.
+  let taskTeamId: string | undefined;
+  if (b.taskTeamId !== undefined && b.taskTeamId !== null) {
+    if (typeof b.taskTeamId !== 'string' || b.taskTeamId.trim().length === 0) return null;
+    taskTeamId = b.taskTeamId.trim();
+  }
+
+  let cdeAudience: CdeAudience | undefined;
+  if (b.cdeAudience !== undefined && b.cdeAudience !== null) {
+    // ⚠️ Ο φρουρός **στενεύει** `unknown → CdeAudience` — κανένα cast σε τιμή που
+    //    ήρθε από το σύρμα.
+    if (!isCdeAudience(b.cdeAudience)) return null;
+    cdeAudience = b.cdeAudience;
+  }
+
+  return { action, projectId, uid, reason, roleId, permissionSetIds, taskTeamId, cdeAudience };
 }
 
 // =============================================================================
@@ -210,7 +234,12 @@ export const POST = withSensitiveRateLimit(
 
         if (!validated) {
           return NextResponse.json(
-            { success: false, error: 'Invalid request body. Required: action, projectId, uid, reason (min 10 chars).' },
+            {
+              success: false,
+              error:
+                'Invalid request body. Required: action, projectId, uid, reason (min 10 chars). ' +
+                'Optional: taskTeamId (non-empty string), cdeAudience (design|crew|client|supplier).',
+            },
             { status: 400 }
           );
         }

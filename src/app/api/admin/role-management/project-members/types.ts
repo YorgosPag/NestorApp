@@ -4,6 +4,8 @@
  * Εξήχθησαν από το `route.ts` (386 γρ. έναντι ορίου 300 για API route, N.7.1).
  */
 
+import type { CdeAudience } from '@/types/container-access';
+
 /**
  * Μέλος **ΕΡΓΟΥ** — `companies/{W}/projects/{P}/members/{mbr_…}`.
  *
@@ -25,6 +27,20 @@ export interface ProjectMemberDoc {
   effectivePermissions: string[];
   addedAt: FirebaseFirestore.Timestamp | null;
   addedBy: string;
+  /**
+   * 🔑 **Η ΟΜΑΔΑ ΕΡΓΑΣΙΑΣ ΤΟΥ ISO 19650** (ADR-862 Φ0 Β7) — *«ο ρόλος λέει **τι
+   * μπορεί**, η ομάδα λέει **τίνος είναι**»*.
+   *
+   * ⚠️ **ΔΗΛΩΜΕΝΟ ΚΑΙ ΕΔΩ ΕΠΙΤΗΔΕΣ.** Το **ίδιο** έγγραφο έχει **δύο** τύπους
+   * (`ProjectMember` στο `lib/auth/types.ts`), που **ήδη** αποκλίνουν
+   * (`addedAt: Date` έναντι `Timestamp`, `PermissionId[]` έναντι `string[]`).
+   * Πεδίο σε **έναν** από τους δύο θα μεγάλωνε την απόκλιση — και ο γραφέας ζει
+   * σε **αυτή** την πλευρά, δηλαδή ο τύπος που δεν το δηλώνει είναι ο τύπος που
+   * **ψεύδεται** για ό,τι γράφεται.
+   */
+  taskTeamId?: string;
+  /** Το πρότυπο συμμετοχής του στην υπόθεση (ADR-862 §5.4.1). */
+  cdeAudience?: CdeAudience;
 }
 
 export interface UserProfileDoc {
@@ -40,4 +56,14 @@ export interface PostBody {
   roleId?: string;
   permissionSetIds?: string[];
   reason: string;
+  /**
+   * Η ομάδα εργασίας — **ρητά δηλωμένη από άνθρωπο** (ADR-862 Φ0 Β7).
+   *
+   * ⛔ **ΠΟΤΕ παραγόμενη από `disciplineCode`/`StudyGroup`**: εκείνα τα γράφει ο
+   * AI enricher **με `confidence`**, και *εξουσιοδότηση από AI είναι
+   * εξουσιοδότηση που κανείς δεν υπέγραψε*. Δύο στατικοί από **δύο** γραφεία
+   * έχουν **ίδιο** κλάδο μελέτης και **διαφορετικό** WIP.
+   */
+  taskTeamId?: string;
+  cdeAudience?: CdeAudience;
 }

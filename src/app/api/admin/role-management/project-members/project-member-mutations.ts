@@ -92,6 +92,10 @@ export async function assignMember({
   }
 
   // Enterprise ID: setDoc() + generateMemberId() (ADR-017)
+  // 🔑 ΤΟ ΚΛΕΙΔΙ ΕΙΝΑΙ `mbr_…` ΚΑΙ ΤΟ `uid` ΕΙΝΑΙ **ΠΕΔΙΟ** (N.6 · ADR-787 §5.1) —
+  //    γι' αυτό ο ΕΝΑΣ αναγνώστης (`lib/auth/project-member-read.ts`) ρωτά
+  //    `where('uid','==',…)`, την **ίδια** ερώτηση με το `findMemberByUid` εδώ.
+  //    ⛔ ΜΗΝ αλλάξεις το κλειδί σε `uid`: θα έσπαγε τον N.6 και το ADR-787.
   const memberId = generateMemberId();
   await membersCol.doc(memberId).set({
     uid,
@@ -102,6 +106,11 @@ export async function assignMember({
     effectivePermissions: [],
     addedAt: FieldValue.serverTimestamp(),
     addedBy: ctx.uid,
+    // ⚠️ **Conditional spread**: το Firestore **απορρίπτει** `undefined`, και ένα
+    //    πεδίο γραμμένο κενό θα σήμαινε «δηλώθηκε χωρίς τιμή» αντί «δεν δηλώθηκε»
+    //    — δύο απουσίες που ο θεματοφύλακας οφείλει να ξεχωρίζει (ADR-862 Φ0 Β7).
+    ...(validated.taskTeamId === undefined ? {} : { taskTeamId: validated.taskTeamId }),
+    ...(validated.cdeAudience === undefined ? {} : { cdeAudience: validated.cdeAudience }),
   });
 
   await logAuditEvent(ctx, 'member_added', uid, 'user', {
@@ -134,6 +143,10 @@ export async function updateMember({
   const updates: Record<string, unknown> = {};
   if (roleId !== undefined) updates.roleId = roleId;
   if (permissionSetIds !== undefined) updates.permissionSetIds = permissionSetIds;
+  // 🔑 Η **μετακίνηση ομάδας** είναι πράξη εξουσιοδότησης, άρα περνά από την ίδια
+  //    πόρτα με τον ρόλο — και καταγράφεται στο **ίδιο** ίχνος, με `reason`.
+  if (validated.taskTeamId !== undefined) updates.taskTeamId = validated.taskTeamId;
+  if (validated.cdeAudience !== undefined) updates.cdeAudience = validated.cdeAudience;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
