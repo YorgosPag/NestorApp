@@ -47,10 +47,10 @@ import {
   apiSuccess,
   type ApiSuccessResponse,
 } from '@/lib/api/ApiErrorHandler';
+import { AUDIT_ENTITY_TYPES } from '@/config/audit-entity-collection-map';
+import { entityAuditEntriesFromData } from '@/lib/audit/audit-entry-from-document';
 import type {
   AuditAction,
-  AuditEntityType,
-  AuditSource,
   EntityAuditEntry,
   EntityAuditResponse,
 } from '@/types/audit-trail';
@@ -58,18 +58,6 @@ import type {
 // ============================================================================
 // VALIDATION
 // ============================================================================
-
-const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact',
-  'building',
-  'property',
-  'project',
-  'parking',
-  'storage',
-  'company',
-  'floor',
-  'purchase_order',
-]);
 
 const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
   'created',
@@ -109,11 +97,10 @@ export const GET = withStandardRateLimit(
 
       // Parse + validate optional filters
       const entityTypeFilter = url.searchParams.get('entityType');
-      if (entityTypeFilter && !VALID_ENTITY_TYPES.has(entityTypeFilter)) {
-        throw new ApiError(
-          400,
-          `Invalid entity type. Valid: ${[...VALID_ENTITY_TYPES].join(', ')}`,
-        );
+      // 🧹 ADR-864 Φ1β — ήταν χειρόγραφο σύνολο **9** τύπων ⇒ το φίλτρο «τοίχος» ή «αγγελία»
+      //    γύριζε 400. Πλέον **προβολή** του μητρώου (ADR-852 §4.9).
+      if (entityTypeFilter && !AUDIT_ENTITY_TYPES.has(entityTypeFilter)) {
+        throw new ApiError(400, 'Invalid entity type');
       }
 
       const performedByFilter = url.searchParams.get('performedBy');
@@ -156,25 +143,11 @@ export const GET = withStandardRateLimit(
         .get();
 
       // Materialize all docs → entries
-      const allEntries: EntityAuditEntry[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        const rawSource = data.source;
-        const source: AuditSource | undefined =
-          rawSource === 'cdc' || rawSource === 'service' ? rawSource : undefined;
-        return {
-          id: doc.id,
-          entityType: data.entityType,
-          entityId: data.entityId,
-          entityName: data.entityName ?? null,
-          action: data.action,
-          changes: data.changes ?? [],
-          performedBy: data.performedBy,
-          performedByName: data.performedByName ?? null,
-          companyId: data.companyId,
-          timestamp: data.timestamp?.toDate?.()?.toISOString() ?? '',
-          ...(source ? { source } : {}),
-        };
-      });
+      // 🔑 Το **ένα** σύνορο ανάγνωσης (`lib/audit/audit-entry-from-document`) — εγγραφή χωρίς
+      //    ακριβώς ένα βιβλίο παραλείπεται.
+      const allEntries: EntityAuditEntry[] = entityAuditEntriesFromData(
+        snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() })),
+      );
 
       // In-memory filter pipeline
       const performedByLower = performedByFilter?.toLowerCase() ?? null;

@@ -29,7 +29,7 @@ import type { AuditEntityType, AuditAction, AuditFieldChange } from '@/types/aud
 import {
   ENTITY_COLLECTION_MAP,
   SUBCOLLECTION_ENTITY_TYPES,
-  VALID_ENTITY_TYPES,
+  RECORDABLE_ENTITY_TYPES,
 } from '@/config/audit-entity-collection-map';
 
 const logger = createModuleLogger('AuditTrailRecord');
@@ -91,8 +91,11 @@ export const POST = withStandardRateLimit(
       // Parse and validate payload
       const body: RecordAuditPayload = await request.json();
 
-      if (!body.entityType || !VALID_ENTITY_TYPES.has(body.entityType)) {
-        throw new ApiError(400, `Invalid entityType. Valid: ${[...VALID_ENTITY_TYPES].join(', ')}`);
+      // 🔴 ADR-864 Φ1β — **μόνο βιβλίο εταιρείας**: αυτή η πόρτα γράφει το `companyId` του
+      //    καλούντος. Οντότητα `ledger: 'custody'` (αγγελία ιδιώτη) θα γραφόταν σε **λάθος
+      //    βιβλίο** — τη γράφει μόνο ο server γραφέας της (`RECORDABLE_ENTITY_TYPES`).
+      if (!body.entityType || !RECORDABLE_ENTITY_TYPES.has(body.entityType)) {
+        throw new ApiError(400, `Invalid entityType. Valid: ${[...RECORDABLE_ENTITY_TYPES].join(', ')}`);
       }
       if (!body.entityId || typeof body.entityId !== 'string') {
         throw new ApiError(400, 'entityId is required');

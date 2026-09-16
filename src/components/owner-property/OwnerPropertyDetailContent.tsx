@@ -57,6 +57,7 @@ import { OwnerListingCompletion } from './OwnerListingCompletion';
 import { OwnerMandatePanel } from './OwnerMandatePanel';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
+import { OwnerPropertyHistory } from './OwnerPropertyHistory';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers/[offerId]` (ADR-777 §8.39).
 //
@@ -237,6 +238,13 @@ function OwnerPropertyView({
       />
 
       <LifecycleButton property={property} />
+
+      {/*
+        📜 **ADR-864 Φ1β — ΤΟ ΙΣΤΟΡΙΚΟ, ΤΕΛΕΥΤΑΙΟ.** Κάτω από τις δύο πράξεις που αφήνουν ίχνος
+        (κοινό · απόσυρση), ώστε η συνέπεια κάθε κλικ να φαίνεται ακριβώς από κάτω του. Το
+        βιβλίο το αποφασίζει η θεματοφυλακή, όχι αυτή η οθόνη (`OwnerPropertyHistory`).
+      */}
+      <OwnerPropertyHistory property={property} />
     </div>
   );
 }

@@ -21,6 +21,7 @@ import React, { useMemo, useState } from "react";
 import { History } from "lucide-react";
 import { useEntityAudit } from "@/hooks/useEntityAudit";
 import type { AuditEntityType, AuditAction } from "@/types/audit-trail";
+import type { AuditLedgerKind } from "@/lib/audit/audit-ledger";
 import type { TabComponentProps } from "@/components/generic/UniversalTabsRenderer";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
@@ -31,11 +32,14 @@ import { AuditTimelineView } from "./AuditTimelineView";
 interface ActivityTabProps extends TabComponentProps {
   entityType?: AuditEntityType;
   entityId?: string;
+  /** ADR-864 Φ1β — ποιο βιβλίο· απουσία ⇒ εταιρικό (ό,τι ίσχυε πάντα). */
+  ledger?: AuditLedgerKind;
 }
 
 export function ActivityTab({
   entityType,
   entityId,
+  ledger,
   unit,
   data,
 }: ActivityTabProps) {
@@ -52,6 +56,7 @@ export function ActivityTab({
   const { entries, isLoading, error, hasMore, loadMore } = useEntityAudit({
     entityType: resolvedEntityType,
     entityId: resolvedEntityId,
+    ledger,
   });
 
   const stats = useMemo(() => computeStats(entries), [entries]);
