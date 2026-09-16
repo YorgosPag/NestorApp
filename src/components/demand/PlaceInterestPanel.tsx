@@ -16,6 +16,12 @@
  * | `count > 0`, στάση `dormant`/`partial` | «N ψάχνουν **κάτι σαν** το δικό σας» **+ γιατί** |
  * | `count === 0` | «κανείς αυτή τη στιγμή» — **υπαρκτή πληροφορία** |
  * | `count === null` | «δεν λέμε αριθμό κάτω από {minCount}» |
+ * | στάση `settled` | «η συναλλαγή ολοκληρώθηκε» — **κανένας** αριθμός (ADR-864 Φ2) |
+ *
+ * 🔒 **Κλειστή διάθεση** (ADR-864 Φ2): ίδιο πλήθος — ο κριτής είναι **ένας** — **και** μία
+ * γραμμή ότι αυτοί οι άνθρωποι **δεν** βλέπουν την αγγελία. Είναι το πλεονέκτημα της
+ * ιδιωτικής φάσης των μεγάλων (Compass Private Exclusives: *δοκιμάζεις τη ζήτηση πριν
+ * βγεις δημόσια*), ειπωμένο **με αριθμό** αντί για εκτίμηση πράκτορα.
  *
  * 🔑 **Η δεύτερη γραμμή είναι ΟΛΟΚΛΗΡΗ η τιμιότητα του χαρακτηριστικού.** Για κλειστό
  * ακίνητο δεν έχουμε δηλωμένο ούτε είδος συμφωνίας ούτε τιμή, άρα η σύγκριση έγινε
@@ -36,7 +42,8 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { InterestStance } from '@/lib/demand/demand-interest';
+import type { JudgedInterestStance, PlaceInterest } from '@/lib/demand/demand-interest';
+import type { MarketingAudience } from '@/constants/marketing-audiences';
 import type { PlaceInterestState } from '@/hooks/demand/usePlaceInterest';
 
 /**
@@ -44,14 +51,14 @@ import type { PlaceInterestState } from '@/hooks/demand/usePlaceInterest';
  * στάση δεν μεταγλωττίζεται χωρίς να αποφασίσει κάποιος **τι λέει** στον άνθρωπο —
  * αλλιώς θα προσγειωνόταν σιωπηλά με τη φωνή του `offered`.
  */
-const WHY_KEY: Readonly<Record<InterestStance, string | null>> = {
+const WHY_KEY: Readonly<Record<JudgedInterestStance, string | null>> = {
   offered: null,
   partial: 'property-market:demand.interest.partialWhy',
   dormant: 'property-market:demand.interest.dormantWhy',
 };
 
 /** Ποια πρόταση λέει το πλήθος — «αυτό ακριβώς» ή «κάτι σαν αυτό». */
-const COUNT_KEY: Readonly<Record<InterestStance, string>> = {
+const COUNT_KEY: Readonly<Record<JudgedInterestStance, string>> = {
   offered: 'property-market:demand.interest.offered',
   partial: 'property-market:demand.interest.dormant',
   dormant: 'property-market:demand.interest.dormant',
@@ -59,8 +66,11 @@ const COUNT_KEY: Readonly<Record<InterestStance, string>> = {
 
 export function PlaceInterestPanel({
   interest,
+  audience,
 }: {
   interest: PlaceInterestState;
+  /** Το κοινό της καταχώρησης — **ήδη ερμηνευμένο** από το `marketingAudienceOf` (Α3). */
+  audience: MarketingAudience;
 }): React.ReactElement | null {
   const { t, isNamespaceReady } = useTranslation(['property-market']);
 
@@ -104,10 +114,24 @@ export function PlaceInterestPanel({
     );
   }
 
-  const { stance, disclosure } = interest.interest;
-  const { count, minCount } = disclosure;
-  const whyKey = WHY_KEY[stance];
+  // 🔴 **ADR-864 Φ2 — η στάση στενεύεται ΠΡΙΝ από κάθε αριθμό.** Ο τύπος δεν δίνει
+  //    `disclosure` σε ολοκληρωμένη συναλλαγή: «0» ή «κάτω από κατώφλι» θα ήταν ψέματα.
+  if (interest.interest.stance === 'settled') {
+    return (
+      <InterestFrame>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t('property-market:demand.interest.settled')}
+        </p>
+      </InterestFrame>
+    );
+  }
 
+  return <CountedInterest interest={interest.interest} audience={audience} />;
+}
+
+/** Το πλαίσιο του πάνελ — **ένα** σημείο για επιφάνεια, ετικέτα και κεφαλίδα. */
+function InterestFrame({ children }: { children: React.ReactNode }): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
   return (
     <section
       aria-label={t('property-market:demand.interest.heading')}
@@ -116,7 +140,29 @@ export function PlaceInterestPanel({
       <h3 className="text-sm font-semibold text-foreground">
         {t('property-market:demand.interest.heading')}
       </h3>
+      {children}
+    </section>
+  );
+}
 
+/** Ακίνητο που **κρίθηκε** απέναντι στη ζήτηση — αριθμός, εξήγηση, εμβέλεια, ιδιωτικότητα. */
+function CountedInterest({
+  interest,
+  audience,
+}: {
+  interest: Extract<PlaceInterest, { disclosure: unknown }>;
+  audience: MarketingAudience;
+}): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  const { stance, disclosure } = interest;
+  const { count, minCount } = disclosure;
+  const whyKey = WHY_KEY[stance];
+  // 🔒 Μόνο πάνω σε **ισχυρό** ισχυρισμό: στο `dormant`/`partial` η εξήγηση ήδη λέει ότι
+  //    το ακίνητο δεν διατίθεται — δεύτερη γραμμή για το κοινό θα ήταν θόρυβος.
+  const closedReach = audience !== 'public' && stance === 'offered' && count !== null && count > 0;
+
+  return (
+    <InterestFrame>
       {count === null ? (
         <p className="mt-2 text-sm text-foreground">
           {t('property-market:demand.interest.hidden', { minCount })}
@@ -135,9 +181,15 @@ export function PlaceInterestPanel({
         <p className="mt-1 text-sm text-muted-foreground">{t(whyKey)}</p>
       ) : null}
 
+      {closedReach ? (
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('property-market:demand.interest.closedReach')}
+        </p>
+      ) : null}
+
       <p className="mt-3 text-xs text-muted-foreground">
         {t('property-market:demand.interest.privacy')}
       </p>
-    </section>
+    </InterestFrame>
   );
 }

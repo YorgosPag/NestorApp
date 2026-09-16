@@ -215,7 +215,10 @@ export function PropertyDetailPageContent({
             οθόνες θα μπορούσαν να δείξουν **διαφορετικό αριθμό για το ίδιο
             ακίνητο**, και καμία δεν θα φαινόταν λάθος.
           */}
-          <PlaceInterestPanel interest={interest} />
+          <PlaceInterestPanel
+            interest={interest}
+            audience={marketingAudienceOf(state.property.marketingAudience)}
+          />
 
           <section className="flex min-h-0 flex-1 flex-col">
             <PropertyDetailSurface
