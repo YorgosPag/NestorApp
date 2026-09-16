@@ -297,6 +297,8 @@
       "hidden": "We do not show a number below {minCount}.",
       "loading": "Checking who is looking…",
       "unavailable": "We could not read demand right now. Please try again shortly.",
+      "settled": "The deal for this property is complete, so we no longer count demand for it.",
+      "closedReach": "Private marketing: these people cannot see your listing.",
       "privacy": "You never learn who they are or exactly what they want — only how many."
     }
   },

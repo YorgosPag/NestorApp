@@ -187,7 +187,7 @@ function OwnerPropertyView({
         μεγαλύτερη αξία. Το §12.6 το λέει: *«πολύ ισχυρότερο κάλεσμα από “ανεβάστε
         αγγελία”»*, δηλαδή απευθύνεται **εξ ορισμού** σε όποιον δεν έχει ανεβάσει.
       */}
-      <PlaceInterestPanel interest={interest} />
+      <PlaceInterestPanel interest={interest} audience={property.marketingAudience} />
 
       {/*
         🎯 **ΤΟ ΚΙΝΗΤΡΟ, ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΕΠΙΘΥΜΙΑ (ADR-842 Φ5).** Η σειρά είναι
