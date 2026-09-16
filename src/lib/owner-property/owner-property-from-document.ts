@@ -59,6 +59,7 @@
 import { readPropertyType } from '@/constants/property-type-aliases';
 import { mediaOf, type OwnerProperty } from '@/types/owner-property';
 import { mandatesOf } from '@/types/owner-property-mandate';
+import { marketingAudienceOf } from '@/constants/marketing-audiences';
 
 /** Τι διαβάστηκε, **και τι χρειάστηκε για να διαβαστεί**. */
 export interface StoredOwnerPropertyRead {
@@ -119,6 +120,9 @@ export function readStoredOwnerProperty(
       ...(stored as unknown as OwnerProperty),
       id,
       type,
+      // 🔴 ADR-864 Α3 — έγγραφο γραμμένο πριν τον άξονα **δεν έχει** το πεδίο· η απουσία
+      //    ερμηνεύεται **εδώ, μία φορά**, ως `public` — ποτέ «κρυφό».
+      marketingAudience: marketingAudienceOf(stored.marketingAudience),
       // ⚠️ Τα δύο υπάρχοντα φύλλα, καλεσμένα **εδώ αντί για παντού** — δες την κεφαλίδα.
       media: mediaOf(stored as { readonly media?: OwnerProperty['media'] }),
       mandates: mandatesOf(

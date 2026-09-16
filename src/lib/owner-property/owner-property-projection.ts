@@ -105,6 +105,8 @@ export function projectableFromOwnerProperty(
     id: property.id,
     name: property.title,
     type: property.type,
+    // ADR-864 §5.1 — το κοινό φτάνει στην **ΜΙΑ** πύλη (`isPubliclyListed`)· εδώ μόνο περνά.
+    marketingAudience: property.marketingAudience,
 
     // ── Α20: τα τρία παραγόμενα, από τη ΜΙΑ αλήθεια ──────────────────────────
     commercialStatus: deriveCommercialStatus(marketOffers),

@@ -95,6 +95,8 @@ export function validOwnerProperty(
     mandatesExpireAt: null,
     ...validDraft(),
     lifecycle: 'listed',
+    // ADR-864 Α3 — η γέννηση είναι δημόσια· οι άγκυρες στενεύουν ρητά.
+    marketingAudience: 'public',
     createdAt: '2026-08-11T09:00:00.000Z',
     updatedAt: '2026-08-11T09:00:00.000Z',
     ...overrides,

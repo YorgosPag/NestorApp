@@ -72,6 +72,10 @@ import type { PlaceRef } from '@/types/geo/public-place';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import {
+  DEFAULT_MARKETING_AUDIENCE,
+  type MarketingAudience,
+} from '@/constants/marketing-audiences';
+import {
   isLiveOffer,
   type OfferKind,
   type PropertyOffer,
@@ -415,6 +419,17 @@ export interface OwnerProperty {
   // ── ΚΥΚΛΟΣ ΖΩΗΣ ───────────────────────────────────────────────────────────
   readonly lifecycle: OwnerPropertyLifecycle;
 
+  // ── ΚΟΙΝΟ (ADR-864 §5.1) ─────────────────────────────────────────────────
+  /**
+   * **Ποιος βλέπει την καταχώρηση** — ορθογώνιο στο {@link OwnerProperty.lifecycle}.
+   *
+   * ⚠️ **Υποχρεωτικό στον τύπο, απόν στη βάση για κάθε παλιό έγγραφο**: το σύνορο
+   * (`readStoredOwnerProperty`) το συμπληρώνει με `marketingAudienceOf` ⇒ `public` (Α3).
+   * Αλλάζει **μόνο** με ρητή πράξη (`setOwnerPropertyAudience`), ποτέ από το προσχέδιο
+   * των 8 πεδίων (ADR-777 Α2 · ADR-864 Ε-10).
+   */
+  readonly marketingAudience: MarketingAudience;
+
   // ── ΧΡΟΝΟΣ ────────────────────────────────────────────────────────────────
   /**
    * **Τι απέγινε η δημόσια προβολή στην τελευταία γραφή** — γεγονός, όχι πρόβλεψη.
@@ -685,6 +700,9 @@ export function newOwnerProperty(
     mandatesExpireAt: nextMandateExpiry(authorship.mandates),
     ...draft,
     lifecycle: 'listed',
+    // 🔑 ADR-864 Α3 — η γέννηση είναι **δημόσια**, όπως ως τώρα. Το κοινό στενεύει μόνο
+    //    με ρητή πράξη μετά, ποτέ από το προσχέδιο.
+    marketingAudience: DEFAULT_MARKETING_AUDIENCE,
     createdAt: now,
     updatedAt: now,
   };

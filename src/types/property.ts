@@ -100,6 +100,7 @@ export type LegacySalesStatus = PropertyStatus | 'rented';
 // με existing imports `import type { CommercialStatus } from '@/types/property'`.
 export type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
+import type { MarketingAudience } from '@/constants/marketing-audiences';
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)
@@ -505,6 +506,12 @@ export interface Property extends PropertySpecificationFields {
    * @default 'unavailable'
    */
   commercialStatus?: CommercialStatus;
+
+  /**
+   * **Ποιος βλέπει την αγγελία** (ADR-864 §5.1) — ορθογώνιο στο `commercialStatus`.
+   * Απουσία ⇒ `public` (Α3), ερμηνευμένη **μόνο** από το `marketingAudienceOf` στην πύλη.
+   */
+  marketingAudience?: MarketingAudience;
 
   /**
    * ✅ NEW: Commercial/pricing data
