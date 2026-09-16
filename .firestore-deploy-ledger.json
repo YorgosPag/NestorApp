@@ -1,4 +1,47 @@
 {
   "$doc": "ADR-865 — ΜΗΤΡΩΟ ΑΝΑΠΤΥΞΕΩΝ FIREBASE. ΠΑΡΑΓΕΤΑΙ από `npm run firestore:deploy` και είναι APPEND-ONLY: γραμμή που γράφτηκε δεν αλλάζει και δεν σβήνεται ποτέ (CHECK 3.86 Κ3). ΜΗΝ το γράψεις στο χέρι — η γραμμή είναι ΠΑΡΑΓΩΓΟ της πράξης, όχι ισχυρισμός για αυτήν.",
-  "deployments": []
+  "deployments": [
+    {
+      "at": "2026-09-16",
+      "commit": "b4276569",
+      "digest": "sha256:8c7ad9b1b788ea3e832690f60fdeb9182a81fe5a008a1ad60b3c237d378de2d2",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
+    },
+    {
+      "at": "2026-09-16",
+      "commit": "b4276569",
+      "digest": "sha256:c8956aa9ecc95a5fef92279db4820d16a5b511d108ba8070c9faa47935105a31",
+      "source": "firestore.indexes.json",
+      "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-09-16",
+      "commit": "b4276569",
+      "digest": "sha256:6c1cd7d0f18af98392035439e7241ea9f66bb195f39e95ff8a9ff28829fef3fe",
+      "source": "storage.rules",
+      "target": "storage"
+    },
+    {
+      "at": "2026-09-16",
+      "commit": "b4276569",
+      "digest": "sha256:8c7ad9b1b788ea3e832690f60fdeb9182a81fe5a008a1ad60b3c237d378de2d2",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
+    },
+    {
+      "at": "2026-09-16",
+      "commit": "b4276569",
+      "digest": "sha256:c8956aa9ecc95a5fef92279db4820d16a5b511d108ba8070c9faa47935105a31",
+      "source": "firestore.indexes.json",
+      "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-09-16",
+      "commit": "b4276569",
+      "digest": "sha256:6c1cd7d0f18af98392035439e7241ea9f66bb195f39e95ff8a9ff28829fef3fe",
+      "source": "storage.rules",
+      "target": "storage"
+    }
+  ]
 }
