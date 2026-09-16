@@ -28,6 +28,7 @@ import { COLLECTIONS, IMMUTABLE_COLLECTIONS } from '@/config/firestore-collectio
 // ⚠️ Το `COLLECTIONS` μένει: το χρειάζεται ο βρόχος (`COLLECTIONS[collectionKey]`)
 // και το `IMMUTABLE_COLLECTIONS` ο έλεγχος αμεταβλητότητας.
 import { BACKUP_COLLECTION_KEY_MAP } from '@/config/audit-entity-collection-map';
+import { AUDIT_LEDGER_KINDS, type AuditLedgerKind } from '@/lib/audit/audit-ledger';
 import { GCP_PROJECT_ID } from '@/config/gcs-buckets';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -106,53 +107,22 @@ export class IncrementalBackupService {
   }
 
   /**
-   * Query entity_audit_trail for all changes after deltaFrom.
+   * Query the audit trail for all changes after deltaFrom.
    * Uses EntityAuditService.queryChangesAfter() (SSoT — centralized access).
    * Groups results by collection, separating modified vs deleted.
+   *
+   * 📒 ADR-864 Φ1β — **και τα δύο βιβλία** (`AUDIT_LEDGER_KINDS`): χωρίς το προσωπικό
+   * διαμέρισμα, μια αλλαγή σε αγγελία ιδιώτη δεν θα έμπαινε ποτέ σε incremental backup. Οι
+   * εγγραφές μιας οντότητας ζουν σε **ένα** βιβλίο (η θεματοφυλακή δεν αλλάζει), άρα το
+   * «last action wins» μένει χρονολογικά σωστό ανά οντότητα.
    */
   private async queryChangedEntities(
     deltaFrom: string,
   ): Promise<ChangedEntity[]> {
     const seenEntities = new Map<string, ChangedEntity>();
 
-    let lastDoc: FirebaseFirestore.DocumentSnapshot | null = null;
-    let hasMore = true;
-
-    while (hasMore) {
-      const result = await EntityAuditService.queryChangesAfter(
-        deltaFrom,
-        AUDIT_QUERY_BATCH_SIZE,
-        lastDoc ?? undefined,
-      );
-
-      for (const entry of result.entries) {
-        const collectionKey = ENTITY_TYPE_TO_COLLECTION_KEY[entry.entityType];
-        if (!collectionKey) {
-          logger.warn(`Unknown audit entity type: ${entry.entityType}`);
-          continue;
-        }
-
-        const collectionName = COLLECTIONS[collectionKey as keyof typeof COLLECTIONS];
-        if (!collectionName) {
-          logger.warn(`No collection found for key: ${collectionKey}`);
-          continue;
-        }
-
-        const key = `${collectionKey}:${entry.entityId}`;
-        const isDeleted = DELETE_ACTIONS.has(entry.action);
-
-        // Last action wins (chronological order)
-        seenEntities.set(key, {
-          entityType: entry.entityType,
-          entityId: entry.entityId,
-          collectionKey,
-          collectionName,
-          isDeleted,
-        });
-      }
-
-      lastDoc = result.lastDoc;
-      hasMore = result.hasMore;
+    for (const ledger of AUDIT_LEDGER_KINDS) {
+      await this.scanLedgerChanges(deltaFrom, ledger, seenEntities);
     }
 
     const entities = Array.from(seenEntities.values());
@@ -163,6 +133,58 @@ export class IncrementalBackupService {
     );
 
     return entities;
+  }
+
+  /** Ένα βιβλίο, με δικό του δρομέα σελιδοποίησης (ο δρομέας δεν διασχίζει συλλογές). */
+  private async scanLedgerChanges(
+    deltaFrom: string,
+    ledger: AuditLedgerKind,
+    seenEntities: Map<string, ChangedEntity>,
+  ): Promise<void> {
+    let lastDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const result = await EntityAuditService.queryChangesAfter(
+        deltaFrom,
+        AUDIT_QUERY_BATCH_SIZE,
+        lastDoc ?? undefined,
+        ledger,
+      );
+
+      for (const entry of result.entries) {
+        this.trackChangedEntity(entry, seenEntities);
+      }
+
+      lastDoc = result.lastDoc;
+      hasMore = result.hasMore;
+    }
+  }
+
+  /** Μία εγγραφή ιστορικού → η οντότητα που άλλαξε (last action wins, χρονολογικά). */
+  private trackChangedEntity(
+    entry: AuditCdcEntry,
+    seenEntities: Map<string, ChangedEntity>,
+  ): void {
+    const collectionKey = ENTITY_TYPE_TO_COLLECTION_KEY[entry.entityType];
+    if (!collectionKey) {
+      logger.warn(`Unknown audit entity type: ${entry.entityType}`);
+      return;
+    }
+
+    const collectionName = COLLECTIONS[collectionKey as keyof typeof COLLECTIONS];
+    if (!collectionName) {
+      logger.warn(`No collection found for key: ${collectionKey}`);
+      return;
+    }
+
+    seenEntities.set(`${collectionKey}:${entry.entityId}`, {
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      collectionKey,
+      collectionName,
+      isDeleted: DELETE_ACTIONS.has(entry.action),
+    });
   }
 
   /**
