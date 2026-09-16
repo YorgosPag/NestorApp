@@ -34,6 +34,7 @@
 
 import '@/lib/design-system';
 import { PRODUCT_NAME } from '@/constants/product-identity';
+import { LegalLinksNav } from '@/components/legal/LegalLinksNav';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
 import { ShellUtilities } from '@/core/containers/ShellUtilities';
@@ -106,6 +107,27 @@ export function AuthBrandMark({ as = 'header' }: { readonly as?: 'header' | 'fra
 }
 
 /**
+ * ⚖️ **Το υποσέλιδο των οθονών σύνδεσης — με τους νομικούς συνδέσμους** (ADR-861 Φ2).
+ *
+ * 🔴 Μέχρι σήμερα οι σύνδεσμοι ζούσαν **μόνο** στο πλαϊνό μενού, που ο επισκέπτης **δεν βλέπει**:
+ * κάποιος που δεν έχει λογαριασμό δεν μπορούσε να διαβάσει πολιτική απορρήτου ή όρους **πριν**
+ * συνδεθεί — ακριβώς τη στιγμή που τα χρειάζεται. Οι μεγάλοι (Google · Stripe) τους βάζουν κάτω
+ * από την κάρτα σύνδεσης. Το `children` είναι για οθόνες που έχουν ήδη γραμμή κειμένου εκεί.
+ */
+export function AuthLegalFooter({ children }: { readonly children?: React.ReactNode }) {
+  const typography = useTypography();
+  const colors = useSemanticColors();
+  const layout = useLayoutClasses();
+
+  return (
+    <footer className={`${layout.flexColGap2} ${typography.body.xs} ${colors.text.muted} ${layout.textCenter}`}>
+      {children}
+      <LegalLinksNav variant="standalone" />
+    </footer>
+  );
+}
+
+/**
  * Η ολόκληρη οθόνη σύνδεσης: μπάρα ρυθμίσεων, σήμα, και η κάρτα με τίτλο/περιγραφή.
  *
  * ⚠️ Ο **τίτλος** και η **περιγραφή** έρχονται ήδη μεταφρασμένα από τον καλούντα,
@@ -150,6 +172,8 @@ export function AuthScreen({ title, description, children }: {
 
           {children}
         </Card>
+
+        <AuthLegalFooter />
       </section>
     </>
   );

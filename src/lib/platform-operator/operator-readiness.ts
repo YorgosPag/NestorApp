@@ -105,12 +105,27 @@ const MAILBOX_DEFECTS = {
   privacy: { invalid: 'privacy-email-invalid', unconfirmed: 'privacy-mailbox-unconfirmed' },
 } as const satisfies Record<'contact' | 'privacy', { invalid: OperatorDefect; unconfirmed: OperatorDefect }>;
 
-/** Επιβεβαιωμένο = υπαρκτή μέρα **που έχει ήδη έρθει** — επιβεβαίωση «από το μέλλον» δεν είναι απόδειξη. */
+/**
+ * **Διαβάζει άνθρωπος αυτή τη διεύθυνση τη μέρα `day`;** — υπαρκτή μέρα επιβεβαίωσης **που έχει ήδη
+ * έρθει**, σε έγκυρη διεύθυνση. Επιβεβαίωση «από το μέλλον» δεν είναι απόδειξη.
+ *
+ * 🔑 **ΕΝΑΣ κανόνας, δύο καταναλωτές** (ADR-861 Φ2): η άρνηση δημόσιου ανοίγματος (εδώ) **και** η
+ * σελίδα που δείχνει τη διεύθυνση (`operator-presentation.ts`). Δεν μπορούν να διαφωνήσουν.
+ */
+export function isMailboxConfirmed(mailbox: OperatorMailbox, day: CalendarDay): boolean {
+  return isValidEmail(mailbox.address) && receivingConfirmed(mailbox, day);
+}
+
+/** Μόνο το σκέλος της ημερομηνίας — ώστε τα δύο ελαττώματα να ονομάζονται **ανεξάρτητα**. */
+function receivingConfirmed(mailbox: OperatorMailbox, day: CalendarDay): boolean {
+  const confirmed = mailbox.receivingConfirmedOn;
+  return confirmed !== null && isCalendarDay(confirmed) && confirmed <= day;
+}
+
 function mailboxDefects(mailbox: OperatorMailbox, role: keyof typeof MAILBOX_DEFECTS, day: CalendarDay): OperatorDefect[] {
   const defects: OperatorDefect[] = [];
   if (!isValidEmail(mailbox.address)) defects.push(MAILBOX_DEFECTS[role].invalid);
-  const confirmed = mailbox.receivingConfirmedOn;
-  if (confirmed === null || !isCalendarDay(confirmed) || confirmed > day) defects.push(MAILBOX_DEFECTS[role].unconfirmed);
+  if (!receivingConfirmed(mailbox, day)) defects.push(MAILBOX_DEFECTS[role].unconfirmed);
   return defects;
 }
 
@@ -166,6 +181,6 @@ export function judgeLaunchReadiness(
 /** Μία γραμμή ημερολογίου ανά πρόβλημα — **ονόματα και ημερομηνίες, ποτέ τιμές**. */
 export function describeReadiness(readiness: LaunchReadiness): readonly string[] {
   if (readiness.status === 'ready') return [];
-  if (readiness.status === 'pending') return [`κανένας φορέας δεν ισχύει τη μέρα ${readiness.day}`];
-  return readiness.problems.map((p) => `γραμμή από ${p.effectiveFrom}: ${p.defects.join(', ')}`);
+  if (readiness.status === 'pending') return [`no operator in effect on ${readiness.day}`];
+  return readiness.problems.map((p) => `record from ${p.effectiveFrom}: ${p.defects.join(', ')}`);
 }

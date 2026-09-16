@@ -5,15 +5,19 @@ name: T2 ⚖️ License Audit (ADR-598 G13)
 #
 # Why this exists
 # ---------------
-# The pre-commit CHECK 12 runs a fast `license-checker --direct` over DIRECT
-# production deps only. But GPL/LGPL/AGPL almost always enter TRANSITIVELY, so
-# --direct is blind to the real risk. This Layer-2 job scans the FULL dependency
-# tree (no --direct) via scripts/check-license-ratchet.js, blocking any package
-# whose SPDX license is neither permissive-allowlisted nor a vetted exception in
-# .license-allowlist.json. Big players (Google/MS) scan the whole tree.
+# ΜΙΑ μηχανή για hook ΚΑΙ CI: scripts/check-license-policy.js πάνω στο
+# .license-policy.json (κατηγορίες Google, επιμέλειες ανά name@version, εξαιρέσεις
+# με ΚΑΡΦΩΜΕΝΗ άδεια και ημερομηνίες μετατροπής/λήξης).
 #
-# Pattern mirrors jscpd-ratchet.yml. Needs deps installed (license-checker reads
-# node_modules), so it runs `pnpm install --frozen-lockfile`.
+# 🔴 Διορθώθηκε 2026-09-16: αυτό το job έγραφε «full tree» αλλά έτρεχε license-checker,
+# που με node-linker=isolated βλέπει μόνο το root node_modules — 126 από τα 1.071
+# πακέτα prod. Τώρα η απογραφή είναι `pnpm licenses list --prod` = ΟΛΟΣ ο γράφος.
+#
+# Γιατί ΚΑΙ εδώ, αφού τρέχει ήδη ο hook: ο runner είναι ubuntu, δηλαδή η πλατφόρμα
+# της παραγωγής (Netcup). Τα πακέτα πλατφόρμας linux (π.χ. @img/sharp-libvips-linux-x64,
+# LGPL) εγκαθίστανται και κρίνονται ΜΟΝΟ εδώ — στα Windows του Giorgio δεν υπάρχουν.
+#
+# Έξοδοι: 0 καθαρό · 1 παράβαση πολιτικής · 2 UNKNOWN (η μέτρηση δεν έγινε).
 # =============================================================================
 
 on:
@@ -21,16 +25,22 @@ on:
     paths:
       - 'package.json'
       - 'pnpm-lock.yaml'
-      - '.license-allowlist.json'
-      - 'scripts/check-license-ratchet.js'
+      - 'patches/**'
+      - '.license-policy.json'
+      - 'scripts/check-license-policy.js'
+      - 'scripts/lib/license-policy/**'
+      - 'scripts/lib/spawn-outcome.js'
       - '.github/workflows/license-audit.yml'
   push:
     branches: [main]
     paths:
       - 'package.json'
       - 'pnpm-lock.yaml'
-      - '.license-allowlist.json'
-      - 'scripts/check-license-ratchet.js'
+      - 'patches/**'
+      - '.license-policy.json'
+      - 'scripts/check-license-policy.js'
+      - 'scripts/lib/license-policy/**'
+      - 'scripts/lib/spawn-outcome.js'
       - '.github/workflows/license-audit.yml'
   workflow_dispatch:
 
@@ -59,14 +69,15 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      # Full dependency graph required — license-checker reads node_modules.
+      # Η απογραφή διαβάζει lockfile + εγκατεστημένο store, και ο έλεγχος απόκλισης
+      # συγκρίνει το pnpm-lock.yaml με το node_modules/.pnpm/lock.yaml.
       - name: 📦 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: ⚖️ License gate (full tree vs SPDX allowlist)
-        run: node scripts/check-license-ratchet.js --check
+      - name: ⚖️ License policy (full prod graph, Google categories)
+        run: node scripts/check-license-policy.js --lockfile=worktree --report
 
       - name: ✅ Summary
         if: success()
         run: |
-          echo "::notice title=License Audit::All package licenses permissive or vetted in .license-allowlist.json"
+          echo "::notice title=License Audit::Every prod package license is allowed, curated or excepted by .license-policy.json"

@@ -22,7 +22,9 @@ import { Mail, Phone } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { splitTextIntoLinkSegments } from '@/lib/validation/text-link-segments';
+// 🔑 Το `mailto:` το χτίζει **ο ΕΝΑΣ κατασκευαστής** του ADR-751 (`text-link-segments`), ποτέ αυτό
+// το αρχείο — `null` ⇒ δείχνεται ως κείμενο. Κοινό πλέον με την ταμπέλα του φορέα (ADR-861 Φ2).
+import { emailHref } from '@/lib/validation/text-link-segments';
 import type { RevealedChannels, ShowcaseChannelKind } from '@/types/showcase-card';
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { channelRevealPath } from './showcase-card-paths';
@@ -36,16 +38,6 @@ type RevealState =
   | { readonly phase: 'gone' }
   | { readonly phase: 'failed' };
 
-/**
- * 🔑 Το `mailto:` το χτίζει **ο ΕΝΑΣ κατασκευαστής** του ADR-751 (`text-link-segments`), ποτέ
- * αυτό το αρχείο. `null` ⇒ ο ανιχνευτής δεν το αναγνωρίζει ως διεύθυνση: δείχνεται ως κείμενο,
- * όχι ως σύνδεσμος που θα άνοιγε κάτι άλλο από αυτό που γράφει.
- */
-function emailHref(email: string): string | null {
-  const segments = splitTextIntoLinkSegments(email, { kinds: ['email'] });
-  const only = segments.length === 1 ? segments[0] : undefined;
-  return only?.kind === 'email' ? only.href : null;
-}
 
 function useChannelReveal(companyId: string, locationId: string) {
   const [state, setState] = React.useState<RevealState>({ phase: 'idle' });

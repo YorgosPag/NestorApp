@@ -21,6 +21,10 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 // σκέλους 4 του WCAG 1.4.8 (διάστιχο ≥1,5 · απόσταση παραγράφων ≥1,5× αυτού),
 // που εδώ έλειπε — μετρημένο 24px αντί για 36px ανάμεσα σε παραγράφους.
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import {
+  OperatorIdentityStatement,
+  OperatorMailboxValue,
+} from '@/components/legal/OperatorIdentityStatement';
 
 registerRouteSlice(routeSlice);
 
@@ -38,7 +42,10 @@ export default function DataDeletionPage() {
       <p>{t('dataDeletion.howToRequest.intro')}</p>
 
       <ol>
-        <li dangerouslySetInnerHTML={{ __html: t('dataDeletion.howToRequest.step1') }} />
+        {/* ADR-861 Φ2 — η διεύθυνση από τη ρίζα του φορέα, με τον ΙΔΙΟ κανόνα επιβεβαίωσης. */}
+        <li>
+          {t('dataDeletion.howToRequest.step1')} <OperatorMailboxValue role="privacy" />
+        </li>
         <li>{t('dataDeletion.howToRequest.step2')}</li>
         <li>{t('dataDeletion.howToRequest.step3')}</li>
       </ol>
@@ -51,7 +58,8 @@ export default function DataDeletionPage() {
       </ul>
 
       <h2>{t('dataDeletion.contact.title')}</h2>
-      <p dangerouslySetInnerHTML={{ __html: t('dataDeletion.contact.text') }} />
+      <p>{t('dataDeletion.contact.intro')}</p>
+      <OperatorIdentityStatement />
     </ShellSurface>
   );
 }

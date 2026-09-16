@@ -21,6 +21,7 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 // σκέλους 4 του WCAG 1.4.8 (διάστιχο ≥1,5 · απόσταση παραγράφων ≥1,5× αυτού),
 // που εδώ έλειπε — μετρημένο 24px αντί για 36px ανάμεσα σε παραγράφους.
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import { OperatorIdentityStatement } from '@/components/legal/OperatorIdentityStatement';
 
 registerRouteSlice(routeSlice);
 
@@ -54,7 +55,9 @@ export default function TermsOfServicePage() {
       <p>{t('termsOfService.changes.content')}</p>
 
       <h2>{t('termsOfService.contact.title')}</h2>
-      <p dangerouslySetInnerHTML={{ __html: t('termsOfService.contact.text') }} />
+      {/* ADR-861 Φ2 — ο φορέας από τη ρίζα του, όχι email γραμμένο σε HTML μέσα στη μετάφραση. */}
+      <p>{t('termsOfService.contact.intro')}</p>
+      <OperatorIdentityStatement />
     </ShellSurface>
   );
 }

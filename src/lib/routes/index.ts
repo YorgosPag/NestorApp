@@ -13,3 +13,4 @@ export * from './authRoutes';
 export * from './appRoutes';
 export * from './entityRoutes';
 export * from './landing';
+export * from './legalRoutes';

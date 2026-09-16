@@ -21,6 +21,7 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 // σκέλους 4 του WCAG 1.4.8 (διάστιχο ≥1,5 · απόσταση παραγράφων ≥1,5× αυτού),
 // που εδώ έλειπε — μετρημένο 24px αντί για 36px ανάμεσα σε παραγράφους.
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import { OperatorIdentityStatement } from '@/components/legal/OperatorIdentityStatement';
 
 registerRouteSlice(routeSlice);
 
@@ -58,10 +59,13 @@ export default function PrivacyPolicyPage() {
       <p>{t('privacyPolicy.dataRetention.content')}</p>
 
       <h2>{t('privacyPolicy.yourRights.title')}</h2>
-      <p dangerouslySetInnerHTML={{ __html: t('privacyPolicy.yourRights.content') }} />
+      <p>{t('privacyPolicy.yourRights.content')}</p>
 
+      {/* ADR-861 Φ2 — ΓΚΠΔ 13(1)(α)-(β): ο υπεύθυνος και η επαφή απορρήτου από τη ΡΙΖΑ του φορέα,
+          όχι γραμμένα στο κείμενο. Το email ήταν HTML μέσα σε μετάφραση (`dangerouslySetInnerHTML`). */}
       <h2>{t('privacyPolicy.contact.title')}</h2>
-      <p dangerouslySetInnerHTML={{ __html: t('privacyPolicy.contact.text') }} />
+      <p>{t('privacyPolicy.contact.intro')}</p>
+      <OperatorIdentityStatement />
     </ShellSurface>
   );
 }

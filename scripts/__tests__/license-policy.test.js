@@ -301,19 +301,21 @@ describe('Ε — «έτρεξε όντως το εργαλείο;»', () => {
    * απέτυχε ⇒ ο παλιός CHECK 12 ανέφερε ψευδώς «license-checker produced no output».
    * Κανένα προσωρινό αρχείο ⇒ ανοσία. Μια μετάλλαξη που ξαναβάζει προσωρινό αρχείο ΚΟΚΚΙΝΙΖΕΙ εδώ.
    */
-  it('Ε5: TMP/TMPDIR/TEMP = ΑΡΧΕΙΟ ⇒ η απογραφή τρέχει κανονικά', () => {
+  /**
+   * ⚠️ ΥΠΟΔΙΕΡΓΑΣΙΑ, ΟΧΙ in-process — ΜΕΤΡΗΜΕΝΟ: η πρώτη γραφή άλλαζε το `process.env` μέσα
+   * στο jest και έμενε ΠΡΑΣΙΝΗ υπό τη μετάλλαξη «ξαναβάλε `mkdtempSync(os.tmpdir())`» (M1,
+   * 2026-09-16). Το `process.env` του sandbox του jest δεν είναι το env που διαβάζει το `os`
+   * ⇒ η άγκυρα δεν ασκούσε ποτέ τη ρίζα. Ένα πραγματικό παιδί με πραγματικό env την ασκεί.
+   */
+  it('Ε5: TMP/TMPDIR/TEMP = ΑΡΧΕΙΟ ⇒ το CLI μετρά κανονικά (υποδιεργασία, πραγματικό env)', () => {
     const notADir = path.join(tmpRoot, 'tmp-is-a-file');
     fs.writeFileSync(notADir, 'x');
-    const saved = { TMP: process.env.TMP, TMPDIR: process.env.TMPDIR, TEMP: process.env.TEMP };
-    const command = fakeTool('ok', reportOf([['a', '1.0.0', 'MIT']]));
-    try {
-      Object.assign(process.env, { TMP: notADir, TMPDIR: notADir, TEMP: notADir });
-      const r = I.runLicenseInventory({ command, env: { ...process.env } });
-      expect(r.outcome).toBe(SPAWN_OUTCOME.RAN);
-      expect(r.packages).toHaveLength(1);
-    } finally {
-      for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
-    }
+    const r = runCli({
+      command: fakeTool('ok', reportOf([['left-pad', '1.3.0', 'MIT']])),
+      env: { TMP: notADir, TMPDIR: notADir, TEMP: notADir },
+    });
+    expect(r.out).not.toMatch(/UNKNOWN|εσωτερικό σφάλμα/);
+    expect(r.code).toBe(0);
   });
 });
 

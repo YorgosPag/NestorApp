@@ -15,8 +15,8 @@
  *   });
  *
  * jest-axe is MIT; its axe-core engine is MPL-2.0 (weak, file-level copyleft) —
- * a vetted dev/test-only exception (see .license-allowlist.json, approved
- * 2026-07-08 for G11). Neither ships in the production bundle.
+ * a vetted dev/test-only exception (see .license-policy.json → exceptions
+ * «axe-core-dev», approved 2026-07-08 for G11). Neither ships in the production bundle.
  */
 
 import type { ReactElement } from 'react';

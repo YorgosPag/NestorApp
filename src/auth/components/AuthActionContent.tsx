@@ -64,7 +64,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { AuthBrandMark } from './AuthScreenChrome';
+import { AuthBrandMark, AuthLegalFooter } from './AuthScreenChrome';
 import { AuthField } from './AuthField';
 import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { AUTH_ROUTES } from '@/lib/routes';
@@ -92,7 +92,6 @@ export function AuthActionContent() {
   const searchParams = useSearchParams();
   const typography = useTypography();
   const layout = useLayoutClasses();
-  const colors = useSemanticColors();
 
   // 🔑 **Φρουρός, όχι cast**: άγνωστο mode ⇒ `null` ⇒ «Άγνωστη ενέργεια».
   const flow = useAuthActionCode(
@@ -147,9 +146,8 @@ export function AuthActionContent() {
           </CardContent>
         </Card>
 
-        <footer className={`${typography.body.xs} ${colors.text.muted} ${layout.textCenter}`}>
-          {t('brand.footer')}
-        </footer>
+        {/* ADR-861 Φ2 — ίδιο υποσέλιδο με τις οθόνες σύνδεσης: η γραμμή «©» + οι νομικοί σύνδεσμοι. */}
+        <AuthLegalFooter>{t('brand.footer')}</AuthLegalFooter>
       </section>
     </section>
   );

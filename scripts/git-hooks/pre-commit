@@ -986,55 +986,57 @@ fi
 # Ο παλιός self-install έγραφε στο .git/hooks/ — φάκελο που το git ΑΓΝΟΕΙ όταν υπάρχει
 # hooksPath → δεν έτρεξε ΠΟΤΕ, ενώ τύπωνε «✅ Installed» σε κάθε commit. Fix 2026-07-26.
 
-# CHECK 12: License Compliance (CLAUDE.md N.5 — no GPL/AGPL) — ADR-598 G13
-# Fires when the dependency manifest OR the lockfile changes (transitive deps
-# shift without package.json touching). Uses the pinned license-checker
-# devDependency via `pnpm exec` — never `npx` (which silently skips on a network
-# fail, turning the gate off unnoticed). Fast --direct scan here; the full
-# transitive tree is gated in CI (.github/workflows/license-audit.yml).
-DEP_MANIFEST_CHANGED=$(echo "$STAGED_FILES" | grep -E "^(package\.json|pnpm-lock\.yaml)$" || true)
+# CHECK 12: Πολιτική αδειών (CLAUDE.md N.5) — ADR-598 G13
+# ΜΙΑ μηχανή για hook ΚΑΙ CI: scripts/check-license-policy.js. Κρίνει ΟΛΟ τον γράφο prod
+# (`pnpm licenses list --prod`, ~3s — το παλιό `license-checker --direct` έβλεπε 126 από 1.071
+# πακέτα λόγω node-linker=isolated), με κατηγορίες Google και εξαιρέσεις με ΚΑΡΦΩΜΕΝΗ άδεια.
+# `--lockfile=staged`: κρίνεται το lockfile του ΕΥΡΕΤΗΡΙΟΥ απέναντι στο εγκατεστημένο.
+# Έξοδοι: 0 καθαρό · 1 παράβαση πολιτικής · 2 UNKNOWN (ο έλεγχος ΔΕΝ έτρεξε) — δύο μπλοκ, δύο μηνύματα.
+# ⚠️ ΚΑΝΕΝΑ mktemp, ΚΑΝΕΝΑ 2>/dev/null, ΚΑΜΙΑ μεταβλητή TMP (ADR-598 G13, 2026-09-16): ο παλιός
+#    έλεγχος έγραφε σε `$(mktemp)`· όταν το git.exe έδωσε TMPDIR=<αρχείο> (από μεταβλητή TMP ενός
+#    commit script), το mktemp απέτυχε, το stderr πετάχτηκε, και το μήνυμα κατηγόρησε το
+#    license-checker — που δεν είχε ξεκινήσει ποτέ.
+# ⚠️ `if node …; then` και όχι `node …; X=$?`: ανθεκτικό σε `set -e`.
+LICENSE_POLICY_TRIGGER=$(echo "$STAGED_FILES" | grep -E "^(package\.json|pnpm-lock\.yaml|\.license-policy\.json|patches/.+|scripts/check-license-policy\.js|scripts/lib/license-policy/.+|scripts/lib/spawn-outcome\.js)$" || true)
 
-if [[ -n "$DEP_MANIFEST_CHANGED" ]]; then
-    echo -e "${YELLOW}🔍 Checking dependency licenses (CLAUDE.md N.5)...${NC}"
-
-    LICENSE_TMPFILE=$(mktemp)
-    pnpm exec license-checker --direct --json --production 2>/dev/null > "$LICENSE_TMPFILE"
-    LICENSE_EXIT=$?
-
-    if [[ $LICENSE_EXIT -eq 0 && -s "$LICENSE_TMPFILE" ]]; then
-        GPL_DEPS=$(grep -B1 -iE '"(GPL|LGPL|AGPL)' "$LICENSE_TMPFILE" | grep -v "^\-\-$" | head -20)
-
-        if [[ -n "$GPL_DEPS" ]]; then
-            echo ""
-            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-            echo -e "${RED}  🚫 COMMIT BLOCKED — GPL/LGPL/AGPL dependency detected${NC}"
-            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-            echo ""
-            echo "$GPL_DEPS"
-            echo ""
-            echo -e "${YELLOW}  Only MIT, Apache-2.0, BSD licenses allowed (CLAUDE.md N.5)${NC}"
-            echo -e "${YELLOW}  Remove the dependency or find a permissive alternative.${NC}"
-            echo ""
-            rm -f "$LICENSE_TMPFILE"
-            exit 1
-        fi
-
-        echo -e "${GREEN}  ✅ License compliance: all permissive${NC}"
+if [[ -n "$LICENSE_POLICY_TRIGGER" ]]; then
+    echo -e "${YELLOW}🔍 CHECK 12 — πολιτική αδειών, ολόκληρος ο γράφος prod (N.5)...${NC}"
+    if node scripts/check-license-policy.js --lockfile=staged; then
+        LICENSE_POLICY_EXIT=0
     else
-        # license-checker is a pinned devDependency (ADR-598 G13). If it produced
-        # no output, the toolchain is broken — fail closed, never silent-skip.
-        echo ""
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo -e "${RED}  🚫 COMMIT BLOCKED — license-checker produced no output${NC}"
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo ""
-        echo -e "${YELLOW}  license-checker is a pinned devDependency (ADR-598 G13).${NC}"
-        echo -e "${YELLOW}  Run 'pnpm install', then retry. Do NOT bypass this gate.${NC}"
-        echo ""
-        rm -f "$LICENSE_TMPFILE"
-        exit 1
+        LICENSE_POLICY_EXIT=$?
     fi
-    rm -f "$LICENSE_TMPFILE"
+
+    case $LICENSE_POLICY_EXIT in
+        0) ;;
+        1)
+            echo ""
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${RED}  🚫 COMMIT BLOCKED — ΠΑΡΑΒΑΣΗ πολιτικής αδειών (CHECK 12, exit 1)${NC}"
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${YELLOW}  Η μέτρηση ΕΓΙΝΕ και η πολιτική λέει όχι — δες τις γραμμές ⛔ παραπάνω.${NC}"
+            echo -e "${YELLOW}  Σκελετοί απόφασης (δεν γράφουν τίποτα): npm run license:propose${NC}"
+            echo ""
+            exit 1
+            ;;
+        2)
+            echo ""
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${RED}  🚫 COMMIT BLOCKED — UNKNOWN: ο έλεγχος αδειών ΔΕΝ ΕΤΡΕΞΕ (CHECK 12, exit 2)${NC}"
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${YELLOW}  Αυτό ΔΕΝ είναι παράβαση πολιτικής: τίποτα δεν μετρήθηκε.${NC}"
+            echo -e "${YELLOW}  Η αιτία (εντολή, κωδικός, stderr του εργαλείου) είναι τυπωμένη παραπάνω.${NC}"
+            echo -e "${YELLOW}  Συνήθως: pnpm install (απόκλιση lockfile). ΜΗΝ παρακάμψεις την πύλη.${NC}"
+            echo ""
+            exit 1
+            ;;
+        *)
+            echo ""
+            echo -e "${RED}  🚫 COMMIT BLOCKED — απρόσμενος κωδικός εξόδου ${LICENSE_POLICY_EXIT} από το CHECK 12 (fail-closed)${NC}"
+            echo ""
+            exit 1
+            ;;
+    esac
 fi
 
 # CHECK 13: Bundle Size Guard — warning only

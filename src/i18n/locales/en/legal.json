@@ -6,7 +6,7 @@
     "howToRequest": {
       "title": "How to Request Data Deletion",
       "intro": "If you would like us to delete your personal data from Nestor App CRM, please follow these steps:",
-      "step1": "Send an email to <strong>georgios.pagonis@gmail.com</strong> with the subject line \"Data Deletion Request\"",
+      "step1": "Send an email with the subject line \"Data Deletion Request\" to:",
       "step2": "Include the platform you used to contact us (Facebook Messenger, Instagram, WhatsApp, or Telegram) and your username or phone number",
       "step3": "We will process your request within 30 days and confirm deletion via email"
     },
@@ -18,7 +18,31 @@
     },
     "contact": {
       "title": "Contact",
-      "text": "For questions about data deletion, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+      "intro": "For questions about data deletion, contact the operator of the service:"
+    }
+  },
+  "legalNotice": {
+    "title": "Legal Notice",
+    "intro": "Information about the provider of this service, under Article 4 of Presidential Decree 131/2003 on electronic commerce and Article 13 of the General Data Protection Regulation (GDPR).",
+    "operatorTitle": "Service provider",
+    "documentsTitle": "Legal documents"
+  },
+  "operator": {
+    "pending": "The details of the service operator will be published before the service is made available to the public.",
+    "mailboxPending": "Will be published once it is confirmed to receive messages.",
+    "noGemi": "No entry in the General Commercial Registry (GEMI)",
+    "noDpo": "No Data Protection Officer (DPO) has been appointed — none is required (Article 37 GDPR).",
+    "labels": {
+      "operator": "Service operator and data controller",
+      "seat": "Geographic address",
+      "vat": "Tax ID (AFM)",
+      "gemi": "GEMI number",
+      "contact": "Contact email",
+      "privacy": "Privacy contact"
+    },
+    "qualifier": {
+      "tradeName": "Trade name: {text}",
+      "legalForm": "Legal form: {text}"
     }
   },
   "privacyPolicy": {
@@ -51,11 +75,11 @@
     },
     "yourRights": {
       "title": "6. Your Rights",
-      "content": "Under GDPR, you have the right to access, correct, or delete your personal data. Contact us at <strong>georgios.pagonis@gmail.com</strong> to exercise your rights."
+      "content": "Under GDPR, you have the right to access, correct, or delete your personal data. To exercise your rights, write to the privacy contact listed in section 7."
     },
     "contact": {
-      "title": "7. Contact",
-      "text": "For privacy-related inquiries, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+      "title": "7. Contact — Data Controller",
+      "intro": "The controller responsible for processing your personal data is the operator of the service:"
     }
   },
   "termsOfService": {
@@ -86,7 +110,7 @@
     },
     "contact": {
       "title": "6. Contact",
-      "text": "For questions about these terms, contact us at: <strong>georgios.pagonis@gmail.com</strong>"
+      "intro": "The service is provided by the operator below. For questions about these terms, use the contact email:"
     }
   }
 }

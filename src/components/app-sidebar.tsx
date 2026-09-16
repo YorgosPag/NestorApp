@@ -12,6 +12,7 @@ import {
 import { SidebarLogo } from "@/components/sidebar/sidebar-logo"
 import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
 import { SidebarRevealBanner } from "@/components/sidebar/sidebar-reveal-banner"
+import { LegalLinksNav } from "@/components/legal/LegalLinksNav"
 // 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
 import { useJobFilteredNavigation } from "@/hooks/useJobFilteredNavigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
@@ -129,11 +130,8 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-sidebar-border">
-                <nav aria-label={t('legal.legalLinks')} className="flex flex-wrap gap-x-4 gap-y-1 px-2 py-1.5 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
-                    <a href="/privacy-policy" className="hover:underline hover:text-sidebar-foreground min-h-[24px] min-w-[24px] px-0.5 py-0.5 inline-flex items-center transition-colors">{t('legal.privacyPolicy')}</a>
-                    <a href="/terms" className="hover:underline hover:text-sidebar-foreground min-h-[24px] min-w-[24px] px-0.5 py-0.5 inline-flex items-center transition-colors">{t('legal.termsOfService')}</a>
-                    <a href="/data-deletion" className="hover:underline hover:text-sidebar-foreground min-h-[24px] min-w-[24px] px-0.5 py-0.5 inline-flex items-center transition-colors">{t('legal.dataDeletion')}</a>
-                </nav>
+                {/* ADR-861 Φ2 — οι νομικοί σύνδεσμοι ζουν ΜΙΑ φορά (κοινοί με τις οθόνες σύνδεσης). */}
+                <LegalLinksNav variant="sidebar" />
             </SidebarFooter>
 
             <SidebarRail />

@@ -11,6 +11,7 @@
  */
 
 import {
+  emailHref,
   hasTextLink,
   splitTextIntoLinkSegments,
   type TextLinkSegment,
@@ -200,5 +201,16 @@ describe('hasTextLink συμφωνεί με splitTextIntoLinkSegments', () => {
     const kinds = ['email', 'url'] as const;
     const full = splitTextIntoLinkSegments(source, { kinds }).some((s) => s.kind !== 'text');
     expect(hasTextLink(source, { kinds })).toBe(full);
+  });
+});
+
+describe('emailHref — σύνδεσμος ΜΟΝΟ για τιμή που είναι ακριβώς ένα email (ADR-861 Φ2)', () => {
+  it('ακριβώς ένα email ⇒ mailto', () => {
+    expect(emailHref('georgios.pagonis@gmail.com')).toBe('mailto:georgios.pagonis@gmail.com');
+  });
+
+  // 🔴 Ένας σύνδεσμος που ανοίγει κάτι άλλο από αυτό που γράφει είναι χειρότερος από κείμενο.
+  it.each(['όχι-email', 'a@example.gr και b@example.gr', 'γράψτε στο a@example.gr', ''])('όχι ακριβώς ένα email ⇒ null: %p', (value) => {
+    expect(emailHref(value)).toBeNull();
   });
 });

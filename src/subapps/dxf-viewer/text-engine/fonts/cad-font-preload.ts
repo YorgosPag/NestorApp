@@ -32,7 +32,7 @@
  *
  * ⚠️ **Γι' αυτό η θεραπεία ΔΕΝ ήταν να μπει «μια bold γραμματοσειρά».** Ήταν να μπει η
  * γραμματοσειρά **που ονομάζει ο πίνακας**: Liberation 2.1.5 (SIL OFL 1.1, εγκεκριμένη από τον
- * Giorgio 2026-08-25 — δες `.license-allowlist.json`). Το όνομα, το αρχείο και ο ισχυρισμός
+ * Giorgio 2026-08-25 — δες `.license-policy.json` → `assetExceptions` «liberation-fonts-ofl»). Το όνομα, το αρχείο και ο ισχυρισμός
  * λένε πλέον **το ίδιο πράγμα**.
  *
  * @module text-engine/fonts/cad-font-preload

@@ -121,6 +121,20 @@ export function splitTextIntoLinkSegments(
 }
 
 /**
+ * The `mailto:` destination of a value that is **exactly one** email address — `null` otherwise.
+ *
+ * `null` means the scanner does not recognise the whole value as an address: callers show it as
+ * text, never as a link that would open something other than what it says. Shared by the public
+ * contact reveal (ADR-841) and the platform operator statement (ADR-861), which had begun to grow
+ * their own copies.
+ */
+export function emailHref(email: string): string | null {
+  const segments = splitTextIntoLinkSegments(email, { kinds: ['email'] });
+  const only = segments.length === 1 ? segments[0] : undefined;
+  return only?.kind === 'email' ? only.href : null;
+}
+
+/**
  * True when `source` contains at least one address — the cheap question, for callers that
  * only need to decide whether to do more work.
  *

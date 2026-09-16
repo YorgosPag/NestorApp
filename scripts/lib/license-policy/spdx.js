@@ -34,56 +34,53 @@ function tokenize(text) {
   return { ok: true, tokens };
 }
 
-function makeParser(tokens) {
-  let pos = 0;
-  const peek = () => tokens[pos];
-  const take = () => tokens[pos++];
-  const fail = (msg) => { throw new SyntaxError(msg); };
+// ─── Αναδρομική κάθοδος — `st = { tokens, pos }` ρητά, όχι closure (N.7.1: ≤40 γρ./συνάρτηση) ──
 
-  function atom() {
-    const tok = take();
-    if (tok === undefined) fail('απρόσμενο τέλος έκφρασης');
-    if (tok === '(') {
-      const inner = orExpr();
-      if (take() !== ')') fail('λείπει «)»');
-      return inner;
-    }
-    if (tok === ')' || OPERATORS.has(tok)) fail(`απρόσμενο «${tok}»`);
-    const plus = tok.endsWith('+');
-    return { type: 'license', id: plus ? tok.slice(0, -1) : tok, plus, exception: null };
+const fail = (msg) => { throw new SyntaxError(msg); };
+const peek = (st) => st.tokens[st.pos];
+const take = (st) => st.tokens[st.pos++];
+const isIdentToken = (tok) => tok !== undefined && tok !== '(' && tok !== ')' && !OPERATORS.has(tok);
+
+function atom(st) {
+  const tok = take(st);
+  if (tok === undefined) fail('απρόσμενο τέλος έκφρασης');
+  if (tok === '(') {
+    const inner = orExpr(st);
+    if (take(st) !== ')') fail('λείπει «)»');
+    return inner;
   }
+  if (!isIdentToken(tok)) fail(`απρόσμενο «${tok}»`);
+  const plus = tok.endsWith('+');
+  return { type: 'license', id: plus ? tok.slice(0, -1) : tok, plus, exception: null };
+}
 
-  function withExpr() {
-    const node = atom();
-    if (peek() !== 'WITH') return node;
-    take();
-    const exc = take();
-    if (node.type !== 'license') fail('το «WITH» εφαρμόζεται μόνο σε αναγνωριστικό άδειας');
-    if (exc === undefined || exc === '(' || exc === ')' || OPERATORS.has(exc) || exc.endsWith('+')) {
-      fail('λείπει αναγνωριστικό εξαίρεσης μετά το «WITH»');
-    }
-    return { ...node, exception: exc };
+function withExpr(st) {
+  const node = atom(st);
+  if (peek(st) !== 'WITH') return node;
+  take(st);
+  const exc = take(st);
+  if (node.type !== 'license') fail('το «WITH» εφαρμόζεται μόνο σε αναγνωριστικό άδειας');
+  if (!isIdentToken(exc) || exc.endsWith('+')) fail('λείπει αναγνωριστικό εξαίρεσης μετά το «WITH»');
+  return { ...node, exception: exc };
+}
+
+function chain(st, type, operator, next) {
+  const operands = [next(st)];
+  while (peek(st) === operator) {
+    take(st);
+    operands.push(next(st));
   }
+  return operands.length === 1 ? operands[0] : { type, operands };
+}
 
-  function chain(type, operator, next) {
-    const operands = [next()];
-    while (peek() === operator) {
-      take();
-      operands.push(next());
-    }
-    return operands.length === 1 ? operands[0] : { type, operands };
-  }
+function andExpr(st) { return chain(st, 'and', 'AND', withExpr); }
+function orExpr(st) { return chain(st, 'or', 'OR', andExpr); }
 
-  function andExpr() { return chain('and', 'AND', withExpr); }
-  function orExpr() { return chain('or', 'OR', andExpr); }
-
-  return {
-    parse() {
-      const ast = orExpr();
-      if (pos !== tokens.length) fail(`περίσσιο «${tokens[pos]}»`);
-      return ast;
-    },
-  };
+function parseTokens(tokens) {
+  const st = { tokens, pos: 0 };
+  const ast = orExpr(st);
+  if (st.pos !== tokens.length) fail(`περίσσιο «${tokens[st.pos]}»`);
+  return ast;
 }
 
 /**
@@ -94,7 +91,7 @@ function parse(text) {
   const t = tokenize(text);
   if (!t.ok) return t;
   try {
-    return { ok: true, ast: makeParser(t.tokens).parse() };
+    return { ok: true, ast: parseTokens(t.tokens) };
   } catch (error) {
     return { ok: false, error: error.message };
   }

@@ -126,7 +126,7 @@ export function assertPublicLaunch(
     data: { operator: readiness.status, details },
   });
   throw new Error(
-    `Δηλώθηκε ${PUBLIC_LAUNCH_ENV}, αλλά ο φορέας της πλατφόρμας είναι «${readiness.status}»: ` +
-      `${details.join(' · ')}. Δες src/constants/platform-operator.ts.`,
+    `${PUBLIC_LAUNCH_ENV} is declared, but the platform operator is "${readiness.status}": ` +
+      `${details.join(' · ')}. See src/constants/platform-operator.ts.`,
   );
 }
