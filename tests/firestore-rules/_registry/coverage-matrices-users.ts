@@ -23,7 +23,8 @@
 import type { CoverageCell } from './coverage-manifest';
 import type { Persona } from './personas';
 import { cell } from './coverage-matrices';
-import { defineMatrix, type CoverageDefinition } from './coverage-completeness';
+import { defineMatrix, overrideDefinition, type CoverageDefinition } from './coverage-completeness';
+import { ALL_PERSONAS } from './personas';
 import {
   anonymousUnmeasured,
   crossTenantUserUnmeasured,
@@ -281,5 +282,28 @@ export function authorOwnedMatrix(): CoverageDefinition {
     cell('same_tenant_user', 'delete', 'deny', 'server_only'),
     ...NON_OWNERS.map((p) => cell(p, 'delete', 'deny', 'server_only')),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ]);
+}
+
+/**
+ * **Ο κάτοχος διαβάζει, γράφει ΜΟΝΟ ο διακομιστής** — το `authorOwnedMatrix` με create + update
+ * σε **deny για ΟΛΟΥΣ**, και τον ίδιο τον κάτοχο.
+ *
+ * 🔑 **Εξήχθη όταν απέκτησε ΔΕΥΤΕΡΟ καταναλωτή** (ADR-864 Φ1β): το ίδιο override γραφόταν
+ * inline για το `owner_properties` (ADR-777 Α14), και το προσωπικό βιβλίο ιστορικού
+ * (`entity_audit_trail_personal`) έχει **ακριβώς** την ίδια μορφή — ο πελάτης δεν γράφει ποτέ
+ * εκεί όπου ο διακομιστής εγγυάται κάτι (συνεπή προβολή · αμετάβλητο ίχνος).
+ *
+ * ⚠️ **Χωρίς νέο `matrixId`**: είναι **απόκλιση** του `authorOwnedMatrix`, όχι νέο πρότυπο —
+ * το id κληρονομείται ώστε η απόκλιση να **φαίνεται** ως απόκλιση (`overrideDefinition`).
+ */
+export function serverWrittenAuthorOwnedMatrix(): CoverageDefinition {
+  return overrideDefinition(authorOwnedMatrix(), [
+    ...ALL_PERSONAS.filter((p) => p !== 'anonymous').flatMap((p) => [
+      cell(p, 'create', 'deny', 'server_only'),
+      cell(p, 'update', 'deny', 'server_only'),
+    ]),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
   ]);
 }

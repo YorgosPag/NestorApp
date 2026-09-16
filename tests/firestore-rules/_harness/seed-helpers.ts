@@ -155,6 +155,41 @@ export async function seedEntityAuditTrail(
 }
 
 /**
+ * ADR-864 Φ1β — μια εγγραφή του **προσωπικού** βιβλίου ιστορικού, όπως τη γράφει ο
+ * `EntityAuditService`: `userId` (ο κάτοχος του βιβλίου) και **κανένα** `companyId`.
+ *
+ * ⚠️ **ΔΕΝ** περνά από το `baseDoc()`: εκείνο προσθέτει `companyId`, και μια προσωπική εγγραφή
+ * με `companyId` είναι ακριβώς η κατάσταση που το σύστημα κάνει **μη εκφράσιμη**. Σπαρμένη
+ * έτσι, η σουίτα θα δοκίμαζε ένα έγγραφο που δεν υπάρχει στην παραγωγή.
+ */
+export function personalAuditEntryPayload(userId: string): Record<string, unknown> {
+  return {
+    entityType: 'owner_property',
+    entityId: 'ownp-seeded-1',
+    entityName: 'Διαμέρισμα 92 τ.μ.',
+    action: 'status_changed',
+    changes: [{ field: 'lifecycle', oldValue: 'listed', newValue: 'withdrawn', label: 'lifecycle' }],
+    performedBy: userId,
+    performedByName: null,
+    userId,
+    source: 'service',
+    timestamp: new Date(),
+  };
+}
+
+export async function seedPersonalAuditEntry(
+  env: RulesTestEnvironment,
+  auditId: string,
+  userId: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('entity_audit_trail_personal').doc(auditId).set(
+      personalAuditEntryPayload(userId),
+    );
+  });
+}
+
+/**
  * Extra options for attendance seeders — `skipCompanyId` forces the
  * crossdoc read leg by omitting the companyId field entirely instead of
  * setting it to undefined (which admin SDK rejects on write).

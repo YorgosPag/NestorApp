@@ -28,7 +28,6 @@ import type { Exemption } from './coverage-completeness';
 import { overrideDefinition } from './coverage-completeness';
 import type { Operation, Outcome, Reason } from './operations';
 import type { Persona } from './personas';
-import { ALL_PERSONAS } from './personas';
 import {
   adminWriteOnlyMatrix,
   attendanceEventMatrix,
@@ -75,6 +74,7 @@ import {
 } from './coverage-matrices-boq';
 import {
   authorOwnedMatrix,
+  serverWrittenAuthorOwnedMatrix,
   companiesMatrix,
   ownerOnlyMatrix,
   usersMatrix,
@@ -448,14 +448,7 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'owner_properties',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/owner-properties.rules.test.ts',
-    ...overrideDefinition(authorOwnedMatrix(), [
-      ...ALL_PERSONAS.filter((p) => p !== 'anonymous').flatMap((p) => [
-        cell(p, 'create', 'deny', 'server_only'),
-        cell(p, 'update', 'deny', 'server_only'),
-      ]),
-      cell('anonymous', 'create', 'deny', 'missing_claim'),
-      cell('anonymous', 'update', 'deny', 'missing_claim'),
-    ]),
+    ...serverWrittenAuthorOwnedMatrix(),
   },
   {
     collection: 'projects',
@@ -510,6 +503,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     pattern: 'immutable',
     testFile: 'tests/firestore-rules/suites/entity-audit-trail.rules.test.ts',
     ...immutableMatrix(),
+  },
+  {
+    // ADR-864 Φ1β — το ΠΡΟΣΩΠΙΚΟ βιβλίο του ίδιου συστήματος ιστορικού (ADR-195). Διαβάζει
+    // ΜΟΝΟ ο κάτοχος (`userId == auth.uid`) — ΟΥΤΕ admin εταιρείας ΟΥΤΕ super admin, ίδια
+    // ορατότητα με την αγγελία. Γράφει ΜΟΝΟ ο διακομιστής (EntityAuditService). Ξεχωριστό
+    // διαμέρισμα και όχι κλάδος στο `entity_audit_trail`, γιατί οι κανόνες δεν φιλτράρουν.
+    collection: 'entity_audit_trail_personal',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/entity-audit-trail-personal.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
   },
   {
     // ADR-332 §3.7 Phase 9 — geocoding correction telemetry.

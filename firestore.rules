@@ -3325,6 +3325,26 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📒 ENTITY_AUDIT_TRAIL_PERSONAL - PERSONAL LEDGER OF THE SAME SYSTEM (ADR-864 Φ1β)
+    // =========================================================================
+    // 📅 Added: 2026-09-16 (ADR-864 Φ1β · ADR-195 §«Προσωπικό βιβλίο»)
+    // 🏢 Το ΙΔΙΟ σύστημα ιστορικού (ίδια υπηρεσία, ίδιο σχήμα, ίδιος αναγνώστης), σε ΞΕΧΩΡΙΣΤΟ
+    //    διαμέρισμα για τον άνθρωπο χωρίς (ή έξω από) εταιρεία — `src/lib/audit/audit-ledger.ts`.
+    // 🔒 READ: ΜΟΝΟ ο κάτοχος του βιβλίου (`userId == auth.uid`). ΟΥΤΕ admin εταιρείας
+    //    (ADR-787 Ε-3 §8) ΟΥΤΕ super admin — ίδια ορατότητα με το ίδιο το έγγραφο: ο κανόνας
+    //    `owner_properties` δεν δίνει ούτε σε εκείνον. Πρότυπο GitHub (personal security log:
+    //    μόνο ο κάτοχος) · Figma (ο admin δεν βλέπει Drafts). Υποστήριξη = Admin SDK.
+    // 🔑 ΓΙΑΤΙ ΔΙΑΜΕΡΙΣΜΑ ΚΑΙ ΟΧΙ ΚΛΑΔΟΣ ΣΤΟΝ ΠΑΡΑΠΑΝΩ ΚΑΝΟΝΑ: οι κανόνες ΔΕΝ φιλτράρουν — ένα
+    //    «όχι οι προσωπικές» για τον super admin θα απέρριπτε ΟΛΟΚΛΗΡΟ το αφιλτράριστο ερώτημά
+    //    του. Έτσι ο εταιρικός κανόνας έμεινε ΑΝΕΓΓΙΧΤΟΣ.
+    // 🚫 WRITE: Server-only via Firebase Admin SDK (EntityAuditService).
+    match /entity_audit_trail_personal/{auditId} {
+      allow read: if isAuthenticated()
+                  && resource.data.userId == request.auth.uid;
+      allow write: if false; // Server-side only (Admin SDK)
+    }
+
+    // =========================================================================
     // 📍 ADDRESS_CORRECTIONS_LOG - GEOCODING TELEMETRY (ADR-332 §3.7 Phase 9)
     // =========================================================================
     // 📅 Added: 2026-05-06 (ADR-332 Phase 9 — Telemetry + Hierarchy Validation)
