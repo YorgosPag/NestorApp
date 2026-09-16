@@ -779,7 +779,8 @@
       "parking": "Parking",
       "storage": "Αποθήκη",
       "floor": "Όροφος",
-      "purchase_order": "Παραγγελία"
+      "purchase_order": "Παραγγελία",
+      "owner_property": "Αγγελία"
     },
     "values": {
       "active": "Ενεργό",

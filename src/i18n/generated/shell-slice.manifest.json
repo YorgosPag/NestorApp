@@ -27,7 +27,7 @@
     "src/i18n/generated/routes/offers.el.json": "953f37cddee1d307a09a27d3e85dd1f050cdc043c02ec06076b62247b950ed70",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "adfde9f628608372f38719362ddfe752c48b316269f9d790fe63a1fffa108eb4",
-    "src/i18n/generated/routes/offers__offerId.el.json": "6718e59a716bf4eb939076a25181b0aaf11606698c121d6ea1302b554901d0e8",
+    "src/i18n/generated/routes/offers__offerId.el.json": "5a7cd5c11e5fda08de9915ac1318ba5e45ae90912b54130893a23faa10fd1030",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "203e1bc906a7581c212f9e7c723979fe3fdf1e2daa7cfed724e57238d65f90db",
     "src/i18n/generated/routes/pro.el.json": "424bf8260b7ccd8fcd692f23a9b62d7c74460686e4555fd27b6a4cdc3302f926",
@@ -37,7 +37,7 @@
     "src/i18n/generated/routes/terms.el.json": "7015969ef24a943f71cc5ae8739b7b76b95fc8858774696298a4ffd1f01b781e",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "647a88cc5a73c262a36cbd99240303f26269cedaba4a87d379871658fd44f7bb",
+    "src/i18n/generated/shell-slice.el.json": "5712e307a54b1ea49f99734ca96a155a3b2736c2846a0805de9b751afb6137d6",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -76,7 +76,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "73e53cfdfe643ce564b75b577baa95cf21bd528a656a919c29bba0e564a0e2b3",
+  "inputsSha256": "11dd60981b1ea06ff9c99bdbf56d4bba832a126b39cc6ca7c1ee30a507a84548",
   "languages": [
     "el"
   ],
@@ -299,8 +299,9 @@
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
     "src/components/owner-property/OwnerPropertyCard.tsx": "5299d8d06f9007c7e05d9f97c3db81fb723c2d78468185d12e35ceb49ff07b7d",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "5df8038c8c881a149761999f161fdd19cbdde2dffb9ca447d8988bd8c2dd2c4a",
-    "src/components/owner-property/OwnerPropertyDetailContent.tsx": "053510141306847eaf59079685613386f360ec49bb996b9dd3a8266f26608313",
+    "src/components/owner-property/OwnerPropertyDetailContent.tsx": "113541490486e6bc30acf30ed2c139887951dac56cc957519d4499cb6f97a0c2",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "cea5b0be17f55a96ab53786a18ece4b189ce5bffaff482ed0f908484bb49e067",
+    "src/components/owner-property/OwnerPropertyHistory.tsx": "82d2eb220476a9775fe52c195c13db6dd6ccdfd28c59cf5bf1c076cdd064b862",
     "src/components/owner-property/form/OwnerPropertyFields.tsx": "9cafd98254d7cc85da1cff478195f7e3ba1fff1638f0a06173430ce152ad807d",
     "src/components/owner-property/form/OwnerPropertyMediaField.tsx": "97993dce54c364018e49464c7ccc5463bde59cfb2fc8387f76d064f9e429d316",
     "src/components/owner-property/form/OwnerPropertyMediaItem.tsx": "7b591567bebfb30401464847f019e738199fd8c53848a4e7715caad867e8bd4e",
@@ -3787,6 +3788,10 @@
             "offer.formBlocker.mandate-expiry-unset",
             "offer.formBlocker.mandate-term-illegal",
             "offer.formBlocker.place-unresolved",
+            "offer.history.lead.company",
+            "offer.history.lead.personal",
+            "offer.history.loading",
+            "offer.history.title",
             "offer.invariant.area-not-positive",
             "offer.invariant.bedrooms-negative",
             "offer.invariant.duplicate-offer-kind",
@@ -5689,7 +5694,7 @@
     "src/lib/array-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/async-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/audit/audit-diff.ts": "d27e5ee4ce6ec72ee6c52a2d123708a25c3e380b7f4509d95ca31644104d5ec2",
-    "src/lib/audit/audit-ledger.ts": "fe48c0fe021fa12751e361088d38bf70700022cc2ee35559731f45037246b033",
+    "src/lib/audit/audit-ledger.ts": "fabe5bbfde36ca542daa6d8a965f0632a01e65a935028a6cfefb9115b68d8577",
     "src/lib/audit/tracked-field-def.ts": "2cde4c9f813a861483b7ac2526178961936d718d422ca01e6d73367990fb54cb",
     "src/lib/auth/audit-core.ts": "e52d8a554d00b8c5667bbcc02546d289613c2af1ed16e679b4a53befc88511bd",
     "src/lib/auth/audit-policy.ts": "5a3b6cffa9c1d488ffd66d947ae0bcbe50a4fb9700405f042ddec9fae70cc6fd",
@@ -5863,7 +5868,7 @@
     "src/services/enterprise-id-types.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
     "src/services/entity-audit.service.ts": "b5c41b8503de6c0fb410184a9abfd16b54838dd97d98bfa24a98a40f74daecc4",
     "src/services/file-approval.service.ts": "71ad3b0dbb0b80c20b6c172d48b78d2a70605e7b3f07a18a5035a6f2186eaf6e",
-    "src/services/file-audit.service.ts": "5f8ee1478f053f73352ebb8e72034514103f159f5f033995ea154d1f9b777ab6",
+    "src/services/file-audit.service.ts": "a99f5809fa58c13f145d6c0a3175c8b6f04564e47e1b6e46c53fbcd8ad745c9f",
     "src/services/file-comment.service.ts": "fe8edd866bb81eb7ba16f067930d1b70de0b7104431ad713198217e23f331d99",
     "src/services/file-folder.service.ts": "321609e54174ce168065ec4be8b50401c1c2cbb28ecf000366c053bbd189585d",
     "src/services/file-record-lifecycle.ts": "50795d4a6289dd8455fd3145edc9293a7421cf177e073e0f6786153baddd33ab",
@@ -5968,6 +5973,7 @@
     "src/types/contacts/relationships/interfaces/relationship.ts": "b35347f6e9ef4869070e4f2006c21c919f13532ad3a59a515991845cff9c3f91",
     "src/types/container-access.ts": "c63a7259614f8679755ab2eecd6ac76aa25b80d87ca3200be9ba7f69ad4036ca",
     "src/types/email-templates.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/types/file-audit.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/file-record.ts": "c379e714defdbad6f8bbfe9839d8a77794fd868271126c703c83e16eb7c9659d",
     "src/types/geo/admin-footprint.ts": "bdf5291766d39aa3be9e97f0ba2003aca52a85be41680eba15e174c2a28b7bce",
     "src/types/geo/coordinates.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -6044,8 +6050,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 677,
-    "sliceBytes": 471750
+    "shellFiles": 678,
+    "sliceBytes": 472324
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

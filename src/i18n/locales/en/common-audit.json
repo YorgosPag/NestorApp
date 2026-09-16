@@ -577,6 +577,30 @@
       },
       "mep-water-heater": {
         "tankCapacityL": "Tank Capacity"
+      },
+      "marketingAudience": "Who sees the listing",
+      "lifecycle": "Status",
+      "askingPrice": "Asking price (€)",
+      "finalPrice": "Final price (€)",
+      "rentPrice": "Monthly rent (€)",
+      "percentage": "Land-for-flats share (%)",
+      "nightlyRate": "Nightly rate (€)",
+      "minNights": "Minimum nights",
+      "maxGuests": "Maximum guests",
+      "published": "Published",
+      "owner_property": {
+        "title": "Title",
+        "type": "Property type",
+        "areaSqm": "Area (m²)",
+        "floor": "Floor",
+        "bedrooms": "Bedrooms",
+        "place": {
+          "label": "Address"
+        },
+        "lifecycle": "Status",
+        "marketingAudience": "Who sees the listing",
+        "offers": "Offers",
+        "media": "Files"
       }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."

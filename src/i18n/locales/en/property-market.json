@@ -644,6 +644,14 @@
         "owner-consent": "You requested it",
         "agency-attestation": "The agency declared it"
       }
+    },
+    "history": {
+      "title": "History",
+      "lead": {
+        "personal": "Every change to your listing: what changed, when and by whom. Only you can see it.",
+        "company": "Every change to the listing: what changed, when and by whom. Visible to the office administrators."
+      },
+      "loading": "Loading history…"
     }
   },
   "mandate": {

@@ -314,6 +314,13 @@
     "closed": "Closed",
     "withdrawn": "Withdrawn"
   },
+  "auditLifecycle": {
+    "listed": "On the market",
+    "active": "Active",
+    "reserved": "Reserved",
+    "closed": "Closed",
+    "withdrawn": "Withdrawn"
+  },
   "marketingAudience": {
     "custodians": "Private — custodians only",
     "network": "Private — professional network",

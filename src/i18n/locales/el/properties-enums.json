@@ -314,6 +314,13 @@
     "closed": "Ολοκληρώθηκε",
     "withdrawn": "Αποσύρθηκε"
   },
+  "auditLifecycle": {
+    "listed": "Στην αγορά",
+    "active": "Ενεργή",
+    "reserved": "Δεσμευμένη",
+    "closed": "Ολοκληρώθηκε",
+    "withdrawn": "Αποσύρθηκε"
+  },
   "marketingAudience": {
     "custodians": "Κλειστή — μόνο διαχειριστές",
     "network": "Κλειστή — επαγγελματικό δίκτυο",
