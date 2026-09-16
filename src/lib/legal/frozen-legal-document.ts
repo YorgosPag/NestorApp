@@ -29,7 +29,8 @@ export interface FrozenLegalListItem {
 export type FrozenLegalBlock =
   | { readonly kind: 'paragraph'; readonly text: string }
   | { readonly kind: 'list'; readonly ordered: boolean; readonly items: readonly FrozenLegalListItem[] }
-  | { readonly kind: 'operator-identity' };
+  | { readonly kind: 'operator-identity' }
+  | { readonly kind: 'clause'; readonly id: string; readonly text: string };
 
 export interface FrozenLegalSection {
   readonly id: string;
@@ -105,6 +106,8 @@ function blockFrom(value: unknown, where: string): FrozenLegalBlock {
     }
     case 'operator-identity':
       return { kind: 'operator-identity' };
+    case 'clause':
+      return { kind: 'clause', id: stringAt(f.id, `${where}.id`), text: stringAt(f.text, `${where}.text`) };
     default:
       throw new FrozenLegalDocumentShapeError(`${where}.kind`);
   }

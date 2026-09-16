@@ -24,7 +24,13 @@
  */
 
 /** 🔑 Το κλειστό λεξιλόγιο των εγγράφων με εκδόσεις (ρίζα CHECK 3.73). */
-export const LEGAL_DOCUMENT_IDS = ['privacy-policy', 'terms-of-service', 'data-deletion'] as const;
+export const LEGAL_DOCUMENT_IDS = [
+  'privacy-policy',
+  'terms-of-service',
+  'data-deletion',
+  // ADR-864 Φ3 — η ενημέρωση που συναινεί ο πωλητής πριν από κλειστή διάθεση (Α7-Α8).
+  'private-marketing-disclosure',
+] as const;
 
 export type LegalDocumentId = (typeof LEGAL_DOCUMENT_IDS)[number];
 
@@ -43,6 +49,11 @@ export interface LegalListItemOutline {
  */
 export type LegalBlockOutline =
   | { readonly kind: 'paragraph'; readonly key: string }
+  /**
+   * **Δήλωση που επιβεβαιώνεται ξεχωριστά** (πρότυπο μονογραφής ανά δήλωση, Bright MLS). Το `id` είναι
+   * **σταθερό** και το καταγράφει η συναίνεση (ADR-864 Α8β) — ποτέ θέση στη λίστα.
+   */
+  | { readonly kind: 'clause'; readonly id: string; readonly key: string }
   | { readonly kind: 'list'; readonly ordered: boolean; readonly items: readonly LegalListItemOutline[] }
   | { readonly kind: 'operator-identity' };
 
@@ -69,6 +80,16 @@ const list = (ordered: boolean, ...items: readonly LegalListItemOutline[]): Lega
 const items = (prefix: string, count: number): readonly LegalListItemOutline[] =>
   Array.from({ length: count }, (_, i) => ({ key: `${prefix}.item${i + 1}` }));
 const OPERATOR: LegalBlockOutline = { kind: 'operator-identity' };
+const clause = (id: string): LegalBlockOutline => ({ kind: 'clause', id, key: `statements.${id}` });
+
+/**
+ * Οι **τιμές** που συμπληρώνονται στο κείμενο της ενημέρωσης κλειστής διάθεσης τη στιγμή της συναίνεσης
+ * (`{agency}` · `{expiresOn}`). Η συναίνεση τις **καταγράφει**, ώστε το κείμενο που διάβασε ο άνθρωπος
+ * να ανασυντίθεται ακριβώς: παγωμένη έκδοση + αυτές οι τιμές.
+ */
+export const LEGAL_TEXT_PLACEHOLDERS = ['agency', 'expiresOn'] as const;
+
+export type LegalTextPlaceholder = (typeof LEGAL_TEXT_PLACEHOLDERS)[number];
 
 /** Ενότητα με τίτλο `<id>.title` — η σύμβαση του `legal.json`. */
 const section = (id: string, ...blocks: readonly LegalBlockOutline[]): LegalSectionOutline => ({
@@ -125,6 +146,27 @@ export const LEGAL_DOCUMENT_OUTLINES: { readonly [Id in LegalDocumentId]: LegalD
       ),
       section('whatWeDelete', list(false, ...items('whatWeDelete', 3))),
       section('contact', paragraph('contact.intro'), OPERATOR),
+    ],
+  },
+  /**
+   * ADR-864 Φ3 — κείμενο **εγκεκριμένο από τον Giorgio 2026-09-16** (ελληνικά· η αγγλική απόδοση πιστή).
+   * NAR PS 8.14: σχέση μεσίτη/πωλητή (1, 2) · τι χάνεται (3, 4 — Ε-4α, **χωρίς αριθμούς**) · δικαίωμα
+   * αλλαγής (5, Compass) · η οδηγία (6).
+   */
+  'private-marketing-disclosure': {
+    source: 'privateMarketingDisclosure',
+    titleKey: 'title',
+    sections: [
+      section('intro', paragraph('intro.content')),
+      section(
+        'statements',
+        clause('relationship'),
+        clause('dualRepresentation'),
+        clause('notPublished'),
+        clause('fewerBuyers'),
+        clause('revocation'),
+        clause('instruction'),
+      ),
     ],
   },
 };
