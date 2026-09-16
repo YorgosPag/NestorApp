@@ -932,3 +932,81 @@ describe('Γ-Π — βαθμονόμηση σε ΠΡΑΓΜΑΤΙΚΟ ιστορ�
     expect(VIEWPORT_HEIGHT.test(exportedRootOf(today).classAttr)).toBe(false);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ΦΑΣΗ Δ — ΤΟ ΣΧΟΛΙΟ ΓΡΑΜΜΗΣ ΠΟΥ ΑΝΟΙΓΕ ΜΠΛΟΚ      (ADR-797 §Δ · ADR-861 §6.4)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ο σαρωτής διάβαζε **μισό αρχείο** και το έλεγε «καθαρό».
+//    Η παλιά `stripComments` έσβηνε τα μπλοκ **πριν** τις γραμμές, οπότε ένα
+//    σχόλιο `//` που περιέχει `/*` (π.χ. το glob `src/app/**`) ζευγάρωνε με το
+//    **επόμενο** `*/` και κατάπινε τα πάντα ανάμεσα — μαζί με το `export
+//    default`. Η σελίδα έβγαινε `unresolved-root`, ο μετρητής έπεφτε **28 → 27**
+//    και η **πράσινη** γραμμή πρότεινε να σφραγιστεί η τύφλωση ως «πρόοδος».
+//
+// ⚠️ Η ΜΕΤΑΛΛΑΞΗ ΕΔΩ ΕΙΝΑΙ ΔΙΑΦΟΡΙΚΗ, ΟΧΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΠΥΛΗΣ: η παλιά μηχανή
+//    ζει παρακάτω ως **απολίθωμα** και τρέχει πάνω στην **ίδια** είσοδο. Έτσι η
+//    άγκυρα αποδεικνύει ότι η αλλαγή **έκανε διαφορά** — μια άγκυρα που απλώς
+//    επιβεβαιώνει το σημερινό αποτέλεσμα θα ήταν πράσινη και πριν τη θεραπεία.
+describe('Δ — η αφαίρεση σχολίων δεν καταπίνει κώδικα', () => {
+  /** Η ΠΑΛΙΑ μηχανή, αυτούσια. Ζει ΜΟΝΟ εδώ, και ΜΟΝΟ για να αποτύχει. */
+  const LEGACY = (s) => s
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
+  // Το ακριβές σχήμα του περιστατικού: σχόλιο γραμμής με glob, και πιο κάτω ένα
+  // JSX σχόλιο που προσφέρει το `*/` με το οποίο ζευγάρωνε.
+  const WITNESS = [
+    '// οι διαδρομές ζουν σε σχόλιο: src/app/** και src/lib/**',
+    'export default function P() {',
+    '  return (',
+    '    <main className="flex h-screen flex-col">',
+    '      {/* σχόλιο JSX — εδώ έκλεινε το ψεύτικο μπλοκ */}',
+    '      <span>x</span>',
+    '    </main>',
+    '  );',
+    '}',
+  ].join('\n');
+
+  it('Δ1 (ΘΕΤΙΚΟΣ ΜΑΡΤΥΡΑΣ): ο σαρωτής ΒΛΕΠΕΙ το `h-screen` της ρίζας', () => {
+    const root = exportedRootOf(stripComments(WITNESS));
+    expect(root).not.toBeNull();
+    expect(root.classAttr).toContain('h-screen');
+  });
+
+  it('Δ2 (ΜΕΤΑΛΛΑΞΗ): η ΠΑΛΙΑ σειρά καταπίνει το `export default` ⇒ ΤΥΦΛΗ', () => {
+    // Η μετάλλαξη ΟΦΕΙΛΕΙ να τυφλώσει…
+    expect(LEGACY(WITNESS)).not.toContain('export default');
+    expect(exportedRootOf(LEGACY(WITNESS))).toBeNull();
+    // …και η σημερινή μηχανή ΟΦΕΙΛΕΙ να μην τυφλώνει. Χωρίς τη δεύτερη γραμμή
+    // το Δ2 θα ήταν πράσινο ακόμη κι αν είχαν τυφλωθεί **και οι δύο**.
+    expect(stripComments(WITNESS)).toContain('export default');
+  });
+
+  it('Δ3: το `//` ΜΕΣΑ σε μπλοκ σχόλιο δεν τερματίζει τη γραμμή πρόωρα', () => {
+    // Η συμμετρική βλάβη, που θα γεννιόταν από σκέτη αντιστροφή της σειράς.
+    const src = '/**\n * τεκμηρίωση: http://nestorconstruct.gr/adr\n */\n'
+      + 'export default function P() {\n  return <main className="p-6">x</main>;\n}';
+    const clean = stripComments(src);
+    expect(clean).not.toContain('nestorconstruct');
+    expect(exportedRootOf(clean).classAttr).toBe('p-6');
+  });
+
+  it('Δ4: glob μέσα σε ΣΥΜΒΟΛΟΣΕΙΡΑ κώδικα δεν ανοίγει μπλοκ', () => {
+    // Η άλλη πλευρά του ίδιου ελαττώματος: το όριο είναι η **συμβολοσειρά**.
+    const src = "const g = 'src/app/**';\n"
+      + 'export default function P() {\n  return <main className="h-screen">x</main>;\n}';
+    const clean = stripComments(src);
+    expect(clean).toContain('src/app/**');
+    expect(exportedRootOf(clean).classAttr).toBe('h-screen');
+  });
+
+  it('Δ5 (ΖΩΝΤΑΝΟ): η σελίδα που το αποκάλυψε διαβάζεται ΟΛΟΚΛΗΡΗ', () => {
+    // Μετρημένο στο περιστατικό: 7.994 → 2.234 χαρακτήρες, με το `export
+    // default` της γρ. 118 μέσα στα καταπιωμένα.
+    const page = path.join(REPO, 'src', 'app', '(app)', 'test-harness', 'listing-shapes', 'page.tsx');
+    const raw = fs.readFileSync(page, 'utf8');
+    expect(LEGACY(raw)).not.toContain('export default');   // ΤΟΤΕ
+    expect(stripComments(raw)).toContain('export default'); // ΤΩΡΑ
+  });
+});
