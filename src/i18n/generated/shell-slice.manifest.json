@@ -75,7 +75,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b3551ae41d0b01558b3dc2b5c49ba39212b2eb9131aba521371bd2e933681ec4",
+  "inputsSha256": "8268548577cc3a86752004faf6f57bb7892e8a19aa7c630924d68991eb7381b5",
   "languages": [
     "el"
   ],
@@ -5197,7 +5197,7 @@
     "src/app/(app)/o/[workspace]/settings/layout.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/app/(auth)/layout.tsx": "2516446e753d611e8cc8965dc85512d2fe627e355d2c8b7682d451181f006bed",
     "src/app/(bare)/layout.tsx": "d8d5e14aafe05d5f4e38db737cd7a168263b583637b6206dfb97e3b6ec286e52",
-    "src/app/(light)/layout.tsx": "1426d0f8c95c31fbff7fbcc5c3db492adc4d9393dce082febda32e44a6aa62eb",
+    "src/app/(light)/layout.tsx": "73e6400aa82928c99ba3ba823fa8a7b6d834fba4196a3045950b9fadbddeb41a",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "cf1eabbc3afc6f0b57cde6075635d8e58d54b4b0e8fe49645fe60f4c79dd27fa",
     "src/app/layout.tsx": "b31f5aac2c86ab42d7e2fac6292db57a6bf00fc728fe28938e2d120139eaeee2",
@@ -5805,8 +5805,9 @@
     "src/types/contacts/relationships/interfaces/financial.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/contacts/relationships/interfaces/performance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/contacts/relationships/interfaces/relationship.ts": "b35347f6e9ef4869070e4f2006c21c919f13532ad3a59a515991845cff9c3f91",
+    "src/types/container-access.ts": "255aac0e3afc8eae87b066f1ac0a6ebe563da7725c28b802a016f94a85d8ed28",
     "src/types/email-templates.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/types/file-record.ts": "b99609402ac13daea72c4de4ea7f50a6d5e03391be2970057b8134b4957ba8c9",
+    "src/types/file-record.ts": "c379e714defdbad6f8bbfe9839d8a77794fd868271126c703c83e16eb7c9659d",
     "src/types/geo/admin-footprint.ts": "bdf5291766d39aa3be9e97f0ba2003aca52a85be41680eba15e174c2a28b7bce",
     "src/types/geo/coordinates.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/geo/public-place.ts": "7d10c6d4f281ce4d21b49662336b58634affe2ce01459c044c3aa58b406be334",
@@ -5882,7 +5883,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 674,
+    "shellFiles": 675,
     "sliceBytes": 466935
   },
   "unresolvableKeys": [
