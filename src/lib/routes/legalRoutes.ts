@@ -16,6 +16,8 @@
  * @see ADR-861 — ο φορέας της πλατφόρμας και τα νομικά έγγραφα
  */
 
+import type { LegalDocumentId } from '@/constants/legal-documents';
+
 export const LEGAL_ROUTES = {
   /** Πολιτική απορρήτου (ΓΚΠΔ άρθ. 13). */
   privacyPolicy: '/privacy-policy',
@@ -34,9 +36,40 @@ export const LEGAL_ROUTES = {
    * ακριβώς ο τρόπος με τον οποίο ένα λεξιλόγιο αρχίζει να αποκλίνει.
    */
   openSource: '/open-source',
+  /**
+   * Η ενημέρωση που συναινεί ο πωλητής πριν από κλειστή διάθεση (ADR-864 Φ3). Δημόσια — ο ιδιοκτήτης
+   * τη διαβάζει **πριν** από τον σύνδεσμο συναίνεσης, και ο μεσίτης την εκτυπώνει για υπογραφή.
+   * Στο μενού **τελευταία**: δεν δεσμεύει κάθε αναγνώστη, μόνο όποιον της ζητηθεί — αλλά είναι δημόσιο
+   * νομικό κείμενο και ο πωλητής πρέπει να το βρίσκει **πριν** του ζητηθεί (άγκυρα Σ1: κάθε διαδρομή = σύνδεσμος).
+   */
+  privateMarketingDisclosure: '/private-marketing-disclosure',
 } as const;
 
 export type LegalRouteId = keyof typeof LEGAL_ROUTES;
+
+/**
+ * **Ποια σελίδα αποδίδει την έκδοση σε ισχύ** κάθε εγγράφου με εκδόσεις (ADR-861 Φ3).
+ * Εξαντλητικό πάνω στο λεξιλόγιο: νέο έγγραφο χωρίς σελίδα **δεν** μεταγλωττίζεται.
+ */
+export const LEGAL_DOCUMENT_ROUTES: { readonly [Id in LegalDocumentId]: string } = {
+  'privacy-policy': LEGAL_ROUTES.privacyPolicy,
+  'terms-of-service': LEGAL_ROUTES.terms,
+  'data-deletion': LEGAL_ROUTES.dataDeletion,
+  'private-marketing-disclosure': LEGAL_ROUTES.privateMarketingDisclosure,
+};
+
+/**
+ * Το **αρχείο εκδόσεων** — **κάτω από τη σελίδα του ίδιου του εγγράφου** (`/privacy-policy/versions`).
+ *
+ * ⚠️ **ΟΧΙ `/legal/<έγγραφο>/versions`**: η οικογένεια είναι επίπεδη με απόφαση Giorgio
+ * (2026-09-16, `openSource` παραπάνω) — ένα πρόθεμα `/legal` θα της έδινε δεύτερο σχήμα
+ * διεύθυνσης. Ως υποδιαδρομή κληρονομεί και την εγγραφή «εκτός χώρου» της σελίδας.
+ */
+export const legalDocumentVersionsHref = (document: LegalDocumentId): string =>
+  `${LEGAL_DOCUMENT_ROUTES[document]}/versions`;
+
+export const legalDocumentVersionHref = (document: LegalDocumentId, version: number): string =>
+  `${legalDocumentVersionsHref(document)}/${version}`;
 
 /**
  * **Η σειρά των συνδέσμων** — ίδια σε κάθε επιφάνεια (μενού · οθόνες σύνδεσης · σελίδα νομικών
@@ -53,4 +86,6 @@ export const LEGAL_LINK_ORDER: readonly LegalRouteId[] = [
   //    **εμάς** απέναντι σε τρίτους εκδότες — άλλο ακροατήριο, χαμηλότερη προτεραιότητα
   //    ανάγνωσης, και καμία σχέση με τη συγκατάθεση που ζητούν οι από πάνω.
   'openSource',
+  // ADR-864 Φ3 — η ενημέρωση κλειστής διάθεσης: αφορά μόνο πωλητή με εντολή, άρα μετά από όλα.
+  'privateMarketingDisclosure',
 ];

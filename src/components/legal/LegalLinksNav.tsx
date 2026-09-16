@@ -33,6 +33,7 @@ const LABEL_KEYS = {
   dataDeletion: 'legal.dataDeletion',
   legalNotice: 'legal.legalNotice',
   openSource: 'legal.openSource',
+  privateMarketingDisclosure: 'legal.privateMarketingDisclosure',
 } as const;
 
 const TOUCH_TARGET = 'inline-flex min-h-[24px] min-w-[24px] items-center px-0.5 py-0.5 transition-colors';
