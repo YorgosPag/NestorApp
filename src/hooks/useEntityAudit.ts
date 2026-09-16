@@ -28,6 +28,7 @@ import { useAuditFeed } from '@/hooks/audit/useAuditFeed';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { EntityAuditClientService } from '@/services/entity-audit-client.service';
+import { AUDIT_LEDGER_PARAM, type AuditLedgerKind } from '@/lib/audit/audit-ledger';
 import type {
   AuditEntityType,
   EntityAuditEntry,
@@ -38,6 +39,12 @@ interface UseEntityAuditOptions {
   entityType: AuditEntityType;
   entityId: string | undefined;
   pageSize?: number;
+  /**
+   * 🔑 ADR-864 Φ1β — **ποιο βιβλίο**: `company` (προεπιλογή, ό,τι ίσχυε πάντα) ή `personal`.
+   * Ο καλών το παράγει από τη **θεματοφυλακή** της οντότητας (`auditLedgerKindOf`), ποτέ από
+   * τον χώρο της οθόνης. Ζωντανό παράθυρο **και** σελιδοποίηση ρωτούν το **ίδιο** βιβλίο.
+   */
+  ledger?: AuditLedgerKind;
 }
 
 interface UseEntityAuditReturn {
@@ -59,19 +66,21 @@ export function useEntityAudit({
   entityType,
   entityId,
   pageSize = DEFAULT_PAGE_SIZE,
+  ledger = 'company',
 }: UseEntityAuditOptions): UseEntityAuditReturn {
   const { user } = useAuth();
 
   return useAuditFeed({
     enabled: Boolean(user && entityId),
     pageSize,
-    subscriptionKey: `${user?.uid ?? ''}|${entityType}|${entityId ?? ''}`,
+    subscriptionKey: `${user?.uid ?? ''}|${entityType}|${entityId ?? ''}|${ledger}`,
     subscribeErrorFallback: 'Failed to subscribe to entity audit trail',
 
     subscribe: (callback) => {
       if (!entityId) return () => {};
       return EntityAuditClientService.subscribeEntity(
-        { entityType, entityId, limit: pageSize },
+        // ⚠️ Το εταιρικό βιβλίο στέλνει τα ΙΔΙΑ ορίσματα με πριν (άγκυρα χαρακτηρισμού).
+        { entityType, entityId, limit: pageSize, ...(ledger === 'personal' ? { ledger } : {}) },
         callback,
       );
     },
@@ -83,6 +92,7 @@ export function useEntityAudit({
 
       const params = new URLSearchParams({ limit: String(pageSize) });
       params.set('startAfter', cursor);
+      if (ledger === 'personal') params.set(AUDIT_LEDGER_PARAM, ledger);
 
       const data = await apiClient.get<EntityAuditResponse>(
         `${API_ROUTES.AUDIT_TRAIL.BY_ENTITY(entityType, entityId)}?${params.toString()}`,

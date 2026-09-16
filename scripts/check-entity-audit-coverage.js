@@ -77,6 +77,9 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'PARKING_SPACES',
   'STORAGE',
   'PURCHASE_ORDERS',
+  // ADR-864 Φ1β — η αγγελία ιδιοκτήτη (audit entityType: 'owner_property', βιβλίο 'custody').
+  // Κάθε ανθρώπινη πράξη περνά από το `persist()` του owner-property-write.service.ts.
+  'OWNER_PROPERTIES',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)
@@ -133,6 +136,22 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]bim[\\/]columns[\\/]column-firestore-service\.ts$/,
   // ADR-363 Phase 5 — client-SDK beam service; audit via beam-audit-client.ts in the hook layer
   /[\\/]bim[\\/]beams[\\/]beam-firestore-service\.ts$/,
+  // ADR-864 Φ1β — η ΠΥΛΗ ΓΡΑΦΗΣ της αγγελίας: το ίχνος το γράφει το `owner-property-audit.ts`
+  // (που καλεί `EntityAuditService.recordChange`), και το `persist()` το απαιτεί ΣΤΟΝ ΤΥΠΟ —
+  // ισχυρότερο από αυτόν τον file-level έλεγχο. Άγκυρα που το ΕΚΤΕΛΕΙ:
+  // `services/owner-property/__tests__/owner-property-audit-trail.test.ts` (Β2 · Β2β).
+  // ⚠️ Δηλωμένο κενό: το `setOwnerPropertyMandate` (συναλλαγή, όχι `persist`) — βιβλίο ADR-861.
+  /[\\/]services[\\/]owner-property[\\/]owner-property-write\.service\.ts$/,
+  // ADR-864 Φ1β — γραφείς ΠΑΡΑΓΩΓΩΝ του `owner_properties`, ΟΧΙ πράξεων ανθρώπου. Ονομαστικά,
+  // με λόγο — ΠΟΤΕ σιωπηλή baseline. Το ιστορικό της αγγελίας καταγράφει ό,τι ΑΠΟΦΑΣΙΣΕ κάποιος·
+  // αυτοί ξαναγράφουν ό,τι ήδη αποφασίστηκε:
+  //   · publication: η κατάσταση δημοσίευσης (`publication`) μετά την επαναπροβολή
+  /[\\/]services[\\/]owner-property[\\/]owner-property-publication\.service\.ts$/,
+  //   · mandate-expiry: ο δείκτης σάρωσης `mandatesExpireAt` (παράγεται από τις εντολές)
+  /[\\/]services[\\/]mandate[\\/]mandate-expiry\.service\.ts$/,
+  //   · agency-listings-sweep: σάρωση συστήματος `mandate.agencyRevokedAt` όταν ανακαλείται
+  //     γραφείο — το βιβλίο της εντολής είναι το ADR-861 (έκδοση συναίνεσης), όχι το ADR-195
+  /[\\/]services[\\/]mandate[\\/]agency-listings-sweep\.service\.ts$/,
 ];
 /**
  * Write operations to detect.

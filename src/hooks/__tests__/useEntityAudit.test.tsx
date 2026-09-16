@@ -370,3 +370,40 @@ describe('useEntityAudit — refetch', () => {
     expect(mockSubscribeEntity).toHaveBeenCalledTimes(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ADR-864 Φ1β — Β7: ΤΟ ΙΔΙΟ ΒΙΒΛΙΟ ΣΕ ΖΩΝΤΑΝΟ ΠΑΡΑΘΥΡΟ ΚΑΙ ΣΕΛΙΔΟΠΟΙΗΣΗ
+// ---------------------------------------------------------------------------
+
+describe('useEntityAudit — Β7: προσωπικό βιβλίο (ADR-864 Φ1β)', () => {
+  function renderPersonal() {
+    return renderHook(() =>
+      useEntityAudit({ entityType: 'owner_property', entityId: 'ownp_a', pageSize: 20, ledger: 'personal' }),
+    );
+  }
+
+  it('🔴 η συνδρομή ζητά το προσωπικό βιβλίο', () => {
+    renderPersonal();
+    expect(lastOptions()).toEqual({
+      entityType: 'owner_property',
+      entityId: 'ownp_a',
+      limit: 20,
+      ledger: 'personal',
+    });
+  });
+
+  it('🔴 η σελιδοποίηση ζητά το ΙΔΙΟ βιβλίο (αλλιώς το «περισσότερα» φέρνει άλλο ιστορικό)', async () => {
+    mockGet.mockResolvedValue({ entries: [], hasMore: false });
+
+    const { result } = renderPersonal();
+    act(() => lastCallback()([entry('a', '2026-01-01T00:00:00.000Z', { entityType: 'owner_property' })], null));
+
+    await act(async () => {
+      result.current.loadMore();
+    });
+
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/audit-trail/owner_property/ownp_a?limit=20&startAfter=a&ledger=personal',
+    );
+  });
+});

@@ -30,6 +30,13 @@ import {
   diffTrackedFields,
   type TrackedFieldDef,
 } from '@/lib/audit/audit-diff';
+import {
+  AUDIT_LEDGER_COLLECTION,
+  auditLedgerKindOfScope,
+  isWritableAuditLedgerScope,
+  type AuditLedgerKind,
+  type AuditLedgerScope,
+} from '@/lib/audit/audit-ledger';
 
 const logger = createModuleLogger('EntityAuditService');
 
@@ -37,7 +44,7 @@ const logger = createModuleLogger('EntityAuditService');
 // TYPES
 // ============================================================================
 
-interface RecordChangeParams {
+interface RecordChangeBase {
   entityType: AuditEntityType;
   entityId: string;
   entityName: string | null;
@@ -45,7 +52,23 @@ interface RecordChangeParams {
   changes: AuditFieldChange[];
   performedBy: string;
   performedByName: string | null;
-  companyId: string;
+}
+
+/**
+ * 🔑 ADR-864 Φ1β — **σε ποιο βιβλίο**: `companyId` **ή** `userId`, ποτέ και τα δύο
+ * (`lib/audit/audit-ledger.ts`). Οι υπάρχοντες καλούντες με `companyId` είναι ήδη το μέλος
+ * εταιρείας της ένωσης και **δεν** άλλαξαν.
+ */
+type RecordChangeParams = RecordChangeBase & AuditLedgerScope;
+
+/**
+ * **Μόνο** το κλειδί της εμβέλειας που υπάρχει — ποτέ `userId: undefined` δίπλα σε `companyId`.
+ *
+ * ⚠️ Ο ρηχός καθαριστής θα έσβηνε ούτως ή άλλως το `undefined`· η ρητή επιλογή εδώ υπάρχει
+ * ώστε η αποκλειστικότητα να είναι **ιδιότητα του γραφέα**, όχι παρενέργεια του καθαριστή.
+ */
+function ledgerFields(scope: AuditLedgerScope): Record<string, string> {
+  return scope.userId !== undefined ? { userId: scope.userId } : { companyId: scope.companyId };
 }
 
 // ============================================================================
@@ -171,6 +194,16 @@ export class EntityAuditService {
    */
   static async recordChange(params: RecordChangeParams): Promise<string | null> {
     try {
+      // 🔴 ADR-864 Φ1β — εγγραφή χωρίς κάτοχο βιβλίου **κανείς δεν μπορεί να τη διαβάσει**
+      //    (οι κανόνες ρωτούν `companyId`/`userId`). Αρνούμαστε **πριν** κάθε ανάγνωση βάσης.
+      if (!isWritableAuditLedgerScope(params)) {
+        logger.error('Audit entry without ledger owner — refused', {
+          entityType: params.entityType,
+          entityId: params.entityId,
+        });
+        return null;
+      }
+
       const db = getAdminFirestore();
       if (!db) {
         logger.warn('Firestore not available, skipping audit entry');
@@ -191,7 +224,7 @@ export class EntityAuditService {
         changes: params.changes,
         performedBy: params.performedBy,
         performedByName: resolvedName ?? null,
-        companyId: params.companyId,
+        ...ledgerFields(params),
         // ADR-195 Phase 1: distinguishes service-layer entries from CDC
         // (Cloud Function) entries during dual-write rollout. Will be removed
         // once CDC coverage is verified and the service path is retired.
@@ -199,9 +232,10 @@ export class EntityAuditService {
         timestamp: FieldValue.serverTimestamp(),
       });
 
+      // 📒 ADR-864 Φ1β — το βιβλίο διαλέγει το **διαμέρισμα** (`AUDIT_LEDGER_COLLECTION`).
       const auditId = generateEntityAuditId();
       await db
-        .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
+        .collection(COLLECTIONS[AUDIT_LEDGER_COLLECTION[auditLedgerKindOfScope(params)]])
         .doc(auditId)
         .set(entry);
 
@@ -293,11 +327,13 @@ export class EntityAuditService {
    * @param afterTimestamp - ISO 8601 timestamp (exclusive lower bound)
    * @param batchSize - Max entries per batch (default 500)
    * @param startAfterDoc - Firestore document snapshot for cursor pagination
+   * @param ledger - ADR-864 Φ1β: which partition to scan (cursor is per partition)
    */
   static async queryChangesAfter(
     afterTimestamp: string,
     batchSize: number = 500,
     startAfterDoc?: FirebaseFirestore.DocumentSnapshot,
+    ledger: AuditLedgerKind = 'company',
   ): Promise<{
     entries: AuditCdcEntry[];
     lastDoc: FirebaseFirestore.DocumentSnapshot | null;
@@ -312,7 +348,7 @@ export class EntityAuditService {
       const deltaDate = new Date(afterTimestamp);
 
       let query = db
-        .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
+        .collection(COLLECTIONS[AUDIT_LEDGER_COLLECTION[ledger]])
         .where('timestamp', '>', deltaDate)
         .orderBy('timestamp', 'asc')
         .limit(batchSize);

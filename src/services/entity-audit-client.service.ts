@@ -20,6 +20,10 @@
  *   Enforced by `firestore.rules` — read allowed only for
  *   `super_admin | company_admin` whose token `companyId` claim matches the
  *   document. A denied query surfaces as an error on the callback.
+ *   ADR-864 Φ1β: the **personal** ledger lives in its own partition
+ *   (`entity_audit_trail_personal`, `lib/audit/audit-ledger.ts`) and is readable
+ *   **only** by `request.auth.uid == userId` — not by company admins, not by
+ *   super admin. The company rule above is untouched.
  *
  * @module services/entity-audit-client.service
  * @enterprise ADR-195 — Entity Audit Trail (Phase 10: Client Subscriptions)
@@ -31,7 +35,6 @@
 import {
   where,
   orderBy,
-  Timestamp,
   type DocumentData,
   type QueryConstraint,
   type Unsubscribe,
@@ -39,10 +42,11 @@ import {
 
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { dedupDualWrite } from '@/services/audit/dedup-dual-write';
+import { entityAuditEntriesFromData } from '@/lib/audit/audit-entry-from-document';
+import { AUDIT_LEDGER_COLLECTION, type AuditLedgerKind } from '@/lib/audit/audit-ledger';
 import type {
   AuditAction,
   AuditEntityType,
-  AuditSource,
   EntityAuditEntry,
 } from '@/types/audit-trail';
 
@@ -73,6 +77,14 @@ export interface EntitySubscriptionOptions {
   entityType: AuditEntityType;
   entityId: string;
   limit?: number;
+  /**
+   * 🔑 ADR-864 Φ1β — **ποιο βιβλίο**. Απουσία ⇒ `company` (ό,τι ίσχυε πάντα).
+   *
+   * `personal` ⇒ διαμέρισμα `ENTITY_AUDIT_TRAIL_PERSONAL`, που το `tenant-config.ts` δηλώνει
+   * `mode: 'userId'` ⇒ το **ίδιο** tenant layer βάζει `userId == uid του συνδεδεμένου` — το
+   * `uid` το δίνει η ταυτότητα, **ποτέ** ο καλών.
+   */
+  ledger?: AuditLedgerKind;
 }
 
 export type AuditSubscriptionCallback = (
@@ -95,52 +107,14 @@ const FILTER_OVERFETCH_CAP = 200;
 // HELPERS
 // ============================================================================
 
-function toIsoTimestamp(value: unknown): string {
-  if (value instanceof Timestamp) return value.toDate().toISOString();
-  if (typeof value === 'string') return value;
-  if (
-    value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as { toDate: () => Date }).toDate().toISOString();
-  }
-  return new Date(0).toISOString();
-}
-
-function normalizeSource(value: unknown): AuditSource | undefined {
-  return value === 'cdc' || value === 'service' ? value : undefined;
-}
-
 /**
- * Serialize a raw Firestore field that should be a display name string.
- * CDC Cloud Functions sometimes store floor/entity objects {name, number}
- * instead of plain strings — this guard prevents React #31 when rendering.
+ * Έγγραφα → εγγραφές, μέσω του **ενός** συνόρου (`lib/audit/audit-entry-from-document`).
+ * Εγγραφή χωρίς ακριβώς ένα βιβλίο **παραλείπεται** — δεν μαντεύουμε σε ποιον ανήκει.
  */
-function toDisplayString(v: unknown): string | null {
-  if (v == null) return null;
-  if (typeof v === 'string') return v || null;
-  if (typeof v === 'object') {
-    const obj = v as Record<string, unknown>;
-    if (obj.name != null) return String(obj.name);
-    return JSON.stringify(obj);
-  }
-  return String(v) || null;
-}
-
-function normalizeEntry(doc: DocumentData & { id?: string }): EntityAuditEntry {
-  return {
-    id: doc.id,
-    entityType: doc.entityType as AuditEntityType,
-    entityId: doc.entityId as string,
-    entityName: toDisplayString(doc.entityName),
-    action: doc.action as AuditAction,
-    changes: Array.isArray(doc.changes) ? doc.changes : [],
-    performedBy: doc.performedBy as string,
-    performedByName: toDisplayString(doc.performedByName),
-    companyId: doc.companyId as string,
-    timestamp: toIsoTimestamp(doc.timestamp),
-    source: normalizeSource(doc.source),
-  };
+function entriesOf(documents: ReadonlyArray<DocumentData & { id?: string }>): EntityAuditEntry[] {
+  return entityAuditEntriesFromData(
+    documents.map(({ id, ...data }) => ({ id: id ?? '', data })),
+  );
 }
 
 // `dedupDualWrite` lives in `@/services/audit/dedup-dual-write.ts` as a pure
@@ -220,7 +194,7 @@ export const EntityAuditClientService = {
     return firestoreQueryService.subscribe<DocumentData & { id?: string }>(
       'ENTITY_AUDIT_TRAIL',
       (result) => {
-        const all = result.documents.map((doc) => normalizeEntry(doc));
+        const all = entriesOf(result.documents);
         const deduped = dedupDualWrite(all);
         callback(applyClientFilters(deduped, options.filters, windowSize), null);
       },
@@ -236,6 +210,9 @@ export const EntityAuditClientService = {
    * Subscribe to the audit trail for a single entity (per-entity History tab).
    *
    * Composes the canonical tenant filter with entityType + entityId filters.
+   * The partition follows the requested {@link EntitySubscriptionOptions.ledger}; its tenant
+   * filter comes from `tenant-config.ts`: `company` ⇒ `companyId` (default), `personal` ⇒
+   * `userId == uid`.
    *
    * @returns Unsubscribe function. Call on unmount.
    */
@@ -252,9 +229,9 @@ export const EntityAuditClientService = {
     ];
 
     return firestoreQueryService.subscribe<DocumentData & { id?: string }>(
-      'ENTITY_AUDIT_TRAIL',
+      AUDIT_LEDGER_COLLECTION[options.ledger ?? 'company'],
       (result) => {
-        const entries = result.documents.map((doc) => normalizeEntry(doc));
+        const entries = entriesOf(result.documents);
         callback(dedupDualWrite(entries), null);
       },
       (error) => callback([], error),
