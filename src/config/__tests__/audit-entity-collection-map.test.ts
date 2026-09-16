@@ -28,7 +28,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
+  AUDIT_ENTITY_TYPES,
   ENTITY_COLLECTION_MAP,
+  RECORDABLE_ENTITY_TYPES,
   VALID_ENTITY_TYPES,
   SUBCOLLECTION_ENTITY_TYPES,
   RENAME_PROPAGATION_MAP,
@@ -150,6 +152,44 @@ describe('ADR-852 §4.9 — οι προβολές συμφωνούν με το �
     for (const t of ['performance_diagnostic', 'bim_dimension_3d']) {
       expect(VALID_ENTITY_TYPES.has(t)).toBe(false);
       expect(AUDIT_ENTITIES[t as keyof typeof AUDIT_ENTITIES].writer).toBe('none');
+    }
+  });
+});
+
+describe('ADR-864 Φ1β — Β5: βιβλίο `custody` και προβολές ανάγνωσης/γραφής', () => {
+  it('Β5.α — κάθε μέλος του μητρώου είναι αναγνώσιμος τύπος (`AUDIT_ENTITY_TYPES` = κλειδιά)', () => {
+    expect([...AUDIT_ENTITY_TYPES].sort()).toEqual(Object.keys(AUDIT_ENTITIES).sort());
+    expect(AUDIT_ENTITY_TYPES.has('owner_property')).toBe(true);
+  });
+
+  it('Β5.β 🔴 οντότητα `custody` ΔΕΝ γράφεται από την εταιρική πόρτα `/record`', () => {
+    const custody = Object.entries(AUDIT_ENTITIES)
+      .filter(([, spec]) => spec.ledger === 'custody')
+      .map(([type]) => type);
+    expect(custody).toEqual(['owner_property']);
+    for (const type of custody) expect(RECORDABLE_ENTITY_TYPES.has(type)).toBe(false);
+    // Παρονομαστής: οι εταιρικές μένουν εγγράψιμες όπως πριν.
+    expect([...RECORDABLE_ENTITY_TYPES].sort()).toEqual(
+      [...VALID_ENTITY_TYPES].filter((t) => !custody.includes(t)).sort(),
+    );
+  });
+
+  it('Β5.γ — `custody` ⇒ `writer: server-direct` (μόνο ο server ξέρει τη θεματοφυλακή)', () => {
+    const broken = Object.entries(AUDIT_ENTITIES)
+      .filter(([, spec]) => spec.ledger === 'custody' && spec.writer !== 'server-direct')
+      .map(([type]) => type);
+    expect(broken).toEqual([]);
+  });
+
+  it('Β5.δ 🔴 καμία διαδρομή ανάγνωσης δεν κρατά ΧΕΙΡΟΓΡΑΦΟ σύνολο τύπων (400 στη σελιδοποίηση)', () => {
+    // Ήταν 6 και 9 τύποι ενώ το `ActivityTab` καλεί τη σελιδοποίηση για ΚΑΘΕ τύπο.
+    for (const rel of [
+      'src/app/api/audit-trail/[entityType]/[entityId]/route.ts',
+      'src/app/api/audit-trail/global/route.ts',
+    ]) {
+      const text = fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
+      expect(`${rel}: ${/new Set<AuditEntityType>\(\[/.test(text)}`).toBe(`${rel}: false`);
+      expect(`${rel}: ${text.includes('AUDIT_ENTITY_TYPES.has(')}`).toBe(`${rel}: true`);
     }
   });
 });

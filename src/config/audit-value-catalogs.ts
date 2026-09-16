@@ -84,6 +84,18 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // ── ADR-864 §5.1: κοινό αγγελίας (custodians/network/public). Ο ΙΔΙΟΣ κατάλογος με τη
   // διεπαφή επιλογής (`MarketingAudienceControl`) — μία ετικέτα ανά τιμή, όχι δύο.
   marketingAudience: { ns: 'properties-enums', path: 'marketingAudience' },
+
+  // ── ADR-864 Φ1β: κύκλος ζωής — **δύο λεξιλόγια κάτω από ΕΝΑ κλειδί πεδίου**, αναπόφευκτα:
+  // η αγγελία (`OWNER_PROPERTY_LIFECYCLES`: listed/withdrawn) **και** το υπο-πεδίο της
+  // διάθεσης (`OFFER_LIFECYCLES`: active/reserved/closed/withdrawn) λέγονται `lifecycle`, και
+  // ο κατάλογος κλειδώνεται από το **όνομα** του πεδίου. Οι τιμές είναι ξένες μεταξύ τους
+  // εκτός από το `withdrawn`, που σημαίνει το **ίδιο** και στα δύο ⇒ μία ένωση, όχι σύγκρουση.
+  // Όταν ο αναγνώστης δέσει το `TrackedFieldDef.enumCatalog` (ADR-852), χωρίζονται.
+  lifecycle: { ns: 'properties-enums', path: 'auditLifecycle' },
+
+  // ── ADR-864 Φ1β: η ετικέτα στοιχείου της συλλογής `offers` είναι το **είδος** της διάθεσης
+  // (`labelFields: ['kind']`) ⇒ «Πώληση», ποτέ ωμό `sell`. Ο ΙΔΙΟΣ κατάλογος με τη φόρμα.
+  offers: { ns: 'properties-enums', path: 'offerKind' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */

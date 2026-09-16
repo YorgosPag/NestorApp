@@ -1194,6 +1194,68 @@ const CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS_RAW, {});
 
+/**
+ * 🎯 ADR-864 Φ1β — `owner_property`: η αγγελία ιδιοκτήτη (ιδιώτη **ή** γραφείου).
+ *
+ * 🔑 **Κάθε πεδίο που συντάσσει ο άνθρωπος** (`OwnerPropertyDraft`) **+** οι δύο πράξεις
+ * διάθεσης (`lifecycle` · `marketingAudience`). Πρότυπο Salesforce Field History / ιστορικό
+ * τιμής Zillow: ο κάτοχος βλέπει **τι** άλλαξε, **πότε**, **από ποιον** — και την **τιμή ανά
+ * διάθεση**, όχι μια συνολική «άλλαξε η αγγελία».
+ *
+ * ⚠️ **ΔΕΝ παρακολουθούνται, επίτηδες**: `place.point` (συντεταγμένες — ο άνθρωπος βλέπει
+ * τη διεύθυνση `place.label`, και ένα ζεύγος αριθμών στο ιστορικό είναι θόρυβος) · οι
+ * χρονοσφραγίδες των διαθέσεων (παράγωγα) · `mandates` (το βιβλίο της εντολής είναι η
+ * **έκδοση συναίνεσης** του ADR-861, όχι αυτό) · `publication` / `mandatesExpireAt`
+ * (παράγωγα του συστήματος).
+ *
+ * ⚠️ **`media.kind` εκτός, προσωρινά**: το `kind` είναι **καθολικό** κλειδί καταλόγου τιμών
+ * που ήδη χρησιμοποιούν ~10 BIM οντότητες με **άλλο** λεξιλόγιο, και ο κατάλογος ανά πεδίο
+ * (`TrackedFieldDef.enumCatalog`) **δεν** διαβάζεται ακόμη από τον αναγνώστη (ADR-852). Ωμό
+ * `floorplan` στο ιστορικό δεν είναι επαγγελματικό — μπαίνει όταν δεθεί το `enumCatalog`.
+ */
+const OWNER_PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
+  title: 'title',
+  type: 'type',
+  areaSqm: 'areaSqm',
+  floor: 'floor',
+  bedrooms: 'bedrooms',
+  'place.label': 'place.label',
+  lifecycle: 'lifecycle',
+  marketingAudience: 'marketingAudience',
+};
+
+const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
+  // Ταυτότητα διάθεσης = `id` (`offr_*`), ΟΧΙ θέση στον πίνακα — η θέση δεν είναι ταυτότητα.
+  offers: {
+    kind: 'collection',
+    label: 'offers',
+    keyBy: 'id',
+    labelFields: ['kind'],
+    trackSubFields: [
+      'lifecycle',
+      'askingPrice',
+      'finalPrice',
+      'rentPrice',
+      'percentage',
+      'nightlyRate',
+      'minNights',
+      'maxGuests',
+    ],
+  },
+  // Ταυτότητα αρχείου = `storagePath` (το `fileName` είναι ό,τι το ονόμασε ο άνθρωπος).
+  media: {
+    kind: 'collection',
+    label: 'media',
+    keyBy: 'storagePath',
+    labelFields: ['fileName'],
+    trackSubFields: ['published'],
+  },
+};
+
+/** Owner-property audit registry — `field → TrackedFieldDef` (ADR-864 Φ1β). */
+export const OWNER_PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(OWNER_PROPERTY_TRACKED_FIELDS_RAW, OWNER_PROPERTY_COLLECTION_DEFS);
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -1279,6 +1341,9 @@ export function getTrackedFieldsForEntityAuditType(
       return TEXT_TEMPLATE_TRACKED_FIELDS;
     case 'custom_dictionary_entry':
       return CUSTOM_DICTIONARY_ENTRY_TRACKED_FIELDS;
+    // ADR-864 Φ1β — η πρώτη οντότητα βιβλίου `custody`.
+    case 'owner_property':
+      return OWNER_PROPERTY_TRACKED_FIELDS;
     default:
       return null;
   }

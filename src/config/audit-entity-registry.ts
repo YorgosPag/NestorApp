@@ -118,6 +118,26 @@ export type AuditEntityScope = 'top-level' | 'subcollection';
  */
 export type AuditEntityWriter = 'client-post' | 'server-direct' | 'none';
 
+/**
+ * **Σε ποιο βιβλίο γράφεται το ιστορικό** — ADR-195 §«Προσωπικό βιβλίο» · ADR-864 Φ1β.
+ *
+ * · `'company'` — η εγγραφή φέρει **πάντα** `companyId`: του καλούντος στο
+ *   `/api/audit-trail/record`, ή του service που την καταγράφει. Είναι ό,τι ίσχυε για
+ *   **κάθε** οντότητα ως τις 2026-09-16.
+ * · `'custody'` — η εμβέλεια **παράγεται από τη θεματοφυλακή του εγγράφου** (π.χ.
+ *   `custodyOf` της αγγελίας): `companyId` **ή** `userId`, ποτέ και τα δύο. Ο ιδιώτης
+ *   χωρίς εταιρεία έχει έτσι ίχνος που διαβάζει **μόνο ο ίδιος**.
+ *
+ * 🔴 **Γιατί στήλη και όχι σύμβαση**: το `/api/audit-trail/record` είναι **εταιρική**
+ * πόρτα (`withAuth`) και γράφει το `companyId` του καλούντος. Για οντότητα `'custody'`
+ * αυτό θα ήταν **λάθος εμβέλεια** — και ο κλάδος `deleted` δέχεται ανύπαρκτο έγγραφο,
+ * άρα δεν υπάρχει καν θεματοφυλακή να ρωτηθεί. Η στήλη κάνει την άρνηση **προβολή του
+ * μητρώου** (`RECORDABLE_ENTITY_TYPES`), όχι έλεγχο που κάποιος θυμάται.
+ *
+ * ⚠️ `'custody'` ⇒ **υποχρεωτικά** `writer: 'server-direct'` — το φυλάει άγκυρα.
+ */
+export type AuditLedger = 'company' | 'custody';
+
 /** Η δήλωση μιας οντότητας — **μία** γραμμή, όλες οι όψεις. */
 export interface AuditEntitySpec {
   /**
@@ -131,6 +151,8 @@ export interface AuditEntitySpec {
   readonly collectionKey: FirestoreCollectionKey | null;
   readonly scope: AuditEntityScope;
   readonly writer: AuditEntityWriter;
+  /** Σε ποιο βιβλίο γράφεται το ιστορικό — δες {@link AuditLedger}. */
+  readonly ledger: AuditLedger;
   /** Μεταφέρεται η μετονομασία της στα ονόματα των αρχείων της; (ADR-293 Φ8) */
   readonly renamePropagation: boolean;
   /** Μπαίνει στο incremental backup manifest; (ADR-195) */
@@ -156,45 +178,53 @@ export interface AuditEntitySpec {
  */
 export const AUDIT_ENTITIES = {
   // ── Επιχειρησιακός κόσμος — γράφεται από server services ──────────────────
-  contact: { collectionKey: 'CONTACTS', scope: 'top-level', writer: 'client-post', renamePropagation: true, backup: true },
-  company: { collectionKey: 'COMPANIES', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  project: { collectionKey: 'PROJECTS', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  building: { collectionKey: 'BUILDINGS', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  floor: { collectionKey: 'FLOORS', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  property: { collectionKey: 'PROPERTIES', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  parking: { collectionKey: 'PARKING_SPACES', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  storage: { collectionKey: 'STORAGE', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
+  contact: { collectionKey: 'CONTACTS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: true, backup: true },
+  company: { collectionKey: 'COMPANIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  project: { collectionKey: 'PROJECTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  building: { collectionKey: 'BUILDINGS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  floor: { collectionKey: 'FLOORS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  property: { collectionKey: 'PROPERTIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  parking: { collectionKey: 'PARKING_SPACES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  storage: { collectionKey: 'STORAGE', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+
+  /**
+   * 🎯 ADR-864 Φ1β — **η αγγελία ιδιοκτήτη**, η πρώτη οντότητα με βιβλίο `'custody'`.
+   * Ιδιώτης ⇒ `userId` · γραφείο ⇒ `companyId`, από το `custodyOf` (CHECK 3.56). Όλες οι
+   * πράξεις περνούν από το `persist()` του `owner-property-write.service.ts`.
+   * `renamePropagation: false` — τα αρχεία της δεν ονομάζονται από τον τίτλο.
+   */
+  owner_property: { collectionKey: 'OWNER_PROPERTIES', scope: 'top-level', writer: 'server-direct', ledger: 'custody', renamePropagation: false, backup: true },
 
   /**
    * ⚠️ `parking_spot` / `storage_unit`: **παλαιά συνώνυμα** των `parking`/`storage`
    * που δείχνουν στην **ίδια** συλλογή. Διατηρούνται επειδή υπάρχουν γραμμένες
    * εγγραφές με αυτά τα ονόματα — αφαίρεση θα έκανε το παλιό ιστορικό **αδιάβαστο**.
    */
-  parking_spot: { collectionKey: 'PARKING_SPACES', scope: 'top-level', writer: 'none', renamePropagation: true, backup: true },
-  storage_unit: { collectionKey: 'STORAGE', scope: 'top-level', writer: 'none', renamePropagation: true, backup: true },
+  parking_spot: { collectionKey: 'PARKING_SPACES', scope: 'top-level', writer: 'none', ledger: 'company', renamePropagation: true, backup: true },
+  storage_unit: { collectionKey: 'STORAGE', scope: 'top-level', writer: 'none', ledger: 'company', renamePropagation: true, backup: true },
 
   // ── Προμήθειες (ADR-332 / procurement) ────────────────────────────────────
-  purchase_order: { collectionKey: 'PURCHASE_ORDERS', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  quote: { collectionKey: 'QUOTES', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  material: { collectionKey: 'MATERIALS', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  framework_agreement: { collectionKey: 'FRAMEWORK_AGREEMENTS', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
+  purchase_order: { collectionKey: 'PURCHASE_ORDERS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  quote: { collectionKey: 'QUOTES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  material: { collectionKey: 'MATERIALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  framework_agreement: { collectionKey: 'FRAMEWORK_AGREEMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
 
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
-  text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
-  custom_dictionary_entry: { collectionKey: 'TEXT_CUSTOM_DICTIONARY', scope: 'top-level', writer: 'server-direct', renamePropagation: true, backup: true },
+  text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  custom_dictionary_entry: { collectionKey: 'TEXT_CUSTOM_DICTIONARY', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
 
   // ── BIM: δομικά (ADR-363 §5.17) ───────────────────────────────────────────
   // Καμία BIM οντότητα δεν μεταφέρει μετονομασία σε αρχεία ούτε μπαίνει στο
   // backup manifest — δηλωμένα, όχι σιωπηλά.
-  wall: { collectionKey: 'FLOORPLAN_WALLS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  opening: { collectionKey: 'FLOORPLAN_OPENINGS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  slab: { collectionKey: 'FLOORPLAN_SLABS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'slab-opening': { collectionKey: 'FLOORPLAN_SLAB_OPENINGS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  column: { collectionKey: 'FLOORPLAN_COLUMNS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  beam: { collectionKey: 'FLOORPLAN_BEAMS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  stair: { collectionKey: 'FLOORPLAN_STAIRS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  roof: { collectionKey: 'FLOORPLAN_ROOFS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  foundation: { collectionKey: 'FLOORPLAN_FOUNDATIONS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
+  wall: { collectionKey: 'FLOORPLAN_WALLS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  opening: { collectionKey: 'FLOORPLAN_OPENINGS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  slab: { collectionKey: 'FLOORPLAN_SLABS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'slab-opening': { collectionKey: 'FLOORPLAN_SLAB_OPENINGS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  column: { collectionKey: 'FLOORPLAN_COLUMNS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  beam: { collectionKey: 'FLOORPLAN_BEAMS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  stair: { collectionKey: 'FLOORPLAN_STAIRS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  roof: { collectionKey: 'FLOORPLAN_ROOFS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  foundation: { collectionKey: 'FLOORPLAN_FOUNDATIONS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
 
   /**
    * 🔴 **ADR-407 — ΕΓΡΑΦΕ ΣΕ 400 ΑΠΟ ΤΗ ΓΕΝΝΗΣΗ ΤΟΥ.** Ο `railing-audit-client.ts`
@@ -202,25 +232,25 @@ export const AUDIT_ENTITIES = {
    * union **ούτε** στον χάρτη ⇒ κάθε εγγραφή 400άριζε και το `.catch(()=>{})` τη
    * σιωπούσε. Η συλλογή `floorplan_railings` **υπήρχε ήδη**.
    */
-  railing: { collectionKey: 'FLOORPLAN_RAILINGS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
+  railing: { collectionKey: 'FLOORPLAN_RAILINGS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
 
   // ── BIM: Η-Μ (ADR-406 / ADR-408) ──────────────────────────────────────────
-  'mep-fixture': { collectionKey: 'FLOORPLAN_MEP_FIXTURES', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-system': { collectionKey: 'FLOORPLAN_MEP_SYSTEMS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'electrical-panel': { collectionKey: 'FLOORPLAN_ELECTRICAL_PANELS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-segment': { collectionKey: 'FLOORPLAN_MEP_SEGMENTS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-fitting': { collectionKey: 'FLOORPLAN_MEP_FITTINGS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-manifold': { collectionKey: 'FLOORPLAN_MEP_MANIFOLDS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
+  'mep-fixture': { collectionKey: 'FLOORPLAN_MEP_FIXTURES', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-system': { collectionKey: 'FLOORPLAN_MEP_SYSTEMS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'electrical-panel': { collectionKey: 'FLOORPLAN_ELECTRICAL_PANELS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-segment': { collectionKey: 'FLOORPLAN_MEP_SEGMENTS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-fitting': { collectionKey: 'FLOORPLAN_MEP_FITTINGS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-manifold': { collectionKey: 'FLOORPLAN_MEP_MANIFOLDS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
 
   /**
    * 🔴 **ADR-408 Εύρος Β — ΤΑ ΤΕΣΣΕΡΑ ΘΕΡΜΙΚΑ ΣΩΜΑΤΑ ΕΓΡΑΦΑΝ ΣΕ 400.** Ίδιο σχήμα
    * με το `railing`: ζωντανοί audit-clients, συλλογές υπαρκτές, **καμία** εγγραφή
    * στο union ή στον χάρτη.
    */
-  'mep-radiator': { collectionKey: 'FLOORPLAN_MEP_RADIATORS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-boiler': { collectionKey: 'FLOORPLAN_MEP_BOILERS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-water-heater': { collectionKey: 'FLOORPLAN_MEP_WATER_HEATERS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'mep-underfloor': { collectionKey: 'FLOORPLAN_MEP_UNDERFLOORS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
+  'mep-radiator': { collectionKey: 'FLOORPLAN_MEP_RADIATORS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-boiler': { collectionKey: 'FLOORPLAN_MEP_BOILERS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-water-heater': { collectionKey: 'FLOORPLAN_MEP_WATER_HEATERS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'mep-underfloor': { collectionKey: 'FLOORPLAN_MEP_UNDERFLOORS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
 
   // ── BIM: σύμβολα, έπιπλα, εισαγόμενα, παραμετρικά ─────────────────────────
   /**
@@ -228,20 +258,20 @@ export const AUDIT_ENTITIES = {
    * τύπος φαινόταν «κανονικό μέλος», άρα κάθε έλεγχος τύπου περνούσε — και το
    * `VALID_ENTITY_TYPES`, που **παράγεται από τον χάρτη**, τον απέρριπτε στο runtime.
    */
-  'floorplan-symbol': { collectionKey: 'FLOORPLAN_SYMBOLS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  furniture: { collectionKey: 'FLOORPLAN_FURNITURE', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'imported-mesh': { collectionKey: 'FLOORPLAN_IMPORTED_MESHES', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
-  'generic-solid': { collectionKey: 'FLOORPLAN_GENERIC_SOLIDS', scope: 'top-level', writer: 'client-post', renamePropagation: false, backup: false },
+  'floorplan-symbol': { collectionKey: 'FLOORPLAN_SYMBOLS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  furniture: { collectionKey: 'FLOORPLAN_FURNITURE', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'imported-mesh': { collectionKey: 'FLOORPLAN_IMPORTED_MESHES', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
+  'generic-solid': { collectionKey: 'FLOORPLAN_GENERIC_SOLIDS', scope: 'top-level', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
 
   /** ADR-412 Φ5 — **η μόνη** subcollection-scoped οντότητα: `companies/{id}/bim_family_types/{typeId}`. */
-  bim_family_type: { collectionKey: 'BIM_FAMILY_TYPES', scope: 'subcollection', writer: 'client-post', renamePropagation: false, backup: false },
+  bim_family_type: { collectionKey: 'BIM_FAMILY_TYPES', scope: 'subcollection', writer: 'client-post', ledger: 'company', renamePropagation: false, backup: false },
 
   // ── Τηλεμετρία & σχολιασμοί 3D (ADR-366) ──────────────────────────────────
   // `collectionKey: null` ⇒ δεν έχουν δικό τους έγγραφο προς επαλήθευση κατοχής.
-  performance_diagnostic: { collectionKey: null, scope: 'top-level', writer: 'none', renamePropagation: false, backup: false },
-  performance_telemetry: { collectionKey: null, scope: 'top-level', writer: 'none', renamePropagation: false, backup: false },
-  bim_dimension_3d: { collectionKey: null, scope: 'top-level', writer: 'none', renamePropagation: false, backup: false },
-  bim_animation: { collectionKey: null, scope: 'top-level', writer: 'none', renamePropagation: false, backup: false },
+  performance_diagnostic: { collectionKey: null, scope: 'top-level', writer: 'none', ledger: 'company', renamePropagation: false, backup: false },
+  performance_telemetry: { collectionKey: null, scope: 'top-level', writer: 'none', ledger: 'company', renamePropagation: false, backup: false },
+  bim_dimension_3d: { collectionKey: null, scope: 'top-level', writer: 'none', ledger: 'company', renamePropagation: false, backup: false },
+  bim_animation: { collectionKey: null, scope: 'top-level', writer: 'none', ledger: 'company', renamePropagation: false, backup: false },
 } as const satisfies Record<string, AuditEntitySpec>;
 
 /**
