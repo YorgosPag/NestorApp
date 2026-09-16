@@ -90,7 +90,11 @@ export type AnnouncementReport = AnnouncementCounters;
 /** Κλείνει το άθροισμα; Υπάρχει **για να αποτύχει θορυβωδώς**. */
 export function announcementReportBalances(report: AnnouncementReport): boolean {
   return (
-    report.announced + report.alreadyKnown + report.noNews + report.optedOut ===
+    report.announced +
+      report.alreadyKnown +
+      report.noNews +
+      report.optedOut +
+      report.settled ===
     report.considered
   );
 }
@@ -125,7 +129,7 @@ export async function announceInterestToOwners(
   if (!announcementReportBalances(report)) {
     throw new Error(
       `interest-notifier: ασυνεπής λογιστική — ${report.announced}+${report.alreadyKnown}+` +
-        `${report.noNews}+${report.optedOut} ≠ ${report.considered}`,
+        `${report.noNews}+${report.optedOut}+${report.settled} ≠ ${report.considered}`,
     );
   }
 

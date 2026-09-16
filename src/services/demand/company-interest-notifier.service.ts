@@ -91,6 +91,7 @@ export function companyReportBalances(report: CompanyAnnouncementReport): boolea
       report.alreadyKnown +
       report.noNews +
       report.optedOut +
+      report.settled +
       report.unsigned +
       report.unscoped ===
     report.considered
@@ -125,7 +126,8 @@ export async function announceInterestToCompanyStaff(
   if (!companyReportBalances(report)) {
     throw new Error(
       `company-interest-notifier: ασυνεπής λογιστική — ${report.announced}+` +
-        `${report.alreadyKnown}+${report.noNews}+${report.optedOut}+${report.unsigned}+` +
+        `${report.alreadyKnown}+${report.noNews}+${report.optedOut}+${report.settled}+` +
+        `${report.unsigned}+` +
         `${report.unscoped} ≠ ${report.considered}`,
     );
   }

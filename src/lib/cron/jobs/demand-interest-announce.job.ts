@@ -97,12 +97,19 @@ function announcementMetrics(
     alreadyKnown: owners.alreadyKnown + company.alreadyKnown,
     noNews: owners.noNews + company.noNews,
     optedOut: owners.optedOut + company.optedOut,
+    // 🔴 ADR-864 Φ2 — ολοκληρωμένες συναλλαγές, **χωριστά** από το `noNews` (δες
+    //    `AnnouncementCounters.settled`: «δεν ρωτήσαμε» ≠ «ρωτήσαμε και σιώπησε»).
+    settled: owners.settled + company.settled,
     considered: owners.considered + company.considered,
     truncated: owners.truncated || company.truncated ? 1 : 0,
     // 🔴 **Χωριστά, ΠΟΤΕ αθροισμένα με το `noNews`.** Ένα ακίνητο γραφείου χωρίς
     // υπογραφή δεν είναι «καμία είδηση» — είναι «δεν ξέρουμε ποιον να ειδοποιήσουμε»,
     // δηλαδή **σιωπηλά χαμένη** ειδοποίηση. Οι δύο διαβάζονται εντελώς διαφορετικά.
     unsigned: company.unsigned,
+    // 🔴 **Έλειπε από τα metrics** (βρέθηκε 2026-09-16, ADR-864 Φ2): ο κάδος υπήρχε στη
+    //    λογιστική (ADR-849 Β1) και **κλείνει** το άθροισμα, αλλά δεν εκπεμπόταν — ακίνητα
+    //    γραφείου χωρίς εταιρεία χάνονταν σιωπηλά από το log. Ίδιο σχήμα με την άγκυρα Λ1.
+    unscoped: company.unscoped,
     // Οι δύο σαρωτές μετριούνται και χωριστά: ένα «0 announced» συνολικά δεν λέει
     // ποιο από τα δύο μονοπάτια σιώπησε — και τα δύο έχουν δικούς τους τρόπους να
     // σπάσουν.
@@ -134,8 +141,8 @@ export async function runDemandInterestAnnounce(): Promise<CronJobResult> {
   return {
     summary:
       `announced ${metrics.announced}, already-known ${metrics.alreadyKnown}, ` +
-      `no-news ${metrics.noNews}, opted-out ${metrics.optedOut}, ` +
-      `unsigned ${metrics.unsigned} ` +
+      `no-news ${metrics.noNews}, opted-out ${metrics.optedOut}, settled ${metrics.settled}, ` +
+      `unsigned ${metrics.unsigned}, unscoped ${metrics.unscoped} ` +
       `(considered ${metrics.considered} = ${owners.considered} ιδιωτών + ` +
       `${company.considered} γραφείου${metrics.truncated === 1 ? ', TRUNCATED' : ''})`,
     metrics,

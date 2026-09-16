@@ -115,6 +115,7 @@ function report(overrides: Partial<AnnouncementReport> = {}): AnnouncementReport
     alreadyKnown: 0,
     noNews: 0,
     optedOut: 0,
+    settled: 0,
     considered: 0,
     truncated: false,
     ...overrides,
@@ -129,7 +130,9 @@ function companyReport(
     alreadyKnown: 0,
     noNews: 0,
     optedOut: 0,
+    settled: 0,
     unsigned: 0,
+    unscoped: 0,
     considered: 0,
     truncated: false,
     ...overrides,
@@ -232,7 +235,9 @@ describe('Λ — τα metrics δεν κρύβουν κάδο', () => {
       'noNews',
       'optedOut',
       'ownerConsidered',
+      'settled',
       'truncated',
+      'unscoped',
       'unsigned',
     ]);
     expect(result.metrics?.announced).toBe(0);

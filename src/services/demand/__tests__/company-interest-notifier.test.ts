@@ -259,13 +259,15 @@ describe('Λ — η λογιστική κλείνει, αλλιώς ουρλιά
 
   it('Λ2 — ο έλεγχος ισοζυγίου πιάνει ασυμφωνία', () => {
     const base = {
-      announced: 1, alreadyKnown: 0, noNews: 0, optedOut: 0,
+      announced: 1, alreadyKnown: 0, noNews: 0, optedOut: 0, settled: 0,
       unsigned: 0, unscoped: 0, considered: 1, truncated: false,
     };
     expect(companyReportBalances(base)).toBe(true);
     expect(companyReportBalances({ ...base, considered: 5 })).toBe(false);
     // Ο νέος κάδος ΜΕΤΡΑΕΙ στο άθροισμα — αλλιώς ένα ακίνητο χωρίς χώρο θα χανόταν σιωπηλά.
     expect(companyReportBalances({ ...base, unscoped: 1, considered: 2 })).toBe(true);
+    // ADR-864 Φ2 — και ο κάδος των ολοκληρωμένων συναλλαγών μετράει.
+    expect(companyReportBalances({ ...base, settled: 1, considered: 2 })).toBe(true);
   });
 
   it('Λ3 🔴 — ασυνεπής λογιστική ⇒ σφάλμα ΜΕ ΟΝΟΜΑ, όχι σιωπή', async () => {

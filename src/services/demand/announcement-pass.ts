@@ -43,6 +43,14 @@ export interface AnnouncementCounters {
   readonly alreadyKnown: number;
   readonly noNews: number;
   readonly optedOut: number;
+  /**
+   * 🔴 **Ολοκληρωμένη συναλλαγή — δεν εξετάστηκε, επίτηδες** (ADR-864 Φ2 · Γ2).
+   *
+   * **Χωριστά, ΠΟΤΕ μέσα στο `noNews`**: «δεν υπάρχει είδηση» σημαίνει *«ρωτήσαμε την
+   * αγορά και σιώπησε»*· εδώ **δεν ρωτήσαμε**, γιατί δεν υπάρχει πια κάτοχος να
+   * ενημερωθεί. Ενωμένοι, ένα χαρτοφυλάκιο γεμάτο πουλημένα θα έμοιαζε με νεκρή αγορά.
+   */
+  readonly settled: number;
   readonly considered: number;
   readonly truncated: boolean;
 }
@@ -51,6 +59,8 @@ export interface AnnouncementCounters {
 export interface AnnouncementTally {
   /** Δεν υπάρχει είδηση για αυτό το ακίνητο (κάτω από ζώνη ή λογοκριμένο). */
   readonly countNoNews: () => void;
+  /** Ολοκληρωμένη συναλλαγή — **δεν** κρίθηκε απέναντι στη ζήτηση. */
+  readonly countSettled: () => void;
   /** Καταγράφει την κατάληξη μιας **πραγματικής** ανακοίνωσης. */
   readonly countOutcome: (outcome: AnnounceOutcome) => void;
   /**
@@ -125,6 +135,13 @@ export async function announceIfNewsworthy(
     moment.nowIso,
     moment.todayDate,
   );
+  // 🔑 **Η στάση στενεύεται ΠΡΙΝ από κάθε αριθμό** — ο τύπος δεν δίνει `disclosure` σε
+  //    ολοκληρωμένο ακίνητο, άρα «0» ή «κάτω από κατώφλι» είναι αμεταγλώττιστα εδώ.
+  if (interest.stance === 'settled') {
+    tally.countSettled();
+    return;
+  }
+
   const band = announcementBand(interest.disclosure.count);
 
   if (band === null) {
@@ -152,10 +169,14 @@ export function createAnnouncementTally(): AnnouncementTally {
   let alreadyKnown = 0;
   let noNews = 0;
   let optedOut = 0;
+  let settled = 0;
 
   return {
     countNoNews: () => {
       noNews += 1;
+    },
+    countSettled: () => {
+      settled += 1;
     },
     countOutcome: (outcome) => {
       if (outcome === 'announced') announced += 1;
@@ -167,6 +188,7 @@ export function createAnnouncementTally(): AnnouncementTally {
       alreadyKnown,
       noNews,
       optedOut,
+      settled,
       considered,
       truncated: considered === limit,
     }),
