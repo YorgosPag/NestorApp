@@ -88,6 +88,8 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   systemsOverride: 'systemsOverride',
   // Commercial status (top-level)
   commercialStatus: 'commercialStatus',
+  // ADR-864 §5.1 — ποιος βλέπει την αγγελία (αλλαγή κοινού = πράξη με ίχνος, Ε-3)
+  marketingAudience: 'marketingAudience',
   // Commercial sub-fields (dot-notation — human-readable, no internal IDs)
   'commercial.askingPrice': 'commercial.askingPrice',
   'commercial.finalPrice': 'commercial.finalPrice',

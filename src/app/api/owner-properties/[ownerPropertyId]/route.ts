@@ -35,7 +35,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ownerPropertyDraftFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
 import { isOwnerPropertyLifecycle } from '@/types/owner-property';
+import { isMarketingAudience } from '@/constants/marketing-audiences';
 import {
+  setOwnerPropertyAudience,
   setOwnerPropertyLifecycle,
   updateOwnerProperty,
 } from '@/services/owner-property/owner-property-write.service';
@@ -107,6 +109,17 @@ async function handler(
     }
     return respondToWrite(
       await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, actorOf(actor)),
+    );
+  }
+
+  // ADR-864 Ε-10 — το κοινό είναι **πράξη**, όχι πεδίο του προσχεδίου των 8 (ADR-777 Α2).
+  const marketingAudience = (body as { marketingAudience?: unknown } | null)?.marketingAudience;
+  if (marketingAudience !== undefined) {
+    if (!isMarketingAudience(marketingAudience)) {
+      return respondToMalformed(['marketingAudience']);
+    }
+    return respondToWrite(
+      await setOwnerPropertyAudience(adminDb, ownerPropertyId, marketingAudience, actorOf(actor)),
     );
   }
 

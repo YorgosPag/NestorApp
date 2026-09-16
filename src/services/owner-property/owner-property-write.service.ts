@@ -71,6 +71,7 @@ import {
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
+import type { MarketingAudience } from '@/constants/marketing-audiences';
 
 const logger = createModuleLogger('owner-property-write.service');
 
@@ -310,6 +311,31 @@ export async function setOwnerPropertyLifecycle(
   if (existing === null) return { kind: 'absent' };
 
   return persist(adminDb, { ...existing, lifecycle, updatedAt: nowISO() }, 'overwrite');
+}
+
+/**
+ * **Αλλαγή κοινού** (ADR-864 §5.1 · §5.2) — διεύρυνση **ή** στένεμα, με επαναπροβολή.
+ *
+ * 🔑 **Το ίδιο σχήμα με την απόσυρση, και για τον ίδιο λόγο**: είναι πράξη πάνω στο *«ποιος
+ * βλέπει»*, όχι περιεχόμενο — άρα **δεν** ξανακρίνει τα invariants (ο άνθρωπος πρέπει να
+ * μπορεί να στενέψει το κοινό μιας αγγελίας **ακόμη κι αν** έγινε άκυρη στο μεταξύ).
+ *
+ * 🔴 **Α2 — Η ΑΠΟΣΥΡΣΗ ΑΠΟ ΤΟΝ ΚΟΣΜΟ ΣΥΜΒΑΙΝΕΙ ΣΤΟ ΙΔΙΟ ΠΕΡΑΣΜΑ**: το `persist` καλεί την
+ * επαναπροβολή, η πύλη λέει `false` για κοινό ≠ `public`, και ο **υπάρχων** γραφέας κάνει
+ * `delete()` + απόσυρση ραφιού. Καμία δεύτερη διαδρομή εξαφάνισης.
+ *
+ * ⚠️ **Ελεύθερο στένεμα, με ίχνος** (Ε-3). Το ίχνος του **ιδιώτη** το προσθέτει η Φ1β (Ε-9 Α).
+ */
+export async function setOwnerPropertyAudience(
+  adminDb: AdminFirestore,
+  ownerPropertyId: string,
+  marketingAudience: MarketingAudience,
+  actor: ListingActor,
+): Promise<OwnerPropertyWriteResult> {
+  const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
+  if (existing === null) return { kind: 'absent' };
+
+  return persist(adminDb, { ...existing, marketingAudience, updatedAt: nowISO() }, 'overwrite');
 }
 
 // =============================================================================

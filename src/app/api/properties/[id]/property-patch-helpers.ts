@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
+import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -63,6 +64,15 @@ export const PropertyPatchSchema = z.object({
     .array(z.string().min(1).max(128))
     .max(PUBLISHED_MEDIA_LIMIT)
     .optional(),
+  /**
+   * **Το κοινό της αγγελίας** (ADR-864 §5.1) — κλειστό λεξιλόγιο, δεμένο στη ρίζα (CHECK 3.73).
+   *
+   * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`** — ίδιο σκεπτικό με το
+   * `publishedMediaOrder`: χωρίς τη γραμμή, μια άγνωστη λέξη θα γραφόταν και η πύλη θα την
+   * ερμήνευε σιωπηλά ως `public`. Η ίχνωση (`PROPERTY_TRACKED_FIELDS`) και η επαναπροβολή
+   * (`republishPublicProjection`) είναι **ήδη** στη διαδρομή — Α2 χωρίς νέο κώδικα.
+   */
+  marketingAudience: z.enum(MARKETING_AUDIENCES).optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 

@@ -80,6 +80,10 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // kebab-case stored values (for-sale → forSale, for-rent → forRent) are
   // normalised by the resolver before lookup.
   commercialStatus: { ns: 'properties-enums', path: 'auditCommercialStatus' },
+
+  // ── ADR-864 §5.1: κοινό αγγελίας (custodians/network/public). Ο ΙΔΙΟΣ κατάλογος με τη
+  // διεπαφή επιλογής (`MarketingAudienceControl`) — μία ετικέτα ανά τιμή, όχι δύο.
+  marketingAudience: { ns: 'properties-enums', path: 'marketingAudience' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */

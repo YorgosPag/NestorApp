@@ -40,6 +40,7 @@ import {
   type MandateInvariant,
 } from '@/types/owner-property-mandate';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import type { MarketingAudience } from '@/constants/marketing-audiences';
 
 const logger = createModuleLogger('owner-property.service');
 
@@ -247,5 +248,24 @@ export async function setOwnerListingLifecycle(
     return { kind: 'saved', ...payload };
   } catch (cause) {
     return failureOf('Η κατάσταση της αγγελίας δεν άλλαξε', ownerPropertyId, cause);
+  }
+}
+
+/**
+ * **Αλλαγή κοινού** (ADR-864 §5.1) — ίδια διαδρομή με την απόσυρση, γιατί είναι το ίδιο
+ * είδος πράξης: αλλάζει *«ποιος βλέπει»* και ξαναγράφει την προβολή.
+ */
+export async function setOwnerListingAudience(
+  ownerPropertyId: string,
+  marketingAudience: MarketingAudience,
+): Promise<OwnerListingResult> {
+  try {
+    const payload = await apiClient.patch<WriteResponse>(
+      `${API_BASE}/${encodeURIComponent(ownerPropertyId)}`,
+      { marketingAudience },
+    );
+    return { kind: 'saved', ...payload };
+  } catch (cause) {
+    return failureOf('Το κοινό της αγγελίας δεν άλλαξε', ownerPropertyId, cause);
   }
 }
