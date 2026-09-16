@@ -46,27 +46,9 @@ const MANIFEST_TS = path.join(
   'coverage-manifest.ts',
 );
 
-let registered = false;
-
-/**
- * Ενεργοποιεί τη μεταγλώττιση TypeScript για `require()`, μία φορά ανά διεργασία.
- */
-function registerTypeScript() {
-  if (registered) return;
-  // eslint-disable-next-line global-require -- σκόπιμα lazy: το ts-node είναι
-  // devDependency και δεν πρέπει να φορτώνεται όταν τρέχουν μόνο οι A-F.
-  require('ts-node').register({
-    transpileOnly: true,
-    skipProject: true,
-    compilerOptions: {
-      module: 'commonjs',
-      target: 'es2022',
-      esModuleInterop: true,
-      moduleResolution: 'node',
-    },
-  });
-  registered = true;
-}
+// 🧹 ADR-861 Φ3 (N.0.2): ο φορτωτής ζει πλέον στο `scripts/lib/ts-module-loader.js` — εκεί
+// τον ζήτησε ο δεύτερος καταναλωτής (πύλη νομικών εγγράφων), όπως προέβλεπε αυτό το σχόλιο.
+const { registerTypeScript } = require('../ts-module-loader');
 
 /**
  * Φορτώνει το μητρώο κάλυψης **εκτελώντας** το.
