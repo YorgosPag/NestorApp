@@ -3,15 +3,26 @@
  * Iso19650MetadataSection — Manual override UI for ISO 19650 FileRecord fields
  * =============================================================================
  *
- * Collapsible panel rendered inside FilePreviewPanel. Shows the 6 ISO 19650
- * metadata fields (disciplineCode, documentSeries, revisionCode, suitabilityCode,
- * cdeState, buildingCode) + an AI/manual source badge.
+ * Collapsible panel rendered inside FilePreviewPanel.
+ *
+ * **ΤΕΣΣΕΡΑ επεξεργάσιμα** πεδία ταξινόμησης (`disciplineCode` · `documentSeries` ·
+ * `revisionCode` · `buildingCode`) + σήμα προέλευσης AI/χειροκίνητης διόρθωσης.
+ *
+ * 🔴 **ΔΥΟ πεδία είναι ΜΟΝΟ ΑΝΑΓΝΩΣΗΣ** (ADR-862 Φ0 Β3):
+ *   • `cdeState` — **φρουρεί** (ADR-787 Κ-4) και αλλάζει **μόνο** με ονομασμένη
+ *     πράξη (AIP-216). Όσο ήταν `<Select>`, ο φρουρός άνοιγε **με ένα κλικ**.
+ *   • `suitabilityCode` — **παράγεται** από την κατάσταση (ISO 19650 §6.1
+ *     «fixed relationships»), δεν δηλώνεται χωριστά.
+ *
+ * ⚠️ Το docblock έλεγε «6 metadata fields» και θα έλεγε **ψέματα** μετά τη Φ0 —
+ * ίδιο σχήμα με το σχόλιο του `UserRoleContext` που το ADR-801 καταγράφει ως
+ * *«η περιγραφή της διόρθωσης ΗΤΑΝ η απόκλιση»*.
  *
  * On save: calls updateIso19650MetadataWithPolicy → writes iso19650Source.overriddenBy.
  * Does NOT re-trigger AI enricher.
  *
  * @module components/file-manager/Iso19650MetadataSection
- * @see ADR-373 §P2.1
+ * @see ADR-373 §P2.1 · ADR-862 Φ0
  */
 
 'use client';
@@ -30,19 +41,17 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// ADR-862 Φ0 Β3 — μένουν ΜΟΝΟ τα δύο επεξεργάσιμα λεξιλόγια.
+//   • έφυγαν `CDE_STATE_VALUES` / `SUITABILITY_CODE_VALUES` / `CdeState` /
+//     `SuitabilityCode`: τα δύο `<Select>` τους έγιναν **ενδείξεις**·
+//   • έφυγαν και `DISCIPLINE_CODES` / `DOCUMENT_SERIES` / `CDE_STATES` /
+//     `SUITABILITY_CODES`, που ήταν **ήδη πριν τη Φ0** αχρησιμοποίητα —
+//     **μετρημένο** με grep, όχι υποτιθέμενο (N.0.2 Boy Scout).
 import {
-  DISCIPLINE_CODES,
-  DOCUMENT_SERIES,
-  CDE_STATES,
-  SUITABILITY_CODES,
   DISCIPLINE_CODE_VALUES,
   DOCUMENT_SERIES_VALUES,
-  CDE_STATE_VALUES,
-  SUITABILITY_CODE_VALUES,
   type DisciplineCode,
   type DocumentSeries,
-  type CdeState,
-  type SuitabilityCode,
 } from '@/config/iso19650-constants';
 import { validateRevisionCode, validateBuildingCode } from '@/services/iso19650/validators';
 import { updateIso19650MetadataWithPolicy, type Iso19650MetadataUpdate } from '@/services/filesystem/file-mutation-gateway';
@@ -121,8 +130,6 @@ export function Iso19650MetadataSection({ file, currentUserId, onFileUpdated }: 
     disciplineCode: file.disciplineCode ?? null,
     documentSeries: file.documentSeries ?? null,
     revisionCode: file.revisionCode ?? null,
-    suitabilityCode: file.suitabilityCode ?? null,
-    cdeState: file.cdeState ?? null,
     buildingCode: file.buildingCode ?? null,
   });
   const [saving, setSaving] = useState(false);
@@ -135,8 +142,6 @@ export function Iso19650MetadataSection({ file, currentUserId, onFileUpdated }: 
       (draft.disciplineCode ?? null) !== (file.disciplineCode ?? null) ||
       (draft.documentSeries ?? null) !== (file.documentSeries ?? null) ||
       (draft.revisionCode ?? null) !== (file.revisionCode ?? null) ||
-      (draft.suitabilityCode ?? null) !== (file.suitabilityCode ?? null) ||
-      (draft.cdeState ?? null) !== (file.cdeState ?? null) ||
       (draft.buildingCode ?? null) !== (file.buildingCode ?? null)
     );
   }, [draft, file]);
@@ -246,44 +251,30 @@ export function Iso19650MetadataSection({ file, currentUserId, onFileUpdated }: 
           </Select>
         </div>
 
-        {/* suitabilityCode */}
+        {/* suitabilityCode — ΠΑΡΑΓΟΜΕΝΟ (ADR-862 Φ0 Β3), ποτέ επιλογή */}
         <div className="space-y-1">
           <Label className="text-xs">{t('iso19650:labels.suitabilityCode')}</Label>
-          <Select
-            value={draft.suitabilityCode ?? ''}
-            onValueChange={v => setDraft(d => ({ ...d, suitabilityCode: (v as SuitabilityCode) || null }))}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder={t('iso19650:labels.select')} />
-            </SelectTrigger>
-            <SelectContent>
-              {SUITABILITY_CODE_VALUES.map(code => (
-                <SelectItem key={code} value={code} className="text-xs">
-                  {code} — {t(`iso19650:suitabilityCode.${code}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <p className="flex h-8 items-center gap-1.5 text-xs text-muted-foreground">
+            <span>
+              {file.suitabilityCode
+                ? t(`iso19650:suitabilityCode.${file.suitabilityCode}`)
+                : t('iso19650:labels.cdeStateUndeclared')}
+            </span>
+            <span className="opacity-70">{t('iso19650:labels.suitabilityDerived')}</span>
+          </p>
         </div>
 
-        {/* cdeState */}
+        {/* cdeState — ΠΡΑΞΗ, ΟΧΙ ΠΕΔΙΟ (ADR-862 Φ0 Β3 · AIP-216) */}
         <div className="space-y-1">
           <Label className="text-xs">{t('iso19650:labels.cdeState')}</Label>
-          <Select
-            value={draft.cdeState ?? ''}
-            onValueChange={v => setDraft(d => ({ ...d, cdeState: (v as CdeState) || null }))}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder={t('iso19650:labels.select')} />
-            </SelectTrigger>
-            <SelectContent>
-              {CDE_STATE_VALUES.map(state => (
-                <SelectItem key={state} value={state} className="text-xs">
-                  {t(`iso19650:cdeState.${state}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <p className="flex h-8 items-center text-xs text-muted-foreground">
+            {file.cdeState
+              ? t(`iso19650:cdeState.${file.cdeState}`)
+              : t('iso19650:labels.cdeStateUndeclared')}
+          </p>
+          <p className="text-[0.65rem] leading-tight text-muted-foreground opacity-70">
+            {t('iso19650:labels.cdeStateReadOnly')}
+          </p>
         </div>
 
         {/* revisionCode */}

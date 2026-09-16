@@ -55,6 +55,9 @@
     "confidence": "Confidence",
     "aiReasoning": "AI Reasoning",
     "derivedLabel": "↗ Derived",
+    "cdeStateUndeclared": "Not declared",
+    "cdeStateReadOnly": "State changes by action, not by selection",
+    "suitabilityDerived": "↗ Derived from state",
     "noChanges": "No changes"
   },
   "placeholder": {

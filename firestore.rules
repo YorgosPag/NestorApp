@@ -588,6 +588,45 @@ service cloud.firestore {
     // =========================================================================
     match /files/{fileId} {
 
+      // =======================================================================
+      // 🔒 ADR-862 Φ0 (Β4) — Η ΚΑΤΑΣΤΑΣΗ CDE ΔΕΝ ΓΡΑΦΕΤΑΙ ΑΠΟ ΠΕΛΑΤΗ
+      // =======================================================================
+      // Το `cdeState` και τα ίχνη των τεσσάρων πράξεων που το γεννούν είναι
+      // **έξοδος του διακομιστή** (AIP-216 output-only): αλλάζουν ΜΟΝΟ μέσα από
+      // τις ονομασμένες πράξεις (`services/iso19650/container-transitions.ts`,
+      // Admin SDK — Β6), ποτέ από client SDK. Πριν τη Φ0 το πεδίο ήταν ελεύθερο
+      // dropdown· δηλαδή ο φρουρός άνοιγε με ΕΝΑ κλικ.
+      //
+      // ⚠️ Ασφαλές ΤΩΡΑ επειδή προηγήθηκαν τα Β2/Β3: μετρημένο 2026-09-16, ο μόνος
+      //    εναπομείνας γραφέας του πεδίου σε όλο το `src/` είναι ο
+      //    `supersedeFileRecord` (Admin SDK· δρομολογείται στο Β10). Κανένας
+      //    πελάτης δεν γράφει πια — γι' αυτό το πάγωμα δεν σπάει τίποτα.
+      //
+      // 🔑 ΓΙΑΤΙ `diff().affectedKeys()` ΚΑΙ ΟΧΙ ΣΥΓΚΡΙΣΗ ΤΙΜΩΝ: η ερώτηση είναι
+      //    «άγγιξε κανείς αυτά τα κλειδιά;», και το `affectedKeys()` την απαντά
+      //    ομοιόμορφα για τις ΤΡΕΙΣ γραφές — προσθήκη σε απόν πεδίο, αλλαγή τιμής,
+      //    ΚΑΙ αφαίρεση. Μια σύγκριση `get(k,null) == get(k,null)` πιάνει την
+      //    αφαίρεση μόνο κατά σύμπτωση, και χρειάζεται έξι γραμμές ανά leg (×4).
+      //    Ίδιο ιδίωμα με το `isAllowedPropertyFieldUpdate()` (ίδιο αρχείο).
+      //
+      // ⛔ ΜΗΝ προσθέσεις δεύτερο `match /files/{fileId}` για να «σφίξεις»: στο
+      //    Firestore το `allow` είναι η ΕΝΩΣΗ των μπλοκ που ταιριάζουν, άρα ο
+      //    ΧΑΛΑΡΟΤΕΡΟΣ νικά και η αυστηροποίηση δεν ισχύει ΠΟΤΕ (CHECK 3.16
+      //    Validation F, μετρητής 0 — ADR-841 §7 Α21.14.8).
+      //
+      // 📌 Το `allow read` ΔΕΝ φρουρεί ακόμη την κατάσταση — σφίγγει τελευταίο
+      //    (Β11), μαζί με τη διαδρομή διακομιστή, γιατί ο κανόνας δεν μπορεί να
+      //    μάθει την ΟΜΑΔΑ του αναγνώστη χωρίς `get()` («rules are not filters»).
+      //    Μέχρι τότε ισχύει δηλωμένο όριο, γραμμένο στο ADR-373.
+      //
+      // @see ADR-862 Φ0 · ADR-787 Κ-4 · ADR-373
+      function cdeCustodyUnchanged() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'cdeState', 'cdeTeamId',
+          'cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal'
+        ]);
+      }
+
       // 📖 READ: Users belonging to file's company (tenant isolation)
       // 🏢 ENTERPRISE: Allow company members OR creator (for pending files during upload)
       // This enables both:
@@ -616,6 +655,20 @@ service cloud.firestore {
                          || isSuperAdminOnly()
                        )
                     && request.resource.data.status == 'pending'
+                    // 🔒 ADR-862 Φ0 — η γέννηση είναι ΠΑΝΤΑ WIP (ή αδήλωτη).
+                    // Η προεπιλογή του `get()` κάνει το «απόν» αληθές ΧΩΡΙΣ `||`:
+                    // απουσία σημαίνει `pre-cde` («όπως σήμερα»), και ΔΕΝ
+                    // επιτρέπεται να γίνει σημαία δημοσίευσης.
+                    // ⚠️ Σκέτο `== 'WIP'` θα γύριζε σε deny τα ΔΥΟ `create/allow`
+                    //    κελιά της μήτρας — το `createData` δεν στέλνει `cdeState`.
+                    && request.resource.data.get('cdeState', 'WIP') == 'WIP'
+                    // Καμία από τις τέσσερις πράξεις στη γέννηση: σφραγίδα «από
+                    // κούνια» θα παρέκαμπτε και τα δύο σκαλοπάτια του PUBLISHED.
+                    // ℹ️ Το `cdeTeamId` ΕΠΙΤΡΕΠΕΤΑΙ εδώ: είναι υπόδειξη του πελάτη,
+                    //    και η αυθεντία είναι η αναζήτηση μέλους στον διακομιστή
+                    //    (ADR-862 Β7). Από τη γέννηση και μετά παγώνει κι αυτό.
+                    && !request.resource.data.keys().hasAny(
+                         ['cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal'])
                     && resource == null; // Ensure document doesn't exist
 
       // 📝 UPDATE: Only creator or company admin can finalize
@@ -644,7 +697,9 @@ service cloud.firestore {
                     && request.resource.data.id == resource.data.id
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.storagePath == resource.data.storagePath;
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    // 🔒 ADR-862 Φ0 — η οριστικοποίηση (pending → ready) δεν αγγίζει CDE.
+                    && cdeCustodyUnchanged();
 
       // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -669,7 +724,11 @@ service cloud.firestore {
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.createdBy == resource.data.createdBy
                     && request.resource.data.storagePath == resource.data.storagePath
-                    && request.resource.data.status == resource.data.status;
+                    && request.resource.data.status == resource.data.status
+                    // 🔒 ADR-862 Φ0 — ούτε η μετακίνηση στον κάδο. Η ΑΠΟΣΥΡΣΗ είναι
+                    // άλλη πράξη (⇒ SUPERSEDED, ποτέ εξαφάνιση) και περνά από τον
+                    // ΕΝΑ γραφέα του Β10 — ποτέ από εδώ.
+                    && cdeCustodyUnchanged();
 
       // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -694,7 +753,10 @@ service cloud.firestore {
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.createdBy == resource.data.createdBy
                     && request.resource.data.storagePath == resource.data.storagePath
-                    && request.resource.data.status == resource.data.status;
+                    && request.resource.data.status == resource.data.status
+                    // 🔒 ADR-862 Φ0 — ούτε η επαναφορά από τον κάδο: ένα αρχείο δεν
+                    // «ξαναγεννιέται» σε άλλη κατάσταση από αυτή που είχε.
+                    && cdeCustodyUnchanged();
 
       // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
       // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
@@ -713,7 +775,13 @@ service cloud.firestore {
                     && request.resource.data.createdBy == resource.data.createdBy
                     && request.resource.data.storagePath == resource.data.storagePath
                     && request.resource.data.status == resource.data.status
-                    && request.resource.data.isDeleted == resource.data.isDeleted;
+                    && request.resource.data.isDeleted == resource.data.isDeleted
+                    // 🔒 ADR-862 Φ0 — ούτε η σύνδεση/αποσύνδεση οντοτήτων.
+                    // 🔴 ΕΔΩ ΑΚΡΙΒΩΣ ζούσε το ελεύθερο dropdown μέχρι το Β3: το
+                    //    `updateIso19650Metadata` (`services/file-record-links.ts`)
+                    //    έγραφε `cdeState` μέσα από ΑΥΤΟ το leg. Ο μεταγλωττιστής
+                    //    έκλεισε την πόρτα στον πελάτη· αυτή η γραμμή την κλειδώνει.
+                    && cdeCustodyUnchanged();
 
       // 🗑️ HARD DELETE: Only creator or company admin
       allow delete: if isAuthenticated()

@@ -55,6 +55,9 @@
     "confidence": "Αξιοπιστία",
     "aiReasoning": "Αιτιολόγηση AI",
     "derivedLabel": "↗ Παράγεται",
+    "cdeStateUndeclared": "Χωρίς δήλωση",
+    "cdeStateReadOnly": "Η κατάσταση αλλάζει με πράξη, όχι με επιλογή",
+    "suitabilityDerived": "↗ Παράγεται από την κατάσταση",
     "noChanges": "Καμία αλλαγή"
   },
   "placeholder": {

@@ -30,7 +30,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import { FileAuditService } from '@/services/file-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
-import type { DisciplineCode, DocumentSeries, CdeState, SuitabilityCode } from '@/config/iso19650-constants';
+// ADR-862 Φ0 Β3 — έφυγαν `CdeState`/`SuitabilityCode`: αυτό το module δεν γράφει πια
+// κατάσταση ούτε καταλληλότητα (δες `Iso19650MetadataUpdate`).
+import type { DisciplineCode, DocumentSeries } from '@/config/iso19650-constants';
 
 const logger = createModuleLogger('FILE_RECORD_LINKS');
 
@@ -196,12 +198,27 @@ export async function updateDescription(fileId: string, description: string): Pr
 // ISO 19650 METADATA UPDATE — ADR-373 Phase 2
 // ============================================================================
 
+/**
+ * Τα **περιγραφικά** πεδία ISO 19650 που διορθώνει ο άνθρωπος στην οθόνη.
+ *
+ * 🔴 **ΤΟ `cdeState` ΚΑΙ ΤΟ `suitabilityCode` ΕΦΥΓΑΝ** (ADR-862 Φ0 Β3).
+ *
+ * Η κατάσταση CDE **φρουρεί** (ADR-787 Κ-4) και είναι **ΠΡΑΞΗ**, όχι επεξεργάσιμο
+ * πεδίο (AIP-216: output-only, αλλάζει μόνο με ονομασμένες πράξεις). Όσο ζούσε
+ * εδώ, ένα `<Select>` στην οθόνη μεταδεδομένων άφηνε **οποιονδήποτε** να γράψει
+ * `'PUBLISHED'` — δηλαδή ο φρουρός άνοιγε **με ένα κλικ**.
+ *
+ * Το `suitabilityCode` φεύγει μαζί επειδή το ISO 19650 §6.1 το δένει με «fixed
+ * relationships» στην κατάσταση ⇒ **παράγεται** (`lib/files/file-record-read`).
+ *
+ * 🔑 **Η ΑΦΑΙΡΕΣΗ ΑΠΟ ΤΟΝ ΤΥΠΟ ΕΙΝΑΙ Η ΑΓΚΥΡΑ**: κάθε άλλος γραφέας παύει να
+ * **μεταγλωττίζεται** — ο μεταγλωττιστής κλείνει κάθε άλλη πόρτα, δεν το θυμάται
+ * άνθρωπος.
+ */
 export interface Iso19650MetadataUpdate {
   disciplineCode?: DisciplineCode | null;
   documentSeries?: DocumentSeries | null;
   revisionCode?: string | null;
-  suitabilityCode?: SuitabilityCode | null;
-  cdeState?: CdeState | null;
   buildingCode?: string | null;
 }
 
@@ -235,8 +252,8 @@ export async function updateIso19650Metadata(
   if ('disciplineCode' in metadata) updateData['disciplineCode'] = metadata.disciplineCode ?? null;
   if ('documentSeries' in metadata) updateData['documentSeries'] = metadata.documentSeries ?? null;
   if ('revisionCode' in metadata) updateData['revisionCode'] = metadata.revisionCode ?? null;
-  if ('suitabilityCode' in metadata) updateData['suitabilityCode'] = metadata.suitabilityCode ?? null;
-  if ('cdeState' in metadata) updateData['cdeState'] = metadata.cdeState ?? null;
+  // ⛔ ADR-862 Φ0 Β3 — ΚΑΜΙΑ γραμμή για `cdeState`/`suitabilityCode`: η κατάσταση
+  //    δεν «ορίζεται» από φόρμα· **συμβαίνει** με ονομασμένη πράξη.
   if ('buildingCode' in metadata) updateData['buildingCode'] = metadata.buildingCode ?? null;
 
   await updateDoc(docRef, updateData);

@@ -15,8 +15,13 @@ import {
   teardownEmulator,
   resetData,
 } from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
-import { assertCell, type AssertTarget } from '../_harness/assertions';
+import { getContext, withSeedContext } from '../_harness/auth-contexts';
+import {
+  assertCell,
+  expectAllow,
+  expectDeny,
+  type AssertTarget,
+} from '../_harness/assertions';
 import { seedFile } from '../_harness/seed-helpers';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import {
@@ -116,4 +121,148 @@ describe('files.rules — tenant_state_machine pattern', () => {
       });
     });
   }
+
+  // --- ADR-862 Φ0 (Β4) — το πάγωμα της κατάστασης CDE ----------------------
+  //
+  // 🔑 ΓΙΑΤΙ ΕΞΩ ΑΠΟ ΤΗ ΜΗΤΡΑ: η μήτρα ρωτά «ποιο ΠΡΟΣΩΠΟ επιτρέπεται σε ποια
+  // ΠΡΑΞΗ» — 7 πρόσωπα × 5 πράξεις = 35 κελιά, κλειστό σύνολο που φρουρεί η
+  // CHECK 3.16 (Validation G). Το ερώτημα εδώ είναι άλλο: «ποιο ΠΕΔΙΟ
+  // επιτρέπεται να αλλάξει», και η απάντηση είναι **ίδια για κάθε πρόσωπο**.
+  // Έκφρασή του ως κελιά θα απαιτούσε όγδοη `Persona` και θα υποχρέωνε **κάθε**
+  // μήτρα του μητρώου να τη δηλώσει. Πρότυπο: το `crossdoc` μπλοκ του
+  // `attendance-events.rules.test.ts:119`. Η μήτρα μένει **αμετάβλητη**.
+  //
+  // 🔴 ΤΟ ΠΡΟΣΩΠΟ ΕΙΝΑΙ ΕΠΙΛΟΓΗ, ΟΧΙ ΤΥΧΑΙΟ: ο `same_tenant_admin` περνά **όλα**
+  // τα άλλα σκέλη (companyId + ρόλος μέσω `isCompanyAdminOfCompany`). Άρα κάθε
+  // `expectDeny` παρακάτω αποδίδεται **μόνο** στη ρήτρα του CDE. Με
+  // `cross_tenant_*` τα ίδια tests θα ήταν πράσινα για **λάθος λόγο** — θα
+  // μετρούσαν απομόνωση μισθωτή, που ήδη μετρά η μήτρα από πάνω.
+  describe('cde freeze — η κατάσταση δεν γράφεται από πελάτη (ADR-862 Φ0)', () => {
+    const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
+
+    /**
+     * Το **ελάχιστο** φορτίο που περνά το leg «ready → trashed». Κάθε
+     * `expectDeny` παρακάτω προσθέτει σε ΑΥΤΟ ένα πεδίο CDE — ώστε η διαφορά
+     * ανάμεσα στο allow και στο deny να είναι **ακριβώς** η ρήτρα που
+     * δοκιμάζεται, και τίποτε άλλο. Χωρίς αυτή την πειθαρχία, ένα `expectDeny`
+     * μπορεί να είναι πράσινο επειδή το φορτίο ήταν ούτως ή άλλως άκυρο.
+     */
+    const TRASH_UPDATE: Record<string, unknown> = { isDeleted: true };
+
+    /** Μια πράξη όπως τη γράφει ο διακομιστής — ADR-862 §5.4.1.γ. */
+    const ACT = { by: ADMIN_UID, at: new Date('2026-09-01'), revision: 1 };
+
+    /** Έγκυρο φορτίο γέννησης· το `status` είναι ΠΑΝΤΑ 'pending' (rule:611). */
+    function createPayload(extra: Record<string, unknown> = {}): Record<string, unknown> {
+      return {
+        fileName: 'cde-freeze.pdf',
+        mimeType: 'application/pdf',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/cde-freeze.pdf`,
+        createdBy: ADMIN_UID,
+        companyId: SAME_TENANT_COMPANY_ID,
+        ...extra,
+      };
+    }
+
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    it('⛔ δηλωμένο WIP → PUBLISHED από πελάτη: ΑΡΝΗΣΗ', async () => {
+      const docId = 'cde-declared-wip';
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { cdeState: 'WIP', cdeTeamId: 'team-structural' },
+      });
+
+      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeState: 'PUBLISHED' }));
+    });
+
+    it('⛔ αδήλωτο → ΠΡΟΣΘΗΚΗ `cdeState`: ΑΡΝΗΣΗ (η προσθήκη ΕΙΝΑΙ γραφή)', async () => {
+      const docId = 'cde-absent-then-added';
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
+
+      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeState: 'WIP' }));
+    });
+
+    it('✅ αδήλωτο + κανονικό update: ΕΠΙΤΡΕΠΕΤΑΙ — η ρήτρα του απόντος', async () => {
+      const docId = 'cde-absent-normal-update';
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
+
+      // 🔑 ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΣΥΜΠΕΡΑΣΜΕΝΟ: ο σπορέας ΔΕΝ γράφει `cdeState`. Αν
+      // κάποτε αρχίσει, αυτή η γραμμή κοκκινίζει **πριν** το `expectAllow`
+      // προλάβει να γίνει πράσινο για λάθος λόγο — και τα 35 κελιά της μήτρας
+      // από πάνω σπέρνονται από τον ΙΔΙΟ σπορέα.
+      await withSeedContext(env, async (seedCtx) => {
+        const snap = await seedCtx.firestore().collection('files').doc(docId).get();
+        expect(snap.data()).not.toHaveProperty('cdeState');
+      });
+
+      await expectAllow(fileDoc(docId).update(TRASH_UPDATE));
+    });
+
+    it('⛔ μετακίνηση σε άλλη ομάδα (`cdeTeamId`) από πελάτη: ΑΡΝΗΣΗ', async () => {
+      const docId = 'cde-team-move';
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { cdeState: 'WIP', cdeTeamId: 'team-structural' },
+      });
+
+      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeTeamId: 'team-mep' }));
+    });
+
+    it('⛔ αλλοίωση υπάρχουσας σφραγίδας: ΑΡΝΗΣΗ — φρουρούνται ΚΑΙ ΤΑ ΕΞΙ πεδία', async () => {
+      const docId = 'cde-seal-tamper';
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { cdeState: 'SHARED', cdeSeal: ACT },
+      });
+
+      await expectDeny(
+        fileDoc(docId).update({
+          ...TRASH_UPDATE,
+          cdeSeal: { by: ADMIN_UID, at: new Date('2026-09-15'), revision: 99 },
+        }),
+      );
+    });
+
+    it('⛔ και οι υπόλοιπες τρεις πράξεις (share · release · withdrawal)', async () => {
+      // Σε έναν βρόχο, όχι σε τρία σχεδόν ταυτόσημα tests: ο φρουρός είναι **μία**
+      // λίστα σε **έναν** βοηθό, άρα τρεις αντιγραφές θα ήταν κλώνος (N.18) χωρίς
+      // να προσθέτουν καμία νέα ερώτηση. Ό,τι λείπει από τη λίστα, λείπει για όλα.
+      const docId = 'cde-acts-frozen';
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { cdeState: 'WIP' },
+      });
+
+      for (const act of ['cdeShare', 'cdeRelease', 'cdeWithdrawal'] as const) {
+        await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, [act]: ACT }));
+      }
+    });
+
+    it('⛔ γέννηση με `cdeState: PUBLISHED`: ΑΡΝΗΣΗ', async () => {
+      await expectDeny(
+        fileDoc('cde-born-published').set(createPayload({ cdeState: 'PUBLISHED' })),
+      );
+    });
+
+    it('⛔ γέννηση με σφραγίδα «από κούνια»: ΑΡΝΗΣΗ', async () => {
+      // Χωρίς αυτό, ένα αρχείο θα γεννιόταν με σφραγίδα δημιουργού ήδη μέσα —
+      // παρακάμπτοντας **και τα δύο** σκαλοπάτια του PUBLISHED (ADR-862 Ε-12).
+      await expectDeny(fileDoc('cde-born-sealed').set(createPayload({ cdeSeal: ACT })));
+    });
+
+    it('✅ γέννηση χωρίς δήλωση κατάστασης: ΕΠΙΤΡΕΠΕΤΑΙ — «όπως σήμερα»', async () => {
+      await expectAllow(fileDoc('cde-born-plain').set(createPayload()));
+    });
+
+    it('✅ γέννηση με ρητό `WIP`: ΕΠΙΤΡΕΠΕΤΑΙ — η κατάσταση γέννησης', async () => {
+      await expectAllow(
+        fileDoc('cde-born-wip').set(createPayload({ cdeState: 'WIP', cdeTeamId: 'team-mep' })),
+      );
+    });
+  });
 });
