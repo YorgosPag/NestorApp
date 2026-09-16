@@ -41,7 +41,15 @@
 import { DEFAULT_LANGUAGE, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 
 /** Ο τρόπος με τον οποίο απευθυνόμαστε στον ιδιοκτήτη. */
-export type MandateMessageKind = 'consent-request' | 'attestation-notice';
+/**
+ * ADR-864 Φ3 — +2 για την κλειστή διάθεση: **αίτημα** (Ε-11, ο ιδιοκτήτης αποφασίζει από τον
+ * σύνδεσμο) και **ειδοποίηση εντύπου** (Ε-12, για αμφισβήτηση — όπως το `attestation-notice`).
+ */
+export type MandateMessageKind =
+  | 'consent-request'
+  | 'attestation-notice'
+  | 'private-marketing-request'
+  | 'private-marketing-attestation-notice';
 
 /** Τα λόγια ενός μηνύματος, σε **μία** γλώσσα. */
 export interface MandateWording {
@@ -121,6 +129,62 @@ export const MANDATE_TEXTS: WordingTable = {
           '',
           'The listing is already published. If you do NOT recognise this mandate,',
           'stop it here — the listing comes down immediately:',
+          url,
+        ].join('\n'),
+    },
+  },
+  'private-marketing-request': {
+    el: {
+      subject: (agency, listing) => `${agency}: αίτημα για διάθεση του «${listing}» χωρίς δημόσια αγγελία`,
+      body: (agency, listing, until, url) =>
+        [
+          `Το μεσιτικό γραφείο «${agency}», που έχει την εντολή σας έως ${until}, ζητά να διαθέσει`,
+          'το ακίνητό σας χωρίς δημόσια αγγελία:',
+          '',
+          `  ${listing}`,
+          '',
+          'Τίποτα δεν αλλάζει αν δεν απαντήσετε εσείς. Διαβάστε τι σημαίνει και απαντήστε εδώ:',
+          url,
+        ].join('\n'),
+    },
+    en: {
+      subject: (agency, listing) => `${agency}: request to market "${listing}" without a public listing`,
+      body: (agency, listing, until, url) =>
+        [
+          `The agency "${agency}", which holds your mandate until ${until}, asks to market`,
+          'your property without a public listing:',
+          '',
+          `  ${listing}`,
+          '',
+          'Nothing changes unless you answer. Read what it means and answer here:',
+          url,
+        ].join('\n'),
+    },
+  },
+  'private-marketing-attestation-notice': {
+    el: {
+      subject: (agency, listing) => `${agency}: το «${listing}» διατίθεται χωρίς δημόσια αγγελία`,
+      body: (agency, listing, until, url) =>
+        [
+          `Το μεσιτικό γραφείο «${agency}» ανέβασε έντυπο με την υπογραφή σας και διαθέτει πλέον`,
+          `το ακίνητό σας χωρίς δημόσια αγγελία, για όσο ισχύει η εντολή (έως ${until}):`,
+          '',
+          `  ${listing}`,
+          '',
+          'Αν ΔΕΝ υπογράψατε τέτοιο έντυπο ή αλλάξατε γνώμη, επιλέξτε δημόσια διάθεση ή απόσυρση εδώ:',
+          url,
+        ].join('\n'),
+    },
+    en: {
+      subject: (agency, listing) => `${agency}: "${listing}" is being marketed without a public listing`,
+      body: (agency, listing, until, url) =>
+        [
+          `The agency "${agency}" uploaded a form signed by you and now markets your property`,
+          `without a public listing, for as long as the mandate runs (until ${until}):`,
+          '',
+          `  ${listing}`,
+          '',
+          'If you did NOT sign such a form, or changed your mind, choose public marketing or withdrawal here:',
           url,
         ].join('\n'),
     },

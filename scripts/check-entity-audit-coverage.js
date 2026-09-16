@@ -142,6 +142,11 @@ const HARD_EXEMPT_PATTERNS = [
   // `services/owner-property/__tests__/owner-property-audit-trail.test.ts` (Β2 · Β2β).
   // ⚠️ Δηλωμένο κενό: το `setOwnerPropertyMandate` (συναλλαγή, όχι `persist`) — βιβλίο ADR-861.
   /[\\/]services[\\/]owner-property[\\/]owner-property-write\.service\.ts$/,
+  // ADR-864 Φ3 (Α18) — η ΣΥΝΑΙΝΕΣΗ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ: γράφει σε συναλλαγή (CAS), και το ίχνος περνά από
+  // το ίδιο `owner-property-audit.ts` (`recordOwnerPropertyWrite` + `extraChanges`) — μία πράξη, μία
+  // εγγραφή. Άγκυρα που το ΕΚΤΕΛΕΙ: `services/mandate/__tests__/private-marketing-consent.test.ts`
+  // (Α18 — αίτημα · παροχή · ανάκληση, μετάλλαξη M14 κόκκινη).
+  /[\\/]services[\\/]mandate[\\/]private-marketing-consent\.service\.ts$/,
   // ADR-864 Φ1β — γραφείς ΠΑΡΑΓΩΓΩΝ του `owner_properties`, ΟΧΙ πράξεων ανθρώπου. Ονομαστικά,
   // με λόγο — ΠΟΤΕ σιωπηλή baseline. Το ιστορικό της αγγελίας καταγράφει ό,τι ΑΠΟΦΑΣΙΣΕ κάποιος·
   // αυτοί ξαναγράφουν ό,τι ήδη αποφασίστηκε:

@@ -55,7 +55,8 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
-import { PLACE_REF_TREATMENT, verifyPlaceRef } from '@/services/places/public-place-read.service';
+import { placeLinkRefusal } from '@/services/owner-property/owner-property-place-link';
+import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import {
   newOwnerProperty,
   type OwnerProperty,
@@ -129,59 +130,6 @@ async function persist(
 }
 
 // =============================================================================
-// Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α — «δείχνει κάπου;», μία φορά για τις ΤΡΕΙΣ πόρτες
-// =============================================================================
-
-/**
- * **Αρνείται η γραφή εξαιτίας του δεσμού;** `null` = προχώρα.
- *
- * 🔑 **ΖΕΙ ΕΔΩ, ΚΑΙ ΓΙ' ΑΥΤΟ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ.** Οι **τρεις** πόρτες γραφής
- * (`POST /api/owner-properties` · `POST /api/owner-properties/brokered` ·
- * `PATCH /api/owner-properties/[id]`) περνούν **όλες** από τη
- * {@link createOwnerProperty} ή την {@link updateOwnerProperty} — η μεσιτική
- * μάλιστα καλεί την πρώτη. Γραμμένος στις διαδρομές, ο έλεγχος θα ήταν **τρία**
- * αντίγραφα και η επόμενη πόρτα θα γεννιόταν **χωρίς** αυτόν.
- *
- * 🔑 **Ο κριτής είναι ο ΥΠΑΡΧΩΝ {@link verifyPlaceRef}** — ο ίδιος που ρωτά ήδη η
- * πόρτα του επαγγελματία (`building-update.handler.ts`). Καμία νέα μηχανή, και η
- * **σημασία** των ετυμηγοριών διαβάζεται από το **ένα** {@link PLACE_REF_TREATMENT}.
- *
- * ⚠️ **Η ΑΠΟΥΣΙΑ ΔΕΣΜΟΥ ΔΕΝ ΕΙΝΑΙ ΣΦΑΛΜΑ, ΚΑΙ ΕΙΝΑΙ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ**: το `link:
- * null` σημαίνει *«δεν έδειξα κτίριο»* — **επιλογή, ποτέ προϋπόθεση** (ίδιος κανόνας
- * με το τοπογραφικό, §21.4). Και το `declined` **δεν έχει καν πεδίο** να ελεγχθεί:
- * ο τύπος το κάνει αδύνατο.
- *
- * ⚠️ **Δεν επαληθεύει ΑΛΗΘΕΙΑ, μόνο ΥΠΑΡΞΗ** (§14.3): το αν το ακίνητο του ανθρώπου
- * **είναι** μέσα σε εκείνο το κτίριο είναι **ισχυρισμός** του, και κανένα ερώτημα
- * βάσης δεν τον κρίνει. Αυτό που κρίνεται είναι αν ο δεσμός δείχνει **κάπου**.
- */
-async function placeLinkRefusal(
-  adminDb: AdminFirestore,
-  draft: OwnerPropertyDraft,
-): Promise<OwnerPropertyWriteResult | null> {
-  // ⚠️ **`?? null` και ΟΧΙ `=== null` σκέτο** — και το βρήκε **εκτέλεση**, όχι ανάγνωση
-  //    (2026-08-27): με το `link` προσωρινά βγαλμένο από το σχήμα, το `undefined`
-  //    δεν είναι `null`, ο έλεγχος **περνούσε**, και ο επαληθευτής έπαιρνε
-  //    `undefined.landId` ⇒ **500**. Δηλαδή μια μελλοντική υποχώρηση του σχήματος θα
-  //    γινόταν *«δικό μας λάθος»* αντί για ήπια απουσία δεσμού. Η απουσία και η ρητή
-  //    άρνηση **είναι το ίδιο πράγμα εδώ**: «δεν έδειξε κτίριο».
-  if (draft.place.kind !== 'declared' || (draft.place.link ?? null) === null) return null;
-
-  const verdict = await verifyPlaceRef(adminDb, draft.place.link);
-
-  // ⚠️ Κλειστό σύνολο, **χωρίς `default`**: μια τέταρτη θεραπεία δεν μεταγλωττίζεται
-  //    μέχρι κάποιος να αποφασίσει τι σημαίνει για τη γραφή.
-  switch (PLACE_REF_TREATMENT[verdict]) {
-    case 'accept':
-      return null;
-    case 'reject':
-      return { kind: 'invalid-place-link', verdict };
-    case 'retry':
-      return { kind: 'place-link-unverified' };
-  }
-}
-
-// =============================================================================
 // 3. ΔΗΜΙΟΥΡΓΙΑ
 // =============================================================================
 
@@ -211,10 +159,15 @@ export async function createOwnerProperty(
   //    περισσότερες από μία, και μια παράβαση σε **οποιαδήποτε** ακυρώνει τη γραφή.
   //    Οι κωδικοί συγχωνεύονται χωρίς διπλότυπα — ο άνθρωπος δεν χρειάζεται να δει
   //    δύο φορές «η λήξη λείπει» επειδή έλειπε σε δύο εντολές.
+  const now = nowISO();
+  const born = newOwnerProperty(draft, authorship);
   const mandateViolations = [
-    ...new Set(
-      authorship.mandates.flatMap((mandate) => mandateInvariantViolations(mandate, nowISO())),
-    ),
+    ...new Set([
+      ...authorship.mandates.flatMap((mandate) => mandateInvariantViolations(mandate, now)),
+      // ADR-864 Α7 — ζώνη ασφαλείας: η γέννηση είναι σήμερα `public`, αλλά ο κριτής ρωτιέται **εδώ**
+      // ώστε μια μελλοντική γέννηση σε κλειστό κοινό να μη γίνει ο γραφέας που ξέχασε.
+      ...privateMarketingViolationsAdded(null, born, now),
+    ]),
   ];
   if (mandateViolations.length > 0) {
     return { kind: 'invalid-mandate', violations: mandateViolations };
@@ -228,7 +181,7 @@ export async function createOwnerProperty(
 
   // Ο δρων της γέννησης **είναι** ο συντάκτης — ιδιώτης ή υπάλληλος γραφείου.
   const author = { uid: authorship.authorUserId, companyId: authorship.authorCompanyId };
-  return persist(adminDb, newOwnerProperty(draft, authorship), 'create', { actor: author, before: null });
+  return persist(adminDb, born, 'create', { actor: author, before: null });
 }
 
 // =============================================================================
@@ -351,7 +304,16 @@ export async function setOwnerPropertyAudience(
   const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
   if (existing === null) return { kind: 'absent' };
 
-  const next = { ...existing, marketingAudience, updatedAt: nowISO() };
+  const now = nowISO();
+  const next = { ...existing, marketingAudience, updatedAt: now };
+
+  // 🔴 ADR-864 Α7 — **ο διακομιστής κρίνει, όχι η διεπαφή**: στένεμα σε καταχώρηση με δεσμευτική
+  //    εντολή χωρίς συναίνεση ⇒ ονομασμένη άρνηση. Η διεύρυνση σε `public` δεν προσθέτει ποτέ
+  //    παραβίαση, άρα η **έξοδος** μένει ανοιχτή. Η συναίνεση που **εκτελεί** το στένεμα ζει στο
+  //    `private-marketing-consent.service` (Ε-11).
+  const violations = privateMarketingViolationsAdded(existing, next, now);
+  if (violations.length > 0) return { kind: 'invalid-mandate', violations };
+
   return persist(adminDb, next, 'overwrite', { actor, before: existing });
 }
 
@@ -439,13 +401,6 @@ export async function setOwnerPropertyMandate(
       //    συνάρτηση. Δεύτερος γραφέας θα ήταν ADR-749· εξαγωγή του κριτή είναι η
       //    σωστή πράξη — δύο καλούντες, **μία** κρίση.
       const verdict = mandateWriteVerdict(mandate, mandatesOf(existing), now);
-      if (verdict.violations.length > 0) {
-        return {
-          kind: 'invalid-mandate',
-          violations: verdict.violations,
-          conflicts: verdict.conflicts,
-        } as const;
-      }
 
       // ⚠️ **ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΑΝΑ ΓΡΑΦΕΙΟ, ΟΧΙ ΠΡΟΣΘΗΚΗ.** Νέοι όροι προς γραφείο που
       //    ήδη κρατά εντολή είναι **η ίδια σύμβαση αναθεωρημένη** — μια `push` θα
@@ -459,6 +414,16 @@ export async function setOwnerPropertyMandate(
         ],
         updatedAt: now,
       };
+
+      // 🔴 ADR-864 Α7α — εντολή (νέα, εγκεκριμένη ή με νέους όρους) πάνω σε **ήδη κλειστή**
+      //    καταχώρηση χωρίς συναίνεση ⇒ ίδια άρνηση με το στένεμα. Κρίνεται στο **φρέσκο** έγγραφο.
+      const violations = [
+        ...verdict.violations,
+        ...privateMarketingViolationsAdded(existing, property, now),
+      ];
+      if (violations.length > 0) {
+        return { kind: 'invalid-mandate', violations, conflicts: verdict.conflicts } as const;
+      }
       tx.set(ref, property);
       return { kind: 'proceed', property } as const;
     });

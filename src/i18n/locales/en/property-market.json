@@ -44,6 +44,19 @@
       "withdrawNote": "Withdrawing deletes nothing — the request stays in your list and stops looking.",
       "failed": "The status did not change. Please try again."
     },
+    "incomplete": {
+      "badge": "Incomplete",
+      "why": "This request cannot be read in full — missing: {gaps}. It is not compared against listings and does not count in the anonymous total until it is completed.",
+      "reassure": "Nothing was lost: what you wrote stays, and the request re-enters the market as soon as the gap is filled.",
+      "fix": "Complete it",
+      "gap": {
+        "seeks": "what kind of transaction you want",
+        "place": "the area",
+        "timing": "the timing",
+        "mandate": "on whose behalf",
+        "lifecycle": "the status"
+      }
+    },
     "form": {
       "title": "What are you looking for?",
       "lead": "We only ask what the matching needs. Anything you leave empty means “not a condition” — not “zero”.",
@@ -572,7 +585,8 @@
       "mandate-start-invalid": "The start date is unreadable or falls after the expiry.",
       "mandate-term-empty": "The mandate starts and expires at the same moment, so it covers no days. Give it a longer term.",
       "mandate-conflicts-existing": "An existing mandate does not allow this agreement.",
-      "mandate-conflict-undetermined": "We could not check the existing mandates. Please try again."
+      "mandate-conflict-undetermined": "We could not check the existing mandates. Please try again.",
+      "private-marketing-consent-missing": "This listing has a mandate with an agency. Private marketing needs the owner's consent first."
     },
     "formBlocker": {
       "place-unresolved": "Press Locate so the address resolves to a point on the map.",
@@ -682,7 +696,29 @@
         "client-mismatch": "This link does not match this mandate.",
         "superseded": "There is a newer message from the agency. Please use the most recent link.",
         "write-failed": "Your answer was not recorded. Please try again.",
-        "service-unavailable": "We cannot check this link right now. There is nothing wrong with your link - please try again shortly, or let the agency know."
+        "service-unavailable": "We cannot check this link right now. There is nothing wrong with your link - please try again shortly, or let the agency know.",
+        "private-marketing-consent-missing": "The property is already marketed without a public listing. To approve the mandate, consent to that is needed first — or choose public marketing below."
+      }
+    },
+    "privateMarketing": {
+      "title": "Marketing without a public listing",
+      "versionNote": "Text version {version}. Confirm each statement separately.",
+      "submit": "I consent",
+      "sending": "Sending…",
+      "granted": "Your consent was recorded. The property is now marketed without a public listing.",
+      "revoked": "Your revocation was recorded. Private marketing has stopped.",
+      "revokeExplain": "The property is marketed without a public listing. You can stop this now: choose public marketing or withdrawal.",
+      "revokePublic": "Public marketing",
+      "revokeWithdraw": "Withdraw the property",
+      "reason": {
+        "consent-not-applicable": "There is no active mandate for this property, so no consent is needed.",
+        "consent-text-superseded": "The text or the mandate details changed in the meantime. Reload the page and read it again.",
+        "consent-incomplete": "Confirm each statement separately before consenting.",
+        "consent-request-stale": "This request is no longer current — the agency changed or withdrew it. Reload the page.",
+        "consent-document-missing": "The signed form is missing.",
+        "consent-not-granted": "There is no active consent to revoke.",
+        "consent-already-granted": "Consent already applies to this mandate.",
+        "private-marketing-consent-missing": "Another agency mandate has no consent yet, so private marketing cannot be applied."
       }
     },
     "cardEmail": {
@@ -1605,6 +1641,9 @@
     },
     "networkPending": "Marketing to the professional network will be available soon.",
     "failed": "The listing audience did not change. Please try again.",
+    "refused": {
+      "private-marketing-consent-missing": "This listing has a mandate with an agency. Marketing it without a public listing needs the owner's consent first, on the text the platform provides."
+    },
     "narrowing": {
       "title": "Limit who can see this listing?",
       "description": "People who can see it today will no longer see it. If it was public, it leaves the map immediately and its photos stop being public. Price history is kept.",

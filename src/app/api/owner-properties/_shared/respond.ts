@@ -21,7 +21,9 @@ import type { PublishOutcome } from '@/services/listings/publish-public-listing'
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
-import type { MandateInvariant } from '@/types/owner-property-mandate';
+import type { MandateInvariant, MandateNotifyOutcome } from '@/types/owner-property-mandate';
+import type { PrivateMarketingRefusal } from '@/types/private-marketing-consent';
+import type { PrivateMarketingOutcome } from '@/services/mandate/private-marketing-consent.service';
 
 /**
  * Ό,τι φεύγει προς τον πελάτη σε **επιτυχία**.
@@ -50,11 +52,20 @@ export interface OwnerPropertyErrorResponse {
    * Ίδια θεραπεία, **άλλο μήνυμα**.
    */
   readonly placeVerdict?: PlaceRefVerdict;
+  /** ADR-864 Φ3 — γιατί αρνήθηκε η υπηρεσία συναίνεσης· κωδικός = κλειδί i18n (Α21). */
+  readonly reason?: PrivateMarketingRefusal;
+}
+
+/** ADR-864 Ε-11 — το αίτημα καταγράφηκε· **πώς πήγε** η ειδοποίηση του ιδιοκτήτη. */
+export interface PrivateMarketingRequestedResponse {
+  readonly requested: true;
+  readonly notify: MandateNotifyOutcome;
 }
 
 export type OwnerPropertyResponse =
   | OwnerPropertyWriteResponse
-  | OwnerPropertyErrorResponse;
+  | OwnerPropertyErrorResponse
+  | PrivateMarketingRequestedResponse;
 
 /**
  * **Αποτέλεσμα πύλης → HTTP.**
@@ -104,4 +115,26 @@ export function respondToMalformed(
   malformed: readonly string[],
 ): NextResponse<OwnerPropertyResponse> {
   return NextResponse.json({ error: 'MALFORMED_BODY', malformed }, { status: 400 });
+}
+
+/**
+ * **Πράξη κλειστής διάθεσης → HTTP** (ADR-864 Φ3).
+ *
+ * | Κατάσταση | Κωδικός | Γιατί |
+ * |---|---|---|
+ * | `refused` | **422** | κατανοητό αίτημα, **ονομασμένος** λόγος (έκδοση · δηλώσεις · αίτημα · έντυπο) — φτάνει στην οθόνη (Α21) |
+ * | `requested` | **200** | το αίτημα γράφτηκε· η ειδοποίηση ταξιδεύει ονομαστικά (`no-address` ≠ `failed`) |
+ * | ό,τι άλλο | όπως {@link respondToWrite} | ίδια πύλη γραφής, ίδια μετάφραση |
+ */
+export function respondToPrivateMarketing(
+  outcome: PrivateMarketingOutcome,
+): NextResponse<OwnerPropertyResponse> {
+  switch (outcome.kind) {
+    case 'refused':
+      return NextResponse.json({ error: 'PRIVATE_MARKETING_REFUSED', reason: outcome.reason }, { status: 422 });
+    case 'requested':
+      return NextResponse.json({ requested: true, notify: outcome.notify.kind });
+    default:
+      return respondToWrite(outcome);
+  }
 }

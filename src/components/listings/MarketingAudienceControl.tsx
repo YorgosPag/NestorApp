@@ -49,14 +49,34 @@ const K = `${NS}:audience`;
 /** Κοινά που **δεν** ζουν ακόμη — ορατά, μη επιλέξιμα. */
 const PENDING_AUDIENCES: ReadonlySet<MarketingAudience> = new Set<MarketingAudience>(['network']);
 
-/** Οι τρεις καταστάσεις της πράξης. **Ποτέ** `boolean` + `string`. */
-type ChangeState = 'idle' | 'busy' | 'failed';
+/**
+ * **Γιατί ο διακομιστής αρνήθηκε** — κλειστό σύνολο, κωδικός = κλειδί i18n (ADR-864 Α21).
+ *
+ * 🔴 Ως τη Φ3 η πράξη επέστρεφε `Promise<boolean>` ⇒ «δεν χρειάζεται συναίνεση του ιδιοκτήτη» και
+ * «έπεσε το δίκτυο» ήταν **το ίδιο** `false`, και ο άνθρωπος διάβαζε «δοκίμασε ξανά» για κάτι που
+ * καμία επανάληψη δεν διορθώνει.
+ */
+type AudienceRefusal = 'private-marketing-consent-missing';
+
+export type AudienceChangeOutcome =
+  | { readonly kind: 'saved' }
+  | { readonly kind: 'refused'; readonly reason: AudienceRefusal }
+  | { readonly kind: 'failed' };
+
+/** Οι καταστάσεις της πράξης. **Ποτέ** `boolean` + `string`. */
+type ChangeState =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'busy' }
+  | { readonly kind: 'failed' }
+  | { readonly kind: 'refused'; readonly reason: AudienceRefusal };
+
+const IDLE: ChangeState = { kind: 'idle' };
 
 export interface MarketingAudienceControlProps {
   /** Το **αποθηκευμένο** κοινό — η μόνη πηγή της εμφανιζόμενης τιμής. */
   readonly audience: MarketingAudience;
-  /** Η πράξη. `true` = αποθηκεύτηκε· η νέα τιμή φτάνει από τη ζωντανή ανάγνωση του καλούντα. */
-  readonly onChange: (next: MarketingAudience) => Promise<boolean>;
+  /** Η πράξη· η νέα τιμή φτάνει από τη ζωντανή ανάγνωση του καλούντα. */
+  readonly onChange: (next: MarketingAudience) => Promise<AudienceChangeOutcome>;
 }
 
 export function MarketingAudienceControl({
@@ -64,15 +84,15 @@ export function MarketingAudienceControl({
   onChange,
 }: MarketingAudienceControlProps): React.ReactElement {
   const { t } = useTranslation([NS, ENUMS_NS]);
-  const [state, setState] = React.useState<ChangeState>('idle');
+  const [state, setState] = React.useState<ChangeState>(IDLE);
   const [pendingNarrowing, setPendingNarrowing] = React.useState<MarketingAudience | null>(null);
   const headingId = React.useId();
 
   const commit = React.useCallback(
     async (next: MarketingAudience): Promise<void> => {
-      setState('busy');
-      const saved = await onChange(next);
-      setState(saved ? 'idle' : 'failed');
+      setState({ kind: 'busy' });
+      const outcome = await onChange(next);
+      setState(outcome.kind === 'saved' ? IDLE : outcome);
     },
     [onChange],
   );
@@ -98,7 +118,7 @@ export function MarketingAudienceControl({
         {t(`${K}.label`)}
       </h2>
 
-      <Select value={audience} onValueChange={handleSelect} disabled={state === 'busy'}>
+      <Select value={audience} onValueChange={handleSelect} disabled={state.kind === 'busy'}>
         <SelectTrigger className="min-w-56 self-start">
           <SelectValue />
         </SelectTrigger>
@@ -114,9 +134,14 @@ export function MarketingAudienceControl({
       <p className="text-sm text-muted-foreground">{t(`${K}.describe.${audience}`)}</p>
       <p className="text-sm text-muted-foreground">{t(`${K}.networkPending`)}</p>
 
-      {state === 'failed' && (
+      {state.kind === 'failed' && (
         <p aria-live="polite" className="text-sm text-foreground">
           {t(`${K}.failed`)}
+        </p>
+      )}
+      {state.kind === 'refused' && (
+        <p aria-live="polite" className="text-sm text-foreground">
+          {t(`${K}.refused.${state.reason}`)}
         </p>
       )}
 

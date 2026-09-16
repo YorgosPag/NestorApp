@@ -8,6 +8,7 @@
  * | Ε3 | ακύρωση ⇒ **καμία** γραφή | η ακύρωση γράφει |
  * | Ε4 | αποτυχία ⇒ ορατό μήνυμα, τιμή = η αποθηκευμένη | αισιόδοξη όψη |
  * | Ε5 | το `network` είναι **μη επιλέξιμο** μέχρι το ADR-862 | επιλογή που υπόσχεται ό,τι δεν συμβαίνει |
+ * | **Α21** (ADR-864 Φ3) | άρνηση διακομιστή ⇒ **ο λόγος** στην οθόνη, όχι «δοκίμασε ξανά» | `onChange: Promise<boolean>` (ο λόγος χάνεται) |
  *
  * Τα Radix Select / AlertDialog αντικαθίστανται από εγγενή στοιχεία: ελέγχεται ο **καλών**,
  * όχι η βιβλιοθήκη.
@@ -77,7 +78,10 @@ jest.mock('@/components/ui/ConfirmDialog', () => ({
 }));
 
 // eslint-disable-next-line import/first -- τα mocks πρέπει να δηλωθούν πριν τα imports
-import { MarketingAudienceControl } from '../MarketingAudienceControl';
+import { MarketingAudienceControl, type AudienceChangeOutcome } from '../MarketingAudienceControl';
+
+const SAVED: AudienceChangeOutcome = { kind: 'saved' };
+const FAILED: AudienceChangeOutcome = { kind: 'failed' };
 
 const CONFIRM = 'property-market:audience.narrowing.confirm';
 
@@ -87,7 +91,7 @@ function choose(value: string): void {
 
 describe('MarketingAudienceControl — το στένεμα ζητά επιβεβαίωση, η γραφή δεν είναι αισιόδοξη', () => {
   it('🔴 Ε1 — στένεμα `public → custodians`: ΚΑΜΙΑ γραφή πριν την επιβεβαίωση, μία μετά', async () => {
-    const onChange = jest.fn(async () => true);
+    const onChange = jest.fn(async () => SAVED);
     render(<MarketingAudienceControl audience="public" onChange={onChange} />);
 
     choose('custodians');
@@ -102,7 +106,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
   });
 
   it('Ε2 — διεύρυνση `custodians → public`: γραφή ΑΜΕΣΩΣ, χωρίς διάλογο', async () => {
-    const onChange = jest.fn(async () => true);
+    const onChange = jest.fn(async () => SAVED);
     render(<MarketingAudienceControl audience="custodians" onChange={onChange} />);
 
     await act(async () => {
@@ -113,7 +117,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
   });
 
   it('🔴 Ε3 — ακύρωση του στενέματος ⇒ ΚΑΜΙΑ γραφή', () => {
-    const onChange = jest.fn(async () => true);
+    const onChange = jest.fn(async () => SAVED);
     render(<MarketingAudienceControl audience="public" onChange={onChange} />);
 
     choose('custodians');
@@ -124,7 +128,7 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
   });
 
   it('🔴 Ε4 — αποτυχία ⇒ μήνυμα με λόγια, και η εμφανιζόμενη τιμή ΜΕΝΕΙ η αποθηκευμένη', async () => {
-    const onChange = jest.fn(async () => false);
+    const onChange = jest.fn(async () => FAILED);
     render(<MarketingAudienceControl audience="custodians" onChange={onChange} />);
 
     await act(async () => {
@@ -135,8 +139,26 @@ describe('MarketingAudienceControl — το στένεμα ζητά επιβεβ
     expect(screen.getByLabelText('audience')).toHaveValue('custodians');
   });
 
+  it('🔴 Α21 — άρνηση ⇒ Ο ΛΟΓΟΣ φτάνει στην οθόνη, ΟΧΙ το γενικό «απέτυχε»', async () => {
+    const refused: AudienceChangeOutcome = { kind: 'refused', reason: 'private-marketing-consent-missing' };
+    render(<MarketingAudienceControl audience="public" onChange={jest.fn(async () => refused)} />);
+
+    choose('custodians');
+    await act(async () => {
+      fireEvent.click(screen.getByText(CONFIRM));
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('property-market:audience.refused.private-marketing-consent-missing'),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('property-market:audience.failed')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('audience')).toHaveValue('public');
+  });
+
   it('Ε5 — το `network` φαίνεται αλλά ΔΕΝ επιλέγεται (προϋποθέτει ADR-862)', () => {
-    render(<MarketingAudienceControl audience="public" onChange={jest.fn(async () => true)} />);
+    render(<MarketingAudienceControl audience="public" onChange={jest.fn(async () => SAVED)} />);
 
     const network = screen.getByText('properties-enums:marketingAudience.network');
     expect(network).toBeDisabled();

@@ -37,6 +37,7 @@ import {
   occupancyOf,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
+import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import { addMonthsUTC } from '@/lib/date-local';
 import {
   DEFAULT_LISTING_AGREEMENT,
@@ -395,6 +396,14 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
       //    2026-08-31 περνούσε **ως έγκυρη** (ο έλεγχος ήταν `expiry < start`,
       //    αυστηρός) — αποκλειστικότητα που δεν κάλυπτε **καμία** μέρα.
       ...mandateInvariantViolations(brokered({ startsAt: FUTURE, expiresAt: FUTURE }), NOW),
+      // ── ADR-864 Α7 ─────────────────────────────────────────────────────────
+      // 🔴 Κλειστή διάθεση χωρίς συναίνεση: **σχέση** κοινού ↔ εντολής, την παράγει ο κριτής
+      //    της γραφής (`privateMarketingViolationsAdded`), όχι η μεμονωμένη εντολή.
+      ...privateMarketingViolationsAdded(
+        null,
+        { marketingAudience: 'custodians', mandates: [brokered({ confirmation: 'confirmed' })] },
+        NOW,
+      ),
     ]);
     for (const code of MANDATE_INVARIANTS) expect(produced).toContain(code);
   });

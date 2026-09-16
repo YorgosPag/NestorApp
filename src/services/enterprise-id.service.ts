@@ -59,6 +59,7 @@ export {
   generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
   generatePipelineAuditId, generateEntityAuditId, generateContractId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
+  generatePrivateMarketingEventId,
   generateFirstContactId,
   generateFirstContactInvitationId,
   generateShowcaseEmailConfirmationId,

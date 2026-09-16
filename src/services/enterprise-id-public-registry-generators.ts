@@ -98,6 +98,9 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
    */
   generateMandateRequestId(): string { return this.generateId(P.MANDATE_REQUEST).id; }
 
+  /** ADR-864 Φ3 — ταυτότητα γεγονότος συναίνεσης κλειστής διάθεσης (`pmev_*`): η παροχή δηλώνει ποιο αίτημα εκτελεί (Α19). */
+  generatePrivateMarketingEventId(): string { return this.generateId(P.PRIVATE_MARKETING_EVENT).id; }
+
   /**
    * ADR-835 §6.1 — id μιας **ΚΡΑΤΗΣΗΣ ΒΡΑΧΥΧΡΟΝΙΑΣ ΔΙΑΜΟΝΗΣ** (`stay_*`).
    *

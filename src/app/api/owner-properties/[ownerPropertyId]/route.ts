@@ -44,9 +44,12 @@ import {
 
 import {
   respondToMalformed,
+  respondToPrivateMarketing,
   respondToWrite,
   type OwnerPropertyResponse,
 } from '../_shared/respond';
+import { accountPrivateMarketingFrom } from '@/lib/mandate/private-marketing-request-body';
+import { dispatchAccountPrivateMarketing } from '../_shared/private-marketing-dispatch';
 
 /** Τα δυναμικά τμήματα της διαδρομής, όπως τα δίνει ο App Router. */
 type RouteContext = { params: Promise<{ ownerPropertyId: string }> };
@@ -120,6 +123,16 @@ async function handler(
     }
     return respondToWrite(
       await setOwnerPropertyAudience(adminDb, ownerPropertyId, marketingAudience, actorOf(actor)),
+    );
+  }
+
+  // ADR-864 Φ3 — αίτημα · συναίνεση · έντυπο · ανάκληση: **παραλλαγή σώματος**, όχι νέα διαδρομή (CHECK 3.78).
+  const privateMarketing = (body as { privateMarketing?: unknown } | null)?.privateMarketing;
+  if (privateMarketing !== undefined) {
+    const action = accountPrivateMarketingFrom(privateMarketing);
+    if (!action.ok) return respondToMalformed(action.malformed);
+    return respondToPrivateMarketing(
+      await dispatchAccountPrivateMarketing(adminDb, ownerPropertyId, action.body, actorOf(actor)),
     );
   }
 

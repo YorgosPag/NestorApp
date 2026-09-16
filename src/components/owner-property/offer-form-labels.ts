@@ -91,6 +91,8 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   //    ήθελε δικό του κλειδί.
   'mandate-conflicts-existing': 'property-market:offer.invariant.mandate-conflicts-existing',
   'mandate-conflict-undetermined': 'property-market:offer.invariant.mandate-conflict-undetermined',
+  // ADR-864 Α7 — κλειστή διάθεση χωρίς συναίνεση ιδιοκτήτη (κάθε γραφέας, όχι μόνο η φόρμα).
+  'private-marketing-consent-missing': 'property-market:offer.invariant.private-marketing-consent-missing',
 };
 
 /** Ο **ΕΝΑΣ** μεταφραστής αυτής της βάσης. */

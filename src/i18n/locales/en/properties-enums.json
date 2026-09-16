@@ -325,5 +325,12 @@
     "custodians": "Private — custodians only",
     "network": "Private — professional network",
     "public": "Public"
+  },
+  "privateMarketingStanding": {
+    "absent": "No consent",
+    "requested": "Agency request",
+    "granted": "Owner consent",
+    "revoked": "Consent revoked",
+    "outdated": "Consent for earlier terms"
   }
 }

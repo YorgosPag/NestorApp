@@ -52,6 +52,11 @@ export interface OwnerPropertyAuditContext {
   readonly actor: ListingActor;
   /** Η κατάσταση **πριν** — `null` στη γέννηση. */
   readonly before: OwnerProperty | null;
+  /**
+   * ADR-864 Φ3 (Α18) — αλλαγές που **δεν** είναι παρακολουθούμενο πεδίο (γεγονός συναίνεσης πάνω στην
+   * εντολή). Μπαίνουν στην **ίδια** εγγραφή με τις διαφορές πεδίων: μία πράξη, μία γραμμή ιστορικού.
+   */
+  readonly extraChanges?: readonly AuditFieldChange[];
 }
 
 /**
@@ -100,9 +105,9 @@ export function ownerPropertyAuditAction(
  */
 export async function recordOwnerPropertyWrite(
   after: OwnerProperty,
-  { actor, before }: OwnerPropertyAuditContext,
+  { actor, before, extraChanges = [] }: OwnerPropertyAuditContext,
 ): Promise<void> {
-  const changes = ownerPropertyAuditChanges(before, after);
+  const changes = [...ownerPropertyAuditChanges(before, after), ...extraChanges];
   if (before !== null && changes.length === 0) return;
 
   await EntityAuditService.recordChange({

@@ -85,6 +85,10 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // διεπαφή επιλογής (`MarketingAudienceControl`) — μία ετικέτα ανά τιμή, όχι δύο.
   marketingAudience: { ns: 'properties-enums', path: 'marketingAudience' },
 
+  // ── ADR-864 Φ3 (Α18): η συναίνεση κλειστής διάθεσης στο ίχνος — παλιά τιμή = κατάσταση, νέα = γεγονός.
+  //    Ένας κατάλογος για τα δύο: `requested`/`granted`/`revoked` είναι **και** γεγονότα **και** καταστάσεις.
+  privateMarketing: { ns: 'properties-enums', path: 'privateMarketingStanding' },
+
   // ── ADR-864 Φ1β: κύκλος ζωής — **δύο λεξιλόγια κάτω από ΕΝΑ κλειδί πεδίου**, αναπόφευκτα:
   // η αγγελία (`OWNER_PROPERTY_LIFECYCLES`: listed/withdrawn) **και** το υπο-πεδίο της
   // διάθεσης (`OFFER_LIFECYCLES`: active/reserved/closed/withdrawn) λέγονται `lifecycle`, και

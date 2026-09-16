@@ -48,7 +48,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 import { PropertyIdentityHeader } from './PropertyIdentityHeader';
-import { MarketingAudienceControl } from '@/components/listings/MarketingAudienceControl';
+import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
 import { updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import type { Property } from '@/types/property';
@@ -59,22 +59,23 @@ const NS = 'properties-detail';
 /**
  * **Αλλαγή κοινού αγγελίας γραφείου** (ADR-864 §5.1) — μέσω της ΜΙΑΣ πύλης μεταλλάξεων.
  *
- * ⚠️ Επιστρέφει `false` αντί να πετά: το component δείχνει την αποτυχία **με λόγια**, και η
+ * ⚠️ Επιστρέφει `failed` αντί να πετά: το component δείχνει την αποτυχία **με λόγια**, και η
  * εμφανιζόμενη τιμή μένει η αποθηκευμένη (η ζωντανή ανάγνωση φέρνει τη νέα όταν γραφτεί).
+ * Τα εταιρικά `properties` **δεν** έχουν εντολή ⇒ καμία άρνηση συναίνεσης εδώ (ADR-864 §17, δηλωμένο όριο).
  */
 async function changePropertyAudience(
   property: Property,
   next: MarketingAudience,
-): Promise<boolean> {
+): Promise<AudienceChangeOutcome> {
   try {
     const result = await updatePropertyWithPolicy({
       propertyId: property.id,
       currentProperty: property,
       updates: { marketingAudience: next },
     });
-    return result.success;
+    return result.success ? { kind: 'saved' } : { kind: 'failed' };
   } catch {
-    return false;
+    return { kind: 'failed' };
   }
 }
 

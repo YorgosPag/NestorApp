@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { formatTermDay } from '@/lib/mandate/mandate-term-window';
+import { PrivateMarketingLinkSection, type PrivateMarketingLinkView } from './PrivateMarketingLinkSection';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/mandate/[token]` (ADR-777 §8.39).
 //
@@ -58,6 +59,8 @@ export interface MandateConsentView {
   readonly agencyName: string | null;
   readonly mandateExpiresAt: string;
   readonly currentDecision: 'pending' | 'confirmed' | 'declined';
+  /** ADR-864 Φ3 — αίτημα κλειστής διάθεσης προς εκτέλεση ή ανάκληση· λυμένα από τον διακομιστή. */
+  readonly privateMarketing: PrivateMarketingLinkView;
 }
 
 /**
@@ -139,6 +142,8 @@ export function MandateConsentContent({
       <p className="text-sm text-muted-foreground">{t(`${K}.explain`)}</p>
 
       <MandateConsentDecision phase={phase} onDecide={decide} />
+
+      <PrivateMarketingLinkSection view={view.privateMarketing} />
     </section>
   );
 }

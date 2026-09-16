@@ -70,6 +70,7 @@ import {
   type MandateOccupancy,
 } from '@/lib/mandate/mandate-conflict';
 import type { OfferKind } from '@/types/property-offers';
+import type { PrivateMarketingEvent } from '@/types/private-marketing-consent';
 import { isMandateOfferKind } from '@/constants/mandate-offer-kinds';
 
 // =============================================================================
@@ -565,6 +566,15 @@ export interface BrokeredListingMandate extends BrokeredMandateCore {
    * γραφείο **περισσότερα δικαιώματα από όσα ζήτησε**, σιωπηλά.
    */
   readonly scope: readonly OfferKind[];
+
+  /**
+   * 🔴 **Η ΣΥΝΑΙΝΕΣΗ ΓΙΑ ΚΛΕΙΣΤΗ ΔΙΑΘΕΣΗ** (ADR-864 §5.4 · Φ3) — γεγονότα **append-only**.
+   *
+   * ⚠️ **Προαιρετικό, και η απουσία σημαίνει «κανένα γεγονός»** — όχι σιωπηλή προεπιλογή: κάθε
+   * εντολή πριν τη Φ3 **δεν** είχε συναίνεση, και η βάση το επιβεβαίωσε (0/7 σε κλειστό κοινό).
+   * Διαβάζεται **μόνο** μέσω `privateMarketingEventsOf` (`lib/mandate/private-marketing-standing`).
+   */
+  readonly privateMarketing?: readonly PrivateMarketingEvent[];
 }
 
 /**
@@ -1050,6 +1060,16 @@ export const MANDATE_INVARIANTS = [
    * γινόταν **παράβαση σύμβασης**.
    */
   'mandate-conflict-undetermined',
+  /**
+   * 🔴 **ΚΛΕΙΣΤΗ ΔΙΑΘΕΣΗ ΧΩΡΙΣ ΣΥΝΑΙΝΕΣΗ ΤΟΥ ΙΔΙΟΚΤΗΤΗ** (ADR-864 Α7 · §5.4).
+   *
+   * ⚠️ **Εδώ, και όχι στο λεξιλόγιο της υπηρεσίας συναίνεσης**: την παράγει **κάθε** γραφέας —
+   * κοινό, εντολή, αποδοχή Σ3 — όταν η γραφή **προσθέτει** δεσμευτική εντολή πάνω σε κοινό ≠
+   * `public` χωρίς ενεργή συναίνεση. Δεν την υπολογίζει το `mandateInvariantViolations`
+   * (χρειάζεται κοινό **και** τις άλλες εντολές): τη δίνει ο κριτής
+   * `privateMarketingViolationsAdded`, και κάθε γραφέας τη **συγχωνεύει**.
+   */
+  'private-marketing-consent-missing',
 ] as const;
 
 export type MandateInvariant = (typeof MANDATE_INVARIANTS)[number];

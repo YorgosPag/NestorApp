@@ -40,6 +40,9 @@ import {
   markMandateViewed,
   readMandateConsentRequest,
 } from '@/services/mandate/mandate-consent.service';
+import { latestLegalDocumentVersion } from '@/lib/legal/legal-document-versions';
+import { consentValuesFor } from '@/lib/mandate/private-marketing-consent-text';
+import { PRIVATE_MARKETING_DOCUMENT } from '@/types/private-marketing-consent';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +83,10 @@ export default async function MandateConsentPage({
   );
 
   const agencyName = await readCompanyPublicName(adminDb, lookup.request.authorCompanyId);
+  // ADR-864 Φ3 — οι τιμές του κειμένου αφορούν το γραφείο **της εντολής**, λυμένες εδώ και επιστρεφόμενες (CAS, Α8α).
+  const mandateAgencyName = (await readCompanyPublicName(adminDb, lookup.request.agencyCompanyId)) ?? '';
+  const disclosure = latestLegalDocumentVersion(PRIVATE_MARKETING_DOCUMENT);
+  const standing = lookup.request.privateMarketing;
 
   return (
     <MandateConsentContent
@@ -89,6 +96,13 @@ export default async function MandateConsentPage({
         agencyName,
         mandateExpiresAt: lookup.request.mandateExpiresAt,
         currentDecision: lookup.request.currentDecision,
+        privateMarketing: {
+          token,
+          requestId: standing.kind === 'requested' ? standing.request.id : null,
+          closed: lookup.request.marketingAudience !== 'public',
+          version: disclosure.kind === 'published' ? disclosure.version : null,
+          values: consentValuesFor(mandateAgencyName, lookup.request.mandateExpiresAt),
+        },
       }}
     />
   );

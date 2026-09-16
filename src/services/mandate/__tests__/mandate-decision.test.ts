@@ -296,6 +296,22 @@ describe('Α — τρεις γραφές, μία πράξη', () => {
     expect(storedRequest(fake).status).toBe('pending');
   });
 
+  it('🔴 ADR-864 Α7α — αποδοχή πάνω σε ΚΛΕΙΣΤΗ καταχώρηση χωρίς συναίνεση ⇒ άρνηση, τίποτα δεν γράφτηκε', async () => {
+    // Ο ιδιώτης έχει στενέψει μόνος του (Α7β)· η εντολή που γεννά η αποδοχή **δεσμεύει** χωρίς
+    // συναίνεση για κλειστή διάθεση ⇒ ο **ίδιος** κριτής με κάθε άλλον γραφέα, μέσα στη συναλλαγή.
+    const fake = world({ listing: { marketingAudience: 'custodians' } });
+
+    const result = await decide(fake);
+
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') {
+      expect(result.reason).toBe('mandate-invalid');
+      expect(result.violations).toContain('private-marketing-consent-missing');
+    }
+    expect(storedContacts(fake)).toHaveLength(0);
+    expect(storedRequest(fake).status).toBe('pending');
+  });
+
   it('🏆 Α2α — ΑΠΛΗ κατάληψη ξένου γραφείου ΔΕΝ εμποδίζει την αποδοχή απλής', async () => {
     // 🏆 Ο παρονομαστής της Α2: χωρίς αυτήν, η Α2 θα περνούσε και με φρουρό
     //    «υπάρχει εντολή; τέλος» — δηλαδή δεν θα ξεχώριζε το σωστό από το λάθος.

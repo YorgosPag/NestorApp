@@ -45,7 +45,10 @@ import {
   setOwnerListingAudience,
   setOwnerListingLifecycle,
 } from '@/services/owner-property/owner-property.service';
-import { MarketingAudienceControl } from '@/components/listings/MarketingAudienceControl';
+import {
+  MarketingAudienceControl,
+  type AudienceChangeOutcome,
+} from '@/components/listings/MarketingAudienceControl';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
 import type { OwnerProperty } from '@/types/owner-property';
 
@@ -81,6 +84,18 @@ const K = `${NS}:offer`;
 
 /** Οι τρεις καταστάσεις του κουμπιού κύκλου ζωής. **Ποτέ** `boolean` + `string`. */
 type LifecycleState = 'idle' | 'busy' | 'failed';
+
+/**
+ * **Αποτέλεσμα πύλης → αποτέλεσμα πράξης κοινού** (ADR-864 Α21): η άρνηση συναίνεσης φτάνει
+ * **ονομασμένη** στην οθόνη — ποτέ ως γενικό «απέτυχε».
+ */
+function audienceOutcomeOf(result: Awaited<ReturnType<typeof setOwnerListingAudience>>): AudienceChangeOutcome {
+  if (result.kind === 'saved') return { kind: 'saved' };
+  if (result.kind === 'invalid' && result.violations.includes('private-marketing-consent-missing')) {
+    return { kind: 'refused', reason: 'private-marketing-consent-missing' };
+  }
+  return { kind: 'failed' };
+}
 
 /**
  * **Απόσυρση / επαναφορά** — ένα κουμπί, δύο κατευθύνσεις.
@@ -232,9 +247,7 @@ function OwnerPropertyView({
       */}
       <MarketingAudienceControl
         audience={property.marketingAudience}
-        onChange={async (next) =>
-          (await setOwnerListingAudience(property.id, next)).kind === 'saved'
-        }
+        onChange={async (next) => audienceOutcomeOf(await setOwnerListingAudience(property.id, next))}
       />
 
       <LifecycleButton property={property} />

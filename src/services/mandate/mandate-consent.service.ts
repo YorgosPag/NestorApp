@@ -57,6 +57,8 @@ import { custodyOf } from '@/lib/owner-property/listing-custody';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { mandatesOf } from '@/types/owner-property-mandate';
+import type { PrivateMarketingStanding } from '@/types/private-marketing-consent';
+import { privateMarketingStandingOf } from '@/lib/mandate/private-marketing-standing';
 
 const logger = createModuleLogger('mandate-consent.service');
 
@@ -170,6 +172,12 @@ export interface ConsentRequest {
   readonly mandateExpiresAt: string;
   /** Πού βρίσκεται ήδη η απόφασή του: του επιτρέπει να **αλλάξει γνώμη**. */
   readonly currentDecision: BrokeredListingMandate['confirmation'];
+  /** ADR-864 Φ3 — το γραφείο της **συγκεκριμένης** εντολής (όχι ο συντάκτης της αγγελίας). */
+  readonly agencyCompanyId: string;
+  /** ADR-864 Φ3 — πού βρίσκεται η συναίνεση κλειστής διάθεσης αυτής της εντολής. */
+  readonly privateMarketing: PrivateMarketingStanding;
+  /** Το τρέχον κοινό — η ενότητα ανάκλησης εμφανίζεται μόνο σε κλειστή διάθεση. */
+  readonly marketingAudience: OwnerProperty['marketingAudience'];
 }
 
 export type ConsentLookup =
@@ -269,6 +277,9 @@ export async function readMandateConsentRequest(
       authorCompanyId: property.authorCompanyId,
       mandateExpiresAt: mandate.expiresAt,
       currentDecision: mandate.confirmation,
+      agencyCompanyId: mandate.agencyCompanyId,
+      privateMarketing: privateMarketingStandingOf(mandate),
+      marketingAudience: property.marketingAudience,
     },
   };
 }
@@ -281,7 +292,11 @@ export type ConsentDecision = 'confirmed' | 'declined';
 
 export type ConsentOutcome =
   | { readonly ok: true; readonly decision: ConsentDecision }
-  | { readonly ok: false; readonly reason: ConsentRejection | 'write-failed' };
+  /**
+   * ⚠️ ADR-864 Α7α — `private-marketing-consent-missing`: έγκριση εντολής πάνω σε **ήδη κλειστή**
+   * καταχώρηση χωρίς συναίνεση. Ονομασμένο, όχι `write-failed` — ο άνθρωπος πρέπει να μάθει **γιατί** (Α21).
+   */
+  | { readonly ok: false; readonly reason: ConsentRejection | 'write-failed' | 'private-marketing-consent-missing' };
 
 /**
  * **Ο ιδιοκτήτης αποφασίζει** — και η αγγελία εμφανίζεται ή εξαφανίζεται στην ίδια πράξη.
@@ -362,6 +377,9 @@ export async function recordMandateDecision(
     return { ok: true, decision };
   }
   if (result.kind === 'absent') return { ok: false, reason: 'listing-absent' };
+  if (result.kind === 'invalid-mandate' && result.violations.includes('private-marketing-consent-missing')) {
+    return { ok: false, reason: 'private-marketing-consent-missing' };
+  }
   return { ok: false, reason: 'write-failed' };
 }
 

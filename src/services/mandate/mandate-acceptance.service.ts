@@ -87,6 +87,7 @@ import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 
 import { prepare, type Prepared } from '@/services/mandate/mandate-acceptance-prepare';
+import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import type {
   AcceptanceInput,
   AcceptanceOutcome,
@@ -190,9 +191,22 @@ async function commit(
       // 🔑 **Ο ΙΔΙΟΣ ΚΡΙΤΗΣ, ΞΑΝΑ, ΜΕ ΤΑ ΦΡΕΣΚΑ** — όχι δεύτερος. Η φάση 1 απαντά
       //    *«αξίζει να προσπαθήσουμε;»*· **αυτή** είναι η μόνη που δεσμεύει, γιατί
       //    είναι η μόνη μέσα στο παράθυρο του CAS.
+      // 🔴 **ΠΡΟΣΘΗΚΗ ΣΤΟΝ ΠΙΝΑΚΑ, ΜΕ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΑΝΑ ΓΡΑΦΕΙΟ** (ADR-832) — ίδια
+      //    σημασιολογία με τον `setOwnerPropertyMandate`. Η **δική** μας εντολή
+      //    αντικαθίσταται (ανανέωση όρων)· κάθε **ξένη** μένει ανέπαφη.
+      const mandates = [
+        ...occupations.filter((m) => m.agencyCompanyId !== prepared.mandate.agencyCompanyId),
+        prepared.mandate,
+      ];
+
+      // 🔴 ADR-864 Α7α — ο **ίδιος** κριτής κλειστής διάθεσης με κάθε άλλον γραφέα, στο φρέσκο έγγραφο.
       const verdict = mandateWriteVerdict(prepared.mandate, occupations, input.nowISO);
-      if (verdict.violations.length > 0) {
-        return { kind: 'refused', reason: 'mandate-invalid', violations: verdict.violations };
+      const violations = [
+        ...verdict.violations,
+        ...privateMarketingViolationsAdded(freshProperty, { ...freshProperty, mandates }, input.nowISO),
+      ];
+      if (violations.length > 0) {
+        return { kind: 'refused', reason: 'mandate-invalid', violations };
       }
 
       if (prepared.contactDoc !== null) {
@@ -201,14 +215,6 @@ async function commit(
           prepared.contactDoc,
         );
       }
-
-      // 🔴 **ΠΡΟΣΘΗΚΗ ΣΤΟΝ ΠΙΝΑΚΑ, ΜΕ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΑΝΑ ΓΡΑΦΕΙΟ** (ADR-832) — ίδια
-      //    σημασιολογία με τον `setOwnerPropertyMandate`. Η **δική** μας εντολή
-      //    αντικαθίσταται (ανανέωση όρων)· κάθε **ξένη** μένει ανέπαφη.
-      const mandates = [
-        ...occupations.filter((m) => m.agencyCompanyId !== prepared.mandate.agencyCompanyId),
-        prepared.mandate,
-      ];
 
       transaction.update(propertyRef, {
         mandates,
