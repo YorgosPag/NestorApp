@@ -192,6 +192,20 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // ADR-655 — χρήση πακέτων περιεχομένου. Το ΑΝ η εταιρεία τα έχει αποκτήσει κρίνεται
       // ξεχωριστά (companies/{id}.assetPackEntitlements) — αυτό εδώ είναι μόνο ο ρόλος.
       "asset_packs:packs:use",
+      // ── ISO 19650 CDE — ο ΣΥΝΤΟΝΙΣΤΗΣ (ADR-862 Φ0 Β6 · Ε-12) ─────────────────
+      // Η **απελευθέρωση** και η **απόσυρση** είναι δικές του: το `SHARED → PUBLISHED`
+      // το εξουσιοδοτεί ο συντονιστής, γιατί **μόνο αυτός** ξέρει αν οι μελέτες
+      // συμφωνούν **μεταξύ τους** (ISO 19650 CRA, UK BIM Framework Part 2).
+      //
+      // ⚠️ Παίρνει **ΚΑΙ** `share`/`seal`, και δεν είναι χαλάρωση: ο διαχειριστής
+      //    είναι συχνά **και** μελετητής, και η ξένη σφραγίδα **δεν** φράζεται από την
+      //    απουσία ικανότητας — τη φράζει ο έλεγχος **ιδιοκτησίας**
+      //    (`actor.uid === createdBy`) μέσα στον γραφέα, που **κανένας** ρόλος δεν
+      //    παρακάμπτει. Αν βασιζόμασταν στην ικανότητα, ο νόμος θα ήταν ρυθμιζόμενος.
+      "iso19650:containers:share",
+      "iso19650:containers:seal",
+      "iso19650:containers:release",
+      "iso19650:containers:withdraw",
     ],
     level: 1,
     isProjectRole: false,
@@ -304,6 +318,13 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_animations:animations:read",
       "bim_animations:animations:update",
       "bim_animations:animations:delete",
+      // ── ISO 19650 CDE — ο ΣΥΝΤΟΝΙΣΤΗΣ του έργου (ADR-862 Φ0 Β6) ─────────────
+      // Ίδιο σκεπτικό με τον `company_admin`: ο υπεύθυνος έργου **είναι** ο lead
+      // appointed party του ISO 19650. Η ξένη σφραγίδα μένει αδύνατη (ιδιοκτησία).
+      "iso19650:containers:share",
+      "iso19650:containers:seal",
+      "iso19650:containers:release",
+      "iso19650:containers:withdraw",
     ],
     level: 2,
     isProjectRole: true,
@@ -340,6 +361,14 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_animations:animations:read",
       "bim_animations:animations:update",
       "bim_animations:animations:delete",
+      // ── ISO 19650 CDE — ο ΜΕΛΕΤΗΤΗΣ (ADR-862 Φ0 Β6 · Ε-12) ──────────────────
+      // **Παραδίδει** (`WIP → SHARED`) και **σφραγίζει** τη δική του μελέτη.
+      // ⛔ **ΟΧΙ** `release`: το δεύτερο σκαλοπάτι ανήκει στον συντονιστή. Η
+      //    **προ-εξουσιοδότηση** του Ε-12 δίνεται σε **ονομασμένο** άνθρωπο μέσα από
+      //    το claim `permissions` — ποτέ με προσθήκη γραμμής εδώ, που θα την έδινε
+      //    σε **κάθε** αρχιτέκτονα του συστήματος.
+      "iso19650:containers:share",
+      "iso19650:containers:seal",
     ],
     level: 3,
     isProjectRole: true,
@@ -377,6 +406,12 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_animations:animations:read",
       "bim_animations:animations:update",
       "bim_animations:animations:delete",
+      // ── ISO 19650 CDE — ο ΜΕΛΕΤΗΤΗΣ (ADR-862 Φ0 Β6 · Ε-12) ──────────────────
+      // Ίδιο με τον `architect`: παραδίδει και σφραγίζει **τη δική του** μελέτη.
+      // Δύο μηχανικοί από δύο γραφεία έχουν τον **ίδιο** ρόλο και **διαφορετικό** WIP —
+      // ο ρόλος λέει «τι μπορεί», η **ομάδα** λέει «τίνος είναι» (Β7).
+      "iso19650:containers:share",
+      "iso19650:containers:seal",
     ],
     level: 3,
     isProjectRole: true,
