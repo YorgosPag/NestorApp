@@ -121,6 +121,19 @@ export class FakeFirestore {
     return new FakeCollection(this, this.bucket(name), name);
   }
 
+  /**
+   * 🔴 **Ο ΚΑΔΟΣ ΜΕ ΠΛΗΡΕΣ ΜΟΝΟΠΑΤΙ — ΓΙΑ ΤΙΣ ΥΠΟΣΥΛΛΟΓΕΣ** (ADR-862 Φ0 Β7).
+   *
+   * Υπάρχει **μόνο** για το {@link FakeDocRef.collection}. Ο αποθηκευτικός χώρος
+   * είναι **επίπεδος** `Map<όνομα, Map<id, έγγραφο>>`, και η ένθεση εκφράζεται ως
+   * **κλειδί με μονοπάτι** (`companies/c/projects/p/members`) — ακριβώς όπως το
+   * αληθινό `ref.path`. Έτσι η υποσυλλογή **ΕΝΟΣ** έργου δεν μπορεί ποτέ να
+   * επιστρέψει έγγραφο **άλλου**, που είναι το ίδιο το ερώτημα του Β7.
+   */
+  public pathBucket(fullPath: string): Map<string, Doc> {
+    return this.bucket(fullPath);
+  }
+
   public batch(): FakeBatch {
     return new FakeBatch(this);
   }
@@ -489,6 +502,31 @@ export class FakeDocRef {
   async delete(): Promise<void> {
     this.bucket.delete(this.id);
     this.db.countWrite();
+  }
+
+  /**
+   * 🔴 **ΕΛΕΙΠΕ — ΚΑΙ ΕΙΝΑΙ Η ΕΝΑΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΣΧΗΜΑΤΟΣ** «ο πλαστός δεν είχε τη
+   * μέθοδο που μετράει» (ADR-862 Φ0 Β7).
+   *
+   * Ο αναγνώστης μέλους έργου ζει σε **ένθετη** διαδρομή —
+   * `companies/{W}/projects/{P}/members` — δηλαδή κάνει `.doc().collection()`. Ο
+   * πλαστός σταματούσε στο `FakeDocRef`, οπότε η κλήση έσκαγε με *«ref.collection
+   * is not a function»*.
+   *
+   * 🔑 **ΓΙΑΤΙ ΑΥΤΟ ΔΕΝ ΕΙΝΑΙ ΕΥΚΟΛΙΑ ΑΛΛΑ ΠΡΟΫΠΟΘΕΣΗ ΤΗΣ ΑΓΚΥΡΑΣ**: χωρίς αυτόν
+   * τον κλάδο, η άγκυρα του Β7 θα **έπλαθε** την αναζήτηση — και τότε η μετάλλαξη
+   * *«γύρνα το κλειδί σε `.doc(uid)`»* θα έμενε **ΠΡΑΣΙΝΗ**, δηλαδή η άγκυρα δεν
+   * θα μπορούσε να πιάσει **ακριβώς** το σφάλμα που γέννησε τον θεματοφύλακα.
+   * Πλαστός που δεν φτάνει στο ερώτημα είναι πράσινο που σημαίνει «δεν κοίταξα».
+   *
+   * ⚠️ **Προσθετικό, μηδέν ακτίνα** — μετρημένο: **κανένας** υπάρχων καταναλωτής
+   * δεν καλεί `.collection()` σε αναφορά εγγράφου, άρα καμία σουίτα δεν αλλάζει
+   * διαδρομή (ο ίδιος κανόνας με το `batch.delete`: σε **κοινό** εργαλείο «πιο
+   * σωστό» δεν αρκεί — μετράει και **ποιον ξυπνά**).
+   */
+  collection(name: string): FakeCollection {
+    const fullPath = `${this.collectionName}/${this.id}/${name}`;
+    return new FakeCollection(this.db, this.db.pathBucket(fullPath), fullPath);
   }
 }
 
