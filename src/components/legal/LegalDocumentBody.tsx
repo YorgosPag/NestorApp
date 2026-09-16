@@ -24,7 +24,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import type { FrozenLegalBlock, FrozenLegalSection, FrozenLegalText } from '@/lib/legal/frozen-legal-document';
 import type { LegalDocumentVersion } from '@/lib/legal/legal-document-versions';
-import { fillLegalText, type PlaceholderValues } from '@/lib/legal/legal-text-placeholders';
+import type { PlaceholderValues } from '@/lib/legal/legal-text-placeholders';
+import { useLegalTextFill } from '@/components/legal/useLegalTextFill';
 
 /** Μεσημέρι UTC της ημέρας ισχύος — πέφτει στην **ίδια** ελληνική μέρα σε κάθε εποχή. */
 export const instantOfDay = (day: string): Date => new Date(`${day}T12:00:00Z`);
@@ -33,16 +34,6 @@ export const instantOfDay = (day: string): Date => new Date(`${day}T12:00:00Z`);
 export function useFrozenText(version: LegalDocumentVersion): FrozenLegalText {
   const { i18n } = useTranslation('legal');
   return version.frozen.locales[resolveHumanLanguage(i18n.language)];
-}
-
-/**
- * Συμπληρωτής θέσεων τιμών (`{agency}` · `{expiresOn}`). Χωρίς τιμές ⇒ ονομασμένες ετικέτες.
- * ⚠️ Ρητές κλήσεις `t('…')` — ο σαρωτής του route slice (ADR-744) δεν βλέπει αναζητήσεις σε χάρτη.
- */
-export function useLegalTextFill(values: PlaceholderValues = {}): (text: string) => string {
-  const { t } = useTranslation('legal');
-  const labels = { agency: t('versions.placeholders.agency'), expiresOn: t('versions.placeholders.expiresOn') };
-  return (text) => fillLegalText(text, values, labels);
 }
 
 interface BlockProps {

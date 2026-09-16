@@ -1,8 +1,6 @@
 {
   "dataDeletion": {
     "title": "Data Deletion Instructions",
-    "lastUpdated": "Last updated:",
-    "lastUpdatedDate": "February 11, 2026",
     "howToRequest": {
       "title": "How to Request Data Deletion",
       "intro": "If you would like us to delete your personal data from Nestor App CRM, please follow these steps:",
@@ -79,8 +77,6 @@
   },
   "privacyPolicy": {
     "title": "Privacy Policy",
-    "lastUpdated": "Last updated:",
-    "lastUpdatedDate": "February 11, 2026",
     "introduction": {
       "title": "1. Introduction",
       "content": "Nestor App CRM (\"we\", \"our\", \"us\") respects your privacy. This Privacy Policy explains how we collect, use, and protect your personal data when you interact with our application and services, including integrations with Facebook Messenger, Instagram, WhatsApp, and Telegram."
@@ -116,8 +112,6 @@
   },
   "termsOfService": {
     "title": "Terms of Service",
-    "lastUpdated": "Last updated:",
-    "lastUpdatedDate": "February 11, 2026",
     "acceptance": {
       "title": "1. Acceptance",
       "content": "By using Nestor App CRM services, including messaging through Facebook Messenger, Instagram, WhatsApp, or Telegram, you agree to these Terms of Service."
@@ -143,6 +137,59 @@
     "contact": {
       "title": "6. Contact",
       "intro": "The service is provided by the operator below. For questions about these terms, use the contact email:"
+    }
+  },
+  "versions": {
+    "line": "Version {version} · in force from {date}",
+    "upcoming": "New version in force from {date}",
+    "archiveLink": "All versions",
+    "archiveTitle": "Versions — {title}",
+    "archiveIntro": "Every version of this document remains available unchanged, with the fingerprint that lets you verify the text has not been altered.",
+    "versionTitle": "{title} — version {version}",
+    "effectiveFrom": "In force from {date}",
+    "status": {
+      "inForce": "In force",
+      "superseded": "Superseded",
+      "scheduled": "Scheduled"
+    },
+    "material": "Material change",
+    "minor": "Non-material change",
+    "open": "View version {version}",
+    "current": "Current version",
+    "digestLabel": "SHA-256 fingerprint",
+    "download": "Download the version file",
+    "downloadHint": "The exact bytes signed by the fingerprint — you can verify them with any SHA-256 tool.",
+    "noteTitle": "Change note",
+    "changesTitle": "What changed since version {version}",
+    "firstVersion": "First recorded version of this document.",
+    "change": {
+      "added": "New section",
+      "removed": "Removed",
+      "changed": "Changed",
+      "unchanged": "Unchanged"
+    },
+    "previousText": "Previous text",
+    "nextText": "New text",
+    "absent": "This version does not exist.",
+    "placeholders": {
+      "agency": "[agency name]",
+      "expiresOn": "[mandate expiry date]"
+    }
+  },
+  "privateMarketingDisclosure": {
+    "title": "Disclosure and instruction for private marketing",
+    "intro": {
+      "title": "What you are being asked",
+      "content": "The agency holding your mandate asks that your property be marketed without a public listing. Read the statements below and confirm each one separately."
+    },
+    "statements": {
+      "title": "Statements",
+      "relationship": "The agency {agency} acts on your behalf under a mandate valid until {expiresOn}. This consent concerns this agency and this mandate.",
+      "dualRepresentation": "The agency may also represent a buyer of the same property. In private marketing this happens more often, because fewer agencies learn about the property.",
+      "notPublished": "The property will not appear on the public map, in search or on a public listing page. Only the agency and those invited through the platform will know about it.",
+      "fewerBuyers": "With less exposure, fewer potential buyers learn about your property. This may affect the price.",
+      "revocation": "You may revoke this consent at any time by choosing public marketing or withdrawal. Private marketing stops immediately.",
+      "instruction": "I instruct the agency to market the property without a public listing, for as long as the mandate is valid or until I revoke this consent."
     }
   }
 }
