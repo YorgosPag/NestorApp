@@ -10,6 +10,7 @@
     "src/i18n/generated/routes/email__preferences__token.el.json": "0a30fc5f663f0a2da5ebc584666b4c9a86c2f97493c14058309704b885d91c23",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/invite__token.el.json": "10b3915e457027e71f08a179e0b13a024cc7901c25b3a46c1bf060ad25f8c9ac",
+    "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "b19ede6fc6c3241e6bcb448fd2912d37e1070117c5f8c6b1df6583ce9dc003c8",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "40f0188cbcf75f60d26ff4c2d176965212a7a07eea39112c778bad05b2a2f6d7",
@@ -74,7 +75,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3c5dd381f78c6822c47407435624c1ea8dcc1a2431e30e679b09d02093ccc885",
+  "inputsSha256": "b3551ae41d0b01558b3dc2b5c49ba39212b2eb9131aba521371bd2e933681ec4",
   "languages": [
     "el"
   ],
@@ -100,6 +101,7 @@
   ],
   "routeFiles": {
     "src/app/(app)/data-deletion/page.tsx": "d3e5f63dcea9f7987ad625dc9814b0db89a7df2d91bb739ac32b6e2aea978574",
+    "src/app/(app)/legal-notice/page.tsx": "290e13e377769dee782b9b4474827ad7504608bb31672900428fcb341b4446ed",
     "src/app/(app)/o/[workspace]/dashboard/page.tsx": "caae0e68c4651ed51e33c634ff45d20da06a9dc9d56901809538950f152e6980",
     "src/app/(app)/o/[workspace]/listings/mandates/[ownerPropertyId]/page.tsx": "464823b34f5a9c40f8e0827b118c9e4a923b143b15c9d8a58f70df45dc682179",
     "src/app/(app)/o/[workspace]/listings/mandates/new/page.tsx": "e678daf0d06fdd1bd4fe7ec0136db195ad9d89e300ee88f7841bd79a3da92a02",
@@ -1349,6 +1351,44 @@
             "workspaceInvite.unavailable.body",
             "workspaceInvite.unavailable.title",
             "workspaceInvite.working"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "legal-notice": {
+      "page": "src/app/(app)/legal-notice/page.tsx",
+      "wants": {
+        "legal": {
+          "keys": [
+            "legalNotice.documentsTitle",
+            "legalNotice.intro",
+            "legalNotice.operatorTitle",
+            "legalNotice.title",
+            "operator.labels.contact",
+            "operator.labels.gemi",
+            "operator.labels.operator",
+            "operator.labels.privacy",
+            "operator.labels.seat",
+            "operator.labels.vat",
+            "operator.mailboxPending",
+            "operator.noDpo",
+            "operator.noGemi",
+            "operator.pending",
+            "operator.qualifier.legalForm",
+            "operator.qualifier.tradeName"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "navigation": {
+          "keys": [
+            "legal.dataDeletion",
+            "legal.legalLinks",
+            "legal.legalNotice",
+            "legal.privacyPolicy",
+            "legal.termsOfService"
           ],
           "prefixes": [],
           "whole": false
@@ -5843,7 +5883,7 @@
     "matchedKeys": 177,
     "routeBoundaries": 0,
     "shellFiles": 674,
-    "sliceBytes": 465226
+    "sliceBytes": 466935
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
