@@ -198,7 +198,7 @@ describe('Ν — ο πίνακας των συνόρων', () => {
     expect(measureK1(files, root, OWNER)).toHaveLength(0);
   });
 
-  it('🔴 Ν5 — ΚΑΘΕ γραμμή του πίνακα δείχνει σε σύνορο που ΥΠΑΡΧΕΙ στον δίσκο', () => {
+  it('🔴 Ν5 — ΚΑΘΕ γραμμή του πίνακα δείχνει σε σύνορο που ΥΠΑΡΧΕΙ στον δίσκο (όλες)', () => {
     // Ο πραγματικός δίσκος, όχι το μίνι-repo: μια γραμμή που δείχνει σε ανύπαρκτο
     // αρχείο θα έκανε την πύλη να κοκκινίζει για λάθος λόγο — ή, χειρότερα, κάποιος
     // θα την έσβηνε αντί να τη διορθώσει.
@@ -209,5 +209,76 @@ describe('Ν — ο πίνακας των συνόρων', () => {
       expect(boundary.remedy).not.toHaveLength(0);
       expect(boundary.adr).toMatch(/^ADR-\d+/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ξ — Η ΤΕΤΑΡΤΗ ΓΡΑΜΜΗ: Η ΖΗΤΗΣΗ (ADR-864 Α15)
+// ---------------------------------------------------------------------------
+//
+// 🔴 **ΤΗ ΓΡΑΜΜΗ ΤΗ ΓΕΝΝΗΣΕ ΤΥΦΛΟ ΣΗΜΕΙΟ ΑΥΤΗΣ ΤΗΣ ΙΔΙΑΣ ΤΗΣ ΠΥΛΗΣ.** Το Κ1 ψάχνει
+// κατά λέξη `as <TypeName>`· η μηχανή ανάγνωσης των «δικών μου» έγραφε **`as T`** —
+// γενικό, άρα **αόρατο**. Η πύλη ήταν πράσινη επειδή δεν έβλεπε την πόρτα, όχι επειδή
+// ήταν κλειστή: το σχήμα «0 = κανείς δεν κοίταξε», μέσα στην πύλη που το κυνηγά.
+//
+// ⚠️ **Το γενικό ΔΕΝ το φυλάει αυτή η ομάδα** — το φυλάει ο **τύπος**
+// (`OwnedCollectionSpec<T>` με υποχρεωτικό `fromDocument`). Εδώ φυλάγεται το
+// **υπόλοιπο** της κλάσης: ωμό `as PropertyDemand` οπουδήποτε αλλού στο repo.
+
+describe('Ξ — η γραμμή της ζήτησης ΕΚΤΕΛΕΙΤΑΙ', () => {
+  const DEMAND = BOUNDARIES.find((b) => b.typeName === 'PropertyDemand');
+
+  it('Ξ0 — ο πίνακας τη δηλώνει, με θεματοφύλακα που υπάρχει', () => {
+    expect(DEMAND).toBeDefined();
+    const repo = path.resolve(__dirname, '..', '..');
+    expect(fs.existsSync(path.join(repo, DEMAND.custodian))).toBe(true);
+  });
+
+  it('🔴 Ξ1 — «as PropertyDemand» σε ΝΕΟ αρχείο ⇒ ΚΟΚΚΙΝΟ', () => {
+    write(DEMAND.custodian, 'export function propertyDemandFromDocument(raw, id) { return null; }');
+    write('src/services/demand/x.ts', 'const d = snap.data() as PropertyDemand;');
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+    const k1 = measureK1(files, root, DEMAND);
+
+    expect(k1).toHaveLength(1);
+    expect(k1[0].file).toBe('src/services/demand/x.ts');
+  });
+
+  it('🔴 Ξ2 (ΤΟ ΣΗΜΑΝΤΙΚΟ) — σύνορο ΧΩΡΙΣ καταναλωτές ⇒ το Κ2 το πιάνει', () => {
+    write(DEMAND.custodian, 'export function propertyDemandFromDocument(raw, id) { return null; }');
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+    expect(measureK2(files, root, DEMAND)).toHaveLength(0);
+
+    write(
+      'src/services/demand/reader.ts',
+      `import { propertyDemandFromDocument } from '@/lib/demand/${DEMAND.module}';\n` +
+        'export const x = propertyDemandFromDocument;'
+    );
+    const after = collectSourceFiles(path.join(root, 'src'), root);
+    expect(measureK2(after, root, DEMAND)).toEqual(['src/services/demand/reader.ts']);
+  });
+
+  it('Ξ3 — δεν μπερδεύεται με τις άλλες τρεις γραμμές', () => {
+    write(DEMAND.custodian, 'export function propertyDemandFromDocument(raw, id) { return null; }');
+    write('src/services/demand/x.ts', 'const d = snap.data() as PropertyDemand;');
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+
+    expect(measureK1(files, root, DEMAND)).toHaveLength(1);
+    for (const other of BOUNDARIES.filter((b) => b.typeName !== 'PropertyDemand')) {
+      expect(measureK1(files, root, other)).toHaveLength(0);
+    }
+  });
+
+  it('Ξ4 — το ίδιο το σύνορο ΕΠΙΤΡΕΠΕΤΑΙ να ισχυρίζεται', () => {
+    write(
+      DEMAND.custodian,
+      'export function readStoredDemand(raw, id) { return raw as PropertyDemand; }'
+    );
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+    expect(measureK1(files, root, DEMAND)).toHaveLength(0);
   });
 });

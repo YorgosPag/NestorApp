@@ -29,6 +29,7 @@ import {
   NO_DEMAND_FEATURES,
   type PropertyDemand,
 } from '@/types/property-demand';
+import { readStoredDemand } from '@/lib/demand/property-demand-from-document';
 
 const NOW = '2026-08-11T00:00:00.000Z';
 
@@ -89,9 +90,33 @@ describe('🔴 Λ — κλειστή λογιστική, fail-closed', () => {
     });
   }
 
+  /**
+   * 🔴 **Ο ΚΑΔΟΣ ΠΟΥ ΔΕΝ ΤΟΝ ΓΕΜΙΖΕΙ Ο ΚΡΙΤΗΣ — ΚΑΙ ΤΟ ΛΕΜΕ, ΔΕΝ ΤΟ ΚΡΥΒΟΥΜΕ.**
+   *
+   * Το `incomplete` (ADR-864 **Α15**) **δεν μπορεί** να προκύψει από το
+   * {@link demandExclusionReason}: εκείνο δέχεται **ήδη διαβασμένη** — άρα πλήρη —
+   * οντότητα. Τον γεμίζει το **σύνορο ανάγνωσης**, ο μόνος που είδε **τι έλειπε**
+   * (πρότυπο **RESO** `Incomplete`: εκτός αγοράς, **ορατή στον κάτοχο**).
+   *
+   * ⚠️ **Η δήλωση δεν αρκεί.** Μια λίστα εξαιρέσεων γραμμένη σε σχόλιο είναι ακριβώς
+   * το *«οδηγία σε σχόλιο δεν είναι πύλη»* — γι' αυτό ο ισχυρισμός **εκτελείται**
+   * αμέσως από κάτω, αντί να τον πιστέψει κανείς.
+   */
+  const READER_PRODUCED: readonly DemandExclusion[] = ['incomplete'];
+
   it('🔑 ΚΑΘΕ λόγος αποκλεισμού καλύπτεται — κανένας αδρανής κάδος', () => {
     const covered = new Set(CASES.map(([reason]) => reason));
-    expect([...DEMAND_EXCLUSIONS].sort()).toEqual([...covered].sort());
+    expect([...DEMAND_EXCLUSIONS].sort()).toEqual([...covered, ...READER_PRODUCED].sort());
+  });
+
+  it('🔴 και ο κάδος του ΑΝΑΓΝΩΣΤΗ ΕΚΤΕΛΕΙΤΑΙ — το σύνορο όντως γεννά ελλιπή', () => {
+    const { place: _dropped, ...withoutPlace } = demand();
+
+    // Η ελλιπής **δεν φτάνει ποτέ** στον κριτή — γι' αυτό ο κάδος της δεν είναι
+    // αδρανής, απλώς τον γεμίζει άλλος. Η μετάλλαξη που το πιάνει: αν το σύνορο
+    // πάψει να ξεχωρίζει το κενό, αυτό εδώ κοκκινίζει πριν προλάβει να γίνει «0».
+    expect(readStoredDemand(withoutPlace, 'dmnd_a')?.kind).toBe('incomplete');
+    expect(READER_PRODUCED).toContain('incomplete');
   });
 
   it('υγιής ζήτηση δεν αποκλείεται', () => {

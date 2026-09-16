@@ -88,6 +88,29 @@ function DemandBody({ demand }: { demand: PropertyDemand }): React.ReactElement 
   );
 }
 
+/**
+ * **Η ζήτηση που δεν διαβάστηκε ολόκληρη** — ίδια λόγια με τον κατάλογο, ίδια κλειδιά.
+ *
+ * 🔑 **Χωριστό σκέλος, ΟΧΙ «μισή οθόνη λεπτομέρειας».** Το `DemandBody` καλεί
+ * `useDemandAnswer(demand)` και `DemandSummary`, που αποδομούν `place.kind` ·
+ * `timing.kind` · `features.types` **χωρίς φρουρό** — δηλαδή μια ελλιπής ζήτηση θα
+ * ζωγράφιζε **λευκή οθόνη**. Πλέον ο τύπος δεν επιτρέπει καν την απόπειρα.
+ */
+function IncompleteDemand({ gaps }: { gaps: readonly string[] }): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  const K = `${NS}:demand.incomplete`;
+
+  return (
+    <section className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold text-foreground">{t(`${K}.badge`)}</h2>
+      <p className="text-sm text-foreground">
+        {t(`${K}.why`, { gaps: gaps.map((gap) => t(`${K}.gap.${gap}`)).join(' · ') })}
+      </p>
+      <p className="text-sm text-muted-foreground">{t(`${K}.reassure`)}</p>
+    </section>
+  );
+}
+
 /** Η ζήτηση δεν βρέθηκε — **και λέγεται σωστά**. */
 function NotFound(): React.ReactElement {
   const { t } = useTranslation([NS]);
@@ -141,7 +164,17 @@ export function DemandDetailContent({ demandId }: { demandId: string }): React.R
       {lookup.state === 'error' && (
         <p className="text-foreground">{t(`${NS}:demand.detail.error`)}</p>
       )}
-      {lookup.state === 'found' && <DemandBody demand={lookup.demand} />}
+      {/*
+        🔴 **ΤΡΙΑ ΣΚΕΛΗ ΣΤΟ «ΒΡΕΘΗΚΕ», ΟΧΙ ΕΝΑ** (ADR-864 Α15): η ανάγνωση απαντά
+        «πλήρης» ή «ελλιπής», και η δεύτερη **δεν** περνά στο `DemandBody` — εκείνο
+        υπολογίζει απάντηση αγοράς πάνω σε κριτήρια που, εξ ορισμού, δεν διαβάστηκαν.
+      */}
+      {lookup.state === 'found' && lookup.demand.kind === 'incomplete' && (
+        <IncompleteDemand gaps={lookup.demand.gaps} />
+      )}
+      {lookup.state === 'found' && lookup.demand.kind === 'complete' && (
+        <DemandBody demand={lookup.demand.demand} />
+      )}
     </main>
   );
 }

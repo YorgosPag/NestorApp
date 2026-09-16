@@ -33,6 +33,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { db } from '@/lib/firebase';
 import { isPersonalCustody } from '@/lib/owner-property/listing-custody';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 
 import {
@@ -51,7 +52,7 @@ import {
  *
  * ⚠️ Σταθερά επιπέδου module — η αναφορά της `buildQuery` μπαίνει σε `useEffect` deps.
  */
-const OWNER_PROPERTIES: OwnedCollectionSpec = {
+const OWNER_PROPERTIES: OwnedCollectionSpec<OwnerProperty> = {
   collectionName: COLLECTIONS.OWNER_PROPERTIES,
   buildQuery: (userId) =>
     query(
@@ -59,6 +60,16 @@ const OWNER_PROPERTIES: OwnedCollectionSpec = {
       where(FIELDS.AUTHOR_USER_ID, '==', userId),
     ),
   label: 'τα ακίνητά μου',
+  /**
+   * 🔴 **ΤΟ ΣΥΝΟΡΟ ΠΟΥ Ο ΠΕΛΑΤΗΣ ΔΕΝ ΠΕΡΝΟΥΣΕ** (ADR-842 §7.6.12 · ADR-864 Α3).
+   *
+   * Ο **διακομιστής** περνούσε από εδώ σε 19 σημεία· αυτή η οθόνη **όχι** — και το
+   * τίμημα ήταν ορατό στον άνθρωπο: **0 από 7** αποθηκευμένες καταχωρήσεις έχουν
+   * `marketingAudience` (η απουσία σημαίνει `public`, Α3), οπότε κάθε κάρτα τύπωνε
+   * `marketingAudience.undefined`. Το σύνορο το ερμήνευε **ήδη σωστά**· απλώς δεν το
+   * ρωτούσε κανείς.
+   */
+  fromDocument: ownerPropertyFromDocument,
 };
 
 /** Οι τέσσερις καταστάσεις του καταλόγου, με το λεξιλόγιο της προσφοράς. */

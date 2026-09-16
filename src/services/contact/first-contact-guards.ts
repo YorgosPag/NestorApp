@@ -56,6 +56,7 @@ import {
   type FirstContactUnavailable as Unavailable,
 } from '@/services/contact/first-contact-vocabulary';
 import { registryClosureOf } from '@/lib/agency/showcase-registry-closure';
+import { propertyDemandFromDocument } from '@/lib/demand/property-demand-from-document';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import type { FirstContactTarget, MatchReason } from '@/types/first-contact';
 import type { PropertyDemand } from '@/types/property-demand';
@@ -215,8 +216,13 @@ async function readDemand(
   demandId: string,
 ): Promise<PropertyDemand | 'absent' | null> {
   try {
+    // 🔴 **ΣΥΝΟΡΟ, ΟΧΙ `as`** (CHECK 3.74): ελλιπής ζήτηση λογίζεται **`absent`** —
+    //    «δεν υπάρχει **για αυτή τη χρήση**». Ο `composeMatchReason` αποδομεί
+    //    `features.types` και `place.kind` χωρίς φρουρό· ένα ωμό cast εδώ έριχνε τη
+    //    διαδρομή πρώτης επαφής με `TypeError`, χωρίς κανένα δίχτυ από πάνω.
     const snapshot = await adminDb.collection(COLLECTIONS.PROPERTY_DEMANDS).doc(demandId).get();
-    return snapshot.exists ? (snapshot.data() as PropertyDemand) : 'absent';
+    if (!snapshot.exists) return 'absent';
+    return propertyDemandFromDocument(snapshot.data(), snapshot.id) ?? 'absent';
   } catch (error) {
     logger.error('[FIRST-CONTACT] Η ανάγνωση της ζήτησης απέτυχε — άγνωστο, όχι κενό', {
       demandId,

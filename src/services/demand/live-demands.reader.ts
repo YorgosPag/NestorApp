@@ -27,6 +27,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { propertyDemandFromDocument } from '@/lib/demand/property-demand-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
 import { LIVE_DEMAND_LIFECYCLES, type PropertyDemand } from '@/types/property-demand';
 
@@ -53,6 +54,16 @@ export interface LiveDemandPool {
    * άλλο νούμερο. Ο καλών οφείλει να αποφασίσει τι λέει στον άνθρωπο.
    */
   readonly truncated: boolean;
+  /**
+   * Πόσες υποψήφιες **δεν διαβάστηκαν ολόκληρες** και μπήκαν σε καραντίνα.
+   *
+   * 🔴 **Ταξιδεύει, δεν μένει στο ημερολόγιο** — ίδιο δόγμα με το {@link truncated}
+   * από πάνω: ένα σιωπηλό κόψιμο δίνει αριθμό που *μοιάζει* απάντηση και είναι
+   * **δείγμα**. Ο κάδος `incomplete` της απογραφής γεμίζει **από εδώ**, γιατί αυτός ο
+   * αναγνώστης είναι ο **μόνος** που τις είδε (`demandExclusionReason` κρίνει ήδη
+   * πλήρεις οντότητες).
+   */
+  readonly incomplete: number;
 }
 
 /**
@@ -80,8 +91,15 @@ export async function readLiveDemands(
     .limit(MAX_DEMAND_CANDIDATES)
     .get();
 
-  const demands = snapshot.docs.map((entry) => entry.data() as PropertyDemand);
-  const truncated = demands.length === MAX_DEMAND_CANDIDATES;
+  // 🔴 **ΣΥΝΟΡΟ ΑΝΑΓΝΩΣΗΣ, ΟΧΙ `as`** (CHECK 3.74 · ADR-864 Α15): ό,τι δεν διαβάζεται
+  //    ολόκληρο **δεν γίνεται ποτέ ισχυρισμός προς τρίτον** — πρότυπο RESO `Incomplete`.
+  //    Ο τύπος εγγυάται πλέον ό,τι υπόσχεται: η μηχανή ταιριάσματος δεν βλέπει ελλιπή.
+  const demands = snapshot.docs.flatMap((entry) => {
+    const demand = propertyDemandFromDocument(entry.data(), entry.id);
+    return demand === null ? [] : [demand];
+  });
+  const incomplete = snapshot.docs.length - demands.length;
+  const truncated = snapshot.docs.length === MAX_DEMAND_CANDIDATES;
 
   if (truncated) {
     logger.warn('Το όριο υποψηφίων αγγίχθηκε — ο αριθμός είναι κάτω φράγμα', {
@@ -89,5 +107,11 @@ export async function readLiveDemands(
     });
   }
 
-  return { demands, truncated };
+  if (incomplete > 0) {
+    logger.warn('Ζητήσεις σε καραντίνα — δεν διαβάστηκαν ολόκληρες', {
+      data: { incomplete: String(incomplete), considered: String(snapshot.docs.length), caller: label },
+    });
+  }
+
+  return { demands, truncated, incomplete };
 }

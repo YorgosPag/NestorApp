@@ -29,6 +29,7 @@ import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_DEMAND_ROUTE } from '@/lib/demand/demand-routes';
+import { demandReadId } from '@/lib/demand/property-demand-from-document';
 import { useMyDemands } from '@/services/realtime/hooks/useMyDemands';
 import { DemandCard } from './DemandCard';
 
@@ -86,9 +87,12 @@ function DemandsBody(): React.ReactElement {
         <EmptyState />
       ) : (
         <ul className="flex list-none flex-col gap-3 p-0">
-          {state.demands.map((demand) => (
-            <li key={demand.id}>
-              <DemandCard demand={demand} />
+          {state.demands.map((read) => (
+            // ⚠️ Η ταυτότητα ζητιέται από το **σύνορο** (`demandReadId`): ζει στο ένα
+            //    σκέλος ως `demand.id` και στο άλλο ως `id`, και η οθόνη δεν έχει λόγο
+            //    να ξέρει ποιο από τα δύο διαβάστηκε.
+            <li key={demandReadId(read)}>
+              <DemandCard read={read} />
             </li>
           ))}
         </ul>

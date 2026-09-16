@@ -38,6 +38,10 @@ import { nowISO } from '@/lib/date-local';
 import { demandExclusionReason } from '@/lib/demand/demand-aggregate';
 import { demandDetailHref } from '@/lib/demand/demand-routes';
 import { affirmDemand } from '@/services/demand/property-demand.service';
+import {
+  demandReadId,
+  type StoredDemandRead,
+} from '@/lib/demand/property-demand-from-document';
 import { DEMAND_AFFIRMATION_TTL_DAYS, type PropertyDemand } from '@/types/property-demand';
 import { DemandSummary } from './DemandSummary';
 
@@ -89,7 +93,59 @@ function AffirmButton({ demand }: { demand: PropertyDemand }): React.ReactElemen
   );
 }
 
-export function DemandCard({ demand }: { demand: PropertyDemand }): React.ReactElement {
+/**
+ * **Η ζήτηση που δεν διαβάστηκε ολόκληρη** — ορατή, εξηγημένη, διορθώσιμη.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΕΜΦΑΝΙΖΕΤΑΙ ΑΝΤΙ ΝΑ ΠΕΤΑΧΤΕΙ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο διακομιστής τη **βγάζει** από κάθε άθροισμα και ταίριασμα (καραντίνα — πρότυπο
+ * **RESO** `Incomplete`: *«δεν συμπληρώθηκε, δεν δημοσιεύεται»*). Εδώ όμως είναι ο
+ * κατάλογος του **ίδιου του κατόχου**, και η **Α5 §4.1** απαγορεύει τη σιωπηλή
+ * εξαφάνιση: κάτι δικό του που «χάθηκε μόνο του» είναι το χειρότερο που μπορεί να δει.
+ *
+ * 🔑 **Λέει ΤΙ λείπει, όχι «σφάλμα».** Τα κενά είναι κλειστό λεξιλόγιο με δικά τους
+ * κλειδιά i18n (`demand.incomplete.gap.*`), ώστε ο άνθρωπος να διαβάζει *«λείπει: η
+ * περιοχή»* — και ο δρόμος διόρθωσης να είναι **ένα κλικ**, η ίδια φόρμα που θα είχε
+ * καταρρεύσει πριν το σύνορο.
+ */
+function IncompleteDemandCard({
+  id,
+  gaps,
+}: {
+  id: string;
+  gaps: readonly string[];
+}): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  const K = 'property-market:demand.incomplete';
+
+  return (
+    <article className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold text-foreground">{t(`${K}.badge`)}</h3>
+        <Link href={demandDetailHref(id)} className="text-sm font-medium text-foreground underline">
+          {t(`${K}.fix`)}
+        </Link>
+      </header>
+
+      <p className="text-sm text-foreground">
+        {t(`${K}.why`, { gaps: gaps.map((gap) => t(`${K}.gap.${gap}`)).join(' · ') })}
+      </p>
+      <p className="text-sm text-muted-foreground">{t(`${K}.reassure`)}</p>
+    </article>
+  );
+}
+
+export function DemandCard({ read }: { read: StoredDemandRead }): React.ReactElement {
+  if (read.kind === 'incomplete') {
+    return <IncompleteDemandCard id={read.id} gaps={read.gaps} />;
+  }
+  return <CompleteDemandCard demand={read.demand} />;
+}
+
+/** Η κάρτα όπως ήταν — **αμετάβλητη**, και πλέον με τον τύπο να λέει αλήθεια. */
+function CompleteDemandCard({ demand }: { demand: PropertyDemand }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
 
   return (

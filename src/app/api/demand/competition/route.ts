@@ -61,6 +61,7 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { discloseCompetition, type DemandDisclosure } from '@/lib/demand/demand-aggregate';
 import { selectSimilarDemands } from '@/lib/demand/demand-similarity';
+import { propertyDemandFromDocument } from '@/lib/demand/property-demand-from-document';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import type { PropertyDemand } from '@/types/property-demand';
 
@@ -83,7 +84,13 @@ async function handler(
   const db = getAdminFirestore();
 
   const own = await db.collection(COLLECTIONS.PROPERTY_DEMANDS).doc(demandId).get();
-  const demand = own.data() as PropertyDemand | undefined;
+  // 🔴 **ΣΥΝΟΡΟ, ΟΧΙ `as`** (CHECK 3.74): ελλιπής ζήτηση απαντά **ΤΟ ΙΔΙΟ** με
+  //    ανύπαρκτη — `NOT_FOUND`. Είναι το σωστό και για τα δύο ερωτήματα: ο κάτοχος τη
+  //    βλέπει στον **δικό του** κατάλογο με τον λόγο της (Α5 §4.1), ενώ το ανώνυμο
+  //    άθροισμα δεν χτίζεται ποτέ πάνω σε κριτήρια που δεν διαβάστηκαν.
+  const demand = own.exists
+    ? (propertyDemandFromDocument(own.data(), own.id) ?? undefined)
+    : undefined;
 
   // 🔴 «Δεν υπάρχει» και «δεν είναι δική σου» απαντώνται **ΤΟ ΙΔΙΟ**, επίτηδες. Μια
   // ξεχωριστή απάντηση 403 θα **επιβεβαίωνε** ότι η ταυτότητα υπάρχει — δηλαδή θα

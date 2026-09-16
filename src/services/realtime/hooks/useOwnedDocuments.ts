@@ -99,10 +99,39 @@ export type OwnedDocumentState<T> =
   | { readonly state: 'absent' }
   | { readonly state: 'error'; readonly message: string };
 
-/** Πού ζει το «δικό μου» — η συλλογή + το **ερώτημα** που ονομάζει τον κάτοχο. */
-export interface OwnedCollectionSpec {
+/** Πού ζει το «δικό μου» — η συλλογή, το **ερώτημα**, και το **σύνορο ανάγνωσης**. */
+export interface OwnedCollectionSpec<T> {
   /** Το όνομα της συλλογής, από το `COLLECTIONS.*` — για την ανάγνωση **ενός** εγγράφου. */
   readonly collectionName: string;
+  /**
+   * 🔴 **Η ΜΟΝΗ ΥΠΟΧΡΕΩΤΙΚΗ ΜΕΤΑΦΡΑΣΗ**: αποθηκευμένο έγγραφο → μοντέλο του τομέα.
+   *
+   * ────────────────────────────────────────────────────────────────────────────
+   * ΓΙΑΤΙ ΕΓΙΝΕ ΥΠΟΧΡΕΩΤΙΚΟ — ΜΕΤΡΗΜΕΝΗ ΒΛΑΒΗ ΣΤΗΝ ΠΑΡΑΓΩΓΗ, 2026-09-16
+   * ────────────────────────────────────────────────────────────────────────────
+   *
+   * Εδώ στεκόταν `entry.data() as T` — **ωμός ισχυρισμός μέσα από γενικό**. Το
+   * αποτέλεσμα, ορατό στην οθόνη του ανθρώπου: **7 στις 7** καταχωρήσεις τύπωναν το
+   * ωμό κλειδί `marketingAudience.undefined`, η οθόνη λεπτομέρειας έλεγε «κλειστή
+   * διάθεση» για αγγελία που **ήταν** στον δημόσιο χάρτη, και η επιβεβαίωση πριν το
+   * στένεμα κοινού **έπαψε να ρωτά** (`narrowsAudience(undefined, …)` ⇒ `false`).
+   *
+   * 🔑 **Η ΠΥΛΗ ΗΤΑΝ ΠΡΑΣΙΝΗ, ΚΑΙ ΓΙ' ΑΥΤΟ ΤΟ ΠΕΔΙΟ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ ΚΑΙ ΟΧΙ
+   * ΠΡΟΑΙΡΕΤΙΚΟ**: το CHECK 3.74 ψάχνει κατά λέξη `as OwnerProperty` — ένα `as T`
+   * του ξεφεύγει **δομικά**. Η προστασία δεν μπορούσε να έρθει από τη σάρωση
+   * κειμένου· έπρεπε να έρθει από τον **τύπο**. Προαιρετικό πεδίο θα σήμαινε ότι ο
+   * επόμενος καταναλωτής μπορεί να το ξεχάσει — δηλαδή ακριβώς η ίδια βλάβη, με νέο
+   * πρόσωπο.
+   *
+   * ⚠️ **Σταθερά επιπέδου module, ΠΟΤΕ inline** — ίδιος λόγος με το `buildQuery`:
+   * η αναφορά μπαίνει στις εξαρτήσεις του `useEffect`.
+   *
+   * 🔑 **`null` σημαίνει «αυτό δεν είναι έγγραφο του τομέα»** — όχι «λείπει πεδίο».
+   * Τα σύνορα (`*-from-document.ts`) επιστρέφουν `null` **μόνο** για δεδομένα που δεν
+   * είναι καν αντικείμενο· ένα έγγραφο που έχασε πεδίο **εξακολουθεί να υπάρχει** και
+   * ο κάτοχός του δικαιούται να το δει.
+   */
+  readonly fromDocument: (raw: unknown, id: string) => T | null;
   /**
    * Χτίζει το ερώτημα «τα δικά μου» — με το `where(<πεδίο κατόχου>)` **υποχρεωτικά**.
    *
@@ -121,13 +150,13 @@ export interface OwnedCollectionSpec {
 
 /** **Τα δικά μου**, ζωντανά. */
 export function useOwnedList<T>(
-  spec: OwnedCollectionSpec,
+  spec: OwnedCollectionSpec<T>,
   userId: string | null,
 ): OwnedListState<T> {
   const [state, setState] = useState<OwnedListState<T>>(
     userId === null ? { state: 'anonymous' } : { state: 'loading' },
   );
-  const { buildQuery, label } = spec;
+  const { buildQuery, label, fromDocument } = spec;
 
   useEffect(() => {
     if (userId === null) {
@@ -142,7 +171,13 @@ export function useOwnedList<T>(
       (snapshot) => {
         setState({
           state: 'ready',
-          items: snapshot.docs.map((entry) => entry.data() as T),
+          // 🔑 **`flatMap` και όχι `map` + `?? []`**: ό,τι δεν είναι καν έγγραφο του
+          //    τομέα **πέφτει**, αντί να μπει στη λίστα ως τρύπα που κάθε οθόνη θα
+          //    έπρεπε να θυμάται να ελέγξει. Η ταυτότητα έρχεται από το **έγγραφο**.
+          items: snapshot.docs.flatMap((entry) => {
+            const item = fromDocument(entry.data(), entry.id);
+            return item === null ? [] : [item];
+          }),
         });
       },
       (error: Error) => {
@@ -152,7 +187,7 @@ export function useOwnedList<T>(
     );
 
     return () => unsubscribe();
-  }, [buildQuery, label, userId]);
+  }, [buildQuery, label, fromDocument, userId]);
 
   return state;
 }
@@ -169,12 +204,12 @@ export function useOwnedList<T>(
  * να κατεβάσει **όλα** τα έγγραφα του ανθρώπου για να δείξει ένα.
  */
 export function useOwnedDocument<T>(
-  spec: OwnedCollectionSpec,
+  spec: OwnedCollectionSpec<T>,
   documentId: string,
   userId: string | null,
 ): OwnedDocumentState<T> {
   const [lookup, setLookup] = useState<OwnedDocumentState<T>>({ state: 'loading' });
-  const { collectionName, label } = spec;
+  const { collectionName, label, fromDocument } = spec;
 
   useEffect(() => {
     if (userId === null) {
@@ -197,11 +232,15 @@ export function useOwnedDocument<T>(
     const unsubscribe = onSnapshot(
       doc(db, collectionName, documentId),
       (snapshot) => {
-        setLookup(
-          snapshot.exists()
-            ? { state: 'found', item: snapshot.data() as T }
-            : { state: 'absent' },
-        );
+        if (!snapshot.exists()) {
+          setLookup({ state: 'absent' });
+          return;
+        }
+        // 🔑 **`null` από το σύνορο ⇒ `absent`, όχι σφάλμα.** Είναι το ίδιο συμβόλαιο
+        //    που ήδη γράφει η τεκμηρίωση του τύπου: «δεν υπάρχει **για σένα**» — και η
+        //    άρνηση του κανόνα δεν ξεχωρίζει από την απουσία, επίτηδες.
+        const item = fromDocument(snapshot.data(), snapshot.id);
+        setLookup(item === null ? { state: 'absent' } : { state: 'found', item });
       },
       (error: Error) => {
         // 🔑 Η άρνηση του κανόνα φτάνει **εδώ**, όχι στο `absent`. Και μεταφράζεται σε
@@ -220,7 +259,7 @@ export function useOwnedDocument<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, label, documentId, userId]);
+  }, [collectionName, label, fromDocument, documentId, userId]);
 
   return lookup;
 }

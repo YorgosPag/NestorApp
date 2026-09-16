@@ -949,6 +949,18 @@
       ],
       "tier": 3
     },
+    "property-demand-from-document": {
+      "addedDate": "2026-09-16",
+      "ssotFile": "src/lib/demand/property-demand-from-document.ts",
+      "description": "ΤΟ ΣΥΝΟΡΟ ΤΗΣ ΖΗΤΗΣΗΣ — έγγραφο Firestore → PropertyDemand, ή ΟΝΟΜΑΣΜΕΝΟ ΚΕΝΟ. Import from @/lib/demand/property-demand-from-document — ποτέ δεύτερη μετάφραση. 🔴 ΓΙΑΤΙ (ADR-864 Α15): η ανάγνωση γινόταν με ωμό snap.data() as PropertyDemand σε 3 σημεία διακομιστή ΚΑΙ με ΓΕΝΙΚΟ as T μέσα στη μηχανή των «δικών μου» (useOwnedDocuments) — το γενικό ήταν ΑΟΡΑΤΟ στο CHECK 3.74, που ψάχνει κατά λέξη «as <TypeName>». Μετρημένο τίμημα 2026-09-16: 0 από 7 owner_properties είχαν marketingAudience ⇒ κάθε κάρτα τύπωνε ωμό κλειδί, και η ΙΔΙΑ μηχανή σερβίρει τη ζήτηση, όπου μια απουσία πεδίου ρίχνει ΟΛΟΚΛΗΡΗ τη σελίδα (DemandSummary αποδομεί place.kind/timing.kind/features.types χωρίς φρουρό) και τα cron ειδοποιητών. 🔑 ΚΑΜΙΑ ΠΡΟΕΠΙΛΟΓΗ, τεκμηριωμένο: Google AIP-216 («το *_UNSPECIFIED ΔΕΝ πρέπει να χρησιμοποιείται» ως κατάσταση) · Protobuf (η άγνωστη τιμή ΔΙΑΤΗΡΕΙΤΑΙ, η παρουσία κρίνεται χωριστά ⇒ τρεις καταστάσεις) · Avro (προεπιλογή ΜΟΝΟ δηλωμένη στο σχήμα, αλλιώς σφάλμα) · RESO StandardStatus «Incomplete» = δεν συμπληρώθηκε, ΔΕΝ δημοσιεύεται. ⚠️ Διακριτή ένωση complete/incomplete ΑΝΤΙ για πλάτεμα των πεδίων σε | null: ο τύπος PropertyDemand παύει να λέει ψέματα ΧΩΡΙΣ να αλλάξει κανένας από τους ~20 καταναλωτές, και η μηχανή ταιριάσματος δεν βλέπει ΠΟΤΕ ελλιπή ζήτηση. ⛔ ΤΑ features/proximity ΔΕΝ είναι κενά: έχουν ΔΗΛΩΜΕΝΗ ουδέτερη τιμή στον τύπο (NO_DEMAND_FEATURES · «κενό = καμία απαίτηση») — η περίπτωση που το Avro επιτρέπει. Άγκυρες που το ΕΚΤΕΛΟΥΝ: src/lib/demand/__tests__/property-demand-from-document.test.ts (8 ομάδες· η Κ2 διατρέχει το ίδιο το DEMAND_GAPS, άρα νέο κενό χωρίς κριτή κοκκινίζει).",
+      "forbiddenPatterns": [
+        "(export\\s+)?function\\s+(readStoredDemand|propertyDemandFromDocument|demandReadId)\\b"
+      ],
+      "allowlist": [
+        "src/lib/demand/property-demand-from-document.ts"
+      ],
+      "tier": 3
+    },
     "property-type-aliases": {
       "addedDate": "2026-08-20",
       "ssotFile": "src/constants/property-type-aliases.ts",

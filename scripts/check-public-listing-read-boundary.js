@@ -114,6 +114,26 @@ const BOUNDARIES = [
     module: 'showcase-read',
     remedy: '«readShowcase(raw, companyId)»',
   },
+  {
+    // 🔴 ADR-864 Α15 — Η ΤΕΤΑΡΤΗ ΓΡΑΜΜΗ, ΚΑΙ ΤΗ ΓΕΝΝΗΣΕ ΤΥΦΛΟ ΣΗΜΕΙΟ **ΑΥΤΗΣ** ΤΗΣ ΠΥΛΗΣ.
+    //
+    // Το Κ1 ψάχνει κατά λέξη `as <TypeName>` — και η μηχανή ανάγνωσης των «δικών μου»
+    // (`services/realtime/hooks/useOwnedDocuments.ts`) έγραφε **`as T`**, γενικό. Δηλαδή
+    // η πύλη ήταν πράσινη επειδή **δεν μπορούσε να δει την πόρτα**, όχι επειδή ήταν
+    // κλειστή: το σχήμα «0 = κανείς δεν κοίταξε», μέσα στην ίδια την πύλη που το
+    // κυνηγά. Μετρημένο τίμημα στην παραγωγή (2026-09-16): **7 στις 7** καταχωρήσεις
+    // τύπωναν ωμό κλειδί, η οθόνη έλεγε «κλειστή διάθεση» για δημόσια αγγελία, και η
+    // επιβεβαίωση πριν το στένεμα κοινού **έπαψε να ρωτά**.
+    //
+    // 🔑 Η θεραπεία του **γενικού** δεν είναι regex — είναι **τύπος**: το
+    // `OwnedCollectionSpec<T>` απαιτεί πλέον `fromDocument`. Αυτή η γραμμή φυλάει το
+    // **υπόλοιπο** της κλάσης: ωμό `as PropertyDemand` οπουδήποτε αλλού στο repo.
+    adr: 'ADR-864 Α15',
+    typeName: 'PropertyDemand',
+    custodian: 'src/lib/demand/property-demand-from-document.ts',
+    module: 'property-demand-from-document',
+    remedy: '«readStoredDemand(raw, id)» ή «propertyDemandFromDocument(raw, id)»',
+  },
 ];
 
 /** Ο ισχυρισμός που ψάχνει η Κ1 για μια γραμμή του πίνακα. */

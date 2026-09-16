@@ -22,7 +22,10 @@ import { collection, query, where } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { db } from '@/lib/firebase';
-import type { PropertyDemand } from '@/types/property-demand';
+import {
+  readStoredDemand,
+  type StoredDemandRead,
+} from '@/lib/demand/property-demand-from-document';
 
 import {
   useOwnedDocument,
@@ -40,7 +43,7 @@ import {
  *
  * ⚠️ Σταθερά επιπέδου module — η αναφορά της `buildQuery` μπαίνει σε `useEffect` deps.
  */
-const DEMANDS: OwnedCollectionSpec = {
+const DEMANDS: OwnedCollectionSpec<StoredDemandRead> = {
   collectionName: COLLECTIONS.PROPERTY_DEMANDS,
   buildQuery: (userId) =>
     query(
@@ -48,13 +51,33 @@ const DEMANDS: OwnedCollectionSpec = {
       where(FIELDS.AUTHOR_USER_ID, '==', userId),
     ),
   label: 'οι ζητήσεις',
+  /**
+   * 🔴 **`readStoredDemand` ΚΑΙ ΟΧΙ `propertyDemandFromDocument`, ΕΠΙΤΗΔΕΣ.**
+   *
+   * Το λεπτό περιτύλιγμα πετά τις ελλιπείς — σωστό για τον **διακομιστή** (καραντίνα
+   * RESO: καμία ελλιπής ζήτηση δεν γίνεται ισχυρισμός προς τρίτον). Εδώ θα ήταν
+   * **σιωπηλή εξαφάνιση** από τον κατάλογο του **ίδιου του κατόχου** — ακριβώς αυτό
+   * που απαγορεύει η Α5 §4.1, και το χειρότερο που μπορεί να δει ο άνθρωπος: κάτι
+   * δικό του που «χάθηκε μόνο του».
+   *
+   * Άρα η οθόνη παίρνει **και τα δύο σκέλη** και δείχνει το ελλιπές **με τον λόγο του**
+   * και έναν δρόμο διόρθωσης.
+   */
+  fromDocument: readStoredDemand,
 };
 
-/** Οι τέσσερις καταστάσεις του καταλόγου, με το λεξιλόγιο της ζήτησης. */
+/**
+ * Οι τέσσερις καταστάσεις του καταλόγου, με το λεξιλόγιο της ζήτησης.
+ *
+ * ⚠️ **`StoredDemandRead` και όχι `PropertyDemand`** — ο κατάλογος του **κατόχου** είναι ο
+ * ένας τόπος που οφείλει να δει και την **ελλιπή** ζήτηση: η Α5 §4.1 απαγορεύει τη
+ * σιωπηλή εξαφάνιση. Οι διαδρομές του διακομιστή παίρνουν τον στενό τύπο μέσω του
+ * `propertyDemandFromDocument` (καραντίνα, πρότυπο RESO `Incomplete`).
+ */
 export type MyDemandsState =
   | { readonly state: 'anonymous' }
   | { readonly state: 'loading' }
-  | { readonly state: 'ready'; readonly demands: readonly PropertyDemand[] }
+  | { readonly state: 'ready'; readonly demands: readonly StoredDemandRead[] }
   | { readonly state: 'error'; readonly message: string };
 
 /**
@@ -63,7 +86,7 @@ export type MyDemandsState =
  * @param userId — το uid του συνδεδεμένου, ή `null` όταν δεν υπάρχει ταυτότητα
  */
 export function useMyDemands(userId: string | null): MyDemandsState {
-  const state = useOwnedList<PropertyDemand>(DEMANDS, userId);
+  const state = useOwnedList<StoredDemandRead>(DEMANDS, userId);
   return state.state === 'ready' ? { state: 'ready', demands: state.items } : state;
 }
 
@@ -71,12 +94,12 @@ export function useMyDemands(userId: string | null): MyDemandsState {
 export type MyDemandLookup =
   | { readonly state: 'anonymous' }
   | { readonly state: 'loading' }
-  | { readonly state: 'found'; readonly demand: PropertyDemand }
+  | { readonly state: 'found'; readonly demand: StoredDemandRead }
   | { readonly state: 'absent' }
   | { readonly state: 'error'; readonly message: string };
 
 /** Η **μία** ζήτηση, ζωντανά — η ανάγνωση της οθόνης λεπτομέρειας. */
 export function useMyDemand(demandId: string, userId: string | null): MyDemandLookup {
-  const lookup = useOwnedDocument<PropertyDemand>(DEMANDS, demandId, userId);
+  const lookup = useOwnedDocument<StoredDemandRead>(DEMANDS, demandId, userId);
   return lookup.state === 'found' ? { state: 'found', demand: lookup.item } : lookup;
 }
