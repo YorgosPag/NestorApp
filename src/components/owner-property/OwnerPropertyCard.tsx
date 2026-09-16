@@ -108,6 +108,17 @@ export function OwnerPropertyCard({
         στις δύο γλώσσες** — και **κανείς δεν το ζητούσε ποτέ**.
       */}
       <p className="text-sm text-foreground">{t(`${K}.publish.${visibility}`)}</p>
+      {/*
+        🔑 **ADR-864 — ο ΛΟΓΟΣ, όταν ο λόγος είναι επιλογή του κατόχου.** Το «δεν είναι στον
+        δημόσιο χάρτη» είναι αληθινό και για την κλειστή διάθεση· χωρίς αυτή τη γραμμή ο
+        άνθρωπος δεν ξεχωρίζει «το επέλεξα» από «κάτι χάλασε». Ίδιος κατάλογος ετικετών με
+        τη διεπαφή επιλογής και το ίχνος.
+      */}
+      {property.marketingAudience !== 'public' && (
+        <p className="text-sm text-muted-foreground">
+          {t(`properties-enums:marketingAudience.${property.marketingAudience}`)}
+        </p>
+      )}
 
       <nav>
         <Link

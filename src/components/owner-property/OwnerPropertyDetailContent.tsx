@@ -41,7 +41,11 @@ import {
 import { projectListingShape } from '@/services/listings/public-listing-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
-import { setOwnerListingLifecycle } from '@/services/owner-property/owner-property.service';
+import {
+  setOwnerListingAudience,
+  setOwnerListingLifecycle,
+} from '@/services/owner-property/owner-property.service';
+import { MarketingAudienceControl } from '@/components/listings/MarketingAudienceControl';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
 import type { OwnerProperty } from '@/types/owner-property';
 
@@ -219,6 +223,18 @@ function OwnerPropertyView({
           {t(`${K}.detail.edit`)}
         </button>
       </div>
+
+      {/*
+        🔑 **ADR-864 Ε-10 — ΔΙΠΛΑ ΣΤΗΝ ΑΠΟΣΥΡΣΗ, ΟΧΙ ΣΤΗ ΦΟΡΜΑ.** Και τα δύο απαντούν
+        «ποιος βλέπει / υπάρχει», όχι «τι είναι το ακίνητο» — η φόρμα των 8 μένει
+        αμετάβλητη (ADR-777 Α2).
+      */}
+      <MarketingAudienceControl
+        audience={property.marketingAudience}
+        onChange={async (next) =>
+          (await setOwnerListingAudience(property.id, next)).kind === 'saved'
+        }
+      />
 
       <LifecycleButton property={property} />
     </div>

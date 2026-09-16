@@ -48,9 +48,35 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 import { PropertyIdentityHeader } from './PropertyIdentityHeader';
+import { MarketingAudienceControl } from '@/components/listings/MarketingAudienceControl';
+import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
+import { updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
+import type { Property } from '@/types/property';
 import { derivePropertyPageState } from './property-page-state';
 
 const NS = 'properties-detail';
+
+/**
+ * **Αλλαγή κοινού αγγελίας γραφείου** (ADR-864 §5.1) — μέσω της ΜΙΑΣ πύλης μεταλλάξεων.
+ *
+ * ⚠️ Επιστρέφει `false` αντί να πετά: το component δείχνει την αποτυχία **με λόγια**, και η
+ * εμφανιζόμενη τιμή μένει η αποθηκευμένη (η ζωντανή ανάγνωση φέρνει τη νέα όταν γραφτεί).
+ */
+async function changePropertyAudience(
+  property: Property,
+  next: MarketingAudience,
+): Promise<boolean> {
+  try {
+    const result = await updatePropertyWithPolicy({
+      propertyId: property.id,
+      currentProperty: property,
+      updates: { marketingAudience: next },
+    });
+    return result.success;
+  } catch {
+    return false;
+  }
+}
 
 export function PropertyDetailPageContent({
   propertyId,
@@ -172,6 +198,16 @@ export function PropertyDetailPageContent({
       {state.kind === 'found' && (
         <>
           <PropertyIdentityHeader property={state.property} />
+
+          {/*
+            🔑 **ADR-864 Ε-10 — το κοινό είναι ΠΡΑΞΗ της καρτέλας, όχι πεδίο φόρμας.** Το
+            ίδιο component με την πλευρά ιδιώτη· αλλάζει μόνο η πόρτα γραφής (η ΜΙΑ
+            πύλη μεταλλάξεων του γραφείου). Ίχνος + επαναπροβολή τα κάνει ήδη η διαδρομή PATCH.
+          */}
+          <MarketingAudienceControl
+            audience={marketingAudienceOf(state.property.marketingAudience)}
+            onChange={(next) => changePropertyAudience(state.property, next)}
+          />
 
           {/*
             🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6 ΓΙΑ ΤΗΝ ΠΛΕΥΡΑ ΕΤΑΙΡΕΙΑΣ.** Το ίδιο πάνελ, ο
