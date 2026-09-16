@@ -53,6 +53,7 @@ import { projectLegality } from './legality-projection';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
+import { marketingAudienceOf } from '@/constants/marketing-audiences';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 import { projectListingAttributes } from './public-listing-attributes';
 import { reductionForListing } from '@/lib/listings/price-history';
@@ -84,7 +85,22 @@ import type {
 const PUBLIC_OFFER_KINDS: ReadonlySet<string> = new Set<OfferKind>(OFFER_KINDS);
 
 /**
- * Δημοσιεύεται αυτό το ακίνητο;
+ * **Δημοσιεύεται αυτό το ακίνητο;** — διατίθεται **ΚΑΙ** το κοινό του είναι `public`.
+ *
+ * Το «διατίθεται» το απαντά η {@link isOffered}· το κοινό το ερμηνεύει **μία** φορά το
+ * `marketingAudienceOf` (απουσία ⇒ `public`, ADR-864 Α3).
+ */
+export function isPubliclyListed(property: ProjectableProperty): boolean {
+  // 🔴 **ΤΟ ΚΟΙΝΟ ΚΡΙΝΕΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ** (ADR-864 §5.1 · Α1). Καταχώρηση που διατίθεται
+  //    σε `custodians`/`network` **δεν** αποκτά ποτέ `PublicListing`: ο γραφέας κάνει ήδη
+  //    `delete()` + απόσυρση ραφιού όταν το `buildPublicListing` επιστρέφει `null` (Α2),
+  //    και ο επιλυτής πρώτης επαφής ρωτά την ίδια πύλη (ADR-864 §2.3 Φ0.2). Έλεγχος
+  //    κοινού σε **αναγνώστη** θα ήταν δεύτερος κριτής — η μετάλλαξη που πιάνει η Α1.
+  return isOffered(property) && marketingAudienceOf(property.marketingAudience) === 'public';
+}
+
+/**
+ * **Διατίθεται αυτό το ακίνητο — σε ΟΠΟΙΟΔΗΠΟΤΕ κοινό;**
  *
  * **Η ένωση των δύο σκελών των κανόνων Firestore**, γραμμένη μία φορά:
  *   - παλιό λεξιλόγιο: `commercialStatus ∈ LISTED_COMMERCIAL_STATUSES`
@@ -94,8 +110,17 @@ const PUBLIC_OFFER_KINDS: ReadonlySet<string> = new Set<OfferKind>(OFFER_KINDS);
  * σε `'unavailable'`)· το δεύτερο μόνο του κρύβει **κάθε έγγραφο γραμμένο πριν την Α20**
  * — και μετρήθηκε ότι σήμερα **κανένα** από τα 8 δεν έχει `offerKinds`, δηλαδή σκέτο το
  * δεύτερο σκέλος θα έδινε **άδεια οθόνη με όλες τις πύλες πράσινες**.
+ *
+ * Ό,τι ήταν η {@link isPubliclyListed} ως τις 2026-09-16, **χωρίς** το κοινό. Χωρίστηκε
+ * επειδή οι δύο ερωτήσεις έγιναν πραγματικά δύο: μια κλειστή διάθεση **διατίθεται**
+ * (η ζήτηση πρέπει να τη βρίσκει, ADR-864 §5.3) αλλά **δεν** είναι δημόσια.
+ *
+ * 🔑 **Εξάγεται για τους ειδοποιητές ζήτησης (ADR-864 Φ2)**: σήμερα εκείνοι κρίνουν μόνο
+ * τα `offerKinds` του σχήματος, και μια μονάδα `sold` περνά (το `sold` αποδεικνύει
+ * `['sell']` — ADR-864 §2.3 Φ0.1β). Ο ορισμός του «διατίθεται» οφείλει να είναι **ένας**
+ * για χάρτη και ειδοποιήσεις.
  */
-export function isPubliclyListed(property: ProjectableProperty): boolean {
+export function isOffered(property: ProjectableProperty): boolean {
   // 🔴 **ΧΩΡΙΣ ΛΥΜΕΝΟ ΕΙΔΟΣ ΔΕΝ ΔΗΜΟΣΙΕΥΕΤΑΙ** (ADR-842 §7.6.12 / §8 #11 — απόφαση
   //    Giorgio 06/09, δρόμος **Γ′**). Ως τις 2026-09-06 η προβολή έγραφε
   //    `(property.type ?? 'apartment') as PropertyType`, δηλαδή **βάφτιζε διαμέρισμα**
