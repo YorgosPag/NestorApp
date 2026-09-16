@@ -1,0 +1,54 @@
+{
+  "$doc": "ADR-863 — ΤΕΚΜΗΡΙΟ ΠΡΟΕΛΕΥΣΗΣ ΚΑΘΕ ΚΑΝΟΝΙΚΟΥ ΚΕΙΜΕΝΟΥ. Κανένα δεν πληκτρολογήθηκε: το καθένα αντιγράφηκε από ονομαστικό πακέτο του δέντρου, και μια άγκυρα επαληθεύει ότι ΤΑΥΤΙΖΕΤΑΙ με πραγματικό αντίγραφο — δηλαδή ότι κανείς δεν το εφηύρε. Το `agreeingCopies` είναι πόσα ανεξάρτητα αντίγραφα του δέντρου συμφωνούσαν στο ΣΩΜΑ όταν επιλέχθηκε η πηγή.",
+  "licenses": {
+    "Apache-2.0": {
+      "sourcePackage": "@google-cloud/firestore@7.11.6",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "109/124",
+      "copyrightLinesReplaced": 0,
+      "bytes": 11357
+    },
+    "MIT": {
+      "sourcePackage": "@fastify/otel@0.17.1",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "282/700",
+      "copyrightLinesReplaced": 1,
+      "bytes": 1077
+    },
+    "ISC": {
+      "sourcePackage": "anymatch@3.1.3",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "19/64",
+      "copyrightLinesReplaced": 1,
+      "bytes": 755
+    },
+    "BSD-2-Clause": {
+      "sourcePackage": "eslint-scope@5.1.1",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "3/11",
+      "copyrightLinesReplaced": 2,
+      "bytes": 1272
+    },
+    "BSD-3-Clause": {
+      "sourcePackage": "@protobufjs/aspromise@1.1.2",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "9/30",
+      "copyrightLinesReplaced": 1,
+      "bytes": 1464
+    },
+    "MPL-2.0": {
+      "sourcePackage": "@resvg/resvg-js@2.6.2",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "2/2",
+      "copyrightLinesReplaced": 0,
+      "bytes": 16724
+    },
+    "FSL-1.1-MIT": {
+      "sourcePackage": "@sentry/cli@2.58.5",
+      "sourceFile": "LICENSE",
+      "agreeingCopies": "1/1",
+      "copyrightLinesReplaced": 1,
+      "bytes": 4224
+    }
+  }
+}
