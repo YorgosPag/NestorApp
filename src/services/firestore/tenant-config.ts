@@ -63,6 +63,10 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // κατέγραψε»), και ο κατάλογος του γραφείου σερβίρεται από τον ΔΙΑΚΟΜΙΣΤΗ, που δεν
   // περνά από αυτούς τους κανόνες.
   OWNER_PROPERTIES:           { mode: 'userId', fieldName: 'authorUserId' },
+  // 📒 ADR-864 Φ1β — το ΠΡΟΣΩΠΙΚΟ βιβλίο ιστορικού: ανήκει σε ΑΝΘΡΩΠΟ, όχι σε εταιρεία. Το
+  // `userId` είναι ο ΚΑΤΟΧΟΣ του βιβλίου (όχι ο δράστης — αυτός είναι το `performedBy`).
+  // Κανένα `companyId` εκ κατασκευής (ADR-787 Ε-3 §8· `lib/audit/audit-ledger.ts`).
+  ENTITY_AUDIT_TRAIL_PERSONAL: { mode: 'userId', fieldName: 'userId' },
 
   // --- system (no tenant filter) ---
   // ⚠️ Το `unscopedReason` ΔΕΝ είναι σχόλιο: ο τύπος `TenantFieldConfig` το απαιτεί

@@ -22,6 +22,8 @@ import type { QuantitySpec } from '@/constants/quantity-specs';
 // ότι **35** αρχεία το εισάγουν, **όλα** με `import type`, και το `functions/` (άλλο
 // tsconfig) δεν το εισάγει καθόλου. Μια runtime εξάρτηση εδώ θα ταξίδευε παντού.
 import type { AuditEntityType } from '@/config/audit-entity-registry';
+// ADR-864 Φ1β — type-only leaf· το αρχείο μένει type-only.
+import type { AuditLedgerScope } from '@/lib/audit/audit-ledger';
 
 // ============================================================================
 // CORE UNION TYPES
@@ -180,8 +182,8 @@ export interface AuditFieldChange {
  */
 export type AuditSource = 'service' | 'cdc';
 
-/** Full audit trail entry as stored in Firestore */
-export interface EntityAuditEntry {
+/** Ό,τι έχει κάθε εγγραφή, ανεξαρτήτως βιβλίου — δες {@link EntityAuditEntry}. */
+export interface EntityAuditEntryBase {
   /** Firestore document ID (populated on read) */
   id?: string;
   /** Entity type (e.g. 'unit', 'building') */
@@ -198,8 +200,6 @@ export interface EntityAuditEntry {
   performedBy: string;
   /** User display name (denormalized) */
   performedByName: string | null;
-  /** Company ID for tenant isolation */
-  companyId: string;
   /** Timestamp (ISO string on read, serverTimestamp on write) */
   timestamp: string;
   /**
@@ -209,6 +209,15 @@ export interface EntityAuditEntry {
    */
   source?: AuditSource;
 }
+
+/**
+ * Full audit trail entry as stored in Firestore.
+ *
+ * 🔑 ADR-864 Φ1β — η εγγραφή ανήκει σε **ένα** βιβλίο: `companyId` (εταιρεία) **ή** `userId`
+ * (προσωπικό), ποτέ και τα δύο (`lib/audit/audit-ledger.ts`). ⚠️ Το `userId` είναι ο
+ * **κάτοχος του βιβλίου**, όχι ο δράστης — αυτός είναι το `performedBy`.
+ */
+export type EntityAuditEntry = EntityAuditEntryBase & AuditLedgerScope;
 
 // ============================================================================
 // QUERY OPTIONS

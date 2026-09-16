@@ -54,6 +54,14 @@ export const FIELDS = {
    * belong to the **broker**, not the agent»*).
    */
   AUTHOR_COMPANY_ID: 'authorCompanyId',
+  /**
+   * ADR-864 Φ1β — το πεδίο απομόνωσης **ανθρώπου** σε συλλογές που το `tenant-config.ts` δηλώνει
+   * `mode: 'userId'` με `fieldName: 'userId'` (`NOTIFICATIONS`), **και** του **προσωπικού
+   * βιβλίου** στο `entity_audit_trail` (`lib/audit/audit-ledger.ts`: `companyId` **ή** `userId`).
+   *
+   * ⚠️ Στο ιστορικό είναι ο **κάτοχος του βιβλίου**, όχι ο δράστης (`performedBy`).
+   */
+  USER_ID: 'userId',
 
   // 📊 STATUS & STATE
   STATUS: 'status',

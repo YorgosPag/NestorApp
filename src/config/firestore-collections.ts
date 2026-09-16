@@ -644,6 +644,12 @@ export const COLLECTIONS = {
 
   // 📜 ENTITY AUDIT TRAIL (ADR-195: Entity Change History)
   ENTITY_AUDIT_TRAIL: process.env.NEXT_PUBLIC_ENTITY_AUDIT_TRAIL_COLLECTION || 'entity_audit_trail',
+  // 📒 ADR-864 Φ1β — το ΠΡΟΣΩΠΙΚΟ βιβλίο του ίδιου συστήματος (`lib/audit/audit-ledger.ts`).
+  //    Ξεχωριστό διαμέρισμα και όχι πεδίο στην παραπάνω, γιατί οι κανόνες Firestore ΔΕΝ
+  //    φιλτράρουν: μια εξαίρεση «όχι τα προσωπικά» στην ίδια συλλογή θα απέρριπτε ΟΛΟΚΛΗΡΟ το
+  //    αφιλτράριστο ερώτημα του super admin. Πρότυπο GitHub (security log ≠ org audit log) ·
+  //    Google Cloud (log bucket ανά κάτοχο). Ίδιο σχήμα, ίδια υπηρεσία, ίδιος αναγνώστης.
+  ENTITY_AUDIT_TRAIL_PERSONAL: process.env.NEXT_PUBLIC_ENTITY_AUDIT_TRAIL_PERSONAL_COLLECTION || 'entity_audit_trail_personal',
 
   // 📍 ADDRESS CORRECTIONS LOG (ADR-332 §3.7 Phase 9: Telemetry)
   ADDRESS_CORRECTIONS_LOG: process.env.NEXT_PUBLIC_ADDRESS_CORRECTIONS_LOG_COLLECTION || 'address_corrections_log',
@@ -1124,6 +1130,7 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
  */
 export const IMMUTABLE_COLLECTIONS: readonly string[] = [
   'ENTITY_AUDIT_TRAIL',
+  'ENTITY_AUDIT_TRAIL_PERSONAL',
   'AUDIT',
   'SYSTEM_AUDIT_LOGS',
   'CLOUD_FUNCTION_AUDIT_LOG',
