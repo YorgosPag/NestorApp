@@ -1,0 +1,237 @@
+{
+  "changeNote": null,
+  "document": "privacy-policy",
+  "effectiveFrom": "2026-09-16",
+  "locales": {
+    "el": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Το Nestor App CRM (\"εμείς\", \"μας\") σέβεται το απόρρητό σας. Αυτή η Πολιτική Απορρήτου εξηγεί πώς συλλέγουμε, χρησιμοποιούμε και προστατεύουμε τα προσωπικά σας δεδομένα όταν αλληλεπιδράτε με την εφαρμογή και τις υπηρεσίες μας, συμπεριλαμβανομένων των ενσωματώσεων με Facebook Messenger, Instagram, WhatsApp και Telegram."
+            }
+          ],
+          "heading": "1. Εισαγωγή",
+          "id": "introduction"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "Μηνύματα που μας στέλνετε μέσω πλατφορμών κοινωνικής δικτύωσης (μόνο περιεχόμενο κειμένου)"
+                },
+                {
+                  "text": "Το αναγνωριστικό χρήστη της πλατφόρμας σας (π.χ. Facebook PSID, Instagram IGSID, αριθμός τηλεφώνου)"
+                },
+                {
+                  "text": "Το δημόσια διαθέσιμο όνομα προφίλ σας"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "2. Δεδομένα που Συλλέγουμε",
+          "id": "dataWeCollect"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "Για να απαντάμε στα ερωτήματά σας και να παρέχουμε υποστήριξη πελατών"
+                },
+                {
+                  "text": "Για τη διαχείριση επιχειρηματικών επικοινωνιών μέσω του συστήματος CRM μας"
+                },
+                {
+                  "text": "Για τη βελτίωση των υπηρεσιών μας και της ποιότητας απόκρισης"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "3. Πώς Χρησιμοποιούμε τα Δεδομένα σας",
+          "id": "howWeUse"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Δεν πωλούμε ούτε μοιραζόμαστε τα προσωπικά σας δεδομένα με τρίτους, εκτός αν απαιτείται από τον νόμο ή για την παροχή των υπηρεσιών που ζητήσατε (π.χ. απαντήσεις με τεχνητή νοημοσύνη μέσω OpenAI)."
+            }
+          ],
+          "heading": "4. Κοινοποίηση Δεδομένων",
+          "id": "dataSharing"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Διατηρούμε τα μηνύματά σας και τα στοιχεία επικοινωνίας σας για όσο διάστημα είναι απαραίτητο για την παροχή των υπηρεσιών μας. Μπορείτε να ζητήσετε τη διαγραφή των δεδομένων σας ανά πάσα στιγμή."
+            }
+          ],
+          "heading": "5. Διατήρηση Δεδομένων",
+          "id": "dataRetention"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Σύμφωνα με τον GDPR, έχετε το δικαίωμα πρόσβασης, διόρθωσης ή διαγραφής των προσωπικών σας δεδομένων. Για να ασκήσετε τα δικαιώματά σας, επικοινωνήστε στη διεύθυνση για θέματα απορρήτου της ενότητας 7."
+            }
+          ],
+          "heading": "6. Τα Δικαιώματά σας",
+          "id": "yourRights"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Υπεύθυνος για την επεξεργασία των προσωπικών σας δεδομένων είναι ο φορέας της υπηρεσίας:"
+            },
+            {
+              "kind": "operator-identity"
+            }
+          ],
+          "heading": "7. Επικοινωνία — Υπεύθυνος Επεξεργασίας",
+          "id": "contact"
+        }
+      ],
+      "title": "Πολιτική Απορρήτου"
+    },
+    "en": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Nestor App CRM (\"we\", \"our\", \"us\") respects your privacy. This Privacy Policy explains how we collect, use, and protect your personal data when you interact with our application and services, including integrations with Facebook Messenger, Instagram, WhatsApp, and Telegram."
+            }
+          ],
+          "heading": "1. Introduction",
+          "id": "introduction"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "Messages you send to us through social media platforms (text content only)"
+                },
+                {
+                  "text": "Your platform user ID (e.g., Facebook PSID, Instagram IGSID, phone number)"
+                },
+                {
+                  "text": "Your publicly available profile name"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "2. Data We Collect",
+          "id": "dataWeCollect"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "To respond to your inquiries and provide customer support"
+                },
+                {
+                  "text": "To manage business communications via our CRM system"
+                },
+                {
+                  "text": "To improve our services and response quality"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "3. How We Use Your Data",
+          "id": "howWeUse"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "We do not sell or share your personal data with third parties, except as required by law or to provide the services you requested (e.g., AI-powered responses via OpenAI)."
+            }
+          ],
+          "heading": "4. Data Sharing",
+          "id": "dataSharing"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "We retain your messages and contact information for as long as necessary to provide our services. You may request deletion of your data at any time."
+            }
+          ],
+          "heading": "5. Data Retention",
+          "id": "dataRetention"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Under GDPR, you have the right to access, correct, or delete your personal data. To exercise your rights, write to the privacy contact listed in section 7."
+            }
+          ],
+          "heading": "6. Your Rights",
+          "id": "yourRights"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "The controller responsible for processing your personal data is the operator of the service:"
+            },
+            {
+              "kind": "operator-identity"
+            }
+          ],
+          "heading": "7. Contact — Data Controller",
+          "id": "contact"
+        }
+      ],
+      "title": "Privacy Policy"
+    }
+  },
+  "material": true,
+  "operator": {
+    "fingerprint": "sha256:f50a1e88868c3090312cd15c4af8491c2e003068467a432261800b9697aa41be",
+    "record": {
+      "contact": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "effectiveFrom": "2026-09-15",
+      "gemiNumber": null,
+      "identity": {
+        "fullName": "Γεώργιος Παγώνης",
+        "kind": "natural-person",
+        "tradeName": null
+      },
+      "privacy": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "seat": {
+        "city": "Ελευθέριο-Κορδελιό",
+        "country": "GR",
+        "number": "16",
+        "postalCode": "56334",
+        "street": "Σαμοθράκης"
+      },
+      "vatNumber": "040817944"
+    }
+  },
+  "version": 1
+}

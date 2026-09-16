@@ -1,0 +1,195 @@
+{
+  "changeNote": null,
+  "document": "terms-of-service",
+  "effectiveFrom": "2026-09-16",
+  "locales": {
+    "el": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Χρησιμοποιώντας τις υπηρεσίες του Nestor App CRM, συμπεριλαμβανομένης της ανταλλαγής μηνυμάτων μέσω Facebook Messenger, Instagram, WhatsApp ή Telegram, συμφωνείτε με αυτούς τους Όρους Χρήσης."
+            }
+          ],
+          "heading": "1. Αποδοχή",
+          "id": "acceptance"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Το Nestor App CRM παρέχει υπηρεσίες διαχείρισης επιχειρηματικών επικοινωνιών, διαχείρισης πελατειακών σχέσεων και υπηρεσίες ανταλλαγής μηνυμάτων με τεχνητή νοημοσύνη."
+            }
+          ],
+          "heading": "2. Υπηρεσίες",
+          "id": "services"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "Παρέχετε ακριβείς πληροφορίες κατά την επικοινωνία μαζί μας"
+                },
+                {
+                  "text": "Μην χρησιμοποιείτε τις υπηρεσίες μας για παράνομους σκοπούς"
+                },
+                {
+                  "text": "Σεβαστείτε τους όρους της πλατφόρμας μέσω της οποίας επικοινωνείτε μαζί μας"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "3. Ευθύνες Χρήστη",
+          "id": "userResponsibilities"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Οι υπηρεσίες μας παρέχονται \"ως έχουν\". Δεν φέρουμε ευθύνη για τυχόν έμμεσες, τυχαίες ή επακόλουθες ζημίες που προκύπτουν από τη χρήση των υπηρεσιών μας."
+            }
+          ],
+          "heading": "4. Περιορισμός Ευθύνης",
+          "id": "limitation"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Μπορούμε να ενημερώσουμε αυτούς τους όρους ανά πάσα στιγμή. Η συνεχιζόμενη χρήση των υπηρεσιών μας αποτελεί αποδοχή των ενημερωμένων όρων."
+            }
+          ],
+          "heading": "5. Αλλαγές",
+          "id": "changes"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Η υπηρεσία παρέχεται από τον παρακάτω φορέα. Για ερωτήσεις σχετικά με αυτούς τους όρους, χρησιμοποιήστε το email επικοινωνίας:"
+            },
+            {
+              "kind": "operator-identity"
+            }
+          ],
+          "heading": "6. Επικοινωνία",
+          "id": "contact"
+        }
+      ],
+      "title": "Όροι Χρήσης"
+    },
+    "en": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "By using Nestor App CRM services, including messaging through Facebook Messenger, Instagram, WhatsApp, or Telegram, you agree to these Terms of Service."
+            }
+          ],
+          "heading": "1. Acceptance",
+          "id": "acceptance"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Nestor App CRM provides business communication management, customer relationship management, and AI-assisted messaging services."
+            }
+          ],
+          "heading": "2. Services",
+          "id": "services"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "Provide accurate information when communicating with us"
+                },
+                {
+                  "text": "Do not use our services for unlawful purposes"
+                },
+                {
+                  "text": "Respect the terms of the platform through which you contact us"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "3. User Responsibilities",
+          "id": "userResponsibilities"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Our services are provided \"as is\". We are not liable for any indirect, incidental, or consequential damages arising from the use of our services."
+            }
+          ],
+          "heading": "4. Limitation of Liability",
+          "id": "limitation"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "We may update these terms at any time. Continued use of our services constitutes acceptance of the updated terms."
+            }
+          ],
+          "heading": "5. Changes",
+          "id": "changes"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "The service is provided by the operator below. For questions about these terms, use the contact email:"
+            },
+            {
+              "kind": "operator-identity"
+            }
+          ],
+          "heading": "6. Contact",
+          "id": "contact"
+        }
+      ],
+      "title": "Terms of Service"
+    }
+  },
+  "material": true,
+  "operator": {
+    "fingerprint": "sha256:f50a1e88868c3090312cd15c4af8491c2e003068467a432261800b9697aa41be",
+    "record": {
+      "contact": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "effectiveFrom": "2026-09-15",
+      "gemiNumber": null,
+      "identity": {
+        "fullName": "Γεώργιος Παγώνης",
+        "kind": "natural-person",
+        "tradeName": null
+      },
+      "privacy": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "seat": {
+        "city": "Ελευθέριο-Κορδελιό",
+        "country": "GR",
+        "number": "16",
+        "postalCode": "56334",
+        "street": "Σαμοθράκης"
+      },
+      "vatNumber": "040817944"
+    }
+  },
+  "version": 1
+}

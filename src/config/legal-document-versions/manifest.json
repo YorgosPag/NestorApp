@@ -1,0 +1,37 @@
+{
+  "$doc": "ADR-861 Φ3 — ΜΗΤΡΩΟ ΕΚΔΟΣΕΩΝ ΝΟΜΙΚΩΝ ΕΓΓΡΑΦΩΝ. ΠΑΡΑΓΕΤΑΙ από `npm run legal:freeze` και είναι APPEND-ONLY: γραμμή που δημοσιεύτηκε δεν αλλάζει και δεν σβήνεται ποτέ (CHECK 3.85 Κ3).",
+  "documents": {
+    "data-deletion": [
+      {
+        "digest": "sha256:26b28bb7f4544fdc8cd2013498a7ed21ebc6ff4aef2e50a0b4c696bbb668e8c8",
+        "effectiveFrom": "2026-09-16",
+        "material": true,
+        "version": 1
+      }
+    ],
+    "privacy-policy": [
+      {
+        "digest": "sha256:2bdb6866f9fa2156d5e860ad81d088a417b88f18e6e93db0f96d71c234c4d4f8",
+        "effectiveFrom": "2026-09-16",
+        "material": true,
+        "version": 1
+      }
+    ],
+    "private-marketing-disclosure": [
+      {
+        "digest": "sha256:68f5bb0c1b5208b84f232ebac46b77b30611ef537a12289afe38b46aba39c2be",
+        "effectiveFrom": "2026-09-16",
+        "material": true,
+        "version": 1
+      }
+    ],
+    "terms-of-service": [
+      {
+        "digest": "sha256:10648fef0ff33133ca6126196f7350bae050f0f987204e0d370e4a48eef95468",
+        "effectiveFrom": "2026-09-16",
+        "material": true,
+        "version": 1
+      }
+    ]
+  }
+}

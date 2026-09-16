@@ -1,0 +1,167 @@
+{
+  "changeNote": null,
+  "document": "data-deletion",
+  "effectiveFrom": "2026-09-16",
+  "locales": {
+    "el": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Αν θέλετε να διαγράψουμε τα προσωπικά σας δεδομένα από το Nestor App CRM, ακολουθήστε τα παρακάτω βήματα:"
+            },
+            {
+              "items": [
+                {
+                  "mailbox": "privacy",
+                  "text": "Στείλτε email με θέμα \"Αίτηση Διαγραφής Δεδομένων\" στη διεύθυνση:"
+                },
+                {
+                  "text": "Συμπεριλάβετε την πλατφόρμα μέσω της οποίας επικοινωνήσατε μαζί μας (Facebook Messenger, Instagram, WhatsApp ή Telegram) και το όνομα χρήστη ή τον αριθμό τηλεφώνου σας"
+                },
+                {
+                  "text": "Θα επεξεργαστούμε το αίτημά σας εντός 30 ημερών και θα επιβεβαιώσουμε τη διαγραφή μέσω email"
+                }
+              ],
+              "kind": "list",
+              "ordered": true
+            }
+          ],
+          "heading": "Πώς να Ζητήσετε Διαγραφή Δεδομένων",
+          "id": "howToRequest"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "Όλα τα μηνύματα και το ιστορικό συνομιλιών"
+                },
+                {
+                  "text": "Τα στοιχεία επικοινωνίας σας και τα αναγνωριστικά πλατφόρμας"
+                },
+                {
+                  "text": "Όλες τις σχετικές εγγραφές CRM"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "Τι Διαγράφουμε",
+          "id": "whatWeDelete"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Για ερωτήσεις σχετικά με τη διαγραφή δεδομένων, απευθυνθείτε στον φορέα της υπηρεσίας:"
+            },
+            {
+              "kind": "operator-identity"
+            }
+          ],
+          "heading": "Επικοινωνία",
+          "id": "contact"
+        }
+      ],
+      "title": "Οδηγίες Διαγραφής Δεδομένων"
+    },
+    "en": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "If you would like us to delete your personal data from Nestor App CRM, please follow these steps:"
+            },
+            {
+              "items": [
+                {
+                  "mailbox": "privacy",
+                  "text": "Send an email with the subject line \"Data Deletion Request\" to:"
+                },
+                {
+                  "text": "Include the platform you used to contact us (Facebook Messenger, Instagram, WhatsApp, or Telegram) and your username or phone number"
+                },
+                {
+                  "text": "We will process your request within 30 days and confirm deletion via email"
+                }
+              ],
+              "kind": "list",
+              "ordered": true
+            }
+          ],
+          "heading": "How to Request Data Deletion",
+          "id": "howToRequest"
+        },
+        {
+          "blocks": [
+            {
+              "items": [
+                {
+                  "text": "All messages and conversation history"
+                },
+                {
+                  "text": "Your contact information and platform identifiers"
+                },
+                {
+                  "text": "Any associated CRM records"
+                }
+              ],
+              "kind": "list",
+              "ordered": false
+            }
+          ],
+          "heading": "What We Delete",
+          "id": "whatWeDelete"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "For questions about data deletion, contact the operator of the service:"
+            },
+            {
+              "kind": "operator-identity"
+            }
+          ],
+          "heading": "Contact",
+          "id": "contact"
+        }
+      ],
+      "title": "Data Deletion Instructions"
+    }
+  },
+  "material": true,
+  "operator": {
+    "fingerprint": "sha256:f50a1e88868c3090312cd15c4af8491c2e003068467a432261800b9697aa41be",
+    "record": {
+      "contact": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "effectiveFrom": "2026-09-15",
+      "gemiNumber": null,
+      "identity": {
+        "fullName": "Γεώργιος Παγώνης",
+        "kind": "natural-person",
+        "tradeName": null
+      },
+      "privacy": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "seat": {
+        "city": "Ελευθέριο-Κορδελιό",
+        "country": "GR",
+        "number": "16",
+        "postalCode": "56334",
+        "street": "Σαμοθράκης"
+      },
+      "vatNumber": "040817944"
+    }
+  },
+  "version": 1
+}

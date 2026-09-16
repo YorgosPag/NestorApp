@@ -1,0 +1,139 @@
+{
+  "changeNote": null,
+  "document": "private-marketing-disclosure",
+  "effectiveFrom": "2026-09-16",
+  "locales": {
+    "el": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "Το γραφείο που έχει την εντολή σας ζητά να διατεθεί το ακίνητό σας χωρίς δημόσια αγγελία. Διαβάστε τις παρακάτω δηλώσεις και επιβεβαιώστε καθεμία χωριστά."
+            }
+          ],
+          "heading": "Τι σας ζητείται",
+          "id": "intro"
+        },
+        {
+          "blocks": [
+            {
+              "id": "relationship",
+              "kind": "clause",
+              "text": "Το γραφείο {agency} ενεργεί για λογαριασμό σας βάσει εντολής που ισχύει έως {expiresOn}. Η συναίνεση αφορά αυτό το γραφείο και αυτή την εντολή."
+            },
+            {
+              "id": "dualRepresentation",
+              "kind": "clause",
+              "text": "Το γραφείο μπορεί να εκπροσωπεί και αγοραστή του ίδιου ακινήτου. Σε κλειστή διάθεση αυτό γίνεται πιο συχνά, γιατί λιγότερα γραφεία μαθαίνουν για το ακίνητο."
+            },
+            {
+              "id": "notPublished",
+              "kind": "clause",
+              "text": "Το ακίνητο δεν θα εμφανίζεται στον δημόσιο χάρτη, στην αναζήτηση ή σε δημόσια σελίδα αγγελίας. Θα το γνωρίζουν μόνο το γραφείο και όσοι προσκληθούν μέσω της πλατφόρμας."
+            },
+            {
+              "id": "fewerBuyers",
+              "kind": "clause",
+              "text": "Με λιγότερη δημοσιότητα, το ακίνητό σας το μαθαίνουν λιγότεροι πιθανοί αγοραστές. Αυτό μπορεί να επηρεάσει την τιμή."
+            },
+            {
+              "id": "revocation",
+              "kind": "clause",
+              "text": "Μπορείτε οποιαδήποτε στιγμή να ανακαλέσετε αυτή τη συναίνεση επιλέγοντας δημόσια διάθεση ή απόσυρση. Η κλειστή διάθεση σταματά αμέσως."
+            },
+            {
+              "id": "instruction",
+              "kind": "clause",
+              "text": "Δίνω οδηγία στο γραφείο να διαθέσει το ακίνητο χωρίς δημόσια αγγελία, για όσο ισχύει η εντολή ή μέχρι να ανακαλέσω αυτή τη συναίνεση."
+            }
+          ],
+          "heading": "Δηλώσεις",
+          "id": "statements"
+        }
+      ],
+      "title": "Ενημέρωση και οδηγία για κλειστή διάθεση"
+    },
+    "en": {
+      "sections": [
+        {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "text": "The agency holding your mandate asks that your property be marketed without a public listing. Read the statements below and confirm each one separately."
+            }
+          ],
+          "heading": "What you are being asked",
+          "id": "intro"
+        },
+        {
+          "blocks": [
+            {
+              "id": "relationship",
+              "kind": "clause",
+              "text": "The agency {agency} acts on your behalf under a mandate valid until {expiresOn}. This consent concerns this agency and this mandate."
+            },
+            {
+              "id": "dualRepresentation",
+              "kind": "clause",
+              "text": "The agency may also represent a buyer of the same property. In private marketing this happens more often, because fewer agencies learn about the property."
+            },
+            {
+              "id": "notPublished",
+              "kind": "clause",
+              "text": "The property will not appear on the public map, in search or on a public listing page. Only the agency and those invited through the platform will know about it."
+            },
+            {
+              "id": "fewerBuyers",
+              "kind": "clause",
+              "text": "With less exposure, fewer potential buyers learn about your property. This may affect the price."
+            },
+            {
+              "id": "revocation",
+              "kind": "clause",
+              "text": "You may revoke this consent at any time by choosing public marketing or withdrawal. Private marketing stops immediately."
+            },
+            {
+              "id": "instruction",
+              "kind": "clause",
+              "text": "I instruct the agency to market the property without a public listing, for as long as the mandate is valid or until I revoke this consent."
+            }
+          ],
+          "heading": "Statements",
+          "id": "statements"
+        }
+      ],
+      "title": "Disclosure and instruction for private marketing"
+    }
+  },
+  "material": true,
+  "operator": {
+    "fingerprint": "sha256:f50a1e88868c3090312cd15c4af8491c2e003068467a432261800b9697aa41be",
+    "record": {
+      "contact": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "effectiveFrom": "2026-09-15",
+      "gemiNumber": null,
+      "identity": {
+        "fullName": "Γεώργιος Παγώνης",
+        "kind": "natural-person",
+        "tradeName": null
+      },
+      "privacy": {
+        "address": "georgios.pagonis@gmail.com",
+        "receivingConfirmedOn": "2026-09-16"
+      },
+      "seat": {
+        "city": "Ελευθέριο-Κορδελιό",
+        "country": "GR",
+        "number": "16",
+        "postalCode": "56334",
+        "street": "Σαμοθράκης"
+      },
+      "vatNumber": "040817944"
+    }
+  },
+  "version": 1
+}
