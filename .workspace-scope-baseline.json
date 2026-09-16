@@ -1,8 +1,8 @@
 {
   "_doc": "CHECK 3.60 — ADR-787 §5.3 γ. violations = σελίδες εντός εμβέλειας ΧΩΡΙΣ πρόθεμα (Κ1) · declarations = κλειστό σύνολο εξαιρέσεων (Κ2).",
-  "_warning": "Ο Κ2 «orphan-declaration» είναι ZERO-TOLERANCE και ΔΕΝ μπαίνει ΠΟΤΕ εδώ.",
+  "_warning": "Οι Κ2 «orphan-declaration» και Κ3 «segment-collision» είναι ZERO-TOLERANCE και ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
   "_campaign": "Ο αριθμός των violations ΔΕΝ είναι δείκτης υγείας — είναι «πόσες σελίδες δεν έχουν μετακινηθεί ΑΚΟΜΗ». Η εκστρατεία τελειώνει στο 0 (ADR-787 §5.3, Βήμα 3).",
-  "generatedAt": "2026-08-24",
+  "generatedAt": "2026-09-16",
   "violations": [],
   "declarations": [
     "[...unprefixed]",
@@ -13,6 +13,7 @@
     "legal-notice",
     "navigation",
     "onboarding",
+    "open-source",
     "pending-approval",
     "privacy-policy",
     "share",
