@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:3a3081ad83f2e1f176df5a08b60ae21845cf60fda0155d6794a7c5d334792132 -->
+     fingerprint: sha256:d16197dee6dd4f3f430a4a5ef3321172c45aeea44fb4dd2359f716529e3f8ccc -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -379,6 +379,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.82** | **Πύλη ωφέλιμου πλάτους πεδίων** (ADR-332) — «βλέπει ο άνθρωπος τι γράφει; — η ερώτηση που κανένα jest ΔΕΝ ΜΠΟΡΕΙ να κάνει, γιατί το jsdom δεν έχει διάταξη» · `npm run test:address-field-width` · 📘 `docs/gates/3.82.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 | **3.83** | **Πύλη αρχής του αποστολέα** (ADR-857) — «ποιος αποφασίζει τη γραμμή `From:` — και το είπε η ρίζα; — το **residue** που ο τύπος δομικά ΔΕΝ μπορεί να πιάσει» · `npm run test:sender-authority` · `SKIP_SENDER_AUTHORITY=1` · 📘 `docs/gates/3.83.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 | **3.84** | **Πύλη της απόδοσης αδειών** (ADR-863) — «οι άδειες NOTICE απαιτούν το κείμενό τους να συνοδεύει τα **αντίγραφα** — και ό,τι κατεβαίνει στον browser **είναι** αντίγραφο· το συνοδεύει;» · `npm run test:third-party-notices` · `SKIP_THIRD_PARTY_NOTICES=1` · 📘 `docs/gates/3.84.md` | ⛔ ZERO-TOL (μπαγιάτικο · άχρηστο κείμενο · διαψευσμένος ισχυρ… | `.third-party-notices-baseline.json` |
+| **3.85** | **Πύλη των εκδόσεων νομικών κειμένων** (ADR-861) — «είναι κάθε νομικό κείμενο που δείχνουμε **ΜΙΑ αμετάβλητη, αποδείξιμη έκδοση** — και ξέρει κάθε έκδοση **ποιος ήταν ο φορέας τότε**;» · `npm run test:legal-documents` · `SKIP_LEGAL_DOCUMENTS=1` · 📘 `docs/gates/3.85.md` | ⛔ ZERO TOL (Κ1–Κ7) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -392,8 +393,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **77** (εκτελεστής 69 + hook 21) ·
-γραμμές εδώ: **66** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **78** (εκτελεστής 70 + hook 21) ·
+γραμμές εδώ: **67** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 
