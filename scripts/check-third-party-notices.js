@@ -47,14 +47,43 @@ const generator = require('./generate-third-party-notices');
 const ROOT = ratchet.PROJECT_ROOT;
 const BASELINE_FILE = path.join(ROOT, '.third-party-notices-baseline.json');
 
+/**
+ * Τα παραγόμενα που **οφείλουν** να φέρουν το αποτύπωμα των τρεχουσών εισόδων.
+ *
+ * 🧹 **ADR-863 Φ3 — ΗΤΑΝ ΕΝΑ, ΚΑΙ ΤΑ ΑΛΛΑ ΠΑΛΙΩΝΑΝ ΑΦΥΛΑΧΤΑ (N.0.2).** Ο έλεγχος
+ * φρεσκάδας κοιτούσε **μόνο** το `THIRD_PARTY_NOTICES.txt`, ενώ το `sbom.json`
+ * παραγόταν από την **ίδια** κρίση με το **ίδιο** αποτύπωμα και **κανείς δεν το
+ * ρωτούσε**: μια χειροκίνητη επεξεργασία ή μια μισοτελειωμένη παραγωγή το άφηνε να
+ * δηλώνει άλλη πραγματικότητα από τον αδελφό του, με την πύλη **πράσινη**. Ακριβώς το
+ * σχήμα «παραγόμενο artifact χωρίς αποτύπωμα παλιώνει σιωπηλά» που το ίδιο το ADR-863
+ * §6 καταγγέλλει — μέσα στην ίδια του την πύλη.
+ *
+ * ⚠️ **Καμία νέα μηχανή**: ίδιο αποτύπωμα, ίδια σύγκριση, τρεις φορές.
+ */
+const fingerprintedArtifacts = () => [
+  generator.NOTICES_FILE,
+  generator.SBOM_FILE,
+  generator.INDEX_FILE,
+];
+
 /** Το παραγόμενο artifact είναι **μπαγιάτικο** όταν δεν φέρει το αποτύπωμα των εισόδων. */
 function staleness(m) {
-  if (!fs.existsSync(generator.NOTICES_FILE)) {
-    return { stale: true, detail: 'το THIRD_PARTY_NOTICES.txt δεν υπάρχει — τρέξε τον γεννήτορα' };
+  for (const file of fingerprintedArtifacts()) {
+    const rel = path.relative(ROOT, file).replace(/\\/g, '/');
+    if (!fs.existsSync(file)) {
+      return { stale: true, detail: `το ${rel} δεν υπάρχει — τρέξε τον γεννήτορα` };
+    }
+    // ⚠️ Τα πρώτα 4 KB αρκούν **κατά κατασκευή**: και στα τρία το αποτύπωμα γράφεται
+    //    στην κεφαλίδα, πριν από οποιοδήποτε σώμα (το sbom.json είναι 586 KB).
+    const head = fs.readFileSync(file, 'utf8').slice(0, 4096);
+    if (!head.includes(`sha256:${m.fingerprint}`)) {
+      return {
+        stale: true,
+        detail: `το ${rel} φέρει ΑΛΛΟ αποτύπωμα από τις τρέχουσες εισόδους (lockfile / πολιτική / κανονικά κείμενα / επιφάνειες)`,
+      };
+    }
   }
-  const head = fs.readFileSync(generator.NOTICES_FILE, 'utf8').slice(0, 4096);
-  if (head.includes(`sha256:${m.fingerprint}`)) return { stale: false, detail: null };
-  return { stale: true, detail: 'το αποτύπωμα του αρχείου ΔΙΑΦΕΡΕΙ από τις τρέχουσες εισόδους (lockfile / πολιτική / κανονικά κείμενα / επιφάνειες)' };
+  return { stale: false, detail: null };
 }
 
 /**

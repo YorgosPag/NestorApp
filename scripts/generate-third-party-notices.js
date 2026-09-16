@@ -35,6 +35,11 @@ const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'public', 'third-party');
 const NOTICES_FILE = path.join(OUT_DIR, 'THIRD_PARTY_NOTICES.txt');
 const SBOM_FILE = path.join(OUT_DIR, 'sbom.json');
+/**
+ * ADR-863 Φ3 — ο **συμπαγής** κατάλογος που διαβάζει η σελίδα `/open-source`.
+ * Ζει δίπλα στα αδέλφια του: **ένας** φάκελος, **ένα** αποτύπωμα, καμία τρίτη αυθεντία.
+ */
+const INDEX_FILE = path.join(OUT_DIR, 'index.json');
 
 /**
  * Το αποτύπωμα των **εισόδων**. Πρότυπο CHECK 3.33/3.34: ένα παραγόμενο artifact χωρίς
@@ -133,7 +138,10 @@ function write(m) {
   const meta = { generatedAt: new Date().toISOString(), fingerprint: m.fingerprint };
   fs.writeFileSync(NOTICES_FILE, R.renderNotices(m.verdict, meta), 'utf8');
   fs.writeFileSync(SBOM_FILE, R.renderSbom(m.verdict, meta), 'utf8');
-  console.log(`✅ ${path.relative(ROOT, NOTICES_FILE)} · ${path.relative(ROOT, SBOM_FILE)}`);
+  // ⚠️ Το `measured` ΔΕΝ είναι διακοσμητικό: χωρίς αυτό η οθόνη δεν μπορεί να ξεχωρίσει
+  //    το «κανένα δεν διανέμεται» από το «κανείς δεν κοίταξε ακόμη» (ADR-863 Φ3).
+  fs.writeFileSync(INDEX_FILE, R.renderIndex(m.verdict, { ...meta, measured: m.snapshot.measured }), 'utf8');
+  console.log(`✅ ${path.relative(ROOT, NOTICES_FILE)} · ${path.relative(ROOT, SBOM_FILE)} · ${path.relative(ROOT, INDEX_FILE)}`);
   console.log(`   αποδόθηκαν: ${R.attributedCount(m.verdict)} · αποτύπωμα sha256:${m.fingerprint.slice(0, 12)}…`);
 }
 
@@ -150,4 +158,4 @@ function main(argv) {
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
 
-module.exports = { ROOT, NOTICES_FILE, SBOM_FILE, inputsFingerprint, licenseOf, subjectOf, measure, printReport, main };
+module.exports = { ROOT, NOTICES_FILE, SBOM_FILE, INDEX_FILE, inputsFingerprint, licenseOf, subjectOf, measure, printReport, main };

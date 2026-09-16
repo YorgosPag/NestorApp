@@ -356,4 +356,54 @@ describe('Ρ — ό,τι βλέπει ο παραλήπτης', () => {
     expect(sbom.components[0].purl).toMatch(/^pkg:npm\//);
     expect(sbom.metadata.properties[0].value).toBe('sha256:φ');
   });
+
+  // ─── Ι — ΤΟ ΤΡΙΤΟ ΠΑΡΑΔΟΤΕΟ: Ο ΚΑΤΑΛΟΓΟΣ ΤΗΣ ΟΘΟΝΗΣ (ADR-863 Φ3) ──────────
+
+  const index = (measured) => JSON.parse(R.renderIndex(verdict, { generatedAt: 'τ', fingerprint: 'φ', measured }));
+
+  it('Ι1: ο κατάλογος φέρει ΤΟ ΙΔΙΟ αποτύπωμα — τρεις μορφές, μία κρίση', () => {
+    expect(index(true).fingerprint).toBe('sha256:φ');
+    expect(index(true).rows).toHaveLength(verdict.rows.length);
+  });
+
+  /**
+   * 🔑 **ΤΕΣΣΕΡΑ ΠΕΔΙΑ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ**: το SBOM είναι 586 KB· η οθόνη χρειάζεται
+   * όνομα · έκδοση · άδεια · επιφάνεια. Ένα πέμπτο πεδίο που γλιστρά εδώ είναι bytes που
+   * κατεβαίνουν σε συσκευή χωρίς να τα ζητά κανείς.
+   */
+  it('Ι2: ΜΟΝΟ τα τέσσερα πεδία που αποδίδει η οθόνη — κανένα λαθρεπιβάτης', () => {
+    for (const row of index(true).rows) {
+      expect(Object.keys(row).sort()).toEqual(['l', 'n', 's', 'v']);
+    }
+  });
+
+  /**
+   * 🔴 Η ΔΙΑΦΟΡΑ ΑΝΑΜΕΣΑ ΣΕ «ΑΓΝΟΙΑ» ΚΑΙ «ΑΠΑΛΛΑΓΗ», ΚΑΙ ΕΙΝΑΙ ΟΛΟΚΛΗΡΗ. Χωρίς το
+   * `measured`, η οθόνη θα έδειχνε «0 διανέμονται» τη στιγμή που **κανείς δεν κοίταξε** —
+   * το σχήμα που αυτό το repo καταγγέλλει σε N.11 · N.12 · N.18 · 3.18.
+   */
+  it('Ι3: το `measured` ταξιδεύει ΑΥΤΟΥΣΙΟ — η οθόνη μπορεί να πει «δεν μετρήθηκε»', () => {
+    expect(index(false).measured).toBe(false);
+    expect(index(true).measured).toBe(true);
+  });
+
+  /** ⚠️ Κατεβαίνει σε **συσκευή**, σε αντίθεση με το SBOM που το ζητά μηχανή. */
+  it('Ι4: συμπαγές, χωρίς εσοχές — αλλιώς ~40% bytes σε κάθε επίσκεψη', () => {
+    expect(R.renderIndex(verdict, { generatedAt: 'τ', fingerprint: 'φ' })).not.toMatch(/\n {2}"/);
+  });
+
+  /**
+   * 🧹 **Η ΚΑΛΩΔΙΩΣΗ ΤΟΥ ΦΡΟΥΡΟΥ ΦΡΕΣΚΑΔΑΣ** (πρότυπο `Ζ6`). Μέχρι την Φ3 το
+   * `staleness()` κοιτούσε **μόνο** το `.txt`: το `sbom.json` παραγόταν από την ίδια
+   * κρίση με το ίδιο αποτύπωμα και **κανείς δεν το ρωτούσε**. Χωρίς αυτή την άγκυρα, η
+   * επέκταση μπορεί να αναιρεθεί σιωπηλά.
+   */
+  it('Ι5: ο φρουρός φρεσκάδας ρωτά ΚΑΙ ΤΑ ΤΡΙΑ παραγόμενα, όχι μόνο το κείμενο', () => {
+    const generator = require('../generate-third-party-notices');
+    expect(generator.INDEX_FILE).toMatch(/index\.json$/);
+    const src = fs.readFileSync(path.join(__dirname, '..', 'check-third-party-notices.js'), 'utf8');
+    for (const artifact of ['NOTICES_FILE', 'SBOM_FILE', 'INDEX_FILE']) {
+      expect(src).toContain(`generator.${artifact}`);
+    }
+  });
 });

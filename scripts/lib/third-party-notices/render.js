@@ -156,7 +156,43 @@ function renderSbom(verdict, { generatedAt, fingerprint }) {
   }, null, 2)}\n`;
 }
 
+/**
+ * ADR-863 Φ3 — **ΤΟ ΤΡΙΤΟ ΠΑΡΑΔΟΤΕΟ: Ο ΚΑΤΑΛΟΓΟΣ ΓΙΑ ΤΗΝ ΟΘΟΝΗ.**
+ *
+ * 🔑 **ΓΙΑΤΙ ΤΡΙΤΟ ΑΡΧΕΙΟ ΚΑΙ ΟΧΙ ΑΝΑΓΝΩΣΗ ΤΟΥ SBOM.** Το SBOM είναι **586 KB** —
+ * σχήμα CycloneDX με `bom-ref`, `purl`, `properties[]` ανά στοιχείο. Η σελίδα χρειάζεται
+ * **τέσσερα πεδία**: το ίδιο γεγονός σε **61 KB**, δηλαδή **9,6×** λιγότερα bytes στο
+ * σύρμα για τον άνθρωπο που απλώς ρωτά *«τι χρησιμοποιείτε;»*. Το εναλλακτικό —να
+ * κατεβάζει η σελίδα το SBOM και να το κλαδεύει στον περιηγητή— θα πλήρωνε **525 KB**
+ * για να τα πετάξει.
+ *
+ * ⚠️ **ΚΑΙ ΤΑ ΤΡΙΑ ΦΕΡΟΥΝ ΤΟ ΙΔΙΟ ΑΠΟΤΥΠΩΜΑ, ΑΡΑ ΔΕΝ ΜΠΟΡΟΥΝ ΝΑ ΑΠΟΚΛΙΝΟΥΝ.** Τρεις
+ * μορφές, **μία** κρίση (`verdict`) — ποτέ τρεις υπολογισμοί.
+ *
+ * ⚠️ **ΣΥΜΠΑΓΕΣ, ΧΩΡΙΣ ΕΣΟΧΕΣ**: αυτό το αρχείο **κατεβαίνει σε συσκευή**, σε αντίθεση
+ * με το SBOM που το ζητά μηχανή. Το `JSON.stringify(…, null, 2)` θα πρόσθετε ~40%.
+ *
+ * ⚠️ **ΤΟ `measured` ΤΑΞΙΔΕΥΕΙ ΜΑΖΙ**, και είναι ο λόγος που η οθόνη μπορεί να πει
+ * «δεν μετρήθηκε» αντί να δείξει «0 διανέμονται» — η διαφορά ανάμεσα σε **άγνοια** και
+ * σε **απουσία υποχρέωσης**, που είναι ολόκληρη.
+ */
+function renderIndex(verdict, { generatedAt, fingerprint, measured }) {
+  return `${JSON.stringify({
+    $doc: 'ΠΑΡΑΓΟΜΕΝΟ (ADR-863 · CHECK 3.84) — μην το επεξεργάζεσαι. Γεννήτορας: npm run third-party-notices:generate',
+    fingerprint: `sha256:${fingerprint}`,
+    generatedAt,
+    measured: measured === true,
+    tally: verdict.tally,
+    rows: verdict.rows.map((row) => ({
+      n: row.name,
+      v: row.version,
+      l: row.license,
+      s: row.surface,
+    })),
+  })}\n`;
+}
+
 /** Πόσα στοιχεία απέδωσαν κείμενο — για την κλειστή λογιστική της αναφοράς. */
 const attributedCount = (verdict) => verdict.rows.filter((r) => ATTRIBUTED_STATES.includes(r.state)).length;
 
-module.exports = { HEADER, SECTIONS, renderEntry, renderSection, renderCanonical, renderNotices, renderSbom, attributedCount };
+module.exports = { HEADER, SECTIONS, renderEntry, renderSection, renderCanonical, renderNotices, renderSbom, renderIndex, attributedCount };
