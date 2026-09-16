@@ -46,6 +46,7 @@
  */
 
 import type { SuitabilityCode } from '@/config/iso19650-constants';
+import type { PermissionId } from '@/lib/auth/types';
 import type { CapabilitySubject } from '@/types/capability-authority';
 
 // =============================================================================
@@ -261,6 +262,37 @@ export const VISIBLE_VERDICTS: readonly ContainerAccessVerdict[] = [
 /** Επιτρέπει αυτή η ετυμηγορία την ανάγνωση; */
 export function isContainerVisible(verdict: ContainerAccessVerdict): boolean {
   return VISIBLE_VERDICTS.includes(verdict);
+}
+
+// =============================================================================
+// ΤΟ ΕΡΩΤΗΜΑ — Η ΤΡΙΑΔΑ ΤΟΥ AuthZEN, ΠΛΗΡΗΣ
+// =============================================================================
+
+/**
+ * Το ερώτημα προς τον κριτή ορατότητας — **subject × action × resource**.
+ *
+ * 🏛️ **ΕΔΩ ΚΛΕΙΝΕΙ Η ΤΡΙΑΔΑ.** Το AuthZEN 1.0 απαιτεί **και τα τρία** σκέλη ως
+ * `REQUIRED` (§6.1), με το `resource` να είναι `{ type, id, properties }` (§5.2).
+ * Ο αδελφός `CapabilityQuery` έχει **δύο** και το δηλώνει (ADR-801 §7)· εδώ:
+ *
+ *   `subject`  → {@link ContainerSubject}
+ *   `action`   → `PermissionId`
+ *   `resource` → {@link ContainerFacts} *(`type: file` · `id: fileId` ·
+ *                `properties: state`)*
+ *
+ * ⚠️ **ΤΟ `action` ΤΟ ΔΙΝΕΙ Ο ΚΑΛΩΝ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΣΗ**: στο μητρώο
+ * `PERMISSIONS` **δεν υπάρχει** γενική ικανότητα αρχείων (μετρημένο 2026-09-16:
+ * μόνο `dxf:files:view` · `legal:documents:view`). Ένα καρφωμένο όνομα εδώ θα
+ * γύριζε `denied-unknown-action` σε **κάθε** κλήση — δηλαδή φρουρός που μοιάζει
+ * να δουλεύει και αρνείται τα πάντα. Οι νέες ικανότητες γεννιούνται στο **Β6**.
+ */
+export interface ContainerAccessQuery {
+  /** Ταυτότητα **ήδη επαληθευμένη**. `null` = ανώνυμος ⇒ deny-by-default. */
+  readonly subject: ContainerSubject | null;
+  /** Τα **ήδη φορτωμένα** γεγονότα του πόρου — ποτέ κλειδί προς ανάγνωση. */
+  readonly facts: ContainerFacts;
+  /** Τι θέλει να κάνει — το κρίνει ο `decideCapability` (ADR-801). */
+  readonly action: PermissionId;
 }
 
 /**
