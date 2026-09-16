@@ -1028,6 +1028,18 @@ if (notifLocaleTriggers.length > 0)
 if (allFiles.length > 0)
   addThread('10', 'Secret scan', 'scripts/check-secret-scan.js', allFiles);
 
+// CHECK 3.86 (ADR-865) — απόδειξη ανάπτυξης. 🔴 ΚΑΜΙΑ ΣΚΑΝΔΑΛΗ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΟΛΟ ΝΟΗΜΑ:
+// με σκανδάλη στα `firestore.rules`/`firestore.indexes.json` ΔΕΝ θα έπιανε τη βλάβη που τη
+// γέννησε. Το `b307f46e` τα άγγιξε, και μετά πέρασαν **21 commits** (legal, ADR-861 κ.ά.) χωρίς
+// κανείς να ξαναδεί την εκκρεμότητα — ακριβώς εκεί ξεχάστηκε. Μια εκκρεμής ανάπτυξη πρέπει να
+// **επιμένει να φαίνεται** σε ΚΑΘΕ commit μέχρι να λυθεί (πρότυπο Argo CD: το `OutOfSync` badge
+// μένει, χωρίς `selfHeal`, μέχρι να δράσει άνθρωπος).
+// Κόστος: sha256 τριών αρχείων + ένα JSON — κανένα δίκτυο, καμία ταυτότητα. Στο commit ΔΕΝ
+// μπλοκάρει ο Κ5 (η στιγμή της ανάπτυξης είναι απόφαση του Giorgio, N.(-1))· μπλοκάρει στο
+// **push**, όπου ο κώδικας φεύγει προς την παραγωγή χωρίς τον κανόνα του (`git-hooks/pre-push`).
+if (!process.env.SKIP_FIRESTORE_DEPLOY_PROOF)
+  addThread('3.86', 'Firestore deploy proof', 'scripts/check-firestore-deploy-proof.js');
+
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {

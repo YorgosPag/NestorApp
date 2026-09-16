@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 810 ADRs | Last Updated: 2026-09-15
+**📊 Stats**: 814 ADRs | Last Updated: 2026-09-16
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 571 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 573 | [View](#uncategorized) |
 
 ---
 
@@ -844,7 +844,11 @@
 | **ADR-858** | **Το αρχείο που δεν φορτώθηκε ΠΟΤΕ — σκίαση, κύκλοι, και η αρχή αξιολόγησης modules** — 🔴 η παραγωγή έσκασε με `Cannot access 'o' before initialization` σε **σελίδα πωλήσεων που δεν ανοίγει καν τον CAD viewer**· η αιτία ταυτοποιήθηκε **από το ίδιο το bundle** (333 KB κατεβασμένα, module ids ένα-ένα). **Τρία ελαττώματα**: ο φάκελος `debug/` είχε `index.ts` **ΚΑΙ** `index.tsx` και το webpack λύνει `.tsx` πρώτο ⇒ το «Pure TypeScript» barrel **δεν φορτώθηκε ποτέ** ενώ **52** αρχεία τραβούσαν React panels + QA runners *(μετρημένο: **κανένα** δεν ζητούσε σύμβολο του `.tsx`)*· το primitive `storage-utils` εισήγαγε **barrel**, γεννώντας κύκλο· και το `table-surface-mode` διάβαζε δίσκο σε **χρόνο αξιολόγησης module**, ο πυροκροτητής. 🔴 **Δεύτερη σκίαση, χειρότερη**: `dynamic-input/index.tsx` ήταν **stub που επέστρεφε `null`** και σκίαζε τον barrel του αληθινού component — **σβήνει λειτουργία σιωπηλά**. 🔴 **Καμία πύλη δεν μπορούσε**: το `.dependency-cruiser.cjs` δήλωνε `.ts` πριν `.tsx`, δηλαδή **ανέλυε γράφο που δεν εκτελείται**, και το ratchet μετρούσε **πλήθος** (1299) όχι ταυτότητα. 🏆 **Έρευνα: ΚΑΝΕΝΑ εργαλείο** (madge · dpdm · skott · `import/no-cycle` · dependency-cruiser) δεν ρωτά «θα **σκάσει**;» — μόνο «υπάρχει κύκλος;»· το `import defer` (TC39 Stage 3) **δεν υπάρχει** σε Next.js. **Λύση: levelization (Lakos) + ratchet ταυτότητας + CHECK 3.79 + CHECK 3.80** που μετρά **top-level ανάγνωση εισαγόμενου binding μέσα σε SCC**: **1159 → 1**. Κύκλοι **1299 → 1159 (−140)** | ✅ ✅ ΕΝΕΡΓΟ — Φ.Α/Φ.Β/Φ.Γ/Φ.Δ κλειστά (2026-09-12) | 2026-09-12 | Architecture & Build | [📄](./adrs/ADR-858-module-evaluation-authority.md) |
 | **ADR-859** | Η σύνδεση ολοκληρώνεται σε **ΕΝΑ** σημείο — ο δεύτερος παράγοντας είναι κατάσταση, όχι επιτυχία | ✅ ΥΛΟΠΟΙΗΜΕΝΟ — ζωντανή επιβεβαίωση **εκκρεμεί** (μετά το deploy) | 2026-09-14 | Security & Auth | [📄](./adrs/ADR-859-sign-in-completion-single-point.md) |
 | **ADR-860** | Ο κώδικας μιας ανοιχτής καρτέλας **επιβιώνει του deploy** — ανθεκτικότητα σε αλλαγή έκδοσης | ✅ ΥΛΟΠΟΙΗΜΕΝΟ — ζωντανή επιβεβαίωση **εκκρεμεί** (χρειάζονται **δύο** διαδοχικά deploys) | 2026-09-14 | Infrastructure & Deployment | [📄](./adrs/ADR-860-deploy-skew-resilience.md) |
-| **ADR-861** | **Ο φορέας της πλατφόρμας** — μία «ταμπέλα» με ιστορικό, και νομικά έγγραφα με εκδόσεις | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Φ1 γράφτηκε 2026-09-15 (ΟΧΙ commit)** · Φ2–Φ4 σχεδιασμένες | 2026-09-15 | Legal & Compliance · SSoT | [📄](./adrs/ADR-861-platform-operator-and-legal-versions.md) |
+| **ADR-861** | **Ο φορέας της πλατφόρμας** — μία «ταμπέλα» με ιστορικό, και νομικά έγγραφα με εκδόσεις | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — Φ1 ✅ (`5ff914b0`) · Φ2 ✅ (`5aaf6a72`) · **Φ3 ✅ κώδικας + πύλη** (`c2fcaf29` → `018fb9f4` + αυτό το commit, 2026-09-16 — §7)· ⚠️ **εκκρεμούν** τα locales + οι παραγόμενοι τύποι και οι σελίδες `versions/` (η δοκιμαστική περιοχή «Type Safety» ήταν κόκκινη για ξένο λόγο τη στιγμή της αλυσίδας — δες §7) · προϋπόθεση του **ADR-864 Φ3** · Φ4 σχεδιασμένη | 2026-09-15 | Legal & Compliance · SSoT | [📄](./adrs/ADR-861-platform-operator-and-legal-versions.md) |
+| **ADR-862** | Το δίκτυο των επαγγελματιών: **εύρεση · επαφή · συμμετοχή σε υπόθεση · προσφορά** | ✅ 🔵 **ΑΠΟΦΑΣΗ — καμία γραμμή κώδικα** *(N.0.1 Φάση 1)*. ✅ **Όλες οι αποφάσεις Ε-1 … Ε-13 του §10 πάρθηκαν** (Giorgio, 2026-09-16), **κανένα** δηλωμένο ανοιχτό — έτοιμο για **Φ0** | 2026-09-16 | Identity / Collaboration / Marketplace / Authorization | [📄](./adrs/ADR-862-professional-network-case-collaboration.md) |
+| **ADR-863** | Η ΑΠΟΔΟΣΗ ΑΔΕΙΩΝ ΓΙΑ Ο,ΤΙ ΔΙΑΝΕΜΕΤΑΙ | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-863-third-party-attribution.md) |
+| **ADR-864** | Η **κλειστή διάθεση**: ακίνητο που πωλείται **χωρίς δημόσια αγγελία** | ✅ 🟢 **ΣΕ ΥΛΟΠΟΙΗΣΗ**. ✅ **Φ0** (§2.3) · ✅ **Φ1α** (§14) · ✅ **Φ1β** (§15) · ✅ **Φ2** (§16). 🟡 **Φ3 σε εξέλιξη** (§17): Μέρος Α (ADR-861 Φ3 + εγκεκριμένο κείμενο v1) γραμμένο, ΟΧΙ commit · Μέρος Β (συναίνεση στην εντολή) επόμενο. Ανοιχτά: **Ε-5β** (οικόπεδο — Φ4) · **Ε-2γ** (`BuildingPhase` χωρίς γραφέα — Φ7). Προϋπόθεση Φ4-Φ5: **ADR-862 Φ1** | 2026-09-16 | Listings / Marketplace / Privacy / Authorization | [📄](./adrs/ADR-864-private-marketing-off-market-listings.md) |
+| **ADR-865** | Η ΑΠΟΔΕΙΞΗ ΑΝΑΠΤΥΞΗΣ: «γραμμένο» δεν σημαίνει «ανεπτυγμένο» | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-865-deploy-proof-firebase.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1652,6 +1656,8 @@
 | **ADR-852** | Το ιστορικό αλλαγών μιλάει ανθρώπινα: **περιγραφέας πεδίου** αντί για ωμό όνομα | ✅ APPROVED | [View](./adrs/ADR-852-audit-field-descriptor-vocabulary.md) |
 | **ADR-853** | **Η ένταξη σε χώρο ξεκινά από τον χώρο: προσκλήσεις αντί για αίτημα σε σταθερή εταιρεία** — 🔴 μια σύνδεση στο nestorconstruct.gr άνοιγε **μόνη της** αίτημα ένταξης προς την ΠΑΓΩΝΗΣ (`getCompanyId()`), δηλαδή κάθε νέος άνθρωπος αποδιδόταν σε γραφείο που **κανείς δεν επέλεξε** (ADR-787 §2.2 παραβιασμένο). 🏆 Έρευνα σε **8 προϊόντα**: έξι στα έξι επαγγελματικά (GitHub · Autodesk ACC · BIMcloud · Maxon · Zillow · Idealista) είναι **invite-only** ⇒ Α1 μόνο πρόσκληση· Α2 ο ήδη μέλος **άλλου** χώρου προσκαλείται κανονικά (η άρνηση είναι το **τεκμηριωμένο ελάττωμα** της Autodesk· μετρήθηκε ότι το `decideMembership` δέχεται **ήδη** ξένο χώρο σε 352 διαδρομές)· Α3 ρόλος με **ταβάνι**, ποτέ `super_admin`· Α4 το αίτημα **παγώνει** (οι δρόμοι ανοίγματος **διαγράφηκαν** — νεκρός κώδικας = ανοιχτή πόρτα). Ξεπερνάμε σε 7 σημεία (token **και** υπογεγραμμένο **και** hashed· δέσμευση σε **επαληθευμένο** email — το Figma ρητά όχι· αποδοχή = **ρητή** πράξη· **δηλωμένη** ταυτότητα εταιρείας· κατάσταση παράδοσης· θέση στην **αποδοχή** όχι στην αποστολή· **ονομασμένοι** λόγοι άρνησης). 🔶 Δηλωμένο όριο: 78 μπλοκ κανόνων κρίνουν με το claim ⇒ Επίπεδο 2 = ADR-787 Κ-2 | ✅ APPROVED | [View](./adrs/ADR-853-workspace-invitations.md) |
 | **ADR-854** | **Το σήμα μετρητή αποκτά ιδιοκτήτη — `IconCountBadge`** — το ίδιο pattern γραμμένο **6 φορές** με **4 χρώματα / 6 μεγέθη / 4 θέσεις / 3 cutoff**· 🔴 τα δύο που ζητούσαν `--bg-error` (soft surface) ήταν στο **φωτεινό θέμα 1,02:1 — αόρατα**, και πέρασαν απαρατήρητα επειδή η ανάπτυξη γίνεται στο σκοτεινό. 🏆 Ο **τόνος δεσμεύει ΖΕΥΓΟΣ** γέμισμα+μελάνι (ο MUI δίνει `success`+λευκό = 2,30:1· εδώ `success`+μαύρο = 9,14:1)· χωρίς `className` prop επίτηδες· `tabular-nums`, logical `-end-1`, `aria-live`, πραγματικός αριθμός στον αναγνώστη. **Στενεύει** το ADR-770 §15 (ρόλος ≠ μέγεθος κειμένου: 3,59:1 περνά στα 14px, όχι στα 10px). 31 αγκυρώσεις **επαληθευμένες με μετάλλαξη** | ✅ APPROVED | [View](./adrs/ADR-854-icon-count-badge.md) |
+| **ADR-863** | Η ΑΠΟΔΟΣΗ ΑΔΕΙΩΝ ΓΙΑ Ο,ΤΙ ΔΙΑΝΕΜΕΤΑΙ | ✅ APPROVED | [View](./adrs/ADR-863-third-party-attribution.md) |
+| **ADR-865** | Η ΑΠΟΔΕΙΞΗ ΑΝΑΠΤΥΞΗΣ: «γραμμένο» δεν σημαίνει «ανεπτυγμένο» | ✅ APPROVED | [View](./adrs/ADR-865-deploy-proof-firebase.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
