@@ -70,6 +70,7 @@
  */
 
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
+import { offerStateOf } from '@/services/listings/public-listing-projection';
 import type { PublicListing } from '@/types/public-listing';
 import type { PropertyDemand } from '@/types/property-demand';
 import {
@@ -99,9 +100,20 @@ import type { DemandBlocker, ListingMatchFacts } from './demand-match-vocabulary
  * φτάνουν** τα λεφτά που ο ίδιος έχει ήδη γράψει. Ο ισχυρισμός θα ήταν **ψευδής**, και
  * θα φαινόταν πιο γενναιόδωρος.
  */
-export const INTEREST_STANCES = ['offered', 'partial', 'dormant'] as const;
+export const INTEREST_STANCES = ['offered', 'partial', 'dormant', 'settled'] as const;
 
 export type InterestStance = (typeof INTEREST_STANCES)[number];
+
+/**
+ * Οι στάσεις που **κρίνονται** απέναντι στη ζήτηση — όλες εκτός της `settled`.
+ *
+ * 🔴 **ADR-864 Φ2 (θεραπεία Φ0.1β)**: ακίνητο με **ολοκληρωμένη** συναλλαγή (`sold`/`rented`)
+ * **δεν** εξετάζεται καθόλου. Δεν είναι «κανείς δεν το ζητά» — είναι «δεν υπάρχει πια
+ * κάτοχος να ρωτηθεί» (Zillow: «Sold» κλείνει την επαφή · Rental Manager: «Rented» την
+ * απενεργοποιεί). Ως τις 2026-09-16 το `sold` αποδείκνυε `['sell']` και ο κάτοχος λάμβανε
+ * *«N ζητούν **αυτό ακριβώς** το ακίνητο»* για διαμέρισμα που είχε ήδη πουλήσει.
+ */
+export type JudgedInterestStance = Exclude<InterestStance, 'settled'>;
 
 /**
  * **Ποια στάση έχει αυτό το ακίνητο** — ταξινομητής που **επιστρέφει όνομα**.
@@ -117,7 +129,12 @@ export type InterestStance = (typeof INTEREST_STANCES)[number];
  * μηχανή επιλογής τιμής** — ακριβώς αυτό που το `PublicListing` αρνήθηκε να γεννήσει.
  */
 export function stanceOfListing(listing: PublicListing): InterestStance {
-  if (listing.offerKinds.length > 0) return 'offered';
+  // 🔴 **ΕΝΑΣ ορισμός του «διατίθεται» για χάρτη ΚΑΙ ζήτηση** (ADR-864 Φ2 · Α6). Ήταν
+  //    `listing.offerKinds.length > 0` — δεύτερος κριτής, που διαφωνούσε με την πύλη
+  //    ακριβώς στο `sold`/`rented` (το κλείσιμο **αποδεικνύει** είδος διάθεσης). Το
+  //    `offerStateOf` είναι αναλλοίωτο στην προβολή, άρα ρωτιέται σωστά πάνω στο σχήμα.
+  const state = offerStateOf(listing);
+  if (state !== 'unoffered') return state;
   return getEffectivePrice(listing)?.amount == null ? 'dormant' : 'partial';
 }
 
@@ -144,7 +161,7 @@ export function stanceOfListing(listing: PublicListing): InterestStance {
  * θα κρυβόταν, αντί να μετρηθεί. Συνέπεια, δηλωμένη: μια ζήτηση **Ζ2** («*από Μάρτιο
  * 2027*») **δεν** μετράει σε κανένα ακίνητο, και ο λόγος **φαίνεται** στη λογιστική.
  */
-const UNDECLARED_AXES: Readonly<Record<InterestStance, readonly DemandBlocker[]>> = {
+const UNDECLARED_AXES: Readonly<Record<JudgedInterestStance, readonly DemandBlocker[]>> = {
   offered: [],
   partial: ['offer-kind'],
   // 🔴 ADR-777 §8.52 — ΗΤΑΝ ΑΝΤΙΣΤΑΘΜΙΣΗ ΤΟΥ ΨΕΥΔΟΥΣ, ΚΑΙ ΕΠΑΨΕ ΝΑ ΧΡΕΙΑΖΕΤΑΙ.
@@ -159,7 +176,7 @@ const UNDECLARED_AXES: Readonly<Record<InterestStance, readonly DemandBlocker[]>
 };
 
 /** `true` αν **κάθε** εμπόδιο οφείλεται σε άξονα που ο ιδιοκτήτης δεν έχει δηλώσει. */
-function onlyUndeclared(blockers: readonly DemandBlocker[], stance: InterestStance): boolean {
+function onlyUndeclared(blockers: readonly DemandBlocker[], stance: JudgedInterestStance): boolean {
   const undeclared = UNDECLARED_AXES[stance];
   return blockers.every((blocker) => undeclared.includes(blocker));
 }
@@ -191,7 +208,7 @@ export type DemandInterestOutcome = (typeof DEMAND_INTEREST_OUTCOMES)[number];
 export function classifyDemandInterest(
   demand: PropertyDemand,
   facts: ListingMatchFacts,
-  stance: InterestStance,
+  stance: JudgedInterestStance,
   nowIso: string,
   todayDate: string,
 ): DemandInterestOutcome {
@@ -258,17 +275,27 @@ export function placeInterestCensusBalances(census: PlaceInterestCensus): boolea
  *
  * ⛔ **ΤΟ {@link PlaceInterestCensus} ΔΕΝ ΤΑΞΙΔΕΥΕΙ ΜΑΖΙ.** Δες την προειδοποίηση εκεί.
  */
-export interface PlaceInterest {
-  /** Πόσο δηλωμένο είναι το ακίνητο — **αλλάζει τι σημαίνει ο αριθμός**. */
-  readonly stance: InterestStance;
+export type PlaceInterest =
+  | {
+      /** Πόσο δηλωμένο είναι το ακίνητο — **αλλάζει τι σημαίνει ο αριθμός**. */
+      readonly stance: JudgedInterestStance;
+      /**
+       * Ο αριθμός, **ήδη λογοκριμένος** από το κατώφλι του `place-owner`.
+       *
+       * `count === null` σημαίνει *«δεν το λέμε»*, **όχι** *«κανένας»* — και η οθόνη
+       * οφείλει να τα ξεχωρίζει.
+       */
+      readonly disclosure: DemandDisclosure;
+    }
   /**
-   * Ο αριθμός, **ήδη λογοκριμένος** από το κατώφλι του `place-owner`.
+   * 🔴 **Ολοκληρωμένη συναλλαγή — ΚΑΝΕΝΑ πεδίο αριθμού, επίτηδες** (ADR-864 Φ2).
    *
-   * `count === null` σημαίνει *«δεν το λέμε»*, **όχι** *«κανένας»* — και η οθόνη
-   * οφείλει να τα ξεχωρίζει.
+   * Ένα `disclosure.count: null` εδώ θα διαβαζόταν *«κάτω από το κατώφλι»*, και ένα `0`
+   * *«κανείς δεν το ζητά»* — **δύο ψέματα** για ένα ακίνητο που απλώς δεν ρωτήθηκε. Ο
+   * τύπος κάνει την παρανάγνωση **αμεταγλώττιστη**: ο καταναλωτής πρέπει να στενέψει τη
+   * στάση πριν αγγίξει αριθμό.
    */
-  readonly disclosure: DemandDisclosure;
-}
+  | { readonly stance: 'settled' };
 
 /**
  * 🔴 **Η ΜΟΝΗ διαδρομή από τη ζήτηση προς τον ΙΔΙΟΚΤΗΤΗ ενός ακινήτου.**
@@ -296,6 +323,10 @@ export function discloseInterest(
   todayDate: string,
 ): { readonly interest: PlaceInterest; readonly census: PlaceInterestCensus } {
   const stance = stanceOfListing(facts.listing);
+
+  // 🔑 **Καμία ζήτηση δεν εξετάζεται** — `considered: 0` είναι η αλήθεια, όχι «0 ταίριαξαν».
+  if (stance === 'settled') return { interest: { stance }, census: SETTLED_CENSUS };
+
   const { interested, census } = tallyInterest(facts, demands, stance, nowIso, todayDate);
 
   // 🔴 Άγνωστη κατάσταση ⇒ `throw` **με όνομα**. Είναι σφάλμα προγράμματος, όχι
@@ -320,6 +351,15 @@ export function discloseInterest(
   };
 }
 
+/** Η λογιστική ολοκληρωμένου ακινήτου: τίποτα δεν εξετάστηκε, τίποτα δεν συγχωρέθηκε. */
+const SETTLED_CENSUS: PlaceInterestCensus = {
+  interested: 0,
+  notCountable: 0,
+  mismatch: 0,
+  considered: 0,
+  undeclaredAxes: [],
+};
+
 /**
  * Ο βρόχος που **ταξινομεί** — χωριστά από την αποκάλυψη που **λογοκρίνει**.
  *
@@ -331,7 +371,7 @@ export function discloseInterest(
 function tallyInterest(
   facts: ListingMatchFacts,
   demands: readonly PropertyDemand[],
-  stance: InterestStance,
+  stance: JudgedInterestStance,
   nowIso: string,
   todayDate: string,
 ): { readonly interested: readonly PropertyDemand[]; readonly census: PlaceInterestCensus } {

@@ -84,6 +84,20 @@ import type {
 /** Οι διαθέσεις που κάνουν μια αγγελία ορατή. Παράγεται από το SSoT, δεν ξαναγράφεται. */
 const PUBLIC_OFFER_KINDS: ReadonlySet<string> = new Set<OfferKind>(OFFER_KINDS);
 
+/** Οι τρεις καταστάσεις διάθεσης — δες {@link offerStateOf}. */
+export const OFFER_STATES = ['offered', 'settled', 'unoffered'] as const;
+
+export type OfferState = (typeof OFFER_STATES)[number];
+
+/**
+ * Το **ελάχιστο** σχήμα που κρίνει τη διάθεση. Το `ProjectableProperty` **και** το
+ * `PublicListing` το ικανοποιούν — άρα ο κριτής ρωτιέται **και** πριν **και** μετά την προβολή.
+ */
+export type OfferStateFacts = Pick<
+  ProjectableProperty,
+  'type' | 'commercialStatus' | 'status' | 'offerKinds'
+>;
+
 /**
  * **Δημοσιεύεται αυτό το ακίνητο;** — διατίθεται **ΚΑΙ** το κοινό του είναι `public`.
  *
@@ -115,12 +129,44 @@ export function isPubliclyListed(property: ProjectableProperty): boolean {
  * επειδή οι δύο ερωτήσεις έγιναν πραγματικά δύο: μια κλειστή διάθεση **διατίθεται**
  * (η ζήτηση πρέπει να τη βρίσκει, ADR-864 §5.3) αλλά **δεν** είναι δημόσια.
  *
- * 🔑 **Εξάγεται για τους ειδοποιητές ζήτησης (ADR-864 Φ2)**: σήμερα εκείνοι κρίνουν μόνο
- * τα `offerKinds` του σχήματος, και μια μονάδα `sold` περνά (το `sold` αποδεικνύει
- * `['sell']` — ADR-864 §2.3 Φ0.1β). Ο ορισμός του «διατίθεται» οφείλει να είναι **ένας**
- * για χάρτη και ειδοποιήσεις.
+ * 🔑 **Παράγεται από το {@link offerStateOf}** — ο **ένας** ορισμός του «διατίθεται» για
+ * χάρτη **και** ειδοποιήσεις ζήτησης (ADR-864 Φ2 · θεραπεία Φ0.1β).
  */
-export function isOffered(property: ProjectableProperty): boolean {
+export function isOffered(property: OfferStateFacts): boolean {
+  return offerStateOf(property) === 'offered';
+}
+
+/**
+ * **Πού βρίσκεται η διάθεση ενός ακινήτου** — κλειστό σύνολο, ταξινομητής που επιστρέφει
+ * **όνομα** (ADR-864 Φ2).
+ *
+ * | Κατάσταση | Σημασία |
+ * |---|---|
+ * | `offered` | διατίθεται — σε **οποιοδήποτε** κοινό |
+ * | `settled` | η συναλλαγή **ολοκληρώθηκε** (`FINALIZED_COMMERCIAL_STATUSES`) |
+ * | `unoffered` | δεν διατίθεται **ακόμη** ή **πια** (κλειστό, αποσυρμένο, χωρίς είδος) |
+ *
+ * 🔴 **ΓΙΑΤΙ ΤΡΕΙΣ ΚΑΙ ΟΧΙ `boolean`** (ADR-864 §2.3 Φ0.1β): το «δεν διατίθεται» έκρυβε
+ * **δύο** γεγονότα με αντίθετη συνέπεια για τη ζήτηση. Το κλειστό κατάστημα είναι ο
+ * **στόχος** του δολώματος (SPEC-777B §12.6)· το πουλημένο διαμέρισμα **δεν έχει πια
+ * κάτοχο να ρωτηθεί** (Zillow: «Sold» κλείνει την επαφή · Rental Manager: «Rented»
+ * απενεργοποιεί). Με `boolean`, ο ειδοποιητής θα έπρεπε να ξαναδιαβάσει το
+ * `FINALIZED_COMMERCIAL_STATUSES` μόνος του — **δεύτερος** κριτής.
+ *
+ * 🔑 **Αναλλοίωτο στην προβολή**: `offerStateOf(p) === offerStateOf(projectListingShape(p))`
+ * — γι' αυτό δέχεται το **ελάχιστο** σχήμα ({@link OfferStateFacts}) και ρωτιέται και
+ * πάνω στο εφήμερο `PublicListing` των γεγονότων ταιριάσματος (άγκυρα Γ4).
+ */
+export function offerStateOf(property: OfferStateFacts): OfferState {
+  const status = property.commercialStatus ?? property.status ?? null;
+
+  // 🔑 **Η ΟΛΟΚΛΗΡΩΣΗ ΚΡΙΝΕΤΑΙ ΠΡΩΤΗ**: ένα πουλημένο ακίνητο χωρίς είδος παραμένει
+  //    πουλημένο. Για τη δημοσίευση η σειρά είναι αδιάφορη (και τα δύο ⇒ όχι)· για τη
+  //    ζήτηση **δεν** είναι.
+  if (typeof status === 'string' && (FINALIZED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
+    return 'settled';
+  }
+
   // 🔴 **ΧΩΡΙΣ ΛΥΜΕΝΟ ΕΙΔΟΣ ΔΕΝ ΔΗΜΟΣΙΕΥΕΤΑΙ** (ADR-842 §7.6.12 / §8 #11 — απόφαση
   //    Giorgio 06/09, δρόμος **Γ′**). Ως τις 2026-09-06 η προβολή έγραφε
   //    `(property.type ?? 'apartment') as PropertyType`, δηλαδή **βάφτιζε διαμέρισμα**
@@ -130,7 +176,7 @@ export function isOffered(property: ProjectableProperty): boolean {
   //
   // 🔑 **Η ΑΠΟΣΥΡΣΗ ΥΠΑΡΧΕΙ ΗΔΗ, ΔΕΝ ΦΤΙΑΧΝΕΤΑΙ ΜΗΧΑΝΙΣΜΟΣ**: ο γραφέας κάνει
   //    `buildPublicListing() === null ⇒ ref.delete()` **μαζί** με απόσυρση του ραφιού
-  //    φωτογραφιών (`writeListingProjection`, ADR-841 Α12.6). Ένα `false` εδώ αρκεί.
+  //    φωτογραφιών (`writeListingProjection`, ADR-841 Α12.6). Ένα `unoffered` εδώ αρκεί.
   //
   // ⚠️ **ΚΑΙ ΤΟ ΑΚΙΝΗΤΟ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ**: η οθόνη του **κατόχου** το δείχνει με
   //    «άγνωστο είδος — χρειάζεται διόρθωση» (`OwnerPropertyCard`), και το
@@ -139,11 +185,10 @@ export function isOffered(property: ProjectableProperty): boolean {
   //
   // 🟢 **Λανθάνον, όχι ενεργό** (μετρημένο 06/09): **9/9** αγγελίες και **6/6** προσφορές
   //    έχουν ήδη κανονικό είδος. Η γραμμή δεν διορθώνει υπαρκτή βλάβη — αποτρέπει την πρώτη.
-  if (normalizePropertyType(property.type) === null) return false;
+  if (normalizePropertyType(property.type) === null) return 'unoffered';
 
-  const status = property.commercialStatus ?? property.status ?? null;
   if (typeof status === 'string' && (LISTED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
-    return true;
+    return 'offered';
   }
 
   // 🔴 **ΤΟ ΚΛΕΙΣΙΜΟ ΚΟΒΕΙ ΤΟ ΔΕΥΤΕΡΟ ΣΚΕΛΟΣ — αλλιώς πουλημένα ακίνητα μένουν στην
@@ -168,12 +213,10 @@ export function isOffered(property: ProjectableProperty): boolean {
   //
   // 🔑 Χρησιμοποιεί το **υπάρχον** `FINALIZED_COMMERCIAL_STATUSES` και όχι δύο ωμά
   // αλφαριθμητικά: μια όγδοη τελική κατάσταση οφείλει να κληρονομήσει τον κανόνα
-  // χωρίς να τη θυμηθεί κανείς.
-  if (typeof status === 'string' && (FINALIZED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
-    return false;
-  }
-
-  return (property.offerKinds ?? []).some((kind) => PUBLIC_OFFER_KINDS.has(kind));
+  // χωρίς να τη θυμηθεί κανείς. (Ο έλεγχος ζει στην αρχή της συνάρτησης — δες εκεί.)
+  return (property.offerKinds ?? []).some((kind) => PUBLIC_OFFER_KINDS.has(kind))
+    ? 'offered'
+    : 'unoffered';
 }
 
 // ============================================================================

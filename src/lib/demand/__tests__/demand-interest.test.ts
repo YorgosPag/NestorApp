@@ -109,6 +109,8 @@ describe('Σ — η στάση, κάθε τιμή από πραγματική ε
     offered: () => stanceOfListing(OFFERED.listing),
     partial: () => stanceOfListing(PARTIAL.listing),
     dormant: () => stanceOfListing(DORMANT.listing),
+    // ADR-864 Φ2 — ολοκληρωμένη συναλλαγή (άγκυρα Γ2 στο `closed-listing-demand.test.ts`).
+    settled: () => stanceOfListing(listing({ commercialStatus: 'sold' })),
   };
 
   it.each(INTEREST_STANCES)('η στάση «%s» παράγεται από πραγματικό ακίνητο', (stance) => {
