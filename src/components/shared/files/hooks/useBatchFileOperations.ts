@@ -21,6 +21,7 @@ import {
   updateFileClassificationWithPolicy,
   type ArchiveFilesResponse,
 } from '@/services/filesystem/file-mutation-gateway';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import { useFileClassification, isAIClassifiable } from './useFileClassification';
@@ -69,6 +70,53 @@ export function showArchiveResultFeedback(
   }
   notify.success(t('batch.archiveSuccess', { count: result.processedCount }));
   return true;
+}
+
+// ============================================================================
+// SSoT: Batch download as ZIP (used by entity + central file manager)
+// ============================================================================
+
+/**
+ * Κατεβάζει τα δοσμένα αρχεία ως **ένα** ZIP.
+ *
+ * 🔑 **ΕΝΑ σώμα, δύο καλούντες** (N.18 / CHECK 3.28): ο κεντρικός διαχειριστής
+ * (`file-manager-handlers`) και αυτό το hook έγραφαν **δίδυμο** σώμα 15 γραμμών —
+ * ίδιο αίτημα, ίδιος χορός με `<a>`, ίδιο όνομα αρχείου. Η πύλη το έπιασε τη
+ * στιγμή που το Β8 τα άγγιξε **και τα δύο** στο ίδιο commit.
+ *
+ * ⚠️ Ο χορός με το `<a>` **δεν** ξαναγράφεται εδώ: ζει στο
+ * `lib/exports/trigger-export-download` (Domain B — το ZIP είναι ονομαστικά δικό
+ * του), που καθαρίζει το object URL **μετά** το click αντί πριν.
+ */
+export async function downloadFilesAsZip(fileIds: readonly string[]): Promise<void> {
+  if (fileIds.length === 0) return;
+
+  try {
+    const blob = await batchDownloadFilesWithPolicy([...fileIds]);
+    triggerExportDownload({ blob, filename: `files_${nowISO().slice(0, 10)}.zip` });
+  } catch (error) {
+    logger.error('Batch download failed', { error });
+  }
+}
+
+/**
+ * Στέλνει τα δοσμένα αρχεία στον κάδο.
+ *
+ * 🔑 Ίδιος λόγος με το {@link downloadFilesAsZip}: **ΕΝΑ** σώμα για τους δύο
+ * διαχειριστές αρχείων. Εδώ ο κλώνος ήταν **κάτω** από το κατώφλι των 50 tokens
+ * της CHECK 3.28 — δηλαδή ο **επόμενος** που θα χτυπούσε, μόλις άλλαζε μια γραμμή.
+ * Φεύγει τώρα μαζί με την κλάση του, όχι όταν κοκκινίσει.
+ */
+export async function trashFilesInBatch(fileIds: readonly string[], userId: string): Promise<void> {
+  await Promise.all(fileIds.map(id => moveFileToTrashWithPolicy(id, userId)));
+}
+
+/** Χειροκίνητη διαβάθμιση δεδομένων σε πολλά αρχεία — ίδιος λόγος με το {@link trashFilesInBatch}. */
+export async function classifyFilesInBatch(
+  fileIds: readonly string[],
+  classification: FileClassification,
+): Promise<void> {
+  await Promise.all(fileIds.map(id => updateFileClassificationWithPolicy(id, classification)));
 }
 
 // ============================================================================
@@ -148,8 +196,7 @@ export function useBatchFileOperations({
 
   const handleBatchDelete = useCallback(async () => {
     if (!currentUserId) return;
-    const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => moveFileToTrashWithPolicy(id, currentUserId)));
+    await trashFilesInBatch(Array.from(selectedIds), currentUserId);
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, currentUserId, refetch]);
@@ -157,34 +204,15 @@ export function useBatchFileOperations({
   // ---- Batch Download (ZIP) ----
 
   const handleBatchDownload = useCallback(async () => {
-    const selected = files.filter(f => selectedIds.has(f.id) && f.downloadUrl);
-    if (selected.length === 0) return;
-
-    try {
-      const blob = await batchDownloadFilesWithPolicy(
-        selected.map(f => ({
-          url: f.downloadUrl as string,
-          filename: `${f.displayName || f.originalFilename}.${f.ext}`,
-        })),
-      );
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `files_${nowISO().slice(0, 10)}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      logger.error('Batch download failed', { error });
-    }
+    // ⚠️ Το φίλτρο `f.downloadUrl` έφυγε στο Β8 — η ονομασία και η τοποθεσία είναι
+    //    πλέον ευθύνη του διακομιστή.
+    await downloadFilesAsZip(files.filter(f => selectedIds.has(f.id)).map(f => f.id));
   }, [selectedIds, files]);
 
   // ---- Batch Classify ----
 
   const handleBatchClassify = useCallback(async (classification: FileClassification) => {
-    const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => updateFileClassificationWithPolicy(id, classification)));
+    await classifyFilesInBatch(Array.from(selectedIds), classification);
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, refetch]);

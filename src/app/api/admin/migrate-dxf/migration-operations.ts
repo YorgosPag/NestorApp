@@ -1,11 +1,14 @@
 import 'server-only';
 
-import { getAdminFirestore, getAdminStorage, Timestamp } from '@/lib/firebaseAdmin';
+import { getAdminBucket, getAdminFirestore, Timestamp } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 // ADR-293: Legacy path constant for migration reads (not new writes)
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+// 🔑 Ο ΕΝΑΣ γεννήτορας υπογεγραμμένου URL (ADR-862 Φ0 Β8) — εδώ ζούσε το **μοναδικό**
+//    ωμό `getSignedUrl` του δέντρου.
+import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
 import { extractRequestMetadata, logMigrationExecuted } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import type { NextRequest } from 'next/server';
@@ -130,7 +133,13 @@ export class DxfMigrationAPI {
           const sceneJson = JSON.stringify(data.scene);
           const sceneBytes = new TextEncoder().encode(sceneJson);
           const storagePath = `dxf-scenes/${fileInfo.id}/scene.json`;
-          const bucket = getAdminStorage().bucket();
+          // 🔴 **ΓΡΑΦΕ ΚΑΙ ΥΠΟΓΡΑΦΕ ΣΤΟ ΙΔΙΟ BUCKET** (ADR-862 Φ0 Β8). Εδώ ζούσε
+          //    `getAdminStorage().bucket()` **χωρίς όνομα** — ο implicit default του
+          //    Admin SDK, που λύνεται σε `{projectId}.appspot.com` σε κάποιες
+          //    διαδρομές αρχικοποίησης (δες `lib/firebaseAdmin.ts:151`). Μόλις η
+          //    υπογραφή πέρασε στον SSoT (`getAdminBucket()`), τα δύο θα μπορούσαν
+          //    να δείχνουν **αλλού**: γράψιμο στο ένα, υπογραφή στο άλλο.
+          const bucket = getAdminBucket();
           const file = bucket.file(storagePath);
 
           logs.push(`      📤 Uploading to: ${storagePath}`);
@@ -146,10 +155,29 @@ export class DxfMigrationAPI {
             },
           });
 
-          const [downloadURL] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + SIGNED_URL_EXPIRY_MS,
+          // 🔑 **Ο ΕΝΑΣ γεννήτορας** υπογεγραμμένου URL (ADR-862 Φ0 Β8). Μέχρι
+          //    σήμερα εδώ ζούσε ωμό `file.getSignedUrl(...)` — το **μοναδικό**
+          //    σημείο υπογραφής του δέντρου, δηλαδή η πρακτική δεν ήταν πουθενά
+          //    γραμμένη και η επόμενη χρήση θα ξεκινούσε από την αντιγραφή του.
+          const signed = await signedDownloadUrl({
+            storagePath,
+            // ⚠️ **7 ΗΜΕΡΕΣ — ΤΟ ΤΑΒΑΝΙ ΤΟΥ ΠΑΡΟΧΟΥ, ΚΑΙ ΕΙΝΑΙ ΔΗΛΩΜΕΝΗ ΕΞΑΙΡΕΣΗ.**
+            //    Η προεπιλογή του SSoT είναι **15′** (σύσταση Google για λήψεις).
+            //    Εδώ ο σύνδεσμος **αποθηκεύεται** στο `storageUrl` του εγγράφου και
+            //    διαβάζεται αργότερα από τον viewer — δεν είναι λήψη που ξεκινά
+            //    τώρα. 🔴 Είναι **προϋπάρχον χρέος, όχι νέα απόφαση**: το σωστό
+            //    είναι το έγγραφο να κρατά `storagePath` και ο σύνδεσμος να
+            //    υπογράφεται **τη στιγμή της ανάγνωσης**. Δεν αλλάζει στη Φ0 —
+            //    αγγίζει τον viewer, που είναι εκτός Β8.
+            ttlMs: SIGNED_URL_EXPIRY_MS,
+            longLivedReason:
+              'migrate-dxf: το URL αποθηκεύεται στο cad_files.storageUrl και διαβάζεται αργότερα· '
+              + 'η υπογραφή-κατά-την-ανάγνωση απαιτεί αλλαγή στον viewer (εκτός ADR-862 Φ0)',
           });
+          if (signed.outcome !== 'signed') {
+            throw new Error(`Signed URL rejected: ${signed.why}`);
+          }
+          const downloadURL = signed.url;
           logs.push('      🔗 Storage URL generated');
 
           const now = Timestamp.now();

@@ -859,6 +859,17 @@ export const API_ROUTES = {
     PROPAGATE_ENTITY_RENAME: '/api/files/propagate-entity-rename',
   },
   DOWNLOAD: '/api/download',
+  /**
+   * Ο auth-gated proxy αντικειμένων Storage — **πρόθεμα**, όχι πλήρες URL.
+   *
+   * 🔑 Το literal ζούσε **μόνο** μέσα στο `buildProxyUrl`
+   * (`services/storage-admin/public-upload.service.ts`), δηλαδή ο **παραγωγός** το
+   * ήξερε και κανένας **αναγνώστης** δεν μπορούσε να το ζητήσει. Το Β8 χρειάστηκε
+   * να το **αναγνωρίσει** (`lib/storage/storage-object-url`), οπότε μετακόμισε εδώ:
+   * ένα literal, δύο αναγνώστες — μετονομασία της διαδρομής σπάει τη μεταγλώττιση
+   * και στις δύο πλευρές (ADR-862 Φ0 Β8).
+   */
+  STORAGE_FILE: '/api/storage/file',
   FLOORPLANS: {
     PROCESS: '/api/floorplans/process',
     SCENE: (fileId: string) => `/api/floorplans/scene?fileId=${fileId}` as const,

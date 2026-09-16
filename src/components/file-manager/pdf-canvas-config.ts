@@ -17,6 +17,18 @@
 export interface PdfCanvasViewerProps {
   /** PDF download URL (Firebase Storage) */
   url: string;
+  /**
+   * 🔑 **Το id του αρχείου, όταν υπάρχει** — η **προτιμώμενη** διαδρομή προς τα
+   * bytes (ADR-862 Φ0 Β8).
+   *
+   * Όταν δίνεται, ο viewer ζητά `/api/download?fileId=…`: ο διακομιστής βρίσκει
+   * **μόνος του** το αντικείμενο και περνά από τον φρουρό ορατότητας δοχείου. Όταν
+   * λείπει, πέφτει στο `?url=`, που φυλάει **μισθωτή** αλλά όχι **δοχείο**.
+   *
+   * ⚠️ **Ο `FilePreviewRenderer` το είχε ΗΔΗ και δεν το προωθούσε** (μετρημένο
+   * 2026-09-16): το κενό ήταν **μία γραμμή**, όχι έλλειψη δεδομένου.
+   */
+  fileId?: string;
   /** Accessible title */
   title: string;
   /** Optional className */

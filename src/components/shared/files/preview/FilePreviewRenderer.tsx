@@ -76,8 +76,11 @@ export interface FilePreviewRendererProps {
 // ============================================================================
 
 /** PDF preview via pdfjs-dist canvas (theme-aware) */
-function PdfPreview({ url, title }: { url: string; title: string }) {
-  return <PdfCanvasViewer url={url} title={title} className="flex-1" />;
+function PdfPreview({ url, fileId, title }: { url: string; fileId?: string; title: string }) {
+  // 🔑 Το `fileId` **υπήρχε ήδη** σε αυτό το component (δηλωμένο στα props του, για
+  //    το Excel preview) και **δεν προωθούνταν** στον PDF viewer — μετρημένο
+  //    2026-09-16. Το κενό ήταν **μία γραμμή**, όχι έλλειψη δεδομένου (ADR-862 Φ0 Β8).
+  return <PdfCanvasViewer url={url} fileId={fileId} title={title} className="flex-1" />;
 }
 
 const IMG_MIN_ZOOM = 0.1;
@@ -314,7 +317,7 @@ export function FilePreviewRenderer({
 
   return (
     <section className={cn('flex flex-col flex-1 min-h-[400px]', className)}>
-      {previewType === 'pdf' && <PdfPreview url={url!} title={displayName} />}
+      {previewType === 'pdf' && <PdfPreview url={url!} fileId={fileId} title={displayName} />}
       {previewType === 'image' && <ImagePreview url={url!} title={displayName} />}
       {previewType === 'video' && <VideoPreview url={url!} title={displayName} />}
       {previewType === 'audio' && <AudioPreview url={url!} title={displayName} />}

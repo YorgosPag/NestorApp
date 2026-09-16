@@ -16,11 +16,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('file-mutation-gateway');
 
-interface BatchDownloadFileInput {
-  url: string;
-  filename: string;
-}
-
 interface FileClassificationResponse {
   success?: boolean;
   status?: 'classifying' | 'already_classified';
@@ -268,47 +263,109 @@ export async function classifyFileWithPolicy(
   });
 }
 
-export async function batchDownloadFilesWithPolicy(
-  files: BatchDownloadFileInput[],
-): Promise<Blob> {
+/**
+ * **Ο πελάτης λέει ΠΟΙΑ, ο διακομιστής λέει ΠΟΥ** (ADR-862 Φ0 Β8).
+ *
+ * 🔴 Μέχρι σήμερα έστελνε `{ url, filename }` ανά αρχείο — δηλαδή **τοποθεσία και
+ * όνομα από τον πελάτη**, που ο διακομιστής κατέβαζε με `fetch()` χωρίς να ρωτήσει
+ * ποιανού είναι. Ο τύπος στενεύει σε `string[]` ώστε ο **μεταγλωττιστής** να βρει
+ * κάθε καλούντα: μια σιωπηλή αλλαγή σχήματος θα άφηνε τον παλιό να στέλνει URLs σε
+ * διαδρομή που πια δεν τα δέχεται, και η βλάβη θα φαινόταν μόνο σε χρόνο εκτέλεσης.
+ */
+export async function batchDownloadFilesWithPolicy(fileIds: string[]): Promise<Blob> {
   return apiClient.post<Blob>(
     API_ROUTES.FILES.BATCH_DOWNLOAD,
-    { files },
+    { fileIds },
     { responseType: 'blob' },
   );
 }
 
+/**
+ * **Η ΠΡΟΤΙΜΩΜΕΝΗ λήψη** — ο πελάτης λέει **ποιο**, ο διακομιστής λέει **πού**
+ * (ADR-862 Φ0 Β8).
+ *
+ * 🔑 Το όνομα του αρχείου **δεν** ταξιδεύει: το παράγει ο διακομιστής από το
+ * `FileRecord`. Όνομα που στέλνει ο πελάτης είναι όνομα που **διαλέγει** για bytes
+ * που **δεν διάλεξε** — και μπαίνει αυτούσιο σε κεφαλίδα `Content-Disposition`.
+ *
+ * ⇒ Η διαδρομή φυλάει **μισθωτή ΚΑΙ δοχείο** (τον κριτή του Β5), γιατί υπάρχει
+ * `FileRecord` να ρωτηθεί.
+ */
+/**
+ * Ο **ΕΝΑΣ** καλών του proxy λήψης — οι δύο δημόσιες μορφές διαφέρουν **μόνο στα
+ * params**, που είναι και η αληθινή διαφορά τους.
+ *
+ * ⚠️ Γράφτηκε επειδή το **CHECK 3.28 το μέτρησε**: οι δύο συναρτήσεις γεννήθηκαν
+ * στο ίδιο commit ως δίδυμα 7 γραμμών / 50 tokens — ο N.18 στην κλασική του μορφή
+ * (*«κεντρικοποιείς το Α και γράφεις Β ως δίδυμο»*). Η πύλη το έπιασε **πριν** το
+ * commit, όχι μετά.
+ */
+function downloadBlobFromProxy(params: Record<string, string>): Promise<Blob> {
+  return apiClient.get<Blob>(API_ROUTES.DOWNLOAD, { params, responseType: 'blob' });
+}
+
+export async function downloadFileByIdWithPolicy(fileId: string): Promise<Blob> {
+  return downloadBlobFromProxy({ fileId });
+}
+
+/**
+ * ⚠️ **Η ΚΛΗΡΟΝΟΜΙΑ — και είναι ΔΗΛΩΜΕΝΟ ΟΡΙΟ, όχι παράλειψη.**
+ *
+ * Μένει **μόνο** για τους καλούντες που **δεν έχουν** `fileId`: μετρημένο
+ * 2026-09-16, ο μόνος τέτοιος είναι οι φωτογραφίες **επαφών**
+ * (`usePhotoPreviewState`), που **δεν είναι `FileRecord`**. Fail-closed εκεί θα
+ * έσπαγε λειτουργία· fail-open θα ήταν θέατρο.
+ *
+ * 🔒 Η διαδρομή πίσω της **δεν** είναι πια αφύλακτη: απέκτησε `validateFetchUrl`
+ * (SSRF) + `storageObjectFromUrl` + `judgeStorageCustody`, και κατεβάζει με Admin
+ * SDK αντί για `fetch(url)`. Φυλάει **μισθωτή**, όχι **δοχείο** — δεν υπάρχει
+ * `FileRecord` για να ρωτηθεί ο κριτής του Β5.
+ *
+ * ⛔ **ΜΗΝ τη χρησιμοποιήσεις για νέο σημείο κλήσης.** Ο ratchet είναι να
+ * μηδενιστούν οι καλούντες της, όχι να μεγαλώσουν.
+ */
 export async function downloadFileFromProxyWithPolicy(
   downloadUrl: string,
   filename: string,
 ): Promise<Blob> {
-  return apiClient.get<Blob>(API_ROUTES.DOWNLOAD, {
-    params: {
-      url: downloadUrl,
-      filename,
-    },
-    responseType: 'blob',
+  return downloadBlobFromProxy({ url: downloadUrl, filename });
+}
+
+/**
+ * Η **αρχειοθέτηση είναι ΜΙΑ διαδρομή με δύο κατευθύνσεις** — ποτέ δύο σώματα.
+ *
+ * ⚠️ **ΠΡΟΫΠΑΡΧΟΝ ΧΡΕΟΣ, θεραπευμένο επιτόπου (N.0.2)**: οι δύο συναρτήσεις ήταν
+ * δίδυμα **7 γραμμών** που διέφεραν σε **ένα literal** — το σχήμα που ο N.18
+ * ονομάζει, και που το **CHECK 3.28** μέτρησε (50 tokens) μόλις το αρχείο μπήκε σε
+ * diff. Δεν γεννήθηκε εδώ· φάνηκε εδώ.
+ *
+ * 🔑 Τα **δύο δημόσια ονόματα μένουν**: η κατεύθυνση είναι μέρος του λεξιλογίου του
+ * καλούντος (*«αρχειοθέτησε»* / *«επανάφερε»*), και μια σκέτη `boolean` παράμετρος
+ * στο σημείο κλήσης θα ήταν χειρότερη από τον κλώνο.
+ */
+type FileArchiveDirection = 'archive' | 'unarchive';
+
+function setFilesArchivedWithPolicy(
+  fileIds: string[],
+  action: FileArchiveDirection,
+): Promise<ArchiveFilesResponse> {
+  return mutateJson<ArchiveFilesResponse>(API_ROUTES.FILES.ARCHIVE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileIds, action }),
   });
 }
 
 export async function archiveFilesWithPolicy(
   fileIds: string[],
 ): Promise<ArchiveFilesResponse> {
-  return mutateJson<ArchiveFilesResponse>(API_ROUTES.FILES.ARCHIVE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileIds, action: 'archive' }),
-  });
+  return setFilesArchivedWithPolicy(fileIds, 'archive');
 }
 
 export async function unarchiveFilesWithPolicy(
   fileIds: string[],
 ): Promise<ArchiveFilesResponse> {
-  return mutateJson<ArchiveFilesResponse>(API_ROUTES.FILES.ARCHIVE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileIds, action: 'unarchive' }),
-  });
+  return setFilesArchivedWithPolicy(fileIds, 'unarchive');
 }
 
 export async function updateFileClassificationWithPolicy(

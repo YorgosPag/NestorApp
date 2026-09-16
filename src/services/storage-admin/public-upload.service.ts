@@ -47,6 +47,9 @@ import 'server-only';
 import type { Bucket } from '@google-cloud/storage';
 import { getAdminBucket, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🔑 Το πρόθεμα του proxy ζούσε ως ωμό literal **μόνο εδώ** — δηλαδή ο παραγωγός το
+//    ήξερε και κανένας αναγνώστης δεν μπορούσε να το ζητήσει (ADR-862 Φ0 Β8).
+import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -156,7 +159,7 @@ export function buildProxyUrl(storagePath: string): string {
     .split('/')
     .map((segment) => encodeURIComponent(segment))
     .join('/');
-  return `/api/storage/file/${encoded}`;
+  return `${API_ROUTES.STORAGE_FILE}/${encoded}`;
 }
 
 /**

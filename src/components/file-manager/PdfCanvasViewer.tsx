@@ -48,7 +48,7 @@ import {
 // COMPONENT
 // ============================================================================
 
-export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps) {
+export function PdfCanvasViewer({ url, fileId, title, className }: PdfCanvasViewerProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -97,14 +97,19 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           docRef.current = null;
         }
 
+        // 🔑 **ΤΟ `fileId` ΝΙΚΑ** (ADR-862 Φ0 Β8): είναι η μόνη είσοδος που ο
+        //    διακομιστής μπορεί να επαληθεύσει **πλήρως** — μισθωτή **και**
+        //    ορατότητα δοχείου. Το `?url=` φυλάει μόνο μισθωτή.
+        //
         // Same-origin relative URLs (e.g. `/api/shared/[token]/pdf`) are already
         // public streams — skip the auth-gated `/api/download` proxy which
         // requires a Firebase Storage URL + auth. External Firebase URLs still
         // route through the proxy to bypass CORS.
-        const isRelative = url.startsWith('/');
-        const fetchUrl = isRelative
-          ? url
-          : `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(url)}&filename=preview.pdf`;
+        const fetchUrl = fileId
+          ? `${API_ROUTES.DOWNLOAD}?fileId=${encodeURIComponent(fileId)}`
+          : url.startsWith('/')
+            ? url
+            : `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(url)}&filename=preview.pdf`;
         const response = await fetch(fetchUrl);
         if (!response.ok) throw new Error(`PDF fetch: HTTP ${response.status}`);
         const data = new Uint8Array(await response.arrayBuffer());
@@ -143,7 +148,10 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         docRef.current = null;
       }
     };
-  }, [url]);
+    // ⚠️ Το `fileId` **πρέπει** να είναι εδώ: είναι πλέον η **πηγή** του `fetchUrl`
+    //    (ADR-862 Φ0 Β8). Χωρίς αυτό, η εναλλαγή αρχείου θα άφηνε στην οθόνη το
+    //    **προηγούμενο** PDF κάτω από το νέο όνομα.
+  }, [url, fileId]);
 
   // Render current page
   useEffect(() => {

@@ -45,11 +45,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { decideContainerAccess } from '@/lib/auth/container-access';
-import { containerSubjectFor } from '@/lib/auth/container-subject';
-import { containerFactsOf, readFileRecord } from '@/lib/files/file-record-read';
+import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { isContainerVisible } from '@/types/container-access';
 import { isSuitabilityCode } from '@/services/iso19650/validators';
 import { ACT_SPEC } from '@/services/iso19650/container-transition-policy';
 import {
@@ -112,53 +109,6 @@ const authorityUnavailableResponse = (): NextResponse =>
   NextResponse.json({ success: false, error: 'authority-unavailable' }, { status: 503 });
 
 /**
- * 🔒 **ΔΕΝ ΕΝΕΡΓΕΙΣ ΣΕ ΔΟΧΕΙΟ ΠΟΥ ΔΕΝ ΒΛΕΠΕΙΣ** — ο **πρώτος καταναλωτής
- * παραγωγής** του κριτή του Β5 (ADR-862 Φ0 Β7).
- *
- * ⚠️ **ΚΑΜΙΑ ΔΕΥΤΕΡΗ ΑΝΑΓΝΩΣΗ**: το `fileResource.load` επιστρέφει ήδη το ωμό
- * `doc.data` (`lib/auth/owned-doc-loader.ts:154`), οπότε τα γεγονότα χτίζονται από
- * ό,τι **έχουμε στο χέρι**. Ένα δεύτερο `get()` θα πρόσθετε κόστος **και** ένα
- * παράθυρο όπου τα δύο διαβάσματα διαφωνούν.
- *
- * 🔑 **Η ΕΡΩΤΗΣΗ ΕΙΝΑΙ Η ΙΚΑΝΟΤΗΤΑ ΤΗΣ ΣΥΓΚΕΚΡΙΜΕΝΗΣ ΠΡΑΞΗΣ** (`ACT_SPEC`), όχι
- * ένα καρφωμένο «δες»: ο κριτής κλείνει με τον `decideCapability`, άρα ένα γενικό
- * όνομα εδώ θα έκρινε **άλλη** εξουσιοδότηση από αυτή που πρόκειται να ασκηθεί.
- *
- * ⚠️ **Η άρνηση είναι το ΙΔΙΟ 404 της διαδρομής** — ποτέ 403: ένα «δεν
- * επιτρέπεσαι» πάνω σε δοχείο που ο αιτών δεν δικαιούται να **δει** ανακοινώνει
- * ότι υπάρχει (ADR-742 §7.1). Γι' αυτό καλείται **μετά** τον φρουρό μισθωτή και
- * με το **ίδιο** εργοστάσιο άρνησης.
- *
- * 🔴 Ένα `unreadable` δοχείο κόβεται **εδώ** (404) και δεν φτάνει στον γραφέα —
- * που θα το αρνιόταν κι εκείνος (`refused: 'unreadable'` ⇒ 403). Η **αυστηρότερη**
- * από τις δύο αρνήσεις νικά, όπως επιβάλλει το fail-closed.
- */
-async function containerRefusal(
-  fileId: string,
-  ctx: AuthContext,
-  act: ContainerAct,
-  raw: unknown,
-): Promise<NextResponse | null> {
-  const read = readFileRecord(raw, fileId);
-  if (read.outcome === 'unreadable') return fileNotFoundResponse();
-
-  const built = await containerSubjectFor({
-    caller: ctx,
-    // 🔑 Η υπόθεση έρχεται από το **έγγραφο**, ποτέ από το σώμα του αιτήματος.
-    projectId: read.record.projectId,
-  });
-  if (built.outcome === 'unknown') return authorityUnavailableResponse();
-
-  const decision = decideContainerAccess({
-    subject: built.subject,
-    facts: containerFactsOf(read.record, read.state),
-    action: ACT_SPEC[act].capability,
-  });
-
-  return isContainerVisible(decision.verdict) ? null : fileNotFoundResponse();
-}
-
-/**
  * Το αίτημα προς τον γραφέα, από **ήδη επαληθευμένη** ταυτότητα και κριμένο σώμα.
  *
  * ⚠️ Τα δύο προαιρετικά μπαίνουν με **conditional spread**: ένα `suitabilityCode:
@@ -219,8 +169,27 @@ async function handlePost(
   });
   if (owned.refusal) return owned.refusal;
 
-  // 🔒 Ο δεύτερος φρουρός: **βλέπει** καν αυτό το δοχείο; (ADR-862 Φ0 Β7)
-  const refusal = await containerRefusal(fileId, ctx, payload.act, owned.doc.data);
+  // 🔒 Ο δεύτερος φρουρός: **βλέπει** καν αυτό το δοχείο; (ADR-862 Φ0 Β7→Β8)
+  //
+  // ⚠️ Το σώμα του ζούσε **εδώ** μέχρι το Β8. Μόλις οι διαδρομές bytes το
+  //    χρειάστηκαν κι εκείνες, τρίτο χειρόγραφο αντίγραφο θα ήταν ο N.18 / CHECK
+  //    3.28 **μέσα στο ίδιο commit** ⇒ εξήχθη στο `container-visibility-guard`.
+  //
+  // 🔑 Η ερώτηση μένει **η ικανότητα της συγκεκριμένης πράξης** (`ACT_SPEC`), όχι
+  //    καρφωμένο «δες»: ο κριτής κλείνει με τον `decideCapability`, άρα γενικό
+  //    όνομα θα έκρινε **άλλη** εξουσιοδότηση από αυτή που πρόκειται να ασκηθεί.
+  //
+  // ⚠️ Η άρνηση είναι το **ΙΔΙΟ** 404 της διαδρομής — ποτέ 403: ένα «δεν
+  //    επιτρέπεσαι» πάνω σε δοχείο που ο αιτών δεν δικαιούται να **δει**
+  //    ανακοινώνει ότι υπάρχει (ADR-742 §7.1).
+  const refusal = await containerVisibilityRefusal({
+    fileId,
+    caller: ctx,
+    action: ACT_SPEC[payload.act].capability,
+    raw: owned.doc.data,
+    notFound: fileNotFoundResponse,
+    unavailable: authorityUnavailableResponse,
+  });
   if (refusal) return refusal;
 
   return toResponse(await transitionContainer(transitionRequestOf(fileId, ctx, payload.act, payload)));

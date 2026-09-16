@@ -22,6 +22,9 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🔑 Ο ΕΝΑΣ αναγνώστης URL αντικειμένου — αντικατέστησε την τέταρτη χειρόγραφη
+//    λίστα domains αυτού του δέντρου (ADR-862 Φ0 Β8).
+import { storageObjectFromUrl } from '@/lib/storage/storage-object-url';
 import { classifyInBackground } from './classify-background';
 import { nowISO } from '@/lib/date-local';
 import {
@@ -71,17 +74,21 @@ interface ClassifyResponse {
 // FIREBASE STORAGE URL VALIDATION
 // ============================================================================
 
+/**
+ * 🔑 **Ο ΕΝΑΣ αναγνώστης** — ADR-862 Φ0 Β8.
+ *
+ * Μέχρι σήμερα εδώ ζούσε η **τέταρτη** χειρόγραφη λίστα domains του δέντρου. Ήταν
+ * η **σωστή** από τις τέσσερις (`=== ` + `endsWith('.' + d)`), και ακριβώς γι' αυτό
+ * επικίνδυνη: τεκμηρίωνε ότι το ερώτημα «είναι δικό μας host;» μπορεί να απαντηθεί
+ * τοπικά — ενώ οι **δύο** αδελφικές διαδρομές bytes το απαντούσαν με
+ * `hostname.includes(d)` και **περνούσαν** το
+ * `firebasestorage.googleapis.com.<κακόβουλο>.gr`.
+ *
+ * ⇒ Τώρα υπάρχει **ένας** πίνακας host (`lib/storage/storage-object-url`) με κλειδί
+ * το **πλήρες** όνομα, δηλαδή σφάλμα υποσυμβολοσειράς είναι **δομικά αδύνατο**.
+ */
 function isFirebaseStorageUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return (
-      parsed.hostname === 'firebasestorage.googleapis.com' ||
-      parsed.hostname === 'storage.googleapis.com' ||
-      parsed.hostname.endsWith('.storage.googleapis.com')
-    );
-  } catch {
-    return false;
-  }
+  return storageObjectFromUrl(url).outcome === 'object';
 }
 
 // ============================================================================

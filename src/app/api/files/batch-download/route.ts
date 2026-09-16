@@ -1,257 +1,164 @@
 /**
  * =============================================================================
- * Batch Download API — Server-side ZIP creation
+ * BATCH DOWNLOAD — Ο ΠΕΛΑΤΗΣ ΛΕΕΙ **ΠΟΙΟ**, Ο ΔΙΑΚΟΜΙΣΤΗΣ ΛΕΕΙ **ΠΟΥ**
  * =============================================================================
  *
- * Creates a ZIP file from multiple Firebase Storage URLs.
- * Uses Node.js built-in zlib (no external packages needed).
- *
- * POST /api/files/batch-download
- * Body: { files: [{ url: string, filename: string }] }
- * Returns: application/zip binary stream
+ * `POST /api/files/batch-download` · σώμα: `{ fileIds: string[] }` → `application/zip`
  *
  * @module api/files/batch-download
- * @enterprise ADR-031 - Canonical File Storage System
+ * @enterprise ADR-031 — Canonical File Storage · ADR-862 Φ0 Β8 · ADR-742 §7undecies
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΗΤΑΝ ΜΕΧΡΙ ΤΟ Β8 — ΚΑΙ ΓΙΑΤΙ ΚΑΜΙΑ ΠΥΛΗ ΔΕΝ ΤΟ ΕΔΕΙΞΕ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η διαδρομή δεχόταν **URLs από το σώμα** και τα κατέβαζε με `fetch()`. Ο μόνος
+ * έλεγχος ήταν `url.hostname.includes(d)` πάνω σε χειρόγραφη λίστα domains.
+ * Μετρημένο 2026-09-16, **δύο** ελαττώματα στην ίδια γραμμή:
+ *
+ *   1. **Καμία ιδιοκτησία.** Κανένα `fileId`, καμία ανάγνωση `FileRecord`, κανένας
+ *      έλεγχος μισθωτή. Όποιος κρατούσε ένα tokenized URL — και το `getDownloadURL()`
+ *      τα κάνει **μόνιμα** — κατέβαζε ό,τι θέλει, για πάντα.
+ *   2. 🔴 **Το `includes` είναι υποσυμβολοσειρά.** Το
+ *      `https://firebasestorage.googleapis.com.<κακόβουλο>.gr/x` **περνούσε**: ο
+ *      διακομιστής γινόταν proxy προς αυθαίρετο host (SSRF). Το OWASP το ονομάζει
+ *      ρητά — *«substring checks are bypassable»* — και συνιστά **indirection με
+ *      opaque identifier**, που είναι ακριβώς αυτό που κάνει τώρα το `fileIds`.
+ *
+ * ⚠️ Το δικαίωμα ήταν `photos:photos:upload`, που **δεν είναι διαχειριστικό**: ζει
+ * στο `config/jobs-registry.ts:202` ως δικαίωμα **εργοταξίου** ⇒ η διαδρομή ήταν
+ * προσιτή σε συνηθισμένο χρήστη πεδίου.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ✅ ΤΙ ΕΙΝΑΙ ΤΩΡΑ — Η ΠΡΑΚΤΙΚΗ ΤΩΝ CDE ΤΗΣ ΑΓΟΡΑΣ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Ο πελάτης στέλνει **ids**. Ο διακομιστής, για **κάθε** id χωριστά:
+ *   1. `fileResource.load()` — υπάρχει; **δικό μου;** (ADR-742)
+ *   2. `containerVisibilityRefusal()` — το **βλέπω** καν; (ADR-862 Φ0 Β5/Β8)
+ *   3. `getAdminBucket().file(storagePath).download()` — **ποτέ** `fetch(url)`
+ *
+ * Το ίδιο σχήμα με το Autodesk Construction Cloud: `item_id` → ο διακομιστής
+ * βρίσκει το αντικείμενο. **Καμία τοποθεσία δεν έρχεται από τον πελάτη.**
+ *
+ * 🔑 **Η ΑΡΝΗΣΗ ΕΙΝΑΙ ΣΙΩΠΗΛΗ ΠΑΡΑΛΕΙΨΗ, ΟΧΙ 403 ΑΝΑ ΑΡΧΕΙΟ**: ένα «δεν
+ * επιτρέπεσαι» ανά id θα μετέτρεπε τη διαδρομή σε **μαντείο ύπαρξης** — ο αιτών θα
+ * δοκίμαζε ids και θα μάθαινε ποια υπάρχουν. Η απάντηση λέει **πόσα** μπήκαν, ποτέ
+ * **ποια** κόπηκαν και γιατί (ADR-742 §7.1).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import type { ProjectMemberRead } from '@/lib/auth/project-member-read';
 import { createModuleLogger } from '@/lib/telemetry';
-import { deflateRawSync } from 'zlib';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { attachmentDisposition } from '@/lib/http/content-disposition';
+import { loadOwnedFileBytes } from '../_shared/owned-file-bytes';
+import { buildZip, uniqueZipNames, type ZipEntry } from './zip-builder';
 
 const logger = createModuleLogger('BatchDownloadRoute');
 
-// ============================================================================
-// ZIP BUILDER (minimal, spec-compliant, no external deps)
-// ============================================================================
+export const maxDuration = 60;
 
-interface ZipEntry {
-  filename: string;
-  data: Uint8Array;
+/** Η **ίδια** ικανότητα με τη μονή λήψη — ονομασμένη μία φορά. */
+const DOWNLOAD_CAPABILITY = 'dxf:files:view' as const;
+
+/** Πάνω από αυτό, η συσκευασία δεν τελειώνει μέσα στο `maxDuration`. */
+const MAX_FILES_PER_BATCH = 50;
+
+/** Τα ids του σώματος, στενεμένα — ό,τι δεν είναι μη-κενή συμβολοσειρά πέφτει. */
+function readFileIds(body: unknown): string[] | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const raw = (body as { fileIds?: unknown }).fileIds;
+  if (!Array.isArray(raw)) return null;
+
+  const ids = raw.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+  return ids.map(id => id.trim());
 }
 
 /**
- * Build a ZIP file from entries using deflate compression.
- * Implements ZIP format (PKZIP APPNOTE 6.3.3) with:
- * - Local file headers
- * - Compressed data (deflate)
- * - Central directory
- * - End of central directory record
+ * **Ένα id → bytes, ή `null`.**
+ *
+ * ⚠️ Το `null` είναι **μία** απάντηση για **τέσσερις** αιτίες (δεν υπάρχει · ξένος
+ * μισθωτής · δεν το βλέπεις · δεν έχει αντικείμενο). Είναι σκόπιμο: ο καλών δεν
+ * πρέπει να μπορεί να τις ξεχωρίσει. Ο **λόγος** ζει στο log του διακομιστή.
  */
-function buildZip(entries: ZipEntry[]): Uint8Array {
-  const localHeaders: Uint8Array[] = [];
-  const centralHeaders: Uint8Array[] = [];
-  let offset = 0;
+async function fetchOwnedEntry(
+  fileId: string,
+  ctx: AuthContext,
+  cache: Map<string, ProjectMemberRead>,
+): Promise<ZipEntry | null> {
+  const result = await loadOwnedFileBytes({
+    fileId,
+    caller: ctx,
+    action: 'batch-download',
+    capability: DOWNLOAD_CAPABILITY,
+    // 🔑 50 αρχεία της ίδιας υπόθεσης ⇒ **μία** ανάγνωση μέλους, όχι 50.
+    cache,
+  });
 
-  for (const entry of entries) {
-    const nameBytes = new TextEncoder().encode(entry.filename);
-    const compressed = deflateRawSync(entry.data);
-    const crc = crc32(entry.data);
+  // 🔑 **Η βλάβη αυθεντίας ισοπεδώνεται με την άρνηση — ΕΔΩ, και είναι απόφαση
+  //    ΤΗΣ ΔΙΑΔΡΟΜΗΣ.** Ο βοηθός τις κρατά **χωριστές** (η μονή λήψη απαντά 503),
+  //    αλλά μέσα σε ZIP δεν υπάρχει «ξαναδοκίμασε ΓΙ' ΑΥΤΟ το αρχείο»: το
+  //    αρχείο μένει εκτός επειδή δεν **ξέρουμε** αν επιτρέπεται (N.12).
+  return result.outcome === 'bytes'
+    ? { filename: result.filename, data: new Uint8Array(result.buffer) }
+    : null;
+}
 
-    // Local file header (30 bytes + filename + compressed data)
-    const local = new ArrayBuffer(30 + nameBytes.length);
-    const lv = new DataView(local);
-    lv.setUint32(0, 0x04034b50, true);   // Signature
-    lv.setUint16(4, 20, true);            // Version needed (2.0)
-    lv.setUint16(6, 0x0800, true);        // Flags: bit 11 = UTF-8 filenames
-    lv.setUint16(8, 8, true);             // Compression: deflate
-    lv.setUint16(10, 0, true);            // Mod time
-    lv.setUint16(12, 0, true);            // Mod date
-    lv.setUint32(14, crc, true);          // CRC-32
-    lv.setUint32(18, compressed.length, true);  // Compressed size
-    lv.setUint32(22, entry.data.length, true);  // Uncompressed size
-    lv.setUint16(26, nameBytes.length, true);   // Filename length
-    lv.setUint16(28, 0, true);            // Extra field length
-    new Uint8Array(local).set(nameBytes, 30);
+async function handleBatchDownload(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  const body: unknown = await request.json().catch(() => null);
+  const fileIds = readFileIds(body);
 
-    // Central directory header (46 bytes + filename)
-    const central = new ArrayBuffer(46 + nameBytes.length);
-    const cv = new DataView(central);
-    cv.setUint32(0, 0x02014b50, true);    // Signature
-    cv.setUint16(4, 20, true);            // Version made by
-    cv.setUint16(6, 20, true);            // Version needed
-    cv.setUint16(8, 0x0800, true);        // Flags: bit 11 = UTF-8 filenames
-    cv.setUint16(10, 8, true);            // Compression: deflate
-    cv.setUint16(12, 0, true);            // Mod time
-    cv.setUint16(14, 0, true);            // Mod date
-    cv.setUint32(16, crc, true);          // CRC-32
-    cv.setUint32(20, compressed.length, true);  // Compressed size
-    cv.setUint32(24, entry.data.length, true);  // Uncompressed size
-    cv.setUint16(28, nameBytes.length, true);   // Filename length
-    cv.setUint16(30, 0, true);            // Extra field length
-    cv.setUint16(32, 0, true);            // Comment length
-    cv.setUint16(34, 0, true);            // Disk number
-    cv.setUint16(36, 0, true);            // Internal attributes
-    cv.setUint32(38, 0, true);            // External attributes
-    cv.setUint32(42, offset, true);       // Offset of local header
-    new Uint8Array(central).set(nameBytes, 46);
-
-    localHeaders.push(new Uint8Array(local));
-    localHeaders.push(new Uint8Array(compressed));
-    centralHeaders.push(new Uint8Array(central));
-
-    offset += 30 + nameBytes.length + compressed.length;
+  if (fileIds === null || fileIds.length === 0) {
+    return NextResponse.json({ error: 'No fileIds provided' }, { status: 400 });
   }
-
-  const centralDirOffset = offset;
-  let centralDirSize = 0;
-  for (const h of centralHeaders) centralDirSize += h.length;
-
-  // End of central directory (22 bytes)
-  const eocd = new ArrayBuffer(22);
-  const ev = new DataView(eocd);
-  ev.setUint32(0, 0x06054b50, true);      // Signature
-  ev.setUint16(4, 0, true);               // Disk number
-  ev.setUint16(6, 0, true);               // Central dir disk
-  ev.setUint16(8, entries.length, true);   // Entries on disk
-  ev.setUint16(10, entries.length, true);  // Total entries
-  ev.setUint32(12, centralDirSize, true);  // Central dir size
-  ev.setUint32(16, centralDirOffset, true); // Central dir offset
-  ev.setUint16(20, 0, true);              // Comment length
-
-  // Concatenate all parts
-  const totalSize = offset + centralDirSize + 22;
-  const result = new Uint8Array(totalSize);
-  let pos = 0;
-  for (const part of localHeaders) { result.set(part, pos); pos += part.length; }
-  for (const part of centralHeaders) { result.set(part, pos); pos += part.length; }
-  result.set(new Uint8Array(eocd), pos);
-
-  return result;
-}
-
-/**
- * CRC-32 calculation (standard polynomial 0xEDB88320)
- */
-function crc32(data: Uint8Array): number {
-  let crc = 0xFFFFFFFF;
-  for (let i = 0; i < data.length; i++) {
-    crc ^= data[i];
-    for (let j = 0; j < 8; j++) {
-      crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-    }
+  if (fileIds.length > MAX_FILES_PER_BATCH) {
+    return NextResponse.json(
+      { error: `Maximum ${MAX_FILES_PER_BATCH} files per batch` },
+      { status: 400 },
+    );
   }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
-
-// ============================================================================
-// FIREBASE URL VALIDATION
-// ============================================================================
-
-const VALID_DOMAINS = [
-  'storage.googleapis.com',
-  'firebasestorage.googleapis.com',
-  'firebase.googleapis.com',
-];
-
-function isFirebaseUrl(urlStr: string): boolean {
-  try {
-    const url = new URL(urlStr);
-    return VALID_DOMAINS.some(d => url.hostname.includes(d));
-  } catch {
-    return false;
-  }
-}
-
-// ============================================================================
-// REQUEST TYPES
-// ============================================================================
-
-interface BatchFile {
-  url: string;
-  filename: string;
-}
-
-interface BatchRequestBody {
-  files: BatchFile[];
-}
-
-// ============================================================================
-// ROUTE HANDLER
-// ============================================================================
-
-export const maxDuration = 60; // Allow up to 60s for large batches
-
-export async function POST(request: NextRequest) {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      return handleBatchDownload(req, ctx);
-    },
-    { permissions: 'photos:photos:upload' }
-  );
-
-  return handler(request);
-}
-
-async function handleBatchDownload(request: NextRequest, ctx: AuthContext) {
-  logger.info('Batch download request', { email: ctx.email });
 
   try {
-    const body = (await request.json()) as BatchRequestBody;
+    // ⚠️ **Ανά-αίτημα** cache: ζει όσο το αίτημα και πεθαίνει μαζί του. Μια
+    //    μακρόβια cache εδώ θα κρατούσε ιδιότητα μέλους που **άλλαξε**.
+    const memberCache = new Map<string, ProjectMemberRead>();
 
-    if (!body.files || !Array.isArray(body.files) || body.files.length === 0) {
-      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
-    }
-
-    if (body.files.length > 50) {
-      return NextResponse.json({ error: 'Maximum 50 files per batch' }, { status: 400 });
-    }
-
-    // Validate all URLs are Firebase URLs
-    for (const file of body.files) {
-      if (!file.url || !file.filename) {
-        return NextResponse.json({ error: 'Each file needs url and filename' }, { status: 400 });
-      }
-      if (!isFirebaseUrl(file.url)) {
-        logger.error('SECURITY: Non-Firebase URL in batch', { url: file.url });
-        return NextResponse.json({ error: 'Only Firebase Storage URLs allowed' }, { status: 403 });
-      }
-    }
-
-    // Fetch all files in parallel
-    const entries: ZipEntry[] = [];
-    const fetchResults = await Promise.allSettled(
-      body.files.map(async (file): Promise<ZipEntry> => {
-        const response = await fetch(file.url);
-        if (!response.ok) throw new Error(`HTTP ${response.status} for ${file.filename}`);
-        const buffer = await response.arrayBuffer();
-        return { filename: file.filename, data: new Uint8Array(buffer) };
-      })
+    const settled = await Promise.allSettled(
+      fileIds.map(fileId => fetchOwnedEntry(fileId, ctx, memberCache)),
     );
 
-    for (const result of fetchResults) {
+    const fetched: ZipEntry[] = [];
+    for (const result of settled) {
       if (result.status === 'fulfilled') {
-        entries.push(result.value);
+        if (result.value !== null) fetched.push(result.value);
       } else {
-        logger.error('Failed to fetch file for batch', { error: result.reason });
+        logger.error('Batch entry failed', { error: getErrorMessage(result.reason) });
       }
     }
 
-    if (entries.length === 0) {
-      return NextResponse.json({ error: 'Failed to fetch any files' }, { status: 502 });
+    if (fetched.length === 0) {
+      return NextResponse.json({ error: 'No downloadable files' }, { status: 404 });
     }
 
-    // Build ZIP
-    const zipData = buildZip(entries);
+    // Τα ονόματα αποσαφηνίζονται **μετά** το φιλτράρισμα: αλλιώς ένα αρχείο που
+    // κόπηκε θα «δέσμευε» το `(2)` και ο άνθρωπος θα έπαιρνε κενό αύξοντα αριθμό.
+    const names = uniqueZipNames(fetched.map(entry => entry.filename));
+    const zipData = buildZip(fetched.map((entry, index) => ({ ...entry, filename: names[index] })));
 
     logger.info('Batch download complete', {
       userId: ctx.uid,
-      filesRequested: body.files.length,
-      filesIncluded: entries.length,
+      requested: fileIds.length,
+      included: fetched.length,
       zipSize: zipData.length,
     });
-
-    // Return ZIP
-    const timestamp = nowISO().slice(0, 10);
-    const zipFilename = `files_${timestamp}.zip`;
 
     return new NextResponse(new Uint8Array(zipData), {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${zipFilename}"`,
+        // 🏢 RFC 6266 + 5987 — SSoT: `lib/http/content-disposition` (ADR-841 Α21.17).
+        'Content-Disposition': attachmentDisposition(`files_${nowISO().slice(0, 10)}.zip`),
         'Content-Length': zipData.length.toString(),
         'Cache-Control': 'no-cache',
       },
@@ -260,7 +167,17 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext) {
     logger.error('Batch download error', { error });
     return NextResponse.json(
       { error: 'Internal server error', details: getErrorMessage(error, 'Unknown') },
-      { status: 500 }
+      { status: 500 },
     );
   }
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
+  const handler = withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
+      handleBatchDownload(req, ctx),
+    { permissions: DOWNLOAD_CAPABILITY },
+  );
+
+  return handler(request);
 }

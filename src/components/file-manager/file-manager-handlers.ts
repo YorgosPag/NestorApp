@@ -13,26 +13,27 @@
 import { useCallback } from 'react';
 import {
   archiveFilesWithPolicy,
-  batchDownloadFilesWithPolicy,
   classifyFileWithPolicy,
-  moveFileToTrashWithPolicy,
   renameFileWithPolicy,
   updateFileDescriptionWithPolicy,
-  updateFileClassificationWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { uploadFileWithPolicy } from '@/services/filesystem/upload-orchestrator-gateway';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
-import { showArchiveResultFeedback } from '@/components/shared/files/hooks/useBatchFileOperations';
+import {
+  classifyFilesInBatch,
+  downloadFilesAsZip,
+  showArchiveResultFeedback,
+  trashFilesInBatch,
+} from '@/components/shared/files/hooks/useBatchFileOperations';
 import { defaultFileFilters } from '@/components/core/AdvancedFilters';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { useFileManagerState } from './useFileManagerState';
-import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FileManagerHandlers');
 
@@ -91,40 +92,20 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
   // Batch operations
   const handleBatchDelete = useCallback(async () => {
     if (!user?.uid) return;
-    const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => moveFileToTrashWithPolicy(id, user.uid)));
+    await trashFilesInBatch(Array.from(selectedIds), user.uid);
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, user?.uid, refetch, setSelectedIds]);
 
   const handleBatchDownload = useCallback(async () => {
-    const selected = filteredFiles.filter(f => selectedIds.has(f.id) && f.downloadUrl);
-    if (selected.length === 0) return;
-
-    try {
-      const blob = await batchDownloadFilesWithPolicy(
-        selected.map(f => ({
-          url: f.downloadUrl as string,
-          filename: `${f.displayName || f.originalFilename}.${f.ext}`,
-        })),
-      );
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `files_${nowISO().slice(0, 10)}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      logger.error('Batch download failed', { error });
-      return;
-    }
+    // ⚠️ Το φίλτρο `f.downloadUrl` **έφυγε** (ADR-862 Φ0 Β8): η διαδρομή δεν δέχεται
+    //    πια URL, και αρχείο χωρίς μόνιμο tokenized URL είναι **κατεβάσιμο** — απλώς
+    //    περνά από τον proxy. Το παλιό φίλτρο θα έκρυβε ακριβώς τα νεότερα αρχεία.
+    await downloadFilesAsZip(filteredFiles.filter(f => selectedIds.has(f.id)).map(f => f.id));
   }, [selectedIds, filteredFiles]);
 
   const handleBatchClassify = useCallback(async (classification: FileClassification) => {
-    const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => updateFileClassificationWithPolicy(id, classification)));
+    await classifyFilesInBatch(Array.from(selectedIds), classification);
     setSelectedIds(new Set());
     refetch();
   }, [selectedIds, refetch, setSelectedIds]);

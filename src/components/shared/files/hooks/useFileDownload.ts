@@ -19,13 +19,27 @@
 
 import { useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { downloadFileFromProxyWithPolicy } from '@/services/filesystem/file-mutation-gateway';
+import {
+  downloadFileByIdWithPolicy,
+  downloadFileFromProxyWithPolicy,
+} from '@/services/filesystem/file-mutation-gateway';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 interface DownloadableFile {
+  /**
+   * 🔑 **Το id του `FileRecord`, όταν υπάρχει** — η **προτιμώμενη** διαδρομή προς
+   * τα bytes (ADR-862 Φ0 Β8): ο διακομιστής βρίσκει **μόνος του** το αντικείμενο
+   * και περνά από τον φρουρό ορατότητας δοχείου.
+   *
+   * ⚠️ **Προαιρετικό επειδή ΕΙΝΑΙ** — μετρημένο 2026-09-16: από τους επτά καλούντες
+   * αυτού του hook, **δύο** δεν έχουν `FileRecord`: οι **εκδόσεις** (ζουν σε
+   * υποσυλλογή, χωρίς δικό τους έγγραφο στη `files`) και οι φωτογραφίες **επαφών**.
+   * Εκείνοι πέφτουν στο `downloadUrl`, που φυλάει **μισθωτή** αλλά όχι **δοχείο**.
+   */
+  id?: string;
   storagePath?: string;
   downloadUrl?: string;
   displayName: string;
@@ -103,15 +117,22 @@ function ensureFileExtension(
 
 export function useFileDownload(): UseFileDownloadReturn {
   const handleDownload = useCallback(async (file: DownloadableFile) => {
-    if (!file.downloadUrl) {
-      logger.warn('Download requested but no downloadUrl available', { displayName: file.displayName });
+    if (!file.id && !file.downloadUrl) {
+      logger.warn('Download requested but neither id nor downloadUrl available', {
+        displayName: file.displayName,
+      });
       return;
     }
 
     logger.info('Starting enterprise download', { displayName: file.displayName });
 
     try {
-      const blob = await downloadFileFromProxyWithPolicy(file.downloadUrl, file.displayName);
+      // 🔑 **Το id νικά** (ADR-862 Φ0 Β8): είναι η μόνη είσοδος που ο διακομιστής
+      //    μπορεί να επαληθεύσει **πλήρως** — μισθωτή **και** ορατότητα δοχείου. Το
+      //    `downloadUrl` μένει εφεδρεία για όσους δεν έχουν `FileRecord`.
+      const blob = file.id
+        ? await downloadFileByIdWithPolicy(file.id)
+        : await downloadFileFromProxyWithPolicy(file.downloadUrl as string, file.displayName);
       const objectUrl = URL.createObjectURL(blob);
 
       const downloadName = ensureFileExtension(file.displayName, file.ext, file.originalFilename, blob.type);
