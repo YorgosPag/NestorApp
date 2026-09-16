@@ -262,6 +262,7 @@
     "empty-select-item:check": "node scripts/check-empty-select-item.js --all",
     "empty-select-item:report": "node scripts/check-empty-select-item.js --report",
     "test:empty-select-item": "jest scripts/__tests__/check-empty-select-item.test.js --verbose",
+    "test:file-sizes": "jest scripts/__tests__/check-file-sizes.test.js --verbose",
     "native-tooltip:audit": "node scripts/check-native-tooltip.js --all",
     "native-tooltip:baseline": "node scripts/check-native-tooltip.js --write-baseline",
     "tabs-import:audit": "node scripts/check-tabs-import-ratchet.js --all",
