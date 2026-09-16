@@ -32,6 +32,11 @@ jest.mock('@/services/listings/public-shelf-model.service', () => ({
 jest.mock('@/services/mandate/showcase-presence.service', () => ({
   refreshShowcasePresence: async () => undefined,
 }));
+// ADR-864 Φ1β — το ίχνος έχει δική του άγκυρα (`owner-property-audit-trail.test.ts`)· εδώ
+// απλώς δεν αφήνουμε τον πραγματικό Admin SDK να ψάξει διαπιστευτήρια.
+jest.mock('@/services/owner-property/owner-property-audit', () => ({
+  recordOwnerPropertyWrite: async () => undefined,
+}));
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { COLLECTIONS } = require('@/config/firestore-collections') as

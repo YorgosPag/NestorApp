@@ -72,6 +72,10 @@ import {
 } from '@/types/owner-property-mandate';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
+import {
+  recordOwnerPropertyWrite,
+  type OwnerPropertyAuditContext,
+} from '@/services/owner-property/owner-property-audit';
 
 const logger = createModuleLogger('owner-property-write.service');
 
@@ -83,11 +87,16 @@ const logger = createModuleLogger('owner-property-write.service');
  * υπάρχει** — και κανείς δεν θα μπορούσε να τη διορθώσει, γιατί δεν θα υπήρχε
  * υποκείμενο να ξαναδιαβαστεί. Το ανάποδο («υπάρχει, δεν φαίνεται») είναι **γνωστά
  * εκκρεμές** και το διορθώνει η επανασύνθεση.
+ *
+ * 🔴 **ADR-864 Φ1β — ΤΟ ΙΧΝΟΣ ΕΙΝΑΙ ΙΔΙΟΤΗΤΑ ΤΗΣ ΓΡΑΦΗΣ**: το `audit` είναι **υποχρεωτικό** στον
+ * τύπο, άρα μια μελλοντική πράξη **δεν μεταγλωττίζεται** χωρίς ίχνος. Καταγράφεται **μετά**
+ * την επιτυχή γραφή, **πριν** την επαναπροβολή (παράγωγο) — ποτέ για γραφή που απέτυχε.
  */
 async function persist(
   adminDb: AdminFirestore,
   property: OwnerProperty,
   mode: 'create' | 'overwrite',
+  audit: OwnerPropertyAuditContext,
 ): Promise<OwnerPropertyWriteResult> {
   const ref = adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(property.id);
 
@@ -112,6 +121,8 @@ async function persist(
   } catch (error) {
     return failure('Η αγγελία δεν αποθηκεύτηκε', property.id, error);
   }
+
+  await recordOwnerPropertyWrite(property, audit);
 
   const republished = await republishOwnerProperty(adminDb, property);
   return { kind: 'saved', property: republished.property, publish: republished.publish };
@@ -215,7 +226,9 @@ export async function createOwnerProperty(
   const refusal = await placeLinkRefusal(adminDb, draft);
   if (refusal !== null) return refusal;
 
-  return persist(adminDb, newOwnerProperty(draft, authorship), 'create');
+  // Ο δρων της γέννησης **είναι** ο συντάκτης — ιδιώτης ή υπάλληλος γραφείου.
+  const author = { uid: authorship.authorUserId, companyId: authorship.authorCompanyId };
+  return persist(adminDb, newOwnerProperty(draft, authorship), 'create', { actor: author, before: null });
 }
 
 // =============================================================================
@@ -284,7 +297,8 @@ export async function updateOwnerProperty(
   const refusal = await placeLinkRefusal(adminDb, draft);
   if (refusal !== null) return refusal;
 
-  return persist(adminDb, { ...existing, ...draft, updatedAt: nowISO() }, 'overwrite');
+  const next = { ...existing, ...draft, updatedAt: nowISO() };
+  return persist(adminDb, next, 'overwrite', { actor, before: existing });
 }
 
 /**
@@ -310,7 +324,8 @@ export async function setOwnerPropertyLifecycle(
   const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
   if (existing === null) return { kind: 'absent' };
 
-  return persist(adminDb, { ...existing, lifecycle, updatedAt: nowISO() }, 'overwrite');
+  const next = { ...existing, lifecycle, updatedAt: nowISO() };
+  return persist(adminDb, next, 'overwrite', { actor, before: existing });
 }
 
 /**
@@ -324,7 +339,8 @@ export async function setOwnerPropertyLifecycle(
  * επαναπροβολή, η πύλη λέει `false` για κοινό ≠ `public`, και ο **υπάρχων** γραφέας κάνει
  * `delete()` + απόσυρση ραφιού. Καμία δεύτερη διαδρομή εξαφάνισης.
  *
- * ⚠️ **Ελεύθερο στένεμα, με ίχνος** (Ε-3). Το ίχνος του **ιδιώτη** το προσθέτει η Φ1β (Ε-9 Α).
+ * ⚠️ **Ελεύθερο στένεμα, με ίχνος** (Ε-3) — το γράφει το `persist` (Φ1β, Ε-9 Α), στο βιβλίο της
+ * **θεματοφυλακής**: ιδιώτης ⇒ προσωπικό, γραφείο ⇒ εταιρικό.
  */
 export async function setOwnerPropertyAudience(
   adminDb: AdminFirestore,
@@ -335,7 +351,8 @@ export async function setOwnerPropertyAudience(
   const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
   if (existing === null) return { kind: 'absent' };
 
-  return persist(adminDb, { ...existing, marketingAudience, updatedAt: nowISO() }, 'overwrite');
+  const next = { ...existing, marketingAudience, updatedAt: nowISO() };
+  return persist(adminDb, next, 'overwrite', { actor, before: existing });
 }
 
 // =============================================================================

@@ -55,6 +55,11 @@ jest.mock('@/server/comms/orchestrator', () => ({
     messageIds: ['msg_1'],
   })),
 }));
+// ADR-864 Φ1β — η γέννηση αγγελίας γράφει πλέον ίχνος μέσω του καθολικού Admin SDK· εδώ δεν
+// κρίνεται (άγκυρα: `owner-property/__tests__/owner-property-audit-trail.test.ts`).
+jest.mock('@/services/owner-property/owner-property-audit', () => ({
+  recordOwnerPropertyWrite: async () => undefined,
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { createBrokeredListing, OWNER_CONSENT_PROOF } =
