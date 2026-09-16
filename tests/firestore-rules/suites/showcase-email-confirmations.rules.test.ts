@@ -53,7 +53,7 @@ describe('showcase_email_confirmations.rules — η επιβεβαίωση γρ�
     it('🔑 ούτε ανώνυμος — ο σύνδεσμος εξαργυρώνεται μόνο μέσω της διαδρομής με όριο ρυθμού', async () => {
       const id = await seedShowcaseEmailConfirmation(env(), SAME_TENANT_COMPANY_ID);
 
-      const anonymous = getContext(env(), 'unauthenticated');
+      const anonymous = getContext(env(), 'anonymous');
 
       await assertFails(anonymous.firestore().collection('showcase_email_confirmations').doc(id).get());
     });

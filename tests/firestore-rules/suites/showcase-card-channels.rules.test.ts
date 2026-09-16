@@ -49,7 +49,7 @@ describe('showcase_card_channels.rules — τα κανάλια φεύγουν μ
     it('🔑 ούτε ανώνυμος — η απουσία ορίου ρυθμού θα ήταν η συγκομιδή', async () => {
       await seedShowcaseCardChannels(env(), SAME_TENANT_COMPANY_ID);
 
-      const anonymous = getContext(env(), 'unauthenticated');
+      const anonymous = getContext(env(), 'anonymous');
 
       await assertFails(
         anonymous.firestore().collection('showcase_card_channels').doc(SAME_TENANT_COMPANY_ID).get(),

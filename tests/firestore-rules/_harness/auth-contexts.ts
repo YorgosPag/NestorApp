@@ -15,6 +15,7 @@
 import type { RulesTestContext, RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 import {
+  ALL_PERSONAS,
   PERSONA_CLAIMS,
   isAuthenticatedPersona,
   type Persona,
@@ -29,6 +30,8 @@ export function getContext(
   env: RulesTestEnvironment,
   persona: Persona,
 ): RulesTestContext {
+  assertKnownPersona(persona);
+
   if (!isAuthenticatedPersona(persona)) {
     return env.unauthenticatedContext();
   }
@@ -38,6 +41,38 @@ export function getContext(
     companyId: claims.companyId,
     globalRole: claims.globalRole,
   });
+}
+
+/**
+ * ⛔ Ονομάζει την άγνωστη περσόνα **τη στιγμή που ζητείται**.
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ — Ο ΤΥΠΟΣ `Persona` ΔΕΝ ΦΡΟΥΡΕΙ ΤΙΠΟΤΑ ΕΔΩ: η σουίτα των
+ * κανόνων μεταγλωττίζεται με **`@swc/jest`** (`jest.config.firestore-rules.js`),
+ * που είναι **transpile-only** — μηδέν έλεγχος τύπων σε χρόνο εκτέλεσης. Άρα
+ * ένα λάθος γραμμένο όνομα περνούσε ολόκληρο το σύνορο: ο `isAuthenticatedPersona`
+ * ρωτά **μόνο** `p !== 'anonymous'`, οπότε το άγνωστο string κρινόταν
+ * «αυθεντικοποιημένο», έφτανε στο `PERSONA_CLAIMS[persona]` ως `undefined` και
+ * έσκαγε με `TypeError: Cannot read properties of undefined (reading 'uid')` —
+ * σφάλμα που δείχνει στο **harness** και κρύβει ότι το λάθος είναι **μία λέξη
+ * στη σουίτα**.
+ *
+ * 📊 ΜΕΤΡΗΜΕΝΟ 2026-09-16: **τέσσερις** σουίτες έγραφαν `'unauthenticated'` αντί
+ * για `'anonymous'` (`company_registry_records` · `showcase_card_channels` ·
+ * `holiday_hours_questions` · `showcase_email_confirmations`) και ήταν
+ * **κόκκινες στο `main`** από τις 14-15/09 — αόρατες, γιατί την πλήρη σουίτα
+ * κανόνων τη βλέπει μόνο ο emulator.
+ *
+ * 🔑 Η λίστα έρχεται από το `ALL_PERSONAS` (SSoT), ποτέ χειρόγραφη: όγδοη
+ * περσόνα θα γινόταν δεκτή **αυτόματα**, χωρίς να χρειάζεται δεύτερη ενημέρωση.
+ */
+function assertKnownPersona(persona: Persona): void {
+  if (!ALL_PERSONAS.includes(persona)) {
+    throw new Error(
+      `getContext: άγνωστη Persona '${String(persona)}'. ` +
+        `Έγκυρες: ${ALL_PERSONAS.join(' · ')}. ` +
+        'Ο μη-αυθεντικοποιημένος λέγεται «anonymous».',
+    );
+  }
 }
 
 /** Explicit anonymous shortcut — reads better in tests than `getContext(env, 'anonymous')`. */

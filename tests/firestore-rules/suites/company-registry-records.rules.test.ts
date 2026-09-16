@@ -21,7 +21,7 @@ import { assertFails } from '@firebase/rules-unit-testing';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
-import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
+import { SAME_TENANT_COMPANY_ID, type Persona } from '../_registry/personas';
 import { defineDenyAllCell, useDenyAllEmulator } from '../_harness/deny-all-suite';
 import { getContext, withSeedContext } from '../_harness/auth-contexts';
 
@@ -62,6 +62,34 @@ describe('company_registry_records.rules — η απάντηση της αρχή
     defineDenyAllCell(env, cell, COVERAGE.collection);
   }
 
+  // --- Ο ΦΡΟΥΡΟΣ ΤΟΥ HARNESS (2026-09-16) ---------------------------------
+  //
+  // 🔴 ΑΥΤΗ Η ΣΟΥΙΤΑ ΗΤΑΝ ΚΟΚΚΙΝΗ ΣΤΟ `main` ΑΠΟ ΤΙΣ 14/09, ΚΑΙ ΚΑΝΕΙΣ ΔΕΝ ΤΟ
+  // ΕΙΔΕ: έγραφε `getContext(env(), 'unauthenticated')` — όνομα που **δεν
+  // ανήκει** στον τύπο `Persona` (ο μη-αυθεντικοποιημένος λέγεται `'anonymous'`).
+  // Ο μεταγλωττιστής θα το είχε πιάσει· η σουίτα όμως τρέχει με **`@swc/jest`**
+  // (transpile-only), οπότε το λάθος έφτασε ζωντανό ως
+  // `TypeError … reading 'uid'` **μέσα στο harness** — σφάλμα που δείχνει σε
+  // λάθος αρχείο. Μαζί της έπεφταν άλλες τρεις σουίτες με το ίδιο λάθος.
+  //
+  // 🔑 Η ΑΓΚΥΡΑ ΔΕΝ ΦΥΛΑΕΙ ΤΟ ΔΕΙΓΜΑ, ΦΥΛΑΕΙ ΤΗΝ ΚΛΑΣΗ: η διόρθωση της μίας
+  // λέξης σε τέσσερα αρχεία δεν εμποδίζει την **πέμπτη** φορά. Αυτό που την
+  // εμποδίζει είναι ο `assertKnownPersona()` του harness — και χωρίς αυτό το
+  // test εκείνος θα ήταν κώδικας που **κανείς δεν εκτελεί**, δηλαδή σχόλιο.
+  // ⚠️ Η μετάλλαξη είναι ρητή: σβήσε την κλήση `assertKnownPersona()` από το
+  //    `getContext` ⇒ αυτή η γραμμή κοκκινίζει.
+  describe('🛡️ το harness ονομάζει την άγνωστη περσόνα', () => {
+    it('άκυρο όνομα ⇒ ρητό σφάλμα που λέει ΚΑΙ τις έγκυρες τιμές', () => {
+      // ⚠️ Το cast **είναι το νόημα** της δοκιμής: αναπαριστά ακριβώς ό,τι
+      //    επιτρέπει ο transpile-only μεταγλωττιστής αυτής της σουίτας. Χωρίς
+      //    αυτό δεν υπάρχει τρόπος να δοκιμαστεί το σύνορο που πράγματι έσπασε.
+      const bogus = 'unauthenticated' as Persona;
+
+      expect(() => getContext(env(), bogus)).toThrow(/άγνωστη Persona/);
+      expect(() => getContext(env(), bogus)).toThrow(/anonymous/);
+    });
+  });
+
   describe('🔴 ούτε ο ΙΔΙΟΣ ο οργανισμός', () => {
     it('ο ιδιοκτήτης ΔΕΝ γράφει «επαληθευμένο» μόνος του', async () => {
       const owner = getContext(env(), 'same_tenant_admin');
@@ -84,7 +112,7 @@ describe('company_registry_records.rules — η απάντηση της αρχή
 
     it('🔑 ούτε ανώνυμος — η έδρα μιας ατομικής είναι συχνά η κατοικία', async () => {
       await seedRegistryRecord(env());
-      const anonymous = getContext(env(), 'unauthenticated');
+      const anonymous = getContext(env(), 'anonymous');
 
       await assertFails(anonymous.firestore().collection(COLLECTION).doc(SAME_TENANT_COMPANY_ID).get());
     });

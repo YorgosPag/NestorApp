@@ -52,7 +52,7 @@ describe('holiday_hours_questions.rules — η ερώτηση αργιών απ�
     it('🔑 ούτε ανώνυμος — η απάντηση περνά μόνο από τη διαδρομή με όριο ρυθμού', async () => {
       const id = await seedHolidayHoursQuestion(env(), SAME_TENANT_COMPANY_ID);
 
-      const anonymous = getContext(env(), 'unauthenticated');
+      const anonymous = getContext(env(), 'anonymous');
 
       await assertFails(anonymous.firestore().collection('holiday_hours_questions').doc(id).get());
     });

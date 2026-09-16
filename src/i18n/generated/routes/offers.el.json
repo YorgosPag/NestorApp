@@ -1,5 +1,10 @@
 {
   "properties-enums": {
+    "marketingAudience": {
+      "custodians": "Κλειστή — μόνο διαχειριστές",
+      "network": "Κλειστή — επαγγελματικό δίκτυο",
+      "public": "Δημόσια"
+    },
     "types": {
       "apartment": "Διαμέρισμα",
       "apartment_1br": "Γκαρσονιέρα",

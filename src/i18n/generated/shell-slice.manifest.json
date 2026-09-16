@@ -24,10 +24,11 @@
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
-    "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
+    "src/i18n/generated/routes/offers.el.json": "953f37cddee1d307a09a27d3e85dd1f050cdc043c02ec06076b62247b950ed70",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "adfde9f628608372f38719362ddfe752c48b316269f9d790fe63a1fffa108eb4",
-    "src/i18n/generated/routes/offers__offerId.el.json": "ab5221308792e22a79be67f87e5faed6802fe111053e65c6cba2b06448de9230",
+    "src/i18n/generated/routes/offers__offerId.el.json": "6718e59a716bf4eb939076a25181b0aaf11606698c121d6ea1302b554901d0e8",
+    "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "203e1bc906a7581c212f9e7c723979fe3fdf1e2daa7cfed724e57238d65f90db",
     "src/i18n/generated/routes/pro.el.json": "424bf8260b7ccd8fcd692f23a9b62d7c74460686e4555fd27b6a4cdc3302f926",
     "src/i18n/generated/routes/pro__alias.el.json": "27ab5d16fb217baec1093b5c4ab05aeecff6b549821b1d6ae7ecea354d0d81ce",
@@ -36,7 +37,7 @@
     "src/i18n/generated/routes/terms.el.json": "7015969ef24a943f71cc5ae8739b7b76b95fc8858774696298a4ffd1f01b781e",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "fb60c811496d111affff0630dfed3a7fb5eb673da9c05f2552f5ddc0fee515dd",
+    "src/i18n/generated/shell-slice.el.json": "647a88cc5a73c262a36cbd99240303f26269cedaba4a87d379871658fd44f7bb",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -75,7 +76,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8268548577cc3a86752004faf6f57bb7892e8a19aa7c630924d68991eb7381b5",
+  "inputsSha256": "2330a3582a11f569e7c610fbfe20928d484d4ad6ec1ee3c08be6e333f840f88a",
   "languages": [
     "el"
   ],
@@ -111,6 +112,7 @@
     "src/app/(app)/o/[workspace]/settings/agency-profile/page.tsx": "44f45fb083f73e6bd4d05c5828bf796de8baf3803659d565910465ed88546f37",
     "src/app/(app)/o/[workspace]/settings/agency-profile/registry/page.tsx": "de25a6cdb9d1adc89352dc2014ceb3fa7f2f2895159606ac4e2fd11dba591184",
     "src/app/(app)/o/[workspace]/settings/brokerage/page.tsx": "2bba99035fb69cc7622c316d2100a4e44318d0e01d45374d9216e73c7a6fe41d",
+    "src/app/(app)/open-source/page.tsx": "fa30ffe52b0b785344c10b83146863970a0344e890ea7d6364877ce25b7773b3",
     "src/app/(app)/privacy-policy/page.tsx": "5ce97246b33fe28209cad6b33c46d197a02a08f0c862200d38d028f922d8a7ae",
     "src/app/(app)/terms/page.tsx": "46349afc264bdf77c1b75dc3f9b9960305d38294be530e1f070eac28ecbbd725",
     "src/app/(app)/test-harness/listing-shapes/page.tsx": "2e9ad4663a20b2ccfa242fc50d31e1a44ede8d88cf6e6429889c776ab5f5af5f",
@@ -198,6 +200,8 @@
     "src/components/geo/use-camera-frame.ts": "7e2c35905eb52783b433a050129f35fc3c8de92441b10a9896916a06a7394995",
     "src/components/geo/use-focus-camera.ts": "221278f2a28183de8f6e35431342579b6f5470c85e217e7292ae506bd017fdfd",
     "src/components/legal/OperatorIdentityStatement.tsx": "a7fec3b8bee11ab464b4bcb855be68fc61862bda5620eb14631e349461860b99",
+    "src/components/legal/ThirdPartyAttribution.tsx": "bd12d515dfef67598b59a83870fead795a25abb58d33b6208fa20d8be8ef018c",
+    "src/components/legal/ThirdPartyComponentTable.tsx": "d8a012f22b711ce79b94753fa8155ed038bd54528f8598fc8b3f41ac22044e93",
     "src/components/listing-detail/ListingAttributeGroup.tsx": "314bc2a2263dc2b42092033482ffecf6211d71f90785f6d627260c28664eecff",
     "src/components/listing-detail/ListingAttributeList.tsx": "10458d7bdee7cc291b220f374b900293ef1e4add9f46c61930f8f171771cae31",
     "src/components/listing-detail/ListingAttributeRow.tsx": "6a3778e8540d28550dcd99ff9abd4ee69a5ea1b9328e7c037a0cf3b1116fc90b",
@@ -214,6 +218,7 @@
     "src/components/listing-detail/ListingPriceReduction.tsx": "6cd7ce237b728dc15ca9f4c4e5c79097218eadc90fb1b996ae9ee6c6ed632310",
     "src/components/listing-detail/listing-attribute-value.ts": "2d7a0bded29eb6bfd3e4163f55ed5ee74c11ade0662f9f5d91057cab30eeadf2",
     "src/components/listing-detail/listing-model-stage-metrics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/components/listings/MarketingAudienceControl.tsx": "c4bb4a222aad4889258d469e8b3759df2b9f8e7e84cf8147ae1e4b36f912d030",
     "src/components/mandate/AgencyContactFacts.tsx": "fc9071dd00368b954d2e6c4cd21004e650437ae20da939ef303cbb5a946fdf19",
     "src/components/mandate/AgencyCoverageFact.tsx": "53859fbab342a8ba6a6d71798c3111853f4bb6d957b76daba70599b9f19d9905",
     "src/components/mandate/AgencyDirectoryContent.tsx": "22be452a4a783fd599436a4bc21e80b65d0c724c0b0f58ddfde3e8329e52bce9",
@@ -292,9 +297,9 @@
     "src/components/owner-property/MyOwnerPropertiesContent.tsx": "5d6c9bd1aea0d87f47c292599456d2c09e758b404c90a8c5f2e24d166167116e",
     "src/components/owner-property/OwnerListingCompletion.tsx": "68f35f90e0a22585ca8064754c9c9f8665bbf60a76987b28b5b2c96c8f2b5a67",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
-    "src/components/owner-property/OwnerPropertyCard.tsx": "cf2fa40c826ffd7dc8ef0d1a7f68d0036d31d63a03eeacec10f26c2f7625f8bd",
+    "src/components/owner-property/OwnerPropertyCard.tsx": "5299d8d06f9007c7e05d9f97c3db81fb723c2d78468185d12e35ceb49ff07b7d",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "5df8038c8c881a149761999f161fdd19cbdde2dffb9ca447d8988bd8c2dd2c4a",
-    "src/components/owner-property/OwnerPropertyDetailContent.tsx": "98e588aa179f6e170f3619cefeeb951af01af9277eaa7db88685a519207ed992",
+    "src/components/owner-property/OwnerPropertyDetailContent.tsx": "053510141306847eaf59079685613386f360ec49bb996b9dd3a8266f26608313",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "cea5b0be17f55a96ab53786a18ece4b189ce5bffaff482ed0f908484bb49e067",
     "src/components/owner-property/form/OwnerPropertyFields.tsx": "9cafd98254d7cc85da1cff478195f7e3ba1fff1638f0a06173430ce152ad807d",
     "src/components/owner-property/form/OwnerPropertyMediaField.tsx": "97993dce54c364018e49464c7ccc5463bde59cfb2fc8387f76d064f9e429d316",
@@ -371,6 +376,7 @@
     "src/components/ui/radio-group.tsx": "92a4ef9ce95e7faf0100e18902b0c457134aa023e0e01f061089811da49f6e4c",
     "src/components/ui/slider.tsx": "9b2f2ce6a4ffdd4f61ca1b4c19413fcfabf4437cdc2918e3e7e66dc97371c7e7",
     "src/components/ui/switch.tsx": "5bd418565b52c5c703b921e73bf7160391ea3ea016e5f1bce8c2f8e4a567d713",
+    "src/components/ui/table.tsx": "36cbacd412e3e35292eb620881f1f2bbda567a1e2e5db4f4e1691c6339edbdb7",
     "src/components/ui/utils/dynamic-styles-generators.ts": "0132df0754f76bd4348660fa27d024526a5db2df3a8081562d677102a3ae5912",
     "src/components/ui/utils/dynamic-styles-internals.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
     "src/components/workspace-invite/WorkspaceInviteContent.tsx": "92deeaa1f3b57f4430962d81bd0af7b46bae1985cd2fef58dace1cf247966a41",
@@ -509,6 +515,7 @@
     "src/lib/http/public-origin.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/http/response-refusal.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/layout/bottom-sheet-stops.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/legal/third-party-index.ts": "1726247d3bcb6aed6cabf965b5964b240e4dd95d2fe0d8ad7d5b9c036fdcdbf7",
     "src/lib/listings/declared-file-ids.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-attribute-groups.ts": "349e9f80fdf6dba48e0e7c6de19187263d4ecd3891429dbbd72726a786b327b5",
     "src/lib/listings/listing-attribute-vocabulary.ts": "1ff3243f1eefc7b4c0b419803a2576537f4846d5b6eef54af8e850bf0fb827a8",
@@ -553,7 +560,7 @@
     "src/lib/owner-property/owner-property-draft-schema.ts": "fb8698021ef1ee5fff5938ddf2a8f52be6265b602eea7b77a017e6bc8a2fe50e",
     "src/lib/owner-property/owner-property-form-validation.ts": "8b89295ec92ccb7f1df65ec50a48b3fbe65eb0224cc72bb4b0bb79d998638bdb",
     "src/lib/owner-property/owner-property-form-values.ts": "2815b27a704454e7d4d57a92493535ab9859deed709f9d74b80f1d8e3b8584f7",
-    "src/lib/owner-property/owner-property-from-document.ts": "3a843402a86febb95d39d4472f551c3e6d476a6f0aed2166620d64a037793361",
+    "src/lib/owner-property/owner-property-from-document.ts": "5898c1dc8f86b27680305d3402ca1507f023bc9f33f44cb2c33ac9b13062643c",
     "src/lib/owner-property/owner-property-projection.ts": "5eea665514450d0f0474549617816cc7ddfa1cebb0a7d0bd2d4493dc49dc118f",
     "src/lib/places/admin-identity.ts": "59a82c814985e68d9b0865a8299d7253a2b7b132e23692f3b35a8a133a162d5f",
     "src/lib/places/admin-name-index.ts": "333c35bedda0057a8b0d1d076a002694e17c7c7087b0165b07afd2e6e3a31d53",
@@ -635,7 +642,7 @@
     "src/services/listings/public-listing-model-projection.ts": "483f8fd4947297a2d10a7ce0055bd203e61c8094a1d4317588e1597480b7c09a",
     "src/services/listings/public-listing-position.ts": "5c0bf072f03972c3cb4d3ed6bbdd54b5aa43335f2741a9d8e19a7b8f4996bc9e",
     "src/services/listings/public-listing-projection-types.ts": "38a4eea96f44f73010765e93a8521eb5fb4f7d1c4e171d4f246a1c4e18491bce",
-    "src/services/listings/public-listing-projection.ts": "8866276713f19a76f6751f5d2955c2a82126f92b41068e84761da7f72288268e",
+    "src/services/listings/public-listing-projection.ts": "548741564888193f9674e04a61fa6660ecbb32f42ea0d886d479c8f3471af1e7",
     "src/services/listings/public-shelf-border.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/listings/public-shelf-bucket.ts": "34c319a7e74ad7a6670a07c89c9ec4647a8f4311da37a1dbc1956888d8faa336",
     "src/services/listings/public-shelf-model-bake.ts": "24695713a9d8af37016eff6732e859df01975a689477b63dcc4668fcf587a54a",
@@ -671,8 +678,8 @@
     "src/services/onboarding/onboarding-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/owner-property/owner-property-publication.service.ts": "ab5a61456598fdc5bf58ea5129ed4801dfcd6ac500320a5f363a6e5b5f779c37",
     "src/services/owner-property/owner-property-write-result.ts": "f3242ab2df3c8e39c387a63ce6d9d25d986478d3d86bd9519e05a05cff7f55a5",
-    "src/services/owner-property/owner-property-write.service.ts": "89227b7471348735c6afe72ac83883efc308d4a84008207bb1c7eba8b5041de4",
-    "src/services/owner-property/owner-property.service.ts": "02aebcb7d7ef6940aacdc744804c0ce5f09a0fcbeaab72d4a63990505473574b",
+    "src/services/owner-property/owner-property-write.service.ts": "7b40832417aa89068da7b09e2a69d10507e8c05b3bf870f080ec40f5c6b8b729",
+    "src/services/owner-property/owner-property.service.ts": "c2f4e873784562426ece2faebbb844ff57bde5eee9f1119f5c65c216ad27d0ce",
     "src/services/photo-upload-types.ts": "4f98445503d1d8b5b42bb6c89c77fded730cc9a40ae88722d5994e7cde2200b1",
     "src/services/photo-upload.service.ts": "9c872ba8e7f6aec6cdc459bb0e8ac54ed4749ca24d4a99a26e2baf4ca0eff50d",
     "src/services/places/admin-footprints.reader.ts": "028aff32e86ae2ed46ddd019863c8b697d0c2cd435da9b421bf180d7f7de7475",
@@ -738,7 +745,7 @@
     "src/types/holiday-hours-question.ts": "48d3c4feafb0156071228c7dc26ce5e37a4d4a25387cd32764c9c669155822bf",
     "src/types/notification-email-facts.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/owner-property-invariants.ts": "a2076e0dfa133bce07a2226a14cac08e1a0d41e5dd0cb043dc1946ad53ccc719",
-    "src/types/owner-property.ts": "ee38aac1b99d0edc7aa952d4cfa186397e5c236035f43411698302f59d4da95f",
+    "src/types/owner-property.ts": "e6bcd2ce76bf693fcde5d57c7f8ae08c972333d7050ed7651ef5fff1b10c78e9",
     "src/types/property-demand.ts": "0948f8195f70b8f584d8af14030a08d8cfa58034393e06a7729108ada0c829be",
     "src/types/rejection-remedy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/showcase-card-import.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -1387,6 +1394,7 @@
             "legal.dataDeletion",
             "legal.legalLinks",
             "legal.legalNotice",
+            "legal.openSource",
             "legal.privacyPolicy",
             "legal.termsOfService"
           ],
@@ -1955,6 +1963,7 @@
             "legal.dataDeletion",
             "legal.legalLinks",
             "legal.legalNotice",
+            "legal.openSource",
             "legal.privacyPolicy",
             "legal.termsOfService"
           ],
@@ -3206,7 +3215,9 @@
             "types.studio",
             "types.villa"
           ],
-          "prefixes": [],
+          "prefixes": [
+            "marketingAudience"
+          ],
           "whole": false
         },
         "property-market": {
@@ -3540,6 +3551,10 @@
       "wants": {
         "common": {
           "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
             "countries.albania",
             "countries.australia",
             "countries.bulgaria",
@@ -3556,6 +3571,96 @@
             "countries.turkey",
             "countries.uk",
             "countries.usa"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -3592,11 +3697,19 @@
             "types.studio",
             "types.villa"
           ],
-          "prefixes": [],
+          "prefixes": [
+            "marketingAudience"
+          ],
           "whole": false
         },
         "property-market": {
           "keys": [
+            "audience.failed",
+            "audience.label",
+            "audience.narrowing.confirm",
+            "audience.narrowing.description",
+            "audience.narrowing.title",
+            "audience.networkPending",
             "custody.personal.body",
             "custody.personal.brokered",
             "custody.personal.title",
@@ -3762,6 +3875,7 @@
             "offer.publish.view"
           ],
           "prefixes": [
+            "audience.describe",
             "offer.form.placeAccuracyNote",
             "offer.form.placeRelaxed",
             "offer.lifecycle",
@@ -3816,6 +3930,49 @@
             "place.modeHint",
             "place.rejection"
           ],
+          "whole": false
+        }
+      }
+    },
+    "open-source": {
+      "page": "src/app/(app)/open-source/page.tsx",
+      "wants": {
+        "legal": {
+          "keys": [
+            "legalNotice.documentsTitle",
+            "openSource.columns.license",
+            "openSource.columns.name",
+            "openSource.columns.surface",
+            "openSource.columns.version",
+            "openSource.fullText",
+            "openSource.fullTextHint",
+            "openSource.intro",
+            "openSource.loading",
+            "openSource.obligation",
+            "openSource.sbom",
+            "openSource.sbomHint",
+            "openSource.surface.browser",
+            "openSource.surface.server",
+            "openSource.surface.unknown",
+            "openSource.tableCaption",
+            "openSource.title",
+            "openSource.total",
+            "openSource.unavailable",
+            "openSource.unmeasuredIntro"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "navigation": {
+          "keys": [
+            "legal.dataDeletion",
+            "legal.legalLinks",
+            "legal.legalNotice",
+            "legal.openSource",
+            "legal.privacyPolicy",
+            "legal.termsOfService"
+          ],
+          "prefixes": [],
           "whole": false
         }
       }
@@ -5240,7 +5397,7 @@
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "87f665a53cb0f2fe310d251c86e83f9d01954287893a5348d1bb05fb37548cd9",
     "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
-    "src/components/legal/LegalLinksNav.tsx": "4a43836197b59f9cbc90c9f45992c0e099b22eccca6992d87c385ab3f6f8556e",
+    "src/components/legal/LegalLinksNav.tsx": "05f67917aee5b012902509db9ff2638666fdd397a74616b2105398fa315b41a8",
     "src/components/listings/ListingAuthorshipLine.tsx": "4cc48f7465d6fef354d79e1375e935b8959759a7deb8b366d594564a120fa606",
     "src/components/mandate/AgencyCard.tsx": "fed1203175143dc47527e3bbd36bd3ca84c34fb9e14d4b93dfd90850bd739797",
     "src/components/mandate/CredibilityStatement.tsx": "ca2d50846efcdf2dc9694956a8b593d643221e2fcf6552cb9cd1800d075a9ed3",
@@ -5357,7 +5514,7 @@
     "src/components/voice-ai/VoiceAIPanel.tsx": "cf1fbed66cc005617aef71a9c4612b4135d1be704e98c239a63e0adfc8325fac",
     "src/components/workspace/WorkspaceScopeBridge.tsx": "9aea46983a227313cc2e4585e4ff777802b74ab54d790059abb78a49c6a83e09",
     "src/config/audit-entity-registry.ts": "f4c9207ee5de7baa95351214d8bc2332432e567a9329edb788e1ccc1be0a4c87",
-    "src/config/audit-value-catalogs.ts": "ca9f4f3294368e7bd25d64a4b62e2c78311b7f98d06bf31b90fb7192b6d6d510",
+    "src/config/audit-value-catalogs.ts": "3865c483e7c6a3afbc4127cfd47ee88093186247f1f324df30c6403cd30932a5",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
     "src/config/domain-constants.ts": "f07b57ffd3b0dca8a8a698b8918a3bcb5d8c4f150bdecff9226f1eea68909fd1",
@@ -5397,6 +5554,7 @@
     "src/constants/layout.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/legal-phases.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/mandate-offer-kinds.ts": "97db33204f59d496e98bb887834619b3f34d218468c862ff252eef7a0163c583",
+    "src/constants/marketing-audiences.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/offer-kind-eligibility.ts": "c4dd9a80fc439fe0807240c899decb89fe52ab3e4f32cb9f354f5fc88f85d7fe",
     "src/constants/operational-statuses.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/priority-levels.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -5640,7 +5798,7 @@
     "src/lib/routes/appRoutes.ts": "d45bdaf856831696dd865e9b5836d019d4dfda9c4bd093dc55638e541e16ee95",
     "src/lib/routes/authRoutes.ts": "0f66499d7df1178beb0bc1e788ab75744de0b18f7108e97f681f6764445a00a9",
     "src/lib/routes/landing.ts": "2cbede12097044eb0f2c0802c2fbbe5fedb9dd9d56abb0006405253aa1d5881b",
-    "src/lib/routes/legalRoutes.ts": "ee4052f862cd87ef46714fcbff5aa4e99c97b55e0a9f412fd0b8b561f74f9683",
+    "src/lib/routes/legalRoutes.ts": "52e71d63c38e796a8edfda04110802a49de3dfbd065159aff59f64bf0d523691",
     "src/lib/safe-fire-and-forget.ts": "7e6568024ebd6120e865d1681fa6dcf3db98600fc116d33b97e02f07dfef5375",
     "src/lib/share-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/sidebar-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -5832,7 +5990,7 @@
     "src/types/project/addresses.ts": "85b4f0133f5d4456373677f14c00be344526788dafc03e33b4f4e53b4116243c",
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/types/property-viewer.ts": "affb6d4a6b268beefec607ae0573c4334f20f06268f2672f7a5b5478f28a6a18",
-    "src/types/property.ts": "b7f1e7b9e03afdcc9dc6a39663346edd9f2b7d29acb57d4e58f6c7eb91efe6ed",
+    "src/types/property.ts": "ed34617719a2c88df9588a06237031fd27bdaf9dec5ffcc71bd435962d86fcc6",
     "src/types/public-listing.ts": "bfdcd873afa021f5f2de9f9207910f11dc0361c85f785a5938c9c78ac6ec8384",
     "src/types/search.ts": "35ecd4246a1349e4fc5757425facb913521b4eee27523e49bb93c52a703e953f",
     "src/types/sharing.ts": "4f540f9b2e1d98f8010b3fb17d71a4d66aa0c2e47a4a2fd863ffd3bd922b9c3e",
@@ -5883,8 +6041,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 675,
-    "sliceBytes": 466935
+    "shellFiles": 676,
+    "sliceBytes": 471750
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -9529,6 +9687,7 @@
         "legal.dataDeletion",
         "legal.legalLinks",
         "legal.legalNotice",
+        "legal.openSource",
         "legal.privacyPolicy",
         "legal.termsOfService",
         "menu.main",
