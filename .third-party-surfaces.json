@@ -1,0 +1,55 @@
+{
+  "$doc": "ADR-863 / CHECK 3.84 — ΠΟΙΑ ΠΑΚΕΤΑ ΦΤΑΝΟΥΝ ΣΤΟΝ BROWSER. Ό,τι κατεβαίνει στη συσκευή του ανθρώπου είναι ΑΝΤΙΓΡΑΦΟ ⇒ η άδεια απαιτεί το κείμενό της να ταξιδέψει μαζί. Ό,τι μένει στον διακομιστή ΕΚΤΕΛΕΙΤΑΙ χωρίς να διανέμεται.",
+
+  "$authority": [
+    "🔑 Η ΑΥΘΕΝΤΙΑ ΕΙΝΑΙ ΤΟ ΠΡΑΓΜΑΤΙΚΟ BUILD, ΟΧΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ.",
+    "Το `browser[]` ΠΑΡΑΓΕΤΑΙ από webpack stats του build που ΗΔΗ τρέχει στο",
+    "`.github/workflows/bundle-ratchet.yml` — κανένα δεύτερο build, καμία νέα εξάρτηση",
+    "(το webpack-bundle-analyzer είναι ήδη wired στο next.config.js).",
+    "",
+    "⚠️ Ο πράκτορας ΔΕΝ τρέχει `next build` (N.17 · 14 GB heap) ⇒ η σπορά γίνεται από το CI,",
+    "όπως ήδη γίνεται για τις baselines depcruise / type-complexity / bundle-size (ADR-598).",
+    "",
+    "🏆 ΤΟ ΣΗΜΕΙΟ ΟΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ: το Chromium δηλώνει `Shipped: yes/no` ανά",
+    "βιβλιοθήκη και ΚΑΝΕΙΣ δεν το επαληθεύει. Εδώ το `claims` είναι ΙΣΧΥΡΙΣΜΟΣ που το build",
+    "μπορεί να ΔΙΑΨΕΥΣΕΙ: αν πακέτο δηλωμένο ως `server` εμφανιστεί στα stats, η πύλη κοκκινίζει.",
+    "Το μετρημένο `browser[]` ΥΠΕΡΙΣΧΥΕΙ κάθε δήλωσης — αλλιώς μια δήλωση θα μπορούσε να κρύψει",
+    "γεγονός, που είναι ο ορισμός της αυτοεπιβεβαίωσης."
+  ],
+
+  "measured": false,
+  "measuredAt": null,
+  "generatedBy": "ΕΚΚΡΕΜΕΙ σπορά: .github/workflows/bundle-ratchet.yml (seed=true) → webpack stats",
+
+  "$measuredFalse": [
+    "⏳ ΟΣΟ ΕΙΝΑΙ `false`: καμία μέτρηση δεν έχει γίνει, άρα κάθε πακέτο εκτός του `claims`",
+    "είναι `surface-unknown` (⛔ fail-closed). Αυτό ΔΕΝ είναι ψευδώς πράσινο ούτε ψευδώς κόκκινο:",
+    "είναι ρητή δήλωση ότι το ερώτημα δεν απαντήθηκε ακόμη — η κατάσταση που αυτό το repo",
+    "ονομάζει «0 = κανείς δεν κοίταξε» και αρνείται να την παρουσιάσει ως καθαρή."
+  ],
+
+  "browser": [],
+
+  "claims": {
+    "sharp": {
+      "surface": "server",
+      "why": "ADR-598 G13 — η εξαίρεση LGPL «sharp-libvips» του .license-policy.json στηρίζεται ΡΗΤΑ στον όρο «server-side: τα bytes δεν διανέμονται σε browser ή σε πελάτη (SaaS)». Μοναδική χρήση: src/services/listings/public-shelf-sanitise.ts, με docblock «SERVER-ONLY: το sharp είναι εγγενές module». 🔴 ΜΕΤΡΗΜΕΝΟ 2026-09-16: το sharp ΔΕΝ είναι στα `serverExternalPackages` του next.config.js, και ΚΑΝΕΝΑ εργαλείο δεν επαληθεύει σήμερα τον ισχυρισμό — αυτή η γραμμή υπάρχει ακριβώς για να τον κάνει διαψεύσιμο."
+    },
+    "@resvg/resvg-js": {
+      "surface": "server",
+      "why": "MPL-2.0 με εξαίρεση «resvg-mpl». Εγγενές module (napi) — δηλώνεται ήδη στα `serverExternalPackages` του next.config.js, άρα δεν περνά καν από webpack στον server."
+    },
+    "@sentry/cli": {
+      "surface": "server",
+      "why": "FSL-1.1-MIT με εξαίρεση «sentry-cli-fsl» (μετατροπή σε MIT στις 2028-02-23). Εργαλείο γραμμής εντολών του build — δεν εισάγεται από κώδικα εφαρμογής."
+    },
+    "@napi-rs/canvas": {
+      "surface": "server",
+      "why": "Εγγενές module· δηλώνεται στα `serverExternalPackages`. Καταναλωτής: src/services/pdf/pdf-rasterize.service.ts (ADR-598, rasterization στον διακομιστή)."
+    },
+    "pdfjs-dist": {
+      "surface": "server",
+      "why": "Δηλώνεται στα `serverExternalPackages` του next.config.js ⇒ δεν περνά από webpack στον server. ⚠️ Ο ισχυρισμός αφορά ΜΟΝΟ τη διαδρομή διακομιστή· αν κάποια οθόνη το εισάγει στον πελάτη, τα stats θα το διαψεύσουν."
+    }
+  }
+}

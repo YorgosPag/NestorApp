@@ -93,6 +93,9 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=12288
           NODE_ENV: production
           DISABLE_SENTRY_WEBPACK: 'true'
+          # ADR-863 / CHECK 3.84 — γράφει `.next/third-party-stats.json` (client bundle μόνο).
+          # ⚠️ ΟΧΙ `ANALYZE`: εκείνο ανοίγει διαδραστικό παράθυρο και δεν αφήνει αρχείο.
+          THIRD_PARTY_STATS: 'true'
           NEXT_TELEMETRY_DISABLED: '1'
           NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyAcqK3o-zPmXodFPr-gG328QJHlcEc6g1k
           NEXT_PUBLIC_FIREBASE_APP_ID: '1:157616068729:web:c7dc1ed6661c895ee19ca8'
@@ -115,6 +118,27 @@ jobs:
           NEXT_PUBLIC_APP_URL: https://nestorconstruct.gr
           # ADR-860 §Ε0 — ίδια γραμμή με το `docker-build.yml` (CHECK 3.57 ισοτιμία env).
           NEXT_PUBLIC_DEPLOYMENT_ID: ${{ github.sha }}
+
+      # [ADR-863 / CHECK 3.84] Η ΑΠΟΓΡΑΦΗ ΕΠΙΦΑΝΕΙΩΝ ΔΙΑΝΟΜΗΣ — πάνω στο ΙΔΙΟ build.
+      #
+      # «Ποια npm πακέτα φτάνουν ΠΡΑΓΜΑΤΙΚΑ στον browser;» Ό,τι κατεβαίνει είναι ΑΝΤΙΓΡΑΦΟ ⇒ η
+      # άδεια απαιτεί το κείμενό της να ταξιδέψει μαζί. Καμία νέα εξάρτηση, ΚΑΝΕΝΑ δεύτερο
+      # build: το `THIRD_PARTY_STATS=true` παραπάνω βάζει το ήδη εγκατεστημένο
+      # webpack-bundle-analyzer να γράψει `.next/third-party-stats.json` (client μόνο).
+      #
+      # ⚠️ Τρέχει ΜΟΝΟ σε seed: το στιγμιότυπο είναι δεδομένο που δεσμεύει ο Giorgio, όπως κάθε
+      #    baseline που σπέρνεται από CI (πρότυπο ADR-598). Ο έλεγχος γίνεται στο pre-commit.
+      - name: 🧾 Third-party surfaces (seed mode only)
+        if: ${{ inputs.seed == true }}
+        run: node scripts/seed-third-party-surfaces.js .next/third-party-stats.json
+
+      - name: 📤 Upload seeded surfaces (seed mode only)
+        if: ${{ inputs.seed == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: third-party-surfaces
+          path: .third-party-surfaces.json
+          include-hidden-files: true # dotfile — v4 excludes hidden by default
 
       - name: 📦 Bundle-size ratchet (seed or check)
         run: |

@@ -447,6 +447,36 @@ const nextConfig = {
       });
     }
 
+    // [ADR-863 / CHECK 3.84] ΑΠΟΓΡΑΦΗ ΕΠΙΦΑΝΕΙΩΝ ΔΙΑΝΟΜΗΣ — ΜΟΝΟ client, ΜΟΝΟ όταν ζητηθεί.
+    //
+    // «Ποια npm πακέτα φτάνουν ΠΡΑΓΜΑΤΙΚΑ στον browser;» Ό,τι κατεβαίνει είναι ΑΝΤΙΓΡΑΦΟ ⇒ η
+    // άδεια απαιτεί το κείμενό της να ταξιδέψει μαζί (ADR-863). Μετρημένο 2026-09-16: κανένα
+    // υπάρχον εργαλείο δεν το απαντά — ο bundle-analyzer μετρά ΜΟΝΟ bytes, ο dependency-cruiser
+    // αποκλείει ρητά το node_modules, το knip ανακατεύει client+server στον ίδιο γράφο.
+    //
+    // ⚠️ ΞΕΧΩΡΙΣΤΗ ΜΕΤΑΒΛΗΤΗ ΑΠΟ ΤΟ `ANALYZE`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ: εκείνο τρέχει
+    //    `analyzerMode: 'server'`, δηλαδή ανοίγει διαδραστικό παράθυρο και ΔΕΝ αφήνει κανένα
+    //    αρχείο — άχρηστο για script, και θα κρέμαγε το CI περιμένοντας άνθρωπο.
+    //
+    // ⚠️ `!isServer`: η webpack() καλείται ΔΥΟ φορές. Χωρίς αυτόν τον φρουρό θα μετρούσαμε το
+    //    server bundle και θα δηλώναμε «φτάνουν στον browser» πακέτα που δεν φτάνουν ποτέ.
+    //
+    // Καμία νέα εξάρτηση (το webpack-bundle-analyzer είναι ήδη εδώ), κανένα δεύτερο build:
+    // προσκολλάται στο build που ΗΔΗ τρέχει στο `.github/workflows/bundle-ratchet.yml`.
+    if (process.env.THIRD_PARTY_STATS === 'true' && !isServer) {
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'disabled',
+          generateStatsFile: true,
+          statsFilename: require('path').join(__dirname, '.next', 'third-party-stats.json'),
+          // Μόνο ό,τι χρειάζεται η απογραφή: διαδρομές modules. Το `source: false` κρατά το
+          // αρχείο σε δεκάδες MB αντί για εκατοντάδες.
+          statsOptions: { modules: true, chunks: true, source: false, reasons: false, assets: false },
+        })
+      );
+    }
+
     // [ENTERPRISE] Bundle analyzer for production analysis
     // Usage: ANALYZE=true pnpm build
     if (process.env.ANALYZE === 'true') {
