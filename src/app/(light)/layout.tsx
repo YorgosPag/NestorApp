@@ -34,6 +34,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
+import { LegalLinksNav } from '@/components/legal/LegalLinksNav';
 
 export default function LightLayout({
   children,
@@ -79,6 +80,31 @@ export default function LightLayout({
         λάθος στις τρεις από τις τέσσερις — γι' αυτό το δηλώνει **η σελίδα**.
       */}
       <ShellSurface className="flex flex-1 flex-col">{children}</ShellSurface>
+      {/*
+        ⚖️ **ΤΟ ΥΠΟΣΕΛΙΔΟ ΤΟΥ ΔΗΜΟΣΙΟΥ ΙΣΤΟΤΟΠΟΥ** (ADR-861 Φ2, απόφαση Giorgio 2026-09-16).
+
+        🔴 **Το κενό που έκλεισε**: οι νομικοί σύνδεσμοι ζούσαν στο πλαϊνό μενού του `(app)`
+        και κάτω από την κάρτα σύνδεσης — δηλαδή **πουθενά** για τον ανώνυμο επισκέπτη της
+        αναζήτησης, της αγγελίας ή της σελίδας επαγγελματία. Το Π.Δ. 131/2003 άρθ. 4 ζητά
+        «**εύκολη, άμεση και συνεχή** πρόσβαση», και η νομολογία το διαβάζει ως «σε όλο τον
+        ιστότοπο» — όχι μόνο εκεί όπου υπάρχει λογαριασμός.
+
+        🔑 **ΓΙΑΤΙ ΕΙΝΑΙ ΑΣΦΑΛΕΣ ΣΕ ΚΛΕΙΔΩΜΕΝΗ ΕΠΙΦΑΝΕΙΑ (το `/search/results`)**: το
+        `[data-shell-frame]` είναι **στήλη flex** (`shell-surface.css` §5) και στο κλείδωμα
+        παίρνει `block-size: 100svh` + `overflow: clip`. Ένα αδελφό υποσέλιδο **μοιράζεται**
+        αυτό το ύψος: ο διάδρομος (`flex-1`) παίρνει ό,τι περισσεύει, ο χάρτης μικραίνει
+        κατά το ύψος του υποσέλιδου και **καμία κύλιση δεν γεννιέται** — η βλάβη των 48px
+        του `(auth)` και των 161px της ΦΑΣΗΣ Γ ήταν ακριβώς το αντίθετο σχήμα (σελίδα που
+        **ξαναδήλωνε** ύψος παραθύρου, εδώ δεν δηλώνεται κανένα).
+        ⚠️ Η αλυσίδα του `:has(> [data-shell-surface] > [data-shell-viewport])` μένει
+        **ανέπαφη**: το υποσέλιδο είναι **αδελφός** του διαδρόμου, όχι κρίκος της.
+
+        ⚠️ **ΜΕΣΑ στο κάδρο, ΕΞΩ από τον διάδρομο**: ο διάδρομος ανήκει στο **περιεχόμενο**
+        (ADR-797) — ένα υποσέλιδο πλάτους οθόνης μέσα του θα ήταν δεύτερη αυθεντία κενού.
+      */}
+      <footer className="w-full border-t border-border px-4 py-2">
+        <LegalLinksNav variant="standalone" />
+      </footer>
     </TooltipProvider>
     </div>
   );
