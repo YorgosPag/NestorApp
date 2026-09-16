@@ -32,6 +32,20 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🔑 ADR-862 Φ0 Β6 — το λεξιλόγιο μετακόμισε σε SSoT **ανεξάρτητο SDK**, ώστε να μπορεί
+//    να το εισαγάγει ΚΑΙ ο γραφέας του διακομιστή. Δες `types/file-audit` για το τι
+//    κόστισε όσο ήταν δεμένο εδώ: **πέντε** αποκλίνοντα admin-side δίδυμα.
+import type {
+  FileAuditAction,
+  FileAuditMetadata,
+  FileAuditRecordFields,
+} from '@/types/file-audit';
+
+// ⚠️ **ΔΥΟ ΓΡΑΜΜΕΣ, ΟΧΙ ΜΙΑ** — ίδιο μάθημα με το `roles.ts` ↔ `role-catalogue.ts`
+//    (ADR-806 §7 #1): το `export … from` **επανεξάγει, δεν εισάγει**, άρα χρειάζεται
+//    και το `import type` από πάνω για να τρέξουν οι υπογραφές αυτού του αρχείου.
+//    Έτσι κανένας από τους υπάρχοντες καταναλωτές δεν αγγίζεται.
+export type { FileAuditAction, FileAuditMetadata } from '@/types/file-audit';
 
 const logger = createModuleLogger('FileAuditService');
 
@@ -39,50 +53,17 @@ const logger = createModuleLogger('FileAuditService');
 // TYPES
 // ============================================================================
 
-/** All trackable file operations */
-export type FileAuditAction =
-  | 'view'
-  | 'download'
-  | 'upload'
-  | 'finalize'
-  | 'rename'
-  | 'description_update'
-  | 'classify'
-  | 'ai_classify'
-  | 'delete'
-  | 'restore'
-  | 'archive'
-  | 'version_create'
-  | 'version_rollback'
-  | 'link'
-  | 'unlink'
-  | 'batch_delete'
-  | 'batch_download'
-  | 'batch_classify'
-  | 'share'
-  | 'hold_place'
-  | 'hold_release'
-  | 'approval_request'
-  | 'approval_approve'
-  | 'approval_reject'
-  | 'approval_cancel'
-  | 'comment'
-  | 'move';
-
-/** Audit log entry stored in Firestore */
-export interface FileAuditEntry {
-  /** File ID */
-  fileId: string;
-  /** Action performed */
-  action: FileAuditAction;
-  /** Who performed the action */
-  performedBy: string;
-  /** Timestamp (server) */
-  timestamp: ReturnType<typeof serverTimestamp>;
-  /** Company ID for tenant isolation */
-  companyId?: string;
-  /** Additional context */
-  metadata?: Record<string, string | number | boolean | null>;
+/**
+ * Η εγγραφή **όπως τη γράφει ο πελάτης** — το κοινό σχήμα, με τη χρονοσήμανση του
+ * client SDK.
+ *
+ * 🔑 Ο τύπος του `timestamp` είναι το **μόνο** πεδίο που δεν μπορεί να είναι κοινό: ο
+ * `FieldValue` του `firebase/firestore` και του `firebase-admin/firestore` είναι
+ * **διαφορετικές κλάσεις**. Γι' αυτό ζει εδώ και όχι στο SSoT.
+ */
+export interface FileAuditEntry extends FileAuditRecordFields {
+  /** Timestamp (server) — sentinel του client SDK. */
+  readonly timestamp: ReturnType<typeof serverTimestamp>;
 }
 
 /** Audit entry as returned from Firestore (with resolved timestamp) */
@@ -112,25 +93,25 @@ export class FileAuditService {
     fileId: string,
     action: FileAuditAction,
     performedBy: string,
-    metadata?: Record<string, string | number | boolean | null>,
+    metadata?: FileAuditMetadata,
   ): Promise<string>;
   static async log(
     fileId: string,
     action: FileAuditAction,
     performedBy: string,
     companyId?: string,
-    metadata?: Record<string, string | number | boolean | null>,
+    metadata?: FileAuditMetadata,
   ): Promise<string>;
   static async log(
     fileId: string,
     action: FileAuditAction,
     performedBy: string,
-    companyIdOrMetadata?: string | Record<string, string | number | boolean | null>,
-    metadata?: Record<string, string | number | boolean | null>,
+    companyIdOrMetadata?: string | FileAuditMetadata,
+    metadata?: FileAuditMetadata,
   ): Promise<string> {
     // Resolve overloaded parameters
     let companyId: string | undefined;
-    let resolvedMetadata: Record<string, string | number | boolean | null> | undefined;
+    let resolvedMetadata: FileAuditMetadata | undefined;
 
     if (typeof companyIdOrMetadata === 'string') {
       companyId = companyIdOrMetadata;
@@ -194,7 +175,7 @@ export class FileAuditService {
     action: FileAuditAction,
     performedBy: string,
     companyId?: string,
-    metadata?: Record<string, string | number | boolean | null>,
+    metadata?: FileAuditMetadata,
   ): Promise<void> {
     // Log one entry per file for queryability
     await Promise.allSettled(
@@ -208,18 +189,35 @@ export class FileAuditService {
   }
 
   /**
-   * Retrieve audit history for a file.
+   * **ΤΟ ΕΝΑ ΕΡΩΤΗΜΑ ΙΣΤΟΡΙΚΟΥ** — αλλάζει **μόνο** ποιο είναι το δεύτερο κριτήριο.
+   *
+   * 🧹 **Εξήχθη 2026-09-16 (CHECK 3.28 / N.18)**: οι `getFileHistory` και `getUserHistory`
+   * ήταν **ταυτόσημες** σε 20 γραμμές / 109 tokens — ίδιο `colRef`, ίδιο φίλτρο μισθωτή,
+   * ίδια ταξινόμηση, και **byte-προς-byte** το ίδιο mapping σε {@link FileAuditRecord}.
+   * Διέφεραν σε **δύο** πράγματα: το πεδίο του δεύτερου `where` και το προεπιλεγμένο όριο.
+   *
+   * ⚠️ Δεν ήταν κλώνος «από αμέλεια»: γεννήθηκε όταν το λεξιλόγιο μετακόμισε στο
+   * `types/file-audit.ts` και οι δύο μέθοδοι **συνέκλιναν**. Ακριβώς το σχήμα που ο N.18
+   * ονομάζει *«κεντρικοποιείς το Α, γράφεις Β+Γ ως δίδυμα»* — γι' αυτό το πιάνει πύλη
+   * **μέσα στο ίδιο commit** και όχι ανασκόπηση.
+   *
+   * 🔑 **Οι δύο δημόσιες υπογραφές ΔΕΝ άλλαξαν** — κανένας καταναλωτής δεν αγγίχθηκε.
+   *
+   * ⚠️ Το φίλτρο μισθωτή μένει **πρώτο και υποχρεωτικό**: είναι το μόνο κλειδί με το οποίο
+   * ρωτά ο αναγνώστης, και γραμμή χωρίς `companyId` είναι **δομικά αόρατη** (δες
+   * `types/file-audit.ts` για τις πέντε γραφές που το παρέλειπαν).
    */
-  static async getFileHistory(
-    fileId: string,
+  private static async queryHistory(
+    field: 'fileId' | 'performedBy',
+    value: string,
     companyId: string,
-    maxEntries = 50,
+    maxEntries: number,
   ): Promise<FileAuditRecord[]> {
     const colRef = collection(db, FILE_AUDIT_COLLECTION);
     const q = query(
       colRef,
       where('companyId', '==', companyId),
-      where('fileId', '==', fileId),
+      where(field, '==', value),
       orderBy('timestamp', 'desc'),
       firestoreLimit(maxEntries),
     );
@@ -241,6 +239,17 @@ export class FileAuditService {
   }
 
   /**
+   * Retrieve audit history for a file.
+   */
+  static async getFileHistory(
+    fileId: string,
+    companyId: string,
+    maxEntries = 50,
+  ): Promise<FileAuditRecord[]> {
+    return FileAuditService.queryHistory('fileId', fileId, companyId, maxEntries);
+  }
+
+  /**
    * Retrieve audit history for a user (across all files).
    */
   static async getUserHistory(
@@ -248,28 +257,6 @@ export class FileAuditService {
     companyId: string,
     maxEntries = 100,
   ): Promise<FileAuditRecord[]> {
-    const colRef = collection(db, FILE_AUDIT_COLLECTION);
-    const q = query(
-      colRef,
-      where('companyId', '==', companyId),
-      where('performedBy', '==', performedBy),
-      orderBy('timestamp', 'desc'),
-      firestoreLimit(maxEntries),
-    );
-
-    const snap = await getDocs(q);
-
-    return snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        fileId: data.fileId,
-        action: data.action,
-        performedBy: data.performedBy,
-        timestamp: data.timestamp?.toDate?.() ?? data.timestamp ?? '',
-        companyId: data.companyId,
-        metadata: data.metadata,
-      } as FileAuditRecord;
-    });
+    return FileAuditService.queryHistory('performedBy', performedBy, companyId, maxEntries);
   }
 }

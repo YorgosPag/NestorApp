@@ -2,6 +2,36 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **16/09 — Ο ADMIN-SIDE ΓΡΑΦΕΑΣ ΤΟΥ `file_audit_log` ΓΡΑΜΜΕΝΟΣ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 5 ΣΗΜΕΙΑ, ΜΕ ΔΥΟ ΑΠΟΚΛΙΣΕΙΣ (εύρημα ADR-862 Φ0 Β6)**
+
+  **Μετρημένο** (grep `FILE_AUDIT_LOG` × `getAdminFirestore`): `api/files/archive/route.ts:108` ·
+  `api/files/classify/classify-background.ts:150` · `api/files/gdpr-delete/route.ts:150` ·
+  `api/files/purge/route.ts:115` · `services/file-record/file-purge-helpers.ts:109`. Όλα γράφουν
+  `db.collection(FILE_AUDIT_LOG).doc(generateAuditId()).set({…})` — δίδυμα του `FileAuditService.log`,
+  που **δεν μπορούσαν** να τον καλέσουν επειδή εισάγει **client SDK** (`firebase/firestore` + `db`).
+  Ο τύπος `FileAuditEntry` ήταν **ακούσιο σύνορο**: δήλωνε `timestamp: ReturnType<typeof serverTimestamp>`,
+  δηλαδή τον `FieldValue` **του πελάτη**, που ο Admin SDK δεν μπορεί να ικανοποιήσει.
+
+  🔴 **ΔΥΟ ΜΕΤΡΗΜΕΝΕΣ ΑΠΟΚΛΙΣΕΙΣ — Η ΔΕΥΤΕΡΗ ΕΙΝΑΙ ΖΩΝΤΑΝΟ ΣΦΑΛΜΑ**:
+  **(1) χρόνος** — τα πέντε γράφουν `timestamp: nowISO()` (**συμβολοσειρά**), ο πελάτης
+  `serverTimestamp()` (**Timestamp**): δύο τύποι στο **ίδιο πεδίο** της ίδιας συλλογής.
+  **(2) μισθωτής** — τα `archive` και `purge` **ΔΕΝ γράφουν `companyId`**, ενώ ο **μοναδικός**
+  αναγνώστης (`FileAuditService.getFileHistory`) ρωτά `where('companyId','==',…)` ⇒ εκείνες οι
+  γραμμές ίχνους είναι **δομικά αόρατες σε κάθε άνθρωπο, για πάντα**. Ίχνος που γράφεται,
+  κοστίζει, και **κανείς δεν μπορεί ποτέ να το δει** — το σχήμα «`0` = κανείς δεν κοίταξε»,
+  μέσα σε audit trail.
+
+  ✅ **Ο ΠΡΟΟΡΙΣΜΟΣ ΥΠΑΡΧΕΙ ΗΔΗ** (γεννήθηκε στο Β6): `services/file-audit-admin.service.ts`
+  (`recordFileAudit` — Admin SDK, `FieldValue.serverTimestamp()`, **αρνείται** χωρίς μισθωτή) +
+  `types/file-audit.ts` (λεξιλόγιο **ανεξάρτητο SDK**, ώστε να το εισάγουν και οι δύο πλευρές).
+  Άγκυρα που τον **εκτελεί**: `services/__tests__/file-audit-admin-anchor.test.ts`.
+
+  **Θεραπεία**: μετανάστευση των 5 σε `recordFileAudit(...)`, με **ρητό** `companyId` σε κάθε κλήση
+  (τα `archive`/`purge` το έχουν διαθέσιμο — απλώς δεν το γράφουν).
+  ⚠️ **ΜΕΤΑ** τη μετανάστευση και **ΠΟΤΕ ΠΡΙΝ**: module `file-audit` στο `.ssot-registry.json` κατά
+  το πρότυπο του `entity-audit-trail` (γρ. 718). Σήμερα θα σήμαινε **αμέσως** τους 5 ⇒ CHECK 3.7/3.18
+  κόκκινο πάνω σε χρέος που η Φ0 **δεν δημιούργησε**. 5 αρχεία σε 2 τομείς ⇒ δική του φέτα.
+
 - 🟡 **15/09 — «POST ΑΠΟ ΚΟΥΜΠΙ ΜΕ ΡΗΤΕΣ ΦΑΣΕΙΣ» ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 5 ΣΗΜΕΙΑ (εύρημα ADR-841 Α21.21 Φάση Β)**
 
   **Μετρημένο** (grep `setPhase({ kind: 'sending' })`): `MandateConsentContent` · `ShowcaseEmailConfirmationContent` · `EmailPreferencesPanel` ·
