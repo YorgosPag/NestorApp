@@ -23,6 +23,12 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const EVIDENCE_GRADES = Object.freeze(['license-text', 'upstream-declaration', 'third-party-curation']);
 const SCOPES = Object.freeze(['prod', 'dev']);
 /**
+ * «Απαιτεί η άδεια το κείμενό της να **ταξιδεύει** με κάθε αντίγραφο;» — ορθογώνιο στο
+ * `decision` («επιτρέπεται;»). Υποχρεωτικό σε **κάθε** κατηγορία: μια κατηγορία χωρίς απάντηση
+ * θα σήμαινε «κανείς δεν ρώτησε», και το CHECK 3.84 θα την προσπερνούσε σιωπηλά.
+ */
+const ATTRIBUTION = Object.freeze(['required', 'none']);
+/**
  * Ποιες αποφάσεις δέχεται κάθε κατηγορία. Κλειστό επίτηδες: κάθε συνδυασμός πρέπει να έχει
  * **όνομα κατάστασης** (`UNEXCEPTED_STATE`)· ένα `notice: block` θα έβγαζε πακέτα χωρίς
  * κατάσταση, δηλαδή λογιστική που δεν κλείνει.
@@ -59,6 +65,9 @@ function checkCategories(raw, errors) {
     const allowed = ALLOWED_DECISIONS[category];
     if (!allowed.includes(entry.decision)) {
       errors.push(`categories.${category}.decision: «${entry.decision}» — επιτρέπεται μόνο ${allowed.join(' | ')} (δεν αλλάζει με ρύθμιση)`);
+    }
+    if (!ATTRIBUTION.includes(entry.attribution)) {
+      errors.push(`categories.${category}.attribution: «${entry.attribution}» — απαιτείται ${ATTRIBUTION.join(' | ')} («ταξιδεύει το κείμενο της άδειας με το αντίγραφο;»)`);
     }
   }
   return undefined;
@@ -177,4 +186,4 @@ function validatePolicy(raw) {
   return { errors, licenseIndex };
 }
 
-module.exports = { validatePolicy, splitPattern, EVIDENCE_GRADES, SCOPES };
+module.exports = { validatePolicy, splitPattern, EVIDENCE_GRADES, SCOPES, ATTRIBUTION };

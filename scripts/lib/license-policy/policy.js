@@ -174,6 +174,24 @@ function decideAsset(policy, relPath, license, now = Date.now()) {
 const PERMITTED = new Set([S.PACKAGE_STATE.ALLOWED, S.PACKAGE_STATE.EXCEPTED, S.PACKAGE_STATE.CONVERTED]);
 const isPermitted = (decision) => PERMITTED.has(decision.state);
 
+/**
+ * «Απαιτεί αυτή η άδεια το κείμενό της να **ΤΑΞΙΔΕΥΕΙ** με κάθε αντίγραφο που διανέμουμε;»
+ *
+ * Ορθογώνιο στο «επιτρέπεται;» — αλλά **ίδια** ταξινόμηση, άρα καμία δεύτερη λίστα αδειών.
+ *
+ * 🔑 **Οι σύνθετες εκφράσεις λύνονται σωστά ΧΩΡΙΣ δεύτερη λογική**, επειδή το `categorize`
+ * ήδη εφαρμόζει «OR ⇒ ευνοϊκότερη, AND ⇒ αυστηρότερη»:
+ *   · `MIT OR CC0-1.0`  ⇒ `unencumbered` ⇒ **none** — διαλέγουμε τη CC0, δεν οφείλουμε ειδοποίηση
+ *   · `MIT AND CC0-1.0` ⇒ `notice`       ⇒ **required** — η MIT δεσμεύει ούτως ή άλλως
+ *
+ * ⚠️ Η άγνωστη άδεια είναι `unknown` ⇒ `required` (fail-closed): ό,τι δεν ξέρουμε τι ζητά,
+ * το αποδίδουμε. Τη ρωτούν **δύο** πύλες — CHECK 3.69 (γραμματοσειρές) και CHECK 3.84 (πακέτα
+ * που φτάνουν στον browser). Πριν από το ADR-863 ήταν χειρόγραφο `Set` στη μία από τις δύο.
+ */
+function requiresAttribution(policy, licenseText) {
+  return policy.raw.categories[categorize(policy, licenseText).category].attribution === 'required';
+}
+
 module.exports = {
   POLICY_FILE_NAME,
   loadPolicy,
@@ -182,6 +200,7 @@ module.exports = {
   decideLicense,
   decideAsset,
   isPermitted,
+  requiresAttribution,
   packageExceptions,
   assetExceptions,
   packageMatchScore,

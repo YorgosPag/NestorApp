@@ -51,8 +51,12 @@ const { stripComments } = require('../source-text');
 const REGISTRY_FILE = '.font-assets.json';
 const POLICY_FILE = LP.POLICY_FILE_NAME;
 
-/** Άδειες που απαιτούν το κείμενό τους να **ταξιδεύει** με το έργο. */
-const ATTRIBUTION_REQUIRED = new Set(['Apache-2.0', 'OFL-1.1']);
+// 🔑 **«ΑΠΑΙΤΕΙ Η ΑΔΕΙΑ ΝΑ ΤΑΞΙΔΕΥΕΙ ΤΟ ΚΕΙΜΕΝΟ ΤΗΣ;» — ΤΟ ΡΩΤΑΜΕ, ΔΕΝ ΤΟ ΛΕΜΕ.**
+//    Ως το ADR-863 ζούσε εδώ ως χειρόγραφο `new Set(['Apache-2.0','OFL-1.1'])` — δεύτερη λίστα
+//    αδειών δίπλα στην πολιτική, δηλαδή ADR-749 σε μικρογραφία. Ήταν **και νομικά στενή**: η
+//    MIT απαιτεί επίσης απόδοση («in all copies or substantial portions») και **έλειπε**.
+//    Πλέον η απάντηση είναι το `LP.requiresAttribution` πάνω στο `.license-policy.json` — η
+//    **ίδια** αυθεντία που λέει «επιτρέπεται;», και η ίδια που ρωτά το CHECK 3.84.
 
 const STATES = {
   DECLARED_ALLOWED: 'declared-allowed',
@@ -204,7 +208,7 @@ function judgeDeclared(inv, rel, entry) {
     return [STATES.LICENSE_NOT_ALLOWED,
       `${decision.detail} — ${POLICY_FILE}, απόφαση N.5`];
   }
-  if (ATTRIBUTION_REQUIRED.has(ev.spdx) && !inv.attributionExists(entry.attribution)) {
+  if (LP.requiresAttribution(inv.policy, ev.spdx) && !inv.attributionExists(entry.attribution)) {
     return [STATES.UNATTRIBUTED,
       `η «${ev.spdx}» απαιτεί το κείμενό της να ταξιδεύει· δεν βρέθηκε αρχείο απόδοσης`];
   }
@@ -261,7 +265,7 @@ function tallyOf(rows) {
 const idsOf = (verdict, state) => verdict.rows.filter((r) => r.state === state).map((r) => r.id);
 
 module.exports = {
-  REGISTRY_FILE, POLICY_FILE, ATTRIBUTION_REQUIRED,
+  REGISTRY_FILE, POLICY_FILE,
   STATES, BLOCKING, RATCHETED,
   tracked, binaryAssets, base64FontModules, gitGrepFiles,
   takeInventory, judge, tallyOf, idsOf,

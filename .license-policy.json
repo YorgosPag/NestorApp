@@ -10,15 +10,31 @@
     "⚠️ Η εξαίρεση ΚΑΡΦΩΝΕΙ την άδεια: αν το πακέτο αλλάξει άδεια, η έγκριση ΠΑΥΕΙ (exception-license-drift) — το @sentry/cli πήγε από BSD-3-Clause σε FSL-1.1-MIT μέσα στη major 2."
   ],
 
+  "$attribution": [
+    "ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΕΡΩΤΗΜΑΤΑ, ΚΑΙ Η ΣΥΓΧΥΣΗ ΤΟΥΣ ΗΤΑΝ ΤΟ ΣΦΑΛΜΑ:",
+    "  · `decision`    — «ΕΠΙΤΡΕΠΕΤΑΙ να τη χρησιμοποιήσουμε;»",
+    "  · `attribution` — «απαιτεί το κείμενό της να ΤΑΞΙΔΕΥΕΙ με κάθε αντίγραφο που διανέμουμε;»",
+    "Είναι ορθογώνια: η MIT επιτρέπεται ΚΑΙ απαιτεί απόδοση· η CC0 επιτρέπεται και ΔΕΝ απαιτεί.",
+    "",
+    "🔴 ΓΙΑΤΙ ΜΠΗΚΕ ΕΔΩ (2026-09-16, ADR-863): το ερώτημα της απόδοσης ζούσε ως ΧΕΙΡΟΓΡΑΦΟ",
+    "`ATTRIBUTION_REQUIRED = new Set(['Apache-2.0','OFL-1.1'])` μέσα στο font-assets/assets.js —",
+    "δεύτερη λίστα αδειών, δηλαδή ADR-749 σε μικρογραφία. Ήταν ΚΑΙ νομικά στενή: η MIT απαιτεί",
+    "επίσης απόδοση («in all copies or substantial portions») και ΕΛΕΙΠΕ. Τώρα το ρωτούν δύο",
+    "πύλες με την ΙΔΙΑ συνάρτηση (`requiresAttribution`): CHECK 3.69 και CHECK 3.84.",
+    "",
+    "⚠️ FAIL-CLOSED: `unknown` ⇒ `required`. Άδεια που δεν ξέρουμε τι ζητά, την αποδίδουμε.",
+    "Μόνο η `unencumbered` λέει `none`, και ΜΕΤΡΗΘΗΚΕ ανά id: CC0-1.0 · Unlicense · 0BSD ·",
+    "LicenseRef-Public-Domain — καμία τους δεν επιβάλλει διατήρηση ειδοποίησης."
+  ],
   "categories": {
-    "forbidden":       { "decision": "block",     "why": "Google FORBIDDEN (+ BUSL/SSPL/Elastic). Καμία εξαίρεση — απόφαση Giorgio 2026-09-16." },
-    "restricted":      { "decision": "exception", "why": "Google RESTRICTED (GPL/LGPL/CC-BY-SA…). Μόνο ονομαστική εξαίρεση με όρους· σήμερα μόνο το sharp/libvips." },
-    "sourceAvailable": { "decision": "exception", "why": "FSL (Functional Source License). Εκτός λίστας Google· ίδια γενιά με τη BUSL. Μόνο εξαίρεση ανά κυκλοφορία με ημερομηνία μετατροπής." },
-    "byExceptionOnly": { "decision": "exception", "why": "Google BY_EXCEPTION_ONLY (Beerware, OFL-1.1, OpenVision)." },
-    "reciprocal":      { "decision": "exception", "why": "Google RECIPROCAL (MPL/EPL/CDDL): file-level copyleft· επιτρέπεται αναλλοίωτο, με εξαίρεση." },
-    "unknown":         { "decision": "block",     "why": "Άδεια που δεν αναλύεται ή δεν ταξινομείται. Θεραπεία = licenseMappings/curations με τεκμήριο, ΠΟΤΕ εξαίρεση (choosealicense.com/no-permission)." },
-    "notice":          { "decision": "allow",     "why": "Google NOTICE (MIT/BSD/Apache…)." },
-    "unencumbered":    { "decision": "allow",     "why": "Google UNENCUMBERED (CC0/Unlicense/0BSD)." }
+    "forbidden":       { "decision": "block",     "attribution": "required", "why": "Google FORBIDDEN (+ BUSL/SSPL/Elastic). Καμία εξαίρεση — απόφαση Giorgio 2026-09-16." },
+    "restricted":      { "decision": "exception", "attribution": "required", "why": "Google RESTRICTED (GPL/LGPL/CC-BY-SA…). Μόνο ονομαστική εξαίρεση με όρους· σήμερα μόνο το sharp/libvips." },
+    "sourceAvailable": { "decision": "exception", "attribution": "required", "why": "FSL (Functional Source License). Εκτός λίστας Google· ίδια γενιά με τη BUSL. Μόνο εξαίρεση ανά κυκλοφορία με ημερομηνία μετατροπής." },
+    "byExceptionOnly": { "decision": "exception", "attribution": "required", "why": "Google BY_EXCEPTION_ONLY (Beerware, OFL-1.1, OpenVision)." },
+    "reciprocal":      { "decision": "exception", "attribution": "required", "why": "Google RECIPROCAL (MPL/EPL/CDDL): file-level copyleft· επιτρέπεται αναλλοίωτο, με εξαίρεση." },
+    "unknown":         { "decision": "block",     "attribution": "required", "why": "Άδεια που δεν αναλύεται ή δεν ταξινομείται. Θεραπεία = licenseMappings/curations με τεκμήριο, ΠΟΤΕ εξαίρεση (choosealicense.com/no-permission)." },
+    "notice":          { "decision": "allow",     "attribution": "required", "why": "Google NOTICE (MIT/BSD/Apache…). Η ίδια η ονομασία της κατηγορίας ΕΙΝΑΙ η υποχρέωση: το κείμενο και το copyright συνοδεύουν κάθε αντίγραφο." },
+    "unencumbered":    { "decision": "allow",     "attribution": "none",     "why": "Google UNENCUMBERED (CC0/Unlicense/0BSD). Το ΜΟΝΟ `none` — παραίτηση δικαιωμάτων, καμία ειδοποίηση προς διατήρηση." }
   },
 
   "$licenseCategoriesAdditions": [
