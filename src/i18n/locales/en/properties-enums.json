@@ -313,5 +313,10 @@
     "reserved": "Reserved",
     "closed": "Closed",
     "withdrawn": "Withdrawn"
+  },
+  "marketingAudience": {
+    "custodians": "Private — custodians only",
+    "network": "Private — professional network",
+    "public": "Public"
   }
 }

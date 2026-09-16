@@ -1585,5 +1585,20 @@
       "empty": "This property has no floor plan yet. Upload one from the list above.",
       "saveFailed": "The selection was not saved. Please try again."
     }
+  },
+  "audience": {
+    "label": "Who can see this listing",
+    "describe": {
+      "public": "The listing appears on the public map and in searches.",
+      "custodians": "Private marketing: the listing is not shown publicly. Only you and agencies with an active mandate can see it.",
+      "network": "Private marketing: the listing is not shown publicly. Its custodians’ professional network can also see it."
+    },
+    "networkPending": "Marketing to the professional network will be available soon.",
+    "failed": "The listing audience did not change. Please try again.",
+    "narrowing": {
+      "title": "Limit who can see this listing?",
+      "description": "People who can see it today will no longer see it. If it was public, it leaves the map immediately and its photos stop being public. Price history is kept.",
+      "confirm": "Limit"
+    }
   }
 }
