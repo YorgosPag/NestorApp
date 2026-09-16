@@ -626,6 +626,24 @@ const nextConfig = {
           destination: '/api/oauth/metadata/authorization-server',
         },
 
+        // ── ADR-863 Φ3: SBOM σε well-known διεύθυνση (RFC 9472) ─────────────
+        // Το IETF έχει καταχωρήσει **μόνιμα** το suffix `sbom` (RFC 9472, κατά
+        // RFC 8615), και τα CISA 2026 minimum elements ζητούν ρητά
+        // `Component License`. Κανείς από Figma/Slack/Chromium/VS Code/Graphisoft
+        // δεν το δημοσιεύει — όλοι σταματούν στο κείμενο για ανθρώπους.
+        //
+        // ⚠️ Rewrite και ΟΧΙ φάκελος `src/app/.well-known/`, ίδιος λόγος με τα
+        //    τρία από πάνω: η διαδρομή είναι υποχρέωση προτύπου και δεν
+        //    επιτρέπεται να εξαρτάται από το πώς ο App Router χειρίζεται
+        //    φακέλους που ξεκινούν με τελεία.
+        // ⚠️ Ο προορισμός είναι ΣΤΑΤΙΚΟ αρχείο του `public/` (το γράφει το
+        //    `npm run third-party-notices:generate`, το αντιγράφει το Dockerfile
+        //    με `COPY public ./public`) — καμία διαδρομή API, κανένα νέο σύνορο.
+        {
+          source: '/.well-known/sbom',
+          destination: '/third-party/sbom.json',
+        },
+
         // ── ADR-860 §Ε2: ένα `/_next/static/*` που ΔΕΝ υπάρχει → αληθινό 404, ποτέ cache ──
         // `afterFiles` = ΜΕΤΑ τον έλεγχο αρχείων (τα υπαρκτά σερβίρονται κανονικά) και ΠΡΙΝ τα
         // dynamic routes (δεν φτάνει στο catch-all `(app)/[...unprefixed]`, που με το
