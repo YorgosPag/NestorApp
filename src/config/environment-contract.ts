@@ -220,6 +220,18 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/auth/workspace-invitation.ts',
   },
   {
+    name: 'STAY_ICAL_FEED_SECRET',
+    severity: 'feature',
+    feature: 'Συγχρονισμός ημερολογίου καταλύματος με τα κανάλια (ADR-835 §22, Στάδιο Γ)',
+    consequence:
+      'Η ΕΞΑΓΩΓΗ δεν υπογράφεται: η οθόνη του ιδιοκτήτη λέει «η εξαγωγή δεν είναι '
+      + 'ρυθμισμένη» και κανένας σύνδεσμος δεν δίνεται στα κανάλια. 🔴 Οι σύνδεσμοι που '
+      + 'ΕΧΟΥΝ ήδη δοθεί απαντούν 404 — δηλαδή Airbnb/Booking/Vrbo σταματούν να βλέπουν '
+      + 'τις κρατήσεις μας και μπορούν να πουλήσουν τις ΙΔΙΕΣ νύχτες. Η ΕΙΣΑΓΩΓΗ '
+      + '(cron → external blocks) δεν επηρεάζεται: δεν χρησιμοποιεί υπογραφή.',
+    consumer: 'src/services/stay-calendar/stay-channel-export.service.ts',
+  },
+  {
     name: 'NOTIFICATION_EMAIL_SECRET',
     severity: 'feature',
     feature: 'Διαγραφή από τα email ειδοποιήσεων με ένα κλικ (ADR-848, RFC 8058)',

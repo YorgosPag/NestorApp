@@ -252,6 +252,20 @@ const BOUNDARIES = [
     module: 'stay-calendar-from-document',
     remedy: '«stayCalendarMonthFromDocument(raw, id)»',
   },
+  {
+    // 🔴 ADR-835 §22 (Στάδιο Γ) — ΤΑ ΚΑΝΑΛΙΑ, και το διακύβευμα είναι ΔΙΠΛΟ:
+    //
+    // (α) **διαθεσιμότητα**: πηγή που δεν διαβάστηκε δεν δημοσκοπείται και δεν φυλάει
+    //     νύχτες ⇒ ωμό `as StayChannels` θα έδινε «τρεις από τις τέσσερις πηγές»,
+    //     δηλαδή «οι νύχτες της τέταρτης είναι ελεύθερες» (§6.4)·
+    // (β) **δίκτυο**: το `url` κάθε feed φτάνει στο `fetchGuardedDocument`. Έγγραφο που
+    //     δεν πέρασε από σύνορο σημαίνει ότι ο διακομιστής μας χτυπά ό,τι βρει γραμμένο.
+    adr: 'ADR-835 §22',
+    typeName: 'StayChannels',
+    custodian: 'src/lib/stay/stay-calendar-from-document.ts',
+    module: 'stay-calendar-from-document',
+    remedy: '«stayChannelsFromDocument(raw, propertyId)»',
+  },
 ];
 
 /**
