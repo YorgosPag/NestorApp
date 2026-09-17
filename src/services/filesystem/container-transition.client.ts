@@ -13,7 +13,10 @@
 
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FILE_CUSTODY_PARAM } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import type { ContainerRefusalReason } from '@/services/iso19650/container-transition-policy';
+import { isSupersessionDoneKind } from '@/services/iso19650/container-transition-vocabulary';
 
 const logger = createModuleLogger('container-transition.client');
 
@@ -68,17 +71,22 @@ function refusedOf(cause: unknown): SupersedeRefusal | null {
 export async function requestSupersession(
   previousFileId: string,
   supersededByFileId: string,
+  custody: CustodyKind,
 ): Promise<SupersedeOutcome> {
   try {
-    const body = await apiClient.post<TransitionResponseBody>(urlOf(previousFileId), {
-      act: 'supersede',
-      supersededByFileId,
-    });
-    return body.kind === 'transitioned' ? { kind: 'superseded' } : { kind: 'noop' };
+    const body = await apiClient.post<TransitionResponseBody>(
+      urlOf(previousFileId),
+      { act: 'supersede', supersededByFileId },
+      // 🗂️ ADR-866 — **μόνο το είδος** στο σύρμα· ο κάτοχος έρχεται από την ταυτότητα του
+      //    διακομιστή. Υποχρεωτικό στον τύπο: προεπιλογή θα σήμαινε «μάντεψε εταιρεία».
+      { params: { [FILE_CUSTODY_PARAM]: custody } },
+    );
+    // ADR-862 §5.3.7 — και η διαδοχή **χωρίς** φάση (δοχείο εκτός έργου) είναι επιτυχία.
+    return isSupersessionDoneKind(body.kind) ? { kind: 'superseded' } : { kind: 'noop' };
   } catch (cause) {
     const why = refusedOf(cause);
     if (why !== null) return { kind: 'refused', why };
-    logger.warn('Η αντικατάσταση αρχείου απέτυχε', { previousFileId, supersededByFileId });
+    logger.warn('Η αντικατάσταση αρχείου απέτυχε', { previousFileId, supersededByFileId, custody });
     return { kind: 'failed' };
   }
 }

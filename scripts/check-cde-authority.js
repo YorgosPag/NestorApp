@@ -40,6 +40,7 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
 const { collectSourceFiles } = require('./lib/module-graph/scan-config');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { rulesKeyListOf } = require('./_shared/firestore-rules-parser');
 
 /** Ο ΕΝΑΣ γραφέας κατάστασης — γράφει κάθε πεδίο φύλαξης. */
 const STATE_WRITER = 'src/services/iso19650/container-transitions.ts';
@@ -99,8 +100,7 @@ const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).l
 
 /** Κ1 — τα πεδία φύλαξης, από το καθολικό `cdeCustodyKeys()` του firestore.rules (ADR-866 §5.2). */
 function custodyFieldsOf(rulesText) {
-  const match = rulesText.match(/function cdeCustodyKeys\(\)\s*\{\s*return\s*\[([\s\S]*?)\];/);
-  return match ? [...match[1].matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1]) : [];
+  return rulesKeyListOf(rulesText, 'cdeCustodyKeys');
 }
 
 /** Είναι αυτό το αντικείμενο όρισμα κλήσης εγγραφής (άμεσα ή μέσω μεταβλητής); */

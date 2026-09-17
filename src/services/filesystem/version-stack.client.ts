@@ -14,6 +14,8 @@
 
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { FILE_CUSTODY_PARAM } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import {
   VERSION_PROMOTION_REFUSALS,
   type FileVersionStackResponse,
@@ -24,17 +26,33 @@ const logger = createModuleLogger('version-stack.client');
 
 const versionsUrl = (fileId: string): string => `/api/files/${encodeURIComponent(fileId)}/versions`;
 
+/**
+ * **Η παράμετρος διαμερίσματος** — `?custody=company|personal` (ADR-866 §2.6.9 Β1).
+ *
+ * 🔴 Ταξιδεύει **μόνο το είδος**, ποτέ ο `userId`: τον κάτοχο τον βάζει ο διακομιστής από τη
+ * **δική του** ταυτότητα. Υποχρεωτικό στον τύπο, ώστε ο μεταγλωττιστής να βρει κάθε καλούντα —
+ * μια προεπιλογή εδώ θα σήμαινε «μάντεψε εταιρεία» σε προσωπικό αρχείο.
+ */
+const custodyParams = (custody: CustodyKind): Record<string, string> => ({
+  [FILE_CUSTODY_PARAM]: custody,
+});
+
 export type PromoteVersionOutcome =
   | { readonly kind: 'promoted' }
   | { readonly kind: 'refused'; readonly why: VersionPromotionRefusal }
   | { readonly kind: 'failed' };
 
 /** Η στοίβα εκδόσεων όπως τη βλέπει ο αιτών — `null` σε βλάβη (η οθόνη δείχνει σφάλμα). */
-export async function fetchVersionStack(fileId: string): Promise<FileVersionStackResponse | null> {
+export async function fetchVersionStack(
+  fileId: string,
+  custody: CustodyKind,
+): Promise<FileVersionStackResponse | null> {
   try {
-    return await apiClient.get<FileVersionStackResponse>(versionsUrl(fileId));
+    return await apiClient.get<FileVersionStackResponse>(versionsUrl(fileId), {
+      params: custodyParams(custody),
+    });
   } catch (cause) {
-    logger.warn('Η στοίβα εκδόσεων δεν φορτώθηκε', { fileId, cause: String(cause) });
+    logger.warn('Η στοίβα εκδόσεων δεν φορτώθηκε', { fileId, custody, cause: String(cause) });
     return null;
   }
 }
@@ -46,9 +64,14 @@ export async function fetchVersionStack(fileId: string): Promise<FileVersionStac
 export async function requestVersionPromotion(
   sourceFileId: string,
   expectedHeadFileId: string,
+  custody: CustodyKind,
 ): Promise<PromoteVersionOutcome> {
   try {
-    await apiClient.post(`${versionsUrl(sourceFileId)}/promote`, { expectedHeadFileId });
+    await apiClient.post(
+      `${versionsUrl(sourceFileId)}/promote`,
+      { expectedHeadFileId },
+      { params: custodyParams(custody) },
+    );
     return { kind: 'promoted' };
   } catch (cause) {
     const refused = apiErrorBodyOf(cause)?.refused;

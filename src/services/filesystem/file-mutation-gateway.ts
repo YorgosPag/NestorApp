@@ -14,7 +14,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { FileCustody } from '@/lib/files/file-custody';
+import { FILE_CUSTODY_PARAM, type FileCustody } from '@/lib/files/file-custody';
 import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
 const logger = createModuleLogger('file-mutation-gateway');
@@ -315,12 +315,15 @@ export async function classifyFileWithPolicy(
  * ποιανού είναι. Ο τύπος στενεύει σε `string[]` ώστε ο **μεταγλωττιστής** να βρει
  * κάθε καλούντα: μια σιωπηλή αλλαγή σχήματος θα άφηνε τον παλιό να στέλνει URLs σε
  * διαδρομή που πια δεν τα δέχεται, και η βλάβη θα φαινόταν μόνο σε χρόνο εκτέλεσης.
+ *
+ * 🔑 ADR-866 §2.6.9 — **υποχρεωτικό** διαμέρισμα (ένα αίτημα = ένα διαμέρισμα): ταξιδεύει **μόνο το
+ * είδος** ως `?custody=`, ποτέ ο κάτοχος. Υποχρεωτικό ώστε ο μεταγλωττιστής να βρει κάθε καλούντα.
  */
-export async function batchDownloadFilesWithPolicy(fileIds: string[]): Promise<Blob> {
+export async function batchDownloadFilesWithPolicy(fileIds: string[], custody: CustodyKind): Promise<Blob> {
   return apiClient.post<Blob>(
     API_ROUTES.FILES.BATCH_DOWNLOAD,
     { fileIds },
-    { responseType: 'blob' },
+    { params: { [FILE_CUSTODY_PARAM]: custody }, responseType: 'blob' },
   );
 }
 
@@ -348,8 +351,8 @@ function downloadBlobFromProxy(params: Record<string, string>): Promise<Blob> {
   return apiClient.get<Blob>(API_ROUTES.DOWNLOAD, { params, responseType: 'blob' });
 }
 
-export async function downloadFileByIdWithPolicy(fileId: string): Promise<Blob> {
-  return downloadBlobFromProxy({ fileId });
+export async function downloadFileByIdWithPolicy(fileId: string, custody: CustodyKind): Promise<Blob> {
+  return downloadBlobFromProxy({ fileId, [FILE_CUSTODY_PARAM]: custody });
 }
 
 /**

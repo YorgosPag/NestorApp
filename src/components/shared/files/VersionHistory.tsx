@@ -33,12 +33,19 @@ import { formatFileSize } from '@/utils/file-validation';
 import { formatFlexibleDate } from '@/lib/intl-utils';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { useVersionStack } from '@/components/shared/files/hooks/useVersionStack';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import type { FileVersionEntry } from '@/types/file-version-stack';
 import '@/lib/design-system';
 
 interface VersionHistoryProps {
   /** Οποιαδήποτε έκδοση της αλυσίδας — η στοίβα βρίσκει μόνη της την κεφαλή. */
   fileId: string;
+  /**
+   * 🗂️ Το διαμέρισμα του αρχείου — **υποχρεωτικό** (ADR-866 2β.3β). Το **αποδεικνύει το έγγραφο**
+   * που κρατά ο γονιός (`fileCustodyKindOf`)· η στοίβα δεν διασχίζει ποτέ διαμερίσματα, και ο
+   * `userId` δεν ταξιδεύει στο σύρμα.
+   */
+  custody: CustodyKind;
   /** Ο αιτών — χωρίς ταυτότητα δεν προσφέρεται «Ορισμός ως τρέχουσας». */
   currentUserId?: string;
   /** Μετά από επιτυχή «Ορισμός ως τρέχουσας» (π.χ. ανανέωση λίστας). */
@@ -63,6 +70,8 @@ function VersionActions({ version, number, promoting, locked, canPromote, onDown
   const { t } = useTranslation(['files', 'files-media']);
   return (
     <nav className="flex items-center gap-1 flex-shrink-0">
+      {/* Το `downloadUrl` μένει ως ένδειξη **ετοιμότητας** (έκδοση `pending`/`failed` δεν έχει
+          bytes να δοθούν)· η ίδια η λήψη γίνεται πλέον με `id` — δες `download` παρακάτω. */}
       {version.downloadUrl && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -113,23 +122,32 @@ function VersionRow(props: VersionRowProps) {
   );
 }
 
-export function VersionHistory({ fileId, currentUserId, onPromoted, className }: VersionHistoryProps) {
+export function VersionHistory({ fileId, custody, currentUserId, onPromoted, className }: VersionHistoryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { handleDownload } = useFileDownload();
-  const { stack, loading, promotingId, numbers, promote } = useVersionStack(fileId, onPromoted);
+  const { stack, loading, promotingId, numbers, promote } = useVersionStack(fileId, custody, onPromoted);
 
+  /**
+   * 🔴 **ΜΕ `id`, ΟΧΙ ΜΕ `downloadUrl`** (ADR-866 §2.6.10 Β9). Εδώ έστελνε `downloadUrl`, και το
+   * σχόλιο που το δικαιολογούσε (*«οι εκδόσεις ζουν σε υποσυλλογή, χωρίς δικό τους έγγραφο»*)
+   * ήταν **μπαγιάτικο**: η ADR-862 Φ0 κατάργησε την υποσυλλογή — κάθε έκδοση είναι πλέον
+   * `FileRecord` με δικό της id. Η εφεδρεία του `downloadUrl` φυλάει **μισθωτή**, όχι **δοχείο**
+   * ούτε ρίζα Storage· με `id` ο διακομιστής βρίσκει μόνος του τα bytes και περνά από ολόκληρη
+   * την αλυσίδα (`loadOwnedFileBytes`), στο **σωστό διαμέρισμα**.
+   */
   const download = useCallback((version: FileVersionEntry, number: number) => {
-    if (!version.downloadUrl) return;
     handleDownload({
-      downloadUrl: version.downloadUrl,
+      id: version.id,
+      custody,
+      downloadUrl: version.downloadUrl ?? undefined,
       displayName: `v${number}_${version.originalFilename}`,
       originalFilename: version.originalFilename,
       ext: version.ext,
       storagePath: version.storagePath,
     });
-  }, [handleDownload]);
+  }, [handleDownload, custody]);
 
   if (loading) return <p role="status" className={cn('flex justify-center p-4', className)}><Spinner /></p>;
   if (!stack) return <p role="alert" className={cn('text-sm text-destructive p-2', className)}>{t('versions.loadFailed')}</p>;

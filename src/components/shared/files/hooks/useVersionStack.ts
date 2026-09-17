@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import {
   fetchVersionStack,
   requestVersionPromotion,
@@ -40,7 +41,12 @@ function useAnnounce(): (outcome: PromoteVersionOutcome) => void {
   }, [success, showError, t]);
 }
 
-export function useVersionStack(fileId: string, onPromoted?: () => void) {
+/**
+ * @param custody Το διαμέρισμα του αρχείου — **υποχρεωτικό** (ADR-866 2β.3β). Το παράγει ο γονιός
+ *   από τα πεδία κατόχου του `FileRecord` (`fileCustodyKindOf`): η οθόνη δεν μαντεύει διαμέρισμα,
+ *   και ο `userId` **δεν ταξιδεύει** ποτέ στο σύρμα.
+ */
+export function useVersionStack(fileId: string, custody: CustodyKind, onPromoted?: () => void) {
   const announce = useAnnounce();
   const [stack, setStack] = useState<FileVersionStackResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,22 +54,22 @@ export function useVersionStack(fileId: string, onPromoted?: () => void) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setStack(await fetchVersionStack(fileId));
+    setStack(await fetchVersionStack(fileId, custody));
     setLoading(false);
-  }, [fileId]);
+  }, [fileId, custody]);
 
   useEffect(() => { void load(); }, [load]);
 
   const promote = useCallback(async (version: FileVersionEntry) => {
     if (!stack) return;
     setPromotingId(version.id);
-    const outcome = await requestVersionPromotion(version.id, stack.headFileId);
+    const outcome = await requestVersionPromotion(version.id, stack.headFileId, custody);
     setPromotingId(null);
     announce(outcome);
     const stale = outcome.kind === 'promoted' || (outcome.kind === 'refused' && outcome.why === 'head-moved');
     if (stale) void load();
     if (outcome.kind === 'promoted') onPromoted?.();
-  }, [stack, announce, load, onPromoted]);
+  }, [stack, custody, announce, load, onPromoted]);
 
   const numbers = useMemo(() => versionNumbers(stack?.versions ?? []), [stack]);
 
