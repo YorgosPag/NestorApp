@@ -1412,6 +1412,8 @@
         "document_removed": "Αφαίρεση εγγράφου",
         "email_sent": "Email εστάλη",
         "erased": "Οριστική διαγραφή στοιχείων",
+        "evidence_disposed": "Διάθεση αποδεικτικού μετά την προθεσμία",
+        "evidence_retention_scheduled": "Κλείδωμα διατήρησης αποδεικτικού",
         "internal_note_added": "Εσωτερική σημείωση",
         "invoice_created": "Δημιουργία παραστατικού",
         "linked": "Σύνδεση",
