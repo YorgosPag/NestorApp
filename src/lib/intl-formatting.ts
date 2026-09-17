@@ -111,6 +111,20 @@ export const formatCalendarDay = (dateKey: string, withYear = false, locale: str
 };
 
 /**
+ * A CALENDAR MONTH `YYYY-MM` — "October 2027" / "Οκτώβριος 2027" — the heading of a month grid (ADR-835 §20).
+ *
+ * WHY a separate formatter and not `formatMonthYear`: that one is a SHORT freshness stamp ("Sept 2026") and
+ * formats an instant in the viewer's zone; a month grid heading is a calendar month with no zone — same UTC
+ * noon anchoring as `formatCalendarDay`, so the 1st never slides into the previous month west of Greenwich.
+ */
+export const formatCalendarMonth = (monthKey: string, locale: string = getCurrentLocale()): string => {
+  const [year, month] = monthKey.split('-').map(Number);
+  const noon = Date.UTC(year, month - 1, 1, 12);
+  if (!Number.isFinite(noon)) return monthKey;
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(noon));
+};
+
+/**
  * The day an event falls on, counted from today: "tomorrow" (CLDR `Intl.RelativeTimeFormat`,
  * `numeric: 'auto'`) when `inDays === 1`, otherwise the weekday name.
  *

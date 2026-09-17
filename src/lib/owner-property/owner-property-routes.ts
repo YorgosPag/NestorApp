@@ -75,3 +75,8 @@ export const OFFER_DETAIL_ROUTE_BASE = '/offers';
 export function offerDetailHref(ownerPropertyId: string) {
   return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}`);
 }
+
+/** ADR-835 §20 — το **ημερολόγιο κρατήσεων** μιας καταχώρησης βραχυχρόνιας μίσθωσης. */
+export function offerStayCalendarHref(ownerPropertyId: string) {
+  return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}/calendar`);
+}

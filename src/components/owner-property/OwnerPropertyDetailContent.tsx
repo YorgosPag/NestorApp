@@ -42,7 +42,7 @@ import {
 } from '@/lib/owner-property/owner-property-projection';
 import { projectListingShape } from '@/services/listings/public-listing-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
-import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { MY_OFFERS_ROUTE, offerStayCalendarHref } from '@/lib/owner-property/owner-property-routes';
 import {
   setOwnerListingAudience,
   setOwnerListingLifecycle,
@@ -52,7 +52,7 @@ import {
   type AudienceChangeOutcome,
 } from '@/components/listings/MarketingAudienceControl';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
-import type { OwnerProperty } from '@/types/owner-property';
+import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
 import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
 
@@ -246,6 +246,15 @@ function OwnerPropertyView({
             className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
           >
             {t(`${K}.publish.view`)}
+          </Link>
+        )}
+        {/* ADR-835 §20 — το ημερολόγιο υπάρχει ΜΟΝΟ για ζωντανή βραχυχρόνια διάθεση. */}
+        {ownerPropertyOfferKinds(property).includes('leaseShort') && (
+          <Link
+            href={offerStayCalendarHref(property.id)}
+            className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
+          >
+            {t('property-market:offer.stayCalendar.open')}
           </Link>
         )}
       </nav>
