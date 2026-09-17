@@ -447,7 +447,8 @@ export function EntityFilesManager({
             selectAll,
             clearSelection,
             onBatchDelete: handleBatchDelete,
-            onBatchDownload: officeActions ? handleBatchDownload : undefined,
+            // ADR-866 §2.6.9 — η λήψη ΔΕΝ είναι ενέργεια γραφείου: κατεβαίνει και το προσωπικό αρχείο.
+            onBatchDownload: handleBatchDownload,
             onBatchClassify: officeActions ? handleBatchClassify : undefined,
             onAIClassify: officeActions ? handleAIClassify : undefined,
             aiClassifying,

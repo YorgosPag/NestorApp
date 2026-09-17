@@ -135,11 +135,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
     );
   }
 
-  // 🔒 ADR-866 §2.6.8 Β6 — **το ίδιο το αρχείο** λέει σε ποιον ανήκει. Εκδόσεις · λήψη μέσω διακομιστή ·
-  //    κοινοποίηση · σχόλια · έγκριση · ιστορικό · ISO 19650 είναι έννοιες/διαδρομές ΓΡΑΦΕΙΟΥ πάνω στη
-  //    συλλογή `files` ⇒ **κρυμμένα** για προσωπικό κάτοχο (εκδόσεις + λήψη: βήμα 2β.3 · ιστορικό: 2β.4).
-  //    Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν: διαβάζουν το `downloadUrl` (κανόνας Storage `people/`).
-  const officeActions = fileCustodyKindOf(file) !== 'personal';
+  // 🔒 ADR-866 §2.6.8 Β6 — **το ίδιο το αρχείο** λέει σε ποιον ανήκει. Κοινοποίηση · σχόλια · έγκριση ·
+  //    ιστορικό · ISO 19650 είναι έννοιες/διαδρομές ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files` ⇒ **κρυμμένα**
+  //    για προσωπικό κάτοχο (ιστορικό: βήμα 2β.4). Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν:
+  //    διαβάζουν το `downloadUrl` (κανόνας Storage `people/`).
+  //
+  // ✅ **ΞΕΚΛΕΙΔΩΘΗΚΑΝ**: η **λήψη** (2β.3α) και οι **εκδόσεις** (2β.3β) — ADR-866 Ε-Φ0-1, *«εκδόσεις
+  //    ΝΑΙ, φάσεις CDE ΟΧΙ»*, όπως το Google Drive «Ο Δίσκος μου» (Manage versions χωρίς ροή έγκρισης).
+  const custody = fileCustodyKindOf(file) ?? 'company';
+  const officeActions = custody !== 'personal';
 
   return (
     <section className={cn('flex flex-col h-full bg-card', className)}>
@@ -159,16 +163,16 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
         <nav className="flex items-center gap-1 flex-shrink-0">
           {file.downloadUrl && (
             <>
-              {officeActions && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={handleDownload} className="h-7 w-7 p-0">
-                      <Download className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('list.download')}</TooltipContent>
-                </Tooltip>
-              )}
+              {/* ADR-866 §2.6.9 — η λήψη περνά από τον διακομιστή και για προσωπικό αρχείο
+                  (`?custody=personal`): δεν είναι ενέργεια γραφείου. */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={handleDownload} className="h-7 w-7 p-0">
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('list.download')}</TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" onClick={handleOpenNewTab} className="h-7 w-7 p-0">
@@ -181,8 +185,10 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           )}
           {/* Version history toggle — ADR-862 Φ0: η στοίβα είναι η αλυσίδα διαδοχής, την
               ξέρει μόνο ο διακομιστής. Το παλιό `revision > 1` δεν αλήθευε ΠΟΤΕ (κανείς δεν
-              αύξανε το πεδίο) ⇒ το κουμπί δεν εμφανιζόταν. */}
-          {officeActions && file.status === FILE_STATUS.READY && (
+              αύξανε το πεδίο) ⇒ το κουμπί δεν εμφανιζόταν.
+              🗂️ ADR-866 2β.3β — **και για προσωπικό αρχείο**: οι εκδόσεις δεν είναι ενέργεια
+              γραφείου (Ε-Φ0-1). Γι' αυτό **δεν** ρωτά `officeActions`. */}
+          {file.status === FILE_STATUS.READY && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -318,10 +324,11 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       </div>
 
       {/* Version history panel (collapsible) */}
-      {officeActions && showVersions && (
+      {showVersions && (
         <div className="border-b max-h-[250px] overflow-y-auto">
           <VersionHistory
             fileId={file.id}
+            custody={custody}
             currentUserId={currentUserId}
             onPromoted={onRefresh}
             className="p-2"

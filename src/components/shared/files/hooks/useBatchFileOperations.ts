@@ -28,7 +28,7 @@ import { useFileClassification, isAIClassifiable } from './useFileClassification
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
-import { fileCustodyKindOf } from '@/lib/files/file-custody';
+import { fileCustodyKindOf, sharedFileCustodyKindOf } from '@/lib/files/file-custody';
 import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import { nowISO } from '@/lib/date-local';
 
@@ -90,11 +90,23 @@ export function showArchiveResultFeedback(
  * `lib/exports/trigger-export-download` (Domain B — το ZIP είναι ονομαστικά δικό
  * του), που καθαρίζει το object URL **μετά** το click αντί πριν.
  */
-export async function downloadFilesAsZip(fileIds: readonly string[]): Promise<void> {
-  if (fileIds.length === 0) return;
+export async function downloadFilesAsZip(
+  files: readonly FileRecord[],
+  selectedIds: ReadonlySet<string>,
+): Promise<void> {
+  const selected = files.filter(file => selectedIds.has(file.id));
+  if (selected.length === 0) return;
+
+  // 🔑 ADR-866 §2.6.9 Β9 — ένα ZIP = **ένα** διαμέρισμα, αποδεδειγμένο από τα **ίδια** τα αρχεία
+  //    (όπως το {@link trashFilesInBatch}). Μικτή επιλογή ⇒ άρνηση, ποτέ «το είδος του πρώτου».
+  const custody = sharedFileCustodyKindOf(selected);
+  if (custody === null) {
+    logger.error('Batch download refused — selection spans custody partitions', { count: selected.length });
+    return;
+  }
 
   try {
-    const blob = await batchDownloadFilesWithPolicy([...fileIds]);
+    const blob = await batchDownloadFilesWithPolicy(selected.map(file => file.id), custody);
     triggerExportDownload({ blob, filename: `files_${nowISO().slice(0, 10)}.zip` });
   } catch (error) {
     logger.error('Batch download failed', { error });
@@ -223,7 +235,7 @@ export function useBatchFileOperations({
   const handleBatchDownload = useCallback(async () => {
     // ⚠️ Το φίλτρο `f.downloadUrl` έφυγε στο Β8 — η ονομασία και η τοποθεσία είναι
     //    πλέον ευθύνη του διακομιστή.
-    await downloadFilesAsZip(files.filter(f => selectedIds.has(f.id)).map(f => f.id));
+    await downloadFilesAsZip(files, selectedIds);
   }, [selectedIds, files]);
 
   // ---- Batch Classify ----

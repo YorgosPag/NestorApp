@@ -23,6 +23,8 @@ import {
   downloadFileByIdWithPolicy,
   downloadFileFromProxyWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
+import { fileCustodyKindOf } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
 // ============================================================================
 // TYPES
@@ -34,10 +36,12 @@ interface DownloadableFile {
    * τα bytes (ADR-862 Φ0 Β8): ο διακομιστής βρίσκει **μόνος του** το αντικείμενο
    * και περνά από τον φρουρό ορατότητας δοχείου.
    *
-   * ⚠️ **Προαιρετικό επειδή ΕΙΝΑΙ** — μετρημένο 2026-09-16: από τους επτά καλούντες
-   * αυτού του hook, **δύο** δεν έχουν `FileRecord`: οι **εκδόσεις** (ζουν σε
-   * υποσυλλογή, χωρίς δικό τους έγγραφο στη `files`) και οι φωτογραφίες **επαφών**.
-   * Εκείνοι πέφτουν στο `downloadUrl`, που φυλάει **μισθωτή** αλλά όχι **δοχείο**.
+   * ⚠️ **Προαιρετικό επειδή ΕΙΝΑΙ** — 🔴 **ΔΙΟΡΘΩΣΗ 2026-09-17 (ADR-866 §2.6.10 Β9)**: εδώ έγραφε
+   * ότι *«οι εκδόσεις ζουν σε υποσυλλογή, χωρίς δικό τους έγγραφο στη `files`»*. **Μπαγιάτικο**:
+   * η ADR-862 Φ0 κατάργησε την υποσυλλογή `files/{id}/versions` (ήταν νεκρή στην παραγωγή) και
+   * **κάθε έκδοση είναι πλέον `FileRecord` με δικό της id** — το `VersionHistory` στέλνει `id`.
+   * Μένει **ένας** καλών χωρίς `FileRecord`: οι φωτογραφίες **επαφών** (`usePhotoPreviewState`),
+   * που πέφτουν στο `downloadUrl` — φυλάει **μισθωτή**, όχι **δοχείο** ούτε ρίζα Storage.
    */
   id?: string;
   storagePath?: string;
@@ -46,6 +50,22 @@ interface DownloadableFile {
   originalFilename?: string;
   /** File extension without dot (e.g. "pdf", "jpg") — most reliable source */
   ext?: string;
+  /**
+   * 🔑 **Τα πεδία κατόχου του `FileRecord`** (ADR-866 §2.6.9): το διαμέρισμα της λήψης το
+   * **αποδεικνύει το ίδιο το αρχείο**, δεν το μαντεύει η οθόνη.
+   */
+  companyId?: string | null;
+  userId?: string | null;
+  /**
+   * 🗂️ **Το είδος, όταν ο καλών το ξέρει ήδη αποδεδειγμένα** (ADR-866 2β.3β) — π.χ. μια γραμμή
+   * **έκδοσης**, που δεν κουβαλά πεδία κατόχου στο σύρμα (ο `userId` **δεν ταξιδεύει**), αλλά ο
+   * γονιός της κρατά το `FileRecord` του δοχείου.
+   *
+   * ⚠️ **Νικά** τα `companyId`/`userId` επειδή προέρχεται από την ίδια απόδειξη, ένα επίπεδο πιο
+   * πάνω — ποτέ από μαντεψιά της οθόνης. Απόν **και** τα δύο ⇒ `company` (το δόγμα του
+   * `custodyKindFromParam` για **αναγνώστες**: ο εταιρικός κριτής αρνείται ό,τι δεν είναι δικό του).
+   */
+  custody?: CustodyKind;
 }
 
 interface UseFileDownloadReturn {
@@ -130,8 +150,11 @@ export function useFileDownload(): UseFileDownloadReturn {
       // 🔑 **Το id νικά** (ADR-862 Φ0 Β8): είναι η μόνη είσοδος που ο διακομιστής
       //    μπορεί να επαληθεύσει **πλήρως** — μισθωτή **και** ορατότητα δοχείου. Το
       //    `downloadUrl` μένει εφεδρεία για όσους δεν έχουν `FileRecord`.
+      // ⚠️ Χωρίς ακριβώς έναν κάτοχο ⇒ **εταιρεία** — το δόγμα του `custodyKindFromParam` για
+      //    **αναγνώστες**: ο εταιρικός κριτής αρνείται ό,τι δεν ανήκει στον μισθωτή, άρα καμία
+      //    διεύρυνση· ποτέ «δοκίμασε και τα δύο».
       const blob = file.id
-        ? await downloadFileByIdWithPolicy(file.id)
+        ? await downloadFileByIdWithPolicy(file.id, file.custody ?? fileCustodyKindOf(file) ?? 'company')
         : await downloadFileFromProxyWithPolicy(file.downloadUrl as string, file.displayName);
       const objectUrl = URL.createObjectURL(blob);
 

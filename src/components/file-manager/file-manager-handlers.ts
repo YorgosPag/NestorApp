@@ -19,7 +19,7 @@ import {
 } from '@/services/filesystem/file-mutation-gateway';
 import { uploadFileWithPolicy } from '@/services/filesystem/upload-orchestrator-gateway';
 import { ENTITY_TYPES } from '@/config/domain-constants';
-import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import type { FileDomain, FileCategory } from '@/config/domain-constants';
 import { getFileExtension } from '@/services/upload/utils/storage-path';
 import { isAIClassifiable } from '@/components/shared/files/hooks/useFileClassification';
 import {
@@ -101,7 +101,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
     // ⚠️ Το φίλτρο `f.downloadUrl` **έφυγε** (ADR-862 Φ0 Β8): η διαδρομή δεν δέχεται
     //    πια URL, και αρχείο χωρίς μόνιμο tokenized URL είναι **κατεβάσιμο** — απλώς
     //    περνά από τον proxy. Το παλιό φίλτρο θα έκρυβε ακριβώς τα νεότερα αρχεία.
-    await downloadFilesAsZip(filteredFiles.filter(f => selectedIds.has(f.id)).map(f => f.id));
+    await downloadFilesAsZip(filteredFiles, selectedIds);
   }, [selectedIds, filteredFiles]);
 
   const handleBatchClassify = useCallback(async (classification: FileClassification) => {

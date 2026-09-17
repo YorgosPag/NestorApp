@@ -92,6 +92,13 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   approval_reject: XCircle,
   approval_cancel: Ban,
   comment: MessageSquare,
+  // ADR-862 Φ0 Β6 — οι πράξεις του δοχείου· §5.3.7 — διαδοχή χωρίς φάση (εκτός έργου).
+  cde_share: Share2,
+  cde_seal: CheckCircle,
+  cde_release: Send,
+  cde_withdraw: Ban,
+  cde_supersede: Archive,
+  version_supersede: Archive,
 };
 
 const ACTION_COLOR_MAP: Record<string, string> = {
@@ -122,6 +129,12 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   approval_reject: 'text-destructive',
   approval_cancel: 'text-[hsl(var(--text-warning))]',
   comment: 'text-primary',
+  cde_share: 'text-[hsl(var(--text-info))]',
+  cde_seal: 'text-[hsl(var(--text-success))]',
+  cde_release: 'text-[hsl(var(--text-success))]',
+  cde_withdraw: 'text-destructive',
+  cde_supersede: 'text-[hsl(var(--text-warning))]',
+  version_supersede: 'text-[hsl(var(--text-warning))]',
 };
 
 // ============================================================================
