@@ -98,11 +98,30 @@ export function isStayBlockSource(value: unknown): value is StayBlockSource {
 }
 
 /**
+ * **Η προέλευση ενός εξωτερικού block** (ADR-835 §22, Στάδιο Γ) — ποια πηγή το έφερε και
+ * με ποια ταυτότητα το ονομάζει **εκείνη**.
+ *
+ * 🔑 **Το `externalUid` δεν είναι διακοσμητικό**: είναι η ταυτότητα του γεγονότος **στο
+ * feed**, και το μόνο που επιτρέπει «το ίδιο γεγονός ξανά ⇒ το ίδιο έγγραφο». ⚠️ Δεν
+ * είναι πάντα σταθερό: η **Booking.com δίνει νέο `UID` κάθε μέρα** για την ίδια κράτηση
+ * (μετρημένο) — γι' αυτό η ταύτιση έχει **δεύτερο** δρόμο (`stay-channel-reconcile.ts`).
+ */
+export interface StayBlockChannelRef {
+  readonly feedId: string;
+  readonly externalUid: string;
+}
+
+/**
  * **Κλεισμένες νύχτες.** Enterprise id `sblk_*` (N.6). Ημι-ανοιχτό `[from, to)`, όπως
  * η κράτηση: το `to` είναι η πρώτη **ανοιχτή** μέρα.
  *
  * 🔑 **Ποτέ επισκέπτης εδώ.** Το `note` είναι σημείωση του οικοδεσπότη προς τον εαυτό
  * του («ανακαίνιση μπάνιου») και δεν φεύγει ποτέ από το ιδιωτικό του ημερολόγιο.
+ *
+ * 🔴 **`source === 'external'` ⇔ `channel !== null`** — δεν είναι σύμβαση σε σχόλιο: το
+ * σύνορο ανάγνωσης (`stay-calendar-from-document.ts`) **αρνείται** το έγγραφο που τα
+ * διαφωνεί. Ένα εξωτερικό block χωρίς πηγή δεν θα μπορούσε ποτέ να σβηστεί όταν το
+ * γεγονός φύγει από το feed — θα έκλεινε νύχτες **για πάντα**, χωρίς ιδιοκτήτη.
  */
 export interface StayBlock {
   readonly id: string;
@@ -115,6 +134,8 @@ export interface StayBlock {
   /** ISO `YYYY-MM-DD` — πρώτη **ανοιχτή** μέρα. */
   readonly to: string;
   readonly source: StayBlockSource;
+  /** Η πηγή του, όταν είναι εξωτερικό (Στάδιο Γ) — `null` για block του ιδιοκτήτη. */
+  readonly channel: StayBlockChannelRef | null;
   readonly note: string | null;
   /** uid του ανθρώπου που έκλεισε — ή του λογαριασμού που συνέδεσε την πηγή. */
   readonly createdBy: string;

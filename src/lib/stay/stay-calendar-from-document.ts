@@ -30,8 +30,18 @@ import {
   isStayBlockSource,
   STAY_CALENDAR_TIMEZONE,
   type StayBlock,
+  type StayBlockChannelRef,
   type StayCalendarHead,
 } from '@/types/stay-calendar';
+import {
+  isStayChannelFailure,
+  isStayChannelKind,
+  STAY_CHANNEL_STATUS_NEW,
+  type StayChannelFailureRecord,
+  type StayChannelFeed,
+  type StayChannelFeedStatus,
+  type StayChannels,
+} from '@/types/stay-channels';
 
 type Stored = Readonly<Record<string, unknown>>;
 
@@ -107,10 +117,23 @@ export function stayBlockFromDocument(raw: unknown, id: string): StayBlock | nul
   const covers = spaceRefsOf(stored.covers, propertyId);
   const range = nightsRange(stored.from, stored.to);
   if (covers === null || range === null) return null;
+  const channel = channelRefOf(stored.channel);
+  // 🔴 `external` ⇔ πηγή: εξωτερικό χωρίς πηγή δεν σβήνεται ποτέ· δικό μας **με** πηγή θα
+  // σβηνόταν από feed που δεν το γέννησε. Και τα δύο είναι νύχτες χαμένες σιωπηλά.
+  if (channel === undefined || (stored.source === 'external') !== (channel !== null)) return null;
   return {
     id, propertyId, authorUserId, covers, ...range,
-    source: stored.source, note, createdBy, createdAt, updatedAt,
+    source: stored.source, channel, note, createdBy, createdAt, updatedAt,
   };
+}
+
+/** `undefined` = χαλασμένη πηγή (⇒ `unreadable`)· `null` = δεν υπάρχει πηγή (block ιδιοκτήτη). */
+function channelRefOf(value: unknown): StayBlockChannelRef | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) return undefined;
+  const feedId = text(value.feedId);
+  const externalUid = text(value.externalUid);
+  return feedId === null || externalUid === null ? undefined : { feedId, externalUid };
 }
 
 function holderOf(value: unknown): StayBookingHolder | null {
@@ -177,4 +200,97 @@ export function stayCalendarMonthFromDocument(raw: unknown, id: string): StayCal
     days[dateKey] = rule;
   }
   return { propertyId, authorUserId, month, days, updatedAt };
+}
+
+// =============================================================================
+// ΤΑ ΚΑΝΑΛΙΑ (ADR-835 §22, Στάδιο Γ)
+// =============================================================================
+
+function number(value: unknown, minimum: number): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= minimum ? value : null;
+}
+
+function failureRecordOf(value: unknown): StayChannelFailureRecord | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) return undefined;
+  const at = text(value.at);
+  const httpStatus = value.httpStatus === null || value.httpStatus === undefined
+    ? null
+    : number(value.httpStatus, 0);
+  if (at === null || httpStatus === undefined || !isStayChannelFailure(value.failure)) return undefined;
+  return { at, failure: value.failure, httpStatus };
+}
+
+function feedStatusOf(value: unknown): StayChannelFeedStatus | null {
+  if (value === undefined) return STAY_CHANNEL_STATUS_NEW;
+  if (!isRecord(value)) return null;
+  const lastAttemptAt = textOrNull(value.lastAttemptAt);
+  const lastSuccessAt = textOrNull(value.lastSuccessAt);
+  const etag = textOrNull(value.etag);
+  const lastModified = textOrNull(value.lastModified);
+  const nextPollAt = text(value.nextPollAt);
+  const consecutiveFailures = number(value.consecutiveFailures, 0);
+  const eventCount = number(value.eventCount, 0);
+  const lastFailure = failureRecordOf(value.lastFailure);
+  if (lastAttemptAt === undefined || lastSuccessAt === undefined || etag === undefined) return null;
+  if (lastModified === undefined || nextPollAt === null || lastFailure === undefined) return null;
+  if (consecutiveFailures === null || eventCount === null) return null;
+  return {
+    lastAttemptAt, lastSuccessAt, lastFailure, consecutiveFailures,
+    eventCount, etag, lastModified, nextPollAt,
+  };
+}
+
+function pendingRemovalsOf(value: unknown): Readonly<Record<string, string>> | null {
+  if (value === undefined || value === null) return {};
+  if (!isRecord(value)) return null;
+  const out: Record<string, string> = {};
+  for (const [blockId, at] of Object.entries(value)) {
+    const stamp = text(at);
+    if (stamp === null) return null;
+    out[blockId] = stamp;
+  }
+  return out;
+}
+
+function feedOf(value: unknown): StayChannelFeed | null {
+  if (!isRecord(value)) return null;
+  const id = text(value.id);
+  const label = text(value.label);
+  const url = text(value.url);
+  const createdAt = text(value.createdAt);
+  const createdBy = text(value.createdBy);
+  const status = feedStatusOf(value.status);
+  const pendingRemovals = pendingRemovalsOf(value.pendingRemovals);
+  if (id === null || label === null || url === null || createdAt === null) return null;
+  if (createdBy === null || status === null || pendingRemovals === null) return null;
+  if (!isStayChannelKind(value.channel)) return null;
+  return { id, label, url, channel: value.channel, status, pendingRemovals, createdAt, createdBy };
+}
+
+/**
+ * **Τα κανάλια ενός ακινήτου** (ADR-835 §22) — ΑΥΣΤΗΡΑ: μία χαλασμένη πηγή ⇒ `null` ⇒
+ * ημερολόγιο `unreadable`.
+ *
+ * 🔴 **Γιατί ΤΟΣΟ αυστηρά**: πηγή που δεν διαβάστηκε είναι πηγή που **δεν
+ * δημοσκοπείται** και **δεν φυλάει** νύχτες. Ένα «διάβασα τις άλλες τρεις» θα σήμαινε
+ * «οι νύχτες της τέταρτης είναι ελεύθερες» — ακριβώς το overbooking του §6.4.
+ */
+export function stayChannelsFromDocument(raw: unknown, propertyId: string): StayChannels | null {
+  if (!isRecord(raw)) return null;
+  const stored: Stored = raw;
+  const authorUserId = text(stored.authorUserId);
+  const createdAt = text(stored.createdAt);
+  const updatedAt = text(stored.updatedAt);
+  const nextPollAt = text(stored.nextPollAt);
+  const exportGeneration = number(stored.exportGeneration, 0);
+  if (authorUserId === null || createdAt === null || updatedAt === null) return null;
+  if (nextPollAt === null || exportGeneration === null || !Array.isArray(stored.feeds)) return null;
+  const feeds: StayChannelFeed[] = [];
+  for (const item of stored.feeds) {
+    const feed = feedOf(item);
+    if (feed === null) return null;
+    feeds.push(feed);
+  }
+  return { propertyId, authorUserId, exportGeneration, feeds, nextPollAt, createdAt, updatedAt };
 }

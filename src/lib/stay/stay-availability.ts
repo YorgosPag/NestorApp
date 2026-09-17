@@ -67,11 +67,13 @@ import {
   minNightsForArrival,
   nearestDates,
 } from './stay-rules';
-import type {
-  StayAvailabilityAnswer,
-  StayCalendar,
-  StayQuery,
-  StaySaleExposure,
+import {
+  isStayable,
+  type StayAvailabilityAnswer,
+  type StayCalendar,
+  type StayChannelTrust,
+  type StayQuery,
+  type StaySaleExposure,
 } from './stay-availability-vocabulary';
 
 // =============================================================================
@@ -276,7 +278,24 @@ export function stayAvailabilityFor<TSource>(
   const time = timeRulesVerdict(calendar.rules, query);
   if (time !== null) return time;
 
-  return calendarVerdict(listing, query, nights, calendar, sale);
+  return syncedAnswer(calendarVerdict(listing, query, nights, calendar, sale), calendar.channels);
+}
+
+/**
+ * 7️⃣ **ΜΙΛΟΥΝ ΤΑ ΚΑΝΑΛΙΑ;** (Στάδιο Γ, §22) — το **τελευταίο** βήμα, και είναι
+ * απόφαση για τη σειρά:
+ *
+ * 🔑 **Μόνο η ΥΠΟΣΧΕΣΗ υποβαθμίζεται.** Ένα `occupied` παραμένει `occupied`: το ξέρουμε
+ * από **δικά μας** δεδομένα και κουβαλά τη διέξοδό του (*«ελεύθερο από 14/08»*). Αν
+ * γυρνούσαμε `unsynced` **πριν** τον κριτή, θα πετούσαμε πληροφορία που έχουμε — και ο
+ * επισκέπτης θα ξαναρωτούσε για νύχτες που ξέρουμε σίγουρα πιασμένες.
+ *
+ * 🔴 Ό,τι είναι `stayable` (`free` · `conditional`) είναι **υπόσχεση προς τον
+ * επισκέπτη**, και υπόσχεση για νύχτες που ένα σιωπηλό κανάλι μπορεί να έχει πουλήσει
+ * **είναι** το overbooking (§6.4).
+ */
+function syncedAnswer(answer: StayAvailabilityAnswer, channels: StayChannelTrust): StayAvailabilityAnswer {
+  return channels === 'stale' && isStayable(answer.kind) ? { kind: 'unsynced' } : answer;
 }
 
 /** 4️⃣–6️⃣ Ο κριτής, οι κανόνες διάρκειας, και η τρίτη κατάσταση. */

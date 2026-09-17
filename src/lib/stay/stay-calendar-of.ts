@@ -25,7 +25,7 @@ import type {
   StayRules,
 } from '@/types/stay-rules';
 
-import type { StayCalendar } from './stay-availability-vocabulary';
+import type { StayCalendar, StayChannelTrust } from './stay-availability-vocabulary';
 import { stayCalendarOccupancies, type StayOccupancySource } from './stay-rules';
 
 /** Ό,τι διάβασε η μία ανάγνωση — δομικό, ώστε η καθαρή μηχανή να μην εξαρτάται από τον διακομιστή. */
@@ -35,6 +35,11 @@ export type StayCalendarReading =
       readonly head: StayCalendarHead | null;
       readonly entries: readonly StayCalendarEntry[];
       readonly months: readonly StayCalendarMonth[];
+      /**
+       * **Μιλούν τα κανάλια;** (Στάδιο Γ, §22) — κρίνεται από τον **αναγνώστη**, που
+       * έχει το ρολόι· εδώ ταξιδεύει ως **γεγονός**, ώστε η σύνθεση να μένει καθαρή.
+       */
+      readonly channels: StayChannelTrust;
     }
   | { readonly kind: 'unreadable' };
 
@@ -53,7 +58,7 @@ export function stayCalendarOf(
   if (reading.kind === 'unreadable') return { kind: 'unreadable' };
   const { head } = reading;
   if (head === null || head.declaredAt === null) return { kind: 'undeclared' };
-  return declaredStayCalendarOf(reading.entries, head.rules, reading.months, clock);
+  return declaredStayCalendarOf(reading.entries, head.rules, reading.months, clock, reading.channels);
 }
 
 /**
@@ -67,11 +72,13 @@ export function declaredStayCalendarOf(
   rules: StayRules,
   months: readonly StayCalendarMonth[],
   clock: StayClock,
+  channels: StayChannelTrust,
 ): StayCalendar<StayOccupancySource> {
   return {
     kind: 'declared',
     occupied: stayCalendarOccupancies(entries, rules.preparationNights),
     rules: { rules, days: stayDayRulesOf(months), clock },
+    channels,
   };
 }
 
