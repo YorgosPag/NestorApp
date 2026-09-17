@@ -1040,6 +1040,24 @@ if (allFiles.length > 0)
 if (!process.env.SKIP_FIRESTORE_DEPLOY_PROOF)
   addThread('3.86', 'Firestore deploy proof', 'scripts/check-firestore-deploy-proof.js');
 
+// CHECK 3.87 (ADR-862 Φ0 Β12) — η αρχή της κατάστασης CDE. «Γράφει κάποιος την κατάσταση
+// ενός αρχείου ΕΞΩ από τον ΕΝΑ γραφέα, ή διαβάζει client λίστα `files` ΧΩΡΙΣ φράχτη;»
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: οι κανόνες (`cdeCustodyUnchanged`) κλείνουν τον ΠΕΛΑΤΗ, όχι το
+// Admin SDK — ένας δεύτερος γραφέας διακομιστή θα γεννιόταν σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο. Και μια
+// client λίστα χωρίς φράχτη ΔΕΝ «χάνει μερικά αρχεία»: απορρίπτεται ΟΛΟΚΛΗΡΗ.
+// ⚠️ AST, ΠΟΤΕ ΚΕΙΜΕΝΟ: το `supersededByFileId` είναι και παράμετρος αιτήματος και φορτίο
+// γεγονότος — μετρημένα 9 σημεία, κανένα γραφή. ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_CDE_AUTHORITY)
+  addThread('3.87', 'CDE state authority', 'scripts/check-cde-authority.js');
+
+// CHECK 3.88 (ADR-862 Φ0 Β14) — η αρχή της ομάδας έργου. «Γράφει κάποιος μέλος έργου ΕΞΩ από
+// τον ΕΝΑ γραφέα, ή γεννά έργο ΧΩΡΙΣ την αρχική του ομάδα;»
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: μετρημένα 8 έργα / 0 μέλη — το έργο γεννιόταν με σκέτο `.set()` και ο
+// κριτής έκρυβε κάθε αρχείο CDE ακόμη και από τον δημιουργό. Οι κανόνες κλείνουν τον ΠΕΛΑΤΗ, όχι
+// το Admin SDK. AST, ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_PROJECT_MEMBER_AUTHORITY)
+  addThread('3.88', 'Project member authority', 'scripts/check-project-member-authority.js');
+
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {

@@ -16,7 +16,21 @@
   (γ) κελιά στη σουίτα `files.rules.test.ts` + CHECK 3.16 · (δ) `file-record-lifecycle.ts` στον `isFileHeld`.
   ⚠️ **Όλα στο ανοιχτό δέντρο της ADR-862 CDE** (17/09) — ΜΗΝ τα αγγίξεις παράλληλα.
 
+  🔶 **17/09 (ADR-864 §20) — σχέδιο ΕΓΚΡΙΘΗΚΕ, αναμονή του commit ADR-862 Β11** (γράφει τώρα το ίδιο μπλοκ):
+  (β) αντί για `firestore.get` στο `storage.rules` (αφαιρέθηκαν 2026-01-20 ως αναξιόπιστα) ⇒ **ένας** server
+  γραφέας hold (`services/file-record/file-hold.service.ts` + `POST /api/files/[fileId]/hold`, κριτής ADR-801,
+  CHECK 3.68/3.78) που βάζει **και** GCS `temporaryHold` — τα bytes τα φυλά η πλατφόρμα. Μετρημένο: τα client
+  `placeHold`/`releaseHold` (`file-record-lifecycle.ts:353-394`) έχουν **μηδέν** καλούντες ⇒ διαγραφή.
+  (δ) καθαρός κριτής `lib/files/file-hold.ts` (ο `isFileHeld` είναι `server-only`, ο lifecycle είναι client).
+  ➕ **Μαζί**: `match /mandate_evidence/{id} { allow read, write: if false; }` + manifest 3.16 (ADR-864 §20.7 #2)
+  και η διαδρομή δικαστικής δέσμευσης αποδεικτικού (§20.7 #3) με **το ίδιο** δικαίωμα.
+
 - 🔴 **16/09 — Η ΑΓΚΥΡΑ `ownership-callsite-coverage` ΕΙΝΑΙ ΚΟΚΚΙΝΗ ΣΤΟ HEAD **ΚΑΙ ΑΦΥΛΑΚΤΗ** (εύρημα ADR-862 Φ0 Β7, καταγραφή Β8)**
+
+  ⚠️ **17/09 (ADR-862 Φ0 Β14) — ΞΑΝΑ 3**: μετρημένα **5** πριν το Β14 (+`services/iso19650/version-stack.ts` του Β10).
+  Το Β14 ταξινόμησε τα **δύο της Φ0** (`container-transition-policy.ts` → Α17.12 · `version-stack.ts` → «ξένος μισθωτής»
+  στο `version-promotion-anchor`) **και** το νέο `lib/files/container-project.ts` (Α30.5). Μένουν **μόνο ξένα**:
+  `lib/agency/showcase-canonical-segment.ts` · `lib/mandate/attestation-document-verdict.ts` · `server/auth/workspace-invitation.ts`.
 
   `src/lib/auth/__tests__/ownership-callsite-coverage-anchor.test.ts` → **19/20**, με **3 αταξινόμητα**:
   `lib/agency/showcase-canonical-segment.ts` · `server/auth/workspace-invitation.ts` ·
@@ -3363,6 +3377,30 @@
 ---
 
 ## Pending tasks (priority order)
+
+### 🗂️ ADR-862 Φ0 — ό,τι έμεινε ανοιχτό μετά το Β11-Β13 (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-17)
+
+- **Χειρόγραφοι δημιουργοί FileRecord εκτός builder** (>1h, 3 αρχεία): `app/api/cad-files/dual-write-to-files.ts`
+  (merge + write-once λογική) και `app/api/quotes/scan/quote-file-record-writer.ts` χτίζουν το έγγραφο **με το χέρι**
+  αντί για `buildPendingFileRecordData`. Κάθε νέο αμετάβλητο γέννησης (π.χ. `cdeReadReach` στο Β11) πρέπει να
+  θυμηθεί **τρία** σημεία. Το CHECK 3.87 τα δηλώνει ως «γραφείς γέννησης» — θεραπεία: μετάβαση στον builder,
+  μετά αφαίρεση από το `BIRTH_WRITERS`.
+- **`generate-gate-index.js` θέλει ΔΥΟ περάσματα** για νέα πύλη (<1h): μετρά την απογραφή του CHECK 3.66
+  **πριν** γράψει τη νέα γραμμή ⇒ το πρώτο πέρασμα γράφει «αδήλωτες: N+1». Θεραπεία: απογραφή πάνω στο
+  **παραγόμενο** κείμενο, όχι στο αρχείο του δίσκου.
+- **Ο βοηθός `text()` αντιγραμμένος — 4 αντίγραφα έμειναν** (<1h, αλλά **διαφορετική σημασία** ⇒ απόφαση ανά αρχείο):
+  το Β14 (2026-09-17) γέννησε `trimmedStringOrNull` στο `lib/type-guards.ts` και μετέφερε **6** αντίγραφα ίδιας σημασίας
+  (`project-member-read` · `file-record-read` · `succession-identity` · + τα 3 νέα). Μένουν **χωρίς trim**:
+  `services/iso19650/container-succession-policy.ts` · `lib/stay/stay-calendar-from-document.ts` ·
+  `services/mandate/showcase-email-return.service.ts`, και **με trim**: `services/company-registry/gemi-opendata-parse.ts`
+  (άλλος agent). ⚠️ Το «χωρίς trim» σε αναγνωριστικό σημαίνει `' comp_x'` ≠ `'comp_x'` — έλεγξε αν είναι σκόπιμο πριν μεταφέρεις.
+- **Δοχεία CDE εκτός έργου** (δηλωμένο όριο Β14): αρχείο επαφής / αγγελίας ιδιοκτήτη που μπαίνει στο CDE (π.χ. με
+  `supersede`) δεν έχει έργο ⇒ κανένα μέλος ⇒ αόρατο σε όλους μετά τη μετάβαση. Το Β14 **δεν** αρνείται (θα έσπαγε τη
+  «νέα έκδοση» σε 22/35 αρχεία). Θεραπεία = απόφαση: CDE μόνο για δοχεία έργου (άρνηση `no-project` στις πράξεις
+  εκτός `supersede`) **ή** κοινόχρηστο «δοχείο γραφείου» με δικά του μέλη. ADR-862 §5.4 · Giorgio.
+- **Αφαίρεση μέλους = διαγραφή** (Β14): ιστορικό ανάκλησης (`revokedAt`/`revokedBy`, ADR-787 Ε-2 §4) με τη Φ1.
+- **Μαζική ένταξη «ομάδα γραφείου» από το UI** (Procore «Add from Company Directory»): ο γραφέας τη στηρίζει
+  (`enrollProjectMembers` με πίνακα), η οθόνη λείπει.
 
 ### 🔔 AccountNotice — μετάβαση του χειρόγραφου κουτιού ειδοποίησης (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-11)
 
