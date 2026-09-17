@@ -17,6 +17,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { formatFlexibleDate } from '@/lib/intl-utils';
+import { FILE_STATUS } from '@/config/domain-constants';
 import {
   FileText,
   Image as ImageIcon,
@@ -65,11 +66,11 @@ interface FilePreviewPanelProps {
   onClose: () => void;
   /** Tenant isolation — company ID for comments */
   companyId?: string;
-  /** Current user ID (for version rollback) */
+  /** Current user ID (για «Ορισμός ως τρέχουσας», σχόλια, κοινοποίηση) */
   currentUserId?: string;
   /** Current user display name (for comments) */
   currentUserName?: string;
-  /** Callback after version rollback */
+  /** Μετά από αλλαγή που επηρεάζει τη λίστα (π.χ. «Ορισμός ως τρέχουσας») */
   onRefresh?: () => void;
   /** Optional class */
   className?: string;
@@ -169,8 +170,10 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
               </Tooltip>
             </>
           )}
-          {/* Version history toggle */}
-          {file.revision && file.revision > 1 && (
+          {/* Version history toggle — ADR-862 Φ0: η στοίβα είναι η αλυσίδα διαδοχής, την
+              ξέρει μόνο ο διακομιστής. Το παλιό `revision > 1` δεν αλήθευε ΠΟΤΕ (κανείς δεν
+              αύξανε το πεδίο) ⇒ το κουμπί δεν εμφανιζόταν. */}
+          {file.status === FILE_STATUS.READY && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -183,7 +186,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {t('versions.title')} (v{file.revision})
+                {t('versions.title')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -308,9 +311,8 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
         <div className="border-b max-h-[250px] overflow-y-auto">
           <VersionHistory
             fileId={file.id}
-            currentRevision={file.revision}
             currentUserId={currentUserId}
-            onRollback={onRefresh}
+            onPromoted={onRefresh}
             className="p-2"
           />
         </div>

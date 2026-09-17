@@ -629,7 +629,6 @@
     "current": "Current version",
     "previousCount": "{count} previous",
     "download": "Download this version",
-    "rollback": "Restore to this version",
     "supersession": {
       "notArchived": "The previous version was not archived and remains among active files: {reason}",
       "reason": {
@@ -644,6 +643,25 @@
         "identity-mismatch": "the two files belong to different slots",
         "successor-not-newer": "the \"new\" version is older than the previous one",
         "not-successor-author": "the new version was uploaded by another user",
+        "failed": "temporary error — please try again"
+      }
+    },
+    "makeCurrent": "Make current",
+    "makeCurrentHint": "Creates a new version with this content — history stays intact",
+    "restoredFrom": "Restored from v{number}",
+    "loadFailed": "Could not load version history",
+    "promoted": "The version was made current",
+    "promotion": {
+      "refused": "The version was not made current: {reason}",
+      "reason": {
+        "head-moved": "a newer version was uploaded in the meantime — refresh the history and try again",
+        "source-not-ready": "this version has no content available",
+        "not-capable": "your role does not allow replacing versions",
+        "predecessor-not-active": "the current version was just changed by another user",
+        "identity-mismatch": "the version belongs to a different slot",
+        "identity-absent": "the file is not linked to a specific slot (entity, category)",
+        "wrong-phase": "the current version has already been withdrawn",
+        "unreadable": "the state of the current version is not valid",
         "failed": "temporary error — please try again"
       }
     }
