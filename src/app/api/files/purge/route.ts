@@ -4,10 +4,19 @@
  * =============================================================================
  *
  * POST /api/files/purge
- * Authorization: Cron secret header or super_admin
+ * Authorization: Cron secret header
  *
- * Finds files in trash past their purgeAt date, permanently deletes them
- * from Firestore (marks as purged). Storage cleanup is separate.
+ * Χειροκίνητη εκτέλεση της **Φάσης Α** του `file-purge.job` — αρχεία στον κάδο που πέρασαν το
+ * `purgeAt`, σε **όλα** τα διαμερίσματα (εταιρεία · άνθρωπος).
+ *
+ * 🧹 **ΛΕΠΤΟΣ ΠΡΟΣΑΡΜΟΓΕΑΣ, ΟΧΙ ΔΕΥΤΕΡΗ ΣΑΡΩΣΗ** (ADR-866 §2.6.9 Β4, N.0.2): μέχρι το 2β.3 αυτό το
+ * αρχείο είχε **αντίγραφο** του ερωτήματος και του βρόχου του job. Ο χρονοπρογραμματιστής τρέχει
+ * **μόνο** το job (`cron-schedule.ts` → `cron/file-purge`)· δύο σαρώσεις σήμαιναν ότι το δεύτερο
+ * διαμέρισμα θα έμπαινε στη μία και θα ξεχνιόταν στην άλλη. Κρίση δέσμευσης, γραφέας και
+ * διαμερίσματα ζουν **εκεί**.
+ *
+ * ⚠️ **Δηλωμένη αλλαγή συμβολαίου**: το `errors[]` μένει στο σχήμα αλλά είναι πλέον **κενό** — το
+ * job μετρά την αποτυχημένη εκκαθάριση στο `skippedCount` και καταγράφει τον λόγο στο log.
  *
  * @module api/files/purge
  * @enterprise ADR-191 - Enterprise Document Management System (Phase 3.2)
@@ -16,13 +25,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
-import { nowISO } from '@/lib/date-local';
 import { verifyCronAuthorization } from '@/lib/cron-auth';
-import { isFileHeld, purgeFileRecord } from '@/services/file-record/file-purge-helpers';
+import { purgeExpiredTrash } from '@/lib/cron/jobs/file-purge.job';
 
 const logger = createModuleLogger('FilePurgeRoute');
 
@@ -52,59 +57,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
   }
 
   try {
-    const db = getAdminFirestore();
-    const now = nowISO();
+    const tally = await purgeExpiredTrash();
 
-    // Query trashed files with expired purgeAt
-    const snapshot = await db
-      .collection(COLLECTIONS.FILES)
-      .where(FIELDS.IS_DELETED, '==', true)
-      .where('purgeAt', '<=', now)
-      .limit(100) // Process in batches of 100
-      .get();
-
-    let purgedCount = 0;
-    let skippedCount = 0;
-    const errors: string[] = [];
-
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-
-      // Skip files with active holds
-      // Hold ή ενεργή διατήρηση ⇒ παράλειψη — ο ΕΝΑΣ κριτής (ADR-864 §19, N.0.2: ήταν αντίγραφο του `isFileHeld`).
-      if (isFileHeld(data)) {
-        skippedCount++;
-        continue;
-      }
-
-      // ADR-864 §21 (N.0.2): ήταν αντίγραφο του `purgeFileRecord` — με «non-blocking» αποτυχία
-      // των bytes, δηλαδή `purged` πάνω σε bytes που η πλατφόρμα κράτησε. Ο ΕΝΑΣ γραφέας.
-      const result = await purgeFileRecord({
-        fileId: doc.id,
-        storagePath: data.storagePath as string | undefined,
-        performedBy: 'system:purge',
-        purgeReason: 'cron_trash',
-        metadata: {
-          purgeType: 'auto',
-          originalPurgeAt: (data.purgeAt as string | undefined) ?? null,
-          category: (data.category as string | undefined) ?? null,
-        },
-      });
-
-      if (result.success) {
-        purgedCount++;
-      } else {
-        errors.push(`${doc.id}: ${result.error ?? 'unknown'}`);
-      }
-    }
-
-    logger.info('Purge cycle complete', { purgedCount, skippedCount, errors: errors.length });
+    logger.info('Purge cycle complete', { purgedCount: tally.purged, skippedCount: tally.skipped });
 
     return NextResponse.json({
       success: true,
-      purgedCount,
-      skippedCount,
-      errors,
+      purgedCount: tally.purged,
+      skippedCount: tally.skipped,
+      errors: [],
     });
   } catch (err) {
     const message = getErrorMessage(err, 'Purge failed');

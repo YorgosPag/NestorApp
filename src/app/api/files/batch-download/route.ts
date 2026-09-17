@@ -3,7 +3,7 @@
  * BATCH DOWNLOAD — Ο ΠΕΛΑΤΗΣ ΛΕΕΙ **ΠΟΙΟ**, Ο ΔΙΑΚΟΜΙΣΤΗΣ ΛΕΕΙ **ΠΟΥ**
  * =============================================================================
  *
- * `POST /api/files/batch-download` · σώμα: `{ fileIds: string[] }` → `application/zip`
+ * `POST /api/files/batch-download[?custody=personal]` · σώμα: `{ fileIds: string[] }` → `application/zip`
  *
  * @module api/files/batch-download
  * @enterprise ADR-031 — Canonical File Storage · ADR-862 Φ0 Β8 · ADR-742 §7undecies
@@ -46,13 +46,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import type { ProjectMemberRead } from '@/lib/auth/project-member-read';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { attachmentDisposition } from '@/lib/http/content-disposition';
+import { fileCallerUid, withFileCustodyAuth, type FileCustodyCaller } from '../_shared/file-custody-route';
 import { loadOwnedFileBytes } from '../_shared/owned-file-bytes';
 import { buildZip, uniqueZipNames, type ZipEntry } from './zip-builder';
 
@@ -85,12 +84,12 @@ function readFileIds(body: unknown): string[] | null {
  */
 async function fetchOwnedEntry(
   fileId: string,
-  ctx: AuthContext,
+  caller: FileCustodyCaller,
   cache: Map<string, ProjectMemberRead>,
 ): Promise<ZipEntry | null> {
   const result = await loadOwnedFileBytes({
     fileId,
-    caller: ctx,
+    caller,
     action: 'batch-download',
     capability: DOWNLOAD_CAPABILITY,
     // 🔑 50 αρχεία της ίδιας υπόθεσης ⇒ **μία** ανάγνωση μέλους, όχι 50.
@@ -106,7 +105,7 @@ async function fetchOwnedEntry(
     : null;
 }
 
-async function handleBatchDownload(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+async function handleBatchDownload(request: NextRequest, caller: FileCustodyCaller): Promise<NextResponse> {
   const body: unknown = await request.json().catch(() => null);
   const fileIds = readFileIds(body);
 
@@ -126,7 +125,7 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext): Prom
     const memberCache = new Map<string, ProjectMemberRead>();
 
     const settled = await Promise.allSettled(
-      fileIds.map(fileId => fetchOwnedEntry(fileId, ctx, memberCache)),
+      fileIds.map(fileId => fetchOwnedEntry(fileId, caller, memberCache)),
     );
 
     const fetched: ZipEntry[] = [];
@@ -148,7 +147,8 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext): Prom
     const zipData = buildZip(fetched.map((entry, index) => ({ ...entry, filename: names[index] })));
 
     logger.info('Batch download complete', {
-      userId: ctx.uid,
+      userId: fileCallerUid(caller),
+      custody: caller.custody,
       requested: fileIds.length,
       included: fetched.length,
       zipSize: zipData.length,
@@ -173,9 +173,9 @@ async function handleBatchDownload(request: NextRequest, ctx: AuthContext): Prom
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
-      handleBatchDownload(req, ctx),
+  // 🔑 ADR-866 §2.6.9 — `?custody=personal` ⇒ ZIP **προσωπικών** αρχείων· ένα αίτημα = ένα διαμέρισμα.
+  const handler = withFileCustodyAuth(
+    (req: NextRequest, caller: FileCustodyCaller) => handleBatchDownload(req, caller),
     { permissions: DOWNLOAD_CAPABILITY },
   );
 

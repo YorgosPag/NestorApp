@@ -55,7 +55,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import type { AuthContext } from '@/lib/auth';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -65,6 +65,7 @@ import { attachmentDisposition } from '@/lib/http/content-disposition';
 import { validateFetchUrl } from '@/lib/security/path-sanitizer';
 import { storageObjectFromUrl } from '@/lib/storage/storage-object-url';
 import { isStorageCustodyServable, judgeStorageCustody } from '@/lib/storage/storage-path-custody';
+import { fileCallerUid, withFileCustodyAuth, type FileCustodyCaller } from '../files/_shared/file-custody-route';
 import { loadOwnedFileBytes } from '../files/_shared/owned-file-bytes';
 
 const logger = createModuleLogger('DownloadRoute');
@@ -95,11 +96,11 @@ const refuse = (why: string, status: 400 | 403): NextResponse =>
  */
 async function deliverableById(
   fileId: string,
-  ctx: AuthContext,
+  caller: FileCustodyCaller,
 ): Promise<Deliverable | NextResponse> {
   const result = await loadOwnedFileBytes({
     fileId,
-    caller: ctx,
+    caller,
     action: 'download',
     capability: DOWNLOAD_CAPABILITY,
   });
@@ -196,7 +197,7 @@ function deliver(item: Deliverable): NextResponse {
   });
 }
 
-async function handleDownload(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+async function handleDownload(request: NextRequest, caller: FileCustodyCaller): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('fileId');
@@ -206,22 +207,29 @@ async function handleDownload(request: NextRequest, ctx: AuthContext): Promise<N
     // ⚠️ Το `fileId` κρίνεται **πρώτο**: όταν δίνονται και τα δύο, νικά η είσοδος
     //    που ο διακομιστής μπορεί να **επαληθεύσει πλήρως**.
     if (fileId) {
-      const item = await deliverableById(fileId, ctx);
+      const item = await deliverableById(fileId, caller);
       if (item instanceof NextResponse) return item;
-      logger.info('DOWNLOAD SUCCESS', { uid: ctx.uid, via: 'fileId', size: item.buffer.length });
+      logger.info('DOWNLOAD SUCCESS', {
+        uid: fileCallerUid(caller),
+        custody: caller.custody,
+        via: 'fileId',
+        size: item.buffer.length,
+      });
       return deliver(item);
     }
 
-    if (!fileUrl || !filename) {
+    // 🔑 ADR-866 §2.6.9 — η κληρονομιά `?url=` μένει **μόνο εταιρική**: τα προσωπικά αρχεία έχουν
+    //    όλα `FileRecord`, άρα **πάντα** `fileId`. Καμία νέα είσοδος χωρίς έγγραφο να κριθεί.
+    if (!fileUrl || !filename || caller.custody !== 'company') {
       return NextResponse.json(
         { error: 'Missing required parameter: fileId (or url + filename)' },
         { status: 400 },
       );
     }
 
-    const item = await deliverableByUrl(fileUrl, filename, ctx);
+    const item = await deliverableByUrl(fileUrl, filename, caller.ctx);
     if (item instanceof NextResponse) return item;
-    logger.info('DOWNLOAD SUCCESS', { uid: ctx.uid, via: 'url', size: item.buffer.length });
+    logger.info('DOWNLOAD SUCCESS', { uid: caller.ctx.uid, via: 'url', size: item.buffer.length });
     return deliver(item);
   } catch (error) {
     logger.error('DOWNLOAD API ERROR', { error });
@@ -233,8 +241,8 @@ async function handleDownload(request: NextRequest, ctx: AuthContext): Promise<N
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handleDownload(req, ctx),
+  const handler = withFileCustodyAuth(
+    (req: NextRequest, caller: FileCustodyCaller) => handleDownload(req, caller),
     // 🔑 **Η ικανότητα επέστρεψε — και είναι η ΣΩΣΤΗ αυτή τη φορά.** Το
     //    `photos:photos:upload` ήταν δικαίωμα **εργοταξίου** και γι' αυτό έκοβε τις
     //    προμήθειες· το `dxf:files:view` είναι η ικανότητα **ανάγνωσης αρχείου**, η

@@ -48,6 +48,7 @@ import { NextResponse } from 'next/server';
 import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 import {
   createOwnershipDecision,
+  createPersonalOwnershipDecision,
   type ResourceAccessCaller,
   type ResourceAccessVerdict,
 } from '@/lib/auth/resource-ownership-guard';
@@ -152,20 +153,71 @@ export function defineOwnedResource(spec: OwnedResourceSpec): OwnedResource {
     check,
 
     load: <R>(load: LoadOwnedResourceSpec<R>) =>
-      loadOwnedDocOrRefusal<R>({
-        collection: spec.collection,
-        docId: load.docId,
-        action: load.action,
-        resourceLabel: spec.resourceLabel,
-        refusal: load.refusal,
-        decide: (data: DocumentData | undefined) =>
-          check({
-            data,
-            caller: load.caller,
-            resourceId: load.docId,
-            action: load.action,
-          }),
-        ...(load.db === undefined ? {} : { db: load.db }),
-      }),
+      loadWithDecision<R>(spec, load, (data) =>
+        check({
+          data,
+          caller: load.caller,
+          resourceId: load.docId,
+          action: load.action,
+        }),
+      ),
   };
+}
+
+// =============================================================================
+// ΠΟΡΟΣ ΜΕ ΑΝΘΡΩΠΙΝΟ ΚΑΤΟΧΟ (ADR-866 §2.6.9 Β2)
+// =============================================================================
+
+/** Ίδιο με το {@link LoadOwnedResourceSpec}, με **`uid`** αντί για καλούντα εταιρείας. */
+export interface LoadPersonalOwnedResourceSpec<R> extends Omit<LoadOwnedResourceSpec<R>, 'caller'> {
+  /** Η **ήδη επαληθευμένη** ταυτότητα — ο διακομιστής φιλτράρει με τη **δική του**. */
+  readonly uid: string;
+}
+
+export interface PersonalOwnedResource {
+  readonly notFoundMessage: string;
+  /** **PEP**: φόρτωσε→υπάρχει;→**δικό μου**; — η **ίδια** αλυσίδα `loadOwnedDocOrRefusal`. */
+  load<R>(spec: LoadPersonalOwnedResourceSpec<R>): Promise<OwnedDocOutcome<R>>;
+}
+
+/**
+ * Δηλώνει πόρο **προσωπικού διαμερίσματος** — κάτοχος `{ userId }`, **χωρίς** παράκαμψη ρόλου.
+ *
+ * 🔑 Η **σειρά** μένει στο `loadOwnedDocOrRefusal`, όπως και στον εταιρικό πόρο: αλλάζει **μόνο** η
+ * απόφαση. Το «όχι» το δίνει ο καλών, για τον ίδιο λόγο (§7.1: η μεταμφίεση μοιάζει με το γνήσιο
+ * «δεν βρέθηκε» **της διαδρομής**).
+ */
+export function definePersonalOwnedResource(spec: OwnedResourceSpec): PersonalOwnedResource {
+  const decide = createPersonalOwnershipDecision(spec.resourceLabel, spec.idLogField);
+
+  return {
+    notFoundMessage: spec.notFoundMessage,
+
+    load: <R>(load: LoadPersonalOwnedResourceSpec<R>) =>
+      loadWithDecision<R>(spec, load, (data) =>
+        decide({ data, uid: load.uid, resourceId: load.docId, action: load.action }),
+      ),
+  };
+}
+
+/**
+ * Η **μία** κλήση της αλυσίδας για τα δύο είδη πόρου — διαφέρουν **μόνο** στην απόφαση.
+ *
+ * ⚠️ Χωρίς αυτή, ο εταιρικός και ο προσωπικός πόρος θα έγραφαν δίδυμο σώμα 10 γραμμών (N.18):
+ * ένα νέο πεδίο εντοπισμού (π.χ. `db`) θα έμπαινε στον έναν και θα ξεχνιόταν στον άλλο.
+ */
+function loadWithDecision<R>(
+  spec: OwnedResourceSpec,
+  load: Omit<LoadOwnedResourceSpec<R>, 'caller'>,
+  decide: (data: DocumentData | undefined) => ResourceAccessVerdict,
+): Promise<OwnedDocOutcome<R>> {
+  return loadOwnedDocOrRefusal<R>({
+    collection: spec.collection,
+    docId: load.docId,
+    action: load.action,
+    resourceLabel: spec.resourceLabel,
+    refusal: load.refusal,
+    decide,
+    ...(load.db === undefined ? {} : { db: load.db }),
+  });
 }

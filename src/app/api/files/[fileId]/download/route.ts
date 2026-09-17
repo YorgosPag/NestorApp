@@ -13,7 +13,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔒 ΟΙ ΤΡΕΙΣ ΦΡΟΥΡΟΙ — Η ΣΕΙΡΑ ΤΟΥΣ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΚΑΙ ΖΕΙ ΑΛΛΟΥ
  * ─────────────────────────────────────────────────────────────────────────────
- *   1. **ταυτότητα + ικανότητα** — `withAuth({ permissions: 'dxf:files:view' })`
+ *   1. **ταυτότητα + ικανότητα** — `withFileCustodyAuth`: εταιρεία ⇒ `withAuth({ permissions: 'dxf:files:view' })`
+ *      όπως πριν· `?custody=personal` ⇒ πολίτης ή μέλος, **μόνο** `uid` (ADR-866 §2.6.9)
  *   2. **μισθωτής** — `fileResource.load()` (ADR-742 §7undecies)
  *   3. **ορατότητα δοχείου** — ο κριτής του Β5 🆕 *(ADR-862 Φ0 Β8)*
  *
@@ -43,10 +44,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getErrorMessage } from '@/lib/error-utils';
 import { fileResource } from '../../_shared/file-ownership';
+import { withFileCustodyAuth, type FileCustodyCaller } from '../../_shared/file-custody-route';
 import { loadOwnedFileBytes } from '../../_shared/owned-file-bytes';
 
 // 🏢 ENTERPRISE: Extended timeout for Storage downloads
@@ -54,7 +54,7 @@ export const maxDuration = 30;
 
 /**
  * 🔑 Η ικανότητα που ρωτά ο φρουρός ορατότητας είναι **η ίδια** που δηλώνει το
- * `withAuth` παρακάτω — ονομασμένη **μία** φορά.
+ * σύνορο παρακάτω (`withFileCustodyAuth`) — ονομασμένη **μία** φορά.
  *
  * ⚠️ Δύο literals θα ήταν ελεύθερα να αποκλίνουν, και η απόκλιση θα ήταν
  * **αόρατη**: ο κριτής θα έκρινε άλλη εξουσιοδότηση από αυτή που το σύνορο
@@ -92,8 +92,8 @@ export async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ fileId: string }> }
 ): Promise<Response> {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+  const handler = withFileCustodyAuth(
+    async (_req: NextRequest, caller: FileCustodyCaller): Promise<NextResponse> => {
       const params = await segmentData.params;
       const fileId = params?.fileId;
 
@@ -104,7 +104,7 @@ export async function GET(
       try {
         const result = await loadOwnedFileBytes({
           fileId,
-          caller: ctx,
+          caller,
           action: 'download',
           capability: DOWNLOAD_CAPABILITY,
         });
