@@ -59,7 +59,7 @@ const transitionContainer = jest.fn(async (request: { fileId: string }): Promise
   kind: 'transitioned', fileId: request.fileId, act: 'supersede', from: 'pre-cde', to: 'SUPERSEDED', revision: 0,
 }));
 jest.mock('@/services/iso19650/container-transitions', () => ({
-  containerActorOf: (ctx: { uid: string; companyId: string }) => ({ uid: ctx.uid, companyId: ctx.companyId }),
+  containerActorOf: (ctx: { uid: string; companyId: string }) => ({ uid: ctx.uid, custody: { companyId: ctx.companyId } }),
   transitionContainer: (request: { fileId: string }) => transitionContainer(request),
 }));
 
@@ -249,7 +249,7 @@ describe('ADR-845 Βήμα Γ — η πόρτα του μοντέλου', () => 
       fileId: 'file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0',
       act: 'supersede',
       supersededByFileId: payload.data.fileId,
-      actor: expect.objectContaining({ uid: 'user_1', companyId: 'comp_alfa' }),
+      actor: expect.objectContaining({ uid: 'user_1', custody: { companyId: 'comp_alfa' } }),
     }));
     expect(payload.data.archived).toEqual(['file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0']);
   });

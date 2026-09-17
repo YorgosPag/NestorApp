@@ -170,7 +170,11 @@ export function useSceneState() {
         void (async () => {
           await link(targetLevelId, resolvedFileRecordId, file.name);
           if (prevFileId && prevFileId !== resolvedFileRecordId) {
-            noticeSupersession(await FileRecordService.supersedeFileRecord(prevFileId, resolvedFileRecordId));
+            // 🗂️ ADR-866 2β.3β — **εταιρικό, δηλωμένο**: οι στάθμες DXF ζουν στον χώρο του
+            //     γραφείου (ο προσωπικός φάκελος δεν έχει στάθμες στη Φ0).
+            noticeSupersession(
+              await FileRecordService.supersedeFileRecord(prevFileId, resolvedFileRecordId, 'company'),
+            );
           }
         })();
       };

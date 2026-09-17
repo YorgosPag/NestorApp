@@ -159,7 +159,7 @@ async function runImport(declareSuccessor: boolean): Promise<{
     getLevelScene: (id) => SceneStore.getLevelScene(id),
     setLevelScene: (id, s) => SceneStore.setLevelScene(id, s),
     linkSceneFileToLevel: () => {
-      pending.push(declareSuccessor ? supersedeFileRecord(PREV_FILE, NEXT_FILE) : moveToTrash(PREV_FILE, 'company', UID));
+      pending.push(declareSuccessor ? supersedeFileRecord(PREV_FILE, NEXT_FILE, 'company') : moveToTrash(PREV_FILE, 'company', UID));
     },
   });
 
@@ -209,10 +209,13 @@ describe('ADR-845 Ο-16 · ADR-862 Φ0 Β10 — αντικατάσταση κά�
     await runImport(true);
 
     expect(updateDocMock).not.toHaveBeenCalled();
-    expect(postMock).toHaveBeenCalledWith(`/api/files/${PREV_FILE}/cde`, {
-      act: 'supersede',
-      supersededByFileId: NEXT_FILE,
-    });
+    // 🗂️ ADR-866 2β.3β — **το διαμέρισμα ταξιδεύει ως παράμετρος**, ποτέ ο κάτοχος: ο
+    //    διακομιστής βάζει τον κάτοχο από τη δική του ταυτότητα. Οι στάθμες DXF είναι εταιρικές.
+    expect(postMock).toHaveBeenCalledWith(
+      `/api/files/${PREV_FILE}/cde`,
+      { act: 'supersede', supersededByFileId: NEXT_FILE },
+      { params: { custody: 'company' } },
+    );
   });
 
   // Η ΠΡΑΓΜΑΤΙΚΗ δουλειά του συνδρομητή δεν χάνεται: εξωτερική διαγραφή ΚΑΘΑΡΙΖΕΙ.
@@ -242,7 +245,7 @@ describe('ADR-845 Ο-16 · ADR-862 Φ0 Β10 — αντικατάσταση κά�
     });
     const seen: FileSupersededPayload[] = [];
     const unsub = RealtimeService.subscribe('FILE_SUPERSEDED', (p) => { seen.push(p); });
-    const outcome = await supersedeFileRecord(PREV_FILE, NEXT_FILE);
+    const outcome = await supersedeFileRecord(PREV_FILE, NEXT_FILE, 'company');
     unsub();
 
     expect(outcome).toEqual({ kind: 'refused', why: 'identity-mismatch' });
@@ -253,7 +256,7 @@ describe('ADR-845 Ο-16 · ADR-862 Φ0 Β10 — αντικατάσταση κά�
   it('Κ8 — supersede με τον ίδιο id είναι no-op', async () => {
     const seen: FileSupersededPayload[] = [];
     const unsub = RealtimeService.subscribe('FILE_SUPERSEDED', (p) => { seen.push(p); });
-    const outcome = await supersedeFileRecord(PREV_FILE, PREV_FILE);
+    const outcome = await supersedeFileRecord(PREV_FILE, PREV_FILE, 'company');
     unsub();
 
     expect(outcome).toEqual({ kind: 'noop' });

@@ -59,6 +59,7 @@ import {
 } from './model-source-lookup';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import { containerActorOf, transitionContainer } from '@/services/iso19650/container-transitions';
+import { isSupersessionDone } from '@/services/iso19650/container-transition-vocabulary';
 import {
   MODEL_DECLARATION_METADATA_KEY,
   decodeModelDeclaration,
@@ -135,7 +136,7 @@ async function archiveSuperseded(
         actor: containerActorOf(ctx),
         supersededByFileId: fileId,
       });
-      if (outcome.kind === 'transitioned') archived.push(previousFileId);
+      if (isSupersessionDone(outcome)) archived.push(previousFileId);
       if (outcome.kind === 'refused') {
         logger.warn('Ο προκάτοχος μοντέλου δεν αρχειοθετήθηκε', { previousFileId, fileId, why: outcome.why });
       }

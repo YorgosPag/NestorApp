@@ -224,7 +224,12 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
       // κάθε αντικατάσταση. Χωρίς `fileId` (δεν συμβαίνει σε επιτυχία) δεν υπάρχει διάδοχος
       // να αποδειχθεί ⇒ η παλιά μένει ενεργή, ποτέ κάδος (ο κάδος σημαίνει απώλεια).
       if (!floorId && existingFile && result.fileId) {
-        noticeSupersession(await FileRecordService.supersedeFileRecord(existingFile.id, result.fileId));
+        // 🗂️ ADR-866 2β.3β — **εταιρικό, δηλωμένο**: τα σχέδια κατόψεων ζουν στον χώρο του
+        //     γραφείου· ο προσωπικός φάκελος δεν έχει ροή DXF στη Φ0. Το είδος είναι υποχρεωτικό
+        //     στον τύπο ακριβώς ώστε μια μελλοντική προσωπική ροή να **μη σιωπήσει** εδώ.
+        noticeSupersession(
+          await FileRecordService.supersedeFileRecord(existingFile.id, result.fileId, 'company'),
+        );
       }
       setUploadedFile(file);
       setUploadedFormat(result.format ?? null);
