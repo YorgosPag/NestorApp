@@ -86,7 +86,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f0d9d5f8f8dfb37ee94bedd223e32e8361a7ffc623fd1ae78a96b5d4433cadbf",
+  "inputsSha256": "1469f479b987cf3894b7970c6f282320ad2ca0815beece10859fb7f4b0493c27",
   "languages": [
     "el"
   ],
@@ -509,7 +509,8 @@
     "src/lib/auth/permission-sets.ts": "8e9ee61a71669bc5571fd528af79b6798c3b8d3e73a844e6122150abdb6b61a4",
     "src/lib/auth/permissions.ts": "19251ccf673fb7a178757d22c482d07be3c9ca4cf156671cded9334746ee6596",
     "src/lib/auth/permissions/resource-lookups.ts": "50ba2c4add9b16d49d5ea7a343aa52af4b3d297c78782457f3a76233de675236",
-    "src/lib/auth/project-member-read.ts": "d94ce8dbbe8eb7af8f6d8f87eaa2c04e531bcbc3ad4de857312393cf21e22f23",
+    "src/lib/auth/project-member-read.ts": "e630b50e10df581f56f915ba7277adad7ce7043f078917b71b4e38c2ef9450a2",
+    "src/lib/auth/project-member-ref.ts": "90b0ff1eadd998a5ed0afdae0123e47ebd9409f657e309b2d51a75151e20876b",
     "src/lib/auth/set-claims-with-mirror.ts": "2c8d8e4d1edb1ee3024be0529b104b94c111b56db511a6db21282227d67040fe",
     "src/lib/auth/token-credentials.ts": "04ada53730e0be6f12abafcf1c22fbe14e11e4a05e082872e72697d417995402",
     "src/lib/calendar/holiday-question.ts": "010e08d4d2d577529653efb949c0aee25c95b3a7a05e1f9a51d73d48c1adff8a",
@@ -6318,7 +6319,7 @@
     "src/lib/auth/tenant-isolation-error.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/auth/tenant-isolation.ts": "953bc81516d07feac3df5ecf3f76608871298976104886344f218bf810e6ac8f",
     "src/lib/auth/tenant-ownership.ts": "3b9368db13b61747ac925d374f708b77424bae24c8edb94192768be58b39db86",
-    "src/lib/auth/types.ts": "4d81e977a1b19b500fdb3a03039dd33069b90db1db16db3613983d61cd30ea15",
+    "src/lib/auth/types.ts": "e161281d55b1d44f9ef2da584446a5ae48203f828b1dd8a61fbe8de720f03c05",
     "src/lib/auth/workspace-from-path.ts": "a5025ff8ab2dbb6a3479ed1ccafc524d6d1806c101c51793acfa821a83eddf01",
     "src/lib/auth/workspace-membership.ts": "b06c7adf0b256107d583687a1856d2fb7716806189bac1f6c4716126475e7e89",
     "src/lib/calendar/date-key.ts": "3338c0194f97d7e941fc7ce55fb9319e6b1beefc2bf1e833e6a85b2af409a97c",
@@ -6341,9 +6342,9 @@
     "src/lib/demand/demand-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/design-system.ts": "cb22ef6086375aa0e11d18e09aa039b0e2d70601a56fc347036f2317492b2ebe",
     "src/lib/error-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/files/file-record-read.ts": "3e6a344706f2328b0126322ef3ccdd4691e5f22a4f0c4ef344f0c393facba3ae",
+    "src/lib/files/file-record-read.ts": "11cd0c670e97d6d1a7aa74acd2964dfd5ce1d94971875d17f7920a90baa3e1d2",
     "src/lib/files/file-visibility-scope.ts": "610a9c6cdbee19dff85318a38406800d33b3b1862d64733a830d5af31c0355f9",
-    "src/lib/files/succession-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/files/succession-identity.ts": "1ba3c6591d6bc77a3df9bd3747ac2e7ac2c2e6effb13a904ac693eaba5411477",
     "src/lib/firebase.ts": "faf274cbae6d0ec09e7a06c408044f27e6c8e55086ce491e2fdedde6243b433f",
     "src/lib/firebaseAdmin-credentials.ts": "f3bc56f3ea2095bc5fcd022ef2a9fda3ebabafb5a90b74e723a900b1cb4f0f15",
     "src/lib/firebaseAdmin-types.ts": "e8b9e64869ab3e4e19d371e63229f5b88404307988cc77de46d1cd942b272ee2",
@@ -6615,6 +6616,7 @@
     "src/types/project-basemap-placement.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
     "src/types/project-building-code.ts": "3e5b1273ceb21fcfe778446490ee02095297158e644c2b0d87eb3ce652bbdf54",
     "src/types/project-elevation.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
+    "src/types/project-member-enrollment.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/project.ts": "5e6e767abc3d13ceec6a8356416d2c48367df171f307315b1b327938ee9e2d86",
     "src/types/project/addresses.ts": "85b4f0133f5d4456373677f14c00be344526788dafc03e33b4f4e53b4116243c",
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
@@ -6670,7 +6672,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 691,
+    "shellFiles": 692,
     "sliceBytes": 513721
   },
   "unresolvableKeys": [

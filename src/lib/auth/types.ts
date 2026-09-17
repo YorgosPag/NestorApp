@@ -12,6 +12,7 @@ import type { MembershipVerdict, RequestedWorkspace } from "@/types/workspace-me
 //    αρχεία ως τύπους. ⛔ ΜΗΝ το κάνεις κανονικό `import`: το CHECK 3.80 μετρά
 //    ακριβώς τον κύκλο που **σκάει** σε αρχικοποίηση (μάθημα `role-catalogue.ts`).
 import type { CdeAudience } from "@/types/container-access";
+import type { ProjectMemberEnrollment } from "@/types/project-member-enrollment";
 
 // =============================================================================
 // GLOBAL ROLES (Coarse-grained, stored in Custom Claims)
@@ -525,6 +526,12 @@ export interface ProjectMember {
    * **οποιονδήποτε** δεν είναι μέλος.
    */
   cdeAudience?: CdeAudience;
+  /**
+   * **Γιατί είναι μέλος** — `creator` · `manual` · `backfill` (ADR-862 Φ0 Β14).
+   * ℹ️ Πληροφορία για τον έλεγχο πρόσβασης, **όχι** εξουσιοδότηση: κανένας κριτής δεν τη διαβάζει.
+   * Απούσα = γραμμένο πριν το Β14.
+   */
+  enrollment?: ProjectMemberEnrollment;
 }
 
 // =============================================================================

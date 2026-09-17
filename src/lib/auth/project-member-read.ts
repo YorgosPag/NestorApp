@@ -58,10 +58,13 @@
 
 import 'server-only';
 
+import { trimmedStringOrNull as text } from '@/lib/type-guards';
+
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isCdeAudience } from '@/types/container-access';
+import { isProjectMemberEnrollment } from '@/types/project-member-enrollment';
+import { memberByUidQuery, projectMembersCollection } from './project-member-ref';
 import { isValidPermission, type PermissionId, type ProjectMember } from './types';
 
 const logger = createModuleLogger('project-member-read');
@@ -161,29 +164,13 @@ async function fetchProjectMember(
 
   try {
     // 🔑 **ΕΡΩΤΗΜΑ ΣΤΟ ΠΕΔΙΟ, ΟΧΙ ΚΛΕΙΔΙ ΕΓΓΡΑΦΟΥ** — η ίδια ερώτηση που απαντά ο
-    //    γραφέας. Το `limit(1)` επειδή ο γραφέας εγγυάται **ένα** έγγραφο ανά uid
-    //    (ελέγχει 409 πριν το `assign`), και μια δεύτερη γραμμή δεν θα έδινε
-    //    «περισσότερη» ιδιότητα μέλους — θα έδινε **μη ντετερμινιστική** απάντηση.
-    // tenant-scope-exempt: ο μισθωτής ΕΙΝΑΙ Η ΙΔΙΑ Η ΔΙΑΔΡΟΜΗ — `companies/{companyId}/…` —
-    //   και όχι πεδίο, άρα δεν υπάρχει `where('companyId')` να γραφτεί εδώ.
-    //
-    //   🔑 **Η απομόνωση είναι ΑΥΣΤΗΡΟΤΕΡΗ από φίλτρο πεδίου, όχι χαλαρότερη**: ένα
-    //   `where('companyId','==',…)` αστοχεί σιωπηλά σε έγγραφο που γράφτηκε **χωρίς** το
-    //   πεδίο — ακριβώς η ζωντανή αστοχία των πέντε γραφών του `file_audit_log` (ADR-862
-    //   Φ0 Β6). Η υποσυλλογή **ΕΝΟΣ** χώρου, αντίθετα, **δεν μπορεί** να επιστρέψει
-    //   έγγραφο άλλου: η εγγύηση είναι του ίδιου του μονοπατιού.
-    //
-    //   ⚠️ Το `companyId` έρχεται από το `AuthContext` (`withAuth`), **ποτέ** από το
-    //   αίτημα — αλλιώς ο αιτών θα διάλεγε σε ποιου τον χώρο ψάχνει.
-    const snapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
-      .doc(projectId)
-      .collection(SUBCOLLECTIONS.PROJECT_MEMBERS)
-      .where('uid', '==', uid)
-      .limit(1)
-      .get();
+    //    γραφέας, ο οποίος εγγυάται **ένα** έγγραφο ανά uid μέσα σε συναλλαγή.
+    // 🔑 Μονοπάτι και ερώτηση από το ΕΝΑ σημείο (`project-member-ref`) — τα ίδια που
+    //    χρησιμοποιεί ο γραφέας, άρα οι δύο δεν μπορούν πια να αποκλίνουν (ADR-862 Φ0 Β14).
+    //    ⚠️ Το `companyId` έρχεται από το `AuthContext` (`withAuth`), **ποτέ** από το
+    //    αίτημα — αλλιώς ο αιτών θα διάλεγε σε ποιου τον χώρο ψάχνει.
+    const members = projectMembersCollection(getAdminFirestore(), companyId, projectId);
+    const snapshot = await memberByUidQuery(members, uid).get();
 
     const doc = snapshot.docs[0];
     if (doc === undefined) return { outcome: 'absent' };
@@ -287,16 +274,13 @@ export function normalizeProjectMember(
     //    καταναλωτής να ξεχωρίζει «δεν δηλώθηκε» από «δηλώθηκε κενό».
     ...(text(data.taskTeamId) === null ? {} : { taskTeamId: text(data.taskTeamId) as string }),
     ...(isCdeAudience(data.cdeAudience) ? { cdeAudience: data.cdeAudience } : {}),
+    // ℹ️ Β14 — η προέλευση είναι **πληροφορία**, όχι εξουσιοδότηση: άγνωστη τιμή ⇒ απούσα,
+    //    ποτέ `unreadable` (σε αντίθεση με τα δύο πεδία από πάνω, που δίνουν πρόσβαση).
+    ...(isProjectMemberEnrollment(data.enrollment) ? { enrollment: data.enrollment } : {}),
     uid,
   } satisfies ProjectMember & { uid: string };
 }
 
-/** Μη κενή συμβολοσειρά, αλλιώς `null`. */
-function text(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
 
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];

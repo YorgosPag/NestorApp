@@ -35,6 +35,18 @@ export function isNonEmptyTrimmedString(value: unknown): value is string {
 }
 
 /**
+ * Reader for **stored** documents: the trimmed string, or `null` when absent / blank / not a string.
+ *
+ * ADR-862 Φ0 Β14 — the same private `text()` had been copied into seven readers, and the copies
+ * disagreed on whether the value is trimmed. For an identifier read back from Firestore (a tenant,
+ * a project, a team) a stray space is the difference between «same» and «foreign», so the ONE
+ * answer trims. Use `isNonEmptyTrimmedString` when you only need the guard.
+ */
+export function trimmedStringOrNull(value: unknown): string | null {
+  return isNonEmptyTrimmedString(value) ? value.trim() : null;
+}
+
+/**
  * Type guard: checks if value is a non-empty array.
  * Replaces scattered `Array.isArray(x) && x.length > 0` patterns.
  * Provides TypeScript type narrowing from `T[] | undefined | null` to `T[]`.
