@@ -58,6 +58,7 @@ const LEDGER_KIND_KEYS: Readonly<Record<StayAvailabilityKind, string>> = {
   occupied: 'short-stay:ledger.kind.occupied',
   unknown: 'short-stay:ledger.kind.unknown',
   unreadable: 'short-stay:ledger.kind.unreadable',
+  unsynced: 'short-stay:ledger.kind.unsynced',
   'terms-unknown': 'short-stay:ledger.kind.terms-unknown',
   'over-capacity': 'short-stay:ledger.kind.over-capacity',
   'below-min-nights': 'short-stay:ledger.kind.below-min-nights',

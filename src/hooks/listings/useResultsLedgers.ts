@@ -48,6 +48,7 @@ import type {
 } from '@/lib/stay/stay-availability-vocabulary';
 import { useListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
+import { NO_STAY_TOTALS, stayTotalsOf, type StayTotals } from '@/lib/listings/listing-stay-total';
 import type { ListingLedger, PublicListing } from '@/types/public-listing';
 
 /** Ό,τι απαντά η οθόνη για το **σύνολο** — και τα δύο σύνολα που το στηρίζουν. */
@@ -65,6 +66,12 @@ export interface ResultsLedgers {
   readonly stayQuery: StayQuery | null;
   /** `true` όσο ο διακομιστής υπολογίζει τις απαντήσεις — η γραμμή λέει «υπολογίζεται». */
   readonly stayPending: boolean;
+  /**
+   * **Το σύνολο κάθε διαθέσιμης διαμονής** για τις ημερομηνίες που ρωτήθηκαν
+   * (ADR-777 §8.60.12). Από τις **ίδιες** απαντήσεις που μετρά η λογιστική — κανένα
+   * δεύτερο αίτημα, καμία δεύτερη αριθμητική.
+   */
+  readonly stayTotals: StayTotals;
   /** *«ταιριάζει;»* — η διαμέριση κριτηρίων του `withinScope`. */
   readonly criteriaLedger: ListingCriteriaLedger;
   /** Ρώτησε κανείς κριτήριο; Η γραμμή τυπώνεται μόνο τότε. */
@@ -206,12 +213,18 @@ export function useResultsLedgers(
     return computeStayLedger(visible, answerFor);
   }, [visible, stayQuery, stayAnswers]);
 
+  const stayTotals = useMemo(
+    () => (stayAnswers.kind === 'loaded' ? stayTotalsOf(stayAnswers.answers) : NO_STAY_TOTALS),
+    [stayAnswers],
+  );
+
   return {
     withinScope,
     ledger,
     stayLedger,
     stayQuery,
     stayPending: stayAnswers.kind === 'pending',
+    stayTotals,
     criteriaLedger,
     criteriaAsked,
     areaLedger,
