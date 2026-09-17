@@ -220,6 +220,8 @@
     "test:cde-authority": "jest scripts/__tests__/cde-authority-gate.test.js src/services/iso19650/__tests__/container-read-reach-anchor.test.ts src/services/firestore/__tests__/firestore-read-paths-anchor.test.ts",
     "project-member-authority:report": "node scripts/check-project-member-authority.js",
     "test:project-member-authority": "jest scripts/__tests__/project-member-authority-gate.test.js src/lib/auth/__tests__/project-team-birth-anchor.test.ts",
+    "network-thread-authority:report": "node scripts/check-network-thread-authority.js",
+    "test:network-thread-authority": "jest scripts/__tests__/network-thread-authority-gate.test.js src/services/network-messaging/__tests__/thread-writer.test.ts",
     "sender-authority:report": "node scripts/check-sender-authority.js",
     "test:sender-authority": "jest scripts/__tests__/sender-authority.test.js",
     "listing-read-boundary:report": "node scripts/check-public-listing-read-boundary.js",

@@ -1058,6 +1058,14 @@ if (!process.env.SKIP_CDE_AUTHORITY)
 if (!process.env.SKIP_PROJECT_MEMBER_AUTHORITY)
   addThread('3.88', 'Project member authority', 'scripts/check-project-member-authority.js');
 
+// CHECK 3.89 (ADR-867 Β4) — η αρχή του νήματος. «Γράφει κάποιος ΑΚΡΟΑΤΗΡΙΟ ή ΜΗΝΥΜΑ έξω από
+// τον ΕΝΑ γραφέα, ή αλλάζει ομάδα ΧΩΡΙΣ να ξαναγράψει το ακροατήριο;»
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: το ακροατήριο ΕΙΝΑΙ η απάντηση του κανόνα Firestore στο «ποιος
+// διαβάζει;». Οι κανόνες κλείνουν τον ΠΕΛΑΤΗ, όχι το Admin SDK — δεύτερος γραφέας στον
+// διακομιστή βάζει όποιον θέλει σε ξένη συνομιλία. AST, ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
+  addThread('3.89', 'Network thread authority', 'scripts/check-network-thread-authority.js');
+
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {
