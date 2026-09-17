@@ -45,7 +45,8 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { defineOwnedResource } from '@/lib/api/owned-resource-http';
+import { defineOwnedResource, definePersonalOwnedResource } from '@/lib/api/owned-resource-http';
+import { FILE_COLLECTION } from '@/lib/files/file-custody';
 
 /**
  * ⚠️ Το κείμενο είναι **ακριβώς** αυτό που έγραφαν και οι τέσσερις διαδρομές
@@ -59,4 +60,18 @@ export const fileResource = defineOwnedResource({
   resourceLabel: 'File',
   idLogField: 'fileId',
   notFoundMessage: 'File not found',
+});
+
+/**
+ * «Ανήκει ΑΥΤΟ το **προσωπικό** αρχείο σε **ΑΥΤΟΝ** τον άνθρωπο;» — ADR-866 §2.6.9 Β2.
+ *
+ * 🔑 **Ίδιο κείμενο «δεν βρέθηκε»** με τον εταιρικό πόρο: η διαδρομή απαντά το ίδιο είτε το αρχείο
+ * δεν υπάρχει, είτε είναι άλλου διαμερίσματος, είτε άλλου ανθρώπου — αλλιώς το ίδιο το κείμενο θα
+ * γινόταν μαντείο του διαμερίσματος. **Καμία** παράκαμψη super admin (ο κανόνας τον αποκλείει).
+ */
+export const personalFileResource = definePersonalOwnedResource({
+  collection: COLLECTIONS[FILE_COLLECTION.personal],
+  resourceLabel: 'PersonalFile',
+  idLogField: 'fileId',
+  notFoundMessage: fileResource.notFoundMessage,
 });

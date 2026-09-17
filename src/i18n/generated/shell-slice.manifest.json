@@ -86,7 +86,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a75cb74a7186d173e417bf2af6bda01ad1b80f8fd610c2875908424761eee0df",
+  "inputsSha256": "8057935a5024e0db1a871f130c72509603d62c9f257acf66e8d866dbcd661ff3",
   "languages": [
     "el"
   ],
@@ -6614,7 +6614,7 @@
     "src/services/firestore/firestore-read-paths.ts": "b61187d35d1c64e9cc87c259afb09f931daf57fa8c24e7e3ba2a9de15af9f115",
     "src/services/firestore/read-scope-config.ts": "d358b53a9a0706995fc6217a7a401c76eb9dcc5103f3cafdf7476a9c5ad512c3",
     "src/services/firestore/super-admin-active-company.ts": "2a7c67bc723c809cce4afafcf30781507852bf28854d7015cd8719098147ef73",
-    "src/services/firestore/tenant-config.ts": "9e20775808ad6ec9b4d68adc78e47574643f18cf2cb829f7ee6771bb972c013b",
+    "src/services/firestore/tenant-config.ts": "8089490651b333893e6207908391399f979cb63bf50d30f96c324dff106eed6c",
     "src/services/iso19650/container-succession-policy.ts": "a98efc9aadeaae4de00a8b8765a0ee8ef5a30a5989b4e868068b1cdb34a53dfd",
     "src/services/iso19650/container-transition-vocabulary.ts": "07bfac36e780d0ca05d753178fe2e2e2fffc037aa38596a26c2ad680dbc36be4",
     "src/services/iso19650/validators.ts": "d6a8760664498b2bf6fb635a8bcc5be5d3075fe5c3c26f9b7aa0c7cc5fad01de",

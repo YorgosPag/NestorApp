@@ -7,43 +7,34 @@
  * Exports all files and metadata belonging to a user as a JSON manifest
  * with download URLs for the actual files.
  *
+ * 🔑 ADR-866 §2.6.9 Β6 — **ίδιος σαρωτής** με το `gdpr-delete` (`findSubjectFiles`), και τα δύο
+ * διαμερίσματα: ό,τι θα σβηστεί είναι ακριβώς ό,τι δείχνει η εξαγωγή. Κάθε αρχείο φέρει `custody`.
+ *
  * @module api/files/gdpr-export
  * @enterprise ADR-191 Phase 3.5 — GDPR Compliance
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { gdprSubjectRoute, type GdprSubject } from '../_shared/gdpr-subject-route';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
+import { findSubjectFiles } from '@/services/file-record/file-subject-scan';
 
 export const maxDuration = 60;
 
-async function handler(
-  _request: NextRequest,
-  ctx: AuthContext,
-  _cache: PermissionCache,
-): Promise<NextResponse> {
+async function handler(_request: NextRequest, { userId, db: adminDb }: GdprSubject): Promise<NextResponse> {
   try {
-    const userId = ctx.uid;
-    const adminDb = getAdminFirestore();
-    if (!adminDb) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
 
-    // Query all files created by this user
-    const filesSnapshot = await adminDb
-      .collection(COLLECTIONS.FILES)
-      .where(FIELDS.CREATED_BY, '==', userId)
-      .get();
+    // All files of this subject — ΚΑΙ ΤΑ ΔΥΟ διαμερίσματα (ADR-866 §2.6.9 Β6)
+    const subjectFiles = await findSubjectFiles(adminDb, userId);
 
-    const files = filesSnapshot.docs.map((doc) => {
+    const files = subjectFiles.map(({ custody, doc }) => {
       const data = doc.data();
       return {
         id: doc.id,
+        custody,
         displayName: data.displayName ?? null,
         originalFilename: data.originalFilename ?? null,
         contentType: data.contentType ?? null,
@@ -151,4 +142,4 @@ async function handler(
   }
 }
 
-export const POST = withSensitiveRateLimit(withAuth(handler));
+export const POST = withSensitiveRateLimit(gdprSubjectRoute(handler));

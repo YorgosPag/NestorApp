@@ -7,33 +7,27 @@
  * Permanently deletes all file records, comments, shares, and audit entries
  * belonging to a user. Respects legal holds.
  *
+ * 🔑 ADR-866 §2.6.9 Β6 — σαρώνει **και τα δύο** διαμερίσματα (`findSubjectFiles`), και δέχεται
+ * **πολίτη χωρίς οργανισμό** (`withPersonalOrOrgAuth`): το δικαίωμα διαγραφής δεν εξαρτάται από
+ * το αν ο άνθρωπος ανήκει σε εταιρεία.
+ *
  * @module api/files/gdpr-delete
  * @enterprise ADR-191 Phase 3.5 — GDPR Compliance
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { gdprSubjectRoute, type GdprSubject } from '../_shared/gdpr-subject-route';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
 import { deleteStorageObjectForPurge, isFileHeld } from '@/services/file-record/file-purge-helpers';
+import { findSubjectFiles } from '@/services/file-record/file-subject-scan';
 
 export const maxDuration = 60;
 
-async function handler(
-  request: NextRequest,
-  ctx: AuthContext,
-  _cache: PermissionCache,
-): Promise<NextResponse> {
+async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubject): Promise<NextResponse> {
   try {
-    const userId = ctx.uid;
-    const adminDb = getAdminFirestore();
-    if (!adminDb) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
     const { confirmPhrase } = await request.json();
 
     // Safety: require explicit confirmation
@@ -52,15 +46,12 @@ async function handler(
       auditAnonymized: 0,
     };
 
-    // 1. Delete files (respect holds)
-    const filesSnapshot = await adminDb
-      .collection(COLLECTIONS.FILES)
-      .where(FIELDS.CREATED_BY, '==', userId)
-      .get();
+    // 1. Delete files (respect holds) — ΚΑΙ ΤΑ ΔΥΟ διαμερίσματα (ADR-866 §2.6.9 Β6)
+    const subjectFiles = await findSubjectFiles(adminDb, userId);
 
     const filesToPurge: FirebaseFirestore.QueryDocumentSnapshot[] = [];
 
-    for (const fileDoc of filesSnapshot.docs) {
+    for (const { doc: fileDoc } of subjectFiles) {
       const data = fileDoc.data();
       // Skip files with legal/regulatory holds **ή** ενεργή διατήρηση (ΓΚΠΔ άρθρο 17 §3) — ο ΕΝΑΣ κριτής.
       // 🔴 ADR-864 §19: εδώ διαβαζόταν πεδίο `type` ΠΑΝΩ στο hold, ενώ το hold είναι **string** ⇒ κάθε αρχείο
@@ -164,4 +155,4 @@ async function handler(
   }
 }
 
-export const POST = withSensitiveRateLimit(withAuth(handler));
+export const POST = withSensitiveRateLimit(gdprSubjectRoute(handler));

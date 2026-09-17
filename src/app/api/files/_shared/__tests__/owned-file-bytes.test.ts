@@ -44,6 +44,7 @@ import { join } from 'path';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { AuthContext } from '@/lib/auth';
 
 // ⚠️ `let` και όχι `const`: το εργοστάσιο του `jest.mock` ανυψώνεται **πάνω** από
 //    κάθε αρχικοποίηση, και οι συναρτήσεις διαβάζουν τη μεταβλητή σε **χρόνο κλήσης**.
@@ -100,18 +101,16 @@ const BASE_DOC: Record<string, unknown> = {
 };
 
 /** Ταυτότητα **ήδη επαληθευμένη**, με **ρητό** permission. */
-const caller = (over: Record<string, unknown> = {}) =>
-  ({
-    uid: READER,
-    email: 'reader@example.test',
-    companyId: COMPANY,
-    globalRole: 'internal_user',
-    mfaEnrolled: false,
-    isAuthenticated: true,
-    permissions: [VIEW],
-    ...over,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any;
+const caller = (over: Partial<AuthContext> = {}): AuthContext => ({
+  uid: READER,
+  email: 'reader@example.test',
+  companyId: COMPANY,
+  globalRole: 'internal_user',
+  mfaEnrolled: false,
+  isAuthenticated: true,
+  permissions: [VIEW],
+  ...over,
+});
 
 function seedFile(fields: Record<string, unknown> = {}): void {
   fake.seed(COLLECTIONS.FILES, FILE_ID, { ...BASE_DOC, ...fields });
@@ -140,7 +139,7 @@ function seedMember(fields: Record<string, unknown> = {}): void {
 const load = () =>
   loadOwnedFileBytes({
     fileId: FILE_ID,
-    caller: caller(),
+    caller: { custody: 'company', ctx: caller() },
     action: 'download',
     capability: VIEW,
   });
@@ -283,6 +282,92 @@ describe('Α — τρεις εκβάσεις, ποτέ δύο', () => {
     seedFile({ storagePath: '' });
 
     expect((await load()).outcome).toBe('refused');
+  });
+});
+
+// =============================================================================
+// Ι — 🔑 ΤΟ ΠΡΟΣΩΠΙΚΟ ΔΙΑΜΕΡΙΣΜΑ (ADR-866 §2.6.9)
+// =============================================================================
+
+describe('Ι — προσωπικό αρχείο: κάτοχος εγγράφου ΚΑΙ κάτοχος ρίζας Storage', () => {
+  const OWNER = 'uid_owner';
+  const STRANGER = 'uid_stranger';
+  const PERSONAL_PATH = `people/${OWNER}/entities/property/prop_1/domains/legal/categories/deeds/files/${FILE_ID}.pdf`;
+
+  /** Το ελάχιστο προσωπικό έγγραφο — **κανένα** `companyId`, κανένα πεδίο CDE (2β.2). */
+  function seedPersonalFile(fields: Record<string, unknown> = {}): void {
+    const { companyId: _omitted, ...personal } = BASE_DOC;
+    fake.seed(COLLECTIONS.FILES_PERSONAL, FILE_ID, {
+      ...personal,
+      userId: OWNER,
+      createdBy: OWNER,
+      storagePath: PERSONAL_PATH,
+      ...fields,
+    });
+  }
+
+  const loadAs = (uid: string) =>
+    loadOwnedFileBytes({ fileId: FILE_ID, caller: { custody: 'personal', uid }, action: 'download', capability: VIEW });
+
+  it('Ι0 — ο κάτοχος κατεβάζει το δικό του αρχείο (ο παρονομαστής των αρνήσεων)', async () => {
+    seedPersonalFile();
+
+    const result = await loadAs(OWNER);
+
+    expect(result.outcome).toBe('bytes');
+    expect(downloads).toEqual([PERSONAL_PATH]);
+  });
+
+  it('🔴 Ι1 — ΞΕΝΟΣ άνθρωπος ⇒ refused, και το bucket ΔΕΝ αγγίχτηκε', async () => {
+    // ΜΕΤΑΛΛΑΞΗ: `owner.userId === query.uid` → `true` στον προσωπικό κριτή ⇒ κόκκινο.
+    seedPersonalFile();
+
+    expect((await loadAs(STRANGER)).outcome).toBe('refused');
+    expect(downloads).toEqual([]);
+  });
+
+  it('🔴 Ι2 — έγγραφο ΔΙΚΟ μου που δείχνει σε ΞΕΝΗ ρίζα ⇒ refused (δεύτερο τεκμήριο)', async () => {
+    // ΜΕΤΑΛΛΑΞΗ: αφαίρεσε τον έλεγχο `storagePathCustody` ⇒ σερβίρονται bytes άλλου ανθρώπου.
+    seedPersonalFile({ storagePath: `people/${STRANGER}/entities/property/p/domains/d/categories/c/files/x.pdf` });
+
+    expect((await loadAs(OWNER)).outcome).toBe('refused');
+    expect(downloads).toEqual([]);
+  });
+
+  it('Ι3 — έγγραφο δικό μου που δείχνει σε ΕΤΑΙΡΙΚΗ ρίζα ⇒ refused', async () => {
+    seedPersonalFile({ storagePath: `companies/${COMPANY}/files/${FILE_ID}.pdf` });
+
+    expect((await loadAs(OWNER)).outcome).toBe('refused');
+    expect(downloads).toEqual([]);
+  });
+
+  it('Ι4 — έγγραφο με ΔΥΟ κατόχους (companyId + userId) ⇒ κανενός ⇒ refused', async () => {
+    seedPersonalFile({ companyId: COMPANY });
+
+    expect((await loadAs(OWNER)).outcome).toBe('refused');
+    expect(downloads).toEqual([]);
+  });
+
+  it('🔴 Ι5 — εταιρικός καλών (ακόμη και super_admin) ΔΕΝ βρίσκει προσωπικό αρχείο', async () => {
+    // Το διαμέρισμα **δεν** μαντεύεται: εταιρικό αίτημα ψάχνει μόνο στο `files`.
+    seedPersonalFile();
+
+    const result = await loadOwnedFileBytes({
+      fileId: FILE_ID,
+      caller: { custody: 'company', ctx: caller({ globalRole: 'super_admin', uid: OWNER }) },
+      action: 'download',
+      capability: VIEW,
+    });
+
+    expect(result.outcome).toBe('refused');
+    expect(downloads).toEqual([]);
+  });
+
+  it('Ι6 — ΔΙΑΓΡΑΜΜΕΝΟ προσωπικό ⇒ refused (η κοινή ουρά ισχύει και εδώ)', async () => {
+    seedPersonalFile({ isDeleted: true });
+
+    expect((await loadAs(OWNER)).outcome).toBe('refused');
+    expect(downloads).toEqual([]);
   });
 });
 

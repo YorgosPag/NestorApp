@@ -31,8 +31,23 @@
  * ADR-742 §7octies. Γι' αυτό η ένωση γίνεται **τώρα**, με το χέρι, όχι όταν το
  * μετρήσει εργαλείο.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ, ΙΔΙΑ ΣΕΙΡΑ (ADR-866 §2.6.9)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Το **πρώτο** βήμα διαφέρει ανά κάτοχο· η ουρά (αντικείμενο → bytes) είναι **μία**:
+ *
+ * | κάτοχος | «δικό μου;» | «το βλέπω;» |
+ * |---|---|---|
+ * | εταιρεία | `fileResource` (μισθωτής, με bypass super admin) | κριτής δοχείου CDE |
+ * | άνθρωπος | `personalFileResource` (`userId == uid`, **κανένα** bypass) | η **ρίζα Storage** ανήκει στον ίδιο `uid` |
+ *
+ * ⚠️ Ο άνθρωπος **δεν** περνά από κριτή δοχείου: προσωπικό αρχείο δεν έχει φάσεις CDE (Ε-Φ0-1).
+ * Στη θέση του μπαίνει **δεύτερο, ανεξάρτητο τεκμήριο**: έγγραφο με αλλοιωμένο `storagePath` που
+ * δείχνει σε ξένα bytes **δεν** σερβίρεται, ακόμη κι αν το έγγραφο είναι δικό σου.
+ *
  * @module app/api/files/_shared/owned-file-bytes
- * @see app/api/files/_shared/file-ownership — ο φρουρός μισθωτή
+ * @see app/api/files/_shared/file-ownership — ο φρουρός μισθωτή / κατόχου
+ * @see app/api/files/_shared/file-custody-route — η πόρτα που παράγει τον καλούντα
  * @see lib/auth/container-visibility-guard — ο φρουρός ορατότητας δοχείου
  */
 
@@ -42,8 +57,10 @@ import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guar
 import type { ProjectMemberRead } from '@/lib/auth/project-member-read';
 import type { AuthContext, PermissionId } from '@/lib/auth';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { storagePathCustody } from '@/lib/storage/storage-path-custody';
 
-import { fileResource } from './file-ownership';
+import type { FileCustodyCaller } from './file-custody-route';
+import { fileResource, personalFileResource } from './file-ownership';
 
 // =============================================================================
 // ΤΟ ΕΡΩΤΗΜΑ ΚΑΙ Η ΕΚΒΑΣΗ
@@ -61,11 +78,11 @@ interface FileBytesRecord {
 
 export interface OwnedFileBytesQuery {
   readonly fileId: string;
-  /** Η **ήδη επαληθευμένη** ταυτότητα (`withAuth`). */
-  readonly caller: AuthContext;
+  /** Η **ήδη επαληθευμένη** ταυτότητα **και** το διαμέρισμα (`withFileCustodyAuth`). */
+  readonly caller: FileCustodyCaller;
   /** Ποιο μονοπάτι ρώτησε — μπαίνει στα logs ασφαλείας (`'download'`, `'batch-download'`). */
   readonly action: string;
-  /** Η ικανότητα που κρίνει ο φρουρός ορατότητας — **η ίδια** που δηλώνει το σύνορο. */
+  /** Η ικανότητα που κρίνει ο φρουρός ορατότητας — **η ίδια** που δηλώνει το σύνορο (μόνο εταιρεία). */
   readonly capability: PermissionId;
   /** Ανά-**αίτημα** απομνημόνευση μέλους — το batch τη χρειάζεται ζωτικά. */
   readonly cache?: Map<string, ProjectMemberRead>;
@@ -94,8 +111,8 @@ export type OwnedFileBytes =
   | { readonly outcome: 'refused' }
   | { readonly outcome: 'unavailable' };
 
-const REFUSED: OwnedFileBytes = { outcome: 'refused' };
-const UNAVAILABLE: OwnedFileBytes = { outcome: 'unavailable' };
+const REFUSED = { outcome: 'refused' } as const satisfies OwnedFileBytes;
+const UNAVAILABLE = { outcome: 'unavailable' } as const satisfies OwnedFileBytes;
 
 /**
  * Το όνομα παράδοσης, **από το έγγραφο**.
@@ -124,21 +141,39 @@ function ownedFileName(data: FileBytesRecord, fileId: string): string {
  * όπου τα δύο διαβάσματα διαφωνούν.
  */
 export async function loadOwnedFileBytes(query: OwnedFileBytesQuery): Promise<OwnedFileBytes> {
-  const { fileId, caller, action, capability, cache } = query;
+  // (1)+(2) υπάρχει; δικό μου; το βλέπω; — ανά διαμέρισμα, με το «όχι» ως τιμή.
+  const owned =
+    query.caller.custody === 'company'
+      ? await ownedCompanyRecord(query, query.caller.ctx)
+      : await ownedPersonalRecord(query, query.caller.uid);
+  if (owned.outcome !== 'record') return owned;
 
-  // (1) υπάρχει; δικό μου; — **μία** πράξη, με το «όχι» ως τιμή.
-  const owned = await fileResource.load<OwnedFileBytes>({
+  return deliverRecordBytes(owned.data, query.fileId);
+}
+
+/** Το έγγραφο **αφού** κρίθηκε — ή ήδη η άρνηση/βλάβη που θα επιστραφεί αυτούσια. */
+type OwnedRecord =
+  | { readonly outcome: 'record'; readonly data: FileBytesRecord }
+  | Exclude<OwnedFileBytes, { readonly outcome: 'bytes' }>;
+
+/** Εταιρεία: μισθωτής (`fileResource`) **και** ορατότητα δοχείου (Β5) — αμετάβλητα από το Β8. */
+async function ownedCompanyRecord(
+  query: OwnedFileBytesQuery,
+  ctx: AuthContext,
+): Promise<OwnedRecord> {
+  const { fileId, action, capability, cache } = query;
+
+  const owned = await fileResource.load<OwnedRecord>({
     docId: fileId,
-    caller,
+    caller: ctx,
     action,
     refusal: () => REFUSED,
   });
   if (owned.refusal !== undefined) return owned.refusal;
 
-  // (2) το **βλέπω** καν; — ο κριτής του Β5, με την ικανότητα της πράξης.
-  const refusal = await containerVisibilityRefusal<OwnedFileBytes>({
+  const refusal = await containerVisibilityRefusal<OwnedRecord>({
     fileId,
-    caller,
+    caller: ctx,
     action: capability,
     raw: owned.doc.data,
     notFound: () => REFUSED,
@@ -147,8 +182,33 @@ export async function loadOwnedFileBytes(query: OwnedFileBytesQuery): Promise<Ow
   });
   if (refusal !== null) return refusal;
 
-  // (3) υπάρχει αντικείμενο να δοθεί;
+  return { outcome: 'record', data: owned.doc.data as FileBytesRecord };
+}
+
+/**
+ * Άνθρωπος: κάτοχος εγγράφου **και** κάτοχος ρίζας Storage — δύο ανεξάρτητα τεκμήρια, ίδιος `uid`.
+ *
+ * 🔴 Η ρίζα κρίνεται από τον **έναν** απαντητή (`storagePathCustody`), ποτέ με `startsWith`: η
+ * λίστα ριζών και η αντιστοίχισή τους με τους κανόνες ζουν **εκεί** (άγκυρα Κ1).
+ */
+async function ownedPersonalRecord(query: OwnedFileBytesQuery, uid: string): Promise<OwnedRecord> {
+  const owned = await personalFileResource.load<OwnedRecord>({
+    docId: query.fileId,
+    uid,
+    action: query.action,
+    refusal: () => REFUSED,
+  });
+  if (owned.refusal !== undefined) return owned.refusal;
+
   const data = owned.doc.data as FileBytesRecord;
+  const bytesOwner = storagePathCustody(data.storagePath ?? '');
+  if (bytesOwner.kind !== 'user' || bytesOwner.uid !== uid) return REFUSED;
+
+  return { outcome: 'record', data };
+}
+
+/** (3)+(4) Η **κοινή** ουρά: υπάρχει αντικείμενο να δοθεί; — και τα bytes. */
+async function deliverRecordBytes(data: FileBytesRecord, fileId: string): Promise<OwnedFileBytes> {
   if (data.isDeleted === true) return REFUSED;
   if (data.storagePath === undefined || data.storagePath.length === 0) return REFUSED;
 
