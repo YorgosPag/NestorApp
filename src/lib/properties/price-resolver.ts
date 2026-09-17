@@ -87,6 +87,54 @@ export interface PricedPropertyLike {
  */
 export type PriceRole = 'sale' | 'rent' | 'nightly';
 
+/**
+ * **The declared sequence of the roles** — a projection of `OFFER_KINDS`
+ * (`sell → leaseOut → leaseShort`), never an opinion about importance.
+ *
+ * Lives next to {@link PriceRole} because it belongs to the vocabulary, not to any one
+ * screen. It had been declared privately inside `listing-price-markers.ts`, and the
+ * moment a second consumer needed it (ADR-777 §8.60.14, the ordering of the results
+ * list) two copies would have been free to disagree about which class comes first —
+ * on the map and in the list, for the same search.
+ *
+ * ⚠️ `Record<PriceRole, number>` on purpose: a fourth role does **not compile** until
+ * someone says where it sits.
+ */
+export const PRICE_ROLE_ORDER: Readonly<Record<PriceRole, number>> = {
+  sale: 0,
+  rent: 1,
+  nightly: 2,
+};
+
+/**
+ * **The comparability class of an amount** — its role, or the explicit absence of one.
+ *
+ * 🔑 **`'unpriced'` is a CLASS, not a remainder** (ADR-777 §8.60.14). A listing with no
+ * recorded price is neither "the cheapest" nor "the most expensive" — it is **not an
+ * answer to either question**. Two amounts are comparable **iff** they share this class.
+ *
+ * Lives here, next to {@link PriceRole}, because both the **ordering** of the results
+ * list and the **price range filter** ask it — and they live in modules that must not
+ * import each other (`lib/listings` ⇄ `lib/criteria` would be a cycle, CHECK 3.80).
+ */
+export type PriceClass = PriceRole | 'unpriced';
+
+/**
+ * The class of a listing's headline amount.
+ *
+ * ⚠️ **Asks the ONE judge** ({@link resolveDisplayPrice}) — the same one that paints the
+ * price on the card, the popup, the edge indicator and the map plaque. A second source
+ * of role would be a second answer to *«what kind of amount is this?»*, free to disagree
+ * with what the human reads **on the same line**.
+ *
+ * 🔑 Callers that also need the **amount** must not call this and then resolve again:
+ * ask `resolveDisplayPrice` once and read both (see `pricedEntryOf`).
+ */
+export function priceClassOf(input: PricedPropertyLike): PriceClass {
+  const price = resolveDisplayPrice(input);
+  return price.kind === 'priced' ? price.headline.role : 'unpriced';
+}
+
 /** Exactly which field the amount was read from. Never inferred, never guessed. */
 export type PriceSource =
   | 'commercial.askingPrice'

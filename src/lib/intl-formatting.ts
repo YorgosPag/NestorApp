@@ -259,13 +259,10 @@ export const formatPercentage = (value: number, options?: Intl.NumberFormatOptio
   return new Intl.NumberFormat(locale, { ...defaultOptions, ...options }).format(value / 100);
 };
 
-/**
- * Format price with unit (e.g., "EUR1,200/month")
- */
-export const formatPriceWithUnit = (price: number, unit: string, currency: string = 'EUR'): string => {
-  const formattedPrice = formatCurrency(price, currency);
-  return `${formattedPrice}/${unit}`;
-};
+// `formatPriceWithUnit` removed 2026-09-17 (ADR-777 §8.60.13): its only caller was dead, and
+// gluing a caller-supplied unit onto an amount is the pattern that let a price carry the WRONG
+// unit. Amount-with-unit lives in ONE place: `lib/listings/listing-price-label.ts` →
+// `common:priceAmount.*`, keyed by `PriceRole`.
 
 // ============================================================================
 // LIST / COLLATION
