@@ -30,6 +30,7 @@ export type StayDayMeaning =
   | 'check-out-only'  // κλειστή νύχτα, αλλά δέχεται αναχώρηση
   | 'no-arrival'      // ανοιχτή νύχτα, αλλά δεν ξεκινά διαμονή εδώ
   | 'closed'          // μη διαθέσιμη
+  | 'unsynced'        // κανάλι που σώπασε: ΔΕΝ ξέρουμε (ADR-835 §22) — ποτέ «ελεύθερη»
   | 'selected-check-in'
   | 'selected-check-out'
   | 'in-stay';
@@ -54,6 +55,9 @@ export function nextStaySelection(
 
 function meaningWithoutSelection(night: StayPublicNight | undefined): StayDayMeaning {
   if (night === undefined) return 'closed';
+  // 🔴 ΠΡΙΝ από κάθε άλλο νόημα: «δεν επιβεβαιώνεται» δεν είναι ούτε «ανοιχτή που δεν
+  //    ξεκινά διαμονή» ούτε «κλειστή» — είναι **άγνωστη**, και το λέει (Στάδιο Γ).
+  if (night.state === 'unsynced') return 'unsynced';
   if (night.checkInAllowed) return 'check-in';
   if (night.state === 'closed') return night.checkOutAllowed ? 'check-out-only' : 'closed';
   return 'no-arrival';

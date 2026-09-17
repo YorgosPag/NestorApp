@@ -119,6 +119,22 @@ describe('Γ — ό,τι δεν είναι δηλωμένο, δεν ζωγραφ
     expect(publicNightsOf(LISTING, { kind: 'unreadable' }, null, FROM, TO).kind).toBe('unreadable');
   });
 
+  it('🔴 ΚΑΝΑΛΙ ΠΟΥ ΣΩΠΑΣΕ (§22): ελεύθερες → `unsynced`, κλειστές ΜΕΝΟΥΝ κλειστές, καμία επιλογή', () => {
+    const stale = calendarOf(ENTRIES, RULES, 'stale');
+    const view = publicNightsOf(LISTING, stale, null, FROM, TO);
+    if (view.kind !== 'declared') throw new Error('δηλωμένο');
+    const byDay = (date: string) => view.nights.find((night) => night.date === date);
+
+    expect(byDay('2026-09-27')?.state).toBe('unsynced');
+    expect(byDay('2026-09-09')?.state).toBe('closed');
+    // 🔑 Η ισοδυναμία με τη μηχανή κρατά: εκείνη απαντά `unsynced` (μη-`stayable`), και το
+    //    πλέγμα **δεν δέχεται** άφιξη ⇒ ο επισκέπτης δεν μπορεί να επιλέξει ό,τι θα του
+    //    απορριπτόταν.
+    expect(byDay('2026-09-27')?.checkInAllowed).toBe(false);
+    expect(view.nights.every((night) => !night.checkInAllowed)).toBe(true);
+    expect(stayableInView(view.nights, '2026-09-27', '2026-09-30')).toBe(false);
+  });
+
   it('🔴 υπό αίρεση πώληση: ελεύθερες νύχτες γίνονται `conditional`, οι κλειστές μένουν κλειστές', () => {
     const view = publicNightsOf(LISTING, CALENDAR, { conditionalFrom: '2026-10-01' }, FROM, TO);
     if (view.kind !== 'declared') throw new Error('δηλωμένο');

@@ -94,6 +94,13 @@ const DECLARED = (occupied: readonly Occupancy<string>[]): StayCalendar<string> 
   kind: 'declared',
   occupied,
   rules: OPEN_RULES,
+  // Στάδιο Γ (§22): «τα κανάλια μιλούν». Το `stale` έχει δικές του άγκυρες (ομάδα Κ).
+  channels: 'synced',
+});
+/** Το ίδιο ημερολόγιο με **σιωπηλό κανάλι** — ό,τι θα λέγαμε «ελεύθερο» γίνεται `unsynced`. */
+const STALE = (occupied: readonly Occupancy<string>[]): StayCalendar<string> => ({
+  ...DECLARED(occupied),
+  channels: 'stale',
 });
 const UNDECLARED: StayCalendar<string> = { kind: 'undeclared' };
 
@@ -101,10 +108,12 @@ const UNDECLARED: StayCalendar<string> = { kind: 'undeclared' };
 // Α — ΤΟ ΛΕΞΙΛΟΓΙΟ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΠΛΗΡΕΣ
 // =============================================================================
 
-describe('Α — δεκατέσσερα ονόματα, κανένα ορφανό', () => {
-  it('το κλειστό σύνολο έχει ακριβώς δεκατέσσερις τιμές, χωρίς διπλότυπα', () => {
-    expect(STAY_AVAILABILITY_KINDS).toHaveLength(14);
-    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(14);
+describe('Α — δεκαπέντε ονόματα, κανένα ορφανό', () => {
+  it('το κλειστό σύνολο έχει ακριβώς δεκαπέντε τιμές, χωρίς διπλότυπα', () => {
+    // 14 → 15 με το `unsynced` του Σταδίου Γ (§22): κανάλι που σώπασε, **άλλος υπόχρεος**
+    // από το `unreadable` (δικό μας χρέος) ⇒ δικός του κάδος στη λογιστική.
+    expect(STAY_AVAILABILITY_KINDS).toHaveLength(15);
+    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(15);
   });
 
   it('🔴 ΜΟΝΟ `free` και `conditional` επιτρέπουν διαμονή — και ΚΑΝΕΝΑ άλλο', () => {
@@ -115,7 +124,7 @@ describe('Α — δεκατέσσερα ονόματα, κανένα ορφαν�
     const rest = STAY_AVAILABILITY_KINDS.filter(
       (k) => !(STAYABLE_AVAILABILITY_KINDS as readonly string[]).includes(k),
     );
-    expect(rest).toHaveLength(12);
+    expect(rest).toHaveLength(13);
     for (const kind of rest) expect(isStayable(kind)).toBe(false);
   });
 });
@@ -375,6 +384,41 @@ describe('Ζ — `conditional`: ούτε `free`, ούτε `occupied`', () => {
       saleExposureOf(BOTH),
     );
     expect(answer.kind).toBe('occupied');
+  });
+});
+
+// =============================================================================
+// Κ — ΤΑ ΚΑΝΑΛΙΑ ΣΩΠΑΣΑΝ (Στάδιο Γ, §22): ΠΑΥΟΥΜΕ ΝΑ ΥΠΟΣΧΟΜΑΣΤΕ
+// =============================================================================
+
+describe('Κ — `stale` κανάλι: μόνο η ΥΠΟΣΧΕΣΗ υποβαθμίζεται', () => {
+  it('🔴 ό,τι θα ήταν `free` γίνεται `unsynced` — ποτέ «ελεύθερο» για νύχτες που δεν ξέρουμε', () => {
+    expect(stayAvailabilityFor(CALYMMA, QUERY, STALE([]), null)).toEqual({ kind: 'unsynced' });
+  });
+
+  it('🔑 ό,τι ξέρουμε ΠΙΑΣΜΕΝΟ μένει `occupied` — με τη διέξοδό του', () => {
+    const answer = stayAvailabilityFor(
+      CALYMMA, QUERY, STALE([booking('b1', '2026-08-10', '2026-08-17')]), null,
+    );
+    // Χωρίς αυτό, θα πετούσαμε πληροφορία **που έχουμε** και ο επισκέπτης θα ξαναρωτούσε
+    // για νύχτες σίγουρα κρατημένες.
+    expect(answer.kind).toBe('occupied');
+  });
+
+  it('`conditional` (πωλείται) είναι ΕΠΙΣΗΣ υπόσχεση ⇒ `unsynced`', () => {
+    const forSaleToo = listingOf(['sell', 'leaseShort'], STAY_TERMS);
+    expect(
+      stayAvailabilityFor(forSaleToo, QUERY, STALE([]), saleExposureOf(forSaleToo)).kind,
+    ).toBe('unsynced');
+  });
+
+  it('οι άρνησεις όρων ΔΕΝ γίνονται `unsynced` — κρίνονται χωρίς ημερολόγιο', () => {
+    const tooMany: StayQuery = { ...QUERY, guests: 99 };
+    expect(stayAvailabilityFor(CALYMMA, tooMany, STALE([]), null).kind).toBe('over-capacity');
+  });
+
+  it('🔴 και ΔΕΝ ισοπεδώνεται με το `unreadable`: άλλος υπόχρεος, άλλος κάδος', () => {
+    expect(stayAvailabilityFor(CALYMMA, QUERY, { kind: 'unreadable' }, null)).toEqual({ kind: 'unreadable' });
   });
 });
 

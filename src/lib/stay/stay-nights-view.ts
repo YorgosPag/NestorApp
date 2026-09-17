@@ -28,7 +28,7 @@ import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
 import type { PublicListing } from '@/types/public-listing';
 import { STAY_RULE_MAX_NIGHTS, type StayRulesInput } from '@/types/stay-rules';
 
-import type { StayCalendar, StaySaleExposure } from './stay-availability-vocabulary';
+import type { StayCalendar, StayChannelTrust, StaySaleExposure } from './stay-availability-vocabulary';
 import {
   arrivalAllowed,
   bookableUntil,
@@ -42,8 +42,14 @@ import {
 // 1. ΤΟ ΣΧΗΜΑ
 // =============================================================================
 
-/** Η κατάσταση μιας νύχτας για τον ανώνυμο επισκέπτη. */
-export type StayPublicNightState = 'free' | 'closed' | 'conditional';
+/**
+ * Η κατάσταση μιας νύχτας για τον ανώνυμο επισκέπτη.
+ *
+ * 🔴 **`unsynced` (Στάδιο Γ, §22) ΔΕΝ είναι «κλειστή» ούτε «ελεύθερη»**: ένα κανάλι
+ * σώπασε πάνω από το όριο εμπιστοσύνης, άρα **δεν ξέρουμε** αν πουλήθηκε. Η αγορά, στην
+ * ίδια θέση, εξακολουθεί να γράφει «ελεύθερη» — και αυτό **είναι** το overbooking (§6.4).
+ */
+export type StayPublicNightState = 'free' | 'closed' | 'conditional' | 'unsynced';
 
 /** Μία νύχτα του δημόσιου ημερολογίου. */
 export interface StayPublicNight {
@@ -103,6 +109,22 @@ function nightStateOf(
     return 'conditional';
   }
   return 'free';
+}
+
+/** Μπορεί να επιλεγεί αυτή η νύχτα; **Μία** διατύπωση για τα δύο άκρα της επιλογής. */
+function selectable(state: StayPublicNightState): boolean {
+  return state === 'free' || state === 'conditional';
+}
+
+/**
+ * **Ό,τι θα λέγαμε «ελεύθερο» γίνεται `unsynced` όταν ένα κανάλι σώπασε** — και ό,τι
+ * ξέρουμε κλειστό **μένει** κλειστό (Στάδιο Γ, §22).
+ *
+ * 🔑 Ίδια απόφαση με το `syncedAnswer` της μηχανής, από την άλλη άκρη: **μόνο η
+ * υπόσχεση** υποβαθμίζεται, ποτέ η γνώση.
+ */
+function syncedState(state: StayPublicNightState, channels: StayChannelTrust): StayPublicNightState {
+  return channels === 'stale' && selectable(state) ? 'unsynced' : state;
 }
 
 // =============================================================================
@@ -177,7 +199,11 @@ function someStayFits(index: NightIndex, checkIn: string, lastDate: string): boo
 /** Οι νύχτες χωρίς τη σημαία εφικτής άφιξης (βήμα 1 από 2). */
 function draftNights<TSource>(
   listing: PublicListing,
-  calendar: { readonly occupied: readonly Occupancy<TSource>[]; readonly rules: StayRulesInput },
+  calendar: {
+    readonly occupied: readonly Occupancy<TSource>[];
+    readonly rules: StayRulesInput;
+    readonly channels: StayChannelTrust;
+  },
   sale: StaySaleExposure | null,
   from: string,
   to: string,
@@ -190,12 +216,14 @@ function draftNights<TSource>(
   const nights: StayPublicNight[] = [];
   let previous: StayPublicNightState = 'closed';
   for (let date: string | null = from; date !== null && date < to; date = addDaysToDateKey(date, 1)) {
-    const state = nightStateOf(date, closed, bounds, sale);
+    const state = syncedState(nightStateOf(date, closed, bounds, sale), calendar.channels);
     nights.push({
       date,
       state,
-      checkInAllowed: state !== 'closed' && arrivalAllowed(input, date),
-      checkOutAllowed: previous !== 'closed' && departureAllowed(input, date),
+      // 🔑 Μόνο `free`/`conditional` δέχονται άφιξη/αναχώρηση: μια `unsynced` νύχτα δεν
+      //    επιλέγεται — αλλιώς η οθόνη θα υποσχόταν ό,τι η μηχανή αρνείται (§21.5).
+      checkInAllowed: selectable(state) && arrivalAllowed(input, date),
+      checkOutAllowed: selectable(previous) && departureAllowed(input, date),
       minNights: minNightsForArrival(input, base, date, calendar.occupied),
       maxNights: maxNightsForArrival(input, date),
     });

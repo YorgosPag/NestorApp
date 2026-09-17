@@ -4,7 +4,7 @@
 
 import { wholePropertySpace } from '@/lib/spaces/space-ref';
 import { stayCalendarOccupancies, type StayOccupancySource } from '@/lib/stay/stay-rules';
-import type { StayCalendar } from '@/lib/stay/stay-availability-vocabulary';
+import type { StayCalendar, StayChannelTrust } from '@/lib/stay/stay-availability-vocabulary';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 import type { StayBooking } from '@/types/stay-booking';
@@ -73,11 +73,15 @@ export function bookingEntry(id: string, checkIn: string, checkOut: string): Sta
   return { kind: 'booking', booking };
 }
 
+/** Η προεπιλεγμένη πηγή ενός εξωτερικού block στις άγκυρες (ADR-835 §22). */
+export const FEED = 'schf_test_feed';
+
 export function blockEntry(
   id: string,
   from: string,
   to: string,
   source: StayBlockSource = 'owner',
+  feedId: string = FEED,
 ): StayCalendarEntry {
   const block: StayBlock = {
     id,
@@ -87,6 +91,8 @@ export function blockEntry(
     from,
     to,
     source,
+    // Το σύνορο ανάγνωσης επιβάλλει `external` ⇔ πηγή — οι άγκυρες κρατούν το ίδιο.
+    channel: source === 'external' ? { feedId, externalUid: `uid-${id}` } : null,
     note: null,
     createdBy: 'owner_1',
     createdAt: STAMP,
@@ -107,10 +113,13 @@ export function rulesInput(
 export function calendarOf(
   entries: readonly StayCalendarEntry[],
   input: StayRulesInput = rulesInput(),
+  channels: StayChannelTrust = 'synced',
 ): StayCalendar<StayOccupancySource> {
   return {
     kind: 'declared',
     occupied: stayCalendarOccupancies(entries, input.rules.preparationNights),
     rules: input,
+    // Στάδιο Γ (§22): οι άγκυρες του Β κρίνουν ημερολόγιο **με τα κανάλια συγχρονισμένα**.
+    channels,
   };
 }
