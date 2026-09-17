@@ -37,6 +37,7 @@ function headlineOf(answer: StayAvailabilityAnswer, t: (key: string, params?: Re
     case 'terms-unknown': return t('short-stay:answer.terms-unknown');
     case 'unknown': return t('short-stay:answer.unknown');
     case 'unreadable': return t('short-stay:answer.unreadable');
+    case 'unsynced': return t('short-stay:answer.unsynced');
     case 'not-a-stay': return t('short-stay:answer.not-a-stay');
   }
 }

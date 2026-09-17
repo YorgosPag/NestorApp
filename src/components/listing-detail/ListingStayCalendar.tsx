@@ -36,6 +36,7 @@ const CELL_LABEL: Readonly<Record<StayDayMeaning, string>> = {
   'check-out-only': 'short-stay:calendar.cell.check-out-only',
   'no-arrival': 'short-stay:calendar.cell.no-arrival',
   closed: 'short-stay:calendar.cell.closed',
+  unsynced: 'short-stay:calendar.cell.unsynced',
   'selected-check-in': 'short-stay:calendar.cell.selected-check-in',
   'selected-check-out': 'short-stay:calendar.cell.selected-check-out',
   'in-stay': 'short-stay:calendar.cell.in-stay',
@@ -47,6 +48,8 @@ const CELL_TONE: Readonly<Record<StayDayMeaning, string>> = {
   'check-out-only': 'border-dashed border-border bg-muted text-foreground',
   'no-arrival': 'border-border bg-card text-muted-foreground',
   closed: 'border-border bg-muted text-muted-foreground line-through',
+  // «Δεν ξέρουμε»: διαγώνια υπόδειξη + λέξη στο aria-label — ποτέ όψη ελεύθερης μέρας.
+  unsynced: 'border-dashed border-muted-foreground/60 bg-card text-muted-foreground',
   // ⚠️ Κείμενο ΠΟΤΕ με token επιφάνειας (CHECK 3.38): η επιλογή = περίγραμμα + βάρος, όχι αντιστροφή.
   'selected-check-in': 'border-foreground bg-accent font-semibold text-foreground ring-2 ring-foreground',
   'selected-check-out': 'border-foreground bg-accent font-semibold text-foreground ring-2 ring-foreground',

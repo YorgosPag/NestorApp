@@ -27,7 +27,8 @@
       "arrival-not-allowed": "{count} don't allow check-in that day",
       "departure-not-allowed": "{count} don't allow check-out that day",
       "above-max-nights": "{count} with a shorter maximum stay",
-      "not-a-stay": "{count} are not short-stay places"
+      "not-a-stay": "{count} are not short-stay places",
+      "unsynced": "{count} with a channel that is not answering"
     }
   },
   "calendar": {
@@ -52,7 +53,8 @@
       "closed": "{day} — unavailable",
       "selected-check-in": "{day} — your check-in",
       "selected-check-out": "{day} — your check-out",
-      "in-stay": "{day} — within your stay"
+      "in-stay": "{day} — within your stay",
+      "unsynced": "{day} · availability can't be confirmed"
     },
     "minNights": "minimum stay {count, plural, one {# night} other {# nights}}",
     "conditional": "conditional: the property is for sale",
@@ -87,7 +89,8 @@
     "unreadable": "We couldn't check availability. That's our error.",
     "not-a-stay": "This property isn't offered for stays.",
     "checking": "Checking your dates…",
-    "failed": "We couldn't check availability right now."
+    "failed": "We couldn't check availability right now.",
+    "unsynced": "Availability can't be confirmed: one of the host's channels is not answering. Ask the host to confirm before you book."
   },
   "quote": {
     "total": "Total {total} for {count, plural, one {# night} other {# nights}}",
