@@ -39,6 +39,8 @@ import {
   FILE_LIFECYCLE_STATES,
   SYSTEM_IDENTITY,
 } from '@/config/domain-constants';
+import type { CdeReadReach } from '@/config/iso19650-constants';
+import { BIRTH_READ_REACH } from '@/lib/auth/container-read-reach';
 // 🏢 ENTERPRISE (2026-01-31): Direct imports to avoid barrel file
 // The barrel '@/services/upload' re-exports pdf-utils which imports react-i18next
 // This breaks API routes with "createContext is not a function" error
@@ -214,6 +216,8 @@ export interface FileRecordBase {
   lifecycleState?: FileLifecycleState;
   isDeleted?: boolean;
   createdBy: string;
+  // ADR-862 Φ0 Β11 — ο φράχτης του κανόνα· στη γέννηση ΠΑΝΤΑ `BIRTH_READ_REACH`.
+  cdeReadReach: CdeReadReach;
 
   // ADR-845 §9 Ο-13 — η εξουσιοδότηση εξόδου· απουσία = ιδιωτικό, ποτέ «άγνωστο».
   classification?: FileClassification;
@@ -381,6 +385,7 @@ export function buildPendingFileRecordData(
     lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
     isDeleted: false,
     createdBy: input.createdBy,
+    cdeReadReach: BIRTH_READ_REACH,
   };
 
   // 7. Add optional fields only if defined (Firestore rejects undefined)

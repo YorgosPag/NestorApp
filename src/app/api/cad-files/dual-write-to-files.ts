@@ -25,6 +25,7 @@ import {
   type FileCategory,
 } from '@/config/domain-constants';
 import { buildFileDisplayName } from '@/services/upload/utils/file-display-name';
+import { BIRTH_READ_REACH } from '@/lib/auth/container-read-reach';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -188,6 +189,11 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
       // Overwriting storagePath with .scene.json breaks deriveScenePath on the next session reload.
       // 🛡️ displayName WRITE-ONCE (see above): omitted on update → merge preserves it.
       ...(isCreate ? { displayName: generatedDisplayName } : {}),
+      // 🔒 ADR-862 Φ0 Β11 — ο φράχτης του κανόνα, WRITE-ONCE όπως το displayName: με
+      //    `merge: true` ένα άνευ όρων πεδίο θα ΞΑΝΑΝΟΙΓΕ σε όλο το γραφείο σχέδιο που ο
+      //    δημιουργός σφράγισε (WIP ⇒ 'author') σε ΚΑΘΕ auto-save. Μετά τη γέννηση το
+      //    αλλάζει μόνο ο γραφέας κατάστασης (`container-transitions.ts`).
+      ...(isCreate ? { cdeReadReach: BIRTH_READ_REACH } : {}),
       originalFilename: fileName,
       ext: 'dxf',
       contentType: 'application/dxf',

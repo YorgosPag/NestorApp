@@ -26,6 +26,7 @@ import {
   FILE_LIFECYCLE_STATES,
 } from '@/config/domain-constants';
 import { buildFileDisplayName } from '@/services/upload/utils/file-display-name';
+import { BIRTH_READ_REACH } from '@/lib/auth/container-read-reach';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -102,6 +103,8 @@ export async function writeQuoteFileRecord(params: WriteQuoteFileRecordParams): 
       lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
       isDeleted: false,
       createdBy,
+      // ADR-862 Φ0 Β11 — ο φράχτης του κανόνα· χωρίς αυτό η σάρωση θα ήταν αόρατη σε κάθε λίστα.
+      cdeReadReach: BIRTH_READ_REACH,
       ...(uploaderName ? { uploaderName } : {}),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),

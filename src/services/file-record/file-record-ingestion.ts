@@ -27,6 +27,7 @@ import type {
   BuildPendingFileRecordResult,
 } from './file-record-core';
 import { nowISO } from '@/lib/date-local';
+import { BIRTH_READ_REACH } from '@/lib/auth/container-read-reach';
 
 // ============================================================================
 // INGESTION STORAGE PATH
@@ -124,6 +125,7 @@ export function buildIngestionFileRecordData(input: {
     lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
     isDeleted: false,
     createdBy: SYSTEM_IDENTITY.INGESTION_ID,
+    cdeReadReach: BIRTH_READ_REACH,
     source: input.source,
     ingestion,
     entityLabel: `${sourceLabel} Chat ${input.source.chatId || 'unknown'}`,

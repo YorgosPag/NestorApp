@@ -87,6 +87,7 @@ import type {
 import { isGranted } from '@/types/capability-authority';
 
 import { decideCapability } from './authority';
+import { READ_REACH_BY_PHASE } from './container-read-reach';
 
 // =============================================================================
 // ΟΙ ΛΟΓΟΙ — ΠΛΗΡΟΤΗΤΑ ΕΠΙΒΑΛΛΟΜΕΝΗ ΑΠΟ ΤΟΝ ΜΕΤΑΓΛΩΤΤΙΣΤΗ
@@ -359,4 +360,9 @@ export function decideContainerAccess(query: ContainerAccessQuery): ContainerAcc
  * απαντητή, τον {@link decideContainerAccess}. Πίνακας διαβασμένος αλλού είναι
  * ο δεύτερος κριτής που όλο αυτό υπάρχει για να μην γεννηθεί (ADR-749).
  */
-export const CONTAINER_POLICY_TABLES = { AUDIENCE_REACH, ACTION_BY_PHASE } as const;
+export const CONTAINER_POLICY_TABLES = {
+  AUDIENCE_REACH,
+  ACTION_BY_PHASE,
+  // ADR-862 Φ0 Β11 — ο εξωτερικός φράχτης του κανόνα, δίπλα στην πολιτική που περικλείει.
+  READ_REACH_BY_PHASE,
+} as const;
