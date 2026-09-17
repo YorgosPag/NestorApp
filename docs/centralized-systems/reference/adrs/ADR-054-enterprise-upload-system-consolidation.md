@@ -52,6 +52,14 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 
 ## Changelog
 
+### 2026-09-17 — Το έντυπο βεβαίωσης παγώνει σε ρίζα `server-only` (ADR-864 §19)
+
+Το ανέβασμα μένει ο **ένας** αγωγός (`uploadEntityFile`). Όταν ένα ανεβασμένο αρχείο γίνεται **αποδεικτικό** βεβαίωσης,
+ο διακομιστής το **αντιγράφει** σε `mandate-evidence/{ownerPropertyId}/{mevd_*}` (sha256 μέσω `lib/storage/sha256-pass-through.ts`,
+όριο `UPLOAD_LIMITS.MAX_FILE_SIZE`, GCS temporary hold **μετά** την εγγραφή). Αιτία: το πρωτότυπο ζει στο `companies/{agency}/…`
+όπου μέλος της εταιρείας έχει `delete`, και το `FileRecord.hold` δεν επιβάλλεται από κανέναν κανόνα (ανοιχτό, ADR-864 §19.8).
+Το `sha256PassThrough` αντικατέστησε και τα δύο αντίγραφα «`createHash` + `Transform`» του backup.
+
 ### 2026-09-16 — Ο πυρήνας του ανεβάσματος οντότητας έγινε συνάρτηση (ADR-864 §18)
 
 **Αφορμή**: το υπογεγραμμένο έντυπο κλειστής διάθεσης (ADR-864 §18.4 Δ1) χρειάστηκε **τον ίδιο** αγωγό με τον διαχειριστή αρχείων **και** την ταυτότητα του αρχείου (`fileId`), που το `useFileUpload` δεν επέστρεφε.

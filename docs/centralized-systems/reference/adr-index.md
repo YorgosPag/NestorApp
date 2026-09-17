@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 814 ADRs | Last Updated: 2026-09-16
+**📊 Stats**: 815 ADRs | Last Updated: 2026-09-17
 
 ---
 
@@ -847,8 +847,9 @@
 | **ADR-861** | **Ο φορέας της πλατφόρμας** — μία «ταμπέλα» με ιστορικό, και νομικά έγγραφα με εκδόσεις | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — Φ1 ✅ (`5ff914b0`) · Φ2 ✅ (`5aaf6a72`) · **Φ3 ✅ κώδικας + πύλη** (`c2fcaf29` → `018fb9f4` + αυτό το commit, 2026-09-16 — §7)· ⚠️ **εκκρεμούν** τα locales + οι παραγόμενοι τύποι και οι σελίδες `versions/` (η δοκιμαστική περιοχή «Type Safety» ήταν κόκκινη για ξένο λόγο τη στιγμή της αλυσίδας — δες §7) · προϋπόθεση του **ADR-864 Φ3** · Φ4 σχεδιασμένη | 2026-09-15 | Legal & Compliance · SSoT | [📄](./adrs/ADR-861-platform-operator-and-legal-versions.md) |
 | **ADR-862** | Το δίκτυο των επαγγελματιών: **εύρεση · επαφή · συμμετοχή σε υπόθεση · προσφορά** | ✅ 🔵 **ΑΠΟΦΑΣΗ — καμία γραμμή κώδικα** *(N.0.1 Φάση 1)*. ✅ **Όλες οι αποφάσεις Ε-1 … Ε-13 του §10 πάρθηκαν** (Giorgio, 2026-09-16), **κανένα** δηλωμένο ανοιχτό — έτοιμο για **Φ0** | 2026-09-16 | Identity / Collaboration / Marketplace / Authorization | [📄](./adrs/ADR-862-professional-network-case-collaboration.md) |
 | **ADR-863** | Η ΑΠΟΔΟΣΗ ΑΔΕΙΩΝ ΓΙΑ Ο,ΤΙ ΔΙΑΝΕΜΕΤΑΙ | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-863-third-party-attribution.md) |
-| **ADR-864** | Η **κλειστή διάθεση**: ακίνητο που πωλείται **χωρίς δημόσια αγγελία** | ✅ 🟢 **ΣΕ ΥΛΟΠΟΙΗΣΗ**. ✅ **Φ0** (§2.3) · ✅ **Φ1α** (§14) · ✅ **Φ1β** (§15) · ✅ **Φ2** (§16). 🟡 **Φ3 σε εξέλιξη** (§17): Μέρος Α (ADR-861 Φ3 + εγκεκριμένο κείμενο v1) γραμμένο, ΟΧΙ commit · Μέρος Β (συναίνεση στην εντολή) επόμενο. Ανοιχτά: **Ε-5β** (οικόπεδο — Φ4) · **Ε-2γ** (`BuildingPhase` χωρίς γραφέα — Φ7). Προϋπόθεση Φ4-Φ5: **ADR-862 Φ1** | 2026-09-16 | Listings / Marketplace / Privacy / Authorization | [📄](./adrs/ADR-864-private-marketing-off-market-listings.md) |
+| **ADR-864** | Η **κλειστή διάθεση**: ακίνητο που πωλείται **χωρίς δημόσια αγγελία** | ✅ 🟢 **ΣΕ ΥΛΟΠΟΙΗΣΗ**. ✅ **Φ0** (§2.3) · ✅ **Φ1α** (§14) · ✅ **Φ1β** (§15) · ✅ **Φ2** (§16) · ✅ **Φ3** — Μέρος Α (`9081e1f1`) · Β (`0593137e`) · Γ (`a38767fe`, §18) · **Δ** (§19: ρυθμός αιτήματος · «μη μου ξαναστείλετε» · παγωμένο αποδεικτικό + λήψη ιδιοκτήτη — **ΟΧΙ commit**). Ανοιχτά: **Ε-5β** (οικόπεδο — Φ4) · **Ε-2γ** (`BuildingPhase` χωρίς γραφέα — Φ7) · **§19.8** (αποδέσμευση hold · επιβολή `FileRecord.hold`). Προϋπόθεση Φ4-Φ5: **ADR-862 Φ1** | 2026-09-16 | Listings / Marketplace / Privacy / Authorization | [📄](./adrs/ADR-864-private-marketing-off-market-listings.md) |
 | **ADR-865** | Η ΑΠΟΔΕΙΞΗ ΑΝΑΠΤΥΞΗΣ: «γραμμένο» δεν σημαίνει «ανεπτυγμένο» | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-865-deploy-proof-firebase.md) |
+| **ADR-866** | Ο φάκελος του ακινήτου: **ό,τι αφορά το σπίτι μου, σε ένα μέρος — με τον ίδιο κώδικα που χρησιμοποιεί το γραφείο** | ✅ 🔵 **ΑΠΟΦΑΣΗ — καμία γραμμή κώδικα** *(N.0.1 Φάση 1)*. Ανοιχτές αποφάσεις Giorgio: **Ε-1 … Ε-6** (§9) | 2026-09-17 | Files / Identity / Collaboration / Private individual | [📄](./adrs/ADR-866-owner-property-dossier.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

@@ -2,6 +2,20 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **17/09 — ΤΟ `FileRecord.hold` ΔΕΝ ΕΠΙΒΑΛΛΕΤΑΙ ΑΠΟ ΚΑΝΕΝΑΝ ΚΑΝΟΝΑ (εύρημα ADR-864 §19.1 #2)**
+
+  Το πεδίο υπάρχει (`HOLD_TYPES`: `none · legal · regulatory · admin`), το σέβονται **μόνο** διαδρομές διακομιστή
+  (`isFileHeld` · `moveToTrash` · cascade επαφών). **Μετρημένο**: `firestore.rules` `match /files/{fileId}` — ούτε η
+  οριστικοποίηση ούτε ο κάδος ελέγχουν `hold`, και το κλειδί **δεν** είναι στα αμετάβλητα (ο client μπορεί να το
+  μηδενίσει)· `storage.rules` γρ. 168 `allow delete` σε κάθε μέλος της εταιρείας, **χωρίς** ερώτηση για hold.
+  ⇒ ένα `hold: 'legal'` σταματά το cron, **όχι** τον χρήστη. Κανείς δεν γράφει ακόμη hold (γι' αυτό το ADR-864 §19
+  πάγωσε **αντίγραφο** αντί να βασιστεί σε αυτό).
+
+  **Θεραπεία**: (α) `holdUnchanged()` δίπλα στο `cdeCustodyUnchanged()` + άρνηση κάδου σε `hold != 'none'` ·
+  (β) `storage.rules` delete με `firestore.get` του `FileRecord` (ή δήλωση ότι μόνο ο διακομιστής σβήνει) ·
+  (γ) κελιά στη σουίτα `files.rules.test.ts` + CHECK 3.16 · (δ) `file-record-lifecycle.ts` στον `isFileHeld`.
+  ⚠️ **Όλα στο ανοιχτό δέντρο της ADR-862 CDE** (17/09) — ΜΗΝ τα αγγίξεις παράλληλα.
+
 - 🔴 **16/09 — Η ΑΓΚΥΡΑ `ownership-callsite-coverage` ΕΙΝΑΙ ΚΟΚΚΙΝΗ ΣΤΟ HEAD **ΚΑΙ ΑΦΥΛΑΚΤΗ** (εύρημα ADR-862 Φ0 Β7, καταγραφή Β8)**
 
   `src/lib/auth/__tests__/ownership-callsite-coverage-anchor.test.ts` → **19/20**, με **3 αταξινόμητα**:
