@@ -499,6 +499,11 @@ export type UploadPurpose = typeof UPLOAD_PURPOSE[keyof typeof UPLOAD_PURPOSE];
 export const STORAGE_PATH_SEGMENTS = {
   /** Root companies folder */
   COMPANIES: 'companies',
+  /**
+   * Root people folder — ο **προσωπικός** κάτοχος (ADR-866 §5.2). Ίδιο υπόλοιπο σχήμα με το
+   * `companies/`: η ρίζα είναι η αμετάβλητη ταυτότητα του κατόχου, τίποτα άλλο.
+   */
+  PEOPLE: 'people',
   /** Projects subfolder */
   PROJECTS: 'projects',
   /** Entities subfolder */
