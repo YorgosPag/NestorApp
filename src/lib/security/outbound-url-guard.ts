@@ -222,38 +222,144 @@ export type GuardedFetchResult =
  * legitimate metadata document δεν χρειάζεται ανακατεύθυνση.
  */
 export async function fetchGuardedText(raw: string): Promise<GuardedFetchResult> {
-  const check = await validateOutboundUrl(raw);
-  if (!check.ok) return { ok: false, rejection: check.rejection };
+  const result = await fetchGuardedDocument(raw, { accept: 'application/json' });
+  if (!result.ok) return { ok: false, rejection: result.rejection };
+  if (result.notModified) return { ok: false, rejection: 'http_error' };
+  return {
+    ok: true,
+    body: result.body,
+    contentType: result.contentType,
+    cacheControl: result.cacheControl,
+  };
+}
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), OUTBOUND_FETCH_LIMITS.TIMEOUT_MS);
+// ============================================================================
+// ΦΥΛΑΓΜΕΝΟ FETCH, ΠΛΗΡΗΣ ΕΚΔΟΣΗ — ADR-835 §22 (feeds iCal)
+// ============================================================================
 
-  try {
-    const response = await fetch(check.url, {
-      method: 'GET',
-      redirect: 'error',
-      signal: controller.signal,
-      headers: { accept: 'application/json' },
-    });
+/**
+ * Ό,τι διαφέρει από τον καταναλωτή του CIMD. **Ίδιος φρουρός**, άλλα όρια: ένα
+ * ημερολόγιο καναλιού είναι εκατοντάδες KB και τα OTA είναι αργά (5s/64KB θα έκοβε
+ * νόμιμα feeds), και η δημοσκόπηση θέλει **conditional GET**.
+ */
+export interface GuardedFetchOptions {
+  readonly timeoutMs?: number;
+  readonly maxBytes?: number;
+  readonly accept?: string;
+  readonly ifNoneMatch?: string | null;
+  readonly ifModifiedSince?: string | null;
+  /**
+   * Πόσες ανακατευθύνσεις ακολουθούνται — **με πλήρη επανέλεγχο κάθε άλματος**
+   * (προεπιλογή `0`, δηλαδή η αυστηρή συμπεριφορά του CIMD).
+   */
+  readonly maxRedirects?: number;
+}
 
-    if (!response.ok) return { ok: false, rejection: 'http_error' };
-
-    const declared = Number(response.headers.get('content-length') ?? '0');
-    if (declared > OUTBOUND_FETCH_LIMITS.MAX_BYTES) return { ok: false, rejection: 'too_large' };
-
-    const body = await response.text();
-    if (body.length > OUTBOUND_FETCH_LIMITS.MAX_BYTES) return { ok: false, rejection: 'too_large' };
-
-    return {
-      ok: true,
-      body,
-      contentType: response.headers.get('content-type') ?? '',
-      cacheControl: response.headers.get('cache-control') ?? '',
+export type GuardedDocumentResult =
+  | {
+      readonly ok: true;
+      readonly notModified: false;
+      readonly status: number;
+      readonly body: string;
+      readonly contentType: string;
+      readonly cacheControl: string;
+      readonly etag: string | null;
+      readonly lastModified: string | null;
+    }
+  | { readonly ok: true; readonly notModified: true; readonly status: 304 }
+  | {
+      readonly ok: false;
+      readonly rejection: OutboundUrlRejection | 'http_error' | 'too_large' | 'timeout' | 'too_many_redirects';
+      /** Ο κωδικός HTTP όταν υπήρξε απάντηση — «404» και «500» ζητούν **άλλη** πράξη. */
+      readonly status: number | null;
     };
-  } catch (error) {
-    const aborted = error instanceof Error && error.name === 'AbortError';
-    return { ok: false, rejection: aborted ? 'timeout' : 'http_error' };
-  } finally {
-    clearTimeout(timer);
+
+const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
+
+function headersFor(options: GuardedFetchOptions): Record<string, string> {
+  const headers: Record<string, string> = { accept: options.accept ?? '*/*' };
+  if (options.ifNoneMatch !== null && options.ifNoneMatch !== undefined) {
+    headers['if-none-match'] = options.ifNoneMatch;
   }
+  if (options.ifModifiedSince !== null && options.ifModifiedSince !== undefined) {
+    headers['if-modified-since'] = options.ifModifiedSince;
+  }
+  return headers;
+}
+
+async function readBounded(response: Response, maxBytes: number): Promise<string | null> {
+  const declared = Number(response.headers.get('content-length') ?? '0');
+  if (declared > maxBytes) return null;
+  const body = await response.text();
+  return Buffer.byteLength(body, 'utf-8') > maxBytes ? null : body;
+}
+
+function documentOf(response: Response, body: string): GuardedDocumentResult {
+  return {
+    ok: true,
+    notModified: false,
+    status: response.status,
+    body,
+    contentType: response.headers.get('content-type') ?? '',
+    cacheControl: response.headers.get('cache-control') ?? '',
+    etag: response.headers.get('etag'),
+    lastModified: response.headers.get('last-modified'),
+  };
+}
+
+/**
+ * **Κατεβάζει έγγραφο από URL τρίτου** με όλα τα στρώματα ενεργά, ονομασμένο `304`, και
+ * **επανέλεγχο σε κάθε ανακατεύθυνση**.
+ *
+ * 🔑 Γιατί επιτρέπονται καθόλου ανακατευθύνσεις εδώ, ενώ το CIMD τις απαγορεύει: τα
+ * feeds των καναλιών **μετρημένα** ανακατευθύνουν (περιφερειακά domains, κανονικοποίηση
+ * διαδρομής). Η άρνηση θα σήμαινε «ο σύνδεσμός σου δεν δουλεύει» για σωστό σύνδεσμο.
+ *
+ * ⚠️ Η ασφάλεια μένει ακέραιη επειδή **κάθε άλμα** περνά ξανά από `validateOutboundUrl`
+ * (συντακτικό + DNS): δεν είναι «ακολουθώ ανακατεύθυνση», είναι «κάνω **νέο** φυλαγμένο
+ * αίτημα στη νέα διεύθυνση». Το υπόλοιπο TOCTOU της κεφαλίδας ισχύει αυτούσιο.
+ */
+export async function fetchGuardedDocument(
+  raw: string,
+  options: GuardedFetchOptions = {},
+): Promise<GuardedDocumentResult> {
+  const maxBytes = options.maxBytes ?? OUTBOUND_FETCH_LIMITS.MAX_BYTES;
+  const timeoutMs = options.timeoutMs ?? OUTBOUND_FETCH_LIMITS.TIMEOUT_MS;
+  const hops = options.maxRedirects ?? 0;
+
+  let target = raw;
+  for (let hop = 0; hop <= hops; hop += 1) {
+    const check = await validateOutboundUrl(target);
+    if (!check.ok) return { ok: false, rejection: check.rejection, status: null };
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(check.url, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: headersFor(options),
+      });
+
+      if (response.status === 304) return { ok: true, notModified: true, status: 304 };
+      if (REDIRECT_CODES.has(response.status)) {
+        const location = response.headers.get('location');
+        if (location === null) return { ok: false, rejection: 'http_error', status: response.status };
+        target = new URL(location, check.url).toString();
+        continue;
+      }
+      if (!response.ok) return { ok: false, rejection: 'http_error', status: response.status };
+
+      const body = await readBounded(response, maxBytes);
+      if (body === null) return { ok: false, rejection: 'too_large', status: response.status };
+      return documentOf(response, body);
+    } catch (error) {
+      const aborted = error instanceof Error && error.name === 'AbortError';
+      return { ok: false, rejection: aborted ? 'timeout' : 'http_error', status: null };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return { ok: false, rejection: 'too_many_redirects', status: null };
 }
