@@ -3,7 +3,8 @@
 // Card Compositions (using BaseCard)
 export * from './ContactCard';
 export * from './NotificationCard';
-export * from './StorageCard';
+// StorageCard removed 2026-09-17 (ADR-777 §8.60.13): zero importers, and it printed the
+// flat `price` as «…/μήνα» — a monthly unit invented for a figure nobody declared monthly.
 // PropertyCard removed 2026-08-09 (ADR-777 Α6): dead duplicate of the live
 // features/property-grid card — zero importers, and it read the @deprecated
 // flat `price` field. The live card resolves via lib/properties/price-resolver.
