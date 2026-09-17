@@ -56,7 +56,12 @@ import {
   type ContainerTransitionOutcome,
   type ContainerTransitionRequest,
 } from '@/services/iso19650/container-transitions';
-import { fileResource } from '../../_shared/file-ownership';
+// Οι δύο απαντήσεις + η φόρτωση ζουν ΜΙΑ φορά (N.18) — κοινές με `versions` και `versions/promote`.
+import {
+  authorityUnavailableResponse,
+  fileNotFoundResponse,
+  loadOwnedFile,
+} from '../../_shared/container-route-responses';
 
 type Segment = { params: Promise<{ fileId: string }> };
 
@@ -69,16 +74,6 @@ const CONTAINER_ACTS: readonly ContainerAct[] = ['share', 'seal', 'release', 'wi
 function isContainerAct(value: unknown): value is ContainerAct {
   return typeof value === 'string' && (CONTAINER_ACTS as readonly string[]).includes(value);
 }
-
-/**
- * Το **ένα** «δεν βρέθηκε» αυτής της διαδρομής (ADR-742 §7.1).
- *
- * ⚠️ Το καλούν **και οι δύο** κλάδοι — γνήσια απουσία **και** ξένος μισθωτής — με
- * **μηδέν ορίσματα**: δεν υπάρχει τιμή που θα μπορούσε να τους διαφοροποιήσει, άρα ο
- * αιτών δεν μπορεί να χρησιμοποιήσει τη διαδρομή ως **μαντείο ύπαρξης**.
- */
-const fileNotFoundResponse = (): NextResponse =>
-  NextResponse.json({ error: fileResource.notFoundMessage }, { status: 404 });
 
 /**
  * **Η έκβαση → HTTP.** Η άρνηση πολιτικής είναι **403 με όνομα**, ποτέ 500.
@@ -101,16 +96,6 @@ function toResponse(outcome: ContainerTransitionOutcome): NextResponse {
 
   return NextResponse.json({ success: true, ...outcome }, { status: 200 });
 }
-
-/**
- * Η **αυθεντία δεν απάντησε** — 503, ποτέ «δεν επιτρέπεσαι».
- *
- * 🔴 *Άγνωστο ≠ κενό* (N.12). Ένα 403/404 εδώ θα έλεγε στον μηχανικό «δεν
- * συμμετέχεις σε αυτή την υπόθεση» επειδή **έπεσε το δίκτυο** — και θα τον
- * έστελνε να ζητήσει δικαιώματα που **έχει**. Το 503 λέει την αλήθεια: *ξαναδοκίμασε*.
- */
-const authorityUnavailableResponse = (): NextResponse =>
-  NextResponse.json({ success: false, error: 'authority-unavailable' }, { status: 503 });
 
 /**
  * Το αίτημα προς τον γραφέα, από **ήδη επαληθευμένη** ταυτότητα και κριμένο σώμα.
@@ -162,12 +147,7 @@ async function handlePost(
 
   // 🔒 Ο PEP: φόρτωσε → υπάρχει; → δικό μου; σε **μία** πράξη, με το «όχι» αυτής της
   //    διαδρομής. Το **ΥΠΑΡΧΟΝ** εργοστάσιο — καμία νέα μηχανή απομόνωσης (ADR-742).
-  const owned = await fileResource.load({
-    docId: fileId,
-    caller: ctx,
-    action: 'cde',
-    refusal: fileNotFoundResponse,
-  });
+  const owned = await loadOwnedFile(fileId, ctx, 'cde');
   if (owned.refusal) return owned.refusal;
 
   // 🔒 Ο δεύτερος φρουρός: **βλέπει** καν αυτό το δοχείο; (ADR-862 Φ0 Β7→Β8)
