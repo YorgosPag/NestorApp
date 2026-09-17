@@ -29,12 +29,14 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 import { extractUidFromPath } from '@/lib/api/route-helpers';
 import {
   failWithLoggedError,
   parseJsonBody,
   prepareMemberMutation,
 } from '@/lib/api/role-management-helpers';
+import { transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-writer';
 
 const logger = createModuleLogger('RoleManagement:UserStatus');
 
@@ -108,12 +110,42 @@ export const PATCH = withSensitiveRateLimit(
           updatedBy: ctx.uid,
         });
 
+        // 3. 🏆 ADR-867 §4.3 / ADR-834 §5 Β (ε) — **ΚΑΝΕΝΑ ΟΡΦΑΝΟ ΝΗΜΑ, ΠΟΤΕ.**
+        //
+        // 🔴 Η **αναστολή ΕΙΝΑΙ η αποχώρηση** σε αυτό το σύστημα: κανείς δεν σβήνει
+        //    `workspace_members` (μετρημένο, ADR-867 §8 #5). Άρα εδώ — και **μόνο** εδώ —
+        //    είναι η στιγμή που ένας υπεύθυνος πράξης παύει να μπορεί να απαντήσει.
+        // 🔑 Η ευθύνη **παράγεται ξανά** (επόμενο μέλος, αλλιώς ο διαχειριστής που έκανε
+        //    την πράξη) — Salesforce/HubSpot/Zendesk/Follow Up Boss απαιτούν χειροκίνητο
+        //    βήμα και μέχρι τότε το νήμα είναι ορφανό.
+        // ⚠️ **Δεν ρίχνει την αναστολή**: ο λογαριασμός είναι ήδη κλειδωμένος και αυτό
+        //    είναι το επείγον. Αποτυχία εδώ αφήνει ομάδες με ανενεργό υπεύθυνο — ονομαστικά
+        //    στο log, και το backfill τις ξαναβρίσκει.
+        let transferredTeams = 0;
+        if (isSuspend) {
+          try {
+            const transfer = await transferActTeamsOnDeparture(prepared.value.db, {
+              companyId: ctx.companyId,
+              departingUid: targetUid,
+              fallbackUid: ctx.uid,
+              nowISO: nowISO(),
+            });
+            transferredTeams = transfer.transferred;
+          } catch (error) {
+            logger.error('[ACT-TEAM] Η μεταβίβαση ευθύνης απέτυχε — η αναστολή ΕΓΙΝΕ', {
+              targetUid,
+              companyId: ctx.companyId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
         // Audit logging
         const auditAction = isSuspend ? 'user_suspended' : 'user_activated';
         await logAuditEvent(ctx, auditAction, targetUid, 'user', {
           previousValue: { type: 'status', value: currentStatus },
           newValue: { type: 'status', value: newStatus },
-          metadata: { reason: body.reason },
+          metadata: { reason: body.reason, transferredActTeams: transferredTeams },
         });
 
         logger.info('User status changed', {

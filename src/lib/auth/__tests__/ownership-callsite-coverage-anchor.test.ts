@@ -148,18 +148,24 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   'lib/firestore/soft-delete-engine.ts',
   'services/ai-pipeline/tools/tool-tenant-guard.ts',
   'services/banking/bank-accounts-server.service.ts',
-  // ADR-862 Φ0 Β10 — μισθωτής του ΔΙΑΔΟΧΟΥ· ξένο/κενό ⇒ `successor-not-found`
-  // (container-supersession-anchor Α20.4).
-  'services/iso19650/container-succession-policy.ts',
   // ADR-862 Φ0 Β14 — κάθε κρίκος οντότητα → κτίριο → έργο ανήκει στον μισθωτή του ΑΡΧΕΙΟΥ·
   // ξένο/κενό ⇒ `chain-broken` (project-team-birth-anchor Α30.5, μετάλλαξη M7).
   'lib/files/container-project.ts',
-  // ADR-862 Φ0 Β6 — ο ΕΝΑΣ γραφέας κατάστασης· ξένο/κενό ⇒ `tenant-mismatch`
-  // (container-transitions-anchor Α17.12). Ταξινομήθηκε στο Β14 (προϋπήρχε αταξινόμητο).
-  'services/iso19650/container-transition-policy.ts',
-  // ADR-862 Φ0 Β10 — η στοίβα εκδόσεων· ξένο ⇒ `null` ⇒ `not-found`
-  // (version-promotion-anchor «ξένος μισθωτής»). Ταξινομήθηκε στο Β14 (προϋπήρχε αταξινόμητο).
-  'services/iso19650/version-stack.ts',
+  //
+  // 🗂️ **ΑΦΑΙΡΕΘΗΚΑΝ ΤΡΙΑ — ΟΧΙ ΣΙΩΠΗΛΑ** (ADR-866 βήμα 2β.3β, 2026-09-17):
+  //     `services/iso19650/container-succession-policy.ts`
+  //     `services/iso19650/container-transition-policy.ts`
+  //     `services/iso19650/version-stack.ts`
+  // Δεν **έφυγαν** από τον έλεγχο ιδιοκτησίας: **άλλαξαν πρωτογενές**. Το `isPayloadOwnedByCompany`
+  // ρωτά *«ανήκει σε αυτή την ΕΤΑΙΡΕΙΑ;»* και ο ιδιώτης δεν έχει εταιρεία (ADR-787 Ε-3 §3), οπότε
+  // τα τρία πέρασαν στο `isOwnedByCustody` (`lib/workspace/custody-scope`) — τη **γενίκευσή** του
+  // στα δύο διαμερίσματα, με την **ίδια** παγίδα του κενού και **διαμέρισμα πριν την ταυτότητα**.
+  // ⚠️ Αυτή η σάρωση μετρά καλούντες του `isPayloadOwnedByCompany`· μένοντας εδώ θα κοκκίνιζαν ως
+  //    **μπαγιάτικες** καταχωρήσεις. Η κάλυψή τους ζει στο `custody-scope.test.ts` **Α2.ε** (11
+  //    περιπτώσεις, incl. ταυτόσημα ids σε **άλλο** διαμέρισμα) + `container-personal-custody-anchor`
+  //    **Α34.4/Α34.5** + `container-supersession-anchor` Α20.4 + `container-transitions-anchor` Α17.12.
+  // 🔶 Όταν το `isOwnedByCustody` αποκτήσει **δικό του** μητρώο σημείων κλήσης, οι τρεις γραμμές
+  //    μετακινούνται εκεί — δεν ξαναγράφονται εδώ.
   'services/sharing/resolver-core/share-entity-access.ts',
   'subapps/procurement/services/rfq-service.ts',
 ];

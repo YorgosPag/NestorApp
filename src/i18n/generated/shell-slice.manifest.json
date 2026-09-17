@@ -41,7 +41,7 @@
     "src/i18n/generated/routes/pro.el.json": "424bf8260b7ccd8fcd692f23a9b62d7c74460686e4555fd27b6a4cdc3302f926",
     "src/i18n/generated/routes/pro__alias.el.json": "27ab5d16fb217baec1093b5c4ab05aeecff6b549821b1d6ae7ecea354d0d81ce",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
-    "src/i18n/generated/routes/search__results.el.json": "3041007124c10ffbbf99db5687b8ad189b4de897e743ee175c209f3eb8eb6a1e",
+    "src/i18n/generated/routes/search__results.el.json": "488011163641708f0d6c0841b09278ae4555cee3a865071b0a064754db9a9737",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/terms__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/terms__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
@@ -86,7 +86,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0ca166c5bc8b8406fd703f55f644c68ab7e83906fcb7a07c6b92e66ebed011f7",
+  "inputsSha256": "cea9de0dd8f87431095bd3d93ba62a9d46e6ec51018bf76d22c7a73116f25bd0",
   "languages": [
     "el"
   ],
@@ -367,10 +367,12 @@
     "src/components/search-results/filters/CriterionRangeField.tsx": "776945fa4db9ca6d8821c066f26d83d50914b157d42da5eb5745533fc17bdf87",
     "src/components/search-results/filters/CriterionValueSetField.tsx": "13fde2d998094d5f9721612cc2a41653402924c0e892ff07ca16d64623ca0947",
     "src/components/search-results/filters/CriterionValueSetPopover.tsx": "ff5b9c4c423cf4126be414653e605e6eaf4644bd45b9ad05a7261f562df5410b",
-    "src/components/search-results/filters/PrimaryFilterBar.tsx": "0531fe3b7190a9699c117fcb1916f75aeac26042e86895f892fc3197c5a786f0",
+    "src/components/search-results/filters/PrimaryFilterBar.tsx": "ef91afa53991e52b70a2def16bb46483625b9900674d9a6656fe7373a4fc1353",
     "src/components/search-results/filters/ResultsOrderSelect.tsx": "62d37ebca26203ba231ec1f1d6889c8454b119216881577cefc011f1a567803e",
+    "src/components/search-results/filters/RetiredPriceParamNotice.tsx": "f741f91b19bf2801d40f631c02d1a49e729b3dd8f311f17542be9d44ed4564ba",
     "src/components/search-results/filters/criteria-filter-groups.ts": "f729b194f60343971fa7ddb9123afab137dc3b0a157b6e118e932f7ed0fe8027",
     "src/components/search-results/filters/use-filter-commit.ts": "e515bf1af66ae87e2178db4e92406edf02ca845b806bf7bb51de08001615606a",
+    "src/components/search-results/filters/visible-price-axes.ts": "0e594d94ed5f1fa602542486124481b6aa5966105406b6bca39a39d7d787fa86",
     "src/components/search-results/results-map-area.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/components/search-results/results-map-contract.ts": "43b8bd6d5a3c2dd1e86017af623fb3342c2d7719279e4dd40a4413f8b080d572",
     "src/components/seo/JsonLdScript.tsx": "d6ebc0f4bf11cef68cb9d797ffad5990afb1ec76a3dc6930530cfdee4cd9a02e",
@@ -5686,6 +5688,7 @@
             "filters.moreActive",
             "filters.option.undeclared",
             "filters.price.needOffer",
+            "filters.price.retired",
             "filters.range.max",
             "filters.range.maxLabel",
             "filters.range.min",
@@ -6793,7 +6796,7 @@
     "matchedKeys": 177,
     "routeBoundaries": 0,
     "shellFiles": 713,
-    "sliceBytes": 520402
+    "sliceBytes": 520543
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

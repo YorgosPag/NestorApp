@@ -51,6 +51,7 @@
 import { createModuleLogger } from '@/lib/telemetry';
 import { isRoleBypass } from './roles';
 import { isPayloadOwnedByCompany, type MaybeTenantOwned } from './tenant-ownership';
+import { custodyScopeFromData } from '@/lib/workspace/custody-scope';
 
 /** Ό,τι χρειάζεται η απόφαση από τον καλούντα. Κάθε `AuthContext` το ικανοποιεί. */
 export interface ResourceAccessCaller {
@@ -146,6 +147,47 @@ export function createOwnershipDecision(resourceLabel: string, idLogField: strin
         [companyLogField]: data?.companyId ?? null,
       },
     );
+    return 'denied';
+  };
+}
+
+// =============================================================================
+// Ο ΠΡΟΣΩΠΙΚΟΣ ΚΑΤΟΧΟΣ — ΑΛΛΗ ΕΡΩΤΗΣΗ, ΟΧΙ ΚΛΑΔΟΣ ΤΗΣ ΠΑΡΑΠΑΝΩ (ADR-866 §2.6.9 Β2)
+// =============================================================================
+
+/** Ό,τι ρωτά ο προσωπικός κριτής — **μόνο** `uid`, καμία εταιρεία, κανένας ρόλος. */
+export interface PersonalResourceAccessQuery {
+  /** Το φορτίο **όπως βγήκε από τη βάση** — ποτέ στενεμένο (§7.5). */
+  readonly data: Readonly<Record<string, unknown>> | null | undefined;
+  /** Η **ήδη επαληθευμένη** ταυτότητα — ποτέ τιμή από το αίτημα. */
+  readonly uid: string;
+  readonly resourceId: string;
+  readonly action: string;
+}
+
+/**
+ * Φτιάχνει την απόφαση για πόρο με **ανθρώπινο** κάτοχο (`{ userId }`, ADR-866 §5.2).
+ *
+ * 🔴 **Καμία παράκαμψη ρόλου — ούτε super admin.** Ο κανόνας του διαμερίσματος αποκλείει ρητά τον
+ * υπερδιαχειριστή (άγκυρα Α3)· ένα bypass εδώ θα έδινε μέσω διακομιστή ό,τι ο κανόνας αρνείται —
+ * το ίδιο δόγμα με το `judgeStorageCustody`. Γι' αυτό είναι **χωριστή** συνάρτηση και όχι κλάδος
+ * του {@link createOwnershipDecision}: εκείνος κληρονομεί το bypass εκ κατασκευής.
+ *
+ * 🔑 Ο κάτοχος διαβάζεται από το **κοινό** σύνορο `custodyScopeFromData` («ακριβώς ένας»): έγγραφο
+ * με `companyId` **και** `userId`, ή με κενό `userId`, είναι **κανενός** ⇒ `denied`.
+ */
+export function createPersonalOwnershipDecision(resourceLabel: string, idLogField: string) {
+  const logger = createModuleLogger(`${resourceLabel}Ownership`);
+
+  return function checkPersonalAccess(query: PersonalResourceAccessQuery): ResourceAccessVerdict {
+    const owner = query.data ? custodyScopeFromData(query.data) : null;
+    if (owner?.userId !== undefined && owner.userId === query.uid) return 'owned';
+
+    logger.warn(`PERSONAL CUSTODY VIOLATION — ${resourceLabel.toLowerCase()} access blocked`, {
+      action: query.action,
+      [idLogField]: query.resourceId,
+      uid: query.uid,
+    });
     return 'denied';
   };
 }

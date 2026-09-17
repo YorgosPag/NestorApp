@@ -242,11 +242,28 @@ export function middleware(request: NextRequest) {
   // επόμενη κίνησή του είναι «Αναφορά ως ανεπιθύμητο», μετρημένη εναντίον του domain.
   // Δεν χαλαρώνει τίποτα: το endpoint δέχεται μόνο POST με υπογεγραμμένο token και έχει
   // δικό του όριο ρυθμού (`WEBHOOK`).
+  //
+  // 🔴 ADR-835 §22 — **ΚΑΙ ΤΟ FEED ΤΟΥ ΗΜΕΡΟΛΟΓΙΟΥ (iCal)**. Αυτό το endpoint το
+  // διαβάζουν **μηχανές καναλιών** (Airbnb · Vrbo · Google Calendar · PMS), και οι
+  // δημοσκόποι τους στέλνουν ακριβώς τους user-agents της λίστας (`python-requests`,
+  // `go-http-client`, `axios/`, `java/`, `curl/`).
+  //
+  // ⚠️ **ΜΕΤΡΗΜΕΝΟ ΣΕ ΖΩΝΤΑΝΗ ΔΟΚΙΜΗ (2026-09-17)**: χωρίς αυτή τη γραμμή το feed
+  // απαντούσε **403 από το Edge** — πριν καν τρέξει ο κώδικάς του. Και η βλάβη είναι
+  // **ασύμμετρη**: το κανάλι δεν δείχνει «403» στον οικοδεσπότη· δείχνει «δεν
+  // συγχρονίστηκε», ή σιωπά — δηλαδή οι κρατήσεις μας **δεν** φτάνουν εκεί και το
+  // κανάλι πουλά τις **ίδιες** νύχτες. Καμία δοκιμή jest δεν μπορούσε να το δει: το
+  // middleware δεν τρέχει σε jest.
+  //
+  // Δεν χαλαρώνει τίποτα: η διαδρομή έχει **δική της** ταυτοποίηση (υπογραφή HMAC με
+  // την εμβέλεια και τη γενιά μέσα της — πλαστό token απορρίπτεται χωρίς καμία
+  // ανάγνωση βάσης) και **δικό της** όριο ρυθμού (`HIGH`).
   const isMachineEndpoint =
     pathname.startsWith('/api/communications/webhooks') ||
     pathname.startsWith('/api/mcp') ||
     pathname.startsWith('/api/oauth') ||
     pathname.startsWith('/api/cron/oauth-cleanup') ||
+    pathname.startsWith('/api/stay-ical') ||
     pathname.startsWith(EMAIL_SUBSCRIPTION_API) ||
     pathname.startsWith('/.well-known/oauth-');
 
