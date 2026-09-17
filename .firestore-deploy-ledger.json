@@ -70,6 +70,27 @@
       "digest": "sha256:d88c428db98f913356147089a333f7189f7ba2948e7e119010384c0e411b86f0",
       "source": "firestore.indexes.json",
       "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-09-17",
+      "commit": "dd5bf4ee",
+      "digest": "sha256:6b0691cab93c049d33010af13b8227336e0d29200b8824f2f4d621f926d1c797",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
+    },
+    {
+      "at": "2026-09-17",
+      "commit": "dd5bf4ee",
+      "digest": "sha256:d88c428db98f913356147089a333f7189f7ba2948e7e119010384c0e411b86f0",
+      "source": "firestore.indexes.json",
+      "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-09-17",
+      "commit": "dd5bf4ee",
+      "digest": "sha256:bb78d3978a3245a55263446d35955a49977d21b2c053947e767a22ec113d89c4",
+      "source": "storage.rules",
+      "target": "storage"
     }
   ]
 }
