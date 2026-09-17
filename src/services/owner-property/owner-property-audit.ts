@@ -122,26 +122,42 @@ export async function recordOwnerPropertyWrite(
   });
 }
 
+/** Οι ενέργειες ιστορικού που αφορούν **ένα** παγωμένο αποδεικτικό — μία διατύπωση για όλες (ADR-864 §19-§20). */
+export type OwnerPropertyEvidenceAction = Extract<AuditAction, 'document_accessed' | 'evidence_retention_scheduled' | 'evidence_disposed'>;
+
 /**
- * **Καταγράφει άνοιγμα παγωμένου αποδεικτικού** (ADR-864 §19 · Α34) — το «Viewed» του DocuSign.
+ * **Καταγράφει γεγονός παγωμένου αποδεικτικού**: άνοιγμα (Α34 — το «Viewed» του DocuSign) · κλείδωμα διατήρησης ·
+ * διάθεση (§20 — η απόδειξη διάθεσης του Purview).
  *
  * 🔑 Στο **ίδιο** βιβλίο με τις γραφές της αγγελίας (προσωπικό ή εταιρικό, `auditLedgerScopeOf`): ο
- * ιδιοκτήτης βλέπει στο «Ιστορικό» **ποιος** άνοιξε το έντυπο που βεβαιώθηκε στο όνομά του, και **πότε**.
- * ⚠️ Δεν πετά ποτέ — αποτυχία ίχνους δεν ακυρώνει λήψη που ήδη κρίθηκε.
+ * ιδιοκτήτης βλέπει στο «Ιστορικό» **ποιος** άνοιξε το έντυπο που βεβαιώθηκε στο όνομά του, **πότε**, και
+ * **ως πότε** κρατιέται.
+ * ⚠️ Δεν πετά ποτέ — αποτυχία ίχνους δεν ακυρώνει πράξη που ήδη κρίθηκε.
  */
-export async function recordOwnerPropertyEvidenceAccess(
+export async function recordOwnerPropertyEvidenceEvent(
   property: OwnerProperty,
-  actor: ListingActor,
+  action: OwnerPropertyEvidenceAction,
+  performedBy: string,
   evidence: { readonly id: string; readonly fileName: string },
+  detail: string | null = null,
 ): Promise<void> {
   await EntityAuditService.recordChange({
     entityType: 'owner_property',
     entityId: property.id,
     entityName: property.title.trim() || null,
-    action: 'document_accessed',
-    changes: [{ field: 'evidence', oldValue: null, newValue: evidence.id, label: evidence.fileName }],
-    performedBy: actor.uid,
+    action,
+    changes: [{ field: 'evidence', oldValue: null, newValue: detail === null ? evidence.id : `${evidence.id} · ${detail}`, label: evidence.fileName }],
+    performedBy,
     performedByName: null,
     ...auditLedgerScopeOf(custodyWorkspace(custodyOf(property))),
   });
+}
+
+/** Άνοιγμα αποδεικτικού από δρώντα (Α34). */
+export async function recordOwnerPropertyEvidenceAccess(
+  property: OwnerProperty,
+  actor: ListingActor,
+  evidence: { readonly id: string; readonly fileName: string },
+): Promise<void> {
+  await recordOwnerPropertyEvidenceEvent(property, 'document_accessed', actor.uid, evidence);
 }

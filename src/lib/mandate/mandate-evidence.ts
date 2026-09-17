@@ -27,6 +27,23 @@ export function attestationEvidencePath(ownerPropertyId: string, evidenceId: str
   return `${MANDATE_EVIDENCE_ROOT}/${ownerPropertyId}/${evidenceId}`;
 }
 
+/**
+ * Η αντίστροφη του {@link attestationEvidencePath} — `null` για ό,τι δεν έχει **ακριβώς** το σχήμα της ρίζας.
+ * Τη χρειάζεται η σάρωση του bucket (υιοθεσία, ADR-864 §20), όπου το μόνο που υπάρχει είναι το όνομα.
+ */
+export function parseEvidencePath(path: string): { readonly ownerPropertyId: string; readonly evidenceId: string } | null {
+  const [root, ownerPropertyId, evidenceId, ...rest] = path.split('/');
+  if (root !== MANDATE_EVIDENCE_ROOT || !ownerPropertyId || !evidenceId || rest.length > 0) return null;
+  return { ownerPropertyId, evidenceId };
+}
+
+/** Το ακίνητο ενός αποδεικτικού, από τη διαδρομή που **ο ίδιος** ο διακομιστής έγραψε. */
+export function ownerPropertyIdOfEvidencePath(path: string): string {
+  const parsed = parseEvidencePath(path);
+  if (parsed === null) throw new Error(`Not a mandate evidence path: ${path}`);
+  return parsed.ownerPropertyId;
+}
+
 /** Το αντίγραφο μιας απόδειξης — `null` όταν η απόδειξη δεν έχει (συγκατάθεση · βεβαίωση χωρίς έντυπο). */
 export function evidenceOfProof(proof: MandateProof): AttestationEvidence | null {
   return proof.via === AGENCY_ATTESTATION ? (proof.evidence ?? null) : null;
@@ -46,8 +63,29 @@ export interface EvidenceView {
   readonly fileName: string;
   /** `sha256:…` — ο ιδιοκτήτης το συγκρίνει με το αρχείο που κατέβασε. */
   readonly digest: string;
+  /**
+   * ISO — η **κλειδωμένη** ημερομηνία διατήρησης (ADR-864 §20)· `null` όσο ζει η σχέση (ή πριν το μητρώο το δει):
+   * τότε η οθόνη λέει τον **κανόνα**, όχι ημερομηνία που δεν υπάρχει ακόμη.
+   */
+  readonly retainUntil: string | null;
+  /** ISO — πότε **διατέθηκε** (τα bytes σβήστηκαν, το αποτύπωμα μένει)· `null` όσο υπάρχει. */
+  readonly disposedAt: string | null;
 }
 
-export function evidenceViewOf(evidence: AttestationEvidence): EvidenceView {
-  return { id: evidence.id, fileName: evidence.fileName, digest: evidence.digest };
+/** Ό,τι λέει το μητρώο για ένα αποδεικτικό στην οθόνη. */
+export interface EvidenceRetentionView {
+  readonly retainUntil: string | null;
+  readonly disposedAt: string | null;
+}
+
+/** @param retentionById — από το μητρώο (`services/mandate/evidence-registry.ts`)· απουσία ⇒ ο κανόνας, χωρίς ημερομηνίες. */
+export function evidenceViewOf(evidence: AttestationEvidence, retentionById: ReadonlyMap<string, EvidenceRetentionView> = new Map()): EvidenceView {
+  const retention = retentionById.get(evidence.id);
+  return {
+    id: evidence.id,
+    fileName: evidence.fileName,
+    digest: evidence.digest,
+    retainUntil: retention?.retainUntil ?? null,
+    disposedAt: retention?.disposedAt ?? null,
+  };
 }
