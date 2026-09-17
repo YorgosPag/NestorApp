@@ -44,9 +44,9 @@ import { transitionContainer } from '../container-transitions';
 
 const COMPANY = 'c_alpha';
 const AUTHOR = 'u_author';
-const author = { uid: AUTHOR, companyId: COMPANY, globalRole: 'company_admin' as const };
+const author = { uid: AUTHOR, custody: { companyId: COMPANY }, globalRole: 'company_admin' as const };
 /** Χωρίς καμία ικανότητα CDE — ο γραφέας αρνείται. */
-const viewer = { uid: 'u_viewer', companyId: COMPANY, globalRole: 'company_viewer' as const };
+const viewer = { uid: 'u_viewer', custody: { companyId: COMPANY }, globalRole: 'company_viewer' as const };
 
 const SLOT = { entityType: 'floor', entityId: 'floor_1', domain: 'construction', category: 'floorplans', purpose: 'floor-floorplan' };
 
@@ -116,7 +116,7 @@ describe('Α24.Α — νέα έκδοση στην κορυφή, ποτέ ανά
     // Από την ΠΑΛΑΙΟΤΕΡΗ (δρόμος προς τα εμπρός) ΚΑΙ από την ΚΕΦΑΛΗ (δρόμος προς τα πίσω) — η
     // οθόνη ανοίγει σχεδόν πάντα την τρέχουσα, άρα ο δεύτερος δρόμος ΔΕΝ είναι προαιρετικός.
     for (const from of ['file_v1', successorId]) {
-      const stack = await readVersionStack(COMPANY, from);
+      const stack = await readVersionStack({ companyId: COMPANY }, from);
       expect(stack).toMatchObject({ kind: 'stack', headFileId: successorId });
       expect(stack.kind === 'stack' ? stack.versions.map(v => v.id) : []).toEqual([successorId, 'file_v2', 'file_v1']);
     }
@@ -124,7 +124,9 @@ describe('Α24.Α — νέα έκδοση στην κορυφή, ποτέ ανά
 
   it('ξένος μισθωτής ⇒ not-found, κανένα μαντείο ύπαρξης', async () => {
     seedChain();
-    const stranger = { ...author, companyId: 'c_other' };
+    // ⚠️ Ο ξένος ορίζεται από τον **κάτοχο**, όχι από πεδίο δίπλα του: μετά το ADR-866 ένα
+    //    `companyId` πλάι στο `custody` θα ήταν αδρανές — και το test θα περνούσε ψευδώς.
+    const stranger = { ...author, custody: { companyId: 'c_other' } };
     expect(await promoteVersion({ actor: stranger, sourceFileId: 'file_v1', expectedHeadFileId: 'file_v2' }))
       .toEqual({ kind: 'refused', why: 'not-found' });
   });

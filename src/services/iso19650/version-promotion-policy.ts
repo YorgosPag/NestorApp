@@ -42,6 +42,8 @@
 
 import { FILE_STATUS } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
+import { fileCustodyKey } from '@/lib/files/file-custody';
+import type { CustodyScope } from '@/lib/workspace/custody-scope';
 import type { BuildPendingFileRecordInput } from '@/services/file-record/file-record-core';
 import type { FileRecord } from '@/types/file-record';
 
@@ -78,23 +80,37 @@ const HEAD_POSITION_FIELDS = [
   'entryPointId',
 ] as const satisfies readonly (keyof FileRecord)[];
 
-/** **Ο σπόρος του ντετερμινιστικού αναγνωριστικού** — ίδια αίτηση ⇒ ίδιος διάδοχος. */
-export function promotionSeed(companyId: string, sourceFileId: string, headFileId: string): string {
-  return `version-promotion:${companyId}:${sourceFileId}:${headFileId}`;
+/**
+ * **Ο σπόρος του ντετερμινιστικού αναγνωριστικού** — ίδια αίτηση ⇒ ίδιος διάδοχος.
+ *
+ * 🔑 **Κλειδί κατόχου, ποτέ σκέτο id** (ADR-866 §2.6.10 Β7): το {@link fileCustodyKey} δίνει
+ * `company:<id>` ή `personal:<uid>`, ώστε εταιρεία και άνθρωπος με **συμπίπτοντα** αναγνωριστικά
+ * να μην μπορούν ποτέ να παραγάγουν τον **ίδιο** διάδοχο — ίδιο δόγμα με τα κλειδιά κρυφής μνήμης.
+ */
+export function promotionSeed(owner: CustodyScope, sourceFileId: string, headFileId: string): string {
+  return `version-promotion:${fileCustodyKey(owner)}:${sourceFileId}:${headFileId}`;
 }
 
-/** Η είσοδος του builder: **θέση** από την κεφαλή, **ταυτότητα αρχείου** από την πηγή. */
+/**
+ * Η είσοδος του builder: **θέση** από την κεφαλή, **ταυτότητα αρχείου** από την πηγή.
+ *
+ * 🔑 **Ο κάτοχος απλώνεται ολόκληρος** (`...custody`, ADR-866 §2.6.10 Β7) ⇒ ο **ίδιος** builder
+ * χτυπά το overload **του ανθρώπου** για προσωπικό αρχείο: **κανένα** `companyId`, **κανένα**
+ * πεδίο CDE, και ρίζα Storage `people/{uid}` **δωρεάν** (το `buildStoragePath({ ...custody })`
+ * την παράγει ήδη). Με σκέτο `companyId` ο διάδοχος θα γεννιόταν εταιρικός — ταυτόχρονα
+ * παραβίαση του κανόνα `files_personal` **και** πεδίο CDE σε αρχείο χωρίς φάσεις.
+ */
 export function successorBuilderInput(params: {
   readonly source: FileRecord;
   readonly head: FileRecord;
   readonly successorId: string;
-  readonly companyId: string;
+  readonly custody: CustodyScope;
   readonly actorUid: string;
 }): BuildPendingFileRecordInput {
   const { source, head } = params;
   return {
+    ...params.custody,
     fileId: params.successorId,
-    companyId: params.companyId,
     createdBy: params.actorUid,
     entityType: head.entityType,
     entityId: head.entityId,

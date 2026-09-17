@@ -31,6 +31,7 @@ import { copyPublicFile, discardPublicCopy } from '@/services/storage-admin/publ
 import { FILE_STATUS } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 
+import { isSupersessionDone } from './container-transition-vocabulary';
 import {
   transitionContainer,
   type ContainerActor,
@@ -59,10 +60,10 @@ export type VersionPromotionOutcome =
   | { readonly kind: 'noop'; readonly why: 'already-current' | 'already-promoted' }
   | { readonly kind: 'refused'; readonly why: PromotionPreflightRefusal | ContainerRefusalReason };
 
-/** (4) Ο διάδοχος αυτής της αίτησης — ίδια (μισθωτής, πηγή, κεφαλή) ⇒ ίδιο id. */
+/** (4) Ο διάδοχος αυτής της αίτησης — ίδια (κάτοχος, πηγή, κεφαλή) ⇒ ίδιο id. */
 function successorIdOf(request: VersionPromotionRequest): string {
   return generateDeterministicFileId(
-    promotionSeed(request.actor.companyId, request.sourceFileId, request.expectedHeadFileId),
+    promotionSeed(request.actor.custody, request.sourceFileId, request.expectedHeadFileId),
   );
 }
 
@@ -70,7 +71,7 @@ function successorIdOf(request: VersionPromotionRequest): string {
 async function preflight(
   request: VersionPromotionRequest,
 ): Promise<VersionPromotionOutcome | { readonly kind: 'ready'; readonly source: FileRecord; readonly head: FileRecord }> {
-  const stack = await readVersionStack(request.actor.companyId, request.sourceFileId);
+  const stack = await readVersionStack(request.actor.custody, request.sourceFileId);
   if (stack.kind === 'not-found') return { kind: 'refused', why: 'not-found' };
   // ♻️ Επανάληψη της ΙΔΙΑΣ αίτησης που ήδη πέτυχε: η κεφαλή ΕΙΝΑΙ ο ντετερμινιστικός διάδοχος.
   const successorId = successorIdOf(request);
@@ -102,7 +103,7 @@ export async function promoteVersion(request: VersionPromotionRequest): Promise<
 
   const successorId = successorIdOf(request);
   const { storagePath, recordBase } = buildPendingFileRecordData(
-    successorBuilderInput({ source, head, successorId, companyId: request.actor.companyId, actorUid: request.actor.uid }),
+    successorBuilderInput({ source, head, successorId, custody: request.actor.custody, actorUid: request.actor.uid }),
   );
 
   const copy = await copyPublicFile({
@@ -121,7 +122,7 @@ export async function promoteVersion(request: VersionPromotionRequest): Promise<
     successorBirth: promotedSuccessorRecord({ base: { ...recordBase }, source, head, downloadUrl: copy.url }),
   });
 
-  if (outcome.kind === 'transitioned') {
+  if (isSupersessionDone(outcome)) {
     return { kind: 'promoted', successorId, previousHeadFileId: head.id };
   }
   // Άρνηση ή noop: η γέννηση ΔΕΝ γράφτηκε ⇒ το αντίγραφο μένει claim ⇒ αντιστάθμιση.
