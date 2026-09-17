@@ -90,6 +90,10 @@ import {
   searchDocumentsMatrix,
   voiceCommandsMatrix,
 } from './coverage-matrices-specialized';
+import {
+  networkServerOnlyMatrix,
+  networkThreadMatrix,
+} from './coverage-matrices-network';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,7 +117,13 @@ export type RulesPattern =
   | 'deny_all'             // allow read,write: if false — no client access (Admin SDK only)
   | 'tenant_admin_write'   // tenant-scoped reads, writes restricted to company_admin / super_admin
   | 'bim_authoring'        // ADR-657 AUTHORING tier — read+write = internal-user-of-company; external_user denied all
-  | 'bim_presentation';    // ADR-657 PRESENTATION tier — read tenant-wide (incl. external_user); write = internal-user-of-company
+  | 'bim_presentation'     // ADR-657 PRESENTATION tier — read tenant-wide (incl. external_user); write = internal-user-of-company
+  | 'audience_gated';      // ADR-867 §4.2 — η ανάγνωση κρίνεται από ΥΠΟΣΥΛΛΟΓΗ ΑΚΡΟΑΤΗΡΙΟΥ
+                           // (`exists(.../network_audience/{uid}) && until == null`), ΟΧΙ από πεδίο
+                           // του εγγράφου. ⚠️ ΔΕΝ είναι `ownership` (οι αναγνώστες είναι ΠΟΛΛΟΙ και
+                           // ΑΛΛΑΖΟΥΝ) ούτε `tenant_direct` (οι δύο πλευρές είναι σε ΔΙΑΦΟΡΕΤΙΚΟΥΣ
+                           // χώρους — ένα `belongsToCompany` θα άνοιγε το νήμα σε ΟΛΟ το γραφείο,
+                           // ρητά απαγορευμένο από το ADR-834 §5 Β (γ) ①).
 
 /** One (persona × operation) cell of a collection's coverage matrix. */
 export interface CoverageCell {
@@ -479,6 +489,60 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/stay-calendar-months.rules.test.ts',
     ...serverWrittenAuthorOwnedMatrix(),
+  },
+  {
+    // 💬 ADR-867 §4.3 (Β4) — **Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ**: ποιος του γραφείου απαντά.
+    //
+    // 🔴 Η συλλογή γεννήθηκε στο Β3 **χωρίς κανόνα** — δηλαδή έκλεινε από την προεπιλογή
+    // `default-deny`. Ήταν **σωστή συμπεριφορά με αδήλωτη πρόθεση**: κανείς δεν μπορούσε
+    // να πει αν το «κλειστό» ήταν απόφαση ή παράλειψη, και η CHECK 3.16 **δεν** μπορεί να
+    // δει συλλογή χωρίς `match`. Το Β4 το γράφει ρητά — μαζί με τη μήτρα που το εκτελεί.
+    collection: 'network_act_teams',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/network-act-teams.rules.test.ts',
+    ...networkServerOnlyMatrix(),
+  },
+  {
+    // 🔒 ADR-867 §4.1 (Β4β) — **ΤΟ ΒΙΒΛΙΟ ΤΩΝ ΑΝΑΚΛΗΣΕΩΝ**: το κείμενο που ο άνθρωπος
+    // πήρε πίσω. **Δεύτερος** καταναλωτής του ίδιου προτύπου, και ο λόγος είναι ο ίδιος
+    // με της ομάδας: ό,τι διαβάζεται από πελάτη **παύει να είναι ανάκληση**.
+    //
+    // 🔴 ΤΟ ΚΕΛΙ ΠΟΥ ΜΕΤΡΑΕΙ ΕΙΝΑΙ ΤΟ `same_tenant_user × read → deny`: ο **ίδιος ο
+    // αποστολέας** δεν διαβάζει τα λόγια που ανακάλεσε. Ένα «μα είναι δικά του» θα ήταν
+    // ο ίδιος πειρασμός με το `showcase_mark_sources` — και η ίδια απάντηση: το Firestore
+    // δεν μπορεί να ξεχωρίσει «ο δικός του» από «ο δικός μου» χωρίς να ανοίξει τη διαδρομή.
+    collection: 'network_message_retractions',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/network-message-retractions.rules.test.ts',
+    ...networkServerOnlyMatrix(),
+  },
+  {
+    // 💬 ADR-867 §4.1/§4.2 (Β4) — **ΤΟ ΝΗΜΑ**. Η **μόνη** συλλογή του αρχείου που κρίνει
+    // την ανάγνωση από **υποσυλλογή**, και το `pattern` το λέει: `audience_gated`.
+    //
+    // 🔑 Η υποσυλλογή μηνυμάτων (`network_messages`) και η υποσυλλογή ακροατηρίου
+    // (`network_audience`) ζουν **μέσα** σε αυτό το `match` — άρα καλύπτονται από **αυτή**
+    // την εγγραφή, όπως το `bim_comments/replies`. Τις εκτελεί η σουίτα με δικές τους
+    // άγκυρες (Α4/Α5/Α7), γιατί ο πίνακας των 35 μιλά μόνο για το γονικό έγγραφο.
+    collection: 'network_threads',
+    pattern: 'audience_gated',
+    testFile: 'tests/firestore-rules/suites/network-threads.rules.test.ts',
+    ...networkThreadMatrix(),
+  },
+  {
+    // 🔴 ADR-835 §22 (Στάδιο Γ) — ΤΑ ΚΑΝΑΛΙΑ. **Η μόνη της οικογένειας που είναι
+    // `deny_all`, και ο λόγος είναι το ΠΕΡΙΕΧΟΜΕΝΟ, όχι η αυστηρότητα**: το URL ενός
+    // feed **ΕΙΝΑΙ διαπιστευτήριο** — ο σύνδεσμος `.ics` της Airbnb δίνει σε όποιον τον
+    // έχει ολόκληρο το ημερολόγιο του οικοδεσπότη εκεί.
+    //
+    // ⚠️ Ο πειρασμός εδώ είναι **ιδιοκτησιακός**, ίδιος με το `showcase_mark_sources`:
+    // *«μα είναι ο ΔΙΚΟΣ του σύνδεσμος»*. Και η απάντηση είναι η ίδια: το Firestore δεν
+    // φιλτράρει πεδία σε ανάγνωση εγγράφου, άρα «να δει την κατάστασή του» σημαίνει «να
+    // κατεβάσει το URL». Η οθόνη παίρνει **προβολή** (host + βαθμίδα) από τον διακομιστή.
+    collection: 'stay_channels',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/stay-channels.rules.test.ts',
+    ...denyAllMatrix(),
   },
   {
     collection: 'projects',
@@ -1472,6 +1536,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'workspace_aliases',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/workspace-aliases.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  // ─── ΠΑΓΩΜΕΝΑ ΑΠΟΔΕΙΚΤΙΚΑ ΕΝΤΟΛΗΣ (ADR-864 §20 · §21) ─────────────────────
+  // Το `deny_all` προστατεύει τη **διατήρηση**: όποιος γράφει εδώ μικραίνει το
+  // `retainUntil` ή αίρει νομική δέσμευση, και ο cron σβήνει αποδεικτικό που ο
+  // νόμος απαιτεί. Η ανάγνωση κρίνεται μόνο στον διακομιστή (κριτής σχέσης + ίχνος).
+  {
+    collection: 'mandate_evidence',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/mandate-evidence.rules.test.ts',
     ...denyAllMatrix(),
   },
 ] as const;

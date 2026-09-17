@@ -45,6 +45,14 @@ const config = {
   // με χειρόγραφο αντίγραφο του σχήματος — που μπορεί να αποκλίνει σιωπηλά.
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // 🔴 ADR-867 Β4 — ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ Η ΕΠΕΚΤΑΣΗ ΤΟΥ ΣΧΟΛΙΟΥ ΑΠΟ ΠΑΝΩ:
+    // το πακέτο `server-only` **πετά** σε σκέτο node (`exports.default → index.js`, που κάνει
+    // `throw`) — μόνο το condition `react-server` δίνει κενό module. Κάθε γραφέας διακομιστή
+    // του έργου ξεκινά με `import 'server-only'`, άρα **καμία** σουίτα κανόνων δεν μπορούσε να
+    // εκτελέσει τον ΠΡΑΓΜΑΤΙΚΟ γραφέα — μόνο να μιμηθεί το φορτίο του με το χέρι.
+    // ⚠️ Το ίδιο mock με το `jest.config.js` (SSoT, γραμμή 56): δεύτερο αντίγραφο θα ήταν
+    // δεύτερη απάντηση στο «τι σημαίνει server-only στα tests».
+    '^server-only$': '<rootDir>/src/services/ai-pipeline/tools/__tests__/test-utils/server-only-mock.ts',
   },
   testTimeout: 30000,
   // Emulator state is shared process-wide; always run serially.

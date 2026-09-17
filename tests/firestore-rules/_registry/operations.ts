@@ -51,6 +51,18 @@ export type Reason =
   | 'enum_invalid'          // enum validation (channel/direction/status)
   | 'insufficient_role'     // authed + tenant OK but role below the rule's floor
   | 'not_owner'             // authed + tenant OK, role irrelevant — private doc, only its creator may read (block_library user scope, ADR-652)
+  /**
+   * ADR-867 §4.2 — πιστοποιημένος, **σωστός μισθωτής, ακόμη και διαχειριστής**, αλλά
+   * **δεν έχει ζωντανή γραμμή στο ακροατήριο** του νήματος (καμία γραμμή, ή `until != null`).
+   *
+   * 🔑 **ΔΕΝ είναι `not_owner`, και η διάκριση δεν είναι λεπτολογία**: το `not_owner`
+   * λέει *«ιδιωτικό έγγραφο — μόνο ο συντάκτης του»*, δηλαδή **ΕΝΑΣ** άνθρωπος για
+   * πάντα. Εδώ οι αναγνώστες είναι **πολλοί**, **αλλάζουν** (ομάδα πράξης) και το
+   * δικαίωμα **σφραγίζεται** όταν φύγει κάποιος — ένα νήμα που επιβιώνει της απουσίας
+   * και της αποχώρησης είναι ολόκληρο το ADR-834 §5 Β (ε). Ετικέτα «ιδιοκτήτη» εδώ θα
+   * περιέγραφε **άλλο** μοντέλο από αυτό που τρέχει.
+   */
+  | 'not_audience'
   | 'server_only';          // client write forbidden (server SDK only)
 
 /** All known operations — iteration helper for matrix loops. */
