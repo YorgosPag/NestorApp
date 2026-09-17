@@ -31,6 +31,8 @@ import {
   UserCheck,
   StickyNote,
   FileDown,
+  Lock,
+  FileX,
 } from "lucide-react";
 import type { AuditAction } from "@/types/audit-trail";
 
@@ -184,6 +186,18 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   document_accessed: {
     icon: FileDown,
     labelKey: "audit.actions.document_accessed",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+  },
+  evidence_retention_scheduled: {
+    icon: Lock,
+    labelKey: "audit.actions.evidence_retention_scheduled",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+  },
+  evidence_disposed: {
+    icon: FileX,
+    labelKey: "audit.actions.evidence_disposed",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
   },

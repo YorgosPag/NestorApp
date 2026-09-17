@@ -168,7 +168,12 @@ async function handler(
     },
   );
 
-  await settleAttestationEvidence(evidence, result.write.kind === 'saved');
+  await settleAttestationEvidence(
+    evidence,
+    result.write.kind === 'saved'
+      ? { committed: true, adminDb, agencyCompanyId: authority.companyId, sealedAt: nowISO() }
+      : { committed: false },
+  );
   const response = respondToWrite(result.write);
   if (result.write.kind !== 'saved') return response;
 

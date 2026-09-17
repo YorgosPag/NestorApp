@@ -409,7 +409,8 @@ export class FakeDocRef {
 
   async create(doc: Doc): Promise<void> {
     if (this.bucket.has(this.id)) {
-      throw new Error(`ALREADY_EXISTS: ${this.id}`);
+      // Ο gRPC κωδικός 6, όπως το πραγματικό SDK — ώστε ο γραφέας που κρίνει «υπάρχει ήδη» να δοκιμάζεται (ADR-864 §20).
+      throw Object.assign(new Error(`ALREADY_EXISTS: ${this.id}`), { code: 6 });
     }
     this.bucket.set(this.id, doc);
     this.db.countWrite();

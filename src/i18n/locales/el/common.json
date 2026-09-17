@@ -750,7 +750,9 @@
       "triage_status_changed": "Αλλαγή κατάστασης διαλογής",
       "triage_assigned": "Ανάθεση διαλογής",
       "internal_note_added": "Εσωτερική σημείωση",
-      "document_accessed": "Άνοιγμα αποδεικτικού"
+      "document_accessed": "Άνοιγμα αποδεικτικού",
+      "evidence_retention_scheduled": "Κλείδωμα διατήρησης αποδεικτικού",
+      "evidence_disposed": "Διάθεση αποδεικτικού μετά την προθεσμία"
     },
     "filters": {
       "all": "Όλα",
