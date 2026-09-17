@@ -32,9 +32,9 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/intl-formatting';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
+import { displayPriceLabel } from '@/lib/listings/listing-price-label';
+import { useStayTotal } from './StayTotalsContext';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ListingEdgeIndicatorProps {
@@ -47,6 +47,7 @@ interface ListingEdgeIndicatorProps {
 export function ListingEdgeIndicator({ listing, direction, onActivate }: ListingEdgeIndicatorProps) {
   const { t } = useTranslation(['search-results', 'search-focus']);
   const price = resolveDisplayPrice(listing);
+  const stayTotal = useStayTotal(listing.id);
   const Arrow = direction === 'above' ? ChevronUp : ChevronDown;
 
   return (
@@ -76,9 +77,7 @@ export function ListingEdgeIndicator({ listing, direction, onActivate }: Listing
       </span>
 
       <span className="shrink-0 text-xs font-semibold text-foreground">
-        {price.kind === 'priced'
-          ? formatCurrency(price.headline.amount)
-          : t(MISSING_PRICE_KEY[price.reason])}
+        {displayPriceLabel(t, price, stayTotal)}
       </span>
 
       {/*
