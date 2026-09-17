@@ -221,6 +221,30 @@ const BOUNDARIES = [
     module: 'project-member-read',
     remedy: '«readProjectMember(query)» ή «normalizeProjectMember(…)»',
   },
+  // ADR-835 §20 — το ημερολόγιο καταλύματος. ΑΥΣΤΗΡΟ σύνορο: ό,τι δεν διαβάζεται ΔΕΝ
+  // μπορεί να γίνει «ελεύθερο» — ωμό `as StayBooking` θα έβαζε στον κριτή διάστημα που
+  // δεν ελέγχθηκε, δηλαδή σιωπηλό overbooking (§6.4).
+  {
+    adr: 'ADR-835 §20',
+    typeName: 'StayBooking',
+    custodian: 'src/lib/stay/stay-calendar-from-document.ts',
+    module: 'stay-calendar-from-document',
+    remedy: '«stayBookingFromDocument(raw, id)»',
+  },
+  {
+    adr: 'ADR-835 §20',
+    typeName: 'StayBlock',
+    custodian: 'src/lib/stay/stay-calendar-from-document.ts',
+    module: 'stay-calendar-from-document',
+    remedy: '«stayBlockFromDocument(raw, id)»',
+  },
+  {
+    adr: 'ADR-835 §20',
+    typeName: 'StayCalendarHead',
+    custodian: 'src/lib/stay/stay-calendar-from-document.ts',
+    module: 'stay-calendar-from-document',
+    remedy: '«stayCalendarHeadFromDocument(raw, propertyId)»',
+  },
 ];
 
 /**

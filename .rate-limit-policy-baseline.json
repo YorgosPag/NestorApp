@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 454,
+  "population": 473,
   "tally": {
     "undeclared": 55,
     "prefix-shadowed-by-declaration": 28,
-    "declared-over-default": 56,
-    "declared-agrees": 220,
-    "declared-via-factory": 95
+    "declared-over-default": 65,
+    "declared-agrees": 229,
+    "declared-via-factory": 96
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -22,7 +22,7 @@
     "STANDARD→HIGH": 1
   },
   "violation_count": 83,
-  "declaration_count": 95,
+  "declaration_count": 96,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -136,6 +136,7 @@
     "createScanCronRoute::/api/cron/firebase-auth-config-drift",
     "createScanCronRoute::/api/cron/first-contact-invitation-expiry",
     "createScanCronRoute::/api/cron/holiday-hours-question",
+    "createScanCronRoute::/api/cron/mandate-evidence-retention",
     "createScanCronRoute::/api/cron/mandate-expiry",
     "createScanCronRoute::/api/cron/oauth-cleanup",
     "createScanCronRoute::/api/cron/onboarding-reminder",

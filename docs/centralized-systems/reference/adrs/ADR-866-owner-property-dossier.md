@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |---|---|
-| **Status** | 🔵 **ΑΠΟΦΑΣΗ — καμία γραμμή κώδικα** *(N.0.1 Φάση 1)*. Αποφάσεις Giorgio: ✅ **ΟΛΕΣ αποφασίστηκαν** (Ε-1 · Ε-2 · Ε-2α · Ε-2β · Ε-2γ · Ε-3 · Ε-4 · Ε-5 · Ε-6, §9) — έτοιμο για **Φ0** μετά το ADR-862 Φ0 Β11 |
+| **Status** | 🟡 **Φ0 ΣΕ ΕΞΕΛΙΞΗ** *(2026-09-17)*: βήμα 1 ✅ SSoT audit (§2.6) + κοινό `lib/workspace/custody-scope.ts` · βήμα 2α ✅ **στρώμα Storage** (ρίζα `people/{userId}` στο `storage-path.ts` + κανόνας `canonical_personal` + σουίτα emulator). **Βήμα 2β** (`FILES_PERSONAL` · `firestore.rules` · `file-custody.ts` · `EntityFilesManager` · υπηρεσίες · δείκτες) **περιμένει το κλείσιμο του ADR-862 Φ0 Β11**. Αποφάσεις Giorgio: ✅ **ΟΛΕΣ** (Ε-1…Ε-6, §9) |
 | **Date** | 2026-09-17 |
 | **Category** | Files / Identity / Collaboration / Private individual |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -65,7 +65,7 @@
 Κοινά σε όλες τις καρτέλες αρχείων: **Αρχεία · Αρχειοθήκη · Κάδος Ανακύκλωσης**, προβολή λίστα/πλέγμα/δέντρο,
 ανέβασμα / ηχητική σημείωση / σημείωση κειμένου (`AddCaptureMenu`), εκδόσεις, προεπισκόπηση. **Όλα από
 ΕΝΑ συστατικό**: `EntityFilesManager` (`components/shared/files/EntityFilesManager.tsx`, 499 γρ.), με
-**20 καταναλωτές** (ακίνητα, κτίρια, έργα, επαφές, αποθήκες, διαχείριση αρχείων). **Το γραφείο είναι
+**17 σημεία απόδοσης** *(μετρήθηκε ξανά στη Φ0, §2.6.4 — έγραφε «20»)* (ακίνητα, κτίρια, έργα, επαφές, αποθήκες, διαχείριση αρχείων). **Το γραφείο είναι
 ήδη SSoT.**
 
 ### 2.2 🔴 **ΤΟ ΤΕΙΧΟΣ: το σύστημα αρχείων υποθέτει ότι κάθε αρχείο ανήκει σε εταιρεία**
@@ -139,6 +139,81 @@ AUDIT_LEDGER_COLLECTION = { company: 'ENTITY_AUDIT_TRAIL', personal: 'ENTITY_AUD
 | Πρόσβαση τρίτου σε ακίνητο | `PropertyGrant` (`lib/auth/types.ts:470`) | **νεκρό** — η γενίκευσή του είναι **ADR-862 Φ1**, δεν έχει υλοποιηθεί |
 | Πρότυπο συμμετοχής **νομικού** (συμβολαιογράφος/δικηγόρος) | ADR-862 §5.4 | **όχι** — τα πρότυπα είναι `consultant · crew · supplier · client` |
 | **Οικοδεσπότης** υπόθεσης = προσωπικός χώρος | ADR-862 | **δεν εξετάστηκε** — το έγγραφο υποθέτει οργανισμό-οικοδεσπότη |
+
+### 2.6 🔎 SSoT audit **Φ0** — μετρημένο 2026-09-17 με grep, **πριν** τον κώδικα *(N.0.1 Φάση 1)*
+
+🔴 **Κατάσταση εκκίνησης**: το ADR-862 Φ0 **Β11 δεν έχει κλείσει** — ο άλλος agent αλλάζει τώρα `firestore.rules`,
+`file-record-core.ts`, `file-record-ingestion.ts`, `types/file-record.ts`, `firestore-collections.ts`, `tenant-config.ts`,
+`firestore-query.service.ts` και γράφει νέο **μοντέλο ανάγνωσης** αρχείων (`cdeReadReach` · `read-scope-config.ts` ·
+`file-visibility-scope.ts`). ⇒ Η Φ0 ξεκίνησε **μόνο** από ό,τι δεν συγκρούεται (§12, βήμα 1).
+
+#### 2.6.1 Το τείχος — **επτά** σημεία, όχι πέντε
+
+| # | Σημείο | Εύρημα |
+|---|---|---|
+| 1-5 | §2.2 | ✅ **ισχύουν ακόμη** (επαληθεύτηκαν: `storage-path.ts:73-75,136` · `storage.rules:111,152` · `firestore.rules:589` · `EntityFilesManager.tsx:77-106` · `useEntityFiles.ts:236`) |
+| **6** 🆕 | `services/file-record/file-record-core.ts:327` `buildPendingFileRecordData` | **πετά** χωρίς `companyId` — είναι το **χωνί** από το οποίο περνά **κάθε** ανέβασμα (`uploadEntityFile` · `FileRecordService.createPendingFileRecord` · `AttestationDocumentField`). Η αλλαγή **εδώ** αρκεί για όλους τους αγωγούς |
+| **7** 🆕 | `services/filesystem/file-mutation-gateway.ts:47-97` `validateUploadAuth` | διαβάζει `companyId` από το **claim** ⇒ `UPLOAD_AUTH_MISSING_COMPANY` για τον ιδιώτη, **πριν** φτάσει στο σημείο 6 |
+
+#### 2.6.2 Καλούντες που δέχονται `companyId` — η διαδρομή οντότητας
+
+| Αρχείο | Πώς μπαίνει το `companyId` |
+|---|---|
+| `services/filesystem/upload-entity-file.ts:40,75` | `EntityFileUploadSpec.companyId` υποχρεωτικό |
+| `services/file-record.service.ts:107,157,205,275` | παράμετρος (`CreateFileRecordInput`) |
+| `services/file-record-lifecycle.ts:266,285` | παράμετρος → `where('companyId','==',…)` (κάδος · αρχειοθήκη) |
+| `services/file-record-links.ts` · `file-version.service.ts` · `file-folder.service.ts` · `file-audit.service.ts` | client SDK πάνω στη συλλογή `files` |
+| `api/files/archive` · `api/files/cde/*` | `_shared/file-ownership.ts:57` → `isOwnedByCompany` (claim ↔ πεδίο εγγράφου) |
+| `services/iso19650/*` | πεδίο του φορτωμένου `FileRecord` — **δεν** ξαναπαράγεται |
+
+- `COLLECTIONS.FILES` αναφέρεται σε **~120** σημεία (διακομιστής, πελάτης, AI pipeline, migrations, Telegram, email,
+  floorplans, DXF). ⚠️ **Η Φ0 ΔΕΝ τα αγγίζει όλα**: μόνο τη διαδρομή οντότητας (`EntityFilesManager` → `useEntityFiles` →
+  υπηρεσία → gateway → χωνί). Τα υπόλοιπα είναι εταιρικά **εξ ορισμού** (εισερχόμενα γραφείου, AI γραφείου).
+- 🔴 **Διόρθωση §5.8**: `api/files/purge` = **καθολική** σάρωση `isDeleted + purgeAt` και `api/files/gdpr-delete` = φίλτρο
+  `createdBy`. **Δεν** «δέχονται `FileCustody`» — πρέπει να **σαρώνουν και τα δύο διαμερίσματα**, όπως το
+  `incremental-backup.service.ts` σαρώνει `AUDIT_LEDGER_KINDS`.
+
+#### 2.6.3 Κανόνες · συλλογές · δείκτες · backup · πύλες
+
+| Θέμα | Εύρημα | Συνέπεια για τη Φ0 |
+|---|---|---|
+| `firestore-collections.ts:416` | `FILES` | νέο `FILES_PERSONAL` **δίπλα**, όπως το `ENTITY_AUDIT_TRAIL_PERSONAL` (γρ. 661)· **όχι** στο `IMMUTABLE_COLLECTIONS` (τα αρχεία αλλάζουν) |
+| `tenant-config.ts` | `FILES` **χωρίς** εγγραφή (κληρονομεί `companyId`)· πρότυπο `ENTITY_AUDIT_TRAIL_PERSONAL: { mode: 'userId' }` (γρ. 69) | **μία** γραμμή `FILES_PERSONAL` ενεργοποιεί την **CHECK 3.35** για κάθε ερώτημα διακομιστή |
+| `firestore.rules:589-844` | `match /files` — σχόλιο 616-619: *ποτέ δεύτερο `match /files`* (το Firestore ενώνει) | ✅ επιβεβαιώνει «διαμέρισμα, όχι διακλάδωση» |
+| `firestore.rules:626-633` `cdeCustodyUnchanged()` | **τοπική** μέσα στο μπλοκ `files` | 🔴 για να την **κληρονομήσει** το `files_personal` πρέπει να **ανέβει** σε καθολική συνάρτηση — **όχι** αντίγραφο (§5.2) |
+| `firestore.rules:3392-3396` | `entity_audit_trail_personal`: `userId == request.auth.uid`, ούτε super admin | πρότυπο ανάγνωσης του `files_personal` |
+| `storage.rules:44-46 · 504` | `isOwner(userId)` · `owner_properties/{userId}/…` (read/write/delete `isOwner` + `isValidFileSize` + `isAllowedContentType`) | ιδίωμα της ρίζας `/people/{userId}/entities/…` |
+| `firestore.indexes.json` | **44** δείκτες `files` — πολλοί **ήδη σε ζεύγη** `companyId`/`createdBy`· **0** για `files_personal` | τα ίδια σχήματα με πρώτο πεδίο `userId` — **παράγονται** από τα ερωτήματα, όχι με το χέρι |
+| Backup | `backup.service.ts` παράγει το σύμπαν από `COLLECTIONS`· `incremental-backup.service.ts` απαριθμεί **μόνο** τα βιβλία ιστορικού | αρκεί η εγγραφή στο `COLLECTIONS` |
+| CHECK 3.16 | `tests/firestore-rules/_registry/coverage-manifest.ts` + `defineMatrix()` (35 κελιά) | νέα εγγραφή· ο `serverWrittenAuthorOwnedMatrix` **δεν** ταιριάζει (τα αρχεία γράφονται **από πελάτη**) |
+
+#### 2.6.4 Καταναλωτές · αγωγοί · προϋπάρχουσα λύση
+
+- **`EntityFilesManager`: 17 σημεία απόδοσης JSX** (`grep -rl "<EntityFilesManager"`), + 15 αναφορές σε σχόλια/ρυθμίσεις —
+  **όχι 20** (διορθώνει §2.1 · §10).
+- Δεύτερος αγωγός (`useOwnerPropertyMedia`): Storage απευθείας, **κανένα** `FileRecord` — ✅ επιβεβαιώθηκε.
+  Τρίτος (`AttestationDocumentField.tsx:38-70`): `uploadEntityFile` με `companyId` **του γραφείου** — ✅ επιβεβαιώθηκε.
+- `FileCustody` · `fileCustodyOf` · `files_personal` · `FILES_PERSONAL` · `personal` στο σύστημα αρχείων: **0** ευρήματα.
+
+#### 2.6.5 🔑 Εύρημα σχεδιασμού — το «ίδιο σχήμα» θα ήταν **δίδυμο**
+
+Το §5.2 ζητούσε `file-custody.ts` «ίδιο σχήμα με `audit-ledger.ts`». Κατά γράμμα: **ίδια** ένωση `?: never`, **ίδιο**
+`…Of(WorkspaceRef)`, **ίδιο** σύνορο ανάγνωσης, **ίδιος** φρουρός γραφής, **ίδιο** λεξιλόγιο `'company' | 'personal'` σε
+**δεύτερο** αρχείο ⇒ κλώνος (CHECK 3.28) και δεύτερη δήλωση λεξιλογίου (CHECK 3.73). **Λύση**: το πρωτογενές
+**εξήχθη** στο `lib/workspace/custody-scope.ts`· κάθε σύστημα (ιστορικό, αρχεία) δηλώνει **μόνο** το δικό του
+`CustodyPartition` (πού ζει κάθε διαμέρισμα). Τα `lib/audit/*` ήταν **καθαρά** στο git — ασφαλής αναδιάρθρωση.
+
+#### 2.6.6 🌐 Έρευνα — πώς χωρίζουν οι μεγάλοι «προσωπικό» και «οργανισμού» *(2026-09-17)*
+
+| Παίκτης | Εύρημα | Τι παίρνουμε |
+|---|---|---|
+| **Google Drive** | κάθε αρχείο ζει σε **ακριβώς ένα** δίσκο — «Ο Δίσκος μου» (κάτοχος **άνθρωπος**) **ή** κοινόχρηστος δίσκος (κάτοχος **οργανισμός**), **ποτέ** και στα δύο· ο χώρος μετρά στο όριο **του κατόχου**· η μετακίνηση σε κοινόχρηστο δίσκο **αλλάζει τον κάτοχο** | ✅ `?: never` · ✅ όριο ανά κάτοχο (Ε-2) · 🔑 η **παράδοση** της §5.7 (Φ4) είναι **μετακίνηση** μεταξύ διαμερισμάτων, όχι αντιγραφή |
+| **Figma** | τα **Drafts** είναι ιδιωτικά· ο admin **δεν** τα βλέπει· μόνο ο κάτοχος τα μετακινεί σε ομάδα (στα Organization plans ο οργανισμός μπορεί να τα διεκδικήσει όταν φύγει το μέλος) | ✅ «ούτε super_admin» (§5.8)· ο ιδιώτης **δεν** ανήκει σε οργανισμό, άρα καμία διεκδίκηση |
+
+*Πηγές*: [Google Drive API — Shared drives overview](https://developers.google.com/workspace/drive/api/guides/about-shareddrives) ·
+[Shared drive vs My Drive API differences](https://developers.google.com/workspace/drive/api/guides/shared-drives-diffs) ·
+[Figma — Updates to how drafts work](https://help.figma.com/hc/en-us/articles/18409526530967-Updates-to-how-drafts-work) ·
+[Figma — Transfer ownership of files](https://help.figma.com/hc/en-us/articles/360038512093-Transfer-ownership-of-files-or-folders).
 
 ---
 
@@ -222,25 +297,40 @@ enterprise ID, N.6). Η αγγελία **δείχνει** σε αυτήν — δ
 
 ### 5.2 🔑 **Θεματοφυλακή αρχείων** — η ΜΙΑ δομική αλλαγή
 
-Αντιγραφή του σχήματος του §2.4, σημείο προς σημείο:
+Το σχήμα του §2.4 — **όχι αντιγραμμένο, κοινό** (§2.6.5):
 
 ```ts
-// lib/files/file-custody.ts — ΝΕΟ, leaf, ίδιο σχήμα με lib/audit/audit-ledger.ts
-type FileCustody =
+// lib/workspace/custody-scope.ts — ✅ ΥΛΟΠΟΙΗΘΗΚΕ 2026-09-17 · leaf · ΚΟΙΝΟ για ιστορικό ΚΑΙ αρχεία
+type CustodyScope =
   | { companyId: string; userId?: never }   // ό,τι ίσχυε πάντα
   | { userId: string;   companyId?: never } // προσωπικός κάτοχος
+custodyScopeOf(workspace: WorkspaceRef)     // η ΜΙΑ μετάφραση
+custodyScopeFromData(data) · isWritableCustodyScope(scope) · custodyKindFromParam(v)   // σύνορο · φρουρός · σύρμα
+type CustodyPartition = Record<'company' | 'personal', CollectionKey>
 
-fileCustodyOf(workspace: WorkspaceRef): FileCustody   // η ΜΙΑ μετάφραση
-FILE_COLLECTION = { company: 'FILES', personal: 'FILES_PERSONAL' }
+// lib/audit/audit-ledger.ts — ✅ πλέον ψευδώνυμα + AUDIT_LEDGER_COLLECTION satisfies CustodyPartition
+
+// lib/files/file-custody.ts — ⏳ επόμενο βήμα, ΜΑΖΙ με τον πρώτο καταναλωτή (§12)
+type FileCustody = CustodyScope
+FILE_COLLECTION = { company: 'FILES', personal: 'FILES_PERSONAL' } satisfies CustodyPartition
 ```
+
+⚠️ **Γιατί το `file-custody.ts` ΔΕΝ γράφτηκε στο βήμα 1**: (α) το `FILE_COLLECTION` χρειάζεται το κλειδί
+`FILES_PERSONAL` στο `firestore-collections.ts`, που είναι WIP του Β11· (β) αρχείο χωρίς εισαγωγέα παραγωγής
+**μπλοκάρει** το commit στη **CHECK 3.22** (knip εξαιρεί τα tests από το `project`) — και σωστά: κώδικας χωρίς
+καταναλωτή είναι νεκρός κώδικας, όχι «προετοιμασία».
 
 | # | Σημείο (§2.2) | Αλλαγή |
 |---|---|---|
-| 1 | `storage-path.ts` | δεύτερη **ρίζα**, ίδιο υπόλοιπο σχήμα: `/people/{userId}/entities/{entityType}/{entityId}/domains/…/files/{fileId}.{ext}`. Η ADR-709 «μία διαδρομή» **διατηρείται**: η ρίζα είναι αμετάβλητη ταυτότητα κατόχου, όπως το `companyId` |
-| 2 | `storage.rules` | **ένα** νέο `match /people/{userId}/entities/…` με `isOwner(userId)` — ίδιο ιδίωμα με `storage.rules:504` |
+| 1 ✅ | `storage-path.ts` | δεύτερη **ρίζα**, ίδιο υπόλοιπο σχήμα: `/people/{userId}/entities/{entityType}/{entityId}/domains/…/files/{fileId}.{ext}`. Η ADR-709 «μία διαδρομή» **διατηρείται**: η ρίζα είναι αμετάβλητη ταυτότητα κατόχου, όπως το `companyId`. **Υλοποίηση (βήμα 2α)**: `StoragePathParams = CustodyScope & συντεταγμένες`· **μία** ρίζα (`buildCustodyStorageRoot`) για builder **και** προθέματα σάρωσης· ο ανεκτικός αναγνώστης δέχεται **δύο ρίζες**, ποτέ άγνωστη, και legacy `projects/` **μόνο** κάτω από `companies/`· επικύρωση «ακριβώς ένας κάτοχος». Οι ~12 καλούντες με `companyId` **ανέγγιχτοι** |
+| 2 ✅ | `storage.rules` | **ένα** νέο `match /people/{userId}/entities/…` με `isOwner(userId)` — ίδιο ιδίωμα με `owner_property_media`. **Υλοποίηση**: `@pathId: canonical_personal` (read/delete `isOwner` · write + μέγεθος + τύπος · **ούτε** super_admin) |
 | 3 | `firestore.rules` | **νέο** `match /files_personal/{fileId}` — `userId == request.auth.uid`. Το `match /files/{fileId}` **ανέγγιχτο** (γιατί διαμέρισμα και όχι διακλάδωση: §2.4) |
-| 4 | `EntityFilesManagerProps` | `companyId: string` → `custody: FileCustody`. Οι **20** καταναλωτές περνούν `{ companyId }` — μηχανική αλλαγή, ο μεταγλωττιστής τους βρίσκει όλους |
+| 4 | `EntityFilesManagerProps` | `companyId: string` → `custody: FileCustody`. Τα **17** σημεία απόδοσης περνούν `{ companyId }` — μηχανική αλλαγή, ο μεταγλωττιστής τα βρίσκει όλα |
 | 5 | `useEntityFiles` · `FileRecordService` · `file-mutation-gateway` | διαβάζουν τη συλλογή από `FILE_COLLECTION[kindOf(custody)]` |
+| 6 🆕 | `file-record-core.ts:327` `buildPendingFileRecordData` (§2.6.1) | δέχεται `FileCustody` αντί «`companyId` REQUIRED» — **ένα** χωνί για όλους τους αγωγούς |
+| 7 🆕 | `validateUploadAuth` (§2.6.1) | ο προσωπικός κάτοχος επαληθεύεται με `uid`, **όχι** claim εταιρείας |
+| 8 🆕 | `api/files/purge` · `api/files/gdpr-delete` (§2.6.2) | σαρώνουν **και τα δύο** διαμερίσματα (`CUSTODY_KINDS`) |
+| 9 🆕 | `firestore.rules` `cdeCustodyUnchanged()` (§2.6.3) | ανεβαίνει από τοπική σε **καθολική** συνάρτηση, ώστε να την καλούν `files` **και** `files_personal` |
 
 ⛔ **ΜΗΝ** δώσεις στον ιδιώτη «ψευδο-εταιρεία» για να περάσει από τους υπάρχοντες φρουρούς. Το
 **ADR-787 Ε-3 §3** το απαγορεύει ρητά και είχε προβλέψει *«εδώ θα γεννηθεί ο πειρασμός»*.
@@ -466,7 +556,9 @@ UK «Material Information», το σκαλί 0 **δεν** ελέγχθηκε έ�
 - **Ιδιωτικό εξ ορισμού**, ούτε `super_admin` — ίδιο δόγμα με `storage.rules:506`.
 - **Κάθε** ανάγνωση από καλεσμένο γράφεται στο **προσωπικό βιβλίο** του κατόχου (ADR-862 §5.7 · ADR-195).
 - Δικαίωμα διαγραφής: ο **κάδος** του `EntityFilesManager` + τελική εκκαθάριση — **υπάρχει**
-  (`api/files/purge` · `api/files/gdpr-delete`) και πρέπει να δέχεται `FileCustody`.
+  (`api/files/purge` · `api/files/gdpr-delete`) και πρέπει να σαρώνει **και τα δύο** διαμερίσματα *(διορθώθηκε
+  2026-09-17, §2.6.2: έγραφε «να δέχεται `FileCustody`» — αλλά το `purge` είναι καθολική σάρωση και το `gdpr-delete`
+  φιλτράρει με `createdBy`, κανένα δεν παίρνει κάτοχο)*.
 
 ### 5.9 Όριο χώρου *(✅ Ε-2, Giorgio 2026-09-17 — αναθεωρήθηκε την ίδια μέρα)*
 
@@ -618,6 +710,12 @@ Zillow/Idealista προέρχονται εν μέρει από δευτερογ�
 | Α5 | Ο κατάλογος ειδών εγγράφου είναι **ένας** | δεύτερο `entries-*` για ιδιώτη (CHECK 3.28 jscpd) |
 | Α6 | Καλεσμένος `legal` διαβάζει **μόνο** τις παραχωρημένες κατηγορίες | παραχώρηση χωρίς φίλτρο κατηγορίας |
 
+✅ **Α1 · Α2 (βήμα 1, 2026-09-17)** — `src/lib/workspace/__tests__/custody-scope.test.ts` (19 tests), πάνω στο **κοινό**
+πρωτογενές. **Μετάλλαξη εκτελέστηκε**: ανταλλαγή κλάδων στο `custodyKindOf` ⇒ **4 κόκκινα** (2 εδώ + 2 στο υπάρχον
+`audit-ledger.test.ts` — απόδειξη ότι το ιστορικό διαβάζει **την ίδια** υλοποίηση)· ψευδής κλάδος στο `custodyScopeOf` ⇒
+**2 κόκκινα**· επαναφορά ⇒ 73/73 πράσινα. ⚠️ Το Α1 (`@ts-expect-error`) το επικυρώνει **μόνο** ο έλεγχος τύπων
+(hook/CI, N.17). Το σκέλος «σωστή **συλλογή**» του Α2 μπαίνει με το `FILE_COLLECTION` στο βήμα 2.
+
 ---
 
 ## §8. Φάσεις
@@ -626,7 +724,7 @@ Zillow/Idealista προέρχονται εν μέρει από δευτερογ�
 
 | Φ | Περιεχόμενο | Προϋπόθεση |
 |---|---|---|
-| **Φ0** | 🔑 `FileCustody` (§5.2): τύπος · διαδρομή · κανόνες Storage + Firestore (σουίτα, CHECK 3.16) · `EntityFilesManager` `custody` prop στους 20 καταναλωτές · `useEntityFiles` · gateway · purge/gdpr-delete · ευρετήρια | ADR-862 Φ0 **Β11 κλειστό** |
+| **Φ0** | 🔑 `FileCustody` (§5.2): τύπος · διαδρομή · κανόνες Storage + Firestore (σουίτα, CHECK 3.16) · `EntityFilesManager` `custody` prop στα 17 σημεία απόδοσης · `useEntityFiles` · gateway · purge/gdpr-delete · ευρετήρια | ADR-862 Φ0 **Β11 κλειστό** |
 | **Φ1** | Οντότητα φακέλου (Ε-1) · σελίδα στον προσωπικό χώρο με καρτέλες **Κάτοψη · Έγγραφα · Φωτογραφίες · Βίντεο · Ιστορικό** (ίδια συστατικά) · **απορρόφηση** `useOwnerPropertyMedia` + μετανάστευση `owner_properties/` → `FileRecord` *(μέτρηση αριθμού αρχείων **πριν** — Firestore MCP)* · το `AttestationDocumentField` ακολουθεί τη θεματοφυλακή της αγγελίας (§2.3 ⚠️) | Φ0 |
 | **Φ1β** | **Όριο χώρου** ανά άνθρωπο (§5.9 — επιβολή στον διακομιστή) · **επιλογή ποιότητας** φωτογραφίας/βίντεο + εκδοχές προβολής εκτός ορίου + παράλειψη διπλοτύπων (§5.9.2) · συμπίεση **βίντεο** ως κοινή ικανότητα | Φ1 |
 | **Φ2** | Είδη εγγράφου που λείπουν (§5.3) **και στο γραφείο** · δήλωση `acceptedIntake` ανά είδος + **σαρωτής εγγράφων → PDF** με έλεγχο ποιότητας (§5.10, επέκταση `CameraCaptureDialog` · N.5 για βιβλιοθήκη) · **απόδειξη γνησιότητας** Γ1-Γ4 (§5.10.1) · πεδία ΗΤΚ / παροχών + **κατηγορία ευαισθησίας πεδίου** (§5.4) · **αλυσίδα κυριότητας Β+** (§5.5: εξαγωγή κοινού τύπου τίτλου από `SurveyTitleDeed` · κλειστό λεξιλόγιο πράξης · κενά/ποσοστά/20ετία · βάρη · συμφιλίωση με κτηματολογικό φύλλο · πρόταση από τοπογραφικό) · i18n el+en (N.11) | Φ1 |
@@ -664,7 +762,7 @@ Zillow/Idealista προέρχονται εν μέρει από δευτερογ�
 - **Δεν** ελέγχθηκε αν οι σελίδες **κτιρίων/έργων** (`building-management/tabs/*`, `projects/*Tab`)
   έχουν κάτι που ο φάκελος χρειάζεται πέρα από το `EntityFilesManager` — είναι καταναλωτές του ίδιου
   συστατικού, άρα η Φ0 τους αγγίζει μόνο μηχανικά.
-- Οι 20 καταναλωτές μετρήθηκαν με `grep -rln EntityFilesManager` (εκτός `shared/files`)· ο ακριβής
+- ✅ **Επαληθεύτηκε στη Φ0 (§2.6.4)**: **17** σημεία απόδοσης JSX, όχι 20. Οι 20 είχαν μετρηθεί με `grep -rln EntityFilesManager` (εκτός `shared/files`)· ο ακριβής
   αριθμός επαληθεύεται στη Φ0.
 - Η αναφορά στην EPBD («ψηφιακό βιβλίο κτιρίου») είναι **πλαίσιο**, όχι νομική υποχρέωση που
   ελέγχθηκε για την Ελλάδα.
@@ -703,3 +801,5 @@ Zillow/Idealista προέρχονται εν μέρει από δευτερογ�
 | 2026-09-17 | ✅ **Ε-5 αποφασίστηκε (Giorgio, «Β+»)**: πλήρης αλυσίδα κυριότητας — 10 κανόνες στην §5.5. Απαίτηση SSoT: εξαγωγή κοινού τύπου τίτλου από `SurveyTitleDeed` + κλειστό λεξιλόγιο είδους πράξης (ωφελεί και ADR-759). |
 | 2026-09-17 | 🌐 **Έρευνα για Ε-6** (§5.6.2): UK Material Information Α/Β/Γ · εικονικές αίθουσες δεδομένων (σταδιακή πρόσβαση, εμπιστευτικότητα, μόνο προβολή, υδατογράφημα, ίχνος). Η απόφαση Ε-6 εκκρεμεί. |
 | 2026-09-17 | ✅ **Ε-6 αποφασίστηκε (Giorgio)**: σκάλα 3 σκαλιών (§5.6.3) + 🏆 Σ1-Σ3. **Όλες οι αποφάσεις του §9 πάρθηκαν.** |
+| 2026-09-17 | 🟡 **Φ0 βήμα 1 — ΥΛΟΠΟΙΗΣΗ** *(μόνο ό,τι δεν συγκρούεται με το ADR-862 Φ0 Β11, που δεν έχει κλείσει)*. 🔎 **§2.6 SSoT audit με grep**: το τείχος έχει **7** σημεία, όχι 5 (+ χωνί `buildPendingFileRecordData` · + `validateUploadAuth`)· **17** σημεία απόδοσης `EntityFilesManager`, όχι 20· `purge`/`gdpr-delete` **δεν** παίρνουν κάτοχο — πρέπει να σαρώνουν και τα δύο διαμερίσματα (διόρθωση §5.8)· `cdeCustodyUnchanged()` είναι **τοπική** και πρέπει να ανέβει σε καθολική· CHECK 3.35 ενεργοποιείται με μία γραμμή `tenant-config`. 🌐 **§2.6.6 έρευνα** Google Drive (ένα αρχείο σε ακριβώς ένα δίσκο· μετακίνηση = αλλαγή κατόχου ⇒ Φ4 παράδοση = μετακίνηση) + Figma Drafts. 🔑 **Εύρημα σχεδιασμού (§2.6.5)**: το «ίδιο σχήμα με το `audit-ledger`» θα ήταν **δίδυμο** ⇒ **εξήχθη** το κοινό `src/lib/workspace/custody-scope.ts`· το `src/lib/audit/audit-ledger.ts` έγινε ψευδώνυμα + `AUDIT_LEDGER_COLLECTION satisfies CustodyPartition` (οι 11 εισαγωγείς ανέγγιχτοι). Άγκυρες Α1/Α2 (§7) με μετάλλαξη· `jscpd:diff` καθαρό. 🛡️ **N.12**: νέο module `custody-scope` στο `.ssot-registry.json` (απαγορεύει δεύτερο φρουρό `userId?: never`/`companyId?: never` και δεύτερο ορισμό των συναρτήσεων) **με την απόδειξή του** στο `scripts/lib/ssot/pattern-proofs.js` (2/2 patterns αποδεδειγμένα· 0 ευρήματα εκτός allowlist ⇒ καμία αλλαγή baseline). ⚠️ Εκτός εμβέλειας, προϋπάρχον: το ταβάνι «patterns χωρίς απόδειξη» του `registry-golden-regex.test.js` είναι **ήδη** 602 > 600 στο HEAD — δεν το ανέβασε αυτό το βήμα, δεν το «διόρθωσε» σιωπηλά. ⏳ Το `file-custody.ts` **αναβλήθηκε** στο βήμα 2 (θέλει `FILES_PERSONAL` — WIP Β11 — και καταναλωτή, αλλιώς CHECK 3.22). §5.2 πίνακας +σημεία 6-9. ⚠️ Εκτός εμβέλειας, προϋπάρχον: το `personal-scope-consumers.test.ts` (Κ2 · Π) είναι **κόκκινο** από δύο διαδρομές του ADR-864 (`mandate-evidence` · `private-marketing`) — δεν το άγγιξε αυτό το βήμα. |
+| 2026-09-17 | 🟡 **Φ0 βήμα 2α — ΣΤΡΩΜΑ STORAGE** *(Giorgio: «μόνο τα καθαρά αρχεία τώρα» — το Β11 ακόμη ανοιχτό· κανένα αρχείο παρακάτω δεν ήταν WIP του άλλου agent)*. **(1) `storage-path.ts`**: `StoragePathParams = CustodyScope & συντεταγμένες` · **μία** ρίζα `buildCustodyStorageRoot` (`companies/{companyId}` \| `people/{userId}`) για builder **και** προθέματα σάρωσης · `parseStoragePath` δέχεται **δύο** ρίζες (άγνωστη ⇒ `null`), legacy `projects/` **μόνο** κάτω από `companies/` · νέο `STORAGE_PATH_SEGMENTS.PEOPLE`. **(2) `storage-path-validation.ts`**: «ακριβώς ένας κάτοχος» μέσω `isWritableCustodyScope` — απουσία/διπλός ⇒ σφάλμα στο `companyId` (ό,τι ίσχυε), άκυρο τμήμα ⇒ σφάλμα στο πεδίο του κλάδου. **(3) Αναγνώστες**: migration normalize-storage-paths (προσωπικό ⇒ ήδη κανονικό) · `file-path-tree` (τμήμα `people`). Οι ~12 εταιρικοί καλούντες **ανέγγιχτοι** (επαληθεύτηκε: όλοι περνούν literal μόνο με `companyId`). **(4) `storage.rules`**: `@pathId: canonical_personal` — `isOwner(userId)` σε read/write/delete, write + μέγεθος + τύπος, **ούτε** super_admin. **(5) Κάλυψη (CHECK 3.19)**: εγγραφή `canonical_personal` + 🧹 Boy Scout: οι **πανομοιότυποι** χειρόγραφοι πίνακες `temp` και `owner_property_media` → **ένα** `ownerOnlyMatrix()` (αλλιώς θα γινόταν τρίτο αντίγραφο) · νέα σουίτα `canonical-path-personal.storage.test.ts` (πίνακας + Π1 ξένο uid στη ρίζα + Π2 τύπος αρχείου). **Επαλήθευση**: jest 110/110 · **emulator 42/42** (νέα σουίτα + `temp` + `owner_property_media` με τον κοινό πίνακα) · CHECK 3.19 `--all` exit 0 · `jscpd:diff` καθαρό · **μεταλλάξεις**: ρίζα builder `people`→`companies` ⇒ 2 κόκκινα · αναγνώστης `people`⇒`companyId` ⇒ 2 κόκκινα · κανόνας read `isOwner`→`isAuthenticated` ⇒ **3 κόκκινα στον emulator** · όλες επανήλθαν (`storage.rules` byte-προς-byte). ⚠️ **Εντοπίστηκε, ΔΕΝ αγγίχθηκε**: ο proxy `api/storage/file/[...path]` ελέγχει χειρόγραφα `segments[0] !== 'companies'` πίσω από `withAuth` (μόνο οργανισμός) — σωστό για τον writer του (`public-upload.service`)· αν ποτέ σερβίρει προσωπικά αρχεία θέλει δική του απόφαση. ⏳ **Βήμα 2β περιμένει το Β11**: `FILES_PERSONAL` + `tenant-config` · `firestore.rules` `files_personal` (με `cdeCustodyUnchanged` καθολική) · δείκτες · `file-custody.ts` + `FILE_COLLECTION` · χωνί `buildPendingFileRecordData` · `validateUploadAuth` · `EntityFilesManager` `custody` (17 σημεία) · `useEntityFiles` · purge/gdpr-delete και στα δύο διαμερίσματα · σουίτα κανόνων Firestore (CHECK 3.16). |

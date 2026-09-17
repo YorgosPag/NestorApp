@@ -18,7 +18,7 @@ type Doc = Record<string, unknown>;
 
 interface WhereClause {
   readonly field: string;
-  readonly op: '==' | '>=' | '<=';
+  readonly op: '==' | '>=' | '<=' | 'in';
   readonly value: unknown;
 }
 
@@ -52,6 +52,8 @@ function readPath(doc: Doc, path: string): unknown {
 function matches(doc: Doc, clause: WhereClause): boolean {
   const value = readPath(doc, clause.field);
   if (clause.op === '==') return value === clause.value;
+  // ADR-862 Φ0 Β14 — η μετανάστευση ρωτά `where('cdeState', 'in', [...])`.
+  if (clause.op === 'in') return Array.isArray(clause.value) && clause.value.includes(value);
 
   const comparable =
     (typeof value === 'number' && typeof clause.value === 'number') ||
@@ -269,7 +271,7 @@ export class FakeTransaction {
    * ⚠️ **Ο ανταγωνιστής (`interfere`) χτυπά ΚΑΙ εδώ**, όπως και στην ανάγνωση αναφοράς:
    * αλλιώς μια άγκυρα «δύο ταυτόχρονες εκδόσεις» θα δοκίμαζε τη σειριακή διαδρομή.
    */
-  async get(ref: FakeQuery): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }>;
+  async get(ref: FakeQuery): Promise<{ docs: { id: string; data: () => Doc; ref?: FakeDocRef }[]; size: number }>;
   async get(ref: FakeDocRef): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }>;
   async get(ref: FakeDocRef | FakeQuery): Promise<unknown> {
     if (ref instanceof FakeQuery) return this.getByQuery(ref);
@@ -312,7 +314,7 @@ export class FakeTransaction {
   /** Η ανάγνωση ερωτήματος: καταγράφει **κάθε** έγγραφο που επέστρεψε. */
   private async getByQuery(
     query: FakeQuery,
-  ): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }> {
+  ): Promise<{ docs: { id: string; data: () => Doc; ref?: FakeDocRef }[]; size: number }> {
     const result = await query.get();
 
     for (const doc of result.docs) {
@@ -341,6 +343,15 @@ export class FakeTransaction {
   }
 
   /**
+   * ⚠️ **ΠΡΟΣΤΕΘΗΚΕ (ADR-862 Φ0 Β14)** — η γέννηση έργου και η ένταξη μέλους γράφουν με
+   * `transaction.create`: σύγκρουση id ⇒ **αποτυχία**, ποτέ σιωπηλή αντικατάσταση. Ο πλαστός
+   * μεταφέρει το `ALREADY_EXISTS` του {@link FakeDocRef.create} στο commit, όπως το αληθινό.
+   */
+  create(ref: FakeDocRef, doc: Doc): void {
+    this.writes.push(() => ref.create(doc));
+  }
+
+  /**
    * ⚠️ **ΠΡΟΣΤΕΘΗΚΕ (ADR-841 §7 Α21.16)** — η απόσυρση βιτρίνας σβήνει πλέον προφίλ **και**
    * κανάλια κάρτας **ατομικά**. Χωρίς αυτό, κάθε `tx.delete` έσκαγε μέσα στον `catch` του
    * γραφέα και η απόσυρση αναφερόταν `failed` — κόκκινο για λόγο άσχετο με ό,τι ρωτά η άγκυρα.
@@ -352,7 +363,12 @@ export class FakeTransaction {
   /** Είναι ακόμη αληθινό ό,τι διαβάσαμε; */
   readsAreStillValid(): boolean {
     for (const [key, seen] of this.reads) {
-      const [collection, id] = key.split('/');
+      // ⚠️ `lastIndexOf`, ΟΧΙ `split('/')` (ADR-862 Φ0 Β14): το κλειδί υποσυλλογής είναι
+      //    `companies/c/projects/p/members/id`. Το `split` διάβαζε `companies/c` ⇒ «άλλαξε»
+      //    σε ΚΑΘΕ συναλλαγή ⇒ ABORTED — κάθε ερώτημα μελών σε συναλλαγή ήταν αδοκίμαστο.
+      const cut = key.lastIndexOf('/');
+      const collection = key.slice(0, cut);
+      const id = key.slice(cut + 1);
       if (this.db.snapshotOf(collection, id) !== seen) return false;
     }
     return true;
@@ -559,6 +575,12 @@ export class FakeQuery {
      * αλλιώς ο έλεγχος φρεσκάδας δεν έχει τι να συγκρίνει.
      */
     public readonly collectionName: string = '',
+    /**
+     * 🔑 **`doc.ref` σε κάθε αποτέλεσμα ερωτήματος** (ADR-862 Φ0 Β14) — το Admin SDK το
+     * εκθέτει, και ο γραφέας μελών αλλάζει/σβήνει **το έγγραφο που βρήκε το ερώτημα**.
+     * Χωρίς αυτό, ο πλαστός ανάγκαζε τον κώδικα να ξαναχτίσει την αναφορά **μόνο στο test**.
+     */
+    private readonly refOf?: (id: string) => FakeDocRef,
   ) {}
 
   where(field: string, op: WhereClause['op'], value: unknown): FakeQuery {
@@ -568,11 +590,12 @@ export class FakeQuery {
       this.cap,
       this.failing,
       this.collectionName,
+      this.refOf,
     );
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName);
+    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName, this.refOf);
   }
 
   /**
@@ -581,7 +604,7 @@ export class FakeQuery {
    * κάθε εγγράφου για να τις ξεχωρίσει και να στείλει πράξη στη σωστή· χωρίς αυτό,
    * κάθε γραμμή θα είχε `undefined` κλειδί και το test θα ήταν πράσινο.
    */
-  async get(): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }> {
+  async get(): Promise<{ docs: { id: string; data: () => Doc; ref?: FakeDocRef }[]; size: number }> {
     if (this.failing()) throw new Error('FAKE_FIRESTORE_UNAVAILABLE');
 
     const hits = [...this.bucket.entries()]
@@ -589,7 +612,7 @@ export class FakeQuery {
       .slice(0, this.cap);
 
     return {
-      docs: hits.map(([id, doc]) => ({ id, data: () => doc })),
+      docs: hits.map(([id, doc]) => ({ id, data: () => doc, ref: this.refOf?.(id) })),
       size: hits.length,
     };
   }
@@ -604,7 +627,7 @@ export class FakeCollection extends FakeQuery {
     // ⚠️ **Συνάρτηση, όχι τιμή**: το `failReads` γυρίζει **μετά** τη δημιουργία της
     //    αναφοράς (`fake.failReads = true` στη μέση ενός test). Ένα στιγμιότυπο εδώ θα
     //    κρατούσε το `false` της κατασκευής και ο διακόπτης δεν θα έπιανε ποτέ.
-    super(docs, [], undefined, () => db.failReads, name);
+    super(docs, [], undefined, () => db.failReads, name, (id) => new FakeDocRef(db, docs, id, name));
   }
 
   doc(id: string): FakeDocRef {
