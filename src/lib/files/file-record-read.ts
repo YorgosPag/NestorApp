@@ -39,6 +39,7 @@
  */
 
 import type { CdeState, SuitabilityCode } from '@/config/iso19650-constants';
+import { readReachFor } from '@/lib/auth/container-read-reach';
 import { fieldToISO } from '@/lib/date-local';
 // ⚠️ ΟΙ ΥΠΑΡΧΟΝΤΕΣ ΦΡΟΥΡΟΙ ΤΥΠΟΥ — ΟΧΙ ΔΕΥΤΕΡΟΙ (N.0 «ACTIVATION > CREATION»).
 //    Η πρώτη γραφή αυτού του αρχείου τους απέφυγε επικαλούμενη «αντιστροφή
@@ -46,7 +47,7 @@ import { fieldToISO } from '@/lib/date-local';
 //    εισάγει από `@/services/**` σε **100** σημεία. Χωρίς αυτή την εισαγωγή οι δύο
 //    φρουροί έμεναν **χωρίς κανέναν καταναλωτή** — δηλαδή θα είχα γράψει νεκρό
 //    κώδικα ΚΑΙ διπλό έλεγχο, στο αρχείο που υπάρχει για να τα αποτρέπει.
-import { isCdeState, isSuitabilityCode } from '@/services/iso19650/validators';
+import { isCdeReadReach, isCdeState, isSuitabilityCode } from '@/services/iso19650/validators';
 import { isFileRecord, type FileRecord } from '@/types/file-record';
 import type {
   ContainerActRecord,
@@ -160,11 +161,28 @@ function hasAnyAct(acts: ContainerActs): boolean {
 const unreadableState = (why: string): ContainerState => ({ phase: 'unreadable', why });
 
 /**
- * **Η ΜΙΑ ανάγνωση της κατάστασης — και η επαλήθευση της προβολής.**
+ * **Η ΜΙΑ ανάγνωση της κατάστασης — και η επαλήθευση ΚΑΙ ΤΩΝ ΔΥΟ προβολών.**
+ *
+ * 🔑 ADR-862 Φ0 Β11: η `cdeReadReach` είναι **δεύτερη προβολή** της ίδιας φάσης (ο
+ * φράχτης του κανόνα). Ο θεματοφύλακας την **ξαναπαράγει και συγκρίνει**, όπως κάνει
+ * με το `cdeState`: διαφωνία ⇒ `unreadable` ⇒ άρνηση. Χωρίς αυτό, χειρόγραφο
+ * `cdeReadReach: 'tenant'` σε WIP θα **άνοιγε** τον φράχτη σε όλο το γραφείο ενώ ο
+ * κριτής θα έλεγε «μόνο ομάδα» — δύο αλήθειες.
+ * ⚠️ **Απούσα** τιμή είναι ανεκτή: τα έγγραφα πριν τη μετανάστευση του Β11 δεν τη
+ * φέρουν, και ο κανόνας `get` τη διαβάζει με προεπιλογή `tenant` («όπως σήμερα»).
  *
  * @param raw Το έγγραφο **όπως βγήκε από τη βάση**, ποτέ στενεμένο.
  */
 export function readContainerState(raw: Record<string, unknown>): ContainerState {
+  const state = deriveContainerState(raw);
+  const stored = raw.cdeReadReach;
+  if (stored === undefined || state.phase === 'unreadable') return state;
+  if (!isCdeReadReach(stored)) return unreadableState('read-reach-outside-vocabulary');
+  return stored === readReachFor(state.phase) ? state : unreadableState('read-reach-mismatch');
+}
+
+/** Η φάση από `cdeState` + πράξεις — χωρίς την εμβέλεια (βλ. {@link readContainerState}). */
+function deriveContainerState(raw: Record<string, unknown>): ContainerState {
   const acts = readContainerActs(raw);
   const teamId = text(raw.cdeTeamId);
   const declared = raw.cdeState;

@@ -104,6 +104,12 @@ export interface ContainerVisibilityQuery<R> {
    * **απαγορευτικά ακριβός** — δηλαδή ο επόμενος θα τον παρέκαμπτε «για ταχύτητα».
    */
   readonly cache?: Map<string, ProjectMemberRead>;
+  /**
+   * 🗂️ **Ο διακόπτης ιστορικού** (ADR-862 Φ0) — ο αιτών ζήτησε **ρητά** τις αρχειοθετημένες
+   * εκδόσεις (η στοίβα εκδόσεων). Χωρίς αυτόν, κάθε `SUPERSEDED` κρίνεται
+   * `denied-superseded-hidden`. ⛔ **ΠΟΤΕ** `true` από προεπιλογή.
+   */
+  readonly historyRequested?: boolean;
 }
 
 // =============================================================================
@@ -132,7 +138,7 @@ export interface ContainerVisibilityQuery<R> {
 export async function containerVisibilityRefusal<R>(
   query: ContainerVisibilityQuery<R>,
 ): Promise<R | null> {
-  const { fileId, caller, action, raw, notFound, unavailable, cache } = query;
+  const { fileId, caller, action, raw, notFound, unavailable, cache, historyRequested } = query;
 
   const read = readFileRecord(raw, fileId);
   if (read.outcome === 'unreadable') return notFound();
@@ -143,6 +149,7 @@ export async function containerVisibilityRefusal<R>(
     //    αλλιώς ο αιτών θα διάλεγε **σε ποια υπόθεση** είναι μέλος.
     projectId: read.record.projectId,
     ...(cache === undefined ? {} : { cache }),
+    ...(historyRequested === true ? { historyRequested } : {}),
   });
   if (built.outcome === 'unknown') return unavailable();
 

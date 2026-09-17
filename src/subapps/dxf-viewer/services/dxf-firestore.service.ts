@@ -1,5 +1,5 @@
 import { getErrorMessage } from '@/lib/error-utils';
-import { db } from '../../../lib/firebase';
+import { auth, db } from '../../../lib/firebase';
 import { COLLECTIONS } from '../../../config/firestore-collections';
 import { generateFileId as enterpriseGenerateFileId } from '@/services/enterprise-id.service';
 import type { SceneModel } from '../types/scene';
@@ -335,17 +335,26 @@ export class DxfFirestoreService {
   ): Promise<{ id: string; storagePath: string | null } | null> {
     try {
       const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
-      // 🏢 ENTERPRISE: Tenant-scoped query on companyId + originalFilename
-      const q = query(
-        collection(db, COLLECTIONS.FILES),
-        where('companyId', '==', companyId),
-        where('originalFilename', '==', fileName),
-        limit(5)
+      const { fileListReadPaths } = await import('@/lib/files/file-visibility-scope');
+      const uid = auth.currentUser?.uid;
+      if (!uid) return null;
+      // 🏢 ENTERPRISE: Tenant-scoped query on companyId + originalFilename.
+      // 🔒 ADR-862 Φ0 Β11 — ΚΑΙ ΟΙ ΔΥΟ δρόμοι ορατότητας: η λίστα γραφείου δεν φέρνει
+      //    το WIP μου, και χωρίς αυτό το auto-save θα γεννούσε ΔΙΠΛΟ FileRecord.
+      const snapshots = await Promise.all(
+        fileListReadPaths(uid).map(scope =>
+          getDocs(query(
+            collection(db, COLLECTIONS.FILES),
+            where('companyId', '==', companyId),
+            ...scope,
+            where('originalFilename', '==', fileName),
+            limit(5)
+          ))
+        )
       );
-      const snapshot = await getDocs(q);
 
       // Filter in code: floorplans category + not deleted
-      for (const docSnap of snapshot.docs) {
+      for (const docSnap of snapshots.flatMap(snapshot => snapshot.docs)) {
         const data = docSnap.data();
         if (data.category === 'floorplans' && data.isDeleted !== true) {
           const existingId = docSnap.id;
