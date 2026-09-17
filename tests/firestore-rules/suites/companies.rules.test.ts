@@ -16,8 +16,8 @@
  */
 
 import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator';
-import { getContext } from '../_harness/auth-contexts';
-import { assertCell, type AssertTarget } from '../_harness/assertions';
+import { getContext, withSeedContext } from '../_harness/auth-contexts';
+import { assertCell, expectDeny, type AssertTarget } from '../_harness/assertions';
 import { seedCompany } from '../_harness/seed-helpers-users';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
@@ -52,6 +52,48 @@ describe('companies.rules — own-company read + server-only write (companiesMat
         };
         await assertCell(ctx, cell, target);
       });
+    });
+  }
+});
+
+/**
+ * ADR-862 Φ0 Β14 — `companies/{W}/projects/{P}/members/{mbr_…}` είναι ΜΟΝΟ διακομιστή.
+ *
+ * 🔴 Το έγγραφο αποφασίζει ποιος βλέπει αρχεία CDE. Εγγραφή από πελάτη = αυτο-ένταξη σε
+ * υπόθεση· ανάγνωση = απαρίθμηση ομάδας. Ούτε ο διαχειριστής του ΙΔΙΟΥ γραφείου, ούτε ο
+ * super admin — ο γραφέας είναι το Admin SDK (`lib/auth/project-member-write.ts`).
+ */
+describe('companies.rules — projects/{P}/members: server-only (ADR-862 Φ0 Β14)', () => {
+  let env: RulesTestEnvironment;
+  const membersPath = `companies/${SAME_TENANT_COMPANY_ID}/projects/proj-1/members`;
+  const personas = ['super_admin', 'same_tenant_admin', 'same_tenant_user'] as const;
+
+  beforeAll(async () => { env = await initEmulator(); });
+  afterAll(async () => { await teardownEmulator(env); });
+  beforeEach(async () => {
+    await withSeedContext(env, async (ctx) => {
+      await ctx.firestore().doc(`${membersPath}/mbr_seed`).set({ uid: 'u-1', cdeAudience: 'design' });
+    });
+  });
+  afterEach(async () => { await resetData(env); });
+
+  for (const persona of personas) {
+    it(`${persona} × get → deny`, async () => {
+      await expectDeny(getContext(env, persona).firestore().doc(`${membersPath}/mbr_seed`).get());
+    });
+    it(`${persona} × list → deny`, async () => {
+      await expectDeny(getContext(env, persona).firestore().collection(membersPath).get());
+    });
+    it(`${persona} × create (self-enrolment) → deny`, async () => {
+      const ctx = getContext(env, persona);
+      await expectDeny(ctx.firestore().doc(`${membersPath}/mbr_self`).set({ uid: 'u-self', cdeAudience: 'design' }));
+    });
+    it(`${persona} × update → deny`, async () => {
+      const ctx = getContext(env, persona);
+      await expectDeny(ctx.firestore().doc(`${membersPath}/mbr_seed`).update({ cdeAudience: 'client' }));
+    });
+    it(`${persona} × delete → deny`, async () => {
+      await expectDeny(getContext(env, persona).firestore().doc(`${membersPath}/mbr_seed`).delete());
     });
   }
 });
