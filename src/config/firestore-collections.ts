@@ -117,6 +117,16 @@ export const COLLECTIONS = {
    * (ακίνητο, μήνας): τιμή νύχτας, ελάχ./μέγ. νύχτες, CTA/CTD. Ίδιο σύνορο με την κεφαλή.
    */
   STAY_CALENDAR_MONTHS: process.env.NEXT_PUBLIC_STAY_CALENDAR_MONTHS_COLLECTION || 'stay_calendar_months',
+  /**
+   * 🎯 ADR-835 §22 (Στάδιο Γ) — **ΤΑ ΚΑΝΑΛΙΑ ΕΝΟΣ ΚΑΤΑΛΥΜΑΤΟΣ**. Κλειδί: το `propertyId`.
+   * Οι πηγές iCal (URL + κατάσταση) και η **γενιά** του μυστικού συνδέσμου εξαγωγής.
+   *
+   * 🔴 **ΑΔΙΑΒΑΣΤΗ ΑΠΟ ΤΟΝ ΠΕΛΑΤΗ — μόνη στην οικογένεια του ημερολογίου.** Το URL ενός
+   * feed **ΕΙΝΑΙ διαπιστευτήριο**: ο σύνδεσμος `.ics` της Airbnb δίνει σε όποιον τον έχει
+   * ολόκληρο το ημερολόγιο του οικοδεσπότη εκεί. Η οθόνη βλέπει **προβολή** από τον
+   * διακομιστή (host + κατάσταση), ποτέ το έγγραφο.
+   */
+  STAY_CHANNELS: process.env.NEXT_PUBLIC_STAY_CHANNELS_COLLECTION || 'stay_channels',
 
   /**
    * 🎯 ADR-827 §9 — **Η ΒΙΤΡΙΝΑ ΤΟΥ ΓΡΑΦΕΙΟΥ**. Κλειδί εγγράφου: το `companyId`.
@@ -293,6 +303,67 @@ export const COLLECTIONS = {
    * **μόνο** που υπάρχει σε **κάθε** έγγραφο, ανεξάρτητα από το είδος του στόχου.
    */
   FIRST_CONTACTS: process.env.NEXT_PUBLIC_FIRST_CONTACTS_COLLECTION || 'first_contacts',
+  /**
+   * ADR-867 §4.3 — **Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ** (`nteam_*`): ποιος του γραφείου απαντά σε μια πράξη
+   * που **δεν έχει έργο** (π.χ. εντολή ιδιοκτήτη ↔ μεσιτικού) — ADR-834 §5 Β (ε) ①.
+   *
+   * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΚΑΘΟΛΟΥ**: η εντολή **δεν γράφει άνθρωπο** (ADR-867 §2.3) — κρατά
+   * `agencyCompanyId`. Χωρίς αυτήν, το «ποιος διαβάζει;» θα απαντιόταν **ή** «ο υπεύθυνος»
+   * (ορφανό νήμα σε απουσία/αποχώρηση — το τεκμηριωμένο κενό Salesforce/HubSpot/Zendesk/FUB)
+   * **ή** «όλο το γραφείο» (αντίκειται στο (γ) ①).
+   *
+   * ⛔ **ΚΛΕΙΣΤΗ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** — **ένας** γραφέας (`services/network-messaging/
+   * act-team-writer.ts`), καμία γραφή πελάτη· η οθόνη τη διαβάζει από τον διακομιστή (Β5/Β7).
+   * ⚠️ Άξονας μισθωτή **`hostCompanyId`** (CHECK 3.35) — το `network_threads` **δεν** θα έχει
+   * κανέναν (νήμα σχέσης = του **προσώπου**, ADR-867 §4.1), γι' αυτό μπαίνει χωριστά στο Β4.
+   */
+  NETWORK_ACT_TEAMS: process.env.NEXT_PUBLIC_NETWORK_ACT_TEAMS_COLLECTION || 'network_act_teams',
+
+  /**
+   * ADR-867 §4.1 — **ΤΟ ΝΗΜΑ** (`nthr_*`): η συνομιλία ανάμεσα σε **δύο πλευρές διαφορετικών
+   * χώρων**. **Ένα** έγγραφο, **δύο** θέματα από κλειστό σύνολο (πράξη · σχέση) — ποτέ δύο
+   * μηχανές (ADR-834 §5 Β (δ)).
+   *
+   * 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΤΟ `CONVERSATIONS`/`MESSAGES` (ADR-029)**: εκείνο μοντελοποιεί
+   * **γραφείο ↔ εξωτερικό κανάλι** (Telegram/email/bot) και η ανάγνωσή του είναι
+   * `belongsToCompany(...)` — δηλαδή **όλο** το γραφείο. Εδώ το «ποιος διαβάζει;» απαντά η
+   * **υποσυλλογή ακροατηρίου**, και ένα κοινό σχήμα θα έκανε τους δύο κανόνες ορατότητας
+   * **αδιάκριτους** (ADR-867 §2.1).
+   *
+   * ⛔ **ΚΑΜΙΑ ΓΡΑΦΗ ΠΕΛΑΤΗ** (`create/update/delete: if false`) — ίδιο δόγμα με το
+   * `owner_properties`: κάθε γραφή περνά από **έναν** γραφέα
+   * (`services/network-messaging/thread-writer.ts`) μέσα σε συναλλαγή. Η **ανάγνωση**
+   * επιτρέπεται σε ζωντανό μέλος του ακροατηρίου, ώστε η οθόνη να είναι **ζωντανή**.
+   *
+   * ⚠️ **ΚΑΝΕΝΑΣ ΑΞΟΝΑΣ ΜΙΣΘΩΤΗ** (`tenant-config.ts`, CHECK 3.35): το νήμα **σχέσης**
+   * ανήκει στο **πρόσωπο** (ADR-834 (γ) ②) και δεν έχει χώρο καθόλου. Δηλώνεται ρητά ως
+   * `mode: 'none'` με κατηγορία `cross-space-thread` — **ποτέ** πεδίο που λείπει από μισά
+   * έγγραφα.
+   */
+  NETWORK_THREADS: process.env.NEXT_PUBLIC_NETWORK_THREADS_COLLECTION || 'network_threads',
+
+  /**
+   * ADR-867 §4.1 — **ΤΟ ΒΙΒΛΙΟ ΤΩΝ ΑΝΑΚΛΗΣΕΩΝ**: το κείμενο κάθε μηνύματος που
+   * ανακλήθηκε, **και το γεγονός της ανάκλησης**. Κλειδί = **το id του μηνύματος**.
+   *
+   * 🔑 **ΤΟ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ — Η ΠΡΑΚΤΙΚΗ ΤΩΝ ΜΕΓΑΛΩΝ, ΓΡΑΜΜΕΝΗ ΠΡΙΝ**: ο Microsoft
+   * Teams κρατά **δύο** αντίγραφα κάθε μηνύματος (*«one for compliance purposes, one for
+   * end-user access»*) και η διαγραφή χρήστη **μετακινεί** το μήνυμα στο κρυφό
+   * `SubstrateHolds`· ο Slack το ίδιο ως `save edits and deletions` + eDiscovery API. Το
+   * XMPP **XEP-0424** το κάνει κανόνα: *«the archiving service MUST store the retraction
+   * message»*. Εδώ ο «κρυφός τόπος» είναι **ρητή συλλογή με ρητό κανόνα** — όχι κρυφός
+   * φάκελος που μαθαίνεις ότι υπάρχει όταν σου ζητήσουν eDiscovery.
+   *
+   * ⛔ **ΚΛΕΙΣΤΗ ΣΕ ΚΑΘΕ ΠΕΛΑΤΗ, ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** — ούτε ο αποστολέας, ούτε ο
+   * παραλήπτης, ούτε ο διαχειριστής χώρου, ούτε ο `super_admin`. Αν ο πελάτης μπορούσε να
+   * τη διαβάσει, η ανάκληση θα ήταν **διακοσμητική**: ο αποστολέας θα νόμιζε ότι πήρε
+   * πίσω τα λόγια του ενώ θα ήταν ένα ερώτημα μακριά.
+   *
+   * ⚖️ **Ο λόγος διατήρησης είναι ΕΝΑΣ και γραμμένος**: ΓΚΠΔ άρθρο 17 §3(ε) —
+   * θεμελίωση/άσκηση/υποστήριξη νομικών αξιώσεων (ADR-834 §5 Β (β) ③).
+   */
+  NETWORK_MESSAGE_RETRACTIONS:
+    process.env.NEXT_PUBLIC_NETWORK_MESSAGE_RETRACTIONS_COLLECTION || 'network_message_retractions',
 
   /**
    * **Η ΠΡΟΣΚΛΗΣΗ — Ο,ΤΙ ΔΕΝ ΕΙΝΑΙ ΑΚΟΜΗ ΠΡΑΞΗ** (ADR-844).
@@ -996,6 +1067,21 @@ export const SUBCOLLECTIONS = {
   //       ⇒ μηδενική μετανάστευση (ADR-787 §5.1 α).
   WORKSPACE_MEMBERS: process.env.NEXT_PUBLIC_WORKSPACE_MEMBERS_SUBCOL || 'workspace_members',
 
+  // 💬 ΝΗΜΑ ΔΙΚΤΥΟΥ — `network_threads/{nthr_*}/…` (ADR-867 §4.1 · §4.2)
+  //
+  // 🔴 ΤΑ ΟΝΟΜΑΤΑ ΕΙΝΑΙ ΜΗΧΑΝΙΣΜΟΣ, ΟΧΙ ΓΟΥΣΤΟ — ΤΟ ΙΔΙΟ ΜΑΘΗΜΑ ΜΕ ΤΟ `WORKSPACE_MEMBERS`
+  // ΑΚΡΙΒΩΣ ΑΠΟ ΠΑΝΩ. Το προφανές όνομα για το πρώτο θα ήταν `'messages'` — και υπάρχει ΗΔΗ
+  // **top-level** συλλογή `messages` (ADR-029 omnichannel, `COLLECTIONS.MESSAGES`, με δικό της
+  // `match` στους κανόνες). Το Firestore απαντά το «δώσε μου όλα τα μηνύματα» με collection
+  // group query, που σαρώνει **ΚΑΤΑ ΟΝΟΜΑ ΣΥΛΛΟΓΗΣ** ⇒ με το ίδιο όνομα, μια σάρωση των
+  // μηνυμάτων του inbox θα επέστρεφε **και** ιδιωτικά μηνύματα δικτύου — σιωπηλά.
+  //
+  // ⛔ ΜΗΝ τα μετονομάσεις σε `'messages'` / `'audience'`, και ⛔ ΜΗΝ «λύσεις» τη σύγκρουση με
+  // φίλτρο τύπου «αγνόησε όσα έχουν threadId»: φίλτρο που πρέπει να **θυμάσαι** είναι το
+  // σχήμα που το repo έχει ήδη πληρώσει τέσσερις φορές (CHECK 3.34 · 3.37 · 3.49 · 3.57).
+  NETWORK_THREAD_MESSAGES: process.env.NEXT_PUBLIC_NETWORK_THREAD_MESSAGES_SUBCOL || 'network_messages',
+  NETWORK_THREAD_AUDIENCE: process.env.NEXT_PUBLIC_NETWORK_THREAD_AUDIENCE_SUBCOL || 'network_audience',
+
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
 
@@ -1146,6 +1232,10 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
 
   // Ownership table subcollections → OWNERSHIP_TABLES
   OWNERSHIP_REVISIONS: 'OWNERSHIP_TABLES',
+
+  // Network thread subcollections → NETWORK_THREADS (ADR-867 §4.1/§4.2)
+  NETWORK_THREAD_MESSAGES: 'NETWORK_THREADS',
+  NETWORK_THREAD_AUDIENCE: 'NETWORK_THREADS',
 } as const;
 
 // ============================================================================

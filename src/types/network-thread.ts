@@ -1,0 +1,174 @@
+/**
+ * @fileoverview **ΝΗΜΑΤΑ ΑΝΑΜΕΣΑ ΣΕ ΣΥΝΕΡΓΑΤΕΣ** — τα κλειστά σύνολα και τα σχήματα (ADR-867 §4).
+ * @related ADR-834 §5 Β (α)-(ε) — οι αποφάσεις · ADR-862 §5.2
+ * @module types/network-thread
+ *
+ * 🔑 **Ο πυρήνας δεν ξέρει τι είναι «εντολή»** (ADR-867 §3): η πράξη εμφανίζεται εδώ ως
+ * `actKind` από κλειστό σύνολο και ως **σπόρος** — τίποτα από τα πεδία της. Νέα πηγή ακμής
+ * (ADR-862 Φ1 — συμμετοχή) = **μία** τιμή στο `NETWORK_ACT_KINDS`, όχι νέο σχήμα νήματος.
+ *
+ * ⚠️ **Ξεχωριστό από το `types/conversations.ts` (ADR-029)**: εκείνο είναι γραφείο ↔ εξωτερικό
+ * κανάλι, ορατό σε όλο τον χώρο. Κοινός τύπος θα έκανε τους κανόνες ορατότητας **αδιάκριτους**.
+ */
+
+// ============================================================================
+// ΚΛΕΙΣΤΑ ΣΥΝΟΛΑ
+// ============================================================================
+
+/** Οι **πράξεις** που γεννούν ακμή. Σήμερα μία (ADR-834 §5 Β (δ)). */
+export const NETWORK_ACT_KINDS = ['mandate'] as const;
+export type NetworkActKind = (typeof NETWORK_ACT_KINDS)[number];
+
+/** Τα δύο θέματα νήματος (ADR-834 §5 Β (γ)): της **πράξης** (του χώρου) · της **σχέσης** (του προσώπου). */
+export const NETWORK_THREAD_KINDS = ['act', 'relationship'] as const;
+export type NetworkThreadKind = (typeof NETWORK_THREAD_KINDS)[number];
+
+/** `closed` ⇐ **μόνο** αποσύνδεση ΓΚΠΔ (β) — **ποτέ** διαγραφή, **ποτέ** λήξη πράξης (α). */
+export const NETWORK_THREAD_STATES = ['open', 'closed'] as const;
+export type NetworkThreadState = (typeof NETWORK_THREAD_STATES)[number];
+
+/** Η **πλευρά** ενός μέλους του ακροατηρίου. `person` = νήμα σχέσης (κανένας χώρος). */
+export const NETWORK_AUDIENCE_SIDES = ['host', 'counterpart', 'person'] as const;
+export type NetworkAudienceSide = (typeof NETWORK_AUDIENCE_SIDES)[number];
+
+/** Ο **ρόλος** στο ακροατήριο (ADR-834 §5 Β (ε) ①). */
+export const NETWORK_AUDIENCE_ROLES = ['responsible', 'collaborator', 'counterpart', 'person'] as const;
+export type NetworkAudienceRole = (typeof NETWORK_AUDIENCE_ROLES)[number];
+
+/**
+ * **Γιατί** κάποιος είναι στο ακροατήριο — η προέλευση, όπως το `enrollment` των μελών έργου.
+ * `admin-self` = ο διαχειριστής χώρου μπήκε **ορατά** (ADR-834 §5 Β (ε) ②).
+ */
+export const NETWORK_AUDIENCE_REASONS = [
+  'creator',
+  'assigned',
+  'added',
+  'failover',
+  'admin-self',
+  'counterpart',
+  'relationship',
+] as const;
+export type NetworkAudienceReason = (typeof NETWORK_AUDIENCE_REASONS)[number];
+
+// ============================================================================
+// ΣΧΗΜΑΤΑ
+// ============================================================================
+
+/** Το θέμα του νήματος — διακριτή ένωση, **ποτέ** προαιρετικά πεδία που «συνήθως» υπάρχουν. */
+export type NetworkThreadTopic =
+  | {
+      readonly kind: 'act';
+      readonly actKind: NetworkActKind;
+      /** Ο σπόρος της πράξης, από το μητρώο πηγών ακμής. */
+      readonly actSeed: string;
+      /** Ο χώρος στον οποίο **ανήκει** το νήμα πράξης (ADR-834 (γ) ①). */
+      readonly hostCompanyId: string;
+      /** Το πρόσωπο της **άλλης** πλευράς. */
+      readonly counterpartUid: string;
+    }
+  | {
+      readonly kind: 'relationship';
+      /** Ταξινομημένα — το ζεύγος είναι **συμμετρικό**. */
+      readonly personUids: readonly [string, string];
+    };
+
+/** `network_threads/{nthr_*}` */
+export interface NetworkThread {
+  readonly id: string;
+  readonly topic: NetworkThreadTopic;
+  readonly state: NetworkThreadState;
+  readonly createdAt: string;
+  readonly lastMessageAt: string | null;
+}
+
+/**
+ * `network_threads/{id}/network_messages/{nmsg_*}` — **ό,τι διαβάζει ο πελάτης**.
+ *
+ * 🔑 **Η ΑΝΑΚΛΗΣΗ ΕΙΝΑΙ ΤΑΦΟΠΛΑΚΑ, ΟΧΙ ΔΙΑΓΡΑΦΗ** (XMPP **XEP-0424**, το πρότυπο της
+ * βιομηχανίας): το έγγραφο **μένει στη θέση του** — ίδιο id, ίδιο `createdAt`, ίδιος
+ * αποστολέας — και **μόνο το σώμα** αδειάζει. Έτσι η σειρά του νήματος, οι δείκτες
+ * ανάγνωσης και η σελιδοποίηση **δεν μετακινούνται**, και ο παραλήπτης βλέπει **ότι
+ * κάτι ανακλήθηκε** αντί να του εξαφανιστεί η συνομιλία κάτω από τα μάτια του.
+ *
+ * ⚠️ **ΤΟ ΚΕΙΜΕΝΟ ΔΕΝ ΧΑΝΕΤΑΙ — ΑΛΛΑΖΕΙ ΤΟΠΟ**: μετακινείται στο
+ * `network_message_retractions/{nmsg_*}`, που είναι **κλειστό σε κάθε πελάτη**. Ίδιο
+ * δόγμα με τα **δύο αντίγραφα** του Microsoft Teams *(«one for compliance purposes, one
+ * for end-user access»)* και με το `save edits and deletions` του Slack.
+ */
+export interface NetworkMessage {
+  readonly id: string;
+  readonly senderUid: string;
+  /** **Κενό** μετά την ανάκληση. Το αρχικό ζει στο βιβλίο ανακλήσεων. */
+  readonly text: string;
+  readonly createdAt: string;
+  readonly editedAt: string | null;
+  readonly retractedAt: string | null;
+  /**
+   * 🏆 **Η ΕΙΛΙΚΡΙΝΗΣ ΤΑΦΟΠΛΑΚΑ — ΤΟ ΚΕΝΟ ΠΟΥ ΚΛΕΙΝΟΥΜΕ.**
+   *
+   * `true` = **κάποιος το είχε ήδη διαβάσει** όταν ανακλήθηκε. Το μετρημένο παράπονο
+   * του WhatsApp είναι ότι ο αποστολέας **δεν μαθαίνει ποτέ** αν πρόλαβε· εδώ το
+   * ξέρουμε, γιατί το ακροατήριο κρατά `lastReadAt` ανά πρόσωπο.
+   *
+   * 🔑 Σε επαγγελματικό εργαλείο αυτό **δεν είναι λεπτομέρεια**: ο μεσίτης που έγραψε
+   * λάθος τιμή πρέπει να ξέρει αν έφτασε στον πελάτη — αλλιώς θα υποθέσει ότι δεν
+   * έφτασε, και θα χτίσει πάνω σε ψέμα. `null` = δεν είχε ανακληθεί ποτέ.
+   */
+  readonly readBeforeRetraction: boolean | null;
+}
+
+/**
+ * `network_message_retractions/{nmsg_*}` — **ΤΟ ΑΝΤΙΓΡΑΦΟ ΣΥΜΜΟΡΦΩΣΗΣ.**
+ *
+ * ⛔ **ΚΛΕΙΣΤΟ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ, ΓΙΑ ΚΑΘΕ ΠΕΛΑΤΗ** — ούτε ο αποστολέας, ούτε ο
+ * παραλήπτης, ούτε ο διαχειριστής χώρου, ούτε ο `super_admin`. Το διαβάζει **μόνο** ο
+ * διακομιστής, και μόνο για τον λόγο που υπάρχει: **θεμελίωση/άσκηση/υποστήριξη
+ * νομικών αξιώσεων** (ΓΚΠΔ άρθρο 17 §3(ε) · ADR-834 §5 Β (β) ③).
+ *
+ * 🔑 **ΤΟ ΚΛΕΙΔΙ ΕΙΝΑΙ ΤΟ ID ΤΟΥ ΜΗΝΥΜΑΤΟΣ** — ένα προς ένα, ντετερμινιστικά. Καμία
+ * νέα ταυτότητα: μια ανάκληση **δεν είναι** δικό της αντικείμενο, είναι το **γεγονός**
+ * που συνέβη σε ένα συγκεκριμένο μήνυμα (XEP-0424: η ανάκληση **αναφέρεται** στο
+ * μήνυμα, δεν το μεταλλάσσει).
+ */
+export interface NetworkMessageRetraction {
+  /** = το id του μηνύματος. */
+  readonly id: string;
+  readonly threadId: string;
+  /** Το θέμα του νήματος — **γιατί** κρατάμε: τεκμήριο πράξης ή προσωπική σχέση. */
+  readonly threadKind: NetworkThreadKind;
+  readonly senderUid: string;
+  /** Ο άνθρωπος που ανακάλεσε. **Πάντα** ο αποστολέας (XEP-0424 business rule). */
+  readonly retractedBy: string;
+  /** 🔒 Το κείμενο **όπως στάλθηκε**. Ο μόνος τόπος όπου επιβιώνει. */
+  readonly originalText: string;
+  readonly originalCreatedAt: string;
+  readonly retractedAt: string;
+  /** Είχε διαβαστεί; Το ίδιο γεγονός με το `readBeforeRetraction`, **γραμμένο δύο φορές επίτηδες**. */
+  readonly readBeforeRetraction: boolean;
+}
+
+/** `network_threads/{id}/audience/{uid}` — **η** απάντηση στο «ποιος διαβάζει;», με ιστορικό. */
+export interface NetworkAudienceEntry {
+  readonly uid: string;
+  readonly side: NetworkAudienceSide;
+  readonly role: NetworkAudienceRole;
+  readonly reason: NetworkAudienceReason;
+  readonly addedBy: string;
+  readonly since: string;
+  /** `null` = διαβάζει **τώρα**. Η έξοδος **σφραγίζεται**, δεν σβήνεται. */
+  readonly until: string | null;
+  readonly lastReadAt: string | null;
+  readonly muted: boolean;
+}
+
+/** `network_act_teams/{nteam_*}` — **το SSoT** της ομάδας· το ακροατήριο είναι προβολή του (§4.3). */
+export interface NetworkActTeam {
+  readonly id: string;
+  readonly actKind: NetworkActKind;
+  readonly actSeed: string;
+  readonly hostCompanyId: string;
+  readonly responsibleUid: string;
+  /** **Περιλαμβάνει** τον υπεύθυνο — μία λίστα, όχι δύο που πρέπει να συμφωνούν. */
+  readonly memberUids: readonly string[];
+  readonly version: number;
+}
