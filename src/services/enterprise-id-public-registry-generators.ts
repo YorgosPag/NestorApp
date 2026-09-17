@@ -121,6 +121,9 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
    */
   generateStayBookingId(): string { return this.generateId(P.STAY_BOOKING).id; }
 
+  /** ADR-835 §20 — id **κλεισμένων νυχτών** (`sblk_*`). Διακομιστής μόνο, ίδιο σκεπτικό με το `stay_*`. */
+  generateStayBlockId(): string { return this.generateId(P.STAY_BLOCK).id; }
+
   /**
    * ADR-843 — id μιας **ΠΡΑΞΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ** (`fcon_*`).
    *

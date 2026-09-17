@@ -166,6 +166,11 @@ export const ENTERPRISE_ID_PREFIXES = {
                               // σύγχυση θα φαινόταν ως ΔΙΠΛΟΚΡΑΤΗΣΗ.
                               // ⚠️ ΚΑΙ ΞΕΧΩΡΙΣΤΟ από το `appointment` (ραντεβού επίσκεψης):
                               // εκείνο είναι ώρα ενός ΜΕΣΙΤΗ, αυτό είναι νύχτες ενός ΧΩΡΟΥ.
+  STAY_BLOCK: 'sblk',         // ADR-835 §20 (Στάδιο Α): ΚΛΕΙΣΜΕΝΕΣ ΝΥΧΤΕΣ — «εδώ δεν μένει κανείς»,
+                              // ΧΩΡΙΣ επισκέπτη. ⚠️ ΞΕΧΩΡΙΣΤΟ από το `stay`: η κράτηση κουβαλά
+                              // άνθρωπο (GDPR), το block όχι — και ο κριτής ξεχωρίζει τις δύο
+                              // πηγές από το πρόθεμα της ταυτότητας (`occupancyId`). Κοινό
+                              // πρόθεμα θα έκανε το «άνοιξε τις μέρες» ικανό να σβήσει ΚΡΑΤΗΣΗ.
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

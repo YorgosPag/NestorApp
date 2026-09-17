@@ -103,6 +103,17 @@ export const COLLECTIONS = {
   OWNER_PROPERTIES: process.env.NEXT_PUBLIC_OWNER_PROPERTIES_COLLECTION || 'owner_properties',
 
   /**
+   * 🎯 ADR-835 §20 (Στάδιο Α) — **Η ΚΕΦΑΛΗ ΤΟΥ ΗΜΕΡΟΛΟΓΙΟΥ ΚΑΤΑΛΥΜΑΤΟΣ**. Κλειδί: το
+   * `propertyId`. «Δηλώθηκε;» + το `version` που σειριοποιεί κάθε εγγραφή (phantom insert).
+   * Γράφει μόνο ο διακομιστής· διαβάζει ο συντάκτης της αγγελίας.
+   */
+  STAY_CALENDARS: process.env.NEXT_PUBLIC_STAY_CALENDARS_COLLECTION || 'stay_calendars',
+  /** 🎯 ADR-835 §20 — **ΚΛΕΙΣΜΕΝΕΣ ΝΥΧΤΕΣ** (`sblk_*`), χωρίς επισκέπτη. Ίδιο σύνορο με την κεφαλή. */
+  STAY_BLOCKS: process.env.NEXT_PUBLIC_STAY_BLOCKS_COLLECTION || 'stay_blocks',
+  /** 🎯 ADR-835 §6.1/§20 — **ΚΡΑΤΗΣΕΙΣ** (`stay_*`). Κουβαλούν άνθρωπο· ίδιο σύνορο με την κεφαλή. */
+  STAY_BOOKINGS: process.env.NEXT_PUBLIC_STAY_BOOKINGS_COLLECTION || 'stay_bookings',
+
+  /**
    * 🎯 ADR-827 §9 — **Η ΒΙΤΡΙΝΑ ΤΟΥ ΓΡΑΦΕΙΟΥ**. Κλειδί εγγράφου: το `companyId`.
    *
    * 🔴 **Η ΜΟΝΗ συλλογή που ο πελάτης επιτρέπεται να ΣΑΡΩΣΕΙ και περιέχει
@@ -244,6 +255,15 @@ export const COLLECTIONS = {
    * ίδιο σκεπτικό με το `OWNER_PROPERTIES`.
    */
   MANDATE_REQUESTS: process.env.NEXT_PUBLIC_MANDATE_REQUESTS_COLLECTION || 'mandate_requests',
+  /**
+   * ADR-864 §20 — **ΤΟ ΜΗΤΡΩΟ ΤΩΝ ΠΑΓΩΜΕΝΩΝ ΑΠΟΔΕΙΚΤΙΚΩΝ** (`mevd_*`): ύπαρξη, διατήρηση, διάθεση.
+   *
+   * 🔴 Υπάρχει γιατί η αναφορά `proof.evidence` **χάνεται** όταν ο γραφέας αντικαθιστά την εντολή ενός
+   * γραφείου, ενώ το αντικείμενο μένει κλειδωμένο στο bucket. Μετά τη διάθεση μένει ως **ταφόπλακα**.
+   *
+   * ⛔ **ΚΛΕΙΣΤΗ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** — μόνο ο διακομιστής. Άξονας μισθωτή **`agencyCompanyId`** (CHECK 3.35).
+   */
+  MANDATE_EVIDENCE: process.env.NEXT_PUBLIC_MANDATE_EVIDENCE_COLLECTION || 'mandate_evidence',
   /**
    * ADR-843 — **Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ** (`fcon_*`): ο ζητών κάνει την κίνηση και
    * φέρνει **τα δικά του** στοιχεία στον προσφέροντα.
@@ -966,8 +986,9 @@ export const SUBCOLLECTIONS = {
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
 
-  // File subcollections (ADR-191: Document Management)
-  FILE_VERSIONS: process.env.NEXT_PUBLIC_FILE_VERSIONS_SUBCOL || 'versions',
+  // ⛔ `FILE_VERSIONS` ΑΦΑΙΡΕΘΗΚΕ (ADR-862 Φ0, 2026-09-17): η υποσυλλογή `files/{id}/versions`
+  //    ήταν νεκρή στην παραγωγή (κανένας κανόνας ⇒ deny-all, 0 έγγραφα). Οι εκδόσεις ζουν
+  //    πλέον ΜΟΝΟ ως αλυσίδα διαδοχής (`services/iso19650/version-stack.ts`).
 
   // Ownership table revisions (ADR-235)
   OWNERSHIP_REVISIONS: process.env.NEXT_PUBLIC_OWNERSHIP_REVISIONS_SUBCOL || 'revisions',
@@ -1109,9 +1130,6 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
   COMPANY_PROPERTIES: 'COMPANIES',
   WORKSPACE_MEMBERS: 'COMPANIES',
   COMPANY_AUDIT_LOGS: 'COMPANIES',
-
-  // File subcollections → FILES
-  FILE_VERSIONS: 'FILES',
 
   // Ownership table subcollections → OWNERSHIP_TABLES
   OWNERSHIP_REVISIONS: 'OWNERSHIP_TABLES',

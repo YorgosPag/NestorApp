@@ -127,7 +127,9 @@ function bookingOf(
     covers: [{ propertyId: PROPERTY, spaceId: null }],
     checkIn: spec.from,
     checkOut: spec.to,
-    holderUserId: spec.holder,
+    holder: { kind: 'user', userId: spec.holder },
+    channel: 'platform',
+    authorUserId: 'usr_author',
     guests: 2,
     lifecycle: 'confirmed',
     riskDisclosedAt: null,
@@ -338,7 +340,7 @@ describe('🔴 Χ — ο πόρος είναι ΣΥΝΟΛΟ ΧΩΡΩΝ: τομή
     expect(conflict?.reason).toBe(EXISTING_IS_EXCLUSIVE);
     // «Ως πότε» — η κατάληψη που εμποδίζει ταξιδεύει ολόκληρη.
     expect(conflict?.with.source.checkOut).toBe(AUG_17);
-    expect(conflict?.with.source.holderUserId).toBe(HOLDER_A);
+    expect(conflict?.with.source.holder).toEqual({ kind: 'user', userId: HOLDER_A });
   });
 
   it('🔑 Χ3. ΔΩΜΑΤΙΟ Α + ΔΩΜΑΤΙΟ Β, ίδιες μέρες ⇒ ΚΑΘΑΡΟ — αλλιώς η τομή θα ήταν «πάντα»', () => {

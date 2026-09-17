@@ -189,6 +189,52 @@ export function isStayBookingLifecycle(
 // =============================================================================
 
 /**
+ * **Από πού ήρθε η κράτηση** — ADR-835 §20 (Στάδιο Α).
+ *
+ * - `direct`: ο οικοδεσπότης την καταχώρισε ο ίδιος (τηλέφωνο, φίλος, επαναλαμβανόμενος πελάτης)
+ * - `platform`: ζητήθηκε από επισκέπτη μέσα από τη Nestor (Στάδιο Δ)
+ *
+ * ⚠️ Οι κρατήσεις **άλλων καναλιών** (Airbnb/Booking μέσω iCal) **ΔΕΝ** είναι κρατήσεις
+ * εδώ: το iCal δεν μεταφέρει επισκέπτη, μόνο «πιασμένο». Γίνονται `StayBlock` με
+ * `source: 'external'` (Στάδιο Γ) — κράτηση χωρίς κάτοχο θα ήταν ψέμα του σχήματος.
+ */
+export const STAY_BOOKING_CHANNELS = ['direct', 'platform'] as const;
+
+export type StayBookingChannel = (typeof STAY_BOOKING_CHANNELS)[number];
+
+/** `true` αν το `value` είναι γνωστό κανάλι κράτησης. */
+export function isStayBookingChannel(value: unknown): value is StayBookingChannel {
+  return (
+    typeof value === 'string' &&
+    (STAY_BOOKING_CHANNELS as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * **Ποιος κρατά** — διακριτή ένωση, ποτέ `holderUserId: string | null`.
+ *
+ * 🔴 Ο επισκέπτης μιας χειροκίνητης κράτησης **δεν έχει λογαριασμό**. Ένα `null` uid θα
+ * έκανε δύο διαφορετικούς ανθρώπους «τον ίδιο κάτοχο» για τον κριτή (N.12)· ένα κενό
+ * string θα ήταν ψεύτικη ταυτότητα. Το `label` είναι **ιδιωτική σημείωση του
+ * οικοδεσπότη** («κ. Παπαδόπουλος, τηλ.») — δεν φεύγει ποτέ προς τρίτους.
+ */
+export type StayBookingHolder =
+  | { readonly kind: 'user'; readonly userId: string }
+  | { readonly kind: 'offline'; readonly label: string };
+
+/**
+ * **Η ταυτότητα κατόχου για τον κριτή.** Ο offline κάτοχος παίρνει ταυτότητα **ανά
+ * κράτηση**: δύο χειροκίνητες κρατήσεις δεν είναι «ο ίδιος άνθρωπος» επειδή κανείς δεν
+ * έχει λογαριασμό. Με `sameHolder: 'conflicts'` η τιμή δεν αλλάζει ετυμηγορία — αλλάζει
+ * το αν η απάντηση **λέει αλήθεια** για το ποιος είναι ποιος.
+ */
+export function stayHolderId(booking: Pick<StayBooking, 'id' | 'holder'>): string {
+  return booking.holder.kind === 'user'
+    ? booking.holder.userId
+    : `offline:${booking.id}`;
+}
+
+/**
  * **Μια κράτηση βραχυχρόνιας διαμονής.** Enterprise id `stay_*` (N.6).
  *
  * ⚠️ **ΤΟ ΔΙΑΣΤΗΜΑ ΕΙΝΑΙ ΗΜΙ-ΑΝΟΙΧΤΟ `[checkIn, checkOut)` — ΜΗΝ ΤΟ ΑΓΓΙΞΕΙΣ.** Η
@@ -244,8 +290,18 @@ export interface StayBooking {
   readonly checkIn: string;
   /** ISO `YYYY-MM-DD` — η **αναχώρηση**. **ΔΕΝ** ανήκει στο διάστημα. */
   readonly checkOut: string;
-  /** Ποιος κρατά. **uid**, ποτέ όνομα — η οθόνη το λύνει (ιδίωμα ADR-832). */
-  readonly holderUserId: string;
+  /** Ποιος κρατά — λογαριασμός ή άνθρωπος εκτός πλατφόρμας. Δες {@link StayBookingHolder}. */
+  readonly holder: StayBookingHolder;
+  /** Από πού ήρθε η κράτηση. Δες {@link STAY_BOOKING_CHANNELS}. */
+  readonly channel: StayBookingChannel;
+  /**
+   * **Ο συντάκτης της αγγελίας** — αντίγραφο του `OwnerProperty.authorUserId`.
+   *
+   * 🔑 Υπάρχει **μόνο** για τον κανόνα ανάγνωσης Firestore (ίδιος άξονας με το
+   * `owner_properties`, `tenant-config.ts`). Ποιος **διαχειρίζεται** το κρίνει πάντα
+   * το `mayAdminister(custodyOf(property))` — ποτέ αυτό το πεδίο (CHECK 3.56).
+   */
+  readonly authorUserId: string;
   readonly guests: number;
   readonly lifecycle: StayBookingLifecycle;
   /**
@@ -279,12 +335,17 @@ export function occupyingStays(
   return bookings.filter((booking) => occupiesStayCalendar(booking.lifecycle));
 }
 
-/** Οι χώροι μιας κράτησης ως **πόροι** του κριτή. */
-function resourcesOf(booking: StayBooking): readonly OccupancyResource[] {
-  return booking.covers.map((space) => ({
+/**
+ * **Χώροι διαμονής ως πόροι** του κριτή — η **μία** μετάφραση, για κράτηση **και** block
+ * (`types/stay-calendar.ts`). Η πράξη είναι πάντα `'leaseShort'`.
+ */
+export function stayResourcesOf(
+  covers: readonly StaySpaceRef[],
+): readonly OccupancyResource[] {
+  return covers.map((space) => ({
     propertyId: space.propertyId,
     spaceId: space.spaceId,
-    kind: booking.offerKind,
+    kind: 'leaseShort' as const,
   }));
 }
 
@@ -304,9 +365,9 @@ function resourcesOf(booking: StayBooking): readonly OccupancyResource[] {
 export function stayOccupancyOf(booking: StayBooking): Occupancy<StayBooking> {
   return {
     occupancyId: booking.id,
-    holderId: booking.holderUserId,
+    holderId: stayHolderId(booking),
     mode: 'exclusive',
-    resources: resourcesOf(booking),
+    resources: stayResourcesOf(booking.covers),
     startsAt: booking.checkIn,
     expiresAt: booking.checkOut,
     source: booking,

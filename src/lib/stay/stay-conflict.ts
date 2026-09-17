@@ -46,6 +46,11 @@ import {
   type OccupancyVerdict,
 } from '@/lib/occupancy/occupancy-conflict';
 import { stayOccupancyOf, type StayBooking } from '@/types/stay-booking';
+import {
+  stayEntryOccupancyOf,
+  stayEntryOccupies,
+  type StayCalendarEntry,
+} from '@/types/stay-calendar';
 
 /**
  * **Ο ίδιος κάτοχος ⇒ ΣΥΓΚΡΟΥΣΗ** — η δηλωμένη πολιτική της κράτησης.
@@ -89,6 +94,29 @@ export function stayConflicts(
   return occupancyConflicts(
     stayOccupancyOf(candidate),
     existing.map(stayOccupancyOf),
+    STAY_OCCUPANCY_POLICY,
+  );
+}
+
+/** Η ετυμηγορία με **εγγραφές ημερολογίου** (κράτηση ή block) ως πηγή. */
+export type StayCalendarVerdict = OccupancyVerdict<StayCalendarEntry>;
+
+/**
+ * **Χωράει αυτή η εγγραφή στο ημερολόγιο;** — ο ίδιος κριτής, η ίδια πολιτική, με
+ * blocks **και** κρατήσεις (ADR-835 §20, Στάδιο Α).
+ *
+ * 🔑 Το φιλτράρισμα κατάστασης γίνεται **εδώ**, μέσω του `stayEntryOccupies` — όχι στον
+ * καλούντα. Ο καλών της εγγραφής περνά **ό,τι διάβασε**· μια ακυρωμένη κράτηση δεν
+ * κλείνει νύχτες επειδή κάποιος ξέχασε ένα `filter`. (Το `stayConflicts` παραπάνω κρατά
+ * την παλιά σύμβαση για τους υπάρχοντες καλούντες.)
+ */
+export function stayCalendarConflicts(
+  candidate: StayCalendarEntry,
+  existing: readonly StayCalendarEntry[],
+): StayCalendarVerdict {
+  return occupancyConflicts(
+    stayEntryOccupancyOf(candidate),
+    existing.filter(stayEntryOccupies).map(stayEntryOccupancyOf),
     STAY_OCCUPANCY_POLICY,
   );
 }

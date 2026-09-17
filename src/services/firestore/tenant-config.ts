@@ -97,6 +97,15 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   PUBLIC_LANDS:     { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α1/Α11 — η ΓΗ είναι φυσικό γεγονός, κοινό σε όλους· υπάρχει πριν τη διεκδικήσει οποιοσδήποτε και δεν ανήκει σε κανέναν. Read-only από τον πελάτη.' },
   PUBLIC_BUILDINGS: { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α11 — «το κτίριο του κόσμου». Κοινή ταυτότητα ώστε προσφορά και ζήτηση να δείχνουν στο ΙΔΙΟ πράγμα (§14.5). Read-only από τον πελάτη.' },
 
+  // --- ADR-835 §20: ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΤΟΥ ΚΑΤΑΛΥΜΑΤΟΣ -----------------------------
+  // 🔴 ΙΔΙΟΣ ΑΞΟΝΑΣ ΜΕ ΤΟ `OWNER_PROPERTIES`, επίτηδες: το ημερολόγιο είναι κομμάτι της
+  // αγγελίας, και δεύτερος άξονας θα έδινε δεύτερη απάντηση στο «ποιος το βλέπει;». Οι
+  // αναγνώσεις του διακομιστή είναι «οι εγγραφές ΑΥΤΟΥ του ακινήτου», ΑΦΟΥ ο
+  // `mayAdminister` (CHECK 3.56) αποδείξει την κατοχή — δηλώνονται στο σημείο κλήσης με
+  // `tenant-scope-exempt` + λόγο, ίδιο σχήμα με το MANDATE_REQUESTS.
+  STAY_CALENDARS:             { mode: 'userId', fieldName: 'authorUserId' },
+  STAY_BLOCKS:                { mode: 'userId', fieldName: 'authorUserId' },
+  STAY_BOOKINGS:              { mode: 'userId', fieldName: 'authorUserId' },
   // --- ADR-777 Α3/Α5: ΔΗΜΟΣΙΕΥΜΕΝΗ ΠΡΟΒΟΛΗ ----------------------------------
   // 🔴 Άλλη κατηγορία από τις δύο παραπάνω, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ Ο ΚΥΚΛΟΣ ΖΩΗΣ: η γη
   // υπάρχει ακόμη κι αν σβήσουν όλοι οι λογαριασμοί· η αγγελία σβήνει μαζί με την
@@ -125,6 +134,12 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // αλλά ΓΟΝΕΑ: «τα αιτήματα ΑΥΤΗΣ της αγγελίας», αφού πρώτα αποδειχθεί ότι η αγγελία
   // είναι δική του — δηλώνεται στο σημείο κλήσης με `tenant-scope-exempt` + λόγο.
   MANDATE_REQUESTS: { mode: 'companyId', fieldName: 'agencyCompanyId' },
+
+  // --- ADR-864 §20: ΤΟ ΜΗΤΡΩΟ ΤΩΝ ΠΑΓΩΜΕΝΩΝ ΑΠΟΔΕΙΚΤΙΚΩΝ ---------------------
+  // 🔴 ΔΕΝ διαβάζεται από πελάτη (`firestore.rules`: read/write false). Άξονας το ΓΡΑΦΕΙΟ της σχέσης,
+  // όπως στο MANDATE_REQUESTS. Οι δύο αναγνώσεις του διακομιστή (σάρωση cron · «τα αποδεικτικά ΑΥΤΟΥ του
+  // ακινήτου») δηλώνονται στο σημείο κλήσης με `tenant-scope-exempt` + λόγο.
+  MANDATE_EVIDENCE: { mode: 'companyId', fieldName: 'agencyCompanyId' },
 
   // --- ADR-843: Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ -----------------------------------
   // 🔴 ΔΕΝ διαβάζεται από πελάτη ΚΑΘΟΛΟΥ (`firestore.rules`: read:false + write:false).
