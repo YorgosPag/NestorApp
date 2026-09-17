@@ -177,6 +177,18 @@ export const generateDeterministicHolidayHoursQuestionId = (companyId: string, s
 // γράψει **με το χέρι** (N.6). ⚠️ Χωρίς όρισμα — μη ντετερμινιστική, δες τη μέθοδο.
 export const generateWorkspaceInvitationId = () =>
   enterpriseIdService.generateWorkspaceInvitationId();
+// ADR-867 — ΤΟ ΔΙΚΤΥΟ ΣΥΝΕΡΓΑΤΩΝ. Εξάγονται μαζί με τις μεθόδους (το μάθημα του `mreq`).
+export const generateDeterministicNetworkActThreadId = (actSeed: string) =>
+  enterpriseIdService.generateDeterministicNetworkActThreadId(actSeed);
+export const generateDeterministicNetworkRelationshipThreadId = (uidA: string, uidB: string) =>
+  enterpriseIdService.generateDeterministicNetworkRelationshipThreadId(uidA, uidB);
+export const generateDeterministicNetworkActTeamId = (actSeed: string) =>
+  enterpriseIdService.generateDeterministicNetworkActTeamId(actSeed);
+export const generateDeterministicNetworkBlockId = (blockerUid: string, blockedUid: string) =>
+  enterpriseIdService.generateDeterministicNetworkBlockId(blockerUid, blockedUid);
+export const generateDeterministicNetworkAwayId = (uid: string) =>
+  enterpriseIdService.generateDeterministicNetworkAwayId(uid);
+export const generateNetworkMessageId = () => enterpriseIdService.generateNetworkMessageId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)

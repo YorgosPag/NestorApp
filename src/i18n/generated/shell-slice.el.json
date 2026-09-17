@@ -2119,8 +2119,20 @@
       "selectOption": "Επιλέξτε μια επιλογή",
       "startTyping": "Ξεκινήστε να πληκτρολογείτε για αναζήτηση"
     },
+    "priceAmount": {
+      "nightly": "{price}/νύχτα",
+      "rent": "{price}/μήνα",
+      "sale": "{price}",
+      "stayTotal": "{price} · {nights, plural, one {# νύχτα} other {# νύχτες}}"
+    },
     "priceReduction": {
       "was": "Προηγούμενη τιμή:"
+    },
+    "priceSection": {
+      "nightly": "Βραχυχρόνια διαμονή · {count, plural, one {# κατάλυμα} other {# καταλύματα}}",
+      "rent": "Ενοικίαση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+      "sale": "Πώληση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+      "unpriced": "Χωρίς καταγεγραμμένη τιμή · {count, plural, one {# ακίνητο} other {# ακίνητα}}"
     },
     "priority": {
       "attention": "Προσοχή",
