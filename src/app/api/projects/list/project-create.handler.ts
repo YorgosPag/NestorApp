@@ -28,10 +28,11 @@ import {
   ProjectMutationPolicyError,
 } from '@/services/projects/project-mutation-policy';
 import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import { invalidateProjectCaches } from '../_shared/project-cache';
+import type { ProjectEnrollmentOutcome } from '@/lib/auth/project-member-write';
+import { writeProjectBirth } from './project-birth';
 
 const logger = createModuleLogger('ProjectsCreateRoute');
 
@@ -52,6 +53,28 @@ type ProjectCreatePayload = {
   /** 🏢 ADR-232: Business entity link */
   linkedCompanyId?: string | null;
 } & Record<string, unknown>;
+
+/**
+ * Το ίχνος της αρχικής ομάδας — **μετά** τη συναλλαγή (ADR-862 §5.7): παρενέργεια μέσα της θα
+ * έφευγε ξανά σε κάθε επανάληψη. Ίδια ενέργεια (`member_added`) με τη χειροκίνητη ένταξη, ώστε
+ * ο έλεγχος πρόσβασης να βρίσκει **όλες** τις εντάξεις στο ίδιο σημείο.
+ */
+async function recordInitialTeamAudit(
+  ctx: AuthContext,
+  projectId: string,
+  outcomes: readonly ProjectEnrollmentOutcome[],
+): Promise<void> {
+  for (const outcome of outcomes) {
+    if (outcome.outcome !== 'enrolled') continue;
+    await logAuditEvent(ctx, 'member_added', outcome.uid, 'user', {
+      newValue: {
+        type: 'project_member',
+        value: { projectId, memberId: outcome.memberId, enrollment: 'creator' },
+      },
+      metadata: { reason: 'Project created — initial project team' },
+    });
+  }
+}
 
 interface ProjectCreateResponse {
   projectId: string;
@@ -136,13 +159,6 @@ export const POST = withHighRateLimit(
         // Admin SDK Firestore is structurally compatible with FirestoreDatabase at runtime
         const { code: projectCode } = await projectCodeService.generateNextCode(adminDb as unknown as FirestoreDatabase);
 
-        await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).set({
-          ...cleanData,
-          projectCode,
-        });
-
-        logger.info('[Projects] Project created', { projectId, projectCode });
-
         // 📜 ADR-195: Entity audit trail (powers the project History tab).
         //
         // Google-level pattern: "create = diff from empty state". We compute
@@ -153,9 +169,6 @@ export const POST = withHighRateLimit(
         // …) lands in the history tab automatically. Fields the user left
         // blank normalize to `null` and produce no noise.
         //
-        // The dynamic diff replaces the previous hardcoded three-entry
-        // snapshot (`name`, `projectCode`, `linkedCompanyId`) that silently
-        // dropped every other field the user entered on the General tab.
         // ADR-195 enterprise policy: keep the canonical `linkedCompanyId`
         // document id in the change value and attach the resolved company
         // name as `newValueLabel` (id-in-value + name-in-label), aligned with
@@ -183,16 +196,17 @@ export const POST = withHighRateLimit(
           },
         ];
 
-        await EntityAuditService.recordChange({
-          entityType: ENTITY_TYPES.PROJECT,
-          entityId: projectId,
-          entityName: body.name,
-          action: 'created',
-          changes: auditChanges,
-          performedBy: ctx.uid,
-          performedByName: ctx.email,
+        // 🔑 ADR-862 Φ0 Β14 — έργο + αρχική ομάδα σε ΜΙΑ συναλλαγή: κανένα έργο χωρίς μέλη.
+        //    Το ίχνος ADR-195 καταγράφεται ΜΕΣΑ στη γέννηση, μετά το commit (CHECK 3.17).
+        const initialTeam = await writeProjectBirth(adminDb, {
           companyId: resolvedCompanyId,
+          projectId,
+          createdBy: ctx.uid,
+          document: { ...cleanData, projectCode },
+          audit: { entityName: body.name, changes: auditChanges, performedByName: ctx.email },
         });
+
+        logger.info('[Projects] Project created', { projectId, projectCode });
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
@@ -206,6 +220,8 @@ export const POST = withHighRateLimit(
           },
           metadata: { reason: 'Project created' },
         });
+
+        await recordInitialTeamAudit(ctx, projectId, initialTeam);
 
         // 🏢 AUTO-REGISTER: Ensure company exists in navigation_companies
         // Skip for super admin (companyId is null)

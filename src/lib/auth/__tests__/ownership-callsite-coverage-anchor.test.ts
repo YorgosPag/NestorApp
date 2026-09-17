@@ -151,6 +151,15 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   // ADR-862 Φ0 Β10 — μισθωτής του ΔΙΑΔΟΧΟΥ· ξένο/κενό ⇒ `successor-not-found`
   // (container-supersession-anchor Α20.4).
   'services/iso19650/container-succession-policy.ts',
+  // ADR-862 Φ0 Β14 — κάθε κρίκος οντότητα → κτίριο → έργο ανήκει στον μισθωτή του ΑΡΧΕΙΟΥ·
+  // ξένο/κενό ⇒ `chain-broken` (project-team-birth-anchor Α30.5, μετάλλαξη M7).
+  'lib/files/container-project.ts',
+  // ADR-862 Φ0 Β6 — ο ΕΝΑΣ γραφέας κατάστασης· ξένο/κενό ⇒ `tenant-mismatch`
+  // (container-transitions-anchor Α17.12). Ταξινομήθηκε στο Β14 (προϋπήρχε αταξινόμητο).
+  'services/iso19650/container-transition-policy.ts',
+  // ADR-862 Φ0 Β10 — η στοίβα εκδόσεων· ξένο ⇒ `null` ⇒ `not-found`
+  // (version-promotion-anchor «ξένος μισθωτής»). Ταξινομήθηκε στο Β14 (προϋπήρχε αταξινόμητο).
+  'services/iso19650/version-stack.ts',
   'services/sharing/resolver-core/share-entity-access.ts',
   'subapps/procurement/services/rfq-service.ts',
 ];

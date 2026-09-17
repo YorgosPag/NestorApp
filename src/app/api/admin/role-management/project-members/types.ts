@@ -5,6 +5,7 @@
  */
 
 import type { CdeAudience } from '@/types/container-access';
+import type { ProjectMemberEnrollment } from '@/types/project-member-enrollment';
 
 /**
  * Μέλος **ΕΡΓΟΥ** — `companies/{W}/projects/{P}/members/{mbr_…}`.
@@ -41,6 +42,8 @@ export interface ProjectMemberDoc {
   taskTeamId?: string;
   /** Το πρότυπο συμμετοχής του στην υπόθεση (ADR-862 §5.4.1). */
   cdeAudience?: CdeAudience;
+  /** Γιατί είναι μέλος (ADR-862 Φ0 Β14) — απούσα = πριν το Β14. */
+  enrollment?: ProjectMemberEnrollment;
 }
 
 export interface UserProfileDoc {

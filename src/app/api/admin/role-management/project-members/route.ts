@@ -27,6 +27,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { PROJECT_NOT_FOUND_MESSAGE } from '@/app/api/projects/_shared/project-ownership';
 import { isCdeAudience, type CdeAudience } from '@/types/container-access';
+import { projectMembersCollection } from '@/lib/auth/project-member-ref';
 import type { ProjectMemberDoc, UserProfileDoc, PostBody } from './types';
 import {
   assignMember,
@@ -148,13 +149,7 @@ export const GET = withSensitiveRateLimit(
         }
 
         // Fetch members subcollection
-        const membersSnap = await db
-          .collection(COLLECTIONS.COMPANIES)
-          .doc(ctx.companyId)
-          .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
-          .doc(projectId)
-          .collection(SUBCOLLECTIONS.PROJECT_MEMBERS)
-          .get();
+        const membersSnap = await projectMembersCollection(db, ctx.companyId, projectId).get();
 
         if (membersSnap.empty) {
           return NextResponse.json({
@@ -244,18 +239,11 @@ export const POST = withSensitiveRateLimit(
           );
         }
 
-        const { action, projectId } = validated;
+        const { action } = validated;
         const db = getAdminFirestore();
 
-        // Enterprise pattern: members collection ref with query by uid field
-        const membersCol = db
-          .collection(COLLECTIONS.COMPANIES)
-          .doc(ctx.companyId)
-          .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
-          .doc(projectId)
-          .collection(SUBCOLLECTIONS.PROJECT_MEMBERS);
-
-        const mutation: MutationContext = { membersCol, ctx, validated };
+        // ADR-862 Φ0 Β14 — η εγγραφή ζει στον ΕΝΑ γραφέα (`lib/auth/project-member-write`).
+        const mutation: MutationContext = { db, ctx, validated };
 
         switch (action) {
           case 'assign':
