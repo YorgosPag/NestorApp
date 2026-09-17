@@ -30,6 +30,7 @@ import {
   isAuthenticatedPersona,
 } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import { FILE_HOLD_FIELDS } from '@/lib/files/file-hold';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'files',
@@ -343,6 +344,124 @@ describe('files.rules — tenant_state_machine pattern', () => {
       await expectDeny(
         fileDoc('cde-born-wip-open').set(createPayload({ cdeState: 'WIP', cdeReadReach: 'tenant' })),
       );
+    });
+  });
+
+  // --- ADR-864 §21 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ: η δέσμευση δεν γράφεται από πελάτη ---
+  //
+  // 🔑 Εκτός μήτρας για τον ίδιο λόγο με το `cde freeze`: ρωτά «ποιο ΠΕΔΙΟ», όχι
+  // «ποιο πρόσωπο». Πρόσωπο `same_tenant_admin`: περνά ΚΑΘΕ άλλο σκέλος (και το
+  // hard delete), άρα κάθε `expectDeny` αποδίδεται ΜΟΝΟ στη δέσμευση.
+  //
+  // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ (Δ21.1): ο κάδος σε δεσμευμένο αρχείο ΕΠΙΤΡΕΠΕΤΑΙ — Google
+  // Vault · Box «silent legal hold». Χωρίς αυτό το allow, ένα λάθος «άρνηση κάδου»
+  // (το σχέδιο που απορρίφθηκε) θα περνούσε πράσινο.
+  describe('hold freeze — η δέσμευση δεν γράφεται από πελάτη (ADR-864 §21)', () => {
+    const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
+    const HELD = {
+      hold: 'legal',
+      holdPlacedBy: 'uid_legal_manager',
+      holdPlacedAt: '2026-09-17T09:00:00.000Z',
+      holdReason: 'Δικαστική διαφορά 123/2026',
+    } as const;
+
+    /** Μία τιμή ανά κλειδί δέσμευσης — ΑΚΡΙΒΩΣ το `FILE_HOLD_FIELDS` (αναλογία ελέγχεται παρακάτω). */
+    const HOLD_WRITES: Record<(typeof FILE_HOLD_FIELDS)[number], unknown> = {
+      hold: 'none',
+      holdPlacedBy: ADMIN_UID,
+      holdPlacedAt: '2026-09-18T00:00:00.000Z',
+      holdReason: 'αλλοίωση',
+      holdReleasedBy: ADMIN_UID,
+      holdReleasedAt: '2026-09-18T00:00:00.000Z',
+      retentionUntil: '2000-01-01T00:00:00.000Z',
+    };
+
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    const seedHeld = (docId: string, overrides: Record<string, unknown> = {}) =>
+      seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...HELD, ...overrides } });
+
+    it('η λίστα του τεστ = `FILE_HOLD_FIELDS` (αλλιώς ο βρόχος θα παρέλειπε κλειδί)', () => {
+      expect(Object.keys(HOLD_WRITES).sort()).toEqual([...FILE_HOLD_FIELDS].sort());
+    });
+
+    /**
+     * Τα τέσσερα σκέλη `update` — κάθε ένα με ΔΙΚΟ του έγγραφο και το ελάχιστο φορτίο που το
+     * περνά. Πρώτα οι αρνήσεις (το έγγραφο μένει άθικτο), ΤΕΛΕΥΤΑΙΟ το allow του παρονομαστή:
+     * αν το σκέτο φορτίο δεν περνούσε, κάθε `expectDeny` θα ήταν πράσινο για λάθος λόγο.
+     */
+    const UPDATE_LEGS = [
+      { leg: 'κάδος', seed: {}, base: { isDeleted: true } },
+      { leg: 'επαναφορά', seed: { isDeleted: true }, base: { isDeleted: false } },
+      { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
+      { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
+    ] as const;
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: κάθε κλειδί δέσμευσης από πελάτη ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const docId = `hold-leg-${UPDATE_LEGS.findIndex((l) => l.leg === leg)}`;
+      await seedHeld(docId, seed);
+
+      for (const [key, value] of Object.entries(HOLD_WRITES)) {
+        await expectDeny(fileDoc(docId).update({ ...base, [key]: value }));
+      }
+      await expectAllow(fileDoc(docId).update(base));
+    });
+
+    it('⛔ ΑΦΑΙΡΕΣΗ της δέσμευσης (ολόκληρο `set` χωρίς το κλειδί): ΑΡΝΗΣΗ — η αφαίρεση ΕΙΝΑΙ γραφή', async () => {
+      await seedHeld('hold-removed');
+      let stored: Record<string, unknown> = {};
+      await withSeedContext(env, async (seedCtx) => {
+        stored = (await seedCtx.firestore().collection('files').doc('hold-removed').get()).data() ?? {};
+      });
+      const { hold: _released, ...withoutHold } = stored;
+
+      await expectDeny(fileDoc('hold-removed').set({ ...withoutHold, isDeleted: true }));
+      await expectAllow(fileDoc('hold-removed').set({ ...stored, isDeleted: true }));
+    });
+
+    it('✅ Δ21.1 κάδος σε ΔΕΣΜΕΥΜΕΝΟ αρχείο: ΕΠΙΤΡΕΠΕΤΑΙ — σιωπηλή δέσμευση', async () => {
+      await seedHeld('hold-silent-trash');
+      await expectAllow(fileDoc('hold-silent-trash').update({ isDeleted: true }));
+    });
+
+    it('⛔ οριστική διαγραφή δεσμευμένου ή υπό διατήρηση αρχείου: ΑΡΝΗΣΗ', async () => {
+      await seedHeld('hold-hard-delete');
+      await seedFile(env, 'retention-hard-delete', {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { retentionUntil: '2999-01-01T00:00:00.000Z' },
+      });
+      await expectDeny(fileDoc('hold-hard-delete').delete());
+      await expectDeny(fileDoc('retention-hard-delete').delete());
+    });
+
+    it('✅ παρονομαστής: οριστική διαγραφή με `hold: none` / `null` / χωρίς δέσμευση: ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
+      await seedFile(env, 'released-hard-delete', {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { hold: 'none', holdReleasedBy: 'uid_legal_manager', retentionUntil: null },
+      });
+      await seedFile(env, 'plain-hard-delete', { companyId: SAME_TENANT_COMPANY_ID });
+      await expectAllow(fileDoc('released-hard-delete').delete());
+      await expectAllow(fileDoc('plain-hard-delete').delete());
+    });
+
+    it('⛔ γέννηση με δέσμευση ή διατήρηση «από κούνια»: ΑΡΝΗΣΗ · ✅ ρητό `hold: none`', async () => {
+      const born = (docId: string, extra: Record<string, unknown>) => fileDoc(docId).set({
+        fileName: `${docId}.pdf`,
+        mimeType: 'application/pdf',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}.pdf`,
+        createdBy: ADMIN_UID,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        ...extra,
+      });
+      await expectDeny(born('born-legal', { hold: 'legal' }));
+      await expectDeny(born('born-retained', { retentionUntil: '2999-01-01T00:00:00.000Z' }));
+      await expectDeny(born('born-none-with-trace', { hold: 'none', holdPlacedBy: ADMIN_UID }));
+      await expectAllow(born('born-none', { hold: 'none' }));
     });
   });
 
