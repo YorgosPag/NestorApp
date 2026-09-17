@@ -59,6 +59,7 @@ import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
 import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
+import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
 
 /**
@@ -336,6 +337,30 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 5,
     leaseMinutes: 10,
     run: runDemandListingMatchAnnounce,
+  },
+  {
+    slug: 'stay-channel-import',
+    path: '/api/cron/stay-channel-import',
+    description: 'Εισαγωγή ημερολογίων καναλιών (iCal) σε εξωτερικά blocks (ADR-835 §22)',
+    enabled: true,
+    // 🔴 **Παλμός 5′, δημοσκόπηση 30′ ανά πηγή — και η διάκριση είναι ΟΛΟ το σχέδιο.**
+    // Το πέρασμα δεν διαβάζει «όλα τα κανάλια»: διαβάζει όσα **οφείλονται**
+    // (`nextPollAt <= now`). Ο πυκνός παλμός δίνει **ακρίβεια** στο πότε οφείλεται μια
+    // πηγή (±5′ αντί ±30′) χωρίς να αυξάνει τα εξωτερικά αιτήματα — αυτά τα ορίζει το
+    // `STAY_CHANNEL_POLL_MINUTES`, και είναι **6× πυκνότερα από την Airbnb** (~3h).
+    //
+    // ⚠️ Λεπτό 2 κάθε πέντε: το `0/5` ανήκει στο heartbeat του dispatcher, και το
+    // `*/10` στο `outbound-email-flush` (λεπτά 0·10·20…). Τρεις εργασίες, τρία λεπτά.
+    schedule: '2-59/5 * * * *',
+    timezone: CRON_TIMEZONE,
+    // Στενά όρια: μια σιωπή 15′ σημαίνει πηγές που γερνούν προς το `stale`, δηλαδή
+    // καταλύματα που παύουν να υπόσχονται διαθεσιμότητα στον επισκέπτη.
+    checkinMarginMinutes: 10,
+    // Ως 25 ακίνητα × πηγές × 15″ ορίου ανά αίτημα — με περιθώριο κάτω από το
+    // `maxDuration = 300` της διαδρομής.
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 10,
+    run: runStayChannelImport,
   },
   {
     slug: 'outbound-email-flush',
