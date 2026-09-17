@@ -5,7 +5,7 @@
  *
  * Reusable functions for purging files from Storage + Firestore.
  * Used by:
- * - Cron file-purge route (Phase A: trash, Phase B: orphan PENDING)
+ * - Cron file-purge route (Phase A: trash, Phase B: orphan PENDING) — **και τα δύο** διαμερίσματα (ADR-866 §2.6.9)
  * - AI agent discard_pending_file tool
  *
  * @module services/file-record/file-purge-helpers
@@ -16,6 +16,8 @@ import 'server-only';
 
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import { isHoldActive, type FileHoldSubject } from '@/lib/files/file-hold';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -42,6 +44,11 @@ export const PENDING_FILE_TTL_MS = (() => {
 
 export interface PurgeFileParams {
   fileId: string;
+  /**
+   * 🔑 **Σε ποιο διαμέρισμα ζει η εγγραφή** — υποχρεωτικό (ADR-866 §2.6.9 Β5): ο μεταγλωττιστής
+   * βρίσκει κάθε καλούντα. Ο καλών το ξέρει από το **ερώτημα** που βρήκε το έγγραφο.
+   */
+  custody: CustodyKind;
   storagePath: string | undefined;
   performedBy: string;
   purgeReason: 'ttl_expired' | 'user_discard' | 'cron_trash';
@@ -93,7 +100,7 @@ export async function deleteStorageObjectForPurge(storagePath: string): Promise<
  * and create an audit log entry.
  */
 export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFileResult> {
-  const { fileId, storagePath, performedBy, purgeReason, metadata } = params;
+  const { fileId, custody, storagePath } = params;
   const db = getAdminFirestore();
   let storageDeleted = false;
 
@@ -109,24 +116,13 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
 
     // Mark FileRecord as purged
     const now = nowISO();
-    await db.collection(COLLECTIONS.FILES).doc(fileId).update({
+    await db.collection(COLLECTIONS[FILE_COLLECTION[custody]]).doc(fileId).update({
       lifecycleState: 'purged',
       purgedAt: now,
       updatedAt: now,
     });
 
-    // Audit log
-    await db.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
-      fileId,
-      action: 'delete',
-      performedBy,
-      timestamp: nowISO(),
-      metadata: {
-        purgeReason,
-        storageDeleted,
-        ...metadata,
-      },
-    });
+    await recordPurgeAudit(params, storageDeleted);
 
     return { success: true, storageDeleted };
   } catch (err) {
@@ -134,4 +130,34 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
     logger.error('Failed to purge file', { fileId, error });
     return { success: false, storageDeleted, error };
   }
+}
+
+/**
+ * Η γραμμή ίχνους της εκκαθάρισης — **μόνο** για το εταιρικό διαμέρισμα.
+ *
+ * ⚠️ Το `FILE_AUDIT_LOG` είναι βιβλίο **οργανισμού**: γραμμή προσωπικού αρχείου εκεί θα ανακάτευε
+ * διαμερίσματα. Το προσωπικό ίχνος αρχείου είναι το **2β.4** (ADR-866 §3) — ίδιο όριο με το
+ * `FileAuditService.logForCustody` του 2β.2. Η εκκαθάριση **καταγράφεται** πάντως στο log διακομιστή.
+ */
+async function recordPurgeAudit(params: PurgeFileParams, storageDeleted: boolean): Promise<void> {
+  if (params.custody !== 'company') {
+    logger.info('Personal file purged — file audit ledger deferred (ADR-866 2β.4)', {
+      fileId: params.fileId,
+      purgeReason: params.purgeReason,
+      storageDeleted,
+    });
+    return;
+  }
+
+  await getAdminFirestore().collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
+    fileId: params.fileId,
+    action: 'delete',
+    performedBy: params.performedBy,
+    timestamp: nowISO(),
+    metadata: {
+      purgeReason: params.purgeReason,
+      storageDeleted,
+      ...params.metadata,
+    },
+  });
 }

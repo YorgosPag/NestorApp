@@ -9,6 +9,11 @@
  * Οι δύο φάσεις τρέχουν **παράλληλα**: απαντούν σε διαφορετική ερώτηση πάνω στην ίδια
  * συλλογή και δεν εξαρτώνται μεταξύ τους.
  *
+ * 🔑 **ΚΑΙ ΤΑ ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ** (ADR-866 §2.6.9 · §5.2 σημείο 8): κάθε φάση τρέχει **μία φορά ανά
+ * κάτοχο** (`CUSTODY_KINDS` × `FILE_COLLECTION`). Χωρίς αυτό, προσωπικό αρχείο στον κάδο **δεν θα
+ * έληγε ποτέ** — υπερ-διατήρηση προσωπικών δεδομένων (ΓΚΠΔ άρθρο 5 §1ε). Ίδιος μηχανισμός με τον
+ * κάδο του Google Drive: μία προθεσμία για «Ο Δίσκος μου» **και** τους κοινόχρηστους δίσκους.
+ *
  * @module lib/cron/jobs/file-purge
  * @enterprise ADR-191 — Enterprise Document Management System (Phase 3.2)
  * @see ADR-740
@@ -18,6 +23,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { FILE_STATUS } from '@/config/domain-constants';
+import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import { CUSTODY_KINDS, type CustodyKind } from '@/lib/workspace/custody-scope';
 import {
   purgeFileRecord,
   isFileHeld,
@@ -30,7 +37,7 @@ import type { CronJobResult } from '@/types/cron-schedule';
 const logger = createModuleLogger('CronFilePurge');
 
 /** Απολογισμός μιας φάσης. */
-interface FilePurgeTally {
+export interface FilePurgeTally {
   purged: number;
   skipped: number;
   checked: number;
@@ -41,9 +48,9 @@ interface PurgePolicy {
   /** Ποιος καταγράφεται ως δράστης στο ίχνος ελέγχου. */
   readonly performedBy: string;
   /** Γιατί διαγράφηκε — ταξινομεί το ίχνος. */
-  readonly purgeReason: string;
+  readonly purgeReason: 'ttl_expired' | 'cron_trash';
   /** Συμφραζόμενα του συγκεκριμένου εγγράφου για το ίχνος. */
-  readonly metadata: (data: FirebaseFirestore.DocumentData) => Record<string, unknown>;
+  readonly metadata: (data: FirebaseFirestore.DocumentData) => Record<string, string | number | boolean | null>;
 }
 
 /**
@@ -55,9 +62,13 @@ interface PurgePolicy {
  * δεύτερο είδος legal hold) εφαρμόζεται στη μία φάση και ξεχνιέται στην άλλη —
  * δηλαδή αρχεία που έπρεπε να μείνουν, διαγράφονται **οριστικά** από τη μία μόνο
  * διαδρομή. Ο έλεγχος `isFileHeld` πρέπει να ζει σε **ένα** σημείο.
+ *
+ * 🔑 Το διαμέρισμα ταξιδεύει **από το ερώτημα** που βρήκε τα έγγραφα — ποτέ δεν μαντεύεται από
+ * τα πεδία τους: η εγγραφή `purged` γράφεται στη **συλλογή όπου βρέθηκε**.
  */
 async function purgeMatching(
   snapshot: FirebaseFirestore.QuerySnapshot,
+  custody: CustodyKind,
   policy: PurgePolicy
 ): Promise<FilePurgeTally> {
   let purged = 0;
@@ -74,6 +85,7 @@ async function purgeMatching(
 
     const result = await purgeFileRecord({
       fileId: doc.id,
+      custody,
       storagePath: data.storagePath as string | undefined,
       performedBy: policy.performedBy,
       purgeReason: policy.purgeReason,
@@ -87,19 +99,22 @@ async function purgeMatching(
   return { purged, skipped, checked: snapshot.size };
 }
 
-/** Φάση Α: αρχεία του κάδου που πέρασαν την ημερομηνία διαγραφής. */
-async function purgeExpiredTrash(
+/** Φάση Α, **ένα** διαμέρισμα: αρχεία του κάδου που πέρασαν την ημερομηνία διαγραφής. */
+async function purgeExpiredTrashIn(
   db: FirebaseFirestore.Firestore,
-  now: string
+  now: string,
+  custody: CustodyKind
 ): Promise<FilePurgeTally> {
+  // tenant-scope-exempt: εργασία συστήματος (cron) που σαρώνει τον κάδο **κάθε** κατόχου εκ
+  // σχεδιασμού — κανένας μισθωτής/άνθρωπος δεν «ζητά» τη λήξη· την επιβάλλει η πολιτική διατήρησης.
   const snapshot = await db
-    .collection(COLLECTIONS.FILES)
+    .collection(COLLECTIONS[FILE_COLLECTION[custody]])
     .where(FIELDS.IS_DELETED, '==', true)
     .where('purgeAt', '<=', now)
     .limit(100)
     .get();
 
-  return purgeMatching(snapshot, {
+  return purgeMatching(snapshot, custody, {
     performedBy: 'system:cron-purge',
     purgeReason: 'cron_trash',
     metadata: (data) => ({
@@ -109,20 +124,23 @@ async function purgeExpiredTrash(
   });
 }
 
-/** Φάση Β: ορφανά PENDING/FAILED παλαιότερα του TTL. */
-async function purgeOrphanPendingFiles(
-  db: FirebaseFirestore.Firestore
+/** Φάση Β, **ένα** διαμέρισμα: ορφανά PENDING/FAILED παλαιότερα του TTL. */
+async function purgeOrphanPendingFilesIn(
+  db: FirebaseFirestore.Firestore,
+  custody: CustodyKind
 ): Promise<FilePurgeTally> {
   const cutoff = new Date(Date.now() - PENDING_FILE_TTL_MS).toISOString();
 
+  // tenant-scope-exempt: εργασία συστήματος (cron) — τα ορφανά ανεβάσματα λήγουν για **κάθε**
+  // κάτοχο με την ίδια πολιτική TTL· κανένα φίλτρο κατόχου δεν έχει νόημα εδώ.
   const snapshot = await db
-    .collection(COLLECTIONS.FILES)
+    .collection(COLLECTIONS[FILE_COLLECTION[custody]])
     .where('status', 'in', [FILE_STATUS.PENDING, FILE_STATUS.FAILED])
     .where('createdAt', '<', cutoff)
     .limit(50)
     .get();
 
-  return purgeMatching(snapshot, {
+  return purgeMatching(snapshot, custody, {
     performedBy: 'system:cron-orphan-cleanup',
     purgeReason: 'ttl_expired',
     metadata: (data) => ({
@@ -131,6 +149,36 @@ async function purgeOrphanPendingFiles(
       ageHours: Math.round((Date.now() - new Date(data.createdAt).getTime()) / 3_600_000),
     }),
   });
+}
+
+/** Άθροισμα απολογισμών — ένας ανά διαμέρισμα. */
+function sumTallies(tallies: readonly FilePurgeTally[]): FilePurgeTally {
+  return tallies.reduce(
+    (total, tally) => ({
+      purged: total.purged + tally.purged,
+      skipped: total.skipped + tally.skipped,
+      checked: total.checked + tally.checked,
+    }),
+    { purged: 0, skipped: 0, checked: 0 },
+  );
+}
+
+/**
+ * **Φάση Α σε ΟΛΑ τα διαμερίσματα** — η **μία** σάρωση κάδου.
+ *
+ * 🔑 Εξάγεται για το `api/files/purge` (χειροκίνητη εκτέλεση): ήταν **αντίγραφο** αυτής της φάσης
+ * (ADR-866 §2.6.9 Β4) — και δεύτερη σάρωση θα ξεχνούσε το δεύτερο διαμέρισμα.
+ */
+export async function purgeExpiredTrash(
+  db: FirebaseFirestore.Firestore = getAdminFirestore(),
+  now: string = nowISO()
+): Promise<FilePurgeTally> {
+  return sumTallies(await Promise.all(CUSTODY_KINDS.map((custody) => purgeExpiredTrashIn(db, now, custody))));
+}
+
+/** Φάση Β σε **όλα** τα διαμερίσματα. */
+async function purgeOrphanPendingFiles(db: FirebaseFirestore.Firestore): Promise<FilePurgeTally> {
+  return sumTallies(await Promise.all(CUSTODY_KINDS.map((custody) => purgeOrphanPendingFilesIn(db, custody))));
 }
 
 export interface FilePurgeReport {

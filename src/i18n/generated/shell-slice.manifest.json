@@ -86,7 +86,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8057935a5024e0db1a871f130c72509603d62c9f257acf66e8d866dbcd661ff3",
+  "inputsSha256": "d2f9f1042b23f459e32cc0589a27bf83e43103be1bb4b3ce8029878c1249faee",
   "languages": [
     "el"
   ],
@@ -6429,9 +6429,9 @@
     "src/lib/contact/first-contact-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/criteria/criterion-vocabulary.ts": "fa71c8ecb83e12afbfc91234df5f2949108d7d55559ede9061d58dfbfaec34ca",
     "src/lib/criteria/listing-criteria-judge.ts": "3695da5cfd8a6867299fbfe1bf072ab178834679243921e4578f55e1414c1f84",
-    "src/lib/criteria/listing-criteria-url.ts": "bbf9909549aac81c41500a0861bb2526a3c7c67ffd0f02189ad4142d381137b7",
+    "src/lib/criteria/listing-criteria-url.ts": "bd4a940559afbd23b613d215133d68618f2ab9fe248e32150198676cc8de56b7",
     "src/lib/criteria/listing-criteria.ts": "5b96ad7b4739ca8de644889132034b5b27f4d94aa3a0bf3b3597fabfbf4838f3",
-    "src/lib/criteria/listing-criterion-asking.ts": "f050048d03f541866134f08c40872b94b9ae051f2137ad127e143121415f71fa",
+    "src/lib/criteria/listing-criterion-asking.ts": "b870603757fc486a7b638428065bc60ba86681ff47c535035f111cb638497fce",
     "src/lib/criteria/listing-criterion-reading.ts": "848ca9a8ab6388bda0e739cf438f15cd27b070a7246106d2bb6dcdb2a570d555",
     "src/lib/criteria/listing-criterion-values.ts": "4834acde991e2a9ddcc522b600ad3056a0f8760e595228423cd7ec59fab04cf7",
     "src/lib/data/lazy-json-snapshot.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
