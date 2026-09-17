@@ -1089,4 +1089,26 @@ import { NON_ACTIVATING_SURFACE, keepKeyboardOnNonActivatingSurface } from '@/li
 onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
 const onPointerDown = (e: React.MouseEvent) => e.preventDefault();`,
   },
+
+  // ADR-866 §5.2 — ο κάτοχος εγγράφου (εταιρεία Ή άνθρωπος) δηλώνεται ΜΙΑ φορά. Το σχήμα που
+  // φυλάγεται είναι ακριβώς ο πειρασμός του ADR-866: «ίδιο σχήμα με το audit-ledger» ⇒ αντίγραφο.
+  'custody-scope': {
+    shouldMatch: `// Δεύτερο αντίγραφο της ένωσης κατόχου — π.χ. «ίδιο σχήμα» για τα αρχεία:
+  readonly userId?: never;
+  readonly companyId?: never;
+type FileOwner = { companyId: string; userId?: never } | { userId: string; companyId?: never };
+// ...και δεύτερος ορισμός των συναρτήσεων του πρωτογενούς:
+export function custodyScopeOf(workspace) { return { companyId: workspace.companyId }; }
+const custodyScopeFromData = (data) => null;
+export function custodyKindOf(workspace) { return 'company'; }`,
+    shouldSkip: `// Κανονική χρήση — ΕΝΑΣ ορισμός, και τα συστήματα δηλώνουν μόνο το διαμέρισμά τους:
+import { custodyScopeOf, type CustodyScope, type CustodyPartition } from '@/lib/workspace/custody-scope';
+export type FileCustody = CustodyScope;
+export const auditLedgerScopeOf = custodyScopeOf;
+const scope = custodyScopeOf(personalWorkspace(uid));
+export const AUDIT_LEDGER_COLLECTION = { company: 'ENTITY_AUDIT_TRAIL', personal: 'ENTITY_AUDIT_TRAIL_PERSONAL' } as const satisfies CustodyPartition;
+// ΑΛΛΟ ερώτημα — κανονικά πεδία κατόχου, όχι φρουρός ένωσης:
+const record = { companyId: 'comp_1', userId: null, createdBy: uid };
+interface Notification { userId: string; companyId?: string }`,
+  },
 };

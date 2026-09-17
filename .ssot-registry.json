@@ -734,6 +734,18 @@
         "src/config/firestore-collections.ts"
       ]
     },
+    "custody-scope": {
+      "ssotFile": "src/lib/workspace/custody-scope.ts",
+      "description": "ADR-866 §5.2 · ADR-195 Part 7 — the ONE answer to 'who owns this stored document: a company or a person?'. The discriminated union {companyId, userId?: never} | {userId, companyId?: never}, its translation from WorkspaceRef (custodyScopeOf), the read boundary (custodyScopeFromData: exactly one owner or null), the write guard (isWritableCustodyScope) and the fail-closed wire parser (custodyKindFromParam) live here. Each partitioned system declares ONLY where its two partitions live, as a `CustodyPartition` (AUDIT_LEDGER_COLLECTION today, FILE_COLLECTION next). WHY: the audit ledger solved this wall on 2026-09-16; ADR-866 then asked for 'the same shape' for files — taken literally that is a second copy of the union, the boundary, the guard and the 'company'|'personal' vocabulary, free to diverge. Forbidden: re-declaring the `?: never` owner guard, or a second definition of the primitive's functions. Domain aliases (auditLedgerScopeOf = custodyScopeOf) are allowed — they are names, not implementations. NEVER give a private person a pseudo-company to get past company guards (ADR-787 Ε-3 §3).",
+      "forbiddenPatterns": [
+        "\\b(userId|companyId)\\??\\s*:\\s*never\\b",
+        "(function\\s+|const\\s+)(custodyScopeOf|custodyKindOf|custodyScopeFromData|isWritableCustodyScope|custodyKindFromParam)\\b"
+      ],
+      "allowlist": [
+        "src/lib/workspace/custody-scope.ts"
+      ],
+      "tier": 3
+    },
     "dxf-raster-generator": {
       "ssotFile": "src/services/dxf-raster/dxf-raster-generator.ts",
       "description": "Server-side DXF scene → PNG rasterisation (ADR-312 Phase 3). Canonical entry point for every surface that needs a DXF thumbnail: Cloud Function trigger (functions/src/storage/dxf-thumbnail-onfinalize.ts), migration endpoint (/api/admin/migrate-dxf-thumbnails), and any future reader. Uses @resvg/resvg-js (pure WASM) to stay serverless-safe. Inline `new Resvg(...)` outside the allowlist = forbidden: we must not scatter SVG→PNG calls across the codebase, or the thumbnail size/background/padding drift from the browser-side DXF Viewer. The functions/shared mirror is the SSoT mirror kept byte-for-byte in sync.",
@@ -787,6 +799,7 @@
       ],
       "allowlist": [
         "src/services/firestore/firestore-query.service.ts",
+        "src/services/firestore/firestore-read-paths.ts",
         "src/services/firestore/firestore-equality.ts",
         "src/services/realtime/RealtimeService.ts",
         "src/services/realtime/hooks/",
