@@ -179,6 +179,25 @@ function denyAll(
 // ---------------------------------------------------------------------------
 
 /**
+ * Owner-only matrix — pattern `owner_based_no_superadmin`.
+ * Gate: `isOwner(userId)` on every leg, **no** super_admin bypass.
+ * ONE definition for `temp`, `owner_property_media` and `canonical_personal`
+ * (ADR-866 §5.2) — three hand-copied matrices would drift apart silently.
+ */
+function ownerOnlyMatrix(): readonly StorageCoverageCell[] {
+  return [
+    // owner (same_tenant_user uid == path userId)
+    ...allowAll('same_tenant_user'),
+    // super_admin: NO bypass — isOwner only, uid does not match path
+    ...denyAll('super_admin', 'not_owner'),
+    // non-owner authenticated
+    ...denyAll('same_tenant_admin', 'not_owner'),
+    // unauthenticated
+    ...denyAll('anonymous', 'missing_claim'),
+  ] as const;
+}
+
+/**
  * Standard company-scoped matrix.
  * Gate: `belongsToCompany(companyId) || isSuperAdmin()`
  * Applied to both read and write variants (write also needs valid file).
@@ -342,16 +361,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
-    matrix: [
-      // owner (same_tenant_user uid == path userId)
-      ...allowAll('same_tenant_user'),
-      // super_admin: NO bypass — isOwner only, uid does not match path
-      ...denyAll('super_admin', 'not_owner'),
-      // non-owner authenticated
-      ...denyAll('same_tenant_admin', 'not_owner'),
-      // unauthenticated
-      ...denyAll('anonymous', 'missing_claim'),
-    ] as const,
+    matrix: ownerOnlyMatrix(),
   },
 
   // -------------------------------------------------------------------------
@@ -374,16 +384,23 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     pathId: 'owner_property_media',
     pattern: 'owner_based_no_superadmin',
     testFile: 'tests/storage-rules/suites/owner-property-media.storage.test.ts',
-    matrix: [
-      // ο κάτοχος (same_tenant_user uid == path userId)
-      ...allowAll('same_tenant_user'),
-      // super_admin: ΚΑΜΙΑ παράκαμψη — μόνο `isOwner`, και το uid δεν ταιριάζει
-      ...denyAll('super_admin', 'not_owner'),
-      // πιστοποιημένος μη-κάτοχος
-      ...denyAll('same_tenant_admin', 'not_owner'),
-      // ανώνυμος
-      ...denyAll('anonymous', 'missing_claim'),
-    ] as const,
+    matrix: ownerOnlyMatrix(),
+  },
+
+  // -------------------------------------------------------------------------
+  // Path 5c: ADR-866 §5.2 — η ΠΡΟΣΩΠΙΚΗ ρίζα της κανονικής διαδρομής
+  //
+  // `/people/{userId}/entities/…/files/{fileName}` — το ΙΔΙΟ σχήμα με το
+  // `canonical_no_project`, με κάτοχο ΑΝΘΡΩΠΟ αντί εταιρείας. Ίδιο πρότυπο με το
+  // `owner_property_media` και για τον ίδιο λόγο (ο φάκελος του σπιτιού ενός ανθρώπου
+  // — ούτε super_admin). Τα δύο συμβόλαια που ο πίνακας δεν εκφράζει (ξένο uid στη
+  // διαδρομή · ο τύπος αρχείου) τα φυλάει το hardening block του suite.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'canonical_personal',
+    pattern: 'owner_based_no_superadmin',
+    testFile: 'tests/storage-rules/suites/canonical-path-personal.storage.test.ts',
+    matrix: ownerOnlyMatrix(),
   },
 
   // -------------------------------------------------------------------------

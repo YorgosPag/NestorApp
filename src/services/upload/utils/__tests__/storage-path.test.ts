@@ -411,3 +411,74 @@ describe('storage prefixes (ADR-709)', () => {
     expect(parsed?.entityId).toBe('proj_1');
   });
 });
+
+// ============================================================================
+// OWNER ROOT — people/{userId} (ADR-866 §5.2)
+// ============================================================================
+
+describe('🔒 ADR-866 §5.2 — η προσωπική ρίζα', () => {
+  const coordinates = {
+    entityType: ENTITY_TYPES.OWNER_PROPERTY,
+    entityId: 'ownp_1',
+    domain: FILE_DOMAINS.LEGAL,
+    category: FILE_CATEGORIES.CONTRACTS,
+    fileId: 'file_1',
+    ext: 'pdf',
+  } as const;
+
+  /** ΙΔΙΑ συμβολοσειρά με το `tests/storage-rules/suites/canonical-path-personal.storage.test.ts`. */
+  const PERSONAL_PATH =
+    'people/persona-same-user/entities/owner_property/ownp_1/domains/legal/categories/contracts/files/file_1.pdf';
+
+  it('🔴 `{ userId }` ⇒ ρίζα `people/`, ΙΔΙΟ υπόλοιπο σχήμα με την εταιρική', () => {
+    const personal = buildStoragePath({ userId: 'persona-same-user', ...coordinates });
+    const company = buildStoragePath({ companyId: 'persona-same-user', ...coordinates });
+
+    expect(personal.path).toBe(PERSONAL_PATH);
+    expect(personal.segments.root).toBe('people/persona-same-user');
+    expect(personal.segments.userId).toBe('persona-same-user');
+    expect('companyId' in personal.segments).toBe(false);
+    expect(personal.path.replace(/^people\//, 'companies/')).toBe(company.path);
+  });
+
+  it('🔴 κάθε προσωπική διαδρομή ζει κάτω από το προσωπικό πρόθεμα της οντότητας', () => {
+    const custody = { userId: 'user_1' };
+    const { path } = buildStoragePath({ ...custody, ...coordinates });
+
+    expect(buildEntityStoragePrefix({ ...custody, entityType: coordinates.entityType, entityId: 'ownp_1' }))
+      .toBe('people/user_1/entities/owner_property/ownp_1/');
+    expect(path.startsWith(buildCategoryStoragePrefix({ ...custody, ...coordinates }))).toBe(true);
+  });
+
+  it('🔴 ο αναγνώστης επιστρέφει τον ΙΔΙΟ κάτοχο — χωρίς εταιρεία', () => {
+    const parsed = parseStoragePath(PERSONAL_PATH);
+
+    expect(parsed).toEqual({ userId: 'persona-same-user', ...coordinates });
+    expect(parsed && 'companyId' in parsed).toBe(false);
+  });
+
+  it('🔴 η ρίζα `people/` ΔΕΝ αναγνωρίζει legacy `projects/` (γεννήθηκε κανονική)', () => {
+    expect(parseStoragePath('people/user_1/projects/p1/entities/owner_property/ownp_1/domains/legal/categories/contracts/files/file_1.pdf'))
+      .toBeNull();
+  });
+
+  it('🔴 άγνωστη ρίζα ⇒ null, ΠΟΤΕ μαντεψιά', () => {
+    expect(parseStoragePath(PERSONAL_PATH.replace(/^people\//, 'users/'))).toBeNull();
+  });
+
+  it.each([
+    ['και οι δύο κάτοχοι', { companyId: 'c1', userId: 'u1' }],
+    ['κανένας κάτοχος', {}],
+    ['κενός άνθρωπος', { userId: '' }],
+  ])('🔴 %s ⇒ σφάλμα επικύρωσης, καμία διαδρομή', (_label, owner) => {
+    const params = { ...owner, ...coordinates } as StoragePathParams;
+
+    expect(validateStoragePathParams(params).some((e) => e.field === 'companyId')).toBe(true);
+    expect(() => buildStoragePath(params)).toThrow(/Exactly one owner/);
+  });
+
+  it('άκυρο τμήμα στον άνθρωπο ⇒ σφάλμα στο πεδίο `userId`', () => {
+    const errors = validateStoragePathParams({ userId: 'user/with/slash', ...coordinates });
+    expect(errors.map((e) => e.field)).toEqual(['userId']);
+  });
+});

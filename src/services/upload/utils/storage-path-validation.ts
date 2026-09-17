@@ -25,6 +25,7 @@ import {
   FILE_CATEGORIES,
   isPlatformEntityType,
 } from '@/config/domain-constants';
+import { isWritableCustodyScope } from '@/lib/workspace/custody-scope';
 import type { StoragePathParams } from './storage-path';
 
 /**
@@ -135,14 +136,34 @@ export function validateStoragePathParams(
     });
   }
 
-  // companyId is REQUIRED for multi-tenant isolation
-  if (!isValidPathSegment(params.companyId)) {
-    errors.push({
-      field: 'companyId',
-      message: 'companyId is REQUIRED. Must contain only alphanumeric, underscore, or hyphen characters.',
-      value: params.companyId,
-    });
-  }
+  const custodyError = validateCustodySegment(params);
+  if (custodyError) errors.push(custodyError);
 
   return errors;
+}
+
+/**
+ * **Ο κάτοχος της ρίζας** (ADR-866 §5.2) — ΑΚΡΙΒΩΣ ένας: `companyId` (εταιρεία) **ή**
+ * `userId` (άνθρωπος), και έγκυρο τμήμα διαδρομής.
+ *
+ * 🔴 Ο τύπος εγγυάται σχήμα, όχι τιμή: ένα κενό ή ένα cast (`as StoragePathParams`) φτάνει εδώ.
+ * Απουσία **και** των δύο αναφέρεται ως `companyId` — ό,τι ίσχυε πάντα για τους εταιρικούς καλούντες.
+ */
+function validateCustodySegment(params: StoragePathParams): StoragePathValidationError | null {
+  if (!isWritableCustodyScope(params)) {
+    return {
+      field: 'companyId',
+      message: 'Exactly one owner is REQUIRED: companyId (company) or userId (person) — never both, never neither.',
+      value: { companyId: params.companyId, userId: params.userId },
+    };
+  }
+  const [field, value] = params.userId !== undefined
+    ? (['userId', params.userId] as const)
+    : (['companyId', params.companyId] as const);
+  if (isValidPathSegment(value)) return null;
+  return {
+    field,
+    message: `${field} must contain only alphanumeric, underscore, or hyphen characters.`,
+    value,
+  };
 }

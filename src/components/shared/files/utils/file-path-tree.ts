@@ -130,11 +130,12 @@ export function buildFilePathTree(fileRecords: FileRecord[]): RootNode {
     // 🏢 ENTERPRISE: value can be undefined for segment-only folders (like "files")
     const segments: Array<{ segment: string; value: string | undefined }> = [];
 
-    // companies/{companyId}
-    segments.push({
-      segment: STORAGE_PATH_SEGMENTS.COMPANIES,
-      value: parsed.companyId,
-    });
+    // Owner root: companies/{companyId} | people/{userId} (ADR-866 §5.2)
+    segments.push(
+      parsed.userId !== undefined
+        ? { segment: STORAGE_PATH_SEGMENTS.PEOPLE, value: parsed.userId }
+        : { segment: STORAGE_PATH_SEGMENTS.COMPANIES, value: parsed.companyId }
+    );
 
     // projects/{projectId} (optional)
     if (parsed.projectId) {

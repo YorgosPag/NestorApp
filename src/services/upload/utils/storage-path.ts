@@ -29,8 +29,14 @@
  * Reading legacy paths that still carry `projects/{projectId}/` is supported by
  * `parseStoragePath` (tolerant reader). Writing them is not expressible.
  *
- * NOTE: companyId is REQUIRED - all files must belong to a company for proper
- * multi-tenant isolation. System-level paths without company are NOT supported.
+ * OWNER ROOT (ADR-866 §5.2): the first two segments name the file's OWNER — exactly one:
+ *   companies/{companyId}/…  — owned by a company (every path written before 2026-09-17)
+ *   people/{userId}/…        — owned by a PERSON (a private individual has no company,
+ *                              ADR-787 Ε-3 §3 — and must never be given a pseudo-company)
+ * Everything after the root is the SAME scheme. The root is an immutable identity of the
+ * owner, exactly like `companyId` always was, so ADR-709 "one scheme" still holds: an owner
+ * change is a MOVE between roots (Google Drive: moving into a shared drive changes owner),
+ * never a rename inside one. System-level paths without an owner are NOT supported.
  */
 
 import {
@@ -40,6 +46,7 @@ import {
   STORAGE_PATH_SEGMENTS,
   isPlatformEntityType,
 } from '@/config/domain-constants';
+import type { CustodyScope } from '@/lib/workspace/custody-scope';
 import {
   isValidCategory,
   isValidDomain,
@@ -66,12 +73,9 @@ export type { StoragePathValidationError } from './storage-path-validation';
 // ============================================================================
 
 /**
- * Parameters for building a canonical storage path
+ * Where a file sits inside its owner's tree — everything except WHO owns it.
  */
-export interface StoragePathParams {
-  /** Company ID for multi-tenant isolation (REQUIRED) */
-  companyId: string;
-
+interface StorageEntityCoordinates {
   /** Entity type this file belongs to */
   entityType: EntityType;
 
@@ -92,6 +96,13 @@ export interface StoragePathParams {
 }
 
 /**
+ * Parameters for building a canonical storage path: exactly ONE owner
+ * (`{ companyId }` or `{ userId }`, ADR-866 §5.2) + the entity coordinates.
+ * Existing callers passing `companyId` are the company member of the union — unchanged.
+ */
+export type StoragePathParams = CustodyScope & StorageEntityCoordinates;
+
+/**
  * Result from building a storage path
  */
 export interface StoragePathResult {
@@ -99,16 +110,7 @@ export interface StoragePathResult {
   path: string;
 
   /** Path segments for debugging/logging */
-  segments: {
-    root: string;
-    companyId: string;
-    entityType: EntityType;
-    entityId: string;
-    domain: FileDomain;
-    category: FileCategory;
-    fileId: string;
-    ext: string;
-  };
+  segments: CustodyScope & StorageEntityCoordinates & { root: string };
 }
 
 /**
@@ -118,10 +120,10 @@ export interface StoragePathResult {
  * pre-ADR-709 `projects/{projectId}/` segment. It exists so migration tooling
  * and prefix sweeps can recognise old objects; it is never an input anywhere.
  */
-export interface ParsedStoragePath extends StoragePathParams {
-  /** Set when the path uses the legacy project-scoped scheme (ADR-709). */
+export type ParsedStoragePath = StoragePathParams & {
+  /** Set when the path uses the legacy project-scoped scheme (ADR-709) — company roots only. */
   legacyProjectId?: string;
-}
+};
 
 // ============================================================================
 // BUILDER
@@ -133,7 +135,7 @@ export interface ParsedStoragePath extends StoragePathParams {
  * Path contains ONLY IDs - no human-readable names, no Greek characters.
  * Display names belong in Firestore FileRecord.displayName.
  *
- * companyId is REQUIRED for multi-tenant isolation.
+ * Exactly one owner is REQUIRED (`companyId` or `userId`, ADR-866 §5.2).
  *
  * ADR-709: there is exactly ONE scheme. A file's project membership is NOT
  * expressible here — it belongs to `FileRecord.projectId` in Firestore.
@@ -181,8 +183,8 @@ export function buildStoragePath(params: StoragePathParams): StoragePathResult {
   return {
     path,
     segments: {
-      root: `${STORAGE_PATH_SEGMENTS.COMPANIES}/${params.companyId}`,
-      companyId: params.companyId,
+      root: buildCustodyStorageRoot(params),
+      ...custodyOnly(params),
       entityType: params.entityType,
       entityId: params.entityId,
       domain: params.domain,
@@ -206,14 +208,11 @@ export function buildStoragePath(params: StoragePathParams): StoragePathResult {
  * buildEntityStoragePrefix({ companyId: 'c1', entityType: 'project', entityId: 'p1' })
  * // 'companies/c1/entities/project/p1/'
  */
-export function buildEntityStoragePrefix(params: {
-  companyId: string;
-  entityType: EntityType;
-  entityId: string;
-}): string {
+export function buildEntityStoragePrefix(
+  params: CustodyScope & { entityType: EntityType; entityId: string }
+): string {
   return [
-    STORAGE_PATH_SEGMENTS.COMPANIES,
-    params.companyId,
+    buildCustodyStorageRoot(params),
     STORAGE_PATH_SEGMENTS.ENTITIES,
     params.entityType,
     params.entityId,
@@ -227,13 +226,14 @@ export function buildEntityStoragePrefix(params: {
  * Narrower than `buildEntityStoragePrefix` — used by sweeps that must delete a
  * single category (e.g. wiping a floor's floorplans) without touching the rest.
  */
-export function buildCategoryStoragePrefix(params: {
-  companyId: string;
-  entityType: EntityType;
-  entityId: string;
-  domain: FileDomain;
-  category: FileCategory;
-}): string {
+export function buildCategoryStoragePrefix(
+  params: CustodyScope & {
+    entityType: EntityType;
+    entityId: string;
+    domain: FileDomain;
+    category: FileCategory;
+  }
+): string {
   return [
     buildEntityStoragePrefix(params).replace(/\/$/, ''),
     STORAGE_PATH_SEGMENTS.DOMAINS,
@@ -280,6 +280,37 @@ export function buildLegacyProjectScopedPrefix(
     `${STORAGE_PATH_SEGMENTS.COMPANIES}/${params.companyId}`,
     projectScope
   );
+}
+
+// ============================================================================
+// OWNER ROOT (ADR-866 §5.2)
+// ============================================================================
+
+/**
+ * **The ONE owner root** — `companies/{companyId}` or `people/{userId}`. Every builder
+ * derives from here, so a prefix sweep can never walk a root a builder does not write.
+ */
+function buildCustodyStorageRoot(custody: CustodyScope): string {
+  return custody.userId !== undefined
+    ? `${STORAGE_PATH_SEGMENTS.PEOPLE}/${custody.userId}`
+    : `${STORAGE_PATH_SEGMENTS.COMPANIES}/${custody.companyId}`;
+}
+
+/** Only the owner member of a wider object — never both keys, never an `undefined` twin. */
+function custodyOnly(custody: CustodyScope): CustodyScope {
+  return custody.userId !== undefined ? { userId: custody.userId } : { companyId: custody.companyId };
+}
+
+/**
+ * Reads the owner root of a split path. `null` for any other first segment — the tolerant
+ * reader accepts two ROOTS, never an unknown one.
+ */
+function parseCustodyRoot(segments: readonly string[]): CustodyScope | null {
+  const ownerId = segments[1];
+  if (!ownerId) return null;
+  if (segments[0] === STORAGE_PATH_SEGMENTS.COMPANIES) return { companyId: ownerId };
+  if (segments[0] === STORAGE_PATH_SEGMENTS.PEOPLE) return { userId: ownerId };
+  return null;
 }
 
 // ============================================================================
@@ -336,27 +367,19 @@ export function parseStoragePath(
   try {
     const segments = path.split('/');
 
-    // Canonical (ADR-709):
-    //   companies/{companyId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{filename}
-    // Legacy (pre-ADR-709, read-only):
+    // Canonical (ADR-709), two owner roots (ADR-866 §5.2):
+    //   {companies/{companyId} | people/{userId}}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{filename}
+    // Legacy (pre-ADR-709, read-only, company roots only — people/ was born canonical):
     //   companies/{companyId}/projects/{projectId}/entities/...
 
     let legacyProjectId: string | undefined;
-    let currentIndex = 0;
 
-    // Must start with 'companies'
-    if (segments[0] !== STORAGE_PATH_SEGMENTS.COMPANIES) {
-      return null;
-    }
-
-    const companyId = segments[1];
-    if (!companyId) {
-      return null;
-    }
-    currentIndex = 2;
+    const custody = parseCustodyRoot(segments);
+    if (!custody) return null;
+    let currentIndex = 2;
 
     // Legacy project scope (pre-ADR-709) — recognised, never produced
-    if (segments[currentIndex] === STORAGE_PATH_SEGMENTS.PROJECTS) {
+    if (custody.companyId !== undefined && segments[currentIndex] === STORAGE_PATH_SEGMENTS.PROJECTS) {
       legacyProjectId = segments[currentIndex + 1];
       currentIndex += 2;
     }
@@ -393,7 +416,7 @@ export function parseStoragePath(
     if (!isValidCategory(category)) return null;
 
     return {
-      companyId,
+      ...custody,
       entityType,
       entityId,
       domain,

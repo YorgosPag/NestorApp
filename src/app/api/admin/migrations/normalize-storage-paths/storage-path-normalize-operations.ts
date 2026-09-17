@@ -85,7 +85,8 @@ export async function scanLegacyPaths(db: Firestore): Promise<LegacyScanResult> 
       continue;
     }
 
-    if (!parsed.legacyProjectId) {
+    // Ο legacy τύπος υπάρχει ΜΟΝΟ κάτω από εταιρική ρίζα· η `people/` γεννήθηκε κανονική (ADR-866 §5.2).
+    if (!parsed.legacyProjectId || parsed.companyId === undefined) {
       alreadyCanonical += 1;
       continue;
     }
