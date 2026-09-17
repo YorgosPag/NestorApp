@@ -38,7 +38,12 @@ import {
   stayBookingFromDocument,
   stayCalendarHeadFromDocument,
   stayCalendarMonthFromDocument,
+  stayChannelsFromDocument,
 } from '@/lib/stay/stay-calendar-from-document';
+import { stayChannelsTrustedAt } from '@/lib/stay/stay-channel-health';
+import type { StayChannelTrust } from '@/lib/stay/stay-availability-vocabulary';
+import { STAY_CHANNELS_NONE, type StayChannels } from '@/types/stay-channels';
+import { nowISO } from '@/lib/date-local';
 import { stayDayRulesOf } from '@/lib/stay/stay-calendar-of';
 import { STAY_RULES_NONE, type StayCalendarMonth } from '@/types/stay-rules';
 import {
@@ -60,6 +65,14 @@ export type StayCalendarSnapshot =
       readonly entries: readonly StayCalendarEntry[];
       /** Οι μήνες με κανόνες ανά ημερομηνία (Στάδιο Β) — όλοι, χωρίς χρονικό φίλτρο. */
       readonly months: readonly StayCalendarMonth[];
+      /**
+       * 🔴 **Η φρεσκάδα των καναλιών ως ΓΕΓΟΝΟΣ** (Στάδιο Γ, §22): κρίνεται εδώ, όπου
+       * υπάρχει ρολόι, και ταξιδεύει στη καθαρή σύνθεση. `stale` ⇒ ό,τι θα λέγαμε
+       * «ελεύθερο» γίνεται `unsynced` — ποτέ υπόσχεση για νύχτες που κανάλι σώπασε.
+       */
+      readonly channels: StayChannelTrust;
+      /** Το έγγραφο των καναλιών **αυτούσιο** — για την εισαγωγή και την οθόνη πηγών. */
+      readonly channelDoc: StayChannels | null;
     }
   | { readonly kind: 'unreadable'; readonly unreadableIds: readonly string[] };
 
@@ -83,6 +96,11 @@ function readerOf(transaction: Transaction | null): CalendarReader {
  */
 export function stayPropertyRef(adminDb: AdminFirestore, propertyId: string): DocumentReference {
   return adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId);
+}
+
+/** Η αναφορά του εγγράφου καναλιών (Στάδιο Γ) — **μία** διατύπωση, όπως της κεφαλής. */
+export function stayChannelsRef(adminDb: AdminFirestore, propertyId: string): DocumentReference {
+  return adminDb.collection(COLLECTIONS.STAY_CHANNELS).doc(propertyId);
 }
 
 /** Η αναφορά της κεφαλής — **μία** διατύπωση, για αναγνώστη και γραφέα. */
@@ -111,11 +129,12 @@ export async function readStayCalendar(
   transaction: Transaction | null,
 ): Promise<StayCalendarSnapshot> {
   const reader = readerOf(transaction);
-  const [headSnap, blockSnap, bookingSnap, monthSnap] = await Promise.all([
+  const [headSnap, blockSnap, bookingSnap, monthSnap, channelSnap] = await Promise.all([
     reader.doc(stayCalendarHeadRef(adminDb, propertyId)),
     reader.query(entriesQuery(adminDb, COLLECTIONS.STAY_BLOCKS, propertyId)),
     reader.query(entriesQuery(adminDb, COLLECTIONS.STAY_BOOKINGS, propertyId)),
     reader.query(entriesQuery(adminDb, COLLECTIONS.STAY_CALENDAR_MONTHS, propertyId)),
+    reader.doc(stayChannelsRef(adminDb, propertyId)),
   ]);
 
   const unreadableIds: string[] = [];
@@ -142,8 +161,15 @@ export async function readStayCalendar(
     else months.push(month);
   }
 
+  // 🔴 Χαλασμένο έγγραφο καναλιών ⇒ `unreadable`: πηγή που δεν διαβάζεται δεν
+  //    δημοσκοπείται και δεν φυλάει νύχτες (§22).
+  const channelDoc = channelSnap.exists ? stayChannelsFromDocument(channelSnap.data(), propertyId) : null;
+  if (channelSnap.exists && channelDoc === null) unreadableIds.push(`${propertyId}:channels`);
+
   if (unreadableIds.length > 0) return { kind: 'unreadable', unreadableIds };
-  return { kind: 'readable', head, entries, months };
+  const feeds = channelDoc?.feeds ?? STAY_CHANNELS_NONE.feeds;
+  const channels: StayChannelTrust = stayChannelsTrustedAt(feeds, nowISO()) ? 'synced' : 'stale';
+  return { kind: 'readable', head, entries, months, channels, channelDoc };
 }
 
 /**

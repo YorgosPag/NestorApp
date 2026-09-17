@@ -65,6 +65,8 @@ function decideBlock(ctx: WriteContext, command: Extract<StayCalendarCommand, { 
     from: command.from,
     to: command.to,
     source: 'owner',
+    // Block του ιδιοκτήτη: καμία πηγή. Το εξωτερικό block το γεννά **μόνο** η εισαγωγή (§22).
+    channel: null,
     note: command.note,
     createdBy: ctx.actor.uid,
     createdAt: ctx.now,

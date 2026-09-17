@@ -165,6 +165,7 @@ describe('Δ — δήλωση, άνοιγμα, ίχνος', () => {
     db.seed(COLLECTIONS.STAY_BLOCKS, 'sblk_ical', {
       propertyId: PROPERTY, authorUserId: 'user-1', covers: [{ propertyId: PROPERTY, spaceId: null }],
       from: '2027-10-10', to: '2027-10-14', source: 'external', note: null, createdBy: 'user-1',
+      channel: { feedId: 'schf_airbnb', externalUid: 'abc@airbnb.com' },
       createdAt: '2027-01-01T00:00:00.000Z', updatedAt: '2027-01-01T00:00:00.000Z',
     });
     expect(await run({ action: 'unblock', blockId: 'sblk_ical' })).toEqual({
