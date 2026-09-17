@@ -12,24 +12,28 @@
  * `FileRecordService.getFileRecord/getFilesByEntity/queryFileRecords` delegate
  * to these functions, so no consumer import changes.
  *
- * ⚠️ `toFileRecord` is the SSoT normalizer: `file-record-links.ts` carried a
- * byte-for-byte private copy of it until 2026-07-25 and now imports it from
- * here (N.0.2 Boy Scout — a second copy is a second place for the Timestamp→ISO
- * rule to drift).
+ * ⚠️ `toFileRecord` **ήταν** ο SSoT normalizer: το `file-record-links.ts` κουβαλούσε
+ * ιδιωτικό αντίγραφό του μέχρι τις 2026-07-25 (N.0.2 Boy Scout — δεύτερο αντίγραφο
+ * = δεύτερο σημείο να αποκλίνει ο κανόνας `Timestamp→ISO`).
+ *
+ * 🔑 **2026-09-16 (ADR-862 Φ0 Β9): το σπίτι μετακόμισε στο σύνορο.** Ο κανόνας ζει
+ * πλέον στο `lib/files/file-record-read.ts` — τον **ίδιο** που χρησιμοποιεί και η
+ * φρουρημένη ανάγνωση. Το `toFileRecord` **μένει** ως το όνομα που ξέρουν οι ~90
+ * καταναλωτές, αλλά είναι πλέον **delegate**: μία γραμμή, μηδέν δεύτερη αλήθεια.
  *
  * @module services/file-record-queries
  * @enterprise ADR-031 — Canonical File Storage System, ADR-214 Phase 3
+ * @see lib/files/file-record-read — ο θεματοφύλακας (CHECK 3.74)
  */
 
 import { where, type DocumentData, type QueryConstraint } from 'firebase/firestore';
 
 import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
-import { fieldToISO } from '@/lib/date-local';
+import { normalizeFileRecord } from '@/lib/files/file-record-read';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { FileRecord, FileRecordQuery } from '@/types/file-record';
-import { isFileRecord } from '@/types/file-record';
 
 const logger = createModuleLogger('FILE_RECORD');
 
@@ -46,14 +50,16 @@ export interface GetFilesByEntityOptions {
 // POST-QUERY NORMALIZATION HELPER (ADR-214 Phase 3)
 // ============================================================================
 
+/**
+ * **Delegate προς τον θεματοφύλακα** (ADR-862 Φ0 Β9).
+ *
+ * ⚠️ **ΑΝΕΚΤΙΚΗ πόρτα, επίτηδες**: κανονικοποίηση + φρουρός σχήματος, **καμία**
+ * κρίση κατάστασης. Ένα έγγραφο με ασυνεπές `cdeState` **συνεχίζει να εμφανίζεται**
+ * στις λίστες, ακριβώς όπως σήμερα — η απόκρυψη ανήκει στο Β11, πίσω από τον κανόνα.
+ * Για διαδρομή που πρόκειται να **γράψει**, χρησιμοποίησε `readFileRecord`.
+ */
 export function toFileRecord(raw: DocumentData): FileRecord | null {
-  const record = {
-    ...raw,
-    id: raw.id as string,
-    createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
-    updatedAt: fieldToISO(raw as Record<string, unknown>, 'updatedAt') || raw.updatedAt,
-  };
-  return isFileRecord(record) ? record : null;
+  return normalizeFileRecord(raw);
 }
 
 // ============================================================================

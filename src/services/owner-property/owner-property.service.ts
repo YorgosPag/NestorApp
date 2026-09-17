@@ -199,7 +199,7 @@ export async function createBrokeredOwnerListing(
     readonly clientContactId: string;
     readonly expiresAt: string;
     readonly via: string;
-    readonly documentPath: string | null;
+    readonly documentFileId: string | null;
   },
 ): Promise<OwnerListingResult & { readonly notify?: BrokeredNotifyOutcome }> {
   try {

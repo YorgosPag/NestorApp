@@ -43,6 +43,20 @@ export type MarketingAudience = (typeof MARKETING_AUDIENCES)[number];
  */
 export const DEFAULT_MARKETING_AUDIENCE: MarketingAudience = 'public';
 
+/**
+ * **Κοινά που ΔΕΝ ζουν ακόμη** — ορατά στη διεπαφή, μη επιλέξιμα.
+ *
+ * 🔶 Το `network` προϋποθέτει το επαγγελματικό δίκτυο του ADR-862 (Φ5)· επιλέξιμο σήμερα θα συμπεριφερόταν
+ * **ακριβώς** σαν `custodians`. Ζει στη ρίζα επειδή το ρωτούν **δύο** οθόνες (έλεγχος κοινού · αίτημα γραφείου,
+ * ADR-864 §18) — τοπικό αντίγραφο στη δεύτερη θα ξεχνιόταν την ημέρα που ανοίγει το δίκτυο.
+ */
+const PENDING_MARKETING_AUDIENCES: ReadonlySet<MarketingAudience> = new Set<MarketingAudience>(['network']);
+
+/** Επιλέξιμο **σήμερα**; */
+export function isOfferableAudience(audience: MarketingAudience): boolean {
+  return !PENDING_MARKETING_AUDIENCES.has(audience);
+}
+
 /** Η τιμή είναι κοινό του λεξιλογίου; */
 export function isMarketingAudience(value: unknown): value is MarketingAudience {
   return typeof value === 'string' && (MARKETING_AUDIENCES as readonly string[]).includes(value);

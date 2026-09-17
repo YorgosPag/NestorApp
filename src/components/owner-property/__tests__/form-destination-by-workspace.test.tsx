@@ -118,7 +118,7 @@ const MANDATE_PROP = {
     clientContactId: 'cont_kostas',
     expiresAt: '2027-02-20T23:59:59.999Z',
     via: 'owner-consent',
-    documentPath: null,
+    documentFileId: null,
   },
   onNotify: () => undefined,
 };

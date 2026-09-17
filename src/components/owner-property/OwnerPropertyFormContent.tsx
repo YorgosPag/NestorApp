@@ -127,7 +127,7 @@ export interface OwnerPropertyFormContentProps
       readonly clientContactId: string;
       readonly expiresAt: string;
       readonly via: string;
-      readonly documentPath: string | null;
+      readonly documentFileId: string | null;
     };
     /** Λέγεται στην οθόνη μόλις απαντήσει ο διακομιστής. */
     readonly onNotify: (outcome: BrokeredNotifyOutcome | undefined) => void;

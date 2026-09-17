@@ -38,6 +38,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   MARKETING_AUDIENCES,
   isMarketingAudience,
+  isOfferableAudience,
   narrowsAudience,
   type MarketingAudience,
 } from '@/constants/marketing-audiences';
@@ -45,9 +46,6 @@ import {
 const NS = 'property-market';
 const ENUMS_NS = 'properties-enums';
 const K = `${NS}:audience`;
-
-/** Κοινά που **δεν** ζουν ακόμη — ορατά, μη επιλέξιμα. */
-const PENDING_AUDIENCES: ReadonlySet<MarketingAudience> = new Set<MarketingAudience>(['network']);
 
 /**
  * **Γιατί ο διακομιστής αρνήθηκε** — κλειστό σύνολο, κωδικός = κλειδί i18n (ADR-864 Α21).
@@ -124,7 +122,7 @@ export function MarketingAudienceControl({
         </SelectTrigger>
         <SelectContent>
           {MARKETING_AUDIENCES.map((option) => (
-            <SelectItem key={option} value={option} disabled={PENDING_AUDIENCES.has(option)}>
+            <SelectItem key={option} value={option} disabled={!isOfferableAudience(option)}>
               {t(`${ENUMS_NS}:marketingAudience.${option}`)}
             </SelectItem>
           ))}

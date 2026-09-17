@@ -133,15 +133,13 @@ async function runLinkAction(
   const adminDb = getAdminFirestore();
   const who = { kind: 'owner-link', nonce: request.nonce, clientContactId: request.clientContactId } as const;
   if (body.action === 'revoke') {
-    return revokePrivateMarketing(adminDb, { ownerPropertyId: request.ownerPropertyId, who, outcome: body.outcome, nowISO: nowISO() });
+    return revokePrivateMarketing(adminDb, { ownerPropertyId: request.ownerPropertyId, who, agencyCompanyId: null, outcome: body.outcome, nowISO: nowISO() });
   }
   return grantPrivateMarketing(adminDb, {
     ownerPropertyId: request.ownerPropertyId,
     who,
-    submission: body.submission,
-    requestId: body.requestId,
+    line: { agencyCompanyId: null, requestId: body.requestId, submission: body.submission },
     audience: null,
-    documentPath: null,
     nowISO: nowISO(),
   });
 }

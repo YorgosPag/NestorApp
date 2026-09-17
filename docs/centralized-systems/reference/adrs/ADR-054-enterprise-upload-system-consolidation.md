@@ -52,6 +52,15 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 
 ## Changelog
 
+### 2026-09-16 — Ο πυρήνας του ανεβάσματος οντότητας έγινε συνάρτηση (ADR-864 §18)
+
+**Αφορμή**: το υπογεγραμμένο έντυπο κλειστής διάθεσης (ADR-864 §18.4 Δ1) χρειάστηκε **τον ίδιο** αγωγό με τον διαχειριστή αρχείων **και** την ταυτότητα του αρχείου (`fileId`), που το `useFileUpload` δεν επέστρεφε.
+
+**Λύση** (N.0.2 — εξαγωγή, όχι αντίγραφο):
+1. **`services/filesystem/upload-entity-file.ts`** — `uploadEntityFile(spec, file) → { fileId, displayName }`: βήματα Α (`createPendingFileRecordWithPolicy`) · Β (`uploadBytes` + μη μπλοκάρουσα μικρογραφία) · Γ (`finalizeFileRecordWithPolicy`). Ο έλεγχος ταυτότητας (`validateUploadAuth`) μένει στον καλούντα.
+2. **`useFileUpload`** καλεί τη συνάρτηση (302 → 265 γρ.)· σημεία εισόδου, ταξινόμηση AI, ειδοποιήσεις και ίχνος μένουν στον hook.
+3. **`ENTITY_TYPES.OWNER_PROPERTY`** (`owner_property`) — έγγραφα γραφείου δεμένα σε αγγελία ιδιώτη, στο `companies/{c}/entities/owner_property/{id}/…`. Κανένας νέος κανόνας αποθήκευσης (το κανονικό μπλοκ δεν απαριθμεί τύπους).
+
 ### 2026-03-24 — Deprecated Legacy Upload Methods Removed from PDFProcessor
 
 **Πρόβλημα**: `PDFProcessor` περιείχε ~200 γραμμές deprecated code (`uploadFloorPlan()`, `cleanupExistingFiles()`, `uploadToStorage()`, `updateFirestoreFloor()`) που χρησιμοποιούσαν legacy `floor-plans/` paths χωρίς companyId isolation.

@@ -28,7 +28,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import type { FileRecord } from '@/types/file-record';
+import { readFileRecord } from '@/lib/files/file-record-read';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileAuditService } from '@/services/file-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
@@ -123,7 +123,22 @@ export class FileVersionService {
       throw new Error(`FileRecord not found: ${fileId}`);
     }
 
-    const currentData = fileSnap.data() as FileRecord;
+    // 🔒 ΦΡΟΥΡΗΜΕΝΗ ΑΝΑΓΝΩΣΗ — ΟΧΙ ΩΜΟ «as FileRecord» (ADR-862 Φ0 Β9 · CHECK 3.74).
+    //
+    // Το ISO 19650 το λέει ρητά: *«any change requires the opening of a new revision
+    // that restarts the cycle from the WIP state»* ⇒ η δημιουργία αναθεώρησης **ΕΙΝΑΙ**
+    // μετάβαση κατάστασης, όχι ουδέτερη ανάγνωση. Δοχείο του οποίου η κατάσταση **δεν
+    // επαληθεύεται από τις πράξεις του** δεν αναθεωρείται: **fail-closed**.
+    //
+    // 🏆 Και η άρνηση **ονομάζει την αιτία** (`published-revision-moved`,
+    //    `shared-without-share-act`, …). Το ACC λέει «locked» και το Teamwork «object
+    //    conflict» — ο άνθρωπος μένει να μαντεύει. Εμείς του λέμε **τι** δεν στέκει.
+    const current = readFileRecord(fileSnap.data(), fileId);
+    if (current.outcome !== 'record') {
+      throw new Error(`FileRecord unreadable: ${fileId} (${current.why})`);
+    }
+
+    const currentData = current.record;
     const currentRevision = currentData.revision ?? 1;
     const newRevision = currentRevision + 1;
 
@@ -242,7 +257,14 @@ export class FileVersionService {
       throw new Error(`FileRecord not found: ${fileId}`);
     }
 
-    const currentData = currentSnap.data() as FileRecord;
+    // 🔒 Ίδιος φρουρός με το `createNewVersion` — η επαναφορά είναι **κι αυτή** νέα
+    //    αναθεώρηση, άρα μετάβαση κατάστασης. Δες εκεί το πλήρες σκεπτικό.
+    const current = readFileRecord(currentSnap.data(), fileId);
+    if (current.outcome !== 'record') {
+      throw new Error(`FileRecord unreadable: ${fileId} (${current.why})`);
+    }
+
+    const currentData = current.record;
     const currentRevision = currentData.revision ?? 1;
     const rollbackRevision = currentRevision + 1;
 

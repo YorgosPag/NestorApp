@@ -718,7 +718,47 @@
         "consent-document-missing": "The signed form is missing.",
         "consent-not-granted": "There is no active consent to revoke.",
         "consent-already-granted": "Consent already applies to this mandate.",
-        "private-marketing-consent-missing": "Another agency mandate has no consent yet, so private marketing cannot be applied."
+        "private-marketing-consent-missing": "Another agency mandate has no consent yet, so private marketing cannot be applied.",
+        "consent-document-invalid": "The file is not a ready form of your agency for this listing. Upload it again from this page."
+      },
+      "saved": "Recorded.",
+      "failed": "The action did not complete. Please try again.",
+      "loading": "Loading consent status…",
+      "loadFailed": "The consent status could not be loaded. Refresh the page.",
+      "standing": {
+        "granted": "Consent in force — text version {version}, {date}, {channel}.",
+        "requested": "Agency request pending since {date}. The owner has not answered yet.",
+        "outdated": "The mandate terms changed after consent was given — the earlier consent does not cover the new terms.",
+        "revoked": "Consent was revoked. The property is marketed publicly or has been withdrawn.",
+        "absent": "No consent has been given for marketing without a public listing.",
+        "channel": {
+          "link": "through the owner's link",
+          "account": "from the owner's account",
+          "form": "with a signed form uploaded by the agency"
+        }
+      },
+      "agency": {
+        "request": "Ask the owner for consent",
+        "requestAgain": "Send the request again",
+        "requestHint": "The owner receives an email with a link. Marketing becomes private only when the owner consents.",
+        "notify": {
+          "sent": "The request was sent to the owner.",
+          "no-address": "The request was recorded, but the owner's contact has no email. Let them know another way.",
+          "failed": "The request was recorded, but the email was not sent. Send the request again."
+        },
+        "attestOpen": "I have a form signed by the owner",
+        "attestExplain": "Print the text of the version in force, have the owner initial every statement and sign, then upload the scanned form. The owner will be notified and can dispute it.",
+        "printable": "Printable text (version {version})",
+        "attestSubmit": "Submit form",
+        "documentLabel": "Signed form",
+        "documentPick": "Choose file",
+        "documentReplace": "Replace file",
+        "documentAttached": "Uploaded: {name}",
+        "documentFailed": "The file was not uploaded. Please try again."
+      },
+      "owner": {
+        "start": "Market without a public listing…",
+        "consentFor": "Consent to: {agency}"
       }
     },
     "cardEmail": {

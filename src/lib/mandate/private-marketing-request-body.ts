@@ -29,14 +29,21 @@ const submissionSchema = z.object({
 
 const grantBase = { requestId: z.string().min(1).nullable(), submission: submissionSchema };
 
+/** Μία συναίνεση ανά γραφείο — κάθε γραφείο **μία** φορά (αλλιώς δύο γεγονότα για μία πράξη). */
+const consentsSchema = z
+  .array(z.object({ agencyCompanyId: z.string().min(1), ...grantBase }))
+  .min(1)
+  .max(16)
+  .refine((lines) => new Set(lines.map((line) => line.agencyCompanyId)).size === lines.length);
+
 /** `PATCH /api/owner-properties/[id]` — `{ privateMarketing: … }`. */
 const accountBodySchema = z.discriminatedUnion('action', [
   /** Το γραφείο **ζητά** (Ε-11). */
   z.object({ action: z.literal('request'), audience: closedAudience }),
-  /** Ο ιδιοκτήτης με λογαριασμό **συναινεί** — για συγκεκριμένο γραφείο. */
-  z.object({ action: z.literal('grant'), agencyCompanyId: z.string().min(1), audience: closedAudience.nullable(), ...grantBase }),
-  /** Το γραφείο ανεβάζει **υπογεγραμμένο έντυπο** (Ε-12). */
-  z.object({ action: z.literal('attest'), audience: closedAudience, documentPath: z.string(), ...grantBase }),
+  /** Ο ιδιοκτήτης με λογαριασμό **συναινεί** — προς **όλα** τα γραφεία μαζί, ατομικά (§18.4 Δ3). */
+  z.object({ action: z.literal('grant'), audience: closedAudience.nullable(), consents: consentsSchema }),
+  /** Το γραφείο ανεβάζει **υπογεγραμμένο έντυπο** (Ε-12)· **ταυτότητα αρχείου**, ποτέ διαδρομή (§18.4 Δ1). */
+  z.object({ action: z.literal('attest'), audience: closedAudience, documentFileId: z.string(), ...grantBase }),
   /** Ο ιδιοκτήτης με λογαριασμό **ανακαλεί** (Ε-13). */
   z.object({ action: z.literal('revoke'), agencyCompanyId: z.string().min(1), outcome: z.enum(PRIVATE_MARKETING_REVOCATION_OUTCOMES) }),
 ]);

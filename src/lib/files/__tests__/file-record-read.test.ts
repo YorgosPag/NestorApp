@@ -24,9 +24,12 @@
 
 import { describe, it, expect } from '@jest/globals';
 
+import { toFileRecord } from '@/services/file-record-queries';
+
 import {
   containerFactsOf,
   deriveSuitability,
+  normalizeFileRecord,
   readContainerActs,
   readContainerState,
   readFileRecord,
@@ -297,5 +300,80 @@ describe('Θ — readFileRecord', () => {
     const read = readFileRecord({ ...BASE_DOC, companyId: '   ' }, 'file_anchor');
     if (read.outcome !== 'record') throw new Error('unreachable');
     expect(containerFactsOf(read.record, read.state).companyId).toBeNull();
+  });
+});
+
+// =============================================================================
+// Ι — 🔴 Η ΤΑΥΤΟΤΗΤΑ ΤΟΥ DELEGATE (ADR-862 Φ0 Β9)
+// =============================================================================
+//
+// 🔴 **Ο ΚΙΝΔΥΝΟΣ ΠΟΥ ΑΥΤΗ Η ΟΜΑΔΑ ΚΑΡΦΩΝΕΙ.** Το σχέδιο του Β9 έλεγε «το
+// `toFileRecord()` γίνεται delegate προς τον θεματοφύλακα». Αν γινόταν **ολικός**
+// delegate — δηλαδή αν οι λίστες περνούσαν από τον {@link readFileRecord} — τότε
+// έγγραφο με ασυνεπές `cdeState` θα γύριζε `unreadable` και θα **εξαφανιζόταν από
+// ~90 σημεία ανάγνωσης**. Αυτό παραβιάζει την κεντρική αρχή της Φ0: *«σε κάθε
+// ενδιάμεσο σημείο η παραγωγή δουλεύει, επειδή το «απόν» σημαίνει παντού «όπως
+// σήμερα»»*. Η απόκρυψη ανήκει στο **Β11**.
+//
+// ✅ Η λύση είναι **ΕΝΑΣ** μετασχηματιστής με **ΔΥΟ** ερωτήσεις — η βιομηχανική
+// **ασυμμετρία προβολής/μετάλλαξης**. Η ομάδα αυτή αποδεικνύει ότι οι δύο πόρτες
+// **διαφέρουν εκεί που πρέπει** και **ταυτίζονται παντού αλλού**.
+
+describe('Ι — ο delegate: ΜΙΑ κανονικοποίηση, ΔΥΟ πόρτες', () => {
+  it('Ι1: σε ΥΓΙΕΣ έγγραφο, οι δύο πόρτες δίνουν το ΙΔΙΟ record', () => {
+    const viaList = toFileRecord({ ...BASE_DOC });
+    const viaGuard = readFileRecord({ ...BASE_DOC }, 'file_anchor');
+
+    if (viaGuard.outcome !== 'record') throw new Error('unreachable');
+    expect(viaList).toEqual(viaGuard.record);
+    expect(viaList).toEqual(normalizeFileRecord({ ...BASE_DOC }));
+  });
+
+  it('Ι2: 🔴 ΤΟ ΚΡΙΣΙΜΟ — έγγραφο σε «unreadable» κατάσταση ΕΞΑΚΟΛΟΥΘΕΙ να εμφανίζεται στις λίστες', () => {
+    // `PUBLISHED` χωρίς σφραγίδα ⇒ ο φρουρός αρνείται (Θ2). Οι λίστες **δεν** πρέπει
+    // να το χάσουν: μέχρι το Β11, «απόν» σημαίνει «όπως σήμερα».
+    const inconsistent = { ...BASE_DOC, cdeState: 'PUBLISHED' };
+
+    expect(readFileRecord(inconsistent, 'file_anchor').outcome).toBe('unreadable');
+
+    const listed = toFileRecord(inconsistent);
+    expect(listed).not.toBeNull();
+    expect(listed?.id).toBe('file_anchor');
+    expect(listed?.displayName).toBe('Κάτοψη Ισογείου');
+  });
+
+  it('Ι3: η κανονικοποίηση χρονοσημάνσεων είναι ΤΑΥΤΟΣΗΜΗ και στις δύο πόρτες', () => {
+    // Ο κανόνας `Timestamp→ISO` είχε **δύο** σπίτια μέχρι το Β9. Τώρα ένα — και αυτό
+    // το test είναι που το κρατά ένα.
+    const withStamp = {
+      ...BASE_DOC,
+      createdAt: { seconds: 1_757_000_000, nanoseconds: 0 },
+      updatedAt: { seconds: 1_758_000_000, nanoseconds: 0 },
+    };
+
+    const listed = toFileRecord(withStamp);
+    const guarded = readFileRecord(withStamp, 'file_anchor');
+
+    if (guarded.outcome !== 'record') throw new Error('unreachable');
+    expect(listed?.createdAt).toBe(guarded.record.createdAt);
+    expect(listed?.updatedAt).toBe(guarded.record.updatedAt);
+    expect(typeof listed?.createdAt).toBe('string');
+  });
+
+  it('Ι4: το «id» κρατά τη σημερινή συμπεριφορά — του εγγράφου, με εφεδρικό το κλειδί', () => {
+    // ⚠️ Το παλιό `toFileRecord` έγραφε `id: raw.id` **χωρίς** εφεδρικό· το
+    //    `readFileRecord` έγραφε `raw.id ?? fileId`. Ο κοινός πυρήνας δέχεται το
+    //    κλειδί **προαιρετικά**, ώστε καμία από τις δύο συμπεριφορές να μην αλλάξει.
+    expect(toFileRecord({ ...BASE_DOC, id: 'file_from_doc' })?.id).toBe('file_from_doc');
+    expect(normalizeFileRecord({ ...BASE_DOC, id: undefined }, 'file_from_key')?.id).toBe(
+      'file_from_key'
+    );
+  });
+
+  it('Ι5: σκουπίδι ⇒ null και στις δύο πόρτες, ποτέ ρίψη', () => {
+    expect(normalizeFileRecord(null)).toBeNull();
+    expect(normalizeFileRecord('όχι αντικείμενο')).toBeNull();
+    const { createdBy: _omitted, ...withoutCreator } = BASE_DOC;
+    expect(toFileRecord(withoutCreator)).toBeNull();
   });
 });

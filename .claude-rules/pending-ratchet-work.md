@@ -2,24 +2,6 @@
 
 **STATUS: ACTIVE**
 
-- 🚀 **16/09 — ΤΡΕΙΣ ΕΚΚΡΕΜΕΙΣ ΑΝΑΠΤΥΞΕΙΣ FIREBASE (ADR-865 · CHECK 3.86) — ΠΡΑΞΗ ΤΟΥ GIORGIO**
-
-  Το `.firestore-deploy-ledger.json` γεννήθηκε **κενό**, και αυτό είναι **η αλήθεια**: δεν υπάρχει
-  απόδειξη ανάπτυξης για **κανέναν** στόχο. Για τους δείκτες η έλλειψη είναι **μετρημένη** (ζωντανά
-  436 · αρχείο 437, λείπει ο `entity_audit_trail_personal`)· για κανόνες/storage δεν υπάρχει
-  read-only τρόπος να ρωτηθεί ο πάροχος.
-
-  **Θεραπεία** (μία εντολή ανά στόχο, γράφει μόνη της τη γραμμή):
-  ```
-  npm run firestore:deploy -- --project pagonis-87766
-  ```
-  ⚠️ **ΠΟΤΕ ΑΠΟ ΠΡΑΚΤΟΡΑ** — γράφει στην παραγωγή. Μετά: σταδιοποίησε το μητρώο.
-  ⚠️ **Deploy ≠ διαθέσιμος**: ο νέος δείκτης χτίζεται (`CREATING`) — το ερώτημα αποτυγχάνει μέχρι
-  `READY`. Επαλήθευση: `npm run firestore:deploy -- --verify --project pagonis-87766`.
-
-  🚫 **Μέχρι τότε το `git push` ΜΠΛΟΚΑΡΕΙ** (νέο `scripts/git-hooks/pre-push`). Escape με
-  αιτιολόγηση: `SKIP_FIRESTORE_DEPLOY_PROOF=1 git push …`.
-
 - 🔴 **16/09 — Η ΑΓΚΥΡΑ `ownership-callsite-coverage` ΕΙΝΑΙ ΚΟΚΚΙΝΗ ΣΤΟ HEAD **ΚΑΙ ΑΦΥΛΑΚΤΗ** (εύρημα ADR-862 Φ0 Β7, καταγραφή Β8)**
 
   `src/lib/auth/__tests__/ownership-callsite-coverage-anchor.test.ts` → **19/20**, με **3 αταξινόμητα**:

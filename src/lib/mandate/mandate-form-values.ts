@@ -45,7 +45,7 @@ export interface MandateFormValues {
   /** `yyyy-mm-dd` — η μορφή του `<input type="date">`, όχι ISO στιγμή. */
   readonly expiresOn: string;
   readonly via: MandateProofVia;
-  readonly documentPath: string | null;
+  readonly documentFileId: string | null;
   /** Τι είδους εντολή — **καθορίζει το νόμιμο ανώτατο** της διάρκειας. */
   readonly agreement: ListingAgreement;
   readonly compensation: MandateCompensation;
@@ -73,7 +73,7 @@ export function emptyMandateForm(todayISO: string): MandateFormValues {
     //    ημερομηνία που κανείς δεν υπολόγισε.
     expiresOn: toDateInputValue(until),
     via: OWNER_CONSENT,
-    documentPath: null,
+    documentFileId: null,
     agreement: DEFAULT_LISTING_AGREEMENT,
     compensation: {
       type: 'percentage',
@@ -149,7 +149,7 @@ export function mandateRequestFrom(values: MandateFormValues): {
   readonly clientContactId: string;
   readonly expiresAt: string;
   readonly via: MandateProofVia;
-  readonly documentPath: string | null;
+  readonly documentFileId: string | null;
   readonly agreement: ListingAgreement;
   readonly compensation: MandateCompensation;
 } {
@@ -157,7 +157,7 @@ export function mandateRequestFrom(values: MandateFormValues): {
     clientContactId: values.clientContactId.trim(),
     expiresAt: endOfDay(values.expiresOn),
     via: values.via,
-    documentPath: values.documentPath,
+    documentFileId: values.documentFileId,
     // 🔴 Χωρίς αυτά τα δύο το `brokeredMandateSchema` απορρίπτει **κάθε** αίτημα.
     agreement: values.agreement,
     compensation: values.compensation,

@@ -33,6 +33,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { brokeredMandateFromRequest } from '@/lib/owner-property/brokered-mandate-schema';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
+import { attestationDocumentOf } from '@/services/mandate/attestation-document';
 import {
   agencyAttestation,
   createBrokeredListing,
@@ -111,6 +112,14 @@ async function handler(
   );
   if (!parsedMandate.ok) return respondToMalformed(parsedMandate.malformed);
 
+  // 🔴 ADR-864 §18.4 Δ1 — το έντυπο είναι **αρχείο του γραφείου για ΑΥΤΗ την αγγελία**, κριμένο από τη βάση·
+  //    η διαδρομή που γράφεται στην απόδειξη έρχεται από το `FileRecord`, ποτέ από το σύρμα.
+  const attestedDocument =
+    parsedMandate.mandate.documentFileId === null
+      ? null
+      : await attestationDocumentOf(adminDb, { fileId: parsedMandate.mandate.documentFileId, companyId: ctx.companyId ?? null, ownerPropertyId: id });
+  if (attestedDocument?.kind === 'refused') return respondToMalformed(['mandate.documentFileId']);
+
   // ⚠️ Η επωνυμία διαβάζεται **εδώ** και περνιέται· η υπηρεσία δεν ξέρει από εταιρείες.
   // Ένα `null` σημαίνει «δεν βρέθηκε» και **δεν** ακυρώνει την καταχώρηση — αλλά το
   // μήνυμα προς τον ιδιοκτήτη θα ήταν ανώνυμο, οπότε λέγεται κενό και όχι μπαλαντέρ.
@@ -150,7 +159,7 @@ async function handler(
       startsAt: nowISO(),
       proof:
         parsedMandate.mandate.via === AGENCY_ATTESTATION
-          ? agencyAttestation(ctx.uid, parsedMandate.mandate.documentPath)
+          ? agencyAttestation(ctx.uid, attestedDocument?.storagePath ?? null)
           : OWNER_CONSENT_PROOF,
     },
   );

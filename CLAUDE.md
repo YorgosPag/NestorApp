@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:bd68faef7dc24788a46d6b5ec5018c057ea35e45001da522dd060651ce586143 -->
+     fingerprint: sha256:6ad72b7d6c37c0d28e6a4ad725388c620ddddf987d64d1df3d6680c57261e0e0 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -368,7 +368,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.71** | **Πύλη των διπλών κλειδιών locale** (ADR-810) — «δηλώνεται κλειδί **ΔΥΟ ΦΟΡΕΣ στο ίδιο αντικείμενο** ενός locale JSON;» · `npm run test:locale-dup-keys` · `SKIP_LOCALE_DUPLICATE_KEYS=1` · 📘 `docs/gates/3.71.md` | ⛔ ZERO TOL | — |
 | **3.72** | **Πύλη των καθολικών δυνατοτήτων** (ADR-809) — «προσφέρει **αυτή η οθόνη** στον άνθρωπο τη **γλώσσα**, το **θέμα** και τον **λογαριασμό** του, και αν όχι το είπε κάποιος **με λόγο**;» · `npm run test:shell-utilities` · `SKIP_SHELL_UTILITIES=1` · 📘 `docs/gates/3.72.md` | ⛔ ZERO TOL | — |
 | **3.73** | **Πύλη λεξιλογίου τομέα** (ADR-812) — «είναι κάθε δήλωση που **απαριθμεί** το λεξιλόγιο **ΔΕΜΕΝΗ στη ρίζα του**;» · `npm run test:domain-vocabulary` · `SKIP_DOMAIN_VOCABULARY=1` · 📘 `docs/gates/3.73.md` | ⛔ ZERO TOL | — |
-| **3.74** | **Πύλη των συνόρων ανάγνωσης** (ADR-839 · ADR-842) — «διαβάζει κάποιος αποθηκευμένο έγγραφο **χωρίς να περάσει από το σύνορό του**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
+| **3.74** | **Πύλη των συνόρων ανάγνωσης** (ADR-839 · ADR-842 · ADR-862) — «διαβάζει κάποιος αποθηκευμένο έγγραφο **χωρίς να περάσει από το σύνορό του**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
 | **3.75** | **Πύλη του συνόρου του χάρτη** (ADR-777 §8.56) — «έρχεται αυτός ο χάρτης **μαζί με το στυλ του**, ή μόνο όταν τύχει;» · `npm run test:map-boundary` · `SKIP_MAP_BOUNDARY=1` · 📘 `docs/gates/3.75.md` | ⛔ ZERO TOL | — |
 | **3.76** | **Πύλη επιμέλειας του δημόσιου μοντέλου** (ADR-845) — «ποιος γεμίζει το `models[]` και ποιος το αδειάζει — και τους ρωτάει κανείς ΠΡΙΝ φύγει η αγγελία στο κοινό;» · `npm run test:listing-model-custody` · `SKIP_LISTING_MODEL_CUSTODY=1` · 📘 `docs/gates/3.76.md` | ⛔ ZERO TOL | — |
 | **3.77** | **Πύλη κίνησης της κάμερας** (ADR-847) — «πέταξε ο χάρτης, ή πήδηξε; — η ερώτηση που καμία στατική ανάλυση δεν μπορεί να κάνει, και που δεκατρία ΠΡΑΣΙΝΑ tests δεν έκαναν» · `npm run test:camera-motion` · 📘 `docs/gates/3.77.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
@@ -395,7 +395,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **79** (εκτελεστής 71 + hook 21) ·
-γραμμές εδώ: **68** · αδήλωτες: **12** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **68** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

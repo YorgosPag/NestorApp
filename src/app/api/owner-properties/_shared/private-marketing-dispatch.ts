@@ -36,27 +36,25 @@ export async function dispatchAccountPrivateMarketing(
     case 'grant':
       return grantPrivateMarketing(adminDb, {
         ownerPropertyId,
-        who: { kind: 'owner-account', actor, agencyCompanyId: body.agencyCompanyId },
-        submission: body.submission,
-        requestId: body.requestId,
+        who: { kind: 'owner-account', actor },
+        lines: body.consents,
         audience: body.audience,
-        documentPath: null,
         nowISO: now,
       });
     case 'attest':
       return grantPrivateMarketing(adminDb, {
         ownerPropertyId,
         who: { kind: 'agency', actor },
-        submission: body.submission,
-        requestId: body.requestId,
+        line: { agencyCompanyId: null, requestId: body.requestId, submission: body.submission },
+        documentFileId: body.documentFileId,
         audience: body.audience,
-        documentPath: body.documentPath,
         nowISO: now,
       });
     case 'revoke':
       return revokePrivateMarketing(adminDb, {
         ownerPropertyId,
-        who: { kind: 'owner-account', actor, agencyCompanyId: body.agencyCompanyId },
+        who: { kind: 'owner-account', actor },
+        agencyCompanyId: body.agencyCompanyId,
         outcome: body.outcome,
         nowISO: now,
       });

@@ -250,11 +250,56 @@ export function deriveSuitability(
 // =============================================================================
 
 /**
+ * **`raw` → `FileRecord`**, ή `null`. **Κανονικοποίηση και τίποτα άλλο.**
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ ΕΙΝΑΙ ΧΩΡΙΣΤΟ ΑΠΟ ΤΟΝ {@link readFileRecord} — ΚΑΙ ΓΙΑΤΙ ΑΥΤΟ ΕΙΝΑΙ
+ *    Η ΣΩΣΤΗ ΣΧΕΔΙΑΣΗ, ΟΧΙ ΣΥΜΒΙΒΑΣΜΟΣ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η βιομηχανική πρακτική έχει όνομα: **ασυμμετρία προβολής/μετάλλαξης** —
+ * *ανεκτικός στην προβολή, αυστηρός στη μετάλλαξη*. Το να διαβάσεις ένα
+ * αλλοιωμένο έγγραφο «σαν να μην υπάρχει» και μετά να γράψεις από πάνω του
+ * **καταστρέφει σιωπηλά** ό,τι θα μπορούσε να σωθεί· η άρνηση κοστίζει **μία**
+ * παραλειπόμενη πράξη και **ένα ορατό σφάλμα**.
+ *
+ * ⇒ Δύο ερωτήσεις, **ΕΝΑΣ** μετασχηματιστής:
+ *
+ *   `normalizeFileRecord`  → λίστες & οθόνες  (~90 σημεία) — **καμία** αλλαγή ορατότητας
+ *   `readFileRecord`       → μεταλλάξεις                    — `unreadable` ⇒ **άρνηση**
+ *
+ * 🔴 **ΜΗΝ κάνεις τον {@link readFileRecord} καθολικό.** Αν οι λίστες γίνονταν
+ * φρουρημένες αναγνώσεις, έγγραφο με ασυνεπές `cdeState` θα **εξαφανιζόταν** από
+ * ~90 σημεία — παραβίαση της κεντρικής αρχής της Φ0: *«σε κάθε ενδιάμεσο σημείο η
+ * παραγωγή δουλεύει, επειδή το «απόν» σημαίνει παντού «όπως σήμερα»»*. Η απόκρυψη
+ * ανήκει στο **Β11**, πίσω από τον κανόνα, όχι εδώ.
+ *
+ * ⚠️ **Ταυτόσημο με το προηγούμενο `toFileRecord`** (`services/file-record-queries.ts`),
+ * που πλέον **delegate**-άρει εδώ: ο κανόνας `Timestamp→ISO` απέκτησε **ένα** σπίτι.
+ *
+ * @param raw Ό,τι επέστρεψε το `snapshot.data()`.
+ * @param fileId Εφεδρικό κλειδί όταν το έγγραφο δεν κουβαλά `id` **μέσα** του.
+ */
+export function normalizeFileRecord(raw: unknown, fileId?: string): FileRecord | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+
+  const normalized = {
+    ...source,
+    id: (source.id ?? fileId) as string,
+    createdAt: fieldToISO(source, 'createdAt') || source.createdAt,
+    updatedAt: fieldToISO(source, 'updatedAt') || source.updatedAt,
+  };
+
+  return isFileRecord(normalized) ? normalized : null;
+}
+
+/**
  * **`raw` → `FileRecord` + κατάσταση**, ή ονομασμένη αποτυχία.
  *
- * ⚠️ Η κανονικοποίηση χρονοσημάνσεων είναι **ταυτόσημη** με το `toFileRecord`
- * (`services/file-record-queries.ts:49`), ώστε η μετάβαση εκείνου σε delegate
- * (Φ0 Β9) να είναι **drop-in** και να μην αλλάξει τίποτα για τους ~90 αναγνώστες.
+ * 🔒 **Η φρουρημένη πόρτα** — για κάθε διαδρομή που πρόκειται να **γράψει**. Το
+ * ISO 19650 το λέει ρητά: *«any change requires the opening of a new revision that
+ * restarts the cycle from the WIP state»* ⇒ η αναθεώρηση **ΕΙΝΑΙ** μετάβαση
+ * κατάστασης, άρα ο γραφέας **οφείλει** να ρωτήσει πρώτα.
  *
  * @param raw Ό,τι επέστρεψε το `snapshot.data()`.
  * @param fileId Το κλειδί — για την καταγραφή του `unreadable`.
@@ -265,14 +310,8 @@ export function readFileRecord(raw: unknown, fileId: string): FileRecordRead {
   }
   const source = raw as Record<string, unknown>;
 
-  const normalized = {
-    ...source,
-    id: (source.id as string) ?? fileId,
-    createdAt: fieldToISO(source, 'createdAt') || source.createdAt,
-    updatedAt: fieldToISO(source, 'updatedAt') || source.updatedAt,
-  };
-
-  if (!isFileRecord(normalized)) {
+  const normalized = normalizeFileRecord(source, fileId);
+  if (normalized === null) {
     return { outcome: 'unreadable', fileId, why: 'shape-guard-rejected' };
   }
 

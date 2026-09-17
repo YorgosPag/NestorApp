@@ -19,22 +19,17 @@
  */
 
 import { useCallback, useState } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 import app from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import {
   classifyFileWithPolicy,
-  createPendingFileRecordWithPolicy,
-  finalizeFileRecordWithPolicy,
   validateUploadAuth,
 } from '@/services/filesystem/file-mutation-gateway';
-import { getFileExtension } from '@/services/upload';
+import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
-import { generateUploadThumbnail, buildThumbnailPath } from '../utils/generate-upload-thumbnail';
 import { isAIClassifiable } from './useFileClassification';
 import { META_PHOTO_PURPOSES } from './useEntityFiles-purpose-filter';
 import { RealtimeService } from '@/services/realtime';
@@ -193,58 +188,26 @@ export function useFileUpload({
         const file = selectedFiles[i];
 
         try {
-          const ext = getFileExtension(file.name);
-
-          // STEP A: Create pending FileRecord
-          const { fileId, storagePath, displayName } = await createPendingFileRecordWithPolicy({
-            companyId,
-            projectId,
-            entityType,
-            entityId,
-            domain: uploadDomain,
-            category: uploadCategory,
-            entityLabel,
-            purpose: uploadPurpose,
-            ...(levelFloorId ? { levelFloorId } : {}),
-            originalFilename: file.name,
-            ext,
-            contentType: file.type,
-            createdBy: currentUserId,
-            uploaderName: currentUserName,
-            customTitle: selectedEntryPoint?.requiresCustomTitle
-              ? customTitle
-              : selectedEntryPoint?.label?.el,
-          });
-
-          // Wait for Firestore propagation before Storage upload
-          await new Promise((resolve) => setTimeout(resolve, 300));
-
-          // STEP B: Upload binary to Storage
-          const storageRef = ref(storage, storagePath);
-          await uploadBytes(storageRef, file);
-          const downloadUrl = await getDownloadURL(storageRef);
-
-          // ADR-191 Phase 2.1: Generate persistent thumbnail
-          let thumbnailUrl: string | undefined;
-          try {
-            const thumbBlob = await generateUploadThumbnail(file, file.type);
-            if (thumbBlob) {
-              const thumbPath = buildThumbnailPath(storagePath);
-              const thumbRef = ref(storage, thumbPath);
-              await uploadBytes(thumbRef, thumbBlob, { contentType: 'image/webp' });
-              thumbnailUrl = await getDownloadURL(thumbRef);
-            }
-          } catch (thumbErr) {
-            logger.warn('Thumbnail generation failed (non-blocking)', { error: String(thumbErr) });
-          }
-
-          // STEP C: Finalize FileRecord
-          await finalizeFileRecordWithPolicy({
-            fileId,
-            sizeBytes: file.size,
-            downloadUrl,
-            thumbnailUrl,
-          });
+          // ADR-054/191/292 — ο **ένας** αγωγός (βήματα Α-Γ), κοινός με το έντυπο κλειστής διάθεσης (ADR-864 §18.4 Δ1).
+          const { fileId, displayName } = await uploadEntityFile(
+            {
+              companyId,
+              projectId,
+              entityType,
+              entityId,
+              domain: uploadDomain,
+              category: uploadCategory,
+              entityLabel,
+              purpose: uploadPurpose,
+              levelFloorId,
+              createdBy: currentUserId,
+              uploaderName: currentUserName,
+              customTitle: selectedEntryPoint?.requiresCustomTitle
+                ? customTitle
+                : selectedEntryPoint?.label?.el,
+            },
+            file,
+          );
 
           // ADR-191 Phase 2.2: AI auto-classify — starts background job, polls until done
           if (isAIClassifiable(file.type, file.name)) {

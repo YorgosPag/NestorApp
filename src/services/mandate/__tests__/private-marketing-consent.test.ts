@@ -21,6 +21,8 @@
  * | Α18 | κάθε γεγονός αφήνει ίχνος ADR-195 | χωρίς `recordChange` |
  * | Α19 | η παροχή εκτελεί στένεμα ατομικά· μπαγιάτικο αίτημα ⇒ άρνηση | χωρίς έλεγχο ταυτότητας αιτήματος |
  * | Α20 | έντυπο χωρίς έγγραφο ⇒ άρνηση · ειδοποίηση ιδιοκτήτη | attestation χωρίς έγγραφο |
+ * | Α23 | έντυπο = `FileRecord` **του γραφείου**, **αυτής** της αγγελίας, **έτοιμο** ⇒ διαδρομή από τη βάση | κριτής χωρίς εταιρεία · χωρίς αγγελία |
+ * | Α27 | ιδιοκτήτης προς δύο γραφεία ⇒ μία υποβολή, ένα γεγονός ανά εντολή· μία άρνηση ⇒ τίποτα | παροχή ανά γραφείο · μερική εγγραφή |
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -133,16 +135,23 @@ function submission(mandate: BrokeredListingMandate, over: Partial<ConsentSubmis
 
 const request = (id: string): PrivateMarketingEvent => ({ kind: 'requested', id, at: NOW, requestedByUserId: 'agent-1', audience: 'custodians' });
 
-function linkGrant(mandate: BrokeredListingMandate, over: Partial<Parameters<typeof consent.grantPrivateMarketing>[1]> = {}) {
+interface LinkOver {
+  readonly nonce?: string;
+  readonly requestId?: string | null;
+  readonly submission?: ConsentSubmission;
+}
+
+function linkGrant(mandate: BrokeredListingMandate, over: LinkOver = {}): Parameters<typeof consent.grantPrivateMarketing>[1] {
   return {
     ownerPropertyId: 'ownp_a',
-    who: { kind: 'owner-link', nonce: 'nonce-live', clientContactId: mandate.clientContactId } as const,
-    submission: submission(mandate),
-    requestId: 'pmev_req_1',
+    who: { kind: 'owner-link', nonce: over.nonce ?? 'nonce-live', clientContactId: mandate.clientContactId },
+    line: {
+      agencyCompanyId: null,
+      requestId: over.requestId === undefined ? 'pmev_req_1' : over.requestId,
+      submission: over.submission ?? submission(mandate),
+    },
     audience: null,
-    documentPath: null,
     nowISO: NOW,
-    ...over,
   };
 }
 
@@ -286,6 +295,7 @@ describe('🏆 Α16 — η ανάκληση δεν αφήνει ΠΟΤΕ κλε�
     const result = await consent.revokePrivateMarketing(typed, {
       ownerPropertyId: 'ownp_a',
       who: { kind: 'owner-link', nonce: 'nonce-live', clientContactId: mandate.clientContactId },
+      agencyCompanyId: null,
       outcome,
       nowISO: NOW,
     });
@@ -333,8 +343,8 @@ describe('🏆 Α18 — κάθε γεγονός αφήνει ίχνος ADR-195'
     const live = afterRequest.mandates[0] as BrokeredListingMandate;
     const pending = lastEvent(afterRequest);
 
-    await consent.grantPrivateMarketing(typed, linkGrant(live, { who: { kind: 'owner-link', nonce: live.consentNonce ?? '', clientContactId: live.clientContactId }, requestId: pending?.id ?? '' }));
-    await consent.revokePrivateMarketing(typed, { ownerPropertyId: 'ownp_a', who: { kind: 'owner-link', nonce: live.consentNonce ?? '', clientContactId: live.clientContactId }, outcome: 'public', nowISO: NOW });
+    await consent.grantPrivateMarketing(typed, linkGrant(live, { nonce: live.consentNonce ?? '', requestId: pending?.id ?? '' }));
+    await consent.revokePrivateMarketing(typed, { ownerPropertyId: 'ownp_a', who: { kind: 'owner-link', nonce: live.consentNonce ?? '', clientContactId: live.clientContactId }, agencyCompanyId: null, outcome: 'public', nowISO: NOW });
 
     const recorded = recordOwnerPropertyWrite.mock.calls.map(([, context]) => context.extraChanges?.find((c) => c.field === 'privateMarketing')?.newValue);
     expect(recorded).toEqual(['requested', 'granted', 'revoked']);
@@ -359,18 +369,26 @@ describe('🏆 Α19 — ο σύνδεσμος εκτελεί ΤΟ ΤΡΕΧΟΝ �
   });
 });
 
-describe('🏆 Α20 — το έντυπο χωρίς αρχείο δεν είναι συναίνεση', () => {
-  const attest = (mandate: BrokeredListingMandate, documentPath: string) => ({
+describe('🏆 Α20 · Α23 — το έντυπο είναι αρχείο ΤΟΥ ΓΡΑΦΕΙΟΥ για ΑΥΤΗ την αγγελία', () => {
+  const STORAGE_PATH = 'companies/comp_alfa/entities/owner_property/ownp_a/domains/legal/categories/contracts/files/file_pm.pdf';
+  const readyFile = (over: Record<string, unknown> = {}) => ({
+    companyId: AGENCY,
+    entityType: 'owner_property',
+    entityId: 'ownp_a',
+    status: 'ready',
+    storagePath: STORAGE_PATH,
+    ...over,
+  });
+  const attest = (mandate: BrokeredListingMandate, documentFileId: string | null): Parameters<typeof consent.grantPrivateMarketing>[1] => ({
     ownerPropertyId: 'ownp_a',
-    who: { kind: 'agency', actor: AGENT } as const,
-    submission: submission(mandate),
-    requestId: null,
-    audience: 'custodians' as const,
-    documentPath,
+    who: { kind: 'agency', actor: AGENT },
+    line: { agencyCompanyId: null, requestId: null, submission: submission(mandate) },
+    documentFileId,
+    audience: 'custodians',
     nowISO: NOW,
   });
 
-  it('🔴 κενό `documentPath` ⇒ `consent-document-missing`, καμία ειδοποίηση', async () => {
+  it('🔴 Α20 — κανένα αρχείο ⇒ `consent-document-missing`, καμία ειδοποίηση', async () => {
     const mandate = confirmedMandate();
     const { db, typed } = seeded([mandate]);
 
@@ -379,14 +397,96 @@ describe('🏆 Α20 — το έντυπο χωρίς αρχείο δεν είν�
     expect(sendMandateInvitation).not.toHaveBeenCalled();
   });
 
-  it('🔴 με αρχείο ⇒ βεβαίωση με όνομα+έγγραφο, στένεμα, και ειδοποίηση αμφισβήτησης στον ιδιοκτήτη', async () => {
+  it('🔴 Α20 + Α23 — έτοιμο αρχείο του γραφείου ⇒ διαδρομή ΑΠΟ ΤΗ ΒΑΣΗ, στένεμα, ειδοποίηση αμφισβήτησης', async () => {
     const mandate = confirmedMandate();
     const { db, typed } = seeded([mandate]);
+    db.seed(COLLECTIONS.FILES, 'file_pm', readyFile());
 
-    expect((await consent.grantPrivateMarketing(typed, attest(mandate, 'companies/comp_alfa/forms/pm.pdf'))).kind).toBe('saved');
+    expect((await consent.grantPrivateMarketing(typed, attest(mandate, 'file_pm'))).kind).toBe('saved');
     const event = lastEvent(await stored(db));
-    expect(event).toMatchObject({ kind: 'granted', channel: 'form', proof: { via: 'agency-attestation', attestedByUserId: 'agent-1', documentPath: 'companies/comp_alfa/forms/pm.pdf' } });
+    expect(event).toMatchObject({ kind: 'granted', channel: 'form', proof: { via: 'agency-attestation', attestedByUserId: 'agent-1', documentPath: STORAGE_PATH } });
     expect(sendMandateInvitation).toHaveBeenCalledWith(expect.anything(), 'private-marketing-attestation-notice', expect.anything());
+  });
+
+  it.each([
+    ['ξένης εταιρείας', { companyId: 'comp_beta' }],
+    ['άλλης αγγελίας', { entityId: 'ownp_other' }],
+    ['άλλου τύπου οντότητας', { entityType: 'property' }],
+    ['μη έτοιμο', { status: 'pending' }],
+    ['διαγραμμένο', { isDeleted: true }],
+  ] as const)('🔴 Α23 — αρχείο %s ⇒ `consent-document-invalid`, ΤΙΠΟΤΑ δεν γράφεται', async (_label, over) => {
+    const mandate = confirmedMandate();
+    const { db, typed } = seeded([mandate]);
+    db.seed(COLLECTIONS.FILES, 'file_pm', readyFile(over));
+
+    expect(await consent.grantPrivateMarketing(typed, attest(mandate, 'file_pm'))).toEqual({ kind: 'refused', reason: 'consent-document-invalid' });
+    expect((await stored(db)).marketingAudience).toBe('public');
+  });
+
+  it('🔴 Α23 — ανύπαρκτο αρχείο λέγεται ΟΠΩΣ το ξένο (κανένα μαντείο ύπαρξης)', async () => {
+    const mandate = confirmedMandate();
+    const { typed } = seeded([mandate]);
+    expect(await consent.grantPrivateMarketing(typed, attest(mandate, 'file_missing'))).toEqual({ kind: 'refused', reason: 'consent-document-invalid' });
+  });
+});
+
+// =============================================================================
+// Α27 — ο ιδιοκτήτης προς ΟΛΑ τα γραφεία μαζί (§18.4 Δ3)
+// =============================================================================
+
+describe('🏆 Α27 — δύο μη αποκλειστικές εντολές: μία υποβολή, ατομικά', () => {
+  const BETA = 'comp_beta';
+  const twoAgencies = () => {
+    const alfa = confirmedMandate();
+    const beta = confirmedMandate({ agencyCompanyId: BETA, consentNonce: 'nonce-beta', clientContactId: alfa.clientContactId });
+    return { alfa, beta, ...seeded([alfa, beta], { authorCompanyId: null }) };
+  };
+  const line = (mandate: BrokeredListingMandate, over: Partial<ConsentSubmission> = {}) => ({
+    agencyCompanyId: mandate.agencyCompanyId,
+    requestId: null,
+    submission: submission(mandate, over),
+  });
+  const accountGrant = (lines: readonly ReturnType<typeof line>[]): Parameters<typeof consent.grantPrivateMarketing>[1] => ({
+    ownerPropertyId: 'ownp_a',
+    who: { kind: 'owner-account', actor: OWNER },
+    lines,
+    audience: 'custodians',
+    nowISO: NOW,
+  });
+  const eventsOf = (property: OwnerProperty, agency: string) =>
+    standingLib.privateMarketingEventsOf(property.mandates.find((m) => m.agencyCompanyId === agency) as BrokeredListingMandate);
+
+  it('🔑 παρονομαστής: συναίνεση προς ΕΝΑ από τα δύο ⇒ άρνηση (το άλλο μένει παραβάτης), τίποτα δεν γράφεται', async () => {
+    const { alfa, db, typed } = twoAgencies();
+
+    const result = await consent.grantPrivateMarketing(typed, accountGrant([line(alfa)]));
+
+    expect(result).toEqual({ kind: 'invalid-mandate', violations: ['private-marketing-consent-missing'] });
+    expect(eventsOf(await stored(db), AGENCY)).toEqual([]);
+  });
+
+  it('🔴 Α27 — και τα δύο σε μία υποβολή ⇒ στένεμα + ΕΝΑ γεγονός ανά εντολή + ΜΙΑ εγγραφή ίχνους', async () => {
+    const { alfa, beta, db, typed } = twoAgencies();
+
+    expect((await consent.grantPrivateMarketing(typed, accountGrant([line(alfa), line(beta)]))).kind).toBe('saved');
+
+    const after = await stored(db);
+    expect(after.marketingAudience).toBe('custodians');
+    expect(eventsOf(after, AGENCY).map((e) => e.kind)).toEqual(['granted']);
+    expect(eventsOf(after, BETA).map((e) => e.kind)).toEqual(['granted']);
+    expect(recordOwnerPropertyWrite).toHaveBeenCalledTimes(1);
+    expect(recordOwnerPropertyWrite.mock.calls[0]?.[1].extraChanges?.map((c) => c.newValue)).toEqual(['granted', 'granted']);
+  });
+
+  it('🔴 Α27 — έστω μία γραμμή άκυρη ⇒ ΤΙΠΟΤΑ δεν γράφεται (ούτε η έγκυρη)', async () => {
+    const { alfa, beta, db, typed } = twoAgencies();
+
+    const result = await consent.grantPrivateMarketing(typed, accountGrant([line(alfa), line(beta, { version: 0 })]));
+
+    expect(result).toEqual({ kind: 'refused', reason: 'consent-text-superseded' });
+    const after = await stored(db);
+    expect(after.marketingAudience).toBe('public');
+    expect(eventsOf(after, AGENCY)).toEqual([]);
   });
 });
 

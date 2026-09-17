@@ -61,6 +61,7 @@ import { OwnerMandatePanel } from './OwnerMandatePanel';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
 import { OwnerPropertyHistory } from './OwnerPropertyHistory';
+import { PrivateMarketingOwnerSection } from './PrivateMarketingOwnerSection';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers/[offerId]` (ADR-777 §8.39).
 //
@@ -248,6 +249,16 @@ function OwnerPropertyView({
       <MarketingAudienceControl
         audience={property.marketingAudience}
         onChange={async (next) => audienceOutcomeOf(await setOwnerListingAudience(property.id, next))}
+      />
+
+      {/*
+        🏆 ADR-864 §18 — **ακριβώς κάτω από τον έλεγχο κοινού**: εκεί λέγεται «χρειάζεται συναίνεση», εδώ δίνεται.
+        Εκκρεμές αίτημα γραφείου φαίνεται **και** χωρίς να πατήσει κανείς τίποτα (§18.5 #2).
+      */}
+      <PrivateMarketingOwnerSection
+        ownerPropertyId={property.id}
+        marketingAudience={property.marketingAudience}
+        revision={property.updatedAt}
       />
 
       <LifecycleButton property={property} />

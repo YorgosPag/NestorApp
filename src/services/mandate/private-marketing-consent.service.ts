@@ -1,20 +1,21 @@
 /**
  * @fileoverview **Η ΣΥΝΑΙΝΕΣΗ ΓΙΑ ΚΛΕΙΣΤΗ ΔΙΑΘΕΣΗ** — αίτημα · παροχή · ανάκληση, ατομικά πάνω στην εντολή.
- * @related ADR-864 §5.4 · §17 (Ε-11…Ε-14) · §7 Α7-Α8 · Α16-Α21 · types/private-marketing-consent.ts
+ * @related ADR-864 §5.4 · §17 (Ε-11…Ε-14) · §18 (Δ1 · Δ3) · §7 Α7-Α8 · Α16-Α21 · Α23 · Α27
  * @module services/mandate/private-marketing-consent.service
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔑 ΤΡΙΑ ΣΥΜΒΟΛΑΙΑ
+ * 🔑 ΤΕΣΣΕΡΑ ΣΥΜΒΟΛΑΙΑ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * 1. **Η παροχή ΕΚΤΕΛΕΙ το στένεμα στην ίδια συναλλαγή** (Ε-11): κανένα «μισοκλειστό» κοινό,
- *    κανένα παράθυρο όπου υπάρχει συναίνεση χωρίς αποτέλεσμα ή αποτέλεσμα χωρίς συναίνεση.
+ * 1. **Η παροχή ΕΚΤΕΛΕΙ το στένεμα στην ίδια συναλλαγή** (Ε-11): κανένα «μισοκλειστό» κοινό.
  * 2. **Η ανάκληση ΔΕΝ αφήνει ποτέ κλειστή διάθεση** (Ε-13): δημόσια ή απόσυρση, ίδια συναλλαγή.
- * 3. **Ο ίδιος κριτής με κάθε γραφέα** (`privateMarketingViolationsAdded`) τρέχει και εδώ, στο
- *    φρέσκο έγγραφο: συναίνεση προς το γραφείο Α **δεν** καλύπτει εντολή του γραφείου Β.
+ * 3. **Ο ίδιος κριτής με κάθε γραφέα** (`privateMarketingViolationsAdded`) τρέχει **μία** φορά, στο
+ *    **τελικό** έγγραφο: συναίνεση προς Α **δεν** καλύπτει εντολή του Β.
+ * 4. **Πολλά γραφεία = μία πράξη** (Δ3 · Α27): ο ιδιοκτήτης συναινεί προς **όλα** τα γραφεία χωρίς συναίνεση
+ *    σε **μία** συναλλαγή, **ένα** γεγονός ανά εντολή· έστω μία άρνηση ⇒ **τίποτα** δεν γράφεται. Χωρίς αυτό,
+ *    δύο μη αποκλειστικές εντολές έκαναν την κλειστή διάθεση **αδύνατη** (μετρημένο, §18.4).
  *
- * ⚠️ Ίχνος ADR-195 σε **κάθε** γεγονός (Α18), **μετά** την επιτυχή γραφή και **έξω** από τη
- * συναλλαγή (το σώμα της ξαναεκτελείται). Γραφή εκτός `persist()` επειδή χρειάζεται CAS.
+ * ⚠️ Ίχνος ADR-195 σε **κάθε** πράξη (Α18), **μετά** την επιτυχή γραφή και **έξω** από τη συναλλαγή.
  */
 
 import 'server-only';
@@ -24,14 +25,9 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
-import { custodyOf, isPersonalCustody, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
+import type { ListingActor } from '@/lib/owner-property/listing-custody';
+import { consentTextVerdict, consentValuesFor, type ConsentSubmission } from '@/lib/mandate/private-marketing-consent-text';
 import {
-  consentTextVerdict,
-  consentValuesFor,
-  type ConsentSubmission,
-} from '@/lib/mandate/private-marketing-consent-text';
-import {
-  consentBearingMandates,
   mandateTermOf,
   privateMarketingEventsOf,
   privateMarketingStandingOf,
@@ -39,77 +35,36 @@ import {
 } from '@/lib/mandate/private-marketing-standing';
 import { generatePrivateMarketingEventId } from '@/services/enterprise-id.service';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
+import { attestationDocumentOf } from '@/services/mandate/attestation-document';
 import { issueMandateConsentLink } from '@/services/mandate/mandate-consent.service';
 import { sendMandateInvitation, type NotifyOutcome } from '@/services/mandate/mandate-invitation.service';
 import type { MandateMessageKind } from '@/services/mandate/mandate-email-texts';
+import {
+  CHANNEL_OF,
+  actorUserIdOf,
+  auditActorOf,
+  locateMandate,
+  type AgencyActor,
+  type ConsentActor,
+  type OwnerAccountActor,
+  type OwnerLinkActor,
+} from '@/services/mandate/private-marketing-actor';
 import { recordOwnerPropertyWrite } from '@/services/owner-property/owner-property-audit';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 import type { OwnerProperty } from '@/types/owner-property';
-import {
-  AGENCY_ATTESTATION,
-  OWNER_CONSENT,
-  type BrokeredListingMandate,
-  type MandateProof,
-} from '@/types/owner-property-mandate';
-import {
-  type ClosedMarketingAudience,
-  type PrivateMarketingChannel,
-  type PrivateMarketingEvent,
-  type PrivateMarketingRefusal,
-  type PrivateMarketingRevocationOutcome,
+import { AGENCY_ATTESTATION, OWNER_CONSENT, type BrokeredListingMandate, type MandateProof } from '@/types/owner-property-mandate';
+import type {
+  ClosedMarketingAudience,
+  PrivateMarketingEvent,
+  PrivateMarketingRefusal,
+  PrivateMarketingRevocationOutcome,
 } from '@/types/private-marketing-consent';
 
 const logger = createModuleLogger('private-marketing-consent.service');
 
 // =============================================================================
-// 1. ΠΟΙΟΣ ΕΝΕΡΓΕΙ — τρεις ταυτότητες, τρεις κανόνες εύρεσης εντολής
-// =============================================================================
-
-/**
- * 🔑 **Η εύρεση της εντολής ΕΙΝΑΙ η εξουσιοδότηση.** Ο σύνδεσμος ονομάζει πρόσκληση (`nonce`)·
- * ο ιδιοκτήτης με λογαριασμό ονομάζει γραφείο **μέσα** στη δική του καταχώρηση· το γραφείο
- * βρίσκει **μόνο** τη δική του εντολή. Αποτυχία ⇒ `absent`, ποτέ «υπάρχει αλλά όχι για σένα».
- */
-type ConsentActor =
-  | { readonly kind: 'owner-link'; readonly nonce: string; readonly clientContactId: string }
-  | { readonly kind: 'owner-account'; readonly actor: ListingActor; readonly agencyCompanyId: string }
-  | { readonly kind: 'agency'; readonly actor: ListingActor };
-
-const CHANNEL_OF: Record<ConsentActor['kind'], PrivateMarketingChannel> = {
-  'owner-link': 'link',
-  'owner-account': 'account',
-  agency: 'form',
-};
-
-function locateMandate(
-  property: OwnerProperty,
-  who: ConsentActor,
-  nowISOValue: string,
-): BrokeredListingMandate | null {
-  const bearing = consentBearingMandates(property.mandates, nowISOValue);
-  switch (who.kind) {
-    case 'owner-link':
-      return bearing.find((m) => m.consentNonce === who.nonce && m.clientContactId === who.clientContactId) ?? null;
-    case 'owner-account':
-      if (!isPersonalCustody(property) || !mayAdminister(custodyOf(property), who.actor)) return null;
-      return bearing.find((m) => m.agencyCompanyId === who.agencyCompanyId) ?? null;
-    case 'agency':
-      return bearing.find((m) => who.actor.companyId !== null && m.agencyCompanyId === who.actor.companyId) ?? null;
-  }
-}
-
-/** Ποιος γράφεται στο ίχνος — ο σύνδεσμος δεν έχει λογαριασμό, έχει **επαφή**. */
-function auditActorOf(who: ConsentActor): ListingActor {
-  return who.kind === 'owner-link' ? { uid: who.clientContactId, companyId: null } : who.actor;
-}
-
-function actorUserIdOf(who: ConsentActor): string | null {
-  return who.kind === 'owner-link' ? null : who.actor.uid;
-}
-
-// =============================================================================
-// 2. Ο ΠΥΡΗΝΑΣ — μία συναλλαγή, ένας κριτής, ένα ίχνος
+// 1. Ο ΠΥΡΗΝΑΣ — μία συναλλαγή, ένας κριτής, ένα ίχνος
 // =============================================================================
 
 export type PrivateMarketingOutcome =
@@ -117,19 +72,24 @@ export type PrivateMarketingOutcome =
   | { readonly kind: 'refused'; readonly reason: PrivateMarketingRefusal }
   | { readonly kind: 'requested'; readonly notify: NotifyOutcome };
 
+/** Ένα γεγονός πάνω σε μία εντολή — η εντολή είναι η **προ** της πράξης (για το ίχνος). */
+interface Applied {
+  readonly mandate: BrokeredListingMandate;
+  readonly event: PrivateMarketingEvent;
+}
+
 interface Mutated {
   readonly next: OwnerProperty;
-  readonly event: PrivateMarketingEvent;
-  /** Νέος σύνδεσμος, όταν το γεγονός χρειάζεται ειδοποίηση του ιδιοκτήτη. */
+  readonly applied: readonly Applied[];
+  /** Νέος σύνδεσμος, όταν η πράξη χρειάζεται ειδοποίηση του ιδιοκτήτη (μία εντολή). */
   readonly token: string | null;
 }
 
-type Mutation = (property: OwnerProperty, mandate: BrokeredListingMandate) => Mutated | PrivateMarketingRefusal;
+type Mutation = (property: OwnerProperty) => Mutated | PrivateMarketingRefusal | 'absent';
 
 interface Written extends Mutated {
   readonly kind: 'written';
   readonly before: OwnerProperty;
-  readonly mandate: BrokeredListingMandate;
 }
 
 /** Η εντολή με ένα γεγονός **προσαρτημένο** — ποτέ αντικατάσταση του ιστορικού. */
@@ -141,14 +101,13 @@ function withEvent(
   return { ...mandate, privateMarketing: [...privateMarketingEventsOf(mandate), event], consentNonce };
 }
 
-function replaceMandate(property: OwnerProperty, mandate: BrokeredListingMandate): readonly BrokeredListingMandate[] {
-  return [...property.mandates.filter((m) => m.agencyCompanyId !== mandate.agencyCompanyId), mandate];
+function replaceMandate(mandates: readonly BrokeredListingMandate[], mandate: BrokeredListingMandate): readonly BrokeredListingMandate[] {
+  return [...mandates.filter((m) => m.agencyCompanyId !== mandate.agencyCompanyId), mandate];
 }
 
-async function mutateMandate(
+async function mutateProperty(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
-  who: ConsentActor,
   nowISOValue: string,
   mutate: Mutation,
 ): Promise<Written | PrivateMarketingOutcome> {
@@ -156,17 +115,15 @@ async function mutateMandate(
   try {
     return await adminDb.runTransaction(async (tx) => {
       const before = ownerPropertyFromDocument((await tx.get(ref)).data(), ownerPropertyId);
-      const mandate = before === null ? null : locateMandate(before, who, nowISOValue);
-      if (before === null || mandate === null) return { kind: 'absent' } as const;
-
-      const mutated = mutate(before, mandate);
+      const mutated = before === null ? 'absent' : mutate(before);
+      if (before === null || mutated === 'absent') return { kind: 'absent' } as const;
       if (typeof mutated === 'string') return { kind: 'refused', reason: mutated } as const;
 
       const violations = privateMarketingViolationsAdded(before, mutated.next, nowISOValue);
       if (violations.length > 0) return { kind: 'invalid-mandate', violations } as const;
 
       tx.set(ref, mutated.next);
-      return { kind: 'written', before, mandate, ...mutated } as const;
+      return { kind: 'written', before, ...mutated } as const;
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -175,37 +132,36 @@ async function mutateMandate(
   }
 }
 
-/** Ίχνος (Α18) + επαναπροβολή — **μετά** την επιτυχή γραφή. */
-async function finish(adminDb: AdminFirestore, written: Written, who: ConsentActor): Promise<OwnerPropertyWriteResult> {
+/** Ίχνος (Α18): **μία** εγγραφή ανά πράξη, μία αλλαγή ανά εντολή που άγγιξε. */
+async function recordAct(written: Written, actor: ListingActor): Promise<void> {
   await recordOwnerPropertyWrite(written.next, {
-    actor: auditActorOf(who),
+    actor,
     before: written.before,
-    extraChanges: [
-      {
-        field: 'privateMarketing',
-        oldValue: privateMarketingStandingOf(written.mandate).kind,
-        newValue: written.event.kind,
-        label: written.mandate.agencyCompanyId,
-      },
-    ],
+    extraChanges: written.applied.map(({ mandate, event }) => ({
+      field: 'privateMarketing',
+      oldValue: privateMarketingStandingOf(mandate).kind,
+      newValue: event.kind,
+      label: mandate.agencyCompanyId,
+    })),
   });
+}
+
+async function finish(adminDb: AdminFirestore, written: Written, who: ConsentActor): Promise<OwnerPropertyWriteResult> {
+  await recordAct(written, auditActorOf(who));
   const republished = await republishOwnerProperty(adminDb, written.next);
   return { kind: 'saved', property: republished.property, publish: republished.publish };
 }
 
-async function notifyOwner(
-  adminDb: AdminFirestore,
-  kind: MandateMessageKind,
-  written: Written,
-): Promise<NotifyOutcome> {
-  if (written.token === null) return { kind: 'failed' };
+async function notifyOwner(adminDb: AdminFirestore, kind: MandateMessageKind, written: Written): Promise<NotifyOutcome> {
+  const first = written.applied[0];
+  if (written.token === null || first === undefined) return { kind: 'failed' };
   return sendMandateInvitation(adminDb, kind, {
-    clientContactId: written.mandate.clientContactId,
-    agencyName: (await readCompanyPublicName(adminDb, written.mandate.agencyCompanyId)) ?? '',
+    clientContactId: first.mandate.clientContactId,
+    agencyName: (await readCompanyPublicName(adminDb, first.mandate.agencyCompanyId)) ?? '',
     listingTitle: written.next.title,
-    expiresAt: written.mandate.expiresAt,
+    expiresAt: first.mandate.expiresAt,
     token: written.token,
-    idempotencyKey: `private-marketing:${written.event.id}`,
+    idempotencyKey: `private-marketing:${first.event.id}`,
   });
 }
 
@@ -214,15 +170,17 @@ function isWritten(outcome: Written | PrivateMarketingOutcome): outcome is Writt
 }
 
 // =============================================================================
-// 3. ΑΙΤΗΜΑ — το γραφείο ζητά (Ε-11)· τίποτα ορατό δεν αλλάζει
+// 2. ΑΙΤΗΜΑ — το γραφείο ζητά (Ε-11)· τίποτα ορατό δεν αλλάζει
 // =============================================================================
 
 export async function requestPrivateMarketing(
   adminDb: AdminFirestore,
   input: { readonly ownerPropertyId: string; readonly actor: ListingActor; readonly audience: ClosedMarketingAudience; readonly nowISO: string },
 ): Promise<PrivateMarketingOutcome> {
-  const who: ConsentActor = { kind: 'agency', actor: input.actor };
-  const outcome = await mutateMandate(adminDb, input.ownerPropertyId, who, input.nowISO, (property, mandate) => {
+  const who: AgencyActor = { kind: 'agency', actor: input.actor };
+  const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, (property) => {
+    const mandate = locateMandate(property, who, null, input.nowISO);
+    if (mandate === null) return 'absent';
     if (privateMarketingStandingOf(mandate).kind === 'granted') return 'consent-already-granted';
     const event: PrivateMarketingEvent = {
       kind: 'requested',
@@ -233,122 +191,175 @@ export async function requestPrivateMarketing(
     };
     // Νέος σύνδεσμος = νέα πρόσκληση· ο παλιός γίνεται `superseded` (ίδιο συμβόλαιο με το «ξαναστείλε»).
     const link = issueMandateConsentLink(property.id, mandate.clientContactId);
-    const next = { ...property, mandates: replaceMandate(property, withEvent(mandate, event, link.nonce)), updatedAt: input.nowISO };
-    return { next, event, token: link.token };
+    const mandates = replaceMandate(property.mandates, withEvent(mandate, event, link.nonce));
+    return { next: { ...property, mandates, updatedAt: input.nowISO }, applied: [{ mandate, event }], token: link.token };
   });
   if (!isWritten(outcome)) return outcome;
 
-  await recordOwnerPropertyWrite(outcome.next, {
-    actor: input.actor,
-    before: outcome.before,
-    extraChanges: [{ field: 'privateMarketing', oldValue: privateMarketingStandingOf(outcome.mandate).kind, newValue: 'requested', label: outcome.mandate.agencyCompanyId }],
-  });
+  await recordAct(outcome, input.actor);
   return { kind: 'requested', notify: await notifyOwner(adminDb, 'private-marketing-request', outcome) };
 }
 
 // =============================================================================
-// 4. ΠΑΡΟΧΗ — σύνδεσμος · λογαριασμός · έντυπο· εκτελεί το στένεμα (Ε-11 · Ε-12)
+// 3. ΠΑΡΟΧΗ — σύνδεσμος · λογαριασμός (πολλά γραφεία) · έντυπο
 // =============================================================================
 
-interface GrantInput {
-  readonly ownerPropertyId: string;
-  readonly who: ConsentActor;
-  readonly submission: ConsentSubmission;
+/** Μία συναίνεση προς ένα γραφείο. `agencyCompanyId: null` = «η μοναδική εντολή που βλέπει ο δρων». */
+interface ConsentLine {
+  readonly agencyCompanyId: string | null;
   /** Το αίτημα που εκτελείται· `null` μόνο όταν ο ιδιοκτήτης/γραφείο στενεύει χωρίς αίτημα. */
   readonly requestId: string | null;
+  readonly submission: ConsentSubmission;
+}
+
+interface GrantCommon {
+  readonly ownerPropertyId: string;
   /** Το κοινό όταν **δεν** εκτελείται αίτημα (λογαριασμός · έντυπο). */
   readonly audience: ClosedMarketingAudience | null;
-  /** Μόνο στο έντυπο: το ανεβασμένο υπογεγραμμένο αρχείο (Α20). */
-  readonly documentPath: string | null;
   readonly nowISO: string;
 }
 
+type GrantInput = GrantCommon &
+  (
+    | { readonly who: OwnerLinkActor; readonly line: ConsentLine }
+    /** Το έντυπο (Ε-12): `documentFileId` κρίνεται από τον **έναν** κριτή (Δ1 · Α23). */
+    | { readonly who: AgencyActor; readonly line: ConsentLine; readonly documentFileId: string | null }
+    /** Ο ιδιοκτήτης προς **όλα** τα γραφεία μαζί (Δ3 · Α27). */
+    | { readonly who: OwnerAccountActor; readonly lines: readonly ConsentLine[] }
+  );
+
+const linesOf = (input: GrantInput): readonly ConsentLine[] => ('lines' in input ? input.lines : [input.line]);
+
+/** Κάθε γραφείο **μία** φορά — δύο γραμμές για την ίδια εντολή θα έγραφαν δύο γεγονότα για μία πράξη. */
+function hasDuplicateAgency(lines: readonly ConsentLine[]): boolean {
+  const named = lines.map((line) => line.agencyCompanyId ?? '');
+  return new Set(named).size !== named.length;
+}
+
 /** Α19 — ποιο κοινό εκτελείται, ή γιατί το αίτημα είναι μπαγιάτικο. */
-function grantedAudience(
-  mandate: BrokeredListingMandate,
-  input: GrantInput,
-): ClosedMarketingAudience | 'consent-request-stale' {
+function grantedAudience(mandate: BrokeredListingMandate, line: ConsentLine, input: GrantInput): ClosedMarketingAudience | 'consent-request-stale' {
   const standing = privateMarketingStandingOf(mandate);
-  if (input.requestId !== null) {
-    return standing.kind === 'requested' && standing.request.id === input.requestId
-      ? standing.request.audience
-      : 'consent-request-stale';
+  if (line.requestId !== null) {
+    return standing.kind === 'requested' && standing.request.id === line.requestId ? standing.request.audience : 'consent-request-stale';
   }
   // 🔴 Ο σύνδεσμος υπάρχει **μόνο** για να εκτελέσει αίτημα — χωρίς αίτημα δεν στενεύει τίποτα.
   if (input.who.kind === 'owner-link' || input.audience === null) return 'consent-request-stale';
   return input.audience;
 }
 
-function proofOf(input: GrantInput): MandateProof | 'consent-document-missing' {
-  if (input.who.kind !== 'agency') return { via: OWNER_CONSENT };
-  const documentPath = input.documentPath?.trim() ?? '';
-  if (documentPath === '') return 'consent-document-missing';
-  return { via: AGENCY_ATTESTATION, attestedByUserId: input.who.actor.uid, attestedAt: input.nowISO, documentPath };
+/** Α20 · Α23 — η απόδειξη· στο έντυπο, το αρχείο **της βάσης**, ποτέ διαδρομή από το σύρμα. */
+async function proofOf(adminDb: AdminFirestore, input: GrantInput): Promise<MandateProof | PrivateMarketingRefusal> {
+  if (input.who.kind !== 'agency' || !('documentFileId' in input)) return { via: OWNER_CONSENT };
+  const document = await attestationDocumentOf(adminDb, {
+    fileId: input.documentFileId,
+    companyId: input.who.actor.companyId,
+    ownerPropertyId: input.ownerPropertyId,
+  });
+  if (document.kind === 'refused') return document.reason;
+  return { via: AGENCY_ATTESTATION, attestedByUserId: input.who.actor.uid, attestedAt: input.nowISO, documentPath: document.storagePath };
 }
-
 
 /**
- * Πριν τη συναλλαγή: **ποιο γραφείο**, ώστε να διαβαστεί η επωνυμία που έδειξε η οθόνη.
- *
- * ⚠️ Ανάγνωση βάσης μέσα στη συναλλαγή που δεν αφορά το έγγραφο θα διεύρυνε το κλείδωμα· γι' αυτό
- * γίνεται **εδώ**, και η μετάλλαξη ξαναελέγχει ότι μιλά για το **ίδιο** γραφείο.
+ * Πριν τη συναλλαγή: **ποια γραφεία** και **με ποια επωνυμία** — οι τιμές που έδειξε η οθόνη (CAS, Α8α).
+ * ⚠️ Ανάγνωση `companies` μέσα στη συναλλαγή θα διεύρυνε το κλείδωμα· η μετάλλαξη ξαναελέγχει το γραφείο.
  */
-async function agencyOf(
-  adminDb: AdminFirestore,
-  input: GrantInput,
-): Promise<{ readonly agencyCompanyId: string; readonly agencyName: string } | null> {
+async function agencyNamesOf(adminDb: AdminFirestore, input: GrantInput): Promise<ReadonlyMap<string, string> | null> {
   const snapshot = await adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(input.ownerPropertyId).get();
   const property = ownerPropertyFromDocument(snapshot.data(), input.ownerPropertyId);
-  const mandate = property === null ? null : locateMandate(property, input.who, input.nowISO);
-  if (mandate === null) return null;
-  const agencyName = (await readCompanyPublicName(adminDb, mandate.agencyCompanyId)) ?? '';
-  return { agencyCompanyId: mandate.agencyCompanyId, agencyName };
+  if (property === null) return null;
+  const names = new Map<string, string>();
+  for (const line of linesOf(input)) {
+    const mandate = locateMandate(property, input.who, line.agencyCompanyId, input.nowISO);
+    if (mandate === null) return null;
+    names.set(mandate.agencyCompanyId, (await readCompanyPublicName(adminDb, mandate.agencyCompanyId)) ?? '');
+  }
+  return names;
 }
 
-function grantMutation(
-  input: GrantInput,
-  proof: MandateProof,
-  agency: { readonly agencyCompanyId: string; readonly agencyName: string },
-): Mutation {
-  return (property, mandate) => {
-    if (mandate.agencyCompanyId !== agency.agencyCompanyId) return 'consent-request-stale';
-    const audience = grantedAudience(mandate, input);
-    if (audience === 'consent-request-stale') return audience;
+type AcceptedText = Extract<ReturnType<typeof consentTextVerdict>, { kind: 'accepted' }>;
 
-    const verdict = consentTextVerdict(input.submission, consentValuesFor(agency.agencyName, mandate.expiresAt));
-    if (verdict.kind === 'refused') return verdict.reason;
+interface LineContext {
+  readonly input: GrantInput;
+  readonly proof: MandateProof;
+  readonly names: ReadonlyMap<string, string>;
+}
 
-    const event: PrivateMarketingEvent = {
-      kind: 'granted',
-      id: generatePrivateMarketingEventId(),
-      at: input.nowISO,
-      requestId: input.requestId,
-      audience,
-      text: verdict.text,
-      acknowledged: verdict.acknowledged,
-      values: input.submission.values,
-      locale: input.submission.locale,
-      channel: CHANNEL_OF[input.who.kind],
-      actorUserId: actorUserIdOf(input.who),
-      proof,
-      term: mandateTermOf(mandate),
-    };
+function grantEvent(ctx: LineContext, line: ConsentLine, mandate: BrokeredListingMandate, audience: ClosedMarketingAudience, accepted: AcceptedText): PrivateMarketingEvent {
+  return {
+    kind: 'granted',
+    id: generatePrivateMarketingEventId(),
+    at: ctx.input.nowISO,
+    requestId: line.requestId,
+    audience,
+    text: accepted.text,
+    acknowledged: accepted.acknowledged,
+    values: line.submission.values,
+    locale: line.submission.locale,
+    channel: CHANNEL_OF[ctx.input.who.kind],
+    actorUserId: actorUserIdOf(ctx.input.who),
+    proof: ctx.proof,
+    term: mandateTermOf(mandate),
+  };
+}
+
+/** Μία γραμμή → ένα γεγονός, ή ο λόγος άρνησης. Η **πρώτη** άρνηση σταματά ολόκληρη την πράξη (Α27). */
+function applyLine(property: OwnerProperty, ctx: LineContext, line: ConsentLine): Applied | PrivateMarketingRefusal | 'absent' {
+  const mandate = locateMandate(property, ctx.input.who, line.agencyCompanyId, ctx.input.nowISO);
+  if (mandate === null) return 'absent';
+  const agencyName = ctx.names.get(mandate.agencyCompanyId);
+  if (agencyName === undefined) return 'consent-request-stale';
+  const audience = grantedAudience(mandate, line, ctx.input);
+  if (audience === 'consent-request-stale') return audience;
+
+  const verdict = consentTextVerdict(line.submission, consentValuesFor(agencyName, mandate.expiresAt));
+  if (verdict.kind === 'refused') return verdict.reason;
+  return { mandate, event: grantEvent(ctx, line, mandate, audience, verdict) };
+}
+
+/** Όλες οι γραμμές, ή η πρώτη άρνηση. ⚠️ Ένα κοινό ανά πράξη: διαφορετικά κλειστά κοινά **δεν** συμπτύσσονται σιωπηλά. */
+function applyLines(property: OwnerProperty, ctx: LineContext): readonly Applied[] | PrivateMarketingRefusal | 'absent' {
+  const applied: Applied[] = [];
+  for (const line of linesOf(ctx.input)) {
+    const result = applyLine(property, ctx, line);
+    if (typeof result === 'string') return result;
+    const first = applied[0];
+    if (first !== undefined && audienceOfEvent(first.event) !== audienceOfEvent(result.event)) return 'consent-request-stale';
+    applied.push(result);
+  }
+  return applied;
+}
+
+const audienceOfEvent = (event: PrivateMarketingEvent): string | null => (event.kind === 'revoked' ? null : event.audience);
+
+function grantMutation(ctx: LineContext): Mutation {
+  return (property) => {
+    const applied = applyLines(property, ctx);
+    if (typeof applied === 'string') return applied;
+    const first = applied[0];
+    if (first === undefined || first.event.kind !== 'granted') return 'consent-incomplete';
+
     // Το έντυπο ειδοποιεί τον ιδιοκτήτη για αμφισβήτηση (Ε-12) ⇒ χρειάζεται ζωντανό σύνδεσμο.
-    const link = input.who.kind === 'agency' ? issueMandateConsentLink(property.id, mandate.clientContactId) : null;
-    const updated = withEvent(mandate, event, link?.nonce ?? mandate.consentNonce);
-    const next = { ...property, marketingAudience: audience, mandates: replaceMandate(property, updated), updatedAt: input.nowISO };
-    return { next, event, token: link?.token ?? null };
+    const link = ctx.input.who.kind === 'agency' ? issueMandateConsentLink(property.id, first.mandate.clientContactId) : null;
+    const mandates = applied.reduce(
+      (all, { mandate, event }) => replaceMandate(all, withEvent(mandate, event, link?.nonce ?? mandate.consentNonce)),
+      property.mandates,
+    );
+    const next = { ...property, marketingAudience: first.event.audience, mandates, updatedAt: ctx.input.nowISO };
+    return { next, applied, token: link?.token ?? null };
   };
 }
 
 export async function grantPrivateMarketing(adminDb: AdminFirestore, input: GrantInput): Promise<PrivateMarketingOutcome> {
-  const proof = proofOf(input);
-  if (proof === 'consent-document-missing') return { kind: 'refused', reason: proof };
+  if (linesOf(input).length === 0) return { kind: 'refused', reason: 'consent-incomplete' };
+  if (hasDuplicateAgency(linesOf(input))) return { kind: 'refused', reason: 'consent-request-stale' };
 
-  const agency = await agencyOf(adminDb, input);
-  if (agency === null) return { kind: 'absent' };
+  const proof = await proofOf(adminDb, input);
+  if (typeof proof === 'string') return { kind: 'refused', reason: proof };
 
-  const outcome = await mutateMandate(adminDb, input.ownerPropertyId, input.who, input.nowISO, grantMutation(input, proof, agency));
+  const names = await agencyNamesOf(adminDb, input);
+  if (names === null) return { kind: 'absent' };
+
+  const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, grantMutation({ input, proof, names }));
   if (!isWritten(outcome)) return outcome;
 
   const saved = await finish(adminDb, outcome, input.who);
@@ -357,19 +368,23 @@ export async function grantPrivateMarketing(adminDb: AdminFirestore, input: Gran
 }
 
 // =============================================================================
-// 5. ΑΝΑΚΛΗΣΗ — ποτέ κλειστή χωρίς συναίνεση (Ε-13 · Α16)
+// 4. ΑΝΑΚΛΗΣΗ — ποτέ κλειστή χωρίς συναίνεση (Ε-13 · Α16)
 // =============================================================================
 
 export async function revokePrivateMarketing(
   adminDb: AdminFirestore,
   input: {
     readonly ownerPropertyId: string;
-    readonly who: Exclude<ConsentActor, { kind: 'agency' }>;
+    readonly who: OwnerLinkActor | OwnerAccountActor;
+    /** Ποιο γραφείο — `null` στον σύνδεσμο (η μία εντολή του). */
+    readonly agencyCompanyId: string | null;
     readonly outcome: PrivateMarketingRevocationOutcome;
     readonly nowISO: string;
   },
 ): Promise<PrivateMarketingOutcome> {
-  const outcome = await mutateMandate(adminDb, input.ownerPropertyId, input.who, input.nowISO, (property, mandate) => {
+  const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, (property) => {
+    const mandate = locateMandate(property, input.who, input.agencyCompanyId, input.nowISO);
+    if (mandate === null) return 'absent';
     // 🔑 Η **έξοδος** μένει πάντα ανοιχτή: και χωρίς ενεργή συναίνεση, αρκεί η διάθεση να είναι κλειστή.
     if (privateMarketingStandingOf(mandate).kind !== 'granted' && property.marketingAudience === 'public') {
       return 'consent-not-granted';
@@ -382,16 +397,15 @@ export async function revokePrivateMarketing(
       channel: input.who.kind === 'owner-link' ? 'link' : 'account',
       actorUserId: actorUserIdOf(input.who),
     };
-    // ⚠️ Η απόσυρση γράφει **και** `public`: αποσυρμένη-κλειστή χωρίς συναίνεση θα ήταν ακόμη παραβίαση,
-    //    και η επαναφορά αργότερα είναι ρητή πράξη του ιδιοκτήτη.
+    // ⚠️ Η απόσυρση γράφει **και** `public`: αποσυρμένη-κλειστή χωρίς συναίνεση θα ήταν ακόμη παραβίαση.
     const next: OwnerProperty = {
       ...property,
       marketingAudience: 'public',
       lifecycle: input.outcome === 'withdrawn' ? 'withdrawn' : property.lifecycle,
-      mandates: replaceMandate(property, withEvent(mandate, event)),
+      mandates: replaceMandate(property.mandates, withEvent(mandate, event)),
       updatedAt: input.nowISO,
     };
-    return { next, event, token: null };
+    return { next, applied: [{ mandate, event }], token: null };
   });
   return isWritten(outcome) ? finish(adminDb, outcome, input.who) : outcome;
 }

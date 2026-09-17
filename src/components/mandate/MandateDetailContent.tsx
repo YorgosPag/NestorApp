@@ -47,6 +47,7 @@ import {
   DETAIL_KEYS,
 } from '@/components/mandate/catalog/mandate-catalog-labels';
 import { Button } from '@/components/ui/button';
+import { PrivateMarketingAgencySection } from '@/components/mandate/PrivateMarketingAgencySection';
 import { useMandateDetail } from '@/hooks/mandate/useMandateDetail';
 import { MANDATE_FOUND } from '@/lib/mandate/mandate-detail-outcome';
 import { MANDATE_CATALOG_ROUTE } from '@/lib/mandate/mandate-routes';
@@ -184,6 +185,14 @@ export function MandateDetailContent({
         />
       ) : (
         <AbsenceNotice kind={view.loaded.kind} onRetry={reload} />
+      )}
+
+      {/*
+        🔑 ADR-864 §18 — **κάτω** από την κάρτα, όχι μέσα της: η κάρτα είναι **κοινή** με τον κατάλογο (μία
+        απόδοση ανά εντολή), η συναίνεση κλειστής διάθεσης είναι πράξη **αυτής** της σελίδας.
+      */}
+      {view.state === 'settled' && view.loaded.kind === MANDATE_FOUND && (
+        <PrivateMarketingAgencySection ownerPropertyId={ownerPropertyId} />
       )}
     </section>
   );

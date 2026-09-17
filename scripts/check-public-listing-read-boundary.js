@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * CHECK 3.74 — **ΤΟ ΣΥΝΟΡΟ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΗΜΟΣΙΑΣ ΠΡΟΒΟΛΗΣ** (ADR-839 §8).
+ * CHECK 3.74 — **ΤΑ ΣΥΝΟΡΑ ΑΝΑΓΝΩΣΗΣ** (ADR-839 §8 · ADR-842 · ADR-841 · ADR-864 · ADR-862).
  *
  * ────────────────────────────────────────────────────────────────────────────
- * Η ΕΡΩΤΗΣΗ: «διαβάζει κάποιος αγγελία ΧΩΡΙΣ να περάσει από το σύνορο;»
+ * Η ΕΡΩΤΗΣΗ: «διαβάζει κάποιος αποθηκευμένο έγγραφο ΧΩΡΙΣ να περάσει από το σύνορό του;»
  * ────────────────────────────────────────────────────────────────────────────
  *
  * 🔴 **Η ΑΙΤΙΑ, μετρημένη στην παραγωγή 2026-08-31**: τρία σημεία έκαναν
@@ -51,9 +51,47 @@
  * και Κ2 για όλες. Το CHECK **κρατά τον αριθμό του** — αυτό που μεγάλωσε είναι η
  * εμβέλεια, όχι η ταυτότητα.
  *
- * ⚠️ **Το Κ2 γίνεται ΑΚΟΜΑ πιο σημαντικό με δύο γραμμές**: ένα σύνορο χωρίς
- * καταναλωτές δίνει **πράσινο Κ1 επειδή κανείς δεν διαβάζει**, και με δύο σύνορα η
- * σιωπή του ενός θα κρυβόταν πίσω από την υγεία του άλλου.
+ * ⚠️ **Το Κ2 γίνεται ΑΚΟΜΑ πιο σημαντικό με πολλές γραμμές**: ένα σύνορο χωρίς
+ * καταναλωτές δίνει **πράσινο Κ1 επειδή κανείς δεν διαβάζει**, και με πολλά σύνορα η
+ * σιωπή του ενός θα κρυβόταν πίσω από την υγεία των άλλων.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 2026-09-16 — Η ΜΗΧΑΝΗ ΕΓΙΝΕ **AST**, ΚΑΙ ΜΕ ΤΟ ΙΔΙΟ ΚΟΣΤΟΣ (ADR-862 Φ0 Β9)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η **πέμπτη** γραμμή (`FileRecord`) έφερε τον λογαριασμό της σάρωσης κειμένου:
+ * `\bas FileRecord\b` καταγγέλλει **6** αρχεία, εκ των οποίων **ΕΝΑ** μόνο ισχυρίζεται
+ * *«αυτό το αποθηκευμένο έγγραφο ΕΙΝΑΙ FileRecord»*. Τα άλλα πέντε είναι
+ * `FileRecord[]` · `FileRecord['status']` · `FileRecord & { entityLabel? }` — δηλαδή
+ * **εκφράσεις τύπου ΓΙΑ** το `FileRecord`, ποτέ ισχυρισμός για έγγραφο. **83% ψευδώς
+ * θετικά**, οκτώ φορές πάνω από τον πήχη ≤10%.
+ *
+ * ⛔ **Απορρίφθηκαν με μετρημένο λόγο** (και ΜΗΝ ξαναπροταθούν):
+ *   - *«καθάρισε τα 5»* — θεραπεύει το **δείγμα**, ακριβώς ό,τι απαγορεύει το ίδιο
+ *     το μήνυμα αυτής της πύλης.
+ *   - **`withConverter`** (η επίσημη λύση της Google στο `data() as X`) — ο τρίτος
+ *     καταναλωτής τρέχει σε **Admin SDK**, άλλη βιβλιοθήκη, άλλος τύπος converter
+ *     ⇒ θα κάλυπτε 2 στα 3 και θα άφηνε **δεύτερο κριτή** (ADR-749).
+ *   - **`@typescript-eslint/no-unsafe-type-assertion`** — σωστή ερώτηση, αλλά απαιτεί
+ *     type information ⇒ ταχύτητα type-check, ακριβώς ό,τι αρνείται ο **N.17**.
+ *
+ * ✅ **Η λύση: διφασική.** Φθηνό πέρασμα κειμένου ως **προ-φίλτρο** (ίδιο κόστος με
+ * πριν) → `ts.createSourceFile` **μόνο** στα ελάχιστα αρχεία που χτύπησαν. Ακρίβεια
+ * AST στο κόστος σάρωσης κειμένου.
+ *
+ * 🎁 **Σβήνει κώδικα αντί να προσθέτει**: το `stripComments()` και η «διπλή ανάγνωση
+ * για σωστό αριθμό γραμμής» υπήρχαν **μόνο** επειδή η μηχανή ήταν κείμενο. Στο AST τα
+ * σχόλια είναι **δομικά αόρατα** και ο αριθμός γραμμής **ακριβής εξ ορισμού**.
+ *
+ * 🔑 **ΚΑΙ ΤΟ Κ2 ΚΕΡΔΙΣΕ**: μετρά πλέον **δηλώσεις εισαγωγής** (`ImportDeclaration` /
+ * `ExportDeclaration`), όχι κείμενο — δηλαδή μια **σχολιασμένη** εισαγωγή έπαψε να
+ * μετράει ως καταναλωτής. Ο παρονομαστής έγινε ειλικρινέστερος, όχι χαλαρότερος.
+ *
+ * ⚡ **ΕΝΑ πέρασμα, όχι 2×N.** Η παλιά μορφή διάβαζε **κάθε** αρχείο μία φορά ανά
+ * κριτήριο **ανά γραμμή** — με 6 γραμμές, **12** πλήρεις σαρώσεις του `src/`. Τώρα:
+ * μία ανάγνωση ανά αρχείο, μία (προαιρετική) ανάλυση. ⚠️ Και είναι **Η ΙΔΙΑ** μηχανή
+ * που εκτελούν οι άγκυρες — τα `measureK1`/`measureK2` είναι λεπτά περιτυλίγματα του
+ * {@link scanFiles}, ποτέ δεύτερη υλοποίηση (ADR-749).
  *
  * Escape: `SKIP_LISTING_READ_BOUNDARY=1` (δικαιολόγησέ το στον Giorgio).
  */
@@ -62,6 +100,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const ts = require('typescript');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(PROJECT_ROOT, 'src');
@@ -78,6 +117,9 @@ const NC = '\x1b[0m';
  * 🔑 Κάθε γραμμή απαντά το ίδιο ζεύγος: *«ποιος είναι ο **ένας** ισχυρισμός;»* (Κ1) και
  * *«τον **ζητά** κανείς;»* (Κ2). Νέα συλλογή με σύνορο ⇒ **μία γραμμή εδώ**, τίποτα
  * άλλο.
+ *
+ * ⚠️ Το προαιρετικό `claims: 'document'` **στενεύει** τη γραμμή — δες {@link isOffence}.
+ * Κάθε χρήση του είναι **δηλωμένη έκπτωση**, ποτέ σιωπηλή.
  */
 const BOUNDARIES = [
   {
@@ -134,10 +176,52 @@ const BOUNDARIES = [
     module: 'property-demand-from-document',
     remedy: '«readStoredDemand(raw, id)» ή «propertyDemandFromDocument(raw, id)»',
   },
+  {
+    // 🔴 ADR-862 Φ0 Β1 — Η ΠΕΜΠΤΗ ΓΡΑΜΜΗ, ΚΑΙ Η ΠΡΩΤΗ ΠΟΥ ΦΥΛΑΕΙ **ΟΡΑΤΟΤΗΤΑ**, ΟΧΙ ΟΘΟΝΗ.
+    //
+    // Τα τέσσερα προηγούμενα σύνορα φυλάνε **οθόνη**: πεδίο που λείπει ⇒ λευκή σελίδα.
+    // Εδώ πεδίο που λείπει δίνει **ΟΡΑΤΟΤΗΤΑ**:
+    //     `cdeState === undefined` διαβασμένο ως `'WIP'`       ⇒ κρύβει εγκεκριμένο σχέδιο
+    //     `cdeState === undefined` διαβασμένο ως `'PUBLISHED'` ⇒ δείχνει ημιτελή μελέτη
+    //                                                            στο **συνεργείο**
+    // Το ωμό `as FileRecord` επιτρέπει **και τα δύο**.
+    //
+    // ⚠️ **ΔΗΛΩΜΕΝΗ ΕΚΠΤΩΣΗ — αυτή η γραμμή είναι ΣΤΕΝΟΤΕΡΗ από τις άλλες τέσσερις.**
+    // Το `claims: 'document'` εξαιρεί τον ισχυρισμό πάνω σε **κατασκευή**
+    // (`{ … } as unknown as FileRecord`), γιατί εκεί ο μεταγλωττιστής είδε τα πεδία
+    // **ένα προς ένα** — δεν είναι **ανάγνωση** αποθηκευμένου εγγράφου, που είναι η
+    // ερώτηση αυτής της πύλης. Μετρημένο κόστος της εξαίρεσης: **2** σημεία
+    // (`DxfPreview.tsx:49`, `useFloorplanFiles.ts:179`), και τα δύο κατασκευές για
+    // προεπισκόπηση. Κόστος του να ΜΗΝ υπάρχει: δύο ψευδώς θετικά σε μπλοκάρουσα
+    // πύλη ⇒ διδάσκει να την παρακάμπτουν.
+    adr: 'ADR-862 Φ0 Β1',
+    typeName: 'FileRecord',
+    custodian: 'src/lib/files/file-record-read.ts',
+    module: 'file-record-read',
+    claims: 'document',
+    remedy:
+      '«readFileRecord(raw, fileId)» για ΜΕΤΑΛΛΑΞΗ (fail-closed) ή ' +
+      '«normalizeFileRecord(raw, fileId)» για ΛΙΣΤΕΣ (καμία αλλαγή ορατότητας)',
+  },
+  {
+    // 🔴 ADR-862 Φ0 Β7 — Η ΕΚΤΗ ΓΡΑΜΜΗ: **η ομάδα ΕΙΝΑΙ εξουσιοδότηση**.
+    //
+    // Το `ProjectMember` δεν είναι έγγραφο προβολής: απαντά *«τίνος είναι αυτό;»* και
+    // *«τι επιτρέπεται;»*. Ωμό `as ProjectMember` υπόσχεται `PermissionId[]` για πίνακα
+    // που ήρθε από τη βάση χωρίς κανέναν έλεγχο — δηλαδή **εξουσιοδότηση που κανείς
+    // δεν υπέγραψε**.
+    //
+    // ✅ Μπαίνει με **Κ1 = 0 χωρίς καμία εργασία** (μετρημένο 2026-09-16: οι μόνες δύο
+    // εμφανίσεις είναι **σχόλιο** μέσα στον ίδιο τον θεματοφύλακα και μία άγκυρα).
+    // Γραμμή που μπαίνει καθαρή δεν είναι διακοσμητική — είναι **κλείδωμα**: από εδώ
+    // και πέρα η επόμενη εμφάνιση κοκκινίζει στο `git add`.
+    adr: 'ADR-862 Φ0 Β7',
+    typeName: 'ProjectMember',
+    custodian: 'src/lib/auth/project-member-read.ts',
+    module: 'project-member-read',
+    remedy: '«readProjectMember(query)» ή «normalizeProjectMember(…)»',
+  },
 ];
-
-/** Ο ισχυρισμός που ψάχνει η Κ1 για μια γραμμή του πίνακα. */
-const assertionOf = (typeName) => new RegExp(`\\bas\\s+${typeName}\\b`);
 
 /**
  * 🔶 Συμβατότητα με τις άγκυρες της πύλης — η **πρώτη** γραμμή είναι το ADR-839.
@@ -178,41 +262,158 @@ function collectSourceFiles(dir, root = PROJECT_ROOT, acc = []) {
 
 const isExempt = (rel) => EXEMPT_PATTERNS.some((pattern) => pattern.test(rel));
 
-/** Σβήνει σχόλια, ώστε ένα `as PublicListing` μέσα σε τεκμηρίωση να μη μετρά. */
-function stripComments(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+// ---------------------------------------------------------------------------
+// Η ΜΗΧΑΝΗ — ΦΑΣΗ Α: ΦΘΗΝΟ ΠΡΟ-ΦΙΛΤΡΟ ΚΕΙΜΕΝΟΥ
+// ---------------------------------------------------------------------------
+
+/**
+ * Το κείμενο που **μπορεί** να περιέχει ισχυρισμό προς `typeName`.
+ *
+ * ⚠️ Δεν αποφασίζει — **φιλτράρει**. Ο ισχυρισμός μέσα σε σχόλιο περνά από εδώ και
+ * πέφτει στη Φάση Β, όπου τα σχόλια είναι δομικά αόρατα.
+ */
+const assertionOf = (typeName) => new RegExp(`\\bas\\s+${typeName}\\b`);
+
+/** Το κείμενο που **μπορεί** να δηλώνει εισαγωγή του θεματοφύλακα. */
+const importOf = (module) => new RegExp(`from\\s+['"][^'"]*${module}['"]`);
+
+// ---------------------------------------------------------------------------
+// Η ΜΗΧΑΝΗ — ΦΑΣΗ Β: AST
+// ---------------------------------------------------------------------------
+
+/**
+ * ⚠️ **Το `ScriptKind` ΔΕΝ είναι λεπτομέρεια.** Χωρίς `TSX` σε αρχείο `.tsx` ο
+ * αναλυτής διαβάζει το `<Foo>` ως **ισχυρισμό τύπου** και το δέντρο βγαίνει άλλο —
+ * δηλαδή η πύλη θα έκρινε κώδικα που δεν υπάρχει.
+ */
+const scriptKindOf = (rel) => (rel.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+
+/**
+ * Ξετυλίγει τα **εμφωλευμένα** `as` για να φανεί *τι* ισχυρίζεται ο ισχυρισμός:
+ * στο `{…} as unknown as FileRecord` το ζητούμενο είναι το object literal, όχι το
+ * ενδιάμεσο `unknown`.
+ */
+function assertedExpression(node) {
+  let inner = node.expression;
+  while (ts.isAsExpression(inner)) inner = inner.expression;
+  return inner;
+}
+
+/**
+ * **Όλοι** οι ισχυρισμοί και **όλες** οι εισαγωγές ενός αρχείου, με μία ανάλυση.
+ *
+ * 🔑 Ουδέτερο ως προς τα σύνορα επίτηδες: το ποιο σύνορο ενδιαφέρεται το κρίνει ο
+ * {@link isOffence}. Έτσι ένα αρχείο αναλύεται **μία φορά** όσες γραμμές κι αν έχει ο
+ * πίνακας.
+ */
+function readAssertionsAndImports(rel, source) {
+  const sf = ts.createSourceFile(rel, source, ts.ScriptTarget.Latest, true, scriptKindOf(rel));
+  const assertions = [];
+  const imports = [];
+
+  function visit(node) {
+    if (
+      ts.isAsExpression(node) &&
+      // 🔑 **ΚΡΙΤΗΡΙΟ 1 — ΣΚΕΤΗ ΑΝΑΦΟΡΑ ΤΥΠΟΥ, ΚΑΜΙΑ ΑΠΟΔΥΝΑΜΩΣΗ.**
+      //    `X[]` (ArrayType) · `X['f']` (IndexedAccess) · `X & {…}` (Intersection) ·
+      //    `Foo.X` (QualifiedName) είναι **εκφράσεις τύπου ΓΙΑ** το X — ποτέ
+      //    ισχυρισμός «αυτό το αποθηκευμένο έγγραφο **είναι** X».
+      ts.isTypeReferenceNode(node.type) &&
+      ts.isIdentifier(node.type.typeName)
+    ) {
+      assertions.push({
+        typeName: node.type.typeName.text,
+        line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+        constructed: ts.isObjectLiteralExpression(assertedExpression(node)),
+      });
+    }
+    // Το `export { x } from '…'` μετράει όσο και το `import` — και τα δύο δηλώνουν
+    // ότι κάποιος **ζητά** τον θεματοφύλακα.
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      imports.push(node.moduleSpecifier.text);
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sf);
+  return { assertions, imports };
+}
+
+/**
+ * «Είναι **αυτός** ο ισχυρισμός παράβαση **αυτού** του συνόρου;»
+ *
+ * ⚠️ Το `claims: 'document'` είναι **δηλωμένη έκπτωση** (δες τη γραμμή `FileRecord`):
+ * κατασκευή που ο μεταγλωττιστής είδε πεδίο-πεδίο **δεν είναι ανάγνωση**.
+ */
+function isOffence(assertion, boundary) {
+  if (assertion.typeName !== boundary.typeName) return false;
+  if (boundary.claims === 'document' && assertion.constructed) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Η ΜΙΑ ΣΑΡΩΣΗ — Κ1 ΚΑΙ Κ2 ΜΑΖΙ, ΕΝΑ ΠΕΡΑΣΜΑ
+// ---------------------------------------------------------------------------
+
+/**
+ * **Η μηχανή.** Ένα πέρασμα στα αρχεία· ανάλυση AST **μόνο** όπου χτύπησε το προ-φίλτρο.
+ *
+ * @returns {Map<string, {k1: {file: string, line: number}[], consumers: string[]}>}
+ *          κλειδί = `typeName` της γραμμής.
+ */
+function scanFiles(files, root = PROJECT_ROOT, boundaries = BOUNDARIES) {
+  const lanes = boundaries.map((boundary) => ({
+    boundary,
+    assertion: assertionOf(boundary.typeName),
+    imported: importOf(boundary.module),
+    result: { k1: [], consumers: [] },
+  }));
+  const byType = new Map(lanes.map((lane) => [lane.boundary.typeName, lane.result]));
+
+  for (const rel of files) {
+    if (isExempt(rel)) continue;
+
+    const source = fs.readFileSync(path.join(root, rel), 'utf8');
+    const interested = lanes.filter(
+      (lane) =>
+        rel !== lane.boundary.custodian &&
+        (lane.assertion.test(source) || lane.imported.test(source))
+    );
+    if (interested.length === 0) continue;
+
+    const { assertions, imports } = readAssertionsAndImports(rel, source);
+
+    for (const lane of interested) {
+      for (const assertion of assertions) {
+        if (isOffence(assertion, lane.boundary)) {
+          lane.result.k1.push({ file: rel, line: assertion.line });
+        }
+      }
+      if (imports.some((specifier) => specifier.endsWith(lane.boundary.module))) {
+        lane.result.consumers.push(rel);
+      }
+    }
+  }
+
+  return byType;
 }
 
 // ---------------------------------------------------------------------------
 // Κ1 — ο ισχυρισμός ζει σε ΕΝΑ σπίτι
+// Κ2 — ο παρονομαστής: το σύνορο έχει καταναλωτές
+//
+// ⚠️ **ΛΕΠΤΑ ΠΕΡΙΤΥΛΙΓΜΑΤΑ, ΟΧΙ ΔΕΥΤΕΡΗ ΥΛΟΠΟΙΗΣΗ.** Οι άγκυρες τα καλούν — άρα
+//    δοκιμάζουν **αυτό που τρέχει** στην παραγωγή. Δεύτερη μηχανή «για τα tests»
+//    είναι ακριβώς ο δεύτερος κριτής που το ADR-749 τιμωρεί.
 // ---------------------------------------------------------------------------
 
 function measureK1(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
-  const ASSERTION = assertionOf(boundary.typeName);
-  const offenders = [];
-
-  for (const rel of files) {
-    if (rel === boundary.custodian || isExempt(rel)) continue;
-
-    // 🔑 **Δύο αναγνώσεις, επίτηδες**: η κρίση γίνεται στο κείμενο *χωρίς* σχόλια
-    //    (ώστε ένα `as PublicListing` μέσα σε τεκμηρίωση να μη μετρά), αλλά ο
-    //    **αριθμός γραμμής** μετριέται στο *αρχικό*. Η πρώτη εκδοχή τύπωνε τη
-    //    γραμμή του απογυμνωμένου κειμένου και έστελνε τον άνθρωπο 72 γραμμές
-    //    πιο πάνω — δείκτης που δείχνει λάθος είναι χειρότερος από κανέναν.
-    const original = fs.readFileSync(path.join(root, rel), 'utf8');
-    if (!ASSERTION.test(stripComments(original))) continue;
-
-    const line = original.split('\n').findIndex((text) => ASSERTION.test(text)) + 1;
-    offenders.push({ file: rel, line });
-  }
-  return offenders;
+  return scanFiles(files, root, [boundary]).get(boundary.typeName).k1;
 }
-
-// ---------------------------------------------------------------------------
-// Κ2 — ο παρονομαστής: το σύνορο έχει καταναλωτές
-// ---------------------------------------------------------------------------
-
-
 
 /**
  * Ποιοι **παραγωγικοί** καταναλωτές ζητούν τη μετάφραση.
@@ -221,13 +422,7 @@ function measureK1(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
  * πύλη που λέει μόνο «0» αφήνει τον άνθρωπο να ψάχνει τι έσπασε.
  */
 function measureK2(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
-  const importsCustodian = new RegExp(`from\\s+['"][^'"]*${boundary.module}['"]`);
-  return files.filter(
-    (rel) =>
-      rel !== boundary.custodian &&
-      !isExempt(rel) &&
-      importsCustodian.test(stripComments(fs.readFileSync(path.join(root, rel), 'utf8')))
-  );
+  return scanFiles(files, root, [boundary]).get(boundary.typeName).consumers;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,19 +434,19 @@ function main() {
   }
 
   const files = collectSourceFiles(SRC);
-  let failed = false;
+  const missing = BOUNDARIES.filter(
+    (boundary) => !fs.existsSync(path.join(PROJECT_ROOT, boundary.custodian))
+  );
+  for (const boundary of missing) {
+    console.error(`${RED}❌ CHECK 3.74 — λείπει το ίδιο το σύνορο: ${boundary.custodian}${NC}`);
+  }
 
-  for (const boundary of BOUNDARIES) {
-    if (!fs.existsSync(path.join(PROJECT_ROOT, boundary.custodian))) {
-      console.error(
-        `${RED}❌ CHECK 3.74 — λείπει το ίδιο το σύνορο: ${boundary.custodian}${NC}`
-      );
-      failed = true;
-      continue;
-    }
+  const present = BOUNDARIES.filter((boundary) => !missing.includes(boundary));
+  const measured = scanFiles(files, PROJECT_ROOT, present);
+  let failed = missing.length > 0;
 
-    const k1 = measureK1(files, PROJECT_ROOT, boundary);
-    const consumers = measureK2(files, PROJECT_ROOT, boundary);
+  for (const boundary of present) {
+    const { k1, consumers } = measured.get(boundary.typeName);
 
     // 🔑 Τυπώνεται **ακόμα και στο μηδέν** — πύλη που σιωπά όταν περνά δεν
     //    ξεχωρίζει από πύλη που δεν έτρεξε (μάθημα CHECK 3.48).
@@ -295,6 +490,7 @@ function main() {
 if (require.main === module) process.exit(main());
 
 module.exports = {
+  scanFiles,
   measureK1,
   measureK2,
   collectSourceFiles,

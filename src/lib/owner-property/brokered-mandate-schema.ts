@@ -65,17 +65,18 @@ export const brokeredMandateSchema = z.object({
   agreement: z.enum(LISTING_AGREEMENTS),
   compensation: compensationSchema,
   /**
-   * Μονοπάτι του σαρωμένου εγγράφου εντολής. **Προαιρετικό** — η βεβαίωση στέκει με
-   * όνομα και ώρα, όπως ακριβώς στο MLS, όπου το χαρτί δεν ανεβαίνει καν.
+   * **Ταυτότητα** (`files/{id}`) του σαρωμένου εγγράφου εντολής — ποτέ διαδρομή αποθήκευσης: τη διαδρομή
+   * τη γράφει ο διακομιστής από τη βάση, μετά τον κριτή `attestationDocumentOf` (ADR-864 §18.4 Δ1).
+   * **Προαιρετικό** — η βεβαίωση στέκει με όνομα και ώρα, όπως ακριβώς στο MLS.
    */
-  documentPath: z.string().nullable().optional(),
+  documentFileId: z.string().min(1).nullable().optional(),
 });
 
 export interface BrokeredMandateInput {
   readonly clientContactId: string;
   readonly expiresAt: string;
   readonly via: MandateProofVia;
-  readonly documentPath: string | null;
+  readonly documentFileId: string | null;
   readonly agreement: ListingAgreement;
   readonly compensation: MandateCompensation;
 }
@@ -108,7 +109,7 @@ export function brokeredMandateFromRequest(value: unknown):
       clientContactId: parsed.data.clientContactId,
       expiresAt: parsed.data.expiresAt,
       via: parsed.data.via,
-      documentPath: parsed.data.documentPath ?? null,
+      documentFileId: parsed.data.documentFileId ?? null,
       agreement: parsed.data.agreement,
       compensation: parsed.data.compensation,
     },

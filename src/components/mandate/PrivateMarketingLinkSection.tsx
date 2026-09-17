@@ -25,7 +25,7 @@ import {
   type PrivateMarketingRevocationOutcome,
 } from '@/types/private-marketing-consent';
 
-import { PrivateMarketingConsentForm } from './PrivateMarketingConsentForm';
+import { PrivateMarketingConsentForm, type PartySubmission } from './PrivateMarketingConsentForm';
 
 const NS = 'property-market';
 const K = `${NS}:mandate.privateMarketing`;
@@ -82,12 +82,15 @@ export function PrivateMarketingLinkSection({ view }: { readonly view: PrivateMa
     setPhase(result.kind === 'idle' ? { kind: 'done', what } : result);
   };
 
-  const grant = (submission: ConsentSubmission): void =>
-    void run('granted', { action: 'grant', requestId: view.requestId, submission });
+  const grant = (submissions: readonly PartySubmission[]): void => {
+    const submission: ConsentSubmission | undefined = submissions[0]?.submission;
+    if (submission !== undefined) void run('granted', { action: 'grant', requestId: view.requestId, submission });
+  };
   const revoke = (outcome: PrivateMarketingRevocationOutcome): void => void run('revoked', { action: 'revoke', outcome });
 
   if (phase.kind === 'done') {
-    return <p role="status" className="text-sm font-medium text-card-foreground">{t(`${K}.${phase.what}`)}</p>;
+    // ⚠️ Ρητά `t()`, όχι `${K}.${phase.what}`: το δυναμικό πρόθεμα έσερνε ΟΛΟ το `mandate.privateMarketing.*` στο slice (CHECK 3.34).
+    return <p role="status" className="text-sm font-medium text-card-foreground">{phase.what === 'granted' ? t(`${K}.granted`) : t(`${K}.revoked`)}</p>;
   }
   if (view.requestId === null && !view.closed) return null;
 
@@ -98,7 +101,7 @@ export function PrivateMarketingLinkSection({ view }: { readonly view: PrivateMa
       {phase.kind === 'failed' && <p role="alert" className="text-sm font-medium text-destructive">{t(phase.key)}</p>}
 
       {view.requestId !== null && view.version !== null && (
-        <PrivateMarketingConsentForm version={view.version} values={view.values} busy={busy} onSubmit={grant} />
+        <PrivateMarketingConsentForm version={view.version} parties={[{ key: 'link', values: view.values }]} busy={busy} onSubmit={grant} />
       )}
 
       {view.closed && (

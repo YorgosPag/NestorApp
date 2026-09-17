@@ -120,6 +120,8 @@ export const ENTITY_TYPES = {
   MATERIAL: 'material',
   /** Framework agreement entity (procurement multi-project vendor contract — ADR-330 Phase 5) */
   FRAMEWORK_AGREEMENT: 'framework_agreement',
+  /** Private owner listing (`owner_properties`) — agency-held documents such as signed forms (ADR-864 §18 Δ1) */
+  OWNER_PROPERTY: 'owner_property',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
