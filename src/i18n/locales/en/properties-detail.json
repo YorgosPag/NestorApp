@@ -18,7 +18,7 @@
       "askedFor": "Asked",
       "salePricePerSqm": "Sale/sqm",
       "rentPricePerSqm": "Rent/sqm",
-      "rentValue": "{amount}/month"
+      "nightly": "Nightly rate"
     },
     "ariaLabel": "Property card {name}",
     "aria": {
@@ -34,7 +34,8 @@
     "price": {
       "notListed": "Not available",
       "saleMissing": "Price not recorded",
-      "rentMissing": "Rent not recorded"
+      "rentMissing": "Rent not recorded",
+      "nightlyMissing": "Nightly rate not recorded"
     }
   },
   "fields": {

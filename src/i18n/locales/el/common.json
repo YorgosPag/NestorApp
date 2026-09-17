@@ -937,6 +937,18 @@
   "notSet": "Δεν έχει οριστεί",
   "invalidDate": "Άκυρη ημερομηνία",
   "invalidValue": "Άκυρη τιμή",
+  "priceAmount": {
+    "sale": "{price}",
+    "rent": "{price}/μήνα",
+    "nightly": "{price}/νύχτα",
+    "stayTotal": "{price} · {nights, plural, one {# νύχτα} other {# νύχτες}}"
+  },
+  "priceSection": {
+    "sale": "Πώληση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+    "rent": "Ενοικίαση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
+    "nightly": "Βραχυχρόνια διαμονή · {count, plural, one {# κατάλυμα} other {# καταλύματα}}",
+    "unpriced": "Χωρίς καταγεγραμμένη τιμή · {count, plural, one {# ακίνητο} other {# ακίνητα}}"
+  },
   "priceReduction": {
     "was": "Προηγούμενη τιμή:"
   },

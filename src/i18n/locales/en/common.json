@@ -937,6 +937,18 @@
   "notSet": "Not set",
   "invalidDate": "Invalid date",
   "invalidValue": "Invalid value",
+  "priceAmount": {
+    "sale": "{price}",
+    "rent": "{price}/month",
+    "nightly": "{price}/night",
+    "stayTotal": "{price} · {nights, plural, one {# night} other {# nights}}"
+  },
+  "priceSection": {
+    "sale": "For sale · {count, plural, one {# property} other {# properties}}",
+    "rent": "For rent · {count, plural, one {# property} other {# properties}}",
+    "nightly": "Short stay · {count, plural, one {# place} other {# places}}",
+    "unpriced": "No recorded price · {count, plural, one {# property} other {# properties}}"
+  },
   "priceReduction": {
     "was": "Previous price:"
   },

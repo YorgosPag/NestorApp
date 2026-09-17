@@ -136,7 +136,6 @@
   },
   "hover": {
     "clickForMore": "Κλικ για περισσότερες πληροφορίες",
-    "perMonth": "/ μήνα",
     "priceOnRequest": "Τιμή κατόπιν αιτήματος",
     "area": "Εμβαδόν",
     "pricePerSqm": "Τιμή/τ.μ.",
@@ -161,7 +160,8 @@
     "parking": "Στάθμευση",
     "storageFull": "Αποθήκη",
     "price": "Τιμή",
-    "monthlyRent": "Μηνιαίο ενοίκιο"
+    "monthlyRent": "Μηνιαίο ενοίκιο",
+    "nightlyRate": "Τιμή διανυκτέρευσης"
   },
   "connectionPanel": {
     "title": "Συνδέσεις & Ομαδοποίηση",

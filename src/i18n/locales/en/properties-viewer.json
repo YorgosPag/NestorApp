@@ -136,7 +136,6 @@
   },
   "hover": {
     "clickForMore": "Click for more details",
-    "perMonth": "/ month",
     "priceOnRequest": "Price on request",
     "area": "Area",
     "pricePerSqm": "Price/sq.m.",
@@ -161,7 +160,8 @@
     "parking": "Parking",
     "storageFull": "Storage",
     "price": "Price",
-    "monthlyRent": "Monthly rent"
+    "monthlyRent": "Monthly rent",
+    "nightlyRate": "Nightly rate"
   },
   "connectionPanel": {
     "title": "Connections & Grouping",

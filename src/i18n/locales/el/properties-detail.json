@@ -18,7 +18,7 @@
       "askedFor": "Ζητούσε",
       "salePricePerSqm": "Πώληση/τ.μ.",
       "rentPricePerSqm": "Ενοίκιο/τ.μ.",
-      "rentValue": "{amount}/μήνα"
+      "nightly": "Διανυκτέρευση"
     },
     "ariaLabel": "Κάρτα ακινήτου {name}",
     "aria": {
@@ -34,7 +34,8 @@
     "price": {
       "notListed": "Δεν διατίθεται",
       "saleMissing": "Η τιμή δεν έχει καταχωρηθεί",
-      "rentMissing": "Το ενοίκιο δεν έχει καταχωρηθεί"
+      "rentMissing": "Το ενοίκιο δεν έχει καταχωρηθεί",
+      "nightlyMissing": "Η τιμή διανυκτέρευσης δεν έχει καταχωρηθεί"
     }
   },
   "fields": {
