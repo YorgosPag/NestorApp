@@ -31,7 +31,6 @@ import {
   type DocumentSnapshot,
   type Query,
   type QueryConstraint,
-  type QuerySnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 
@@ -41,6 +40,8 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { requireAuthContext, waitForAuthReady, resolveEffectiveCompanyId } from './auth-context';
 import { onSuperAdminActiveCompanyChange } from './super-admin-active-company';
 import { getTenantConfig, resolveTenantValue } from './tenant-config';
+import { buildReadPaths, hasReadPaths } from './read-scope-config';
+import { listenToPaths, resultOfSnapshots } from './firestore-read-paths';
 import { chunkArray } from '@/lib/array-utils';
 import type {
   TenantContext,
@@ -108,6 +109,20 @@ function buildTenantConstraints(
   return [where(config.fieldName, '==', value)];
 }
 
+/**
+ * Τα **πρώτα** φίλτρα κάθε client λίστας, **ανά δρόμο ανάγνωσης**: μισθωτής **και** φράχτης
+ * (ADR-862 Φ0 Β11). ΕΝΑ σημείο για `getAll` και `subscribe` — δεύτερη χειρόγραφη σύνθεση
+ * θα ξεχνούσε τον φράχτη, και η λίστα θα απορριπτόταν ολόκληρη.
+ */
+function buildLeadingPaths(
+  key: CollectionKey,
+  ctx: TenantContext,
+  tenantOverride?: QueryOptions['tenantOverride']
+): QueryConstraint[][] {
+  const tenant = buildTenantConstraints(key, ctx, tenantOverride);
+  return buildReadPaths(key, ctx.uid).map(scope => [...tenant, ...scope]);
+}
+
 // ADR-218: chunkArray imported from centralized @/lib/array-utils
 
 /** «Κανένας ακροατής» — ΕΝΑ όνομα αντί για έξι σκόρπια `() => {}` (CHECK 3.28). */
@@ -125,20 +140,8 @@ function extractDoc<T>(snap: DocumentSnapshot): T | null {
 //    (`subscribe` ↔ `subscribeSubcollection`). Τρία αντίγραφα του ίδιου φακέλου
 //    αποτελέσματος είναι τρία σημεία όπου ένα νέο πεδίο μπορεί να ξεχαστεί.
 
-/** Τα έγγραφα ενός στιγμιότυπου συλλογής, με το `id` τους. */
-function mapDocuments<T>(snapshot: QuerySnapshot): T[] {
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
-}
-
-/** Ο φάκελος αποτελέσματος — ΕΝΑΣ για ανάγνωση και για ακρόαση. */
-function toQueryResult<T>(snapshot: QuerySnapshot, documents: readonly T[]): QueryResult<T> {
-  return {
-    documents,
-    size: snapshot.size,
-    isEmpty: snapshot.empty,
-    lastDocument: snapshot.docs[snapshot.docs.length - 1] ?? null,
-  };
-}
+// ℹ️ `mapDocuments` + `toQueryResult` μετακόμισαν στο `firestore-read-paths.ts` (ADR-862 Φ0
+//    Β11): ο φάκελος αποτελέσματος χτίζεται πλέον από ΕΝΑ ή ΠΕΡΙΣΣΟΤΕΡΑ στιγμιότυπα.
 
 /** Το query: πρώτα τα `leading` (φίλτρο μισθωτή), μετά του καλούντα, τέλος το όριο. */
 function composeQuery(
@@ -162,15 +165,14 @@ function guardedCollectionListener<T extends DocumentData>(
   slot: EqualitySlot<readonly T[]>,
   options: SubscribeOptions<T>,
   onData: (result: QueryResult<T>) => void,
-): (snapshot: QuerySnapshot) => void {
+): (result: QueryResult<T>) => void {
   const equalityFn = options.equalityFn ?? defaultDocumentsEqual;
   const guardEnabled = options.skipEqualityGuard !== true;
-  return snapshot => {
-    const documents = mapDocuments<T>(snapshot);
-    if (guardEnabled && slot.shouldSkip(documents, equalityFn)) {
+  return result => {
+    if (guardEnabled && slot.shouldSkip(result.documents, equalityFn)) {
       return;
     }
-    onData(toQueryResult(snapshot, documents));
+    onData(result);
   };
 }
 
@@ -189,7 +191,7 @@ function guardedCollectionListener<T extends DocumentData>(
  */
 function subscribeToCollection<T extends DocumentData>(
   ref: CollectionReference,
-  leading: (ctx: TenantContext) => readonly QueryConstraint[],
+  leading: (ctx: TenantContext) => readonly (readonly QueryConstraint[])[],
   followScope: boolean,
   onData: (result: QueryResult<T>) => void,
   onError: (error: Error) => void,
@@ -218,7 +220,8 @@ function subscribeToCollection<T extends DocumentData>(
     if (stale()) return;
     const ctx = await requireAuthContext();
     if (stale()) return;
-    innerUnsub = onSnapshot(composeQuery(ref, leading(ctx), options), listener, onError);
+    const queries = leading(ctx).map(path => composeQuery(ref, path, options));
+    innerUnsub = listenToPaths<T>(queries, options.maxResults, listener, onError);
   };
 
   void rebuild().catch(onError);
@@ -264,10 +267,12 @@ class FirestoreQueryService implements IFirestoreQueryService {
   ): Promise<QueryResult<T>> {
     const ctx = await requireAuthContext();
     const colRef = collection(db, resolveCollectionName(key));
-    const q = composeQuery(colRef, buildTenantConstraints(key, ctx, options.tenantOverride), options);
-
-    const snapshot = await getDocs(q);
-    return toQueryResult(snapshot, mapDocuments<T>(snapshot));
+    const snapshots = await Promise.all(
+      buildLeadingPaths(key, ctx, options.tenantOverride).map(path =>
+        getDocs(composeQuery(colRef, path, options)),
+      ),
+    );
+    return resultOfSnapshots<T>(snapshots, options.maxResults);
   }
 
   // --- WRITE: Create -----------------------------------------------------------
@@ -349,7 +354,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
   ): Unsubscribe {
     return subscribeToCollection(
       collection(db, resolveCollectionName(key)),
-      ctx => buildTenantConstraints(key, ctx, options.tenantOverride),
+      ctx => buildLeadingPaths(key, ctx, options.tenantOverride),
       true,
       onData,
       onError,
@@ -419,7 +424,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     // φίλτρο πρώτο, και καμία ανοικοδόμηση όταν αλλάζει ο χώρος — ίδια συμπεριφορά με πριν.
     return subscribeToCollection(
       collection(db, resolveCollectionName(parentKey), parentId, subcollectionName),
-      () => [],
+      () => [[]],
       false,
       onData,
       onError,
@@ -440,8 +445,14 @@ class FirestoreQueryService implements IFirestoreQueryService {
     const chunks = chunkArray([...docIds], FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
 
     const results = new Map<string, T>();
+    // ADR-862 Φ0 Β11 — και το `in` σε ids είναι `list`: χωρίς τους δρόμους ανάγνωσης η
+    // λίστα απορρίπτεται. Η ταυτότητα ζητείται ΜΟΝΟ όπου η συλλογή έχει φράχτη, ώστε οι
+    // υπόλοιπες να κρατούν ακριβώς τη σημερινή συμπεριφορά.
+    const paths = hasReadPaths(key)
+      ? buildReadPaths(key, (await requireAuthContext()).uid)
+      : buildReadPaths(key, '');
 
-    const chunkPromises = chunks.map(async chunk => {
+    const chunkPromises = chunks.flatMap(chunk => paths.map(async path => {
       // companyId: N/A — generic batchGet by documentId() (Firestore reserved field).
       // Tenant isolation is enforced at the firestore.rules level via resource.data.companyId
       // checks on each fetched document. Adding a where('companyId') here would require
@@ -449,13 +460,14 @@ class FirestoreQueryService implements IFirestoreQueryService {
       const q = query(
         // companyId: N/A — generic batchGet by documentId(), tenant enforced by firestore.rules
         colRef,
-        where(documentId(), 'in', chunk)
+        where(documentId(), 'in', chunk),
+        ...path
       );
       const snapshot = await getDocs(q);
       for (const docSnap of snapshot.docs) {
         results.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as unknown as T);
       }
-    });
+    }));
 
     await Promise.all(chunkPromises);
     return results;

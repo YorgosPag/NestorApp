@@ -56,6 +56,8 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const COLLECTIONS_FILE = path.join(PROJECT_ROOT, 'src', 'config', 'firestore-collections.ts');
 const TENANT_CONFIG_FILE = path.join(PROJECT_ROOT, 'src', 'services', 'firestore', 'tenant-config.ts');
 const FIELD_CONSTANTS_FILE = path.join(PROJECT_ROOT, 'src', 'config', 'firestore-field-constants.ts');
+// ADR-862 Φ0 Β11 — «από ποιους δρόμους διαβάζει μια client λίστα;» (ο αδελφός του tenant-config)
+const READ_SCOPE_CONFIG_FILE = path.join(PROJECT_ROOT, 'src', 'services', 'firestore', 'read-scope-config.ts');
 
 /**
  * Η προεπιλογή του `firestoreQueryService`: **κάθε** συλλογή που δεν δηλώνεται
@@ -211,6 +213,42 @@ function loadTenantOverrides() {
 }
 
 /**
+ * **Τα πεδία ισότητας των δρόμων ανάγνωσης** ανά KEY — από το `READ_PATH_FIELDS`
+ * (ADR-862 Φ0 Β11). Απούσα συλλογή ⇒ ένας δρόμος χωρίς επιπλέον πεδίο.
+ *
+ * 🔴 Χωρίς αυτό, το CHECK 3.15 ήταν **τυφλό**: το `firestoreQueryService` προσθέτει
+ * `cdeReadReach ==` / `createdBy ==` σε κάθε λίστα `files`, και ερώτημα με `orderBy`
+ * χρειάζεται composite με αυτό το πεδίο — αλλιώς `FAILED_PRECONDITION` στην παραγωγή.
+ *
+ * @returns {Map<string, string[]>}
+ */
+function loadReadPathFields() {
+  /** @type {Map<string, string[]>} */
+  const map = new Map();
+  if (!fs.existsSync(READ_SCOPE_CONFIG_FILE)) return map;
+  const sf = parseFile(READ_SCOPE_CONFIG_FILE);
+
+  /** @param {ts.Node} node */
+  function visit(node) {
+    if (ts.isVariableDeclaration(node) && node.name.getText() === 'READ_PATH_FIELDS' && node.initializer) {
+      const obj = unwrapAsExpression(node.initializer);
+      if (obj && ts.isObjectLiteralExpression(obj)) {
+        for (const prop of obj.properties) {
+          if (!ts.isPropertyAssignment(prop)) continue;
+          const arr = unwrapAsExpression(prop.initializer);
+          if (!arr || !ts.isArrayLiteralExpression(arr)) continue;
+          map.set(prop.name.getText(), arr.elements.filter(ts.isStringLiteral).map((e) => e.text));
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sf);
+  return map;
+}
+
+/**
  * Η **πραγματική** απάντηση: overrides + προεπιλογή.
  *
  * @param {Map<string, {mode: string, fieldName: string}>} overrides
@@ -333,6 +371,8 @@ module.exports = {
   loadCollectionsMap,
   loadFieldConstants,
   loadTenantOverrides,
+  loadReadPathFields,
+  READ_SCOPE_CONFIG_FILE,
   resolveTenantFor,
   buildCollectionAliasMap,
   resolveCollectionArg,

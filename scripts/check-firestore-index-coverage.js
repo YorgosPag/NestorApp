@@ -78,6 +78,7 @@ const {
 const {
   loadCollectionsMap,
   loadTenantOverrides,
+  loadReadPathFields,
   resolveTenantFor,
 } = require('./_shared/firestore-ast-loaders');
 
@@ -386,9 +387,34 @@ function extractOptionsDetails(optionsArg, callNode) {
  * @param {CallSite}                                       site
  * @param {Map<string, string>}                            collectionsMap
  * @param {Map<string, {mode: string, fieldName: string}>} tenantOverrides
+ * @param {Map<string, string[]>} [readPathFields] ADR-862 Φ0 Β11 — πεδίο ισότητας ανά δρόμο
  * @returns {import('./_shared/firestore-index-matcher').QueryShape[]}
  */
-function deriveShapes(site, collectionsMap, tenantOverrides) {
+function deriveShapes(site, collectionsMap, tenantOverrides, readPathFields = new Map()) {
+  const paths = readPathFields.get(site.collectionKey);
+  const base = deriveTenantShapes(site, collectionsMap, tenantOverrides);
+  if (!paths || paths.length === 0) return base;
+  // 🔴 ADR-862 Φ0 Β11 — το `firestoreQueryService` τρέχει ΕΝΑ ερώτημα ανά δρόμο, με το
+  //    πεδίο του δρόμου ως επιπλέον ισότητα. Κάθε δρόμος × κάθε παραλλαγή μισθωτή
+  //    χρειάζεται τον δικό του δείκτη — αλλιώς ο δρόμος «τα δικά μου» πέφτει σιωπηλά.
+  return base.flatMap((shape) =>
+    paths.map((field) => ({
+      ...shape,
+      equalityFields: [field, ...shape.equalityFields.filter((f) => f !== field)],
+      variant: `${shape.variant}+${field}`,
+    })),
+  );
+}
+
+/**
+ * Οι παραλλαγές μισθωτή (default + super_admin), πριν τους δρόμους ανάγνωσης.
+ *
+ * @param {CallSite} site
+ * @param {Map<string, string>} collectionsMap
+ * @param {Map<string, {mode: string, fieldName: string}>} tenantOverrides
+ * @returns {import('./_shared/firestore-index-matcher').QueryShape[]}
+ */
+function deriveTenantShapes(site, collectionsMap, tenantOverrides) {
   const collectionName = collectionsMap.get(site.collectionKey);
   if (!collectionName) return [];
 
@@ -521,6 +547,7 @@ function main() {
 
   const collectionsMap = loadCollectionsMap();
   const tenantOverrides = loadTenantOverrides();
+  const readPathFields = loadReadPathFields();
 
   const targetFiles = resolveTargetFiles(argv).filter((p) => {
     const rel = path.relative(PROJECT_ROOT, p).replace(/\\/g, '/');
@@ -550,7 +577,7 @@ function main() {
       if (site.warnings.length > 0) unanalyzable.push(site);
       if (!site.collectionKey || !collectionsMap.has(site.collectionKey)) continue;
 
-      const shapes = deriveShapes(site, collectionsMap, tenantOverrides);
+      const shapes = deriveShapes(site, collectionsMap, tenantOverrides, readPathFields);
       /** @type {Set<string>} Dedupe key per call-site: avoids double-reporting when default and super_admin variants happen to collapse to the same fingerprint. */
       const seenFingerprints = new Set();
       for (const shape of shapes) {
@@ -601,4 +628,8 @@ function main() {
   process.exit(1);
 }
 
-main();
+// ADR-862 Φ0 Β11 — εξάγεται για την άγκυρα των δρόμων ανάγνωσης· ο worker runner ορίζει
+// `require.main` (ίδιο ιδίωμα με 3.56 / 3.83), άρα η πύλη τρέχει όπως πριν.
+if (require.main === module) main();
+
+module.exports = { deriveShapes };
