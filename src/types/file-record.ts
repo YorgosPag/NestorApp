@@ -28,6 +28,7 @@ import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import type {
   DisciplineCode,
   DocumentSeries,
+  CdeReadReach,
   CdeState,
   SuitabilityCode,
 } from '@/config/iso19650-constants';
@@ -685,6 +686,14 @@ export interface FileRecord {
    */
   supersededByFileId?: string;
 
+  /**
+   * ♻️ **Η ΠΡΟΕΛΕΥΣΗ ΜΙΑΣ ΕΠΑΝΑΦΟΡΑΣ** — από ποια παλιά έκδοση αντιγράφηκαν τα bytes
+   * (ADR-862 Φ0, «Ορισμός ως τρέχουσας»). Όπως στο Box/SharePoint, η επαναφορά είναι
+   * **νέα** έκδοση στην κορυφή — αυτό το πεδίο λέει «η v4 είναι η v2 ξανά».
+   * **Απουσία** = γνήσια νέα μεταφόρτωση. Το γράφει **μόνο** η γέννηση του διαδόχου.
+   */
+  promotedFromFileId?: string;
+
   /** Πότε αντικαταστάθηκε (συνοδεύει το {@link supersededByFileId}). */
   supersededAt?: Date | string;
 
@@ -851,6 +860,17 @@ export interface FileRecord {
    * ⛔ **ποτέ** «καμία ομάδα» και ⛔ **ποτέ** «όλες οι ομάδες».
    */
   cdeTeamId?: string;
+
+  /**
+   * 🔒 **Ο ΦΡΑΧΤΗΣ ΤΟΥ ΚΑΝΟΝΑ** — προβολή της φάσης (ADR-862 Φ0 Β11).
+   *
+   * Υπάρχει **μόνο** επειδή το Firestore κρίνει τα `list` από τα φίλτρα του ερωτήματος
+   * («rules are not filters»). Την παράγει **μόνο** το `readReachFor`, τη γράφουν η
+   * γέννηση και ο γραφέας κατάστασης, και ο θεματοφύλακας την ξαναπαράγει και συγκρίνει.
+   * ⛔ **ΠΟΤΕ** απόφαση ορατότητας από αυτήν — κρίνει ο `decideContainerAccess`.
+   * **Απουσία** = πριν τη μετανάστευση του Β11 ⇒ ο κανόνας `get` τη διαβάζει ως `tenant`.
+   */
+  cdeReadReach?: CdeReadReach;
 
   /**
    * 📤 **Η ΠΑΡΑΔΟΣΗ** — η μετάβαση `WIP → SHARED`.

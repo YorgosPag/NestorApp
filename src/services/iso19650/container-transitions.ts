@@ -69,6 +69,7 @@ import {
   type ContainerTransitionRequest,
 } from './container-transition-policy';
 import { judgeSuccession } from './container-succession-policy';
+import { custodyOnEntry, type ContainerCustodyFields } from './container-custody';
 
 // ⚠️ **ΔΥΟ ΓΡΑΜΜΕΣ, ΟΧΙ ΜΙΑ** (ADR-806 §7 #1): το `export … from` **επανεξάγει, δεν
 //    εισάγει**, άρα το `import` από πάνω είναι ξεχωριστό και απαραίτητο. Η επανεξαγωγή
@@ -148,6 +149,7 @@ function writeTransition(
   request: ContainerTransitionRequest,
   spec: ActSpec,
   verdict: Extract<ReturnType<typeof judgeTransition>, { ok: true }>,
+  custody: ContainerCustodyFields,
 ): ContainerTransitionOutcome {
   const record = buildAct(request, verdict.revision);
   const nextActs = withAct(verdict.acts, request.act, record);
@@ -156,6 +158,9 @@ function writeTransition(
   transaction.update(ref, {
     [spec.field]: record,
     cdeState: projection.cdeState,
+    // ADR-862 Φ0 Β11 — ο φράχτης του κανόνα ακολουθεί τη φάση ΑΤΟΜΙΚΑ: ανάμεσα σε δύο
+    // update() θα υπήρχε στιγμή «WIP με φράχτη γραφείου» (ή SHARED αόρατο στις λίστες).
+    cdeReadReach: projection.cdeReadReach,
     // Η αποθηκευμένη καταλληλότητα είναι **προβολή για ανάγνωση/εξαγωγή**· η αυθεντία
     // μένει το `deriveSuitability`. Γράφεται μόνο όταν το πρότυπο **ορίζει** χρήση —
     // `null` σημαίνει «δεν ορίζεται», όχι «σβήσ' το».
@@ -163,6 +168,8 @@ function writeTransition(
       ? {}
       : { suitabilityCode: projection.suitabilityCode }),
     ...(request.act === 'supersede' ? archivalFieldsOf(request, record.at) : {}),
+    // ADR-862 Φ0 Β14 — έργο/ομάδα που σφραγίστηκαν στην είσοδο στο CDE (κενό αλλιώς).
+    ...custody,
     updatedAt: nowISO(),
   });
 
@@ -264,12 +271,21 @@ function runTransition(
         : refusal(request, verdict.why);
     }
 
-    if (request.act === 'supersede') {
-      const blocked = await successionBlock(transaction, raw, request, actsForOthers);
-      if (blocked !== null) return blocked;
+    const succession =
+      request.act === 'supersede' ? await successionBlock(transaction, raw, request, actsForOthers) : null;
+    if (succession !== null && succession.blocked !== null) return succession.blocked;
+
+    // 🔑 Β14 — έργο + ομάδα στην είσοδο στο CDE. **Αναγνώσεις**, άρα πριν από κάθε εγγραφή.
+    const custody = await custodyOnEntry(transaction, db, raw, verdict.from, request.actor);
+
+    // 🔑 Ο διάδοχος γεννιέται ΜΟΝΟ αφού κριθεί, στην ΙΔΙΑ συναλλαγή με την αρχειοθέτηση
+    //    του προκατόχου: καμία στιγμή με δύο ενεργές εκδόσεις της ίδιας θέσης. Κληρονομεί
+    //    ό,τι σφραγίστηκε μόλις — αλλά ό,τι δηλώνει **ήδη** η εγγραφή του νικά.
+    if (succession !== null && succession.birth !== null) {
+      transaction.set(succession.birth.ref, { ...custody, ...succession.birth.record });
     }
 
-    return writeTransition(transaction, ref, request, spec, verdict);
+    return writeTransition(transaction, ref, request, spec, verdict, custody);
   });
 }
 
@@ -280,33 +296,54 @@ function runTransition(
  * στην κρίση και τη γραφή, η συναλλαγή **ξαναεκτελείται** και κρίνει ξανά. Μια ανάγνωση **έξω**
  * από τη συναλλαγή θα έδινε αρχειοθέτηση υπέρ διαδόχου που **ήδη δεν υπάρχει**.
  *
- * @returns `null` όταν η διαδοχή αποδείχθηκε· αλλιώς η **ονομασμένη** έκβαση.
+ * 🍼 **Γέννηση στη συναλλαγή** (`successorBirth`): αν ο διάδοχος **δεν** υπάρχει ακόμη ως
+ * FileRecord (λείπει ή είναι μόνο το claim του Storage, χωρίς μισθωτή), κρίνεται **η εγγραφή
+ * που θα γραφτεί** — και επιστρέφεται για να γραφτεί **μόνο** αν η κρίση περάσει. Αν υπάρχει
+ * ήδη πλήρης (επανάληψη), κρίνεται **αυτή**, και δεν ξαναγράφεται τίποτα.
+ *
+ * @returns `blocked: null` όταν η διαδοχή αποδείχθηκε· αλλιώς η **ονομασμένη** έκβαση.
  */
 async function successionBlock(
   transaction: Transaction,
   predecessor: Record<string, unknown>,
   request: ContainerTransitionRequest,
   actsForOthers: boolean,
-): Promise<ContainerTransitionOutcome | null> {
+): Promise<SuccessionJudgement> {
   const successorId = request.supersededByFileId;
-  const successorSnap =
+  const successorRef =
     successorId === undefined || successorId === request.fileId
       ? null
-      : await transaction.get(getAdminFirestore().collection(COLLECTIONS.FILES).doc(successorId));
+      : getAdminFirestore().collection(COLLECTIONS.FILES).doc(successorId);
+  const successorSnap = successorRef === null ? null : await transaction.get(successorRef);
+  const stored = successorSnap?.exists ? ((successorSnap.data() ?? {}) as Record<string, unknown>) : null;
+  // Claim του Storage (`public-upload.service`) = ύπαρξη χωρίς μισθωτή — ΟΧΙ FileRecord.
+  const born = stored !== null && typeof stored.companyId === 'string';
+  const birth = request.successorBirth !== undefined && !born && successorRef !== null
+    ? { ref: successorRef, record: request.successorBirth }
+    : null;
 
   const verdict = judgeSuccession({
     predecessor,
-    successor: successorSnap?.exists ? ((successorSnap.data() ?? {}) as Record<string, unknown>) : null,
+    successor: birth !== null ? { ...birth.record } : stored,
     predecessorId: request.fileId,
     successorId,
     actorUid: request.actor.uid,
     actorCompanyId: request.actor.companyId,
     actsForOthers,
   });
-  if (verdict.ok) return null;
-  return verdict.outcome === 'noop'
-    ? { kind: 'noop', fileId: request.fileId, act: request.act, why: verdict.why }
-    : refusal(request, verdict.why);
+  if (verdict.ok) return { blocked: null, birth };
+  return {
+    blocked: verdict.outcome === 'noop'
+      ? { kind: 'noop', fileId: request.fileId, act: request.act, why: verdict.why }
+      : refusal(request, verdict.why),
+    birth: null,
+  };
+}
+
+/** Η έκβαση της κρίσης διαδοχής: άρνηση/noop **ή** (προαιρετική) γέννηση προς εγγραφή. */
+interface SuccessionJudgement {
+  readonly blocked: ContainerTransitionOutcome | null;
+  readonly birth: { readonly ref: DocumentReference; readonly record: Readonly<Record<string, unknown>> } | null;
 }
 
 // =============================================================================
