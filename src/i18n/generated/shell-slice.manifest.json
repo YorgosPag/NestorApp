@@ -86,7 +86,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7be29869e6e525a0f39f878a84c8b6c91730d05e9bce9e39ba556c2855e94264",
+  "inputsSha256": "5553581307621a0e10b4212a8bbd12fb13c8a247f0b884c8f9a206dabaffe083",
   "languages": [
     "el"
   ],
@@ -351,7 +351,7 @@
     "src/components/search-results/ListingMapPopup.tsx": "40a49098650002921cdf386f16369b5613044e17771b00785e321e8f0a0e1ea4",
     "src/components/search-results/ListingPriceMarkers.tsx": "3e21364bd181e3fafd2b620d1dc9641dd66c84f6d2749fe652e74015cdd2d923",
     "src/components/search-results/MapAreaControl.tsx": "74e3601f1490e3611ba009298341aea66fde03e9f91256cdb425069165ec4e2d",
-    "src/components/search-results/ResultsList.tsx": "fc33b743be425653936dc8fdf9ee785619c223ddb648cd03427daee2af8971e7",
+    "src/components/search-results/ResultsList.tsx": "dcd0ac31aa28b0d54711b892e5e5cb76fc7ced0505dafed00891abeb457725bd",
     "src/components/search-results/ResultsMap.tsx": "db59f41bc738f3e5d374d866d79b8aec0e52397eab45e6507d32da62158efa55",
     "src/components/search-results/ResultsMapLayers.tsx": "2fe0c31ffa77d98e164ee170bc7aa9cfe6e839eb9e206b1f8dc1ba7a37fa4b09",
     "src/components/search-results/ResultsMapSources.tsx": "e0d5e988f4242c8b7e2e01750a2bef56fa1c126d4f73033cc272265ce6e746b6",
@@ -5481,11 +5481,7 @@
             "priceAmount.rent",
             "priceAmount.sale",
             "priceAmount.stayTotal",
-            "priceReduction.was",
-            "priceSection.nightly",
-            "priceSection.rent",
-            "priceSection.sale",
-            "priceSection.unpriced"
+            "priceReduction.was"
           ],
           "prefixes": [],
           "whole": false
