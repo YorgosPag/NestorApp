@@ -215,4 +215,15 @@ describe('🏆 Α33 — ο ιδιοκτήτης κατεβάζει το έντυ
     });
     expect(downloadMandateEvidence).toHaveBeenCalledWith({ kind: 'account', ownerPropertyId: 'ownp_a' }, 'mevd_1');
   });
+
+  it('🔴 ADR-864 §20 (Α43) — η γραμμή διατήρησης: κανόνας όσο ζει η σχέση · ημερομηνία όταν κλειδώσει · διάθεση όταν σβηστεί', () => {
+    const digest = `sha256:${'d'.repeat(64)}`;
+    const item = (id: string, retainUntil: string | null, disposedAt: string | null) => ({ id, fileName: `${id}.pdf`, digest, retainUntil, disposedAt });
+    currentLoad = found('owner', [{ ...panel('comp_alfa', GRANTED), evidence: [item('mevd_live', null, null), item('mevd_locked', '2032-12-31T22:00:00.000Z', null), item('mevd_gone', '2032-12-31T22:00:00.000Z', '2033-01-02T00:00:00.000Z')] }]);
+    render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="custodians" revision={null} />);
+
+    expect(screen.getByText('property-market:mandate.evidence.retainedWhileLive')).toBeInTheDocument();
+    expect(screen.getByText('property-market:mandate.evidence.retainedUntil')).toBeInTheDocument();
+    expect(screen.getByText('property-market:mandate.evidence.disposed')).toBeInTheDocument();
+  });
 });

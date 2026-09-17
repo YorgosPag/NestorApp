@@ -16,11 +16,27 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatDate } from '@/lib/intl-formatting';
 import type { EvidenceView } from '@/lib/mandate/mandate-evidence';
 import { downloadMandateEvidence, type EvidenceSource } from '@/services/mandate/mandate-evidence.client';
 
 const NS = 'property-market';
 const K = `${NS}:mandate.evidence`;
+
+/** Η γραμμή διατήρησης — τρεις καταστάσεις, από το μητρώο (ADR-864 §20). */
+function RetentionLine({ evidence }: { readonly evidence: EvidenceView }): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  // `?? null` και όχι σκέτο `!== null`: απάντηση γραμμένη πριν από τα πεδία φέρνει `undefined` (το βρήκε άγκυρα, Α33).
+  const disposedAt = evidence.disposedAt ?? null;
+  const retainUntil = evidence.retainUntil ?? null;
+  const text =
+    disposedAt !== null
+      ? t(`${K}.disposed`, { date: formatDate(disposedAt) })
+      : retainUntil !== null
+        ? t(`${K}.retainedUntil`, { date: formatDate(retainUntil) })
+        : t(`${K}.retainedWhileLive`);
+  return <p className="text-xs text-muted-foreground">{text}</p>;
+}
 
 function EvidenceItem({ evidence, source }: { readonly evidence: EvidenceView; readonly source: EvidenceSource }): React.ReactElement {
   const { t } = useTranslation([NS]);
@@ -43,6 +59,7 @@ function EvidenceItem({ evidence, source }: { readonly evidence: EvidenceView; r
       <p className="text-xs text-muted-foreground">
         {t(`${K}.digest`)} <code className="break-all">{evidence.digest}</code>
       </p>
+      <RetentionLine evidence={evidence} />
       {unavailable && <p role="alert" className="text-sm font-medium text-destructive">{t(`${K}.unavailable`)}</p>}
     </li>
   );

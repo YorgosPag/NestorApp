@@ -53,6 +53,7 @@ import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
 import { runHolidayHoursQuestion } from '@/lib/cron/jobs/holiday-hours-question.job';
+import { runMandateEvidenceRetention } from '@/lib/cron/jobs/mandate-evidence-retention.job';
 import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
@@ -228,6 +229,21 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runMandateExpiry,
+  },
+  {
+    slug: 'mandate-evidence-retention',
+    path: '/api/cron/mandate-evidence-retention',
+    description: 'Κλείδωμα διατήρησης και διάθεση αποδεικτικών βεβαίωσης (ADR-864 §20)',
+    enabled: true,
+    // 🔑 **Ημερήσια, ΜΕΤΑ τον σαρωτή λήξης** (03:30): η σχέση κρίνεται από τις ίδιες εντολές, και η μονάδα
+    //    της προθεσμίας είναι το **έτος** — ωριαία σάρωση θα πλήρωνε 24 περάσματα για ακρίβεια που ο νόμος
+    //    δεν ζητά. Καθυστέρηση μίας ημέρας στο κλείδωμα **δεν** εκθέτει τίποτα: ως τότε ισχύει το hold.
+    schedule: '45 3 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runMandateEvidenceRetention,
   },
   {
     slug: 'first-contact-invitation-expiry',

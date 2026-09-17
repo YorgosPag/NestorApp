@@ -668,6 +668,90 @@
         "company": "Every change to the listing: what changed, when and by whom. Visible to the office administrators."
       },
       "loading": "Loading history…"
+    },
+    "stayCalendar": {
+      "open": "Booking calendar",
+      "openHint": "Block dates, record bookings and see what is available.",
+      "title": "Booking calendar",
+      "lead": "Each cell is one night. Tap the first and the last night to select a range.",
+      "back": "Back to the listing",
+      "loading": "Loading calendar…",
+      "absent": "Listing not found.",
+      "failed": "The calendar could not be loaded.",
+      "retry": "Try again",
+      "unreadable": "A calendar entry cannot be read. Until it is fixed, changes are disabled — so no night is taken twice.",
+      "notAStay": "This listing is not offered for short-term rental. Add that offer by editing the listing.",
+      "declaration": {
+        "undeclaredTitle": "The calendar has not been declared up to date",
+        "undeclaredBody": "Until you declare it, guests see availability as “unknown” — not as “available”.",
+        "declare": "The calendar is up to date",
+        "declaredStatus": "Declared up to date on {date}.",
+        "revoke": "Withdraw declaration"
+      },
+      "nav": {
+        "label": "Month navigation",
+        "previous": "Previous month",
+        "next": "Next month",
+        "today": "Today"
+      },
+      "legend": {
+        "title": "Legend",
+        "free": "Available",
+        "blocked": "Blocked",
+        "external": "Blocked by another channel",
+        "booked": "Booked",
+        "selected": "Selected"
+      },
+      "cell": {
+        "free": "{day} — available night",
+        "blocked": "{day} — blocked night",
+        "external": "{day} — blocked by another channel",
+        "booked": "{day} — booked",
+        "pending": "{day} — saving"
+      },
+      "selection": {
+        "prompt": "Select nights on the calendar.",
+        "summary": "{nights, plural, one {# night} other {# nights}}: {from} – check-out {to}",
+        "clear": "Clear selection",
+        "mixed": "The selection mixes free and taken nights, or spans more than one entry. Select only free nights, or the nights of a single entry.",
+        "pending": "Saving…"
+      },
+      "block": {
+        "heading": "Block nights",
+        "note": "Note (only for you)",
+        "notePlaceholder": "e.g. renovation, personal use",
+        "submit": "Block nights"
+      },
+      "book": {
+        "heading": "Record a booking",
+        "guestLabel": "Guest name (only for you)",
+        "guestLabelPlaceholder": "e.g. Maria Papadopoulou, phone",
+        "guests": "Guests",
+        "submit": "Record booking"
+      },
+      "entry": {
+        "blockTitle": "Blocked nights",
+        "externalTitle": "Blocked by another channel",
+        "externalHint": "These nights can only be opened by the channel that blocked them.",
+        "bookingTitle": "Booking",
+        "range": "{from} – check-out {to}",
+        "guests": "{count, plural, one {# guest} other {# guests}}",
+        "unblock": "Open nights",
+        "cancel": "Cancel booking",
+        "cancelled": "Cancelled"
+      },
+      "outcome": {
+        "saved": "Saved.",
+        "conflictBlock": "Not saved: it overlaps blocked nights ({from} – {to}).",
+        "conflictBooking": "Not saved: it overlaps a booking ({from} – {to}).",
+        "notAStay": "Not saved: the listing is no longer offered for short-term rental.",
+        "unreadable": "Not saved: a calendar entry cannot be read.",
+        "entryAbsent": "The entry no longer exists — the calendar was refreshed.",
+        "externalSource": "These nights can only be opened by the channel that blocked them.",
+        "lifecycle": "The booking is completed and cannot be cancelled.",
+        "absent": "Listing not found.",
+        "failed": "The change was not saved. Please try again."
+      }
     }
   },
   "mandate": {
@@ -1486,7 +1570,10 @@
       "explain": "A copy exactly as attested, kept by the platform — not even the agency can change or delete it.",
       "download": "Download",
       "digest": "SHA-256 fingerprint:",
-      "unavailable": "The form is not available right now. If your link has expired, ask the agency for a new one."
+      "unavailable": "The form is not available right now. If your link has expired, ask the agency for a new one.",
+      "retainedWhileLive": "Kept for as long as the relationship with the agency lasts and five calendar years after it ends (Greek Civil Code arts. 250, 253).",
+      "retainedUntil": "Locked until {date}; afterwards it is deleted and only the fingerprint remains.",
+      "disposed": "Deleted on {date}, after the statutory period. The fingerprint above remains as proof."
     }
   },
   "contact": {
