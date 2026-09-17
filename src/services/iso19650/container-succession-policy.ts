@@ -30,7 +30,7 @@
  */
 
 import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
-import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { successionIdentityOf } from '@/lib/files/succession-identity';
 
 /** Γιατί **δεν** δέχτηκε ο κριτής τη διαδοχή. **Κλειστό σύνολο, ονομασμένο.** */
@@ -39,7 +39,10 @@ export type SuccessionRefusalReason =
   | 'successor-missing'
   /** Το αρχείο που αντικαθίσταται είναι ήδη στον κάδο / αρχειοθετημένο — δεν «ξαναζωντανεύει». */
   | 'predecessor-not-active'
-  /** Ο διάδοχος δεν υπάρχει **ή** ανήκει σε άλλον μισθωτή — ένα όνομα, κανένα μαντείο ύπαρξης. */
+  /**
+   * Ο διάδοχος δεν υπάρχει · ανήκει σε άλλον κάτοχο · **ή ζει σε άλλο διαμέρισμα** (ADR-866) —
+   * **ένα** όνομα, κανένα μαντείο ύπαρξης.
+   */
   | 'successor-not-found'
   /** Ο διάδοχος δεν ολοκληρώθηκε (`pending`/`failed`) ή είναι διαγραμμένος. */
   | 'successor-not-ready'
@@ -60,7 +63,11 @@ export interface SuccessionQuery {
   readonly predecessorId: string;
   readonly successorId: string | undefined;
   readonly actorUid: string;
-  readonly actorCompanyId: string;
+  /**
+   * **Ο χώρος του αιτούντος** — εταιρεία ή ο ίδιος (ADR-866 §2.6.10 Β4). Ο διάδοχος πρέπει να
+   * ζει στον **ίδιο**: μια «έκδοση» που αλλάζει διαμέρισμα δεν είναι έκδοση, είναι μεταφορά.
+   */
+  readonly actorCustody: CustodyScope;
   /**
    * Έχει ο αιτών εξουσία **συντονιστή** (`iso19650:containers:withdraw`); Τότε αντικαθιστά
    * και έκδοση που ανέβασε **άλλος** — ο υπεύθυνος έργου τακτοποιεί το μητρώο.
@@ -71,7 +78,7 @@ export interface SuccessionQuery {
 
 export type SuccessionVerdict =
   | { readonly ok: true; readonly successorId: string }
-  | { readonly ok: false; readonly outcome: 'noop'; readonly why: 'self-succession' }
+  | { readonly ok: false; readonly outcome: 'noop'; readonly why: 'self-succession' | 'already-in-state' }
   | { readonly ok: false; readonly outcome: 'refused'; readonly why: SuccessionRefusalReason };
 
 function text(value: unknown): string | null {
@@ -135,10 +142,19 @@ export function judgeSuccession(query: SuccessionQuery): SuccessionVerdict {
 
   if (successorId === undefined || successorId.length === 0) return deny('successor-missing');
   if (successorId === query.predecessorId) return { ok: false, outcome: 'noop', why: 'self-succession' };
+  // ♻️ ADR-862 §5.3.7 — ιδεμποτησία **χωρίς** πράξη CDE. Στο καθεστώς `versions-only` δεν γράφεται
+  //    `cdeSupersession`, άρα το `already-in-state` του `judgeTransition` δεν πιάνει ποτέ· η απόδειξη ότι
+  //    «έγινε ήδη» είναι ο **δεσμός** του ίδιου διαδόχου. ⚠️ **Πριν** το `predecessor-not-active`: ο
+  //    προκάτοχος είναι πλέον αρχειοθετημένος, και η δεύτερη κλήση θα έβγαινε ψευδώς άρνηση.
+  if (text(predecessor.supersededByFileId) === successorId) {
+    return { ok: false, outcome: 'noop', why: 'already-in-state' };
+  }
   if (!isActive(predecessor)) return deny('predecessor-not-active');
 
-  const successorTenant = successor === null ? null : text(successor.companyId);
-  if (successor === null || !isPayloadOwnedByCompany({ companyId: successorTenant }, query.actorCompanyId)) {
+  // 🔑 ADR-866 §2.6.10 Β4 — **ίδιος κάτοχος**, για τα δύο διαμερίσματα, με **μία** σύγκριση:
+  //    ανύπαρκτος · ξένου μισθωτή · ξένου ανθρώπου · **άλλου διαμερίσματος** ⇒ το **ίδιο**
+  //    όνομα. Κανένα μαντείο ύπαρξης, και καμία «έκδοση» που δραπετεύει από τον χώρο της.
+  if (successor === null || !isOwnedByCustody(successor, query.actorCustody)) {
     return deny('successor-not-found');
   }
   if (successor.status !== FILE_STATUS.READY || !isActive(successor)) return deny('successor-not-ready');

@@ -45,12 +45,14 @@ import { transitionContainer } from '../container-transitions';
 const FILE_ID = 'file_reach_anchor';
 const COMPANY = 'c_alpha';
 const AUTHOR = 'u_author';
-const author = { uid: AUTHOR, companyId: COMPANY, globalRole: 'company_admin' as const };
+const author = { uid: AUTHOR, custody: { companyId: COMPANY }, globalRole: 'company_admin' as const };
 
 function seedFile(extra: Record<string, unknown> = {}): void {
   fake.seed(COLLECTIONS.FILES, FILE_ID, {
     id: FILE_ID,
     companyId: COMPANY,
+    // ADR-862 §5.3.7 — φάσεις CDE ΜΟΝΟ σε δοχείο έργου· χωρίς αυτό η άγκυρα θα ασκούσε το `versions-only`.
+    projectId: 'proj_cde',
     createdBy: AUTHOR,
     status: 'ready',
     revision: 2,

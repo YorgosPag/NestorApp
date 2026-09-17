@@ -16,12 +16,13 @@
  * όπου ο server **ξέρει** ποιος πράττει και έχει συναλλαγή.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * ⚠️ ΔΕΝ ΑΡΝΕΙΤΑΙ ΠΟΤΕ — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ
+ * ⚠️ Η ΣΦΡΑΓΙΣΗ ΔΕΝ ΑΡΝΕΙΤΑΙ — ΤΟ ΚΑΘΕΣΤΩΣ ΑΠΟΦΑΣΙΖΕΙ
  * ─────────────────────────────────────────────────────────────────────────────
  * Η αντικατάσταση έκδοσης (`supersede`) περνά από τον ίδιο γραφέα για **κάθε** αρχείο, και
  * μετρημένα 22 από 35 ζωντανά αρχεία **δεν** ζουν σε έργο (επαφές · αγγελίες ιδιοκτητών).
  * Άρνηση εδώ θα **έσπαγε** τη «νέα έκδοση» για όλα αυτά. ⇒ Σφραγίζεται **ό,τι λύνεται**· ό,τι
- * δεν λύνεται μένει όπως σήμερα — **δηλωμένο όριο** στο ADR-862 (δοχεία εκτός έργου).
+ * δεν λύνεται μπαίνει σε καθεστώς `versions-only` (ADR-862 §5.3.7, `container-regime-policy.ts`):
+ * εκδόσεις ναι, φάσεις όχι — ποτέ αόρατο αρχείο.
  *
  * 🔑 **Ομάδα = ο οργανισμός του μέλους** (ACC: WIP ανά εταιρεία) — διαβάζεται από το έγγραφο
  * μέλους **αυτού** του έργου, ποτέ από claim (OpenFGA: claims ζουν ως τη λήξη του token).
@@ -43,10 +44,22 @@ import { memberByUidQuery, projectMembersCollection } from '@/lib/auth/project-m
 import { resolveContainerProject, type ContainerProjectResolution } from '@/lib/files/container-project';
 import type { ContainerPhase } from '@/types/container-access';
 
-import type { ContainerActor } from './container-transition-policy';
+import { CDE_REGIME, PERSONAL_REGIME, regimeOfEntry, type ContainerRegime } from './container-regime-policy';
+import type { ContainerActor } from './container-transition-vocabulary';
 
 /** Τα πεδία προς σφράγιση — **κενό** αντικείμενο όταν δεν υπάρχει τίποτα να γραφτεί. */
 export type ContainerCustodyFields = Readonly<{ projectId?: string; cdeTeamId?: string }>;
+
+/**
+ * **Η είσοδος στο CDE** — τι σφραγίζεται **και** σε ποιο καθεστώς μπαίνει το δοχείο.
+ *
+ * 🔑 Από **μία** ανάλυση έργου (ADR-862 §5.3.7): το «σε ποιο έργο;» απαντά και τα δύο. Δεύτερη
+ * ανάγνωση της αλυσίδας για το καθεστώς θα μπορούσε να διαφωνήσει με τη σφράγιση μέσα στην ίδια πράξη.
+ */
+interface ContainerEntry {
+  readonly regime: ContainerRegime;
+  readonly fields: ContainerCustodyFields;
+}
 
 
 /** Το `projectId` που **ισχύει**, και αν πρέπει να **γραφτεί**. */
@@ -64,9 +77,12 @@ function projectFieldsOf(resolution: ContainerProjectResolution): {
 /**
  * **Τι σφραγίζεται στην είσοδο στο CDE** — μόνο αναγνώσεις, μέσα στη συναλλαγή του γραφέα.
  *
- * ⚠️ Μόνο από `pre-cde`: ένα δοχείο **ήδη** στο CDE έχει ήδη κριθεί, και αλλαγή έργου ή ομάδας
- * σε αυτό θα άλλαζε **εκ των υστέρων** ποιος το βλέπει. Αυτό είναι πράξη μετακίνησης, όχι
- * παρενέργεια μιας σφραγίδας.
+ * ⚠️ Μόνο από `pre-cde`: ένα δοχείο **ήδη** στο CDE έχει ήδη κριθεί, και αλλαγή έργου, ομάδας
+ * **ή καθεστώτος** σε αυτό θα άλλαζε **εκ των υστέρων** ποιος το βλέπει. Αυτό είναι πράξη
+ * μετακίνησης, όχι παρενέργεια μιας σφραγίδας ⇒ {@link CDE_REGIME}, χωρίς ανάγνωση.
+ *
+ * 🔑 Χωρίς έργο ⇒ `versions-only` (ADR-862 §5.3.7): ο γραφέας αρνείται τις πράξεις φάσης και
+ * γράφει μόνο τη διαδοχή.
  */
 export async function custodyOnEntry(
   transaction: Transaction,
@@ -74,16 +90,30 @@ export async function custodyOnEntry(
   raw: Readonly<Record<string, unknown>>,
   from: ContainerPhase,
   actor: ContainerActor,
-): Promise<ContainerCustodyFields> {
-  if (from !== 'pre-cde') return {};
+): Promise<ContainerEntry> {
+  // 🔑 ADR-866 Ε-Φ0-1 — **ο άνθρωπος πρώτος, και ΑΝΕΞΑΡΤΗΤΩΣ ΦΑΣΗΣ**: προσωπικό δοχείο δεν
+  //    αποκτά **ποτέ** φάση (ο κανόνας `files_personal` αρνείται κάθε κλειδί του
+  //    `cdeCustodyKeys()`), οπότε το «και `pre-cde`» θα ήταν συνθήκη που δεν μπορεί να
+  //    ψευδεί — δηλαδή θόρυβος που κρύβει τον πραγματικό λόγο. Καμία ανάγνωση: ο ιδιώτης
+  //    **δεν ρωτά καν** για έργο (μία ανάγνωση λιγότερη ανά πράξη, και κανένας ψευδής λόγος).
+  //
+  // ⚠️ **Τοπικό `const`, όχι `actor.custody.…` σε κάθε σημείο**: η στένωση της ένωσης πάνω σε
+  //    τοπική σταθερά επιβιώνει των `await` και **δεν** εξαρτάται από στένωση διαδρομής ιδιότητας.
+  const { custody } = actor;
+  if (custody.userId !== undefined) return { regime: PERSONAL_REGIME, fields: {} };
 
-  const { projectId, fields } = projectFieldsOf(await resolveContainerProject(transaction, db, raw));
-  if (projectId === null || text(raw.cdeTeamId) !== null) return fields;
+  if (from !== 'pre-cde') return { regime: CDE_REGIME, fields: {} };
 
-  const members = projectMembersCollection(db, actor.companyId, projectId);
+  const resolution = await resolveContainerProject(transaction, db, raw);
+  const regime = regimeOfEntry(resolution);
+  const { projectId, fields } = projectFieldsOf(resolution);
+  if (projectId === null || text(raw.cdeTeamId) !== null) return { regime, fields };
+
+  // ⚠️ Ο κλάδος είναι **αποδεδειγμένα** εταιρικός: ο προσωπικός κόπηκε στην πρώτη γραμμή.
+  const members = projectMembersCollection(db, custody.companyId, projectId);
   const member = (await transaction.get(memberByUidQuery(members, actor.uid))).docs[0];
   const team = text(member?.data().taskTeamId);
-  return team === null ? fields : { ...fields, cdeTeamId: team };
+  return { regime, fields: team === null ? fields : { ...fields, cdeTeamId: team } };
 }
 
 // =============================================================================

@@ -43,10 +43,12 @@
 
 import 'server-only';
 
-import type { DocumentReference, Transaction } from 'firebase-admin/firestore';
+import type { CollectionReference, DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import { custodyScopeFromData } from '@/lib/workspace/custody-scope';
 import { FILE_LIFECYCLE_STATES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -55,7 +57,7 @@ import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { decideCapability } from '@/lib/auth/authority';
 import { isGranted } from '@/types/capability-authority';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
-import type { AuthContext } from '@/lib/auth';
+import type { FileAuditAction, FileAuditMetadata } from '@/types/file-audit';
 import {
   ACT_SPEC,
   buildAct,
@@ -63,13 +65,13 @@ import {
   projectionFor,
   withAct,
   type ActSpec,
-  type ContainerActor,
   type ContainerRefusalReason,
   type ContainerTransitionOutcome,
   type ContainerTransitionRequest,
 } from './container-transition-policy';
 import { judgeSuccession } from './container-succession-policy';
 import { custodyOnEntry, type ContainerCustodyFields } from './container-custody';
+import { regimeRefusal } from './container-regime-policy';
 
 // ⚠️ **ΔΥΟ ΓΡΑΜΜΕΣ, ΟΧΙ ΜΙΑ** (ADR-806 §7 #1): το `export … from` **επανεξάγει, δεν
 //    εισάγει**, άρα το `import` από πάνω είναι ξεχωριστό και απαραίτητο. Η επανεξαγωγή
@@ -84,27 +86,12 @@ export type {
   ContainerTransitionRequest,
 } from './container-transition-policy';
 export { deriveCdeState, judgeTransition, projectionFor } from './container-transition-policy';
+// ⚠️ Οι **κατασκευαστές δράστη** εξήχθησαν στο λεξιλόγιο (N.7.1: ο γραφέας έφτασε 494/500 με το
+//    ADR-866 2β.3β) — εκεί που ζει ήδη ο τύπος `ContainerActor`. Επανεξάγονται ώστε οι δύο
+//    υπάρχουσες διαδρομές να μείνουν **ανέγγιχτες**.
+export { containerActorOf, personalContainerActorOf } from './container-transition-vocabulary';
 
 const logger = createModuleLogger('ContainerTransitions');
-
-/**
- * **Ο αιτών, από ήδη επαληθευμένη ταυτότητα** — μία κατασκευή για κάθε διαδρομή που ζητά πράξη.
- *
- * 🔑 ADR-801 Φ3γ — οι **ρητά δοσμένες** ικανότητες του claim ταξιδεύουν μαζί. Χωρίς αυτές, η
- * προ-εξουσιοδότηση του Ε-12 (απελευθέρωση σε ονομασμένο μελετητή) θα ήταν γραμμένη και
- * **ανενεργή**: ο κριτής θα έκρινε μόνο από ρόλο.
- *
- * ⚠️ Εξήχθη όταν τη χρειάστηκε **δεύτερη** διαδρομή (ADR-862 Φ0 Β10: η δημοσίευση μοντέλου
- * αρχειοθετεί τους προκατόχους) — δεύτερο χειρόγραφο αντίγραφο θα ήταν ο N.18.
- */
-export function containerActorOf(ctx: AuthContext): ContainerActor {
-  return {
-    uid: ctx.uid,
-    companyId: ctx.companyId,
-    globalRole: ctx.globalRole,
-    permissions: ctx.permissions,
-  };
-}
 
 // =============================================================================
 // Η ΓΡΑΦΗ
@@ -183,6 +170,30 @@ function writeTransition(
   };
 }
 
+/**
+ * 🔁 **Η ΜΙΑ γραφή της διαδοχής ΧΩΡΙΣ φάση** — δοχείο εκτός έργου (ADR-862 §5.3.7).
+ *
+ * 🔑 Γράφει **μόνο** τα ουδέτερα πεδία διαδοχής ({@link archivalFieldsOf}): δεσμός · χρόνος ·
+ * αρχειοθέτηση · ποιος. **Κανένα** `cde*`: ο προκάτοχος μένει `pre-cde` ⇒ ο θεματοφύλακας τον
+ * διαβάζει «όπως σήμερα», η στοίβα εκδόσεων τον βρίσκει από τον δεσμό, και κανείς κριτής δεν ζητά
+ * μέλος έργου που δεν υπάρχει.
+ *
+ * ⚠️ **Όχι `cdeSupersession`**: πράξη CDE χωρίς `cdeState` = `act-without-declared-state` ⇒ **αόρατο**.
+ * Η απόδειξη *(ποιος · πότε · ποιος διάδοχος)* είναι ήδη πλήρης στα ουδέτερα πεδία.
+ */
+function writeSuccession(
+  transaction: Transaction,
+  ref: DocumentReference,
+  request: ContainerTransitionRequest,
+  supersededByFileId: string,
+): ContainerTransitionOutcome {
+  transaction.update(ref, {
+    ...archivalFieldsOf({ ...request, supersededByFileId }, nowISO()),
+    updatedAt: nowISO(),
+  });
+  return { kind: 'succeeded', fileId: request.fileId, act: 'supersede', supersededByFileId };
+}
+
 // =============================================================================
 // Ο ΓΡΑΦΕΑΣ
 // =============================================================================
@@ -207,21 +218,27 @@ export async function transitionContainer(
   request: ContainerTransitionRequest,
 ): Promise<ContainerTransitionOutcome> {
   const spec = ACT_SPEC[request.act];
+  // 🔑 ADR-866 — ο προσωπικός χώρος **δεν έχει οργανισμό**, άρα ούτε ικανότητες οργανισμού.
+  //    Εκεί η εξουσία είναι η **ιδιοκτησία** (βήμα 2) — δες `personalContainerActorOf`.
+  const organisational = request.actor.custody.userId === undefined;
 
-  // (4) Ο αδελφός κριτής — καθαρός, σύγχρονος, χωρίς I/O.
-  if (!isGranted(decideCapability({ subject: request.actor, action: spec.capability }).verdict)) {
+  // (4) Ο αδελφός κριτής — καθαρός, σύγχρονος, χωρίς I/O. **Μόνο** για εταιρικό χώρο.
+  if (organisational && !isGranted(decideCapability({ subject: request.actor, action: spec.capability }).verdict)) {
     return refusal(request, 'not-capable');
   }
 
   // 🔑 Β10 — ο συντονιστής (εξουσία απόσυρσης) τακτοποιεί και εκδόσεις **άλλων**. Κρίνεται
   //    από τον **ΕΝΑ** κριτή, εδώ, και φτάνει στην καθαρή κρίση ως γεγονός.
+  // 🔴 **Ποτέ στον προσωπικό χώρο**: δεν υπάρχει συντονιστής σε φάκελο ενός ανθρώπου ⇒ ο
+  //    διάδοχος πρέπει να είναι **δικός του** (`not-successor-author`), χωρίς εξαίρεση.
   const actsForOthers =
+    organisational &&
     request.act === 'supersede' &&
     isGranted(decideCapability({ subject: request.actor, action: ACT_SPEC.withdraw.capability }).verdict);
 
   try {
     const outcome = await runTransition(request, spec, actsForOthers);
-    if (outcome.kind === 'transitioned') recordTrace(request, outcome);
+    recordTrace(request, outcome);
     return outcome;
   } catch (error: unknown) {
     // ⚠️ Πραγματική **βλάβη** (δίκτυο, σύγκρουση που δεν έκλεισε) — ποτέ άρνηση
@@ -234,6 +251,22 @@ export async function transitionContainer(
     });
     throw error;
   }
+}
+
+/**
+ * 🗂️ **ΤΟ ΔΙΑΜΕΡΙΣΜΑ ΤΟΥ ΑΙΤΗΜΑΤΟΣ** — από τον **κάτοχο του δράστη**, ποτέ από δεύτερη δήλωση
+ * (ADR-866 §2.6.10): ο δράστης πράττει σε **έναν** χώρο, το έγγραφο ζει σε **έναν** χώρο, και ο
+ * κριτής (βήμα 2, `isOwnedByCustody`) απαιτεί να είναι **ο ίδιος**. Δεύτερο πεδίο `custody` στο
+ * αίτημα θα μπορούσε να διαφωνήσει με τον δράστη — και τότε θα διαβάζαμε στο ένα διαμέρισμα ό,τι
+ * κρίναμε για το άλλο.
+ *
+ * 🔴 **`COLLECTIONS[FILE_COLLECTION[kind]]` ΕΔΩ, ΟΧΙ ΠΕΡΙΤΥΛΙΓΜΑ** (`lib/files/file-custody`): οι
+ * πύλες 3.15 (δείκτες) · 3.35 (μισθωτής) · 3.87 (CDE) διαβάζουν **αυτή** τη μορφή και ελέγχουν
+ * έναν κλάδο ανά κάτοχο. Συνάρτηση-περιτύλιγμα τις ξανάκανε τυφλές.
+ */
+function filesOf(db: Firestore, request: ContainerTransitionRequest): CollectionReference {
+  const kind = request.actor.custody.userId !== undefined ? 'personal' : 'company';
+  return db.collection(COLLECTIONS[FILE_COLLECTION[kind]]);
 }
 
 /** Η άρνηση, **μία φορά** — ώστε να μην ξαναγράφεται σε κάθε σημείο που κόβει. */
@@ -257,7 +290,7 @@ function runTransition(
   actsForOthers: boolean,
 ): Promise<ContainerTransitionOutcome> {
   const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.FILES).doc(request.fileId);
+  const ref = filesOf(db, request).doc(request.fileId);
 
   return db.runTransaction<ContainerTransitionOutcome>(async (transaction) => {
     const snapshot = await transaction.get(ref);
@@ -275,17 +308,23 @@ function runTransition(
       request.act === 'supersede' ? await successionBlock(transaction, raw, request, actsForOthers) : null;
     if (succession !== null && succession.blocked !== null) return succession.blocked;
 
-    // 🔑 Β14 — έργο + ομάδα στην είσοδο στο CDE. **Αναγνώσεις**, άρα πριν από κάθε εγγραφή.
-    const custody = await custodyOnEntry(transaction, db, raw, verdict.from, request.actor);
+    // 🔑 Β14 — έργο + ομάδα στην είσοδο στο CDE, **και** το καθεστώς (§5.3.7) από την ΙΔΙΑ
+    //    ανάλυση. **Αναγνώσεις**, άρα πριν από κάθε εγγραφή.
+    const entry = await custodyOnEntry(transaction, db, raw, verdict.from, request.actor);
+    const outsideRegime = regimeRefusal(request.act, entry.regime);
+    if (outsideRegime !== null) return refusal(request, outsideRegime);
 
     // 🔑 Ο διάδοχος γεννιέται ΜΟΝΟ αφού κριθεί, στην ΙΔΙΑ συναλλαγή με την αρχειοθέτηση
     //    του προκατόχου: καμία στιγμή με δύο ενεργές εκδόσεις της ίδιας θέσης. Κληρονομεί
     //    ό,τι σφραγίστηκε μόλις — αλλά ό,τι δηλώνει **ήδη** η εγγραφή του νικά.
     if (succession !== null && succession.birth !== null) {
-      transaction.set(succession.birth.ref, { ...custody, ...succession.birth.record });
+      transaction.set(succession.birth.ref, { ...entry.fields, ...succession.birth.record });
     }
 
-    return writeTransition(transaction, ref, request, spec, verdict, custody);
+    if (entry.regime.kind === 'versions-only' && succession !== null) {
+      return writeSuccession(transaction, ref, request, succession.successorId);
+    }
+    return writeTransition(transaction, ref, request, spec, verdict, entry.fields);
   });
 }
 
@@ -310,14 +349,19 @@ async function successionBlock(
   actsForOthers: boolean,
 ): Promise<SuccessionJudgement> {
   const successorId = request.supersededByFileId;
+  // 🔑 Ο διάδοχος ζητείται στο **ίδιο** διαμέρισμα με τον προκάτοχο: «έκδοση» που αλλάζει
+  //    διαμέρισμα δεν είναι έκδοση. Ό,τι ζει αλλού φαίνεται ως `successor-not-found`.
   const successorRef =
     successorId === undefined || successorId === request.fileId
       ? null
-      : getAdminFirestore().collection(COLLECTIONS.FILES).doc(successorId);
+      : filesOf(getAdminFirestore(), request).doc(successorId);
   const successorSnap = successorRef === null ? null : await transaction.get(successorRef);
   const stored = successorSnap?.exists ? ((successorSnap.data() ?? {}) as Record<string, unknown>) : null;
-  // Claim του Storage (`public-upload.service`) = ύπαρξη χωρίς μισθωτή — ΟΧΙ FileRecord.
-  const born = stored !== null && typeof stored.companyId === 'string';
+  // Claim του Storage (`public-upload.service`) = ύπαρξη **χωρίς κάτοχο** — ΟΧΙ FileRecord.
+  // 🔴 ADR-866 §2.6.10 Β5: εδώ ρωτούσε `typeof stored.companyId === 'string'`, που σε προσωπικό
+  //    διάδοχο είναι **πάντα false** ⇒ ο γραφέας θα τον θεωρούσε αγέννητο και θα τον **ξανάγραφε
+  //    πάνω του**, σβήνοντας πεδία. «Γεννημένο» = **έχει κάτοχο**, με το κοινό σύνορο.
+  const born = stored !== null && custodyScopeFromData(stored) !== null;
   const birth = request.successorBirth !== undefined && !born && successorRef !== null
     ? { ref: successorRef, record: request.successorBirth }
     : null;
@@ -328,10 +372,10 @@ async function successionBlock(
     predecessorId: request.fileId,
     successorId,
     actorUid: request.actor.uid,
-    actorCompanyId: request.actor.companyId,
+    actorCustody: request.actor.custody,
     actsForOthers,
   });
-  if (verdict.ok) return { blocked: null, birth };
+  if (verdict.ok) return { blocked: null, birth, successorId: verdict.successorId };
   return {
     blocked: verdict.outcome === 'noop'
       ? { kind: 'noop', fileId: request.fileId, act: request.act, why: verdict.why }
@@ -341,10 +385,14 @@ async function successionBlock(
 }
 
 /** Η έκβαση της κρίσης διαδοχής: άρνηση/noop **ή** (προαιρετική) γέννηση προς εγγραφή. */
-interface SuccessionJudgement {
-  readonly blocked: ContainerTransitionOutcome | null;
-  readonly birth: { readonly ref: DocumentReference; readonly record: Readonly<Record<string, unknown>> } | null;
-}
+type SuccessionJudgement =
+  | { readonly blocked: ContainerTransitionOutcome; readonly birth: null }
+  | {
+      readonly blocked: null;
+      readonly birth: { readonly ref: DocumentReference; readonly record: Readonly<Record<string, unknown>> } | null;
+      /** Ο **αποδεδειγμένος** διάδοχος — ποτέ ο ισχυρισμός του σώματος. */
+      readonly successorId: string;
+    };
 
 // =============================================================================
 // ΤΟ ΗΜΕΡΟΛΟΓΙΟ — ΜΕΤΑ ΤΟ COMMIT, ΜΗ-ΜΠΛΟΚΑΡΟΝ
@@ -359,30 +407,54 @@ interface SuccessionJudgement {
  * αναθεώρηση)* είναι το `cdeSeal` **πάνω στο έγγραφο**, γραμμένο **ατομικά** στο (8)
  * και αμετάβλητο από τους κανόνες (Β4). Αυτό εδώ είναι η **προβολή** του.
  */
-function recordTrace(
-  request: ContainerTransitionRequest,
-  outcome: Extract<ContainerTransitionOutcome, { kind: 'transitioned' }>,
-): void {
+function recordTrace(request: ContainerTransitionRequest, outcome: ContainerTransitionOutcome): void {
+  const trace = traceOf(request, outcome);
+  if (trace === null) return;
+  // 🔶 ADR-866 2β.4 — **το `FILE_AUDIT_LOG` δεν έχει προσωπικό διαμέρισμα** (ο `recordFileAudit`
+  //    απαιτεί μη κενό `companyId`, και ο αναγνώστης φιλτράρει `where('companyId','==',…)`). Μια
+  //    γραμμή με ψεύτικη ή κενή εταιρεία θα ήταν **αόρατη** — δηλαδή ίχνος που κανείς δεν διαβάζει,
+  //    με το κόστος να μοιάζει γραμμένο. ⇒ Σιωπή **δηλωμένη**, ίδιο δόγμα με το `logForCustody`
+  //    (2β.2) και το `recordPurgeAudit` (2β.3α). Ο φρουρός φεύγει στο 2β.4, μαζί με τους άλλους δύο.
+  const { custody } = request.actor;
+  if (custody.userId !== undefined) return;
   safeFireAndForget(
     recordFileAudit({
       fileId: outcome.fileId,
-      action: ACT_SPEC[outcome.act].audit,
+      action: trace.action,
       performedBy: request.actor.uid,
-      companyId: request.actor.companyId,
-      metadata: {
-        from: outcome.from,
-        to: outcome.to,
-        revision: outcome.revision,
-        ...(request.suitabilityCode === undefined
-          ? {}
-          : { suitabilityCode: request.suitabilityCode }),
-        ...(request.reason === undefined ? {} : { reason: request.reason }),
-        ...(request.supersededByFileId === undefined
-          ? {}
-          : { supersededByFileId: request.supersededByFileId }),
-      },
+      companyId: custody.companyId,
+      metadata: trace.metadata,
     }),
     'ContainerTransitions.recordTrace',
     { fileId: outcome.fileId, act: outcome.act },
   );
+}
+
+/**
+ * **Τι καταγράφεται** για κάθε έκβαση — `null` όταν δεν έγινε τίποτα (noop · άρνηση).
+ *
+ * 🔑 ADR-862 §5.3.7: διαδοχή **χωρίς** φάση ⇒ `version_supersede`, **ποτέ** `cde_supersede` — το
+ * ημερολόγιο δεν επιτρέπεται να ισχυριστεί μετάβαση ISO 19650 που δεν έγινε.
+ */
+function traceOf(
+  request: ContainerTransitionRequest,
+  outcome: ContainerTransitionOutcome,
+): { readonly action: FileAuditAction; readonly metadata: FileAuditMetadata } | null {
+  if (outcome.kind === 'succeeded') {
+    return { action: 'version_supersede', metadata: { supersededByFileId: outcome.supersededByFileId } };
+  }
+  if (outcome.kind !== 'transitioned') return null;
+  return {
+    action: ACT_SPEC[outcome.act].audit,
+    metadata: {
+      from: outcome.from,
+      to: outcome.to,
+      revision: outcome.revision,
+      ...(request.suitabilityCode === undefined ? {} : { suitabilityCode: request.suitabilityCode }),
+      ...(request.reason === undefined ? {} : { reason: request.reason }),
+      ...(request.supersededByFileId === undefined
+        ? {}
+        : { supersededByFileId: request.supersededByFileId }),
+    },
+  };
 }

@@ -55,7 +55,8 @@ const SLOT = {
 
 function predecessorDoc(extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    id: PREV, companyId: COMPANY, createdBy: ARCHITECT, status: 'ready', lifecycleState: 'active',
+    // ADR-862 §5.3.7 — `projectId` ⇒ καθεστώς `cde`· η διαδοχή ΕΚΤΟΣ έργου κλειδώνεται στην Α33.
+    id: PREV, companyId: COMPANY, projectId: 'proj_cde', createdBy: ARCHITECT, status: 'ready', lifecycleState: 'active',
     isDeleted: false, createdAt: '2026-09-01T10:00:00.000Z', ...SLOT, ...extra,
   };
 }
@@ -74,7 +75,7 @@ function query(overrides: Partial<SuccessionQuery> = {}): SuccessionQuery {
     predecessorId: PREV,
     successorId: NEXT,
     actorUid: ARCHITECT,
-    actorCompanyId: COMPANY,
+    actorCustody: { companyId: COMPANY },
     actsForOthers: false,
     ...overrides,
   };
@@ -168,8 +169,8 @@ function stored(id: string): Record<string, unknown> {
   return fake.all<Record<string, unknown>>(COLLECTIONS.FILES).find((doc) => doc.id === id) ?? {};
 }
 
-const architect = { uid: ARCHITECT, companyId: COMPANY, globalRole: 'architect' as const };
-const supersede = (actor: { uid: string; companyId: string; globalRole: string }) =>
+const architect = { uid: ARCHITECT, custody: { companyId: COMPANY }, globalRole: 'architect' as const };
+const supersede = (actor: { uid: string; custody: { companyId: string }; globalRole: string }) =>
   transitionContainer({
     fileId: PREV,
     act: 'supersede',
@@ -246,14 +247,14 @@ describe('Α20 — η εξουσία: όποιος ανεβάζει, όχι μό
 
   it('✅ Α20.16 — ΣΥΝΤΟΝΙΣΤΗΣ τακτοποιεί έκδοση άλλου', async () => {
     seedPair({}, { createdBy: OTHER });
-    const coordinator = { uid: 'u_pm', companyId: COMPANY, globalRole: 'company_admin' };
+    const coordinator = { uid: 'u_pm', custody: { companyId: COMPANY }, globalRole: 'company_admin' };
 
     expect(await supersede(coordinator)).toMatchObject({ kind: 'transitioned' });
   });
 
   it('🔴 Α20.17 — ρόλος ανάγνωσης ⇒ not-capable, ΠΡΙΝ κάθε ανάγνωση', async () => {
     seedPair({ createdBy: 'u_viewer' }, { createdBy: 'u_viewer' });
-    const viewer = { uid: 'u_viewer', companyId: COMPANY, globalRole: 'viewer' };
+    const viewer = { uid: 'u_viewer', custody: { companyId: COMPANY }, globalRole: 'viewer' };
 
     expect(await supersede(viewer)).toMatchObject({ kind: 'refused', why: 'not-capable' });
   });
