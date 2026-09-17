@@ -35,11 +35,10 @@ import {
   readContainerState,
   deriveSuitability,
 } from '@/lib/files/file-record-read';
-import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { isOwnedByCustody } from '@/lib/workspace/custody-scope';
 import { readReachForState } from '@/lib/auth/container-read-reach';
 import type { CdeReadReach, CdeState, SuitabilityCode } from '@/config/iso19650-constants';
 import type { PermissionId } from '@/lib/auth/types';
-import type { CapabilitySubject } from '@/types/capability-authority';
 import type { FileAuditAction } from '@/types/file-audit';
 import type {
   ContainerActRecord,
@@ -47,111 +46,22 @@ import type {
   ContainerPhase,
   ContainerState,
 } from '@/types/container-access';
-import type { SuccessionRefusalReason } from './container-succession-policy';
+import type {
+  ContainerAct,
+  ContainerNoopReason,
+  ContainerRefusalReason,
+  ContainerTransitionRequest,
+} from './container-transition-vocabulary';
 
-// =============================================================================
-// ΤΟ ΛΕΞΙΛΟΓΙΟ
-// =============================================================================
-
-/**
- * Οι πέντε πράξεις. **Κλειστό σύνολο** — έκτη δεν μεταγλωττίζεται χωρίς γραμμή.
- *
- * 🔑 `supersede` (ADR-862 Φ0 Β10): **νέα έκδοση** πήρε τη θέση — συνέπεια ανεβάσματος, όχι
- * κρίση συντονιστή. Δες `container-succession-policy.ts` για την απόδειξη που απαιτεί.
- */
-export type ContainerAct = 'share' | 'seal' | 'release' | 'withdraw' | 'supersede';
-
-/**
- * Ποιος ζητά την πράξη.
- *
- * ⚠️ **Ταυτότητα ήδη επαληθευμένη** — το `AuthContext` του `withAuth`. Κανένας από τους
- * δύο μας **δεν** διαβάζει κανάλι και **δεν** εμπιστεύεται είσοδο πελάτη.
- */
-export interface ContainerActor extends CapabilitySubject {
-  readonly uid: string;
-  readonly companyId: string;
-}
-
-export interface ContainerTransitionRequest {
-  readonly fileId: string;
-  readonly act: ContainerAct;
-  readonly actor: ContainerActor;
-  /** **Μόνο στη σφραγίδα** — το «permitted use» που δηλώνει ο μελετητής. */
-  readonly suitabilityCode?: SuitabilityCode;
-  /** **Μόνο στην απόσυρση** — γιατί αποσύρθηκε. */
-  readonly reason?: string;
-  /** **Μόνο στην αντικατάσταση** — ποιο αρχείο παίρνει τη θέση. Κρίνεται, δεν πιστεύεται. */
-  readonly supersededByFileId?: string;
-  /**
-   * **Μόνο στην αντικατάσταση** — ο διάδοχος **γεννιέται μέσα στην ίδια συναλλαγή** (ADR-862 Φ0,
-   * «Ορισμός ως τρέχουσας»). Κρίνεται από τον `judgeSuccession` **όπως θα γραφτεί**, και γράφεται
-   * μόνο αν η κρίση περάσει ⇒ δύο «τρέχουσες» εκδόσεις είναι **δομικά αδύνατες**, ούτε για μια στιγμή.
-   * Απόν ⇒ ο διάδοχος πρέπει να υπάρχει ήδη (η ροή ανεβάσματος του Β10).
-   */
-  readonly successorBirth?: Readonly<Record<string, unknown>>;
-}
-
-/**
- * Γιατί **δεν** έγινε η πράξη. **Κλειστό σύνολο, ονομασμένο.**
- *
- * ⚠️ **ΠΟΤΕ ρίψη για «δεν επιτρέπεται»**: μια άρνηση πολιτικής είναι **τιμή**, όχι
- * σφάλμα. Εξαίρεση θα ανάγκαζε τον καλούντα να τη διακρίνει από πραγματική βλάβη με
- * `instanceof` — και ο επόμενος θα την έπιανε σε `catch` που γυρίζει **500** αντί για
- * «δεν επιτρέπεται». Ίδιο δόγμα με τις ετυμηγορίες των δύο κριτών.
- */
-export type ContainerRefusalReason =
-  /** Το έγγραφο δεν υπάρχει — ή ο αιτών δεν δικαιούται να μάθει ότι υπάρχει. */
-  | 'not-found'
-  /** Ξένος μισθωτής. Το κενό **δεν είναι** tenant (ADR-742 §4). */
-  | 'tenant-mismatch'
-  /** Η κατάσταση δεν διαβάζεται ⇒ **fail-closed**, καμία πράξη πάνω σε άγνωστο. */
-  | 'unreadable'
-  /** Ο `decideCapability` είπε όχι. */
-  | 'not-capable'
-  /** 🔴 Σφραγίδα από **μη-δημιουργό**. Ισχύει **ακόμη και για τον υπερδιαχειριστή**. */
-  | 'not-author'
-  /** Η πράξη δεν έχει νόημα σε αυτή τη φάση (π.χ. σφραγίδα αποσυρμένου). */
-  | 'wrong-phase'
-  /** Απελευθέρωση **χωρίς** σφραγίδα δημιουργού (ADR-862 Α17 μετάλλαξη γ). */
-  | 'seal-missing'
-  /** Η σφραγίδα δείχνει σε **άλλη** αναθεώρηση (Α17 μετάλλαξη α). */
-  | 'revision-moved'
-  /** Η αντικατάσταση **δεν αποδείχθηκε** (ADR-862 Φ0 Β10) — δες το όνομα. */
-  | SuccessionRefusalReason;
-
-/**
- * Γιατί η πράξη ήταν **περιττή** — ιδεμποτησία (N.7.2 #3), όχι αποτυχία.
- * `self-succession`: το αρχείο δεν διαδέχεται τον εαυτό του.
- */
-export type ContainerNoopReason = 'already-in-state' | 'self-succession';
-
-/**
- * Η έκβαση — **ονομασμένη ένωση**, ποτέ `boolean`, ποτέ σιωπή.
- *
- * 🔑 Το `fileId` επιστρέφεται **ρητά**, ώστε ένα «έγινε» να μην μπορεί ποτέ να
- * αποδοθεί σε **άλλο** αρχείο από αυτό που ζητήθηκε (πρότυπο `ContainerAccessDecision`).
- */
-export type ContainerTransitionOutcome =
-  | {
-      readonly kind: 'transitioned';
-      readonly fileId: string;
-      readonly act: ContainerAct;
-      readonly from: ContainerPhase;
-      readonly to: CdeState;
-      readonly revision: number;
-    }
-  | {
-      readonly kind: 'noop';
-      readonly fileId: string;
-      readonly act: ContainerAct;
-      readonly why: ContainerNoopReason;
-    }
-  | {
-      readonly kind: 'refused';
-      readonly fileId: string;
-      readonly act: ContainerAct;
-      readonly why: ContainerRefusalReason;
-    };
+// ⚠️ Το λεξιλόγιο εξήχθη (N.7.1, ADR-862 §5.3.7)· επανεξάγεται ώστε κανένας καταναλωτής να μην αλλάξει.
+export type {
+  ContainerAct,
+  ContainerActor,
+  ContainerNoopReason,
+  ContainerRefusalReason,
+  ContainerTransitionOutcome,
+  ContainerTransitionRequest,
+} from './container-transition-vocabulary';
 
 // =============================================================================
 // Ο ΠΙΝΑΚΑΣ ΤΩΝ ΠΡΑΞΕΩΝ — ΔΕΔΟΜΕΝΑ, ΠΟΤΕ ΑΛΥΣΙΔΑ `if`
@@ -445,19 +355,23 @@ export function judgeTransition(
   const deny = (why: ContainerRefusalReason): TransitionVerdict =>
     ({ ok: false, outcome: 'refused', why });
 
-  // (2) Ξένος μισθωτής — η **ΜΙΑ** σύγκριση (`lib/auth/tenant-ownership`, ADR-742).
+  // (2) **Ξένος κάτοχος** — η **ΜΙΑ** σύγκριση (`lib/workspace/custody-scope`, ADR-866 §2.6.10 Β4).
   //
   // 🔴 **ΓΙΑΤΙ ΟΧΙ `raw.companyId !== actor.companyId`**: το σχόλιο έλεγε τον σωστό κανόνα
   //    («το κενό δεν είναι tenant») και ο κώδικας από κάτω έκανε το **αντίθετο** — όταν
   //    **και τα δύο** λείπουν, το `!==` δίνει `false`, δηλαδή **περνά**. Ακριβώς το
   //    σφάλμα που το μητρώο καταγράφει ως «a real bug fixed for free» όταν οι τέσσερις
-  //    χειρόγραφες μορφές ενοποιήθηκαν. Το κενό είναι **απουσία** μισθωτή, ποτέ ταίριασμα.
+  //    χειρόγραφες μορφές ενοποιήθηκαν. Το κενό είναι **απουσία** κατόχου, ποτέ ταίριασμα.
   //
-  // ⚠️ Ο στενωτής είναι ρητός επειδή το `raw` είναι `Record<string, unknown>`: ό,τι δεν
-  //    είναι συμβολοσειρά **είναι** απουσία — ίδιο ιδίωμα με τα `readContainerState`/
-  //    `readContainerActs` από κάτω, και **χωρίς** `as` (N.2).
-  const docTenant = typeof raw.companyId === 'string' ? raw.companyId : null;
-  if (!isPayloadOwnedByCompany({ companyId: docTenant }, actor.companyId)) {
+  // 🔑 **ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ, ΜΙΑ ΕΡΩΤΗΣΗ** (ADR-866): ο κάτοχος είναι εταιρεία **ή** άνθρωπος,
+  //    και το `isOwnedByCustody` απαντά και για τους δύο — **ποτέ** δεύτερος κλάδος εδώ, που
+  //    θα μπορούσε να διαφωνήσει με τον πρώτο. Το **διαμέρισμα** κρίνεται πριν την ταυτότητα:
+  //    εταιρικό έγγραφο δεν ανήκει σε άνθρωπο ούτε όταν τα ids συμπίπτουν.
+  //
+  // ⚠️ Το όνομα της άρνησης μένει `tenant-mismatch` **επίτηδες**: είναι το ίδιο **ονομασμένο**
+  //    «δεν είναι δικό σου» για τα δύο διαμερίσματα, και μετονομασία θα άλλαζε το σύρμα και τα
+  //    κλειδιά i18n χωρίς να προσθέσει πληροφορία στον αιτούντα (βλέπει ούτως ή άλλως 404).
+  if (!isOwnedByCustody(raw, actor.custody)) {
     return deny('tenant-mismatch');
   }
 

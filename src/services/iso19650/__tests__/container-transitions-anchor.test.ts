@@ -50,15 +50,17 @@ const COMPANY = 'c_alpha';
 const AUTHOR = 'u_author';
 
 /** Ο δημιουργός — `company_admin`, άρα κατέχει και τις τέσσερις ικανότητες. */
-const author = { uid: AUTHOR, companyId: COMPANY, globalRole: 'company_admin' as const };
+const author = { uid: AUTHOR, custody: { companyId: COMPANY }, globalRole: 'company_admin' as const };
 
 /** Άλλος άνθρωπος, **με τον ανώτατο ρόλο του συστήματος**. */
-const superAdmin = { uid: 'u_super', companyId: COMPANY, globalRole: 'super_admin' as const };
+const superAdmin = { uid: 'u_super', custody: { companyId: COMPANY }, globalRole: 'super_admin' as const };
 
 function seedFile(extra: Record<string, unknown> = {}): void {
   fake.seed(COLLECTIONS.FILES, FILE_ID, {
     id: FILE_ID,
     companyId: COMPANY,
+    // ADR-862 §5.3.7 — φάσεις CDE ΜΟΝΟ σε δοχείο έργου· χωρίς αυτό η άγκυρα θα ασκούσε το `versions-only`.
+    projectId: 'proj_cde',
     createdBy: AUTHOR,
     status: 'ready',
     revision: 2,
@@ -265,7 +267,7 @@ describe('Α17 — απομόνωση μισθωτή', () => {
     const outcome = await transitionContainer({
       fileId: FILE_ID,
       act: 'share',
-      actor: { ...author, companyId: 'c_other' },
+      actor: { ...author, custody: { companyId: 'c_other' } },
     });
 
     expect(outcome).toMatchObject({ kind: 'refused', why: 'tenant-mismatch' });
