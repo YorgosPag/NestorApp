@@ -38,6 +38,7 @@
  * @see ADR-787 Κ-4 · ADR-862 Φ0
  */
 
+import { trimmedStringOrNull as text } from '@/lib/type-guards';
 import type { CdeState, SuitabilityCode } from '@/config/iso19650-constants';
 import { readReachFor } from '@/lib/auth/container-read-reach';
 import { fieldToISO } from '@/lib/date-local';
@@ -61,21 +62,6 @@ import type {
 // ΑΤΟΜΑ
 // =============================================================================
 
-/**
- * «Μη κενή συμβολοσειρά, αλλιώς `null`».
- *
- * ⚠️ **ΤΟΠΙΚΟ ΕΠΙΤΗΔΕΣ.** Το μόνο υπάρχον `text()` ζει στο
- * `lib/agency/showcase-read-primitives` και το ίδιο του το docblock το ορίζει ως
- * **leaf της οικογένειας βιτρίνας**. Εισαγωγή από τον τομέα των **μεσιτικών
- * προφίλ** σε θεματοφύλακα **αρχείων** θα έδενε δύο άσχετους τομείς για τρεις
- * γραμμές. Κάτω από το κατώφλι των **50 tokens** του CHECK 3.28 — δεν είναι ο
- * δομικός κλώνος που ο N.18 υπάρχει να πιάνει.
- */
-function text(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
 
 /** Πεπερασμένος αριθμός, αλλιώς `null` — το `NaN` **δεν** είναι αναθεώρηση. */
 function finiteNumber(value: unknown): number | null {

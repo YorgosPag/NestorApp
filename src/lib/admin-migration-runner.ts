@@ -64,9 +64,24 @@ export type MigrationRun = (
   opts: { dryRun: boolean },
 ) => Promise<MigrationOutcome>;
 
+/**
+ * The ONE rate-limit tier every migration route runs under (`withSensitiveRateLimit` below).
+ *
+ * ADR-862 Φ0 Β14 · CHECK 3.78 (ADR-855): a route built by this factory hides its tier from the
+ * reader of its own `route.ts`. A route may now STATE it (`category: MIGRATION_RATE_LIMIT_CATEGORY`
+ * or the literal) — and the literal type makes a lying declaration impossible: any other value
+ * does not compile, because this factory enforces exactly one tier.
+ */
+export const MIGRATION_RATE_LIMIT_CATEGORY = 'SENSITIVE' as const;
+
 export interface MigrationDefinition {
   /** Audit action name, e.g. 'backfill-file-companyid'. */
   name: string;
+  /**
+   * Optional, visible-in-review declaration of the enforced tier. Typed as the single value the
+   * factory enforces, so it can never disagree with `withSensitiveRateLimit` (CHECK 3.78).
+   */
+  category?: typeof MIGRATION_RATE_LIMIT_CATEGORY;
   /** RBAC permission (default 'admin:migrations:execute'). */
   permissions?: string;
   /** The actual migration — receives Admin Firestore + dry-run flag. */

@@ -35,6 +35,8 @@
  * @see services/iso19650/container-succession-policy — ο **κριτής** που το ρωτά
  */
 
+import { trimmedStringOrNull as text } from '@/lib/type-guards';
+
 /** Το πρόθεμα της δομικής ταυτότητας — διακριτό από το `model` των μοντέλων. */
 export const SLOT_IDENTITY_PREFIX = 'slot';
 
@@ -47,10 +49,6 @@ const UNPLACED_ENTITY_ID = 'standalone';
 
 /** Τα σκέλη της θέσης, **με σταθερή σειρά** — ποτέ `Object.values` (η σειρά κλειδιών δεν είναι συμβόλαιο). */
 const SLOT_FIELDS = ['entityType', 'entityId', 'domain', 'category'] as const;
-
-function text(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
 
 /**
  * Η **θέση** του αρχείου: οντότητα · τομέας · κατηγορία · σκοπός · επίπεδο.
