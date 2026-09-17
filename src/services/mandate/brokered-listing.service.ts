@@ -44,6 +44,8 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { nowISO } from '@/lib/date-local';
+import { mandateActSeed } from '@/lib/network-edge/edge-sources';
+import { ensureActTeam } from '@/services/network-messaging/act-team-writer';
 import { issueMandateConsentLink } from '@/services/mandate/mandate-consent.service';
 import {
   sendMandateInvitation,
@@ -191,6 +193,36 @@ export async function createBrokeredListing(
   );
 
   if (write.kind !== 'saved') return { write, notify: { kind: 'failed' } };
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 🔴 ADR-867 §4.3 (Β3) — Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ, ΑΜΕΣΩΣ ΜΟΛΙΣ ΥΠΑΡΞΕΙ Η ΠΡΑΞΗ
+  // ────────────────────────────────────────────────────────────────────────────
+  //
+  // ⚠️ **ΔΕΝ είναι στην ίδια συναλλαγή, και ο λόγος είναι ΜΕΤΡΗΜΕΝΟΣ**: αυτός ο δρόμος
+  //    **δεν έχει** συναλλαγή καθόλου — ο `createOwnerProperty` γράφει μόνος του
+  //    (κριτές, σύνδεσμος τόπου, `persist`). Να τον τυλίξουμε σε συναλλαγή θα άλλαζε
+  //    τον γραφέα **κάθε** αγγελίας, και ιδιώτη, για ανάγκη που έχει **μόνο** ο μεσίτης.
+  // 🔑 **Belt-and-suspenders** (N.7.2 #4): κύριος δρόμος εδώ, δίχτυ το backfill
+  //    (`scripts/backfill-network-act-teams.js`) — η ομάδα είναι **ιδεμποτής** και
+  //    **ντετερμινιστική**, άρα το δίχτυ γράφει **την ίδια** ομάδα, ποτέ δεύτερη.
+  // ⚠️ **`await`, όχι fire-and-forget**: το ποιος απαντά είναι **ορθότητα**, όχι
+  //    παρενέργεια. Αν πέσει, πέφτει **πριν** φύγει η πρόσκληση — και ο μεσίτης το
+  //    ξαναπατά με το ίδιο αποτέλεσμα (ίδιο κλειδί).
+  // 🔑 **Υπεύθυνος = όποιος ΕΚΑΝΕ την πράξη**: στη βεβαίωση ο `attestedByUserId` (αυτός
+  //    δήλωσε ότι κρατά υπογεγραμμένη εντολή), αλλιώς ο συντάκτης της καταχώρησης.
+  await ensureActTeam(
+    adminDb,
+    {
+      actKind: 'mandate',
+      actSeed: mandateActSeed(identity.id, authority.companyId),
+      hostCompanyId: authority.companyId,
+      responsibleUid:
+        request.proof.via === AGENCY_ATTESTATION
+          ? request.proof.attestedByUserId
+          : identity.authorUserId,
+    },
+    nowISO(),
+  );
 
   const notify = await sendMandateInvitation(
     adminDb,

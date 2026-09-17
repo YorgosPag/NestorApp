@@ -147,6 +147,28 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
     expect(await isPublished(db)).toBe(false);
   });
 
+  it('🔑 Β1β — Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ γεννιέται ΚΑΙ ΣΕ ΑΝΑΜΟΝΗ: η ευθύνη δεν περιμένει τον πελάτη', async () => {
+    const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
+      clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
+      expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
+      proof: OWNER_CONSENT_PROOF,
+    });
+
+    // 🔑 Η **ακμή** δεν υπάρχει ακόμη (ο ιδιοκτήτης δεν απάντησε — `edge-sources.ts`),
+    //    αλλά η **ομάδα** ναι: το «ποιος απαντά από το γραφείο» είναι ιδιότητα της
+    //    ΠΡΑΞΗΣ, όχι της απάντησης του πελάτη (N.7.2 #1 — προδραστικά).
+    const teams = (db as unknown as FakeFirestore).all<Record<string, unknown>>(
+      COLLECTIONS.NETWORK_ACT_TEAMS,
+    );
+    expect(teams).toHaveLength(1);
+    expect(teams[0]).toMatchObject({ responsibleUid: IDENTITY.authorUserId, version: 1 });
+  });
+
   it('Β2 — ο σύνδεσμος υπάρχει ΣΤΗΝ ΕΝΤΟΛΗ τη στιγμή που φεύγει το μήνυμα', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
@@ -207,6 +229,39 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
     expect(mandate.confirmation).toBe('confirmed');
     expect(mandate.proof.via).toBe(AGENCY_ATTESTATION);
     expect(await isPublished(db)).toBe(true);
+  });
+
+  /**
+   * ADR-867 §4.3 (Β3) — **η ομάδα της πράξης γεννιέται ΚΑΙ σε αυτόν τον δρόμο.**
+   *
+   * 🔑 **Υπεύθυνος = όποιος ΕΚΑΝΕ την πράξη**: στη βεβαίωση ο υπογράφων
+   * (`attestedByUserId`), στη συγκατάθεση ο συντάκτης της καταχώρησης. Η εντολή **δεν
+   * γράφει άνθρωπο** (ADR-867 §2.3) — αν δεν γραφτεί εδώ, δεν υπάρχει πουθενά.
+   */
+  it('🔑 Γ1β — Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ: υπεύθυνος ο ΥΠΟΓΡΑΦΩΝ τη βεβαίωση, όχι ο συντάκτης', async () => {
+    const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
+      clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
+      expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
+      proof: agencyAttestation('user_dimitris'),
+    });
+
+    const teams = (db as unknown as FakeFirestore).all<Record<string, unknown>>(
+      COLLECTIONS.NETWORK_ACT_TEAMS,
+    );
+    expect(teams).toHaveLength(1);
+    expect(teams[0]).toMatchObject({
+      actKind: 'mandate',
+      actSeed: `${LISTING_ID}:comp_alfa`,
+      hostCompanyId: 'comp_alfa',
+      responsibleUid: 'user_dimitris',
+      memberUids: ['user_dimitris'],
+    });
+    expect(IDENTITY.authorUserId).not.toBe('user_dimitris');
   });
 
   it('🔑 Γ2 — η βεβαίωση κρατά ΠΟΙΟΣ την έδωσε — και δεν είναι ο πελάτης', async () => {

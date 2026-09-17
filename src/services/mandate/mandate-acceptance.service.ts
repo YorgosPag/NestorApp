@@ -86,6 +86,16 @@ import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-f
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 
+import { mandateActSeed } from '@/lib/network-edge/edge-sources';
+import {
+  effectiveActTeam,
+  readActTeam,
+  writeActTeamBirth,
+} from '@/services/network-messaging/act-team-writer';
+import {
+  readActThreadSlot,
+  writeActThread,
+} from '@/services/network-messaging/thread-writer';
 import { prepare, type Prepared } from '@/services/mandate/mandate-acceptance-prepare';
 import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import type {
@@ -160,9 +170,20 @@ async function commit(
 
   try {
     return await adminDb.runTransaction(async (transaction: Transaction) => {
-      const [requestSnap, propertySnap] = await Promise.all([
+      // 🔑 **ADR-867 Β3 — η ΤΡΙΤΗ ανάγνωση είναι η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ**, και ζει εδώ πάνω
+      //    για τον ίδιο λόγο με τις άλλες δύο: **όλα τα `get` πριν από κάθε γραφή**.
+      //    Η ομάδα γεννιέται στην **ίδια** συναλλαγή με την εντολή — αλλιώς υπάρχει
+      //    στιγμή όπου η πράξη υπάρχει και **κανείς δεν είναι υπεύθυνος** γι' αυτήν.
+      // 🔑 **ADR-867 Β4 — η ΤΕΤΑΡΤΗ ανάγνωση είναι το ΝΗΜΑ ΤΗΣ ΠΡΑΞΗΣ**, και ζει εδώ για
+      //    τον ίδιο λόγο με τις άλλες τρεις. Η αποδοχή είναι η **μόνη** στιγμή όπου η
+      //    ακμή γεννιέται **με πρόσωπο** και στις δύο πλευρές (`confirmedByUserId` =
+      //    `requestedByUserId`) — δηλαδή η μόνη όπου μπορεί να γεννηθεί νήμα (§8 #1).
+      const actSeed = mandateActSeed(prepared.property.id, prepared.mandate.agencyCompanyId);
+      const [requestSnap, propertySnap, teamSlot, threadSlot] = await Promise.all([
         transaction.get(requestRef),
         transaction.get(propertyRef),
+        readActTeam(transaction, adminDb, actSeed),
+        readActThreadSlot(transaction, adminDb, actSeed),
       ]);
 
       // 🔴 **ΤΟ ΣΥΝΟΡΟ ΠΡΙΝ ΤΟΝ ΚΡΙΤΗ** (ADR-842 §7.6.12). Η **απουσία εγγράφου** δεν
@@ -228,6 +249,43 @@ async function commit(
         status: 'accepted',
         decidedAt: input.nowISO,
         clientContactId: prepared.clientContactId,
+      });
+
+      // 🔴 **ADR-867 §4.3 — Ο ΑΝΘΡΩΠΟΣ ΠΟΥ ΑΝΕΛΑΒΕ, ΓΡΑΜΜΕΝΟΣ ΕΠΙΤΕΛΟΥΣ ΚΑΠΟΥ.**
+      //    Ως σήμερα ο `deciderUid` ζούσε **μόνο** στο ίχνος ελέγχου (§2.3): το γραφείο
+      //    ήξερε ότι κάποιος δέχτηκε, και **δεν μπορούσε να πει ποιος απαντά**. Χωρίς
+      //    ομάδα, το «ποιος διαβάζει;» θα το απαντούσε το `belongsToCompany` — δηλαδή
+      //    **όλο** το γραφείο (αντίκειται στο ADR-834 (γ) ①).
+      // ⚠️ **Σιωπηλά ιδεμποτής**: ανανέωση όρων στο ίδιο γραφείο βρίσκει την ομάδα και
+      //    **δεν** την ξαναγράφει — μια μεταβίβαση ευθύνης δεν ακυρώνεται από ανανέωση.
+      const birth = {
+        actKind: 'mandate',
+        actSeed,
+        hostCompanyId: prepared.mandate.agencyCompanyId,
+        responsibleUid: input.deciderUid,
+      } as const;
+      writeActTeamBirth(transaction, teamSlot, birth, input.nowISO);
+
+      // 🔴 **ADR-867 Β4 — ΤΟ ΝΗΜΑ ΓΕΝΝΙΕΤΑΙ ΜΕ ΤΗΝ ΑΚΜΗ, ΟΧΙ ΜΕ ΤΟ ΠΡΩΤΟ ΜΗΝΥΜΑ.** Αν
+      //    περίμενε το πρώτο «γεια σας», τότε **ο πελάτης** θα αποφάσιζε ποιος του
+      //    απαντά — και το ακροατήριο θα γραφόταν με την ομάδα **εκείνης** της στιγμής,
+      //    όχι με την ομάδα που ανέλαβε την πράξη.
+      // ⚠️ **Η ομάδα έρχεται από το `effectiveActTeam`, ΠΟΤΕ από τη γέννηση**: σε
+      //    **ανανέωση όρων** η αποθηκευμένη ομάδα μπορεί να έχει άλλον υπεύθυνο
+      //    (μεταβίβαση) και περισσότερα μέλη. Το ακροατήριο είναι **προβολή** της
+      //    ομάδας (§4.3) — μια δεύτερη λίστα εδώ θα την ακύρωνε σιωπηλά.
+      writeActThread(transaction, threadSlot, {
+        birth: {
+          kind: 'act',
+          actKind: 'mandate',
+          actSeed,
+          hostCompanyId: prepared.mandate.agencyCompanyId,
+          counterpartUid: input.request.requestedByUserId,
+        },
+        team: effectiveActTeam(teamSlot, birth),
+        newcomerReason: 'creator',
+        addedBy: input.deciderUid,
+        nowISO: input.nowISO,
       });
 
       return {

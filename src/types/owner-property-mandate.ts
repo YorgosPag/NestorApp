@@ -840,7 +840,13 @@ export function mandatesOf(source: {
   if (Array.isArray(source.mandates)) return source.mandates;
 
   const legacy = source.mandate;
-  if (legacy === undefined || legacy.kind === 'self') return [];
+  // 🔴 **ΚΑΙ `null`, ΟΧΙ ΜΟΝΟ `undefined`** — μετρημένο σε ζωντανή δοκιμή (2026-09-17,
+  //    ADR-835 §22): αποθηκευμένο `mandate: null` (γραμμένο ρητά, όχι απόν) έριχνε
+  //    `TypeError: Cannot read properties of null` **μέσα στο σύνορο ανάγνωσης** ⇒ 500
+  //    σε κάθε διαδρομή που διαβάζει την αγγελία. Το ίδιο το δόγμα της κεφαλίδας
+  //    («ο ιδιώτης θα **έριχνε** τη διαδρομή αντί να κριθεί») το απαγορεύει: η απουσία
+  //    εντολής — γραμμένη ΜΕ ΟΠΟΙΟΝ τρόπο — είναι **κενός πίνακας**, ποτέ εξαίρεση.
+  if (legacy === undefined || legacy === null || legacy.kind === 'self') return [];
   return [legacy];
 }
 

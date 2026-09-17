@@ -34,6 +34,7 @@ import {
   MANDATE_PROOF_VIAS,
   CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
+  mandatesOf,
   occupancyOf,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
@@ -455,6 +456,31 @@ describe('Υ — η προέλευση της αγγελίας παράγετα�
 // ============================================================================
 // Γ — Η ΓΕΦΥΡΑ ΠΡΟΣ ΤΟΝ ΚΡΙΤΗ ΣΥΓΚΡΟΥΣΗΣ, ΚΑΙ ΤΟ ΚΛΗΡΟΔΟΤΗΜΑ (ADR-834)
 // ============================================================================
+
+describe('Ν — αποθηκευμένο `mandate: null` ΔΕΝ ρίχνει το σύνορο ανάγνωσης', () => {
+  /**
+   * 🔴 **ΖΩΝΤΑΝΟ CRASH, ΜΕΤΡΗΜΕΝΟ 2026-09-17** (ADR-835 §22, ζωντανή δοκιμή της
+   * εξαγωγής iCal): έγγραφο αγγελίας με **ρητό** `mandate: null` — όχι απόν πεδίο —
+   * έριχνε `TypeError: Cannot read properties of null (reading 'kind')` **μέσα** στο
+   * `readStoredOwnerProperty`, δηλαδή **500 σε κάθε διαδρομή** που διαβάζει την
+   * αγγελία (εδώ: το δημόσιο feed του ημερολογίου).
+   *
+   * 🔑 Η ίδια η κεφαλίδα του `mandatesOf` δηλώνει το δόγμα που παραβιαζόταν: *«ο
+   * ιδιώτης θα **έριχνε** τη διαδρομή αντί να κριθεί»*. Η απουσία εντολής — γραμμένη
+   * με **οποιονδήποτε** τρόπο — είναι **κενός πίνακας**, ποτέ εξαίρεση.
+   */
+  it('Ν-1 🔴 `mandate: null` ⇒ κενός πίνακας, ΚΑΜΙΑ εξαίρεση', () => {
+    const stored = { mandate: null } as unknown as Parameters<typeof mandatesOf>[0];
+
+    expect(() => mandatesOf(stored)).not.toThrow();
+    expect(mandatesOf(stored)).toEqual([]);
+  });
+
+  it('Ν-2 ο παρονομαστής: απόν πεδίο και «ιδιώτης» δίνουν το ΙΔΙΟ — κενό πίνακα', () => {
+    expect(mandatesOf({})).toEqual([]);
+    expect(mandatesOf({ mandate: { kind: 'self' } })).toEqual([]);
+  });
+});
 
 describe('Γ — `occupancyOf` πάνω σε έγγραφο ΠΡΙΝ το ADR-832', () => {
   /**

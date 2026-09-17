@@ -14,7 +14,8 @@
  * CAS μέσα στη συναλλαγή.
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
 import { mandatesOf } from '@/types/owner-property-mandate';
@@ -55,7 +56,12 @@ jest.mock('@/services/entity-audit.service', () => ({
 }));
 
 let contactSeq = 0;
+// ⚠️ **`requireActual` + ΕΝΑ override, ποτέ σκέτο αντικείμενο** (ADR-867 Β3): το module
+//    εξάγει **όλες** τις ταυτότητες, και ένα mock που κρατά μόνο τη μία τις σβήνει όλες —
+//    η γέννηση της ομάδας πράξης έσκαγε με «is not a function» **μέσα** στη συναλλαγή,
+//    δηλαδή η σουίτα θα κατήγγειλε τον γραφέα για σφάλμα που έφτιαξε η ίδια.
 jest.mock('@/services/enterprise-id-convenience', () => ({
+  ...jest.requireActual('@/services/enterprise-id-convenience'),
   generateContactId: jest.fn(() => `cont_neo_${(contactSeq += 1)}`),
 }));
 
@@ -384,6 +390,78 @@ describe('Α — τρεις γραφές, μία πράξη', () => {
     expect(storedRequest(fake).clientContactId).toBe('cont_palia');
     // Υπάρχουσα καρτέλα ΔΕΝ «δημιουργήθηκε» επειδή την αναγνωρίσαμε.
     expect(audited).toHaveLength(0);
+  });
+
+  /**
+   * ADR-867 §4.3 (Β3) — **Η ΤΕΤΑΡΤΗ ΓΡΑΦΗ: ποιος του γραφείου απαντά.**
+   *
+   * 🔴 Ως σήμερα ο `deciderUid` ζούσε **μόνο** στο ίχνος: η εντολή κρατά `agencyCompanyId`,
+   * **όχι άνθρωπο** (ADR-867 §2.3). Χωρίς ομάδα, το «ποιος διαβάζει το νήμα;» θα το
+   * απαντούσε το `belongsToCompany` — δηλαδή **όλο** το γραφείο (ADR-834 (γ) ① ⛔).
+   */
+  it('🔑 Α8 — Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ γεννιέται στην ΙΔΙΑ συναλλαγή, με υπεύθυνο αυτόν που δέχτηκε', async () => {
+    const fake = world();
+
+    expect((await decide(fake)).kind).toBe('decided');
+
+    const teams = fake.all<Record<string, unknown>>(COLLECTIONS.NETWORK_ACT_TEAMS);
+    expect(teams).toHaveLength(1);
+    expect(teams[0]).toMatchObject({
+      actKind: 'mandate',
+      actSeed: `${LISTING}:${AGENCY}`,
+      hostCompanyId: AGENCY,
+      responsibleUid: CLERK,
+      memberUids: [CLERK],
+      version: 1,
+    });
+  });
+
+  it('🔴 Α9 — ΑΡΝΗΣΗ ή αποτυχία ⇒ ΚΑΜΙΑ ομάδα: η ομάδα ζει ή πεθαίνει με την πράξη', async () => {
+    const refused = world();
+    expect((await decide(refused, 'declined-final')).kind).toBe('decided');
+    expect(refused.all(COLLECTIONS.NETWORK_ACT_TEAMS)).toHaveLength(0);
+
+    // Και όταν η ίδια η συναλλαγή δεν περνά (ΑΦΜ που λείπει), τίποτα δεν μένει πίσω.
+    const blocked = world({ profile: { vatNumber: null } });
+    await decide(blocked);
+    expect(blocked.all(COLLECTIONS.NETWORK_ACT_TEAMS)).toHaveLength(0);
+  });
+
+  /**
+   * ADR-867 §4.1/§4.2 (Β4) — **ΤΟ ΝΗΜΑ ΓΕΝΝΙΕΤΑΙ ΜΕ ΤΗΝ ΑΚΜΗ, ΣΤΗΝ ΙΔΙΑ ΣΥΝΑΛΛΑΓΗ.**
+   *
+   * 🔑 Η **πραγματική διαδρομή**, όχι η μονάδα: αν η γέννηση ζούσε μόνο στο
+   * `thread-writer.test.ts`, η άγκυρα θα ήταν πράσινη και σε κόσμο όπου **κανείς δεν την
+   * καλεί** — το μετρημένο σχήμα «η πύλη δεν το είδε ≠ δεν υπάρχει».
+   */
+  it('🔑 Α10 — Η ΑΠΟΔΟΧΗ γεννά ΝΗΜΑ με ακροατήριο ΚΑΙ ΤΙΣ ΔΥΟ πλευρές', async () => {
+    const fake = world();
+
+    expect((await decide(fake)).kind).toBe('decided');
+
+    const threadId = generateDeterministicNetworkActThreadId(`${LISTING}:${AGENCY}`);
+    const threads = fake.all<Record<string, unknown>>(COLLECTIONS.NETWORK_THREADS);
+    expect(threads).toHaveLength(1);
+    expect(threads[0]).toMatchObject({
+      id: threadId,
+      state: 'open',
+      lastMessageAt: null,
+      topic: { kind: 'act', actKind: 'mandate', hostCompanyId: AGENCY, counterpartUid: OWNER_UID },
+    });
+
+    const audience = fake.all<{ uid: string; side: string; until: string | null }>(
+      `${COLLECTIONS.NETWORK_THREADS}/${threadId}/${SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE}`,
+    );
+    expect(audience).toHaveLength(2);
+    expect(audience.find((a) => a.uid === CLERK)).toMatchObject({ side: 'host', until: null });
+    // 🔴 Ο **ιδιοκτήτης** — αλλιώς το νήμα θα ήταν μονόλογος του γραφείου.
+    expect(audience.find((a) => a.uid === OWNER_UID)).toMatchObject({ side: 'counterpart', until: null });
+  });
+
+  it('🔴 Α11 — ΑΡΝΗΣΗ ⇒ ΚΑΝΕΝΑ νήμα: το νήμα υπάρχει επειδή υπάρχει ΑΚΜΗ', async () => {
+    const refused = world();
+    expect((await decide(refused, 'declined-final')).kind).toBe('decided');
+    expect(refused.all(COLLECTIONS.NETWORK_THREADS)).toHaveLength(0);
   });
 
   it('🔴 Α7 — ΒΛΑΒΗ στον έλεγχο διπλότυπου ⇒ ΑΡΝΗΣΗ, ποτέ «γράψε καινούρια»', async () => {
