@@ -31,6 +31,7 @@ import {
   type PrivateMarketingPanel,
 } from '@/lib/mandate/private-marketing-panel';
 import {
+  declinePrivateMarketing,
   revokePrivateMarketing,
   type PrivateMarketingActionOutcome,
 } from '@/services/owner-property/private-marketing.client';
@@ -64,9 +65,27 @@ function RevokeControl({ ownerPropertyId, panel, onDone }: { readonly ownerPrope
   );
 }
 
+/** Α35 — «μη μου ξαναστείλετε»: δικαίωμα του παραλήπτη (Adobe Acrobat Sign), ένα κλικ δίπλα στο αίτημα. */
+function DeclineControl({ ownerPropertyId, panel, requestId, onDone }: { readonly ownerPropertyId: string; readonly panel: PrivateMarketingPanel; readonly requestId: string; readonly onDone: (outcome: PrivateMarketingActionOutcome) => void }): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  const [busy, setBusy] = React.useState(false);
+  const decline = async (): Promise<void> => {
+    setBusy(true);
+    onDone(await declinePrivateMarketing(ownerPropertyId, panel.agencyCompanyId, requestId));
+    setBusy(false);
+  };
+  return (
+    <footer className="flex flex-col gap-1">
+      <Button type="button" size="sm" variant="outline" className="self-start" disabled={busy} onClick={() => void decline()}>{t(`${K}.decline`)}</Button>
+      <p className="text-sm text-muted-foreground">{t(`${K}.declineExplain`)}</p>
+    </footer>
+  );
+}
+
 function AgencyRow({ panel, closed, ownerPropertyId, onDone }: { readonly panel: PrivateMarketingPanel; readonly closed: boolean; readonly ownerPropertyId: string; readonly onDone: (outcome: PrivateMarketingActionOutcome) => void }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const agencyLabel = usePrivateMarketingAgencyLabel();
+  const requestId = pendingRequestIdOf(panel);
   return (
     <li className="flex flex-col gap-1">
       <p className="text-sm font-medium text-card-foreground">{agencyLabel(panel)}</p>
@@ -77,6 +96,7 @@ function AgencyRow({ panel, closed, ownerPropertyId, onDone }: { readonly panel:
           <RevokeControl ownerPropertyId={ownerPropertyId} panel={panel} onDone={onDone} />
         </>
       )}
+      {requestId !== null && <DeclineControl ownerPropertyId={ownerPropertyId} panel={panel} requestId={requestId} onDone={onDone} />}
     </li>
   );
 }

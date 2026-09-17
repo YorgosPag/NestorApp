@@ -32,6 +32,7 @@ import {
   privateMarketingEventsOf,
   privateMarketingStandingOf,
   privateMarketingViolationsAdded,
+  requestRefusalOf,
 } from '@/lib/mandate/private-marketing-standing';
 import { generatePrivateMarketingEventId } from '@/services/enterprise-id.service';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
@@ -181,7 +182,9 @@ export async function requestPrivateMarketing(
   const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, (property) => {
     const mandate = locateMandate(property, who, null, input.nowISO);
     if (mandate === null) return 'absent';
-    if (privateMarketingStandingOf(mandate).kind === 'granted') return 'consent-already-granted';
+    // Α29 · Α35 — ισχύει ήδη · αρνήθηκε · αναμονή: **ένας** κριτής, μέσα στη συναλλαγή (δύο κλικ ⇒ ένα email).
+    const refusal = requestRefusalOf(mandate, input.nowISO);
+    if (refusal !== null) return refusal;
     const event: PrivateMarketingEvent = {
       kind: 'requested',
       id: generatePrivateMarketingEventId(),
@@ -329,7 +332,7 @@ function applyLines(property: OwnerProperty, ctx: LineContext): readonly Applied
   return applied;
 }
 
-const audienceOfEvent = (event: PrivateMarketingEvent): string | null => (event.kind === 'revoked' ? null : event.audience);
+const audienceOfEvent = (event: PrivateMarketingEvent): string | null => ('audience' in event ? event.audience : null);
 
 function grantMutation(ctx: LineContext): Mutation {
   return (property) => {
@@ -368,23 +371,42 @@ export async function grantPrivateMarketing(adminDb: AdminFirestore, input: Gran
 }
 
 // =============================================================================
-// 4. ΑΝΑΚΛΗΣΗ — ποτέ κλειστή χωρίς συναίνεση (Ε-13 · Α16)
+// 4. ΠΡΑΞΕΙΣ ΤΟΥ ΙΔΙΟΚΤΗΤΗ ΣΕ ΜΙΑ ΕΝΤΟΛΗ — εντοπισμός, συναλλαγή, ίχνος
+// =============================================================================
+
+interface OwnerMandateInput {
+  readonly ownerPropertyId: string;
+  readonly who: OwnerLinkActor | OwnerAccountActor;
+  /** Ποιο γραφείο — `null` στον σύνδεσμο (η μία εντολή του). */
+  readonly agencyCompanyId: string | null;
+  readonly nowISO: string;
+}
+
+type MandateMutation = (property: OwnerProperty, mandate: BrokeredListingMandate) => Mutated | PrivateMarketingRefusal;
+
+/** Ο **ένας** δρόμος για ανάκληση και άρνηση: η εντολή εντοπίζεται μέσα στη συναλλαγή, ποτέ πριν. */
+async function mutateOwnerMandate(adminDb: AdminFirestore, input: OwnerMandateInput, mutate: MandateMutation): Promise<PrivateMarketingOutcome> {
+  const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, (property) => {
+    const mandate = locateMandate(property, input.who, input.agencyCompanyId, input.nowISO);
+    return mandate === null ? 'absent' : mutate(property, mandate);
+  });
+  return isWritten(outcome) ? finish(adminDb, outcome, input.who) : outcome;
+}
+
+/** Το γεγονός είναι **του** ιδιοκτήτη: κανάλι και χρήστης από τον ίδιο τον δράστη. */
+function ownerEventOrigin(who: OwnerLinkActor | OwnerAccountActor): Pick<Extract<PrivateMarketingEvent, { kind: 'revoked' }>, 'channel' | 'actorUserId'> {
+  return { channel: who.kind === 'owner-link' ? 'link' : 'account', actorUserId: actorUserIdOf(who) };
+}
+
+// =============================================================================
+// 5. ΑΝΑΚΛΗΣΗ — ποτέ κλειστή χωρίς συναίνεση (Ε-13 · Α16)
 // =============================================================================
 
 export async function revokePrivateMarketing(
   adminDb: AdminFirestore,
-  input: {
-    readonly ownerPropertyId: string;
-    readonly who: OwnerLinkActor | OwnerAccountActor;
-    /** Ποιο γραφείο — `null` στον σύνδεσμο (η μία εντολή του). */
-    readonly agencyCompanyId: string | null;
-    readonly outcome: PrivateMarketingRevocationOutcome;
-    readonly nowISO: string;
-  },
+  input: OwnerMandateInput & { readonly outcome: PrivateMarketingRevocationOutcome },
 ): Promise<PrivateMarketingOutcome> {
-  const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, (property) => {
-    const mandate = locateMandate(property, input.who, input.agencyCompanyId, input.nowISO);
-    if (mandate === null) return 'absent';
+  return mutateOwnerMandate(adminDb, input, (property, mandate) => {
     // 🔑 Η **έξοδος** μένει πάντα ανοιχτή: και χωρίς ενεργή συναίνεση, αρκεί η διάθεση να είναι κλειστή.
     if (privateMarketingStandingOf(mandate).kind !== 'granted' && property.marketingAudience === 'public') {
       return 'consent-not-granted';
@@ -394,8 +416,7 @@ export async function revokePrivateMarketing(
       id: generatePrivateMarketingEventId(),
       at: input.nowISO,
       outcome: input.outcome,
-      channel: input.who.kind === 'owner-link' ? 'link' : 'account',
-      actorUserId: actorUserIdOf(input.who),
+      ...ownerEventOrigin(input.who),
     };
     // ⚠️ Η απόσυρση γράφει **και** `public`: αποσυρμένη-κλειστή χωρίς συναίνεση θα ήταν ακόμη παραβίαση.
     const next: OwnerProperty = {
@@ -407,5 +428,33 @@ export async function revokePrivateMarketing(
     };
     return { next, applied: [{ mandate, event }], token: null };
   });
-  return isWritten(outcome) ? finish(adminDb, outcome, input.who) : outcome;
+}
+
+// =============================================================================
+// 6. ΑΡΝΗΣΗ — «μη μου ξαναστείλετε» (Adobe Acrobat Sign · Α35)
+// =============================================================================
+
+/**
+ * Ο ιδιοκτήτης αρνείται το **εκκρεμές** αίτημα. Τίποτα ορατό δεν αλλάζει (το κοινό μένει ως έχει)·
+ * φράζονται **μόνο** τα επόμενα αιτήματα του γραφείου για **αυτούς** τους όρους.
+ */
+export async function declinePrivateMarketing(
+  adminDb: AdminFirestore,
+  /** `requestId`: το αίτημα που αρνείται — αίτημα που άλλαξε στο μεταξύ **δεν** αρνείται σιωπηλά (Α19). */
+  input: OwnerMandateInput & { readonly requestId: string },
+): Promise<PrivateMarketingOutcome> {
+  return mutateOwnerMandate(adminDb, input, (property, mandate) => {
+    const standing = privateMarketingStandingOf(mandate);
+    if (standing.kind !== 'requested') return 'consent-not-requested';
+    if (standing.request.id !== input.requestId) return 'consent-request-stale';
+    const event: PrivateMarketingEvent = {
+      kind: 'declined',
+      id: generatePrivateMarketingEventId(),
+      at: input.nowISO,
+      ...ownerEventOrigin(input.who),
+      term: mandateTermOf(mandate),
+    };
+    const next: OwnerProperty = { ...property, mandates: replaceMandate(property.mandates, withEvent(mandate, event)), updatedAt: input.nowISO };
+    return { next, applied: [{ mandate, event }], token: null };
+  });
 }

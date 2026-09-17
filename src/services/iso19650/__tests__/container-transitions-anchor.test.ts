@@ -251,6 +251,7 @@ describe('Α17 — απόσυρση: SUPERSEDED, ΠΟΤΕ εξαφάνιση', (
       seal: { by: AUTHOR, at: 'x', revision: 2 },
       release: { by: AUTHOR, at: 'x', revision: 2 },
       withdrawal: { by: AUTHOR, at: 'x', revision: 2 },
+      supersession: null,
     };
     expect(deriveCdeState(acts, 2)).toBe('SUPERSEDED');
   });

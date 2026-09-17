@@ -35,6 +35,7 @@ import {
 import { nowISO } from '@/lib/date-local';
 import { linkPrivateMarketingFrom, type LinkPrivateMarketingBody } from '@/lib/mandate/private-marketing-request-body';
 import {
+  declinePrivateMarketing,
   grantPrivateMarketing,
   revokePrivateMarketing,
   type PrivateMarketingOutcome,
@@ -134,6 +135,9 @@ async function runLinkAction(
   const who = { kind: 'owner-link', nonce: request.nonce, clientContactId: request.clientContactId } as const;
   if (body.action === 'revoke') {
     return revokePrivateMarketing(adminDb, { ownerPropertyId: request.ownerPropertyId, who, agencyCompanyId: null, outcome: body.outcome, nowISO: nowISO() });
+  }
+  if (body.action === 'decline') {
+    return declinePrivateMarketing(adminDb, { ownerPropertyId: request.ownerPropertyId, who, agencyCompanyId: null, requestId: body.requestId, nowISO: nowISO() });
   }
   return grantPrivateMarketing(adminDb, {
     ownerPropertyId: request.ownerPropertyId,

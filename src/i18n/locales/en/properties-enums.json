@@ -331,6 +331,7 @@
     "requested": "Agency request",
     "granted": "Owner consent",
     "revoked": "Consent revoked",
-    "outdated": "Consent for earlier terms"
+    "outdated": "Consent for earlier terms",
+    "declined": "Owner declined"
   }
 }

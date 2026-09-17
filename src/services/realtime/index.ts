@@ -75,6 +75,7 @@ export {
   type FileDeletedPayload,
   type FileTrashedPayload,
   type FileRestoredPayload,
+  type FileSupersededPayload,
   type NotificationDeletedPayload,
   type ObligationDeletedPayload,
   type WorkspaceDeletedPayload,

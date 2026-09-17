@@ -8,6 +8,10 @@
   `lib/agency/showcase-canonical-segment.ts` · `server/auth/workspace-invitation.ts` ·
   `services/iso19650/container-transition-policy.ts`.
 
+  ⚠️ **17/09 (ADR-862 Φ0 Β10) — έγιναν 4**: +`lib/mandate/attestation-document-verdict.ts` (commit `a38767fe`,
+  ADR-864 Φ3-Γ). Το Β10 πρόσθεσε **ένα** σημείο (`services/iso19650/container-succession-policy.ts`) και το
+  **ταξινόμησε** στο ίδιο commit (σουίτα `container-supersession-anchor` Α20.4) — μετρημένο: αταξινόμητα 5 → 4.
+
   🔴 **Δεν είναι δικό μας**: τα δύο πρώτα είχαν την κλήση **μέσα στο HEAD** και ήταν αμετάβλητα· το τρίτο
   μπήκε από **ξένη** επεξεργασία (αντικατέστησε ωμό `!==` με τον SSoT — **σωστή** αλλαγή: το `!==`
   **περνούσε** όταν έλειπαν και τα δύο). Το Β7 πρόσθεσε **μηδέν** σημεία κλήσης, μετρημένο.

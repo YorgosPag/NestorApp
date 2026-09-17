@@ -392,20 +392,25 @@ export interface FileTrashedPayload {
   displayName?: string;
   entityId?: string;
   entityType?: string;
-  /**
-   * 🌐 ISO 19650 §10.2 — **ο ΔΙΑΔΟΧΟΣ**, όταν αυτό το αρχείο έφυγε επειδή
-   * **αντικαταστάθηκε** και όχι επειδή χάθηκε.
-   *
-   * 🔴 ΓΙΑΤΙ ΤΟ ΚΟΥΒΑΛΑ ΤΟ ΓΕΓΟΝΟΣ ΚΑΙ ΟΧΙ ΜΟΝΟ ΤΟ ΕΓΓΡΑΦΟ (ADR-845 Ο-16):
-   * ο συνδρομητής παίρνει το γεγονός **πριν** προλάβει να δει τη νέα κατάσταση —
-   * το `sceneFileId` του επιπέδου ταξιδεύει μέσω server PATCH + `onSnapshot`, ενώ ο
-   * κάδος είναι τοπική εγγραφή. Αν η πρόθεση δεν ταξιδεύει **μαζί** με το γεγονός,
-   * ο συνδρομητής υποχρεώνεται να τη μαντέψει από ένα **μπαγιάτικο** αντίγραφο —
-   * και μαντεύει «απώλεια». Αυτό ακριβώς άδειαζε τον καμβά μέσα στην ίδια εισαγωγή.
-   *
-   * Απόν ⇒ **πραγματική** διαγραφή. Παρόν ⇒ αντικατάσταση: κανείς δεν έχασε τίποτα.
-   */
-  supersededByFileId?: string;
+  timestamp: number;
+}
+
+/**
+ * 🔁 **ΤΟ ΑΡΧΕΙΟ ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ** από νέα έκδοση — ΔΕΝ χάθηκε (ADR-862 Φ0 Β10 · ADR-845 Ο-16).
+ *
+ * 🔴 **ΧΩΡΙΣΤΟ ΓΕΓΟΝΟΣ, ΟΧΙ ΣΗΜΑΙΑ ΣΤΟ `FILE_TRASHED`.** Μέχρι το Β10 η αντικατάσταση ήταν
+ * `FILE_TRASHED` + `supersededByFileId`, και **κάθε** συνδρομητής του κάδου έπρεπε να θυμηθεί
+ * να ρωτήσει τη σημαία — όποιος ξεχνούσε, **άδειαζε τον καμβά** που η ίδια η εισαγωγή είχε
+ * μόλις γεμίσει (Ο-16). Με δικό του όνομα η παράλειψη είναι **αδύνατη**: ο συνδρομητής της
+ * απώλειας (`useLevelFloorplanSync`) **δεν ακούει** αυτό το γεγονός — δεν υπάρχει δρόμος.
+ *
+ * ⚠️ Εκπέμπεται από τον πελάτη **ΜΟΝΟ αφού** ο διακομιστής επιβεβαιώσει τη διαδοχή.
+ */
+export interface FileSupersededPayload {
+  /** Το αρχείο που **αρχειοθετήθηκε**. */
+  fileId: string;
+  /** Το αρχείο που πήρε τη θέση του. */
+  supersededByFileId: string;
   timestamp: number;
 }
 
@@ -951,9 +956,10 @@ export interface RealtimeEventMap {
   FLOORPLAN_DELETED: FloorplanDeletedPayload;
   PARKING_DELETED: ParkingDeletedPayload;
   STORAGE_DELETED: StorageDeletedPayload;
-  // File extras (2)
+  // File extras (3)
   FILE_TRASHED: FileTrashedPayload;
   FILE_RESTORED: FileRestoredPayload;
+  FILE_SUPERSEDED: FileSupersededPayload;
   // Association links (4)
   CONTACT_LINK_CREATED: ContactLinkCreatedPayload;
   CONTACT_LINK_DELETED: ContactLinkDeletedPayload;

@@ -20,7 +20,7 @@ import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
 import { isPermissionDeniedError } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
-import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileLinkCreatedPayload } from '@/services/realtime';
+import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileSupersededPayload, FileLinkCreatedPayload } from '@/services/realtime';
 import { buildPurposeFilter } from './useEntityFiles-purpose-filter';
 
 // ============================================================================
@@ -446,7 +446,9 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       }));
     };
 
-    const handleTrashed = (payload: FileTrashedPayload) => {
+    // 🔁 ADR-862 Φ0 Β10 — ο κάδος **και** η αντικατάσταση βγάζουν το αρχείο από την ενεργή λίστα
+    // (το δεύτερο πάει στα «Αρχειοθετημένα»). Ένας χειριστής, δύο γεγονότα με δικό τους όνομα.
+    const handleLeftActive = (payload: FileTrashedPayload | FileSupersededPayload) => {
       setFiles(prev => prev.filter(file => file.id !== payload.fileId));
     };
 
@@ -464,11 +466,12 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
 
     const unsub1 = RealtimeService.subscribe('FILE_CREATED', handleCreated);
     const unsub2 = RealtimeService.subscribe('FILE_UPDATED', handleUpdated);
-    const unsub3 = RealtimeService.subscribe('FILE_TRASHED', handleTrashed);
+    const unsub3 = RealtimeService.subscribe('FILE_TRASHED', handleLeftActive);
     const unsub4 = RealtimeService.subscribe('FILE_RESTORED', handleRestored);
     const unsub5 = RealtimeService.subscribe('FILE_LINK_CREATED', handleFileLinked);
+    const unsub6 = RealtimeService.subscribe('FILE_SUPERSEDED', handleLeftActive);
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
   }, [entityId, entityType, fetchFiles]);
 
   // =========================================================================

@@ -155,6 +155,7 @@ export const REALTIME_EVENTS = {
   FILE_DELETED: 'realtime:file-deleted',
   FILE_TRASHED: 'realtime:file-trashed',
   FILE_RESTORED: 'realtime:file-restored',
+  FILE_SUPERSEDED: 'realtime:file-superseded',
   NOTIFICATION_DELETED: 'realtime:notification-deleted',
   OBLIGATION_DELETED: 'realtime:obligation-deleted',
   WORKSPACE_DELETED: 'realtime:workspace-deleted',

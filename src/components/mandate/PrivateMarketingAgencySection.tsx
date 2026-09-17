@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { MARKETING_AUDIENCES, isOfferableAudience } from '@/constants/marketing-audiences';
 import { usePrivateMarketingPanels } from '@/hooks/mandate/usePrivateMarketingPanels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatDateTime } from '@/lib/intl-formatting';
 import type { PrivateMarketingPanel } from '@/lib/mandate/private-marketing-panel';
 import {
   requestPrivateMarketing,
@@ -68,6 +69,10 @@ function RequestControl({ ownerPropertyId, panel, audience, onDone }: ActionProp
     onDone(await requestPrivateMarketing(ownerPropertyId, audience));
     setBusy(false);
   };
+  // Α30 — η αναμονή λέγεται με ΩΡΑ, από τον διακομιστή· κουμπί που θα γύριζε `consent-request-cooling` δεν δείχνεται.
+  if (panel.nextRequestAt !== null) {
+    return <p className="text-sm text-muted-foreground">{t(`${K}.agency.requestCooling`, { time: formatDateTime(panel.nextRequestAt) })}</p>;
+  }
   return (
     <footer className="flex flex-col gap-1">
       <Button type="button" className="self-start" disabled={busy} onClick={() => void request()}>
@@ -115,7 +120,10 @@ export function PrivateMarketingAgencySection({ ownerPropertyId }: { readonly ow
       <h2 id={headingId} className="text-base font-semibold text-card-foreground">{t(`${K}.title`)}</h2>
       <PrivateMarketingStandingLine standing={panel.standing} />
       <AgencyOutcomeNotice outcome={outcome} />
-      {audience !== null && <RequestControl ownerPropertyId={ownerPropertyId} panel={panel} audience={audience} onDone={onDone} />}
+      {/* Α35 — ο ιδιοκτήτης αρνήθηκε: κανένα αίτημα για αυτούς τους όρους. Το έντυπο μένει (ειδοποιείται για αμφισβήτηση). */}
+      {audience !== null && panel.standing.kind !== 'declined' && (
+        <RequestControl ownerPropertyId={ownerPropertyId} panel={panel} audience={audience} onDone={onDone} />
+      )}
       {audience !== null && load.panels.disclosure !== null && (
         <AttestationControl ownerPropertyId={ownerPropertyId} panel={panel} audience={audience} onDone={onDone} disclosure={load.panels.disclosure} />
       )}

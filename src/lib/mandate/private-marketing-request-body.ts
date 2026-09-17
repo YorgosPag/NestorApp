@@ -46,12 +46,15 @@ const accountBodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('attest'), audience: closedAudience, documentFileId: z.string(), ...grantBase }),
   /** Ο ιδιοκτήτης με λογαριασμό **ανακαλεί** (Ε-13). */
   z.object({ action: z.literal('revoke'), agencyCompanyId: z.string().min(1), outcome: z.enum(PRIVATE_MARKETING_REVOCATION_OUTCOMES) }),
+  /** Ο ιδιοκτήτης με λογαριασμό **αρνείται** το εκκρεμές αίτημα ενός γραφείου (ADR-864 §19 · Α35). */
+  z.object({ action: z.literal('decline'), agencyCompanyId: z.string().min(1), requestId: z.string().min(1) }),
 ]);
 
-/** `POST /api/mandate/[token]` — ο σύνδεσμος μόνο **εκτελεί αίτημα** ή **ανακαλεί**. */
+/** `POST /api/mandate/[token]` — ο σύνδεσμος **εκτελεί** ή **αρνείται** αίτημα, ή **ανακαλεί**. */
 const linkBodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('grant'), requestId: z.string().min(1), submission: submissionSchema }),
   z.object({ action: z.literal('revoke'), outcome: z.enum(PRIVATE_MARKETING_REVOCATION_OUTCOMES) }),
+  z.object({ action: z.literal('decline'), requestId: z.string().min(1) }),
 ]);
 
 export type AccountPrivateMarketingBody = z.infer<typeof accountBodySchema>;

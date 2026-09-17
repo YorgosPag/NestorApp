@@ -36,6 +36,7 @@ export type PrivateMarketingStandingView =
   | { readonly kind: 'requested'; readonly requestId: string; readonly at: string; readonly audience: ClosedMarketingAudience }
   | { readonly kind: 'outdated' }
   | { readonly kind: 'revoked' }
+  | { readonly kind: 'declined'; readonly at: string }
   | { readonly kind: 'absent' };
 
 /** Μία εντολή — ένα γραφείο. */
@@ -46,6 +47,11 @@ export interface PrivateMarketingPanel {
   readonly standing: PrivateMarketingStandingView;
   /** Οι τιμές θέσεων, **έτοιμες** — αυτές ακριβώς επιστρέφει η φόρμα (Α25). */
   readonly values: ConsentPlaceholderValues;
+  /**
+   * **Πότε ανοίγει το επόμενο αίτημα** — `null` = τώρα (Α30). Του **διακομιστή**, από τον ίδιο κριτή που
+   * αρνείται (`nextRequestAtOf`): η οθόνη δεν δείχνει κουμπί που θα γύριζε `consent-request-cooling`.
+   */
+  readonly nextRequestAt: string | null;
 }
 
 /** Ποιος ρωτά — αλλάζει **τι** προσφέρει η οθόνη, όχι τι είναι αληθές. */
@@ -66,6 +72,8 @@ export function privateMarketingStandingViewOf(mandate: BrokeredListingMandate):
       return { kind: 'granted', version: standing.grant.text.version, at: standing.grant.at, channel: standing.grant.channel, audience: standing.grant.audience };
     case 'requested':
       return { kind: 'requested', requestId: standing.request.id, at: standing.request.at, audience: standing.request.audience };
+    case 'declined':
+      return { kind: 'declined', at: standing.decline.at };
     default:
       return { kind: standing.kind };
   }

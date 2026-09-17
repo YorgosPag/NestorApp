@@ -20,6 +20,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { readContainerState } from '@/lib/files/file-record-read';
+import { fileResource } from '../_shared/file-ownership';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 
@@ -73,15 +75,23 @@ async function handlePost(
 
     for (const fileId of body.fileIds) {
       try {
-        const docRef = db.collection(COLLECTIONS.FILES).doc(fileId);
-        const docSnap = await docRef.get();
-
-        if (!docSnap.exists) {
-          errors.push(`${fileId}: not found`);
+        // 🔒 ADR-862 Φ0 Β10 — Ο PEP ΠΟΥ ΕΛΕΙΠΕ. Η διαδρομή έγραφε σε `files/{id}` **χωρίς**
+        //    έλεγχο μισθωτή: κάθε συνδεδεμένος αρχειοθετούσε/επανέφερε **ξένο** αρχείο με
+        //    γνωστό id. Τώρα: φόρτωσε → υπάρχει; → δικό μου; σε **μία** πράξη (ADR-742), και
+        //    ξένο = ανύπαρκτο (κανένα μαντείο ύπαρξης).
+        const owned = await fileResource.load({
+          docId: fileId,
+          caller: ctx,
+          action: `archive:${action}`,
+          refusal: () => `${fileId}: not found`,
+          db,
+        });
+        if (owned.refusal !== undefined) {
+          errors.push(owned.refusal);
           continue;
         }
-
-        const data = docSnap.data();
+        const docRef = owned.doc.ref;
+        const data = owned.doc.data;
 
         // Validate state transition
         if (action === 'archive' && data?.lifecycleState === 'archived') {
@@ -89,6 +99,13 @@ async function handlePost(
         }
         if (action === 'unarchive' && data?.lifecycleState !== 'archived') {
           continue; // Not archived, skip silently
+        }
+        // 🔴 Β10 — Η ΑΝΤΙΚΑΤΕΣΤΗΜΕΝΗ ΕΚΔΟΣΗ ΔΕΝ «ΞΑΝΑΓΙΝΕΤΑΙ ΕΝΕΡΓΗ» ΜΕ ΕΝΑ ΚΛΙΚ. Δύο ενεργές
+        //    εκδόσεις της ίδιας θέσης είναι ψέμα για το ποια ισχύει. Κατά Autodesk Docs η
+        //    επαναφορά παλιάς έκδοσης είναι **αντίγραφο που προωθείται** ως νέα — ποτέ ανάσταση.
+        if (action === 'unarchive' && readContainerState(data ?? {}).phase === 'SUPERSEDED') {
+          errors.push(`${fileId}: superseded-restore-via-new-version`);
+          continue;
         }
 
         const updateData: Record<string, string> = {

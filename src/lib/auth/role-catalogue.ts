@@ -206,6 +206,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "iso19650:containers:seal",
       "iso19650:containers:release",
       "iso19650:containers:withdraw",
+      "iso19650:containers:supersede", // ADR-862 Φ0 Β10 — νέα έκδοση ⇒ η παλιά αρχειοθετείται
     ],
     level: 1,
     isProjectRole: false,
@@ -325,6 +326,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "iso19650:containers:seal",
       "iso19650:containers:release",
       "iso19650:containers:withdraw",
+      "iso19650:containers:supersede", // ADR-862 Φ0 Β10 — νέα έκδοση ⇒ η παλιά αρχειοθετείται
     ],
     level: 2,
     isProjectRole: true,
@@ -369,6 +371,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       //    σε **κάθε** αρχιτέκτονα του συστήματος.
       "iso19650:containers:share",
       "iso19650:containers:seal",
+      // ADR-862 Φ0 Β10 — όποιος ανεβάζει νέα έκδοση την ανεβάζει **στη θέση** της παλιάς
+      // (Procore «Upload Drawings», Autodesk Docs «Create + Upload»). Όχι απόσυρση.
+      "iso19650:containers:supersede",
     ],
     level: 3,
     isProjectRole: true,
@@ -412,6 +417,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // ο ρόλος λέει «τι μπορεί», η **ομάδα** λέει «τίνος είναι» (Β7).
       "iso19650:containers:share",
       "iso19650:containers:seal",
+      // ADR-862 Φ0 Β10 — όποιος ανεβάζει νέα έκδοση την ανεβάζει **στη θέση** της παλιάς
+      // (Procore «Upload Drawings», Autodesk Docs «Create + Upload»). Όχι απόσυρση.
+      "iso19650:containers:supersede",
     ],
     level: 3,
     isProjectRole: true,
@@ -425,6 +433,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "dxf:text:edit",
       "dxf:dictionary:view",
       "photos:photos:upload",
+      "iso19650:containers:supersede", // ADR-862 Φ0 Β10 — ανεβάζει, άρα ξαναανεβάζει
       "progress:progress:update",
       "reports:reports:view",
       "reports:reports:create",

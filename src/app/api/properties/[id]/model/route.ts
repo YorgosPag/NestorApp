@@ -58,6 +58,7 @@ import {
   readSceneFileIds,
 } from './model-source-lookup';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
+import { containerActorOf, transitionContainer } from '@/services/iso19650/container-transitions';
 import {
   MODEL_DECLARATION_METADATA_KEY,
   decodeModelDeclaration,
@@ -85,13 +86,12 @@ interface PropertyModelResponse {
   readonly fileId: string;
   readonly storagePath: string;
   /**
-   * 🏆 **ΠΟΙΟΥΣ ΔΙΑΔΕΧΕΤΑΙ ΑΥΤΗ Η ΔΗΜΟΣΙΕΥΣΗ** — ταυτοποιητικά, ποτέ πράξη (ADR-845 Ο-27).
+   * 🏆 **ΠΟΙΟΥΣ ΔΙΑΔΕΧΕΤΑΙ ΑΥΤΗ Η ΔΗΜΟΣΙΕΥΣΗ** — ταυτοποιητικά (ADR-845 Ο-27).
    *
-   * 🔴 **Ο ΔΙΑΚΟΜΙΣΤΗΣ ΚΡΙΝΕΙ, Ο ΠΕΛΑΤΗΣ ΠΡΑΤΤΕΙ — ΚΑΙ ΤΟ ΕΠΙΒΑΛΛΕΙ ΤΟ ΦΡΑΓΜΑ.** Η **μία**
-   * πόρτα της απόσυρσης *(`supersedeFileRecord` → `moveToTrash`)* εισάγει `@/lib/firebase`,
-   * δηλαδή **client SDK**· αυτή η διαδρομή είναι `'server-only'`. Δεν συναντιούνται.
-   * ⛔ Ένα **admin δίδυμο** της πόρτας απορρίφθηκε ρητά: δεύτερη μηχανή για την ίδια ερώτηση
-   * *(N.18 · ADR-749)* — και η ίδια της η κεφαλίδα το απαγορεύει.
+   * 🔴 **ΑΛΛΑΞΕ ΣΤΟ ADR-862 Φ0 Β10: Ο ΔΙΑΚΟΜΙΣΤΗΣ ΚΡΙΝΕΙ ΚΑΙ ΠΡΑΤΤΕΙ.** Μέχρι τότε η μία πόρτα
+   * της απόσυρσης ήταν **client SDK** και η αρχειοθέτηση γινόταν σε δεύτερο βήμα στον πελάτη.
+   * Πλέον η πόρτα **είναι** ο server γραφέας (`transitionContainer({ act: 'supersede' })`), άρα
+   * καλείται **εδώ** — όχι δίδυμο: ο **ΕΝΑΣ** γραφέας, από τον δεύτερο καλούντα. Δες {@link archived}.
    *
    * ⚠️ **Η ΑΓΓΕΛΙΑ ΕΙΝΑΙ ΗΔΗ ΣΩΣΤΗ ΧΩΡΙΣ ΑΥΤΟ.** Το `currentPerIdentity` κρατά **παράγωγα**
    * το νεότερο ανά ταυτότητα, άρα το κοινό δεν βλέπει ποτέ διπλότυπο — ούτε αν ο πελάτης
@@ -102,6 +102,48 @@ interface PropertyModelResponse {
    * **Ποτέ** «δεν ξέρω».
    */
   readonly supersedes: readonly string[];
+  /**
+   * 🗄️ **Ποιοι από τους `supersedes` ΑΡΧΕΙΟΘΕΤΗΘΗΚΑΝ ΠΡΑΓΜΑΤΙ** (ADR-862 Φ0 Β10).
+   *
+   * 🔑 Ο πελάτης εκπέμπει `FILE_SUPERSEDED` **μόνο** γι' αυτούς — ποτέ για ό,τι απλώς
+   * ταυτοποιήθηκε. Μια άρνηση του γραφέα (π.χ. `not-capable`) **δεν** ακυρώνει τη δημοσίευση:
+   * η αγγελία είναι ήδη σωστή· χάνεται μόνο η τακτοποίηση της ιστορίας, και καταγράφεται.
+   */
+  readonly archived: readonly string[];
+}
+
+/**
+ * **Οι προκάτοχοι → ΑΡΧΕΙΟ**, μέσω του ΕΝΟΣ γραφέα (ADR-862 Φ0 Β10).
+ *
+ * ⚠️ **Σειριακά, όχι `Promise.all`**: κάθε πράξη είναι συναλλαγή πάνω στον **ίδιο** διάδοχο· σε
+ * παράλληλη εκτέλεση θα ξαναεκτελούνταν η μία την άλλη χωρίς κέρδος. Στην πράξη είναι ένας.
+ *
+ * 🔑 Μια **βλάβη** (ρίψη) στον έναν δεν κρύβει την επιτυχία του άλλου και **δεν** ρίχνει τη
+ * δημοσίευση — το μοντέλο ανέβηκε ήδη. Καταγράφεται με όνομα.
+ */
+async function archiveSuperseded(
+  ctx: AuthContext,
+  supersedes: readonly string[],
+  fileId: string,
+): Promise<readonly string[]> {
+  const archived: string[] = [];
+  for (const previousFileId of supersedes) {
+    try {
+      const outcome = await transitionContainer({
+        fileId: previousFileId,
+        act: 'supersede',
+        actor: containerActorOf(ctx),
+        supersededByFileId: fileId,
+      });
+      if (outcome.kind === 'transitioned') archived.push(previousFileId);
+      if (outcome.kind === 'refused') {
+        logger.warn('Ο προκάτοχος μοντέλου δεν αρχειοθετήθηκε', { previousFileId, fileId, why: outcome.why });
+      }
+    } catch (error) {
+      logger.error('Η αρχειοθέτηση προκατόχου μοντέλου απέτυχε', { previousFileId, fileId, error: getErrorMessage(error) });
+    }
+  }
+  return archived;
 }
 
 /**
@@ -184,14 +226,15 @@ async function handlePost(
   const supersedes = await findSupersededModels(adminDb, ctx.companyId, propertyId, recordBase);
 
   await writeModel({ fileId, storagePath, recordBase, file, declaration, createdBy: ctx.uid });
+  const archived = await archiveSuperseded(ctx, supersedes, fileId);
 
   logger.info('Μοντέλο ακινήτου ανέβηκε', {
     fileId, propertyId, companyId: ctx.companyId, bytes: file.size,
     state: declaration.state, scope: declaration.scope, supersedes: supersedes.length,
-    sources: sourceRevisions.length,
+    archived: archived.length, sources: sourceRevisions.length,
   });
 
-  return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes });
+  return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes, archived });
 }
 
 /**

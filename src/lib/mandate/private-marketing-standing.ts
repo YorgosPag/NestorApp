@@ -21,9 +21,18 @@ import {
 } from '@/types/owner-property-mandate';
 import type {
   PrivateMarketingEvent,
+  PrivateMarketingRefusal,
   PrivateMarketingStanding,
   PrivateMarketingTerm,
 } from '@/types/private-marketing-consent';
+
+/**
+ * **Μία ώρα ανάμεσα σε δύο αιτήματα προς τον ίδιο ιδιοκτήτη** (ADR-864 §19 · Α29).
+ *
+ * 🌐 Dropbox Sign API, επί λέξει: *«You cannot send a reminder within 1 hour of the last reminder that was sent»*.
+ * Ανά εντολή = ανά σχέση γραφείου↔ιδιοκτήτη, όπως εκεί ανά υπογράφοντα.
+ */
+export const PRIVATE_MARKETING_REQUEST_COOLDOWN_MS = 60 * 60 * 1000;
 
 /** Ό,τι χρειάζεται ο κριτής από την καταχώρηση — τίποτε άλλο. */
 interface PrivateMarketingSubject {
@@ -70,7 +79,37 @@ export function privateMarketingStandingOf(mandate: BrokeredListingMandate): Pri
       return sameTerm(latest.term, mandateTermOf(mandate))
         ? { kind: 'granted', grant: latest }
         : { kind: 'outdated' };
+    case 'declined':
+      // Άρνηση για **άλλους** όρους δεν φράζει τη νέα σύμβαση (Α17 · Α35) — μένει μόνο στο ιστορικό.
+      return sameTerm(latest.term, mandateTermOf(mandate))
+        ? { kind: 'declined', decline: latest }
+        : { kind: 'absent' };
   }
+}
+
+/**
+ * **Πότε επιτρέπεται το επόμενο αίτημα** — `null` = τώρα (Α29 · Α30).
+ *
+ * 🔑 Από το **τελευταίο** `requested` του ιστορικού — κανένας μετρητής, καμία δεύτερη αλήθεια. Την ίδια τιμή
+ * κρίνει ο γραφέας (μέσα στη συναλλαγή) και δείχνει η οθόνη (από το πάνελ του διακομιστή).
+ */
+export function nextRequestAtOf(mandate: BrokeredListingMandate, nowISOValue: string): string | null {
+  const lastRequest = privateMarketingEventsOf(mandate).filter((event) => event.kind === 'requested').at(-1);
+  if (lastRequest === undefined) return null;
+  const opensAt = Date.parse(lastRequest.at) + PRIVATE_MARKETING_REQUEST_COOLDOWN_MS;
+  return opensAt > Date.parse(nowISOValue) ? new Date(opensAt).toISOString() : null;
+}
+
+/**
+ * **Μπορεί το γραφείο να ζητήσει ΤΩΡΑ;** — `null` = ναι· αλλιώς ο λόγος, με όνομα.
+ *
+ * Σειρά = σειρά του «τι πρέπει να κάνει ο άνθρωπος»: ισχύει ήδη (τίποτα) · αρνήθηκε (σεβάσου το) · αναμονή (περίμενε).
+ */
+export function requestRefusalOf(mandate: BrokeredListingMandate, nowISOValue: string): PrivateMarketingRefusal | null {
+  const standing = privateMarketingStandingOf(mandate).kind;
+  if (standing === 'granted') return 'consent-already-granted';
+  if (standing === 'declined') return 'consent-declined';
+  return nextRequestAtOf(mandate, nowISOValue) === null ? null : 'consent-request-cooling';
 }
 
 /** Εντολές που **δεσμεύουν** αυτή τη στιγμή — εγκεκριμένες, μη ανακληθείσες, μη ληγμένες. */

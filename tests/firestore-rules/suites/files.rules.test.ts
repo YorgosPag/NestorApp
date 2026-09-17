@@ -228,7 +228,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
       );
     });
 
-    it('⛔ και οι υπόλοιπες τρεις πράξεις (share · release · withdrawal)', async () => {
+    it('⛔ και οι υπόλοιπες πράξεις (share · release · withdrawal · supersession)', async () => {
       // Σε έναν βρόχο, όχι σε τρία σχεδόν ταυτόσημα tests: ο φρουρός είναι **μία**
       // λίστα σε **έναν** βοηθό, άρα τρεις αντιγραφές θα ήταν κλώνος (N.18) χωρίς
       // να προσθέτουν καμία νέα ερώτηση. Ό,τι λείπει από τη λίστα, λείπει για όλα.
@@ -238,7 +238,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
         overrides: { cdeState: 'WIP' },
       });
 
-      for (const act of ['cdeShare', 'cdeRelease', 'cdeWithdrawal'] as const) {
+      for (const act of ['cdeShare', 'cdeRelease', 'cdeWithdrawal', 'cdeSupersession'] as const) {
         await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, [act]: ACT }));
       }
     });
@@ -263,6 +263,60 @@ describe('files.rules — tenant_state_machine pattern', () => {
       await expectAllow(
         fileDoc('cde-born-wip').set(createPayload({ cdeState: 'WIP', cdeTeamId: 'team-mep' })),
       );
+    });
+
+    /**
+     * 🔬 ADR-862 Φ0 Β10 — **το ΑΚΡΙΒΕΣ φορτίο** του `moveToTrash`
+     * (`services/file-record-lifecycle.ts`), όχι το ελάχιστο `TRASH_UPDATE`.
+     * Οι δύο γραμμές διαφέρουν **μόνο** στα τρία πεδία της διαδοχής — άρα αν η
+     * πρώτη περνά και η δεύτερη όχι, η αιτία είναι η διαδοχή και τίποτε άλλο.
+     */
+    function productionTrashPayload(): Record<string, unknown> {
+      const at = new Date('2026-09-17');
+      return {
+        lifecycleState: 'trashed',
+        trashedAt: at,
+        trashedBy: ADMIN_UID,
+        purgeAt: '2026-10-17T00:00:00.000Z',
+        isDeleted: true,
+        deletedAt: at,
+        deletedBy: ADMIN_UID,
+        updatedAt: at,
+      };
+    }
+
+    it('✅ κάδος όπως τον γράφει η παραγωγή: ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
+      const docId = 'cde-production-trash';
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
+
+      await expectAllow(fileDoc(docId).update(productionTrashPayload()));
+    });
+
+    // 🔴 ADR-862 Φ0 Β10 — ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΑΠΟΔΕΙΧΘΗΚΕ (2026-09-17): αυτό ακριβώς έστελνε ο παλιός
+    //    `moveToTrash` σε κάθε αντικατάσταση, και απορριπτόταν ολόκληρο, σιωπηλά.
+    it('⛔ διαδοχή που γράφει `cdeState` από πελάτη: ΑΡΝΗΣΗ — ΟΛΗ η εγγραφή', async () => {
+      const docId = 'cde-production-supersede';
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
+
+      await expectDeny(
+        fileDoc(docId).update({
+          ...productionTrashPayload(),
+          supersededByFileId: 'file_successor',
+          supersededAt: new Date('2026-09-17'),
+          cdeState: 'SUPERSEDED',
+        }),
+      );
+    });
+
+    it('⛔ ισχυρισμός διαδοχής ΧΩΡΙΣ `cdeState` από πελάτη: ΑΡΝΗΣΗ — η απόδειξη είναι του διακομιστή', async () => {
+      // Χωρίς αυτή τη γραμμή, ο πελάτης θα έγραφε `supersededByFileId` και ο θεματοφύλακας
+      // (κληρονομιά του Μ1) θα το δεχόταν ως **απόδειξη** διαδοχής που κανείς δεν έκρινε.
+      const docId = 'cde-client-succession-claim';
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID });
+
+      for (const claim of [{ supersededByFileId: 'file_successor' }, { supersededAt: new Date('2026-09-17') }]) {
+        await expectDeny(fileDoc(docId).update({ ...productionTrashPayload(), ...claim }));
+      }
     });
   });
 });

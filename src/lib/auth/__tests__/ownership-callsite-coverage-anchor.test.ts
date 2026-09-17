@@ -148,6 +148,9 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   'lib/firestore/soft-delete-engine.ts',
   'services/ai-pipeline/tools/tool-tenant-guard.ts',
   'services/banking/bank-accounts-server.service.ts',
+  // ADR-862 Φ0 Β10 — μισθωτής του ΔΙΑΔΟΧΟΥ· ξένο/κενό ⇒ `successor-not-found`
+  // (container-supersession-anchor Α20.4).
+  'services/iso19650/container-succession-policy.ts',
   'services/sharing/resolver-core/share-entity-access.ts',
   'subapps/procurement/services/rfq-service.ts',
 ];

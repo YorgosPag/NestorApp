@@ -42,6 +42,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSupersessionNotice } from '@/hooks/files/useSupersessionNotice';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import {
@@ -89,6 +90,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
+  const noticeSupersession = useSupersessionNotice();
 
   // ADR-368: user-specified DXF coordinate units (default = auto-detect)
   const [selectedUnits, setSelectedUnits] = useState<SceneUnits | 'auto'>('auto');
@@ -214,29 +216,21 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
       userDrawingUnits: explicitUnits,
     });
     if (result.success) {
-      // 🔁 ADR-845 Ο-16 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΔΙΑΓΡΑΦΗ (ISO 19650 «superseded»).
-      // Ο δίδυμος αυτού του κλάδου ζει στο `useSceneState.linkSceneFileToLevel`: η ίδια
-      // αντικατάσταση δηλώνεται από δύο σημεία, και ΚΑΘΕ ένα που θα ξεχνούσε τον διάδοχο
-      // θα ξανάδειαζε τον καμβά. `result.fileId` = το αρχείο που μόλις πήρε τη θέση.
-      // Χωρίς `fileId` (δεν πρέπει να συμβαίνει σε επιτυχία) πέφτουμε στον σκέτο κάδο —
-      // fail-closed προς την παλιά, ορατή συμπεριφορά αντί για σιωπηλή παράλειψη.
-      if (!floorId && existingFile) {
-        try {
-          if (result.fileId) {
-            await FileRecordService.supersedeFileRecord(existingFile.id, result.fileId, config.userId);
-          } else {
-            await FileRecordService.moveToTrash(existingFile.id, config.userId);
-          }
-        } catch {
-          // non-blocking
-        }
+      // 🔁 ADR-845 Ο-16 · ADR-862 Φ0 Β10 — ΝΕΑ ΕΚΔΟΣΗ, ΟΧΙ ΔΙΑΓΡΑΦΗ (ISO 19650 «superseded»).
+      // Η παλιά **αρχειοθετείται** από τον ΕΝΑ γραφέα του διακομιστή, που αποδεικνύει τη
+      // διαδοχή (ίδια θέση · έτοιμος διάδοχος · δικός σου). Κάθε «όχι» φτάνει στον άνθρωπο
+      // **με όνομα** — ποτέ πια `catch {}`: η σιωπή εδώ έκρυψε ότι ο κανόνας Β4 απέρριπτε
+      // κάθε αντικατάσταση. Χωρίς `fileId` (δεν συμβαίνει σε επιτυχία) δεν υπάρχει διάδοχος
+      // να αποδειχθεί ⇒ η παλιά μένει ενεργή, ποτέ κάδος (ο κάδος σημαίνει απώλεια).
+      if (!floorId && existingFile && result.fileId) {
+        noticeSupersession(await FileRecordService.supersedeFileRecord(existingFile.id, result.fileId));
       }
       setUploadedFile(file);
       setUploadedFormat(result.format ?? null);
       setUploadSuccess(true);
       onComplete(file, result.fileId, result.format, explicitUnits);
     }
-  }, [smart, floorId, existingFile, config.userId, onComplete, explicitUnits]);
+  }, [smart, floorId, existingFile, noticeSupersession, onComplete, explicitUnits]);
 
   const handleUpload = useCallback(async (files: File[]) => {
     if (files.length === 0) return;

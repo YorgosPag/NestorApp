@@ -178,10 +178,21 @@ export interface ContainerActRecord {
   readonly suitabilityCode?: SuitabilityCode;
   /** **Μόνο στην απόσυρση**: γιατί αποσύρθηκε. */
   readonly reason?: string;
+  /**
+   * **Μόνο στην αντικατάσταση**: **ποιο** αρχείο πήρε τη θέση του (ADR-862 Φ0 Β10).
+   * Η κατάσταση `SUPERSEDED` λέει «κάτι το αντικατέστησε»· αυτό λέει **τι**.
+   */
+  readonly supersededByFileId?: string;
 }
 
 /**
- * Οι τέσσερις πράξεις ενός δοχείου, **όπως διαβάστηκαν**. `null` = δεν έγινε.
+ * Οι πέντε πράξεις ενός δοχείου, **όπως διαβάστηκαν**. `null` = δεν έγινε.
+ *
+ * 🔑 **Δύο δρόμοι προς το `SUPERSEDED`, και ΔΕΝ είναι το ίδιο** (ADR-862 Φ0 Β10):
+ *   `withdrawal`   → ο **συντονιστής** αποσύρει δοχείο (κρίση, με `reason`)
+ *   `supersession` → **νέα έκδοση** πήρε τη θέση του (συνέπεια ανεβάσματος, με διάδοχο)
+ * Κατά Aconex/Procore/Autodesk Docs η δεύτερη είναι δικαίωμα **όποιου ανεβάζει**, όχι του
+ * συντονιστή — γι' αυτό είναι χωριστή πράξη με χωριστή ικανότητα.
  *
  * ⚠️ Το `WIP` **δεν** έχει πράξη: είναι η κατάσταση **γέννησης**. Γι' αυτό η
  * διάκριση «δηλωμένο WIP» ↔ «ποτέ δεν δηλώθηκε» **δεν** παράγεται από τις πράξεις —
@@ -192,6 +203,7 @@ export interface ContainerActs {
   readonly seal: ContainerActRecord | null;
   readonly release: ContainerActRecord | null;
   readonly withdrawal: ContainerActRecord | null;
+  readonly supersession: ContainerActRecord | null;
 }
 
 // =============================================================================

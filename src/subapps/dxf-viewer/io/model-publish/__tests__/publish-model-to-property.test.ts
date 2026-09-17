@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 
 import { decodeModelDeclaration } from '@/lib/listings/model-declaration-metadata';
+import { RealtimeService } from '@/services/realtime';
 
 import { serialiseGlb } from '../../../export/core/mesh3d/mesh3d-serialise';
 import type { ExportArtifact, ExportDeps } from '../../../export/types';
@@ -135,5 +136,27 @@ describe('ADR-845 Βήμα Γ — ο δρόμος του πελάτη', () => {
     if (outcome.ok) throw new Error('unreachable');
     expect(outcome.refusal).toBe('rejected');
     expect(outcome.detail).toBe('MODEL_SIGNATORY_REQUIRED');
+  });
+
+  // 🔑 ADR-862 Φ0 Β10 — η αρχειοθέτηση έγινε στον διακομιστή· ο πελάτης ΜΟΝΟ ανακοινώνει, και
+  //    μόνο ό,τι **πράγματι** αρχειοθετήθηκε. Ένα γεγονός για τον `file_refused` θα έκρυβε από τη
+  //    λίστα αρχείο που είναι ακόμη ενεργό.
+  it('Κ5 — FILE_SUPERSEDED ΜΟΝΟ για τα `archived`, ποτέ για όσα απλώς ταυτοποιήθηκαν', async () => {
+    exportFloorsToMesh3d.mockResolvedValue({ artifacts: await realGlbArtifacts(), warnings: [] });
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { fileId: 'file_1', storagePath: 'p', supersedes: ['file_done', 'file_refused'], archived: ['file_done'] },
+      }),
+    })) as unknown as typeof fetch;
+    const seen: { fileId: string; supersededByFileId: string }[] = [];
+    const unsub = RealtimeService.subscribe('FILE_SUPERSEDED', (payload) => { seen.push(payload); });
+
+    const outcome = await publishModelToProperty(order(), deps());
+    unsub();
+
+    expect(outcome).toEqual({ ok: true, fileId: 'file_1' });
+    expect(seen).toEqual([expect.objectContaining({ fileId: 'file_done', supersededByFileId: 'file_1' })]);
   });
 });

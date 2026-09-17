@@ -112,10 +112,27 @@ interface PrivateMarketingRevoked {
   readonly actorUserId: string | null;
 }
 
+/**
+ * Ο ιδιοκτήτης **αρνείται** — «μη μου ξαναστείλετε» (ADR-864 §19 · Α35).
+ *
+ * 🔑 Δικαίωμα του παραλήπτη, όπως στο Adobe Acrobat Sign (ο αποστολέας **δεν** μπορεί να το αφαιρέσει).
+ * Δένεται στους **όρους** της εντολής (ίδιο δόγμα με το `granted`, Α17): νέοι όροι = νέα σύμβαση ⇒ το
+ * γραφείο μπορεί να ρωτήσει ξανά. Μπλοκάρει **μόνο** τα αιτήματα — ο ιδιοκτήτης συναινεί όποτε θέλει.
+ */
+export interface PrivateMarketingDeclined {
+  readonly kind: 'declined';
+  readonly id: string;
+  readonly at: string;
+  readonly channel: Exclude<PrivateMarketingChannel, 'form'>;
+  readonly actorUserId: string | null;
+  readonly term: PrivateMarketingTerm;
+}
+
 export type PrivateMarketingEvent =
   | PrivateMarketingRequested
   | PrivateMarketingGranted
-  | PrivateMarketingRevoked;
+  | PrivateMarketingRevoked
+  | PrivateMarketingDeclined;
 
 /**
  * **Πού βρίσκεται η συναίνεση** — όνομα, ποτέ `boolean` (Α8).
@@ -126,13 +143,15 @@ export type PrivateMarketingEvent =
  * | `requested` | εκκρεμεί αίτημα, καμία ενεργή συναίνεση |
  * | `outdated` | υπήρξε συναίνεση, αλλά για **άλλους** όρους (Α17) |
  * | `revoked` | η τελευταία πράξη ήταν ανάκληση |
- * | `absent` | τίποτα δεν ζητήθηκε ποτέ |
+ * | `declined` | ο ιδιοκτήτης αρνήθηκε **για τους τρέχοντες** όρους — κανένα νέο αίτημα |
+ * | `absent` | τίποτα δεν ζητήθηκε ποτέ — ή άρνηση για **άλλους** όρους (ιστορικό, όχι φραγμός) |
  */
 export type PrivateMarketingStanding =
   | { readonly kind: 'granted'; readonly grant: PrivateMarketingGranted }
   | { readonly kind: 'requested'; readonly request: PrivateMarketingRequested }
   | { readonly kind: 'outdated' }
   | { readonly kind: 'revoked' }
+  | { readonly kind: 'declined'; readonly decline: PrivateMarketingDeclined }
   | { readonly kind: 'absent' };
 
 /**
@@ -158,6 +177,12 @@ export const PRIVATE_MARKETING_REFUSALS = [
   'consent-not-granted',
   /** Αίτημα ενώ η συναίνεση **ήδη ισχύει** για τους τρέχοντες όρους — το στένεμα περνά ήδη. */
   'consent-already-granted',
+  /** Αίτημα πριν περάσει η αναμονή από το προηγούμενο (Dropbox Sign: ≤1/ώρα · Α29). */
+  'consent-request-cooling',
+  /** Αίτημα ενώ ο ιδιοκτήτης **αρνήθηκε** για τους τρέχοντες όρους (Adobe Acrobat Sign · Α35). */
+  'consent-declined',
+  /** Άρνηση χωρίς εκκρεμές αίτημα — δεν υπάρχει τι να αρνηθεί. */
+  'consent-not-requested',
 ] as const;
 
 export type PrivateMarketingRefusal = (typeof PRIVATE_MARKETING_REFUSALS)[number];

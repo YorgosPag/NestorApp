@@ -597,10 +597,14 @@ service cloud.firestore {
       // Admin SDK — Β6), ποτέ από client SDK. Πριν τη Φ0 το πεδίο ήταν ελεύθερο
       // dropdown· δηλαδή ο φρουρός άνοιγε με ΕΝΑ κλικ.
       //
-      // ⚠️ Ασφαλές ΤΩΡΑ επειδή προηγήθηκαν τα Β2/Β3: μετρημένο 2026-09-16, ο μόνος
-      //    εναπομείνας γραφέας του πεδίου σε όλο το `src/` είναι ο
-      //    `supersedeFileRecord` (Admin SDK· δρομολογείται στο Β10). Κανένας
-      //    πελάτης δεν γράφει πια — γι' αυτό το πάγωμα δεν σπάει τίποτα.
+      // 🔴 ΔΙΟΡΘΩΣΗ 2026-09-17 (Β10): εδώ έγραφε «ο μόνος εναπομείνας γραφέας είναι ο
+      //    `supersedeFileRecord` (Admin SDK) — το πάγωμα δεν σπάει τίποτα». ΔΙΠΛΟ ΛΑΘΟΣ,
+      //    ΜΕΤΡΗΜΕΝΟ ΣΤΟΝ EMULATOR: ήταν **client SDK**, άρα το πάγωμα **έσπασε** κάθε
+      //    αντικατάσταση αρχείου (ολόκληρη η εγγραφή απορριπτόταν, και οι 3 καλούντες
+      //    κατάπιναν την άρνηση). Θεραπεία ADR-862 Φ0 Β10: η αντικατάσταση είναι πλέον η
+      //    5η πράξη (`supersede`) του ΕΝΟΣ γραφέα — και η **απόδειξη διαδοχής**
+      //    (`cdeSupersession` · `supersededByFileId` · `supersededAt`) μπήκε στη λίστα,
+      //    γιατί ένας πελάτης που τη γράφει θα ισχυριζόταν διαδοχή που κανείς δεν έκρινε.
       //
       // 🔑 ΓΙΑΤΙ `diff().affectedKeys()` ΚΑΙ ΟΧΙ ΣΥΓΚΡΙΣΗ ΤΙΜΩΝ: η ερώτηση είναι
       //    «άγγιξε κανείς αυτά τα κλειδιά;», και το `affectedKeys()` την απαντά
@@ -623,7 +627,8 @@ service cloud.firestore {
       function cdeCustodyUnchanged() {
         return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'cdeState', 'cdeTeamId',
-          'cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal'
+          'cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal',
+          'cdeSupersession', 'supersededByFileId', 'supersededAt'
         ]);
       }
 

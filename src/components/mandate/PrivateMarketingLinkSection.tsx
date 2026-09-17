@@ -47,7 +47,7 @@ export interface PrivateMarketingLinkView {
 type Phase =
   | { readonly kind: 'idle' }
   | { readonly kind: 'sending' }
-  | { readonly kind: 'done'; readonly what: 'granted' | 'revoked' }
+  | { readonly kind: 'done'; readonly what: 'granted' | 'revoked' | 'declined' }
   | { readonly kind: 'failed'; readonly key: string };
 
 function failureKey(body: unknown): string {
@@ -76,7 +76,7 @@ export function PrivateMarketingLinkSection({ view }: { readonly view: PrivateMa
   const [phase, setPhase] = React.useState<Phase>({ kind: 'idle' });
   const headingId = React.useId();
 
-  const run = async (what: 'granted' | 'revoked', privateMarketing: object): Promise<void> => {
+  const run = async (what: 'granted' | 'revoked' | 'declined', privateMarketing: object): Promise<void> => {
     setPhase({ kind: 'sending' });
     const result = await post(view.token, privateMarketing);
     setPhase(result.kind === 'idle' ? { kind: 'done', what } : result);
@@ -87,10 +87,12 @@ export function PrivateMarketingLinkSection({ view }: { readonly view: PrivateMa
     if (submission !== undefined) void run('granted', { action: 'grant', requestId: view.requestId, submission });
   };
   const revoke = (outcome: PrivateMarketingRevocationOutcome): void => void run('revoked', { action: 'revoke', outcome });
+  const decline = (requestId: string): void => void run('declined', { action: 'decline', requestId });
 
   if (phase.kind === 'done') {
     // ⚠️ Ρητά `t()`, όχι `${K}.${phase.what}`: το δυναμικό πρόθεμα έσερνε ΟΛΟ το `mandate.privateMarketing.*` στο slice (CHECK 3.34).
-    return <p role="status" className="text-sm font-medium text-card-foreground">{phase.what === 'granted' ? t(`${K}.granted`) : t(`${K}.revoked`)}</p>;
+    const doneText = phase.what === 'granted' ? t(`${K}.granted`) : phase.what === 'revoked' ? t(`${K}.revoked`) : t(`${K}.declinedDone`);
+    return <p role="status" className="text-sm font-medium text-card-foreground">{doneText}</p>;
   }
   if (view.requestId === null && !view.closed) return null;
 
@@ -102,6 +104,15 @@ export function PrivateMarketingLinkSection({ view }: { readonly view: PrivateMa
 
       {view.requestId !== null && view.version !== null && (
         <PrivateMarketingConsentForm version={view.version} parties={[{ key: 'link', values: view.values }]} busy={busy} onSubmit={grant} />
+      )}
+
+      {view.requestId !== null && (
+        <footer className="flex flex-col gap-1">
+          <Button type="button" variant="outline" className="self-start" disabled={busy} onClick={() => view.requestId !== null && decline(view.requestId)}>
+            {t(`${K}.decline`)}
+          </Button>
+          <p className="text-sm text-muted-foreground">{t(`${K}.declineExplain`)}</p>
+        </footer>
       )}
 
       {view.closed && (

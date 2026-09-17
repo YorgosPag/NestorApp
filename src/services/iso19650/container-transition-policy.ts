@@ -46,13 +46,19 @@ import type {
   ContainerPhase,
   ContainerState,
 } from '@/types/container-access';
+import type { SuccessionRefusalReason } from './container-succession-policy';
 
 // =============================================================================
 // ΤΟ ΛΕΞΙΛΟΓΙΟ
 // =============================================================================
 
-/** Οι τέσσερις πράξεις. **Κλειστό σύνολο** — πέμπτη δεν μεταγλωττίζεται χωρίς γραμμή. */
-export type ContainerAct = 'share' | 'seal' | 'release' | 'withdraw';
+/**
+ * Οι πέντε πράξεις. **Κλειστό σύνολο** — έκτη δεν μεταγλωττίζεται χωρίς γραμμή.
+ *
+ * 🔑 `supersede` (ADR-862 Φ0 Β10): **νέα έκδοση** πήρε τη θέση — συνέπεια ανεβάσματος, όχι
+ * κρίση συντονιστή. Δες `container-succession-policy.ts` για την απόδειξη που απαιτεί.
+ */
+export type ContainerAct = 'share' | 'seal' | 'release' | 'withdraw' | 'supersede';
 
 /**
  * Ποιος ζητά την πράξη.
@@ -73,6 +79,8 @@ export interface ContainerTransitionRequest {
   readonly suitabilityCode?: SuitabilityCode;
   /** **Μόνο στην απόσυρση** — γιατί αποσύρθηκε. */
   readonly reason?: string;
+  /** **Μόνο στην αντικατάσταση** — ποιο αρχείο παίρνει τη θέση. Κρίνεται, δεν πιστεύεται. */
+  readonly supersededByFileId?: string;
 }
 
 /**
@@ -99,10 +107,15 @@ export type ContainerRefusalReason =
   /** Απελευθέρωση **χωρίς** σφραγίδα δημιουργού (ADR-862 Α17 μετάλλαξη γ). */
   | 'seal-missing'
   /** Η σφραγίδα δείχνει σε **άλλη** αναθεώρηση (Α17 μετάλλαξη α). */
-  | 'revision-moved';
+  | 'revision-moved'
+  /** Η αντικατάσταση **δεν αποδείχθηκε** (ADR-862 Φ0 Β10) — δες το όνομα. */
+  | SuccessionRefusalReason;
 
-/** Γιατί η πράξη ήταν **περιττή** — ιδεμποτησία (N.7.2 #3), όχι αποτυχία. */
-export type ContainerNoopReason = 'already-in-state';
+/**
+ * Γιατί η πράξη ήταν **περιττή** — ιδεμποτησία (N.7.2 #3), όχι αποτυχία.
+ * `self-succession`: το αρχείο δεν διαδέχεται τον εαυτό του.
+ */
+export type ContainerNoopReason = 'already-in-state' | 'self-succession';
 
 /**
  * Η έκβαση — **ονομασμένη ένωση**, ποτέ `boolean`, ποτέ σιωπή.
@@ -140,7 +153,7 @@ export interface ActSpec {
   /** Η ικανότητα που ζητά ο `decideCapability` (ADR-801). */
   readonly capability: PermissionId;
   /** Το πεδίο της πράξης πάνω στο έγγραφο. */
-  readonly field: 'cdeShare' | 'cdeSeal' | 'cdeRelease' | 'cdeWithdrawal';
+  readonly field: 'cdeShare' | 'cdeSeal' | 'cdeRelease' | 'cdeWithdrawal' | 'cdeSupersession';
   /** Η **διακριτή** ενέργεια ημερολογίου — ⚠️ ποτέ το πιασμένο `'share'`. */
   readonly audit: FileAuditAction;
   /** 🔴 Απαιτεί **ιδιοκτησία**; Μόνο η σφραγίδα — και **δεν** είναι ικανότητα. */
@@ -187,6 +200,15 @@ export const ACT_SPEC: Readonly<Record<ContainerAct, ActSpec>> = {
     requiresAuthor: false,
     from: ['pre-cde', 'WIP', 'SHARED', 'PUBLISHED'],
   },
+  supersede: {
+    capability: 'iso19650:containers:supersede',
+    field: 'cdeSupersession',
+    audit: 'cde_supersede',
+    // ⚠️ Η «ιδιοκτησία» εδώ αφορά τον **διάδοχο**, όχι το έγγραφο: την κρίνει ο
+    //    `judgeSuccession` (`not-successor-author`), που ξέρει και την εξαίρεση συντονιστή.
+    requiresAuthor: false,
+    from: ['pre-cde', 'WIP', 'SHARED', 'PUBLISHED'],
+  },
 };
 
 // =============================================================================
@@ -207,7 +229,7 @@ export const ACT_SPEC: Readonly<Record<ContainerAct, ActSpec>> = {
  * παλιά σφραγίδα.
  */
 export function deriveCdeState(acts: ContainerActs, revision: number): CdeState {
-  if (acts.withdrawal !== null) return 'SUPERSEDED';
+  if (acts.withdrawal !== null || acts.supersession !== null) return 'SUPERSEDED';
   if (
     acts.seal !== null &&
     acts.release !== null &&
@@ -302,9 +324,20 @@ function releaseRequirement(acts: ContainerActs, revision: number): ContainerRef
 // Η ΚΑΤΑΣΚΕΥΗ ΤΗΣ ΠΡΑΞΗΣ
 // =============================================================================
 
-/** Το κλειδί της πράξης μέσα στο {@link ContainerActs} — `withdraw` ↔ `withdrawal`. */
+/**
+ * Το κλειδί της πράξης μέσα στο {@link ContainerActs} — ρήμα ↔ ουσιαστικό.
+ * 🔑 `Record` ⇒ έκτη πράξη **δεν χτίζει** χωρίς γραμμή εδώ (ό,τι ήταν τριαδικό θα σιωπούσε).
+ */
+const ACT_KEY: Readonly<Record<ContainerAct, keyof ContainerActs>> = {
+  share: 'share',
+  seal: 'seal',
+  release: 'release',
+  withdraw: 'withdrawal',
+  supersede: 'supersession',
+};
+
 function actKey(act: ContainerAct): keyof ContainerActs {
-  return act === 'withdraw' ? 'withdrawal' : act;
+  return ACT_KEY[act];
 }
 
 /**
@@ -331,6 +364,9 @@ export function buildAct(
     ...(request.act === 'withdraw' && request.reason !== undefined
       ? { reason: request.reason }
       : {}),
+    ...(request.act === 'supersede' && request.supersededByFileId !== undefined
+      ? { supersededByFileId: request.supersededByFileId }
+      : {}),
   };
 }
 
@@ -352,6 +388,7 @@ export function withAct(
     seal: act === 'seal' ? record : acts.seal,
     release: act === 'release' ? record : acts.release,
     withdrawal: act === 'withdraw' ? record : acts.withdrawal,
+    supersession: act === 'supersede' ? record : acts.supersession,
   };
 }
 

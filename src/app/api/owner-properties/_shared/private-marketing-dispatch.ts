@@ -15,6 +15,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { nowISO } from '@/lib/date-local';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import {
+  declinePrivateMarketing,
   grantPrivateMarketing,
   requestPrivateMarketing,
   revokePrivateMarketing,
@@ -56,6 +57,14 @@ export async function dispatchAccountPrivateMarketing(
         who: { kind: 'owner-account', actor },
         agencyCompanyId: body.agencyCompanyId,
         outcome: body.outcome,
+        nowISO: now,
+      });
+    case 'decline':
+      return declinePrivateMarketing(adminDb, {
+        ownerPropertyId,
+        who: { kind: 'owner-account', actor },
+        agencyCompanyId: body.agencyCompanyId,
+        requestId: body.requestId,
         nowISO: now,
       });
   }

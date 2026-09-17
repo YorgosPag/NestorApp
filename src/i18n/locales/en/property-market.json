@@ -719,7 +719,10 @@
         "consent-not-granted": "There is no active consent to revoke.",
         "consent-already-granted": "Consent already applies to this mandate.",
         "private-marketing-consent-missing": "Another agency mandate has no consent yet, so private marketing cannot be applied.",
-        "consent-document-invalid": "The file is not a ready form of your agency for this listing. Upload it again from this page."
+        "consent-document-invalid": "The file is not a ready form of your agency for this listing. Upload it again from this page.",
+        "consent-request-cooling": "The request was sent a moment ago. You can send it again one hour after the previous one.",
+        "consent-declined": "The owner declined off-market marketing for the current mandate terms. A new request can be sent only if the terms change.",
+        "consent-not-requested": "There is no pending request to decline."
       },
       "saved": "Recorded.",
       "failed": "The action did not complete. Please try again.",
@@ -735,7 +738,8 @@
           "link": "through the owner's link",
           "account": "from the owner's account",
           "form": "with a signed form uploaded by the agency"
-        }
+        },
+        "declined": "The owner declined on {date}. No new requests are sent for the current mandate terms."
       },
       "agency": {
         "request": "Ask the owner for consent",
@@ -754,12 +758,16 @@
         "documentPick": "Choose file",
         "documentReplace": "Replace file",
         "documentAttached": "Uploaded: {name}",
-        "documentFailed": "The file was not uploaded. Please try again."
+        "documentFailed": "The file was not uploaded. Please try again.",
+        "requestCooling": "Request sent. You can send it again from {time}."
       },
       "owner": {
         "start": "Market without a public listing…",
         "consentFor": "Consent to: {agency}"
-      }
+      },
+      "decline": "Not interested",
+      "declineExplain": "The agency will not be able to send you another request for the current mandate terms. You can always consent later from here.",
+      "declinedDone": "Your answer was recorded. The agency will not send you another request for the current terms."
     },
     "cardEmail": {
       "title": "Business card email confirmation",

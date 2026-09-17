@@ -18,6 +18,7 @@ import { latestLegalDocumentVersion } from '@/lib/legal/legal-document-versions'
 import { custodyOf, isPersonalCustody, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { consentValuesFor } from '@/lib/mandate/private-marketing-consent-text';
+import { nextRequestAtOf } from '@/lib/mandate/private-marketing-standing';
 import {
   privateMarketingStandingViewOf,
   type PrivateMarketingPanel,
@@ -37,12 +38,13 @@ type PrivateMarketingPanelsRead =
  * **Μία εντολή → ένα πάνελ** — οι τιμές θέσεων λύνονται **εδώ** (Α25). Τον καλεί και το `/mandate/[token]`,
  * ώστε ο σύνδεσμος και οι δύο οθόνες λογαριασμού να δείχνουν **το ίδιο** κείμενο με τις **ίδιες** τιμές.
  */
-function privateMarketingPanelOf(mandate: BrokeredListingMandate, agencyName: string): PrivateMarketingPanel {
+function privateMarketingPanelOf(mandate: BrokeredListingMandate, agencyName: string, nowISOValue: string): PrivateMarketingPanel {
   return {
     agencyCompanyId: mandate.agencyCompanyId,
     agencyName,
     standing: privateMarketingStandingViewOf(mandate),
     values: consentValuesFor(agencyName, mandate.expiresAt),
+    nextRequestAt: nextRequestAtOf(mandate, nowISOValue),
   };
 }
 
@@ -69,7 +71,7 @@ export async function readPrivateMarketingPanels(
 
   const panels = await Promise.all(
     mandates.map(async (mandate) =>
-      privateMarketingPanelOf(mandate, (await readCompanyPublicName(adminDb, mandate.agencyCompanyId)) ?? ''),
+      privateMarketingPanelOf(mandate, (await readCompanyPublicName(adminDb, mandate.agencyCompanyId)) ?? '', nowISOValue),
     ),
   );
   const disclosure = latestLegalDocumentVersion(PRIVATE_MARKETING_DOCUMENT);

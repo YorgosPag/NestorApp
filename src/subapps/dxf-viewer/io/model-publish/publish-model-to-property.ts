@@ -41,7 +41,7 @@ import type {
   ModelStateMark,
 } from '@/lib/listings/listing-model-declaration';
 import { measureModelBytes } from '@/services/listings/gltf-model-measure';
-import { FileRecordService } from '@/services/file-record.service';
+import { RealtimeService } from '@/services/realtime';
 
 import {
   resolveExportFloors,
@@ -87,21 +87,6 @@ export interface ModelPublishRequest {
   readonly scope: ModelPublishScope;
   readonly state: ModelStateMark;
   readonly signatory: ModelSignatory;
-  /**
-   * **Ποιος έκανε την αντικατάσταση** — για την **ιστορία**, ποτέ για την εξουσιοδότηση
-   * (ADR-845 Ο-27).
-   *
-   * 🔴 **ΔΕΝ ΕΙΝΑΙ ΙΣΧΥΡΙΣΜΟΣ ΤΑΥΤΟΤΗΤΑΣ, ΚΑΙ Η ΔΙΑΚΡΙΣΗ ΕΙΝΑΙ ΑΣΦΑΛΕΙΑ.** Την **άδεια** να
-   * ανέβει το μοντέλο την κρίνει ο διακομιστής από το **δικό του** auth context
-   * *(`ctx.uid`, `requirePropertyInTenantScope`)* — αυτό εδώ **δεν ταξιδεύει** στο POST.
-   * Χρησιμοποιείται **μόνο** στην πράξη απόσυρσης του πελάτη, που τρέχει με client SDK και
-   * υπόκειται στους Firestore rules του **ίδιου** ανθρώπου: ένα ψεύτικο uid εδώ θα έγραφε
-   * λάθος **όνομα σε ημερολόγιο**, ποτέ δεν θα άνοιγε πόρτα.
-   *
-   * ⚠️ Ίδιο ακριβώς ιδίωμα με το `config.userId` του `StepUpload.performUpload` — η αδελφή
-   * διαδρομή που κάνει την **ίδια** πράξη για τις κατόψεις *(Ο-16)*.
-   */
-  readonly actorUid: string;
 }
 
 /**
@@ -154,7 +139,7 @@ export async function publishModelToProperty(
     return { ok: false, refusal: 'declaration-too-large' };
   }
 
-  return sendModel(request.propertyId, bytes, encoded, request.actorUid, sceneFileIdsOf(floors));
+  return sendModel(request.propertyId, bytes, encoded, sceneFileIdsOf(floors));
 }
 
 /**
@@ -246,7 +231,6 @@ async function sendModel(
   propertyId: string,
   bytes: Uint8Array,
   declaration: string,
-  actorUid: string,
   sceneFileIds: readonly string[],
 ): Promise<ModelPublishOutcome> {
   const body = new FormData();
@@ -275,59 +259,32 @@ async function sendModel(
   const fileId = readFileId(payload);
   if (fileId === null) return { ok: false, refusal: 'rejected' };
 
-  await recordSuccession(readSupersedes(payload), fileId, actorUid);
+  announceArchived(readArchived(payload), fileId);
 
   return { ok: true, fileId };
 }
 
 /**
- * 🌐 **Η ΙΣΤΟΡΙΑ, ΟΧΙ Η ΑΛΗΘΕΙΑ** — ISO 19650 §10.2 (ADR-845 Ο-27).
+ * 🌐 **Η ΙΣΤΟΡΙΑ ΕΓΡΑΦΤΗΚΕ ΣΤΟΝ ΔΙΑΚΟΜΙΣΤΗ — ΕΔΩ ΜΟΝΟ ΑΝΑΚΟΙΝΩΝΕΤΑΙ** (ADR-845 Ο-27 · ADR-862 Φ0 Β10).
  *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΓΙΑΤΙ ΕΔΩ, ΣΤΟΝ ΠΕΛΑΤΗ, ΕΝΩ Η ΔΗΜΟΣΙΕΥΣΗ ΕΙΝΑΙ `'server-only'`
- * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 **ΑΛΛΑΞΕ ΣΤΟ Β10.** Μέχρι τότε η αρχειοθέτηση των προκατόχων γινόταν **εδώ**, με client SDK
+ * (`supersedeFileRecord` → `moveToTrash`), γιατί η μία πόρτα ήταν client και η δημοσίευση
+ * `'server-only'`. Ο κανόνας `cdeCustodyUnchanged()` (Β4) άρχισε σωστά να απορρίπτει την εγγραφή
+ * `cdeState` από τον browser, και το `allSettled` **έκρυψε** την άρνηση. Πλέον η πόρτα **είναι** ο
+ * server γραφέας και την καλεί η ίδια η διαδρομή δημοσίευσης, με τη **δική της** ταυτότητα.
  *
- * Η **μία** πόρτα της απόσυρσης *(`supersedeFileRecord` → `moveToTrash`)* εισάγει
- * `@/lib/firebase` — **client SDK**. Η πόρτα του ανεβάσματος είναι `'server-only'`.
- * **Δεν συναντιούνται**, και ένα admin δίδυμο απορρίφθηκε ρητά: δεύτερη μηχανή για την ίδια
- * ερώτηση *(N.18 · ADR-749)* — το απαγορεύει η ίδια της η κεφαλίδα.
- *
- * ⇒ **Ο διακομιστής κρίνει, ο πελάτης πράττει.** Ο κατάλογος έρχεται από την απάντηση: το
- * *«ποιοι δημοσιεύουν το ίδιο πράγμα;»* το απαντά **ένα** σώμα *(`supersededByPublication`)*,
- * το ίδιο που ζει δίπλα στην επιμέλεια της αγγελίας.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * ⚠️ ΓΙΑΤΙ Η ΑΠΟΤΥΧΙΑ ΕΔΩ **ΔΕΝ** ΑΚΥΡΩΝΕΙ ΤΗ ΔΗΜΟΣΙΕΥΣΗ
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Η αγγελία είναι **ήδη σωστή** χωρίς αυτή τη γραμμή: το `currentPerIdentity` κρατά
- * **παράγωγα** το νεότερο ανά ταυτότητα, σε **κάθε** πέρασμα. Ο κόσμος δεν βλέπει διπλότυπο
- * ούτε αν ο περιηγητής κλείσει σε αυτό ακριβώς το σημείο.
- *
- * Αυτό που χάνεται σε αποτυχία είναι η **ιστορία**: το παλιό μένει `active` στον διαχειριστή
- * αρχείων, δηλαδή ο κάτοχος βλέπει δύο και ο κόσμος ένα. Ενοχλητικό, **όχι λάθος** — και
- * επισκευάσιμο με την επόμενη δημοσίευση, που θα το ξαναβρεί.
- *
- * 🔑 **Γι' αυτό ακριβώς επιτρέπεται να ζει σε δεύτερο βήμα.** Η γραμμένη ένσταση της διεξόδου
- * Α *(«παράθυρο κούρσας»)* **εξέπνευσε** τη στιγμή που η ορθότητα έγινε παράγωγη: το παράθυρο
- * υπάρχει ακόμη, αλλά **δεν χωρά τίποτα μέσα του**.
- *
- * ⚠️ **`allSettled`, ποτέ `all`**: μια αποτυχία στον έναν προκάτοχο δεν επιτρέπεται να κρύψει
- * την επιτυχία στον άλλο. *(Στην πράξη είναι σχεδόν πάντα **ένας** — αλλά «σχεδόν πάντα» δεν
- * είναι εγγύηση, και ο πληθυντικός δεν κοστίζει.)*
+ * 🔑 Ο πελάτης εκπέμπει `FILE_SUPERSEDED` **μόνο** για ό,τι ο διακομιστής **πράγματι** αρχειοθέτησε
+ * (`archived`), ποτέ για ό,τι απλώς ταυτοποίησε (`supersedes`): ένα γεγονός για πράξη που δεν
+ * έγινε θα έκρυβε από τη λίστα αρχείο που **είναι ακόμη ενεργό**.
  */
-async function recordSuccession(
-  supersedes: readonly string[],
-  fileId: string,
-  actorUid: string,
-): Promise<void> {
-  if (supersedes.length === 0) return;
-
-  await Promise.allSettled(
-    supersedes.map((previousFileId) =>
-      FileRecordService.supersedeFileRecord(previousFileId, fileId, actorUid),
-    ),
-  );
+function announceArchived(archived: readonly string[], fileId: string): void {
+  for (const previousFileId of archived) {
+    RealtimeService.dispatch('FILE_SUPERSEDED', {
+      fileId: previousFileId,
+      supersededByFileId: fileId,
+      timestamp: Date.now(),
+    });
+  }
 }
 
 /** Ο διακομιστής υπόσχεται σχήμα· ο πελάτης το **ελέγχει**, δεν το ισχυρίζεται *(N.2)*. */
@@ -337,14 +294,14 @@ function readFileId(payload: unknown): string | null {
 }
 
 /**
- * **Ποιους διαδέχεται** — και `[]` για **κάθε** άλλη απάντηση.
+ * **Ποιοι αρχειοθετήθηκαν** — και `[]` για **κάθε** άλλη απάντηση.
  *
- * ⚠️ **Fail-closed προς την πράξη**: ένα σχήμα που δεν αναγνωρίζεται σημαίνει *«μην αποσύρεις
- * τίποτα»*, ποτέ *«απόσυρε ό,τι βρεις»*. Η χειρότερη εκδοχή του λάθους εδώ είναι να ρίξει
- * στον κάδο μοντέλο που **κανείς δεν αντικατέστησε**.
+ * ⚠️ **Fail-closed προς την ανακοίνωση**: ένα σχήμα που δεν αναγνωρίζεται σημαίνει *«μην ανακοινώσεις
+ * τίποτα»* — η χειρότερη εκδοχή του λάθους θα ήταν να κρυφτεί από τη λίστα αρχείο που **δεν**
+ * αρχειοθετήθηκε.
  */
-function readSupersedes(payload: unknown): readonly string[] {
-  const raw = readResponseField(payload, 'supersedes');
+function readArchived(payload: unknown): readonly string[] {
+  const raw = readResponseField(payload, 'archived');
   if (!Array.isArray(raw)) return [];
 
   const ids: readonly unknown[] = raw;

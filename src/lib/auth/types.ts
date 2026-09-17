@@ -120,6 +120,11 @@ export const PERMISSIONS = {
   "iso19650:containers:seal": true,
   "iso19650:containers:release": true,
   "iso19650:containers:withdraw": true,
+  // 🔑 ADR-862 Φ0 Β10 — η **πέμπτη**: νέα έκδοση παίρνει τη θέση της παλιάς. Κατά
+  //    Aconex/Procore/Autodesk Docs είναι δικαίωμα **όποιου ανεβάζει**, όχι του συντονιστή —
+  //    γι' αυτό ΔΕΝ είναι το `withdraw`. Η ικανότητα **δεν αρκεί**: ο γραφέας απαιτεί και
+  //    **απόδειξη διαδοχής** (ίδιο δοχείο · ίδιος μισθωτής · δικός σου διάδοχος).
+  "iso19650:containers:supersede": true,
 
   // CRM
   "crm:contacts:view": true,

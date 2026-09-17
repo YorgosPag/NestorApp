@@ -3,7 +3,7 @@
  * ΟΙ ΤΕΣΣΕΡΙΣ ΠΡΑΞΕΙΣ ΤΟΥ ΔΟΧΕΙΟΥ — **ΜΙΑ** διαδρομή (ADR-862 Φ0 Β6)
  * =============================================================================
  *
- * `POST /api/files/{fileId}/cde`  ·  σώμα: `{ act, suitabilityCode?, reason? }`
+ * `POST /api/files/{fileId}/cde`  ·  σώμα: `{ act, suitabilityCode?, reason?, supersededByFileId? }`
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ⛔ ΓΙΑΤΙ **ΜΙΑ** ΔΙΑΔΡΟΜΗ ΚΑΙ ΟΧΙ ΤΕΣΣΕΡΙΣ
@@ -50,6 +50,7 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { isSuitabilityCode } from '@/services/iso19650/validators';
 import { ACT_SPEC } from '@/services/iso19650/container-transition-policy';
 import {
+  containerActorOf,
   transitionContainer,
   type ContainerAct,
   type ContainerTransitionOutcome,
@@ -59,8 +60,11 @@ import { fileResource } from '../../_shared/file-ownership';
 
 type Segment = { params: Promise<{ fileId: string }> };
 
-/** Οι τέσσερις πράξεις **ως δεδομένα** — ο φρουρός στενεύει `unknown → ContainerAct`. */
-const CONTAINER_ACTS: readonly ContainerAct[] = ['share', 'seal', 'release', 'withdraw'];
+/**
+ * Οι πέντε πράξεις **ως δεδομένα** — ο φρουρός στενεύει `unknown → ContainerAct`.
+ * `supersede` (ADR-862 Φ0 Β10): σώμα `{ act: 'supersede', supersededByFileId }`.
+ */
+const CONTAINER_ACTS: readonly ContainerAct[] = ['share', 'seal', 'release', 'withdraw', 'supersede'];
 
 function isContainerAct(value: unknown): value is ContainerAct {
   return typeof value === 'string' && (CONTAINER_ACTS as readonly string[]).includes(value);
@@ -123,20 +127,17 @@ function transitionRequestOf(
   return {
     fileId,
     act,
-    actor: {
-      uid: ctx.uid,
-      companyId: ctx.companyId,
-      globalRole: ctx.globalRole,
-      // 🔑 ADR-801 Φ3γ — οι **ρητά δοσμένες** ικανότητες του claim. Χωρίς αυτές, η
-      //    προ-εξουσιοδότηση του Ε-12 (απελευθέρωση σε ονομασμένο μελετητή) θα ήταν
-      //    γραμμένη και **ανενεργή**: ο κριτής θα έκρινε μόνο από ρόλο.
-      permissions: ctx.permissions,
-    },
+    actor: containerActorOf(ctx),
     ...(isSuitabilityCode(payload.suitabilityCode)
       ? { suitabilityCode: payload.suitabilityCode }
       : {}),
     ...(typeof payload.reason === 'string' && payload.reason.trim().length > 0
       ? { reason: payload.reason.trim() }
+      : {}),
+    // 🔑 Β10 — **ισχυρισμός** του πελάτη, ποτέ απόφαση: ο γραφέας τον **αποδεικνύει** μέσα
+    //    στη συναλλαγή (`judgeSuccession`). Απόν ⇒ ονομασμένη άρνηση `successor-missing`.
+    ...(act === 'supersede' && typeof payload.supersededByFileId === 'string' && payload.supersededByFileId.length > 0
+      ? { supersededByFileId: payload.supersededByFileId }
       : {}),
   };
 }

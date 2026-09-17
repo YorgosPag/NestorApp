@@ -118,13 +118,27 @@ function readAct(raw: unknown): ContainerActRecord | null {
   return act;
 }
 
-/** Οι τέσσερις πράξεις του δοχείου, όπως διαβάστηκαν. */
+/**
+ * Η πράξη **αντικατάστασης** — μια πράξη **με διάδοχο**, ή `null` (ADR-862 Φ0 Β10).
+ *
+ * ⚠️ Χωρίς `supersededByFileId` **δεν** είναι πράξη αντικατάστασης: «κάτι με αντικατέστησε»
+ * χωρίς **τι** είναι ακριβώς το κενό που το πεδίο υπάρχει για να κλείσει.
+ */
+function readSupersession(raw: unknown): ContainerActRecord | null {
+  const act = readAct(raw);
+  if (act === null || typeof raw !== 'object' || raw === null) return null;
+  const successor = text((raw as Record<string, unknown>).supersededByFileId);
+  return successor === null ? null : { ...act, supersededByFileId: successor };
+}
+
+/** Οι πέντε πράξεις του δοχείου, όπως διαβάστηκαν. */
 export function readContainerActs(raw: Record<string, unknown>): ContainerActs {
   return {
     share: readAct(raw.cdeShare),
     seal: readAct(raw.cdeSeal),
     release: readAct(raw.cdeRelease),
     withdrawal: readAct(raw.cdeWithdrawal),
+    supersession: readSupersession(raw.cdeSupersession),
   };
 }
 
@@ -134,7 +148,13 @@ export function readContainerActs(raw: Record<string, unknown>): ContainerActs {
 
 /** Έχει το έγγραφο έστω μία πράξη κατάστασης; */
 function hasAnyAct(acts: ContainerActs): boolean {
-  return acts.share !== null || acts.seal !== null || acts.release !== null || acts.withdrawal !== null;
+  return (
+    acts.share !== null ||
+    acts.seal !== null ||
+    acts.release !== null ||
+    acts.withdrawal !== null ||
+    acts.supersession !== null
+  );
 }
 
 const unreadableState = (why: string): ContainerState => ({ phase: 'unreadable', why });
@@ -200,7 +220,12 @@ export function readContainerState(raw: Record<string, unknown>): ContainerState
       //    (`supersededByFileId`), που ο ίδιος γραφέας βάζει στην ίδια εγγραφή.
       //    ⛔ Χωρίς αυτόν τον κλάδο θα γίνονταν `unreadable`, δηλαδή **αόρατα** —
       //    συμπέρασμα από τον **ΓΡΑΦΕΑ**, όχι μαντεψιά (πρότυπο `showcase-read`).
-      if (acts.withdrawal === null && text(raw.supersededByFileId) === null) {
+      // 🔑 ADR-862 Φ0 Β10: τρίτη απόδειξη — η πράξη **αντικατάστασης** του γραφέα.
+      if (
+        acts.withdrawal === null &&
+        acts.supersession === null &&
+        text(raw.supersededByFileId) === null
+      ) {
         return unreadableState('superseded-without-evidence');
       }
       return { phase: 'SUPERSEDED', teamId };

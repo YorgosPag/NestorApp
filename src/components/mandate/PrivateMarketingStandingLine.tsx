@@ -6,7 +6,7 @@
  *   components/owner-property/PrivateMarketingOwnerSection.tsx
  * @module components/mandate/PrivateMarketingStandingLine
  *
- * 🔴 **Πέντε καταστάσεις, πέντε κείμενα.** Το `outdated` λέει *«οι όροι της εντολής άλλαξαν»* — **ποτέ** «χωρίς
+ * 🔴 **Έξι καταστάσεις, έξι κείμενα.** Το `outdated` λέει *«οι όροι της εντολής άλλαξαν»* — **ποτέ** «χωρίς
  * συναίνεση»: ο άνθρωπος που συναίνεσε και μετά παρατάθηκε η εντολή οφείλει να μάθει **γιατί** του ζητείται ξανά
  * (το DocuSign ακυρώνει σιωπηλά τον φάκελο· το OneTrust ξαναρωτά χωρίς λόγο — §18.3).
  *
@@ -43,6 +43,8 @@ export function PrivateMarketingStandingLine({ standing }: { readonly standing: 
       return <p className="text-sm text-card-foreground">{t(`${K}.outdated`)}</p>;
     case 'revoked':
       return <p className="text-sm text-muted-foreground">{t(`${K}.revoked`)}</p>;
+    case 'declined':
+      return <p className="text-sm text-card-foreground">{t(`${K}.declined`, { date: formatDate(standing.at) })}</p>;
     case 'absent':
       return <p className="text-sm text-muted-foreground">{t(`${K}.absent`)}</p>;
   }

@@ -20,9 +20,9 @@ import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
-// 🔒 TENANT SCOPING + replace cleanup (ADR-399)
-import { useAuth } from '@/auth/hooks/useAuth';
+// ADR-862 Φ0 Β10 — η αντικατάσταση επιπέδου περνά από τον ΕΝΑ γραφέα, με ονομασμένη έκβαση
 import { FileRecordService } from '@/services/file-record.service';
+import { useSupersessionNotice } from '@/hooks/files/useSupersessionNotice';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT + DXF default-layer constant
@@ -38,7 +38,7 @@ export function useSceneState() {
   // ✅ ENTERPRISE: 2 separate copy instances for error notification actions
   const { copy: copyErrorMessage } = useCopyToClipboard();
   const { copy: copyImportError } = useCopyToClipboard();
-  const { user } = useAuth();
+  const noticeSupersession = useSupersessionNotice();
   // Levels and scene management
   const levelsSystem = useLevels();
   const { currentLevelId, getLevelScene, setLevelScene, addLevel, levels, setCurrentLevel } = levelsSystem;
@@ -150,26 +150,29 @@ export function useSceneState() {
       }
       // 🛡️ ADR-526 Φ5a / ADR-399 — link the level to its canonical FileRecord NOW
       // (deterministic, not the 2s debounced round-trip) so the scene blob survives a
-      // hard-refresh, and trash the level's PREVIOUS scene file on replace (FILE-LESS
-      // levels never run the wizard floor-wipe → otherwise each replace orphans the old
-      // FileRecord + Storage blob; moveToTrash is soft/recoverable, cron purge frees Storage).
+      // hard-refresh, and SUPERSEDE the level's PREVIOUS scene file on replace (FILE-LESS
+      // levels never run the wizard floor-wipe → otherwise each replace leaves the old
+      // FileRecord active). ADR-862 Φ0 Β10: superseded = ARCHIVED, never trash/purge —
+      // ISO 19650 keeps every superseded revision as record (UK BIM Framework Part C §6.3).
       // Idempotent; skips when there is no canonical id. Shared by BOTH the Tekton and DXF
       // import branches (N.18 — one copy instead of two twins).
       const linkSceneFileToLevel = (): void => {
-        if (!(resolvedFileRecordId && levelsSystem.linkSceneToLevel)) return;
+        const link = levelsSystem.linkSceneToLevel;
+        if (!(resolvedFileRecordId && link)) return;
         const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
-        if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
-          // 🔁 ADR-845 Ο-16 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΔΙΑΓΡΑΦΗ (ISO 19650 «superseded»).
-          // Σκέτο `moveToTrash` εδώ σήμαινε «η κάτοψη χάθηκε» — και ο συνδρομητής
-          // `useLevelFloorplanSync` έσβηνε τη σκηνή που το βήμα 2 του
-          // `commitImportedScene` μόλις είχε γράψει, λίγες γραμμές πριν. Ο διάδοχος
-          // δηλώνεται ΡΗΤΑ ώστε κανείς να μη χρειαστεί να τον μαντέψει από το
-          // (δομικά μπαγιάτικο) `levels` — δες `level-floorplan-loss.ts`.
-          void FileRecordService.supersedeFileRecord(prevFileId, resolvedFileRecordId, user.uid).catch(() => {
-            /* non-blocking: already deleted by floor-wipe, or permission no-op */
-          });
-        }
-        void levelsSystem.linkSceneToLevel(targetLevelId, resolvedFileRecordId, file.name);
+        // 🔁 ADR-845 Ο-16 · ADR-862 Φ0 Β10 — ΝΕΑ ΕΚΔΟΣΗ, ΟΧΙ ΔΙΑΓΡΑΦΗ.
+        // (1) ΠΡΩΤΑ ο δείκτης στο νέο: η `PATCH /api/dxf-levels` απαιτεί το αρχείο να
+        //     υπάρχει, άρα όταν ζητηθεί η διαδοχή ο διάδοχος έχει ήδη αποδειχθεί υπαρκτός.
+        // (2) ΜΕΤΑ η αντικατάσταση: ο διακομιστής αρχειοθετεί την παλιά και ο πελάτης εκπέμπει
+        //     `FILE_SUPERSEDED` — γεγονός που ο `useLevelFloorplanSync` **δεν ακούει**, άρα ο
+        //     καμβάς δεν μπορεί να σβηστεί (δομικά, όχι με σημαία).
+        // (3) Κάθε «όχι» λέγεται με όνομα — ποτέ πια `.catch(() => {})`.
+        void (async () => {
+          await link(targetLevelId, resolvedFileRecordId, file.name);
+          if (prevFileId && prevFileId !== resolvedFileRecordId) {
+            noticeSupersession(await FileRecordService.supersedeFileRecord(prevFileId, resolvedFileRecordId));
+          }
+        })();
       };
       // 🏢 ADR-240: Inject save context from Wizard (entityType/floorId/purpose)
       if (levelsSystem.setSaveContext) {
@@ -264,7 +267,7 @@ export function useSceneState() {
         }]
       });
     }
-  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, user, copyErrorMessage, copyImportError, notifications, importError, t]);
+  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, noticeSupersession, copyErrorMessage, copyImportError, notifications, importError, t]);
 
   return {
     currentScene,

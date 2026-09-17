@@ -629,7 +629,24 @@
     "current": "Current version",
     "previousCount": "{count} previous",
     "download": "Download this version",
-    "rollback": "Restore to this version"
+    "rollback": "Restore to this version",
+    "supersession": {
+      "notArchived": "The previous version was not archived and remains among active files: {reason}",
+      "reason": {
+        "not-capable": "your role does not allow replacing versions",
+        "unreadable": "the state of the previous file is not valid",
+        "wrong-phase": "the previous file has already been withdrawn",
+        "successor-missing": "the replacing file was not specified",
+        "predecessor-not-active": "the previous file is no longer active",
+        "successor-not-found": "the new version was not found",
+        "successor-not-ready": "the new version has not finished uploading",
+        "identity-absent": "the file is not linked to a specific slot (entity, category)",
+        "identity-mismatch": "the two files belong to different slots",
+        "successor-not-newer": "the \"new\" version is older than the previous one",
+        "not-successor-author": "the new version was uploaded by another user",
+        "failed": "temporary error — please try again"
+      }
+    }
   },
   "audit": {
     "title": "Activity history",

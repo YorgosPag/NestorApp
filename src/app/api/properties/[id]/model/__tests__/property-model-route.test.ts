@@ -49,6 +49,20 @@ jest.mock('@/lib/auth/tenant-isolation', () => ({
   requirePropertyInTenantScope: async () => undefined,
 }));
 
+/**
+ * 🔴 **ADR-862 Φ0 Β10 — Ο ΕΝΑΣ ΓΡΑΦΕΑΣ, ΣΤΟ ΣΥΝΟΡΟ ΤΟΥ.** Χωρίς αυτό το mock η αρχειοθέτηση των
+ * προκατόχων έτρεχε πάνω σε ψεύτικο χωρίς `runTransaction`, έσκαγε μέσα στο δικό της `catch` και
+ * το Κ6 έμενε **πράσινο και τυφλό**. Η κρίση του γραφέα έχει **δική της** άγκυρα
+ * (`container-supersession-anchor`)· εδώ ρωτάμε μόνο αν η πόρτα τον **καλεί σωστά**.
+ */
+const transitionContainer = jest.fn(async (request: { fileId: string }): Promise<unknown> => ({
+  kind: 'transitioned', fileId: request.fileId, act: 'supersede', from: 'pre-cde', to: 'SUPERSEDED', revision: 0,
+}));
+jest.mock('@/services/iso19650/container-transitions', () => ({
+  containerActorOf: (ctx: { uid: string; companyId: string }) => ({ uid: ctx.uid, companyId: ctx.companyId }),
+  transitionContainer: (request: { fileId: string }) => transitionContainer(request),
+}));
+
 /** Η σειρά των πράξεων καταγράφεται — το «πότε» είναι μέρος του κριτηρίου (Κ5). */
 const trace: string[] = [];
 const setDoc = jest.fn(async () => { trace.push('set'); });
@@ -226,10 +240,34 @@ describe('ADR-845 Βήμα Γ — η πόρτα του μοντέλου', () => 
     );
     const payload = await (response as unknown as Response).json();
 
-    // ⚠️ **Ο διακομιστής ΚΡΙΝΕΙ, δεν ΠΡΑΤΤΕΙ**: η μία πόρτα της απόσυρσης είναι client SDK,
-    //    και ένα admin δίδυμό της απορρίφθηκε ρητά *(N.18 · ADR-749)*.
     expect(payload.data.supersedes).toEqual(['file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0']);
     expect(payload.data.supersedes).not.toContain(payload.data.fileId);
+
+    // 🔑 ADR-862 Φ0 Β10 — **Ο διακομιστής ΚΡΙΝΕΙ ΚΑΙ ΠΡΑΤΤΕΙ**: ο ΕΝΑΣ γραφέας καλείται από την
+    //    ίδια την πόρτα, με διάδοχο τη νέα δημοσίευση, **μετά** την εγγραφή της.
+    expect(transitionContainer).toHaveBeenCalledWith(expect.objectContaining({
+      fileId: 'file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0',
+      act: 'supersede',
+      supersededByFileId: payload.data.fileId,
+      actor: expect.objectContaining({ uid: 'user_1', companyId: 'comp_alfa' }),
+    }));
+    expect(payload.data.archived).toEqual(['file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0']);
+  });
+
+  it('🔑 Κ6β — Β10: άρνηση του γραφέα ΔΕΝ ρίχνει τη δημοσίευση — απλώς δεν ανακοινώνεται αρχειοθέτηση', async () => {
+    siblings = [{ id: 'file_old', publicationIdentity: 'model/measured/active-floor/as-built' }];
+    transitionContainer.mockImplementationOnce(async (request) => ({
+      kind: 'refused', fileId: request.fileId, act: 'supersede', why: 'not-capable',
+    }));
+
+    const response = await POST(
+      request(glb(), declaration()) as never, undefined as never, undefined as never,
+    );
+    const payload = await (response as unknown as Response).json();
+
+    expect(payload.data.fileId).toEqual(expect.any(String));
+    expect(payload.data.supersedes).toEqual(['file_old']);
+    expect(payload.data.archived).toEqual([]);
   });
 
   it('🏆 Κ8 — Ο-25: η πόρτα ΓΡΑΦΕΙ σε ποιο revision ήταν τα σχέδια', async () => {

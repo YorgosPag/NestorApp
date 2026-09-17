@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Ο ΠΕΛΑΤΗΣ ΤΗΣ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ** — μία ανάγνωση, τέσσερις πράξεις, ονομασμένες εκβάσεις.
+ * @fileoverview **Ο ΠΕΛΑΤΗΣ ΤΗΣ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ** — μία ανάγνωση, πέντε πράξεις, ονομασμένες εκβάσεις.
  * @related ADR-864 §17.6 · §18.4 · app/api/owner-properties/[ownerPropertyId]/route.ts (PATCH `privateMarketing`) ·
  *   app/api/owner-properties/[ownerPropertyId]/private-marketing/route.ts (GET)
  * @module services/owner-property/private-marketing.client
@@ -132,3 +132,7 @@ export const attestPrivateMarketing = (
 /** Ο ιδιοκτήτης **ανακαλεί** (Ε-13). */
 export const revokePrivateMarketing = (ownerPropertyId: string, agencyCompanyId: string, outcome: PrivateMarketingRevocationOutcome): Promise<PrivateMarketingActionOutcome> =>
   act(ownerPropertyId, { action: 'revoke', agencyCompanyId, outcome }, saved);
+
+/** Ο ιδιοκτήτης **αρνείται** το εκκρεμές αίτημα ενός γραφείου — «μη μου ξαναστείλετε» (ADR-864 §19 · Α35). */
+export const declinePrivateMarketing = (ownerPropertyId: string, agencyCompanyId: string, requestId: string): Promise<PrivateMarketingActionOutcome> =>
+  act(ownerPropertyId, { action: 'decline', agencyCompanyId, requestId }, saved);
