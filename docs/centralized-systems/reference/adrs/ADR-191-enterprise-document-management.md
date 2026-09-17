@@ -144,14 +144,14 @@ active → trashed → archived → purged
 |---------|--------|-------|
 | **2.1 Thumbnail generation** | ✅ Done | `src/components/shared/files/utils/generate-upload-thumbnail.ts`, `src/components/shared/files/FileThumbnail.tsx`, `src/components/shared/files/hooks/usePdfThumbnail.ts` |
 | **2.2 AI auto-classification** | ✅ Done | `src/components/shared/files/hooks/useFileClassification.ts`, `src/app/api/files/classify/route.ts` |
-| **2.3 File versioning** | ✅ Done | `src/services/file-version.service.ts`, `src/components/shared/files/VersionHistory.tsx` |
+| **2.3 File versioning** | ✅ Done *(ξαναγράφτηκε 2026-09-17, ADR-862 Φ0)* | `src/services/iso19650/version-stack.ts`, `src/services/iso19650/version-promotion.ts`, `src/app/api/files/[fileId]/versions/**`, `src/components/shared/files/VersionHistory.tsx` |
 | **2.4 Full-text search** | ⏸️ Pending | Requires Algolia/Meilisearch external service |
 
 **Λεπτομέρειες υλοποίησης:**
 
 - **Thumbnail generation**: Dual approach — (1) Persistent thumbnails at upload time via OffscreenCanvas (images→300px resize, PDFs→page 1 render), stored as WebP in Firebase Storage alongside originals. (2) On-demand client-side thumbnails via `usePdfThumbnail` hook for PDFs not yet thumbnailed. `FileThumbnail` component handles priority: pre-existing URL → PDF generation → image direct → file type icon.
 - **AI auto-classification**: Fire-and-forget call to `/api/files/classify` after every upload finalize. OpenAI gpt-4o-mini vision classifies document type (invoice, contract, permit, photo, etc.). Also available as manual batch operation via BatchActionsBar. Results stored in `ingestion.analysis` field.
-- **File versioning**: Firestore subcollection `files/{fileId}/versions`. `FileVersionService` (create/history/rollback). `VersionHistory` UI component in FilePreviewPanel with download per version and reversible rollback.
+- **File versioning** *(2026-09-17, ADR-862 Φ0)*: **ΜΙΑ** αλήθεια — η **αλυσίδα διαδοχής** (κάθε έκδοση ξεχωριστό FileRecord, δεμένο με `supersededByFileId` από τον ΕΝΑ γραφέα). Στοίβα: `GET /api/files/{id}/versions` (κάθε έκδοση κρίνεται από τον PEP με διακόπτη ιστορικού). «Ορισμός ως τρέχουσας»: `POST …/versions/promote {expectedHeadFileId}` — **νέα** έκδοση στην κορυφή (Box/SharePoint), **ατομικά** με την αρχειοθέτηση της κεφαλής, με προϋπόθεση κεφαλής (`head-moved`) και ιδεμποτησία. 🔴 Η παλιά υποσυλλογή `files/{fileId}/versions` + `FileVersionService` **καταργήθηκαν**: χωρίς κανόνα ⇒ deny-all ⇒ **δεν δούλεψαν ποτέ** στην παραγωγή (0 έγγραφα), και η «επαναφορά» ήταν επιτόπια εγγραφή χωρίς συναλλαγή (lost update).
 
 ### Phase 3: Governance & Compliance (✅ COMPLETED — 2026-03-09)
 
@@ -333,6 +333,7 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 
 | Date | Change |
 |------|--------|
+| 2026-09-17 | ♻️ **ADR-862 Φ0 — ΕΝΑ μοντέλο εκδόσεων.** Διαγράφηκαν `file-version.service.ts` + `SUBCOLLECTIONS.FILE_VERSIONS` (νεκρά: κανένας κανόνας, 0 έγγραφα, lost update, παγίδα `?? 1`/`?? 0`). Νέα στοίβα (`version-stack.ts`) + «Ορισμός ως τρέχουσας» (`version-promotion.ts`, `successorBirth` στον γραφέα) + `VersionHistory`/`useVersionStack`/`version-stack.client`. Άγκυρα ADR-862 Α24, 9/9 μεταλλάξεις. |
 | 2026-09-17 | 🔴→✅ **ADR-862 Φ0 Β10 — Αρχειοθέτηση: ΚΗΔΕΜΟΝΙΑ + ΔΙΑΔΟΧΗ.** (1) Η `POST /api/files/archive` έγραφε σε `files/{id}` **χωρίς έλεγχο μισθωτή** — κάθε συνδεδεμένος αρχειοθετούσε/επανέφερε **ξένο** αρχείο με γνωστό id. Πλέον PEP `fileResource.load()` ανά αρχείο (ADR-742): ξένο = ανύπαρκτο (`not found`). (2) Επαναφορά (`unarchive`) αρχείου `SUPERSEDED` ⇒ άρνηση `superseded-restore-via-new-version` — δύο «τρέχουσες» εκδόσεις ίδιας θέσης είναι ψέμα (Autodesk Docs: η επαναφορά είναι αντίγραφο που προωθείται). (3) Η **αντικατάσταση** αρχείου πλέον **αρχειοθετεί** (`lifecycleState: 'archived'`, **χωρίς** `purgeAt`) αντί για κάδο — πριν, το `file-purge.job` διέγραφε **οριστικά** κάθε αντικατεστημένη έκδοση (UK BIM Framework Part C §6.3 «Continuous Archiving»). Άγκυρα `archive-route-custody` (ADR-862 Α21), μεταλλάξεις 2/2. |
 | 2026-05-24 | **ADR-373 — FileRecord ISO 19650 metadata enrichment (Phase 1)** — Schema extended with 5 optional fields (`disciplineCode`, `documentSeries`, `revisionCode`, `cdeState`, `buildingCode`) + `iso19650Source` AI audit subobject. Storage path layer UNCHANGED (ADR-293 100% preserved). Auto-fill via OpenAI vision in `iso19650-enricher.ts` (always-AI policy per OQ7, $0.01/file budget cap per OQ6). DXF auto-process hook extracted from `file-record.service.ts` → new `file-record-post-finalize-hooks.ts` SSoT (Boy Scout SRP). All new fields optional + backward-compatible (existing FileRecords = `undefined`). UI / manual override / virtual folders / backfill deferred to Phase 2. See [ADR-373](./ADR-373-iso19650-metadata-enrichment.md). |
 | 2026-03-09 | Initial ADR — Phase 1 documented, Phases 2-5 roadmap defined |
