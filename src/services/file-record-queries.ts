@@ -34,6 +34,8 @@ import { normalizeFileRecord } from '@/lib/files/file-record-read';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { FileRecord, FileRecordQuery } from '@/types/file-record';
+import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
+import { custodyKindOfScope, type CustodyKind } from '@/lib/workspace/custody-scope';
 
 const logger = createModuleLogger('FILE_RECORD');
 
@@ -43,7 +45,28 @@ export interface GetFilesByEntityOptions {
   purpose?: string;
   levelFloorId?: string;
   includeDeleted?: boolean;
-  companyId?: string;
+  /**
+   * **Ποιος κατέχει τα αρχεία** (ADR-866 §2.6.8 Β5) — ορίζει διαμέρισμα **και** φίλτρο κατόχου.
+   * Απουσία ⇒ **εταιρεία** με το φίλτρο μισθωτή της υπηρεσίας (ό,τι ίσχυε πάντα για αναγνώστες ·
+   * ίδιο δόγμα με το `custodyKindFromParam`).
+   */
+  custody?: FileCustody;
+}
+
+/**
+ * **Το διαμέρισμα και το χειρόγραφο φίλτρο κατόχου ενός αναγνώστη.**
+ *
+ * 🔑 ADR-866 §2.6.8 Β1 — η υπηρεσία βάζει **ήδη** το φίλτρο κατόχου. Το χειρόγραφο `companyId`
+ * μένει **μόνο** για εταιρεία: καλύπτει τον super admin χωρίς επιλεγμένη εταιρεία. Για άνθρωπο
+ * **κανένα** — η υπηρεσία γράφει `userId == uid`, ακριβώς όσο ζητά ο κανόνας `files_personal`.
+ */
+export function fileOwnerConstraints(custody: FileCustody | undefined): QueryConstraint[] {
+  return custody?.companyId !== undefined ? [where('companyId', '==', custody.companyId)] : [];
+}
+
+/** Το είδος κατόχου ενός αναγνώστη — απουσία ⇒ `company`. */
+export function fileReadKindOf(custody: FileCustody | undefined): CustodyKind {
+  return custody === undefined ? 'company' : custodyKindOfScope(custody);
 }
 
 // ============================================================================
@@ -88,8 +111,9 @@ export function activeOnlyConstraints(): QueryConstraint[] {
 export async function runFileRecordQuery(
   constraints: QueryConstraint[],
   context: string,
+  custody: CustodyKind,
 ): Promise<FileRecord[]> {
-  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
+  const result = await firestoreQueryService.getAll<DocumentData>(FILE_COLLECTION[custody], { constraints });
 
   const validRecords: FileRecord[] = [];
   for (const raw of result.documents) {
@@ -139,12 +163,8 @@ export async function getFilesByEntity(
     where('status', '==', FILE_STATUS.READY),
   ];
 
-  // 🔒 SECURITY: companyId constraint required for Firestore Security Rules
-  // Rules enforce belongsToCompany(resource.data.companyId) — without this
-  // filter, queries fail with PERMISSION_DENIED for non-super-admin users.
-  if (options?.companyId) {
-    constraints.push(where('companyId', '==', options.companyId));
-  }
+  // 🔒 SECURITY: owner constraint required for Firestore Security Rules (ADR-866 §2.6.8 Β1)
+  constraints.push(...fileOwnerConstraints(options?.custody));
 
   if (options?.domain) {
     constraints.push(where('domain', '==', options.domain));
@@ -166,7 +186,7 @@ export async function getFilesByEntity(
     constraints.push(...activeOnlyConstraints());
   }
 
-  const validRecords = await runFileRecordQuery(constraints, 'query results');
+  const validRecords = await runFileRecordQuery(constraints, 'query results', fileReadKindOf(options?.custody));
 
   // ADR-351: sort by createdAt DESC (most recent first) — client-side to avoid
   // adding a composite index for every where() combination. Callers that pick
@@ -216,5 +236,5 @@ export async function queryFileRecords(queryParams: FileRecordQuery): Promise<Fi
     constraints.push(...activeOnlyConstraints());
   }
 
-  return runFileRecordQuery(constraints, 'queryFileRecords');
+  return runFileRecordQuery(constraints, 'queryFileRecords', 'company');
 }

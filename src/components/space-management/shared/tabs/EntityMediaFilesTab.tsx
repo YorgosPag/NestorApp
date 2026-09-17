@@ -16,9 +16,7 @@
 'use client';
 
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuth } from '@/auth/contexts/AuthContext';
-import { useCompanyId } from '@/hooks/useCompanyId';
-import { useCompanyDisplayName } from '@/hooks/useCompanyDisplayName';
+import { useEntityFilesTabSession } from '@/components/shared/files/useEntityFilesTabSession';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -42,15 +40,11 @@ interface EntityMediaFilesTabProps {
 // ============================================================================
 
 export function EntityMediaFilesTab({ binding, media }: EntityMediaFilesTabProps) {
-  const { user } = useAuth();
   const { t } = useTranslation(binding.i18nNamespace);
   const colors = useSemanticColors();
-
-  const companyId = useCompanyId()?.companyId;
-  const currentUserId = user?.uid;
-  const companyName = useCompanyDisplayName(
-    media.needsCompanyName ? companyId : undefined,
-  );
+  const { companyId, currentUserId, companyName } = useEntityFilesTabSession({
+    withCompanyName: media.needsCompanyName,
+  });
 
   if (!companyId || !currentUserId) {
     return (
@@ -63,7 +57,7 @@ export function EntityMediaFilesTab({ binding, media }: EntityMediaFilesTabProps
   return (
     <section className="p-2">
       <EntityFilesManager
-        companyId={companyId}
+        custody={{ companyId }}
         currentUserId={currentUserId}
         entityType={binding.entityType}
         entityId={binding.entityId}

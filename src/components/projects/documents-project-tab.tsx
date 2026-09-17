@@ -11,83 +11,41 @@
  *
  * @module components/projects/documents-project-tab
  * @enterprise ADR-031 - Canonical File Storage System
- *
- * MIGRATION NOTE: Previously had nested sub-tabs (Contracts, Miscellaneous).
- * Now uses unified EntityFilesManager with entry point selector.
  */
 
 'use client';
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuth } from '@/auth/contexts/AuthContext';
-import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
-import type { Project } from '@/types/project';
-import '@/lib/design-system';
+import {
+  ProjectFilesTabPlaceholder,
+  useProjectFilesTab,
+  type ProjectFilesTabProps,
+} from './project-files-tab';
 
-// =============================================================================
-// PROPS
-// =============================================================================
-
-interface DocumentsProjectTabProps {
-  /** Project data (passed automatically by UniversalTabsRenderer) */
-  project?: Project;
-  /** Alternative data prop */
-  data?: Project;
+interface DocumentsProjectTabProps extends ProjectFilesTabProps {
   /** Injected by UniversalTabsRenderer — navigate to sibling tab */
   onNavigateToTab?: (tabId: string) => void;
 }
 
-// =============================================================================
-// COMPONENT
-// =============================================================================
-
 /**
  * Project Documents Tab - Enterprise File Management
  *
- * Displays project documents using centralized EntityFilesManager with:
- * - Domain: construction (default for file queries)
- * - Category: documents (default for file queries)
+ * - Domain: construction · Category: documents
  * - Entry points: ALL except photos and videos (filtered via excludeCategories)
- *
- * This tab handles: contracts, permits, invoices, reports, delivery notes, etc.
- * Photos and Videos have their own dedicated tabs for better preview experience.
  */
-export function DocumentsProjectTab({ project, data, onNavigateToTab }: DocumentsProjectTabProps) {
-  const { user } = useAuth();
+export function DocumentsProjectTab({ onNavigateToTab, ...props }: DocumentsProjectTabProps) {
   const { t } = useTranslation(['files', 'files-media', 'projects']);
-  const spacing = useSpacingTokens();
-  const colors = useSemanticColors();
+  const { identity } = useProjectFilesTab(props);
 
-  // Resolve project from props
-  const resolvedProject = project || data;
-
-  // Get companyId and userId from auth context
-  const companyId = useCompanyId()?.companyId;
-  const currentUserId = user?.uid;
-
-  // If no project, companyId, or userId, show placeholder
-  if (!resolvedProject?.id || !companyId || !currentUserId) {
-    return (
-      <div className={cn(spacing.padding.lg, "text-center", colors.text.muted)}>
-        <p>{t('projects:documents.selectProject')}</p>
-      </div>
-    );
+  if (!identity) {
+    return <ProjectFilesTabPlaceholder message={t('projects:documents.selectProject')} />;
   }
 
   return (
     <EntityFilesManager
-      companyId={companyId}
-      currentUserId={currentUserId}
-      entityType={ENTITY_TYPES.PROJECT}
-      entityId={String(resolvedProject.id)}
-      entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
-      domain="construction"
+      {...identity}
       category="documents"
       purpose="document"
       fetchAllDomains

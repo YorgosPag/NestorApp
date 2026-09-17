@@ -35,8 +35,9 @@ import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
 import { BatchActionsBar } from '@/components/file-manager/BatchActionsBar';
 import { FileThumbnail } from './FileThumbnail';
 import { formatFileSize } from '@/utils/file-validation';
-import type { EntityType, FileCategory, FileClassification } from '@/config/domain-constants';
+import type { EntityType, FileCategory } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
+import type { FileCustody } from '@/lib/files/file-custody';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
@@ -59,16 +60,19 @@ import { gridPatterns } from '@/styles/design-tokens';
 // TYPES
 // ============================================================================
 
-interface BatchActions {
-  selectAll: () => void;
-  clearSelection: () => void;
-  onBatchDelete: () => Promise<void>;
-  onBatchDownload: () => Promise<void>;
-  onBatchClassify: (classification: FileClassification) => Promise<void>;
-  onAIClassify: () => Promise<void>;
+/**
+ * Οι μαζικές ενέργειες — **δανεικές** από τα props της μπάρας, ποτέ δεύτερη διατύπωση (CHECK 3.28).
+ * ADR-866 §2.6.8 Β6: απουσία ενέργειας γραφείου ⇒ δεν αποδίδεται (κρυμμένη για προσωπικό κάτοχο).
+ */
+type BatchActionsBarProps = React.ComponentProps<typeof BatchActionsBar>;
+type BatchActions = Pick<
+  BatchActionsBarProps,
+  'onBatchDelete' | 'onBatchDownload' | 'onBatchClassify' | 'onAIClassify' | 'onBatchArchive'
+> & {
+  selectAll: BatchActionsBarProps['onSelectAll'];
+  clearSelection: BatchActionsBarProps['onClearSelection'];
   aiClassifying: boolean;
-  onBatchArchive: () => Promise<void>;
-}
+};
 
 export interface EntityFilesContentProps {
   activeTab: 'files' | 'archived' | 'trash';
@@ -129,8 +133,8 @@ export interface EntityFilesContentProps {
   batchActions: BatchActions;
   // Storage
   totalStorageBytes: number;
-  // Trash
-  companyId: string;
+  // Trash — ο κάτοχος (ADR-866 §5.2)
+  custody: FileCustody | undefined;
   entityId: string;
   onRestore: (fileId: string) => void;
   onUnarchive: (fileId: string, displayName: string) => void;
@@ -165,7 +169,7 @@ export function EntityFilesContent(props: EntityFilesContentProps) {
       )}
       {props.activeTab === 'archived' && (
         <ArchiveView
-          companyId={props.companyId}
+          custody={props.custody}
           currentUserId={props.currentUserId}
           entityType={props.entityType}
           entityId={props.entityId}
@@ -174,7 +178,7 @@ export function EntityFilesContent(props: EntityFilesContentProps) {
       )}
       {props.activeTab === 'trash' && (
         <TrashView
-          companyId={props.companyId}
+          custody={props.custody}
           currentUserId={props.currentUserId}
           entityType={props.entityType}
           entityId={props.entityId}
@@ -335,7 +339,7 @@ function FilesTabContent(props: EntityFilesContentProps) {
               <FilePreviewPanel
                 file={props.selectedFile}
                 onClose={() => props.onSelectFile(null)}
-                companyId={props.companyId}
+                companyId={props.custody?.companyId}
                 currentUserId={props.currentUserId}
                 onRefresh={() => { /* refetch handled by parent */ }}
               />

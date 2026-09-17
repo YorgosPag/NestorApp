@@ -19,39 +19,15 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Info } from 'lucide-react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { EntityFilesTabPlaceholder } from '@/components/shared/files/EntityFilesTabPlaceholder';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getCompanyById } from '@/services/companies.service';
-import { FLOORPLAN_PURPOSES, ENTITY_TYPES } from '@/config/domain-constants';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
-import type { Building } from '@/types/building/contracts';
 import { tryResolveCompanyId } from '@/services/company-id-resolver';
-import { createModuleLogger } from '@/lib/telemetry';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import '@/lib/design-system';
-
-const logger = createModuleLogger('BuildingFloorplanTab');
-
-// =============================================================================
-// PROPS
-// =============================================================================
-
-interface BuildingFloorplanTabProps {
-  /** Building data (passed automatically by UniversalTabsRenderer) */
-  building?: Building;
-  /** Alternative data prop */
-  data?: Building;
-  /** Title for the tab */
-  title?: string;
-}
-
-// =============================================================================
-// COMPONENT
-// =============================================================================
+import { useBuildingFilesTab, type BuildingFilesTabProps } from './building-files-tab';
 
 /**
  * 🏢 ENTERPRISE: Building Floorplan Tab
@@ -62,59 +38,15 @@ interface BuildingFloorplanTabProps {
  * - DisplayStyle: floorplan-gallery (full-width DXF/PDF viewer)
  * - Purpose: 'building-floorplan' for filtering
  */
-export function BuildingFloorplanTab({
-  building,
-  data,
-  title: _title,
-}: BuildingFloorplanTabProps) {
+export function BuildingFloorplanTab(props: BuildingFilesTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-  const colors = useSemanticColors();
-
-  // Resolve building from props
-  const resolvedBuilding = building || data;
-
-  // Get userId from auth context
-  const currentUserId = user?.uid;
   // 🏢 ENTERPRISE: Centralized companyId resolution (ADR-200)
   // Priority: building.companyId → user.companyId (supports super_admin cross-tenant)
-  const companyId = tryResolveCompanyId({ building: resolvedBuilding, user })?.companyId;
+  const companyId = tryResolveCompanyId({ building: props.building || props.data, user })?.companyId;
+  const { t, identity, companyName } = useBuildingFilesTab(props, { companyId, withCompanyName: true });
 
-  // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
-  const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    const fetchCompanyName = async () => {
-      if (!companyId) {
-        setCompanyDisplayName(undefined);
-        return;
-      }
-
-      try {
-        const company = await getCompanyById(companyId);
-        if (company && company.type === 'company') {
-          // 🏢 ENTERPRISE: Use companyName or tradeName as fallback
-          const displayName = company.companyName || company.tradeName || companyId;
-          setCompanyDisplayName(displayName);
-        } else {
-          setCompanyDisplayName(companyId); // Fallback to ID if company not found
-        }
-      } catch (error) {
-        logger.error('Failed to fetch company name', { error });
-        setCompanyDisplayName(companyId); // Fallback to ID on error
-      }
-    };
-
-    fetchCompanyName();
-  }, [companyId]);
-
-  // If no building, companyId, or userId, show placeholder
-  if (!resolvedBuilding?.id || !companyId || !currentUserId) {
-    return (
-      <section className={cn("p-2 text-center", colors.text.muted)}>
-        <p>{t('tabs.floorplan.noBuilding')}</p>
-      </section>
-    );
+  if (!identity) {
+    return <EntityFilesTabPlaceholder message={t('tabs.floorplan.noBuilding')} />;
   }
 
   return (
@@ -126,19 +58,13 @@ export function BuildingFloorplanTab({
       </aside>
 
       <EntityFilesManager
-        companyId={companyId}
-        currentUserId={currentUserId}
-        entityType={ENTITY_TYPES.BUILDING}
-        entityId={String(resolvedBuilding.id)}
-        entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
-        projectId={resolvedBuilding.projectId}
-        domain="construction"
+        {...identity}
         category="floorplans"
         purpose={FLOORPLAN_PURPOSES.BUILDING}
         entryPointCategoryFilter="floorplans"
         displayStyle="floorplan-gallery"
         acceptedTypes={FLOORPLAN_ACCEPT}
-        companyName={companyDisplayName}
+        companyName={companyName}
       />
     </section>
   );

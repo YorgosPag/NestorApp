@@ -48,6 +48,18 @@ describe('Κ1 — δεύτερος γραφέας', () => {
     expect(findingsOf("ref.set({ cdeState: 'WIP' });", birth)).toEqual([gate.STATES.SECOND_WRITER]);
   });
 
+  it('🔎 σχετικό αρχείο ΚΑΙ όταν αναφέρει μόνο το προσωπικό διαμέρισμα (ADR-866 §2.6.7)', () => {
+    for (const text of [
+      'db.collection(COLLECTIONS.FILES_PERSONAL).doc(id)',
+      "firestoreQueryService.getAll('FILES_PERSONAL', {})",
+      'db.collection(COLLECTIONS[FILE_COLLECTION[kind]])',
+      'db.collection(COLLECTIONS.FILES)',
+    ]) {
+      expect(gate.FILES_REFERENCE.test(text)).toBe(true);
+    }
+    expect(gate.FILES_REFERENCE.test('db.collection(COLLECTIONS.FILE_AUDIT_LOG)')).toBe(false);
+  });
+
   it('🔓 εξαίρεση ΜΟΝΟ με λόγο', () => {
     expect(findingsOf("ref.update({\n  // cde-authority-exempt: μετανάστευση Χ\n  cdeState: s,\n});")).toEqual([gate.STATES.EXEMPT]);
     expect(findingsOf("ref.update({\n  // cde-authority-exempt:\n  cdeState: s,\n});")).toEqual([gate.STATES.EXEMPT_NO_REASON]);
@@ -72,6 +84,11 @@ describe('Κ5 — client λίστα files χωρίς φράχτη', () => {
     const scoped = `import { fileListReadPaths } from '@/lib/files/file-visibility-scope';\n${list}`;
     expect(gate.unscopedListIn(scoped, 'src/x.ts')).toMatchObject({ state: gate.STATES.SCOPED_LISTS });
     expect(gate.unscopedListIn(`import 'server-only';\n${list}`, 'src/x.ts')).toBeNull();
+  });
+
+  it('⛔ και μέσω διαμερίσματος κατόχου: ο εταιρικός κλάδος θέλει φράχτη (ADR-866 §2.6.7)', () => {
+    const partitioned = "const s = await getDocs(query(collection(db, COLLECTIONS[FILE_COLLECTION[kind]]), where('x','==',1)));";
+    expect(gate.unscopedListIn(partitioned, 'src/x.ts')).toMatchObject({ state: gate.STATES.UNSCOPED_LIST });
   });
 });
 

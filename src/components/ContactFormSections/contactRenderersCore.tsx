@@ -61,7 +61,7 @@ export interface RendererContext {
   isContactTrashed?: boolean;
 }
 
-type RendererFn = (
+export type RendererFn = (
   field: CustomRendererField,
   fieldFormData: Record<string, unknown>,
   fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
@@ -70,19 +70,49 @@ type RendererFn = (
 ) => React.ReactNode;
 
 /**
+ * Προσαρμογέας για renderer που χρειάζεται **ΜΟΝΟ** το `fieldDisabled`.
+ *
+ * Οι picker renderers (`communication` · `taxOffice` εδώ, `profession` · `employer` ·
+ * `skills` · `name` · `supervisionMinistry` στο `contactRenderersTyped`) διαβάζουν το
+ * `formData` από το closure τους και **αγνοούν τις τέσσερις πρώτες παραμέτρους** της
+ * {@link RendererFn}. Καθένας ξανάγραφε ΟΛΟΚΛΗΡΗ την υπογραφή — που το CHECK 3.28
+ * (jscpd, token-based) μετρούσε ως κλώνους του ίδιου μπλοκ. Ζούσε τοπικά στο
+ * `contactRenderersTyped`· ανέβηκε εδώ ώστε να είναι **ένα** και για τα δύο αρχεία.
+ *
+ * ⚠️ **ΜΗΝ το κάνεις γενικό «προσαρμογέα με options»**: η μόνη παράμετρος που
+ * καταναλώνεται πραγματικά είναι το `fieldDisabled`. Ένας προσαρμογέας που
+ * δέχεται και τις πέντε θα ήταν η **ίδια boilerplate με άλλο όνομα**.
+ *
+ * ⚠️ Οι παράμετροι **δεν** φέρουν ρητούς τύπους: τους δίνει το contextual typing
+ * από το `: RendererFn` της επιστροφής.
+ */
+export const disabledOnly =
+  (render: (fieldDisabled: boolean) => React.ReactNode): RendererFn =>
+  (_field, _fieldFormData, _onChange, _onSelectChange, fieldDisabled) =>
+    render(fieldDisabled);
+
+/**
  * Build core custom renderers shared across all contact types.
  * Returns a Record to be spread into customRenderers.
  */
 export function buildCoreRenderers(ctx: RendererContext): Record<string, RendererFn | (() => React.ReactNode)> {
   const { formData, setFormData, disabled, contactType, handleChange, handleSelectChange, t } = ctx;
 
+  // ONE renderer for both address keys (see 'addresses' / 'address' below)
+  const renderAddresses = () => (
+    <AddressesSectionWithFullscreen
+      formData={formData}
+      setFormData={setFormData ? (value) => {
+        const newData = typeof value === 'function' ? value(formData) : value;
+        setFormData(newData);
+      } : undefined}
+      disabled={disabled}
+    />
+  );
+
   return {
     // ── Communication ──────────────────────────────────────────
-    communication: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    communication: disabledOnly((fieldDisabled) => (
       <div className="w-full max-w-none min-w-full col-span-full">
         <DynamicContactArrays
           phones={formData.phones || []}
@@ -97,7 +127,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
           onSocialMediaChange={(socialMedia) => setFormData ? setFormData({ ...formData, socialMediaArray: socialMedia }) : handleChange({ target: { name: 'socialMediaArray', value: JSON.stringify(socialMedia) } } as React.ChangeEvent<HTMLInputElement>)}
         />
       </div>
-    ),
+    )),
 
     // ── VAT Number ─────────────────────────────────────────────
     vatNumber: (
@@ -115,17 +145,13 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
     ),
 
     // ── Tax Office (DOY) ───────────────────────────────────────
-    taxOffice: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    taxOffice: disabledOnly((fieldDisabled) => (
       <DoyPicker
         value={formData.taxOffice ?? ''}
         onValueChange={(value) => handleSelectChange('taxOffice', value)}
         disabled={fieldDisabled ?? disabled}
       />
-    ),
+    )),
 
     // ── Relationships ──────────────────────────────────────────
     relationships: () => {
@@ -166,7 +192,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
           <EntityFilesManager
             entityType={ENTITY_TYPES.CONTACT}
             entityId={contactId}
-            companyId={ctx.resolvedCompanyId}
+            custody={{ companyId: ctx.resolvedCompanyId }}
             domain="admin"
             category="documents"
             currentUserId={ctx.userId}
@@ -206,26 +232,8 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
     // ── Addresses (ADR-318 SSoT: shared by individual/company/service) ──
     // Individual schema uses sectionId 'address' (singular); company/service use 'addresses' (plural).
     // Same component registered under both keys — schema files untouched.
-    addresses: () => (
-      <AddressesSectionWithFullscreen
-        formData={formData}
-        setFormData={setFormData ? (value) => {
-          const newData = typeof value === 'function' ? value(formData) : value;
-          setFormData(newData);
-        } : undefined}
-        disabled={disabled}
-      />
-    ),
-    address: () => (
-      <AddressesSectionWithFullscreen
-        formData={formData}
-        setFormData={setFormData ? (value) => {
-          const newData = typeof value === 'function' ? value(formData) : value;
-          setFormData(newData);
-        } : undefined}
-        disabled={disabled}
-      />
-    ),
+    addresses: renderAddresses,
+    address: renderAddresses,
 
     // ── Procurement Tab — ADR-327 §18 ──────────────────────────
     procurement: () => {

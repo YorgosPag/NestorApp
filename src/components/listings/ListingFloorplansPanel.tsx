@@ -36,6 +36,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
 import { useListingFloorplans } from '@/hooks/listings/useListingFloorplans';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
 
 const NS = 'property-market';
@@ -70,7 +71,7 @@ export function ListingFloorplansPanel({
   const { files } = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY,
     entityId: propertyId,
-    companyId,
+    custody: companyReadCustodyOf(companyId),
     category: FILE_CATEGORIES.FLOORPLANS,
     realtime: true,
   });

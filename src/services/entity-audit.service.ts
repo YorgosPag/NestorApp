@@ -347,6 +347,10 @@ export class EntityAuditService {
 
       const deltaDate = new Date(afterTimestamp);
 
+      // tenant-scope-exempt: CDC του incremental backup — σαρώνει ΚΑΘΕ μισθωτή και ΚΑΘΕ
+      // προσωπικό βιβλίο εκ σχεδιασμού (μοναδικός καλών `incremental-backup.service.ts`, Admin
+      // SDK, ποτέ από αίτημα χρήστη). Επιστρέφει μόνο entityType/entityId/action. Ορατό στην
+      // πύλη από τον κλάδο ανά κάτοχο (ADR-866 §2.6.7)· πριν ήταν `unanalyzable`.
       let query = db
         .collection(COLLECTIONS[AUDIT_LEDGER_COLLECTION[ledger]])
         .where('timestamp', '>', deltaDate)

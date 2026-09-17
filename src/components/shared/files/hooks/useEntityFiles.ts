@@ -4,24 +4,23 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { where } from 'firebase/firestore';
-import type { DocumentData } from 'firebase/firestore';
-import { FileRecordService, toFileRecord } from '@/services/file-record.service';
+import { FileRecordService } from '@/services/file-record.service';
 import {
   moveFileToTrashWithPolicy,
   renameFileWithPolicy,
   updateFileDescriptionWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
-import { firestoreQueryService } from '@/services/firestore';
-import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
-import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
+import { fileCustodyKindOf, type FileCustody } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import { isPermissionDeniedError } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileSupersededPayload, FileLinkCreatedPayload } from '@/services/realtime';
 import { buildPurposeFilter } from './useEntityFiles-purpose-filter';
+import { useEntityFilesRealtime } from './useEntityFilesRealtime';
+import { useStableFileCustody } from './useStableFileCustody';
 
 // ============================================================================
 // MODULE LOGGER
@@ -41,8 +40,12 @@ export interface UseEntityFilesParams {
   entityType: EntityType;
   /** Entity ID */
   entityId: string;
-  /** Company ID for query authorization (required for Firestore Rules) */
-  companyId?: string;
+  /**
+   * **Ποιος κατέχει τα αρχεία** (ADR-866 §5.2) — διαμέρισμα **και** φίλτρο κατόχου (Firestore Rules).
+   * Απουσία ⇒ εταιρικό διαμέρισμα με το φίλτρο μισθωτή της υπηρεσίας, **χωρίς** realtime και
+   * χωρίς συνδεδεμένα αρχεία (ό,τι ίσχυε με απόν `companyId`).
+   */
+  custody?: FileCustody;
   /** Optional domain filter */
   domain?: FileDomain;
   /** Optional category filter */
@@ -118,7 +121,6 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   const {
     entityType,
     entityId,
-    companyId,
     domain,
     category,
     purpose,
@@ -126,11 +128,25 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     autoFetch = true,
     realtime = false,
   } = params;
+  const custody = useStableFileCustody(params.custody);
 
   // State
   const [files, setFiles] = useState<FileRecordWithLinkStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
+  const filesRef = useRef(files);
+  useEffect(() => { filesRef.current = files; }, [files]);
+
+  /**
+   * **Το διαμέρισμα ενός αρχείου της λίστας — από το ΙΔΙΟ το έγγραφο** (ADR-866 §2.6.8 Β4).
+   * Αρχείο εκτός λίστας ή χωρίς ακριβώς έναν κάτοχο ⇒ **άρνηση**, ποτέ μαντεψιά.
+   */
+  const custodyOfListedFile = useCallback((fileId: string): CustodyKind => {
+    const file = filesRef.current.find((candidate) => candidate.id === fileId);
+    const kind = file ? fileCustodyKindOf(file) : null;
+    if (kind === null) throw new Error(`FILE_CUSTODY_UNKNOWN: ${fileId}`);
+    return kind;
+  }, []);
 
   // =========================================================================
   // FETCH FILES
@@ -148,7 +164,6 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       logger.info('Fetching files for entity', {
         entityType,
         entityId,
-        companyId,
         domain,
         category,
         purpose,
@@ -158,10 +173,10 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       // 🔗 ENTERPRISE: Parallel queries — linked files failure is non-blocking
       const [fetchedFiles, linkedFiles] = await Promise.all([
         FileRecordService.getFilesByEntity(entityType, entityId, {
-          companyId, domain, category, levelFloorId, includeDeleted: false,
+          custody, domain, category, levelFloorId, includeDeleted: false,
         }),
-        companyId
-          ? FileRecordService.getLinkedFiles(entityType, entityId, companyId)
+        custody
+          ? FileRecordService.getLinkedFiles(entityType, entityId, custody)
               .catch((err: unknown) => {
                 const code = (err as { code?: string })?.code ?? '';
                 logger.warn('Linked files query failed (non-blocking)', { code, entityType, entityId });
@@ -219,82 +234,26 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, companyId, domain, category, purpose, levelFloorId]);
+  }, [entityType, entityId, custody, domain, category, purpose, levelFloorId]);
 
   // =========================================================================
-  // 🏢 ADR-240: REAL-TIME LISTENER (Firestore onSnapshot)
-  // Active only when realtime=true. Uses firestoreQueryService.subscribe —
-  // same pattern as useFloorplanFiles. Server-side updates (e.g. processedData
-  // written by /api/floorplans/process) propagate automatically to the UI.
+  // 🏢 ADR-240: REAL-TIME LISTENER (Firestore onSnapshot) — `useEntityFilesRealtime`
+  // Active only when realtime=true **and** the owner is known (ADR-866 §5.2).
   // =========================================================================
-
-  // Stable ref for purpose filter — avoids subscription re-creation on every render
-  const purposeRef = useRef(purpose);
-  useEffect(() => { purposeRef.current = purpose; }, [purpose]);
-
-  useEffect(() => {
-    if (!realtime || !entityId || !companyId) return;
-
-    setLoading(true);
-
-    // Build same constraints as getFilesByEntity
-    // 🔒 SECURITY: companyId constraint is REQUIRED for Firestore Security Rules
-    // Without it, the query fails with PERMISSION_DENIED because rules enforce
-    // belongsToCompany(resource.data.companyId) tenant isolation.
-    const constraints = [
-      where('companyId', '==', companyId),
-      where('entityType', '==', entityType),
-      where('entityId', '==', entityId),
-      where('status', '==', FILE_STATUS.READY),
-      where('isDeleted', '==', false),
-      where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE),
-      ...(domain ? [where('domain', '==', domain)] : []),
-      ...(category ? [where('category', '==', category)] : []),
-      ...(levelFloorId ? [where('levelFloorId', '==', levelFloorId)] : []),
-    ];
-
-    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
-      'FILES',
-      (result: QueryResult<DocumentData>) => {
-        const currentPurpose = purposeRef.current;
-
-        const filterByPurpose = buildPurposeFilter(currentPurpose);
-
-        const records = result.documents
-          .map(doc => toFileRecord(doc))
-          .filter((r): r is FileRecord => r !== null)
-          .filter(FileRecordService.isVisibleInActiveLists)
-          .filter(filterByPurpose);
-
-        setFiles(records);
-        setLoading(false);
-        setError(null);
-
-        logger.info('[realtime] Files updated', {
-          count: records.length,
-          entityType,
-          entityId,
-        });
-      },
-      (err: unknown) => {
-        const code = (err as { code?: string })?.code ?? 'unknown';
-        // Permission errors are expected (auth loading, unsaved entities)
-        if (isPermissionDeniedError(err)) {
-          logger.warn('[realtime] Permission denied (expected)', { entityType, entityId });
-          setFiles([]);
-          setLoading(false);
-          return;
-        }
-        logger.warn('[realtime] Listener failed, falling back to one-time fetch', { code, entityType, entityId });
-        void fetchFiles().catch(() => { setLoading(false); });
-      },
-      { constraints },
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [realtime, entityType, entityId, companyId, domain, category, levelFloorId]);
+  useEntityFilesRealtime({
+    enabled: realtime,
+    entityType,
+    entityId,
+    custody,
+    domain,
+    category,
+    purpose,
+    levelFloorId,
+    onFiles: setFiles,
+    onLoading: setLoading,
+    onError: setError,
+    onFallback: () => { void fetchFiles().catch(() => { setLoading(false); }); },
+  });
 
   // =========================================================================
   // 🗑️ TRASH OPERATIONS (Enterprise Trash System - ADR-032)
@@ -311,7 +270,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     try {
       logger.info('Moving file to trash', { fileId, trashedBy });
 
-      await moveFileToTrashWithPolicy(fileId, trashedBy);
+      await moveFileToTrashWithPolicy(fileId, custodyOfListedFile(fileId), trashedBy);
 
       logger.info('File moved to trash successfully', { fileId });
 
@@ -325,7 +284,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       });
       throw error; // Re-throw for UI error handling
     }
-  }, []);
+  }, [custodyOfListedFile]);
 
   // =========================================================================
   // RENAME OPERATIONS
@@ -339,7 +298,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     try {
       logger.info('Renaming file', { fileId, newDisplayName, renamedBy });
 
-      await renameFileWithPolicy(fileId, newDisplayName, renamedBy);
+      await renameFileWithPolicy(fileId, custodyOfListedFile(fileId), newDisplayName, renamedBy);
 
       logger.info('File renamed successfully', { fileId });
 
@@ -357,7 +316,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       });
       throw error;
     }
-  }, []);
+  }, [custodyOfListedFile]);
 
   // =========================================================================
   // DESCRIPTION OPERATIONS
@@ -367,7 +326,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     try {
       logger.info('Updating file description', { fileId });
 
-      await updateFileDescriptionWithPolicy(fileId, description);
+      await updateFileDescriptionWithPolicy(fileId, custodyOfListedFile(fileId), description);
 
       // Optimistic local state update
       setFiles((prev) => prev.map((file) =>
@@ -380,7 +339,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       logger.error('Failed to update description', { error: error.message, fileId });
       throw error;
     }
-  }, []);
+  }, [custodyOfListedFile]);
 
   /**
    * @deprecated Use moveToTrash instead

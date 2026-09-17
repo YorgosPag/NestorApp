@@ -34,6 +34,7 @@ import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, FLOORPLAN_PURPOSES } from 
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
+import type { FileRecord } from '@/types/file-record';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -107,6 +108,19 @@ export interface LoadPropertyFloorplanParams {
 // ============================================================================
 
 export class PropertyFloorplanService {
+  /**
+   * **Οι κατόψεις ενός ακινήτου** — η ΜΙΑ αναζήτηση για φόρτωση, έλεγχο ύπαρξης και διαγραφή
+   * (ήταν τρία δίδυμα μπλοκ, CHECK 3.28 · ADR-866 §2.6.8).
+   */
+  private static floorplanRecords(companyId: string, propertyId: string): Promise<FileRecord[]> {
+    return FileRecordService.getFilesByEntity(ENTITY_TYPES.PROPERTY, propertyId, {
+      custody: { companyId },
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      purpose: FLOORPLAN_PURPOSES.PROPERTY,
+    });
+  }
+
 
   /**
    * 🏢 ENTERPRISE: Save unit floorplan using FileRecordService
@@ -202,16 +216,7 @@ export class PropertyFloorplanService {
       logger.debug('Loading property floorplan', { propertyId, companyId });
 
       // ── Primary: FileRecord-based lookup ──
-      const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.PROPERTY,
-        propertyId,
-        {
-          companyId,
-          domain: FILE_DOMAINS.CONSTRUCTION,
-          category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.PROPERTY,
-        }
-      );
+      const fileRecords = await PropertyFloorplanService.floorplanRecords(companyId, propertyId);
 
       if (fileRecords.length > 0) {
         const fileRecord = fileRecords[0];
@@ -277,16 +282,7 @@ export class PropertyFloorplanService {
    */
   static async hasFloorplan(companyId: string, propertyId: string): Promise<boolean> {
     try {
-      const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.PROPERTY,
-        propertyId,
-        {
-          companyId,
-          domain: FILE_DOMAINS.CONSTRUCTION,
-          category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.PROPERTY,
-        }
-      );
+      const fileRecords = await PropertyFloorplanService.floorplanRecords(companyId, propertyId);
 
       // 🏢 ADR-292 Phase 4: Legacy unit_floorplans fallback eliminated
       return fileRecords.length > 0;
@@ -304,23 +300,14 @@ export class PropertyFloorplanService {
    */
   static async deleteFloorplan(companyId: string, propertyId: string, deletedBy: string): Promise<boolean> {
     try {
-      const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.PROPERTY,
-        propertyId,
-        {
-          companyId,
-          domain: FILE_DOMAINS.CONSTRUCTION,
-          category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.PROPERTY,
-        }
-      );
+      const fileRecords = await PropertyFloorplanService.floorplanRecords(companyId, propertyId);
 
       if (!fileRecords || fileRecords.length === 0) {
         return true; // Nothing to delete
       }
 
       for (const fileRecord of fileRecords) {
-        await FileRecordService.moveToTrash(fileRecord.id, deletedBy);
+        await FileRecordService.moveToTrash(fileRecord.id, 'company', deletedBy);
       }
 
       logger.info('Deleted property floorplan(s)', { propertyId, count: fileRecords.length });

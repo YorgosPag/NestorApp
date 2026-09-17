@@ -245,6 +245,13 @@ const BOUNDARIES = [
     module: 'stay-calendar-from-document',
     remedy: '«stayCalendarHeadFromDocument(raw, propertyId)»',
   },
+  {
+    adr: 'ADR-835 §21',
+    typeName: 'StayCalendarMonth',
+    custodian: 'src/lib/stay/stay-calendar-from-document.ts',
+    module: 'stay-calendar-from-document',
+    remedy: '«stayCalendarMonthFromDocument(raw, id)»',
+  },
 ];
 
 /**

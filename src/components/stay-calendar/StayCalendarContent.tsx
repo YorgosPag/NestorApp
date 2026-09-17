@@ -22,7 +22,9 @@ import {
   useStayCalendarSelection,
   type StayCalendarSelectionController,
 } from '@/hooks/owner-property/useStayCalendarSelection';
+import { deriveCommercialAmounts } from '@/lib/offers/derive-commercial-status';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import { selectionMeaning } from '@/lib/stay/stay-calendar-month';
 import type { StayCalendarView } from '@/lib/stay/stay-calendar-view';
@@ -32,25 +34,34 @@ import { stayCalendarMessageOf, type StayCalendarMessage } from './stay-calendar
 import { StayCalendarDeclaration, StayCalendarLegend, StayCalendarMonthNav } from './StayCalendarChrome';
 import { StayCalendarGrid } from './StayCalendarGrid';
 import { StayCalendarPanel } from './StayCalendarPanel';
+import { StayRulesSettings } from './StayRulesSettings';
+import type { StayPendingWarnings } from './StayRuleWarningsConfirm';
 import routeSlice from '@/i18n/generated/routes/offers__offerId__calendar.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 // ADR-744 — τα κλειδιά του πρώτου καρέ, σύγχρονα (CHECK 3.51). Δήλωση: `.i18n-shell-slice.json`.
 registerRouteSlice(routeSlice);
 
-function StayCalendarBody({ view, calendar, picker }: {
+function StayCalendarBody({ view, calendar, picker, pricing }: {
   readonly view: StayCalendarView;
   readonly calendar: StayCalendarController;
   readonly picker: StayCalendarSelectionController;
+  readonly pricing: PricedPropertyLike;
 }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   const [message, setMessage] = React.useState<StayCalendarMessage | null>(null);
+  const [warnings, setWarnings] = React.useState<StayPendingWarnings | null>(null);
   const locked = view.kind === 'unreadable';
   const entries = view.kind === 'readable' ? view.entries : [];
+  const days = view.kind === 'readable' ? view.days : {};
 
   const send = async (command: StayCalendarCommand): Promise<void> => {
     const outcome = await calendar.send(command);
     setMessage(stayCalendarMessageOf(outcome));
+    // 🏆 Παράκαμψη κανόνων ⇒ ονομασμένη επιβεβαίωση, ποτέ σιωπή (ADR-835 §21).
+    setWarnings(outcome.kind === 'rules-unacknowledged' && command.action === 'book'
+      ? { command, warnings: outcome.warnings }
+      : null);
     if (outcome.kind === 'ok') picker.clear();
   };
   const pick = (day: string, extend: boolean): void => {
@@ -62,28 +73,34 @@ function StayCalendarBody({ view, calendar, picker }: {
     <>
       {locked && <p role="alert" className="text-sm text-foreground">{t('property-market:offer.stayCalendar.unreadable')}</p>}
       {view.kind === 'readable' && (
-        <StayCalendarDeclaration declaredAt={view.declaredAt} busy={calendar.busy} locked={locked} onSend={(c) => void send(c)} />
+        <>
+          <StayCalendarDeclaration declaredAt={view.declaredAt} busy={calendar.busy} locked={locked} onSend={(c) => void send(c)} />
+          <StayRulesSettings rules={view.rules} busy={calendar.busy} onSend={(c) => void send(c)} />
+        </>
       )}
       <section className="flex flex-col gap-3">
         <StayCalendarMonthNav monthKey={picker.monthKey} onShift={picker.shiftMonth} onToday={() => picker.moveFocus(picker.today)} />
         <StayCalendarGrid
-          monthKey={picker.monthKey} entries={entries} selection={picker.selection} focusDay={picker.focusDay}
-          onFocusDay={picker.moveFocus} onPick={pick}
+          monthKey={picker.monthKey} entries={entries} days={days} pricing={pricing} selection={picker.selection}
+          focusDay={picker.focusDay} onFocusDay={picker.moveFocus} onPick={pick}
         />
         <StayCalendarLegend />
       </section>
       <StayCalendarPanel
         selection={picker.selection}
         meaning={picker.selection === null ? null : selectionMeaning(picker.selection, entries)}
-        busy={calendar.busy} locked={locked} message={message}
-        onSend={(command) => void send(command)} onClear={picker.clear}
+        days={days} busy={calendar.busy} locked={locked} message={message} warnings={warnings}
+        onSend={(command) => void send(command)} onClear={picker.clear} onDismissWarnings={() => setWarnings(null)}
       />
     </>
   );
 }
 
 /** Ο μήνας ζει **εδώ**, πάνω από τη φόρτωση: αλλαγή μήνα = νέο παράθυρο ανάγνωσης. */
-function StayCalendarSession({ ownerPropertyId }: { readonly ownerPropertyId: string }): React.ReactElement {
+function StayCalendarSession({ ownerPropertyId, pricing }: {
+  readonly ownerPropertyId: string;
+  readonly pricing: PricedPropertyLike;
+}): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   const picker = useStayCalendarSelection();
   const calendar = useStayCalendar(ownerPropertyId, picker.monthKey);
@@ -100,7 +117,7 @@ function StayCalendarSession({ ownerPropertyId }: { readonly ownerPropertyId: st
         </p>
       );
     case 'ready':
-      return <StayCalendarBody view={calendar.state.view} calendar={calendar} picker={picker} />;
+      return <StayCalendarBody view={calendar.state.view} calendar={calendar} picker={picker} pricing={pricing} />;
   }
 }
 
@@ -109,6 +126,9 @@ export function StayCalendarContent({ ownerPropertyId }: { readonly ownerPropert
   const { user } = useAuth();
   const lookup = useMyOwnerProperty(ownerPropertyId, user?.uid ?? null);
   const isStay = lookup.state === 'found' && ownerPropertyOfferKinds(lookup.property).includes('leaseShort');
+  // Η τιμή βάσης ΟΠΩΣ τη βλέπει ο επιλυτής τιμής — ο ίδιος δρόμος με τη δημόσια προβολή.
+  const offers = lookup.state === 'found' ? lookup.property.offers : null;
+  const pricing = React.useMemo<PricedPropertyLike>(() => ({ commercial: deriveCommercialAmounts(offers) }), [offers]);
 
   return (
     <main className="flex w-full flex-col gap-6">
@@ -127,7 +147,7 @@ export function StayCalendarContent({ ownerPropertyId }: { readonly ownerPropert
         <p className="text-foreground">{t('property-market:offer.stayCalendar.absent')}</p>
       )}
       {lookup.state === 'found' && !isStay && <p className="text-foreground">{t('property-market:offer.stayCalendar.notAStay')}</p>}
-      {isStay && <StayCalendarSession ownerPropertyId={ownerPropertyId} />}
+      {isStay && <StayCalendarSession ownerPropertyId={ownerPropertyId} pricing={pricing} />}
     </main>
   );
 }

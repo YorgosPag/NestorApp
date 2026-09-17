@@ -40,6 +40,7 @@ import {
 } from '@/config/domain-constants';
 import { formatFileSize } from '@/utils/file-validation';
 import { cn } from '@/lib/utils';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 
 // ============================================================================
 // PROPS
@@ -147,7 +148,7 @@ export function QuoteOriginalDocumentPanel({
   const { files, loading, error } = useEntityFiles({
     entityType: ENTITY_TYPES.QUOTE,
     entityId: quoteId,
-    companyId,
+    custody: companyReadCustodyOf(companyId),
     domain: FILE_DOMAINS.SALES,
     category: FILE_CATEGORIES.DOCUMENTS,
     realtime: true,

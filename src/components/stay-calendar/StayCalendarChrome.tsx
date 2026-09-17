@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, Link2, Lock, UserRound } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Link2, Lock, LogIn, LogOut, UserRound } from 'lucide-react';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarMonth, formatLongDate } from '@/lib/intl-formatting';
@@ -82,6 +82,9 @@ export function StayCalendarLegend(): React.ReactElement {
         <li className="flex items-center gap-1.5"><span aria-hidden className={cn(swatch, 'border-border bg-muted')}><Link2 className="size-3" /></span>{t('property-market:offer.stayCalendar.legend.external')}</li>
         <li className="flex items-center gap-1.5"><span aria-hidden className={cn(swatch, 'border-foreground/40 bg-accent')}><UserRound className="size-3" /></span>{t('property-market:offer.stayCalendar.legend.booked')}</li>
         <li className="flex items-center gap-1.5"><span aria-hidden className={cn(swatch, 'border-border ring-2 ring-foreground')} />{t('property-market:offer.stayCalendar.legend.selected')}</li>
+        <li className="flex items-center gap-1.5"><span aria-hidden className={cn(swatch, 'border-border bg-card')}><LogIn className="size-3" /></span>{t('property-market:offer.stayCalendar.legend.noArrival')}</li>
+        <li className="flex items-center gap-1.5"><span aria-hidden className={cn(swatch, 'border-border bg-card')}><LogOut className="size-3" /></span>{t('property-market:offer.stayCalendar.legend.noDeparture')}</li>
+        <li>{t('property-market:offer.stayCalendar.legend.price')}</li>
       </ul>
     </section>
   );

@@ -27,6 +27,7 @@
  */
 
 import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
+import type { StayRules } from '@/types/stay-rules';
 import {
   occupiesStayCalendar,
   stayHolderId,
@@ -62,6 +63,11 @@ export interface StayCalendarHead {
   readonly authorUserId: string;
   /** ISO — πότε ο οικοδεσπότης **δήλωσε** ότι το ημερολόγιο είναι ενημερωμένο. */
   readonly declaredAt: string | null;
+  /**
+   * Οι κανόνες βάσης (Στάδιο Β, ADR-835 §21). Κεφαλή γραμμένη **πριν** το Στάδιο Β δεν έχει
+   * το πεδίο και διαβάζεται ρητά ως `STAY_RULES_NONE` — όχι ως χαλασμένη.
+   */
+  readonly rules: StayRules;
   readonly version: number;
   readonly timezone: typeof STAY_CALENDAR_TIMEZONE;
   readonly createdAt: string;

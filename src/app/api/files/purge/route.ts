@@ -16,13 +16,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { verifyCronAuthorization } from '@/lib/cron-auth';
-import { isFileHeld } from '@/services/file-record/file-purge-helpers';
+import { isFileHeld, purgeFileRecord } from '@/services/file-record/file-purge-helpers';
 
 const logger = createModuleLogger('FilePurgeRoute');
 
@@ -77,50 +77,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
         continue;
       }
 
-      try {
-        // 🏢 ENTERPRISE: Delete binary file from Firebase Storage BEFORE marking as purged
-        const storagePath = data.storagePath as string | undefined;
-        if (storagePath) {
-          try {
-            const bucket = getAdminStorage().bucket();
-            await bucket.file(storagePath).delete();
-            logger.info('Storage file deleted', { fileId: doc.id, storagePath });
-          } catch (storageErr) {
-            // File may already be deleted or path invalid — log but don't block purge
-            logger.warn('Storage file deletion failed (non-blocking)', {
-              fileId: doc.id,
-              storagePath,
-              error: getErrorMessage(storageErr),
-            });
-          }
-        }
+      // ADR-864 §21 (N.0.2): ήταν αντίγραφο του `purgeFileRecord` — με «non-blocking» αποτυχία
+      // των bytes, δηλαδή `purged` πάνω σε bytes που η πλατφόρμα κράτησε. Ο ΕΝΑΣ γραφέας.
+      const result = await purgeFileRecord({
+        fileId: doc.id,
+        storagePath: data.storagePath as string | undefined,
+        performedBy: 'system:purge',
+        purgeReason: 'cron_trash',
+        metadata: {
+          purgeType: 'auto',
+          originalPurgeAt: (data.purgeAt as string | undefined) ?? null,
+          category: (data.category as string | undefined) ?? null,
+        },
+      });
 
-        // Mark as purged in Firestore
-        await doc.ref.update({
-          lifecycleState: 'purged',
-          purgedAt: nowISO(),
-          updatedAt: nowISO(),
-        });
-
-        // Audit log
-        const { generateAuditId } = await import('@/services/enterprise-id.service');
-        await db.collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
-          fileId: doc.id,
-          action: 'delete',
-          performedBy: 'system:purge',
-          timestamp: nowISO(),
-          metadata: {
-            purgeType: 'auto',
-            originalPurgeAt: data.purgeAt ?? null,
-            category: data.category ?? null,
-          },
-        });
-
+      if (result.success) {
         purgedCount++;
-      } catch (err) {
-        const msg = getErrorMessage(err);
-        errors.push(`${doc.id}: ${msg}`);
-        logger.error('Failed to purge file', { fileId: doc.id, error: msg });
+      } else {
+        errors.push(`${doc.id}: ${result.error ?? 'unknown'}`);
       }
     }
 

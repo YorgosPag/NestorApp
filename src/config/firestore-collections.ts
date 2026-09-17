@@ -112,6 +112,11 @@ export const COLLECTIONS = {
   STAY_BLOCKS: process.env.NEXT_PUBLIC_STAY_BLOCKS_COLLECTION || 'stay_blocks',
   /** 🎯 ADR-835 §6.1/§20 — **ΚΡΑΤΗΣΕΙΣ** (`stay_*`). Κουβαλούν άνθρωπο· ίδιο σύνορο με την κεφαλή. */
   STAY_BOOKINGS: process.env.NEXT_PUBLIC_STAY_BOOKINGS_COLLECTION || 'stay_bookings',
+  /**
+   * 🎯 ADR-835 §21 (Στάδιο Β) — **ΚΑΝΟΝΕΣ ΑΝΑ ΗΜΕΡΟΜΗΝΙΑ** (`scmo_*`), ένα έγγραφο ανά
+   * (ακίνητο, μήνας): τιμή νύχτας, ελάχ./μέγ. νύχτες, CTA/CTD. Ίδιο σύνορο με την κεφαλή.
+   */
+  STAY_CALENDAR_MONTHS: process.env.NEXT_PUBLIC_STAY_CALENDAR_MONTHS_COLLECTION || 'stay_calendar_months',
 
   /**
    * 🎯 ADR-827 §9 — **Η ΒΙΤΡΙΝΑ ΤΟΥ ΓΡΑΦΕΙΟΥ**. Κλειδί εγγράφου: το `companyId`.
@@ -425,6 +430,14 @@ export const COLLECTIONS = {
 
   // 📄 FILES (SSoT: all uploaded files — floorplans, DXF, photos, documents)
   FILES: process.env.NEXT_PUBLIC_FILES_COLLECTION || 'files',
+  /**
+   * 🗂️ ADR-866 §5.2 — **ΤΑ ΑΡΧΕΙΑ ΠΟΥ ΑΝΗΚΟΥΝ ΣΕ ΑΝΘΡΩΠΟ**, όχι σε εταιρεία (ίδιο `FileRecord`, πεδίο
+   * `userId` αντί `companyId`). **Διαμέρισμα, όχι διακλάδωση** του `FILES`: οι κανόνες δεν φιλτράρουν,
+   * και ένας κλάδος μέσα στο `match /files` θα έριχνε κάθε αφιλτράριστη λίστα. Το διαβάζει **μόνο** ο
+   * κάτοχος — ούτε super admin (Google Drive «Ο Δίσκος μου» · Figma Drafts). Επιλογή μέσω
+   * `FILE_COLLECTION[kind]` (`lib/files/file-custody.ts`)· **ποτέ** στο `IMMUTABLE_COLLECTIONS`.
+   */
+  FILES_PERSONAL: process.env.NEXT_PUBLIC_FILES_PERSONAL_COLLECTION || 'files_personal',
   ATTACHMENTS: process.env.NEXT_PUBLIC_ATTACHMENTS_COLLECTION || 'attachments',
 
   // 🎨 CAD & TECHNICAL DRAWINGS (Enterprise Unified)

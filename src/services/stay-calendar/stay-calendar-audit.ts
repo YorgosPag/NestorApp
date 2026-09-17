@@ -22,6 +22,18 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import type { OwnerProperty } from '@/types/owner-property';
 
+/** Η κράτηση ως γραμμή — 🏆 με τη ρητή αποδοχή κανόνων (ADR-835 §21), ποτέ σιωπηλή παράκαμψη. */
+function bookingLine(command: Extract<StayCalendarCommand, { action: 'book' }>, entryId: string | null): string {
+  const acknowledged = command.acknowledgedWarnings.length === 0
+    ? ''
+    : ` · acknowledged: ${command.acknowledgedWarnings.join(', ')}`;
+  return `${entryId} · ${command.checkIn}→${command.checkOut}${acknowledged}`;
+}
+
+function restrictionLine(command: Extract<StayCalendarCommand, { action: 'restrict' }>): string {
+  return `${command.from}→${command.to} · ${JSON.stringify({ set: command.set, clear: command.clear })}`;
+}
+
 /** Η πράξη ως **μία** γραμμή αλλαγής — ίδιο σχήμα για κάθε πράξη, όχι πέντε διατυπώσεις. */
 function changeOf(command: StayCalendarCommand, entryId: string | null): {
   readonly field: string;
@@ -36,9 +48,13 @@ function changeOf(command: StayCalendarCommand, entryId: string | null): {
     case 'unblock':
       return { field: 'stayCalendar.block', oldValue: command.blockId, newValue: null };
     case 'book':
-      return { field: 'stayCalendar.booking', oldValue: null, newValue: `${entryId} · ${command.checkIn}→${command.checkOut}` };
+      return { field: 'stayCalendar.booking', oldValue: null, newValue: bookingLine(command, entryId) };
     case 'cancel':
       return { field: 'stayCalendar.booking', oldValue: command.bookingId, newValue: 'cancelled' };
+    case 'rules':
+      return { field: 'stayCalendar.rules', oldValue: null, newValue: JSON.stringify(command.rules) };
+    case 'restrict':
+      return { field: 'stayCalendar.days', oldValue: null, newValue: restrictionLine(command) };
   }
 }
 

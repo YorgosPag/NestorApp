@@ -13,6 +13,9 @@ import type { AuditEntityType } from '@/types/audit-trail';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import type { FileCustody } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
 const logger = createModuleLogger('file-mutation-gateway');
 
@@ -97,6 +100,37 @@ export async function validateUploadAuth(
   return { uid: currentUser.uid, companyId, globalRole, isSuperAdmin };
 }
 
+/** Αποτέλεσμα ελέγχου ανεβάσματος **με κάτοχο** — ο συνδεδεμένος και το διαμέρισμα που θα γραφτεί. */
+export interface CustodyUploadAuthResult {
+  uid: string;
+  custody: CustodyKind;
+}
+
+/**
+ * **Έλεγχος ανεβάσματος για κάτοχο «εταιρεία Ή άνθρωπος»** (ADR-866 §2.6.8 Β3).
+ *
+ * - **Εταιρεία** ⇒ **καλεί** το {@link validateUploadAuth} — μηδέν δεύτερη λογική claim.
+ * - **Άνθρωπος** ⇒ ο κάτοχος **πρέπει** να είναι ο συνδεδεμένος: **κανένα** claim εταιρείας (ο ιδιώτης
+ *   δεν έχει και δεν αποκτά — ADR-787 Ε-3 §3) και **καμία** παράκαμψη super admin (ο κανόνας
+ *   `files_personal` δεν τη δίνει ούτε αυτός). Ξένο `userId` ⇒ `UPLOAD_AUTH_CUSTODY_MISMATCH`.
+ */
+export async function validateCustodyUploadAuth(custody: FileCustody): Promise<CustodyUploadAuthResult> {
+  if (custody.userId === undefined) {
+    const { uid } = await validateUploadAuth(custody.companyId);
+    return { uid, custody: 'company' };
+  }
+
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('UPLOAD_AUTH_REQUIRED');
+  }
+  if (!custody.userId || custody.userId !== currentUser.uid) {
+    logger.error('Personal custody does not belong to the signed-in user', { uid: currentUser.uid });
+    throw new Error('UPLOAD_AUTH_CUSTODY_MISMATCH');
+  }
+  return { uid: currentUser.uid, custody: 'personal' };
+}
+
 async function mutateJson<T>(url: string, init: RequestInit): Promise<T> {
   const body = init.body !== undefined && typeof init.body === 'string'
     ? JSON.parse(init.body) as unknown
@@ -173,27 +207,33 @@ export async function cancelFileApprovalWithPolicy(
   return FileApprovalService.cancel(approvalId, userId, fileId);
 }
 
+// 🔑 ADR-866 §2.6.8 Β4 — κάθε πράξη που παίρνει ΜΟΝΟ `fileId` δέχεται **υποχρεωτικό** `custody`
+//    (το διαμέρισμα): ο μεταγλωττιστής βρίσκει κάθε καλούντα, και κανείς δεν «δοκιμάζει και τις δύο».
+
 export async function unlinkFileFromEntityWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   targetEntityType: EntityType,
   targetEntityId: string,
 ): Promise<void> {
-  return FileRecordService.unlinkFileFromEntity(fileId, targetEntityType, targetEntityId);
+  return FileRecordService.unlinkFileFromEntity(fileId, custody, targetEntityType, targetEntityId);
 }
 
 export async function linkFileToEntityWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   targetEntityType: EntityType,
   targetEntityId: string,
 ): Promise<void> {
-  return FileRecordService.linkFileToEntity(fileId, targetEntityType, targetEntityId);
+  return FileRecordService.linkFileToEntity(fileId, custody, targetEntityType, targetEntityId);
 }
 
 export async function updateFileDescriptionWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   description: string,
 ): Promise<void> {
-  return FileRecordService.updateDescription(fileId, description);
+  return FileRecordService.updateDescription(fileId, custody, description);
 }
 
 export async function updateIso19650MetadataWithPolicy(
@@ -225,31 +265,35 @@ export async function finalizeFileRecordWithPolicy(
 
 export async function markFileRecordFailedWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   errorMessage?: string,
 ): Promise<void> {
-  return FileRecordService.markFileRecordFailed(fileId, errorMessage);
+  return FileRecordService.markFileRecordFailed(fileId, custody, errorMessage);
 }
 
 export async function renameFileWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   newDisplayName: string,
   renamedBy: string,
 ): Promise<void> {
-  return FileRecordService.renameFile(fileId, newDisplayName, renamedBy);
+  return FileRecordService.renameFile(fileId, custody, newDisplayName, renamedBy);
 }
 
 export async function moveFileToTrashWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   trashedBy: string,
 ): Promise<void> {
-  return FileRecordService.moveToTrash(fileId, trashedBy);
+  return FileRecordService.moveToTrash(fileId, custody, trashedBy);
 }
 
 export async function restoreFileFromTrashWithPolicy(
   fileId: string,
+  custody: CustodyKind,
   restoredBy: string,
 ): Promise<void> {
-  return FileRecordService.restoreFromTrash(fileId, restoredBy);
+  return FileRecordService.restoreFromTrash(fileId, custody, restoredBy);
 }
 
 export async function classifyFileWithPolicy(
@@ -372,9 +416,11 @@ export async function updateFileClassificationWithPolicy(
   fileId: string,
   classification: FileClassification,
 ): Promise<void> {
+  // 🧹 ADR-866 §2.6.8 Β11 — ήταν ωμό `'files'`. Η δημοσιοποίηση (ADR-845) είναι πράξη ΓΡΑΦΕΙΟΥ:
+  //    μόνο εταιρικό διαμέρισμα, και το UI την κρύβει για προσωπικό κάτοχο.
   const { doc, updateDoc } = await import('firebase/firestore');
   const { db } = await import('@/lib/firebase');
-  await updateDoc(doc(db, 'files', fileId), { classification });
+  await updateDoc(doc(db, COLLECTIONS.FILES, fileId), { classification });
 }
 
 // ============================================================================

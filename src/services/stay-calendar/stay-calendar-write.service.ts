@@ -23,7 +23,7 @@
  */
 
 import 'server-only';
-import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { custodyOf, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
@@ -37,40 +37,22 @@ import type { StayBooking } from '@/types/stay-booking';
 import {
   STAY_CALENDAR_TIMEZONE,
   type StayBlock,
-  type StayCalendarEntry,
   type StayCalendarHead,
 } from '@/types/stay-calendar';
+import { stayClockAt } from '@/lib/stay/stay-calendar-of';
+import { STAY_RULES_NONE } from '@/types/stay-rules';
 import { recordStayCalendarWrite } from './stay-calendar-audit';
+import { decideRestrict, decideRules, unacknowledgedWarnings } from './stay-calendar-rules-write';
+import { refuse, type Decision, type WriteContext } from './stay-calendar-write-decision';
 import { readStayCalendar, stayCalendarHeadRef, stayPropertyRef } from './stay-calendar-read.service';
 import { refusalOf, type StayCalendarWriteResult } from './stay-calendar-write-result';
-
-/** Ό,τι ξέρει η συναλλαγή όταν φτάνει στην πράξη. */
-interface WriteContext {
-  readonly adminDb: AdminFirestore;
-  readonly property: OwnerProperty;
-  readonly entries: readonly StayCalendarEntry[];
-  readonly actor: ListingActor;
-  readonly now: string;
-}
-
-/** Η απόφαση της πράξης: άρνηση, ή τι γράφεται και ποια κεφαλή προκύπτει. */
-type Decision =
-  | { readonly kind: 'refuse'; readonly result: StayCalendarWriteResult }
-  | {
-      readonly kind: 'write';
-      readonly entryId: string | null;
-      readonly apply: (transaction: Transaction) => void;
-      readonly declaredAt?: string | null;
-    };
-
-const refuse = (result: StayCalendarWriteResult): Decision => ({ kind: 'refuse', result });
 
 function isStay(property: OwnerProperty): boolean {
   return ownerPropertyOfferKinds(property).includes('leaseShort');
 }
 
 // =============================================================================
-// ΟΙ ΠΕΝΤΕ ΑΠΟΦΑΣΕΙΣ — καθαρές ως προς τα δεδομένα, γράφουν μόνο μέσω `apply`
+// ΟΙ ΑΠΟΦΑΣΕΙΣ ΤΟΥ ΣΤΑΔΙΟΥ Α — καθαρές ως προς τα δεδομένα, γράφουν μόνο μέσω `apply`
 // =============================================================================
 
 function decideBlock(ctx: WriteContext, command: Extract<StayCalendarCommand, { action: 'block' }>): Decision {
@@ -115,6 +97,9 @@ function decideBook(ctx: WriteContext, command: Extract<StayCalendarCommand, { a
   };
   const refusal = refusalOf(stayCalendarConflicts({ kind: 'booking', booking }, ctx.entries));
   if (refusal !== null) return refuse(refusal);
+  // Επικάλυψη = σκληρή άρνηση (πάνω)· κανόνας = προειδοποίηση που ο οικοδεσπότης αποδέχεται.
+  const warnings = unacknowledgedWarnings(ctx, command);
+  if (warnings !== null) return warnings;
   const ref = ctx.adminDb.collection(COLLECTIONS.STAY_BOOKINGS).doc(booking.id);
   return { kind: 'write', entryId: booking.id, apply: (tx) => tx.set(ref, booking) };
 }
@@ -155,6 +140,10 @@ function decide(ctx: WriteContext, command: StayCalendarCommand): Decision {
       return decideBook(ctx, command);
     case 'cancel':
       return decideCancel(ctx, command.bookingId);
+    case 'rules':
+      return isStay(ctx.property) ? decideRules(command.rules) : refuse({ kind: 'not-a-stay' });
+    case 'restrict':
+      return isStay(ctx.property) ? decideRestrict(ctx, command) : refuse({ kind: 'not-a-stay' });
   }
 }
 
@@ -173,6 +162,7 @@ function nextHead(
     authorUserId: property.authorUserId,
     // `undefined` = η πράξη δεν αγγίζει τη δήλωση· κρατά ό,τι ίσχυε.
     declaredAt: decision.declaredAt === undefined ? head?.declaredAt ?? null : decision.declaredAt,
+    rules: decision.rules ?? head?.rules ?? STAY_RULES_NONE,
     version: (head?.version ?? 0) + 1,
     timezone: STAY_CALENDAR_TIMEZONE,
     createdAt: head?.createdAt ?? now,
@@ -206,7 +196,11 @@ async function transact(
     if (snapshot.kind === 'unreadable') return { result: { kind: 'unreadable' }, property: null };
 
     const now = nowISO();
-    const decision = decide({ adminDb, property, entries: snapshot.entries, actor, now }, command);
+    const context: WriteContext = {
+      adminDb, property, head: snapshot.head, entries: snapshot.entries, months: snapshot.months,
+      actor, now, clock: stayClockAt(new Date(now)),
+    };
+    const decision = decide(context, command);
     if (decision.kind === 'refuse') return { result: decision.result, property: null };
 
     const head = nextHead(property, snapshot.head, decision, now);

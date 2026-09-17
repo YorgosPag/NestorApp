@@ -52,7 +52,7 @@ jest.mock('@/services/firestore/firestore-query.service', () => ({
   firestoreQueryService: { getAll: jest.fn(async () => ({ documents: [] })) },
 }));
 jest.mock('@/services/file-audit.service', () => ({
-  FileAuditService: { log: jest.fn(async () => undefined) },
+  FileAuditService: { log: jest.fn(async () => undefined), logForCustody: jest.fn() },
 }));
 
 // ── Σύνορο δικτύου προς τον ΕΝΑ γραφέα (αντικατάσταση) ─────────────────────────
@@ -159,7 +159,7 @@ async function runImport(declareSuccessor: boolean): Promise<{
     getLevelScene: (id) => SceneStore.getLevelScene(id),
     setLevelScene: (id, s) => SceneStore.setLevelScene(id, s),
     linkSceneFileToLevel: () => {
-      pending.push(declareSuccessor ? supersedeFileRecord(PREV_FILE, NEXT_FILE) : moveToTrash(PREV_FILE, UID));
+      pending.push(declareSuccessor ? supersedeFileRecord(PREV_FILE, NEXT_FILE) : moveToTrash(PREV_FILE, 'company', UID));
     },
   });
 
@@ -219,7 +219,7 @@ describe('ADR-845 Ο-16 · ADR-862 Φ0 Β10 — αντικατάσταση κά�
   it('Κ5 — σκέτη διαγραφή εξακολουθεί να καθαρίζει τον καμβά', async () => {
     SceneStore.setLevelScene(LEVEL, importedFloorplan());
     const unsub = subscribeLossListener(staleLevels());
-    await moveToTrash(PREV_FILE, UID);
+    await moveToTrash(PREV_FILE, 'company', UID);
     unsub();
 
     expect(SceneStore.getLevelScene(LEVEL)).toBeNull();

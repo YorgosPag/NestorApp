@@ -23,6 +23,8 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import type { EntityType, FileCategory, FileDomain } from '@/config/domain-constants';
 import { storage } from '@/lib/firebase';
+import type { FileCustody } from '@/lib/files/file-custody';
+import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
 import { createModuleLogger } from '@/lib/telemetry';
 import { buildThumbnailPath, generateUploadThumbnail } from '@/components/shared/files/utils/generate-upload-thumbnail';
 import {
@@ -37,7 +39,8 @@ const logger = createModuleLogger('upload-entity-file');
 const FIRESTORE_PROPAGATION_MS = 300;
 
 interface EntityFileUploadSpec {
-  readonly companyId: string;
+  /** **Ποιος κατέχει** το αρχείο (ADR-866 §5.2) — ορίζει ρίζα Storage **και** διαμέρισμα Firestore. */
+  readonly custody: FileCustody;
   readonly projectId?: string;
   readonly entityType: EntityType;
   readonly entityId: string;
@@ -72,7 +75,7 @@ async function uploadThumbnail(file: File, storagePath: string): Promise<string 
 /** **Ένα αρχείο, τρία βήματα.** Πετά σε αποτυχία — ο καλών μετρά επιτυχίες/αποτυχίες όπως θέλει. */
 export async function uploadEntityFile(spec: EntityFileUploadSpec, file: File): Promise<UploadedEntityFile> {
   const { fileId, storagePath, displayName } = await createPendingFileRecordWithPolicy({
-    companyId: spec.companyId,
+    ...spec.custody,
     projectId: spec.projectId,
     entityType: spec.entityType,
     entityId: spec.entityId,
@@ -96,6 +99,12 @@ export async function uploadEntityFile(spec: EntityFileUploadSpec, file: File): 
   const downloadUrl = await getDownloadURL(storageRef);
   const thumbnailUrl = await uploadThumbnail(file, storagePath);
 
-  await finalizeFileRecordWithPolicy({ fileId, sizeBytes: file.size, downloadUrl, thumbnailUrl });
+  await finalizeFileRecordWithPolicy({
+    fileId,
+    custody: custodyKindOfScope(spec.custody),
+    sizeBytes: file.size,
+    downloadUrl,
+    thumbnailUrl,
+  });
   return { fileId, displayName };
 }

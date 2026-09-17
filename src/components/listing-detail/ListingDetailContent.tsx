@@ -73,6 +73,7 @@ import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingGallery } from './ListingGallery';
 import { ListingFloorplans } from './ListingFloorplans';
 import { ListingModels } from './ListingModels';
+import { ListingStay } from './ListingStay';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 
@@ -261,6 +262,12 @@ function ListingDetailBody({
           */}
           <ListingModels listing={listing} />
           <ListingPositionSection listing={listing} />
+          {/*
+            ADR-835 §21 — **ο ΧΡΟΝΟΣ μετά τον ΤΟΠΟ** (η σειρά «τόπος → χρόνος» του §4.6).
+            Στην κύρια στήλη και όχι στο πλάι: δύο μήνες δίπλα-δίπλα θέλουν πλάτος. Αποδίδει
+            **τίποτα** για ό,τι δεν είναι βραχυχρόνια διάθεση.
+          */}
+          <ListingStay listing={listing} />
         </div>
 
         <aside className="flex flex-col gap-4">

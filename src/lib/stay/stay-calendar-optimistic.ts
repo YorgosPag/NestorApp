@@ -16,6 +16,8 @@
 
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import type { StayCalendarEntryView, StayCalendarView } from '@/lib/stay/stay-calendar-view';
+import { restrictDays } from '@/lib/stay/stay-day-restriction';
+import type { StayDayRules } from '@/types/stay-rules';
 
 export const PENDING_ENTRY_PREFIX = 'pending:';
 
@@ -32,6 +34,8 @@ function entriesAfter(
 ): readonly StayCalendarEntryView[] {
   switch (command.action) {
     case 'declare':
+    case 'rules':
+    case 'restrict':
       return entries;
     case 'block':
       return [...entries, { kind: 'block', id: pendingId, from: command.from, to: command.to, source: 'owner', note: command.note }];
@@ -52,5 +56,18 @@ function entriesAfter(
 /** Το στιγμιότυπο όπως θα είναι αν η πράξη δεσμευτεί. */
 export function optimisticView(view: Readable, command: StayCalendarCommand, pendingId: string, nowIso: string): Readable {
   const declaredAt = command.action === 'declare' ? (command.declared ? nowIso : null) : view.declaredAt;
-  return { ...view, declaredAt, entries: entriesAfter(view.entries, command, pendingId) };
+  return {
+    ...view,
+    declaredAt,
+    entries: entriesAfter(view.entries, command, pendingId),
+    rules: command.action === 'rules' ? command.rules : view.rules,
+    days: daysAfter(view.days, command),
+  };
+}
+
+/** Οι μέρες μετά τη ρύθμιση — με την ΙΔΙΑ συγχώνευση του διακομιστή· αντίφαση ⇒ αμετάβλητες. */
+function daysAfter(days: StayDayRules, command: StayCalendarCommand): StayDayRules {
+  if (command.action !== 'restrict') return days;
+  const outcome = restrictDays(days, command);
+  return outcome.kind === 'ok' ? outcome.days : days;
 }

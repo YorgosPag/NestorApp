@@ -1,7 +1,8 @@
 /**
  * 🗑️ ENTERPRISE FILE RECORD LIFECYCLE OPERATIONS
  *
- * Trash system, hold management, and purge eligibility.
+ * Trash system and purge eligibility. Hold is written ONLY by the server
+ * (`services/file-record/file-hold.service.ts`, ADR-864 §21).
  * Extracted from file-record.service.ts (ADR-065 SRP split).
  *
  * 3-tier lifecycle: Active → Trashed → Archived → Purged
@@ -25,18 +26,19 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import {
   type EntityType,
   type FileCategory,
-  type HoldType,
   FILE_LIFECYCLE_STATES,
   DEFAULT_RETENTION_POLICIES,
   TRASH_RETENTION_BY_CATEGORY,
-  HOLD_TYPES,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isHoldActive } from '@/lib/files/file-hold';
+import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
+import { custodyKindOfScope, type CustodyKind } from '@/lib/workspace/custody-scope';
+import { fileOwnerConstraints } from '@/services/file-record-queries';
 import { RealtimeService } from '@/services/realtime';
 import { FileAuditService } from '@/services/file-audit.service';
-import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import {
   requestSupersession,
   type SupersedeOutcome,
@@ -63,14 +65,16 @@ function calculatePurgeDate(category: FileCategory): Date {
 type LifecycleTimestampField = 'trashedAt' | 'archivedAt' | 'updatedAt';
 
 /**
- * Load a FILES document and fail loudly when it does not exist.
+ * Load a file document and fail loudly when it does not exist.
  * Single source for the read-then-assert prologue of every mutation below.
+ *
+ * @param custody Σε ποιο διαμέρισμα ζει (ADR-866 §2.6.8 Β4) — ποτέ «δοκίμασε και τις δύο».
  */
-async function loadFileDocOrThrow(fileId: string): Promise<{
+async function loadFileDocOrThrow(fileId: string, custody: CustodyKind): Promise<{
   docRef: DocumentReference;
   data: DocumentData;
 }> {
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+  const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
 
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) {
@@ -98,16 +102,24 @@ function normalizeFileRecord(
   return isFileRecord(normalized) ? normalized : null;
 }
 
+/** Κάδος/αρχειοθήκη **ενός κατόχου**, προαιρετικά μίας οντότητας. */
+interface LifecycleListOptions {
+  /** Ο κάτοχος (ADR-866 §5.2) — ορίζει **και** το διαμέρισμα **και** το φίλτρο κατόχου. */
+  custody: FileCustody;
+  entityType?: EntityType;
+  entityId?: string;
+}
+
 /**
- * Run a tenant-scoped FILES query with the optional entity filters applied.
- * 🏢 ADR-214 Phase 3: via FirestoreQueryService (companyId comes from the caller's constraints)
+ * Run a custody-scoped file query with the optional entity filters applied.
+ * 🏢 ADR-214 Phase 3: via FirestoreQueryService — φίλτρο κατόχου από το `fileOwnerConstraints`.
  */
 async function queryLifecycleFiles(
   baseConstraints: QueryConstraint[],
-  options: { entityType?: EntityType; entityId?: string },
+  options: LifecycleListOptions,
   timestampField: LifecycleTimestampField
 ): Promise<FileRecord[]> {
-  const constraints = [...baseConstraints];
+  const constraints = [...baseConstraints, ...fileOwnerConstraints(options.custody)];
 
   if (options.entityType) {
     constraints.push(where('entityType', '==', options.entityType));
@@ -117,7 +129,10 @@ async function queryLifecycleFiles(
     constraints.push(where('entityId', '==', options.entityId));
   }
 
-  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
+  const result = await firestoreQueryService.getAll<DocumentData>(
+    FILE_COLLECTION[custodyKindOfScope(options.custody)],
+    { constraints },
+  );
 
   const files: FileRecord[] = [];
   for (const raw of result.documents) {
@@ -142,16 +157,16 @@ async function queryLifecycleFiles(
  * επειδή **ήρθε νέα έκδοση**, κάλεσε το {@link supersedeFileRecord}: αρχειοθετεί (ποτέ
  * οριστική διαγραφή) μέσω του ΕΝΟΣ γραφέα του διακομιστή.
  */
-export async function moveToTrash(fileId: string, trashedBy: string): Promise<void> {
+export async function moveToTrash(fileId: string, custody: CustodyKind, trashedBy: string): Promise<void> {
   logger.info('Moving FileRecord to trash', { fileId, trashedBy });
 
-  const { docRef, data } = await loadFileDocOrThrow(fileId);
+  const { docRef, data } = await loadFileDocOrThrow(fileId, custody);
   const category = data.category as FileCategory;
   const purgeDate = calculatePurgeDate(category);
 
-  if (data.hold && data.hold !== HOLD_TYPES.NONE) {
-    throw new Error(`Cannot trash file ${fileId}: Active hold (${data.hold}) prevents deletion. Contact administrator.`);
-  }
+  // 🔑 ADR-864 §21 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ (Google Vault · Box · Purview): ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ και σε
+  //    αρχείο σε δέσμευση. Αυτό που δεν γίνεται ποτέ είναι η ΟΡΙΣΤΙΚΗ διαγραφή — την αρνούνται ο
+  //    κριτής (`isFileHeld` σε κάθε purge), οι κανόνες και η πλατφόρμα (GCS `temporaryHold`).
 
   await updateDoc(docRef, {
     lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
@@ -180,7 +195,7 @@ export async function moveToTrash(fileId: string, trashedBy: string): Promise<vo
     timestamp: Date.now(),
   });
 
-  safeFireAndForget(FileAuditService.log(fileId, 'delete', trashedBy), 'FileRecord.trashFile', { fileId });
+  FileAuditService.logForCustody(custody, fileId, 'delete', trashedBy, 'FileRecord.trashFile');
 }
 
 /**
@@ -226,10 +241,10 @@ export async function supersedeFileRecord(
  * ♻️ Restore file from Trash
  * @enterprise Returns file to active state
  */
-export async function restoreFromTrash(fileId: string, restoredBy: string): Promise<void> {
+export async function restoreFromTrash(fileId: string, custody: CustodyKind, restoredBy: string): Promise<void> {
   logger.info('Restoring FileRecord from trash', { fileId, restoredBy });
 
-  const { docRef, data } = await loadFileDocOrThrow(fileId);
+  const { docRef, data } = await loadFileDocOrThrow(fileId, custody);
   if (data.lifecycleState !== FILE_LIFECYCLE_STATES.TRASHED && data.isDeleted !== true) {
     throw new Error(`FileRecord ${fileId} is not in trash`);
   }
@@ -255,22 +270,17 @@ export async function restoreFromTrash(fileId: string, restoredBy: string): Prom
     timestamp: Date.now(),
   });
 
-  safeFireAndForget(FileAuditService.log(fileId, 'restore', restoredBy), 'FileRecord.restoreFile', { fileId });
+  FileAuditService.logForCustody(custody, fileId, 'restore', restoredBy, 'FileRecord.restoreFile');
 }
 
 /**
  * 📂 Get files in Trash for an entity
  * 🏢 ADR-214 Phase 3: via FirestoreQueryService
  */
-export async function getTrashedFiles(options: {
-  companyId: string;
-  entityType?: EntityType;
-  entityId?: string;
-}): Promise<FileRecord[]> {
+export async function getTrashedFiles(options: LifecycleListOptions): Promise<FileRecord[]> {
   return queryLifecycleFiles(
     [
       where('isDeleted', '==', true),
-      where('companyId', '==', options.companyId),
     ],
     options,
     'trashedAt'
@@ -281,15 +291,10 @@ export async function getTrashedFiles(options: {
  * 📦 Get archived files for an entity
  * Same pattern as getTrashedFiles but queries lifecycleState=archived
  */
-export async function getArchivedFiles(options: {
-  companyId: string;
-  entityType?: EntityType;
-  entityId?: string;
-}): Promise<FileRecord[]> {
+export async function getArchivedFiles(options: LifecycleListOptions): Promise<FileRecord[]> {
   return queryLifecycleFiles(
     [
       where('isDeleted', '==', false),
-      where('companyId', '==', options.companyId),
       where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ARCHIVED),
     ],
     options,
@@ -319,17 +324,10 @@ export async function getFilesEligibleForPurge(): Promise<FileRecord[]> {
 
   const eligibleFiles: FileRecord[] = [];
   for (const raw of result.documents) {
-    if (raw.hold && raw.hold !== HOLD_TYPES.NONE) {
-      logger.info('Skipping file with active hold', { fileId: raw.id, hold: raw.hold });
+    // Ο ΕΝΑΣ κριτής (ADR-864 §21): δέσμευση ή διατήρηση που δεν έληξε ⇒ παράλειψη.
+    if (isHoldActive(raw, Date.now())) {
+      logger.info('Skipping held file', { fileId: raw.id });
       continue;
-    }
-
-    if (raw.retentionUntil) {
-      const retentionDate = new Date(raw.retentionUntil as string);
-      if (retentionDate > new Date()) {
-        logger.info('Skipping file with active retention', { fileId: raw.id, retentionUntil: raw.retentionUntil });
-        continue;
-      }
     }
 
     const normalized = normalizeFileRecord(raw, 'updatedAt');
@@ -340,56 +338,4 @@ export async function getFilesEligibleForPurge(): Promise<FileRecord[]> {
 
   logger.info('Found files eligible for purge', { count: eligibleFiles.length });
   return eligibleFiles;
-}
-
-// ============================================================================
-// HOLD OPERATIONS
-// ============================================================================
-
-/**
- * 🔒 Place hold on file (prevents deletion)
- * @enterprise For legal/regulatory compliance
- */
-export async function placeHold(
-  fileId: string,
-  holdType: HoldType,
-  placedBy: string,
-  reason: string
-): Promise<void> {
-  logger.info('Placing hold on FileRecord', { fileId, holdType, placedBy, reason });
-
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-  await updateDoc(docRef, {
-    hold: holdType,
-    holdPlacedBy: placedBy,
-    holdPlacedAt: serverTimestamp(),
-    holdReason: reason,
-    updatedAt: serverTimestamp(),
-  });
-
-  logger.info('Hold placed on FileRecord', { fileId, holdType });
-
-  safeFireAndForget(FileAuditService.log(fileId, 'hold_place', placedBy, undefined, { holdType, reason }), 'FileRecord.holdPlace', { fileId });
-}
-
-/**
- * 🔓 Release hold on file
- * @enterprise Allows file to be deleted again
- */
-export async function releaseHold(fileId: string, releasedBy: string): Promise<void> {
-  logger.info('Releasing hold on FileRecord', { fileId, releasedBy });
-
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-  await updateDoc(docRef, {
-    hold: HOLD_TYPES.NONE,
-    holdReleasedBy: releasedBy,
-    holdReleasedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  logger.info('Hold released on FileRecord', { fileId });
-
-  safeFireAndForget(FileAuditService.log(fileId, 'hold_release', releasedBy), 'FileRecord.holdRelease', { fileId });
 }

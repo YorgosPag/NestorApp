@@ -13,7 +13,7 @@
  * διακομιστή θα περνούσε κάθε κανόνα. Αυτή η πύλη κλείνει ό,τι ο κανόνας δομικά δεν βλέπει.
  *
  * ── ΤΑ ΚΡΙΤΗΡΙΑ (κάθε ένα δική του γραμμή — ποτέ «ή», μάθημα 3.41) ─────────────────────
- *  Κ1 γραφή πεδίου φύλαξης (η λίστα διαβάζεται από το `cdeCustodyUnchanged()` του
+ *  Κ1 γραφή πεδίου φύλαξης (η λίστα διαβάζεται από το `cdeCustodyKeys()` του
  *     firestore.rules — ΜΙΑ πηγή) σε όρισμα κλήσης εγγραφής, εκτός δηλωμένου γραφέα
  *  Κ2 ο κριτής (`decideContainerAccess`) και ο PEP (`container-visibility-guard`) έχουν
  *     καταναλωτές — αλλιώς «πράσινο επειδή κανείς δεν κρίνει»
@@ -63,7 +63,12 @@ const VISIBILITY_SCOPE_MODULE = 'lib/files/file-visibility-scope';
 const WRITE_METHODS = new Set(['set', 'update', 'create']);
 const WRITE_FUNCTIONS = new Set(['setDoc', 'updateDoc']);
 const SECOND_FLAG = /^(is)?(ForConstruction|forConstruction|ApprovedForBuild|approvedForBuild|ApprovedForConstruction)$/;
-const FILES_REFERENCE = /COLLECTIONS\.FILES\b|['"]FILES['"]|collection\(\s*db\s*,\s*['"]files['"]/;
+// ADR-866 §2.6.7 — ΚΑΙ το προσωπικό διαμέρισμα: `COLLECTIONS.FILES\b` δεν πιάνει το `FILES_PERSONAL`
+// (το `_` είναι χαρακτήρας λέξης ⇒ κανένα όριο), άρα γραφέας που αναφέρει ΜΟΝΟ το προσωπικό
+// διαμέρισμα ή το `FILE_COLLECTION[kind]` θα ήταν αόρατος στο Κ1.
+const FILES_REFERENCE = /COLLECTIONS\.FILES(?:_PERSONAL)?\b|['"]FILES(?:_PERSONAL)?['"]|\bFILE_COLLECTION\b|collection\(\s*db\s*,\s*['"]files(?:_personal)?['"]/;
+// Κ5 — client λίστα αρχείων: literal ή διαμέρισμα κατόχου (ο εταιρικός κλάδος θέλει φράχτη).
+const FILES_LIST_TARGET = /collection\(\s*db\s*,\s*(COLLECTIONS\.FILES\b|['"]files['"]|COLLECTIONS\[\s*FILE_COLLECTION\[[^\]]*\]\s*\])\s*\)/;
 const EXEMPT = /cde-authority-exempt:\s*(\S.*)?$/;
 
 const STATES = {
@@ -92,9 +97,9 @@ function sourceFileOf(absPath, text) {
 
 const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
-/** Κ1 — τα πεδία φύλαξης, από το `cdeCustodyUnchanged()` του firestore.rules. */
+/** Κ1 — τα πεδία φύλαξης, από το καθολικό `cdeCustodyKeys()` του firestore.rules (ADR-866 §5.2). */
 function custodyFieldsOf(rulesText) {
-  const match = rulesText.match(/function cdeCustodyUnchanged\(\)\s*\{[\s\S]*?hasAny\(\[([\s\S]*?)\]\)/);
+  const match = rulesText.match(/function cdeCustodyKeys\(\)\s*\{\s*return\s*\[([\s\S]*?)\];/);
   return match ? [...match[1].matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1]) : [];
 }
 
@@ -181,7 +186,7 @@ function classifyWrite(sf, node, rel, key) {
 /** Κ5 — client λίστα `files` χωρίς τον παραγωγό ορατότητας. */
 function unscopedListIn(text, rel) {
   if (/['"]server-only['"]|firebase-admin|getAdminFirestore/.test(text)) return null;
-  const directList = /collection\(\s*db\s*,\s*(COLLECTIONS\.FILES|['"]files['"])\s*\)/.test(text)
+  const directList = FILES_LIST_TARGET.test(text)
     && /\b(getDocs|onSnapshot|query)\(/.test(text);
   if (!directList || text.includes(VISIBILITY_SCOPE_MODULE)) return directList ? { state: STATES.SCOPED_LISTS, file: rel } : null;
   return { state: STATES.UNSCOPED_LIST, file: rel,
@@ -226,7 +231,7 @@ function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
   const fields = custodyFieldsOf(fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'));
   const findings = [];
-  if (fields.length === 0) findings.push({ state: STATES.SOURCE_DRIFT, file: 'firestore.rules', detail: 'το cdeCustodyUnchanged() δεν διαβάστηκε — η Κ1 δεν ξέρει τι φυλάει' });
+  if (fields.length === 0) findings.push({ state: STATES.SOURCE_DRIFT, file: 'firestore.rules', detail: 'το cdeCustodyKeys() δεν διαβάστηκε — η Κ1 δεν ξέρει τι φυλάει' });
   const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
   if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
   let judgeConsumers = 0;
@@ -290,5 +295,5 @@ if (require.main === module) process.exit(main());
 
 module.exports = {
   measure, report, main, custodyFieldsOf, custodyFindingsIn, unscopedListIn, writeTargetsIn,
-  sourceFileOf, tableGaps, STATES, BLOCKING, STATE_WRITER, BIRTH_WRITERS,
+  sourceFileOf, tableGaps, STATES, BLOCKING, STATE_WRITER, BIRTH_WRITERS, FILES_REFERENCE,
 };

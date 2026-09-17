@@ -32,6 +32,8 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 // 🔑 ADR-862 Φ0 Β6 — το λεξιλόγιο μετακόμισε σε SSoT **ανεξάρτητο SDK**, ώστε να μπορεί
 //    να το εισαγάγει ΚΑΙ ο γραφέας του διακομιστή. Δες `types/file-audit` για το τι
 //    κόστισε όσο ήταν δεμένο εδώ: **πέντε** αποκλίνοντα admin-side δίδυμα.
@@ -165,6 +167,26 @@ export class FileAuditService {
       });
       return '';
     }
+  }
+
+  /**
+   * **Ιστορικό αρχείου για πράξη που ξέρει το διαμέρισμά της** — fire-and-forget.
+   *
+   * 🔴 ADR-866 §2.6.8 Β7: το {@link FileAuditService.log} ψάχνει τον κάτοχο στη συλλογή **`files`**
+   * και γράφει στο **εταιρικό** `FILE_AUDIT_LOG`. Για προσωπικό αρχείο θα διάβαζε **λάθος**
+   * διαμέρισμα και θα έγραφε γραμμή **χωρίς** κάτοχο ⇒ **καμία** εγγραφή, δηλωμένα, ως το βήμα
+   * 2β.4 (προσωπικό ιστορικό αρχείου). ΕΝΑ σημείο για όλες τις πράξεις — όχι φρουρός ανά καλούντα.
+   */
+  static logForCustody(
+    custody: CustodyKind,
+    fileId: string,
+    action: FileAuditAction,
+    performedBy: string,
+    context: string,
+    metadata?: FileAuditMetadata,
+  ): void {
+    if (custody !== 'company') return;
+    safeFireAndForget(FileAuditService.log(fileId, action, performedBy, undefined, metadata), context, { fileId });
   }
 
   /**

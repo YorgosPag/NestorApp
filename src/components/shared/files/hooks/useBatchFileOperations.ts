@@ -28,6 +28,8 @@ import { useFileClassification, isAIClassifiable } from './useFileClassification
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
+import { fileCustodyKindOf } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useBatchFileOperations');
@@ -106,9 +108,24 @@ export async function downloadFilesAsZip(fileIds: readonly string[]): Promise<vo
  * διαχειριστές αρχείων. Εδώ ο κλώνος ήταν **κάτω** από το κατώφλι των 50 tokens
  * της CHECK 3.28 — δηλαδή ο **επόμενος** που θα χτυπούσε, μόλις άλλαζε μια γραμμή.
  * Φεύγει τώρα μαζί με την κλάση του, όχι όταν κοκκινίσει.
+ *
+ * 🔑 ADR-866 §2.6.8 Β4 — δέχεται τα **αρχεία**, όχι σκέτα ids: το διαμέρισμα κάθε αρχείου το
+ * αποδεικνύει το **ίδιο** το έγγραφο. Αρχείο χωρίς ακριβώς έναν κάτοχο ⇒ **άρνηση** πριν γραφτεί
+ * οτιδήποτε (ποτέ μισή μαζική πράξη πάνω σε μαντεψιά).
  */
-export async function trashFilesInBatch(fileIds: readonly string[], userId: string): Promise<void> {
-  await Promise.all(fileIds.map(id => moveFileToTrashWithPolicy(id, userId)));
+export async function trashFilesInBatch(
+  files: readonly FileRecord[],
+  selectedIds: ReadonlySet<string>,
+  userId: string,
+): Promise<void> {
+  const targets: { id: string; custody: CustodyKind }[] = [];
+  for (const file of files) {
+    if (!selectedIds.has(file.id)) continue;
+    const custody = fileCustodyKindOf(file);
+    if (custody === null) throw new Error(`FILE_CUSTODY_UNKNOWN: ${file.id}`);
+    targets.push({ id: file.id, custody });
+  }
+  await Promise.all(targets.map(({ id, custody }) => moveFileToTrashWithPolicy(id, custody, userId)));
 }
 
 /** Χειροκίνητη διαβάθμιση δεδομένων σε πολλά αρχεία — ίδιος λόγος με το {@link trashFilesInBatch}. */
@@ -196,10 +213,10 @@ export function useBatchFileOperations({
 
   const handleBatchDelete = useCallback(async () => {
     if (!currentUserId) return;
-    await trashFilesInBatch(Array.from(selectedIds), currentUserId);
+    await trashFilesInBatch(files, selectedIds, currentUserId);
     setSelectedIds(new Set());
     refetch();
-  }, [selectedIds, currentUserId, refetch]);
+  }, [files, selectedIds, currentUserId, refetch]);
 
   // ---- Batch Download (ZIP) ----
 

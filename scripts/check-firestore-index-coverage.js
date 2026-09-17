@@ -80,6 +80,9 @@ const {
   loadTenantOverrides,
   loadReadPathFields,
   resolveTenantFor,
+  loadCustodyPartitions,
+  buildPartitionAliasMap,
+  resolveCollectionKeys,
 } = require('./_shared/firestore-ast-loaders');
 
 // ---------------------------------------------------------------------------
@@ -165,6 +168,9 @@ function extractCallSitesFromFile(filePath) {
 
   if (ssotBindings.size === 0) return [];
 
+  // ADR-866 §2.6.7 — `X[kind]` διαμερίσματος κατόχου ⇒ ένα σημείο ανά κλάδο (όχι «unanalyzable»).
+  const partitionAlias = buildPartitionAliasMap(sf, loadCustodyPartitions());
+
   /** @type {CallSite[]} */
   const results = [];
 
@@ -174,8 +180,7 @@ function extractCallSitesFromFile(filePath) {
       const receiver = node.expression.expression.getText();
       const method = node.expression.name.getText();
       if (ssotBindings.has(receiver) && SSOT_METHOD_NAMES.has(method)) {
-        const site = parseCallExpression(node, method, filePath, sf);
-        if (site) results.push(site);
+        results.push(...parseCallExpression(node, method, filePath, sf, partitionAlias));
       }
     }
     ts.forEachChild(node, visit);
@@ -246,26 +251,38 @@ function resolveLocalConstArray(fromNode, identifierName) {
 }
 
 /**
- * Parse one SSoT CallExpression into a CallSite, or return null if the
- * call does not match the expected SSoT shape.
+ * Parse one SSoT CallExpression into CallSites — **one per collection branch**.
+ *
+ * First argument = CollectionKey: a string literal ("'ENTITY_AUDIT_TRAIL'") ⇒ one site;
+ * a custody partition lookup (`AUDIT_LEDGER_COLLECTION[kind]`, ADR-866 §2.6.7) ⇒ one site
+ * per branch, each judged like a literal. Anything else ⇒ one `unanalyzable` site.
  *
  * @param {ts.CallExpression} call
  * @param {string}            methodName
  * @param {string}            filePath
  * @param {ts.SourceFile}     sf
- * @returns {CallSite|null}
+ * @param {Map<string, string[]>} partitionAlias
+ * @returns {CallSite[]}
  */
-function parseCallExpression(call, methodName, filePath, sf) {
+function parseCallExpression(call, methodName, filePath, sf, partitionAlias) {
   const args = call.arguments;
-  if (args.length === 0) return null;
+  if (args.length === 0) return [];
+  const keys = resolveCollectionKeys(args[0], partitionAlias);
+  return (keys.length > 0 ? keys : [null]).map((key) => parseCallBranch(call, methodName, filePath, sf, key));
+}
 
-  // First argument = CollectionKey (string literal or identifier). We only
-  // support string literal ("'ENTITY_AUDIT_TRAIL'") for precise mapping.
-  const keyArg = args[0];
-  let collectionKey = null;
-  if (ts.isStringLiteral(keyArg)) {
-    collectionKey = keyArg.text;
-  }
+/**
+ * One branch of {@link parseCallExpression}.
+ *
+ * @param {ts.CallExpression} call
+ * @param {string}            methodName
+ * @param {string}            filePath
+ * @param {ts.SourceFile}     sf
+ * @param {string|null}       collectionKey
+ * @returns {CallSite}
+ */
+function parseCallBranch(call, methodName, filePath, sf, collectionKey) {
+  const args = call.arguments;
 
   // Options object — last argument for all supported SSoT methods.
   const optionsArg = args[args.length - 1];
@@ -440,7 +457,12 @@ function deriveTenantShapes(site, collectionsMap, tenantOverrides) {
     variant: 'default',
   });
 
-  if (tenantInjected) {
+  // 🔴 ADR-866 §2.6.7 — η παραλλαγή «super_admin χωρίς φίλτρο» υπάρχει ΜΟΝΟ όπου η υπηρεσία
+  //    μπορεί να ΑΦΗΣΕΙ το φίλτρο: `companyId` (super admin χωρίς επιλογή εταιρείας) και
+  //    `tenantId` (τιμή από το ίδιο claim). Στο `userId` το φίλτρο είναι ΠΑΝΤΑ το `uid` του
+  //    συνδεδεμένου (`resolveTenantValue`) — δεν υπάρχει ερώτημα χωρίς αυτό, άρα ούτε δείκτης
+  //    που του λείπει. Φάνηκε μόλις η πύλη άρχισε να βλέπει `AUDIT_LEDGER_COLLECTION[kind]`.
+  if (tenantInjected && tenant.mode !== 'userId') {
     shapes.push({
       collection: collectionName,
       equalityFields: [...site.equalityFields],
@@ -632,4 +654,4 @@ function main() {
 // `require.main` (ίδιο ιδίωμα με 3.56 / 3.83), άρα η πύλη τρέχει όπως πριν.
 if (require.main === module) main();
 
-module.exports = { deriveShapes };
+module.exports = { deriveShapes, extractCallSitesFromFile };

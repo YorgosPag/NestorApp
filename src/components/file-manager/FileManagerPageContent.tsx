@@ -358,7 +358,7 @@ export function FileManagerPageContent() {
                 </EnterpriseErrorBoundary>
               ) : (
                 <EnterpriseErrorBoundary componentName="Trash View" enableRetry enableReporting>
-                  <TrashView companyId={companyId} currentUserId={user?.uid || ''} onRestore={() => refetch()} />
+                  <TrashView custody={{ companyId }} currentUserId={user?.uid || ''} onRestore={() => refetch()} />
                 </EnterpriseErrorBoundary>
               )}
             </CardContent>

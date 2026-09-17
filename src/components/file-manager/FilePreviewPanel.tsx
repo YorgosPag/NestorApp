@@ -52,6 +52,7 @@ import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-regis
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileRecord } from '@/types/file-record';
+import { fileCustodyKindOf } from '@/lib/files/file-custody';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -134,6 +135,12 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
     );
   }
 
+  // 🔒 ADR-866 §2.6.8 Β6 — **το ίδιο το αρχείο** λέει σε ποιον ανήκει. Εκδόσεις · λήψη μέσω διακομιστή ·
+  //    κοινοποίηση · σχόλια · έγκριση · ιστορικό · ISO 19650 είναι έννοιες/διαδρομές ΓΡΑΦΕΙΟΥ πάνω στη
+  //    συλλογή `files` ⇒ **κρυμμένα** για προσωπικό κάτοχο (εκδόσεις + λήψη: βήμα 2β.3 · ιστορικό: 2β.4).
+  //    Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν: διαβάζουν το `downloadUrl` (κανόνας Storage `people/`).
+  const officeActions = fileCustodyKindOf(file) !== 'personal';
+
   return (
     <section className={cn('flex flex-col h-full bg-card', className)}>
       {/* Header */}
@@ -152,14 +159,16 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
         <nav className="flex items-center gap-1 flex-shrink-0">
           {file.downloadUrl && (
             <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={handleDownload} className="h-7 w-7 p-0">
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('list.download')}</TooltipContent>
-              </Tooltip>
+              {officeActions && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={handleDownload} className="h-7 w-7 p-0">
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.download')}</TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" onClick={handleOpenNewTab} className="h-7 w-7 p-0">
@@ -173,7 +182,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           {/* Version history toggle — ADR-862 Φ0: η στοίβα είναι η αλυσίδα διαδοχής, την
               ξέρει μόνο ο διακομιστής. Το παλιό `revision > 1` δεν αλήθευε ΠΟΤΕ (κανείς δεν
               αύξανε το πεδίο) ⇒ το κουμπί δεν εμφανιζόταν. */}
-          {file.status === FILE_STATUS.READY && (
+          {officeActions && file.status === FILE_STATUS.READY && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -191,7 +200,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
             </Tooltip>
           )}
           {/* Share link */}
-          {currentUserId && (
+          {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -209,7 +218,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
             </Tooltip>
           )}
           {/* Comments toggle (ADR-191 Phase 4.3) */}
-          {currentUserId && (
+          {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -227,7 +236,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
             </Tooltip>
           )}
           {/* Approvals toggle (ADR-191 Phase 3.3) */}
-          {currentUserId && (
+          {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -245,23 +254,25 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
             </Tooltip>
           )}
           {/* Audit log toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={showAudit ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setShowAudit(!showAudit)}
-                className="h-7 w-7 p-0"
-              >
-                <ScrollText className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('audit.title')}
-            </TooltipContent>
-          </Tooltip>
+          {officeActions && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showAudit ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowAudit(!showAudit)}
+                  className="h-7 w-7 p-0"
+                >
+                  <ScrollText className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('audit.title')}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {/* ISO 19650 metadata toggle (ADR-373 §P2.1) */}
-          {currentUserId && (
+          {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -307,7 +318,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       </div>
 
       {/* Version history panel (collapsible) */}
-      {showVersions && (
+      {officeActions && showVersions && (
         <div className="border-b max-h-[250px] overflow-y-auto">
           <VersionHistory
             fileId={file.id}
@@ -319,14 +330,14 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
 
       {/* Audit log panel (collapsible) */}
-      {showAudit && companyId && (
+      {officeActions && showAudit && companyId && (
         <div className="border-b max-h-[250px] overflow-y-auto">
           <AuditLogPanel fileId={file.id} companyId={companyId} className="p-2" />
         </div>
       )}
 
       {/* Comments panel (collapsible — ADR-191 Phase 4.3) */}
-      {showComments && currentUserId && companyId && (
+      {officeActions && showComments && currentUserId && companyId && (
         <div className="border-b">
           <CommentsPanel
             fileId={file.id}
@@ -338,7 +349,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
 
       {/* Approvals panel (collapsible — ADR-191 Phase 3.3) */}
-      {showApprovals && currentUserId && companyId && (
+      {officeActions && showApprovals && currentUserId && companyId && (
         <div className="border-b max-h-[300px] overflow-y-auto">
           <ApprovalPanel
             fileId={file.id}
@@ -350,7 +361,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
 
       {/* ISO 19650 metadata panel (collapsible — ADR-373 §P2.1) */}
-      {showIso19650 && currentUserId && (
+      {officeActions && showIso19650 && currentUserId && (
         <div className="border-b">
           <Iso19650MetadataSection
             file={file}
@@ -372,7 +383,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       />
 
       {/* ADR-315: Unified share dialog (file entityType) */}
-      {currentUserId && companyId && (
+      {officeActions && currentUserId && companyId && (
         <UnifiedShareDialog
           open={showShare}
           onOpenChange={setShowShare}

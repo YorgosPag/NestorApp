@@ -14,7 +14,7 @@ export function usePropertyThumbnail(propertyId: string): string | undefined {
     let cancelled = false;
 
     FileRecordService.getFilesByEntity(ENTITY_TYPES.PROPERTY, propertyId, {
-      companyId,
+      custody: { companyId },
       category: FILE_CATEGORIES.PHOTOS,
     })
       .then(files => {

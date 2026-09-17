@@ -2,6 +2,17 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **17/09 — ΟΙ ΑΠΟΘΗΚΕΥΜΕΝΕΣ ΤΙΜΕΣ ΕΙΝΑΙ ΕΥΡΩ ΔΕΚΑΔΙΚΑ, ΟΧΙ ΑΚΕΡΑΙΑ ΛΕΠΤΑ (εύρημα ADR-835 §21.2)**
+
+  Το ADR-835 §4.8 δεσμεύει «χρήμα σε ακέραια λεπτά». **Μετρημένο**: `askingPrice · finalPrice · rentPrice ·
+  nightlyRate` (`PropertyCommercialData`, `ShortLeaseOffer`, `PublicListing.commercial`) αποθηκεύονται ως **ευρώ
+  δεκαδικά** και το `price-resolver` (41+ καταναλωτές) τα διαβάζει έτσι. Το Στάδιο Β έφτιαξε το SSoT
+  `lib/money/money.ts` και κρατά **κάθε υπολογισμό διαμονής** σε λεπτά, με **μία** μετατροπή στο σύνορο
+  (`minorFromMajor`). **Θεραπεία**: μετάπτωση αποθήκευσης σε `*Minor` πεδία + εκδοχή σχήματος στην προβολή
+  (ADR-839 σύνορο ανάγνωσης: παλιό έγγραφο ⇒ μετατροπή κατά την ανάγνωση), `price-resolver` σε λεπτά, φόρμες
+  με `majorFromMinor` μόνο για εμφάνιση. **Μέγεθος**: >1h, 4+ domains (τύποι · προβολή · επιλυτής · φόρμες ·
+  οικονομικές μηχανές) — απόφαση Giorgio για προτεραιότητα.
+
 - 🟡 **17/09 — ΤΟ `FileRecord.hold` ΔΕΝ ΕΠΙΒΑΛΛΕΤΑΙ ΑΠΟ ΚΑΝΕΝΑΝ ΚΑΝΟΝΑ (εύρημα ADR-864 §19.1 #2)**
 
   Το πεδίο υπάρχει (`HOLD_TYPES`: `none · legal · regulatory · admin`), το σέβονται **μόνο** διαδρομές διακομιστή
@@ -24,6 +35,14 @@
   (δ) καθαρός κριτής `lib/files/file-hold.ts` (ο `isFileHeld` είναι `server-only`, ο lifecycle είναι client).
   ➕ **Μαζί**: `match /mandate_evidence/{id} { allow read, write: if false; }` + manifest 3.16 (ADR-864 §20.7 #2)
   και η διαδρομή δικαστικής δέσμευσης αποδεικτικού (§20.7 #3) με **το ίδιο** δικαίωμα.
+
+  🟡 **17/09 (ADR-864 §21) — ΚΩΔΙΚΑΣ ΕΓΙΝΕ, ΟΧΙ commit· ΜΕΝΟΥΝ ΜΟΝΟ ΟΙ ΚΑΝΟΝΕΣ.** Απόφαση Giorgio: **σιωπηλή
+  δέσμευση** (Vault/Box — ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ, η οριστική διαγραφή όχι) ⇒ το «άρνηση κάδου» ΑΠΟΡΡΙΦΘΗΚΕ.
+  Έγιναν: κριτής `lib/files/file-hold.ts` · γραφέας `file-hold.service.ts` (όλη η στοίβα + GCS hold) · διαδρομές
+  `files/[fileId]/hold` + `…/legal-hold` (`legal:holds:manage`) · purge/gdpr fail-closed · φύλαξη στο deletion-guard.
+  **Μένει (§21.7 #1-#2)**: `holdCustodyUnchanged()` = ακριβώς `FILE_HOLD_FIELDS` στα 4 σκέλη update · create χωρίς
+  κλειδιά δέσμευσης · hard delete αρνείται σε `hold != 'none'` ή `retentionUntil` · κάδος ΑΝΟΙΧΤΟΣ · `mandate_evidence`
+  deny-all + manifest 3.16 + σουίτες. ⏸️ Αναμονή commit του ανοιχτού `firestore.rules`/`coverage-manifest.ts` (ADR-835 §21).
 
 - 🔴 **16/09 — Η ΑΓΚΥΡΑ `ownership-callsite-coverage` ΕΙΝΑΙ ΚΟΚΚΙΝΗ ΣΤΟ HEAD **ΚΑΙ ΑΦΥΛΑΚΤΗ** (εύρημα ADR-862 Φ0 Β7, καταγραφή Β8)**
 

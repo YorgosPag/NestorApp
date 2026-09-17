@@ -22,6 +22,9 @@ import type { StayCalendarEntryView } from '@/lib/stay/stay-calendar-view';
 import { cn } from '@/lib/utils';
 import type { StayCalendarMessage, StayCalendarMessageId } from './stay-calendar-outcome';
 import { StayBlockForm, StayBookingForm } from './StayCalendarForms';
+import { StayDayRulesForm } from './StayDayRulesForm';
+import { StayRuleWarningsConfirm, type StayPendingWarnings } from './StayRuleWarningsConfirm';
+import type { StayDayRules } from '@/types/stay-rules';
 
 /** Κλειδιά ως ΚΥΡΙΟΛΕΚΤΙΚΑ — η γεννήτρια των route slices τα διαβάζει από εδώ (ADR-744). */
 const MESSAGE: Readonly<Record<StayCalendarMessageId, string>> = {
@@ -35,6 +38,8 @@ const MESSAGE: Readonly<Record<StayCalendarMessageId, string>> = {
   lifecycle: 'property-market:offer.stayCalendar.outcome.lifecycle',
   absent: 'property-market:offer.stayCalendar.outcome.absent',
   failed: 'property-market:offer.stayCalendar.outcome.failed',
+  rulesUnacknowledged: 'property-market:offer.stayCalendar.outcome.rulesUnacknowledged',
+  contradictoryRules: 'property-market:offer.stayCalendar.outcome.contradictoryRules',
 };
 
 const ACTION = 'self-start rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50';
@@ -46,8 +51,12 @@ interface StayCalendarPanelProps {
   /** `true` όταν το ημερολόγιο δεν διαβάζεται — καμία πράξη (δες `StayCalendarView`). */
   readonly locked: boolean;
   readonly message: StayCalendarMessage | null;
+  /** Κράτηση που παρακάμπτει κανόνες και περιμένει ρητή επιβεβαίωση (ADR-835 §21). */
+  readonly warnings: StayPendingWarnings | null;
+  readonly days: StayDayRules;
   readonly onSend: (command: StayCalendarCommand) => void;
   readonly onClear: () => void;
+  readonly onDismissWarnings: () => void;
 }
 
 interface DetailsProps<E extends StayCalendarEntryView['kind']> {
@@ -112,7 +121,7 @@ function EntryDetails({ entry, busy, onSend }: {
 
 export function StayCalendarPanel(props: StayCalendarPanelProps): React.ReactElement {
   const { t } = useTranslation(['property-market']);
-  const { selection, meaning, busy, locked, message, onSend, onClear } = props;
+  const { selection, meaning, busy, locked, message, warnings, days, onSend, onClear, onDismissWarnings } = props;
 
   return (
     <aside aria-live="polite" className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
@@ -120,6 +129,9 @@ export function StayCalendarPanel(props: StayCalendarPanelProps): React.ReactEle
         <p role={message.tone === 'alert' ? 'alert' : 'status'} className={cn('text-sm', message.tone === 'alert' ? COLOR_BRIDGE.text.error : COLOR_BRIDGE.text.primary)}>
           {t(MESSAGE[message.id], message.params)}
         </p>
+      )}
+      {warnings !== null && (
+        <StayRuleWarningsConfirm pending={warnings} busy={busy} onSend={onSend} onDismiss={onDismissWarnings} />
       )}
       {selection === null || meaning === null ? (
         <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.selection.prompt')}</p>
@@ -143,6 +155,8 @@ export function StayCalendarPanel(props: StayCalendarPanelProps): React.ReactEle
           )}
           {!locked && meaning.kind === 'entry' && <EntryDetails entry={meaning.entry} busy={busy} onSend={onSend} />}
           {meaning.kind === 'mixed' && <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.selection.mixed')}</p>}
+          {/* Οι κανόνες ανά ημερομηνία ισχύουν όποια κι αν είναι η κατάσταση των νυχτών. */}
+          {!locked && <StayDayRulesForm selection={selection} days={days} busy={busy} onSend={onSend} />}
         </>
       )}
     </aside>

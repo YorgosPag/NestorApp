@@ -15,7 +15,8 @@
  * @version 1.0.0
  */
 
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref } from 'firebase/storage';
+import { uploadResumableToUrl } from '@/services/upload/utils/resumable-upload';
 import { doc, getDoc } from 'firebase/firestore';
 import { storage, db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -352,44 +353,24 @@ export class PDFProcessor implements FileProcessor {
       // Step B: Upload binary to canonical path
       canonicalLogger.info('Uploading to canonical path', { storagePath });
 
-      const uploadResult = await new Promise<{ url: string }>((resolve, reject) => {
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            const overallProgress = 10 + (progress * 0.8);
-
-            options.onProgress?.({
-              progress: Math.round(overallProgress),
-              phase: 'upload',
-              bytesTransferred: snapshot.bytesTransferred,
-              totalBytes: snapshot.totalBytes,
-              message: `Ανέβασμα... ${Math.round(progress)}%`,
-            });
-          },
-          (error) => {
-            canonicalLogger.error('Upload error', { error });
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve({ url: downloadURL });
-            } catch (error) {
-              reject(error);
-            }
-          }
-        );
-      });
+      const uploadResult = {
+        url: await uploadResumableToUrl(ref(storage, storagePath), file, (snapshot) => {
+          options.onProgress?.({
+            progress: Math.round(10 + (snapshot.percent * 0.8)),
+            phase: 'upload',
+            bytesTransferred: snapshot.bytesTransferred,
+            totalBytes: snapshot.totalBytes,
+            message: `Ανέβασμα... ${Math.round(snapshot.percent)}%`,
+          });
+        }),
+      };
 
       canonicalLogger.info('Binary uploaded successfully');
 
       // Step C: Finalize FileRecord (via gateway — ADR-292)
       await finalizeFileRecordWithPolicy({
         fileId,
+        custody: 'company',
         sizeBytes: file.size,
         downloadUrl: uploadResult.url,
       });
@@ -424,6 +405,7 @@ export class PDFProcessor implements FileProcessor {
       canonicalLogger.error('Upload failed, marking FileRecord as failed');
       await markFileRecordFailedWithPolicy(
         fileId,
+        'company',
         getErrorMessage(error)
       );
       throw error;

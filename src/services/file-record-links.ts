@@ -20,7 +20,12 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import { runFileRecordQuery, toFileRecord } from '@/services/file-record-queries';
+import {
+  fileOwnerConstraints,
+  fileReadKindOf,
+  runFileRecordQuery,
+  toFileRecord,
+} from '@/services/file-record-queries';
 import {
   type EntityType,
   FILE_STATUS,
@@ -29,7 +34,8 @@ import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import { FileAuditService } from '@/services/file-audit.service';
-import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 // ADR-862 Φ0 Β3 — έφυγαν `CdeState`/`SuitabilityCode`: αυτό το module δεν γράφει πια
 // κατάσταση ούτε καταλληλότητα (δες `Iso19650MetadataUpdate`).
 import type { DisciplineCode, DocumentSeries } from '@/config/iso19650-constants';
@@ -51,6 +57,7 @@ const logger = createModuleLogger('FILE_RECORD_LINKS');
  */
 export async function linkFileToEntity(
   fileId: string,
+  custody: CustodyKind,
   targetEntityType: EntityType,
   targetEntityId: string
 ): Promise<void> {
@@ -58,7 +65,7 @@ export async function linkFileToEntity(
 
   logger.info('Linking file to entity', { fileId, linkTag });
 
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+  const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
 
   await updateDoc(docRef, {
     linkedTo: arrayUnion(linkTag),
@@ -81,6 +88,7 @@ export async function linkFileToEntity(
  */
 export async function unlinkFileFromEntity(
   fileId: string,
+  custody: CustodyKind,
   targetEntityType: EntityType,
   targetEntityId: string
 ): Promise<void> {
@@ -88,7 +96,7 @@ export async function unlinkFileFromEntity(
 
   logger.info('Unlinking file from entity', { fileId, linkTag });
 
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+  const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
 
   await updateDoc(docRef, {
     linkedTo: arrayRemove(linkTag),
@@ -111,21 +119,20 @@ export async function unlinkFileFromEntity(
 export async function getLinkedFiles(
   targetEntityType: EntityType,
   targetEntityId: string,
-  companyId: string // Required for Firestore Security Rules (tenant isolation)
+  custody: FileCustody // Required for Firestore Security Rules (owner isolation — ADR-866 §5.2)
 ): Promise<FileRecord[]> {
   const linkTag = `${targetEntityType}:${targetEntityId}`;
 
-  // 🔒 SECURITY: companyId constraint is REQUIRED for Firestore Security Rules.
-  // Without it, super admin queries fail with permission-denied because rules
-  // require resource.data.keys().hasAny(['companyId']).
+  // 🔒 SECURITY: owner constraint is REQUIRED for Firestore Security Rules — for a company the
+  // manual `companyId` covers the super admin without a selected company (ADR-866 §2.6.8 Β1).
   const constraints = [
     where('linkedTo', 'array-contains', linkTag),
-    where('companyId', '==', companyId),
+    ...fileOwnerConstraints(custody),
     where('status', '==', FILE_STATUS.READY),
     where('isDeleted', '==', false),
   ];
 
-  const validRecords = await runFileRecordQuery(constraints, 'getLinkedFiles');
+  const validRecords = await runFileRecordQuery(constraints, 'getLinkedFiles', fileReadKindOf(custody));
 
   logger.info('Fetched linked files', { linkTag, count: validRecords.length });
   return validRecords;
@@ -143,10 +150,11 @@ export async function getLinkedFiles(
  */
 async function updateFileRecordFields(
   fileId: string,
+  custody: CustodyKind,
   updates: Record<string, unknown>,
   dispatched: Partial<FileRecord>,
 ): Promise<void> {
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+  const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
 
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) {
@@ -166,7 +174,12 @@ async function updateFileRecordFields(
  * Rename file display name
  * @enterprise Updates displayName in Firestore — propagates to all views instantly
  */
-export async function renameFile(fileId: string, newDisplayName: string, renamedBy: string): Promise<void> {
+export async function renameFile(
+  fileId: string,
+  custody: CustodyKind,
+  newDisplayName: string,
+  renamedBy: string,
+): Promise<void> {
   if (!newDisplayName.trim()) {
     throw new Error('Display name cannot be empty');
   }
@@ -174,22 +187,22 @@ export async function renameFile(fileId: string, newDisplayName: string, renamed
   logger.info('Renaming FileRecord', { fileId, newDisplayName, renamedBy });
 
   const displayName = newDisplayName.trim();
-  await updateFileRecordFields(fileId, { displayName }, { displayName });
+  await updateFileRecordFields(fileId, custody, { displayName }, { displayName });
 
   logger.info('FileRecord renamed successfully', { fileId, newDisplayName });
 
-  safeFireAndForget(FileAuditService.log(fileId, 'rename', renamedBy, undefined, { newDisplayName: displayName }), 'FileRecord.renameFile', { fileId });
+  FileAuditService.logForCustody(custody, fileId, 'rename', renamedBy, 'FileRecord.renameFile', { newDisplayName: displayName });
 }
 
 /**
  * Update file description / notes
  * Editable at any time — no restrictions
  */
-export async function updateDescription(fileId: string, description: string): Promise<void> {
+export async function updateDescription(fileId: string, custody: CustodyKind, description: string): Promise<void> {
   logger.info('Updating FileRecord description', { fileId });
 
   const trimmed = description.trim();
-  await updateFileRecordFields(fileId, { description: trimmed || null }, { description: trimmed || undefined });
+  await updateFileRecordFields(fileId, custody, { description: trimmed || null }, { description: trimmed || undefined });
 
   logger.info('FileRecord description updated', { fileId });
 }

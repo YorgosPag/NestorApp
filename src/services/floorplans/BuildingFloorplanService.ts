@@ -410,7 +410,7 @@ export class BuildingFloorplanService {
   static async deleteFloorplan(buildingId: string, type: 'building' | 'storage'): Promise<boolean> {
     try {
       const fileId = this.generateFileId(buildingId, type);
-      await FileRecordService.moveToTrash(fileId, 'system');
+      await FileRecordService.moveToTrash(fileId, 'company', 'system');
 
       floorplanLogger.info(`Deleted ${type} floorplan`, { buildingId });
 

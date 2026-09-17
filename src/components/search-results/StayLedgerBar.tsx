@@ -61,6 +61,11 @@ const LEDGER_KIND_KEYS: Readonly<Record<StayAvailabilityKind, string>> = {
   'terms-unknown': 'short-stay:ledger.kind.terms-unknown',
   'over-capacity': 'short-stay:ledger.kind.over-capacity',
   'below-min-nights': 'short-stay:ledger.kind.below-min-nights',
+  'above-max-nights': 'short-stay:ledger.kind.above-max-nights',
+  'advance-notice': 'short-stay:ledger.kind.advance-notice',
+  'outside-window': 'short-stay:ledger.kind.outside-window',
+  'arrival-not-allowed': 'short-stay:ledger.kind.arrival-not-allowed',
+  'departure-not-allowed': 'short-stay:ledger.kind.departure-not-allowed',
   'not-a-stay': 'short-stay:ledger.kind.not-a-stay',
 };
 
@@ -70,10 +75,12 @@ interface StayLedgerBarProps {
   readonly position: ListingLedger;
   /** `false` όσο ο επισκέπτης δεν έχει δώσει ημερομηνίες. */
   readonly asked: boolean;
+  /** `true` όσο ο διακομιστής ελέγχει τα ημερολόγια (ADR-835 §21). */
+  readonly pending?: boolean;
   readonly className?: string;
 }
 
-export function StayLedgerBar({ stay, position, asked, className }: StayLedgerBarProps) {
+export function StayLedgerBar({ stay, position, asked, pending = false, className }: StayLedgerBarProps) {
   const { t } = useTranslation(['short-stay']);
 
   const balanced = stayLedgerBalances(stay);
@@ -89,7 +96,9 @@ export function StayLedgerBar({ stay, position, asked, className }: StayLedgerBa
     >
       {!asked && <span>{t('short-stay:ledger.idle')}</span>}
 
-      {asked && (
+      {asked && pending && <span>{t('short-stay:ledger.pending')}</span>}
+
+      {asked && !pending && (
         <>
           <span>{t('short-stay:ledger.total', { count: stay.total })}</span>
           {STAY_AVAILABILITY_KINDS.filter((kind) => stay.byKind[kind] > 0).map((kind) => (

@@ -178,7 +178,7 @@ export function BrokerageAgreementCard({
             <X className={iconSizes.sm} />
           </Button>
           <EntityFilesManager
-            companyId={companyId}
+            custody={{ companyId }}
             currentUserId={currentUserId}
             entityType={ENTITY_TYPES.PROJECT}
             entityId={projectId}

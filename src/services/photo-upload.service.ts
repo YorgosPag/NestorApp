@@ -8,7 +8,8 @@
  * - photo-upload-types.ts (shared types, loggers, utilities)
  */
 
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
+import { uploadResumableToUrl } from '@/services/upload/utils/resumable-upload';
 import { storage } from '@/lib/firebase';
 import type { FileUploadProgress } from '@/hooks/useFileUploadState';
 import { smartCompressContactPhoto } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
@@ -32,6 +33,7 @@ import {
 import type { FileRecord } from '@/types/file-record';
 import { generateDeterministicFileId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 
 // ✅ ADR-065 SRP: Re-export types for backward compatibility (9 consumers)
 export {
@@ -382,40 +384,21 @@ export class PhotoUploadService {
       canonicalLogger.info('Uploading to canonical path', { storagePath });
       const storageRef = ref(storage, storagePath);
 
-      const uploadResult = await new Promise<{ url: string }>((resolve, reject) => {
-        const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
-
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            if (options.onProgress) {
-              options.onProgress({
-                progress: Math.round(progress),
-                phase: progress < 95 ? 'upload' : 'processing',
-              });
-            }
-          },
-          (error) => {
-            canonicalLogger.error('Upload error', { error });
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve({ url: downloadURL });
-            } catch (error) {
-              reject(error);
-            }
-          }
-        );
-      });
+      const uploadResult = {
+        url: await uploadResumableToUrl(storageRef, fileToUpload, ({ percent }) => {
+          options.onProgress?.({
+            progress: Math.round(percent),
+            phase: percent < 95 ? 'upload' : 'processing',
+          });
+        }),
+      };
 
       canonicalLogger.info('Binary uploaded successfully');
 
       // Step C: Finalize FileRecord (via gateway — ADR-292)
       await finalizeFileRecordWithPolicy({
         fileId,
+        custody: 'company',
         sizeBytes: fileToUpload.size,
         downloadUrl: uploadResult.url,
       });
@@ -435,7 +418,7 @@ export class PhotoUploadService {
       };
     } catch (error) {
       canonicalLogger.error('Upload failed, marking FileRecord as failed');
-      await markFileRecordFailedWithPolicy(fileId, getErrorMessage(error));
+      await markFileRecordFailedWithPolicy(fileId, 'company', getErrorMessage(error));
       throw error;
     }
   }
@@ -467,7 +450,7 @@ export class PhotoUploadService {
       entityType,
       entityId,
       {
-        companyId: options?.companyId,
+        custody: companyReadCustodyOf(options?.companyId),
         domain: resolvedDomain,
         category: resolvedCategory,
       }

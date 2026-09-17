@@ -160,6 +160,9 @@ export const PERMISSIONS = {
   "legal:grants:create": true,
   "legal:grants:revoke": true,
   "legal:contracts:view": true,
+  // ADR-864 §21 — δέσμευση/αποδέσμευση αρχείου ΚΑΙ δικαστική δέσμευση αποδεικτικού: ΕΝΑ δικαίωμα
+  // κρίνει και τα δύο (Google Vault «Manage Holds» — ένα προνόμιο, όχι ένα ανά πηγή).
+  "legal:holds:manage": true,
 
   // Listings
   "listings:listings:publish": true,

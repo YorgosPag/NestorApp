@@ -59,7 +59,10 @@ const {
   loadTenantOverrides,
   resolveTenantFor,
   buildCollectionAliasMap,
-  resolveCollectionArg,
+  resolveCollectionArgs,
+  resolveCollectionKeys,
+  loadCustodyPartitions,
+  buildPartitionAliasMap,
   resolveFieldArg,
 } = require('./firestore-ast-loaders');
 
@@ -122,7 +125,21 @@ function createScanContext() {
     collections: loadCollectionsMap({ includeSubcollections: true }),
     fields: loadFieldConstants(),
     tenant: loadTenantOverrides(),
+    // ADR-866 §2.6.7 — `X[kind]` διαμερίσματος κατόχου ⇒ ένας κλάδος ανά κάτοχο.
+    partitions: loadCustodyPartitions(),
   };
+}
+
+/**
+ * **Ένα σημείο ανά κλάδο** συλλογής: literal ⇒ ένα· διαμέρισμα κατόχου ⇒ ένα ανά κάτοχο, κάθε
+ * κλάδος κρίνεται μόνος του· τίποτα ⇒ ένα `unanalyzable` (ποτέ σιωπηλή εξαφάνιση).
+ *
+ * @param {Site[]} sites
+ * @param {{key: string|null, name: string|null}[]} colls
+ * @param {(coll: {key: string|null, name: string|null}|null) => Site} make
+ */
+function pushPerBranch(sites, colls, make) {
+  for (const coll of colls.length > 0 ? colls : [null]) sites.push(make(coll));
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +273,8 @@ function collectFieldsFromIdentifier(scope, name, fieldConstants, out) {
 
 function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
   if (!/\bquery\s*\(/.test(src)) return;
-  const alias = buildCollectionAliasMap(sf);
+  const partitionAlias = partitionAliasOf(sf, ctx);
+  const alias = buildCollectionAliasMap(sf, partitionAlias);
 
   (function visit(node) {
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'query') {
@@ -265,13 +283,7 @@ function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
         const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
 
         // — ποια συλλογή; `collection(db, X)` · `getCol(X, conv)` · σκέτο X
-        let coll = resolveCollectionArg(args[0], alias, ctx.collections);
-        if (!coll && ts.isCallExpression(args[0])) {
-          for (const a of args[0].arguments) {
-            const r = resolveCollectionArg(a, alias, ctx.collections);
-            if (r) { coll = r; break; }
-          }
-        }
+        const colls = resolveCollectionArgs(args[0], alias, ctx.collections, partitionAlias);
 
         // — ποια πεδία φιλτράρονται;
         const fields = new Set();
@@ -291,7 +303,7 @@ function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
           }
         }
 
-        sites.push(classify({
+        pushPerBranch(sites, colls, (coll) => classify({
           rule: 'R1-client', file: filePath, line: line + 1, coll, fields, unresolved,
           // ΟΧΙ κριτήριο επιπέδου αρχείου — βλ. σχόλιο πάνω από το SCOPE_HELPER_RE.
           ctx, exempt: isExempt(lines, line), ssotGuaranteed: false,
@@ -308,7 +320,8 @@ function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
 
 function scanAdminQueries(filePath, src, sf, ctx, lines, sites) {
   if (!/\.collection(Group)?\s*\(/.test(src)) return;
-  const alias = buildCollectionAliasMap(sf);
+  const partitionAlias = partitionAliasOf(sf, ctx);
+  const alias = buildCollectionAliasMap(sf, partitionAlias);
 
   (function visit(node) {
     const isCollCall =
@@ -317,7 +330,7 @@ function scanAdminQueries(filePath, src, sf, ctx, lines, sites) {
       (node.expression.name.getText() === 'collection' || node.expression.name.getText() === 'collectionGroup');
 
     if (isCollCall) {
-      const coll = resolveCollectionArg(node.arguments[0], alias, ctx.collections);
+      const colls = resolveCollectionArgs(node.arguments[0], alias, ctx.collections, partitionAlias);
       const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
 
       const fields = new Set();
@@ -356,7 +369,7 @@ function scanAdminQueries(filePath, src, sf, ctx, lines, sites) {
         if (!wrapped && isPassedToScopeHelper(scope, bound)) wrapped = true;
       }
 
-      sites.push(classify({
+      pushPerBranch(sites, colls, (coll) => classify({
         rule: 'R2-admin', file: filePath, line: line + 1, coll, fields, unresolved,
         ctx, exempt: isExempt(lines, line), ssotGuaranteed: !!wrapped,
         requiresWhere: true, hasWhere,
@@ -504,14 +517,19 @@ function findSkipOverride(node) {
 }
 
 /**
- * `'PROPERTIES'` → `{key:'PROPERTIES', name:'properties'}` όταν το κλειδί υπάρχει στο
- * μητρώο συλλογών· `null` όταν είναι δυναμικό (μεταβλητή, παράμετρος, ένωση).
+ * `'PROPERTIES'` → `[{key:'PROPERTIES', name:'properties'}]` όταν το κλειδί υπάρχει στο
+ * μητρώο συλλογών· `X[kind]` διαμερίσματος ⇒ ένα ανά κλάδο (ADR-866 §2.6.7)· κενό όταν είναι
+ * δυναμικό (μεταβλητή, παράμετρος, ένωση).
  */
-function resolveCollectionKeyArg(expr, collectionsMap) {
-  if (!expr || !ts.isStringLiteralLike(expr)) return null;
-  const key = expr.text;
-  if (!collectionsMap.has(key)) return null;
-  return { key, name: collectionsMap.get(key) };
+function resolveCollectionKeyArgs(expr, collectionsMap, partitionAlias) {
+  return resolveCollectionKeys(expr, partitionAlias)
+    .filter((key) => collectionsMap.has(key))
+    .map((key) => ({ key, name: collectionsMap.get(key) }));
+}
+
+/** Τα διαμερίσματα κατόχου όπως φαίνονται **σε αυτό** το αρχείο (με ψευδώνυμα εισαγωγής). */
+function partitionAliasOf(sf, ctx) {
+  return buildPartitionAliasMap(sf, ctx.partitions || new Map());
 }
 
 function scanServiceOverrides(filePath, src, sf, ctx, lines, sites) {
@@ -534,12 +552,13 @@ function scanServiceOverrides(filePath, src, sf, ctx, lines, sites) {
       if (skipNode) {
         const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
         const skipLine = sf.getLineAndCharacterOfPosition(skipNode.getStart(sf)).line;
-        sites.push(
+        const colls = resolveCollectionKeyArgs(node.arguments[0], ctx.collections, partitionAliasOf(sf, ctx));
+        pushPerBranch(sites, colls, (coll) =>
           classify({
             rule: 'R3-service',
             file: filePath,
             line: line + 1,
-            coll: resolveCollectionKeyArg(node.arguments[0], ctx.collections),
+            coll,
             fields: new Set(),
             unresolved: false,
             ctx,
@@ -665,7 +684,7 @@ module.exports = {
   enclosingScope,
   isExempt,
   findSkipOverride,
-  resolveCollectionKeyArg,
+  resolveCollectionKeyArgs,
   SCOPE_HELPER_RE,
   EXEMPT_RE,
   QUERY_SERVICE_RE,

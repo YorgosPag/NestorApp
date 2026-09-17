@@ -11,6 +11,7 @@
 
 import type { StayCalendarVerdict } from '@/lib/stay/stay-conflict';
 import { isRecord } from '@/lib/type-guards';
+import { isStayRuleWarningKind, type StayRuleWarningKind } from '@/lib/stay/stay-rule-warnings';
 
 /**
  * **Με τι συγκρούστηκε** — ό,τι χρειάζεται η οθόνη για να πει «πέφτει πάνω στην κράτηση
@@ -34,7 +35,14 @@ export type StayCalendarWriteResult =
   | { readonly kind: 'unreadable' }
   | { readonly kind: 'entry-absent' }
   /** Block εξωτερικής πηγής (το ανοίγει η πηγή) ή κράτηση που δεν ακυρώνεται πια. */
-  | { readonly kind: 'not-changeable'; readonly reason: 'external-source' | 'lifecycle' };
+  | { readonly kind: 'not-changeable'; readonly reason: 'external-source' | 'lifecycle' }
+  /**
+   * 🏆 Η χειροκίνητη κράτηση **παρακάμπτει κανόνες** που ο οικοδεσπότης δεν αποδέχτηκε ρητά
+   * (ADR-835 §21). Η οθόνη τους ονομάζει και ζητά αποδοχή — ποτέ σιωπηλή παράκαμψη.
+   */
+  | { readonly kind: 'rules-unacknowledged'; readonly warnings: readonly StayRuleWarningKind[] }
+  /** Η ρύθμιση ημερών αφήνει μέρα με ελάχιστες > μέγιστες νύχτες — αντίφαση, όχι κανόνας. */
+  | { readonly kind: 'contradictory-rules'; readonly date: string };
 
 export type StayCalendarWriteKind = StayCalendarWriteResult['kind'];
 
@@ -84,6 +92,12 @@ export function stayCalendarWriteResultFrom(raw: unknown): StayCalendarWriteResu
       const conflicts = conflictViewsOf(raw.conflicts);
       return conflicts === null ? null : { kind: 'conflict', conflicts };
     }
+    case 'rules-unacknowledged':
+      return Array.isArray(raw.warnings) && raw.warnings.every(isStayRuleWarningKind)
+        ? { kind: 'rules-unacknowledged', warnings: raw.warnings }
+        : null;
+    case 'contradictory-rules':
+      return typeof raw.date === 'string' ? { kind: 'contradictory-rules', date: raw.date } : null;
     case 'not-changeable':
       return raw.reason === 'external-source' || raw.reason === 'lifecycle'
         ? { kind: 'not-changeable', reason: raw.reason }
@@ -107,4 +121,6 @@ export const STAY_CALENDAR_WRITE_STATUS: Readonly<Record<StayCalendarWriteKind, 
   unreadable: 503,
   'entry-absent': 404,
   'not-changeable': 409,
+  'rules-unacknowledged': 409,
+  'contradictory-rules': 422,
 };

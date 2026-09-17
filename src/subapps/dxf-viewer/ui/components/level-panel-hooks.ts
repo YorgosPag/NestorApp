@@ -203,7 +203,7 @@ export function useLevelDeletion({ levels, deleteLevel, userUid }: LevelDeletion
       // Trash underlying FileRecord if linked
       if (level?.sceneFileId && userUid) {
         try {
-          await FileRecordService.moveToTrash(level.sceneFileId, userUid);
+          await FileRecordService.moveToTrash(level.sceneFileId, 'company', userUid);
         } catch {
           // Non-blocking — level removed, file trash best-effort
         }

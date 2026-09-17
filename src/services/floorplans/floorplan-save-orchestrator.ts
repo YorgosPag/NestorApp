@@ -223,6 +223,7 @@ export class FloorplanSaveOrchestrator {
     // ─── Step 4: Finalize FileRecord ───
     await FileRecordService.finalizeFileRecord({
       fileId: createResult.fileId,
+      custody: 'company',
       sizeBytes: uploadSize,
       downloadUrl,
       thumbnailUrl,

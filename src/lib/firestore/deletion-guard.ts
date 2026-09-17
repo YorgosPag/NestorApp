@@ -23,6 +23,8 @@ import {
   type DependencyCheckResult,
 } from '@/config/deletion-registry';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { isFileHeld } from '@/services/file-record/file-purge-helpers';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -120,6 +122,56 @@ interface CascadeDeletionDetail {
 /** Firestore batch write limit (using 450 for safety margin) */
 const BATCH_SIZE = 450;
 
+type CascadeDocument = FirebaseFirestore.QueryDocumentSnapshot;
+
+/**
+ * 🔒 **ΦΥΛΑΞΗ ΑΝΑ ΣΥΛΛΟΓΗ, ΟΧΙ ΑΝΑ ΓΡΑΜΜΗ ΜΗΤΡΩΟΥ** (ADR-864 §21 — σιωπηλή δέσμευση).
+ * Η οριστική διαγραφή οντότητας **δεν** σβήνει αρχείο σε δέσμευση: το αρχείο μένει
+ * (Google Vault: *«the file isn't purged»*) και τα bytes του τα αρνείται η πλατφόρμα
+ * (GCS `temporaryHold`). Κλειδωμένο στη **συλλογή**: νέα γραμμή `FILES` στο
+ * `deletion-registry.ts` καλύπτεται χωρίς να θυμηθεί κανείς σημαία.
+ */
+const CASCADE_PRESERVATION: Readonly<Record<string, (data: FirebaseFirestore.DocumentData) => boolean>> = {
+  [COLLECTIONS.FILES]: (data) => isFileHeld(data),
+};
+
+/** Τα έγγραφα που επιτρέπεται να σβηστούν — όσα φυλάσσονται μένουν, με ίχνος στο log. */
+function deletableCascadeDocs(
+  dep: CascadeDependencyDef,
+  docs: readonly CascadeDocument[],
+  entityId: string,
+): CascadeDocument[] {
+  const preserved = CASCADE_PRESERVATION[dep.collection];
+  if (preserved === undefined) return [...docs];
+  const deletable = docs.filter((doc) => !preserved(doc.data()));
+  if (deletable.length < docs.length) {
+    logger.info(`[DeletionGuard] Preserved ${docs.length - deletable.length} held docs in ${dep.collection}`, { entityId });
+  }
+  return deletable;
+}
+
+/** Batched delete in chunks of BATCH_SIZE */
+async function deleteInBatches(db: FirebaseFirestore.Firestore, docs: readonly CascadeDocument[]): Promise<void> {
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const batch = db.batch();
+    for (const doc of docs.slice(i, i + BATCH_SIZE)) batch.delete(doc.ref);
+    await batch.commit();
+  }
+}
+
+/** Το ερώτημα μιας εξάρτησης — subcollection και φίλτρο μισθωτή λύνονται μαζί (ADR-742 §7novies). */
+function cascadeQuery(
+  db: FirebaseFirestore.Firestore,
+  dep: CascadeDependencyDef,
+  entityId: string,
+  companyId: string,
+): FirebaseFirestore.Query {
+  const query = tenantScopedDependencyQuery(db, dep.collection, dep, companyId);
+  return dep.queryType === 'array-contains'
+    ? query.where(dep.foreignKey, 'array-contains', entityId)
+    : query.where(dep.foreignKey, '==', entityId);
+}
+
 /**
  * Auto-delete junction records before blocking dependency check.
  *
@@ -144,40 +196,20 @@ async function executeCascadeDeletions(
 
   for (const dep of cascadeDeps) {
     try {
-      // Subcollection support (`useCollectionGroup`) και το φίλτρο μισθωτή
-      // λύνονται μαζί, μία φορά: ADR-742 §7novies.
-      let query = tenantScopedDependencyQuery(db, dep.collection, dep, companyId);
+      const snapshot = await cascadeQuery(db, dep, entityId, companyId).get();
+      const docs = deletableCascadeDocs(dep, snapshot.docs, entityId);
+      if (docs.length === 0) continue;
 
-      if (dep.queryType === 'array-contains') {
-        query = query.where(dep.foreignKey, 'array-contains', entityId);
-      } else {
-        query = query.where(dep.foreignKey, '==', entityId);
-      }
-
-      const snapshot = await query.get();
-
-      if (snapshot.empty) continue;
-
-      const docIds = snapshot.docs.map((doc) => doc.id);
-
-      // Batched delete in chunks of BATCH_SIZE
-      for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
-        const batch = db.batch();
-        const chunk = snapshot.docs.slice(i, i + BATCH_SIZE);
-        for (const doc of chunk) {
-          batch.delete(doc.ref);
-        }
-        await batch.commit();
-      }
+      await deleteInBatches(db, docs);
 
       details.push({
         collection: dep.collection,
-        count: snapshot.size,
-        documentIds: docIds.slice(0, MAX_PREVIEW_IDS),
+        count: docs.length,
+        documentIds: docs.map((doc) => doc.id).slice(0, MAX_PREVIEW_IDS),
       });
-      totalDeleted += snapshot.size;
+      totalDeleted += docs.length;
 
-      logger.info(`[DeletionGuard] Cascade deleted ${snapshot.size} docs from ${dep.collection}`, {
+      logger.info(`[DeletionGuard] Cascade deleted ${docs.length} docs from ${dep.collection}`, {
         foreignKey: dep.foreignKey,
         entityId,
       });

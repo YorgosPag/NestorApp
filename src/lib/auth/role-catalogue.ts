@@ -207,6 +207,10 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "iso19650:containers:release",
       "iso19650:containers:withdraw",
       "iso19650:containers:supersede", // ADR-862 Φ0 Β10 — νέα έκδοση ⇒ η παλιά αρχειοθετείται
+      // ── Δέσμευση διατήρησης (ADR-864 §21) ─────────────────────────────────────
+      // ΜΟΝΟ ο διαχειριστής: η δέσμευση είναι πράξη συμμόρφωσης, όχι εργασίας — στο Google Vault
+      // είναι το προνόμιο «Manage Holds» του διαχειριστή, και ο χρήστης δεν ειδοποιείται (σιωπηλή).
+      "legal:holds:manage",
     ],
     level: 1,
     isProjectRole: false,

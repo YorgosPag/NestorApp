@@ -18,34 +18,20 @@
 
 'use client';
 
-import React, { useCallback, useState, useEffect } from 'react';
-import { createStaleCache } from '@/lib/stale-cache';
-import {
-  Trash2,
-  RotateCcw,
-  AlertTriangle,
-  Clock,
-  Shield,
-  RefreshCw,
-  HardDrive,
-  Calendar,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useFileDisplayName } from '@/hooks/useFileDisplayName';
-import { formatFileSize } from '@/utils/file-validation';
-import { formatDateTime } from '@/lib/intl-utils';
-import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
+import React, { useCallback, useState } from 'react';
+import { Clock, Shield, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { FileRecordService } from '@/services/file-record.service';
 import { restoreFileFromTrashWithPolicy } from '@/services/filesystem/file-mutation-gateway';
-import type { FileRecord } from '@/types/file-record';
+import { fileCustodyKindOf, type FileCustody } from '@/lib/files/file-custody';
+import { useLifecycleFileList } from './hooks/useLifecycleFileList';
+import {
+  LifecycleFileRow,
+  LifecycleListFrame,
+  LifecycleListHeader,
+  LifecycleListStats,
+  formatLifecycleDate,
+  useLifecycleViewKit,
+} from './LifecycleListFrame';
 import { HOLD_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
@@ -56,15 +42,16 @@ import '@/lib/design-system';
 
 const logger = createModuleLogger('TRASH_VIEW');
 
-const trashViewCache = createStaleCache<FileRecord[]>('file-trash');
-
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface TrashViewProps {
-  /** Company ID for fetching trashed files */
-  companyId: string;
+  /**
+   * **Ποιος κατέχει τα αρχεία** (ADR-866 §5.2) — διαμέρισμα **και** φίλτρο κατόχου. Απουσία ⇒
+   * **καμία** ανάγνωση (ο κάτοχος δεν έχει φορτώσει ακόμη) — ποτέ ανάγνωση σε μαντεμένο διαμέρισμα.
+   */
+  custody: FileCustody | undefined;
   /** Current user ID (for restore authorization) */
   currentUserId: string;
   /** Optional entity type filter */
@@ -78,17 +65,6 @@ export interface TrashViewProps {
 // ============================================================================
 // UTILITIES
 // ============================================================================
-
-/**
- * Format file size
- */
-// formatFileSize() → direct import from @/utils/file-validation (ADR-212)
-
-const formatTrashDate = (dateInput: string | Date | undefined): string => {
-  if (!dateInput) return 'N/A';
-  const formatted = formatDateTime(dateInput);
-  return formatted === '-' ? 'N/A' : formatted;
-};
 
 /**
  * Calculate days until purge
@@ -137,64 +113,32 @@ function getHoldTypeDisplay(hold: string | undefined, t: (key: string) => string
  * - Permanent delete (admin only)
  */
 export function TrashView({
-  companyId,
+  custody: custodyProp,
   currentUserId,
   entityType,
   entityId,
   onRestore,
 }: TrashViewProps) {
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
-  const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
-  const translateDisplayName = useFileDisplayName();
-  const fileNotifications = useFilesNotifications();
+  const { iconSizes, t, fileNotifications } = useLifecycleViewKit();
 
   // State
-  const _trashCacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
-  const [trashedFiles, setTrashedFiles] = useState<FileRecord[]>(trashViewCache.get(_trashCacheKey) ?? []);
-  const [loading, setLoading] = useState(!trashViewCache.hasLoaded(_trashCacheKey));
-  const [error, setError] = useState<Error | null>(null);
+  const {
+    files: trashedFiles,
+    setFiles: setTrashedFiles,
+    loading,
+    error,
+    refetch: fetchTrashedFiles,
+  } = useLifecycleFileList({
+    list: 'trashed',
+    custody: custodyProp,
+    entityType,
+    entityId,
+  });
 
   // Dialog state
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [fileToRestore, setFileToRestore] = useState<string | null>(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
-
-  // =========================================================================
-  // FETCH TRASHED FILES
-  // =========================================================================
-
-  const fetchTrashedFiles = useCallback(async () => {
-    const cacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
-    try {
-      if (!trashViewCache.hasLoaded(cacheKey)) setLoading(true);
-      setError(null);
-
-      logger.info('Fetching trashed files', { companyId, entityType, entityId });
-
-      const files = await FileRecordService.getTrashedFiles({
-        companyId,
-        entityType: entityType as Parameters<typeof FileRecordService.getTrashedFiles>[0]['entityType'],
-        entityId,
-      });
-
-      logger.info('Trashed files fetched', { count: files.length });
-      trashViewCache.set(files, cacheKey);
-      setTrashedFiles(files);
-    } catch (err) {
-      const fetchError = err instanceof Error ? err : new Error('Failed to fetch trashed files');
-      logger.error('Failed to fetch trashed files', { error: fetchError.message });
-      setError(fetchError);
-    } finally {
-      setLoading(false);
-    }
-  }, [companyId, entityType, entityId]);
-
-  // Fetch on mount
-  useEffect(() => {
-    fetchTrashedFiles();
-  }, [fetchTrashedFiles]);
 
   // =========================================================================
   // HANDLERS
@@ -216,7 +160,11 @@ export function TrashView({
 
     setRestoreLoading(true);
     try {
-      await restoreFileFromTrashWithPolicy(fileToRestore, currentUserId);
+      // ADR-866 §2.6.8 Β4 — το διαμέρισμα το αποδεικνύει το ΙΔΙΟ το έγγραφο, ποτέ μαντεψιά.
+      const record = trashedFiles.find((f) => f.id === fileToRestore);
+      const recordCustody = record ? fileCustodyKindOf(record) : null;
+      if (recordCustody === null) throw new Error(`FILE_CUSTODY_UNKNOWN: ${fileToRestore}`);
+      await restoreFileFromTrashWithPolicy(fileToRestore, recordCustody, currentUserId);
       fileNotifications.trash.restoreSuccess();
       setRestoreDialogOpen(false);
       setFileToRestore(null);
@@ -233,178 +181,54 @@ export function TrashView({
     } finally {
       setRestoreLoading(false);
     }
-  }, [fileToRestore, currentUserId, fileNotifications, onRestore]);
+  }, [fileToRestore, trashedFiles, currentUserId, fileNotifications, onRestore]);
 
   // =========================================================================
   // RENDER
   // =========================================================================
 
-  // Loading state
-  if (loading) {
-    return (
-      <section className="space-y-2" role="status" aria-label={t('list.loadingFiles')}>
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trash2 className={cn(iconSizes.md, colors.text.muted)} />
-            <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
-          </div>
-        </header>
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className={`p-2 bg-card ${quick.card} border animate-pulse`}
-              aria-hidden="true"
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`w-12 h-12 bg-muted ${quick.card}`} />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                  <div className="h-3 bg-muted rounded w-1/2" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <section className={`p-2 ${colors.bg.error} ${quick.card} border border-destructive`}>
-        <div className="flex items-center gap-2 text-destructive">
-          <AlertTriangle className={iconSizes.md} />
-          <p>{error.message}</p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchTrashedFiles}
-          className="mt-2"
-        >
-          <RefreshCw className={`${iconSizes.sm} mr-2`} />
-          {t('manager.refresh')}
-        </Button>
-      </section>
-    );
-  }
-
-  // Empty state
-  if (trashedFiles.length === 0) {
-    return (
-      <section className="space-y-2">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trash2 className={cn(iconSizes.md, colors.text.muted)} />
-            <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchTrashedFiles}
-            aria-label={t('manager.refresh')}
-          >
-            <RefreshCw className={iconSizes.sm} />
-          </Button>
-        </header>
-        <div
-          className={`p-2 text-center ${colors.bg.muted} ${quick.card}`}
-          role="status"
-          aria-label={t('trash.noTrashedFiles')}
-        >
-          <Trash2 className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
-          <p className="text-sm font-medium">{t('trash.noTrashedFiles')}</p>
-          <p className={cn("text-xs mt-1", colors.text.muted)}>
-            {t('trash.noTrashedFilesDescription')}
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  // Trashed files list
   return (
-    <section className="space-y-2">
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Trash2 className={cn(iconSizes.md, colors.text.muted)} />
-          <div>
-            <h2 className="text-lg font-semibold">{t('trash.title')}</h2>
-            <p className={cn("text-xs", colors.text.muted)}>{t('trash.description')}</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchTrashedFiles}
-          aria-label={t('manager.refresh')}
-        >
-          <RefreshCw className={iconSizes.sm} />
-        </Button>
-      </header>
+    <LifecycleListFrame
+      icon={Trash2}
+      title={t('trash.title')}
+      emptyTitle={t('trash.noTrashedFiles')}
+      emptyDescription={t('trash.noTrashedFilesDescription')}
+      loading={loading}
+      error={error}
+      isEmpty={trashedFiles.length === 0}
+      onRefresh={fetchTrashedFiles}
+    >
+      <section className="space-y-2">
+        <LifecycleListHeader
+          icon={Trash2}
+          title={t('trash.title')}
+          description={t('trash.description')}
+          onRefresh={fetchTrashedFiles}
+        />
 
-      {/* Stats */}
-      <div className="flex gap-2 text-sm">
-        <span className={cn("flex items-center gap-1", colors.text.muted)}>
-          <HardDrive className={iconSizes.xs} />
-          {t('trash.stats.totalFiles')}: {trashedFiles.length}
-        </span>
-        <span className={cn("flex items-center gap-1", colors.text.muted)}>
-          <HardDrive className={iconSizes.xs} />
-          {t('trash.stats.totalSize')}: {formatFileSize(
-            trashedFiles.reduce((total, f) => total + (f.sizeBytes || 0), 0)
-          )}
-        </span>
-      </div>
+        {/* Stats */}
+        <LifecycleListStats
+          files={trashedFiles}
+          countLabel={t('trash.stats.totalFiles')}
+          sizeLabel={t('trash.stats.totalSize')}
+        />
 
-      {/* Files list */}
-      <div className="space-y-2" role="list" aria-label={t('trash.title')}>
-        {trashedFiles.map((file) => {
-          const daysUntilPurge = getDaysUntilPurge(file.purgeAt);
-          const holdDisplay = getHoldTypeDisplay(file.hold, t);
-          const isExpired = daysUntilPurge !== null && daysUntilPurge <= 0;
+        {/* Files list */}
+        <div className="space-y-2" role="list" aria-label={t('trash.title')}>
+          {trashedFiles.map((file) => {
+            const daysUntilPurge = getDaysUntilPurge(file.purgeAt);
+            const holdDisplay = getHoldTypeDisplay(file.hold, t);
+            const isExpired = daysUntilPurge !== null && daysUntilPurge <= 0;
 
-          return (
-            <article
-              key={file.id}
-              className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-              role="listitem"
-              aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
-            >
-              {/* File info */}
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                {/* Icon */}
-                <div
-                  className={`flex-shrink-0 w-10 h-10 bg-destructive/10 ${quick.card} flex items-center justify-center`}
-                  aria-hidden="true"
-                >
-                  <Trash2 className={`${iconSizes.md} text-destructive`} />
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  {/* Display name */}
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {translateDisplayName(file)}
-                  </p>
-
-                  {/* Metadata */}
-                  <div className={cn("flex flex-wrap items-center gap-2 text-xs mt-1", colors.text.muted)}>
-                    {/* File size */}
-                    <span className="flex items-center gap-1">
-                      <HardDrive className={iconSizes.xs} aria-hidden="true" />
-                      {formatFileSize(file.sizeBytes ?? 0)}
-                    </span>
-
-                    {/* Trashed date */}
-                    <span className="flex items-center gap-1">
-                      <Calendar className={iconSizes.xs} aria-hidden="true" />
-                      {t('trash.trashedAt')}: {formatTrashDate(file.trashedAt)}
-                    </span>
-
+            return (
+              <LifecycleFileRow
+                key={file.id}
+                file={file}
+                icon={Trash2}
+                tone="destructive"
+                dateText={`${t('trash.trashedAt')}: ${formatLifecycleDate(file.trashedAt)}`}
+                extraMeta={
+                  <>
                     {/* Days until purge */}
                     {daysUntilPurge !== null && (
                       <span
@@ -430,46 +254,29 @@ export function TrashView({
                         {holdDisplay}
                       </span>
                     )}
-                  </div>
-                </div>
-              </div>
+                  </>
+                }
+                actionLabel={t('trash.restoreFile')}
+                actionText={t('trash.restore')}
+                onAction={() => handleRestoreClick(file.id)}
+              />
+            );
+          })}
+        </div>
 
-              {/* Actions */}
-              <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
-                {/* Restore */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRestoreClick(file.id)}
-                      className="text-[hsl(var(--text-success))] hover:text-[hsl(var(--text-success))] hover:bg-[hsl(var(--bg-success))]/10"
-                      aria-label={t('trash.restoreFile')}
-                    >
-                      <RotateCcw className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                      {t('trash.restore')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('trash.restoreFile')}</TooltipContent>
-                </Tooltip>
-              </nav>
-            </article>
-          );
-        })}
-      </div>
-
-      {/* Restore Confirmation Dialog */}
-      <ConfirmDialog
-        open={restoreDialogOpen}
-        onOpenChange={setRestoreDialogOpen}
-        title={t('trash.restoreFile')}
-        description={t('trash.restoreConfirm')}
-        onConfirm={handleRestoreConfirm}
-        confirmText={t('trash.restore')}
-        cancelText={t('list.cancel')}
-        loading={restoreLoading}
-        variant="default"
-      />
-    </section>
+        {/* Restore Confirmation Dialog */}
+        <ConfirmDialog
+          open={restoreDialogOpen}
+          onOpenChange={setRestoreDialogOpen}
+          title={t('trash.restoreFile')}
+          description={t('trash.restoreConfirm')}
+          onConfirm={handleRestoreConfirm}
+          confirmText={t('trash.restore')}
+          cancelText={t('list.cancel')}
+          loading={restoreLoading}
+          variant="default"
+        />
+      </section>
+    </LifecycleListFrame>
   );
 }

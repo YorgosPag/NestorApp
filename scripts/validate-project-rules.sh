@@ -167,13 +167,19 @@ check_ts_ignore() {
 check_purge_has_storage_delete() {
   local file="$1"
 
+  # Tests carry 'purged' as fixture data, not as a purge path
+  if [[ "$file" == *"__tests__/"* || "$file" == *.test.* || "$file" == *.spec.* ]]; then
+    return
+  fi
+
   # Only check files that do purging
   if ! grep -q "lifecycleState.*purged\|lifecycleState.*'purged'" "$file" 2>/dev/null; then
     return
   fi
 
-  # Must also contain storage deletion
-  if ! grep -qE "\.delete\(\)|deleteObject|bucket\.file" "$file" 2>/dev/null; then
+  # Must also contain storage deletion — directly, or via the SSoT
+  # deleteStorageObjectForPurge() (file-purge-helpers.ts, ADR-864 §21)
+  if ! grep -qE "\.delete\(\)|deleteObject|bucket\.file|deleteStorageObjectForPurge\(" "$file" 2>/dev/null; then
     echo -e "${RED}  ❌ RULE 5: Purge without Storage deletion in $file${NC}"
     echo "     When marking files as purged, also delete from Firebase Storage"
     echo "     Use: bucket.file(storagePath).delete()"

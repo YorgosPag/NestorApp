@@ -244,7 +244,13 @@ function resolveRentPrice(input: PricedPropertyLike): ResolvedPrice | null {
   return pickPriced('rent', [[commercial.rentPrice, 'commercial.rentPrice']]);
 }
 
-function resolveNightlyPrice(input: PricedPropertyLike): ResolvedPrice | null {
+/**
+ * The **nightly** role on its own — for callers that price a stay night by night
+ * (ADR-835 §21, `lib/stay/stay-nightly-quote.ts`). The headline of
+ * {@link resolveDisplayPrice} is not that: a property for sale **and** offered
+ * nightly has the sale price as headline.
+ */
+export function resolveNightlyPrice(input: PricedPropertyLike): ResolvedPrice | null {
   const commercial = input.commercial ?? {};
   return pickPriced('nightly', [[commercial.nightlyRate, 'commercial.nightlyRate']]);
 }

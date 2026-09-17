@@ -245,7 +245,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     if (!companyId || !user) return;
 
     try {
-      const trashed = await FileRecordService.getTrashedFiles({ companyId });
+      const trashed = await FileRecordService.getTrashedFiles({ custody: { companyId } });
       setTrashedFiles(trashed);
     } catch (err) {
       logger.error('Failed to fetch trashed files', {
@@ -278,7 +278,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     try {
       logger.info('Moving file to trash', { fileId, trashedBy });
 
-      await moveFileToTrashWithPolicy(fileId, trashedBy);
+      await moveFileToTrashWithPolicy(fileId, 'company', trashedBy);
 
       // Optimistic: move from active to trashed in local state
       // Note: onSnapshot will also update `files` automatically
@@ -305,7 +305,7 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
     try {
       logger.info('Restoring file from trash', { fileId, restoredBy });
 
-      await restoreFileFromTrashWithPolicy(fileId, restoredBy);
+      await restoreFileFromTrashWithPolicy(fileId, 'company', restoredBy);
 
       // Optimistic: move from trashed to active in local state
       // Note: onSnapshot will also update `files` automatically

@@ -55,7 +55,8 @@ export function AttestationDocumentField({
       await validateUploadAuth(companyId);
       const uploaded = await uploadEntityFile(
         {
-          companyId,
+          // Η βεβαίωση ανήκει στο ΓΡΑΦΕΙΟ που την ανεβάζει (ADR-864 §18.4) — εταιρικός κάτοχος.
+          custody: { companyId },
           entityType: ENTITY_TYPES.OWNER_PROPERTY,
           entityId: ownerPropertyId,
           domain: FILE_DOMAINS.LEGAL,

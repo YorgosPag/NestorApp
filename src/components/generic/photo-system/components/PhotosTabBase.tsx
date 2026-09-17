@@ -59,6 +59,7 @@ import type {
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 
 // =============================================================================
 // FILE RECORD → PHOTO MAPPER (ADR-293 Phase 5 Batch 29 cleanup)
@@ -279,7 +280,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   const { files: fetchedFiles } = useEntityFiles({
     entityType: config.canonicalEntityType,
     entityId: entity.id,
-    companyId: resolvedCompanyId,
+    custody: companyReadCustodyOf(resolvedCompanyId),
     domain: config.domain,
     category: config.category,
     purpose: config.uploadPurpose === 'logo' ? 'logo' : 'photo',

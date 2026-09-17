@@ -73,7 +73,11 @@ export function StayBookingForm({ selection, busy, onSend }: FormProps): React.R
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!ready) return;
-    onSend({ action: 'book', checkIn: selection.from, checkOut: selection.to, guests, guestLabel: guestLabel.trim() });
+    onSend({
+      action: 'book', checkIn: selection.from, checkOut: selection.to, guests, guestLabel: guestLabel.trim(),
+      // Καμία αποδοχή εκ των προτέρων: αν παρακάμπτει κανόνες, ο διακομιστής τους ονομάζει.
+      acknowledgedWarnings: [],
+    });
     setGuestLabel('');
   }
 

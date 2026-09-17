@@ -14,44 +14,26 @@ import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { ListingFloorplansPanel } from '@/components/listings/ListingFloorplansPanel';
 import { LevelTabStrip } from '@/features/property-details/components/PropertyFieldsReadOnly';
-import { useAuth } from '@/auth/contexts/AuthContext';
 import { PublishedModelFreshness } from '@/components/listings/PublishedModelFreshness';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { useCompanyDisplayName } from '@/hooks/useCompanyDisplayName';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
-import '@/lib/design-system';
-
-const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
-const propertyColor = NAVIGATION_ENTITIES.property.color;
+import { usePropertyFilesTab } from './property-files-tab';
 
 interface FloorPlanTabProps {
   selectedProperty: Property | null;
 }
 
 export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
-  const { user } = useAuth();
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
   const fallbackCompanyId = useCompanyId()?.companyId;
-
   const unitCompanyId = (selectedProperty as Record<string, unknown> | null)?.companyId as string | undefined;
-  const companyId = unitCompanyId || fallbackCompanyId;
-  const currentUserId = user?.uid;
 
-  // 🧹 Το «φέρε την εταιρεία, προτίμησε companyName → tradeName → id» ζει στο ΕΝΑ hook
-  // (`hooks/useCompanyDisplayName`). Ήταν αντιγραμμένο εδώ **και** στο `PhotosTab` — το
-  // CHECK 3.28 τα μέτρησε δίδυμα (8 γραμμές / 52 tokens) τη στιγμή που στάλθηκαν μαζί.
-  // ⚠️ Και το αντίγραφο ήταν **χειρότερο**: χωρίς φρουρό ακύρωσης, δηλαδή γρήγορη
-  //    εναλλαγή ακινήτου μπορούσε να γράψει το όνομα του **προηγούμενου**.
-  const companyDisplayName = useCompanyDisplayName(companyId);
+  // 🧹 Συνεδρία, όνομα εταιρείας (ΕΝΑ hook, με φρουρό ακύρωσης) και placeholders ζουν στο
+  // `property-files-tab` — ήταν δίδυμα με Photos/Videos/Documents (CHECK 3.28).
+  const { t, identity, companyId, fallback } = usePropertyFilesTab(selectedProperty, 'floorplan', {
+    companyId: unitCompanyId || fallbackCompanyId,
+  });
 
   // Multi-level: active level selection
   const levels = selectedProperty?.levels ?? [];
@@ -69,23 +51,7 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
   }, [selectedProperty?.id, isMultiLevel, levels.length]);
 
 
-  if (!selectedProperty) {
-    return (
-      <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
-        <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectProperty')}</h3>
-        <p className="text-sm max-w-sm">{t('floorplan.selectUnitDescription')}</p>
-      </div>
-    );
-  }
-
-  if (!companyId || !currentUserId) {
-    return (
-      <section className={cn("p-6 text-center", colors.text.muted)}>
-        <p>{t('floorplan.noAuth', { defaultValue: '' })}</p>
-      </section>
-    );
-  }
+  if (!identity || !selectedProperty || !companyId) return fallback;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -109,18 +75,13 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
       )}
 
       <EntityFilesManager
-        companyId={companyId}
-        currentUserId={currentUserId}
-        entityType={ENTITY_TYPES.PROPERTY}
-        entityId={String(selectedProperty.id)}
-        entityLabel={selectedProperty.name || `Μονάδα ${selectedProperty.id}`}
+        {...identity}
         domain="construction"
         category="floorplans"
         purpose={FLOORPLAN_PURPOSES.PROPERTY}
         entryPointCategoryFilter="floorplans"
         displayStyle="floorplan-gallery"
         acceptedTypes={FLOORPLAN_ACCEPT}
-        companyName={companyDisplayName}
         levelFloorId={activeLevelId ?? undefined}
       />
 

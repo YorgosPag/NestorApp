@@ -189,13 +189,27 @@ describe('🏆 Α41 — διάθεση: μετά την ημερομηνία, π
   it('🔴 legal hold: τοποθέτηση βάζει hold ΣΤΗΝ ΠΛΑΤΦΟΡΜΑ · αφαίρεση σε `retained` το βγάζει', async () => {
     const { db, typed, bucket } = lockedWorld();
 
-    expect(await service.placeEvidenceLegalHold(typed, bucket, { evidenceId: 'mevd_1', placedBy: 'admin-1', reason: 'αγωγή', nowISO: '2030-01-01T00:00:00.000Z' })).toEqual({ kind: 'placed' });
+    expect(await service.placeEvidenceLegalHold(typed, bucket, { evidenceId: 'mevd_1', agencyCompanyId: AGENCY, ownerPropertyId: 'ownp_a', placedBy: 'admin-1', reason: 'αγωγή', nowISO: '2030-01-01T00:00:00.000Z' })).toEqual({ kind: 'placed' });
     expect(bucket.objects.get(PATH)?.hold).toBe(true);
     expect((await stored(db))?.legalHold).toMatchObject({ placedBy: 'admin-1', reason: 'αγωγή' });
 
-    expect(await service.releaseEvidenceLegalHold(typed, bucket, { evidenceId: 'mevd_1' })).toEqual({ kind: 'released' });
+    expect(await service.releaseEvidenceLegalHold(typed, bucket, { evidenceId: 'mevd_1', agencyCompanyId: AGENCY, ownerPropertyId: 'ownp_a' })).toEqual({ kind: 'released' });
     expect(bucket.objects.get(PATH)?.hold).toBe(false);
     expect((await stored(db))?.legalHold).toBeNull();
+  });
+
+  it('🔴 ADR-864 §21: ξένο γραφείο ή άλλο ακίνητο ⇒ η ΙΔΙΑ απουσία · δεύτερη δέσμευση ⇒ `already-held`', async () => {
+    const { db, typed, bucket } = lockedWorld();
+    const scope = { evidenceId: 'mevd_1', agencyCompanyId: AGENCY, ownerPropertyId: 'ownp_a' };
+    const hold = { placedBy: 'admin-1', reason: 'αγωγή', nowISO: '2030-01-01T00:00:00.000Z' };
+
+    expect(await service.placeEvidenceLegalHold(typed, bucket, { ...scope, ...hold, agencyCompanyId: 'comp_beta' })).toEqual({ kind: 'absent' });
+    expect(await service.releaseEvidenceLegalHold(typed, bucket, { ...scope, ownerPropertyId: 'ownp_b' })).toEqual({ kind: 'absent' });
+    expect((await stored(db))?.legalHold).toBeNull();
+
+    expect(await service.placeEvidenceLegalHold(typed, bucket, { ...scope, ...hold })).toEqual({ kind: 'placed' });
+    expect(await service.placeEvidenceLegalHold(typed, bucket, { ...scope, ...hold, reason: 'άλλη' })).toEqual({ kind: 'already-held' });
+    expect((await stored(db))?.legalHold).toMatchObject({ reason: 'αγωγή' });
   });
 });
 

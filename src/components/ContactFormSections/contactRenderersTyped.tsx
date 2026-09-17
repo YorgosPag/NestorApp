@@ -10,40 +10,8 @@ import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
-import type { RendererContext, CustomRendererField } from './contactRenderersCore';
+import { disabledOnly, type RendererContext, type RendererFn } from './contactRenderersCore';
 import '@/lib/design-system';
-
-type RendererFn = (
-  field: CustomRendererField,
-  fieldFormData: Record<string, unknown>,
-  fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-  fieldOnSelectChange: (name: string, value: string) => void,
-  fieldDisabled: boolean,
-) => React.ReactNode;
-
-/**
- * Προσαρμογέας για renderer που χρειάζεται **ΜΟΝΟ** το `fieldDisabled`.
- *
- * Οι πέντε picker renderers αυτού του αρχείου (`profession` · `employer` ·
- * `skills` · `name` · `supervisionMinistry`) διαβάζουν το `formData` από το
- * closure τους και **αγνοούν τις τέσσερις πρώτες παραμέτρους** της
- * {@link RendererFn}. Μέχρι σήμερα καθένας ξανάγραφε ΟΛΟΚΛΗΡΗ την υπογραφή —
- * **έξι γραμμές × πέντε αντίγραφα** — που το CHECK 3.28 (jscpd, token-based)
- * μετρούσε ως πέντε κλώνους του ίδιου μπλοκ.
- *
- * ⚠️ **ΜΗΝ το κάνεις γενικό «προσαρμογέα με options»**: η μόνη παράμετρος που
- * καταναλώνεται πραγματικά είναι το `fieldDisabled`. Ένας προσαρμογέας που
- * δέχεται και τις πέντε θα ήταν η **ίδια boilerplate με άλλο όνομα** — δηλαδή
- * θα μετακινούσε τον κλώνο αντί να τον λύσει.
- *
- * ⚠️ Οι παράμετροι **δεν** φέρουν ρητούς τύπους: τους δίνει το contextual typing
- * από το `: RendererFn` της επιστροφής. Ρητή επανάληψή τους εδώ θα ξαναγεννούσε
- * ακριβώς το μπλοκ που αυτή η συνάρτηση υπάρχει για να εξαλείψει.
- */
-const disabledOnly =
-  (render: (fieldDisabled: boolean) => React.ReactNode): RendererFn =>
-  (_field, _fieldFormData, _onChange, _onSelectChange, fieldDisabled) =>
-    render(fieldDisabled);
 
 
 /**

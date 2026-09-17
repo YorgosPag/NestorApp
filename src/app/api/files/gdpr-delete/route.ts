@@ -14,15 +14,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { createModuleLogger } from '@/lib/telemetry';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
-import { isFileHeld } from '@/services/file-record/file-purge-helpers';
-
-const logger = createModuleLogger('GdprDeleteRoute');
+import { deleteStorageObjectForPurge, isFileHeld } from '@/services/file-record/file-purge-helpers';
 
 export const maxDuration = 60;
 
@@ -61,8 +58,6 @@ async function handler(
       .where(FIELDS.CREATED_BY, '==', userId)
       .get();
 
-    // 🏢 ENTERPRISE: Delete binary files from Storage BEFORE Firestore purge
-    const bucket = getAdminStorage().bucket();
     const filesToPurge: FirebaseFirestore.QueryDocumentSnapshot[] = [];
 
     for (const fileDoc of filesSnapshot.docs) {
@@ -74,20 +69,14 @@ async function handler(
         results.filesSkippedHold++;
         continue;
       }
-      filesToPurge.push(fileDoc);
-
-      // Delete binary from Firebase Storage (non-blocking per file)
+      // Bytes πρώτα· άρνηση της πλατφόρμας (GCS hold) ⇒ η εγγραφή ΔΕΝ ανωνυμοποιείται ως «σβησμένη»
+      // (ADR-864 §21 — ίδιος γραφέας με το purge).
       const storagePath = data.storagePath as string | undefined;
-      if (storagePath) {
-        try {
-          await bucket.file(storagePath).delete();
-        } catch (storageErr) {
-          logger.warn('GDPR storage file deletion failed (non-blocking)', {
-            fileId: fileDoc.id,
-            storagePath,
-          });
-        }
+      if (storagePath && (await deleteStorageObjectForPurge(storagePath)) === 'refused') {
+        results.filesSkippedHold++;
+        continue;
       }
+      filesToPurge.push(fileDoc);
     }
 
     const batch1 = adminDb.batch();

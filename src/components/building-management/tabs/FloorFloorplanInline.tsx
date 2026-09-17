@@ -1,13 +1,11 @@
 /**
  * FloorFloorplanInline — Inline Floorplan per Floor (IFC-Compliant)
  *
- * Wraps the centralized EntityFilesManager for floor-level floorplan
- * management. Uses displayStyle="floorplan-gallery" which renders DXF
- * via FloorplanGallery (auto-processing + scene loading pipeline).
+ * Floor plans belong to IfcBuildingStorey (floor), NOT to IfcBuilding — same
+ * pattern as Revit Level views, ArchiCAD Story plans, and Procore Drawing Areas.
  *
- * Follows IFC 4.3 standard: floor plans belong to IfcBuildingStorey (floor),
- * NOT to IfcBuilding. Same pattern as Revit Level views, ArchiCAD Story plans,
- * and Procore Drawing Areas per floor.
+ * Thin binding over the generic {@link SpaceFloorplanInline} (it used to be a
+ * line-for-line twin of it — CHECK 3.28).
  *
  * @module components/building-management/tabs/FloorFloorplanInline
  * @see ADR-031 — Canonical File Storage System
@@ -16,18 +14,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuth } from '@/auth/contexts/AuthContext';
-import { getCompanyById } from '@/services/companies.service';
+import { SpaceFloorplanInline } from '@/components/building-management/shared/SpaceFloorplanInline';
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('FloorFloorplanInline');
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface FloorFloorplanInlineProps {
   /** Floor document ID from Firestore */
@@ -40,81 +28,20 @@ interface FloorFloorplanInlineProps {
   buildingCompanyId?: string;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Accepted file types for floorplans (DXF, PDF, images) */
-const FLOORPLAN_ACCEPT =
-  '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function FloorFloorplanInline({
   floorId,
   floorName,
   projectId,
   buildingCompanyId,
 }: FloorFloorplanInlineProps) {
-  const { user } = useAuth();
-
-  // Use building's companyId first (critical for super_admin who manages multiple tenants)
-  const companyId = buildingCompanyId || user?.companyId;
-  const currentUserId = user?.uid;
-
-  // Fetch company name for display (same pattern as BuildingFloorplanTab)
-  const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!companyId) {
-      setCompanyDisplayName(undefined);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchCompanyName = async () => {
-      try {
-        const company = await getCompanyById(companyId);
-        if (cancelled) return;
-        if (company && company.type === 'company') {
-          setCompanyDisplayName(company.companyName || company.tradeName || companyId);
-        } else {
-          setCompanyDisplayName(companyId);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          logger.error('Failed to fetch company name', { error });
-          setCompanyDisplayName(companyId);
-        }
-      }
-    };
-
-    fetchCompanyName();
-    return () => { cancelled = true; };
-  }, [companyId]);
-
-  if (!companyId || !currentUserId) {
-    return null;
-  }
-
   return (
-    <EntityFilesManager
-      companyId={companyId}
-      currentUserId={currentUserId}
+    <SpaceFloorplanInline
       entityType="floor"
       entityId={floorId}
       entityLabel={floorName}
       projectId={projectId}
-      domain="construction"
-      category="floorplans"
+      building={{ companyId: buildingCompanyId }}
       purpose={FLOORPLAN_PURPOSES.FLOOR}
-      entryPointCategoryFilter="floorplans"
-      displayStyle="floorplan-gallery"
-      acceptedTypes={FLOORPLAN_ACCEPT}
-      companyName={companyDisplayName}
     />
   );
 }

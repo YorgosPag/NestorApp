@@ -26,6 +26,7 @@ import {
   type StayQuery,
 } from '@/lib/stay/stay-availability-vocabulary';
 import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
+import { STAY_RULES_NONE, type StayRulesInput } from '@/types/stay-rules';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 
@@ -83,9 +84,16 @@ function booking(id: string, from: string, to: string | null, spaceId: string | 
 }
 
 const QUERY: StayQuery = { checkIn: '2026-08-10', checkOut: '2026-08-17', guests: 2 };
+/** Κανόνες χωρίς κανέναν περιορισμό, με «σήμερα» πριν από κάθε ερώτημα των ομάδων. */
+const OPEN_RULES: StayRulesInput = {
+  rules: STAY_RULES_NONE,
+  days: {},
+  clock: { today: '2026-01-01', minutes: 600 },
+};
 const DECLARED = (occupied: readonly Occupancy<string>[]): StayCalendar<string> => ({
   kind: 'declared',
   occupied,
+  rules: OPEN_RULES,
 });
 const UNDECLARED: StayCalendar<string> = { kind: 'undeclared' };
 
@@ -93,10 +101,10 @@ const UNDECLARED: StayCalendar<string> = { kind: 'undeclared' };
 // Α — ΤΟ ΛΕΞΙΛΟΓΙΟ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΠΛΗΡΕΣ
 // =============================================================================
 
-describe('Α — εννέα ονόματα, κανένα ορφανό', () => {
-  it('το κλειστό σύνολο έχει ακριβώς εννέα τιμές, χωρίς διπλότυπα', () => {
-    expect(STAY_AVAILABILITY_KINDS).toHaveLength(9);
-    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(9);
+describe('Α — δεκατέσσερα ονόματα, κανένα ορφανό', () => {
+  it('το κλειστό σύνολο έχει ακριβώς δεκατέσσερις τιμές, χωρίς διπλότυπα', () => {
+    expect(STAY_AVAILABILITY_KINDS).toHaveLength(14);
+    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(14);
   });
 
   it('🔴 ΜΟΝΟ `free` και `conditional` επιτρέπουν διαμονή — και ΚΑΝΕΝΑ άλλο', () => {
@@ -107,7 +115,7 @@ describe('Α — εννέα ονόματα, κανένα ορφανό', () => {
     const rest = STAY_AVAILABILITY_KINDS.filter(
       (k) => !(STAYABLE_AVAILABILITY_KINDS as readonly string[]).includes(k),
     );
-    expect(rest).toHaveLength(7);
+    expect(rest).toHaveLength(12);
     for (const kind of rest) expect(isStayable(kind)).toBe(false);
   });
 });

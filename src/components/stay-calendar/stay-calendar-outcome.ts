@@ -25,6 +25,8 @@ const STAY_CALENDAR_MESSAGE_IDS = [
   'lifecycle',
   'absent',
   'failed',
+  'rulesUnacknowledged',
+  'contradictoryRules',
 ] as const;
 
 export type StayCalendarMessageId = (typeof STAY_CALENDAR_MESSAGE_IDS)[number];
@@ -36,7 +38,7 @@ export interface StayCalendarMessage {
   readonly tone: 'status' | 'alert';
 }
 
-type SimpleKind = Exclude<StayCalendarSendOutcome['kind'], 'conflict' | 'not-changeable'>;
+type SimpleKind = Exclude<StayCalendarSendOutcome['kind'], 'conflict' | 'not-changeable' | 'contradictory-rules'>;
 
 const SIMPLE: Readonly<Record<SimpleKind, StayCalendarMessage>> = {
   ok: { id: 'saved', tone: 'status' },
@@ -45,6 +47,8 @@ const SIMPLE: Readonly<Record<SimpleKind, StayCalendarMessage>> = {
   unreadable: { id: 'unreadable', tone: 'alert' },
   'entry-absent': { id: 'entryAbsent', tone: 'alert' },
   failed: { id: 'failed', tone: 'alert' },
+  // Οι ίδιες οι παραβιάσεις ονομάζονται δίπλα, με επιβεβαίωση (`StayRuleWarningsConfirm`).
+  'rules-unacknowledged': { id: 'rulesUnacknowledged', tone: 'alert' },
 };
 
 export function stayCalendarMessageOf(outcome: StayCalendarSendOutcome): StayCalendarMessage {
@@ -58,6 +62,8 @@ export function stayCalendarMessageOf(outcome: StayCalendarSendOutcome): StayCal
         tone: 'alert',
       };
     }
+    case 'contradictory-rules':
+      return { id: 'contradictoryRules', params: { date: formatCalendarDay(outcome.date) }, tone: 'alert' };
     case 'not-changeable':
       return { id: outcome.reason === 'external-source' ? 'externalSource' : 'lifecycle', tone: 'alert' };
     default:

@@ -700,7 +700,10 @@
         "blocked": "Blocked",
         "external": "Blocked by another channel",
         "booked": "Booked",
-        "selected": "Selected"
+        "selected": "Selected",
+        "noArrival": "No check-in",
+        "noDeparture": "No check-out",
+        "price": "Nightly price — bold when you set it for that day"
       },
       "cell": {
         "free": "{day} — available night",
@@ -750,7 +753,62 @@
         "externalSource": "These nights can only be opened by the channel that blocked them.",
         "lifecycle": "The booking is completed and cannot be cancelled.",
         "absent": "Listing not found.",
-        "failed": "The change was not saved. Please try again."
+        "failed": "The change was not saved. Please try again.",
+        "rulesUnacknowledged": "This booking bypasses your rules. Review them below and confirm if you want it.",
+        "contradictoryRules": "Not saved: on {date} the minimum nights would exceed the maximum."
+      },
+      "warnings": {
+        "heading": "This booking bypasses:",
+        "arrival-not-allowed": "You don't accept check-in that day",
+        "departure-not-allowed": "You don't accept check-out that day",
+        "below-min-nights": "It is below the minimum nights",
+        "above-max-nights": "It is above the maximum nights",
+        "preparation": "It falls on a preparation night around another booking",
+        "confirm": "Record it anyway",
+        "dismiss": "Cancel"
+      },
+      "days": {
+        "heading": "Settings for these days",
+        "lead": "Applies to every selected day. Empty field = the general rule applies.",
+        "price": "Nightly price (€)",
+        "minNights": "Minimum nights for check-in on these days",
+        "maxNights": "Maximum nights for check-in on these days",
+        "closedToArrival": "No check-in",
+        "closedToDeparture": "No check-out",
+        "submit": "Save for these days",
+        "reset": "Reset to general rules",
+        "cellNoArrival": "no check-in",
+        "cellNoDeparture": "no check-out",
+        "cellMinNights": "{count, plural, one {minimum # night} other {minimum # nights}}",
+        "mixed": "The selected days have different settings; saving will make them the same."
+      },
+      "rules": {
+        "heading": "General availability rules",
+        "lead": "They apply to guests. You can bypass them on a manual booking, with confirmation.",
+        "termsNote": "Base price, minimum nights and guests are set in the listing terms.",
+        "notice": "Advance notice",
+        "notice0": "Same day",
+        "notice1": "At least 1 day",
+        "notice2": "At least 2 days",
+        "notice3": "At least 3 days",
+        "notice7": "At least 7 days",
+        "cutoff": "Same-day bookings until (hour)",
+        "cutoffNone": "Any time",
+        "preparation": "Preparation nights before and after each stay",
+        "preparation0": "None",
+        "preparation1": "1 night",
+        "preparation2": "2 nights",
+        "window": "How far ahead you accept bookings",
+        "windowNone": "No limit",
+        "windowMonths": "{count} months",
+        "maxNights": "Maximum nights (0 = no limit)",
+        "arrivalDays": "Check-in days",
+        "departureDays": "Check-out days",
+        "weekdaysEmpty": "Select at least one day.",
+        "orphan": "Accept shorter stays in gaps between bookings",
+        "orphanHint": "A gap up to this many nights can be filled with fewer than the minimum.",
+        "orphanNights": "Gap up to",
+        "submit": "Save rules"
       }
     }
   },

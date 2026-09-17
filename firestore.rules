@@ -622,15 +622,11 @@ service cloud.firestore {
       //    διακομιστή — πελάτης που τον γράφει θα άνοιγε ο ίδιος το WIP του σε όλο το
       //    γραφείο (ή θα έκρυβε εγκεκριμένο σχέδιο από τις λίστες).
       //
+      // 🔑 ADR-866 §5.2: η φρουρά `cdeCustodyUnchanged()` ζει πλέον στις ΚΑΘΟΛΙΚΕΣ συναρτήσεις
+      //    (κάτω από το `isOwner`), γιατί την καλεί ΚΑΙ το `match /files_personal` — μία λίστα
+      //    πεδίων, όχι αντίγραφο που θα απέκλινε.
+      //
       // @see ADR-862 Φ0 · ADR-787 Κ-4 · ADR-373
-      function cdeCustodyUnchanged() {
-        return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'cdeState', 'cdeTeamId',
-          'cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal',
-          'cdeSupersession', 'supersededByFileId', 'supersededAt',
-          'cdeReadReach'
-        ]);
-      }
 
       // =======================================================================
       // 📖 READ — ADR-862 Φ0 Β11: Η ΑΝΑΓΝΩΣΗ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΚΑΤΑΣΤΑΣΗ
@@ -841,6 +837,58 @@ service cloud.firestore {
                          resource.data.createdBy == request.auth.uid
                          || isCompanyAdminOfCompany(resource.data.companyId)
                        );
+    }
+
+    // =========================================================================
+    // 🗂️ FILES_PERSONAL — ΤΑ ΑΡΧΕΙΑ ΠΟΥ ΑΝΗΚΟΥΝ ΣΕ ΑΝΘΡΩΠΟ (ADR-866 §5.2)
+    // =========================================================================
+    // 📅 Added: 2026-09-17 (ADR-866 Φ0 βήμα 2β)
+    // 🏢 ΤΟ ΙΔΙΟ σύστημα αρχείων (ίδιο `FileRecord`, ίδιος builder, ίδιες υπηρεσίες) σε ΞΕΧΩΡΙΣΤΟ
+    //    διαμέρισμα, με κάτοχο `userId` αντί `companyId` (`lib/workspace/custody-scope.ts`).
+    // 🔑 ΓΙΑΤΙ ΔΙΑΜΕΡΙΣΜΑ ΚΑΙ ΟΧΙ ΚΛΑΔΟΣ ΣΤΟ `match /files`: οι κανόνες ΔΕΝ φιλτράρουν — ένα
+    //    «όχι τα προσωπικά» θα απέρριπτε ΟΛΟΚΛΗΡΟ το αφιλτράριστο ερώτημα του super admin, και το
+    //    `allow` είναι ένωση, άρα κλάδος εκεί θα χαλάρωνε τον εταιρικό κανόνα. Εκείνος μένει ΑΝΕΓΓΙΧΤΟΣ.
+    // 🔒 READ: ΜΟΝΟ ο κάτοχος. ΟΥΤΕ admin εταιρείας ΟΥΤΕ super admin — Google Drive «Ο Δίσκος
+    //    μου» · Figma Drafts (ADR-866 §2.6.6). Ίδιο δόγμα με το `entity_audit_trail_personal`.
+    //    ΕΝΑΣ δρόμος λίστας: `where('userId','==',uid)`, τον βάζει το `tenant-config`
+    //    (`FILES_PERSONAL: mode 'userId'`) — κανένας φράχτης `cdeReadReach` (έννοια γραφείου).
+    // 🔒 CDE: τα προσωπικά αρχεία έχουν ΕΚΔΟΣΕΙΣ αλλά ΟΧΙ φάσεις ISO 19650 (Ε-Φ0-1). Γεννιούνται
+    //    ΧΩΡΙΣ κανένα πεδίο θεματοφυλακής, και ο πελάτης δεν τα αγγίζει ποτέ (`cdeCustodyUnchanged`)·
+    //    η διαδοχή εκδόσεων γράφεται ΜΟΝΟ από τον ΕΝΑ γραφέα (Admin SDK).
+    match /files_personal/{fileId} {
+      allow get, list: if isAuthenticated()
+                       && resource.data.userId == request.auth.uid;
+
+      // ✍️ CREATE — εκκρεμής εγγραφή του ΙΔΙΟΥ του κατόχου, χωρίς ίχνος εταιρείας ή CDE.
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.createdBy == request.auth.uid
+                    && !request.resource.data.keys().hasAny(['companyId'])
+                    && !request.resource.data.keys().hasAny(cdeCustodyKeys())
+                    && request.resource.data.status == 'pending'
+                    && resource == null;
+
+      // 📝 UPDATE — ο κάτοχος: οριστικοποίηση (pending → ready|failed) ή αλλαγές σε έτοιμο αρχείο
+      //    (κάδος · επαναφορά · σύνδεση · μετονομασία). Ίδια σκέλη με το `match /files`, χωρίς
+      //    διαχειριστή: εδώ δεν υπάρχει οργανισμός να διαχειριστεί.
+      allow update: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.userId == resource.data.userId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    && !request.resource.data.keys().hasAny(['companyId'])
+                    && (
+                         (resource.data.status == 'pending'
+                           && request.resource.data.status in ['ready', 'failed'])
+                         || (resource.data.status == 'ready'
+                           && request.resource.data.status == 'ready')
+                       )
+                    && cdeCustodyUnchanged();
+
+      // 🗑️ HARD DELETE — μόνο ο κάτοχος.
+      allow delete: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid;
     }
 
     // =========================================================================
@@ -1569,6 +1617,14 @@ service cloud.firestore {
     }
 
     match /stay_bookings/{bookingId} {
+      allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    // ADR-835 §21 (Στάδιο Β) — κανόνες ανά ημερομηνία (τιμή, ελάχ./μέγ., CTA/CTD), ένα
+    // έγγραφο ανά (ακίνητο, μήνας). Ίδιο σύνορο: γραφή μόνο μέσα στη συναλλαγή της κεφαλής.
+    match /stay_calendar_months/{monthId} {
       allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
       allow create, update: if false;
       allow delete: if false;
@@ -5498,6 +5554,28 @@ service cloud.firestore {
     // User ownership helper
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
+    }
+
+    // =========================================================================
+    // 🔒 ΤΑ ΠΕΔΙΑ ΘΕΜΑΤΟΦΥΛΑΚΗΣ ΑΡΧΕΙΟΥ — ADR-862 Φ0 (Β4 · Β10 · Β11) · ADR-866 §5.2
+    // =========================================================================
+    // Έξοδος ΜΟΝΟ του διακομιστή (AIP-216 output-only): αλλάζουν αποκλειστικά από τον ΕΝΑ
+    // γραφέα (`services/iso19650/container-transitions.ts`, Admin SDK). ΜΙΑ λίστα για ΔΥΟ
+    // διαμερίσματα: `files` (εταιρεία) και `files_personal` (άνθρωπος).
+    // ⚠️ Η λίστα ΔΙΑΒΑΖΕΤΑΙ από το CHECK 3.87 (Κ1) — μείνε σε literal μέσα στο `hasAny([…])`.
+    function cdeCustodyKeys() {
+      return [
+        'cdeState', 'cdeTeamId',
+        'cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal',
+        'cdeSupersession', 'supersededByFileId', 'supersededAt',
+        'cdeReadReach'
+      ];
+    }
+
+    // Καμία γραφή πελάτη δεν αγγίζει θεματοφυλακή — προσθήκη, αλλαγή ΚΑΙ αφαίρεση
+    // (`affectedKeys()`, όχι σύγκριση τιμών: δείτε το σχόλιο στο `match /files`).
+    function cdeCustodyUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(cdeCustodyKeys());
     }
 
     // =========================================================================

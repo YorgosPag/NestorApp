@@ -194,6 +194,46 @@ export async function seedPersonalAuditEntry(
 }
 
 /**
+ * ADR-866 §5.2 — ένα **προσωπικό** αρχείο, όπως το γεννά ο builder για κάτοχο-άνθρωπο: `userId`
+ * και **κανένα** `companyId` ή πεδίο θεματοφυλακής CDE.
+ *
+ * ⚠️ **ΔΕΝ** περνά από το `baseDoc()` (εκείνο προσθέτει `companyId`) — ίδιος λόγος με το
+ * {@link personalAuditEntryPayload}.
+ */
+export function personalFilePayload(
+  userId: string,
+  fileId: string,
+  status: 'pending' | 'ready' = 'pending',
+): Record<string, unknown> {
+  return {
+    id: fileId,
+    userId,
+    createdBy: userId,
+    fileName: `personal-${fileId}.pdf`,
+    mimeType: 'application/pdf',
+    size: 1024,
+    status,
+    isDeleted: false,
+    storagePath: `people/${userId}/entities/owner_property/ownp-1/domains/legal/categories/documents/files/${fileId}.pdf`,
+    createdAt: new Date(),
+  };
+}
+
+export async function seedPersonalFile(
+  env: RulesTestEnvironment,
+  fileId: string,
+  userId: string,
+  overrides?: Record<string, unknown>,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('files_personal').doc(fileId).set({
+      ...personalFilePayload(userId, fileId, 'ready'),
+      ...overrides,
+    });
+  });
+}
+
+/**
  * Extra options for attendance seeders — `skipCompanyId` forces the
  * crossdoc read leg by omitting the companyId field entirely instead of
  * setting it to undefined (which admin SDK rejects on write).

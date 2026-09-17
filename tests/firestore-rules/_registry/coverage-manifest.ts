@@ -75,6 +75,7 @@ import {
 import {
   authorOwnedMatrix,
   serverWrittenAuthorOwnedMatrix,
+  personalFileMatrix,
   companiesMatrix,
   ownerOnlyMatrix,
   usersMatrix,
@@ -471,6 +472,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/stay-bookings.rules.test.ts',
     ...serverWrittenAuthorOwnedMatrix(),
   },
+  // ADR-835 §21 (Στάδιο Β) — κανόνες ανά ημερομηνία. Έκτος καταναλωτής της ίδιας μήτρας:
+  // μια τιμή ή ένα CTA γραμμένο από τον πελάτη θα άλλαζε τι απαντά η μηχανή χωρίς κεφαλή.
+  {
+    collection: 'stay_calendar_months',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/stay-calendar-months.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
+  },
   {
     collection: 'projects',
     pattern: 'tenant_direct',
@@ -518,6 +527,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     pattern: 'tenant_state_machine',
     testFile: 'tests/firestore-rules/suites/files.rules.test.ts',
     ...tenantStateMachineMatrix(),
+  },
+  {
+    // ADR-866 §5.2 — τα αρχεία που ανήκουν σε ΑΝΘΡΩΠΟ: ίδιο `FileRecord`, διαμέρισμα με κάτοχο
+    // `userId`. Διαβάζει/γράφει/σβήνει ΜΟΝΟ ο κάτοχος — ΟΥΤΕ super admin (Google Drive «Ο Δίσκος
+    // μου» · Figma Drafts). Διαμέρισμα και όχι κλάδος στο `files`, γιατί οι κανόνες δεν φιλτράρουν.
+    collection: 'files_personal',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/files-personal.rules.test.ts',
+    ...personalFileMatrix(),
   },
   {
     collection: 'entity_audit_trail',

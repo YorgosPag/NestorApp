@@ -9,6 +9,7 @@
   "rangeInvalid": "Check-out must be after check-in. We won't fix the date for you.",
   "ledger": {
     "total": "{count, plural, one {# listing} other {# listings}}",
+    "pending": "Checking each place’s calendar…",
     "idle": "Enter dates to see what is free.",
     "imbalanced": "The time count doesn't balance — this is an error, not a state.",
     "disagree": "The two counts report different totals — this is an error, not a state.",
@@ -21,7 +22,77 @@
       "terms-unknown": "{count} with no declared capacity",
       "over-capacity": "{count} smaller than your party",
       "below-min-nights": "{count} with a longer minimum stay",
+      "advance-notice": "{count} need more notice",
+      "outside-window": "{count} don't take bookings that far ahead yet",
+      "arrival-not-allowed": "{count} don't allow check-in that day",
+      "departure-not-allowed": "{count} don't allow check-out that day",
+      "above-max-nights": "{count} with a shorter maximum stay",
       "not-a-stay": "{count} are not short-stay places"
     }
+  },
+  "calendar": {
+    "heading": "Availability",
+    "pickCheckIn": "Choose a check-in date.",
+    "pickCheckOut": "Choose a check-out date.",
+    "selected": "{from} – {to}",
+    "clear": "Clear dates",
+    "previous": "Previous month",
+    "next": "Next month",
+    "loading": "Loading the calendar…",
+    "failed": "The calendar didn't load.",
+    "retry": "Try again",
+    "undeclared": "The host hasn't declared a calendar — availability is unknown, not free.",
+    "unreadable": "We couldn't read the calendar. That's our error.",
+    "gridLabel": "Availability calendar {month}",
+    "cell": {
+      "check-in": "{day} — available for check-in",
+      "check-out": "{day} — available for check-out",
+      "check-out-only": "{day} — check-out only",
+      "no-arrival": "{day} — stays can't start on this day",
+      "closed": "{day} — unavailable",
+      "selected-check-in": "{day} — your check-in",
+      "selected-check-out": "{day} — your check-out",
+      "in-stay": "{day} — within your stay"
+    },
+    "minNights": "minimum stay {count, plural, one {# night} other {# nights}}",
+    "conditional": "conditional: the property is for sale",
+    "legend": {
+      "available": "Available",
+      "closed": "Unavailable",
+      "checkOutOnly": "Check-out only",
+      "conditional": "Conditional (for sale)"
+    }
+  },
+  "terms": {
+    "minNights": "Minimum stay: {count, plural, one {# night} other {# nights}}",
+    "maxGuests": "{count, plural, one {Up to # guest} other {Up to # guests}}"
+  },
+  "answer": {
+    "free": "Free for your dates.",
+    "conditional": "Free — the property is for sale, so the stay is conditional.",
+    "conditionalFrom": "Free — the property is for sale; stays after {date} are conditional.",
+    "occupied": "Booked on these dates.",
+    "nextFreeFrom": "Free again from {date}.",
+    "freeRuns": "Fits within the dates you asked for: {runs}.",
+    "below-min-nights": "From this check-in the minimum is {minNights, plural, one {# night} other {# nights}}.",
+    "above-max-nights": "From this check-in the maximum is {maxNights, plural, one {# night} other {# nights}}.",
+    "advance-notice": "The host needs notice — the earliest check-in is {date}.",
+    "outside-window": "Not taking bookings that far ahead yet — check-out by {date}.",
+    "arrival-not-allowed": "Check-in isn't allowed that day.",
+    "departure-not-allowed": "Check-out isn't allowed that day.",
+    "nearest": "Nearest allowed: {dates}.",
+    "over-capacity": "Fits up to {maxGuests, plural, one {# guest} other {# guests}}.",
+    "terms-unknown": "The host hasn't declared how many guests it fits.",
+    "unknown": "The host hasn't declared a calendar — availability is unknown, not free.",
+    "unreadable": "We couldn't check availability. That's our error.",
+    "not-a-stay": "This property isn't offered for stays.",
+    "checking": "Checking your dates…",
+    "failed": "We couldn't check availability right now."
+  },
+  "quote": {
+    "total": "Total {total} for {count, plural, one {# night} other {# nights}}",
+    "breakdown": "Price per night",
+    "night": "{date}: {amount}",
+    "unpriced": "Some nights have no declared price. Ask the host."
   }
 }

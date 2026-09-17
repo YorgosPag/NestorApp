@@ -38,9 +38,14 @@ const config = {
       },
     ],
   },
-  // No setupFilesAfterEach / moduleNameMapper — the rules tests only use
-  // relative imports and `@firebase/rules-unit-testing`, nothing that needs
-  // path-alias resolution or browser globals.
+  // No setupFilesAfterEach — no browser globals needed.
+  // `@/` alias (ίδιο με το `jest.config.js`, SSoT tsconfig): ADR-866 §2.6.8 — μια σουίτα κανόνων
+  // πρέπει να μπορεί να στείλει στον emulator το φορτίο του ΠΡΑΓΜΑΤΙΚΟΥ builder
+  // (`buildPendingFileRecordData`), αλλιώς «κώδικας και κανόνας συμφωνούν» αποδεικνύεται μόνο
+  // με χειρόγραφο αντίγραφο του σχήματος — που μπορεί να αποκλίνει σιωπηλά.
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
   testTimeout: 30000,
   // Emulator state is shared process-wide; always run serially.
   maxWorkers: 1,

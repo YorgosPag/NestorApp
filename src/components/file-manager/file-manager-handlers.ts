@@ -73,7 +73,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
   const handleRename = useCallback(async (fileId: string, newDisplayName: string) => {
     if (!user?.uid) return;
     try {
-      await renameFileWithPolicy(fileId, newDisplayName, user.uid);
+      await renameFileWithPolicy(fileId, 'company', newDisplayName, user.uid);
       refetch();
     } catch (err) {
       logger.error('Rename failed', { fileId, error: err });
@@ -82,7 +82,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
 
   const handleDescriptionUpdate = useCallback(async (fileId: string, description: string) => {
     try {
-      await updateFileDescriptionWithPolicy(fileId, description);
+      await updateFileDescriptionWithPolicy(fileId, 'company', description);
       refetch();
     } catch (err) {
       logger.error('Description update failed', { fileId, error: err });
@@ -92,10 +92,10 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
   // Batch operations
   const handleBatchDelete = useCallback(async () => {
     if (!user?.uid) return;
-    await trashFilesInBatch(Array.from(selectedIds), user.uid);
+    await trashFilesInBatch(filteredFiles, selectedIds, user.uid);
     setSelectedIds(new Set());
     refetch();
-  }, [selectedIds, user?.uid, refetch, setSelectedIds]);
+  }, [filteredFiles, selectedIds, user?.uid, refetch, setSelectedIds]);
 
   const handleBatchDownload = useCallback(async () => {
     // ⚠️ Το φίλτρο `f.downloadUrl` **έφυγε** (ADR-862 Φ0 Β8): η διαδρομή δεν δέχεται

@@ -17,6 +17,8 @@
 
 import { isDateKey } from '@/lib/calendar/date-key';
 import { isRecord } from '@/lib/type-guards';
+import { stayDayRuleFrom, stayRulesFrom } from '@/lib/stay/stay-rules-shape';
+import { STAY_RULES_NONE, type StayCalendarMonth, type StayDayRule } from '@/types/stay-rules';
 import type { SpaceRef } from '@/lib/spaces/space-ref';
 import {
   isStayBookingChannel,
@@ -74,10 +76,14 @@ export function stayCalendarHeadFromDocument(raw: unknown, propertyId: string): 
     return null;
   }
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) return null;
+  // Κεφαλή πριν το Στάδιο Β: χωρίς πεδίο ⇒ ρητά «κανένας κανόνας». Παρόν αλλά άκυρο ⇒ χαλασμένη.
+  const rules = stored.rules === undefined ? STAY_RULES_NONE : stayRulesFrom(stored.rules);
+  if (rules === null) return null;
   return {
     propertyId,
     authorUserId,
     declaredAt,
+    rules,
     version,
     timezone: STAY_CALENDAR_TIMEZONE,
     createdAt,
@@ -145,4 +151,30 @@ export function stayBookingFromDocument(raw: unknown, id: string): StayBooking |
     holder, channel: stored.channel, authorUserId, guests,
     lifecycle: stored.lifecycle, riskDisclosedAt, createdAt, updatedAt,
   };
+}
+
+const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/**
+ * **Οι κανόνες ανά ημερομηνία ενός μήνα** (ADR-835 §21) — ΑΥΣΤΗΡΑ. Κάθε μέρα πρέπει να ανήκει
+ * στον μήνα του εγγράφου· μία άκυρη μέρα ⇒ όλο το έγγραφο `null` ⇒ ημερολόγιο `unreadable`
+ * (μια τιμή ή ένα CTA που δεν διαβάστηκε **δεν** είναι «κανένας κανόνας»).
+ */
+export function stayCalendarMonthFromDocument(raw: unknown, id: string): StayCalendarMonth | null {
+  if (!isRecord(raw) || id.length === 0) return null;
+  const stored: Stored = raw;
+  const propertyId = text(stored.propertyId);
+  const authorUserId = text(stored.authorUserId);
+  const updatedAt = text(stored.updatedAt);
+  const month = stored.month;
+  if (propertyId === null || authorUserId === null || updatedAt === null) return null;
+  if (typeof month !== 'string' || !MONTH_KEY.test(month) || !isRecord(stored.days)) return null;
+  const days: Record<string, StayDayRule> = {};
+  for (const [dateKey, value] of Object.entries(stored.days)) {
+    if (!isDateKey(dateKey) || !dateKey.startsWith(`${month}-`)) return null;
+    const rule = stayDayRuleFrom(value);
+    if (rule === null) return null;
+    days[dateKey] = rule;
+  }
+  return { propertyId, authorUserId, month, days, updatedAt };
 }

@@ -44,6 +44,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι.
  */
 
+import { addDaysToDateKey } from '@/lib/calendar/date-key';
 import { intervalShape, normalizeToMillisOrNull, MS_PER_DAY } from '@/lib/date-local';
 import {
   occupancyConflicts,
@@ -53,8 +54,19 @@ import { earliestFreeStart } from '@/lib/occupancy/occupancy-horizon';
 import type { OccupancyResource } from '@/lib/occupancy/occupancy-resource';
 import type { PublicListing } from '@/types/public-listing';
 
+import type { StayRulesInput } from '@/types/stay-rules';
+
 import { STAY_OCCUPANCY_POLICY } from './stay-conflict';
 import { freeRunsWithin } from './stay-free-runs';
+import {
+  arrivalAllowed,
+  bookableUntil,
+  departureAllowed,
+  earliestCheckIn,
+  maxNightsForArrival,
+  minNightsForArrival,
+  nearestDates,
+} from './stay-rules';
 import type {
   StayAvailabilityAnswer,
   StayCalendar,
@@ -94,9 +106,9 @@ const ANONYMOUS_ENQUIRER = 'stay-availability-enquiry';
  * κράτηση ενός δωματίου να το εμποδίζει — που είναι το σωστό: αν το δωμάτιο Α είναι
  * πιασμένο, το «ολόκληρο» **δεν** είναι ελεύθερο.
  */
-function enquiryOccupancy(listing: PublicListing, query: StayQuery): Occupancy<null> {
+export function stayEnquiryOccupancy(propertyId: string, query: StayQuery): Occupancy<null> {
   const resource: OccupancyResource = {
-    propertyId: listing.id,
+    propertyId,
     spaceId: null,
     kind: 'leaseShort',
   };
@@ -141,6 +153,7 @@ function termsVerdict(
   stay: NonNullable<PublicListing['stay']>,
   query: StayQuery,
   nights: number,
+  judgeMinNights: boolean,
 ): StayAvailabilityAnswer | null {
   if (query.guests !== null) {
     // 🔴 «Δεν δήλωσε» **δεν** γίνεται «χωράει» ούτε «δεν χωράει» (N.12).
@@ -152,12 +165,67 @@ function termsVerdict(
 
   // ⚠️ `minNights === null` = **δεν δήλωσε ελάχιστο**, άρα δεν εμποδίζει τίποτα. Ένα
   //    `?? 1` θα υποσχόταν εκ μέρους του κατόχου κάτι που δεν είπε.
-  if (stay.minNights !== null && nights < stay.minNights) {
+  //    Με δηλωμένο ημερολόγιο το ελάχιστο κρίνεται **μετά** τον κριτή (ανά άφιξη + κενό).
+  if (judgeMinNights && stay.minNights !== null && nights < stay.minNights) {
     return { kind: 'below-min-nights', minNights: stay.minNights, asked: nights };
   }
 
   return null;
 }
+
+/**
+ * **Οι κανόνες ΧΡΟΝΟΥ** (Στάδιο Β) — κρίνονται πριν τον κριτή, γιατί ισχύουν ό,τι κι αν
+ * είναι κρατημένο: ειδοποίηση · παράθυρο · άφιξη · αναχώρηση.
+ */
+function timeRulesVerdict(input: StayRulesInput, query: StayQuery): StayAvailabilityAnswer | null {
+  const earliest = earliestCheckIn(input);
+  if (query.checkIn < earliest) return { kind: 'advance-notice', earliestCheckIn: earliest };
+
+  const until = bookableUntil(input);
+  if (until !== null && query.checkOut > until) {
+    return { kind: 'outside-window', bookableUntil: until };
+  }
+
+  if (!arrivalAllowed(input, query.checkIn)) {
+    const near = nearestDates(query.checkIn, (day) => arrivalAllowed(input, day), earliest);
+    return { kind: 'arrival-not-allowed', nearestBefore: near.before, nearestAfter: near.after };
+  }
+
+  if (!departureAllowed(input, query.checkOut)) {
+    // Η αναχώρηση είναι πάντα **μετά** την άφιξη — το `floor` είναι η επόμενη μέρα της.
+    const floor = addDaysToDateKey(query.checkIn, 1) ?? query.checkOut;
+    const near = nearestDates(query.checkOut, (day) => departureAllowed(input, day), floor);
+    return { kind: 'departure-not-allowed', nearestBefore: near.before, nearestAfter: near.after };
+  }
+
+  return null;
+}
+
+/**
+ * **Οι κανόνες ΔΙΑΡΚΕΙΑΣ** — μετά τον κριτή, γιατί το ελάχιστο εξαρτάται από το κενό
+ * γύρω από την άφιξη (ορφανό κενό, πρότυπο PriceLabs).
+ */
+function lengthRulesVerdict<TSource>(
+  listing: PublicListing,
+  query: StayQuery,
+  nights: number,
+  calendar: DeclaredStayCalendar<TSource>,
+): StayAvailabilityAnswer | null {
+  const max = maxNightsForArrival(calendar.rules, query.checkIn);
+  if (max !== null && nights > max) {
+    return { kind: 'above-max-nights', maxNights: max, asked: nights };
+  }
+
+  const base = listing.stay?.minNights ?? null;
+  const min = minNightsForArrival(calendar.rules, base, query.checkIn, calendar.occupied);
+  if (min !== null && nights < min) {
+    return { kind: 'below-min-nights', minNights: min, asked: nights };
+  }
+  return null;
+}
+
+/** Ο δηλωμένος κλάδος του ημερολογίου. */
+type DeclaredStayCalendar<TSource> = Extract<StayCalendar<TSource>, { kind: 'declared' }>;
 
 // =============================================================================
 // 3. Η ΜΙΑ ΚΛΗΣΗ
@@ -195,47 +263,63 @@ export function stayAvailabilityFor<TSource>(
   //    χρειαστεί: ένα σιωπηλό `free` εδώ **είναι** το overbooking (§6.4).
   if (nights === null) return { kind: 'unreadable' };
 
-  const terms = termsVerdict(listing.stay, query, nights);
+  // Χωρίς δηλωμένο ημερολόγιο ο όρος `minNights` κρίνεται εδώ· με δηλωμένο, μετά τον κριτή.
+  const terms = termsVerdict(listing.stay, query, nights, calendar.kind !== 'declared');
   if (terms !== null) return terms;
 
   // 2️⃣ **Δηλώθηκε ημερολόγιο;** «Δεν δηλώθηκε» **δεν** είναι «ελεύθερο» (§4.6).
   if (calendar.kind === 'undeclared') return { kind: 'unknown' };
+  // 🔴 Δηλωμένο αλλά αδιάβαστο ⇒ **δικό μας** χρέος, ποτέ «ελεύθερο» (§6.4).
+  if (calendar.kind === 'unreadable') return { kind: 'unreadable' };
 
-  // 3️⃣ **Ο ΚΡΙΤΗΣ, ΑΥΤΟΥΣΙΟΣ** — ο ίδιος που θα τρέξει ο διακομιστής στην έγκριση.
+  // 3️⃣ **Οι κανόνες χρόνου** (Στάδιο Β) — ισχύουν ό,τι κι αν είναι κρατημένο.
+  const time = timeRulesVerdict(calendar.rules, query);
+  if (time !== null) return time;
+
+  return calendarVerdict(listing, query, nights, calendar, sale);
+}
+
+/** 4️⃣–6️⃣ Ο κριτής, οι κανόνες διάρκειας, και η τρίτη κατάσταση. */
+function calendarVerdict<TSource>(
+  listing: PublicListing,
+  query: StayQuery,
+  nights: number,
+  calendar: DeclaredStayCalendar<TSource>,
+  sale: StaySaleExposure | null,
+): StayAvailabilityAnswer {
+  // 4️⃣ **Ο ΚΡΙΤΗΣ, ΑΥΤΟΥΣΙΟΣ** — ο ίδιος που θα τρέξει ο διακομιστής στην έγκριση.
   const verdict = occupancyConflicts(
-    enquiryOccupancy(listing, query),
+    stayEnquiryOccupancy(listing.id, query),
     calendar.occupied,
     STAY_OCCUPANCY_POLICY,
   );
 
-  switch (verdict.kind) {
-    case 'undetermined':
-      // 🔴 §6.4: *«αν το ημερολόγιο δεν διαβάστηκε, η απάντηση είναι `undetermined`,
-      //    όχι ελεύθερο — γιατί ένα ελεύθερο εκεί **είναι** το overbooking»*.
-      return { kind: 'unreadable' };
-
-    case 'conflicts': {
-      // 🏆 **Η ΔΙΕΞΟΔΟΣ, ΔΥΟ ΦΟΡΕΣ** — δες `StayAvailabilityAnswer` `occupied`.
-      const runs = freeRunsWithin(query.checkIn, query.checkOut, calendar.occupied);
-      // ⚠️ `null` από τα υποδιαστήματα = **δεν διαβάστηκαν όλα**. Ο κριτής βρήκε
-      //    σύγκρουση (άρα «κρατημένο» είναι **απόδειξη**), αλλά το *«τι απομένει»*
-      //    δεν το ξέρουμε — και **δεν το μαντεύουμε**: κενός πίνακας εδώ θα έλεγε
-      //    «τίποτα δεν χωράει», που είναι **άλλος ισχυρισμός**.
-      return {
-        kind: 'occupied',
-        nextFreeFrom: earliestFreeStart(verdict.conflicts),
-        freeRuns: runs ?? [],
-      };
-    }
-
-    case 'clear':
-      // 4️⃣ **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ** (§4.7): ελεύθερο, αλλά το ακίνητο πωλείται.
-      //    **Ποτέ** ισοπεδωμένο σε `free` — αυτό θα ήταν ψέμα προς τον επισκέπτη.
-      if (sale !== null) {
-        return { kind: 'conditional', conditionalFrom: sale.conditionalFrom };
-      }
-      return { kind: 'free' };
+  if (verdict.kind === 'undetermined') {
+    // 🔴 §6.4: *«αν το ημερολόγιο δεν διαβάστηκε, η απάντηση είναι `undetermined`,
+    //    όχι ελεύθερο — γιατί ένα ελεύθερο εκεί **είναι** το overbooking»*.
+    return { kind: 'unreadable' };
   }
+
+  if (verdict.kind === 'conflicts') {
+    // 🏆 **Η ΔΙΕΞΟΔΟΣ, ΔΥΟ ΦΟΡΕΣ** — δες `StayAvailabilityAnswer` `occupied`.
+    const runs = freeRunsWithin(query.checkIn, query.checkOut, calendar.occupied);
+    // ⚠️ `null` από τα υποδιαστήματα = **δεν διαβάστηκαν όλα**. «Κρατημένο» είναι
+    //    **απόδειξη**, αλλά το *«τι απομένει»* δεν το μαντεύουμε.
+    return {
+      kind: 'occupied',
+      nextFreeFrom: earliestFreeStart(verdict.conflicts),
+      freeRuns: runs ?? [],
+    };
+  }
+
+  // 5️⃣ **Διάρκεια** — ανά άφιξη, με χαλάρωση ορφανού κενού.
+  const length = lengthRulesVerdict(listing, query, nights, calendar);
+  if (length !== null) return length;
+
+  // 6️⃣ **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ** (§4.7): ελεύθερο, αλλά το ακίνητο πωλείται.
+  //    **Ποτέ** ισοπεδωμένο σε `free` — αυτό θα ήταν ψέμα προς τον επισκέπτη.
+  if (sale !== null) return { kind: 'conditional', conditionalFrom: sale.conditionalFrom };
+  return { kind: 'free' };
 }
 
 /**

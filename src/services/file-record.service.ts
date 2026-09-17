@@ -48,6 +48,8 @@ import {
 } from '@/services/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { FILE_COLLECTION, requireFileCustody } from '@/lib/files/file-custody';
+import { custodyKindOfScope, type CustodyKind } from '@/lib/workspace/custody-scope';
 import { RealtimeService } from '@/services/realtime';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -59,8 +61,6 @@ import {
   getTrashedFiles,
   getArchivedFiles,
   getFilesEligibleForPurge,
-  placeHold,
-  releaseHold,
 } from '@/services/file-record-lifecycle';
 import {
   linkFileToEntity,
@@ -103,8 +103,10 @@ export class FileRecordService {
   ): Promise<CreateFileRecordResult> {
     await ensureFilesNamespaceLoaded();
 
+    // ADR-866 §5.2 — ο κάτοχος (εταιρεία Ή άνθρωπος) κρίνεται από το ΕΝΑ πρωτογενές, όχι εδώ.
+    const custody = requireFileCustody(input);
     const coreInput: BuildPendingFileRecordInput = {
-      companyId: input.companyId,
+      ...custody,
       entityType: input.entityType,
       entityId: input.entityId,
       domain: input.domain,
@@ -154,7 +156,7 @@ export class FileRecordService {
       createdAt: nowISO(),
     };
 
-    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+    const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]], fileId);
     const docData = {
       ...recordBase,
       createdAt: serverTimestamp(),
@@ -202,7 +204,7 @@ export class FileRecordService {
       hasDownloadUrl: !!input.downloadUrl,
     });
 
-    const docRef = doc(db, COLLECTIONS.FILES, input.fileId);
+    const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[input.custody]], input.fileId);
 
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
@@ -229,27 +231,16 @@ export class FileRecordService {
       status: coreUpdate.status,
     });
 
-    // ADR-029: Index for global search after file is ready (fire-and-forget)
-    apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
-
-    // ADR-312 + ADR-373: Post-finalize side effects (DXF + ISO19650 enrichment) — fire-and-forget.
-    // Hooks SSoT: file-record-post-finalize-hooks.ts. Dynamic import keeps server-only chain
-    // out of client bundles (this service is callable from client code paths like useFileDownload).
     type FinalizedSnapshot = { ext?: string; category?: string; originalFilename?: string; contentType?: string; purpose?: string; displayName?: string };
     const finalizedRecord = docSnap.data() as FinalizedSnapshot | undefined;
-    import('@/services/file-record-post-finalize-hooks')
-      .then(({ triggerPostFinalizeHooks }) =>
-        triggerPostFinalizeHooks(input.fileId, {
-          ext: finalizedRecord?.ext,
-          category: finalizedRecord?.category,
-          sizeBytes: input.sizeBytes,
-          downloadUrl: input.downloadUrl,
-          originalFilename: finalizedRecord?.originalFilename,
-          contentType: finalizedRecord?.contentType,
-          purpose: finalizedRecord?.purpose,
-        }),
-      )
-      .catch((err) => logger.warn('Post-finalize hooks dispatch failed', { fileId: input.fileId, error: getErrorMessage(err) }));
+
+    // 🔒 ADR-866 §2.6.8 Β6 — η αναζήτηση γραφείου και ο εμπλουτισμός (DXF · ISO 19650) είναι
+    //    λειτουργίες ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files`· ένα προσωπικό αρχείο δεν ευρετηριάζεται εκεί.
+    if (input.custody === 'company') {
+      // ADR-029: Index for global search after file is ready (fire-and-forget)
+      apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
+      FileRecordService.dispatchPostFinalizeHooks(input, finalizedRecord);
+    }
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId: input.fileId,
@@ -264,15 +255,41 @@ export class FileRecordService {
   }
 
   /**
+   * ADR-312 + ADR-373: Post-finalize side effects (DXF + ISO19650 enrichment) — fire-and-forget.
+   * Hooks SSoT: file-record-post-finalize-hooks.ts. Dynamic import keeps server-only chain
+   * out of client bundles (this service is callable from client code paths like useFileDownload).
+   */
+  private static dispatchPostFinalizeHooks(
+    input: FinalizeFileRecordInput,
+    finalizedRecord: { ext?: string; category?: string; originalFilename?: string; contentType?: string; purpose?: string } | undefined,
+  ): void {
+    import('@/services/file-record-post-finalize-hooks')
+      .then(({ triggerPostFinalizeHooks }) =>
+        triggerPostFinalizeHooks(input.fileId, {
+          ext: finalizedRecord?.ext,
+          category: finalizedRecord?.category,
+          sizeBytes: input.sizeBytes,
+          downloadUrl: input.downloadUrl,
+          originalFilename: finalizedRecord?.originalFilename,
+          contentType: finalizedRecord?.contentType,
+          purpose: finalizedRecord?.purpose,
+        }),
+      )
+      .catch((err) => logger.warn('Post-finalize hooks dispatch failed', { fileId: input.fileId, error: getErrorMessage(err) }));
+  }
+
+  /**
    * Mark FileRecord as failed (if upload fails)
+   * @param custody Σε ποιο διαμέρισμα ζει (ADR-866 §2.6.8 Β4) — υποχρεωτικό, ποτέ μαντεψιά.
    */
   static async markFileRecordFailed(
     fileId: string,
+    custody: CustodyKind,
     errorMessage?: string
   ): Promise<void> {
     logger.warn('Marking FileRecord as failed', { fileId, errorMessage });
 
-    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+    const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
 
     await updateDoc(docRef, {
       status: FILE_STATUS.FAILED,
@@ -324,12 +341,6 @@ export class FileRecordService {
   /** 📋 Get files eligible for purge — @see file-record-lifecycle.ts */
   static getFilesEligibleForPurge = getFilesEligibleForPurge;
 
-  /** 🔒 Place hold on file — @see file-record-lifecycle.ts */
-  static placeHold = placeHold;
-
-  /** 🔓 Release hold on file — @see file-record-lifecycle.ts */
-  static releaseHold = releaseHold;
-
   /** 🔗 Link file to entity — @see file-record-links.ts */
   static linkFileToEntity = linkFileToEntity;
 
@@ -350,12 +361,6 @@ export class FileRecordService {
 
   /** Find file by hash — @see file-record-links.ts */
   static findByHash = findByHash;
-
-  /** @deprecated Use moveToTrash() instead */
-  static async softDeleteFileRecord(fileId: string, deletedBy: string): Promise<void> {
-    logger.warn('softDeleteFileRecord is deprecated, use moveToTrash instead', { fileId });
-    return moveToTrash(fileId, deletedBy);
-  }
 
   /**
    * Get total storage used by an entity

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |---|---|
-| **Status** | 🟢 **ΣΕ ΥΛΟΠΟΙΗΣΗ**. ✅ **Φ0** (§2.3) · ✅ **Φ1α** (§14) · ✅ **Φ1β** (§15) · ✅ **Φ2** (§16) · ✅ **Φ3** — Μέρος Α (`9081e1f1`) · Β (`0593137e`) · Γ (`a38767fe`, §18) · ✅ **Δ** (`ea65fee8` · docs `fdee8130`, §19: ρυθμός αιτήματος · «μη μου ξαναστείλετε» · παγωμένο αποδεικτικό + λήψη ιδιοκτήτη). Ανοιχτά: **Ε-5β** (οικόπεδο — Φ4) · **Ε-2γ** (`BuildingPhase` χωρίς γραφέα — Φ7) · **§20** (διατήρηση αποδεικτικού — υλοποιημένο, ΟΧΙ commit· εκκρεμεί ενεργοποίηση object retention στο bucket + μπλοκ κανόνων) · **§19.8 #2** (επιβολή `FileRecord.hold` — μετά το ADR-862 Β11). Προϋπόθεση Φ4-Φ5: **ADR-862 Φ1** |
+| **Status** | 🟢 **ΣΕ ΥΛΟΠΟΙΗΣΗ**. ✅ **Φ0** (§2.3) · ✅ **Φ1α** (§14) · ✅ **Φ1β** (§15) · ✅ **Φ2** (§16) · ✅ **Φ3** — Μέρος Α (`9081e1f1`) · Β (`0593137e`) · Γ (`a38767fe`, §18) · ✅ **Δ** (`ea65fee8` · docs `fdee8130`, §19: ρυθμός αιτήματος · «μη μου ξαναστείλετε» · παγωμένο αποδεικτικό + λήψη ιδιοκτήτη). Ανοιχτά: **Ε-5β** (οικόπεδο — Φ4) · **Ε-2γ** (`BuildingPhase` χωρίς γραφέα — Φ7) · **§20** (διατήρηση αποδεικτικού — υλοποιημένο, ΟΧΙ commit· εκκρεμεί ενεργοποίηση object retention στο bucket + μπλοκ κανόνων) · 🟡 **§21** (επιβολή `FileRecord.hold` — κώδικας + διαδρομές ✅ ΟΧΙ commit· κανόνες Firestore σε αναμονή). Προϋπόθεση Φ4-Φ5: **ADR-862 Φ1** |
 | **Date** | 2026-09-16 |
 | **Category** | Listings / Marketplace / Privacy / Authorization |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -921,8 +921,8 @@ tsc (N.17) · browser · **πραγματικό** bucket (temporary hold στο 
 ### 19.8 🔶 Ανοιχτά
 
 1. ~~**Αποδέσμευση του hold**~~ → ✅ **αποφασίστηκε και υλοποιήθηκε στο §20** (λήξη σχέσης + τέλος έτους + 5 έτη · Locked · legal hold · ταφόπλακα).
-2. **Γενική επιβολή `FileRecord.hold`** σε `firestore.rules` (ενημέρωση/κάδος) και `storage.rules` (delete): σήμερα **μόνο** κώδικας διακομιστή το σέβεται — ο client μπορεί να το παρακάμψει. Είναι στο ανοιχτό δέντρο άλλης συνεδρίας (ADR-862 CDE) ⇒ `.claude-rules/pending-ratchet-work.md`. 🔶 **17/09**: το σχέδιο εγκρίθηκε (`holdUnchanged()` στα 4 σκέλη update · άρνηση κάδου/διαγραφής σε `hold != 'none'` · **ένας** server γραφέας που βάζει και GCS `temporaryHold`, ώστε τα bytes να τα φυλά η πλατφόρμα χωρίς `firestore.get` στο `storage.rules` · διαγραφή των νεκρών client `placeHold`/`releaseHold`, **μηδέν** καλούντες) — **σε αναμονή** του commit του ADR-862 Β11, που γράφει τώρα το ίδιο μπλοκ.
-3. `file-record-lifecycle.ts` έχει ακόμη τοπικό έλεγχο `hold` (ανοιχτό δέντρο άλλης συνεδρίας) — στον `isFileHeld` όταν κλείσει.
+2. 🟡 **→ §21** (κώδικας, γραφέας, διαδρομή, purge fail-closed ✅· μπλοκ κανόνων ⏸️ §21.7 #1). **Γενική επιβολή `FileRecord.hold`** σε `firestore.rules` (ενημέρωση/κάδος) και `storage.rules` (delete): σήμερα **μόνο** κώδικας διακομιστή το σέβεται — ο client μπορεί να το παρακάμψει. Είναι στο ανοιχτό δέντρο άλλης συνεδρίας (ADR-862 CDE) ⇒ `.claude-rules/pending-ratchet-work.md`. 🔶 **17/09**: το σχέδιο εγκρίθηκε (`holdUnchanged()` στα 4 σκέλη update · άρνηση κάδου/διαγραφής σε `hold != 'none'` · **ένας** server γραφέας που βάζει και GCS `temporaryHold`, ώστε τα bytes να τα φυλά η πλατφόρμα χωρίς `firestore.get` στο `storage.rules` · διαγραφή των νεκρών client `placeHold`/`releaseHold`, **μηδέν** καλούντες) — **σε αναμονή** του commit του ADR-862 Β11, που γράφει τώρα το ίδιο μπλοκ.
+3. ✅ **→ §21** (ο lifecycle ρωτά τον καθαρό κριτή `isHoldActive`· ο κάδος δεν ρωτά — Δ21.1). ~~`file-record-lifecycle.ts` έχει ακόμη τοπικό έλεγχο `hold` (ανοιχτό δέντρο άλλης συνεδρίας) — στον `isFileHeld` όταν κλείσει.~~
 
 ## §20. 🟡 **Διατήρηση και διάθεση αποδεικτικού** — πόσο ζει το παγωμένο έντυπο, και ποιος το σβήνει *(2026-09-17 — ο κώδικας είναι η αυθεντία · ΟΧΙ commit)*
 
@@ -1014,15 +1014,103 @@ tsc (N.17) · browser · **πραγματικό** bucket (temporary hold στο 
 ### 20.7 🔶 Ανοιχτά — δηλωμένα
 
 1. **Βήμα Giorgio (Console, μη αναστρέψιμο)**: Cloud Storage → bucket `pagonis-87766.firebasestorage.app` → Protection → **Enable object retention**. Μέχρι τότε το πέρασμα είναι **fail-closed**: κανένα hold δεν αφαιρείται, η αναφορά του cron μετρά `failed`. 🔶 **ΑΝΑΒΟΛΗ ως την έναρξη παραγωγής (Giorgio, 2026-09-17)**: η βάση είναι ακόμη **δοκιμαστική**, και το bucket είναι **κοινό** για ανάπτυξη και παραγωγή (`pagonis-87766`). Με ενεργό Locked, δοκιμαστική βεβαίωση με ληγμένη εντολή θα κλείδωνε **σκουπίδι για ~6 χρόνια**, χωρίς δυνατότητα διαγραφής. Χωρίς την ενεργοποίηση μένει μόνο το `temporaryHold`, που ο διακομιστής **μπορεί** να αφαιρέσει ⇒ τα δοκιμαστικά σβήνονται. Μετρημένο 17/09 (MCP): `mandate-evidence/` = **0** αρχεία.
-2. **`firestore.rules`**: `match /mandate_evidence/{id} { allow read, write: if false; }` + manifest CHECK 3.16. **Αναβλήθηκε** επειδή ο άλλος πράκτορας (ADR-862 Β11) γράφει **αυτή τη στιγμή** το ίδιο αρχείο. Μέχρι τότε η συλλογή καλύπτεται από το default-deny.
-3. **Διαδρομή δικαστικής δέσμευσης** (`POST`, κριτής δικαιώματος ADR-801, CHECK 3.68/3.78) — μαζί με τη διαδρομή hold του `FileRecord` (4β, §19.8 #2), ώστε **ένα** δικαίωμα να κρίνει και τα δύο.
+2. ⏸️ **→ §21.7 #2** (ίδια αναμονή). **`firestore.rules`**: `match /mandate_evidence/{id} { allow read, write: if false; }` + manifest CHECK 3.16. **Αναβλήθηκε** επειδή ο άλλος πράκτορας (ADR-862 Β11) γράφει **αυτή τη στιγμή** το ίδιο αρχείο. Μέχρι τότε η συλλογή καλύπτεται από το default-deny.
+3. ✅ **→ §21** (`POST …/mandate-evidence/[evidenceId]/legal-hold`, δικαίωμα `legal:holds:manage`, άξονας γραφείου+ακινήτου). ~~**Διαδρομή δικαστικής δέσμευσης** (`POST`, κριτής δικαιώματος ADR-801, CHECK 3.68/3.78) — μαζί με τη διαδρομή hold του `FileRecord` (4β, §19.8 #2), ώστε **ένα** δικαίωμα να κρίνει και τα δύο.~~
 4. **Ζωντανή επαλήθευση** μετά το #1: MCP `storage_get_metadata` σε δοκιμαστικό αποδεικτικό ⇒ `temporaryHold` · μετά από λήξη σχέσης ⇒ `retention.mode = Locked`.
 5. Όχι επαληθευμένα: tsc (N.17) · browser · πραγματικό bucket.
+
+## §21. 🟡 **Επιβολή της δέσμευσης αρχείου (`FileRecord.hold`)** — σιωπηλή δέσμευση, ένας γραφέας, bytes στην πλατφόρμα *(2026-09-17 — ο κώδικας είναι η αυθεντία · ΟΧΙ commit · κανόνες Firestore σε αναμονή)*
+
+Κλείνει τον **κώδικα** των §19.8 #2/#3 και §20.7 #3. Τα **μπλοκ κανόνων** (`firestore.rules` `files` + `mandate_evidence`, §20.7 #2) **δεν** γράφτηκαν: στις 17/09 το `firestore.rules` και το `coverage-manifest.ts` είχαν **ξανά** αδέσμευτες αλλαγές άλλου πράκτορα (ADR-835 §21) — δες §21.7.
+
+### 21.1 Τι μετρήθηκε πριν από τον κώδικα
+
+| # | Εύρημα | Συνέπεια |
+|---|---|---|
+| 1 | Τα client `placeHold`/`releaseHold` είχαν **μηδέν** καλούντες και γράφουν από client SDK | διαγράφηκαν· γράφει **μόνο** ο διακομιστής |
+| 2 | 🔴 `purgeFileRecord`, `/api/files/purge` **και** `gdpr-delete` έκαναν τη διαγραφή bytes «non-blocking» ⇒ με GCS hold η εγγραφή θα γινόταν `purged` πάνω σε bytes που **υπάρχουν** | `deleteStorageObjectForPurge`: `deleted · absent (404) · refused` — στο `refused` η εγγραφή **μένει** |
+| 3 | 🔴 Η οριστική διαγραφή **οντότητας** (`deletion-guard` → `deletion-registry`, 3 γραμμές `FILES`) σβήνει FileRecords **χωρίς** να ρωτήσει τον κριτή | φύλαξη **ανά συλλογή** (`CASCADE_PRESERVATION`), όχι σημαία ανά γραμμή μητρώου |
+| 4 | Η `/api/files/purge` ήταν **αντίγραφο** του `purgeFileRecord` (N.0.2) | καλεί πλέον τον ΕΝΑ γραφέα |
+| 5 | Ο `isFileHeld` έδινε `false` σε **άκυρη** `retentionUntil` (`new Date(x) > now`) | fail-closed: άκυρη ⇒ δεσμεύεται |
+| 6 | Οι εκδόσεις είναι **αλυσίδα FileRecords** (`version-stack.ts`) — δέσμευση σε ένα έγγραφο αφήνει την προηγούμενη έκδοση διαγράψιμη | η δέσμευση πιάνει **όλη** τη στοίβα |
+| 7 | `placeEvidenceLegalHold`/`releaseEvidenceLegalHold` διάβαζαν την εγγραφή **χωρίς** άξονα μισθωτή | `EvidenceHoldScope` (γραφείο **και** ακίνητο) πριν αποκτήσουν διαδρομή |
+
+### 21.2 Έρευνα *(πρωτογενείς πηγές)* — και η απόφαση που **ανέτρεψε** το εγκεκριμένο σχέδιο
+
+| Πηγή | Εύρημα |
+|---|---|
+| **Google Vault** (knowledge.workspace.google.com, «Place Drive data on hold» · «How retention works») | *«When a file that's on hold is deleted by a user … the user can't access the file anymore but the file isn't purged»* |
+| **Box Governance** (support.box.com, «About Legal Hold Policies») | *«Users can delete content under Legal Hold … this is known as a silent legal hold»*· μένει ορατό στον διαχειριστή |
+| **Microsoft Purview** (preservation hold) | ο χρήστης σβήνει, αντίγραφο διατηρείται |
+| **GCS object holds** (docs.cloud.google.com/storage/docs/object-holds) | *«While an object has a hold placed on it, the object cannot be deleted or replaced. You can, however, edit the metadata»* |
+| Revit · ArchiCAD · Cinema 4D · Figma · Zillow · Idealista | ⚠️ κανένα μοτίβο δέσμευσης — ακολουθήθηκαν τα εργαλεία συμμόρφωσης |
+
+**Απόφαση Giorgio (17/09): «όπως οι μεγάλοι»** ⇒ **Δ21.1 σιωπηλή δέσμευση**: ο κάδος **επιτρέπεται** σε δεσμευμένο αρχείο (το σχέδιο του handoff έλεγε «άρνηση κάδου» — **απορρίφθηκε**). Αυτό που δεν γίνεται **ποτέ** είναι η **οριστική** διαγραφή, βάσης **ή** bytes.
+
+### 21.3 Οι αποφάσεις
+
+| Δ | Απόφαση | Πηγή |
+|---|---|---|
+| **Δ21.1** | Σιωπηλή δέσμευση: κάδος ✅ · purge/gdpr/διαγραφή οντότητας/hard delete ❌ | Vault · Box · Purview |
+| **Δ21.2** | Εμβέλεια = **όλη η στοίβα εκδόσεων** | Vault «retains all versions» |
+| **Δ21.3** | Bytes: GCS `temporaryHold` από τον **ένα** γραφέα — **όχι** `firestore.get` στο `storage.rules` | GCS object holds · αφαίρεση `firestore.get` 2026-01-20 |
+| **Δ21.4** | **Ένα** δικαίωμα `legal:holds:manage` για αρχείο **και** αποδεικτικό· `company_admin` + σύνολο «Legal Manager» | Vault «Manage Holds» |
+| **Δ21.5** | Μία δέσμευση τη φορά: δεύτερη ⇒ `already-held` (409), ποτέ σιωπηλή αντικατάσταση | — |
+| **Δ21.6** | Η διαδρομή **σκόπιμα** χωρίς `containerVisibilityRefusal`: η δέσμευση φτάνει και WIP ομάδας που ο διαχειριστής δεν βλέπει· η απάντηση δεν εκθέτει περιεχόμενο (μόνο ids) | Vault: η δέσμευση δεν απαιτεί πρόσβαση στο περιεχόμενο |
+
+### 21.4 Η υλοποίηση
+
+| Κομμάτι | Πού | Σημείωση |
+|---|---|---|
+| **Κριτής** (καθαρός, χωρίς `server-only`) | `lib/files/file-hold.ts` → `isHoldActive` · `hasActiveHold` · `FILE_HOLD_FIELDS` · `isPlaceableHoldType` · `holdReasonOf` | ο `isFileHeld` είναι λεπτό περιτύλιγμα· τον ρωτούν `file-record-lifecycle` (client) · purge · gdpr · cron · AI handler · deletion-guard |
+| **Γραφέας** | `services/file-record/file-hold.service.ts` → `placeFileHold` · `releaseFileHold` | τοποθέτηση: bytes **πρώτα**, συναλλαγή που ξαναδιαβάζει, ίχνος `hold_place`· αποδέσμευση: βάση **πρώτα**· **και οι δύο** τελειώνουν με `reconcileBytes` (**τα bytes ακολουθούν τη βάση**) |
+| **Διαδρομή αρχείου** | `POST /api/files/[fileId]/hold` · `{act:'place',holdType,reason}` / `{act:'release'}` | `withAuth({permissions:'legal:holds:manage'})` · `SENSITIVE` ρητά (3.78) · PEP `resolveOwnedFile` |
+| **Διαδρομή αποδεικτικού** | `POST /api/owner-properties/[ownerPropertyId]/mandate-evidence/[evidenceId]/legal-hold` | **ίδιο** δικαίωμα · `agencyCompanyId = ctx.companyId` · 404 ίδιο για ξένο γραφείο/ακίνητο |
+| **Purge fail-closed** | `file-purge-helpers.ts` → `deleteStorageObjectForPurge` · `/api/files/purge` → `purgeFileRecord` · `gdpr-delete` | `refused` ⇒ η εγγραφή μένει, ξαναδοκιμάζεται στον επόμενο γύρο |
+| **Διαγραφή οντότητας** | `lib/firestore/deletion-guard.ts` → `CASCADE_PRESERVATION[COLLECTIONS.FILES]` | τα δεσμευμένα FileRecords **μένουν**· τα bytes τους τα αρνείται η πλατφόρμα στο `executeStorageCleanup` (`force: true`) |
+| **Κάδος επαφής** | `api/contacts/[contactId]/route.ts` | Δ21.1: και το δεσμευμένο πάει στον κάδο· αφαιρέθηκε το νεκρό `filesSkipped` (+ `audit-types.ts`) |
+| **Τύπος** | `types/file-record.ts` → `holdReleasedBy` · `holdReleasedAt` | τα έγραφε ο (νεκρός) client γραφέας χωρίς δήλωση |
+
+### 21.5 🏆 Πού ξεπερνάμε — μετρήσιμα
+
+1. **Τα bytes τα φυλά η πλατφόρμα, όχι σύμβαση κώδικα** — ούτε ο Admin SDK δεν τα σβήνει ή τα **αντικαθιστά** όσο ισχύει η δέσμευση. Το Box/Vault το εγγυώνται μέσα στο δικό τους προϊόν· εδώ η εγγύηση επιβιώνει και **σφάλματος** στον δικό μας κώδικα διαγραφής (μετρημένο: τρεις διαδρομές έσβηναν «non-blocking»).
+2. **Καμία κατάσταση «η βάση λέει σβήστηκε, τα bytes υπάρχουν»** — `refused` ⇒ η εγγραφή μένει. Το Vault δεν εκθέτει τέτοια εγγύηση.
+3. **Ταυτόχρονες πράξεις συγκλίνουν** — `reconcileBytes` διαβάζει τη βάση **μετά** τη γραφή· κάθε ενδιάμεση ασυμφωνία είναι προς την **ασφαλή** πλευρά. Η αφελής «αντιστάθμιση» θα ξεκλείδωνε τα bytes της **νικήτριας** (μετάλλαξη M70).
+4. **Η διαγραφή οντότητας δεν είναι παράκαμψη** — φύλαξη κλειδωμένη στη **συλλογή**, άρα νέα γραμμή μητρώου καλύπτεται χωρίς να τη θυμηθεί κανείς.
+
+### 21.6 Άγκυρες — **εκτελεσμένες μεταλλάξεις**
+
+Σουίτες: `services/file-record/__tests__/file-hold.test.ts` (**16**, Α36 · Α47 · Α48) · **νέα** `file-hold-service.test.ts` (**7**, Α44-Α46 — γνήσια στοίβα, πλαστός που **ξαναεκτελεί** τη συναλλαγή, `FakeEvidenceBucket`) · `services/mandate/__tests__/evidence-retention.test.ts` (**18**, +1).
+
+| Μετάλλαξη | Άγκυρα | Αποτέλεσμα |
+|---|---|---|
+| M65 άκυρη διατήρηση ⇒ fail-open | Α47 | 🔴 1/16 |
+| M66 bytes «non-blocking» στο purge | Α48 | 🔴 1/16 |
+| M67 ο κάδος αρνείται σε δέσμευση | Α47 · Α48 | 🔴 2/16 |
+| M68 cascade χωρίς φύλαξη | Α48 | 🔴 1/16 |
+| M69 δέσμευση μόνο στο ζητούμενο (όχι στοίβα) | Α44 | 🔴 3/7 |
+| M70 αφελής αντιστάθμιση | Α45 | 🔴 1/7 |
+| M71 αποδέσμευση χωρίς συμφιλίωση | Α46 | 🔴 2/7 |
+| M72 βάση χωρίς προηγούμενο κλείδωμα bytes | Α45 | 🔴 1/7 |
+| M73 legal hold χωρίς άξονα γραφείου | Α37 (evidence) | 🔴 1/18 |
+| M74 legal hold αντικαθιστά σιωπηλά | Α37 (evidence) | 🔴 1/18 |
+
+**10/10 κόκκινες**, sha256 επαναφοράς ✅. Προϋπάρχοντα κόκκινα **άσχετα** στο `lib/auth/__tests__` (5 σε 4 σουίτες: `personal-scope-consumers` · `identity-provenance` · `identity-remediation` · `ownership-callsite-coverage-anchor`) — κανένα δεν αφορά αρχείο αυτής της αλλαγής.
+
+### 21.7 🔶 Ανοιχτά — δηλωμένα
+
+1. **`firestore.rules` `match /files/{fileId}`** (στο **ίδιο** μπλοκ): `holdCustodyUnchanged()` με **ακριβώς** τα `FILE_HOLD_FIELDS` και στα **4** σκέλη update · `create` χωρίς κλειδιά δέσμευσης πλην `hold == 'none'` · hard delete **αρνείται** σε `hold != 'none'` ή παρουσία `retentionUntil` (οι κανόνες δεν διαβάζουν ISO ημερομηνία) · κάδος **ανοιχτός** (Δ21.1). + μπλοκ «hold freeze» εκτός μήτρας στο `files.rules.test.ts` + άγκυρα ισότητας λίστας κανόνα ↔ `FILE_HOLD_FIELDS`. ⏸️ **Αναμονή commit ADR-835 §21** (ανοιχτό `firestore.rules` + `coverage-manifest.ts`, 17/09).
+2. **§20.7 #2** `match /mandate_evidence/{id} { allow read, write: if false; }` + manifest 3.16 — ίδια αναμονή.
+3. Πύλες **3.28 · 3.68 · 3.70 · 3.78** δεν έτρεξαν: φρένο βαριών εργασιών (βαριά εντολή άλλης συνεδρίας).
+4. **Δηλωμένο όριο**: διάδοχος έκδοση που γεννιέται **μετά** τη δέσμευση **δεν** κληρονομεί το hold (οι προκάτοχοι μένουν δεσμευμένοι — το αποδεικτικό «τι ίσχυε τότε» φυλάσσεται). Κληρονομιά στον γραφέα διαδοχής = ADR-862.
+5. **Δηλωμένο όριο UI**: κανένα κουμπί τοποθέτησης· το `TrashView` δείχνει ετικέτα δέσμευσης και αντίστροφη μέτρηση purge που **δεν** θα εκτελεστεί όσο ισχύει.
+6. Όχι επαληθευμένα: tsc (N.17) · browser · πραγματικό bucket (`temporaryHold` σε `companies/…`) · emulator.
 
 ## §13. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-17 (§21) | 🟡 **Επιβολή `FileRecord.hold`, ΟΧΙ commit.** Έρευνα (Google Vault · Box Governance · Purview · GCS object holds) **ανέτρεψε** το εγκεκριμένο «άρνηση κάδου» ⇒ απόφαση Giorgio: **σιωπηλή δέσμευση** (κάδος ✅, οριστική διαγραφή ❌). Καθαρός κριτής `lib/files/file-hold.ts` (fail-closed σε άκυρη διατήρηση) · **ένας** γραφέας `file-hold.service.ts` σε **όλη τη στοίβα εκδόσεων**, GCS `temporaryHold`, `reconcileBytes` · διαδρομές `files/[fileId]/hold` και `…/mandate-evidence/[evidenceId]/legal-hold` με **ένα** δικαίωμα `legal:holds:manage`. 🔴 **Ευρήματα**: τρεις διαδρομές έσβηναν bytes «non-blocking» (⇒ `purged` πάνω σε δεσμευμένα bytes) · η διαγραφή οντότητας έσβηνε δεσμευμένα FileRecords · legal hold αποδεικτικού χωρίς άξονα μισθωτή. Boy Scout: `/api/files/purge` → `purgeFileRecord` · νεκρά client `placeHold`/`releaseHold` · νεκρό `filesSkipped`. Άγκυρες **Α44-Α48**, **10/10** μεταλλάξεις κόκκινες. ⏸️ Κανόνες Firestore (§21.7) — ανοιχτό `firestore.rules` άλλου πράκτορα. |
 | 2026-09-17 (§20) | 🟡 **Διατήρηση και διάθεση αποδεικτικού, ΟΧΙ commit.** Έρευνα πρωτογενών πηγών (ΑΚ 250 αρ.5 · 253 · 937 · ν.4557/2018 άρθ.30 · ν.4308/2014 άρθ.7 · ΓΚΠΔ 5§1(ε)/17§3(ε) · GCS Object Retention Lock · Purview · Vault · DocuSign · Adobe Sign). Αποφάσεις Giorgio: γεγονός = λήξη **σχέσης** γραφείου–ακινήτου · 1/1/(έτος λήξης+6) ώρα Αθήνας · **Locked** στο αντικείμενο · legal hold χωριστό · ταφόπλακα. 🔴 **Εύρημα**: η αντικατάσταση εντολής ανά γραφείο χάνει το `proof.evidence` ⇒ **μητρώο** `mandate_evidence` με ιδεμποτητική γέννηση και **υιοθεσία** από σάρωση. Cron `mandate-evidence-retention` στο υπάρχον μητρώο · οθόνη «κλειδωμένο έως». Άγκυρες **Α37-Α43**, **14/14** μεταλλάξεις κόκκινες. Διορθώθηκαν μπαγιάτικα: «ΟΧΙ commit» σε κεφαλίδα/§17.6/§18/§18.8/§19/changelog · §19.7 «το 3.86 μετρά μόνο Firestore» (ψευδές — ο στόχος `storage` υπάρχει και αναπτύχθηκε). Ανοιχτά §20.7. |
 | 2026-09-17 (Φ3-Δ) | ✅ **Φ3 Μέρος Δ (§19) — `ea65fee8` · docs `fdee8130`.** Έρευνα πρωτογενών πηγών (Dropbox Sign API · Adobe Acrobat Sign · DocuSign · GCS object holds). **Ρυθμός**: ≤1 αίτημα/ώρα ανά εντολή από το ιστορικό, μέσα στη συναλλαγή, με ώρα στην οθόνη **πριν** το κλικ. **«Μη μου ξαναστείλετε»**: γεγονός `declined` δεμένο στους όρους. 🔴 **Εύρημα**: το αποδεικτικό ήταν **δείκτης** στο αρχείο του γραφείου, που μέλος της εταιρείας μπορούσε να σβήσει ⇒ **παγωμένο αντίγραφο** σε ρίζα `server-only` (`mandate-evidence/`), sha256, GCS temporary hold **μετά** την εγγραφή, και στους **δύο** γραφείς βεβαίωσης. Λήψη από ιδιοκτήτη (σύνδεσμος + λογαριασμός) και γραφείο με κριτή **σχέσης**, αποτύπωμα δίπλα στη λήψη, ίχνος `document_accessed`. Boy Scout: σφάλμα `hold.type` στο `gdpr-delete` (υπερ-διατήρηση) · `isFileHeld` στο purge · `sha256PassThrough` στο backup · 9 ετικέτες ιστορικού · κόκκινο fixture `consent-term-day`. Άγκυρες **Α29-Α36**, **20/20** μεταλλάξεις κόκκινες. Διορθώθηκαν μπαγιάτικα: κεφαλίδα · §18.10 #1. Ανοιχτά §19.8. |
 | 2026-09-16 (Φ3-Γ) | ✅ **Φ3 Μέρος Γ — οι οθόνες (§18) — `a38767fe`.** Έρευνα πρωτογενών πηγών (NAR · Compass · Bright MLS · DocuSign · Dropbox Sign · OneTrust · Figma · Zillow) **πριν** τον κώδικα. Αποφάσεις Giorgio: **Δ1** έντυπο = `FileRecord` του γραφείου για την αγγελία, κριμένο από τη βάση (και στη βεβαίωση εντολής) · **Δ2** ένας αναγνώστης `GET …/private-marketing` για γραφείο και ιδιοκτήτη · **Δ3** συναίνεση ιδιοκτήτη προς **όλα** τα γραφεία ατομικά (μετρημένο: με δύο εντολές η κλειστή διάθεση ήταν **αδύνατη**). Οθόνη γραφείου (κατάσταση · αίτημα · έντυπο με ανέβασμα) · οθόνη ιδιοκτήτη (εκκρεμές αίτημα ορατό · φόρμα μόνο όπου λείπει · ανάκληση). N.0.2: `uploadEntityFile` εξήχθη από `useFileUpload` · `PENDING_MARKETING_AUDIENCES` στη ρίζα · εύρεση εντολής σε `private-marketing-actor.ts`. Εκκρεμότητες Μέρους Α: έκλεισαν **χωρίς κώδικα** (§18.1). Άγκυρες **Α22-Α28**, **16/16** μεταλλάξεις κόκκινες. 🔴 Ανοιχτό: επανασφράγιση 3.34 για 2 διαδρομές (§18.10). |

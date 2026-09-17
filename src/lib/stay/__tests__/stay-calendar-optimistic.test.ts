@@ -2,11 +2,14 @@
 
 import { isPendingEntry, optimisticView } from '@/lib/stay/stay-calendar-optimistic';
 import type { StayCalendarView } from '@/lib/stay/stay-calendar-view';
+import { STAY_RULES_NONE } from '@/types/stay-rules';
 
 const BEFORE: Extract<StayCalendarView, { kind: 'readable' }> = {
   kind: 'readable',
   declaredAt: null,
   version: 4,
+  rules: STAY_RULES_NONE,
+  days: {},
   entries: [
     { kind: 'block', id: 'sblk_1', from: '2027-10-10', to: '2027-10-12', source: 'owner', note: null },
     {
@@ -40,5 +43,14 @@ describe('optimisticView', () => {
     const snapshot = JSON.stringify(BEFORE);
     optimisticView(BEFORE, { action: 'unblock', blockId: 'sblk_1' }, 'pending:5', NOW);
     expect(JSON.stringify(BEFORE)).toBe(snapshot);
+  });
+
+  it('ρύθμιση ημερών: ίδια συγχώνευση με τον διακομιστή — αντίφαση αφήνει τις μέρες ως είχαν', () => {
+    const set = optimisticView(BEFORE, { action: 'restrict', from: '2027-10-01', to: '2027-10-03', set: { minNights: 4 }, clear: [] }, 'pending:6', NOW);
+    expect(set.days).toEqual({ '2027-10-01': { minNights: 4 }, '2027-10-02': { minNights: 4 } });
+    const cleared = optimisticView(set, { action: 'restrict', from: '2027-10-01', to: '2027-10-02', set: {}, clear: ['minNights'] }, 'pending:7', NOW);
+    expect(cleared.days).toEqual({ '2027-10-02': { minNights: 4 } });
+    const contradictory = optimisticView(set, { action: 'restrict', from: '2027-10-01', to: '2027-10-02', set: { maxNights: 2 }, clear: [] }, 'pending:8', NOW);
+    expect(contradictory.days).toBe(set.days);
   });
 });

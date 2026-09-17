@@ -142,6 +142,7 @@ export function useCrmAttachmentUpload({
       // =====================================================================
       await finalizeFileRecordWithPolicy({
         fileId,
+        custody: 'company',
         sizeBytes: file.size,
         downloadUrl,
         thumbnailUrl,

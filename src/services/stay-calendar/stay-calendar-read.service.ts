@@ -29,6 +29,7 @@ import { custodyOf, mayAdminister, type ListingActor } from '@/lib/owner-propert
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import {
   stayCalendarEntryViewOf,
+  stayDaysWithin,
   stayEntriesWithin,
   type StayCalendarView,
 } from '@/lib/stay/stay-calendar-view';
@@ -36,7 +37,10 @@ import {
   stayBlockFromDocument,
   stayBookingFromDocument,
   stayCalendarHeadFromDocument,
+  stayCalendarMonthFromDocument,
 } from '@/lib/stay/stay-calendar-from-document';
+import { stayDayRulesOf } from '@/lib/stay/stay-calendar-of';
+import { STAY_RULES_NONE, type StayCalendarMonth } from '@/types/stay-rules';
 import {
   type StayCalendarEntry,
   type StayCalendarHead,
@@ -54,6 +58,8 @@ export type StayCalendarSnapshot =
       readonly kind: 'readable';
       readonly head: StayCalendarHead | null;
       readonly entries: readonly StayCalendarEntry[];
+      /** Οι μήνες με κανόνες ανά ημερομηνία (Στάδιο Β) — όλοι, χωρίς χρονικό φίλτρο. */
+      readonly months: readonly StayCalendarMonth[];
     }
   | { readonly kind: 'unreadable'; readonly unreadableIds: readonly string[] };
 
@@ -85,9 +91,11 @@ export function stayCalendarHeadRef(adminDb: AdminFirestore, propertyId: string)
 }
 
 function entriesQuery(adminDb: AdminFirestore, collection: string, propertyId: string): Query {
-  // tenant-scope-exempt: ανάγνωση ΓΟΝΕΑ — «οι εγγραφές ημερολογίου ΑΥΤΟΥ του ακινήτου». Κάθε
-  // καλών έχει ήδη περάσει τον `mayAdminister(custodyOf(property))` (CHECK 3.56) πάνω στο ίδιο
-  // ακίνητο· ο άξονας `authorUserId` ΔΕΝ είναι ο κριτής της διαχείρισης (γραφείο: άλλος υπάλληλος).
+  // tenant-scope-exempt: ανάγνωση ΓΟΝΕΑ — «οι εγγραφές ημερολογίου ΑΥΤΟΥ του ακινήτου». Δύο
+  // είδη καλούντων: (α) η οθόνη/συναλλαγή, που έχει ήδη περάσει τον `mayAdminister(custodyOf(…))`
+  // (CHECK 3.56) — ο άξονας `authorUserId` ΔΕΝ είναι ο κριτής της διαχείρισης (γραφείο: άλλος
+  // υπάλληλος)· (β) η δημόσια διαθεσιμότητα (ADR-835 §21), για ΔΗΜΟΣΙΕΥΜΕΝΗ βραχυχρόνια αγγελία,
+  // όπου από τον διακομιστή φεύγει ΜΟΝΟ η απάντηση της μηχανής, ποτέ εγγραφή.
   return adminDb.collection(collection).where('propertyId', '==', propertyId);
 }
 
@@ -103,10 +111,11 @@ export async function readStayCalendar(
   transaction: Transaction | null,
 ): Promise<StayCalendarSnapshot> {
   const reader = readerOf(transaction);
-  const [headSnap, blockSnap, bookingSnap] = await Promise.all([
+  const [headSnap, blockSnap, bookingSnap, monthSnap] = await Promise.all([
     reader.doc(stayCalendarHeadRef(adminDb, propertyId)),
     reader.query(entriesQuery(adminDb, COLLECTIONS.STAY_BLOCKS, propertyId)),
     reader.query(entriesQuery(adminDb, COLLECTIONS.STAY_BOOKINGS, propertyId)),
+    reader.query(entriesQuery(adminDb, COLLECTIONS.STAY_CALENDAR_MONTHS, propertyId)),
   ]);
 
   const unreadableIds: string[] = [];
@@ -125,8 +134,16 @@ export async function readStayCalendar(
     else entries.push({ kind: 'booking', booking });
   }
 
+  const months: StayCalendarMonth[] = [];
+  for (const doc of monthSnap.docs) {
+    const month = stayCalendarMonthFromDocument(doc.data(), doc.id);
+    // Ένας μήνας άλλου ακινήτου κάτω από αυτό το ερώτημα είναι αδύνατος — αν συμβεί, χαλασμένος.
+    if (month === null || month.propertyId !== propertyId) unreadableIds.push(doc.id);
+    else months.push(month);
+  }
+
   if (unreadableIds.length > 0) return { kind: 'unreadable', unreadableIds };
-  return { kind: 'readable', head, entries };
+  return { kind: 'readable', head, entries, months };
 }
 
 /**
@@ -154,6 +171,8 @@ export async function readStayCalendarView(
     kind: 'readable',
     declaredAt: snapshot.head?.declaredAt ?? null,
     version: snapshot.head?.version ?? 0,
+    rules: snapshot.head?.rules ?? STAY_RULES_NONE,
+    days: stayDaysWithin(stayDayRulesOf(snapshot.months), window.from, window.to),
     entries: stayEntriesWithin(snapshot.entries.map(stayCalendarEntryViewOf), window.from, window.to),
   };
 }

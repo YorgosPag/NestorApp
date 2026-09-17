@@ -307,3 +307,21 @@ export function serverWrittenAuthorOwnedMatrix(): CoverageDefinition {
     cell('anonymous', 'update', 'deny', 'missing_claim'),
   ]);
 }
+
+/**
+ * 🗂️ ADR-866 §5.2 — **προσωπικό αρχείο** (`files_personal`): ο πελάτης του κατόχου γράφει
+ * (ανεβάζει, οριστικοποιεί, μετονομάζει, στέλνει στον κάδο) **και** σβήνει — είναι δικό του, όπως
+ * στο «Ο Δίσκος μου». Ο `authorOwnedMatrix` κρατά ήδη το υπόλοιπο: μόνο ο κάτοχος, ούτε super admin.
+ */
+export function personalFileMatrix(): CoverageDefinition {
+  return overrideDefinition(
+    authorOwnedMatrix(),
+    [
+      cell('same_tenant_user', 'delete', 'allow'),
+      ...ALL_PERSONAS
+        .filter((p) => p !== 'anonymous' && p !== 'same_tenant_user')
+        .map((p) => cell(p, 'delete', 'deny', 'not_owner')),
+    ],
+    'personalFileMatrix',
+  );
+}

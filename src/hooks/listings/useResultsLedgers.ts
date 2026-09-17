@@ -47,6 +47,7 @@ import type {
   StayQuery,
 } from '@/lib/stay/stay-availability-vocabulary';
 import { useListingLedger } from '@/services/realtime/hooks/usePublicListings';
+import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
 import type { ListingLedger, PublicListing } from '@/types/public-listing';
 
 /** Ό,τι απαντά η οθόνη για το **σύνολο** — και τα δύο σύνολα που το στηρίζουν. */
@@ -62,6 +63,8 @@ export interface ResultsLedgers {
   readonly stayLedger: StayLedger;
   /** Το χρονικό ερώτημα, ή `null` όταν κανείς δεν ρώτησε. */
   readonly stayQuery: StayQuery | null;
+  /** `true` όσο ο διακομιστής υπολογίζει τις απαντήσεις — η γραμμή λέει «υπολογίζεται». */
+  readonly stayPending: boolean;
   /** *«ταιριάζει;»* — η διαμέριση κριτηρίων του `withinScope`. */
   readonly criteriaLedger: ListingCriteriaLedger;
   /** Ρώτησε κανείς κριτήριο; Η γραμμή τυπώνεται μόνο τότε. */
@@ -172,34 +175,43 @@ export function useResultsLedgers(
    * απαγορεύει ρητά να ταξιδέψει ημερολόγιο μέσα στο `PublicListing`. Άρα η
    * διαθεσιμότητα απαντιέται **στον διακομιστή**, και φτάνει εδώ ως **απάντηση**.
    *
-   * ⚠️ **Ο διακομιστής είναι Φ5** — η συλλογή κρατήσεων δεν υπάρχει ακόμη. Ως τότε
-   * το ημερολόγιο κάθε αγγελίας είναι **`undeclared`**, και η μηχανή απαντά
-   * ειλικρινά `unknown`: *«κανείς δεν δήλωσε ημερολόγιο»*. Αυτό **δεν** είναι
-   * προσωρινό ψέμα — είναι η **αλήθεια** για τα σημερινά δεδομένα, και η γραμμή
-   * λογιστικής τη λέει με **αριθμό** αντί να δείξει άδεια λίστα.
+   * ✅ **ΣΤΑΔΙΟ Β (ADR-835 §21): ο διακομιστής απαντά** με το **πραγματικό** ημερολόγιο
+   * και τους κανόνες (`useStayAnswers` → `POST /api/public-listings/stay-availability`).
    *
-   * 🔑 Οι όροι διαμονής (`maxGuests`/`minNights`) και το `not-a-stay` απαντιούνται
-   * **ήδη σωστά** από σήμερα: ζουν στο `PublicListing.stay`, όχι στο ημερολόγιο.
+   * 🔑 **Το `not-a-stay` κρίνεται τοπικά** (ζει στο `PublicListing`, κανένα αίτημα για
+   * πώληση). Όσο φορτώνει, η γραμμή λέει **«υπολογίζεται»** (`stayPending`) — όχι «N χωρίς
+   * ημερολόγιο». Αποτυχία ή αγγελία χωρίς απάντηση ⇒ **`unreadable`**, δικό μας χρέος.
    */
   const stayQuery = useMemo(() => stayQueryOf(filters), [filters]);
+  const stayListingIds = useMemo(
+    () => visible.filter((listing) => listing.offerKinds.includes('leaseShort')).map((listing) => listing.id),
+    [visible]
+  );
+  const stayAnswers = useStayAnswers(stayListingIds, stayQuery);
 
   const stayLedger = useMemo(() => {
     // 🔴 **ΜΕΤΡΑ ΠΑΝΤΑ ΤΟ ΙΔΙΟ `visible`, ΑΚΟΜΗ ΚΑΙ ΧΩΡΙΣ ΕΡΩΤΗΣΗ.** Ένα κενό σύνολο
     //    εδώ θα έδινε `total: 0` ενώ η πρώτη διαμέριση μετρά **N** — και το
     //    `ledgersAgree` θα φώναζε **σωστά**, για λάθος λόγο. Χωρίς ερώτηση κάθε
     //    αγγελία είναι `unknown` (*«δεν ρωτήσαμε»*), και το άθροισμα κλείνει.
-    const answerFor = (listing: PublicListing): StayAvailabilityAnswer | undefined =>
-      stayQuery === null
-        ? undefined
-        : stayAvailabilityFor(listing, stayQuery, { kind: 'undeclared' }, saleExposureOf(listing));
+    const answerFor = (listing: PublicListing): StayAvailabilityAnswer | undefined => {
+      if (stayQuery === null) return undefined;
+      const local = stayAvailabilityFor(listing, stayQuery, { kind: 'undeclared' }, saleExposureOf(listing));
+      if (local.kind === 'not-a-stay' || stayAnswers.kind === 'idle' || stayAnswers.kind === 'pending') {
+        return local;
+      }
+      if (stayAnswers.kind === 'failed') return { kind: 'unreadable' };
+      return stayAnswers.answers[listing.id]?.answer ?? { kind: 'unreadable' };
+    };
     return computeStayLedger(visible, answerFor);
-  }, [visible, stayQuery]);
+  }, [visible, stayQuery, stayAnswers]);
 
   return {
     withinScope,
     ledger,
     stayLedger,
     stayQuery,
+    stayPending: stayAnswers.kind === 'pending',
     criteriaLedger,
     criteriaAsked,
     areaLedger,

@@ -16,7 +16,7 @@ import 'server-only';
 
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { HOLD_TYPES } from '@/config/domain-constants';
+import { isHoldActive, type FileHoldSubject } from '@/lib/files/file-hold';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateAuditId } from '@/services/enterprise-id.service';
@@ -54,24 +54,38 @@ export interface PurgeFileResult {
   error?: string;
 }
 
-interface FirestoreDocData {
-  hold?: string;
-  retentionUntil?: string;
-}
+/** Η έκβαση της διαγραφής των bytes — τρεις απαντήσεις, γιατί η θεραπεία τους διαφέρει. */
+export type StorageObjectDeletion = 'deleted' | 'absent' | 'refused';
 
 // =============================================================================
 // FUNCTIONS
 // =============================================================================
 
-/** Check if a file has an active hold or retention that blocks deletion */
-export function isFileHeld(data: FirestoreDocData): boolean {
-  if (data.hold && data.hold !== HOLD_TYPES.NONE) {
-    return true;
+/**
+ * Δεσμεύεται το αρχείο (δέσμευση ή ενεργή διατήρηση); — λεπτό περιτύλιγμα του **ενός**
+ * καθαρού κριτή (`lib/files/file-hold.ts`) με τον χρόνο του διακομιστή.
+ */
+export function isFileHeld(data: FileHoldSubject): boolean {
+  return isHoldActive(data, Date.now());
+}
+
+/**
+ * **Σβήσε τα bytes — ή πες ΓΙΑΤΙ όχι.** 🔒 ADR-864 §21: με GCS `temporaryHold` η πλατφόρμα
+ * **αρνείται** τη διαγραφή. Πριν, κάθε αποτυχία ήταν «non-blocking» και η εγγραφή γινόταν
+ * `purged` ⇒ η βάση θα έλεγε «σβήστηκε» για bytes που **υπάρχουν**. Μόνο το 404 είναι αθώο
+ * (τα bytes λείπουν ήδη)· κάθε άλλη αποτυχία αφήνει την εγγραφή όπως ήταν, για τον επόμενο γύρο.
+ */
+export async function deleteStorageObjectForPurge(storagePath: string): Promise<StorageObjectDeletion> {
+  try {
+    await getAdminStorage().bucket().file(storagePath).delete();
+    return 'deleted';
+  } catch (error: unknown) {
+    if ((error as { code?: unknown }).code === 404) return 'absent';
+    logger.warn('Storage deletion refused — the record stays unpurged', {
+      storagePath, error: getErrorMessage(error),
+    });
+    return 'refused';
   }
-  if (data.retentionUntil) {
-    return new Date(data.retentionUntil) > new Date();
-  }
-  return false;
 }
 
 /**
@@ -84,17 +98,13 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
   let storageDeleted = false;
 
   try {
-    // Delete binary from Firebase Storage
+    // Bytes πρώτα — και άρνηση της πλατφόρμας (δέσμευση) ⇒ η εγγραφή ΔΕΝ γίνεται `purged`.
     if (storagePath) {
-      try {
-        const bucket = getAdminStorage().bucket();
-        await bucket.file(storagePath).delete();
-        storageDeleted = true;
-      } catch (storageErr) {
-        logger.warn('Storage file deletion failed (non-blocking)', {
-          fileId, storagePath, error: getErrorMessage(storageErr),
-        });
+      const deletion = await deleteStorageObjectForPurge(storagePath);
+      if (deletion === 'refused') {
+        return { success: false, storageDeleted: false, error: 'storage-deletion-refused' };
       }
+      storageDeleted = deletion === 'deleted';
     }
 
     // Mark FileRecord as purged

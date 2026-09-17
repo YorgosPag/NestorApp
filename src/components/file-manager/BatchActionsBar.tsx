@@ -55,10 +55,16 @@ interface BatchActionsBarProps {
   onClearSelection: () => void;
   /** Batch delete (move to trash) */
   onBatchDelete: () => Promise<void>;
-  /** Batch download as ZIP */
-  onBatchDownload: () => Promise<void>;
-  /** Batch classify (manual data classification) */
-  onBatchClassify: (classification: FileClassification) => Promise<void>;
+  /**
+   * Batch download as ZIP — απουσία ⇒ δεν αποδίδεται (ADR-866 §2.6.8 Β6: η διαδρομή ZIP ξέρει
+   * σήμερα μόνο το εταιρικό διαμέρισμα· τα προσωπικά αρχεία την αποκτούν στο βήμα 2β.3).
+   */
+  onBatchDownload?: () => Promise<void>;
+  /**
+   * Batch classify (manual data classification) — απουσία ⇒ δεν αποδίδεται: η διαβάθμιση
+   * δημοσιοποίησης (ADR-845) είναι πράξη **γραφείου**, όχι προσωπικού κατόχου.
+   */
+  onBatchClassify?: (classification: FileClassification) => Promise<void>;
   /** AI auto-classify (ADR-191 Phase 2.2) */
   onAIClassify?: () => Promise<void>;
   /** Whether AI classification is in progress */
@@ -116,6 +122,7 @@ export function BatchActionsBar({
   }
 
   async function handleDownload() {
+    if (!onBatchDownload) return;
     setDownloading(true);
     try {
       await onBatchDownload();
@@ -125,6 +132,7 @@ export function BatchActionsBar({
   }
 
   async function handleClassify(value: string) {
+    if (!onBatchClassify) return;
     await onBatchClassify(value as FileClassification);
   }
 
@@ -185,21 +193,23 @@ export function BatchActionsBar({
       <span className="w-px h-5 bg-border" aria-hidden="true" />
 
       {/* Classification dropdown */}
-      <Select onValueChange={handleClassify}>
-        <SelectTrigger className="h-7 w-[160px] text-xs">
-          <SelectValue placeholder={t('batch.classify')} />
-        </SelectTrigger>
-        <SelectContent>
-          {CLASSIFICATION_OPTIONS.map(({ value, icon: Icon }) => (
-            <SelectItem key={value} value={value}>
-              <span className="flex items-center gap-1.5">
-                <Icon className="h-3.5 w-3.5" />
-                {t(`batch.classification.${value}`)}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {onBatchClassify && (
+        <Select onValueChange={handleClassify}>
+          <SelectTrigger className="h-7 w-[160px] text-xs">
+            <SelectValue placeholder={t('batch.classify')} />
+          </SelectTrigger>
+          <SelectContent>
+            {CLASSIFICATION_OPTIONS.map(({ value, icon: Icon }) => (
+              <SelectItem key={value} value={value}>
+                <span className="flex items-center gap-1.5">
+                  <Icon className="h-3.5 w-3.5" />
+                  {t(`batch.classification.${value}`)}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* AI Auto-Classify (ADR-191 Phase 2.2) */}
       {onAIClassify && (
@@ -273,25 +283,27 @@ export function BatchActionsBar({
       <span className="w-px h-5 bg-border" aria-hidden="true" />
 
       {/* Batch download */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownload}
-            disabled={downloading}
-            className="h-7 px-2 text-xs"
-          >
-            {downloading ? (
-              <Spinner size="small" color="inherit" className="mr-1" />
-            ) : (
-              <Download className="h-3.5 w-3.5 mr-1" />
-            )}
-            {t('batch.downloadZip')}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('batch.downloadZip')}</TooltipContent>
-      </Tooltip>
+      {onBatchDownload && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="h-7 px-2 text-xs"
+            >
+              {downloading ? (
+                <Spinner size="small" color="inherit" className="mr-1" />
+              ) : (
+                <Download className="h-3.5 w-3.5 mr-1" />
+              )}
+              {t('batch.downloadZip')}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('batch.downloadZip')}</TooltipContent>
+        </Tooltip>
+      )}
 
       {/* Batch delete */}
       <Tooltip>

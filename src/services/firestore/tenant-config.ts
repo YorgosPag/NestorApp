@@ -67,6 +67,10 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // `userId` είναι ο ΚΑΤΟΧΟΣ του βιβλίου (όχι ο δράστης — αυτός είναι το `performedBy`).
   // Κανένα `companyId` εκ κατασκευής (ADR-787 Ε-3 §8· `lib/audit/audit-ledger.ts`).
   ENTITY_AUDIT_TRAIL_PERSONAL: { mode: 'userId', fieldName: 'userId' },
+  // 🗂️ ADR-866 §5.2 — τα ΠΡΟΣΩΠΙΚΑ αρχεία: ίδιο σχήμα κατόχου με το βιβλίο παραπάνω. 🔑 ΚΑΜΙΑ
+  // εγγραφή στο `READ_PATHS`: αυτή η γραμμή παράγει ήδη `where('userId','==',uid)` — τον ΕΝΑ δρόμο
+  // που δέχεται ο κανόνας (ADR-866 §2.6.7). Ο φράχτης `cdeReadReach` είναι έννοια ΓΡΑΦΕΙΟΥ.
+  FILES_PERSONAL:             { mode: 'userId', fieldName: 'userId' },
 
   // --- system (no tenant filter) ---
   // ⚠️ Το `unscopedReason` ΔΕΝ είναι σχόλιο: ο τύπος `TenantFieldConfig` το απαιτεί
@@ -106,6 +110,7 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   STAY_CALENDARS:             { mode: 'userId', fieldName: 'authorUserId' },
   STAY_BLOCKS:                { mode: 'userId', fieldName: 'authorUserId' },
   STAY_BOOKINGS:              { mode: 'userId', fieldName: 'authorUserId' },
+  STAY_CALENDAR_MONTHS:       { mode: 'userId', fieldName: 'authorUserId' },
   // --- ADR-777 Α3/Α5: ΔΗΜΟΣΙΕΥΜΕΝΗ ΠΡΟΒΟΛΗ ----------------------------------
   // 🔴 Άλλη κατηγορία από τις δύο παραπάνω, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ Ο ΚΥΚΛΟΣ ΖΩΗΣ: η γη
   // υπάρχει ακόμη κι αν σβήσουν όλοι οι λογαριασμοί· η αγγελία σβήνει μαζί με την

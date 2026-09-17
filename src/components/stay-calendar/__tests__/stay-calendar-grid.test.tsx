@@ -27,8 +27,8 @@ function renderGrid(overrides: Partial<React.ComponentProps<typeof StayCalendarG
   const onFocusDay = jest.fn();
   render(
     <StayCalendarGrid
-      monthKey="2027-10" entries={ENTRIES} selection={null} focusDay="2027-10-05"
-      onFocusDay={onFocusDay} onPick={onPick} {...overrides}
+      monthKey="2027-10" entries={ENTRIES} days={{}} pricing={{ commercial: { nightlyRate: null } }}
+      selection={null} focusDay="2027-10-05" onFocusDay={onFocusDay} onPick={onPick} {...overrides}
     />,
   );
   return { onPick, onFocusDay };
@@ -67,5 +67,20 @@ describe('StayCalendarGrid', () => {
     renderGrid({ selection: { from: '2027-10-01', to: '2027-10-03', nights: 2 } });
     const selected = screen.getAllByRole('gridcell').filter((cell) => cell.getAttribute('aria-selected') === 'true');
     expect(selected).toHaveLength(2);
+  });
+
+  it('Στάδιο Β: CTA/CTD και ελάχιστες νύχτες ΛΕΓΟΝΤΑΙ στην ετικέτα· η τιμή της ημέρας υπερισχύει της βάσης', () => {
+    renderGrid({
+      days: { '2027-10-02': { closedToArrival: true, closedToDeparture: true, minNights: 3, nightlyRateMinor: 12000 } },
+      pricing: { commercial: { nightlyRate: 80 } },
+    });
+    const [first, second] = screen.getAllByRole('button');
+    const label = second.getAttribute('aria-label') ?? '';
+    expect(label).toContain('property-market:offer.stayCalendar.days.cellNoArrival');
+    expect(label).toContain('property-market:offer.stayCalendar.days.cellNoDeparture');
+    expect(label).toContain('property-market:offer.stayCalendar.days.cellMinNights');
+    expect(second.textContent).toMatch(/120/);
+    expect(first.textContent).toMatch(/80/);
+    expect(first.getAttribute('aria-label')).not.toContain('cellNoArrival');
   });
 });

@@ -44,6 +44,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSupersessionNotice } from '@/hooks/files/useSupersessionNotice';
 import type { FileRecord } from '@/types/file-record';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 import '@/lib/design-system';
 import {
   PreviewBanner,
@@ -174,7 +175,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         const files = await FileRecordService.getFilesByEntity(
           entityType,
           entityId,
-          { companyId, category, purpose, levelFloorId },
+          { custody: companyReadCustodyOf(companyId), category, purpose, levelFloorId },
         );
         if (cancelled) return;
         if (files.length > 0) setExistingFile(files[0]);

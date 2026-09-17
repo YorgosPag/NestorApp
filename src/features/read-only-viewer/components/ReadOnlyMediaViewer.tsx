@@ -35,6 +35,7 @@ import { MediaGallery } from '@/components/shared/files/media/MediaGallery';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 
 // 🏢 ENTERPRISE: Extracted types + adapter (Google SRP)
 import {
@@ -123,7 +124,7 @@ export function ReadOnlyMediaViewer({
   // ==========================================================================
 
   const floorplansData = useEntityFiles({
-    entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', companyId: effectiveCompanyId,
+    entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', custody: companyReadCustodyOf(effectiveCompanyId),
     category: 'floorplans', autoFetch: !!propertyId && !!effectiveCompanyId,
     realtime: true,
   });
@@ -152,13 +153,13 @@ export function ReadOnlyMediaViewer({
   }, [floorFloorplan, floorFloorplanLoading, floorFloorplanError, refetchFloorFloorplan, effectiveCompanyId]);
 
   const photosData = useEntityFiles({
-    entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', companyId: effectiveCompanyId,
+    entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', custody: companyReadCustodyOf(effectiveCompanyId),
     category: 'photos', autoFetch: !!propertyId && !!effectiveCompanyId,
     realtime: true,
   });
 
   const videosData = useEntityFiles({
-    entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', companyId: effectiveCompanyId,
+    entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', custody: companyReadCustodyOf(effectiveCompanyId),
     category: 'videos', autoFetch: !!propertyId && !!effectiveCompanyId,
     realtime: true,
   });

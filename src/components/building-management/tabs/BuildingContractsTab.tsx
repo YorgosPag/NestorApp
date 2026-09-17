@@ -21,35 +21,16 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuth } from '@/auth/contexts/AuthContext';
-import { useCompanyId } from '@/hooks/useCompanyId';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { EntityFilesTabPlaceholder } from '@/components/shared/files/EntityFilesTabPlaceholder';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
-import type { Building } from '@/types/building/contracts';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { FloorInfo } from '@/config/upload-entry-points';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import '@/lib/design-system';
+import { useBuildingFilesTab, type BuildingFilesTabProps } from './building-files-tab';
 
-// =============================================================================
-// PROPS
-// =============================================================================
-
-interface BuildingContractsTabProps {
-  /** Building data (passed automatically by UniversalTabsRenderer) */
-  building?: Building;
-  /** Alternative data prop */
-  data?: Building;
-  /** Title for the tab */
-  title?: string;
+interface BuildingContractsTabProps extends BuildingFilesTabProps {
   /** Injected by UniversalTabsRenderer — navigate to sibling tab */
   onNavigateToTab?: (tabId: string) => void;
 }
-
-// =============================================================================
-// COMPONENT
-// =============================================================================
 
 /**
  * 🏢 ENTERPRISE: Building Documents Tab
@@ -62,29 +43,17 @@ interface BuildingContractsTabProps {
  * This tab handles: contracts, permits, studies, invoices, reports, etc.
  * Photos and Videos have their own dedicated tabs for better preview experience.
  */
-export function BuildingContractsTab({
-  building,
-  data,
-  onNavigateToTab,
-}: BuildingContractsTabProps) {
-  const { user } = useAuth();
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-  const colors = useSemanticColors();
+export function BuildingContractsTab({ onNavigateToTab, ...props }: BuildingContractsTabProps) {
+  const { t, identity } = useBuildingFilesTab(props);
   const [floors, setFloors] = useState<FloorInfo[]>([]);
-
-  // Resolve building from props
-  const resolvedBuilding = building || data;
-
-  // Get companyId and userId from auth context
-  const companyId = useCompanyId()?.companyId;
-  const currentUserId = user?.uid;
+  const buildingId = (props.building || props.data)?.id;
 
   // 🏢 ADR-191: Fetch floors for per-floor entry point expansion
   const fetchFloors = useCallback(async () => {
-    if (!resolvedBuilding?.id) return;
+    if (!buildingId) return;
     try {
       const result = await apiClient.get<{ floors: Array<{ id: string; number: number; name: string }> }>(
-        `${API_ROUTES.FLOORS.LIST}?buildingId=${resolvedBuilding.id}`
+        `${API_ROUTES.FLOORS.LIST}?buildingId=${buildingId}`
       );
       if (result?.floors) {
         const sorted = [...result.floors]
@@ -95,30 +64,19 @@ export function BuildingContractsTab({
     } catch {
       // Non-blocking: floors are optional for the documents tab
     }
-  }, [resolvedBuilding?.id]);
+  }, [buildingId]);
 
   useEffect(() => {
     fetchFloors();
   }, [fetchFloors]);
 
-  // If no building, companyId, or userId, show placeholder
-  if (!resolvedBuilding?.id || !companyId || !currentUserId) {
-    return (
-      <section className={cn("p-2 text-center", colors.text.muted)}>
-        <p>{t('tabs.contracts.noBuilding')}</p>
-      </section>
-    );
+  if (!identity) {
+    return <EntityFilesTabPlaceholder message={t('tabs.contracts.noBuilding')} />;
   }
 
   return (
     <EntityFilesManager
-      companyId={companyId}
-      currentUserId={currentUserId}
-      entityType={ENTITY_TYPES.BUILDING}
-      entityId={String(resolvedBuilding.id)}
-      entityLabel={resolvedBuilding.name || t('entityLabel', { id: resolvedBuilding.id })}
-      projectId={resolvedBuilding.projectId}
-      domain="construction"
+      {...identity}
       category="documents"
       purpose="document"
       entryPointExcludeCategories={['photos', 'videos']}

@@ -86,6 +86,14 @@ export abstract class AccessLifecycleIdGenerators extends PublicRegistryIdGenera
   }
 
   /**
+   * ADR-835 §21 — **οι κανόνες ανά ημερομηνία ενός μήνα**, ένα έγγραφο ανά (ακίνητο, `YYYY-MM`).
+   * Ντετερμινιστικό ⇒ η συναλλαγή που ρυθμίζει μέρες ξέρει ποιο έγγραφο γράφει χωρίς ερώτημα.
+   */
+  generateDeterministicStayCalendarMonthId(propertyId: string, monthKey: string): string {
+    return this.mintDeterministicV4Id(P.STAY_CALENDAR_MONTH, `${propertyId}:${monthKey}`);
+  }
+
+  /**
    * ADR-853 §7.1 — **η πρόσκληση σε χώρο εργασίας**.
    *
    * 🔴 **ΜΗ ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ, ΑΝΤΙΘΕΤΑ ΑΠΟ ΤΟΝ ΔΙΠΛΑΝΟ ΤΟΥ `wacr` — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ

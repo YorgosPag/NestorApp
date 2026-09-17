@@ -42,6 +42,9 @@ import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 // ADR-845 Ο-25 — ΕΝΑ σχήμα για το «από ποια έκδοση σχεδίου». Type-only ⇒ μηδέν runtime
 // εξάρτηση· η ΚΡΙΣΗ («ισχύει ακόμα;») ζει εκεί, όχι εδώ.
 import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions';
+// ADR-866 §5.2 — ο κάτοχος του αρχείου (εταιρεία Ή άνθρωπος). Type-only.
+import type { FileCustody } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
 // ============================================================================
 // 🏢 ENTERPRISE: FLOORPLAN PROCESSED DATA TYPES (ADR-033)
@@ -237,6 +240,13 @@ export interface FileRecord {
 
   /** Company ID for tenant isolation (optional for system files) */
   companyId?: string;
+
+  /**
+   * **Προσωπικός κάτοχος** (ADR-866 §5.2) — το αρχείο ζει στο `files_personal` και το διαβάζει
+   * μόνο αυτός ο άνθρωπος. **Ακριβώς ένα** από `companyId` / `userId` (`lib/files/file-custody`).
+   * ⚠️ Ο κάτοχος, **όχι** ο δράστης (`createdBy`).
+   */
+  userId?: string;
 
   /** Project ID for project-scoped files (optional) */
   projectId?: string;
@@ -733,6 +743,15 @@ export interface FileRecord {
    */
   holdReason?: string;
 
+  /**
+   * Who released the most recent hold (ADR-864 §21 — kept after release as evidence)
+   * @enterprise Audit trail for compliance
+   */
+  holdReleasedBy?: string;
+
+  /** When the most recent hold was released */
+  holdReleasedAt?: Date | string;
+
   // -------------------------------------------------------------------------
   // ARCHIVE FIELDS (when lifecycleState === 'archived')
   // -------------------------------------------------------------------------
@@ -956,7 +975,13 @@ export interface FileRecord {
  * Instead, provide "naming context" and the system generates displayName centrally.
  * This enforces single naming authority (ADR-031).
  */
-export interface CreateFileRecordInput {
+export type CreateFileRecordInput = FileCustody & CreateFileRecordCoordinates;
+
+/**
+ * Η είσοδος γέννησης **χωρίς** τον κάτοχο — ο κάτοχος (`{ companyId }` ή `{ userId }`) μπαίνει με
+ * το {@link CreateFileRecordInput} (ADR-866 §5.2). Οι υπάρχοντες καλούντες με `companyId` δεν αλλάζουν.
+ */
+export interface CreateFileRecordCoordinates {
   /**
    * Προαιρετικό override του fileId για **idempotent** μεταφόρτωση.
    *
@@ -966,8 +991,6 @@ export interface CreateFileRecordInput {
    * Αν παραλειφθεί, η συμπεριφορά είναι όπως πάντα (τυχαίο enterprise id).
    */
   fileId?: string;
-  /** Company ID for tenant isolation (REQUIRED for multi-tenant) */
-  companyId: string;
   /** Project ID for project scope */
   projectId?: string;
   /** Entity type this file belongs to */
@@ -1074,6 +1097,11 @@ export interface CreateFileRecordResult {
 export interface FinalizeFileRecordInput {
   /** File ID to finalize */
   fileId: string;
+  /**
+   * **Σε ποιο διαμέρισμα ζει** (ADR-866 §2.6.8 Β4) — υποχρεωτικό: η οριστικοποίηση παίρνει μόνο
+   * `fileId`, και ο μεταγλωττιστής πρέπει να βρει κάθε καλούντα. Ποτέ «δοκίμασε και τις δύο».
+   */
+  custody: CustodyKind;
   /** File size in bytes */
   sizeBytes: number;
   /** Download URL from Storage */

@@ -25,9 +25,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import {
   classifyFileWithPolicy,
-  validateUploadAuth,
+  validateCustodyUploadAuth,
 } from '@/services/filesystem/file-mutation-gateway';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
+import type { FileCustody } from '@/lib/files/file-custody';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { isAIClassifiable } from './useFileClassification';
@@ -67,7 +68,11 @@ async function pollClassifyAndDispatch(
 // ============================================================================
 
 interface UseFileUploadParams {
-  companyId: string;
+  /**
+   * **Ποιος κατέχει** τα αρχεία που ανεβαίνουν (ADR-866 §5.2) — σταθερή ταυτότητα (`useStableFileCustody`).
+   * `undefined` ⇒ κανένας έγκυρος κάτοχος ⇒ το ανέβασμα **αρνείται** πριν αγγίξει οτιδήποτε.
+   */
+  custody: FileCustody | undefined;
   projectId?: string;
   entityType: EntityType;
   entityId: string;
@@ -109,7 +114,7 @@ const logger = createModuleLogger('FILE_UPLOAD');
 // ============================================================================
 
 export function useFileUpload({
-  companyId,
+  custody,
   projectId,
   entityType,
   entityId,
@@ -135,13 +140,19 @@ export function useFileUpload({
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     // =========================================================================
-    // AUTH GATE — Canonical upload auth with companyId validation (ADR-292)
+    // AUTH GATE — Canonical upload auth per owner (ADR-292 · ADR-866 §2.6.8 Β3)
     // =========================================================================
-    let authContext: Awaited<ReturnType<typeof validateUploadAuth>>;
+    let authContext: Awaited<ReturnType<typeof validateCustodyUploadAuth>>;
+
+    if (!custody) {
+      logger.error('AUTH_PRECHECK_FAILED', { error: 'UPLOAD_AUTH_CUSTODY_MISSING' });
+      fileNotifications.upload.authFailed();
+      return;
+    }
 
     try {
-      authContext = await validateUploadAuth(companyId);
-      logger.info('AUTH_VERIFIED', { uid: authContext.uid, companyId: authContext.companyId });
+      authContext = await validateCustodyUploadAuth(custody);
+      logger.info('AUTH_VERIFIED', { uid: authContext.uid, custody: authContext.custody });
     } catch (authError) {
       logger.error('AUTH_PRECHECK_FAILED', { error: String(authError) });
       const errorMessage = authError instanceof Error ? authError.message : '';
@@ -158,7 +169,7 @@ export function useFileUpload({
       projectId: app.options.projectId,
       storageBucket: app.options.storageBucket,
       authUid: authContext.uid,
-      companyId,
+      custody: authContext.custody,
       entityType,
       entityId,
       domain,
@@ -191,7 +202,7 @@ export function useFileUpload({
           // ADR-054/191/292 — ο **ένας** αγωγός (βήματα Α-Γ), κοινός με το έντυπο κλειστής διάθεσης (ADR-864 §18.4 Δ1).
           const { fileId, displayName } = await uploadEntityFile(
             {
-              companyId,
+              custody,
               projectId,
               entityType,
               entityId,
@@ -209,8 +220,9 @@ export function useFileUpload({
             file,
           );
 
-          // ADR-191 Phase 2.2: AI auto-classify — starts background job, polls until done
-          if (isAIClassifiable(file.type, file.name)) {
+          // ADR-191 Phase 2.2: AI auto-classify — starts background job, polls until done.
+          // 🔒 ADR-866 §2.6.8 Β6 — ταξινόμηση ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files`: όχι για προσωπικό κάτοχο.
+          if (authContext.custody === 'company' && isAIClassifiable(file.type, file.name)) {
             classifyFileWithPolicy(fileId)
               .then(() => pollClassifyAndDispatch(fileId, entityType, entityId))
               .catch(() => { /* non-blocking */ });
@@ -245,7 +257,7 @@ export function useFileUpload({
       setUploading(false);
     }
   }, [
-    companyId, projectId, entityType, entityId, domain, category, entityLabel, purpose, levelFloorId,
+    custody, projectId, entityType, entityId, domain, category, entityLabel, purpose, levelFloorId,
     currentUserId, currentUserName, selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete, fileNotifications, t,
   ]);

@@ -18,7 +18,8 @@
  * @enterprise ADR-292 — Floorplan Upload Consolidation Map
  */
 
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadResumableToUrl } from '@/services/upload/utils/resumable-upload';
 import { storage } from '@/lib/firebase';
 import {
   validateUploadAuth,
@@ -158,7 +159,15 @@ export async function uploadFileWithPolicy(
     let downloadUrl: string;
 
     if (config.useResumable) {
-      downloadUrl = await uploadResumable(storageRef, file, config);
+      // 10-80% της συνολικής προόδου ανήκει στο ανέβασμα.
+      downloadUrl = await uploadResumableToUrl(storageRef, file, (snapshot) => {
+        config.onProgress?.({
+          percent: Math.round(10 + (snapshot.percent * 0.7)),
+          phase: 'uploading',
+          bytesTransferred: snapshot.bytesTransferred,
+          totalBytes: snapshot.totalBytes,
+        });
+      });
     } else {
       await uploadBytes(storageRef, file);
       onProgress?.({ percent: 80, phase: 'uploading' });
@@ -179,6 +188,7 @@ export async function uploadFileWithPolicy(
     onProgress?.({ percent: 90, phase: 'finalizing' });
     await finalizeFileRecordWithPolicy({
       fileId,
+      custody: 'company',
       sizeBytes: file.size,
       downloadUrl,
       thumbnailUrl,
@@ -192,7 +202,7 @@ export async function uploadFileWithPolicy(
     logger.error('Upload failed, marking FileRecord as failed', {
       fileId, error: getErrorMessage(error),
     });
-    await markFileRecordFailedWithPolicy(fileId, getErrorMessage(error));
+    await markFileRecordFailedWithPolicy(fileId, 'company', getErrorMessage(error));
     throw error;
   }
 }
@@ -200,40 +210,6 @@ export async function uploadFileWithPolicy(
 // ============================================================================
 // Internal Helpers
 // ============================================================================
-
-/** Resumable upload with progress tracking */
-async function uploadResumable(
-  storageRef: ReturnType<typeof ref>,
-  file: File | Blob,
-  config: UploadFileConfig,
-): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const pct = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        const overallPercent = 10 + (pct * 0.7); // 10-80% range
-        config.onProgress?.({
-          percent: Math.round(overallPercent),
-          phase: 'uploading',
-          bytesTransferred: snapshot.bytesTransferred,
-          totalBytes: snapshot.totalBytes,
-        });
-      },
-      (error) => reject(error),
-      async () => {
-        try {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(url);
-        } catch (error) {
-          reject(error);
-        }
-      },
-    );
-  });
-}
 
 /** Generate thumbnail and upload — non-blocking on failure */
 async function generateAndUploadThumbnail(

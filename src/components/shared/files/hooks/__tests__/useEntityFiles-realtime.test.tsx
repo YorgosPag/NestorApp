@@ -24,6 +24,12 @@ jest.mock('@/services/firestore', () => ({
   },
 }));
 
+// Οι πραγματικοί `fileOwnerConstraints`/`fileReadKindOf` (file-record-queries) τρέχουν — μόνο η
+// υπηρεσία Firestore από κάτω τους κόβεται (ADR-866 §2.6.8 — άγκυρα διαμερίσματος).
+jest.mock('@/services/firestore/firestore-query.service', () => ({
+  firestoreQueryService: { getAll: jest.fn(), getById: jest.fn() },
+}));
+
 jest.mock('@/services/filesystem/file-mutation-gateway', () => ({
   moveFileToTrashWithPolicy: jest.fn(),
   renameFileWithPolicy: jest.fn(),
@@ -104,7 +110,7 @@ describe('useEntityFiles — FILE_UPDATED subscriber', () => {
     ]);
 
     const { result } = renderHook(() =>
-      useEntityFiles({ entityType: 'property', entityId: 'prop_1', companyId: 'comp_1' }),
+      useEntityFiles({ entityType: 'property', entityId: 'prop_1', custody: { companyId: 'comp_1' } }),
     );
 
     await waitFor(() => expect(result.current.files).toHaveLength(3));
@@ -129,7 +135,7 @@ describe('useEntityFiles — FILE_UPDATED subscriber', () => {
     mockedGetFilesByEntity.mockResolvedValue([makeFile('f1', { displayName: 'keep' })]);
 
     const { result } = renderHook(() =>
-      useEntityFiles({ entityType: 'property', entityId: 'prop_1', companyId: 'comp_1' }),
+      useEntityFiles({ entityType: 'property', entityId: 'prop_1', custody: { companyId: 'comp_1' } }),
     );
 
     await waitFor(() => expect(result.current.files).toHaveLength(1));
@@ -153,7 +159,7 @@ describe('useEntityFiles — FILE_UPDATED subscriber', () => {
     ]);
 
     const { result } = renderHook(() =>
-      useEntityFiles({ entityType: 'property', entityId: 'prop_1', companyId: 'comp_1' }),
+      useEntityFiles({ entityType: 'property', entityId: 'prop_1', custody: { companyId: 'comp_1' } }),
     );
 
     await waitFor(() => expect(result.current.files).toHaveLength(1));
@@ -177,7 +183,7 @@ describe('useEntityFiles — FILE_UPDATED subscriber', () => {
     mockedGetFilesByEntity.mockResolvedValue([makeFile('f1')]);
 
     const { unmount, result } = renderHook(() =>
-      useEntityFiles({ entityType: 'property', entityId: 'prop_1', companyId: 'comp_1' }),
+      useEntityFiles({ entityType: 'property', entityId: 'prop_1', custody: { companyId: 'comp_1' } }),
     );
 
     await waitFor(() => expect(result.current.files).toHaveLength(1));
@@ -189,5 +195,85 @@ describe('useEntityFiles — FILE_UPDATED subscriber', () => {
     unmount();
 
     expect(spy!).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================================
+// ADR-866 §2.6.8 — ΚΑΤΟΧΟΣ: διαμέρισμα ακροατή · φίλτρο κατόχου · διαμέρισμα κάθε πράξης
+// ============================================================================
+
+import { firestoreQueryService } from '@/services/firestore';
+import { moveFileToTrashWithPolicy } from '@/services/filesystem/file-mutation-gateway';
+
+const mockedSubscribe = firestoreQueryService.subscribe as jest.Mock;
+const mockedTrash = moveFileToTrashWithPolicy as jest.Mock;
+
+/** Τα πεδία όλων των `where(...)` που πήρε ο ακροατής. */
+function whereFieldsOfLastSubscription(): unknown[] {
+  const options = mockedSubscribe.mock.calls.at(-1)?.[3] as { constraints: { __where: unknown[] }[] };
+  return options.constraints.map((c) => c.__where[0]);
+}
+
+describe('useEntityFiles — κάτοχος αρχείων (ADR-866 §5.2)', () => {
+  beforeEach(() => {
+    mockedSubscribe.mockClear();
+    mockedTrash.mockReset();
+  });
+
+  test('εταιρεία ⇒ ακροατής στο FILES με χειρόγραφο φίλτρο companyId', () => {
+    renderHook(() => useEntityFiles({
+      entityType: 'property', entityId: 'prop_1', custody: { companyId: 'comp_1' }, realtime: true,
+    }));
+
+    expect(mockedSubscribe.mock.calls.at(-1)?.[0]).toBe('FILES');
+    expect(whereFieldsOfLastSubscription()).toContain('companyId');
+  });
+
+  test('άνθρωπος ⇒ ακροατής στο FILES_PERSONAL, ΚΑΝΕΝΑ χειρόγραφο φίλτρο κατόχου (το βάζει η υπηρεσία)', () => {
+    renderHook(() => useEntityFiles({
+      entityType: 'property', entityId: 'prop_1', custody: { userId: 'uid_1' }, realtime: true,
+    }));
+
+    expect(mockedSubscribe.mock.calls.at(-1)?.[0]).toBe('FILES_PERSONAL');
+    const fields = whereFieldsOfLastSubscription();
+    expect(fields).not.toContain('companyId');
+    expect(fields).not.toContain('userId');
+  });
+
+  test('νέο αντικείμενο custody σε κάθε render ⇒ ο ακροατής ΔΕΝ ξαναστήνεται', () => {
+    const { rerender } = renderHook(() => useEntityFiles({
+      entityType: 'property', entityId: 'prop_1', custody: { userId: 'uid_1' }, realtime: true,
+    }));
+    rerender();
+    rerender();
+
+    expect(mockedSubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  test('κάδος: το διαμέρισμα το λέει το ΙΔΙΟ το αρχείο', async () => {
+    mockedGetFilesByEntity.mockResolvedValue([
+      makeFile('p1', { companyId: undefined, userId: 'uid_1' }),
+    ]);
+    const { result } = renderHook(() =>
+      useEntityFiles({ entityType: 'property', entityId: 'prop_1', custody: { userId: 'uid_1' } }),
+    );
+    await waitFor(() => expect(result.current.files).toHaveLength(1));
+
+    await act(async () => { await result.current.moveToTrash('p1', 'uid_1'); });
+
+    expect(mockedTrash).toHaveBeenCalledWith('p1', 'personal', 'uid_1');
+  });
+
+  test('αρχείο χωρίς ακριβώς έναν κάτοχο ⇒ άρνηση, καμία εγγραφή σε μαντεμένο διαμέρισμα', async () => {
+    mockedGetFilesByEntity.mockResolvedValue([
+      makeFile('x1', { companyId: 'comp_1', userId: 'uid_1' }),
+    ]);
+    const { result } = renderHook(() =>
+      useEntityFiles({ entityType: 'property', entityId: 'prop_1', custody: { companyId: 'comp_1' } }),
+    );
+    await waitFor(() => expect(result.current.files).toHaveLength(1));
+
+    await expect(result.current.moveToTrash('x1', 'uid_1')).rejects.toThrow('FILE_CUSTODY_UNKNOWN');
+    expect(mockedTrash).not.toHaveBeenCalled();
   });
 });

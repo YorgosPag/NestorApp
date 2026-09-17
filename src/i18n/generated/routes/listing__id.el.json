@@ -330,5 +330,14 @@
     "popup": {
       "open": "Δες το ακίνητο"
     }
+  },
+  "short-stay": {
+    "calendar": {
+      "heading": "Διαθεσιμότητα"
+    },
+    "terms": {
+      "maxGuests": "{count, plural, one {Έως # άτομο} other {Έως # άτομα}}",
+      "minNights": "Ελάχιστη διαμονή: {count, plural, one {# νύχτα} other {# νύχτες}}"
+    }
   }
 }

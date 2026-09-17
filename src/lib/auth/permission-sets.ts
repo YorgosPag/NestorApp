@@ -91,7 +91,10 @@ export const PERMISSION_SETS: Record<string, PermissionSetDefinition> = {
       'legal:grants:view',
       'legal:grants:create',
       'legal:grants:revoke',
-      'legal:contracts:view'
+      'legal:contracts:view',
+      // ADR-864 §21 — δεσμεύσεις διατήρησης (αρχεία + αποδεικτικά): δουλειά του νομικού ρόλου,
+      // όπως το «eDiscovery Manager» του Purview / «Manage Holds» του Vault.
+      'legal:holds:manage'
     ],
     requiresMfaEnrolled: true  // Sensitive operations
   },

@@ -180,8 +180,8 @@ export function LinkToBuildingModal({
 
       // Execute link/unlink operations
       const operations: Promise<void>[] = [
-        ...toAdd.map(id => linkFileToEntityWithPolicy(file.id, 'building', id)),
-        ...toRemove.map(id => unlinkFileFromEntityWithPolicy(file.id, 'building', id)),
+        ...toAdd.map(id => linkFileToEntityWithPolicy(file.id, 'company', 'building', id)),
+        ...toRemove.map(id => unlinkFileFromEntityWithPolicy(file.id, 'company', 'building', id)),
       ];
 
       await Promise.all(operations);

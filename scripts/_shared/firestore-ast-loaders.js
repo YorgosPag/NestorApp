@@ -112,27 +112,34 @@ function extractFallbackString(expr) {
  * @returns {Map<string, string>}
  */
 function loadStringRecord(file, varName) {
-  const sf = parseFile(file);
   /** @type {Map<string, string>} */
   const map = new Map();
+  for (const prop of recordPropertiesOf(parseFile(file), varName)) {
+    const value = extractFallbackString(prop.initializer);
+    if (value !== null) map.set(prop.name.getText(), value);
+  }
+  return map;
+}
 
-  /** @param {ts.Node} node */
-  function visit(node) {
+/**
+ * Οι `KEY: τιμή` ιδιότητες του object literal `const <varName> = { … }` (με ή χωρίς `as const`)
+ * — η ΜΙΑ διάσχιση που μοιράζονται όλοι οι κατάλογοι αυτού του module.
+ *
+ * @param {ts.SourceFile} sf
+ * @param {string} varName
+ * @returns {ts.PropertyAssignment[]}
+ */
+function recordPropertiesOf(sf, varName) {
+  /** @type {ts.PropertyAssignment[]} */
+  const props = [];
+  (function visit(node) {
     if (ts.isVariableDeclaration(node) && node.name.getText() === varName && node.initializer) {
       const obj = unwrapAsExpression(node.initializer);
-      if (obj && ts.isObjectLiteralExpression(obj)) {
-        for (const prop of obj.properties) {
-          if (!ts.isPropertyAssignment(prop)) continue;
-          const value = extractFallbackString(prop.initializer);
-          if (value !== null) map.set(prop.name.getText(), value);
-        }
-      }
+      if (obj && ts.isObjectLiteralExpression(obj)) props.push(...obj.properties.filter(ts.isPropertyAssignment));
     }
     ts.forEachChild(node, visit);
-  }
-
-  visit(sf);
-  return map;
+  })(sf);
+  return props;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,34 +188,20 @@ function loadFieldConstants() {
  * @returns {Map<string, {mode: string, fieldName: string}>}
  */
 function loadTenantOverrides() {
-  const sf = parseFile(TENANT_CONFIG_FILE);
   /** @type {Map<string, {mode: string, fieldName: string}>} */
   const map = new Map();
-
-  /** @param {ts.Node} node */
-  function visit(node) {
-    if (ts.isVariableDeclaration(node) && node.name.getText() === 'TENANT_OVERRIDES' && node.initializer) {
-      const obj = unwrapAsExpression(node.initializer);
-      if (obj && ts.isObjectLiteralExpression(obj)) {
-        for (const prop of obj.properties) {
-          if (!ts.isPropertyAssignment(prop)) continue;
-          if (!ts.isObjectLiteralExpression(prop.initializer)) continue;
-          const entry = { ...DEFAULT_TENANT_CONFIG };
-          for (const sub of prop.initializer.properties) {
-            if (!ts.isPropertyAssignment(sub)) continue;
-            if (!ts.isStringLiteral(sub.initializer)) continue;
-            const key = sub.name.getText();
-            if (key === 'mode') entry.mode = sub.initializer.text;
-            else if (key === 'fieldName') entry.fieldName = sub.initializer.text;
-          }
-          map.set(prop.name.getText(), entry);
-        }
-      }
+  for (const prop of recordPropertiesOf(parseFile(TENANT_CONFIG_FILE), 'TENANT_OVERRIDES')) {
+    if (!ts.isObjectLiteralExpression(prop.initializer)) continue;
+    const entry = { ...DEFAULT_TENANT_CONFIG };
+    for (const sub of prop.initializer.properties) {
+      if (!ts.isPropertyAssignment(sub)) continue;
+      if (!ts.isStringLiteral(sub.initializer)) continue;
+      const key = sub.name.getText();
+      if (key === 'mode') entry.mode = sub.initializer.text;
+      else if (key === 'fieldName') entry.fieldName = sub.initializer.text;
     }
-    ts.forEachChild(node, visit);
+    map.set(prop.name.getText(), entry);
   }
-
-  visit(sf);
   return map;
 }
 
@@ -226,25 +219,11 @@ function loadReadPathFields() {
   /** @type {Map<string, string[]>} */
   const map = new Map();
   if (!fs.existsSync(READ_SCOPE_CONFIG_FILE)) return map;
-  const sf = parseFile(READ_SCOPE_CONFIG_FILE);
-
-  /** @param {ts.Node} node */
-  function visit(node) {
-    if (ts.isVariableDeclaration(node) && node.name.getText() === 'READ_PATH_FIELDS' && node.initializer) {
-      const obj = unwrapAsExpression(node.initializer);
-      if (obj && ts.isObjectLiteralExpression(obj)) {
-        for (const prop of obj.properties) {
-          if (!ts.isPropertyAssignment(prop)) continue;
-          const arr = unwrapAsExpression(prop.initializer);
-          if (!arr || !ts.isArrayLiteralExpression(arr)) continue;
-          map.set(prop.name.getText(), arr.elements.filter(ts.isStringLiteral).map((e) => e.text));
-        }
-      }
-    }
-    ts.forEachChild(node, visit);
+  for (const prop of recordPropertiesOf(parseFile(READ_SCOPE_CONFIG_FILE), 'READ_PATH_FIELDS')) {
+    const arr = unwrapAsExpression(prop.initializer);
+    if (!arr || !ts.isArrayLiteralExpression(arr)) continue;
+    map.set(prop.name.getText(), arr.elements.filter(ts.isStringLiteral).map((e) => e.text));
   }
-
-  visit(sf);
   return map;
 }
 
@@ -269,22 +248,24 @@ function resolveTenantFor(overrides, collectionKey) {
  * 🔴 Χωρίς αυτό ο έλεγχος είναι **τυφλός στο κυρίαρχο idiom του έργου** (βλ. header).
  *
  * @param {ts.SourceFile} sf
- * @returns {Map<string, string>} τοπικό όνομα → CollectionKey
+ * @param {Map<string, string[]>|null} [partitionAlias] από {@link buildPartitionAliasMap}
+ * @returns {Map<string, string|string[]>} τοπικό όνομα → CollectionKey (ή ένα ανά κλάδο διαμερίσματος)
  */
-function buildCollectionAliasMap(sf) {
-  /** @type {Map<string, string>} */
+function buildCollectionAliasMap(sf, partitionAlias = null) {
+  /** @type {Map<string, string|string[]>} */
   const alias = new Map();
 
   /** @param {ts.Node} n */
   function scan(n) {
-    if (
-      ts.isVariableDeclaration(n) &&
-      ts.isIdentifier(n.name) &&
-      n.initializer &&
-      ts.isPropertyAccessExpression(n.initializer) &&
-      /COLLECTIONS$/.test(n.initializer.expression.getText())
-    ) {
-      alias.set(n.name.text, n.initializer.name.getText());
+    const init = ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) ? n.initializer : undefined;
+    if (init && /COLLECTIONS$/.test(ts.isPropertyAccessExpression(init) || ts.isElementAccessExpression(init) ? init.expression.getText() : '')) {
+      if (ts.isPropertyAccessExpression(init)) {
+        alias.set(n.name.text, init.name.getText());
+      } else {
+        // ADR-866 §2.6.7 — `const c = COLLECTIONS[X[kind]]`: ένα όνομα, ένας κλάδος ανά κάτοχο.
+        const keys = resolvePartitionKeys(init.argumentExpression, partitionAlias);
+        if (keys) alias.set(n.name.text, keys);
+      }
     }
     ts.forEachChild(n, scan);
   }
@@ -303,7 +284,21 @@ function buildCollectionAliasMap(sf) {
  * @returns {{key: string|null, name: string|null}|null} `null` ⇒ δεν αναγνωρίστηκε καθόλου
  */
 function resolveCollectionArg(expr, alias, collectionsMap) {
-  if (!expr) return null;
+  return resolveCollectionArgs(expr, alias, collectionsMap, null)[0] || null;
+}
+
+/**
+ * **Η ΜΙΑ υλοποίηση** — με κλάδους: `COLLECTIONS[X[kind]]` ⇒ μία απάντηση ανά κλάδο
+ * διαμερίσματος (ADR-866 §2.6.7). Κενό ⇒ δεν αναγνωρίστηκε.
+ *
+ * @param {ts.Expression|undefined} expr
+ * @param {Map<string, string>} alias
+ * @param {Map<string, string>} collectionsMap
+ * @param {Map<string, string[]>|null} partitionAlias από {@link buildPartitionAliasMap}
+ * @returns {{key: string|null, name: string|null}[]}
+ */
+function resolveCollectionArgs(expr, alias, collectionsMap, partitionAlias) {
+  if (!expr) return [];
 
   // 🔑 Ξετύλιξε το `.withConverter(conv)`: το `collection(db, X).withConverter(c)` κρύβει τη
   // συλλογή μέσα στην **έκφραση** της πρόσβασης ιδιότητας, ενώ ο σαρωτής κοιτά τα ορίσματα
@@ -317,31 +312,37 @@ function resolveCollectionArg(expr, alias, collectionsMap) {
     ts.isPropertyAccessExpression(expr.expression) &&
     expr.expression.name.getText() === 'withConverter'
   ) {
-    return resolveCollectionArg(expr.expression.expression, alias, collectionsMap);
+    return resolveCollectionArgs(expr.expression.expression, alias, collectionsMap, partitionAlias);
   }
 
   // `collection(db, X)` / `getCol(X, conv)` — η συλλογή είναι ένα από τα ορίσματα.
   if (ts.isCallExpression(expr)) {
     for (const a of expr.arguments) {
-      const r = resolveCollectionArg(a, alias, collectionsMap);
-      if (r) return r;
+      const r = resolveCollectionArgs(a, alias, collectionsMap, partitionAlias);
+      if (r.length > 0) return r;
     }
-    return null;
+    return [];
   }
 
-  if (ts.isStringLiteral(expr)) return { key: null, name: expr.text };
+  if (ts.isStringLiteral(expr)) return [{ key: null, name: expr.text }];
+
+  /** @param {string} key */
+  const byKey = (key) => ({ key, name: collectionsMap.get(key) || null });
 
   if (ts.isPropertyAccessExpression(expr) && /COLLECTIONS$/.test(expr.expression.getText())) {
-    const key = expr.name.getText();
-    return { key, name: collectionsMap.get(key) || null };
+    return [byKey(expr.name.getText())];
+  }
+
+  // `COLLECTIONS[X[kind]]` — διαμέρισμα κατόχου: ένας κλάδος ανά κάτοχο.
+  if (ts.isElementAccessExpression(expr) && /COLLECTIONS$/.test(expr.expression.getText())) {
+    return (resolvePartitionKeys(expr.argumentExpression, partitionAlias) || []).map(byKey);
   }
 
   if (ts.isIdentifier(expr) && alias && alias.has(expr.text)) {
-    const key = alias.get(expr.text);
-    return { key, name: collectionsMap.get(key) || null };
+    return [].concat(alias.get(expr.text)).map(byKey);
   }
 
-  return null;
+  return [];
 }
 
 /**
@@ -360,8 +361,150 @@ function resolveFieldArg(expr, fieldConstants) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Διαμερίσματα κατόχου — `X[kind]` (ADR-866 §2.6.7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Πού δηλώνονται τα διαμερίσματα. `src/lib` και όχι ολόκληρο το `src/`: το
+ * `CustodyPartition` είναι δήλωση **συστήματος** (ιστορικό, αρχεία), που ζει δίπλα στο
+ * πρωτογενές του — όχι σε οθόνη ή υπηρεσία.
+ */
+const CUSTODY_PARTITION_ROOT = path.join(PROJECT_ROOT, 'src', 'lib');
+
+/** Η σειρά των κλάδων — ίδια με το `CUSTODY_KINDS` του `lib/workspace/custody-scope.ts`. */
+const CUSTODY_KINDS = Object.freeze(['company', 'personal']);
+
+/** @type {Map<string, string[]>|null} */
+let partitionsCache = null;
+
+/** @param {string} dir @param {string[]} out */
+function collectTsFiles(dir, out) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== '__tests__' && entry.name !== 'node_modules') collectTsFiles(full, out);
+    } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+/**
+ * `const X = { company: 'A', personal: 'B' } as const satisfies CustodyPartition` → κλειδιά
+ * `['A','B']` με τη σειρά του {@link CUSTODY_KINDS}· `null` αν λείπει κλάδος.
+ *
+ * @param {ts.Expression} init
+ * @returns {string[]|null}
+ */
+function partitionKeysOf(init) {
+  if (!ts.isSatisfiesExpression(init) || init.type.getText() !== 'CustodyPartition') return null;
+  const obj = unwrapAsExpression(init.expression);
+  if (!obj || !ts.isObjectLiteralExpression(obj)) return null;
+  /** @type {Map<string, string>} */
+  const byKind = new Map();
+  for (const prop of obj.properties) {
+    if (ts.isPropertyAssignment(prop) && ts.isStringLiteral(prop.initializer)) {
+      byKind.set(prop.name.getText(), prop.initializer.text);
+    }
+  }
+  const keys = CUSTODY_KINDS.map((kind) => byKind.get(kind));
+  return keys.every(Boolean) ? keys : null;
+}
+
+/**
+ * **Κάθε δηλωμένο διαμέρισμα κατόχου**: όνομα σταθεράς → κλειδιά συλλογής ανά κλάδο.
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ένα σύστημα με δύο διαμερίσματα διαλέγει συλλογή με `X[kind]`
+ * (`AUDIT_LEDGER_COLLECTION[ledger]`). Οι πύλες 3.15/3.35 δέχονταν **μόνο** literal ⇒ το
+ * σημείο γινόταν `unanalyzable` και **δεν μετρούσε** — δηλαδή τα ερωτήματα του προσωπικού
+ * βιβλίου ιστορικού δεν ελέγχονταν ποτέ για δείκτη ή φίλτρο κατόχου. Με αυτόν τον κατάλογο το
+ * σημείο **διπλασιάζεται** σε έναν κλάδο ανά κάτοχο, και κάθε κλάδος κρίνεται όπως literal.
+ *
+ * 🔑 Ανακαλύπτεται από τον **τύπο** (`satisfies CustodyPartition`), όχι από μητρώο: νέο
+ * διαμέρισμα ελέγχεται χωρίς να θυμηθεί κανείς να το δηλώσει εδώ.
+ *
+ * @param {string} [root]
+ * @returns {Map<string, string[]>}
+ */
+function loadCustodyPartitions(root = CUSTODY_PARTITION_ROOT) {
+  // Μία ανακάλυψη ανά διεργασία για την πραγματική ρίζα (οι πύλες σαρώνουν εκατοντάδες αρχεία).
+  if (root === CUSTODY_PARTITION_ROOT && partitionsCache) return partitionsCache;
+  /** @type {Map<string, string[]>} */
+  const map = new Map();
+  if (root === CUSTODY_PARTITION_ROOT) partitionsCache = map;
+  for (const file of collectTsFiles(root, [])) {
+    const src = fs.readFileSync(file, 'utf8');
+    if (!src.includes('satisfies CustodyPartition')) continue;
+    const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
+    (function visit(node) {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+        const keys = partitionKeysOf(node.initializer);
+        if (keys) map.set(node.name.text, keys);
+      }
+      ts.forEachChild(node, visit);
+    })(sf);
+  }
+  return map;
+}
+
+/**
+ * Τοπικό όνομα → κλειδιά διαμερίσματος, **για ένα αρχείο** — με τα ψευδώνυμα εισαγωγής
+ * (`import { FILE_COLLECTION as FC }`).
+ *
+ * @param {ts.SourceFile} sf
+ * @param {Map<string, string[]>} partitions από {@link loadCustodyPartitions}
+ * @returns {Map<string, string[]>}
+ */
+function buildPartitionAliasMap(sf, partitions) {
+  /** @type {Map<string, string[]>} */
+  const local = new Map(partitions);
+  for (const stmt of sf.statements) {
+    const bindings = ts.isImportDeclaration(stmt) && stmt.importClause && stmt.importClause.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const el of bindings.elements) {
+      const imported = el.propertyName ? el.propertyName.getText() : null;
+      if (imported && partitions.has(imported)) local.set(el.name.getText(), partitions.get(imported));
+    }
+  }
+  return local;
+}
+
+/**
+ * `X[expr]` όπου `X` διαμέρισμα ⇒ τα **κλειδιά** όλων των κλάδων· αλλιώς `null`.
+ *
+ * @param {ts.Expression|undefined} expr
+ * @param {Map<string, string[]>} partitionAlias από {@link buildPartitionAliasMap}
+ * @returns {string[]|null}
+ */
+function resolvePartitionKeys(expr, partitionAlias) {
+  if (!expr || !partitionAlias || !ts.isElementAccessExpression(expr)) return null;
+  if (!ts.isIdentifier(expr.expression)) return null;
+  return partitionAlias.get(expr.expression.text) || null;
+}
+
+/**
+ * **Κλειδιά συλλογής** ενός ορίσματος `firestoreQueryService.*(KEY, …)`: literal ⇒ ένα·
+ * διαμέρισμα ⇒ ένα ανά κλάδο· δυναμικό ⇒ κενό (το σημείο μένει `unanalyzable`).
+ *
+ * @param {ts.Expression|undefined} expr
+ * @param {Map<string, string[]>} partitionAlias
+ * @returns {string[]}
+ */
+function resolveCollectionKeys(expr, partitionAlias) {
+  if (expr && ts.isStringLiteralLike(expr)) return [expr.text];
+  return resolvePartitionKeys(expr, partitionAlias) || [];
+}
+
 module.exports = {
   PROJECT_ROOT,
+  CUSTODY_PARTITION_ROOT,
+  loadCustodyPartitions,
+  buildPartitionAliasMap,
+  resolvePartitionKeys,
+  resolveCollectionKeys,
+  resolveCollectionArgs,
   COLLECTIONS_FILE,
   TENANT_CONFIG_FILE,
   FIELD_CONSTANTS_FILE,

@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { useListingMediaOrder } from '@/hooks/listings/useListingMediaOrder';
+import { companyReadCustodyOf } from '@/lib/files/file-custody';
 import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
 
 const NS = 'property-market';
@@ -87,7 +88,7 @@ export function ListingMediaOrderPanel({
   const { files } = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY,
     entityId: propertyId,
-    companyId,
+    custody: companyReadCustodyOf(companyId),
     realtime: true,
   });
 

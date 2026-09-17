@@ -22,26 +22,9 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { ListingMediaOrderPanel } from '@/components/listings/ListingMediaOrderPanel';
-import { useAuth } from '@/auth/contexts/AuthContext';
-import { useCompanyDisplayName } from '@/hooks/useCompanyDisplayName';
-import { useCompanyId } from '@/hooks/useCompanyId';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 import { DEFAULT_PHOTO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
-import '@/lib/design-system';
-
-// =============================================================================
-// PROPS
-// =============================================================================
-
-// 🏢 ENTERPRISE: Centralized Property Icon & Color
-const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
-const propertyColor = NAVIGATION_ENTITIES.property.color;
+import { usePropertyFilesTab } from './property-files-tab';
 
 interface PhotosTabProps {
   selectedProperty: Property | null;
@@ -63,57 +46,20 @@ interface PhotosTabProps {
 export function PhotosTab({
   selectedProperty,
 }: PhotosTabProps) {
-  const { user } = useAuth();
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
+  const { identity, companyId, fallback } = usePropertyFilesTab(selectedProperty, 'photos');
 
-  // Get companyId and userId from auth context
-  const companyId = useCompanyId()?.companyId;
-  const currentUserId = user?.uid;
-
-  // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
-  // Ena hook, mia apantisi — des ti simeiwsi sto `FloorPlanTab`.
-  const companyDisplayName = useCompanyDisplayName(companyId);
-
-
-  // If no unit selected, show placeholder
-  if (!selectedProperty) {
-    return (
-      <div className={cn("flex flex-col items-center justify-center h-full text-center p-8", colors.text.muted)}>
-        <PropertyIcon className={`${iconSizes['2xl']} ${propertyColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('photos.selectProperty')}</h3>
-        <p className="text-sm max-w-sm">
-          {t('photos.selectUnitDescription')}
-        </p>
-      </div>
-    );
-  }
-
-  // If no companyId or userId, show auth placeholder
-  if (!companyId || !currentUserId) {
-    return (
-      <section className={cn("p-6 text-center", colors.text.muted)}>
-        <p>{t('photos.noAuth')}</p>
-      </section>
-    );
-  }
+  if (!identity || !selectedProperty || !companyId) return fallback;
 
   return (
     <>
       <EntityFilesManager
-        companyId={companyId}
-        currentUserId={currentUserId}
-        entityType={ENTITY_TYPES.PROPERTY}
-        entityId={String(selectedProperty.id)}
-        entityLabel={selectedProperty.name || t('unitFallbackLabel', { id: selectedProperty.id })}
+        {...identity}
         domain="sales"
         category="photos"
         purpose="photo"
         entryPointCategoryFilter="photos"
         displayStyle="media-gallery"
         acceptedTypes={DEFAULT_PHOTO_ACCEPT}
-        companyName={companyDisplayName}
       />
 
       {/*

@@ -125,7 +125,7 @@ async function readFreshness(
 ): Promise<readonly PublishedModelState[]> {
   try {
     const models = await FileRecordService.getFilesByEntity('property', propertyId, {
-      companyId,
+      custody: { companyId },
       category: FILE_CATEGORIES.MODELS,
     });
 

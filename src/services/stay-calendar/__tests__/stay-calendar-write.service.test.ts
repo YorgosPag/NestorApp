@@ -16,6 +16,7 @@ import { offerOf, validOwnerProperty } from '@/lib/owner-property/__tests__/owne
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { readStayCalendarView } from '@/services/stay-calendar/stay-calendar-read.service';
 import { executeStayCalendarCommand } from '@/services/stay-calendar/stay-calendar-write.service';
+import { STAY_RULES_NONE } from '@/types/stay-rules';
 
 const mockRecordChange = jest.fn();
 jest.mock('@/services/entity-audit.service', () => ({
@@ -27,6 +28,7 @@ jest.mock('@/services/enterprise-id.service', () => ({
   enterpriseIdService: {
     generateStayBlockId: () => `sblk_${++sequence}`,
     generateStayBookingId: () => `stay_${++sequence}`,
+    generateDeterministicStayCalendarMonthId: (propertyId: string, month: string) => `scmo_${propertyId}_${month}`,
   },
 }));
 
@@ -46,7 +48,7 @@ const run = (command: StayCalendarCommand, actor: ListingActor = OWNER) =>
 
 const block = (from: string, to: string): StayCalendarCommand => ({ action: 'block', from, to, note: null });
 const book = (checkIn: string, checkOut: string): StayCalendarCommand => ({
-  action: 'book', checkIn, checkOut, guests: 2, guestLabel: 'κ. Παπαδόπουλος',
+  action: 'book', checkIn, checkOut, guests: 2, guestLabel: 'κ. Παπαδόπουλος', acknowledgedWarnings: [],
 });
 
 beforeEach(() => {
@@ -178,5 +180,91 @@ describe('Δ — δήλωση, άνοιγμα, ίχνος', () => {
     const [entry] = mockRecordChange.mock.calls[0] as [{ entityType: string; changes: unknown[] }];
     expect(entry.entityType).toBe('owner_property');
     expect(JSON.stringify(entry.changes)).not.toContain('Παπαδόπουλος');
+  });
+});
+
+// =============================================================================
+// Ρ — ΚΑΝΟΝΕΣ (ADR-835 §21, Στάδιο Β)
+// =============================================================================
+
+const WINDOW = { from: '2027-10-01', to: '2027-11-01' };
+const restrict = (from: string, to: string, set: object, clear: string[] = []) =>
+  ({ action: 'restrict', from, to, set, clear }) as StayCalendarCommand;
+
+describe('Ρ — κανόνες βάσης και ανά ημερομηνία', () => {
+  it('Ρ1. οι κανόνες βάσης γράφονται στην κεφαλή με version+1 και επιστρέφουν στην οθόνη', async () => {
+    givenStay();
+    const rules = { ...STAY_RULES_NONE, maxNights: 14, preparationNights: 1 as const };
+    expect(await run({ action: 'rules', rules })).toMatchObject({ kind: 'ok', version: 1 });
+    const view = await readStayCalendarView(adminDb, PROPERTY, OWNER, WINDOW);
+    expect(view).toMatchObject({ kind: 'readable', version: 1, rules });
+  });
+
+  it('Ρ2. ρύθμιση ημερών γράφει ΕΝΑ έγγραφο ανά μήνα· το «καθάρισε» σβήνει τον άδειο μήνα', async () => {
+    givenStay();
+    await run(restrict('2027-10-30', '2027-11-02', { nightlyRateMinor: 12000, closedToArrival: true }));
+    expect(db.all(COLLECTIONS.STAY_CALENDAR_MONTHS)).toHaveLength(2);
+    await run(restrict('2027-11-01', '2027-11-02', {}, ['nightlyRateMinor', 'closedToArrival']));
+    expect(db.all(COLLECTIONS.STAY_CALENDAR_MONTHS)).toHaveLength(1);
+    const view = await readStayCalendarView(adminDb, PROPERTY, OWNER, WINDOW);
+    expect(view.kind === 'readable' && view.days).toEqual({
+      '2027-10-30': { closedToArrival: true, nightlyRateMinor: 12000 },
+      '2027-10-31': { closedToArrival: true, nightlyRateMinor: 12000 },
+    });
+  });
+
+  it('Ρ3. αντίφαση (ελάχιστες > μέγιστες) ⇒ contradictory-rules, ΤΙΠΟΤΑ δεν γράφεται', async () => {
+    givenStay();
+    await run(restrict('2027-10-10', '2027-10-12', { maxNights: 2 }));
+    expect(await run(restrict('2027-10-11', '2027-10-13', { minNights: 5 }))).toEqual({
+      kind: 'contradictory-rules', date: '2027-10-11',
+    });
+    const view = await readStayCalendarView(adminDb, PROPERTY, OWNER, WINDOW);
+    expect(view).toMatchObject({ kind: 'readable', version: 1 });
+  });
+
+  it('Ρ4. ακίνητο χωρίς βραχυχρόνια ⇒ not-a-stay και για κανόνες', async () => {
+    givenStay([offerOf('sell', 210_000)]);
+    expect(await run(restrict('2027-10-10', '2027-10-12', { minNights: 2 }))).toEqual({ kind: 'not-a-stay' });
+    expect(await run({ action: 'rules', rules: STAY_RULES_NONE })).toEqual({ kind: 'not-a-stay' });
+  });
+
+  it('Ρ5. αδιάβαστος μήνας ⇒ unreadable, ΠΟΤΕ «κανένας κανόνας»', async () => {
+    givenStay();
+    db.seed(COLLECTIONS.STAY_CALENDAR_MONTHS, 'scmo_broken', {
+      propertyId: PROPERTY, authorUserId: 'user-1', month: '2027-10', days: { '2027-10-10': { minNights: 0 } },
+      updatedAt: '2027-01-01T00:00:00.000Z',
+    });
+    expect(await run(block('2027-11-01', '2027-11-03'))).toEqual({ kind: 'unreadable' });
+  });
+});
+
+describe('Π — η χειροκίνητη κράτηση προειδοποιεί, ΔΕΝ σιωπά', () => {
+  it('🏆 Π1. κάτω από τις ελάχιστες της ημέρας ⇒ rules-unacknowledged, και με αποδοχή περνά (στο ίχνος)', async () => {
+    givenStay();
+    await run(restrict('2027-10-10', '2027-10-11', { minNights: 3 }));
+    expect(await run(book('2027-10-10', '2027-10-12'))).toEqual({
+      kind: 'rules-unacknowledged', warnings: ['below-min-nights'],
+    });
+    expect(db.all(COLLECTIONS.STAY_BOOKINGS)).toHaveLength(0);
+    const accepted = { ...book('2027-10-10', '2027-10-12'), acknowledgedWarnings: ['below-min-nights'] } as StayCalendarCommand;
+    expect((await run(accepted)).kind).toBe('ok');
+    expect(JSON.stringify(mockRecordChange.mock.calls.at(-1))).toContain('acknowledged: below-min-nights');
+  });
+
+  it('🔴 Π2. νύχτα προετοιμασίας ⇒ προειδοποίηση· ΕΠΙΚΑΛΥΨΗ ⇒ σκληρή άρνηση ακόμη και με αποδοχή', async () => {
+    givenStay();
+    await run({ action: 'rules', rules: { ...STAY_RULES_NONE, preparationNights: 1 } });
+    await run(book('2027-10-10', '2027-10-14'));
+    expect(await run(book('2027-10-14', '2027-10-16'))).toEqual({
+      kind: 'rules-unacknowledged', warnings: ['preparation'],
+    });
+    const overlap = { ...book('2027-10-12', '2027-10-16'), acknowledgedWarnings: ['preparation'] } as StayCalendarCommand;
+    expect((await run(overlap)).kind).toBe('conflict');
+  });
+
+  it('🔴 Π3. χωρίς κανόνες καμία προειδοποίηση — ο παρονομαστής', async () => {
+    givenStay();
+    expect((await run(book('2027-10-10', '2027-10-11'))).kind).toBe('ok');
   });
 });

@@ -21,7 +21,7 @@
  * <EntityFilesManager
  *   entityType="contact"
  *   entityId="contact_123"
- *   companyId="company_xyz"
+ *   custody={{ companyId: "company_xyz" }}
  *   domain="admin"
  *   category="photos"
  *   currentUserId="user_abc"
@@ -32,8 +32,7 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-import React, { useCallback, useState, useMemo } from 'react';
-import { normalizeForSearch } from '@/utils/greek-text';
+import React, { useCallback, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
@@ -46,7 +45,6 @@ import type { FileRecord } from '@/types/file-record';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
-import { FileRecordService } from '@/services/file-record.service';
 import { syncPropertyCoverageForRemainingFiles } from '@/services/property/property-file-mutation-gateway';
 import {
   buildPropertyFileBatchDeletePreview,
@@ -55,6 +53,7 @@ import {
 } from '@/services/property/property-file-mutation-preview';
 import { unlinkFileFromEntityWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { fileCustodyKindOf, type FileCustody } from '@/lib/files/file-custody';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 // Hooks
@@ -64,6 +63,8 @@ import { useFileAudit } from './hooks/useFileAudit';
 import { useFloorplanAutoProcess } from './hooks/useFloorplanAutoProcess';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useFileDownload } from './hooks/useFileDownload';
+import { useEntityFilesSearch } from './hooks/useEntityFilesSearch';
+import { useStableFileCustody } from './hooks/useStableFileCustody';
 
 // Components
 import { EntityFilesToolbar } from './EntityFilesToolbar';
@@ -77,7 +78,11 @@ import { LinkToBuildingModal } from './LinkToBuildingModal';
 export interface EntityFilesManagerProps {
   entityType: EntityType;
   entityId: string;
-  companyId: string;
+  /**
+   * **Ποιος κατέχει τα αρχεία** (ADR-866 §5.2) — εταιρεία `{ companyId }` ή άνθρωπος `{ userId }`.
+   * Ορίζει ρίζα Storage, διαμέρισμα Firestore, φίλτρο κατόχου **και** ποιες ενέργειες γραφείου φαίνονται.
+   */
+  custody: FileCustody;
   domain: FileDomain;
   category: FileCategory;
   currentUserId: string;
@@ -113,7 +118,7 @@ export interface EntityFilesManagerProps {
 export function EntityFilesManager({
   entityType,
   entityId,
-  companyId,
+  custody: custodyProp,
   domain,
   category,
   currentUserId,
@@ -141,6 +146,9 @@ export function EntityFilesManager({
   const { t } = useTranslation(['files', 'files-media']);
   const { activeWorkspace } = useWorkspace();
   const fullscreen = useFullscreen();
+  const custody = useStableFileCustody(custodyProp);
+  // Ενέργειες ΓΡΑΦΕΙΟΥ (AI/διαβάθμιση/αρχειοθέτηση/ZIP) κρυμμένες για προσωπικό κάτοχο — §2.6.8 Β6.
+  const officeActions = custody?.userId === undefined;
 
   // =========================================================================
   // UI STATE
@@ -173,7 +181,7 @@ export function EntityFilesManager({
   } = useEntityFiles({
     entityType,
     entityId,
-    companyId,
+    custody,
     domain: fetchAllDomains ? undefined : domain,
     category: fetchAllDomains ? undefined : category,
     purpose: fetchAllDomains ? undefined : purpose,
@@ -185,31 +193,7 @@ export function EntityFilesManager({
   // =========================================================================
   // FILE FILTERING
   // =========================================================================
-  const filteredFiles = useMemo(() => {
-    if (!searchTerm.trim()) return files;
-
-    const raw = searchTerm.trim();
-    const extMatch = raw.match(/^\*\.(\w+)$/);
-    if (extMatch) {
-      const ext = extMatch[1].toLowerCase();
-      return files.filter(f =>
-        (f.originalFilename ?? '').toLowerCase().endsWith(`.${ext}`) ||
-        (f.displayName ?? '').toLowerCase().endsWith(`.${ext}`) ||
-        f.ext?.toLowerCase() === ext
-      );
-    }
-
-    const norm = (s?: string | null) => (s ? normalizeForSearch(s) : '');
-    const query = norm(raw);
-
-    return files.filter((file) => {
-      const searchableFields = [
-        file.displayName, file.originalFilename,
-        file.category, file.domain, file.purpose, file.description,
-      ].filter(Boolean);
-      return searchableFields.some((field) => norm(field).includes(query));
-    });
-  }, [files, searchTerm]);
+  const filteredFiles = useEntityFilesSearch(files, searchTerm);
 
   // =========================================================================
   // EXTRACTED HOOKS
@@ -223,7 +207,7 @@ export function EntityFilesManager({
   });
 
   const { handleUpload, handleCapture, uploading } = useFileUpload({
-    companyId, projectId, entityType, entityId,
+    custody, projectId, entityType, entityId,
     domain, category, entityLabel, purpose, levelFloorId, currentUserId,
     selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete: () => {
@@ -304,7 +288,10 @@ export function EntityFilesManager({
         }
       }
     }
-    await unlinkFileFromEntityWithPolicy(fileId, entityType, entityId);
+    // ADR-866 §2.6.8 Β4 — το διαμέρισμα το αποδεικνύει το ΙΔΙΟ το έγγραφο.
+    const fileCustody = fileCustodyKindOf(file);
+    if (fileCustody === null) return;
+    await unlinkFileFromEntityWithPolicy(fileId, fileCustody, entityType, entityId);
     recordFileActivity('unlinked', 'file_unlink', name, null, t('audit.fileUnlink'));
     await refetch();
   }, [category, confirm, entityId, entityType, files, getFileName, recordFileActivity, refetch, t]);
@@ -460,14 +447,14 @@ export function EntityFilesManager({
             selectAll,
             clearSelection,
             onBatchDelete: handleBatchDelete,
-            onBatchDownload: handleBatchDownload,
-            onBatchClassify: handleBatchClassify,
-            onAIClassify: handleAIClassify,
+            onBatchDownload: officeActions ? handleBatchDownload : undefined,
+            onBatchClassify: officeActions ? handleBatchClassify : undefined,
+            onAIClassify: officeActions ? handleAIClassify : undefined,
             aiClassifying,
-            onBatchArchive: handleBatchArchive,
+            onBatchArchive: officeActions ? handleBatchArchive : undefined,
           }}
           totalStorageBytes={totalStorageBytes}
-          companyId={companyId}
+          custody={custody}
           entityId={entityId}
           onRestore={(fileId: string) => {
             recordFileActivity('updated', 'file_restore', null, fileId, t('audit.fileRestore'));

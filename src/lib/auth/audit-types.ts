@@ -137,7 +137,6 @@ export interface AuditMetadata {
   reason?: string;
   filesRestored?: number;
   filesCascaded?: number;
-  filesSkipped?: number;
 }
 
 /** Complete audit log entry. */

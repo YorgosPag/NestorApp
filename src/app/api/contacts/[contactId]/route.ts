@@ -10,7 +10,6 @@ import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   FILE_LIFECYCLE_STATES,
-  HOLD_TYPES,
   TRASH_RETENTION_BY_CATEGORY,
   DEFAULT_RETENTION_POLICIES,
   type FileCategory,
@@ -143,7 +142,7 @@ async function cascadeContactFilesToTrash(
   contactId: string,
   companyId: string,
   trashedBy: string,
-): Promise<{ trashed: number; skipped: number }> {
+): Promise<{ trashed: number }> {
   const filesSnap = await db
     .collection(COLLECTIONS.FILES)
     .where('companyId', '==', companyId)
@@ -152,21 +151,17 @@ async function cascadeContactFilesToTrash(
     .where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE)
     .get();
 
-  if (filesSnap.empty) return { trashed: 0, skipped: 0 };
+  if (filesSnap.empty) return { trashed: 0 };
 
   let trashed = 0;
-  let skipped = 0;
   let batch = db.batch();
   let batchCount = 0;
 
   for (const fileDoc of filesSnap.docs) {
     const data = fileDoc.data();
 
-    if (data.hold && data.hold !== HOLD_TYPES.NONE) {
-      logger.warn('Cascade trash: skipping file on hold', { fileId: fileDoc.id, hold: data.hold });
-      skipped++;
-      continue;
-    }
+    // 🔑 ADR-864 §21 — σιωπηλή δέσμευση: και το αρχείο σε δέσμευση πάει στον κάδο μαζί με την
+    //    επαφή· η ΟΡΙΣΤΙΚΗ διαγραφή του αρνείται (κριτής purge · κανόνες · GCS `temporaryHold`).
 
     const retentionDays =
       TRASH_RETENTION_BY_CATEGORY[data.category as FileCategory] ??
@@ -197,15 +192,14 @@ async function cascadeContactFilesToTrash(
 
   if (batchCount > 0) await batch.commit();
 
-  logger.info('Cascade trash complete', { contactId, trashed, skipped });
-  return { trashed, skipped };
+  logger.info('Cascade trash complete', { contactId, trashed });
+  return { trashed };
 }
 
 interface ContactDeleteResponse {
   contactId: string;
   deleted: boolean;
   filesCascaded: number;
-  filesSkipped: number;
 }
 
 export async function DELETE(
@@ -232,18 +226,18 @@ export async function DELETE(
       await softDelete(adminDb, 'contact', contactId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
       // Cascade: move all active contact files to trash
-      const { trashed: filesCascaded, skipped: filesSkipped } =
+      const { trashed: filesCascaded } =
         await cascadeContactFilesToTrash(adminDb, contactId, ctx.companyId, ctx.uid);
 
-      logger.info('Contact moved to trash', { contactId, email: ctx.email, filesCascaded, filesSkipped });
+      logger.info('Contact moved to trash', { contactId, email: ctx.email, filesCascaded });
 
       await logAuditEvent(ctx, 'soft_deleted', 'contact', 'api', {
         newValue: { type: 'status', value: { contactId } },
-        metadata: { reason: 'Contact moved to trash via API', filesCascaded, filesSkipped },
+        metadata: { reason: 'Contact moved to trash via API', filesCascaded },
       });
 
       return apiSuccess<ContactDeleteResponse>(
-        { contactId, deleted: true, filesCascaded, filesSkipped },
+        { contactId, deleted: true, filesCascaded },
         'Contact moved to trash'
       );
     },

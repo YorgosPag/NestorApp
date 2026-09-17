@@ -14,6 +14,7 @@
  */
 
 import { intervalsOverlap } from '@/lib/date-local';
+import type { StayDayRule, StayDayRules, StayRules } from '@/types/stay-rules';
 import type { StayBookingChannel, StayBookingLifecycle } from '@/types/stay-booking';
 import { stayEntryOccupies, type StayBlockSource, type StayCalendarEntry } from '@/types/stay-calendar';
 
@@ -51,6 +52,10 @@ export type StayCalendarView =
       readonly declaredAt: string | null;
       readonly version: number;
       readonly entries: readonly StayCalendarEntryView[];
+      /** Οι κανόνες βάσης (Στάδιο Β). */
+      readonly rules: StayRules;
+      /** Οι υπερβάσεις ανά ημερομηνία **μέσα στο παράθυρο** της οθόνης. */
+      readonly days: StayDayRules;
     }
   | { readonly kind: 'unreadable' };
 
@@ -87,4 +92,13 @@ export function stayEntriesWithin(
   return entries
     .filter((entry) => intervalsOverlap(entry.from, entry.to, windowFrom, windowTo) !== false)
     .sort((a, b) => (a.from === b.from ? a.id.localeCompare(b.id) : a.from < b.from ? -1 : 1));
+}
+
+/** Οι υπερβάσεις ημερών μέσα στο `[windowFrom, windowTo)` — η οθόνη δεν χρειάζεται τις υπόλοιπες. */
+export function stayDaysWithin(days: StayDayRules, windowFrom: string, windowTo: string): StayDayRules {
+  const within: Record<string, StayDayRule> = {};
+  for (const [date, rule] of Object.entries(days)) {
+    if (date >= windowFrom && date < windowTo) within[date] = rule;
+  }
+  return within;
 }

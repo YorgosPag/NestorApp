@@ -1,39 +1,34 @@
 'use client';
 
 /**
- * **Το μηνιαίο πλέγμα νυχτών** — ARIA grid με πλοήγηση πληκτρολογίου.
+ * **Το μηνιαίο πλέγμα νυχτών του οικοδεσπότη** — πάνω στον κοινό σκελετό `StayMonthGridFrame`.
  *
  * 🔑 **Κάθε κατάσταση έχει ΣΧΗΜΑ, όχι μόνο χρώμα** (WCAG 1.4.1, CHECK 3.41): κλειστή =
- * λουκέτο, άλλο κανάλι = σύνδεσμος, κράτηση = άνθρωπος, επιλογή = περίγραμμα. Το
- * `aria-label` κάθε κελιού λέει την κατάσταση με λέξεις.
+ * λουκέτο, άλλο κανάλι = σύνδεσμος, κράτηση = άνθρωπος, επιλογή = περίγραμμα, «όχι άφιξη» /
+ * «όχι αναχώρηση» = πόρτα εισόδου / εξόδου (Στάδιο Β). Το `aria-label` τα λέει με λέξεις.
  *
- * ⌨️ Βέλη = μετακίνηση · Shift+βέλη = επέκταση επιλογής · Enter/Space = αρχή ή τέλος
- * επιλογής. Ένα κελί μόνο είναι στη σειρά Tab (roving tabindex). Ο καθαρισμός γίνεται από
- * το ορατό κουμπί του πάνελ — ⚠️ ΟΧΙ με Escape: η κλίμακα Escape έχει ΕΝΑΝ ιδιοκτήτη
- * (`escape-command-bus`, ADR-364, CHECK 3.7), και ένα τοπικό `key === 'Escape'` θα ήταν
- * δεύτερος.
+ * 💶 **Η τιμή της νύχτας στο κελί** (Στάδιο Β) — υπέρβαση ημέρας ή τιμή της αγγελίας, από
+ * τον ΕΝΑ επιλυτή (`nightlyRateOn`). Η υπέρβαση φαίνεται **έντονη**, ώστε ο οικοδεσπότης να
+ * ξεχωρίζει τι όρισε ο ίδιος από τη βάση.
  *
- * @related ADR-835 §20 (Στάδιο Α) · lib/stay/stay-calendar-month.ts
+ * @related ADR-835 §20 · §21 · components/stay-calendar/StayMonthGridFrame.tsx
  */
 
 import React from 'react';
-import { Link2, Lock, UserRound } from 'lucide-react';
+import { Link2, Lock, LogIn, LogOut, UserRound } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { addDaysToDateKey } from '@/lib/calendar/date-key';
-import { formatCalendarDay, formatIsoWeekday } from '@/lib/intl-formatting';
-import {
-  monthGrid,
-  monthKeyOf,
-  nightStateOf,
-  type StayNightSelection,
-  type StayNightState,
-} from '@/lib/stay/stay-calendar-month';
+import { formatCalendarDay } from '@/lib/intl-formatting';
+import { formatMinor } from '@/lib/money/money';
+import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
+import { nightStateOf, type StayNightSelection, type StayNightState } from '@/lib/stay/stay-calendar-month';
 import { isPendingEntry } from '@/lib/stay/stay-calendar-optimistic';
 import type { StayCalendarEntryView } from '@/lib/stay/stay-calendar-view';
+import { nightlyRateOn } from '@/lib/stay/stay-nightly-quote';
+import { dayRuleOn } from '@/lib/stay/stay-rules';
 import { cn } from '@/lib/utils';
+import type { StayDayRules } from '@/types/stay-rules';
 
-const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
-const KEY_STEP: Readonly<Record<string, number>> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+import { StayMonthGridFrame, type StayGridCellBindings } from './StayMonthGridFrame';
 
 /** Κλειδιά ως ΚΥΡΙΟΛΕΚΤΙΚΑ — η γεννήτρια των route slices τα διαβάζει από εδώ (ADR-744). */
 const CELL_LABEL = {
@@ -47,6 +42,9 @@ const CELL_LABEL = {
 interface StayCalendarGridProps {
   readonly monthKey: string;
   readonly entries: readonly StayCalendarEntryView[];
+  readonly days: StayDayRules;
+  /** Η τιμή βάσης της αγγελίας, στο σχήμα του επιλυτή τιμής. */
+  readonly pricing: PricedPropertyLike;
   readonly selection: StayNightSelection | null;
   readonly focusDay: string;
   readonly onFocusDay: (day: string) => void;
@@ -61,42 +59,58 @@ function cellLabelKey(state: StayNightState): keyof typeof CELL_LABEL {
   return state.entry.source === 'external' ? 'external' : 'blocked';
 }
 
-function CellMark({ state }: { readonly state: StayNightState }): React.ReactElement | null {
-  if (state.kind === 'free') return null;
-  const Icon = state.kind === 'booked' ? UserRound : state.entry.source === 'external' ? Link2 : Lock;
-  return <Icon aria-hidden className="size-3.5" />;
-}
-
-function inSelection(day: string, selection: StayNightSelection | null): boolean {
-  return selection !== null && selection.from <= day && day < selection.to;
+function CellMarks({ state, day, days }: {
+  readonly state: StayNightState;
+  readonly day: string;
+  readonly days: StayDayRules;
+}): React.ReactElement {
+  const rule = dayRuleOn(days, day);
+  const Entry = state.kind === 'free' ? null : state.kind === 'booked' ? UserRound : state.entry.source === 'external' ? Link2 : Lock;
+  return (
+    <span className="flex items-center gap-0.5" aria-hidden>
+      {Entry !== null && <Entry className="size-3.5" />}
+      {rule.closedToArrival === true && <LogIn className="size-3" />}
+      {rule.closedToDeparture === true && <LogOut className="size-3" />}
+    </span>
+  );
 }
 
 interface NightCellProps {
   readonly day: string;
   readonly state: StayNightState;
   readonly selected: boolean;
-  readonly tabbable: boolean;
-  readonly register: (day: string, node: HTMLButtonElement | null) => void;
+  readonly days: StayDayRules;
+  readonly pricing: PricedPropertyLike;
+  readonly bindings: StayGridCellBindings;
   readonly onPick: (day: string, extend: boolean) => void;
-  readonly onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, day: string) => void;
-  readonly onFocusDay: (day: string) => void;
 }
 
-function NightCell({ day, state, selected, tabbable, register, onPick, onKeyDown, onFocusDay }: NightCellProps): React.ReactElement {
+/** Η περιγραφή του κελιού με λέξεις: κατάσταση + κανόνες + τιμή. */
+function useCellLabel({ day, state, days, pricing }: Pick<NightCellProps, 'day' | 'state' | 'days' | 'pricing'>): string {
   const { t } = useTranslation(['property-market']);
+  const rule = dayRuleOn(days, day);
+  const rate = nightlyRateOn(pricing, days, day);
+  const parts = [t(CELL_LABEL[cellLabelKey(state)], { day: formatCalendarDay(day, true) })];
+  if (rule.closedToArrival === true) parts.push(t('property-market:offer.stayCalendar.days.cellNoArrival'));
+  if (rule.closedToDeparture === true) parts.push(t('property-market:offer.stayCalendar.days.cellNoDeparture'));
+  if (rule.minNights !== undefined) parts.push(t('property-market:offer.stayCalendar.days.cellMinNights', { count: rule.minNights }));
+  if (rate !== null) parts.push(formatMinor(rate.amountMinor));
+  return parts.join(' · ');
+}
+
+function NightCell({ day, state, selected, days, pricing, bindings, onPick }: NightCellProps): React.ReactElement {
+  const label = useCellLabel({ day, state, days, pricing });
   const pending = state.kind !== 'free' && isPendingEntry(state.entry);
+  const rate = nightlyRateOn(pricing, days, day);
   return (
     <td role="gridcell" aria-selected={selected}>
       <button
-        ref={(node) => register(day, node)}
+        {...bindings}
         type="button"
-        tabIndex={tabbable ? 0 : -1}
-        aria-label={t(CELL_LABEL[cellLabelKey(state)], { day: formatCalendarDay(day, true) })}
+        aria-label={label}
         onClick={(event) => onPick(day, event.shiftKey)}
-        onKeyDown={(event) => onKeyDown(event, day)}
-        onFocus={() => onFocusDay(day)}
         className={cn(
-          'flex h-12 w-full flex-col items-center justify-center gap-0.5 rounded-md border text-sm',
+          'flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded-md border text-sm',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           state.kind === 'free' && 'border-border bg-card text-foreground hover:bg-accent/50',
           state.kind === 'blocked' && 'border-border bg-muted text-muted-foreground',
@@ -106,71 +120,35 @@ function NightCell({ day, state, selected, tabbable, register, onPick, onKeyDown
         )}
       >
         <span>{Number(day.slice(8))}</span>
-        <CellMark state={state} />
+        <CellMarks state={state} day={day} days={days} />
+        {rate !== null && (
+          <span aria-hidden className={cn('text-[0.65rem] leading-none', rate.source === 'day' ? 'font-semibold' : 'text-muted-foreground')}>
+            {formatMinor(rate.amountMinor)}
+          </span>
+        )}
       </button>
     </td>
   );
 }
 
+function inSelection(day: string, selection: StayNightSelection | null): boolean {
+  return selection !== null && selection.from <= day && day < selection.to;
+}
+
 export function StayCalendarGrid(props: StayCalendarGridProps): React.ReactElement {
-  const { monthKey, entries, selection, focusDay, onFocusDay, onPick } = props;
-  const weeks = monthGrid(monthKey);
-  // Ένα κελί στη σειρά Tab ΠΑΝΤΑ — κι όταν η εστίαση έμεινε σε άλλον μήνα (κουμπιά μήνα).
-  const tabbableDay = monthKeyOf(focusDay) === monthKey ? focusDay : `${monthKey}-01`;
-  const cellRefs = React.useRef(new Map<string, HTMLButtonElement>());
-  // Η εστίαση μετακινείται ΜΟΝΟ όταν την κίνησε το πληκτρολόγιο μέσα στο πλέγμα — ποτέ στη
-  // φόρτωση ή στο «Σήμερα»: κλοπή εστίασης αποπροσανατολίζει τον αναγνώστη οθόνης.
-  const keyboardMoved = React.useRef(false);
-
-  React.useEffect(() => {
-    if (!keyboardMoved.current) return;
-    keyboardMoved.current = false;
-    cellRefs.current.get(focusDay)?.focus({ preventScroll: true });
-  }, [focusDay, monthKey]);
-
-  const register = React.useCallback((day: string, node: HTMLButtonElement | null) => {
-    if (node === null) cellRefs.current.delete(day);
-    else cellRefs.current.set(day, node);
-  }, []);
-
-  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, day: string): void {
-    const step = KEY_STEP[event.key];
-    if (step === undefined) return;
-    event.preventDefault();
-    const next = addDaysToDateKey(day, step);
-    if (next === null) return;
-    keyboardMoved.current = true;
-    onFocusDay(next);
-    if (event.shiftKey) onPick(next, true);
-  }
-
+  const { monthKey, entries, days, pricing, selection, focusDay, onFocusDay, onPick } = props;
   return (
-    <table role="grid" aria-readonly="false" className="w-full table-fixed border-separate border-spacing-1">
-      <thead>
-        <tr>
-          {WEEKDAYS.map((weekday) => (
-            <th key={weekday} scope="col" className="text-xs font-medium text-muted-foreground">
-              <span aria-hidden>{formatIsoWeekday(weekday, 'short')}</span>
-              <span className="sr-only">{formatIsoWeekday(weekday, 'long')}</span>
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {weeks.map((week, row) => (
-          <tr key={`${monthKey}-${row}`}>
-            {week.map((day, column) => (day === null
-              ? <td key={`${monthKey}-${row}-${column}`} role="presentation" />
-              : (
-                <NightCell
-                  key={day} day={day} state={nightStateOf(day, entries)} selected={inSelection(day, selection)}
-                  tabbable={day === tabbableDay} register={register} onPick={onPick}
-                  onKeyDown={handleKeyDown} onFocusDay={onFocusDay}
-                />
-              )))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <StayMonthGridFrame
+      monthKey={monthKey}
+      focusDay={focusDay}
+      onFocusDay={onFocusDay}
+      onExtend={(day) => onPick(day, true)}
+      renderCell={(day, bindings) => (
+        <NightCell
+          day={day} state={nightStateOf(day, entries)} selected={inSelection(day, selection)}
+          days={days} pricing={pricing} bindings={bindings} onPick={onPick}
+        />
+      )}
+    />
   );
 }

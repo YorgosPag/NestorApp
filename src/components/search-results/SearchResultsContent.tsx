@@ -122,6 +122,7 @@ export function SearchResultsContent() {
     ledger,
     stayLedger,
     stayQuery,
+    stayPending,
     criteriaLedger,
     criteriaAsked,
     areaLedger,
@@ -277,6 +278,7 @@ export function SearchResultsContent() {
           stay={stayLedger}
           position={ledger}
           asked={stayQuery !== null}
+          pending={stayPending}
           className="mt-1"
         />
         {/*

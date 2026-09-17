@@ -48,7 +48,8 @@ describe('stayCalendarCommandFrom', () => {
 
   it('έγκυρη κράτηση', () => {
     expect(stayCalendarCommandFrom({ action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, guestLabel: ' Μαρία ' })).toEqual({
-      ok: true, command: { action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, guestLabel: 'Μαρία' },
+      ok: true,
+      command: { action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, guestLabel: 'Μαρία', acknowledgedWarnings: [] },
     });
   });
 

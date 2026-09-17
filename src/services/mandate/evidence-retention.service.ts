@@ -179,11 +179,30 @@ export async function runEvidenceRetention(adminDb: AdminFirestore, bucket: Evid
 // ΔΙΚΑΣΤΙΚΗ ΔΕΣΜΕΥΣΗ — υπερισχύει κάθε προθεσμίας (Vault · Purview «holds always win»)
 // =============================================================================
 
-export type LegalHoldOutcome = { readonly kind: 'placed' | 'released' } | { readonly kind: 'absent' } | { readonly kind: 'failed' };
+export type LegalHoldOutcome =
+  | { readonly kind: 'placed' | 'released' }
+  | { readonly kind: 'absent' }
+  /** Υπάρχει ήδη δικαστική δέσμευση — ποτέ σιωπηλή αντικατάσταση του λόγου της πρώτης (ADR-864 §21). */
+  | { readonly kind: 'already-held' }
+  | { readonly kind: 'failed' };
 
-async function readRecord(adminDb: AdminFirestore, evidenceId: string): Promise<MandateEvidenceRecord | null> {
-  const snapshot = await adminDb.collection(COLLECTIONS.MANDATE_EVIDENCE).doc(evidenceId).get();
-  return snapshot.exists ? evidenceRecordFromDocument(snapshot.data(), evidenceId) : null;
+/** Πού ανήκει το αποδεικτικό που ζητείται — γραφείο **και** ακίνητο, όπως στη διεύθυνση. */
+export interface EvidenceHoldScope {
+  readonly evidenceId: string;
+  readonly agencyCompanyId: string;
+  readonly ownerPropertyId: string;
+}
+
+/**
+ * Η εγγραφή **του γραφείου, σε αυτό το ακίνητο** — ή `null`. 🔒 ADR-864 §21: ξένο γραφείο ή άλλο ακίνητο ⇒
+ * η **ίδια** απουσία (ADR-742 §7.1), ώστε η διαδρομή να μη γίνει μαντείο ύπαρξης αποδεικτικών άλλου μισθωτή.
+ */
+async function readRecord(adminDb: AdminFirestore, scope: EvidenceHoldScope): Promise<MandateEvidenceRecord | null> {
+  const snapshot = await adminDb.collection(COLLECTIONS.MANDATE_EVIDENCE).doc(scope.evidenceId).get();
+  const record = snapshot.exists ? evidenceRecordFromDocument(snapshot.data(), scope.evidenceId) : null;
+  return record !== null && record.agencyCompanyId === scope.agencyCompanyId && record.ownerPropertyId === scope.ownerPropertyId
+    ? record
+    : null;
 }
 
 /**
@@ -193,10 +212,11 @@ async function readRecord(adminDb: AdminFirestore, evidenceId: string): Promise<
 export async function placeEvidenceLegalHold(
   adminDb: AdminFirestore,
   bucket: EvidenceBucket,
-  input: { readonly evidenceId: string; readonly placedBy: string; readonly reason: string; readonly nowISO: string },
+  input: EvidenceHoldScope & { readonly placedBy: string; readonly reason: string; readonly nowISO: string },
 ): Promise<LegalHoldOutcome> {
-  const record = await readRecord(adminDb, input.evidenceId);
+  const record = await readRecord(adminDb, input);
   if (record === null || record.state === 'disposed') return { kind: 'absent' };
+  if (record.legalHold !== null) return { kind: 'already-held' };
   try {
     await bucket.file(record.path).setMetadata({ temporaryHold: true });
     await updateEvidenceRecord(adminDb, record.id, { legalHold: { placedBy: input.placedBy, placedAt: input.nowISO, reason: input.reason } });
@@ -214,9 +234,9 @@ export async function placeEvidenceLegalHold(
 export async function releaseEvidenceLegalHold(
   adminDb: AdminFirestore,
   bucket: EvidenceBucket,
-  input: { readonly evidenceId: string },
+  input: EvidenceHoldScope,
 ): Promise<LegalHoldOutcome> {
-  const record = await readRecord(adminDb, input.evidenceId);
+  const record = await readRecord(adminDb, input);
   if (record === null || record.state === 'disposed' || record.legalHold === null) return { kind: 'absent' };
   try {
     await updateEvidenceRecord(adminDb, record.id, { legalHold: null });

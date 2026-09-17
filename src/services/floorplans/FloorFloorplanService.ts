@@ -117,6 +117,38 @@ export interface LoadFloorplanParams {
 
 export class FloorFloorplanService {
   /**
+   * **Ποιο αρχείο είναι η κάτοψη ορόφου** — κάτοχος, οντότητα, σκοπός, ονοματοδοσία. ΜΙΑ δήλωση για
+   * PDF/εικόνα και DXF (ήταν δίδυμο μπλοκ, CHECK 3.28 · ADR-866 §2.6.8).
+   */
+  private static saveIdentity(params: SaveFloorplanParams) {
+    const floorNumber = params.data.floorNumber ?? 0;
+    return {
+      companyId: params.companyId,
+      projectId: params.projectId,
+      entityType: ENTITY_TYPES.FLOOR,
+      entityId: params.floorId,
+      purpose: FLOORPLAN_PURPOSES.FLOOR,
+      entityLabel: `Όροφος ${floorNumber}`,
+      descriptors: [`floor-${floorNumber}`],
+      createdBy: params.createdBy,
+    };
+  }
+
+  /**
+   * **Οι κατόψεις ενός ορόφου** — η ΜΙΑ αναζήτηση (ήταν τέσσερα δίδυμα μπλοκ, CHECK 3.28 · ADR-866 §2.6.8).
+   * Χωρίς `purpose` ⇒ και τα αρχεία πριν το ADR-202 που δεν τον έχουν.
+   * Index: entityType + entityId + status + companyId + domain + category (+ purpose) + isDeleted
+   */
+  private static floorplanRecords(companyId: string, floorId: string, purpose?: string): Promise<FileRecord[]> {
+    return FileRecordService.getFilesByEntity(ENTITY_TYPES.FLOOR, floorId, {
+      custody: { companyId },
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      ...(purpose ? { purpose } : {}),
+    });
+  }
+
+  /**
    * 🏢 ENTERPRISE: Save floor floorplan using FileRecordService
    *
    * Flow:
@@ -156,12 +188,7 @@ export class FloorFloorplanService {
         }
 
         const result = await FloorplanSaveOrchestrator.save({
-          companyId, projectId,
-          entityType: ENTITY_TYPES.FLOOR, entityId: floorId,
-          purpose: FLOORPLAN_PURPOSES.FLOOR,
-          entityLabel: `Όροφος ${data.floorNumber ?? 0}`,
-          descriptors: [`floor-${data.floorNumber ?? 0}`],
-          createdBy,
+          ...FloorFloorplanService.saveIdentity(params),
           originalFilename: uploadFile.name,
           contentType, ext,
           payload: { kind: 'raw-file', file: uploadFile },
@@ -192,14 +219,7 @@ export class FloorFloorplanService {
 
       // 🏢 ENTERPRISE: Delegate to centralized FloorplanSaveOrchestrator (ADR-201)
       const result = await FloorplanSaveOrchestrator.save({
-        companyId,
-        projectId,
-        entityType: ENTITY_TYPES.FLOOR,
-        entityId: floorId,
-        purpose: FLOORPLAN_PURPOSES.FLOOR,
-        entityLabel: `Όροφος ${data.floorNumber ?? 0}`,
-        descriptors: [`floor-${data.floorNumber ?? 0}`],
-        createdBy,
+        ...FloorFloorplanService.saveIdentity(params),
         originalFilename: fileName,
         contentType: 'application/json',
         payload: { kind: 'json', data: data.scene },
@@ -252,30 +272,13 @@ export class FloorFloorplanService {
       // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
       // 🏢 FIX: Include domain to match the existing Firestore composite index
       // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
-      let fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.FLOOR,
-        floorId,
-        {
-          companyId,
-          domain: FILE_DOMAINS.CONSTRUCTION,
-          category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.FLOOR,
-        }
-      );
+      let fileRecords = await FloorFloorplanService.floorplanRecords(companyId, floorId, FLOORPLAN_PURPOSES.FLOOR);
 
       // 🏢 ENTERPRISE: Fallback — files uploaded via EntityFilesManager before ADR-202
       // may not have purpose set. Query without purpose filter to catch them.
       if (!fileRecords || fileRecords.length === 0) {
         floorplanLogger.info('No records with purpose=floor-floorplan, trying without purpose filter');
-        fileRecords = await FileRecordService.getFilesByEntity(
-          ENTITY_TYPES.FLOOR,
-          floorId,
-          {
-            companyId,
-            domain: FILE_DOMAINS.CONSTRUCTION,
-            category: FILE_CATEGORIES.FLOORPLANS,
-          }
-        );
+        fileRecords = await FloorFloorplanService.floorplanRecords(companyId, floorId);
       }
 
       // 🔗 ENTERPRISE: Cross-entity linked files fallback (e.g., unit floorplan linked to floor)
@@ -284,7 +287,7 @@ export class FloorFloorplanService {
         const linkedFiles = await FileRecordService.getLinkedFiles(
           ENTITY_TYPES.FLOOR,
           floorId,
-          companyId
+          { companyId }
         );
         fileRecords = linkedFiles.filter(f =>
           f.domain === FILE_DOMAINS.CONSTRUCTION &&
@@ -410,16 +413,7 @@ export class FloorFloorplanService {
     try {
       // 🏢 FIX: Include domain to match the existing Firestore composite index
       // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
-      const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.FLOOR,
-        floorId,
-        {
-          companyId,
-          domain: FILE_DOMAINS.CONSTRUCTION,
-          category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.FLOOR,
-        }
-      );
+      const fileRecords = await FloorFloorplanService.floorplanRecords(companyId, floorId, FLOORPLAN_PURPOSES.FLOOR);
 
       return fileRecords && fileRecords.length > 0;
     } catch (error) {
@@ -441,16 +435,7 @@ export class FloorFloorplanService {
     try {
       // 🏢 FIX: Include domain to match the existing Firestore composite index
       // Index: entityType + entityId + status + companyId + domain + category + purpose + isDeleted
-      const fileRecords = await FileRecordService.getFilesByEntity(
-        ENTITY_TYPES.FLOOR,
-        floorId,
-        {
-          companyId,
-          domain: FILE_DOMAINS.CONSTRUCTION,
-          category: FILE_CATEGORIES.FLOORPLANS,
-          purpose: FLOORPLAN_PURPOSES.FLOOR,
-        }
-      );
+      const fileRecords = await FloorFloorplanService.floorplanRecords(companyId, floorId, FLOORPLAN_PURPOSES.FLOOR);
 
       if (!fileRecords || fileRecords.length === 0) {
         return true; // Nothing to delete
@@ -458,7 +443,7 @@ export class FloorFloorplanService {
 
       // Move to trash all floorplans for this floor
       for (const fileRecord of fileRecords) {
-        await FileRecordService.moveToTrash(fileRecord.id, deletedBy);
+        await FileRecordService.moveToTrash(fileRecord.id, 'company', deletedBy);
       }
 
       floorplanLogger.info(`Deleted floor floorplan(s)`, { floorId, count: fileRecords.length });
