@@ -26,7 +26,7 @@ Replace all 29 inline currency formatting patterns with centralized SSoT functio
 | `formatCurrency()` | `(amount, currency?, options?)` | General currency (0-2 decimals) |
 | `formatCurrencyWhole()` | `(amount: number\|null\|undefined)` | 0 decimals, null→"—" |
 | `formatCurrencyCompact()` | `(value: number)` | K/M notation (€500K, €1.2M) |
-| `formatPriceWithUnit()` | `(price, unit, currency?)` | "€1.200/month" |
+| ~~`formatPriceWithUnit()`~~ | — | **Αφαιρέθηκε 2026-09-17** (ADR-777 §8.60.13): μοναδικός καλών νεκρός· ποσό+μονάδα ζει στο `lib/listings/listing-price-label.ts` (`common:priceAmount.*`, ανά `PriceRole`) |
 
 ## Changes
 
