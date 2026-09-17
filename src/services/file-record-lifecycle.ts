@@ -215,18 +215,25 @@ export async function moveToTrash(fileId: string, custody: CustodyKind, trashedB
  * της απώλειας (`useLevelFloorplanSync`) ακούει μόνο `FILE_TRASHED`· το `FILE_SUPERSEDED`
  * δεν έχει δρόμο προς τον καθαρισμό του καμβά — η προστασία είναι **δομική**, όχι σημαία.
  *
+ * 🗂️ **ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ** (ADR-866 2β.3β): το `custody` είναι **υποχρεωτικό** — και τα δύο αρχεία
+ * ζουν στο **ίδιο**, αλλιώς δεν είναι εκδόσεις του ίδιου δοχείου (ο γραφέας το αποδεικνύει:
+ * ζητά τον διάδοχο **στο ίδιο** διαμέρισμα, και ό,τι ζει αλλού φαίνεται `successor-not-found`).
+ * Το είδος το **αποδεικνύει το έγγραφο** (`fileCustodyKindOf`), δεν το μαντεύει η οθόνη.
+ *
  * @param previousFileId     Το αρχείο που αντικαθίσταται.
  * @param supersededByFileId Ο διάδοχος που μόλις πήρε τη θέση του.
+ * @param custody            Το διαμέρισμα **και των δύο** — από τα πεδία κατόχου του εγγράφου.
  * @returns **Ονομασμένη** έκβαση — ο καλών αποφασίζει τι θα δει ο άνθρωπος, ποτέ σιωπή.
  */
 export async function supersedeFileRecord(
   previousFileId: string,
   supersededByFileId: string,
+  custody: CustodyKind,
 ): Promise<SupersedeOutcome> {
   // Ταυτότητα, όχι αντικατάσταση: το αρχείο δεν διαδέχεται τον εαυτό του — ούτε δίκτυο.
   if (previousFileId === supersededByFileId) return { kind: 'noop' };
 
-  const outcome = await requestSupersession(previousFileId, supersededByFileId);
+  const outcome = await requestSupersession(previousFileId, supersededByFileId, custody);
   if (outcome.kind === 'superseded') {
     RealtimeService.dispatch('FILE_SUPERSEDED', {
       fileId: previousFileId,

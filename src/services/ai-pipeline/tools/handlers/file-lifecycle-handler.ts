@@ -88,6 +88,8 @@ export class FileLifecycleHandler implements ToolHandler {
 
     const result = await purgeFileRecord({
       fileId: fileRecordId,
+      // Το έγγραφο διαβάστηκε από το εταιρικό διαμέρισμα (γρ. 55): ο πράκτορας δρα **μόνο** για εταιρεία.
+      custody: 'company',
       storagePath: data.storagePath as string | undefined,
       performedBy: `ai-agent:${ctx.channel}`,
       purgeReason: 'user_discard',

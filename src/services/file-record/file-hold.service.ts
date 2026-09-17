@@ -129,6 +129,25 @@ async function auditEach(fileIds: readonly string[], actor: FileHoldActor, actio
     recordFileAudit({ fileId, action, performedBy: actor.uid, companyId: actor.companyId, metadata: { ...metadata, stackSize: fileIds.length } })));
 }
 
+/**
+ * 🗂️ **Η στοίβα του αρχείου, στο ΕΤΑΙΡΙΚΟ διαμέρισμα** — ADR-866 2β.3β.
+ *
+ * Η `readVersionStack` ζητά πλέον **κάτοχο** (`CustodyScope`) αντί για `companyId`. Η **νόμιμη
+ * δέσμευση** είναι έννοια **εταιρείας** (ADR-864 §21: την τοποθετεί υπεύθυνος συμμόρφωσης, όχι ο
+ * ίδιος ο κάτοχος), και ο γραφέας της (`writeStack`) γράφει **μόνο** στο εταιρικό διαμέρισμα —
+ * άρα ο κάτοχος δηλώνεται **ρητά**, μία φορά, εδώ.
+ *
+ * ⚠️ **Εξήχθη επειδή οι δύο πράξεις το ζητούσαν ολόιδια** (CHECK 3.28 · N.18 — μετρημένος κλώνος
+ * 6 γραμμών **μέσα στο ίδιο commit**): δύο χειρόγραφα αντίγραφα θα μπορούσαν να αποκλίνουν στο
+ * διαμέρισμα, δηλαδή να δεσμεύσουν τη μία στοίβα και να αποδεσμεύσουν άλλη.
+ *
+ * 🔶 Όταν η δέσμευση αποκτήσει προσωπικό διαμέρισμα (ADR-864 §21.8 / ADR-866), αλλάζει **αυτή** η
+ * μία γραμμή — όχι δύο.
+ */
+function heldVersionStack(actor: FileHoldActor, fileId: string): ReturnType<typeof readVersionStack> {
+  return readVersionStack({ companyId: actor.companyId }, fileId);
+}
+
 // =============================================================================
 // ΟΙ ΔΥΟ ΠΡΑΞΕΙΣ
 // =============================================================================
@@ -142,7 +161,7 @@ export interface PlaceFileHoldInput {
 
 /** **Τοποθέτηση** στη στοίβα του αρχείου: bytes πρώτα, βάση μετά, συμφιλίωση στο τέλος. */
 export async function placeFileHold(input: PlaceFileHoldInput, bucket: HoldableBucket = getAdminBucket()): Promise<FileHoldOutcome> {
-  const stack = await readVersionStack(input.actor.companyId, input.fileId);
+  const stack = await heldVersionStack(input.actor, input.fileId);
   if (stack.kind === 'not-found') return { kind: 'not-found' };
   const held = stack.versions.find((version) => hasActiveHold(version));
   if (held) return { kind: 'already-held', holdType: String(held.hold) };
@@ -175,7 +194,7 @@ export interface ReleaseFileHoldInput {
 
 /** **Αποδέσμευση**: βάση πρώτα, bytes μετά — και τα bytes συμφιλιώνονται πάντα (ιδεμπότητο). */
 export async function releaseFileHold(input: ReleaseFileHoldInput, bucket: HoldableBucket = getAdminBucket()): Promise<FileHoldOutcome> {
-  const stack = await readVersionStack(input.actor.companyId, input.fileId);
+  const stack = await heldVersionStack(input.actor, input.fileId);
   if (stack.kind === 'not-found') return { kind: 'not-found' };
 
   try {

@@ -15,6 +15,7 @@ import path from 'path';
 
 import { buildPendingFileRecordData } from '@/services/file-record/file-record-core';
 import type { BuildPendingFileRecordInput } from '@/services/file-record/file-record-core';
+import { FILE_HOLD_FIELDS } from '@/lib/files/file-hold';
 
 const { custodyFieldsOf } = require('../../../../scripts/check-cde-authority.js') as {
   custodyFieldsOf: (rulesText: string) => string[];
@@ -22,6 +23,8 @@ const { custodyFieldsOf } = require('../../../../scripts/check-cde-authority.js'
 
 const RULES = fs.readFileSync(path.join(process.cwd(), 'firestore.rules'), 'utf8');
 const CDE_CUSTODY_FIELDS = custodyFieldsOf(RULES);
+/** ADR-864 §21 — η γέννηση ΔΕΝ φέρει δέσμευση (`holdBornAbsent()` στους κανόνες και των δύο διαμερισμάτων). */
+const HOLD_FIELDS: readonly string[] = FILE_HOLD_FIELDS;
 
 const COORDINATES = {
   createdBy: 'uid_owner',
@@ -51,6 +54,11 @@ describe('buildPendingFileRecordData — κάτοχος άνθρωπος', () =>
     for (const field of CDE_CUSTODY_FIELDS) expect(keys).not.toContain(field);
   });
 
+  test('ΚΑΝΕΝΑ κλειδί δέσμευσης (ADR-864 §21 — αλλιώς ο κανόνας create αρνείται κάθε ανέβασμα)', () => {
+    const keys = Object.keys(recordBase);
+    for (const field of HOLD_FIELDS) expect(keys).not.toContain(field);
+  });
+
   test('ρίζα Storage του ανθρώπου — `people/{uid}/`, ποτέ `companies/`', () => {
     expect(storagePath.startsWith('people/uid_owner/')).toBe(true);
   });
@@ -63,6 +71,7 @@ describe('buildPendingFileRecordData — κάτοχος εταιρεία (αμε
     expect(recordBase.companyId).toBe('comp_1');
     expect(recordBase.cdeReadReach).toBe('tenant');
     expect(Object.keys(recordBase)).not.toContain('userId');
+    for (const field of HOLD_FIELDS) expect(Object.keys(recordBase)).not.toContain(field);
     expect(storagePath.startsWith('companies/comp_1/')).toBe(true);
   });
 });

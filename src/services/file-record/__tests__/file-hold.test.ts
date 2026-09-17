@@ -14,6 +14,7 @@
  * | Α47 κανένα αρχείο δεν ξαναγράφει τον έλεγχο τοπικά | inline `data.hold` / `raw.hold` |
  * | Α48 άρνηση bytes από την πλατφόρμα ⇒ η εγγραφή **δεν** γίνεται `purged` | «non-blocking» αποτυχία bytes |
  * | Α48 σιωπηλή δέσμευση: ο κάδος **δεν** ρωτά τη δέσμευση · η διαγραφή οντότητας **φυλά** τα δεσμευμένα | `throw` στον κάδο · cascade χωρίς φύλαξη |
+ * | Α49 `holdCustodyKeys()` του `firestore.rules` === `FILE_HOLD_FIELDS` · φρουρά σε κάθε σκέλος, και στα δύο διαμερίσματα | κλειδί που λείπει · σκέλος χωρίς φρουρά · «άρνηση κάδου» |
  */
 
 import { readFileSync } from 'fs';
@@ -31,6 +32,9 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { isFileHeld, purgeFileRecord } = require('../file-purge-helpers') as typeof import('../file-purge-helpers');
 const judge = require('@/lib/files/file-hold') as typeof import('@/lib/files/file-hold');
+const { rulesKeyListOf } = require('../../../../scripts/_shared/firestore-rules-parser.js') as {
+  rulesKeyListOf: (rulesText: string, functionName: string) => string[];
+};
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const source = (file: string): string => readFileSync(join(process.cwd(), file), 'utf8');
@@ -49,7 +53,8 @@ describe('🏆 Α36 — ο κριτής δέσμευσης', () => {
 
   it.each([
     'src/app/api/files/gdpr-delete/route.ts',
-    'src/app/api/files/purge/route.ts',
+    // ADR-866 §2.6.9 Β4 — το `api/files/purge` έγινε προσαρμογέας του job: ο κριτής ζει ΕΚΕΙ.
+    'src/lib/cron/jobs/file-purge.job.ts',
   ])('🔴 %s ρωτά τον ΕΝΑ κριτή — κανένας τοπικός έλεγχος `data.hold`', (file) => {
     expect(source(file)).toContain('isFileHeld(data)');
     expect(source(file)).not.toMatch(/data\.hold\b/);
@@ -82,6 +87,35 @@ describe('🏆 Α47 — ο καθαρός κριτής (ADR-864 §21)', () => {
   it('🔴 ο client γραφέας hold ΔΕΝ υπάρχει — γράφει μόνο ο διακομιστής', () => {
     expect(source('src/services/file-record-lifecycle.ts')).not.toMatch(/export async function (?:placeHold|releaseHold)/);
     expect(source('src/services/file-record.service.ts')).not.toMatch(/\b(?:placeHold|releaseHold)\b/);
+  });
+});
+
+describe('🏆 Α49 — κώδικας και κανόνας φυλάνε τα ΙΔΙΑ κλειδιά (ADR-864 §21.7)', () => {
+  const RULES = source('firestore.rules');
+  const ruleKeys = rulesKeyListOf(RULES, 'holdCustodyKeys');
+  /** Τα σώματα των δύο διαμερισμάτων αρχείων — ΜΕΧΡΙ το επόμενο καθολικό σχόλιο-ενότητα. */
+  const blockOf = (matchLine: string): string => RULES.split(matchLine)[1]?.split('\n    // ====')[0] ?? '';
+
+  it('🔴 `holdCustodyKeys()` του firestore.rules === `FILE_HOLD_FIELDS` (ούτε λιγότερα ούτε περισσότερα)', () => {
+    expect(ruleKeys.length).toBeGreaterThan(0);
+    expect([...ruleKeys].sort()).toEqual([...judge.FILE_HOLD_FIELDS].sort());
+  });
+
+  it.each([
+    ['match /files/{fileId} {', 4],
+    ['match /files_personal/{fileId} {', 1],
+  ] as const)('🔴 %s — κάθε `allow update` φυλά τη δέσμευση · create γεννά χωρίς · delete ρωτά', (matchLine, updateLegs) => {
+    const block = blockOf(matchLine);
+    expect(block.match(/allow update:/g)).toHaveLength(updateLegs);
+    expect(block.match(/&& holdCustodyUnchanged\(\)/g)).toHaveLength(updateLegs);
+    expect(block).toMatch(/allow create:[\s\S]*?&& holdBornAbsent\(\)[\s\S]*?;/);
+    expect(block).toMatch(/allow delete:[\s\S]*?&& holdAllowsHardDelete\(\);/);
+  });
+
+  it('🔴 Δ21.1 σιωπηλή δέσμευση: ΚΑΝΕΝΑ σκέλος update δεν ρωτά «είναι δεσμευμένο;»', () => {
+    const updates = [blockOf('match /files/{fileId} {'), blockOf('match /files_personal/{fileId} {')]
+      .flatMap((block) => block.split('allow ').filter((leg) => leg.startsWith('update:')));
+    for (const leg of updates) expect(leg).not.toMatch(/holdAllowsHardDelete|\.hold\b|'hold'/);
   });
 });
 
