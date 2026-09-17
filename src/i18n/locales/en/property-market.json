@@ -810,6 +810,70 @@
         "orphanNights": "Gap up to",
         "submit": "Save rules"
       }
+    },
+    "stayChannels": {
+      "title": "Channel sync (iCal)",
+      "lead": "Send your bookings to the channels and pull in theirs — so the calendar says the same thing everywhere.",
+      "loading": "Loading channels…",
+      "failed": "We couldn't load the channels.",
+      "retry": "Try again",
+      "calendarUnreadable": "Something in the calendar can't be read, so the sources can't be updated. That's our error.",
+      "export": {
+        "title": "Your link for the channels",
+        "hint": "Copy it and paste it into Airbnb/Vrbo as a calendar import. It carries dates only — never names or notes.",
+        "rotate": "Renew link",
+        "rotateConfirm": "The old link stops working for every channel. You will have to paste the new one everywhere.",
+        "rotateYes": "Yes, renew it",
+        "rotateNo": "Cancel",
+        "unconfigured": "Export isn't configured on this server. That's on us — importing works normally."
+      },
+      "import": {
+        "title": "Sources we read"
+      },
+      "noFeeds": "No sources yet. Until there is one, the calendar shows only what you record here.",
+      "neverRead": "Not read yet.",
+      "lastRead": "Read {when} · {count, plural, one {# event} other {# events}}",
+      "lastFailure": "Last error: {code}",
+      "oneWay": "This channel only exports to us — it won't accept our link. Close those dates there by hand.",
+      "feedExportLabel": "Link for “{label}” (without its own events)",
+      "syncNow": "Sync now",
+      "remove": "Remove",
+      "freshness": {
+        "fresh": "in sync",
+        "lagging": "lagging",
+        "stale": "not answering — free dates are no longer shown as free",
+        "paused": "stopped answering — needs a new link"
+      },
+      "add": {
+        "title": "Add a source",
+        "hint": "Paste the channel's calendar export (.ics) link. We read it right away: if it doesn't answer, it isn't saved.",
+        "labelField": "Name (for you)",
+        "urlField": ".ics link",
+        "submit": "Add",
+        "checking": "Reading the link…"
+      },
+      "conflicts": {
+        "title": "{count, plural, one {# date conflict} other {# date conflicts}}",
+        "overbooking": "The channel reports {channelFrom}–{channelTo}, where you already have a booking {from}–{to}.",
+        "overbookingRemedy": "A double booking that already happened: cancel one side or move the guest.",
+        "owner-block": "The channel reports {channelFrom}–{channelTo}, nights you had closed ({from}–{to}).",
+        "owner-blockRemedy": "Close those dates on the channel too, or reopen them here.",
+        "other-channel": "Two channels report the same nights: {channelFrom}–{channelTo} and {from}–{to}.",
+        "other-channelRemedy": "Check whether this is one stay seen in two calendars or two separate bookings."
+      },
+      "message": {
+        "saved": "Saved.",
+        "feedUnreadable": "The link couldn't be read ({code}). Check it on the channel and try again.",
+        "duplicate": "That link is already there.",
+        "tooMany": "You have reached {max} sources. Remove one to add another.",
+        "tooSoon": "A sync just ran. Try again shortly.",
+        "feedAbsent": "That source no longer exists.",
+        "notAStay": "This listing has no live short-stay offer.",
+        "unreadable": "Something in the calendar can't be read. That's our error.",
+        "exportUnconfigured": "Export isn't configured on this server.",
+        "absent": "Listing not found.",
+        "failed": "The action didn't complete."
+      }
     }
   },
   "mandate": {

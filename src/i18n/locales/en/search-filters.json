@@ -23,10 +23,12 @@
       "undeclared": "{count} undeclared"
     },
     "axis": {
-      "price": "Price",
       "offerKind": "Offer",
       "authorship": "Listed by",
-      "hasPhotos": "With photos only"
+      "hasPhotos": "With photos only",
+      "priceSale": "Sale price",
+      "priceRent": "Rent (monthly)",
+      "priceNightly": "Price per night"
     },
     "authorship": {
       "agency": "Agencies",
@@ -41,6 +43,11 @@
       "priceAsc": "Price: low to high",
       "priceDesc": "Price: high to low",
       "unknownLast": "Listings with no recorded date appear last."
+    },
+    "price": {
+      "needOffer": "Choose an offer type first — price means something different in each.",
+      "retired": "This link asked for a price without a unit ({min} – {max}). For which offer type?",
+      "retiredDismiss": "Dismiss"
     }
   }
 }
