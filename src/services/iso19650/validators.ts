@@ -19,6 +19,7 @@ import {
   DISCIPLINE_CODES,
   DOCUMENT_SERIES,
   CDE_STATES,
+  CDE_READ_REACH_VALUES,
   SUITABILITY_CODES,
   SUITABILITY_CODE_REGEX,
   REVISION_CODE_REGEX,
@@ -26,6 +27,7 @@ import {
   STUDY_GROUP_TO_DEFAULT_DISCIPLINE,
   type DisciplineCode,
   type DocumentSeries,
+  type CdeReadReach,
   type CdeState,
   type SuitabilityCode,
 } from '@/config/iso19650-constants';
@@ -46,6 +48,11 @@ export function isDocumentSeries(value: unknown): value is DocumentSeries {
 
 export function isCdeState(value: unknown): value is CdeState {
   return typeof value === 'string' && value in CDE_STATES;
+}
+
+/** ADR-862 Φ0 Β11 — φρουρός λεξιλογίου του φράχτη ανάγνωσης, χωρίς cast. */
+export function isCdeReadReach(value: unknown): value is CdeReadReach {
+  return CDE_READ_REACH_VALUES.some(reach => reach === value);
 }
 
 export function isSuitabilityCode(value: unknown): value is SuitabilityCode {

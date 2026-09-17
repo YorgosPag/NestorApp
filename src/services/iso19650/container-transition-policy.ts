@@ -36,7 +36,8 @@ import {
   deriveSuitability,
 } from '@/lib/files/file-record-read';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
-import type { CdeState, SuitabilityCode } from '@/config/iso19650-constants';
+import { readReachForState } from '@/lib/auth/container-read-reach';
+import type { CdeReadReach, CdeState, SuitabilityCode } from '@/config/iso19650-constants';
 import type { PermissionId } from '@/lib/auth/types';
 import type { CapabilitySubject } from '@/types/capability-authority';
 import type { FileAuditAction } from '@/types/file-audit';
@@ -81,6 +82,13 @@ export interface ContainerTransitionRequest {
   readonly reason?: string;
   /** **Μόνο στην αντικατάσταση** — ποιο αρχείο παίρνει τη θέση. Κρίνεται, δεν πιστεύεται. */
   readonly supersededByFileId?: string;
+  /**
+   * **Μόνο στην αντικατάσταση** — ο διάδοχος **γεννιέται μέσα στην ίδια συναλλαγή** (ADR-862 Φ0,
+   * «Ορισμός ως τρέχουσας»). Κρίνεται από τον `judgeSuccession` **όπως θα γραφτεί**, και γράφεται
+   * μόνο αν η κρίση περάσει ⇒ δύο «τρέχουσες» εκδόσεις είναι **δομικά αδύνατες**, ούτε για μια στιγμή.
+   * Απόν ⇒ ο διάδοχος πρέπει να υπάρχει ήδη (η ροή ανεβάσματος του Β10).
+   */
+  readonly successorBirth?: Readonly<Record<string, unknown>>;
 }
 
 /**
@@ -257,11 +265,13 @@ function stateOf(phase: CdeState, revision: number): ContainerState {
   return phase === 'PUBLISHED' ? { phase, teamId: null, revision } : { phase, teamId: null };
 }
 
-/** Η **αποθηκευμένη προβολή** των πράξεων — τα δύο παραγόμενα πεδία, μαζί. */
+/** Η **αποθηκευμένη προβολή** των πράξεων — τα τρία παραγόμενα πεδία, μαζί. */
 export interface ContainerProjection {
   readonly cdeState: CdeState;
   /** `null` = το πρότυπο **δεν ορίζει** χρήση σε αυτή τη φάση — όχι «σβήσ' το». */
   readonly suitabilityCode: SuitabilityCode | null;
+  /** ADR-862 Φ0 Β11 — ο φράχτης του κανόνα· **ίδια** `update()` με το `cdeState`. */
+  readonly cdeReadReach: CdeReadReach;
 }
 
 /**
@@ -273,16 +283,20 @@ export interface ContainerProjection {
  */
 export function projectionFor(acts: ContainerActs, revision: number): ContainerProjection {
   const cdeState = deriveCdeState(acts, revision);
-  return { cdeState, suitabilityCode: deriveSuitability(stateOf(cdeState, revision), acts) };
+  return {
+    cdeState,
+    suitabilityCode: deriveSuitability(stateOf(cdeState, revision), acts),
+    cdeReadReach: readReachForState(cdeState),
+  };
 }
 
 /**
  * Η αναθεώρηση, **με τον κανόνα του αναγνώστη**.
  *
- * 🔴 **ΜΕΤΡΗΜΕΝΗ ΠΑΓΙΔΑ**: το `file-version.service.ts:127` χρησιμοποιεί `?? 1`, ο
- * θεματοφύλακας `?? 0` (`file-record-read.ts:151`). Αν ο γραφέας διαλέξει το **άλλο**,
- * κάθε `PUBLISHED` βγαίνει `published-revision-moved` ⇒ **αόρατο αρχείο**.
- * ⇒ Εδώ ισχύει ο κανόνας του **αναγνώστη**, γιατί αυτός κρίνει.
+ * 🔴 **ΜΕΤΡΗΜΕΝΗ ΠΑΓΙΔΑ** (κλειστή 2026-09-17): το καταργημένο `file-version.service.ts`
+ * διάβαζε `?? 1`, ο θεματοφύλακας `?? 0`. Αν ο γραφέας διάλεγε το **άλλο**, κάθε `PUBLISHED`
+ * θα έβγαινε `published-revision-moved` ⇒ **αόρατο αρχείο**. Το δεύτερο μοντέλο εκδόσεων
+ * αφαιρέθηκε (ADR-862 Φ0)· ο κανόνας μένει: ισχύει του **αναγνώστη**, γιατί αυτός κρίνει.
  */
 function containerRevisionOf(raw: Record<string, unknown>): number {
   const value = raw.revision;

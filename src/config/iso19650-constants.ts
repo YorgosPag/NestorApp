@@ -102,6 +102,23 @@ export type CdeState = keyof typeof CDE_STATES;
 export const CDE_STATE_VALUES = Object.keys(CDE_STATES) as CdeState[];
 
 // ============================================================================
+// CDE READ REACH (ADR-862 Φ0 Β11)
+// ============================================================================
+// Η εμβέλεια ανάγνωσης ως ΠΡΟΒΟΛΗ της κατάστασης — το ανάλογο του φακέλου
+// WIP/Shared/Published του Autodesk Docs και του «security per workflow state»
+// του ProjectWise. Αποθηκεύεται επειδή ο κανόνας Firestore κρίνει τα `list` από
+// τα ΦΙΛΤΡΑ του ερωτήματος («rules are not filters») και χρειάζεται πεδίο
+// παρόν σε ΚΑΘΕ έγγραφο. Την παράγει ΜΟΝΟ το `readReachFor`
+// (`lib/auth/container-read-reach.ts`).
+//   tenant — κάθε μέλος του γραφείου (ο κριτής αποφασίζει τα υπόλοιπα)
+//   author — μόνο ο δημιουργός με client SDK· η ομάδα από τον διακομιστή
+// ============================================================================
+
+export const CDE_READ_REACH_VALUES = ['tenant', 'author'] as const;
+
+export type CdeReadReach = (typeof CDE_READ_REACH_VALUES)[number];
+
+// ============================================================================
 // SUITABILITY CODES (BS 1192:2007+A2 — Phase 2, approved 2026-05-24 OQ2)
 // ============================================================================
 // Separate from revisionCode per BS 1192 separation pattern (Aconex/Bentley).
