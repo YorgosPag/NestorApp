@@ -14,6 +14,8 @@
  *     ↑ extends
  *   AccessLifecycleIdGenerators  (this file)
  *     ↑ extends
+ *   NetworkIdGenerators          (ADR-867 — νήματα ανάμεσα σε χώρους)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (composite keys + pure readers)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engines: retry loop, cache, stats, v4 nibble)
@@ -91,6 +93,22 @@ export abstract class AccessLifecycleIdGenerators extends PublicRegistryIdGenera
    */
   generateDeterministicStayCalendarMonthId(propertyId: string, monthKey: string): string {
     return this.mintDeterministicV4Id(P.STAY_CALENDAR_MONTH, `${propertyId}:${monthKey}`);
+  }
+
+  /**
+   * ADR-835 §22 — **το εξωτερικό block ενός γεγονότος feed** (`sblk_*`), ένα ανά
+   * (πηγή, `UID`).
+   *
+   * 🔑 Ντετερμινιστικό ⇒ η **επανεισαγωγή** του ίδιου γεγονότος γράφει το **ίδιο**
+   * έγγραφο, χωρίς ερώτημα: δύο δημοσκοπήσεις δεν φτιάχνουν δύο blocks για μία κράτηση.
+   *
+   * ⚠️ **Δεν αρκεί μόνο του**: η Booking.com δίνει **νέο `UID` κάθε μέρα** για την ίδια
+   * κράτηση (μετρημένο), οπότε η συμφιλίωση έχει **δεύτερο** δρόμο ταύτισης κατά ημέρα
+   * αναχώρησης (`lib/stay/stay-channel-reconcile.ts`). Το ντετερμινιστικό id είναι η
+   * **ιδιοδυναμία**, όχι η ταυτότητα του γεγονότος.
+   */
+  generateDeterministicStayExternalBlockId(feedId: string, externalUid: string): string {
+    return this.mintDeterministicV4Id(P.STAY_BLOCK, `${feedId}:${externalUid}`);
   }
 
   /**

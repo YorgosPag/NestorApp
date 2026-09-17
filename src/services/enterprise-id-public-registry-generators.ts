@@ -125,6 +125,16 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   generateStayBlockId(): string { return this.generateId(P.STAY_BLOCK).id; }
 
   /**
+   * ADR-835 §22 — id **πηγής iCal** (`schf_*`). Διακομιστής μόνο.
+   *
+   * 🔑 **ΜΗ ντετερμινιστικό, επίτηδες**: ο ίδιος σύνδεσμος μπορεί να αφαιρεθεί και να
+   * ξαναμπεί — και τότε είναι **νέα** πηγή, με νέα ιστορία και **νέο** σύνδεσμο
+   * εξαγωγής. Ντετερμινιστικό id ανά URL θα ανέσταινε την παλιά κατάσταση (αποτυχίες,
+   * εκκρεμείς διαγραφές) σε μια σύνδεση που ο άνθρωπος ήθελε **καθαρή**.
+   */
+  generateStayChannelFeedId(): string { return this.generateId(P.STAY_CHANNEL_FEED).id; }
+
+  /**
    * ADR-843 — id μιας **ΠΡΑΞΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ** (`fcon_*`).
    *
    * 🔴 **ΔΙΑΚΟΜΙΣΤΗΣ ΜΟΝΟ, με το κριτήριο του `mreq_*` και όχι του `land_*`.** Εκεί το

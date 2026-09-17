@@ -252,6 +252,13 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicAuthReprovisionJournalId',
       'generateDeterministicHolidayHoursQuestionId',
       'generateDeterministicWorkspaceAccessRequestId',
+      // ADR-867 — κανένα νήμα/ομάδα/φραγή/απουσία δεν επιτρέπεται να γεννηθεί τυχαίο:
+      // η ιδεμποτησία ΕΙΝΑΙ η εγγύηση «ένα νήμα ανά πράξη / ανά ζεύγος».
+      'generateDeterministicNetworkActTeamId',
+      'generateDeterministicNetworkActThreadId',
+      'generateDeterministicNetworkAwayId',
+      'generateDeterministicNetworkBlockId',
+      'generateDeterministicNetworkRelationshipThreadId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -327,6 +334,14 @@ describe('EnterpriseIdService', () => {
       // ADR-841 §7 Α21.21 Φάση Β — δύο παράμετροι (`companyId`, `seasonKey`), ίδιο σχήμα με το `wacr` από πάνω: ο
       //    πραγματικός σπόρος είναι `'anchor-seed:undefined'`, γι' αυτό το uuid **ταυτίζεται** με του `wacr`.
       generateDeterministicHolidayHoursQuestionId: 'hhq_aa044400-10b9-4583-865f-97901fb1d075',
+      // ADR-867 — ίδια μηχανή ⇒ ίδια uuid όπου ο σπόρος συμπίπτει (`nteam`/`naway` = σκέτος σπόρος,
+      //    `nblk` = `'anchor-seed:undefined'`). Τα `nthr` διαφέρουν επειδή φέρουν πρόθημα θέματος
+      //    (`act:` / `rel:`) — αυτό ακριβώς κρατά χωριστά νήμα πράξης και νήμα σχέσης.
+      generateDeterministicNetworkActTeamId: 'nteam_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicNetworkActThreadId: 'nthr_57bd03ab-cf49-47c7-86f2-f56494788cde',
+      generateDeterministicNetworkAwayId: 'naway_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicNetworkBlockId: 'nblk_aa044400-10b9-4583-865f-97901fb1d075',
+      generateDeterministicNetworkRelationshipThreadId: 'nthr_6b688050-cdbb-459e-850d-70f955dfb818',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το
