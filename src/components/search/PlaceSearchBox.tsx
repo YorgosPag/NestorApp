@@ -68,6 +68,7 @@ import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route
 import { OccupationSelect } from '@/components/mandate/OccupationSelect';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import { createModuleLogger } from '@/lib/telemetry';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 const logger = createModuleLogger('PlaceSearchBox');
 
@@ -292,7 +293,7 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
         <button
           type="submit"
           disabled={busy || !canSubmit}
-          className="rounded-md bg-foreground px-4 py-2 font-semibold text-background disabled:opacity-50"
+          className={`rounded-md px-4 py-2 font-semibold disabled:opacity-50 ${COLOR_BRIDGE.action.primary}`}
         >
           {t('search-results:landing.search.submit')}
         </button>

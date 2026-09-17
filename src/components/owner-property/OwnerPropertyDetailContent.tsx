@@ -31,6 +31,8 @@ import React from 'react';
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { cn } from '@/lib/utils';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { nowISO } from '@/lib/date-local';
 import {
@@ -127,7 +129,12 @@ function LifecycleButton({ property }: { property: OwnerProperty }): React.React
         type="button"
         onClick={handleClick}
         disabled={state === 'busy'}
-        className="self-start rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground disabled:opacity-50"
+        className={cn(
+          'self-start rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50',
+          // ADR-770 §18 — η ΑΠΟΣΥΡΣΗ αλλάζει τι βλέπει ο κόσμος ⇒ μελάνι προσοχής· η
+          // ΕΠΑΝΑΦΟΡΑ είναι απλή δευτερεύουσα. Ίδιο βάρος στις δύο = καμία ιεραρχία.
+          next === 'withdrawn' ? COLOR_BRIDGE.action.caution : COLOR_BRIDGE.action.secondary,
+        )}
       >
         {t(next === 'withdrawn' ? `${K}.lifecycle.withdraw` : `${K}.lifecycle.restore`)}
       </button>
@@ -220,26 +227,28 @@ function OwnerPropertyView({
         αγγελία είναι πραγματικά δημοσιευμένη — ένας σύνδεσμος προς κενή σελίδα είναι
         χειρότερος από κανέναν.
       */}
-      {onMap && (
-        <nav>
-          <Link
-            href={listingDetailHref(property.id)}
-            className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
-          >
-            {t(`${K}.publish.view`)}
-          </Link>
-        </nav>
-      )}
-
-      <div className="flex flex-wrap gap-3">
+      {/*
+        🎯 ADR-770 §18 — **ΜΙΑ γραμμή ενεργειών, ΜΙΑ κύρια.** Ήταν δύο ξεχωριστά, ίδια
+        κουμπιά με περίγραμμα: ο άνθρωπος δεν έβλεπε ποια είναι η επόμενη κίνηση. Η κύρια
+        είναι η **επεξεργασία** — ο δείκτης πληρότητας από πάνω είναι ο λόγος να πατηθεί.
+      */}
+      <nav className="flex flex-wrap gap-3">
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+          className={cn('rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.primary)}
         >
           {t(`${K}.detail.edit`)}
         </button>
-      </div>
+        {onMap && (
+          <Link
+            href={listingDetailHref(property.id)}
+            className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
+          >
+            {t(`${K}.publish.view`)}
+          </Link>
+        )}
+      </nav>
 
       {/*
         🔑 **ADR-864 Ε-10 — ΔΙΠΛΑ ΣΤΗΝ ΑΠΟΣΥΡΣΗ, ΟΧΙ ΣΤΗ ΦΟΡΜΑ.** Και τα δύο απαντούν

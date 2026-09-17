@@ -18,13 +18,14 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo, useState } from 'react';
 import {
-  Clock, History, ChevronDown, BarChart3, Filter,
-  FileEdit, Users, ImageIcon,
+  Clock, History, ChevronDown, Filter,
+  ImageIcon,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useEntityAudit } from '@/hooks/useEntityAudit';
 import { usePhotoShareHistory } from '@/hooks/usePhotoShareHistory';
-import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
+import { AuditStatsPanel } from '@/components/shared/audit/AuditStatsPanel';
+import { AuditDayDivider, AuditFilterChip } from '@/components/shared/audit/AuditFilterChip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -100,15 +101,12 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
 
       {/* Statistics */}
       {allEntries.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <StatsCard title={t('audit.totalLabel')} value={stats.total} icon={BarChart3} color="blue" />
-          <StatsCard title={t('audit.stats.lastChange')} value={stats.lastChangeRelative ?? '—'} icon={Clock} color="gray" />
-          <StatsCard title={t('audit.stats.fieldsChanged')} value={stats.uniqueFieldsChanged} icon={FileEdit} color="orange" />
-          {stats.photoShareCount > 0
-            ? <StatsCard title={t('audit.filters.photo_share')} value={stats.photoShareCount} icon={ImageIcon} color="teal" />
-            : <StatsCard title={t('audit.stats.users')} value={stats.uniqueUsers} icon={Users} color="teal" />
-          }
-        </div>
+        <AuditStatsPanel
+          stats={stats}
+          fourthCard={stats.photoShareCount > 0
+            ? { title: t('audit.filters.photo_share'), value: stats.photoShareCount, icon: ImageIcon }
+            : undefined}
+        />
       )}
 
       {/* Quick Filters */}
@@ -125,19 +123,13 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
             if (value !== 'all' && count === 0) return null;
 
             return (
-              <button
+              <AuditFilterChip
                 key={value}
-                type="button"
+                label={t(labelKey)}
+                count={count}
+                isActive={isActive}
                 onClick={() => setActiveFilter(isActive && value !== 'all' ? 'all' : value)}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : `bg-muted/60 ${colors.text.muted} hover:bg-muted`
-                }`}
-              >
-                {t(labelKey)}
-                <span className={`text-[10px] ${isActive ? 'opacity-80' : 'opacity-50'}`}>{count}</span>
-              </button>
+              />
             );
           })}
         </nav>
@@ -173,12 +165,7 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
       {/* Day-Grouped Timeline */}
       {groupedEntries.map(({ dateLabel, dateKey, entries: dayEntries }) => (
         <section key={dateKey}>
-          {/* Day header */}
-          <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-background/95 py-1 backdrop-blur-sm">
-            <div className="h-px flex-1 bg-border" />
-            <span className={cn('text-[11px] font-medium', colors.text.muted)}>{dateLabel}</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
+          <AuditDayDivider label={dateLabel} />
 
           {/* Timeline entries */}
           <ol className="relative ml-3 space-y-0 border-l-2 border-muted">

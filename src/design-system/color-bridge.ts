@@ -152,9 +152,9 @@ export const COLOR_BRIDGE = {
     // ✅ ADR-365 follow-up: success/price point to --text-success var (SSoT) — one source,
     //    matches green-700 in light, auto green-400 in dark. (was duplicated 'text-green-700')
     success: 'text-[hsl(var(--text-success))]', // Success text (theme-aware SSoT)
-    error: 'text-red-700',                // Error text
-    warning: 'text-yellow-700',           // Warning text
-    info: 'text-blue-700',               // Info text
+    error: 'text-[hsl(var(--text-error))]',   // ADR-770 §18 — θεματικό (ήταν text-red-700 = σκούρο κόκκινο και στο σκοτεινό)
+    warning: 'text-[hsl(var(--text-warning))]', // ADR-770 §18 — θεματικό (ήταν text-yellow-700)
+    info: 'text-[hsl(var(--text-info))]',     // ADR-770 §18 — θεματικό (ήταν text-blue-700 = αόρατο στο σκοτεινό)
     price: 'text-[hsl(var(--text-success))]', // Price text (reuse success SSoT)
 
     // ✅ Text on SOLID status fills (vivid bg) — ADR-365 follow-up
@@ -181,7 +181,7 @@ export const COLOR_BRIDGE = {
     errorStrong: 'text-red-800',          // Strong error text
 
     // ✅ ENTERPRISE MISSING VARIANTS - ADDED FOR COMPONENT COMPATIBILITY
-    danger: 'text-red-700',               // Danger text (alias for error)
+    danger: 'text-[hsl(var(--text-error))]',  // ADR-770 §18 — alias του error, ίδιο θεματικό token
     accent: 'text-blue-700',              // Accent text (alias for info)
     tertiary: 'text-slate-500',           // Tertiary text για DynamicInput components
 
@@ -314,6 +314,32 @@ export const COLOR_BRIDGE = {
     /** Γεμάτος δείκτης χωρίς Radix state (progress, επιλεγμένη μέρα). */
     fill: 'bg-control-accent',
     fillInk: 'text-control-accent-foreground',
+    /** ADR-770 §18 — η ΡΑΓΑ κάτω από γέμισμα (progress). Ήταν `bg-secondary` = ΙΔΙΟ με το `--card`
+     *  στο σκοτεινό ⇒ «26%» χωρίς ορατό «από πόσο». Ίδια οικογένεια με το `--control-outline`
+     *  (M3 `outline`), σε 25% ώστε να διαβάζεται ως κενό, όχι ως δεύτερο γέμισμα. */
+    track: 'bg-control-outline/25',
+  },
+
+  /**
+   * 🎯 ΙΕΡΑΡΧΙΑ ΕΝΕΡΓΕΙΩΝ (ADR-770 §18) — «ποιο κουμπί πατάω;» έχει ΜΙΑ απάντηση ανά οθόνη.
+   *
+   * ⚠️ ΓΙΑΤΙ ΟΧΙ `<Button variant="default">`: είναι `bg-primary`, και το `--primary` εδώ
+   * είναι ΕΠΙΦΑΝΕΙΑ (`.dark --primary` ≡ `--card`) ⇒ το «κύριο» κουμπί στο σκοτεινό ΣΒΗΝΕΙ
+   * μέσα στην κάρτα και μοιάζει με όλα τα άλλα. ⛔ Όχι αλλαγή του `--primary` (ADR-682 §5.5)·
+   * ⛔ όχι δανεισμός του `--control-accent` (ρόλος ΧΕΙΡΙΣΤΗΡΙΟΥ — δύο σημασίες σε ένα token).
+   *
+   * 🔑 Ανεστραμμένο μονόχρωμο (Vercel · Linear · GitHub Primer «emphasis»): το ζεύγος
+   * `--foreground`/`--background` είναι θεματικό ΕΞ ΟΡΙΣΜΟΥ, ~14:1 και στα δύο θέματα.
+   * Ήταν ήδη η κύρια ενέργεια του δημόσιου site, γραμμένη με το χέρι σε 2 αρχεία.
+   */
+  action: {
+    /** ΜΙΑ ανά οθόνη — η επόμενη κίνηση. */
+    primary: 'bg-foreground text-background hover:bg-foreground/90',
+    /** Δευτερεύουσα — περίγραμμα, καμία γέμιση. */
+    secondary: 'border border-border bg-transparent text-foreground hover:bg-accent/50',
+    /** Πράξη που αλλάζει τι βλέπει ο ΚΟΣΜΟΣ (απόσυρση) — μελάνι άρνησης, ΟΧΙ γέμισμα:
+     *  αναστρέψιμη, άρα δεν φωνάζει όσο μια διαγραφή (GitHub «Danger zone»). */
+    caution: 'border border-border bg-transparent text-[hsl(var(--text-error))] hover:bg-[hsl(var(--bg-error))]/10',
   },
 
   /** 🔘 ENTERPRISE SWITCH TOKENS - Status-based toggle colors (ADR-128) */

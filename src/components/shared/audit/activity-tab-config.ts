@@ -51,7 +51,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   updated: {
     icon: Edit3,
     labelKey: "audit.actions.updated",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },
   deleted: {
@@ -81,7 +81,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   linked: {
     icon: Link2,
     labelKey: "audit.actions.linked",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-accent",
   },
   unlinked: {
@@ -93,7 +93,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   professional_assigned: {
     icon: UserPlus,
     labelKey: "audit.actions.professional_assigned",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-accent",
   },
   professional_removed: {
@@ -105,7 +105,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   email_sent: {
     icon: Mail,
     labelKey: "audit.actions.email_sent",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },
   invoice_created: {
@@ -117,7 +117,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   document_added: {
     icon: FilePlus2,
     labelKey: "audit.actions.document_added",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },
   document_removed: {
@@ -129,7 +129,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   vendor_notified: {
     icon: Mail,
     labelKey: "audit.actions.vendor_notified",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },
   orphaned: {
@@ -141,7 +141,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   auto_submit_prompted: {
     icon: Send,
     labelKey: "audit.actions.auto_submit_prompted",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },
   auto_submit_accepted: {
@@ -171,13 +171,13 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   triage_assigned: {
     icon: UserCheck,
     labelKey: "audit.actions.triage_assigned",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-accent",
   },
   internal_note_added: {
     icon: StickyNote,
     labelKey: "audit.actions.internal_note_added",
-    color: "text-primary",
+    color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },
 };

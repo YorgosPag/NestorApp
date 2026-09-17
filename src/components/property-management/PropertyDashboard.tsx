@@ -53,7 +53,7 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
         { title: t('dashboard.stats.totalArea'), value: `${Math.round(stats.totalArea ?? 0)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
         { title: t(UNIFIED_STATUS_FILTER_LABELS.SOLD, { ns: 'common' }), value: stats.soldProperties ?? 0, icon: CheckCircle, color: "red" },
         { title: t('dashboard.stats.averagePrice'), value: formatCurrency(stats.averagePrice), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
-    ];
+    ] as const; // ADR-770 §18 — κρατά τα κυριολεκτικά χρώματα ώστε να ταιριάζουν στο StatsCardColor
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">

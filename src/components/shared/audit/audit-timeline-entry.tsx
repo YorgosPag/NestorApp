@@ -240,7 +240,7 @@ export function AuditTimelineEntry({
             {entityHref ? (
               <Link
                 href={entityHref}
-                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                className="inline-flex items-center gap-1 font-medium text-[hsl(var(--text-info))] hover:underline"
               >
                 {safeEntityName(entry.entityName) ?? t('audit.unknownEntityName')}
                 <ExternalLink className="h-3 w-3 opacity-60" />
@@ -267,7 +267,7 @@ export function AuditTimelineEntry({
               <TooltipTrigger asChild>
                 <time
                   dateTime={entry.timestamp}
-                  className={cn("ml-auto text-[11px]", colors.text.muted)}
+                  className={cn("ml-auto text-xs", colors.text.muted)}
                 >
                   {relativeTime}
                 </time>
@@ -348,7 +348,7 @@ export function AuditTimelineEntry({
                                 <span
                                   className={cn(
                                     colors.text.muted,
-                                    "line-through decoration-red-400/60",
+                                    "line-through",
                                   )}
                                 >
                                   {formatFieldAwareValue(sub.subField, sub.oldValue, translateSubValue)}
@@ -394,7 +394,7 @@ export function AuditTimelineEntry({
                   <span
                     className={cn(
                       colors.text.muted,
-                      "line-through decoration-red-400/60",
+                      "line-through",
                     )}
                   >
                     {change.oldValueLabel

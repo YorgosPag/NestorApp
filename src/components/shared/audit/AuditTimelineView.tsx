@@ -23,17 +23,15 @@ import {
   Clock,
   History,
   ChevronDown,
-  BarChart3,
   Filter,
-  FileEdit,
-  Users,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import type {
   AuditAction,
   EntityAuditEntry,
 } from "@/types/audit-trail";
-import { StatsCard } from "@/components/property-management/dashboard/StatsCard";
+import { AuditStatsPanel } from "./AuditStatsPanel";
+import { AuditDayDivider, AuditFilterChip } from "./AuditFilterChip";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
@@ -98,7 +96,7 @@ export function AuditTimelineView({
         <span>{t("audit.changeHistory")}</span>
       </header>
 
-      {entries.length > 0 && <StatsPanel stats={stats} />}
+      {entries.length > 0 && <AuditStatsPanel stats={stats} />}
 
       {entries.length > 0 && (
         <QuickFilters
@@ -184,43 +182,6 @@ export function AuditTimelineView({
 }
 
 // ============================================================================
-// STATISTICS PANEL
-// ============================================================================
-
-function StatsPanel({ stats }: { stats: Stats }) {
-  const { t } = useTranslation(COMMON_NAMESPACES);
-
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <StatsCard
-        title={t("audit.totalLabel")}
-        value={stats.total}
-        icon={BarChart3}
-        color="blue"
-      />
-      <StatsCard
-        title={t("audit.stats.lastChange")}
-        value={stats.lastChangeRelative ?? "—"}
-        icon={Clock}
-        color="gray"
-      />
-      <StatsCard
-        title={t("audit.stats.fieldsChanged")}
-        value={stats.uniqueFieldsChanged}
-        icon={FileEdit}
-        color="orange"
-      />
-      <StatsCard
-        title={t("audit.stats.users")}
-        value={stats.uniqueUsers}
-        icon={Users}
-        color="teal"
-      />
-    </div>
-  );
-}
-
-// ============================================================================
 // QUICK FILTERS
 // ============================================================================
 
@@ -233,7 +194,6 @@ function QuickFilters({
   onChange: (v: AuditAction | "all") => void;
   stats: Stats;
 }) {
-  const colors = useSemanticColors();
   const { t } = useTranslation(COMMON_NAMESPACES);
   return (
     <nav
@@ -248,27 +208,13 @@ function QuickFilters({
         if (value !== "all" && count === 0) return null;
 
         return (
-          <button
+          <AuditFilterChip
             key={value}
-            type="button"
-            onClick={() =>
-              onChange(isActive && value !== "all" ? "all" : value)
-            }
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : `bg-muted/60 ${colors.text.muted} hover:bg-muted`
-            }`}
-          >
-            {t(labelKey)}
-            <span
-              className={`text-[10px] ${
-                isActive ? "opacity-80" : "opacity-50"
-              }`}
-            >
-              {count}
-            </span>
-          </button>
+            label={t(labelKey)}
+            count={count}
+            isActive={isActive}
+            onClick={() => onChange(isActive && value !== "all" ? "all" : value)}
+          />
         );
       })}
     </nav>
@@ -286,16 +232,9 @@ function DayGroup({
   dateLabel: string;
   children: React.ReactNode;
 }) {
-  const colors = useSemanticColors();
   return (
     <section>
-      <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-background/95 py-1 backdrop-blur-sm">
-        <div className="h-px flex-1 bg-border" />
-        <span className={cn("text-[11px] font-medium", colors.text.muted)}>
-          {dateLabel}
-        </span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
+      <AuditDayDivider label={dateLabel} />
 
       <ol className="relative ml-3 space-y-0 border-l-2 border-muted">
         {children}

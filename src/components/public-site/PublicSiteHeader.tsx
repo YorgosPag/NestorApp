@@ -57,6 +57,7 @@ import { AUTH_ROUTES } from '@/lib/routes';
 import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 export function PublicSiteHeader() {
   // ⚠️ Το `'search-results'` ήταν γραμμένο **τρεις φορές** στον ίδιο πίνακα — ο i18next
@@ -145,7 +146,7 @@ export function PublicSiteHeader() {
           */}
           <Link
             href={NEW_OFFER_ROUTE}
-            className="rounded-md bg-foreground px-3 py-1.5 text-sm font-semibold text-background"
+            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${COLOR_BRIDGE.action.primary}`}
           >
             {t('property-market:offer.door.cta')}
           </Link>

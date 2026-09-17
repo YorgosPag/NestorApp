@@ -43,9 +43,9 @@ export function completionBucketTextClass(
 /**
  * Η βαθμίδα → κλάση **γεμίσματος** της μπάρας.
  *
- * Περνιέται στο `indicatorClassName` του `<Progress>` (επέκταση shadcn). Ο διάδρομος
- * παίρνει επιπλέον `bg-transparent`, ώστε να μη φαίνεται το προεπιλεγμένο `bg-primary`
- * κάτω από το χρωματισμένο γέμισμα — χωρίς μάχη ειδικότητας με child selectors.
+ * Περνιέται στο `indicatorClassName` του `<Progress>` (επέκταση shadcn). Η **ράγα** από κάτω
+ * είναι ευθύνη του ίδιου του `<Progress>` (`COLOR_BRIDGE.selectionControl.track`, ADR-770 §18)
+ * — ⛔ ΜΗΝ της βάλεις `bg-transparent`: έτσι το «26%» χάνει το «από πόσο».
  */
 export function completionBucketIndicatorClass(bucket: CompletionBucket): string {
   switch (bucket) {

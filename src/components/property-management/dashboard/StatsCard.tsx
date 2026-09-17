@@ -11,11 +11,24 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
 
+/**
+ * Ο ΚΛΕΙΣΤΟΣ κατάλογος χρωμάτων — ADR-770 §18. Ήταν `color: string` + `as keyof`, και
+ * το `"teal"` (ανύπαρκτο κλειδί) προσγειώθηκε σε ΔΥΟ οθόνες ιστορικού βάφοντας την κλάση
+ * `undefined`. Με union ο μεταγλωττιστής το αρνείται.
+ *
+ * 🔑 `gray` = ΟΥΔΕΤΕΡΗ κάρτα (ετικέτα/εικονίδιο muted, αριθμός foreground). Είναι η
+ * προεπιλογή των μεγάλων (GitHub · Linear · Stripe): το χρώμα σε στατιστικό ΣΗΜΑΙΝΕΙ
+ * κατάσταση, ποτέ ποικιλία.
+ */
+export type StatsCardColor =
+  | 'blue' | 'gray' | 'green' | 'purple' | 'red' | 'orange'
+  | 'cyan' | 'pink' | 'yellow' | 'indigo';
+
 interface StatsCardProps {
     title: string;
     value: string | number;
     icon: React.ElementType;
-    color: string;
+    color: StatsCardColor;
     onClick?: () => void;
     loading?: boolean;
     description?: string;
@@ -26,8 +39,10 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-    // Enterprise semantic color mapping (ONLY text colors - NO borders, NO backgrounds)
-    const colorClasses = {
+    // Enterprise semantic color mapping (ONLY text colors - NO borders, NO backgrounds).
+    // ΕΝΑΣ χάρτης τόνου: ετικέτα + εικονίδιο τον παίρνουν αυτούσιο· ο αριθμός διαφέρει ΜΟΝΟ
+    // στην ουδέτερη κάρτα (μελάνι κειμένου αντί muted) — τρεις δίδυμοι χάρτες έκρυβαν αυτή τη μία διαφορά.
+    const toneClasses: Record<StatsCardColor, string> = {
         blue: colors.text.info,
         gray: colors.text.muted,
         green: colors.text.success,
@@ -40,39 +55,13 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
         indigo: colors.text.info
     };
 
-    // Enterprise semantic value color mapping
-    const valueColorClasses = {
-        blue: colors.text.info,
-        gray: colors.text.primary,
-        green: colors.text.success,
-        purple: colors.text.purple,
-        red: colors.text.danger,
-        orange: colors.text.warning,
-        cyan: colors.text.info,
-        pink: colors.text.purple,
-        yellow: colors.text.warning,
-        indigo: colors.text.info
-    };
-
-    // Enterprise semantic icon color mapping
-    const iconColorClasses = {
-        blue: colors.text.info,
-        gray: colors.text.muted,
-        green: colors.text.success,
-        purple: colors.text.purple,
-        red: colors.text.danger,
-        orange: colors.text.warning,
-        cyan: colors.text.info,
-        pink: colors.text.purple,
-        yellow: colors.text.warning,
-        indigo: colors.text.info
-    };
-
-    const colorKey = color as keyof typeof colorClasses;
+    const colorKey = color;
+    const toneClass = toneClasses[colorKey];
+    const valueToneClass = colorKey === 'gray' ? colors.text.primary : toneClass;
 
     return (
         <Card
-            className={`${quick.card} ${colors.bg.card} ${colorClasses[colorKey]} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
+            className={`${quick.card} ${colors.bg.card} ${toneClass} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
             onClick={onClick}
         >
             <CardContent className={`${spacing.padding.sm} min-w-0`}>
@@ -86,15 +75,15 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
                             </>
                         ) : (
                             <>
-                                <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>
-                                <p className={`${typeof value === 'string' ? 'text-sm sm:text-base' : 'text-lg sm:text-xl lg:text-2xl'} font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
+                                <p className={`text-xs font-medium ${toneClass} truncate leading-tight`}>{title}</p>
+                                <p className={`${typeof value === 'string' ? 'text-sm sm:text-base' : 'text-lg sm:text-xl lg:text-2xl'} font-bold ${valueToneClass} truncate leading-tight`}>{value}</p>
                                 {description && (
                                     <p className={`text-xs ${colors.text.muted} truncate leading-tight mt-0.5`}>{description}</p>
                                 )}
                             </>
                         )}
                     </div>
-                    <Icon className={`${iconSizes.lg} ${iconColorClasses[colorKey]} flex-shrink-0`} />
+                    <Icon className={`${iconSizes.lg} ${toneClass} flex-shrink-0`} />
                 </div>
             </CardContent>
         </Card>

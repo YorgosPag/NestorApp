@@ -53,7 +53,7 @@
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 212 85% 94%; /* ✅ ENTERPRISE: Harmonious blue muted (was grey) */
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 38%;  /* ADR-770 §18 — ήταν 46,9% (shadcn default, βαθμονομημένο σε ΛΕΥΚΟ) = 3,89:1 επί --accent ❌ · τώρα ≥5,38:1 σε 10 επιφάνειες */
 
     --accent: 211 83% 92%; /* ✅ ENTERPRISE: Sophisticated blue accent (was grey) */
     --accent-foreground: 222.2 47.4% 11.2%;
@@ -134,7 +134,7 @@
     --bg-info: 214 95% 97%;           /* info background - blue-50 */
 
     /* Enterprise Text Colors for Status Badges */
-    --text-success: 142 76% 36%;      /* success text - green-700 */
+    --text-success: 142 76% 24%;      /* ADR-770 §18 — ήταν 36% = 2,72:1 ❌ · τώρα ≥5,35:1 */
     /**
      * 🔴 ΤΟ ΚΟΚΚΙΝΟ ΜΕΛΑΝΙ — Η ΜΟΝΗ ΑΥΘΕΝΤΙΑ (ADR-770 · CHECK 3.38/3.39/3.40)
      *
@@ -162,8 +162,8 @@
      * επιλογή είναι που το έσπασε. Αν αλλάξεις επιφάνεια, **ξαναμέτρησε και τα δύο θέματα**.
      */
     --text-error: 0 72% 42%;          /* error text — βαθμονομημένο ≥5,28:1 (βλ. παραπάνω) */
-    --text-warning: 43 96% 56%;       /* warning text - yellow-600 */
-    --text-info: 217 91% 60%;         /* info text - blue-600 */
+    --text-warning: 32 95% 28%;       /* ADR-770 §18 — ήταν 43° 56% (κίτρινο) = 1,38:1 ❌ · κίτρινο μελάνι σε ανοιχτό φόντο ΔΕΝ ΥΠΑΡΧΕΙ ⇒ κεχριμπάρι, ≥5,48:1 */
+    --text-info: 217 91% 42%;         /* ADR-770 §18 — ήταν 60% = 2,97:1 ❌ · τώρα ≥5,42:1 */
     --bg-primary: 214 95% 93%;        /* ✅ ENTERPRISE: primary background - Beautiful light blue (no white) */
     --bg-secondary: 213 92% 95%;      /* ✅ ENTERPRISE: secondary background - Elegant blue (no grey) */
     --bg-hover: 212 89% 90%;          /* ✅ ENTERPRISE: hover background - Rich blue interaction */

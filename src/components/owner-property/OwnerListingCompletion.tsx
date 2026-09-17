@@ -125,6 +125,14 @@ export function OwnerListingCompletion({
   const { percentage, bucketColor, missing } = assessment;
   const shown = missing.slice(0, SUGGESTIONS_AT_A_TIME);
 
+  // 🎨 ADR-770 §18 — ΤΟ ΧΡΩΜΑ ΕΙΝΑΙ COACHING, ΟΧΙ ΣΦΑΛΜΑ. Κόκκινο = «κάτι χάλασε»· μια
+  //    αγγελία που μόλις δημοσιεύτηκε δεν χάλασε, απλώς δεν συμπληρώθηκε (ADR-842 §6 #7:
+  //    «κατηγορητήριο»). Η ΒΑΘΜΙΔΑ μένει ίδια — το κείμενο εξακολουθεί να λέει «κρίσιμα» —
+  //    αλλάζει μόνο ο ΤΟΝΟΣ: η κόκκινη εμφανίζεται κεχριμπαρένια (LinkedIn «profile
+  //    strength» · Airbnb listing quality). Ο επαγγελματίας (`PropertyCompletionMeter`)
+  //    κρατά το κόκκινο: εκεί είναι φράγμα, όχι coaching.
+  const tone = bucketColor === 'red' ? 'amber' : bucketColor;
+
   return (
     <section
       aria-label={t(`${K}.aria`)}
@@ -132,15 +140,15 @@ export function OwnerListingCompletion({
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-medium text-foreground">{t(`${K}.title`)}</h2>
-        <p className={cn('text-sm font-semibold', completionBucketTextClass(bucketColor, colors))}>
+        <p className={cn('text-sm font-semibold', completionBucketTextClass(tone, colors))}>
           {percentage}%
         </p>
       </header>
 
       <Progress
         value={percentage}
-        className="h-2 bg-transparent"
-        indicatorClassName={completionBucketIndicatorClass(bucketColor)}
+        className="h-2"
+        indicatorClassName={completionBucketIndicatorClass(tone)}
       />
 
       {/*
