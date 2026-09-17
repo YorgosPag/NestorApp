@@ -11,17 +11,21 @@
  * anchor — είναι σχόλιο»*). Αν κάποια μέρα ο κριτής τιμής αποκτήσει δεύτερη διαδρομή,
  * αυτή η ομάδα κοκκινίζει **πριν** η οθόνη δείξει έναν αριθμό και ταξινομήσει με άλλον.
  *
- * ⚠️ Η **Κ1** είναι το κανάλι ειλικρίνειας: πινακίδα σε σχήμα που δεν είναι πινέζα
- * λέει **ακριβή τιμή σε ανακριβή θέση**. Ελέγχονται **και τα πέντε** άλλα σχήματα, όχι
- * δείγμα — αλλιώς μια μελλοντική χαλάρωση θα περνούσε στο μισό.
+ * ⚠️ Η **Κ1** είναι το κανάλι ειλικρίνειας: πινακίδα σε θέση με αβεβαιότητα πάνω από
+ * όσο δέχεται ο κλάδος (Airbnb: < 1 χλμ) λέει **ακριβή τιμή σε ανακριβή θέση**.
+ * Ελέγχονται **όλα** τα σχήματα, όχι δείγμα — αλλιώς μια μελλοντική χαλάρωση θα
+ * περνούσε στο μισό. (Ως 2026-09-17 ο κανόνας ήταν «μόνο `pin`» και έκρυβε κάθε
+ * γεωκωδικοποιημένη διεύθυνση χωρίς αριθμό — δες ADR-777 §8.60.)
  */
 
 import {
   listingPriceMarkers,
+  PLAQUE_MAX_UNCERTAINTY_M,
   PRICE_MARKER_LIMIT,
   type ListingPriceMarker,
 } from '../listing-price-markers';
 import { listingsToGeoJson, type ListingFeatureProperties } from '../listings-geojson';
+import { LISTING_UNCERTAINTY_KM } from '../listing-map-shape';
 import { priceSortKey } from '@/lib/properties/price-resolver';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
@@ -71,10 +75,10 @@ function markersOf(listings: readonly PublicListing[], limit?: number): readonly
 }
 
 // ============================================================================
-// Κ1 — ΞΕΡΟΥΜΕ **ΠΟΥ**: πινακίδα ΜΟΝΟ σε `pin`
+// Κ1 — ΞΕΡΟΥΜΕ **ΠΟΥ**: πινακίδα μόνο μέσα στο όριο αβεβαιότητας
 // ============================================================================
 
-describe('Κ1 — πινακίδα μόνο σε ακριβή πινέζα', () => {
+describe('Κ1 — πινακίδα μόνο όσο η θέση είναι αρκετά γνωστή', () => {
   it('η ακριβής πινέζα (χειροκίνητη) παίρνει πινακίδα', () => {
     expect(markersOf([priced('a', 100)]).map((m) => m.id)).toEqual(['a']);
   });
@@ -90,8 +94,29 @@ describe('Κ1 — πινακίδα μόνο σε ακριβή πινέζα', () 
     expect(markersOf([l]).map((m) => m.id)).toEqual(['exact']);
   });
 
+  /*
+    🔴 **Η ΑΓΚΥΡΑ ΤΟΥ ΠΕΡΙΣΤΑΤΙΚΟΥ 2026-09-17.** Κατάλυμα στη Θεσσαλονίκη, διεύθυνση
+    χωρίς αριθμό ⇒ `interpolated` ⇒ δακτύλιος 250 μ. — και **καμία** τιμή στον χάρτη,
+    ενώ η κάρτα δίπλα έγραφε «50 €». Το Airbnb δείχνει τιμή σε αβεβαιότητα έως ~1 χλμ.
+  */
+  it('η γεωκωδικοποιημένη διεύθυνση ΧΩΡΙΣ αριθμό (δακτύλιος) παίρνει πινακίδα', () => {
+    const l = listing({
+      id: 'ring',
+      position: {
+        kind: 'known', provenance: 'geocoded', accuracy: 'interpolated',
+        point: { lat: 40.67, lng: 22.91 }, locatedAt: AT,
+      },
+    });
+    expect(markersOf([l]).map((m) => m.id)).toEqual(['ring']);
+  });
+
+  it('το όριο διαχωρίζει τα σχήματα ΑΚΡΙΒΩΣ όπως δηλώνει ο πίνακας αβεβαιότητας', () => {
+    expect(PLAQUE_MAX_UNCERTAINTY_M).toBeLessThanOrEqual(1000);
+    expect((LISTING_UNCERTAINTY_KM['pin-with-ring'] ?? Infinity) * 1000).toBeLessThanOrEqual(PLAQUE_MAX_UNCERTAINTY_M);
+    expect((LISTING_UNCERTAINTY_KM['shaded-circle'] ?? 0) * 1000).toBeGreaterThan(PLAQUE_MAX_UNCERTAINTY_M);
+  });
+
   it.each([
-    ['pin-with-ring — δρόμος χωρίς αριθμό', 'interpolated'],
     ['shaded-circle — συνοικία', 'approximate'],
     ['shaded-city — μόνο πόλη', 'center'],
   ] as const)('ΔΕΝ παίρνει πινακίδα: %s', (_label, accuracy) => {
@@ -300,5 +325,61 @@ describe('Κ6 — καμία δεύτερη μετατροπή σε [lng, lat]',
 
   it('ο τίτλος ταξιδεύει, για το προσβάσιμο όνομα', () => {
     expect(markersOf([priced('t', 100)])[0].title).toBe('Ακίνητο t');
+  });
+});
+
+// ============================================================================
+// Κ7 — ΡΟΛΟΣ ΚΑΙ ΣΕΙΡΑ ΑΝΑΜΕΣΑ ΣΕ ΑΝΟΜΟΙΑ ΠΟΣΑ (2026-09-17)
+// ============================================================================
+
+describe('Κ7 — η πινακίδα ξέρει ΤΙ ΕΙΔΟΥΣ ποσό είναι, και η σειρά δεν συγκρίνει ανόμοια', () => {
+  function rent(id: string, amount: number): PublicListing {
+    return listing({
+      id,
+      commercialStatus: 'for-rent',
+      offerKinds: ['leaseOut'],
+      commercial: { askingPrice: null, finalPrice: null, rentPrice: amount, nightlyRate: null },
+    });
+  }
+
+  function nightly(id: string, amount: number): PublicListing {
+    return listing({
+      id,
+      commercialStatus: 'unavailable',
+      offerKinds: ['leaseShort'],
+      commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: amount },
+    });
+  }
+
+  it('ο ρόλος ταξιδεύει από τον κριτή — πώληση, μίσθωμα, διανυκτέρευση', () => {
+    const roles = Object.fromEntries(
+      markersOf([priced('s', 170000), rent('r', 900), nightly('n', 50)]).map((m) => [m.id, m.role]),
+    );
+    expect(roles).toEqual({ s: 'sale', r: 'rent', n: 'nightly' });
+  });
+
+  it('το κατάλυμα ΜΟΝΟ βραχυχρόνιας μίσθωσης παίρνει πινακίδα με την τιμή ανά νύχτα', () => {
+    expect(markersOf([nightly('stay', 50)]).map((m) => [m.amount, m.role])).toEqual([[50, 'nightly']]);
+  });
+
+  /*
+    🔴 **Η βλάβη που φυλάει**: με έναν άξονα «τιμή ↑», 50 €/νύχτα < 900 €/μήνα < 170.000 €
+    ⇒ ένα όριο 3 θα γέμιζε ΜΟΝΟ με διανυκτερεύσεις. Εναλλάξ ανά ρόλο, κάθε είδος
+    παίρνει μερίδιο.
+  */
+  it('όταν το όριο κόβει, κάθε ρόλος παίρνει μερίδιο — όχι ο φθηνότερος σε μονάδα', () => {
+    const crowd = [
+      nightly('n1', 40), nightly('n2', 45), nightly('n3', 50),
+      rent('r1', 700), rent('r2', 800),
+      priced('s1', 150000), priced('s2', 160000),
+    ];
+    expect(markersOf(crowd, 3).map((m) => m.id)).toEqual(['s1', 'r1', 'n1']);
+    expect(markersOf(crowd, 5).map((m) => m.id)).toEqual(['s1', 'r1', 'n1', 's2', 'r2']);
+  });
+
+  it('μέσα στον ίδιο ρόλο ισχύει η «τιμή ↑», ανεξάρτητα από τη σειρά εισόδου', () => {
+    const stays = [nightly('c', 90), nightly('a', 30), nightly('b', 60)];
+    expect(markersOf(stays).map((m) => m.id)).toEqual(['a', 'b', 'c']);
+    expect(markersOf([...stays].reverse()).map((m) => m.id)).toEqual(['a', 'b', 'c']);
   });
 });

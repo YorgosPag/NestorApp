@@ -51,13 +51,14 @@
 import React, { useMemo } from 'react';
 import { Marker } from '@/lib/maps/maplibre';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
+import { headlinePriceLabel } from '@/lib/listings/listing-price-label';
 import {
   listingFocusStrength,
   type ListingFocus,
   type ListingFocusStrength,
 } from '@/lib/listings/listing-focus';
 import type { ListingPriceMarker } from '@/lib/listings/listing-price-markers';
+import { useStayTotal } from './StayTotalsContext';
 
 interface ListingPriceMarkersProps {
   /** Ποιες αγγελίες πήραν πινακίδα — **κρίση του `listingPriceMarkers`**, όχι εδώ. */
@@ -184,7 +185,13 @@ interface PriceMarkerProps {
  */
 function PriceMarker({ marker, offset, strength, onPeek, onSelect }: PriceMarkerProps) {
   const { t } = useTranslation();
-  const price = formatCurrency(marker.amount);
+  const stayTotal = useStayTotal(marker.id);
+  /*
+    🔴 **Ποσό ΜΑΖΙ με μονάδα** («50 €/νύχτα»), από το ΕΝΑ σημείο μορφοποίησης: στον ίδιο
+    χάρτη κάθονται πώληση, μίσθωμα και διανυκτέρευση (ADR-835 §4.4). Με ημερομηνίες
+    που το κατάλυμα δέχεται, το **σύνολο** της διαμονής («150 € · 3 νύχτες», §8.60.12).
+  */
+  const price = headlinePriceLabel(t, marker, stayTotal);
 
   return (
     <Marker

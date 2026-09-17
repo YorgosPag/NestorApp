@@ -32,11 +32,12 @@ import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
+import { displayPriceLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { useStayTotal } from './StayTotalsContext';
 import { PriceReductionBadge } from './PriceReductionBadge';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
-import { formatCurrency, formatList } from '@/lib/intl-formatting';
+import { formatList } from '@/lib/intl-formatting';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { ListingCardGallery } from '@/components/search-results/ListingCardGallery';
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
@@ -191,6 +192,7 @@ export function ListingCard({
 }: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
+  const stayTotal = useStayTotal(listing.id);
   const images = listingGalleryImages(listing);
   const href = listingDetailHref(listing.id, filterQuery);
 
@@ -324,12 +326,11 @@ export function ListingCard({
           </h3>
 
           <p className="mt-1 text-base font-semibold text-foreground">
-            {price.kind === 'priced'
-              ? formatCurrency(price.headline.amount)
-              : t(MISSING_PRICE_KEY[price.reason])}
+            {/* ADR-835 §4.4 — ποσό ΜΑΖΙ με μονάδα («50 €/νύχτα»), από το ΕΝΑ σημείο. */}
+            {displayPriceLabel(t, price, stayTotal)}
             {price.kind === 'priced' && price.secondary && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {formatCurrency(price.secondary.amount)}
+                {resolvedPriceLabel(t, price.secondary)}
               </span>
             )}
             {/* ADR-777 §8.69 — «ήταν X, ↓%», μόνο όσο η μείωση είναι φρέσκια. */}

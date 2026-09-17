@@ -63,9 +63,9 @@ import { Popup } from '@/lib/maps/maplibre';
 
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
+import { displayPriceLabel } from '@/lib/listings/listing-price-label';
+import { useStayTotal } from './StayTotalsContext';
 import { PriceReductionBadge } from './PriceReductionBadge';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
@@ -95,6 +95,7 @@ interface ListingMapPopupProps {
 
 export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPopupProps) {
   const { t } = useTranslation(['search-results', 'search-focus']);
+  const stayTotal = useStayTotal(listing.id);
 
   // Ο φρουρός είναι για τον μεταγλωττιστή, όχι για την οθόνη: ο καλών ζωγραφίζει popup
   // μόνο για αγγελία που ήδη πέρασε από το `mapped` — δηλαδή έχει θέση εξ ορισμού.
@@ -221,9 +222,7 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
         </h3>
 
         <p className="mt-0.5 text-sm font-semibold text-popover-foreground">
-          {price.kind === 'priced'
-            ? formatCurrency(price.headline.amount)
-            : t(MISSING_PRICE_KEY[price.reason])}
+          {displayPriceLabel(t, price, stayTotal)}
           {/* ADR-777 §8.69 — η ΙΔΙΑ σήμανση με την κάρτα της λίστας, όχι αντίγραφό της. */}
           <PriceReductionBadge reduction={listing.priceReduction} className="ml-2" />
         </p>
