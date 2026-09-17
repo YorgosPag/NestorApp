@@ -16,10 +16,12 @@ import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { formatCurrency } from '@/lib/intl-utils';
+import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import {
   resolveDisplayPrice,
   type DisplayPrice,
   type MissingPriceReason,
+  type PriceRole,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
 import type { CommercialStatus } from '@/types/property';
@@ -114,20 +116,38 @@ export const MISSING_PRICE_LABEL_KEYS: Record<MissingPriceReason, string> = {
   'not-listed': 'card.price.notListed',
   'sale-price-missing': 'card.price.saleMissing',
   'rent-price-missing': 'card.price.rentMissing',
+  // Offered for short stays, rate never recorded — the opposite claim of `not-listed`
+  // (ADR-835 §4.4). Until 2026-09-17 this row was missing and the card painted a raw key.
+  'nightly-rate-missing': 'card.price.nightlyMissing',
 };
 
 /** Whole-euro money formatting — one rule, so every card reads the same. */
 export const formatPriceAmount = (amount: number): string =>
   formatCurrency(amount, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-/** One price → one StatItem. Rent carries its period; sale does not. */
+/**
+ * **What each role is called** when it labels a row — «Πώληση» · «Ενοίκιο» · «Διανυκτέρευση».
+ *
+ * `Record<PriceRole, …>` so that a fourth role does not compile until someone names it.
+ * The previous `if (role === 'rent') … else` chain sent `nightly` down the sale branch,
+ * and a 50 €/night rate was labelled «Τιμή» — the sale word (ADR-777 §8.60.13).
+ */
+const PRICE_ROLE_LABEL_KEY: Readonly<Record<PriceRole, string>> = {
+  sale: 'card.stats.sale',
+  rent: 'card.stats.rent',
+  nightly: 'card.stats.nightly',
+};
+
+/**
+ * One price → one StatItem. The value carries its unit through the ONE amount-with-unit
+ * rule (`resolvedPriceLabel` → `common:priceAmount.*`), shared with the public search.
+ */
 function priceStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem {
-  const amount = formatPriceAmount(price.amount);
   return {
     icon: NAVIGATION_ENTITIES.price.icon,
     iconColor: NAVIGATION_ENTITIES.price.color,
     label: t(labelKey),
-    value: price.role === 'rent' ? t('card.stats.rentValue', { amount }) : amount,
+    value: resolvedPriceLabel(t, price),
     valueColor: NAVIGATION_ENTITIES.price.color,
   };
 }
@@ -151,9 +171,9 @@ function priceStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem
  * carrying its asking price there (ADR-777 §8.2 #3), that row would have
  * labelled 200.000 € as **rent**. Position is not meaning; `source` is.
  *
- * The three branches are exhaustive by construction of `resolveDisplayPrice`:
- * a rent headline never has a secondary, a `finalPrice` headline can only be a
- * sold unit, and everything else is the ordinary sale chain.
+ * Exhaustive by construction of `resolveDisplayPrice`: a `finalPrice` headline can
+ * only be a sold unit; rent and nightly headlines never carry a secondary; the only
+ * other pair is sale + rent.
  */
 function priceLabelKeys(
   headline: ResolvedPrice,
@@ -164,14 +184,11 @@ function priceLabelKeys(
     return { headline: 'card.stats.soldFor', secondary: secondary ? 'card.stats.askedFor' : null };
   }
 
-  if (headline.role === 'rent') {
-    return { headline: 'card.stats.rent', secondary: null };
-  }
-
   // A sale headline standing alone is simply "Price"; alongside a rent it is "Sale".
+  const standaloneSale = headline.role === 'sale' && secondary === null;
   return {
-    headline: secondary ? 'card.stats.sale' : 'card.stats.price',
-    secondary: secondary ? 'card.stats.rent' : null,
+    headline: standaloneSale ? 'card.stats.price' : PRICE_ROLE_LABEL_KEY[headline.role],
+    secondary: secondary ? PRICE_ROLE_LABEL_KEY[secondary.role] : null,
   };
 }
 
@@ -180,7 +197,7 @@ function priceLabelKeys(
  * as opposed to the stat rows of {@link buildPropertyPriceStats}.
  *
  * Exists so that `PropertyCard` stops deciding the wording itself. It used to
- * wrap **both** amounts in `card.stats.rentValue` — correct while a secondary
+ * wrap **both** amounts in a rent-only «/μήνα» key — correct while a secondary
  * could only be a rent, and wrong the moment a sold unit put its asking price
  * there: 200.000 € would have been printed as **«200.000 €/μήνα»**. The rule of
  * what each number MEANS belongs next to the rule of which number to show.
@@ -194,13 +211,9 @@ export function buildCardPriceText(
 ): { headline: string; secondary: string | null } | null {
   if (price.kind === 'missing') return null;
 
-  const format = (p: ResolvedPrice): string => {
-    const amount = formatPriceAmount(p.amount);
-    if (p.source === 'commercial.rentPrice') {
-      return t('card.stats.rentValue', { amount });
-    }
-    return amount;
-  };
+  // The unit follows the ROLE, never the source field: a nightly rate read as a bare
+  // amount was the §8.60.13 defect («50 €» next to «170.000 €»).
+  const format = (p: ResolvedPrice): string => resolvedPriceLabel(t, p);
 
   const { headline, secondary } = price;
 
@@ -229,11 +242,37 @@ export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] 
   return items;
 }
 
-/** Per-role presentation of a €/m² row. Rent is warned-coloured, sale is not. */
-const PRICE_PER_SQM_PRESENTATION = {
+interface PricePerSqmPresentation {
+  readonly labelKey: string;
+  readonly iconColor: string;
+}
+
+/**
+ * Per-role presentation of a €/m² row — or `null` where a rate per m² means nothing.
+ *
+ * 🔴 **`nightly: null`, declared, not forgotten.** The map used to name only sale and
+ * rent; a nightly headline indexed it with a key it did not have and the destructuring
+ * threw — the whole card went down for a short-stay property. A price per night per
+ * square metre is not a figure any market quotes (Airbnb and Booking publish none).
+ * `Record<PriceRole, …>` makes the next role answer the same question before it compiles.
+ */
+const PRICE_PER_SQM_PRESENTATION: Readonly<Record<PriceRole, PricePerSqmPresentation | null>> = {
   sale: { labelKey: 'card.stats.salePricePerSqm', iconColor: NAVIGATION_ENTITIES.price.color },
   rent: { labelKey: 'card.stats.rentPricePerSqm', iconColor: 'text-[hsl(var(--text-warning))]' },
-} as const;
+  nightly: null,
+};
+
+/**
+ * **Price per m², whole euros** — `null` when the area is unknown or the role has no
+ * such rate. One rule for the card rows below and for the floor-plan quick view.
+ */
+export function pricePerSqmAmount(
+  price: Pick<ResolvedPrice, 'role' | 'amount'>,
+  area: number | null | undefined,
+): number | null {
+  if (PRICE_PER_SQM_PRESENTATION[price.role] === null) return null;
+  return typeof area === 'number' && area > 0 ? Math.round(price.amount / area) : null;
+}
 
 /**
  * Price-per-m² stat(s) for a Property card — sales views only.
@@ -265,13 +304,15 @@ export function buildPropertyPricePerSqmStats(
   const prices: ResolvedPrice[] =
     secondary && secondary.role !== headline.role ? [headline, secondary] : [headline];
 
-  return prices.map((price) => {
-    const { labelKey, iconColor } = PRICE_PER_SQM_PRESENTATION[price.role];
-    return {
+  return prices.flatMap((price) => {
+    const presentation = PRICE_PER_SQM_PRESENTATION[price.role];
+    const perSqm = pricePerSqmAmount(price, displayArea);
+    if (presentation === null || perSqm === null) return [];
+    return [{
       icon: NAVIGATION_ENTITIES.price.icon,
-      iconColor,
-      label: t(labelKey),
-      value: `${formatPriceAmount(Math.round(price.amount / displayArea))}/m²`,
-    };
+      iconColor: presentation.iconColor,
+      label: t(presentation.labelKey),
+      value: `${formatPriceAmount(perSqm)}/m²`,
+    }];
   });
 }

@@ -15,18 +15,27 @@
  * ρωτούσε: *«λέει η κάρτα την αλήθεια για το τι είναι ο κάθε αριθμός;»*
  */
 import {
+  MISSING_PRICE_LABEL_KEYS,
+  buildCardPriceText,
   buildPropertyPriceStats,
   buildPropertyPricePerSqmStats,
+  pricePerSqmAmount,
 } from '@/domain/cards/property/property-card-shared';
+import { resolveDisplayPrice, type MissingPriceReason } from '@/lib/properties/price-resolver';
 import type { Property } from '@/types/property-viewer';
 
-/** Το `t` επιστρέφει το ίδιο το κλειδί — κρίνουμε ΠΟΙΟ κλειδί ζητήθηκε. */
+/** Το `t` επιστρέφει το ίδιο το κλειδί — κρίνουμε ΠΟΙΟ κλειδί ζητήθηκε (και με ποιο ποσό). */
 const t = (key: string, opts?: Record<string, unknown>): string =>
-  opts && 'amount' in opts ? `${key}:${String(opts.amount)}` : key;
+  opts && 'price' in opts ? `${key}:${String(opts.price)}` : key;
 
 /** Δομικό ελάχιστο — μόνο ό,τι διαβάζει ο resolver. */
 function unit(commercialStatus: string, commercial: Record<string, number>): Property {
   return { commercialStatus, commercial } as unknown as Property;
+}
+
+/** Κατάλυμα **μόνο** βραχυχρόνιας — η περίπτωση του §8.60.13 (Θεσσαλονίκη, 50 €/νύχτα). */
+function shortStay(commercial: Record<string, number>): Property {
+  return { offerKinds: ['leaseShort'], commercial } as unknown as Property;
 }
 
 const labelsOf = (p: Property): string[] =>
@@ -48,9 +57,9 @@ describe('Κ1 — sold: η δεύτερη γραμμή είναι η ζητού�
     expect(labelsOf(sold)).not.toContain('card.stats.rent');
   });
 
-  it('τα ποσά μένουν σκέτοι αριθμοί — καμία περίοδος «/μήνα»', () => {
-    const values = buildPropertyPriceStats(sold, t).map((s) => s.value);
-    expect(values.every((v) => !String(v).includes('rentValue'))).toBe(true);
+  it('τα ποσά γράφονται με τη μονάδα ΠΩΛΗΣΗΣ — καμία περίοδος «/μήνα»', () => {
+    const values = buildPropertyPriceStats(sold, t).map((s) => String(s.value));
+    expect(values.every((v) => v.startsWith('common:priceAmount.sale:'))).toBe(true);
   });
 });
 
@@ -118,5 +127,49 @@ describe('Κ3 — €/τ.μ. δεν τυπώνεται δύο φορές κάτ�
     expect(
       buildPropertyPricePerSqmStats(unit('sold', { finalPrice: 185_000 }), 0, t),
     ).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Κ4 — Η ΔΙΑΝΥΚΤΕΡΕΥΣΗ (ADR-777 §8.60.13): ετικέτα, μονάδα, €/τ.μ., απουσία
+// =============================================================================
+
+describe('Κ4 — τιμή ανά νύχτα: ποτέ «Τιμή», ποτέ χωρίς μονάδα, ποτέ €/τ.μ.', () => {
+  const nightly = shortStay({ nightlyRate: 50 });
+
+  it('ετικέτα «Διανυκτέρευση», όχι η λέξη της πώλησης', () => {
+    expect(labelsOf(nightly)).toEqual(['card.stats.nightly']);
+  });
+
+  it('η τιμή γράφεται με τη μονάδα της νύχτας — στη γραμμή ΚΑΙ στη συμπαγή κάρτα', () => {
+    expect(buildPropertyPriceStats(nightly, t).map((s) => String(s.value)))
+      .toEqual([expect.stringMatching(/^common:priceAmount.nightly:/)]);
+    expect(buildCardPriceText(resolveDisplayPrice(nightly), t)?.headline)
+      .toMatch(/^common:priceAmount.nightly:/);
+  });
+
+  it('🔴 €/τ.μ.: καμία γραμμή — και η κάρτα ΔΕΝ σκάει (πριν: destructuring σε undefined)', () => {
+    expect(() => buildPropertyPricePerSqmStats(nightly, 85, t)).not.toThrow();
+    expect(buildPropertyPricePerSqmStats(nightly, 85, t)).toEqual([]);
+    expect(pricePerSqmAmount({ role: 'nightly', amount: 50 }, 85)).toBeNull();
+  });
+
+  it('το ενοίκιο κρατά τη μονάδα του μήνα και το €/τ.μ. του', () => {
+    const rent = unit('for-rent', { rentPrice: 500 });
+    expect(String(buildPropertyPriceStats(rent, t)[0]?.value)).toMatch(/^common:priceAmount.rent:/);
+    expect(pricePerSqmAmount({ role: 'rent', amount: 500 }, 100)).toBe(5);
+  });
+
+  it('χωρίς καταχωρημένη τιμή νύχτας → δική της αιτία, όχι ωμό κλειδί', () => {
+    const verdict = resolveDisplayPrice(shortStay({}));
+    expect(verdict).toEqual({ kind: 'missing', reason: 'nightly-rate-missing' });
+    expect(MISSING_PRICE_LABEL_KEYS['nightly-rate-missing']).toBe('card.price.nightlyMissing');
+  });
+
+  it('κάθε αιτία απουσίας έχει κλειδί (ο πίνακας είναι ΟΛΙΚΟΣ, όχι δείγμα)', () => {
+    const reasons: readonly MissingPriceReason[] = [
+      'not-listed', 'sale-price-missing', 'rent-price-missing', 'nightly-rate-missing',
+    ];
+    expect(Object.keys(MISSING_PRICE_LABEL_KEYS).sort()).toEqual([...reasons].sort());
   });
 });

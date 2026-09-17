@@ -43,10 +43,10 @@ import {
 import type { Property } from '@/types/property-viewer';
 import type { ReadOnlyViewerContextProps } from '../types';
 import '@/lib/design-system';
-import { formatCurrency } from '@/lib/intl-formatting';
 import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
 import { PROPERTY_STATUS_LABELS } from '@/constants/domains/property-status-core';
 import type { PropertyStatus } from '@/constants/domains/property-status-core';
+import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 
 export function ListLayout({
@@ -118,7 +118,7 @@ export function ListLayout({
   // ADR-340 §3.6 — pre-formatted in-polygon hover labels for FloorplanGallery.
   // Locale-agnostic strings: caller formats with i18n + currency, the canvas
   // renderer just draws them. Three lines per property: code (small),
-  // gross sqm (small), sale price (emphasis / larger).
+  // gross sqm (small), headline price with its unit (emphasis / larger).
   const sqmUnit = t('units.sqm', { ns: 'properties-enums' });
   const propertyLabels = React.useMemo(() => {
     const map = new Map<string, OverlayLabel>();
@@ -133,7 +133,10 @@ export function ListLayout({
         statusText,
         primaryText: p.code || undefined,
         secondaryText: hasSqm ? `${grossSqm} ${sqmUnit}` : undefined,
-        emphasisText: effectivePrice ? formatCurrency(effectivePrice.amount) : undefined,
+        // ADR-777 §8.60.13: the amount WITH its unit — «900 €/μήνα», «50 €/νύχτα».
+        emphasisText: effectivePrice
+          ? resolvedPriceLabel(t, { role: effectivePrice.mode, amount: effectivePrice.amount })
+          : undefined,
       });
     }
     return map;

@@ -22,6 +22,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getCompatNamespaces } from '@/i18n/namespace-compat';
+import { MISSING_PRICE_LABEL_KEYS } from '@/domain/cards/property/property-card-shared';
 
 /**
  * Κάθε `card.*` κλειδί που ζωγραφίζει η κάρτα ακινήτου, χειρόγραφα.
@@ -51,12 +52,13 @@ const CARD_KEYS = [
   'card.stats.rent',
   'card.stats.soldFor',
   'card.stats.askedFor',
-  'card.stats.rentValue',
+  'card.stats.nightly',
   'card.stats.salePricePerSqm',
   'card.stats.rentPricePerSqm',
   'card.price.notListed',
   'card.price.saleMissing',
   'card.price.rentMissing',
+  'card.price.nightlyMissing',
 ] as const;
 
 const LOCALES = ['el', 'en'] as const;
@@ -156,5 +158,17 @@ describe('Κ3 — el και en έχουν ΤΑ ΙΔΙΑ card.* κλειδιά', 
       ]),
     );
     expect(missingPerLocale.el).toEqual(missingPerLocale.en);
+  });
+});
+
+// =============================================================================
+// Κ4 — Η ΛΙΣΤΑ ΔΕΝ ΠΑΛΙΩΝΕΙ: κάθε κλειδί απουσίας που ΠΑΡΑΓΕΙ ο πίνακας είναι μέσα
+// =============================================================================
+
+describe('Κ4 — η χειρόγραφη λίστα καλύπτει τον πίνακα απουσίας (ADR-777 §8.60.13)', () => {
+  it('κάθε MISSING_PRICE_LABEL_KEYS ελέγχεται από το Κ1', () => {
+    // Ο πίνακας απέκτησε `nightly-rate-missing` ΜΗΝΕΣ μετά τον τύπο — και η λίστα δεν ρωτήθηκε.
+    const listed = new Set<string>(CARD_KEYS);
+    expect(Object.values(MISSING_PRICE_LABEL_KEYS).filter((key) => !listed.has(key))).toEqual([]);
   });
 });

@@ -22,8 +22,21 @@ import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { getEffectivePrice } from '@/lib/properties/price-resolver';
+import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { getEffectivePrice, type PriceRole } from '@/lib/properties/price-resolver';
+import { formatPriceAmount, pricePerSqmAmount } from '@/domain/cards/property/property-card-shared';
 import '@/lib/design-system';
+
+/**
+ * **What the price row is called, per role** (ADR-777 §8.60.13). `Record`, so a new role
+ * does not compile until it is named — the old `isRent ? … : 'price'` sent a nightly rate
+ * down the sale label.
+ */
+const PRICE_ROW_LABEL_KEY: Readonly<Record<PriceRole, string>> = {
+  sale: 'hoverInfo.price',
+  rent: 'hoverInfo.monthlyRent',
+  nightly: 'hoverInfo.nightlyRate',
+};
 
 interface PropertyQuickViewProps {
   property: Property;
@@ -53,14 +66,12 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const { areas, layout, orientations, linkedSpaces } = property;
   // 🏢 ADR-197/258: status-aware price (rent for for-rent/rented, sale otherwise) — SSoT
   const resolvedPrice = getEffectivePrice(property);
-  const effectivePrice = resolvedPrice?.amount ?? null;
-  const isRentPrice = resolvedPrice?.mode === 'rent';
+  const headlinePrice = resolvedPrice ? { role: resolvedPrice.mode, amount: resolvedPrice.amount } : null;
   const parkingCount = linkedSpaces?.filter(s => s.spaceType === 'parking').length ?? 0;
   const storageCount = linkedSpaces?.filter(s => s.spaceType === 'storage').length ?? 0;
   const displayArea = property.areas?.gross || property.areas?.net || property.area;
-  const pricePerSqm = effectivePrice && displayArea && displayArea > 0
-    ? Math.round(effectivePrice / displayArea)
-    : null;
+  // One €/m² rule with the property cards — and none for a nightly rate.
+  const pricePerSqm = headlinePrice ? pricePerSqmAmount(headlinePrice, displayArea) : null;
 
   // Translate orientations using SSoT ORIENTATION_LABELS → i18n
   const translatedOrientations = orientations
@@ -150,16 +161,16 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
             value={storageCount}
           />
         )}
-        {effectivePrice && effectivePrice > 0 && (
+        {headlinePrice && headlinePrice.amount > 0 && (
           <>
             <Separator className="my-1" />
             <QuickViewRow
-              label={t(isRentPrice ? 'hoverInfo.monthlyRent' : 'hoverInfo.price')}
+              label={t(PRICE_ROW_LABEL_KEY[headlinePrice.role])}
               value={
                 <span className={`${COLOR_BRIDGE.text.price} font-semibold`}>
-                  {effectivePrice.toLocaleString('el-GR')}€
-                  {pricePerSqm && (
-                    <span className={`${colors.text.muted} font-normal text-[10px]`}> ({pricePerSqm.toLocaleString('el-GR')}€/m²)</span>
+                  {resolvedPriceLabel(t, headlinePrice)}
+                  {pricePerSqm !== null && (
+                    <span className={`${colors.text.muted} font-normal text-[10px]`}> ({formatPriceAmount(pricePerSqm)}/m²)</span>
                   )}
                 </span>
               }
