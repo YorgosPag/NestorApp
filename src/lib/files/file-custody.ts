@@ -94,3 +94,24 @@ export function fileCustodyKindOf(record: FileOwnerFields): CustodyKind | null {
   const scope = custodyScopeFromData({ companyId: record.companyId, userId: record.userId });
   return scope === null ? null : custodyKindOfScope(scope);
 }
+
+/**
+ * **Το ΚΟΙΝΟ διαμέρισμα πολλών αρχείων** — για πράξη που στέλνει **ένα** αίτημα (π.χ. ZIP).
+ *
+ * 🔴 `null` όταν η λίστα είναι κενή, όταν κάποιο αρχείο δεν έχει ακριβώς έναν κάτοχο, **ή** όταν
+ * ανακατεύονται διαμερίσματα: ο καλών **αρνείται** — ποτέ «το είδος του πρώτου» (ADR-866 §2.6.9 Β9).
+ */
+export function sharedFileCustodyKindOf(records: readonly FileOwnerFields[]): CustodyKind | null {
+  const kinds = new Set(records.map(fileCustodyKindOf));
+  const [only] = kinds;
+  return kinds.size === 1 ? (only ?? null) : null;
+}
+
+/**
+ * **Η παράμετρος σύρματος του διαμερίσματος** — `?custody=company|personal` (ADR-866 §2.6.9 Β1).
+ *
+ * 🔑 Ταξιδεύει **μόνο το είδος**, ποτέ ο `userId`: τον κάτοχο τον βάζει ο διακομιστής από τη **δική
+ * του** ταυτότητα. Ο διακομιστής τη διαβάζει με `custodyKindFromParam` (απουσία ⇒ εταιρεία,
+ * άγνωστη τιμή ⇒ άρνηση) — ίδιο ιδίωμα με το `?ledger=` του ιστορικού.
+ */
+export const FILE_CUSTODY_PARAM = 'custody';

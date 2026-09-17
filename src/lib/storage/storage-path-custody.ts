@@ -147,11 +147,13 @@ const STORAGE_ROOT_CUSTODY: Readonly<Record<string, StorageCustodyKind>> = {
   // ── εταιρικά (12 μπλοκ) ────────────────────────────────────────────────────
   companies: 'company',
   'topo-surfaces': 'company',
-  // ── προσωπικά (4 μπλοκ) ────────────────────────────────────────────────────
+  // ── προσωπικά (5 μπλοκ) ────────────────────────────────────────────────────
   users: 'user',
   owner_properties: 'user',
   cad: 'user',
   temp: 'user',
+  // ADR-866 2α — προσωπικά αρχεία οντοτήτων (`people/{userId}/entities/…`, `canonical_personal`).
+  people: 'user',
   // ── κοινόχρηστοι κατάλογοι (4 μπλοκ) ───────────────────────────────────────
   system: 'shared',
   'furniture-library': 'shared',

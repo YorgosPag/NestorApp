@@ -145,6 +145,42 @@ export function custodyScopeFromData(data: Readonly<Record<string, unknown>>): C
 }
 
 /**
+ * **Ανήκει ΑΥΤΟ το έγγραφο σε ΑΥΤΟΝ τον κάτοχο;** — η γενίκευση του `isPayloadOwnedByCompany`
+ * (ADR-742) στα **δύο** διαμερίσματα (ADR-866 §2.6.10 Β4).
+ *
+ * 🔴 **Η ΠΑΓΙΔΑ ΤΟΥ ΚΕΝΟΥ ΚΛΕΙΝΕΙ ΔΥΟ ΦΟΡΕΣ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ**: το έγγραφο περνά από το
+ * {@link custodyScopeFromData} («ακριβώς ένας»), και ο ίδιος ο **κάτοχος** από τον
+ * {@link isWritableCustodyScope}. Δηλαδή ούτε έγγραφο χωρίς/με δύο κατόχους, ούτε καλών με
+ * χαλασμένο token (`{ companyId: '' }`) μπορεί να «ταιριάξει» κατά σύμπτωση — ακριβώς το
+ * ζωντανό σφάλμα που μετρήθηκε στην ADR-742 §4 όταν τέσσερις χειρόγραφες συγκρίσεις `!==`
+ * ενοποιήθηκαν. **Το κενό είναι απουσία κατόχου, ποτέ ταίριασμα.**
+ *
+ * ⚠️ **Διαμέρισμα ΠΡΩΤΑ, ταυτότητα ΜΕΤΑ**: εταιρικό έγγραφο δεν ανήκει ποτέ σε άνθρωπο, ακόμη
+ * κι αν τα δύο αναγνωριστικά έτυχε να συμπίπτουν (ίδιο δόγμα με το {@link fileCustodyKey} του
+ * `lib/files/file-custody`: το σκέτο id δεν αρκεί).
+ *
+ * ⛔ **ΜΗΝ γράψεις τέταρτο χειρόγραφο `===`.** Οι τρεις προηγούμενες μορφές έζησαν στον
+ * `judgeTransition`, στον `judgeSuccession` και στο `version-stack.readOwned`, και η καθεμία
+ * ρωτούσε λίγο αλλιώς.
+ *
+ * @example
+ * isOwnedByCustody({ userId: 'u1' }, { userId: 'u1' });      // true
+ * isOwnedByCustody({ companyId: 'c1' }, { userId: 'c1' });   // false — άλλο διαμέρισμα
+ * isOwnedByCustody({ companyId: '' }, { companyId: '' });    // false — απουσία, όχι ταίριασμα
+ */
+export function isOwnedByCustody(
+  data: Readonly<Record<string, unknown>> | null | undefined,
+  owner: CustodyScope,
+): boolean {
+  if (!isWritableCustodyScope(owner)) return false;
+  const docOwner = data === null || data === undefined ? null : custodyScopeFromData(data);
+  if (docOwner === null) return false;
+  return docOwner.userId !== undefined
+    ? docOwner.userId === owner.userId
+    : docOwner.companyId === owner.companyId;
+}
+
+/**
  * **Έγκυρος κάτοχος για γραφή;** — ο φρουρός του γραφέα, ίδιο κριτήριο με το σύνορο ανάγνωσης.
  *
  * ⚠️ Ο τύπος εγγυάται **σχήμα**, όχι **τιμή**: ένα `{ userId: '' }` μεταγλωττίζεται και θα

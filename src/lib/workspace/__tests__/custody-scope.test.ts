@@ -23,6 +23,7 @@ import {
   custodyKindOfScope,
   custodyScopeFromData,
   custodyScopeOf,
+  isOwnedByCustody,
   isWritableCustodyScope,
   type CustodyScope,
 } from '@/lib/workspace/custody-scope';
@@ -82,6 +83,37 @@ describe('Α2.γ — το σύνορο ανάγνωσης: ΑΚΡΙΒΩΣ ένα
     expect(isWritableCustodyScope({ companyId: '' })).toBe(false);
     expect(isWritableCustodyScope({ userId: 'user_1' })).toBe(true);
     expect(isWritableCustodyScope({ companyId: 'comp_1' })).toBe(true);
+  });
+});
+
+/**
+ * 🔴 **Α2.ε — «ΑΝΗΚΕΙ ΣΕ ΑΥΤΟΝ ΤΟΝ ΚΑΤΟΧΟ;»** (ADR-866 §2.6.10 Β4) — η γενίκευση του
+ * `isPayloadOwnedByCompany` (ADR-742) στα **δύο** διαμερίσματα.
+ *
+ * ⚠️ **Η ΠΕΡΙΠΤΩΣΗ ΤΩΝ ΤΑΥΤΟΣΗΜΩΝ ID ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΜΕΤΑΛΛΑΞΗ ΠΟΥ ΒΓΗΚΕ ΠΡΑΣΙΝΗ** (Μ7): μια
+ * υλοποίηση που συγκρίνει `(doc.userId ?? doc.companyId) === (owner.userId ?? owner.companyId)`
+ * περνούσε **κάθε** άλλο test, επειδή στα σενάριά τους τα δύο αναγνωριστικά **τυχαίνει** να
+ * διαφέρουν. Το διαμέρισμα πρέπει να κρίνεται **πρώτο** — αλλιώς η απόδειξη είναι σύμπτωση.
+ */
+describe('Α2.ε — ιδιοκτησία ανά διαμέρισμα: το είδος ΠΡΩΤΑ, η ταυτότητα ΜΕΤΑ', () => {
+  it.each([
+    ['ίδιος άνθρωπος', { userId: 'u1' }, { userId: 'u1' }, true],
+    ['ίδια εταιρεία', { companyId: 'c1' }, { companyId: 'c1' }, true],
+    ['🔴 άλλος άνθρωπος', { userId: 'u2' }, { userId: 'u1' }, false],
+    ['🔴 άλλη εταιρεία', { companyId: 'c2' }, { companyId: 'c1' }, false],
+    ['🔴 ΤΑΥΤΟΣΗΜΑ id, ΑΛΛΟ διαμέρισμα (εταιρικό έγγραφο → άνθρωπος)', { companyId: 'x1' }, { userId: 'x1' }, false],
+    ['🔴 ΤΑΥΤΟΣΗΜΑ id, ΑΛΛΟ διαμέρισμα (προσωπικό έγγραφο → εταιρεία)', { userId: 'x1' }, { companyId: 'x1' }, false],
+    ['🔴 έγγραφο με ΔΥΟ κατόχους = κανενός', { companyId: 'c1', userId: 'u1' }, { companyId: 'c1' }, false],
+    ['🔴 έγγραφο ΧΩΡΙΣ κάτοχο', {}, { companyId: 'c1' }, false],
+    ['🔴 η παγίδα του κενού — και στις δύο πλευρές', { companyId: '' }, { companyId: '' }, false],
+    ['🔴 χαλασμένο token (κενός κάτοχος) σε υπαρκτό έγγραφο', { companyId: 'c1' }, { companyId: '' }, false],
+  ])('%s', (_label, data, owner, expected) => {
+    expect(isOwnedByCustody(data, owner as Parameters<typeof isOwnedByCustody>[1])).toBe(expected);
+  });
+
+  it('🔴 απουσία εγγράφου δεν ανήκει σε κανέναν', () => {
+    expect(isOwnedByCustody(null, { userId: 'u1' })).toBe(false);
+    expect(isOwnedByCustody(undefined, { companyId: 'c1' })).toBe(false);
   });
 });
 

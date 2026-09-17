@@ -11,6 +11,7 @@ import {
   fileCustodyKey,
   fileCustodyKindOf,
   requireFileCustody,
+  sharedFileCustodyKindOf,
 } from '@/lib/files/file-custody';
 import { CUSTODY_KINDS } from '@/lib/workspace/custody-scope';
 
@@ -63,5 +64,21 @@ describe('βοηθοί αναγνώστη', () => {
 
   test('fileCustodyKey: ίδιο id σε διαφορετικό είδος ⇒ διαφορετικό κλειδί', () => {
     expect(fileCustodyKey({ companyId: 'x' })).not.toBe(fileCustodyKey({ userId: 'x' }));
+  });
+});
+
+describe('sharedFileCustodyKindOf — ένα αίτημα, ΕΝΑ διαμέρισμα (ADR-866 §2.6.9 Β9)', () => {
+  test('ομοιογενής επιλογή ⇒ το είδος της', () => {
+    expect(sharedFileCustodyKindOf([{ userId: 'u1' }, { userId: 'u1' }])).toBe('personal');
+    expect(sharedFileCustodyKindOf([{ companyId: 'c1' }])).toBe('company');
+  });
+
+  test.each([
+    ['κενή επιλογή', []],
+    ['μικτά διαμερίσματα', [{ companyId: 'c1' }, { userId: 'u1' }]],
+    ['ένα αρχείο χωρίς κάτοχο', [{ userId: 'u1' }, {}]],
+    ['μόνο αρχεία χωρίς κάτοχο', [{}]],
+  ])('%s ⇒ null (ποτέ «το είδος του πρώτου»)', (_label, records) => {
+    expect(sharedFileCustodyKindOf(records)).toBeNull();
   });
 });
