@@ -350,6 +350,8 @@ mandate: { kind: 'brokered', clientContactId: 'cont_da84f8c4-…',
 γραφείο (αντίκειται στο (γ) ①) · σιωπηλή ανάγνωση από διαχειριστή (Follow Up Boss/idealista — ο πελάτης δεν ξέρει
 ποιος διαβάζει).
 
+📐 **Υλοποίηση των (α)-(ε)**: **ADR-867** *(πυρήνας μηνυμάτων — σχέδιο 2026-09-17)*.
+
 ### Γ) Η απάντηση στους μεγάλους
 
 Ariba *trading relationship* + *document-level messaging* — με **παραγόμενη** ακμή αντί για
