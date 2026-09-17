@@ -335,8 +335,27 @@ function findDuplicateMatchPaths(blocks) {
   return dupes.sort();
 }
 
+/**
+ * **Η λίστα κλειδιών μιας καθολικής συνάρτησης των κανόνων** — `function X() { return ['a', 'b']; }`.
+ *
+ * Μία ανάγνωση για κάθε λίστα-αυθεντία που ζει ΜΕΣΑ στο `firestore.rules` και πρέπει να
+ * συμφωνεί με κώδικα: `cdeCustodyKeys()` (CHECK 3.87 Κ1 · ADR-862) και `holdCustodyKeys()`
+ * (`FILE_HOLD_FIELDS`, ADR-864 §21). Κενός πίνακας = η συνάρτηση δεν βρέθηκε — ο καλών
+ * το κρίνει ως απόκλιση πηγής, ποτέ ως «τίποτα να φυλαχτεί».
+ *
+ * @param {string} rulesText
+ * @param {string} functionName
+ * @returns {string[]}
+ */
+function rulesKeyListOf(rulesText, functionName) {
+  const pattern = new RegExp(`function ${functionName}\\(\\)\\s*\\{\\s*return\\s*\\[([\\s\\S]*?)\\];`);
+  const match = rulesText.match(pattern);
+  return match ? [...match[1].matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1]) : [];
+}
+
 module.exports = {
   parseFirestoreRules,
+  rulesKeyListOf,
   findDuplicateMatchPaths,
   isSuperAdminShortCircuit,
   validateSuperAdminShortCircuit,

@@ -716,6 +716,8 @@ service cloud.firestore {
                     // θα το έκανε `unreadable` ⇒ αρνούμαστε ΕΔΩ, όχι αργότερα.
                     && request.resource.data.get('cdeReadReach', null)
                          == (request.resource.data.keys().hasAny(['cdeState']) ? 'author' : 'tenant')
+                    // 🔒 ADR-864 §21 — καμία δέσμευση «από κούνια» (ο builder δεν γράφει καμία).
+                    && holdBornAbsent()
                     && resource == null; // Ensure document doesn't exist
 
       // 📝 UPDATE: Only creator or company admin can finalize
@@ -746,7 +748,9 @@ service cloud.firestore {
                     && request.resource.data.createdBy == resource.data.createdBy
                     && request.resource.data.storagePath == resource.data.storagePath
                     // 🔒 ADR-862 Φ0 — η οριστικοποίηση (pending → ready) δεν αγγίζει CDE.
-                    && cdeCustodyUnchanged();
+                    && cdeCustodyUnchanged()
+                    // 🔒 ADR-864 §21 — ούτε δέσμευση.
+                    && holdCustodyUnchanged();
 
       // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -775,7 +779,11 @@ service cloud.firestore {
                     // 🔒 ADR-862 Φ0 — ούτε η μετακίνηση στον κάδο. Η ΑΠΟΣΥΡΣΗ είναι
                     // άλλη πράξη (⇒ SUPERSEDED, ποτέ εξαφάνιση) και περνά από τον
                     // ΕΝΑ γραφέα του Β10 — ποτέ από εδώ.
-                    && cdeCustodyUnchanged();
+                    && cdeCustodyUnchanged()
+                    // 🔒 ADR-864 §21 Δ21.1 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ: ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ σε δεσμευμένο
+                    //    αρχείο (Google Vault · Box · Purview)· αυτό που δεν επιτρέπεται είναι να
+                    //    ΑΓΓΙΞΕΙ τη δέσμευση. ⛔ ΜΗΝ προσθέσεις «hold == 'none'» εδώ — απορρίφθηκε.
+                    && holdCustodyUnchanged();
 
       // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
       // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
@@ -803,7 +811,9 @@ service cloud.firestore {
                     && request.resource.data.status == resource.data.status
                     // 🔒 ADR-862 Φ0 — ούτε η επαναφορά από τον κάδο: ένα αρχείο δεν
                     // «ξαναγεννιέται» σε άλλη κατάσταση από αυτή που είχε.
-                    && cdeCustodyUnchanged();
+                    && cdeCustodyUnchanged()
+                    // 🔒 ADR-864 §21 — η επαναφορά δεν «καθαρίζει» τη δέσμευση.
+                    && holdCustodyUnchanged();
 
       // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
       // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
@@ -828,15 +838,21 @@ service cloud.firestore {
                     //    `updateIso19650Metadata` (`services/file-record-links.ts`)
                     //    έγραφε `cdeState` μέσα από ΑΥΤΟ το leg. Ο μεταγλωττιστής
                     //    έκλεισε την πόρτα στον πελάτη· αυτή η γραμμή την κλειδώνει.
-                    && cdeCustodyUnchanged();
+                    && cdeCustodyUnchanged()
+                    // 🔒 ADR-864 §21 — ούτε η δέσμευση (ήταν το σκέλος με το χαλαρότερο πρόσωπο:
+                    //    κάθε μέλος της εταιρείας, όχι μόνο δημιουργός/διαχειριστής).
+                    && holdCustodyUnchanged();
 
       // 🗑️ HARD DELETE: Only creator or company admin
+      // 🔒 ADR-864 §21 Δ21.1 — ΠΟΤΕ σε δεσμευμένο ή υπό διατήρηση αρχείο. Ο κάδος (update)
+      //    μένει ανοιχτός· η ΟΡΙΣΤΙΚΗ διαγραφή είναι αυτό που η δέσμευση απαγορεύει.
       allow delete: if isAuthenticated()
                     && resource.data.companyId == getUserCompanyId()
                     && (
                          resource.data.createdBy == request.auth.uid
                          || isCompanyAdminOfCompany(resource.data.companyId)
-                       );
+                       )
+                    && holdAllowsHardDelete();
     }
 
     // =========================================================================
@@ -865,6 +881,8 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && !request.resource.data.keys().hasAny(['companyId'])
                     && !request.resource.data.keys().hasAny(cdeCustodyKeys())
+                    // 🔒 ADR-864 §21 — ίδια λίστα δέσμευσης με το `match /files` (ADR-866 §5.2).
+                    && holdBornAbsent()
                     && request.resource.data.status == 'pending'
                     && resource == null;
 
@@ -884,11 +902,15 @@ service cloud.firestore {
                          || (resource.data.status == 'ready'
                            && request.resource.data.status == 'ready')
                        )
-                    && cdeCustodyUnchanged();
+                    && cdeCustodyUnchanged()
+                    // 🔒 ADR-864 §21 — ο κάτοχος δεν αυτο-δεσμεύει ούτε αποδεσμεύει (`retentionUntil`
+                    //    θα έβγαζε το αρχείο από κάθε καθαρισμό· `hold` θα ακύρωνε δέσμευση διακομιστή).
+                    && holdCustodyUnchanged();
 
-      // 🗑️ HARD DELETE — μόνο ο κάτοχος.
+      // 🗑️ HARD DELETE — μόνο ο κάτοχος, και ΠΟΤΕ σε δεσμευμένο (ADR-864 §21 Δ21.1).
       allow delete: if isAuthenticated()
-                    && resource.data.userId == request.auth.uid;
+                    && resource.data.userId == request.auth.uid
+                    && holdAllowsHardDelete();
     }
 
     // =========================================================================
@@ -1626,6 +1648,126 @@ service cloud.firestore {
     // έγγραφο ανά (ακίνητο, μήνας). Ίδιο σύνορο: γραφή μόνο μέσα στη συναλλαγή της κεφαλής.
     match /stay_calendar_months/{monthId} {
       allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // 💬 ΔΙΚΤΥΟ ΣΥΝΕΡΓΑΤΩΝ — ADR-867 §4.1 / §4.2 / §4.3 (Β4)
+    // =========================================================================
+    // Το νήμα ανάμεσα σε ΔΥΟ ΠΛΕΥΡΕΣ ΔΙΑΦΟΡΕΤΙΚΩΝ ΧΩΡΩΝ. Δεν μοιάζει με καμία άλλη
+    // συλλογή του αρχείου, και είναι επίτηδες: ΚΑΘΕ άλλος κανόνας ρωτά «ποιανού
+    // μισθωτή είναι;» (`belongsToCompany`) ή «ποιος το έγραψε;» (`authorUserId`).
+    // Εδώ και τα δύο θα ήταν ΛΑΘΟΣ ΑΠΑΝΤΗΣΗ:
+    //
+    //   🔴 `belongsToCompany` ⇒ το διαβάζει ΟΛΟ το γραφείο — αντίκειται ρητά στο
+    //      ADR-834 §5 Β (γ) ① (το διαβάζει η ΟΜΑΔΑ της πράξης, όχι ο οργανισμός).
+    //   🔴 `authorUserId` ⇒ το διαβάζει ΕΝΑΣ — δηλαδή το ορφανό νήμα σε απουσία ή
+    //      αποχώρηση, το τεκμηριωμένο κενό Salesforce/HubSpot/Zendesk/Follow Up Boss.
+    //
+    // ✅ Η απάντηση είναι Η ΥΠΟΣΥΛΛΟΓΗ ΑΚΡΟΑΤΗΡΙΟΥ: «υπάρχει γραμμή για μένα, και
+    //    είναι ΖΩΝΤΑΝΗ (`until == null`);». ΕΝΑΣ τόπος απαντά «ποιος διαβάζει;» —
+    //    και για τον κανόνα ΚΑΙ για την οθόνη (ADR-867 §4.2).
+    //
+    // ⚠️ Η ΣΦΡΑΓΙΔΑ ΕΙΝΑΙ Ο ΚΑΝΟΝΑΣ, ΟΧΙ Η ΔΙΑΓΡΑΦΗ: όποιος βγήκε από την ομάδα έχει
+    //    γραμμή με `until != null` — ΥΠΑΡΧΕΙ, και ΔΕΝ διαβάζει. Ένας κανόνας με σκέτο
+    //    `exists()` θα έδινε πρόσβαση σε κάθε πρώην μέλος, για πάντα.
+
+    // 🔒 ΤΟ ΒΙΒΛΙΟ ΤΩΝ ΑΝΑΚΛΗΣΕΩΝ — ADR-867 §4.1. ΤΟ ΚΕΙΜΕΝΟ ΠΟΥ ΠΗΡΕ ΠΙΣΩ Ο ΑΝΘΡΩΠΟΣ.
+    //
+    // 🔴 ΚΛΕΙΣΤΟ ΣΕ ΚΑΘΕ ΠΕΛΑΤΗ — ΚΑΙ ΣΤΟΝ ΙΔΙΟ ΤΟΝ ΑΠΟΣΤΟΛΕΑ. Αυτό είναι το σημείο
+    // όπου η ανάκληση γίνεται ΑΛΗΘΙΝΗ: αν οποιοσδήποτε πελάτης μπορούσε να διαβάσει
+    // εδώ, ο άνθρωπος θα νόμιζε ότι πήρε πίσω τα λόγια του ενώ θα ήταν ΕΝΑ ΕΡΩΤΗΜΑ
+    // μακριά. Το διαβάζει ΜΟΝΟ ο διακομιστής, για τον ΕΝΑ λόγο που υπάρχει: ΓΚΠΔ
+    // άρθρο 17 §3(ε) — θεμελίωση/άσκηση/υποστήριξη νομικών αξιώσεων.
+    //
+    // 🔑 ΓΙΑΤΙ ΕΙΝΑΙ ΕΔΩ, ΚΑΙ ΟΧΙ ΥΠΟΣΥΛΛΟΓΗ ΤΟΥ ΝΗΜΑΤΟΣ: μέσα στο `network_threads`
+    // ζουν ΔΥΟ υποσυλλογές που ΔΙΝΟΥΝ ανάγνωση στο ακροατήριο. Ένα αντιγραμμένο
+    // μπλοκ ή ένα μελλοντικό `{document=**}` θα άνοιγε ΣΙΩΠΗΛΑ και αυτή. Χωριστή
+    // ρίζα = χωριστός κανόνας = καμία κληρονομιά άδειας κατά λάθος.
+    //
+    // 📐 Πρότυπο: Microsoft Teams κρατά ΔΥΟ αντίγραφα («one for compliance purposes,
+    // one for end-user access») και η διαγραφή ΜΕΤΑΚΙΝΕΙ στο κρυφό `SubstrateHolds`·
+    // Slack «save edits and deletions» + eDiscovery API· XMPP XEP-0424: «the
+    // archiving service MUST store the retraction message». Εδώ ο «κρυφός τόπος»
+    // είναι ΡΗΤΗ συλλογή με ΡΗΤΟ κανόνα — όχι φάκελος που τον μαθαίνεις σε αγωγή.
+    match /network_message_retractions/{messageId} {
+      allow read: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /network_act_teams/{actTeamId} {
+      // 🔴 ΚΛΕΙΣΤΗ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ. Η ομάδα είναι Η ΑΥΘΕΝΤΙΑ του «ποιος διαβάζει»
+      // (§4.3): μια γραφή πελάτη εδώ θα ΕΒΑΖΕ ΤΟΝ ΕΑΥΤΟ ΤΟΥ στο ακροατήριο κάθε νήματος
+      // — δηλαδή θα παρέκαμπτε ολόκληρο τον παραπάνω κανόνα από την πίσω πόρτα.
+      // Η οθόνη τη διαβάζει από τον ΔΙΑΚΟΜΙΣΤΗ (Β5/Β7), που δεν περνά από εδώ.
+      allow read: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /network_threads/{threadId} {
+      function audienceSeat() {
+        return /databases/$(database)/documents/network_threads/$(threadId)/network_audience/$(request.auth.uid);
+      }
+
+      // 🔑 Η ΜΙΑ ΕΡΩΤΗΣΗ: «διαβάζω ΤΩΡΑ αυτό το νήμα;»
+      function readsThisThread() {
+        return isAuthenticated()
+               && exists(audienceSeat())
+               && get(audienceSeat()).data.until == null;
+      }
+
+      // 📖 GET: ναι — ώστε η οθόνη να είναι ΖΩΝΤΑΝΗ (onSnapshot). Χωρίς αυτό, κάθε νέο
+      //    μήνυμα θα απαιτούσε δημοσκόπηση του διακομιστή, και μια συνομιλία που
+      //    ανανεώνεται κάθε 10″ δεν είναι συνομιλία.
+      allow get: if readsThisThread();
+
+      // 🚫 LIST: ΠΟΤΕ. Το ακροατήριο είναι ΥΠΟΣΥΛΛΟΓΗ, άρα ένα ερώτημα πάνω στη συλλογή
+      //    ΔΕΝ μπορεί να το ρωτήσει («rules are not filters»). Ο κατάλογος νημάτων
+      //    σερβίρεται από τον ΔΙΑΚΟΜΙΣΤΗ (Β5) — ίδιο δόγμα με τον κατάλογο του γραφείου.
+      allow list: if false;
+
+      // ✍️ ΚΑΜΙΑ ΓΡΑΦΗ ΠΕΛΑΤΗ — ίδιο δόγμα με το `owner_properties`. Κάθε γραφή περνά
+      //    από ΕΝΑΝ γραφέα μέσα σε συναλλαγή (`thread-writer.ts`, CHECK 3.89): εκεί
+      //    ξαναελέγχεται το ακροατήριο και ενημερώνεται το `lastMessageAt` ΜΑΖΙ με το
+      //    μήνυμα. Ένα μήνυμα γραμμένο από τον πελάτη θα παρέκαμπτε και τα δύο.
+      allow create, update, delete: if false;
+
+      // 💬 ΤΑ ΜΗΝΥΜΑΤΑ — ίδια ερώτηση, γιατί ίδιο ακροατήριο.
+      // ⚠️ Εδώ το LIST ΕΠΙΤΡΕΠΕΤΑΙ: ο κανόνας δεν κοιτά ΚΑΝΕΝΑ πεδίο του εγγράφου, άρα
+      //    δεν υπάρχει φίλτρο να «ξεχαστεί» — η άδεια κρίνεται από το ΝΗΜΑ, όχι από το
+      //    ερώτημα. (Το `/messages` του ADR-029 είναι ΑΛΛΗ συλλογή· δες
+      //    `firestore-collections.ts` για το γιατί το όνομα εδώ είναι `network_messages`.)
+      match /network_messages/{messageId} {
+        allow read: if readsThisThread();
+        allow create, update, delete: if false;
+      }
+
+      // 👥 ΤΟ ΑΚΡΟΑΤΗΡΙΟ ΕΙΝΑΙ ΟΡΑΤΟ ΣΤΟ ΑΚΡΟΑΤΗΡΙΟ — ΚΑΙ ΕΙΝΑΙ ΧΑΡΑΚΤΗΡΙΣΤΙΚΟ, ΟΧΙ
+      //    ΔΙΑΡΡΟΗ (ADR-834 §5 Β (ε) 🏆). Ο πελάτης βλέπει «ποιοι διαβάζουν» ΚΑΙ «από
+      //    πότε» — αυτό ακριβώς που δεν κάνει κανένας από Front/Intercom/HubSpot/
+      //    Zendesk/Teams, και ο λόγος που ο διαχειριστής χώρου ΔΕΝ μπαίνει σιωπηλά.
+      //    ⚠️ Γράφει ΜΟΝΟ ο γραφέας: μια γραφή πελάτη εδώ είναι αυτοπρόσκληση σε ξένη
+      //    συνομιλία — η ΜΙΑ πίσω πόρτα που ολόκληρο το σχήμα υπάρχει για να κλείσει.
+      match /network_audience/{memberUid} {
+        allow read: if readsThisThread();
+        allow create, update, delete: if false;
+      }
+    }
+
+    // ADR-835 §22 (Στάδιο Γ) — ΤΑ ΚΑΝΑΛΙΑ: πηγές iCal + γενιά του συνδέσμου εξαγωγής.
+    //
+    // 🔴 Η ΜΟΝΗ ΣΥΛΛΟΓΗ ΤΗΣ ΟΙΚΟΓΕΝΕΙΑΣ ΧΩΡΙΣ ΚΑΜΙΑ ΑΝΑΓΝΩΣΗ ΠΕΛΑΤΗ — και ο λόγος δεν
+    // είναι η αυστηρότητα, είναι το ΠΕΡΙΕΧΟΜΕΝΟ: το URL ενός feed **ΕΙΝΑΙ
+    // διαπιστευτήριο**. Ο σύνδεσμος `.ics` της Airbnb δίνει σε όποιον τον έχει
+    // ΟΛΟΚΛΗΡΟ το ημερολόγιο του οικοδεσπότη εκεί — και η Firestore **δεν μπορεί** να
+    // κρύψει πεδίο σε ανάγνωση εγγράφου (τεκμηρίωση Google, *Control access to specific
+    // fields*: «You either retrieve the full document, or you retrieve nothing»).
+    //
+    // Άρα ο συντάκτης **δεν** διαβάζει ούτε το δικό του: η οθόνη παίρνει **προβολή** από
+    // τον διακομιστή (host + κατάσταση + υπογεγραμμένοι σύνδεσμοι), ποτέ το έγγραφο.
+    match /stay_channels/{propertyId} {
+      allow read: if false;
       allow create, update: if false;
       allow delete: if false;
     }
@@ -5579,6 +5721,45 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🔒 ΤΑ ΠΕΔΙΑ ΔΕΣΜΕΥΣΗΣ ΑΡΧΕΙΟΥ — ADR-864 §21 (σιωπηλή δέσμευση)
+    // =========================================================================
+    // Έξοδος ΜΟΝΟ του ΕΝΑ γραφέα (`services/file-record/file-hold.service.ts`, Admin SDK,
+    // δικαίωμα `legal:holds:manage`). Ο πελάτης δεν τα γράφει, δεν τα αλλάζει, δεν τα
+    // ΑΦΑΙΡΕΙ — αλλιώς ένα `hold: 'legal'` θα μηδενιζόταν με ένα update και η επόμενη
+    // οριστική διαγραφή θα περνούσε.
+    // ⚠️ Η λίστα είναι ΑΚΡΙΒΩΣ το `FILE_HOLD_FIELDS` (`lib/files/file-hold.ts`)· την ισότητα
+    //    τη φυλά η άγκυρα Α49 (`file-hold.test.ts`) μέσω του `rulesKeyListOf` — μείνε σε literal.
+    function holdCustodyKeys() {
+      return [
+        'hold', 'holdPlacedBy', 'holdPlacedAt', 'holdReason',
+        'holdReleasedBy', 'holdReleasedAt', 'retentionUntil'
+      ];
+    }
+
+    // Καμία γραφή πελάτη δεν αγγίζει δέσμευση — προσθήκη, αλλαγή ΚΑΙ αφαίρεση (`affectedKeys()`).
+    // 🔑 Ο κάδος ΜΕΝΕΙ ΑΝΟΙΧΤΟΣ (Δ21.1 — Google Vault · Box «silent legal hold»): ο φρουρός
+    //    ρωτά «άγγιξες τη δέσμευση;», ΠΟΤΕ «είναι δεσμευμένο;».
+    function holdCustodyUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(holdCustodyKeys());
+    }
+
+    // Γέννηση ΧΩΡΙΣ δέσμευση: κανένα κλειδί της, εκτός από ρητό `hold: 'none'` (= απουσία).
+    // Αρχείο «δεσμευμένο από κούνια» θα ήταν δέσμευση που δεν έκρινε κανείς.
+    function holdBornAbsent() {
+      return request.resource.data.get('hold', 'none') == 'none'
+             && !request.resource.data.keys().hasAny(holdCustodyKeys().removeAll(['hold']));
+    }
+
+    // Οριστική διαγραφή: ΜΟΝΟ χωρίς δέσμευση και χωρίς διατήρηση. Οι κανόνες δεν συγκρίνουν
+    // την ISO `retentionUntil` με το τώρα ⇒ ΚΑΘΕ δηλωμένη διατήρηση αρνείται (συντηρητικά·
+    // η ληγμένη καθαρίζεται από τον διακομιστή, Admin SDK, με τον κριτή `isHoldActive`).
+    // `null` ⇒ απουσία, ίδια σημασία με τον κριτή (`hasActiveHold` · `isHoldActive`).
+    function holdAllowsHardDelete() {
+      return resource.data.get('hold', 'none') in ['none', null]
+             && resource.data.get('retentionUntil', null) == null;
+    }
+
+    // =========================================================================
     // 🔐 RFC v6 AUTHORIZATION HELPERS (PHASE 1 PREPARATION)
     // =========================================================================
     // These helpers enable future tenant-scoped access control.
@@ -6438,6 +6619,25 @@ service cloud.firestore {
     //    θα έκανε το ευρετήριο όργανο ΑΠΑΡΙΘΜΗΣΗΣ γραφείων, που το ADR-787
     //    Ε-5 §4 #1 απαγορεύει ρητά. Γι' αυτό δεν υπάρχει ούτε σκέλος `read`.
     match /workspace_aliases/{aliasSkeleton} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    // ── ΤΟ ΜΗΤΡΩΟ ΤΩΝ ΠΑΓΩΜΕΝΩΝ ΑΠΟΔΕΙΚΤΙΚΩΝ ΕΝΤΟΛΗΣ (ADR-864 §20 · §21) ─────────
+    // Μία εγγραφή ανά παγωμένο αντίγραφο βεβαίωσης (`mandate-evidence/` στο bucket):
+    // κατάσταση διατήρησης, `retainUntil`, νομική δέσμευση, ταφόπλακα.
+    //
+    // ✍️ WRITE: ΜΟΝΟ ο διακομιστής (`services/mandate/evidence-registry.ts` ·
+    //    `evidence-retention.service.ts`, Admin SDK). Πελάτης που γράφει εδώ θα μπορούσε
+    //    να ΜΙΚΡΥΝΕΙ τη διατήρηση ή να ΑΡΕΙ νομική δέσμευση — και ο cron θα έσβηνε
+    //    αποδεικτικό συναίνεσης που ο νόμος (ΑΚ 250 · ν.4557/2018) απαιτεί να ζει.
+    //
+    // 📖 READ: ΚΑΝΕΝΑΣ. Η πρόσβαση στο αποδεικτικό κρίνεται στη διαδρομή του διακομιστή
+    //    (`mandate-evidence-access.ts`: κριτής ΣΧΕΣΗΣ γραφείου–ακινήτου + ίχνος
+    //    `document_accessed`)· ανάγνωση από τον πελάτη θα παρέκαμπτε και τα δύο.
+    //
+    // ⚠️ Ρητή άρνηση, όχι «καλύπτεται από το default-deny» — ίδιος λόγος με τα
+    //    `cron_job_state` · `oauth_*` · `workspace_aliases` από πάνω.
+    match /mandate_evidence/{evidenceId} {
       allow read, write: if false; // Server-side only via Admin SDK
     }
 

@@ -112,6 +112,20 @@
       "digest": "sha256:bb78d3978a3245a55263446d35955a49977d21b2c053947e767a22ec113d89c4",
       "source": "storage.rules",
       "target": "storage"
+    },
+    {
+      "at": "2026-09-17",
+      "commit": "ceadd529",
+      "digest": "sha256:c9e8ede37bdf883506c0de7cee704e5b076ed126e2def73e15b1bd690713e8ca",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
+    },
+    {
+      "at": "2026-09-17",
+      "commit": "ceadd529",
+      "digest": "sha256:6857a1c75efd0e084ffabe2d78a7495f998eb6569962dbd0fd7989d4fb4aed69",
+      "source": "firestore.indexes.json",
+      "target": "firestore:indexes"
     }
   ]
 }
