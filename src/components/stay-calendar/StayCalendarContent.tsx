@@ -13,6 +13,7 @@
  * @related ADR-835 §20 (Στάδιο Α) · hooks/owner-property/useStayCalendar.ts
  */
 
+import dynamic from 'next/dynamic';
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -32,6 +33,7 @@ import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperti
 import { ownerPropertyOfferKinds } from '@/types/owner-property';
 import { stayCalendarMessageOf, type StayCalendarMessage } from './stay-calendar-outcome';
 import { StayCalendarDeclaration, StayCalendarLegend, StayCalendarMonthNav } from './StayCalendarChrome';
+
 import { StayCalendarGrid } from './StayCalendarGrid';
 import { StayCalendarPanel } from './StayCalendarPanel';
 import { StayRulesSettings } from './StayRulesSettings';
@@ -42,7 +44,20 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-744 — τα κλειδιά του πρώτου καρέ, σύγχρονα (CHECK 3.51). Δήλωση: `.i18n-shell-slice.json`.
 registerRouteSlice(routeSlice);
 
-function StayCalendarBody({ view, calendar, picker, pricing }: {
+/**
+ * ⚠️ **ΟΡΙΟ `next/dynamic` γύρω από τον συγχρονισμό καναλιών** (ADR-744 Κ2, μετρημένο):
+ * σύγχρονος, μεγάλωνε το slice της σελίδας **8.656 → 13.853 bytes**. Είναι **κάτω** από
+ * το πλέγμα και απαντά «γιατί είναι κλειστές αυτές οι μέρες;» **αφού** ο άνθρωπος τις
+ * δει — άρα κανένα ωμό κλειδί δεν προλαβαίνει να φανεί. Ο χώρος κρατιέται με σταθερό
+ * ελάχιστο ύψος (καμία μετατόπιση διάταξης).
+ */
+const StayChannelSync = dynamic(() => import('./StayChannelSync'), {
+  ssr: false,
+  loading: () => <span aria-hidden className="block min-h-[12rem]" />,
+});
+
+function StayCalendarBody({ ownerPropertyId, view, calendar, picker, pricing }: {
+  readonly ownerPropertyId: string;
   readonly view: StayCalendarView;
   readonly calendar: StayCalendarController;
   readonly picker: StayCalendarSelectionController;
@@ -86,6 +101,9 @@ function StayCalendarBody({ view, calendar, picker, pricing }: {
         />
         <StayCalendarLegend />
       </section>
+      {/* ADR-835 §22 (Στάδιο Γ) — ο συγχρονισμός καναλιών: **κάτω** από το πλέγμα, γιατί
+          απαντά «γιατί φαίνονται αυτές οι μέρες κλειστές;» ΑΦΟΥ ο άνθρωπος τις δει. */}
+      <StayChannelSync ownerPropertyId={ownerPropertyId} />
       <StayCalendarPanel
         selection={picker.selection}
         meaning={picker.selection === null ? null : selectionMeaning(picker.selection, entries)}
@@ -117,7 +135,12 @@ function StayCalendarSession({ ownerPropertyId, pricing }: {
         </p>
       );
     case 'ready':
-      return <StayCalendarBody view={calendar.state.view} calendar={calendar} picker={picker} pricing={pricing} />;
+      return (
+        <StayCalendarBody
+          ownerPropertyId={ownerPropertyId} view={calendar.state.view}
+          calendar={calendar} picker={picker} pricing={pricing}
+        />
+      );
   }
 }
 
