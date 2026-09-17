@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 473,
+  "population": 474,
   "tally": {
     "undeclared": 55,
     "prefix-shadowed-by-declaration": 28,
     "declared-over-default": 65,
     "declared-agrees": 229,
-    "declared-via-factory": 96
+    "declared-via-factory": 97
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -22,7 +22,7 @@
     "STANDARD→HIGH": 1
   },
   "violation_count": 83,
-  "declaration_count": 96,
+  "declaration_count": 97,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -144,6 +144,7 @@
     "createScanCronRoute::/api/cron/overdue-alerts",
     "createScanCronRoute::/api/cron/purge-deleted-contacts",
     "createScanCronRoute::/api/cron/purge-deleted-entities",
+    "createScanCronRoute::/api/cron/stay-channel-import",
     "createShowcaseEmailRoute::/api/buildings/[buildingId]/showcase/email",
     "createShowcaseEmailRoute::/api/parking/[id]/showcase/email",
     "createShowcaseEmailRoute::/api/projects/[projectId]/showcase/email",
