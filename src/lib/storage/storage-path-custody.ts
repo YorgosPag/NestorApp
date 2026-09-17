@@ -49,7 +49,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * 🏛️ Η ΑΥΘΕΝΤΙΑ ΕΙΝΑΙ ΤΟ `storage.rules`, ΚΑΙ Η ΑΓΚΥΡΑ ΤΟ ΕΠΙΒΑΛΛΕΙ
  * ─────────────────────────────────────────────────────────────────────────────
- * Ο {@link STORAGE_ROOT_CUSTODY} είναι **κάτοπτρο** των 22 `match` μπλοκ, όχι
+ * Ο {@link STORAGE_ROOT_CUSTODY} είναι **κάτοπτρο** των `match` μπλοκ (23 στις 2026-09-17), όχι
  * δεύτερη αλήθεια. Η άγκυρα (`storage-path-custody-anchor.test.ts`) **διαβάζει το
  * ίδιο το `storage.rules`** και απαιτεί: κάθε ρίζα που εμφανίζεται εκεί να έχει
  * γραμμή εδώ. Νέα ρίζα στους κανόνες **χωρίς** γραμμή ⇒ **κόκκινο**.
@@ -79,7 +79,7 @@
  * | `company_scoped_with_project` · `company_scoped_no_project` · `company_scoped_authoring` | `company` |
  * | `owner_based` · `owner_based_no_superadmin` · `authenticated_read_owner_write` | `user` |
  * | *(οι τρεις βιβλιοθήκες + `system/`)* | `shared` |
- * | `server_only_read_superadmin_curation` | `server-only` |
+ * | `server_only_read_superadmin_curation` · `server_only_sealed` | `server-only` |
  */
 export type StorageCustodyKind = 'company' | 'user' | 'shared' | 'server-only';
 
@@ -122,7 +122,7 @@ export type StorageCustodyGap =
 // =============================================================================
 
 /**
- * Πώς κρίνεται κάθε ρίζα. **Οι έντεκα ρίζες των 22 μπλοκ** του `storage.rules`.
+ * Πώς κρίνεται κάθε ρίζα. **Οι δώδεκα ρίζες των 23 μπλοκ** του `storage.rules` (ADR-864 §19 πρόσθεσε το `mandate-evidence`).
  *
  * 🔑 `'company'`/`'user'` σημαίνει **«ο μισθωτής είναι το 2ο τμήμα»**· `'shared'`
  * και `'server-only'` δεν έχουν μισθωτή στη διαδρομή.
@@ -157,8 +157,10 @@ const STORAGE_ROOT_CUSTODY: Readonly<Record<string, StorageCustodyKind>> = {
   'furniture-library': 'shared',
   'bim-mesh-library': 'shared',
   'bim-texture-library': 'shared',
-  // ── μόνο διακομιστής (1 μπλοκ) ─────────────────────────────────────────────
+  // ── μόνο διακομιστής (2 μπλοκ) ─────────────────────────────────────────────
   'asset-packs': 'server-only',
+  // ADR-864 §19 — το παγωμένο αποδεικτικό ανήκει στη σχέση: `allow read, write: if false` για ΚΑΘΕ client.
+  'mandate-evidence': 'server-only',
 };
 
 /**

@@ -63,6 +63,7 @@ import {
   initialConfirmationFor,
   NOTIFY_SENT,
   OWNER_CONSENT,
+  type AttestationEvidence,
   type BrokeredListingMandate,
   type MandateCompensation,
   type MandateProof,
@@ -243,14 +244,13 @@ export async function createBrokeredListing(
  */
 export function agencyAttestation(
   attestedByUserId: string,
-  documentPath: string | null = null,
+  /** Το **παγωμένο** έντυπο (ADR-864 §19 · Α32) — `null` όταν δεν ανέβηκε αρχείο. */
+  document: { readonly storagePath: string; readonly evidence: AttestationEvidence } | null = null,
 ): MandateProof {
-  return {
-    via: AGENCY_ATTESTATION,
-    attestedByUserId,
-    attestedAt: nowISO(),
-    documentPath,
-  };
+  const base = { via: AGENCY_ATTESTATION, attestedByUserId, attestedAt: nowISO() } as const;
+  return document === null
+    ? { ...base, documentPath: null }
+    : { ...base, documentPath: document.storagePath, evidence: document.evidence };
 }
 
 /** Ο δρόμος της **συγκατάθεσης** — ρητός, ώστε ο καλών να μην περνά ωμή συμβολοσειρά. */

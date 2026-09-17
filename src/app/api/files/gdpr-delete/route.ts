@@ -20,6 +20,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
+import { isFileHeld } from '@/services/file-record/file-purge-helpers';
 
 const logger = createModuleLogger('GdprDeleteRoute');
 
@@ -66,8 +67,10 @@ async function handler(
 
     for (const fileDoc of filesSnapshot.docs) {
       const data = fileDoc.data();
-      // Skip files with legal/regulatory holds
-      if (data.hold && data.hold.type !== 'none') {
+      // Skip files with legal/regulatory holds **ή** ενεργή διατήρηση (ΓΚΠΔ άρθρο 17 §3) — ο ΕΝΑΣ κριτής.
+      // 🔴 ADR-864 §19: εδώ διαβαζόταν πεδίο `type` ΠΑΝΩ στο hold, ενώ το hold είναι **string** ⇒ κάθε αρχείο
+      //    με `hold: 'none'` κρινόταν «σε δέσμευση» και **δεν σβηνόταν ποτέ** (υπερ-διατήρηση).
+      if (isFileHeld(data)) {
         results.filesSkippedHold++;
         continue;
       }

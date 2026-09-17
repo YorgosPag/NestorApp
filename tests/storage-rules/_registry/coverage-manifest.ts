@@ -66,6 +66,13 @@ export type StoragePathPattern =
    */
   | 'server_only_read_superadmin_curation'
   /**
+   * `server_only_sealed` (ADR-864 §19 — παγωμένα αποδεικτικά βεβαίωσης) — **καμία** πράξη για **κανέναν**
+   * client, ούτε τον super_admin: `allow read, write: if false`. Γράφει και διαβάζει μόνο ο διακομιστής
+   * (Admin SDK), αφού κρίνει ότι ο καλών είναι μέρος της εντολής. Αυστηρότερο από το `asset_packs`, γιατί εδώ
+   * δεν υπάρχει curation: ό,τι γράφτηκε είναι απόδειξη, και σβήσιμο από client θα την εξαφάνιζε.
+   */
+  | 'server_only_sealed'
+  /**
    * `authenticated_read_owner_write` (ADR-798 §16 — φωτογραφία προφίλ) — το
    * **πρώτο** path όπου η ανάγνωση δεν εξαρτάται από εταιρεία ούτε από ιδιοκτησία:
    * `allow read: if isAuthenticated()`. Δεν είναι χαλάρωση — είναι ο **αυστηρότερος
@@ -496,6 +503,25 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     pattern: 'authenticated_read_owner_write',
     testFile: 'tests/storage-rules/suites/user-avatars.storage.test.ts',
     matrix: personalAssetMatrix(),
+  },
+
+  // -------------------------------------------------------------------------
+  // 🧾 ΠΑΓΩΜΕΝΑ ΑΠΟΔΕΙΚΤΙΚΑ ΒΕΒΑΙΩΣΗΣ — ADR-864 §19 (Α31-Α33)
+  //
+  // Η απόδειξη ανήκει στη ΣΧΕΣΗ γραφείου↔ιδιοκτήτη, όχι στο γραφείο. Κάθε persona,
+  // κάθε πράξη: deny — και ρητά ο super_admin, γιατί «ό,τι γράφτηκε είναι απόδειξη».
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'mandate_evidence',
+    pattern: 'server_only_sealed',
+    testFile: 'tests/storage-rules/suites/mandate-evidence.storage.test.ts',
+    matrix: [
+      ...denyAll('super_admin', 'server_only'),
+      ...denyAll('same_tenant_admin', 'server_only'),
+      ...denyAll('same_tenant_user', 'server_only'),
+      ...denyAll('cross_tenant_user', 'server_only'),
+      ...denyAll('anonymous', 'server_only'),
+    ] as const,
   },
 ] as const;
 

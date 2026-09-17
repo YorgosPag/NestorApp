@@ -72,7 +72,12 @@ export type AuditAction =
   | 'erased'
   | 'triage_status_changed'
   | 'triage_assigned'
-  | 'internal_note_added';
+  | 'internal_note_added'
+  /**
+   * ADR-864 §19 (Α34) — **άνοιγμα** αποδεικτικού, όχι αλλαγή: το «Viewed» του Certificate of Completion του
+   * DocuSign. Ποιος κατέβασε το παγωμένο έντυπο μιας βεβαίωσης, και πότε.
+   */
+  | 'document_accessed';
 
 // ============================================================================
 // FIELD-LEVEL DIFF

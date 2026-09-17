@@ -39,6 +39,7 @@
 import 'server-only';
 
 import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { attachmentDisposition } from '@/lib/http/content-disposition';
 
 // =============================================================================
 // Ο ΧΡΟΝΟΣ ΖΩΗΣ
@@ -79,6 +80,11 @@ export interface SignedDownloadRequest {
    * Ίδιο ιδίωμα με το `why` των πυλών αυτού του δέντρου.
    */
   readonly longLivedReason?: string;
+  /**
+   * Όνομα αρχείου για **λήψη** (`Content-Disposition: attachment`) — αλλιώς ο φυλλομετρητής κρατά το object
+   * name (π.χ. `mevd_…` χωρίς επέκταση). RFC 6266: ASCII `filename` + UTF-8 `filename*` για ελληνικά ονόματα.
+   */
+  readonly downloadFileName?: string;
 }
 
 export type SignedDownloadOutcome =
@@ -108,7 +114,7 @@ export type SignedDownloadRejection =
 export async function signedDownloadUrl(
   request: SignedDownloadRequest,
 ): Promise<SignedDownloadOutcome> {
-  const { storagePath, ttlMs = SIGNED_DOWNLOAD_TTL_MS, longLivedReason } = request;
+  const { storagePath, ttlMs = SIGNED_DOWNLOAD_TTL_MS, longLivedReason, downloadFileName } = request;
 
   if (typeof storagePath !== 'string' || storagePath.trim().length === 0) {
     return { outcome: 'rejected', why: 'path-missing' };
@@ -126,7 +132,11 @@ export async function signedDownloadUrl(
   const expiresAt = Date.now() + ttlMs;
   const [url] = await getAdminBucket()
     .file(storagePath.trim())
-    .getSignedUrl({ action: 'read', expires: expiresAt });
+    .getSignedUrl({
+      action: 'read',
+      expires: expiresAt,
+      ...(downloadFileName === undefined ? {} : { responseDisposition: attachmentDisposition(downloadFileName) }),
+    });
 
   // ⛔ Το `url` **δεν** καταγράφεται: η ίδια η Google το ονομάζει μυστικό. Ένα
   //    log εδώ θα έκανε κάθε αποθηκευμένη γραμμή ημερολογίου κλειδί πρόσβασης.

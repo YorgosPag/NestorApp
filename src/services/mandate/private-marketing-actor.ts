@@ -34,21 +34,40 @@ export const CHANNEL_OF: Record<ConsentActor['kind'], PrivateMarketingChannel> =
   agency: 'form',
 };
 
+/**
+ * **Ποιος είναι ο δρων με λογαριασμό** — ιδιοκτήτης **μόνο** σε προσωπική καταχώρηση που διαχειρίζεται· αλλιώς γραφείο.
+ * Το αποφασίζει η **καταχώρηση**, ποτέ το αίτημα. Ένας ορισμός για αναγνώστη πάνελ **και** λήψη αποδεικτικού.
+ */
+export function consentActorOfProperty(property: OwnerProperty, actor: ListingActor): OwnerAccountActor | AgencyActor {
+  return isPersonalCustody(property) && mayAdminister(custodyOf(property), actor)
+    ? { kind: 'owner-account', actor }
+    : { kind: 'agency', actor };
+}
+
+/**
+ * **Σε ποιες εντολές είναι ΜΕΡΟΣ αυτός ο δρων** — ανεξαρτήτως ισχύος (ADR-864 §19 · Α33).
+ *
+ * 🔑 Η **ανάγνωση αποδεικτικού** ρωτά αυτό: ο ιδιοκτήτης χρειάζεται το έντυπο **και** αφού λήξει ή
+ * ανακληθεί η εντολή — τότε ακριβώς αμφισβητεί. Οι **πράξεις** ρωτούν το στενότερο {@link mandatesVisibleTo}.
+ */
+export function mandatesPartyTo(property: OwnerProperty, who: ConsentActor): readonly BrokeredListingMandate[] {
+  switch (who.kind) {
+    case 'owner-link':
+      return property.mandates.filter((m) => m.consentNonce === who.nonce && m.clientContactId === who.clientContactId);
+    case 'owner-account':
+      return isPersonalCustody(property) && mayAdminister(custodyOf(property), who.actor) ? property.mandates : [];
+    case 'agency':
+      return property.mandates.filter((m) => who.actor.companyId !== null && m.agencyCompanyId === who.actor.companyId);
+  }
+}
+
 /** **Όλες** οι εντολές που αυτός ο δρων δικαιούται να αγγίξει — κενό = καμία, ποτέ «υπάρχει αλλά όχι για σένα». */
 export function mandatesVisibleTo(
   property: OwnerProperty,
   who: ConsentActor,
   nowISOValue: string,
 ): readonly BrokeredListingMandate[] {
-  const bearing = consentBearingMandates(property.mandates, nowISOValue);
-  switch (who.kind) {
-    case 'owner-link':
-      return bearing.filter((m) => m.consentNonce === who.nonce && m.clientContactId === who.clientContactId);
-    case 'owner-account':
-      return isPersonalCustody(property) && mayAdminister(custodyOf(property), who.actor) ? bearing : [];
-    case 'agency':
-      return bearing.filter((m) => who.actor.companyId !== null && m.agencyCompanyId === who.actor.companyId);
-  }
+  return consentBearingMandates(mandatesPartyTo(property, who), nowISOValue);
 }
 
 /**

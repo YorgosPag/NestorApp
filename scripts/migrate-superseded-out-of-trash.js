@@ -30,7 +30,10 @@ const admin = require('firebase-admin');
 const { applyEnvLocal } = require('./_shared/loadEnvLocal');
 const { initAdminApp } = require('./_shared/firebaseAdminOps');
 
-const TRASH_FIELDS = ['isDeleted', 'purgeAt', 'trashedAt', 'trashedBy', 'deletedAt', 'deletedBy'];
+// ⚠️ `isDeleted` ΔΕΝ σβήνεται — γίνεται `false`: η λίστα «Αρχειοθετημένα» ρωτά `isDeleted == false`
+//    (`file-record-lifecycle.ts`), και ένα έγγραφο ΧΩΡΙΣ το πεδίο θα ήταν σώο αλλά ΑΟΡΑΤΟ.
+//    Μετρημένο 2026-09-17: η πρώτη εκτέλεση το έσβησε — η δεύτερη το διορθώνει (ίδιο script, ιδεμποτητικό).
+const TRASH_FIELDS = ['purgeAt', 'trashedAt', 'trashedBy', 'deletedAt', 'deletedBy'];
 
 /** Firestore Timestamp · Date · ISO → ISO (ο θεματοφύλακας δέχεται `at` ΜΟΝΟ ως Date ή string). */
 function isoOf(value) {
@@ -41,16 +44,20 @@ function isoOf(value) {
 
 /** Η ενημέρωση για ένα έγγραφο, ή `null` όταν δεν χρειάζεται (ιδεμποτησία). */
 function planFor(data) {
-  if (data.lifecycleState !== 'trashed' && data.isDeleted !== true) return null;
   if (typeof data.supersededByFileId !== 'string' || data.supersededByFileId.length === 0) return null;
+  const inTrash = data.lifecycleState === 'trashed' || data.isDeleted === true;
+  const archivedButInvisible = data.lifecycleState === 'archived' && data.isDeleted !== false;
+  if (!inTrash && !archivedButInvisible) return null;
 
-  const actor = data.trashedBy || data.deletedBy || data.createdBy;
+  // Δεύτερη εκτέλεση: ό,τι έγραψε ήδη η πρώτη (πράξη · ποιος · πότε) ΜΕΝΕΙ — ποτέ ξαναγραφή ιστορίας.
+  const actor = data.archivedBy || data.trashedBy || data.deletedBy || data.createdBy;
   const at = isoOf(data.supersededAt || data.trashedAt);
   const update = {
     lifecycleState: 'archived',
-    archivedAt: at,
+    isDeleted: false,
+    archivedAt: data.archivedAt || at,
     archivedBy: actor,
-    cdeSupersession: {
+    cdeSupersession: data.cdeSupersession || {
       by: actor,
       at,
       revision: typeof data.revision === 'number' ? data.revision : 0,

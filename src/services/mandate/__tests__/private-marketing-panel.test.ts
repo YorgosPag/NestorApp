@@ -111,3 +111,16 @@ describe('🏆 Α25 · Α26 — οι τιμές και η κατάσταση ε�
     expect(read.kind === 'found' && read.panels[0]?.standing).toEqual({ kind: 'outdated' });
   });
 });
+
+describe('🏆 Α30 — το πάνελ δίνει την ώρα του επόμενου αιτήματος', () => {
+  it('🔴 αίτημα πριν από 10′ ⇒ `nextRequestAt` = +1h από το αίτημα · χωρίς αίτημα ⇒ `null`', async () => {
+    const at = new Date(Date.parse(NOW) - 10 * 60_000).toISOString();
+    const requested = { ...mandate('comp_alfa'), privateMarketing: [{ kind: 'requested' as const, id: 'pmev_r', at, requestedByUserId: 'agent-1', audience: 'custodians' as const }] };
+    const read = await readPrivateMarketingPanels(seeded([requested, mandate('comp_beta')]), 'ownp_a', OWNER, NOW);
+
+    expect(read.kind === 'found' && read.panels.map((panel) => panel.nextRequestAt)).toEqual([
+      new Date(Date.parse(at) + 60 * 60_000).toISOString(),
+      null,
+    ]);
+  });
+});

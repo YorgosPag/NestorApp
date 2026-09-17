@@ -15,18 +15,18 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { latestLegalDocumentVersion } from '@/lib/legal/legal-document-versions';
-import { custodyOf, isPersonalCustody, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
+import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { consentValuesFor } from '@/lib/mandate/private-marketing-consent-text';
 import { nextRequestAtOf } from '@/lib/mandate/private-marketing-standing';
+import { evidencesOfMandate, evidenceViewOf } from '@/lib/mandate/mandate-evidence';
 import {
   privateMarketingStandingViewOf,
   type PrivateMarketingPanel,
   type PrivateMarketingPanels,
 } from '@/lib/mandate/private-marketing-panel';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
-import { mandatesVisibleTo, type ConsentActor } from '@/services/mandate/private-marketing-actor';
-import type { OwnerProperty } from '@/types/owner-property';
+import { consentActorOfProperty, mandatesVisibleTo } from '@/services/mandate/private-marketing-actor';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { PRIVATE_MARKETING_DOCUMENT } from '@/types/private-marketing-consent';
 
@@ -45,14 +45,8 @@ function privateMarketingPanelOf(mandate: BrokeredListingMandate, agencyName: st
     standing: privateMarketingStandingViewOf(mandate),
     values: consentValuesFor(agencyName, mandate.expiresAt),
     nextRequestAt: nextRequestAtOf(mandate, nowISOValue),
+    evidence: evidencesOfMandate(mandate).map(evidenceViewOf),
   };
-}
-
-/** Ιδιοκτήτης **μόνο** σε προσωπική καταχώρηση που διαχειρίζεται· αλλιώς γραφείο. */
-function consentActorOf(property: OwnerProperty, actor: ListingActor): ConsentActor {
-  return isPersonalCustody(property) && mayAdminister(custodyOf(property), actor)
-    ? { kind: 'owner-account', actor }
-    : { kind: 'agency', actor };
 }
 
 export async function readPrivateMarketingPanels(
@@ -65,7 +59,7 @@ export async function readPrivateMarketingPanels(
   const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
   if (property === null) return { kind: 'absent' };
 
-  const who = consentActorOf(property, actor);
+  const who = consentActorOfProperty(property, actor);
   const mandates = mandatesVisibleTo(property, who, nowISOValue);
   if (mandates.length === 0) return { kind: 'absent' };
 

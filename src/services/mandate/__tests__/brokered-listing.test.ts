@@ -117,6 +117,16 @@ beforeEach(() => {
 // Β — Ο ΔΡΟΜΟΣ ΤΗΣ ΣΥΓΚΑΤΑΘΕΣΗΣ
 // =============================================================================
 
+/** Παγωμένο αποδεικτικό (ADR-864 §19) — σχήμα όπως το γράφει το `attestedDocumentOf`. */
+const EVIDENCE = {
+  id: 'mevd_1',
+  path: 'mandate-evidence/ownp_1/mevd_1',
+  digest: `sha256:${'a'.repeat(64)}`,
+  sizeBytes: 1024,
+  contentType: 'application/pdf',
+  fileName: 'kostas.pdf',
+} as const;
+
 describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσιο πριν απαντήσει', () => {
   it('🔑 Β1 — γεννιέται ΣΕ ΑΝΑΜΟΝΗ και ΔΕΝ δημοσιεύεται', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
@@ -208,13 +218,15 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
       expiresAt: FUTURE,
       scope: ['sell'],
       startsAt: NOW,
-      proof: agencyAttestation('user_maria', 'entoles/kostas.pdf'),
+      proof: agencyAttestation('user_maria', { storagePath: 'entoles/kostas.pdf', evidence: EVIDENCE }),
     });
 
     const mandate = (await storedProperty(db)).mandates[0]!;
     if (mandate.proof.via === AGENCY_ATTESTATION) {
       expect(mandate.proof.attestedByUserId).toBe('user_maria');
       expect(mandate.proof.documentPath).toBe('entoles/kostas.pdf');
+      // ADR-864 §19 Α32 — η βεβαίωση εντολής κρατά ΚΑΙ το παγωμένο αντίγραφο, όχι μόνο δείκτη στο ζωντανό αρχείο.
+      expect(mandate.proof.evidence).toEqual(EVIDENCE);
       expect(mandate.proof.attestedAt).toEqual(expect.any(String));
     } else {
       throw new Error('η βεβαίωση χάθηκε');

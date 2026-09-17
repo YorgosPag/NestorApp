@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { refusalOf } from '@/lib/http/response-refusal';
 import type { LegalDocumentVersion } from '@/lib/legal/legal-document-versions';
+import type { EvidenceView } from '@/lib/mandate/mandate-evidence';
 import type { ConsentSubmission } from '@/lib/mandate/private-marketing-consent-text';
 import {
   PRIVATE_MARKETING_REFUSALS,
@@ -25,6 +26,7 @@ import {
   type PrivateMarketingRevocationOutcome,
 } from '@/types/private-marketing-consent';
 
+import { MandateEvidenceList } from './MandateEvidenceList';
 import { PrivateMarketingConsentForm, type PartySubmission } from './PrivateMarketingConsentForm';
 
 const NS = 'property-market';
@@ -42,6 +44,8 @@ export interface PrivateMarketingLinkView {
   readonly closed: boolean;
   readonly version: LegalDocumentVersion | null;
   readonly values: ConsentPlaceholderValues;
+  /** Τα παγωμένα έντυπα της εντολής — ο ιδιοκτήτης τα κατεβάζει από τον σύνδεσμο (ADR-864 §19 · Α33). */
+  readonly evidence: readonly EvidenceView[];
 }
 
 type Phase =
@@ -94,13 +98,15 @@ export function PrivateMarketingLinkSection({ view }: { readonly view: PrivateMa
     const doneText = phase.what === 'granted' ? t(`${K}.granted`) : phase.what === 'revoked' ? t(`${K}.revoked`) : t(`${K}.declinedDone`);
     return <p role="status" className="text-sm font-medium text-card-foreground">{doneText}</p>;
   }
-  if (view.requestId === null && !view.closed) return null;
+  const evidence = <MandateEvidenceList evidence={view.evidence} source={{ kind: 'link', token: view.token }} />;
+  if (view.requestId === null && !view.closed) return view.evidence.length > 0 ? <section className="flex flex-col gap-4 border-t border-border pt-4">{evidence}</section> : null;
 
   const busy = phase.kind === 'sending';
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-4 border-t border-border pt-4">
       <h2 id={headingId} className="text-base font-semibold text-card-foreground">{t(`${K}.title`)}</h2>
       {phase.kind === 'failed' && <p role="alert" className="text-sm font-medium text-destructive">{t(phase.key)}</p>}
+      {evidence}
 
       {view.requestId !== null && view.version !== null && (
         <PrivateMarketingConsentForm version={view.version} parties={[{ key: 'link', values: view.values }]} busy={busy} onSubmit={grant} />

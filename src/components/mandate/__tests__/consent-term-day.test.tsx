@@ -52,6 +52,8 @@ const VIEW: MandateConsentView = {
   //    γεγονότος — και θα έμενε πίσω την ημέρα που θα αλλάξει ο `endOfDay`.
   mandateExpiresAt: endOfDay(AGREED_DAY),
   currentDecision: 'pending',
+  // ADR-864 Φ3 — το πεδίο είναι υποχρεωτικό από τη Φ3-Β· χωρίς αυτό η κάρτα έσκαγε ΠΡΙΝ ελεγχθεί η ημέρα.
+  privateMarketing: { token: 'nonce-test', requestId: null, closed: false, version: null, values: { agency: '', expiresOn: '' }, evidence: [] },
 };
 
 /** Ό,τι κείμενο έφτασε στην κάρτα συγκατάθεσης. */

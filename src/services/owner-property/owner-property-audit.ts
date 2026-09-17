@@ -121,3 +121,27 @@ export async function recordOwnerPropertyWrite(
     ...auditLedgerScopeOf(custodyWorkspace(custodyOf(after))),
   });
 }
+
+/**
+ * **Καταγράφει άνοιγμα παγωμένου αποδεικτικού** (ADR-864 §19 · Α34) — το «Viewed» του DocuSign.
+ *
+ * 🔑 Στο **ίδιο** βιβλίο με τις γραφές της αγγελίας (προσωπικό ή εταιρικό, `auditLedgerScopeOf`): ο
+ * ιδιοκτήτης βλέπει στο «Ιστορικό» **ποιος** άνοιξε το έντυπο που βεβαιώθηκε στο όνομά του, και **πότε**.
+ * ⚠️ Δεν πετά ποτέ — αποτυχία ίχνους δεν ακυρώνει λήψη που ήδη κρίθηκε.
+ */
+export async function recordOwnerPropertyEvidenceAccess(
+  property: OwnerProperty,
+  actor: ListingActor,
+  evidence: { readonly id: string; readonly fileName: string },
+): Promise<void> {
+  await EntityAuditService.recordChange({
+    entityType: 'owner_property',
+    entityId: property.id,
+    entityName: property.title.trim() || null,
+    action: 'document_accessed',
+    changes: [{ field: 'evidence', oldValue: null, newValue: evidence.id, label: evidence.fileName }],
+    performedBy: actor.uid,
+    performedByName: null,
+    ...auditLedgerScopeOf(custodyWorkspace(custodyOf(property))),
+  });
+}

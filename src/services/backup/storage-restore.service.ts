@@ -19,8 +19,7 @@
 import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { createHash } from 'crypto';
-import { Transform } from 'stream';
+import { sha256PassThrough } from '@/lib/storage/sha256-pass-through';
 import { pipeline } from 'stream/promises';
 
 import type { Bucket } from '@google-cloud/storage';
@@ -168,16 +167,7 @@ export class StorageRestoreService {
     }
 
     // Stream from backup GCS → target bucket with SHA-256 verification
-    const hash = createHash('sha256');
-    let bytesCopied = 0;
-
-    const hashTransform = new Transform({
-      transform(chunk, _encoding, callback) {
-        hash.update(chunk);
-        bytesCopied += chunk.length;
-        callback(null, chunk);
-      },
-    });
+    const hash = sha256PassThrough();
 
     const backupGcsPath = `${backupId}/${entry.backupFile}`;
     const readStream = gcsService.createReadStream(backupGcsPath);
@@ -189,10 +179,10 @@ export class StorageRestoreService {
       },
     });
 
-    await pipeline(readStream, hashTransform, writeStream);
+    await pipeline(readStream, hash.stream, writeStream);
 
     // Verify SHA-256
-    const computedHash = hash.digest('hex');
+    const computedHash = hash.digestHex();
     if (computedHash !== entry.sha256) {
       logger.error(
         `SHA-256 mismatch for ${entry.storagePath}: ` +
@@ -203,6 +193,6 @@ export class StorageRestoreService {
       return { status: 'failed', bytes: 0 };
     }
 
-    return { status: 'restored', bytes: bytesCopied };
+    return { status: 'restored', bytes: hash.bytes() };
   }
 }

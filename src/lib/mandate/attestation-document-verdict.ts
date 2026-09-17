@@ -26,10 +26,18 @@ interface AttestationFileFacts {
   readonly status?: unknown;
   readonly isDeleted?: unknown;
   readonly storagePath?: unknown;
+  readonly contentType?: unknown;
+  readonly displayName?: unknown;
 }
 
 export type AttestationDocumentVerdict =
-  | { readonly kind: 'attached'; readonly storagePath: string }
+  | {
+      readonly kind: 'attached';
+      readonly storagePath: string;
+      /** Για το πάγωμα (ADR-864 §19): τύπος και όνομα **του `FileRecord`**, ποτέ του σύρματος. */
+      readonly contentType: string;
+      readonly fileName: string;
+    }
   /** Κανένα αρχείο δεν δηλώθηκε. */
   | { readonly kind: 'refused'; readonly reason: 'consent-document-missing' }
   /** Δηλώθηκε, αλλά δεν είναι έτοιμο έντυπο **αυτού** του γραφείου για **αυτή** την αγγελία. */
@@ -50,5 +58,15 @@ export function judgeAttestationDocument(
   if (facts.entityType !== ENTITY_TYPES.OWNER_PROPERTY || facts.entityId !== expected.ownerPropertyId) return INVALID;
   if (facts.status !== FILE_STATUS.READY || facts.isDeleted === true) return INVALID;
   if (typeof facts.storagePath !== 'string' || facts.storagePath.trim() === '') return INVALID;
-  return { kind: 'attached', storagePath: facts.storagePath };
+  return {
+    kind: 'attached',
+    storagePath: facts.storagePath,
+    contentType: typeof facts.contentType === 'string' && facts.contentType !== '' ? facts.contentType : 'application/octet-stream',
+    fileName: typeof facts.displayName === 'string' && facts.displayName.trim() !== '' ? facts.displayName.trim() : fileNameOf(facts.storagePath),
+  };
+}
+
+/** Το τελευταίο τμήμα της διαδρομής — όνομα όταν το `FileRecord` δεν έχει `displayName`. */
+function fileNameOf(storagePath: string): string {
+  return storagePath.split('/').at(-1) ?? storagePath;
 }

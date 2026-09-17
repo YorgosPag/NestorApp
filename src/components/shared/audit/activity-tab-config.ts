@@ -30,6 +30,7 @@ import {
   Flag,
   UserCheck,
   StickyNote,
+  FileDown,
 } from "lucide-react";
 import type { AuditAction } from "@/types/audit-trail";
 
@@ -179,6 +180,12 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
     labelKey: "audit.actions.internal_note_added",
     color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
+  },
+  document_accessed: {
+    icon: FileDown,
+    labelKey: "audit.actions.document_accessed",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
   },
 };
 

@@ -740,7 +740,17 @@
       "email_sent": "Email sent",
       "invoice_created": "Invoice created",
       "document_added": "Document added",
-      "document_removed": "Document removed"
+      "document_removed": "Document removed",
+      "vendor_notified": "Vendor notified",
+      "orphaned": "Left without parent",
+      "auto_submit_prompted": "Auto-submit suggested",
+      "auto_submit_accepted": "Auto-submit accepted",
+      "auto_submit_declined": "Auto-submit declined",
+      "erased": "Data permanently erased",
+      "triage_status_changed": "Triage status changed",
+      "triage_assigned": "Triage assigned",
+      "internal_note_added": "Internal note",
+      "document_accessed": "Evidence opened"
     },
     "filters": {
       "all": "All",
@@ -894,7 +904,8 @@
       "Germany": "Germany",
       "United Kingdom": "United Kingdom",
       "United States": "United States"
-    }  },
+    }
+  },
   "fullscreen": {
     "enter": "Fullscreen",
     "exit": "Exit Fullscreen",

@@ -30,6 +30,7 @@ import {
 } from '@/services/owner-property/private-marketing.client';
 import { isClosedMarketingAudience, type ClosedMarketingAudience } from '@/types/private-marketing-consent';
 
+import { MandateEvidenceList } from './MandateEvidenceList';
 import { PrivateMarketingActionNotice } from './PrivateMarketingActionNotice';
 import { PrivateMarketingStandingLine } from './PrivateMarketingStandingLine';
 
@@ -119,6 +120,7 @@ export function PrivateMarketingAgencySection({ ownerPropertyId }: { readonly ow
     <section aria-labelledby={headingId} className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
       <h2 id={headingId} className="text-base font-semibold text-card-foreground">{t(`${K}.title`)}</h2>
       <PrivateMarketingStandingLine standing={panel.standing} />
+      <MandateEvidenceList evidence={panel.evidence} source={{ kind: 'account', ownerPropertyId }} />
       <AgencyOutcomeNotice outcome={outcome} />
       {/* Α35 — ο ιδιοκτήτης αρνήθηκε: κανένα αίτημα για αυτούς τους όρους. Το έντυπο μένει (ειδοποιείται για αμφισβήτηση). */}
       {audience !== null && panel.standing.kind !== 'declined' && (

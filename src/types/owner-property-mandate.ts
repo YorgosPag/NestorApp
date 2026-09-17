@@ -120,8 +120,31 @@ export interface AgencyAttestation {
   readonly attestedByUserId: string;
   /** ISO — πότε δόθηκε η βεβαίωση. */
   readonly attestedAt: string;
-  /** Μονοπάτι του σαρωμένου εγγράφου, όταν υπάρχει. */
+  /** Μονοπάτι του σαρωμένου εγγράφου, όταν υπάρχει — η **προέλευση** (αρχείο του γραφείου). */
   readonly documentPath: string | null;
+  /**
+   * **Το παγωμένο αντίγραφο** (ADR-864 §19 · Α31) — παρόν **όταν και μόνο όταν** ανέβηκε έντυπο.
+   *
+   * 🔴 Το `documentPath` δείχνει στο **ζωντανό** αρχείο του γραφείου, που μέλος της εταιρείας μπορεί να
+   * σβήσει (`storage.rules`). Η απόδειξη ανήκει στη **σχέση**, όχι στο γραφείο: όπως το DocuSign κρατά το
+   * ολοκληρωμένο έγγραφο το ίδιο, ο διακομιστής αντιγράφει σε ρίζα που **κανένας client** δεν αγγίζει, με
+   * GCS temporary hold και αποτύπωμα που ο ιδιοκτήτης επαληθεύει ανεξάρτητα.
+   */
+  readonly evidence?: AttestationEvidence;
+}
+
+/** Ένα παγωμένο αποδεικτικό — ό,τι χρειάζεται για λήψη **και** επαλήθευση, τίποτε άλλο. */
+export interface AttestationEvidence {
+  /** `mevd_*` (N.6) — η **μόνη** ταυτότητα που ταξιδεύει στο σύρμα· ποτέ η διαδρομή. */
+  readonly id: string;
+  /** `mandate-evidence/{ownerPropertyId}/{id}` — ρίζα `server-only`. */
+  readonly path: string;
+  /** `sha256:<64 hex>` των bytes **όπως παγώθηκαν**. */
+  readonly digest: string;
+  readonly sizeBytes: number;
+  readonly contentType: string;
+  /** Το όνομα που είδε ο άνθρωπος — για το `Content-Disposition` της λήψης. */
+  readonly fileName: string;
 }
 
 /**

@@ -23,6 +23,9 @@
  * | Α20 | έντυπο χωρίς έγγραφο ⇒ άρνηση · ειδοποίηση ιδιοκτήτη | attestation χωρίς έγγραφο |
  * | Α23 | έντυπο = `FileRecord` **του γραφείου**, **αυτής** της αγγελίας, **έτοιμο** ⇒ διαδρομή από τη βάση | κριτής χωρίς εταιρεία · χωρίς αγγελία |
  * | Α27 | ιδιοκτήτης προς δύο γραφεία ⇒ μία υποβολή, ένα γεγονός ανά εντολή· μία άρνηση ⇒ τίποτα | παροχή ανά γραφείο · μερική εγγραφή |
+ * | Α29 | δεύτερο αίτημα < 1h ⇒ `consent-request-cooling`, κανένα email | χωρίς κριτή · αναμονή από το πρώτο αίτημα |
+ * | Α31 | έντυπο ⇒ **παγωμένο** αντίγραφο (sha256 + hold **μετά** την εγγραφή)· άρνηση ⇒ αντίγραφο σβησμένο· αποτυχία πάγωσης ⇒ τίποτα | βεβαίωση χωρίς αντίγραφο · hold πριν την εγγραφή |
+ * | Α35 | «μη μου ξαναστείλετε» φράζει αιτήματα για τους ίδιους όρους, όχι τη συναίνεση | σύμπτυξη σε `absent` |
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -51,6 +54,12 @@ jest.mock('@/services/company/company-public-name.reader', () => ({
 jest.mock('@/services/mandate/mandate-invitation.service', () => ({
   sendMandateInvitation: (...args: Parameters<typeof sendMandateInvitation>) => sendMandateInvitation(...args),
 }));
+// ADR-864 §19 — το πάγωμα γράφει σε bucket· εδώ ένα ψεύτικο στη μνήμη που αρνείται διαγραφή υπό hold, όπως το GCS.
+let evidenceBucket: import('./fake-evidence-bucket').FakeEvidenceBucket;
+jest.mock('@/lib/firebaseAdmin', () => ({
+  ...jest.requireActual('@/lib/firebaseAdmin'),
+  getAdminBucket: () => evidenceBucket,
+}));
 
 process.env.MANDATE_CONSENT_SECRET ??= 'δοκιμαστικό-μυστικό-κλειστής-διάθεσης';
 
@@ -65,7 +74,11 @@ const { consentValuesFor } = require('@/lib/mandate/private-marketing-consent-te
 const { latestLegalDocumentVersion } = require('@/lib/legal/legal-document-versions') as typeof import('@/lib/legal/legal-document-versions');
 const { clauseIdsOf } = require('@/lib/legal/legal-clauses') as typeof import('@/lib/legal/legal-clauses');
 const { ownerPropertyFromDocument } = require('@/lib/owner-property/owner-property-from-document') as typeof import('@/lib/owner-property/owner-property-from-document');
+const { FakeEvidenceBucket } = require('./fake-evidence-bucket') as typeof import('./fake-evidence-bucket');
+const evidenceLib = require('../attestation-evidence') as typeof import('../attestation-evidence');
 /* eslint-enable @typescript-eslint/no-require-imports */
+
+import { createHash } from 'crypto';
 
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
@@ -157,6 +170,7 @@ function linkGrant(mandate: BrokeredListingMandate, over: LinkOver = {}): Parame
 
 beforeEach(() => {
   jest.clearAllMocks();
+  evidenceBucket = new FakeEvidenceBucket();
   reconcilePublicShelf.mockResolvedValue(EMPTY_REPORT);
   reconcilePublicModelShelf.mockResolvedValue(EMPTY_REPORT);
   recordOwnerPropertyWrite.mockResolvedValue(undefined);
@@ -401,6 +415,7 @@ describe('🏆 Α20 · Α23 — το έντυπο είναι αρχείο ΤΟΥ
     const mandate = confirmedMandate();
     const { db, typed } = seeded([mandate]);
     db.seed(COLLECTIONS.FILES, 'file_pm', readyFile());
+    evidenceBucket.put(STORAGE_PATH, 'υπογεγραμμένο');
 
     expect((await consent.grantPrivateMarketing(typed, attest(mandate, 'file_pm'))).kind).toBe('saved');
     const event = lastEvent(await stored(db));
@@ -496,5 +511,185 @@ describe('🔑 σύνορο εγγράφου — τα γεγονότα ΠΕΡΝ�
     const grant = grantFor(mandate);
     const read = ownerPropertyFromDocument(fixtures.validOwnerProperty({ mandates: [{ ...mandate, privateMarketing: [grant] }] }), 'ownp_a');
     expect(read?.mandates[0]?.privateMarketing).toEqual([grant]);
+  });
+});
+
+// =============================================================================
+// ADR-864 §19 — Φ3 Μέρος Δ: ρυθμός αιτήματος (Α29) · άρνηση ιδιοκτήτη (Α35)
+// =============================================================================
+
+const agencyRequest = (nowISO: string): Parameters<typeof consent.requestPrivateMarketing>[1] => ({
+  ownerPropertyId: 'ownp_a',
+  actor: AGENT,
+  audience: 'custodians',
+  nowISO,
+});
+
+const plusMinutes = (iso: string, minutes: number): string => new Date(Date.parse(iso) + minutes * 60_000).toISOString();
+
+describe('🏆 Α29 — ένα αίτημα ανά ώρα ανά εντολή (Dropbox Sign), κριμένο ΜΕΣΑ στη συναλλαγή', () => {
+  it('🔴 δεύτερο αίτημα σε 59′ ⇒ `consent-request-cooling`, ΚΑΝΕΝΑ δεύτερο email, κανένα δεύτερο γεγονός', async () => {
+    const { db, typed } = seeded([confirmedMandate()]);
+
+    expect((await consent.requestPrivateMarketing(typed, agencyRequest(NOW))).kind).toBe('requested');
+    expect(await consent.requestPrivateMarketing(typed, agencyRequest(plusMinutes(NOW, 59)))).toEqual({ kind: 'refused', reason: 'consent-request-cooling' });
+
+    expect(sendMandateInvitation).toHaveBeenCalledTimes(1);
+    expect(standingLib.privateMarketingEventsOf((await stored(db)).mandates[0] as BrokeredListingMandate).map((e) => e.kind)).toEqual(['requested']);
+  });
+
+  it('🔑 παρονομαστής: στα 60′ το αίτημα ξαναστέλνεται', async () => {
+    const { typed } = seeded([confirmedMandate()]);
+
+    await consent.requestPrivateMarketing(typed, agencyRequest(NOW));
+    expect((await consent.requestPrivateMarketing(typed, agencyRequest(plusMinutes(NOW, 60)))).kind).toBe('requested');
+    expect(sendMandateInvitation).toHaveBeenCalledTimes(2);
+  });
+
+  it('🔴 η αναμονή μετρά από το ΤΕΛΕΥΤΑΙΟ αίτημα, όχι από το πρώτο', () => {
+    const mandate = confirmedMandate({
+      privateMarketing: [request('pmev_old'), { ...request('pmev_new'), at: plusMinutes(NOW, 120) }],
+    });
+    expect(standingLib.nextRequestAtOf(mandate, plusMinutes(NOW, 150))).toBe(plusMinutes(NOW, 180));
+    expect(standingLib.nextRequestAtOf(mandate, plusMinutes(NOW, 180))).toBeNull();
+  });
+});
+
+describe('🏆 Α30 — το πάνελ δίνει την ώρα του επόμενου αιτήματος ΑΠΟ ΤΟΝ ΚΡΙΤΗ', () => {
+  it('🔴 ίδια τιμή με αυτή που αρνείται ο γραφέας', () => {
+    const mandate = confirmedMandate({ privateMarketing: [request('pmev_req_1')] });
+    const at = plusMinutes(NOW, 10);
+    expect(standingLib.nextRequestAtOf(mandate, at)).toBe(plusMinutes(NOW, 60));
+    expect(standingLib.requestRefusalOf(mandate, at)).toBe('consent-request-cooling');
+  });
+});
+
+describe('🏆 Α35 — «μη μου ξαναστείλετε»: δικαίωμα του ιδιοκτήτη (Adobe Acrobat Sign)', () => {
+  const linkWho = (mandate: BrokeredListingMandate) => ({ kind: 'owner-link', nonce: 'nonce-live', clientContactId: mandate.clientContactId }) as const;
+  const decline = (mandate: BrokeredListingMandate, requestId = 'pmev_req_1'): Parameters<typeof consent.declinePrivateMarketing>[1] => ({
+    ownerPropertyId: 'ownp_a',
+    who: linkWho(mandate),
+    agencyCompanyId: null,
+    requestId,
+    nowISO: NOW,
+  });
+
+  it('🔴 άρνηση ⇒ κατάσταση `declined` ΜΕ ΟΝΟΜΑ · νέο αίτημα (και μετά την αναμονή) ⇒ `consent-declined` · ίχνος', async () => {
+    const mandate = confirmedMandate({ privateMarketing: [request('pmev_req_1')] });
+    const { db, typed } = seeded([mandate]);
+
+    expect((await consent.declinePrivateMarketing(typed, decline(mandate))).kind).toBe('saved');
+
+    const after = (await stored(db)).mandates[0] as BrokeredListingMandate;
+    expect(standingLib.privateMarketingStandingOf(after).kind).toBe('declined');
+    expect(recordOwnerPropertyWrite.mock.calls[0]?.[1].extraChanges?.map((c) => c.newValue)).toEqual(['declined']);
+    expect(await consent.requestPrivateMarketing(typed, agencyRequest(plusMinutes(NOW, 600)))).toEqual({ kind: 'refused', reason: 'consent-declined' });
+    expect(sendMandateInvitation).not.toHaveBeenCalled();
+  });
+
+  it('🔴 νέοι όροι εντολής ⇒ η άρνηση ΔΕΝ φράζει (άλλη σύμβαση, Α17)', () => {
+    const mandate = confirmedMandate();
+    const declined: PrivateMarketingEvent = { kind: 'declined', id: 'pmev_d', at: NOW, channel: 'link', actorUserId: null, term: standingLib.mandateTermOf(mandate) };
+    const extended = { ...mandate, expiresAt: '2028-01-01T00:00:00.000Z', privateMarketing: [declined] };
+
+    expect(standingLib.privateMarketingStandingOf({ ...mandate, privateMarketing: [declined] }).kind).toBe('declined');
+    expect(standingLib.privateMarketingStandingOf(extended).kind).toBe('absent');
+    expect(standingLib.requestRefusalOf(extended, NOW)).toBeNull();
+  });
+
+  it('🔴 η άρνηση ΔΕΝ μπλοκάρει τη συναίνεση του ίδιου του ιδιοκτήτη', async () => {
+    const mandate = confirmedMandate();
+    const declined: PrivateMarketingEvent = { kind: 'declined', id: 'pmev_d', at: NOW, channel: 'link', actorUserId: null, term: standingLib.mandateTermOf(mandate) };
+    const { db, typed } = seeded([{ ...mandate, privateMarketing: [declined] }], { authorCompanyId: null });
+
+    const result = await consent.grantPrivateMarketing(typed, {
+      ownerPropertyId: 'ownp_a',
+      who: { kind: 'owner-account', actor: OWNER },
+      lines: [{ agencyCompanyId: AGENCY, requestId: null, submission: submission(mandate) }],
+      audience: 'custodians',
+      nowISO: NOW,
+    });
+
+    expect(result.kind).toBe('saved');
+    expect((await stored(db)).marketingAudience).toBe('custodians');
+  });
+
+  it('🔴 άρνηση χωρίς εκκρεμές αίτημα ⇒ `consent-not-requested` · μπαγιάτικο αίτημα ⇒ `consent-request-stale`', async () => {
+    const plain = confirmedMandate();
+    expect(await consent.declinePrivateMarketing(seeded([plain]).typed, decline(plain))).toEqual({ kind: 'refused', reason: 'consent-not-requested' });
+
+    const pending = confirmedMandate({ privateMarketing: [request('pmev_req_2')] });
+    expect(await consent.declinePrivateMarketing(seeded([pending]).typed, decline(pending, 'pmev_req_1'))).toEqual({ kind: 'refused', reason: 'consent-request-stale' });
+  });
+});
+
+describe('🏆 Α31 — το έντυπο ΠΑΓΩΝΕΙ: αντίγραφο της πλατφόρμας, όχι δείκτης στο αρχείο του γραφείου', () => {
+  const STORAGE_PATH = 'companies/comp_alfa/entities/owner_property/ownp_a/domains/legal/categories/contracts/files/file_pm.pdf';
+  const CONTENT = 'υπογεγραμμένο έντυπο — μονογραφή ανά δήλωση';
+  const seedReady = (db: Fake, over: Record<string, unknown> = {}) =>
+    db.seed(COLLECTIONS.FILES, 'file_pm', {
+      companyId: AGENCY, entityType: 'owner_property', entityId: 'ownp_a', status: 'ready',
+      storagePath: STORAGE_PATH, contentType: 'application/pdf', displayName: 'Έντυπο Κώστα.pdf', ...over,
+    });
+  const attest = (mandate: BrokeredListingMandate, submissionOver: Partial<ConsentSubmission> = {}): Parameters<typeof consent.grantPrivateMarketing>[1] => ({
+    ownerPropertyId: 'ownp_a',
+    who: { kind: 'agency', actor: AGENT },
+    line: { agencyCompanyId: null, requestId: null, submission: submission(mandate, submissionOver) },
+    documentFileId: 'file_pm',
+    audience: 'custodians',
+    nowISO: NOW,
+  });
+  const sha256 = (text: string): string => `sha256:${createHash('sha256').update(Buffer.from(text)).digest('hex')}`;
+
+  it('🔴 επιτυχία ⇒ αντίγραφο στο `mandate-evidence/` με αποτύπωμα των ΙΔΙΩΝ bytes, όνομα από το FileRecord, ΚΑΙ hold', async () => {
+    const mandate = confirmedMandate();
+    const { db, typed } = seeded([mandate]);
+    seedReady(db);
+    evidenceBucket.put(STORAGE_PATH, CONTENT);
+
+    expect((await consent.grantPrivateMarketing(typed, attest(mandate))).kind).toBe('saved');
+
+    const event = lastEvent(await stored(db));
+    const proof = event?.kind === 'granted' ? event.proof : null;
+    if (proof === null || proof.via !== 'agency-attestation' || proof.evidence === undefined) throw new Error('evidence expected');
+    expect(proof.evidence).toMatchObject({ digest: sha256(CONTENT), fileName: 'Έντυπο Κώστα.pdf', contentType: 'application/pdf', sizeBytes: Buffer.byteLength(CONTENT) });
+    expect(proof.evidence.path).toBe(`mandate-evidence/ownp_a/${proof.evidence.id}`);
+    expect(evidenceBucket.objects.get(proof.evidence.path)).toMatchObject({ hold: true });
+    // 🔑 Το γραφείο σβήνει το ΠΡΩΤΟΤΥΠΟ του — η απόδειξη ΜΕΝΕΙ.
+    evidenceBucket.objects.delete(STORAGE_PATH);
+    expect(evidenceBucket.objects.get(proof.evidence.path)?.bytes.toString()).toBe(CONTENT);
+  });
+
+  it('🔴 άρνηση ΜΕΤΑ το πάγωμα (παλιά έκδοση κειμένου) ⇒ το αντίγραφο ΣΒΗΝΕΤΑΙ — κανένα ορφανό κλειδωμένο αρχείο', async () => {
+    const mandate = confirmedMandate();
+    const { db, typed } = seeded([mandate]);
+    seedReady(db);
+    evidenceBucket.put(STORAGE_PATH, CONTENT);
+
+    expect(await consent.grantPrivateMarketing(typed, attest(mandate, { version: 0 }))).toEqual({ kind: 'refused', reason: 'consent-text-superseded' });
+    expect(evidenceBucket.evidencePaths()).toEqual([]);
+  });
+
+  it('🔴 αποτυχία πάγωσης ⇒ `failed`, ΤΙΠΟΤΑ δεν γράφεται, καμία ειδοποίηση — ποτέ βεβαίωση χωρίς αποδεικτικό', async () => {
+    const mandate = confirmedMandate();
+    const { db, typed } = seeded([mandate]);
+    seedReady(db);
+    evidenceBucket.put(STORAGE_PATH, CONTENT);
+    evidenceBucket.failAllWrites = true;
+
+    expect((await consent.grantPrivateMarketing(typed, attest(mandate))).kind).toBe('failed');
+    expect((await stored(db)).marketingAudience).toBe('public');
+    expect(sendMandateInvitation).not.toHaveBeenCalled();
+    expect(evidenceBucket.evidencePaths()).toEqual([]);
+  });
+
+  it('🔑 το hold ΔΕΝ μπαίνει πριν την εγγραφή: σε άρνηση ο διακομιστής μπορεί ακόμη να σβήσει', async () => {
+    const { freezeAttestationEvidence, settleAttestationEvidence } = evidenceLib;
+    evidenceBucket.put(STORAGE_PATH, CONTENT);
+    const frozen = await freezeAttestationEvidence({ storagePath: STORAGE_PATH, contentType: 'application/pdf', fileName: 'x.pdf' }, 'ownp_a', evidenceBucket);
+    if (frozen.kind !== 'frozen') throw new Error('frozen expected');
+    expect(evidenceBucket.objects.get(frozen.evidence.path)?.hold).toBe(false);
+    await settleAttestationEvidence(frozen.evidence, false, evidenceBucket);
+    expect(evidenceBucket.evidencePaths()).toEqual([]);
   });
 });

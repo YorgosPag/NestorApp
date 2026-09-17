@@ -21,6 +21,7 @@
  */
 
 import type { MarketingAudience } from '@/constants/marketing-audiences';
+import type { EvidenceView } from '@/lib/mandate/mandate-evidence';
 import type { LegalDocumentVersion } from '@/lib/legal/legal-document-versions';
 import { privateMarketingStandingOf } from '@/lib/mandate/private-marketing-standing';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
@@ -52,6 +53,8 @@ export interface PrivateMarketingPanel {
    * αρνείται (`nextRequestAtOf`): η οθόνη δεν δείχνει κουμπί που θα γύριζε `consent-request-cooling`.
    */
   readonly nextRequestAt: string | null;
+  /** Τα **παγωμένα** υπογεγραμμένα έντυπα αυτής της εντολής (ADR-864 §19 · Α33) — χωρίς διαδρομή. */
+  readonly evidence: readonly EvidenceView[];
 }
 
 /** Ποιος ρωτά — αλλάζει **τι** προσφέρει η οθόνη, όχι τι είναι αληθές. */

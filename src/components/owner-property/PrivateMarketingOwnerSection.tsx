@@ -37,6 +37,7 @@ import {
 } from '@/services/owner-property/private-marketing.client';
 import type { PrivateMarketingRevocationOutcome } from '@/types/private-marketing-consent';
 import { PrivateMarketingActionNotice } from '@/components/mandate/PrivateMarketingActionNotice';
+import { MandateEvidenceList } from '@/components/mandate/MandateEvidenceList';
 import { PrivateMarketingStandingLine } from '@/components/mandate/PrivateMarketingStandingLine';
 
 import { usePrivateMarketingAgencyLabel } from './usePrivateMarketingAgencyLabel';
@@ -90,6 +91,7 @@ function AgencyRow({ panel, closed, ownerPropertyId, onDone }: { readonly panel:
     <li className="flex flex-col gap-1">
       <p className="text-sm font-medium text-card-foreground">{agencyLabel(panel)}</p>
       <PrivateMarketingStandingLine standing={panel.standing} />
+      <MandateEvidenceList evidence={panel.evidence} source={{ kind: 'account', ownerPropertyId }} />
       {panel.standing.kind === 'granted' && closed && (
         <>
           <p className="text-sm text-muted-foreground">{t(`${K}.revokeExplain`)}</p>

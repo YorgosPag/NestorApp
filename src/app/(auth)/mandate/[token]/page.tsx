@@ -102,6 +102,7 @@ export default async function MandateConsentPage({
           closed: lookup.request.marketingAudience !== 'public',
           version: disclosure.kind === 'published' ? disclosure.version : null,
           values: consentValuesFor(mandateAgencyName, lookup.request.mandateExpiresAt),
+          evidence: lookup.request.evidence,
         },
       }}
     />

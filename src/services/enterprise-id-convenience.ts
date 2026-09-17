@@ -147,6 +147,8 @@ export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId
 export const generateMandateRequestId = () => enterpriseIdService.generateMandateRequestId();
 // ADR-864 Φ3 — γεγονός συναίνεσης κλειστής διάθεσης, εξαγόμενο μαζί με τη μέθοδο.
 export const generatePrivateMarketingEventId = () => enterpriseIdService.generatePrivateMarketingEventId();
+// ADR-864 §19 — παγωμένο αποδεικτικό βεβαίωσης, εξαγόμενο μαζί με τη μέθοδο.
+export const generateMandateEvidenceId = () => enterpriseIdService.generateMandateEvidenceId();
 // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. Εξάγεται **μαζί** με τη μέθοδο, όχι αργότερα:
 // το `mreq` έμεινε άφταστο από το facade και η ΜΟΝΑΔΙΚΗ πηγή ταυτοτήτων (N.6) ήταν
 // απρόσιτη για τον γραφέα — δηλαδή ο επόμενος θα έγραφε χειρόγραφο id. Δεύτερη φορά

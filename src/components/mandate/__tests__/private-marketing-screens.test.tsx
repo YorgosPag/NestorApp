@@ -8,6 +8,9 @@
  * | Α24 | ο ιδιοκτήτης βλέπει φόρμα **μόνο** για γραφεία χωρίς ενεργή συναίνεση | φόρμα για κάθε εντολή |
  * | Α25 | οι τιμές της φόρμας είναι **του διακομιστή**, και αυτές ακριβώς φεύγουν | υπολογισμός στον πελάτη |
  * | Α26 | `outdated` λέγεται **με όνομα** | σύμπτυξη σε `absent` |
+ * | Α30 | όσο διαρκεί η αναμονή, **ώρα** αντί για κουμπί αιτήματος | κουμπί πάντα |
+ * | Α33 | ο ιδιοκτήτης βλέπει **λήψη + αποτύπωμα** του παγωμένου εντύπου, ζητώντας με **ταυτότητα**, ποτέ διαδρομή | λίστα χωρίς αποτύπωμα · λήψη με διαδρομή |
+ * | Α35 | «Δεν ενδιαφέρομαι» δίπλα στο εκκρεμές αίτημα · `declined` με όνομα · καμία πρόταση αιτήματος μετά | κουμπί χωρίς αίτημα · αίτημα μετά την άρνηση |
  *
  * Μοκάρονται: ο αναγνώστης (δίνει πάνελ), ο πελάτης δικτύου (μετρά κλήσεις), το πεδίο αρχείου (το ανέβασμα
  * είναι του συστήματος αρχείων — εδώ κρίνεται **ο καλών**). Το κείμενο είναι το **πραγματικό** παγωμένο v1.
@@ -35,11 +38,18 @@ const requestPrivateMarketing = jest.fn();
 const attestPrivateMarketing = jest.fn();
 const grantPrivateMarketing = jest.fn();
 const revokePrivateMarketing = jest.fn();
+const declinePrivateMarketing = jest.fn();
 jest.mock('@/services/owner-property/private-marketing.client', () => ({
   requestPrivateMarketing: (...args: unknown[]) => requestPrivateMarketing(...args),
   attestPrivateMarketing: (...args: unknown[]) => attestPrivateMarketing(...args),
   grantPrivateMarketing: (...args: unknown[]) => grantPrivateMarketing(...args),
   revokePrivateMarketing: (...args: unknown[]) => revokePrivateMarketing(...args),
+  declinePrivateMarketing: (...args: unknown[]) => declinePrivateMarketing(...args),
+}));
+
+const downloadMandateEvidence = jest.fn();
+jest.mock('@/services/mandate/mandate-evidence.client', () => ({
+  downloadMandateEvidence: (...args: unknown[]) => downloadMandateEvidence(...args),
 }));
 
 jest.mock('@/components/mandate/AttestationDocumentField', () => ({
@@ -64,8 +74,8 @@ const CLAUSES = clauseIdsOf(DISCLOSURE.frozen).length;
 /** Τιμές που **κανένας** υπολογισμός πελάτη δεν θα έβγαζε — μόνο ο διακομιστής τις ξέρει (Α25). */
 const SERVER_VALUES = { agency: 'Επωνυμία-Μόνο-Του-Διακομιστή', expiresOn: '31/12/2099' };
 
-function panel(agencyCompanyId: string, standing: PrivateMarketingPanel['standing']): PrivateMarketingPanel {
-  return { agencyCompanyId, agencyName: SERVER_VALUES.agency, standing, values: SERVER_VALUES };
+function panel(agencyCompanyId: string, standing: PrivateMarketingPanel['standing'], nextRequestAt: string | null = null): PrivateMarketingPanel {
+  return { agencyCompanyId, agencyName: SERVER_VALUES.agency, standing, values: SERVER_VALUES, nextRequestAt, evidence: [] };
 }
 
 function found(viewer: PrivateMarketingPanels['viewer'], panels: readonly PrivateMarketingPanel[]): PrivateMarketingPanelsLoad {
@@ -84,6 +94,7 @@ beforeEach(() => {
   requestPrivateMarketing.mockResolvedValue({ kind: 'requested', notify: 'sent' });
   attestPrivateMarketing.mockResolvedValue({ kind: 'saved' });
   grantPrivateMarketing.mockResolvedValue({ kind: 'saved' });
+  declinePrivateMarketing.mockResolvedValue({ kind: 'saved' });
 });
 
 describe('🏆 Α22 — κανένα «αίτημα» όταν η συναίνεση ισχύει', () => {
@@ -155,5 +166,53 @@ describe('🏆 Α26 — `outdated` με όνομα', () => {
     const { container } = render(<PrivateMarketingStandingLine standing={{ kind: 'outdated' }} />);
     expect(within(container).getByText('property-market:mandate.privateMarketing.standing.outdated')).toBeInTheDocument();
     expect(within(container).queryByText('property-market:mandate.privateMarketing.standing.absent')).toBeNull();
+  });
+});
+
+describe('🏆 Α30 — η αναμονή λέγεται με ΩΡΑ, όχι με κουμπί που αποτυγχάνει', () => {
+  it('🔴 `nextRequestAt` από τον διακομιστή ⇒ κείμενο αναμονής, ΚΑΝΕΝΑ κουμπί αιτήματος', () => {
+    currentLoad = found('agency', [panel('comp_alfa', REQUESTED, '2026-09-16T11:00:00.000Z')]);
+    render(<PrivateMarketingAgencySection ownerPropertyId="ownp_a" />);
+    expect(screen.getByText('property-market:mandate.privateMarketing.agency.requestCooling')).toBeInTheDocument();
+    expect(screen.queryByText('property-market:mandate.privateMarketing.agency.requestAgain')).toBeNull();
+  });
+});
+
+describe('🏆 Α35 — «Δεν ενδιαφέρομαι»: δικαίωμα του ιδιοκτήτη', () => {
+  it('🔴 εκκρεμές αίτημα ⇒ ο ιδιοκτήτης αρνείται ΑΥΤΟ το αίτημα, αυτού του γραφείου', async () => {
+    currentLoad = found('owner', [panel('comp_beta', REQUESTED)]);
+    render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="public" revision={null} />);
+    await act(async () => {
+      fireEvent.click(screen.getByText('property-market:mandate.privateMarketing.decline'));
+    });
+    expect(declinePrivateMarketing).toHaveBeenCalledWith('ownp_a', 'comp_beta', 'pmev_req');
+  });
+
+  it('🔑 παρονομαστής: χωρίς εκκρεμές αίτημα δεν υπάρχει τι να αρνηθεί', () => {
+    currentLoad = found('owner', [panel('comp_alfa', { kind: 'absent' })]);
+    render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="public" revision={null} />);
+    expect(screen.queryByText('property-market:mandate.privateMarketing.decline')).toBeNull();
+  });
+
+  it('🔴 το γραφείο βλέπει `declined` ΜΕ ΟΝΟΜΑ και ΚΑΝΕΝΑ αίτημα', () => {
+    currentLoad = found('agency', [panel('comp_alfa', { kind: 'declined', at: '2026-09-16T10:00:00.000Z' })]);
+    render(<PrivateMarketingAgencySection ownerPropertyId="ownp_a" />);
+    expect(screen.getByText('property-market:mandate.privateMarketing.standing.declined')).toBeInTheDocument();
+    expect(screen.queryByText(/agency\.request/)).toBeNull();
+  });
+});
+
+describe('🏆 Α33 — ο ιδιοκτήτης κατεβάζει το έντυπο που βεβαιώθηκε στο όνομά του, με αποτύπωμα', () => {
+  it('🔴 λήψη ζητείται με ΤΑΥΤΟΤΗΤΑ από τον λογαριασμό · το αποτύπωμα φαίνεται δίπλα', async () => {
+    downloadMandateEvidence.mockResolvedValue('opened');
+    const digest = `sha256:${'c'.repeat(64)}`;
+    currentLoad = found('owner', [{ ...panel('comp_alfa', GRANTED), evidence: [{ id: 'mevd_1', fileName: 'Έντυπο.pdf', digest }] }]);
+    render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="custodians" revision={null} />);
+
+    expect(screen.getByText(digest)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByText('property-market:mandate.evidence.download'));
+    });
+    expect(downloadMandateEvidence).toHaveBeenCalledWith({ kind: 'account', ownerPropertyId: 'ownp_a' }, 'mevd_1');
   });
 });

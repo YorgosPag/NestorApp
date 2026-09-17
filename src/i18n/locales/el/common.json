@@ -740,7 +740,17 @@
       "email_sent": "Email εστάλη",
       "invoice_created": "Δημιουργία παραστατικού",
       "document_added": "Προσθήκη εγγράφου",
-      "document_removed": "Αφαίρεση εγγράφου"
+      "document_removed": "Αφαίρεση εγγράφου",
+      "vendor_notified": "Ειδοποίηση προμηθευτή",
+      "orphaned": "Έμεινε χωρίς γονέα",
+      "auto_submit_prompted": "Πρόταση αυτόματης υποβολής",
+      "auto_submit_accepted": "Αυτόματη υποβολή εγκρίθηκε",
+      "auto_submit_declined": "Αυτόματη υποβολή απορρίφθηκε",
+      "erased": "Οριστική διαγραφή στοιχείων",
+      "triage_status_changed": "Αλλαγή κατάστασης διαλογής",
+      "triage_assigned": "Ανάθεση διαλογής",
+      "internal_note_added": "Εσωτερική σημείωση",
+      "document_accessed": "Άνοιγμα αποδεικτικού"
     },
     "filters": {
       "all": "Όλα",
@@ -894,7 +904,8 @@
       "Germany": "Γερμανία",
       "United Kingdom": "Ηνωμένο Βασίλειο",
       "United States": "Ηνωμένες Πολιτείες"
-    }  },
+    }
+  },
   "fullscreen": {
     "enter": "Πλήρης Οθόνη",
     "exit": "Έξοδος Πλήρους Οθόνης",

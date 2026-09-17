@@ -33,7 +33,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { brokeredMandateFromRequest } from '@/lib/owner-property/brokered-mandate-schema';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
-import { attestationDocumentOf } from '@/services/mandate/attestation-document';
+import { attestedDocumentOf } from '@/services/mandate/attestation-document';
+import { settleAttestationEvidence } from '@/services/mandate/attestation-evidence';
 import {
   agencyAttestation,
   createBrokeredListing,
@@ -112,18 +113,21 @@ async function handler(
   );
   if (!parsedMandate.ok) return respondToMalformed(parsedMandate.malformed);
 
-  // 🔴 ADR-864 §18.4 Δ1 — το έντυπο είναι **αρχείο του γραφείου για ΑΥΤΗ την αγγελία**, κριμένο από τη βάση·
-  //    η διαδρομή που γράφεται στην απόδειξη έρχεται από το `FileRecord`, ποτέ από το σύρμα.
-  const attestedDocument =
-    parsedMandate.mandate.documentFileId === null
-      ? null
-      : await attestationDocumentOf(adminDb, { fileId: parsedMandate.mandate.documentFileId, companyId: ctx.companyId ?? null, ownerPropertyId: id });
-  if (attestedDocument?.kind === 'refused') return respondToMalformed(['mandate.documentFileId']);
-
   // ⚠️ Η επωνυμία διαβάζεται **εδώ** και περνιέται· η υπηρεσία δεν ξέρει από εταιρείες.
   // Ένα `null` σημαίνει «δεν βρέθηκε» και **δεν** ακυρώνει την καταχώρηση — αλλά το
   // μήνυμα προς τον ιδιοκτήτη θα ήταν ανώνυμο, οπότε λέγεται κενό και όχι μπαλαντέρ.
   const agencyName = (await readCompanyPublicName(adminDb, ctx.companyId)) ?? '';
+
+  // 🔴 ADR-864 §18.4 Δ1 — το έντυπο είναι **αρχείο του γραφείου για ΑΥΤΗ την αγγελία**, κριμένο από τη βάση·
+  //    η διαδρομή που γράφεται στην απόδειξη έρχεται από το `FileRecord`, ποτέ από το σύρμα.
+  // 🔴 §19 Α32 — **και παγώνεται**, όπως στο έντυπο συναίνεσης: τελευταίο βήμα πριν την εγγραφή.
+  const attestedDocument =
+    parsedMandate.mandate.documentFileId === null
+      ? null
+      : await attestedDocumentOf(adminDb, { fileId: parsedMandate.mandate.documentFileId, companyId: ctx.companyId ?? null, ownerPropertyId: id });
+  if (attestedDocument?.kind === 'refused') return respondToMalformed(['mandate.documentFileId']);
+  if (attestedDocument?.kind === 'failed') return respondToWrite({ kind: 'failed', message: 'attestation-evidence-not-frozen' });
+  const evidence = attestedDocument?.kind === 'frozen' ? attestedDocument.evidence : null;
 
   const result = await createBrokeredListing(
     adminDb,
@@ -159,11 +163,12 @@ async function handler(
       startsAt: nowISO(),
       proof:
         parsedMandate.mandate.via === AGENCY_ATTESTATION
-          ? agencyAttestation(ctx.uid, attestedDocument?.storagePath ?? null)
+          ? agencyAttestation(ctx.uid, attestedDocument?.kind === 'frozen' ? attestedDocument : null)
           : OWNER_CONSENT_PROOF,
     },
   );
 
+  await settleAttestationEvidence(evidence, result.write.kind === 'saved');
   const response = respondToWrite(result.write);
   if (result.write.kind !== 'saved') return response;
 

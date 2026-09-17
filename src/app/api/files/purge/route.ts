@@ -19,10 +19,10 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { HOLD_TYPES } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { verifyCronAuthorization } from '@/lib/cron-auth';
+import { isFileHeld } from '@/services/file-record/file-purge-helpers';
 
 const logger = createModuleLogger('FilePurgeRoute');
 
@@ -71,18 +71,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<PurgeResu
       const data = doc.data();
 
       // Skip files with active holds
-      if (data.hold && data.hold !== HOLD_TYPES.NONE) {
+      // Hold ή ενεργή διατήρηση ⇒ παράλειψη — ο ΕΝΑΣ κριτής (ADR-864 §19, N.0.2: ήταν αντίγραφο του `isFileHeld`).
+      if (isFileHeld(data)) {
         skippedCount++;
         continue;
-      }
-
-      // Skip files with active retention
-      if (data.retentionUntil) {
-        const retentionDate = new Date(data.retentionUntil);
-        if (retentionDate > new Date()) {
-          skippedCount++;
-          continue;
-        }
       }
 
       try {

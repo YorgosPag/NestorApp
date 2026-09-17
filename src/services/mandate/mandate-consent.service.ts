@@ -59,6 +59,7 @@ import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import type { PrivateMarketingStanding } from '@/types/private-marketing-consent';
 import { privateMarketingStandingOf } from '@/lib/mandate/private-marketing-standing';
+import { evidencesOfMandate, evidenceViewOf } from '@/lib/mandate/mandate-evidence';
 
 const logger = createModuleLogger('mandate-consent.service');
 
@@ -279,6 +280,8 @@ export async function readMandateConsentRequest(
       currentDecision: mandate.confirmation,
       agencyCompanyId: mandate.agencyCompanyId,
       privateMarketing: privateMarketingStandingOf(mandate),
+      // ADR-864 §19 — τα παγωμένα έντυπα **αυτής** της εντολής: ο σύνδεσμος τα ανοίγει χωρίς λογαριασμό (Α33).
+      evidence: evidencesOfMandate(mandate).map(evidenceViewOf),
       marketingAudience: property.marketingAudience,
     },
   };

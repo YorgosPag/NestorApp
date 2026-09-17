@@ -36,7 +36,9 @@ import {
 } from '@/lib/mandate/private-marketing-standing';
 import { generatePrivateMarketingEventId } from '@/services/enterprise-id.service';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
-import { attestationDocumentOf } from '@/services/mandate/attestation-document';
+import { attestedDocumentOf } from '@/services/mandate/attestation-document';
+import { evidenceOfProof } from '@/lib/mandate/mandate-evidence';
+import { settleAttestationEvidence } from '@/services/mandate/attestation-evidence';
 import { issueMandateConsentLink } from '@/services/mandate/mandate-consent.service';
 import { sendMandateInvitation, type NotifyOutcome } from '@/services/mandate/mandate-invitation.service';
 import type { MandateMessageKind } from '@/services/mandate/mandate-email-texts';
@@ -250,16 +252,26 @@ function grantedAudience(mandate: BrokeredListingMandate, line: ConsentLine, inp
   return input.audience;
 }
 
-/** Α20 · Α23 — η απόδειξη· στο έντυπο, το αρχείο **της βάσης**, ποτέ διαδρομή από το σύρμα. */
-async function proofOf(adminDb: AdminFirestore, input: GrantInput): Promise<MandateProof | PrivateMarketingRefusal> {
+/**
+ * Α20 · Α23 · Α31 — η απόδειξη· στο έντυπο, το αρχείο **της βάσης**, ποτέ διαδρομή από το σύρμα, **παγωμένο**.
+ * ⚠️ Το αντίγραφο βγαίνει χωρίς hold: ο `grantPrivateMarketing` το σφραγίζει ή το απορρίπτει μετά την εγγραφή.
+ */
+async function proofOf(adminDb: AdminFirestore, input: GrantInput): Promise<MandateProof | PrivateMarketingRefusal | 'failed'> {
   if (input.who.kind !== 'agency' || !('documentFileId' in input)) return { via: OWNER_CONSENT };
-  const document = await attestationDocumentOf(adminDb, {
+  const document = await attestedDocumentOf(adminDb, {
     fileId: input.documentFileId,
     companyId: input.who.actor.companyId,
     ownerPropertyId: input.ownerPropertyId,
   });
   if (document.kind === 'refused') return document.reason;
-  return { via: AGENCY_ATTESTATION, attestedByUserId: input.who.actor.uid, attestedAt: input.nowISO, documentPath: document.storagePath };
+  if (document.kind === 'failed') return 'failed';
+  return {
+    via: AGENCY_ATTESTATION,
+    attestedByUserId: input.who.actor.uid,
+    attestedAt: input.nowISO,
+    documentPath: document.storagePath,
+    evidence: document.evidence,
+  };
 }
 
 /**
@@ -356,13 +368,16 @@ export async function grantPrivateMarketing(adminDb: AdminFirestore, input: Gran
   if (linesOf(input).length === 0) return { kind: 'refused', reason: 'consent-incomplete' };
   if (hasDuplicateAgency(linesOf(input))) return { kind: 'refused', reason: 'consent-request-stale' };
 
-  const proof = await proofOf(adminDb, input);
-  if (typeof proof === 'string') return { kind: 'refused', reason: proof };
-
   const names = await agencyNamesOf(adminDb, input);
   if (names === null) return { kind: 'absent' };
 
+  // Το πάγωμα είναι το ΤΕΛΕΥΤΑΙΟ βήμα πριν τη συναλλαγή: κάθε άρνηση πριν από αυτό δεν αφήνει αντίγραφο.
+  const proof = await proofOf(adminDb, input);
+  if (proof === 'failed') return { kind: 'failed', message: 'attestation-evidence-not-frozen' };
+  if (typeof proof === 'string') return { kind: 'refused', reason: proof };
+
   const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, grantMutation({ input, proof, names }));
+  await settleAttestationEvidence(evidenceOfProof(proof), isWritten(outcome));
   if (!isWritten(outcome)) return outcome;
 
   const saved = await finish(adminDb, outcome, input.who);

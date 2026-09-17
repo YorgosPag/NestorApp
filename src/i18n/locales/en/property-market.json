@@ -1480,6 +1480,13 @@
         "identity-incomplete": "The owner has not filled in their identity details (full name or VAT number), and no brokerage contract can be drawn up without them. The request STAYS open: contact them and press Accept again.",
         "mandate-invalid": "The proposed terms are not lawful for this type of mandate."
       }
+    },
+    "evidence": {
+      "title": "Signed forms",
+      "explain": "A copy exactly as attested, kept by the platform — not even the agency can change or delete it.",
+      "download": "Download",
+      "digest": "SHA-256 fingerprint:",
+      "unavailable": "The form is not available right now. If your link has expired, ask the agency for a new one."
     }
   },
   "contact": {

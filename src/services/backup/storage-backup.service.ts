@@ -25,8 +25,7 @@ import { getAdminStorage, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { createHash } from 'crypto';
-import { Transform } from 'stream';
+import { sha256PassThrough } from '@/lib/storage/sha256-pass-through';
 import { pipeline } from 'stream/promises';
 
 import type { Bucket, File as GcsFile } from '@google-cloud/storage';
@@ -124,20 +123,14 @@ export class StorageBackupService {
     const backupFilePath = `storage/${storagePath}`;
 
     // Stream: source → SHA-256 transform → destination
-    const hash = createHash('sha256');
-    const hashTransform = new Transform({
-      transform(chunk, _encoding, callback) {
-        hash.update(chunk);
-        callback(null, chunk);
-      },
-    });
+    const hash = sha256PassThrough();
 
     const readStream = file.createReadStream();
     const writeStream = gcsService.createWriteStream(backupId, backupFilePath, contentType);
 
-    await pipeline(readStream, hashTransform, writeStream);
+    await pipeline(readStream, hash.stream, writeStream);
 
-    const sha256 = hash.digest('hex');
+    const sha256 = hash.digestHex();
     const firestoreDocId = storagePathIndex.get(storagePath);
 
     return {

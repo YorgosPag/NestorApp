@@ -60,6 +60,7 @@ export {
   generatePipelineAuditId, generateEntityAuditId, generateContractId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generatePrivateMarketingEventId,
+  generateMandateEvidenceId,
   generateFirstContactId,
   generateFirstContactInvitationId,
   generateShowcaseEmailConfirmationId,
