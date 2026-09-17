@@ -99,7 +99,12 @@ export type BespokeCriterionKey = Exclude<
  * γραμμένα**, οπότε ο σαρωτής της CHECK 3.8 τα βλέπει **ένα προς ένα** — αυστηρότερο.
  */
 const BESPOKE_AXIS_LABEL_KEY: Record<BespokeCriterionKey, string> = {
-  price: 'search-filters:filters.axis.price',
+  // 🔴 **Τρεις ετικέτες, μία ανά μονάδα** (§8.60.14 Φάση 2): «Τιμή πώλησης» ·
+  //    «Ενοίκιο (μηνιαίο)» · «Τιμή ανά νύχτα». Μια κοινή «Τιμή» θα ξανάφερνε ακριβώς
+  //    τη διφορούμενη ερώτηση που οι τρεις άξονες υπάρχουν για να διαλύσουν.
+  priceSale: 'search-filters:filters.axis.priceSale',
+  priceRent: 'search-filters:filters.axis.priceRent',
+  priceNightly: 'search-filters:filters.axis.priceNightly',
   offerKind: 'search-filters:filters.axis.offerKind',
   authorship: 'search-filters:filters.axis.authorship',
   hasPhotos: 'search-filters:filters.axis.hasPhotos',

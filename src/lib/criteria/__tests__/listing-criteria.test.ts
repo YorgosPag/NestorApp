@@ -89,8 +89,12 @@ describe('Κ — ο πίνακας αξόνων: εξαντλητικός, κα�
     for (const key of [...LISTING_ATTRIBUTE_KEYS, ...LISTING_FEATURE_SET_KEYS]) {
       expect(LISTING_CRITERION_ASKING).toHaveProperty(key);
     }
+    // 🔴 **ΕΞΙ ειδικοί, όχι τέσσερις** (ADR-777 §8.60.14 Φάση 2): ο άξονας `price`
+    //    έγινε **τρεις** — ένας ανά μονάδα (`priceSale` · `priceRent` · `priceNightly`).
+    //    Ένας άξονας με τρεις σημασίες ήταν ο τύπος να λέει ψέματα· σε κλειστό
+    //    λεξιλόγιο κάθε κλειδί οφείλει να σημαίνει **ένα** πράγμα.
     expect(LISTING_CRITERION_KEYS.length).toBe(
-      LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length + 4,
+      LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length + 6,
     );
   });
 

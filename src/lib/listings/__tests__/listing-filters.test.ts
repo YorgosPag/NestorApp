@@ -73,7 +73,7 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
     // ⚠️ **Οι τρεις ειδικοί άξονες μένουν ΡΗΤΑ `null`** — δες `EMPTY_LISTING_FILTERS`.
     let criteria = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', ['sell', 'exchange']);
     criteria = withValues(criteria, 'type', ['apartment']);
-    criteria = withRange(criteria, 'price', { min: 100000, max: 300000 });
+    criteria = withRange(criteria, 'priceSale', { min: 100000, max: 300000 });
     criteria = withRange(criteria, 'areaSqm', { min: 50, max: null });
     criteria = withRange(criteria, 'bedrooms', { min: 2, max: null });
     criteria = withRange(criteria, 'floor', { min: 1, max: 4 });
@@ -112,8 +112,8 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
   });
 
   it('🔴 σκουπίδι σε αριθμό γίνεται null, ΟΧΙ 0 — το 0 θα φιλτράριζε τα πάντα', () => {
-    const parsed = parseListingFilters(new URLSearchParams('pmin=abc&amin='));
-    expect(rangeOf(parsed.criteria, 'price')).toBeUndefined();
+    const parsed = parseListingFilters(new URLSearchParams('psalemin=abc&amin='));
+    expect(rangeOf(parsed.criteria, 'priceSale')).toBeUndefined();
     expect(rangeOf(parsed.criteria, 'areaSqm')).toBeUndefined();
   });
 
@@ -232,10 +232,17 @@ describe('Φ2 — φιλτράρεται ο ΣΩΣΤΟΣ άξονας (Α20)', (
       commercial: { askingPrice: null, finalPrice: null, rentPrice: 500, nightlyRate: null },
       offerKinds: ['leaseOut'],
     });
-    const upTo600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'price', { min: null, max: 600 }));
-    const from600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'price', { min: 600, max: null }));
+    // 🔴 **Ο ΑΞΟΝΑΣ ΕΙΝΑΙ ΤΟΥ ΕΝΟΙΚΙΟΥ** (ADR-777 §8.60.14 Φάση 2): το ίδιο νούμερο σε
+    //    άξονα **πώλησης** δεν αφορά αυτή την αγγελία — και η άγκυρα το εκτελεί ακριβώς
+    //    από κάτω, ώστε η μονάδα να μην είναι σχόλιο.
+    const upTo600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'priceRent', { min: null, max: 600 }));
+    const from600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'priceRent', { min: 600, max: null }));
     expect(applyListingFilters([rental], upTo600)).toHaveLength(1);
     expect(applyListingFilters([rental], from600)).toHaveLength(0);
+
+    // Ο άξονας **πώλησης** με το ίδιο νούμερο: η αγγελία μένει, γιατί δεν ρωτήθηκε.
+    const saleFrom600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'priceSale', { min: 600, max: null }));
+    expect(applyListingFilters([rental], saleFrom600)).toHaveLength(1);
   });
 
   it('🔴 ΧΩΡΙΣ ΕΜΒΑΔΟΝ ΔΕΝ ΒΑΦΤΙΖΕΤΑΙ 0 τ.μ. — ΚΑΙ ΠΛΕΟΝ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ ΚΙΟΛΑΣ', () => {

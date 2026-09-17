@@ -39,7 +39,7 @@ import {
   isAttributeDeclared,
   listingFeatureSetValues,
 } from '@/lib/listings/listing-attribute-declared';
-import { getEffectivePrice } from '@/lib/properties/price-resolver';
+import { getEffectivePrice, priceClassOf, type PriceRole } from '@/lib/properties/price-resolver';
 import { isLandProperty } from '@/constants/property-classification';
 
 import {
@@ -75,8 +75,46 @@ import {
  * κλάση να προστεθεί **εδώ** και όχι σε κάθε αναγνώστη.
  */
 export function criterionAppliesTo(listing: PublicListing, key: CriterionKey): boolean {
-  return !isLandProperty(listing.type) || landCanAnswer(key);
+  if (isLandProperty(listing.type) && !landCanAnswer(key)) return false;
+  return priceAxisAppliesTo(listing, key);
 }
+
+/**
+ * **Η ΔΕΥΤΕΡΗ ΚΛΑΣΗ ΑΡΝΗΣΗΣ — Η ΜΟΝΑΔΑ** (ADR-777 §8.60.14 Φάση 2).
+ *
+ * Ένα εύρος σε **€/μήνα** δεν είναι χαλαρό ή αυστηρό για μια αγγελία **πώλησης** —
+ * **δεν τη ρώτησε**. Η σωστή απάντηση δεν είναι `excluded` *(θα την εξαφάνιζε για
+ * ερώτηση που δεν της έγινε)* ούτε `never-asked` *(θα χρέωνε στον κάτοχο σιωπή που
+ * δεν του ζητήθηκε)*: είναι `not-applicable` — *«ο άξονας αγνοείται»*, η τέταρτη
+ * κατάσταση που το `criterion-vocabulary` ορίζει ρητά ως **δήλωση για την ερώτηση,
+ * όχι για την αγγελία**.
+ *
+ * 🔑 **Ο ρόλος έρχεται από τον ΕΝΑ κριτή** (`priceClassOf`) — τον ίδιο που διαμερίζει
+ * τη λίστα σε τμήματα. Χάρτης, σειρά και φίλτρο απαντούν στο *«τι είδους ποσό είναι
+ * αυτό;»* με **μία** φωνή.
+ *
+ * ⚠️ Αγγελία **χωρίς** τιμή (`'unpriced'`) δεν ταιριάζει σε **κανέναν** από τους τρεις
+ * άξονες ⇒ `not-applicable` παντού, και μένει ορατή. Ήταν ήδη έτσι: ο παλιός
+ * αναγνώστης επέστρεφε `null` ⇒ `never-asked`. **Η αλλαγή είναι ότι παύει να χρεώνεται
+ * ως σιωπή του κατόχου** — η τιμή δεν είναι δήλωσή του, είναι **λυμένη** από τις
+ * διαθέσεις (δες το σχόλιο του άξονα στο `BESPOKE_ASKING`).
+ */
+function priceAxisAppliesTo(listing: PublicListing, key: CriterionKey): boolean {
+  const wanted = PRICE_AXIS_CLASS[key as PriceAxisKey];
+  return wanted === undefined || priceClassOf(listing) === wanted;
+}
+
+/**
+ * **Ποιος άξονας ρωτά ποια μονάδα** — `Record` πάνω στους τρεις, ώστε ένας τέταρτος
+ * ρόλος να **μη μεταγλωττίζεται** χωρίς άξονα και ένας άξονας χωρίς ρόλο καθόλου.
+ */
+const PRICE_AXIS_CLASS = {
+  priceSale: 'sale',
+  priceRent: 'rent',
+  priceNightly: 'nightly',
+} as const satisfies Partial<Record<CriterionKey, PriceRole>>;
+
+type PriceAxisKey = keyof typeof PRICE_AXIS_CLASS;
 
 // =============================================================================
 // 2. ΟΙ ΑΡΙΘΜΗΤΙΚΟΙ ΑΞΟΝΕΣ
@@ -130,7 +168,19 @@ const NUMERIC_READERS: Record<RangeCriterionKey, NumericReader> = {
    * διαθέσεις. Ο μοναδικός επιλυτής είναι το `getEffectivePrice`, όπως ακριβώς έκανε
    * και ο παλιός κριτής.
    */
-  price: (listing) => getEffectivePrice(listing)?.amount ?? null,
+  /**
+   * 🔑 **Δεν είναι δημόσιο στοιχείο, είναι ΛΥΜΕΝΗ τιμή** — γι' αυτό δεν περνά από τον
+   * `isAttributeDeclared`: η τιμή δεν «δηλώνεται» ως πεδίο, **προκύπτει** από τις
+   * διαθέσεις. Ο μοναδικός επιλυτής είναι το `getEffectivePrice`.
+   *
+   * ⚠️ **Και οι τρεις διαβάζουν το ΙΔΙΟ ποσό, και είναι σωστό**: η **μονάδα** κρίθηκε
+   * ήδη στο {@link priceAxisAppliesTo} — αν φτάσαμε εδώ, η αγγελία **είναι** αυτού του
+   * ρόλου. Ένας δεύτερος έλεγχος ρόλου εδώ θα ήταν η ίδια κρίση, δεύτερη φορά,
+   * ελεύθερη να αποκλίνει.
+   */
+  priceSale: (listing) => getEffectivePrice(listing)?.amount ?? null,
+  priceRent: (listing) => getEffectivePrice(listing)?.amount ?? null,
+  priceNightly: (listing) => getEffectivePrice(listing)?.amount ?? null,
 };
 
 /** Η απάντηση της αγγελίας σε **αριθμητικό** άξονα. */
