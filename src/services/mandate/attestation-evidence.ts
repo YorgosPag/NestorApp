@@ -29,12 +29,15 @@ import 'server-only';
 import { pipeline } from 'stream/promises';
 import type { Readable, Writable } from 'stream';
 
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+
 import { UPLOAD_LIMITS } from '@/config/file-upload-config';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
-import { attestationEvidencePath } from '@/lib/mandate/mandate-evidence';
+import { attestationEvidencePath, ownerPropertyIdOfEvidencePath } from '@/lib/mandate/mandate-evidence';
 import { sha256PassThrough } from '@/lib/storage/sha256-pass-through';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateMandateEvidenceId } from '@/services/enterprise-id.service';
+import { registerSealedEvidence } from '@/services/mandate/evidence-registry';
 import type { AttestationEvidence } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('attestation-evidence');
@@ -43,12 +46,24 @@ const logger = createModuleLogger('attestation-evidence');
 export interface EvidenceObject {
   createReadStream(): Readable;
   createWriteStream(options: { readonly contentType: string; readonly resumable: false; readonly metadata: { readonly metadata: Record<string, string> } }): Writable;
-  setMetadata(metadata: { readonly temporaryHold: boolean }): Promise<unknown>;
+  setMetadata(metadata: EvidenceMetadataPatch): Promise<unknown>;
   delete(options: { readonly ignoreNotFound: true }): Promise<unknown>;
+}
+
+/**
+ * 🔑 **Δύο κλειδαριές, διαφορετικής φύσης** (ADR-864 §20): το `temporaryHold` είναι διακόπτης (όσο ζει η σχέση ·
+ * δικαστική δέσμευση)· το `retention` σε **Locked** είναι ημερομηνία που η πλατφόρμα **μόνο αυξάνει**.
+ * Το GCS επιτρέπει και τα δύο μαζί στο ίδιο αντικείμενο.
+ */
+export interface EvidenceMetadataPatch {
+  readonly temporaryHold?: boolean;
+  readonly retention?: { readonly mode: 'Locked'; readonly retainUntilTime: string };
 }
 
 export interface EvidenceBucket {
   file(path: string): EvidenceObject;
+  /** Σάρωση προθέματος — το δίχτυ της υιοθεσίας (αντικείμενο χωρίς εγγραφή μητρώου). */
+  getFiles(query: { readonly prefix: string }): Promise<readonly [readonly { readonly name: string }[], ...unknown[]]>;
 }
 
 const adminEvidenceBucket = (): EvidenceBucket => getAdminBucket();
@@ -101,24 +116,44 @@ export async function freezeAttestationEvidence(
   return { kind: 'frozen', evidence };
 }
 
+/** Τι έγινε με την εγγραφή — και, αν έγινε, **σε ποια σχέση** ανήκει το αποδεικτικό (μητρώο, §20). */
+export type EvidenceSettlement =
+  | { readonly committed: false }
+  | {
+      readonly committed: true;
+      readonly adminDb: AdminFirestore;
+      /** `null` μόνο σε αδύνατο κλάδο· τότε η σάρωση το **αναφέρει** ως αδέσποτο, ποτέ δεν το σβήνει. */
+      readonly agencyCompanyId: string | null;
+      readonly sealedAt: string;
+    };
+
 /**
  * Βήματα 2-3 — **σφράγιση** αν η εγγραφή έγινε, **απόρριψη** αλλιώς. Ποτέ δεν ρίχνει: η εγγραφή έχει ήδη
  * κριθεί, και αποτυχία hold δεν ακυρώνει νόμιμη βεβαίωση (το αντίγραφο μένει σε ρίζα `server-only`).
+ *
+ * 🔑 Σφράγιση **πρώτα**, μητρώο **μετά**: η αμεταβλητότητα είναι η κύρια υπόσχεση· εγγραφή μητρώου που
+ * αποτυγχάνει την υιοθετεί η σάρωση (`evidence-retention.service.ts`), ενώ hold που λείπει δεν το αναπληρώνει κανείς.
  */
 export async function settleAttestationEvidence(
   evidence: AttestationEvidence | null,
-  committed: boolean,
+  settlement: EvidenceSettlement,
   bucket: EvidenceBucket = adminEvidenceBucket(),
 ): Promise<void> {
   if (evidence === null) return;
   const object = bucket.file(evidence.path);
   try {
-    if (committed) await object.setMetadata({ temporaryHold: true });
+    if (settlement.committed) await object.setMetadata({ temporaryHold: true });
     else await object.delete({ ignoreNotFound: true });
   } catch (error) {
-    logger.error(committed ? 'Το αποδεικτικό γράφτηκε αλλά ΔΕΝ σφραγίστηκε (hold)' : 'Το απορριφθέν αποδεικτικό δεν σβήστηκε', {
+    logger.error(settlement.committed ? 'Το αποδεικτικό γράφτηκε αλλά ΔΕΝ σφραγίστηκε (hold)' : 'Το απορριφθέν αποδεικτικό δεν σβήστηκε', {
       data: { evidenceId: evidence.id },
       error: error instanceof Error ? error.message : String(error),
     });
   }
+  if (!settlement.committed || settlement.agencyCompanyId === null) return;
+  await registerSealedEvidence(settlement.adminDb, evidence, {
+    ownerPropertyId: ownerPropertyIdOfEvidencePath(evidence.path),
+    agencyCompanyId: settlement.agencyCompanyId,
+    sealedAt: settlement.sealedAt,
+  });
 }

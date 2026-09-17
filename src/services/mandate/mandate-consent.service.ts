@@ -60,6 +60,7 @@ import { mandatesOf } from '@/types/owner-property-mandate';
 import type { PrivateMarketingStanding } from '@/types/private-marketing-consent';
 import { privateMarketingStandingOf } from '@/lib/mandate/private-marketing-standing';
 import { evidencesOfMandate, evidenceViewOf } from '@/lib/mandate/mandate-evidence';
+import { retainUntilByEvidenceOf } from '@/services/mandate/evidence-registry';
 
 const logger = createModuleLogger('mandate-consent.service');
 
@@ -268,6 +269,7 @@ export async function readMandateConsentRequest(
     return { ok: false, reason: 'client-mismatch' };
   }
 
+  const retainUntilById = await retainUntilByEvidenceOf(adminDb, ownerPropertyId);
   return {
     ok: true,
     request: {
@@ -281,7 +283,7 @@ export async function readMandateConsentRequest(
       agencyCompanyId: mandate.agencyCompanyId,
       privateMarketing: privateMarketingStandingOf(mandate),
       // ADR-864 §19 — τα παγωμένα έντυπα **αυτής** της εντολής: ο σύνδεσμος τα ανοίγει χωρίς λογαριασμό (Α33).
-      evidence: evidencesOfMandate(mandate).map(evidenceViewOf),
+      evidence: evidencesOfMandate(mandate).map((evidence) => evidenceViewOf(evidence, retainUntilById)),
       marketingAudience: property.marketingAudience,
     },
   };

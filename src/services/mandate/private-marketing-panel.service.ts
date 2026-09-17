@@ -19,13 +19,14 @@ import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { consentValuesFor } from '@/lib/mandate/private-marketing-consent-text';
 import { nextRequestAtOf } from '@/lib/mandate/private-marketing-standing';
-import { evidencesOfMandate, evidenceViewOf } from '@/lib/mandate/mandate-evidence';
+import { evidencesOfMandate, evidenceViewOf, type EvidenceRetentionView } from '@/lib/mandate/mandate-evidence';
 import {
   privateMarketingStandingViewOf,
   type PrivateMarketingPanel,
   type PrivateMarketingPanels,
 } from '@/lib/mandate/private-marketing-panel';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
+import { retainUntilByEvidenceOf } from '@/services/mandate/evidence-registry';
 import { consentActorOfProperty, mandatesVisibleTo } from '@/services/mandate/private-marketing-actor';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { PRIVATE_MARKETING_DOCUMENT } from '@/types/private-marketing-consent';
@@ -38,14 +39,14 @@ type PrivateMarketingPanelsRead =
  * **Μία εντολή → ένα πάνελ** — οι τιμές θέσεων λύνονται **εδώ** (Α25). Τον καλεί και το `/mandate/[token]`,
  * ώστε ο σύνδεσμος και οι δύο οθόνες λογαριασμού να δείχνουν **το ίδιο** κείμενο με τις **ίδιες** τιμές.
  */
-function privateMarketingPanelOf(mandate: BrokeredListingMandate, agencyName: string, nowISOValue: string): PrivateMarketingPanel {
+function privateMarketingPanelOf(mandate: BrokeredListingMandate, agencyName: string, nowISOValue: string, retainUntilById: ReadonlyMap<string, EvidenceRetentionView>): PrivateMarketingPanel {
   return {
     agencyCompanyId: mandate.agencyCompanyId,
     agencyName,
     standing: privateMarketingStandingViewOf(mandate),
     values: consentValuesFor(agencyName, mandate.expiresAt),
     nextRequestAt: nextRequestAtOf(mandate, nowISOValue),
-    evidence: evidencesOfMandate(mandate).map(evidenceViewOf),
+    evidence: evidencesOfMandate(mandate).map((evidence) => evidenceViewOf(evidence, retainUntilById)),
   };
 }
 
@@ -63,9 +64,10 @@ export async function readPrivateMarketingPanels(
   const mandates = mandatesVisibleTo(property, who, nowISOValue);
   if (mandates.length === 0) return { kind: 'absent' };
 
+  const retainUntilById = await retainUntilByEvidenceOf(adminDb, ownerPropertyId);
   const panels = await Promise.all(
     mandates.map(async (mandate) =>
-      privateMarketingPanelOf(mandate, (await readCompanyPublicName(adminDb, mandate.agencyCompanyId)) ?? '', nowISOValue),
+      privateMarketingPanelOf(mandate, (await readCompanyPublicName(adminDb, mandate.agencyCompanyId)) ?? '', nowISOValue, retainUntilById),
     ),
   );
   const disclosure = latestLegalDocumentVersion(PRIVATE_MARKETING_DOCUMENT);

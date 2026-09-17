@@ -655,6 +655,10 @@ describe('🏆 Α31 — το έντυπο ΠΑΓΩΝΕΙ: αντίγραφο τ�
     expect(proof.evidence).toMatchObject({ digest: sha256(CONTENT), fileName: 'Έντυπο Κώστα.pdf', contentType: 'application/pdf', sizeBytes: Buffer.byteLength(CONTENT) });
     expect(proof.evidence.path).toBe(`mandate-evidence/ownp_a/${proof.evidence.id}`);
     expect(evidenceBucket.objects.get(proof.evidence.path)).toMatchObject({ hold: true });
+    // 🔴 ADR-864 §20 (Α37) — και ΜΠΑΙΝΕΙ ΣΤΟ ΜΗΤΡΩΟ με το ΓΡΑΦΕΙΟ της σχέσης: αλλιώς η αντικατάσταση της εντολής
+    //    θα άφηνε αντικείμενο κλειδωμένο για πάντα, χωρίς κανέναν να ξέρει ότι υπάρχει.
+    const registered = await db.collection(COLLECTIONS.MANDATE_EVIDENCE).doc(proof.evidence.id).get();
+    expect(registered.data()).toMatchObject({ state: 'sealed', agencyCompanyId: AGENCY, ownerPropertyId: 'ownp_a', digest: sha256(CONTENT), retainUntil: null });
     // 🔑 Το γραφείο σβήνει το ΠΡΩΤΟΤΥΠΟ του — η απόδειξη ΜΕΝΕΙ.
     evidenceBucket.objects.delete(STORAGE_PATH);
     expect(evidenceBucket.objects.get(proof.evidence.path)?.bytes.toString()).toBe(CONTENT);
@@ -668,6 +672,7 @@ describe('🏆 Α31 — το έντυπο ΠΑΓΩΝΕΙ: αντίγραφο τ�
 
     expect(await consent.grantPrivateMarketing(typed, attest(mandate, { version: 0 }))).toEqual({ kind: 'refused', reason: 'consent-text-superseded' });
     expect(evidenceBucket.evidencePaths()).toEqual([]);
+    expect((await db.collection(COLLECTIONS.MANDATE_EVIDENCE).get()).size).toBe(0);
   });
 
   it('🔴 αποτυχία πάγωσης ⇒ `failed`, ΤΙΠΟΤΑ δεν γράφεται, καμία ειδοποίηση — ποτέ βεβαίωση χωρίς αποδεικτικό', async () => {
@@ -689,7 +694,7 @@ describe('🏆 Α31 — το έντυπο ΠΑΓΩΝΕΙ: αντίγραφο τ�
     const frozen = await freezeAttestationEvidence({ storagePath: STORAGE_PATH, contentType: 'application/pdf', fileName: 'x.pdf' }, 'ownp_a', evidenceBucket);
     if (frozen.kind !== 'frozen') throw new Error('frozen expected');
     expect(evidenceBucket.objects.get(frozen.evidence.path)?.hold).toBe(false);
-    await settleAttestationEvidence(frozen.evidence, false, evidenceBucket);
+    await settleAttestationEvidence(frozen.evidence, { committed: false }, evidenceBucket);
     expect(evidenceBucket.evidencePaths()).toEqual([]);
   });
 });

@@ -377,7 +377,12 @@ export async function grantPrivateMarketing(adminDb: AdminFirestore, input: Gran
   if (typeof proof === 'string') return { kind: 'refused', reason: proof };
 
   const outcome = await mutateProperty(adminDb, input.ownerPropertyId, input.nowISO, grantMutation({ input, proof, names }));
-  await settleAttestationEvidence(evidenceOfProof(proof), isWritten(outcome));
+  await settleAttestationEvidence(
+    evidenceOfProof(proof),
+    isWritten(outcome)
+      ? { committed: true, adminDb, agencyCompanyId: input.who.kind === 'agency' ? input.who.actor.companyId : null, sealedAt: input.nowISO }
+      : { committed: false },
+  );
   if (!isWritten(outcome)) return outcome;
 
   const saved = await finish(adminDb, outcome, input.who);

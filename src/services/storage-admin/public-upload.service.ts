@@ -150,6 +150,57 @@ export async function uploadPublicFile(
 }
 
 /**
+ * **Αντιγραφή** υπάρχοντος αντικειμένου σε νέα διαδρομή — με το ίδιο pre-claim (ADR-862 Φ0,
+ * «Ορισμός ως τρέχουσας»).
+ *
+ * 🔑 Server-side `copy()`: τα bytes **δεν** περνούν από τη μνήμη του διακομιστή (ένα IFC
+ * εκατοντάδων MB θα τη γέμιζε). Το claim γράφεται **πριν** την αντιγραφή για τον ίδιο λόγο
+ * με το {@link uploadPublicFile}: αλλιώς το `onStorageFinalize` σβήνει το αντίγραφο σε ~2″.
+ *
+ * ⚠️ Το claim **δεν** είναι FileRecord (χωρίς μισθωτή ⇒ αόρατο σε κάθε λίστα και ανάγνωση).
+ * Το αντικαθιστά ατομικά η πλήρης εγγραφή του γραφέα — ή το σβήνει το {@link discardPublicCopy}.
+ */
+export async function copyPublicFile(params: {
+  readonly sourcePath: string;
+  readonly storagePath: string;
+  readonly contentType: string;
+  readonly sizeBytes: number;
+  readonly createdBy: string;
+}): Promise<UploadPublicFileResult> {
+  const bucket = getAdminBucket();
+  const fileId = extractFileIdFromStoragePath(params.storagePath);
+  await writeOrphanClaim({
+    fileId,
+    storagePath: params.storagePath,
+    bucketName: bucket.name,
+    contentType: params.contentType,
+    sizeBytes: params.sizeBytes,
+    createdBy: params.createdBy,
+  });
+  await bucket.file(params.sourcePath).copy(bucket.file(params.storagePath));
+  logger.info('File copied', { sourcePath: params.sourcePath, storagePath: params.storagePath, fileId });
+  return { url: buildProxyUrl(params.storagePath), storagePath: params.storagePath, bucket: bucket.name, fileId };
+}
+
+/**
+ * **Αντιστάθμιση** ενός {@link copyPublicFile} που δεν έγινε FileRecord (η κρίση αρνήθηκε).
+ *
+ * 🔒 Σβήνει το claim **μόνο αν είναι ακόμη claim** (χωρίς μισθωτή), μέσα σε συναλλαγή: αν στο
+ * μεταξύ ο γραφέας το έκανε πλήρη εγγραφή, **δεν αγγίζεται τίποτα** — ούτε τα bytes.
+ */
+export async function discardPublicCopy(storagePath: string): Promise<void> {
+  const db = getAdminFirestore();
+  const ref = db.collection(COLLECTIONS.FILES).doc(extractFileIdFromStoragePath(storagePath));
+  const discarded = await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists && typeof snapshot.data()?.companyId === 'string') return false;
+    if (snapshot.exists) transaction.delete(ref);
+    return true;
+  });
+  if (discarded) await getAdminBucket().file(storagePath).delete({ ignoreNotFound: true });
+}
+
+/**
  * Build the same-origin proxy URL for a stored file. Exported so the proxy
  * route's tests and any URL-construction helpers stay aligned with the
  * canonical scheme.
