@@ -13,14 +13,18 @@
  * ⚠️ Το 404 είναι **ένα** για απουσία και ξένο μισθωτή (ADR-742 §7.1). Έκδοση που ο αιτών
  * δεν βλέπει **παραλείπεται** — δεν ανακοινώνεται.
  *
+ * 🗂️ **ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ** (ADR-866 2β.3β): `?custody=personal` ⇒ η πόρτα δέχεται **και** πολίτη
+ * χωρίς οργανισμό, ο κριτής είναι ο κάτοχος (`userId == uid`, **καμία** παράκαμψη super admin),
+ * και ο διακόπτης ιστορικού **δεν** παίζει — προσωπικό αρχείο δεν έχει φάσεις CDE (Ε-Φ0-1).
+ * Απουσία της παραμέτρου ⇒ **εταιρεία**, δηλαδή μηδέν αλλαγή για κάθε υπάρχοντα καλούντα.
+ *
  * ⚡ `STANDARD` ρητά (CHECK 3.78): ανάγνωση καταλόγου, όχι αλλαγή ορατότητας.
  *
  * @module app/api/files/[fileId]/versions
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import type { AuthContext } from '@/lib/auth';
 import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
 import type { ProjectMemberRead } from '@/lib/auth/project-member-read';
 import { readContainerState } from '@/lib/files/file-record-read';
@@ -29,9 +33,13 @@ import { readVersionStack } from '@/services/iso19650/version-stack';
 import type { FileRecord } from '@/types/file-record';
 import type { FileVersionEntry, FileVersionStackResponse } from '@/types/file-version-stack';
 import {
+  withFileCustodyAuth,
+  type FileCustodyCaller,
+} from '../../_shared/file-custody-route';
+import {
   authorityUnavailableResponse,
   fileNotFoundResponse,
-  resolveOwnedFile,
+  resolveContainerFile,
   type FileSegment,
 } from '../../_shared/container-route-responses';
 
@@ -81,15 +89,20 @@ async function visibleVersions(
   return visible;
 }
 
-async function handleGet(_request: NextRequest, ctx: AuthContext, _cache: PermissionCache, segment?: FileSegment) {
-  const resolved = await resolveOwnedFile(segment, ctx, 'versions');
+async function handleGet(_request: NextRequest, caller: FileCustodyCaller, segment?: FileSegment) {
+  const resolved = await resolveContainerFile(segment, caller, 'versions');
   if (resolved.refusal) return resolved.refusal;
-  const { fileId } = resolved;
+  const { fileId, actor } = resolved;
 
-  const stack = await readVersionStack(ctx.companyId, fileId);
+  const stack = await readVersionStack(actor.custody, fileId);
   if (stack.kind === 'not-found') return fileNotFoundResponse();
 
-  const visible = await visibleVersions(ctx, stack.versions);
+  // 🔑 ADR-866 Ε-Φ0-1 — **ο ιδιώτης δεν περνά από κριτή δοχείου**: προσωπικό αρχείο δεν έχει
+  //    φάσεις CDE, άρα δεν υπάρχει ορατότητα φάσης να κριθεί. Η ιδιοκτησία κρίθηκε **ήδη** δύο
+  //    φορές — στο `personalFileResource` για το ζητούμενο, και μέσα στη στοίβα, που **δεν
+  //    διασχίζει** ποτέ διαμερίσματα (`isOwnedByCustody` ανά έκδοση). Ίδιο δόγμα με τη λήψη bytes.
+  const visible =
+    caller.custody === 'company' ? await visibleVersions(caller.ctx, stack.versions) : [...stack.versions];
   if (visible === null) return authorityUnavailableResponse();
   // Ο αιτών δεν βλέπει ΚΑΝ το ζητούμενο ⇒ το ίδιο 404, ποτέ κενή στοίβα που μαρτυρά ύπαρξη.
   if (!visible.some(record => record.id === fileId)) return fileNotFoundResponse();
@@ -101,4 +114,6 @@ async function handleGet(_request: NextRequest, ctx: AuthContext, _cache: Permis
   return NextResponse.json(body, { status: 200 });
 }
 
-export const GET = withStandardRateLimit(withAuth<unknown, FileSegment>(handleGet));
+export const GET = withStandardRateLimit(
+  withFileCustodyAuth<FileSegment>(handleGet, { permissions: VIEW_ACTION }),
+);

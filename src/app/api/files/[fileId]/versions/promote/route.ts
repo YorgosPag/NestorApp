@@ -15,24 +15,29 @@
  *
  * ⚡ `SENSITIVE` ρητά (CHECK 3.78): αλλάζει **ποια έκδοση ισχύει** για όλο το γραφείο.
  *
+ * 🗂️ **ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ** (ADR-866 2β.3β): `?custody=personal` ⇒ ο κάτοχος προβιβάζει **δική του**
+ * έκδοση (Box «Promote file version» στον προσωπικό χώρο). Ο διάδοχος γεννιέται από τον **ίδιο**
+ * builder, με το overload **του ανθρώπου** — κανένα `companyId`, κανένα πεδίο CDE, ρίζα `people/`.
+ *
  * @module app/api/files/[fileId]/versions/promote
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ACT_SPEC } from '@/services/iso19650/container-transition-policy';
-import { containerActorOf } from '@/services/iso19650/container-transitions';
 import {
   promoteVersion,
   type VersionPromotionOutcome,
 } from '@/services/iso19650/version-promotion';
 import {
+  withFileCustodyAuth,
+  type FileCustodyCaller,
+} from '../../../_shared/file-custody-route';
+import {
   authorityUnavailableResponse,
   fileNotFoundResponse,
-  resolveOwnedFile,
+  resolveContainerFile,
   type FileSegment,
 } from '../../../_shared/container-route-responses';
 
@@ -52,33 +57,39 @@ function toResponse(outcome: VersionPromotionOutcome): NextResponse {
   }
 }
 
-async function handlePost(request: NextRequest, ctx: AuthContext, _cache: PermissionCache, segment?: FileSegment) {
+async function handlePost(request: NextRequest, caller: FileCustodyCaller, segment?: FileSegment) {
   const body: unknown = await request.json().catch(() => null);
   const expectedHeadFileId = (body as { expectedHeadFileId?: unknown } | null)?.expectedHeadFileId;
   if (typeof expectedHeadFileId !== 'string' || expectedHeadFileId.length === 0) {
     return NextResponse.json({ error: 'expectedHeadFileId is required' }, { status: 400 });
   }
 
-  const resolved = await resolveOwnedFile(segment, ctx, 'promote-version');
+  const resolved = await resolveContainerFile(segment, caller, 'promote-version');
   if (resolved.refusal) return resolved.refusal;
-  const { fileId } = resolved;
+  const { fileId, actor } = resolved;
 
   // 🔒 Βλέπει καν την παλιά έκδοση; — με τον διακόπτη ιστορικού, και την ικανότητα της
   //    ΠΡΑΞΗΣ που θα ασκηθεί (αντικατάσταση), όχι γενικό «δες».
-  const refusal = await containerVisibilityRefusal({
-    fileId,
-    caller: ctx,
-    action: ACT_SPEC.supersede.capability,
-    raw: resolved.doc.data,
-    notFound: fileNotFoundResponse,
-    unavailable: authorityUnavailableResponse,
-    historyRequested: true,
-  });
-  if (refusal) return refusal;
+  // 🔑 **Μόνο για εταιρεία** (ADR-866 Ε-Φ0-1): στον προσωπικό χώρο δεν υπάρχει φάση να κριθεί,
+  //    και η ικανότητα `iso19650:containers:supersede` δεν υπάρχει να δοθεί σε πολίτη — εκεί η
+  //    εξουσία είναι η **ιδιοκτησία**, που κρίθηκε μόλις (`personalFileResource`) και ξανά μέσα
+  //    στον γραφέα (`isOwnedByCustody`, βήμα 2).
+  if (caller.custody === 'company') {
+    const refusal = await containerVisibilityRefusal({
+      fileId,
+      caller: caller.ctx,
+      action: ACT_SPEC.supersede.capability,
+      raw: resolved.doc.data,
+      notFound: fileNotFoundResponse,
+      unavailable: authorityUnavailableResponse,
+      historyRequested: true,
+    });
+    if (refusal) return refusal;
+  }
 
-  return toResponse(
-    await promoteVersion({ actor: containerActorOf(ctx), sourceFileId: fileId, expectedHeadFileId }),
-  );
+  return toResponse(await promoteVersion({ actor, sourceFileId: fileId, expectedHeadFileId }));
 }
 
-export const POST = withSensitiveRateLimit(withAuth<unknown, FileSegment>(handlePost));
+export const POST = withSensitiveRateLimit(
+  withFileCustodyAuth<FileSegment>(handlePost, { permissions: ACT_SPEC.supersede.capability }),
+);

@@ -22,8 +22,17 @@
  * ικανότητα κρίνεται **ανά πράξη** μέσα στον γραφέα, με τον ΕΝΑ κριτή (ADR-801) —
  * δηλαδή στο σημείο που **ξέρει ποια** πράξη ζητήθηκε.
  *
- * ⚠️ Το σύνορο εξακολουθεί να απαιτεί **ταυτότητα** (`withAuth`) και **ιδιοκτησία
- * μισθωτή** (`fileResource.load`). Καμία νέα μηχανή απομόνωσης.
+ * ⚠️ Το σύνορο εξακολουθεί να απαιτεί **ταυτότητα** και **ιδιοκτησία** (`resolveContainerFile` →
+ * `fileResource` για εταιρεία, `personalFileResource` για άνθρωπο). Καμία νέα μηχανή απομόνωσης.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🗂️ ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ — ΚΑΙ Ο ΙΔΙΩΤΗΣ ΕΧΕΙ **ΜΙΑ** ΠΡΑΞΗ (ADR-866 Ε-Φ0-1)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * `?custody=personal` ⇒ ο κάτοχος ζητά πράξη σε **δικό του** αρχείο. Από τις πέντε, μόνο η
+ * **αντικατάσταση** (`supersede`) έχει νόημα: οι τέσσερις πράξεις **φάσης** παίρνουν ονομασμένη
+ * άρνηση `no-project` από το **καθεστώς** του δοχείου (`container-regime-policy`, ADR-862 §5.3.7)
+ * — **μέσα στον γραφέα**, όχι με δεύτερο φρουρό εδώ. Έτσι το «γιατί όχι» λέγεται **μία** φορά,
+ * από το σημείο που το ξέρει.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ⚡ ΤΟ ΟΡΙΟ ΡΥΘΜΟΥ ΔΗΛΩΝΕΤΑΙ **ΕΔΩ**, ΡΗΤΑ (CHECK 3.78)
@@ -43,27 +52,32 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { containerVisibilityRefusal } from '@/lib/auth/container-visibility-guard';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { isSuitabilityCode } from '@/services/iso19650/validators';
 import { ACT_SPEC } from '@/services/iso19650/container-transition-policy';
 import {
-  containerActorOf,
   transitionContainer,
   type ContainerAct,
+  type ContainerActor,
   type ContainerTransitionOutcome,
   type ContainerTransitionRequest,
 } from '@/services/iso19650/container-transitions';
+import {
+  withFileCustodyAuth,
+  type FileCustodyCaller,
+} from '../../_shared/file-custody-route';
 // Οι δύο απαντήσεις + η φόρτωση ζουν ΜΙΑ φορά (N.18) — κοινές με `versions` και `versions/promote`.
 import {
   authorityUnavailableResponse,
   fileNotFoundResponse,
-  loadOwnedFile,
+  resolveContainerFile,
+  type FileSegment,
 } from '../../_shared/container-route-responses';
 
-type Segment = { params: Promise<{ fileId: string }> };
+// ⚠️ Το τμήμα διαδρομής ζει **μία** φορά στο `_shared` (N.18) — εδώ μόνο ψευδώνυμο, ώστε το
+//    υπόλοιπο αρχείο να μείνει ανέγγιχτο.
+type Segment = FileSegment;
 
 /**
  * Οι πέντε πράξεις **ως δεδομένα** — ο φρουρός στενεύει `unknown → ContainerAct`.
@@ -105,14 +119,14 @@ function toResponse(outcome: ContainerTransitionOutcome): NextResponse {
  */
 function transitionRequestOf(
   fileId: string,
-  ctx: AuthContext,
+  actor: ContainerActor,
   act: ContainerAct,
   payload: Record<string, unknown>,
 ): ContainerTransitionRequest {
   return {
     fileId,
     act,
-    actor: containerActorOf(ctx),
+    actor,
     ...(isSuitabilityCode(payload.suitabilityCode)
       ? { suitabilityCode: payload.suitabilityCode }
       : {}),
@@ -129,15 +143,9 @@ function transitionRequestOf(
 
 async function handlePost(
   request: NextRequest,
-  ctx: AuthContext,
-  _cache: PermissionCache,
+  caller: FileCustodyCaller,
   segment?: Segment,
 ): Promise<NextResponse> {
-  const fileId = (await segment?.params)?.fileId;
-  if (!fileId) {
-    return NextResponse.json({ error: 'Missing fileId' }, { status: 400 });
-  }
-
   const body: unknown = await request.json().catch(() => null);
   const payload = (body ?? {}) as Record<string, unknown>;
 
@@ -145,10 +153,11 @@ async function handlePost(
     return NextResponse.json({ error: 'Invalid act', allowed: CONTAINER_ACTS }, { status: 400 });
   }
 
-  // 🔒 Ο PEP: φόρτωσε → υπάρχει; → δικό μου; σε **μία** πράξη, με το «όχι» αυτής της
-  //    διαδρομής. Το **ΥΠΑΡΧΟΝ** εργοστάσιο — καμία νέα μηχανή απομόνωσης (ADR-742).
-  const owned = await loadOwnedFile(fileId, ctx, 'cde');
-  if (owned.refusal) return owned.refusal;
+  // 🔒 Ο PEP: `fileId` → φόρτωσε → υπάρχει; → δικό μου; **στο διαμέρισμα που ζητήθηκε**, σε μία
+  //    πράξη, με το «όχι» αυτής της διαδρομής. Το **ΥΠΑΡΧΟΝ** εργοστάσιο (ADR-742 · ADR-866).
+  const resolved = await resolveContainerFile(segment, caller, 'cde');
+  if (resolved.refusal) return resolved.refusal;
+  const { fileId, actor } = resolved;
 
   // 🔒 Ο δεύτερος φρουρός: **βλέπει** καν αυτό το δοχείο; (ADR-862 Φ0 Β7→Β8)
   //
@@ -163,17 +172,27 @@ async function handlePost(
   // ⚠️ Η άρνηση είναι το **ΙΔΙΟ** 404 της διαδρομής — ποτέ 403: ένα «δεν
   //    επιτρέπεσαι» πάνω σε δοχείο που ο αιτών δεν δικαιούται να **δει**
   //    ανακοινώνει ότι υπάρχει (ADR-742 §7.1).
-  const refusal = await containerVisibilityRefusal({
-    fileId,
-    caller: ctx,
-    action: ACT_SPEC[payload.act].capability,
-    raw: owned.doc.data,
-    notFound: fileNotFoundResponse,
-    unavailable: authorityUnavailableResponse,
-  });
-  if (refusal) return refusal;
+  //
+  // 🔑 **ΜΟΝΟ ΓΙΑ ΕΤΑΙΡΕΙΑ** (ADR-866 Ε-Φ0-1): προσωπικό δοχείο **δεν έχει φάση** ⇒ δεν υπάρχει
+  //    ορατότητα φάσης να κριθεί, και η άρνηση των τεσσάρων πράξεων φάσης δεν ανήκει εδώ: τη
+  //    δίνει **ονομασμένη** (`no-project`) ο ΕΝΑΣ γραφέας, από το **καθεστώς** του δοχείου
+  //    (`container-regime-policy`). Δεύτερος φρουρός εδώ θα ήταν δεύτερη κρίση για το ίδιο.
+  if (caller.custody === 'company') {
+    const refusal = await containerVisibilityRefusal({
+      fileId,
+      caller: caller.ctx,
+      action: ACT_SPEC[payload.act].capability,
+      raw: resolved.doc.data,
+      notFound: fileNotFoundResponse,
+      unavailable: authorityUnavailableResponse,
+    });
+    if (refusal) return refusal;
+  }
 
-  return toResponse(await transitionContainer(transitionRequestOf(fileId, ctx, payload.act, payload)));
+  return toResponse(await transitionContainer(transitionRequestOf(fileId, actor, payload.act, payload)));
 }
 
-export const POST = withSensitiveRateLimit(withAuth<unknown, Segment>(handlePost));
+// ⚠️ **ΚΑΜΙΑ ικανότητα στο σύνορο — αμετάβλητο** (δες την αιτιολογία στην κεφαλή): η πόρτα
+//    διαμερίσματος δέχεται **προαιρετικό** `permissions` ακριβώς ώστε αυτή η απόφαση να μη χρειαστεί
+//    να σπάσει. Η ικανότητα κρίνεται **ανά πράξη** μέσα στον γραφέα, με τον ΕΝΑ κριτή.
+export const POST = withSensitiveRateLimit(withFileCustodyAuth<Segment>(handlePost));
