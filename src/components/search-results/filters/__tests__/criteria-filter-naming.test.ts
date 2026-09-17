@@ -133,10 +133,24 @@ describe('Β — οι 31 ετικέτες αξόνων', () => {
     expect(criterionLabel(t, 'amenities')).toBe('listing-detail:attributes.label.amenities');
   });
 
-  it('οι 4 ειδικοί έχουν δικές τους — γιατί ΔΕΝ είναι δημόσια στοιχεία', () => {
+  it('οι 6 ειδικοί έχουν δικές τους — γιατί ΔΕΝ είναι δημόσια στοιχεία', () => {
     const { t } = recordingT();
-    expect(criterionLabel(t, 'price')).toBe('search-filters:filters.axis.price');
     expect(criterionLabel(t, 'hasPhotos')).toBe('search-filters:filters.axis.hasPhotos');
+  });
+
+  it('🔴 ΚΑΘΕ άξονας τιμής ονομάζει τη ΜΟΝΑΔΑ του — ποτέ σκέτο «Τιμή»', () => {
+    // ADR-777 §8.60.14 Φάση 2. Μια κοινή ετικέτα «Τιμή» πάνω από τρία πεδία θα
+    // ξανάφερνε ακριβώς τη διφορούμενη ερώτηση που οι τρεις άξονες διαλύουν: «έως
+    // 1.000 €» δέχεται 900 €/μήνα **και** 50 €/νύχτα.
+    //
+    // ⚠️ **Και φυλάει μια σιωπηλή διαδρομή**: αν κάποιος σβήσει έναν από τους τρεις
+    //    από τον πίνακα ετικετών, ο `criterionLabel` **δεν σκάει** — πέφτει στο
+    //    `listing-detail:attributes.label.*`. Μετρήθηκε: το παλιό `price` επέστρεφε
+    //    έτσι υπαρκτό, **λάθος** κλειδί. Η άγκυρα ελέγχει το κλειδί, όχι την ύπαρξη.
+    const { t } = recordingT();
+    expect(criterionLabel(t, 'priceSale')).toBe('search-filters:filters.axis.priceSale');
+    expect(criterionLabel(t, 'priceRent')).toBe('search-filters:filters.axis.priceRent');
+    expect(criterionLabel(t, 'priceNightly')).toBe('search-filters:filters.axis.priceNightly');
   });
 });
 

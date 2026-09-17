@@ -46,6 +46,11 @@ import {
   orderResultsListings,
   parseListingOrder,
 } from '@/lib/listings/listing-results-order';
+import {
+  countListingSections,
+  flattenListingSections,
+  type ListingOrderContext,
+} from '@/lib/listings/listing-price-sections';
 
 import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
 import { StayFilterFields } from './StayFilterFields';
@@ -53,6 +58,7 @@ import { StayLedgerBar } from './StayLedgerBar';
 import { ResultsList } from './ResultsList';
 import { ResultsMap } from './ResultsMap';
 import { ResultsSheet } from './ResultsSheet';
+import { StayTotalsProvider } from './StayTotalsContext';
 
 export function SearchResultsContent() {
   const { t } = useTranslation(['search-results', 'search-filters', 'listing-detail']);
@@ -123,6 +129,7 @@ export function SearchResultsContent() {
     stayLedger,
     stayQuery,
     stayPending,
+    stayTotals,
     criteriaLedger,
     criteriaAsked,
     areaLedger,
@@ -199,8 +206,29 @@ export function SearchResultsContent() {
    * διαβάζει άνθρωπος. Αν έμενε αταξινόμητο, η ίδια οθόνη θα είχε **δύο** σειρές — μία
    * δηλωμένη και μία τυχαία — και η δεύτερη θα ήταν πάλι κατά τάξη συντάκτη.
    */
-  const orderedMapped = useMemo(() => orderResultsListings(mapped, order), [mapped, order]);
-  const orderedUnmapped = useMemo(() => orderResultsListings(unmapped, order), [unmapped, order]);
+  /**
+   * 🔴 **ΤΑ ΣΥΝΟΛΑ ΔΙΑΜΟΝΗΣ ΜΠΑΙΝΟΥΝ ΣΤΗ ΣΕΙΡΑ, ΟΧΙ ΜΟΝΟ ΣΤΟ ΚΕΙΜΕΝΟ** (§8.60.14).
+   * Με ημερομηνίες η κάρτα γράφει «150 € · 3 νύχτες»· αν η σειρά εξακολουθούσε να
+   * διαβάζει την τιμή **νύχτας**, ο άνθρωπος θα έβλεπε τιμές που **δεν** είναι
+   * ταξινομημένες — ταξινομημένο θα ήταν κάτι που δεν φαίνεται πουθενά.
+   */
+  const orderContext = useMemo<ListingOrderContext>(() => ({ stayTotals }), [stayTotals]);
+
+  const orderedSections = useMemo(
+    () => orderResultsListings(mapped, order, orderContext),
+    [mapped, order, orderContext]
+  );
+
+  /**
+   * ⚠️ **Η συμπτυγμένη γραμμή παίρνει ΕΠΙΠΕΔΟ πίνακα, και είναι σωστό**: δείχνει
+   * **μόνο τίτλους**, χωρίς ποσά, άρα δεν υπάρχει μονάδα να μπερδευτεί και μια επιγραφή
+   * εκεί θα ήταν θόρυβος. Η ακολουθία παραμένει η **συνένωση** των ταξινομημένων
+   * κλάσεων — καμία σύγκριση ανάμεσά τους δεν εκτελείται.
+   */
+  const orderedUnmapped = useMemo(
+    () => flattenListingSections(orderResultsListings(unmapped, order, orderContext)),
+    [unmapped, order, orderContext]
+  );
 
   /**
    * 🔴 **ΕΝΑ ΑΝΤΙΚΕΙΜΕΝΟ, ΔΥΟ ΚΑΤΑΝΑΛΩΤΕΣ — ΚΑΙ ΕΙΝΑΙ ΟΛΟ ΤΟ ΝΟΗΜΑ ΤΟΥ §8.62.**
@@ -220,10 +248,15 @@ export function SearchResultsContent() {
    * επειδή το §8.60 έχει ήδη αποφασίσει γραπτά ότι η λίστα δεν διατάζει τον χάρτη.
    */
   const listView = useMemo(
-    () => ({ mapped: orderedMapped, unmapped: orderedUnmapped }),
-    [orderedMapped, orderedUnmapped]
+    () => ({ sections: orderedSections, unmapped: orderedUnmapped }),
+    [orderedSections, orderedUnmapped]
   );
-  const renderedCount = listView.mapped.length + listView.unmapped.length;
+  /**
+   * ⚠️ **Μετριέται από τα ΤΜΗΜΑΤΑ, ποτέ από τον αρχικό πίνακα** — αλλιώς ο μετρητής θα
+   * μπορούσε να μείνει σωστός ενώ η λίστα δείχνει άλλα, που είναι ακριβώς το ελάττωμα
+   * που το §8.62 έκλεισε. Το `countListingSections` είναι **η** άθροιση, μία φορά.
+   */
+  const renderedCount = countListingSections(listView.sections) + listView.unmapped.length;
 
   return (
     // 🔴 `flex-1 min-h-0`, ΟΧΙ `h-screen`: η οθόνη ζει τώρα **κάτω από κεφαλίδα**, και
@@ -348,71 +381,74 @@ export function SearchResultsContent() {
         (`z-10`): στο στενό είναι **δεύτερο** στο βάψιμο ενώ είναι **πρώτο** στην ανάγνωση,
         και η σειρά του DOM μόνη της θα το έθαβε κάτω από τον χάρτη.
       */}
-      <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,26rem)_1fr]">
-        <ResultsSheet viewport={viewport}>
-          <ResultsList
-            mapped={listView.mapped}
-            unmapped={listView.unmapped}
-            focus={focus}
-            onHover={peek}
-            filterQuery={filterQuery}
-            undeclaredLabelsFor={undeclaredLabelsFor}
-          />
-        </ResultsSheet>
-
-        {/*
-          `isolate`: ο χάρτης είναι **ξένος** κώδικας (Geo-Canvas/MapLibre) με δικά του
-          εσωτερικά επίπεδα. Ένα δικό του στρώμα δεν επιτρέπεται να αναρριχηθεί πάνω από
-          το φύλλο — και ο **περιορισμός** είναι το ανώτερο εργαλείο έναντι του δαμάσματος
-          με αριθμό (CHECK 3.50): δεν χρειάζεται να ξέρουμε τι γράφει η βιβλιοθήκη, ούτε
-          μετά από αναβάθμισή της.
-        */}
-        <section
-          aria-label={t('search-results:map.label')}
-          className="absolute inset-0 isolate md:static"
-        >
-          {/*
-            **Ο ΑΜΦΙΔΡΟΜΟΣ ΔΕΣΜΟΣ, ΟΛΟΚΛΗΡΟΣ** (Α3) — τέσσερα σύρματα, όχι δύο:
-            hover στη λίστα → `peek` · hover στον χάρτη → `peek` · κλικ στον χάρτη →
-            `select` · κλικ στο κενό ή `Escape` → `clear`.
-          */}
-          <ResultsMap
-            listings={mapped}
-            focus={focus}
-            filterQuery={filterQuery}
-            onPeek={peek}
-            onSelect={select}
-            onClear={clear}
-            onAreaChange={onAreaChange}
-            /*
-              🔴 **Η ΠΕΡΙΟΧΗ ΚΑΝΕΙ ΔΥΟ ΔΟΥΛΕΙΕΣ** — δες `ResultsMapProps.searchArea`:
-              (α) σπάει την ανάδραση *(ο χάρτης δεν ξανακαδράρει στα αποτελέσματα, άρα
-              δεν πηδά κάτω από τα δάχτυλα του ανθρώπου)*· (β) **καδράρει εκεί**, ώστε
-              ένας κοινοποιημένος σύνδεσμος να **δείχνει** την περιοχή που φιλτράρει.
-
-              ⚠️ **Μόνο ορθογώνιο**: το `near` μπορεί να είναι και **κύκλος** *(από
-              κείμενο που έγραψε ο επισκέπτης)*, και εκείνον τον καδράρει ήδη ο
-              υπάρχων μηχανισμός των δεδομένων. Το `null` εδώ σημαίνει ρητά *«καμία
-              ορθογώνια περιοχή»*, όχι «καμία ερώτηση».
-            */
-            searchArea={filters.near !== null && isBoundingBox(filters.near) ? filters.near : null}
-          />
+      {/* ADR-777 §8.60.12 — «150 € · 3 νύχτες» σε κάρτα, φούσκα, δείκτη άκρης και πινακίδα. */}
+      <StayTotalsProvider totals={stayTotals}>
+        <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,26rem)_1fr]">
+          <ResultsSheet viewport={viewport}>
+            <ResultsList
+              sections={listView.sections}
+              unmapped={listView.unmapped}
+              focus={focus}
+              onHover={peek}
+              filterQuery={filterQuery}
+              undeclaredLabelsFor={undeclaredLabelsFor}
+            />
+          </ResultsSheet>
 
           {/*
-            ⚠️ **ΑΔΕΛΦΟΣ ΤΟΥ ΧΑΡΤΗ, ΠΟΤΕ ΠΑΙΔΙ ΤΟΥ.** Ο `ResultsMap` αποδίδει τον
-            `InteractiveMap` του Geo-Canvas, που διαχειρίζεται **ο ίδιος** το δέντρο
-            του· ένα χειριστήριο χωμένο μέσα του θα ζούσε στο έλεος ξένου κώδικα. Εδώ
-            κάθεται πάνω από τον χάρτη μέσα στο **ίδιο** `isolate`, άρα η στρώση του
-            είναι τοπική και δεν ανταγωνίζεται καμία καθολική κλίμακα (CHECK 3.50).
+            `isolate`: ο χάρτης είναι **ξένος** κώδικας (Geo-Canvas/MapLibre) με δικά του
+            εσωτερικά επίπεδα. Ένα δικό του στρώμα δεν επιτρέπεται να αναρριχηθεί πάνω από
+            το φύλλο — και ο **περιορισμός** είναι το ανώτερο εργαλείο έναντι του δαμάσματος
+            με αριθμό (CHECK 3.50): δεν χρειάζεται να ξέρουμε τι γράφει η βιβλιοθήκη, ούτε
+            μετά από αναβάθμισή της.
           */}
-          <MapAreaControl
-            followMap={followMap}
-            onFollowMapChange={setFollowMap}
-            hasPendingArea={pendingArea !== null}
-            onSearchHere={applyPendingArea}
-          />
-        </section>
-      </div>
+          <section
+            aria-label={t('search-results:map.label')}
+            className="absolute inset-0 isolate md:static"
+          >
+            {/*
+              **Ο ΑΜΦΙΔΡΟΜΟΣ ΔΕΣΜΟΣ, ΟΛΟΚΛΗΡΟΣ** (Α3) — τέσσερα σύρματα, όχι δύο:
+              hover στη λίστα → `peek` · hover στον χάρτη → `peek` · κλικ στον χάρτη →
+              `select` · κλικ στο κενό ή `Escape` → `clear`.
+            */}
+            <ResultsMap
+              listings={mapped}
+              focus={focus}
+              filterQuery={filterQuery}
+              onPeek={peek}
+              onSelect={select}
+              onClear={clear}
+              onAreaChange={onAreaChange}
+              /*
+                🔴 **Η ΠΕΡΙΟΧΗ ΚΑΝΕΙ ΔΥΟ ΔΟΥΛΕΙΕΣ** — δες `ResultsMapProps.searchArea`:
+                (α) σπάει την ανάδραση *(ο χάρτης δεν ξανακαδράρει στα αποτελέσματα, άρα
+                δεν πηδά κάτω από τα δάχτυλα του ανθρώπου)*· (β) **καδράρει εκεί**, ώστε
+                ένας κοινοποιημένος σύνδεσμος να **δείχνει** την περιοχή που φιλτράρει.
+
+                ⚠️ **Μόνο ορθογώνιο**: το `near` μπορεί να είναι και **κύκλος** *(από
+                κείμενο που έγραψε ο επισκέπτης)*, και εκείνον τον καδράρει ήδη ο
+                υπάρχων μηχανισμός των δεδομένων. Το `null` εδώ σημαίνει ρητά *«καμία
+                ορθογώνια περιοχή»*, όχι «καμία ερώτηση».
+              */
+              searchArea={filters.near !== null && isBoundingBox(filters.near) ? filters.near : null}
+            />
+
+            {/*
+              ⚠️ **ΑΔΕΛΦΟΣ ΤΟΥ ΧΑΡΤΗ, ΠΟΤΕ ΠΑΙΔΙ ΤΟΥ.** Ο `ResultsMap` αποδίδει τον
+              `InteractiveMap` του Geo-Canvas, που διαχειρίζεται **ο ίδιος** το δέντρο
+              του· ένα χειριστήριο χωμένο μέσα του θα ζούσε στο έλεος ξένου κώδικα. Εδώ
+              κάθεται πάνω από τον χάρτη μέσα στο **ίδιο** `isolate`, άρα η στρώση του
+              είναι τοπική και δεν ανταγωνίζεται καμία καθολική κλίμακα (CHECK 3.50).
+            */}
+            <MapAreaControl
+              followMap={followMap}
+              onFollowMapChange={setFollowMap}
+              hasPendingArea={pendingArea !== null}
+              onSearchHere={applyPendingArea}
+            />
+          </section>
+        </div>
+      </StayTotalsProvider>
     </main>
   );
 }

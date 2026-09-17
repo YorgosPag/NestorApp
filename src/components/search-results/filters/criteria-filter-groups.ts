@@ -57,10 +57,48 @@ import {
  */
 export const PRIMARY_CRITERION_KEYS = [
   'offerKind',
-  'price',
+  'priceSale',
+  'priceRent',
+  'priceNightly',
   'type',
   'bedrooms',
 ] as const satisfies readonly CriterionKey[];
+
+/**
+ * 🔴 **ΟΙ ΤΡΕΙΣ ΑΞΟΝΕΣ ΤΙΜΗΣ ΔΕΝ ΖΩΓΡΑΦΙΖΟΝΤΑΙ ΟΛΟΙ ΜΑΖΙ** — ADR-777 §8.60.14 Φάση 2.
+ *
+ * Το πρώτο επίπεδο έχει **τρεις** άξονες τιμής επειδή κάθε μονάδα είναι δική της
+ * ερώτηση· η **γραμμή** όμως δείχνει μόνο όσους η ερώτηση του ανθρώπου αφορά. Ο κανόνας
+ * είναι ο ίδιος που η κεφαλίδα αυτού του αρχείου δηλώνει από τις 2026-09-04 — *«η
+ * διάθεση αλλάζει το νόημα της τιμής»* — εφαρμοσμένος επιτέλους και στη **μηχανή**:
+ *
+ * 1. Η «Διάθεση» ονομάζει είδη ⇒ **οι αντίστοιχοι άξονες**, με τη σειρά του λεξιλογίου.
+ * 2. Δεν ονομάζει κανένα, αλλά κάποιος άξονας **έχει ήδη τιμή** ⇒ **αυτοί** *(ο άνθρωπος
+ *    το ζήτησε, δεν του το κρύβουμε)*.
+ * 3. Τίποτα από τα δύο ⇒ **κανένας**, και στη θέση τους η **ερώτηση**: «διάλεξε
+ *    διάθεση». Είναι το *«clear buy/rent segmentation at the search level, not buried
+ *    in filters»* του κλάδου — Zillow και Rightmove **δεν έχουν καν** κατάσταση «και τα
+ *    δύο», άρα το πεδίο τιμής τους δεν μπορεί ποτέ να είναι διφορούμενο.
+ */
+export const PRICE_CRITERION_KEYS = [
+  'priceSale',
+  'priceRent',
+  'priceNightly',
+] as const satisfies readonly CriterionKey[];
+
+export type PriceCriterionKey = (typeof PRICE_CRITERION_KEYS)[number];
+
+/** Είναι αυτός ο άξονας ερώτηση **τιμής**; Φρουρός τύπου, ώστε κανείς να μη γράψει `as`. */
+export function isPriceCriterionKey(key: CriterionKey): key is PriceCriterionKey {
+  return (PRICE_CRITERION_KEYS as readonly CriterionKey[]).includes(key);
+}
+
+/** Ποια διάθεση οδηγεί ποιον άξονα τιμής. `Record` ⇒ καμία σιωπηλή παράλειψη. */
+export const PRICE_AXIS_OF_OFFER_KIND: Readonly<Record<string, PriceCriterionKey | undefined>> = {
+  sell: 'priceSale',
+  leaseOut: 'priceRent',
+  leaseShort: 'priceNightly',
+};
 
 /** Μια ομάδα του πάνελ, **με τα μέλη της**. */
 export interface CriteriaFilterGroup {

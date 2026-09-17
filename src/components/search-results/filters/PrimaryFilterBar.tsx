@@ -49,7 +49,10 @@ import type { ListingOrder } from '@/lib/listings/listing-results-order';
 import type { PublicListing } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
 
-import { PRIMARY_CRITERION_KEYS } from './criteria-filter-groups';
+import { isPriceCriterionKey, PRIMARY_CRITERION_KEYS } from './criteria-filter-groups';
+import { visiblePriceAxes } from './visible-price-axes';
+import { RetiredPriceParamNotice } from './RetiredPriceParamNotice';
+import { readRetiredPriceRange } from '@/lib/criteria/listing-criteria-url';
 import { CriteriaFilterPanel } from './CriteriaFilterPanel';
 import { CriterionField } from './CriterionField';
 import { ResultsOrderSelect } from './ResultsOrderSelect';
@@ -88,6 +91,18 @@ export function PrimaryFilterBar({
   const [open, setOpen] = useState(false);
 
   const askedCount = askedCriterionKeys(filters.criteria).length;
+
+  /** Ποιοι άξονες τιμής ρωτιούνται τώρα — δες `visible-price-axes.ts`. */
+  const shownPriceAxes = visiblePriceAxes(filters.criteria);
+
+  /**
+   * Το εύρος ενός **παλιού** συνδέσμου (`pmin`/`pmax`), που ζητούσε τιμή χωρίς μονάδα.
+   * 🔑 Διαβάζεται από τη **διεύθυνση**, όχι από τα φίλτρα: δεν είναι ερώτηση που
+   * αναγνωρίζει ο κριτής — είναι ερώτηση που **ζητά μονάδα** πριν γίνει ερώτηση.
+   */
+  const retiredPrice = readRetiredPriceRange(
+    new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search),
+  );
 
   /**
    * 🔑 **Το κείμενο του κουμπιού λέει ΠΟΣΑ, όχι σκέτο «Περισσότερα»** — ρητή σύσταση
@@ -133,7 +148,15 @@ export function PrimaryFilterBar({
         ετικέτα μιας επιλογής έσπρωχνε τον αριθμό της στην άλλη άκρη — μετρημένο.
         Εδώ κάθε χειριστήριο παίρνει **όσο χρειάζεται** και η γραμμή αναδιπλώνεται.
       */}
-      {PRIMARY_CRITERION_KEYS.map((key) => (
+      {/*
+        🔴 **ΟΙ ΤΡΕΙΣ ΑΞΟΝΕΣ ΤΙΜΗΣ ΔΕΝ ΖΩΓΡΑΦΙΖΟΝΤΑΙ ΟΛΟΙ** (ADR-777 §8.60.14 Φάση 2):
+        η **μονάδα** έρχεται από τη «Διάθεση», και χωρίς αυτήν η ερώτηση «έως 1.000 €»
+        είναι διφορούμενη — δέχεται 900 €/μήνα **και** 50 €/νύχτα. Ο κανόνας ζει
+        ολόκληρος στο `visible-price-axes.ts`· εδώ μένει μόνο η κλήση.
+      */}
+      {PRIMARY_CRITERION_KEYS.filter(
+        (key) => !isPriceCriterionKey(key) || shownPriceAxes.includes(key),
+      ).map((key) => (
         <div key={key} className="w-44 shrink-0">
           <CriterionField
             criterionKey={key}
@@ -144,6 +167,20 @@ export function PrimaryFilterBar({
           />
         </div>
       ))}
+
+      {/*
+        ⚠️ **Η ΑΠΟΥΣΙΑ ΤΩΝ ΠΕΔΙΩΝ ΤΙΜΗΣ ΔΕΝ ΕΙΝΑΙ ΣΙΩΠΗΛΗ.** Το #1 φίλτρο (62% χρήση,
+        Baymard) δεν επιτρέπεται να **λείπει χωρίς λόγο**: χωρίς αυτή τη γραμμή, ο
+        άνθρωπος θα έψαχνε ένα πεδίο που δεν υπάρχει και δεν θα μάθαινε ποτέ γιατί.
+      */}
+      {/* ADR-777 §8.60.14 Φάση 2 — ο παλιός σύνδεσμος ρωτιέται, ποτέ δεν πετιέται. */}
+      <RetiredPriceParamNotice range={retiredPrice} onChoose={commit.setRange} />
+
+      {shownPriceAxes.length === 0 && retiredPrice === null && (
+        <p className="w-full text-xs text-muted-foreground">
+          {t('search-filters:filters.price.needOffer')}
+        </p>
+      )}
 
       {/*
         🔴 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΧΕΙΡΙΣΤΗΡΙΟ ΠΡΩΤΟΥ ΕΠΙΠΕΔΟΥ, ΟΧΙ ΕΠΙΛΟΓΗ ΜΕΣΑ ΣΤΟ ΣΥΡΤΑΡΙ**
