@@ -109,6 +109,10 @@ export async function seedFile(
       status: 'ready',
       isDeleted: false,
       storagePath: `companies/${opts?.companyId ?? SAME_TENANT_COMPANY_ID}/files/${fileId}`,
+      // ADR-862 Φ0 Β11 — ο φράχτης ανάγνωσης, όπως τον γράφει ο builder στη γέννηση και η
+      // μετανάστευση σε κάθε ζωντανό έγγραφο. Χωρίς αυτό, κάθε `list` κελί θα κρινόταν
+      // πάνω σε έγγραφο που η παραγωγή δεν έχει πια.
+      cdeReadReach: 'tenant',
       ...baseDoc(opts),
       ...opts?.overrides,
     });

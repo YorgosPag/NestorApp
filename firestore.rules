@@ -618,33 +618,72 @@ service cloud.firestore {
       //    ΧΑΛΑΡΟΤΕΡΟΣ νικά και η αυστηροποίηση δεν ισχύει ΠΟΤΕ (CHECK 3.16
       //    Validation F, μετρητής 0 — ADR-841 §7 Α21.14.8).
       //
-      // 📌 Το `allow read` ΔΕΝ φρουρεί ακόμη την κατάσταση — σφίγγει τελευταίο
-      //    (Β11), μαζί με τη διαδρομή διακομιστή, γιατί ο κανόνας δεν μπορεί να
-      //    μάθει την ΟΜΑΔΑ του αναγνώστη χωρίς `get()` («rules are not filters»).
-      //    Μέχρι τότε ισχύει δηλωμένο όριο, γραμμένο στο ADR-373.
+      // 🔒 ADR-862 Φ0 Β11: και ο ΦΡΑΧΤΗΣ ΑΝΑΓΝΩΣΗΣ (`cdeReadReach`) είναι έξοδος του
+      //    διακομιστή — πελάτης που τον γράφει θα άνοιγε ο ίδιος το WIP του σε όλο το
+      //    γραφείο (ή θα έκρυβε εγκεκριμένο σχέδιο από τις λίστες).
       //
       // @see ADR-862 Φ0 · ADR-787 Κ-4 · ADR-373
       function cdeCustodyUnchanged() {
         return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'cdeState', 'cdeTeamId',
           'cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal',
-          'cdeSupersession', 'supersededByFileId', 'supersededAt'
+          'cdeSupersession', 'supersededByFileId', 'supersededAt',
+          'cdeReadReach'
         ]);
       }
 
-      // 📖 READ: Users belonging to file's company (tenant isolation)
-      // 🏢 ENTERPRISE: Allow company members OR creator (for pending files during upload)
-      // This enables both:
-      // - Storage Rules to validate uploads via firestore.get() (pending files)
-      // - Users to list/view ready files from their company
-      allow read: if isAuthenticated()
+      // =======================================================================
+      // 📖 READ — ADR-862 Φ0 Β11: Η ΑΝΑΓΝΩΣΗ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΚΑΤΑΣΤΑΣΗ
+      // =======================================================================
+      // 🔑 ΓΙΑΤΙ `get` ΚΑΙ `list` ΧΩΡΙΣΤΑ (μετρημένο 2026-09-17): το Firestore κρίνει
+      //    το `list` από τα ΦΙΛΤΡΑ του ερωτήματος, όχι από τα δεδομένα («rules are not
+      //    filters — queries are all or nothing»). Ένας ενιαίος `read` που διαβάζει
+      //    κατάσταση θα έριχνε ΚΑΘΕ λίστα αρχείων. Το `get` κρίνεται στο πραγματικό
+      //    έγγραφο ⇒ μπορεί να δεχτεί και τον δημιουργό του WIP.
+      //
+      // 🔑 ΓΙΑΤΙ `cdeReadReach` ΚΑΙ ΟΧΙ `cdeState`: το ερώτημα πρέπει να μπορεί να
+      //    δηλώσει την τιμή σε ΚΑΘΕ έγγραφο, και `in`/`not-in` αποκλείουν έγγραφα χωρίς
+      //    το πεδίο (35 ζωντανά, 2 με `cdeState`). Η εμβέλεια είναι προβολή της φάσης
+      //    (`lib/auth/container-read-reach.ts`), τη γράφουν ΜΟΝΟ η γέννηση και ο γραφέας,
+      //    και ο θεματοφύλακας την ξαναπαράγει και συγκρίνει.
+      //
+      // ⚠️ Ο κανόνας είναι ΕΞΩΤΕΡΙΚΟΣ ΦΡΑΧΤΗΣ, όχι η απόφαση: την ΟΜΑΔΑ του WIP δεν
+      //    μπορεί να την ξέρει (δεν μπαίνει σε claim — `container-subject.ts`) ⇒ τα WIP
+      //    ομάδας τα σερβίρει η διαδρομή διακομιστή, όπου κρίνει ο `decideContainerAccess`.
+      //
+      // ℹ️ Διορθώθηκε 2026-09-17: εδώ έγραφε ότι το read «επιτρέπει στους Storage Rules
+      //    να επικυρώνουν uploads μέσω firestore.get()». Το `storage.rules` δεν κάνει πια
+      //    κανένα `firestore.get()` (αφαιρέθηκαν 2026-07-26).
+      allow get: if isAuthenticated()
+                 && (
+                      isSuperAdminOnly()
+                      || (
+                           resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId)
+                           // Απών φράχτης = πριν τη μετανάστευση του Β11 ⇒ «όπως σήμερα».
+                           && (
+                                resource.data.get('cdeReadReach', 'tenant') == 'tenant'
+                                || resource.data.get('createdBy', null) == request.auth.uid
+                              )
+                         )
+                    );
+
+      // Η λίστα ΠΡΕΠΕΙ να δηλώνει ΕΝΑ από τα δύο — τα παράγει ΕΝΑΣ παραγωγός
+      // (`lib/files/file-visibility-scope.ts`) και το CHECK του Β12 μπλοκάρει client
+      // λίστα `files` που τον παρακάμπτει:
+      //   • `where('cdeReadReach', '==', 'tenant')`  — ό,τι βλέπει όλο το γραφείο
+      //   • `where('createdBy', '==', <uid>)`        — τα ΔΙΚΑ μου, μαζί με το WIP μου
+      //     (αλλιώς το auto-save του DXF δεν θα έβρισκε το WIP του ⇒ διπλό αρχείο)
+      allow list: if isAuthenticated()
                   && (
-                       // Super admin can read everything — no companyId constraint needed
                        isSuperAdminOnly()
-                       // Company members can read files from their company
                        || (
                             resource.data.keys().hasAny(['companyId'])
                             && belongsToCompany(resource.data.companyId)
+                            && (
+                                 resource.data.cdeReadReach == 'tenant'
+                                 || resource.data.createdBy == request.auth.uid
+                               )
                           )
                      );
 
@@ -674,6 +713,13 @@ service cloud.firestore {
                     //    (ADR-862 Β7). Από τη γέννηση και μετά παγώνει κι αυτό.
                     && !request.resource.data.keys().hasAny(
                          ['cdeShare', 'cdeSeal', 'cdeRelease', 'cdeWithdrawal'])
+                    // 🔒 ADR-862 Φ0 Β11 — ο φράχτης της γέννησης ΣΥΜΦΩΝΕΙ με τη φάση
+                    // (`READ_REACH_BY_PHASE`): `pre-cde` ⇒ `tenant` (`BIRTH_READ_REACH`,
+                    // ό,τι γράφει ο builder)· δηλωμένο `WIP` ⇒ `author`. Απών ⇒ ο builder
+                    // δεν έτρεξε ⇒ αρχείο αόρατο σε κάθε λίστα. Ασυμφωνία ⇒ ο θεματοφύλακας
+                    // θα το έκανε `unreadable` ⇒ αρνούμαστε ΕΔΩ, όχι αργότερα.
+                    && request.resource.data.get('cdeReadReach', null)
+                         == (request.resource.data.keys().hasAny(['cdeState']) ? 'author' : 'tenant')
                     && resource == null; // Ensure document doesn't exist
 
       // 📝 UPDATE: Only creator or company admin can finalize
@@ -850,6 +896,22 @@ service cloud.firestore {
                        );
 
         allow write: if false;
+      }
+
+      // =========================================================================
+      // 👥 PROJECT MEMBERS — η ομάδα του έργου (ADR-862 Φ0 Β14 · ADR-787 §5.1)
+      // =========================================================================
+      // `companies/{W}/projects/{P}/members/{mbr_…}` — ΜΟΝΟ διακομιστής.
+      //
+      // 🔴 ΡΗΤΟ `false` ΚΑΙ ΟΧΙ ΣΙΩΠΗΡΟ DEFAULT-DENY: μέχρι το Β14 δεν υπήρχε
+      //    κανένα μπλοκ, και η άρνηση ερχόταν από το καθολικό catch-all — σωστό
+      //    σήμερα, εύθραυστο αύριο: ένα μελλοντικό `match /{document=**}` μέσα στο
+      //    `companies/{companyId}` θα το άνοιγε σιωπηλά. Το έγγραφο αποφασίζει
+      //    ΠΟΙΟΣ ΒΛΕΠΕΙ αρχεία CDE (`decideContainerAccess`, βήμα 4): εγγραφή από
+      //    πελάτη = αυτο-ένταξη σε ξένη υπόθεση, ανάγνωση = απαρίθμηση ομάδας.
+      //    Ο ΕΝΑΣ γραφέας: `lib/auth/project-member-write.ts` (Admin SDK, CHECK 3.88).
+      match /projects/{projectId}/members/{memberId} {
+        allow read, write: if false;
       }
 
       // =========================================================================
@@ -1476,6 +1538,38 @@ service cloud.firestore {
     match /owner_properties/{ownerPropertyId} {
       allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
 
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // 📅 ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ — ADR-835 §20 (Στάδιο Α)
+    // =========================================================================
+    // Κεφαλή (`stay_calendars/{propertyId}`) · κλεισμένες νύχτες (`stay_blocks`) ·
+    // κρατήσεις (`stay_bookings`). ΙΔΙΟ σύνορο με το `owner_properties` παραπάνω, και
+    // επίτηδες: το ημερολόγιο είναι κομμάτι της αγγελίας.
+    //
+    // 🔴 ΚΑΝΕΙΣ ΔΕΝ ΓΡΑΦΕΙ ΑΠΟ ΤΟΝ ΠΕΛΑΤΗ, ΟΥΤΕ Ο ΣΥΝΤΑΚΤΗΣ. Κάθε εγγραφή τρέχει τον
+    // κριτή κατάληψης ΜΕΣΑ σε συναλλαγή και αυξάνει το `version` της κεφαλής — ό,τι
+    // έγραφε ο πελάτης θα παρέκαμπτε και τα δύο, δηλαδή θα ήταν overbooking με άλλο όνομα.
+    //
+    // ⚠️ Η οθόνη διαβάζει μέσω του διακομιστή (προβολή ανά θεατή, Στάδιο Ε)· ο κανόνας
+    // ανάγνωσης υπάρχει ως ΑΝΩΤΑΤΟ όριο, όχι ως δρόμος. Κανένα σκέλος για γραφείο —
+    // ίδιος λόγος με το `owner_properties` (ένας άξονας απομόνωσης).
+    match /stay_calendars/{propertyId} {
+      allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    match /stay_blocks/{blockId} {
+      allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    match /stay_bookings/{bookingId} {
+      allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
       allow create, update: if false;
       allow delete: if false;
     }

@@ -63,6 +63,13 @@
       "digest": "sha256:ed861e0f0baed0f00ef04b82eb92ba6f1a85065d0e61ce3813da15ac56a018d0",
       "source": "storage.rules",
       "target": "storage"
+    },
+    {
+      "at": "2026-09-17",
+      "commit": "feb3f5be",
+      "digest": "sha256:d88c428db98f913356147089a333f7189f7ba2948e7e119010384c0e411b86f0",
+      "source": "firestore.indexes.json",
+      "target": "firestore:indexes"
     }
   ]
 }

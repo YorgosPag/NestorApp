@@ -521,6 +521,43 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 👤 ADR-866 §5.2 — Η ΠΡΟΣΩΠΙΚΗ ΡΙΖΑ ΤΗΣ ΚΑΝΟΝΙΚΗΣ ΔΙΑΔΡΟΜΗΣ
+    // =========================================================================
+    // Path: /people/{userId}/entities/{entityType}/{entityId}/
+    //       domains/{domain}/categories/{category}/files/{fileId}.{ext}
+    //
+    // 🔑 ΙΔΙΟ ΣΧΗΜΑ με το `canonical_no_project` — αλλάζει ΜΟΝΟ η ρίζα: ο κάτοχος είναι
+    // ΑΝΘΡΩΠΟΣ, όχι εταιρεία (`buildStoragePath` με `{ userId }`). Ο ιδιώτης δεν έχει και
+    // δεν επιτρέπεται να αποκτήσει `companyId` (ADR-787 Ε-3 §3), άρα κανένα
+    // `/companies/…` block δεν μπορεί ποτέ να τον εξυπηρετήσει.
+    //
+    // 🔴 ΧΩΡΙΣΤΗ ΡΙΖΑ, ΟΧΙ ΚΛΑΔΟΣ ΜΕΣΑ ΣΤΑ `/companies/…`: η απομόνωση είναι το ίδιο το
+    // μονοπάτι (`{userId}` πρώτο) — καμία ανάγνωση Firestore, ίδιο σκεπτικό με το
+    // `owner_property_media`. Και το `/companies/…` block μένει ΑΝΕΓΓΙΧΤΟ.
+    //
+    // ⛔ ΟΥΤΕ super_admin (ADR-866 §5.8): ο φάκελος του σπιτιού ενός ανθρώπου — τίτλοι,
+    // συμβόλαια, κατόψεις — είναι ιδιωτικός εξ ορισμού (πρότυπο: τα Drafts του Figma δεν τα
+    // βλέπει ο admin του οργανισμού). Πρόσβαση τρίτου έρχεται ΜΟΝΟ μέσω ADR-862 (Φ3), από
+    // τον διακομιστή — ΠΟΤΕ με χαλάρωση αυτού του κανόνα.
+    //
+    // 🧾 Ο ΤΥΠΟΣ ελέγχεται (όπως στο `owner_property_media`): τα αρχεία ΜΕΝΟΥΝ.
+
+    // @pathId: canonical_personal
+    match /people/{userId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
+
+      // 📖 READ: μόνο ο κάτοχος.
+      allow read: if isOwner(userId);
+
+      // ✍️ WRITE: μόνο ο κάτοχος, με έλεγχο μεγέθους ΚΑΙ τύπου.
+      allow write: if isOwner(userId)
+                   && isValidFileSize()
+                   && isAllowedContentType();
+
+      // 🗑️ DELETE: μόνο ο κάτοχος (κάδος → εκκαθάριση, ΓΚΠΔ — ADR-866 §5.8).
+      allow delete: if isOwner(userId);
+    }
+
+    // =========================================================================
     // 📄 TEMPORARY UPLOADS (for processing)
     // =========================================================================
     // Path: /temp/{userId}/{filename}

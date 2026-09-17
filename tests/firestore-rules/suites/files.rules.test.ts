@@ -109,12 +109,16 @@ describe('files.rules — tenant_state_machine pattern', () => {
             storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/created.pdf`,
             createdBy: createdByFor(cell.persona),
             companyId: SAME_TENANT_COMPANY_ID,
+            // ADR-862 Φ0 Β11 — ό,τι γράφει ο builder (`BIRTH_READ_REACH`).
+            cdeReadReach: 'tenant',
           },
-          listFilter: {
-            field: 'companyId',
-            op: '==',
-            value: SAME_TENANT_COMPANY_ID,
-          },
+          // ADR-862 Φ0 Β11 — η λίστα όπως τη συνθέτει το `firestoreQueryService`: μισθωτής
+          // ΚΑΙ φράχτης γραφείου. Η μήτρα ρωτά «ποιο πρόσωπο», όχι «ποιο φίλτρο» — το
+          // φίλτρο το ρωτά το μπλοκ `cde read` παρακάτω.
+          listFilter: [
+            { field: 'companyId', op: '==', value: SAME_TENANT_COMPANY_ID },
+            { field: 'cdeReadReach', op: '==', value: 'tenant' },
+          ],
         };
 
         await assertCell(ctx, cell, target);
@@ -163,6 +167,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
         storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/cde-freeze.pdf`,
         createdBy: ADMIN_UID,
         companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
         ...extra,
       };
     }
@@ -261,7 +266,9 @@ describe('files.rules — tenant_state_machine pattern', () => {
 
     it('✅ γέννηση με ρητό `WIP`: ΕΠΙΤΡΕΠΕΤΑΙ — η κατάσταση γέννησης', async () => {
       await expectAllow(
-        fileDoc('cde-born-wip').set(createPayload({ cdeState: 'WIP', cdeTeamId: 'team-mep' })),
+        fileDoc('cde-born-wip').set(
+          createPayload({ cdeState: 'WIP', cdeTeamId: 'team-mep', cdeReadReach: 'author' }),
+        ),
       );
     });
 
@@ -317,6 +324,106 @@ describe('files.rules — tenant_state_machine pattern', () => {
       for (const claim of [{ supersededByFileId: 'file_successor' }, { supersededAt: new Date('2026-09-17') }]) {
         await expectDeny(fileDoc(docId).update({ ...productionTrashPayload(), ...claim }));
       }
+    });
+
+    it('⛔ άνοιγμα του φράχτη ανάγνωσης (`cdeReadReach`) από πελάτη: ΑΡΝΗΣΗ', async () => {
+      const docId = 'cde-reach-open';
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { cdeState: 'WIP', cdeReadReach: 'author' },
+      });
+
+      await expectDeny(fileDoc(docId).update({ ...TRASH_UPDATE, cdeReadReach: 'tenant' }));
+    });
+
+    it('⛔ γέννηση ΧΩΡΙΣ φράχτη, ή με φράχτη που δεν ταιριάζει στη φάση: ΑΡΝΗΣΗ', async () => {
+      const { cdeReadReach: _omitted, ...withoutReach } = createPayload();
+      await expectDeny(fileDoc('cde-born-no-reach').set(withoutReach));
+      await expectDeny(fileDoc('cde-born-author').set(createPayload({ cdeReadReach: 'author' })));
+      await expectDeny(
+        fileDoc('cde-born-wip-open').set(createPayload({ cdeState: 'WIP', cdeReadReach: 'tenant' })),
+      );
+    });
+  });
+
+  // --- ADR-862 Φ0 (Β11) — Η ΑΝΑΓΝΩΣΗ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΚΑΤΑΣΤΑΣΗ -----------------
+  //
+  // 🔑 Εκτός μήτρας για τον ίδιο λόγο με το πάγωμα: ρωτά «ποιο ΦΙΛΤΡΟ / ποια ΦΑΣΗ»,
+  // όχι «ποιο πρόσωπο». Πρόσωπο: `same_tenant_user` — περνά μισθωτή και ανάγνωση, δεν
+  // είναι δημιουργός, δεν έχει παράκαμψη. Κάθε άρνηση αποδίδεται ΜΟΝΟ στον φράχτη.
+  describe('cde read — η ανάγνωση ακολουθεί την κατάσταση (ADR-862 Φ0 Β11)', () => {
+    const USER_UID = PERSONA_CLAIMS.same_tenant_user.uid;
+    const files = () => getContext(env, 'same_tenant_user').firestore().collection('files');
+
+    async function seedForeignWip(docId: string): Promise<void> {
+      await seedFile(env, docId, {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { createdBy: 'u-colleague', cdeState: 'WIP', cdeReadReach: 'author' },
+      });
+    }
+
+    it('✅ λίστα με φράχτη γραφείου: ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
+      await seedFile(env, 'cde-read-tenant', { companyId: SAME_TENANT_COMPANY_ID });
+      await expectAllow(
+        files()
+          .where('companyId', '==', SAME_TENANT_COMPANY_ID)
+          .where('cdeReadReach', '==', 'tenant')
+          .get(),
+      );
+    });
+
+    it('🔴 λίστα ΧΩΡΙΣ φίλτρο φράχτη: ΑΡΝΗΣΗ — «rules are not filters», ακόμη και χωρίς κανένα WIP', async () => {
+      await seedFile(env, 'cde-read-unfiltered', { companyId: SAME_TENANT_COMPANY_ID });
+      await expectDeny(files().where('companyId', '==', SAME_TENANT_COMPANY_ID).get());
+    });
+
+    it('⛔ λίστα που ζητά τα `author` όλου του γραφείου: ΑΡΝΗΣΗ', async () => {
+      await seedForeignWip('cde-read-author-list');
+      await expectDeny(
+        files()
+          .where('companyId', '==', SAME_TENANT_COMPANY_ID)
+          .where('cdeReadReach', '==', 'author')
+          .get(),
+      );
+    });
+
+    it('✅ λίστα «τα δικά μου» (`createdBy == uid`): ΕΠΙΤΡΕΠΕΤΑΙ — φέρνει και το WIP μου', async () => {
+      await seedFile(env, 'cde-read-own-wip', {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { createdBy: USER_UID, cdeState: 'WIP', cdeReadReach: 'author' },
+      });
+      await expectAllow(
+        files()
+          .where('companyId', '==', SAME_TENANT_COMPANY_ID)
+          .where('createdBy', '==', USER_UID)
+          .get(),
+      );
+    });
+
+    it('⛔ get ΞΕΝΟΥ WIP με γνωστό id: ΑΡΝΗΣΗ — το όριο του ADR-373 κλείνει', async () => {
+      await seedForeignWip('cde-read-foreign-wip');
+      await expectDeny(files().doc('cde-read-foreign-wip').get());
+    });
+
+    it('✅ get ΔΙΚΟΥ WIP: ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
+      await seedFile(env, 'cde-read-get-own-wip', {
+        companyId: SAME_TENANT_COMPANY_ID,
+        overrides: { createdBy: USER_UID, cdeState: 'WIP', cdeReadReach: 'author' },
+      });
+      await expectAllow(files().doc('cde-read-get-own-wip').get());
+    });
+
+    it('✅ get εγγράφου ΠΡΙΝ τη μετανάστευση (χωρίς φράχτη): ΕΠΙΤΡΕΠΕΤΑΙ — «όπως σήμερα»', async () => {
+      // Γραμμένο απευθείας, όχι με τον σπορέα: ο σπορέας βάζει πλέον φράχτη σε κάθε έγγραφο.
+      await withSeedContext(env, async (seedCtx) => {
+        await seedCtx.firestore().collection('files').doc('cde-read-legacy').set({
+          id: 'cde-read-legacy',
+          companyId: SAME_TENANT_COMPANY_ID,
+          createdBy: 'u-colleague',
+          status: 'ready',
+        });
+      });
+      await expectAllow(files().doc('cde-read-legacy').get());
     });
   });
 });

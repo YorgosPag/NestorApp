@@ -450,6 +450,27 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/owner-properties.rules.test.ts',
     ...serverWrittenAuthorOwnedMatrix(),
   },
+  // ADR-835 §20 (Στάδιο Α) — ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ. Ίδιο σύνορο με την αγγελία: ο
+  // συντάκτης διαβάζει, κανείς δεν γράφει από τον πελάτη (ο κριτής κατάληψης τρέχει μόνο
+  // στη συναλλαγή του διακομιστή). Τρίτος–πέμπτος καταναλωτής της ίδιας μήτρας.
+  {
+    collection: 'stay_calendars',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/stay-calendars.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
+  },
+  {
+    collection: 'stay_blocks',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/stay-blocks.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
+  },
+  {
+    collection: 'stay_bookings',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/stay-bookings.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
+  },
   {
     collection: 'projects',
     pattern: 'tenant_direct',
