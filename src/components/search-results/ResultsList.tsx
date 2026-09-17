@@ -12,14 +12,23 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useListingRevealTracking } from '@/hooks/listings/useListingRevealTracking';
-import { focusedListingId, listingFocusStrength, type ListingFocus } from '@/lib/listings/listing-focus';
-import { ListingCard } from './ListingCard';
+import { focusedListingId, type ListingFocus } from '@/lib/listings/listing-focus';
+import { flattenListingSections, type ListingSections } from '@/lib/listings/listing-price-sections';
+import { ResultsListSection } from './ResultsListSection';
 import { ListingEdgeIndicator } from './ListingEdgeIndicator';
 import { UnmappedListingsRow } from './UnmappedListingsRow';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ResultsListProps {
-  readonly mapped: readonly PublicListing[];
+  /**
+   * **Η λίστα ως ΑΚΟΛΟΥΘΙΑ ΚΛΑΣΕΩΝ**, όχι ως επίπεδος πίνακας (ADR-777 §8.60.14).
+   *
+   * 🔴 Ποσά διαφορετικού ρόλου είναι **ασύγκριτα**: «50 €/νύχτα», «900 €/μήνα» και
+   * «170.000 €» δεν μπαίνουν σε έναν άξονα. Ο τύπος της εισόδου **δεν εκφράζει** ενιαία
+   * κατάταξη, άρα η λίστα δεν μπορεί να την υποθέσει — με **μία** κλάση ο τύπος
+   * εκφυλίζεται σε ένα τμήμα χωρίς επιγραφή και η οθόνη μένει **ακριβώς** η σημερινή.
+   */
+  readonly sections: ListingSections;
   readonly unmapped: readonly PublicListing[];
   /**
    * **Η ΕΣΤΙΑΣΗ ΟΛΟΚΛΗΡΗ** — «τι κοιτάζω» ΚΑΙ «τι διάλεξα», ποτέ συμπτυγμένα σε ένα.
@@ -50,7 +59,7 @@ interface ResultsListProps {
 }
 
 export function ResultsList({
-  mapped,
+  sections,
   unmapped,
   focus,
   onHover,
@@ -58,7 +67,22 @@ export function ResultsList({
   undeclaredLabelsFor,
 }: ResultsListProps) {
   const { t } = useTranslation(['search-results']);
+
+  /**
+   * Οι τοποθετημένες αγγελίες ως **ένας** πίνακας — για την **εστίαση** και για το
+   * «άδειο». 🔑 Ούτε η μία ούτε η άλλη ερώτηση αφορά τη μονάδα του ποσού, άρα εδώ η
+   * ισοπέδωση δεν λέει τίποτα για τη σειρά *(δες `flattenListingSections`)*.
+   */
+  const mapped = useMemo(() => flattenListingSections(sections), [sections]);
   const isEmpty = mapped.length === 0 && unmapped.length === 0;
+
+  /**
+   * 🔑 **ΜΟΝΟ Η ΠΡΩΤΗ ΚΑΡΤΑ ΟΛΗΣ ΤΗΣ ΛΙΣΤΑΣ ΕΙΝΑΙ «ΥΨΗΛΗΣ»** (ADR-841 §7 Α2.4) — κατά
+   * **ταυτότητα**, όχι κατά δείκτη μέσα στο τμήμα: με τρία τμήματα, ένα `index === 0`
+   * ανά τμήμα θα έδινε **τρεις** εικόνες υψηλής προτεραιότητας, που **ακυρώνουν η μία
+   * την άλλη** — ακριβώς το ελάττωμα που ο κανόνας υπάρχει για να αποκλείσει.
+   */
+  const priorityId = mapped[0]?.id ?? null;
 
   const { scrollerRef, focusVisibility, revealFocused } = useListingRevealTracking(focus);
 
@@ -112,24 +136,17 @@ export function ResultsList({
           {isEmpty ? (
             <p className="p-4 text-sm text-muted-foreground">{t('search-results:list.empty')}</p>
           ) : (
-            <ul className="space-y-2 p-3">
-              {/*
-                🔑 **ΜΟΝΟ Η ΠΡΩΤΗ ΚΑΡΤΑ ΕΙΝΑΙ «ΥΨΗΛΗΣ»** (ADR-841 §7 Α2.4): η θέση είναι
-                γνώση **της λίστας**, όχι της κάρτας — και πολλές εικόνες υψηλής
-                προτεραιότητας **ακυρώνουν η μία την άλλη**.
-              */}
-              {mapped.map((listing, index) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  focusStrength={listingFocusStrength(focus, listing.id)}
-                  onHover={onHover}
-                  filterQuery={filterQuery}
-                  priority={index === 0}
-                  undeclaredLabels={undeclaredLabelsFor(listing)}
-                />
-              ))}
-            </ul>
+            sections.map((section) => (
+              <ResultsListSection
+                key={section.heading ?? 'all'}
+                section={section}
+                focus={focus}
+                onHover={onHover}
+                filterQuery={filterQuery}
+                priorityId={priorityId}
+                undeclaredLabelsFor={undeclaredLabelsFor}
+              />
+            ))
           )}
         </div>
       </div>

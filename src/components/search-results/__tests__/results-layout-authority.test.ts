@@ -153,14 +153,17 @@ describe('Η ΣΕΙΡΑ ΦΤΑΝΕΙ ΣΤΗ ΛΙΣΤΑ ΚΑΙ ΟΧΙ ΣΤΟΝ Χ
   it('Σ2: ο `ResultsList` παίρνει τον ΤΑΞΙΝΟΜΗΜΕΝΟ — μέσα από το **ΕΝΑ** δοχείο (§8.62)', () => {
     const props = propsOf('ResultsList');
 
-    // ⚠️ **ΤΟ ΟΝΟΜΑ ΑΛΛΑΞΕ, Η ΕΓΓΥΗΣΗ ΟΧΙ.** Ως το §8.61 τα props ήταν κατευθείαν
-    //    `orderedMapped`/`orderedUnmapped`. Το §8.62 τα πέρασε μέσα από **ένα**
+    // ⚠️ **ΤΟ ΟΝΟΜΑ ΑΛΛΑΞΕ ΔΥΟ ΦΟΡΕΣ, Η ΕΓΓΥΗΣΗ ΟΧΙ.** Ως το §8.61 τα props ήταν
+    //    κατευθείαν `orderedMapped`/`orderedUnmapped`. Το §8.62 τα πέρασε μέσα από **ένα**
     //    `listView`, ώστε ο μετρητής να μετρά **ό,τι ακριβώς** παίρνει η λίστα (δες Σ2γ).
-    expect(props).toMatch(/mapped=\{listView\.mapped\}/);
+    //    Το §8.60.14 άλλαξε τον **τύπο**: η λίστα παίρνει **τμήματα**, γιατί ποσά
+    //    διαφορετικού ρόλου είναι ασύγκριτα και ένας επίπεδος πίνακας θα επέτρεπε σε
+    //    κάθε καταναλωτή να υποθέσει ενιαία κατάταξη.
+    expect(props).toMatch(/sections=\{listView\.sections\}/);
     expect(props).toMatch(/unmapped=\{listView\.unmapped\}/);
 
     // Η ρητή άρνηση μένει: η λίστα δεν επιτρέπεται να πάρει τον **ωμό** πίνακα.
-    expect(props).not.toMatch(/mapped=\{mapped\}/);
+    expect(props).not.toMatch(/sections=\{mapped\}/);
     expect(props).not.toMatch(/unmapped=\{unmapped\}/);
   });
 
@@ -168,7 +171,7 @@ describe('Η ΣΕΙΡΑ ΦΤΑΝΕΙ ΣΤΗ ΛΙΣΤΑ ΚΑΙ ΟΧΙ ΣΤΟΝ Χ
     // Χωρίς αυτό, το Σ2 θα ήταν **πράσινο ακόμη κι αν** το `listView` κρατούσε τους
     // αταξινόμητους: θα επαλήθευε το **όνομα** του δοχείου, όχι το περιεχόμενό του.
     // Η εγγύηση έγινε αλυσίδα δύο κρίκων, άρα χρειάζεται δύο ισχυρισμούς.
-    expect(SCREEN_SOURCE).toMatch(/mapped:\s*orderedMapped/);
+    expect(SCREEN_SOURCE).toMatch(/sections:\s*orderedSections/);
     expect(SCREEN_SOURCE).toMatch(/unmapped:\s*orderedUnmapped/);
   });
 
@@ -176,9 +179,14 @@ describe('Η ΣΕΙΡΑ ΦΤΑΝΕΙ ΣΤΗ ΛΙΣΤΑ ΚΑΙ ΟΧΙ ΣΤΟΝ Χ
     // Ο πυρήνας του Βήματος 2: για να κοπεί η λίστα, το κόψιμο πρέπει να συμβεί μέσα
     // στο `listView` — και τότε το `renderedCount` πέφτει **στην ίδια αναπνοή**. Αν
     // κάποιος ξαναδώσει στον μετρητή άλλο σύνολο (π.χ. `visible.length`), εδώ κοκκινίζει.
+    //
+    // 🔴 **ΚΑΙ ΜΕΤΡΑΕΙ ΤΑ ΤΜΗΜΑΤΑ, ΟΧΙ ΤΟΝ ΑΡΧΙΚΟ ΠΙΝΑΚΑ** (§8.60.14): ένα
+    //    `mapped.length` εδώ θα έμενε σωστό ακόμη κι αν η διαμέριση έχανε αγγελία —
+    //    δηλαδή ο μετρητής θα ήταν ξανά «ταυτόχρονα συνεπής και ψεύτης».
     expect(SCREEN_SOURCE).toMatch(
-      /renderedCount\s*=\s*listView\.mapped\.length\s*\+\s*listView\.unmapped\.length/
+      /renderedCount\s*=\s*countListingSections\(listView\.sections\)\s*\+\s*listView\.unmapped\.length/
     );
+    expect(SCREEN_SOURCE).not.toMatch(/renderedCount\s*=\s*mapped\.length/);
     expect(propsOf('ListingLedgerBar')).toMatch(/rendered=\{renderedCount\}/);
   });
 

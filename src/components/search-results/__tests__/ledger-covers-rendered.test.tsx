@@ -67,6 +67,7 @@ import { ListingLedgerBar } from '../ListingLedgerBar';
 import { ResultsList } from '../ResultsList';
 import { ledgerCoversRendered, type ListingLedger } from '@/types/public-listing';
 import { NO_LISTING_FOCUS } from '@/lib/listings/listing-focus';
+import type { ListingSections } from '@/lib/listings/listing-price-sections';
 /**
  * ⚠️ **ΔΑΝΕΙΣΜΕΝΟ ΕΡΓΟΣΤΑΣΙΟ, ΚΑΙ ΕΙΝΑΙ ΣΥΝΕΙΔΗΤΟ.** Η `PublicListing` έχει ~50
  * υποχρεωτικά πεδία· γράφοντάς τα εδώ θα γεννιόταν **δίδυμο** που το N.18 (jscpd)
@@ -146,10 +147,16 @@ describe('Γ — η λίστα ζωγραφίζει **ΟΛΑ** όσα της δ�
       listing({ id: `prop_cov_${i}`, title: `Αγγελία ${i}` })
     );
 
-  function drawList(listings: readonly PublicListing[]) {
+  /**
+   * ⚠️ **Η λίστα παίρνει ΤΜΗΜΑΤΑ** (ADR-777 §8.60.14). Εδώ δίνεται **ένα** τμήμα χωρίς
+   * επιγραφή — ακριβώς ό,τι παράγει ο `orderResultsListings` για ομοιογενή
+   * αποτελέσματα — ώστε η ομάδα Γ να κρίνει **μόνο** αυτό που δηλώνει: ότι
+   * ζωγραφίζονται **όλα** όσα δόθηκαν.
+   */
+  function drawSections(sections: ListingSections) {
     return render(
       <ResultsList
-        mapped={listings}
+        sections={sections}
         unmapped={[]}
         focus={NO_LISTING_FOCUS}
         onHover={() => {}}
@@ -157,6 +164,10 @@ describe('Γ — η λίστα ζωγραφίζει **ΟΛΑ** όσα της δ�
         undeclaredLabelsFor={() => []}
       />
     );
+  }
+
+  function drawList(listings: readonly PublicListing[]) {
+    return drawSections([{ heading: null, listings }]);
   }
 
   it('🔴 41 αγγελίες ⇒ 41 κάρτες στο DOM — κανένα σιωπηλό ταβάνι', () => {
@@ -191,6 +202,34 @@ describe('Γ — η λίστα ζωγραφίζει **ΟΛΑ** όσα της δ�
     const card = container.querySelector('[data-listing-id="prop_cov_0"]');
     expect(card).not.toBeNull();
     expect(card).toHaveClass('card');
+  });
+
+  it('🔴 ΜΕ ΤΜΗΜΑΤΑ: ζωγραφίζονται ΟΛΕΣ οι κάρτες ΟΛΩΝ των τμημάτων — η λογιστική κλείνει', () => {
+    // Το §8.62 εγγυάται ότι ο μετρητής μετρά **ό,τι ακριβώς** ζωγραφίζεται. Η
+    // διαμέριση του §8.60.14 είναι η πρώτη φορά που η λίστα έχει **περισσότερα από ένα**
+    // δοχεία — δηλαδή η πρώτη ευκαιρία να ξεχαστεί ένα.
+    const { container } = drawSections([
+      { heading: 'sale', listings: mapped(2) },
+      { heading: 'nightly', listings: [listing({ id: 'prop_stay_0', title: 'Διαμονή' })] },
+    ]);
+
+    expect(container.querySelectorAll('[data-listing-id]')).toHaveLength(3);
+    expect(container.querySelectorAll('section[aria-labelledby] > h2')).toHaveLength(2);
+
+    // 🔴 **Η ΕΠΙΓΡΑΦΗ ΕΙΝΑΙ ΠΑΝΩ ΑΠΟ ΤΙΣ ΚΑΡΤΕΣ, ΟΧΙ ΔΙΠΛΑ ΤΟΥΣ.** Ο τίτλος κάθε κάρτας
+    //    είναι `<h3>`· μια επιγραφή στο ίδιο επίπεδο θα έκανε την κλάση **αδελφό** των
+    //    μελών της. Η πρώτη γραφή το είχε λάθος και το έπιασε αυτή η άγκυρα.
+    expect(container.querySelectorAll('h2')).toHaveLength(2);
+  });
+
+  it('🔴 ΧΩΡΙΣ επιγραφή δεν γεννιέται ΚΑΜΙΑ — μία κλάση δεν ανακοινώνεται', () => {
+    // Φυλάει τη ρητή απόφαση: επιγραφή πάνω από ομοιογενή λίστα θα επαναλάμβανε ό,τι
+    // λέει ήδη η μονάδα κάθε κάρτας (§8.60.11).
+    const { container } = drawList(mapped(3));
+    expect(container.querySelectorAll('h2')).toHaveLength(0);
+    expect(container.querySelectorAll('section[aria-labelledby]')).toHaveLength(0);
+    // …και δεν «εξαφανίστηκαν» οι κάρτες μαζί με την επιγραφή:
+    expect(container.querySelectorAll('[data-listing-id]')).toHaveLength(3);
   });
 });
 
