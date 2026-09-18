@@ -36,7 +36,11 @@ import {
   parseJsonBody,
   prepareMemberMutation,
 } from '@/lib/api/role-management-helpers';
-import { transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-writer';
+import {
+  resolveDepartureHeir,
+  transferActTeamsOnDeparture,
+} from '@/services/network-messaging/act-team-departure';
+import { belongsHere } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('RoleManagement:UserStatus');
 
@@ -121,16 +125,29 @@ export const PATCH = withSensitiveRateLimit(
         // ⚠️ **Δεν ρίχνει την αναστολή**: ο λογαριασμός είναι ήδη κλειδωμένος και αυτό
         //    είναι το επείγον. Αποτυχία εδώ αφήνει ομάδες με ανενεργό υπεύθυνο — ονομαστικά
         //    στο log, και το backfill τις ξαναβρίσκει.
+        // 🔴 ADR-867 Β5: ο κληρονόμος **δεν** είναι πια «όποιος έκανε την αναστολή» — η διαδρομή
+        //    απαιτεί `BYPASS_ROLES`, άρα σε ξένο γραφείο θα έβαζε τον super_admin να διαβάζει
+        //    ιδιωτικά νήματα. Πρότυπο Microsoft 365: άνθρωπος του ΙΔΙΟΥ γραφείου, ή κανείς.
         let transferredTeams = 0;
+        let orphanedTeams = 0;
         if (isSuspend) {
           try {
-            const transfer = await transferActTeamsOnDeparture(prepared.value.db, {
+            const db = prepared.value.db;
+            const fallbackUid = await resolveDepartureHeir(db, {
               companyId: ctx.companyId,
               departingUid: targetUid,
-              fallbackUid: ctx.uid,
+              actorUid: ctx.uid,
+              actorIsMember: belongsHere(ctx.membershipVerdict),
+            });
+            const transfer = await transferActTeamsOnDeparture(db, {
+              companyId: ctx.companyId,
+              departingUid: targetUid,
+              fallbackUid,
+              performedBy: ctx.uid,
               nowISO: nowISO(),
             });
             transferredTeams = transfer.transferred;
+            orphanedTeams = transfer.orphaned;
           } catch (error) {
             logger.error('[ACT-TEAM] Η μεταβίβαση ευθύνης απέτυχε — η αναστολή ΕΓΙΝΕ', {
               targetUid,
@@ -145,7 +162,7 @@ export const PATCH = withSensitiveRateLimit(
         await logAuditEvent(ctx, auditAction, targetUid, 'user', {
           previousValue: { type: 'status', value: currentStatus },
           newValue: { type: 'status', value: newStatus },
-          metadata: { reason: body.reason, transferredActTeams: transferredTeams },
+          metadata: { reason: body.reason, transferredActTeams: transferredTeams, orphanedActTeams: orphanedTeams },
         });
 
         logger.info('User status changed', {

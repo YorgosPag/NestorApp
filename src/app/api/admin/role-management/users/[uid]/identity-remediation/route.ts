@@ -65,6 +65,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { extractUidFromPath } from '@/lib/api/route-helpers';
 import { failWithLoggedError, parseJsonBody, rejectSelfTarget } from '@/lib/api/role-management-helpers';
 import { reconcileIdentity } from '@/lib/auth/identity-provenance';
+import { nowISO } from '@/lib/date-local';
+import { transferActTeamsOnPlatformDeparture } from '@/services/network-messaging/act-team-departure';
+import { belongsHere } from '@/types/workspace-membership';
 import {
   explainNoMaterialisation,
   explainNoPlan,
@@ -182,11 +185,14 @@ export const PATCH = withSensitiveRateLimit(
           );
         }
 
+        const departure = await departIfSuspended(ctx, targetUid, result.before, result.after);
+
         await recordRemediation(ctx, targetUid, plan.plan.forward.summary, body.reason, {
           verdict: outcome.verdict,
           before: result.before,
           after: result.after,
           inverse: plan.plan.inverse,
+          ...departure,
         });
 
         logger.info('Identity remediation applied', { targetUid, verdict: outcome.verdict });
@@ -264,6 +270,39 @@ async function handleMaterialisation(
 }
 
 /**
+ * 🏆 **ADR-867 Β5 — Ο ΔΕΥΤΕΡΟΣ ΓΡΑΦΕΑΣ ΑΠΟΧΩΡΗΣΗΣ**: μια θεραπεία που **περνά** τον άνθρωπο σε
+ * `suspended` τον κλείνει σε **όλη** την πλατφόρμα — άρα η ευθύνη των πράξεών του μεταβιβάζεται σε
+ * **κάθε** γραφείο του, σε άνθρωπο **του ίδιου** γραφείου (πρότυπο Microsoft 365). Ο super_admin που
+ * εκτελεί τη θεραπεία **δεν** κληρονομεί σε ξένο γραφείο (ADR-834 (γ)/(ε) ②, ζωντανή άγκυρα Ζ2).
+ *
+ * ⚠️ **Δεν ρίχνει τη θεραπεία** (ίδιο δόγμα με το `…/status`): η ταυτότητα είναι ήδη διορθωμένη και
+ * αυτό είναι το επείγον. Αποτυχία ⇒ ονομαστικά στο log, και τα νούμερα στο ίχνος.
+ */
+async function departIfSuspended(
+  ctx: AuthContext,
+  targetUid: string,
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): Promise<{ readonly transferredActTeams: number; readonly orphanedActTeams: number } | Record<string, never>> {
+  if (after.status !== 'suspended' || before.status === 'suspended') return {};
+  try {
+    const outcome = await transferActTeamsOnPlatformDeparture(getAdminFirestore(), {
+      departingUid: targetUid,
+      actorUid: ctx.uid,
+      actorMemberWorkspaceId: belongsHere(ctx.membershipVerdict) ? ctx.companyId : null,
+      nowISO: nowISO(),
+    });
+    return { transferredActTeams: outcome.transferred, orphanedActTeams: outcome.orphaned };
+  } catch (error) {
+    logger.error('[ACT-TEAM] Η μεταβίβαση ευθύνης απέτυχε — η θεραπεία ΕΓΙΝΕ', {
+      targetUid,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {};
+  }
+}
+
+/**
  * Η καταγραφή — **μέσα από το υπάρχον SSoT**, ποτέ απευθείας στη συλλογή.
  *
  * ⚠️ Δύο εγγραφές όταν αλλάζει ρόλος, **επίτηδες**: το `role_changed` είναι το
@@ -288,6 +327,11 @@ async function recordRemediation(
   await logAuditEvent(ctx, 'data_fix_executed', targetUid, 'user', {
     previousValue: { type: 'status', value: before as Record<string, unknown> | null },
     newValue: { type: 'status', value: after as Record<string, unknown> | null },
-    metadata: { reason: `${summary} — ${reason}` },
+    metadata: {
+      reason: `${summary} — ${reason}`,
+      // ADR-867 Β5 — ίδια μεταδεδομένα με το `…/status`: πόσες ευθύνες άλλαξαν χέρια, πόσες έμειναν ορφανές.
+      ...(typeof evidence.transferredActTeams === 'number' ? { transferredActTeams: evidence.transferredActTeams } : {}),
+      ...(typeof evidence.orphanedActTeams === 'number' ? { orphanedActTeams: evidence.orphanedActTeams } : {}),
+    },
   });
 }

@@ -88,7 +88,11 @@ async function fetchCollection(
       id: snap.id,
       spaceType,
       area: (data.area as number) ?? 0,
+      // The price resolver's inputs, whole (ADR-777 §8.60.14.14): the sale dialog asks it for
+      // the SALE role, and without the commercial status it cannot tell rent from sale.
       commercial: data.commercial as BatchResolvedSpace['commercial'],
+      commercialStatus: (data.commercialStatus as BatchResolvedSpace['commercialStatus']) ?? undefined,
+      offerKinds: Array.isArray(data.offerKinds) ? (data.offerKinds as string[]) : undefined,
       name: (data.name as string) ?? undefined,
       buildingId: (data.buildingId as string) ?? undefined,
       floorId: (data.floorId as string) ?? undefined,
