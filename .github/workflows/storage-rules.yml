@@ -44,6 +44,7 @@ on:
       - 'scripts/_shared/storage-rules-parser.js'
       - '.github/workflows/storage-rules.yml'
       - 'firebase.json'
+      - '.firebaserc' # ADR-865 §11.7 — deploy target του Storage
   push:
     branches: [main]
     paths:
@@ -54,6 +55,7 @@ on:
       - 'scripts/_shared/storage-rules-parser.js'
       - '.github/workflows/storage-rules.yml'
       - 'firebase.json'
+      - '.firebaserc' # ADR-865 §11.7 — deploy target του Storage
 
 concurrency:
   group: storage-rules-${{ github.event_name == 'pull_request' && github.ref || github.sha }}

@@ -45,12 +45,12 @@ gcloud iam workload-identity-pools providers create-oidc nestor-app \
 gcloud iam roles create nestorFirebaseDriftReader --project=$PROJECT --stage=GA \
   --title="Nestor - Firebase drift reader (ADR-865)" \
   --description="Read-only: rules releases, index definitions, default bucket. NO data access." \
-  --permissions=firebaserules.releases.get,firebaserules.rulesets.get,datastore.databases.getMetadata,datastore.schemas.list,firebasestorage.defaultBucket.get,serviceusage.services.use
+  --permissions=firebaserules.releases.get,firebaserules.rulesets.get,datastore.databases.getMetadata,datastore.schemas.list,firebasestorage.defaultBucket.get,firebasestorage.buckets.get,resourcemanager.projects.get,serviceusage.services.use
 
 gcloud iam roles create nestorFirebaseRulesDeployer --project=$PROJECT --stage=GA \
   --title="Nestor - Firebase rules/indexes deployer (ADR-865)" \
   --description="Deploy rules and create/update indexes. NO deletes, NO data, NO IAM." \
-  --permissions=firebaserules.releases.get,firebaserules.releases.list,firebaserules.releases.create,firebaserules.releases.update,firebaserules.rulesets.get,firebaserules.rulesets.list,firebaserules.rulesets.create,firebaserules.rulesets.test,datastore.databases.getMetadata,datastore.schemas.get,datastore.schemas.list,datastore.schemas.create,datastore.schemas.update,datastore.operations.get,firebasestorage.defaultBucket.get,serviceusage.services.get,serviceusage.services.use,resourcemanager.projects.get
+  --permissions=firebaserules.releases.get,firebaserules.releases.list,firebaserules.releases.create,firebaserules.releases.update,firebaserules.rulesets.get,firebaserules.rulesets.list,firebaserules.rulesets.create,firebaserules.rulesets.test,datastore.databases.getMetadata,datastore.schemas.get,datastore.schemas.list,datastore.schemas.create,datastore.schemas.update,datastore.operations.get,firebasestorage.defaultBucket.get,firebasestorage.buckets.get,serviceusage.services.get,serviceusage.services.use,resourcemanager.projects.get
 
 # (δ) Δύο λογαριασμοί υπηρεσίας — ΧΩΡΙΣ κλειδί (κανένα αρχείο JSON δεν δημιουργείται ποτέ)
 gcloud iam service-accounts create gh-firebase-verify --project=$PROJECT \
@@ -132,6 +132,12 @@ Firebase Console → Firestore → Indexes.
   (`PERMISSION_DENIED … <permission>`). Πρόσθεσέ το στον ρόλο (`gcloud iam roles update
   nestorFirebaseRulesDeployer --project=pagonis-87766 --add-permissions=<permission>`) και
   **Re-run failed jobs**.
+- **Storage: `NO_DEFAULT_BUCKET` / «Deploy target main not configured»** (ADR-865 §11.7): ο bucket
+  **δηλώνεται** — `firebase.json` `"storage": [{ "target": "main", … }]` + `.firebaserc`
+  `targets.<project>.storage.main`. **ΜΗΝ** γυρίσεις το `storage` σε αντικείμενο (ξαναφέρνει την
+  ασταθή κλήση `defaultBucket`) και **ΜΗΝ** γράψεις `bucket` στον πίνακα (σπάει τον emulator). Νέο
+  project με emulator Storage ⇒ γραμμή στο `.firebaserc` (το ελέγχει η άγκυρα). **ΠΟΤΕ** `"projects"`
+  στο `.firebaserc`: μια προεπιλογή θα έστελνε κάθε εντολή χωρίς `--project` στην παραγωγή.
 - **Ζωντανή κατάσταση από τον υπολογιστή** (μόνο ανάγνωση):
   `npm run firestore:verify -- --project pagonis-87766` · με `--plan` βλέπεις τι θα έκανε η γραμμή.
 
