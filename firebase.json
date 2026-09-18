@@ -12,9 +12,12 @@
     "indexes": "firestore.indexes.json",
     "predeploy": ["node scripts/build-firestore-rules.js"]
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
+  "storage": [
+    {
+      "target": "main",
+      "rules": "storage.rules"
+    }
+  ],
   "hosting": {
     "public": "out",
     "ignore": [

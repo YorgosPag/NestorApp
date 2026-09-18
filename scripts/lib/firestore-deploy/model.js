@@ -39,6 +39,7 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 const paths = {
   root: ROOT,
   firebaseJson: path.join(ROOT, 'firebase.json'),
+  firebaserc: path.join(ROOT, '.firebaserc'),
   ledger: path.join(ROOT, '.firestore-deploy-ledger.json'),
   of: (relative) => path.join(ROOT, relative),
 };
@@ -101,23 +102,76 @@ function namedDatabaseOf(firebaseJson) {
 /** Η βάση Firestore του `firebase.json` — `(default)` όταν δεν ονομάζεται (firebase-tools). */
 const databaseOf = (firebaseJson) => namedDatabaseOf(firebaseJson) ?? '(default)';
 
-/** Ο bucket που ονομάζει ρητά το `firebase.json`, ή `null` (⇒ ο προεπιλεγμένος του project). */
-function explicitBucketOf(firebaseJson) {
+/**
+ * **Η δήλωση Storage του `firebase.json` όπως τη διαβάζει το `firebase deploy`** — `null` όταν
+ * δεν δηλώνεται, αλλιώς `{ bucket, target, rules }` (το πολύ ένα από `bucket`/`target` μη-null).
+ *
+ * Σημασιολογία του firebase-tools 15.13.0 (`deploy/storage/{prepare,release}.js`, αναγνωσμένα
+ * 2026-09-18):
+ * - **αντικείμενο** (`StorageSingle`: μόνο `rules`) ⇒ `bucket: null, target: null` — ο deployer
+ *   καλεί `getDefaultBucket()` (`v1alpha/…/defaultBucket`) και **αντικαθιστά** κάθε `bucket` του.
+ *   Γι' αυτό ένα `bucket` σε αντικείμενο **αγνοείται** και εδώ: ισχυρισμός που ο deployer δεν τιμά.
+ * - **πίνακας με `target`** ⇒ `rc.target(project, 'storage', target)` από το `.firebaserc` — ο
+ *   **τεκμηριωμένος** μηχανισμός της Google (*Deploy targets*) και ο **μόνος** που δέχεται και ο
+ *   emulator (`emulator/storage/rules/config.js`: «Must supply 'target'»). §11.7.
+ * - **πίνακας με `bucket`** ⇒ δηλωμένος, χωρίς `.firebaserc` — ο deployer τον δέχεται, ο emulator
+ *   **όχι**· γι' αυτό η άγκυρα απαιτεί `target` στο **πραγματικό** αρχείο.
+ *
+ * ⚠️ Η γραμμή κρίνει **έναν** στόχο `storage`: πίνακας με ≠1 στοιχεία, ή στοιχείο με **και τα δύο**
+ * (ο deployer προτιμά το `target` και αγνοεί σιωπηλά το `bucket`) ή **κανένα** ⇒ **ρίχνει** — ποτέ
+ * σιωπηλή επιλογή.
+ */
+function storageEntriesOf(firebaseJson) {
   const st = firebaseJson.storage;
-  return st && typeof st === 'object' && typeof st.bucket === 'string' ? st.bucket : null;
+  if (st === undefined || st === null) return null;
+  const rulesOf = (node) => (typeof node.rules === 'string' ? node.rules : null);
+  if (!Array.isArray(st)) {
+    return typeof st === 'object' ? { bucket: null, target: null, rules: rulesOf(st) } : null;
+  }
+  if (st.length !== 1) {
+    throw new Error(`firebase.json storage: ${st.length} buckets — η γραμμή κρίνει ακριβώς έναν (ADR-865 §11.7)`);
+  }
+  const [entry] = st;
+  const bucket = typeof entry.bucket === 'string' && entry.bucket !== '' ? entry.bucket : null;
+  const target = typeof entry.target === 'string' && entry.target !== '' ? entry.target : null;
+  if ((bucket === null) === (target === null)) {
+    throw new Error('firebase.json storage[0]: απαιτείται ΑΚΡΙΒΩΣ ένα από "target" / "bucket" (ADR-865 §11.7)');
+  }
+  return { bucket, target, rules: rulesOf(entry) };
+}
+
+/**
+ * **Ο bucket που ΔΗΛΩΝΕΤΑΙ στο δέντρο** για το `project`, ή `null` (⇒ ανακάλυψη, μορφή αντικειμένου).
+ *
+ * Το `target` λύνεται **ακριβώς** όπως το `release.js` του firebase-tools
+ * (`targets[project].storage[target] || []`). Κενή λίστα = το `requireTarget` του deployer
+ * **ρίχνει** ⇒ ρίχνουμε κι εμείς· **>1** buckets = ο deployer γράφει σε **όλους**, ενώ η γραμμή κρίνει
+ * **έναν** ⇒ ρίχνουμε αντί να κρίνουμε σιωπηλά τον πρώτο.
+ */
+function declaredBucketOf(firebaseJson, firebaserc, project) {
+  const entry = storageEntriesOf(firebaseJson);
+  if (entry === null || entry.bucket !== null) return entry === null ? null : entry.bucket;
+  if (entry.target === null) return null;
+  const buckets = firebaserc?.targets?.[project]?.storage?.[entry.target] ?? [];
+  if (buckets.length !== 1 || typeof buckets[0] !== 'string') {
+    throw new Error(
+      `.firebaserc: το target storage "${entry.target}" δίνει ${buckets.length} buckets για το ` +
+        `"${project}" — απαιτείται ακριβώς ένας (ADR-865 §11.7)`,
+    );
+  }
+  return buckets[0];
 }
 
 /**
  * **Το όνομα του release** που ενημερώνει το `firebase deploy` για έναν στόχο κανόνων —
  * `rulesDeploy.release(file, service, subResource)` του firebase-tools: `service` ή
  * `service/subResource`. Χωρίς ονομασμένη βάση, οι κανόνες Firestore πάνε στο σκέτο
- * `cloud.firestore`· οι κανόνες Storage **πάντα** σε `firebase.storage/<bucket>`.
+ * `cloud.firestore`· οι κανόνες Storage **πάντα** σε `firebase.storage/<bucket>`, με `bucket` τον
+ * **λυμένο** (δηλωμένο — `declaredBucketOf` — ή ανακαλυμμένο).
  */
-function releaseNameOf(firebaseJson, target, defaultBucket) {
+function releaseNameOf(firebaseJson, target, bucket) {
   const provider = DEPLOY_TARGETS[target].provider;
-  if (provider.service === 'firebase.storage') {
-    return `${provider.service}/${explicitBucketOf(firebaseJson) ?? defaultBucket}`;
-  }
+  if (provider.service === 'firebase.storage') return `${provider.service}/${bucket}`;
   const named = namedDatabaseOf(firebaseJson);
   return named === null ? provider.service : `${provider.service}/${named}`;
 }
@@ -151,6 +205,10 @@ const NOT_JUDGED = Object.freeze({
 
 /** Η δηλωμένη διαδρομή ενός στόχου μέσα στο `firebase.json` — `null` όταν δεν δηλώνεται. */
 function declaredPath(firebaseJson, target) {
+  if (DEPLOY_TARGETS[target].provider.service === 'firebase.storage') {
+    const entry = storageEntriesOf(firebaseJson); // αντικείμενο ή πίνακας — ένας αναγνώστης
+    return entry === null ? null : entry.rules;
+  }
   let node = firebaseJson;
   for (const key of DEPLOY_TARGETS[target].jsonPath) {
     if (node === null || typeof node !== 'object' || !(key in node)) return null;
@@ -245,6 +303,11 @@ function loadFirebaseJson() {
   return JSON.parse(fs.readFileSync(paths.firebaseJson, 'utf8'));
 }
 
+/** Το `.firebaserc` (deploy targets) — `{}` όταν λείπει, όπως το `loadRC` του firebase-tools. */
+function loadFirebaserc() {
+  return fs.existsSync(paths.firebaserc) ? JSON.parse(fs.readFileSync(paths.firebaserc, 'utf8')) : {};
+}
+
 module.exports = {
   paths,
   rel,
@@ -260,7 +323,8 @@ module.exports = {
   declaredPath,
   sourceOf,
   databaseOf,
-  explicitBucketOf,
+  declaredBucketOf,
+  storageEntriesOf,
   releaseNameOf,
   wireOf,
   loadLedger,
@@ -269,4 +333,5 @@ module.exports = {
   lastDeployment,
   readSource,
   loadFirebaseJson,
+  loadFirebaserc,
 };

@@ -346,7 +346,7 @@ cron 04:30 UTC ─► firebase-drift (drift reader · verify --wait) ─► Tier
 
 | Ταυτότητα | Ρόλος | Ποιος μπορεί να τη γίνει |
 |---|---|---|
-| `gh-firebase-verify` | `nestorFirebaseDriftReader` (6): `firebaserules.{releases,rulesets}.get` · `datastore.databases.getMetadata` · `datastore.schemas.list` · `firebasestorage.defaultBucket.get` · `serviceusage.services.use` | κάθε job **αυτού** του repo στο `main` |
+| `gh-firebase-verify` | `nestorFirebaseDriftReader` (8, ζωντανά): `firebaserules.{releases,rulesets}.get` · `datastore.databases.getMetadata` · `datastore.schemas.list` · `firebasestorage.defaultBucket.get` · `firebasestorage.buckets.get` · `resourcemanager.projects.get` · `serviceusage.services.use`. ⚠️ Τα **τρία** του Storage/project **δεν χρησιμοποιούνται** μετά το §11.7 (προστέθηκαν 19:13 στη διάγνωση και **δεν** έλυσαν το 404) — αφαιρούνται όταν πρασινίσει η γραμμή | κάθε job **αυτού** του repo στο `main` |
 | `gh-firebase-deploy` | `nestorFirebaseRulesDeployer` (+12 δημιουργίας/ενημέρωσης) — **χωρίς** `*.delete`, `entities.*`, `setIamPolicy` | **μόνο** `subject/repo:YorgosPag/NestorApp:environment:firebase-production` ⇒ το κλειδί **δεν εκδίδεται** χωρίς έγκριση |
 
 Πόρτα WIF: `assertion.repository_owner_id=='213181784' && assertion.repository_id=='1113295967' &&
@@ -390,12 +390,83 @@ CRLF/LF · προέλευση από **πραγματικό** ιστορικό �
 4. Προέλευση από ιστορικό: παλαιότερη των 200 αλλαγών της πηγής μένει `foreign` — δηλωμένο.
 5. Ο Κ5 συγκρίνει με το `origin/main` όπως το ξέρει ο **τοπικός** κλώνος (τελευταίο fetch).
 
+### 11.7 Ο bucket **δηλώνεται**, δεν ανακαλύπτεται *(2026-09-18, πρώτο τρέξιμο της γραμμής)*
+
+**Το συμβάν (μετρημένο)**: στο πρώτο τρέξιμο (run `35384172883`) το `firebase-plan` σταμάτησε με
+`storage · 404 NO_DEFAULT_BUCKET` ⇒ «ο πάροχος δεν απάντησε» ⇒ **καμία** κυκλοφορία (fail-closed,
+σωστά). Το **ίδιο** αίτημα με διαπιστευτήρια χρήστη απαντά `pagonis-87766.firebasestorage.app`, και ο
+ρόλος `nestorFirebaseDriftReader` **έχει** το `firebasestorage.defaultBucket.get`.
+
+🔴 **Η ΥΠΟΘΕΣΗ «ΛΕΙΠΕΙ ΔΙΚΑΙΩΜΑ» ΔΙΑΨΕΥΣΤΗΚΕ ΔΥΟ ΦΟΡΕΣ.** Audit log: `UpdateRole` και στους δύο ρόλους
+19:13:06Z / 19:13:30Z (+`firebasestorage.buckets.get` · +`resourcemanager.projects.get` — ό,τι έχει ο
+`roles/firebasestorage.viewer` πλην των `*.list`). Δύο ανεξάρτητα re-run (attempt 2 ~25′ και attempt 3
+~10′ μετά) ⇒ **το ίδιο** 404. Η μίμηση του λογαριασμού υπηρεσίας για άμεση διάγνωση **δεν** έγινε.
+
+| Πηγή | Εύρημα |
+|---|---|
+| firebase-tools 15.13.0 `deploy/storage/prepare.js` | `if (!Array.isArray(rulesConfig)) { getDefaultBucket(...) }` — η ανακάλυψη γίνεται **μόνο** στη μορφή αντικειμένου, και **αντικαθιστά** κάθε `bucket` του |
+| `deploy/storage/release.js` · `rc.js` | `target` ⇒ `rc.target(project,'storage',target)` = `targets[project].storage[target] \|\| []`, release σε **κάθε** bucket της λίστας· κενή ⇒ `requireTarget` ρίχνει |
+| 🔴 `emulator/storage/rules/config.js` | πίνακας **χωρίς** `target` ⇒ `throw "Must supply 'target' in Storage configuration"` — **ο emulator δεν ξεκινά**· target χωρίς αντιστοίχιση σε demo project ⇒ **ΑΝΟΙΧΤΟΙ** προεπιλεγμένοι κανόνες |
+| Firebase, [*Deploy targets*](https://firebase.google.com/docs/cli/targets) | ο **τεκμηριωμένος** μηχανισμός δήλωσης bucket: `firebase target:apply storage main <bucket>` + `"storage": [{ "target": "main", … }]` |
+| [firebase-tools #6593](https://github.com/firebase/firebase-tools/issues/6593) (2023-12 → 2026-06) | το συμβόλαιο IAM του `defaultBucket` είναι **ασταθές και λάθος τεκμηριωμένο**: το δικαίωμα ήταν κρυφό από custom roles· κάθε χρήστης χρειάστηκε **άλλο** σύνολο (`firebasestorage.viewer` · +Storage Admin · `storage.buckets.get/list` · +`firebasestorage.admin`)· 06/2026: *«my CI/CD was working fine, no upgrades — something changed somewhere»* |
+| Terraform `google_firebaserules_release` | `name = "firebase.storage/${bucket}"` — **δηλωμένος** πόρος, καμία ανακάλυψη |
+
+⇒ Όποιο δικαίωμα κι αν προστεθεί είναι **μαντεψιά πάνω σε alpha API που αλλάζει χωρίς ειδοποίηση**. Η
+κρίσιμη διαδρομή κυκλοφορίας **δεν** εξαρτάται πια από αυτό: **η ερώτηση καταργήθηκε**.
+
+**Απόφαση (αναθεωρημένη την ίδια μέρα)**: η πρώτη εκδοχή (`"storage": [{ "bucket": … }]`) έλυνε το
+deploy αλλά **έσπαγε τον emulator** (γραμμή 3 του πίνακα) — μετρημένο πάνω στην πραγματική
+`getStorageRulesConfig`. Τελική, με τον μηχανισμό της Google:
+
+```jsonc
+// firebase.json
+"storage": [{ "target": "main", "rules": "storage.rules" }]
+// .firebaserc — ΜΟΝΟ targets· ΚΑΝΕΝΑ "projects" (εντολή χωρίς --project δεν φτάνει ποτέ στην παραγωγή)
+"targets": { "pagonis-87766":            { "storage": { "main": ["pagonis-87766.firebasestorage.app"] } },
+             "demo-nestor":              { "storage": { "main": ["demo-nestor.appspot.com"] } },
+             "demo-nestor-functions-it": { "storage": { "main": ["demo-nestor-functions-it.appspot.com"] } } }
+```
+
+Ο επαληθευτής **και** ο deployer **και** ο emulator διαβάζουν την **ίδια** δήλωση. Ο **ένας** αναγνώστης
+`storageEntriesOf` → `declaredBucketOf(firebaseJson, firebaserc, project)` (model.js) λύνει το `target`
+**ακριβώς** όπως το `release.js`· ≠1 στοιχεία · `bucket`+`target` μαζί (ο deployer αγνοεί σιωπηλά το
+`bucket`) · target με 0 ή >1 buckets ⇒ **ρίχνει**. Στο `live.js` λάθος δήλωση γίνεται `{error}` **με
+όνομα** (όχι «ο πάροχος δεν απάντησε»), χωρίς καμία κλήση στο `defaultBucket`.
+
+🏆 **Πέρα από το Firebase — τρεις άγκυρες πάνω στο ΠΡΑΓΜΑΤΙΚΟ αποθετήριο** (`firestore-deploy-drift.test.js`):
+1. **Οι κανόνες πάνε στον bucket που χρησιμοποιεί η εφαρμογή**: ο λυμένος bucket για το
+   `FIREBASE_PROJECT_ID` του `docker-build.yml` **=** `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`. Δύο δηλώσεις
+   του ίδιου γεγονότος· αν αποκλίνουν, το deploy «πετυχαίνει» σε bucket που η εφαρμογή δεν αγγίζει και
+   ο πραγματικός μένει με τους **παλιούς** κανόνες — σιωπηλά. Κανένα εργαλείο της αγοράς δεν το ελέγχει.
+2. **Κάθε emulator με storage και ρητό `--project` ξεκινά με τους δικούς μας κανόνες** (σάρωση του
+   `package.json`) — ποτέ με τους ανοιχτούς προεπιλεγμένους του demo project.
+3. **Το `.firebaserc` δεν ορίζει προεπιλεγμένο project.**
+
+**Μετρημένο 2026-09-18 (όχι υποθετικό)**:
+
+| Έλεγχος | Αποτέλεσμα |
+|---|---|
+| `verify-live --project pagonis-87766` (ζωντανό) | storage **✓ Synced**, release `3dd4e096…` — **το ίδιο** που έβρισκε η ανακάλυψη ⇒ δήλωση ≡ εύρεση στην παραγωγή |
+| `firebase deploy --only storage --dry-run --debug` (15.13.0) | exit 0 · `requireTarget(pagonis-87766, storage, main)` ✓ · **0** κλήσεις `defaultBucket` |
+| `test:storage-rules:emulator` (`demo-nestor`) | ο emulator **ξεκινά** · 12/13 σουίτες, 182/183 — το 1 κόκκινο (`user-avatars` · same_tenant_user × write) **προϋπάρχει**: ίδιο με τη διαμόρφωση του HEAD (15 tests, 1 κόκκινο), άσχετο |
+| `test:functions-integration:emulator` (`demo-nestor-functions-it`) | ο emulator **ξεκινά**, triggers Storage πυροδοτούνται στο `demo-nestor-functions-it.appspot.com` · 11/12 — το 1 κόκκινο είναι `TypeError … 'serverTimestamp'` **μέσα** στο `orphan-cleanup.ts:90` (`admin.firestore.FieldValue`), σφάλμα κώδικα άσχετο με τη δήλωση· **δεν** ξαναμετρήθηκε με τη διαμόρφωση του HEAD |
+| jest `firestore-deploy-{drift,gate,pipeline}` | **83/83** · **9/9 μεταλλάξεις σκοτωμένες** (>1 buckets δεκτό · target αγνοείται · bucket+target δεκτά · live αγνοεί τη δήλωση · σφάλμα δήλωσης ⇒ σιωπηλή ανακάλυψη · `.firebaserc` χωρίς demo · λάθος bucket παραγωγής · default project · `firebase.json` πίσω σε `bucket`) |
+
+Τα `storage-rules.yml` και `functions-integration.yml` ενεργοποιούνται πλέον **και** από το `.firebaserc`
+(πριν: μόνο `firebase.json` ⇒ αλλαγή αντιστοίχισης θα περνούσε αθέατη από τον emulator του CI).
+
+⚠️ **Δικαιώματα**: με δηλωμένο bucket, τα `firebasestorage.defaultBucket.get` · `firebasestorage.buckets.get`
+· `resourcemanager.projects.get` **δεν χρησιμοποιούνται πια** από κανέναν από τους δύο ρόλους. Μένουν
+(ο runbook καθρεφτίζει τον ζωντανό IAM, μετρημένο με `gcloud iam roles describe` + diff)· η αφαίρεσή τους
+(ελάχιστα δικαιώματα) είναι βήμα Giorgio **αφού** πρασινίσει η γραμμή.
+
 ---
 
 ## §9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-18 | ✅ **§11.7 — Ο BUCKET ΔΗΛΩΝΕΤΑΙ, ΜΕ ΤΟΝ ΜΗΧΑΝΙΣΜΟ ΤΗΣ GOOGLE (deploy targets)** *(εντολή Giorgio: «όπως οι μεγάλοι»)*. Το πρώτο τρέξιμο της γραμμής σταμάτησε (σωστά, fail-closed) σε `storage · 404 NO_DEFAULT_BUCKET` για την ταυτότητα CI. 🔴 **Η υπόθεση IAM διαψεύστηκε δύο φορές** (UpdateRole 19:13 +2 δικαιώματα ⇒ δύο re-run, ίδιο 404) και το firebase-tools #6593 δείχνει ότι το συμβόλαιο IAM του `defaultBucket` είναι **ασταθές** (2023→06/2026) ⇒ **καταργήθηκε η ερώτηση**. 🔴 **Η πρώτη εκδοχή (`storage: [{ bucket }]`) ΕΣΠΑΓΕ ΤΟΝ EMULATOR** (`config.js`: «Must supply 'target'») — αναθεωρήθηκε την ίδια μέρα σε `storage: [{ target: "main" }]` + νέο **`.firebaserc` μόνο με `targets`** (παραγωγή + τα δύο demo projects, **κανένα** default project). `storageEntriesOf` → **`declaredBucketOf(firebaseJson, firebaserc, project)`** με τη σημασιολογία του `release.js`/`rc.js`· λάθος δήλωση ⇒ `{error}` **με όνομα** στο `live.js`. 🏆 Άγκυρες στο **πραγματικό** αποθετήριο: κανόνες στον **ίδιο** bucket με το `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` · κάθε emulator με storage ξεκινά με **τους δικούς μας** κανόνες · κανένα default project. **9/9 μεταλλάξεις σκοτωμένες** (md5 επαναφορά). Runbook: οι εντολές δημιουργίας ρόλων καθρεφτίζουν τον **ζωντανό** IAM (diff). |
 | 2026-09-18 | ✅ **§11 — Η ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ: η παραγωγή Firebase ελέγχεται (3) και ενημερώνεται (4) από το CI** *(εντολή Giorgio: «και τα δύο, όπως οι μεγάλοι»)*. Κλείνουν τα §10.5 #1-#2. 🔑 **Το αυγό-κότα του handoff §5.1** λύθηκε με **GitOps** (Argo CD: *«sync only if OutOfSync»*): το δέντρο = «τι θέλουμε», ρωτιέται ο **πάροχος**, ιστορικό = GitHub Deployment — **κανένα** commit από ρομπότ. `docker-build.yml`: `firebase-plan` (παράλληλα με το build) → ⏸ έγκριση **μόνο αν διαφέρει** → `firebase-apply` (μόνο οι διαφέροντες στόχοι, `--wait` μέχρι READY) → `release` (immutable `:main-<sha>` → `:latest` → Coolify). `firebase-drift.yml` κάθε πρωί, **Tier 1** ⇒ CI Health + **Telegram σε μετάβαση**. Ο **Κ5 γίνεται ενημέρωση** έναντι `origin/main` (δεν μπλοκάρει πια το push — θα απαγόρευε το ίδιο το αίτημα). 🔴 **Τρία μετρημένα ευρήματα που ανέτρεψαν υποθέσεις**: (1) **`roles/datastore.indexViewer` δεν υπάρχει** και ο `datastore.viewer` διαβάζει **κάθε έγγραφο** ⇒ δύο **custom roles** (6 · 18 δικαιώματα, 18/18 επαληθευμένα με `testIamPermissions`, **χωρίς** delete/δεδομένα/IAM)· (2) **το `firebase-admin` 12.7.0 απορρίπτει την ταυτότητα χωρίς κλειδί** (`external_account`) ⇒ το `live.js` σε `google-auth-library` 9.15.1 (Apache-2.0, ήδη στο lockfile ως optional — **μία** έκδοση), το ίδιο με το firebase-tools· (3) το repo είναι **δημόσιο** ⇒ Actions δωρεάν, Environments διαθέσιμα στο Free. Επίσης: σύγκριση κανόνων **modulo CRLF/LF** · προέλευση `history` από το git (ταύτιση περιεχομένου) · καρφωμένο `firebase-tools@15.13.0` · `--pipeline` (μόνο μέσα στο Actions) · **ένας** αποστολέας Telegram (το inline curl είχε script injection) · `workflow-meta.readWorkflowJobs`. Σουίτα `firestore-deploy-pipeline.test.js` (**25** tests, **9/9 εκτελεσμένες μεταλλάξεις**)· 105/105 μαζί με gate/drift/tiers. Runbook βημάτων Giorgio: `docs/deployment/firebase-pipeline.md`. **Ενεργοποίηση**: μετά τα βήματα Giorgio — πριν από αυτά ο κώδικας **δεν** κυκλοφορεί (fail-closed, §11.6). |
 | 2026-09-18 | ✅ **§10 — Η ΖΩΝΤΑΝΗ ΕΠΑΛΗΘΕΥΣΗ: το μητρώο από ισχυρισμός γίνεται επαληθεύσιμο γεγονός** *(εντολή Giorgio)*. Αφορμή: το handoff ζητούσε deploy που **είχε ήδη γίνει** (`bd29dd14`)· η επιβεβαίωση χρειάστηκε **χειροκίνητο** curl/gcloud, γιατί το εργαλείο δεν μπορούσε να την κάνει — και μετρήθηκαν **τέσσερις** ψευδείς ισχυρισμοί (§10.1), με χειρότερο το «CREATING» του `--verify` που ήταν **σταθερό κείμενο**. Νέα: `live.js` (ο **μόνος** κώδικας που ρωτά τον πάροχο — μόνο GET, ADC μέσω του υπάρχοντος `firebase-admin`, releases/ταύτιση **του firebase-tools 15.13.0**) · `drift.js` (καθαρός, **Sync × Health** του Argo CD, έξοδοι **0-4** επέκταση του Terraform `-detailed-exitcode`, **απόδοση προέλευσης** `tree/recorded/foreign/unattributable` από το μητρώο + git) · `verify-live.js` (`npm run firestore:verify`, `--wait`, `--json`) · `compileRules` εξήχθη **καθαρή** από το `build-firestore-rules.js` (μία μεταγλώττιση, δύο καταναλωτές). Το `record-deploy.js` **έχασε** το `verifyIndexes`/`indexKey` και τρέχει τη ζωντανή ερώτηση **μετά από κάθε** deploy, με τον **δικό της** κωδικό εξόδου. 🔴 Παγίδα που βρέθηκε: `storage.rules` CRLF στον δίσκο / LF στο blob ⇒ ανασύνθεση με **τρεις αποδόσεις γραμμών** κρινόμενες από το sha256 του μητρώου. Μέτρηση παραγωγής: **3/3 Synced·Healthy, 475/475 READY, overrides 2/2, EXIT 0**· 6 αρνητικοί μάρτυρες σε **πραγματικά** ζωντανά δεδομένα. Σουίτα `firestore-deploy-drift.test.js` (+30 tests· 50/50 μαζί με την πύλη) με **εκτελεσμένες μεταλλάξεις**. |
 | 2026-09-16 | ✅ **Η ΠΡΩΤΗ ΑΝΑΠΤΥΞΗ — και η οριστική απόδειξη της διάγνωσης** *(εντολή Giorgio)*. `firestore:rules` + `firestore:indexes` → δείκτες **437 = 437** (ήταν 436·437). 🔑 **Η οθόνη άλλαξε μήνυμα**: από `Missing or insufficient permissions` (**permission-denied** ⇒ κανόνας) σε `The query requires an index… currently building` (**failed-precondition** ⇒ δείκτης) — δηλαδή ο κανόνας **πέρασε**, και αποκαλύφθηκε το εμπόδιο που ήταν **κρυμμένο πίσω του**, ακριβώς όπως προέβλεψε το §1 (οι κανόνες κρίνονται **πριν** τα ευρετήρια). Μετά, `storage` με το ίδιο σκεπτικό: στο GitOps δόγμα η απάντηση στο «artifact χωρίς απόδειξη» είναι **reconcile**, **ποτέ** «εξαίρεσέ το» (Argo CD δεν αφαιρεί resource επειδή είναι `OutOfSync`· Terraform δεν προτείνει `ignore_changes` για drift). Πύλη: **✅ και οι τρεις στόχοι**, EXIT 0. ⚠️ **Τεκμήριο της έρευνας που ΔΕΝ επιβεβαιώθηκε**: το CLI **ποτέ** δεν τύπωσε *«already up to date»* — τύπωσε `uploading… released` και στις τρεις περιπτώσεις ⇒ **δεν** μπορεί να χρησιμοποιηθεί ως ανιχνευτής απόκλισης, ούτε καν κατά την ανάπτυξη. Δηλωμένο όριο. |

@@ -1,0 +1,19 @@
+{
+  "targets": {
+    "pagonis-87766": {
+      "storage": {
+        "main": ["pagonis-87766.firebasestorage.app"]
+      }
+    },
+    "demo-nestor": {
+      "storage": {
+        "main": ["demo-nestor.appspot.com"]
+      }
+    },
+    "demo-nestor-functions-it": {
+      "storage": {
+        "main": ["demo-nestor-functions-it.appspot.com"]
+      }
+    }
+  }
+}

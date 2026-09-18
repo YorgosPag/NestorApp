@@ -12,7 +12,7 @@
  * | Στόχος | Τι ενημερώνει το `firebase deploy` | Πηγή |
  * |---|---|---|
  * | κανόνες Firestore | release `cloud.firestore` (ή `cloud.firestore/<database>`) | `lib/rulesDeploy.js` · `deploy/firestore/release.js` |
- * | κανόνες Storage | release `firebase.storage/<bucket>` — ο bucket από `v1alpha/…/defaultBucket` | `deploy/storage/prepare.js` · `gcp/storage.js` |
+ * | κανόνες Storage | release `firebase.storage/<bucket>` — ο bucket **δηλωμένος** (`firebase.json` `target` → `.firebaserc`, §11.7)· μόνο σε μορφή αντικειμένου από `v1alpha/…/defaultBucket` | `deploy/storage/{prepare,release}.js` · `rc.js` · `gcp/storage.js` |
  * | δείκτες | `…/collectionGroups/-/indexes` + `fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:*` χωρίς `__default__` | `lib/firestore/api.js` |
  *
  * 🔴 Γιατί έχει σημασία, **μετρημένο**: το project έχει **δύο** releases storage — το παλιό
@@ -225,12 +225,28 @@ async function settle(read) {
 }
 
 /**
- * @param {{project:string, firebaseJson:object, transport:{getJson:Function}}} opts
+ * **Ο bucket ενός στόχου κανόνων**: ο **δηλωμένος** (`firebase.json` + `.firebaserc`, §11.7) ή — μόνο
+ * σε μορφή αντικειμένου — ο ανακαλυμμένος. Λάθος δήλωση ⇒ `{error}` **με όνομα**, ποτέ ρίψη που θα
+ * διάβαζε σαν «ο πάροχος δεν απάντησε».
+ */
+async function bucketFor({ provider, firebaseJson, firebaserc, project, defaultBucketOnce }) {
+  if (!provider.needsBucket) return null;
+  let declared;
+  try {
+    declared = M.declaredBucketOf(firebaseJson, firebaserc, project);
+  } catch (error) {
+    return { error: `δήλωση Storage — ${error.message}` };
+  }
+  return declared ?? defaultBucketOnce();
+}
+
+/**
+ * @param {{project:string, firebaseJson:object, firebaserc?:object, transport:{getJson:Function}}} opts
  * @returns {Promise<Record<string, object>>} ανά στόχο το ζωντανό, ή `{error}`.
  */
-async function loadLiveWorld({ project, firebaseJson, transport }) {
+async function loadLiveWorld({ project, firebaseJson, firebaserc = M.loadFirebaserc(), transport }) {
   const live = {};
-  let bucket = null; // ρωτιέται μία φορά, και μόνο αν το firebase.json δεν ονομάζει bucket
+  let bucket = null; // ρωτιέται μία φορά, και μόνο αν το δέντρο δεν δηλώνει bucket
   const defaultBucketOnce = () => (bucket ??= settle(() => fetchDefaultBucket(transport, project)));
   await Promise.all(Object.keys(M.DEPLOY_TARGETS).map(async (target) => {
     if (M.sourceOf(firebaseJson, target) === null) return; // δεν δηλώνεται — ο Κ1 κρίνει
@@ -239,13 +255,12 @@ async function loadLiveWorld({ project, firebaseJson, transport }) {
       live[target] = await settle(() => fetchIndexes(transport, project, M.databaseOf(firebaseJson)));
       return;
     }
-    const needsDefault = provider.needsBucket && M.explicitBucketOf(firebaseJson) === null;
-    const defaultBucket = needsDefault ? await defaultBucketOnce() : null;
-    if (defaultBucket && defaultBucket.error) {
-      live[target] = defaultBucket;
+    const resolved = await bucketFor({ provider, firebaseJson, firebaserc, project, defaultBucketOnce });
+    if (resolved && resolved.error) {
+      live[target] = resolved;
       return;
     }
-    const release = M.releaseNameOf(firebaseJson, target, defaultBucket);
+    const release = M.releaseNameOf(firebaseJson, target, resolved);
     live[target] = await settle(() => fetchRelease(transport, project, release));
   }));
   return live;

@@ -200,7 +200,74 @@ describe('ADR-865 §10 — ζωντανό έναντι δέντρου', () => {
 
     it('🔴 storage ΠΑΝΤΑ firebase.storage/<bucket> — ποτέ το σκέτο (νεκρό) firebase.storage', () => {
       expect(M.releaseNameOf({ storage: {} }, 'storage', 'def.app')).toBe('firebase.storage/def.app');
-      expect(M.releaseNameOf({ storage: { bucket: 'own' } }, 'storage', 'def.app')).toBe('firebase.storage/own');
+      expect(M.releaseNameOf({ storage: [{ target: 'main', rules: 'storage.rules' }] }, 'storage', 'own')).toBe('firebase.storage/own');
+    });
+  });
+
+  describe('ADR-865 §11.7 — η δήλωση Storage όπως τη διαβάζει το firebase deploy (prepare/release.js)', () => {
+    const RC = { targets: { p: { storage: { main: ['p.firebasestorage.app'], two: ['a', 'b'], none: [] } } } };
+    const withTarget = (target) => ({ storage: [{ target, rules: 'storage.rules' }] });
+
+    it('αντικείμενο ⇒ ανακάλυψη· ένα `bucket` εκεί ΑΓΝΟΕΙΤΑΙ (ο deployer το αντικαθιστά)', () => {
+      const obj = { storage: { rules: 'storage.rules', bucket: 'own' } };
+      expect(M.storageEntriesOf(obj)).toEqual({ bucket: null, target: null, rules: 'storage.rules' });
+      expect(M.declaredBucketOf(obj, RC, 'p')).toBeNull();
+    });
+
+    it('πίνακας με target ⇒ λύνεται από το .firebaserc ΑΝΑ PROJECT (rc.target), καμία ανακάλυψη', () => {
+      expect(M.storageEntriesOf(withTarget('main'))).toEqual({ bucket: null, target: 'main', rules: 'storage.rules' });
+      expect(M.declaredBucketOf(withTarget('main'), RC, 'p')).toBe('p.firebasestorage.app');
+      expect(M.sourceOf(withTarget('main'), 'storage')).toBe('storage.rules');
+    });
+
+    it('πίνακας με bucket ⇒ δηλωμένος χωρίς .firebaserc (τον δέχεται ο deployer, ΟΧΙ ο emulator)', () => {
+      expect(M.declaredBucketOf({ storage: [{ bucket: 'b.app', rules: 'r' }] }, {}, 'p')).toBe('b.app');
+    });
+
+    it('🔴 ποτέ σιωπηλή επιλογή: ≠1 στοιχεία · και τα δύο · κανένα · target χωρίς ή με >1 buckets ⇒ ρίχνει', () => {
+      expect(() => M.storageEntriesOf({ storage: [] })).toThrow('0 buckets');
+      expect(() => M.storageEntriesOf({ storage: [{ bucket: 'a', rules: 'r' }, { bucket: 'b', rules: 'r' }] })).toThrow('2 buckets');
+      expect(() => M.storageEntriesOf({ storage: [{ rules: 'r' }] })).toThrow('ΑΚΡΙΒΩΣ ένα');
+      expect(() => M.storageEntriesOf({ storage: [{ bucket: 'a', target: 'main', rules: 'r' }] })).toThrow('ΑΚΡΙΒΩΣ ένα');
+      expect(() => M.declaredBucketOf(withTarget('none'), RC, 'p')).toThrow('0 buckets');
+      expect(() => M.declaredBucketOf(withTarget('two'), RC, 'p')).toThrow('2 buckets');
+      expect(() => M.declaredBucketOf(withTarget('main'), RC, 'άλλο-project')).toThrow('0 buckets');
+    });
+  });
+
+  describe('🌍 ADR-865 §11.7 — το ΠΡΑΓΜΑΤΙΚΟ firebase.json + .firebaserc', () => {
+    const fs = require('node:fs');
+    const REAL = M.loadFirebaseJson();
+    const RC = M.loadFirebaserc();
+    const WORKFLOW = fs.readFileSync(M.paths.of('.github/workflows/docker-build.yml'), 'utf8');
+    const envOf = (name) => (WORKFLOW.match(new RegExp(`^\\s*${name}:\\s*(\\S+)\\s*$`, 'm')) || [])[1];
+
+    it('η γραμμή παραγωγής ΔΕΝ εξαρτάται από το defaultBucket API — target, όχι ανακάλυψη', () => {
+      expect(M.storageEntriesOf(REAL).target).toBe('main');
+      expect(M.declaredBucketOf(REAL, RC, envOf('FIREBASE_PROJECT_ID'))).toMatch(/\.firebasestorage\.app$/);
+    });
+
+    it('🏆 οι κανόνες πάνε στον ΙΔΙΟ bucket που χρησιμοποιεί η εφαρμογή (NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)', () => {
+      // Δύο δηλώσεις του ίδιου γεγονότος: αν αποκλίνουν, το deploy «πετυχαίνει» σε bucket που η
+      // εφαρμογή δεν αγγίζει και ο πραγματικός μένει με τους ΠΑΛΙΟΥΣ κανόνες — σιωπηλά.
+      const project = envOf('FIREBASE_PROJECT_ID');
+      expect(envOf('NEXT_PUBLIC_FIREBASE_PROJECT_ID')).toBe(project);
+      expect(M.declaredBucketOf(REAL, RC, project)).toBe(envOf('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'));
+    });
+
+    it('🏆 κάθε emulator με storage και ρητό --project ξεκινά με ΤΟΥΣ ΔΙΚΟΥΣ ΜΑΣ κανόνες', () => {
+      // Χωρίς αντιστοίχιση: demo project ⇒ ΑΝΟΙΧΤΟΙ προεπιλεγμένοι κανόνες (config.js), αλλιώς ρίψη.
+      const scripts = Object.values(JSON.parse(fs.readFileSync(M.paths.of('package.json'), 'utf8')).scripts);
+      const projects = scripts
+        .filter((s) => /emulators:(exec|start)/.test(s) && /--only\s+\S*\bstorage\b/.test(s))
+        .map((s) => (s.match(/--project\s+(\S+)/) || [])[1])
+        .filter(Boolean);
+      expect(projects.length).toBeGreaterThan(0);
+      for (const project of projects) expect(() => M.declaredBucketOf(REAL, RC, project)).not.toThrow();
+    });
+
+    it('το .firebaserc ΔΕΝ ορίζει προεπιλεγμένο project — εντολή χωρίς --project δεν φτάνει ποτέ στην παραγωγή', () => {
+      expect(RC.projects).toBeUndefined();
     });
   });
 });
@@ -260,8 +327,18 @@ describe('ADR-865 §10 — live.js με ψεύτικη μεταφορά', () => 
   it('ο bucket ΔΕΝ ρωτιέται όταν τον ονομάζει το firebase.json', async () => {
     const calls = [];
     const routes = { ...fakeRoutes(), '/v1/projects/demo-project/releases/firebase.storage/own': fakeRoutes()['/v1/projects/demo-project/releases/firebase.storage/def.app'] };
-    await loadLiveWorld({ project: PROJECT, firebaseJson: { ...FIREBASE_JSON, storage: { rules: 'storage.rules', bucket: 'own' } }, transport: fakeTransport(routes, calls) });
+    const firebaserc = { targets: { [PROJECT]: { storage: { main: ['own'] } } } };
+    await loadLiveWorld({ project: PROJECT, firebaseJson: { ...FIREBASE_JSON, storage: [{ target: 'main', rules: 'storage.rules' }] }, firebaserc, transport: fakeTransport(routes, calls) });
     expect(calls.some((c) => c.url.includes('defaultBucket'))).toBe(false);
+    expect(calls.some((c) => c.url.endsWith('/releases/firebase.storage/own'))).toBe(true);
+  });
+
+  it('🔴 target χωρίς αντιστοίχιση ⇒ {error} ΜΕ ΟΝΟΜΑ, καμία ανακάλυψη, καμία ετυμηγορία (fail-closed)', async () => {
+    const calls = [];
+    const live = await loadLiveWorld({ project: PROJECT, firebaseJson: { ...FIREBASE_JSON, storage: [{ target: 'main', rules: 'storage.rules' }] }, firebaserc: {}, transport: fakeTransport(fakeRoutes(), calls) });
+    expect(live.storage.error).toContain('.firebaserc');
+    expect(calls.some((c) => c.url.includes('defaultBucket'))).toBe(false);
+    expect(D.judgeLive(desiredWorld(), live).exitCode).toBe(D.EXIT.ERROR);
   });
 
   it('🔴 σφάλμα παρόχου γίνεται {error} με τον λόγο της Google — ο κόσμος ΔΕΝ καταρρέει', async () => {
