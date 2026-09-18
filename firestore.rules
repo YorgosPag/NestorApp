@@ -905,7 +905,9 @@ service cloud.firestore {
                     && cdeCustodyUnchanged()
                     // 🔒 ADR-864 §21 — ο κάτοχος δεν αυτο-δεσμεύει ούτε αποδεσμεύει (`retentionUntil`
                     //    θα έβγαζε το αρχείο από κάθε καθαρισμό· `hold` θα ακύρωνε δέσμευση διακομιστή).
-                    && holdCustodyUnchanged();
+                    && holdCustodyUnchanged()
+                    // 📒 ADR-866 §2.6.11 — κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή τους.
+                    && personalActivityPaired();
 
       // 🗑️ HARD DELETE — μόνο ο κάτοχος, και ΠΟΤΕ σε δεσμευμένο (ADR-864 §21 Δ21.1).
       allow delete: if isAuthenticated()
@@ -1613,6 +1615,28 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🗂️ ΦΑΚΕΛΟΣ ΑΚΙΝΗΤΟΥ — ADR-866 Ε-1 · Φ1.1
+    // =========================================================================
+    // Ό,τι αφορά το ΣΠΙΤΙ, πέρα από κάθε αγγελία. ΙΔΙΟ σύνορο με το `owner_properties`
+    // παραπάνω: διαβάζει ΜΟΝΟ ο κάτοχος, γράφει ΜΟΝΟ ο διακομιστής
+    // (`property-dossier-write.service.ts`, Admin SDK) — γιατί η γέννηση πρέπει να μπορεί
+    // να γίνει στην ΙΔΙΑ δέσμη με την αγγελία (Ε-Φ1-1), και το ίχνος είναι ιδιότητα της
+    // διαδρομής γραφής.
+    //
+    // 🔑 Ο κάτοχος είναι `userId` και ΟΧΙ `authorUserId`: ο φάκελος ΑΛΛΑΖΕΙ ΧΕΡΙΑ (Φ4),
+    // ο συγγραφέας όχι (ADR-866 §2.8.7 Δ1). Ίδιο όνομα με τα προσωπικά του αρχεία.
+    //
+    // ⚠️ ΚΑΝΕΝΑ σκέλος super_admin ή γραφείου: ό,τι αφορά το σπίτι ενός ανθρώπου το βλέπει
+    // ο ίδιος — και από τη Φ3 όποιον ΚΑΛΕΣΕΙ, μέσω ADR-862, όχι μέσω ρόλου.
+    // ⚠️ ΚΑΜΙΑ διαγραφή: η έξοδος από την καθημερινή λίστα είναι `lifecycle: 'archived'`.
+    match /property_dossiers/{dossierId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
     // 📅 ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ — ADR-835 §20 (Στάδιο Α)
     // =========================================================================
     // Κεφαλή (`stay_calendars/{propertyId}`) · κλεισμένες νύχτες (`stay_blocks`) ·
@@ -1638,8 +1662,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ADR-835 §23 (Στάδιο Δ): και ο ΕΠΙΣΚΕΠΤΗΣ διαβάζει — ΜΟΝΟ τα δικά του αιτήματα/κρατήσεις
+    // (`guestUserId`, παράγωγο του κατόχου· ο αναγνώστης αρνείται έγγραφο που διαφωνεί). Η γραφή μένει
+    // κλειστή: αίτημα που έγραφε ο πελάτης θα παρέκαμπτε κριτή, προθεσμία ΚΑΙ όριο ενεργών αιτημάτων.
     match /stay_bookings/{bookingId} {
-      allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
+      allow read: if isAuthenticated()
+        && (resource.data.authorUserId == request.auth.uid
+          || resource.data.get('guestUserId', null) == request.auth.uid);
+      allow create, update: if false;
+      allow delete: if false;
+    }
+
+    // ADR-835 §23.4 (Στάδιο Δ) — Η ΚΕΦΑΛΗ ΤΟΥ ΕΠΙΣΚΕΠΤΗ: μηχανισμός σειριοποίησης του ορίου ενεργών
+    // αιτημάτων, ΟΧΙ προβολή. Κανείς πελάτης δεν τη διαβάζει ούτε τη γράφει — ούτε ο ίδιος ο επισκέπτης:
+    // ό,τι χρειάζεται να δει («έχεις 3 ζωντανά αιτήματα») του το λέει ο διακομιστής, με όνομα.
+    match /stay_guests/{userId} {
+      allow read: if false;
       allow create, update: if false;
       allow delete: if false;
     }
@@ -1692,6 +1730,16 @@ service cloud.firestore {
     // archiving service MUST store the retraction message». Εδώ ο «κρυφός τόπος»
     // είναι ΡΗΤΗ συλλογή με ΡΗΤΟ κανόνα — όχι φάκελος που τον μαθαίνεις σε αγωγή.
     match /network_message_retractions/{messageId} {
+      allow read: if false;
+      allow create, update, delete: if false;
+    }
+
+    // 🌴 ADR-867 §4.4 (Β5) — Η ΑΠΟΥΣΙΑ. ΚΛΕΙΣΤΗ ΣΕ ΚΑΘΕ ΠΕΛΑΤΗ, ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ.
+    // Ο αντισυμβαλλόμενος μαθαίνει ΜΟΝΟ «ως πότε» και «ποιος διαβάζει στη θέση του», από
+    // τον ΔΙΑΚΟΜΙΣΤΗ, και ΜΟΝΟ για όσους διαβάζουν το ΙΔΙΟ νήμα με αυτόν. Μια ανάγνωση
+    // πελάτη εδώ θα έκανε το ημερολόγιο απουσιών ενός γραφείου ΑΠΑΡΙΘΜΗΣΙΜΟ από ξένους.
+    // Γράφει ΜΟΝΟ ο `services/network-messaging/network-away.ts`.
+    match /network_away/{awayId} {
       allow read: if false;
       allow create, update, delete: if false;
     }
@@ -3729,6 +3777,39 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📒 FILE_AUDIT_LOG_PERSONAL — Η ΔΡΑΣΤΗΡΙΟΤΗΤΑ ΤΩΝ ΠΡΟΣΩΠΙΚΩΝ ΑΡΧΕΙΩΝ (ADR-866 §2.6.11)
+    // =========================================================================
+    // 📅 Added: 2026-09-18 (ADR-866 Φ0 βήμα 2β.4)
+    // 🏢 ΤΟ ΙΔΙΟ σύστημα με το `file_audit_log` (λεξιλόγιο · σχήμα · αναγνώστης · οθόνη), σε ΞΕΧΩΡΙΣΤΟ
+    //    διαμέρισμα με κάτοχο `userId` (`FILE_AUDIT_COLLECTION`, `lib/files/file-custody.ts`) — το
+    //    πρότυπο του `entity_audit_trail_personal`. Γιατί διαμέρισμα και όχι κλάδος: οι κανόνες δεν
+    //    φιλτράρουν (ADR-195 §7.3) — ο εταιρικός κανόνας έμεινε ΑΝΕΓΓΙΧΤΟΣ.
+    // 🔒 READ: ΜΟΝΟ ο κάτοχος. ΟΥΤΕ admin εταιρείας ΟΥΤΕ super admin — ο κανόνας `files_personal`
+    //    δεν τους δίνει ούτε το ίδιο το αρχείο· το ίχνος του δεν γίνεται πιο ορατό από αυτό.
+    // ✍️ CREATE: ΜΟΝΟ ζευγαρωμένη με την αλλαγή που περιγράφει (`personalActivityMatchesChange`),
+    //    ως ο ΙΔΙΟΣ (`performedBy == uid`), με χρόνο ΔΙΑΚΟΜΙΣΤΗ, χωρίς `companyId`. Οι πράξεις του
+    //    διακομιστή (εκκαθάριση · διαδοχή έκδοσης) γράφονται με Admin SDK (`recordFileAudit`).
+    // 🚫 UPDATE/DELETE: ποτέ από πελάτη — αμετάβλητο (η ΓΚΠΔ διαγραφή είναι Admin SDK).
+    match /file_audit_log_personal/{logId} {
+      allow get, list: if isAuthenticated()
+                       && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasOnly(
+                         ['fileId', 'action', 'performedBy', 'userId', 'timestamp', 'metadata'])
+                    && request.resource.data.keys().hasAll(
+                         ['fileId', 'action', 'performedBy', 'userId', 'timestamp'])
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.performedBy == request.auth.uid
+                    && request.resource.data.timestamp == request.time
+                    && request.resource.data.fileId is string
+                    && (!request.resource.data.keys().hasAny(['metadata'])
+                        || request.resource.data.metadata is map)
+                    && personalActivityMatchesChange(
+                         request.resource.data.fileId, logId, request.resource.data.action);
+      allow update, delete: if false; // Αμετάβλητο
+    }
+
+    // =========================================================================
     // 🔗 FILE_SHARES - ENTERPRISE SHAREABLE LINKS (ADR-191 Phase 4.2)
     // =========================================================================
     // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
@@ -5757,6 +5838,62 @@ service cloud.firestore {
     function holdAllowsHardDelete() {
       return resource.data.get('hold', 'none') in ['none', null]
              && resource.data.get('retentionUntil', null) == null;
+    }
+
+    // =========================================================================
+    // 📒 ΖΕΥΓΑΡΩΜΕΝΗ ΔΡΑΣΤΗΡΙΟΤΗΤΑ ΠΡΟΣΩΠΙΚΟΥ ΑΡΧΕΙΟΥ (ADR-866 §2.6.11 Ε-Φ0-4)
+    // =========================================================================
+    // Στους μεγάλους (Drive · Dropbox · Box) τη γραμμή δραστηριότητας τη γράφει η ΥΠΗΡΕΣΙΑ: ο
+    // χρήστης ούτε την πλαστογραφεί ούτε την παραλείπει. Εδώ την ίδια εγγύηση τη δίνουν ΑΥΤΟΙ οι
+    // κανόνες, και ΑΤΟΜΙΚΑ — η αλλαγή του αρχείου και η γραμμή της γράφονται στην ΙΔΙΑ δέσμη:
+    //   · η αλλαγή αρνείται αν δεν δείχνει (`lastActivityId`) σε ΝΕΑ γραμμή της ίδιας δέσμης·
+    //   · η γραμμή αρνείται αν δεν περιγράφει την αλλαγή που συμβαίνει (`get` πριν / `getAfter` μετά).
+    // Γραφέας: `services/file-record/file-activity-commit.ts`.
+
+    // Τα κλειδιά που κάνουν μια αλλαγή «δραστηριότητα»: κάδος/επαναφορά (`lifecycleState` ΚΑΙ το
+    // legacy `isDeleted` — τα ερωτήματα φιλτράρουν και με τα δύο, άρα «κάδος μόνο με `isDeleted`»
+    // θα ήταν κάδος χωρίς γραμμή) · μετονομασία (`displayName`).
+    // ⚠️ Κάτοπτρο του `FILE_ACTIVITY_PAIRED_ACTIONS` (`types/file-audit.ts`) — άγκυρα Α35.
+    function personalActivityKeys() {
+      return ['lifecycleState', 'isDeleted', 'displayName'];
+    }
+
+    function personalActivityPath(activityId) {
+      return /databases/$(database)/documents/file_audit_log_personal/$(activityId);
+    }
+
+    // Η ΑΛΛΑΓΗ: αγγίζει δραστηριότητα ⇔ δείχνει σε ΝΕΑ γραμμή, γραμμένη στην ΙΔΙΑ δέσμη. Και το
+    // `lastActivityId` δεν αλλάζει ποτέ μόνο του — δείκτης χωρίς πράξη θα ήταν ψέμα.
+    function personalActivityPaired() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let activityId = request.resource.data.get('lastActivityId', '');
+      return (!changed.hasAny(personalActivityKeys()) && !changed.hasAny(['lastActivityId']))
+             || (changed.hasAny(personalActivityKeys())
+                 && changed.hasAny(['lastActivityId'])
+                 && activityId is string
+                 && activityId.size() > 0
+                 && !exists(personalActivityPath(activityId))
+                 && existsAfter(personalActivityPath(activityId)));
+    }
+
+    // Η ΓΡΑΜΜΗ: περιγράφει ΑΚΡΙΒΩΣ την αλλαγή του ΔΙΚΟΥ του αρχείου, που δείχνει σε ΑΥΤΗ τη γραμμή.
+    // Αρχείο που δεν υπάρχει ⇒ `get` = null ⇒ σφάλμα ⇒ άρνηση (fail closed).
+    function personalActivityMatchesChange(fileId, logId, action) {
+      let path = /databases/$(database)/documents/files_personal/$(fileId);
+      let before = get(path).data;
+      let after = getAfter(path).data;
+      let wasTrashed = before.get('lifecycleState', 'active') == 'trashed'
+                       || before.get('isDeleted', false) == true;
+      return before.userId == request.auth.uid
+             && after.get('lastActivityId', '') == logId
+             && (
+                  (action == 'delete' && !wasTrashed
+                      && after.get('lifecycleState', '') == 'trashed' && after.get('isDeleted', false) == true)
+                  || (action == 'restore' && wasTrashed
+                      && after.get('lifecycleState', '') == 'active' && after.get('isDeleted', true) == false)
+                  || (action == 'rename'
+                      && after.get('displayName', '') != before.get('displayName', ''))
+                );
     }
 
     // =========================================================================

@@ -673,6 +673,17 @@ export interface FileRecord {
   trashedBy?: string;
 
   /**
+   * 📒 **Η τελευταία γραμμή ΔΡΑΣΤΗΡΙΟΤΗΤΑΣ που γράφτηκε ΜΑΖΙ με αλλαγή αυτού του αρχείου**
+   * (ADR-866 §2.6.11 Ε-Φ0-4). Ο κανόνας του `files_personal` αρνείται κάδο · επαναφορά ·
+   * μετονομασία αν **δεν** δείχνει σε **νέα** γραμμή του προσωπικού βιβλίου, γραμμένη στην **ίδια**
+   * ατομική δέσμη — και ο κανόνας της γραμμής αρνείται γραμμή που **δεν** αντιστοιχεί στην αλλαγή.
+   * Δηλαδή η δραστηριότητα ούτε πλαστογραφείται ούτε παραλείπεται.
+   *
+   * @see services/file-record/file-activity-commit — ο ΕΝΑΣ γραφέας της
+   */
+  lastActivityId?: string;
+
+  /**
    * When file becomes eligible for permanent deletion
    * Calculated: trashedAt + retentionDays
    * @enterprise Server-side scheduler checks this field

@@ -103,6 +103,14 @@ export const COLLECTIONS = {
   OWNER_PROPERTIES: process.env.NEXT_PUBLIC_OWNER_PROPERTIES_COLLECTION || 'owner_properties',
 
   /**
+   * 🗂️ ADR-866 Ε-1 · Φ1.1 — **Ο ΦΑΚΕΛΟΣ ΤΟΥ ΑΚΙΝΗΤΟΥ** (`pdos_*`): ό,τι αφορά το σπίτι, πέρα από
+   * κάθε αγγελία. Κάτοχος = `userId` (μέλος της `CustodyScope`, όπως το `FILES_PERSONAL`) —
+   * **όχι** `authorUserId`, γιατί ο φάκελος **αλλάζει χέρια** (Φ4) ενώ ο συγγραφέας όχι.
+   * Γράφει **μόνο** ο διακομιστής (`property-dossier-write.service.ts`).
+   */
+  PROPERTY_DOSSIERS: process.env.NEXT_PUBLIC_PROPERTY_DOSSIERS_COLLECTION || 'property_dossiers',
+
+  /**
    * 🎯 ADR-835 §20 (Στάδιο Α) — **Η ΚΕΦΑΛΗ ΤΟΥ ΗΜΕΡΟΛΟΓΙΟΥ ΚΑΤΑΛΥΜΑΤΟΣ**. Κλειδί: το
    * `propertyId`. «Δηλώθηκε;» + το `version` που σειριοποιεί κάθε εγγραφή (phantom insert).
    * Γράφει μόνο ο διακομιστής· διαβάζει ο συντάκτης της αγγελίας.
@@ -112,6 +120,13 @@ export const COLLECTIONS = {
   STAY_BLOCKS: process.env.NEXT_PUBLIC_STAY_BLOCKS_COLLECTION || 'stay_blocks',
   /** 🎯 ADR-835 §6.1/§20 — **ΚΡΑΤΗΣΕΙΣ** (`stay_*`). Κουβαλούν άνθρωπο· ίδιο σύνορο με την κεφαλή. */
   STAY_BOOKINGS: process.env.NEXT_PUBLIC_STAY_BOOKINGS_COLLECTION || 'stay_bookings',
+  /**
+   * 🎯 ADR-835 §23 (Στάδιο Δ) — **Η ΚΕΦΑΛΗ ΤΟΥ ΕΠΙΣΚΕΠΤΗ**. Κλειδί: το `uid`. Τα **ζωντανά**
+   * αιτήματά του, για το όριο ενεργών αιτημάτων — γράφεται **στην ίδια συναλλαγή** με την κράτηση,
+   * ώστε δύο παράλληλα αιτήματα να μη περνούν και τα δύο το όριο (κάτοπτρο της κεφαλής ακινήτου).
+   * 🔴 **Αδιάβαστη από τον πελάτη**: είναι μηχανισμός σειριοποίησης, όχι προβολή.
+   */
+  STAY_GUESTS: process.env.NEXT_PUBLIC_STAY_GUESTS_COLLECTION || 'stay_guests',
   /**
    * 🎯 ADR-835 §21 (Στάδιο Β) — **ΚΑΝΟΝΕΣ ΑΝΑ ΗΜΕΡΟΜΗΝΙΑ** (`scmo_*`), ένα έγγραφο ανά
    * (ακίνητο, μήνας): τιμή νύχτας, ελάχ./μέγ. νύχτες, CTA/CTD. Ίδιο σύνορο με την κεφαλή.
@@ -364,6 +379,16 @@ export const COLLECTIONS = {
    */
   NETWORK_MESSAGE_RETRACTIONS:
     process.env.NEXT_PUBLIC_NETWORK_MESSAGE_RETRACTIONS_COLLECTION || 'network_message_retractions',
+
+  /**
+   * **Η ΑΠΟΥΣΙΑ ΤΟΥ ΑΝΘΡΩΠΟΥ** (ADR-867 §4.4 · Β5 · ADR-834 (ε) 🏆) — `network_away/{naway_*}`,
+   * κλειδί **ντετερμινιστικό** ανά πρόσωπο: μία δήλωση ανά άνθρωπο, ποτέ δύο που διαφωνούν.
+   *
+   * ⛔ **ΚΛΕΙΣΤΗ ΣΕ ΚΑΘΕ ΠΕΛΑΤΗ**: ο αντισυμβαλλόμενος μαθαίνει **μόνο** «ως πότε» και «ποιος
+   * διαβάζει στη θέση του», από τον **διακομιστή**, και **μόνο** για όσους διαβάζουν το **ίδιο**
+   * νήμα. Ανάγνωση πελάτη θα έκανε το ημερολόγιο απουσιών ενός γραφείου απαριθμήσιμο.
+   */
+  NETWORK_AWAY: process.env.NEXT_PUBLIC_NETWORK_AWAY_COLLECTION || 'network_away',
 
   /**
    * **Η ΠΡΟΣΚΛΗΣΗ — Ο,ΤΙ ΔΕΝ ΕΙΝΑΙ ΑΚΟΜΗ ΠΡΑΞΗ** (ADR-844).
@@ -719,6 +744,9 @@ export const COLLECTIONS = {
 
   // 📄 FILE AUDIT LOG (ADR-191: Enterprise Document Management — Phase 3.1)
   FILE_AUDIT_LOG: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_COLLECTION || 'file_audit_log',
+  // 📒 ADR-866 §2.6.11 — η ΔΡΑΣΤΗΡΙΟΤΗΤΑ των προσωπικών αρχείων: το ΙΔΙΟ σύστημα, ξεχωριστό διαμέρισμα
+  //    (`FILE_AUDIT_COLLECTION` στο `lib/files/file-custody.ts`). Τη διαβάζει ΜΟΝΟ ο κάτοχος.
+  FILE_AUDIT_LOG_PERSONAL: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_PERSONAL_COLLECTION || 'file_audit_log_personal',
 
   /**
    * 🔗 FILE SHARES (ADR-191: Enterprise Document Management — Phase 4.2)
@@ -1257,6 +1285,7 @@ export const IMMUTABLE_COLLECTIONS: readonly string[] = [
   'CLOUD_FUNCTION_AUDIT_LOG',
   'ACCOUNTING_AUDIT_LOG',
   'FILE_AUDIT_LOG',
+  'FILE_AUDIT_LOG_PERSONAL',
   'COMMUNICATIONS',
   'MESSAGES',
   'ATTENDANCE_EVENTS',

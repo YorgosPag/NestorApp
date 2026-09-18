@@ -19,6 +19,8 @@ export type SpaceCommercialStatus =
 // =============================================================================
 
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import type { PriceTotalsByRole } from '@/lib/properties/price-totals';
+import type { RolePriceRange } from '@/lib/properties/price-range';
 
 export interface SpaceCommercialData {
   /** Asking price in EUR */
@@ -45,15 +47,21 @@ export interface SalesSpaceFilterState {
   type: string;
   building: string;
   floor: string;
-  priceRange: { min: number | null; max: number | null };
+  /** Εύρος τιμής **με μονάδα** (ADR-777 §8.60.14.14) — κρίνεται από το `matchesPriceRange`. */
+  priceRange: RolePriceRange;
   areaRange: { min: number | null; max: number | null };
 }
 
-export interface SalesSpaceDashboardStats {
+/**
+ * Τα στατιστικά **κάθε** σελίδας πωλήσεων — ακίνητα, θέσεις στάθμευσης, αποθήκες, πωλημένα.
+ *
+ * 🔑 **ΕΝΑ σχήμα** (ADR-777 §8.60.14.13): ήταν δύο ταυτόσημα (`SalesDashboardStats` στο hook
+ * των ακινήτων + αυτό), με τα **ίδια τέσσερα** πεδία — και τα δύο με το ίδιο ελάττωμα.
+ * Αξία, μέση τιμή και €/m² ζουν πλέον **ανά ρόλο** στο `priceTotals`.
+ */
+export interface SalesDashboardStats {
   availableCount: number;
-  averagePrice: number;
-  totalValue: number;
-  averagePricePerSqm: number;
+  priceTotals: PriceTotalsByRole;
 }
 
 export type SalesViewMode = 'list' | 'grid';

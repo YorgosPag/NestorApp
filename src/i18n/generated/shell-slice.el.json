@@ -1447,10 +1447,12 @@
         "company": "Εταιρεία",
         "contact": "Επαφή",
         "floor": "Όροφος",
+        "network_act_team": "Ομάδα πράξης",
         "owner_property": "Αγγελία",
         "parking": "Parking",
         "project": "Έργο",
         "property": "Ακίνητο",
+        "property_dossier": "Φάκελος ακινήτου",
         "purchase_order": "Παραγγελία",
         "storage": "Αποθήκη"
       },
@@ -2124,6 +2126,19 @@
       "rent": "{price}/μήνα",
       "sale": "{price}",
       "stayTotal": "{price} · {nights, plural, one {# νύχτα} other {# νύχτες}}"
+    },
+    "pricePerArea": {
+      "nightly": "{price}/m²/νύχτα",
+      "rent": "{price}/m²/μήνα",
+      "sale": "{price}/m²"
+    },
+    "priceRangeFilter": {
+      "role": {
+        "nightly": "Τιμή ανά νύχτα (€/νύχτα)",
+        "rent": "Ενοίκιο (€/μήνα)",
+        "sale": "Τιμή πώλησης (€)"
+      },
+      "unit": "Μονάδα τιμής"
     },
     "priceReduction": {
       "was": "Προηγούμενη τιμή:"

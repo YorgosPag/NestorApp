@@ -291,11 +291,11 @@ export type DemandTiming =
  * `PublicListing`, όπου *«`0` είναι **ισόγειο**, υπαρκτή τιμή»*: αν το `floorMin`
  * ήταν `0` για «αδιάφορο», καμία ζήτηση δεν θα μπορούσε να ζητήσει **ισόγειο**.
  *
- * ⚠️ **Ο άξονας τιμής είναι ΕΝΑΣ, και είναι σκόπιμο.** Δεν υπάρχουν χωριστά
- * `priceMax` και `rentMax`: η τιμή κρίνεται **έναντι της λυμένης τιμής** της
- * αγγελίας (`lib/properties/price-resolver.ts`, 23 καταναλωτές), που ήδη ξέρει αν
- * κοιτάζει πώληση ή ενοίκιο. Δύο πεδία εδώ θα σήμαιναν **δεύτερη μηχανή επιλογής
- * τιμής** — ακριβώς αυτό που το `PublicListing` αρνήθηκε να γεννήσει.
+ * 🔴 **Η ΤΙΜΗ ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ** (ADR-777 §8.60.15, 2026-09-18). Ως τότε αυτό το σχόλιο έλεγε
+ * *«ο άξονας τιμής είναι ΕΝΑΣ, και είναι σκόπιμο»* — σωστό μόνο όσο κάθε ζήτηση είχε **μία**
+ * διάθεση. Με «πώληση **και** ενοικίαση» το ένα αμονάδιστο εύρος κρινόταν απέναντι σε **κάθε**
+ * μονάδα: 160.000 € ως «κατώτατο» έκανε **κάθε** ενοίκιο `price-below`. Η τιμή είναι ιδιότητα της
+ * **συναλλαγής**, όχι του ακινήτου που ζητιέται ⇒ ζει στο {@link DemandSeek}.
  */
 export interface DemandFeatures {
   /**
@@ -303,10 +303,6 @@ export interface DemandFeatures {
    * σημασιολογία με το `ListingFilters.types`, ώστε η προβολή να μη χρειάζεται όρο.
    */
   readonly types: readonly string[];
-  /** Ανώτατο ποσό σε EUR. `null` = δεν έθεσε οροφή. */
-  readonly priceMax: number | null;
-  /** Κατώτατο ποσό σε EUR — υπάρχει, γιατί «τίποτα κάτω από Χ» είναι πραγματικό αίτημα. */
-  readonly priceMin: number | null;
   /** Ελάχιστο μικτό εμβαδόν σε m². */
   readonly areaMin: number | null;
   /** Μέγιστο μικτό εμβαδόν σε m² — ο αγοραστής που **δεν** θέλει να συντηρεί 300 m². */
@@ -322,14 +318,118 @@ export interface DemandFeatures {
 /** Κανένας όρος χαρακτηριστικών — η ουδέτερη τιμή, ώστε να μη γράφεται πουθενά αλλού. */
 export const NO_DEMAND_FEATURES: DemandFeatures = {
   types: [],
-  priceMax: null,
-  priceMin: null,
   areaMin: null,
   areaMax: null,
   bedroomsMin: null,
   floorMin: null,
   floorMax: null,
 };
+
+// =============================================================================
+// 3β. Η ΣΥΝΑΛΛΑΓΗ ΚΑΙ Η ΤΙΜΗ ΤΗΣ — `schema.org/Demand` (ADR-777 §8.60.15)
+// =============================================================================
+
+/**
+ * **Εύρος ποσού σε ΜΙΑ μονάδα.** Η μονάδα **δεν γράφεται** — είναι ο κλάδος του
+ * {@link DemandSeek} που το κρατά (πώληση € · εκμίσθωση €/μήνα · βραχυχρόνια €/νύχτα).
+ *
+ * `null` = «δεν έθεσε όριο» — ποτέ `0`: μηδέν ευρώ δεν είναι «αδιάφορο».
+ */
+export interface DemandAmountRange {
+  readonly min: number | null;
+  readonly max: number | null;
+}
+
+/** Κανένα όριο ποσού — η ουδέτερη τιμή, ώστε να μη γράφεται πουθενά αλλού. */
+export const NO_AMOUNT_RANGE: DemandAmountRange = { min: null, max: null };
+
+/**
+ * **Μία εναλλακτική της ανάγκης** — είδος συναλλαγής **και** η τιμή της, στη μονάδα της.
+ *
+ * 🌐 **schema.org** (επαληθευμένο 2026-09-18): `Person.seeks` → **`Demand`** (πολλές), και κάθε
+ * `Demand` έχει **δικό του** `businessFunction` **και** `priceSpecification` (`minPrice` ·
+ * `maxPrice` · μονάδα). Ο άνθρωπος που ψάχνει «αγορά **ή** ενοικίαση» έχει **δύο** Demand με
+ * **δύο** τιμές — όχι μία τιμή για δύο συναλλαγές.
+ *
+ * 🏆 **Πού ξεπερνάμε τον κλάδο**: RESO (`SavedSearch.ClassName`), τα CRM «demandas» και τα portal
+ * κρατούν **μία** συναλλαγή ανά εγγραφή ⇒ «αγορά ή ενοικίαση» = **δύο** εγγραφές με αντίγραφα
+ * τόπου/χρόνου/χαρακτηριστικών που αποκλίνουν, και ο ιδιοκτήτης βλέπει **δύο** ενδιαφερόμενους
+ * εκεί που υπάρχει **ένας**. Εδώ η **ανάγκη** είναι μία (το έγγραφο), οι **εναλλακτικές** πολλές.
+ *
+ * 🔑 **Η μονάδα είναι ΚΛΑΔΟΣ, όχι πεδίο** — το δόγμα του `ShortLeaseOffer`: *«η σύγχυση γίνεται
+ * αδύνατη να εκφραστεί, όχι απαγορευμένη από σχόλιο»*. Ένα `unit: 'month' | 'night'` δίπλα στο
+ * ποσό (το `LeaseAmountFrequency` του RESO) θα άφηνε κάθε αναγνώστη να ξεχάσει να το ρωτήσει.
+ *
+ * ⚠️ **Η αντιπαροχή δεν έχει ποσό** — φέρει **ποσοστό** στην προσφορά (`ExchangeOffer`). Εύρος
+ * ποσοστού στη ζήτηση = δηλωμένο επόμενο βήμα, όχι σιωπηλή παράλειψη.
+ */
+export type DemandSeek =
+  | { readonly kind: 'sell'; readonly price: DemandAmountRange }
+  | { readonly kind: 'leaseOut'; readonly price: DemandAmountRange }
+  | { readonly kind: 'leaseShort'; readonly price: DemandAmountRange }
+  | { readonly kind: 'exchange' };
+
+/** Εναλλακτική που **έχει** τιμή. */
+export type PricedDemandSeek = Extract<DemandSeek, { readonly price: DemandAmountRange }>;
+
+/** Τα είδη συναλλαγής που φέρουν ποσό — **παράγεται** από την ένωση, δεν γράφεται. */
+export type PricedSeekKind = PricedDemandSeek['kind'];
+
+/**
+ * 🔒 `Record` πάνω στο {@link PricedSeekKind} ⇒ νέος κλάδος με τιμή **δεν μεταγλωττίζεται** χωρίς
+ * γραμμή εδώ, και γραμμή χωρίς κλάδο επίσης. Η σειρά είναι του `OFFER_KINDS` (πώληση → εκμίσθωση
+ * → βραχυχρόνια) — η σειρά με την οποία η φόρμα δείχνει τα εύρη.
+ */
+const PRICED_SEEK_KIND_ORDER: Readonly<Record<PricedSeekKind, number>> = {
+  sell: 0,
+  leaseOut: 1,
+  leaseShort: 2,
+};
+
+/** Οι διαθέσεις που φέρουν ποσό, **με σειρά** — παράγεται, ποτέ δεύτερη χειρόγραφη λίστα. */
+export const PRICED_SEEK_KINDS: readonly PricedSeekKind[] = (
+  Object.keys(PRICED_SEEK_KIND_ORDER) as PricedSeekKind[]
+).sort((a, b) => PRICED_SEEK_KIND_ORDER[a] - PRICED_SEEK_KIND_ORDER[b]);
+
+/** `true` όταν αυτό το είδος συναλλαγής φέρει ποσό. */
+export function isPricedSeekKind(kind: OfferKind): kind is PricedSeekKind {
+  return kind in PRICED_SEEK_KIND_ORDER;
+}
+
+/**
+ * 🔒 **Κάθε διάθεση έχει κλάδο.** Νέα τιμή στο `OFFER_KINDS` χωρίς κλάδο εδώ ⇒ ο {@link demandSeek}
+ * **δεν μεταγλωττίζεται** (επιστρέφει `{ kind }` που δεν ανήκει στην ένωση).
+ */
+export function demandSeek(kind: OfferKind, price: DemandAmountRange): DemandSeek {
+  // 🔑 Η αντιπαροχή **πετά** το εύρος — δεν το κρατά κρυφό: ποσό που κανείς δεν κρίνει θα ήταν
+  //    ψευδής ισχυρισμός μέσα στο έγγραφο.
+  return isPricedSeekKind(kind) ? { kind, price } : { kind };
+}
+
+/** `true` όταν η εναλλακτική φέρει ποσό. */
+export function isPricedSeek(seek: DemandSeek): seek is PricedDemandSeek {
+  return 'price' in seek;
+}
+
+/** Τα είδη συναλλαγής μιας ζήτησης, **με τη σειρά του εγγράφου**. */
+export function seekKindsOf(seeks: readonly DemandSeek[]): OfferKind[] {
+  return seeks.map((seek) => seek.kind);
+}
+
+/** Η εναλλακτική **αυτού** του είδους — `undefined` όταν η ζήτηση δεν το ζητά. */
+export function seekOfKind(seeks: readonly DemandSeek[], kind: OfferKind): DemandSeek | undefined {
+  return seeks.find((seek) => seek.kind === kind);
+}
+
+/** Έθεσε ο άνθρωπος **κάποιο** όριο ποσού; */
+export function isAmountRangeSet(range: DemandAmountRange): boolean {
+  return range.min !== null || range.max !== null;
+}
+
+/** Οι εναλλακτικές **με** όριο ποσού — ό,τι ο κριτής τιμής οφείλει να ελέγξει. */
+export function boundedPricedSeeks(seeks: readonly DemandSeek[]): PricedDemandSeek[] {
+  return seeks.filter(isPricedSeek).filter((seek) => isAmountRangeSet(seek.price));
+}
 
 // =============================================================================
 // 4. ΓΕΙΤΟΝΙΑ — Ζ6
@@ -503,8 +603,12 @@ export interface PropertyDemand {
    * είδους συναλλαγή» δεν είναι αίτημα — και θα ταίριαζε με **τα πάντα**, δηλαδή θα
    * γέμιζε τον θερμοχάρτη με θόρυβο. Επιβάλλεται στην πύλη γραφής
    * ({@link demandInvariantViolations}).
+   *
+   * 🔑 **Κάθε στοιχείο είναι εναλλακτική με τη δική της τιμή** ({@link DemandSeek}, ADR-777
+   * §8.60.15). Ως τις 2026-09-18 ήταν σκέτα είδη (`OfferKind[]`) με **ένα** αμονάδιστο εύρος στα
+   * χαρακτηριστικά· το σύνορο ανάγνωσης διαβάζει ακόμη και το παλιό σχήμα.
    */
-  readonly seeks: readonly OfferKind[];
+  readonly seeks: readonly DemandSeek[];
   readonly place: DemandPlace;
   readonly timing: DemandTiming;
   readonly features: DemandFeatures;
@@ -628,6 +732,13 @@ export function isAttributableDemand(demand: PropertyDemand): boolean {
 export const DEMAND_GAPS = [
   /** Κλειστό λεξιλόγιο· κενό `seeks` «ταιριάζει με τα πάντα» — δες `seeks-empty`. */
   'seeks',
+  /**
+   * **ADR-777 §8.60.15** — έγγραφο του **παλιού** σχήματος με **πολλές** διαθέσεις με τιμή και
+   * **ένα** αμονάδιστο εύρος. Η μονάδα **δεν** μαντεύεται (250.000 € ή €/μήνα;): ο κάτοχος
+   * ορίζει την τιμή ανά διάθεση με μία επεξεργασία. Δεν είναι πεδίο του εγγράφου — είναι
+   * **ερμηνεία** που απέτυχε, και ονομάζεται όπως κάθε κενό.
+   */
+  'seek-prices',
   /** Διακριτή ένωση **χωρίς** ουδέτερο: το `anywhere` είναι **δήλωση**, όχι απουσία. */
   'place',
   /** Ομοίως: το `whenever` λέει «όποτε», δεν λέει «δεν ξέρω». */
@@ -737,10 +848,13 @@ function frontageInvariants(place: Extract<DemandPlace, { kind: 'frontage' }>): 
   return violations;
 }
 
-/** Οι παραβιάσεις εγκυρότητας των αριθμητικών ευρών. */
-function featureInvariants(features: DemandFeatures): DemandInvariant[] {
+/**
+ * Οι παραβιάσεις εγκυρότητας των αριθμητικών ευρών — εμβαδόν, όροφος **και** το ποσό **κάθε**
+ * εναλλακτικής (ADR-777 §8.60.15: η τιμή ζει πια στο {@link DemandSeek}, όχι στα χαρακτηριστικά).
+ */
+function rangeInvariants(features: DemandFeatures, seeks: readonly DemandSeek[]): DemandInvariant[] {
   const inverted =
-    rangeInverted(features.priceMin, features.priceMax) ||
+    seeks.filter(isPricedSeek).some((seek) => rangeInverted(seek.price.min, seek.price.max)) ||
     rangeInverted(features.areaMin, features.areaMax) ||
     rangeInverted(features.floorMin, features.floorMax);
   return inverted ? ['range-inverted'] : [];
@@ -769,13 +883,16 @@ export function demandInvariantViolations(
   const found: DemandInvariant[] = [];
 
   if (demand.seeks.length === 0) found.push('seeks-empty');
-  if (new Set(demand.seeks).size !== demand.seeks.length) found.push('seeks-duplicated');
+  // 🔴 Σύνολο πάνω στα **ΕΙΔΗ**, ποτέ στα στοιχεία: με αντικείμενα κάθε `Set` είναι μοναδικό
+  //    ⇒ το `seeks-duplicated` θα σώπαινε **για πάντα**, χωρίς κανένα κόκκινο (ADR-777 §8.60.15).
+  const kinds = seekKindsOf(demand.seeks);
+  if (new Set(kinds).size !== kinds.length) found.push('seeks-duplicated');
   if (demand.timing.kind === 'window' && demand.timing.fromDate > demand.timing.toDate) {
     found.push('window-inverted');
   }
 
   found.push(...placeInvariants(demand.place));
-  found.push(...featureInvariants(demand.features));
+  found.push(...rangeInvariants(demand.features, demand.seeks));
   found.push(...proximityInvariants(demand.proximity));
 
   return found;

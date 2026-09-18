@@ -29,7 +29,8 @@
 import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
 import type { StayRules } from '@/types/stay-rules';
 import {
-  occupiesStayCalendar,
+  STAY_LIFECYCLE_OCCUPIES,
+  stayBookingOccupiesAt,
   stayHolderId,
   stayResourcesOf,
   type StayBooking,
@@ -159,11 +160,26 @@ export type StayCalendarEntry =
   | { readonly kind: 'block'; readonly block: StayBlock };
 
 /**
- * **Πιάνει νύχτες αυτή η εγγραφή;** Το block **πάντα** (υπάρχει ⇒ κλείνει)· η κράτηση
- * κατά {@link occupiesStayCalendar} — η **μία** πηγή της απάντησης, ποτέ δεύτερη λίστα.
+ * **Πιάνει νύχτες αυτή η εγγραφή τη στιγμή `instant`;** Το block **πάντα** (υπάρχει ⇒ κλείνει)·
+ * η κράτηση κατά {@link stayBookingOccupiesAt} — η **μία** πηγή της απάντησης, ποτέ δεύτερη λίστα.
+ *
+ * 🔑 Η στιγμή είναι **υποχρεωτική** (Στάδιο Δ, §23.2): ένα αίτημα καταλαμβάνει **όσο ζει** η
+ * προθεσμία του. Προαιρετική στιγμή θα σήμαινε σιωπηλή προεπιλογή — και κάθε προεπιλογή εδώ είναι
+ * λάθος για κάποιον (ή διπλοκράτηση, ή μέρες κλειστές για πάντα).
  */
-export function stayEntryOccupies(entry: StayCalendarEntry): boolean {
-  return entry.kind === 'block' || occupiesStayCalendar(entry.booking.lifecycle);
+export function stayEntryOccupies(entry: StayCalendarEntry, instant: string): boolean {
+  return entry.kind === 'block' || stayBookingOccupiesAt(entry.booking, instant);
+}
+
+/**
+ * **Είναι αυτή η εγγραφή ζωντανό αίτημα σε αναμονή;** — η διάκριση που κάνει τον επισκέπτη να βλέπει
+ * *«σε αναμονή ως 14:00»* αντί για σκέτο «κλειστό» (§23.5). Επιστρέφει την προθεσμία, ή `null`.
+ */
+export function stayEntryHeldUntil(entry: StayCalendarEntry, instant: string): string | null {
+  if (entry.kind !== 'booking') return null;
+  const { booking } = entry;
+  if (STAY_LIFECYCLE_OCCUPIES[booking.lifecycle] !== 'while-hold-lives') return null;
+  return stayBookingOccupiesAt(booking, instant) && booking.hold !== null ? booking.hold.expiresAt : null;
 }
 
 /**

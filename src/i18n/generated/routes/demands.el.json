@@ -29,7 +29,6 @@
       },
       "form": {
         "features": {
-          "priceLegend": "Ποσό (€)",
           "typesLabel": "Είδη ακινήτου"
         },
         "place": {
@@ -46,6 +45,7 @@
           "lifecycle": "η κατάσταση",
           "mandate": "για λογαριασμό ποιου",
           "place": "η περιοχή",
+          "seek-prices": "το ποσό για κάθε είδος συναλλαγής χωριστά (η ζήτηση είχε ένα ποσό για πολλές συναλλαγές, χωρίς μονάδα)",
           "seeks": "τι είδους συναλλαγή ζητάς",
           "timing": "ο χρόνος"
         },
@@ -88,9 +88,17 @@
         "noPriceLimit": "Χωρίς όριο ποσού",
         "now": "Τώρα",
         "place": "Σε συγκεκριμένο ακίνητο",
-        "priceFrom": "Από {priceMin} €",
-        "priceRange": "{priceMin} – {priceMax} €",
-        "priceUpTo": "Έως {priceMax} €",
+        "priceFrom": "από {priceMin}",
+        "priceLabel": "Ποσό",
+        "priceRange": "{priceMin} – {priceMax}",
+        "priceUpTo": "έως {priceMax}",
+        "seekKind": {
+          "exchange": "Αντιπαροχή",
+          "leaseOut": "Ενοικίαση",
+          "leaseShort": "Διαμονή",
+          "sell": "Αγορά"
+        },
+        "seekPrice": "{kind}: {range}",
         "whenever": "Όποτε κι αν βγει",
         "window": "Από {fromDate} έως {toDate}"
       }

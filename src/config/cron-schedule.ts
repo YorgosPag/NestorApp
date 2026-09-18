@@ -60,6 +60,7 @@ import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
 import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
+import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
 
 /**
@@ -361,6 +362,30 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 5,
     leaseMinutes: 10,
     run: runStayChannelImport,
+  },
+  {
+    slug: 'stay-hold-expiry',
+    path: '/api/cron/stay-hold-expiry',
+    description: 'Καταγραφή αιτημάτων κράτησης που έληξαν χωρίς απάντηση (ADR-835 §23)',
+    enabled: true,
+    // 🔑 **Ο ρυθμός ορίζει ΜΟΝΟ πόσο γρήγορα φεύγουν οι ειδοποιήσεις — ΟΧΙ την ορθότητα.** Η λήξη
+    // ισχύει στην ανάγνωση: οι νύχτες είναι ελεύθερες **από τη στιγμή** της προθεσμίας, με ή
+    // χωρίς αυτό το πέρασμα. 10′ επειδή η μικρότερη προθεσμία είναι **2 ώρες** — ένα «δεν
+    // απαντήθηκε» ως 10′ αργότερα είναι ακρίβεια· μισή ώρα αργότερα θα ήταν το 25% της υπόσχεσης.
+    //
+    // 🔴 **ΟΧΙ 5′, ΚΑΙ ΤΟ ΕΙΠΕ Η ΑΓΚΥΡΑ**: ο παλμός (`*/5`) πρέπει να χτυπά **αυστηρά συχνότερα** από
+    // κάθε εργασία (`cron-schedule.test.ts`). Μετρημένο 2026-09-18: `4-59/5` ⇒ κενό 5′ = 5′ ⇒ κόκκινο.
+    // (Το `stay-channel-import` στα `2-59/5` παραβιάζει ήδη τον ίδιο κανόνα από το Στάδιο Γ — ADR-835 §23.9.)
+    //
+    // ⚠️ Λεπτό 4 κάθε δέκα: `0/5` = heartbeat, `*/10` = outbound-email-flush, `2-59/5` =
+    // stay-channel-import. Κανένα κοινό λεπτό.
+    schedule: '4-59/10 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    // Ως 200 αιτήματα × μία συναλλαγή το καθένα, 5 παράλληλα — πολύ κάτω από το `maxDuration = 120`.
+    maxRuntimeMinutes: 2,
+    leaseMinutes: 5,
+    run: runStayHoldExpiry,
   },
   {
     slug: 'outbound-email-flush',

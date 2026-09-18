@@ -21,6 +21,9 @@
  *   **Π6. ΜΕΤΑ τη διαδοχή του γραφέα (Admin SDK, εκτός κανόνων)**: ο κάτοχος **εξακολουθεί να
  *   διαβάζει** προκάτοχο και διάδοχο, και το ερώτημα προκατόχων της στοίβας περνά — ενώ ο δεσμός
  *   διαδοχής **δεν ξηλώνεται** από τον πελάτη (ADR-866 βήμα 2β.3β · Ε-Φ0-1).
+ *   **Π7. Κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή δραστηριότητάς τους** — ίδια ατομική
+ *   δέσμη, `lastActivityId` σε ΝΕΑ γραμμή (ADR-866 §2.6.11 Ε-Φ0-4). Γι' αυτό κάθε τέτοια πράξη σε
+ *   αυτή τη σουίτα περνά από το `commitPairedActivity`, όπως στον πραγματικό γραφέα.
  *
  * @since 2026-09-17 (ADR-866 Φ0 βήμα 2β)
  */
@@ -29,6 +32,12 @@ import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator'
 import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { personalFilePayload, seedPersonalFile } from '../_harness/seed-helpers';
+import {
+  RESTORE_UPDATES,
+  TRASH_UPDATES,
+  commitPairedActivity,
+  seedPersonalActivity,
+} from '../_harness/personal-activity';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { PERSONA_CLAIMS } from '../_registry/personas';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
@@ -74,7 +83,8 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
         const target: AssertTarget = {
           collection: COLLECTION,
           docId: DOC_ID,
-          data: { displayName: 'Συμβόλαιο αγοράς' },
+          // ⚠️ ΟΧΙ `displayName`: η μετονομασία είναι δραστηριότητα και θέλει ζεύγος (Π7, ADR-866 §2.6.11).
+          data: { description: 'Συμβόλαιο αγοράς' },
           createData: personalFilePayload(OWNER_UID, `${DOC_ID}-new`),
           // 🔑 Το φίλτρο ονομάζει το uid ΤΟΥ ΚΑΤΟΧΟΥ: «ξέρω ποιανού ζητάω» δεν αρκεί.
           listFilter: { field: 'userId', op: '==', value: OWNER_UID },
@@ -95,7 +105,10 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertSucceeds(ref.get());
       const snap = await assertSucceeds(db.collection(COLLECTION).where('userId', '==', CITIZEN_UID).get());
       expect(snap.size).toBe(1);
-      await assertSucceeds(ref.update({ isDeleted: true }));
+      // 📒 ADR-866 §2.6.11 — ο κάδος ΜΑΖΙ με τη γραμμή του (Π7).
+      await assertSucceeds(commitPairedActivity(db, {
+        uid: CITIZEN_UID, fileId: 'citizen-file', action: 'delete', updates: TRASH_UPDATES,
+      }));
       await assertSucceeds(ref.delete());
     });
 
@@ -179,7 +192,10 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
     it('🔑 ό,τι σφράγισε ο γραφέας δεν αφαιρείται από τον πελάτη', async () => {
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { supersededByFileId: 'file-personal-2', supersededAt: new Date() });
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);
-      await assertSucceeds(ref.update({ displayName: 'παλιά έκδοση' }));
+      // 📒 ADR-866 §2.6.11 — η μετονομασία είναι δραστηριότητα: ζευγαρωμένη (Π7).
+      await assertSucceeds(commitPairedActivity(citizen(), {
+        uid: CITIZEN_UID, fileId: DOC_ID, action: 'rename', updates: { displayName: 'παλιά έκδοση' },
+      }));
       await assertFails(ref.update({ supersededAt: new Date() }));
     });
 
@@ -189,7 +205,9 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID);
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);
       await assertFails(ref.update({ retentionUntil: '2999-01-01T00:00:00.000Z' }));
-      await assertSucceeds(ref.update({ displayName: 'χωρίς δέσμευση' }));
+      await assertSucceeds(commitPairedActivity(citizen(), {
+        uid: CITIZEN_UID, fileId: DOC_ID, action: 'rename', updates: { displayName: 'χωρίς δέσμευση' },
+      }));
     });
 
     it('🔑 Δ21.1 δεσμευμένο από τον διακομιστή: κάδος ✅ · αποδέσμευση ✗ · οριστική διαγραφή ✗', async () => {
@@ -197,7 +215,9 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);
       await assertFails(ref.update({ hold: 'none' }));
       await assertFails(ref.delete());
-      await assertSucceeds(ref.update({ isDeleted: true }));
+      await assertSucceeds(commitPairedActivity(citizen(), {
+        uid: CITIZEN_UID, fileId: DOC_ID, action: 'delete', updates: TRASH_UPDATES,
+      }));
     });
   });
 
@@ -226,21 +246,23 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
 
     it('γέννηση → οριστικοποίηση → κάδος → επαναφορά, με τα σχήματα του κώδικα', async () => {
       const { fileId, recordBase } = birth(CITIZEN_UID);
-      const ref = env.authenticatedContext(CITIZEN_UID, {}).firestore().collection(personalCollection).doc(fileId);
+      const db = env.authenticatedContext(CITIZEN_UID, {}).firestore();
+      const ref = db.collection(personalCollection).doc(fileId);
 
       await assertSucceeds(ref.set({ ...recordBase, createdAt: new Date() }));
       await assertSucceeds(ref.update({
         ...buildFinalizeFileRecordUpdate({ sizeBytes: 2048, downloadUrl: 'https://example.test/x.pdf' }),
         updatedAt: new Date(),
       }));
-      await assertSucceeds(ref.update({
+      // 📒 ADR-866 §2.6.11 — κάδος/επαναφορά ΜΟΝΟ ζευγαρωμένα, με τα πεδία του `file-record-lifecycle`.
+      await assertSucceeds(commitPairedActivity(db, { uid: CITIZEN_UID, fileId, action: 'delete', updates: {
         lifecycleState: 'trashed', trashedAt: new Date(), trashedBy: CITIZEN_UID, purgeAt: new Date().toISOString(),
         isDeleted: true, deletedAt: new Date(), deletedBy: CITIZEN_UID, updatedAt: new Date(),
-      }));
-      await assertSucceeds(ref.update({
-        lifecycleState: 'active', isDeleted: false, trashedAt: null, trashedBy: null, purgeAt: null,
+      } }));
+      await assertSucceeds(commitPairedActivity(db, { uid: CITIZEN_UID, fileId, action: 'restore', updates: {
+        ...RESTORE_UPDATES, trashedBy: null, purgeAt: null,
         deletedAt: null, deletedBy: null, restoredAt: new Date(), restoredBy: CITIZEN_UID, updatedAt: new Date(),
-      }));
+      } }));
     });
 
     it('🔴 το ίδιο φορτίο στο ΕΤΑΙΡΙΚΟ διαμέρισμα → deny (κανένας κλάδος ανθρώπου στο `files`)', async () => {
@@ -308,8 +330,50 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(ref.update({ supersededByFileId: 'file-personal-other' }));
       await assertFails(ref.update({ supersededByFileId: null }));
       await assertFails(ref.update({ supersededAt: new Date() }));
-      // ⚠️ Ό,τι **δεν** είναι θεματοφυλακή μένει δικό του: μετονομασία επιτρέπεται.
-      await assertSucceeds(ref.update({ displayName: 'έκδοση 1 (παλιά)' }));
+      // ⚠️ Ό,τι **δεν** είναι θεματοφυλακή μένει δικό του: μετονομασία επιτρέπεται (ζευγαρωμένη, Π7).
+      await assertSucceeds(commitPairedActivity(env.authenticatedContext(CITIZEN_UID, {}).firestore(), {
+        uid: CITIZEN_UID, fileId: PREV, action: 'rename', updates: { displayName: 'έκδοση 1 (παλιά)' },
+      }));
+    });
+  });
+
+  // ==========================================================================
+  // 🔴 Π7 — ΚΑΔΟΣ · ΕΠΑΝΑΦΟΡΑ · ΜΕΤΟΝΟΜΑΣΙΑ ΜΟΝΟ ΜΑΖΙ ΜΕ ΤΗ ΓΡΑΜΜΗ ΤΟΥΣ (ADR-866 §2.6.11)
+  // ==========================================================================
+  // Η πλευρά του ΑΡΧΕΙΟΥ στο ζευγάρωμα (η πλευρά της γραμμής: `file-audit-log-personal`). Στους
+  // μεγάλους τη δραστηριότητα τη γράφει η υπηρεσία — ο χρήστης δεν την παραλείπει. Εδώ ο κανόνας
+  // αρνείται την ΠΡΑΞΗ όταν λείπει η γραμμή της.
+  describe('🔴 Π7 — η πράξη δεν γίνεται χωρίς τη γραμμή της', () => {
+    beforeEach(async () => {
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID);
+    });
+
+    const citizenDb = () => env.authenticatedContext(CITIZEN_UID, {}).firestore();
+    const ref = () => citizenDb().collection(COLLECTION).doc(DOC_ID);
+
+    it('κάδος ΧΩΡΙΣ γραμμή → deny — και με `lifecycleState` και με σκέτο `isDeleted`', async () => {
+      await assertFails(ref().update({ ...TRASH_UPDATES }));
+      await assertFails(ref().update({ isDeleted: true }));
+    });
+
+    it('μετονομασία ΧΩΡΙΣ γραμμή → deny', async () => {
+      await assertFails(ref().update({ displayName: 'άλλο όνομα' }));
+    });
+
+    it('🔑 δείκτης σε ΠΑΛΙΑ γραμμή (όχι της ίδιας δέσμης) → deny', async () => {
+      await seedPersonalActivity(env, 'act-old', CITIZEN_UID, DOC_ID);
+      await assertFails(ref().update({ displayName: 'άλλο όνομα', lastActivityId: 'act-old' }));
+    });
+
+    it('🔑 ο δείκτης δεν αλλάζει ΜΟΝΟΣ του — δείκτης χωρίς πράξη θα ήταν ψέμα', async () => {
+      await assertFails(ref().update({ lastActivityId: 'act-anything' }));
+    });
+
+    it('✅ ζευγαρωμένα → allow· και ό,τι ΔΕΝ είναι δραστηριότητα (περιγραφή) μένει ελεύθερο', async () => {
+      await assertSucceeds(commitPairedActivity(citizenDb(), {
+        uid: CITIZEN_UID, fileId: DOC_ID, action: 'rename', updates: { displayName: 'νέο όνομα' },
+      }));
+      await assertSucceeds(ref().update({ description: 'σημείωση' }));
     });
   });
 });

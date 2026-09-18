@@ -792,7 +792,9 @@
       "storage": "Αποθήκη",
       "floor": "Όροφος",
       "purchase_order": "Παραγγελία",
-      "owner_property": "Αγγελία"
+      "owner_property": "Αγγελία",
+      "network_act_team": "Ομάδα πράξης",
+      "property_dossier": "Φάκελος ακινήτου"
     },
     "values": {
       "active": "Ενεργό",
@@ -948,6 +950,19 @@
     "rent": "Ενοικίαση · {count, plural, one {# ακίνητο} other {# ακίνητα}}",
     "nightly": "Βραχυχρόνια διαμονή · {count, plural, one {# κατάλυμα} other {# καταλύματα}}",
     "unpriced": "Χωρίς καταγεγραμμένη τιμή · {count, plural, one {# ακίνητο} other {# ακίνητα}}"
+  },
+  "pricePerArea": {
+    "sale": "{price}/m²",
+    "rent": "{price}/m²/μήνα",
+    "nightly": "{price}/m²/νύχτα"
+  },
+  "priceRangeFilter": {
+    "unit": "Μονάδα τιμής",
+    "role": {
+      "sale": "Τιμή πώλησης (€)",
+      "rent": "Ενοίκιο (€/μήνα)",
+      "nightly": "Τιμή ανά νύχτα (€/νύχτα)"
+    }
   },
   "priceReduction": {
     "was": "Προηγούμενη τιμή:"

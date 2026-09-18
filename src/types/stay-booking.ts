@@ -43,6 +43,7 @@ import {
 import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
 import type { OccupancyResource } from '@/lib/occupancy/occupancy-resource';
 import type { SpaceRef } from '@/lib/spaces/space-ref';
+import type { StayHoldBound, StayHoldTier } from '@/lib/stay/stay-hold-deadline';
 import type { OfferKind } from '@/types/property-offers';
 
 // =============================================================================
@@ -121,11 +122,17 @@ export function inventoryUnitLegalityIsWellFormed(unit: StayInventoryUnit): bool
 // =============================================================================
 
 export const STAY_BOOKING_LIFECYCLES = [
-  /** ο επισκέπτης ζήτησε — **ΔΕΝ καταλαμβάνει ακόμη**. */
+  /** ο επισκέπτης ζήτησε — καταλαμβάνει **όσο ζει η προθεσμία** (hold TTL, §23). */
   'requested',
   /** ο οικοδεσπότης δέχτηκε — **καταλαμβάνει**. */
   'confirmed',
-  /** ακυρώθηκε πριν τη διαμονή. */
+  /** ο οικοδεσπότης είπε **όχι**. */
+  'declined',
+  /** 🔴 **κανείς δεν απάντησε** — ΔΕΝ είναι άρνηση: άλλη θεραπεία («ρώτα ξανά»), §4.11 #3. */
+  'expired',
+  /** ο **επισκέπτης** απέσυρε το αίτημα πριν απαντηθεί — ούτε άρνηση, ούτε ακύρωση. */
+  'withdrawn',
+  /** ακυρώθηκε **επιβεβαιωμένη** κράτηση πριν τη διαμονή. */
   'cancelled',
   /** η διαμονή έγινε. */
   'completed',
@@ -134,44 +141,98 @@ export const STAY_BOOKING_LIFECYCLES = [
 export type StayBookingLifecycle = (typeof STAY_BOOKING_LIFECYCLES)[number];
 
 /**
+ * **Πώς καταλαμβάνει μια κατάσταση** — τρεις απαντήσεις, όχι δύο.
+ *
+ * - `always`: πιάνει τις νύχτες της, ανεξάρτητα από την ώρα.
+ * - `never`: δεν πιάνει τίποτα.
+ * - `while-hold-lives`: πιάνει **μόνο** όσο η προθεσμία του {@link StayHold} δεν έχει περάσει.
+ *
+ * 🔑 Ένα `boolean` δεν μπορεί να εκφράσει το τρίτο — και η Στάδιο-Δ εκδοχή «`true` + ένα `if`
+ * κάπου για τη λήξη» θα ήταν **δεύτερη διατύπωση** του ίδιου κανόνα σε σημείο χρήσης.
+ */
+export const STAY_OCCUPANCY_RULES = ['always', 'never', 'while-hold-lives'] as const;
+
+export type StayOccupancyRule = (typeof STAY_OCCUPANCY_RULES)[number];
+
+/**
  * **Πιάνει ημέρες αυτή η κατάσταση;** — η **μία** πηγή της απάντησης.
  *
- * 🔑 `Record` πάνω σε κλειστό σύνολο: **πέμπτη κατάσταση δεν μεταγλωττίζεται** μέχρι
+ * 🔑 `Record` πάνω σε κλειστό σύνολο: **όγδοη κατάσταση δεν μεταγλωττίζεται** μέχρι
  * κάποιος να απαντήσει *«και αυτή, πιάνει ημέρες;»*. Ίδιος φρουρός με το
- * `LISTING_AGREEMENT_LOCK_MODES`. Ένα `?? false` θα σήμαινε **σιωπηλή απόφαση** στο
+ * `LISTING_AGREEMENT_LOCK_MODES`. Ένα `?? 'never'` θα σήμαινε **σιωπηλή απόφαση** στο
  * ακριβώς λάθος σημείο — και η σιωπηλή απόφαση εδώ λέγεται **διπλοκράτηση**.
  *
- * 🔴 **Το `requested` ΔΕΝ καταλαμβάνει, και είναι ΑΠΟΦΑΣΗ, όχι παράλειψη** (§6.1). Αν
- * καταλάμβανε, κακόβουλος θα «κλείδωνε» ολόκληρο καλοκαίρι με αιτήματα που δεν
- * πληρώνει ποτέ. Ο ανταγωνισμός δύο ταυτόχρονων αιτημάτων λύνεται **στην έγκριση,
- * μέσα σε συναλλαγή** — ποτέ στο αίτημα.
+ * 🔴 **ΤΟ `requested` ΑΛΛΑΞΕ ΣΤΟ ΣΤΑΔΙΟ Δ — ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ** (§20.3 · Ε-9). Ως το
+ * Στάδιο Γ ήταν `false` (*«ο κακόβουλος θα κλείδωνε ολόκληρο καλοκαίρι»*). Η αγορά (Airbnb/Vrbo)
+ * **κρατά** τις μέρες όσο εκκρεμεί το αίτημα, και ο φόβος λύνεται **αλλιώς**: η προθεσμία κάνει το
+ * κλείδωμα **βραχύβιο** και το όριο ενεργών αιτημάτων ανά επισκέπτη κάνει τη μαζική κατάχρηση
+ * **αδύνατη να εκφραστεί** (`lib/stay/stay-guest-head.ts`).
+ *
+ * 🔑 **Τα `declined` · `expired` · `withdrawn` ΔΕΝ καταλαμβάνουν** — και καμία από τις τρεις δεν
+ * κρατά μέρες «μέχρι να τις ανοίξει ο host», όπως κάνει το Airbnb μετά τη λήξη.
  *
  * 🔑 **Το `completed` ΚΑΤΑΛΑΜΒΑΝΕΙ, και δεν είναι περίεργο**: μια διαμονή που έγινε
- * κρατά τις νύχτες της για πάντα. Ένα `false` εκεί θα επέτρεπε **αναδρομική**
+ * κρατά τις νύχτες της για πάντα. Ένα `never` εκεί θα επέτρεπε **αναδρομική**
  * διπλοκράτηση — δηλαδή ιστορικό που αντιφάσκει με τον εαυτό του.
  */
 export const STAY_LIFECYCLE_OCCUPIES: Readonly<
-  Record<StayBookingLifecycle, boolean>
+  Record<StayBookingLifecycle, StayOccupancyRule>
 > = {
-  requested: false,
-  confirmed: true,
-  cancelled: false,
-  completed: true,
+  requested: 'while-hold-lives',
+  confirmed: 'always',
+  declined: 'never',
+  expired: 'never',
+  withdrawn: 'never',
+  cancelled: 'never',
+  completed: 'always',
 };
 
 /**
- * Οι καταστάσεις που **καταλαμβάνουν** το ημερολόγιο.
+ * Οι καταστάσεις που **μπορούν** να καταλάβουν το ημερολόγιο (όλες εκτός `never`).
  *
  * ⚠️ **ΠΑΡΑΓΩΓΟ του {@link STAY_LIFECYCLE_OCCUPIES}, ποτέ δεύτερη λίστα.** Γραμμένο
  * στο χέρι, θα ήταν το σχήμα που το `allowsOtherAgencies` πλήρωσε (ADR-832 §5.1):
- * δεύτερη διατύπωση που αποκλίνει την ημέρα που προστίθεται πέμπτη κατάσταση.
+ * δεύτερη διατύπωση που αποκλίνει την ημέρα που προστίθεται νέα κατάσταση.
+ * ⚠️ Το **αν** καταλαμβάνει **τώρα** το λέει μόνο το {@link stayBookingOccupiesAt}.
  */
 export const OCCUPYING_STAY_LIFECYCLES: readonly StayBookingLifecycle[] =
-  STAY_BOOKING_LIFECYCLES.filter((lifecycle) => STAY_LIFECYCLE_OCCUPIES[lifecycle]);
+  STAY_BOOKING_LIFECYCLES.filter((lifecycle) => STAY_LIFECYCLE_OCCUPIES[lifecycle] !== 'never');
 
-/** `true` αν αυτή η κατάσταση πιάνει ημέρες στο ημερολόγιο. */
-export function occupiesStayCalendar(lifecycle: StayBookingLifecycle): boolean {
-  return STAY_LIFECYCLE_OCCUPIES[lifecycle];
+/**
+ * `true` αν η προθεσμία του hold **δεν έχει περάσει** τη στιγμή `instant`.
+ *
+ * 🔑 **Ημι-ανοιχτό, όπως τα διαστήματα**: τη στιγμή `expiresAt` το hold **έχει ήδη λήξει**. Η
+ * στιγμή που λέει η οθόνη («ως 14:00») είναι η πρώτη που οι μέρες είναι ξανά ελεύθερες.
+ * ⚠️ Άκυρη στιγμή (οποιαδήποτε από τις δύο) ⇒ `false`: ένα hold που δεν διαβάζεται **δεν
+ * κρατά** μέρες — ο αναγνώστης το έχει ήδη κρίνει `unreadable` πριν φτάσει εδώ.
+ */
+export function stayHoldLivesAt(hold: Pick<StayHold, 'expiresAt'>, instant: string): boolean {
+  const expires = Date.parse(hold.expiresAt);
+  const now = Date.parse(instant);
+  return Number.isFinite(expires) && Number.isFinite(now) && now < expires;
+}
+
+/**
+ * **Πιάνει ημέρες αυτή η κράτηση τη στιγμή `instant`;** — η **ΜΙΑ** ερώτηση (Στάδιο Δ, §23.1).
+ *
+ * 🔴 **Η λήξη ισχύει στην ΑΝΑΓΝΩΣΗ, όχι όταν τρέξει το cron.** Ένα ληγμένο hold δεν καταλαμβάνει
+ * **από τη στιγμή που έληξε** — το cron απλώς το **καταγράφει** ως `expired` και ειδοποιεί. Αν το
+ * cron πεθάνει, δεν γεννιέται ούτε overbooking ούτε μέρες «κλειδωμένες για πάντα» (το Airbnb τις
+ * αφήνει κλειστές μετά τη λήξη μέχρι να τις ανοίξει ο host). Πρότυπο `mandate-expiry`: *«η λήξη
+ * είναι δομική»*.
+ */
+export function stayBookingOccupiesAt(
+  booking: Pick<StayBooking, 'lifecycle' | 'hold'>,
+  instant: string,
+): boolean {
+  switch (STAY_LIFECYCLE_OCCUPIES[booking.lifecycle]) {
+    case 'always':
+      return true;
+    case 'never':
+      return false;
+    case 'while-hold-lives':
+      return booking.hold !== null && stayHoldLivesAt(booking.hold, instant);
+  }
 }
 
 /** `true` αν το `value` είναι γνωστή κατάσταση κράτησης. */
@@ -217,9 +278,16 @@ export function isStayBookingChannel(value: unknown): value is StayBookingChanne
  * έκανε δύο διαφορετικούς ανθρώπους «τον ίδιο κάτοχο» για τον κριτή (N.12)· ένα κενό
  * string θα ήταν ψεύτικη ταυτότητα. Το `label` είναι **ιδιωτική σημείωση του
  * οικοδεσπότη** («κ. Παπαδόπουλος, τηλ.») — δεν φεύγει ποτέ προς τρίτους.
+ *
+ * 🔑 **Ο κάτοχος-λογαριασμός κουβαλά `displayName`** (Στάδιο Δ): **στιγμιότυπο** του ονόματος τη
+ * στιγμή του αιτήματος — αυτό που βλέπει ο οικοδεσπότης δίπλα στο αίτημα (όπως το μικρό όνομα στο
+ * Airbnb). Στιγμιότυπο και όχι ζωντανή ανάγνωση: το αίτημα λέει **ποιος ζήτησε**, και αυτό δεν
+ * αλλάζει αν ο λογαριασμός αλλάξει όνομα αύριο. ⛔ **Ποτέ κριτής ταυτότητας** — αυτό είναι το `userId`.
+ * 🔴 `null` = ο λογαριασμός **δεν έχει** όνομα — και **ποτέ** εφεδρεία το email: θα έφτανε στον
+ * οικοδεσπότη διεύθυνση που ο επισκέπτης δεν του έδωσε (η οθόνη γράφει «Επισκέπτης»).
  */
 export type StayBookingHolder =
-  | { readonly kind: 'user'; readonly userId: string }
+  | { readonly kind: 'user'; readonly userId: string; readonly displayName: string | null }
   | { readonly kind: 'offline'; readonly label: string };
 
 /**
@@ -233,6 +301,41 @@ export function stayHolderId(booking: Pick<StayBooking, 'id' | 'holder'>): strin
     ? booking.holder.userId
     : `offline:${booking.id}`;
 }
+
+/**
+ * **Η προθεσμία ενός αιτήματος** (hold TTL, §23.3) — υπολογίζεται **μία φορά**, στη γέννηση του
+ * αιτήματος, και **αποθηκεύεται**.
+ *
+ * 🔑 Αποθηκευμένη, ποτέ ξαναϋπολογισμένη: αν ο οικοδεσπότης αλλάξει αργότερα τις ώρες απόκρισης, οι
+ * προθεσμίες που **ήδη υποσχεθήκαμε** σε επισκέπτες δεν μετακινούνται. Η βαθμίδα και το ταβάνι που
+ * κέρδισε γράφονται μαζί, ώστε το ίχνος να λέει **γιατί** αυτή η ώρα.
+ */
+export interface StayHold {
+  /** ISO — η στιγμή που το αίτημα **παύει** να καταλαμβάνει (ημι-ανοιχτό, §23.1). */
+  readonly expiresAt: string;
+  readonly tier: StayHoldTier;
+  readonly bound: StayHoldBound;
+  /**
+   * **Ποιος οφείλει την απάντηση** (§4.11 #4) — uid. Σήμερα ο κάτοχος της αγγελίας· το Στάδιο Ε
+   * (`StayManagementGrant`) αλλάζει **μόνο** το ποιος γράφεται εδώ.
+   */
+  readonly respondentUserId: string;
+}
+
+/** Οι λόγοι λήξης — `expired` **με λόγο**, όπως το §4.11 #3. */
+export const STAY_EXPIRY_REASONS = ['no-answer'] as const;
+export type StayExpiryReason = (typeof STAY_EXPIRY_REASONS)[number];
+
+/**
+ * **Πώς έκλεισε ένα αίτημα που δεν έγινε κράτηση** — γεγονός, με στιγμή.
+ *
+ * 🔑 Διακριτή ένωση κατά κατάσταση: ο λόγος της λήξης **δεν** είναι ο λόγος της απόσυρσης. Ένα
+ * σκέτο `reason: string` θα επέτρεπε «απόσυρση επειδή κανείς δεν απάντησε» — ψέμα του σχήματος.
+ */
+export type StayResolution =
+  | { readonly lifecycle: 'declined'; readonly at: string }
+  | { readonly lifecycle: 'expired'; readonly at: string; readonly reason: StayExpiryReason }
+  | { readonly lifecycle: 'withdrawn'; readonly at: string };
 
 /**
  * **Μια κράτηση βραχυχρόνιας διαμονής.** Enterprise id `stay_*` (N.6).
@@ -312,8 +415,27 @@ export interface StayBooking {
    * δεν απαγορεύει, **αποκαλύπτει** — και η αποκάλυψη πρέπει να είναι αποδείξιμη.
    */
   readonly riskDisclosedAt: string | null;
+  /**
+   * **Η προθεσμία του αιτήματος.** Υπάρχει **αν και μόνο αν** η κράτηση γεννήθηκε ως αίτημα
+   * επισκέπτη (`channel: 'platform'`). Μένει και μετά την απάντηση: είναι το ίχνος *«ως πότε
+   * κρατήθηκαν οι μέρες»*. ⛔ `requested` χωρίς hold **δεν διαβάζεται** (fail-closed, ο αναγνώστης).
+   */
+  readonly hold: StayHold | null;
+  /** Πώς έκλεισε, αν έκλεισε χωρίς να γίνει διαμονή. `null` για κάθε άλλη κατάσταση. */
+  readonly resolution: StayResolution | null;
+  /**
+   * **Ο επισκέπτης ως επίπεδο πεδίο-ευρετήριο** — το `holder.userId` όταν `holder.kind === 'user'`,
+   * αλλιώς `null`. Κάτοπτρο του {@link StayBooking.authorUserId}: υπάρχει **μόνο** για τον κανόνα
+   * ανάγνωσης Firestore και για το ερώτημα «τα αιτήματά μου». Ποτέ κριτής ταυτότητας.
+   */
+  readonly guestUserId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** Το `guestUserId` που **οφείλει** να έχει μια κράτηση — από τον κάτοχο, ποτέ δεύτερη πηγή. */
+export function stayGuestUserIdOf(holder: StayBookingHolder): string | null {
+  return holder.kind === 'user' ? holder.userId : null;
 }
 
 // =============================================================================
@@ -323,16 +445,18 @@ export interface StayBooking {
 /**
  * **Ποιες κρατήσεις πιάνουν ημέρες** — το κάτοπτρο του `bindingMandates`.
  *
- * 🔴 **ΤΟ ΦΙΛΤΡΟ ΕΙΝΑΙ ΚΑΤΑΣΤΑΣΗΣ, ΠΟΤΕ ΧΡΟΝΟΥ.** Το ADR-832 §5.5 το πλήρωσε
- * μετρημένα: χρονικό φίλτρο **πριν** τον κριτή έκρυβε τις εγγραφές με χαλασμένο
- * διάστημα, δηλαδή το *«άγνωστο»* γινόταν *«κενό»* (N.12) — και ήταν **διπλός**
- * έλεγχος, αφού ο κριτής τον κάνει ήδη. Εδώ φιλτράρεται **μόνο** ό,τι κατέχει το
- * σχήμα: ποια κατάσταση καταλαμβάνει.
+ * 🔴 **ΤΟ ΦΙΛΤΡΟ ΕΙΝΑΙ ΚΑΤΑΣΤΑΣΗΣ, ΠΟΤΕ ΔΙΑΣΤΗΜΑΤΟΣ ΝΥΧΤΩΝ.** Το ADR-832 §5.5 το πλήρωσε
+ * μετρημένα: χρονικό φίλτρο **πάνω στο διάστημα** πριν τον κριτή έκρυβε τις εγγραφές με
+ * χαλασμένο διάστημα, δηλαδή το *«άγνωστο»* γινόταν *«κενό»* (N.12). Εδώ φιλτράρεται
+ * **μόνο** ό,τι κατέχει το σχήμα: ποια κατάσταση καταλαμβάνει — και, από το Στάδιο Δ, αν
+ * **ζει ακόμη το hold** της. ⚠️ Το δεύτερο **δεν** είναι φίλτρο διαστήματος: η προθεσμία είναι
+ * ιδιότητα της **κατάστασης** (`while-hold-lives`), και οι νύχτες φτάνουν στον κριτή άθικτες.
  */
 export function occupyingStays(
   bookings: readonly StayBooking[],
+  instant: string,
 ): readonly StayBooking[] {
-  return bookings.filter((booking) => occupiesStayCalendar(booking.lifecycle));
+  return bookings.filter((booking) => stayBookingOccupiesAt(booking, instant));
 }
 
 /**

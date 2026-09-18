@@ -38,8 +38,10 @@ import { deleteApp, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
-import { ensureActTeam, transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-writer';
+import { transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-departure';
+import { ensureActTeam } from '@/services/network-messaging/act-team-writer';
 import { retractNetworkMessage, sendNetworkMessage } from '@/services/network-messaging/thread-messages';
+import { decodeDirectoryCursor, listNetworkThreads } from '@/services/network-messaging/thread-directory';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
 
 import { getContext } from '../_harness/auth-contexts';
@@ -182,6 +184,7 @@ describe('🧪 ΖΩΝΤΑΝΗ — ο γραφέας γράφει, ο κανόν�
       companyId: SAME_TENANT_COMPANY_ID,
       departingUid: RESPONSIBLE,
       fallbackUid: ADMIN,
+      performedBy: ADMIN,
       nowISO: LATER,
     });
     expect(transfer.transferred).toBe(1);
@@ -200,6 +203,7 @@ describe('🧪 ΖΩΝΤΑΝΗ — ο γραφέας γράφει, ο κανόν�
       companyId: SAME_TENANT_COMPANY_ID,
       departingUid: RESPONSIBLE,
       fallbackUid: ADMIN,
+      performedBy: ADMIN,
       nowISO: LATER,
     });
 
@@ -302,5 +306,54 @@ describe('🧪 ΖΩΝΤΑΝΗ — ο γραφέας γράφει, ο κανόν�
 
     const messages = await assertSucceeds(messagesOf(env, 'external_user', threadId).get());
     expect(messages.size).toBe(1);
+  });
+
+  // ==========================================================================
+  // Ζ7 — Ο ΚΑΤΑΛΟΓΟΣ: ΠΡΑΓΜΑΤΙΚΟ COLLECTION GROUP, ΠΡΑΓΜΑΤΙΚΗ ΤΑΞΙΝΟΜΗΣΗ, ΔΡΟΜΕΑΣ (ADR-867 Β5)
+  // ==========================================================================
+
+  it('Ζ7 — ο κατάλογος: σειρά δραστηριότητας, σελίδες με δρομέα, και ΜΟΝΟ ό,τι διαβάζει τώρα', async () => {
+    const first = await birthFromRealWriter();
+    const secondSeed = mandateActSeed('ownp_live_2', SAME_TENANT_COMPANY_ID);
+    const second = await ensureActThread(adminDb, {
+      actSeed: secondSeed,
+      birth: { kind: 'act', actKind: 'mandate', actSeed: secondSeed, hostCompanyId: SAME_TENANT_COMPANY_ID, counterpartUid: OWNER },
+      team: { responsibleUid: ADMIN, memberUids: [ADMIN] },
+      newcomerReason: 'creator',
+      addedBy: ADMIN,
+      nowISO: NOW,
+    });
+    // 🔑 Μήνυμα στο ΠΡΩΤΟ, αργότερα ⇒ πρέπει να ανέβει πάνω από το δεύτερο (fan-out on write).
+    await sendNetworkMessage(adminDb, { threadId: first, senderUid: RESPONSIBLE, text: 'Νέα τιμή', nowISO: LATER });
+
+    const page1 = await listNetworkThreads(adminDb, { uid: OWNER, limit: 1, after: null });
+    expect(page1.items).toHaveLength(1);
+    expect(page1.items[0]).toMatchObject({ threadId: first, activityAt: LATER, unread: true, role: 'counterpart' });
+    expect(page1.next).not.toBeNull();
+
+    const page2 = await listNetworkThreads(adminDb, {
+      uid: OWNER,
+      limit: 1,
+      after: decodeDirectoryCursor(page1.next as string),
+    });
+    expect(page2.items.map((item) => item.threadId)).toStrictEqual([second.threadId]);
+    expect(page2.next).toBeNull();
+
+    // 🔴 Ο αποστολέας ΔΕΝ βλέπει δικό του μήνυμα ως αδιάβαστο· ο υπάλληλος ΔΕΝ βλέπει ξένο νήμα.
+    const mine = await listNetworkThreads(adminDb, { uid: RESPONSIBLE, limit: 10, after: null });
+    expect(mine.items.map((item) => item.threadId)).toStrictEqual([first]);
+    expect(mine.items[0]?.unread).toBe(false);
+
+    // 🔴 Μετά την αποχώρηση, το νήμα ΦΕΥΓΕΙ από τον κατάλογό του — η γραμμή μένει σφραγισμένη.
+    await transferActTeamsOnDeparture(adminDb, {
+      companyId: SAME_TENANT_COMPANY_ID,
+      departingUid: RESPONSIBLE,
+      fallbackUid: ADMIN,
+      performedBy: ADMIN,
+      nowISO: LATER,
+    });
+    expect((await listNetworkThreads(adminDb, { uid: RESPONSIBLE, limit: 10, after: null })).items).toHaveLength(0);
+    const admin = await listNetworkThreads(adminDb, { uid: ADMIN, limit: 10, after: null });
+    expect(admin.items.map((item) => item.threadId)).toStrictEqual([first, second.threadId]);
   });
 });

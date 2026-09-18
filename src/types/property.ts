@@ -100,6 +100,7 @@ export type LegacySalesStatus = PropertyStatus | 'rented';
 // με existing imports `import type { CommercialStatus } from '@/types/property'`.
 export type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
+import { EMPTY_PRICE_TOTALS, type PriceTotalsByRole } from '@/lib/properties/price-totals';
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 
 // =============================================================================
@@ -764,9 +765,12 @@ export interface PropertyFilters {
 export interface PropertyStats {
   totalProperties: number;
   availableProperties: number;
-  totalValue: number;
+  /**
+   * Αξία, μέση τιμή και €/m² **ανά ρόλο** (ADR-777 §8.60.14.13). Ήταν `totalValue` +
+   * `averagePrice`: ένας αριθμός πάνω από πωλήσεις, μηνιαία ενοίκια και διανυκτερεύσεις.
+   */
+  priceTotals: PriceTotalsByRole;
   totalArea: number;
-  averagePrice: number;
   propertiesByStatus: Record<string, number>;
   propertiesByType: Record<string, number>;
   propertiesByFloor: Record<string, number>;
@@ -795,9 +799,8 @@ export interface PropertyStats {
 export const DEFAULT_PROPERTY_STATS: PropertyStats = {
   totalProperties: 0,
   availableProperties: 0,
-  totalValue: 0,
+  priceTotals: EMPTY_PRICE_TOTALS,
   totalArea: 0,
-  averagePrice: 0,
   propertiesByStatus: {},
   propertiesByType: {},
   propertiesByFloor: {},

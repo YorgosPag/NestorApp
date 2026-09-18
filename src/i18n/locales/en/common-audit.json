@@ -588,6 +588,10 @@
       "minNights": "Minimum nights",
       "maxGuests": "Maximum guests",
       "published": "Published",
+      "network_act_team": {
+        "responsibleUid": "Responsible",
+        "memberUids": "Team members"
+      },
       "owner_property": {
         "title": "Title",
         "type": "Property type",
@@ -601,6 +605,11 @@
         "marketingAudience": "Who sees the listing",
         "offers": "Offers",
         "media": "Files"
+      },
+      "property_dossier": {
+        "label": "Dossier name",
+        "type": "Property type",
+        "lifecycle": "Status"
       }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."

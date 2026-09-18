@@ -792,7 +792,9 @@
       "storage": "Storage",
       "floor": "Floor",
       "purchase_order": "Purchase Order",
-      "owner_property": "Listing"
+      "owner_property": "Listing",
+      "network_act_team": "Act team",
+      "property_dossier": "Property dossier"
     },
     "values": {
       "active": "Active",
@@ -948,6 +950,19 @@
     "rent": "For rent · {count, plural, one {# property} other {# properties}}",
     "nightly": "Short stay · {count, plural, one {# place} other {# places}}",
     "unpriced": "No recorded price · {count, plural, one {# property} other {# properties}}"
+  },
+  "pricePerArea": {
+    "sale": "{price}/m²",
+    "rent": "{price}/m²/month",
+    "nightly": "{price}/m²/night"
+  },
+  "priceRangeFilter": {
+    "unit": "Price unit",
+    "role": {
+      "sale": "Sale price (€)",
+      "rent": "Rent (€/month)",
+      "nightly": "Nightly rate (€/night)"
+    }
   },
   "priceReduction": {
     "was": "Previous price:"

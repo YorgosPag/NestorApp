@@ -133,6 +133,18 @@ export type FileAuditAction =
  */
 export type FileAuditMetadata = Record<string, string | number | boolean | null>;
 
+/** Ό,τι λέει μια γραμμή για την **ΠΡΑΞΗ** — χωρίς κάτοχο βιβλίου και χωρίς χρόνο. */
+export interface FileAuditActFields {
+  /** Το αρχείο που αφορά. */
+  readonly fileId: string;
+  /** Τι έγινε. */
+  readonly action: FileAuditAction;
+  /** Ποιος το έκανε — `uid`, ή ονομασμένος αυτοματισμός (π.χ. `'system:purge'`). */
+  readonly performedBy: string;
+  /** Πρόσθετο πλαίσιο, επίπεδο. */
+  readonly metadata?: FileAuditMetadata;
+}
+
 /**
  * Ό,τι είναι **κοινό σε κάθε γραφέα** του `file_audit_log`.
  *
@@ -143,15 +155,33 @@ export type FileAuditMetadata = Record<string, string | number | boolean | null>
  * γραφέας του διακομιστή **αρνείται** χωρίς αυτό, με το ίδιο σκεπτικό που ο
  * `EntityAuditService` αρνείται εγγραφή χωρίς κάτοχο βιβλίου (ADR-864 Φ1β).
  */
-export interface FileAuditRecordFields {
-  /** Το αρχείο που αφορά. */
-  readonly fileId: string;
-  /** Τι έγινε. */
-  readonly action: FileAuditAction;
-  /** Ποιος το έκανε — `uid`, ή ονομασμένος αυτοματισμός (π.χ. `'system:purge'`). */
-  readonly performedBy: string;
+export interface FileAuditRecordFields extends FileAuditActFields {
   /** Ο μισθωτής. Δες παραπάνω γιατί η απουσία του είναι **αοράτη** εγγραφή. */
   readonly companyId?: string;
-  /** Πρόσθετο πλαίσιο, επίπεδο. */
-  readonly metadata?: FileAuditMetadata;
 }
+
+// =============================================================================
+// Η ΖΕΥΓΑΡΩΜΕΝΗ ΔΡΑΣΤΗΡΙΟΤΗΤΑ — ADR-866 §2.6.11 Ε-Φ0-4
+// =============================================================================
+
+/**
+ * **Οι πράξεις που γράφονται ΜΑΖΙ με την αλλαγή του αρχείου, στην ίδια ατομική δέσμη.**
+ *
+ * 🔑 Στους μεγάλους (Drive · Dropbox · Box) τη γραμμή δραστηριότητας **δεν** τη γράφει ο πελάτης·
+ * τη γράφει η υπηρεσία ως συνέπεια της πράξης — ούτε πλαστογραφείται ούτε παραλείπεται. Εδώ την
+ * ίδια εγγύηση τη δίνουν οι **κανόνες**, και **ατομικά**: η αλλαγή του αρχείου αρνείται χωρίς τη γραμμή
+ * της, η γραμμή αρνείται χωρίς την αλλαγή που περιγράφει (`get`/`getAfter`).
+ *
+ * ⚠️ **Κλειστό σύνολο, με κάτοπτρο στο `firestore.rules`** (`personalActivityMatchesChange`) — η
+ * άγκυρα Α35 συγκρίνει τα δύο. Νέα πράξη εδώ χωρίς κλάδο εκεί = γραφή που ο κανόνας **αρνείται**.
+ */
+export const FILE_ACTIVITY_PAIRED_ACTIONS = ['delete', 'restore', 'rename'] as const satisfies readonly FileAuditAction[];
+
+/** Μία από τις ζευγαρωμένες πράξεις. */
+export type FileActivityPairedAction = (typeof FILE_ACTIVITY_PAIRED_ACTIONS)[number];
+
+/**
+ * **Το πεδίο του αρχείου που δείχνει τη γραμμή του** — μέσω αυτού ο κανόνας βρίσκει το ζευγάρι.
+ * Ένα όνομα, για τον γραφέα, τον τύπο `FileRecord` και τον κανόνα.
+ */
+export const FILE_LAST_ACTIVITY_FIELD = 'lastActivityId';

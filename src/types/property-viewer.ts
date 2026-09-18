@@ -1,5 +1,6 @@
 // 🏢 ADR-051: Import GenericFilterState for type compatibility
 import type { GenericFilterState, NumericRange } from '@/components/core/AdvancedFilters/types';
+import { EMPTY_PRICE_RANGE, type RolePriceRange } from '@/lib/properties/price-range';
 
 // Re-export PropertyStats from property.ts
 export type { PropertyStats } from './property';
@@ -248,8 +249,11 @@ export interface FilterState extends GenericFilterState {
   floor: string[];
   propertyType: string[];
   status: string[];
-  /** 🏢 ADR-051: Uses NumericRange for type compatibility with useGenericFilters */
-  priceRange: NumericRange;
+  /**
+   * Εύρος τιμής **με τη μονάδα του** (ADR-777 §8.60.14.14): ποτέ «έως 1.000» χωρίς να λέει
+   * αν είναι € πώλησης, €/μήνα ή €/νύχτα. Κρίνεται από το `matchesPriceRange`.
+   */
+  priceRange: RolePriceRange;
   /** 🏢 ADR-051: Uses NumericRange for type compatibility with useGenericFilters */
   areaRange: NumericRange;
   features: string[];
@@ -279,7 +283,7 @@ export const DEFAULT_FILTERS: FilterState = {
   floor: [],
   propertyType: [],
   status: [],
-  priceRange: { min: undefined, max: undefined },
+  priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: undefined, max: undefined },
   features: [],
 };

@@ -27,6 +27,14 @@
         "checking": "Ψάχνουμε…",
         "heading": "Τι υπάρχει σήμερα",
         "matched": "{count, plural, one {Ταιριάζει # αγγελία} other {Ταιριάζουν # αγγελίες}}.",
+        "matchedList": {
+          "atLimit": "Ακριβώς στο όριό σου",
+          "heading": "Οι αγγελίες που ταιριάζουν",
+          "headroom": "{amount} κάτω από το όριό σου",
+          "matchedAs": "Ταιριάζει ως",
+          "more": "{count, plural, one {Και # ακόμη αγγελία στα αποτελέσματα.} other {Και # ακόμη αγγελίες στα αποτελέσματα.}}",
+          "term": "{kind} · {price}"
+        },
         "nearButUnreachable": "Υπάρχουν {count, plural, one {# αγγελία κοντά} other {# αγγελίες κοντά}} στο αίτημά σου, αλλά καμία σε απόσταση που αξίζει να προτείνουμε.",
         "noMatch": "Κρίθηκαν {count, plural, one {# αγγελία} other {# αγγελίες}} και καμία δεν πλησιάζει. Η ζήτηση μένει ανοιχτή.",
         "none": "Καμία αγγελία δεν ταιριάζει σήμερα.",
@@ -101,7 +109,6 @@
       },
       "form": {
         "features": {
-          "priceLegend": "Ποσό (€)",
           "typesLabel": "Είδη ακινήτου"
         },
         "place": {
@@ -117,6 +124,7 @@
           "lifecycle": "η κατάσταση",
           "mandate": "για λογαριασμό ποιου",
           "place": "η περιοχή",
+          "seek-prices": "το ποσό για κάθε είδος συναλλαγής χωριστά (η ζήτηση είχε ένα ποσό για πολλές συναλλαγές, χωρίς μονάδα)",
           "seeks": "τι είδους συναλλαγή ζητάς",
           "timing": "ο χρόνος"
         },
@@ -152,9 +160,17 @@
         "noPriceLimit": "Χωρίς όριο ποσού",
         "now": "Τώρα",
         "place": "Σε συγκεκριμένο ακίνητο",
-        "priceFrom": "Από {priceMin} €",
-        "priceRange": "{priceMin} – {priceMax} €",
-        "priceUpTo": "Έως {priceMax} €",
+        "priceFrom": "από {priceMin}",
+        "priceLabel": "Ποσό",
+        "priceRange": "{priceMin} – {priceMax}",
+        "priceUpTo": "έως {priceMax}",
+        "seekKind": {
+          "exchange": "Αντιπαροχή",
+          "leaseOut": "Ενοικίαση",
+          "leaseShort": "Διαμονή",
+          "sell": "Αγορά"
+        },
+        "seekPrice": "{kind}: {range}",
         "whenever": "Όποτε κι αν βγει",
         "window": "Από {fromDate} έως {toDate}"
       }

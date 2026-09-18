@@ -309,6 +309,27 @@ export function serverWrittenAuthorOwnedMatrix(): CoverageDefinition {
 }
 
 /**
+ * 📒 ADR-866 §2.6.11 — **η δραστηριότητα προσωπικού αρχείου** (`file_audit_log_personal`): διαβάζει
+ * **μόνο** ο κάτοχος (ούτε super admin — όπως το ίδιο το αρχείο)· γράφει ο κάτοχος **μόνο ζευγαρωμένα**
+ * με την αλλαγή που περιγράφει (το κελί δοκιμάζει μεμονωμένη γραφή ⇒ άρνηση — η ζευγαρωμένη δέσμη
+ * δοκιμάζεται ρητά στη σουίτα)· **αμετάβλητο** για όλους.
+ */
+export function personalFileActivityMatrix(): CoverageDefinition {
+  const AUTHENTICATED = ALL_PERSONAS.filter((p) => p !== 'anonymous');
+  return overrideDefinition(
+    authorOwnedMatrix(),
+    [
+      cell('same_tenant_user', 'create', 'deny', 'unpaired_activity'),
+      ...AUTHENTICATED.flatMap((p) => [
+        cell(p, 'update', 'deny', 'immutable'),
+        cell(p, 'delete', 'deny', 'immutable'),
+      ]),
+    ],
+    'personalFileActivityMatrix',
+  );
+}
+
+/**
  * 🗂️ ADR-866 §5.2 — **προσωπικό αρχείο** (`files_personal`): ο πελάτης του κατόχου γράφει
  * (ανεβάζει, οριστικοποιεί, μετονομάζει, στέλνει στον κάδο) **και** σβήνει — είναι δικό του, όπως
  * στο «Ο Δίσκος μου». Ο `authorOwnedMatrix` κρατά ήδη το υπόλοιπο: μόνο ο κάτοχος, ούτε super admin.

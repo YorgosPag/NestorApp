@@ -783,6 +783,16 @@
     "archivedBody": "Τη βλέπεις επειδή ο σύνδεσμος οδηγεί σε αυτήν. Επανάφερέ την για να γίνει ξανά ενεργή.",
     "restore": "Επαναφορά"
   },
+  "stayRequest": {
+    "receivedTitle": "Νέο αίτημα κράτησης για «{title}» ({range}) — απαντήστε ως {until}",
+    "withdrawnTitle": "Το αίτημα κράτησης για «{title}» ({range}) αποσύρθηκε",
+    "expiredTitle": "Το αίτημα κράτησης για «{title}» ({range}) έληξε χωρίς απάντηση"
+  },
+  "stayRequestAnswered": {
+    "acceptedTitle": "Η κράτησή σας στο «{title}» ({range}) επιβεβαιώθηκε",
+    "declinedTitle": "Ο οικοδεσπότης του «{title}» δεν μπορεί να σας φιλοξενήσει ({range})",
+    "expiredTitle": "Το αίτημά σας για «{title}» ({range}) δεν απαντήθηκε — δοκιμάστε ξανά"
+  },
   "mandateRequestAnswered": {
     "acceptedTitle": "Το «{agency}» ανέλαβε την αγγελία «{title}»",
     "revisableTitle": "Το «{agency}» σας ζητά να ξαναστείλετε το αίτημα για «{title}»",

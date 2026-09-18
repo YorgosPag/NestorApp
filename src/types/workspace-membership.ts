@@ -273,6 +273,25 @@ export function isAllowed(verdict: MembershipVerdict): boolean {
 }
 
 /**
+ * Οι ετυμηγορίες που σημαίνουν **«ΑΝΗΚΕΙ εδώ»** — όχι «πέρασε από εδώ» (ADR-867 Β5).
+ *
+ * 🔴 **ΔΕΝ είναι το `ALLOWING_VERDICTS`, και η διαφορά είναι το `platform-bypass`**: ο super_admin
+ * **επιτρέπεται** να δει ξένο χώρο (υποστήριξη), αλλά **δεν γίνεται** μέλος του. Όπου μια πράξη
+ * δίνει **ιδιότητα μέσα** στον χώρο — να γίνει υπεύθυνος πράξης, να μπει σε ομάδα, άρα να
+ * **διαβάζει ιδιωτικά νήματα** — η ερώτηση είναι **αυτή**, όχι εκείνη.
+ * ⚠️ Το `self` λείπει επίσης: ιδιωτικός χώρος δεν έχει ομάδες ούτε συναδέλφους.
+ */
+export const BELONGING_VERDICTS: readonly MembershipVerdict[] = ['home', 'member'] as const;
+
+/**
+ * **Ανήκει εδώ;** — απουσία ετυμηγορίας ⇒ context χτισμένο από το υπογεγραμμένο claim, δηλαδή ο
+ * χώρος του token (`home`).
+ */
+export function belongsHere(verdict: MembershipVerdict | undefined): boolean {
+  return BELONGING_VERDICTS.includes(verdict ?? 'home');
+}
+
+/**
  * Το αποτέλεσμα του απαντητή: **η ετυμηγορία μαζί με τον χώρο που κρίθηκε**.
  *
  * ⚠️ Ο χώρος επιστρέφεται **ρητά** ώστε ο καλών να μη χρειάζεται να θυμάται τι

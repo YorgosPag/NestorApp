@@ -28,7 +28,8 @@
       "departure-not-allowed": "{count} don't allow check-out that day",
       "above-max-nights": "{count} with a shorter maximum stay",
       "not-a-stay": "{count} are not short-stay places",
-      "unsynced": "{count} with a channel that is not answering"
+      "unsynced": "{count} with a channel that is not answering",
+      "held": "{count} awaiting a reply"
     }
   },
   "calendar": {
@@ -54,7 +55,8 @@
       "selected-check-in": "{day} — your check-in",
       "selected-check-out": "{day} — your check-out",
       "in-stay": "{day} — within your stay",
-      "unsynced": "{day} · availability can't be confirmed"
+      "unsynced": "{day} · availability can't be confirmed",
+      "held": "{day} — on hold for another guest"
     },
     "minNights": "minimum stay {count, plural, one {# night} other {# nights}}",
     "conditional": "conditional: the property is for sale",
@@ -62,8 +64,10 @@
       "available": "Available",
       "closed": "Unavailable",
       "checkOutOnly": "Check-out only",
-      "conditional": "Conditional (for sale)"
-    }
+      "conditional": "Conditional (for sale)",
+      "held": "On hold (opens if unanswered)"
+    },
+    "heldUntil": "on hold until {until}"
   },
   "terms": {
     "minNights": "Minimum stay: {count, plural, one {# night} other {# nights}}",
@@ -90,12 +94,50 @@
     "not-a-stay": "This property isn't offered for stays.",
     "checking": "Checking your dates…",
     "failed": "We couldn't check availability right now.",
-    "unsynced": "Availability can't be confirmed: one of the host's channels is not answering. Ask the host to confirm before you book."
+    "unsynced": "Availability can't be confirmed: one of the host's channels is not answering. Ask the host to confirm before you book.",
+    "held": "On hold for another guest until {until} — if the host doesn't reply, the dates open up again."
   },
   "quote": {
     "total": "Total {total} for {count, plural, one {# night} other {# nights}}",
     "breakdown": "Price per night",
     "night": "{date}: {amount}",
     "unpriced": "Some nights have no declared price. Ask the host."
+  },
+  "request": {
+    "title": "Booking request",
+    "signIn": "Sign in to send a booking request.",
+    "signInLink": "Sign in",
+    "promise": {
+      "response-hours": "The host will reply by {until} (within their reply hours). Until then the dates are held for you.",
+      "stretch": "The host will reply by {until}. Until then the dates are held for you.",
+      "arrival": "The host will reply by {until}, before your arrival. Until then the dates are held for you."
+    },
+    "tooLate": "Arrival is too close for a request with a fair reply deadline — contact the host directly.",
+    "guests": "Guests",
+    "riskAcknowledge": "I understand the property is also for sale and the stay is conditional.",
+    "submit": "Send request",
+    "sending": "Sending…",
+    "mineLine": "{range} · {status}",
+    "minePending": "{range} · awaiting a reply until {until}",
+    "withdraw": "Withdraw",
+    "mineFailed": "Your requests didn't load — please try again.",
+    "status": {
+      "confirmed": "confirmed",
+      "declined": "the host can't host you",
+      "expired": "no reply — you can ask again",
+      "withdrawn": "withdrawn",
+      "cancelled": "cancelled",
+      "completed": "completed"
+    },
+    "outcome": {
+      "ok": "Done.",
+      "taken": "These dates are no longer available — see the calendar for others.",
+      "too-late": "Arrival is too close for a request — contact the host.",
+      "risk": "Please confirm you know the property is for sale.",
+      "limit": "You already have {limit} requests awaiting a reply — wait for an answer or withdraw one.",
+      "lapsed": "This request's deadline has already passed.",
+      "own-listing": "You can't request your own listing — block dates from its calendar instead.",
+      "failed": "Something went wrong — please try again."
+    }
   }
 }

@@ -21,8 +21,12 @@ import {
   DEMAND_LIFE_CONTEXTS,
   DEMAND_PROXIMITY_KINDS,
   NO_DEMAND_FEATURES,
+  PRICED_SEEK_KINDS,
   demandInvariantViolations,
+  demandSeek,
   isAttributableDemand,
+  isPricedSeekKind,
+  seekKindsOf,
   isDemandLifeContext,
   isDemandLifecycle,
   isLiveDemand,
@@ -30,6 +34,7 @@ import {
   type PropertyDemand,
 } from '../property-demand';
 import { OFFER_KINDS } from '../property-offers';
+import { seek } from '@/lib/demand/__tests__/demand-fixtures';
 
 // =============================================================================
 // ΒΟΗΘΗΤΙΚΑ
@@ -41,7 +46,7 @@ function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
     authorUserId: 'usr_1',
     authorCompanyId: null,
     mandate: { kind: 'self' },
-    seeks: ['sell'],
+    seeks: [seek('sell')],
     place: { kind: 'anywhere' },
     timing: { kind: 'now' },
     features: NO_DEMAND_FEATURES,
@@ -71,7 +76,7 @@ describe('🔴 Ζ1–Ζ8 — οκτώ μορφές, ΜΙΑ οντότητα, τ�
 
   it('Ζ2 — μελλοντική με παράθυρο: «από Μάρτιο 2027 έως Ιούνιο 2028»', () => {
     const z2 = demand({
-      seeks: ['leaseOut'],
+      seeks: [seek('leaseOut')],
       timing: { kind: 'window', fromDate: '2027-03-01', toDate: '2028-06-30' },
     });
     expect(demandInvariantViolations(z2)).toEqual([]);
@@ -136,10 +141,11 @@ describe('🔴 Ζ1–Ζ8 — οκτώ μορφές, ΜΙΑ οντότητα, τ�
 
   it('Ζ8 — χαρακτηριστικά ακινήτου', () => {
     const z8 = demand({
+      // ADR-777 §8.60.15 — το ποσό ζει στην εναλλακτική, στη μονάδα της.
+      seeks: [seek('sell', { max: 250_000 })],
       features: {
         ...NO_DEMAND_FEATURES,
         types: ['apartment'],
-        priceMax: 250_000,
         areaMin: 80,
         bedroomsMin: 3,
       },
@@ -149,10 +155,10 @@ describe('🔴 Ζ1–Ζ8 — οκτώ μορφές, ΜΙΑ οντότητα, τ�
 
   it('🔑 και ΟΛΕΣ μαζί σε ΕΝΑ έγγραφο — που είναι όλο το επιχείρημα', () => {
     const everything = demand({
-      seeks: ['sell', 'exchange'],
+      seeks: [seek('sell', { max: 300_000 }), seek('exchange')],
       place: { kind: 'place', landId: 'land_1', buildingId: 'pbld_1' },
       timing: { kind: 'window', fromDate: '2027-03-01', toDate: '2027-09-30' },
-      features: { ...NO_DEMAND_FEATURES, floorMin: 3, floorMax: 5, priceMax: 300_000 },
+      features: { ...NO_DEMAND_FEATURES, floorMin: 3, floorMax: 5 },
       proximity: [{ kind: 'busStop', maxMetres: 300 }],
       lifeContext: 'family',
     });
@@ -168,12 +174,12 @@ describe('🔴 Λ — καμία δεύτερη αλήθεια στον άξον
   it('το `seeks` δέχεται ΑΚΡΙΒΩΣ τα `OFFER_KINDS` — schema.org/Demand', () => {
     // Αν κάποτε γεννηθεί καθρεφτισμένο λεξιλόγιο (`buy`/`leaseIn`), αυτό το test
     // δεν θα μεταγλωττίζεται καν — και αυτό είναι το ζητούμενο.
-    const all = demand({ seeks: [...OFFER_KINDS] });
+    const all = demand({ seeks: OFFER_KINDS.map((kind) => seek(kind)) });
     expect(demandInvariantViolations(all)).toEqual([]);
     // ⚠️ **Χειρόγραφα, επίτηδες** — δεύτερη φωνή απέναντι στο `OFFER_KINDS`. Ένα
     // `toEqual([...OFFER_KINDS])` θα συνέκρινε τη σταθερά με τον εαυτό της και θα
     // έμενε πράσινο σε **οποιαδήποτε** αλλαγή του λεξιλογίου, ακόμη και σε διαγραφή.
-    expect(all.seeks).toEqual(['sell', 'leaseOut', 'exchange', 'leaseShort']);
+    expect(seekKindsOf(all.seeks)).toEqual(['sell', 'leaseOut', 'exchange', 'leaseShort']);
   });
 });
 
@@ -192,7 +198,7 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
    */
   const CASES: ReadonlyArray<readonly [DemandInvariant, Partial<PropertyDemand>]> = [
     ['seeks-empty', { seeks: [] }],
-    ['seeks-duplicated', { seeks: ['sell', 'sell'] }],
+    ['seeks-duplicated', { seeks: [seek('sell'), seek('sell')] }],
     [
       'window-inverted',
       { timing: { kind: 'window', fromDate: '2028-01-01', toDate: '2027-01-01' } },
@@ -277,12 +283,46 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
     const broken = demand({
       seeks: [],
       proximity: [{ kind: 'school', maxMetres: -1 }],
-      features: { ...NO_DEMAND_FEATURES, priceMin: 500_000, priceMax: 100_000 },
+      // ADR-777 §8.60.15 — η τιμή ζει στην εναλλακτική, άρα με `seeks: []` το αντεστραμμένο εύρος
+      // ασκείται στο **εμβαδόν**: ίδιος κωδικός, ίδιο «όλες μαζί».
+      features: { ...NO_DEMAND_FEATURES, areaMin: 500, areaMax: 100 },
     });
     const found = demandInvariantViolations(broken);
     expect(found).toContain('seeks-empty');
     expect(found).toContain('proximity-not-positive');
     expect(found).toContain('range-inverted');
+  });
+});
+
+// =============================================================================
+// Σ — ΟΙ ΕΝΑΛΛΑΚΤΙΚΕΣ ΚΑΙ Η ΤΙΜΗ ΤΟΥΣ (ADR-777 §8.60.15)
+// =============================================================================
+
+describe('🔴 Σ — η τιμή ζει ΑΝΑ ΕΝΑΛΛΑΚΤΙΚΗ, και τα αναλλοίωτα τη βλέπουν εκεί', () => {
+  it('🔴 ίδιο είδος δύο φορές με ΔΙΑΦΟΡΕΤΙΚΗ τιμή ⇒ `seeks-duplicated` (η παγίδα του `Set` πάνω σε αντικείμενα)', () => {
+    // Με `new Set(seeks)` δύο αντικείμενα είναι **πάντα** διαφορετικά ⇒ ο κωδικός θα σώπαινε για πάντα.
+    const twice = demand({ seeks: [seek('leaseOut', { max: 900 }), seek('leaseOut', { max: 1_200 })] });
+    expect(demandInvariantViolations(twice)).toContain('seeks-duplicated');
+  });
+
+  it('αντεστραμμένο εύρος σε ΜΙΑ από δύο εναλλακτικές ⇒ `range-inverted`', () => {
+    const inverted = demand({
+      seeks: [seek('sell', { max: 250_000 }), seek('leaseOut', { min: 1_500, max: 900 })],
+    });
+    expect(demandInvariantViolations(inverted)).toEqual(['range-inverted']);
+  });
+
+  it('🔑 η αντιπαροχή ΔΕΝ κρατά ποσό — ο κατασκευαστής το πετά, δεν το κρύβει', () => {
+    expect(demandSeek('exchange', { min: 1, max: 2 })).toEqual({ kind: 'exchange' });
+    expect(demandSeek('leaseShort', { min: null, max: 80 })).toEqual({
+      kind: 'leaseShort',
+      price: { min: null, max: 80 },
+    });
+  });
+
+  it('🔒 κάθε διάθεση εκτός της αντιπαροχής φέρει ποσό — η λίστα παράγεται, δεν γράφεται', () => {
+    expect(OFFER_KINDS.filter((kind) => !isPricedSeekKind(kind))).toEqual(['exchange']);
+    expect(PRICED_SEEK_KINDS).toEqual(['sell', 'leaseOut', 'leaseShort']);
   });
 });
 

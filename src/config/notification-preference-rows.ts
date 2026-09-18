@@ -75,6 +75,9 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       // ADR-841 §7 Α21.20 — «το email της κάρτας σας επέστρεψε».
       { key: 'cardEmailReturned', labelKey: 'common-account:account.notificationSettings.categories.properties.cardEmailReturned' },
       { key: 'holidayHoursQuestion', labelKey: 'common-account:account.notificationSettings.categories.properties.holidayHoursQuestion' },
+      // ADR-835 §23.6 — τα αιτήματα κράτησης (υποχρεωτικά, όπως οι ειδοποιήσεις ασφαλείας).
+      { key: 'stayRequestReceived', labelKey: 'common-account:account.notificationSettings.categories.properties.stayRequestReceived' },
+      { key: 'stayRequestAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.stayRequestAnswered' },
     ],
   },
   {

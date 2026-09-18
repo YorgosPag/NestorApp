@@ -194,6 +194,20 @@ export const AUDIT_ENTITIES = {
    * `renamePropagation: false` — τα αρχεία της δεν ονομάζονται από τον τίτλο.
    */
   owner_property: { collectionKey: 'OWNER_PROPERTIES', scope: 'top-level', writer: 'server-direct', ledger: 'custody', renamePropagation: false, backup: true },
+  /**
+   * 🗂️ ADR-866 Φ1.1 — **ο φάκελος του ακινήτου**, η δεύτερη οντότητα βιβλίου `'custody'`: ο
+   * κάτοχος (`userId`) διαβάζει το ιστορικό του στο **προσωπικό** βιβλίο. Κάθε γραφή περνά από το
+   * `property-dossier-write.service.ts` (ίχνος μέσω `recordTrackedEntityWrite`).
+   */
+  property_dossier: { collectionKey: 'PROPERTY_DOSSIERS', scope: 'top-level', writer: 'server-direct', ledger: 'custody', renamePropagation: false, backup: true },
+
+  /**
+   * 💬 ADR-867 Β5 — **η ομάδα της πράξης** (ποιος απαντά από το γραφείο). Βιβλίο `'company'`
+   * = ο χώρος που **φιλοξενεί** την πράξη (`hostCompanyId`). Κάθε αλλαγή μετά τη γέννηση —
+   * ανθρώπινη ή μεταβίβαση — περνά από το `commitActTeamVersion` του `act-team-writer.ts` και
+   * γράφει ίχνος: ADR-834 (ε) ② «ο διαχειριστής αλλάζει υπεύθυνο ή προσθέτει μέλη — **με ίχνος**».
+   */
+  network_act_team: { collectionKey: 'NETWORK_ACT_TEAMS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
   /**
    * ⚠️ `parking_spot` / `storage_unit`: **παλαιά συνώνυμα** των `parking`/`storage`

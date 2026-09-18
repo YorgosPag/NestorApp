@@ -104,21 +104,9 @@ export interface ParkingSpot {
 // STATS & FILTERS
 // =============================================================================
 
-export interface ParkingStats {
-  totalSpots: number;
-  soldSpots: number;
-  availableSpots: number;
-  occupiedSpots: number;
-  reservedSpots: number;
-  maintenanceSpots: number;
-  totalValue: number;
-  totalArea: number;
-  averagePrice: number;
-  spotsByType: Record<string, number>;
-  spotsByFloor: Record<string, number>;
-  spotsByStatus: Record<string, number>;
-  spotsByLocationZone: Record<string, number>;
-}
+// ⛔ `ParkingStats` αφαιρέθηκε (ADR-777 §8.60.14.13): τύπος χωρίς κανέναν χρήστη, που
+//    δήλωνε `totalValue`/`averagePrice` χωρίς ρόλο. Τα στατιστικά θέσεων ζουν στο
+//    `hooks/useParkingStats` (`ParkingStats`, με `priceTotals` ανά ρόλο).
 
 export interface ParkingFilters {
   searchTerm: string;

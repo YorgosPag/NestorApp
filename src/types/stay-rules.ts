@@ -25,7 +25,7 @@
  * **Layering**: leaf — τύποι + σταθερές.
  */
 
-import type { IsoWeekday } from '@/lib/calendar/weekly-hours';
+import type { IsoWeekday, WeeklyHours } from '@/lib/calendar/weekly-hours';
 import { ISO_WEEKDAYS } from '@/lib/calendar/weekly-hours';
 import type { MinorAmount } from '@/lib/money/money';
 
@@ -91,6 +91,15 @@ export interface StayRules {
   /** Μέρες εβδομάδας που επιτρέπεται **αναχώρηση**. Ποτέ κενό. */
   readonly departureWeekdays: readonly IsoWeekday[];
   readonly orphanGap: StayOrphanGapRule | null;
+  /**
+   * **Οι ώρες που ο οικοδεσπότης απαντά σε αιτήματα** (ADR-835 §4.11 #2 · §23.3) — το ρολόι της
+   * προθεσμίας τρέχει **μόνο** μέσα τους.
+   *
+   * `null` = **ρολόι τοίχου**, η πρακτική **όλης** της αγοράς (έρευνα 2026-09-18: καμία πλατφόρμα
+   * δεν παγώνει το ρολόι). Είναι και η τιμή κάθε κεφαλής γραμμένης **πριν** το Στάδιο Δ: η απουσία
+   * διαβάζεται `null`, ποτέ `unreadable`.
+   */
+  readonly responseHours: WeeklyHours | null;
 }
 
 /**
@@ -106,6 +115,22 @@ export const STAY_RULES_NONE: StayRules = {
   arrivalWeekdays: ISO_WEEKDAYS,
   departureWeekdays: ISO_WEEKDAYS,
   orphanGap: null,
+  responseHours: null,
+};
+
+/**
+ * **Η ΠΡΟΤΑΣΗ όταν ο οικοδεσπότης ανοίγει τις ώρες απόκρισης** (Στάδιο Δ, §23.3) — 08:00–22:00 κάθε μέρα.
+ * ⚠️ **Πρόταση, ΟΧΙ προεπιλογή**: η προεπιλογή είναι `responseHours: null` (ρολόι τοίχου, η πρακτική
+ * της αγοράς). Αυτό γεμίζει μόνο το πρόχειρο της φόρμας — ο άνθρωπος το διορθώνει και το αποθηκεύει.
+ */
+export const STAY_RESPONSE_HOURS_SUGGESTED: WeeklyHours = {
+  1: [{ opens: '08:00', closes: '22:00' }],
+  2: [{ opens: '08:00', closes: '22:00' }],
+  3: [{ opens: '08:00', closes: '22:00' }],
+  4: [{ opens: '08:00', closes: '22:00' }],
+  5: [{ opens: '08:00', closes: '22:00' }],
+  6: [{ opens: '08:00', closes: '22:00' }],
+  7: [{ opens: '08:00', closes: '22:00' }],
 };
 
 // =============================================================================
@@ -171,6 +196,12 @@ export interface StayClock {
   readonly today: string;
   /** Λεπτά από τα μεσάνυχτα Αθήνας (0–1439). */
   readonly minutes: number;
+  /**
+   * **Η ίδια στιγμή, ως ISO** (Στάδιο Δ, §23.2). Το hold ενός αιτήματος λήγει σε **στιγμή**, όχι
+   * σε ημερομηνία· με μόνο `today` + `minutes` η μηχανή δεν θα μπορούσε να πει αν ζει ακόμη.
+   * Η ίδια πηγή με τα άλλα δύο (`stayClockAt`), άρα δεν μπορούν να διαφωνήσουν.
+   */
+  readonly instant: string;
 }
 
 /** Ό,τι χρειάζεται η μηχανή για να κρίνει κανόνες — μαζί, ποτέ μισό. */

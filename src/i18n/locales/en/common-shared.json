@@ -783,6 +783,16 @@
     "archivedBody": "You can see it because the link points to it. Restore it to make it active again.",
     "restore": "Restore"
   },
+  "stayRequest": {
+    "receivedTitle": "New booking request for \"{title}\" ({range}) — reply by {until}",
+    "withdrawnTitle": "The booking request for \"{title}\" ({range}) was withdrawn",
+    "expiredTitle": "The booking request for \"{title}\" ({range}) expired without a reply"
+  },
+  "stayRequestAnswered": {
+    "acceptedTitle": "Your stay at \"{title}\" ({range}) is confirmed",
+    "declinedTitle": "The host of \"{title}\" can't host you ({range})",
+    "expiredTitle": "Your request for \"{title}\" ({range}) got no reply — try again"
+  },
   "mandateRequestAnswered": {
     "acceptedTitle": "{agency} took on the listing \"{title}\"",
     "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",

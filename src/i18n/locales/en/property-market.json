@@ -51,6 +51,7 @@
       "fix": "Complete it",
       "gap": {
         "seeks": "what kind of transaction you want",
+        "seek-prices": "the amount for each kind of transaction separately (the request had one amount for several transactions, without a unit)",
         "place": "the area",
         "timing": "the timing",
         "mandate": "on whose behalf",
@@ -75,6 +76,14 @@
         "leaseOut": "I want to rent",
         "exchange": "I am looking for land for a build-to-share deal",
         "leaseShort": "I am looking for a place to stay for a few nights"
+      },
+      "seekPrice": {
+        "sell": "Purchase amount (€)",
+        "leaseOut": "Monthly rent (€/month)",
+        "leaseShort": "Price per night (€/night)",
+        "min": "From",
+        "max": "To",
+        "help": "Each amount is judged only against listings of the same transaction — a rent is never compared with a sale price."
       },
       "place": {
         "legend": "Where?",
@@ -123,10 +132,6 @@
         "legend": "What property?",
         "typesLabel": "Property types",
         "typesHelp": "None selected means “any type”.",
-        "priceLegend": "Amount (€)",
-        "priceMin": "From",
-        "priceMax": "To",
-        "priceHelp": "The amount is judged against the price that applies to each listing — sale or rent.",
         "areaLegend": "Area (m²)",
         "areaMin": "From",
         "areaMax": "To",
@@ -199,7 +204,15 @@
       "blockedByUnknowns": "We cannot judge yet — and that is not the same as “nothing exists”.",
       "blockedByUnknownsWhy": "What is missing is our data, not properties.",
       "axesLostHeading": "The link above is broader than your request — it ignores:",
-      "balanceError": "The results ledger does not balance. We do not show a number we cannot stand behind."
+      "balanceError": "The results ledger does not balance. We do not show a number we cannot stand behind.",
+      "matchedList": {
+        "heading": "Listings that match",
+        "matchedAs": "Matches as",
+        "term": "{kind} · {price}",
+        "headroom": "{amount} under your limit",
+        "atLimit": "Exactly at your limit",
+        "more": "{count, plural, one {And # more listing in the results.} other {And # more listings in the results.}}"
+      }
     },
     "axisLost": {
       "timing": "the timing you asked for",
@@ -291,9 +304,17 @@
       "whenever": "Whenever it comes up",
       "anyType": "Any type",
       "noPriceLimit": "No amount limit",
-      "priceUpTo": "Up to {priceMax} €",
-      "priceFrom": "From {priceMin} €",
-      "priceRange": "{priceMin} – {priceMax} €"
+      "priceUpTo": "up to {priceMax}",
+      "priceFrom": "from {priceMin}",
+      "priceRange": "{priceMin} – {priceMax}",
+      "priceLabel": "Amount",
+      "seekPrice": "{kind}: {range}",
+      "seekKind": {
+        "sell": "Purchase",
+        "leaseOut": "Rental",
+        "leaseShort": "Stay",
+        "exchange": "Land-for-flats exchange"
+      }
     },
     "space": {
       "title": "My space",
@@ -703,14 +724,16 @@
         "selected": "Selected",
         "noArrival": "No check-in",
         "noDeparture": "No check-out",
-        "price": "Nightly price — bold when you set it for that day"
+        "price": "Nightly price — bold when you set it for that day",
+        "requested": "Request awaiting a reply"
       },
       "cell": {
         "free": "{day} — available night",
         "blocked": "{day} — blocked night",
         "external": "{day} — blocked by another channel",
         "booked": "{day} — booked",
-        "pending": "{day} — saving"
+        "pending": "{day} — saving",
+        "requested": "{day} — booking request awaiting a reply"
       },
       "selection": {
         "prompt": "Select nights on the calendar.",
@@ -741,7 +764,9 @@
         "guests": "{count, plural, one {# guest} other {# guests}}",
         "unblock": "Open nights",
         "cancel": "Cancel booking",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "requestTitle": "Booking request awaiting a reply",
+        "requestHint": "Reply from the “Requests” list above the calendar."
       },
       "outcome": {
         "saved": "Saved.",
@@ -755,7 +780,9 @@
         "absent": "Listing not found.",
         "failed": "The change was not saved. Please try again.",
         "rulesUnacknowledged": "This booking bypasses your rules. Review them below and confirm if you want it.",
-        "contradictoryRules": "Not saved: on {date} the minimum nights would exceed the maximum."
+        "contradictoryRules": "Not saved: on {date} the minimum nights would exceed the maximum.",
+        "conflictRequest": "Not saved: it overlaps a guest request awaiting a reply until {until} — answer the request first.",
+        "holdLapsed": "This request's deadline has passed — it expired and the dates were released."
       },
       "warnings": {
         "heading": "This booking bypasses:",
@@ -808,7 +835,21 @@
         "orphan": "Accept shorter stays in gaps between bookings",
         "orphanHint": "A gap up to this many nights can be filled with fewer than the minimum.",
         "orphanNights": "Gap up to",
-        "submit": "Save rules"
+        "submit": "Save rules",
+        "responseHours": "Reply hours for requests",
+        "responseHoursOff": "Off: the reply deadline runs around the clock, as on every platform.",
+        "responseHoursOn": "On: the deadline only runs within your hours — a request at midnight doesn't use up your night. The guest never waits more than twice as long.",
+        "responseHoursLegend": "When you reply to requests",
+        "responseHoursHint": "Greek time. Outside these hours the deadline clock pauses.",
+        "responseHoursInvalid": "Reply hours need at least one valid interval."
+      },
+      "requests": {
+        "heading": "{count, plural, one {# booking request awaits a reply} other {# booking requests await a reply}}",
+        "guestWithoutName": "Guest",
+        "replyBy": "Reply by {until} — if you don't, the request expires and the dates open up.",
+        "riskDisclosed": "The guest was told the property is for sale and accepted.",
+        "accept": "Accept",
+        "decline": "Decline"
       }
     },
     "stayChannels": {

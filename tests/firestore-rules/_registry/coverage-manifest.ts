@@ -76,6 +76,7 @@ import {
   authorOwnedMatrix,
   serverWrittenAuthorOwnedMatrix,
   personalFileMatrix,
+  personalFileActivityMatrix,
   companiesMatrix,
   ownerOnlyMatrix,
   usersMatrix,
@@ -461,6 +462,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/owner-properties.rules.test.ts',
     ...serverWrittenAuthorOwnedMatrix(),
   },
+  {
+    // ADR-866 Φ1.1 — Ο ΦΑΚΕΛΟΣ ΤΟΥ ΑΚΙΝΗΤΟΥ. Ίδιο σύνορο με την αγγελία (διαβάζει ΜΟΝΟ ο
+    // κάτοχος `userId`, γράφει ΜΟΝΟ ο διακομιστής) ⇒ ίδια μήτρα, ΚΑΜΙΑ νέα. Ούτε super admin:
+    // ό,τι αφορά το σπίτι ενός ανθρώπου το βλέπει ο ίδιος και όποιον καλέσει (Φ3, ADR-862).
+    collection: 'property_dossiers',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/property-dossiers.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
+  },
   // ADR-835 §20 (Στάδιο Α) — ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ. Ίδιο σύνορο με την αγγελία: ο
   // συντάκτης διαβάζει, κανείς δεν γράφει από τον πελάτη (ο κριτής κατάληψης τρέχει μόνο
   // στη συναλλαγή του διακομιστή). Τρίτος–πέμπτος καταναλωτής της ίδιας μήτρας.
@@ -517,6 +527,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...networkServerOnlyMatrix(),
   },
   {
+    // 🌴 ADR-867 §4.4 (Β5) — **Η ΑΠΟΥΣΙΑ**. **Τρίτος** καταναλωτής του ίδιου προτύπου: ο
+    // αντισυμβαλλόμενος μαθαίνει «ως πότε» **μόνο** από τον διακομιστή, και μόνο για το νήμα
+    // που διαβάζει ήδη. Το κελί που μετράει είναι το `same_tenant_user × read → deny`: ούτε ο
+    // **συνάδελφος** δεν διαβάζει το ημερολόγιο απουσιών — αλλιώς ο χώρος γίνεται απαριθμήσιμος.
+    collection: 'network_away',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/network-away.rules.test.ts',
+    ...networkServerOnlyMatrix(),
+  },
+  {
     // 💬 ADR-867 §4.1/§4.2 (Β4) — **ΤΟ ΝΗΜΑ**. Η **μόνη** συλλογή του αρχείου που κρίνει
     // την ανάγνωση από **υποσυλλογή**, και το `pattern` το λέει: `audience_gated`.
     //
@@ -542,6 +562,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'stay_channels',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/stay-channels.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // 🔴 ADR-835 §23.4 (Στάδιο Δ) — Η ΚΕΦΑΛΗ ΤΟΥ ΕΠΙΣΚΕΠΤΗ. `deny_all` για τον ίδιο λόγο με τα κανάλια:
+    // ο πειρασμός είναι ιδιοκτησιακός («η ΔΙΚΗ του κεφαλή»), αλλά είναι μηχανισμός σειριοποίησης του
+    // ορίου ενεργών αιτημάτων — ο κάτοχος που τη γράφει ξεπερνά το όριο. Η σουίτα σπέρνει κεφαλή του
+    // ίδιου του δοκιμαζόμενου, ώστε η μετάλλαξη «ο κάτοχος διαβάζει» να κοκκινίζει.
+    collection: 'stay_guests',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/stay-guests.rules.test.ts',
     ...denyAllMatrix(),
   },
   {
@@ -600,6 +630,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/files-personal.rules.test.ts',
     ...personalFileMatrix(),
+  },
+  {
+    // ADR-866 §2.6.11 — η ΔΡΑΣΤΗΡΙΟΤΗΤΑ των προσωπικών αρχείων: το ίδιο σύστημα με το
+    // `file_audit_log`, διαμέρισμα με κάτοχο `userId`. Διαβάζει ΜΟΝΟ ο κάτοχος (ούτε super admin)·
+    // γράφει ο κάτοχος ΜΟΝΟ ζευγαρωμένα με την αλλαγή που περιγράφει· αμετάβλητο για όλους.
+    collection: 'file_audit_log_personal',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/file-audit-log-personal.rules.test.ts',
+    ...personalFileActivityMatrix(),
   },
   {
     collection: 'entity_audit_trail',

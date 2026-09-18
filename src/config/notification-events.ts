@@ -120,6 +120,13 @@ export const NOTIFICATION_EVENT_TYPES = {
    * διαχειριστές του γραφείου, με απάντηση ενός κλικ χωρίς σύνδεση. Ερώτηση και υπενθύμιση = **ένας** διακόπτης.
    */
   PROPERTIES_HOLIDAY_HOURS_QUESTION: 'properties.holidayHoursQuestion',
+  /**
+   * ADR-835 §23.6 (Στάδιο Δ) — **προς τον οικοδεσπότη**: νέο αίτημα κράτησης (με την προθεσμία), αίτημα
+   * που αποσύρθηκε, αίτημα που έληξε χωρίς απάντηση. Ταυτότητα = η **μετάβαση** της κράτησης.
+   */
+  PROPERTIES_STAY_REQUEST_RECEIVED: 'properties.stayRequestReceived',
+  /** ADR-835 §23.6 — **προς τον επισκέπτη**: αποδοχή · άρνηση · λήξη («ρώτα ξανά» — ΔΕΝ είναι «όχι»). */
+  PROPERTIES_STAY_REQUEST_ANSWERED: 'properties.stayRequestAnswered',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -275,6 +282,22 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   // ADR-841 §7 Α21.20 — WARNING: δημόσιο σήμα αφαιρέθηκε και θέλει ενέργεια του ανθρώπου.
+  // ADR-835 §23.6 — 🔴 **`isMandatory: true`, ΡΗΤΑ, και είναι το αντίθετο του `demandInterest`.**
+  //    Εκείνη είναι εμπορική είδηση· αυτές είναι **συναλλακτικές**: ένα αίτημα που ο οικοδεσπότης δεν
+  //    μαθαίνει **λήγει χωρίς να ειπωθεί ποτέ**, και μια απάντηση που ο επισκέπτης δεν μαθαίνει τον
+  //    αφήνει να περιμένει για διαμονή που δεν έρχεται. Ούτε το Airbnb τις αφήνει να σβηστούν.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_RECEIVED]: {
+    category: 'properties',
+    settingKey: 'stayRequestReceived',
+    isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_ANSWERED]: {
+    category: 'properties',
+    settingKey: 'stayRequestAnswered',
+    isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: {
     category: 'properties',
     settingKey: 'cardEmailReturned',

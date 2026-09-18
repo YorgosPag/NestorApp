@@ -151,7 +151,9 @@
           "mandateDecided": "A client answered the mandate I sent them",
           "mandateRequestAnswered": "An agency answered your mandate request",
           "cardEmailReturned": "An email on your business card returned permanently",
-          "holidayHoursQuestion": "Question about your opening hours before public holidays"
+          "holidayHoursQuestion": "Question about your opening hours before public holidays",
+          "stayRequestReceived": "Booking requests for my stays (required)",
+          "stayRequestAnswered": "Replies to my booking requests (required)"
         },
         "tasks": {
           "title": "Tasks",

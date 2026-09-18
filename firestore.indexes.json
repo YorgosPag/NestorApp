@@ -1,6 +1,23 @@
 {
   "indexes": [
     {
+      "collectionGroup": "stay_bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "lifecycle", "order": "ASCENDING" },
+        { "fieldPath": "hold.expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "network_audience",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "until", "order": "ASCENDING" },
+        { "fieldPath": "threadActivityAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "audit_log",
       "queryScope": "COLLECTION",
       "fields": [
@@ -2014,6 +2031,24 @@
       "fields": [
         {
           "fieldPath": "performedBy",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "file_audit_log_personal",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fileId",
           "order": "ASCENDING"
         },
         {
