@@ -170,10 +170,10 @@ describe('Τ — η μηχανή λέει ΩΣ ΤΙ ταιριάζει η αγγ
     expect(match.metOn).toEqual([{ kind: 'leaseOut', role: 'rent', amount: 800, headroomBy: 0 }]);
   });
 
-  it('η αντιπαροχή ικανοποιείται χωρίς ρόλο και χωρίς ποσό', () => {
-    const land = listing({ offerKinds: ['exchange'] });
+  it('η αντιπαροχή χωρίς οροφή ικανοποιείται — ποσοστό όχι ευρώ, «προς συζήτηση» όταν δεν δηλώθηκε', () => {
+    const land = listing({ offerKinds: ['exchange'], exchange: { landownerShare: null } });
     const { metOn } = priceAxisOutcome(land, [seek('exchange')]);
-    expect(metOn).toEqual([{ kind: 'exchange', role: null, amount: null, headroomBy: null }]);
+    expect(metOn).toEqual([{ kind: 'exchange', landownerShare: null, headroomBy: null }]);
   });
 
   it('κοντινό αποτέλεσμα ⇒ κανένα «ως τι»', () => {

@@ -1,4 +1,8 @@
 {
+  "exchange": {
+    "share": "Land-for-flats exchange: {share} to the landowner, of the new floor area.",
+    "negotiable": "Land-for-flats exchange: the landowner’s share is open to negotiation."
+  },
   "priceReduction": {
     "since": "Reduced on {date}",
     "basis": "Compared with the lowest price of the last 30 days."

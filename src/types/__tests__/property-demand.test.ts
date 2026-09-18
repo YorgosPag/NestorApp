@@ -20,13 +20,17 @@ import {
   DEMAND_LIFECYCLES,
   DEMAND_LIFE_CONTEXTS,
   DEMAND_PROXIMITY_KINDS,
+  NO_AMOUNT_RANGE,
   NO_DEMAND_FEATURES,
+  NO_NIGHTS_RANGE,
   PRICED_SEEK_KINDS,
   demandInvariantViolations,
   demandSeek,
+  exchangeSeek,
   isAttributableDemand,
   isPricedSeekKind,
   seekKindsOf,
+  shortStaySeek,
   isDemandLifeContext,
   isDemandLifecycle,
   isLiveDemand,
@@ -204,6 +208,21 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
       { timing: { kind: 'window', fromDate: '2028-01-01', toDate: '2027-01-01' } },
     ],
     ['range-inverted', { features: { ...NO_DEMAND_FEATURES, areaMin: 200, areaMax: 50 } }],
+    // ADR-777 §8.60.17 — «150% στον οικοπεδούχο» δεν είναι οροφή, είναι παρανόηση του πεδίου.
+    ['exchange-share-out-of-range', { seeks: [exchangeSeek(150)] }],
+    // ADR-777 §8.60.19 — οι όροι διαμονής: νύχτες που δεν είναι νύχτες · ελάχιστο που δεν χωρά · παρέα χωρίς ενήλικα.
+    ['stay-nights-invalid', { seeks: [shortStaySeek(NO_AMOUNT_RANGE, { min: 0, max: null }, null)] }],
+    [
+      'stay-nights-exceed-window',
+      {
+        seeks: [shortStaySeek(NO_AMOUNT_RANGE, { min: 5, max: null }, null)],
+        timing: { kind: 'window', fromDate: '2027-03-01', toDate: '2027-03-04' },
+      },
+    ],
+    [
+      'stay-party-invalid',
+      { seeks: [shortStaySeek(NO_AMOUNT_RANGE, NO_NIGHTS_RANGE, { adults: 0, children: 1, infants: 0 })] },
+    ],
     [
       'radius-not-positive',
       { place: { kind: 'near', center: { lat: 40, lng: 22 }, radiusKm: 0 } },
@@ -313,10 +332,14 @@ describe('🔴 Σ — η τιμή ζει ΑΝΑ ΕΝΑΛΛΑΚΤΙΚΗ, και �
   });
 
   it('🔑 η αντιπαροχή ΔΕΝ κρατά ποσό — ο κατασκευαστής το πετά, δεν το κρύβει', () => {
-    expect(demandSeek('exchange', { min: 1, max: 2 })).toEqual({ kind: 'exchange' });
+    // ADR-777 §8.60.17 — το εύρος ποσού πετιέται· η αντιπαροχή έχει μόνο **οροφή ποσοστού** (εδώ καμία).
+    expect(demandSeek('exchange', { min: 1, max: 2 })).toEqual({ kind: 'exchange', landownerShareMax: null });
+    // ADR-777 §8.60.19 — η διαμονή ξεκινά **χωρίς** όρους: καμία νύχτα, καμία παρέα.
     expect(demandSeek('leaseShort', { min: null, max: 80 })).toEqual({
       kind: 'leaseShort',
       price: { min: null, max: 80 },
+      nights: { min: null, max: null },
+      party: null,
     });
   });
 

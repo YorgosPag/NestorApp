@@ -298,6 +298,10 @@ export const IGNORANCE_BLOCKERS = [
   //    για κάτι που κανείς δεν ρώτησε». Ίδιο σχήμα με τα τέσσερα από πάνω, που είναι
   //    επίσης όλα στο `CATEGORICAL_BLOCKERS`.
   ...ABSENCE_BLOCKERS,
+  // ADR-777 §8.60.17 — «ποσοστό προς συζήτηση»: ο λόγος δεν είναι ότι δεν υπάρχει οικόπεδο.
+  'share-undeclared',
+  // ADR-777 §8.60.19 — κανείς δεν δήλωσε αν τα βρέφη μετρούν· η χωρητικότητα-απουσία έρχεται με το ABSENCE.
+  'stay-infants-uncertain',
 ] as const satisfies readonly DemandBlocker[];
 
 /**

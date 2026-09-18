@@ -46,6 +46,13 @@
 
 import { z } from 'zod';
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
+import {
+  EMPTY_STAY_NIGHTS_FORM,
+  EMPTY_STAY_PARTY_FORM,
+  shortStaySeekFrom,
+  stayNightsFormSchema,
+  stayPartyFormSchema,
+} from './demand-form-stay';
 import type { OfferKind } from '@/types/property-offers';
 import { OFFER_KINDS } from '@/types/property-offers';
 import {
@@ -55,6 +62,7 @@ import {
   NO_AMOUNT_RANGE,
   NO_DEMAND_FEATURES,
   demandSeek,
+  exchangeSeek,
   isPricedSeekKind,
   type DemandFeatures,
   type DemandSeek,
@@ -168,6 +176,17 @@ export const demandFormSchema = z.object({
   seeks: z.array(z.enum(OFFER_KINDS as unknown as [OfferKind, ...OfferKind[]])),
   /** Η τιμή **κάθε** διάθεσης, στη μονάδα της — βλ. {@link seekPrices}. */
   seekPrices,
+  /**
+   * **Οροφή ποσοστού οικοπεδούχου** για την αντιπαροχή (ADR-777 §8.60.17) — κενό = καμία οροφή.
+   * Μένει συμπληρωμένη κι όταν η αντιπαροχή αποεπιλεγεί (Α14 §17.2)· ταξιδεύει **μόνο** επιλεγμένη.
+   */
+  exchangeShareMax: optionalNumber,
+  /**
+   * **Όροι διαμονής** (ADR-777 §8.60.19) — νύχτες «από/έως» και παρέα. Ζουν στο `demand-form-stay.ts`
+   * μαζί με τη μετάφρασή τους και προς τις δύο κατευθύνσεις.
+   */
+  stayNights: stayNightsFormSchema,
+  stayParty: stayPartyFormSchema,
 
   // ── ΧΩΡΟΣ ───────────────────────────────────────────────────────────────
   placeKind: z.enum(FORM_PLACE_KINDS),
@@ -260,6 +279,9 @@ export const DEFAULT_FRONTAGE_DEPTH_METRES = 40;
 export const EMPTY_DEMAND_FORM: DemandFormValues = {
   seeks: [],
   seekPrices: { sell: NO_AMOUNT_RANGE, leaseOut: NO_AMOUNT_RANGE, leaseShort: NO_AMOUNT_RANGE },
+  exchangeShareMax: null,
+  stayNights: EMPTY_STAY_NIGHTS_FORM,
+  stayParty: EMPTY_STAY_PARTY_FORM,
   placeKind: 'anywhere',
   placeQuery: '',
   placeCenter: null,
@@ -384,9 +406,13 @@ function featuresFrom(values: DemandFormParsed): DemandFeatures {
  * ήταν ψευδής ισχυρισμός μέσα στο έγγραφο (ίδιο δόγμα με τον {@link demandSeek}).
  */
 function seeksFrom(values: DemandFormParsed): DemandSeek[] {
-  return values.seeks.map((kind) =>
-    demandSeek(kind, isPricedSeekKind(kind) ? values.seekPrices[kind] : NO_AMOUNT_RANGE),
-  );
+  return values.seeks.map((kind) => {
+    if (kind === 'exchange') return exchangeSeek(values.exchangeShareMax);
+    if (kind === 'leaseShort') {
+      return shortStaySeekFrom(values.seekPrices.leaseShort, values.stayNights, values.stayParty);
+    }
+    return demandSeek(kind, isPricedSeekKind(kind) ? values.seekPrices[kind] : NO_AMOUNT_RANGE);
+  });
 }
 
 /** **Φόρμα → προσχέδιο ζήτησης.** Καθαρή, ολική. */

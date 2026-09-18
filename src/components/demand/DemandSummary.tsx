@@ -28,6 +28,9 @@ import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import {
   boundedPricedSeeks,
+  isExchangeSeek,
+  isShortStaySeek,
+  isStayTermsSet,
   type DemandPlace,
   type DemandSeek,
   type DemandTiming,
@@ -36,6 +39,7 @@ import {
 } from '@/types/property-demand';
 import { priceRoleOfSeek } from '@/lib/criteria/listing-criterion-reading';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { formatPercentage } from '@/lib/intl-formatting';
 import { SEEK_KIND_I18N_KEYS } from './seek-kind-labels';
 
 /** Ο χωρικός άξονας ως φράση. */
@@ -107,6 +111,7 @@ function useTimingPhrase(): (timing: DemandTiming) => string {
 function usePricePhrase(): (seeks: readonly DemandSeek[]) => string {
   const { t } = useTranslation(['property-market', 'common']);
   const K = 'property-market:demand.summary';
+  const stayPhrase = useStayTermsPhrase();
 
   const rangeOf = React.useCallback(
     (seek: PricedDemandSeek): string => {
@@ -123,13 +128,48 @@ function usePricePhrase(): (seeks: readonly DemandSeek[]) => string {
 
   return React.useCallback(
     (seeks) => {
-      const bounded = boundedPricedSeeks(seeks);
-      if (bounded.length === 0) return t(`${K}.noPriceLimit`);
-      return bounded
-        .map((seek) => t(`${K}.seekPrice`, { kind: t(SEEK_KIND_I18N_KEYS[seek.kind]), range: rangeOf(seek) }))
-        .join(' · ');
+      const parts = boundedPricedSeeks(seeks).map((seek) =>
+        t(`${K}.seekPrice`, { kind: t(SEEK_KIND_I18N_KEYS[seek.kind]), range: rangeOf(seek) }),
+      );
+      // 🔑 ADR-777 §8.60.17 — η αντιπαροχή δεν έχει ποσό, έχει **οροφή ποσοστού οικοπεδούχου**.
+      const shareMax = seeks.find(isExchangeSeek)?.landownerShareMax ?? null;
+      if (shareMax !== null) {
+        parts.push(t(`${K}.exchangeShare`, { share: formatPercentage(shareMax) }));
+      }
+      const stay = stayPhrase(seeks);
+      if (stay !== null) parts.push(stay);
+      return parts.length === 0 ? t(`${K}.noPriceLimit`) : parts.join(' · ');
     },
-    [t, rangeOf],
+    [t, rangeOf, stayPhrase],
+  );
+}
+
+/**
+ * Οι **όροι διαμονής** ως φράση (ADR-777 §8.60.19) — «Διαμονή: 4–6 νύχτες, 2 ενήλικες, 1 βρέφος».
+ * `null` όταν δεν ζητείται διαμονή ή δεν τέθηκε όρος. Μηδενικά παιδιά/βρέφη **δεν** λέγονται.
+ */
+function useStayTermsPhrase(): (seeks: readonly DemandSeek[]) => string | null {
+  const { t } = useTranslation(['property-market', 'common']);
+  const K = 'property-market:demand.summary';
+
+  return React.useCallback(
+    (seeks) => {
+      const stay = seeks.find(isShortStaySeek);
+      if (stay === undefined || !isStayTermsSet(stay)) return null;
+      const { min, max } = stay.nights;
+      const parts: string[] = [];
+      if (min !== null && max !== null) parts.push(t(`${K}.stayNightsRange`, { min, max }));
+      else if (min !== null) parts.push(t(`${K}.stayNightsFrom`, { min }));
+      else if (max !== null) parts.push(t(`${K}.stayNightsUpTo`, { max }));
+      const party = stay.party;
+      if (party !== null) {
+        parts.push(t(`${K}.stayAdults`, { count: party.adults }));
+        if (party.children > 0) parts.push(t(`${K}.stayChildren`, { count: party.children }));
+        if (party.infants > 0) parts.push(t(`${K}.stayInfants`, { count: party.infants }));
+      }
+      return t(`${K}.stayTerms`, { kind: t(SEEK_KIND_I18N_KEYS.leaseShort), terms: parts.join(', ') });
+    },
+    [t],
   );
 }
 

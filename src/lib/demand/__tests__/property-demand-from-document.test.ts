@@ -169,7 +169,7 @@ describe('Κ7 — ADR-777 §8.60.15: ΔΥΟ σχήματα στον δίσκο, 
     if (read?.kind !== 'complete') throw new Error('αναμενόταν complete');
     expect(read.demand.seeks).toEqual([
       { kind: 'sell', price: { min: null, max: 300_000 } },
-      { kind: 'exchange' },
+      { kind: 'exchange', landownerShareMax: null },
     ]);
   });
 

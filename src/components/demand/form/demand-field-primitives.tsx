@@ -60,3 +60,40 @@ export function DemandOptionsField<T extends string>(props: {
 }): React.ReactElement {
   return <FormOptionsField<DemandFormValues, T> control={useDemandForm()} {...props} />;
 }
+
+/**
+ * Ένα εύρος «από/έως» — τιμή · εμβαδόν · όροφος · **νύχτες** (ADR-777 §8.60.19: δεύτερος κάτοχος,
+ * γι' αυτό ζει εδώ και όχι μέσα σε ένα αρχείο πεδίων).
+ *
+ * ⚠️ Το `floor` λείπει **επίτηδες** στον όροφο: υπάρχουν **υπόγεια**, και ένα
+ * `min={0}` θα έκανε το «−1» αδύνατο να πληκτρολογηθεί. Το ισόγειο είναι `0`, όχι το
+ * κάτω άκρο του κόσμου.
+ */
+export function DemandRangeRow({
+  legend,
+  help,
+  minName,
+  maxName,
+  minLabel,
+  maxLabel,
+  floor,
+}: {
+  legend: string;
+  help?: string;
+  minName: DemandFieldName;
+  maxName: DemandFieldName;
+  minLabel: string;
+  maxLabel: string;
+  floor?: number;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-sm font-medium text-foreground">{legend}</p>
+      {help !== undefined && <p className="text-sm text-muted-foreground">{help}</p>}
+      <div className="flex flex-wrap gap-3">
+        <DemandNumberField name={minName} label={minLabel} min={floor} />
+        <DemandNumberField name={maxName} label={maxLabel} min={floor} />
+      </div>
+    </div>
+  );
+}

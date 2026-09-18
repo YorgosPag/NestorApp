@@ -21,9 +21,8 @@
  * **Layering**: leaf — μόνο τύποι και σταθερές. Καμία λογική, καμία εξάρτηση.
  */
 
-import type { DemandProximityKind } from '@/types/property-demand';
+import type { DemandProximityKind, PricedSeekKind } from '@/types/property-demand';
 import type { PriceRole } from '@/lib/properties/price-resolver';
-import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -181,10 +180,57 @@ export const DEMAND_BLOCKERS = [
   'bedrooms-undeclared',
   /** Δεν έχει δηλωθεί όροφος. */
   'floor-undeclared',
+  /**
+   * **Κατάλυμα χωρίς δηλωμένη χωρητικότητα**, απέναντι σε ζητούντα με παρέα (ADR-777 §8.60.19).
+   * Ίδιο δόγμα με τα τέσσερα παραπάνω, και **ίδια σημασία** με το `terms-unknown` της αναζήτησης
+   * (`stay-availability-vocabulary.ts`), που επίσης **δεν** λογίζεται «μπορείς να μείνεις».
+   */
+  'stay-capacity-undeclared',
+
+  // ── ΟΡΟΙ ΔΙΑΜΟΝΗΣ — κατηγορικό (ADR-777 §8.60.19) ─────────────────────────
+  /**
+   * **Η παρέα δεν χωρά** — ενήλικες + παιδιά πάνω από το `maxGuests`.
+   *
+   * ⚖️ **Κατηγορικό στη ζήτηση**, ενώ η αναζήτηση το ονομάζει μετρήσιμο: εκεί ο επισκέπτης
+   * **διαβάζει** τον αριθμό για **μία** ερώτηση· εδώ ένα μετρήσιμο θα έβαζε δυάρι στα «κοντινά» μιας
+   * τετραμελούς οικογένειας — θόρυβος. Airbnb · Booking · Vrbo φιλτράρουν τη χωρητικότητα **σκληρά**.
+   */
+  'stay-over-capacity',
+
+  // ── ΠΡΟΣ ΣΥΖΗΤΗΣΗ — «δεν το δήλωσε, και είναι όρος διαπραγμάτευσης» (ADR-777 §8.60.17) ──
+  /**
+   * Αντιπαροχή **χωρίς** δηλωμένο ποσοστό οικοπεδούχου, απέναντι σε εργολάβο με οροφή.
+   *
+   * ⚖️ **ΟΧΙ απουσία (κατηγορικό) όπως το `price-undeclared` — και είναι απόφαση**: το ποσοστό της
+   * αντιπαροχής είναι κατά κανόνα **διαπραγματεύσιμο** (έρευνα §8.60.17), και ως σήμερα **καμία**
+   * δημόσια αγγελία δεν το είχε (ήταν δηλωμένη απώλεια της προβολής). Κατηγορικό θα έκρυβε **κάθε**
+   * οικόπεδο από κάθε εργολάβο με οροφή. Ως αβεβαιότητα, η αγγελία βγαίνει **κοντινή** με τον λόγο
+   * γραμμένο: «ποσοστό προς συζήτηση».
+   */
+  'share-undeclared',
+  /**
+   * **Χωρά μόνο αν τα βρέφη δεν μετρούν** (ADR-777 §8.60.19) — ενήλικες + παιδιά ≤ `maxGuests` <
+   * όλη η παρέα.
+   *
+   * 🏆 **Εδώ ξεπερνάμε τους μεγάλους**: το Airbnb **σιωπηλά δέχεται** (τα βρέφη δεν μετρούν κατά
+   * προεπιλογή), το schema.org/Booking **σιωπηλά απορρίπτει** (η χωρητικότητα τα περιλαμβάνει). Ο
+   * κάτοχος **δεν** έχει δηλώσει πολιτική βρεφών — άρα η αλήθεια είναι «δεν ξέρουμε», και η
+   * αγγελία βγαίνει **κοντινή** με τον λόγο γραμμένο: «ρωτήστε τον κάτοχο για το βρέφος».
+   */
+  'stay-infants-uncertain',
 
   // ── ΜΕΤΡΗΣΙΜΑ (έχουν «πόσο») ──────────────────────────────────────────────
+  /**
+   * **Ζητά περισσότερες νύχτες** από το πάνω όριο του ζητούντα (ADR-777 §8.60.19) — «πόσο» σε νύχτες.
+   *
+   * 🏆 **Το Airbnb κρύβει σιωπηλά** την αγγελία που θέλει περισσότερες νύχτες (Help 3728: *«your
+   * listing may not appear»*). Εδώ λέμε **πόσες** λείπουν, και η σκάλα προτείνει «+2 νύχτες ⇒ 3 καταλύματα».
+   */
+  'stay-nights-below-minimum',
   /** Ακριβότερη από την οροφή. */
   'price-above',
+  /** Ποσοστό οικοπεδούχου **πάνω** από την οροφή του εργολάβου — «πόσο» σε μονάδες ποσοστού. */
+  'share-above',
   /** Φθηνότερη από το κατώφλι που έθεσε. */
   'price-below',
   /** Μικρότερη σε εμβαδόν από το ελάχιστο. */
@@ -242,6 +288,7 @@ export const ABSENCE_BLOCKERS = [
   'area-undeclared',
   'bedrooms-undeclared',
   'floor-undeclared',
+  'stay-capacity-undeclared',
 ] as const satisfies readonly DemandBlocker[];
 
 export const CATEGORICAL_BLOCKERS = [
@@ -253,6 +300,8 @@ export const CATEGORICAL_BLOCKERS = [
   'availability-unknown',
   'proximity-unknown',
   'wrong-side',
+  // ADR-777 §8.60.19 — η παρέα δεν χωρά: κανένα «λίγο» που ο ζητών κλείνει με υποχώρηση.
+  'stay-over-capacity',
   // 🔴 ADR-777 §8.52 — οι τέσσερις απουσίες. **Ιδιότητα της αγγελίας**, όχι της
   //    γνώσης μας: ο κάτοχος δεν δημοσίευσε το στοιχείο, άρα δεν υπάρχει δημόσιο
   //    γεγονός να αγνοούμε. Ο λόγος γράφεται ολόκληρος στο {@link DEMAND_BLOCKERS}.
@@ -309,7 +358,13 @@ export const CATEGORICAL_BLOCKERS = [
  * επειδή μετρήθηκε ότι για **αυτό** η άγνοια είναι η πλειοψηφία. Τα άλλα τρία
  * παραμένουν κατηγορικά μέχρι κάποιος να δείξει το ίδιο για εκείνα.
  */
-export const UNCERTAIN_BLOCKERS = ['side-unresolved'] as const satisfies readonly DemandBlocker[];
+export const UNCERTAIN_BLOCKERS = [
+  'side-unresolved',
+  // ADR-777 §8.60.17 — όρος διαπραγμάτευσης που δεν δηλώθηκε: η αγγελία **μπορεί** να ταιριάζει.
+  'share-undeclared',
+  // ADR-777 §8.60.19 — κανείς δεν δήλωσε αν τα βρέφη μετρούν: η αγγελία **μπορεί** να χωρά.
+  'stay-infants-uncertain',
+] as const satisfies readonly DemandBlocker[];
 
 /** `true` αν το εμπόδιο είναι **κλειστή υπόθεση** — ιδιότητα της αγγελίας, όχι της γνώσης μας. */
 export function isCategoricalBlocker(blocker: DemandBlocker): boolean {
@@ -348,6 +403,18 @@ export interface DemandGaps {
   readonly priceOverBy: number | null;
   /** Πόσα € κάτω από το κατώφλι. */
   readonly priceUnderBy: number | null;
+  /**
+   * **Μονάδες ποσοστού** πάνω από την οροφή οικοπεδούχου (ADR-777 §8.60.17).
+   *
+   * 🔴 **Χωριστό πεδίο από το `priceOverBy`, και είναι η ουσία**: «+5» στο `priceOverBy` θα
+   * διαβαζόταν «+5 €». Ποσοστό και ποσό **δεν** μοιράζονται κενό — η μονάδα είναι κλάδος.
+   */
+  readonly shareOverBy: number | null;
+  /**
+   * **Νύχτες** που λείπουν ως το ελάχιστο του κατόχου (ADR-777 §8.60.19) — πάνω από το πάνω όριο νυχτών
+   * του ζητούντα. Δική του μονάδα, ποτέ σε άλλο πεδίο.
+   */
+  readonly nightsShortBy: number | null;
   /** Πόσα m² λείπουν από το ελάχιστο. */
   readonly areaShortBy: number | null;
   /** Πόσα m² περισσεύουν από το μέγιστο. */
@@ -366,6 +433,8 @@ export interface DemandGaps {
 export const NO_GAPS: DemandGaps = {
   priceOverBy: null,
   priceUnderBy: null,
+  shareOverBy: null,
+  nightsShortBy: null,
   areaShortBy: null,
   areaOverBy: null,
   bedroomsShortBy: null,
@@ -383,18 +452,33 @@ export type DemandVerdict = (typeof DEMAND_VERDICTS)[number];
 
 /**
  * **Μια εναλλακτική της ζήτησης που η αγγελία ικανοποιεί ΠΛΗΡΩΣ** (ADR-777 §8.60.16) — την
- * **προσφέρει** και η τιμή της **χωρά** (ή η εναλλακτική δεν έθεσε όριο).
+ * **προσφέρει** και το ποσό της **χωρά** (ή η εναλλακτική δεν έθεσε όριο).
  *
- * 🔑 **Το περιθώριο είναι ο καθρέφτης του κενού**: το `priceOverBy` λέει «πόσο **έξω**», το
- * `headroomBy` «πόσο **μέσα**». Και τα δύο στη μονάδα του `role` — «50» δεν διαβάζεται χωρίς αυτήν.
+ * 🔑 **Το περιθώριο είναι ο καθρέφτης του κενού**: το `priceOverBy`/`shareOverBy` λέει «πόσο
+ * **έξω**», το `headroomBy` «πόσο **μέσα**» — στη μονάδα του **κλάδου**.
+ *
+ * 🔴 **Διακριτή ένωση, όχι `role: null`** (ADR-777 §8.60.17): η αντιπαροχή φέρει **ποσοστό**, όχι
+ * ευρώ. Ένα κοινό `amount` θα άφηνε κάθε αναγνώστη να ξεχάσει να ρωτήσει τη μονάδα — το ίδιο δόγμα
+ * «η μονάδα είναι κλάδος» του §8.60.15.
  */
-export interface DemandSeekMet {
-  readonly kind: OfferKind;
-  /** `null` = εναλλακτική χωρίς ποσό (αντιπαροχή). */
-  readonly role: PriceRole | null;
+export type DemandSeekMet = DemandSeekMetPriced | DemandSeekMetExchange;
+
+/** Συναλλαγή **με ποσό** (€ · €/μήνα · €/νύχτα). */
+export interface DemandSeekMetPriced {
+  readonly kind: PricedSeekKind;
+  readonly role: PriceRole;
   /** Το ποσό της αγγελίας **σε αυτόν τον ρόλο** — ο **ίδιος** αναγνώστης με την κρίση· `null` = δεν δηλώθηκε. */
   readonly amount: number | null;
   /** `max − amount` — `null` χωρίς ανώτατο όριο ή χωρίς ποσό. */
+  readonly headroomBy: number | null;
+}
+
+/** Αντιπαροχή — **ποσοστό οικοπεδούχου**, ποτέ ευρώ. */
+export interface DemandSeekMetExchange {
+  readonly kind: 'exchange';
+  /** Το ποσοστό οικοπεδούχου της αγγελίας· `null` = προς συζήτηση. */
+  readonly landownerShare: number | null;
+  /** `οροφή − ποσοστό`, σε **μονάδες ποσοστού** — `null` χωρίς οροφή ή χωρίς ποσοστό. */
   readonly headroomBy: number | null;
 }
 

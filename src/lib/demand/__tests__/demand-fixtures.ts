@@ -71,6 +71,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null, nightlyRate: null },
     // ADR-835 §4.5 — η ουδέτερη αγγελία είναι **πώληση**, άρα `stay: null`.
     stay: null,
+    exchange: null,
     coverImage: null,
     gallery: [],
     type: 'apartment',

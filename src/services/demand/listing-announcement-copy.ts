@@ -31,7 +31,11 @@ import {
   type AnnouncementReasons,
   type BudgetVerdict,
 } from '@/lib/demand/demand-announcement';
-import type { DemandSeekMet } from '@/lib/demand/demand-matching';
+import type {
+  DemandSeekMet,
+  DemandSeekMetExchange,
+  DemandSeekMetPriced,
+} from '@/lib/demand/demand-matching';
 import { isReductionFresh } from '@/lib/listings/price-history';
 import type { PriceRole } from '@/lib/properties/price-resolver';
 import elMarket from '@/i18n/locales/el/property-market.json';
@@ -118,22 +122,37 @@ const ROLE_SUFFIX: Readonly<Record<PriceRole, string>> = {
 const SEEK_KIND_NAME: Readonly<Record<OfferKind, string>> = elMarket.demand.summary.seekKind;
 
 /** «50 €/μήνα κάτω από το όριό σας» — ή τίποτα, όταν δεν υπάρχει όριο (ή λόγος να λεχθεί). */
-function headroomPhrase(met: DemandSeekMet, suffix: string): string | null {
-  if (met.headroomBy === null) return null;
-  return met.headroomBy === 0
-    ? 'ακριβώς στο όριό σας'
-    : `${formatEuro(met.headroomBy)}${suffix} κάτω από το όριό σας`;
+function headroomPhrase(headroomBy: number | null, formatted: (value: number) => string): string | null {
+  if (headroomBy === null) return null;
+  return headroomBy === 0 ? 'ακριβώς στο όριό σας' : `${formatted(headroomBy)} κάτω από το όριό σας`;
+}
+
+/** Οι λεπτομέρειες μιας συναλλαγής **με ποσό** — «850,00 €/μήνα, 50,00 €/μήνα κάτω από το όριό σας». */
+function pricedDetails(met: DemandSeekMetPriced): readonly (string | null)[] {
+  if (met.amount === null) return [];
+  const suffix = ROLE_SUFFIX[met.role];
+  return [`${formatEuro(met.amount)}${suffix}`, headroomPhrase(met.headroomBy, (value) => `${formatEuro(value)}${suffix}`)];
+}
+
+/**
+ * Οι λεπτομέρειες της **αντιπαροχής** (ADR-777 §8.60.17) — «40% στον οικοπεδούχο, 5 μονάδες κάτω από
+ * το όριό σας». Ποσοστό, **ποτέ** ευρώ: ο κλάδος το εγγυάται.
+ */
+function exchangeDetails(met: DemandSeekMetExchange): readonly (string | null)[] {
+  if (met.landownerShare === null) return ['ποσοστό προς συζήτηση'];
+  return [
+    `${greekNumber(met.landownerShare)}% στον οικοπεδούχο`,
+    headroomPhrase(met.headroomBy, (value) => `${greekNumber(value)} μονάδες`),
+  ];
 }
 
 /** «ως ενοικίαση (850 €/μήνα, 50 €/μήνα κάτω από το όριό σας)» — ή σκέτο «ως αντιπαροχή». */
 function metPhrase(met: DemandSeekMet): string {
   const name = `ως ${SEEK_KIND_NAME[met.kind].toLocaleLowerCase('el')}`;
-  if (met.role === null || met.amount === null) return name;
-  const suffix = ROLE_SUFFIX[met.role];
-  const details = [`${formatEuro(met.amount)}${suffix}`, headroomPhrase(met, suffix)].filter(
+  const details = (met.kind === 'exchange' ? exchangeDetails(met) : pricedDetails(met)).filter(
     (part): part is string => part !== null,
   );
-  return `${name} (${details.join(', ')})`;
+  return details.length === 0 ? name : `${name} (${details.join(', ')})`;
 }
 
 /**
@@ -148,9 +167,14 @@ export function matchedAsSentence(metOn: readonly DemandSeekMet[]): string | und
   return `Ταιριάζει ${metOn.map(metPhrase).join(' και ')}.`;
 }
 
-/** Ποσοστό σε ελληνική γραφή, με ένα δεκαδικό το πολύ: `830` μ.β. ⇒ `8,3`. */
+/** Αριθμός σε ελληνική γραφή, με ένα δεκαδικό το πολύ: `8.3` ⇒ `8,3`. */
+function greekNumber(value: number): string {
+  return new Intl.NumberFormat('el', { maximumFractionDigits: 1 }).format(value);
+}
+
+/** Ποσοστό μείωσης από μονάδες βάσης: `830` μ.β. ⇒ `8,3`. */
 function percentOf(dropBasisPoints: number): string {
-  return new Intl.NumberFormat('el', { maximumFractionDigits: 1 }).format(dropBasisPoints / 100);
+  return greekNumber(dropBasisPoints / 100);
 }
 
 function subjectOf(lead: string, listingTitle: string): string {

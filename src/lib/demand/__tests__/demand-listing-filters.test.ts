@@ -20,7 +20,14 @@ import {
   withinRange,
 } from '@/lib/listings/listing-filters';
 import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
-import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
+import {
+  NO_AMOUNT_RANGE,
+  NO_DEMAND_FEATURES,
+  NO_NIGHTS_RANGE,
+  exchangeSeek,
+  shortStaySeek,
+  type PropertyDemand,
+} from '@/types/property-demand';
 import { seek } from './demand-fixtures';
 
 function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
@@ -186,6 +193,11 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
     ],
     ['place-identity', { place: { kind: 'place', landId: 'land_1', buildingId: null } }],
     ['proximity', { proximity: [{ kind: 'school', maxMetres: 400 }] }],
+    // ADR-777 §8.60.17 — η αναζήτηση δεν έχει φίλτρο ποσοστού αντιπαροχής (κανένα portal δεν έχει).
+    ['landownerShare', { seeks: [exchangeSeek(40)] }],
+    // ADR-777 §8.60.19 — νύχτες χωρίς ημερομηνίες, και παρέα που κρίνεται μόνο με ημερομηνίες.
+    ['stayNights', { seeks: [shortStaySeek(NO_AMOUNT_RANGE, { min: 3, max: 5 }, null)] }],
+    ['stayParty', { seeks: [shortStaySeek(NO_AMOUNT_RANGE, NO_NIGHTS_RANGE, { adults: 2, children: 0, infants: 0 })] }],
   ];
 
   for (const [axis, overrides] of CASES) {

@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΑΝΑΓΝΩΣΗ ΤΩΝ ΕΝΑΛΛΑΚΤΙΚΩΝ** — `seeks` αποθηκευμένο → `DemandSeek[]`, ή όνομα.
- * @related ADR-777 §8.60.15 · lib/demand/property-demand-from-document.ts · scripts/migrations/migrate-demand-seek-prices.ts
+ * @related ADR-777 §8.60.15 · §8.60.17 · §8.60.19 · lib/demand/property-demand-from-document.ts · scripts/migrations/migrate-demand-seek-prices.ts
  * @module lib/demand/demand-seeks-read
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -32,11 +32,15 @@
 import { isOfferKind, type OfferKind } from '@/types/property-offers';
 import {
   NO_AMOUNT_RANGE,
+  NO_NIGHTS_RANGE,
   demandSeek,
+  exchangeSeek,
   isAmountRangeSet,
   isPricedSeek,
+  shortStaySeek,
   type DemandAmountRange,
   type DemandSeek,
+  type StayParty,
 } from '@/types/property-demand';
 
 /** Το αποτέλεσμα — **ονομασμένο**, ποτέ `null` που σημαίνει πολλά. */
@@ -66,15 +70,51 @@ function rangeFrom(min: unknown, max: unknown): DemandAmountRange | null {
   return low === undefined || high === undefined ? null : { min: low, max: high };
 }
 
+/** Αντικείμενο αποθηκευμένο — όχι πίνακας, όχι `null`. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Η παρέα — απούσα ⇒ `null` (καμία)· χαλασμένη ⇒ `undefined`. Το **νόημα** το κρίνουν τα αναλλοίωτα. */
+function partyFrom(value: unknown): StayParty | null | undefined {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) return undefined;
+  const [adults, children, infants] = [value.adults, value.children, value.infants].map(amountOrNull);
+  if (adults == null || children == null || infants == null) return undefined;
+  return { adults, children, infants };
+}
+
+/** Το εύρος νυχτών — απόν ⇒ χωρίς όριο· χαλασμένο ⇒ `null`. */
+function nightsFrom(value: unknown): DemandAmountRange | null {
+  if (value === null || value === undefined) return NO_NIGHTS_RANGE;
+  return isRecord(value) ? rangeFrom(value.min, value.max) : null;
+}
+
+/**
+ * Οι όροι διαμονής (ADR-777 §8.60.19). **Απόντες = καμία συνθήκη**: τα έγγραφα πριν από την ερώτηση
+ * είναι σωστά ως έχουν — **καμία μετανάστευση**. Χαλασμένοι ⇒ ολόκληρη η εναλλακτική αδιάβαστη.
+ */
+function shortStayFrom(range: DemandAmountRange, stored: Record<string, unknown>): DemandSeek | null {
+  const nights = nightsFrom(stored.nights);
+  const party = partyFrom(stored.party);
+  return nights === null || party === undefined ? null : shortStaySeek(range, nights, party);
+}
+
 /** Μία εναλλακτική του **νέου** σχήματος — `null` όταν δεν διαβάζεται. */
 function seekFrom(value: unknown): DemandSeek | null {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
-  const { kind, price } = value as { kind?: unknown; price?: unknown };
+  if (!isRecord(value)) return null;
+  const { kind, price, landownerShareMax } = value;
   if (!isOfferKind(kind)) return null;
-  if (kind === 'exchange') return demandSeek(kind, NO_AMOUNT_RANGE);
-  if (typeof price !== 'object' || price === null) return null;
-  const range = rangeFrom((price as { min?: unknown }).min, (price as { max?: unknown }).max);
-  return range === null ? null : demandSeek(kind, range);
+  if (kind === 'exchange') {
+    // ADR-777 §8.60.17 — η οροφή ποσοστού οικοπεδούχου. **Απούσα = καμία οροφή**: τα έγγραφα πριν
+    // από την ερώτηση είναι σωστά ως έχουν (καμία μετανάστευση). Χαλασμένη ⇒ ολόκληρη αδιάβαστη.
+    const share = amountOrNull(landownerShareMax);
+    return share === undefined ? null : exchangeSeek(share);
+  }
+  if (!isRecord(price)) return null;
+  const range = rangeFrom(price.min, price.max);
+  if (range === null) return null;
+  return kind === 'leaseShort' ? shortStayFrom(range, value) : demandSeek(kind, range);
 }
 
 /** Το **παλιό** σχήμα: είδη + ένα αμονάδιστο εύρος στα χαρακτηριστικά. */

@@ -74,6 +74,7 @@ import { ListingGallery } from './ListingGallery';
 import { ListingFloorplans } from './ListingFloorplans';
 import { ListingModels } from './ListingModels';
 import { ListingStay } from './ListingStay';
+import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 
@@ -318,6 +319,8 @@ function ListingOffers({ listing }: { readonly listing: PublicListing }) {
           </li>
         ))}
       </ul>
+      {/* ADR-777 §8.60.17 — ο όρος της αντιπαροχής, δίπλα στη διάθεσή του. */}
+      <ListingExchangeTerm exchange={listing.exchange} />
     </section>
   );
 }

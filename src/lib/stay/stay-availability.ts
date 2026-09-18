@@ -140,16 +140,60 @@ function nightsOf(query: StayQuery): number | null {
   return Math.round((to - from) / MS_PER_DAY);
 }
 
+/** Η απάντηση του όρου χωρητικότητας — υποσύνολο του {@link StayAvailabilityAnswer}. */
+type StayCapacityVerdict = Extract<
+  StayAvailabilityAnswer,
+  { kind: 'terms-unknown' } | { kind: 'over-capacity' }
+>;
+
+/** Η απάντηση του όρου ελάχιστης διαμονής — υποσύνολο του {@link StayAvailabilityAnswer}. */
+type StayMinNightsVerdict = Extract<StayAvailabilityAnswer, { kind: 'below-min-nights' }>;
+
 /**
- * Οι **σταθεροί όροι** του κατόχου, κριμένοι πριν από το ημερολόγιο.
+ * **Ο ΕΝΑΣ κριτής χωρητικότητας** — πόσα άτομα απέναντι στο δηλωμένο μέγιστο του κατόχου.
+ *
+ * 🔑 **Εξάγεται επειδή τον ρωτούν ΔΥΟ** (ADR-777 §8.60.19): ο επισκέπτης της αναζήτησης (μέσω
+ * {@link stayAvailabilityFor}) **και** ο ζητών μιας αποθηκευμένης ζήτησης (`demand-match-stay.ts`).
+ * Δεύτερη σύγκριση `guests > maxGuests` αλλού θα ήταν δεύτερη αλήθεια για το «χωράει;».
+ *
+ * @param headcount — άτομα που **μετρούν** στη χωρητικότητα· `null` = δεν ρωτήθηκε.
+ * @returns `null` όταν ο όρος δεν αποφασίζει (δεν ρωτήθηκε, ή χωράει).
+ */
+export function capacityVerdict(
+  maxGuests: number | null,
+  headcount: number | null,
+): StayCapacityVerdict | null {
+  if (headcount === null) return null;
+  // 🔴 «Δεν δήλωσε» **δεν** γίνεται «χωράει» ούτε «δεν χωράει» (N.12).
+  if (maxGuests === null) return { kind: 'terms-unknown' };
+  return headcount > maxGuests ? { kind: 'over-capacity', maxGuests, asked: headcount } : null;
+}
+
+/**
+ * **Ο ΕΝΑΣ κριτής του ελάχιστου νυχτών** του κατόχου — δεύτερος καταναλωτής η ζήτηση (§8.60.19).
+ *
+ * ⚠️ `minNights === null` = **δεν δήλωσε ελάχιστο**, άρα δεν εμποδίζει τίποτα. Ένα `?? 1` θα
+ * υποσχόταν εκ μέρους του κατόχου κάτι που δεν είπε.
+ */
+export function minNightsVerdict(
+  minNights: number | null,
+  nights: number,
+): StayMinNightsVerdict | null {
+  if (minNights === null || nights >= minNights) return null;
+  return { kind: 'below-min-nights', minNights, asked: nights };
+}
+
+/**
+ * Οι **σταθεροί όροι** του κατόχου, κριμένοι πριν από το ημερολόγιο — **σύνθεση** των δύο
+ * κριτών ({@link capacityVerdict} · {@link minNightsVerdict}), όχι τρίτη σύγκριση.
  *
  * @returns η απάντηση αν κάποιος όρος αποφασίζει· `null` αν όλοι περνούν.
  *
- * ⚠️ **Η σειρά ΕΙΝΑΙ συμβόλαιο** (ίδιο ιδίωμα με το `coverageStateOf`): η άγνωστη
- * χωρητικότητα κρίνεται **πριν** την υπέρβαση, γιατί «δεν ξέρω» δεν μπορεί να παράγει
- * «δεν χωράει». Και **και τα δύο** κρίνονται πριν το ημερολόγιο, γιατί ισχύουν **ό,τι
+ * ⚠️ **Η σειρά ΕΙΝΑΙ συμβόλαιο** (ίδιο ιδίωμα με το `coverageStateOf`): η χωρητικότητα
+ * κρίνεται **πριν** τις νύχτες, και **και τα δύο** πριν το ημερολόγιο, γιατί ισχύουν **ό,τι
  * κι αν λέει** εκείνο — και το *«χωράει μόνο 2»* είναι χρησιμότερο για τον άνθρωπο
- * από το *«δεν ξέρω το ημερολόγιο»*.
+ * από το *«δεν ξέρω το ημερολόγιο»*. Με δηλωμένο ημερολόγιο το ελάχιστο κρίνεται **μετά**
+ * τον κριτή (ανά άφιξη + κενό) — γι' αυτό το `judgeMinNights`.
  */
 function termsVerdict(
   stay: NonNullable<PublicListing['stay']>,
@@ -157,22 +201,9 @@ function termsVerdict(
   nights: number,
   judgeMinNights: boolean,
 ): StayAvailabilityAnswer | null {
-  if (query.guests !== null) {
-    // 🔴 «Δεν δήλωσε» **δεν** γίνεται «χωράει» ούτε «δεν χωράει» (N.12).
-    if (stay.maxGuests === null) return { kind: 'terms-unknown' };
-    if (query.guests > stay.maxGuests) {
-      return { kind: 'over-capacity', maxGuests: stay.maxGuests, asked: query.guests };
-    }
-  }
-
-  // ⚠️ `minNights === null` = **δεν δήλωσε ελάχιστο**, άρα δεν εμποδίζει τίποτα. Ένα
-  //    `?? 1` θα υποσχόταν εκ μέρους του κατόχου κάτι που δεν είπε.
-  //    Με δηλωμένο ημερολόγιο το ελάχιστο κρίνεται **μετά** τον κριτή (ανά άφιξη + κενό).
-  if (judgeMinNights && stay.minNights !== null && nights < stay.minNights) {
-    return { kind: 'below-min-nights', minNights: stay.minNights, asked: nights };
-  }
-
-  return null;
+  const capacity = capacityVerdict(stay.maxGuests, query.guests);
+  if (capacity !== null) return capacity;
+  return judgeMinNights ? minNightsVerdict(stay.minNights, nights) : null;
 }
 
 /**

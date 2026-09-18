@@ -81,6 +81,7 @@ const LISTING: PublicListing = {
   commercialStatus: 'for-rent',
   commercial: { askingPrice: null, finalPrice: null, rentPrice: 500, nightlyRate: null },
   stay: null,
+  exchange: null,
   coverImage: null,
   gallery: [image(1), image(2), image(3)],
   type: 'apartment',

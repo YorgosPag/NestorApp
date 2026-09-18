@@ -37,7 +37,17 @@ import {
 } from '../demand-listing-filters';
 import { matchesListingFilters } from '@/lib/listings/listing-filters';
 import { EARTH_RADIUS_METERS } from '@/lib/geo/geo-distance';
-import { NO_DEMAND_FEATURES, type FrontageSide, type PropertyDemand } from '@/types/property-demand';
+import {
+  NO_AMOUNT_RANGE,
+  NO_DEMAND_FEATURES,
+  NO_NIGHTS_RANGE,
+  exchangeSeek,
+  shortStaySeek,
+  type DemandNightsRange,
+  type FrontageSide,
+  type PropertyDemand,
+  type StayParty,
+} from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 import { IGNORANCE_BLOCKERS } from '../demand-answer';
 
@@ -51,6 +61,18 @@ import { IGNORANCE_BLOCKERS } from '../demand-answer';
  * **fixture** της είναι διαφορετικό δηλώνει κάλυψη που δεν υπάρχει.
  */
 import { NOW_ISO, TODAY, demand, facts, listing, seek } from './demand-fixtures';
+
+/** ADR-777 §8.60.19 — κατάλυμα βραχυχρόνιας με τους όρους του κατόχου. */
+function lodging(minNights: number | null, maxGuests: number | null): PublicListing {
+  return listing({ offerKinds: ['leaseShort'], stay: { minNights, maxGuests, nextAvailableFrom: null } });
+}
+
+/** ADR-777 §8.60.19 — ζητών «Διαμονή» με νύχτες και παρέα. */
+function traveller(nights: DemandNightsRange, party: StayParty | null): PropertyDemand {
+  return demand({ seeks: [shortStaySeek(NO_AMOUNT_RANGE, nights, party)] });
+}
+
+const stayParty = (adults: number, children = 0, infants = 0): StayParty => ({ adults, children, infants });
 
 /**
  * Άξονας δρόμου Δύση→Ανατολή (ίδιο πλάτος `lat`), για τα σενάρια της **Ζ4
@@ -212,6 +234,22 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
     ],
     ['price-above', demand({ seeks: [seek('sell', { max: 100_000 })] }), facts()],
     ['price-below', demand({ seeks: [seek('sell', { min: 400_000 })] }), facts()],
+    // ADR-777 §8.60.17 — η οροφή ποσοστού οικοπεδούχου: υπέρβαση (μετρήσιμη) και «προς συζήτηση».
+    [
+      'share-above',
+      demand({ seeks: [exchangeSeek(40)] }),
+      facts({ listing: listing({ type: 'land', offerKinds: ['exchange'], exchange: { landownerShare: 50 } }) }),
+    ],
+    [
+      'share-undeclared',
+      demand({ seeks: [exchangeSeek(40)] }),
+      facts({ listing: listing({ type: 'land', offerKinds: ['exchange'], exchange: { landownerShare: null } }) }),
+    ],
+    // ADR-777 §8.60.19 — οι όροι διαμονής: κατάλυμα για 4, ελάχιστο 5 νύχτες (ή αδήλωτη χωρητικότητα).
+    ['stay-over-capacity', traveller(NO_NIGHTS_RANGE, stayParty(5)), facts({ listing: lodging(null, 4) })],
+    ['stay-infants-uncertain', traveller(NO_NIGHTS_RANGE, stayParty(4, 0, 1)), facts({ listing: lodging(null, 4) })],
+    ['stay-capacity-undeclared', traveller(NO_NIGHTS_RANGE, stayParty(2)), facts({ listing: lodging(null, null) })],
+    ['stay-nights-below-minimum', traveller({ min: null, max: 3 }, null), facts({ listing: lodging(5, 4) })],
     ['area-below', demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 200 } }), facts()],
     ['area-above', demand({ features: { ...NO_DEMAND_FEATURES, areaMax: 50 } }), facts()],
     ['bedrooms-below', demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 5 } }), facts()],

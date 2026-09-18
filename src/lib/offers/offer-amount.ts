@@ -68,6 +68,16 @@ export const EXCHANGE_PERCENTAGE_MIN_EXCLUSIVE = 0;
 export const EXCHANGE_PERCENTAGE_MAX_INCLUSIVE = 100;
 
 /**
+ * **Είναι αυτό έγκυρο ποσοστό οικοπεδούχου;** — ο **ΕΝΑΣ** κριτής των ορίων.
+ *
+ * 🔑 Τον ρωτούν **και** η διάθεση ({@link offerPercentageOutOfRange}) **και** η ζήτηση (οροφή του
+ * εργολάβου, ADR-777 §8.60.17): «ποσοστό» σημαίνει **το ίδιο** όποιος κι αν το γράφει.
+ */
+export function isLandownerShareInRange(value: number): boolean {
+  return value > EXCHANGE_PERCENTAGE_MIN_EXCLUSIVE && value <= EXCHANGE_PERCENTAGE_MAX_INCLUSIVE;
+}
+
+/**
  * Το κατώτατο **δηλώσιμο** όριο των δύο όρων διαμονής (ADR-835 §4.1).
  *
  * 🔴 **«Δεν δηλώθηκε» και «δηλώθηκε μηδέν» ΔΕΝ είναι το ίδιο, και μόνο το δεύτερο
@@ -81,6 +91,19 @@ export const EXCHANGE_PERCENTAGE_MAX_INCLUSIVE = 100;
  * αριθμοί που μπορούν να αποκλίνουν χωρίς να το προσέξει κανείς.
  */
 export const STAY_LIMIT_MIN_INCLUSIVE = 1;
+
+/**
+ * **Είναι αυτό έγκυρος αριθμός νυχτών ή ανθρώπων;** — ακέραιος, τουλάχιστον {@link STAY_LIMIT_MIN_INCLUSIVE}.
+ *
+ * 🔑 Το **ίδιο** κατώφλι με τους όρους του κατόχου, για τη ζήτηση (ADR-777 §8.60.19): «μία νύχτα
+ * τουλάχιστον» σημαίνει το ίδιο όποιος κι αν τη γράφει.
+ *
+ * ⚠️ **Ακέραιος**: 2,5 ενήλικες ή 3,5 νύχτες δεν ζητούνται. Η πλευρά του κατόχου
+ * ({@link isDeclaredButBelowStayMinimum}) κρίνει **μόνο** το κατώφλι — δηλωμένο όριο §8.60.19.6.
+ */
+export function isWholeStayCount(value: number): boolean {
+  return Number.isInteger(value) && value >= STAY_LIMIT_MIN_INCLUSIVE;
+}
 
 // =============================================================================
 // 2. ΤΟ ΠΟΣΟ ΜΙΑΣ ΔΙΑΘΕΣΗΣ
@@ -141,10 +164,7 @@ export function offerPercentageOutOfRange(offer: PropertyOffer): boolean {
   if (offer.kind !== 'exchange') return false;
   const value = offer.percentage;
   if (typeof value !== 'number' || !Number.isFinite(value)) return false;
-  return (
-    value <= EXCHANGE_PERCENTAGE_MIN_EXCLUSIVE ||
-    value > EXCHANGE_PERCENTAGE_MAX_INCLUSIVE
-  );
+  return !isLandownerShareInRange(value);
 }
 
 /**

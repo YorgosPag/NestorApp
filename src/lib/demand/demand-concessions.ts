@@ -94,6 +94,16 @@ export const DEMAND_CONCESSIONS = [
    * δείξει — ενώ το `demand.place.kind` ήδη το ξέρει.
    */
   'search-radius',
+  /**
+   * **Δέξου μεγαλύτερο ποσοστό οικοπεδούχου** στην αντιπαροχή (ADR-777 §8.60.17) — «με +5 μονάδες
+   * ποσοστού θα έβρισκες 2 οικόπεδα». Κανένα portal δεν το λέει: κανένα δεν έχει καν το ποσοστό δομημένο.
+   */
+  'share-ceiling',
+  /**
+   * **Μείνε περισσότερες νύχτες** (ADR-777 §8.60.19) — «με +2 νύχτες θα έβρισκες 3 καταλύματα». Το Airbnb
+   * κρύβει σιωπηλά ό,τι θέλει μεγαλύτερη διαμονή (Help 3728)· εδώ λέγεται **πόσο** και **τι κερδίζεις**.
+   */
+  'stay-length',
 ] as const;
 
 export type DemandConcession = (typeof DEMAND_CONCESSIONS)[number];
@@ -109,6 +119,8 @@ const CONCESSION_OF_GAP: Readonly<Record<keyof DemandGaps, DemandConcession>> = 
   areaOverBy: 'area-ceiling',
   bedroomsShortBy: 'bedrooms-floor',
   distanceOverMetres: 'search-radius',
+  shareOverBy: 'share-ceiling',
+  nightsShortBy: 'stay-length',
 };
 
 /**
@@ -117,7 +129,7 @@ const CONCESSION_OF_GAP: Readonly<Record<keyof DemandGaps, DemandConcession>> = 
  * ⚠️ Ονομασμένο λεξιλόγιο, **όχι** ελεύθερο κείμενο: η μονάδα καταλήγει σε κλειδί
  * i18n (N.11), και ένα «€» γραμμένο σε component θα ήταν ωμή συμβολοσειρά σε `.tsx`.
  */
-export const CONCESSION_UNITS = ['eur', 'sqm', 'rooms', 'metres'] as const;
+export const CONCESSION_UNITS = ['eur', 'sqm', 'rooms', 'metres', 'points', 'nights'] as const;
 
 export type ConcessionUnit = (typeof CONCESSION_UNITS)[number];
 
@@ -128,6 +140,9 @@ export const CONCESSION_UNIT: Readonly<Record<DemandConcession, ConcessionUnit>>
   'area-ceiling': 'sqm',
   'bedrooms-floor': 'rooms',
   'search-radius': 'metres',
+  // Μονάδες **ποσοστού** (40% → 45% = +5), ποτέ «%» σχετικό: «+12,5%» πάνω σε 40% θα ήταν αδιάβαστο.
+  'share-ceiling': 'points',
+  'stay-length': 'nights',
 };
 
 // =============================================================================
@@ -168,6 +183,24 @@ export const MAX_RELATIVE_CONCESSION = 0.15;
 export const MAX_ROOMS_CONCESSION = 1;
 
 /**
+ * **Πόσες μονάδες ποσοστού οικοπεδούχου** αξίζει να προτείνουμε (ADR-777 §8.60.17).
+ *
+ * 🔑 **Απόλυτο, όχι σχετικό** — όπως τα υπνοδωμάτια: το 15% του 40% (6 μονάδες) θα άλλαζε με την οροφή,
+ * ενώ ο εργολάβος σκέφτεται σε **μονάδες** («από 40 σε 45»). Πέντε μονάδες είναι το εύρος μιας
+ * συνηθισμένης διαπραγμάτευσης (έρευνα §8.60.17: 30–35% → 40–45% ανά περιοχή και περίοδο).
+ */
+export const MAX_SHARE_CONCESSION_POINTS = 5;
+
+/**
+ * **Πόσες νύχτες** αξίζει να προτείνουμε να μείνει περισσότερο (ADR-777 §8.60.19).
+ *
+ * 🔑 **Απόλυτο, όχι σχετικό** — όπως τα υπνοδωμάτια: το 15% πάνω σε «3 νύχτες» δίνει 0,45, δηλαδή
+ * **κανένα** σκαλί. **Δύο** είναι το μεγαλύτερο βήμα ανάμεσα στα συνήθη ελάχιστα (1 → 2 → 3 → 5 → 7)· μια
+ * τρίτη νύχτα είναι ήδη άλλο ταξίδι (Σαββατοκύριακο → εβδομάδα, οι κουβάδες του Airbnb Flexible).
+ */
+export const MAX_NIGHTS_CONCESSION = 2;
+
+/**
  * Το ανώτατο ποσό υποχώρησης για **αυτή** τη ζήτηση σε **αυτόν** τον άξονα, ή `null`
  * όταν δεν υπάρχει βάση για αναλογία.
  *
@@ -182,6 +215,8 @@ export function concessionCeiling(
   priceRole: PriceRole | null = null,
 ): number | null {
   if (concession === 'bedrooms-floor') return MAX_ROOMS_CONCESSION;
+  if (concession === 'share-ceiling') return MAX_SHARE_CONCESSION_POINTS;
+  if (concession === 'stay-length') return MAX_NIGHTS_CONCESSION;
 
   const base = concessionBase(demand, concession, priceRole);
   return base === null ? null : base * MAX_RELATIVE_CONCESSION;
@@ -215,7 +250,9 @@ function concessionBase(
       if (place.kind === 'frontage') return place.depthMetres;
       return null;
     case 'bedrooms-floor':
-      // Αδιέξοδο εκ κατασκευής: ο διακριτός άξονας απαντήθηκε πριν φτάσει εδώ.
+    case 'share-ceiling':
+    case 'stay-length':
+      // Αδιέξοδο εκ κατασκευής: τα απόλυτα όρια απαντήθηκαν πριν φτάσουν εδώ.
       return null;
   }
 }

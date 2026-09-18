@@ -44,6 +44,10 @@ function nearMiss(overrides: Partial<DemandMatch>): DemandMatch {
       areaOverBy: null,
       bedroomsShortBy: null,
       distanceOverMetres: null,
+      // ADR-777 §8.60.17 — το κενό ποσοστού οικοπεδούχου· `null` = κανένα.
+      shareOverBy: null,
+      // ADR-777 §8.60.19 — νύχτες ως το ελάχιστο του κατόχου· `null` = καμία.
+      nightsShortBy: null,
     },
     // ADR-777 §8.60.15 — η μονάδα της τιμής: η ουδέτερη ζήτηση είναι **πώληση**.
     pricedAs: 'sale',

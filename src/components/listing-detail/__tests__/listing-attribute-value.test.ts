@@ -192,6 +192,7 @@ describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνετ�
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 1, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,
+    exchange: null,
     coverImage: null,
     gallery: [],
     type: 'maisonette',

@@ -25,6 +25,14 @@
  * Τώρα: κρίνονται οι **προσφερόμενες**· **μόνο αν δεν υπάρχει καμία** (όπου το `offer-kind` έχει ήδη
  * πει «όχι») κρίνονται όσες έχουν δηλωμένο ποσό — η στάση `partial`, ανέπαφη.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 ADR-777 §8.60.17 — ΚΑΙ Η ΑΝΤΙΠΑΡΟΧΗ ΕΧΕΙ «ΠΟΣΟ»: ΤΟ ΠΟΣΟΣΤΟ ΟΙΚΟΠΕΔΟΥΧΟΥ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το `offer-amount.ts` το λέει ήδη: το ποσό της αντιπαροχής **είναι** το ποσοστό. Άρα κρίνεται **εδώ**,
+ * στον ίδιο κριτή με τις τιμές — με **δικό του** κενό (`shareOverBy`) και δικό του κλάδο στο `metOn`,
+ * ώστε ποσοστό και ευρώ να μη συναντηθούν ποτέ στο ίδιο πεδίο.
+ *
  * **Layering**: leaf — καθαρές συναρτήσεις, καμία εξάρτηση από React/Firestore.
  */
 
@@ -38,26 +46,44 @@ import type { PublicListing } from '@/types/public-listing';
 import {
   isAmountRangeSet,
   isPricedSeek,
+  isShortStaySeek,
+  isStayTermsSet,
   type DemandSeek,
+  type ExchangeDemandSeek,
   type PricedDemandSeek,
 } from '@/types/property-demand';
+import { judgeStayTerms } from './demand-match-stay';
 import type { DemandBlocker, DemandSeekMet } from './demand-match-vocabulary';
 
-/** Η κρίση τιμής **μιας** εναλλακτικής — εμπόδια, κενά **και** το ποσό, στη **δική της** μονάδα. */
+/**
+ * Η κρίση **μιας** εναλλακτικής — εμπόδια, κενά **και** το ποσό, στη **δική της** μονάδα.
+ *
+ * ⚠️ Το `amount` είναι **στη μονάδα του κλάδου**: ευρώ για τις τιμές, **ποσοστό** για την αντιπαροχή.
+ * Ζει μόνο μέσα σε αυτό το αρχείο· έξω φεύγει **διακριτή** ένωση (`DemandSeekMet`), ποτέ αυτό.
+ */
 interface SeekPriceVerdict {
   readonly seek: DemandSeek;
   readonly blockers: readonly DemandBlocker[];
   readonly overBy: number | null;
   readonly underBy: number | null;
+  readonly shareOverBy: number | null;
+  readonly nightsShortBy: number | null;
   readonly role: PriceRole | null;
   readonly amount: number | null;
 }
+
+/** Καμία απόσταση σε κανέναν κλάδο — η ουδέτερη τιμή, γραμμένη **μία** φορά. */
+const NO_SEEK_GAPS = { overBy: null, underBy: null, shareOverBy: null, nightsShortBy: null } as const;
 
 /** Ό,τι απαντά ο άξονας τιμής — χωρίς μεταβλητό κοινό κατάστημα: ο καλών το συνθέτει. */
 export interface PriceAxisOutcome {
   readonly blockers: readonly DemandBlocker[];
   readonly overBy: number | null;
   readonly underBy: number | null;
+  /** Μονάδες ποσοστού πάνω από την οροφή οικοπεδούχου — δες `DemandGaps.shareOverBy`. */
+  readonly shareOverBy: number | null;
+  /** Νύχτες ως το ελάχιστο του κατόχου — δες `DemandGaps.nightsShortBy`. */
+  readonly nightsShortBy: number | null;
   /** Η μονάδα των κενών — δες `DemandMatch.pricedAs`. */
   readonly pricedAs: PriceRole | null;
   /** Ως τι ταιριάζει — δες `DemandMatch.metOn`. */
@@ -70,9 +96,30 @@ function declaredAmountOf(listing: PublicListing, seek: PricedDemandSeek): numbe
   return answer.state === 'declared' ? answer.value : null;
 }
 
-/** Η εναλλακτική **χωρίς** όριο ποσού (ή αντιπαροχή) — η τιμή της δεν εμποδίζει **ποτέ**. */
+/**
+ * Η εναλλακτική **χωρίς** κανένα όριο (ποσού, ποσοστού ή όρου διαμονής) — δεν εμποδίζει **ποτέ**.
+ *
+ * ⚠️ ADR-777 §8.60.19: διαμονή **χωρίς** ποσό αλλά **με** παρέα δεν είναι «ανοιχτή» — αλλιώς θα έσωζε
+ * δυάρι για πενταμελή οικογένεια επειδή ο άνθρωπος δεν έβαλε τιμή.
+ */
 function isUnbounded(seek: DemandSeek): boolean {
-  return !isPricedSeek(seek) || !isAmountRangeSet(seek.price);
+  if (isShortStaySeek(seek) && isStayTermsSet(seek)) return false;
+  return isPricedSeek(seek) ? !isAmountRangeSet(seek.price) : seek.landownerShareMax === null;
+}
+
+/**
+ * Κρίνει την **αντιπαροχή**: το ποσοστό οικοπεδούχου της αγγελίας απέναντι στην οροφή του εργολάβου.
+ *
+ * ⚖️ Αδήλωτο ποσοστό ⇒ `share-undeclared` (**αβεβαιότητα**, όχι απουσία — δες το λεξιλόγιο): είναι όρος
+ * διαπραγμάτευσης, και η αγγελία **μπορεί** να ταιριάζει.
+ */
+function judgeExchange(listing: PublicListing, seek: ExchangeDemandSeek): SeekPriceVerdict {
+  const share = listing.exchange?.landownerShare ?? null;
+  const clean = { seek, blockers: [], ...NO_SEEK_GAPS, role: null, amount: share };
+  const max = seek.landownerShareMax;
+  if (max === null) return clean;
+  if (share === null) return { ...clean, blockers: ['share-undeclared'] };
+  return share > max ? { ...clean, blockers: ['share-above'], shareOverBy: share - max } : clean;
 }
 
 /**
@@ -83,8 +130,17 @@ function isUnbounded(seek: DemandSeek): boolean {
  * εμποδίζει ποτέ — το ποσό της διαβάζεται μόνο για να **ειπωθεί** («ως ενοικίαση · 850 €/μήνα»).
  */
 function judgeSeek(listing: PublicListing, seek: DemandSeek): SeekPriceVerdict {
-  const clean = { seek, blockers: [], overBy: null, underBy: null };
-  if (!isPricedSeek(seek)) return { ...clean, role: null, amount: null };
+  if (!isPricedSeek(seek)) return judgeExchange(listing, seek);
+  const price = judgePrice(listing, seek);
+  if (!isShortStaySeek(seek)) return price;
+  // ADR-777 §8.60.19 — η διαμονή κρίνεται **και** στους όρους της: ένα καθαρό ποσό δεν αρκεί.
+  const terms = judgeStayTerms(listing, seek);
+  return { ...price, blockers: [...price.blockers, ...terms.blockers], nightsShortBy: terms.nightsShortBy };
+}
+
+/** Το ποσό **μιας** εναλλακτικής με τιμή, στον ρόλο της — βλ. {@link judgeSeek}. */
+function judgePrice(listing: PublicListing, seek: PricedDemandSeek): SeekPriceVerdict {
+  const clean = { seek, blockers: [], ...NO_SEEK_GAPS };
 
   const role = priceRoleOfSeek(seek);
   const amount = declaredAmountOf(listing, seek);
@@ -97,7 +153,7 @@ function judgeSeek(listing: PublicListing, seek: DemandSeek): SeekPriceVerdict {
   const blockers: DemandBlocker[] = [];
   if (overBy !== null) blockers.push('price-above');
   if (underBy !== null) blockers.push('price-below');
-  return { seek, blockers, overBy, underBy, role, amount };
+  return { seek, blockers, ...NO_SEEK_GAPS, overBy, underBy, role, amount };
 }
 
 /**
@@ -110,23 +166,27 @@ function relevantSeeks(listing: PublicListing, seeks: readonly DemandSeek[]): re
   return seeks.filter((seek) => isPricedSeek(seek) && declaredAmountOf(listing, seek) !== null);
 }
 
-/** Το περιθώριο κάτω από το ανώτατο όριο — ο καθρέφτης του `overBy`. */
+/** Το περιθώριο κάτω από το ανώτατο όριο (ποσού ή ποσοστού) — ο καθρέφτης του `overBy`. */
 function headroomOf(verdict: SeekPriceVerdict): number | null {
   const { seek, amount } = verdict;
-  if (!isPricedSeek(seek) || amount === null || seek.price.max === null) return null;
-  return seek.price.max - amount;
+  const max = isPricedSeek(seek) ? seek.price.max : seek.landownerShareMax;
+  return amount === null || max === null ? null : max - amount;
+}
+
+/** Μία καθαρή κρίση → ο **κλάδος** της στο «ως τι» (ποσό **ή** ποσοστό, ποτέ κοινό πεδίο). */
+function metOf(verdict: SeekPriceVerdict): DemandSeekMet {
+  const { seek, amount } = verdict;
+  const headroomBy = headroomOf(verdict);
+  return isPricedSeek(seek)
+    ? { kind: seek.kind, role: priceRoleOfSeek(seek), amount, headroomBy }
+    : { kind: 'exchange', landownerShare: amount, headroomBy };
 }
 
 /** Οι **καθαρές** κρίσεις εναλλακτικών που η αγγελία **προσφέρει** — το «ως τι». */
 function metOnOf(listing: PublicListing, verdicts: readonly SeekPriceVerdict[]): DemandSeekMet[] {
   return verdicts
     .filter((verdict) => verdict.blockers.length === 0 && listing.offerKinds.includes(verdict.seek.kind))
-    .map((verdict) => ({
-      kind: verdict.seek.kind,
-      role: verdict.role,
-      amount: verdict.amount,
-      headroomBy: headroomOf(verdict),
-    }));
+    .map(metOf);
 }
 
 /** Η **πιο κοντινή** κρίση — λιγότερα εμπόδια· ισοπαλία ⇒ η **σειρά του ανθρώπου**. */
@@ -160,16 +220,17 @@ export function priceAxisOutcome(
   const metOn = metOnOf(listing, verdicts);
 
   const open = verdicts.find((verdict) => isUnbounded(verdict.seek));
-  if (open !== undefined) {
-    return { blockers: [], overBy: null, underBy: null, pricedAs: open.role, metOn };
-  }
+  const none = { blockers: [], ...NO_SEEK_GAPS, metOn };
+  if (open !== undefined) return { ...none, pricedAs: open.role };
 
   const closest = closestOf(verdicts);
-  if (closest === null) return { blockers: [], overBy: null, underBy: null, pricedAs: null, metOn };
+  if (closest === null) return { ...none, pricedAs: null };
   return {
     blockers: closest.blockers,
     overBy: closest.overBy,
     underBy: closest.underBy,
+    shareOverBy: closest.shareOverBy,
+    nightsShortBy: closest.nightsShortBy,
     pricedAs: closest.role,
     metOn,
   };

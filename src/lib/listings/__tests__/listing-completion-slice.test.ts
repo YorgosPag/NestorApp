@@ -35,6 +35,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 170000, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,
+    exchange: null,
     coverImage: null,
     gallery: [],
     type: 'apartment',

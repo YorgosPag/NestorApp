@@ -35,6 +35,7 @@ import {
   deriveOfferKinds,
 } from '@/lib/offers/derive-commercial-status';
 import { deriveStayTerms } from '@/lib/offers/derive-stay-terms';
+import { deriveExchangeTerms } from '@/lib/offers/derive-exchange-terms';
 import {
   isPubliclyListed,
   type PlaceKnowledge,
@@ -116,6 +117,9 @@ export function projectableFromOwnerProperty(
     //    φρουρό `isLiveOffer`: μια αποσυρμένη βραχυχρόνια δεν δίνει όρους, όπως δεν
     //    δίνει ούτε ποσό. Ζει σε δικό της αρχείο — δες `derive-stay-terms.ts`.
     stay: deriveStayTerms(marketOffers),
+    // 🔑 ADR-777 §8.60.17 — **πέμπτη** ανάγνωση, ίδιος φρουρός: το ποσοστό οικοπεδούχου δεν είναι
+    //    ευρώ, άρα δικό του κουτί (όπως το `stay`), ποτέ πεδίο του `commercial`.
+    exchange: deriveExchangeTerms(marketOffers),
 
     // ── §25.6: είδος + εμβαδόν, όροφος, υπνοδωμάτια ──────────────────────────
     areas: { gross: property.areaSqm },

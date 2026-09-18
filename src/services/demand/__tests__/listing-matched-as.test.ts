@@ -35,9 +35,16 @@ describe('matchedAsSentence — ως τι, σε ποια μονάδα, πόσο 
     );
   });
 
-  it('αντιπαροχή ⇒ μόνο το όνομα, κανένα ποσό', () => {
-    const exchange: DemandSeekMet = { kind: 'exchange', role: null, amount: null, headroomBy: null };
-    expect(matchedAsSentence([exchange])).toBe('Ταιριάζει ως αντιπαροχή.');
+  it('αντιπαροχή χωρίς δηλωμένο ποσοστό ⇒ «προς συζήτηση», κανένα ευρώ', () => {
+    const exchange: DemandSeekMet = { kind: 'exchange', landownerShare: null, headroomBy: null };
+    expect(matchedAsSentence([exchange])).toBe('Ταιριάζει ως αντιπαροχή (ποσοστό προς συζήτηση).');
+  });
+
+  it('🔴 αντιπαροχή με ποσοστό ⇒ «% στον οικοπεδούχο» και περιθώριο σε ΜΟΝΑΔΕΣ, ποτέ «€»', () => {
+    const exchange: DemandSeekMet = { kind: 'exchange', landownerShare: 35, headroomBy: 5 };
+    expect(matchedAsSentence([exchange])).toBe(
+      'Ταιριάζει ως αντιπαροχή (35% στον οικοπεδούχο, 5 μονάδες κάτω από το όριό σας).',
+    );
   });
 
   it('κανένα «ως τι» ⇒ καμία πρόταση (όχι «Ταιριάζει .»)', () => {

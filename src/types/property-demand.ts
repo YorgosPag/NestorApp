@@ -110,6 +110,8 @@
 
 import { isMandateAttributable, type MandateLike } from '@/types/mandate';
 import type { OfferKind } from '@/types/property-offers';
+import { isLandownerShareInRange, isWholeStayCount } from '@/lib/offers/offer-amount';
+import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
 import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
 
 // =============================================================================
@@ -360,14 +362,72 @@ export const NO_AMOUNT_RANGE: DemandAmountRange = { min: null, max: null };
  * αδύνατη να εκφραστεί, όχι απαγορευμένη από σχόλιο»*. Ένα `unit: 'month' | 'night'` δίπλα στο
  * ποσό (το `LeaseAmountFrequency` του RESO) θα άφηνε κάθε αναγνώστη να ξεχάσει να το ρωτήσει.
  *
- * ⚠️ **Η αντιπαροχή δεν έχει ποσό** — φέρει **ποσοστό** στην προσφορά (`ExchangeOffer`). Εύρος
- * ποσοστού στη ζήτηση = δηλωμένο επόμενο βήμα, όχι σιωπηλή παράλειψη.
+ * ⚠️ **Η αντιπαροχή δεν έχει ποσό — έχει ΟΡΟΦΗ ΠΟΣΟΣΤΟΥ ΟΙΚΟΠΕΔΟΥΧΟΥ** (ADR-777 §8.60.17): ο εργολάβος
+ * διαπραγματεύεται **ανώτατο** μερίδιο του ιδιοκτήτη της γης επί των νέων τ.μ. («δέχομαι έως 40%»).
+ * Ίδια έννοια με το `ExchangeOffer.percentage` — **του οικοπεδούχου**, ποτέ του κατασκευαστή.
  */
 export type DemandSeek =
   | { readonly kind: 'sell'; readonly price: DemandAmountRange }
   | { readonly kind: 'leaseOut'; readonly price: DemandAmountRange }
-  | { readonly kind: 'leaseShort'; readonly price: DemandAmountRange }
-  | { readonly kind: 'exchange' };
+  | ShortStayDemandSeek
+  | ExchangeDemandSeek;
+
+/**
+ * **Εύρος νυχτών** της διαμονής που ζητείται (ADR-777 §8.60.19) — `null` = χωρίς όριο σε αυτό το άκρο.
+ *
+ * 🌐 **Εύρος, όχι κουβάδες**: το Airbnb «Flexible» δίνει μόνο Σαββατοκύριακο / εβδομάδα / μήνα και
+ * δηλώνει ότι *«δεν γίνεται αναζήτηση με αριθμό νυχτών»* (Help 252). Εδώ ο άνθρωπος λέει «4–6 νύχτες»·
+ * οι κουβάδες εκφράζονται (Σ/Κ = 2–3). Το **πότε** ΔΕΝ ζει εδώ — ζει στο {@link DemandTiming}: ένα
+ * πεδίο χρόνου, όχι δύο.
+ */
+export interface DemandNightsRange {
+  readonly min: number | null;
+  readonly max: number | null;
+}
+
+/** Κανένα όριο νυχτών — η ουδέτερη τιμή. */
+export const NO_NIGHTS_RANGE: DemandNightsRange = { min: null, max: null };
+
+/**
+ * **Η παρέα** της διαμονής — ενήλικες · παιδιά · βρέφη (ADR-777 §8.60.19).
+ *
+ * 🌐 Ανάλυση όπως **όλοι** οι μεγάλοι (Airbnb · Booking `number_of_adults` + `children` · OpenTravel
+ * `GuestCount` 10/8/7), με τις ηλικίες του Airbnb: ενήλικες 13+ · παιδιά 2–12 · βρέφη κάτω των 2.
+ *
+ * ⚖️ **Τα βρέφη ΔΕΝ μετρούν στη χωρητικότητα** ({@link stayHeadcount}) — προεπιλογή Airbnb· το
+ * schema.org `occupancy` τα μετρά. Οι μεγάλοι **διαφωνούν**, και η μηχανή **το λέει** αντί να
+ * διαλέξει σιωπηλά (`stay-infants-uncertain`, `demand-match-stay.ts`).
+ */
+export interface StayParty {
+  /** ≥ 1 — κανείς δεν κάνει κράτηση χωρίς ενήλικα (Booking: «at least 1 adult»). */
+  readonly adults: number;
+  readonly children: number;
+  readonly infants: number;
+}
+
+/**
+ * **Η διαμονή που ζητείται** — €/νύχτα **και** οι όροι της (ADR-777 §8.60.19).
+ *
+ * `nights` χωρίς όρια + `party: null` = καμία συνθήκη πέρα από την τιμή — η μορφή κάθε εγγράφου πριν
+ * το §8.60.19, άρα **καμία μετανάστευση**.
+ */
+export interface ShortStayDemandSeek {
+  readonly kind: 'leaseShort';
+  readonly price: DemandAmountRange;
+  readonly nights: DemandNightsRange;
+  readonly party: StayParty | null;
+}
+
+/**
+ * **Η αντιπαροχή που ζητά ο εργολάβος** — `landownerShareMax: null` = καμία οροφή («δεν με δεσμεύει»).
+ *
+ * ⚠️ **Οροφή, όχι εύρος** — και δεν είναι παράλειψη: κατά την έρευνα (ADR-777 §8.60.17) ο εργολάβος
+ * διαπραγματεύεται **μόνο** το πάνω όριο· ένα «από 20%» δεν έχει νόημα γι' αυτόν.
+ */
+export interface ExchangeDemandSeek {
+  readonly kind: 'exchange';
+  readonly landownerShareMax: number | null;
+}
 
 /** Εναλλακτική που **έχει** τιμή. */
 export type PricedDemandSeek = Extract<DemandSeek, { readonly price: DemandAmountRange }>;
@@ -401,9 +461,55 @@ export function isPricedSeekKind(kind: OfferKind): kind is PricedSeekKind {
  * **δεν μεταγλωττίζεται** (επιστρέφει `{ kind }` που δεν ανήκει στην ένωση).
  */
 export function demandSeek(kind: OfferKind, price: DemandAmountRange): DemandSeek {
+  // Οι όροι διαμονής έρχονται από το {@link shortStaySeek}· εδώ ξεκινά **χωρίς** συνθήκη.
+  if (kind === 'leaseShort') return shortStaySeek(price, NO_NIGHTS_RANGE, null);
   // 🔑 Η αντιπαροχή **πετά** το εύρος — δεν το κρατά κρυφό: ποσό που κανείς δεν κρίνει θα ήταν
-  //    ψευδής ισχυρισμός μέσα στο έγγραφο.
-  return isPricedSeekKind(kind) ? { kind, price } : { kind };
+  //    ψευδής ισχυρισμός μέσα στο έγγραφο. Η οροφή της έρχεται από το {@link exchangeSeek}.
+  return isPricedSeekKind(kind) ? { kind, price } : exchangeSeek(null);
+}
+
+/** Ο **ένας** κατασκευαστής της διαμονής — τιμή, νύχτες και παρέα (ADR-777 §8.60.19). */
+export function shortStaySeek(
+  price: DemandAmountRange,
+  nights: DemandNightsRange,
+  party: StayParty | null,
+): ShortStayDemandSeek {
+  return { kind: 'leaseShort', price, nights, party };
+}
+
+/** `true` όταν η εναλλακτική είναι διαμονή (βραχυχρόνια). */
+export function isShortStaySeek(seek: DemandSeek): seek is ShortStayDemandSeek {
+  return seek.kind === 'leaseShort';
+}
+
+/** Έθεσε ο άνθρωπος **κάποιον** όρο διαμονής (νύχτες ή παρέα); */
+export function isStayTermsSet(seek: ShortStayDemandSeek): boolean {
+  return seek.nights.min !== null || seek.nights.max !== null || seek.party !== null;
+}
+
+/**
+ * **Όσοι μετρούν στη χωρητικότητα** — ενήλικες + παιδιά, **χωρίς** τα βρέφη (προεπιλογή Airbnb).
+ *
+ * ⚠️ Ο **ένας** ορισμός: τον διαβάζουν η μηχανή (απέναντι στο `maxGuests`) **και** η προβολή προς
+ * την αναζήτηση (`ListingFilters.guests`). Δεύτερη πρόσθεση αλλού θα μπορούσε να μετρήσει τα βρέφη.
+ */
+export function stayHeadcount(party: StayParty): number {
+  return party.adults + party.children;
+}
+
+/** Όλη η παρέα, **με** τα βρέφη — ό,τι μετρά το schema.org `occupancy`. */
+export function stayPartySize(party: StayParty): number {
+  return stayHeadcount(party) + party.infants;
+}
+
+/** Ο **ένας** κατασκευαστής της αντιπαροχής — με ή χωρίς οροφή ποσοστού οικοπεδούχου. */
+export function exchangeSeek(landownerShareMax: number | null): ExchangeDemandSeek {
+  return { kind: 'exchange', landownerShareMax };
+}
+
+/** `true` όταν η εναλλακτική είναι αντιπαροχή — η διάκριση που ο τύπος κάνει ήδη, με όνομα. */
+export function isExchangeSeek(seek: DemandSeek): seek is ExchangeDemandSeek {
+  return seek.kind === 'exchange';
 }
 
 /** `true` όταν η εναλλακτική φέρει ποσό. */
@@ -808,6 +914,23 @@ export const DEMAND_INVARIANTS = [
   'proximity-not-positive',
   /** Το ίδιο είδος γειτονιάς δηλωμένο δύο φορές με άλλη απόσταση. */
   'proximity-duplicated',
+  /**
+   * **Οροφή ποσοστού οικοπεδούχου εκτός (0, 100]** (ADR-777 §8.60.17) — ο **ίδιος** κριτής με τη
+   * διάθεση (`isLandownerShareInRange`): «ποσοστό» σημαίνει το ίδιο όποιος κι αν το γράφει.
+   */
+  'exchange-share-out-of-range',
+  /**
+   * **Νύχτες που δεν είναι νύχτες** (ADR-777 §8.60.19) — όριο κάτω από 1 ή μη ακέραιο. Ίδιος κριτής
+   * με τους όρους του κατόχου (`isWholeStayCount`). Το αντεστραμμένο εύρος λέγεται `range-inverted`.
+   */
+  'stay-nights-invalid',
+  /**
+   * **Το ελάχιστο νυχτών δεν χωρά στο παράθυρο** — «7 νύχτες μέσα σε 1–4 Μαρτίου». Η ζήτηση
+   * αντιφάσκει με τον εαυτό της· καμία αγγελία δεν θα την ικανοποιούσε ποτέ.
+   */
+  'stay-nights-exceed-window',
+  /** **Παρέα που δεν είναι παρέα** — χωρίς ενήλικα, ή μη ακέραιοι / αρνητικοί αριθμοί ανθρώπων. */
+  'stay-party-invalid',
 ] as const;
 
 export type DemandInvariant = (typeof DEMAND_INVARIANTS)[number];
@@ -855,6 +978,7 @@ function frontageInvariants(place: Extract<DemandPlace, { kind: 'frontage' }>): 
 function rangeInvariants(features: DemandFeatures, seeks: readonly DemandSeek[]): DemandInvariant[] {
   const inverted =
     seeks.filter(isPricedSeek).some((seek) => rangeInverted(seek.price.min, seek.price.max)) ||
+    seeks.filter(isShortStaySeek).some((seek) => rangeInverted(seek.nights.min, seek.nights.max)) ||
     rangeInverted(features.areaMin, features.areaMax) ||
     rangeInverted(features.floorMin, features.floorMax);
   return inverted ? ['range-inverted'] : [];
@@ -894,6 +1018,47 @@ export function demandInvariantViolations(
   found.push(...placeInvariants(demand.place));
   found.push(...rangeInvariants(demand.features, demand.seeks));
   found.push(...proximityInvariants(demand.proximity));
+  const outOfRange = demand.seeks
+    .filter(isExchangeSeek)
+    .some((seek) => seek.landownerShareMax !== null && !isLandownerShareInRange(seek.landownerShareMax));
+  if (outOfRange) found.push('exchange-share-out-of-range');
+  found.push(...stayInvariants(demand.seeks, demand.timing));
+
+  return found;
+}
+
+/** Ένας αριθμός ανθρώπων που **μπορεί** να είναι μηδέν (παιδιά · βρέφη) — ακέραιος, όχι αρνητικός. */
+function isHeadcountPart(value: number): boolean {
+  return Number.isInteger(value) && value >= 0;
+}
+
+/**
+ * Οι παραβιάσεις των όρων διαμονής (ADR-777 §8.60.19) — **όλες**, όχι η πρώτη.
+ *
+ * 🔑 Το παράθυρο μετρά **νύχτες** ως ημι-ανοιχτό `[από, έως)` — η σύμβαση του `ListingStayWindow`
+ * (η μέρα αναχώρησης **δεν** είναι νύχτα διαμονής).
+ */
+function stayInvariants(seeks: readonly DemandSeek[], timing: DemandTiming): DemandInvariant[] {
+  const found: DemandInvariant[] = [];
+  const stay = seeks.find(isShortStaySeek);
+  if (stay === undefined) return found;
+
+  const { min, max } = stay.nights;
+  if ([min, max].some((value) => value !== null && !isWholeStayCount(value))) {
+    found.push('stay-nights-invalid');
+  }
+  if (min !== null && timing.kind === 'window') {
+    const windowNights = daysBetweenDateKeys(timing.fromDate, timing.toDate);
+    if (windowNights !== null && windowNights >= 0 && min > windowNights) {
+      found.push('stay-nights-exceed-window');
+    }
+  }
+
+  const { party } = stay;
+  const partyValid =
+    party === null ||
+    (isWholeStayCount(party.adults) && isHeadcountPart(party.children) && isHeadcountPart(party.infants));
+  if (!partyValid) found.push('stay-party-invalid');
 
   return found;
 }

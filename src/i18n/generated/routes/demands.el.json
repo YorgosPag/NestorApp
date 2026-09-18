@@ -82,6 +82,7 @@
         "anyType": "Κάθε είδος",
         "anywhere": "Οπουδήποτε",
         "area": "Σε σχεδιασμένη περιοχή",
+        "exchangeShare": "Αντιπαροχή: έως {share} στον οικοπεδούχο",
         "frontage": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} του δρόμου",
         "frontageNamed": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} της οδού {street}",
         "near": "Σε ακτίνα {radiusKm} χλμ.",
@@ -99,6 +100,13 @@
           "sell": "Αγορά"
         },
         "seekPrice": "{kind}: {range}",
+        "stayAdults": "{count, plural, one {# ενήλικας} other {# ενήλικες}}",
+        "stayChildren": "{count, plural, one {# παιδί} other {# παιδιά}}",
+        "stayInfants": "{count, plural, one {# βρέφος} other {# βρέφη}}",
+        "stayNightsFrom": "τουλάχιστον {min, plural, one {# νύχτα} other {# νύχτες}}",
+        "stayNightsRange": "{min}–{max} νύχτες",
+        "stayNightsUpTo": "έως {max, plural, one {# νύχτα} other {# νύχτες}}",
+        "stayTerms": "{kind}: {terms}",
         "whenever": "Όποτε κι αν βγει",
         "window": "Από {fromDate} έως {toDate}"
       }

@@ -95,6 +95,12 @@
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
+    "src/components/building-management/tabs/PlaceholderTab.tsx": {
+      "keys": [
+        "building:tabs.labels.protocols"
+      ],
+      "reason": "ADR-866 Φ1.2 — έγινε ορατό στον generator όταν η ΠΡΩΤΗ σελίδα με route slice απέδωσε τον `UniversalTabsRenderer` (`/dossiers/[dossierId]`), που εισάγει ΣΤΑΤΙΚΑ το `PlaceholderTab` ως εφεδρεία «άγνωστο συστατικό». Η ΜΟΝΗ δυναμική κλήση είναι `t(titleProp)` (γρ. 34), και το `title` έρχεται ΜΟΝΟ από `componentProps.title` των ρυθμίσεων καρτελών. ΜΕΤΡΗΜΕΝΟ 2026-09-18: `grep -rn \"component: 'PlaceholderTab'\" -A8 src/config` δίνει ΕΝΑΝ τίτλο — `tabs.labels.protocols` (building, καρτέλα ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΗ)· η προεπιλογή `'Content'` δεν έχει τελεία και δεν μεταφράζεται. Άρα ΑΚΡΙΒΕΣ κλειδί, όχι πρόθεμα-σκούπα `building:tabs.labels` που θα κουβαλούσε όλες τις ετικέτες καρτελών κτιρίου σε κάθε σελίδα με καρτέλες. ⚠️ Νέα `PlaceholderTab` με άλλο `title` ⇒ πρόσθεσε το κλειδί εδώ (ο generator το ξαναρωτά)."
+    },
     "src/core/badges/IconCountBadge.tsx": {
       "keys": [
         "common-shared:iconCountBadge.items"
@@ -386,6 +392,32 @@
         }
       ],
       "reason": "ADR-777 §8.39. 🔴 ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΤΗ ΜΕΤΑΚΟΜΙΣΗ ΤΟΥ §8.38, ΚΑΙ ΜΕΤΡΗΘΗΚΕ ΠΡΙΝ ΠΡΟΣΓΕΙΩΘΕΙ: όσο το λεξιλόγιο ζούσε μέσα στο `search-results`, ταξίδευε ΟΛΟΚΛΗΡΟ σε 141 διαδρομές και **κάθε** οθόνη ζήτησης/προσφοράς/εντολής το είχε σύγχρονα — κατά τύχη. Βγάζοντάς το από το μητρώο, οι οθόνες αυτές θα έβαφαν ωμά κλειδιά στο πρώτο καρέ: **η μία κλάση ωμού κλειδιού ανταλλαγμένη με άλλη**, που είναι ακριβώς ό,τι το ADR-744 §8 απαγορεύει. Το per-route slice δίνει τα ίδια bytes **μόνο εδώ**. — Ο ΚΑΤΑΛΟΓΟΣ ΤΟΥ ΙΔΙΩΤΗ (`/offers`). Δείχνει κατάσταση κύκλου ζωής και τις πράξεις απόσυρσης/επαναφοράς: κείμενο που ο άνθρωπος διαβάζει **πριν** πατήσει."
+    },
+    "src/app/(me)/dossiers/page.tsx": {
+      "sealed": 3572,
+      "sealedAt": "2026-09-18",
+      "history": [
+        {
+          "from": 0,
+          "to": 3572,
+          "at": "2026-09-18",
+          "why": "ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ (ADR-866 Φ1.2). Μετρημένο με `--measure`: 3572 bytes σε 2 namespaces (`property-market` · `properties-enums`) — ΙΔΙΑ τάξη με τον αδελφό κατάλογο `/offers` (3515), όπως αναμένεται για κατάλογο με κάρτες + διάλογο γέννησης. Τα `properties-enums:types.*` ταξιδεύουν επειδή η κάρτα και ο διάλογος βάφουν το ΕΙΔΟΣ ακινήτου στο πρώτο καρέ."
+        }
+      ],
+      "reason": "ADR-866 Φ1.2 — «ΟΙ ΦΑΚΕΛΟΙ ΜΟΥ» (`/dossiers`). Κατάλογος φακέλων ακινήτου με φίλτρο ενεργοί/αρχειοθετημένοι, μενού ανά κάρτα και διάλογο «Νέος φάκελος»/«Μετονομασία». Κείμενο που ο άνθρωπος διαβάζει ΠΡΙΝ πατήσει — γι' αυτό σύγχρονα, μόνο εδώ, και όχι στο κέλυφος των 141 διαδρομών."
+    },
+    "src/app/(me)/dossiers/[dossierId]/page.tsx": {
+      "sealed": 3153,
+      "sealedAt": "2026-09-18",
+      "history": [
+        {
+          "from": 0,
+          "to": 3153,
+          "at": "2026-09-18",
+          "why": "ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ (ADR-866 Φ1.2), ΜΕ ΟΡΙΟ ΠΡΙΝ ΤΗ ΣΦΡΑΓΙΣΗ. 🔴 Η ΠΡΩΤΗ ΜΕΤΡΗΣΗ ΗΤΑΝ 81.644 bytes σε 16 namespaces (`bim3d` · `dxf-viewer*` · `iso19650` · `files*` · `trash`…) = 47,7% του κελύφους: η στατική κλειστότητα των καρτελών έφτανε ΟΛΟΚΛΗΡΟ τον διαχειριστή αρχείων. Η αιτία ήταν ΚΛΕΙΣΤΟΤΗΤΑ ΠΟΥ ΞΕΦΥΓΕ, όχι λεξιλόγιο της σελίδας ⇒ θεραπεία ΟΡΙΟ (Κ2), όχι μεγάλη σφράγιση: οι καρτέλες φορτώνουν με `React.lazy` (`propertyDossierMappings.ts`, ίδιο ιδίωμα με το `OwnerPropertyHistory`). Μετά το όριο: 3153 bytes σε 3 namespaces (−96%). Το `building` ταξιδεύει για ΕΝΑ κλειδί (`tabs.labels.protocols`, `dynamicKeyPolicy` του `PlaceholderTab`)."
+        }
+      ],
+      "reason": "ADR-866 Φ1.2 — ΕΝΑΣ ΦΑΚΕΛΟΣ ΑΚΙΝΗΤΟΥ (`/dossiers/[dossierId]`): κεφαλίδα (όνομα με επιτόπου μετονομασία · είδος · αρχειοθέτηση) + ετικέτες καρτελών. Το ΠΕΡΙΕΧΟΜΕΝΟ των καρτελών (αρχεία · ιστορικό) ζει ΠΙΣΩ από όριο φόρτωσης και φέρνει τα namespaces του ασύγχρονα, όταν ανοίξει η καρτέλα."
     },
     "src/app/(me)/offers/[offerId]/page.tsx": {
       "sealed": 24845,

@@ -141,7 +141,13 @@ export function numericOutcome(
   // 🔑 Ο άξονας τιμής ζει στο `demand-match-price.ts` (§8.60.16) — απαντά **και** στο «ως τι».
   const price = priceAxisOutcome(listing, demand.seeks);
   const blockers: DemandBlocker[] = [...price.blockers];
-  const gaps: MutableGaps = { ...NO_GAPS, priceOverBy: price.overBy, priceUnderBy: price.underBy };
+  const gaps: MutableGaps = {
+    ...NO_GAPS,
+    priceOverBy: price.overBy,
+    priceUnderBy: price.underBy,
+    shareOverBy: price.shareOverBy,
+    nightsShortBy: price.nightsShortBy,
+  };
 
   areaAxis(listing, f, blockers, gaps);
   bedroomsAxis(listing, f, blockers, gaps);

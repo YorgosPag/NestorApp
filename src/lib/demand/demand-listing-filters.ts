@@ -66,7 +66,10 @@ import { distanceMeters } from '@/lib/geo/geo-distance';
 import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 import {
   boundedPricedSeeks,
+  isExchangeSeek,
+  isShortStaySeek,
   seekKindsOf,
+  stayHeadcount,
   type DemandPlace,
   type PropertyDemand,
 } from '@/types/property-demand';
@@ -103,6 +106,22 @@ export const DEMAND_AXES_LOST_IN_FILTERS = [
   'frontage-axis',
   /** **Ζ6** — «σχολείο ≤ 500 μ.». Απαιτεί άντληση σημείων ενδιαφέροντος. */
   'proximity',
+  /**
+   * **Η οροφή ποσοστού οικοπεδούχου** (ADR-777 §8.60.17). Η αναζήτηση **δεν** έχει φίλτρο ποσοστού —
+   * κανένα portal δεν έχει (xe.gr · Spitogatos · Idealista), και η ζήτηση το κρίνει μόνη της. Ο
+   * σύνδεσμος το λέει **ρητά** αντί να δείξει σιωπηλά και οικόπεδα πάνω από την οροφή.
+   */
+  'landownerShare',
+  /**
+   * **Οι νύχτες** (ADR-777 §8.60.19). Η αναζήτηση κρίνει διάρκεια **μόνο** από συγκεκριμένες ημερομηνίες
+   * (`stayWindow`)· ένα «4–6 νύχτες, κάποια στιγμή τον Ιούλιο» δεν γίνεται ημερομηνίες χωρίς επινόηση.
+   */
+  'stayNights',
+  /**
+   * **Η παρέα** (ADR-777 §8.60.19). Ταξιδεύει ως `guests` (ενήλικες + παιδιά) — αλλά η αναζήτηση κρίνει
+   * χωρητικότητα **μόνο μαζί με ημερομηνίες** (`stayQueryOf`), άρα ως τότε **δεν στενεύει** τίποτα.
+   */
+  'stayParty',
 ] as const;
 
 /**
@@ -149,7 +168,7 @@ export type DemandAxisLostInFilters = (typeof DEMAND_AXES_LOST_IN_FILTERS)[numbe
  * τα αποτελέσματα.
  */
 export function axesLostProjectingDemand(
-  demand: Pick<PropertyDemand, 'place' | 'timing' | 'features' | 'proximity'>,
+  demand: Pick<PropertyDemand, 'place' | 'timing' | 'features' | 'proximity' | 'seeks'>,
 ): DemandAxisLostInFilters[] {
   const lost: DemandAxisLostInFilters[] = [];
 
@@ -160,6 +179,12 @@ export function axesLostProjectingDemand(
   // ✅ Ο **όροφος** δεν χάνεται πια — ταξιδεύει ως κριτήριο. Δες τη σημείωση πάνω από
   //    το `DemandAxisLostInFilters`: αυτή η διαγραφή **είναι** η πρόοδος.
   if (demand.proximity.length > 0) lost.push('proximity');
+  if (demand.seeks.some((seek) => isExchangeSeek(seek) && seek.landownerShareMax !== null)) {
+    lost.push('landownerShare');
+  }
+  const stay = demand.seeks.find(isShortStaySeek);
+  if (stay !== undefined && (stay.nights.min !== null || stay.nights.max !== null)) lost.push('stayNights');
+  if (stay?.party != null) lost.push('stayParty');
 
   return lost;
 }
@@ -285,7 +310,17 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
     ...EMPTY_LISTING_FILTERS,
     criteria,
     near: projectPlace(demand.place),
+    guests: headcountOf(demand),
   };
+}
+
+/**
+ * Η παρέα ως **`guests` της αναζήτησης** (ADR-777 §8.60.19) — ο **ένας** ορισμός του {@link stayHeadcount}.
+ * Προσυμπληρώνει το πεδίο· κρίνεται μόλις ο άνθρωπος δώσει ημερομηνίες.
+ */
+function headcountOf(demand: PropertyDemand): number | null {
+  const party = demand.seeks.find(isShortStaySeek)?.party ?? null;
+  return party === null ? null : stayHeadcount(party);
 }
 
 /**

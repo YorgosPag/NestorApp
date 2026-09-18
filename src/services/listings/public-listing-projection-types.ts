@@ -67,6 +67,14 @@ export interface ProjectableProperty {
     readonly minNights?: number | null;
     readonly maxGuests?: number | null;
   } | null;
+  /**
+   * **Ο όρος της αντιπαροχής** (ADR-777 §8.60.17). Παράγεται από `deriveExchangeTerms`.
+   *
+   * ⚠️ **`null`/απόν = δεν υπάρχει ζωντανή αντιπαροχή** — ίδια διάκριση με το `stay`.
+   */
+  readonly exchange?: {
+    readonly landownerShare?: number | null;
+  } | null;
   readonly areas?: {
     readonly gross?: number | null;
     /** ADR-842 Φ3 — δες τη σημείωση των λεξιλογικών πεδίων παρακάτω. */

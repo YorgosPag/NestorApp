@@ -54,7 +54,7 @@ import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
-import type { PublicListing, PublicListingStay } from '@/types/public-listing';
+import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/types/public-listing';
 import { projectListingAttributes } from './public-listing-attributes';
 import { reductionForListing } from '@/lib/listings/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
@@ -297,6 +297,20 @@ function projectStay(
 }
 
 /**
+ * **Ο όρος της αντιπαροχής** (ADR-777 §8.60.17) — ίδιο σχήμα με το {@link projectStay}.
+ *
+ * 🔑 **Το `offerKinds` αποφασίζει ΑΝ υπάρχει κουτί, το έγγραφο ΤΙ λέει μέσα**: αγγελία χωρίς
+ * αντιπαροχή δεν παίρνει `{ landownerShare: null }` («προς συζήτηση» για κάτι που δεν διατίθεται).
+ */
+function projectExchange(
+  property: ProjectableProperty,
+  offerKinds: readonly OfferKind[],
+): PublicListingExchange | null {
+  if (!offerKinds.includes('exchange')) return null;
+  return { landownerShare: numberOrNull(property.exchange?.landownerShare) };
+}
+
+/**
  * Ακίνητο + τόπος → **δημόσια αγγελία**, ή `null` αν δεν δημοσιεύεται.
  *
  * 🔑 **Το `null` δεν είναι σφάλμα — είναι εντολή διαγραφής.** Ο γραφέας το μεταφράζει
@@ -364,6 +378,8 @@ export function projectListingShape(
     },
     // ── ADR-835 §4.5 — οι όροι διαμονής· **ποτέ** ημερολόγιο. Δες `projectStay`.
     stay: projectStay(property, offerKinds),
+    // ── ADR-777 §8.60.17 — το ποσοστό οικοπεδούχου· δικό του κουτί, ποτέ `commercial`.
+    exchange: projectExchange(property, offerKinds),
     // 🔶 Η εικόνα μπαίνει όταν υπάρξει ο παραγωγός της (Α19, κανόνας 31: **προ-ψημένο
     // artifact από το μοντέλο**, ποτέ ανέβασμα χρήστη). Μέχρι τότε `null` = «δεν
     // υπάρχει», και η οθόνη οφείλει να το πει — ποτέ εξωτερικό placeholder (§25.5.2).

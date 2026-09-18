@@ -98,6 +98,7 @@ function listingOf(
     commercialStatus: price.commercialStatus,
     commercial: price.commercial,
     stay: null,
+    exchange: null,
     coverImage: null,
     gallery: [],
     floorplans: [],

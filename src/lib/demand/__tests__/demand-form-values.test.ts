@@ -259,7 +259,7 @@ describe('🔴 η επικύρωση καλεί την ΙΔΙΑ αρχή με τ
     // 🔑 ADR-777 §8.60.15 — η πώληση κουβαλά το εύρος της· η αντιπαροχή **δεν** έχει ποσό.
     expect(result.draft.seeks).toEqual([
       { kind: 'sell', price: { min: 100_000, max: 250_000 } },
-      { kind: 'exchange' },
+      { kind: 'exchange', landownerShareMax: null },
     ]);
     expect(result.draft.place).toEqual({
       kind: 'near',

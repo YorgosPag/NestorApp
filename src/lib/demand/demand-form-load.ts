@@ -28,8 +28,10 @@ import {
 } from './demand-form-values';
 import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
 import type { DemandFormValues } from './demand-form-values';
+import { stayTermsFormOf } from './demand-form-stay';
 import {
   NO_AMOUNT_RANGE,
+  isExchangeSeek,
   isPricedSeek,
   seekKindsOf,
   seekOfKind,
@@ -51,6 +53,11 @@ function seekPricesOf(demand: PropertyDemand): Record<PricedSeekKind, DemandAmou
     return seek !== undefined && isPricedSeek(seek) ? { ...seek.price } : NO_AMOUNT_RANGE;
   };
   return { sell: rangeOf('sell'), leaseOut: rangeOf('leaseOut'), leaseShort: rangeOf('leaseShort') };
+}
+
+/** Η οροφή ποσοστού οικοπεδούχου της αντιπαροχής (ADR-777 §8.60.17) — `null` χωρίς αντιπαροχή ή οροφή. */
+function exchangeShareMaxOf(demand: PropertyDemand): number | null {
+  return demand.seeks.find(isExchangeSeek)?.landownerShareMax ?? null;
 }
 
 /**
@@ -83,6 +90,8 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
     values: {
       seeks: seekKindsOf(demand.seeks),
       seekPrices: seekPricesOf(demand),
+      exchangeShareMax: exchangeShareMaxOf(demand),
+      ...stayTermsFormOf(demand),
       // ⚠️ **Η μορφή διαβάζεται από την οντότητα, όχι συνάγεται από το τι είναι
       // γεμάτο.** Ένα `near === null ? 'anywhere' : 'near'` ήταν σωστό όσο υπήρχαν
       // δύο μορφές· με πέντε θα έστελνε κάθε Ζ3/Ζ5, κάθε Ζ4 και κάθε μέτωπο πίσω ως

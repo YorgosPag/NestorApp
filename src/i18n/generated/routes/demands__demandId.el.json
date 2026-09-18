@@ -33,6 +33,9 @@
           "headroom": "{amount} κάτω από το όριό σου",
           "matchedAs": "Ταιριάζει ως",
           "more": "{count, plural, one {Και # ακόμη αγγελία στα αποτελέσματα.} other {Και # ακόμη αγγελίες στα αποτελέσματα.}}",
+          "shareHeadroom": "{points} μονάδες κάτω από την οροφή σου",
+          "shareNegotiable": "{kind} · ποσοστό προς συζήτηση",
+          "shareTerm": "{kind} · {share} στον οικοπεδούχο",
           "term": "{kind} · {price}"
         },
         "nearButUnreachable": "Υπάρχουν {count, plural, one {# αγγελία κοντά} other {# αγγελίες κοντά}} στο αίτημά σου, αλλά καμία σε απόσταση που αξίζει να προτείνουμε.",
@@ -45,8 +48,11 @@
         "area-outline": "το ακριβές σχήμα της περιοχής",
         "floor-range": "τον όροφο",
         "frontage-axis": "τον άξονα του μετώπου δρόμου",
+        "landownerShare": "το ποσοστό οικοπεδούχου",
         "place-identity": "το συγκεκριμένο ακίνητο",
         "proximity": "τις απαιτήσεις γειτονιάς",
+        "stayNights": "τις νύχτες της διαμονής",
+        "stayParty": "την παρέα — η χωρητικότητα κρίνεται μόλις δώσεις ημερομηνίες",
         "timing": "τον χρόνο που ζήτησες"
       },
       "blocker": {
@@ -74,7 +80,13 @@
         "property-type": "Άλλο είδος ακινήτου",
         "proximity-too-far": "Πιο μακριά από όσο ζήτησες",
         "proximity-unknown": "Δεν έχουμε μετρήσει ακόμη τι υπάρχει γύρω τους",
+        "share-above": "Ποσοστό οικοπεδούχου πάνω από την οροφή σου",
+        "share-undeclared": "Ποσοστό οικοπεδούχου προς συζήτηση",
         "side-unresolved": "Δεν ξέρουμε ακόμη σε ποια πλευρά του δρόμου είναι",
+        "stay-capacity-undeclared": "Δεν έχει δηλωθεί πόσα άτομα χωράει",
+        "stay-infants-uncertain": "Χωράει μόνο αν τα βρέφη δεν μετρούν — ρώτα τον κάτοχο",
+        "stay-nights-below-minimum": "Ζητά περισσότερες νύχτες από όσες σκοπεύεις",
+        "stay-over-capacity": "Δεν χωράει την παρέα σου",
         "wrong-side": "Είναι στην άλλη πλευρά του δρόμου"
       },
       "competition": {
@@ -91,7 +103,9 @@
           "bedrooms-floor": "{value, plural, one {# υπνοδωμάτιο λιγότερο} other {# υπνοδωμάτια λιγότερα}}",
           "price-ceiling": "+{value}",
           "price-floor": "{value} χαμηλότερο κατώτατο",
-          "search-radius": "{value} μ. μεγαλύτερη ακτίνα"
+          "search-radius": "{value} μ. μεγαλύτερη ακτίνα",
+          "share-ceiling": "+{value} μονάδες ποσοστού στον οικοπεδούχο",
+          "stay-length": "{value, plural, one {# νύχτα περισσότερη} other {# νύχτες περισσότερες}}"
         },
         "heading": "Πόσο λείπει",
         "lead": "Δεν σου λέμε απλώς «όχι» — σου λέμε πόσο.",
@@ -154,6 +168,7 @@
         "anyType": "Κάθε είδος",
         "anywhere": "Οπουδήποτε",
         "area": "Σε σχεδιασμένη περιοχή",
+        "exchangeShare": "Αντιπαροχή: έως {share} στον οικοπεδούχο",
         "frontage": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} του δρόμου",
         "frontageNamed": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} της οδού {street}",
         "near": "Σε ακτίνα {radiusKm} χλμ.",
@@ -171,6 +186,13 @@
           "sell": "Αγορά"
         },
         "seekPrice": "{kind}: {range}",
+        "stayAdults": "{count, plural, one {# ενήλικας} other {# ενήλικες}}",
+        "stayChildren": "{count, plural, one {# παιδί} other {# παιδιά}}",
+        "stayInfants": "{count, plural, one {# βρέφος} other {# βρέφη}}",
+        "stayNightsFrom": "τουλάχιστον {min, plural, one {# νύχτα} other {# νύχτες}}",
+        "stayNightsRange": "{min}–{max} νύχτες",
+        "stayNightsUpTo": "έως {max, plural, one {# νύχτα} other {# νύχτες}}",
+        "stayTerms": "{kind}: {terms}",
         "whenever": "Όποτε κι αν βγει",
         "window": "Από {fromDate} έως {toDate}"
       }

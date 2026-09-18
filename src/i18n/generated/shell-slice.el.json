@@ -1700,6 +1700,10 @@
       "openWebsite": "Άνοιγμα ιστοσελίδας {value}",
       "sendEmail": "Αποστολή email στο {value} μέσω Gmail"
     },
+    "commercialCard": {
+      "title": "Διάθεση & τιμή",
+      "transactionLocked": "Τη διάθεση την κατέχει κράτηση, πώληση ή μίσθωση — αλλάζει μόνο από τις Πωλήσεις."
+    },
     "common": {
       "cancel": "Ακύρωση",
       "loading": "Φόρτωση...",
@@ -2483,6 +2487,7 @@
       "logout": "Αποσύνδεση",
       "menuLabel": "Μενού χρήστη",
       "myContacts": "Οι επαφές μου",
+      "myDossiers": "Οι φάκελοί μου",
       "noEmail": "Δεν υπάρχει email",
       "spaces": {
         "current": "εδώ βρίσκεσαι",

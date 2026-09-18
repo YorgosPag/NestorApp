@@ -26,6 +26,8 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
+import { isLandownerShareInRange } from '@/lib/offers/offer-amount';
+import { formatPercentage } from '@/lib/intl-formatting';
 import {
   DEMAND_PROXIMITY_KINDS,
   PRICED_SEEK_KINDS,
@@ -37,8 +39,9 @@ import {
   DemandFieldset,
   DemandNumberField,
   DemandOptionsField,
-  type DemandFieldName,
+  DemandRangeRow,
 } from './demand-field-primitives';
+import { DemandStayTermsRow } from './DemandStayTermsRow';
 import { DemandPlaceResolver } from './DemandPlaceResolver';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { DemandAreaOutline } from './DemandAreaOutline';
@@ -69,6 +72,8 @@ export function DemandSeeksField(): React.ReactElement {
         labelOf={(kind) => t(`${NS}:demand.form.seeks.${kind}`)}
       />
       <DemandSeekPriceRows />
+      <DemandStayTermsRow />
+      <DemandExchangeShareRow />
     </DemandFieldset>
   );
 }
@@ -104,6 +109,35 @@ function DemandSeekPriceRows(): React.ReactElement | null {
         />
       ))}
       <p className="text-sm text-muted-foreground">{t(`${K}.help`)}</p>
+    </>
+  );
+}
+
+/**
+ * **Η οροφή ποσοστού οικοπεδούχου** — μόνο όταν έχει επιλεγεί αντιπαροχή (ADR-777 §8.60.17).
+ *
+ * 🔑 **Η λεζάντα λέει ΠΟΙΑΝΟΥ είναι το ποσοστό** — του οικοπεδούχου, επί των νέων τ.μ. Το «60-40»
+ * διαβάζεται και από τις δύο μεριές· γι' αυτό το μερίδιο του εργολάβου (100 − x) φαίνεται **μόνο ως
+ * ανάγνωση**, ποτέ ως δεύτερο πεδίο που θα μπορούσε να διαφωνήσει με το πρώτο.
+ */
+function DemandExchangeShareRow(): React.ReactElement | null {
+  const { t } = useTranslation([NS]);
+  const selected = useWatch<DemandFormValues, 'seeks'>({ name: 'seeks' });
+  const shareMax = useWatch<DemandFormValues, 'exchangeShareMax'>({ name: 'exchangeShareMax' });
+  const K = `${NS}:demand.form.exchangeShareMax`;
+
+  if (!selected.includes('exchange')) return null;
+  const valid = typeof shareMax === 'number' && isLandownerShareInRange(shareMax);
+
+  return (
+    <>
+      <DemandNumberField name="exchangeShareMax" label={t(`${K}.label`)} min={1} />
+      <p className="text-sm text-muted-foreground">{t(`${K}.help`)}</p>
+      {valid && (
+        <p className="text-sm text-foreground">
+          {t(`${K}.builderShare`, { share: formatPercentage(100 - shareMax) })}
+        </p>
+      )}
     </>
   );
 }
@@ -272,42 +306,6 @@ export function DemandFeaturesField(): React.ReactElement {
         <p className="text-sm text-muted-foreground">{t(`${K}.bedroomsHelp`)}</p>
       </div>
     </DemandFieldset>
-  );
-}
-
-/**
- * Ένα εύρος «από/έως».
- *
- * ⚠️ Το `floor` λείπει **επίτηδες** στον όροφο: υπάρχουν **υπόγεια**, και ένα
- * `min={0}` θα έκανε το «−1» αδύνατο να πληκτρολογηθεί. Το ισόγειο είναι `0`, όχι το
- * κάτω άκρο του κόσμου.
- */
-function DemandRangeRow({
-  legend,
-  help,
-  minName,
-  maxName,
-  minLabel,
-  maxLabel,
-  floor,
-}: {
-  legend: string;
-  help?: string;
-  minName: DemandFieldName;
-  maxName: DemandFieldName;
-  minLabel: string;
-  maxLabel: string;
-  floor?: number;
-}): React.ReactElement {
-  return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-medium text-foreground">{legend}</p>
-      {help !== undefined && <p className="text-sm text-muted-foreground">{help}</p>}
-      <div className="flex flex-wrap gap-3">
-        <DemandNumberField name={minName} label={minLabel} min={floor} />
-        <DemandNumberField name={maxName} label={maxLabel} min={floor} />
-      </div>
-    </div>
   );
 }
 

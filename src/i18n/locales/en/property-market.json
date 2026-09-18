@@ -85,6 +85,23 @@
         "max": "To",
         "help": "Each amount is judged only against listings of the same transaction — a rent is never compared with a sale price."
       },
+      "exchangeShareMax": {
+        "label": "Maximum landowner share (% of the new floor area)",
+        "help": "The share the landowner receives — not yours. Leave empty for no ceiling.",
+        "builderShare": "Your share: at least {share} of the new floor area."
+      },
+      "stayTerms": {
+        "legend": "Stay terms",
+        "nights": "How many nights?",
+        "nightsHelp": "The “to” value is checked against the property’s minimum stay — if it asks for more, we tell you how many. You set “when” in the demand’s timing.",
+        "from": "From",
+        "to": "To",
+        "party": "Who is coming?",
+        "adults": "Adults (13+)",
+        "children": "Children (2–12)",
+        "infants": "Infants (under 2)",
+        "partyHelp": "Infants do not count towards capacity. If a property fits only without them, you will see it marked “ask the owner”. Empty = no condition."
+      },
       "place": {
         "legend": "Where?",
         "anywhere": "Anywhere — I care about what, not where",
@@ -178,6 +195,10 @@
       "seeks-duplicated": "The same kind of transaction was declared twice.",
       "window-inverted": "The “to” date is before the “from” date.",
       "range-inverted": "A range has its lower bound above its upper bound.",
+      "exchange-share-out-of-range": "The landowner’s maximum share must be between 1 and 100.",
+      "stay-nights-invalid": "Nights are whole numbers, at least 1.",
+      "stay-nights-exceed-window": "The minimum number of nights does not fit in the period you gave.",
+      "stay-party-invalid": "The party needs at least one adult, and people are counted in whole numbers.",
       "radius-not-positive": "The radius must be greater than zero.",
       "outline-degenerate": "The drawn area encloses nothing.",
       "proximity-not-positive": "A neighbourhood distance is zero or negative.",
@@ -211,10 +232,16 @@
         "term": "{kind} · {price}",
         "headroom": "{amount} under your limit",
         "atLimit": "Exactly at your limit",
+        "shareTerm": "{kind} · {share} to the landowner",
+        "shareNegotiable": "{kind} · share open to negotiation",
+        "shareHeadroom": "{points} points under your ceiling",
         "more": "{count, plural, one {And # more listing in the results.} other {And # more listings in the results.}}"
       }
     },
     "axisLost": {
+      "landownerShare": "the landowner share",
+      "stayNights": "the nights of your stay",
+      "stayParty": "your party — capacity is checked once you give dates",
       "timing": "the timing you asked for",
       "area-outline": "the exact shape of the area",
       "place-identity": "the specific property",
@@ -228,6 +255,8 @@
       "sentence": "With {amount} there {count, plural, one {is # listing} other {are # listings}}.",
       "amount": {
         "price-ceiling": "+{value}",
+        "share-ceiling": "+{value} points of landowner share",
+        "stay-length": "{value, plural, one {# more night} other {# more nights}}",
         "price-floor": "{value} lower minimum",
         "area-floor": "{value} m² less",
         "area-ceiling": "{value} m² more",
@@ -240,6 +269,12 @@
       "unquantified": "{count, plural, one {# listing is close} other {# listings are close}} on an axis that is not measured in an amount."
     },
     "blocker": {
+      "share-above": "Landowner share above your ceiling",
+      "share-undeclared": "Landowner share open to negotiation",
+      "stay-capacity-undeclared": "Capacity has not been declared",
+      "stay-over-capacity": "Does not fit your party",
+      "stay-infants-uncertain": "Fits only if infants do not count — ask the owner",
+      "stay-nights-below-minimum": "Requires more nights than you plan to stay",
       "heading": "What stopped them",
       "offer-kind": "A different kind of transaction",
       "property-type": "A different property type",
@@ -309,6 +344,14 @@
       "priceRange": "{priceMin} – {priceMax}",
       "priceLabel": "Amount",
       "seekPrice": "{kind}: {range}",
+      "exchangeShare": "Land-for-flats exchange: up to {share} to the landowner",
+      "stayTerms": "{kind}: {terms}",
+      "stayNightsRange": "{min}–{max} nights",
+      "stayNightsFrom": "at least {min, plural, one {# night} other {# nights}}",
+      "stayNightsUpTo": "up to {max, plural, one {# night} other {# nights}}",
+      "stayAdults": "{count, plural, one {# adult} other {# adults}}",
+      "stayChildren": "{count, plural, one {# child} other {# children}}",
+      "stayInfants": "{count, plural, one {# infant} other {# infants}}",
       "seekKind": {
         "sell": "Purchase",
         "leaseOut": "Rental",
@@ -1953,6 +1996,102 @@
       "title": "Limit who can see this listing?",
       "description": "People who can see it today will no longer see it. If it was public, it leaves the map immediately and its photos stop being public. Price history is kept.",
       "confirm": "Limit"
+    }
+  },
+  "auth": {
+    "signInToViewPhotos": "Sign in to see the photos.",
+    "signInToViewVideos": "Sign in to see the videos.",
+    "signInToViewDocuments": "Sign in to see the documents.",
+    "signInToViewFloorplans": "Sign in to see the floor plans."
+  },
+  "dossier": {
+    "list": {
+      "title": "My property files",
+      "lead": "Everything about each of your homes in one place — floor plans, documents, photos, videos. A file lives as long as the home, not as long as a listing.",
+      "create": "New property file",
+      "loading": "Loading your property files…",
+      "error": "Your property files could not be loaded. Please try again shortly.",
+      "filterLabel": "Which property files you see",
+      "filter": {
+        "active": "Active",
+        "archived": "Archived"
+      },
+      "empty": {
+        "active": {
+          "title": "You have no property file yet.",
+          "body": "A property file keeps the papers and images of a home in one place — and it stays yours whatever happens to your listings."
+        },
+        "archived": {
+          "title": "No archived property files.",
+          "body": "Archiving takes a file out of your everyday list without losing anything. You can restore it at any time."
+        }
+      },
+      "updated": "Updated {date}",
+      "noType": "Type: not set",
+      "actions": {
+        "label": "Actions for the property file “{label}”",
+        "open": "Open",
+        "rename": "Rename",
+        "archive": "Archive",
+        "restore": "Restore"
+      },
+      "fromOffers": "My homes’ property files"
+    },
+    "dialog": {
+      "createTitle": "New property file",
+      "createDescription": "Give it a name you will recognise — you can set the type later.",
+      "renameTitle": "Rename property file",
+      "renameDescription": "Only the name and type change — the files stay as they are.",
+      "labelLabel": "File name",
+      "labelPlaceholder": "e.g. Kalamaria apartment",
+      "typeLabel": "Property type (optional)",
+      "typePlaceholder": "Choose a type",
+      "typeClear": "No type",
+      "create": "Create",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "failed": "Not saved. Please try again."
+    },
+    "invariant": {
+      "label-required": "Give the property file a name.",
+      "label-too-long": "The name is too long — up to {max} characters."
+    },
+    "lifecycle": {
+      "archived": "Archived",
+      "archivedToast": "The property file “{label}” was archived.",
+      "restoredToast": "The property file “{label}” is active again.",
+      "undo": "Undo",
+      "failed": "The property file status did not change. Please try again.",
+      "archivedBanner": "This property file is archived — it is hidden from your active files. Nothing was lost.",
+      "restore": "Restore"
+    },
+    "detail": {
+      "back": "My property files",
+      "loading": "Loading the property file…",
+      "absent": "The property file was not found.",
+      "error": "The property file could not be loaded. Please try again shortly.",
+      "rename": "Rename",
+      "renameLabel": "File name"
+    },
+    "tabs": {
+      "floorplan": "Floor plan",
+      "topographic": "Site survey",
+      "documents": "Documents",
+      "photos": "Photos",
+      "videos": "Videos",
+      "history": "History",
+      "loading": "Loading…",
+      "descriptions": {
+        "floorplan": "Floor plans or site survey of the property",
+        "documents": "The property’s documents",
+        "photos": "Photos of the property",
+        "videos": "Videos of the property",
+        "history": "Every change to the property file"
+      }
+    },
+    "history": {
+      "lead": "Every change to the property file: what changed, when and by whom. Only you can see it."
     }
   }
 }

@@ -29,7 +29,13 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { matchedPreview, type DemandAnswer } from '@/lib/demand/demand-answer';
-import type { DemandOutcome, DemandSeekMet } from '@/lib/demand/demand-matching';
+import type {
+  DemandOutcome,
+  DemandSeekMet,
+  DemandSeekMetExchange,
+  DemandSeekMetPriced,
+} from '@/lib/demand/demand-matching';
+import { formatNumber, formatPercentage } from '@/lib/intl-formatting';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { Link } from '@/lib/workspace/navigation';
@@ -38,22 +44,34 @@ import { SEEK_KIND_I18N_KEYS } from './seek-kind-labels';
 
 const K = 'property-market:demand.answer.matchedList';
 
+type MatchT = ReturnType<typeof useTranslation>['t'];
+
+/** Ετικέτα + περιθώριο μιας συναλλαγής **με ποσό** — η μονάδα από τον ΕΝΑ μορφοποιητή. */
+function pricedPhrases(t: MatchT, kind: string, met: DemandSeekMetPriced): [string, string | null] {
+  const { role, amount, headroomBy } = met;
+  const term = amount === null ? kind : t(`${K}.term`, { kind, price: resolvedPriceLabel(t, { role, amount }) });
+  if (headroomBy === null) return [term, null];
+  if (headroomBy === 0) return [term, t(`${K}.atLimit`)];
+  return [term, t(`${K}.headroom`, { amount: resolvedPriceLabel(t, { role, amount: headroomBy }) })];
+}
+
+/** Ετικέτα + περιθώριο της **αντιπαροχής** — ποσοστό οικοπεδούχου, ποτέ ευρώ (ADR-777 §8.60.17). */
+function exchangePhrases(t: MatchT, kind: string, met: DemandSeekMetExchange): [string, string | null] {
+  const { landownerShare, headroomBy } = met;
+  const term =
+    landownerShare === null
+      ? t(`${K}.shareNegotiable`, { kind })
+      : t(`${K}.shareTerm`, { kind, share: formatPercentage(landownerShare) });
+  if (headroomBy === null) return [term, null];
+  if (headroomBy === 0) return [term, t(`${K}.atLimit`)];
+  return [term, t(`${K}.shareHeadroom`, { points: formatNumber(headroomBy, { maximumFractionDigits: 1 }) })];
+}
+
 /** Μία συναλλαγή που ικανοποιείται: ετικέτα-κείμενο, και το περιθώριο δίπλα της. */
 function MetTerm({ met }: { met: DemandSeekMet }): React.ReactElement {
   const { t } = useTranslation(['property-market', 'common']);
   const kind = t(SEEK_KIND_I18N_KEYS[met.kind]);
-  const { role, amount, headroomBy } = met;
-
-  const term =
-    role === null || amount === null
-      ? kind
-      : t(`${K}.term`, { kind, price: resolvedPriceLabel(t, { role, amount }) });
-  const headroom =
-    role === null || headroomBy === null
-      ? null
-      : headroomBy === 0
-        ? t(`${K}.atLimit`)
-        : t(`${K}.headroom`, { amount: resolvedPriceLabel(t, { role, amount: headroomBy }) });
+  const [term, headroom] = met.kind === 'exchange' ? exchangePhrases(t, kind, met) : pricedPhrases(t, kind, met);
 
   return (
     <li className="flex flex-wrap items-center gap-2">

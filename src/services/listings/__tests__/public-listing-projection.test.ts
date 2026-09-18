@@ -188,6 +188,14 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       'balconies', 'balconyAreaSqm', 'bathrooms', 'bedrooms',
       'commercial', 'commercialStatus', 'condition', 'coolingType', 'coverImage',
       'energyClass',
+      // 🔴 **ΚΟΚΚΙΝΙΣΕ ΞΑΝΑ (ADR-777 §8.60.17, 2026-09-18)** — και πάλι έκανε τη δουλειά της. Το
+      // `exchange` πέρασε από **γραμμένη** απόφαση (Giorgio: «όπως οι μεγάλοι»): το xe.gr γράφει το
+      // ποσοστό της αντιπαροχής **δημόσια**, σε ελεύθερο κείμενο· εδώ φεύγει **δομημένο**, ώστε να
+      // κρίνεται η οροφή του εργολάβου.
+      //
+      // ⛔ **ΤΙ ΔΕΝ ΤΑΞΙΔΕΥΕΙ**: μόνο το ποσοστό **του οικοπεδούχου** — κανένας όρος του εργολαβικού
+      // (προθεσμίες, ποινικές ρήτρες, χρηματικό αντιστάθμισμα). Και **μόνο** όταν η αντιπαροχή διατίθεται.
+      'exchange',
       'floor', 'flooring',
       // 🔴 **ΠΕΜΠΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-841 Α2.6, 2026-09-01)** — η
       // **συλλογή του κατόχου**, δίπλα στο `coverImage` και ποτέ μέσα του: το πρώτο
@@ -269,6 +277,36 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
   // ===========================================================================
   // Σ — ΟΙ ΟΡΟΙ ΔΙΑΜΟΝΗΣ ΕΙΝΑΙ ΔΕΜΕΝΟΙ ΣΤΟ `leaseShort` (ADR-835 §4.5)
   // ===========================================================================
+
+  // ===========================================================================
+  // Αν — ΤΟ ΠΟΣΟΣΤΟ ΤΗΣ ΑΝΤΙΠΑΡΟΧΗΣ ΕΙΝΑΙ ΔΕΜΕΝΟ ΣΤΟ `exchange` (ADR-777 §8.60.17)
+  // ===========================================================================
+
+  describe('🔴 Αν — ο δεσμός `exchange` ⇄ `exchange`, ΚΑΙ ΠΡΟΣ ΤΙΣ ΔΥΟ ΚΑΤΕΥΘΥΝΣΕΙΣ', () => {
+    it('Αν1 — ΧΩΡΙΣ αντιπαροχή το κουτί είναι `null`, ΠΟΤΕ «προς συζήτηση»', () => {
+      const listing = buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!;
+      expect(listing.offerKinds).not.toContain('exchange');
+      expect(listing.exchange).toBeNull();
+    });
+
+    it('Αν2 — ΜΕ αντιπαροχή το ποσοστό του οικοπεδούχου ΦΤΑΝΕΙ (ήταν δηλωμένη απώλεια)', () => {
+      const listing = buildPublicListing(
+        { ...REAL_MAISONETTE, offerKinds: ['exchange'], exchange: { landownerShare: 40 } },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.exchange).toEqual({ landownerShare: 40 });
+    });
+
+    it('Αν3 — αντιπαροχή χωρίς ποσοστό ⇒ `{ landownerShare: null }` («προς συζήτηση»), όχι `null`', () => {
+      const listing = buildPublicListing(
+        { ...REAL_MAISONETTE, offerKinds: ['exchange'], exchange: null },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.exchange).toEqual({ landownerShare: null });
+    });
+  });
 
   describe('🔴 Σ — ο δεσμός `leaseShort` ⇄ `stay`, ΚΑΙ ΠΡΟΣ ΤΙΣ ΔΥΟ ΚΑΤΕΥΘΥΝΣΕΙΣ', () => {
     it('Σ1 — ΧΩΡΙΣ `leaseShort` το `stay` είναι `null`, ΠΟΤΕ αντικείμενο με μηδενικά', () => {

@@ -73,7 +73,7 @@ import type { ListedAt } from '@/types/public-listing';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 11;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 12;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -217,6 +217,19 @@ const stayOrNull = z.object({}).passthrough().nullable().catch(null);
 
 /** Ωμός αριθμός ή `null` — ποτέ `0` ως «άγνωστο» (κανόνας του σχήματος). */
 const numberOrNull = z.number().finite().nullable().catch(null);
+
+/**
+ * Το κουτί της αντιπαροχής ενός αποθηκευμένου εγγράφου (κρίκος 12) — το **`offerKinds`** αποφασίζει
+ * αν υπάρχει, όπως και στην προβολή (`projectExchange`).
+ */
+function storedExchangeOf(doc: StoredListingDocument): { landownerShare: number | null } | null {
+  const kinds = Array.isArray(doc.offerKinds) ? doc.offerKinds : [];
+  if (!kinds.includes('exchange')) return null;
+  const box = typeof doc.exchange === 'object' && doc.exchange !== null
+    ? (doc.exchange as Readonly<Record<string, unknown>>)
+    : {};
+  return { landownerShare: numberOrNull.parse(box.landownerShare ?? null) };
+}
 
 /**
  * Συμβολοσειρά ή `null` — και **το κενό είναι `null`**, όχι `''`.
@@ -645,6 +658,26 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * (`readPriceReduction`) — έγκυρη μείωση περνά **αυτούσια**, σκουπίδι γίνεται `null`.
      */
     apply: (doc) => ({ ...doc, priceReduction: readPriceReduction(doc.priceReduction) }),
+  },
+  {
+    to: 12,
+    adr: 'ADR-777 §8.60.17',
+    adds: ['exchange'],
+    /**
+     * 🔴 **ΤΟ ΠΟΣΟΣΤΟ ΤΗΣ ΑΝΤΙΠΑΡΟΧΗΣ ΑΠΕΚΤΗΣΕ ΚΟΥΤΙ — ΚΑΙ ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΟ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΠΡΟΒΛΗΘΗΚΕ», ΟΧΙ «ΔΕΝ ΥΠΑΡΧΕΙ»**: ως σήμερα το
+     * ποσοστό ήταν δηλωμένη απώλεια της προβολής — ο ιδιοκτήτης **ίσως** το έχει γράψει στη
+     * διάθεσή του. Άρα αγγελία **με** αντιπαροχή παίρνει `{ landownerShare: null }` («προς
+     * συζήτηση» — ό,τι πράγματι ξέρει το έγγραφο), και **χωρίς** αντιπαροχή `null`. Η επόμενη
+     * αποθήκευση του ακινήτου ξαναπροβάλλει με το πραγματικό ποσοστό.
+     *
+     * ⛔ **Και ρητά δεν διαβάζει τη διάθεση**: οι κρίκοι είναι καθαρές συναρτήσεις πάνω σε **ένα**
+     * έγγραφο (κρίκος 3) — δεν ανοίγουν το `owner_properties`.
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: έγκυρο κουτί περνά αυτούσιο (κανονικοποιημένο).
+     */
+    apply: (doc) => ({ ...doc, exchange: storedExchangeOf(doc) }),
   },
 ];
 
