@@ -16,7 +16,7 @@
  */
 
 import { athensClockAt } from '@/lib/calendar/weekly-hours';
-import type { StayCalendarEntry, StayCalendarHead } from '@/types/stay-calendar';
+import { stayEntryHeldUntil, type StayCalendarEntry, type StayCalendarHead } from '@/types/stay-calendar';
 import type {
   StayCalendarMonth,
   StayClock,
@@ -76,10 +76,20 @@ export function declaredStayCalendarOf(
 ): StayCalendar<StayOccupancySource> {
   return {
     kind: 'declared',
-    occupied: stayCalendarOccupancies(entries, rules.preparationNights),
+    // 🔑 Η στιγμή του ρολογιού κρίνει ποια αιτήματα **ζουν ακόμη** (Στάδιο Δ, §23.2).
+    occupied: stayCalendarOccupancies(entries, rules.preparationNights, clock.instant),
     rules: { rules, days: stayDayRulesOf(months), clock },
     channels,
+    heldUntilOf: (source) => stayOccupancyHeldUntil(source, clock.instant),
   };
+}
+
+/**
+ * **Είναι αυτή η κατάληψη ζωντανό αίτημα; Ως πότε;** — και οι νύχτες **προετοιμασίας** γύρω από
+ * αίτημα μετράνε ως αναμονή: αν το αίτημα λήξει, ελευθερώνονται μαζί του (Στάδιο Δ, §23.5).
+ */
+export function stayOccupancyHeldUntil(source: StayOccupancySource, instant: string): string | null {
+  return stayEntryHeldUntil(source.kind === 'entry' ? source.entry : source.of, instant);
 }
 
 /**
@@ -88,5 +98,5 @@ export function declaredStayCalendarOf(
  */
 export function stayClockAt(instant: Date): StayClock {
   const clock = athensClockAt(instant);
-  return { today: clock.dateKey, minutes: clock.minutes };
+  return { today: clock.dateKey, minutes: clock.minutes, instant: instant.toISOString() };
 }

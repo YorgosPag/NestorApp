@@ -106,7 +106,7 @@ describe('stayChannelConflicts — το overbooking που ΗΔΗ συνέβη, 
       bookingEntry('stay_1', '2026-10-12', '2026-10-16'),
       blockEntry('sblk_ext', '2026-10-14', '2026-10-18', 'external', FEED),
     ];
-    expect(stayChannelConflicts(entries, TODAY)).toEqual([
+    expect(stayChannelConflicts(entries, { today: TODAY, instant: `${TODAY}T09:00:00.000Z` })).toEqual([
       {
         kind: 'overbooking', feedId: FEED, blockId: 'sblk_ext', from: '2026-10-14', to: '2026-10-18',
         party: { entryKind: 'booking', entryId: 'stay_1', from: '2026-10-12', to: '2026-10-16' },
@@ -119,7 +119,7 @@ describe('stayChannelConflicts — το overbooking που ΗΔΗ συνέβη, 
       blockEntry('sblk_own', '2026-10-12', '2026-10-16'),
       blockEntry('sblk_ext', '2026-10-14', '2026-10-18', 'external', FEED),
     ];
-    expect(stayChannelConflicts(entries, TODAY).map((c) => c.kind)).toEqual(['owner-block']);
+    expect(stayChannelConflicts(entries, { today: TODAY, instant: `${TODAY}T09:00:00.000Z` }).map((c) => c.kind)).toEqual(['owner-block']);
   });
 
   it('δύο ΔΙΑΦΟΡΕΤΙΚΑ κανάλια στις ίδιες νύχτες ⇒ other-channel, και για τα δύο', () => {
@@ -127,7 +127,7 @@ describe('stayChannelConflicts — το overbooking που ΗΔΗ συνέβη, 
       blockEntry('sblk_a', '2026-10-12', '2026-10-16', 'external', FEED),
       blockEntry('sblk_b', '2026-10-14', '2026-10-18', 'external', 'schf_other'),
     ];
-    expect(stayChannelConflicts(entries, TODAY).map((c) => [c.blockId, c.kind])).toEqual([
+    expect(stayChannelConflicts(entries, { today: TODAY, instant: `${TODAY}T09:00:00.000Z` }).map((c) => [c.blockId, c.kind])).toEqual([
       ['sblk_a', 'other-channel'],
       ['sblk_b', 'other-channel'],
     ]);
@@ -138,7 +138,7 @@ describe('stayChannelConflicts — το overbooking που ΗΔΗ συνέβη, 
       blockEntry('sblk_a', '2026-10-12', '2026-10-16', 'external', FEED),
       blockEntry('sblk_b', '2026-10-14', '2026-10-18', 'external', FEED),
     ];
-    expect(stayChannelConflicts(entries, TODAY)).toEqual([]);
+    expect(stayChannelConflicts(entries, { today: TODAY, instant: `${TODAY}T09:00:00.000Z` })).toEqual([]);
   });
 
   it('σύγκρουση που ΤΕΛΕΙΩΣΕ δεν αναφέρεται — συναγερμός χωρίς διέξοδο είναι θόρυβος', () => {
@@ -146,7 +146,7 @@ describe('stayChannelConflicts — το overbooking που ΗΔΗ συνέβη, 
       bookingEntry('stay_old', '2026-08-10', '2026-08-16'),
       blockEntry('sblk_old', '2026-08-14', '2026-08-18', 'external', FEED),
     ];
-    expect(stayChannelConflicts(entries, TODAY)).toEqual([]);
+    expect(stayChannelConflicts(entries, { today: TODAY, instant: `${TODAY}T09:00:00.000Z` })).toEqual([]);
   });
 
   it('καμία επικάλυψη ⇒ καμία σύγκρουση (ούτε από την προετοιμασία: ο κριτής συγκρίνει εγγραφές)', () => {
@@ -154,6 +154,6 @@ describe('stayChannelConflicts — το overbooking που ΗΔΗ συνέβη, 
       bookingEntry('stay_1', '2026-10-01', '2026-10-05'),
       blockEntry('sblk_ext', '2026-10-05', '2026-10-09', 'external', FEED),
     ];
-    expect(stayChannelConflicts(entries, TODAY)).toEqual([]);
+    expect(stayChannelConflicts(entries, { today: TODAY, instant: `${TODAY}T09:00:00.000Z` })).toEqual([]);
   });
 });

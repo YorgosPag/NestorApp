@@ -88,7 +88,7 @@ const QUERY: StayQuery = { checkIn: '2026-08-10', checkOut: '2026-08-17', guests
 const OPEN_RULES: StayRulesInput = {
   rules: STAY_RULES_NONE,
   days: {},
-  clock: { today: '2026-01-01', minutes: 600 },
+  clock: { today: '2026-01-01', minutes: 600, instant: '2026-01-01T08:00:00.000Z' },
 };
 const DECLARED = (occupied: readonly Occupancy<string>[]): StayCalendar<string> => ({
   kind: 'declared',
@@ -96,6 +96,8 @@ const DECLARED = (occupied: readonly Occupancy<string>[]): StayCalendar<string> 
   rules: OPEN_RULES,
   // Στάδιο Γ (§22): «τα κανάλια μιλούν». Το `stale` έχει δικές του άγκυρες (ομάδα Κ).
   channels: 'synced',
+  // Στάδιο Δ (§23.5): καμία πηγή δεν είναι αίτημα σε αναμονή — όλες σκληρές.
+  heldUntilOf: () => null,
 });
 /** Το ίδιο ημερολόγιο με **σιωπηλό κανάλι** — ό,τι θα λέγαμε «ελεύθερο» γίνεται `unsynced`. */
 const STALE = (occupied: readonly Occupancy<string>[]): StayCalendar<string> => ({
@@ -108,12 +110,14 @@ const UNDECLARED: StayCalendar<string> = { kind: 'undeclared' };
 // Α — ΤΟ ΛΕΞΙΛΟΓΙΟ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΠΛΗΡΕΣ
 // =============================================================================
 
-describe('Α — δεκαπέντε ονόματα, κανένα ορφανό', () => {
-  it('το κλειστό σύνολο έχει ακριβώς δεκαπέντε τιμές, χωρίς διπλότυπα', () => {
+describe('Α — δεκαέξι ονόματα, κανένα ορφανό', () => {
+  it('το κλειστό σύνολο έχει ακριβώς δεκαέξι τιμές, χωρίς διπλότυπα', () => {
     // 14 → 15 με το `unsynced` του Σταδίου Γ (§22): κανάλι που σώπασε, **άλλος υπόχρεος**
     // από το `unreadable` (δικό μας χρέος) ⇒ δικός του κάδος στη λογιστική.
-    expect(STAY_AVAILABILITY_KINDS).toHaveLength(15);
-    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(15);
+    // 15 → 16 με το `held` του Σταδίου Δ (§23.5): ζωντανό αίτημα άλλου — **άλλη θεραπεία** από το
+    // `occupied` («ξαναδοκίμασε μετά τις 14:00», όχι «δες άλλες μέρες»).
+    expect(STAY_AVAILABILITY_KINDS).toHaveLength(16);
+    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(16);
   });
 
   it('🔴 ΜΟΝΟ `free` και `conditional` επιτρέπουν διαμονή — και ΚΑΝΕΝΑ άλλο', () => {
@@ -124,7 +128,7 @@ describe('Α — δεκαπέντε ονόματα, κανένα ορφανό', 
     const rest = STAY_AVAILABILITY_KINDS.filter(
       (k) => !(STAYABLE_AVAILABILITY_KINDS as readonly string[]).includes(k),
     );
-    expect(rest).toHaveLength(13);
+    expect(rest).toHaveLength(14);
     for (const kind of rest) expect(isStayable(kind)).toBe(false);
   });
 });

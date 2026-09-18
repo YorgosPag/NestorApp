@@ -43,6 +43,7 @@ function entriesAfter(
       return [...entries, {
         kind: 'booking', id: pendingId, from: command.checkIn, to: command.checkOut, guests: command.guests,
         guestLabel: command.guestLabel, channel: 'direct', lifecycle: 'confirmed', occupies: true,
+        holdExpiresAt: null, riskDisclosedAt: null,
       }];
     case 'unblock':
       return entries.filter((entry) => entry.id !== command.blockId);
@@ -50,6 +51,20 @@ function entriesAfter(
       return entries.map((entry) => (entry.kind === 'booking' && entry.id === command.bookingId
         ? { ...entry, lifecycle: 'cancelled', occupies: false }
         : entry));
+    // Στάδιο Δ (§23.4): ο οικοδεσπότης απαντά σε αίτημα.
+    case 'accept':
+      return entries.map((entry) => (entry.kind === 'booking' && entry.id === command.bookingId
+        ? { ...entry, lifecycle: 'confirmed', occupies: true }
+        : entry));
+    case 'decline':
+      return entries.map((entry) => (entry.kind === 'booking' && entry.id === command.bookingId
+        ? { ...entry, lifecycle: 'declined', occupies: false }
+        : entry));
+    // Πράξεις επισκέπτη και συστήματος: δεν τις στέλνει ποτέ η οθόνη του οικοδεσπότη.
+    case 'request':
+    case 'withdraw':
+    case 'expire':
+      return entries;
   }
 }
 
@@ -60,6 +75,10 @@ export function optimisticView(view: Readable, command: StayCalendarCommand, pen
     ...view,
     declaredAt,
     entries: entriesAfter(view.entries, command, pendingId),
+    // Η απάντηση βγάζει το αίτημα από το εισερχόμενο — αμέσως, όπως στο Gmail.
+    pendingRequests: command.action === 'accept' || command.action === 'decline'
+      ? view.pendingRequests.filter((entry) => entry.id !== command.bookingId)
+      : view.pendingRequests,
     rules: command.action === 'rules' ? command.rules : view.rules,
     days: daysAfter(view.days, command),
   };

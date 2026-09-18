@@ -51,20 +51,28 @@ export async function fetchStayCalendar(
   }
 }
 
-export async function sendStayCalendarCommand(
-  ownerPropertyId: string,
-  command: StayCalendarCommand,
-): Promise<StayCalendarSendOutcome> {
+/**
+ * **Στέλνει μία πράξη σε μια πόρτα του ημερολογίου** — του οικοδεσπότη ή του επισκέπτη (Στάδιο Δ).
+ * 🔑 Η **μία** ανάγνωση της έκβασης: το 409 διαβάζεται από το σώμα, ποτέ ως «σφάλμα δικτύου».
+ */
+export async function postStayCommand(url: string, command: StayCalendarCommand): Promise<StayCalendarSendOutcome> {
   try {
-    const body = await apiClient.post<unknown>(urlOf(ownerPropertyId), command);
+    const body = await apiClient.post<unknown>(url, command);
     return stayCalendarWriteResultFrom(body) ?? { kind: 'failed' };
   } catch (cause) {
     const refused = stayCalendarWriteResultFrom(apiErrorBodyOf(cause));
     if (refused !== null) return refused;
     logger.error('Η πράξη στο ημερολόγιο καταλύματος απέτυχε', {
-      data: { ownerPropertyId, action: command.action },
+      data: { url, action: command.action },
       error: cause instanceof Error ? cause.message : String(cause),
     });
     return { kind: 'failed' };
   }
+}
+
+export async function sendStayCalendarCommand(
+  ownerPropertyId: string,
+  command: StayCalendarCommand,
+): Promise<StayCalendarSendOutcome> {
+  return postStayCommand(urlOf(ownerPropertyId), command);
 }

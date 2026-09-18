@@ -31,6 +31,7 @@ import {
   stayCalendarEntryViewOf,
   stayDaysWithin,
   stayEntriesWithin,
+  stayPendingRequestsOf,
   type StayCalendarView,
 } from '@/lib/stay/stay-calendar-view';
 import {
@@ -193,12 +194,17 @@ export async function readStayCalendarView(
 
   const snapshot = await readStayCalendar(adminDb, propertyId, null);
   if (snapshot.kind === 'unreadable') return { kind: 'unreadable' };
+  // 🔑 **Μία** στιγμή για όλη την προβολή — αλλιώς ένα αίτημα θα μπορούσε να λήγει ανάμεσα σε δύο γραμμές.
+  const instant = nowISO();
+  const views = snapshot.entries.map((entry) => stayCalendarEntryViewOf(entry, instant));
   return {
     kind: 'readable',
     declaredAt: snapshot.head?.declaredAt ?? null,
     version: snapshot.head?.version ?? 0,
     rules: snapshot.head?.rules ?? STAY_RULES_NONE,
     days: stayDaysWithin(stayDayRulesOf(snapshot.months), window.from, window.to),
-    entries: stayEntriesWithin(snapshot.entries.map(stayCalendarEntryViewOf), window.from, window.to),
+    // 🔑 Η στιγμή της ανάγνωσης κρίνει ποια αιτήματα **ζουν ακόμη** (Στάδιο Δ, §23.1).
+    entries: stayEntriesWithin(views, window.from, window.to),
+    pendingRequests: stayPendingRequestsOf(views),
   };
 }

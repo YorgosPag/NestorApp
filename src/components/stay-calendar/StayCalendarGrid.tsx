@@ -37,6 +37,8 @@ const CELL_LABEL = {
   external: 'property-market:offer.stayCalendar.cell.external',
   booked: 'property-market:offer.stayCalendar.cell.booked',
   pending: 'property-market:offer.stayCalendar.cell.pending',
+  // Στάδιο Δ (§23.8): ζωντανό αίτημα επισκέπτη — κρατά τη νύχτα ως την προθεσμία.
+  requested: 'property-market:offer.stayCalendar.cell.requested',
 } as const;
 
 interface StayCalendarGridProps {
@@ -55,7 +57,7 @@ interface StayCalendarGridProps {
 function cellLabelKey(state: StayNightState): keyof typeof CELL_LABEL {
   if (state.kind === 'free') return 'free';
   if (isPendingEntry(state.entry)) return 'pending';
-  if (state.kind === 'booked') return 'booked';
+  if (state.kind === 'booked') return state.entry.lifecycle === 'requested' ? 'requested' : 'booked';
   return state.entry.source === 'external' ? 'external' : 'blocked';
 }
 
@@ -114,7 +116,9 @@ function NightCell({ day, state, selected, days, pricing, bindings, onPick }: Ni
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           state.kind === 'free' && 'border-border bg-card text-foreground hover:bg-accent/50',
           state.kind === 'blocked' && 'border-border bg-muted text-muted-foreground',
-          state.kind === 'booked' && 'border-foreground/40 bg-accent text-foreground',
+          state.kind === 'booked' && state.entry.lifecycle !== 'requested' && 'border-foreground/40 bg-accent text-foreground',
+          // Αίτημα σε αναμονή: διακεκομμένο περίγραμμα — η νύχτα κρατιέται, δεν έχει δοθεί.
+          state.kind === 'booked' && state.entry.lifecycle === 'requested' && 'border-dashed border-foreground/40 bg-card text-foreground',
           selected && 'ring-2 ring-foreground',
           pending && 'opacity-60',
         )}

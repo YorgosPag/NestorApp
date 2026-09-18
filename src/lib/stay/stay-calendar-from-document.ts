@@ -23,9 +23,21 @@ import type { SpaceRef } from '@/lib/spaces/space-ref';
 import {
   isStayBookingChannel,
   isStayBookingLifecycle,
+  STAY_EXPIRY_REASONS,
+  stayGuestUserIdOf,
   type StayBooking,
   type StayBookingHolder,
+  type StayBookingLifecycle,
+  type StayExpiryReason,
+  type StayHold,
+  type StayResolution,
 } from '@/types/stay-booking';
+import {
+  STAY_HOLD_BOUNDS,
+  STAY_HOLD_TIERS,
+  type StayHoldBound,
+  type StayHoldTier,
+} from '@/lib/stay/stay-hold-deadline';
 import {
   isStayBlockSource,
   STAY_CALENDAR_TIMEZONE,
@@ -140,13 +152,74 @@ function holderOf(value: unknown): StayBookingHolder | null {
   if (!isRecord(value)) return null;
   if (value.kind === 'user') {
     const userId = text(value.userId);
-    return userId === null ? null : { kind: 'user', userId };
+    const displayName = textOrNull(value.displayName);
+    return userId === null || displayName === undefined ? null : { kind: 'user', userId, displayName };
   }
   if (value.kind === 'offline') {
     const label = text(value.label);
     return label === null ? null : { kind: 'offline', label };
   }
   return null;
+}
+
+/** Άκυρη στιγμή ISO ⇒ `null`. */
+function instantOf(value: unknown): string | null {
+  const raw = text(value);
+  return raw !== null && Number.isFinite(Date.parse(raw)) ? raw : null;
+}
+
+/** `undefined` = χαλασμένο (⇒ `unreadable`)· `null` = δεν υπάρχει (κάθε έγγραφο πριν το Στάδιο Δ). */
+function holdOf(value: unknown): StayHold | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) return undefined;
+  const expiresAt = instantOf(value.expiresAt);
+  const respondentUserId = text(value.respondentUserId);
+  const { tier, bound } = value;
+  if (expiresAt === null || respondentUserId === null) return undefined;
+  if (!(STAY_HOLD_TIERS as readonly unknown[]).includes(tier)) return undefined;
+  if (!(STAY_HOLD_BOUNDS as readonly unknown[]).includes(bound)) return undefined;
+  return { expiresAt, tier: tier as StayHoldTier, bound: bound as StayHoldBound, respondentUserId };
+}
+
+/** `undefined` = χαλασμένο· `null` = δεν υπάρχει. Ο λόγος ανήκει **μόνο** στη λήξη. */
+function resolutionOf(value: unknown): StayResolution | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) return undefined;
+  const at = instantOf(value.at);
+  if (at === null) return undefined;
+  switch (value.lifecycle) {
+    case 'declined':
+    case 'withdrawn':
+      return { lifecycle: value.lifecycle, at };
+    case 'expired':
+      return (STAY_EXPIRY_REASONS as readonly unknown[]).includes(value.reason)
+        ? { lifecycle: 'expired', at, reason: value.reason as StayExpiryReason }
+        : undefined;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * 🔴 **Οι αναλλοίωτες του Σταδίου Δ** (§23.1) — fail-closed, γιατί κάθε παραβίαση **αλλάζει κατάληψη**:
+ *
+ * - `requested` **χωρίς** hold ⇒ άκυρο: δεν ξέρουμε ως πότε κρατά νύχτες, και ένα «δεν κρατά» θα
+ *   ήταν overbooking ενώ ένα «κρατά για πάντα» θα ήταν οι μέρες-φυλακή του Airbnb.
+ * - η επίλυση υπάρχει **αν και μόνο αν** η κατάσταση είναι επίλυση, και **είναι η ίδια**.
+ * - το `guestUserId` είναι **παράγωγο** του κατόχου — διαφωνία = δύο αλήθειες για τον ίδιο άνθρωπο.
+ */
+function stageDInvariantsHold(
+  lifecycle: StayBookingLifecycle,
+  hold: StayHold | null,
+  resolution: StayResolution | null,
+  guestUserId: string | null,
+  holder: StayBookingHolder,
+): boolean {
+  if (lifecycle === 'requested' && hold === null) return false;
+  const resolved = lifecycle === 'declined' || lifecycle === 'expired' || lifecycle === 'withdrawn';
+  if (resolved !== (resolution !== null)) return false;
+  if (resolution !== null && resolution.lifecycle !== lifecycle) return false;
+  return guestUserId === stayGuestUserIdOf(holder);
 }
 
 /** **Η κράτηση.** Χωρίς αναγνώσιμο κάτοχο, διάστημα ή κατάσταση ⇒ `null` (δες κεφαλίδα). */
@@ -168,11 +241,16 @@ export function stayBookingFromDocument(raw: unknown, id: string): StayBooking |
   const covers = spaceRefsOf(stored.covers, propertyId);
   const range = nightsRange(stored.checkIn, stored.checkOut);
   if (covers === null || range === null) return null;
+  const hold = holdOf(stored.hold);
+  const resolution = resolutionOf(stored.resolution);
+  const guestUserId = textOrNull(stored.guestUserId);
+  if (hold === undefined || resolution === undefined || guestUserId === undefined) return null;
+  if (!stageDInvariantsHold(stored.lifecycle, hold, resolution, guestUserId, holder)) return null;
   return {
     id, propertyId, offerKind: 'leaseShort', covers,
     checkIn: range.from, checkOut: range.to,
     holder, channel: stored.channel, authorUserId, guests,
-    lifecycle: stored.lifecycle, riskDisclosedAt, createdAt, updatedAt,
+    lifecycle: stored.lifecycle, riskDisclosedAt, hold, resolution, guestUserId, createdAt, updatedAt,
   };
 }
 

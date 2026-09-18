@@ -14,6 +14,7 @@ import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import { isRecord } from '@/lib/type-guards';
 
 import type { StayAvailabilityAnswer, StayQuery } from './stay-availability-vocabulary';
+import type { StayHoldDeadline } from './stay-hold-deadline';
 import type { StayQuote } from './stay-nightly-quote';
 import { STAY_BOOKING_MAX_GUESTS, STAY_BOOKING_MAX_NIGHTS } from './stay-calendar-command';
 
@@ -80,4 +81,10 @@ export interface PublicStayAnswer {
   readonly answer: StayAvailabilityAnswer;
   /** `null` όταν δεν είναι κατάλυμα ή το ερώτημα δεν τιμολογείται. */
   readonly quote: StayQuote | null;
+  /**
+   * 🏆 **Η υπόσχεση ΠΡΙΝ το αίτημα** (Στάδιο Δ, §23.5): «ο οικοδεσπότης θα απαντήσει ως Τρίτη 14:00»
+   * — ή `too-late`. `null` όταν η απάντηση δεν επιτρέπει διαμονή. Η αγορά δείχνει μέσο όρο
+   * απόκρισης τρίτων· εμείς δείχνουμε **την ώρα που δεσμεύει**.
+   */
+  readonly hold: StayHoldDeadline | null;
 }

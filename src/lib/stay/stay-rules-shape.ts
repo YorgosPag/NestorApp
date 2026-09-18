@@ -16,7 +16,13 @@
 
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 import { isRecord } from '@/lib/type-guards';
-import type { IsoWeekday } from '@/lib/calendar/weekly-hours';
+import {
+  ISO_WEEKDAYS,
+  normalizeWeeklyHours,
+  readWeeklyHours,
+  type IsoWeekday,
+  type WeeklyHours,
+} from '@/lib/calendar/weekly-hours';
 import {
   STAY_ADVANCE_NOTICE_DAYS,
   STAY_AVAILABILITY_WINDOW_MONTHS,
@@ -72,6 +78,19 @@ function advanceNoticeFrom(value: unknown): StayAdvanceNotice | null {
   return { days: 0, sameDayCutoffHour: cutoff };
 }
 
+/**
+ * **Ώρες απόκρισης** (Στάδιο Δ, §23.3). 🔑 **Απών ⇒ `null`**, όχι παραβίαση: κάθε κεφαλή γραμμένη
+ * πριν το Στάδιο Δ δεν έχει το πεδίο, και ένα `undefined ⇒ άκυρο` θα έκανε **κάθε υπάρχον
+ * ημερολόγιο `unreadable`**. Παρόν ⇒ ο **ΙΔΙΟΣ** κριτής ωραρίου (`readWeeklyHours`), ποτέ δεύτερος.
+ * Κανένα άνοιγμα σε όλη την εβδομάδα ⇒ άκυρο: «δεν απαντώ ποτέ» δεν είναι ωράριο.
+ */
+function responseHoursFrom(value: unknown): WeeklyHours | null | undefined {
+  if (value === undefined || value === null) return null;
+  const hours = readWeeklyHours(value);
+  if (hours === null || ISO_WEEKDAYS.every((weekday) => hours[weekday].length === 0)) return undefined;
+  return normalizeWeeklyHours(hours);
+}
+
 function orphanGapFrom(value: unknown): StayOrphanGapRule | null | undefined {
   if (value === null) return null;
   if (!isRecord(value) || !oneOf(STAY_ORPHAN_GAP_NIGHTS, value.maxNights)) return undefined;
@@ -86,8 +105,10 @@ export function stayRulesFrom(raw: unknown): StayRules | null {
   const arrivalWeekdays = weekdaysFrom(raw.arrivalWeekdays);
   const departureWeekdays = weekdaysFrom(raw.departureWeekdays);
   const orphanGap = orphanGapFrom(raw.orphanGap);
+  const responseHours = responseHoursFrom(raw.responseHours);
   const window = raw.availabilityWindowMonths;
   if (maxNights === undefined || advanceNotice === null || orphanGap === undefined) return null;
+  if (responseHours === undefined) return null;
   if (arrivalWeekdays === null || departureWeekdays === null) return null;
   if (!oneOf(STAY_PREPARATION_NIGHTS, raw.preparationNights)) return null;
   if (window !== null && !oneOf(STAY_AVAILABILITY_WINDOW_MONTHS, window)) return null;
@@ -99,6 +120,7 @@ export function stayRulesFrom(raw: unknown): StayRules | null {
     arrivalWeekdays,
     departureWeekdays,
     orphanGap,
+    responseHours,
   };
 }
 

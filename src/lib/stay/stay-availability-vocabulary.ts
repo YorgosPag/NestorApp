@@ -149,6 +149,15 @@ export type StayCalendar<TSource> =
       readonly rules: StayRulesInput;
       /** Μιλούν τα κανάλια; Δες {@link StayChannelTrust} — Στάδιο Γ, §22. */
       readonly channels: StayChannelTrust;
+      /**
+       * **Είναι αυτή η κατάληψη ΖΩΝΤΑΝΟ ΑΙΤΗΜΑ; Ως πότε;** (Στάδιο Δ, §23.5) — `null` = σκληρή κατάληψη.
+       *
+       * 🔑 Η μηχανή είναι αδιαφανής ως προς την πηγή (`TSource`), άρα **δεν μπορεί** να κοιτάξει
+       * μέσα της· η ερώτηση ταξιδεύει ως **συνάρτηση** από την **ΜΙΑ** σύνθεση (`stayCalendarOf`).
+       * 🔴 **Υποχρεωτικό**, όπως το `channels`: προαιρετικό θα έκανε κάθε νέο καλούντα να λέει
+       * σιωπηλά «όλα σκληρά» — δηλαδή «κλειστό» αντί για «σε αναμονή ως 14:00».
+       */
+      readonly heldUntilOf: (source: TSource) => string | null;
     };
 
 /**
@@ -291,6 +300,16 @@ export type StayAvailabilityAnswer =
       readonly freeRuns: readonly StayNightRun[];
     }
   /**
+   * 🏆 **ΣΕ ΑΝΑΜΟΝΗ — ΚΑΙ ΛΕΜΕ ΩΣ ΠΟΤΕ** (Στάδιο Δ, §23.5). Κάθε σύγκρουση είναι **ζωντανό αίτημα**
+   * άλλου επισκέπτη· αν ο οικοδεσπότης δεν απαντήσει, οι νύχτες **ελευθερώνονται μόνες τους** στο
+   * `until`.
+   *
+   * 🔑 **Ποτέ ισοπεδωμένο σε `occupied`**: η θεραπεία είναι άλλη («ξαναδοκίμασε μετά τις 14:00»,
+   * όχι «δες άλλες μέρες»). Η αγορά δείχνει σκέτο γκρι — και το Airbnb κρατά τις μέρες κλειστές
+   * **και μετά** τη λήξη. Αν έστω και **μία** σύγκρουση είναι σκληρή, η απάντηση είναι `occupied`.
+   */
+  | { readonly kind: 'held'; readonly until: string }
+  /**
    * **Ελεύθερο, ΑΛΛΑ το ακίνητο πωλείται** (§4.7).
    *
    * 🔴 **ΠΟΤΕ ισοπεδωμένο**: σε `free` είναι *«ψέμα προς τον επισκέπτη»*· σε
@@ -327,6 +346,7 @@ export const STAY_AVAILABILITY_KINDS = [
   'arrival-not-allowed',
   'departure-not-allowed',
   'occupied',
+  'held',
   'above-max-nights',
   'below-min-nights',
   'conditional',
@@ -345,6 +365,11 @@ export const STAYABLE_AVAILABILITY_KINDS = [
   'conditional',
   'free',
 ] as const satisfies readonly StayAvailabilityKind[];
+
+/** `true` αν η τιμή είναι γνωστός κάδος — ο αναλυτής του σύρματος (Στάδιο Δ). */
+export function isStayAvailabilityKind(value: unknown): value is StayAvailabilityKind {
+  return typeof value === 'string' && (STAY_AVAILABILITY_KINDS as readonly string[]).includes(value);
+}
 
 /** `true` αν αυτή η απάντηση επιτρέπει διαμονή στις ζητούμενες ημερομηνίες. */
 export function isStayable(kind: StayAvailabilityKind): boolean {

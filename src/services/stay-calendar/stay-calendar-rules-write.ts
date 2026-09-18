@@ -82,7 +82,10 @@ export function decideRestrict(ctx: WriteContext, command: RestrictCommand): Dec
  */
 export function unacknowledgedWarnings(ctx: WriteContext, command: BookCommand): Decision | null {
   const rules = ctx.head?.rules ?? STAY_RULES_NONE;
-  const calendar = declaredStayCalendarOf(ctx.entries, rules, ctx.months, ctx.clock);
+  // 🔴 Ως το Στάδιο Δ έλειπε το 5ο όρισμα (`channels`, υποχρεωτικό από το Στάδιο Γ) — σφάλμα τύπου
+  //    στο HEAD. `'synced'` ΡΗΤΑ: εδώ κρίνονται οι **κανόνες** του οικοδεσπότη για τη δική του
+  //    κράτηση· ένα σιωπηλό κανάλι θα μετέτρεπε κάθε απάντηση σε `unsynced` ⇒ ψευδής «προειδοποίηση».
+  const calendar = declaredStayCalendarOf(ctx.entries, rules, ctx.months, ctx.clock, 'synced');
   const base = deriveStayTerms(ctx.property.offers)?.minNights ?? null;
   const warnings = stayRuleWarningsFor(ctx.property.id, calendar, base, command.checkIn, command.checkOut);
   const missing = warnings.filter((warning) => !command.acknowledgedWarnings.includes(warning));

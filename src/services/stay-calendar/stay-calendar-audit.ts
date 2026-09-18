@@ -55,6 +55,17 @@ function changeOf(command: StayCalendarCommand, entryId: string | null): {
       return { field: 'stayCalendar.rules', oldValue: null, newValue: JSON.stringify(command.rules) };
     case 'restrict':
       return { field: 'stayCalendar.days', oldValue: null, newValue: restrictionLine(command) };
+    // ── Στάδιο Δ (§23.4) — ⛔ ποτέ όνομα επισκέπτη στο ίχνος, μόνο ταυτότητα εγγραφής ──
+    case 'request':
+      return { field: 'stayCalendar.request', oldValue: null, newValue: `${entryId} · ${command.checkIn}→${command.checkOut}` };
+    case 'withdraw':
+      return { field: 'stayCalendar.request', oldValue: command.bookingId, newValue: 'withdrawn' };
+    case 'accept':
+      return { field: 'stayCalendar.request', oldValue: command.bookingId, newValue: 'confirmed' };
+    case 'decline':
+      return { field: 'stayCalendar.request', oldValue: command.bookingId, newValue: 'declined' };
+    case 'expire':
+      return { field: 'stayCalendar.request', oldValue: command.bookingId, newValue: 'expired' };
   }
 }
 

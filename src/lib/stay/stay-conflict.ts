@@ -23,10 +23,9 @@
  * 🔴 ΤΙ ΔΕΝ ΚΑΝΕΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ — ΚΑΙ ΤΟ ΠΡΩΤΟ ΕΙΝΑΙ ΤΟ ΠΙΟ ΕΠΙΚΙΝΔΥΝΟ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * ⛔ **ΔΕΝ φιλτράρει καταστάσεις.** Ο καλών περνά {@link occupyingStays}. Ένα αίτημα
- * (`requested`) που θα έφτανε εδώ αφιλτράριστο θα **καταλάμβανε** — δηλαδή κάθε
- * κακόβουλος θα μπορούσε να κλειδώσει ολόκληρο καλοκαίρι με αιτήματα που δεν πληρώνει
- * ποτέ (§6.1).
+ * ⛔ **ΔΕΝ φιλτράρει καταστάσεις** (`stayConflicts`). Ο καλών περνά {@link occupyingStays}
+ * με τη στιγμή της ερώτησης. Μια ακυρωμένη ή ληγμένη κράτηση που θα έφτανε εδώ αφιλτράριστη
+ * θα **καταλάμβανε** νύχτες που κανείς δεν κρατά.
  *
  * ⛔ **ΔΕΝ είναι συναλλαγή, και δεν αρκεί μόνο του.** Το `Κ1` του §12 (**overbooking**)
  * λύνεται **μόνο** αν αυτή η ετυμηγορία υπολογιστεί **μέσα** στη συναλλαγή της
@@ -109,14 +108,18 @@ export type StayCalendarVerdict = OccupancyVerdict<StayCalendarEntry>;
  * καλούντα. Ο καλών της εγγραφής περνά **ό,τι διάβασε**· μια ακυρωμένη κράτηση δεν
  * κλείνει νύχτες επειδή κάποιος ξέχασε ένα `filter`. (Το `stayConflicts` παραπάνω κρατά
  * την παλιά σύμβαση για τους υπάρχοντες καλούντες.)
+ *
+ * 🔑 Η στιγμή `instant` κρίνει ποια αιτήματα **ζουν ακόμη** (Στάδιο Δ, §23.1): ένα ληγμένο hold
+ * δεν μπλοκάρει τον επόμενο, **ακόμη κι αν το cron δεν το έχει καταγράψει ως `expired`**.
  */
 export function stayCalendarConflicts(
   candidate: StayCalendarEntry,
   existing: readonly StayCalendarEntry[],
+  instant: string,
 ): StayCalendarVerdict {
   return occupancyConflicts(
     stayEntryOccupancyOf(candidate),
-    existing.filter(stayEntryOccupies).map(stayEntryOccupancyOf),
+    existing.filter((entry) => stayEntryOccupies(entry, instant)).map(stayEntryOccupancyOf),
     STAY_OCCUPANCY_POLICY,
   );
 }

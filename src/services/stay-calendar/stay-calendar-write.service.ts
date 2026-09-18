@@ -1,7 +1,8 @@
 /**
  * @fileoverview **ΚΑΘΕ ΕΓΓΡΑΦΗ ΣΤΟ ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ** — μία συναλλαγή, ένας κριτής,
  *   μία κεφαλή που σειριοποιεί.
- * @related ADR-835 §20 (Στάδιο Α) · §12 Κ1 · lib/stay/stay-conflict.ts ·
+ * @related ADR-835 §20 (Στάδιο Α) · §23 (Στάδιο Δ) · §12 Κ1 · lib/stay/stay-conflict.ts ·
+ *   lib/stay/stay-command-authority.ts · services/stay-calendar/stay-calendar-request-write.ts ·
  *   services/stay-calendar/stay-calendar-read.service.ts · CHECK 3.56 · CHECK 3.17
  * @module services/stay-calendar/stay-calendar-write.service
  *
@@ -9,41 +10,48 @@
  * 🔴 Η ΣΕΙΡΑ ΜΕΣΑ ΣΤΗ ΣΥΝΑΛΛΑΓΗ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * 1. **ακίνητο** → σύνορο → `mayAdminister(custodyOf(…))` — ο ΕΝΑΣ κριτής κατοχής (3.56)
- * 2. **ημερολόγιο** (κεφαλή + blocks + κρατήσεις) από την **ίδια** συναλλαγή
- * 3. **κριτής κατάληψης** πάνω στα φρέσκα (`stayCalendarConflicts`)
- * 4. **γραφή** της εγγραφής **και** `version + 1` στην κεφαλή
+ * 1. **ακίνητο** + **ημερολόγιο** (κεφαλή + blocks + κρατήσεις) + η **δημόσια προβολή** όταν
+ *    ενεργεί επισκέπτης — από την **ίδια** συναλλαγή
+ * 2. **ποιος ενεργεί** — ο πίνακας εξουσίας (`STAY_COMMAND_AUTHORITY`) και ύστερα το κριτήριο
+ *    του δρώντα: κατοχή (`mayAdminister`, 3.56) για τον οικοδεσπότη, δημόσια αγγελία για τον επισκέπτη
+ * 3. η **κεφαλή του επισκέπτη** που αγγίζει η πράξη (Στάδιο Δ) — ακόμη ανάγνωση, πριν από κάθε γραφή
+ * 4. **κριτής κατάληψης** πάνω στα φρέσκα (`stayCalendarConflicts`)
+ * 5. **γραφή** της εγγραφής **και** `version + 1` στην κεφαλή
  *
- * Το βήμα 4 δεν είναι λογιστική: η Firestore δεν κλειδώνει εύρος ερωτήματος, και χωρίς
+ * Το βήμα 5 δεν είναι λογιστική: η Firestore δεν κλειδώνει εύρος ερωτήματος, και χωρίς
  * την κεφαλή δύο παράλληλα «κλείσε 10–14/10» θα περνούσαν και τα δύο (phantom insert).
- * Με την κεφαλή, η δεύτερη συναλλαγή **ξαναπαίζεται** και ο κριτής τη σταματά.
+ * Με την κεφαλή, η δεύτερη συναλλαγή **ξαναπαίζεται** και ο κριτής τη σταματά. Το βήμα 3 είναι
+ * το ίδιο μάθημα για τον **άνθρωπο**: δύο αιτήματα σε **διαφορετικά** ακίνητα δεν μοιράζονται
+ * κεφαλή ακινήτου — μοιράζονται κεφαλή επισκέπτη.
  *
- * ⚠️ **Το ίχνος γράφεται ΜΕΤΑ τη δέσμευση**, όπως στο `mandate-acceptance.service` —
- * ίχνος μέσα σε συναλλαγή που ξαναπαίζεται θα έγραφε πράξεις που δεν έγιναν.
+ * ⚠️ **Το ίχνος και η ειδοποίηση γράφονται ΜΕΤΑ τη δέσμευση**, όπως στο
+ * `mandate-acceptance.service` — ό,τι μέσα σε συναλλαγή που ξαναπαίζεται θα έγραφε πράξεις
+ * που δεν έγιναν, και θα έστελνε email για αίτημα που ποτέ δεν γράφτηκε.
  */
 
 import 'server-only';
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
-import { custodyOf, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
+import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
+import { custodyOf, mayAdminister } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { wholePropertySpace } from '@/lib/spaces/space-ref';
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
+import { stayClockAt } from '@/lib/stay/stay-calendar-of';
+import { actorMayIssue, stayActorPerformer, type StayActor } from '@/lib/stay/stay-command-authority';
 import { stayCalendarConflicts } from '@/lib/stay/stay-conflict';
+import { stayGuestHeadFromDocument, type StayGuestHead } from '@/lib/stay/stay-guest-head';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
-import type { StayBooking } from '@/types/stay-booking';
-import {
-  STAY_CALENDAR_TIMEZONE,
-  type StayBlock,
-  type StayCalendarHead,
-} from '@/types/stay-calendar';
-import { stayClockAt } from '@/lib/stay/stay-calendar-of';
+import type { PublicListing } from '@/types/public-listing';
+import { STAY_CALENDAR_TIMEZONE, type StayBlock, type StayCalendarEntry, type StayCalendarHead } from '@/types/stay-calendar';
 import { STAY_RULES_NONE } from '@/types/stay-rules';
 import { recordStayCalendarWrite } from './stay-calendar-audit';
+import { announceStayBookingNotice } from './stay-booking-notifier.service';
+import { decideAnswer, decideRequest, stayGuestHeadRef } from './stay-calendar-request-write';
 import { decideRestrict, decideRules, unacknowledgedWarnings } from './stay-calendar-rules-write';
-import { refuse, type Decision, type WriteContext } from './stay-calendar-write-decision';
+import { newStayBooking, refuse, type Decision, type StayBookingNotice, type WriteContext } from './stay-calendar-write-decision';
 import { readStayCalendar, stayCalendarHeadRef, stayPropertyRef } from './stay-calendar-read.service';
 import { refusalOf, type StayCalendarWriteResult } from './stay-calendar-write-result';
 
@@ -52,7 +60,7 @@ function isStay(property: OwnerProperty): boolean {
 }
 
 // =============================================================================
-// ΟΙ ΑΠΟΦΑΣΕΙΣ ΤΟΥ ΣΤΑΔΙΟΥ Α — καθαρές ως προς τα δεδομένα, γράφουν μόνο μέσω `apply`
+// ΟΙ ΑΠΟΦΑΣΕΙΣ ΤΟΥ ΟΙΚΟΔΕΣΠΟΤΗ (Στάδιο Α) — καθαρές ως προς τα δεδομένα, γράφουν μόνο μέσω `apply`
 // =============================================================================
 
 function decideBlock(ctx: WriteContext, command: Extract<StayCalendarCommand, { action: 'block' }>): Decision {
@@ -68,11 +76,11 @@ function decideBlock(ctx: WriteContext, command: Extract<StayCalendarCommand, { 
     // Block του ιδιοκτήτη: καμία πηγή. Το εξωτερικό block το γεννά **μόνο** η εισαγωγή (§22).
     channel: null,
     note: command.note,
-    createdBy: ctx.actor.uid,
+    createdBy: ctx.performedBy,
     createdAt: ctx.now,
     updatedAt: ctx.now,
   };
-  const refusal = refusalOf(stayCalendarConflicts({ kind: 'block', block }, ctx.entries));
+  const refusal = refusalOf(stayCalendarConflicts({ kind: 'block', block }, ctx.entries, ctx.now));
   if (refusal !== null) return refuse(refusal);
   const ref = ctx.adminDb.collection(COLLECTIONS.STAY_BLOCKS).doc(block.id);
   return { kind: 'write', entryId: block.id, apply: (tx) => tx.set(ref, block) };
@@ -80,24 +88,20 @@ function decideBlock(ctx: WriteContext, command: Extract<StayCalendarCommand, { 
 
 function decideBook(ctx: WriteContext, command: Extract<StayCalendarCommand, { action: 'book' }>): Decision {
   if (!isStay(ctx.property)) return refuse({ kind: 'not-a-stay' });
-  const booking: StayBooking = {
-    id: enterpriseIdService.generateStayBookingId(),
-    propertyId: ctx.property.id,
-    offerKind: 'leaseShort',
-    covers: [wholePropertySpace(ctx.property.id)],
+  const booking = newStayBooking(ctx, {
     checkIn: command.checkIn,
     checkOut: command.checkOut,
     holder: { kind: 'offline', label: command.guestLabel },
     channel: 'direct',
-    authorUserId: ctx.property.authorUserId,
     guests: command.guests,
     // 🔑 Ο οικοδεσπότης **είναι** αυτός που δέχεται — η χειροκίνητη κράτηση γεννιέται επιβεβαιωμένη.
     lifecycle: 'confirmed',
     riskDisclosedAt: null,
-    createdAt: ctx.now,
-    updatedAt: ctx.now,
-  };
-  const refusal = refusalOf(stayCalendarConflicts({ kind: 'booking', booking }, ctx.entries));
+    hold: null,
+  });
+  // 🔑 Ζωντανό αίτημα επισκέπτη **κλείνει** τις νύχτες και για τον οικοδεσπότη — η άρνηση το
+  //    ονομάζει («αίτημα σε αναμονή ως 14:00»): πρώτα απάντησε, μετά κράτα (Στάδιο Δ, §23.4).
+  const refusal = refusalOf(stayCalendarConflicts({ kind: 'booking', booking }, ctx.entries, ctx.now));
   if (refusal !== null) return refuse(refusal);
   // Επικάλυψη = σκληρή άρνηση (πάνω)· κανόνας = προειδοποίηση που ο οικοδεσπότης αποδέχεται.
   const warnings = unacknowledgedWarnings(ctx, command);
@@ -115,12 +119,16 @@ function decideUnblock(ctx: WriteContext, blockId: string): Decision {
   return { kind: 'write', entryId: blockId, apply: (tx) => tx.delete(ref) };
 }
 
+/**
+ * **Ακύρωση ΕΠΙΒΕΒΑΙΩΜΕΝΗΣ κράτησης.** 🔴 Αίτημα **δεν** ακυρώνεται — απαντιέται (`decline`) ή
+ * αποσύρεται (`withdraw`): ένα «ακυρωμένο αίτημα» θα ονόμαζε λάθος γεγονός (§4.11 #3).
+ */
 function decideCancel(ctx: WriteContext, bookingId: string): Decision {
   const entry = ctx.entries.find((e) => e.kind === 'booking' && e.booking.id === bookingId);
   if (entry === undefined || entry.kind !== 'booking') return refuse({ kind: 'entry-absent' });
   // Ιδιοδύναμη: ακύρωση ακυρωμένης = καμία αλλαγή, καμία άρνηση.
   if (entry.booking.lifecycle === 'cancelled') return { kind: 'write', entryId: bookingId, apply: () => undefined };
-  if (entry.booking.lifecycle === 'completed') return refuse({ kind: 'not-changeable', reason: 'lifecycle' });
+  if (entry.booking.lifecycle !== 'confirmed') return refuse({ kind: 'not-changeable', reason: 'lifecycle' });
   const ref = ctx.adminDb.collection(COLLECTIONS.STAY_BOOKINGS).doc(bookingId);
   return {
     kind: 'write',
@@ -146,6 +154,13 @@ function decide(ctx: WriteContext, command: StayCalendarCommand): Decision {
       return isStay(ctx.property) ? decideRules(command.rules) : refuse({ kind: 'not-a-stay' });
     case 'restrict':
       return isStay(ctx.property) ? decideRestrict(ctx, command) : refuse({ kind: 'not-a-stay' });
+    case 'request':
+      return decideRequest(ctx, command);
+    case 'withdraw':
+    case 'accept':
+    case 'decline':
+    case 'expire':
+      return decideAnswer(ctx, command.action, command.bookingId);
   }
 }
 
@@ -175,46 +190,106 @@ function nextHead(
 interface Committed {
   readonly result: StayCalendarWriteResult;
   readonly property: OwnerProperty | null;
+  readonly notice: StayBookingNotice | null;
+}
+
+const refused = (result: StayCalendarWriteResult): Committed => ({ result, property: null, notice: null });
+
+/** Ο δρώντας περνά το **δικό του** κριτήριο; — ο πίνακας εξουσίας έχει ήδη ρωτηθεί. */
+function actorAdmitted(actor: StayActor, property: OwnerProperty, listing: PublicListing | null): boolean {
+  switch (actor.kind) {
+    case 'host':
+      return mayAdminister(custodyOf(property), actor.actor);
+    case 'guest':
+      // Ο επισκέπτης ενεργεί **μόνο** πάνω σε ό,τι είναι δημόσια αγγελία.
+      return listing !== null;
+    case 'system':
+      return true;
+  }
+}
+
+/** Ποιου επισκέπτη την κεφαλή αγγίζει η πράξη — ή κανενός. */
+function touchedGuest(actor: StayActor, command: StayCalendarCommand, entries: readonly StayCalendarEntry[]): string | null {
+  if (command.action === 'request') return actor.kind === 'guest' ? actor.uid : null;
+  if (command.action !== 'withdraw' && command.action !== 'accept' && command.action !== 'decline'
+    && command.action !== 'expire') return null;
+  const entry = entries.find((e) => e.kind === 'booking' && e.booking.id === command.bookingId);
+  return entry?.kind === 'booking' ? entry.booking.guestUserId : null;
+}
+
+/** `undefined` = χαλασμένη κεφαλή (⇒ άρνηση)· `null` = δεν υπάρχει ή δεν αγγίζεται. */
+async function readGuestHead(
+  adminDb: AdminFirestore,
+  transaction: Transaction,
+  uid: string | null,
+): Promise<StayGuestHead | null | undefined> {
+  if (uid === null) return null;
+  const snap = await transaction.get(stayGuestHeadRef(adminDb, uid));
+  if (!snap.exists) return null;
+  return stayGuestHeadFromDocument(snap.data(), uid) ?? undefined;
+}
+
+async function readListing(adminDb: AdminFirestore, transaction: Transaction, actor: StayActor, propertyId: string): Promise<PublicListing | null> {
+  if (actor.kind !== 'guest') return null;
+  // 🔑 Η ταυτότητα της δημόσιας προβολής **είναι** η ταυτότητα της αγγελίας (ADR-777 Α3).
+  const snap = await transaction.get(adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(propertyId));
+  return snap.exists ? publicListingFromDocument(snap.data(), snap.id) : null;
 }
 
 async function transact(
   adminDb: AdminFirestore,
   propertyId: string,
   command: StayCalendarCommand,
-  actor: ListingActor,
+  actor: StayActor,
 ): Promise<Committed> {
   return adminDb.runTransaction(async (transaction): Promise<Committed> => {
-    const propertyRef = stayPropertyRef(adminDb, propertyId);
-    // Όλες οι αναγνώσεις μαζί, πριν από κάθε απόφαση. Το ημερολόγιο ακινήτου που δεν
-    // διαχειρίζεσαι διαβάζεται στον διακομιστή και ΠΕΤΙΕΤΑΙ — δεν φεύγει ποτέ.
-    const [propertySnap, snapshot] = await Promise.all([
-      transaction.get(propertyRef),
+    // Όλες οι αναγνώσεις πριν από κάθε απόφαση. Το ημερολόγιο ακινήτου που δεν διαχειρίζεσαι
+    // διαβάζεται στον διακομιστή και ΠΕΤΙΕΤΑΙ — δεν φεύγει ποτέ.
+    const [propertySnap, snapshot, listing] = await Promise.all([
+      transaction.get(stayPropertyRef(adminDb, propertyId)),
       readStayCalendar(adminDb, propertyId, transaction),
+      readListing(adminDb, transaction, actor, propertyId),
     ]);
     const property = ownerPropertyFromDocument(propertySnap.data(), propertyId);
-    if (property === null || !mayAdminister(custodyOf(property), actor)) {
-      return { result: { kind: 'absent' }, property: null };
+    if (property === null || !actorMayIssue(actor, command.action) || !actorAdmitted(actor, property, listing)) {
+      return refused({ kind: 'absent' });
     }
-    if (snapshot.kind === 'unreadable') return { result: { kind: 'unreadable' }, property: null };
+    if (snapshot.kind === 'unreadable') return refused({ kind: 'unreadable' });
+    const guestHead = await readGuestHead(adminDb, transaction, touchedGuest(actor, command, snapshot.entries));
+    if (guestHead === undefined) return refused({ kind: 'unreadable' });
 
     const now = nowISO();
     const context: WriteContext = {
       adminDb, property, head: snapshot.head, entries: snapshot.entries, months: snapshot.months,
-      actor, now, clock: stayClockAt(new Date(now)),
+      reading: snapshot, actor, performedBy: stayActorPerformer(actor), listing, guestHead,
+      now, clock: stayClockAt(new Date(now)),
     };
     const decision = decide(context, command);
-    if (decision.kind === 'refuse') return { result: decision.result, property: null };
-
-    const head = nextHead(property, snapshot.head, decision, now);
-    decision.apply(transaction);
-    transaction.set(stayCalendarHeadRef(adminDb, propertyId), head);
-    return { result: { kind: 'ok', entryId: decision.entryId, version: head.version }, property };
+    if (decision.kind === 'refuse') return refused(decision.result);
+    return commit(transaction, context, decision);
   });
 }
 
+/** **Η δέσμευση**: η εγγραφή της απόφασης **και** `version + 1` στην κεφαλή — πάντα μαζί. */
+function commit(
+  transaction: Transaction,
+  ctx: WriteContext,
+  decision: Extract<Decision, { kind: 'write' }>,
+): Committed {
+  const head = nextHead(ctx.property, ctx.head, decision, ctx.now);
+  decision.apply(transaction);
+  transaction.set(stayCalendarHeadRef(ctx.adminDb, ctx.property.id), head);
+  return {
+    result: { kind: 'ok', entryId: decision.entryId, version: head.version, holdExpiresAt: decision.holdExpiresAt ?? null },
+    property: ctx.property,
+    notice: decision.notice ?? null,
+  };
+}
+
 /**
- * **Εκτελεί μία πράξη στο ημερολόγιο.** Το ίχνος γράφεται μόνο για δεσμευμένη πράξη.
+ * **Εκτελεί μία πράξη στο ημερολόγιο.** Το ίχνος και η ειδοποίηση γράφονται μόνο για δεσμευμένη πράξη.
  *
+ * @param actor — ποιος ενεργεί· ο πίνακας εξουσίας (`STAY_COMMAND_AUTHORITY`) κρίνει αν επιτρέπεται.
  * @returns κλειστή έκβαση — ο καλών (διαδρομή) τη μεταφράζει σε HTTP με τον **έναν**
  *   πίνακα `STAY_CALENDAR_WRITE_STATUS`.
  */
@@ -222,11 +297,12 @@ export async function executeStayCalendarCommand(
   adminDb: AdminFirestore,
   propertyId: string,
   command: StayCalendarCommand,
-  actor: ListingActor,
+  actor: StayActor,
 ): Promise<StayCalendarWriteResult> {
-  const { result, property } = await transact(adminDb, propertyId, command, actor);
+  const { result, property, notice } = await transact(adminDb, propertyId, command, actor);
   if (result.kind === 'ok' && property !== null) {
-    await recordStayCalendarWrite(property, command, result.entryId, actor.uid);
+    await recordStayCalendarWrite(property, command, result.entryId, stayActorPerformer(actor));
+    if (notice !== null) await announceStayBookingNotice(adminDb, property, notice);
   }
   return result;
 }

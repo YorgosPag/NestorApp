@@ -117,17 +117,23 @@ function uidOf(source: StayOccupancySource, from: string): string {
  * (`stayCalendarOccupancies`), ποτέ δεύτερη λίστα.
  *
  * 🔑 Ό,τι **καταλαμβάνει** εξάγεται, και η απάντηση στο «καταλαμβάνει;» δίνεται από το
- * `STAY_LIFECYCLE_OCCUPIES` — άρα όταν το Στάδιο Δ κάνει το `requested` να καταλαμβάνει
- * όσο ζει η προθεσμία, τα **holds εξάγονται μόνα τους**, χωρίς αλλαγή εδώ.
+ * `STAY_LIFECYCLE_OCCUPIES` — άρα όταν το Στάδιο Δ έκανε το `requested` να καταλαμβάνει
+ * όσο ζει η προθεσμία, τα **holds εξάχθηκαν μόνα τους**.
+ *
+ * ⚠️ **Ο ισχυρισμός «χωρίς αλλαγή εδώ» ήταν ΜΙΣΟΣ — μετρημένα (Στάδιο Δ, §23.2)**: η λογική δεν
+ * άλλαξε, αλλά η απάντηση «καταλαμβάνει;» έγινε συνάρτηση του **χρόνου**, οπότε ο εξαγωγέας
+ * χρειάστηκε **τη στιγμή** (`instant`). Ληγμένο hold **δεν** εξάγεται — το κανάλι ανοίγει τη νύχτα
+ * στην επόμενη δημοσκόπηση, χωρίς να περιμένει το cron.
  */
 export function stayExportEvents(
   entries: readonly StayCalendarEntry[],
   rules: StayRules,
   scope: StayExportScope,
+  instant: string,
 ): readonly IcalWriteEvent[] {
   const visible = entries.filter((entry) => visibleTo(entry, scope));
   const events: IcalWriteEvent[] = [];
-  for (const occupancy of stayCalendarOccupancies(visible, rules.preparationNights)) {
+  for (const occupancy of stayCalendarOccupancies(visible, rules.preparationNights, instant)) {
     const { source, startsAt, expiresAt } = occupancy;
     if (expiresAt === null) continue;
     events.push({
@@ -148,11 +154,12 @@ export function stayExportCalendar(
   rules: StayRules,
   scope: StayExportScope,
   name: string,
+  instant: string,
 ): string {
   return writeIcalCalendar({
     prodId: STAY_ICAL_PRODID,
     name,
     refreshInterval: STAY_ICAL_REFRESH_INTERVAL,
-    events: stayExportEvents(entries, rules, scope),
+    events: stayExportEvents(entries, rules, scope, instant),
   });
 }

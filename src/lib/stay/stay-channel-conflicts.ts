@@ -25,6 +25,8 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι.
  */
 
+import type { StayClock } from '@/types/stay-rules';
+
 import { stayCalendarConflicts } from './stay-conflict';
 import type { StayCalendarEntry } from '@/types/stay-calendar';
 
@@ -82,14 +84,16 @@ function othersFor(entries: readonly StayCalendarEntry[], feedId: string): reado
  */
 export function stayChannelConflicts(
   entries: readonly StayCalendarEntry[],
-  today: string,
+  clock: Pick<StayClock, 'today' | 'instant'>,
 ): readonly StayChannelConflict[] {
   const out: StayChannelConflict[] = [];
   for (const entry of entries) {
     if (entry.kind !== 'block' || entry.block.channel === null) continue;
     const { block } = entry;
-    if (block.to <= today) continue;
-    const verdict = stayCalendarConflicts(entry, othersFor(entries, block.channel.feedId));
+    if (block.to <= clock.today) continue;
+    // 🔑 Η στιγμή κρίνει ποια αιτήματα ζουν (Στάδιο Δ): ζωντανό αίτημα κάτω από εξωτερικό block
+    //    **είναι** σύγκρουση που ο οικοδεσπότης πρέπει να δει· ληγμένο δεν είναι.
+    const verdict = stayCalendarConflicts(entry, othersFor(entries, block.channel.feedId), clock.instant);
     // `undetermined` ⇒ όχι σύγκρουση εδώ: το ημερολόγιο είναι ήδη `unreadable` και η
     // οθόνη το λέει· ένας δεύτερος συναγερμός για το ίδιο πράγμα είναι θόρυβος.
     if (verdict.kind !== 'conflicts') continue;

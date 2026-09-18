@@ -4,6 +4,7 @@
 
 import { wholePropertySpace } from '@/lib/spaces/space-ref';
 import { stayCalendarOccupancies, type StayOccupancySource } from '@/lib/stay/stay-rules';
+import { stayOccupancyHeldUntil } from '@/lib/stay/stay-calendar-of';
 import type { StayCalendar, StayChannelTrust } from '@/lib/stay/stay-availability-vocabulary';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
@@ -20,8 +21,8 @@ import {
 export const PROPERTY = 'prop_stage_b';
 const STAMP = '2026-09-01T00:00:00.000Z';
 
-/** Σήμερα = Τρίτη 1/9/2026, 10:00 ώρα Αθήνας. */
-export const CLOCK: StayClock = { today: '2026-09-01', minutes: 600 };
+/** Σήμερα = Τρίτη 1/9/2026, 10:00 ώρα Αθήνας (θερινή, UTC+3 ⇒ 07:00Z). */
+export const CLOCK: StayClock = { today: '2026-09-01', minutes: 600, instant: '2026-09-01T07:00:00.000Z' };
 
 export function listingOf(
   stay: PublicListingStay | null = { minNights: null, maxGuests: 4, nextAvailableFrom: null },
@@ -67,8 +68,35 @@ export function bookingEntry(id: string, checkIn: string, checkOut: string): Sta
     guests: 2,
     lifecycle: 'confirmed',
     riskDisclosedAt: null,
+    hold: null,
+    resolution: null,
+    guestUserId: null,
     createdAt: STAMP,
     updatedAt: STAMP,
+  };
+  return { kind: 'booking', booking };
+}
+
+/**
+ * **Αίτημα επισκέπτη σε αναμονή** (Στάδιο Δ, §23) — `requested` με hold που λήγει στο `expiresAt`.
+ * Ζωντανό ή νεκρό το κρίνει η **στιγμή** της ερώτησης, όχι το fixture.
+ */
+export function requestEntry(
+  id: string,
+  checkIn: string,
+  checkOut: string,
+  expiresAt: string,
+  guestUserId = 'guest_1',
+): StayCalendarEntry {
+  const base = bookingEntry(id, checkIn, checkOut);
+  if (base.kind !== 'booking') throw new Error('bookingEntry');
+  const booking: StayBooking = {
+    ...base.booking,
+    holder: { kind: 'user', userId: guestUserId, displayName: 'Μαρία' },
+    channel: 'platform',
+    lifecycle: 'requested',
+    hold: { expiresAt, tier: 'upcoming', bound: 'response-hours', respondentUserId: 'owner_1' },
+    guestUserId,
   };
   return { kind: 'booking', booking };
 }
@@ -117,9 +145,11 @@ export function calendarOf(
 ): StayCalendar<StayOccupancySource> {
   return {
     kind: 'declared',
-    occupied: stayCalendarOccupancies(entries, input.rules.preparationNights),
+    occupied: stayCalendarOccupancies(entries, input.rules.preparationNights, input.clock.instant),
     rules: input,
     // Στάδιο Γ (§22): οι άγκυρες του Β κρίνουν ημερολόγιο **με τα κανάλια συγχρονισμένα**.
     channels,
+    // Στάδιο Δ (§23.5): η **ίδια** ερώτηση «ζωντανό αίτημα;» με τη σύνθεση του διακομιστή.
+    heldUntilOf: (source) => stayOccupancyHeldUntil(source, input.clock.instant),
   };
 }

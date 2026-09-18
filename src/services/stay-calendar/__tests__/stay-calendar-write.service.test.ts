@@ -23,6 +23,12 @@ jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: (...args: unknown[]) => mockRecordChange(...args) },
 }));
 
+// Στάδιο Δ: ο γραφέας ειδοποιεί μετά τη δέσμευση — εδώ κρίνεται ο γραφέας, όχι ο αγωγός.
+const mockAnnounce = jest.fn();
+jest.mock('@/services/stay-calendar/stay-booking-notifier.service', () => ({
+  announceStayBookingNotice: (...args: unknown[]) => mockAnnounce(...args),
+}));
+
 let sequence = 0;
 jest.mock('@/services/enterprise-id.service', () => ({
   enterpriseIdService: {
@@ -44,7 +50,7 @@ function givenStay(offers = [offerOf('leaseShort', 65)]): void {
 }
 
 const run = (command: StayCalendarCommand, actor: ListingActor = OWNER) =>
-  executeStayCalendarCommand(adminDb, PROPERTY, command, actor);
+  executeStayCalendarCommand(adminDb, PROPERTY, command, { kind: 'host', actor });
 
 const block = (from: string, to: string): StayCalendarCommand => ({ action: 'block', from, to, note: null });
 const book = (checkIn: string, checkOut: string): StayCalendarCommand => ({
@@ -84,7 +90,8 @@ describe('Χ — ο κριτής μέσα στη συναλλαγή', () => {
     await run(block('2027-10-10', '2027-10-14'));
     expect(await run(book('2027-10-12', '2027-10-15'))).toEqual({
       kind: 'conflict',
-      conflicts: [{ entryKind: 'block', entryId: 'sblk_1', from: '2027-10-10', to: '2027-10-14' }],
+      // Στάδιο Δ: `heldUntil: null` — σκληρό block, όχι αίτημα σε αναμονή («απαντήστε πρώτα»).
+      conflicts: [{ entryKind: 'block', entryId: 'sblk_1', from: '2027-10-10', to: '2027-10-14', heldUntil: null }],
     });
     expect(db.all(COLLECTIONS.STAY_BOOKINGS)).toHaveLength(0);
   });

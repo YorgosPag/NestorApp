@@ -36,6 +36,7 @@ import { StayCalendarDeclaration, StayCalendarLegend, StayCalendarMonthNav } fro
 
 import { StayCalendarGrid } from './StayCalendarGrid';
 import { StayCalendarPanel } from './StayCalendarPanel';
+import { StayRequestsInbox } from './StayRequestsInbox';
 import { StayRulesSettings } from './StayRulesSettings';
 import type { StayPendingWarnings } from './StayRuleWarningsConfirm';
 import routeSlice from '@/i18n/generated/routes/offers__offerId__calendar.el.json';
@@ -87,6 +88,10 @@ function StayCalendarBody({ ownerPropertyId, view, calendar, picker, pricing }: 
   return (
     <>
       {locked && <p role="alert" className="text-sm text-foreground">{t('property-market:offer.stayCalendar.unreadable')}</p>}
+      {/* ADR-835 §23.8 (Στάδιο Δ) — το εισερχόμενο αιτημάτων: ΠΡΩΤΟ, γιατί έχει προθεσμία. */}
+      {view.kind === 'readable' && (
+        <StayRequestsInbox requests={view.pendingRequests} busy={calendar.busy} onSend={(c) => void send(c)} />
+      )}
       {view.kind === 'readable' && (
         <>
           <StayCalendarDeclaration declaredAt={view.declaredAt} busy={calendar.busy} locked={locked} onSend={(c) => void send(c)} />

@@ -99,9 +99,10 @@ describe('Β — τι βλέπει ο επισκέπτης', () => {
     expect(byDate('2026-09-27')?.minNights).toBe(3);
   });
 
-  it('🔴 ποτέ ποιος ή γιατί — μόνο τα έξι πεδία', () => {
+  it('🔴 ποτέ ποιος ή γιατί — μόνο τα επτά πεδία', () => {
+    // Στάδιο Δ (§23.5): +`heldUntil` — ΩΣ ΠΟΤΕ κρατά ένα αίτημα, ποτέ ΠΟΙΟΣ το έκανε.
     expect(Object.keys(declaredNights()[0]).sort()).toEqual(
-      ['checkInAllowed', 'checkOutAllowed', 'date', 'maxNights', 'minNights', 'state'],
+      ['checkInAllowed', 'checkOutAllowed', 'date', 'heldUntil', 'maxNights', 'minNights', 'state'],
     );
   });
 

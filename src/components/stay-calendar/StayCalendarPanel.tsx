@@ -40,6 +40,8 @@ const MESSAGE: Readonly<Record<StayCalendarMessageId, string>> = {
   failed: 'property-market:offer.stayCalendar.outcome.failed',
   rulesUnacknowledged: 'property-market:offer.stayCalendar.outcome.rulesUnacknowledged',
   contradictoryRules: 'property-market:offer.stayCalendar.outcome.contradictoryRules',
+  conflictRequest: 'property-market:offer.stayCalendar.outcome.conflictRequest',
+  holdLapsed: 'property-market:offer.stayCalendar.outcome.holdLapsed',
 };
 
 const ACTION = 'self-start rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50';
@@ -89,15 +91,22 @@ function BlockDetails({ entry, range, busy, onSend }: DetailsProps<'block'>): Re
 
 function BookingDetails({ entry, range, busy, onSend }: DetailsProps<'booking'>): React.ReactElement {
   const { t } = useTranslation(['property-market']);
+  // Στάδιο Δ: **μόνο** η επιβεβαιωμένη ακυρώνεται· το ζωντανό αίτημα απαντιέται από το εισερχόμενο.
+  const pendingRequest = entry.lifecycle === 'requested' && entry.occupies;
   return (
     <article className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold text-foreground">{t('property-market:offer.stayCalendar.entry.bookingTitle')}</h3>
+      <h3 className="text-sm font-semibold text-foreground">
+        {pendingRequest ? t('property-market:offer.stayCalendar.entry.requestTitle') : t('property-market:offer.stayCalendar.entry.bookingTitle')}
+      </h3>
       <p className="text-sm text-foreground">{range}</p>
       {entry.guestLabel !== null && <p className="text-sm text-foreground">{entry.guestLabel}</p>}
       <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.entry.guests', { count: entry.guests })}</p>
-      <button type="button" disabled={busy} onClick={() => onSend({ action: 'cancel', bookingId: entry.id })} className={cn(ACTION, COLOR_BRIDGE.action.caution)}>
-        {t('property-market:offer.stayCalendar.entry.cancel')}
-      </button>
+      {pendingRequest && <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.entry.requestHint')}</p>}
+      {entry.lifecycle === 'confirmed' && (
+        <button type="button" disabled={busy} onClick={() => onSend({ action: 'cancel', bookingId: entry.id })} className={cn(ACTION, COLOR_BRIDGE.action.caution)}>
+          {t('property-market:offer.stayCalendar.entry.cancel')}
+        </button>
+      )}
     </article>
   );
 }

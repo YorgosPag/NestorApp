@@ -207,8 +207,8 @@ export type StayOccupancySource =
  * μόνο στις **δικές της** κρατήσεις· εδώ ισχύει για όλα τα κανάλια. Τα blocks του
  * ιδιοκτήτη **δεν** είναι επισκέπτες και δεν χρειάζονται καθάρισμα.
  */
-function needsPreparation(entry: StayCalendarEntry): boolean {
-  if (!stayEntryOccupies(entry)) return false;
+function needsPreparation(entry: StayCalendarEntry, instant: string): boolean {
+  if (!stayEntryOccupies(entry, instant)) return false;
   return entry.kind === 'booking' || entry.block.source === 'external';
 }
 
@@ -239,18 +239,23 @@ function preparationAround(
  *
  * ⚠️ Χαλασμένη εγγραφή **δεν** παίρνει προετοιμασία (δεν ξέρουμε άκρα)· ο κριτής τη
  * βλέπει αυτούσια και απαντά `undetermined` — fail-closed.
+ *
+ * 🔑 **Ζωντανό αίτημα ΠΑΙΡΝΕΙ προετοιμασία** (Στάδιο Δ, §23.2): αν γίνει αποδεκτό, οι νύχτες
+ * καθαρισμού θα χρειαστούν — και ο επόμενος επισκέπτης δεν πρέπει να τις πάρει στο μεταξύ.
+ * Η στιγμή `instant` κρίνει αν το αίτημα **ζει ακόμη** (`stayEntryOccupies`).
  */
 export function stayCalendarOccupancies(
   entries: readonly StayCalendarEntry[],
   preparationNights: StayRules['preparationNights'],
+  instant: string,
 ): Occupancy<StayOccupancySource>[] {
   const out: Occupancy<StayOccupancySource>[] = [];
   for (const entry of entries) {
-    if (!stayEntryOccupies(entry)) continue;
+    if (!stayEntryOccupies(entry, instant)) continue;
     const occupancy = stayEntryOccupancyOf(entry);
     out.push({ ...occupancy, source: { kind: 'entry', entry } });
     const { startsAt, expiresAt } = occupancy;
-    if (preparationNights === 0 || !needsPreparation(entry)) continue;
+    if (preparationNights === 0 || !needsPreparation(entry, instant)) continue;
     if (!isDateKey(startsAt) || expiresAt === null || !isDateKey(expiresAt)) continue;
     out.push(...preparationAround(entry, startsAt, expiresAt, preparationNights));
   }

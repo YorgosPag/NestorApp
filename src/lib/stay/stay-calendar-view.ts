@@ -33,12 +33,19 @@ export type StayCalendarEntryView =
       readonly from: string;
       readonly to: string;
       readonly guests: number;
-      /** Ιδιωτική σημείωση του οικοδεσπότη για χειροκίνητη κράτηση· `null` για λογαριασμό. */
+      /**
+       * Ποιον βλέπει ο οικοδεσπότης: η ιδιωτική του σημείωση (χειροκίνητη κράτηση) ή το όνομα
+       * του λογαριασμού τη στιγμή του αιτήματος (Στάδιο Δ). Ποτέ uid, ποτέ email· `null` = χωρίς όνομα.
+       */
       readonly guestLabel: string | null;
       readonly channel: StayBookingChannel;
       readonly lifecycle: StayBookingLifecycle;
-      /** Πιάνει νύχτες; — από τη **μία** πηγή (`stayEntryOccupies`), ποτέ ξαναγραμμένο στην οθόνη. */
+      /** Πιάνει νύχτες **τώρα**; — από τη **μία** πηγή (`stayEntryOccupies`), ποτέ ξαναγραμμένο στην οθόνη. */
       readonly occupies: boolean;
+      /** Η προθεσμία απάντησης, αν γεννήθηκε ως αίτημα (§23.3)· αλλιώς `null`. */
+      readonly holdExpiresAt: string | null;
+      /** Πότε ειπώθηκε στον επισκέπτη ότι το ακίνητο πωλείται (§4.7)· `null` = δεν ίσχυε. */
+      readonly riskDisclosedAt: string | null;
     };
 
 /**
@@ -56,10 +63,20 @@ export type StayCalendarView =
       readonly rules: StayRules;
       /** Οι υπερβάσεις ανά ημερομηνία **μέσα στο παράθυρο** της οθόνης. */
       readonly days: StayDayRules;
+      /**
+       * 🔴 **Τα ζωντανά αιτήματα — ΧΩΡΙΣ παράθυρο** (Στάδιο Δ, §23.8). Οι `entries` κόβονται στους
+       * 2–3 μήνες της οθόνης· ένα αίτημα για τον Αύγουστο θα ήταν **αόρατο** ώσπου ο οικοδεσπότης να
+       * πάει τυχαία εκεί — και θα έληγε χωρίς να το δει. Το «εισερχόμενο» αιτημάτων δεν έχει μήνα.
+       */
+      readonly pendingRequests: readonly StayCalendarEntryView[];
     }
   | { readonly kind: 'unreadable' };
 
-export function stayCalendarEntryViewOf(entry: StayCalendarEntry): StayCalendarEntryView {
+/**
+ * **Η προβολή μιας εγγραφής τη στιγμή `instant`** — η στιγμή κρίνει αν ένα αίτημα **ζει ακόμη**
+ * (`occupies`), ώστε η οθόνη να μη δείχνει ως «σε αναμονή» αίτημα που έληξε πριν τρέξει το cron.
+ */
+export function stayCalendarEntryViewOf(entry: StayCalendarEntry, instant: string): StayCalendarEntryView {
   if (entry.kind === 'block') {
     const { block } = entry;
     return { kind: 'block', id: block.id, from: block.from, to: block.to, source: block.source, note: block.note };
@@ -71,11 +88,24 @@ export function stayCalendarEntryViewOf(entry: StayCalendarEntry): StayCalendarE
     from: booking.checkIn,
     to: booking.checkOut,
     guests: booking.guests,
-    guestLabel: booking.holder.kind === 'offline' ? booking.holder.label : null,
+    guestLabel: booking.holder.kind === 'offline' ? booking.holder.label : booking.holder.displayName,
     channel: booking.channel,
     lifecycle: booking.lifecycle,
-    occupies: stayEntryOccupies(entry),
+    occupies: stayEntryOccupies(entry, instant),
+    holdExpiresAt: booking.hold?.expiresAt ?? null,
+    riskDisclosedAt: booking.riskDisclosedAt,
   };
+}
+
+/** Τα **ζωντανά** αιτήματα, η πιο επείγουσα προθεσμία πρώτη — το εισερχόμενο του οικοδεσπότη. */
+export function stayPendingRequestsOf(entries: readonly StayCalendarEntryView[]): readonly StayCalendarEntryView[] {
+  return entries
+    .filter((entry) => entry.kind === 'booking' && entry.lifecycle === 'requested' && entry.occupies)
+    .sort((a, b) => {
+      const left = a.kind === 'booking' ? a.holdExpiresAt ?? '' : '';
+      const right = b.kind === 'booking' ? b.holdExpiresAt ?? '' : '';
+      return left === right ? a.id.localeCompare(b.id) : left < right ? -1 : 1;
+    });
 }
 
 /**

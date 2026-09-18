@@ -16,7 +16,8 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
-import { saleExposureOf, stayAvailabilityFor } from '@/lib/stay/stay-availability';
+import { saleExposureOf } from '@/lib/stay/stay-availability';
+import { stayRequestPreview } from '@/lib/stay/stay-request-preview';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import { stayCalendarOf, stayClockAt, stayDayRulesOf } from '@/lib/stay/stay-calendar-of';
 import { monthWindow } from '@/lib/stay/stay-calendar-month';
@@ -77,15 +78,15 @@ export async function readPublicStayNights(
 async function answerOne(adminDb: AdminFirestore, listingId: string, query: StayQuery, now: Date): Promise<PublicStayAnswer> {
   const read = await readPublicStay(adminDb, listingId);
   // 🔴 Αγγελία που ο πελάτης έχει κι εμείς δεν βρίσκουμε ⇒ **δικό μας** χρέος, ποτέ «δεν είναι κατάλυμα».
-  if (read.kind === 'missing') return { answer: { kind: 'unreadable' }, quote: null };
-  if (read.kind === 'not-a-stay') return { answer: { kind: 'not-a-stay' }, quote: null };
+  if (read.kind === 'missing') return { answer: { kind: 'unreadable' }, quote: null, hold: null };
+  if (read.kind === 'not-a-stay') return { answer: { kind: 'not-a-stay' }, quote: null, hold: null };
   const { stay } = read;
-  const calendar = stayCalendarOf(stay.reading, stayClockAt(now));
-  const answer = stayAvailabilityFor(stay.listing, query, calendar, saleExposureOf(stay.listing));
+  // 🔑 Η **ίδια** σύνθεση με τον γραφέα του αιτήματος (Στάδιο Δ) — η υπόσχεση είναι η δέσμευση.
+  const { answer, hold } = stayRequestPreview(stay.listing, stay.reading, stayClockAt(now), query);
   // Οι τιμές ανά ημέρα ισχύουν και σε αδήλωτο ημερολόγιο· σε αδιάβαστο, δεν τιμολογούμε.
   const days = stay.reading.kind === 'readable' ? stayDayRulesOf(stay.reading.months) : null;
   const quote = days === null ? null : stayQuoteOf(stay.listing, days, query.checkIn, query.checkOut);
-  return { answer, quote };
+  return { answer, quote, hold };
 }
 
 /**

@@ -30,9 +30,12 @@ import {
   STAY_CUTOFF_HOUR_MAX,
   STAY_ORPHAN_GAP_NIGHTS,
   STAY_PREPARATION_NIGHTS,
+  STAY_RESPONSE_HOURS_SUGGESTED,
   STAY_RULE_MAX_NIGHTS,
+  STAY_RULES_NONE,
   type StayRules,
 } from '@/types/stay-rules';
+import { WeeklyHoursField } from '@/components/mandate/WeeklyHoursField';
 
 import { StayRuleChoice } from './StayRuleChoice';
 
@@ -151,6 +154,42 @@ function LengthRules({ draft, patch }: {
   );
 }
 
+/** Δέχεται ο αναλυτής αυτό το ωράριο; — ο **ίδιος** κριτής (`stayRulesFrom`), πάνω σε κανόνες χωρίς άλλο λάθος. */
+function responseHoursUsable(hours: NonNullable<StayRules['responseHours']>): boolean {
+  return stayRulesFrom({ ...STAY_RULES_NONE, responseHours: hours }) !== null;
+}
+
+/**
+ * **Οι ώρες απόκρισης** (Στάδιο Δ, §23.3) — πότε τρέχει το ρολόι της προθεσμίας ενός αιτήματος.
+ * Κλειστό = ρολόι τοίχου (η πρακτική της αγοράς). Ανοιχτό = ο **ίδιος** επεξεργαστής ωραρίου της κάρτας.
+ */
+function ResponseRules({ draft, patch }: {
+  readonly draft: StayRules;
+  readonly patch: (next: Partial<StayRules>) => void;
+}): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  const switchId = React.useId();
+  const hours = draft.responseHours;
+  return (
+    <>
+      <span className="flex items-center gap-2">
+        <Switch id={switchId} checked={hours !== null}
+          onCheckedChange={(on) => patch({ responseHours: on ? STAY_RESPONSE_HOURS_SUGGESTED : null })} />
+        <Label htmlFor={switchId}>{t('property-market:offer.stayCalendar.rules.responseHours')}</Label>
+      </span>
+      <p className="text-xs text-muted-foreground">
+        {hours === null ? t('property-market:offer.stayCalendar.rules.responseHoursOff') : t('property-market:offer.stayCalendar.rules.responseHoursOn')}
+      </p>
+      {hours !== null && (
+        <WeeklyHoursField hours={hours} onChange={(responseHours) => patch({ responseHours })} labels={{
+          legend: t('property-market:offer.stayCalendar.rules.responseHoursLegend'),
+          hint: t('property-market:offer.stayCalendar.rules.responseHoursHint'),
+        }} />
+      )}
+    </>
+  );
+}
+
 export function StayRulesSettings({ rules, busy, onSend }: {
   readonly rules: StayRules;
   readonly busy: boolean;
@@ -171,7 +210,15 @@ export function StayRulesSettings({ rules, busy, onSend }: {
         <p className="text-xs text-muted-foreground">{t('property-market:offer.stayCalendar.rules.termsNote')}</p>
         <TimeRules draft={draft} patch={patch} />
         <LengthRules draft={draft} patch={patch} />
-        {valid === null && <p role="alert" className={cn('text-sm', COLOR_BRIDGE.text.error)}>{t('property-market:offer.stayCalendar.rules.weekdaysEmpty')}</p>}
+        <ResponseRules draft={draft} patch={patch} />
+        {/* Ό,τι αρνείται ο αναλυτής, ονομασμένο ανά αιτία — ποτέ «μέρες κενές» για άκυρο ωράριο. */}
+        {valid === null && (
+          <p role="alert" className={cn('text-sm', COLOR_BRIDGE.text.error)}>
+            {draft.responseHours !== null && !responseHoursUsable(draft.responseHours)
+              ? t('property-market:offer.stayCalendar.rules.responseHoursInvalid')
+              : t('property-market:offer.stayCalendar.rules.weekdaysEmpty')}
+          </p>
+        )}
         <button type="submit" disabled={busy || valid === null} className={cn(BUTTON, COLOR_BRIDGE.action.primary)}>
           {t('property-market:offer.stayCalendar.rules.submit')}
         </button>

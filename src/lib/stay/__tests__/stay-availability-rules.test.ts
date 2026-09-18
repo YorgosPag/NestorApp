@@ -160,8 +160,8 @@ describe('Ζ — προετοιμασία: μοιραζόμενη, για κάθ
   });
 
   it('🔴 χωρίς προετοιμασία καμία συνθετική κατάληψη', () => {
-    expect(stayCalendarOccupancies([bookingEntry('stay_a', '2026-09-05', '2026-09-10')], 0)).toHaveLength(1);
-    expect(stayCalendarOccupancies([bookingEntry('stay_a', '2026-09-05', '2026-09-10')], 2)).toHaveLength(3);
+    expect(stayCalendarOccupancies([bookingEntry('stay_a', '2026-09-05', '2026-09-10')], 0, CLOCK.instant)).toHaveLength(1);
+    expect(stayCalendarOccupancies([bookingEntry('stay_a', '2026-09-05', '2026-09-10')], 2, CLOCK.instant)).toHaveLength(3);
   });
 });
 

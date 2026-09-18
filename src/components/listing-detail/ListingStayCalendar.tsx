@@ -16,7 +16,8 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCalendarDay, formatCalendarMonth } from '@/lib/intl-formatting';
+import { formatCalendarDay, formatCalendarMonth, formatDateTime } from '@/lib/intl-formatting';
+import { STAY_HOLD_TIME_FORMAT } from '@/lib/stay/stay-hold-deadline';
 import { addMonthsToMonthKey } from '@/lib/stay/stay-calendar-month';
 import type { StayPublicNight } from '@/lib/stay/stay-nights-view';
 import {
@@ -37,6 +38,7 @@ const CELL_LABEL: Readonly<Record<StayDayMeaning, string>> = {
   'no-arrival': 'short-stay:calendar.cell.no-arrival',
   closed: 'short-stay:calendar.cell.closed',
   unsynced: 'short-stay:calendar.cell.unsynced',
+  held: 'short-stay:calendar.cell.held',
   'selected-check-in': 'short-stay:calendar.cell.selected-check-in',
   'selected-check-out': 'short-stay:calendar.cell.selected-check-out',
   'in-stay': 'short-stay:calendar.cell.in-stay',
@@ -50,6 +52,8 @@ const CELL_TONE: Readonly<Record<StayDayMeaning, string>> = {
   closed: 'border-border bg-muted text-muted-foreground line-through',
   // «Δεν ξέρουμε»: διαγώνια υπόδειξη + λέξη στο aria-label — ποτέ όψη ελεύθερης μέρας.
   unsynced: 'border-dashed border-muted-foreground/60 bg-card text-muted-foreground',
+  // «Σε αναμονή»: όψη κλειστής (δεν επιλέγεται) με διακεκομμένο περίγραμμα — θα ανοίξει μόνη της.
+  held: 'border-dashed border-border bg-muted text-muted-foreground',
   // ⚠️ Κείμενο ΠΟΤΕ με token επιφάνειας (CHECK 3.38): η επιλογή = περίγραμμα + βάρος, όχι αντιστροφή.
   'selected-check-in': 'border-foreground bg-accent font-semibold text-foreground ring-2 ring-foreground',
   'selected-check-out': 'border-foreground bg-accent font-semibold text-foreground ring-2 ring-foreground',
@@ -65,6 +69,9 @@ function useStayDayDescription(): (day: string, meaning: StayDayMeaning, night: 
       parts.push(t('short-stay:calendar.minNights', { count: night.minNights }));
     }
     if (night?.state === 'conditional') parts.push(t('short-stay:calendar.conditional'));
+    if (night?.state === 'held' && night.heldUntil !== null) {
+      parts.push(t('short-stay:calendar.heldUntil', { until: formatDateTime(night.heldUntil, STAY_HOLD_TIME_FORMAT) }));
+    }
     return parts.join(' · ');
   };
 }
@@ -147,6 +154,7 @@ export function ListingStayCalendar({ monthKey, nights, selection, onShiftMonth,
         <li className="line-through">{t('short-stay:calendar.legend.closed')}</li>
         <li className="border-b border-dashed">{t('short-stay:calendar.legend.checkOutOnly')}</li>
         <li className="underline decoration-dotted">{t('short-stay:calendar.legend.conditional')}</li>
+        <li className="border-b border-dashed text-muted-foreground">{t('short-stay:calendar.legend.held')}</li>
       </ul>
     </section>
   );

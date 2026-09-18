@@ -48,14 +48,20 @@ import {
  * 🔴 **`unsynced` (Στάδιο Γ, §22) ΔΕΝ είναι «κλειστή» ούτε «ελεύθερη»**: ένα κανάλι
  * σώπασε πάνω από το όριο εμπιστοσύνης, άρα **δεν ξέρουμε** αν πουλήθηκε. Η αγορά, στην
  * ίδια θέση, εξακολουθεί να γράφει «ελεύθερη» — και αυτό **είναι** το overbooking (§6.4).
+ *
+ * 🏆 **`held` (Στάδιο Δ, §23.5) ΔΕΝ είναι «κλειστή»**: τη κρατά **ζωντανό αίτημα** άλλου επισκέπτη,
+ * και αν ο οικοδεσπότης δεν απαντήσει ελευθερώνεται **μόνη της** στο `heldUntil`. Η αγορά δείχνει
+ * σκέτο γκρι· εμείς λέμε «σε αναμονή ως 14:00». Δεν επιλέγεται — η υπόσχεση ανήκει στον πρώτο.
  */
-export type StayPublicNightState = 'free' | 'closed' | 'conditional' | 'unsynced';
+export type StayPublicNightState = 'free' | 'closed' | 'conditional' | 'unsynced' | 'held';
 
 /** Μία νύχτα του δημόσιου ημερολογίου. */
 export interface StayPublicNight {
   /** `YYYY-MM-DD` — η νύχτα που ξεκινά αυτή τη μέρα. */
   readonly date: string;
   readonly state: StayPublicNightState;
+  /** Ως πότε κρατά το αίτημα — **μόνο** για `held`, αλλιώς `null`. Ποτέ ποιος ή γιατί. */
+  readonly heldUntil: string | null;
   /** Μπορεί να **ξεκινήσει** διαμονή εδώ που πράγματι χωράει; */
   readonly checkInAllowed: boolean;
   /** Μπορεί να **τελειώσει** διαμονή σήμερα (η χθεσινή νύχτα ανοιχτή + κανόνας αναχώρησης); */
@@ -75,14 +81,20 @@ export type StayPublicNights =
 // 2. ΚΛΕΙΣΤΕΣ ΝΥΧΤΕΣ
 // =============================================================================
 
-/** Οι κλειστές νύχτες στο `[from, to)` — ή `null` αν κάποια κατάληψη δεν διαβάζεται. */
+/**
+ * Οι πιασμένες νύχτες στο `[from, to)`: ημερομηνία → `null` (σκληρά κλειστή) ή η προθεσμία του
+ * αιτήματος που την κρατά. Σκληρή κατάληψη **κερδίζει** την αναμονή στην ίδια νύχτα: στο `heldUntil`
+ * δεν θα ελευθερωνόταν. `null` συνολικά αν κάποια κατάληψη δεν διαβάζεται.
+ */
 function closedNightsWithin<TSource>(
   occupied: readonly Occupancy<TSource>[],
+  heldUntilOf: (source: TSource) => string | null,
   from: string,
   to: string,
-): Set<string> | null {
-  const closed = new Set<string>();
+): Map<string, string | null> | null {
+  const closed = new Map<string, string | null>();
   for (const occupancy of occupied) {
+    const heldUntil = heldUntilOf(occupancy.source);
     const end = occupancy.expiresAt ?? to;
     const shape = intervalShape(occupancy.startsAt, end);
     // 🔴 Ό,τι ο κριτής δεν μπορεί να κρίνει (άκυρο ή ανάποδο) μολύνει όλη την προβολή.
@@ -90,7 +102,11 @@ function closedNightsWithin<TSource>(
     const start = occupancy.startsAt > from ? occupancy.startsAt : from;
     const stop = end < to ? end : to;
     for (let day: string | null = start; day !== null && day < stop; day = addDaysToDateKey(day, 1)) {
-      closed.add(day);
+      const current = closed.get(day);
+      if (current === null) continue;
+      if (heldUntil === null || current === undefined || Date.parse(heldUntil) > Date.parse(current)) {
+        closed.set(day, heldUntil);
+      }
     }
   }
   return closed;
@@ -99,12 +115,14 @@ function closedNightsWithin<TSource>(
 /** Η κατάσταση μιας νύχτας, από τις κλειστές + ειδοποίηση + παράθυρο + αίρεση. */
 function nightStateOf(
   date: string,
-  closed: ReadonlySet<string>,
+  closed: ReadonlyMap<string, string | null>,
   bounds: { readonly earliest: string; readonly until: string | null },
   sale: StaySaleExposure | null,
 ): StayPublicNightState {
   if (date < bounds.earliest || (bounds.until !== null && date >= bounds.until)) return 'closed';
-  if (closed.has(date)) return 'closed';
+  const occupiedBy = closed.get(date);
+  if (occupiedBy === null) return 'closed';
+  if (occupiedBy !== undefined) return 'held';
   if (sale !== null && (sale.conditionalFrom === null || date >= sale.conditionalFrom)) {
     return 'conditional';
   }
@@ -181,7 +199,10 @@ function someStayFits(index: NightIndex, checkIn: string, lastDate: string): boo
   if (first === undefined) return false;
   let nights = 0;
   for (let day: string | null = checkIn; day !== null && day < lastDate; day = addDaysToDateKey(day, 1)) {
-    if (index.get(day)?.state === 'closed') return false;
+    // 🔴 Κάθε μη επιλέξιμη νύχτα τερματίζει — όχι μόνο η `closed`. Με `closed` μόνο, μια
+    //    `unsynced`/`held` στη μέση άφηνε την «εφικτή άφιξη» να υπόσχεται διαμονή πάνω της (Στάδιο Δ).
+    const state = index.get(day)?.state;
+    if (state === undefined || !selectable(state)) return false;
     nights += 1;
     const out = addDaysToDateKey(day, 1);
     const last = out === null ? undefined : index.get(out);
@@ -203,13 +224,14 @@ function draftNights<TSource>(
     readonly occupied: readonly Occupancy<TSource>[];
     readonly rules: StayRulesInput;
     readonly channels: StayChannelTrust;
+    readonly heldUntilOf: (source: TSource) => string | null;
   },
   sale: StaySaleExposure | null,
   from: string,
   to: string,
 ): StayPublicNight[] | null {
   const input = calendar.rules;
-  const closed = closedNightsWithin(calendar.occupied, from, to);
+  const closed = closedNightsWithin(calendar.occupied, calendar.heldUntilOf, from, to);
   if (closed === null) return null;
   const bounds = { earliest: earliestCheckIn(input), until: bookableUntil(input) };
   const base = listing.stay?.minNights ?? null;
@@ -220,6 +242,7 @@ function draftNights<TSource>(
     nights.push({
       date,
       state,
+      heldUntil: state === 'held' ? closed.get(date) ?? null : null,
       // 🔑 Μόνο `free`/`conditional` δέχονται άφιξη/αναχώρηση: μια `unsynced` νύχτα δεν
       //    επιλέγεται — αλλιώς η οθόνη θα υποσχόταν ό,τι η μηχανή αρνείται (§21.5).
       checkInAllowed: selectable(state) && arrivalAllowed(input, date),

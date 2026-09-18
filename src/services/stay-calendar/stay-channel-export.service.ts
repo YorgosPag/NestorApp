@@ -104,12 +104,17 @@ export function stayExportClaimOf(token: string): StayExportClaim {
 /**
  * **Το σώμα του feed.** Καθαρή σύνθεση — ο καλών (διαδρομή) έχει ήδη αποδείξει υπογραφή,
  * γενιά και ότι το ακίνητο είναι κατάλυμα.
+ *
+ * @param instant — η στιγμή της λήψης: κρίνει ποια αιτήματα **ζουν ακόμη** (Στάδιο Δ, §23.2).
+ *   ⚠️ Το σώμα μένει ντετερμινιστικό **ανάμεσα** σε λήξεις: η στιγμή δεν γράφεται μέσα του
+ *   (`DTSTAMP` = ώρα της εγγραφής, §22.13), άρα το `ETag` αλλάζει **μόνο** όταν αλλάζει κάτι.
  */
 export function stayExportBody(
   entries: readonly StayCalendarEntry[],
   rules: StayRules,
   scope: StayExportScope,
   title: string,
+  instant: string,
 ): string {
-  return stayExportCalendar(entries, rules, scope, title);
+  return stayExportCalendar(entries, rules, scope, title, instant);
 }

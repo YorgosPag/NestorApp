@@ -31,6 +31,7 @@ export type StayDayMeaning =
   | 'no-arrival'      // ανοιχτή νύχτα, αλλά δεν ξεκινά διαμονή εδώ
   | 'closed'          // μη διαθέσιμη
   | 'unsynced'        // κανάλι που σώπασε: ΔΕΝ ξέρουμε (ADR-835 §22) — ποτέ «ελεύθερη»
+  | 'held'            // ζωντανό αίτημα άλλου επισκέπτη — ελευθερώνεται μόνη της (ADR-835 §23.5)
   | 'selected-check-in'
   | 'selected-check-out'
   | 'in-stay';
@@ -60,6 +61,8 @@ function meaningWithoutSelection(night: StayPublicNight | undefined): StayDayMea
   if (night.state === 'unsynced') return 'unsynced';
   if (night.checkInAllowed) return 'check-in';
   if (night.state === 'closed') return night.checkOutAllowed ? 'check-out-only' : 'closed';
+  // Η νύχτα σε αναμονή κρίνεται όπως η κλειστή ως προς την αναχώρηση — αλλά λέει ότι **θα ανοίξει**.
+  if (night.state === 'held') return night.checkOutAllowed ? 'check-out-only' : 'held';
   return 'no-arrival';
 }
 

@@ -26,6 +26,7 @@ import type { PublicListing } from '@/types/public-listing';
 
 import { ListingStayAnswer } from './ListingStayAnswer';
 import { ListingStayCalendar } from './ListingStayCalendar';
+import { ListingStayRequest } from './ListingStayRequest';
 
 function queryOf(selection: StayPublicSelection): StayQuery | null {
   return selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, guests: null } : null;
@@ -77,6 +78,14 @@ export default function ListingStayBooking({ listing }: { readonly listing: Publ
         onPick={(day) => setSelection((current) => nextStaySelection(current, day, nights))}
       />
       <ListingStayAnswer listingId={listing.id} state={answers} />
+      {/* Στάδιο Δ (ADR-835 §23): η υπόσχεση πριν, το αίτημα, και τα αιτήματά μου. */}
+      <ListingStayRequest
+        listingId={listing.id}
+        query={selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut } : null}
+        answer={answers.kind === 'loaded' ? answers.answers[listing.id] : undefined}
+        maxGuests={listing.stay?.maxGuests ?? null}
+        onChanged={() => { setSelection(NO_STAY_SELECTION); reload(); }}
+      />
     </>
   );
 }

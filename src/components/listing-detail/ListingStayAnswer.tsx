@@ -12,9 +12,10 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCalendarDay, formatList } from '@/lib/intl-formatting';
+import { formatCalendarDay, formatDateTime, formatList } from '@/lib/intl-formatting';
 import { formatMinor } from '@/lib/money/money';
-import type { StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
+import { isStayable, type StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
+import { STAY_HOLD_TIME_FORMAT } from '@/lib/stay/stay-hold-deadline';
 import type { StayQuote } from '@/lib/stay/stay-nightly-quote';
 import type { StayAnswersState } from '@/hooks/listings/useStayAnswers';
 
@@ -27,6 +28,8 @@ function headlineOf(answer: StayAvailabilityAnswer, t: (key: string, params?: Re
         ? t('short-stay:answer.conditional')
         : t('short-stay:answer.conditionalFrom', { date: formatCalendarDay(answer.conditionalFrom, true) });
     case 'occupied': return t('short-stay:answer.occupied');
+    // 🏆 Στάδιο Δ (§23.5): «σε αναμονή ως …», όχι σκέτο «κλειστό» — θα ελευθερωθεί αν δεν απαντηθεί.
+    case 'held': return t('short-stay:answer.held', { until: formatDateTime(answer.until, STAY_HOLD_TIME_FORMAT) });
     case 'below-min-nights': return t('short-stay:answer.below-min-nights', { minNights: answer.minNights });
     case 'above-max-nights': return t('short-stay:answer.above-max-nights', { maxNights: answer.maxNights });
     case 'advance-notice': return t('short-stay:answer.advance-notice', { date: formatCalendarDay(answer.earliestCheckIn, true) });
@@ -86,7 +89,8 @@ export function ListingStayAnswer({ listingId, state }: {
   if (state.kind === 'pending') return <p role="status" className="text-sm text-muted-foreground">{t('short-stay:answer.checking')}</p>;
   const result = state.kind === 'loaded' ? state.answers[listingId] : undefined;
   if (result === undefined) return <p role="alert" className="text-sm text-foreground">{t('short-stay:answer.failed')}</p>;
-  const stayable = result.answer.kind === 'free' || result.answer.kind === 'conditional';
+  // 🔑 Η ΜΙΑ απάντηση στο «μπορείς να μείνεις;» — ποτέ ξαναγραμμένη λίστα κάδων (Boy Scout, Στάδιο Δ).
+  const stayable = isStayable(result.answer.kind);
   return (
     <output aria-live="polite" className="flex flex-col gap-1">
       <p className="text-sm font-medium text-foreground">{headlineOf(result.answer, t)}</p>

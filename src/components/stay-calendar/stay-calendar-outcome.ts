@@ -11,7 +11,8 @@
  * @related ADR-835 §20 (Στάδιο Α) · services/stay-calendar/stay-calendar-write-result.ts
  */
 
-import { formatCalendarDay } from '@/lib/intl-formatting';
+import { formatCalendarDay, formatDateTime } from '@/lib/intl-formatting';
+import { STAY_HOLD_TIME_FORMAT } from '@/lib/stay/stay-hold-deadline';
 import type { StayCalendarSendOutcome } from '@/services/stay-calendar/stay-calendar.client';
 
 const STAY_CALENDAR_MESSAGE_IDS = [
@@ -27,6 +28,9 @@ const STAY_CALENDAR_MESSAGE_IDS = [
   'failed',
   'rulesUnacknowledged',
   'contradictoryRules',
+  // Στάδιο Δ (ADR-835 §23) — ό,τι μόνο ο οικοδεσπότης μπορεί να συναντήσει.
+  'conflictRequest',
+  'holdLapsed',
 ] as const;
 
 export type StayCalendarMessageId = (typeof STAY_CALENDAR_MESSAGE_IDS)[number];
@@ -49,6 +53,15 @@ const SIMPLE: Readonly<Record<SimpleKind, StayCalendarMessage>> = {
   failed: { id: 'failed', tone: 'alert' },
   // Οι ίδιες οι παραβιάσεις ονομάζονται δίπλα, με επιβεβαίωση (`StayRuleWarningsConfirm`).
   'rules-unacknowledged': { id: 'rulesUnacknowledged', tone: 'alert' },
+  // Στάδιο Δ: αποδοχή/άρνηση **μετά** την προθεσμία — το αίτημα έχει ήδη λήξει.
+  'hold-lapsed': { id: 'holdLapsed', tone: 'alert' },
+  // Εκβάσεις της πόρτας του **επισκέπτη**: σε αυτή την οθόνη θα σήμαιναν σφάλμα, όχι κατάσταση.
+  unavailable: { id: 'failed', tone: 'alert' },
+  'too-late': { id: 'failed', tone: 'alert' },
+  'risk-not-acknowledged': { id: 'failed', tone: 'alert' },
+  'guest-hold-limit': { id: 'failed', tone: 'alert' },
+  'hold-alive': { id: 'failed', tone: 'alert' },
+  'own-listing': { id: 'failed', tone: 'alert' },
 };
 
 export function stayCalendarMessageOf(outcome: StayCalendarSendOutcome): StayCalendarMessage {
@@ -56,6 +69,10 @@ export function stayCalendarMessageOf(outcome: StayCalendarSendOutcome): StayCal
     case 'conflict': {
       const [first] = outcome.conflicts;
       if (first === undefined) return SIMPLE.failed;
+      // 🏆 Ζωντανό αίτημα: «απαντήστε πρώτα» — άλλη θεραπεία από το «πέφτει πάνω σε κράτηση».
+      if (first.heldUntil !== null) {
+        return { id: 'conflictRequest', params: { until: formatDateTime(first.heldUntil, STAY_HOLD_TIME_FORMAT) }, tone: 'alert' };
+      }
       return {
         id: first.entryKind === 'booking' ? 'conflictBooking' : 'conflictBlock',
         params: { from: formatCalendarDay(first.from), to: formatCalendarDay(first.to) },

@@ -320,6 +320,10 @@ function calendarVerdict<TSource>(
   }
 
   if (verdict.kind === 'conflicts') {
+    // 🏆 **ΣΕ ΑΝΑΜΟΝΗ** (Στάδιο Δ, §23.5): αν **όλες** οι συγκρούσεις είναι ζωντανά αιτήματα, οι
+    //    νύχτες ελευθερώνονται μόνες τους — λέμε **ως πότε**, με την αργότερη προθεσμία.
+    const held = heldUntilOfAll(verdict.conflicts.map((conflict) => conflict.with.source), calendar.heldUntilOf);
+    if (held !== null) return { kind: 'held', until: held };
     // 🏆 **Η ΔΙΕΞΟΔΟΣ, ΔΥΟ ΦΟΡΕΣ** — δες `StayAvailabilityAnswer` `occupied`.
     const runs = freeRunsWithin(query.checkIn, query.checkOut, calendar.occupied);
     // ⚠️ `null` από τα υποδιαστήματα = **δεν διαβάστηκαν όλα**. «Κρατημένο» είναι
@@ -339,6 +343,25 @@ function calendarVerdict<TSource>(
   //    **Ποτέ** ισοπεδωμένο σε `free` — αυτό θα ήταν ψέμα προς τον επισκέπτη.
   if (sale !== null) return { kind: 'conditional', conditionalFrom: sale.conditionalFrom };
   return { kind: 'free' };
+}
+
+/**
+ * **Η αργότερη προθεσμία, αν ΟΛΕΣ οι πηγές είναι ζωντανά αιτήματα** — αλλιώς `null`.
+ *
+ * ⚠️ Μία σκληρή κατάληψη ⇒ `null`: η απάντηση «σε αναμονή ως 14:00» θα ήταν ψέμα, αφού στις 14:00
+ * οι νύχτες **δεν** ελευθερώνονται. Κενό σύνολο ⇒ `null` (δεν υπάρχει σύγκρουση για να ονομαστεί).
+ */
+export function heldUntilOfAll<TSource>(
+  sources: readonly TSource[],
+  heldUntilOf: (source: TSource) => string | null,
+): string | null {
+  let latest: string | null = null;
+  for (const source of sources) {
+    const until = heldUntilOf(source);
+    if (until === null) return null;
+    if (latest === null || Date.parse(until) > Date.parse(latest)) latest = until;
+  }
+  return latest;
 }
 
 /**

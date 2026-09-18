@@ -135,7 +135,7 @@ export async function readStayChannelsView(
     exportConfigured: stayExportConfigured(),
     exportUrl: exportUrlFor(propertyId, STAY_EXPORT_SCOPE_ALL, generation),
     feeds: feeds.map((feed) => feedViewOf(feed, propertyId, generation, now)),
-    conflicts: stayChannelConflicts(snapshot.entries, stayClockAt(new Date(now)).today),
+    conflicts: stayChannelConflicts(snapshot.entries, stayClockAt(new Date(now))),
   };
 }
 

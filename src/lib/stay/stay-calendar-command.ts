@@ -5,7 +5,8 @@
  *   services/stay-calendar/stay-calendar-write.service.ts · lib/calendar/date-key.ts
  * @module lib/stay/stay-calendar-command
  *
- * 🔑 **Μία διαδρομή, επτά πράξεις** (Στάδιο Β: `rules` · `restrict`) — ίδιο ιδίωμα με το `PATCH /api/owner-properties/[id]`
+ * 🔑 **Ένας αναλυτής, δώδεκα πράξεις** (Στάδιο Β: `rules` · `restrict` · Στάδιο Δ: `request` · `withdraw` ·
+ * `accept` · `decline` · `expire`) — ίδιο ιδίωμα με το `PATCH /api/owner-properties/[id]`
  * (`lifecycle` · `marketingAudience` · `privateMarketing`). Κάθε πράξη είναι μέλος
  * διακριτής ένωσης, άρα ο διακομιστής **δεν μπορεί** να δεχτεί «κράτηση χωρίς επισκέπτη».
  *
@@ -51,6 +52,25 @@ export type StayCalendarCommand =
       readonly acknowledgedWarnings: readonly StayRuleWarningKind[];
     }
   | { readonly action: 'cancel'; readonly bookingId: string }
+  /**
+   * **Αίτημα επισκέπτη** (Στάδιο Δ, §23.4). Το `riskAcknowledged` είναι η **ρητή** αποδοχή ότι το
+   * ακίνητο πωλείται (§4.7): όταν ισχύει και λείπει, ο γραφέας αρνείται — η αποκάλυψη είναι γεγονός.
+   */
+  | {
+      readonly action: 'request';
+      readonly checkIn: string;
+      readonly checkOut: string;
+      readonly guests: number;
+      readonly riskAcknowledged: boolean;
+    }
+  /** Ο επισκέπτης αποσύρει το αίτημά του πριν απαντηθεί. */
+  | { readonly action: 'withdraw'; readonly bookingId: string }
+  /** Ο οικοδεσπότης δέχεται — ο κριτής ξανατρέχει μέσα στη συναλλαγή. */
+  | { readonly action: 'accept'; readonly bookingId: string }
+  /** Ο οικοδεσπότης αρνείται. */
+  | { readonly action: 'decline'; readonly bookingId: string }
+  /** Το σύστημα καταγράφει λήξη — **μόνο** με νεκρό hold (cron `stay-hold-expiry`). */
+  | { readonly action: 'expire'; readonly bookingId: string }
   /** Αντικατάσταση των κανόνων βάσης (Στάδιο Β). */
   | { readonly action: 'rules'; readonly rules: StayRules }
   /**
@@ -104,19 +124,29 @@ function parseBlock(body: Body): StayCalendarCommandParse {
   return { ok: true, command: { action: 'block', from: String(body.from), to: String(body.to), note } };
 }
 
+/**
+ * Ο **κοινός** πυρήνας κράτησης και αιτήματος: νύχτες `[checkIn, checkOut)` + πλήθος επισκεπτών.
+ * Γράφει τα άκυρα πεδία στο `bad`· επιστρέφει τους επισκέπτες, ή `null` αν είναι άκυροι.
+ */
+function stayGuestsWithin(body: Body, bad: string[]): number | null {
+  if (!nightsWithin(body.checkIn, body.checkOut, STAY_BOOKING_MAX_NIGHTS)) bad.push('checkIn', 'checkOut');
+  const { guests } = body;
+  if (typeof guests === 'number' && Number.isInteger(guests) && guests >= 1 && guests <= STAY_BOOKING_MAX_GUESTS) {
+    return guests;
+  }
+  bad.push('guests');
+  return null;
+}
+
 function parseBook(body: Body): StayCalendarCommandParse {
   const guestLabel = boundedText(body.guestLabel, STAY_GUEST_LABEL_MAX_LENGTH);
-  const guests = body.guests;
   const bad: string[] = [];
-  if (!nightsWithin(body.checkIn, body.checkOut, STAY_BOOKING_MAX_NIGHTS)) bad.push('checkIn', 'checkOut');
-  if (typeof guests !== 'number' || !Number.isInteger(guests) || guests < 1 || guests > STAY_BOOKING_MAX_GUESTS) {
-    bad.push('guests');
-  }
+  const guests = stayGuestsWithin(body, bad);
   // 🔑 Χειροκίνητη κράτηση **χωρίς** όνομα δεν είναι κράτηση — είναι block.
   if (guestLabel === undefined || guestLabel === null) bad.push('guestLabel');
   const acknowledgedWarnings = warningsOf(body.acknowledgedWarnings);
   if (acknowledgedWarnings === null) bad.push('acknowledgedWarnings');
-  if (bad.length > 0 || typeof guests !== 'number' || !guestLabel || acknowledgedWarnings === null) {
+  if (bad.length > 0 || guests === null || !guestLabel || acknowledgedWarnings === null) {
     return malformed(...bad);
   }
   return {
@@ -126,6 +156,27 @@ function parseBook(body: Body): StayCalendarCommandParse {
       acknowledgedWarnings,
     },
   };
+}
+
+function parseRequest(body: Body): StayCalendarCommandParse {
+  const { riskAcknowledged } = body;
+  const bad: string[] = [];
+  const guests = stayGuestsWithin(body, bad);
+  // Ρητό `boolean`, ποτέ «απών = όχι»: η αποκάλυψη είναι γεγονός και γράφεται μόνο αν ειπώθηκε.
+  if (typeof riskAcknowledged !== 'boolean') bad.push('riskAcknowledged');
+  if (bad.length > 0 || guests === null || typeof riskAcknowledged !== 'boolean') return malformed(...bad);
+  return {
+    ok: true,
+    command: { action: 'request', checkIn: String(body.checkIn), checkOut: String(body.checkOut), guests, riskAcknowledged },
+  };
+}
+
+/** Οι πράξεις που αγγίζουν **μία** κράτηση με το id της. */
+type BookingAction = 'cancel' | 'withdraw' | 'accept' | 'decline' | 'expire';
+
+function parseBookingAction(action: BookingAction, body: Body): StayCalendarCommandParse {
+  const bookingId = idOf(body.bookingId);
+  return bookingId === null ? malformed('bookingId') : { ok: true, command: { action, bookingId } };
 }
 
 /** Απών = καμία αποδοχή· παρών = πίνακας γνωστών προειδοποιήσεων χωρίς διπλότυπα. */
@@ -174,10 +225,18 @@ export function stayCalendarCommandFrom(raw: unknown): StayCalendarCommandParse 
     }
     case 'book':
       return parseBook(raw);
-    case 'cancel': {
-      const bookingId = idOf(raw.bookingId);
-      return bookingId === null ? malformed('bookingId') : { ok: true, command: { action: 'cancel', bookingId } };
-    }
+    case 'cancel':
+      return parseBookingAction('cancel', raw);
+    case 'withdraw':
+      return parseBookingAction('withdraw', raw);
+    case 'accept':
+      return parseBookingAction('accept', raw);
+    case 'decline':
+      return parseBookingAction('decline', raw);
+    case 'expire':
+      return parseBookingAction('expire', raw);
+    case 'request':
+      return parseRequest(raw);
     case 'rules': {
       const rules = stayRulesFrom(raw.rules);
       return rules === null ? malformed('rules') : { ok: true, command: { action: 'rules', rules } };
