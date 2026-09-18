@@ -8,7 +8,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy, sumBy, sumByKey, countBy, rate, avg, groupByKey } from '@/utils/collection-utils';
-import { totalPrice } from '@/lib/properties/price-resolver';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
+import { normalizeCommercialStatus, requiresAskingPrice } from '@/constants/commercial-statuses';
 import { computeEVM } from './evm-calculator';
 import type { EVMResult } from './evm-calculator';
 import { computeAgingBuckets } from './aging-calculator';
@@ -149,14 +150,19 @@ export class ReportDataAggregator {
     const units = await fetchCompanyUnits(filter);
 
     const sold = units.filter(u => u.commercialStatus === 'sold');
-    const forSale = units.filter(u => u.commercialStatus === 'for_sale');
+    // 🔴 ADR-777 §8.60.14.13: ήταν `=== 'for_sale'` (κάτω παύλα) — τιμή που το λεξιλόγιο
+    // ΔΕΝ έχει (`'for-sale'`). Δεν ταίριαζε ΠΟΤΕ ⇒ pipeline 0 € και 0 προς πώληση, σε κάθε
+    // αναφορά. Ο ΕΝΑΣ κριτής «ζητά τιμή πώλησης;» καλύπτει και το `for-sale-and-rent`.
+    const forSale = units.filter(u => requiresAskingPrice(normalizeCommercialStatus(u.commercialStatus)));
 
     // Revenue is what was actually paid — `finalPrice`, deliberately NOT the
     // display-price resolver (which prefers the asking price). See ADR-777 §8.2
     // open item #4: the "price of a sold unit" question is still undecided.
     const totalRevenue = sumBy(sold, u => u.commercial?.finalPrice ?? 0);
-    // Pipeline value IS the displayed price of listed units → ADR-777 Α6 SSoT.
-    const pipelineValue = totalPrice(forSale).total;
+    // Pipeline value IS the displayed price of listed units → ADR-777 Α6 SSoT — and it is
+    // a SALE question, so it names the role (§8.60.14.13): a dual listing without a sale
+    // price resolves to its rent, which is not pipeline.
+    const pipelineValue = totalPriceByRole(forSale).byRole.sale.total;
 
     const unitsWithPayment = units.filter(u => u.commercial?.paymentSummary);
     const avgCoverage = unitsWithPayment.length > 0
@@ -269,9 +275,6 @@ export class ReportDataAggregator {
     const storageSold = countBy(storage, s => s.status === 'sold');
 
     const storageTotalArea = sumBy(storage, s => s.area ?? 0);
-    // ADR-777 Α6 — spaces carry `commercial.askingPrice` too (types/spaces.ts),
-    // so the flat `price` alone under-reports the portfolio.
-    const storageTotalValue = totalPrice(storage).total;
 
     // Linked vs unlinked: spaces that have a buildingId are "linked"
     const linkedParking = countBy(parking, p => !!p.buildingId);
@@ -289,7 +292,8 @@ export class ReportDataAggregator {
         byZone: tallyBy(parking, p => p.locationZone ?? 'unknown'),
         byBuilding: tallyBy(parking, p => p.buildingId ?? 'unassigned'),
         utilizationRate: rate(parkingOccupied, parking.length),
-        totalValue: totalPrice(parking).total,
+        // ADR-777 Α6 + §8.60.14.13 — ο SSoT τιμής, ΑΝΑ ΡΟΛΟ.
+        priceTotals: totalPriceByRole(parking),
         soldCount: parkingSold,
         salesRate: rate(parkingSold, parking.length),
       },
@@ -300,11 +304,13 @@ export class ReportDataAggregator {
         byBuilding: tallyBy(storage, s => s.buildingId ?? 'unassigned'),
         utilizationRate: rate(storageOccupied, storage.length),
         totalArea: storageTotalArea,
-        totalValue: storageTotalValue,
-        avgPricePerSqm: storageTotalArea > 0 ? Math.round(storageTotalValue / storageTotalArea) : 0,
+        // Το €/m² διαιρεί με το εμβαδόν των ΙΔΙΩΝ μονάδων που άθροισε — όχι όλων.
+        priceTotals: totalPriceByRole(storage, s => s.area),
         soldCount: storageSold,
         salesRate: rate(storageSold, storage.length),
       },
+      // Θέσεις + αποθήκες ΜΑΖΙ: ίδιος ρόλος ⇒ ίδια μονάδα ⇒ αθροίζονται — στο ΙΔΙΟ πέρασμα.
+      spacesPriceTotals: totalPriceByRole<ParkingDoc | StorageDoc>([...parking, ...storage]),
       linkedSpaces,
       unlinkedSpaces: totalSpaces - linkedSpaces,
       generatedAt: nowISO(),

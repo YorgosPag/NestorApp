@@ -59,6 +59,11 @@ export interface EntityStatsConfig<T> {
    * both the sum and the average's denominator. Returning `0` instead states
    * that the item is worth nothing, which drags the average down and makes an
    * incomplete total look complete.
+   *
+   * ⛔ **Only for amounts of ONE unit** (a project budget, a building's value). A property
+   * **price is not one** — sale, monthly rent and nightly rate would be added into a number
+   * that measures nothing. Prices go through `totalPriceByRole`
+   * (`lib/properties/price-totals.ts`), never through here (ADR-777 §8.60.14.13).
    */
   getValue?: (item: T) => number | null;
   /** Extract status string from an item (default: 'unknown') */

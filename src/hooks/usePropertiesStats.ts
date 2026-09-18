@@ -7,7 +7,12 @@
  */
 
 import { useMemo } from 'react';
-import { priceSortKey, type PricedPropertyLike } from '@/lib/properties/price-resolver';
+import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
+import {
+  EMPTY_PRICE_TOTALS,
+  totalPriceByRole,
+  type PriceTotalsByRole,
+} from '@/lib/properties/price-totals';
 import { useEntityStats, countBy, rate } from './useEntityStats';
 
 /**
@@ -40,8 +45,8 @@ export interface PropertiesStats {
   totalProperties: number;
   availableProperties: number;
   soldProperties: number;
-  totalValue: number;
-  averageValue: number;
+  /** Αξία **ανά ρόλο** (ADR-777 §8.60.14.13) — ποτέ ένας αριθμός πάνω από ανόμοιες μονάδες. */
+  priceTotals: PriceTotalsByRole;
   totalArea: number;
   averageArea: number;
   propertiesByStatus: { [key: string]: number };
@@ -53,14 +58,14 @@ const AVAILABLE_STATUSES = ['for-sale', 'for-rent'];
 const SOLD_STATUSES = ['sold', 'rented'];
 
 const getArea = (u: PropertyStatsInput): number => u.area || 0;
-// ADR-777 Α5/Α6 — the resolved price, not the @deprecated flat field. `null`
-// keeps a priceless unit out of the sum AND out of the average's denominator.
-const getValue = (u: PropertyStatsInput): number | null => priceSortKey(u);
+// ⛔ No `getValue`: a price is NOT a unitless number (ADR-777 §8.60.14.13). The
+//    generic `useEntityStats` sum would add sale prices to monthly rents — the
+//    value is answered per role by `totalPriceByRole`, below.
 const getStatus = (u: PropertyStatsInput): string => u.status || 'unknown';
 const getType = (u: PropertyStatsInput): string => u.type || 'unknown';
 
 export function usePropertiesStats(properties: PropertyStatsInput[]): PropertiesStats {
-  const base = useEntityStats(properties, { getArea, getValue, getStatus, getType });
+  const base = useEntityStats(properties, { getArea, getStatus, getType });
 
   const stats = useMemo<PropertiesStats>(() => {
     const total = base.total;
@@ -70,8 +75,7 @@ export function usePropertiesStats(properties: PropertyStatsInput[]): Properties
         totalProperties: 0,
         availableProperties: 0,
         soldProperties: 0,
-        totalValue: 0,
-        averageValue: 0,
+        priceTotals: EMPTY_PRICE_TOTALS,
         totalArea: 0,
         averageArea: 0,
         propertiesByStatus: {},
@@ -100,8 +104,7 @@ export function usePropertiesStats(properties: PropertyStatsInput[]): Properties
       totalProperties: total,
       availableProperties,
       soldProperties,
-      totalValue: base.totalValue,
-      averageValue: base.averageValue,
+      priceTotals: totalPriceByRole(properties),
       totalArea: base.totalArea,
       averageArea: base.averageArea,
       propertiesByStatus: base.byStatus,

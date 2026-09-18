@@ -26,6 +26,7 @@ import { z } from 'zod';
 
 import { MS_PER_DAY } from '@/lib/date-local';
 import {
+  PRICE_ROLES,
   resolveDisplayPrice,
   type PriceRole,
   type PricedPropertyLike,
@@ -51,12 +52,6 @@ export const PRICE_HISTORY_RETENTION_DAYS = 180;
 /** Άνω φράγμα εγγραφών — ένα έγγραφο ακινήτου δεν μεγαλώνει ποτέ χωρίς όριο. */
 export const PRICE_HISTORY_MAX_ENTRIES = 24;
 
-/**
- * Οι ρόλοι τιμής ως **εξαντλητικός** πίνακας: τέταρτος ρόλος στο `PriceRole` δεν
- * μεταγλωττίζεται εδώ μέχρι να δηλωθεί — ίδιο ιδίωμα με το `ANSWER_WHERE_LEGACY_IS_SILENT`.
- */
-const PRICE_ROLE_TABLE: Readonly<Record<PriceRole, true>> = { sale: true, rent: true, nightly: true };
-const PRICE_ROLES = Object.keys(PRICE_ROLE_TABLE) as [PriceRole, ...PriceRole[]];
 
 // ============================================================================
 // ΑΝΑΓΝΩΣΗ — το σύνορο του αποθηκευμένου

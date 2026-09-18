@@ -10,8 +10,11 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import type { Property, CommercialStatus } from '@/types/property';
-import { isDisplayableInSalesDashboard } from '@/constants/commercial-statuses';
-import { priceSortKey } from '@/lib/properties/price-resolver';
+import { isDisplayableInSalesDashboard, requiresAskingPrice } from '@/constants/commercial-statuses';
+import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
+import { EMPTY_PRICE_RANGE, isPriceRangeActive, matchesPriceRange, type RolePriceRange } from '@/lib/properties/price-range';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
+import type { SalesDashboardStats } from '@/types/sales-shared';
 
 // =============================================================================
 // 🏢 TYPES
@@ -23,18 +26,34 @@ export interface SalesFilterState {
   propertyType: string;
   building: string;
   floor: string;
-  priceRange: { min: number | null; max: number | null };
+  /** Εύρος τιμής **με μονάδα** (ADR-777 §8.60.14.14). */
+  priceRange: RolePriceRange;
   areaRange: { min: number | null; max: number | null };
 }
 
-export interface SalesDashboardStats {
-  availableCount: number;
-  averagePrice: number;
-  totalValue: number;
-  averagePricePerSqm: number;
-}
 
 export type SalesViewMode = 'list' | 'grid';
+
+/** Ό,τι χρειάζεται το άθροισμα: η τιμή (για τον επιλυτή) και το εμβαδόν (για το €/m²). */
+type SalesPricedUnit = PricedPropertyLike & Pick<Property, 'area' | 'areas'>;
+
+/**
+ * **Η όψη ΕΣΟΔΩΝ ενός πωλημένου ακινήτου: μόνο η τιμή συμβολαίου.**
+ *
+ * Ο επιλυτής, για `sold` χωρίς `finalPrice`, πέφτει στη ζητούμενη — σωστό για να
+ * **δείξει** μια τιμή, λάθος για να την **αθροίσει ως έσοδο** (ADR-777 §8.2 #4: η
+ * ζητούμενη δεν πληρώθηκε ποτέ). Κρατώντας μόνο το `finalPrice`, ένα πωλημένο χωρίς
+ * καταγεγραμμένο συμβόλαιο πάει στην κλάση `'unpriced'` — **ονομάζεται**, αντί να
+ * εξαφανίζεται σιωπηλά από το άθροισμα όπως πριν.
+ */
+function contractPriceView(unit: Property): SalesPricedUnit {
+  return {
+    commercialStatus: 'sold',
+    commercial: { finalPrice: unit.commercial?.finalPrice ?? null },
+    area: unit.area,
+    areas: unit.areas,
+  };
+}
 
 /**
  * View scope for this hook — distinguishes the sales-pipeline page using the hook:
@@ -53,7 +72,7 @@ const DEFAULT_FILTERS: SalesFilterState = {
   propertyType: 'all',
   building: 'all',
   floor: 'all',
-  priceRange: { min: null, max: null },
+  priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: null, max: null },
 };
 
@@ -166,17 +185,10 @@ export function useSalesPropertiesViewerState(
       result = result.filter(u => u.floor === Number(filters.floor));
     }
 
-    // Advanced filter: price range
-    // ADR-777 Α6 — resolved price, not raw `askingPrice`: a rented unit prices
-    // through `rentPrice` and used to read as "0", passing every lower bound.
-    // A unit with no price answers neither bound, so it drops out (SQL rule).
-    if (filters.priceRange.min !== null || filters.priceRange.max !== null) {
-      const { min, max } = filters.priceRange;
-      result = result.filter(u => {
-        const amount = priceSortKey(u);
-        if (amount === null) return false;
-        return (min === null || amount >= min) && (max === null || amount <= max);
-      });
+    // Advanced filter: price range — ADR-777 Α6 + §8.60.14.14: the range carries its UNIT;
+    // only an amount in that role is judged, and a unit with none drops out (SQL rule).
+    if (isPriceRangeActive(filters.priceRange)) {
+      result = result.filter((u) => matchesPriceRange(u, filters.priceRange));
     }
 
     // Advanced filter: area range
@@ -202,54 +214,20 @@ export function useSalesPropertiesViewerState(
   }, [salesUnits, filters, selectedCommercialStatus, selectedPropertyType]);
 
   // =========================================================================
-  // DASHBOARD STATS — scope-aware aggregations.
-  // Shape (count / averagePrice / totalValue / averagePricePerSqm) is shared
-  // between scopes; semantics differ:
-  //   - `'available'` uses `askingPrice` on for-sale/dual listings
-  //   - `'sold'`      uses `finalPrice` on sold units (contract price)
+  // DASHBOARD STATS — ADR-777 §8.60.14.13: ο ΕΝΑΣ δρόμος (`totalPriceByRole`).
+  // Εδώ ζούσε το χειρόγραφο `prices.reduce(...)` που ΔΕΝ περνούσε καν από τον
+  // επιλυτή, και ένα €/m² που διαιρούσε το άθροισμα των τιμολογημένων με το
+  // εμβαδόν ΟΛΩΝ. Οι δύο προβολές διαφέρουν μόνο στο ΤΙ ρωτούν:
+  //   - `'available'` → η τιμή των προς πώληση (ο επιλυτής λέει τον ρόλο)
+  //   - `'sold'`      → τα ΕΣΟΔΑ: μόνο η τιμή συμβολαίου (`contractPriceView`)
   // =========================================================================
   const dashboardStats = useMemo<SalesDashboardStats>(() => {
-    if (viewScope === 'sold') {
-      const finalPrices = salesUnits
-        .map(u => u.commercial?.finalPrice)
-        .filter((p): p is number => typeof p === 'number' && p > 0);
-
-      const areas = salesUnits
-        .map(u => u.areas?.gross ?? u.area ?? 0)
-        .filter(a => a > 0);
-
-      const totalRevenue = finalPrices.reduce((sum, p) => sum + p, 0);
-      const totalArea = areas.reduce((sum, a) => sum + a, 0);
-
-      return {
-        availableCount: salesUnits.length,
-        averagePrice: finalPrices.length > 0 ? totalRevenue / finalPrices.length : 0,
-        totalValue: totalRevenue,
-        averagePricePerSqm: totalArea > 0 ? totalRevenue / totalArea : 0,
-      };
-    }
-
-    // viewScope === 'available'
-    const forSaleProperties = salesUnits.filter(u =>
-      u.commercialStatus === 'for-sale' || u.commercialStatus === 'for-sale-and-rent'
-    );
-
-    const prices = forSaleProperties
-      .map(u => u.commercial?.askingPrice)
-      .filter((p): p is number => p !== null && p !== undefined && p > 0);
-
-    const areas = forSaleProperties
-      .map(u => u.areas?.gross ?? u.area ?? 0)
-      .filter(a => a > 0);
-
-    const totalPrice = prices.reduce((sum, p) => sum + p, 0);
-    const totalArea = areas.reduce((sum, a) => sum + a, 0);
-
+    const units: readonly SalesPricedUnit[] = viewScope === 'sold'
+      ? salesUnits.map(contractPriceView)
+      : salesUnits.filter(u => requiresAskingPrice(u.commercialStatus));
     return {
-      availableCount: forSaleProperties.length,
-      averagePrice: prices.length > 0 ? totalPrice / prices.length : 0,
-      totalValue: totalPrice,
-      averagePricePerSqm: totalArea > 0 ? totalPrice / totalArea : 0,
+      availableCount: units.length,
+      priceTotals: totalPriceByRole(units, u => u.areas?.gross ?? u.area),
     };
   }, [salesUnits, viewScope]);
 

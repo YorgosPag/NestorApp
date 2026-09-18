@@ -8,19 +8,17 @@
 
 import { useMemo } from 'react';
 import type { Storage } from '@/types/storage/contracts';
-import { priceSortKey } from '@/lib/properties/price-resolver';
 import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
 
 const getArea = (s: Storage): number => s.area || 0;
-// ADR-777 Α5/Α6 — `s.price || 0` ignored `commercial.askingPrice` (which
-// `types/spaces.ts` declares for storage) and counted priceless units as
-// costing nothing. `null` keeps them out of both the sum and the average.
-const getValue = (s: Storage): number | null => priceSortKey(s);
+// ⛔ No `getValue` (ADR-777 §8.60.14.13): the page never showed a storage value, and the
+//    generic sum would have added sale prices to monthly rents. A future value tile asks
+//    `totalPriceByRole` — the per-role answer — not this hook.
 const getStatus = (s: Storage): string => s.status || 'unknown';
 const getType = (s: Storage): string => s.type || 'unknown';
 
 export function useStorageStats(storages: Storage[]) {
-  const base = useEntityStats(storages, { getArea, getValue, getStatus, getType });
+  const base = useEntityStats(storages, { getArea, getStatus, getType });
 
   const stats = useMemo(() => {
     const total = base.total;
@@ -45,8 +43,6 @@ export function useStorageStats(storages: Storage[]) {
 
       totalArea: base.totalArea,
       averageArea: base.averageArea,
-      totalValue: base.totalValue,
-      averagePrice: base.averageValue,
 
       uniqueBuildings,
       storagesByType: base.byType,

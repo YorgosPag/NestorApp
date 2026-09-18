@@ -13,6 +13,8 @@
  * | `properties.demandPriceDrop` | `listingMatchDestination` | `announcePriceDrop` |
  * | `properties.mandateRequestAnswered` | `mandateRequestDestination` | `announceMandateRequestAnswer` |
  * | `properties.mandateDecided` | `custodyOf` + `mandateDecisionDestination` | `announceMandateDecision` |
+ * | `properties.stayRequestReceived` | `custodyOf` + `stayRequestReceivedDestination` | `announceStayBookingNotice` |
+ * | `properties.stayRequestAnswered` | `stayRequestAnsweredDestination` | `announceStayBookingNotice` |
  *
  * 🔑 **Κανένας κανόνας δεν γράφει δική του διαδρομή ή δικό του χώρο.** Αν αύριο ο
  * παραγωγός αλλάξει πόρτα, ο ανιχνευτής την ξέρει την ίδια στιγμή — δεν υπάρχει δεύτερο
@@ -47,6 +49,10 @@ import { mandateDecisionDestination } from '@/services/mandate/mandate-decision-
 import { mandateRequestDestination } from '@/services/mandate/mandate-request-notifier.service';
 import { holidayHoursQuestionDestination } from '@/services/mandate/holiday-hours-question-notifier';
 import { cardEmailReturnedDestination } from '@/services/mandate/showcase-email-return.service';
+import {
+  stayRequestAnsweredDestination,
+  stayRequestReceivedDestination,
+} from '@/services/stay-calendar/stay-booking-notifier.service';
 
 import type {
   ExpectedDestination,
@@ -87,6 +93,14 @@ const mandateDecidedRule: DestinationRule = async (db, _notification, entityId) 
   return expected(mandateDecisionDestination(entityId, custodyOf(property)));
 };
 
+/** Αίτημα κράτησης προς τον οικοδεσπότη: ο χώρος είναι η **θεματοφυλακή** της αγγελίας (ADR-835 §23.6). */
+const stayRequestReceivedRule: DestinationRule = async (db, _notification, entityId) => {
+  const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(entityId).get();
+  const property = ownerPropertyFromDocument(snapshot.data(), entityId);
+  if (property === null) return unresolvable('entity-absent');
+  return expected(stayRequestReceivedDestination(entityId, custodyOf(property)));
+};
+
 const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> = {
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST]: demandInterestRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH]: async (_db, notification, entityId) =>
@@ -103,6 +117,9 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   // ADR-841 §7 Α21.21 Φάση Β — η ερώτηση αργιών οδηγεί στην ίδια κάρτα («Άλλο ωράριο» ⇒ φόρμα).
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HOLIDAY_HOURS_QUESTION]: async (_db, _notification, entityId) =>
     expected(holidayHoursQuestionDestination(entityId)),
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_RECEIVED]: stayRequestReceivedRule,
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
+    expected(stayRequestAnsweredDestination(entityId, notification.userId)),
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

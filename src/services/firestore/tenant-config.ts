@@ -71,6 +71,12 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // εγγραφή στο `READ_PATHS`: αυτή η γραμμή παράγει ήδη `where('userId','==',uid)` — τον ΕΝΑ δρόμο
   // που δέχεται ο κανόνας (ADR-866 §2.6.7). Ο φράχτης `cdeReadReach` είναι έννοια ΓΡΑΦΕΙΟΥ.
   FILES_PERSONAL:             { mode: 'userId', fieldName: 'userId' },
+  // 📒 ADR-866 §2.6.11 — η δραστηριότητα των προσωπικών αρχείων: το `userId` είναι ο ΚΑΤΟΧΟΣ του
+  // βιβλίου (ο δράστης είναι το `performedBy`) — ίδιο σχήμα με το `ENTITY_AUDIT_TRAIL_PERSONAL`.
+  FILE_AUDIT_LOG_PERSONAL:    { mode: 'userId', fieldName: 'userId' },
+  // 🗂️ ADR-866 Φ1.1 — ο ΦΑΚΕΛΟΣ ΤΟΥ ΑΚΙΝΗΤΟΥ: ίδιος άξονας με τα ΠΡΟΣΩΠΙΚΑ αρχεία του (`userId`, το
+  // μέλος της `CustodyScope`) — όχι `authorUserId`: ο φάκελος αλλάζει κάτοχο (Φ4), ο συγγραφέας όχι.
+  PROPERTY_DOSSIERS:          { mode: 'userId', fieldName: 'userId' },
 
   // --- system (no tenant filter) ---
   // ⚠️ Το `unscopedReason` ΔΕΝ είναι σχόλιο: ο τύπος `TenantFieldConfig` το απαιτεί
@@ -115,6 +121,9 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // (τα URL των feeds είναι διαπιστευτήρια): ο άξονας φυλάει τον διακομιστή, οι κανόνες
   // κλείνουν τον πελάτη εντελώς.
   STAY_CHANNELS:              { mode: 'userId', fieldName: 'authorUserId' },
+  // ADR-835 §23 (Στάδιο Δ): η κεφαλή του επισκέπτη — ο άξονας είναι ο ΙΔΙΟΣ ο άνθρωπος (`userId`),
+  // όχι ο συντάκτης της αγγελίας: ένας επισκέπτης κρατά σε ακίνητα ΠΟΛΛΩΝ οικοδεσποτών.
+  STAY_GUESTS:                { mode: 'userId', fieldName: 'userId' },
   // --- ADR-777 Α3/Α5: ΔΗΜΟΣΙΕΥΜΕΝΗ ΠΡΟΒΟΛΗ ----------------------------------
   // 🔴 Άλλη κατηγορία από τις δύο παραπάνω, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ Ο ΚΥΚΛΟΣ ΖΩΗΣ: η γη
   // υπάρχει ακόμη κι αν σβήσουν όλοι οι λογαριασμοί· η αγγελία σβήνει μαζί με την
@@ -212,6 +221,10 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
     unscopedReason:
       'ADR-867 §4.1 — το αντίγραφο συμμόρφωσης ενός ανακληθέντος μηνύματος. Ακολουθεί το νήμα του, που ανήκει σε ΔΥΟ πλευρές διαφορετικών χώρων (και, στο νήμα σχέσης, σε πρόσωπο ΧΩΡΙΣ χώρο). ΚΑΜΙΑ ανάγνωση πελάτη — ούτε του αποστολέα: αν διαβαζόταν, η ανάκληση θα ήταν διακοσμητική. Σημειακή ανάγνωση διακομιστή κατά κλειδί (= το id του μηνύματος) για ΓΚΠΔ άρθρο 17 §3(ε)· γράφει ΜΟΝΟ ο `services/network-messaging/thread-messages.ts` (CHECK 3.89).',
   },
+
+  // 🌴 ADR-867 §4.4 (Β5) — Η ΑΠΟΥΣΙΑ ΑΝΗΚΕΙ ΣΤΟ ΠΡΟΣΩΠΟ, όχι σε χώρο: ένας άνθρωπος που
+  // απουσιάζει απουσιάζει από ΟΛΑ του τα νήματα. ⇒ άξονας `uid`, όπως οι ειδοποιήσεις.
+  NETWORK_AWAY: { mode: 'userId', fieldName: 'uid' },
 
   // --- ADR-787 §5.3 δ: ΚΑΘΟΛΙΚΟ ΕΥΡΕΤΗΡΙΟ ΑΝΤΙΣΤΡΟΦΗΣ ΑΝΑΖΗΤΗΣΗΣ -------------
   // 🔴 ΔΕΝ είναι `system`: κάθε εγγραφή ΑΝΗΚΕΙ σε χώρο (φέρει `companyId`). Αυτό που

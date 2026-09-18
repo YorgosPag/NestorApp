@@ -70,7 +70,7 @@ import { discloseDemand } from '@/lib/demand/demand-aggregate';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
 import type { ListingActor, ListingCustody } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { PropertyDemand } from '@/types/property-demand';
+import { boundedPricedSeeks, type PropertyDemand } from '@/types/property-demand';
 import {
   disclosedToOfferer,
   firstContactFromStored,
@@ -104,7 +104,8 @@ function declaredAxesOf(demand: PropertyDemand): number {
   const declared: readonly boolean[] = [
     true,
     f.types.length > 0,
-    f.priceMax !== null || f.priceMin !== null,
+    // ADR-777 §8.60.15 — η τιμή ζει ανά εναλλακτική· **ένας** άξονας, όσες μονάδες κι αν έχει.
+    boundedPricedSeeks(demand.seeks).length > 0,
     f.areaMin !== null || f.areaMax !== null,
     f.bedroomsMin !== null,
     f.floorMin !== null || f.floorMax !== null,

@@ -34,6 +34,9 @@ import * as path from 'path';
 // ── Σύνορο Firestore (κάδος) ───────────────────────────────────────────────────
 const updateDocMock = jest.fn(async () => undefined);
 const docData: Record<string, unknown> = {
+  // ADR-866 §2.6.11 — κάθε αρχείο έχει ΑΚΡΙΒΩΣ έναν κάτοχο (μετρημένο 35/35 στο `files`)· ο κάδος τον
+  // ρωτά για να διαλέξει βιβλίο δραστηριότητας, και αρνείται αρχείο χωρίς κάτοχο.
+  companyId: 'comp_test',
   category: 'floorplans',
   displayName: 'Κατόψεις property-floorplan - Διαμέρισμα 80 τ.μ.',
   entityId: 'prop_80',
@@ -52,7 +55,7 @@ jest.mock('@/services/firestore/firestore-query.service', () => ({
   firestoreQueryService: { getAll: jest.fn(async () => ({ documents: [] })) },
 }));
 jest.mock('@/services/file-audit.service', () => ({
-  FileAuditService: { log: jest.fn(async () => undefined), logForCustody: jest.fn() },
+  FileAuditService: { log: jest.fn(async () => undefined) },
 }));
 
 // ── Σύνορο δικτύου προς τον ΕΝΑ γραφέα (αντικατάσταση) ─────────────────────────

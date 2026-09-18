@@ -217,7 +217,7 @@ describe('Γ. ΟΜΟΙΟΓΕΝΗ ΑΠΟΤΕΛΕΣΜΑΤΑ — η οθόνη ΔΕ
 
     const sections = orderResultsListings(input, 'newest');
 
-    expect(sections[0].listings).not.toBe(input);
+    expect(sections[0].items).not.toBe(input);
     expect(idsOf(input)).toEqual(before);
   });
 
@@ -380,15 +380,15 @@ describe('🔴 Ε. ΤΟ ΣΥΝΟΛΟ ΔΙΑΜΟΝΗΣ ΑΛΛΑΖΕΙ ΤΗ ΜΟΝ
       stayTotals: TOTALS,
     });
     expect(headings(sections)).toEqual(['sale', 'nightly']);
-    expect(idsOf(sections[0].listings)).toEqual(['prop_sale']);
+    expect(idsOf(sections[0].items)).toEqual(['prop_sale']);
   });
 });
 
 describe('ΣΤ. ΤΟ ΙΣΙΩΜΑ — γραμμική επέκταση, ποτέ ισχυρισμός κατάταξης', () => {
   it('ΣΤ1 — η συνένωση διατηρεί τη σειρά των τμημάτων και τη σειρά μέσα τους', () => {
     const sections: ListingSections = [
-      { heading: 'sale', listings: [listingOf('a', 'Α', known(AT), forSale(1))] },
-      { heading: 'nightly', listings: [listingOf('b', 'Β', known(AT), forStay(2))] },
+      { heading: 'sale', items: [listingOf('a', 'Α', known(AT), forSale(1))] },
+      { heading: 'nightly', items: [listingOf('b', 'Β', known(AT), forStay(2))] },
     ];
     expect(idsOf(flattenListingSections(sections))).toEqual(['a', 'b']);
     expect(countListingSections(sections)).toBe(2);

@@ -11,6 +11,7 @@ import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import type { ParkingSpot } from '@/types/parking';
 import type { SalesSpaceFilterState } from '@/types/sales-shared';
 import { useSalesSpaceViewerState } from './useSalesSpaceViewerState';
+import { EMPTY_PRICE_RANGE } from '@/lib/properties/price-range';
 
 // =============================================================================
 // 🏢 EXTENDED FILTER (parking has locationZone)
@@ -27,7 +28,7 @@ const DEFAULT_FILTERS: SalesParkingFilterState = {
   building: 'all',
   floor: 'all',
   locationZone: 'all',
-  priceRange: { min: null, max: null },
+  priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: null, max: null },
 };
 

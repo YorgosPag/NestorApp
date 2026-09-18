@@ -581,6 +581,12 @@ export class FakeQuery {
      * Χωρίς αυτό, ο πλαστός ανάγκαζε τον κώδικα να ξαναχτίσει την αναφορά **μόνο στο test**.
      */
     private readonly refOf?: (id: string) => FakeDocRef,
+    /**
+     * 🔑 **`orderBy` ΠΡΙΝ το `limit`** (ADR-835 §23.7) — όπως στη Firestore. Ο σαρωτής λήξης
+     * ταξινομεί κατά `hold.expiresAt` ώστε, όταν κόβεται, να φεύγουν **πρώτα οι παλαιότερες**
+     * λήξεις· χωρίς ταξινόμηση στο πλαστό, η περικοπή θα ήταν «όποια έτυχε» και η άγκυρα τυφλή.
+     */
+    private readonly order: string | null = null,
   ) {}
 
   where(field: string, op: WhereClause['op'], value: unknown): FakeQuery {
@@ -591,11 +597,17 @@ export class FakeQuery {
       this.failing,
       this.collectionName,
       this.refOf,
+      this.order,
     );
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName, this.refOf);
+    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName, this.refOf, this.order);
+  }
+
+  /** Αύξουσα ταξινόμηση — ίδια σύγκριση με το `matches` (ISO σε UTC ⇒ αλφαβητική = χρονολογική). */
+  orderBy(field: string): FakeQuery {
+    return new FakeQuery(this.bucket, this.clauses, this.cap, this.failing, this.collectionName, this.refOf, field);
   }
 
   /**
@@ -607,9 +619,15 @@ export class FakeQuery {
   async get(): Promise<{ docs: { id: string; data: () => Doc; ref?: FakeDocRef }[]; size: number }> {
     if (this.failing()) throw new Error('FAKE_FIRESTORE_UNAVAILABLE');
 
-    const hits = [...this.bucket.entries()]
-      .filter(([, doc]) => this.clauses.every((clause) => matches(doc, clause)))
-      .slice(0, this.cap);
+    const order = this.order;
+    const filtered = [...this.bucket.entries()]
+      .filter(([, doc]) => this.clauses.every((clause) => matches(doc, clause)));
+    const sorted = order === null ? filtered : [...filtered].sort(([, a], [, b]) => {
+      const left = readPath(a, order) as string | number;
+      const right = readPath(b, order) as string | number;
+      return left < right ? -1 : left > right ? 1 : 0;
+    });
+    const hits = sorted.slice(0, this.cap);
 
     return {
       docs: hits.map(([id, doc]) => ({ id, data: () => doc, ref: this.refOf?.(id) })),
@@ -684,7 +702,8 @@ export class FakeBatch {
     // έκρυβε ακριβώς αυτό το σφάλμα.
     for (const { ref } of this.pending) {
       const snapshot = await ref.get();
-      if (snapshot.data() !== undefined) throw new Error(`ALREADY_EXISTS: ${ref.id}`);
+      // Ο gRPC κωδικός 6 και εδώ, όπως στο `create()` και στο πραγματικό SDK (ADR-866 Φ1.1: η επανάληψη γέννησης φακέλου).
+      if (snapshot.data() !== undefined) throw Object.assign(new Error(`ALREADY_EXISTS: ${ref.id}`), { code: 6 });
     }
     for (const { ref } of this.pendingUpdates) {
       const snapshot = await ref.get();

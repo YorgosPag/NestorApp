@@ -15,7 +15,7 @@ import type { Property, LinkedSpace } from '@/types/property';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import type { SaleLineItem } from '@/services/sales-accounting/types';
 import type { BatchResolveResponse } from '@/types/spaces';
-import { priceSortKey } from '@/lib/properties/price-resolver';
+import { resolvePriceForRole } from '@/lib/properties/price-by-role';
 
 // =============================================================================
 // TYPES
@@ -117,12 +117,13 @@ export function useLinkedSpacesForSale(unit: Property): UseLinkedSpacesForSaleRe
 
           if (resolvedPrice === 0 && fetched) {
             // The negotiated `salePrice` wins; the space's own price is only a
-            // suggestion when none was agreed — and WHICH price that is belongs
-            // to the resolver (ADR-777 Α6), not to this hook. Reading
-            // `commercial.askingPrice` alone skipped `finalPrice` and the
-            // legacy flat field. The terminal 0 stays: this is a write-side
-            // form default meaning "not set yet", not a displayed price.
-            resolvedPrice = priceSortKey(fetched) ?? 0;
+            // suggestion when none was agreed. 🔴 ADR-777 §8.60.14.14: the question
+            // is «what does it SELL for?» — so the SALE role, named. Until 2026-09-18
+            // this read `priceSortKey` (the headline, ANY role): a space offered for
+            // rent at 60 €/month was proposed as a 60 € SALE and then added into the
+            // appurtenances total. No sale price ⇒ empty field (0 = "not set yet",
+            // a write-side form default) — never an amount of another unit.
+            resolvedPrice = resolvePriceForRole(fetched, 'sale')?.amount ?? 0;
           }
 
           const hasValidArea = resolvedArea > 0;

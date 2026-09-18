@@ -15,7 +15,7 @@
  * | «έχει δηλωθεί αυτή η ιδιότητα;» | `isAttributeDeclared` *(`listing-attribute-declared`)* |
  * | «σε ποια από τις τρεις καταστάσεις είναι το σύνολο;» | `featureSetState` — ίδιο αρχείο |
  * | «είναι γη;» | `isLandProperty` — ο **ΕΝΑΣ** κριτής *(ADR-842 §7.6.11)* |
- * | «ποια είναι η τιμή;» | `getEffectivePrice` *(23 καταναλωτές)* |
+ * | «ποια είναι η τιμή;» | `resolvePriceForRole` *(ανά ρόλο, πάνω στο `resolveDisplayPrice`)* |
  * | «ποιο κανονικό είδος είναι;» | **το σύνορο ανάγνωσης** *(ADR-842 §7.6.12)* — δεν ρωτιέται πια εδώ |
  *
  * 🔴 **Ο λόγος είναι μετρημένος, όχι αισθητικός.** Ένα `listing.levels !== null` εδώ
@@ -29,6 +29,7 @@
  * React/Firestore, καμία γνώση της διεύθυνσης.
  */
 
+import type { PricedDemandSeek, PricedSeekKind } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 import type {
   ListingAttributeKey,
@@ -39,7 +40,8 @@ import {
   isAttributeDeclared,
   listingFeatureSetValues,
 } from '@/lib/listings/listing-attribute-declared';
-import { getEffectivePrice, priceClassOf, type PriceRole } from '@/lib/properties/price-resolver';
+import { priceClassOf, type PriceRole } from '@/lib/properties/price-resolver';
+import { resolvePriceForRole } from '@/lib/properties/price-by-role';
 import { isLandProperty } from '@/constants/property-classification';
 
 import {
@@ -101,7 +103,9 @@ export function criterionAppliesTo(listing: PublicListing, key: CriterionKey): b
  */
 function priceAxisAppliesTo(listing: PublicListing, key: CriterionKey): boolean {
   const wanted = PRICE_AXIS_CLASS[key as PriceAxisKey];
-  return wanted === undefined || priceClassOf(listing) === wanted;
+  if (wanted === undefined || priceClassOf(listing) === wanted) return true;
+  // 🔑 ADR-777 §8.60.15 — και η **δεύτερη** τιμή μετρά: «πώληση + ενοικίαση» απαντά στο ενοίκιο.
+  return resolvePriceForRole(listing, wanted) !== null;
 }
 
 /**
@@ -116,6 +120,12 @@ const PRICE_AXIS_CLASS = {
 
 type PriceAxisKey = keyof typeof PRICE_AXIS_CLASS;
 
+const PRICE_AXIS_OF_PRICED_SEEK = {
+  sell: 'priceSale',
+  leaseOut: 'priceRent',
+  leaseShort: 'priceNightly',
+} as const satisfies Record<PricedSeekKind, PriceAxisKey>;
+
 /**
  * **Ποια διάθεση οδηγεί ποιον άξονα τιμής** — `undefined` για διάθεση χωρίς ποσό (ανταλλαγή).
  *
@@ -124,27 +134,28 @@ type PriceAxisKey = keyof typeof PRICE_AXIS_CLASS;
  * στη γραμμή φίλτρων (`components/search-results/filters`) και **ανέβηκε** στο λεξιλόγιο όταν τη
  * χρειάστηκε **δεύτερος** καταναλωτής (η προβολή ζήτησης → φίλτρα): ένα `lib/` που εισάγει από
  * `components/` είναι αντιστροφή επιπέδων, και ένα δεύτερο χειρόγραφο αντίγραφο θα απέκλινε.
+ *
+ * 🔒 **ADR-777 §8.60.15 — δεμένο με τον ΤΥΠΟ της ζήτησης**: `satisfies Record<PricedSeekKind, …>`
+ * ⇒ νέος κλάδος με τιμή στο `DemandSeek` **δεν μεταγλωττίζεται** χωρίς άξονα εδώ. Ως τότε ο πίνακας
+ * ήταν `Record<string, …>` και ένα λάθος κλειδί σώπαινε.
  */
-export const PRICE_AXIS_OF_OFFER_KIND: Readonly<Record<string, PriceAxisKey | undefined>> = {
-  sell: 'priceSale',
-  leaseOut: 'priceRent',
-  leaseShort: 'priceNightly',
-};
+export const PRICE_AXIS_OF_OFFER_KIND: Readonly<Record<string, PriceAxisKey | undefined>> =
+  PRICE_AXIS_OF_PRICED_SEEK;
 
 /**
- * **Ποιον άξονα τιμής σηκώνει ΑΥΤΗ η αγγελία;** — `null` όταν κανέναν (`'unpriced'`).
+ * **Σε ποιον άξονα κρίνεται η τιμή ΑΥΤΗΣ της εναλλακτικής** (ADR-777 §8.60.15).
  *
- * 🔴 **ΓΙΑΤΙ ΕΞΑΓΕΤΑΙ** (ζωντανό 500, 2026-09-18): όταν το §8.60.14 έσπασε το ενιαίο
- * `'price'` σε τρεις άξονες, ο άξονας τιμής της **ζήτησης** έμεινε να ζητά το παλιό
- * όνομα ⇒ `NUMERIC_READERS['price']` ήταν `undefined` ⇒ `TypeError` ⇒ **500** σε κάθε
- * `GET /api/demand/interest` με ζήτηση που δηλώνει εύρος τιμής. Ο καλών **δεν** επιτρέπεται
- * να μαντεύει όνομα άξονα: η σχέση ρόλου ↔ άξονα ζει **εδώ**, στον ίδιο πίνακα που την
- * επιβάλλει — αντιστροφή του {@link PRICE_AXIS_CLASS}, ποτέ δεύτερη λίστα που θα απέκλινε.
+ * 🔴 **Αντικαθιστά το `priceAxisKeyOf(listing)`** — που ρωτούσε «ποιον άξονα σηκώνει η **αγγελία**;»
+ * και έκρινε το **ένα** αμονάδιστο εύρος της ζήτησης σε αυτόν. Η ερώτηση ήταν ανάποδα: η μονάδα
+ * ανήκει στο **αίτημα**, όχι στην αγγελία. Μια αγγελία «πώληση + ενοικίαση» απαντά σε **δύο** άξονες.
  */
-export function priceAxisKeyOf(listing: PublicListing): PriceAxisKey | null {
-  const role = priceClassOf(listing);
-  const entry = Object.entries(PRICE_AXIS_CLASS).find(([, axisRole]) => axisRole === role);
-  return entry === undefined ? null : (entry[0] as PriceAxisKey);
+export function priceAxisOfSeek(seek: PricedDemandSeek): PriceAxisKey {
+  return PRICE_AXIS_OF_PRICED_SEEK[seek.kind];
+}
+
+/** Η **μονάδα** (ρόλος τιμής) μιας εναλλακτικής — € · €/μήνα · €/νύχτα. Παράγεται, δεν γράφεται. */
+export function priceRoleOfSeek(seek: PricedDemandSeek): PriceRole {
+  return PRICE_AXIS_CLASS[priceAxisOfSeek(seek)];
 }
 
 // =============================================================================
@@ -165,6 +176,11 @@ function plainNumber<K extends ListingAttributeKey>(
   read: (listing: PublicListing) => number | null
 ): NumericReader {
   return (listing) => (isAttributeDeclared(listing, key) ? read(listing) : null);
+}
+
+/** Αναγνώστης του ποσού **ενός ρόλου** — ο ρόλος έρχεται από τον {@link PRICE_AXIS_CLASS}, ποτέ γραμμένος. */
+function amountInRole(role: PriceRole): NumericReader {
+  return (listing) => resolvePriceForRole(listing, role)?.amount ?? null;
 }
 
 /**
@@ -196,22 +212,16 @@ const NUMERIC_READERS: Record<RangeCriterionKey, NumericReader> = {
   /**
    * 🔑 **Δεν είναι δημόσιο στοιχείο, είναι ΛΥΜΕΝΗ τιμή** — γι' αυτό δεν περνά από τον
    * `isAttributeDeclared`: η τιμή δεν «δηλώνεται» ως πεδίο, **προκύπτει** από τις
-   * διαθέσεις. Ο μοναδικός επιλυτής είναι το `getEffectivePrice`, όπως ακριβώς έκανε
-   * και ο παλιός κριτής.
-   */
-  /**
-   * 🔑 **Δεν είναι δημόσιο στοιχείο, είναι ΛΥΜΕΝΗ τιμή** — γι' αυτό δεν περνά από τον
-   * `isAttributeDeclared`: η τιμή δεν «δηλώνεται» ως πεδίο, **προκύπτει** από τις
-   * διαθέσεις. Ο μοναδικός επιλυτής είναι το `getEffectivePrice`.
+   * διαθέσεις, μέσω του **ενός** επιλυτή (`resolveDisplayPrice`).
    *
-   * ⚠️ **Και οι τρεις διαβάζουν το ΙΔΙΟ ποσό, και είναι σωστό**: η **μονάδα** κρίθηκε
-   * ήδη στο {@link priceAxisAppliesTo} — αν φτάσαμε εδώ, η αγγελία **είναι** αυτού του
-   * ρόλου. Ένας δεύτερος έλεγχος ρόλου εδώ θα ήταν η ίδια κρίση, δεύτερη φορά,
-   * ελεύθερη να αποκλίνει.
+   * 🔴 **ΔΙΟΡΘΩΣΗ 2026-09-18 (ADR-777 §8.60.15)**: και οι τρεις διάβαζαν το `getEffectivePrice`,
+   * δηλαδή την **κύρια** τιμή ⇒ το ενοίκιο μιας αγγελίας «πώληση + ενοικίαση» ήταν **αόρατο** στο
+   * `priceRent`. Τώρα κάθε άξονας ζητά **το ποσό του δικού του ρόλου** από τον έναν αναγνώστη
+   * ρόλου ({@link resolvePriceForRole}) — όπου η κύρια τιμή ήταν ήδη του ρόλου, **ίδιο ποσό**.
    */
-  priceSale: (listing) => getEffectivePrice(listing)?.amount ?? null,
-  priceRent: (listing) => getEffectivePrice(listing)?.amount ?? null,
-  priceNightly: (listing) => getEffectivePrice(listing)?.amount ?? null,
+  priceSale: amountInRole(PRICE_AXIS_CLASS.priceSale),
+  priceRent: amountInRole(PRICE_AXIS_CLASS.priceRent),
+  priceNightly: amountInRole(PRICE_AXIS_CLASS.priceNightly),
 };
 
 /** Η απάντηση της αγγελίας σε **αριθμητικό** άξονα. */

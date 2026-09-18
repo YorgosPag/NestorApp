@@ -143,14 +143,19 @@ export const formatWeekdayFromToday = (weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7, inDay
  * and granular options (year/month/day/hour/minute)
  * Note: dateStyle/timeStyle cannot be combined with granular options
  */
-export const formatDateTime = (date: Date | string | number, options?: Intl.DateTimeFormatOptions): string => {
+export const formatDateTime = (
+  date: Date | string | number,
+  options?: Intl.DateTimeFormatOptions,
+  // ⚠️ Ρητή γλώσσα στον διακομιστή (ADR-835 §23.6): ίδιο δόγμα με το `formatCalendarDay` — μία διεργασία,
+  //    πολλοί παραλήπτες, και η καθολική γλώσσα θα έγραφε την ώρα του ενός στη γλώσσα του άλλου.
+  locale: string = getCurrentLocale(),
+): string => {
   if (!date) return '-';
 
   const dateObj = date instanceof Date ? date : new Date(date);
 
   if (isNaN(dateObj.getTime())) return '-';
 
-  const locale = getCurrentLocale();
 
   // ENTERPRISE: If dateStyle or timeStyle is provided, use ONLY those options
   // (they cannot be combined with granular options like hour/minute/year etc)

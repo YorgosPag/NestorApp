@@ -6,6 +6,7 @@
 import type { Property, FilterState } from '@/types/property-viewer';
 import type { Connection, PropertyGroup } from '@/types/connections';
 import type { Floor } from '@/types/building/contracts';
+import type { PriceTotalsByRole } from '@/lib/properties/price-totals';
 
 /**
  * 🏢 ENTERPRISE: Polygon event arguments for create/update operations
@@ -86,22 +87,17 @@ export interface PublicDashboardStats {
   totalProperties: number;
   availableProperties: number;
   soldProperties: number;
-  totalValue: number;
   totalArea: number;
-  averagePrice: number;
   /**
-   * ADR-777 Α5 — **η κλειστή λογιστική της τιμής**: πόσα ακίνητα συνεισέφεραν στο
-   * `totalValue`/`averagePrice` και πόσα όχι. Χωρίς αυτά τα δύο, ένα ταμπλό που δείχνει
-   * «Συνολική αξία 2.4M» δεν λέει **αν** ο αριθμός αφορά όλα τα ακίνητα ή τα μισά.
+   * Αξία, μέση τιμή και €/m² **ανά ρόλο**, με την **κλειστή λογιστική** μέσα
+   * (`byRole[r].pricedCount` + `unpricedCount`) — ADR-777 Α5 + §8.60.14.13.
    *
-   * ⚠️ Ήταν το σημείο όπου η λογιστική **σταματούσε στα μισά**: το hook τα υπολόγιζε ήδη,
-   * αλλά δεν υπήρχαν εδώ ⇒ κάθε καταναλωτής που τυπίζεται ως `PublicDashboardStats` τα
-   * έβλεπε **αόρατα** (ανάθεση από μεταβλητή δεν ενεργοποιεί excess-property check, άρα
-   * τίποτα δεν έσκαγε). Ένα σύνολο που δεν λέει **ποιος μετρήθηκε** επικυρώνει τον εαυτό
-   * του — το ίδιο σχήμα «0 = κανείς δεν κοίταξε» που κυνηγούν οι πύλες του repo.
+   * ⚠️ Αντικατέστησε **τέσσερα** πεδία (`totalValue` · `averagePrice` · `pricedProperties` ·
+   * `unpricedProperties`). Τα δύο τελευταία είχαν μπει επειδή *«ένα σύνολο που δεν λέει
+   * ποιος μετρήθηκε επικυρώνει τον εαυτό του»* — σωστό, αλλά το σύνολο **δεν έλεγε ούτε
+   * ΤΙ μετρήθηκε**: πωλήσεις, ενοίκια και διανυκτερεύσεις σε έναν αριθμό.
    */
-  pricedProperties: number;
-  unpricedProperties: number;
+  priceTotals: PriceTotalsByRole;
   propertiesByStatus: Record<string, number>;
   propertiesByType: Record<string, number>;
   propertiesByFloor: Record<string, number>;

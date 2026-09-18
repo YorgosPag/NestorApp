@@ -29,6 +29,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
+import { EMPTY_PRICE_TOTALS } from '@/lib/properties/price-totals';
 
 // 🏢 ADR-051: Use centralized usePropertyGridFilters from Enterprise Filter System
 import { usePropertyGridFilters } from '@/components/core/AdvancedFilters';
@@ -45,7 +47,7 @@ import '@/lib/design-system';
 
 export function PropertyGridView() {
   const router = useRouter();
-  const { properties, filters, handleFiltersChange, dashboardStats, isLoading } = usePublicPropertyViewer();
+  const { properties, filteredProperties: engineFiltered, filters, handleFiltersChange, dashboardStats, isLoading } = usePublicPropertyViewer();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
@@ -64,11 +66,17 @@ export function PropertyGridView() {
    */
   const filtersConfig = usePropertyFiltersConfig(properties, propertyFiltersConfig);
 
+  /*
+    🔴 ADR-777 §8.60.14.14 — η λίστα ΠΕΡΝΑ ΠΡΩΤΑ ΑΠΟ ΤΗ ΜΗΧΑΝΗ. Ως τις 2026-09-18 το πλέγμα
+    έτρωγε τα ΑΦΙΛΤΡΑΡΙΣΤΑ `properties`, και ο παλιός `usePropertyGridFilters` έκρινε τιμή/
+    εμβαδόν με ΔΙΚΗ του, ποτέ γραμμένη κατάσταση — το «Εύρος τιμής» του πίνακα δεν έκανε
+    τίποτα. Τώρα το πλέγμα δείχνει ό,τι έκρινε ο ΕΝΑΣ κριτής (τιμή ΜΕ μονάδα), όπως η κάτοψη.
+  */
   const {
     viewMode, setViewMode,
     availableProperties,
     filteredProperties,
-  } = usePropertyGridFilters(properties, filters);
+  } = usePropertyGridFilters(engineFiltered, filters);
 
   // 🏢 ENTERPRISE: Dashboard stats
   const dashboardStatsFormatted: DashboardStat[] = useMemo(() => [
@@ -80,7 +88,7 @@ export function PropertyGridView() {
     },
     {
       title: t('dashboard.stats.totalValue'),
-      value: `€${((dashboardStats?.totalValue ?? 0) / 1000).toFixed(0)}K`,
+      ...priceTotalsView(t, dashboardStats?.priceTotals ?? EMPTY_PRICE_TOTALS, 'total'),
       icon: DollarSign,
       color: 'green' as const,
     },
@@ -92,7 +100,7 @@ export function PropertyGridView() {
     },
     {
       title: t('dashboard.stats.averagePrice'),
-      value: `€${((dashboardStats?.averagePrice ?? 0) / 1000).toFixed(0)}K`,
+      ...priceTotalsView(t, dashboardStats?.priceTotals ?? EMPTY_PRICE_TOTALS, 'average'),
       icon: Home,
       color: 'orange' as const,
     },

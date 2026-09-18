@@ -103,6 +103,33 @@ export const PRICE_AMOUNT_KEY: Readonly<Record<PriceRole, string>> = {
 };
 
 /**
+ * **Τιμή ανά τετραγωνικό, με τη μονάδα του ρόλου** — «2.450 €/m²», «9 €/m²/μήνα»
+ * (ADR-777 §8.60.14.13).
+ *
+ * ⚠️ Το ίδιο ιδίωμα με το {@link PRICE_AMOUNT_KEY}, **όχι** σύνθεση των δύο: η σειρά
+ * «/m²/μήνα» είναι γλωσσική απόφαση και ανήκει στο locale. Ως τις 2026-09-18 οι σελίδες
+ * πωλήσεων έγραφαν σκέτο «€/τ.μ.» πάνω από ποσό που μπορούσε να είναι μηνιαίο.
+ */
+export const PRICE_PER_AREA_KEY: Readonly<Record<PriceRole, string>> = {
+  sale: 'common:pricePerArea.sale',
+  rent: 'common:pricePerArea.rent',
+  nightly: 'common:pricePerArea.nightly',
+};
+
+/**
+ * **Η μονάδα ενός εύρους τιμής, ως επιλογή** — «Τιμή πώλησης (€)» · «Ενοίκιο (€/μήνα)» ·
+ * «Τιμή ανά νύχτα (€/νύχτα)» (ADR-777 §8.60.14.14, ο επιλογέας του φίλτρου «Τιμή από/έως»).
+ *
+ * 🔑 Η μονάδα γράφεται **μέσα** στην επιλογή: ο άνθρωπος που γράφει «έως 900» βλέπει **σε τι**
+ * το γράφει. `Record<PriceRole, …>` ⇒ τέταρτος ρόλος δεν μεταγλωττίζεται χωρίς όνομα.
+ */
+export const PRICE_RANGE_ROLE_KEY: Readonly<Record<PriceRole, string>> = {
+  sale: 'common:priceRangeFilter.role.sale',
+  rent: 'common:priceRangeFilter.role.rent',
+  nightly: 'common:priceRangeFilter.role.nightly',
+};
+
+/**
  * **Η ΕΠΙΓΡΑΦΗ ΕΝΟΣ ΤΜΗΜΑΤΟΣ ΤΗΣ ΛΙΣΤΑΣ** — η κλάση, **με το πλήθος της** (ADR-777 §8.60.14).
  *
  * 🔴 **Γιατί το πλήθος ζει ΜΕΣΑ στην επιγραφή και όχι δίπλα της.** Η επιγραφή είναι ο

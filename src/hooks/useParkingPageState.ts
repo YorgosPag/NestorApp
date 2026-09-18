@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 import { defaultParkingFilters, type ParkingFilterState } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 import { resolveParkingById, isArchivedEntity } from './entity-deep-link-sources';
+import { matchesPriceRange } from '@/lib/properties/price-range';
 import {
   useEntityPageState,
   type EntityPageStateConfig,
@@ -53,6 +54,10 @@ function filterParkingSpots(parkingSpots: ParkingSpot[], filters: ParkingFilterS
     const areaRange = filters.ranges?.areaRange;
     if (areaRange?.min !== undefined && parking.area && parking.area < areaRange.min) return false;
     if (areaRange?.max !== undefined && parking.area && parking.area > areaRange.max) return false;
+
+    // ADR-777 §8.60.14.14 — the panel offered a price range that NOTHING read (a control that
+    // silently did nothing). Now judged, with its UNIT, by the ONE price-range rule.
+    if (!matchesPriceRange(parking, filters.ranges?.priceRange)) return false;
 
     return true;
   });

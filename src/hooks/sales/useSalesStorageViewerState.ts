@@ -11,6 +11,7 @@ import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import type { Storage } from '@/types/storage/contracts';
 import type { SalesSpaceFilterState } from '@/types/sales-shared';
 import { useSalesSpaceViewerState } from './useSalesSpaceViewerState';
+import { EMPTY_PRICE_RANGE } from '@/lib/properties/price-range';
 
 // =============================================================================
 // 🏢 DEFAULTS
@@ -22,7 +23,7 @@ const DEFAULT_FILTERS: SalesSpaceFilterState = {
   type: 'all',
   building: 'all',
   floor: 'all',
-  priceRange: { min: null, max: null },
+  priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: null, max: null },
 };
 

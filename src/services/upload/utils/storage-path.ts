@@ -46,7 +46,7 @@ import {
   STORAGE_PATH_SEGMENTS,
   isPlatformEntityType,
 } from '@/config/domain-constants';
-import type { CustodyScope } from '@/lib/workspace/custody-scope';
+import { custodyOnly, type CustodyScope } from '@/lib/workspace/custody-scope';
 import {
   isValidCategory,
   isValidDomain,
@@ -294,11 +294,6 @@ function buildCustodyStorageRoot(custody: CustodyScope): string {
   return custody.userId !== undefined
     ? `${STORAGE_PATH_SEGMENTS.PEOPLE}/${custody.userId}`
     : `${STORAGE_PATH_SEGMENTS.COMPANIES}/${custody.companyId}`;
-}
-
-/** Only the owner member of a wider object — never both keys, never an `undefined` twin. */
-function custodyOnly(custody: CustodyScope): CustodyScope {
-  return custody.userId !== undefined ? { userId: custody.userId } : { companyId: custody.companyId };
 }
 
 /**

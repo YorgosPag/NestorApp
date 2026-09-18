@@ -15,8 +15,7 @@ import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-ente
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
-import { formatCurrency } from '@/lib/intl-utils';
-import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { pricePerAreaLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import {
   resolveDisplayPrice,
   type DisplayPrice,
@@ -120,10 +119,6 @@ export const MISSING_PRICE_LABEL_KEYS: Record<MissingPriceReason, string> = {
   // (ADR-835 §4.4). Until 2026-09-17 this row was missing and the card painted a raw key.
   'nightly-rate-missing': 'card.price.nightlyMissing',
 };
-
-/** Whole-euro money formatting — one rule, so every card reads the same. */
-export const formatPriceAmount = (amount: number): string =>
-  formatCurrency(amount, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 /**
  * **What each role is called** when it labels a row — «Πώληση» · «Ενοίκιο» · «Διανυκτέρευση».
@@ -312,7 +307,8 @@ export function buildPropertyPricePerSqmStats(
       icon: NAVIGATION_ENTITIES.price.icon,
       iconColor: presentation.iconColor,
       label: t(presentation.labelKey),
-      value: `${formatPriceAmount(perSqm)}/m²`,
+      // ADR-777 §8.60.14.14 — «9 €/m²/μήνα», never a bare «9 €/m²» under a rent.
+      value: pricePerAreaLabel(t, { role: price.role, amount: perSqm }),
     }];
   });
 }

@@ -147,6 +147,11 @@ export const PERMISSIONS = {
   // Notifications
   "notifications:notifications:view": true,
 
+  // Network — η ομάδα της πράξης (ADR-867 Β5 · ADR-834 §5 Β (ε) ②). Ο **διαχειριστής χώρου**
+  // αλλάζει υπεύθυνο και μέλη. Τους **συνεργάτες** τους αλλάζουν και τα μέλη της ομάδας, αλλά αυτό
+  // είναι σχέση με τον πόρο και το κρίνει το `act-team-change.ts`, όχι ρόλος.
+  "network:act_teams:manage": true,
+
   // Finance
   "finance:invoices:view": true,
   "finance:invoices:update": true,

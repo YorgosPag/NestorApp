@@ -10,10 +10,10 @@
 import {
   resolveDisplayPrice,
   getEffectivePrice,
-  totalPrice,
   priceSortKey,
   type PricedPropertyLike,
 } from '@/lib/properties/price-resolver';
+import { totalPriceByRole, type PriceTotalsByRole } from '@/lib/properties/price-totals';
 import { compareSortValues } from '@/lib/array-utils';
 
 /** Minimal builder — nothing is defaulted that the resolver reads. */
@@ -285,7 +285,10 @@ describe('Κ8 — getEffectivePrice remains a faithful projection', () => {
 // Κ9 — COLLECTIONS: the accounting must close, and absence must not be a zero
 // =============================================================================
 
-describe('Κ9 — totalPrice keeps a closed accounting', () => {
+describe('Κ9 — totalPriceByRole keeps a closed accounting (ξαναστράφηκε, ADR-777 §8.60.14.13)', () => {
+  // Η εγγύηση του Κ9 ΜΕΝΕΙ ακέραιη — άθροισμα μόνο όσων έχουν τιμή, μέσος όρος πάνω
+  // στους τιμολογημένους, κλειστή λογιστική, ποτέ NaN. Αυτό που άλλαξε: ο αριθμός ζει
+  // πλέον ΑΝΑ ΡΟΛΟ, γιατί ο παλιός `totalPrice` πρόσθετε πωλήσεις με ενοίκια.
   const mixed: PricedPropertyLike[] = [
     { commercialStatus: 'for-sale', commercial: { askingPrice: 100_000 } },
     { commercialStatus: 'for-sale', commercial: { askingPrice: 200_000 } },
@@ -293,20 +296,23 @@ describe('Κ9 — totalPrice keeps a closed accounting', () => {
     { commercialStatus: 'unavailable' }, // off the market
   ];
 
+  const pricedSum = (t: PriceTotalsByRole): number =>
+    Object.values(t.byRole).reduce((n, r) => n + r.pricedCount, 0);
+
   it('sums only the units that have a price', () => {
-    expect(totalPrice(mixed).total).toBe(300_000);
+    expect(totalPriceByRole(mixed).byRole.sale.total).toBe(300_000);
   });
 
   it('divides the average by the PRICED units, not by all of them', () => {
     // The defect this pins: 300.000/4 = 75.000 would report an average that no
     // unit is offered at, because two units that have no price were counted as
     // costing nothing.
-    expect(totalPrice(mixed).average).toBe(150_000);
+    expect(totalPriceByRole(mixed).byRole.sale.average).toBe(150_000);
   });
 
   it('reports both counts so the total can be read honestly', () => {
-    const result = totalPrice(mixed);
-    expect(result.pricedCount).toBe(2);
+    const result = totalPriceByRole(mixed);
+    expect(result.byRole.sale.pricedCount).toBe(2);
     expect(result.unpricedCount).toBe(2);
   });
 
@@ -319,19 +325,21 @@ describe('Κ9 — totalPrice keeps a closed accounting', () => {
       [{ commercialStatus: 'for-sale', commercial: { askingPrice: 0 } }],
     ];
     for (const shape of shapes) {
-      const result = totalPrice(shape);
-      expect(result.pricedCount + result.unpricedCount).toBe(shape.length);
+      const result = totalPriceByRole(shape);
+      expect(pricedSum(result) + result.unpricedCount).toBe(shape.length);
     }
   });
 
   it('reports zero — not NaN — when nothing in the set has a price', () => {
-    const result = totalPrice([{ commercialStatus: 'unavailable' }, {}]);
-    expect(result).toEqual({ total: 0, average: 0, pricedCount: 0, unpricedCount: 2 });
+    const result = totalPriceByRole([{ commercialStatus: 'unavailable' }, {}]);
+    expect(result.byRole.sale).toEqual({ total: 0, average: 0, pricedCount: 0, perArea: null });
+    expect(result.unpricedCount).toBe(2);
   });
 
-  it('counts a rent-priced unit, because rent IS its price', () => {
-    const result = totalPrice([{ commercialStatus: 'for-rent', commercial: { rentPrice: 750 } }]);
-    expect(result).toEqual({ total: 750, average: 750, pricedCount: 1, unpricedCount: 0 });
+  it('counts a rent-priced unit IN THE RENT ROLE — rent is its price, not a sale figure', () => {
+    const result = totalPriceByRole([{ commercialStatus: 'for-rent', commercial: { rentPrice: 750 } }]);
+    expect(result.byRole.rent).toEqual({ total: 750, average: 750, pricedCount: 1, perArea: null });
+    expect(result.byRole.sale.pricedCount).toBe(0);
   });
 });
 
@@ -437,11 +445,11 @@ describe('Κ11 — sold: contract price leads, asking price is context', () => {
     });
     expect(getEffectivePrice(u)).toEqual({ amount: 185_000, mode: 'sale' });
     expect(priceSortKey(u)).toBe(185_000);
-    expect(totalPrice([u])).toEqual({
+    expect(totalPriceByRole([u]).byRole.sale).toEqual({
       total: 185_000,
       average: 185_000,
       pricedCount: 1,
-      unpricedCount: 0,
+      perArea: null,
     });
   });
 });

@@ -127,12 +127,15 @@ function bookingOf(
     covers: [{ propertyId: PROPERTY, spaceId: null }],
     checkIn: spec.from,
     checkOut: spec.to,
-    holder: { kind: 'user', userId: spec.holder },
+    holder: { kind: 'user', userId: spec.holder, displayName: null },
     channel: 'platform',
     authorUserId: 'usr_author',
     guests: 2,
     lifecycle: 'confirmed',
     riskDisclosedAt: null,
+    hold: null,
+    resolution: null,
+    guestUserId: spec.holder,
     createdAt: '2027-01-01T00:00:00.000Z',
     updatedAt: '2027-01-01T00:00:00.000Z',
     ...over,
@@ -340,7 +343,7 @@ describe('🔴 Χ — ο πόρος είναι ΣΥΝΟΛΟ ΧΩΡΩΝ: τομή
     expect(conflict?.reason).toBe(EXISTING_IS_EXCLUSIVE);
     // «Ως πότε» — η κατάληψη που εμποδίζει ταξιδεύει ολόκληρη.
     expect(conflict?.with.source.checkOut).toBe(AUG_17);
-    expect(conflict?.with.source.holder).toEqual({ kind: 'user', userId: HOLDER_A });
+    expect(conflict?.with.source.holder).toEqual({ kind: 'user', userId: HOLDER_A, displayName: null });
   });
 
   it('🔑 Χ3. ΔΩΜΑΤΙΟ Α + ΔΩΜΑΤΙΟ Β, ίδιες μέρες ⇒ ΚΑΘΑΡΟ — αλλιώς η τομή θα ήταν «πάντα»', () => {
@@ -486,18 +489,24 @@ describe('Ο — δηλωμένα όρια', () => {
     expect(intervalShape(AUG_12, AUG_14)).toBe('proper');
   });
 
-  it('🔴 Ο2. Το `requested` ΔΕΝ καταλαμβάνει — και το φιλτράρει ο ΚΑΛΩΝ', () => {
-    // Αν καταλάμβανε, κακόβουλος «κλειδώνει» ολόκληρο καλοκαίρι με αιτήματα (§6.1).
+  // 🔴 Ο2 — ΑΝΤΙΣΤΡΑΦΗΚΕ ΣΤΟ ΣΤΑΔΙΟ Δ (Ε-9, ADR-835 §20.3 · §23.1), δεν σβήστηκε.
+  //    Ως το Στάδιο Γ έλεγε «το `requested` ΔΕΝ καταλαμβάνει» (φόβος: «κλειδώνω το καλοκαίρι»).
+  //    Η αγορά **κρατά** τις μέρες όσο εκκρεμεί το αίτημα· ο φόβος λύθηκε με **προθεσμία** και με
+  //    **όριο ανά επισκέπτη**. Η άγκυρα καρφώνει πλέον και τις δύο πλευρές της προθεσμίας.
+  const NOW = '2027-08-01T09:00:00.000Z';
+  it.each([
+    { expiresAt: '2027-08-02T09:00:00.000Z', alive: true, occupies: 1, verdict: 'conflicts' },
+    { expiresAt: '2027-08-01T09:00:00.000Z', alive: false, occupies: 0, verdict: 'clear' },
+  ])('🔴 Ο2. `requested` καταλαμβάνει ΜΟΝΟ όσο ζει η προθεσμία (ζωντανό=$alive)', ({ expiresAt, occupies, verdict }) => {
     const requested = bookingOf({ holder: HOLDER_A, from: AUG_10, to: AUG_17 }, {
       lifecycle: 'requested',
+      hold: { expiresAt, tier: 'distant', bound: 'response-hours', respondentUserId: 'usr_author' },
     });
     const candidate = bookingOf({ holder: HOLDER_B, from: AUG_10, to: AUG_17 });
 
-    expect(occupyingStays([requested])).toHaveLength(0);
-    expect(stayConflicts(candidate, occupyingStays([requested])).kind).toBe('clear');
-
-    // 🔑 Ο παρονομαστής: **αφιλτράριστο** το ίδιο αίτημα ΣΥΓΚΡΟΥΕΤΑΙ. Δηλαδή το
-    //    φίλτρο κάνει δουλειά, και η παράλειψή του έχει συνέπεια.
+    expect(occupyingStays([requested], NOW)).toHaveLength(occupies);
+    expect(stayConflicts(candidate, occupyingStays([requested], NOW)).kind).toBe(verdict);
+    // 🔑 Ο παρονομαστής: **αφιλτράριστο** το ίδιο αίτημα ΣΥΓΚΡΟΥΕΤΑΙ πάντα — το φίλτρο κάνει δουλειά.
     expect(stayConflicts(candidate, [requested]).kind).toBe('conflicts');
   });
 
@@ -512,7 +521,7 @@ describe('Ο — δηλωμένα όρια', () => {
       id: 'stay_completed',
     });
 
-    expect(occupyingStays([cancelled, completed]).map((b) => b.lifecycle)).toEqual([
+    expect(occupyingStays([cancelled, completed], '2027-08-01T09:00:00.000Z').map((b) => b.lifecycle)).toEqual([
       'completed',
     ]);
   });

@@ -10,10 +10,11 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import { priceSortKey, totalPrice } from '@/lib/properties/price-resolver';
+import { matchesPriceRange } from '@/lib/properties/price-range';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
 import type {
   SalesSpaceFilterState,
-  SalesSpaceDashboardStats,
+  SalesDashboardStats,
   SalesSpaceItem,
   SalesViewMode,
 } from '@/types/sales-shared';
@@ -94,7 +95,8 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
     if (filters.building !== 'all' && !matchesBuilding(item, filters.building)) return false;
     if (filters.floor !== 'all' && item.floor !== filters.floor) return false;
 
-    if (!matchesRange(priceSortKey(item), filters.priceRange)) return false;
+    // ADR-777 §8.60.14.14 — ποσό ΣΤΗ ΜΟΝΑΔΑ του εύρους, ποτέ η κύρια τιμή όποιου ρόλου.
+    if (!matchesPriceRange(item, filters.priceRange)) return false;
     if (!matchesRange(item.area ?? 0, filters.areaRange)) return false;
 
     if (options.matchesExtraFilters && !options.matchesExtraFilters(item, filters)) {
@@ -111,20 +113,15 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
 // 🏢 STATS
 // =============================================================================
 
-function computeDashboardStats(items: SalesSpaceItem[]): SalesSpaceDashboardStats {
+function computeDashboardStats(items: SalesSpaceItem[]): SalesDashboardStats {
   const available = items.filter((item) => item.status === 'available');
-  const areas = available.map((item) => item.area ?? 0).filter((a) => a > 0);
 
-  // ADR-777 Α5/Α6 — the sum and its denominator both come from the resolver,
-  // which skips units with no price instead of entering them as zero.
-  const priced = totalPrice(available);
-  const totalArea = areas.reduce((sum, a) => sum + a, 0);
-
+  // ADR-777 Α5/Α6 + §8.60.14.13 — per role, and the €/m² divides by the area of the
+  // SAME units it summed: it used to divide the priced total by the area of ALL
+  // available units, so every priceless spot pulled the €/m² down as if it were free.
   return {
     availableCount: available.length,
-    averagePrice: priced.average,
-    totalValue: priced.total,
-    averagePricePerSqm: totalArea > 0 ? priced.total / totalArea : 0,
+    priceTotals: totalPriceByRole(available, (item) => item.area),
   };
 }
 

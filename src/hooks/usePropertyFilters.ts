@@ -12,7 +12,8 @@ import {
   matchesArrayFilter,
   matchesFeatures
 } from '@/components/core/AdvancedFilters';
-import { priceSortKey, totalPrice } from '@/lib/properties/price-resolver';
+import { EMPTY_PRICE_RANGE, matchesPriceRange } from '@/lib/properties/price-range';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { tallyBy } from '@/utils/collection-utils';
 
 
@@ -58,7 +59,7 @@ export function usePropertyFilters(
       floor = [],
       propertyType = [],
       status = [],
-      priceRange = { min: undefined, max: undefined },
+      priceRange = EMPTY_PRICE_RANGE,
       areaRange = { min: undefined, max: undefined },
       features = [],
       coverage = {},
@@ -79,12 +80,11 @@ export function usePropertyFilters(
       const typeMatch = matchesArrayFilter(property.type, propertyType);
       const statusMatch = matchesArrayFilter(property.status, status);
 
-      // 🏢 CENTRALIZED: Range filters using matchesNumericRange
-      // ADR-777 Α6 — the filter must read the SAME price the card displays. It
-      // read the @deprecated flat `property.price`, so a unit priced through
-      // `commercial.askingPrice` was filtered on a field it does not use.
-      // `matchesNumericRange` already drops a null against an active range.
-      const priceMatch = matchesNumericRange(priceSortKey(property), priceRange);
+      // 🏢 CENTRALIZED: Range filters
+      // ADR-777 Α6 + §8.60.14.14 — the price range carries its UNIT: only an amount in
+      // that role is judged (`matchesPriceRange`), never «up to 1.000» across a sale
+      // price, a monthly rent and a nightly rate.
+      const priceMatch = matchesPriceRange(property, priceRange);
       const areaMatch = matchesNumericRange(property.area, areaRange);
 
       // 🏢 CENTRALIZED: Features filter using matchesFeatures
@@ -114,19 +114,16 @@ export function usePropertyFilters(
       return searchMatch && projectMatch && buildingMatch && floorMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch && coverageMatch;
     });
     
-    // ADR-777 Α5/Α6 — the totals read the price SSoT, and the average divides by
-    // the units that actually have a price. `p.price || 0` both ignored
-    // `commercial.askingPrice` and counted priceless units as costing nothing.
-    const priced = totalPrice(filtered);
+    // ADR-777 Α5/Α6 + §8.60.14.13 — the totals read the price SSoT, PER ROLE: a sale
+    // price, a monthly rent and a nightly rate are three units, never one sum.
 
     // 🎯 DOMAIN SEPARATION: Stats use operationalStatus where available
     const calculatedStats: PropertyStats = {
       totalProperties: filtered.length,
       // availableProperties = operationalStatus 'ready' (Physical readiness)
       availableProperties: filtered.filter(p => p.operationalStatus === 'ready').length,
-      totalValue: priced.total,
+      priceTotals: totalPriceByRole(filtered, (p) => p.area),
       totalArea: filtered.reduce((sum, p) => sum + (p.area || 0), 0),
-      averagePrice: priced.average,
       // propertiesByStatus uses operationalStatus (not sales status)
       propertiesByStatus: tallyBy(filtered, p => p.operationalStatus || 'draft'),
       propertiesByType: tallyBy(filtered, p => p.type),

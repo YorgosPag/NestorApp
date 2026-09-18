@@ -197,6 +197,13 @@ export interface PropertiesNotificationSettings {
    */
   cardEmailReturned: boolean;
   /**
+   * 🎯 ADR-835 §23.6 — «**νέο αίτημα κράτησης — απάντησε ως …**» (και απόσυρση · λήξη). **Υποχρεωτική**
+   * στο μητρώο (`isMandatory: true`): το πεδίο υπάρχει για τη γραμμή των ρυθμίσεων, όχι για να σβήνει.
+   */
+  stayRequestReceived: boolean;
+  /** 🎯 ADR-835 §23.6 — «**η κράτησή σου επιβεβαιώθηκε / δεν έγινε δεκτή / δεν απαντήθηκε**». Υποχρεωτική. */
+  stayRequestAnswered: boolean;
+  /**
    * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»** (ερώτηση + μία υπενθύμιση ανά περίοδο).
    *
    * ⚠️ **Προεπιλογή `true`**: χωρίς απάντηση η δημόσια κάρτα λέει «το ωράριο ίσως διαφέρει» σε κάθε αργία — ο
@@ -410,6 +417,8 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   mandateRequestAnswered: true,
   cardEmailReturned: true,
   holidayHoursQuestion: true,
+  stayRequestReceived: true,
+  stayRequestAnswered: true,
 };
 
 /**

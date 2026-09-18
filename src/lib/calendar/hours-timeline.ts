@@ -207,6 +207,36 @@ export function openStateAt(hours: WeeklyHours, instant: Date, options: Timeline
   return { kind: 'closed', next, uncertain: uncertainBefore(days, next?.inDays ?? DAYS_PER_WEEK - 1) };
 }
 
+/**
+ * **Σε πόσα λεπτά ΡΟΛΟΓΙΟΥ θα έχουν περάσει `minutes` λεπτά ΑΝΟΙΧΤΟΥ χρόνου;** — το «ρολόι ανθρώπου»
+ * (ADR-835 §23.3): αίτημα Παρασκευή 23:40 με ώρες 09:00–21:00 δεν ξοδεύει τη νύχτα.
+ *
+ * 🔑 Πάνω στα **ίδια** `openBlocks` με το «ανοιχτό τώρα;» — δεύτερη γραμμή χρόνου θα διαφωνούσε κάποτε για
+ * το ίδιο 22:00–02:00. Η βάρδια της παραμονής μετρά (παράθυρο από χθες), όπως στο {@link openStateAt}.
+ *
+ * `null` ⇒ δεν συμπληρώνονται μέσα στο παράθυρο των 14 ημερών (ωράριο σχεδόν κλειστό). Ο καλών **οφείλει**
+ * ταβάνι· αυτή η συνάρτηση δεν μαντεύει.
+ */
+export function openMinutesElapseIn(
+  hours: WeeklyHours,
+  instant: Date,
+  minutes: number,
+  options: TimelineOptions = {},
+): number | null {
+  if (minutes <= 0) return 0;
+  const clock = athensClockAt(instant);
+  const now = clock.minutes;
+  let remaining = minutes;
+  for (const block of openBlocks(calendarDays(clock, hours, options, -WINDOW_PAST_DAYS, WINDOW_AHEAD_DAYS))) {
+    const start = Math.max(block.start, now);
+    if (block.end <= start) continue;
+    const available = block.end - start;
+    if (available >= remaining) return start + remaining - now;
+    remaining -= available;
+  }
+  return null;
+}
+
 /** **Οι επόμενες `count` ημέρες από σήμερα**, με ό,τι ξέρουμε για την καθεμία — ο πίνακας της σελίδας (όπως το Google Maps). */
 export function upcomingDays(hours: WeeklyHours, instant: Date, count: number, options: TimelineOptions = {}): readonly CalendarDay[] {
   return calendarDays(athensClockAt(instant), hours, options, 0, count - 1);

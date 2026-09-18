@@ -12,6 +12,7 @@ import {
   Ruler, TrendingUp, ShoppingCart, Percent, Link, Unlink,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import type { ReportKPI } from '@/components/reports/core';
 import type {
   SpacesReportPayload,
@@ -45,14 +46,6 @@ export interface UseSpacesReportReturn {
 // Pure transforms
 // ---------------------------------------------------------------------------
 
-function formatEuro(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatArea(sqm: number): string {
   return `${sqm.toLocaleString('el-GR')} m²`;
 }
@@ -66,9 +59,11 @@ function buildSpaceKPIs(
     { title: t('spaces.kpis.totalStorage'), value: data.storage.total, icon: Warehouse, color: 'purple' as const },
     { title: t('spaces.kpis.parkingUtilization'), value: `${data.parking.utilizationRate}%`, icon: Percent, color: 'green' as const },
     { title: t('spaces.kpis.storageUtilization'), value: `${data.storage.utilizationRate}%`, icon: BarChart3, color: 'orange' as const },
-    { title: t('spaces.kpis.totalValue'), value: formatEuro(data.parking.totalValue + data.storage.totalValue), icon: CircleDollarSign, color: 'cyan' as const },
+    // ADR-777 §8.60.14.13 — ήταν `parking.totalValue + storage.totalValue`: δύο αθροίσματα
+    // χωρίς μονάδα, προστιθέμενα. Τώρα ΕΝΑ πέρασμα πάνω και στα δύο, ανά ρόλο.
+    { title: t('spaces.kpis.totalValue'), ...priceTotalsView(t, data.spacesPriceTotals, 'total'), icon: CircleDollarSign, color: 'cyan' as const },
     { title: t('spaces.kpis.totalArea'), value: formatArea(data.storage.totalArea), icon: Ruler, color: 'indigo' as const },
-    { title: t('spaces.kpis.avgPricePerSqm'), value: formatEuro(data.storage.avgPricePerSqm), icon: TrendingUp, color: 'pink' as const },
+    { title: t('spaces.kpis.avgPricePerSqm'), ...priceTotalsView(t, data.storage.priceTotals, 'perArea'), icon: TrendingUp, color: 'pink' as const },
     { title: t('spaces.kpis.totalSold'), value: data.parking.soldCount + data.storage.soldCount, icon: ShoppingCart, color: 'yellow' as const },
     { title: t('spaces.kpis.linked'), value: data.linkedSpaces, icon: Link, color: 'green' as const },
     { title: t('spaces.kpis.unlinked'), value: data.unlinkedSpaces, icon: Unlink, color: 'red' as const },

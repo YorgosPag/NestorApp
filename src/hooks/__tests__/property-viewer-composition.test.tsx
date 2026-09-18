@@ -98,7 +98,8 @@ const EXPECTED_EMPTY_FILTERS: FilterState = {
   floor: [],
   propertyType: [],
   status: [],
-  priceRange: { min: undefined, max: undefined },
+  // ADR-777 §8.60.14.14 — το εύρος τιμής φέρει ΜΟΝΑΔΑ· κενό = ο πρώτος ρόλος, κανένα όριο.
+  priceRange: { role: 'sale' },
   areaRange: { min: undefined, max: undefined },
   features: [],
 };
@@ -107,9 +108,16 @@ const EXPECTED_EMPTY_FILTERS: FilterState = {
 const EXPECTED_ZERO_STATS: PropertyStats = {
   totalProperties: 0,
   availableProperties: 0,
-  totalValue: 0,
+  // ADR-777 §8.60.14.13 — αξία ανά ρόλο, γραμμένη ΑΝΕΞΑΡΤΗΤΑ (όχι `EMPTY_PRICE_TOTALS`).
+  priceTotals: {
+    byRole: {
+      sale: { total: 0, average: 0, pricedCount: 0, perArea: null },
+      rent: { total: 0, average: 0, pricedCount: 0, perArea: null },
+      nightly: { total: 0, average: 0, pricedCount: 0, perArea: null },
+    },
+    unpricedCount: 0,
+  },
   totalArea: 0,
-  averagePrice: 0,
   propertiesByStatus: {},
   propertiesByType: {},
   propertiesByFloor: {},

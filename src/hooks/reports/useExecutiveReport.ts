@@ -23,6 +23,7 @@ import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 import { usePropertiesStats } from '@/hooks/usePropertiesStats';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { useRealtimeOpportunities } from '@/services/realtime/hooks/useRealtimeOpportunities';
 import { useRealtimeTasks } from '@/services/realtime/hooks/useRealtimeTasks';
 import { getTrafficLight } from '@/services/report-engine/evm-calculator';
@@ -90,7 +91,10 @@ function buildKPIs(
     },
     {
       title: t('executive.kpis.revenueYTD'),
-      value: formatEuro(unitStats.totalValue),
+      // ADR-777 §8.60.14.13 — ανά ρόλο, ποτέ ένα άθροισμα πωλήσεων + ενοικίων + διανυκτερεύσεων.
+      // 🔶 ΔΗΛΩΜΕΝΟ, ΑΝΟΙΧΤΟ: ο τίτλος λέει «Έσοδα YTD», ο αριθμός είναι η ΤΙΜΗ του
+      //    χαρτοφυλακίου (όλες οι καταστάσεις, χωρίς χρονικό φίλτρο). Απόφαση Giorgio.
+      ...priceTotalsView(t, unitStats.priceTotals, 'total'),
       icon: TrendingUp,
       color: 'green' as const,
     },

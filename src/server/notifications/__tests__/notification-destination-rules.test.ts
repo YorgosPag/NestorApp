@@ -160,6 +160,10 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.holidayHoursQuestion',
       'properties.mandateDecided',
       'properties.mandateRequestAnswered',
+      // ADR-835 §23.6 (Στάδιο Δ) — ο οικοδεσπότης στο ημερολόγιο (χώρος = θεματοφυλακή),
+      // ο επισκέπτης στη δημόσια αγγελία (ίδιος κανόνας με την αντιστοίχιση ζήτησης).
+      'properties.stayRequestAnswered',
+      'properties.stayRequestReceived',
     ]);
   });
 });

@@ -410,19 +410,15 @@ type SuccessionJudgement =
 function recordTrace(request: ContainerTransitionRequest, outcome: ContainerTransitionOutcome): void {
   const trace = traceOf(request, outcome);
   if (trace === null) return;
-  // 🔶 ADR-866 2β.4 — **το `FILE_AUDIT_LOG` δεν έχει προσωπικό διαμέρισμα** (ο `recordFileAudit`
-  //    απαιτεί μη κενό `companyId`, και ο αναγνώστης φιλτράρει `where('companyId','==',…)`). Μια
-  //    γραμμή με ψεύτικη ή κενή εταιρεία θα ήταν **αόρατη** — δηλαδή ίχνος που κανείς δεν διαβάζει,
-  //    με το κόστος να μοιάζει γραμμένο. ⇒ Σιωπή **δηλωμένη**, ίδιο δόγμα με το `logForCustody`
-  //    (2β.2) και το `recordPurgeAudit` (2β.3α). Ο φρουρός φεύγει στο 2β.4, μαζί με τους άλλους δύο.
-  const { custody } = request.actor;
-  if (custody.userId !== undefined) return;
+  // 📒 ADR-866 §2.6.11 — η γραμμή πάει στο βιβλίο **του κατόχου του δράστη** (`FILE_AUDIT_COLLECTION`):
+  //    εταιρικό ⇒ `file_audit_log`, προσωπικό ⇒ `file_audit_log_personal`, που το διαβάζει ο κάτοχος.
+  //    Ο κάτοχος είναι ο **ίδιος** που διάλεξε το διαμέρισμα του αρχείου — μία πηγή, ποτέ δεύτερη.
   safeFireAndForget(
     recordFileAudit({
       fileId: outcome.fileId,
       action: trace.action,
       performedBy: request.actor.uid,
-      companyId: custody.companyId,
+      ...request.actor.custody,
       metadata: trace.metadata,
     }),
     'ContainerTransitions.recordTrace',

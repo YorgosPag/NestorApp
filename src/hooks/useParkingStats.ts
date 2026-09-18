@@ -8,7 +8,11 @@
 
 import { useMemo } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
-import { priceSortKey } from '@/lib/properties/price-resolver';
+import {
+  EMPTY_PRICE_TOTALS,
+  totalPriceByRole,
+  type PriceTotalsByRole,
+} from '@/lib/properties/price-totals';
 import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
 
 export interface ParkingStats {
@@ -25,8 +29,8 @@ export interface ParkingStats {
   averageArea: number;
 
   // Price metrics
-  totalValue: number;
-  averagePrice: number;
+  /** Αξία **ανά ρόλο** (ADR-777 §8.60.14.13) — ποτέ ένας αριθμός πάνω από ανόμοιες μονάδες. */
+  priceTotals: PriceTotalsByRole;
 
   // Distribution metrics
   uniqueBuildings: number;
@@ -42,15 +46,14 @@ export interface ParkingStats {
 }
 
 const getArea = (p: ParkingSpot): number => p.area || 0;
-// ADR-777 Α5/Α6 — `p.price || 0` ignored `commercial.askingPrice` (which
-// `types/spaces.ts` declares for parking) and counted priceless spots as
-// costing nothing. `null` keeps them out of both the sum and the average.
-const getValue = (p: ParkingSpot): number | null => priceSortKey(p);
+// ⛔ No `getValue` (ADR-777 §8.60.14.13): a price is not a unitless number — the value
+//    is answered per role by `totalPriceByRole` (which also keeps Α5: priceless spots
+//    are named, never entered as zero).
 const getStatus = (p: ParkingSpot): string => p.status || 'unknown';
 const getType = (p: ParkingSpot): string => p.type || 'unknown';
 
 export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
-  const base = useEntityStats(parkingSpots, { getArea, getValue, getStatus, getType });
+  const base = useEntityStats(parkingSpots, { getArea, getStatus, getType });
 
   const stats = useMemo<ParkingStats>(() => {
     const total = base.total;
@@ -77,8 +80,7 @@ export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
 
       totalArea: base.totalArea,
       averageArea: base.averageArea,
-      totalValue: base.totalValue,
-      averagePrice: base.averageValue,
+      priceTotals: total > 0 ? totalPriceByRole(parkingSpots) : EMPTY_PRICE_TOTALS,
 
       uniqueBuildings,
       parkingByType: base.byType,

@@ -10,6 +10,7 @@
 
 import type { EVMResult } from './evm-calculator';
 import type { AgingBucketResult } from './aging-calculator';
+import type { PriceTotalsByRole } from '@/lib/properties/price-totals';
 
 // ============================================================================
 // PUBLIC — Filter
@@ -132,7 +133,8 @@ export interface SpacesReportData {
     byZone: Record<string, number>;
     byBuilding: Record<string, number>;
     utilizationRate: number;
-    totalValue: number;
+    /** Αξία ανά ρόλο (ADR-777 §8.60.14.13) — ήταν `totalValue`, ένας αριθμός χωρίς μονάδα. */
+    priceTotals: PriceTotalsByRole;
     soldCount: number;
     salesRate: number;
   };
@@ -143,11 +145,13 @@ export interface SpacesReportData {
     byBuilding: Record<string, number>;
     utilizationRate: number;
     totalArea: number;
-    totalValue: number;
-    avgPricePerSqm: number;
+    /** Αξία + €/m² ανά ρόλο — ήταν `totalValue` + `avgPricePerSqm` (παρονομαστής: ΟΛΟ το εμβαδόν). */
+    priceTotals: PriceTotalsByRole;
     soldCount: number;
     salesRate: number;
   };
+  /** Θέσεις + αποθήκες μαζί, ανά ρόλο — το KPI «Συνολική αξία χώρων». */
+  spacesPriceTotals: PriceTotalsByRole;
   linkedSpaces: number;
   unlinkedSpaces: number;
   generatedAt: string;

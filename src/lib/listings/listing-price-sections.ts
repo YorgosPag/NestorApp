@@ -1,85 +1,64 @@
 /**
- * @fileoverview **ΟΙ ΚΛΑΣΕΙΣ ΣΥΓΚΡΙΣΙΜΟΤΗΤΑΣ ΤΗΣ ΤΙΜΗΣ** — ποια ποσά επιτρέπεται να συγκριθούν.
- * @related ADR-777 §8.60.14 · ADR-835 §4.4 · lib/listings/listing-results-order.ts
+ * @fileoverview **ΟΙ ΚΛΑΣΕΙΣ ΣΥΓΚΡΙΣΙΜΟΤΗΤΑΣ ΤΗΣ ΤΙΜΗΣ — ό,τι είναι ΔΙΚΟ της δημόσιας αναζήτησης.**
+ * @related ADR-777 §8.60.14 · §8.60.14.14 · lib/properties/price-class-sections.ts · lib/listings/listing-results-order.ts
  * @module lib/listings/listing-price-sections
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΤΟ ΕΡΩΤΗΜΑ ΠΟΥ ΑΠΑΝΤΑ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ, ΚΑΙ ΜΟΝΟ ΑΥΤΟ
+ * 🔴 ΤΙ ΕΜΕΙΝΕ ΕΔΩ — ΚΑΙ ΓΙΑΤΙ Η ΜΗΧΑΝΗ ΕΦΥΓΕ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * *«Ποια ποσά είναι ΣΥΓΚΡΙΣΙΜΑ μεταξύ τους — και τι κάνουμε με όσα δεν είναι;»*
+ * Η διαμέριση «πρώτα η μονάδα, μετά ο αριθμός» (Φάση 1) ζούσε εδώ, δεμένη στο `PublicListing`.
+ * Η Φάση 4 (§8.60.14.14) τη χρειάστηκε σε **τέσσερις εσωτερικούς πίνακες** ⇒ **γενικεύτηκε** και
+ * ανέβηκε στο `lib/properties/price-class-sections.ts` (`partitionByPriceClass<T>`). ⛔ Δεύτερη
+ * υλοποίηση θα ήταν δεύτερη απάντηση στο ίδιο ερώτημα.
  *
- * Ο Νέστωρ δείχνει **πώληση, μίσθωμα και διανυκτέρευση στην ΙΔΙΑ οθόνη**. Ως τις
- * 2026-09-17 η «τιμή ↑» έβαζε σε **έναν** άξονα `50 €/νύχτα`, `900 €/μήνα` και
- * `170.000 €` πώλησης. Δεν είναι σφάλμα μορφοποίησης: **δεν είναι σύγκριση**.
+ * Εδώ μένουν **μόνο** οι δύο αποφάσεις που ανήκουν στην αναζήτηση:
  *
- * 🔑 Ποσά διαφορετικού ρόλου είναι **ΑΣΥΓΚΡΙΤΑ** ⇒ η «σειρά κατά τιμή» είναι **μερική**
- * διάταξη, όχι ολική — και μια μερική διάταξη **δεν γίνεται επίπεδη λίστα χωρίς να
- * εφευρεθεί κάτι**. Τα τμήματα εδώ είναι ακριβώς οι **κλάσεις συγκρισιμότητας**: δεν
- * προσθέτουν απόφαση, **αποκαλύπτουν** αυτήν που ήδη υπήρχε κρυμμένη.
+ * 1. **Το σύνολο διαμονής** (§8.60.12 / §8.60.14.5): με ημερομηνίες, η μονάδα του τμήματος
+ *    διαμονής γίνεται το **σύνολο** — όλο ή τίποτα **ανά τμήμα**.
+ * 2. **Η ολική σειρά** για ισοπαλίες: τίτλος → `id`.
  *
- * ⚠️ **ΓΙΑΤΙ ΧΩΡΙΣΤΟ ΑΡΧΕΙΟ ΑΠΟ ΤΟΝ `listing-results-order.ts`** (N.7.1, 500 γραμμές):
- * εκείνο απαντά *«ΠΟΙΕΣ σειρές προσφέρονται και πώς ζουν στη διεύθυνση»* — κλειστό
- * λεξιλόγιο, προεπιλογή, κωδικοποιητής URL. Αυτό απαντά *«ΠΟΙΑ ποσά μπαίνουν στον ίδιο
- * άξονα»* — κανόνας του **τομέα**, που θα ίσχυε ακόμη κι αν η οθόνη δεν πρόσφερε καμία
- * επιλογή σειράς. Δύο ερωτήσεις, δύο αρχεία· **ένας** εξαγόμενος δρόμος
- * ({@link orderResultsListings}) που τις ενώνει.
- *
- * ⛔ **ΜΗΝ γεννήσεις εδώ δεύτερο κλειδί τιμής.** Ο ρόλος και το ποσό έρχονται **και τα
- * δύο** από τον ΕΝΑ κριτή (`resolveDisplayPrice`) — τον ίδιο που ζωγραφίζει την τιμή σε
- * κάρτα, φούσκα, δείκτη άκρης και πινακίδα χάρτη.
+ * ⚠️ **ΓΙΑΤΙ ΧΩΡΙΣΤΟ ΑΡΧΕΙΟ ΑΠΟ ΤΟΝ `listing-results-order.ts`** (N.7.1): εκείνο απαντά
+ * *«ΠΟΙΕΣ σειρές προσφέρονται και πώς ζουν στη διεύθυνση»*· αυτό *«ΠΟΙΑ ποσά μπαίνουν στον ίδιο
+ * άξονα, στην αναζήτηση»*.
  */
 
-import { compareSortValues, type SortDirection } from '@/lib/array-utils';
 import { compareByNameThenId } from '@/lib/ordering/total-name-order';
+import type { SortDirection } from '@/lib/array-utils';
+import type { PriceClass, PriceRole } from '@/lib/properties/price-resolver';
 import {
-  PRICE_ROLE_ORDER,
-  resolveDisplayPrice,
-  type PriceClass,
-  type PriceRole,
-} from '@/lib/properties/price-resolver';
+  countPriceClassSections,
+  flattenPriceClassSections,
+  partitionByPriceClass,
+  type PriceClassSection,
+  type PriceClassSections,
+  type PricedEntry,
+  type PriceKeyWithin,
+} from '@/lib/properties/price-class-sections';
 import { NO_STAY_TOTALS, type StayTotals } from '@/lib/listings/listing-stay-total';
 import type { PublicListing } from '@/types/public-listing';
 
 // ============================================================================
-// ΤΑ ΤΜΗΜΑΤΑ — οι κλάσεις συγκρισιμότητας
+// ΤΑ ΤΜΗΜΑΤΑ — το γενικό σχήμα, με το όνομα της αναζήτησης
 // ============================================================================
 
 /**
- * **Η κλάση στην οποία ανήκει ένα τμήμα** — ο ρόλος του ποσού, ή η ρητή απουσία ποσού.
- *
- * 🔑 **Δεν δηλώνεται εδώ**: είναι το {@link PriceClass} του `price-resolver`, δηλαδή του
- * ιδιοκτήτη του λεξιλογίου. Το ίδιο ερώτημα το ρωτά και το **φίλτρο εύρους τιμής**
- * (§8.60.14 Φάση 2), που ζει στο `lib/criteria` — και τα δύο δέντρα **δεν επιτρέπεται
- * να εισάγουν το ένα το άλλο** (κύκλος, CHECK 3.80). Ένα τοπικό αντίγραφο του τύπου θα
- * ήταν δεύτερη δήλωση της ίδιας διαμέρισης, ελεύθερη να αποκλίνει.
- *
- * ⚠️ Το όνομα μένει **τοπικό ψευδώνυμο** γιατί εδώ σημαίνει «επιγραφή τμήματος» — ίδιος
- * τύπος, άλλη ανάγνωση.
+ * **Η κλάση στην οποία ανήκει ένα τμήμα** — το {@link PriceClass} του `price-resolver`,
+ * δηλαδή του ιδιοκτήτη του λεξιλογίου. Το ίδιο ερώτημα το ρωτά και το φίλτρο εύρους τιμής
+ * (`lib/criteria`), και τα δύο δέντρα **δεν επιτρέπεται να εισάγουν το ένα το άλλο**
+ * (κύκλος, CHECK 3.80). Τοπικό **ψευδώνυμο**, γιατί εδώ σημαίνει «επιγραφή τμήματος».
  */
 export type ListingSectionHeading = PriceClass;
 
-/**
- * Ένα τμήμα της λίστας: **μία** κλάση συγκρισιμότητας, ταξινομημένη μέσα της.
- *
- * ⚠️ **`heading: null` σημαίνει «καμία επιγραφή», ΟΧΙ «καμία κλάση».** Όταν όλα τα
- * αποτελέσματα ανήκουν σε **μία** κλάση, η επιγραφή δεν προσθέτει πληροφορία — την
- * λέει ήδη κάθε κάρτα με τη μονάδα της (§8.60.11). Επιγραφή πάνω από ομοιογενή λίστα
- * θα ήταν θόρυβος με στολή ειλικρίνειας.
- */
-export interface ListingSection {
-  readonly heading: ListingSectionHeading | null;
-  readonly listings: readonly PublicListing[];
-}
+/** Ένα τμήμα της λίστας αποτελεσμάτων — το γενικό {@link PriceClassSection}, ποτέ δεύτερο σχήμα. */
+export type ListingSection = PriceClassSection<PublicListing>;
 
 /** Η λίστα ως **ακολουθία κλάσεων**. Πάντα ≥1 τμήμα όταν υπάρχει ≥1 αγγελία. */
-export type ListingSections = readonly ListingSection[];
+export type ListingSections = PriceClassSections<PublicListing>;
 
 /**
- * Ό,τι χρειάζεται η σειρά **πέρα από τις ίδιες τις αγγελίες**.
- *
- * Σήμερα ένα πράγμα: τα **σύνολα διαμονής** του §8.60.12. Είναι αντικείμενο και όχι
- * σκέτο όρισμα ώστε μια δεύτερη εξάρτηση να μην αλλάξει την υπογραφή κάθε καλούντος.
+ * Ό,τι χρειάζεται η σειρά **πέρα από τις ίδιες τις αγγελίες** — σήμερα τα **σύνολα διαμονής**.
+ * Αντικείμενο και όχι σκέτο όρισμα, ώστε μια δεύτερη εξάρτηση να μην αλλάξει κάθε καλούντα.
  */
 export interface ListingOrderContext {
   readonly stayTotals: StayTotals;
@@ -91,204 +70,65 @@ export const NO_ORDER_CONTEXT: ListingOrderContext = Object.freeze({
 });
 
 // ============================================================================
-// Η ΚΡΙΣΗ — μία φορά ανά αγγελία
+// ΟΙ ΔΥΟ ΑΠΟΦΑΣΕΙΣ ΤΗΣ ΑΝΑΖΗΤΗΣΗΣ
 // ============================================================================
 
-/**
- * Μία αγγελία **με την κρίση του επιλυτή ήδη παρμένη** — κλάση και ποσό.
- *
- * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ο επιλυτής ΔΕΝ ΚΑΛΕΙΤΑΙ ΜΕΣΑ ΣΤΟΝ ΣΥΓΚΡΙΤΗ.** Ένας συγκριτής που
- * ρωτά τον `resolveDisplayPrice` εκτελεί **O(n log n)** κρίσεις — με τα 1.200
- * αποτελέσματα που το §8.62 ονομάζει ρητά, ~12.000 κλήσεις ανά ταξινόμηση, **κάθε φορά
- * που αλλάζει ένα φίλτρο**. Η κρίση γίνεται **μία φορά ανά αγγελία** *(Schwartzian
- * transform)* — και το **ίδιο** πέρασμα δίνει **και** την κλάση **και** το ποσό.
- */
-interface PricedEntry {
-  readonly listing: PublicListing;
-  readonly heading: ListingSectionHeading;
-  /** Το ποσό της κύριας τιμής — `null` **ακριβώς όταν** η κλάση είναι `'unpriced'`. */
-  readonly amount: number | null;
-}
-
-function pricedEntryOf(listing: PublicListing): PricedEntry {
-  const price = resolveDisplayPrice(listing);
-  return price.kind === 'priced'
-    ? { listing, heading: price.headline.role, amount: price.headline.amount }
-    : { listing, heading: 'unpriced', amount: null };
-}
-
-/** Με ποια μονάδα ταξινομείται ένα τμήμα. */
-type SectionUnit = 'amount' | 'stayTotal';
-
-/**
- * **Το κλειδί τιμής ΜΕΣΑ σε μία κλάση** — `null` όταν η αγγελία δεν είναι απάντηση.
- *
- * 🔴 **ΤΟ ΣΥΝΟΛΟ ΔΙΑΜΟΝΗΣ ΑΛΛΑΖΕΙ ΤΗ ΜΟΝΑΔΑ ΤΟΥ ΤΜΗΜΑΤΟΣ, ΚΑΙ ΕΙΝΑΙ ΟΛΟ Ή ΤΙΠΟΤΑ.**
- * Όταν ο επισκέπτης έδωσε ημερομηνίες, η ερώτηση παύει να είναι *«πόσο η νύχτα;»* και
- * γίνεται *«πόσο η διαμονή;»* — και η κάρτα γράφει ήδη το σύνολο (§8.60.12). Αν το
- * τμήμα ταξινομούνταν με **σύνολο** για όσα το έχουν και **τιμή νύχτας** για τα
- * υπόλοιπα, θα είχαμε αναπαραγάγει την ίδια αμαρτία **ένα επίπεδο πιο κάτω**: «250 €
- * σύνολο» δίπλα σε «50 €/νύχτα», σε έναν άξονα.
- *
- * ⇒ Μόλις **έστω μία** αγγελία του τμήματος έχει σύνολο, η μονάδα του τμήματος **είναι**
- * το σύνολο· όσες δεν το έχουν *(κατειλημμένες, χωρίς δηλωμένο ημερολόγιο, κάτω από
- * ελάχιστες νύχτες — ο κριτής τις **ονομάζει**)* **δεν είναι απάντηση** και πάνε στο
- * τέλος, **και στις δύο** κατευθύνσεις. Ίδιος ακριβώς κανόνας με την απουσία τιμής, ίδια
- * μηχανή ({@link compareSortValues}), **μηδέν** νέος κώδικας.
- *
- * ⚠️ Το σύνολο είναι σε **λεπτά** (`MinorAmount`) και η τιμή σε **ακέραιες μονάδες** —
- * δεν αναμειγνύονται ποτέ, ακριβώς επειδή η επιλογή είναι όλο-ή-τίποτα **ανά τμήμα**.
- */
-function priceKeyWithin(
-  entry: PricedEntry,
-  unit: SectionUnit,
-  context: ListingOrderContext,
-): number | null {
-  return unit === 'stayTotal'
-    ? context.stayTotals[entry.listing.id]?.totalMinor ?? null
-    : entry.amount;
-}
-
-/**
- * **Κατά τιμή, ΜΕΣΑ στην ίδια κλάση**, στην κατεύθυνση που ζητήθηκε.
- *
- * ⚠️ **Δεν καλείται ποτέ πάνω σε δύο διαφορετικές κλάσεις** — τη διαμέριση την κάνει ο
- * {@link orderResultsListings}, και είναι ο **μόνος** εξαγόμενος δρόμος προς τη σειρά.
- * Γι' αυτό η συνάρτηση δεν χρειάζεται —και δεν έχει— κλάδο «τι κάνω αν διαφέρουν».
- */
-function compareWithinClass(
-  a: PricedEntry,
-  b: PricedEntry,
-  direction: SortDirection,
-  unit: SectionUnit,
-  context: ListingOrderContext,
-): number {
-  const byPrice = compareSortValues(
-    priceKeyWithin(a, unit, context),
-    priceKeyWithin(b, unit, context),
-    direction,
-  );
-  return byPrice !== 0
-    ? byPrice
-    : compareByNameThenId(a.listing.title, a.listing.id, b.listing.title, b.listing.id);
-}
-/**
- * Η σειρά των κλάσεων στην οθόνη: **η δηλωμένη σειρά των ρόλων, και η απουσία τελευταία.**
- *
- * ⚠️ Δεν είναι ιεραρχία αξίας: το {@link PRICE_ROLE_ORDER} είναι προβολή του
- * `OFFER_KINDS`, δηλαδή του λεξιλογίου που το έργο **ήδη** έχει δηλώσει. Η απουσία
- * πηγαίνει τελευταία για τον ίδιο λόγο που πηγαίνει τελευταία **μέσα** σε ένα τμήμα:
- * δεν είναι απάντηση στην ερώτηση που έκανε ο άνθρωπος.
- */
-const UNPRICED_RANK = Number.MAX_SAFE_INTEGER;
-
-function classRank(heading: ListingSectionHeading): number {
-  return heading === 'unpriced' ? UNPRICED_RANK : PRICE_ROLE_ORDER[heading];
-}
-
-
-// ============================================================================
-// Η ΔΙΑΜΕΡΙΣΗ
-// ============================================================================
-
-/**
- * **Οι αγγελίες σε ΚΛΑΣΕΙΣ, ταξινομημένες μέσα σε καθεμία.**
- *
- * 🔑 **Μία κλάση ⇒ καμία επιγραφή.** Η οθόνη μένει ακριβώς η σημερινή, και ο χάρτης
- * συμφωνεί με τη λίστα **χωρίς δεύτερο κανόνα** (§8.60.11: με έναν ρόλο ο `fairOrder`
- * εκφυλίζεται μόνος του σε «τιμή ↑»).
- *
- * ⚠️ **ΕΝΑ πέρασμα**: ο επιλυτής ρωτιέται **μία φορά ανά αγγελία**, και η απάντηση
- * ταξιδεύει μέσα στο {@link PricedEntry} ως την ταξινόμηση.
- */
-export function partitionByPriceClass(
-  listings: readonly PublicListing[],
-  direction: SortDirection,
-  context: ListingOrderContext,
-): ListingSections {
-  const byClass = new Map<ListingSectionHeading, PricedEntry[]>();
-
-  for (const listing of listings) {
-    const entry = pricedEntryOf(listing);
-    const group = byClass.get(entry.heading) ?? [];
-    group.push(entry);
-    byClass.set(entry.heading, group);
-  }
-
-  const single = byClass.size === 1;
-
-  return [...byClass.entries()]
-    .sort(([a], [b]) => classRank(a) - classRank(b))
-    .map(([heading, group]) => ({
-      heading: single ? null : heading,
-      listings: sortClass(heading, group, direction, context),
-    }));
-}
-
-/**
- * Η σειρά **μέσα** σε μία κλάση.
- *
- * ⚠️ Το `'unpriced'` **δεν ταξινομείται κατά τιμή** — δεν έχει. Παίρνει τη σταθερή,
- * ολική σειρά ονόματος/`id`: χωρίς αυτήν το τμήμα θα αναδιατασσόταν μεταξύ αποδόσεων με
- * **τα ίδια δεδομένα**, που είναι η ίδια αδήλωτη κατάταξη σε μικρότερη κλίμακα.
- */
-function sortClass(
-  heading: ListingSectionHeading,
-  group: readonly PricedEntry[],
-  direction: SortDirection,
-  context: ListingOrderContext,
-): readonly PublicListing[] {
-  if (heading === 'unpriced') {
-    return [...group]
-      .sort((a, b) =>
-        compareByNameThenId(a.listing.title, a.listing.id, b.listing.title, b.listing.id))
-      .map((entry) => entry.listing);
-  }
-
-  const unit = sectionUnit(heading, group, context);
-  return [...group]
-    .sort((a, b) => compareWithinClass(a, b, direction, unit, context))
-    .map((entry) => entry.listing);
+/** Ολική σειρά για ισοπαλίες και για την απουσία τιμής: τίτλος → `id`. */
+function byTitleThenId(a: PublicListing, b: PublicListing): number {
+  return compareByNameThenId(a.title, a.id, b.title, b.id);
 }
 
 /**
  * **Η μονάδα ενός τμήματος** — ποσό, ή σύνολο διαμονής.
  *
- * 🔑 **Η απόφαση είναι του ΤΜΗΜΑΤΟΣ, όχι της αγγελίας** — δες {@link priceKeyWithin}.
- * Μόνο τα καταλύματα έχουν σύνολο διαμονής· ένα τμήμα πώλησης δεν το ρωτά ποτέ.
+ * 🔴 **ΤΟ ΣΥΝΟΛΟ ΔΙΑΜΟΝΗΣ ΑΛΛΑΖΕΙ ΤΗ ΜΟΝΑΔΑ ΤΟΥ ΤΜΗΜΑΤΟΣ, ΚΑΙ ΕΙΝΑΙ ΟΛΟ Ή ΤΙΠΟΤΑ.** Αν το
+ * τμήμα ταξινομούνταν με **σύνολο** για όσα το έχουν και **τιμή νύχτας** για τα υπόλοιπα, θα
+ * είχαμε την ίδια αμαρτία ένα επίπεδο πιο κάτω: «250 € σύνολο» δίπλα σε «50 €/νύχτα». Μόλις
+ * **έστω μία** αγγελία του τμήματος έχει σύνολο, η μονάδα **είναι** το σύνολο· όσες δεν το
+ * έχουν **δεν είναι απάντηση** και πάνε στο τέλος, **και στις δύο** κατευθύνσεις.
+ *
+ * ⚠️ Το σύνολο είναι σε **λεπτά** και η τιμή σε **ακέραιες μονάδες** — δεν αναμειγνύονται
+ * ποτέ, ακριβώς επειδή η επιλογή είναι όλο-ή-τίποτα **ανά τμήμα**. Επιστρέφει `undefined`
+ * (⇒ το ποσό, η προεπιλογή της μηχανής) όταν το τμήμα δεν ρωτά σύνολο.
  */
-function sectionUnit(
-  heading: PriceRole,
-  group: readonly PricedEntry[],
+function stayTotalKey(context: ListingOrderContext) {
+  return (
+    role: PriceRole,
+    group: readonly PricedEntry<PublicListing>[],
+  ): PriceKeyWithin<PublicListing> | undefined => {
+    if (role !== 'nightly') return undefined;
+    if (!group.some((entry) => context.stayTotals[entry.item.id] !== undefined)) return undefined;
+    return (entry) => context.stayTotals[entry.item.id]?.totalMinor ?? null;
+  };
+}
+
+/**
+ * **Οι αγγελίες σε ΚΛΑΣΕΙΣ, ταξινομημένες μέσα σε καθεμία** — η γενική μηχανή, με τις δύο
+ * αποφάσεις της αναζήτησης. Μία κλάση ⇒ καμία επιγραφή.
+ */
+export function partitionListingsByPriceClass(
+  listings: readonly PublicListing[],
+  direction: SortDirection,
   context: ListingOrderContext,
-): SectionUnit {
-  if (heading !== 'nightly') return 'amount';
-  return group.some((entry) => context.stayTotals[entry.listing.id] !== undefined)
-    ? 'stayTotal'
-    : 'amount';
+): ListingSections {
+  return partitionByPriceClass(listings, {
+    direction,
+    tieBreak: byTitleThenId,
+    keyWithin: stayTotalKey(context),
+  });
 }
 
 // ============================================================================
-// ΠΡΟΒΟΛΕΣ ΤΩΝ ΤΜΗΜΑΤΩΝ
+// ΠΡΟΒΟΛΕΣ — τα ονόματα που ήδη διαβάζει η οθόνη, πάνω στη ΜΙΑ υλοποίηση
 // ============================================================================
 
 /**
- * Τα τμήματα ως **ένας** πίνακας, για επιφάνειες που δεν ζωγραφίζουν τιμές.
- *
- * 🔑 **Δεν παραβιάζει τον κανόνα, τον ΤΗΡΕΙ**: η ακολουθία είναι η **συνένωση** των
- * ταξινομημένων κλάσεων — μια *γραμμική επέκταση* της μερικής διάταξης. Καμία σύγκριση
- * ανάμεσα σε κλάσεις δεν εκτελέστηκε, και καμία δεν δηλώνεται.
- *
- * ⚠️ **Ο ΜΟΝΟΣ νόμιμος καταναλωτής σήμερα είναι η συμπτυγμένη γραμμή των αγγελιών χωρίς
- * θέση** (`UnmappedListingsRow`), που δείχνει **μόνο τίτλους** — άρα δεν υπάρχει μονάδα
- * να μπερδευτεί και μια επιγραφή εκεί θα ήταν θόρυβος. **ΜΗΝ** το χρησιμοποιήσεις για
- * να «ισιώσεις» μια λίστα που δείχνει ποσά.
+ * Τα τμήματα ως **ένας** πίνακας. ⚠️ Ο **μόνος** νόμιμος καταναλωτής είναι η συμπτυγμένη
+ * γραμμή των αγγελιών χωρίς θέση (`UnmappedListingsRow`), που δείχνει **μόνο τίτλους**.
  */
-export function flattenListingSections(sections: ListingSections): readonly PublicListing[] {
-  return sections.flatMap((section) => section.listings);
-}
+export const flattenListingSections: (sections: ListingSections) => readonly PublicListing[] =
+  flattenPriceClassSections;
 
 /** Πόσες αγγελίες περιέχουν συνολικά τα τμήματα — **η λογιστική του §8.62 κλείνει εδώ**. */
-export function countListingSections(sections: ListingSections): number {
-  return sections.reduce((total, section) => total + section.listings.length, 0);
-}
+export const countListingSections: (sections: ListingSections) => number =
+  countPriceClassSections;

@@ -237,6 +237,24 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       + '(findSubjectFiles)· καμία τιμή από το αίτημα, καμία εμβέλεια εταιρείας. Οι δύο μοιράζονται '
       + 'πόρτα και σαρωτή, ώστε ό,τι θα σβηστεί να είναι ακριβώς ό,τι δείχνει η εξαγωγή.',
   },
+  {
+    route: 'src/app/api/network/_shared/network-door.ts',
+    why:
+      'Η ΠΟΡΤΑ ΤΩΝ ΝΗΜΑΤΩΝ ΤΟΥ ΔΙΚΤΥΟΥ (ADR-867 Β5) — καταναλωτές κλειστό σύνολο στην Κ4. Το νήμα '
+      + 'πράξης έχει ΔΥΟ πλευρές και η μία είναι ιδιώτης χωρίς οργανισμό (ο ιδιοκτήτης): με withAuth '
+      + 'θα έπαιρνε 401 σε κάθε «στείλε». Η εξουσιοδότηση ΔΕΝ είναι εμβέλειας εταιρείας: ο δρων '
+      + 'είναι ΜΟΝΟ uid, και την κρίνει η ζωντανή γραμμή ακροατηρίου ΜΕΣΑ στη συναλλαγή του γραφέα '
+      + '(ίδια ερώτηση με τον κανόνα Firestore). Η ΟΜΑΔΑ πράξης μένει σε withAuth — δεν αφορά ιδιώτη.',
+  },
+  {
+    route: 'src/app/api/property-dossiers/route.ts',
+    why:
+      'Η ΠΟΡΤΑ ΓΕΝΝΗΣΗΣ ΦΑΚΕΛΟΥ ΑΚΙΝΗΤΟΥ (ADR-866 Φ1.1). Ο φάκελος είναι ΠΡΟΣΩΠΙΚΟΣ (κάτοχος userId, '
+      + 'καμία εταιρεία) και ο κανόνας Firestore λέει create: false ⇒ με withAuth ο ιδιώτης δεν θα '
+      + 'μπορούσε να ανοίξει φάκελο με κανέναν τρόπο. Ο κάτοχος είναι ΠΑΝΤΑ το actor.ctx.uid — το σχήμα '
+      + 'του σώματος δεν έχει καν πεδίο κατόχου — άρα και ο υπάλληλος γραφείου ανοίγει φάκελο μόνο ως '
+      + 'άνθρωπος, στο δικό του διαμέρισμα. Μόνο POST: η ανάγνωση είναι ζωντανή από τον πελάτη (§2.8.7 Δ3).',
+  },
 ];
 
 /**
@@ -261,6 +279,18 @@ const DOOR_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   gdprSubjectRoute: [
     'src/app/api/files/gdpr-delete/route.ts',
     'src/app/api/files/gdpr-export/route.ts',
+  ],
+  // 💬 ADR-867 Β5 — οι πράξεις πάνω σε νήμα. Και οι τέσσερις περνούν στον γραφέα ΜΟΝΟ `uid`· το
+  //    «διαβάζει;» το κρίνει η γραμμή ακροατηρίου μέσα στη συναλλαγή, ποτέ ο χώρος του δρώντος.
+  withNetworkDoor: [
+    // Η απουσία είναι ΠΑΝΤΑ η δική του (`actor.uid`) — και ο ιδιοκτήτης μπορεί να λείπει.
+    'src/app/api/network/away/route.ts',
+    'src/app/api/network/threads/[threadId]/messages/[messageId]/retraction/route.ts',
+    'src/app/api/network/threads/[threadId]/messages/route.ts',
+    'src/app/api/network/threads/[threadId]/mute/route.ts',
+    'src/app/api/network/threads/[threadId]/presence/route.ts',
+    'src/app/api/network/threads/[threadId]/read/route.ts',
+    'src/app/api/network/threads/route.ts',
   ],
 };
 
@@ -375,7 +405,16 @@ describe('ADR-817 §5 — το κλειστό σύνολο των διαδρομ
     //    (`mandate-evidence` · `private-marketing` · `stay-calendar`) μπήκαν με commit **χωρίς** γραμμή
     //    στο `DECLARED` ⇒ η Κ2 ήταν κόκκινη πριν από αυτή την αλλαγή. Οι λόγοι τους ανήκουν σε όποιον
     //    τις έγραψε (ADR-864)· εδώ μετρώνται, δεν δηλώνονται. 18 + 2 = **20**.
-    expect(actualConsumers().length).toBe(20);
+    // 🔴 Μετρημένο 2026-09-18: το HEAD είχε ήδη **21** — η `owner-properties/[id]/stay-channels`
+    //    (ADR-835 §22, `877c8690`) μπήκε **χωρίς** γραμμή στο `DECLARED` ⇒ και η Π και η Κ2 ήταν
+    //    κόκκινες πριν από το ADR-867 Β5. Ο λόγος της ανήκει σε όποιον την έγραψε.
+    // 22η: η πόρτα των νημάτων του δικτύου (ADR-867 Β5) — **δηλωμένη**, με καταναλωτές στην Κ4.
+    //    21 + 1 = **22**.
+    // 🔴 Μετρημένο 2026-09-18 (ADR-866 Φ1.1): το δέντρο είχε ήδη **23** — η
+    //    `public-listings/[listingId]/stay-request` (ADR-835, staged από άλλη συνεδρία) μπήκε **χωρίς**
+    //    γραμμή στο `DECLARED` ⇒ η Κ2 είναι κόκκινη γι' αυτήν· ο λόγος της ανήκει σε όποιον την έγραψε.
+    // 24η: η πόρτα γέννησης φακέλου ακινήτου (ADR-866 Φ1.1) — **δηλωμένη**. 23 + 1 = **24**.
+    expect(actualConsumers().length).toBe(24);
   });
 
   it('Π2 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΗΣ ΠΡΟΕΠΙΛΟΓΗΣ: η συντριπτική πλειοψηφία μένει εταιρική', () => {

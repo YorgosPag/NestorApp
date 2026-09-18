@@ -75,13 +75,14 @@
  * 🔑 **Η μηχανή είναι κοινή, η απόφαση όχι** — ίδιος διαχωρισμός με τον αδελφό: εδώ δεν
  * γεννιέται **κανένας** νέος συγκριτής και **κανένα** δεύτερο κλειδί τιμής.
  * Χρησιμοποιούνται τα υπάρχοντα {@link compareSortValues} και {@link compareByNameThenId},
- * και η διαμέριση του {@link partitionByPriceClass}.
+ * και η διαμέριση του {@link partitionListingsByPriceClass} (πάνω στη γενική μηχανή του
+ * `lib/properties/price-class-sections`, §8.60.14.14).
  */
 import { compareSortValues, type SortDirection } from '@/lib/array-utils';
 import { compareByNameThenId } from '@/lib/ordering/total-name-order';
 import {
   NO_ORDER_CONTEXT,
-  partitionByPriceClass,
+  partitionListingsByPriceClass,
   type ListingOrderContext,
   type ListingSections,
 } from '@/lib/listings/listing-price-sections';
@@ -169,11 +170,11 @@ export function orderResultsListings(
   // ⚠️ **Ο χρόνος έχει ΜΙΑ μονάδα** — καμία διαμέριση, καμία επιγραφή. Οι επιγραφές
   //    ανήκουν στην **ερώτηση** («πόσο;»), όχι στη λίστα.
   if (order === 'newest') {
-    return [{ heading: null, listings: [...listings].sort(compareListingsByListedAt) }];
+    return [{ heading: null, items: [...listings].sort(compareListingsByListedAt) }];
   }
 
   const direction: SortDirection = order === 'priceAsc' ? 'asc' : 'desc';
-  return partitionByPriceClass(listings, direction, context);
+  return partitionListingsByPriceClass(listings, direction, context);
 }
 
 // ============================================================================

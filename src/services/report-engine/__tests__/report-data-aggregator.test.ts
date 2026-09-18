@@ -244,7 +244,7 @@ describe('ReportDataAggregator', () => {
         ],
         properties: [
           { commercialStatus: 'sold', project: 'proj_1' },
-          { commercialStatus: 'for_sale', project: 'proj_1' },
+          { commercialStatus: 'for-sale', project: 'proj_1' },
         ],
         buildings: [
           { id: 'bld_1', name: 'Building 1', projectId: 'proj_1', progress: 50 },
@@ -286,7 +286,10 @@ describe('ReportDataAggregator', () => {
             commercial: { finalPrice: 150000, paymentSummary: { paidPercentage: 80 } },
           },
           {
-            commercialStatus: 'for_sale',
+            // 🔴 Ήταν `'for_sale'` — γραφή που η ζωντανή Firestore ΔΕΝ έχει (μετρημένο
+            // 2026-09-18: 0 έγγραφα, 5 με `for-sale`/`for-sale-and-rent`). Το fixture
+            // αντέγραφε το λάθος του κώδικα, και γι' αυτό η άγκυρα ήταν πράσινη.
+            commercialStatus: 'for-sale',
             commercial: { askingPrice: 200000, paymentSummary: null },
           },
         ],
@@ -304,6 +307,23 @@ describe('ReportDataAggregator', () => {
       expect(result.pipelineValue).toBe(200000);
       expect(result.chequesByStatus).toEqual({ pending: 1, cleared: 1 });
       expect(result.generatedAt).toBeDefined();
+    });
+
+    it('Φ3-Α — το pipeline είναι ερώτηση ΠΩΛΗΣΗΣ: η διπλή διάθεση μετρά, το ενοίκιο ΟΧΙ (ADR-777 §8.60.14.13)', async () => {
+      setupFirestoreMock({
+        properties: [
+          { commercialStatus: 'for-sale-and-rent', commercial: { askingPrice: 300000, rentPrice: 900 } },
+          // διπλή διάθεση χωρίς τιμή πώλησης ⇒ ο επιλυτής λέει ΕΝΟΙΚΙΟ — δεν είναι pipeline
+          { commercialStatus: 'for-sale-and-rent', commercial: { rentPrice: 700 } },
+          { commercialStatus: 'for-rent', commercial: { rentPrice: 800 } },
+        ],
+        cheques: [],
+      });
+
+      const result = await ReportDataAggregator.getSalesReport(baseFilter);
+
+      expect(result.forSaleProperties).toBe(2);
+      expect(result.pipelineValue).toBe(300000);
     });
 
     it('returns zero when no units', async () => {
@@ -390,6 +410,29 @@ describe('ReportDataAggregator', () => {
       expect(result.linkedSpaces).toBe(2); // bld_1 parking + bld_1 storage
       expect(result.unlinkedSpaces).toBe(1); // parking without buildingId
       expect(result.generatedAt).toBeDefined();
+    });
+
+    it('Φ3-Β — αξία ανά ρόλο, και οι χώροι μαζί σε ΕΝΑ πέρασμα (ADR-777 §8.60.14.13)', async () => {
+      setupFirestoreMock({
+        parking_spots: [
+          { status: 'available', price: 15000 },
+          { commercialStatus: 'for-rent', commercial: { rentPrice: 60 } },
+        ],
+        storage_units: [
+          { status: 'available', area: 10, price: 5000 },
+          { status: 'available', area: 30 }, // χωρίς τιμή: ΔΕΝ μπαίνει στον παρονομαστή του €/m²
+        ],
+      });
+
+      const result = await ReportDataAggregator.getSpacesReport(baseFilter);
+
+      expect(result.parking.priceTotals.byRole.sale.total).toBe(15000);
+      expect(result.parking.priceTotals.byRole.rent.total).toBe(60);
+      expect(result.spacesPriceTotals.byRole.sale.total).toBe(20000);
+      expect(result.spacesPriceTotals.byRole.rent.total).toBe(60);
+      expect(result.spacesPriceTotals.unpricedCount).toBe(1);
+      // 5000 € / 10 m² — ΟΧΙ 5000 / 40 (το παλιό `avgPricePerSqm` διαιρούσε με όλο το εμβαδόν)
+      expect(result.storage.priceTotals.byRole.sale.perArea).toEqual({ amount: 500, measuredCount: 1 });
     });
 
     it('returns zero when no spaces', async () => {

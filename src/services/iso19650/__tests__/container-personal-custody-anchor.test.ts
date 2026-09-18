@@ -22,7 +22,9 @@
  *   Α34.7  ο **σπόρος** του διαδόχου κλειδώνει σε **κλειδί κατόχου** — εταιρεία και άνθρωπος με
  *          ίδιο id δεν παράγουν ποτέ τον ίδιο διάδοχο
  *   Α34.8  η **στοίβα** διαβάζει το προσωπικό διαμέρισμα και **δεν διασχίζει** διαμερίσματα
- *   Α34.9  **καμία** γραμμή στο εταιρικό ημερολόγιο για προσωπική πράξη (2β.4 — δηλωμένη σιωπή)
+ *   Α34.9  🔁 **ΑΝΤΕΣΤΡΑΜΜΕΝΗ στο 2β.4** (ADR-866 §2.6.11): η προσωπική διαδοχή γράφει γραμμή στο
+ *          βιβλίο **του κατόχου** (`{ userId }` ⇒ `file_audit_log_personal`, που ΕΚΕΙΝΟΣ διαβάζει) —
+ *          και **ποτέ** με `companyId` (καμία γραμμή στο εταιρικό βιβλίο)
  *   Α34.10 το καθεστώς του ανθρώπου έχει **δικό του** όνομα (`personal-custody`), όχι δανεικό
  *   Α34.10β η `custodyOnEntry` **λέει** αυτό το όνομα — και **δεν διαβάζει** αλυσίδα έργου
  *
@@ -231,12 +233,19 @@ describe('Α34 — ο προσωπικός χώρος: εκδόσεις ΝΑΙ, 
     expect(stack.versions.map((v) => v.id)).toEqual([NEXT, PREV]);
   });
 
-  it('🔇 Α34.9 — ΚΑΜΙΑ γραμμή στο εταιρικό ημερολόγιο (δηλωμένη σιωπή ως το 2β.4)', async () => {
+  it('📒 Α34.9 — ΜΙΑ γραμμή, στο βιβλίο του ΚΑΤΟΧΟΥ — ποτέ στο εταιρικό (αντεστραμμένη στο 2β.4)', async () => {
     seedPair();
 
     await supersede();
 
-    expect(recordFileAudit).not.toHaveBeenCalled();
+    // 🔑 Ο γραφέας διαλέγει το βιβλίο από τον ΚΑΤΟΧΟ (`FILE_AUDIT_COLLECTION`): `{ userId }` ⇒
+    //    `file_audit_log_personal`, το βιβλίο που ο κανόνας δίνει ΜΟΝΟ στον κάτοχο (Α35 · σουίτα
+    //    `file-audit-log-personal`). Η δρομολόγηση αποδεικνύεται στο `file-audit-admin-anchor` Γ6.
+    expect(recordFileAudit).toHaveBeenCalledTimes(1);
+    const [row] = jest.mocked(recordFileAudit).mock.calls[0];
+    expect(row).toMatchObject({ userId: PERSON, performedBy: PERSON, action: 'version_supersede' });
+    // 🔴 Καμία ψευδο-εταιρεία: γραμμή με `companyId` θα πήγαινε στο ΕΤΑΙΡΙΚΟ βιβλίο.
+    expect(Object.hasOwn(row, 'companyId')).toBe(false);
   });
 });
 

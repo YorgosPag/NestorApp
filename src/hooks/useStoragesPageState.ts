@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { defaultStorageFilters, type StorageFilterState } from '@/components/core/AdvancedFilters/configs/storageFiltersConfig';
 import { resolveStorageById, isArchivedEntity } from './entity-deep-link-sources';
+import { matchesPriceRange } from '@/lib/properties/price-range';
 import {
   useEntityPageState,
   type EntityPageStateConfig,
@@ -57,9 +58,10 @@ function filterStorages(storages: Storage[], filters: StorageFilterState): Stora
     if (areaRange?.min !== undefined && storage.area && storage.area < areaRange.min) return false;
     if (areaRange?.max !== undefined && storage.area && storage.area > areaRange.max) return false;
 
-    const priceRange = filters.ranges?.priceRange;
-    if (priceRange?.min !== undefined && storage.price && storage.price < priceRange.min) return false;
-    if (priceRange?.max !== undefined && storage.price && storage.price > priceRange.max) return false;
+    // ADR-777 Α6 + §8.60.14.14 — the price range carries its UNIT and is judged by the ONE
+    // price rule. It read the @deprecated flat `storage.price` (any role, and `&& storage.price`
+    // let every priceless storage through any bound).
+    if (!matchesPriceRange(storage, filters.ranges?.priceRange)) return false;
 
     // Date range filter
     const dateRange = filters.ranges?.dateRange;

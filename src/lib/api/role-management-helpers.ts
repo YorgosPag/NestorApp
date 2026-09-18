@@ -26,7 +26,7 @@ import type { Auth } from 'firebase-admin/auth';
 import type { DocumentData, DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { workspaceMemberRef } from '@/lib/workspace/workspace-member-ref';
 import { getErrorMessage } from '@/lib/error-utils';
 
 /** Επιτυχία με φορτίο, ή έτοιμη απάντηση HTTP που ο καλών απλώς επιστρέφει. */
@@ -80,7 +80,7 @@ export async function parseJsonBody<T>(
 /**
  * **Απομόνωση μισθωτή**: το μέλος αναζητείται ΜΟΝΟ κάτω από τον χώρο του καλούντος.
  *
- * ⚠️ Η διαδρομή χτίζεται από τις σταθερές `COLLECTIONS`/`SUBCOLLECTIONS` — **ποτέ**
+ * ⚠️ Η διαδρομή έρχεται από το `workspaceMemberRef` (ένα σημείο) — **ποτέ**
  * χειρόγραφο string: το `workspace_members` είναι το όνομα που κάνει το
  * `collectionGroup` **αδύνατο** να πιάσει μέλος έργου (ADR-787 §5.1 β).
  */
@@ -89,8 +89,7 @@ export async function loadWorkspaceMember(
   companyId: string,
   targetUid: string,
 ): Promise<RouteStep<WorkspaceMemberHit>> {
-  const path = `${COLLECTIONS.COMPANIES}/${companyId}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}/${targetUid}`;
-  const ref = db.doc(path);
+  const ref = workspaceMemberRef(db, companyId, targetUid);
   const snap = await ref.get();
   if (!snap.exists) {
     return {

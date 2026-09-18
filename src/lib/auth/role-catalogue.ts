@@ -80,6 +80,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "settings:settings:view",
       "settings:settings:manage",
       "notifications:notifications:view",
+      // ADR-867 Β5 — «ο διαχειριστής χώρου αλλάζει υπεύθυνο ή προσθέτει μέλη, ορατά» (ADR-834 (ε) ②).
+      "network:act_teams:manage",
       "floorplans:floorplans:process",
       // ═══════════════════════════════════════════════════════════════════════
       // 🔴 ADR-829 — Ο ΠΡΟΒΟΛΕΑΣ DXF: Η ΤΟΜΗ ΗΤΑΝ ΚΕΝΗ (μετρημένο ζωντανά 2026-08-29)
