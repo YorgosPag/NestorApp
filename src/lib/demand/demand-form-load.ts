@@ -28,7 +28,30 @@ import {
 } from './demand-form-values';
 import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
 import type { DemandFormValues } from './demand-form-values';
-import type { DemandPlace, PropertyDemand } from '@/types/property-demand';
+import {
+  NO_AMOUNT_RANGE,
+  isPricedSeek,
+  seekKindsOf,
+  seekOfKind,
+  type DemandAmountRange,
+  type DemandPlace,
+  type PricedSeekKind,
+  type PropertyDemand,
+} from '@/types/property-demand';
+
+/**
+ * Το εύρος **κάθε** διάθεσης με τιμή — της ζήτησης όπου υπάρχει, κενό αλλού (ADR-777 §8.60.15).
+ *
+ * 🔑 `Record<PricedSeekKind, …>` ⇒ νέος κλάδος με τιμή **δεν μεταγλωττίζεται** χωρίς γραμμή εδώ, και
+ * καμία γραμμή δεν επιτρέπεται για διάθεση χωρίς τιμή. Κανένας ισχυρισμός τύπου.
+ */
+function seekPricesOf(demand: PropertyDemand): Record<PricedSeekKind, DemandAmountRange> {
+  const rangeOf = (kind: PricedSeekKind): DemandAmountRange => {
+    const seek = seekOfKind(demand.seeks, kind);
+    return seek !== undefined && isPricedSeek(seek) ? { ...seek.price } : NO_AMOUNT_RANGE;
+  };
+  return { sell: rangeOf('sell'), leaseOut: rangeOf('leaseOut'), leaseShort: rangeOf('leaseShort') };
+}
 
 /**
  * Τι έγινε όταν ζητήθηκε να ανοίξει υπάρχουσα ζήτηση για επεξεργασία.
@@ -58,7 +81,8 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
   return {
     kind: 'editable',
     values: {
-      seeks: [...demand.seeks],
+      seeks: seekKindsOf(demand.seeks),
+      seekPrices: seekPricesOf(demand),
       // ⚠️ **Η μορφή διαβάζεται από την οντότητα, όχι συνάγεται από το τι είναι
       // γεμάτο.** Ένα `near === null ? 'anywhere' : 'near'` ήταν σωστό όσο υπήρχαν
       // δύο μορφές· με πέντε θα έστελνε κάθε Ζ3/Ζ5, κάθε Ζ4 και κάθε μέτωπο πίσω ως
@@ -81,8 +105,6 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
       fromDate: window?.fromDate ?? '',
       toDate: window?.toDate ?? '',
       types: [...demand.features.types],
-      priceMin: demand.features.priceMin,
-      priceMax: demand.features.priceMax,
       areaMin: demand.features.areaMin,
       areaMax: demand.features.areaMax,
       bedroomsMin: demand.features.bedroomsMin,

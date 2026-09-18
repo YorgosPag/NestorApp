@@ -21,9 +21,9 @@ import {
   ignoranceShare,
   listingFactsFrom,
 } from '../demand-answer';
-import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
+import type { PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
-import { NOW_ISO, TODAY, demand, listing } from './demand-fixtures';
+import { NOW_ISO, TODAY, demand, listing, seek } from './demand-fixtures';
 
 /** Συντομογραφία: ζήτηση + αγγελίες + **μηδέν** γνώση (η σημερινή πραγματικότητα). */
 function answer(d: PropertyDemand, listings: readonly PublicListing[], others: readonly PropertyDemand[] = []) {
@@ -51,7 +51,7 @@ function overBy(over: number, id: string): PublicListing {
 
 describe('🔴 Κ — «δεν βρέθηκε τίποτα, αλλά με +20.000 € υπάρχουν 6, και άλλοι Ν ζητούν το ίδιο»', () => {
   it('η ΜΙΑ απάντηση κουβαλά **και τα τρία** σκέλη ταυτόχρονα', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 250_000 })] });
     const listings = [5_000, 8_000, 12_000, 15_000, 18_000, 20_000].map((over) =>
       overBy(over, `prop_${over}`),
     );
@@ -85,12 +85,12 @@ describe('🔴 Σ — και τα έξι σχήματα παράγονται α�
   });
 
   it('`has-concession` — τίποτα δεν ταιριάζει, αλλά υπάρχει πρόταση με ποσό', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 250_000 })] });
     expect(demandAnswerShape(answer(d, [overBy(10_000, 'prop_a')]))).toBe('has-concession');
   });
 
   it('`near-but-unreachable` — κοντινές, αλλά η υποχώρηση είναι μεγάλη', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 250_000 })] });
     // +100.000 = 40% πάνω από την οροφή ⇒ πάνω από το κατώφλι του 15%.
     expect(demandAnswerShape(answer(d, [overBy(100_000, 'prop_far')]))).toBe(
       'near-but-unreachable',
@@ -109,7 +109,7 @@ describe('🔴 Σ — και τα έξι σχήματα παράγονται α�
 
   it('`no-match` — κρίθηκαν, και κανένα δεν πλησιάζει', () => {
     // Κατηγορικό εμπόδιο που **δεν** είναι άγνοια: άλλο είδος συναλλαγής.
-    const d = demand({ seeks: ['leaseOut'] });
+    const d = demand({ seeks: [seek('leaseOut')] });
     const result = answer(d, [listing()]);
 
     expect(demandAnswerShape(result)).toBe('no-match');
@@ -133,7 +133,7 @@ describe('🔴 Σ — και τα έξι σχήματα παράγονται α�
 
 describe('🔴 η σειρά των ερωτήσεων είναι συμβόλαιο, όχι τύχη', () => {
   it('το ΤΑΙΡΙΑΣΜΑ νικά την πρόταση — κανείς δεν θέλει συμβουλή όταν βρήκε', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 250_000 })] });
     const result = answer(d, [
       listing({ id: 'prop_ok', commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null, nightlyRate: null } }),
       overBy(10_000, 'prop_near'),
@@ -154,7 +154,7 @@ describe('🔴 η σειρά των ερωτήσεων είναι συμβόλα
 
   it('η ΠΛΕΙΟΨΗΦΙΑ, όχι «έστω μία» — μία αγγελία χωρίς θέση δεν βάφει όλη την απάντηση', () => {
     const d = demand({
-      seeks: ['sell'],
+      seeks: [seek('sell')],
       place: { kind: 'near', center: { lat: 40.64, lng: 22.94 }, radiusKm: 1 },
     });
     const result = answer(d, [
@@ -186,7 +186,7 @@ describe('🔴 η σειρά των ερωτήσεων είναι συμβόλα
 
 describe('🔴 Λ — δύο ανεξάρτητα αθροίσματα, και τα δύο κλείνουν', () => {
   it('κλείνει σε πλούσιο σενάριο', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 250_000 })] });
     const result = answer(d, [
       listing({ id: 'a', commercial: { askingPrice: 100_000, finalPrice: null, rentPrice: null, nightlyRate: null } }),
       overBy(5_000, 'b'),

@@ -30,7 +30,8 @@
 import { withinRange } from '@/lib/listings/listing-filters';
 // 🔑 ADR-777 §8.52 — Ο **ΕΝΑΣ** αναγνώστης. Η ζήτηση ΔΕΝ ρωτά πια μόνη της «τι απαντά
 // η αγγελία;» — ούτε για την τιμή (`getEffectivePrice` ζει ΜΕΣΑ του), ούτε για τη γη.
-import { priceAxisKeyOf, readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import { readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import type { PriceRole } from '@/lib/properties/price-resolver';
 import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import { isPointInGeoOutline } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
@@ -38,11 +39,18 @@ import { metresOutsideFrontage, sideOfPolyline } from '@/lib/geo/geo-line';
 import type { LocationProvenance } from '@/lib/location/location-provenance';
 import type { PlacePosition } from '@/types/geo/public-place';
 import type { PublicListing } from '@/types/public-listing';
-import type { DemandPlace, DemandTiming, PropertyDemand } from '@/types/property-demand';
+import {
+  seekKindsOf,
+  type DemandPlace,
+  type DemandTiming,
+  type PropertyDemand,
+} from '@/types/property-demand';
+import { priceAxisOutcome } from './demand-match-price';
 import {
   NO_GAPS,
   type DemandBlocker,
   type DemandGaps,
+  type DemandSeekMet,
   type ListingAvailability,
   type ListingMatchFacts,
 } from './demand-match-vocabulary';
@@ -55,7 +63,8 @@ import {
 export function categoryBlockers(demand: PropertyDemand, listing: PublicListing): DemandBlocker[] {
   const found: DemandBlocker[] = [];
 
-  if (!listing.offerKinds.some((kind) => demand.seeks.includes(kind))) {
+  const sought = seekKindsOf(demand.seeks);
+  if (!listing.offerKinds.some((kind) => sought.includes(kind))) {
     found.push('offer-kind');
   }
   const { types } = demand.features;
@@ -122,17 +131,23 @@ type MutableGaps = { -readonly [K in keyof DemandGaps]: DemandGaps[K] };
 export function numericOutcome(
   demand: PropertyDemand,
   listing: PublicListing,
-): { blockers: DemandBlocker[]; gaps: DemandGaps } {
+): {
+  blockers: DemandBlocker[];
+  gaps: DemandGaps;
+  pricedAs: PriceRole | null;
+  metOn: readonly DemandSeekMet[];
+} {
   const f = demand.features;
-  const blockers: DemandBlocker[] = [];
-  const gaps: MutableGaps = { ...NO_GAPS };
+  // 🔑 Ο άξονας τιμής ζει στο `demand-match-price.ts` (§8.60.16) — απαντά **και** στο «ως τι».
+  const price = priceAxisOutcome(listing, demand.seeks);
+  const blockers: DemandBlocker[] = [...price.blockers];
+  const gaps: MutableGaps = { ...NO_GAPS, priceOverBy: price.overBy, priceUnderBy: price.underBy };
 
-  priceAxis(listing, f, blockers, gaps);
   areaAxis(listing, f, blockers, gaps);
   bedroomsAxis(listing, f, blockers, gaps);
   floorAxis(listing, f, blockers);
 
-  return { blockers, gaps };
+  return { blockers, gaps, pricedAs: price.pricedAs, metOn: price.metOn };
 }
 
 /**
@@ -157,40 +172,6 @@ function answerOrBlock(
   //    δεν του τέθηκε ποτέ το ερώτημα (§8.50, `LAND_CANNOT_ANSWER`).
   if (answer.state === 'never-asked' || answer.state === 'declared-none') blockers.push(absent);
   return null;
-}
-
-function priceAxis(
-  listing: PublicListing,
-  f: PropertyDemand['features'],
-  blockers: DemandBlocker[],
-  gaps: MutableGaps,
-): void {
-  // 🔑 **Ο ΑΞΟΝΑΣ ΕΠΙΛΕΓΕΤΑΙ ΑΠΟ ΤΗ ΜΟΝΑΔΑ** (ADR-777 §8.60.14): πώληση · ενοίκιο ·
-  //    διανυκτέρευση είναι **τρεις** άξονες. Το παλιό ενιαίο `'price'` δεν υπάρχει πια στο
-  //    λεξιλόγιο, και όσο ζητιόταν εδώ ο αναγνώστης ήταν `undefined` ⇒ ζωντανό **500**.
-  // ⚠️ **Η ΑΓΓΕΛΙΑ ΧΩΡΙΣ ΤΙΜΗ ΠΑΡΑΜΕΝΕΙ «ΔΕΝ ΤΟ ΔΗΛΩΣΕ»** (ADR-777 §8.52), και είναι **άλλο**
-  //    ερώτημα από το φίλτρο: εκεί το `not-applicable` κρατά την αγγελία **ορατή**· εδώ μετρά
-  //    «ποιος ζητά αυτό το ακίνητο», και ένα ποσό που **κανείς δεν ξέρει** δεν επιτρέπεται να
-  //    περάσει ως ταίριασμα σε ζήτηση με εύρος τιμής. ⇒ εμπόδιο **απουσίας**, ποτέ `price-above`.
-  const priceKey = priceAxisKeyOf(listing);
-  if (priceKey === null) {
-    if (f.priceMin !== null || f.priceMax !== null) blockers.push('price-undeclared');
-    return;
-  }
-
-  const price = answerOrBlock(
-    listing, priceKey, 'price-undeclared',
-    f.priceMin !== null || f.priceMax !== null, blockers,
-  );
-  if (price === null) return;
-  if (f.priceMax !== null && price > f.priceMax) {
-    blockers.push('price-above');
-    gaps.priceOverBy = price - f.priceMax;
-  }
-  if (f.priceMin !== null && price < f.priceMin) {
-    blockers.push('price-below');
-    gaps.priceUnderBy = f.priceMin - price;
-  }
 }
 
 function areaAxis(

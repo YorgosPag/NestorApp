@@ -37,6 +37,23 @@ function withoutField(field: string): Record<string, unknown> {
   return body;
 }
 
+/**
+ * **Ένα έγγραφο που σπάει ΑΚΡΙΒΩΣ αυτό το κενό** — `Record` πάνω στο `DemandGap`, άρα νέο κενό χωρίς
+ * είσοδο **δεν μεταγλωττίζεται**.
+ *
+ * 🔑 Τα περισσότερα κενά είναι **απόντα πεδία**· το `seek-prices` (ADR-777 §8.60.15) είναι
+ * **ερμηνεία που απέτυχε**: παλιό έγγραφο με δύο διαθέσεις και ένα αμονάδιστο εύρος.
+ */
+const BROKEN_FOR: Readonly<Record<DemandGap, () => Record<string, unknown>>> = {
+  seeks: () => withoutField('seeks'),
+  'seek-prices': () =>
+    storedDoc({ seeks: ['sell', 'leaseOut'], features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } }),
+  place: () => withoutField('place'),
+  timing: () => withoutField('timing'),
+  mandate: () => withoutField('mandate'),
+  lifecycle: () => withoutField('lifecycle'),
+};
+
 describe('Κ1 — πλήρες έγγραφο περνά, και η ταυτότητα έρχεται ΑΠΟ ΕΞΩ', () => {
   it('γνωστό σχήμα ⇒ `complete`', () => {
     const read = readStoredDemand(storedDoc(), 'dmnd_a');
@@ -52,7 +69,7 @@ describe('Κ1 — πλήρες έγγραφο περνά, και η ταυτότ
 describe('Κ2 — ΚΑΘΕ κενό του λεξιλογίου πιάνεται, ΜΕ ΤΟ ΟΝΟΜΑ ΤΟΥ', () => {
   // 🔑 Ο πίνακας **εκτελείται**: νέο `DemandGap` χωρίς κριτή κοκκινίζει εδώ.
   it.each(DEMAND_GAPS)('απόν «%s» ⇒ incomplete με ακριβώς αυτό το κενό', (gap: DemandGap) => {
-    const read = readStoredDemand(withoutField(gap), 'dmnd_a');
+    const read = readStoredDemand(BROKEN_FOR[gap](), 'dmnd_a');
 
     expect(read?.kind).toBe('incomplete');
     expect(read?.kind === 'incomplete' && read.gaps).toEqual([gap]);
@@ -114,7 +131,7 @@ describe('Κ4 — Avro: ΔΗΛΩΜΕΝΗ ουδέτερη τιμή επιτρέ�
   });
 
   it('υπαρκτές τιμές περνούν ΑΥΤΟΥΣΙΕΣ', () => {
-    const features = { ...NO_DEMAND_FEATURES, priceMax: 180_000 };
+    const features = { ...NO_DEMAND_FEATURES, areaMin: 80 };
     const read = readStoredDemand(storedDoc({ features }), 'dmnd_a');
     expect(read?.kind === 'complete' && read.demand.features).toEqual(features);
   });
@@ -128,6 +145,53 @@ describe('Κ5 — αναγνωσιμότητα ≠ εγκυρότητα, και 
 
   it('`seeks` που δεν είναι πίνακας ⇒ κενό ανάγνωσης', () => {
     expect(readStoredDemand(storedDoc({ seeks: 'sell' }), 'dmnd_a')?.kind).toBe('incomplete');
+  });
+});
+
+describe('Κ7 — ADR-777 §8.60.15: ΔΥΟ σχήματα στον δίσκο, ΕΝΑ στη μνήμη', () => {
+  it('🔑 παλιό έγγραφο με ΜΙΑ διάθεση ⇒ το εύρος πάει σε ΑΥΤΗ, και φεύγει από τα χαρακτηριστικά', () => {
+    const legacy = storedDoc({
+      seeks: ['leaseOut'],
+      features: { ...NO_DEMAND_FEATURES, priceMin: 400, priceMax: 1_300, areaMin: 60 },
+    });
+    const read = readStoredDemand(legacy, 'dmnd_a');
+    if (read?.kind !== 'complete') throw new Error('αναμενόταν complete');
+    expect(read.demand.seeks).toEqual([{ kind: 'leaseOut', price: { min: 400, max: 1_300 } }]);
+    expect(read.demand.features).toEqual({ ...NO_DEMAND_FEATURES, areaMin: 60 });
+  });
+
+  it('παλιό έγγραφο με διάθεση ΧΩΡΙΣ ποσό (αντιπαροχή) + μία με ποσό ⇒ μονοσήμαντο, όχι μαντεψιά', () => {
+    const legacy = storedDoc({
+      seeks: ['sell', 'exchange'],
+      features: { ...NO_DEMAND_FEATURES, priceMax: 300_000 },
+    });
+    const read = readStoredDemand(legacy, 'dmnd_a');
+    if (read?.kind !== 'complete') throw new Error('αναμενόταν complete');
+    expect(read.demand.seeks).toEqual([
+      { kind: 'sell', price: { min: null, max: 300_000 } },
+      { kind: 'exchange' },
+    ]);
+  });
+
+  it('⛔ παλιό έγγραφο, ΠΟΛΛΕΣ διαθέσεις με ποσό, ΕΝΑ εύρος ⇒ `seek-prices`, ΠΟΤΕ ανάθεση', () => {
+    const read = readStoredDemand(BROKEN_FOR['seek-prices'](), 'dmnd_a');
+    expect(read).toEqual({ kind: 'incomplete', id: 'dmnd_a', gaps: ['seek-prices'] });
+  });
+
+  it('παλιό έγγραφο, πολλές διαθέσεις, ΚΑΝΕΝΑ εύρος ⇒ πλήρες (δεν υπάρχει τι να μαντευτεί)', () => {
+    const read = readStoredDemand(storedDoc({ seeks: ['sell', 'leaseOut'] }), 'dmnd_a');
+    if (read?.kind !== 'complete') throw new Error('αναμενόταν complete');
+    expect(read.demand.seeks).toEqual([
+      { kind: 'sell', price: { min: null, max: null } },
+      { kind: 'leaseOut', price: { min: null, max: null } },
+    ]);
+  });
+
+  it('νέο σχήμα με άγνωστο είδος ή χαλασμένο ποσό ⇒ `seeks` (AIP-216: το άγνωστο ονομάζεται)', () => {
+    const unknownKind = storedDoc({ seeks: [{ kind: 'barter', price: { min: null, max: null } }] });
+    const badAmount = storedDoc({ seeks: [{ kind: 'sell', price: { min: 'πολλά', max: null } }] });
+    expect(readStoredDemand(unknownKind, 'dmnd_a')).toEqual({ kind: 'incomplete', id: 'dmnd_a', gaps: ['seeks'] });
+    expect(readStoredDemand(badAmount, 'dmnd_a')).toEqual({ kind: 'incomplete', id: 'dmnd_a', gaps: ['seeks'] });
   });
 });
 

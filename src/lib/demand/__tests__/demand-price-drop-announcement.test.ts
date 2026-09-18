@@ -5,6 +5,13 @@
 
 import { MS_PER_DAY } from '@/lib/date-local';
 import type { PriceReduction } from '@/types/price-history';
+import type { DemandSeek } from '@/types/property-demand';
+import { seek } from './demand-fixtures';
+
+/** Οι εναλλακτικές **μίας** ζήτησης με όριο **πώλησης** (ο ρόλος της `REDUCTION`) — `null` = χωρίς όριο. */
+function saleCaps(...caps: (number | null)[]): DemandSeek[][] {
+  return caps.map((max) => (max === null ? [seek('sell')] : [seek('sell', { max })]));
+}
 
 import {
   demandListingMatchEventId,
@@ -83,23 +90,35 @@ describe('Θ — §8.69.12: η ταυτότητα είναι ΘΕΜΑ (παρα�
 
 describe('Β — ο ΕΝΑΣ κριτής προϋπολογισμού πάνω σε όλους τους λόγους', () => {
   it('🏆 Β1 — into-budget για ΜΙΑ από τις ζητήσεις ⇒ into-budget', () => {
-    expect(strongestBudgetVerdict([4_000_000, 3_300_000], REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
+    expect(strongestBudgetVerdict(saleCaps(4_000_000, 3_300_000), REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
   });
 
   it('🔴 Β2 — πολλά into-budget ⇒ το ΑΥΣΤΗΡΟΤΕΡΟ όριο (ποτέ υπόσχεση μεγαλύτερου περιθωρίου)', () => {
-    expect(strongestBudgetVerdict([3_400_000, 3_250_000, 3_300_000], REDUCTION)).toEqual({
+    expect(strongestBudgetVerdict(saleCaps(3_400_000, 3_250_000, 3_300_000), REDUCTION)).toEqual({
       kind: 'into-budget',
       priceMax: 3_250_000,
     });
   });
 
   it('Β3 — όριο κάτω από τη νέα τιμή ΔΕΝ κερδίζει (δεν είναι into-budget για εκείνη)', () => {
-    expect(strongestBudgetVerdict([3_000_000, 3_300_000], REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
+    expect(strongestBudgetVerdict(saleCaps(3_000_000, 3_300_000), REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
   });
 
   it('Β4 — καμία into-budget / κανένα όριο ⇒ within-budget', () => {
-    expect(strongestBudgetVerdict([null, 4_000_000], REDUCTION)).toEqual({ kind: 'within-budget' });
+    expect(strongestBudgetVerdict(saleCaps(null, 4_000_000), REDUCTION)).toEqual({ kind: 'within-budget' });
     expect(strongestBudgetVerdict([], REDUCTION)).toEqual({ kind: 'within-budget' });
+  });
+
+  it('🔴 Β5 — ADR-777 §8.60.15: μείωση ΕΝΟΙΚΙΟΥ κρίνεται ΜΟΝΟ απέναντι σε όριο ενοικίου', () => {
+    const rentDrop: PriceReduction = { ...REDUCTION, role: 'rent', from: 1_100, to: 950 };
+    // Ζήτηση «αγορά έως 250.000 € ή ενοικίαση έως 1.000 €/μήνα».
+    const both = [[seek('sell', { max: 250_000 }), seek('leaseOut', { max: 1_000 })]];
+    expect(strongestBudgetVerdict(both, rentDrop)).toEqual({ kind: 'into-budget', priceMax: 1_000 });
+    // Μόνο όριο **πώλησης** ⇒ η μείωση ενοικίου δεν «μπαίνει» σε κανέναν προϋπολογισμό.
+    // (Πριν: το αμονάδιστο 250.000 έκανε κάθε ενοίκιο «εντός».)
+    expect(strongestBudgetVerdict([[seek('sell', { max: 250_000 })]], rentDrop)).toEqual({
+      kind: 'within-budget',
+    });
   });
 });
 

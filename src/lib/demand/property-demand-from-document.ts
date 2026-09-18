@@ -70,6 +70,8 @@ import {
   type PropertyDemand,
 } from '@/types/property-demand';
 
+import { featuresWithoutLegacyPrice, readStoredSeeks } from './demand-seeks-read';
+
 // =============================================================================
 // 1. ΤΙ ΔΙΑΒΑΣΤΗΚΕ
 // =============================================================================
@@ -116,19 +118,28 @@ function isTagged(value: unknown): boolean {
  * όνομα, `seeks-empty`. Δύο ερωτήσεις, δύο σπίτια — αλλιώς ο άνθρωπος θα έβλεπε
  * «λείπει» για κάτι που **υπάρχει και είναι λάθος**, ή το αντίστροφο.
  */
-const PRESENT: Readonly<Record<DemandGap, (value: unknown) => boolean>> = {
-  seeks: (value) => Array.isArray(value),
-  place: isTagged,
-  timing: isTagged,
-  mandate: isTagged,
+type Stored = Readonly<Record<string, unknown>>;
+
+/**
+ * 🔑 **ADR-777 §8.60.15** — το `seeks` κρίνεται από τον **έναν** αναγνώστη εναλλακτικών, που ξέρει
+ * **και τα δύο** σχήματα. Άγνωστο είδος ή χαλασμένο ποσό ⇒ `seeks`· παλιό έγγραφο με πολλές
+ * διαθέσεις και ένα αμονάδιστο εύρος ⇒ `seek-prices` (η μονάδα **δεν** μαντεύεται).
+ */
+const PRESENT: Readonly<Record<DemandGap, (stored: Stored) => boolean>> = {
+  seeks: (stored) => readStoredSeeks(stored.seeks, stored.features).kind !== 'unreadable',
+  'seek-prices': (stored) =>
+    readStoredSeeks(stored.seeks, stored.features).kind !== 'ambiguous-price',
+  place: (stored) => isTagged(stored.place),
+  timing: (stored) => isTagged(stored.timing),
+  mandate: (stored) => isTagged(stored.mandate),
   // 🔴 AIP-216: τιμή **εκτός** λεξιλογίου δεν είναι «κάτι άλλο», είναι **άγνωστη** — και
   //    το άγνωστο ονομάζεται, δεν βαφτίζεται `'active'`.
-  lifecycle: isDemandLifecycle,
+  lifecycle: (stored) => isDemandLifecycle(stored.lifecycle),
 };
 
 /** Τα κενά αυτού του εγγράφου, **με τη σειρά του λεξιλογίου** (σταθερή για την οθόνη). */
-function gapsOf(stored: Readonly<Record<string, unknown>>): readonly DemandGap[] {
-  return DEMAND_GAPS.filter((gap) => !PRESENT[gap](stored[gap]));
+function gapsOf(stored: Stored): readonly DemandGap[] {
+  return DEMAND_GAPS.filter((gap) => !PRESENT[gap](stored));
 }
 
 // =============================================================================
@@ -164,10 +175,11 @@ function gapsOf(stored: Readonly<Record<string, unknown>>): readonly DemandGap[]
 export function readStoredDemand(raw: unknown, id: string): StoredDemandRead | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
 
-  const stored = raw as Readonly<Record<string, unknown>>;
+  const stored = raw as Stored;
   const gaps = gapsOf(stored);
+  const seeks = readStoredSeeks(stored.seeks, stored.features);
 
-  if (gaps.length > 0) return { kind: 'incomplete', id, gaps };
+  if (gaps.length > 0 || seeks.kind !== 'read') return { kind: 'incomplete', id, gaps };
 
   return {
     kind: 'complete',
@@ -176,8 +188,12 @@ export function readStoredDemand(raw: unknown, id: string): StoredDemandRead | n
       //    `as PropertyDemand` οπουδήποτε αλλού στο repo.
       ...(stored as unknown as PropertyDemand),
       id,
+      // 🔑 ADR-777 §8.60.15 — πάντα το **νέο** σχήμα στη μνήμη, όποιο κι αν είναι στον δίσκο.
+      seeks: seeks.seeks,
       // ── Οι ΔΗΛΩΜΕΝΕΣ ουδέτερες τιμές (Avro), ποτέ εφευρημένες ──────────────
-      features: (stored.features as PropertyDemand['features']) ?? NO_DEMAND_FEATURES,
+      features:
+        (featuresWithoutLegacyPrice(stored.features) as PropertyDemand['features'] | undefined) ??
+        NO_DEMAND_FEATURES,
       proximity: (stored.proximity as PropertyDemand['proximity']) ?? [],
       // `lifeContext` είναι ήδη `| null` στον τύπο: η απουσία **είναι** η τιμή.
       lifeContext: (stored.lifeContext as PropertyDemand['lifeContext']) ?? null,

@@ -40,7 +40,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις. Καμία εξάρτηση από React/Firestore.
  */
 
-import type { PropertyDemand } from '@/types/property-demand';
+import { isPricedSeek, seekOfKind, type PropertyDemand } from '@/types/property-demand';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
 import type { GeoArea } from '@/types/geo/coordinates';
 import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
@@ -124,15 +124,9 @@ export function demandsAreSimilar(a: PropertyDemand, b: PropertyDemand): boolean
   const fb = listingFiltersFromDemand(b);
 
   return (
-    labelsIntersect(labels(fa, 'offerKind'), labels(fb, 'offerKind')) &&
+    // 🔑 ADR-777 §8.60.15 — συναλλαγή **και** τιμή μαζί, ανά εναλλακτική: βλ. {@link seeksCompete}.
+    seeksCompete(a, b) &&
     labelsIntersect(labels(fa, 'type'), labels(fb, 'type')) &&
-    // 🔴 **Η ΤΙΜΗ ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΗ ΖΗΤΗΣΗ, ΟΧΙ ΑΠΟ ΤΗΝ ΠΡΟΒΟΛΗ** (μετρημένο 2026-09-18):
-    //    από το §8.60.14 ο άξονας τιμής είναι **τρεις** (μονάδα ανά διάθεση) και η προβολή διαλέγει
-    //    έναν. Το `span(…, 'price')` ρωτούσε άξονα **που δεν υπάρχει πια** ⇒ ουδέτερο εύρος ⇒ δύο
-    //    ζητήσεις με **ασύμβατα** εύρη έβγαιναν «όμοιες», δηλαδή ο ανταγωνισμός μετριόταν λάθος.
-    //    ⚠️ Εδώ η σύγκριση είναι **ζήτηση ↔ ζήτηση**: το εύρος είναι αμονάδιστο **και στις δύο**
-    //    πλευρές, άρα συγκρίσιμο αυτούσιο. Η μονάδα χρειάζεται μόνο όταν μπαίνει **αγγελία**.
-    rangesOverlap(demandPriceSpan(a), demandPriceSpan(b)) &&
     rangesOverlap(span(fa, 'areaSqm'), span(fb, 'areaSqm')) &&
     areasIntersect(fa.near, fb.near)
   );
@@ -152,13 +146,29 @@ export function demandsAreSimilar(a: PropertyDemand, b: PropertyDemand): boolean
  * απόφαση προϊόντος, και το γράφω ώστε η επόμενη προσθήκη άξονα να μη «διορθώσει»
  * σιωπηλά αυτή τη σιωπή.
  */
-function labels(filters: ListingFilters, key: 'offerKind' | 'type'): readonly string[] {
+function labels(filters: ListingFilters, key: 'type'): readonly string[] {
   return valuesOf(filters.criteria, key) ?? [];
 }
 
-/** Το **δηλωμένο** εύρος τιμής της ζήτησης — χωρίς μονάδα, όπως ζει στο έγγραφο. */
-function demandPriceSpan(demand: PropertyDemand): CriterionRange {
-  return { min: demand.features.priceMin, max: demand.features.priceMax };
+/**
+ * **Υπάρχει ΚΟΙΝΗ συναλλαγή όπου τα εύρη τους τέμνονται — στην ΙΔΙΑ μονάδα;** (ADR-777 §8.60.15)
+ *
+ * 🔴 **Ιστορικό, μετρημένο**: (1) ως τις 2026-09-18 ρωτιόταν άξονας `'price'` που **δεν υπήρχε
+ * πια** ⇒ ουδέτερο εύρος ⇒ ασύμβατα εύρη έβγαιναν «όμοια»· (2) η πρώτη διόρθωση σύγκρινε το **ένα**
+ * αμονάδιστο εύρος της κάθε ζήτησης — σωστό μόνο όσο και οι δύο είχαν **μία** διάθεση. «Αγορά έως
+ * 250.000 €» και «ενοικίαση έως 900 €/μήνα» **δεν** ανταγωνίζονται, όσο κι αν τα εύρη «τέμνονται»
+ * ως αριθμοί.
+ *
+ * 🔑 Κοινή συναλλαγή **χωρίς** όριο σε μία από τις δύο πλευρές (ή αντιπαροχή) ⇒ ανταγωνίζονται:
+ * η γενναιοδωρία της κεφαλίδας («μετράμε περισσότερους, ποτέ λιγότερους») ισχύει αυτούσια.
+ */
+function seeksCompete(a: PropertyDemand, b: PropertyDemand): boolean {
+  return a.seeks.some((seek) => {
+    const rival = seekOfKind(b.seeks, seek.kind);
+    if (rival === undefined) return false;
+    if (!isPricedSeek(seek) || !isPricedSeek(rival)) return true;
+    return rangesOverlap(seek.price, rival.price);
+  });
 }
 
 /** Το εύρος ενός άξονα, ή το ουδέτερο όταν δεν ρωτήθηκε. */

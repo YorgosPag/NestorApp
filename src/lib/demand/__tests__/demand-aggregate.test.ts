@@ -30,6 +30,7 @@ import {
   type PropertyDemand,
 } from '@/types/property-demand';
 import { readStoredDemand } from '@/lib/demand/property-demand-from-document';
+import { seek } from './demand-fixtures';
 
 const NOW = '2026-08-11T00:00:00.000Z';
 
@@ -44,7 +45,7 @@ function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
     authorUserId: 'usr_1',
     authorCompanyId: null,
     mandate: { kind: 'self' },
-    seeks: ['sell'],
+    seeks: [seek('sell')],
     place: { kind: 'anywhere' },
     timing: { kind: 'now' },
     features: NO_DEMAND_FEATURES,

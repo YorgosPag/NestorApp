@@ -50,7 +50,7 @@ import { IGNORANCE_BLOCKERS } from '../demand-answer';
  * σουίτα. Γραμμένα δύο φορές θα απέκλιναν — και μια δοκιμή που περνά επειδή το
  * **fixture** της είναι διαφορετικό δηλώνει κάλυψη που δεν υπάρχει.
  */
-import { NOW_ISO, TODAY, demand, facts, listing } from './demand-fixtures';
+import { NOW_ISO, TODAY, demand, facts, listing, seek } from './demand-fixtures';
 
 /**
  * Άξονας δρόμου Δύση→Ανατολή (ίδιο πλάτος `lat`), για τα σενάρια της **Ζ4
@@ -70,10 +70,10 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
   /** Ζητήσεις που καλύπτουν **και τους πέντε** άξονες, με και χωρίς όρο. */
   const DEMANDS: readonly PropertyDemand[] = [
     demand(),
-    demand({ seeks: ['leaseOut'] }),
-    demand({ seeks: ['sell', 'exchange'] }),
-    demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 150_000 } }),
-    demand({ features: { ...NO_DEMAND_FEATURES, priceMin: 250_000 } }),
+    demand({ seeks: [seek('leaseOut')] }),
+    demand({ seeks: [seek('sell'), seek('exchange')] }),
+    demand({ seeks: [seek('sell', { max: 150_000 })] }),
+    demand({ seeks: [seek('sell', { min: 250_000 })] }),
     demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 120 } }),
     demand({ features: { ...NO_DEMAND_FEATURES, areaMax: 80 } }),
     demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 4 } }),
@@ -183,7 +183,7 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
   const SCENARIOS: ReadonlyArray<
     readonly [DemandBlocker, PropertyDemand, ListingMatchFacts]
   > = [
-    ['offer-kind', demand({ seeks: ['leaseOut'] }), facts()],
+    ['offer-kind', demand({ seeks: [seek('leaseOut')] }), facts()],
     ['property-type', demand({ features: { ...NO_DEMAND_FEATURES, types: ['land'] } }), facts()],
     [
       'other-place',
@@ -210,8 +210,8 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
       demand({ proximity: [{ kind: 'supermarket', maxMetres: 300 }] }),
       facts({ proximityMetres: {} }),
     ],
-    ['price-above', demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 100_000 } }), facts()],
-    ['price-below', demand({ features: { ...NO_DEMAND_FEATURES, priceMin: 400_000 } }), facts()],
+    ['price-above', demand({ seeks: [seek('sell', { max: 100_000 })] }), facts()],
+    ['price-below', demand({ seeks: [seek('sell', { min: 400_000 })] }), facts()],
     ['area-below', demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 200 } }), facts()],
     ['area-above', demand({ features: { ...NO_DEMAND_FEATURES, areaMax: 50 } }), facts()],
     ['bedrooms-below', demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 5 } }), facts()],
@@ -222,7 +222,7 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
     //    γεννιέται εμπόδιο (§8.52.4), χωρίς το δεύτερο γεννιέται το μετρήσιμο αδελφό του.
     [
       'price-undeclared',
-      demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 100_000 } }),
+      demand({ seeks: [seek('sell', { max: 100_000 })] }),
       facts({
         listing: listing({
           commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null },
@@ -340,7 +340,7 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
 
 describe('🔴 Μ — «με +20.000 € υπάρχουν 6» ΥΠΟΛΟΓΙΖΕΤΑΙ, δεν γράφεται', () => {
   it('το ακριβώς παράδειγμα του §12.6: οροφή 180.000, αγγελία 200.000', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 180_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 180_000 })] });
     const result = matchDemandAgainstListing(d, facts(), TODAY);
 
     expect(result.verdict).toBe('near-miss');
@@ -381,7 +381,7 @@ describe('🔴 Μ — «με +20.000 € υπάρχουν 6» ΥΠΟΛΟΓΙΖΕ
   });
 
   it('🔴 αγγελία ΧΩΡΙΣ τιμή δεν παράγει ψεύτικο «πόσο λείπει»', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 180_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 180_000 })] });
     const f = facts({
       listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null } }),
     });
@@ -472,7 +472,7 @@ describe('Π — πολιτική: πότε «κοντά» και πότε «ό�
 
 describe('🔴 Λ — κλειστή λογιστική στα αποτελέσματα', () => {
   it('τα τρία σύνολα κλείνουν στο πλήθος των υποψηφίων', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 190_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 190_000 })] });
     const candidates = [
       facts(), // 200.000 → near-miss (+10.000)
       facts({ listing: listing({ commercial: { askingPrice: 150_000, finalPrice: null, rentPrice: null, nightlyRate: null } }) }), // match
@@ -499,7 +499,7 @@ describe('🔴 Λ — κλειστή λογιστική στα αποτελέσ�
   });
 
   it('τα «κοντινά» κουβαλούν το ΓΙΑΤΙ μαζί τους', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 190_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 190_000 })] });
     const results = matchDemand(d, [facts()], TODAY);
     expect(results.nearMissed[0].match.gaps.priceOverBy).toBe(10_000);
   });
@@ -692,7 +692,7 @@ describe('ADR-777 §8.52 — η ζήτηση ρωτά τον ΕΝΑΝ αναγν
   // ── Α. Η ΣΙΩΠΗ ΟΝΟΜΑΖΕΤΑΙ ─────────────────────────────────────────────────
 
   it('Α1 — χωρίς δηλωμένη τιμή: `price-undeclared`, ΠΟΤΕ `price-above`/`price-below`', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMin: 50_000, priceMax: 180_000 } });
+    const d = demand({ seeks: [seek('sell', { min: 50_000, max: 180_000 })] });
     const result = matchDemandAgainstListing(d, facts({ listing: listing({ commercial: NOTHING }) }), TODAY);
     expect(result.blockers).toContain('price-undeclared');
     expect(result.blockers).not.toContain('price-above');

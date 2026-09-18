@@ -26,13 +26,18 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
-import { DEMAND_PROXIMITY_KINDS, type DemandProximityKind } from '@/types/property-demand';
+import {
+  DEMAND_PROXIMITY_KINDS,
+  PRICED_SEEK_KINDS,
+  type DemandProximityKind,
+} from '@/types/property-demand';
 import { FORM_PLACE_KINDS, type DemandFormValues } from '@/lib/demand/demand-form-values';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 import {
   DemandFieldset,
   DemandNumberField,
   DemandOptionsField,
+  type DemandFieldName,
 } from './demand-field-primitives';
 import { DemandPlaceResolver } from './DemandPlaceResolver';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
@@ -63,7 +68,43 @@ export function DemandSeeksField(): React.ReactElement {
         options={OFFER_KINDS}
         labelOf={(kind) => t(`${NS}:demand.form.seeks.${kind}`)}
       />
+      <DemandSeekPriceRows />
     </DemandFieldset>
+  );
+}
+
+/**
+ * **Ένα εύρος τιμής για κάθε επιλεγμένη διάθεση με τιμή** — με τη μονάδα στη λεζάντα (ADR-777 §8.60.15).
+ *
+ * 🔴 Ως τις 2026-09-18 υπήρχε **ένα** πεδίο «Ποσό (€)» στα χαρακτηριστικά, για όλες τις διαθέσεις
+ * μαζί: «αγορά **ή** ενοικίαση, έως 250.000» ⇒ κάθε ενοίκιο κρινόταν απέναντι σε 250.000.
+ *
+ * 🔑 Η λεζάντα **λέει** τη μονάδα («Μηνιαίο ενοίκιο (€/μήνα)»): ο άνθρωπος δεν μπορεί να γράψει
+ * ποσό χωρίς να ξέρει σε τι. Η σειρά είναι του {@link PRICED_SEEK_KINDS}, όχι των κλικ.
+ */
+function DemandSeekPriceRows(): React.ReactElement | null {
+  const { t } = useTranslation([NS]);
+  const selected = useWatch<DemandFormValues, 'seeks'>({ name: 'seeks' });
+  const K = `${NS}:demand.form.seekPrice`;
+
+  const priced = PRICED_SEEK_KINDS.filter((kind) => selected.includes(kind));
+  if (priced.length === 0) return null;
+
+  return (
+    <>
+      {priced.map((kind) => (
+        <DemandRangeRow
+          key={kind}
+          legend={t(`${K}.${kind}`)}
+          minName={`seekPrices.${kind}.min`}
+          maxName={`seekPrices.${kind}.max`}
+          minLabel={t(`${K}.min`)}
+          maxLabel={t(`${K}.max`)}
+          floor={0}
+        />
+      ))}
+      <p className="text-sm text-muted-foreground">{t(`${K}.help`)}</p>
+    </>
   );
 }
 
@@ -210,15 +251,6 @@ export function DemandFeaturesField(): React.ReactElement {
       />
 
       <DemandRangeRow
-        legend={t(`${K}.priceLegend`)}
-        help={t(`${K}.priceHelp`)}
-        minName="priceMin"
-        maxName="priceMax"
-        minLabel={t(`${K}.priceMin`)}
-        maxLabel={t(`${K}.priceMax`)}
-        floor={0}
-      />
-      <DemandRangeRow
         legend={t(`${K}.areaLegend`)}
         minName="areaMin"
         maxName="areaMax"
@@ -261,8 +293,8 @@ function DemandRangeRow({
 }: {
   legend: string;
   help?: string;
-  minName: 'priceMin' | 'areaMin' | 'floorMin';
-  maxName: 'priceMax' | 'areaMax' | 'floorMax';
+  minName: DemandFieldName;
+  maxName: DemandFieldName;
   minLabel: string;
   maxLabel: string;
   floor?: number;

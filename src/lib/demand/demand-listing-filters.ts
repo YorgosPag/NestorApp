@@ -58,13 +58,18 @@ import {
   withValues,
   type ListingCriteria,
 } from '@/lib/criteria/listing-criteria';
-// 🔑 Η **μία** δήλωση «ποια διάθεση ρωτά ποιον άξονα τιμής» (ADR-777 §8.60.14).
-import { PRICE_AXIS_OF_OFFER_KIND } from '@/lib/criteria/listing-criterion-reading';
+// 🔑 Η **μία** δήλωση «ποια εναλλακτική ρωτά ποιον άξονα τιμής» (ADR-777 §8.60.14 · §8.60.15).
+import { priceAxisOfSeek } from '@/lib/criteria/listing-criterion-reading';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { geoOutlineBoundingCircle } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
-import type { DemandPlace, PropertyDemand } from '@/types/property-demand';
+import {
+  boundedPricedSeeks,
+  seekKindsOf,
+  type DemandPlace,
+  type PropertyDemand,
+} from '@/types/property-demand';
 
 // =============================================================================
 // 1. ΟΙ ΑΠΩΛΕΙΕΣ — ονομασμένες, όχι σιωπηλές
@@ -248,36 +253,30 @@ function projectPlace(place: DemandPlace): ProjectedGeo {
  * ακριβώς αυτό που το συμβόλαιο απαγορεύει.
  */
 /**
- * **Το εύρος τιμής πάει στον άξονα ΤΗΣ ΜΟΝΑΔΑΣ** (ADR-777 §8.60.14).
+ * **Κάθε εναλλακτική γράφει το εύρος της στον άξονα ΤΗΣ ΜΟΝΑΔΑΣ της** (ADR-777 §8.60.14 · §8.60.15).
  *
- * 🔴 **Μετρημένο 2026-09-18**: εδώ γραφόταν `withRange(criteria, 'price', …)` — άξονας που
- * **έπαψε να υπάρχει** όταν η τιμή έσπασε σε πώληση · ενοίκιο · διανυκτέρευση. Ο κατασκευαστής
- * δεν ρίχνει σε άγνωστο κλειδί, οπότε η οροφή τιμής **εξαφανιζόταν σιωπηλά** από τον σύνδεσμο
- * «δες τι υπάρχει σήμερα»: ο άνθρωπος έβλεπε αποτελέσματα **χωρίς** το όριο που είχε ζητήσει.
+ * 🔴 **Ιστορικό, μετρημένο**: (1) ως τις 2026-09-18 εδώ γραφόταν `withRange(criteria, 'price', …)` —
+ * άξονας που **έπαψε να υπάρχει** όταν η τιμή έσπασε σε τρεις ⇒ η οροφή εξαφανιζόταν σιωπηλά·
+ * (2) η πρώτη διόρθωση έγραφε τιμή **μόνο** όταν η ζήτηση είχε **μία** διάθεση, γιατί το έγγραφο
+ * είχε **ένα** αμονάδιστο εύρος. Με την τιμή **ανά εναλλακτική** (§8.60.15) το όριο αυτό **έπεσε**:
+ * «πώληση έως 250.000 € **ή** ενοικίαση έως 900 €/μήνα» γράφει **δύο** άξονες, ο καθένας στη μονάδα του.
  *
- * 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ — ζήτηση με ΠΟΛΛΕΣ διαθέσεις**: το έγγραφο ζήτησης έχει **ένα** εύρος χωρίς
- * μονάδα. Με «πώληση **και** ενοικίαση» μαζί, το ίδιο ποσό δεν μπορεί να σταλεί και στους δύο
- * άξονες — 250.000 € πώλησης δεν είναι 250.000 € ενοικίου. Γράφεται μόνο όταν η μονάδα είναι
- * **μονοσήμαντη**· αλλιώς ο σύνδεσμος μένει χωρίς άξονα τιμής, ρητά και όχι κατά λάθος. Η λύση
- * ανήκει στο **έγγραφο** *(να φέρει μονάδα)*, όχι σε μαντεψιά εδώ.
+ * ✅ **Υπερσύνολο**: κάθε άξονας τιμής κρίνει **μόνο** αγγελίες του ρόλου του (`not-applicable` για
+ * τις άλλες — `listing-criterion-reading`), άρα δύο άξονες μαζί **δεν** στενεύουν ο ένας τον άλλον.
  */
-function withPriceRange(criteria: ListingCriteria, demand: PropertyDemand): ListingCriteria {
-  const { priceMin, priceMax } = demand.features;
-  const axes = new Set(
-    demand.seeks.map((kind) => PRICE_AXIS_OF_OFFER_KIND[kind]).filter((axis) => axis !== undefined),
+function withPriceRanges(criteria: ListingCriteria, demand: PropertyDemand): ListingCriteria {
+  return boundedPricedSeeks(demand.seeks).reduce(
+    (built, seek) => withRange(built, priceAxisOfSeek(seek), seek.price),
+    criteria,
   );
-  const [axis] = [...axes];
-  return axes.size === 1 && axis !== undefined
-    ? withRange(criteria, axis, { min: priceMin, max: priceMax })
-    : criteria;
 }
 
 export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters {
   const f = demand.features;
 
-  let criteria = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', demand.seeks);
+  let criteria = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', seekKindsOf(demand.seeks));
   criteria = withValues(criteria, 'type', f.types);
-  criteria = withPriceRange(criteria, demand);
+  criteria = withPriceRanges(criteria, demand);
   criteria = withRange(criteria, 'areaSqm', { min: f.areaMin, max: f.areaMax });
   criteria = withRange(criteria, 'bedrooms', { min: f.bedroomsMin, max: null });
   criteria = withRange(criteria, 'floor', { min: f.floorMin, max: f.floorMax });

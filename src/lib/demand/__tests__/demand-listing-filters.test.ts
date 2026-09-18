@@ -21,6 +21,7 @@ import {
 } from '@/lib/listings/listing-filters';
 import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
 import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
+import { seek } from './demand-fixtures';
 
 function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
   return {
@@ -28,7 +29,7 @@ function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
     authorUserId: 'usr_1',
     authorCompanyId: null,
     mandate: { kind: 'self' },
-    seeks: ['sell'],
+    seeks: [seek('sell')],
     place: { kind: 'anywhere' },
     timing: { kind: 'now' },
     features: NO_DEMAND_FEATURES,
@@ -68,7 +69,7 @@ const SQUARE = [
 
 describe('🔴 Τ — καμία μετάφραση στον άξονα συναλλαγής', () => {
   it('το `seeks` περνά ΑΥΤΟΥΣΙΟ στα `offerKinds` — schema.org/Demand', () => {
-    const filters = listingFiltersFromDemand(demand({ seeks: ['leaseOut', 'exchange'] }));
+    const filters = listingFiltersFromDemand(demand({ seeks: [seek('leaseOut'), seek('exchange')] }));
     expect(valuesOf(filters.criteria, 'offerKind')).toEqual(['leaseOut', 'exchange']);
   });
 });
@@ -158,7 +159,7 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
   it('ζήτηση χωρίς ιδιαιτερότητες δεν χάνει ΤΙΠΟΤΑ', () => {
     const plain = demand({
       timing: { kind: 'now' },
-      features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 },
+      seeks: [seek('sell', { max: 250_000 })],
     });
     // ⚠️ Ψεύτικη προειδοποίηση είναι θόρυβος που εκπαιδεύει τον χρήστη να αγνοεί
     // τις αληθινές — άρα το κενό αποτέλεσμα είναι εξίσου σημαντικό με τα υπόλοιπα.
@@ -230,8 +231,8 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
 describe('Δ — ο σύνδεσμος «δες τι υπάρχει σήμερα»', () => {
   it('δείχνει στην οθόνη 2 με τα φίλτρα της ζήτησης', () => {
     const d = demand({
-      seeks: ['sell'],
-      features: { ...NO_DEMAND_FEATURES, priceMax: 250_000, bedroomsMin: 3 },
+      seeks: [seek('sell', { max: 250_000 })],
+      features: { ...NO_DEMAND_FEATURES, bedroomsMin: 3 },
       place: { kind: 'near', center: { lat: 40.6, lng: 22.9 }, radiusKm: 4 },
     });
     const href = demandResultsHref(d);
@@ -247,7 +248,7 @@ describe('Δ — ο σύνδεσμος «δες τι υπάρχει σήμερα
 
   it('🔑 ο κύκλος επιβιώνει της σειριοποίησης — round-trip', () => {
     const d = demand({
-      features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 },
+      seeks: [seek('sell', { max: 250_000 })],
       place: { kind: 'near', center: { lat: 40.6, lng: 22.9 }, radiusKm: 4 },
     });
     const projected = listingFiltersFromDemand(d);

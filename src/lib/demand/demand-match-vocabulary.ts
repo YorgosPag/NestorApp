@@ -22,6 +22,8 @@
  */
 
 import type { DemandProximityKind } from '@/types/property-demand';
+import type { PriceRole } from '@/lib/properties/price-resolver';
+import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -379,11 +381,46 @@ export const DEMAND_VERDICTS = ['match', 'near-miss', 'no-match'] as const;
 
 export type DemandVerdict = (typeof DEMAND_VERDICTS)[number];
 
+/**
+ * **Μια εναλλακτική της ζήτησης που η αγγελία ικανοποιεί ΠΛΗΡΩΣ** (ADR-777 §8.60.16) — την
+ * **προσφέρει** και η τιμή της **χωρά** (ή η εναλλακτική δεν έθεσε όριο).
+ *
+ * 🔑 **Το περιθώριο είναι ο καθρέφτης του κενού**: το `priceOverBy` λέει «πόσο **έξω**», το
+ * `headroomBy` «πόσο **μέσα**». Και τα δύο στη μονάδα του `role` — «50» δεν διαβάζεται χωρίς αυτήν.
+ */
+export interface DemandSeekMet {
+  readonly kind: OfferKind;
+  /** `null` = εναλλακτική χωρίς ποσό (αντιπαροχή). */
+  readonly role: PriceRole | null;
+  /** Το ποσό της αγγελίας **σε αυτόν τον ρόλο** — ο **ίδιος** αναγνώστης με την κρίση· `null` = δεν δηλώθηκε. */
+  readonly amount: number | null;
+  /** `max − amount` — `null` χωρίς ανώτατο όριο ή χωρίς ποσό. */
+  readonly headroomBy: number | null;
+}
+
 export interface DemandMatch {
   readonly verdict: DemandVerdict;
   /** **Πάντα κενό** όταν `verdict === 'match'`· **ποτέ** κενό αλλιώς. */
   readonly blockers: readonly DemandBlocker[];
   readonly gaps: DemandGaps;
+  /**
+   * **Σε ποια μονάδα κρίθηκε η τιμή** (ADR-777 §8.60.15) — ο ρόλος της εναλλακτικής που
+   * ικανοποιήθηκε ή βρέθηκε πιο κοντά. `null` = καμία κρίση τιμής (κανένα όριο ποσού, ή
+   * εναλλακτική χωρίς ποσό — αντιπαροχή).
+   *
+   * 🔑 Είναι η **μονάδα των `priceOverBy`/`priceUnderBy`**: «+100» δεν διαβάζεται χωρίς αυτήν
+   * (€ πώλησης ή €/μήνα;).
+   *
+   * ⚠️ **ΔΕΝ** απαντά στο «ταιριάζει **ως τι**» — είναι **ένας** ρόλος, ενώ η αγγελία μπορεί να
+   * ικανοποιεί **δύο** εναλλακτικές. Εκείνο το λέει το {@link metOn}.
+   */
+  readonly pricedAs: PriceRole | null;
+  /**
+   * **Ως τι ταιριάζει** (ADR-777 §8.60.16) — **όλες** οι εναλλακτικές που η αγγελία ικανοποιεί
+   * πλήρως, με τη **σειρά του ανθρώπου**. **Ποτέ** κενό όταν `verdict === 'match'` (αναλλοίωτο
+   * με `throw`, `demand-matching.ts`).
+   */
+  readonly metOn: readonly DemandSeekMet[];
 }
 
 /**

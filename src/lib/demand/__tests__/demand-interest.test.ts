@@ -35,8 +35,8 @@ import {
 } from '../demand-interest';
 import { DEMAND_DISCLOSURE } from '../demand-aggregate';
 import { matchDemandAgainstListing } from '../demand-matching';
-import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
-import { NOW_ISO, TODAY, demand, facts, listing } from './demand-fixtures';
+import type { PropertyDemand } from '@/types/property-demand';
+import { NOW_ISO, TODAY, demand, facts, listing, seek } from './demand-fixtures';
 
 // =============================================================================
 // ΒΟΗΘΗΤΙΚΑ — τρία ακίνητα, μία ανά στάση
@@ -92,7 +92,7 @@ describe('🔴 Μ0 — ο αφελής βρόχος απαντά ΠΑΝΤΑ 0 σ
 
   it('⚠️ σε ΔΗΛΩΜΕΝΟ ακίνητο τίποτα δεν συγχωρείται — η μηχανή κρίνει ολόκληρη', () => {
     // Ζητά ενοικίαση· το ακίνητο πωλείται. Πραγματική ασυμφωνία, ΟΧΙ αδήλωτος άξονας.
-    const renters = [demand({ seeks: ['leaseOut'] })];
+    const renters = [demand({ seeks: [seek('leaseOut')] })];
     const { interest, census } = discloseInterest(OFFERED, renters, NOW_ISO, TODAY);
     expect(interest.disclosure.count).toBeNull();
     expect(census.mismatch).toBe(1);
@@ -119,13 +119,13 @@ describe('Σ — η στάση, κάθε τιμή από πραγματική ε
 
   it('🔴 το `partial` ΚΡΙΝΕΙ την τιμή — δεν τη συγχωρεί', () => {
     // Προϋπολογισμός 150.000 έναντι τιμής 200.000: αληθινή ασυμφωνία.
-    const tight = [demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 150_000 } })];
+    const tight = [demand({ seeks: [seek('sell', { max: 150_000 })] })];
     const { census } = discloseInterest(PARTIAL, tight, NOW_ISO, TODAY);
     expect(census.mismatch).toBe(1);
   });
 
   it('🔴 το `dormant` ΔΕΝ έχει τιμή να κρίνει — ο ίδιος άνθρωπος μετράει', () => {
-    const tight = [demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 150_000 } })];
+    const tight = [demand({ seeks: [seek('sell', { max: 150_000 })] })];
     const { census } = discloseInterest(DORMANT, tight, NOW_ISO, TODAY);
     expect(census.interested).toBe(1);
   });
@@ -149,7 +149,7 @@ describe('Κ — η κατάληξη κάθε ζήτησης', () => {
         ),
       mismatch: () =>
         classifyDemandInterest(
-          demand({ seeks: ['leaseOut'] }),
+          demand({ seeks: [seek('leaseOut')] }),
           OFFERED,
           'offered',
           NOW_ISO,
@@ -162,7 +162,7 @@ describe('Κ — η κατάληξη κάθε ζήτησης', () => {
   it('🔴 αποσυρμένη ΚΑΙ ασύμφωνη ⇒ `not-countable`, ΠΟΤΕ `mismatch`', () => {
     // Η σειρά είναι συμβόλαιο: αλλιώς η αναφορά λέει «δέκα δεν το θέλησαν» ενώ οι
     // οκτώ βρήκαν σπίτι — και ο ιδιοκτήτης ρίχνει τιμή που δεν χρειάζεται.
-    const gone = demand({ lifecycle: 'withdrawn', seeks: ['leaseOut'] });
+    const gone = demand({ lifecycle: 'withdrawn', seeks: [seek('leaseOut')] });
     expect(classifyDemandInterest(gone, OFFERED, 'offered', NOW_ISO, TODAY)).toBe(
       'not-countable',
     );
@@ -192,7 +192,7 @@ describe('Λ — κλειστή λογιστική, fail-closed', () => {
     const pool = [
       ...seekers(3),
       demand({ id: 'x1', lifecycle: 'paused' }),
-      demand({ id: 'x2', seeks: ['leaseOut'] }),
+      demand({ id: 'x2', seeks: [seek('leaseOut')] }),
       demand({ id: 'x3', affirmedAt: '2020-01-01T00:00:00.000Z' }),
     ];
     const { census } = discloseInterest(OFFERED, pool, NOW_ISO, TODAY);

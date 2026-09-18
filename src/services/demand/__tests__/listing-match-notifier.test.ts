@@ -54,22 +54,27 @@ import { recipientListingMatchEventId } from '@/lib/demand/demand-announcement';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 
 function demand(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return { id, authorUserId: `usr_${id}`, features: { priceMax: null }, ...overrides };
+  // ADR-777 §8.60.15 — η τιμή ζει στις εναλλακτικές· χωρίς όριο ποσού = καμία εναλλακτική με τιμή.
+  return { id, authorUserId: `usr_${id}`, seeks: [], ...overrides };
 }
 
 function listing(id: string, title = `Αγγελία ${id}`): Record<string, unknown> {
   return { id, title, priceReduction: null, areaSqm: null };
 }
 
-/** Το `matchDemand` επιστρέφει `matched: ListingMatchFacts[]` — το ελάχιστο σχήμα. */
+/**
+ * Το `matchDemand` επιστρέφει `matched: DemandOutcome[]` (ADR-777 §8.60.16) — το ελάχιστο σχήμα.
+ * `metOn: []` ⇒ η ειδοποίηση δεν έχει πρόταση «ως τι» — τα tests του «ως τι» ζουν στο
+ * `listing-announcement-copy.test.ts`.
+ */
 function matchedFactsOf(listings: ReadonlyArray<Record<string, unknown>>): {
-  matched: Array<{ listing: Record<string, unknown> }>;
+  matched: Array<{ facts: { listing: Record<string, unknown> }; match: { metOn: never[] } }>;
   nearMissed: never[];
   rejected: never[];
   considered: number;
 } {
   return {
-    matched: listings.map((item) => ({ listing: item })),
+    matched: listings.map((item) => ({ facts: { listing: item }, match: { metOn: [] } })),
     nearMissed: [],
     rejected: [],
     considered: listings.length,

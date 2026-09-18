@@ -47,7 +47,12 @@
  */
 
 import type { DemandBlocker, DemandGaps, DemandMatch } from './demand-match-vocabulary';
-import type { DemandFeatures, PropertyDemand } from '@/types/property-demand';
+import type { PropertyDemand } from '@/types/property-demand';
+import type { PriceRole } from '@/lib/properties/price-resolver';
+import { amountRangeOfRole } from './demand-seek-roles';
+
+/** Ό,τι χρειάζεται από τη ζήτηση για να μετρηθεί «λογική» υποχώρηση. */
+type ConcessionDemand = Pick<PropertyDemand, 'features' | 'place' | 'seeks'>;
 
 // =============================================================================
 // 1. ΟΙ ΑΞΟΝΕΣ ΥΠΟΧΩΡΗΣΗΣ — ένας ανά μετρήσιμο κενό, κλειστό σύνολο
@@ -172,26 +177,30 @@ export const MAX_ROOMS_CONCESSION = 1;
  * άξονας θα εξαφανιζόταν από τη σκάλα — σιωπηλά, και μόνο για κάποιες ζητήσεις.
  */
 export function concessionCeiling(
-  demand: Pick<PropertyDemand, 'features' | 'place'>,
+  demand: ConcessionDemand,
   concession: DemandConcession,
+  priceRole: PriceRole | null = null,
 ): number | null {
   if (concession === 'bedrooms-floor') return MAX_ROOMS_CONCESSION;
 
-  const base = concessionBase(demand.features, demand.place, concession);
+  const base = concessionBase(demand, concession, priceRole);
   return base === null ? null : base * MAX_RELATIVE_CONCESSION;
 }
 
 /** Το **δηλωμένο όριο** του χρήστη πάνω στο οποίο μετριέται η αναλογία. */
 function concessionBase(
-  features: DemandFeatures,
-  place: PropertyDemand['place'],
+  { features, place, seeks }: ConcessionDemand,
   concession: DemandConcession,
+  priceRole: PriceRole | null,
 ): number | null {
+  // 🔑 ADR-777 §8.60.15 — το όριο τιμής είναι **της εναλλακτικής στη μονάδα της σκάλας**: +15% πάνω
+  //    σε 900 €/μήνα, ποτέ πάνω σε 250.000 € πώλησης της ίδιας ζήτησης.
+  const priceRange = priceRole === null ? null : amountRangeOfRole(seeks, priceRole);
   switch (concession) {
     case 'price-ceiling':
-      return features.priceMax;
+      return priceRange?.max ?? null;
     case 'price-floor':
-      return features.priceMin;
+      return priceRange?.min ?? null;
     case 'area-floor':
       return features.areaMin;
     case 'area-ceiling':
@@ -227,6 +236,13 @@ export interface ConcessionStep {
 export interface ConcessionLadder {
   readonly concession: DemandConcession;
   readonly unit: ConcessionUnit;
+  /**
+   * **Η μονάδα της τιμής** για τις σκάλες τιμής (ADR-777 §8.60.15) — `null` σε κάθε άλλη.
+   *
+   * 🔴 Σκάλα τιμής **χωρίς** ρόλο θα ανακάτευε `+20.000 €` πώλησης με `+100 €/μήνα` ενοικίου στο
+   * **ίδιο** σκαλί. Γι' αυτό η σκάλα κλειδώνεται ανά **(υποχώρηση, ρόλος)**.
+   */
+  readonly priceRole: PriceRole | null;
   /** Αύξουσα κατά ποσό, σωρευτική κατά πλήθος. **Ποτέ κενή**. */
   readonly steps: readonly ConcessionStep[];
   /**
@@ -249,7 +265,7 @@ export interface ConcessionLadder {
  */
 export function soleConcessionOf(
   match: DemandMatch,
-): { concession: DemandConcession; amount: number } | null {
+): { concession: DemandConcession; amount: number; priceRole: PriceRole | null } | null {
   if (match.blockers.length !== 1) return null;
 
   const measured = (Object.keys(CONCESSION_OF_GAP) as (keyof DemandGaps)[])
@@ -262,8 +278,9 @@ export function soleConcessionOf(
   if (measured.length !== 1) return null;
 
   const [only] = measured;
+  const concession = CONCESSION_OF_GAP[only.key];
   return only.amount > 0
-    ? { concession: CONCESSION_OF_GAP[only.key], amount: only.amount }
+    ? { concession, amount: only.amount, priceRole: isPriceConcession(concession) ? match.pricedAs : null }
     : null;
 }
 
@@ -278,6 +295,7 @@ export function buildLadder(
   concession: DemandConcession,
   amounts: readonly number[],
   ceiling: number | null,
+  priceRole: PriceRole | null = null,
 ): ConcessionLadder | null {
   if (amounts.length === 0) return null;
 
@@ -294,6 +312,7 @@ export function buildLadder(
   return {
     concession,
     unit: CONCESSION_UNIT[concession],
+    priceRole,
     steps,
     headline: pickHeadline(steps, ceiling),
   };
@@ -373,10 +392,10 @@ export interface DemandConcessionReport {
  * @param nearMisses — οι ετυμηγορίες `near-miss` της {@link matchDemand}
  */
 export function buildConcessionReport(
-  demand: Pick<PropertyDemand, 'features' | 'place'>,
+  demand: ConcessionDemand,
   nearMisses: readonly DemandMatch[],
 ): DemandConcessionReport {
-  const amounts = new Map<DemandConcession, number[]>();
+  const amounts = new Map<string, { key: LadderKey; list: number[] }>();
   let multiAxis = 0;
   let unquantified = 0;
 
@@ -390,19 +409,23 @@ export function buildConcessionReport(
       unquantified += 1;
       continue;
     }
-    const bucket = amounts.get(sole.concession);
-    if (bucket === undefined) amounts.set(sole.concession, [sole.amount]);
-    else bucket.push(sole.amount);
+    const key: LadderKey = { concession: sole.concession, priceRole: sole.priceRole };
+    const id = ladderIdOf(key);
+    const bucket = amounts.get(id);
+    if (bucket === undefined) amounts.set(id, { key, list: [sole.amount] });
+    else bucket.list.push(sole.amount);
   }
 
-  const ladders = DEMAND_CONCESSIONS.map((concession) =>
-    buildLadder(concession, amounts.get(concession) ?? [], concessionCeiling(demand, concession)),
-  ).filter((ladder): ladder is ConcessionLadder => ladder !== null);
+  const ladders = [...amounts.values()]
+    .map(({ key, list }) =>
+      buildLadder(key.concession, list, concessionCeiling(demand, key.concession, key.priceRole), key.priceRole),
+    )
+    .filter((ladder): ladder is ConcessionLadder => ladder !== null);
 
   return {
     ladders: [...ladders].sort(compareLadders),
     census: {
-      ladderedCount: [...amounts.values()].reduce((sum, list) => sum + list.length, 0),
+      ladderedCount: [...amounts.values()].reduce((sum, bucket) => sum + bucket.list.length, 0),
       multiAxis,
       unquantified,
       considered: nearMisses.length,
@@ -419,7 +442,23 @@ function compareLadders(a: ConcessionLadder, b: ConcessionLadder): number {
   const unlocksA = a.headline?.unlocks ?? 0;
   const unlocksB = b.headline?.unlocks ?? 0;
   if (unlocksA !== unlocksB) return unlocksB - unlocksA;
-  return a.concession.localeCompare(b.concession);
+  return ladderIdOf(a).localeCompare(ladderIdOf(b));
+}
+
+/** Η ταυτότητα μιας σκάλας — **(υποχώρηση, ρόλος τιμής)**, ADR-777 §8.60.15. */
+interface LadderKey {
+  readonly concession: DemandConcession;
+  readonly priceRole: PriceRole | null;
+}
+
+/** Σταθερό κλειδί σκάλας — και για τον κάδο, και για το `key` της λίστας στην οθόνη. */
+export function ladderIdOf(key: LadderKey): string {
+  return key.priceRole === null ? key.concession : `${key.concession}:${key.priceRole}`;
+}
+
+/** Είναι υποχώρηση **τιμής** (άρα έχει μονάδα-ρόλο); */
+function isPriceConcession(concession: DemandConcession): boolean {
+  return concession === 'price-ceiling' || concession === 'price-floor';
 }
 
 /**

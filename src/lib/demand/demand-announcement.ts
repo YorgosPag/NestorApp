@@ -50,6 +50,8 @@
 
 import { isReductionFresh } from '@/lib/listings/price-history';
 import type { PriceReduction } from '@/types/price-history';
+import type { DemandSeek } from '@/types/property-demand';
+import { amountRangeOfRole } from './demand-seek-roles';
 
 /**
  * 🔴 **ΟΙ ΖΩΝΕΣ — κάθε μία είναι ΑΛΛΗ ΕΙΔΗΣΗ, όχι μεγαλύτερος αριθμός.**
@@ -206,11 +208,16 @@ export function priceDropKind(
  * ειδοποιήσεων (Knock, Novu) λέει το αντίθετο: **το θέμα είναι η ταυτότητα, οι αιτίες είναι
  * περιεχόμενο**. Εδώ οι ζητήσεις γίνονται **λόγοι μέσα** στην ειδοποίηση.
  *
- * ⚠️ `demandIds` και `priceMaxes` είναι **παράλληλοι** πίνακες, ταξινομημένοι κατά ζήτηση.
+ * ⚠️ `demandIds` και `seeks` είναι **παράλληλοι** πίνακες, ταξινομημένοι κατά ζήτηση.
+ *
+ * 🔴 **ADR-777 §8.60.15 — ήταν `priceMaxes: (number | null)[]`**: ένα αμονάδιστο όριο ανά
+ * ζήτηση ⇒ μείωση **ενοικίου** από 1.100 σε 950 €/μήνα κρινόταν απέναντι σε όριο **πώλησης**
+ * 250.000 € και έβγαινε «εντός προϋπολογισμού». Τώρα κρατιούνται οι **εναλλακτικές**, και το όριο
+ * διαλέγεται **στη μονάδα της μείωσης** ({@link strongestBudgetVerdict}).
  */
 export interface AnnouncementReasons {
   readonly demandIds: readonly string[];
-  readonly priceMaxes: readonly (number | null)[];
+  readonly seeks: readonly (readonly DemandSeek[])[];
 }
 
 /**
@@ -244,11 +251,13 @@ export type BudgetVerdict =
  * ποτέ υπόσχεση μεγαλύτερου περιθωρίου απ' ό,τι έχει ο άνθρωπος.
  */
 export function strongestBudgetVerdict(
-  priceMaxes: readonly (number | null)[],
-  reduction: Pick<PriceReduction, 'from' | 'to'>,
+  seeksPerDemand: readonly (readonly DemandSeek[])[],
+  reduction: Pick<PriceReduction, 'from' | 'to' | 'role'>,
 ): BudgetVerdict {
   let strictest: number | null = null;
-  for (const priceMax of priceMaxes) {
+  for (const seeks of seeksPerDemand) {
+    // 🔑 Το όριο **του ρόλου της μείωσης** — ζήτηση χωρίς εναλλακτική σε αυτή τη μονάδα δεν έχει όριο εδώ.
+    const priceMax = amountRangeOfRole(seeks, reduction.role)?.max ?? null;
     if (priceMax === null || priceDropKind(priceMax, reduction) !== 'into-budget') continue;
     if (strictest === null || priceMax < strictest) strictest = priceMax;
   }

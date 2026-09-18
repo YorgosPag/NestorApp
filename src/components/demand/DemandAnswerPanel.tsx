@@ -55,6 +55,7 @@ import type { CompetitionState } from '@/hooks/demand/useDemandAnswer';
 import { DemandBlockerList } from './DemandBlockerList';
 import { DemandCompetitionPanel } from './DemandCompetitionPanel';
 import { DemandConcessionList } from './DemandConcessionList';
+import { DemandMatchedListings } from './DemandMatchedListings';
 
 /** Η κύρια πρόταση — **μία** ανά σχήμα, ποτέ συνένωση. */
 function HeadlineSentence({
@@ -69,7 +70,14 @@ function HeadlineSentence({
 
   switch (shape) {
     case 'has-matches':
-      return <p className="text-foreground">{t(`${K}.matched`, { count: answer.matchedCount })}</p>;
+      // 🔑 ADR-777 §8.60.16 — το πλήθος **και** ποιες, ως τι. Η λίστα ζει ΜΟΝΟ σε αυτό το σχήμα:
+      //    ένα `answer.matched.length > 0 && …` στο JSX θα ήταν δεύτερη πολιτική δίπλα στο `switch`.
+      return (
+        <>
+          <p className="text-foreground">{t(`${K}.matched`, { count: answer.matchedCount })}</p>
+          <DemandMatchedListings answer={answer} />
+        </>
+      );
     case 'has-concession':
       return <p className="text-foreground">{t(`${K}.none`)}</p>;
     case 'near-but-unreachable':

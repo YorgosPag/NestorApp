@@ -33,7 +33,7 @@ import { valuesOf, withRange, type ListingCriteria } from '@/lib/criteria/listin
 import { judgeCriterion } from '@/lib/criteria/listing-criteria-judge';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
 import { NO_DEMAND_FEATURES } from '@/types/property-demand';
-import { demand, listing } from './demand-fixtures';
+import { demand, listing, seek } from './demand-fixtures';
 
 /**
  * «Υπνοδωμάτια, τουλάχιστον N» πάνω σε υπάρχοντα φίλτρα.
@@ -51,7 +51,7 @@ import { isLandProperty } from '@/constants/property-classification';
 
 /** Ο εργολάβος: «ζητώ **οικόπεδο** με **αντιπαροχή**». */
 const CONTRACTOR = demand({
-  seeks: ['exchange'],
+  seeks: [seek('exchange')],
   features: { ...NO_DEMAND_FEATURES, types: ['plot'] },
 });
 
@@ -154,7 +154,7 @@ describe('ADR-777 §8.32 — ο εργολάβος ψάχνει, ο ιδιοκτ
     // έλεγχο, αντί να προστεθεί σε χειρόγραφη λίστα που κανείς δεν θυμάται.
     for (const land of LAND_PROPERTY_TYPES) {
       const seeker = demand({
-        seeks: ['exchange'],
+        seeks: [seek('exchange')],
         features: { ...NO_DEMAND_FEATURES, types: [land] },
       });
       const offered = { ...OWNER_PLOT, type: land };

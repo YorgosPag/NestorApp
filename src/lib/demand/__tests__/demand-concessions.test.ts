@@ -30,7 +30,7 @@ import {
 import { matchDemand } from '../demand-matching';
 import type { DemandMatch } from '../demand-match-vocabulary';
 import { NO_DEMAND_FEATURES } from '@/types/property-demand';
-import { TODAY, demand, facts, listing } from './demand-fixtures';
+import { TODAY, demand, facts, listing, seek } from './demand-fixtures';
 
 /** Μια ετυμηγορία «κοντά» φτιαγμένη στο χέρι — για να δοκιμαστεί **η πολιτική** μόνη της. */
 function nearMiss(overrides: Partial<DemandMatch>): DemandMatch {
@@ -45,6 +45,10 @@ function nearMiss(overrides: Partial<DemandMatch>): DemandMatch {
       bedroomsShortBy: null,
       distanceOverMetres: null,
     },
+    // ADR-777 §8.60.15 — η μονάδα της τιμής: η ουδέτερη ζήτηση είναι **πώληση**.
+    pricedAs: 'sale',
+    // ADR-777 §8.60.16 — κοντινό αποτέλεσμα: καμία εναλλακτική δεν ικανοποιείται πλήρως.
+    metOn: [],
     ...overrides,
   };
 }
@@ -62,7 +66,7 @@ describe('🔴 Β — «με +20.000 € υπάρχουν 6» αναπαράγε
   const OVER_BY = [5_000, 8_000, 12_000, 15_000, 18_000, 20_000, 80_000];
 
   it('διαλέγει το +20.000 (6 αγγελίες), ΟΧΙ το +5.000 (1) ούτε το +80.000 (7)', () => {
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
+    const d = demand({ seeks: [seek('sell', { max: 250_000 })] });
     const candidates = OVER_BY.map((over) =>
       facts({
         listing: listing({
@@ -85,13 +89,13 @@ describe('🔴 Β — «με +20.000 € υπάρχουν 6» αναπαράγε
 
   it('το κατώφλι είναι ΣΧΕΤΙΚΟ — η ίδια απόσταση απορρίπτεται σε μικρότερο προϋπολογισμό', () => {
     // 🔑 Το +20.000 είναι μικρό σε ζήτηση των 250.000 και **παράλογο** στις 60.000.
-    const rich = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
-    const modest = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 60_000 } });
+    const rich = demand({ seeks: [seek('sell', { max: 250_000 })] });
+    const modest = demand({ seeks: [seek('sell', { max: 60_000 })] });
 
-    expect(concessionCeiling(rich, 'price-ceiling')).toBe(250_000 * MAX_RELATIVE_CONCESSION);
-    expect(buildLadder('price-ceiling', [20_000], concessionCeiling(rich, 'price-ceiling'))?.headline)
+    expect(concessionCeiling(rich, 'price-ceiling', 'sale')).toBe(250_000 * MAX_RELATIVE_CONCESSION);
+    expect(buildLadder('price-ceiling', [20_000], concessionCeiling(rich, 'price-ceiling', 'sale'))?.headline)
       .not.toBeNull();
-    expect(buildLadder('price-ceiling', [20_000], concessionCeiling(modest, 'price-ceiling'))?.headline)
+    expect(buildLadder('price-ceiling', [20_000], concessionCeiling(modest, 'price-ceiling', 'sale'))?.headline)
       .toBeNull();
   });
 
@@ -144,7 +148,42 @@ describe('🔴 Α — μόνο ΕΝΑΣ άξονας, μόνος του, γεν�
       blockers: ['price-above'],
       gaps: { ...nearMiss({}).gaps, priceOverBy: 20_000 },
     });
-    expect(soleConcessionOf(match)).toEqual({ concession: 'price-ceiling', amount: 20_000 });
+    expect(soleConcessionOf(match)).toEqual({ concession: 'price-ceiling', amount: 20_000, priceRole: 'sale' });
+  });
+});
+
+// =============================================================================
+// Μ — ADR-777 §8.60.15: ΜΙΑ ΣΚΑΛΑ ΑΝΑ ΜΟΝΑΔΑ
+// =============================================================================
+
+describe('🔴 Μ — σκάλες τιμής ΑΝΑ ΜΟΝΑΔΑ: € πώλησης και €/μήνα δεν μπαίνουν στην ίδια σκάλα', () => {
+  const both = demand({ seeks: [seek('sell', { max: 250_000 }), seek('leaseOut', { max: 900 })] });
+  const over = (amount: number, pricedAs: 'sale' | 'rent'): DemandMatch =>
+    nearMiss({ pricedAs, gaps: { ...nearMiss({}).gaps, priceOverBy: amount } });
+
+  it('δύο ρόλοι ⇒ ΔΥΟ σκάλες, η καθεμιά με το ΔΙΚΟ της όριο', () => {
+    const report = buildConcessionReport(both, [over(20_000, 'sale'), over(100, 'rent'), over(120, 'rent')]);
+
+    const sale = report.ladders.find((ladder) => ladder.priceRole === 'sale');
+    const rent = report.ladders.find((ladder) => ladder.priceRole === 'rent');
+    expect(sale?.steps).toEqual([{ amount: 20_000, unlocks: 1 }]);
+    expect(rent?.steps).toEqual([
+      { amount: 100, unlocks: 1 },
+      { amount: 120, unlocks: 2 },
+    ]);
+    // 🔑 +15% πάνω σε 900 €/μήνα = 135 ⇒ και τα δύο ενοίκια προτείνονται· ΠΟΤΕ πάνω στις 250.000.
+    expect(rent?.headline).toEqual({ amount: 120, unlocks: 2 });
+    expect(report.census.ladderedCount).toBe(3);
+  });
+
+  it('🔴 ενοίκιο +200 €/μήνα ΔΕΝ προτείνεται — κι ας είναι «μικρό» μπροστά στις 250.000', () => {
+    const report = buildConcessionReport(both, [over(200, 'rent')]);
+    expect(report.ladders.find((ladder) => ladder.priceRole === 'rent')?.headline).toBeNull();
+  });
+
+  it('η υποχώρηση χωρίς ρόλο τιμής (εμβαδόν) δεν αποκτά ρόλο', () => {
+    const area = nearMiss({ blockers: ['area-below'], gaps: { ...nearMiss({}).gaps, areaShortBy: 5 } });
+    expect(soleConcessionOf(area)).toEqual({ concession: 'area-floor', amount: 5, priceRole: null });
   });
 });
 
@@ -241,7 +280,7 @@ describe('🔴 Π — η σκάλα και η επιλογή του σκαλιο
       gaps: { ...nearMiss({}).gaps, bedroomsShortBy: 5 },
     });
 
-    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 100_000, bedroomsMin: 3 } });
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 3 }, seeks: [seek('sell', { max: 100_000 })] });
     const report = buildConcessionReport(d, [withoutHeadline, withHeadline]);
 
     expect(report.ladders[0].concession).toBe('price-ceiling');

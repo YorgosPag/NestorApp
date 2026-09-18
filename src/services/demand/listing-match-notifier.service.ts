@@ -56,7 +56,7 @@ import {
   knowledgeFromListings,
   listingFactsFrom,
 } from '@/lib/demand/demand-answer';
-import { matchDemand } from '@/lib/demand/demand-matching';
+import { matchDemand, type DemandOutcome } from '@/lib/demand/demand-matching';
 // 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/listing/${id}`** — κουβαλά ήδη το
 //    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
 import { listingDetailHref } from '@/lib/listings/listing-routes';
@@ -154,8 +154,8 @@ interface RecipientPass {
  * τίποτα εδώ, το `/offers/<id>` θα ήταν ψεύτικη πόρτα. Το `label` δεν φτάνει ποτέ σε οθόνη.
  */
 async function announceOneMatch(pass: RecipientPass, topic: ListingTopic): Promise<MatchOutcome> {
-  const { listing, reasons } = topic;
-  const copy = matchAnnouncementCopy(listing, reasons, pass.nowMs);
+  const { listing, reasons, metOn } = topic;
+  const copy = matchAnnouncementCopy({ listing, reasons, metOn }, pass.nowMs);
 
   const result = await dispatchNotification({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH,
@@ -182,16 +182,19 @@ async function announceOneMatch(pass: RecipientPass, topic: ListingTopic): Promi
   return dispatchOutcomeOf(result);
 }
 
-/** Τα ταιριάσματα μιας ζήτησης, **όλα** — το όριο εφαρμόζεται αργότερα, μόνο στα νέα. */
+/**
+ * Τα ταιριάσματα μιας ζήτησης, **όλα** — το όριο εφαρμόζεται αργότερα, μόνο στα νέα.
+ *
+ * 🔑 **Με την ετυμηγορία τους** (ADR-777 §8.60.16): το «ως τι» (`metOn`) ταξιδεύει ως την ειδοποίηση,
+ * ώστε κανείς να μη χρειαστεί να ξανακρίνει την αγγελία για να το πει.
+ */
 function matchedListings(
   demand: PropertyDemand,
   listings: readonly PublicListing[],
   knowledge: ReturnType<typeof knowledgeFromListings>,
   todayDate: string,
-): readonly PublicListing[] {
-  return matchDemand(demand, listingFactsFrom(listings, knowledge), todayDate).matched.map(
-    (facts) => facts.listing,
-  );
+): readonly DemandOutcome[] {
+  return matchDemand(demand, listingFactsFrom(listings, knowledge), todayDate).matched;
 }
 
 /** Η μείωση μιας αγγελίας, αν υπάρχει — κριμένη με ό,τι **ήδη** ξέρει ο άνθρωπος. */

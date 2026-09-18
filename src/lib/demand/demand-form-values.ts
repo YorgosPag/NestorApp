@@ -52,8 +52,13 @@ import {
   DEMAND_LIFE_CONTEXTS,
   DEMAND_PROXIMITY_KINDS,
   FRONTAGE_SIDES,
+  NO_AMOUNT_RANGE,
   NO_DEMAND_FEATURES,
+  demandSeek,
+  isPricedSeekKind,
   type DemandFeatures,
+  type DemandSeek,
+  type PricedSeekKind,
   type DemandLifeContext,
   type DemandPlace,
   type DemandProximity,
@@ -134,6 +139,23 @@ const isoDate = z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/);
 
 const geoPoint = geoPointSchema;
 
+/** Εύρος ποσού «από/έως» — κενό = «δεν έθεσα όριο», **ποτέ** `0`. */
+const amountRange = z.object({ min: optionalNumber, max: optionalNumber });
+
+/**
+ * **Ένα εύρος ανά διάθεση με τιμή** (ADR-777 §8.60.15) — `Record` πάνω στο {@link PricedSeekKind}
+ * ⇒ νέος κλάδος με τιμή δεν μεταγλωττίζεται χωρίς πεδίο εδώ.
+ *
+ * 🔑 **Μένουν συμπληρωμένα κι όταν η διάθεση αποεπιλεγεί** — το ίδιο δόγμα με την ακτίνα (Α14
+ * §17.2): ο άνθρωπος που ξετσεκάρει και ξανατσεκάρει την «ενοικίαση» βρίσκει το 900 του. Στο
+ * **έγγραφο** όμως ταξιδεύουν **μόνο** τα επιλεγμένα ({@link seeksFrom}).
+ */
+const seekPrices = z.object({
+  sell: amountRange,
+  leaseOut: amountRange,
+  leaseShort: amountRange,
+} satisfies Record<PricedSeekKind, typeof amountRange>);
+
 /**
  * Το σχήμα της φόρμας. **Επίπεδο**, με διακριτές τιμές ως ετικέτες — όχι ενώσεις.
  *
@@ -144,6 +166,8 @@ const geoPoint = geoPointSchema;
  */
 export const demandFormSchema = z.object({
   seeks: z.array(z.enum(OFFER_KINDS as unknown as [OfferKind, ...OfferKind[]])),
+  /** Η τιμή **κάθε** διάθεσης, στη μονάδα της — βλ. {@link seekPrices}. */
+  seekPrices,
 
   // ── ΧΩΡΟΣ ───────────────────────────────────────────────────────────────
   placeKind: z.enum(FORM_PLACE_KINDS),
@@ -190,8 +214,6 @@ export const demandFormSchema = z.object({
 
   // ── ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ──────────────────────────────────────────────────────
   types: z.array(z.string()),
-  priceMin: optionalNumber,
-  priceMax: optionalNumber,
   areaMin: optionalNumber,
   areaMax: optionalNumber,
   bedroomsMin: optionalNumber,
@@ -237,6 +259,7 @@ export const DEFAULT_FRONTAGE_DEPTH_METRES = 40;
  */
 export const EMPTY_DEMAND_FORM: DemandFormValues = {
   seeks: [],
+  seekPrices: { sell: NO_AMOUNT_RANGE, leaseOut: NO_AMOUNT_RANGE, leaseShort: NO_AMOUNT_RANGE },
   placeKind: 'anywhere',
   placeQuery: '',
   placeCenter: null,
@@ -251,8 +274,6 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   fromDate: '',
   toDate: '',
   types: [],
-  priceMin: null,
-  priceMax: null,
   areaMin: null,
   areaMax: null,
   bedroomsMin: null,
@@ -348,8 +369,6 @@ function timingFrom(values: DemandFormParsed): DemandTiming {
 function featuresFrom(values: DemandFormParsed): DemandFeatures {
   return {
     types: values.types,
-    priceMax: values.priceMax,
-    priceMin: values.priceMin,
     areaMin: values.areaMin,
     areaMax: values.areaMax,
     bedroomsMin: values.bedroomsMin,
@@ -358,10 +377,22 @@ function featuresFrom(values: DemandFormParsed): DemandFeatures {
   };
 }
 
+/**
+ * Οι εναλλακτικές — **μόνο** οι επιλεγμένες διαθέσεις, η καθεμιά με **το δικό της** εύρος.
+ *
+ * 🔑 Ένα εύρος διάθεσης που ο άνθρωπος **αποεπέλεξε** δεν ταξιδεύει: ποσό που κανείς δεν κρίνει θα
+ * ήταν ψευδής ισχυρισμός μέσα στο έγγραφο (ίδιο δόγμα με τον {@link demandSeek}).
+ */
+function seeksFrom(values: DemandFormParsed): DemandSeek[] {
+  return values.seeks.map((kind) =>
+    demandSeek(kind, isPricedSeekKind(kind) ? values.seekPrices[kind] : NO_AMOUNT_RANGE),
+  );
+}
+
 /** **Φόρμα → προσχέδιο ζήτησης.** Καθαρή, ολική. */
 export function demandDraftFrom(values: DemandFormParsed): DemandDraft {
   return {
-    seeks: values.seeks,
+    seeks: seeksFrom(values),
     place: placeFrom(values),
     timing: timingFrom(values),
     features: featuresFrom(values),

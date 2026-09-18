@@ -23,11 +23,7 @@ import {
 import { demandFormFrom } from '../demand-form-load';
 import { validateDemandForm } from '../demand-form-validation';
 import { DEMAND_LIFE_PRESETS, applyLifePreset } from '../demand-life-presets';
-import {
-  DEMAND_LIFE_CONTEXTS,
-  NO_DEMAND_FEATURES,
-  type PropertyDemand,
-} from '@/types/property-demand';
+import { DEMAND_LIFE_CONTEXTS, type PropertyDemand } from '@/types/property-demand';
 import { demand } from './demand-fixtures';
 
 /** Οι τιμές που περνούν από zod — ό,τι δέχεται η μετάφραση. */
@@ -47,8 +43,8 @@ const FULL: DemandFormValues = {
   fromDate: '2027-03-01',
   toDate: '2027-06-30',
   types: ['apartment', 'maisonette'],
-  priceMin: 100_000,
-  priceMax: 250_000,
+  // ADR-777 §8.60.15 — η τιμή ζει **ανά διάθεση**· η αντιπαροχή δεν έχει ποσό.
+  seekPrices: { ...EMPTY_DEMAND_FORM.seekPrices, sell: { min: 100_000, max: 250_000 } },
   areaMin: 80,
   areaMax: 160,
   bedroomsMin: 2,
@@ -167,8 +163,13 @@ describe('🔴 Ρ — ζήτηση → φόρμα → ζήτηση είναι Τ
 
 describe('🔴 Ν — κενό πεδίο ⇒ `null`, ΠΟΤΕ `0`', () => {
   it('κενή συμβολοσειρά γίνεται `null` σε κάθε αριθμητικό', () => {
-    const parsed = parse({ ...EMPTY_DEMAND_FORM, priceMax: '', areaMin: '', floorMin: '' });
-    expect(parsed.priceMax).toBeNull();
+    const parsed = parse({
+      ...EMPTY_DEMAND_FORM,
+      seekPrices: { ...EMPTY_DEMAND_FORM.seekPrices, sell: { min: '', max: '' } },
+      areaMin: '',
+      floorMin: '',
+    });
+    expect(parsed.seekPrices.sell.max).toBeNull();
     expect(parsed.areaMin).toBeNull();
     expect(parsed.floorMin).toBeNull();
   });
@@ -184,7 +185,11 @@ describe('🔴 Ν — κενό πεδίο ⇒ `null`, ΠΟΤΕ `0`', () => {
   it('σκουπίδια γίνονται `null`, όχι `NaN`', () => {
     // `Number('abc')` είναι NaN, και ένα NaN σε εύρος περνά κάθε σύγκριση ως `false`
     // — δηλαδή θα φίλτραρε τα πάντα, σιωπηλά.
-    expect(parse({ ...EMPTY_DEMAND_FORM, priceMax: 'χίλια' }).priceMax).toBeNull();
+    const values = {
+      ...EMPTY_DEMAND_FORM,
+      seekPrices: { ...EMPTY_DEMAND_FORM.seekPrices, leaseOut: { min: null, max: 'χίλια' } },
+    };
+    expect(parse(values).seekPrices.leaseOut.max).toBeNull();
   });
 });
 
@@ -238,8 +243,7 @@ describe('🔴 η επικύρωση καλεί την ΙΔΙΑ αρχή με τ
       ...FULL,
       fromDate: '2027-06-30',
       toDate: '2027-03-01',
-      priceMin: 300_000,
-      priceMax: 100_000,
+      seekPrices: { ...FULL.seekPrices, sell: { min: 300_000, max: 100_000 } },
     };
     const result = validateDemandForm(values);
     if (result.kind !== 'incomplete') throw new Error('αναμενόταν incomplete');
@@ -252,7 +256,11 @@ describe('🔴 η επικύρωση καλεί την ΙΔΙΑ αρχή με τ
     const result = validateDemandForm(FULL);
     expect(result.kind).toBe('ready');
     if (result.kind !== 'ready') return;
-    expect(result.draft.seeks).toEqual(['sell', 'exchange']);
+    // 🔑 ADR-777 §8.60.15 — η πώληση κουβαλά το εύρος της· η αντιπαροχή **δεν** έχει ποσό.
+    expect(result.draft.seeks).toEqual([
+      { kind: 'sell', price: { min: 100_000, max: 250_000 } },
+      { kind: 'exchange' },
+    ]);
     expect(result.draft.place).toEqual({
       kind: 'near',
       center: { lat: 40.64, lng: 22.94 },
@@ -320,8 +328,7 @@ describe('🔴 Π — το πλαίσιο ζωής γεμίζει ΚΕΝΑ, πο
     // αντί να την καταγράψει, και ο θερμοχάρτης του Ε2 θα μετρούσε τις υποθέσεις μας.
     for (const context of DEMAND_LIFE_CONTEXTS) {
       const outcome = applyLifePreset(EMPTY_DEMAND_FORM, context);
-      expect(outcome.values.priceMin).toBe(NO_DEMAND_FEATURES.priceMin);
-      expect(outcome.values.priceMax).toBe(NO_DEMAND_FEATURES.priceMax);
+      expect(outcome.values.seekPrices).toEqual(EMPTY_DEMAND_FORM.seekPrices);
     }
   });
 });

@@ -132,8 +132,13 @@ export function matchDemandAgainstListing(
       `demand-matching: ασυνεπής λογιστική — ετυμηγορία "${verdict}" με ${blockers.length} εμπόδια`,
     );
   }
+  // 🔴 ADR-777 §8.60.16 — ταίριασμα **χωρίς** «ως τι» σημαίνει ότι η τιμή σώθηκε από συναλλαγή που
+  //    η αγγελία δεν προσφέρει. Δομικά αδύνατο (`demand-match-price.ts`)· αν συμβεί, είναι σφάλμα.
+  if (verdict === 'match' && numeric.metOn.length === 0) {
+    throw new Error('demand-matching: match verdict with no satisfied alternative (empty metOn)');
+  }
 
-  return { verdict, blockers, gaps };
+  return { verdict, blockers, gaps, pricedAs: numeric.pricedAs, metOn: numeric.metOn };
 }
 
 /**
@@ -169,7 +174,13 @@ export function decideVerdict(blockers: readonly DemandBlocker[]): DemandVerdict
  * `ListingLedger`.
  */
 export interface DemandResults {
-  readonly matched: readonly ListingMatchFacts[];
+  /**
+   * Οι ταιριασμένες — **με την ετυμηγορία τους** (ADR-777 §8.60.16), όπως τα άλλα δύο σύνολα.
+   *
+   * 🔴 **Ήταν σκέτα `facts` μέχρι 2026-09-18**: η ετυμηγορία πετιόταν ακριβώς εκεί όπου λέει
+   * **ως τι** ταιριάζει η αγγελία (`metOn`), και καμία επιφάνεια δεν μπορούσε να το πει.
+   */
+  readonly matched: readonly DemandOutcome[];
   readonly nearMissed: readonly DemandOutcome[];
   /**
    * Οι απορριφθείσες — **με την ετυμηγορία τους**, όχι σκέτο πλήθος.
@@ -210,13 +221,13 @@ export function matchDemand(
   candidates: readonly ListingMatchFacts[],
   todayDate: string,
 ): DemandResults {
-  const matched: ListingMatchFacts[] = [];
+  const matched: DemandOutcome[] = [];
   const nearMissed: DemandOutcome[] = [];
   const rejected: DemandOutcome[] = [];
 
   for (const facts of candidates) {
     const match = matchDemandAgainstListing(demand, facts, todayDate);
-    if (match.verdict === 'match') matched.push(facts);
+    if (match.verdict === 'match') matched.push({ facts, match });
     else if (match.verdict === 'near-miss') nearMissed.push({ facts, match });
     else rejected.push({ facts, match });
   }

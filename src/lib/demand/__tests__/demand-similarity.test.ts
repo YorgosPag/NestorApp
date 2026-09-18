@@ -14,7 +14,7 @@
 
 import { demandsAreSimilar, selectSimilarDemands } from '../demand-similarity';
 import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
-import { demand } from './demand-fixtures';
+import { demand, seek } from './demand-fixtures';
 
 /** Θεσσαλονίκη. */
 const THESSALONIKI = { lat: 40.64, lng: 22.94 };
@@ -27,12 +27,12 @@ function near(center: { lat: number; lng: number }, radiusKm: number): PropertyD
 
 describe('🔴 Σ — συμμετρία', () => {
   const PAIRS: readonly (readonly [PropertyDemand, PropertyDemand])[] = [
-    [demand(), demand({ seeks: ['leaseOut'] })],
+    [demand(), demand({ seeks: [seek('leaseOut')] })],
     [near(THESSALONIKI, 5), near(ATHENS, 5)],
     [near(THESSALONIKI, 5), demand()],
     [
-      demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 100_000 } }),
-      demand({ features: { ...NO_DEMAND_FEATURES, priceMin: 200_000 } }),
+      demand({ seeks: [seek('sell', { max: 100_000 })] }),
+      demand({ seeks: [seek('sell', { min: 200_000 })] }),
     ],
   ];
 
@@ -47,7 +47,7 @@ describe('🔴 Σ — συμμετρία', () => {
 describe('🔴 Δ — το κριτήριο ΟΝΤΩΣ απορρίπτει', () => {
   it('άλλο είδος συναλλαγής ⇒ όχι όμοιες', () => {
     // Ο αγοραστής και ο ενοικιαστής **δεν** ανταγωνίζονται για την ίδια αγγελία.
-    expect(demandsAreSimilar(demand({ seeks: ['sell'] }), demand({ seeks: ['leaseOut'] }))).toBe(
+    expect(demandsAreSimilar(demand({ seeks: [seek('sell')] }), demand({ seeks: [seek('leaseOut')] }))).toBe(
       false,
     );
   });
@@ -59,8 +59,8 @@ describe('🔴 Δ — το κριτήριο ΟΝΤΩΣ απορρίπτει', ()
   it('εύρη τιμής που δεν τέμνονται ⇒ όχι όμοιες', () => {
     expect(
       demandsAreSimilar(
-        demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 100_000 } }),
-        demand({ features: { ...NO_DEMAND_FEATURES, priceMin: 200_000 } }),
+        demand({ seeks: [seek('sell', { max: 100_000 })] }),
+        demand({ seeks: [seek('sell', { min: 200_000 })] }),
       ),
     ).toBe(false);
   });
@@ -88,8 +88,8 @@ describe('🔴 Γ — γενναιοδωρία: ό,τι ΘΑ μπορούσε ν
     // «ως 250.000» και «ως 260.000» ανταγωνίζονται για τα ίδια ακίνητα.
     expect(
       demandsAreSimilar(
-        demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } }),
-        demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 260_000 } }),
+        demand({ seeks: [seek('sell', { max: 250_000 })] }),
+        demand({ seeks: [seek('sell', { max: 260_000 })] }),
       ),
     ).toBe(true);
   });

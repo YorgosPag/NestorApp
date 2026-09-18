@@ -56,7 +56,7 @@ import {
   tallyBlockers,
   type DemandConcessionReport,
 } from './demand-concessions';
-import { matchDemand, type DemandResults } from './demand-matching';
+import { matchDemand, type DemandOutcome, type DemandResults } from './demand-matching';
 import { ABSENCE_BLOCKERS } from './demand-match-vocabulary';
 import type { DemandBlocker, ListingMatchFacts } from './demand-match-vocabulary';
 import { axesLostProjectingDemand, type DemandAxisLostInFilters } from './demand-listing-filters';
@@ -150,8 +150,11 @@ export function listingFactsFrom(
 export interface DemandAnswer {
   /** Πόσες αγγελίες ταιριάζουν **πλήρως**. */
   readonly matchedCount: number;
-  /** Οι αγγελίες που ταιριάζουν — για την προεπισκόπηση, χωρίς δεύτερο πέρασμα. */
-  readonly matched: readonly PublicListing[];
+  /**
+   * Οι αγγελίες που ταιριάζουν **με την ετυμηγορία τους** — για την προεπισκόπηση, χωρίς δεύτερο
+   * πέρασμα. Η ετυμηγορία κουβαλά το **ως τι** (`match.metOn`, ADR-777 §8.60.16).
+   */
+  readonly matched: readonly DemandOutcome[];
   /** Οι προτάσεις υποχώρησης, **με τη σκάλα τους**. Πρώτη = αυτή που λέγεται πρώτη. */
   readonly concessions: DemandConcessionReport;
   /**
@@ -200,7 +203,7 @@ export function answerDemand(params: {
 
   return {
     matchedCount: results.matched.length,
-    matched: results.matched.map((facts) => facts.listing),
+    matched: results.matched,
     concessions: buildConcessionReport(
       demand,
       results.nearMissed.map((outcome) => outcome.match),
@@ -210,6 +213,28 @@ export function answerDemand(params: {
     axesLost: axesLostProjectingDemand(demand),
     results,
   };
+}
+
+// =============================================================================
+// 2α. Η ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΤΩΝ ΤΑΙΡΙΑΣΜΑΤΩΝ (ADR-777 §8.60.16)
+// =============================================================================
+
+/**
+ * Πόσα ταιριάσματα δείχνει η οθόνη ζήτησης **πριν** παραπέμψει στα αποτελέσματα.
+ *
+ * ⚠️ **Πολιτική, όχι φυσικός νόμος** — αλλά ζει **εδώ**, μία φορά, δίπλα στην απάντηση, ώστε να μην
+ * ξαναγραφτεί ως `slice(0, 5)` σε κάποια οθόνη. Τα υπόλοιπα **μετριούνται** («και άλλες N»), δεν
+ * σιωπούν: ο σύνδεσμος «δες τα αποτελέσματα» τα δείχνει όλα.
+ */
+export const MATCHED_PREVIEW_LIMIT = 6;
+
+/** Η προεπισκόπηση — τα πρώτα {@link MATCHED_PREVIEW_LIMIT}, και **πόσα έμειναν έξω**. */
+export function matchedPreview(answer: DemandAnswer): {
+  readonly shown: readonly DemandOutcome[];
+  readonly hidden: number;
+} {
+  const shown = answer.matched.slice(0, MATCHED_PREVIEW_LIMIT);
+  return { shown, hidden: answer.matched.length - shown.length };
 }
 
 // =============================================================================

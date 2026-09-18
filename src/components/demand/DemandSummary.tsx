@@ -24,10 +24,19 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
-import type { DemandPlace, DemandTiming, PropertyDemand } from '@/types/property-demand';
+import {
+  boundedPricedSeeks,
+  type DemandPlace,
+  type DemandSeek,
+  type DemandTiming,
+  type PricedDemandSeek,
+  type PropertyDemand,
+} from '@/types/property-demand';
+import { priceRoleOfSeek } from '@/lib/criteria/listing-criterion-reading';
+import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import { SEEK_KIND_I18N_KEYS } from './seek-kind-labels';
 
 /** Ο χωρικός άξονας ως φράση. */
 function usePlacePhrase(): (place: DemandPlace) => string {
@@ -86,32 +95,41 @@ function useTimingPhrase(): (timing: DemandTiming) => string {
 }
 
 /**
- * Ο άξονας τιμής ως φράση — **τέσσερις** περιπτώσεις, όχι τρεις.
+ * Ο άξονας τιμής ως φράση — **ανά εναλλακτική, με τη μονάδα της** (ADR-777 §8.60.15).
  *
- * ⚠️ Το «μόνο κατώτατο» (`priceMin` χωρίς `priceMax`) είναι **υπαρκτό αίτημα**
- * («τίποτα κάτω από Χ» — ο τύπος το επιτρέπει ρητά και εξηγεί γιατί). Μια περίληψη
- * που έδειχνε μόνο οροφή θα το εξαφάνιζε από την οθόνη ενώ θα **ίσχυε** στο
- * ταίριασμα — δηλαδή ο άνθρωπος θα έβλεπε αποτελέσματα φιλτραρισμένα από όρο που δεν
- * του λέμε ότι έθεσε.
+ * 🔴 Ως τις 2026-09-18 έγραφε «Έως 250.000 €» για ζήτηση «αγορά **ή** ενοικίαση» — ένα ποσό χωρίς
+ * να λέει **σε ποια** συναλλαγή. Τώρα: «Αγορά: έως 250.000 € · Ενοικίαση: έως 900 €/μήνα». Η μονάδα
+ * έρχεται από τον **ΕΝΑ** μορφοποιητή (`resolvedPriceLabel`), όχι από «€» γραμμένο στο locale.
+ *
+ * ⚠️ Το «μόνο κατώτατο» (`min` χωρίς `max`) είναι **υπαρκτό αίτημα** («τίποτα κάτω από Χ»): μια
+ * περίληψη που έδειχνε μόνο οροφή θα το εξαφάνιζε από την οθόνη ενώ θα **ίσχυε** στο ταίριασμα.
  */
-function usePricePhrase(): (features: PropertyDemand['features']) => string {
-  const { t } = useTranslation(['property-market']);
+function usePricePhrase(): (seeks: readonly DemandSeek[]) => string {
+  const { t } = useTranslation(['property-market', 'common']);
   const K = 'property-market:demand.summary';
-  const money = React.useCallback(
-    (value: number) => formatCurrency(value, 'EUR', { maximumFractionDigits: 0 }),
-    [],
+
+  const rangeOf = React.useCallback(
+    (seek: PricedDemandSeek): string => {
+      const role = priceRoleOfSeek(seek);
+      const amount = (value: number) => resolvedPriceLabel(t, { role, amount: value });
+      const { min, max } = seek.price;
+      if (min !== null && max !== null) return t(`${K}.priceRange`, { priceMin: amount(min), priceMax: amount(max) });
+      if (max !== null) return t(`${K}.priceUpTo`, { priceMax: amount(max) });
+      if (min !== null) return t(`${K}.priceFrom`, { priceMin: amount(min) });
+      return t(`${K}.noPriceLimit`);
+    },
+    [t],
   );
 
   return React.useCallback(
-    ({ priceMin, priceMax }) => {
-      if (priceMin !== null && priceMax !== null) {
-        return t(`${K}.priceRange`, { priceMin: money(priceMin), priceMax: money(priceMax) });
-      }
-      if (priceMax !== null) return t(`${K}.priceUpTo`, { priceMax: money(priceMax) });
-      if (priceMin !== null) return t(`${K}.priceFrom`, { priceMin: money(priceMin) });
-      return t(`${K}.noPriceLimit`);
+    (seeks) => {
+      const bounded = boundedPricedSeeks(seeks);
+      if (bounded.length === 0) return t(`${K}.noPriceLimit`);
+      return bounded
+        .map((seek) => t(`${K}.seekPrice`, { kind: t(SEEK_KIND_I18N_KEYS[seek.kind]), range: rangeOf(seek) }))
+        .join(' · ');
     },
-    [t, money],
+    [t, rangeOf],
   );
 }
 
@@ -158,7 +176,7 @@ export function DemandSummary({ demand }: { demand: PropertyDemand }): React.Rea
     [t('property-market:demand.form.place.legend'), placeOf(demand.place)],
     [t('property-market:demand.form.timing.legend'), timingOf(demand.timing)],
     [t('property-market:demand.form.features.typesLabel'), typesOf(demand.features.types)],
-    [t('property-market:demand.form.features.priceLegend'), priceOf(demand.features)],
+    [t('property-market:demand.summary.priceLabel'), priceOf(demand.seeks)],
   ];
 
   return (

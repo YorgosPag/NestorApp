@@ -62,8 +62,13 @@ const REDUCTION: PriceReduction = {
   since: SINCE,
 };
 
+/**
+ * ADR-777 §8.60.15 — το όριο ζει στην εναλλακτική **πώλησης** (ο ρόλος της `REDUCTION`): μια μείωση
+ * κρίνεται **μόνο** απέναντι στο όριο της ίδιας μονάδας.
+ */
 function demand(id: string, priceMax: number | null = null, author = `usr_${id}`): Record<string, unknown> {
-  return { id, authorUserId: author, features: { priceMax } };
+  const seeks = priceMax === null ? [] : [{ kind: 'sell', price: { min: null, max: priceMax } }];
+  return { id, authorUserId: author, seeks };
 }
 
 function listing(id: string, priceReduction: PriceReduction | null = null): Record<string, unknown> {
@@ -77,7 +82,9 @@ function announcedAt(atMs: number | null, priceDropKnown = false): TopicKnowledg
 function givenPass(demands: unknown[], listings: Array<Record<string, unknown>>, ledger: Map<string, TopicKnowledge>): void {
   readLiveDemands.mockResolvedValue({ demands, truncated: false });
   readLivePublicListings.mockResolvedValue({ listings, truncated: false });
-  matchDemand.mockReturnValue({ matched: listings.map((item) => ({ listing: item })) });
+  matchDemand.mockReturnValue({
+    matched: listings.map((item) => ({ facts: { listing: item }, match: { metOn: [] } })),
+  });
   readRecipientLedger.mockResolvedValue(ledger);
 }
 

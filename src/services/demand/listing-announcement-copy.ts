@@ -31,11 +31,16 @@ import {
   type AnnouncementReasons,
   type BudgetVerdict,
 } from '@/lib/demand/demand-announcement';
+import type { DemandSeekMet } from '@/lib/demand/demand-matching';
 import { isReductionFresh } from '@/lib/listings/price-history';
 import type { PriceRole } from '@/lib/properties/price-resolver';
+import elMarket from '@/i18n/locales/el/property-market.json';
 import { formatEuro } from '@/services/email-templates/base-email-template';
 import type { PriceReduction } from '@/types/price-history';
+import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
+
+import type { ListingTopic } from './listing-match-topics';
 
 /** Ό,τι χρειάζεται μια ειδοποίηση για να μιλήσει. */
 export interface AnnouncementCopy {
@@ -103,6 +108,46 @@ const ROLE_SUFFIX: Readonly<Record<PriceRole, string>> = {
   nightly: '/διανυκτέρευση',
 };
 
+/**
+ * Το όνομα κάθε συναλλαγής **από τη μεριά του ζητούντος** («Ενοικίαση», όχι «Εκμίσθωση»).
+ *
+ * ⛔ **ΔΕΝ ξαναγράφεται εδώ**: διαβάζεται από το **ίδιο** locale που δείχνει η σύνοψη της ζήτησης
+ * (`property-market` → `demand.summary.seekKind`) — πρότυπο `holiday-question-email-texts.ts`. Το
+ * `Record<OfferKind, …>` ⇒ νέα συναλλαγή **δεν μεταγλωττίζεται** χωρίς όνομα στο locale.
+ */
+const SEEK_KIND_NAME: Readonly<Record<OfferKind, string>> = elMarket.demand.summary.seekKind;
+
+/** «50 €/μήνα κάτω από το όριό σας» — ή τίποτα, όταν δεν υπάρχει όριο (ή λόγος να λεχθεί). */
+function headroomPhrase(met: DemandSeekMet, suffix: string): string | null {
+  if (met.headroomBy === null) return null;
+  return met.headroomBy === 0
+    ? 'ακριβώς στο όριό σας'
+    : `${formatEuro(met.headroomBy)}${suffix} κάτω από το όριό σας`;
+}
+
+/** «ως ενοικίαση (850 €/μήνα, 50 €/μήνα κάτω από το όριό σας)» — ή σκέτο «ως αντιπαροχή». */
+function metPhrase(met: DemandSeekMet): string {
+  const name = `ως ${SEEK_KIND_NAME[met.kind].toLocaleLowerCase('el')}`;
+  if (met.role === null || met.amount === null) return name;
+  const suffix = ROLE_SUFFIX[met.role];
+  const details = [`${formatEuro(met.amount)}${suffix}`, headroomPhrase(met, suffix)].filter(
+    (part): part is string => part !== null,
+  );
+  return `${name} (${details.join(', ')})`;
+}
+
+/**
+ * **Ως τι ταιριάζει** (ADR-777 §8.60.16) — «Ταιριάζει ως αγορά (170.000 €) και ως ενοικίαση
+ * (850 €/μήνα).» Κανένα portal δεν το λέει: όλοι κόβουν τη ροή σε **μία** συναλλαγή ανά αναζήτηση.
+ *
+ * ⚠️ Το ποσό είναι **του ρόλου που ταίριαξε**, ποτέ η κύρια τιμή: αγγελία «πώληση + ενοικίαση» που
+ * ταιριάζει ως ενοικίαση δεν λέει τις 200.000 € σε κάποιον που ψάχνει ενοίκιο.
+ */
+export function matchedAsSentence(metOn: readonly DemandSeekMet[]): string | undefined {
+  if (metOn.length === 0) return undefined;
+  return `Ταιριάζει ${metOn.map(metPhrase).join(' και ')}.`;
+}
+
 /** Ποσοστό σε ελληνική γραφή, με ένα δεκαδικό το πολύ: `830` μ.β. ⇒ `8,3`. */
 function percentOf(dropBasisPoints: number): string {
   return new Intl.NumberFormat('el', { maximumFractionDigits: 1 }).format(dropBasisPoints / 100);
@@ -148,9 +193,13 @@ export function reductionSentence(reduction: PriceReduction, areaSqm: number | n
  * ασαφές όταν οι ζητήσεις έχουν διαφορετικά όρια.
  */
 function intoBudgetSentence(priceMax: number, reduction: PriceReduction, reasonCount: number): string {
+  // 🔑 ADR-777 §8.60.15 — το όριο είναι **στη μονάδα της μείωσης**, άρα και η φράση τη λέει.
+  const suffix = ROLE_SUFFIX[reduction.role];
   const limit =
-    reasonCount > 1 ? `το όριο ${formatEuro(priceMax)} μιας ζήτησής σας` : 'το ανώτατο όριο της ζήτησής σας';
-  return `Είναι πλέον ${formatEuro(priceMax - reduction.to)} κάτω από ${limit}.`;
+    reasonCount > 1
+      ? `το όριο ${formatEuro(priceMax)}${suffix} μιας ζήτησής σας`
+      : 'το ανώτατο όριο της ζήτησής σας';
+  return `Είναι πλέον ${formatEuro(priceMax - reduction.to)}${suffix} κάτω από ${limit}.`;
 }
 
 function bodyOf(
@@ -178,17 +227,20 @@ export function freshReductionOf(listing: PublicListing, nowMs: number): PriceRe
  * τιμή λέγεται **μία** φορά, με τη μείωση μέσα. Ο ειδοποιητής μείωσης τη σιωπά μετά
  * (`predates-match`), γιατί ο ζητών την είδε **ήδη** μειωμένη.
  */
-export function matchAnnouncementCopy(
-  listing: PublicListing,
-  reasons: AnnouncementReasons,
-  nowMs: number,
-): AnnouncementCopy {
+export function matchAnnouncementCopy(topic: ListingTopic, nowMs: number): AnnouncementCopy {
+  const { listing, reasons, metOn } = topic;
+  // 🔑 §8.60.16 — **πρώτα** ως τι ταιριάζει, **μετά** η μείωση: η δεύτερη διαβάζεται μέσα στην πρώτη.
+  const matchedAs = matchedAsSentence(metOn);
   const reduction = freshReductionOf(listing, nowMs);
-  if (reduction === null) return headerOf(LEADS.match, listing, reasons);
+  if (reduction === null) return { ...headerOf(LEADS.match, listing, reasons), body: matchedAs };
 
-  const verdict = strongestBudgetVerdict(reasons.priceMaxes, reduction);
+  const verdict = strongestBudgetVerdict(reasons.seeks, reduction);
   const lead = verdict.kind === 'into-budget' ? LEADS.matchIntoBudget : LEADS.matchReduced;
-  return { ...headerOf(lead, listing, reasons), body: bodyOf(listing, reduction, verdict, reasons) };
+  const reductionBody = bodyOf(listing, reduction, verdict, reasons);
+  return {
+    ...headerOf(lead, listing, reasons),
+    body: matchedAs === undefined ? reductionBody : `${matchedAs} ${reductionBody}`,
+  };
 }
 
 /**
@@ -202,7 +254,7 @@ export function priceDropCopy(
   reduction: PriceReduction,
   reasons: AnnouncementReasons,
 ): AnnouncementCopy {
-  const verdict = strongestBudgetVerdict(reasons.priceMaxes, reduction);
+  const verdict = strongestBudgetVerdict(reasons.seeks, reduction);
   const lead = verdict.kind === 'into-budget' ? LEADS.priceDropIntoBudget : LEADS.priceDrop;
   return { ...headerOf(lead, listing, reasons), body: bodyOf(listing, reduction, verdict, reasons) };
 }

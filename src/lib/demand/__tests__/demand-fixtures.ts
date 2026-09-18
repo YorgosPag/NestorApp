@@ -14,7 +14,15 @@
  * αλλάξει κώδικας**.
  */
 
-import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
+import {
+  NO_AMOUNT_RANGE,
+  NO_DEMAND_FEATURES,
+  demandSeek,
+  type DemandAmountRange,
+  type DemandSeek,
+  type PropertyDemand,
+} from '@/types/property-demand';
+import type { OfferKind } from '@/types/property-offers';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import type { ListingMatchFacts } from '../demand-match-vocabulary';
 
@@ -24,6 +32,16 @@ export const TODAY = '2026-08-11';
 /** Η σταθερή στιγμή αναφοράς — για τη **φρεσκάδα**, όχι για το ταίριασμα. */
 export const NOW_ISO = '2026-08-11T00:00:00.000Z';
 
+/**
+ * **Μία εναλλακτική** — `seek('leaseOut', { max: 900 })` (ADR-777 §8.60.15).
+ *
+ * 🔑 Περνά από τον **ίδιο** κατασκευαστή με την παραγωγή (`demandSeek`): η αντιπαροχή πετά το εύρος
+ * και εδώ, ώστε κανένα fixture να μην περιγράφει ζήτηση που η εφαρμογή δεν μπορεί να γράψει.
+ */
+export function seek(kind: OfferKind, price: Partial<DemandAmountRange> = {}): DemandSeek {
+  return demandSeek(kind, { ...NO_AMOUNT_RANGE, ...price });
+}
+
 /** Η ουδέτερη ζήτηση: «οπουδήποτε, όποτε, πώληση, χωρίς όρο χαρακτηριστικών». */
 export function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
   return {
@@ -31,7 +49,7 @@ export function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand 
     authorUserId: 'usr_1',
     authorCompanyId: null,
     mandate: { kind: 'self' },
-    seeks: ['sell'],
+    seeks: [seek('sell')],
     place: { kind: 'anywhere' },
     timing: { kind: 'whenever' },
     features: NO_DEMAND_FEATURES,

@@ -12,21 +12,24 @@
  */
 
 import type { AnnouncementReasons } from '@/lib/demand/demand-announcement';
+import type { DemandOutcome, DemandSeekMet } from '@/lib/demand/demand-matching';
 import type { PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 
 import { EMPTY_PRICE_DROP_TALLY, type DispatchOutcome, type PriceDropTally } from './listing-price-drop-notifier';
 
-/** Τα ταιριάσματα **μίας** ζήτησης — η έξοδος της μηχανής ταιριάσματος. */
+/** Τα ταιριάσματα **μίας** ζήτησης — η έξοδος της μηχανής ταιριάσματος, **με** την ετυμηγορία. */
 export interface DemandMatches {
   readonly demand: PropertyDemand;
-  readonly matched: readonly PublicListing[];
+  readonly matched: readonly DemandOutcome[];
 }
 
 /** **Ένα θέμα**: μία αγγελία, και οι ζητήσεις του ίδιου ανθρώπου που ταιριάζουν σε αυτή. */
 export interface ListingTopic {
   readonly listing: PublicListing;
   readonly reasons: AnnouncementReasons;
+  /** **Ως τι** ταιριάζει — η ένωση ανά είδος από όλους τους λόγους ({@link mergeMetOn}). */
+  readonly metOn: readonly DemandSeekMet[];
 }
 
 /** Όλα τα θέματα **ενός** παραλήπτη, με το πλήθος ζευγών (ζήτηση, αγγελία) που τα γέννησαν. */
@@ -36,18 +39,49 @@ export interface RecipientTopics {
   readonly pairs: number;
 }
 
-interface TopicDraft {
-  readonly listing: PublicListing;
-  readonly demands: PropertyDemand[];
+/** Ένας λόγος: η ζήτηση **και** ως τι της ταιριάζει η αγγελία. */
+export interface TopicReason {
+  readonly demand: PropertyDemand;
+  readonly metOn: readonly DemandSeekMet[];
 }
 
-function reasonsOf(demands: readonly PropertyDemand[]): AnnouncementReasons {
-  // 🔑 Ταξινόμηση κατά ζήτηση: ίδια είσοδος σε άλλη σειρά ⇒ ΙΔΙΟΙ λόγοι στο έγγραφο.
-  const sorted = [...demands].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+interface TopicDraft {
+  readonly listing: PublicListing;
+  readonly reasons: TopicReason[];
+}
+
+/** 🔑 Ταξινόμηση κατά ζήτηση: ίδια είσοδος σε άλλη σειρά ⇒ ΙΔΙΟΙ λόγοι στο έγγραφο. */
+function sortedByDemand(reasons: readonly TopicReason[]): TopicReason[] {
+  return [...reasons].sort((a, b) => (a.demand.id < b.demand.id ? -1 : a.demand.id > b.demand.id ? 1 : 0));
+}
+
+function reasonsOf(sorted: readonly TopicReason[]): AnnouncementReasons {
   return {
-    demandIds: sorted.map((demand) => demand.id),
-    priceMaxes: sorted.map((demand) => demand.features.priceMax),
+    demandIds: sorted.map((reason) => reason.demand.id),
+    seeks: sorted.map((reason) => reason.demand.seeks),
   };
+}
+
+/**
+ * **Ως τι ταιριάζει, για ΟΛΟΥΣ τους λόγους μαζί** (ADR-777 §8.60.16) — ένωση **ανά είδος**, με τη
+ * σειρά της πρώτης ζήτησης που το ζητά.
+ *
+ * ⚠️ **Το περιθώριο λέγεται ΜΟΝΟ με έναν λόγο.** Δύο ζητήσεις με διαφορετικά όρια κάνουν το «50 € κάτω
+ * από το όριό σας» **ασαφές** — ίδια απόφαση με το `intoBudgetSentence` (`listing-announcement-copy.ts`).
+ * Το είδος και το ποσό μένουν, γιατί είναι γεγονότα της **αγγελίας**, όχι της ζήτησης.
+ */
+export function mergeMetOn(sorted: readonly TopicReason[]): readonly DemandSeekMet[] {
+  const byKind = new Map<DemandSeekMet['kind'], DemandSeekMet>();
+  for (const met of sorted.flatMap((reason) => reason.metOn)) {
+    if (!byKind.has(met.kind)) byKind.set(met.kind, met);
+  }
+  const merged = [...byKind.values()];
+  return sorted.length > 1 ? merged.map((met) => ({ ...met, headroomBy: null })) : merged;
+}
+
+function topicOf(draft: TopicDraft): ListingTopic {
+  const sorted = sortedByDemand(draft.reasons);
+  return { listing: draft.listing, reasons: reasonsOf(sorted), metOn: mergeMetOn(sorted) };
 }
 
 /**
@@ -61,17 +95,18 @@ export function groupTopicsByRecipient(matches: readonly DemandMatches[]): reado
     const recipientId = demand.authorUserId;
     const group = byRecipient.get(recipientId) ?? { drafts: new Map<string, TopicDraft>(), pairs: 0 };
     byRecipient.set(recipientId, group);
-    for (const listing of matched) {
-      const draft = group.drafts.get(listing.id);
-      if (draft) draft.demands.push(demand);
-      else group.drafts.set(listing.id, { listing, demands: [demand] });
+    for (const { facts, match } of matched) {
+      const reason: TopicReason = { demand, metOn: match.metOn };
+      const draft = group.drafts.get(facts.listing.id);
+      if (draft) draft.reasons.push(reason);
+      else group.drafts.set(facts.listing.id, { listing: facts.listing, reasons: [reason] });
       group.pairs += 1;
     }
   }
 
   return [...byRecipient].map(([recipientId, group]) => ({
     recipientId,
-    topics: [...group.drafts.values()].map((draft) => ({ listing: draft.listing, reasons: reasonsOf(draft.demands) })),
+    topics: [...group.drafts.values()].map(topicOf),
     pairs: group.pairs,
   }));
 }

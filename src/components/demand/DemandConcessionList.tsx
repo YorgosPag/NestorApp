@@ -32,10 +32,12 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
-import type {
-  ConcessionLadder,
-  ConcessionStep,
-  DemandConcessionReport,
+import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
+import {
+  ladderIdOf,
+  type ConcessionLadder,
+  type ConcessionStep,
+  type DemandConcessionReport,
 } from '@/lib/demand/demand-concessions';
 
 /**
@@ -47,7 +49,7 @@ import type {
  * αριθμό που ο αναγνώστης πρέπει να μετρήσει με το δάχτυλο.
  */
 function useAmountPhrase(): (ladder: ConcessionLadder, step: ConcessionStep) => string {
-  const { t } = useTranslation(['property-market']);
+  const { t } = useTranslation(['property-market', 'common']);
 
   return React.useCallback(
     (ladder, step) => {
@@ -55,6 +57,11 @@ function useAmountPhrase(): (ladder: ConcessionLadder, step: ConcessionStep) => 
       // Τα `rooms` περνούν τον **ωμό** αριθμό: η φράση τους είναι ICU plural και
       // πρέπει να δει `number`, όχι μορφοποιημένο κείμενο.
       if (ladder.unit === 'rooms') return t(key, { value: step.amount });
+      // 🔑 ADR-777 §8.60.15 — το ποσό τιμής φέρει τη **μονάδα του ρόλου** («+100 €/μήνα»), από τον
+      //    ΕΝΑ μορφοποιητή (`resolvedPriceLabel`), ποτέ σκέτο «+100 €» που διαβάζεται ως πώληση.
+      if (ladder.priceRole !== null) {
+        return t(key, { value: resolvedPriceLabel(t, { role: ladder.priceRole, amount: step.amount }) });
+      }
       const value =
         ladder.unit === 'eur'
           ? formatCurrency(step.amount, 'EUR', { maximumFractionDigits: 0 })
@@ -118,7 +125,7 @@ export function DemandConcessionList({
       {suggested.length > 0 && (
         <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm">
           {suggested.map((ladder) => (
-            <ConcessionSentence key={ladder.concession} ladder={ladder} />
+            <ConcessionSentence key={ladderIdOf(ladder)} ladder={ladder} />
           ))}
         </ul>
       )}
