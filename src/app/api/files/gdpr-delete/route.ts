@@ -22,7 +22,38 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
 import { deleteStorageObjectForPurge, isFileHeld } from '@/services/file-record/file-purge-helpers';
-import { findSubjectFiles } from '@/services/file-record/file-subject-scan';
+import { findSubjectActivity, findSubjectFiles } from '@/services/file-record/file-subject-scan';
+
+/**
+ * **Η δραστηριότητα του υποκειμένου μετά τη διαγραφή** (ADR-866 §2.6.11).
+ *
+ * | βιβλίο | πράξη | γιατί |
+ * |---|---|---|
+ * | εταιρικό | **ανωνυμοποίηση** `performedBy` | ό,τι ίσχυε: το βιβλίο ανήκει στην εταιρεία, που έχει έννομο συμφέρον να το κρατήσει |
+ * | προσωπικό | **διαγραφή** | το βιβλίο υπάρχει **μόνο** για τον κάτοχο· κανείς άλλος υπεύθυνος δεν έχει λόγο να το κρατήσει |
+ *
+ * ⚠️ Γραμμές **αρχείων που μένουν** (δέσμευση/διατήρηση) **δεν** σβήνονται — η δραστηριότητα είναι
+ * μέρος του τεκμηρίου που η δέσμευση προστατεύει.
+ */
+async function eraseSubjectActivity(
+  adminDb: GdprSubject['db'],
+  userId: string,
+  retainedFileIds: ReadonlySet<string>,
+): Promise<{ anonymized: number; deleted: number }> {
+  const tally = { anonymized: 0, deleted: 0 };
+  const batch = adminDb.batch();
+  for (const { custody, doc } of await findSubjectActivity(adminDb, userId)) {
+    if (custody === 'company') {
+      batch.update(doc.ref, { performedBy: 'anonymized', performedByName: '[GDPR ANONYMIZED]' });
+      tally.anonymized++;
+    } else if (!retainedFileIds.has(String(doc.data().fileId))) {
+      batch.delete(doc.ref);
+      tally.deleted++;
+    }
+  }
+  await batch.commit();
+  return tally;
+}
 
 export const maxDuration = 60;
 
@@ -44,12 +75,15 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
       commentsDeleted: 0,
       sharesDeleted: 0,
       auditAnonymized: 0,
+      activityDeleted: 0,
     };
 
     // 1. Delete files (respect holds) — ΚΑΙ ΤΑ ΔΥΟ διαμερίσματα (ADR-866 §2.6.9 Β6)
     const subjectFiles = await findSubjectFiles(adminDb, userId);
 
     const filesToPurge: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    // Αρχεία που ΜΕΝΟΥΝ (δέσμευση/διατήρηση) — μένει μαζί τους και η δραστηριότητά τους (άρθρο 17 §3).
+    const retainedFileIds = new Set<string>();
 
     for (const { doc: fileDoc } of subjectFiles) {
       const data = fileDoc.data();
@@ -58,6 +92,7 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
       //    με `hold: 'none'` κρινόταν «σε δέσμευση» και **δεν σβηνόταν ποτέ** (υπερ-διατήρηση).
       if (isFileHeld(data)) {
         results.filesSkippedHold++;
+        retainedFileIds.add(fileDoc.id);
         continue;
       }
       // Bytes πρώτα· άρνηση της πλατφόρμας (GCS hold) ⇒ η εγγραφή ΔΕΝ ανωνυμοποιείται ως «σβησμένη»
@@ -65,6 +100,7 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
       const storagePath = data.storagePath as string | undefined;
       if (storagePath && (await deleteStorageObjectForPurge(storagePath)) === 'refused') {
         results.filesSkippedHold++;
+        retainedFileIds.add(fileDoc.id);
         continue;
       }
       filesToPurge.push(fileDoc);
@@ -112,21 +148,10 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
     }
     await batch3.commit();
 
-    // 4. Anonymize audit log (keep for compliance but remove PII)
-    const auditSnapshot = await adminDb
-      .collection(COLLECTIONS.FILE_AUDIT_LOG)
-      .where('performedBy', '==', userId)
-      .get();
-
-    const batch4 = adminDb.batch();
-    for (const auditDoc of auditSnapshot.docs) {
-      batch4.update(auditDoc.ref, {
-        performedBy: 'anonymized',
-        performedByName: '[GDPR ANONYMIZED]',
-      });
-      results.auditAnonymized++;
-    }
-    await batch4.commit();
+    // 4. Δραστηριότητα αρχείων — ΚΑΙ ΤΑ ΔΥΟ βιβλία (ADR-866 §2.6.11), ίδιος σαρωτής με την εξαγωγή.
+    const activity = await eraseSubjectActivity(adminDb, userId, retainedFileIds);
+    results.auditAnonymized = activity.anonymized;
+    results.activityDeleted = activity.deleted;
 
     // Write GDPR erasure audit entry
     const { generateAuditId } = await import('@/services/enterprise-id.service');

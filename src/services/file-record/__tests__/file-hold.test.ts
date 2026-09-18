@@ -26,7 +26,12 @@ let deletion: () => Promise<void> = async () => undefined;
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminStorage: () => ({ bucket: () => ({ file: () => ({ delete: () => deletion() }) }) }),
-  getAdminFirestore: () => ({ collection: () => ({ doc: () => ({ update, set }) }) }),
+  // `get`: ADR-866 §2.6.11 — η εκκαθάριση διαβάζει ΠΡΩΤΑ την εγγραφή (κάτοχος βιβλίου · ύπαρξη πριν τα bytes).
+  getAdminFirestore: () => ({
+    collection: () => ({
+      doc: () => ({ update, set, get: async () => ({ exists: true, data: () => ({ companyId: 'c' }) }) }),
+    }),
+  }),
 }));
 
 /* eslint-disable @typescript-eslint/no-require-imports */

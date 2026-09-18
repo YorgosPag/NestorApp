@@ -30,7 +30,7 @@ import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { FILE_COLLECTION } from '@/lib/files/file-custody';
+import { FILE_AUDIT_COLLECTION, FILE_COLLECTION } from '@/lib/files/file-custody';
 import { CUSTODY_KINDS, type CustodyKind } from '@/lib/workspace/custody-scope';
 
 /** Ποιο πεδίο ονομάζει το υποκείμενο σε κάθε διαμέρισμα — η **μία** δήλωση (βλ. πίνακα πάνω). */
@@ -59,6 +59,47 @@ export async function findSubjectFiles(db: Firestore, uid: string): Promise<Subj
       const snapshot = await db
         .collection(COLLECTIONS[FILE_COLLECTION[custody]])
         .where(FILE_SUBJECT_FIELD[custody], '==', uid)
+        .get();
+      return snapshot.docs.map((doc) => ({ custody, doc }));
+    }),
+  );
+  return perCustody.flat();
+}
+
+/**
+ * Ποιο πεδίο ονομάζει το υποκείμενο στη **δραστηριότητα** κάθε διαμερίσματος (ADR-866 §2.6.11).
+ *
+ * | βιβλίο | πεδίο | γιατί |
+ * |---|---|---|
+ * | εταιρικό | `performedBy` | ό,τι ίσχυε: του ανθρώπου είναι ό,τι **έκανε**· το βιβλίο ανήκει στην εταιρεία |
+ * | προσωπικό | `userId` | το **δικό του** βιβλίο — ολόκληρο, και ό,τι έκαναν άλλοι στα αρχεία του |
+ */
+export const FILE_ACTIVITY_SUBJECT_FIELD = {
+  company: 'performedBy',
+  personal: FIELDS.USER_ID,
+} as const satisfies Record<CustodyKind, string>;
+
+/** Μια γραμμή δραστηριότητας του υποκειμένου — μαζί με το βιβλίο **όπου βρέθηκε**. */
+export interface SubjectActivityDoc {
+  readonly custody: CustodyKind;
+  readonly doc: QueryDocumentSnapshot;
+}
+
+/**
+ * Όλη η δραστηριότητα αρχείων του υποκειμένου, σε **όλα** τα βιβλία — ό,τι δείχνει η εξαγωγή
+ * (άρθρο 15/20) είναι ακριβώς ό,τι χειρίζεται η διαγραφή (άρθρο 17).
+ *
+ * 🔴 Πριν το 2β.4 η εξαγωγή διάβαζε **μόνο** το εταιρικό βιβλίο: με προσωπικό διαμέρισμα, ο πολίτης
+ * θα λάμβανε εξαγωγή **χωρίς** τη δραστηριότητα των δικών του αρχείων — και δεν θα το μάθαινε ποτέ.
+ */
+export async function findSubjectActivity(db: Firestore, uid: string): Promise<SubjectActivityDoc[]> {
+  const perCustody = await Promise.all(
+    CUSTODY_KINDS.map(async (custody) => {
+      // tenant-scope-exempt: αίτημα ΓΚΠΔ του ΙΔΙΟΥ του υποκειμένου — εκ σχεδιασμού διασχίζει κάθε
+      // μισθωτή όπου ο άνθρωπος έχει δεδομένα· το φίλτρο είναι η επαληθευμένη ταυτότητα (`uid`).
+      const snapshot = await db
+        .collection(COLLECTIONS[FILE_AUDIT_COLLECTION[custody]])
+        .where(FILE_ACTIVITY_SUBJECT_FIELD[custody], '==', uid)
         .get();
       return snapshot.docs.map((doc) => ({ custody, doc }));
     }),

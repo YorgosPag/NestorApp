@@ -33,9 +33,9 @@ import {
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
-import { FileAuditService } from '@/services/file-audit.service';
+import { commitFileActivity } from '@/services/file-record/file-activity-commit';
 import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
-import type { CustodyKind } from '@/lib/workspace/custody-scope';
+import { custodyScopeFromData, type CustodyKind } from '@/lib/workspace/custody-scope';
 // ADR-862 Φ0 Β3 — έφυγαν `CdeState`/`SuitabilityCode`: αυτό το module δεν γράφει πια
 // κατάσταση ούτε καταλληλότητα (δες `Iso19650MetadataUpdate`).
 import type { DisciplineCode, DocumentSeries } from '@/config/iso19650-constants';
@@ -187,11 +187,26 @@ export async function renameFile(
   logger.info('Renaming FileRecord', { fileId, newDisplayName, renamedBy });
 
   const displayName = newDisplayName.trim();
-  await updateFileRecordFields(fileId, custody, { displayName }, { displayName });
+  const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
+  const docSnap = await getDoc(docRef);
+  const owner = docSnap.exists() ? custodyScopeFromData(docSnap.data()) : null;
+  if (owner === null) {
+    throw new Error(`FileRecord not found or without a single owner: ${fileId}`);
+  }
+  // 🔑 ADR-866 §2.6.11 — ίδιο όνομα ⇒ καμία πράξη, καμία γραμμή (και ο κανόνας θα την αρνιόταν).
+  if (docSnap.data()?.displayName === displayName) return;
 
+  // 📒 Η αλλαγή ΚΑΙ η γραμμή της — ατομικά για προσωπικό αρχείο (ADR-866 §2.6.11 Ε-Φ0-4).
+  await commitFileActivity({
+    docRef,
+    owner,
+    updates: { displayName, updatedAt: serverTimestamp() },
+    act: { fileId, action: 'rename', performedBy: renamedBy, metadata: { newDisplayName: displayName } },
+    context: 'FileRecord.renameFile',
+  });
+
+  RealtimeService.dispatch('FILE_UPDATED', { fileId, updates: { displayName }, timestamp: Date.now() });
   logger.info('FileRecord renamed successfully', { fileId, newDisplayName });
-
-  FileAuditService.logForCustody(custody, fileId, 'rename', renamedBy, 'FileRecord.renameFile', { newDisplayName: displayName });
 }
 
 /**

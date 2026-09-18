@@ -8,7 +8,8 @@
  * | ομάδα | ερώτημα | μετάλλαξη που πιάνει |
  * |---|---|---|
  * | Γ | η λήξη γράφεται στη **συλλογή όπου ζει** το αρχείο; | `FILE_COLLECTION[custody]` → `COLLECTIONS.FILES` |
- * | Γ | γραμμή προσωπικού αρχείου στο **εταιρικό** βιβλίο; | αφαίρεση του φρουρού `custody !== 'company'` |
+ * | Γ | η γραμμή πάει στο βιβλίο **του κατόχου**, με το **πεδίο** του; (ADR-866 §2.6.11) | `FILE_AUDIT_COLLECTION` → εταιρικό · κάτοχος από το διαμέρισμα αντί των πεδίων |
+ * | Γ | η εταιρική γραμμή είναι **ορατή** (φέρει `companyId`); | επιστροφή στο χειρόγραφο δίδυμο χωρίς μισθωτή |
  * | Υ | η ΓΚΠΔ βλέπει **και τα δύο** διαμερίσματα; | `CUSTODY_KINDS` → `['company']` |
  * | Υ | ο μεσίτης σβήνει τον φάκελο του ιδιοκτήτη; | `FILE_SUBJECT_FIELD.personal` → `createdBy` |
  *
@@ -26,6 +27,7 @@ let deletedObjects: string[] = [];
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: (): AdminFirestore => fake as unknown as AdminFirestore,
+  FieldValue: { serverTimestamp: () => ({ __fieldValue: 'serverTimestamp' }) },
   getAdminStorage: () => ({
     bucket: () => ({
       file: (path: string) => ({
@@ -51,7 +53,7 @@ beforeEach(() => {
 });
 
 describe('Γ — ο γραφέας εκκαθάρισης ανά διαμέρισμα', () => {
-  it('🔴 Γ1 — προσωπικό αρχείο: `purged` στο `files_personal`, ΚΑΜΙΑ γραμμή στο εταιρικό βιβλίο', async () => {
+  it('🔴 Γ1 — προσωπικό αρχείο: `purged` στο `files_personal`, γραμμή στο ΠΡΟΣΩΠΙΚΟ βιβλίο, ΚΑΜΙΑ στο εταιρικό', async () => {
     fake.seed(COLLECTIONS.FILES_PERSONAL, 'file_p', { userId: OWNER, lifecycleState: 'trashed' });
 
     const result = await purgeFileRecord({
@@ -65,6 +67,10 @@ describe('Γ — ο γραφέας εκκαθάρισης ανά διαμέρι�
     expect(result).toEqual({ success: true, storageDeleted: true });
     expect(fake.all<{ lifecycleState: string }>(COLLECTIONS.FILES_PERSONAL)[0].lifecycleState).toBe('purged');
     expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG)).toEqual([]);
+    // 📒 ADR-866 §2.6.11 — η εκκαθάριση φαίνεται στη Δραστηριότητα του ΚΑΤΟΧΟΥ (σιωπή #2 κλειστή).
+    expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG_PERSONAL)).toEqual([
+      expect.objectContaining({ fileId: 'file_p', action: 'delete', userId: OWNER, performedBy: 'system:cron-purge' }),
+    ]);
     expect(deletedObjects).toEqual([`people/${OWNER}/x.pdf`]);
   });
 
@@ -81,7 +87,11 @@ describe('Γ — ο γραφέας εκκαθάρισης ανά διαμέρι�
 
     expect(result.success).toBe(true);
     expect(fake.all<{ lifecycleState: string }>(COLLECTIONS.FILES)[0].lifecycleState).toBe('purged');
-    expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG)).toHaveLength(1);
+    // 🔴 ADR-866 §2.6.11 Β2 — ως τις 2026-09-18 η γραμμή γραφόταν ΧΩΡΙΣ `companyId` ⇒ αόρατη σε όλους.
+    expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG)).toEqual([
+      expect.objectContaining({ fileId: 'file_c', action: 'delete', companyId: 'comp_1' }),
+    ]);
+    expect(fake.all(COLLECTIONS.FILE_AUDIT_LOG_PERSONAL)).toEqual([]);
   });
 
   it('🔴 Γ3 — λάθος διαμέρισμα ⇒ αποτυχία, ποτέ σιωπηλή εγγραφή αλλού', async () => {

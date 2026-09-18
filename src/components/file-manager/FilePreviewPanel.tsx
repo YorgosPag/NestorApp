@@ -52,7 +52,7 @@ import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-regis
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import type { FileRecord } from '@/types/file-record';
-import { fileCustodyKindOf } from '@/lib/files/file-custody';
+import { fileCustodyOf } from '@/lib/files/file-custody';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -136,13 +136,13 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   }
 
   // 🔒 ADR-866 §2.6.8 Β6 — **το ίδιο το αρχείο** λέει σε ποιον ανήκει. Κοινοποίηση · σχόλια · έγκριση ·
-  //    ιστορικό · ISO 19650 είναι έννοιες/διαδρομές ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files` ⇒ **κρυμμένα**
-  //    για προσωπικό κάτοχο (ιστορικό: βήμα 2β.4). Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν:
-  //    διαβάζουν το `downloadUrl` (κανόνας Storage `people/`).
+  //    ISO 19650 είναι έννοιες/διαδρομές ΓΡΑΦΕΙΟΥ πάνω στη συλλογή `files` ⇒ **κρυμμένα** για προσωπικό
+  //    κάτοχο. Η προβολή και το «άνοιγμα σε νέα καρτέλα» μένουν: διαβάζουν το `downloadUrl` (Storage `people/`).
   //
-  // ✅ **ΞΕΚΛΕΙΔΩΘΗΚΑΝ**: η **λήψη** (2β.3α) και οι **εκδόσεις** (2β.3β) — ADR-866 Ε-Φ0-1, *«εκδόσεις
-  //    ΝΑΙ, φάσεις CDE ΟΧΙ»*, όπως το Google Drive «Ο Δίσκος μου» (Manage versions χωρίς ροή έγκρισης).
-  const custody = fileCustodyKindOf(file) ?? 'company';
+  // ✅ **ΞΕΚΛΕΙΔΩΘΗΚΑΝ**: η **λήψη** (2β.3α), οι **εκδόσεις** (2β.3β) και η **δραστηριότητα** (2β.4) —
+  //    ADR-866 Ε-Φ0-1/Ε-Φ0-3, όπως το Google Drive «Ο Δίσκος μου» (Manage versions · Activity).
+  const owner = fileCustodyOf(file);
+  const custody = owner === null || owner.userId === undefined ? 'company' : 'personal';
   const officeActions = custody !== 'personal';
 
   return (
@@ -259,8 +259,9 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
               </TooltipContent>
             </Tooltip>
           )}
-          {/* Audit log toggle */}
-          {officeActions && (
+          {/* Δραστηριότητα — 📒 ADR-866 §2.6.11: **και για προσωπικό αρχείο**, από το ΔΙΚΟ του βιβλίο
+              (Drive · Dropbox · OneDrive: η δραστηριότητα είναι πλαίσιο πάνω στο αρχείο, όχι έννοια γραφείου). */}
+          {owner !== null && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -337,9 +338,9 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       )}
 
       {/* Audit log panel (collapsible) */}
-      {officeActions && showAudit && companyId && (
+      {showAudit && owner !== null && (
         <div className="border-b max-h-[250px] overflow-y-auto">
-          <AuditLogPanel fileId={file.id} companyId={companyId} className="p-2" />
+          <AuditLogPanel fileId={file.id} custody={owner} className="p-2" />
         </div>
       )}
 

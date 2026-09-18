@@ -42,6 +42,19 @@ export const FILE_COLLECTION = {
   personal: 'FILES_PERSONAL',
 } as const satisfies CustodyPartition;
 
+/**
+ * **Πού ζει η ΔΡΑΣΤΗΡΙΟΤΗΤΑ κάθε διαμερίσματος** (ADR-866 §2.6.11) — ίδιο ιδίωμα με το
+ * `AUDIT_LEDGER_COLLECTION` του ιστορικού οντοτήτων: **ένα** σύστημα (λεξιλόγιο · σχήμα · αναγνώστης ·
+ * οθόνη), **δύο** βιβλία. Το εταιρικό το διαβάζει ο οργανισμός· το προσωπικό **μόνο** ο κάτοχος.
+ *
+ * ⚠️ Γράφεται `COLLECTIONS[FILE_AUDIT_COLLECTION[kind]]` **στο σημείο κλήσης**, ποτέ μέσα από
+ * συνάρτηση-περιτύλιγμα — οι πύλες 3.15/3.35 διαβάζουν αυτή τη μορφή.
+ */
+export const FILE_AUDIT_COLLECTION = {
+  company: 'FILE_AUDIT_LOG',
+  personal: 'FILE_AUDIT_LOG_PERSONAL',
+} as const satisfies CustodyPartition;
+
 /** Τα πεδία κατόχου όπως τα φέρει είσοδος ή έγγραφο — τιμές **αδιάβαστες** ως να κριθούν. */
 interface FileOwnerFields {
   readonly companyId?: unknown;
@@ -85,13 +98,22 @@ export function fileCustodyKey(custody: FileCustody): string {
 }
 
 /**
+ * **Ποιος κατέχει αυτό το αποθηκευμένο αρχείο;** — από τα **δικά του** πεδία (ADR-866 §2.6.11).
+ *
+ * 🔴 `null` όταν δεν έχει **ακριβώς έναν** κάτοχο: ο καλών **αρνείται** — δεν μαντεύει.
+ */
+export function fileCustodyOf(record: FileOwnerFields): FileCustody | null {
+  return custodyScopeFromData({ companyId: record.companyId, userId: record.userId });
+}
+
+/**
  * **Σε ποιο διαμέρισμα ανήκει αυτό το αποθηκευμένο αρχείο;** — από τα **δικά του** πεδία.
  *
  * 🔴 `null` όταν δεν έχει **ακριβώς έναν** κάτοχο: ο καλών **αρνείται** την πράξη — δεν διαλέγει
  * διαμέρισμα στην τύχη.
  */
 export function fileCustodyKindOf(record: FileOwnerFields): CustodyKind | null {
-  const scope = custodyScopeFromData({ companyId: record.companyId, userId: record.userId });
+  const scope = fileCustodyOf(record);
   return scope === null ? null : custodyKindOfScope(scope);
 }
 

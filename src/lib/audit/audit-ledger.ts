@@ -24,6 +24,7 @@ import {
   custodyKindOf,
   custodyKindOfScope,
   custodyScopeFromData,
+  custodyOnly,
   custodyScopeOf,
   isWritableCustodyScope,
   type CustodyKind,
@@ -72,3 +73,6 @@ export const auditLedgerScopeFromData = custodyScopeFromData;
 
 /** **Έγκυρη εμβέλεια για γραφή;** — ο φρουρός του γραφέα. */
 export const isWritableAuditLedgerScope = isWritableCustodyScope;
+
+/** **Μόνο** το πεδίο του βιβλίου που υπάρχει — ποτέ `userId: undefined` δίπλα σε `companyId`. */
+export const auditLedgerFieldsOf = custodyOnly;

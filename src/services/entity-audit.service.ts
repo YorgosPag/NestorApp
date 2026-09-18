@@ -32,6 +32,7 @@ import {
 } from '@/lib/audit/audit-diff';
 import {
   AUDIT_LEDGER_COLLECTION,
+  auditLedgerFieldsOf,
   auditLedgerKindOfScope,
   isWritableAuditLedgerScope,
   type AuditLedgerKind,
@@ -61,15 +62,6 @@ interface RecordChangeBase {
  */
 type RecordChangeParams = RecordChangeBase & AuditLedgerScope;
 
-/**
- * **Μόνο** το κλειδί της εμβέλειας που υπάρχει — ποτέ `userId: undefined` δίπλα σε `companyId`.
- *
- * ⚠️ Ο ρηχός καθαριστής θα έσβηνε ούτως ή άλλως το `undefined`· η ρητή επιλογή εδώ υπάρχει
- * ώστε η αποκλειστικότητα να είναι **ιδιότητα του γραφέα**, όχι παρενέργεια του καθαριστή.
- */
-function ledgerFields(scope: AuditLedgerScope): Record<string, string> {
-  return scope.userId !== undefined ? { userId: scope.userId } : { companyId: scope.companyId };
-}
 
 // ============================================================================
 // HELPERS
@@ -224,7 +216,7 @@ export class EntityAuditService {
         changes: params.changes,
         performedBy: params.performedBy,
         performedByName: resolvedName ?? null,
-        ...ledgerFields(params),
+        ...auditLedgerFieldsOf(params),
         // ADR-195 Phase 1: distinguishes service-layer entries from CDC
         // (Cloud Function) entries during dual-write rollout. Will be removed
         // once CDC coverage is verified and the service path is retired.

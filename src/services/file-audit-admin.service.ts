@@ -65,18 +65,30 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateAuditId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import type { FileAuditRecordFields } from '@/types/file-audit';
+import { FILE_AUDIT_COLLECTION } from '@/lib/files/file-custody';
+import {
+  custodyKindOfScope,
+  custodyOnly,
+  isWritableCustodyScope,
+  type CustodyScope,
+} from '@/lib/workspace/custody-scope';
+import type { FileAuditActFields } from '@/types/file-audit';
 
 const logger = createModuleLogger('FileAuditAdminService');
 
 // =============================================================================
-// Η ΕΙΣΟΔΟΣ — ΤΟ `companyId` ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ, ΚΑΙ ΤΟ ΕΠΙΒΑΛΛΕΙ Ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ
+// Η ΕΙΣΟΔΟΣ — Ο ΚΑΤΟΧΟΣ ΤΟΥ ΒΙΒΛΙΟΥ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟΣ, ΚΑΙ ΤΟ ΕΠΙΒΑΛΛΕΙ Ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ
 // =============================================================================
 
 /**
  * Ό,τι χρειάζεται μια γραμμή ίχνους γραμμένη από τον διακομιστή.
  *
- * 🔴 **ΓΙΑΤΙ ΤΟ `companyId` ΓΙΝΕΤΑΙ ΥΠΟΧΡΕΩΤΙΚΟ ΕΔΩ** ενώ είναι προαιρετικό στο κοινό
+ * 📒 **ADR-866 §2.6.11 — ο κάτοχος είναι ΕΝΩΣΗ** (`CustodyScope`): `{ companyId }` ⇒ εταιρικό βιβλίο,
+ * `{ userId }` ⇒ προσωπικό βιβλίο (`FILE_AUDIT_COLLECTION`). Οι εταιρικοί καλούντες μεταγλωττίζονται
+ * **αμετάβλητοι** — είναι ήδη το μέλος εταιρείας της ένωσης. Το `userId` είναι ο **κάτοχος του
+ * βιβλίου**· ο δράστης είναι το `performedBy`.
+ *
+ * 🔴 **ΓΙΑΤΙ Ο ΚΑΤΟΧΟΣ ΓΙΝΕΤΑΙ ΥΠΟΧΡΕΩΤΙΚΟΣ ΕΔΩ** ενώ είναι προαιρετικό στο κοινό
  * σχήμα: ο πελάτης **μπορεί** να το επιλύσει μόνος του διαβάζοντας το `FileRecord`
  * (`file-audit.service.ts:144-153`). Ο διακομιστής **ξέρει ήδη** τον μισθωτή — τον
  * κουβαλά το `AuthContext` — άρα μια δεύτερη ανάγνωση θα ήταν σπατάλη, και η
@@ -86,9 +98,7 @@ const logger = createModuleLogger('FileAuditAdminService');
  * Γι' αυτό ο γραφέας ρωτά **και** σε χρόνο εκτέλεσης — ίδιο ακριβώς σκεπτικό με το
  * `isWritableAuditLedgerScope` του `EntityAuditService` (ADR-864 Φ1β).
  */
-export type ServerFileAuditInput = FileAuditRecordFields & {
-  readonly companyId: string;
-};
+export type ServerFileAuditInput = FileAuditActFields & CustodyScope;
 
 // =============================================================================
 // Η ΕΓΓΡΑΦΗ
@@ -107,7 +117,8 @@ function auditDocument(input: ServerFileAuditInput): Record<string, unknown> {
     fileId: input.fileId,
     action: input.action,
     performedBy: input.performedBy,
-    companyId: input.companyId,
+    // 🔑 **Μόνο** το πεδίο του κατόχου — ποτέ και τα δύο, ποτέ δίδυμο `undefined`.
+    ...custodyOnly(input),
     // 🔑 **Χρόνος ΔΙΑΚΟΜΙΣΤΗ, ποτέ `nowISO()`** — αυτή ακριβώς είναι η απόκλιση των
     //    πέντε διδύμων (συμβολοσειρά vs `Timestamp` στο **ίδιο πεδίο**). Ο αδελφός
     //    γράφει `serverTimestamp()`· το ισοδύναμο του Admin SDK είναι αυτό.
@@ -135,11 +146,11 @@ function auditDocument(input: ServerFileAuditInput): Record<string, unknown> {
 export async function recordFileAudit(
   input: ServerFileAuditInput,
 ): Promise<string | null> {
-  // 🔴 Εγγραφή χωρίς μισθωτή **κανείς δεν μπορεί να τη διαβάσει** (ο μοναδικός
-  //    αναγνώστης ρωτά `where('companyId','==',…)`). Αρνούμαστε **πριν** αγγίξουμε
+  // 🔴 Εγγραφή χωρίς κάτοχο **κανείς δεν μπορεί να τη διαβάσει** (ο αναγνώστης ρωτά
+  //    `companyId` ή `userId`, και ο κανόνας το ίδιο). Αρνούμαστε **πριν** αγγίξουμε
   //    τη βάση — μια αόρατη γραμμή κοστίζει και δεν προσφέρει τίποτα.
-  if (input.companyId.trim().length === 0) {
-    logger.error('Γραμμή ίχνους χωρίς μισθωτή — απορρίφθηκε', {
+  if (!isWritableCustodyScope(input)) {
+    logger.error('Γραμμή ίχνους χωρίς κάτοχο βιβλίου — απορρίφθηκε', {
       fileId: input.fileId,
       action: input.action,
     });
@@ -149,7 +160,7 @@ export async function recordFileAudit(
   try {
     const auditId = generateAuditId();
     await getAdminFirestore()
-      .collection(COLLECTIONS.FILE_AUDIT_LOG)
+      .collection(COLLECTIONS[FILE_AUDIT_COLLECTION[custodyKindOfScope(input)]])
       .doc(auditId)
       .set(auditDocument(input));
 

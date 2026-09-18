@@ -143,6 +143,30 @@ describe('Γ — ο ΕΝΑΣ γραφέας ίχνους του διακομισ
     expect(Object.hasOwn(storedEntries()[0] ?? {}, 'metadata')).toBe(false);
   });
 
+  it('📒 Γ6 — ΠΡΟΣΩΠΙΚΟΣ κάτοχος ⇒ γραμμή στο ΠΡΟΣΩΠΙΚΟ βιβλίο, με `userId`, ΚΑΙ ΤΙΠΟΤΑ στο εταιρικό (ADR-866 §2.6.11)', async () => {
+    const id = await recordFileAudit({
+      fileId: FILE_ID,
+      action: 'version_supersede',
+      performedBy: 'u_person',
+      userId: 'u_person',
+    });
+
+    expect(id).not.toBeNull();
+    expect(storedEntries()).toHaveLength(0);
+    const personal = fake.all<Record<string, unknown>>(COLLECTIONS.FILE_AUDIT_LOG_PERSONAL);
+    expect(personal).toHaveLength(1);
+    expect(personal[0]).toMatchObject({ userId: 'u_person', performedBy: 'u_person', timestamp: SERVER_TS });
+    // 🔑 Μόνο το πεδίο του κατόχου — ποτέ και τα δύο (αλλιώς ο κανόνας «ακριβώς ένας» θα την έκρυβε).
+    expect(Object.hasOwn(personal[0] ?? {}, 'companyId')).toBe(false);
+  });
+
+  it('🔴 Γ7 — κενός ΠΡΟΣΩΠΙΚΟΣ κάτοχος ⇒ άρνηση, καμία γραφή — σε κανένα βιβλίο', async () => {
+    const before = fake.writes;
+    const id = await recordFileAudit({ fileId: FILE_ID, action: 'delete', performedBy: 'system:purge', userId: '  ' });
+    expect(id).toBeNull();
+    expect(fake.writes).toBe(before);
+  });
+
   it('✅ Γ5 — με metadata, ταξιδεύει αυτούσιο', async () => {
     await recordFileAudit({
       fileId: FILE_ID,

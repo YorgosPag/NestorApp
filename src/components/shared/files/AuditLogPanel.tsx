@@ -1,4 +1,3 @@
-/* eslint-disable design-system/enforce-semantic-colors */
 /**
  * =============================================================================
  * 🏢 ENTERPRISE: Audit Log Panel
@@ -55,6 +54,7 @@ import {
 } from '@/services/file-audit.service';
 import '@/lib/design-system';
 import { createStaleCache } from '@/lib/stale-cache';
+import { fileCustodyKey, type FileCustody } from '@/lib/files/file-custody';
 
 const fileAuditLogCache = createStaleCache<FileAuditRecord[]>('file-audit-log');
 
@@ -144,8 +144,11 @@ const ACTION_COLOR_MAP: Record<string, string> = {
 interface AuditLogPanelProps {
   /** File ID to show audit log for */
   fileId: string;
-  /** Tenant isolation — company ID for Firestore rules */
-  companyId: string;
+  /**
+   * 📒 **Ο κάτοχος του αρχείου** (ADR-866 §2.6.11) — διαλέγει **ποιο βιβλίο** διαβάζεται: εταιρικό
+   * `file_audit_log` ή προσωπικό `file_audit_log_personal`, που το βλέπει μόνο ο κάτοχος.
+   */
+  custody: FileCustody;
   /** Additional className */
   className?: string;
 }
@@ -154,26 +157,29 @@ interface AuditLogPanelProps {
 // COMPONENT
 // ============================================================================
 
-export function AuditLogPanel({ fileId, companyId, className }: AuditLogPanelProps) {
+export function AuditLogPanel({ fileId, custody, className }: AuditLogPanelProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();
 
-  const [entries, setEntries] = useState<FileAuditRecord[]>(fileAuditLogCache.get(fileId) ?? []);
-  const [loading, setLoading] = useState(!fileAuditLogCache.hasLoaded(fileId));
+  // 🔑 Κλειδί κρυφής μνήμης με **κάτοχο** — το σκέτο id δεν αρκεί (`fileCustodyKey`).
+  const custodyKey = fileCustodyKey(custody);
+  const cacheKey = `${custodyKey}:${fileId}`;
+  const [entries, setEntries] = useState<FileAuditRecord[]>(fileAuditLogCache.get(cacheKey) ?? []);
+  const [loading, setLoading] = useState(!fileAuditLogCache.hasLoaded(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      if (!fileAuditLogCache.hasLoaded(fileId)) setLoading(true);
+      if (!fileAuditLogCache.hasLoaded(cacheKey)) setLoading(true);
       setError(null);
       try {
-        const history = await FileAuditService.getFileHistory(fileId, companyId, 30);
+        const history = await FileAuditService.getFileHistory(fileId, custody, 30);
         if (!cancelled) {
-          fileAuditLogCache.set(history, fileId);
+          fileAuditLogCache.set(history, cacheKey);
           setEntries(history);
         }
       } catch (err) {
@@ -189,7 +195,8 @@ export function AuditLogPanel({ fileId, companyId, className }: AuditLogPanelPro
 
     load();
     return () => { cancelled = true; };
-  }, [fileId]);
+    // `custodyKey` αντί για `custody`: το αντικείμενο αλλάζει ταυτότητα σε κάθε απόδοση, ο κάτοχος όχι.
+  }, [fileId, custodyKey]);
 
   // Empty state
   if (!loading && entries.length === 0 && !error) {

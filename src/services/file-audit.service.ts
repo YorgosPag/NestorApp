@@ -27,17 +27,23 @@ import {
   getDocs,
   limit as firestoreLimit,
   serverTimestamp,
+  type WriteBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
-import type { CustodyKind } from '@/lib/workspace/custody-scope';
+import { FILE_AUDIT_COLLECTION } from '@/lib/files/file-custody';
+import {
+  custodyKindOfScope,
+  custodyOnly,
+  type CustodyScope,
+} from '@/lib/workspace/custody-scope';
 // 🔑 ADR-862 Φ0 Β6 — το λεξιλόγιο μετακόμισε σε SSoT **ανεξάρτητο SDK**, ώστε να μπορεί
 //    να το εισαγάγει ΚΑΙ ο γραφέας του διακομιστή. Δες `types/file-audit` για το τι
 //    κόστισε όσο ήταν δεμένο εδώ: **πέντε** αποκλίνοντα admin-side δίδυμα.
 import type {
+  FileAuditActFields,
   FileAuditAction,
   FileAuditMetadata,
   FileAuditRecordFields,
@@ -72,13 +78,15 @@ export interface FileAuditEntry extends FileAuditRecordFields {
 export interface FileAuditRecord extends Omit<FileAuditEntry, 'timestamp'> {
   id: string;
   timestamp: Date | string;
+  /** Ο κάτοχος του **προσωπικού** βιβλίου (ADR-866 §2.6.11) — απών στο εταιρικό. */
+  userId?: string;
 }
 
 // ============================================================================
 // COLLECTION NAME
 // ============================================================================
 
-const FILE_AUDIT_COLLECTION = COLLECTIONS.FILE_AUDIT_LOG;
+const COMPANY_FILE_AUDIT_COLLECTION = COLLECTIONS.FILE_AUDIT_LOG;
 
 // ============================================================================
 // SERVICE
@@ -154,7 +162,7 @@ export class FileAuditService {
 
       const { generateAuditId } = await import('@/services/enterprise-id.service');
       const enterpriseId = generateAuditId();
-      const docRef = doc(db, FILE_AUDIT_COLLECTION, enterpriseId);
+      const docRef = doc(db, COMPANY_FILE_AUDIT_COLLECTION, enterpriseId);
       await setDoc(docRef, cleanEntry);
 
       return enterpriseId;
@@ -170,23 +178,27 @@ export class FileAuditService {
   }
 
   /**
-   * **Ιστορικό αρχείου για πράξη που ξέρει το διαμέρισμά της** — fire-and-forget.
+   * **Βάλε τη γραμμή δραστηριότητας σε δέσμη** — στο βιβλίο **του κατόχου** (ADR-866 §2.6.11).
    *
-   * 🔴 ADR-866 §2.6.8 Β7: το {@link FileAuditService.log} ψάχνει τον κάτοχο στη συλλογή **`files`**
-   * και γράφει στο **εταιρικό** `FILE_AUDIT_LOG`. Για προσωπικό αρχείο θα διάβαζε **λάθος**
-   * διαμέρισμα και θα έγραφε γραμμή **χωρίς** κάτοχο ⇒ **καμία** εγγραφή, δηλωμένα, ως το βήμα
-   * 2β.4 (προσωπικό ιστορικό αρχείου). ΕΝΑ σημείο για όλες τις πράξεις — όχι φρουρός ανά καλούντα.
+   * 🔑 Δεν γράφει μόνη της: ο καλών (`commitFileActivity`) βάζει στην **ίδια** δέσμη την αλλαγή του
+   * αρχείου με `lastActivityId` = το id που επιστρέφεται, και οι κανόνες ζευγαρώνουν τα δύο. Χρόνος
+   * **διακομιστή** (`serverTimestamp()` ⇒ ο κανόνας ζητά `== request.time`) και **μόνο** το πεδίο του
+   * κατόχου — ποτέ και τα δύο.
+   *
+   * ⚠️ Αντικατέστησε το `logForCustody`, που για προσωπικό αρχείο **σιωπούσε** (2β.2 → 2β.4).
    */
-  static logForCustody(
-    custody: CustodyKind,
-    fileId: string,
-    action: FileAuditAction,
-    performedBy: string,
-    context: string,
-    metadata?: FileAuditMetadata,
-  ): void {
-    if (custody !== 'company') return;
-    safeFireAndForget(FileAuditService.log(fileId, action, performedBy, undefined, metadata), context, { fileId });
+  static async stageActivity(batch: WriteBatch, owner: CustodyScope, act: FileAuditActFields): Promise<string> {
+    const { generateAuditId } = await import('@/services/enterprise-id.service');
+    const activityId = generateAuditId();
+    batch.set(doc(db, COLLECTIONS[FILE_AUDIT_COLLECTION[custodyKindOfScope(owner)]], activityId), {
+      fileId: act.fileId,
+      action: act.action,
+      performedBy: act.performedBy,
+      ...custodyOnly(owner),
+      timestamp: serverTimestamp(),
+      ...(act.metadata === undefined ? {} : { metadata: act.metadata }),
+    });
+    return activityId;
   }
 
   /**
@@ -225,20 +237,27 @@ export class FileAuditService {
    *
    * 🔑 **Οι δύο δημόσιες υπογραφές ΔΕΝ άλλαξαν** — κανένας καταναλωτής δεν αγγίχθηκε.
    *
-   * ⚠️ Το φίλτρο μισθωτή μένει **πρώτο και υποχρεωτικό**: είναι το μόνο κλειδί με το οποίο
-   * ρωτά ο αναγνώστης, και γραμμή χωρίς `companyId` είναι **δομικά αόρατη** (δες
+   * ⚠️ Το φίλτρο κατόχου μένει **πρώτο και υποχρεωτικό**: είναι το κλειδί με το οποίο ρωτούν ο
+   * αναγνώστης **και** ο κανόνας, και γραμμή χωρίς κάτοχο είναι **δομικά αόρατη** (δες
    * `types/file-audit.ts` για τις πέντε γραφές που το παρέλειπαν).
+   *
+   * 📒 ADR-866 §2.6.11 — **ένα** ερώτημα, δύο βιβλία: το διαμέρισμα από τον κάτοχο
+   * (`FILE_AUDIT_COLLECTION`), και το φίλτρο κατόχου **κυριολεκτικό** ανά κλάδο, ώστε οι πύλες
+   * 3.15/3.35 να το βλέπουν. Ο κανόνας του προσωπικού βιβλίου **δεν** φιλτράρει — το `userId` εδώ
+   * είναι αυτό που κάνει το ερώτημα αποδεκτό.
    */
   private static async queryHistory(
     field: 'fileId' | 'performedBy',
     value: string,
-    companyId: string,
+    owner: CustodyScope,
     maxEntries: number,
   ): Promise<FileAuditRecord[]> {
-    const colRef = collection(db, FILE_AUDIT_COLLECTION);
+    const colRef = collection(db, COLLECTIONS[FILE_AUDIT_COLLECTION[custodyKindOfScope(owner)]]);
     const q = query(
       colRef,
-      where('companyId', '==', companyId),
+      owner.userId !== undefined
+        ? where('userId', '==', owner.userId)
+        : where('companyId', '==', owner.companyId),
       where(field, '==', value),
       orderBy('timestamp', 'desc'),
       firestoreLimit(maxEntries),
@@ -255,20 +274,21 @@ export class FileAuditService {
         performedBy: data.performedBy,
         timestamp: data.timestamp?.toDate?.() ?? data.timestamp ?? '',
         companyId: data.companyId,
+        userId: data.userId,
         metadata: data.metadata,
       } as FileAuditRecord;
     });
   }
 
   /**
-   * Retrieve audit history for a file.
+   * **Η δραστηριότητα ενός αρχείου** — στο βιβλίο του κατόχου του (ADR-866 §2.6.11).
    */
   static async getFileHistory(
     fileId: string,
-    companyId: string,
+    owner: CustodyScope,
     maxEntries = 50,
   ): Promise<FileAuditRecord[]> {
-    return FileAuditService.queryHistory('fileId', fileId, companyId, maxEntries);
+    return FileAuditService.queryHistory('fileId', fileId, owner, maxEntries);
   }
 
   /**
@@ -279,6 +299,6 @@ export class FileAuditService {
     companyId: string,
     maxEntries = 100,
   ): Promise<FileAuditRecord[]> {
-    return FileAuditService.queryHistory('performedBy', performedBy, companyId, maxEntries);
+    return FileAuditService.queryHistory('performedBy', performedBy, { companyId }, maxEntries);
   }
 }

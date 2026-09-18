@@ -20,7 +20,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
-import { findSubjectFiles } from '@/services/file-record/file-subject-scan';
+import { findSubjectActivity, findSubjectFiles } from '@/services/file-record/file-subject-scan';
 
 export const maxDuration = 60;
 
@@ -51,22 +51,18 @@ async function handler(_request: NextRequest, { userId, db: adminDb }: GdprSubje
       };
     });
 
-    // Query audit log entries for this user
-    const auditSnapshot = await adminDb
-      .collection(COLLECTIONS.FILE_AUDIT_LOG)
-      .where('performedBy', '==', userId)
-      .orderBy('timestamp', 'desc')
-      .limit(500)
-      .get();
-
-    const auditEntries = auditSnapshot.docs.map((doc) => {
+    // 📒 ADR-866 §2.6.11 — η δραστηριότητα αρχείων σε ΟΛΑ τα βιβλία (ίδιος σαρωτής με τη διαγραφή).
+    //    ⚠️ Χωρίς το παλιό `limit(500)`: η εξαγωγή του άρθρου 20 είναι **όλα** τα δεδομένα, όχι δείγμα.
+    const auditEntries = (await findSubjectActivity(adminDb, userId)).map(({ custody, doc }) => {
       const data = doc.data();
       return {
         id: doc.id,
+        custody,
         action: data.action ?? null,
         fileId: data.fileId ?? null,
-        timestamp: data.timestamp?.toDate?.()?.toISOString() ?? null,
-        details: data.details ?? null,
+        performedBy: data.performedBy ?? null,
+        timestamp: data.timestamp?.toDate?.()?.toISOString() ?? data.timestamp ?? null,
+        metadata: data.metadata ?? data.details ?? null,
       };
     });
 

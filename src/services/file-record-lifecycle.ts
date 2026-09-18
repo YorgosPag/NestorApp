@@ -12,7 +12,6 @@
 import {
   doc,
   getDoc,
-  updateDoc,
   where,
   serverTimestamp,
   type DocumentData,
@@ -35,10 +34,15 @@ import { isFileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isHoldActive } from '@/lib/files/file-hold';
 import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
-import { custodyKindOfScope, type CustodyKind } from '@/lib/workspace/custody-scope';
+import {
+  custodyKindOfScope,
+  custodyScopeFromData,
+  type CustodyKind,
+  type CustodyScope,
+} from '@/lib/workspace/custody-scope';
 import { fileOwnerConstraints } from '@/services/file-record-queries';
 import { RealtimeService } from '@/services/realtime';
-import { FileAuditService } from '@/services/file-audit.service';
+import { commitFileActivity } from '@/services/file-record/file-activity-commit';
 import {
   requestSupersession,
   type SupersedeOutcome,
@@ -73,6 +77,7 @@ type LifecycleTimestampField = 'trashedAt' | 'archivedAt' | 'updatedAt';
 async function loadFileDocOrThrow(fileId: string, custody: CustodyKind): Promise<{
   docRef: DocumentReference;
   data: DocumentData;
+  owner: CustodyScope;
 }> {
   const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
 
@@ -81,7 +86,20 @@ async function loadFileDocOrThrow(fileId: string, custody: CustodyKind): Promise
     throw new Error(`FileRecord not found: ${fileId}`);
   }
 
-  return { docRef, data: docSnap.data() };
+  // 📒 ADR-866 §2.6.11 — ο κάτοχος από τα ΔΙΚΑ του πεδία: σε αυτόν πάει η γραμμή δραστηριότητας.
+  //    Χωρίς ακριβώς έναν, η πράξη ΑΡΝΕΙΤΑΙ — δεν ξέρουμε σε ποιο βιβλίο θα την έβλεπε κανείς.
+  const data = docSnap.data();
+  const owner = custodyScopeFromData(data);
+  if (owner === null) {
+    throw new Error(`FileRecord ${fileId} has no single owner`);
+  }
+
+  return { docRef, data, owner };
+}
+
+/** Στον κάδο ήδη; — `lifecycleState` **ή** το legacy `isDeleted` (πάνε πάντα μαζί). */
+function isInTrash(data: DocumentData): boolean {
+  return data.lifecycleState === FILE_LIFECYCLE_STATES.TRASHED || data.isDeleted === true;
 }
 
 /**
@@ -160,7 +178,14 @@ async function queryLifecycleFiles(
 export async function moveToTrash(fileId: string, custody: CustodyKind, trashedBy: string): Promise<void> {
   logger.info('Moving FileRecord to trash', { fileId, trashedBy });
 
-  const { docRef, data } = await loadFileDocOrThrow(fileId, custody);
+  const { docRef, data, owner } = await loadFileDocOrThrow(fileId, custody);
+  // 🔴 ADR-866 §2.6.11 Β3 — ΙΔΕΜΠΟΤΗΤΑ: μετρημένα, 10 από τις 15 γραμμές `delete` ήταν ζεύγη σε
+  //    0,4 s. Δεύτερος κάδος ξανάγραφε `trashedAt`/`purgeAt` (**μετέθετε το ρολόι εκκαθάρισης**) και
+  //    δεύτερη γραμμή ιστορικού. Ήδη στον κάδο ⇒ καμία πράξη.
+  if (isInTrash(data)) {
+    logger.info('FileRecord already in trash — no-op', { fileId });
+    return;
+  }
   const category = data.category as FileCategory;
   const purgeDate = calculatePurgeDate(category);
 
@@ -168,15 +193,21 @@ export async function moveToTrash(fileId: string, custody: CustodyKind, trashedB
   //    αρχείο σε δέσμευση. Αυτό που δεν γίνεται ποτέ είναι η ΟΡΙΣΤΙΚΗ διαγραφή — την αρνούνται ο
   //    κριτής (`isFileHeld` σε κάθε purge), οι κανόνες και η πλατφόρμα (GCS `temporaryHold`).
 
-  await updateDoc(docRef, {
-    lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
-    trashedAt: serverTimestamp(),
-    trashedBy,
-    purgeAt: purgeDate.toISOString(),
-    isDeleted: true,
-    deletedAt: serverTimestamp(),
-    deletedBy: trashedBy,
-    updatedAt: serverTimestamp(),
+  await commitFileActivity({
+    docRef,
+    owner,
+    updates: {
+      lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
+      trashedAt: serverTimestamp(),
+      trashedBy,
+      purgeAt: purgeDate.toISOString(),
+      isDeleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: trashedBy,
+      updatedAt: serverTimestamp(),
+    },
+    act: { fileId, action: 'delete', performedBy: trashedBy },
+    context: 'FileRecord.trashFile',
   });
 
   logger.info('FileRecord moved to trash', {
@@ -194,8 +225,6 @@ export async function moveToTrash(fileId: string, custody: CustodyKind, trashedB
     entityType: (data.entityType as string | undefined) ?? undefined,
     timestamp: Date.now(),
   });
-
-  FileAuditService.logForCustody(custody, fileId, 'delete', trashedBy, 'FileRecord.trashFile');
 }
 
 /**
@@ -251,22 +280,28 @@ export async function supersedeFileRecord(
 export async function restoreFromTrash(fileId: string, custody: CustodyKind, restoredBy: string): Promise<void> {
   logger.info('Restoring FileRecord from trash', { fileId, restoredBy });
 
-  const { docRef, data } = await loadFileDocOrThrow(fileId, custody);
-  if (data.lifecycleState !== FILE_LIFECYCLE_STATES.TRASHED && data.isDeleted !== true) {
+  const { docRef, data, owner } = await loadFileDocOrThrow(fileId, custody);
+  if (!isInTrash(data)) {
     throw new Error(`FileRecord ${fileId} is not in trash`);
   }
 
-  await updateDoc(docRef, {
-    lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
-    isDeleted: false,
-    trashedAt: null,
-    trashedBy: null,
-    purgeAt: null,
-    deletedAt: null,
-    deletedBy: null,
-    restoredAt: serverTimestamp(),
-    restoredBy,
-    updatedAt: serverTimestamp(),
+  await commitFileActivity({
+    docRef,
+    owner,
+    updates: {
+      lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
+      isDeleted: false,
+      trashedAt: null,
+      trashedBy: null,
+      purgeAt: null,
+      deletedAt: null,
+      deletedBy: null,
+      restoredAt: serverTimestamp(),
+      restoredBy,
+      updatedAt: serverTimestamp(),
+    },
+    act: { fileId, action: 'restore', performedBy: restoredBy },
+    context: 'FileRecord.restoreFile',
   });
 
   logger.info('FileRecord restored from trash', { fileId, restoredBy });
@@ -276,8 +311,6 @@ export async function restoreFromTrash(fileId: string, custody: CustodyKind, res
     restoredBy,
     timestamp: Date.now(),
   });
-
-  FileAuditService.logForCustody(custody, fileId, 'restore', restoredBy, 'FileRecord.restoreFile');
 }
 
 /**

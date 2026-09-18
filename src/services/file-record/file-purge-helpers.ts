@@ -17,12 +17,17 @@ import 'server-only';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
-import type { CustodyKind } from '@/lib/workspace/custody-scope';
+import {
+  custodyKindOfScope,
+  custodyScopeFromData,
+  type CustodyKind,
+  type CustodyScope,
+} from '@/lib/workspace/custody-scope';
 import { isHoldActive, type FileHoldSubject } from '@/lib/files/file-hold';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { generateAuditId } from '@/services/enterprise-id.service';
 import { nowISO } from '@/lib/date-local';
+import { recordFileAudit } from '@/services/file-audit-admin.service';
 
 const logger = createModuleLogger('FilePurgeHelpers');
 
@@ -101,10 +106,17 @@ export async function deleteStorageObjectForPurge(storagePath: string): Promise<
  */
 export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFileResult> {
   const { fileId, custody, storagePath } = params;
-  const db = getAdminFirestore();
+  const ref = getAdminFirestore().collection(COLLECTIONS[FILE_COLLECTION[custody]]).doc(fileId);
   let storageDeleted = false;
 
   try {
+    // 🔑 ADR-866 §2.6.11 — η εγγραφή διαβάζεται ΠΡΩΤΑ, στο διαμέρισμα όπου ζητήθηκε: (α) ο κάτοχος
+    //    του βιβλίου δραστηριότητας έρχεται από τα ΔΙΚΑ της πεδία, (β) εγγραφή που ΔΕΝ υπάρχει εκεί
+    //    δεν κοστίζει τα bytes της — πριν, τα bytes σβήνονταν και μετά αποτύγχανε η ενημέρωση.
+    const snap = await ref.get();
+    if (!snap.exists) return { success: false, storageDeleted: false, error: 'record-not-found' };
+    const owner = custodyScopeFromData(snap.data() ?? {});
+
     // Bytes πρώτα — και άρνηση της πλατφόρμας (δέσμευση) ⇒ η εγγραφή ΔΕΝ γίνεται `purged`.
     if (storagePath) {
       const deletion = await deleteStorageObjectForPurge(storagePath);
@@ -116,13 +128,13 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
 
     // Mark FileRecord as purged
     const now = nowISO();
-    await db.collection(COLLECTIONS[FILE_COLLECTION[custody]]).doc(fileId).update({
+    await ref.update({
       lifecycleState: 'purged',
       purgedAt: now,
       updatedAt: now,
     });
 
-    await recordPurgeAudit(params, storageDeleted);
+    await recordPurgeAudit(params, owner, storageDeleted);
 
     return { success: true, storageDeleted };
   } catch (err) {
@@ -133,31 +145,34 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
 }
 
 /**
- * Η γραμμή ίχνους της εκκαθάρισης — **μόνο** για το εταιρικό διαμέρισμα.
+ * Η γραμμή δραστηριότητας της εκκαθάρισης — στο βιβλίο **του κατόχου του αρχείου** (ADR-866 §2.6.11).
  *
- * ⚠️ Το `FILE_AUDIT_LOG` είναι βιβλίο **οργανισμού**: γραμμή προσωπικού αρχείου εκεί θα ανακάτευε
- * διαμερίσματα. Το προσωπικό ίχνος αρχείου είναι το **2β.4** (ADR-866 §3) — ίδιο όριο με το
- * `FileAuditService.logForCustody` του 2β.2. Η εκκαθάριση **καταγράφεται** πάντως στο log διακομιστή.
+ * 📒 Εταιρικό αρχείο ⇒ `file_audit_log`· προσωπικό ⇒ `file_audit_log_personal`, που το διαβάζει ο
+ * κάτοχος. Μέσω του **ενός** γραφέα διακομιστή (`recordFileAudit`): χρόνος διακομιστή και **πεδίο
+ * κατόχου**. 🔴 Ως τις 2026-09-18 η εταιρική γραμμή γραφόταν εδώ με το χέρι, **χωρίς** `companyId`
+ * και με `nowISO()` — δηλαδή **καμία** εταιρική εκκαθάριση δεν ήταν ποτέ ορατή σε άνθρωπο (§2.6.11 Β2).
+ *
+ * ⚠️ Κάτοχος που **δεν** ανήκει στο διαμέρισμα όπου βρέθηκε το έγγραφο ⇒ **καμία** γραμμή, με σφάλμα
+ * στο log: η γραμμή θα πήγαινε σε βιβλίο που ο κάτοχος του αρχείου δεν διαβάζει.
  */
-async function recordPurgeAudit(params: PurgeFileParams, storageDeleted: boolean): Promise<void> {
-  if (params.custody !== 'company') {
-    logger.info('Personal file purged — file audit ledger deferred (ADR-866 2β.4)', {
+async function recordPurgeAudit(
+  params: PurgeFileParams,
+  owner: CustodyScope | null,
+  storageDeleted: boolean,
+): Promise<void> {
+  if (owner === null || custodyKindOfScope(owner) !== params.custody) {
+    logger.error('Purged record has no single owner in its partition — no activity row', {
       fileId: params.fileId,
-      purgeReason: params.purgeReason,
-      storageDeleted,
+      custody: params.custody,
     });
     return;
   }
 
-  await getAdminFirestore().collection(COLLECTIONS.FILE_AUDIT_LOG).doc(generateAuditId()).set({
+  await recordFileAudit({
     fileId: params.fileId,
     action: 'delete',
     performedBy: params.performedBy,
-    timestamp: nowISO(),
-    metadata: {
-      purgeReason: params.purgeReason,
-      storageDeleted,
-      ...params.metadata,
-    },
+    ...owner,
+    metadata: { purgeReason: params.purgeReason, storageDeleted, ...params.metadata },
   });
 }
