@@ -51,6 +51,10 @@ const COLLECTION_HOME = 'src/config/firestore-collections.ts';
 const CONSUMERS = {
   [AUDIENCE_WRITER]: 'ο ΕΝΑΣ γραφέας νήματος + ακροατηρίου',
   [MESSAGE_WRITER]: 'η αποστολή μηνύματος (υποσυλλογή μηνυμάτων)',
+  'src/services/network-messaging/thread-directory.ts':
+    'ο κατάλογος νημάτων (ADR-867 Β5): collection group ΑΝΑΓΝΩΣΗ του ακροατηρίου — καμία γραφή',
+  'src/services/network-messaging/network-away.ts':
+    'η παρουσία νήματος (ADR-867 Β5): ΑΝΑΓΝΩΣΗ του ακροατηρίου για «ποιος λείπει, ποιος διαβάζει» — καμία γραφή',
 };
 
 /**
@@ -75,6 +79,7 @@ const REF_CALLS = new Set([
   'networkAudienceRef',
   'networkThreadMessages',
   'networkRetractionRef',
+  'networkAudienceGroup',
 ]);
 const AUDIENCE_CALLS = new Set(['networkThreadAudience', 'networkAudienceRef']);
 /**
@@ -252,7 +257,9 @@ function wiringFindings(root) {
   return findings;
 }
 
-const RELEVANT = /NETWORK_THREAD|networkThread|networkAudienceRef|writeActThread/;
+// ⚠️ ADR-867 Β5: το `networkAudienceGroup` ΠΡΕΠΕΙ να είναι εδώ — αλλιώς αρχείο που καλεί ΜΟΝΟ
+//    αυτό δεν σαρώνεται καν, και ο Κ2 είναι πράσινος επειδή δεν κοίταξε.
+const RELEVANT = /NETWORK_THREAD|networkThread|networkAudienceRef|networkAudienceGroup|writeActThread/;
 
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;

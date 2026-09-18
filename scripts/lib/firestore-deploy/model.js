@@ -72,18 +72,66 @@ const DEPLOY_TARGETS = Object.freeze({
       'Το firebase.json δηλώνει το ΠΑΡΑΓΟΜΕΝΟ firestore.rules.compiled (predeploy: '
       + 'scripts/build-firestore-rules.js), που είναι untracked. Η αυθεντία —και ό,τι βλέπει το '
       + 'git— είναι η πηγή firestore.rules.',
+    provider: Object.freeze({ kind: 'ruleset', service: 'cloud.firestore', needsBucket: false, compiled: true }),
   }),
   'firestore:indexes': Object.freeze({
     jsonPath: ['firestore', 'indexes'],
     sourceOverride: null,
     overrideWhy: null,
+    provider: Object.freeze({ kind: 'indexes' }),
   }),
   storage: Object.freeze({
     jsonPath: ['storage', 'rules'],
     sourceOverride: null,
     overrideWhy: null,
+    provider: Object.freeze({ kind: 'ruleset', service: 'firebase.storage', needsBucket: true, compiled: false }),
   }),
 });
+
+// ============================================================================
+// Ο ΠΑΡΟΧΟΣ — πώς βλέπει ο καθένας τον στόχο (ADR-865 §10)
+// ============================================================================
+
+/** Η βάση που ονομάζει ρητά το `firebase.json`, ή `null`. */
+function namedDatabaseOf(firebaseJson) {
+  const fs_ = firebaseJson.firestore;
+  return fs_ && typeof fs_ === 'object' && typeof fs_.database === 'string' ? fs_.database : null;
+}
+
+/** Η βάση Firestore του `firebase.json` — `(default)` όταν δεν ονομάζεται (firebase-tools). */
+const databaseOf = (firebaseJson) => namedDatabaseOf(firebaseJson) ?? '(default)';
+
+/** Ο bucket που ονομάζει ρητά το `firebase.json`, ή `null` (⇒ ο προεπιλεγμένος του project). */
+function explicitBucketOf(firebaseJson) {
+  const st = firebaseJson.storage;
+  return st && typeof st === 'object' && typeof st.bucket === 'string' ? st.bucket : null;
+}
+
+/**
+ * **Το όνομα του release** που ενημερώνει το `firebase deploy` για έναν στόχο κανόνων —
+ * `rulesDeploy.release(file, service, subResource)` του firebase-tools: `service` ή
+ * `service/subResource`. Χωρίς ονομασμένη βάση, οι κανόνες Firestore πάνε στο σκέτο
+ * `cloud.firestore`· οι κανόνες Storage **πάντα** σε `firebase.storage/<bucket>`.
+ */
+function releaseNameOf(firebaseJson, target, defaultBucket) {
+  const provider = DEPLOY_TARGETS[target].provider;
+  if (provider.service === 'firebase.storage') {
+    return `${provider.service}/${explicitBucketOf(firebaseJson) ?? defaultBucket}`;
+  }
+  const named = namedDatabaseOf(firebaseJson);
+  return named === null ? provider.service : `${provider.service}/${named}`;
+}
+
+/**
+ * **Τα bytes που φτάνουν στον πάροχο** από τα bytes της πηγής — η **ίδια** μεταγλώττιση με το
+ * predeploy (`compileRules`), ώστε η σύγκριση να είναι «δέντρο = παραγωγή», όχι «artifact =
+ * παραγωγή». Για στόχο χωρίς μεταγλώττιση, ταυτότητα.
+ */
+function wireOf(target, sourceBytes) {
+  if (!DEPLOY_TARGETS[target].provider.compiled) return sourceBytes;
+  const { compileRules } = require('../../build-firestore-rules');
+  return compileRules(sourceBytes);
+}
 
 /**
  * **Τα κλειδιά του `firebase.json` που ΔΕΝ κρίνει αυτή η πύλη** — κάθε ένα με γραπτό λόγο.
@@ -145,6 +193,40 @@ function renderLedger(ledger) {
 /** Ταυτότητα γραμμής — για τη σύγκριση append-only του Κ3. */
 const rowKey = (row) => stableStringify(row);
 
+// ============================================================================
+// Η ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ — ADR-865 §11
+// ============================================================================
+
+/**
+ * **Η ΜΙΑ έκδοση του firebase-tools** — του deployer **και** της σημασιολογίας που αντιγράφει ο
+ * επαληθευτής (`drift.js`: `processIndex` · `indexMatchesSpec` · releases). Επαληθευτής με **άλλη**
+ * σημασιολογία από αυτόν που γράφει κρίνει **άλλο πράγμα** (§10.2). Αλλαγή εδώ ⇒ ξαναδιάβασε
+ * την πηγή του νέου firebase-tools και ενημέρωσε το `drift.js` στο **ίδιο** commit.
+ */
+const FIREBASE_TOOLS_VERSION = '15.13.0';
+
+/**
+ * **Η γραμμή παραγωγής** (`.github/workflows/docker-build.yml`). Οι ταυτότητες των jobs ζουν
+ * **εδώ** ώστε η άγκυρα (`firestore-deploy-pipeline.test.js`) να ρωτά το workflow με τα **ίδια**
+ * ονόματα που υπόσχεται το ADR — όχι με δεύτερο αντίγραφο.
+ *
+ * 🔑 Το `environment` δεν είναι ετικέτα: η ταυτότητα εγγραφής (WIF) είναι δεμένη στο claim
+ * `environment` ⇒ το κλειδί **δεν εκδίδεται** εκτός αυτού, και αυτό θέλει **ανθρώπινη έγκριση**.
+ */
+const PIPELINE = Object.freeze({
+  workflow: '.github/workflows/docker-build.yml',
+  environment: 'firebase-production',
+  jobs: Object.freeze({ plan: 'firebase-plan', apply: 'firebase-apply', release: 'release' }),
+});
+
+/**
+ * Οι κανόνες είναι **αδιάφοροι** στις αλλαγές γραμμής· τα bytes όχι. Με `core.autocrlf=true` το
+ * `storage.rules` είναι CRLF στον δίσκο των Windows και LF σε checkout Linux (CI) ⇒ σύγκριση
+ * bytes θα έβγαζε **ψευδή** απόκλιση ανάλογα με το **μηχάνημα**. Κανονικοποίηση διαφοράς όπως το
+ * Argo CD (`diff normalization`): συγκρίνεται **σημασία**, όχι τέχνημα του checkout.
+ */
+const normalizeEol = (text) => (typeof text === 'string' ? text.replace(/\r\n/g, '\n') : text);
+
 /** Η **τελευταία** καταγεγραμμένη ανάπτυξη ενός στόχου, ή `null`. */
 function lastDeployment(ledger, target) {
   for (let i = ledger.deployments.length - 1; i >= 0; i--) {
@@ -170,10 +252,17 @@ module.exports = {
   stableStringify,
   DIGEST_RE,
   DEPLOY_TARGETS,
+  FIREBASE_TOOLS_VERSION,
+  PIPELINE,
+  normalizeEol,
   NOT_JUDGED,
   LEDGER_DOC,
   declaredPath,
   sourceOf,
+  databaseOf,
+  explicitBucketOf,
+  releaseNameOf,
+  wireOf,
   loadLedger,
   renderLedger,
   rowKey,

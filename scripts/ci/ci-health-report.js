@@ -19,7 +19,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const { parseState, projectGateStatus, diffState, renderBody } = require('../lib/ci/health-state');
+const { parseState, projectGateStatus, diffState, renderBody, tier1Alert } = require('../lib/ci/health-state');
+const { composeMessage, sendTelegram } = require('../lib/ci/telegram');
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const TOKEN = process.env.GITHUB_TOKEN;
@@ -115,6 +116,19 @@ function transitionComment(broke, fixed) {
   return lines.join('\n');
 }
 
+/**
+ * ADR-757 πολιτική `alert` (Tier 1 = ΠΑΡΑΓΩΓΗ) · ADR-865 §11: η μετάβαση φτάνει **και** στο
+ * κινητό. Το σχόλιο του issue είναι το γραπτό αρχείο· το Telegram είναι το «ξύπνα». Μόνο σε
+ * **μετάβαση** — σταθερό κόκκινο = σιωπή, ίδια αρχή με το σχόλιο.
+ */
+async function alertTier1(broke, fixed, issue) {
+  const alert = tier1Alert(broke, fixed);
+  if (alert === null) return;
+  const text = composeMessage({ ...alert, title: 'NestorApp — ΠΑΡΑΓΩΓΗ (Tier 1)', link: issue.html_url });
+  const { sent, reason } = await sendTelegram(text);
+  if (!sent) console.log(`::warning::Telegram — ${reason}`);
+}
+
 async function main() {
   if (!REPO || !TOKEN) throw new Error('Λείπει GITHUB_REPOSITORY ή GITHUB_TOKEN');
 
@@ -140,6 +154,8 @@ async function main() {
       body: transitionComment(notify.broke, notify.fixed),
     });
   }
+
+  await alertTier1(broke, fixed, issue);
 
   const failing = Object.values(next.gates).filter((gate) => gate.conclusion === 'failure');
   console.log(

@@ -1,7 +1,7 @@
 {
   "adr": "ADR-757",
   "check": "3.37",
-  "updated": "2026-09-13",
+  "updated": "2026-09-18",
   "doc": "docs/centralized-systems/reference/adrs/ADR-757-ci-gate-tiers.md",
   "namePrefix": "T{tier} ",
   "aggregator": {
@@ -85,7 +85,13 @@
       "file": "docker-build.yml",
       "name": "T1 🚀 Build & Deploy Docker Image",
       "tier": 1,
-      "why": "Η ΜΟΝΑΔΙΚΗ πύλη που φράζει την παραγωγή: κόκκινο = το Netcup δεν παίρνει την εικόνα."
+      "why": "Η ΜΟΝΑΔΙΚΗ πύλη που φράζει την παραγωγή: κόκκινο = το Netcup δεν παίρνει την εικόνα. Από ADR-865 §11 φράζει και την ΣΕΙΡΑ: ο κώδικας δεν κυκλοφορεί πριν οι κανόνες/δείκτες του είναι ζωντανοί και READY (firebase-plan → έγκριση → firebase-apply → release)."
+    },
+    {
+      "file": "firebase-drift.yml",
+      "name": "T1 🔭 Firebase Drift (ADR-865)",
+      "tier": 1,
+      "why": "Κόκκινο = η ΠΑΡΑΓΩΓΗ Firebase (κανόνες · δείκτες · storage) ≠ το δέντρο ή δεν είναι διαθέσιμη — οι χρήστες βλέπουν «Missing or insufficient permissions» ή ερώτημα χωρίς δείκτη. Tier 1 και όχι 2: δεν είναι ελάττωμα του κώδικα, είναι η παραγωγή που συμπεριφέρεται αλλιώς (16/09 · 18/09)."
     },
     {
       "file": "dxf-tsc-ratchet.yml",

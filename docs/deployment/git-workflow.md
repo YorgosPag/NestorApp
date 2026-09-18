@@ -42,6 +42,10 @@ git push origin main
 ```
 → Αυτόματο: `docker-build.yml` χτίζει το standalone → GHCR → trigger redeploy στο
 **Coolify** (Netcup) → production live στο **https://nestorconstruct.gr**.
+→ **ADR-865 §11**: στο ίδιο τρέξιμο το `firebase-plan` ρωτά την παραγωγή Firebase· αν οι
+κανόνες/δείκτες διαφέρουν, ζητά **έγκριση του Γιώργου** (GitHub → Actions → «Review deployments»),
+αναπτύσσει, περιμένει τους δείκτες **READY**, και **μόνο τότε** κυκλοφορεί ο κώδικας.
+Runbook: `docs/deployment/firebase-pipeline.md`.
 
 ### ✅ ΒΗΜΑ 4 (optional, on request): BACKUP_SUMMARY.json
 Δημιουργείται **ΜΟΝΟ** αν ο Γιώργος ζητήσει πλήρες backup ZIP. Schema:

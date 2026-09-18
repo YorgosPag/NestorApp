@@ -39,11 +39,12 @@ const row = (target, source, bytes, at = '2026-09-16') => ({
 /** Καθαρός κόσμος: κάθε στόχος αναπτυγμένος με **τα τρέχοντα** bytes, μητρώο ίδιο με το `HEAD`. */
 function cleanWorld(overrides = {}) {
   const bytes = { ...BYTES, ...(overrides.bytes || {}) };
+  const published = overrides.published || {};
   const targets = [
     { target: 'firestore:rules', source: 'firestore.rules', digest: M.digestOf(bytes['firestore.rules']) },
     { target: 'firestore:indexes', source: 'firestore.indexes.json', digest: M.digestOf(bytes['firestore.indexes.json']) },
     { target: 'storage', source: 'storage.rules', digest: M.digestOf(bytes['storage.rules']) },
-  ];
+  ].map((t) => ({ ...t, published: published[t.target] || 'same' }));
   const deployments = [
     row('firestore:rules', 'firestore.rules', BYTES['firestore.rules']),
     row('firestore:indexes', 'firestore.indexes.json', BYTES['firestore.indexes.json']),
@@ -54,6 +55,7 @@ function cleanWorld(overrides = {}) {
     ledger: { deployments: overrides.deployments || deployments },
     headLedger: { deployments: overrides.headLedger || deployments },
     targets: overrides.targets || targets,
+    publishedRef: 'origin/main',
     sourceByTarget: {
       'firestore:rules': 'firestore.rules',
       'firestore:indexes': 'firestore.indexes.json',
@@ -75,7 +77,7 @@ describe('CHECK 3.86 — απόδειξη ανάπτυξης (ADR-865)', () => {
       const world = cleanWorld({ firebaseJson: { ...FIREBASE_JSON, dataconnect: { source: 'dc' } } });
       const findings = judgeFirestoreDeploy(world);
       expect(rulesOf(findings)).toContain(RULES.K1);
-      expect(blocking(findings, { atPush: false })).toHaveLength(1);
+      expect(blocking(findings)).toHaveLength(1);
     });
 
     it('🔑 τα ρητά εξαιρεμένα (functions · hosting · emulators) ΔΕΝ κοκκινίζουν', () => {
@@ -91,7 +93,7 @@ describe('CHECK 3.86 — απόδειξη ανάπτυξης (ADR-865)', () => {
       world.targets[0].digest = null;
       const findings = judgeFirestoreDeploy(world);
       expect(rulesOf(findings)).toContain(RULES.K2);
-      expect(blocking(findings, { atPush: false })).toHaveLength(1);
+      expect(blocking(findings)).toHaveLength(1);
     });
   });
 
@@ -124,36 +126,34 @@ describe('CHECK 3.86 — απόδειξη ανάπτυξης (ADR-865)', () => {
     });
   });
 
-  describe('Κ5 — η καρδιά: τρέχον ≠ αναπτυγμένο', () => {
-    it('🔴 Η ΠΡΑΓΜΑΤΙΚΗ ΒΛΑΒΗ — αλλαγμένος κανόνας που δεν αναπτύχθηκε', () => {
-      const changed = 'rules { allow read: if resource.data.userId == request.auth.uid; }\n';
-      const world = cleanWorld({ bytes: { 'firestore.rules': changed } });
-      const findings = judgeFirestoreDeploy(world);
-      const k5 = findings.filter((f) => f.rule === RULES.K5);
+  describe('Κ5 — ADR-865 §11: ενημέρωση, όχι φράγμα (η φύλαξη ζει στη γραμμή παραγωγής)', () => {
+    it('🔴 αλλαγμένος κανόνας που ΔΕΝ είναι στο origin/main ⇒ Κ5 αναφέρει «θα ζητηθεί έγκριση»', () => {
+      const world = cleanWorld({ published: { 'firestore:rules': 'differs' } });
+      const k5 = judgeFirestoreDeploy(world).filter((f) => f.rule === RULES.K5);
       expect(k5).toHaveLength(1);
       expect(k5[0].target).toBe('firestore:rules');
+      expect(k5[0].detail).toContain('origin/main');
+      expect(k5[0].detail).toContain('ΕΓΚΡΙΣΗ');
     });
 
-    it('🔑 ΣΤΟ COMMIT ΔΕΝ ΜΠΛΟΚΑΡΕΙ — η στιγμή της ανάπτυξης είναι απόφαση ανθρώπου (N.(-1))', () => {
-      const world = cleanWorld({ bytes: { 'firestore.rules': 'άλλο\n' } });
-      expect(blocking(judgeFirestoreDeploy(world), { atPush: false })).toEqual([]);
+    it('🔑 ΟΥΤΕ ΣΤΟ COMMIT ΟΥΤΕ ΣΤΟ PUSH ΜΠΛΟΚΑΡΕΙ — το push ΕΙΝΑΙ το αίτημα ανάπτυξης (handoff §5.1)', () => {
+      const world = cleanWorld({ published: { 'firestore:rules': 'differs', storage: 'differs' } });
+      const findings = judgeFirestoreDeploy(world);
+      expect(findings.filter((f) => f.rule === RULES.K5)).toHaveLength(2);
+      expect(findings.every((f) => f.severity === 'report')).toBe(true);
+      expect(blocking(findings)).toEqual([]);
     });
 
-    it('🚫 ΣΤΟ PUSH ΜΠΛΟΚΑΡΕΙ — εκεί ο κώδικας φεύγει στην παραγωγή χωρίς τον κανόνα του', () => {
-      const world = cleanWorld({ bytes: { 'firestore.rules': 'άλλο\n' } });
-      expect(blocking(judgeFirestoreDeploy(world), { atPush: true })).toHaveLength(1);
+    it('✅ θετικός μάρτυρας: ίδιο με το origin/main ⇒ καμία αναφορά — ακόμη κι αν το ΜΗΤΡΩΟ είναι παλιό', () => {
+      // Μετά από ανάπτυξη της γραμμής το τοπικό μητρώο ΔΕΝ ενημερώνεται (το αρχείο είναι το GitHub
+      // Deployment). Ένας Κ5 που ρωτούσε ακόμη το μητρώο θα έλεγε «εκκρεμεί» για ΠΑΝΤΑ.
+      const world = cleanWorld({ bytes: { 'firestore.rules': 'νεότερο\n' } });
+      expect(judgeFirestoreDeploy(world).filter((f) => f.rule === RULES.K5)).toEqual([]);
     });
 
-    it('στόχος χωρίς ΚΑΜΙΑ καταγεγραμμένη ανάπτυξη ⇒ εκκρεμής', () => {
-      const world = cleanWorld({ deployments: [], headLedger: [] });
-      expect(judgeFirestoreDeploy(world).filter((f) => f.rule === RULES.K5)).toHaveLength(3);
-    });
-
-    it('🔑 Η ΗΛΙΚΙΑ ΜΠΑΙΝΕΙ ΣΤΟ ΜΗΝΥΜΑ — σε commits, ποτέ σε μέρες (μάθημα CHECK 3.33)', () => {
-      const world = cleanWorld({ bytes: { 'firestore.rules': 'άλλο\n' } });
-      world.ageOf = () => 21;
-      const k5 = judgeFirestoreDeploy(world).find((f) => f.rule === RULES.K5);
-      expect(k5.detail).toContain('21 commit(s)');
+    it('ref που δεν υπάρχει (κλώνος χωρίς remote) ⇒ «unknown», ποτέ ψευδές εύρημα ή ψευδές «ίδιο»', () => {
+      const world = cleanWorld({ published: { 'firestore:rules': 'unknown' } });
+      expect(judgeFirestoreDeploy(world).filter((f) => f.rule === RULES.K5)).toEqual([]);
     });
   });
 

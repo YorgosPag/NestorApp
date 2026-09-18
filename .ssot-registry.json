@@ -739,7 +739,7 @@
       "description": "ADR-866 §5.2 · ADR-195 Part 7 — the ONE answer to 'who owns this stored document: a company or a person?'. The discriminated union {companyId, userId?: never} | {userId, companyId?: never}, its translation from WorkspaceRef (custodyScopeOf), the read boundary (custodyScopeFromData: exactly one owner or null), the write guard (isWritableCustodyScope) and the fail-closed wire parser (custodyKindFromParam) live here. Each partitioned system declares ONLY where its two partitions live, as a `CustodyPartition` (AUDIT_LEDGER_COLLECTION today, FILE_COLLECTION next). WHY: the audit ledger solved this wall on 2026-09-16; ADR-866 then asked for 'the same shape' for files — taken literally that is a second copy of the union, the boundary, the guard and the 'company'|'personal' vocabulary, free to diverge. Forbidden: re-declaring the `?: never` owner guard, or a second definition of the primitive's functions. Domain aliases (auditLedgerScopeOf = custodyScopeOf) are allowed — they are names, not implementations. NEVER give a private person a pseudo-company to get past company guards (ADR-787 Ε-3 §3).",
       "forbiddenPatterns": [
         "\\b(userId|companyId)\\??\\s*:\\s*never\\b",
-        "(function\\s+|const\\s+)(custodyScopeOf|custodyKindOf|custodyScopeFromData|isWritableCustodyScope|custodyKindFromParam)\\b"
+        "(function\\s+|const\\s+)(custodyScopeOf|custodyKindOf|custodyScopeFromData|isWritableCustodyScope|custodyKindFromParam|custodyOnly)\\b"
       ],
       "allowlist": [
         "src/lib/workspace/custody-scope.ts"

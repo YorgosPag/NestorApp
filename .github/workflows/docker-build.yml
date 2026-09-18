@@ -1,13 +1,37 @@
 name: T1 🚀 Build & Deploy Docker Image
 
+# =============================================================================
+# ADR-865 §11 — Η ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ: ο κώδικας ΔΕΝ κυκλοφορεί πριν τους κανόνες/δείκτες του.
+#
+#   build-and-push ─────────────────────────────────────┐
+#   firebase-plan (ρωτά τον ΠΑΡΟΧΟ, μόνο ανάγνωση) ──┐   ├─► release (:latest → Coolify)
+#        └─ apply ─► firebase-apply (⏸ ΕΓΚΡΙΣΗ) ─────┴───┘        └─► notify (Telegram)
+#
+# Πριν: η εικόνα έφευγε στο Netcup, οι κανόνες/δείκτες ΠΟΤΕ (το push δεν πάει στο Firebase) ⇒
+# δύο φορές σε μία εβδομάδα «Missing or insufficient permissions» με σωστό κώδικα (16/09, 18/09).
+# Τώρα: GitOps — το δέντρο λέει «τι θέλουμε», ο πάροχος ρωτιέται ΣΕ ΚΑΘΕ push, και η έγκριση
+# ζητείται ΜΟΝΟ όταν η παραγωγή διαφέρει (Argo CD: sync only if OutOfSync). Δείκτες εκτός
+# αρχείου δεν σβήνονται ποτέ από εδώ (Argo CD prune off by default · firebase-tools χωρίς --force).
+#
+# ⚠️ Τα ονόματα των jobs firebase-plan / firebase-apply / release και το environment
+#    firebase-production είναι SSoT στο scripts/lib/firestore-deploy/model.js (PIPELINE) — τα
+#    ρωτά η άγκυρα firestore-deploy-pipeline.test.js. Αφαίρεση της φύλαξης = κόκκινο test.
+# =============================================================================
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      firebase_dry_run:
+        description: 'ADR-865 §11 — δοκιμή του deployer: firebase deploy --dry-run (ΚΑΜΙΑ εγγραφή, ΚΑΜΙΑ κυκλοφορία)'
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: yorgospag/nestor-app
+  FIREBASE_PROJECT_ID: pagonis-87766
 
 jobs:
   build-and-push:
@@ -15,6 +39,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout
@@ -124,8 +150,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # ADR-865 §11 — ΜΟΝΟ η αμετάβλητη ετικέτα του commit. Το `:latest` = «ό,τι ΚΥΚΛΟΦΟΡΗΣΕ»
+          # και το δίνει ΜΟΝΟ το job `release`, αφού οι κανόνες/δείκτες είναι ζωντανοί. Έτσι και
+          # το carry-forward (ADR-860 §Ε1) διαβάζει την προηγούμενη ΚΥΚΛΟΦΟΡΗΜΕΝΗ έκδοση.
           tags: |
-            type=raw,value=latest
             type=sha,prefix=main-,format=short
 
       - name: Build and push Docker image
@@ -138,8 +166,106 @@ jobs:
           # No cache: standalone output must be fresh every build
           no-cache: true
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # ADR-865 §11 — ΠΛΑΝΟ: ρωτά την ΠΑΡΑΓΩΓΗ (όχι «ποια αρχεία άλλαξαν»). Τρέχει ΠΑΡΑΛΛΗΛΑ με το
+  # build, οπότε η έγκριση μπορεί να δοθεί όσο χτίζεται η εικόνα — κόστος χρόνου ~0.
+  # Ταυτότητα: «drift reader» (6 δικαιώματα, ΚΑΜΙΑ ανάγνωση δεδομένων πελατών).
+  # Έξοδος 1 (⇒ καμία κυκλοφορία) ΜΟΝΟ όταν ο πάροχος δεν απάντησε ή δείκτης χτίζεται ακόμη.
+  # ───────────────────────────────────────────────────────────────────────────
+  firebase-plan:
+    name: 🧭 Firebase — πλάνο (μόνο ανάγνωση)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      action: ${{ steps.plan.outputs.action }}
+      targets: ${{ steps.plan.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # προέλευση του ζωντανού από το ιστορικό (world.attributeFromHistory)
+
+      - uses: ./.github/actions/firebase-identity
+        with:
+          service-account: ${{ vars.GCP_SA_VERIFY }}
+          workload-identity-provider: ${{ vars.GCP_WIF_PROVIDER }}
+
+      - name: 🔎 Ζωντανό έναντι δέντρου → πλάνο
+        id: plan
+        run: node scripts/firestore-deploy/verify-live.js --plan --wait --timeout 1800
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # ADR-865 §11 — ΑΝΑΠΤΥΞΗ, ΜΕ ΕΓΚΡΙΣΗ. Το environment ΔΕΝ είναι διακόσμηση: η ταυτότητα εγγραφής
+  # είναι δεμένη (WIF) στο claim `environment=firebase-production` ⇒ ΔΕΝ εκδίδεται χωρίς την
+  # έγκριση του Giorgio. Αναπτύσσονται ΜΟΝΟ οι στόχοι που διαφέρουν, και μετά ρωτιέται ξανά ο
+  # πάροχος μέχρι οι δείκτες να είναι READY (record-deploy.js → verify --wait).
+  # Το αρχείο της πράξης = το GitHub Deployment του environment (ποιος ενέκρινε, πότε, ποιο commit).
+  # ───────────────────────────────────────────────────────────────────────────
+  firebase-apply:
+    name: 🚀 Firebase — ανάπτυξη (με έγκριση)
+    needs: firebase-plan
+    if: needs.firebase-plan.outputs.action == 'apply' || inputs.firebase_dry_run == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: firebase-production
+    concurrency:
+      group: firebase-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/firebase-identity
+        with:
+          service-account: ${{ vars.GCP_SA_DEPLOY }}
+          workload-identity-provider: ${{ vars.GCP_WIF_PROVIDER }}
+
+      - name: 🚀 firebase deploy → επαλήθευση μέχρι READY
+        env:
+          TARGETS: ${{ needs.firebase-plan.outputs.targets }}
+          DRY_RUN: ${{ inputs.firebase_dry_run == true && '--dry-run' || '' }}
+        run: >-
+          node scripts/firestore-deploy/record-deploy.js --pipeline
+          --project "$FIREBASE_PROJECT_ID" --only "$TARGETS" --wait --timeout 3000 $DRY_RUN
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # ΚΥΚΛΟΦΟΡΙΑ — μόνο όταν η εικόνα χτίστηκε ΚΑΙ η παραγωγή Firebase είναι έτοιμη γι' αυτήν.
+  # Απόρριψη έγκρισης / πάροχος σιωπηλός / δείκτης όχι READY ⇒ ο κώδικας ΔΕΝ κυκλοφορεί (fail-closed).
+  # ───────────────────────────────────────────────────────────────────────────
+  release:
+    name: 📦 Κυκλοφορία στο Netcup
+    needs: [build-and-push, firebase-plan, firebase-apply]
+    if: >-
+      always() && !cancelled() && inputs.firebase_dry_run != true
+      && needs.build-and-push.result == 'success'
+      && needs.firebase-plan.result == 'success'
+      && (needs.firebase-apply.result == 'success' || needs.firebase-apply.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Προώθηση χωρίς ξαναχτίσιμο: το `:latest` δείχνει πλέον στην εικόνα ΑΥΤΟΥ του commit.
+      - name: Promote image to :latest
+        env:
+          IMAGE: ${{ needs.build-and-push.outputs.image }}
+        run: docker buildx imagetools create --tag "${REGISTRY}/${IMAGE_NAME}:latest" "$IMAGE"
+
       - name: Trigger Coolify redeploy
-        if: success()
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
@@ -149,21 +275,30 @@ jobs:
             "http://159.195.44.221:8000/api/v1/applications/f661kuiq901llma0o8unhvpi/start")
           echo "Coolify response: ${RESPONSE}"
 
+  notify:
+    name: 📣 Ειδοποίηση
+    needs: [build-and-push, firebase-plan, firebase-apply, release]
+    if: always() && inputs.firebase_dry_run != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+
+      # Ο ΕΝΑΣ αποστολέας (scripts/lib/ci/telegram.js). Το μήνυμα του commit ΜΟΝΟ ως μεταβλητή
+      # περιβάλλοντος — ποτέ `${{ }}` μέσα στο script (script injection, GitHub hardening guide).
       - name: Telegram notification
-        if: always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          STATUS="${{ job.status }}"
-          if [ "$STATUS" = "success" ]; then
-            ICON="✅"
-            LABEL="Deploy completato"
-          else
-            ICON="❌"
-            LABEL="Deploy FALLITO"
-          fi
-          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
-          TEXT="${ICON} *NestorApp — ${LABEL}*%0A%0A📝 ${COMMIT_MSG}%0A🔗 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}&text=${TEXT}&parse_mode=Markdown"
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          STATUS: ${{ needs.release.result == 'success' && 'success' || 'failure' }}
+          TITLE: ${{ needs.release.result == 'success' && 'NestorApp — Deploy completato' || 'NestorApp — Deploy FALLITO' }}
+          STAGES: >-
+            build ${{ needs.build-and-push.result }} · firebase-plan ${{ needs.firebase-plan.result }}
+            (${{ needs.firebase-plan.outputs.action || '—' }}) · firebase-apply ${{ needs.firebase-apply.result }}
+            · release ${{ needs.release.result }}
+        run: node scripts/ci/telegram-notify.js --status "$STATUS" --title "$TITLE" --line "$STAGES"

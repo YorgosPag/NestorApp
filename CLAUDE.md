@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:3e7595a4d37b252efd84a2b3c8c1775ba057a20521258bb3f715f9f8e8b2938e -->
+     fingerprint: sha256:723d9cf026e5d95b37de0454f2f8cb7490f7f899ac2950b508f0fe7f4337a8d4 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -380,7 +380,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.83** | **Πύλη αρχής του αποστολέα** (ADR-857) — «ποιος αποφασίζει τη γραμμή `From:` — και το είπε η ρίζα; — το **residue** που ο τύπος δομικά ΔΕΝ μπορεί να πιάσει» · `npm run test:sender-authority` · `SKIP_SENDER_AUTHORITY=1` · 📘 `docs/gates/3.83.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 | **3.84** | **Πύλη της απόδοσης αδειών** (ADR-863) — «οι άδειες NOTICE απαιτούν το κείμενό τους να συνοδεύει τα **αντίγραφα** — και ό,τι κατεβαίνει στον browser **είναι** αντίγραφο· το συνοδεύει;» · `npm run test:third-party-notices` · `SKIP_THIRD_PARTY_NOTICES=1` · 📘 `docs/gates/3.84.md` | ⛔ ZERO-TOL (μπαγιάτικο · άχρηστο κείμενο · διαψευσμένος ισχυρ… | `.third-party-notices-baseline.json` |
 | **3.85** | **Πύλη των εκδόσεων νομικών κειμένων** (ADR-861) — «είναι κάθε νομικό κείμενο που δείχνουμε **ΜΙΑ αμετάβλητη, αποδείξιμη έκδοση** — και ξέρει κάθε έκδοση **ποιος ήταν ο φορέας τότε**;» · `npm run test:legal-documents` · `SKIP_LEGAL_DOCUMENTS=1` · 📘 `docs/gates/3.85.md` | ⛔ ZERO TOL (Κ1–Κ7) | — |
-| **3.86** | **Πύλη της απόδειξης ανάπτυξης** (ADR-865) — «ό,τι χρειάζεται ο πελάτης για να διαβάσει είναι **ΑΝΕΠΤΥΓΜΕΝΟ** — ή μόνο **γραμμένο**; (commit ≠ deploy: το push πάει στο Netcup, **ποτέ** στο Fireba…» · `npm run test:firestore-deploy-proof` · `SKIP_FIRESTORE_DEPLOY_PROOF=1` · 📘 `docs/gates/3.86.md` | ⛔ ZERO-TOL (Κ1-Κ4) + 🚫 PUSH-BLOCK (Κ5) | — |
+| **3.86** | **Πύλη της απόδειξης ανάπτυξης** (ADR-865) — «ό,τι χρειάζεται ο πελάτης για να διαβάσει είναι **ΑΝΕΠΤΥΓΜΕΝΟ** — ή μόνο **γραμμένο**; (commit ≠ deploy: το push πάει στο Netcup, **ποτέ** στο Fireba…» · `npm run test:firestore-deploy-proof` · `SKIP_FIRESTORE_DEPLOY_PROOF=1` · 📘 `docs/gates/3.86.md` | ⛔ ZERO-TOL (Κ1-Κ4) + ⏳ αναφορά (Κ5) · η σειρά κανόνας→κώδικας… | — |
 | **3.87** | **Πύλη της αρχής της κατάστασης CDE** (ADR-862) — «γράφει κάποιος την κατάσταση CDE ενός αρχείου **ΕΞΩ από τον ΕΝΑ γραφέα** — ή διαβάζει client λίστα `files` **χωρίς φράχτη**; (οι κανόνες κλείνουν τον…» · `npm run test:cde-authority` · `SKIP_CDE_AUTHORITY=1` · 📘 `docs/gates/3.87.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 | **3.88** | **Πύλη της αρχής της ομάδας έργου** (ADR-862) — «γράφει κάποιος μέλος έργου **ΕΞΩ από τον ΕΝΑ γραφέα** — ή γεννά έργο **ΧΩΡΙΣ την αρχική του ομάδα**; (οι κανόνες κλείνουν τον πελάτη, **όχι** το Admi…» · `npm run test:project-member-authority` · `SKIP_PROJECT_MEMBER_AUTHORITY=1` · 📘 `docs/gates/3.88.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 | **3.89** | **Πύλη της αρχής του νήματος** (ADR-867) — «γράφει κάποιος **ακροατήριο** ή **μήνυμα** έξω από τον **ΕΝΑ** γραφέα — ή αλλάζει ομάδα **ΧΩΡΙΣ** να ξαναγράψει το ακροατήριο; (οι κανόνες κλείνουν τ…» · `npm run test:network-thread-authority` · `SKIP_NETWORK_THREAD_AUTHORITY=1` · 📘 `docs/gates/3.89.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5+Κ6) | — |

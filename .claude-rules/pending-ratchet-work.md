@@ -2,6 +2,41 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **18/09 — ΤΟ ΚΕΛΥΦΟΣ ΚΑΡΤΕΛΩΝ ΑΡΧΕΙΩΝ ADR-588 ΕΦΑΡΜΟΖΕΤΑΙ ΣΤΑ ΜΙΣΑ** (εύρημα ADR-866 §2.7.7, N.0.2)
+
+  Το `space-management/shared/tabs/EntityMediaFilesTab` + `media-tab-configs` ενοποίησε Parking/Storage, αλλά **7** αρχεία
+  καλούν ακόμη το `EntityFilesManager` με το χέρι για τις ίδιες καρτέλες: `features/properties-sidebar/components/{PhotosTab,
+  VideosTab,FloorPlanTab}` · `building-management/tabs/{building-files-tab,BuildingFloorplanTab}` · `projects/{project-files-tab,
+  tabs/ProjectFloorplanTab}`. **Θεραπεία**: `EntityMediaBinding` για property/building/project + τα `*_MEDIA_CONFIG`. Προϋπόθεση:
+  το κέλυφος μαθαίνει `custody` (ADR-866 Φ1.2). >1h, 3 domains ⇒ ξεχωριστή εργασία.
+
+- 🟡 **18/09 — ΤΟ ΜΟΝΟΠΑΤΙ ΜΕΛΟΥΣ ΧΩΡΟΥ ΧΤΙΖΟΤΑΝ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 7 ΣΗΜΕΙΑ** (εύρημα ADR-867 Β5, N.0.2)
+
+  SSoT **γεννήθηκε**: `lib/workspace/workspace-member-ref.ts` (`workspaceMemberRef(db, companyId, uid)`).
+  Μεταφέρθηκαν **2/7** (`lib/workspace/grant-membership.ts` · `lib/api/role-management-helpers.ts`) + ο νέος
+  καταναλωτής `act-team-writer.ts`. **Μένουν 5**: `app/api/admin/role-management/bootstrap/route.ts:99` ·
+  `…/users/route.ts:109` (συλλογή — θέλει και `workspaceMembersCollection`) · `lib/auth/workspace-membership.ts:194`
+  (κριτής ADR-787 — άγγιξέ τον **μόνο** με τις σουίτες του) · `lib/auth/workspace-membership.ts:307`
+  (collection group — θέλει `workspaceMembersGroup`) · `lib/workspace/workspace-provisioning.ts:342` ·
+  `services/mandate/holiday-hours-question-notifier.ts:51`. **Θεραπεία**: import από το SSoT, και πύλη που
+  απαγορεύει `SUBCOLLECTIONS.WORKSPACE_MEMBERS` έξω από αυτό (σχήμα Κ1 της CHECK 3.89). <1h, αλλά αγγίζει
+  τον κριτή μέλους ⇒ ξεχωριστό commit.
+
+- 🟡 **18/09 — Η ΛΙΣΤΑ ΤΗΣ CHECK 3.17 ΕΙΝΑΙ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ ΤΟΥ `AUDIT_ENTITIES`** (εύρημα ADR-867 Β5)
+
+  `scripts/check-entity-audit-coverage.js` `TRACKED_COLLECTION_KEYS` απαριθμεί **με το χέρι** τις συλλογές με
+  ίχνος, ενώ η αυθεντία είναι το `src/config/audit-entity-registry.ts` (`writer: 'server-direct' | 'client-post'`).
+  Νέα οντότητα ⇒ **δύο** γραμμές σε **δύο** αρχεία, και αν ξεχαστεί η δεύτερη η πύλη είναι πράσινη χωρίς να
+  κοιτάξει (σχήμα «0 = κανείς δεν κοίταξε»). **Θεραπεία**: η πύλη να **παράγει** τη λίστα από το μητρώο (ή
+  άγκυρα ισοτιμίας). **Μετρημένη απόκλιση**: `MATERIALS` · `QUOTES` · `FRAMEWORK_AGREEMENTS` ·
+  `TEXT_CUSTOM_DICTIONARY` είναι `server-direct` στο μητρώο και **απουσιάζουν** από τη λίστα της πύλης —
+  δηλαδή γραφέας τους χωρίς `recordChange` περνά **πράσινος** σήμερα.
+  🔴 **ΞΑΝΑΜΕΤΡΗΘΗΚΕ 18/09 (ADR-866 Φ1.1 §2.8 Κ3): η απόκλιση είναι 23 κλειδιά, όχι 4** — στα 4 `server-direct`
+  προστίθενται **19 `client-post`**: `FLOORPLAN_STAIRS/ROOFS/FOUNDATIONS/RAILINGS` · `FLOORPLAN_MEP_*` (12) ·
+  `FLOORPLAN_SYMBOLS/FURNITURE/IMPORTED_MESHES/GENERIC_SOLIDS` · `BIM_FAMILY_TYPES`. Αντίστροφη απόκλιση: 0.
+  ⇒ Η παραγωγή της λίστας από το μητρώο θα ανοίξει 23 συλλογές στην πύλη ⇒ πιθανές νέες παραβιάσεις ⇒ αλλαγή
+  **baseline** (Giorgio). Ο φάκελος (`PROPERTY_DOSSIERS`) μπήκε και στις δύο λίστες.
+
 - ✅ **17/09 — ΕΣΩΤΕΡΙΚΕΣ ΚΑΡΤΕΣ ΑΚΙΝΗΤΩΝ: ΕΚΛΕΙΣΕ** (ADR-777 **§8.60.13**) — αφαίρεσε αυτή τη γραμμή μετά το commit.
 
   Οι κάρτες καλούν πλέον το **υπάρχον** `resolvedPriceLabel` (`common:priceAmount.*`)· `Record<PriceRole, …>` για
@@ -132,6 +167,22 @@
   ⚠️ **ΜΕΤΑ** τη μετανάστευση και **ΠΟΤΕ ΠΡΙΝ**: module `file-audit` στο `.ssot-registry.json` κατά
   το πρότυπο του `entity-audit-trail` (γρ. 718). Σήμερα θα σήμαινε **αμέσως** τους 5 ⇒ CHECK 3.7/3.18
   κόκκινο πάνω σε χρέος που η Φ0 **δεν δημιούργησε**. 5 αρχεία σε 2 τομείς ⇒ δική του φέτα.
+
+  📒 **18/09 — ADR-866 §2.6.11 (βήμα 2β.4) — ΞΑΝΑΜΕΤΡΗΘΗΚΕ**:
+  - ✅ **Ένα από τα πέντε ΕΚΛΕΙΣΕ**: το `file-purge-helpers.ts` (`recordPurgeAudit`) περνά πλέον από τον
+    `recordFileAudit` (με κάτοχο — εταιρεία **ή** άνθρωπος). Μένουν **4**: archive · classify · gdpr-delete · purge route.
+  - 🔴 **Σε δεδομένα παραγωγής**: 5 από τις 20 γραμμές του `file_audit_log` (`ai_classify`, `classify-background`)
+    **χωρίς** `companyId` ⇒ **25% αόρατο** (Firestore MCP, 2026-09-18).
+  - 🔴 **ΕΚΤΟ δίδυμο, που δεν μετρήθηκε στα πέντε**: το `gdpr-delete` γράφει `action: 'gdpr_erasure'` (**εκτός**
+    `FileAuditAction`) · **χωρίς** `companyId` · `timestamp: new Date()` · πεδίο `details`. ⚠️ Απόφαση πριν τη
+    μετανάστευση: **σε ποιο βιβλίο** ανήκει η απόδειξη διαγραφής υποκειμένου που **ίσως δεν έχει** εταιρεία.
+  - 🔴 **Ο εταιρικός κανόνας `file_audit_log` δεν δένει τον δράστη** (`performedBy == request.auth.uid` λείπει) ⇒
+    μέλος μπορεί να γράψει γραμμή που λέει ότι **άλλος** έκανε κάτι. ⚠️ **Μετρημένο εμπόδιο**:
+    `BuildingFloorplanService.ts:413` στέλνει στον κάδο ως `'system'` **από τον πελάτη** ⇒ δέσιμο σήμερα = εκείνες
+    οι γραμμές **χάνονται σιωπηλά** (fire-and-forget). Πρώτα: αυτοματισμοί του πελάτη → διακομιστή.
+  - 🟡 **Εταιρικό ζευγάρωμα** (ό,τι έγινε για το προσωπικό, `personalActivityPaired`): ο κανόνας `files` επιτρέπει
+    στον **δημιουργό** κάδο «χωρίς claims», ο `file_audit_log` ζητά `companyId == getUserCompanyId()` ⇒ πρώτα
+    ευθυγράμμιση των δύο, **μετά** δέσμη. Ως τότε η εταιρική γραμμή μένει μη-μπλοκάρουσα προβολή (`commitFileActivity`).
 
 - 🟡 **15/09 — «POST ΑΠΟ ΚΟΥΜΠΙ ΜΕ ΡΗΤΕΣ ΦΑΣΕΙΣ» ΓΡΑΜΜΕΝΟ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 5 ΣΗΜΕΙΑ (εύρημα ADR-841 Α21.21 Φάση Β)**
 

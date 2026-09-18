@@ -1100,11 +1100,15 @@ type FileOwner = { companyId: string; userId?: never } | { userId: string; compa
 // ...και δεύτερος ορισμός των συναρτήσεων του πρωτογενούς:
 export function custodyScopeOf(workspace) { return { companyId: workspace.companyId }; }
 const custodyScopeFromData = (data) => null;
-export function custodyKindOf(workspace) { return 'company'; }`,
+export function custodyKindOf(workspace) { return 'company'; }
+// ...και τρίτο δίδυμο του «μόνο το πεδίο του κατόχου» (ADR-866 §2.6.11 — ζούσε ήδη δύο φορές):
+function custodyOnly(custody) { return custody.userId !== undefined ? { userId: custody.userId } : { companyId: custody.companyId }; }`,
     shouldSkip: `// Κανονική χρήση — ΕΝΑΣ ορισμός, και τα συστήματα δηλώνουν μόνο το διαμέρισμά τους:
 import { custodyScopeOf, type CustodyScope, type CustodyPartition } from '@/lib/workspace/custody-scope';
 export type FileCustody = CustodyScope;
 export const auditLedgerScopeOf = custodyScopeOf;
+export const auditLedgerFieldsOf = custodyOnly;
+const row = { fileId, ...custodyOnly(owner) };
 const scope = custodyScopeOf(personalWorkspace(uid));
 export const AUDIT_LEDGER_COLLECTION = { company: 'ENTITY_AUDIT_TRAIL', personal: 'ENTITY_AUDIT_TRAIL_PERSONAL' } as const satisfies CustodyPartition;
 // ΑΛΛΟ ερώτημα — κανονικά πεδία κατόχου, όχι φρουρός ένωσης:

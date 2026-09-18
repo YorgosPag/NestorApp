@@ -54,14 +54,25 @@ function stripComment(line) {
   return line;
 }
 
-function build() {
-  const source = fs.readFileSync(SOURCE_PATH, 'utf8');
+/**
+ * The wire transform — PURE, so the live verifier (ADR-865 §10) can ask "is what runs in
+ * production the compile of THIS tree's source?" without touching the untracked artifact.
+ * One transform, two callers (`build()` + `scripts/lib/firestore-deploy/model.js`).
+ * @param {string} source the authored `firestore.rules` text
+ * @returns {string} the exact bytes `firebase deploy` uploads
+ */
+function compileRules(source) {
   const compiled = source
     .split('\n')
     .map((line) => stripComment(line).trim())
     .filter((line) => line.length > 0)
     .join('\n');
-  const out = compiled.endsWith('\n') ? compiled : compiled + '\n';
+  return compiled.endsWith('\n') ? compiled : compiled + '\n';
+}
+
+function build() {
+  const source = fs.readFileSync(SOURCE_PATH, 'utf8');
+  const out = compileRules(source);
 
   const sourceBytes = Buffer.byteLength(source, 'utf8');
   const compiledBytes = Buffer.byteLength(out, 'utf8');
@@ -83,4 +94,6 @@ function build() {
   );
 }
 
-build();
+if (require.main === module) build();
+
+module.exports = { compileRules, stripComment, FIREBASE_RULESET_LIMIT_BYTES };

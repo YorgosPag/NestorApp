@@ -1,0 +1,59 @@
+name: T1 🔭 Firebase Drift (ADR-865)
+
+# =============================================================================
+# ADR-865 §11 — «Η παραγωγή Firebase = το δέντρο;» — ρωτημένο ΚΑΘΕ ΜΕΡΑ, από μόνο του.
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΚΑΙ ΜΕ ΤΗ ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ
+# ------------------------------------------
+# Η γραμμή (docker-build.yml → firebase-plan) ρωτά την παραγωγή σε ΚΑΘΕ push. Εδώ ρωτάμε όταν
+# ΚΑΝΕΝΑΣ δεν κάνει push: αλλαγή από την Console, rollback, δείκτης που έπεσε σε NEEDS_REPAIR,
+# εγκρίσεις που απορρίφθηκαν. Terraform Cloud «drift detection» / Argo CD reconciliation —
+# ο επιβλέπων μηχανικός που περνά κάθε μέρα από το εργοτάξιο και συγκρίνει με τα σχέδια.
+#
+# ΜΟΝΟ ΑΝΑΓΝΩΣΗ. Η ταυτότητα είναι ο «drift reader» (custom role, 6 δικαιώματα — ΟΧΙ
+# datastore.viewer, που θα διάβαζε ΚΑΘΕ έγγραφο πελάτη). Κανένα deploy, καμία εγγραφή.
+#
+# ΕΙΔΟΠΟΙΗΣΗ: Tier 1 ⇒ ο CI Health συγκεντρωτής (workflow_run) σχολιάζει στο issue ΚΑΙ στέλνει
+# Telegram — μόνο σε ΜΕΤΑΒΑΣΗ (πράσινο→κόκκινο→πράσινο). Σταθερό κόκκινο = σιωπή (ADR-757).
+#
+# ΚΩΔΙΚΟΙ ΕΞΟΔΟΥ (verify-live.js): 0 ✓ · 1 ο πάροχος δεν απάντησε · 2 απόκλιση ·
+# 3 δείκτης χτίζεται μετά την αναμονή · 4 NEEDS_REPAIR — όλοι εκτός του 0 κοκκινίζουν.
+# =============================================================================
+
+on:
+  schedule:
+    # 04:30 UTC = 07:30 Αθήνα — πριν το ημερήσιο πέρασμα του CI Health (05:00 UTC).
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # GitHub OIDC → Google (ταυτότητα χωρίς κλειδί)
+
+concurrency:
+  group: firebase-drift
+  cancel-in-progress: false
+
+env:
+  FIREBASE_PROJECT_ID: pagonis-87766
+
+jobs:
+  drift:
+    name: 🔭 Ζωντανό έναντι δέντρου
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # Πλήρες ιστορικό: η προέλευση του ζωντανού βρίσκεται με ταύτιση περιεχομένου στο git
+      # (world.attributeFromHistory) — με ρηχό checkout θα έμενε «foreign».
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/firebase-identity
+        with:
+          service-account: ${{ vars.GCP_SA_VERIFY }}
+          workload-identity-provider: ${{ vars.GCP_WIF_PROVIDER }}
+
+      # --wait: δείκτης σε CREATING δεν είναι «κόκκινο» αν γίνει READY μέσα στο χρονικό όριο.
+      - name: 🔎 Επαλήθευση ζωντανού (μόνο ανάγνωση)
+        run: node scripts/firestore-deploy/verify-live.js --wait --timeout 1800

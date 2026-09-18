@@ -154,4 +154,22 @@ function renderBody(state, registry) {
   ].join('\n');
 }
 
-module.exports = { parseState, projectGateStatus, diffState, renderBody, STATE_VERSION, STATE_OPEN };
+/**
+ * ADR-757 πολιτική `alert` · ADR-865 §11 — τι λέει το «ξύπνα» (Telegram) για τις μεταβάσεις
+ * **Tier 1**. Καθαρή· `null` ⇒ καμία ειδοποίηση (καμία μετάβαση Tier 1 — σταθερό κόκκινο = σιωπή).
+ * @returns {{status:'failure'|'success', lines:string[]}|null}
+ */
+function tier1Alert(broke, fixed) {
+  const brokeT1 = broke.filter((g) => g.tier === 1);
+  const fixedT1 = fixed.filter((g) => g.tier === 1);
+  if (brokeT1.length === 0 && fixedT1.length === 0) return null;
+  return {
+    status: brokeT1.length > 0 ? 'failure' : 'success',
+    lines: [
+      ...brokeT1.map((g) => `❌ έσπασε · ${g.name} — ${g.sinceSha || g.sha}`),
+      ...fixedT1.map((g) => `✅ αποκαταστάθηκε · ${g.name} — ${g.sha}`),
+    ],
+  };
+}
+
+module.exports = { parseState, projectGateStatus, diffState, renderBody, tier1Alert, STATE_VERSION, STATE_OPEN };

@@ -279,12 +279,60 @@ function readWorkflowRunSteps(filePath) {
   return steps;
 }
 
+/**
+ * Η τιμή ενός κλειδιού στο **άμεσο** επίπεδο ενός job: inline (`key: x`), λίστα flow (`[a, b]`),
+ * λίστα μπλοκ (`- a`), folded (`>-`) ή χάρτης μπλοκ (`environment:\n  name: x` ⇒ το `name`).
+ * @returns {string|string[]|null}
+ */
+function jobValue(body, key) {
+  const direct = body.length > 0 ? body[0].indent : 0;
+  const index = body.findIndex((l) => l.indent === direct && l.body.startsWith(`${key}:`));
+  if (index === -1) return null;
+  const inline = body[index].body.slice(key.length + 1).trim();
+  const children = childLines(body, index).map((l) => l.body);
+  if (inline.startsWith('[')) return inline.replace(/^\[|\]$/g, '').split(',').map((s) => scalar(s.trim())).filter(Boolean);
+  if (inline !== '' && !/^[|>][-+]?$/.test(inline)) return scalar(inline);
+  if (children.length > 0 && children[0].startsWith('- ')) return children.map((b) => scalar(b.slice(2).trim()));
+  const named = children.find((b) => b.startsWith('name:'));
+  if (named && inline === '') return scalar(named.slice('name:'.length).trim());
+  return children.join(inline.startsWith('>') ? ' ' : '\n');
+}
+
+/**
+ * ADR-865 §11 — **η ΔΟΜΗ** ενός workflow: ποιο job περιμένει ποιο (`needs`), ποιο ζει πίσω από
+ * **environment** (ανθρώπινη έγκριση), και με ποια συνθήκη (`if`). Χωρίς αυτό, καμία άγκυρα δεν
+ * μπορεί να ρωτήσει «κυκλοφορεί ο κώδικας ΜΟΝΟ αφού αναπτυχθούν οι κανόνες του;» — και μια
+ * αφαίρεση του `needs` θα άνοιγε ξανά την τρύπα **σιωπηλά**.
+ * @param {string} filePath
+ * @returns {Record<string, {needs:string[], environment:string|null, if:string|null}>}
+ */
+function readWorkflowJobs(filePath) {
+  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+  const jobsIndex = findKey(lines, 'jobs', 0);
+  if (jobsIndex === -1) return {};
+  const jobLines = childLines(lines, jobsIndex);
+  const jobIndent = jobLines.length > 0 ? jobLines[0].indent : 0;
+  const jobs = {};
+  for (let i = 0; i < jobLines.length; i += 1) {
+    if (jobLines[i].indent !== jobIndent) continue;
+    const body = childLines(jobLines, i);
+    const needs = jobValue(body, 'needs');
+    jobs[jobLines[i].body.replace(/:.*$/, '').trim()] = {
+      needs: needs === null ? [] : [].concat(needs),
+      environment: jobValue(body, 'environment'),
+      if: jobValue(body, 'if'),
+    };
+  }
+  return jobs;
+}
+
 module.exports = {
   listWorkflowFiles,
   readWorkflowName,
   readWorkflowRunWatchList,
   readWorkflowRunSteps,
   readWorkflowTriggers,
+  readWorkflowJobs,
   // εκτεθειμένα για τα tests — η αυστηρότητα του αναγνώστη ΕΙΝΑΙ ο μηχανισμός
   significantLines,
   scalar,

@@ -48,6 +48,7 @@ on:
       # ΜΟΝΟ Tier 1. Επιβάλλεται από το CHECK 3.37 και προς τις δύο κατευθύνσεις:
       # Tier 1 που λείπει = αόρατη αποτυχία παραγωγής· μη-Tier-1 που περισσεύει = σπατάλη.
       - "T1 🚀 Build & Deploy Docker Image"
+      - "T1 🔭 Firebase Drift (ADR-865)"
     types: [completed]
   schedule:
     # 05:00 UTC = 08:00 Αθήνα — ο πίνακας είναι φρέσκος πριν ξεκινήσει η μέρα.
@@ -77,7 +78,10 @@ jobs:
           node-version: '20'
 
       # Καμία εγκατάσταση εξαρτήσεων: ο συγκεντρωτής χρησιμοποιεί μόνο built-ins (fetch).
+      # Tier 1 μετάβαση ⇒ σχόλιο (γραπτό αρχείο) **και** Telegram (ξύπνα) — ADR-865 §11.
       - name: 🚑 Ενημέρωση πίνακα κατάστασης
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node scripts/ci/ci-health-report.js

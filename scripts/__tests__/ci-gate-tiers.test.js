@@ -84,11 +84,14 @@ describe('Μ0 — ζωντανό δέντρο', () => {
     expect(meta.listWorkflowFiles(dir).filter((f) => !known.has(f))).toEqual([]);
   });
 
-  test('υπάρχει ακριβώς ένα Tier 1 και είναι το build της παραγωγής', () => {
+  // Κλειστό σύνολο, όχι «ακριβώς ένα»: το ADR-757 απαιτεί ≥1 Tier 1 (`no-tier1`)· το ΠΟΙΑ είναι
+  // Tier 1 είναι απόφαση — νέο μέλος εδώ = ρητή αλλαγή αυτού του test, ποτέ σιωπηλή αναβάθμιση.
+  // ADR-865 §11: + ο καθημερινός έλεγχος της παραγωγής Firebase (οι χρήστες βλέπουν
+  // «Missing or insufficient permissions» — παραγωγή, όχι ορθότητα κώδικα).
+  test('Tier 1 = ακριβώς τα δύο της παραγωγής: το build/deploy και ο έλεγχος Firebase', () => {
     const { registry } = auditGateTiers({ repoRoot: REPO_ROOT });
-    const tier1 = registry.gates.filter((g) => g.tier === 1);
-    expect(tier1).toHaveLength(1);
-    expect(tier1[0].file).toBe('docker-build.yml');
+    const tier1 = registry.gates.filter((g) => g.tier === 1).map((g) => g.file).sort();
+    expect(tier1).toEqual(['docker-build.yml', 'firebase-drift.yml']);
   });
 
   test('το fixture βασικό δέντρο είναι καθαρό (αλλιώς οι μεταλλάξεις δεν αποδεικνύουν τίποτα)', () => {

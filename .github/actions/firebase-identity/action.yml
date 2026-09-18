@@ -1,0 +1,54 @@
+name: Firebase identity (keyless)
+description: >
+  ADR-865 §11 — Single source of truth for a job that talks to production Firebase:
+  pnpm + Node + dependencies, then a KEYLESS Google identity via Workload Identity
+  Federation (GitHub OIDC → Google STS → short-lived token of ONE service account).
+  No JSON key exists anywhere to be stolen. Used by the daily drift check and by the
+  plan/apply jobs of the production pipeline (docker-build.yml) — never copy these steps.
+
+# WHY a composite and not three copies: the three jobs must authenticate IDENTICALLY
+# (same library, same provider, same pnpm) — a drifted copy would verify with one
+# identity and deploy with another. Checkout MUST precede this action: the auth action
+# writes its credentials file into the workspace, and a later checkout would erase it.
+#
+# ⚠️ The job using this action needs `permissions: id-token: write` (GitHub OIDC).
+# ⚠️ Which service account a job gets is decided by Google, not by this file:
+#    the deployer account is bound to `attribute.environment/firebase-production`,
+#    so a job outside that environment CANNOT obtain its token even if it asks.
+
+inputs:
+  service-account:
+    description: Email of the service account to impersonate (repository variable).
+    required: true
+  workload-identity-provider:
+    description: Full resource name of the WIF provider (repository variable).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 📦 Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.14.0
+        run_install: false
+
+    - name: 📦 Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+
+    # `--ignore-scripts`: the app's postinstall patches are irrelevant to the deploy scripts.
+    - name: 📥 Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --ignore-scripts
+
+    # google-github-actions/auth — Apache-2.0. Exports GOOGLE_APPLICATION_CREDENTIALS
+    # (external_account), read by google-auth-library in BOTH scripts/lib/firestore-deploy/live.js
+    # and firebase-tools (lib/requireAuth.js) — one identity for verifier and deployer.
+    - name: 🔑 Keyless Google identity
+      uses: google-github-actions/auth@v3
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account }}

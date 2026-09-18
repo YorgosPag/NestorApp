@@ -12,10 +12,21 @@
  * | **Κ2** | υπάρχει το αρχείο-πηγή κάθε δηλωμένου στόχου; | ⛔ block |
  * | **Κ3** | έμεινε **αμετάβλητη** κάθε γραμμή μητρώου που υπήρχε στο `HEAD`; | ⛔ block |
  * | **Κ4** | είναι κάθε γραμμή **σχηματικά έγκυρη** (στόχος · αποτύπωμα · ημερομηνία · πηγή); | ⛔ block |
- * | **Κ5** | ταιριάζει το **τρέχον** αποτύπωμα με το **τελευταίο αναπτυγμένο**; | 🔴 push · ⏳ commit |
+ * | **Κ5** | διαφέρει η πηγή από ό,τι θα κρίνει η γραμμή παραγωγής (`origin/main`); | ⏳ αναφορά |
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔑 ΓΙΑΤΙ Ο Κ5 ΕΧΕΙ ΔΥΟ ΣΟΒΑΡΟΤΗΤΕΣ — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΕΚΠΤΩΣΗ
+ * 🔁 ADR-865 §11 (2026-09-18) — Ο Κ5 ΜΕΤΑΚΟΜΙΣΕ ΣΤΗ ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ
+ * ────────────────────────────────────────────────────────────────────────────
+ * Ο Κ5 ρωτούσε «ταιριάζει το τρέχον με το **τελευταίο αναπτυγμένο** του μητρώου;» και μπλόκαρε
+ * το push. Όταν αναπτύσσει η γραμμή (`docker-build.yml` → `firebase-plan` → έγκριση →
+ * `firebase-apply` → `release`), το push **είναι** το αίτημα ανάπτυξης: ένας φύλακας που το
+ * μπλόκαρε θα απαγόρευε ακριβώς αυτό που το ενεργοποιεί (αυγό-κότα, μετρημένο στο handoff §5.1).
+ * Η ερώτηση «ο κώδικας φεύγει χωρίς τον κανόνα του;» απαντιέται πλέον **εκεί**, και καλύτερα:
+ * ρωτιέται ο **πάροχος**, όχι το μητρώο, και ο κώδικας **περιμένει** δείκτες READY. Εδώ μένει η
+ * **ενημέρωση**: «αυτό το push θα ζητήσει έγκριση». Το ιστορικό σκεπτικό ακολουθεί.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 (ιστορικό, 2026-09-16) ΓΙΑΤΙ Ο Κ5 ΕΙΧΕ ΔΥΟ ΣΟΒΑΡΟΤΗΤΕΣ
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Στο **commit** ο άνθρωπος **δουλεύει**: μπορεί να γράψει κανόνα σήμερα και να τον αναπτύξει
@@ -92,18 +103,10 @@ function judgeTarget(entry, world, out) {
     return;
   }
 
-  const last = M.lastDeployment(world.ledger, target);
-  if (last === null) {
-    out.push(finding(RULES.K5, target, 'pushBlock',
-      `καμία καταγεγραμμένη ανάπτυξη — το «${source}» δεν έφυγε ΠΟΤΕ προς το Firebase`));
-    return;
-  }
-  if (last.digest !== digest) {
-    const age = world.ageOf(source);
-    const since = age === null ? '' : ` · ${age} commit(s) από την τελευταία του αλλαγή`;
-    out.push(finding(RULES.K5, target, 'pushBlock',
-      `το «${source}» άλλαξε μετά την ανάπτυξη της ${last.at}${since} — τα bytes που τρέχουν στο `
-      + `Firebase ΔΕΝ είναι αυτά του δέντρου`));
+  if (entry.published === 'differs') {
+    out.push(finding(RULES.K5, target, 'report',
+      `το «${source}» διαφέρει από το ${world.publishedRef} — στο push η γραμμή παραγωγής ρωτά την `
+      + 'παραγωγή και, αν διαφέρει, ζητά την ΕΓΚΡΙΣΗ σου πριν κυκλοφορήσει ο κώδικας (ADR-865 §11)'));
   }
 }
 
@@ -151,7 +154,7 @@ function judgeRow(row, index, world, out) {
 /**
  * @param {object} world βλ. `world.js` — `firebaseJson`, `ledger`, `headLedger`, `targets`,
  *   `sourceByTarget`, `ageOf`.
- * @returns {Array<{rule:string, target:string, severity:'block'|'pushBlock', detail:string}>}
+ * @returns {Array<{rule:string, target:string, severity:'block'|'report', detail:string}>}
  */
 function judgeFirestoreDeploy(world) {
   const out = [];
@@ -162,9 +165,13 @@ function judgeFirestoreDeploy(world) {
   return out;
 }
 
-/** Τα ευρήματα που μπλοκάρουν **τώρα** — στο push μπλοκάρει και ο Κ5. */
-function blocking(findings, { atPush }) {
-  return findings.filter((f) => f.severity === 'block' || (atPush && f.severity === 'pushBlock'));
+/**
+ * Τα ευρήματα που μπλοκάρουν — **ίδια** σε commit και push. Από ADR-865 §11 ο Κ5 είναι μόνο
+ * αναφορά: η φύλαξη της σειράς «κανόνας πριν τον κώδικα» ζει στη γραμμή παραγωγής, όπου **δεν**
+ * παρακάμπτεται με μεταβλητή περιβάλλοντος και ισχύει από **κάθε** μηχάνημα.
+ */
+function blocking(findings) {
+  return findings.filter((f) => f.severity === 'block');
 }
 
 module.exports = { RULES, judgeFirestoreDeploy, blocking };

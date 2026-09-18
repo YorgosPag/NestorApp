@@ -80,6 +80,12 @@ const TRACKED_COLLECTION_KEYS = new Set([
   // ADR-864 Φ1β — η αγγελία ιδιοκτήτη (audit entityType: 'owner_property', βιβλίο 'custody').
   // Κάθε ανθρώπινη πράξη περνά από το `persist()` του owner-property-write.service.ts.
   'OWNER_PROPERTIES',
+  // ADR-866 Φ1.1 — ο φάκελος του ακινήτου (audit entityType: 'property_dossier', βιβλίο 'custody').
+  // Κάθε γραφή περνά από το property-dossier-write.service.ts (ίχνος μετά το commit).
+  'PROPERTY_DOSSIERS',
+  // ADR-867 Β5 — η ομάδα της πράξης (audit entityType: 'network_act_team', βιβλίο 'company').
+  // Κάθε αλλαγή μετά τη γέννηση περνά από το `commitActTeamVersion` του act-team-writer.ts.
+  'NETWORK_ACT_TEAMS',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)
