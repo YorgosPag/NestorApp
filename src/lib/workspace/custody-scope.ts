@@ -124,9 +124,15 @@ export function custodyKindFromParam(value: string | null): CustodyKind | null {
   return value === 'company' || value === 'personal' ? value : null;
 }
 
-/** Μη κενή συμβολοσειρά — κενό δεν είναι κάτοχος, είναι **απουσία** κατόχου. */
+/**
+ * Μη κενή συμβολοσειρά — κενό δεν είναι κάτοχος, είναι **απουσία** κατόχου.
+ *
+ * ⚠️ ADR-866 §2.6.11 — **και μόνο-κενά** (`'   '`) είναι απουσία: ο γραφέας ίχνους αρχείων το
+ * αρνιόταν με δικό του `trim()`, και η μετάβασή του σε αυτό το πρωτογενές θα το **έχανε**
+ * (άγκυρα Γ2 του `file-audit-admin-anchor`). Ένα σημείο κρίσης για κάθε διαμέρισμα.
+ */
 function nonEmpty(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 /**
@@ -178,6 +184,18 @@ export function isOwnedByCustody(
   return docOwner.userId !== undefined
     ? docOwner.userId === owner.userId
     : docOwner.companyId === owner.companyId;
+}
+
+/**
+ * **Μόνο το πεδίο του κατόχου** ενός ευρύτερου αντικειμένου — ποτέ και τα δύο κλειδιά, ποτέ δίδυμο
+ * `undefined` δίπλα στο άλλο. Αυτό απλώνεται σε έγγραφο Firestore (`{ ...custodyOnly(x) }`).
+ *
+ * 🧹 ADR-866 §2.6.11 — ζούσε **δύο** φορές (`storage-path.custodyOnly` · `entity-audit.ledgerFields`)
+ * και θα γινόταν τρίτη στο ιστορικό αρχείων. Η αποκλειστικότητα είναι **ιδιότητα της κατασκευής**,
+ * όχι παρενέργεια καθαριστή `undefined`.
+ */
+export function custodyOnly(scope: CustodyScope): CustodyScope {
+  return scope.userId !== undefined ? { userId: scope.userId } : { companyId: scope.companyId };
 }
 
 /**

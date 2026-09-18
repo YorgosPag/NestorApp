@@ -18,10 +18,9 @@ import { generateDeterministicNetworkActTeamId } from '@/services/enterprise-id.
 import {
   actTeamDocument,
   ensureActTeam,
-  nextResponsible,
-  transferActTeamsOnDeparture,
   type ActTeamBirth,
 } from '@/services/network-messaging/act-team-writer';
+import { nextResponsible, transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-departure';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const NOW = '2026-09-17T10:00:00.000Z';
@@ -133,6 +132,7 @@ describe('Μ — η μεταβίβαση της ευθύνης', () => {
     companyId: 'comp_alfa',
     departingUid: 'user_maria',
     fallbackUid: 'user_admin',
+    performedBy: 'user_admin',
     nowISO: LATER,
   };
 
@@ -145,7 +145,7 @@ describe('Μ — η μεταβίβαση της ευθύνης', () => {
     const { db, fake } = freshDb();
     seedTeam(fake, { memberUids: ['user_maria', 'user_eleni'] });
 
-    expect(await transferActTeamsOnDeparture(db, DEPARTURE)).toEqual({ transferred: 1 });
+    expect(await transferActTeamsOnDeparture(db, DEPARTURE)).toEqual({ transferred: 1, orphaned: 0 });
 
     expect(storedTeam(fake, BIRTH.actSeed)).toMatchObject({
       responsibleUid: 'user_eleni',
@@ -174,7 +174,7 @@ describe('Μ — η μεταβίβαση της ευθύνης', () => {
     fake.seed(COLLECTIONS.NETWORK_ACT_TEAMS, foreign.id, foreign);
     fake.seed(COLLECTIONS.NETWORK_ACT_TEAMS, other.id, other);
 
-    expect(await transferActTeamsOnDeparture(db, DEPARTURE)).toEqual({ transferred: 0 });
+    expect(await transferActTeamsOnDeparture(db, DEPARTURE)).toEqual({ transferred: 0, orphaned: 0 });
 
     expect(storedTeam(fake, 'ownp_2:comp_beta')).toMatchObject({ responsibleUid: 'user_maria', version: 1 });
     expect(storedTeam(fake, 'ownp_3:comp_alfa')).toMatchObject({ responsibleUid: 'user_nikos', version: 1 });

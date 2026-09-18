@@ -34,9 +34,9 @@ import {
 } from './network-thread-ref';
 import { isLiveAudience } from './thread-audience';
 import {
-  readAudienceEntry,
   readThreadAudience,
   touchOwnAudience,
+  writeThreadActivity,
   type AudienceSelfOutcome,
 } from './thread-writer';
 
@@ -110,10 +110,13 @@ export async function sendNetworkMessage(
   const messageId = generateNetworkMessageId();
 
   return adminDb.runTransaction<SendOutcome>(async (transaction) => {
-    const [threadSnap, entry] = await Promise.all([
+    // 🔑 **ΟΛΟ** το ακροατήριο, όχι μόνο η γραμμή του αποστολέα: το fan-out χρειάζεται κάθε
+    //    ζωντανό μέλος, και οι αναγνώσεις πρέπει να προηγούνται **κάθε** γραφής.
+    const [threadSnap, audience] = await Promise.all([
       transaction.get(threadRef),
-      readAudienceEntry(transaction, adminDb, input.threadId, input.senderUid),
+      readThreadAudience(transaction, adminDb, input.threadId),
     ]);
+    const entry = audience.find((row) => row.uid === input.senderUid) ?? null;
 
     const refusal = sendRefusal(threadSnap.exists, threadSnap.data(), entry);
     if (refusal !== null) return { kind: 'refused', reason: refusal };
@@ -123,6 +126,10 @@ export async function sendNetworkMessage(
       networkMessageDocument({ ...input, text }, messageId),
     );
     transaction.update(threadRef, { lastMessageAt: input.nowISO, updatedAt: input.nowISO });
+    writeThreadActivity(transaction, adminDb, input.threadId, audience, {
+      senderUid: input.senderUid,
+      nowISO: input.nowISO,
+    });
 
     return { kind: 'sent', messageId };
   });

@@ -24,7 +24,8 @@ import {
   generateDeterministicNetworkActThreadId,
   generateDeterministicNetworkActTeamId,
 } from '@/services/enterprise-id.service';
-import { actTeamDocument, transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-writer';
+import { actTeamDocument } from '@/services/network-messaging/act-team-writer';
+import { transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-departure';
 import {
   ensureActThread,
   touchOwnAudience,
@@ -167,6 +168,7 @@ describe('Ν — το νήμα και το ακροατήριό του', () => {
       companyId: 'comp_alfa',
       departingUid: MARIA,
       fallbackUid: ADMIN,
+      performedBy: ADMIN,
       nowISO: LATER,
     });
 

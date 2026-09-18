@@ -88,6 +88,8 @@ export interface ActThreadSlot {
   /** Το θέμα του **υπάρχοντος** νήματος — από εκεί βγαίνει ο αντισυμβαλλόμενος. */
   readonly topic: ActThreadTopic | null;
   readonly audience: readonly NetworkAudienceEntry[];
+  /** `lastMessageAt ?? createdAt` του **υπάρχοντος** νήματος· `null` ⇒ δεν υπάρχει ακόμη. */
+  readonly activityAt: string | null;
 }
 
 /**
@@ -119,7 +121,16 @@ export async function readActThreadSlot(
     exists: snapshot.exists,
     topic: stored?.topic.kind === 'act' ? stored.topic : null,
     audience: audienceSnap.docs.map((doc) => doc.data() as NetworkAudienceEntry),
+    activityAt: stored === undefined ? null : threadActivityOf(stored),
   };
+}
+
+/**
+ * **Η δραστηριότητα ενός νήματος** — ο **ένας** ορισμός (`lastMessageAt ?? createdAt`), για
+ * τη γέννηση, την είσοδο και τον κατάλογο. Δύο διατυπώσεις θα ταξινομούσαν διαφορετικά.
+ */
+export function threadActivityOf(thread: Pick<NetworkThread, 'lastMessageAt' | 'createdAt'>): string {
+  return thread.lastMessageAt ?? thread.createdAt;
 }
 
 /** Ό,τι χρειάζεται η **φάση γραφής**: η ομάδα τώρα, και —αν δεν υπάρχει νήμα— το θέμα του. */
@@ -174,6 +185,7 @@ export function writeActThread(
     newcomerReason: plan.newcomerReason,
     addedBy: plan.addedBy,
     nowISO: plan.nowISO,
+    threadActivityAt: slot.activityAt ?? threadActivityOf(document),
   });
 
   for (const write of audienceWrites) {
@@ -237,20 +249,34 @@ export async function touchOwnAudience(
 }
 
 /**
- * **Διαβάζει αυτός τώρα;** — η ανάγνωση που χρειάζεται κάθε γραφή μηνύματος.
+ * 🔑 **ΤΟ FAN-OUT ΤΟΥ ΜΗΝΥΜΑΤΟΣ** — κάθε **ζωντανή** γραμμή μαθαίνει ότι το νήμα κινήθηκε, και ο
+ * **αποστολέας** ότι έχει διαβάσει ό,τι μόλις έγραψε. Στην **ίδια** συναλλαγή με το μήνυμα.
  *
- * ⚠️ Ζει **εδώ** και όχι στον γραφέα μηνυμάτων για τον ίδιο λόγο που ζει εδώ και η
- * {@link touchOwnAudience}: **ένα** αρχείο αγγίζει το ακροατήριο, ώστε η πύλη να έχει
- * **ένα** πράγμα να μετρήσει.
+ * ⚠️ **Γιατί εδώ και όχι στον γραφέα μηνυμάτων**: είναι γραφή **ακροατηρίου** (CHECK 3.89 Κ3).
+ * ⚠️ **Μόνο ζωντανές γραμμές**: η σφραγισμένη δεν εμφανίζεται σε κατάλογο (το ερώτημα φιλτράρει
+ * `until == null`), και η **επιστροφή** την ξαναγράφει με τη δραστηριότητα της στιγμής.
+ * ⚠️ `update`, **ποτέ** `set`: το `set` θα έσβηνε `lastReadAt`/`muted` — ή θα **γεννούσε** γραμμή.
+ *
+ * 🔑 **Ο αποστολέας δεν γίνεται «αδιάβαστο» από το δικό του μήνυμα** (Slack/Teams: η αποστολή
+ * σημαίνει και ανάγνωση ως εκεί). Χωρίς αυτό, κάθε νήμα όπου μίλησε τελευταίος θα φαινόταν έντονο.
+ *
+ * Το κόστος είναι **1 γραφή ανά ζωντανό μέλος** — ομάδα πράξης + αντισυμβαλλόμενος, μονοψήφιο
+ * πλήθος. Το αντίθετο (ταξινόμηση κατά την ανάγνωση) κοστίζει **κάθε** φορά που ανοίγει ο κατάλογος.
  */
-export async function readAudienceEntry(
+export function writeThreadActivity(
   transaction: Transaction,
   adminDb: AdminFirestore,
   threadId: string,
-  uid: string,
-): Promise<NetworkAudienceEntry | null> {
-  const snapshot = await transaction.get(networkAudienceRef(adminDb, threadId, uid));
-  return (snapshot.data() as NetworkAudienceEntry | undefined) ?? null;
+  audience: readonly NetworkAudienceEntry[],
+  activity: { readonly senderUid: string; readonly nowISO: string },
+): void {
+  for (const entry of audience) {
+    if (entry.until !== null) continue;
+    const patch = entry.uid === activity.senderUid
+      ? { threadActivityAt: activity.nowISO, lastReadAt: activity.nowISO }
+      : { threadActivityAt: activity.nowISO };
+    transaction.update(networkAudienceRef(adminDb, threadId, entry.uid), patch);
+  }
 }
 
 /**

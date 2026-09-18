@@ -40,9 +40,9 @@ import 'server-only';
 
 import { FieldValue as AdminFieldValue, type Transaction } from 'firebase-admin/firestore';
 
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { workspaceMemberRef } from '@/lib/workspace/workspace-member-ref';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -155,11 +155,7 @@ export async function recordMembershipGrantAudit(
 // =============================================================================
 
 function memberRef(companyId: string, uid: string) {
-  return getAdminFirestore()
-    .collection(COLLECTIONS.COMPANIES)
-    .doc(companyId)
-    .collection(SUBCOLLECTIONS.WORKSPACE_MEMBERS)
-    .doc(uid);
+  return workspaceMemberRef(getAdminFirestore(), companyId, uid);
 }
 
 /**

@@ -21,6 +21,7 @@ import type {
   CollectionReference,
   DocumentReference,
   Firestore as AdminFirestore,
+  Query,
 } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
@@ -55,6 +56,18 @@ export function networkAudienceRef(
   uid: string,
 ): DocumentReference {
   return networkThreadAudience(adminDb, threadId).doc(uid);
+}
+
+/**
+ * **ΟΛΕΣ οι γραμμές ακροατηρίου, σε ΟΛΑ τα νήματα** — collection group, για τον κατάλογο.
+ *
+ * 🔴 **Εδώ φαίνεται γιατί το όνομα είναι `network_audience` και όχι `audience`**: ένα collection
+ * group σαρώνει **κατά όνομα** υποσυλλογής σε **όλη** τη βάση. Με γενικό όνομα, ο κατάλογος
+ * νημάτων θα επέστρεφε γραμμές **άσχετων** συλλογών με το ίδιο όνομα.
+ * ⚠️ Μόνο **ανάγνωση** — ένα ερώτημα δεν γράφει· ο δείκτης του ζει στο `firestore.indexes.json`.
+ */
+export function networkAudienceGroup(adminDb: AdminFirestore): Query {
+  return adminDb.collectionGroup(SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE);
 }
 
 /** `network_threads/{id}/network_messages` */

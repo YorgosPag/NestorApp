@@ -30,10 +30,29 @@ import type {
 } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { normalizeMembership } from '@/lib/auth/workspace-membership';
+import { createModuleLogger } from '@/lib/telemetry';
+import { workspaceMemberRef } from '@/lib/workspace/workspace-member-ref';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { generateDeterministicNetworkActTeamId } from '@/services/enterprise-id.service';
-import type { NetworkActKind, NetworkActTeam } from '@/types/network-thread';
+import type { NetworkActKind, NetworkActTeam, NetworkAudienceReason } from '@/types/network-thread';
 
-import { readActThreadSlot, writeActThread } from './thread-writer';
+import {
+  actTeamAuditChanges,
+  judgeActTeamChange,
+  type ActTeamChange,
+  type ActTeamChangeRefusal,
+  type ActTeamNext,
+} from './act-team-change';
+import type { AudienceWrite } from './thread-audience';
+import {
+  readActThreadSlot,
+  writeActThread,
+  type ActThreadOutcome,
+  type ActThreadSlot,
+} from './thread-writer';
+
+const logger = createModuleLogger('ActTeamWriter');
 
 /** Ό,τι ξέρει η **πράξη** τη στιγμή που γεννιέται — τίποτα για μηνύματα, τίποτα για νήματα. */
 export interface ActTeamBirth {
@@ -104,9 +123,12 @@ export function effectiveActTeam(
 }
 
 function actTeamRef(adminDb: AdminFirestore, actSeed: string): DocumentReference {
-  return adminDb
-    .collection(COLLECTIONS.NETWORK_ACT_TEAMS)
-    .doc(generateDeterministicNetworkActTeamId(actSeed));
+  return actTeamRefById(adminDb, generateDeterministicNetworkActTeamId(actSeed));
+}
+
+/** `network_act_teams/{id}` — το μονοπάτι, σε **ένα** σημείο (και για τη μεταβίβαση). */
+export function actTeamRefById(adminDb: AdminFirestore, teamId: string): DocumentReference {
+  return adminDb.collection(COLLECTIONS.NETWORK_ACT_TEAMS).doc(teamId);
 }
 
 /**
@@ -165,110 +187,193 @@ export async function ensureActTeam(
 }
 
 // =============================================================================
-// Η ΜΕΤΑΒΙΒΑΣΗ — «κανένα ορφανό νήμα, ΠΟΤΕ» (ADR-834 §5 Β (ε) 🏆)
+// Ο ΕΝΑΣ ΤΟΠΟΣ ΟΠΟΥ Η ΟΜΑΔΑ ΑΠΟΚΤΑ ΝΕΑ ΕΚΔΟΣΗ
 // =============================================================================
 
-/** Ποιος φεύγει, ποιος κάνει την πράξη, πότε. */
-export interface DepartureTransfer {
-  readonly companyId: string;
-  readonly departingUid: string;
-  /**
-   * 🔑 **Ο τελευταίος καταφύγιος, και ΥΠΑΡΧΕΙ ΠΑΝΤΑ**: ο διαχειριστής που εκτελεί την
-   * αναστολή. Δεν χρειάζεται δεύτερη ανάγνωση «βρες έναν διαχειριστή» — η αυτοπροστασία
-   * (`rejectSelfTarget`) εγγυάται ότι **δεν** είναι ο ίδιος ο αποχωρών.
-   */
-  readonly fallbackUid: string;
+/** Ποιος μπαίνει, γιατί, από ποιον, πότε — ό,τι χρειάζεται η προβολή πέρα από την ομάδα. */
+interface ProjectionContext {
+  readonly newcomerReason: NetworkAudienceReason;
+  readonly addedBy: string;
   readonly nowISO: string;
 }
 
 /**
- * **Ο κανόνας, καθαρός**: επόμενο μέλος της ομάδας· αν δεν υπάρχει, ο διαχειριστής.
+ * 🔑 **Η ΝΕΑ ΕΚΔΟΣΗ ΤΗΣ ΟΜΑΔΑΣ ΚΑΙ Η ΠΡΟΒΟΛΗ ΤΗΣ — ΑΔΙΑΧΩΡΙΣΤΑ.**
  *
- * ⚠️ **Ποτέ `null`, ποτέ «ο ίδιος»**: μια ομάδα χωρίς υπεύθυνο είναι το **ορφανό νήμα**
- * που Salesforce/HubSpot/Zendesk/Follow Up Boss αφήνουν πίσω τους (ADR-834 §5 Β (ε)).
+ * 🔴 **ADR-867 Β4 — ΑΛΛΑΓΗ ΧΩΡΙΣ ΤΟ ΑΚΡΟΑΤΗΡΙΟ ΘΑ ΗΤΑΝ ΜΙΣΗ**, και η μισή είναι **χειρότερη**
+ * από καμία: η ομάδα θα έλεγε «υπεύθυνη η Ελένη» ενώ ο κανόνας Firestore θα συνέχιζε να δίνει
+ * ανάγνωση στον **προηγούμενο** και να την **αρνείται** στην Ελένη.
+ *
+ * ⚠️ **Κάθε** αλλαγή ομάδας μετά τη γέννηση — αυτόματη μεταβίβαση **ή** ανθρώπινη πράξη —
+ * περνά από **εδώ**. Δύο `update` σε δύο συναρτήσεις θα σήμαιναν ότι η τρίτη μπορεί να ξεχάσει
+ * την προβολή — και η CHECK 3.89 Κ6 μετρά **ανά αρχείο**, όχι ανά συνάρτηση.
+ *
+ * `birth: null` ⇒ **αν δεν υπάρχει νήμα, δεν γεννιέται τώρα**: αλλαγή ομάδας δεν είναι ακμή (§8 #1).
  */
-export function nextResponsible(
-  team: { readonly memberUids: readonly string[] },
-  departingUid: string,
-  fallbackUid: string,
-): string {
-  return team.memberUids.find((uid) => uid !== departingUid) ?? fallbackUid;
-}
-
-/** Η **επόμενη έκδοση** της ομάδας μετά την αποχώρηση — καθαρή, ώστε να ελέγχεται μόνη της. */
-export function teamAfterDeparture(
-  team: NetworkActTeam,
-  transfer: DepartureTransfer,
-): Pick<NetworkActTeam, 'responsibleUid' | 'memberUids' | 'version'> & { readonly updatedAt: string } {
-  const heir = nextResponsible(team, transfer.departingUid, transfer.fallbackUid);
-  const remaining = team.memberUids.filter((uid) => uid !== transfer.departingUid);
-  return {
-    responsibleUid: heir,
-    // ⚠️ Ο κληρονόμος μπαίνει στα μέλη **μία** φορά: ο διαχειριστής που μπαίνει είναι
-    //    **ορατός** στο ακροατήριο (ADR-834 (ε) ②) — καμία σιωπηλή ανάγνωση.
-    memberUids: remaining.includes(heir) ? remaining : [...remaining, heir],
-    version: team.version + 1,
-    updatedAt: transfer.nowISO,
-  };
+export function commitActTeamVersion(
+  transaction: Transaction,
+  ref: DocumentReference,
+  threadSlot: ActThreadSlot,
+  next: ActTeamNext,
+  projection: ProjectionContext,
+): ActThreadOutcome {
+  transaction.update(ref, {
+    responsibleUid: next.responsibleUid,
+    memberUids: next.memberUids,
+    version: next.version,
+    updatedAt: projection.nowISO,
+  });
+  return writeActThread(transaction, threadSlot, { birth: null, team: next, ...projection });
 }
 
 /**
- * **Η αποχώρηση παράγει ξανά την ευθύνη** — για **κάθε** πράξη που κρατούσε ο αποχωρών.
- *
- * ⚠️ **Η αποχώρηση ΔΕΝ είναι διαγραφή μέλους** (μετρημένο 2026-09-17, ADR-867 §8 #5):
- * **κανείς** δεν σβήνει `workspace_members`. Η αποχώρηση εκφράζεται ως **κατάσταση**
- * (`status: suspended` + Firebase Auth `disabled`), και **αυτοί** είναι οι γραφείς που
- * καλούν αυτή τη συνάρτηση.
- *
- * ⚠️ **Μία συναλλαγή ανά ομάδα**, όχι μία για όλες: το πλήθος είναι **αφράγκτο** και μια
- * συναλλαγή Firestore έχει όριο. Κάθε ομάδα μεταβιβάζεται **ατομικά** — μερική επιτυχία
- * αφήνει **λιγότερα** ορφανά, ποτέ ασυνεπή ομάδα.
+ * **Το ίχνος** (ADR-834 (ε) ② «με ίχνος») — **μετά** τη συναλλαγή: ο γραφέας του ιστορικού
+ * κάνει δικές του αναγνώσεις (όνομα εκτελούντος), και μια συναλλαγή δεν δέχεται ανάγνωση μετά
+ * από γραφή. ⚠️ Αποτυχία εδώ **δεν** αναιρεί την αλλαγή — την ονομάζει στο log.
  */
-export async function transferActTeamsOnDeparture(
+export async function recordActTeamChange(
+  teamId: string,
+  hostCompanyId: string,
+  performedBy: string,
+  before: Pick<NetworkActTeam, 'responsibleUid' | 'memberUids'>,
+  after: Pick<NetworkActTeam, 'responsibleUid' | 'memberUids'>,
+): Promise<void> {
+  const written = await EntityAuditService.recordChange({
+    entityType: 'network_act_team',
+    entityId: teamId,
+    entityName: null,
+    action: 'updated',
+    changes: actTeamAuditChanges(before, after),
+    performedBy,
+    performedByName: null,
+    companyId: hostCompanyId,
+  });
+  if (written === null) logger.error('[ACT-TEAM] Το ίχνος δεν γράφτηκε — η αλλαγή ΕΓΙΝΕ', { teamId });
+}
+
+// =============================================================================
+// Η ΑΝΘΡΩΠΙΝΗ ΑΛΛΑΓΗ — «άλλαξε υπεύθυνο / πρόσθεσε / αφαίρεσε» (ADR-834 (ε) ②)
+// =============================================================================
+
+/** Ό,τι φέρνει η πόρτα — ταυτότητα και ικανότητα **ήδη κριμένες** από τους δύο κριτές. */
+export interface ActTeamChangeRequest {
+  readonly teamId: string;
+  readonly change: ActTeamChange;
+  readonly actorUid: string;
+  /** Ο χώρος του καλούντος (ADR-787) — ξένη ομάδα ⇒ «δεν υπάρχει». */
+  readonly actorWorkspaceId: string;
+  /** `decideCapability` × `network:act_teams:manage` (ADR-801) — **όχι** λίστα ρόλων εδώ. */
+  readonly actorIsManager: boolean;
+  readonly expectedVersion: number;
+  readonly nowISO: string;
+}
+
+export type ActTeamChangeOutcome =
+  | {
+      readonly kind: 'applied';
+      readonly team: ActTeamNext;
+      /** Τι είδε ο πελάτης να αλλάζει στη λίστα «ποιοι διαβάζουν». */
+      readonly audienceWrites: readonly AudienceWrite[];
+    }
+  | { readonly kind: 'unchanged' }
+  | {
+      readonly kind: 'refused';
+      readonly reason: ActTeamChangeRefusal;
+      /** Μόνο στο `stale-version`: η έκδοση που ισχύει, ώστε η οθόνη να ξαναδιαβάσει. */
+      readonly currentVersion: number | null;
+    };
+
+type ChangeTxResult =
+  | { readonly outcome: ActTeamChangeOutcome; readonly before: null }
+  | { readonly outcome: ActTeamChangeOutcome; readonly before: NetworkActTeam };
+
+/**
+ * 🔑 **Η αλλαγή ομάδας από άνθρωπο** — ο κριτής αποφασίζει, ο **ένας** τόπος γράφει, το ίχνος
+ * καταγράφει.
+ *
+ * ⚠️ Όλες οι αναγνώσεις **πριν** από κάθε γραφή: ομάδα → (νήμα + έγγραφο μέλους του στόχου).
+ * Το έγγραφο μέλους διαβάζεται **μέσα** στη συναλλαγή: ανάμεσα στην οθόνη και στο «πρόσθεσε»
+ * ο στόχος μπορεί να έχει ανασταλεί.
+ */
+export async function changeActTeam(
   adminDb: AdminFirestore,
-  transfer: DepartureTransfer,
-): Promise<{ readonly transferred: number }> {
-  // tenant-scope-exempt: το φίλτρο **ΕΙΝΑΙ** ο άξονας μισθωτή αυτής της συλλογής
-  //   (`hostCompanyId`, tenant-config) — δηλωμένο ρητά επειδή το όνομα δεν είναι `companyId`.
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.NETWORK_ACT_TEAMS)
-    .where('hostCompanyId', '==', transfer.companyId)
-    .where('responsibleUid', '==', transfer.departingUid)
-    .get();
+  request: ActTeamChangeRequest,
+): Promise<ActTeamChangeOutcome> {
+  const result = await adminDb.runTransaction<ChangeTxResult>((transaction) =>
+    changeActTeamInTransaction(transaction, adminDb, request),
+  );
 
-  let transferred = 0;
-  for (const doc of snapshot.docs) {
-    const ref = adminDb.collection(COLLECTIONS.NETWORK_ACT_TEAMS).doc(doc.id);
-    const changed = await adminDb.runTransaction(async (transaction) => {
-      const fresh = await transaction.get(ref);
-      const team = fresh.data() as NetworkActTeam | undefined;
-      // 🔑 **Ξαναδιαβάζουμε μέσα στη συναλλαγή**: αν κάποιος μεταβίβασε ήδη στο ενδιάμεσο,
-      //    η ομάδα **δεν** αγγίζεται — αλλιώς θα κλέβαμε ευθύνη από τον νέο υπεύθυνο.
-      if (team === undefined || team.responsibleUid !== transfer.departingUid) return false;
-
-      // 🔴 **ADR-867 Β4 — Η ΜΕΤΑΒΙΒΑΣΗ ΧΩΡΙΣ ΤΟ ΑΚΡΟΑΤΗΡΙΟ ΘΑ ΗΤΑΝ ΜΙΣΗ**, και η μισή
-      //    είναι **χειρότερη** από καμία: η ομάδα θα έλεγε «υπεύθυνη η Ελένη» ενώ ο
-      //    κανόνας Firestore θα συνέχιζε να δίνει ανάγνωση στον **αποχωρούντα** και να
-      //    την **αρνείται** στην Ελένη. Δηλαδή νήμα που κανείς αρμόδιος δεν διαβάζει.
-      //    ⚠️ Η ανάγνωση **πριν** από κάθε γραφή (απαίτηση Firestore) — γι' αυτό εδώ.
-      const threadSlot = await readActThreadSlot(transaction, adminDb, team.actSeed);
-
-      const next = teamAfterDeparture(team, transfer);
-      transaction.update(ref, next);
-
-      // ⚠️ `birth: null` ⇒ **αν δεν υπάρχει νήμα, δεν γεννιέται τώρα**: η αποχώρηση
-      //    ενός υπαλλήλου δεν είναι ακμή, και μια πράξη «σε αναμονή» δεν έχει ακόμη
-      //    πρόσωπο στην άλλη πλευρά (§8 #1).
-      writeActThread(transaction, threadSlot, {
-        birth: null,
-        team: next,
-        newcomerReason: 'failover',
-        addedBy: transfer.fallbackUid,
-        nowISO: transfer.nowISO,
-      });
-      return true;
-    });
-    if (changed) transferred += 1;
+  if (result.outcome.kind === 'applied' && result.before !== null) {
+    await recordActTeamChange(
+      request.teamId,
+      result.before.hostCompanyId,
+      request.actorUid,
+      result.before,
+      result.outcome.team,
+    );
   }
-  return { transferred };
+  return result.outcome;
+}
+
+/**
+ * **Η ομάδα, όπως τη βλέπει ένα μέλος του χώρου-οικοδεσπότη** — `null` όταν δεν υπάρχει **ή**
+ * ανήκει σε άλλον χώρο: η ίδια απάντηση επίτηδες (ADR-742), όπως το `team-absent` του κριτή.
+ *
+ * 🔑 Ποιος χειρίζεται μια πράξη το βλέπει **όλο το γραφείο** (Follow Up Boss: ο assigned agent
+ * φαίνεται σε όλη την ομάδα). Το **νήμα** όμως μένει στην ομάδα — εκεί κρίνει ο κανόνας.
+ */
+export async function readActTeamInWorkspace(
+  adminDb: AdminFirestore,
+  teamId: string,
+  workspaceId: string,
+): Promise<NetworkActTeam | null> {
+  const team = (await actTeamRefById(adminDb, teamId).get()).data() as NetworkActTeam | undefined;
+  return team !== undefined && team.hostCompanyId === workspaceId ? team : null;
+}
+
+function refused(reason: ActTeamChangeRefusal, currentVersion: number | null): ActTeamChangeOutcome {
+  return { kind: 'refused', reason, currentVersion };
+}
+
+/** Το σώμα της συναλλαγής: αναγνώσεις → κριτής → ο **ένας** τόπος γραφής. */
+async function changeActTeamInTransaction(
+  transaction: Transaction,
+  adminDb: AdminFirestore,
+  request: ActTeamChangeRequest,
+): Promise<ChangeTxResult> {
+  const ref = actTeamRefById(adminDb, request.teamId);
+  const team = ((await transaction.get(ref)).data() as NetworkActTeam | undefined) ?? null;
+  // 🔴 Ξένη ομάδα ⇒ **καμία** περαιτέρω ανάγνωση, ούτε μέλους ξένου χώρου.
+  if (team === null || team.hostCompanyId !== request.actorWorkspaceId) {
+    return { outcome: refused('team-absent', null), before: null };
+  }
+
+  const [threadSlot, targetSnap] = await Promise.all([
+    readActThreadSlot(transaction, adminDb, team.actSeed),
+    transaction.get(workspaceMemberRef(adminDb, team.hostCompanyId, request.change.uid)),
+  ]);
+  const targetRaw = targetSnap.exists ? targetSnap.data() : undefined;
+
+  const verdict = judgeActTeamChange({
+    ...request,
+    team,
+    targetIsActiveMember:
+      targetRaw !== undefined && normalizeMembership(request.change.uid, targetRaw).status === 'active',
+    counterpartUid: threadSlot.topic?.counterpartUid ?? null,
+  });
+  if (verdict.kind === 'unchanged') return { outcome: verdict, before: team };
+  if (verdict.kind === 'refused') {
+    const current = verdict.reason === 'stale-version' ? team.version : null;
+    return { outcome: refused(verdict.reason, current), before: team };
+  }
+
+  const written = commitActTeamVersion(transaction, ref, threadSlot, verdict.next, {
+    newcomerReason: verdict.newcomerReason,
+    addedBy: request.actorUid,
+    nowISO: request.nowISO,
+  });
+  return {
+    outcome: { kind: 'applied', team: verdict.next, audienceWrites: written.audienceWrites },
+    before: team,
+  };
 }

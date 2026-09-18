@@ -46,6 +46,11 @@ export interface AudienceProjectionInput {
   readonly newcomerReason: NetworkAudienceReason;
   readonly addedBy: string;
   readonly nowISO: string;
+  /**
+   * Η δραστηριότητα του νήματος **τώρα** (`lastMessageAt ?? createdAt`) — ό,τι γράφεται στη
+   * γραμμή όποιου **μπαίνει**, ώστε το νήμα να βρίσκει αμέσως τη θέση του στον κατάλογό του.
+   */
+  readonly threadActivityAt: string;
 }
 
 /** Τι άλλαξε — η ετικέτα υπάρχει για το **ίχνος** και για τις άγκυρες, όχι για τον κανόνα. */
@@ -103,6 +108,7 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
       until: null,
       lastReadAt: null,
       muted: false,
+      threadActivityAt: input.threadActivityAt,
     },
   };
 }
@@ -134,6 +140,8 @@ function rejoined(
       addedBy: input.addedBy,
       since: input.nowISO,
       until: null,
+      // ⚠️ Όσο έλειπε, η γραμμή του **δεν** ενημερωνόταν (το fan-out αγγίζει μόνο ζωντανές).
+      threadActivityAt: input.threadActivityAt,
     },
   };
 }
