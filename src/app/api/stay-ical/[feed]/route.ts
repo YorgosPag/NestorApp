@@ -21,6 +21,7 @@ import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { ownerPropertyOfferKinds } from '@/types/owner-property';
 import { STAY_RULES_NONE } from '@/types/stay-rules';
+import { nowISO } from '@/lib/date-local';
 import {
   readStayCalendar,
   stayPropertyRef,
@@ -70,6 +71,8 @@ async function handler(request: NextRequest, routeContext?: RouteContext): Promi
     snapshot.head?.rules ?? STAY_RULES_NONE,
     claim.scope,
     property.title.trim(),
+    // 🔑 Ληγμένο αίτημα δεν εξάγεται, με ή χωρίς cron (Στάδιο Δ, §23.1).
+    nowISO(),
   );
   const etag = etagOf(body);
   if (request.headers.get('if-none-match') === etag) {

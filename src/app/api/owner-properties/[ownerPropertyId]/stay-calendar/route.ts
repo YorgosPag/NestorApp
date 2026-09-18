@@ -1,6 +1,7 @@
 /**
- * @fileoverview **ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ** — ανάγνωση (`GET`) και οι πέντε πράξεις (`POST`).
- * @related ADR-835 §20 (Στάδιο Α) · services/stay-calendar/* · lib/stay/stay-calendar-command.ts
+ * @fileoverview **ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ** — ανάγνωση (`GET`) και οι πράξεις του οικοδεσπότη (`POST`).
+ * @related ADR-835 §20 (Στάδιο Α) · §23 (Στάδιο Δ: `accept` · `decline`) · services/stay-calendar/* ·
+ *   lib/stay/stay-calendar-command.ts · lib/stay/stay-command-authority.ts
  *
  * 🔑 **ΜΙΑ διαδρομή, πράξη στο σώμα** — ίδιο ιδίωμα με το `PATCH /api/owner-properties/[id]`
  * (CHECK 3.78: παραλλαγή σώματος, όχι νέα διαδρομή ανά πράξη).
@@ -80,7 +81,11 @@ async function postHandler(
   const parsed = stayCalendarCommandFrom(await request.json().catch(() => null));
   if (!parsed.ok) return malformed(parsed.malformed);
 
-  const result = await executeStayCalendarCommand(getAdminFirestore(), propertyId, parsed.command, actorOf(actor));
+  // 🔑 Εδώ ενεργεί **πάντα** ο οικοδεσπότης: πράξη επισκέπτη ή συστήματος σε αυτή την πόρτα ⇒ ο
+  //    πίνακας εξουσίας την αρνείται ως `absent` (ADR-835 §23.4) — ποτέ σιωπηλή εκτέλεση.
+  const result = await executeStayCalendarCommand(
+    getAdminFirestore(), propertyId, parsed.command, { kind: 'host', actor: actorOf(actor) },
+  );
   return NextResponse.json(result, { status: STAY_CALENDAR_WRITE_STATUS[result.kind] });
 }
 
