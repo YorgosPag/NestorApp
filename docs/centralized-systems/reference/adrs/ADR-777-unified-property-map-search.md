@@ -13141,7 +13141,15 @@ DemandAxisLostInFilters += 'landownerShare'
 ##### 8.60.17.6 ⚠️ Δηλωμένα όρια
 
 1. **Οι υπάρχουσες αγγελίες αντιπαροχής** λένε «προς συζήτηση» μέχρι να ξανααποθηκευτεί το ακίνητο (ο κρίκος 12 δεν
-   ανοίγει το `owner_properties` — καθαρή συνάρτηση πάνω σε ένα έγγραφο). Δεν υπάρχει script επαναπροβολής.
+   ανοίγει το `owner_properties` — καθαρή συνάρτηση πάνω σε ένα έγγραφο).
+   ✅ **ΚΛΕΙΣΤΗΚΕ 2026-09-18**: `scripts/migrations/republish-exchange-listings.ts` (ξηρό από προεπιλογή, `--apply`).
+   Γράφει **μόνο** μέσω του ΕΝΟΣ `republishOwnerProperty`· η ξηρή κρίση τρέχει τις **ίδιες** καθαρές συναρτήσεις
+   (`projectableFromOwnerProperty` → `buildPublicListing`) και αγγίζει μόνο ό,τι είναι μπαγιάτικο (απόν πεδίο ≠ `null`).
+   Αγγελία που ο κριτής θα **απέσυρε** · επαγγελματίας (καμία πηγή ποσοστού) · ορφανή ⇒ **αναφορά, ποτέ γραφή**. Δεύτερο
+   πέρασμα: ακίνητα κατόχου με αντιπαροχή **χωρίς** αγγελία, κρινόμενα από τον ίδιο κριτή — αλλιώς το «0» δεν ξεχωρίζει
+   το «καμία δεν υπάρχει» από το «καμία δεν γράφτηκε». **Μετρημένο στην παραγωγή 18/09 (ξηρό)**: 11 αγγελίες, **0** με
+   `exchange` ⇒ **τίποτα προς επαναπροβολή**· 1 ακίνητο κατόχου με αντιπαροχή (2%) χωρίς αγγελία, και ο κριτής
+   **συμφωνεί** (μη δημοσιεύσιμο). Το `--apply` δεν χρειάστηκε.
 2. **Στάση ενδιαφέροντος `offered`**: το `share-undeclared` **δεν** συγχωρείται στο `UNDECLARED_AXES.offered` — η άγκυρα
    Μ0 (`demand-interest.test.ts`) ορίζει ότι σε **δηλωμένο** ακίνητο τίποτα δεν συγχωρείται, και δεν παρακάμφθηκε. Άρα
    στην καρτέλα του ιδιοκτήτη, εργολάβος με οροφή απέναντι σε αντιπαροχή **χωρίς** ποσοστό μετρά ως μη ταίριασμα.
@@ -13408,6 +13416,7 @@ DemandAxisLostInFilters += 'stayNights' | 'stayParty'     // η παρέα τα�
 1. **Κατοικίδια** — όλοι οι μεγάλοι έχουν πολιτική κατοικιδίων **στην αγγελία**· εμείς **κανένα** πεδίο (grep: 0). Ένα
    `pets` στη ζήτηση χωρίς πλευρά αγγελίας θα ήταν αδρανής φρουρός (ADR-749 §5). Επόμενο βήμα: `ShortLeaseOffer.petsAllowed`
    → `deriveStayTerms` → `PublicListingStay` (κρίκος 13) → φόρμα κατόχου → `party.pets`.
+   ✅ **ΚΛΕΙΣΤΗΚΕ 2026-09-18 → §8.60.21** (κάτοχος · προβολή · σελίδα · κριτής/αναζήτηση · ζήτηση).
 2. **Πολιτική βρεφών του κατόχου** — όταν δηλωθεί, το `stay-infants-uncertain` λύνεται (Airbnb: επιλογή οικοδεσπότη).
 3. **Συγκεκριμένες ημερομηνίες + ημερολόγιο** (ADR-835) — η ζήτηση δεν ρωτά `stayAvailabilityFor`· το ημερολόγιο ζει
    στον server, εκτός προβολής. Το `timing: window` κρίνεται μόνο ως αναλλοίωτο.
@@ -13416,6 +13425,114 @@ DemandAxisLostInFilters += 'stayNights' | 'stayParty'     // η παρέα τα�
 6. **«Ως τι»** για διαμονή λέει τιμή, όχι όρους («χωράει 6») — η σελίδα αγγελίας τους δείχνει ήδη.
 7. **Shell slice**: `npm run generate:i18n-shell-slice` χρειάζεται πριν το commit (τα νέα κλειδιά `property-market`)·
    δεν έτρεξε εδώ επειδή γράφει και locales άλλων agents.
+
+---
+
+#### 8.60.21 🏆 **ΚΑΤΟΙΚΙΔΙΑ ΣΤΗ ΔΙΑΜΟΝΗ — ΚΑΤΟΧΟΣ → ΠΡΟΒΟΛΗ → ΣΕΛΙΔΑ → ΚΡΙΤΗΣ/ΑΝΑΖΗΤΗΣΗ → ΖΗΤΗΣΗ, ΜΕ ΕΝΑΝ ΚΡΙΤΗ** *(2026-09-18, απόφαση Giorgio: «όπως οι μεγάλοι — κι αν μπορείς, καλύτερα»)*
+
+> ⚠️ **Αριθμός**: το handoff έλεγε §8.60.20· ο agent της Φάσης 6 (θέσεις/αποθήκες) το δέσμευσε πρώτος, άρα αυτή η
+> ενότητα είναι **§8.60.21**. Ο κώδικας παραπέμπει εδώ.
+
+##### 8.60.21.1 🔴 Το κενό
+Καμία αγγελία βραχυχρόνιας δεν μπορούσε να πει αν δέχεται κατοικίδια, και κανένας ζητών ή επισκέπτης να πει ότι φέρνει
+(grep 18/09: 0 hits σε stay · demand · listing · search). Δηλωμένο όριο §8.60.19.6 #1. Ένα `pets` στη ζήτηση **χωρίς**
+πλευρά αγγελίας θα ήταν αδρανής φρουρός (ADR-749 §5) ⇒ η αλυσίδα ξεκίνησε από τον κάτοχο.
+
+##### 8.60.21.2 🌐 Τι κάνουν οι μεγάλοι (έρευνα 18/09, πρωτογενείς πηγές)
+| Πηγή | Εύρημα |
+|---|---|
+| Booking Connectivity (`developers.booking.com`, `OTA_HotelDescriptiveContentNotif`) | `PetsAllowedCode` = **Pets Allowed · Pets By Arrangements · Pets Not Allowed** · `NonRefundableFee` = `free` / `charges_may_apply` |
+| Airbnb Help 3623 | χρέωση **ανά κράτηση · νύχτα · κατοικίδιο · κατοικίδιο/νύχτα** · *«can't be more than your nightly base rate»* · *«Service animals always stay for free»* |
+| Airbnb resources 463 · Help 86 | όριο **1–5** από τον οικοδεσπότη · ο επισκέπτης δηλώνει **πλήθος** στο «Who» |
+| Airbnb Help 1869 | *«A Service Animal is not a pet»* · απαγορεύεται άρνηση/χρέωση · ESA = άλλη κατηγορία (pet fee επιτρέπεται εκτός CA/NY/QC/ON) |
+| Vrbo Help · Expedia Rapid | *«service animals are not classified as pets»* · attribute 51 «Pets allowed», 2809 «Dogs only» |
+| schema.org `petsAllowed` | Boolean **ή Text**· χωρίς τιμή = **άγνωστο** |
+| Ν.4830/2021 άρθ.15 §3 | ο κανονισμός πολυκατοικίας **δεν** απαγορεύει ζώα συντροφιάς· περιορίζει **έως 3/διαμέρισμα** |
+| Ν.3868/2010 άρθ.16 §7 | δικαίωμα συνοδείας από **σκύλο βοήθειας** (οδηγός τυφλών · βοήθειας ΑμεΑ · υπό εκπαίδευση) |
+
+🏆 **Πού τους ξεπερνάμε**: (α) **ο σκύλος βοήθειας δεν είναι κατοικίδιο ΔΟΜΙΚΑ** — δεν υπάρχει **κανένα** πεδίο, φίλτρο ή
+κριτής γι' αυτόν, άρα είναι **αδύνατο** να αποκλειστεί ή να χρεωθεί (οι μεγάλοι το λένε σε πολιτική· εδώ είναι ιδιότητα
+του σχήματος). Η γραμμή του νόμου εμφανίζεται **πάντα** — και κάτω από «όχι». ESA: ο ελληνικός νόμος καλύπτει μόνο
+σκύλους βοήθειας ⇒ ESA = κατοικίδιο. (β) **Υπερσύνολο**: τριμερές Booking + όριο/χρέωση Airbnb, με τις άκυρες καταστάσεις
+**μη αναπαραστάσιμες** («όχι» δεν φέρει όριο/χρέωση). (γ) **«Δεν δηλώθηκε» ≠ «όχι»** — ονομασμένο. (δ) **Καμία σιωπηλή
+απόκρυψη**: η λογιστική λέει «N δεν δέχονται · M λιγότερα · K κατόπιν συνεννόησης». (ε) **Μετρήσιμο όριο**: «δέχεται έως 1».
+
+##### 8.60.21.3 Το σχήμα
+```ts
+// types/property-offers.ts
+PET_ACCEPTANCE = ['yes', 'onRequest', 'no']             // ≡ Booking PetsAllowedCode
+PET_FEE_BASES  = ['stay', 'night', 'pet', 'petNight']   // ≡ Airbnb
+StayPetPolicy = { accepts: 'no' } | { accepts: 'yes' | 'onRequest'; maxPets: number | null; fee: StayPetFee | null }
+ShortLeaseOffer.pets?: StayPetPolicy | null             // απόν/null = ΔΕΝ ΔΗΛΩΘΗΚΕ
+// lib/offers/offer-amount.ts:  STAY_PETS_CEILING = 5 · isWholePetCount · offerMaxPetsInvalid · offerPetFeeInvalid (≤ nightlyRate)
+// lib/offers/stay-pet-policy.ts: stayPetPolicySchema + readStayPetPolicy — ΕΝΑΣ αναλυτής για 3 πόρτες
+// PublicListingStay.pets: StayPetPolicy | null            · κρίκος 13 (`stay.pets`, παλιό έγγραφο ⇒ null)
+// StayQuery.pets?: number | null · ListingFilters.pets · `?pets=` (RESERVED_SEARCH_PARAMS)
+// StayParty.pets: number (0..5· απόν ⇒ 0 ⇒ καμία μετανάστευση· ΔΕΝ μετρά στο stayHeadcount/stayPartySize)
+```
+
+**Ο ΕΝΑΣ κριτής** — `petsVerdict(policy, pets)` στο `lib/stay/stay-availability.ts`, δίπλα στα `capacityVerdict` /
+`minNightsVerdict`, με δύο καταναλωτές (αναζήτηση · ζήτηση):
+
+| `petsVerdict` | Αναζήτηση (`StayAvailabilityAnswer`) | Ζήτηση (`DemandBlocker`) | Τάξη ζήτησης |
+|---|---|---|---|
+| πολιτική `null` | `pets-unknown` (πριν το ημερολόγιο) | `stay-pets-undeclared` | **αβέβαιο** |
+| `no` | `pets-not-allowed` | `stay-pets-not-allowed` | κατηγορικό |
+| πάνω από `maxPets` | `over-pet-limit {maxPets, asked}` | `stay-pets-over-limit` | κατηγορικό |
+| `onRequest` | `pets-on-request` — **stayable**, υποβάθμιση **μόνο** του `free` μετά τον κριτή | `stay-pets-on-request` | **αβέβαιο** |
+
+⚖️ **Γιατί το «δεν δηλώθηκε» είναι ΑΒΕΒΑΙΟ στη ζήτηση και όχι απουσία** (σε αντίθεση με το `stay-capacity-undeclared`):
+η ερώτηση γεννήθηκε σήμερα ⇒ **κάθε** υπάρχουσα αγγελία είναι αδήλωτη· κατηγορικό θα έκρυβε **κάθε** κατάλυμα από κάθε
+ζητούντα με κατοικίδιο — ακριβώς το επιχείρημα του `share-undeclared` (§8.60.17). Και τα δύο αβέβαια μπαίνουν στο
+`IGNORANCE_BLOCKERS`. Άγκυρα Μ0 / `UNDECLARED_AXES`: **αμετάβλητα**.
+
+⚠️ **Γιατί το `pets-on-request` ΔΕΝ κόβει νωρίς**: θα έκρυβε την απάντηση του ημερολογίου (ένα πιασμένο κατάλυμα θα
+έλεγε «ρωτήστε για το κατοικίδιο»). Σειρά: είδος → άτομα → κατοικίδια → νύχτες → ημερολόγιο → **επιφύλαξη κατοικιδίου**.
+
+##### 8.60.21.4 Τι άλλαξε
+- **Κάτοχος**: `property-offers.ts` · `offer-amount.ts` · `owner-property-invariants.ts` (+`short-lease-max-pets-invalid` ·
+  `short-lease-pet-fee-invalid`, και εξαγωγή `offerGapInvariants` — πίνακας κενών→κωδικών) · `owner-property-draft-schema.ts`
+  (σύνορο δικτύου, `pets` προαιρετικό) · νέα `owner-property-pets-form.ts` (γέφυρα, ρητό «δεν το ορίζω τώρα») ·
+  `owner-property-form-values.ts` · νέο `OwnerStayPetsField.tsx` (όριο/χρέωση μόνο σε ναι/κατόπιν· γραμμή σκύλου βοήθειας
+  πάντα) · `offer-form-labels.ts` · `FormInputField` απέκτησε προαιρετικό `max`.
+- **Προβολή/σελίδα**: `derive-stay-terms.ts` · `public-listing-projection(-types).ts` · `public-listing.ts` ·
+  `public-listing-schema.ts` (**κρίκος 13**, έκδοση 12→13) · νέο `ListingStayPets.tsx` μέσα στο `ListingStay.tsx`.
+- **Κριτής/αναζήτηση**: `stay-availability(-vocabulary).ts` (4 απαντήσεις · 16→20 κάδοι · 3 stayable) ·
+  `stay-public-request.ts` (ο server δέχεται `pets` 1..5) · `listing-filters.ts` · `listing-criteria-url.ts` ·
+  `StayFilterFields.tsx` (κοινό `CountSelectField` για άτομα **και** κατοικίδια — όχι δίδυμο) · `StayLedgerBar.tsx` ·
+  `ListingStayAnswer.tsx` · `listing-stay-total.ts` (σύνολο και για `pets-on-request`· **κανένα** σύνολο όταν φέρνει κατοικίδιο
+  και ο κάτοχος χρεώνει — `listingsWithUnpricedPetFee`) · `useResultsLedgers.ts`.
+- **Ζήτηση**: `property-demand.ts` · `demand-seeks-read.ts` · `demand-form-stay.ts` · `DemandStayTermsRow.tsx` ·
+  `demand-match-stay.ts` (`PETS_BLOCKER`: `Record` πάνω στο κλειστό σύνολο) · `demand-match-vocabulary.ts` ·
+  `demand-answer.ts` · `demand-listing-filters.ts` (τα κατοικίδια **ταξιδεύουν** στο `pets`) · `DemandSummary.tsx`.
+- 🧹 **Boy scout**: το `LEDGER_KIND_KEYS` του `StayLedgerBar` **δεν είχε** γραμμή για το `held` (Στάδιο Δ) — το κλειδί
+  ζούσε στα locales, ο κάδος όχι ⇒ `t(undefined)` σε κάθε αγγελία «σε αναμονή». Διορθώθηκε.
+- **i18n**: `property-market` (φόρμα κατόχου · invariants · φόρμα ζήτησης · εμπόδια · σύνοψη) · `short-stay` (σελίδα · απαντήσεις ·
+  λογιστική · φίλτρο), el + en — **όλα με ολόκληρα κλειδιά** (κανένα συναρμολογημένο `t()`).
+
+##### 8.60.21.5 ✅ Επαλήθευση
+Νέα άγκυρα `src/lib/stay/__tests__/stay-pets-anchor.test.ts` (Ο όρια · Χ χρέωση · Ι invariants · Σ σύνορο · Α αναγνώστης ·
+Φ φόρμα κατόχου · Κ κριτής · Ρ σειρά σύνθεσης · Λ λογιστική · Τ σύνολο · Ζ1–Ζ6 ζήτηση). Ενημερώθηκαν ρητά οι καρφώσεις
+σχήματος (`stay-availability.test` 16→20 κάδοι · `derive-stay-terms` · Κ6 του `public-listing-schema.test`: κρίκος μέσα σε
+προαιρετικό κουτί ελέγχεται σε έγγραφο **με** το κουτί) και το «κάθε εμπόδιο πυροδοτεί» του `demand-matching.test`
+(+4 σενάρια). **107 σουίτες · 2.299 tests πράσινα** (stay · listings · offers · owner-property · demand · services/listings ·
+services/demand).
+
+##### 8.60.21.6 ⚠️ Δηλωμένα όρια
+1. **Η χρέωση κατοικιδίου ΔΕΝ μπαίνει ακόμη στο σύνολο/αίτημα κράτησης** — το `stayQuoteOf` καλείται **μόνο** από
+   `services/stay-calendar/stay-calendar-public.service.ts` και το αίτημα κράτησης ανήκει στο ADR-835 (άλλος agent). Ως τότε:
+   η σελίδα δείχνει τη χρέωση ρητά, και με κατοικίδιο + χρέωση η αναζήτηση **δεν** δείχνει σύνολο (ποτέ μερικό άθροισμα).
+   Επόμενο: `petFeeMinor(fee, pets, nights)` στο `lib/stay/` + γραμμή `fees` στο `StayQuote` + `pets` στο αίτημα.
+2. **Η σελίδα αγγελίας δεν διαβάζει το `?pets=`** της αναζήτησης για τη δική της απάντηση (το `ListingStayBooking` χτίζει
+   ερώτημα χωρίς κατοικίδια). Η πολιτική φαίνεται ούτως ή άλλως στο `ListingStayPets`.
+3. **Ιστορικό αλλαγών (audit)**: τα πεδία `pets` δεν προστέθηκαν στο `config/audit-tracked-fields.ts` — το αρχείο έχει
+   ανοιχτή δουλειά άλλου agent· μπαίνει μόλις γίνει commit εκείνη.
+4. **Παραγόμενα i18n** (`src/types/i18n.ts` — CHECK 3.33 · shell slice — CHECK 3.34): δεν ξαναπαράχθηκαν από εδώ, γιατί οι
+   γεννήτορες γράφουν και locales άλλων agents. Ο Giorgio αποφασίζει τη σειρά.
+5. **JSON-LD `petsAllowed`**: η σελίδα αγγελίας δεν εκπέμπει δομημένα δεδομένα ακόμη· όταν αποκτήσει, `yes`→`true`, `no`→`false`,
+   `onRequest`→Text.
+6. **Είδος/μέγεθος ζώου** (Vrbo type/size · Expedia «Dogs only») — όχι σε αυτή τη φάση.
+7. **Καμία επαναπροβολή δεν χρειάζεται**: κάθε υπάρχουσα αγγελία διαβάζεται `pets: null` μέσω του κρίκου 13, που είναι η αλήθεια.
 
 ---
 

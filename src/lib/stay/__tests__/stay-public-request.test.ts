@@ -26,8 +26,13 @@ describe('stayAnswersRequestFrom', () => {
   it('έγκυρο σώμα', () => {
     expect(stayAnswersRequestFrom(body)).toEqual({
       ok: true,
-      value: { listingIds: ['ownp_a'], query: { checkIn: '2027-09-10', checkOut: '2027-09-12', guests: null } },
+      value: { listingIds: ['ownp_a'], query: { checkIn: '2027-09-10', checkOut: '2027-09-12', guests: null, pets: null } },
     });
+  });
+
+  it('κατοικίδια (ADR-777 §8.60.21): ταξιδεύουν αυτούσια στο ερώτημα', () => {
+    const parsed = stayAnswersRequestFrom({ ...body, pets: 2 });
+    expect(parsed.ok && parsed.value.query.pets).toBe(2);
   });
 
   it.each([
@@ -36,6 +41,9 @@ describe('stayAnswersRequestFrom', () => {
     ['ταυτότητα με κάθετο', { listingIds: ['../x'] }],
     ['ανάποδο διάστημα', { checkIn: '2027-09-12', checkOut: '2027-09-10' }],
     ['0 άτομα', { guests: 0 }],
+    ['0 κατοικίδια', { pets: 0 }],
+    ['6 κατοικίδια (ταβάνι 5)', { pets: 6 }],
+    ['κατοικίδια ως κείμενο', { pets: '2' }],
   ])('🔴 %s ⇒ malformed', (_, patch) => {
     expect(stayAnswersRequestFrom({ ...body, ...patch }).ok).toBe(false);
   });

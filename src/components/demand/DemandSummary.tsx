@@ -166,6 +166,8 @@ function useStayTermsPhrase(): (seeks: readonly DemandSeek[]) => string | null {
         parts.push(t(`${K}.stayAdults`, { count: party.adults }));
         if (party.children > 0) parts.push(t(`${K}.stayChildren`, { count: party.children }));
         if (party.infants > 0) parts.push(t(`${K}.stayInfants`, { count: party.infants }));
+        // ADR-777 §8.60.21 — τα κατοικίδια είναι όρος της παρέας, όχι άτομα.
+        if (party.pets > 0) parts.push(t(`${K}.stayPets`, { count: party.pets }));
       }
       return t(`${K}.stayTerms`, { kind: t(SEEK_KIND_I18N_KEYS.leaseShort), terms: parts.join(', ') });
     },

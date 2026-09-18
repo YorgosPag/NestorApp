@@ -302,6 +302,9 @@ export const IGNORANCE_BLOCKERS = [
   'share-undeclared',
   // ADR-777 §8.60.19 — κανείς δεν δήλωσε αν τα βρέφη μετρούν· η χωρητικότητα-απουσία έρχεται με το ABSENCE.
   'stay-infants-uncertain',
+  // ADR-777 §8.60.21 — πολιτική κατοικιδίων αδήλωτη / «κατόπιν συνεννόησης»: «ρώτα», όχι «δεν υπάρχει».
+  'stay-pets-undeclared',
+  'stay-pets-on-request',
 ] as const satisfies readonly DemandBlocker[];
 
 /**

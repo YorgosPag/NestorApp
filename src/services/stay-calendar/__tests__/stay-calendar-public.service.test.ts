@@ -22,7 +22,7 @@ const NOW = new Date('2027-09-01T07:00:00.000Z');
 const STAMP = '2027-01-01T00:00:00.000Z';
 
 function givenListing(offerKinds: readonly ('leaseShort' | 'sell')[] = ['leaseShort']): void {
-  const stay = offerKinds.includes('leaseShort') ? { minNights: 2, maxGuests: 4, nextAvailableFrom: null } : null;
+  const stay = offerKinds.includes('leaseShort') ? { minNights: 2, maxGuests: 4, pets: null, nextAvailableFrom: null } : null;
   db.seed(COLLECTIONS.PUBLIC_LISTINGS, PROPERTY, { ...listingOf(stay, offerKinds, 80) });
 }
 

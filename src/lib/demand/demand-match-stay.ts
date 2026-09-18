@@ -18,6 +18,8 @@
  * | `over-capacity` (ενήλικες + παιδιά) | `stay-over-capacity` | κατηγορικό |
  * | χωρά χωρίς βρέφη, όχι με αυτά | `stay-infants-uncertain` | αβεβαιότητα |
  * | `below-min-nights` (με το **πάνω** όριο νυχτών) | `stay-nights-below-minimum` | μετρήσιμο |
+ * | `pets-not-allowed` · `over-pet-limit` (ADR-777 §8.60.21) | `stay-pets-not-allowed` · `stay-pets-over-limit` | κατηγορικό |
+ * | `pets-unknown` · `pets-on-request` | `stay-pets-undeclared` · `stay-pets-on-request` | αβεβαιότητα |
  *
  * 🔑 **Οι νύχτες κρίνονται με το ΠΑΝΩ όριο του ζητούντα**: ο άνθρωπος που λέει «4–6 νύχτες» ικανοποιεί
  * ελάχιστο 6. Χωρίς πάνω όριο **κανένα** ελάχιστο δεν τον εμποδίζει — θα έμενε όσο χρειαστεί.
@@ -25,7 +27,12 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, καμία εξάρτηση από React/Firestore.
  */
 
-import { capacityVerdict, minNightsVerdict } from '@/lib/stay/stay-availability';
+import {
+  capacityVerdict,
+  minNightsVerdict,
+  petsVerdict,
+  type StayPetsVerdict,
+} from '@/lib/stay/stay-availability';
 import type { PublicListing } from '@/types/public-listing';
 import {
   stayHeadcount,
@@ -64,6 +71,25 @@ function partyBlocker(stay: ListingStay, party: StayParty | null): DemandBlocker
 }
 
 /**
+ * **Απάντηση του ΕΝΟΣ κριτή κατοικιδίων → εμπόδιο ζήτησης** (ADR-777 §8.60.21).
+ *
+ * 🔒 `Record` πάνω στο κλειστό σύνολο ⇒ πέμπτη απάντηση του κριτή **δεν μεταγλωττίζεται** χωρίς γραμμή
+ * εδώ. Καμία δεύτερη σύγκριση `pets > maxPets` — μόνο μετάφραση λεξιλογίου.
+ */
+const PETS_BLOCKER: Readonly<Record<StayPetsVerdict['kind'], DemandBlocker>> = {
+  'pets-unknown': 'stay-pets-undeclared',
+  'pets-not-allowed': 'stay-pets-not-allowed',
+  'over-pet-limit': 'stay-pets-over-limit',
+  'pets-on-request': 'stay-pets-on-request',
+};
+
+/** Τα κατοικίδια της παρέας απέναντι στην πολιτική του κατόχου. Χωρίς παρέα/κατοικίδιο ⇒ τίποτα. */
+function petsBlocker(stay: ListingStay, party: StayParty | null): DemandBlocker | null {
+  const verdict = petsVerdict(stay.pets ?? null, party?.pets ?? null);
+  return verdict === null ? null : PETS_BLOCKER[verdict.kind];
+}
+
+/**
  * **Κρίνει τους όρους διαμονής** μιας εναλλακτικής απέναντι στην αγγελία.
  *
  * ⚠️ Αγγελία **χωρίς** `stay` (δεν προσφέρει διαμονή) ⇒ καμία κρίση όρων: το `offer-kind` έχει ήδη
@@ -76,6 +102,8 @@ export function judgeStayTerms(listing: PublicListing, seek: ShortStayDemandSeek
   const blockers: DemandBlocker[] = [];
   const party = partyBlocker(stay, seek.party);
   if (party !== null) blockers.push(party);
+  const pets = petsBlocker(stay, seek.party);
+  if (pets !== null) blockers.push(pets);
 
   const longest = seek.nights.max;
   const nights = longest === null ? null : minNightsVerdict(stay.minNights, longest);

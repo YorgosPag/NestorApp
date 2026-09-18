@@ -64,6 +64,9 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   // ── ADR-835: η βραχυχρόνια ως τέταρτη διάθεση ───────────────────────────────
   'short-lease-min-nights-invalid': 'property-market:offer.invariant.short-lease-min-nights-invalid',
   'short-lease-max-guests-invalid': 'property-market:offer.invariant.short-lease-max-guests-invalid',
+  // ── ADR-777 §8.60.21: κατοικίδια ─────────────────────────────────────────────
+  'short-lease-max-pets-invalid': 'property-market:offer.invariant.short-lease-max-pets-invalid',
+  'short-lease-pet-fee-invalid': 'property-market:offer.invariant.short-lease-pet-fee-invalid',
   'exchange-requires-land': 'property-market:offer.invariant.exchange-requires-land',
   // ⚠️ **Ο συμμετρικός του από πάνω** (ADR-842 §7.6.10): ίδιος κριτής
   //    (`OFFER_KIND_CLASSES`), **αντίθετη** κίνηση για τον άνθρωπο.

@@ -41,11 +41,11 @@ function lodging(minNights: number | null, maxGuests: number | null): PublicList
     commercialStatus: 'unavailable',
     offerKinds: ['leaseShort'],
     commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: 80 },
-    stay: { minNights, maxGuests, nextAvailableFrom: null },
+    stay: { minNights, maxGuests, pets: null, nextAvailableFrom: null },
   });
 }
 
-const party = (adults: number, children = 0, infants = 0): StayParty => ({ adults, children, infants });
+const party = (adults: number, children = 0, infants = 0, pets = 0): StayParty => ({ adults, children, infants, pets });
 
 /** Ζητών: «Διαμονή», χωρίς όριο τιμής, με τις νύχτες και την παρέα του. */
 function traveller(nights: DemandNightsRange, who: StayParty | null, extra: DemandSeek[] = []) {
@@ -242,7 +242,7 @@ describe('Φο — η φόρμα: οι όροι ταξιδεύουν ΜΟΝΟ μ
     ...EMPTY_DEMAND_FORM,
     seeks,
     stayNights: { min: 3, max: 5 },
-    stayParty: { adults: 2, children: null, infants: 1 },
+    stayParty: { adults: 2, children: null, infants: 1, pets: null },
   });
   const draftOf = (seeks: string[]) => demandDraftFrom(demandFormSchema.parse(values(seeks)));
 
@@ -261,6 +261,6 @@ describe('Φο — η φόρμα: οι όροι ταξιδεύουν ΜΟΝΟ μ
     expect(loaded.kind).toBe('editable');
     if (loaded.kind !== 'editable') return;
     expect(loaded.values.stayNights).toEqual({ min: 3, max: 5 });
-    expect(loaded.values.stayParty).toEqual({ adults: 2, children: 0, infants: 1 });
+    expect(loaded.values.stayParty).toEqual({ adults: 2, children: 0, infants: 1, pets: null });
   });
 });

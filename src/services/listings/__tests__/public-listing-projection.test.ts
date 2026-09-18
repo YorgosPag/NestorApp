@@ -329,7 +329,7 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
         NO_PLACE,
         AT,
       )!;
-      expect(listing.stay).toEqual({ minNights: 3, maxGuests: 5, nextAvailableFrom: null });
+      expect(listing.stay).toEqual({ minNights: 3, maxGuests: 5, pets: null, nextAvailableFrom: null });
     });
 
     it('🔴 Σ3 — το `nextAvailableFrom` είναι ΠΑΝΤΑ `null` εδώ: το ημερολόγιο ΔΕΝ ζει στην προβολή', () => {

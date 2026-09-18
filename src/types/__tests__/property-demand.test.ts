@@ -221,7 +221,7 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
     ],
     [
       'stay-party-invalid',
-      { seeks: [shortStaySeek(NO_AMOUNT_RANGE, NO_NIGHTS_RANGE, { adults: 0, children: 1, infants: 0 })] },
+      { seeks: [shortStaySeek(NO_AMOUNT_RANGE, NO_NIGHTS_RANGE, { adults: 0, children: 1, infants: 0, pets: 0 })] },
     ],
     [
       'radius-not-positive',

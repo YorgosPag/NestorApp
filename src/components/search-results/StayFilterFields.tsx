@@ -34,6 +34,7 @@ import React, { useId } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
 import { intervalShape } from '@/lib/date-local';
+import { STAY_PETS_CEILING } from '@/lib/offers/offer-amount';
 import { cn } from '@/lib/utils';
 import { useFilterCommit } from './filters/use-filter-commit';
 
@@ -45,12 +46,57 @@ interface StayFilterFieldsProps {
 /** Πόσα άτομα προσφέρει ο έλεγχος. Πάνω από αυτό, ο επισκέπτης γράφει στη διεύθυνση. */
 const GUEST_CHOICES = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
+/** Πόσα κατοικίδια — **παράγεται** από το ταβάνι του κατόχου, ποτέ δεύτερος χειρόγραφος αριθμός. */
+const PET_CHOICES: readonly number[] = Array.from({ length: STAY_PETS_CEILING }, (_, index) => index + 1);
+
+/**
+ * **Ένας επιλογέας πλήθους** — άτομα ή κατοικίδια, με ρητό «δεν το έχω αποφασίσει».
+ *
+ * ⚠️ **Το «δεν το έχω αποφασίσει» είναι ΤΙΜΗ, όχι απουσία** (N.12). Χωρίς ρητή επιλογή, ο
+ * επισκέπτης δεν θα μπορούσε να **ξε-ρωτήσει** — και το `null` σημαίνει «δεν ρωτήθηκε», ποτέ
+ * «ένα» ή «μηδέν». Εξήχθη όταν ήρθε ο δεύτερος άξονας, ώστε να μη γεννηθεί δίδυμο (CHECK 3.28).
+ */
+function CountSelectField({
+  label,
+  anyLabel,
+  choices,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly anyLabel: string;
+  readonly choices: readonly number[];
+  readonly value: number | null;
+  readonly onChange: (value: number | null) => void;
+}): React.ReactElement {
+  const id = useId();
+  return (
+    <div className="flex flex-col">
+      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value === null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
+        className="mt-1 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
+      >
+        <option value="">{anyLabel}</option>
+        {choices.map((count) => (
+          <option key={count} value={count}>
+            {count}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function StayFilterFields({ filters, className }: StayFilterFieldsProps) {
   const { t } = useTranslation(['short-stay']);
   const { commit } = useFilterCommit(filters);
   const checkInId = useId();
   const checkOutId = useId();
-  const guestsId = useId();
 
   const checkIn = filters.stayWindow?.checkIn ?? '';
   const checkOut = filters.stayWindow?.checkOut ?? '';
@@ -117,29 +163,22 @@ export function StayFilterFields({ filters, className }: StayFilterFieldsProps) 
           />
         </div>
 
-        <div className="flex flex-col">
-          <label htmlFor={guestsId} className="text-xs font-medium text-muted-foreground">
-            {t('short-stay:guests')}
-          </label>
-          <select
-            id={guestsId}
-            value={filters.guests === null ? '' : String(filters.guests)}
-            onChange={(e) => commit({ ...filters, guests: e.target.value === '' ? null : Number(e.target.value) })}
-            className="mt-1 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
-          >
-            {/*
-              ⚠️ **Το «δεν το έχω αποφασίσει» είναι ΤΙΜΗ, όχι απουσία** (N.12). Χωρίς
-              ρητή επιλογή, ο επισκέπτης δεν θα μπορούσε να **ξε-ρωτήσει** τα άτομα —
-              και το `guests: null` σημαίνει «δεν ρωτήθηκε», ποτέ «ένα άτομο».
-            */}
-            <option value="">{t('short-stay:guestsAny')}</option>
-            {GUEST_CHOICES.map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CountSelectField
+          label={t('short-stay:guests')}
+          anyLabel={t('short-stay:guestsAny')}
+          choices={GUEST_CHOICES}
+          value={filters.guests}
+          onChange={(guests) => commit({ ...filters, guests })}
+        />
+
+        {/* ADR-777 §8.60.21 — ίδιος έλεγχος, ίδιος κανόνας «δεν ρωτήθηκε ≠ μηδέν». */}
+        <CountSelectField
+          label={t('short-stay:pets.filterLabel')}
+          anyLabel={t('short-stay:pets.filterAny')}
+          choices={PET_CHOICES}
+          value={filters.pets}
+          onChange={(pets) => commit({ ...filters, pets })}
+        />
 
         {filters.stayWindow !== null && (
           <button
@@ -159,6 +198,7 @@ export function StayFilterFields({ filters, className }: StayFilterFieldsProps) 
       )}
 
       <p className="text-xs text-muted-foreground">{t('short-stay:hint')}</p>
+      <p className="text-xs text-muted-foreground">{t('short-stay:pets.filterHint')}</p>
     </section>
   );
 }

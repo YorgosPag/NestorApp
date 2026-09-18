@@ -66,6 +66,8 @@ export interface ProjectableProperty {
   readonly stay?: {
     readonly minNights?: number | null;
     readonly maxGuests?: number | null;
+    /** Η πολιτική κατοικιδίων (ADR-777 §8.60.21) — `unknown`: τη διαβάζει ο ΕΝΑΣ αναγνώστης. */
+    readonly pets?: unknown;
   } | null;
   /**
    * **Ο όρος της αντιπαροχής** (ADR-777 §8.60.17). Παράγεται από `deriveExchangeTerms`.

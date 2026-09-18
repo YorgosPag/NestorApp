@@ -39,6 +39,8 @@ import { isLandProperty } from '@/constants/property-classification';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 
+import { OwnerStayPetsField } from './OwnerStayPetsField';
+
 const NS = 'property-market';
 const K = `${NS}:offer`;
 
@@ -260,6 +262,9 @@ export function OwnerOffersField(): React.ReactElement {
           />
         )),
       )}
+
+      {/* ADR-777 §8.60.21 — ο όρος κατοικιδίων ανήκει στη βραχυχρόνια, όπως νύχτες/άτομα. */}
+      {chosen?.includes('leaseShort') && <OwnerStayPetsField />}
 
       {(chosen?.length ?? 0) > 0 && (
         <p className="text-sm text-muted-foreground">{t(`${K}.form.priceHelp`)}</p>

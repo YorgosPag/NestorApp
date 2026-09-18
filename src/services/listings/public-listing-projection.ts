@@ -55,6 +55,7 @@ import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-statu
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
 import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/types/public-listing';
+import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { projectListingAttributes } from './public-listing-attributes';
 import { reductionForListing } from '@/lib/listings/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
@@ -292,6 +293,8 @@ function projectStay(
   return {
     minNights: numberOrNull(property.stay?.minNights),
     maxGuests: numberOrNull(property.stay?.maxGuests),
+    // ADR-777 §8.60.21 — ο ΕΝΑΣ αναγνώστης· ό,τι δεν διαβάζεται = «δεν δηλώθηκε».
+    pets: readStayPetPolicy(property.stay?.pets),
     nextAvailableFrom: null,
   };
 }

@@ -86,7 +86,7 @@ describe('Γ — μέρες άφιξης/αναχώρησης και CTA/CTD', (
 
 describe('Δ — διάρκεια ανά ΗΜΕΡΑ ΑΦΙΞΗΣ', () => {
   it('ελάχιστο της ημέρας άφιξης υπερισχύει του όρου της αγγελίας', () => {
-    const listing = listingOf({ minNights: 2, maxGuests: 4, nextAvailableFrom: null });
+    const listing = listingOf({ minNights: 2, maxGuests: 4, pets: null, nextAvailableFrom: null });
     const cal = calendarOf([], rulesInput({}, { '2026-09-10': { minNights: 5 } }));
     expect(stayAvailabilityFor(listing, ask('2026-09-10', '2026-09-13'), cal, null)).toEqual({
       kind: 'below-min-nights',
@@ -112,7 +112,7 @@ describe('Δ — διάρκεια ανά ΗΜΕΡΑ ΑΦΙΞΗΣ', () => {
 });
 
 describe('Ε — ορφανό κενό', () => {
-  const listing = listingOf({ minNights: 5, maxGuests: 4, nextAvailableFrom: null });
+  const listing = listingOf({ minNights: 5, maxGuests: 4, pets: null, nextAvailableFrom: null });
   const entries = [bookingEntry('stay_a', '2026-09-05', '2026-09-10'), bookingEntry('stay_b', '2026-09-12', '2026-09-15')];
 
   it('κενό 2 νυχτών με κανόνα ≤2 ⇒ δίνυχτη διαμονή που το γεμίζει ΠΕΡΝΑ', () => {

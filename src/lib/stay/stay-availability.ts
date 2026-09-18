@@ -53,6 +53,7 @@ import {
 import { earliestFreeStart } from '@/lib/occupancy/occupancy-horizon';
 import type { OccupancyResource } from '@/lib/occupancy/occupancy-resource';
 import type { PublicListing } from '@/types/public-listing';
+import type { StayPetPolicy } from '@/types/property-offers';
 
 import type { StayRulesInput } from '@/types/stay-rules';
 
@@ -149,6 +150,12 @@ type StayCapacityVerdict = Extract<
 /** Η απάντηση του όρου ελάχιστης διαμονής — υποσύνολο του {@link StayAvailabilityAnswer}. */
 type StayMinNightsVerdict = Extract<StayAvailabilityAnswer, { kind: 'below-min-nights' }>;
 
+/** Η απάντηση του όρου κατοικιδίων — υποσύνολο του {@link StayAvailabilityAnswer} (ADR-777 §8.60.21). */
+export type StayPetsVerdict = Extract<
+  StayAvailabilityAnswer,
+  { kind: 'pets-unknown' } | { kind: 'pets-not-allowed' } | { kind: 'over-pet-limit' } | { kind: 'pets-on-request' }
+>;
+
 /**
  * **Ο ΕΝΑΣ κριτής χωρητικότητας** — πόσα άτομα απέναντι στο δηλωμένο μέγιστο του κατόχου.
  *
@@ -184,6 +191,35 @@ export function minNightsVerdict(
 }
 
 /**
+ * **Ο ΕΝΑΣ κριτής κατοικιδίων** (ADR-777 §8.60.21) — πόσα φέρνει ο επισκέπτης απέναντι στην
+ * πολιτική του κατόχου. Τον ρωτούν **δύο**, όπως τον {@link capacityVerdict}: η αναζήτηση
+ * (μέσω {@link stayAvailabilityFor}) και η ζήτηση (`demand-match-stay.ts`).
+ *
+ * @param pets — πόσα κατοικίδια· `null`/`0` = **δεν ρωτήθηκε** ⇒ ο όρος δεν κρίνεται.
+ * @returns `null` όταν ο όρος δεν αποφασίζει (δεν ρωτήθηκε, ή γίνεται δεκτό χωρίς επιφύλαξη).
+ *
+ * 🔑 **Το `pets-on-request` ΔΕΝ είναι εμπόδιο** — είναι ονομασμένη αβεβαιότητα. Ο κάθε
+ * καταναλωτής τη μεταφράζει στο δικό του λεξιλόγιο (αναζήτηση: υποβάθμιση του `free` ·
+ * ζήτηση: αβέβαιο εμπόδιο «ρώτα τον κάτοχο»), χωρίς δεύτερη σύγκριση.
+ * ⛔ Ο σκύλος βοήθειας **δεν** μετριέται στο `pets` — άρα καμία απάντηση εδώ δεν τον αφορά.
+ */
+export function petsVerdict(policy: StayPetPolicy | null, pets: number | null): StayPetsVerdict | null {
+  if (pets === null || pets <= 0) return null;
+  // 🔴 «Δεν δήλωσε» **δεν** γίνεται «ναι» ούτε «όχι» (N.12 · schema.org: άγνωστο).
+  if (policy === null) return { kind: 'pets-unknown' };
+  if (policy.accepts === 'no') return { kind: 'pets-not-allowed' };
+  if (policy.maxPets !== null && pets > policy.maxPets) {
+    return { kind: 'over-pet-limit', maxPets: policy.maxPets, asked: pets };
+  }
+  return policy.accepts === 'onRequest' ? { kind: 'pets-on-request' } : null;
+}
+
+/** Το ερώτημα των κατοικιδίων της αγγελίας — **μία** ανάγνωση, για τις δύο θέσεις που το ρωτούν. */
+function listingPetsVerdict(stay: NonNullable<PublicListing['stay']>, query: StayQuery): StayPetsVerdict | null {
+  return petsVerdict(stay.pets ?? null, query.pets ?? null);
+}
+
+/**
  * Οι **σταθεροί όροι** του κατόχου, κριμένοι πριν από το ημερολόγιο — **σύνθεση** των δύο
  * κριτών ({@link capacityVerdict} · {@link minNightsVerdict}), όχι τρίτη σύγκριση.
  *
@@ -203,7 +239,25 @@ function termsVerdict(
 ): StayAvailabilityAnswer | null {
   const capacity = capacityVerdict(stay.maxGuests, query.guests);
   if (capacity !== null) return capacity;
+  // Τα κατοικίδια μετά τα άτομα (ίδιο είδος όρου: «ποιοι έρχονται»), πριν τις νύχτες. Το
+  // «κατόπιν συνεννόησης» ΔΕΝ κόβει εδώ — δες {@link petsCaveat}.
+  const pets = listingPetsVerdict(stay, query);
+  if (pets !== null && pets.kind !== 'pets-on-request') return pets;
   return judgeMinNights ? minNightsVerdict(stay.minNights, nights) : null;
+}
+
+/**
+ * 8️⃣ **Η ΕΠΙΦΥΛΑΞΗ ΤΩΝ ΚΑΤΟΙΚΙΔΙΩΝ** (ADR-777 §8.60.21) — μόνο το **`free`** γίνεται
+ * `pets-on-request`. Ένα `occupied`/`held`/`conditional` κρατά το δικό του όνομα: λέει κάτι
+ * **σοβαρότερο** από «ρώτα για το κατοικίδιο», και η σελίδα δείχνει την πολιτική ούτως ή άλλως.
+ */
+function petsCaveat(
+  answer: StayAvailabilityAnswer,
+  stay: NonNullable<PublicListing['stay']>,
+  query: StayQuery,
+): StayAvailabilityAnswer {
+  if (answer.kind !== 'free') return answer;
+  return listingPetsVerdict(stay, query)?.kind === 'pets-on-request' ? { kind: 'pets-on-request' } : answer;
 }
 
 /**
@@ -309,7 +363,8 @@ export function stayAvailabilityFor<TSource>(
   const time = timeRulesVerdict(calendar.rules, query);
   if (time !== null) return time;
 
-  return syncedAnswer(calendarVerdict(listing, query, nights, calendar, sale), calendar.channels);
+  const answer = syncedAnswer(calendarVerdict(listing, query, nights, calendar, sale), calendar.channels);
+  return petsCaveat(answer, listing.stay, query);
 }
 
 /**

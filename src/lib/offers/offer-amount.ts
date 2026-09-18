@@ -105,6 +105,22 @@ export function isWholeStayCount(value: number): boolean {
   return Number.isInteger(value) && value >= STAY_LIMIT_MIN_INCLUSIVE;
 }
 
+/**
+ * **Το ανώτατο πλήθος κατοικιδίων** που δηλώνεται — και από τον κάτοχο (όριο) και από τον
+ * ζητούντα (πόσα φέρνει). ADR-777 §8.60.21.
+ *
+ * 🔑 **5 = το όριο του Airbnb** (*«how many pets you allow per stay, from one to five»*,
+ * και 0–5 στον επιλογέα του επισκέπτη). ⚠️ Ο Ν.4830/2021 άρθ.15 §3 επιτρέπει στον
+ * **κανονισμό πολυκατοικίας** να περιορίσει έως **3** — αυτό είναι όρος του κτιρίου που ο
+ * κάτοχος εκφράζει με το δικό του όριο, **όχι** ταβάνι της πλατφόρμας.
+ */
+export const STAY_PETS_CEILING = 5;
+
+/** Ακέραιο πλήθος κατοικιδίων στο `[1, STAY_PETS_CEILING]` — το **ίδιο** κατώφλι «ένα, τουλάχιστον». */
+export function isWholePetCount(value: number): boolean {
+  return isWholeStayCount(value) && value <= STAY_PETS_CEILING;
+}
+
 // =============================================================================
 // 2. ΤΟ ΠΟΣΟ ΜΙΑΣ ΔΙΑΘΕΣΗΣ
 // =============================================================================
@@ -190,6 +206,36 @@ export function offerMaxGuestsInvalid(offer: PropertyOffer): boolean {
 }
 
 /**
+ * `true` αν το δηλωμένο **όριο κατοικιδίων** δεν είναι πλήθος κατοικιδίων ({@link isWholePetCount}).
+ *
+ * 🔑 Κρίνεται **μόνο** σε «ναι»/«κατόπιν συνεννόησης»: το «όχι» δεν φέρει όριο (ο τύπος το
+ * αποκλείει), και `null` = «χωρίς όριο», νόμιμη απάντηση.
+ */
+export function offerMaxPetsInvalid(offer: PropertyOffer): boolean {
+  if (offer.kind !== 'leaseShort') return false;
+  const pets = offer.pets ?? null;
+  if (pets === null || pets.accepts === 'no' || pets.maxPets === null) return false;
+  return !isWholePetCount(pets.maxPets);
+}
+
+/**
+ * `true` αν η **χρέωση κατοικιδίου** δεν είναι θετικό ποσό, ή ξεπερνά την τιμή ανά νύχτα.
+ *
+ * 🔑 **Το ταβάνι είναι του Airbnb** (Help 3623): *«your pet fee can't be more than your
+ * nightly base rate»* — φρένο σε κρυφή εγγύηση ζημιών ντυμένη χρέωση καθαρισμού. Χωρίς
+ * δηλωμένη τιμή νύχτας δεν υπάρχει ταβάνι να συγκριθεί (το κενό το λέει ήδη το
+ * `offer-amount-missing`)· ένα `0` δεν είναι χρέωση — είναι «χωρίς χρέωση», δηλαδή `fee: null`.
+ */
+export function offerPetFeeInvalid(offer: PropertyOffer): boolean {
+  if (offer.kind !== 'leaseShort') return false;
+  const pets = offer.pets ?? null;
+  if (pets === null || pets.accepts === 'no' || pets.fee === null) return false;
+  if (!isPositiveAmount(pets.fee.amount)) return true;
+  const rate = offer.nightlyRate;
+  return typeof rate === 'number' && isPositiveAmount(rate) && pets.fee.amount > rate;
+}
+
+/**
  * «Δηλώθηκε, αλλά κάτω από το κατώφλι» — **η μία** ανάγνωση των δύο όρων διαμονής.
  *
  * 🔑 `null` ⇒ `false` **επίτηδες**: η μη δήλωση δεν είναι σφάλμα (δες
@@ -229,24 +275,31 @@ export interface OfferAmountGaps {
   readonly minNightsInvalid: readonly PropertyOffer['kind'][];
   /** Είδη με **μέγιστο επισκεπτών** που δεν είναι άνθρωποι. */
   readonly maxGuestsInvalid: readonly PropertyOffer['kind'][];
+  /** Είδη με **όριο κατοικιδίων** εκτός `[1, 5]` (ADR-777 §8.60.21). */
+  readonly maxPetsInvalid: readonly PropertyOffer['kind'][];
+  /** Είδη με **χρέωση κατοικιδίου** μη θετική ή πάνω από την τιμή νύχτας. */
+  readonly petFeeInvalid: readonly PropertyOffer['kind'][];
 }
 
-/** Τα κενά ποσού των **ζωντανών** διαθέσεων. Όλα, ποτέ το πρώτο. */
+/**
+ * Τα κενά ποσού των **ζωντανών** διαθέσεων. Όλα, ποτέ το πρώτο.
+ *
+ * 🔑 Ένα φίλτρο ανά κάδο πάνω στις **ίδιες** ζωντανές διαθέσεις: νέος κάδος = μία γραμμή, και
+ * ο τύπος {@link OfferAmountGaps} αρνείται να μεταγλωττιστεί αν ξεχαστεί.
+ */
 export function liveOfferAmountGaps(
   offers: readonly PropertyOffer[] | null | undefined,
 ): OfferAmountGaps {
-  const missing: PropertyOffer['kind'][] = [];
-  const percentageOutOfRange: PropertyOffer['kind'][] = [];
-  const minNightsInvalid: PropertyOffer['kind'][] = [];
-  const maxGuestsInvalid: PropertyOffer['kind'][] = [];
+  const live = (offers ?? []).filter(isLiveOffer);
+  const kindsFailing = (judge: (offer: PropertyOffer) => boolean): PropertyOffer['kind'][] =>
+    live.filter(judge).map((offer) => offer.kind);
 
-  for (const offer of offers ?? []) {
-    if (!isLiveOffer(offer)) continue;
-    if (offerAmountMissing(offer)) missing.push(offer.kind);
-    if (offerPercentageOutOfRange(offer)) percentageOutOfRange.push(offer.kind);
-    if (offerMinNightsInvalid(offer)) minNightsInvalid.push(offer.kind);
-    if (offerMaxGuestsInvalid(offer)) maxGuestsInvalid.push(offer.kind);
-  }
-
-  return { missing, percentageOutOfRange, minNightsInvalid, maxGuestsInvalid };
+  return {
+    missing: kindsFailing(offerAmountMissing),
+    percentageOutOfRange: kindsFailing(offerPercentageOutOfRange),
+    minNightsInvalid: kindsFailing(offerMinNightsInvalid),
+    maxGuestsInvalid: kindsFailing(offerMaxGuestsInvalid),
+    maxPetsInvalid: kindsFailing(offerMaxPetsInvalid),
+    petFeeInvalid: kindsFailing(offerPetFeeInvalid),
+  };
 }

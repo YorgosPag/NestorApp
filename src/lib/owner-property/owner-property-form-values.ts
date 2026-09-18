@@ -51,6 +51,7 @@ import { isLandProperty } from '@/constants/property-classification';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind, type PropertyOffer } from '@/types/property-offers';
+import { EMPTY_PET_FORM, petFormOf, petFormShape, petPolicyFromForm } from './owner-property-pets-form';
 import type {
   OwnerProperty,
   OwnerPropertyDraft,
@@ -124,6 +125,8 @@ export const ownerPropertyFormSchema = z.object({
    */
   minNights: optionalNumber,
   maxGuests: optionalNumber,
+  // ── ADR-777 §8.60.21: ΚΑΤΟΙΚΙΔΙΑ (γέφυρα: `owner-property-pets-form.ts`) ──────
+  ...petFormShape,
 
   // ── §25.6: ΘΕΣΗ ─────────────────────────────────────────────────────────
   placeAnswer: z.enum(PLACE_ANSWERS),
@@ -208,6 +211,7 @@ export const EMPTY_OWNER_PROPERTY_FORM: OwnerPropertyFormValues = {
   nightlyRate: null,
   minNights: null,
   maxGuests: null,
+  ...EMPTY_PET_FORM,
   placeAnswer: 'declared',
   placeQuery: '',
   placePoint: null,
@@ -280,6 +284,7 @@ function offerFrom(
         nightlyRate: values.nightlyRate,
         minNights: values.minNights,
         maxGuests: values.maxGuests,
+        pets: petPolicyFromForm(values),
       };
   }
 }
@@ -397,6 +402,7 @@ export function ownerPropertyFormFrom(
     nightlyRate: stay?.kind === 'leaseShort' ? stay.nightlyRate : null,
     minNights: stay?.kind === 'leaseShort' ? stay.minNights : null,
     maxGuests: stay?.kind === 'leaseShort' ? stay.maxGuests : null,
+    ...petFormOf(stay?.kind === 'leaseShort' ? stay.pets : null),
     placeAnswer: declared === null ? 'declined' : 'declared',
     placeQuery: declared?.label ?? '',
     placePoint: declared?.point ?? null,

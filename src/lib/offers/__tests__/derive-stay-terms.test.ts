@@ -44,14 +44,14 @@ describe('Α — `null` σημαίνει «δεν είναι κατάλυμα»,
   });
 
   it('🔴 …ενώ ζωντανή βραχυχρόνια δίνει ΑΝΤΙΚΕΙΜΕΝΟ — ο παρονομαστής', () => {
-    expect(deriveStayTerms([shortLease()])).toEqual({ minNights: 3, maxGuests: 4 });
+    expect(deriveStayTerms([shortLease()])).toEqual({ minNights: 3, maxGuests: 4, pets: null });
   });
 
   it('🔴 κατάλυμα ΧΩΡΙΣ δηλωμένους όρους δίνει αντικείμενο με `null`, ΟΧΙ `null`', () => {
     // Η διάκριση που παράγει `terms-unknown` αντί για `not-a-stay`: το πρώτο
     // ζητά ένα πεδίο από τον κάτοχο, το δεύτερο δεν είναι καν ερώτηση γι' αυτόν.
     const mute = deriveStayTerms([shortLease({ minNights: null, maxGuests: null } as Partial<PropertyOffer>)]);
-    expect(mute).toEqual({ minNights: null, maxGuests: null });
+    expect(mute).toEqual({ minNights: null, maxGuests: null, pets: null });
     expect(mute).not.toBeNull();
   });
 });
@@ -67,6 +67,6 @@ describe('Β — ΜΟΝΟ ζωντανές διαθέσεις, ίδιος φρο
   });
 
   it('η βραχυχρόνια βρίσκεται ανάμεσα σε άλλες διαθέσεις (συνύπαρξη §4.7)', () => {
-    expect(deriveStayTerms([SALE, shortLease()])).toEqual({ minNights: 3, maxGuests: 4 });
+    expect(deriveStayTerms([SALE, shortLease()])).toEqual({ minNights: 3, maxGuests: 4, pets: null });
   });
 });

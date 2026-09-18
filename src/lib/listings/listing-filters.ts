@@ -56,6 +56,7 @@ import {
 import { isBoundingBox } from '@/lib/geo/geo-area';
 import { intervalShape } from '@/lib/date-local';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
+import { isWholePetCount } from '@/lib/offers/offer-amount';
 
 import {
   EMPTY_LISTING_CRITERIA,
@@ -139,6 +140,15 @@ export interface ListingFilters {
    * στο παράθυρο, η μία ερώτηση θα ήταν **ανέκφραστη χωρίς την άλλη**.
    */
   readonly guests: number | null;
+  /**
+   * Πόσα κατοικίδια (ADR-777 §8.60.21)· `null` = **δεν ρωτήθηκε**, ποτέ «μηδέν».
+   *
+   * 🔑 Ανεξάρτητο από το παράθυρο, όπως τα άτομα — αλλά **κρίνεται μαζί του**, από τον ΙΔΙΟ
+   * κριτή (`petsVerdict` μέσα στο `stayAvailabilityFor`): κανένα δεύτερο φίλτρο, καμία σιωπηλή
+   * απόκρυψη — η λογιστική λέει πόσα δεν δέχονται.
+   * ⛔ Ο σκύλος βοήθειας **δεν** δηλώνεται εδώ — δεν είναι κατοικίδιο.
+   */
+  readonly pets: number | null;
 }
 
 /** Προεπιλεγμένη ακτίνα όταν η διεύθυνση δεν τη δηλώνει. Πόλη-κλίμακα. */
@@ -149,6 +159,7 @@ export const EMPTY_LISTING_FILTERS: ListingFilters = {
   near: null,
   stayWindow: null,
   guests: null,
+  pets: null,
 };
 
 // ============================================================================
@@ -169,6 +180,7 @@ const PARAM = {
   checkIn: 'in',
   checkOut: 'out',
   guests: 'guests',
+  pets: 'pets',
 } as const;
 
 /**
@@ -266,6 +278,15 @@ function readGuests(params: URLSearchParams): number | null {
   return value;
 }
 
+/**
+ * Διεύθυνση → πλήθος κατοικιδίων, ή `null` — ακέραιος στο `[1, 5]` ({@link isWholePetCount}),
+ * το **ίδιο** κατώφλι με τον κάτοχο. `0` ή `9` ⇒ αγνοείται, όπως κάθε άκυρη παράμετρος.
+ */
+function readPets(params: URLSearchParams): number | null {
+  const value = readFiniteNumber(params, PARAM.pets);
+  return value !== null && isWholePetCount(value) ? value : null;
+}
+
 /** Διεύθυνση → φίλτρα. **Άγνωστη τιμή αγνοείται**, ποτέ δεν σκάει η οθόνη. */
 export function parseListingFilters(params: URLSearchParams): ListingFilters {
   return {
@@ -278,6 +299,7 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
     near: readSearchAreaBox(params) ?? readGeoFilter(params),
     stayWindow: readStayWindow(params),
     guests: readGuests(params),
+    pets: readPets(params),
   };
 }
 
@@ -318,6 +340,7 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
     params.set(PARAM.checkOut, filters.stayWindow.checkOut);
   }
   if (filters.guests !== null) params.set(PARAM.guests, String(filters.guests));
+  if (filters.pets !== null) params.set(PARAM.pets, String(filters.pets));
   return params;
 }
 
@@ -340,6 +363,7 @@ export function stayQueryOf(filters: ListingFilters): StayQuery | null {
     checkIn: filters.stayWindow.checkIn,
     checkOut: filters.stayWindow.checkOut,
     guests: filters.guests,
+    pets: filters.pets,
   };
 }
 

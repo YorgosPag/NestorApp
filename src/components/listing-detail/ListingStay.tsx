@@ -18,6 +18,8 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 
+import { ListingStayPets } from './ListingStayPets';
+
 const ListingStayBooking = dynamic(() => import('./ListingStayBooking'), {
   ssr: false,
   loading: () => <span aria-hidden className="block min-h-[22rem]" />,
@@ -41,6 +43,8 @@ export function ListingStay({ listing }: { readonly listing: PublicListing }): R
     <section aria-labelledby="listing-stay-heading" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <h2 id="listing-stay-heading" className="text-sm font-medium text-muted-foreground">{t('short-stay:calendar.heading')}</h2>
       <StayTerms stay={listing.stay} />
+      {/* ADR-777 §8.60.21 — πάντα: ακόμη και χωρίς δήλωση λέει «δεν έχει δηλωθεί» + σκύλοι βοήθειας. */}
+      <ListingStayPets pets={listing.stay.pets ?? null} />
       <span className="block min-h-[22rem]"><ListingStayBooking listing={listing} /></span>
     </section>
   );

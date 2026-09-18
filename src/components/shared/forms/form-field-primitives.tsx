@@ -118,7 +118,7 @@ const INPUT_ADAPTERS: Readonly<
 /**
  * **Ένα πεδίο εισόδου** — αριθμητικό ή κειμενικό, με ρητό είδος.
  *
- * ⚠️ Το `min` αφορά **μόνο** το αριθμητικό, και **δεν** επιβάλλεται στον τύπο: ένα
+ * ⚠️ Τα `min`/`max` αφορούν **μόνο** το αριθμητικό, και **δεν** επιβάλλεται στον τύπο: ένα
  * `min` σε κειμενικό πεδίο είναι αγνοούμενο από τον περιηγητή, ενώ μια διακριτή ένωση
  * props θα διπλασίαζε την υπογραφή — δηλαδή θα ξαναγεννούσε τον κλώνο στον **τύπο**.
  */
@@ -128,6 +128,7 @@ export function FormInputField<TValues extends FieldValues>({
   label,
   kind,
   min,
+  max,
   placeholder,
 }: {
   control: Control<TValues>;
@@ -135,6 +136,8 @@ export function FormInputField<TValues extends FieldValues>({
   label: string;
   kind: InputFieldKind;
   min?: number;
+  /** Ανώτατο όριο του περιηγητή — **υπόδειξη**· την αλήθεια την κρίνει το invariant. */
+  max?: number;
   placeholder?: string;
 }): React.ReactElement {
   const inputId = React.useId();
@@ -154,6 +157,7 @@ export function FormInputField<TValues extends FieldValues>({
             type={adapter.type}
             inputMode={adapter.inputMode}
             min={min}
+            max={max}
             placeholder={placeholder}
             value={adapter.toInput(field.value)}
             onChange={(event) => field.onChange(adapter.fromInput(event.target.value))}

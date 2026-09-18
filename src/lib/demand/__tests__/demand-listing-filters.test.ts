@@ -197,7 +197,7 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
     ['landownerShare', { seeks: [exchangeSeek(40)] }],
     // ADR-777 §8.60.19 — νύχτες χωρίς ημερομηνίες, και παρέα που κρίνεται μόνο με ημερομηνίες.
     ['stayNights', { seeks: [shortStaySeek(NO_AMOUNT_RANGE, { min: 3, max: 5 }, null)] }],
-    ['stayParty', { seeks: [shortStaySeek(NO_AMOUNT_RANGE, NO_NIGHTS_RANGE, { adults: 2, children: 0, infants: 0 })] }],
+    ['stayParty', { seeks: [shortStaySeek(NO_AMOUNT_RANGE, NO_NIGHTS_RANGE, { adults: 2, children: 0, infants: 0, pets: 0 })] }],
   ];
 
   for (const [axis, overrides] of CASES) {

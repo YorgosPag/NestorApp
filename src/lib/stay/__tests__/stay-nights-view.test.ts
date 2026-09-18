@@ -22,7 +22,7 @@ import {
 const FROM = '2026-09-01';
 const TO = '2026-10-31';
 
-const LISTING = listingOf({ minNights: 3, maxGuests: 4, nextAvailableFrom: null });
+const LISTING = listingOf({ minNights: 3, maxGuests: 4, pets: null, nextAvailableFrom: null });
 const ENTRIES = [
   bookingEntry('stay_a', '2026-09-08', '2026-09-12'),
   bookingEntry('stay_b', '2026-09-15', '2026-09-20'),

@@ -106,6 +106,7 @@
         "stayNightsFrom": "τουλάχιστον {min, plural, one {# νύχτα} other {# νύχτες}}",
         "stayNightsRange": "{min}–{max} νύχτες",
         "stayNightsUpTo": "έως {max, plural, one {# νύχτα} other {# νύχτες}}",
+        "stayPets": "{count, plural, one {# κατοικίδιο} other {# κατοικίδια}}",
         "stayTerms": "{kind}: {terms}",
         "whenever": "Όποτε κι αν βγει",
         "window": "Από {fromDate} έως {toDate}"

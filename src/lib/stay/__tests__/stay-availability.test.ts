@@ -65,7 +65,7 @@ function listingOf(
   } as PublicListing;
 }
 
-const STAY_TERMS: PublicListingStay = { minNights: null, maxGuests: 4, nextAvailableFrom: null };
+const STAY_TERMS: PublicListingStay = { minNights: null, maxGuests: 4, pets: null, nextAvailableFrom: null };
 
 /** Ένα κατάλυμα με δηλωμένους όρους — η βάση των περισσότερων ομάδων. */
 const CALYMMA = listingOf(['leaseShort'], STAY_TERMS);
@@ -110,17 +110,19 @@ const UNDECLARED: StayCalendar<string> = { kind: 'undeclared' };
 // Α — ΤΟ ΛΕΞΙΛΟΓΙΟ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΠΛΗΡΕΣ
 // =============================================================================
 
-describe('Α — δεκαέξι ονόματα, κανένα ορφανό', () => {
-  it('το κλειστό σύνολο έχει ακριβώς δεκαέξι τιμές, χωρίς διπλότυπα', () => {
+describe('Α — είκοσι ονόματα, κανένα ορφανό', () => {
+  it('το κλειστό σύνολο έχει ακριβώς είκοσι τιμές, χωρίς διπλότυπα', () => {
     // 14 → 15 με το `unsynced` του Σταδίου Γ (§22): κανάλι που σώπασε, **άλλος υπόχρεος**
     // από το `unreadable` (δικό μας χρέος) ⇒ δικός του κάδος στη λογιστική.
     // 15 → 16 με το `held` του Σταδίου Δ (§23.5): ζωντανό αίτημα άλλου — **άλλη θεραπεία** από το
     // `occupied` («ξαναδοκίμασε μετά τις 14:00», όχι «δες άλλες μέρες»).
-    expect(STAY_AVAILABILITY_KINDS).toHaveLength(16);
-    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(16);
+    // 16 → 20 με τα κατοικίδια (ADR-777 §8.60.21): `pets-unknown` · `pets-not-allowed` ·
+    // `over-pet-limit` (όροι, πριν το ημερολόγιο) + `pets-on-request` (επιφύλαξη του `free`).
+    expect(STAY_AVAILABILITY_KINDS).toHaveLength(20);
+    expect(new Set(STAY_AVAILABILITY_KINDS).size).toBe(20);
   });
 
-  it('🔴 ΜΟΝΟ `free` και `conditional` επιτρέπουν διαμονή — και ΚΑΝΕΝΑ άλλο', () => {
+  it('🔴 ΜΟΝΟ `free` · `conditional` · `pets-on-request` επιτρέπουν διαμονή — και ΚΑΝΕΝΑ άλλο', () => {
     // Το θετικό σκέλος…
     for (const kind of STAYABLE_AVAILABILITY_KINDS) expect(isStayable(kind)).toBe(true);
     // …και ο **παρονομαστής**: κάθε άλλη τιμή οφείλει να είναι `false`. Χωρίς αυτό,
@@ -128,7 +130,7 @@ describe('Α — δεκαέξι ονόματα, κανένα ορφανό', () =
     const rest = STAY_AVAILABILITY_KINDS.filter(
       (k) => !(STAYABLE_AVAILABILITY_KINDS as readonly string[]).includes(k),
     );
-    expect(rest).toHaveLength(14);
+    expect(rest).toHaveLength(17);
     for (const kind of rest) expect(isStayable(kind)).toBe(false);
   });
 });
@@ -170,19 +172,19 @@ describe('Γ — χωρητικότητα και ελάχιστες νύχτες
   });
 
   it('🔴 αδήλωτη χωρητικότητα ⇒ `terms-unknown`, ΟΥΤΕ «χωράει» ΟΥΤΕ «δεν χωράει»', () => {
-    const mute = listingOf(['leaseShort'], { minNights: null, maxGuests: null, nextAvailableFrom: null });
+    const mute = listingOf(['leaseShort'], { minNights: null, maxGuests: null, pets: null, nextAvailableFrom: null });
     expect(stayAvailabilityFor(mute, { ...QUERY, guests: 2 }, DECLARED([]), null).kind).toBe('terms-unknown');
   });
 
   it('🔴 …αλλά αν ΔΕΝ ρωτήθηκαν άτομα, η αδήλωτη χωρητικότητα δεν εμποδίζει', () => {
     // Ο παρονομαστής του από πάνω: το `terms-unknown` δεν είναι «λείπει πεδίο», είναι
     // «λείπει πεδίο **που ρωτήθηκε**».
-    const mute = listingOf(['leaseShort'], { minNights: null, maxGuests: null, nextAvailableFrom: null });
+    const mute = listingOf(['leaseShort'], { minNights: null, maxGuests: null, pets: null, nextAvailableFrom: null });
     expect(stayAvailabilityFor(mute, { ...QUERY, guests: null }, DECLARED([]), null).kind).toBe('free');
   });
 
   it('λιγότερες νύχτες από το ελάχιστο ⇒ `below-min-nights` με το «πόσο»', () => {
-    const strict = listingOf(['leaseShort'], { minNights: 10, maxGuests: 4, nextAvailableFrom: null });
+    const strict = listingOf(['leaseShort'], { minNights: 10, maxGuests: 4, pets: null, nextAvailableFrom: null });
     expect(stayAvailabilityFor(strict, QUERY, DECLARED([]), null)).toEqual({
       kind: 'below-min-nights',
       minNights: 10,
@@ -191,7 +193,7 @@ describe('Γ — χωρητικότητα και ελάχιστες νύχτες
   });
 
   it('🔴 ακριβώς όσες το ελάχιστο ΠΕΡΝΑ — «και το ίσον;»', () => {
-    const strict = listingOf(['leaseShort'], { minNights: 7, maxGuests: 4, nextAvailableFrom: null });
+    const strict = listingOf(['leaseShort'], { minNights: 7, maxGuests: 4, pets: null, nextAvailableFrom: null });
     expect(stayAvailabilityFor(strict, QUERY, DECLARED([]), null).kind).toBe('free');
   });
 
@@ -430,9 +432,10 @@ describe('Κ — `stale` κανάλι: μόνο η ΥΠΟΣΧΕΣΗ υποβαθ
 // Η — ⛔ ΚΑΝΕΝΑ ΗΜΕΡΟΛΟΓΙΟ ΣΤΗ ΔΗΜΟΣΙΑ ΠΡΟΒΟΛΗ (§4.5) — άγκυρα στο ΚΛΕΙΣΤΟ ΣΧΗΜΑ
 // =============================================================================
 
-describe('Η — το `PublicListing.stay` έχει ΤΡΙΑ πεδία, και κανένα δεν είναι ημερολόγιο', () => {
-  it('⛔ ακριβώς `minNights` · `maxGuests` · `nextAvailableFrom` — τίποτα άλλο', () => {
-    expect(Object.keys(STAY_TERMS).sort()).toEqual(['maxGuests', 'minNights', 'nextAvailableFrom']);
+describe('Η — το `PublicListing.stay` έχει ΤΕΣΣΕΡΑ πεδία, και κανένα δεν είναι ημερολόγιο', () => {
+  // 3 → 4 με το `pets` (ADR-777 §8.60.21): όρος του κατόχου, **όχι** ημερολόγιο.
+  it('⛔ ακριβώς `minNights` · `maxGuests` · `pets` · `nextAvailableFrom` — τίποτα άλλο', () => {
+    expect(Object.keys(STAY_TERMS).sort()).toEqual(['maxGuests', 'minNights', 'nextAvailableFrom', 'pets']);
   });
 
   it('⛔ καμία σειρά/πίνακας δεν ταξιδεύει στο `stay` — ένα σημείο, ποτέ ημερολόγιο', () => {

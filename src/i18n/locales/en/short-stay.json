@@ -29,7 +29,11 @@
       "above-max-nights": "{count} with a shorter maximum stay",
       "not-a-stay": "{count} are not short-stay places",
       "unsynced": "{count} with a channel that is not answering",
-      "held": "{count} awaiting a reply"
+      "held": "{count} awaiting a reply",
+      "pets-unknown": "{count} without a stated pet policy",
+      "pets-not-allowed": "{count} don't allow pets",
+      "over-pet-limit": "{count} allow fewer pets",
+      "pets-on-request": "{count} available — pets on request"
     }
   },
   "calendar": {
@@ -95,7 +99,11 @@
     "checking": "Checking your dates…",
     "failed": "We couldn't check availability right now.",
     "unsynced": "Availability can't be confirmed: one of the host's channels is not answering. Ask the host to confirm before you book.",
-    "held": "On hold for another guest until {until} — if the host doesn't reply, the dates open up again."
+    "held": "On hold for another guest until {until} — if the host doesn't reply, the dates open up again.",
+    "pets-unknown": "The host hasn't stated whether pets are allowed — ask them.",
+    "pets-not-allowed": "Pets are not allowed. (Assistance dogs are always welcome.)",
+    "over-pet-limit": "Allows {maxPets, plural, one {up to # pet} other {up to # pets}}.",
+    "pets-on-request": "Available for your dates — pets on request, arrange it with the host."
   },
   "quote": {
     "total": "Total {total} for {count, plural, one {# night} other {# nights}}",
@@ -139,5 +147,25 @@
       "own-listing": "You can't request your own listing — block dates from its calendar instead.",
       "failed": "Something went wrong — please try again."
     }
+  },
+  "pets": {
+    "heading": "Pets",
+    "undeclared": "Pets: the host hasn't stated a policy — ask them.",
+    "no": "Pets are not allowed.",
+    "yes": "Pets are allowed.",
+    "yesUpTo": "Pets are allowed — {count, plural, one {up to # pet} other {up to # pets}}.",
+    "onRequest": "Pets on request — arrange it with the host.",
+    "onRequestUpTo": "Pets on request — {count, plural, one {up to # pet} other {up to # pets}}.",
+    "feeFree": "No charge for pets.",
+    "fee": {
+      "stay": "Pet fee: {amount} per booking.",
+      "night": "Pet fee: {amount} per night.",
+      "pet": "Pet fee: {amount} per pet.",
+      "petNight": "Pet fee: {amount} per pet per night."
+    },
+    "assistance": "Assistance dogs are not pets: they are always welcome, free of charge (Law 3868/2010, art. 16).",
+    "filterLabel": "Pets",
+    "filterAny": "No pets",
+    "filterHint": "Travelling with an assistance dog? It doesn't count as a pet — it's always welcome."
   }
 }

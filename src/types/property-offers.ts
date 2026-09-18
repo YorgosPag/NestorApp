@@ -244,7 +244,64 @@ export interface ShortLeaseOffer extends PropertyOfferBase {
   minNights: number | null;
   /** Μέγιστος αριθμός επισκεπτών. `null` = δεν δηλώθηκε· **ποτέ `0`**. */
   maxGuests: number | null;
+  /**
+   * **Η πολιτική κατοικιδίων** (ADR-777 §8.60.21). Απόν ή `null` = **δεν δηλώθηκε** —
+   * ποτέ «όχι» (schema.org `petsAllowed`: χωρίς τιμή, *άγνωστο*). Προαιρετικό στον τύπο
+   * επειδή κάθε έγγραφο πριν τις 2026-09-18 δεν το έχει· ο αναγνώστης λέει `?? null`.
+   *
+   * ⛔ **Οι σκύλοι βοήθειας ΔΕΝ ζουν εδώ — και δεν ζουν πουθενά.** Δεν είναι κατοικίδια
+   * (Ν.3868/2010 άρθ.16 §7 · Airbnb Help 1869 · Vrbo), άρα κανένα «όχι» και καμία χρέωση
+   * αυτής της πολιτικής δεν μπορεί να τους αγγίξει: δεν υπάρχει πεδίο να τους αποκλείσει.
+   */
+  pets?: StayPetPolicy | null;
 }
+
+// =============================================================================
+// 3α. ΚΑΤΟΙΚΙΔΙΑ ΣΤΗ ΔΙΑΜΟΝΗ (ADR-777 §8.60.21)
+// =============================================================================
+
+/**
+ * **Δέχεται κατοικίδια;** — οι τρεις απαντήσεις του Booking (`PetsAllowedCode`: *Pets
+ * Allowed · Pets By Arrangements · Pets Not Allowed*, developers.booking.com).
+ *
+ * 🔑 **Τριμερές, όχι δυαδικό**: το Airbnb έχει μόνο «ναι/όχι», και το «κατόπιν
+ * συνεννόησης» χάνεται εκεί ή γίνεται ψέμα προς τη μία πλευρά. Εδώ είναι **ονομασμένη
+ * αβεβαιότητα**, που ο κριτής λέει ως «ρώτα τον κάτοχο».
+ */
+export const PET_ACCEPTANCE = ['yes', 'onRequest', 'no'] as const;
+export type PetAcceptance = (typeof PET_ACCEPTANCE)[number];
+
+/**
+ * **Πώς υπολογίζεται η χρέωση κατοικιδίου** — οι τέσσερις τρόποι του Airbnb (Help 3623):
+ * ανά κράτηση · ανά νύχτα · ανά κατοικίδιο · ανά κατοικίδιο ανά νύχτα.
+ */
+export const PET_FEE_BASES = ['stay', 'night', 'pet', 'petNight'] as const;
+export type PetFeeBasis = (typeof PET_FEE_BASES)[number];
+
+/** Η χρέωση κατοικιδίου: ποσό σε **ευρώ** (ίδια μονάδα με το `nightlyRate`) και τρόπος. */
+export interface StayPetFee {
+  readonly amount: number;
+  readonly per: PetFeeBasis;
+}
+
+/**
+ * **Η πολιτική κατοικιδίων** ως διακριτή ένωση — οι άκυρες καταστάσεις **δεν γράφονται**.
+ *
+ * 🔴 Το «όχι» **δεν φέρει** όριο ούτε χρέωση: ένα `{ accepts: 'no', fee: 20 }` δεν είναι
+ * «απαγορευμένο από invariant», είναι **αδύνατο να εκφραστεί** (ίδιο δόγμα με το
+ * {@link ExchangeOffer}).
+ *
+ * - `maxPets: null` = **χωρίς δηλωμένο όριο** (όχι «μηδέν»).
+ * - `fee: null` = **χωρίς χρέωση** — όπως στο Airbnb, όπου χωρίς ορισμένη χρέωση δεν
+ *   χρεώνεται τίποτα (και όπως το `free` του Booking).
+ */
+export type StayPetPolicy =
+  | { readonly accepts: 'no' }
+  | {
+      readonly accepts: Exclude<PetAcceptance, 'no'>;
+      readonly maxPets: number | null;
+      readonly fee: StayPetFee | null;
+    };
 
 /** Μια διάθεση — ένα από τα τέσσερα είδη. */
 export type PropertyOffer =

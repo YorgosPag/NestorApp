@@ -60,6 +60,7 @@ import { z } from 'zod';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { readPriceReduction } from '@/lib/listings/price-history';
 import type { ListedAt } from '@/types/public-listing';
+import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 
 // ============================================================================
 // Η ΕΚΔΟΣΗ
@@ -73,7 +74,7 @@ import type { ListedAt } from '@/types/public-listing';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 12;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 13;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -229,6 +230,16 @@ function storedExchangeOf(doc: StoredListingDocument): { landownerShare: number 
     ? (doc.exchange as Readonly<Record<string, unknown>>)
     : {};
   return { landownerShare: numberOrNull.parse(box.landownerShare ?? null) };
+}
+
+/**
+ * Το κουτί διαμονής με την **πολιτική κατοικιδίων** (κρίκος 13). Χωρίς κουτί ⇒ `null`
+ * («δεν είναι κατάλυμα»), όπως πριν· με κουτί, η πολιτική περνά από τον **ΕΝΑ** αναγνώστη.
+ */
+function storedStayWithPets(doc: StoredListingDocument): Readonly<Record<string, unknown>> | null {
+  const stay = stayOrNull.parse(doc.stay ?? null);
+  if (stay === null) return null;
+  return { ...stay, pets: readStayPetPolicy(stay.pets) };
 }
 
 /**
@@ -678,6 +689,22 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * 🔑 **Ιδιοδύναμο (Κ3)**: έγκυρο κουτί περνά αυτούσιο (κανονικοποιημένο).
      */
     apply: (doc) => ({ ...doc, exchange: storedExchangeOf(doc) }),
+  },
+  {
+    to: 13,
+    adr: 'ADR-777 §8.60.21',
+    adds: ['stay.pets'],
+    /**
+     * 🔴 **Η ΔΙΑΜΟΝΗ ΑΠΕΚΤΗΣΕ ΠΟΛΙΤΙΚΗ ΚΑΤΟΙΚΙΔΙΩΝ — ΚΑΙ ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΗΝ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΕ»** (`pets: null`), ποτέ «όχι»: ως
+     * σήμερα η ερώτηση **δεν υπήρχε**. Ένα «όχι» εδώ θα κατηγορούσε κάθε κάτοχο για απάντηση που
+     * δεν έδωσε, και θα έδιωχνε επισκέπτες από καταλύματα που ίσως τους δέχονται.
+     *
+     * ⛔ **Δεν διαβάζει τη διάθεση** (καθαρή συνάρτηση πάνω σε **ένα** έγγραφο, κρίκος 3).
+     * 🔑 **Ιδιοδύναμο (Κ3)**: έγκυρη πολιτική περνά αυτούσια· αγγελία χωρίς `stay` μένει `null`.
+     */
+    apply: (doc) => ({ ...doc, stay: storedStayWithPets(doc) }),
   },
 ];
 

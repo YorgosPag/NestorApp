@@ -118,8 +118,9 @@ export const DEMAND_AXES_LOST_IN_FILTERS = [
    */
   'stayNights',
   /**
-   * **Η παρέα** (ADR-777 §8.60.19). Ταξιδεύει ως `guests` (ενήλικες + παιδιά) — αλλά η αναζήτηση κρίνει
-   * χωρητικότητα **μόνο μαζί με ημερομηνίες** (`stayQueryOf`), άρα ως τότε **δεν στενεύει** τίποτα.
+   * **Η παρέα** (ADR-777 §8.60.19). Ταξιδεύει ως `guests` (ενήλικες + παιδιά) **και** `pets` (§8.60.21) —
+   * αλλά η αναζήτηση κρίνει χωρητικότητα και κατοικίδια **μόνο μαζί με ημερομηνίες** (`stayQueryOf`), άρα
+   * ως τότε **δεν στενεύει** τίποτα.
    */
   'stayParty',
 ] as const;
@@ -311,6 +312,7 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
     criteria,
     near: projectPlace(demand.place),
     guests: headcountOf(demand),
+    pets: petsOf(demand),
   };
 }
 
@@ -321,6 +323,15 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
 function headcountOf(demand: PropertyDemand): number | null {
   const party = demand.seeks.find(isShortStaySeek)?.party ?? null;
   return party === null ? null : stayHeadcount(party);
+}
+
+/**
+ * Τα κατοικίδια της παρέας ως **`pets` της αναζήτησης** (ADR-777 §8.60.21). `0` ⇒ `null`: «κανένα» και
+ * «δεν ρωτήθηκε» είναι το ίδιο για τον κριτή (`petsVerdict`), και η διεύθυνση δεν κουβαλά `pets=0`.
+ */
+function petsOf(demand: PropertyDemand): number | null {
+  const pets = demand.seeks.find(isShortStaySeek)?.party?.pets ?? 0;
+  return pets > 0 ? pets : null;
 }
 
 /**

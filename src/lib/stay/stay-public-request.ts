@@ -12,6 +12,7 @@
 
 import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import { isRecord } from '@/lib/type-guards';
+import { isWholePetCount } from '@/lib/offers/offer-amount';
 
 import type { StayAvailabilityAnswer, StayQuery } from './stay-availability-vocabulary';
 import type { StayHoldDeadline } from './stay-hold-deadline';
@@ -48,19 +49,31 @@ export function isPublicListingId(value: unknown): value is string {
   return typeof value === 'string' && LISTING_ID.test(value);
 }
 
+/**
+ * Τα κατοικίδια του σώματος (ADR-777 §8.60.21): απόν/`null` ⇒ `null` (δεν ρωτήθηκε)· αλλιώς
+ * ακέραιος στο `[1, 5]` — το **ίδιο** κατώφλι με τον κάτοχο. Άκυρη τιμή ⇒ `undefined` ⇒ το
+ * αίτημα απορρίπτεται, ποτέ σιωπηλό «χωρίς κατοικίδιο».
+ */
+function petsOf(pets: unknown): number | null | undefined {
+  if (pets === undefined || pets === null) return null;
+  return typeof pets === 'number' && isWholePetCount(pets) ? pets : undefined;
+}
+
 function queryOf(body: Readonly<Record<string, unknown>>): StayQuery | null {
   const { checkIn, checkOut, guests } = body;
   if (!isDateKey(checkIn) || !isDateKey(checkOut)) return null;
   const nights = daysBetweenDateKeys(checkIn, checkOut);
   if (nights === null || nights < 1 || nights > STAY_BOOKING_MAX_NIGHTS) return null;
-  if (guests === null) return { checkIn, checkOut, guests: null };
+  const pets = petsOf(body.pets);
+  if (pets === undefined) return null;
+  if (guests === null) return { checkIn, checkOut, guests: null, pets };
   if (typeof guests !== 'number' || !Number.isInteger(guests) || guests < 1 || guests > STAY_BOOKING_MAX_GUESTS) {
     return null;
   }
-  return { checkIn, checkOut, guests };
+  return { checkIn, checkOut, guests, pets };
 }
 
-/** Σώμα `{ listingIds, checkIn, checkOut, guests }`. */
+/** Σώμα `{ listingIds, checkIn, checkOut, guests, pets? }`. */
 export function stayAnswersRequestFrom(
   raw: unknown,
 ): StayPublicParse<{ readonly listingIds: readonly string[]; readonly query: StayQuery }> {
@@ -71,7 +84,7 @@ export function stayAnswersRequestFrom(
   const idsValid = Array.isArray(ids) && ids.length >= 1 && ids.length <= STAY_PUBLIC_MAX_LISTINGS
     && ids.every(isPublicListingId) && new Set(ids).size === ids.length;
   if (!idsValid) bad.push('listingIds');
-  if (query === null) bad.push('checkIn', 'checkOut', 'guests');
+  if (query === null) bad.push('checkIn', 'checkOut', 'guests', 'pets');
   if (bad.length > 0 || query === null || !Array.isArray(ids)) return { ok: false, malformed: bad };
   return { ok: true, value: { listingIds: ids.filter(isPublicListingId), query } };
 }

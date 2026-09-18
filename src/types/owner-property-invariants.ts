@@ -25,7 +25,7 @@
  */
 
 import { hasDuplicateLiveOfferKind } from '@/lib/offers/derive-commercial-status';
-import { liveOfferAmountGaps } from '@/lib/offers/offer-amount';
+import { liveOfferAmountGaps, type OfferAmountGaps } from '@/lib/offers/offer-amount';
 import { isOfferKindEligible } from '@/constants/offer-kind-eligibility';
 import { isLiveOffer, isOpenOffer } from '@/types/property-offers';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
@@ -74,6 +74,16 @@ export const OWNER_PROPERTY_INVARIANTS = [
    * άκυροι» θα τον έστελνε να ψάξει ανάμεσα σε δύο.
    */
   'short-lease-max-guests-invalid',
+  /**
+   * **Όριο κατοικιδίων εκτός `[1, 5]`** (ADR-777 §8.60.21) — ίδιο κατώφλι «ένα, τουλάχιστον»,
+   * ταβάνι του Airbnb. `null` («χωρίς όριο») **δεν** είναι σφάλμα.
+   */
+  'short-lease-max-pets-invalid',
+  /**
+   * **Χρέωση κατοικιδίου μη θετική ή πάνω από την τιμή νύχτας** (κανόνας Airbnb Help 3623).
+   * Ξεχωριστός κωδικός: η οθόνη οφείλει να πει **ποιο** πεδίο.
+   */
+  'short-lease-pet-fee-invalid',
   /**
    * **Αντιπαροχή σε κάτι που δεν είναι γη** (ADR-777 §8.32).
    *
@@ -150,6 +160,27 @@ function isPositive(value: number | null | undefined): boolean {
 }
 
 /**
+ * **Κενά ποσού/όρων → κωδικοί** — όλοι **δανεισμένοι** από τον ΕΝΑ κριτή
+ * ({@link liveOfferAmountGaps}). Ένας δεύτερος έλεγχος εδώ θα ήταν δεύτερη αλήθεια για το
+ * ίδιο κατώφλι. Εξήχθη (2026-09-18) ώστε ο πίνακας να μεγαλώνει χωρίς να φουσκώνει ο κριτής.
+ */
+const GAP_INVARIANTS: ReadonlyArray<
+  readonly [keyof OfferAmountGaps, OwnerPropertyInvariant]
+> = [
+  ['missing', 'offer-amount-missing'],
+  ['percentageOutOfRange', 'exchange-percentage-out-of-range'],
+  ['minNightsInvalid', 'short-lease-min-nights-invalid'],
+  ['maxGuestsInvalid', 'short-lease-max-guests-invalid'],
+  ['maxPetsInvalid', 'short-lease-max-pets-invalid'],
+  ['petFeeInvalid', 'short-lease-pet-fee-invalid'],
+];
+
+function offerGapInvariants(draft: OwnerPropertyDraft): OwnerPropertyInvariant[] {
+  const gaps = liveOfferAmountGaps(draft.offers);
+  return GAP_INVARIANTS.filter(([gap]) => gaps[gap].length > 0).map(([, code]) => code);
+}
+
+/**
  * **Ποιοι κανόνες παραβιάζονται** — **ΟΛΟΙ**, ποτέ ο πρώτος.
  *
  * 🔴 **Η ίδια συνάρτηση κρίνει τη ΦΟΡΜΑ και την ΠΥΛΗ ΓΡΑΦΗΣ**, όπως ακριβώς το
@@ -176,15 +207,7 @@ export function ownerPropertyInvariantViolations(
   if (live.length === 0) found.push('no-live-offer');
   if (hasDuplicateLiveOfferKind(draft.offers)) found.push('duplicate-offer-kind');
 
-  const gaps = liveOfferAmountGaps(draft.offers);
-  if (gaps.missing.length > 0) found.push('offer-amount-missing');
-  if (gaps.percentageOutOfRange.length > 0) {
-    found.push('exchange-percentage-out-of-range');
-  }
-  // ⚠️ **Δανείζονται από τον ίδιο κριτή** ({@link liveOfferAmountGaps}), όπως τα δύο
-  // από πάνω: ένας δεύτερος έλεγχος εδώ θα ήταν δεύτερη αλήθεια για το ίδιο κατώφλι.
-  if (gaps.minNightsInvalid.length > 0) found.push('short-lease-min-nights-invalid');
-  if (gaps.maxGuestsInvalid.length > 0) found.push('short-lease-max-guests-invalid');
+  found.push(...offerGapInvariants(draft));
 
   // ── Ποιες διαθέσεις έχουν νόημα για ΑΥΤΟ το είδος (ADR-842 §7.6.10) ──────────
   //

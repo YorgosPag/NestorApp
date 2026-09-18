@@ -10,7 +10,7 @@ import {
 
 import { bookingEntry, calendarOf, listingOf, rulesInput } from './stay-rules-fixtures';
 
-const LISTING = listingOf({ minNights: 2, maxGuests: 4, nextAvailableFrom: null });
+const LISTING = listingOf({ minNights: 2, maxGuests: 4, pets: null, nextAvailableFrom: null });
 const CALENDAR = calendarOf(
   [bookingEntry('stay_a', '2026-09-10', '2026-09-14')],
   rulesInput({}, { '2026-09-20': { closedToArrival: true } }),

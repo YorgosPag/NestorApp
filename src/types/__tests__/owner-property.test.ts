@@ -158,6 +158,28 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
           ],
         }),
       ),
+      // ADR-777 §8.60.21 — οι δύο όροι κατοικιδίων, πάλι **ΧΩΡΙΣΤΑ**: όριο πάνω από το
+      // ταβάνι (5) με έγκυρη χρέωση, και χρέωση πάνω από την τιμή νύχτας με έγκυρο όριο.
+      ...ownerPropertyInvariantViolations(
+        validDraft({
+          offers: [
+            {
+              id: 'offr_stay', kind: 'leaseShort', lifecycle: 'active', nightlyRate: 65, minNights: 2, maxGuests: 4,
+              pets: { accepts: 'yes', maxPets: 6, fee: { amount: 20, per: 'stay' } },
+            },
+          ],
+        }),
+      ),
+      ...ownerPropertyInvariantViolations(
+        validDraft({
+          offers: [
+            {
+              id: 'offr_stay', kind: 'leaseShort', lifecycle: 'active', nightlyRate: 65, minNights: 2, maxGuests: 4,
+              pets: { accepts: 'yes', maxPets: 2, fee: { amount: 90, per: 'stay' } },
+            },
+          ],
+        }),
+      ),
       // ADR-842 §7.6.10 — ο συμμετρικός του `exchange-requires-land`. Η **γη** εδώ,
       // το **εμπορικό** στο Κ23: μετρημένο ότι χρειάζονται **και τα δύο** — με μόνο
       // τη γη, η μετάλλαξη `leaseShort: ['residential','commercial']` έμενε **πράσινη**.

@@ -222,9 +222,19 @@ describe('Κ6 — η αλυσίδα είναι συνεπής με τον εαυ
     });
   });
 
+  /**
+   * Κρίκος που γεμίζει πεδίο **μέσα** σε προαιρετικό κουτί (κρίκος 13: `stay.pets`) δεν αποδεικνύεται
+   * σε έγγραφο **χωρίς** το κουτί — εκεί σωστά δεν προσθέτει τίποτα. Του δίνεται κατάλυμα, ώστε η
+   * δήλωση να **εκτελείται** αντί να εξαιρείται.
+   */
+  const baseFor = (adds: readonly string[]): StoredListingDocument =>
+    adds.some((path) => path.startsWith('stay.'))
+      ? { ...PRODUCTION_V1, offerKinds: ['leaseShort'], stay: { minNights: null, maxGuests: 2 } }
+      : PRODUCTION_V1;
+
   it('🔴 το δηλωμένο `adds` ΕΚΤΕΛΕΙΤΑΙ — δεν είναι σχόλιο που πάλιωσε', () => {
     LISTING_MIGRATIONS.forEach((migration) => {
-      const before: StoredListingDocument = migration.adds.reduce(omitPath, PRODUCTION_V1);
+      const before: StoredListingDocument = migration.adds.reduce(omitPath, baseFor(migration.adds));
       const after = migration.apply(before);
 
       for (const path of migration.adds) {

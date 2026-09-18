@@ -23,11 +23,15 @@ import { DemandNumberField, DemandRangeRow } from './demand-field-primitives';
 const NS = 'property-market';
 const K = `${NS}:demand.form.stayTerms`;
 
-/** Τα τρία πεδία της παρέας, με τη **σειρά** του Airbnb/OpenTravel (ενήλικες → παιδιά → βρέφη). */
+/**
+ * Τα τέσσερα πεδία της παρέας, με τη **σειρά** του «Who» του Airbnb (ενήλικες → παιδιά → βρέφη →
+ * κατοικίδια). Τα κατοικίδια (ADR-777 §8.60.21) **δεν** είναι άτομα — δεν μετρούν στη χωρητικότητα.
+ */
 const PARTY_FIELDS = [
   { name: 'stayParty.adults', key: 'adults', min: 1 },
   { name: 'stayParty.children', key: 'children', min: 0 },
   { name: 'stayParty.infants', key: 'infants', min: 0 },
+  { name: 'stayParty.pets', key: 'pets', min: 0 },
 ] as const;
 
 export function DemandStayTermsRow(): React.ReactElement | null {
@@ -57,6 +61,7 @@ export function DemandStayTermsRow(): React.ReactElement | null {
         ))}
       </ul>
       <p className="text-sm text-muted-foreground">{t(`${K}.partyHelp`)}</p>
+      <p className="text-sm text-muted-foreground">{t(`${K}.petsHelp`)}</p>
     </fieldset>
   );
 }

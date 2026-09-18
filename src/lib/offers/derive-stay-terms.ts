@@ -25,7 +25,9 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι.
  */
 
-import { isLiveOffer, type PropertyOffer } from '@/types/property-offers';
+import { isLiveOffer, type PropertyOffer, type StayPetPolicy } from '@/types/property-offers';
+
+import { readStayPetPolicy } from './stay-pet-policy';
 
 /**
  * **Οι όροι διαμονής μιας ζωντανής βραχυχρόνιας διάθεσης.**
@@ -40,6 +42,8 @@ import { isLiveOffer, type PropertyOffer } from '@/types/property-offers';
 export interface DerivedStayTerms {
   readonly minNights: number | null;
   readonly maxGuests: number | null;
+  /** Η πολιτική κατοικιδίων (ADR-777 §8.60.21). `null` = **δεν δηλώθηκε**, ποτέ «όχι». */
+  readonly pets: StayPetPolicy | null;
 }
 
 /**
@@ -70,6 +74,9 @@ export function deriveStayTerms(
     terms = {
       minNights: offer.minNights ?? null,
       maxGuests: offer.maxGuests ?? null,
+      // 🔑 Μέσα από τον ΕΝΑ αναγνώστη: ό,τι δεν διαβάζεται γίνεται «δεν δηλώθηκε» εδώ, πριν
+      //    φτάσει στη δημόσια αγγελία — όχι σε κάθε καταναλωτή χωριστά.
+      pets: readStayPetPolicy(offer.pets),
     };
   }
 

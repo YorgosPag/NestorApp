@@ -380,7 +380,21 @@ describe('Χ2 — `stayQueryOf`: ο ΜΟΝΑΔΙΚΟΣ κατασκευαστή�
         stayWindow: { checkIn: '2026-08-10', checkOut: '2026-08-17' },
         guests: 4,
       }),
-    ).toEqual({ checkIn: '2026-08-10', checkOut: '2026-08-17', guests: 4 });
+    ).toEqual({ checkIn: '2026-08-10', checkOut: '2026-08-17', guests: 4, pets: null });
+  });
+
+  it('κατοικίδια (ADR-777 §8.60.21) ⇒ ταξιδεύουν στο ερώτημα, και στη διεύθυνση πάνε-έρχονται', () => {
+    const filters = {
+      ...EMPTY_LISTING_FILTERS,
+      stayWindow: { checkIn: '2026-08-10', checkOut: '2026-08-17' },
+      pets: 2,
+    };
+    expect(stayQueryOf(filters)?.pets).toBe(2);
+    expect(parseListingFilters(serializeListingFilters(filters)).pets).toBe(2);
+  });
+
+  it.each(['0', '6', '1.5', 'δύο'])('🔴 `pets=%s` ⇒ αγνοείται (ακέραιος 1..5, όπως ο κάτοχος)', (raw) => {
+    expect(parseListingFilters(new URLSearchParams({ pets: raw })).pets).toBeNull();
   });
 
   it('🔴 ΧΩΡΙΣ παράθυρο ⇒ `null`, όσα άτομα κι αν δηλώθηκαν', () => {

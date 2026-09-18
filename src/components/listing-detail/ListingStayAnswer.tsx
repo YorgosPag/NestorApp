@@ -38,6 +38,11 @@ function headlineOf(answer: StayAvailabilityAnswer, t: (key: string, params?: Re
     case 'departure-not-allowed': return t('short-stay:answer.departure-not-allowed');
     case 'over-capacity': return t('short-stay:answer.over-capacity', { maxGuests: answer.maxGuests });
     case 'terms-unknown': return t('short-stay:answer.terms-unknown');
+    // ADR-777 §8.60.21 — κατοικίδια: τρία εμπόδια + μία επιφύλαξη του «ελεύθερο».
+    case 'pets-unknown': return t('short-stay:answer.pets-unknown');
+    case 'pets-not-allowed': return t('short-stay:answer.pets-not-allowed');
+    case 'over-pet-limit': return t('short-stay:answer.over-pet-limit', { maxPets: answer.maxPets });
+    case 'pets-on-request': return t('short-stay:answer.pets-on-request');
     case 'unknown': return t('short-stay:answer.unknown');
     case 'unreadable': return t('short-stay:answer.unreadable');
     case 'unsynced': return t('short-stay:answer.unsynced');

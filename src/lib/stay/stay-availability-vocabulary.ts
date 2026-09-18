@@ -95,6 +95,14 @@ export interface StayQuery {
   readonly checkOut: string;
   /** Πόσα άτομα· `null` = **δεν ρωτήθηκε**, ποτέ «ένα». */
   readonly guests: number | null;
+  /**
+   * Πόσα κατοικίδια φέρνει (ADR-777 §8.60.21). Απόν / `null` / `0` = **δεν ρωτήθηκε** — ο όρος
+   * κατοικιδίων δεν κρίνεται. Προαιρετικό **επειδή η απουσία έχει ήδη τη σωστή σημασία**
+   * («χωρίς κατοικίδιο»)· δεν υπάρχει σιωπηλή απάντηση να κρυφτεί πίσω του.
+   *
+   * ⛔ Ο σκύλος βοήθειας **δεν μετριέται εδώ** — δεν είναι κατοικίδιο.
+   */
+  readonly pets?: number | null;
 }
 
 // =============================================================================
@@ -228,6 +236,15 @@ export type StayAvailabilityAnswer =
   /** Χωράει **λιγότερους**. **Μετρήσιμο** εμπόδιο: ο επισκέπτης ξέρει πόσο λείπει. */
   | { readonly kind: 'over-capacity'; readonly maxGuests: number; readonly asked: number }
   /**
+   * Ο επισκέπτης φέρνει κατοικίδιο και ο κάτοχος **δεν δήλωσε** πολιτική (ADR-777 §8.60.21).
+   * ⚠️ Ούτε «ναι» ούτε «όχι» — schema.org `petsAllowed`: χωρίς τιμή, **άγνωστο**.
+   */
+  | { readonly kind: 'pets-unknown' }
+  /** Ο κάτοχος **δεν δέχεται** κατοικίδια. (Οι σκύλοι βοήθειας δεν κρίνονται εδώ.) */
+  | { readonly kind: 'pets-not-allowed' }
+  /** Δέχεται **λιγότερα** κατοικίδια. **Μετρήσιμο**, όπως το `over-capacity`. */
+  | { readonly kind: 'over-pet-limit'; readonly maxPets: number; readonly asked: number }
+  /**
    * Δέχεται **περισσότερες** νύχτες. Μετρήσιμο, με τον ίδιο ακριβώς λόγο.
    *
    * 🔑 Με δηλωμένο ημερολόγιο το ελάχιστο κρίνεται **ανά ημέρα άφιξης** και χαλαρώνει σε
@@ -317,6 +334,14 @@ export type StayAvailabilityAnswer =
    * **γεγονός της κράτησης** (`StayBooking.riskDisclosedAt`), όχι κείμενο οθόνης.
    */
   | { readonly kind: 'conditional'; readonly conditionalFrom: string | null }
+  /**
+   * **Ελεύθερο — και το κατοικίδιο κατόπιν συνεννόησης** (ADR-777 §8.60.21).
+   *
+   * 🔑 **Stayable, και ΜΟΝΟ υποβάθμιση του `free`**: κρίνεται **μετά** το ημερολόγιο, ώστε ένα
+   * `occupied` να μένει `occupied` με τη διέξοδό του. Αν έκοβε νωρίς (όπως τα εμπόδια), η
+   * «συνεννόηση» θα έκρυβε ότι οι ημερομηνίες είναι πιασμένες. Ονομασμένη αβεβαιότητα: «ρώτα».
+   */
+  | { readonly kind: 'pets-on-request' }
   /** Ελεύθερο, καμία επιφύλαξη. */
   | { readonly kind: 'free' };
 
@@ -338,6 +363,9 @@ export const STAY_AVAILABILITY_KINDS = [
   'not-a-stay',
   'terms-unknown',
   'over-capacity',
+  'pets-unknown',
+  'pets-not-allowed',
+  'over-pet-limit',
   'unknown',
   'unreadable',
   'unsynced',
@@ -350,6 +378,7 @@ export const STAY_AVAILABILITY_KINDS = [
   'above-max-nights',
   'below-min-nights',
   'conditional',
+  'pets-on-request',
   'free',
 ] as const satisfies readonly StayAvailabilityKind[];
 
@@ -363,6 +392,7 @@ export const STAY_AVAILABILITY_KINDS = [
  */
 export const STAYABLE_AVAILABILITY_KINDS = [
   'conditional',
+  'pets-on-request',
   'free',
 ] as const satisfies readonly StayAvailabilityKind[];
 

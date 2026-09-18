@@ -25,7 +25,7 @@ const STAMP = '2026-09-01T00:00:00.000Z';
 export const CLOCK: StayClock = { today: '2026-09-01', minutes: 600, instant: '2026-09-01T07:00:00.000Z' };
 
 export function listingOf(
-  stay: PublicListingStay | null = { minNights: null, maxGuests: 4, nextAvailableFrom: null },
+  stay: PublicListingStay | null = { minNights: null, maxGuests: 4, pets: null, nextAvailableFrom: null },
   offerKinds: readonly OfferKind[] = ['leaseShort'],
   nightlyRate: number | null = 80,
 ): PublicListing {

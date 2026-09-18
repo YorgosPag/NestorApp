@@ -49,6 +49,7 @@ import {
   type StayParty,
 } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
+import type { StayPetPolicy } from '@/types/property-offers';
 import { IGNORANCE_BLOCKERS } from '../demand-answer';
 
 // =============================================================================
@@ -63,8 +64,12 @@ import { IGNORANCE_BLOCKERS } from '../demand-answer';
 import { NOW_ISO, TODAY, demand, facts, listing, seek } from './demand-fixtures';
 
 /** ADR-777 §8.60.19 — κατάλυμα βραχυχρόνιας με τους όρους του κατόχου. */
-function lodging(minNights: number | null, maxGuests: number | null): PublicListing {
-  return listing({ offerKinds: ['leaseShort'], stay: { minNights, maxGuests, nextAvailableFrom: null } });
+function lodging(
+  minNights: number | null,
+  maxGuests: number | null,
+  pets: StayPetPolicy | null = null,
+): PublicListing {
+  return listing({ offerKinds: ['leaseShort'], stay: { minNights, maxGuests, pets, nextAvailableFrom: null } });
 }
 
 /** ADR-777 §8.60.19 — ζητών «Διαμονή» με νύχτες και παρέα. */
@@ -72,7 +77,7 @@ function traveller(nights: DemandNightsRange, party: StayParty | null): Property
   return demand({ seeks: [shortStaySeek(NO_AMOUNT_RANGE, nights, party)] });
 }
 
-const stayParty = (adults: number, children = 0, infants = 0): StayParty => ({ adults, children, infants });
+const stayParty = (adults: number, children = 0, infants = 0, pets = 0): StayParty => ({ adults, children, infants, pets });
 
 /**
  * Άξονας δρόμου Δύση→Ανατολή (ίδιο πλάτος `lat`), για τα σενάρια της **Ζ4
@@ -249,6 +254,11 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
     ['stay-over-capacity', traveller(NO_NIGHTS_RANGE, stayParty(5)), facts({ listing: lodging(null, 4) })],
     ['stay-infants-uncertain', traveller(NO_NIGHTS_RANGE, stayParty(4, 0, 1)), facts({ listing: lodging(null, 4) })],
     ['stay-capacity-undeclared', traveller(NO_NIGHTS_RANGE, stayParty(2)), facts({ listing: lodging(null, null) })],
+    // ADR-777 §8.60.21 — τα τέσσερα εμπόδια κατοικιδίων, από τον ΙΔΙΟ κριτή (`petsVerdict`).
+    ['stay-pets-not-allowed', traveller(NO_NIGHTS_RANGE, stayParty(2, 0, 0, 1)), facts({ listing: lodging(null, 4, { accepts: 'no' }) })],
+    ['stay-pets-over-limit', traveller(NO_NIGHTS_RANGE, stayParty(2, 0, 0, 2)), facts({ listing: lodging(null, 4, { accepts: 'yes', maxPets: 1, fee: null }) })],
+    ['stay-pets-undeclared', traveller(NO_NIGHTS_RANGE, stayParty(2, 0, 0, 1)), facts({ listing: lodging(null, 4) })],
+    ['stay-pets-on-request', traveller(NO_NIGHTS_RANGE, stayParty(2, 0, 0, 1)), facts({ listing: lodging(null, 4, { accepts: 'onRequest', maxPets: null, fee: null }) })],
     ['stay-nights-below-minimum', traveller({ min: null, max: 3 }, null), facts({ listing: lodging(5, 4) })],
     ['area-below', demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 200 } }), facts()],
     ['area-above', demand({ features: { ...NO_DEMAND_FEATURES, areaMax: 50 } }), facts()],

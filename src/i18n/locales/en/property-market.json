@@ -100,7 +100,9 @@
         "adults": "Adults (13+)",
         "children": "Children (2–12)",
         "infants": "Infants (under 2)",
-        "partyHelp": "Infants do not count towards capacity. If a property fits only without them, you will see it marked “ask the owner”. Empty = no condition."
+        "partyHelp": "Infants do not count towards capacity. If a property fits only without them, you will see it marked “ask the owner”. Empty = no condition.",
+        "pets": "Pets",
+        "petsHelp": "Pets don't count towards capacity. Travelling with an assistance dog? Don't list it as a pet — it's always welcome, free of charge."
       },
       "place": {
         "legend": "Where?",
@@ -300,7 +302,11 @@
       "bedrooms-undeclared": "No number of bedrooms declared",
       "floor-undeclared": "No floor declared",
       "outside-frontage": "Outside the street stretch you set, or set back deeper than the depth you specified",
-      "count": "{count}"
+      "count": "{count}",
+      "stay-pets-not-allowed": "Pets not allowed",
+      "stay-pets-over-limit": "Allows fewer pets than you're bringing",
+      "stay-pets-undeclared": "No pet policy stated — ask the owner",
+      "stay-pets-on-request": "Pets on request — ask the owner"
     },
     "competition": {
       "heading": "How many others want the same",
@@ -357,7 +363,8 @@
         "leaseOut": "Rental",
         "leaseShort": "Stay",
         "exchange": "Land-for-flats exchange"
-      }
+      },
+      "stayPets": "{count, plural, one {# pet} other {# pets}}"
     },
     "space": {
       "title": "My space",
@@ -650,7 +657,9 @@
       "mandate-term-empty": "The mandate starts and expires at the same moment, so it covers no days. Give it a longer term.",
       "mandate-conflicts-existing": "An existing mandate does not allow this agreement.",
       "mandate-conflict-undetermined": "We could not check the existing mandates. Please try again.",
-      "private-marketing-consent-missing": "This listing has a mandate with an agency. Private marketing needs the owner's consent first."
+      "private-marketing-consent-missing": "This listing has a mandate with an agency. Private marketing needs the owner's consent first.",
+      "short-lease-max-pets-invalid": "The maximum number of pets must be a whole number from 1 to 5. Leave the field empty if you don't want a limit.",
+      "short-lease-pet-fee-invalid": "The pet fee must be a positive amount, no higher than the nightly rate. Leave the field empty if you don't charge."
     },
     "formBlocker": {
       "place-unresolved": "Press Locate so the address resolves to a point on the map.",
@@ -958,6 +967,26 @@
         "absent": "Listing not found.",
         "failed": "The action didn't complete."
       }
+    },
+    "pets": {
+      "legend": "Pets",
+      "help": "Tell guests whether they can bring a pet. Without an answer, the listing says \"not stated\" — never \"no\".",
+      "accepts": {
+        "yes": "Yes, pets are welcome",
+        "onRequest": "On request",
+        "no": "No, pets are not allowed",
+        "unset": "I won't state it now"
+      },
+      "maxPetsLabel": "Maximum number of pets (1–{max})",
+      "feeAmountLabel": "Pet fee (€)",
+      "feePer": {
+        "stay": "per booking",
+        "night": "per night",
+        "pet": "per pet",
+        "petNight": "per pet per night"
+      },
+      "feeHelp": "Leave empty if you don't charge. The fee cannot exceed the nightly rate.",
+      "assistanceAnimals": "Assistance dogs (guide dogs and assistance dogs for people with disabilities) are not pets: they are always welcome, free of charge, whatever you choose here (Law 3868/2010, art. 16)."
     }
   },
   "mandate": {

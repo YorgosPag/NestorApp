@@ -75,13 +75,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Τα κατοικίδια της παρέας (ADR-777 §8.60.21): **απόντα ⇒ 0** — κάθε παρέα πριν τις 2026-09-18,
+ * άρα καμία μετανάστευση· χαλασμένα ⇒ `undefined` (όλη η εναλλακτική αδιάβαστη, ποτέ σιωπηλό 0).
+ */
+function petsFrom(value: unknown): number | undefined {
+  if (value === null || value === undefined) return 0;
+  return amountOrNull(value) ?? undefined;
+}
+
 /** Η παρέα — απούσα ⇒ `null` (καμία)· χαλασμένη ⇒ `undefined`. Το **νόημα** το κρίνουν τα αναλλοίωτα. */
 function partyFrom(value: unknown): StayParty | null | undefined {
   if (value === null || value === undefined) return null;
   if (!isRecord(value)) return undefined;
   const [adults, children, infants] = [value.adults, value.children, value.infants].map(amountOrNull);
-  if (adults == null || children == null || infants == null) return undefined;
-  return { adults, children, infants };
+  const pets = petsFrom(value.pets);
+  if (adults == null || children == null || infants == null || pets === undefined) return undefined;
+  return { adults, children, infants, pets };
 }
 
 /** Το εύρος νυχτών — απόν ⇒ χωρίς όριο· χαλασμένο ⇒ `null`. */

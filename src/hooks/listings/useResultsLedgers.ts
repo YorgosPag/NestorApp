@@ -48,7 +48,12 @@ import type {
 } from '@/lib/stay/stay-availability-vocabulary';
 import { useListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
-import { NO_STAY_TOTALS, stayTotalsOf, type StayTotals } from '@/lib/listings/listing-stay-total';
+import {
+  listingsWithUnpricedPetFee,
+  NO_STAY_TOTALS,
+  stayTotalsOf,
+  type StayTotals,
+} from '@/lib/listings/listing-stay-total';
 import type { ListingLedger, PublicListing } from '@/types/public-listing';
 
 /** Ό,τι απαντά η οθόνη για το **σύνολο** — και τα δύο σύνολα που το στηρίζουν. */
@@ -214,8 +219,11 @@ export function useResultsLedgers(
   }, [visible, stayQuery, stayAnswers]);
 
   const stayTotals = useMemo(
-    () => (stayAnswers.kind === 'loaded' ? stayTotalsOf(stayAnswers.answers) : NO_STAY_TOTALS),
-    [stayAnswers],
+    () => (stayAnswers.kind === 'loaded'
+      // ADR-777 §8.60.21: με κατοικίδιο, όπου ο κάτοχος χρεώνει, το σύνολο δεν θα ήταν ολόκληρο.
+      ? stayTotalsOf(stayAnswers.answers, listingsWithUnpricedPetFee(visible, stayQuery))
+      : NO_STAY_TOTALS),
+    [stayAnswers, visible, stayQuery],
   );
 
   return {

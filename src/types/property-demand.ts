@@ -110,7 +110,7 @@
 
 import { isMandateAttributable, type MandateLike } from '@/types/mandate';
 import type { OfferKind } from '@/types/property-offers';
-import { isLandownerShareInRange, isWholeStayCount } from '@/lib/offers/offer-amount';
+import { isLandownerShareInRange, isWholePetCount, isWholeStayCount } from '@/lib/offers/offer-amount';
 import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
 import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
 
@@ -403,6 +403,15 @@ export interface StayParty {
   readonly adults: number;
   readonly children: number;
   readonly infants: number;
+  /**
+   * **Πόσα κατοικίδια** (ADR-777 §8.60.21) — 0..5, όπως το «Who: pets» του Airbnb. `0` = κανένα, και
+   * είναι η τιμή κάθε αποθηκευμένης παρέας πριν τις 2026-09-18 ⇒ **καμία μετανάστευση**.
+   *
+   * ⚠️ **Δεν είναι άτομα**: ούτε το {@link stayHeadcount} ούτε το {@link stayPartySize} τα μετρούν.
+   * ⛔ Ο **σκύλος βοήθειας δεν δηλώνεται εδώ** — δεν είναι κατοικίδιο (Ν.3868/2010 άρθ.16 §7), άρα
+   * καμία πολιτική κατοικιδίων δεν μπορεί να αποκλείσει τον ζητούντα που τον έχει.
+   */
+  readonly pets: number;
 }
 
 /**
@@ -1057,7 +1066,11 @@ function stayInvariants(seeks: readonly DemandSeek[], timing: DemandTiming): Dem
   const { party } = stay;
   const partyValid =
     party === null ||
-    (isWholeStayCount(party.adults) && isHeadcountPart(party.children) && isHeadcountPart(party.infants));
+    (isWholeStayCount(party.adults) &&
+      isHeadcountPart(party.children) &&
+      isHeadcountPart(party.infants) &&
+      // ADR-777 §8.60.21 — 0 (κανένα) ή ακέραιος 1..5, το ίδιο ταβάνι με τον κάτοχο.
+      (party.pets === 0 || isWholePetCount(party.pets)));
   if (!partyValid) found.push('stay-party-invalid');
 
   return found;

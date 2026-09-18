@@ -59,6 +59,7 @@ import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/ge
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import { OFFER_LIFECYCLES, type OfferLifecycle } from '@/types/property-offers';
+import { stayPetPolicySchema } from '@/lib/offers/stay-pet-policy';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 
 /** Αριθμός ή ρητή απουσία. **Ποτέ `0` για το κενό** — δες `owner-property-form-values.ts`. */
@@ -120,6 +121,9 @@ const offer = z.discriminatedUnion('kind', [
     nightlyRate: nullableNumber,
     minNights: nullableNumber,
     maxGuests: nullableNumber,
+    // ADR-777 §8.60.21 — **προαιρετικό**: πελάτης πριν τις 2026-09-18 δεν το στέλνει, και
+    // απόν = «δεν δηλώθηκε». Ο ΕΝΑΣ αναλυτής (`stay-pet-policy.ts`), όχι δεύτερο σχήμα.
+    pets: stayPetPolicySchema.nullable().optional(),
   }),
 ]);
 

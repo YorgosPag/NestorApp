@@ -29,29 +29,32 @@ import {
 /** Εύρος νυχτών «από/έως» — κενό = χωρίς όριο. */
 export const stayNightsFormSchema = z.object({ min: optionalNumberSchema, max: optionalNumberSchema });
 
-/** Η παρέα ως τρία πεδία — **όλα** κενά = καμία παρέα (όχι «μηδέν άτομα»). */
+/** Η παρέα ως τέσσερα πεδία — **όλα** κενά = καμία παρέα (όχι «μηδέν άτομα»). */
 export const stayPartyFormSchema = z.object({
   adults: optionalNumberSchema,
   children: optionalNumberSchema,
   infants: optionalNumberSchema,
+  /** ADR-777 §8.60.21 — πόσα κατοικίδια· κενό = κανένα. */
+  pets: optionalNumberSchema,
 });
 
 type StayPartyForm = z.output<typeof stayPartyFormSchema>;
 
 /** Η κενή μορφή των όρων διαμονής στη φόρμα. */
 export const EMPTY_STAY_NIGHTS_FORM: DemandNightsRange = { min: null, max: null };
-export const EMPTY_STAY_PARTY_FORM: StayPartyForm = { adults: null, children: null, infants: null };
+export const EMPTY_STAY_PARTY_FORM: StayPartyForm = { adults: null, children: null, infants: null, pets: null };
 
 /**
- * **Τρία πεδία → παρέα.**
+ * **Τέσσερα πεδία → παρέα.**
  *
  * ⚠️ Παιδιά ή βρέφη **χωρίς** ενήλικα γίνονται `adults: 0` — **όχι** σιωπηλό `1`: το αναλλοίωτο
  * `stay-party-invalid` λέει στον άνθρωπο «χρειάζεται ενήλικας» αντί να του επινοήσουμε έναν.
  */
 function stayPartyFrom(form: StayPartyForm): StayParty | null {
-  const { adults, children, infants } = form;
-  if (adults === null && children === null && infants === null) return null;
-  return { adults: adults ?? 0, children: children ?? 0, infants: infants ?? 0 };
+  const { adults, children, infants, pets } = form;
+  if (adults === null && children === null && infants === null && pets === null) return null;
+  // 🔑 Κατοικίδιο χωρίς ενήλικα ⇒ `adults: 0` ⇒ `stay-party-invalid` — ίδιο δόγμα με τα παιδιά.
+  return { adults: adults ?? 0, children: children ?? 0, infants: infants ?? 0, pets: pets ?? 0 };
 }
 
 /** **Φόρμα → κλάδος διαμονής** — τιμή, νύχτες, παρέα. */
@@ -72,6 +75,10 @@ export function stayTermsFormOf(demand: PropertyDemand): {
   if (stay === undefined) return { stayNights: EMPTY_STAY_NIGHTS_FORM, stayParty: EMPTY_STAY_PARTY_FORM };
   return {
     stayNights: { ...stay.nights },
-    stayParty: stay.party === null ? EMPTY_STAY_PARTY_FORM : { ...stay.party },
+    // ⚠️ `pets: 0` ⇒ **κενό πεδίο**, όχι «0»: κάθε παλιά παρέα διαβάζεται 0, και ο άνθρωπος δεν θα
+    //    έβλεπε αριθμό που δεν έγραψε ποτέ. Κενό ⇒ 0 στο γύρισμα (`stayPartyFrom`), άρα ο γύρος κλείνει.
+    stayParty: stay.party === null
+      ? EMPTY_STAY_PARTY_FORM
+      : { ...stay.party, pets: stay.party.pets === 0 ? null : stay.party.pets },
   };
 }

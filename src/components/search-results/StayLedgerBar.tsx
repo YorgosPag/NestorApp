@@ -59,8 +59,16 @@ const LEDGER_KIND_KEYS: Readonly<Record<StayAvailabilityKind, string>> = {
   unknown: 'short-stay:ledger.kind.unknown',
   unreadable: 'short-stay:ledger.kind.unreadable',
   unsynced: 'short-stay:ledger.kind.unsynced',
+  // 🔴 Έλειπε (Στάδιο Δ, §23.5): το κλειδί ζούσε στα locales, αλλά ο κάδος `held` δεν είχε
+  //    γραμμή εδώ ⇒ `t(undefined)` σε κάθε αγγελία «σε αναμονή». Διορθώθηκε 2026-09-18.
+  held: 'short-stay:ledger.kind.held',
   'terms-unknown': 'short-stay:ledger.kind.terms-unknown',
   'over-capacity': 'short-stay:ledger.kind.over-capacity',
+  // ADR-777 §8.60.21 — κατοικίδια.
+  'pets-unknown': 'short-stay:ledger.kind.pets-unknown',
+  'pets-not-allowed': 'short-stay:ledger.kind.pets-not-allowed',
+  'over-pet-limit': 'short-stay:ledger.kind.over-pet-limit',
+  'pets-on-request': 'short-stay:ledger.kind.pets-on-request',
   'below-min-nights': 'short-stay:ledger.kind.below-min-nights',
   'above-max-nights': 'short-stay:ledger.kind.above-max-nights',
   'advance-notice': 'short-stay:ledger.kind.advance-notice',

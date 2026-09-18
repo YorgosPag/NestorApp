@@ -56,7 +56,7 @@ function givenStay(offerKinds: readonly OfferKind[] = ['leaseShort']): void {
   const offers = offerKinds.map((kind) => (kind === 'leaseShort' ? offerOf('leaseShort', 65) : offerOf(kind, 210_000)));
   db.seed(COLLECTIONS.OWNER_PROPERTIES, PROPERTY, { ...validOwnerProperty({ offers }) });
   db.seed(COLLECTIONS.PUBLIC_LISTINGS, PROPERTY, {
-    ...listingOf({ minNights: null, maxGuests: 4, nextAvailableFrom: null }, offerKinds), id: PROPERTY,
+    ...listingOf({ minNights: null, maxGuests: 4, pets: null, nextAvailableFrom: null }, offerKinds), id: PROPERTY,
   });
   db.seed(COLLECTIONS.STAY_CALENDARS, PROPERTY, {
     propertyId: PROPERTY, authorUserId: 'user-1', declaredAt: STAMP, version: 1, rules: STAY_RULES_NONE,

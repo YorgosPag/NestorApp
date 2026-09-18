@@ -64,7 +64,7 @@
 
 import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
-import type { OfferKind } from '@/types/property-offers';
+import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
@@ -363,6 +363,14 @@ export interface PublicListingStay {
    * σιωπηλό «χωράει» ή «δεν χωράει» (N.12). Η θεραπεία ανήκει στον **κάτοχο**.
    */
   readonly maxGuests: number | null;
+  /**
+   * **Η πολιτική κατοικιδίων** (ADR-777 §8.60.21). `null` = **δεν δηλώθηκε** — ποτέ «όχι»
+   * (schema.org `petsAllowed`: χωρίς τιμή = άγνωστο). Παράγει δικό του όνομα στην απάντηση
+   * (`pets-unknown`), όπως το `maxGuests` το `terms-unknown`.
+   *
+   * ⛔ Οι σκύλοι βοήθειας **δεν** κρίνονται από αυτό το πεδίο — δεν είναι κατοικίδια.
+   */
+  readonly pets: StayPetPolicy | null;
   /**
    * **Η επόμενη ελεύθερη ημερομηνία** — ISO `YYYY-MM-DD`. `null` = δεν το ξέρουμε.
    *
