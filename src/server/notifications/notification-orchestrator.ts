@@ -21,7 +21,6 @@ import {
   NOTIFICATION_CHANNELS,
   DEFAULT_DELIVERY,
   NOTIFICATION_ENTITY_TYPES,
-  FIREBASE_ERROR_CODES,
   SOURCE_SERVICES,
   getCurrentEnvironment,
   type NotificationEventType,
@@ -45,6 +44,7 @@ import type { WorkspaceRef } from '@/types/workspace-membership';
 import type { NotificationDestination } from '@/lib/notifications/notification-destination';
 import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isAlreadyExistsError } from '@/lib/firestore/firestore-already-exists';
 
 const logger = createModuleLogger('NotificationOrchestrator');
 
@@ -275,14 +275,8 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
   try {
     await docRef.create(notificationData);
   } catch (error: unknown) {
-    // Check if error is "document already exists" using structured error code (enterprise pattern)
-    // Firebase Admin SDK returns error.code as number (gRPC) or string
-    const firebaseError = error as { code?: number | string };
-    const isAlreadyExists =
-      firebaseError.code === FIREBASE_ERROR_CODES.ALREADY_EXISTS ||
-      firebaseError.code === FIREBASE_ERROR_CODES.ALREADY_EXISTS_STRING;
-
-    if (isAlreadyExists) {
+    // "Document already exists" — the ONE interpretation (gRPC number or string code), ADR-866 §2.8.
+    if (isAlreadyExistsError(error)) {
       return {
         success: true,
         notificationId: dedupeKey,

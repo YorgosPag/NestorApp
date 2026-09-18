@@ -9,6 +9,11 @@
   VideosTab,FloorPlanTab}` · `building-management/tabs/{building-files-tab,BuildingFloorplanTab}` · `projects/{project-files-tab,
   tabs/ProjectFloorplanTab}`. **Θεραπεία**: `EntityMediaBinding` για property/building/project + τα `*_MEDIA_CONFIG`. Προϋπόθεση:
   το κέλυφος μαθαίνει `custody` (ADR-866 Φ1.2). >1h, 3 domains ⇒ ξεχωριστή εργασία.
+  ✅ **Η προϋπόθεση εκπληρώθηκε (ADR-866 Φ1.2, 18/09)**: `EntityMediaBinding.custodySource` (`session-company` | `personal`),
+  3ος καταναλωτής ο φάκελος ακινήτου. **Μετρημένο γιατί μένει >1h**: τα 3 σημεία με δικό τους hook (`property-files-tab.tsx:106` ·
+  `building-files-tab.tsx:62` · `project-files-tab.tsx:58`) καρφώνουν `{ companyId }` με το χέρι, και τα `PhotosTab`/`FloorPlanTab`
+  του ακινήτου κουβαλούν συστατικά που **δεν** είναι του κελύφους (σειρά φωτογραφιών αγγελίας · πολυεπίπεδη κάτοψη · IFC) ⇒ το
+  κέλυφος χρειάζεται πρώτα **υποδοχή παιδιών**.
 
 - 🟡 **18/09 — ΤΟ ΜΟΝΟΠΑΤΙ ΜΕΛΟΥΣ ΧΩΡΟΥ ΧΤΙΖΟΤΑΝ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 7 ΣΗΜΕΙΑ** (εύρημα ADR-867 Β5, N.0.2)
 

@@ -14,7 +14,7 @@
 import React, { useCallback, useState } from 'react';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { handleInlineRenameKey } from '../../utils/inline-rename-keyboard';
+import { handleInlineRenameKey } from '@/lib/ui/inline-rename-keyboard';
 import type { OpeningFrameProfilePresetDoc } from '../../../bim/types/opening-frame-profile';
 
 type TFn = (key: string, opts?: Record<string, string>) => string;

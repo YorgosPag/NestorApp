@@ -122,6 +122,8 @@ export const ENTITY_TYPES = {
   FRAMEWORK_AGREEMENT: 'framework_agreement',
   /** Private owner listing (`owner_properties`) — agency-held documents such as signed forms (ADR-864 §18 Δ1) */
   OWNER_PROPERTY: 'owner_property',
+  /** Property dossier (`property_dossiers`) — ό,τι αφορά το σπίτι, πέρα από κάθε αγγελία· προσωπικός κάτοχος (ADR-866 Ε-1 · Φ1.1) */
+  PROPERTY_DOSSIER: 'property_dossier',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];

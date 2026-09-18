@@ -166,7 +166,8 @@ describe('ADR-864 Φ1β — Β5: βιβλίο `custody` και προβολές 
     const custody = Object.entries(AUDIT_ENTITIES)
       .filter(([, spec]) => spec.ledger === 'custody')
       .map(([type]) => type);
-    expect(custody).toEqual(['owner_property']);
+    // ADR-866 Φ1.1 — ο φάκελος του ακινήτου είναι η δεύτερη οντότητα προσωπικού βιβλίου.
+    expect(custody).toEqual(['owner_property', 'property_dossier']);
     for (const type of custody) expect(RECORDABLE_ENTITY_TYPES.has(type)).toBe(false);
     // Παρονομαστής: οι εταιρικές μένουν εγγράψιμες όπως πριν.
     expect([...RECORDABLE_ENTITY_TYPES].sort()).toEqual(

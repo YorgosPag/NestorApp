@@ -42,3 +42,27 @@ export function isValidEnterpriseId(id: string): boolean {
 export function enterpriseIdType(id: string): string | null {
   return parseEnterpriseId(id)?.prefix || null;
 }
+
+/**
+ * **Είναι αυτό έγκυρη ταυτότητα ΑΥΤΟΥ του είδους;** — πρόθεμα από το μητρώο **και** πραγματικό uuid v4.
+ *
+ * 🔑 SSoT (ADR-866 §2.8 — N.0.2): το ζεύγος `isValidEnterpriseId && enterpriseIdType === P` ήταν γραμμένο
+ * με το χέρι σε δύο σημεία (αγγελία · τμήμα διεύθυνσης χώρου) και ο φάκελος θα ήταν το τρίτο. Ένα γνωστό
+ * πρόθεμα **δεν** αρκεί, ούτε ένα έγκυρο uuid με **άλλο** πρόθεμα (`ownp_…` δεν είναι φάκελος).
+ * ⚠️ **Αυστηρό**: κανένα `trim` — ό,τι ήρθε από το δίκτυο το κανονικοποιεί το {@link enterpriseIdFromRequest}.
+ */
+export function isEnterpriseIdOfPrefix(id: string, prefix: EnterpriseIdPrefix): boolean {
+  return isValidEnterpriseId(id) && enterpriseIdType(id) === prefix;
+}
+
+/**
+ * **Η ταυτότητα από ένα αίτημα** — κανονικοποιημένη, ή `null` αν δεν είναι ταυτότητα του είδους `prefix`.
+ *
+ * Για ταυτότητες **επιπέδου Β** που προ-γεννά ο πελάτης (`ownp` · `pdos`): ο διακομιστής **δεν** τις
+ * εμπιστεύεται — τις ελέγχει εδώ και γράφει με `create()`, που αρνείται υπάρχον έγγραφο.
+ */
+export function enterpriseIdFromRequest(value: unknown, prefix: EnterpriseIdPrefix): string | null {
+  if (typeof value !== 'string') return null;
+  const id = value.trim();
+  return isEnterpriseIdOfPrefix(id, prefix) ? id : null;
+}

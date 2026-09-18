@@ -65,7 +65,7 @@ import { useTableDragSpan } from '../../state/table-drag-span-store';
 import { TABLE_CELL_SESSION_MARKER } from './table-cell-session-focus';
 // 🔴 CHECK 3.7 / ADR-364 — ο **ΕΝΑΣ** ορισμός του «τοπικό πεδίο: Enter επιβεβαιώνει,
 // Escape ακυρώνει». Δες τον χειριστή παρακάτω για το γιατί ΔΕΝ είναι ο escape-bus.
-import { handleInlineRenameKey } from '../utils/inline-rename-keyboard';
+import { handleInlineRenameKey } from '@/lib/ui/inline-rename-keyboard';
 import type { TableCellReference } from '../../bim/table/table-cell-reference';
 import type { TableModel } from '../../types/table';
 

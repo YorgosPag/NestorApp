@@ -24,6 +24,7 @@ import {
 import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -52,7 +53,33 @@ export interface EntityFilesToolbarProps {
   onRefresh: () => void;
   fullscreen: { isFullscreen: boolean; toggle: () => void };
   fileCount: number;
-  workspaceName?: string;
+  /**
+   * Δείξε «Ανήκει σε: <χώρος>» — **μόνο** για εταιρική θεματοφυλακή (ADR-866 Φ1.2, §2.9.3 Κ2).
+   * ⚠️ Σημαία και όχι έτοιμο όνομα: το όνομα το διαβάζει το {@link ActiveWorkspaceLabel}, ώστε το `useWorkspace`
+   * (που **πετά** έξω από `WorkspaceProvider`, δηλαδή σε κάθε κόσμο πλην του `(app)`) να **μην** καλείται ποτέ
+   * για προσωπικά αρχεία.
+   */
+  showWorkspace: boolean;
+}
+
+/**
+ * «Ανήκει σε: <χώρος>» — ο **μόνος** αναγνώστης του `WorkspaceContext` στο δέντρο αρχείων.
+ *
+ * 🔴 Ζούσε ως `useWorkspace()` στο σώμα του `EntityFilesManager` ⇒ ο διαχειριστής αρχείων **έπεφτε** σε κάθε
+ * σελίδα χωρίς `WorkspaceProvider` — δηλαδή σε **όλο** τον προσωπικό χώρο `(me)`. Απομονωμένος εδώ, καλείται
+ * μόνο όταν η θεματοφυλακή είναι εταιρική (που ζει πάντα μέσα στο `(app)`).
+ */
+function ActiveWorkspaceLabel(): React.ReactElement | null {
+  const { t } = useTranslation(['files', 'files-media']);
+  const colors = useSemanticColors();
+  const { activeWorkspace } = useWorkspace();
+  if (!activeWorkspace?.displayName) return null;
+  return (
+    <div className={cn("flex items-center gap-2 text-xs", colors.text.muted)}>
+      <span>{t('manager.belongsTo')}:</span>
+      <span className="font-medium text-foreground">{activeWorkspace.displayName}</span>
+    </div>
+  );
 }
 
 // ============================================================================
@@ -75,7 +102,7 @@ export function EntityFilesToolbar({
   onRefresh,
   fullscreen,
   fileCount,
-  workspaceName,
+  showWorkspace,
 }: EntityFilesToolbarProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['files', 'files-media']);
@@ -95,12 +122,7 @@ export function EntityFilesToolbar({
             )}
           </CardTitle>
 
-          {workspaceName && (
-            <div className={cn("flex items-center gap-2 text-xs", colors.text.muted)}>
-              <span>{t('manager.belongsTo')}:</span>
-              <span className="font-medium text-foreground">{workspaceName}</span>
-            </div>
-          )}
+          {showWorkspace && <ActiveWorkspaceLabel />}
         </div>
 
         <div className="flex flex-wrap gap-2">

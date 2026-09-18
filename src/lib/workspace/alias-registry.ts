@@ -36,7 +36,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { AliasVerdict, WorkspaceAliasRecord } from '@/types/workspace-alias';
 import { judgeAliasShape } from './alias-rules';
 import { skeleton } from '@/lib/unicode/skeleton';
-import { enterpriseIdType, isValidEnterpriseId } from '@/services/enterprise-id-parse';
+import { isEnterpriseIdOfPrefix } from '@/services/enterprise-id-parse';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 
 const logger = createModuleLogger('workspace-alias-registry');
@@ -132,10 +132,7 @@ export type AliasResolution =
  * **αναγνώστης**. Δεύτερος κριτής θα ήταν δύο γραμματικές για μία υποδοχή.
  */
 export function readsAsWorkspaceIdentity(segment: string): boolean {
-  return (
-    isValidEnterpriseId(segment) &&
-    enterpriseIdType(segment) === ENTERPRISE_ID_PREFIXES.COMPANY
-  );
+  return isEnterpriseIdOfPrefix(segment, ENTERPRISE_ID_PREFIXES.COMPANY);
 }
 
 // =============================================================================

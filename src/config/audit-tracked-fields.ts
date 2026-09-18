@@ -92,6 +92,8 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   marketingAudience: 'marketingAudience',
   // Commercial sub-fields (dot-notation — human-readable, no internal IDs)
   'commercial.askingPrice': 'commercial.askingPrice',
+  // ADR-777 §8.60.18 — το ενοίκιο ήταν το ΜΟΝΟ ποσό της φόρμας χωρίς ίχνος στο ιστορικό.
+  'commercial.rentPrice': 'commercial.rentPrice',
   'commercial.finalPrice': 'commercial.finalPrice',
   'commercial.reservationDeposit': 'commercial.reservationDeposit',
   'commercial.owners': 'commercialOwners',
@@ -585,6 +587,20 @@ export const FLOOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 // STORAGE TRACKED FIELDS
 // ============================================================================
 
+/**
+ * ADR-777 §8.60.18 — τα εμπορικά πεδία που δηλώνει ο επεξεργαστής ενός **χώρου** (θέση ·
+ * αποθήκη): διάθεση και τιμή ανά ρόλο. **Μία** δήλωση για τους δύο, όπως ένα είναι το
+ * `SPACE_COMMERCIAL_UPDATE_FIELDS` που τα γράφει.
+ *
+ * 🧹 Αντικατέστησε το `monthlyRent` της θέσης στάθμευσης: πεδίο που **δεν υπήρχε** σε κανέναν
+ * τύπο, mapper ή διαδρομή — ιστορικό για κάτι που δεν γραφόταν ποτέ.
+ */
+const SPACE_COMMERCIAL_TRACKED_FIELDS_RAW: Record<string, string> = {
+  commercialStatus: 'commercialStatus',
+  'commercial.askingPrice': 'commercial.askingPrice',
+  'commercial.rentPrice': 'commercial.rentPrice',
+};
+
 const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
   name: 'name',
   type: 'type',
@@ -594,6 +610,7 @@ const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
   area: 'area',
   code: 'code',
   projectId: 'projectId',
+  ...SPACE_COMMERCIAL_TRACKED_FIELDS_RAW,
 };
 
 /** Storage audit registry — `field → TrackedFieldDef`. */
@@ -613,7 +630,7 @@ const PARKING_TRACKED_FIELDS_RAW: Record<string, string> = {
   code: 'code',
   projectId: 'projectId',
   area: 'area',
-  monthlyRent: 'monthlyRent',
+  ...SPACE_COMMERCIAL_TRACKED_FIELDS_RAW,
 };
 
 /** Parking audit registry — `field → TrackedFieldDef`. */
@@ -1256,6 +1273,23 @@ const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
 export const OWNER_PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(OWNER_PROPERTY_TRACKED_FIELDS_RAW, OWNER_PROPERTY_COLLECTION_DEFS);
 
+/**
+ * 🗂️ ADR-866 Φ1.1 — `property_dossier`: ο φάκελος του ακινήτου.
+ *
+ * 🔑 **Κάθε πεδίο που συντάσσει ο άνθρωπος** (`PropertyDossierDraft`: `label` · `type`) **+** ο κύκλος
+ * ζωής (αρχειοθέτηση/επαναφορά ⇒ `status_changed`). ⚠️ Ο **κάτοχος** (`userId`) **δεν** είναι πεδίο
+ * ιστορικού: η μεταβίβαση (Φ4) θα γραφτεί ως **δική της** πράξη, με ποιος → ποιον, όχι ως διαφορά πεδίου.
+ */
+const PROPERTY_DOSSIER_TRACKED_FIELDS_RAW: Record<string, string> = {
+  label: 'label',
+  type: 'type',
+  lifecycle: 'lifecycle',
+};
+
+/** Property-dossier audit registry — `field → TrackedFieldDef` (ADR-866 Φ1.1). */
+export const PROPERTY_DOSSIER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(PROPERTY_DOSSIER_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -1344,6 +1378,9 @@ export function getTrackedFieldsForEntityAuditType(
     // ADR-864 Φ1β — η πρώτη οντότητα βιβλίου `custody`.
     case 'owner_property':
       return OWNER_PROPERTY_TRACKED_FIELDS;
+    // ADR-866 Φ1.1 — η δεύτερη οντότητα βιβλίου `custody`.
+    case 'property_dossier':
+      return PROPERTY_DOSSIER_TRACKED_FIELDS;
     default:
       return null;
   }

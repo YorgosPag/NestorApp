@@ -194,6 +194,34 @@ export async function seedPersonalAuditEntry(
 }
 
 /**
+ * ADR-866 Φ1.1 — ένας **φάκελος ακινήτου**, όπως τον γεννά το `newPropertyDossier`: κάτοχος `userId`
+ * και **κανένα** `companyId` (δεν περνά από το `baseDoc()`, για τον ίδιο λόγο με το βιβλίο παραπάνω).
+ */
+export function propertyDossierPayload(userId: string): Record<string, unknown> {
+  return {
+    userId,
+    label: 'Διαμέρισμα Καλαμαριάς',
+    type: 'apartment',
+    lifecycle: 'active',
+    createdAt: '2026-09-18T10:00:00.000Z',
+    updatedAt: '2026-09-18T10:00:00.000Z',
+  };
+}
+
+export async function seedPropertyDossier(
+  env: RulesTestEnvironment,
+  dossierId: string,
+  userId: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('property_dossiers').doc(dossierId).set({
+      id: dossierId,
+      ...propertyDossierPayload(userId),
+    });
+  });
+}
+
+/**
  * ADR-866 §5.2 — ένα **προσωπικό** αρχείο, όπως το γεννά ο builder για κάτοχο-άνθρωπο: `userId`
  * και **κανένα** `companyId` ή πεδίο θεματοφυλακής CDE.
  *

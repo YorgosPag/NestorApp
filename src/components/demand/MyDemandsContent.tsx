@@ -25,12 +25,14 @@
  */
 
 import React from 'react';
+import '@/lib/design-system';
 import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_DEMAND_ROUTE } from '@/lib/demand/demand-routes';
 import { demandReadId } from '@/lib/demand/property-demand-from-document';
 import { useMyDemands } from '@/services/realtime/hooks/useMyDemands';
+import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
 import { DemandCard } from './DemandCard';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/demands` (ADR-777 §8.39).
@@ -75,29 +77,30 @@ function DemandsBody(): React.ReactElement {
   const { user } = useAuth();
   const state = useMyDemands(user?.uid ?? null);
 
-  switch (state.state) {
-    case 'anonymous':
-      return <p className="text-foreground">{t('property-market:demand.space.signInNeeded')}</p>;
-    case 'loading':
-      return <p className="text-muted-foreground">{t('property-market:demand.list.loading')}</p>;
-    case 'error':
-      return <p className="text-foreground">{t('property-market:demand.list.error')}</p>;
-    case 'ready':
-      return state.demands.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <ul className="flex list-none flex-col gap-3 p-0">
-          {state.demands.map((read) => (
-            // ⚠️ Η ταυτότητα ζητιέται από το **σύνορο** (`demandReadId`): ζει στο ένα
-            //    σκέλος ως `demand.id` και στο άλλο ως `id`, και η οθόνη δεν έχει λόγο
-            //    να ξέρει ποιο από τα δύο διαβάστηκε.
-            <li key={demandReadId(read)}>
-              <DemandCard read={read} />
-            </li>
-          ))}
-        </ul>
-      );
-  }
+  // 🔑 Οι τρεις «μη έτοιμες» καταστάσεις ζουν στο ΕΝΑ `OwnedListStatus` (ADR-866 Φ1.2 — τρίτο δίδυμο, CHECK 3.28).
+  return (
+    <OwnedListStatus
+      state={state}
+      loadingText={t('property-market:demand.list.loading')}
+      errorText={t('property-market:demand.list.error')}
+      renderReady={({ demands }) =>
+        demands.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <ul className="flex list-none flex-col gap-3 p-0">
+            {demands.map((read) => (
+              // ⚠️ Η ταυτότητα ζητιέται από το **σύνορο** (`demandReadId`): ζει στο ένα
+              //    σκέλος ως `demand.id` και στο άλλο ως `id`, και η οθόνη δεν έχει λόγο
+              //    να ξέρει ποιο από τα δύο διαβάστηκε.
+              <li key={demandReadId(read)}>
+                <DemandCard read={read} />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    />
+  );
 }
 
 export function MyDemandsContent(): React.ReactElement {

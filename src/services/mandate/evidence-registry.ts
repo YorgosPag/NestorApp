@@ -18,14 +18,13 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { EvidenceRetentionView } from '@/lib/mandate/mandate-evidence';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isAlreadyExistsError } from '@/lib/firestore/firestore-already-exists';
 import type { MandateEvidenceRecord } from '@/types/mandate-evidence-record';
 import { MANDATE_EVIDENCE_STATES } from '@/types/mandate-evidence-record';
 import type { AttestationEvidence } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('evidence-registry');
 
-/** gRPC `ALREADY_EXISTS` — το `create` σε υπάρχον έγγραφο. */
-const ALREADY_EXISTS = 6;
 
 export interface EvidenceCustody {
   readonly ownerPropertyId: string;
@@ -65,7 +64,7 @@ export async function registerSealedEvidence(
     await registry(adminDb).doc(evidence.id).create(sealedEvidenceRecord(evidence, custody));
     return true;
   } catch (error) {
-    if ((error as { code?: unknown } | null)?.code === ALREADY_EXISTS) return true;
+    if (isAlreadyExistsError(error)) return true;
     logger.error('Το αποδεικτικό δεν μπήκε στο μητρώο', {
       data: { evidenceId: evidence.id, ownerPropertyId: custody.ownerPropertyId },
       error: error instanceof Error ? error.message : String(error),

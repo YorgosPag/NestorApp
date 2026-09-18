@@ -88,7 +88,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0c3ac403fe72f3097c585a721c118e2a540412f7320fe7feab4fd3109b5630e4",
+  "inputsSha256": "f39868680d88af8c1c7a58e4cb04a8d7abb21f3473e96d83b20ca7e11be2625c",
   "languages": [
     "el"
   ],
@@ -361,7 +361,7 @@
     "src/components/property-dossier/PropertyDossierCard.tsx": "4ddbc5afbb8570f898810cea202c55f62bc9053fff8c2730f3ad8a97a00582f7",
     "src/components/property-dossier/PropertyDossierDetailContent.tsx": "64db9d49c31370d3ab8130c53eeedc2225fb69bd1943ca2a7e0d96f239eb68f5",
     "src/components/property-dossier/PropertyDossierDialog.tsx": "2b38dd99b708f9d8c6d52c6bbf0d4e800bff0f3fdadecbffd20fe8b265fa6c7b",
-    "src/components/property-dossier/PropertyDossierTitle.tsx": "88358a581c3649415faa2b9f4b77879b0f51cc05eff53cc55aa4d22f03a8a29c",
+    "src/components/property-dossier/PropertyDossierTitle.tsx": "218515ae17720dc4443b05393dbc81017e722490ac4cd1647af3cd33bf27bc3f",
     "src/components/property-dossier/usePropertyDossierLifecycle.ts": "ae58e9ec9a40c2e60ebf3a54da403d8ab377e4e5a66508c8321e57b6c8ffac50",
     "src/components/search-results/AreaLedgerBar.tsx": "4ac67dee7d9e49bcac2d8195e37032fc7f9bf6e54b89664236c21cb77567c875",
     "src/components/search-results/CriteriaLedgerBar.tsx": "f829859dad6a08df38fcea86128bda22c158af65b61f7d738f8b8b665e4c7cbd",
@@ -683,6 +683,7 @@
     "src/lib/stay/stay-day-rules-form.ts": "640bcfabba5ead616d6bc05b5d6ebec2929e7efd113f0b8cb2312a0615445bb8",
     "src/lib/stay/stay-nights-view.ts": "af3933bcc85952a115eeefb8c4ebace52513844e72b36f10fe40f23b244d0b07",
     "src/lib/tokens/signed-token.ts": "c9f5a1fce3869194506ea66622febcc052b469949f7f0bef1009723f27a4e820",
+    "src/lib/ui/inline-rename-keyboard.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/lib/url-query-state.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
     "src/lib/validation/greek-vat-number.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/validation/text-link-segments.ts": "5656aa0b6d472d37a73258f653418596cd520209dd0d3987d4401aa5f027c62e",

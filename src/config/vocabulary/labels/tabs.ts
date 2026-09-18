@@ -301,6 +301,30 @@ export const VOCAB_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
   parkingFloorplan: "tabs.labels.parkingFloorplan"
 } as const;
 
+/** Οι καρτέλες του φακέλου ακινήτου (ADR-866 Φ1.2) — κλειδιά του `property-market` (ο κόσμος του ιδιώτη). */
+export interface PropertyDossierTabLabelsConfig {
+  readonly 'floor-plan': string;
+  readonly documents: string;
+  readonly photos: string;
+  readonly videos: string;
+  readonly history: string;
+}
+
+/**
+ * Property Dossier Tab Labels — ADR-866 Φ1.2 (§2.9.3 Κ4).
+ * 📍 Translations: `src/i18n/locales/{lang}/property-market.json` → `dossier.tabs.*` — **όχι** `building.json`:
+ * ο φάκελος ζει στον προσωπικό χώρο `(me)`, όπου φορτώνεται το `property-market` (ανά διαδρομή, ADR-744).
+ * ⚠️ Η «Κάτοψη» γίνεται «Τοπογραφικό» σε **γη** — η αντικατάσταση γίνεται στην οθόνη (`floorplanTabKind`), γιατί
+ * εξαρτάται από το **είδος** του συγκεκριμένου φακέλου, όχι από την οντότητα.
+ */
+export const VOCAB_PROPERTY_DOSSIER_TAB_LABELS: PropertyDossierTabLabelsConfig = {
+  'floor-plan': "dossier.tabs.floorplan",
+  documents: "dossier.tabs.documents",
+  photos: "dossier.tabs.photos",
+  videos: "dossier.tabs.videos",
+  history: "dossier.tabs.history",
+} as const;
+
 // ====================================================================
 // ACCESSOR FUNCTIONS - 🏢 ENTERPRISE CENTRALIZED
 // ====================================================================
@@ -359,6 +383,11 @@ export function getStorageTabLabels(): StorageTabLabelsConfig {
  */
 export function getParkingTabLabels(): ParkingTabLabelsConfig {
   return VOCAB_PARKING_TAB_LABELS;
+}
+
+/** Get property dossier tab labels (ADR-866 Φ1.2). */
+export function getPropertyDossierTabLabels(): PropertyDossierTabLabelsConfig {
+  return VOCAB_PROPERTY_DOSSIER_TAB_LABELS;
 }
 
 // ====================================================================

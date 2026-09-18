@@ -177,6 +177,16 @@ const BOUNDARIES = [
     remedy: '«readStoredDemand(raw, id)» ή «propertyDemandFromDocument(raw, id)»',
   },
   {
+    // 🗂️ ADR-866 Φ1.1 — Ο ΦΑΚΕΛΟΣ ΤΟΥ ΑΚΙΝΗΤΟΥ, και η γραμμή μπαίνει **ΜΑΖΙ** με το σύνορο, όχι
+    //    μετά το πρώτο ωμό `as` (όπως στις γραμμές 2-4). Πρώτος αναγνώστης: η επανάληψη γέννησης
+    //    του γραφέα· δεύτερος (Φ1.2): ο ζωντανός κατάλογος μέσω `useOwnedDocuments.fromDocument`.
+    adr: 'ADR-866 Φ1.1',
+    typeName: 'PropertyDossier',
+    custodian: 'src/lib/property-dossier/property-dossier-from-document.ts',
+    module: 'property-dossier-from-document',
+    remedy: '«propertyDossierFromDocument(raw, id)»',
+  },
+  {
     // 🔴 ADR-862 Φ0 Β1 — Η ΠΕΜΠΤΗ ΓΡΑΜΜΗ, ΚΑΙ Η ΠΡΩΤΗ ΠΟΥ ΦΥΛΑΕΙ **ΟΡΑΤΟΤΗΤΑ**, ΟΧΙ ΟΘΟΝΗ.
     //
     // Τα τέσσερα προηγούμενα σύνορα φυλάνε **οθόνη**: πεδίο που λείπει ⇒ λευκή σελίδα.

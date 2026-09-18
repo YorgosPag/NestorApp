@@ -4549,7 +4549,7 @@
         "src/subapps/dxf-viewer/hooks/canvas/useCanvasEscapeRegistrations.ts",
         "src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputKeyboard.ts",
         "src/subapps/dxf-viewer/systems/dynamic-input/keyboard-handlers/",
-        "src/subapps/dxf-viewer/ui/utils/inline-rename-keyboard.ts",
+        "src/lib/ui/inline-rename-keyboard.ts",
         "src/subapps/dxf-viewer/bim-3d/shortcuts/shortcut-dispatcher.ts",
         "src/subapps/dxf-viewer/bim-3d/shortcuts/use3DEscapeRegistrations.ts",
         "src/components/ui/numeric-field/use-numeric-field.ts",

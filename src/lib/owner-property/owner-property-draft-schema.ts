@@ -54,13 +54,10 @@ import { z } from 'zod';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 
-import {
-  PROPERTY_TYPES,
-  type PropertyTypeCanonical,
-} from '@/constants/property-types';
+import { propertyTypeSchema } from '@/lib/property/property-type-schema';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
-import { enterpriseIdType, isValidEnterpriseId } from '@/services/enterprise-id-parse';
+import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import { OFFER_LIFECYCLES, type OfferLifecycle } from '@/types/property-offers';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 
@@ -240,16 +237,15 @@ export const ownerPropertyDraftSchema = z.object({
    * **ταυτόσημο** με τον {@link PropertyType}: η φάση *contract* του §8 #11 έβγαλε τις
    * παρωχημένες και τις ελληνικές legacy τιμές από την ένωση, αφού μετρήθηκε ότι
    * **κανένα** ζωντανό έγγραφο δεν τις χρησιμοποιεί (23/23 κανονικά).
-   * ⚠️ **Το `z.enum(PROPERTY_TYPES)` μένει, και ΔΕΝ είναι πλεονασμός**: ο τύπος φυλάει
+   * ⚠️ **Το `z.enum(PROPERTY_TYPES)` μένει** (πλέον ως κοινό `propertyTypeSchema`, ADR-866 §2.8),
+   * **και ΔΕΝ είναι πλεονασμός**: ο τύπος φυλάει
    * τη **μεταγλώττιση**, αυτό φυλάει το **δίκτυο** — και το δίκτυο δεν μεταγλωττίζεται.
    *
    * ✅ **Παρονομαστής, μετρημένος**: η φόρμα προσφέρει **ακριβώς** αυτό το σύνολο
    * (`OwnerPropertyFields.tsx` → `options={PROPERTY_TYPES}`), άρα η αυστηροποίηση
    * **δεν κλείνει καμία πόρτα που είναι ανοιχτή σήμερα**.
    */
-  type: z.enum(
-    PROPERTY_TYPES as unknown as [PropertyTypeCanonical, ...PropertyTypeCanonical[]],
-  ),
+  type: propertyTypeSchema,
   areaSqm: nullableNumber,
   floor: nullableNumber,
   bedrooms: nullableNumber,
@@ -322,12 +318,7 @@ export function ownerPropertyDraftFromRequest(value: unknown):
  * ζήτησης — και τα δύο έγγραφα θα δείχνανε στο ίδιο `public_listings/{id}`.
  */
 export function ownerPropertyIdFromRequest(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const id = value.trim();
-  if (id === '') return null;
-  // ⚠️ `isValidEnterpriseId` **και** έλεγχος τύπου: το πρώτο απαιτεί πραγματικό
-  // uuid v4 στο δεύτερο μισό (γνωστό πρόθεμα **δεν αρκεί**), το δεύτερο ότι είναι
-  // αγγελία και όχι ζήτηση.
-  if (!isValidEnterpriseId(id)) return null;
-  return enterpriseIdType(id) === ENTERPRISE_ID_PREFIXES.OWNER_PROPERTY ? id : null;
+  // ⚠️ Πραγματικό uuid v4 στο δεύτερο μισό (γνωστό πρόθεμα **δεν αρκεί**) **και** ότι είναι
+  // αγγελία και όχι ζήτηση — ο ΕΝΑΣ κριτής του μητρώου (ADR-866 §2.8, N.0.2).
+  return enterpriseIdFromRequest(value, ENTERPRISE_ID_PREFIXES.OWNER_PROPERTY);
 }

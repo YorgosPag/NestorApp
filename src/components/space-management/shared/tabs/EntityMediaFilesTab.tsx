@@ -6,7 +6,10 @@
  * are supplied via an {@link EntityMediaBinding}; per-tab differences via a
  * {@link MediaTabConfig}. The heavy lifting (upload, gallery, CRUD) stays in
  * the centralized {@link EntityFilesManager} (ADR-031) — this shell only wires
- * auth/company context and the sign-in guard.
+ * auth/custody context and the sign-in guard.
+ *
+ * 🔑 ADR-866 Φ1.2: η θεματοφυλακή έρχεται από τη **σύνδεση** (`binding.custodySource`) — εταιρεία της συνεδρίας
+ * (Parking/Storage, αμετάβλητο) **ή** κάτοχος-άνθρωπος (φάκελος ακινήτου). Ένα κέλυφος, όχι δεύτερο.
  *
  * @module components/space-management/shared/tabs/EntityMediaFilesTab
  * @see ADR-588 — Space Media Tab Shell
@@ -15,7 +18,9 @@
 
 'use client';
 
+import { useAuth } from '@/auth/contexts/AuthContext';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import type { FileCustody } from '@/lib/files/file-custody';
 import { useEntityFilesTabSession } from '@/components/shared/files/useEntityFilesTabSession';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -39,25 +44,19 @@ interface EntityMediaFilesTabProps {
 // COMPONENT
 // ============================================================================
 
-export function EntityMediaFilesTab({ binding, media }: EntityMediaFilesTabProps) {
-  const { t } = useTranslation(binding.i18nNamespace);
-  const colors = useSemanticColors();
-  const { companyId, currentUserId, companyName } = useEntityFilesTabSession({
-    withCompanyName: media.needsCompanyName,
-  });
+/** Ό,τι χρειάζεται η απόδοση **αφού** λυθεί η θεματοφυλακή — ένα σημείο, και για τους δύο κλάδους. */
+interface ResolvedMediaFilesProps extends EntityMediaFilesTabProps {
+  custody: FileCustody;
+  currentUserId: string;
+  companyName?: string;
+}
 
-  if (!companyId || !currentUserId) {
-    return (
-      <p className={cn('p-4 text-center', colors.text.muted)}>
-        {t(media.signInKey)}
-      </p>
-    );
-  }
-
+/** Η **μία** απόδοση του `EntityFilesManager` — οι δύο κλάδοι διαφέρουν **μόνο** στο πώς βρίσκουν τον κάτοχο. */
+function ResolvedMediaFiles({ binding, media, custody, currentUserId, companyName }: ResolvedMediaFilesProps) {
   return (
     <section className="p-2">
       <EntityFilesManager
-        custody={{ companyId }}
+        custody={custody}
         currentUserId={currentUserId}
         entityType={binding.entityType}
         entityId={binding.entityId}
@@ -74,6 +73,41 @@ export function EntityMediaFilesTab({ binding, media }: EntityMediaFilesTabProps
       />
     </section>
   );
+}
+
+/** Χωρίς ταυτότητα (ή εταιρεία, στον εταιρικό κλάδο) — το μήνυμα σύνδεσης της σύνδεσης. */
+function SignInNeeded({ binding, media }: EntityMediaFilesTabProps) {
+  const { t } = useTranslation(binding.i18nNamespace);
+  const colors = useSemanticColors();
+  return <p className={cn('p-4 text-center', colors.text.muted)}>{t(media.signInKey)}</p>;
+}
+
+/** Εταιρικός κλάδος — η εταιρεία της **συνεδρίας**, ό,τι ίσχυε αυτούσιο (Parking/Storage). */
+function SessionCompanyMediaFiles(props: EntityMediaFilesTabProps) {
+  const { companyId, currentUserId, companyName } = useEntityFilesTabSession({
+    withCompanyName: props.media.needsCompanyName,
+  });
+  if (!companyId || !currentUserId) return <SignInNeeded {...props} />;
+  return <ResolvedMediaFiles {...props} custody={{ companyId }} currentUserId={currentUserId} companyName={companyName} />;
+}
+
+/**
+ * Προσωπικός κλάδος (ADR-866 Φ1.2) — ο κάτοχος **δηλώνεται** από τη σύνδεση.
+ *
+ * ⛔ **Καμία** κλήση `useCompanyId`/`useCompanyDisplayName`: ο προσωπικός χώρος δεν ρωτά ποτέ εταιρεία — ούτε για
+ * ετικέτα. Ο υπάλληλος που ανοίγει τον φάκελο του **δικού του** σπιτιού δεν βλέπει το όνομα του γραφείου του.
+ */
+function PersonalMediaFiles(props: EntityMediaFilesTabProps & { custody: Extract<FileCustody, { userId: string }> }) {
+  const { user } = useAuth();
+  if (!user?.uid) return <SignInNeeded {...props} />;
+  return <ResolvedMediaFiles {...props} custody={props.custody} currentUserId={user.uid} />;
+}
+
+export function EntityMediaFilesTab({ binding, media }: EntityMediaFilesTabProps) {
+  const source = binding.custodySource;
+  return source.kind === 'personal'
+    ? <PersonalMediaFiles binding={binding} media={media} custody={source.custody} />
+    : <SessionCompanyMediaFiles binding={binding} media={media} />;
 }
 
 export default EntityMediaFilesTab;

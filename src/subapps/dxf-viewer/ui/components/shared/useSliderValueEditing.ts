@@ -43,7 +43,7 @@ import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clamp } from '../../../utils/scalar-math';
 import { quantizeToStep } from '../../../rendering/entities/shared/geometry-utils';
-import { handleInlineRenameKey } from '../../utils/inline-rename-keyboard';
+import { handleInlineRenameKey } from '@/lib/ui/inline-rename-keyboard';
 import type { SliderValueUnit } from './slider-value-units';
 
 /** Coarse nudge multiplier — Shift+Arrow, matching C4D / Figma. */

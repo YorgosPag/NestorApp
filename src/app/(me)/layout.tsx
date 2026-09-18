@@ -38,6 +38,7 @@ import type { Metadata } from 'next';
 
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { PrivateSpaceShell } from '@/components/private-space/PrivateSpaceShell';
+import { NotificationProvider } from '@/providers/NotificationProvider';
 
 /**
  * 🔴 **`noindex` ΓΙΑ ΟΛΟΚΛΗΡΟ ΤΟ GROUP, ΚΑΙ ΕΙΝΑΙ Η ΜΙΣΗ ΔΙΚΑΙΟΛΟΓΗΣΗ ΤΟΥ.**
@@ -89,7 +90,20 @@ export default function PrivateSpaceLayout({
         το κρατά άλλος πράκτορας και η βλάβη ήταν ζωντανή.
       */}
       <TooltipProvider delayDuration={300}>
+      {/*
+        🔴 ADR-866 Φ1.2 (§2.9.3 Κ3) — **ΟΙ ΕΙΔΟΠΟΙΗΣΕΙΣ ΕΛΕΙΠΑΝ ΑΠΟ ΤΟΝ ΙΔΙΩΤΙΚΟ ΧΩΡΟ.** Ο
+        `NotificationProvider` ζούσε **μόνο** στο `(app)/layout.tsx`, ενώ το `useNotifications()`
+        **πετά** χωρίς αυτόν — και το δέντρο αρχείων (`EntityFilesManager` · ανέβασμα · εκδόσεις)
+        το καλεί σε **12** σημεία. Η πρώτη σελίδα του `(me)` με αρχεία (ο φάκελος ακινήτου) θα
+        έπεφτε ολόκληρη στο πρώτο render· και το toast «Αναίρεση» της αρχειοθέτησης (Ε-Φ1.2-3) τον
+        χρειάζεται ούτως ή άλλως.
+        ⚠️ Είναι **ελαφρύς** (`sonner` + i18n) — **όχι** ένας από τους δέκα βαρείς του `(app)`
+        που το `.shell-boundary.json` αρνείται εδώ. Έξω από τον `PrivateSpaceShell`, ώστε και η
+        κεφαλίδα να μπορεί να ειδοποιήσει.
+      */}
+      <NotificationProvider>
       <PrivateSpaceShell>{children}</PrivateSpaceShell>
+      </NotificationProvider>
       </TooltipProvider>
     </div>
   );

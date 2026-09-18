@@ -37,6 +37,7 @@ import { DeclaredOccupationBadge } from '@/components/header/DeclaredOccupationB
 import { MySpacesSection } from '@/components/header/MySpacesSection';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
+  FolderArchive,
   Handshake,
   User,
   LogOut,
@@ -50,6 +51,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
 import { AUTH_ROUTES, resolveAccountRoute } from '@/lib/routes';
 import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
+import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -217,6 +219,17 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
           >
             <Handshake className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
             <span>{t('userMenu.myContacts')}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            /* ADR-866 Φ1.2 (Ε-Φ1.2-4) — «ΟΙ ΦΑΚΕΛΟΙ ΜΟΥ». Ίδιος λόγος με τις επαφές: είναι ΛΙΣΤΑ του
+               συνδεδεμένου, όχι πρόθεση που βλέπει ο ανώνυμος (Zillow «Profile → Your home» · idealista
+               «Mis anuncios»). Εκτός χώρου (`OUTSIDE_WORKSPACE`) ⇒ ίδιος προορισμός για ιδιώτη ΚΑΙ υπάλληλο:
+               ο φάκελος του σπιτιού του υπαλλήλου είναι δικός του, όχι του γραφείου. */
+            onClick={() => router.push(MY_DOSSIERS_ROUTE)}
+            className={layout.cursorPointer}
+          >
+            <FolderArchive className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
+            <span>{t('userMenu.myDossiers')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             /* 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΚΡΙΝΕΤΑΙ, ΔΕΝ ΕΙΝΑΙ ΣΤΑΘΕΡΟΣ — και ήταν ΖΩΝΤΑΝΟ 404.**

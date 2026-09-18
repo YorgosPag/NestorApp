@@ -31,6 +31,7 @@ import {
   getProjectTabLabels,
   getCRMDashboardTabLabels,
   getParkingTabLabels,
+  getPropertyDossierTabLabels,
 } from '@/config/vocabulary/labels/tabs';
 
 // ============================================================================
@@ -40,7 +41,7 @@ import {
 /**
  * Supported entity types για το tabs factory
  */
-export type TabEntityType = 'properties' | 'storage' | 'building' | 'contact' | 'project' | 'crm-dashboard' | 'parking';
+export type TabEntityType = 'properties' | 'storage' | 'building' | 'contact' | 'project' | 'crm-dashboard' | 'parking' | 'property-dossier';
 
 /**
  * Supported contact types για conditional tabs
@@ -166,6 +167,8 @@ function getLabelsForEntity(entityType: TabEntityType): Record<string, string> {
       return getCRMDashboardTabLabels() as unknown as Record<string, string>;
     case 'parking':
       return getParkingTabLabels() as unknown as Record<string, string>;
+    case 'property-dossier':
+      return { ...getPropertyDossierTabLabels() };
     default:
       // ✅ ENTERPRISE: Type-safe default (should never happen due to TypeScript)
       throw new Error(`Unknown entity type: ${entityType}`);
@@ -567,6 +570,63 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             componentProps: {
               entityType: ENTITY_TYPES.BUILDING,
             },
+          },
+        ],
+        defaultEnabled: true
+      };
+
+    case 'property-dossier':
+      // ADR-866 Φ1.2 — ο φάκελος ακινήτου: οι καρτέλες αρχείων της Parking/Storage (ADR-588 κέλυφος, **ίδια**
+      // σειρά κάτοψη → έγγραφα → φωτογραφίες → βίντεο) + Ιστορικό στο **προσωπικό** βιβλίο. Καμία «Βασικές
+      // πληροφορίες»: όνομα + είδος ζουν στην κεφαλίδα της σελίδας (επιτόπου μετονομασία, Ε-Φ1.2-1).
+      // ⚠️ Οι `description` φέρουν ΡΗΤΟ namespace (`property-market:`): χωρίς αυτό ο resolver (CHECK 3.13)
+      // έκοβε το `dossier.` και έβρισκε τα `tabs.descriptions.*` του ΕΡΓΟΥ στο `building-tabs`.
+      return {
+        baseTabs: [
+          {
+            id: 'floor-plan',
+            value: 'floor-plan',
+            icon: 'map',
+            description: 'property-market:dossier.tabs.descriptions.floorplan',
+            order: 1,
+            enabled: true,
+            component: 'PropertyDossierFloorplanTab',
+          },
+          {
+            id: 'documents',
+            value: 'documents',
+            icon: 'file-text',
+            description: 'property-market:dossier.tabs.descriptions.documents',
+            order: 2,
+            enabled: true,
+            component: 'PropertyDossierDocumentsTab',
+          },
+          {
+            id: 'photos',
+            value: 'photos',
+            icon: 'camera',
+            description: 'property-market:dossier.tabs.descriptions.photos',
+            order: 3,
+            enabled: true,
+            component: 'PropertyDossierPhotosTab',
+          },
+          {
+            id: 'videos',
+            value: 'videos',
+            icon: 'video',
+            description: 'property-market:dossier.tabs.descriptions.videos',
+            order: 4,
+            enabled: true,
+            component: 'PropertyDossierVideosTab',
+          },
+          {
+            id: 'history',
+            value: 'history',
+            icon: 'clock',
+            description: 'property-market:dossier.tabs.descriptions.history',
+            order: 5,
+            enabled: true,
+            component: 'PropertyDossierHistoryTab',
           },
         ],
         defaultEnabled: true

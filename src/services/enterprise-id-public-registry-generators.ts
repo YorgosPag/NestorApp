@@ -84,6 +84,18 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   generateOwnerPropertyId(): string { return this.generateId(P.OWNER_PROPERTY).id; }
 
   /**
+   * ADR-866 Φ1.1 — id ενός **ΦΑΚΕΛΟΥ ΑΚΙΝΗΤΟΥ** (`pdos_*`).
+   *
+   * 🔑 **Ίδιος λόγος με το `ownp` να ΜΗΝ περιορίζεται στον διακομιστή** (επίπεδο Β, ένας
+   * άνθρωπος) — και ένας **δικός του**: όπως το `files.generateIds` του Google Drive, ο πελάτης
+   * προ-γεννά την ταυτότητα ώστε το ανέβασμα να ξέρει τον προορισμό
+   * (`people/{uid}/entities/property_dossier/{pdos}/…`) **πριν** υπάρξει το έγγραφο. Ο
+   * διακομιστής ελέγχει πρόθεμα + uuid από το μητρώο και γράφει με `create()`: η ταυτότητα
+   * **είναι** το κλειδί ιδεμποτίας (ADR-866 §2.8.7 Δ4).
+   */
+  generatePropertyDossierId(): string { return this.generateId(P.PROPERTY_DOSSIER).id; }
+
+  /**
    * ADR-827 §8.7 — id ενός **ΑΙΤΗΜΑΤΟΣ ΑΝΑΘΕΣΗΣ** (`mreq_*`).
    *
    * 🔴 **ΔΙΑΚΟΜΙΣΤΗΣ ΜΟΝΟ, και ο λόγος ΔΕΝ είναι ο ίδιος με του `land_*`.** Εκεί το

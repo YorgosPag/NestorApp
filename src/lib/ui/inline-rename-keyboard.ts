@@ -1,7 +1,7 @@
 import type React from 'react';
 
 /**
- * SSoT για το keyboard flow ενός inline-rename `<input>` στα library cards του DXF viewer:
+ * SSoT για το keyboard flow ενός inline-rename `<input>` — σε ΟΛΗ την εφαρμογή:
  *   - **Enter**  → επιβεβαίωση (`onConfirm`)
  *   - **Escape** → ακύρωση (`onCancel`)
  *
@@ -11,7 +11,10 @@ import type React from 'react';
  * Αυτό το αρχείο είναι το ΜΟΝΟ σημείο που κρατά το `'Escape'` literal για local inputs
  * (allowlisted στο escape-command-bus module) ώστε να μην αντιγράφεται σε κάθε card.
  *
- * Καταναλωτές: {@link FrameProfileCard}, EntityCard (layers panel).
+ * Καταναλωτές: FrameProfileCard · EntityCard (layers panel) · TableNameBox · useSliderValueEditing
+ * (DXF viewer) · PropertyDossierTitle (ADR-866 Φ1.2). Μετακινήθηκε από το
+ * `dxf-viewer/ui/utils/` στο `lib/ui/` (2026-09-18) όταν απέκτησε τον πρώτο καταναλωτή
+ * έξω από το subapp — αλλιώς ο φάκελος θα ξανάγραφε το `'Escape'` literal (CHECK 3.7).
  */
 export interface InlineRenameKeyOptions {
   readonly onConfirm: () => void;

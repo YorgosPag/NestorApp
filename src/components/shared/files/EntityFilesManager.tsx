@@ -38,7 +38,6 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
 import type { FileRecord } from '@/types/file-record';
@@ -144,7 +143,6 @@ export function EntityFilesManager({
   defaultActiveTab,
 }: EntityFilesManagerProps) {
   const { t } = useTranslation(['files', 'files-media']);
-  const { activeWorkspace } = useWorkspace();
   const fullscreen = useFullscreen();
   const custody = useStableFileCustody(custodyProp);
   // Ενέργειες ΓΡΑΦΕΙΟΥ (AI/διαβάθμιση/αρχειοθέτηση/ZIP) κρυμμένες για προσωπικό κάτοχο — §2.6.8 Β6.
@@ -393,7 +391,7 @@ export function EntityFilesManager({
           onRefresh={() => refetch()}
           fullscreen={fullscreen}
           fileCount={files.length}
-          workspaceName={activeWorkspace?.displayName}
+          showWorkspace={officeActions}
         />
 
         <EntityFilesContent

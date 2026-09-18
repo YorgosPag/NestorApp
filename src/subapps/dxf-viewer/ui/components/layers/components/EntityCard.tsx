@@ -10,7 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
-import { handleInlineRenameKey } from '../../../utils/inline-rename-keyboard';
+import { handleInlineRenameKey } from '@/lib/ui/inline-rename-keyboard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';

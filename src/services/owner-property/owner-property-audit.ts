@@ -36,6 +36,7 @@ import 'server-only';
  */
 
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { OWNER_PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { auditLedgerScopeOf } from '@/lib/audit/audit-ledger';
 import {
@@ -60,65 +61,24 @@ export interface OwnerPropertyAuditContext {
 }
 
 /**
- * **Οι αλλαγές** ανάμεσα σε δύο καταστάσεις, από το **ένα** μητρώο πεδίων.
- *
- * Στη γέννηση η σύγκριση γίνεται με **κενό** έγγραφο ⇒ το ιστορικό ξεκινά με τις αρχικές
- * τιμές (ίδιο πρότυπο με το `entity-creation.service.ts`).
- */
-export function ownerPropertyAuditChanges(
-  before: OwnerProperty | null,
-  after: OwnerProperty,
-): AuditFieldChange[] {
-  return EntityAuditService.diffFields(
-    before === null ? {} : { ...before },
-    { ...after },
-    OWNER_PROPERTY_TRACKED_FIELDS,
-  );
-}
-
-/**
- * **Η ενέργεια** — `created` στη γέννηση · `status_changed` όταν άλλαξε **μόνο** ο κύκλος
- * ζωής (απόσυρση/επαναφορά — το φίλτρο «κατάσταση» του `ActivityTab` τις ξεχωρίζει) ·
- * αλλιώς `updated`.
- */
-export function ownerPropertyAuditAction(
-  before: OwnerProperty | null,
-  changes: readonly AuditFieldChange[],
-): AuditAction {
-  if (before === null) return 'created';
-  return changes.length > 0 && changes.every((change) => change.field === 'lifecycle')
-    ? 'status_changed'
-    : 'updated';
-}
-
-/**
- * **Καταγράφει** μια επιτυχημένη γραφή αγγελίας.
- *
- * ⚠️ **Καλείται ΜΟΝΟ μετά από επιτυχή γραφή** — ένα ίχνος για πράξη που δεν έγινε είναι
- * ψέμα στο βιβλίο που υπάρχει για να λέει την αλήθεια.
- *
- * 🔑 **Ιδεμπότητα**: ενημέρωση **χωρίς** αλλαγή παρακολουθούμενου πεδίου (π.χ. «απόσυρε»
- * σε ήδη αποσυρμένη) ⇒ **καμία** εγγραφή. Το ιστορικό μετρά πράξεις με αποτέλεσμα, όχι κλικ.
- *
- * ⚠️ **Δεν πετά ποτέ** (το `recordChange` καταπίνει και καταγράφει) — ίχνος που αποτυγχάνει
- * δεν ακυρώνει ποτέ την πράξη του ανθρώπου.
+ * **Καταγράφει** μια επιτυχημένη γραφή αγγελίας — μέσω του **κοινού** ίχνους οντότητας
+ * (`entity-audit-tracked-write.ts`, ADR-866 §2.8 Γ3): μόνο μετά από επιτυχή γραφή · ιδεμπότητο ·
+ * δεν πετά ποτέ. Εδώ μένει **μόνο** ό,τι είναι της αγγελίας: μητρώο πεδίων, όνομα, θεματοφυλακή.
  */
 export async function recordOwnerPropertyWrite(
   after: OwnerProperty,
   { actor, before, extraChanges = [] }: OwnerPropertyAuditContext,
 ): Promise<void> {
-  const changes = [...ownerPropertyAuditChanges(before, after), ...extraChanges];
-  if (before !== null && changes.length === 0) return;
-
-  await EntityAuditService.recordChange({
+  await recordTrackedEntityWrite({
     entityType: 'owner_property',
     entityId: after.id,
     entityName: after.title.trim() || null,
-    action: ownerPropertyAuditAction(before, changes),
-    changes,
+    trackedFields: OWNER_PROPERTY_TRACKED_FIELDS,
+    before,
+    after,
+    extraChanges,
     performedBy: actor.uid,
-    performedByName: null,
-    ...auditLedgerScopeOf(custodyWorkspace(custodyOf(after))),
+    ledger: auditLedgerScopeOf(custodyWorkspace(custodyOf(after))),
   });
 }
 

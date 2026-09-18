@@ -24,15 +24,18 @@
  */
 
 import React from 'react';
+import '@/lib/design-system';
 import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
 // ADR-820 §5.3 — Ο ΕΝΑΣ κριτής του «ανήκω σε οργανισμό;», ποτέ ωμό `user?.companyId`.
 import { hasOrganization } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 
+import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers` (ADR-777 §8.39).
@@ -78,26 +81,27 @@ function OwnerPropertiesBody(): React.ReactElement {
   const { user } = useAuth();
   const state = useMyOwnerProperties(user?.uid ?? null);
 
-  switch (state.state) {
-    case 'anonymous':
-      return <p className="text-foreground">{t(`${NS}:demand.space.signInNeeded`)}</p>;
-    case 'loading':
-      return <p className="text-muted-foreground">{t(`${K}.loading`)}</p>;
-    case 'error':
-      return <p className="text-foreground">{t(`${K}.error`)}</p>;
-    case 'ready':
-      return state.properties.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <ul className="flex list-none flex-col gap-3 p-0">
-          {state.properties.map((property) => (
-            <li key={property.id}>
-              <OwnerPropertyCard property={property} />
-            </li>
-          ))}
-        </ul>
-      );
-  }
+  // 🔑 Οι τρεις «μη έτοιμες» καταστάσεις ζουν στο ΕΝΑ `OwnedListStatus` (ADR-866 Φ1.2 — τρίτο δίδυμο, CHECK 3.28).
+  return (
+    <OwnedListStatus
+      state={state}
+      loadingText={t(`${K}.loading`)}
+      errorText={t(`${K}.error`)}
+      renderReady={({ properties }) =>
+        properties.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <ul className="flex list-none flex-col gap-3 p-0">
+            {properties.map((property) => (
+              <li key={property.id}>
+                <OwnerPropertyCard property={property} />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    />
+  );
 }
 
 export function MyOwnerPropertiesContent(): React.ReactElement {
@@ -131,12 +135,22 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
         splitting σημαίνει ότι το βάρος της φόρμας **δεν ταξιδεύει καν** προς όποιον
         δεν την άνοιξε. Δες `owner-property-routes.ts`.
       */}
-      <nav>
+      <nav className="flex flex-wrap gap-3">
         <Link
           href={NEW_OFFER_ROUTE}
           className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
         >
           {t(`${K}.create`)}
+        </Link>
+        {/*
+          🗂️ ADR-866 Φ1.2 (Ε-Φ1.2-4) — ο **συμφραζόμενος** δρόμος προς τους φακέλους: πίσω από κάθε αγγελία
+          υπάρχει το **σπίτι**, και ο φάκελός του ζει πέρα από αυτήν. Η κύρια πόρτα είναι το μενού χρήστη.
+        */}
+        <Link
+          href={MY_DOSSIERS_ROUTE}
+          className="inline-block rounded-md px-4 py-2 font-medium text-foreground underline"
+        >
+          {t(`${NS}:dossier.list.fromOffers`)}
         </Link>
       </nav>
 
