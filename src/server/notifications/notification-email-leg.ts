@@ -123,6 +123,11 @@ export interface EmailLegRequest {
   readonly notificationId?: string;
   /** ADR-841 §7 Α21.21 Φάση Β — γεγονότα για κουμπιά ενέργειας· ο αποστολέας τα κάνει συνδέσμους. */
   readonly emailFacts?: NotificationEmailFacts;
+  /**
+   * ADR-867 Β6 — η **νωρίτερη** στιγμή που το email έχει νόημα (π.χ. «μόνο αν μείνει αδιάβαστο 15′»).
+   * Μόνο **ανεβάζει** τη στιγμή παράδοσης — δες `EmailDeliveryContext.notBefore`.
+   */
+  readonly notBefore?: Date;
   /** Η στιγμή αναφοράς. Δίνεται, ώστε η απόφαση να είναι δοκιμάσιμη. */
   readonly now?: Date;
 }
@@ -172,6 +177,7 @@ export async function queueNotificationEmail(
     isMandatory: request.isMandatory,
     // 📧 ADR-849 — «όχι email για ταιριάσματα, ναι για εντολές»: ο διακόπτης ΤΟΥ τύπου.
     setting: EVENT_CATEGORY_MAP[request.eventType],
+    ...(request.notBefore ? { notBefore: request.notBefore } : {}),
   });
 
   if (decision.kind === 'suppressed') {

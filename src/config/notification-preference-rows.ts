@@ -108,6 +108,16 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
     ],
   },
   {
+    // ADR-867 Β6 — μηνύματα ανάμεσα σε συνεργάτες (ιδιοκτήτης ↔ γραφείο, και αύριο νήμα σχέσης).
+    category: 'network',
+    titleKey: 'common-account:account.notificationSettings.categories.network.title',
+    descriptionKey: 'common-account:account.notificationSettings.categories.network.description',
+    settings: [
+      { key: 'threadMessage', labelKey: 'common-account:account.notificationSettings.categories.network.threadMessage' },
+      { key: 'teamJoined', labelKey: 'common-account:account.notificationSettings.categories.network.teamJoined' },
+    ],
+  },
+  {
     category: 'security',
     titleKey: 'common-account:account.notificationSettings.categories.security.title',
     descriptionKey: 'common-account:account.notificationSettings.categories.security.description',

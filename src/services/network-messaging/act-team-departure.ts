@@ -45,7 +45,7 @@ import { isGranted } from '@/types/capability-authority';
 import type { NetworkActTeam } from '@/types/network-thread';
 
 import type { ActTeamNext } from './act-team-change';
-import { actTeamRefById, commitActTeamVersion, recordActTeamChange } from './act-team-writer';
+import { actTeamRefById, commitActTeamVersion, settleActTeamChange } from './act-team-writer';
 import { readActThreadSlot } from './thread-writer';
 
 const logger = createModuleLogger('ActTeamDeparture');
@@ -255,7 +255,11 @@ export async function transferActTeamsOnDeparture(
     }
     if (change === 'untouched' || change === 'orphaned') continue;
     transferred += 1;
-    await recordActTeamChange(doc.id, transfer.companyId, transfer.performedBy, change.before, change.after);
+    // Η ταυτότητα από το **κλειδί** του εγγράφου (όπως πριν), όχι από το πεδίο του.
+    await settleActTeamChange(adminDb, { ...change.before, id: doc.id }, change.after, {
+      performedBy: transfer.performedBy,
+      departingUid: transfer.departingUid,
+    });
   }
   return { transferred, orphaned };
 }

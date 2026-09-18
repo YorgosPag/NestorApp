@@ -196,13 +196,27 @@ export async function readThreadPresence(
   if (!isLiveAudience(audience.find((entry) => entry.uid === callerUid))) return { kind: 'not-audience' };
 
   const others = audience.filter((entry) => isLiveAudience(entry) && entry.uid !== callerUid);
-  const aways = new Map<string, NetworkAway>();
-  if (others.length > 0) {
-    const snaps = await adminDb.getAll(...others.map((entry) => awayRef(adminDb, entry.uid)));
-    snaps.forEach((snap) => {
-      const away = snap.data() as NetworkAway | undefined;
-      if (away !== undefined) aways.set(away.uid, away);
-    });
-  }
+  const aways = await readAwaysOf(adminDb, others.map((entry) => entry.uid));
   return { kind: 'ok', presence: presenceOf(audience, aways, callerUid, nowISO) };
+}
+
+/**
+ * **Οι δηλώσεις απουσίας πολλών προσώπων, με ΜΙΑ ανάγνωση** (`getAll`) — όσες υπάρχουν.
+ *
+ * 🔗 ADR-867 Β6 (N.0.2): τη ζητούν η **παρουσία** (ποιος λείπει), η **ειδοποίηση** (ποιος
+ * αναπληρώνει) και η **πύλη του email** (λείπει ακόμη;). Ένας αναγνώστης, τρεις ερωτήσεις.
+ */
+export async function readAwaysOf(
+  adminDb: AdminFirestore,
+  uids: readonly string[],
+): Promise<ReadonlyMap<string, NetworkAway>> {
+  const aways = new Map<string, NetworkAway>();
+  const unique = [...new Set(uids)];
+  if (unique.length === 0) return aways;
+  const snaps = await adminDb.getAll(...unique.map((uid) => awayRef(adminDb, uid)));
+  snaps.forEach((snap) => {
+    const away = snap.data() as NetworkAway | undefined;
+    if (away !== undefined) aways.set(away.uid, away);
+  });
+  return aways;
 }

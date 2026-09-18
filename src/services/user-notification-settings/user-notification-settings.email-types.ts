@@ -51,5 +51,5 @@ export type EmailCategorySettings = {
 
 /** Κανένας τύπος σιγασμένος — νέο αντικείμενο κάθε φορά (οι ρυθμίσεις είναι μεταβλητές). */
 export function emptyEmailCategories(): EmailCategorySettings {
-  return { crm: {}, properties: {}, tasks: {}, security: {}, procurement: {} };
+  return { crm: {}, properties: {}, tasks: {}, security: {}, procurement: {}, network: {} };
 }

@@ -55,6 +55,8 @@ const CONSUMERS = {
     'ο κατάλογος νημάτων (ADR-867 Β5): collection group ΑΝΑΓΝΩΣΗ του ακροατηρίου — καμία γραφή',
   'src/services/network-messaging/network-away.ts':
     'η παρουσία νήματος (ADR-867 Β5): ΑΝΑΓΝΩΣΗ του ακροατηρίου για «ποιος λείπει, ποιος διαβάζει» — καμία γραφή',
+  'src/services/network-messaging/network-unread-email.ts':
+    'η πύλη του email «αδιάβαστο» (ADR-867 Β6): ΑΝΑΓΝΩΣΗ νήματος + γραμμής του παραλήπτη τη στιγμή της αποστολής — καμία γραφή',
 };
 
 /**

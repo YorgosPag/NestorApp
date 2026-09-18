@@ -251,6 +251,20 @@ export interface ProcurementNotificationSettings {
 }
 
 /**
+ * 💬 ADR-867 Β6 — **μηνύματα ανάμεσα σε συνεργάτες** (νήματα δικτύου).
+ *
+ * ⚠️ **Δική τους κατηγορία, ΟΧΙ δανεισμός του `crm.newCommunication`**: εκείνο αφορά το
+ * omnichannel του γραφείου (ADR-029) και ο ιδιώτης δεν έχει CRM. Ίδιο μάθημα με το
+ * `mandateRequestAnswered`: δύο ακροατήρια ⇒ δύο διακόπτες.
+ */
+export interface NetworkNotificationSettings {
+  /** «Νέο μήνυμα από …» — **μία** ειδοποίηση ανά διάστημα αδιάβαστων, όχι ανά μήνυμα. */
+  threadMessage: boolean;
+  /** «Σας ανατέθηκε / μπήκατε στην ομάδα της πράξης» — ανάθεση, μεταβίβαση, προσθήκη. */
+  teamJoined: boolean;
+}
+
+/**
  * Security notification settings
  */
 export interface SecurityNotificationSettings {
@@ -276,6 +290,7 @@ export interface NotificationCategorySettingsMap {
   tasks: TasksNotificationSettings;
   security: SecurityNotificationSettings;
   procurement: ProcurementNotificationSettings;
+  network: NetworkNotificationSettings;
 }
 
 // 📧 ADR-849 — ο τύπος «email ανά τύπο» (`EmailCategorySettings`) ζει στο
@@ -446,6 +461,12 @@ export const DEFAULT_PROCUREMENT_SETTINGS: ProcurementNotificationSettings = {
   vendorCreated: true,
 };
 
+/** 💬 ADR-867 Β6 — ανοιχτά: είναι **συνομιλία** με πελάτη/γραφείο, όχι ενημερωτικό δελτίο. */
+export const DEFAULT_NETWORK_SETTINGS: NetworkNotificationSettings = {
+  threadMessage: true,
+  teamJoined: true,
+};
+
 /**
  * Default Security notification settings
  */
@@ -473,6 +494,7 @@ export function getDefaultNotificationSettings(userId: string): UserNotification
       tasks: { ...DEFAULT_TASKS_SETTINGS },
       security: { ...DEFAULT_SECURITY_SETTINGS },
       procurement: { ...DEFAULT_PROCUREMENT_SETTINGS },
+      network: { ...DEFAULT_NETWORK_SETTINGS },
     },
     emailCategories: emptyEmailCategories(),
     quietHours: {

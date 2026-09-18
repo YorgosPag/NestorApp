@@ -81,6 +81,11 @@ export interface DispatchContent {
    * Δεν συμμετέχει στο `dedupeKey`: οι λόγοι είναι **περιεχόμενο**, όχι ταυτότητα.
    */
   reasons?: readonly string[];
+  /**
+   * 💬 ADR-867 Β6 — **η νωρίτερη στιγμή που το email έχει νόημα**, όπως τη δηλώνει ο παραγωγός
+   * («email μόνο αν το μήνυμα μείνει αδιάβαστο 15′» — Slack/Teams). Δεν αγγίζει το κουδούνι.
+   */
+  emailNotBefore?: Date;
 }
 
 /**
@@ -325,6 +330,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     // υπόσχεση που δεν τηρείται. Η ταυτότητα της ειδοποίησης ΕΙΝΑΙ το `dedupeKey`.
     ...(hasDestination(actions) ? { notificationId: dedupeKey } : {}),
     ...(request.emailFacts ? { emailFacts: request.emailFacts } : {}),
+    ...(request.emailNotBefore ? { notBefore: request.emailNotBefore } : {}),
   });
 
   // Η ειδοποίηση **μέσα στην εφαρμογή** έχει ήδη γραφτεί επιτυχώς· ένα σπασμένο

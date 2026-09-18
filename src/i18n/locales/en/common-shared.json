@@ -810,6 +810,16 @@
     "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",
     "finalTitle": "{agency} did not take on the listing \"{title}\""
   },
+  "networkMessage": {
+    "directTitle": "New message from {sender} about \"{subject}\"",
+    "coveringTitle": "New message from {sender} about \"{subject}\" · {absent} is away — you're covering",
+    "personalTitle": "New message from {sender}"
+  },
+  "networkTeamJoined": {
+    "assignedTitle": "You're now responsible for \"{subject}\"",
+    "failoverTitle": "You've taken over \"{subject}\" — {previous} left the office",
+    "addedTitle": "You were added to the team for \"{subject}\""
+  },
   "cardEmailReturned": {
     "title": "The email {email} on your card returned — the “Email confirmed” badge was removed"
   },

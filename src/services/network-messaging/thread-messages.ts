@@ -32,6 +32,7 @@ import {
   networkThreadMessages,
   networkThreadRef,
 } from './network-thread-ref';
+import { announceNetworkMessage, type NetworkMessageNotice } from './network-notifier';
 import { isLiveAudience } from './thread-audience';
 import {
   readThreadAudience,
@@ -101,15 +102,29 @@ export function networkMessageDocument(
 export async function sendNetworkMessage(
   adminDb: AdminFirestore,
   input: SendNetworkMessageInput,
+  announce: (adminDb: AdminFirestore, notice: NetworkMessageNotice) => Promise<void> = announceNetworkMessage,
 ): Promise<SendOutcome> {
   const text = input.text.trim();
   if (text.length === 0) return { kind: 'refused', reason: 'empty-text' };
   if (text.length > MAX_NETWORK_MESSAGE_CHARS) return { kind: 'refused', reason: 'too-long' };
 
+  const result = await commitNetworkMessage(adminDb, { ...input, text });
+  // 🔔 ADR-867 Β6 — η ειδοποίηση είναι **παρενέργεια** (N.7.2 #6): **μετά** το commit, ποτέ μέσα στη
+  //    συναλλαγή (που μπορεί να ξανατρέξει), με το ακροατήριο που **ήδη** διάβασε. Δεν πετά ποτέ.
+  if (result.notice !== null) await announce(adminDb, result.notice);
+  return result.outcome;
+}
+
+/** Το αποτέλεσμα της συναλλαγής — και ό,τι χρειάζεται η ειδοποίηση (`null` αν δεν στάλθηκε). */
+type CommitResult = { readonly outcome: SendOutcome; readonly notice: NetworkMessageNotice | null };
+
+/** Η συναλλαγή της αποστολής — επιστρέφει και ό,τι χρειάζεται η ειδοποίηση, χωρίς δεύτερη ανάγνωση. */
+async function commitNetworkMessage(adminDb: AdminFirestore, input: SendNetworkMessageInput): Promise<CommitResult> {
+  const { text } = input;
   const threadRef = networkThreadRef(adminDb, input.threadId);
   const messageId = generateNetworkMessageId();
 
-  return adminDb.runTransaction<SendOutcome>(async (transaction) => {
+  return adminDb.runTransaction<CommitResult>(async (transaction) => {
     // 🔑 **ΟΛΟ** το ακροατήριο, όχι μόνο η γραμμή του αποστολέα: το fan-out χρειάζεται κάθε
     //    ζωντανό μέλος, και οι αναγνώσεις πρέπει να προηγούνται **κάθε** γραφής.
     const [threadSnap, audience] = await Promise.all([
@@ -119,7 +134,7 @@ export async function sendNetworkMessage(
     const entry = audience.find((row) => row.uid === input.senderUid) ?? null;
 
     const refusal = sendRefusal(threadSnap.exists, threadSnap.data(), entry);
-    if (refusal !== null) return { kind: 'refused', reason: refusal };
+    if (refusal !== null) return { outcome: { kind: 'refused', reason: refusal }, notice: null };
 
     transaction.set(
       networkThreadMessages(adminDb, input.threadId).doc(messageId),
@@ -131,7 +146,11 @@ export async function sendNetworkMessage(
       nowISO: input.nowISO,
     });
 
-    return { kind: 'sent', messageId };
+    const thread = threadSnap.data() as NetworkThread;
+    return {
+      outcome: { kind: 'sent', messageId },
+      notice: { threadId: input.threadId, topic: thread.topic, audience, senderUid: input.senderUid, sentAt: input.nowISO },
+    };
   });
 }
 

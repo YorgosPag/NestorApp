@@ -26,7 +26,8 @@ import type { EmailActionButton, RenderableMessage } from './notification-email-
 /** **Τα κουμπιά ενός μηνύματος** — κενό όταν δεν έχει γεγονότα ή όταν δεν μπορούν να χτιστούν έγκυροι σύνδεσμοι. */
 export function liveEmailActions(message: RenderableMessage, language: HumanLanguage): readonly EmailActionButton[] {
   const { facts, recipientId } = message;
-  if (facts === undefined || !recipientId) return [];
+  // ADR-867 Β6 — μόνο η ερώτηση αργιών έχει κουμπιά· τα γεγονότα «αδιάβαστο νήμα» τα διαβάζει η πύλη.
+  if (facts?.kind !== 'holiday-hours-question' || !recipientId) return [];
   const secret = holidayQuestionSecret();
   if (secret === null) return [];
   const token = encodeHolidayQuestionLink(secret, { id: facts.questionId, nonce: facts.nonce, recipientUid: recipientId });

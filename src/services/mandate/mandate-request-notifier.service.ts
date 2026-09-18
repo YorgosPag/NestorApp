@@ -43,7 +43,6 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   getCurrentEnvironment,
   NOTIFICATION_ENTITY_TYPES,
@@ -73,7 +72,8 @@ export function mandateRequestDestination(
   return viewDestination(offerDetailHref(ownerPropertyId), personalWorkspace(recipientUserId));
 }
 import type { MandateRequestDecision } from '@/types/mandate-request';
-import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
+// 🔗 ADR-867 Β6 (N.0.2) — ο τίτλος για μήνυμα ζει σε ΕΝΑ σημείο (ήταν αντίγραφο εδώ και στο stay notifier).
+import { listingNoticeTitle } from '@/lib/listings/listing-notice-title';
 
 const logger = createModuleLogger('mandate-request-notifier.service');
 
@@ -132,7 +132,7 @@ export async function announceMandateRequestAnswer(
   answer: MandateRequestAnswer,
 ): Promise<boolean> {
   try {
-    const listingTitle = await listingTitleOf(adminDb, answer.ownerPropertyId);
+    const listingTitle = await listingNoticeTitle(adminDb, answer.ownerPropertyId);
 
     const result = await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_REQUEST_ANSWERED,
@@ -174,50 +174,5 @@ export async function announceMandateRequestAnswer(
       error: error instanceof Error ? error.message : String(error),
     });
     return false;
-  }
-}
-
-/**
- * Ο τίτλος της αγγελίας για το μήνυμα.
- *
- * 🔑 **Από τη ΔΗΜΟΣΙΑ προβολή**, όχι από το ωμό έγγραφο: είναι η ίδια πηγή που είδε
- * το γραφείο όταν έκρινε (§8.2), και η μόνη που δεν χρειάζεται δεύτερη απόφαση
- * αποκάλυψης.
- *
- * ⚠️ **Εφεδρεία το αναγνωριστικό, ποτέ κενό**: ένα *«Το «Χ» ανέλαβε την αγγελία «»»*
- * είναι χειρότερο από ένα άσχημο αναγνωριστικό — ο άνθρωπος πρέπει να μπορεί να
- * καταλάβει **ποια** αγγελία, ακόμη κι όταν η προβολή έχει αποσυρθεί στο μεταξύ.
- */
-async function listingTitleOf(
-  adminDb: AdminFirestore,
-  ownerPropertyId: string,
-): Promise<string> {
-  try {
-    const snapshot = await adminDb
-      .collection(COLLECTIONS.PUBLIC_LISTINGS)
-      .doc(ownerPropertyId)
-      .get();
-
-    // ── ADR-839 — **ΤΟ ΣΧΟΛΙΟ ΕΔΩ ΕΙΧΕ ΗΔΗ ΔΕΙ ΤΗΝ ΚΛΑΣΗ, ΚΑΙ ΤΗ ΜΠΑΛΩΣΕ ΤΟΠΙΚΑ.**
-    //
-    // Έγραφε: *«ο τίτλος μπορεί να λείπει από παλιό στιγμιότυπο»* — σωστή
-    // παρατήρηση, λάθος εμβέλεια. Η θεραπεία ήταν ένα `unknown` **σε αυτή τη
-    // γραμμή**, οπότε η ίδια αλήθεια για τα **υπόλοιπα 17 πεδία** έμεινε
-    // αδιατύπωτη· τρεις μήνες αργότερα το `legality` έριξε τη δημόσια σελίδα.
-    // Πλέον το ερώτημα «τι λείπει από παλιό στιγμιότυπο;» απαντιέται **μία φορά**,
-    // στο σύνορο, για **όλα** τα πεδία.
-    // 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: ο έλεγχος `unknown` μένει, και δεν είναι περίσσευμα.
-    //    Η αλυσίδα εγγυάται τα πεδία που **πρόσθεσε** (v2 και πάνω)· για τα
-    //    αρχικά της v1 η εγγύηση είναι ο γραφέας, όχι η μετάφραση. Εδώ ο τίτλος
-    //    ταξιδεύει σε **μήνυμα προς άνθρωπο**, όπου ένα `undefined.trim()` θα
-    //    έριχνε την ειδοποίηση ολόκληρη — άρα η φθηνή άμυνα αξίζει.
-    const title: unknown = publicListingFromDocument(snapshot.data(), ownerPropertyId)?.title;
-    return typeof title === 'string' && title.trim() !== '' ? title.trim() : ownerPropertyId;
-  } catch (error) {
-    logger.warn('Ο τίτλος της αγγελίας δεν διαβάστηκε — το μήνυμα φεύγει με αναγνωριστικό', {
-      data: { ownerPropertyId },
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return ownerPropertyId;
   }
 }

@@ -142,6 +142,17 @@ export function personalWorkspace(userId: string): PersonalWorkspaceRef {
 }
 
 /**
+ * **Ο μισθωτής (`tenantId`) μιας ειδοποίησης προς αυτόν τον χώρο** — για τον ιδιώτη είναι ο
+ * **εαυτός του** (`tenant-config` → `NOTIFICATIONS: mode 'userId'`).
+ *
+ * 🔗 ADR-867 Β6 (N.0.2) — ζούσε ως τοπικό `tenantOf` στο `stay-booking-notifier`· δεύτερος
+ * καταναλωτής ο `network-notifier`.
+ */
+export function workspaceTenantId(workspace: WorkspaceRef): string {
+  return workspace.kind === 'org' ? workspace.companyId : workspace.userId;
+}
+
+/**
  * Κλειδί **προβολής** — ανά-αίτημα απομνημόνευση, καταγραφή, και το `id` του
  * `Workspace` που ταξιδεύει προς την οθόνη. **Τίποτε άλλο.**
  *

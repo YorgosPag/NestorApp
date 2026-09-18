@@ -171,6 +171,12 @@
           "twoFactorChange": "2FA change",
           "suspiciousActivity": "Suspicious activity"
         },
+        "network": {
+          "title": "Partner messages",
+          "description": "Conversations with owners and offices you work with",
+          "threadMessage": "New message in one of my conversations",
+          "teamJoined": "A client was assigned to me or I joined their team"
+        },
         "procurement": {
           "title": "Procurement",
           "description": "Notifications about purchase orders, quotes and vendors",

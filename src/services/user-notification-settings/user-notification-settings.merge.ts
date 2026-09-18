@@ -74,6 +74,7 @@ function mergeCategories(
     tasks: overlayByType(defaults.tasks, raw.tasks),
     security: overlayByType(defaults.security, raw.security),
     procurement: overlayByType(defaults.procurement, raw.procurement),
+    network: overlayByType(defaults.network, raw.network),
   };
 }
 
@@ -103,6 +104,7 @@ function mergeEmailCategories(
     tasks: modesFor(known.tasks, raw.tasks),
     security: modesFor(known.security, raw.security),
     procurement: modesFor(known.procurement, raw.procurement),
+    network: modesFor(known.network, raw.network),
   };
 }
 

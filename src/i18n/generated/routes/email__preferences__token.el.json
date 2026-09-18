@@ -47,6 +47,11 @@
             "taskAssigned": "Ανάθεση εργασίας",
             "title": "CRM"
           },
+          "network": {
+            "teamJoined": "Μου ανατέθηκε πελάτης ή μπήκα στην ομάδα του",
+            "threadMessage": "Νέο μήνυμα σε συνομιλία μου",
+            "title": "Μηνύματα συνεργατών"
+          },
           "procurement": {
             "aiLowConfidence": "Σάρωση προσφοράς θέλει έλεγχο",
             "approvalNeeded": "Παραγγελία προς έγκριση",

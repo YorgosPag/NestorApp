@@ -17,6 +17,7 @@ import type {
   TasksNotificationSettings,
   SecurityNotificationSettings,
   ProcurementNotificationSettings,
+  NetworkNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Channel, Severity } from '@/types/notification';
 import { DEPARTMENT_CODES, type DepartmentCode } from '@/config/department-codes';
@@ -149,6 +150,17 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROCUREMENT_QUOTE_EDITED: 'procurement.quoteEdited',
   // ADR-327 Phase 2 — AI Scan
   PROCUREMENT_QUOTE_SCAN_COMPLETED: 'procurement.quoteScanCompleted',
+  /**
+   * ADR-867 Β6 — **νέο μήνυμα σε νήμα συνεργατών**. Ταυτότητα = **το διάστημα αδιάβαστων** του
+   * παραλήπτη (`lastReadAt`), όχι το μήνυμα: δέκα μηνύματα πριν ανοίξει το νήμα = **μία** ειδοποίηση
+   * (το ένα σήμα ανά συνομιλία του Slack/Teams). Δες `network-notification-plan.ts`.
+   */
+  NETWORK_THREAD_MESSAGE: 'network.threadMessage',
+  /**
+   * ADR-867 Β6 — **μπήκες στην ομάδα μιας πράξης**: ανάθεση ευθύνης, **μεταβίβαση στην αποχώρηση**
+   * (το email του Microsoft 365 στον manager), προσθήκη συνεργάτη. Ταυτότητα = η **έκδοση** της ομάδας.
+   */
+  NETWORK_TEAM_JOINED: 'network.teamJoined',
 } as const;
 
 export type NotificationEventType = typeof NOTIFICATION_EVENT_TYPES[keyof typeof NOTIFICATION_EVENT_TYPES];
@@ -172,7 +184,7 @@ export function isNotificationEventType(value: unknown): value is NotificationEv
  */
 export interface EventCategoryMapping {
   category: NotificationCategory;
-  settingKey: keyof CrmNotificationSettings | keyof PropertiesNotificationSettings | keyof TasksNotificationSettings | keyof SecurityNotificationSettings | keyof ProcurementNotificationSettings;
+  settingKey: keyof CrmNotificationSettings | keyof PropertiesNotificationSettings | keyof TasksNotificationSettings | keyof SecurityNotificationSettings | keyof ProcurementNotificationSettings | keyof NetworkNotificationSettings;
   isMandatory: boolean;
   defaultSeverity: Severity;
 }
@@ -413,6 +425,21 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.SUCCESS,
   },
+  // ADR-867 Β6 — ⚠️ **`isMandatory: false`, ΚΑΙ ΤΑ ΔΥΟ, ρητά.** Ο άνθρωπος αποφασίζει πώς
+  // ενημερώνεται (Slack · Teams · HubSpot «assigned to you»: όλα ρυθμίσιμα από τον χρήστη). Το
+  // «κανένα ορφανό νήμα» το εγγυάται η **ανάθεση** (ο κατάλογος και το ακροατήριο), όχι η ειδοποίηση.
+  [NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE]: {
+    category: 'network',
+    settingKey: 'threadMessage',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED]: {
+    category: 'network',
+    settingKey: 'teamJoined',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
 };
 
 // ============================================================================
@@ -433,6 +460,10 @@ export const NOTIFICATION_ENTITY_TYPES = {
   PURCHASE_ORDER: 'purchase_order',
   QUOTE: 'quote',
   RFQ: 'rfq',
+  /** ADR-867 Β6 — το νήμα συνεργατών (`network_threads/{id}`). */
+  NETWORK_THREAD: 'network_thread',
+  /** ADR-867 Β6 — η ομάδα της πράξης (`network_act_teams/{id}`). */
+  NETWORK_ACT_TEAM: 'network_act_team',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];
@@ -503,6 +534,8 @@ export const SOURCE_SERVICES = {
   TASKS: 'tasks',
   SYSTEM: 'system',
   PROCUREMENT: 'procurement',
+  /** ADR-867 — μηνύματα ανάμεσα σε συνεργάτες. */
+  NETWORK: 'network',
 } as const;
 
 export type SourceService = typeof SOURCE_SERVICES[keyof typeof SOURCE_SERVICES];

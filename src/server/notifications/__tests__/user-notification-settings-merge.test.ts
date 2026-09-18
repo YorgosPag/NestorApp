@@ -35,10 +35,17 @@ describe('🔴 Μ0 — η παλιά ρηχή συγχώνευση έχανε κ
 });
 
 describe('Ε — email ανά τύπο', () => {
-  it('Ε1 — απουσία ⇒ κανένας τύπος σιγασμένος, και οι πέντε κατηγορίες παρούσες', () => {
+  it('Ε1 — απουσία ⇒ κανένας τύπος σιγασμένος, και οι έξι κατηγορίες παρούσες', () => {
+    // ADR-867 Β6 — έκτη κατηγορία: `network` (μηνύματα συνεργατών).
     expect(mergeNotificationSettings('u1', {}).emailCategories).toEqual({
-      crm: {}, properties: {}, tasks: {}, security: {}, procurement: {},
+      crm: {}, properties: {}, tasks: {}, security: {}, procurement: {}, network: {},
     });
+  });
+
+  it('Ε1β 🔴 — παλιό έγγραφο ΧΩΡΙΣ `network` ⇒ οι προεπιλογές της, ανοιχτές (καμία migration)', () => {
+    const merged = mergeNotificationSettings('u1', { categories: { crm: { newLead: false } } });
+    expect(merged.categories.network).toStrictEqual({ threadMessage: true, teamJoined: true });
+    expect(merged.categories.crm.newLead).toBe(false);
   });
 
   it('Ε2 🔴 — μόνο ΓΝΩΣΤΑ κλειδιά με ΓΝΩΣΤΗ κατάσταση περνούν', () => {

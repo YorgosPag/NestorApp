@@ -36,7 +36,6 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   getCurrentEnvironment,
   NOTIFICATION_ENTITY_TYPES,
@@ -46,7 +45,7 @@ import {
 } from '@/config/notification-events';
 import { formatCalendarDay, formatDateTime } from '@/lib/intl-formatting';
 import { STAY_HOLD_TIME_FORMAT } from '@/lib/stay/stay-hold-deadline';
-import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
+import { listingNoticeTitle } from '@/lib/listings/listing-notice-title';
 import { viewDestination, type NotificationDestination } from '@/lib/notifications/notification-destination';
 import { custodyOf, custodyWorkspace, type ListingCustody } from '@/lib/owner-property/listing-custody';
 import { offerStayCalendarHref } from '@/lib/owner-property/owner-property-routes';
@@ -55,7 +54,7 @@ import { dispatchNotification } from '@/server/notifications/notification-orches
 import { listingMatchDestination } from '@/services/demand/listing-match-notifier.service';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { StayBooking } from '@/types/stay-booking';
-import type { WorkspaceRef } from '@/types/workspace-membership';
+import { workspaceTenantId } from '@/types/workspace-membership';
 
 import type { StayBookingNotice } from './stay-calendar-write-decision';
 
@@ -119,11 +118,6 @@ const EMAIL_SUBJECTS: Readonly<Record<Audience, Partial<Record<NoticeEvent, Subj
   },
 };
 
-/** Ο μισθωτής ενός χώρου — για τον ιδιώτη είναι **ο εαυτός του** (ιδίωμα `interest-notifier`). */
-function tenantOf(workspace: WorkspaceRef): string {
-  return workspace.kind === 'org' ? workspace.companyId : workspace.userId;
-}
-
 /**
  * **Ο οικοδεσπότης** προσγειώνεται στο ημερολόγιο του καταλύματος, **στον χώρο της αγγελίας**
  * (ADR-849 §6δ Β1) — εκεί ζουν τα κουμπιά «Αποδοχή / Άρνηση». Εξάγεται για τον ανιχνευτή απόκλισης.
@@ -158,18 +152,7 @@ function recipientOf(audience: Audience, property: OwnerProperty, booking: StayB
   const custody = custodyOf(property);
   // Ο υπόχρεος της απάντησης είναι γραμμένος **στο hold** (§4.11 #4) — ποτέ ξαναϋπολογισμένος.
   const userId = booking.hold?.respondentUserId ?? property.authorUserId;
-  return { userId, tenantId: tenantOf(custodyWorkspace(custody)), destination: stayRequestReceivedDestination(property.id, custody) };
-}
-
-async function listingTitleOf(adminDb: AdminFirestore, property: OwnerProperty): Promise<string> {
-  try {
-    const snapshot = await adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(property.id).get();
-    const title = snapshot.exists ? publicListingFromDocument(snapshot.data(), snapshot.id)?.title.trim() : '';
-    // Εφεδρεία ο τίτλος του εγγράφου, ποτέ κενό: «αίτημα για «»» δεν λέει ποια αγγελία.
-    return title !== undefined && title.length > 0 ? title : property.title.trim() || property.id;
-  } catch {
-    return property.title.trim() || property.id;
-  }
+  return { userId, tenantId: workspaceTenantId(custodyWorkspace(custody)), destination: stayRequestReceivedDestination(property.id, custody) };
 }
 
 async function announceTo(
@@ -210,7 +193,7 @@ export async function announceStayBookingNotice(
   notice: StayBookingNotice,
 ): Promise<void> {
   try {
-    const title = await listingTitleOf(adminDb, property);
+    const title = await listingNoticeTitle(adminDb, property.id, property.title);
     await Promise.all(AUDIENCES[notice.event].map((audience) => announceTo(audience, property, notice, title)));
   } catch (error) {
     logger.error('Η ειδοποίηση του αιτήματος κράτησης δεν στάλθηκε', {

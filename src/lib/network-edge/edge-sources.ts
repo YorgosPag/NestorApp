@@ -117,3 +117,41 @@ export function judgeNetworkEdge(
 ): EdgeVerdict<NetworkActKind> {
   return judgeEdge(evidence, ends, EDGE_SOURCES);
 }
+
+// ============================================================================
+// ΤΟ ΑΝΤΙΚΕΙΜΕΝΟ ΤΗΣ ΠΡΑΞΗΣ — «για ΠΟΙΟ πράγμα μιλάμε;» (ADR-867 Β6)
+// ============================================================================
+
+/**
+ * **Το αντικείμενο μιας πράξης**, όσο χρειάζεται ένα μήνυμα προς άνθρωπο («νέο μήνυμα για «Διαμέρισμα
+ * Κυψέλη»»). Κλειστή ένωση: νέα πηγή ακμής με άλλο αντικείμενο = νέο μέλος εδώ.
+ *
+ * 🔑 **Ζει ΕΔΩ, όχι στον αποστολέα ειδοποιήσεων**: ο πυρήνας δεν ξέρει τι είναι «εντολή» (ADR-867 §3)·
+ * το **μόνο** αρχείο που ξέρει ότι ο σπόρος μιας εντολής είναι `propertyId:agencyCompanyId` είναι αυτό.
+ */
+export type ActSubject = { readonly kind: 'listing'; readonly ownerPropertyId: string };
+
+/**
+ * Το **αντίστροφο** του {@link mandateActSeed} — `null` σε σπόρο που δεν έφτιαξε εκείνο.
+ * ⚠️ Ελέγχεται με **επιστροφή**: ό,τι αναλύθηκε πρέπει να ξαναχτίζει **τον ίδιο** σπόρο, αλλιώς
+ * `null` — ποτέ μισή ανάγνωση που θα έδειχνε λάθος αγγελία.
+ */
+export function mandateActSubject(actSeed: string): ActSubject | null {
+  const cut = actSeed.indexOf(':');
+  if (cut <= 0 || cut === actSeed.length - 1) return null;
+  const propertyId = actSeed.slice(0, cut);
+  const agencyCompanyId = actSeed.slice(cut + 1);
+  return mandateActSeed(propertyId, agencyCompanyId) === actSeed
+    ? { kind: 'listing', ownerPropertyId: propertyId }
+    : null;
+}
+
+/** «Είδος πράξης → πώς διαβάζεται το αντικείμενο από τον σπόρο». Νέα πηγή χωρίς γραμμή ⇒ δεν μεταγλωττίζεται. */
+const ACT_SUBJECTS: { readonly [K in NetworkActKind]: (actSeed: string) => ActSubject | null } = {
+  mandate: mandateActSubject,
+};
+
+/** Το αντικείμενο μιας πράξης — ό,τι καλεί ο διακομιστής. */
+export function actSubjectOf(actKind: NetworkActKind, actSeed: string): ActSubject | null {
+  return ACT_SUBJECTS[actKind](actSeed);
+}

@@ -79,6 +79,10 @@ import {
   type UserNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 
+// 🔗 ADR-867 Β6 (N.7.1) — η αριθμητική «ώρα σε ζώνη» (ησυχία, τοπική ώρα → στιγμή) ζει σε
+// δικό της module: εδώ μένει η ΠΟΛΙΤΙΚΗ («πότε επιτρέπεται να διακόψω;»).
+import { insideQuietHours, instantAtLocalHour, quietHoursEnd, zonedParts } from './email-delivery-clock';
+
 /**
  * ✅ **ΤΟ ΟΡΙΟ ΕΚΛΕΙΣΕ (§8.28): η ζώνη είναι πλέον ΑΝΑ ΧΡΗΣΤΗ.**
  *
@@ -131,8 +135,14 @@ export const WEEKLY_WINDOW_HOUR = 9;
 /** Ημέρα του εβδομαδιαίου παραθύρου: Δευτέρα (`Date#getDay` → 1). */
 export const WEEKLY_WINDOW_WEEKDAY = 1;
 
-/** Γιατί αναβλήθηκε. Ονομασμένο, ποτέ boolean. */
-export type DeferReason = 'quiet-hours' | 'daily-window' | 'weekly-window';
+/**
+ * Γιατί αναβλήθηκε. Ονομασμένο, ποτέ boolean.
+ *
+ * `unread-grace` (ADR-867 Β6) — ο **παραγωγός** δήλωσε ότι το email έχει νόημα **μόνο αν μείνει
+ * αδιάβαστο** για λίγο (Slack: ανά 15′ · Teams missed activity: από 10′). Η πύλη αποστολής ρωτά
+ * ύστερα αν διαβάστηκε στο μεταξύ.
+ */
+export type DeferReason = 'quiet-hours' | 'daily-window' | 'weekly-window' | 'unread-grace';
 
 /**
  * Γιατί δεν φεύγει καθόλου. Ονομασμένο, ποτέ boolean.
@@ -151,7 +161,12 @@ export type SuppressReason =
    * ADR-841 §7 Α21.21 Φάση Β — **γεγονός του αιτήματος, όχι ρύθμιση του ανθρώπου**: η ερώτηση αργιών απαντήθηκε (στη φόρμα
    * ή από άλλον διαχειριστή), έληξε ή η βιτρίνα αποσύρθηκε **αφού** το email μπήκε στην ουρά. Ερώτηση χωρίς νόημα δεν φεύγει.
    */
-  | 'question-settled';
+  | 'question-settled'
+  /**
+   * ADR-867 Β6 — **γεγονός του νήματος, όχι ρύθμιση**: το μήνυμα διαβάστηκε, το νήμα σιγάστηκε, ο παραλήπτης
+   * βγήκε από το ακροατήριο ή λείπει **αφού** το email μπήκε στην ουρά. Το «έχεις αδιάβαστο» δεν ισχύει πια.
+   */
+  | 'thread-settled';
 
 /**
  * Η απόφαση.
@@ -164,153 +179,6 @@ export type EmailDeliveryDecision =
   | { readonly kind: 'send-now' }
   | { readonly kind: 'defer'; readonly deliverAt: Date; readonly reason: DeferReason }
   | { readonly kind: 'suppressed'; readonly reason: SuppressReason };
-
-/** Τα μέρη μιας στιγμής, **στη ζώνη του παραλήπτη**. */
-interface ZonedParts {
-  readonly year: number;
-  readonly month: number;
-  readonly day: number;
-  readonly hour: number;
-  readonly minute: number;
-  /** 0 = Κυριακή, όπως το `Date#getDay`. */
-  readonly weekday: number;
-}
-
-const WEEKDAY_INDEX: Readonly<Record<string, number>> = {
-  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
-};
-
-/**
- * Ανάλυση μιας στιγμής στα μέρη της, στη ζώνη `NOTIFICATION_TIMEZONE`.
- *
- * ⚠️ **Μέσω `Intl`, ΠΟΤΕ μέσω `getHours()`.** Το `getHours()` απαντά στη ζώνη του
- * **διακομιστή** — και ο διακομιστής είναι ένα container Docker που τρέχει σε
- * UTC. Οι «ώρες ησυχίας 22:00–08:00» θα ίσχυαν τότε 01:00–11:00 τοπικά τον
- * χειμώνα και 00:00–10:00 το καλοκαίρι: λάθος, **και διαφορετικά λάθος δύο φορές
- * τον χρόνο**.
- */
-function zonedParts(instant: Date, timeZone: string): ZonedParts {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    weekday: 'short',
-    hour12: false,
-  }).formatToParts(instant);
-
-  const value = (type: string): string =>
-    parts.find((part) => part.type === type)?.value ?? '';
-
-  // Το `hour12: false` αποδίδει μεσάνυχτα ως «24» σε ορισμένες εκδόσεις ICU.
-  const rawHour = Number(value('hour'));
-
-  return {
-    year: Number(value('year')),
-    month: Number(value('month')),
-    day: Number(value('day')),
-    hour: rawHour === 24 ? 0 : rawHour,
-    minute: Number(value('minute')),
-    weekday: WEEKDAY_INDEX[value('weekday')] ?? 0,
-  };
-}
-
-/** `"HH:MM"` → λεπτά από τα μεσάνυχτα· `null` όταν η μορφή δεν είναι έγκυρη. */
-function minutesOfDay(time: string): number | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
-  if (!match) return null;
-
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (hour > 23 || minute > 59) return null;
-
-  return hour * 60 + minute;
-}
-
-/**
- * Η στιγμή που αντιστοιχεί σε τοπική ώρα `hour:00`, `dayOffset` μέρες μετά το
- * `from` — υπολογισμένη **αναζητητικά**, γιατί η αντίστροφη απεικόνιση
- * (τοπική ώρα → στιγμή) δεν είναι συνάρτηση: την ημέρα αλλαγής ώρας μια τοπική
- * ώρα μπορεί να **μην υπάρχει** ή να υπάρχει **δύο φορές**.
- *
- * Ξεκινά από την εκτίμηση UTC και διορθώνει με τη μετρημένη απόκλιση. Δύο
- * περάσματα αρκούν: η πρώτη διόρθωση φέρνει μέσα στη σωστή μέρα, η δεύτερη
- * απορροφά την αλλαγή ζώνης αν η πρώτη πέρασε το σύνορό της.
- */
-function instantAtLocalHour(
-  from: Date,
-  dayOffset: number,
-  hour: number,
-  timeZone: string,
-): Date {
-  const base = zonedParts(from, timeZone);
-  let candidate = new Date(
-    Date.UTC(base.year, base.month - 1, base.day + dayOffset, hour, 0, 0, 0),
-  );
-
-  for (let pass = 0; pass < 2; pass += 1) {
-    const got = zonedParts(candidate, timeZone);
-    const wantedMinutes = hour * 60;
-    const gotMinutes = got.hour * 60 + got.minute;
-    // Η διαφορά μέρας μετριέται σε λεπτά μέσω της ίδιας της υποψηφιότητας.
-    const dayDrift =
-      Date.UTC(got.year, got.month - 1, got.day) -
-      Date.UTC(base.year, base.month - 1, base.day + dayOffset);
-    const driftMinutes = gotMinutes - wantedMinutes + dayDrift / 60_000;
-    if (driftMinutes === 0) break;
-    candidate = new Date(candidate.getTime() - driftMinutes * 60_000);
-  }
-
-  return candidate;
-}
-
-/** Είναι η στιγμή μέσα στο παράθυρο ησυχίας; */
-function insideQuietHours(
-  instant: Date,
-  quietHours: UserNotificationSettings['quietHours'],
-  timeZone: string,
-): boolean {
-  if (!quietHours.enabled) return false;
-
-  const start = minutesOfDay(quietHours.startTime);
-  const end = minutesOfDay(quietHours.endTime);
-  // Άκυρη μορφή ⇒ **καμία** ησυχία, όχι μόνιμη ησυχία: μια κακογραμμένη ρύθμιση
-  // δεν επιτρέπεται να αποκλείσει σιωπηλά κάθε email για πάντα.
-  if (start === null || end === null || start === end) return false;
-
-  const parts = zonedParts(instant, timeZone);
-  const nowMinutes = parts.hour * 60 + parts.minute;
-
-  // ⚠️ Το παράθυρο **συνήθως περνά τα μεσάνυχτα** (η προεπιλογή είναι 22:00→08:00).
-  // Ένας αφελής έλεγχος `start <= now && now < end` είναι ΠΑΝΤΑ ψευδής εκεί —
-  // δηλαδή θα ανέφερε «ποτέ ησυχία» ακριβώς στη ρύθμιση που έχουν όλοι.
-  return start < end
-    ? nowMinutes >= start && nowMinutes < end
-    : nowMinutes >= start || nowMinutes < end;
-}
-
-/** Η επόμενη στιγμή που κλείνει το παράθυρο ησυχίας. */
-function quietHoursEnd(
-  instant: Date,
-  quietHours: UserNotificationSettings['quietHours'],
-  timeZone: string,
-): Date {
-  const end = minutesOfDay(quietHours.endTime) ?? 0;
-  const endHour = Math.floor(end / 60);
-  const parts = zonedParts(instant, timeZone);
-  const nowMinutes = parts.hour * 60 + parts.minute;
-
-  // Αν η ώρα λήξης έχει ήδη περάσει σήμερα, το παράθυρο κλείνει **αύριο**.
-  const sameDay = nowMinutes < end;
-  const candidate = instantAtLocalHour(instant, sameDay ? 0 : 1, endHour, timeZone);
-
-  // Τα λεπτά της ώρας λήξης προστίθενται χωριστά: το `instantAtLocalHour` δουλεύει
-  // σε ακέραιες ώρες, και μια ρύθμιση «08:30» δεν επιτρέπεται να στρογγυλοποιηθεί
-  // σιωπηλά σε 08:00 — θα ήταν email μέσα στην ησυχία που ο χρήστης ζήτησε.
-  return new Date(candidate.getTime() + (end % 60) * 60_000);
-}
 
 /** Η επόμενη στιγμή του ημερήσιου παραθύρου. */
 function nextDailyWindow(instant: Date, timeZone: string): Date {
@@ -354,6 +222,14 @@ export interface EmailDeliveryContext {
    * ακριβώς η συμπεριφορά πριν, ποτέ μαντεψιά.
    */
   readonly setting?: NotificationSettingRef;
+  /**
+   * ADR-867 Β6 — **η νωρίτερη στιγμή που το email έχει νόημα**, όπως τη δηλώνει ο παραγωγός.
+   *
+   * ⚠️ **Μόνο ΑΝΕΒΑΖΕΙ τη στιγμή παράδοσης, ποτέ δεν τη φέρνει νωρίτερα**: ένα `daily` μένει στις
+   * 20:00· ένα `realtime` περιμένει ως εδώ. Οι ώρες ησυχίας εφαρμόζονται **μετά**, στη στιγμή που προκύπτει.
+   * Τα υποχρεωτικά την αγνοούν (φεύγουν αμέσως, όπως πάντα).
+   */
+  readonly notBefore?: Date;
 }
 
 /**
@@ -416,7 +292,7 @@ export function decideEmailDelivery(
 
   if (settings.emailFrequency === 'daily') {
     return withQuietHours(
-      { kind: 'defer', deliverAt: nextDailyWindow(context.now, timeZone), reason: 'daily-window' },
+      notEarlierThan({ kind: 'defer', deliverAt: nextDailyWindow(context.now, timeZone), reason: 'daily-window' }, context),
       settings,
       timeZone,
     );
@@ -424,14 +300,25 @@ export function decideEmailDelivery(
 
   if (settings.emailFrequency === 'weekly') {
     return withQuietHours(
-      { kind: 'defer', deliverAt: nextWeeklyWindow(context.now, timeZone), reason: 'weekly-window' },
+      notEarlierThan({ kind: 'defer', deliverAt: nextWeeklyWindow(context.now, timeZone), reason: 'weekly-window' }, context),
       settings,
       timeZone,
     );
   }
 
-  // `realtime` — η μόνη περίπτωση όπου η στιγμή παράδοσης είναι το τώρα.
-  return withQuietHours({ kind: 'send-now' }, settings, timeZone, context.now);
+  // `realtime` — η μόνη περίπτωση όπου η στιγμή παράδοσης είναι το τώρα (εκτός αν ο παραγωγός ζήτησε αναμονή).
+  return withQuietHours(notEarlierThan({ kind: 'send-now' }, context), settings, timeZone, context.now);
+}
+
+/**
+ * ADR-867 Β6 — **ανέβασε** τη στιγμή παράδοσης ως το `notBefore` του παραγωγού, αν χρειάζεται.
+ * Καθαρή· δεν αγγίζει ποτέ απόφαση που ήδη στέλνει **αργότερα**.
+ */
+function notEarlierThan(decision: EmailDeliveryDecision, context: EmailDeliveryContext): EmailDeliveryDecision {
+  const floor = context.notBefore;
+  if (floor === undefined || decision.kind === 'suppressed') return decision;
+  const at = decision.kind === 'defer' ? decision.deliverAt : context.now;
+  return floor.getTime() > at.getTime() ? { kind: 'defer', deliverAt: floor, reason: 'unread-grace' } : decision;
 }
 
 /**

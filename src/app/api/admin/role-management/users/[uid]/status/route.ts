@@ -180,6 +180,9 @@ export const PATCH = withSensitiveRateLimit(
             action: body.action,
             previousStatus: currentStatus,
             newStatus,
+            // 🔔 ADR-867 Β6 — ο δρων μαθαίνει **εδώ** τι έγινε με τις πράξεις του αποχωρούντος (και
+            //    πόσες έμειναν **ορφανές**: γραφείο χωρίς κανέναν ενεργό διαχειριστή) — όχι μόνο στο ίχνος.
+            ...(isSuspend ? { transferredActTeams: transferredTeams, orphanedActTeams: orphanedTeams } : {}),
           },
         });
       } catch (error) {

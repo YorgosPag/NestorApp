@@ -205,6 +205,8 @@ export const PATCH = withSensitiveRateLimit(
           after: result.after,
           /** 🔑 Η αναίρεση επιστρέφεται **στον καλούντα**, όχι μόνο στο log. */
           inverse: plan.plan.inverse,
+          // 🔔 ADR-867 Β6 — και οι πράξεις του: πόσες μεταβιβάστηκαν, πόσες έμειναν **ορφανές**.
+          ...departure,
         });
       } catch (error) {
         return failWithLoggedError(logger, 'Identity remediation failed', error);

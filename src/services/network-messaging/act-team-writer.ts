@@ -44,6 +44,8 @@ import {
   type ActTeamChangeRefusal,
   type ActTeamNext,
 } from './act-team-change';
+import { announceTeamArrivals } from './network-notifier';
+import { teamArrivals } from './network-notification-plan';
 import type { AudienceWrite } from './thread-audience';
 import {
   readActThreadSlot,
@@ -227,11 +229,37 @@ export function commitActTeamVersion(
 }
 
 /**
+ * 🔑 **ΟΤΙ ΑΚΟΛΟΥΘΕΙ ΜΙΑ ΝΕΑ ΕΚΔΟΣΗ ΟΜΑΔΑΣ — ΕΝΑΣ ΤΟΠΟΣ** (ADR-867 Β6), ο δίδυμος του
+ * {@link commitActTeamVersion}: εκείνος γράφει **μέσα** στη συναλλαγή, αυτός τρέχει **μετά** το commit —
+ * **ίχνος** (ADR-834 (ε) ②) **και** ειδοποίηση όσων **μπήκαν** («σου ανατέθηκε» · «αναλάβατε» · «προστεθήκατε»).
+ *
+ * ⚠️ **Ένας τόπος, όχι δύο κλήσεις σε κάθε γραφέα**: η ανθρώπινη αλλαγή **και** η μεταβίβαση περνούν από
+ * εδώ. Αλλιώς ο τρίτος γραφέας ομάδας θα θυμόταν το ίχνος και θα ξεχνούσε τον κληρονόμο — ακριβώς το
+ * κενό που άφησε ανοιχτό το Β5 (β): *«ο κληρονόμος φαίνεται στη λίστα, αλλά κανείς δεν του το λέει»*.
+ */
+export async function settleActTeamChange(
+  adminDb: AdminFirestore,
+  before: NetworkActTeam,
+  after: ActTeamNext,
+  context: { readonly performedBy: string; readonly departingUid?: string },
+): Promise<void> {
+  await recordActTeamChange(before.id, before.hostCompanyId, context.performedBy, before, after);
+  await announceTeamArrivals(adminDb, {
+    team: { ...before, ...after },
+    arrivals: teamArrivals(before, after, {
+      actorUid: context.performedBy,
+      departure: context.departingUid !== undefined,
+    }),
+    ...(context.departingUid === undefined ? {} : { departingUid: context.departingUid }),
+  });
+}
+
+/**
  * **Το ίχνος** (ADR-834 (ε) ② «με ίχνος») — **μετά** τη συναλλαγή: ο γραφέας του ιστορικού
  * κάνει δικές του αναγνώσεις (όνομα εκτελούντος), και μια συναλλαγή δεν δέχεται ανάγνωση μετά
  * από γραφή. ⚠️ Αποτυχία εδώ **δεν** αναιρεί την αλλαγή — την ονομάζει στο log.
  */
-export async function recordActTeamChange(
+async function recordActTeamChange(
   teamId: string,
   hostCompanyId: string,
   performedBy: string,
@@ -304,13 +332,7 @@ export async function changeActTeam(
   );
 
   if (result.outcome.kind === 'applied' && result.before !== null) {
-    await recordActTeamChange(
-      request.teamId,
-      result.before.hostCompanyId,
-      request.actorUid,
-      result.before,
-      result.outcome.team,
-    );
+    await settleActTeamChange(adminDb, result.before, result.outcome.team, { performedBy: request.actorUid });
   }
   return result.outcome;
 }

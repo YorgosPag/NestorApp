@@ -16,7 +16,7 @@
  */
 
 import React from 'react';
-import { Building2, CheckSquare, Package, Shield, Users } from 'lucide-react';
+import { Building2, CheckSquare, MessagesSquare, Package, Shield, Users } from 'lucide-react';
 
 import {
   isEmailFrequency,
@@ -48,6 +48,8 @@ export const CATEGORY_ICONS: Readonly<Record<NotificationCategory, React.Element
   tasks: CheckSquare,
   procurement: Package,
   security: Shield,
+  // ADR-867 Β6 — μηνύματα ανάμεσα σε συνεργάτες.
+  network: MessagesSquare,
 };
 
 // ============================================================================
