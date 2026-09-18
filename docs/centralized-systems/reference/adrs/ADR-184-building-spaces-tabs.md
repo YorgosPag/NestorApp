@@ -61,3 +61,14 @@
 - Building detail pages now have 14 tabs (was 12)
 - Storage/Parking/Units data created from building tabs appears automatically in sidebar pages
 - No new npm packages required
+
+## Changelog
+
+- **2026-09-18** — **ONE filter bar** for the three space tabs: `shared/BuildingSpaceFilterBar.tsx`
+  (search + type/status selects + export). Units (`PropertiesTabContent`), Parking
+  (`ParkingTabContent`) and Storage (`StorageTab/StorageTabFilters`, now a thin label wrapper)
+  carried the same markup as parallel twins — CHECK 3.28 blocked the commit that staged two of
+  them together. Labels stay with each caller (own i18n namespace); the select value is narrowed
+  by **membership** (`narrowSpaceFilterValue`: `'all'` or a listed option, else ignored) instead
+  of `as` casts / `normalizePropertyType` on the raw string. Test:
+  `shared/__tests__/building-space-filter-bar.test.ts`.

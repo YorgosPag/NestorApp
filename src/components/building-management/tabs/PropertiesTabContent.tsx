@@ -3,7 +3,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -12,25 +11,15 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Home, Plus, Search, CheckCircle, Euro, Ruler, BarChart3, Layers, Table as TableIcon, Link2 } from 'lucide-react';
+import { Home, Plus, CheckCircle, Euro, Ruler, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar } from '../shared';
 import type { LinkableItem } from '../shared';
 import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -50,7 +39,8 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createStaleCache } from '@/lib/stale-cache';
 import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
 import { useHasAnyUnits } from '@/hooks/useHasAnyUnits';
-import { totalPrice } from '@/lib/properties/price-resolver';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 
 // ADR-300: Module-level caches — keyed by buildingId, survive re-navigation
 const buildingPropertiesCache = createStaleCache<Property[]>('building-properties-tab');
@@ -97,7 +87,6 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   const [filterType, setFilterType] = useState<PropertyType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const hasAnyUnits = useHasAnyUnits();
   const fetchFloors = useCallback(async () => {
@@ -154,8 +143,8 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   const stats = useMemo(() => ({
     total: units.length,
     available: units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length,
-    // ADR-777 Α5/Α6 — the price SSoT, not the @deprecated flat field.
-    totalValue: totalPrice(units).total,
+    // ADR-777 Α5/Α6 + §8.60.14.13 — the price SSoT, PER ROLE (never one sum across units).
+    priceTotals: totalPriceByRole(units),
     totalArea: units.reduce((sum, u) => sum + (u.areas?.gross || u.areas?.net || u.area || 0), 0),
   }), [units]);
 
@@ -174,7 +163,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   const dashboardStats: DashboardStat[] = useMemo(() => [
     { title: t('unitStats.total'), value: stats.total, icon: Home, color: 'blue' },
     { title: t('unitStats.available'), value: stats.available, icon: CheckCircle, color: 'green' },
-    { title: t('unitStats.totalValue'), value: `€${(stats.totalValue / 1000).toFixed(0)}K`, icon: Euro, color: 'gray' },
+    { title: t('unitStats.totalValue'), ...priceTotalsView(t, stats.priceTotals, 'total'), icon: Euro, color: 'gray' },
     { title: t('unitStats.totalArea'), value: `${stats.totalArea.toFixed(1)} m²`, icon: Ruler, color: 'blue' },
   ], [stats, t]);
 
@@ -335,57 +324,26 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
       <UnifiedDashboard stats={dashboardStats} columns={4} className="" />
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-2">
-          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-2">
-            <label className="relative md:col-span-2">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
-              <Input
-                placeholder={t('unitStats.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </label>
-
-            {/* 🔴 Κανονικοποίηση αντί για ισχυρισμό (ADR-842 §7.6.12): το `'all'`
-                είναι **δικό μας** σύμβολο, όχι είδος — γι' αυτό ελέγχεται χωριστά. */}
-            <Select
-              value={filterType}
-              onValueChange={(val) =>
-                setFilterType(val === 'all' ? 'all' : (normalizePropertyType(val) ?? 'all'))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
-                {UNIT_TYPES_FOR_FILTER.map(ut => (
-                  <SelectItem key={ut} value={ut}>{getPropertyTypeLabel(ut, tUnits)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('allStatuses', { ns: 'filters' })} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
-                {UNIT_STATUSES_FOR_FILTER.map(us => (
-                  <SelectItem key={us} value={us}>{getPropertyStatusLabel(us, tUnits)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" className="flex items-center gap-2">
-              <BarChart3 className={iconSizes.sm} />
-              {t('unitStats.exportReport')}
-            </Button>
-          </fieldset>
-        </CardContent>
-      </Card>
+      {/* 🔴 Κανονικοποίηση αντί για ισχυρισμό (ADR-842 §7.6.12): η μπάρα στενεύει την τιμή με
+          ΣΥΜΜΕΤΟΧΗ στις επιλογές — `'all'` ή είδος της λίστας, ποτέ ωμό string. */}
+      <BuildingSpaceFilterBar
+        searchPlaceholder={t('unitStats.searchPlaceholder')}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        typeFilter={{
+          value: filterType,
+          onChange: setFilterType,
+          options: UNIT_TYPES_FOR_FILTER.map((ut) => ({ value: ut, label: getPropertyTypeLabel(ut, tUnits) })),
+          allLabel: t('allTypes', { ns: 'filters' }),
+        }}
+        statusFilter={{
+          value: filterStatus,
+          onChange: setFilterStatus,
+          options: UNIT_STATUSES_FOR_FILTER.map((us) => ({ value: us, label: getPropertyStatusLabel(us, tUnits) })),
+          allLabel: t('allStatuses', { ns: 'filters' }),
+        }}
+        exportLabel={t('unitStats.exportReport')}
+      />
 
       <UnitQuickCreateSheet
         open={showCreateForm}

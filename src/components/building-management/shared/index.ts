@@ -14,7 +14,9 @@ export { BuildingSpaceConfirmDialog } from './BuildingSpaceConfirmDialog';
 export { BuildingSpaceLinkDialog } from './BuildingSpaceLinkDialog';
 export { SpaceFloorplanInline } from './SpaceFloorplanInline';
 export { BuildingSpaceWarningBanner } from './BuildingSpaceWarningBanner';
+export { BuildingSpaceFilterBar } from './BuildingSpaceFilterBar';
 export type { LinkableItem } from './BuildingSpaceLinkDialog';
+export type { SpaceFilterOption, SpaceSelectFilter } from './BuildingSpaceFilterBar';
 
 export { buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './buildingSpaceCardFields';
 export { buildPriceColumn } from './buildingSpacePriceColumn';

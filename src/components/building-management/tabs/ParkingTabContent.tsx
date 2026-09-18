@@ -15,25 +15,14 @@
 
 import { useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Car, Plus, Search, BarChart3, Layers, Table as TableIcon, Link2 } from 'lucide-react';
+import { Car, Plus, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
-import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/types/parking';
+import type { ParkingSpot, ParkingSpotStatus } from '@/types/parking';
 import { PARKING_TYPES, PARKING_STATUSES } from '@/types/parking';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -45,7 +34,6 @@ import { getStatusBadgeClasses } from './parking-tab-config';
 import { ParkingQuickCreateSheet } from '../dialogs/ParkingQuickCreateSheet';
 import { ParkingEditRow } from './parking-tab-forms';
 import { useHasAnyParking } from '@/hooks/useHasAnyUnits';
-import { priceSortKey } from '@/lib/properties/price-resolver';
 
 // Re-export types for backward compatibility
 export type { ParkingTabContentProps } from './parking-tab-config';
@@ -55,7 +43,6 @@ export type { ParkingTabContentProps } from './parking-tab-config';
 // ============================================================================
 export function ParkingTabContent({ building }: { building: Building }) {
   const router = useRouter();
-  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
   const state = useParkingTabState({
@@ -81,7 +68,8 @@ export function ParkingTabContent({ building }: { building: Building }) {
     { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className={colors.text.muted}>{t(`types.${s.type || 'standard'}`)}</span> },
     { key: 'floor', label: t('general.fields.floor'), width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className={colors.text.muted}>{s.floor || '—'}</span> },
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
-    { key: 'price', label: t('general.fields.price'), width: 'w-24', sortValue: (s) => priceSortKey(s), render: (s) => <span className="font-mono text-xs">{formatCurrencyWhole(priceSortKey(s))}</span> },
+    // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης).
+    buildPriceColumn<ParkingSpot>(t('general.fields.price'), t, (s) => s.number),
     { key: 'status', label: t('general.fields.status'), width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
   ], [t, colors.text.muted]);
 
@@ -89,7 +77,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
     buildTypeCodeField(t('general.fields.type'), (s) => t(`types.${s.type || 'standard'}`), (s) => s.code),
     buildFloorField(t('general.fields.floor'), (s) => s.floor),
     buildAreaField((s) => s.area),
-    buildPriceField(t('general.fields.price')),
+    buildPriceField(t('general.fields.price'), t),
   ], [t]);
 
   // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
@@ -148,50 +136,24 @@ export function ParkingTabContent({ building }: { building: Building }) {
       <UnifiedDashboard stats={state.dashboardStats} columns={4} className="" />
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-2">
-          <fieldset className="grid grid-cols-1 md:grid-cols-5 gap-2">
-            <label className="relative md:col-span-2">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${colors.text.muted} ${iconSizes.sm}`} />
-              <Input
-                placeholder={tBuilding('parkingStats.searchPlaceholder')}
-                value={state.searchTerm}
-                onChange={(e) => state.setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </label>
-
-            <Select value={state.filterType} onValueChange={(val) => state.setFilterType(val as ParkingSpotType | 'all')}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('allTypes', { ns: 'filters' })}</SelectItem>
-                {PARKING_TYPES.map(pt => (
-                  <SelectItem key={pt} value={pt}>{t(`types.${pt}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={state.filterStatus} onValueChange={(val) => state.setFilterStatus(val as ParkingSpotStatus | 'all')}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('allStatuses', { ns: 'filters' })} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('allStatuses', { ns: 'filters' })}</SelectItem>
-                {PARKING_STATUSES.map(ps => (
-                  <SelectItem key={ps} value={ps}>{t(`status.${ps}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" className="flex items-center gap-2">
-              <BarChart3 className={iconSizes.sm} />
-              {tBuilding('parkingStats.exportReport')}
-            </Button>
-          </fieldset>
-        </CardContent>
-      </Card>
+      <BuildingSpaceFilterBar
+        searchPlaceholder={tBuilding('parkingStats.searchPlaceholder')}
+        searchTerm={state.searchTerm}
+        onSearchChange={state.setSearchTerm}
+        typeFilter={{
+          value: state.filterType,
+          onChange: state.setFilterType,
+          options: PARKING_TYPES.map((pt) => ({ value: pt, label: t(`types.${pt}`) })),
+          allLabel: t('allTypes', { ns: 'filters' }),
+        }}
+        statusFilter={{
+          value: state.filterStatus,
+          onChange: state.setFilterStatus,
+          options: PARKING_STATUSES.map((ps) => ({ value: ps, label: t(`status.${ps}`) })),
+          allLabel: t('allStatuses', { ns: 'filters' }),
+        }}
+        exportLabel={tBuilding('parkingStats.exportReport')}
+      />
 
       <ParkingQuickCreateSheet
         open={state.showCreateForm}
