@@ -24,8 +24,40 @@ import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { StorageStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
-import { compareSortValues } from '@/lib/array-utils';
-import { priceSortKey } from '@/lib/properties/price-resolver';
+import type { SortableValue } from '@/lib/array-utils';
+import { compareByNameThenId } from '@/lib/ordering/total-name-order';
+import { sortIntoPriceClassSections } from '@/lib/properties/price-class-sections';
+import { PriceClassSectionedList } from '@/components/shared/price-sections/PriceClassSectionedList';
+
+/** Ολική σειρά για ισοπαλίες και απουσία τιμής: όνομα → `id`. */
+function byNameThenId(a: Storage, b: Storage): number {
+  return compareByNameThenId(a.name, a.id, b.name, b.id);
+}
+
+/**
+ * Το κλειδί μιας αποθήκης για κάθε σειρά **εκτός** της τιμής — εκείνη διαμερίζει και **δεν**
+ * έχει επίπεδο κλειδί (ADR-777 §8.60.14.14). Κενά τελευταία και στις δύο κατευθύνσεις.
+ */
+function storageSortValue(x: Storage, field: SortField): SortableValue {
+  switch (field) {
+    case 'name':
+      return x.name.toLowerCase();
+    case 'area':
+      return x.area;
+    case 'status':
+      return x.status.toLowerCase();
+    case 'location':
+      return x.building.toLowerCase();
+    case 'number':
+      return x.floor.toLowerCase();
+    case 'date':
+      return x.lastUpdated instanceof Date ? x.lastUpdated.getTime() : x.lastUpdated ? new Date(x.lastUpdated).getTime() : 0;
+    case 'type':
+      return x.type.toLowerCase();
+    default:
+      return null;
+  }
+}
 
 interface StoragesListProps {
   storages: Storage[];
@@ -71,57 +103,24 @@ export function StoragesList({
     });
   }, [storages, list.searchTerm, list.selectedStatuses]);
 
-  const sortedStorages = [...filteredStorages].sort((a, b) => {
-    let aValue: string | number | null;
-    let bValue: string | number | null;
-
-    switch (list.sortBy) {
-      case 'name':
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
-        break;
-      case 'area':
-        aValue = a.area;
-        bValue = b.area;
-        break;
-      case 'value':
-        aValue = priceSortKey(a);
-        bValue = priceSortKey(b);
-        break;
-      case 'status':
-        aValue = a.status.toLowerCase();
-        bValue = b.status.toLowerCase();
-        break;
-      case 'location':
-        aValue = a.building.toLowerCase();
-        bValue = b.building.toLowerCase();
-        break;
-      case 'number':
-        aValue = a.floor.toLowerCase();
-        bValue = b.floor.toLowerCase();
-        break;
-      case 'date':
-        aValue = a.lastUpdated instanceof Date ? a.lastUpdated.getTime() : a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
-        bValue = b.lastUpdated instanceof Date ? b.lastUpdated.getTime() : b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
-        break;
-      case 'type':
-        aValue = a.type.toLowerCase();
-        bValue = b.type.toLowerCase();
-        break;
-      default:
-        return 0;
-    }
-
-    // Ένας συγκριτής για κάθε ταξινομήσιμη λίστα: «δεν έχει τιμή» πάει τελευταίο
-    // ΚΑΙ στις δύο φορές (ADR-777 Α6 · σύμβαση φύλλου εργασίας για τα κενά), και
-    // το κείμενο συγκρίνεται με ΡΗΤΟ ελληνικό locale. Δες `lib/array-utils`.
-    return compareSortValues(aValue, bValue, list.sortOrder);
-  });
+  /*
+    🔑 ADR-777 §8.60.14.14 — «κατά αξία» = ΠΡΩΤΑ η μονάδα, ΜΕΤΑ ο αριθμός (Revit `Sort By` →
+    `Then By`): τμήματα ανά κλάση, ποτέ €/μήνα και € πώλησης σε έναν άξονα.
+  */
+  const sections = useMemo(
+    () => sortIntoPriceClassSections(filteredStorages, {
+      byPrice: list.sortBy === 'value',
+      direction: list.sortOrder,
+      tieBreak: byNameThenId,
+      valueOf: (storage) => storageSortValue(storage, list.sortBy),
+    }),
+    [filteredStorages, list.sortBy, list.sortOrder],
+  );
 
   return (
     <EntityListColumn hasBorder aria-label={t('storages.list.ariaLabel')}>
       <StoragesListHeader
-        storages={sortedStorages}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
+        storages={filteredStorages}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
         searchTerm={list.searchTerm}
         onSearchChange={list.setSearchTerm}
         showToolbar={list.showToolbar}
@@ -148,18 +147,22 @@ export function StoragesList({
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
-          {sortedStorages.map((storage) => (
-            <StorageListCard
-              key={storage.id}
-              storage={storage}
-              isSelected={selectedStorage?.id === storage.id}
-              isFavorite={list.favorites.includes(storage.id)}
-              onSelect={() => onSelectStorage?.(storage)}
-              onToggleFavorite={() => list.toggleFavorite(storage.id)}
-            />
-          ))}
+          <PriceClassSectionedList
+            sections={sections}
+            idPrefix="storages-section"
+            getKey={(storage) => storage.id}
+            renderItem={(storage) => (
+              <StorageListCard
+                storage={storage}
+                isSelected={selectedStorage?.id === storage.id}
+                isFavorite={list.favorites.includes(storage.id)}
+                onSelect={() => onSelectStorage?.(storage)}
+                onToggleFavorite={() => list.toggleFavorite(storage.id)}
+              />
+            )}
+          />
 
-          {sortedStorages.length === 0 && (
+          {filteredStorages.length === 0 && (
             <div className={cn("text-center py-8", colors.text.muted)}>
               <Warehouse className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>{t('storages.list.noResults')}</p>

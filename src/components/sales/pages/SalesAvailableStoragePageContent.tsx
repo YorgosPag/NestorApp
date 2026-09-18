@@ -18,15 +18,14 @@ import { Package, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { SalesGridCard } from '@/components/sales/shared/SalesGridCard';
 import {
   SalesCardGrid,
   SalesListPageShell,
-  mapCommonSpaceFilters,
-  salesMoneyValue,
-  salesPerSqmValue,
-  salesSpaceCardPricing,
+  salesCardPricing,
   salesSpaceSidebarProps,
+  useSalesSpacePanelFilters,
 } from '@/components/sales/shared';
 import '@/lib/design-system';
 
@@ -36,15 +35,8 @@ function SalesStorageContent() {
   const storageState = useSalesStorageViewerState();
   const { filteredItems, dashboardStats, filters, handleFiltersChange, handleSelectItem } = storageState;
 
-  const handleAdvancedFiltersChange = React.useCallback((adv: StorageFilterState) => {
-    handleFiltersChange({
-      ...mapCommonSpaceFilters(adv),
-      areaRange: {
-        min: adv.ranges?.areaRange?.min ?? null,
-        max: adv.ranges?.areaRange?.max ?? null,
-      },
-    });
-  }, [handleFiltersChange]);
+  // Panel ⇄ σελίδα: ο ΚΟΙΝΟΣ μεταφραστής (εύρη τιμής ΜΕ μονάδα · εμβαδόν · κατάσταση).
+  const { panelFilters, onPanelFiltersChange } = useSalesSpacePanelFilters(filters, handleFiltersChange);
 
   const unifiedDashboardStats: DashboardStat[] = [
     {
@@ -56,21 +48,21 @@ function SalesStorageContent() {
     },
     {
       title: t('salesStorage.stats.avgPrice'),
-      value: salesMoneyValue(dashboardStats.averagePrice),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'average'),
       description: t('salesStorage.stats.avgPriceDesc'),
       icon: DollarSign,
       color: 'green',
     },
     {
       title: t('salesStorage.stats.totalValue'),
-      value: salesMoneyValue(dashboardStats.totalValue),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'total'),
       description: t('salesStorage.stats.totalValueDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
       title: t('salesStorage.stats.avgPricePerSqm'),
-      value: salesPerSqmValue(dashboardStats.averagePricePerSqm),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'perArea'),
       description: t('salesStorage.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'blue',
@@ -91,8 +83,8 @@ function SalesStorageContent() {
       stats={unifiedDashboardStats}
       onSearchChange={searchTerm => handleFiltersChange({ searchTerm })}
       filtersConfig={storageFiltersConfig}
-      filters={filters as unknown as StorageFilterState}
-      onFiltersChange={handleAdvancedFiltersChange}
+      filters={panelFilters as unknown as StorageFilterState}
+      onFiltersChange={onPanelFiltersChange}
       renderList={() => <SalesStorageSidebar {...salesSpaceSidebarProps(storageState)} />}
       renderGrid={() => (
         <SalesCardGrid
@@ -108,7 +100,7 @@ function SalesStorageContent() {
               statusKey={item.status ?? 'available'}
               statusLabel={t(`storage:status.${item.status}`)}
               description={`${t(`storage:types.${item.type}`)} · ${item.area ?? '—'} m²`}
-              {...salesSpaceCardPricing(item)}
+              {...salesCardPricing(item, t)}
               onClick={handleSelectItem}
             />
           )}

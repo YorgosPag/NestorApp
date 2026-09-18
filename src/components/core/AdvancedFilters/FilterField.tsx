@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
+import { PriceRangeFilterField } from './PriceRangeFilterField';
+import type { RolePriceRange } from '@/lib/properties/price-range';
 import { PROPERTY_AREA_RANGE_PRESETS } from './configs';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -33,7 +35,7 @@ interface DateRangeValue {
 }
 
 /** Possible filter field values */
-export type FilterFieldValue = string | string[] | boolean | number | RangeValue | DateRangeValue | undefined;
+export type FilterFieldValue = string | string[] | boolean | number | RangeValue | DateRangeValue | RolePriceRange | undefined;
 
 interface FilterFieldProps {
   config: FilterFieldConfig;
@@ -91,6 +93,16 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
           </div>
         );
       }
+
+      case 'priceRange':
+        // ADR-777 §8.60.14.14 — εύρος τιμής ΜΕ μονάδα: ο ρόλος είναι μέρος της τιμής του πεδίου.
+        return (
+          <PriceRangeFilterField
+            id={config.id}
+            value={value as RolePriceRange | undefined}
+            onChange={(range) => onValueChange(range)}
+          />
+        );
 
       case 'range': {
         const rangeValue = value as RangeValue | undefined;

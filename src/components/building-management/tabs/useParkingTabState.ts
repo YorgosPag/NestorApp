@@ -20,7 +20,8 @@ import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { Car, CheckCircle, Euro, Ruler } from 'lucide-react';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
-import { totalPrice } from '@/lib/properties/price-resolver';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import type { LinkableItem } from '../shared';
 import type {
   ParkingApiData,
@@ -373,8 +374,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const stats = useMemo(() => ({
     total: parkingSpots.length,
     available: parkingSpots.filter(s => s.status === 'available').length,
-    // ADR-777 Α5/Α6 — the price SSoT, not the @deprecated flat field.
-    totalValue: totalPrice(parkingSpots).total,
+    // ADR-777 Α5/Α6 + §8.60.14.13 — the price SSoT, PER ROLE.
+    priceTotals: totalPriceByRole(parkingSpots),
     totalArea: parkingSpots.reduce((sum, s) => sum + (s.area || 0), 0),
   }), [parkingSpots]);
 
@@ -393,7 +394,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const dashboardStats: DashboardStat[] = useMemo(() => [
     { title: tBuilding('parkingStats.total'), value: stats.total, icon: Car, color: 'blue' },
     { title: tBuilding('parkingStats.available'), value: stats.available, icon: CheckCircle, color: 'green' },
-    { title: tBuilding('parkingStats.totalValue'), value: `€${(stats.totalValue / 1000).toFixed(0)}K`, icon: Euro, color: 'gray' },
+    { title: tBuilding('parkingStats.totalValue'), ...priceTotalsView(tBuilding, stats.priceTotals, 'total'), icon: Euro, color: 'gray' },
     { title: tBuilding('parkingStats.totalArea'), value: `${stats.totalArea.toFixed(1)} m²`, icon: Ruler, color: 'blue' },
   ], [stats, tBuilding]);
 

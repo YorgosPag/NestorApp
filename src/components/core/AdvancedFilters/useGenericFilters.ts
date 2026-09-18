@@ -47,6 +47,26 @@ export interface UseGenericFiltersReturn<T extends GenericFilterState> {
   batchUpdate: (updates: Partial<T>) => void;
 }
 
+/**
+ * **Το κλειδί ενός ΕΜΦΩΛΕΥΜΕΝΟΥ εύρους** — `'ranges.priceRange'` → `'priceRange'`· `null` για άμεσο.
+ *
+ * 🔴 Τα configs θέσεων/αποθηκών δηλώνουν πεδία ως `'ranges.priceRange'`, και ο πίνακας έγραφε
+ * την τιμή στο **κυριολεκτικό** κλειδί `ranges['ranges.priceRange']` — ενώ οι μηχανές διαβάζουν
+ * `ranges.priceRange`. Τα εύρη εκείνων των οθονών **δεν έφταναν ποτέ** στη μηχανή: χειριστήριο
+ * που δεν κάνει τίποτα (ADR-777 §8.60.14.14). Ένας μεταφραστής, για ανάγνωση **και** εγγραφή.
+ */
+export function nestedRangeKey(fieldId: string): string | null {
+  const prefix = 'ranges.';
+  return fieldId.startsWith(prefix) ? fieldId.slice(prefix.length) : null;
+}
+
+/** Ο πίνακας τιμών ενός πεδίου με την `value` **εναλλαγμένη** — μία υλοποίηση για πολλαπλή επιλογή και εναλλαγή. */
+function toggledValues(filters: GenericFilterState, key: string, value: string): string[] {
+  const current = filters[key];
+  const values = (Array.isArray(current) ? current : []) as string[];
+  return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
+}
+
 export function useGenericFilters<T extends GenericFilterState>(
   filters: T,
   onFiltersChange: (filters: T) => void,
@@ -83,15 +103,16 @@ export function useGenericFilters<T extends GenericFilterState>(
         [rangeKey]: newRange
       } as T);
     } else {
-      // Nested ranges property (legacy support)
+      // Nested ranges property — `'ranges.X'` ids address `ranges.X`, never a literal dotted key
       const ranges = filters.ranges || {};
-      const currentRange = ranges[rangeKey] || {};
+      const key = nestedRangeKey(rangeKey) ?? rangeKey;
+      const currentRange = ranges[key] || {};
 
       onFiltersChange({
         ...filters,
         ranges: {
           ...ranges,
-          [rangeKey]: {
+          [key]: {
             ...currentRange,
             [subKey]: value === '' ? undefined : Number(value)
           }
@@ -133,17 +154,7 @@ export function useGenericFilters<T extends GenericFilterState>(
     key: string,
     value: string
   ) => {
-    const filtersRecord = filters as Record<string, unknown>;
-    const currentValues = (Array.isArray(filtersRecord[key]) ? filtersRecord[key] : []) as string[];
-    let newValues: string[];
-
-    if (value === 'all') {
-      newValues = [];
-    } else {
-      newValues = currentValues.includes(value)
-        ? currentValues.filter((v: string) => v !== value)
-        : [...currentValues, value];
-    }
+    const newValues = value === 'all' ? [] : toggledValues(filters, key, value);
 
     onFiltersChange({
       ...filters,
@@ -222,12 +233,7 @@ export function useGenericFilters<T extends GenericFilterState>(
    * Generic version of handleMultiSelectChange without 'all' handling
    */
   const toggleArrayValue = useCallback((key: string, value: string) => {
-    const filtersRecord = filters as Record<string, unknown>;
-    const currentValues = (Array.isArray(filtersRecord[key]) ? filtersRecord[key] : []) as string[];
-
-    const newValues = currentValues.includes(value)
-      ? currentValues.filter((v: string) => v !== value)
-      : [...currentValues, value];
+    const newValues = toggledValues(filters, key, value);
 
     onFiltersChange({
       ...filters,

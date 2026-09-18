@@ -22,6 +22,8 @@ import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 import { ReportSparkline } from "./ReportSparkline";
 import { ReportTrafficLight, type RAGStatus } from "./ReportTrafficLight";
+import { PriceTotalsBreakdown } from "@/components/shared/price-totals/PriceTotalsBreakdown";
+import { priceTotalsSentence, type PriceTotalsRow } from "@/lib/listings/listing-price-label";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +34,11 @@ export interface ReportKPI {
   title: string;
   /** Display value (pre-formatted string or number) */
   value: string | number;
+  /**
+   * Υποσύνολα τιμής ανά ρόλο (ADR-777 §8.60.14.13) — όταν έχει γραμμές, αντικαθιστά το
+   * `value`. Το παράγει **μόνο** το `priceTotalsView`, μαζί με το `value`.
+   */
+  priceBreakdown?: readonly PriceTotalsRow[];
   /** Optional description */
   description?: string;
   /** Tooltip explanation shown via info icon next to the title */
@@ -116,6 +123,11 @@ const ICON_BG_MAP: Record<string, string> = {
 // KPI Card
 // ---------------------------------------------------------------------------
 
+/** Η τιμή ως κείμενο για τον αναγνώστη οθόνης — τα υποσύνολα γραμμή-γραμμή, ποτέ άθροισμα. */
+function kpiValueText(kpi: ReportKPI): string {
+  return priceTotalsSentence({ value: String(kpi.value), priceBreakdown: kpi.priceBreakdown ?? [] });
+}
+
 function KPICard({
   kpi,
   index,
@@ -184,7 +196,7 @@ function KPICard({
         role: "button" as const,
         tabIndex: 0,
         onKeyDown: handleKeyDown,
-        "aria-label": `${kpi.title}: ${kpi.value}${kpi.description ? `. ${kpi.description}` : ""}`,
+        "aria-label": `${kpi.title}: ${kpiValueText(kpi)}${kpi.description ? `. ${kpi.description}` : ""}`,
       })}
     >
       <CardContent className="p-2">
@@ -214,14 +226,18 @@ function KPICard({
 
           {/* Value + Sparkline */}
           <div className="flex items-end justify-between">
-            <span
-              className={cn(
-                "text-2xl font-bold tabular-nums",
-                colors.text.primary,
-              )}
-            >
-              {kpi.value}
-            </span>
+            {kpi.priceBreakdown && kpi.priceBreakdown.length > 0 ? (
+              <PriceTotalsBreakdown rows={kpi.priceBreakdown} valueClassName={colors.text.primary} />
+            ) : (
+              <span
+                className={cn(
+                  "text-2xl font-bold tabular-nums",
+                  colors.text.primary,
+                )}
+              >
+                {kpi.value}
+              </span>
+            )}
             {kpi.sparklineData && kpi.sparklineData.length >= 2 && (
               <ReportSparkline
                 data={kpi.sparklineData}

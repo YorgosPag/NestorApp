@@ -25,16 +25,14 @@ export type {
 
 export { SalesCardGrid } from './SalesCardGrid';
 
-export { SALES_STAT_EMPTY, salesMoneyValue, salesPerSqmValue } from './sales-stat-values';
-
 export {
-  mapCommonSpaceFilters,
-  salesSpaceCardPricing,
+  salesCardPricing,
   salesSpaceSidebarProps,
+  useSalesSpacePanelFilters,
 } from './sales-space-page';
 export type {
   SalesSpaceAdvancedFilters,
-  SalesSpaceCardPricing,
+  SalesCardPricing,
   SalesSpaceSidebarProps,
   SalesSpaceSidebarState,
 } from './sales-space-page';

@@ -16,11 +16,10 @@ import { propertyListFiltersConfig, type UnitFilterState } from '@/components/co
 import { ShoppingBag, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import {
   SalesCardGrid,
   SalesListPageShell,
-  salesMoneyValue,
-  salesPerSqmValue,
 } from '@/components/sales/shared';
 import { useSalesPropertiesListPage } from '@/components/sales/shared/use-sales-properties-list-page';
 import { PropertyGridCard } from '@/domain/cards/property/PropertyGridCard';
@@ -43,21 +42,21 @@ function SalesAvailableContent() {
     },
     {
       title: t('sales.available.stats.avgPrice'),
-      value: salesMoneyValue(dashboardStats.averagePrice),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'average'),
       description: t('sales.available.stats.avgPriceDesc'),
       icon: DollarSign,
       color: 'green',
     },
     {
       title: t('sales.available.stats.totalValue'),
-      value: salesMoneyValue(dashboardStats.totalValue),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'total'),
       description: t('sales.available.stats.totalValueDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
       title: t('sales.available.stats.avgPricePerSqm'),
-      value: salesPerSqmValue(dashboardStats.averagePricePerSqm),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'perArea'),
       description: t('sales.available.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'orange',

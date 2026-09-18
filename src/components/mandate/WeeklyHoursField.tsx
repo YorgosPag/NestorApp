@@ -31,6 +31,12 @@ import { WeeklyHoursDayRow } from './WeeklyHoursDayRow';
 interface WeeklyHoursFieldProps {
   readonly hours: WeeklyHours;
   readonly onChange: (hours: WeeklyHours) => void;
+  /**
+   * Τίτλος και υπόδειξη **ήδη μεταφρασμένα**, όταν το ωράριο δεν είναι ωράριο καταστήματος — π.χ. οι
+   * ώρες απόκρισης του οικοδεσπότη (ADR-835 §23.3). Απόν ⇒ οι ετικέτες της κάρτας, όπως πάντα.
+   * 🔑 Ο **ίδιος** επεξεργαστής και ο **ίδιος** κριτής ελαττωμάτων — ποτέ δεύτερη φόρμα ωραρίου.
+   */
+  readonly labels?: { readonly legend: string; readonly hint: string };
 }
 
 function PresetMenu({ onPreset }: { readonly onPreset: (preset: WeeklyHoursPreset) => void }): React.ReactElement {
@@ -51,7 +57,7 @@ function PresetMenu({ onPreset }: { readonly onPreset: (preset: WeeklyHoursPrese
   );
 }
 
-export function WeeklyHoursField({ hours, onChange }: WeeklyHoursFieldProps): React.ReactElement {
+export function WeeklyHoursField({ hours, onChange, labels }: WeeklyHoursFieldProps): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const defects = React.useMemo(
     () => new Map(weeklyHoursDefects(hours).map(({ weekday, defect }) => [weekday, defect])),
@@ -60,8 +66,8 @@ export function WeeklyHoursField({ hours, onChange }: WeeklyHoursFieldProps): Re
 
   return (
     <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-      <legend className="text-sm font-medium text-foreground">{t(SHOWCASE_CARD_KEYS.hoursLabel)}</legend>
-      <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.hoursHint)}</p>
+      <legend className="text-sm font-medium text-foreground">{labels?.legend ?? t(SHOWCASE_CARD_KEYS.hoursLabel)}</legend>
+      <p className="m-0 text-sm text-muted-foreground">{labels?.hint ?? t(SHOWCASE_CARD_KEYS.hoursHint)}</p>
       <PresetMenu onPreset={(preset) => onChange(WEEKLY_HOURS_PRESETS[preset])} />
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {ISO_WEEKDAYS.map((weekday) => (

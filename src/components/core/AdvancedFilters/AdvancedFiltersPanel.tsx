@@ -8,8 +8,8 @@ import { Filter, RotateCcw } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { FilterField, type FilterFieldValue } from './FilterField';
-import { useGenericFilters } from './useGenericFilters';
-import type { FilterPanelConfig, GenericFilterState } from './types';
+import { nestedRangeKey, useGenericFilters } from './useGenericFilters';
+import type { FilterPanelConfig, FilterRange, GenericFilterState } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -70,6 +70,10 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   } = useGenericFilters(filters, onFiltersChange, defaultFilters);
 
   const getFieldValue = (fieldId: string): FilterFieldValue => {
+    const nested = nestedRangeKey(fieldId);
+    if (nested !== null) {
+      return (filters.ranges?.[nested] as FilterFieldValue) ?? { min: undefined, max: undefined };
+    }
     if (fieldId.includes('Range')) {
       // 🏢 ENTERPRISE: Support both direct ranges (areaRange) and nested ranges (ranges.areaRange)
       const directRange = (filters as Record<string, unknown>)[fieldId];
@@ -87,7 +91,12 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
       // 🔧 ENTERPRISE FIX: Handle range dropdown mode (preset selections)
       // Check if value is a complete range object from dropdown
       if (value && typeof value === 'object' && 'min' in value && 'max' in value) {
-        // Direct range object from dropdown preset selection
+        // A complete range object (dropdown preset, or the price range with its unit)
+        const nested = nestedRangeKey(fieldId);
+        if (nested !== null) {
+          onFiltersChange({ ...filters, ranges: { ...filters.ranges, [nested]: value as FilterRange } } as T);
+          return;
+        }
         handleFilterChange(fieldId as keyof T, value as T[keyof T]);
         return;
       }

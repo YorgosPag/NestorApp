@@ -47,12 +47,14 @@ export function usePublicPropertyFilters(
   // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
   const onPriceRange = useCallback((vals: [number, number]) => {
     set({
+      // ADR-777 §8.60.14.14 — το εύρος κρατά τη μονάδα του· ο δρομέας αλλάζει μόνο τους αριθμούς.
       priceRange: {
+        ...filters.priceRange,
         min: vals[0] === PRICE_MIN ? undefined : vals[0],
         max: vals[1] === PRICE_MAX ? undefined : vals[1],
       }
     });
-  }, [set]);
+  }, [filters.priceRange, set]);
 
   // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
   const onAreaRange = useCallback((vals: [number, number]) => {

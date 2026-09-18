@@ -167,7 +167,7 @@ describe('Γ — η λίστα ζωγραφίζει **ΟΛΑ** όσα της δ�
   }
 
   function drawList(listings: readonly PublicListing[]) {
-    return drawSections([{ heading: null, listings }]);
+    return drawSections([{ heading: null, items: listings }]);
   }
 
   it('🔴 41 αγγελίες ⇒ 41 κάρτες στο DOM — κανένα σιωπηλό ταβάνι', () => {
@@ -209,8 +209,8 @@ describe('Γ — η λίστα ζωγραφίζει **ΟΛΑ** όσα της δ�
     // διαμέριση του §8.60.14 είναι η πρώτη φορά που η λίστα έχει **περισσότερα από ένα**
     // δοχεία — δηλαδή η πρώτη ευκαιρία να ξεχαστεί ένα.
     const { container } = drawSections([
-      { heading: 'sale', listings: mapped(2) },
-      { heading: 'nightly', listings: [listing({ id: 'prop_stay_0', title: 'Διαμονή' })] },
+      { heading: 'sale', items: mapped(2) },
+      { heading: 'nightly', items: [listing({ id: 'prop_stay_0', title: 'Διαμονή' })] },
     ]);
 
     expect(container.querySelectorAll('[data-listing-id]')).toHaveLength(3);

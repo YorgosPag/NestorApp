@@ -29,6 +29,7 @@ import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import { useUrlPreselect } from '@/features/property-management/hooks/useUrlPreselect';
 import { useViewerProps } from '@/features/property-management/hooks/useViewerProps';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 // 🏢 ENTERPRISE: Semantic colors for consistent styling
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -72,7 +73,7 @@ export function PropertyManagementPageContent() {
     },
     {
       title: t('dashboard.stats.totalValue'),
-      value: `€${(hookState.dashboardStats.totalValue / 1000).toFixed(0)}K`,
+      ...priceTotalsView(t, hookState.dashboardStats.priceTotals, 'total'),
       icon: DollarSign,
       color: 'green' as const,
     },
@@ -84,7 +85,7 @@ export function PropertyManagementPageContent() {
     },
     {
       title: t('dashboard.stats.averagePrice'),
-      value: `€${(hookState.dashboardStats.averagePrice / 1000).toFixed(0)}K`,
+      ...priceTotalsView(t, hookState.dashboardStats.priceTotals, 'average'),
       icon: Home,
       color: 'orange' as const,
     },

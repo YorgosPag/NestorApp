@@ -17,15 +17,14 @@ import { parkingFiltersConfig, type ParkingFilterState } from '@/components/core
 import { Car, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { SalesGridCard } from '@/components/sales/shared/SalesGridCard';
 import {
   SalesCardGrid,
   SalesListPageShell,
-  mapCommonSpaceFilters,
-  salesMoneyValue,
-  salesPerSqmValue,
-  salesSpaceCardPricing,
+  salesCardPricing,
   salesSpaceSidebarProps,
+  useSalesSpacePanelFilters,
 } from '@/components/sales/shared';
 import '@/lib/design-system';
 
@@ -35,12 +34,8 @@ function SalesParkingContent() {
   const parkingState = useSalesParkingViewerState();
   const { filteredItems, dashboardStats, filters, handleFiltersChange, handleSelectItem } = parkingState;
 
-  const handleAdvancedFiltersChange = React.useCallback((adv: ParkingFilterState) => {
-    handleFiltersChange({
-      ...mapCommonSpaceFilters(adv),
-      status: adv.status?.[0] || 'all',
-    });
-  }, [handleFiltersChange]);
+  // Panel ⇄ σελίδα: ο ΚΟΙΝΟΣ μεταφραστής (εύρη τιμής ΜΕ μονάδα · εμβαδόν · κατάσταση).
+  const { panelFilters, onPanelFiltersChange } = useSalesSpacePanelFilters(filters, handleFiltersChange);
 
   const unifiedDashboardStats: DashboardStat[] = [
     {
@@ -52,21 +47,21 @@ function SalesParkingContent() {
     },
     {
       title: t('salesParking.stats.avgPrice'),
-      value: salesMoneyValue(dashboardStats.averagePrice),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'average'),
       description: t('salesParking.stats.avgPriceDesc'),
       icon: DollarSign,
       color: 'green',
     },
     {
       title: t('salesParking.stats.totalValue'),
-      value: salesMoneyValue(dashboardStats.totalValue),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'total'),
       description: t('salesParking.stats.totalValueDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
       title: t('salesParking.stats.avgPricePerSqm'),
-      value: salesPerSqmValue(dashboardStats.averagePricePerSqm),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'perArea'),
       description: t('salesParking.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'orange',
@@ -87,8 +82,8 @@ function SalesParkingContent() {
       stats={unifiedDashboardStats}
       onSearchChange={searchTerm => handleFiltersChange({ searchTerm })}
       filtersConfig={parkingFiltersConfig}
-      filters={filters as unknown as ParkingFilterState}
-      onFiltersChange={handleAdvancedFiltersChange}
+      filters={panelFilters as unknown as ParkingFilterState}
+      onFiltersChange={onPanelFiltersChange}
       renderList={() => <SalesParkingSidebar {...salesSpaceSidebarProps(parkingState)} />}
       renderGrid={() => (
         <SalesCardGrid
@@ -106,7 +101,7 @@ function SalesParkingContent() {
                 statusKey={item.status ?? 'available'}
                 statusLabel={t(`parking:status.${item.status ?? 'available'}`)}
                 description={`${t(`parking:types.${item.type ?? 'standard'}`)}${zone}`}
-                {...salesSpaceCardPricing(item)}
+                {...salesCardPricing(item, t)}
                 onClick={handleSelectItem}
               />
             );

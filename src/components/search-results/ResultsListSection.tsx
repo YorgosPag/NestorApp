@@ -13,10 +13,9 @@
  */
 
 import React from 'react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingFocusStrength, type ListingFocus } from '@/lib/listings/listing-focus';
-import { PRICE_SECTION_KEY } from '@/lib/listings/listing-price-keys';
 import type { ListingSection } from '@/lib/listings/listing-price-sections';
+import { PriceClassSection } from '@/components/shared/price-sections/PriceClassSection';
 import { ListingCard } from './ListingCard';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -42,11 +41,9 @@ export function ResultsListSection({
   priorityId,
   undeclaredLabelsFor,
 }: ResultsListSectionProps) {
-  const { t } = useTranslation(['common']);
-
   const cards = (
     <ul className="space-y-2 p-3">
-      {section.listings.map((listing) => (
+      {section.items.map((listing) => (
         <ListingCard
           key={listing.id}
           listing={listing}
@@ -61,45 +58,22 @@ export function ResultsListSection({
   );
 
   /*
-    🔑 **ΜΙΑ ΚΛΑΣΗ, ΚΑΜΙΑ ΠΕΡΙΤΥΛΙΞΗ.** Με ομοιογενή αποτελέσματα το `heading` είναι
-    `null` και η έξοδος είναι **χαρακτήρα προς χαρακτήρα** η οθόνη πριν το §8.60.14:
-    ούτε `<section>`, ούτε επιγραφή. Μια επιγραφή πάνω από λίστα ενός είδους θα
-    επαναλάμβανε ό,τι λέει **ήδη** η μονάδα κάθε κάρτας (§8.60.11) — θόρυβος με στολή
-    ειλικρίνειας.
-  */
-  if (section.heading === null) return cards;
+    🔑 Η επιγραφή **είναι** η δήλωση του κανόνα κατάταξης (Καν. ΕΕ 2019/1150 άρ. 5 · Οδηγία ΕΕ
+    2019/2161): «Πώληση · 6 ακίνητα» λέει ότι η σύγκριση έγινε **μέσα** στην πώληση. Μία κλάση ⇒
+    καμία περιτύλιξη. Η σήμανση ζει στο **κοινό** `PriceClassSection` (και των εσωτερικών λιστών,
+    §8.60.14.14).
 
-  const headingId = `results-section-${section.heading}`;
-
-  /*
-    ⚠️ **`<section>` με επιγραφή, ποτέ `<div>` με έντονο κείμενο** (N.4): ο αναγνώστης
-    οθόνης οφείλει να μπορεί να **πηδήξει** από κλάση σε κλάση — είναι η ίδια πληροφορία
-    που ο βλέπων παίρνει από το κενό και την τυπογραφία.
-
-    🔑 **Η επιγραφή ΕΙΝΑΙ η δήλωση του κανόνα κατάταξης** (Καν. ΕΕ 2019/1150 άρ. 5 ·
-    Οδηγία ΕΕ 2019/2161): «Πώληση · 6 ακίνητα» λέει ότι η σύγκριση έγινε **μέσα** στην
-    πώληση, και **πόσο** προσπερνά όποιος κυλά. Γι' αυτό δεν χρειάστηκε δεύτερη,
-    γραπτή σημείωση όπως στο §8.61 — εκεί η βύθιση ήταν **αόρατη**, εδώ τίποτα δεν είναι.
+    ⚠️ **`<h2>`, ΚΑΙ ΤΟ ΜΕΤΡΗΣΕ ΑΓΚΥΡΑ.** Ο τίτλος κάθε κάρτας είναι ήδη `<h3>`· επιγραφή στο
+    **ίδιο** επίπεδο θα έκανε «Πώληση» και «Διαμέρισμα στο Κέντρο» **αδέλφια**.
   */
   return (
-    <section aria-labelledby={headingId}>
-      {/*
-        ⚠️ **`<h2>`, ΚΑΙ ΤΟ ΜΕΤΡΗΣΕ ΑΓΚΥΡΑ.** Ο τίτλος κάθε κάρτας είναι ήδη `<h3>`· μια
-        επιγραφή τμήματος στο **ίδιο** επίπεδο θα έλεγε στον αναγνώστη οθόνης ότι
-        «Πώληση» και «Διαμέρισμα στο Κέντρο» είναι **αδέλφια**, δηλαδή θα κατέστρεφε
-        ακριβώς την ιεραρχία που η διαμέριση υπάρχει για να δηλώσει. Η πρώτη γραφή το
-        είχε λάθος.
-
-        🔑 **`sticky`**: το ίδιο που κάνει το Revit όταν επαναλαμβάνει την επικεφαλίδα
-        ομάδας σε κάθε σελίδα — η κλάση δεν επιτρέπεται να χαθεί όταν κυλήσει έξω.
-      */}
-      <h2
-        id={headingId}
-        className="sticky top-0 z-10 bg-background/95 px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur"
-      >
-        {t(PRICE_SECTION_KEY[section.heading], { count: section.listings.length })}
-      </h2>
+    <PriceClassSection
+      heading={section.heading}
+      count={section.items.length}
+      idPrefix="results-section"
+      level="h2"
+    >
       {cards}
-    </section>
+    </PriceClassSection>
   );
 }

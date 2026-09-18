@@ -11,7 +11,7 @@ import { DetailsCard } from './dashboard/DetailsCard';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized currency formatting
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import '@/lib/design-system';
 
 interface PropertyDashboardProps {
@@ -49,10 +49,10 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
     const statsCardsData = [
         { title: t('dashboard.stats.totalProperties'), value: stats.totalProperties ?? 0, icon: NAVIGATION_ENTITIES.property.icon, color: "blue" },
         { title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }), value: stats.availableProperties ?? 0, icon: TrendingUp, color: "gray" },
-        { title: t('dashboard.stats.totalValue'), value: formatCurrency(stats.totalValue), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
+        { title: t('dashboard.stats.totalValue'), ...priceTotalsView(t, stats.priceTotals, 'total'), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
         { title: t('dashboard.stats.totalArea'), value: `${Math.round(stats.totalArea ?? 0)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
         { title: t(UNIFIED_STATUS_FILTER_LABELS.SOLD, { ns: 'common' }), value: stats.soldProperties ?? 0, icon: CheckCircle, color: "red" },
-        { title: t('dashboard.stats.averagePrice'), value: formatCurrency(stats.averagePrice), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
+        { title: t('dashboard.stats.averagePrice'), ...priceTotalsView(t, stats.priceTotals, 'average'), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
     ] as const; // ADR-770 §18 — κρατά τα κυριολεκτικά χρώματα ώστε να ταιριάζουν στο StatsCardColor
 
     return (

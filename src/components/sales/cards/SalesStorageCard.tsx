@@ -11,8 +11,8 @@ import React, { useMemo } from 'react';
 import { DollarSign, Calculator, Layers } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
-import { salesSpaceCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
+import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
+import { salesCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
 
@@ -50,9 +50,8 @@ export function SalesStorageCard({
     [t, status],
   );
 
-  // ADR-777 Α6 — the ONE shared pricing helper, so this card and the storage
-  // detail panel cannot disagree about the same unit.
-  const { price, pricePerSqm } = salesSpaceCardPricing(storage);
+  // ADR-777 Α6 + §8.60.14.14 — the ONE shared pricing helper, with the UNIT written in.
+  const { price, pricePerSqm } = salesCardPricing(storage, t);
   const area = storage.area ?? 0;
 
   const stats = useMemo(() => {
@@ -73,7 +72,7 @@ export function SalesStorageCard({
         icon: DollarSign,
         iconColor: 'text-[hsl(var(--text-success))]',
         label: t('storage:general.fields.price'),
-        value: formatCurrencyWhole(price),
+        value: price ?? NO_PRICE_TOTAL,
       },
     ];
 
@@ -82,7 +81,7 @@ export function SalesStorageCard({
         icon: Calculator,
         iconColor: 'text-primary',
         label: t('storage:general.fields.pricePerSqm'),
-        value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
+        value: pricePerSqm,
       });
     }
 

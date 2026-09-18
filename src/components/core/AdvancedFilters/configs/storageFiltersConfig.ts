@@ -1,4 +1,5 @@
 import type { FilterPanelConfig } from '../types';
+import { DEFAULT_SPACE_FILTERS, type SpaceFilterState } from './space-filter-state';
 import {
   UNIFIED_STATUS_FILTER_LABELS,
   COMMON_FILTER_LABELS,
@@ -6,37 +7,9 @@ import {
   STORAGE_LABELS
 } from '@/constants/property-statuses-enterprise';
 
-// Storage Filter State Type
-// 🏢 ENTERPRISE: Added index signature for GenericFilterState compatibility
-export interface StorageFilterState {
-  [key: string]: unknown;
-  searchTerm?: string;
-  status?: string[];
-  type?: string[];
-  building?: string[];
-  floor?: string[];
-  project?: string[];
-  ranges?: {
-    areaRange?: { min?: number; max?: number };
-    priceRange?: { min?: number; max?: number };
-    dateRange?: { start?: Date; end?: Date };
-  };
-}
-
-// Default Storage Filters
-export const defaultStorageFilters: StorageFilterState = {
-  searchTerm: '',
-  status: [],
-  type: [],
-  building: [],
-  floor: [],
-  project: [],
-  ranges: {
-    areaRange: { min: undefined, max: undefined },
-    priceRange: { min: undefined, max: undefined },
-    dateRange: { start: undefined, end: undefined }
-  }
-};
+// Κατάσταση + προεπιλογή: η ΜΙΑ δήλωση του βοηθητικού χώρου (N.18, ADR-777 §8.60.14.14).
+export type StorageFilterState = SpaceFilterState;
+export const defaultStorageFilters: StorageFilterState = DEFAULT_SPACE_FILTERS;
 
 // Storage Filters Configuration
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
@@ -155,7 +128,7 @@ export const storageFiltersConfig: FilterPanelConfig = {
         },
         {
           id: 'ranges.priceRange',
-          type: 'range',
+          type: 'priceRange',
           label: 'filters.common.price',
           placeholder: { min: 'filters.common.from', max: 'filters.common.to' },
           ariaLabel: 'filters.storage.ariaLabels.price',

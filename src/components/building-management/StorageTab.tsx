@@ -13,7 +13,6 @@
 
 import { useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';
 import { cn } from '@/lib/utils';
@@ -35,11 +34,10 @@ import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
-import { priceSortKey } from '@/lib/properties/price-resolver';
 
 const STORAGE_TYPES: StorageType[] = ['storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse'];
 const STORAGE_STATUSES: StorageStatus[] = ['available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable'];
@@ -61,7 +59,8 @@ export function StorageTab({ building }: StorageTabProps) {
     { key: 'type', label: s.t('storageTable.columns.type'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{s.translatedGetTypeLabel(u.type)}</span> },
     { key: 'floor', label: s.t('storageTable.columns.floor'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={colors.text.muted}>{u.floor || '—'}</span> },
     { key: 'area', label: s.t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
-    { key: 'price', label: s.t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => priceSortKey(u), render: (u) => <span className="font-mono text-xs">{formatCurrencyWhole(priceSortKey(u))}</span> },
+    // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης).
+    buildPriceColumn<StorageUnit>(s.t('storageTable.columns.price'), s.t, (u) => u.code),
     { key: 'status', label: s.t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStorageBadgeClass(u.status)}`}>
         {s.translatedGetStatusLabel(u.status)}
@@ -73,7 +72,7 @@ export function StorageTab({ building }: StorageTabProps) {
     buildTypeCodeField(s.t('storageTable.columns.type'), (u) => s.translatedGetTypeLabel(u.type), (u) => u.code),
     buildFloorField(s.t('storageTable.columns.floor'), (u) => u.floor),
     buildAreaField((u) => u.area),
-    buildPriceField(s.t('storageTable.columns.price')),
+    buildPriceField(s.t('storageTable.columns.price'), s.t),
   ], [s.t, s.translatedGetTypeLabel]);
 
   // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
@@ -127,7 +126,7 @@ export function StorageTab({ building }: StorageTabProps) {
       <StorageTabStats
         storageCount={s.stats.storageCount}
         available={s.stats.available}
-        totalValue={s.stats.totalValue}
+        priceTotals={s.stats.priceTotals}
         totalArea={s.stats.totalArea}
       />
 

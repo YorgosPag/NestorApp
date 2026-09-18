@@ -10,6 +10,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
+import type { PriceTotalsRow } from '@/lib/listings/listing-price-label';
+import { PriceTotalsBreakdown } from '@/components/shared/price-totals/PriceTotalsBreakdown';
 
 /**
  * Ο ΚΛΕΙΣΤΟΣ κατάλογος χρωμάτων — ADR-770 §18. Ήταν `color: string` + `as keyof`, και
@@ -32,9 +34,14 @@ interface StatsCardProps {
     onClick?: () => void;
     loading?: boolean;
     description?: string;
+    /**
+     * Υποσύνολα τιμής ανά ρόλο (ADR-777 §8.60.14.13). Όταν έχει γραμμές, **αντικαθιστά** το
+     * `value`: ποσά άλλης μονάδας δεν γίνονται ένας αριθμός. Το παράγει **μόνο** το `priceTotalsView`.
+     */
+    priceBreakdown?: readonly PriceTotalsRow[];
 }
 
-export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description, priceBreakdown }: StatsCardProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -76,7 +83,11 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
                         ) : (
                             <>
                                 <p className={`text-xs font-medium ${toneClass} truncate leading-tight`}>{title}</p>
-                                <p className={`${typeof value === 'string' ? 'text-sm sm:text-base' : 'text-lg sm:text-xl lg:text-2xl'} font-bold ${valueToneClass} truncate leading-tight`}>{value}</p>
+                                {priceBreakdown && priceBreakdown.length > 0 ? (
+                                    <PriceTotalsBreakdown rows={priceBreakdown} valueClassName={valueToneClass} />
+                                ) : (
+                                    <p className={`${typeof value === 'string' ? 'text-sm sm:text-base' : 'text-lg sm:text-xl lg:text-2xl'} font-bold ${valueToneClass} truncate leading-tight`}>{value}</p>
+                                )}
                                 {description && (
                                     <p className={`text-xs ${colors.text.muted} truncate leading-tight mt-0.5`}>{description}</p>
                                 )}

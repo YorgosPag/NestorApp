@@ -3,6 +3,7 @@
 
 import { Package, Warehouse } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import { totalPriceByRole } from '@/lib/properties/price-totals';
 
 // 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
 type TranslateFunction = (key: string) => string;
@@ -40,7 +41,9 @@ export const calculateStats = (units: StorageUnit[]) => {
         available: units.filter(u => u.status === 'available').length,
         sold: units.filter(u => u.status === 'sold').length,
         reserved: units.filter(u => u.status === 'reserved').length,
-        totalValue: units.reduce((sum, u) => sum + u.price, 0),
+        // ADR-777 Α6 + §8.60.14.13 — ο ΕΝΑΣ επιλυτής, ανά ρόλο. Ήταν το τέταρτο
+        // χειρόγραφο άθροισμα, και διάβαζε το @deprecated flat `price` χωρίς ρόλο.
+        priceTotals: totalPriceByRole(units),
         totalArea: units.reduce((sum, u) => sum + u.area, 0),
         storageCount: units.length,
       };

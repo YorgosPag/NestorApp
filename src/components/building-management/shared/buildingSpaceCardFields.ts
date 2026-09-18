@@ -14,8 +14,8 @@
  * @see ADR-184 (Building Spaces Tabs)
  */
 
-import { formatCurrencyWhole } from '@/lib/intl-utils';
-import { priceSortKey, type PricedPropertyLike } from '@/lib/properties/price-resolver';
+import { priceCellLabel, type PriceLabelT } from '@/lib/listings/listing-price-label';
+import { resolveDisplayPrice, type PricedPropertyLike } from '@/lib/properties/price-resolver';
 import type { SpaceCardField } from './types';
 
 // ============================================================================
@@ -72,23 +72,23 @@ export function buildAreaField<T>(
 }
 
 /**
- * Field 4: Formatted price.
+ * Field 4: Price — **with its unit** («900 €/μήνα», never a bare «900 €»).
  *
- * Takes NO price accessor on purpose. Which field holds "the price" is one
- * rule owned by the `price-resolver` SSoT (ADR-777 Α6), so there is nothing
- * for a caller to supply — and nothing for three callers to disagree about.
- * Each of them used to pass the @deprecated flat `.price`, which silently
- * ignored `commercial.askingPrice` on units that have one.
+ * Takes NO price accessor on purpose. Which field holds "the price" — and in which ROLE — is
+ * one rule owned by the `price-resolver` SSoT (ADR-777 Α6), so there is nothing for a caller
+ * to supply. Until 2026-09-18 this rendered `formatCurrencyWhole(priceSortKey(item))`: the role
+ * was resolved and thrown away, and a monthly rent read like a sale price (ADR-777 §8.60.14.14).
  *
  * Absence renders as a dash, never as "0 €".
  *
- * @see lib/properties/price-resolver
+ * @see lib/listings/listing-price-label — `priceCellLabel`, the ONE cell formatter
  */
 export function buildPriceField<T extends PricedPropertyLike>(
   label: string,
+  t: PriceLabelT,
 ): SpaceCardField<T> {
   return {
     label,
-    render: (item) => formatCurrencyWhole(priceSortKey(item)),
+    render: (item) => priceCellLabel(t, resolveDisplayPrice(item)),
   };
 }

@@ -43,7 +43,7 @@ import {
 } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 // ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrencyCompact } from '@/lib/intl-utils';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -198,7 +198,7 @@ export function ParkingPageContent() {
     },
     {
       title: t('pages.parking.dashboard.totalValue'),
-      value: formatCurrencyCompact(stats.totalValue),
+      ...priceTotalsView(t, stats.priceTotals, 'total'),
       icon: TrendingUp,
       color: "cyan"
     },

@@ -1,10 +1,14 @@
 'use client';
 
+import type { RolePriceRange } from '@/lib/properties/price-range';
+
 // Generic filter field types
 export type FilterFieldType =
   | 'search'
   | 'select'
   | 'range'
+  /** Εύρος τιμής **με μονάδα** (επιλογέας ρόλου + από/έως) — ADR-777 §8.60.14.14. */
+  | 'priceRange'
   | 'checkbox'
   | 'multiselect'
   | 'date'
@@ -75,7 +79,7 @@ export interface DateFromToRange {
 }
 
 // Union type for all range types
-export type FilterRange = NumericRange | DateRange | DateFromToRange;
+export type FilterRange = NumericRange | DateRange | DateFromToRange | RolePriceRange;
 
 // ============================================================================
 // ADR-051: ENTERPRISE TYPE GUARDS & NORMALIZATION
@@ -238,10 +242,8 @@ export interface PropertyListFilterState extends GenericFilterState {
   floor: string[];
   type: string[];
   status: string[];
-  priceRange: {
-    min?: number | null;
-    max?: number | null;
-  };
+  /** Εύρος τιμής **με μονάδα** (ADR-777 §8.60.14.14). */
+  priceRange: RolePriceRange;
   areaRange: {
     min?: number | null;
     max?: number | null;

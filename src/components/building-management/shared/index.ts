@@ -17,6 +17,7 @@ export { BuildingSpaceWarningBanner } from './BuildingSpaceWarningBanner';
 export type { LinkableItem } from './BuildingSpaceLinkDialog';
 
 export { buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './buildingSpaceCardFields';
+export { buildPriceColumn } from './buildingSpacePriceColumn';
 
 export type {
   SpaceColumn,

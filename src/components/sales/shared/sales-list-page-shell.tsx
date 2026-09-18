@@ -22,7 +22,7 @@
  *
  * @module components/sales/shared/sales-list-page-shell
  * @see SalesCardGrid.tsx — ο καμβάς της προβολής πλέγματος
- * @see sales-stat-values.ts — η μορφοποίηση των τιμών του dashboard
+ * @see lib/listings/listing-price-label.ts — `priceTotalsView`: οι τιμές του dashboard ανά ρόλο (ADR-777 §8.60.14.13)
  * @see docs/centralized-systems/reference/adrs/ADR-197-sales-pages-implementation-plan.md
  */
 

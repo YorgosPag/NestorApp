@@ -11,7 +11,7 @@
  *
  * Ο λόγος που αξίζει κοινό component δεν είναι οι γραμμές: είναι ότι το «τι
  * σημαίνει οικονομικά αυτός ο χώρος» πρέπει να απαντιέται **μία** φορά. Η
- * τιμή έρχεται από τον SSoT (ADR-777 Α6) μέσω του `salesSpaceCardPricing`, εδώ
+ * τιμή έρχεται από τον SSoT (ADR-777 Α6) μέσω του `salesCardPricing`, εδώ
  * μέσα — ο καλών δεν την υπολογίζει και δεν μπορεί να δώσει άλλη.
  *
  * @module components/sales/details/SalesSpaceFinancialCard
@@ -24,7 +24,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { InfoRow } from '@/components/shared/InfoRow';
 import { SALES_ICON_COLORS } from '@/components/sales/config/sales-colors';
-import { salesSpaceCardPricing } from '@/components/sales/shared/sales-space-page';
+import { salesCardPricing } from '@/components/sales/shared/sales-space-page';
+import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { SalesSpaceItem } from '@/types/sales-shared';
 
 /**
@@ -47,7 +49,9 @@ interface SalesSpaceFinancialCardProps {
 
 export function SalesSpaceFinancialCard({ item, labels }: SalesSpaceFinancialCardProps) {
   const iconSizes = useIconSizes();
-  const { price, pricePerSqm } = salesSpaceCardPricing(item);
+  const { t } = useTranslation(['common']);
+  // ADR-777 §8.60.14.14 — τιμή και τιμή/m² ΜΕ τη μονάδα του ρόλου («60 €/μήνα», «6 €/m²/μήνα»).
+  const { price, pricePerSqm } = salesCardPricing(item, t);
   const finalPrice = item.commercial?.finalPrice;
 
   return (
@@ -63,7 +67,7 @@ export function SalesSpaceFinancialCard({ item, labels }: SalesSpaceFinancialCar
           icon={DollarSign}
           iconColor={SALES_ICON_COLORS.askingPrice}
           label={labels.price}
-          value={formatCurrencyWhole(price)}
+          value={price ?? NO_PRICE_TOTAL}
           valueColor={SALES_ICON_COLORS.askingPrice}
         />
         {pricePerSqm && (
@@ -71,7 +75,7 @@ export function SalesSpaceFinancialCard({ item, labels }: SalesSpaceFinancialCar
             icon={DollarSign}
             iconColor={SALES_ICON_COLORS.pricePerSqm}
             label={labels.pricePerSqm}
-            value={`${formatCurrencyWhole(pricePerSqm)}/m²`}
+            value={pricePerSqm}
           />
         )}
         {finalPrice && (

@@ -16,8 +16,16 @@
  * @see SalesSpaceSidebar.tsx — το κοινό sidebar που δέχεται αυτά τα props
  */
 
-import { priceSortKey } from '@/lib/properties/price-resolver';
-import type { SalesSpaceItem } from '@/types/sales-shared';
+import { useCallback, useMemo } from 'react';
+import { pricePerSqmAmount } from '@/domain/cards/property/property-card-shared';
+import {
+  pricePerAreaLabel,
+  resolvedPriceLabel,
+  type PriceLabelT,
+} from '@/lib/listings/listing-price-label';
+import { EMPTY_PRICE_RANGE, type RolePriceRange } from '@/lib/properties/price-range';
+import { resolveDisplayPrice, type PricedPropertyLike } from '@/lib/properties/price-resolver';
+import type { SalesSpaceFilterState, SalesSpaceItem } from '@/types/sales-shared';
 
 /** Το κομμάτι της κατάστασης που ταΐζει το sidebar ενός βοηθητικού χώρου. */
 export interface SalesSpaceSidebarState<TItem extends SalesSpaceItem> {
@@ -59,26 +67,38 @@ export function salesSpaceSidebarProps<TItem extends SalesSpaceItem>(
   };
 }
 
-/** Οι τιμές που δείχνει η κάρτα ενός βοηθητικού χώρου. */
-export interface SalesSpaceCardPricing {
-  price: number | null;
-  pricePerSqm: number | null;
+/**
+ * Οι τιμές που δείχνει μια κάρτα πωλήσεων — **ήδη γραμμένες, με τη μονάδα τους**.
+ * `null` ⇒ δεν υπάρχει ποσό (η κάρτα γράφει παύλα, ποτέ «0 €»).
+ */
+export interface SalesCardPricing {
+  price: string | null;
+  pricePerSqm: string | null;
 }
 
 /**
- * Ποια τιμή δείχνεται είναι κανόνας του `price-resolver` (ADR-777 Α6) — εδώ
- * μόνο συνδυάζεται με το εμβαδόν. Η τιμή/τ.μ. υπάρχει μόνο όταν υπάρχουν ΚΑΙ
- * τιμή ΚΑΙ θετικό εμβαδόν (αλλιώς θα ήταν διαίρεση με το μηδέν ή ψέμα).
+ * Τιμή και τιμή/m² μιας κάρτας πωλήσεων (θέση · αποθήκη · πωλημένο ακίνητο).
+ *
+ * 🔴 ADR-777 §8.60.14.14: ως τις 2026-09-18 επέστρεφε **αριθμούς** (`priceSortKey`) και κάθε
+ * κάρτα τους έγραφε `formatCurrencyWhole(x)` / `${x}/m²` — δηλαδή «60 €» και «6 €/m²» για
+ * θέση που **νοικιάζεται** 60 €/μήνα. Ο ρόλος λυνόταν και **πετιόταν**. Πλέον το κείμενο
+ * γράφεται **εδώ, μία φορά**, από τους ΕΝΑ μορφοποιητές (`resolvedPriceLabel` ·
+ * `pricePerAreaLabel`), με τη μονάδα του ρόλου — και η τιμή/m² υπάρχει μόνο όπου ο ρόλος
+ * την ορίζει (`pricePerSqmAmount`: καμία «€/m²/νύχτα»).
  *
  * @see lib/properties/price-resolver — ο ΕΝΑΣ κανόνας τιμής
  */
-export function salesSpaceCardPricing(item: SalesSpaceItem): SalesSpaceCardPricing {
-  const price = priceSortKey(item);
-  const hasArea = typeof item.area === 'number' && item.area > 0;
+export function salesCardPricing(
+  item: PricedPropertyLike & { area?: number | null },
+  t: PriceLabelT,
+): SalesCardPricing {
+  const price = resolveDisplayPrice(item);
+  if (price.kind !== 'priced') return { price: null, pricePerSqm: null };
 
+  const perSqm = pricePerSqmAmount(price.headline, item.area);
   return {
-    price,
-    pricePerSqm: hasArea && price ? price / (item.area as number) : null,
+    price: resolvedPriceLabel(t, price.headline),
+    pricePerSqm: perSqm === null ? null : pricePerAreaLabel(t, { role: price.headline.role, amount: perSqm }),
   };
 }
 
@@ -128,20 +148,88 @@ export function salesSpaceStatusBadge(
   };
 }
 
+/**
+ * Μια επιλογή του panel: **πίνακας** όταν ο πίνακας ξεκίνησε από πίνακα, **κείμενο** όταν ξεκίνησε
+ * από κείμενο (το panel σέβεται τη μορφή της κατάστασης που του δόθηκε — και η σελίδα του δίνει
+ * `'all'`).
+ */
+type SingleChoice = string | readonly string[];
+
+/**
+ * Η μία τιμή μιας επιλογής — `'all'` όταν δεν επιλέχθηκε τίποτα.
+ *
+ * 🔴 ADR-777 §8.60.14.14 (ζωντανή επαλήθευση): ο μεταφραστής έγραφε `adv.building?.[0]`, δηλαδή
+ * υπέθετε **πίνακα**. Η σελίδα όμως δίνει στο panel **κείμενο** (`'all'`), και `'all'[0]` είναι
+ * `'a'` ⇒ **κάθε** αλλαγή φίλτρου άδειαζε τη λίστα (κτίριο · όροφος · τύπος · κατάσταση = `'a'`).
+ */
+function singleChoice(value: SingleChoice | undefined): string {
+  if (typeof value === 'string') return value || 'all';
+  return value?.[0] ?? 'all';
+}
+
 /** Η μορφή των φίλτρων του `AdvancedFiltersPanel` που διαβάζουν και οι δύο χώροι. */
 export interface SalesSpaceAdvancedFilters {
   searchTerm?: string;
-  building?: string[];
-  floor?: string[];
-  type?: string[];
+  status?: SingleChoice;
+  building?: SingleChoice;
+  floor?: SingleChoice;
+  type?: SingleChoice;
+  ranges?: {
+    priceRange?: RolePriceRange;
+    areaRange?: { min?: number | null; max?: number | null };
+  };
 }
 
-/** Τα φίλτρα του panel (πολλαπλή επιλογή) → η κατάσταση της σελίδας (μονή τιμή). */
+/**
+ * Τα φίλτρα του panel (πολλαπλή επιλογή, εμφωλευμένα εύρη) → η κατάσταση της σελίδας.
+ *
+ * 🔴 ADR-777 §8.60.14.14: ως τις 2026-09-18 εδώ περνούσαν μόνο αναζήτηση/κτίριο/όροφος/τύπος·
+ * τα εύρη **τιμής και εμβαδού πετιόνταν** — τα πεδία ζωγραφίζονταν, δέχονταν αριθμούς και
+ * **δεν έκαναν τίποτα**. Το εύρος τιμής ταξιδεύει πλέον **με τη μονάδα του**.
+ */
 export function mapCommonSpaceFilters(adv: SalesSpaceAdvancedFilters) {
   return {
     searchTerm: adv.searchTerm || '',
-    building: adv.building?.[0] || 'all',
-    floor: adv.floor?.[0] || 'all',
-    type: adv.type?.[0] || 'all',
+    status: singleChoice(adv.status),
+    building: singleChoice(adv.building),
+    floor: singleChoice(adv.floor),
+    type: singleChoice(adv.type),
+    priceRange: adv.ranges?.priceRange ?? EMPTY_PRICE_RANGE,
+    areaRange: { min: adv.ranges?.areaRange?.min ?? null, max: adv.ranges?.areaRange?.max ?? null },
   };
+}
+
+/**
+ * Η κατάσταση της σελίδας → η μορφή του panel — **το αντίστροφο** του {@link mapCommonSpaceFilters}.
+ * Χωρίς αυτό το panel διάβαζε `ranges.*` που η σελίδα δεν έχει: τα πεδία εύρους **άδειαζαν**
+ * μόλις γράφονταν (ελεγχόμενο πεδίο χωρίς πηγή).
+ */
+export function spacePanelFilters<TFilters extends SalesSpaceFilterState>(filters: TFilters) {
+  return {
+    ...filters,
+    ranges: {
+      priceRange: filters.priceRange,
+      areaRange: { min: filters.areaRange.min ?? undefined, max: filters.areaRange.max ?? undefined },
+    },
+  };
+}
+
+/**
+ * **Η γέφυρα panel ⇄ σελίδα, ΜΙΑ φορά για θέσεις ΚΑΙ αποθήκες** (ADR-777 §8.60.14.14 · N.18).
+ *
+ * Οι δύο σελίδες έγραφαν η καθεμία τον δικό της μεταφραστή — και **απέκλιναν**: η σελίδα θέσεων
+ * περνούσε την κατάσταση (status), η σελίδα αποθηκών **όχι**· καμία δεν περνούσε το εύρος τιμής.
+ * Τώρα και οι δύο ρωτούν εδώ: το panel βλέπει τα εύρη εμφωλευμένα, η σελίδα τα παίρνει πίσω
+ * **με τη μονάδα τους**.
+ */
+export function useSalesSpacePanelFilters<TFilters extends SalesSpaceFilterState>(
+  filters: TFilters,
+  onChange: (next: Partial<SalesSpaceFilterState>) => void,
+) {
+  const panelFilters = useMemo(() => spacePanelFilters(filters), [filters]);
+  const onPanelFiltersChange = useCallback(
+    (adv: SalesSpaceAdvancedFilters) => onChange(mapCommonSpaceFilters(adv)),
+    [onChange],
+  );
+  return { panelFilters, onPanelFiltersChange };
 }

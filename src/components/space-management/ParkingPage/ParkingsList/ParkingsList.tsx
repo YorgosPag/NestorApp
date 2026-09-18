@@ -31,8 +31,41 @@ import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { ParkingStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
-import { compareSortValues } from '@/lib/array-utils';
-import { priceSortKey } from '@/lib/properties/price-resolver';
+import type { SortableValue } from '@/lib/array-utils';
+import { compareByNameThenId } from '@/lib/ordering/total-name-order';
+import { sortIntoPriceClassSections } from '@/lib/properties/price-class-sections';
+import { PriceClassSectionedList } from '@/components/shared/price-sections/PriceClassSectionedList';
+
+/** Ολική σειρά για ισοπαλίες και απουσία τιμής: αριθμός θέσης → `id`. */
+function byNumberThenId(a: ParkingSpot, b: ParkingSpot): number {
+  return compareByNameThenId(a.number || '', a.id, b.number || '', b.id);
+}
+
+/**
+ * Το κλειδί μιας θέσης για κάθε σειρά **εκτός** της τιμής — εκείνη διαμερίζει
+ * (`partitionByPriceClass`) και **δεν** έχει επίπεδο κλειδί (ADR-777 §8.60.14.14).
+ * Ένας συγκριτής για όλες (`compareSortValues`): κενά τελευταία και στις δύο κατευθύνσεις.
+ */
+function parkingSortValue(p: ParkingSpot, field: SortField): SortableValue {
+  switch (field) {
+    case 'name':
+      return (p.number || '').toLowerCase();
+    case 'area':
+      return p.area || 0;
+    case 'status':
+      return (p.status || '').toLowerCase();
+    case 'location':
+      return (p.location || '').toLowerCase();
+    case 'number':
+      return String(p.floor || '').toLowerCase();
+    case 'date':
+      return p.updatedAt?.getTime() ?? p.createdAt?.getTime() ?? 0;
+    case 'type':
+      return (p.type || '').toLowerCase();
+    default:
+      return null;
+  }
+}
 
 interface ParkingsListProps {
   parkingSpots: ParkingSpot[];
@@ -77,57 +110,25 @@ export function ParkingsList({
     });
   }, [parkingSpots, list.searchTerm, list.selectedStatuses]);
 
-  const sortedParkingSpots = [...filteredParkingSpots].sort((a, b) => {
-    let aValue: string | number | null;
-    let bValue: string | number | null;
-
-    switch (list.sortBy) {
-      case 'name':
-        aValue = (a.number || '').toLowerCase();
-        bValue = (b.number || '').toLowerCase();
-        break;
-      case 'area':
-        aValue = a.area || 0;
-        bValue = b.area || 0;
-        break;
-      case 'value':
-        aValue = priceSortKey(a);
-        bValue = priceSortKey(b);
-        break;
-      case 'status':
-        aValue = (a.status || '').toLowerCase();
-        bValue = (b.status || '').toLowerCase();
-        break;
-      case 'location':
-        aValue = (a.location || '').toLowerCase();
-        bValue = (b.location || '').toLowerCase();
-        break;
-      case 'number':
-        aValue = String(a.floor || '').toLowerCase();
-        bValue = String(b.floor || '').toLowerCase();
-        break;
-      case 'date':
-        aValue = a.updatedAt?.getTime() ?? a.createdAt?.getTime() ?? 0;
-        bValue = b.updatedAt?.getTime() ?? b.createdAt?.getTime() ?? 0;
-        break;
-      case 'type':
-        aValue = (a.type || '').toLowerCase();
-        bValue = (b.type || '').toLowerCase();
-        break;
-      default:
-        return 0;
-    }
-
-    // Ένας συγκριτής για κάθε ταξινομήσιμη λίστα: «δεν έχει τιμή» πάει τελευταίο
-    // ΚΑΙ στις δύο φορές (ADR-777 Α6 · σύμβαση φύλλου εργασίας για τα κενά), και
-    // το κείμενο συγκρίνεται με ΡΗΤΟ ελληνικό locale. Δες `lib/array-utils`.
-    return compareSortValues(aValue, bValue, list.sortOrder);
-  });
+  /*
+    🔑 ADR-777 §8.60.14.14 — «κατά αξία» = ΠΡΩΤΑ η μονάδα, ΜΕΤΑ ο αριθμός (Revit `Sort By` →
+    `Then By`): τμήματα ανά κλάση, ποτέ 60 €/μήνα και 18.000 € σε έναν άξονα. Κάθε άλλη σειρά
+    είναι ΕΝΑ τμήμα χωρίς επιγραφή.
+  */
+  const sections = useMemo(
+    () => sortIntoPriceClassSections(filteredParkingSpots, {
+      byPrice: list.sortBy === 'value',
+      direction: list.sortOrder,
+      tieBreak: byNumberThenId,
+      valueOf: (parking) => parkingSortValue(parking, list.sortBy),
+    }),
+    [filteredParkingSpots, list.sortBy, list.sortOrder],
+  );
 
   return (
     <EntityListColumn hasBorder aria-label={t('parkings.list.ariaLabel')}>
       <ParkingsListHeader
-        parkingSpots={sortedParkingSpots}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
+        parkingSpots={filteredParkingSpots}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
         searchTerm={list.searchTerm}
         onSearchChange={list.setSearchTerm}
         showToolbar={list.showToolbar}
@@ -154,18 +155,22 @@ export function ParkingsList({
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
-          {sortedParkingSpots.map((parking) => (
-            <ParkingListCard
-              key={parking.id}
-              parking={parking}
-              isSelected={selectedParking?.id === parking.id}
-              isFavorite={list.favorites.includes(parking.id)}
-              onSelect={() => onSelectParking?.(parking)}
-              onToggleFavorite={() => list.toggleFavorite(parking.id)}
-            />
-          ))}
+          <PriceClassSectionedList
+            sections={sections}
+            idPrefix="parkings-section"
+            getKey={(parking) => parking.id}
+            renderItem={(parking) => (
+              <ParkingListCard
+                parking={parking}
+                isSelected={selectedParking?.id === parking.id}
+                isFavorite={list.favorites.includes(parking.id)}
+                onSelect={() => onSelectParking?.(parking)}
+                onToggleFavorite={() => list.toggleFavorite(parking.id)}
+              />
+            )}
+          />
 
-          {sortedParkingSpots.length === 0 && (
+          {filteredParkingSpots.length === 0 && (
             <div className={cn("text-center py-8", colors.text.muted)}>
               <Car className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>{t('parkings.list.noResults')}</p>

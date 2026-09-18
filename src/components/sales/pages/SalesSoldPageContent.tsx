@@ -18,15 +18,14 @@ import { propertyListFiltersConfig, type UnitFilterState } from '@/components/co
 import { CheckCircle, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { SalesGridCard } from '@/components/sales/shared/SalesGridCard';
 import {
   SalesCardGrid,
   SalesListPageShell,
-  salesMoneyValue,
-  salesPerSqmValue,
+  salesCardPricing,
 } from '@/components/sales/shared';
 import { useSalesPropertiesListPage } from '@/components/sales/shared/use-sales-properties-list-page';
-import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import '@/lib/design-system';
 
 function SalesSoldContent() {
@@ -45,21 +44,21 @@ function SalesSoldContent() {
     },
     {
       title: t('sales.sold.stats.totalRevenue'),
-      value: salesMoneyValue(dashboardStats.totalValue),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'total'),
       description: t('sales.sold.stats.totalSalesValue'),
       icon: DollarSign,
       color: 'blue',
     },
     {
       title: t('sales.sold.stats.avgSalePrice'),
-      value: salesMoneyValue(dashboardStats.averagePrice),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'average'),
       description: t('sales.sold.stats.avgSalePriceDesc'),
       icon: TrendingUp,
       color: 'purple',
     },
     {
       title: t('sales.sold.stats.avgPricePerSqm'),
-      value: salesPerSqmValue(dashboardStats.averagePricePerSqm),
+      ...priceTotalsView(t, dashboardStats.priceTotals, 'perArea'),
       description: t('sales.sold.stats.avgPricePerSqmDesc'),
       icon: Maximize2,
       color: 'orange',
@@ -99,11 +98,9 @@ function SalesSoldContent() {
           emptyMessage={t('sales.sold.noResults')}
           renderCard={unit => {
             const area = unit.areas?.gross ?? unit.area ?? 0;
-            // ADR-777 §8.2 #3: η σειρά `finalPrice → askingPrice` ήταν σωστή
-            // αλλά γραμμένη ΕΔΩ — τρίτη ιδιωτική απάντηση για την ίδια
-            // ερώτηση. Πλέον τη δίνει ο SSoT, που για `sold` οδηγεί με την
-            // τιμή συμβολαίου. Ίδιο αποτέλεσμα, ένας ιδιοκτήτης του κανόνα.
-            const price = getEffectivePrice(unit)?.amount ?? null;
+            // ADR-777 §8.2 #3 + §8.60.14.14: ο SSoT (για `sold` οδηγεί η τιμή συμβολαίου),
+            // και το ΚΕΙΜΕΝΟ με τη μονάδα του ρόλου — ο ΕΝΑΣ δρόμος όλων των καρτών πωλήσεων.
+            const pricing = salesCardPricing({ ...unit, area }, t);
             return (
               <SalesGridCard
                 key={unit.id}
@@ -115,8 +112,7 @@ function SalesSoldContent() {
                   ? t(`sales.commercialStatus.${unit.commercialStatus}`)
                   : t('sales.commercialStatus.sold')}
                 description={`${t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type })} · ${area || '—'} m²`}
-                price={price}
-                pricePerSqm={price && area ? price / area : null}
+                {...pricing}
                 onClick={handleSelectProperty}
               />
             );

@@ -112,6 +112,6 @@ export function usePropertyTabCardFields(tUnits: TFn): SpaceCardField<Property>[
     buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
     buildFloorField(tUnits('card.stats.floor'), (u) => (u.floor != null ? String(u.floor) : undefined)),
     buildAreaField((u) => u.areas?.gross || u.areas?.net || u.area),
-    buildPriceField(tUnits('table.price')),
+    buildPriceField(tUnits('table.price'), tUnits),
   ], [tUnits]);
 }

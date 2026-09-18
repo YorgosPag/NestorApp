@@ -11,49 +11,16 @@
  */
 
 import type { FilterPanelConfig } from '../types';
+import { DEFAULT_SPACE_FILTERS, type SpaceFilterState } from './space-filter-state';
 import {
   COMMON_FILTER_LABELS,
   PROPERTY_FILTER_LABELS,
   PARKING_FILTER_LABELS
 } from '@/constants/property-statuses-enterprise';
 
-// =============================================================================
-// 🅿️ PARKING FILTER STATE TYPE
-// =============================================================================
-
-// 🏢 ENTERPRISE: Added index signature for GenericFilterState compatibility
-export interface ParkingFilterState {
-  [key: string]: unknown;
-  searchTerm?: string;
-  status?: string[];
-  type?: string[];
-  building?: string[];
-  floor?: string[];
-  project?: string[];
-  ranges?: {
-    areaRange?: { min?: number; max?: number };
-    priceRange?: { min?: number; max?: number };
-    dateRange?: { start?: Date; end?: Date };
-  };
-}
-
-// =============================================================================
-// 🅿️ DEFAULT PARKING FILTERS
-// =============================================================================
-
-export const defaultParkingFilters: ParkingFilterState = {
-  searchTerm: '',
-  status: [],
-  type: [],
-  building: [],
-  floor: [],
-  project: [],
-  ranges: {
-    areaRange: { min: undefined, max: undefined },
-    priceRange: { min: undefined, max: undefined },
-    dateRange: { start: undefined, end: undefined }
-  }
-};
+// Κατάσταση + προεπιλογή: η ΜΙΑ δήλωση του βοηθητικού χώρου (N.18, ADR-777 §8.60.14.14).
+export type ParkingFilterState = SpaceFilterState;
+export const defaultParkingFilters: ParkingFilterState = DEFAULT_SPACE_FILTERS;
 
 // =============================================================================
 // 🅿️ PARKING TYPE LABELS (Enterprise Centralized)
@@ -222,7 +189,7 @@ export const parkingFiltersConfig: FilterPanelConfig = {
         },
         {
           id: 'ranges.priceRange',
-          type: 'range',
+          type: 'priceRange',
           label: 'filters.common.price',
           placeholder: { min: 'filters.common.from', max: 'filters.common.to' },
           ariaLabel: 'filters.parking.ariaLabels.price',

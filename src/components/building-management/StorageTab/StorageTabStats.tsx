@@ -7,18 +7,20 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { priceTotalsView } from '@/lib/listings/listing-price-label';
+import type { PriceTotalsByRole } from '@/lib/properties/price-totals';
 
 interface StorageTabStatsProps {
     storageCount: number;
     available: number;
-    totalValue: number;
+    priceTotals: PriceTotalsByRole;
     totalArea: number;
 }
 
 export function StorageTabStats({
     storageCount,
     available,
-    totalValue,
+    priceTotals,
     totalArea,
 }: StorageTabStatsProps) {
     const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
@@ -38,7 +40,7 @@ export function StorageTabStats({
         },
         {
             title: t('storageStats.totalValue'),
-            value: `€${(totalValue / 1000).toFixed(0)}K`,
+            ...priceTotalsView(t, priceTotals, 'total'),
             icon: Euro,
             color: 'gray',
         },

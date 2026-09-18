@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { SortableValue } from '@/lib/array-utils';
+import type { SortableValue, SortDirection } from '@/lib/array-utils';
 
 // ============================================================================
 // TABLE COLUMN DEFINITION
@@ -41,6 +41,27 @@ export interface SpaceColumn<T> {
    * recorded price as the cheapest one.
    */
   sortValue?: (item: T) => SortableValue;
+  /**
+   * **Σειρά σε ΟΜΑΔΕΣ** — το `Sort By` (ομάδα) → `Then By` (τιμή) του Revit (ADR-777 §8.60.14.14).
+   *
+   * Για στήλη της οποίας οι τιμές **δεν ανήκουν όλες στον ίδιο άξονα** (τιμή: πώληση · €/μήνα ·
+   * €/νύχτα). Όταν υπάρχει, **αντικαθιστά** το `sortValue`: ο πίνακας ζωγραφίζει κάθε ομάδα ως
+   * δικό της `<tbody>` με γραμμή-επικεφαλίδα, και **ποτέ** δεν συγκρίνει στοιχεία δύο ομάδων.
+   * Ο πίνακας δεν ξέρει τι είναι «τιμή» — μόνο ότι κάποιες στήλες διαμερίζουν.
+   */
+  sortGroups?: (items: readonly T[], direction: SortDirection) => readonly SpaceSortGroup<T>[];
+}
+
+/**
+ * Μία ομάδα γραμμών ενός ταξινομημένου πίνακα.
+ *
+ * `label: null` ⇔ **μία** μόνο ομάδα: η γραμμή-επικεφαλίδα δεν θα πρόσθετε τίποτα (όπως ένα
+ * schedule με μία ομάδα δεν τυπώνει header). Το `key` είναι σταθερό ανάμεσα σε αποδόσεις.
+ */
+export interface SpaceSortGroup<T> {
+  readonly key: string;
+  readonly label: string | null;
+  readonly items: readonly T[];
 }
 
 // ============================================================================

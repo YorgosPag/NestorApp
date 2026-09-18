@@ -16,7 +16,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
-import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
+import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
 
 // ============================================================================
 // STATUS COLOR MAP — Domain-specific badge styling
@@ -53,10 +53,10 @@ export interface SalesGridCardProps {
   statusKey: string;
   /** Description line (type, area, zone, etc.) */
   description: string;
-  /** Asking price (null = show dash) */
-  price: number | null;
-  /** Price per square meter (null = hide) */
-  pricePerSqm: number | null;
+  /** The price, ALREADY written with its unit («60 €/μήνα») — `null` = show dash (ADR-777 §8.60.14.14) */
+  price: string | null;
+  /** Price per m², already written with its unit («6 €/m²/μήνα») — `null` = hide */
+  pricePerSqm: string | null;
   /** Click handler */
   onClick: (id: string) => void;
 }
@@ -105,12 +105,10 @@ export function SalesGridCard({
         </div>
         <p className={cn('text-xs', colors.text.muted)}>{description}</p>
         <p className={cn('text-lg font-bold mt-1', colors.text.success)}>
-          {price ? formatCurrencyCompact(price) : '—'}
+          {price ?? NO_PRICE_TOTAL}
         </p>
         {pricePerSqm ? (
-          <p className={cn('text-xs', colors.text.muted)}>
-            {formatCurrencyWhole(Math.round(pricePerSqm))}/m²
-          </p>
+          <p className={cn('text-xs', colors.text.muted)}>{pricePerSqm}</p>
         ) : null}
       </div>
     </article>

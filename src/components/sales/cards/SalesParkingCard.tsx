@@ -11,8 +11,8 @@ import React, { useMemo } from 'react';
 import { DollarSign, Calculator, MapPin, Car } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
-import { salesSpaceCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
+import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
+import { salesCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
 import type { ParkingSpot } from '@/types/parking';
 import '@/lib/design-system';
 
@@ -50,9 +50,9 @@ export function SalesParkingCard({
     [t, status],
   );
 
-  // ADR-777 Α6 — the ONE shared pricing helper, so this card and the parking
-  // detail panel cannot disagree about the same unit.
-  const { price } = salesSpaceCardPricing(spot);
+  // ADR-777 Α6 + §8.60.14.14 — the ONE shared pricing helper, with the UNIT written in:
+  // «60 €/μήνα» for a space offered for rent, never a bare «60 €».
+  const { price } = salesCardPricing(spot, t);
   const area = spot.area ?? 0;
 
   const stats = useMemo(() => {
@@ -75,7 +75,7 @@ export function SalesParkingCard({
         icon: DollarSign,
         iconColor: 'text-[hsl(var(--text-success))]',
         label: t('parking:general.fields.price'),
-        value: formatCurrencyWhole(price),
+        value: price ?? NO_PRICE_TOTAL,
       },
     ];
 

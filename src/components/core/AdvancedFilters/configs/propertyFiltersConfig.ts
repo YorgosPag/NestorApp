@@ -1,4 +1,5 @@
 import type { FilterPanelConfig, PropertyListFilterState } from '../types';
+import { EMPTY_PRICE_RANGE } from '@/lib/properties/price-range';
 import {
   BUILDING_FILTER_FIELD,
   FLOOR_FILTER_FIELD,
@@ -158,7 +159,8 @@ export const propertyFiltersConfig: FilterPanelConfig = {
       fields: [
         {
           id: "priceRange",
-          type: "range",
+          // ADR-777 §8.60.14.14 — εύρος ΜΕ μονάδα (επιλογέας ρόλου), ποτέ «έως 1.000» χωρίς μονάδα.
+          type: "priceRange",
           label: FL.price_range,
           ariaLabel: "Price range filter",
           width: 1,
@@ -202,7 +204,7 @@ export const defaultUnitFilters: PropertyListFilterState = {
   floor: [],
   type: [],
   status: [],
-  priceRange: { min: undefined, max: undefined },
+  priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: undefined, max: undefined },
   features: [],
 };
