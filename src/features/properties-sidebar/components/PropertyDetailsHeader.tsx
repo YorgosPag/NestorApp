@@ -93,9 +93,18 @@ export function PropertyDetailsHeader({
     : [
         ...(extraActions ?? []),
         createEntityAction('edit', t('navigation.actions.edit.label'), () => onToggleEditMode?.()),
-        createEntityAction('new', t('navigation.actions.newUnit.label'), () => onNewProperty?.()),
+        // 🔴 **ΚΟΥΜΠΙ ΧΩΡΙΣ ΧΕΙΡΙΣΤΗ ΔΕΝ ΖΩΓΡΑΦΙΖΕΤΑΙ** — μετρημένο 2026-09-18 στην παραγωγή:
+        //    η `/properties/[id]` δεν περνούσε `onNewProperty`/`onDeleteProperty`, και το `?.()`
+        //    κατάπινε το κλικ **σιωπηλά**: κανένα σφάλμα, καμία ένδειξη, κουμπί που κοροϊδεύει.
+        //    Ο φρουρός είναι **δομικός**: όποια οθόνη ξεχάσει τη σύνδεση δείχνει ένα κουμπί
+        //    λιγότερο, αντί για ένα κουμπί που δεν κάνει τίποτα.
+        ...(onNewProperty
+          ? [createEntityAction('new', t('navigation.actions.newUnit.label'), onNewProperty)]
+          : []),
         createEntityAction('showcase', t('navigation.actions.showcase.label'), () => onShowcaseProperty?.()),
-        createEntityAction('delete', t('navigation.actions.delete.label'), () => onDeleteProperty?.()),
+        ...(onDeleteProperty
+          ? [createEntityAction('delete', t('navigation.actions.delete.label'), () => { void onDeleteProperty(); })]
+          : []),
       ];
 
   const headerTitle = isCreatingNewUnit

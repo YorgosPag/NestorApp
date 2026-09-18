@@ -50,6 +50,15 @@ export const ENTITY_ROUTES = {
       typedHref(`/properties/${encodeURIComponent(id)}?tab=${encodeURIComponent(tab)}`),
     /** Η λίστα με την κάτοψη, με **επιλεγμένο** ακίνητο. Κατάσταση λίστας, όχι ταυτότητα. */
     inSpaces: (id: string) => withQuery('/spaces/properties', `propertyId=${encodeURIComponent(id)}`),
+    /**
+     * **Η ΜΙΑ πόρτα δημιουργίας ακινήτου** — η ενσωματωμένη φόρμα του `/spaces/properties`.
+     *
+     * 🔴 Γιατί υπάρχει γραμμή εδώ: η καρτέλα (`/properties/[id]`) δείχνει κουμπί «Νέο Ακίνητο»,
+     * αλλά η ροή δημιουργίας ζει **μόνο** στη λίστα (`handleNewUnitInline`). Χωρίς αυτή τη
+     * γραμμή ο κάθε καταναλωτής θα έγραφε ωμό `/spaces/properties?new=1` — και η επόμενη
+     * μετακίνηση της σελίδας θα τους άφηνε **όλους** σπασμένους, «σωστά» γραμμένους.
+     */
+    create: withQuery('/spaces/properties', 'new=1'),
   },
   spaces: {
     parking: (id: string) => withQuery('/spaces/parking', `parkingId=${id}`),

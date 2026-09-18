@@ -30,7 +30,7 @@
 import { withinRange } from '@/lib/listings/listing-filters';
 // 🔑 ADR-777 §8.52 — Ο **ΕΝΑΣ** αναγνώστης. Η ζήτηση ΔΕΝ ρωτά πια μόνη της «τι απαντά
 // η αγγελία;» — ούτε για την τιμή (`getEffectivePrice` ζει ΜΕΣΑ του), ούτε για τη γη.
-import { readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import { priceAxisKeyOf, readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
 import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import { isPointInGeoOutline } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
@@ -165,8 +165,21 @@ function priceAxis(
   blockers: DemandBlocker[],
   gaps: MutableGaps,
 ): void {
+  // 🔑 **Ο ΑΞΟΝΑΣ ΕΠΙΛΕΓΕΤΑΙ ΑΠΟ ΤΗ ΜΟΝΑΔΑ** (ADR-777 §8.60.14): πώληση · ενοίκιο ·
+  //    διανυκτέρευση είναι **τρεις** άξονες. Το παλιό ενιαίο `'price'` δεν υπάρχει πια στο
+  //    λεξιλόγιο, και όσο ζητιόταν εδώ ο αναγνώστης ήταν `undefined` ⇒ ζωντανό **500**.
+  // ⚠️ **Η ΑΓΓΕΛΙΑ ΧΩΡΙΣ ΤΙΜΗ ΠΑΡΑΜΕΝΕΙ «ΔΕΝ ΤΟ ΔΗΛΩΣΕ»** (ADR-777 §8.52), και είναι **άλλο**
+  //    ερώτημα από το φίλτρο: εκεί το `not-applicable` κρατά την αγγελία **ορατή**· εδώ μετρά
+  //    «ποιος ζητά αυτό το ακίνητο», και ένα ποσό που **κανείς δεν ξέρει** δεν επιτρέπεται να
+  //    περάσει ως ταίριασμα σε ζήτηση με εύρος τιμής. ⇒ εμπόδιο **απουσίας**, ποτέ `price-above`.
+  const priceKey = priceAxisKeyOf(listing);
+  if (priceKey === null) {
+    if (f.priceMin !== null || f.priceMax !== null) blockers.push('price-undeclared');
+    return;
+  }
+
   const price = answerOrBlock(
-    listing, 'price', 'price-undeclared',
+    listing, priceKey, 'price-undeclared',
     f.priceMin !== null || f.priceMax !== null, blockers,
   );
   if (price === null) return;

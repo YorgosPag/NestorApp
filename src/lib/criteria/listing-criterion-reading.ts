@@ -116,6 +116,37 @@ const PRICE_AXIS_CLASS = {
 
 type PriceAxisKey = keyof typeof PRICE_AXIS_CLASS;
 
+/**
+ * **Ποια διάθεση οδηγεί ποιον άξονα τιμής** — `undefined` για διάθεση χωρίς ποσό (ανταλλαγή).
+ *
+ * 🔑 **Ζει ΕΔΩ, δίπλα στο {@link PRICE_AXIS_CLASS}**, επειδή είναι η **ίδια** γνώση από την άλλη
+ * πλευρά: εκεί «ο άξονας ρωτά αυτή τη μονάδα», εδώ «αυτή η διάθεση ρωτά αυτόν τον άξονα». Γεννήθηκε
+ * στη γραμμή φίλτρων (`components/search-results/filters`) και **ανέβηκε** στο λεξιλόγιο όταν τη
+ * χρειάστηκε **δεύτερος** καταναλωτής (η προβολή ζήτησης → φίλτρα): ένα `lib/` που εισάγει από
+ * `components/` είναι αντιστροφή επιπέδων, και ένα δεύτερο χειρόγραφο αντίγραφο θα απέκλινε.
+ */
+export const PRICE_AXIS_OF_OFFER_KIND: Readonly<Record<string, PriceAxisKey | undefined>> = {
+  sell: 'priceSale',
+  leaseOut: 'priceRent',
+  leaseShort: 'priceNightly',
+};
+
+/**
+ * **Ποιον άξονα τιμής σηκώνει ΑΥΤΗ η αγγελία;** — `null` όταν κανέναν (`'unpriced'`).
+ *
+ * 🔴 **ΓΙΑΤΙ ΕΞΑΓΕΤΑΙ** (ζωντανό 500, 2026-09-18): όταν το §8.60.14 έσπασε το ενιαίο
+ * `'price'` σε τρεις άξονες, ο άξονας τιμής της **ζήτησης** έμεινε να ζητά το παλιό
+ * όνομα ⇒ `NUMERIC_READERS['price']` ήταν `undefined` ⇒ `TypeError` ⇒ **500** σε κάθε
+ * `GET /api/demand/interest` με ζήτηση που δηλώνει εύρος τιμής. Ο καλών **δεν** επιτρέπεται
+ * να μαντεύει όνομα άξονα: η σχέση ρόλου ↔ άξονα ζει **εδώ**, στον ίδιο πίνακα που την
+ * επιβάλλει — αντιστροφή του {@link PRICE_AXIS_CLASS}, ποτέ δεύτερη λίστα που θα απέκλινε.
+ */
+export function priceAxisKeyOf(listing: PublicListing): PriceAxisKey | null {
+  const role = priceClassOf(listing);
+  const entry = Object.entries(PRICE_AXIS_CLASS).find(([, axisRole]) => axisRole === role);
+  return entry === undefined ? null : (entry[0] as PriceAxisKey);
+}
+
 // =============================================================================
 // 2. ΟΙ ΑΡΙΘΜΗΤΙΚΟΙ ΑΞΟΝΕΣ
 // =============================================================================

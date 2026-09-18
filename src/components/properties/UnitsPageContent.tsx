@@ -148,6 +148,22 @@ export function PropertiesManagementContent() {
     handlePolygonSelect(propertyId, false);
   }, [forceDataRefresh, handlePolygonSelect]);
 
+  /**
+   * 🔑 **Η δημιουργία ζητιέται και από ΑΛΛΗ οθόνη** (ADR-777 §8.30 · 2026-09-18).
+   *
+   * Η καρτέλα `/properties/[id]` δείχνει «Νέο Ακίνητο», αλλά η ροή δημιουργίας ζει **εδώ**.
+   * Στέλνει λοιπόν `?new=1` (`ENTITY_ROUTES.properties.create`) και ανοίγει η **ίδια** φόρμα —
+   * ποτέ δεύτερη υλοποίηση. ⚠️ **Μία φορά**: η σημαία διαβάζεται στην άφιξη· αν ο άνθρωπος
+   * ακυρώσει, δεν ξανανοίγει μόνη της (το `ref` θυμάται ότι τιμήθηκε).
+   */
+  const creationRequested = searchParams.get('new') === '1';
+  const creationHonored = React.useRef(false);
+  useEffect(() => {
+    if (!creationRequested || creationHonored.current) return;
+    creationHonored.current = true;
+    handleNewUnitInline();
+  }, [creationRequested, handleNewUnitInline]);
+
   // 🏢 ENTERPRISE: Cancel new unit creation
   const handleCancelCreate = useCallback(() => {
     setIsCreatingNewUnit(false);

@@ -238,7 +238,9 @@ describe('Δ — ο σύνδεσμος «δες τι υπάρχει σήμερα
 
     expect(href.startsWith('/search/results?')).toBe(true);
     expect(href).toContain('offer=sell');
-    expect(href).toContain('pmax=250000');
+    // ADR-777 §8.60.14 — η τιμή έχει **μονάδα**: η ζήτηση «πώληση» γράφει τον άξονα πώλησης
+    // (`psale`). Το παλιό αμονάδιστο `pmax` είναι **αποσυρμένο** (`RETIRED_RANGE_PARAMS`).
+    expect(href).toContain('psalemax=250000');
     expect(href).toContain('bedsmin=3');
     expect(href).toContain('r=4');
   });

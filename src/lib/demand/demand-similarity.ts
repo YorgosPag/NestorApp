@@ -126,7 +126,13 @@ export function demandsAreSimilar(a: PropertyDemand, b: PropertyDemand): boolean
   return (
     labelsIntersect(labels(fa, 'offerKind'), labels(fb, 'offerKind')) &&
     labelsIntersect(labels(fa, 'type'), labels(fb, 'type')) &&
-    rangesOverlap(span(fa, 'price'), span(fb, 'price')) &&
+    // 🔴 **Η ΤΙΜΗ ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΗ ΖΗΤΗΣΗ, ΟΧΙ ΑΠΟ ΤΗΝ ΠΡΟΒΟΛΗ** (μετρημένο 2026-09-18):
+    //    από το §8.60.14 ο άξονας τιμής είναι **τρεις** (μονάδα ανά διάθεση) και η προβολή διαλέγει
+    //    έναν. Το `span(…, 'price')` ρωτούσε άξονα **που δεν υπάρχει πια** ⇒ ουδέτερο εύρος ⇒ δύο
+    //    ζητήσεις με **ασύμβατα** εύρη έβγαιναν «όμοιες», δηλαδή ο ανταγωνισμός μετριόταν λάθος.
+    //    ⚠️ Εδώ η σύγκριση είναι **ζήτηση ↔ ζήτηση**: το εύρος είναι αμονάδιστο **και στις δύο**
+    //    πλευρές, άρα συγκρίσιμο αυτούσιο. Η μονάδα χρειάζεται μόνο όταν μπαίνει **αγγελία**.
+    rangesOverlap(demandPriceSpan(a), demandPriceSpan(b)) &&
     rangesOverlap(span(fa, 'areaSqm'), span(fb, 'areaSqm')) &&
     areasIntersect(fa.near, fb.near)
   );
@@ -150,8 +156,13 @@ function labels(filters: ListingFilters, key: 'offerKind' | 'type'): readonly st
   return valuesOf(filters.criteria, key) ?? [];
 }
 
+/** Το **δηλωμένο** εύρος τιμής της ζήτησης — χωρίς μονάδα, όπως ζει στο έγγραφο. */
+function demandPriceSpan(demand: PropertyDemand): CriterionRange {
+  return { min: demand.features.priceMin, max: demand.features.priceMax };
+}
+
 /** Το εύρος ενός άξονα, ή το ουδέτερο όταν δεν ρωτήθηκε. */
-function span(filters: ListingFilters, key: 'price' | 'areaSqm'): CriterionRange {
+function span(filters: ListingFilters, key: 'areaSqm'): CriterionRange {
   return rangeOf(filters.criteria, key) ?? NO_RANGE;
 }
 

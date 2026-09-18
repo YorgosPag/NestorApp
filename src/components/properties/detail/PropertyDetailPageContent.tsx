@@ -34,7 +34,7 @@
  */
 
 import React from 'react';
-import { Link } from '@/lib/workspace/navigation';
+import { Link, useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
@@ -103,6 +103,8 @@ export function PropertyDetailPageContent({
   // πληρώνει δεύτερη ανάγνωση, ούτε γεννά δεύτερη μετάφραση.
   const viewer = usePropertiesViewerState(propertyId);
   const interest = usePlaceInterest(propertyId);
+  // Πλοήγηση **από το σύνορο** (CHECK 3.61) — η καρτέλα στέλνει στη ροή δημιουργίας της λίστας.
+  const router = useRouter();
 
   // 🔑 Η απόφαση ζει σε **καθαρή συνάρτηση** και όχι εδώ, γιατί η πρώτη της
   // γραφή ήταν σιωπηλά λάθος και το βρήκε **ζωντανή μέτρηση**, όχι test. Δες
@@ -231,8 +233,20 @@ export function PropertyDetailPageContent({
               isEditMode={isEditMode}
               onToggleEditMode={() => setIsEditMode((previous) => !previous)}
               onExitEditMode={() => setIsEditMode(false)}
+              /*
+                🔴 **ΜΕΤΡΗΜΕΝΟ ΣΤΗΝ ΠΑΡΑΓΩΓΗ, 2026-09-18**: οι δύο αυτές ενέργειες **έλειπαν**,
+                και η κεφαλίδα τις καλούσε με `?.()` ⇒ «Νέο Ακίνητο» και «Μεταφορά στον κάδο»
+                ήταν **νεκρά κουμπιά**, χωρίς σφάλμα και χωρίς ένδειξη. Ο δομικός φρουρός ζει
+                πλέον στην κεφαλίδα (ενέργεια χωρίς χειριστή δεν ζωγραφίζεται)· εδώ μπαίνουν
+                οι **υπάρχοντες** χειριστές — καμία νέα ροή.
+                ⚠️ Η δημιουργία ζει στη λίστα (`handleNewUnitInline`): η καρτέλα τη **ζητά**.
+              */
+              onNewProperty={() => router.push(ENTITY_ROUTES.properties.create)}
+              onDeleteProperty={() => viewer.handleDelete(state.property.id)}
               defaultTab={initialTab}
             />
+            {/* Οι διάλογοι της διαγραφής ανήκουν στον **ίδιο** hook που την εκτελεί. */}
+            {viewer.PropertyDeletionDialogs}
           </section>
         </>
       )}

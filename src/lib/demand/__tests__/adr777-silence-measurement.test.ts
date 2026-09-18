@@ -17,7 +17,10 @@ import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking'
 import type { PublicListing } from '@/types/public-listing';
 import { LISTING_CORPUS_2026_09_05 } from './__fixtures__/public-listings-corpus';
 
-const AXES: readonly RangeCriterionKey[] = ['price', 'areaSqm', 'bedrooms', 'floor'];
+// ⚠️ **Ο άξονας τιμής είναι ΤΡΕΙΣ** από το §8.60.14 (πώληση · ενοίκιο · διανυκτέρευση). Το σώμα
+//    μετριέται στον άξονα **πώλησης**: το ίδιο ερώτημα με πριν για τις αγγελίες πώλησης, και οι
+//    υπόλοιπες απαντούν πλέον `not-applicable` αντί να χρεώνονται σιωπή σε μονάδα που δεν τους τέθηκε.
+const AXES: readonly RangeCriterionKey[] = ['priceSale', 'areaSqm', 'bedrooms', 'floor'];
 
 type Tally = { declared: number; neverAsked: number; declaredNone: number; notApplicable: number };
 
@@ -47,7 +50,13 @@ describe('ADR-777 §8.52 — η μέτρηση της σιωπής, με τον 
   // ─── ΙΣΧΥΡΙΣΜΟΙ ΥΠΑΡΞΕΩΣ — αυτό ΜΠΟΡΕΙ να αποδείξει ένα σώμα 8 δοκιμίων ────────
 
   it('Υ1 — υπάρχει αγγελία ΧΩΡΙΣ δηλωμένη τιμή ⇒ το `price-above` ΕΙΝΑΙ προσβάσιμο ψέμα', () => {
-    expect(tally(corpus, 'price').neverAsked).toBeGreaterThan(0);
+    // 🔑 **Η ΚΑΤΑΣΤΑΣΗ ΜΕΤΑΚΙΝΗΘΗΚΕ, ΤΟ ΕΥΡΗΜΑ ΜΕΝΕΙ** (§8.60.14): πριν, η αγγελία χωρίς τιμή
+    //    χρεωνόταν **σιωπή του κατόχου** (`never-asked`)· πλέον ο άξονας **δεν της τίθεται**
+    //    (`not-applicable`), γιατί η τιμή είναι **λυμένη** από τις διαθέσεις, όχι δήλωσή του.
+    //    Ο ισχυρισμός που έχει σημασία είναι ο ίδιος: **υπάρχει** τέτοια αγγελία στο σώμα, άρα ένα
+    //    `price-above` επάνω της θα ήταν ψέμα. Τι κάνει η **ζήτηση** με αυτήν *(εμπόδιο απουσίας,
+    //    ποτέ `price-above`)* το κλειδώνει το `demand-matching.test.ts`.
+    expect(tally(corpus, 'priceSale').notApplicable).toBeGreaterThan(0);
   });
 
   it('Υ2 — υπάρχει γη που ΔΕΝ ΣΗΚΩΝΕΙ τις ερωτήσεις ορόφου/υπνοδωματίων', () => {

@@ -93,12 +93,11 @@ export function isPriceCriterionKey(key: CriterionKey): key is PriceCriterionKey
   return (PRICE_CRITERION_KEYS as readonly CriterionKey[]).includes(key);
 }
 
-/** Ποια διάθεση οδηγεί ποιον άξονα τιμής. `Record` ⇒ καμία σιωπηλή παράλειψη. */
-export const PRICE_AXIS_OF_OFFER_KIND: Readonly<Record<string, PriceCriterionKey | undefined>> = {
-  sell: 'priceSale',
-  leaseOut: 'priceRent',
-  leaseShort: 'priceNightly',
-};
+/**
+ * Ποια διάθεση οδηγεί ποιον άξονα τιμής — **ΑΝΕΒΗΚΕ ΣΤΟ ΛΕΞΙΛΟΓΙΟ** (2026-09-18), όταν τη
+ * χρειάστηκε και η προβολή ζήτησης → φίλτρα. Επανεξάγεται ώστε κανένας καταναλωτής να μην αλλάξει.
+ */
+export { PRICE_AXIS_OF_OFFER_KIND } from '@/lib/criteria/listing-criterion-reading';
 
 /** Μια ομάδα του πάνελ, **με τα μέλη της**. */
 export interface CriteriaFilterGroup {

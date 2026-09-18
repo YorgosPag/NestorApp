@@ -56,7 +56,10 @@ import {
   EMPTY_LISTING_CRITERIA,
   withRange,
   withValues,
+  type ListingCriteria,
 } from '@/lib/criteria/listing-criteria';
+// 🔑 Η **μία** δήλωση «ποια διάθεση ρωτά ποιον άξονα τιμής» (ADR-777 §8.60.14).
+import { PRICE_AXIS_OF_OFFER_KIND } from '@/lib/criteria/listing-criterion-reading';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { geoOutlineBoundingCircle } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
@@ -244,12 +247,37 @@ function projectPlace(place: DemandPlace): ProjectedGeo {
  * έχει μόνο `bedroomsMin`. Ένα `max` από το πουθενά θα ήταν **στένωση χωρίς αίτημα** —
  * ακριβώς αυτό που το συμβόλαιο απαγορεύει.
  */
+/**
+ * **Το εύρος τιμής πάει στον άξονα ΤΗΣ ΜΟΝΑΔΑΣ** (ADR-777 §8.60.14).
+ *
+ * 🔴 **Μετρημένο 2026-09-18**: εδώ γραφόταν `withRange(criteria, 'price', …)` — άξονας που
+ * **έπαψε να υπάρχει** όταν η τιμή έσπασε σε πώληση · ενοίκιο · διανυκτέρευση. Ο κατασκευαστής
+ * δεν ρίχνει σε άγνωστο κλειδί, οπότε η οροφή τιμής **εξαφανιζόταν σιωπηλά** από τον σύνδεσμο
+ * «δες τι υπάρχει σήμερα»: ο άνθρωπος έβλεπε αποτελέσματα **χωρίς** το όριο που είχε ζητήσει.
+ *
+ * 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ — ζήτηση με ΠΟΛΛΕΣ διαθέσεις**: το έγγραφο ζήτησης έχει **ένα** εύρος χωρίς
+ * μονάδα. Με «πώληση **και** ενοικίαση» μαζί, το ίδιο ποσό δεν μπορεί να σταλεί και στους δύο
+ * άξονες — 250.000 € πώλησης δεν είναι 250.000 € ενοικίου. Γράφεται μόνο όταν η μονάδα είναι
+ * **μονοσήμαντη**· αλλιώς ο σύνδεσμος μένει χωρίς άξονα τιμής, ρητά και όχι κατά λάθος. Η λύση
+ * ανήκει στο **έγγραφο** *(να φέρει μονάδα)*, όχι σε μαντεψιά εδώ.
+ */
+function withPriceRange(criteria: ListingCriteria, demand: PropertyDemand): ListingCriteria {
+  const { priceMin, priceMax } = demand.features;
+  const axes = new Set(
+    demand.seeks.map((kind) => PRICE_AXIS_OF_OFFER_KIND[kind]).filter((axis) => axis !== undefined),
+  );
+  const [axis] = [...axes];
+  return axes.size === 1 && axis !== undefined
+    ? withRange(criteria, axis, { min: priceMin, max: priceMax })
+    : criteria;
+}
+
 export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters {
   const f = demand.features;
 
   let criteria = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', demand.seeks);
   criteria = withValues(criteria, 'type', f.types);
-  criteria = withRange(criteria, 'price', { min: f.priceMin, max: f.priceMax });
+  criteria = withPriceRange(criteria, demand);
   criteria = withRange(criteria, 'areaSqm', { min: f.areaMin, max: f.areaMax });
   criteria = withRange(criteria, 'bedrooms', { min: f.bedroomsMin, max: null });
   criteria = withRange(criteria, 'floor', { min: f.floorMin, max: f.floorMax });
