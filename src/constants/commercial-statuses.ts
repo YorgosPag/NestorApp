@@ -187,6 +187,47 @@ export function requiresRentPrice(
 }
 
 // =============================================================================
+// 3a. ΠΟΙΟΣ ΚΑΤΕΧΕΙ ΤΗΝ ΚΑΤΑΣΤΑΣΗ — επεξεργαστής ή συναλλαγή (ADR-777 §8.60.18)
+// =============================================================================
+
+/**
+ * Οι καταστάσεις που ένας άνθρωπος **δηλώνει** σε επεξεργαστή: «εκτός αγοράς» ή μία από
+ * τις καταστάσεις αγοράς. **Παράγεται** — `DEFAULT` + `LISTED` — ώστε μια νέα κατάσταση
+ * αγοράς να μπαίνει εδώ **χωρίς** δεύτερη λίστα.
+ *
+ * Ίδιο σύνολο για **ακίνητα και χώρους** (θέσεις · αποθήκες): ήταν το τοπικό
+ * `COMMERCIAL_STATUS_OPTIONS` της φόρμας ακινήτου και ανέβηκε εδώ όταν απέκτησε δεύτερο
+ * καταναλωτή — τον server, που **αρνείται** ό,τι λείπει από εδώ.
+ */
+export const EDITOR_COMMERCIAL_STATUSES = [
+  DEFAULT_COMMERCIAL_STATUS,
+  ...LISTED_COMMERCIAL_STATUSES,
+] as const satisfies readonly CommercialStatus[];
+
+export type EditorCommercialStatus = (typeof EDITOR_COMMERCIAL_STATUSES)[number];
+
+/** `true` αν η τιμή είναι κατάσταση που επιτρέπεται να δηλωθεί από επεξεργαστή. */
+export function isEditorCommercialStatus(value: unknown): value is EditorCommercialStatus {
+  return typeof value === 'string' && (EDITOR_COMMERCIAL_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * `true` αν την κατάσταση την **κατέχει μια συναλλαγή** (κράτηση · πώληση · μίσθωση) —
+ * δηλαδή κάθε κατάσταση που **δεν** είναι του επεξεργαστή. Παράγεται ως συμπλήρωμα, όχι
+ * ως τρίτη χειρόγραφη λίστα.
+ *
+ * 🔴 **Γιατί ο server το ρωτά και δεν αρκεί το UI**: μια κρατημένη ή πωλημένη θέση έχει
+ * αγοραστή, ημερομηνίες και σύνδεση με ακίνητο (ADR-199). Αν ένα PATCH από τη γρήγορη
+ * επεξεργασία μπορούσε να γράψει `for-sale` πάνω της, θα την «ξεπουλούσε» **σιωπηλά** —
+ * με τον αγοραστή ακόμη γραμμένο. Η έξοδος από συναλλαγή είναι **δική της** πράξη
+ * (`RevertDialog`), όχι παρενέργεια μιας φόρμας.
+ */
+export function isTransactionOwnedCommercialStatus(value: unknown): boolean {
+  const canonical = normalizeCommercialStatus(value);
+  return canonical !== null && !isEditorCommercialStatus(canonical);
+}
+
+// =============================================================================
 // 3b. DISPLAY ELIGIBILITY GATE — Single SSoT for sales/rental dashboards
 // =============================================================================
 //

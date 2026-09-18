@@ -47,7 +47,7 @@ export interface Storage {
   /** Millesimal shares (χιλιοστά) — 0 = common, >0 = independently sellable */
   millesimalShares?: number | null;
   /** Commercial status for sales context */
-  commercialStatus?: import('@/types/sales-shared').SpaceCommercialStatus;
+  commercialStatus?: import('@/constants/commercial-statuses').CommercialStatus;
   /** Commercial data overlay for sales */
   commercial?: import('@/types/sales-shared').SpaceCommercialData;
 }
@@ -59,7 +59,12 @@ export interface StorageUnit {
   type: StorageType;
   floor: string;
   area: number; // in square meters
+  /** @deprecated ADR-777 §8.60.18 — δεν γράφεται πια· η τιμή ζει στο `commercial`, ανά ρόλο. */
   price: number; // in euros
+  /** ADR-777 §8.60.18 — η διάθεση (ίδιο λεξιλόγιο με τα ακίνητα) που οδηγεί την τιμή. */
+  commercialStatus?: import('@/constants/commercial-statuses').CommercialStatus;
+  /** ADR-777 §8.60.18 — τα ποσά ανά ρόλο (`askingPrice` · `rentPrice`). */
+  commercial?: import('@/types/sales-shared').SpaceCommercialData;
   status: StorageStatus;
   description: string;
   building: string;

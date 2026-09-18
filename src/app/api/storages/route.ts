@@ -225,7 +225,6 @@ interface StorageCreatePayload {
   /** Floor document ID (Firestore foreign key) */
   floorId?: string;
   area?: number;
-  price?: number;
   description?: string;
   notes?: string;
   projectId?: string;

@@ -24,6 +24,7 @@ import type {
   SecurityFeatureCodeType,
 } from '@/constants/property-features-enterprise';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
+import { changedCommercialAmounts } from '@/lib/properties/commercial-draft';
 
 /**
  * Builds the Firestore update payload from the current form state.
@@ -100,16 +101,13 @@ export function buildPropertyUpdatesFromForm(params: {
     updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
   }
 
-  // Commercial data — preserve existing fields, update askingPrice + rentPrice
-  const parsedPrice = formData.askingPrice ? Number(formData.askingPrice) : null;
-  const parsedRentPrice = formData.rentPrice ? Number(formData.rentPrice) : null;
-  const priceChanged = parsedPrice !== (property.commercial?.askingPrice ?? null);
-  const rentPriceChanged = parsedRentPrice !== (property.commercial?.rentPrice ?? null);
-  if (priceChanged || rentPriceChanged) {
+  // Commercial data — preserve existing fields, write only the amounts that changed.
+  // ADR-777 §8.60.18: ο ΙΔΙΟΣ κριτής «τι άλλαξε» με τους επεξεργαστές θέσεων/αποθηκών.
+  const amountChanges = changedCommercialAmounts(formData, property.commercial);
+  if (Object.keys(amountChanges).length > 0) {
     updates.commercial = {
       ...(property.commercial as Record<string, unknown>),
-      askingPrice: parsedPrice && parsedPrice > 0 ? parsedPrice : null,
-      rentPrice: parsedRentPrice && parsedRentPrice > 0 ? parsedRentPrice : null,
+      ...amountChanges,
     } as Property['commercial'];
   }
 

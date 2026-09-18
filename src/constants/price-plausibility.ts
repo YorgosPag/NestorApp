@@ -57,8 +57,12 @@ const COMMERCIAL_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
   'hall',
 ]);
 
-const AUXILIARY_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
+const AUXILIARY_TYPES: ReadonlySet<string> = new Set<string>([
   'storage',
+  // ADR-777 §8.60.18 — η θέση στάθμευσης ΔΕΝ είναι τύπος ακινήτου, αλλά τιμολογείται ως
+  // βοηθητικός χώρος (μετρημένο: 12.000 € / 12 m² = 1.000 €/m² · 60 €/μήνα = 5 €/m²/μήνα,
+  // και τα δύο μέσα στη ζώνη «auxiliary»). Χωρίς αυτό θα κρινόταν ως κατοικία.
+  'parking',
 ]);
 
 /**

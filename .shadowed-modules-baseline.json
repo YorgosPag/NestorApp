@@ -3,16 +3,8 @@
   "generatedBy": "node scripts/check-shadowed-modules.js --write-baseline",
   "adr": "ADR-858",
   "gate": "3.79",
-  "total": 13,
+  "total": 12,
   "violations": [
-    {
-      "rule": "directory-shadow",
-      "specifier": "src/components/building-management/StorageTab",
-      "winner": "src/components/building-management/StorageTab.tsx",
-      "shadowed": [
-        "src/components/building-management/StorageTab/index.tsx"
-      ]
-    },
     {
       "rule": "directory-shadow",
       "specifier": "src/components/building-management/tabs/AnalyticsTabContent",

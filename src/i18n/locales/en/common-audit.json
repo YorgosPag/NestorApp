@@ -199,6 +199,7 @@
       "thermalOutputW": "Thermal Output",
       "commercial": {
         "askingPrice": "Asking Price",
+        "rentPrice": "Monthly Rent",
         "finalPrice": "Final Price",
         "reservationDeposit": "Reservation Deposit",
         "owners": "Owners/Buyers",
@@ -361,6 +362,7 @@
         "commercialOwners": "Owners/Buyers",
         "commercial": {
           "askingPrice": "Asking price",
+          "rentPrice": "Monthly rent",
           "finalPrice": "Final price",
           "reservationDeposit": "Reservation deposit",
           "owners": "Owners/Buyers",
@@ -413,7 +415,6 @@
         "code": "Code",
         "projectId": "Project",
         "area": "Area",
-        "monthlyRent": "Monthly rent",
         "number": "Spot Number"
       },
       "address": {

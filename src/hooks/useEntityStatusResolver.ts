@@ -34,7 +34,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
 import type { CommercialStatus } from '@/types/property';
-import type { SpaceCommercialStatus } from '@/types/sales-shared';
+import { normalizeCommercialStatus } from '@/constants/commercial-statuses';
 
 const logger = createModuleLogger('useEntityStatusResolver');
 
@@ -55,7 +55,7 @@ export interface ResolvableOverlay {
 }
 
 /** Internal cache: entityId → raw commercial status from Firestore */
-type EntityStatusCache = Map<string, CommercialStatus | SpaceCommercialStatus>;
+type EntityStatusCache = Map<string, CommercialStatus>;
 
 /** Collection subscription config */
 interface CollectionSubscription {
@@ -172,10 +172,8 @@ export function useEntityStatusResolver(
             const foundIds = new Set<string>();
 
             for (const docData of result.documents) {
-              const commercialStatus = docData.commercialStatus as
-                | CommercialStatus
-                | SpaceCommercialStatus
-                | undefined;
+              // ADR-777 §8.60.18 — ΕΝΑ λεξιλόγιο για ακίνητα και χώρους, μέσα από τον ΕΝΑ κανονικοποιητή.
+              const commercialStatus = normalizeCommercialStatus(docData.commercialStatus);
               liveMapRef.current.set(docData.id, commercialStatus ?? 'unavailable');
               foundIds.add(docData.id);
             }

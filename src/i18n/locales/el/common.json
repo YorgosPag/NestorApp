@@ -956,6 +956,10 @@
     "rent": "{price}/m²/μήνα",
     "nightly": "{price}/m²/νύχτα"
   },
+  "commercialCard": {
+    "title": "Διάθεση & τιμή",
+    "transactionLocked": "Τη διάθεση την κατέχει κράτηση, πώληση ή μίσθωση — αλλάζει μόνο από τις Πωλήσεις."
+  },
   "priceRangeFilter": {
     "unit": "Μονάδα τιμής",
     "role": {

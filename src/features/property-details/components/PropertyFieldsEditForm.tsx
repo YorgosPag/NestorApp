@@ -33,7 +33,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
-import { PropertyCommercialPriceFields } from './PropertyCommercialPriceFields';
+import { CommercialStatusSelect } from '@/components/shared/commercial/CommercialStatusSelect';
+import { CommercialPriceFields } from '@/components/shared/commercial/CommercialPriceFields';
 import { LayoutPlausibilityWarning } from '@/components/properties/shared/LayoutPlausibilityWarning';
 import { AreaPlausibilityWarning } from '@/components/properties/shared/AreaPlausibilityWarning';
 import { resolveAreaValues } from './area-values-resolver';
@@ -41,14 +42,14 @@ import {
   Ruler, FileText, Lock, Layers, AlertTriangle
 } from 'lucide-react';
 
-import type { CommercialStatus, OperationalStatus } from '@/types/property';
+import type { OperationalStatus } from '@/types/property';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { LevelTabStrip } from './PropertyFieldsReadOnly';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
 import {
-  EDITABLE_PROPERTY_TYPES, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
+  EDITABLE_PROPERTY_TYPES, OPERATIONAL_STATUS_OPTIONS,
   PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
@@ -260,35 +261,22 @@ export function PropertyFieldsEditForm({
                 </Select>
               </fieldset>
             )}
+            {/* ADR-777 §8.60.18 — ο ΙΔΙΟΣ επιλογέας διάθεσης και τα ΙΔΙΑ πεδία τιμής με θέσεις/αποθήκες. */}
             <fieldset className="space-y-1">
-              <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.identity.commercialStatus')}
-              </Label>
-              <Select value={formData.commercialStatus} disabled={!isEditing || isReservedOrSold || isHierarchyLocked}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, commercialStatus: value as CommercialStatus }))}>
-                <SelectTrigger size="sm">
-                  <SelectValue placeholder={t('fields.identity.commercialStatusPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMERCIAL_STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status} value={status} className="text-xs">
-                      {t(`commercialStatus.${status}`, { defaultValue: status })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CommercialStatusSelect
+                id="unit-commercial-status"
+                value={formData.commercialStatus}
+                disabled={!isEditing || isReservedOrSold || isHierarchyLocked}
+                onValueChange={(commercialStatus) => setFormData(prev => ({ ...prev, commercialStatus }))}
+              />
             </fieldset>
-            <PropertyCommercialPriceFields
-              commercialStatus={formData.commercialStatus}
-              askingPrice={formData.askingPrice}
-              rentPrice={formData.rentPrice}
+            <CommercialPriceFields
+              draft={formData}
+              onPriceChange={(field, raw) => setFormData(prev => ({ ...prev, [field]: raw }))}
               grossArea={isMultiLevel && aggregatedTotals ? aggregatedTotals.areas.gross : formData.areaGross}
-              propertyType={formData.type}
-              setFormData={setFormData}
-              isEditing={isEditing}
-              isSoldOrRented={isSoldOrRented}
-              isHierarchyLocked={isHierarchyLocked}
-              t={t}
+              pricingType={formData.type}
+              disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
+              idPrefix="unit"
             />
             <FloorTypePlausibilityWarning
               propertyType={formData.type}

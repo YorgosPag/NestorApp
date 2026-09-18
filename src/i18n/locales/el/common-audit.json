@@ -199,6 +199,7 @@
       "thermalOutputW": "Θερμική απόδοση",
       "commercial": {
         "askingPrice": "Τιμή Ζητούμενη",
+        "rentPrice": "Μηνιαίο ενοίκιο",
         "finalPrice": "Τελική Τιμή",
         "reservationDeposit": "Προκαταβολή",
         "owners": "Ιδιοκτήτες/Αγοραστές",
@@ -361,6 +362,7 @@
         "commercialOwners": "Ιδιοκτήτες/Αγοραστές",
         "commercial": {
           "askingPrice": "Τιμή ζητούμενη",
+          "rentPrice": "Μηνιαίο ενοίκιο",
           "finalPrice": "Τελική τιμή",
           "reservationDeposit": "Προκαταβολή",
           "owners": "Ιδιοκτήτες/Αγοραστές",
@@ -413,7 +415,6 @@
         "code": "Κωδικός",
         "projectId": "Έργο",
         "area": "Εμβαδόν",
-        "monthlyRent": "Μηνιαίο Ενοίκιο",
         "number": "Αριθμός Θέσης"
       },
       "address": {

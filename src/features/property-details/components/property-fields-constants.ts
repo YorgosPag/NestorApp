@@ -10,7 +10,7 @@
  * @since 2026-03-27
  */
 
-import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
+import type { PropertyType, OperationalStatus } from '@/types/property';
 import { CREATABLE_PROPERTY_TYPES } from '@/constants/property-types';
 import type {
   OrientationType,
@@ -91,12 +91,10 @@ export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [...SECURITY_
  */
 export const EDITABLE_PROPERTY_TYPES: PropertyType[] = [...CREATABLE_PROPERTY_TYPES];
 
-// Transaction statuses (reserved, sold, rented) require buyer/tenant selection
-// and can ONLY be set through SalesActionDialogs (ReserveDialog/SellDialog).
-// See: Sentry fix 2026-03-24 — ApiClientError "Buyer contact is required"
-export const COMMERCIAL_STATUS_OPTIONS: CommercialStatus[] = [
-  'unavailable', 'for-sale', 'for-rent', 'for-sale-and-rent',
-];
+// 🧹 Εδώ ζούσε το `COMMERCIAL_STATUS_OPTIONS` (οι 4 καταστάσεις του επεξεργαστή). Ανέβηκε ως
+// `EDITOR_COMMERCIAL_STATUSES` στο `@/constants/commercial-statuses` όταν απέκτησε δεύτερο
+// καταναλωτή — τους χώρους και τον server που αρνείται ό,τι λείπει (ADR-777 §8.60.18).
+// Κράτηση · πώληση · μίσθωση γίνονται ΜΟΝΟ από τους διαλόγους πωλήσεων (Sentry 2026-03-24).
 
 export const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
   'draft', 'under-construction', 'inspection', 'ready', 'maintenance',

@@ -60,10 +60,10 @@ export function useStorageCardModel(storage: Storage, view: 'grid' | 'list'): Ca
   const stats = useMemo<StatItem[]>(() => {
     const floor = floorStat(storage.floor, t('card.stats.floor'));
     const area = areaStat(storage.area, t('card.stats.area'));
-    const price = priceStat(storage.price, t('card.stats.price'));
+    const price = priceStat(storage, t('card.stats.price'), t);
     const ordered = view === 'grid' ? [floor, area, price] : [area, price, floor];
     return ordered.filter((s): s is StatItem => s !== null);
-  }, [storage.floor, storage.area, storage.price, view, t]);
+  }, [storage, view, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {

@@ -24,6 +24,10 @@ export interface ParkingSpotAdapter {
   status?: string;
   /** Area (m²) */
   area?: number;
-  /** Price (EUR) */
+  /** @deprecated flat price — διαβάζεται μόνο ως δίχτυ για παλιά έγγραφα (ADR-777 §8.60.18). */
   price?: number;
+  /** Η διάθεση που οδηγεί την τιμή (ίδιο λεξιλόγιο με τα ακίνητα). */
+  commercialStatus?: string | null;
+  /** Τα ποσά ανά ρόλο — ο επιλυτής διαλέγει ποιο δείχνει η κάρτα, με τη μονάδα του. */
+  commercial?: { askingPrice?: number | null; rentPrice?: number | null; finalPrice?: number | null } | null;
 }

@@ -19,6 +19,15 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types/parking';
 import { useParkingTabState } from './useParkingTabState';
+import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
+import { OptionSelectField, type SelectOption } from '@/components/shared/space-info/OptionSelectField';
+
+const PARKING_TYPE_OPTIONS: ReadonlyArray<SelectOption<ParkingSpotType>> =
+  PARKING_TYPES.map((value) => ({ value, labelKey: `types.${value}` }));
+const PARKING_STATUS_OPTIONS: ReadonlyArray<SelectOption<ParkingSpotStatus>> =
+  PARKING_STATUSES.map((value) => ({ value, labelKey: `status.${value}` }));
+const PARKING_ZONE_OPTIONS: ReadonlyArray<SelectOption<ParkingLocationZone>> =
+  PARKING_LOCATION_ZONES.map((value) => ({ value, labelKey: `locationZone.${value}` }));
 
 interface ParkingCreateFormProps {
   state: ReturnType<typeof useParkingTabState>;
@@ -46,50 +55,36 @@ export function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) 
             autoFocus
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {t('general.fields.type')}
-          </span>
-          <Select value={state.createType} onValueChange={(v) => state.handleCreateTypeChange(v as ParkingSpotType)} disabled={state.creating}>
-            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {PARKING_TYPES.map(pt => (
-                <SelectItem key={pt} value={pt}>{t(`types.${pt}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {t('general.fields.status')}
-          </span>
-          <Select value={state.createStatus} onValueChange={(v) => state.setCreateStatus(v as ParkingSpotStatus)} disabled={state.creating}>
-            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {PARKING_STATUSES.map(ps => (
-                <SelectItem key={ps} value={ps}>{t(`status.${ps}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
+        {/* N.0.2 — το ΕΝΑ «ετικέτα + Select» (`OptionSelectField`), όχι τρία χειρόγραφα δίδυμα. */}
+        <OptionSelectField
+          label={t('general.fields.type')}
+          value={state.createType}
+          options={PARKING_TYPE_OPTIONS}
+          onValueChange={state.handleCreateTypeChange}
+          t={t}
+          disabled={state.creating}
+        />
+        <OptionSelectField
+          label={t('general.fields.status')}
+          value={state.createStatus}
+          options={PARKING_STATUS_OPTIONS}
+          onValueChange={state.setCreateStatus}
+          t={t}
+          disabled={state.creating}
+        />
       </fieldset>
 
-      <fieldset className="grid grid-cols-4 gap-2">
-        <label className="flex flex-col gap-1">
-          <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {t('locationZone.label')}
-          </span>
-          <Select value={state.createLocationZone} onValueChange={(v) => state.setCreateLocationZone(v as ParkingLocationZone)} disabled={state.creating}>
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder={t('locationZone.placeholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {PARKING_LOCATION_ZONES.map(lz => (
-                <SelectItem key={lz} value={lz}>{t(`locationZone.${lz}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
+      {/* ADR-777 §8.60.18 — καμία τιμή στη γέννηση: νέα θέση = εκτός αγοράς μέχρι να δηλωθεί διάθεση. */}
+      <fieldset className="grid grid-cols-3 gap-2">
+        <OptionSelectField<ParkingLocationZone | ''>
+          label={t('locationZone.label')}
+          value={state.createLocationZone}
+          options={PARKING_ZONE_OPTIONS}
+          onValueChange={state.setCreateLocationZone}
+          t={t}
+          disabled={state.creating}
+          placeholder={t('locationZone.placeholder')}
+        />
         <label className="flex flex-col gap-1">
           <span className={cn("text-xs font-medium", colors.text.muted)}>
             {t('general.fields.floor')}
@@ -109,19 +104,6 @@ export function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) 
             value={state.createArea}
             onChange={(e) => state.handleCreateAreaChange(e.target.value)}
             placeholder="12"
-            className="h-9"
-            disabled={state.creating}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={cn("text-xs font-medium", colors.text.muted)}>
-            {t('general.fields.price')} (€)
-          </span>
-          <Input
-            type="number" step="0.01"
-            value={state.createPrice}
-            onChange={(e) => state.setCreatePrice(e.target.value)}
-            placeholder="15000"
             className="h-9"
             disabled={state.creating}
           />
@@ -181,7 +163,8 @@ export function ParkingEditRow({ state, t }: ParkingEditRowProps) {
         <Input type="number" step="0.01" value={state.editArea} onChange={(e) => state.setEditArea(e.target.value)} className="h-8 w-16" disabled={state.saving} />
       </TableCell>
       <TableCell>
-        <Input type="number" step="0.01" value={state.editPrice} onChange={(e) => state.setEditPrice(e.target.value)} className="h-8 w-20" disabled={state.saving} />
+        {/* ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο, ο ΙΔΙΟΣ επεξεργαστής με την κάρτα «Διάθεση & τιμή». */}
+        <CommercialDraftCell commercial={state.commercial} disabled={state.saving} idPrefix={`parking-row-${state.editingId}`} />
       </TableCell>
       <TableCell>
         <Select value={state.editStatus} onValueChange={(v) => state.setEditStatus(v as ParkingSpotStatus)} disabled={state.saving}>

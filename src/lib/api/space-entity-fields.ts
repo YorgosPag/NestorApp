@@ -24,6 +24,7 @@
  */
 
 import { z } from 'zod';
+import { SPACE_COMMERCIAL_UPDATE_FIELDS } from '@/lib/api/space-commercial-fields';
 
 /** Human-facing identifier of the space — parking spots use `number`, storage units `name`. */
 export type SpaceDisplayField = 'number' | 'name';
@@ -51,10 +52,11 @@ export const SPACE_COMMON_UPDATE_FIELDS = {
   status: z.string().max(50).optional(),
   floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
   area: z.number().min(0).max(999_999).nullable().optional(),
-  price: z.number().min(0).max(999_999_999).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   buildingId: z.string().max(128).nullable().optional(),
+  /** ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο· κρίνεται από το `mapSpaceCommercialFields`. */
+  ...SPACE_COMMERCIAL_UPDATE_FIELDS,
   /** SPEC-256A: expected document version for the optimistic-concurrency check */
   _v: z.number().int().optional(),
 } as const;
@@ -87,13 +89,12 @@ export const SPACE_COMMON_CREATE_FIELDS = {
   status: z.string().max(50).optional(),
   floor: z.string().max(50).optional(),
   area: z.number().min(0).max(999_999).optional(),
-  price: z.number().min(0).max(999_999_999).optional(),
   description: z.string().max(2000).optional(),
   notes: z.string().max(5000).optional(),
 } as const;
 
 /**
- * Τα **έξι** πεδία δημιουργίας που οι δύο χώροι έγραφαν με **πανομοιότυπη**
+ * Τα **πέντε** πεδία δημιουργίας που οι δύο χώροι έγραφαν με **πανομοιότυπη**
  * σημασιολογία.
  *
  * 🔴 Η σημασιολογία **δεν** είναι ομοιόμορφη και **δεν πρέπει** να γίνει:
@@ -102,11 +103,12 @@ export const SPACE_COMMON_CREATE_FIELDS = {
  * |---|---|---|
  * | `floor`, `description`, `notes`, `code` | κενό μετά από `trim()` ⇒ **παραλείπεται** | κενή συμβολοσειρά δεν είναι τιμή |
  * | `area` | `> 0` | μηδενικό εμβαδόν δεν είναι δεδομένο, είναι κενή φόρμα |
- * | `price` | `>= 0` | **το μηδέν είναι έγκυρη τιμή** (δωρεάν/συμπεριλαμβανόμενο) |
  *
- * Η διαφορά `area > 0` vs `price >= 0` ήταν ήδη εκεί, ίδια και στα δύο αρχεία.
- * Γραμμένη δύο φορές, ένα «καθάρισμα» θα την εξομάλυνε και θα έσβηνε σιωπηλά
- * κάθε μηδενική τιμή.
+ * ⛔ **Το @deprecated `price` ΔΕΝ γράφεται πια** (ADR-777 §8.60.18): ο επιλυτής το
+ * διάβαζε **πάντα** ως πώληση, άρα θέση προς ενοικίαση δεν μπορούσε να δηλωθεί. Η τιμή
+ * ζει στο `commercial.{askingPrice,rentPrice}` και την οδηγεί το `commercialStatus`
+ * (`space-commercial-fields.ts`). Ο επιλυτής **συνεχίζει να το διαβάζει** ως δίχτυ για
+ * παλιά έγγραφα («read both, write new» — μετρημένα 2026-09-18: **0** έγγραφα το έχουν).
  *
  * Επιστρέφει **μόνο** τα παρόντα πεδία, ώστε ο καλών να το κάνει spread πάνω
  * στα δικά του χωρίς να γράψει `undefined` στο Firestore.
@@ -120,7 +122,6 @@ export function mapCommonSpaceCreateFields(
   if (floor) fields.floor = floor;
 
   if (typeof body.area === 'number' && body.area > 0) fields.area = body.area;
-  if (typeof body.price === 'number' && body.price >= 0) fields.price = body.price;
 
   const description = trimmedOrNull(body.description);
   if (description) fields.description = description;
@@ -167,7 +168,6 @@ export function mapCommonSpaceFields(
       : body.floor ?? null;
   }
   if (isProvided(body.area)) updateData.area = typeof body.area === 'number' ? body.area : null;
-  if (isProvided(body.price)) updateData.price = typeof body.price === 'number' ? body.price : null;
   if (isProvided(body.description)) updateData.description = trimmedOrNull(body.description);
   if (isProvided(body.notes)) updateData.notes = trimmedOrNull(body.notes);
   if (isProvided(body.buildingId)) updateData.buildingId = body.buildingId ?? null;

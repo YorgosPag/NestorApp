@@ -19,7 +19,6 @@ import { useFirestoreProperties } from '@/hooks/useFirestoreProperties';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import type { CommercialStatus } from '@/types/property';
-import type { SpaceCommercialStatus } from '@/types/sales-shared';
 import type { Overlay } from '../overlays/types';
 import { compareByLocale } from '@/lib/intl-formatting';
 
@@ -34,7 +33,7 @@ export interface LinkableEntity {
   /** Human-readable name for dropdown display */
   displayName: string;
   /** Commercial status for color dot */
-  commercialStatus: CommercialStatus | SpaceCommercialStatus | undefined;
+  commercialStatus: CommercialStatus | undefined;
   /** Overlay ID this entity is linked to, or null if free */
   linkedToOverlayId: string | null;
   /** Entity kind — auto-set on overlay when this entity is selected */

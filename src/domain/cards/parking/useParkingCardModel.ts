@@ -45,9 +45,9 @@ export function useParkingCardModel(parking: ParkingSpotAdapter, view: 'grid' | 
     return [
       floorStat(parking.level || parking.floor, t('card.stats.level')),
       areaStat(parking.area, t('card.stats.area')),
-      priceStat(parking.price, t('card.stats.price')),
+      priceStat(parking, t('card.stats.price'), t),
     ].filter((s): s is StatItem => s !== null);
-  }, [parking.level, parking.floor, parking.area, parking.price, t]);
+  }, [parking, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {

@@ -103,7 +103,10 @@ export function ParkingsList({
           parking.status,
           parking.notes,
           parking.area,
-          parking.price
+          parking.price,
+          // ADR-777 §8.60.18 — τα ποσά ανά ρόλο (το `price` μένει μόνο για παλιά έγγραφα).
+          parking.commercial?.askingPrice,
+          parking.commercial?.rentPrice,
         ],
         list.searchTerm
       );

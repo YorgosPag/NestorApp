@@ -96,7 +96,10 @@ export function StoragesList({
           storage.status,
           storage.owner,
           storage.area,
-          storage.price
+          storage.price,
+          // ADR-777 §8.60.18 — τα ποσά ανά ρόλο (το `price` μένει μόνο για παλιά έγγραφα).
+          storage.commercial?.askingPrice,
+          storage.commercial?.rentPrice,
         ],
         list.searchTerm
       );

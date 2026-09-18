@@ -72,7 +72,6 @@ interface ParkingCreatePayload {
   floor?: string;
   location?: string;
   area?: number;
-  price?: number;
   description?: string;
   notes?: string;
 }
@@ -111,9 +110,10 @@ export const POST = withStandardRateLimit(
         }
 
         // Entity-specific fields (everything NOT handled by centralized service).
-        // Τα έξι κοινά με τα `storages` (floor/area/price/description/notes/code)
-        // έρχονται από τον SSoT — η σημασιολογία τους (`area > 0` αλλά
-        // `price >= 0`) περιγράφεται εκεί και **δεν** εξομαλύνεται.
+        // Τα πέντε κοινά με τα `storages` (floor/area/description/notes/code)
+        // έρχονται από τον SSoT — η σημασιολογία τους περιγράφεται εκεί. Το
+        // @deprecated `price` ΔΕΝ γράφεται πια (ADR-777 §8.60.18): νέα θέση =
+        // εκτός αγοράς, η διάθεση δηλώνεται μετά, με τιμή ανά ρόλο.
         const entitySpecificFields: Record<string, unknown> = {
           number: body.number.trim(),
           buildingId: buildingId,

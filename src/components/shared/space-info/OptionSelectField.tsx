@@ -44,6 +44,8 @@ interface OptionSelectFieldProps<T extends string> {
   /** Translate an option's `labelKey`. */
   t: (key: string) => string;
   disabled?: boolean;
+  /** Κείμενο όταν δεν έχει γίνει επιλογή (τιμή `''`) — ήδη μεταφρασμένο. */
+  placeholder?: string;
 }
 
 // ============================================================================
@@ -57,6 +59,7 @@ export function OptionSelectField<T extends string>({
   onValueChange,
   t,
   disabled,
+  placeholder,
 }: OptionSelectFieldProps<T>) {
   const colors = useSemanticColors();
 
@@ -69,7 +72,7 @@ export function OptionSelectField<T extends string>({
         disabled={disabled}
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (

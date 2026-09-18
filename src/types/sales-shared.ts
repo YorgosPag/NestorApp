@@ -5,14 +5,13 @@
  */
 
 // =============================================================================
-// 🏢 COMMERCIAL STATUS (reuse from Unit)
+// 🏢 COMMERCIAL STATUS — ΕΝΑ λεξιλόγιο για ακίνητα ΚΑΙ χώρους (ADR-777 §8.60.18)
 // =============================================================================
-
-export type SpaceCommercialStatus =
-  | 'unavailable'
-  | 'for-sale'
-  | 'reserved'
-  | 'sold';
+//
+// 🧹 Εδώ ζούσε το `SpaceCommercialStatus` (4 τιμές: χωρίς ενοικίαση) — **δεύτερο λεξιλόγιο**
+// για την ίδια έννοια (ADR-749), που το παραβίαζε ήδη ο ίδιος ο γραφέας του: το
+// `appurtenance-sync` γράφει στους χώρους `CommercialStatus` (7 τιμές). Κάθε χώρος
+// χρησιμοποιεί πλέον το `CommercialStatus` του `@/constants/commercial-statuses`.
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA — overlay for Storage & Parking
@@ -23,8 +22,10 @@ import type { PriceTotalsByRole } from '@/lib/properties/price-totals';
 import type { RolePriceRange } from '@/lib/properties/price-range';
 
 export interface SpaceCommercialData {
-  /** Asking price in EUR */
+  /** Ζητούμενη τιμή **πώλησης** (€) — τη διαβάζει ο επιλυτής όταν η διάθεση είναι πώληση. */
   askingPrice?: number | null;
+  /** Μηνιαίο **ενοίκιο** (€/μήνα) — ADR-777 §8.60.18· το οδηγεί το `commercialStatus`. */
+  rentPrice?: number | null;
   /** Final sale price in EUR */
   finalPrice?: number | null;
   /** Ιδιοκτήτες χώρου — SSoT (ADR-244 Phase 3) */

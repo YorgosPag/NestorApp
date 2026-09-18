@@ -230,8 +230,11 @@
         "commercialStatus": {
           "unavailable": "Μη Διαθέσιμο",
           "for-sale": "Προς Πώληση",
+          "for-rent": "Προς Ενοικίαση",
+          "for-sale-and-rent": "Πώληση & Ενοικίαση",
           "reserved": "Κρατημένο",
-          "sold": "Πωλημένο"
+          "sold": "Πωλημένο",
+          "rented": "Ενοικιασμένο"
         }
       }
     },
@@ -275,8 +278,11 @@
         "commercialStatus": {
           "unavailable": "Μη Διαθέσιμο",
           "for-sale": "Προς Πώληση",
+          "for-rent": "Προς Ενοικίαση",
+          "for-sale-and-rent": "Πώληση & Ενοικίαση",
           "reserved": "Κρατημένο",
-          "sold": "Πωλημένο"
+          "sold": "Πωλημένο",
+          "rented": "Ενοικιασμένο"
         }
       }
     },

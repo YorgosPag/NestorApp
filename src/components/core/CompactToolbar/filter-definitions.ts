@@ -337,6 +337,17 @@ export function getSortOptionsForType(type: ToolbarType) {
       { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
     ];
   }
+  if (type === 'parking' || type === 'storages') {
+    // ADR-777 §8.60.18 — «κατά αξία» ΜΕ ομάδες ανά μονάδα (`sortIntoPriceClassSections`): οι
+    // λίστες είχαν ήδη τη μηχανή (Φάση 4), αλλά καμία επιλογή δεν τη ζητούσε.
+    return [
+      { field: 'name' as const, ascLabel: 'toolbar.sort.name.asc', descLabel: 'toolbar.sort.name.desc' },
+      { field: 'value' as const, ascLabel: 'toolbar.sort.value.asc', descLabel: 'toolbar.sort.value.desc' },
+      { field: 'area' as const, ascLabel: 'toolbar.sort.area.asc', descLabel: 'toolbar.sort.area.desc' },
+      { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
+      { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' },
+    ];
+  }
   if (type === 'materials') {
     return [
       { field: 'name' as const, ascLabel: 'toolbar.sort.name.asc', descLabel: 'toolbar.sort.name.desc' },

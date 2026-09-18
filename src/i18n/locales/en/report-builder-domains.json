@@ -230,8 +230,11 @@
         "commercialStatus": {
           "unavailable": "Unavailable",
           "for-sale": "For Sale",
+          "for-rent": "For Rent",
+          "for-sale-and-rent": "For Sale & Rent",
           "reserved": "Reserved",
-          "sold": "Sold"
+          "sold": "Sold",
+          "rented": "Rented"
         }
       }
     },
@@ -275,8 +278,11 @@
         "commercialStatus": {
           "unavailable": "Unavailable",
           "for-sale": "For Sale",
+          "for-rent": "For Rent",
+          "for-sale-and-rent": "For Sale & Rent",
           "reserved": "Reserved",
-          "sold": "Sold"
+          "sold": "Sold",
+          "rented": "Rented"
         }
       }
     },

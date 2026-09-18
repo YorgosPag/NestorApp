@@ -5,8 +5,8 @@
  *
  * The PATCH / DELETE / GET pipeline internals for a «building space», composed
  * from existing primitives (NEVER re-implemented):
- *   withVersionCheck → softDelete → linkEntity → propagateSpaceAllocationCodeChange
- *   → logAuditEvent
+ *   planSpaceWrite → withVersionCheck → softDelete → linkEntity
+ *   → propagateSpaceAllocationCodeChange → EntityAuditService → logAuditEvent
  *
  * The public factory that wraps these with `withAuth` + `withStandardRateLimit`
  * lives in `space-entity-route.ts`; the shared contract types live in
@@ -33,7 +33,9 @@ import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { mapCommonSpaceFields, resolveAllocationCodeChange } from '@/lib/api/space-entity-fields';
+import { resolveAllocationCodeChange } from '@/lib/api/space-entity-fields';
+import { planSpaceWrite, spaceAuditEntry } from '@/lib/api/space-entity-write';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import type {
   SpaceEntityRouteConfig,
   SpaceMutationResult,
@@ -77,6 +79,38 @@ function cascadeBuildingLink<TBody extends Record<string, unknown>>(
     apiPath: `${cfg.apiPath} (PATCH)`,
   }).catch((err) => {
     cfg.logger.warn('linkEntity failed (non-blocking)', { id, error: getErrorMessage(err) });
+  });
+}
+
+/**
+ * ADR-195 · ADR-777 §8.60.18 — το ίχνος της γραφής στο ιστορικό του χώρου.
+ *
+ * Ως τις 2026-09-18 το PATCH χώρου έγραφε **μόνο** `logAuditEvent` (ποιος κάλεσε ποιο API)
+ * και **κανένα** ίχνος οντότητας: η καρτέλα «Ιστορικό» μιας θέσης έμενε άδεια ό,τι κι αν
+ * άλλαζε. Η διαφορά βγαίνει στο καθαρό `spaceAuditEntry` (ένα μητρώο πεδίων).
+ * Fire-and-forget σκόπιμα (N.7.2 #6): ίχνος που αποτυγχάνει δεν ακυρώνει γραφή που έγινε.
+ */
+function recordSpaceEntityAudit<TBody extends Record<string, unknown>>(
+  cfg: SpaceEntityRouteConfig<TBody>,
+  ctx: AuthContext,
+  id: string,
+  existing: Record<string, unknown>,
+  updateData: Record<string, unknown>,
+): void {
+  const entry = spaceAuditEntry(cfg.entityKind, existing, updateData);
+  if (!entry) return;
+
+  EntityAuditService.recordChange({
+    entityType: cfg.entityKind,
+    entityId: id,
+    entityName: (existing[cfg.displayField] as string | undefined) ?? null,
+    action: entry.action,
+    changes: [...entry.changes],
+    performedBy: ctx.uid,
+    performedByName: ctx.email ?? null,
+    companyId: ctx.companyId,
+  }).catch((err) => {
+    cfg.logger.warn('entity audit failed (non-blocking)', { id, error: getErrorMessage(err) });
   });
 }
 
@@ -170,11 +204,11 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
       const { _v: expectedVersion, ...rest } = parsed.data as TBody & { _v?: number };
       const body = rest as unknown as TBody;
 
+      // ADR-777 §8.60.18 — τα εμπορικά κρίνονται απέναντι στο αποθηκευμένο· άρνηση ΠΡΙΝ τη γραφή.
+      const plan = planSpaceWrite(cfg, body, existing);
+      if (plan.kind === 'rejected') throw new ApiError(plan.status, plan.message);
       // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
-      const updateData = {
-        ...mapCommonSpaceFields(body, cfg.displayField),
-        ...cfg.mapExtraFields(body),
-      };
+      const updateData = plan.updateData;
 
       const versionResult = await withVersionCheck({
         db: adminDb,
@@ -187,6 +221,7 @@ export function buildPatchHandler<TBody extends Record<string, unknown>>(
 
       cascadeAllocationCode(cfg, id, body, existing);
       cascadeBuildingLink(cfg, ctx, id, body, existing);
+      recordSpaceEntityAudit(cfg, ctx, id, existing, updateData);
 
       // ADR-029 Phase D: search_documents written by the entity's Cloud Function.
       cfg.logger.info(cfg.messages.logUpdated, { id, companyId: ctx.companyId });

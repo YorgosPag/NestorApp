@@ -23,7 +23,8 @@ import type {
   PropertyCommercialData,
   PropertyCoverage,
 } from '@/types/property';
-import type { SpaceCommercialStatus, SpaceCommercialData } from '@/types/sales-shared';
+import type { SpaceCommercialData } from '@/types/sales-shared';
+import { normalizeCommercialStatus, type CommercialStatus } from '@/constants/commercial-statuses';
 import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
@@ -49,7 +50,7 @@ import { normalizeToDate } from '@/lib/date-local';
  */
 function spaceAppurtenanceFields(data: Record<string, unknown>): {
   readonly millesimalShares: number | null | undefined;
-  readonly commercialStatus: SpaceCommercialStatus | undefined;
+  readonly commercialStatus: CommercialStatus | undefined;
   readonly commercial: SpaceCommercialData | undefined;
 } {
   return {
@@ -59,7 +60,8 @@ function spaceAppurtenanceFields(data: Record<string, unknown>): {
         : data.millesimalShares === null
           ? null
           : undefined,
-    commercialStatus: data.commercialStatus as SpaceCommercialStatus | undefined,
+    // ADR-777 §8.60.18 — ο ΕΝΑΣ κανονικοποιητής, όχι `as`: άγνωστη τιμή ⇒ απουσία, όχι ψέμα τύπου.
+    commercialStatus: normalizeCommercialStatus(data.commercialStatus) ?? undefined,
     commercial: data.commercial as SpaceCommercialData | undefined,
   };
 }

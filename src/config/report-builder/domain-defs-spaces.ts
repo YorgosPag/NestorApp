@@ -8,6 +8,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
+import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data)
@@ -32,10 +33,6 @@ const STORAGE_TYPES = [
 
 const STORAGE_STATUSES = [
   'available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable',
-] as const;
-
-const SPACE_COMMERCIAL_STATUSES = [
-  'unavailable', 'for-sale', 'reserved', 'sold',
 ] as const;
 
 // ============================================================================
@@ -141,7 +138,8 @@ export const PARKING_DEFINITION: DomainDefinition = {
       filterable: true,
       sortable: true,
       defaultVisible: false,
-      enumValues: SPACE_COMMERCIAL_STATUSES,
+      // ADR-777 §8.60.18 — το ΕΝΑ λεξιλόγιο (ήταν τρίτο χειρόγραφο αντίγραφο, 4 τιμές).
+      enumValues: COMMERCIAL_STATUSES,
       enumLabelPrefix: 'domains.parking.enums.commercialStatus',
     },
   ],
@@ -240,7 +238,8 @@ export const STORAGE_DEFINITION: DomainDefinition = {
       filterable: true,
       sortable: true,
       defaultVisible: false,
-      enumValues: SPACE_COMMERCIAL_STATUSES,
+      // ADR-777 §8.60.18 — το ΕΝΑ λεξιλόγιο (ήταν τρίτο χειρόγραφο αντίγραφο, 4 τιμές).
+      enumValues: COMMERCIAL_STATUSES,
       enumLabelPrefix: 'domains.storage.enums.commercialStatus',
     },
     {

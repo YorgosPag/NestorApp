@@ -95,7 +95,7 @@ export interface ParkingSpot {
   /** Millesimal shares (χιλιοστά) — 0 = common, >0 = independently sellable */
   millesimalShares?: number | null;
   /** Commercial status for sales context */
-  commercialStatus?: import('@/types/sales-shared').SpaceCommercialStatus;
+  commercialStatus?: import('@/constants/commercial-statuses').CommercialStatus;
   /** Commercial data overlay for sales */
   commercial?: import('@/types/sales-shared').SpaceCommercialData;
 }

@@ -55,6 +55,7 @@ import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { useSpaceGeneralSave } from '@/hooks/useSpaceGeneralSave';
+import { SpaceCommercialCard, useSpaceCommercial } from '@/components/shared/commercial';
 import {
   useSpaceNameSuggestion,
   type SpaceFormPatchApplier,
@@ -120,6 +121,8 @@ export function StorageGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
+  // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο: το ΙΔΙΟ πρόχειρο με τη γρήγορη επεξεργασία.
+  const commercial = useSpaceCommercial(storage);
 
   // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
   useEffect(() => {
@@ -228,6 +231,7 @@ export function StorageGeneralTab({
   // EDIT MODE: PATCH existing storage
   const handleUpdate = useCallback(async (): Promise<boolean> => {
     const patch = buildStoragePatch(form, storage, buildingLink.getPayload());
+    patch.merge(commercial.patchAgainst(storage));
 
     // Nothing changed
     if (patch.isEmpty) {
@@ -250,7 +254,7 @@ export function StorageGeneralTab({
     logger.info('Storage updated', { id: storage.id });
     onEditingChange?.(false);
     return true;
-  }, [form, storage, onEditingChange, buildingLink, versioned.save]);
+  }, [form, storage, onEditingChange, buildingLink, versioned.save, commercial]);
 
   useSpaceGeneralSave({ createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, logger });
 
@@ -339,7 +343,17 @@ export function StorageGeneralTab({
         </CardContent>
       </Card>
 
-      {/* ADR-193: Financial Card (price, price/m², project) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
+      {/* ADR-193 → ADR-777 §8.60.18: η διάθεση επιστρέφει ως ΧΩΡΙΣΤΗ ομάδα (όχι ανάμειξη με τα
+          φυσικά), με το ίδιο πρωτότυπο με το ακίνητο. Νέα αποθήκη ⇒ εκτός αγοράς μέχρι να δηλωθεί. */}
+      {!createMode && (
+        <SpaceCommercialCard
+          commercial={commercial}
+          area={storage.area ?? undefined}
+          pricingType="storage"
+          isEditing={isEditing}
+          idPrefix={`storage-${storage.id}`}
+        />
+      )}
 
       {/* ADR-194: Description & Notes — SSoT shared card */}
       <DescriptionNotesCard form={form} isEditing={isEditing} onChange={updateField} t={t} />

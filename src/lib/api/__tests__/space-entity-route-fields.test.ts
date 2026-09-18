@@ -22,16 +22,18 @@ import {
  *
  * Το ADR-696 ένωσε το `PATCH` και σταμάτησε εκεί· το `POST` των δύο χώρων έμεινε
  * δίδυμο μέχρι που το `jscpd` το χτύπησε. Αυτά τα tests καρφώνουν τη
- * σημασιολογία **που ήδη υπήρχε** στα δύο routes — ιδίως τη διαφορά
- * `area > 0` / `price >= 0`, που ένα «καθάρισμα» θα εξομάλυνε και θα έσβηνε
- * σιωπηλά κάθε μηδενική τιμή.
+ * σημασιολογία **που ήδη υπήρχε** στα δύο routes.
+ *
+ * 🔴 ADR-777 §8.60.18: το @deprecated `price` **δεν γράφεται πια** — ούτε στη δημιουργία ούτε
+ * στο PATCH. Ο επιλυτής το διάβαζε **πάντα** ως πώληση, άρα θέση προς ενοικίαση δεν μπορούσε να
+ * δηλωθεί. Η τιμή ζει στο `commercial` ανά ρόλο (`space-commercial-fields.ts`).
  */
 describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟΥΡΓΙΑ', () => {
   it('άδειο σώμα ⇒ κανένα πεδίο (ποτέ `undefined` στο Firestore)', () => {
     expect(mapCommonSpaceCreateFields({})).toEqual({});
   });
 
-  it('περνά τα έξι κοινά πεδία, με trim', () => {
+  it('περνά τα πέντε κοινά πεδία, με trim — και ΠΕΤΑ το `price`', () => {
     expect(
       mapCommonSpaceCreateFields({
         floor: ' 2 ',
@@ -44,15 +46,15 @@ describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟ
     ).toEqual({
       floor: '2',
       area: 12.5,
-      price: 1000,
       description: 'περιγραφή',
       notes: 'σημ',
       code: 'P-1',
     });
   });
 
-  it('🔴 `price: 0` ΓΡΑΦΕΤΑΙ — το μηδέν είναι έγκυρη τιμή', () => {
-    expect(mapCommonSpaceCreateFields({ price: 0 })).toEqual({ price: 0 });
+  it('🔴 `price` ΔΕΝ γράφεται ποτέ (ADR-777 §8.60.18) — ούτε μηδέν ούτε θετικό', () => {
+    expect(mapCommonSpaceCreateFields({ price: 0 })).toEqual({});
+    expect(mapCommonSpaceCreateFields({ price: 12000 })).toEqual({});
   });
 
   it('🔴 `area: 0` ΔΕΝ γράφεται — μηδενικό εμβαδόν είναι κενή φόρμα', () => {
@@ -135,12 +137,15 @@ describe('mapCommonSpaceFields — floor accepts string or number', () => {
 
 describe('mapCommonSpaceFields — numeric fields reject non-numbers', () => {
   it('keeps zero (falsy but valid)', () => {
-    expect(mapCommonSpaceFields({ area: 0, price: 0 }, 'number')).toEqual({ area: 0, price: 0 });
+    expect(mapCommonSpaceFields({ area: 0 }, 'number')).toEqual({ area: 0 });
   });
 
-  it('maps a non-number area/price to null rather than persisting garbage', () => {
-    expect(mapCommonSpaceFields({ area: null, price: 'abc' }, 'number'))
-      .toEqual({ area: null, price: null });
+  it('maps a non-number area to null rather than persisting garbage', () => {
+    expect(mapCommonSpaceFields({ area: 'abc' }, 'number')).toEqual({ area: null });
+  });
+
+  it('🔴 never writes the @deprecated `price` (ADR-777 §8.60.18)', () => {
+    expect(mapCommonSpaceFields({ price: 60 }, 'number')).toEqual({});
   });
 });
 

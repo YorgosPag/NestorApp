@@ -32,6 +32,18 @@
       "pdfReport": "PDF Report"
     },
     "sort": {
+      "value": {
+        "asc": "Value ascending",
+        "desc": "Value descending"
+      },
+      "area": {
+        "asc": "Area ascending",
+        "desc": "Area descending"
+      },
+      "number": {
+        "asc": "Number ascending",
+        "desc": "Number descending"
+      },
       "name": {
         "asc": "Name ascending",
         "desc": "Name descending"

@@ -23,6 +23,7 @@ import type { LinkableItem } from '../shared';
 import { getStatusLabel } from '@/lib/status-helpers';
 import { getStorageTypeLabel, filterUnits, calculateStats } from './utils';
 import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
+import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -52,7 +53,6 @@ export function useStorageTabState(building: Building) {
   const [createStatus, setCreateStatus] = useState<StorageStatus>('available');
   const [createFloor, setCreateFloor] = useState('');
   const [createArea, setCreateArea] = useState('');
-  const [createPrice, setCreatePrice] = useState('');
   const [createDescription, setCreateDescription] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -63,7 +63,8 @@ export function useStorageTabState(building: Building) {
   const [editStatus, setEditStatus] = useState<StorageStatus>('available');
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
-  const [editPrice, setEditPrice] = useState('');
+  // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο (ήταν `editPrice` → @deprecated `price`, πάντα «πώληση»).
+  const commercial = useCommercialDraft();
   const [saving, setSaving] = useState(false);
 
   // ── Delete state ──
@@ -120,6 +121,10 @@ export function useStorageTabState(building: Building) {
           floor: s.floor || '',
           area: typeof s.area === 'number' ? s.area : 0,
           price: typeof s.price === 'number' ? s.price : 0,
+          // ADR-777 §8.60.18 — χωρίς αυτά ο επιλυτής έβλεπε ΜΟΝΟ το @deprecated `price`:
+          // η στήλη «Τιμή» της καρτέλας αποθηκών δεν μπορούσε να δείξει ποτέ ενοίκιο.
+          commercialStatus: s.commercialStatus,
+          commercial: s.commercial,
           description: s.description || '',
           building: s.building || building.name,
           project: '',        // mapStorageDoc does not expose this field
@@ -181,7 +186,6 @@ export function useStorageTabState(building: Building) {
     setCreateStatus('available');
     setCreateFloor('');
     setCreateArea('');
-    setCreatePrice('');
     setCreateDescription('');
   };
 
@@ -197,7 +201,6 @@ export function useStorageTabState(building: Building) {
         status: createStatus,
         floor: createFloor.trim() || null,
         area: createArea ? parseFloat(createArea) : null,
-        price: createPrice ? parseFloat(createPrice) : null,
         description: createDescription.trim() || null,
         building: building.name,
       }});
@@ -222,10 +225,16 @@ export function useStorageTabState(building: Building) {
     setEditStatus(unit.status || 'available');
     setEditFloor(unit.floor || '');
     setEditArea(unit.area ? String(unit.area) : '');
-    setEditPrice(unit.price ? String(unit.price) : '');
+    commercial.reset(unit);
   };
 
   const cancelEdit = () => setEditingId(null);
+
+  /** Το σώμα διάθεσης της γραμμής — απέναντι στην ΑΠΟΘΗΚΕΥΜΕΝΗ αποθήκη, μόνο ό,τι άλλαξε. */
+  const commercialPatchFor = (id: string) => {
+    const stored = units.find((unit) => unit.id === id);
+    return stored ? commercial.patchAgainst(stored) : {};
+  };
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
@@ -237,7 +246,8 @@ export function useStorageTabState(building: Building) {
         status: editStatus,
         floor: editFloor.trim() || null,
         area: editArea ? parseFloat(editArea) : null,
-        price: editPrice ? parseFloat(editPrice) : null,
+        // Η διάθεση ταξιδεύει ΜΟΝΟ όταν άλλαξε — κρίνεται απέναντι στην αποθηκευμένη αποθήκη.
+        ...commercialPatchFor(editingId),
       }});
       success(t('storageNotifications.updated'));
       setEditingId(null);
@@ -344,14 +354,13 @@ export function useStorageTabState(building: Building) {
     createStatus, setCreateStatus,
     createFloor, setCreateFloor,
     createArea, setCreateArea,
-    createPrice, setCreatePrice,
     createDescription, setCreateDescription,
     creating, handleCreate, resetCreateForm,
     // Edit
     editingId, editCode, setEditCode,
     editType, setEditType, editStatus, setEditStatus,
     editFloor, setEditFloor, editArea, setEditArea,
-    editPrice, setEditPrice, saving,
+    commercial, saving,
     startEdit, cancelEdit, handleSaveEdit,
     // Delete
     deletingId, confirmDelete, setConfirmDelete, confirmLoading, handleDeleteClick, handleDeleteConfirm,

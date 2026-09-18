@@ -33,6 +33,7 @@ import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
+import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
@@ -223,7 +224,8 @@ export function StorageTab({ building }: StorageTabProps) {
                   <Input type="number" step="0.01" value={s.editArea} onChange={(e) => s.setEditArea(e.target.value)} className="h-8 w-16" disabled={s.saving} />
                 </TableCell>
                 <TableCell>
-                  <Input type="number" step="0.01" value={s.editPrice} onChange={(e) => s.setEditPrice(e.target.value)} className="h-8 w-20" disabled={s.saving} />
+                  {/* ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο, ο ΙΔΙΟΣ επεξεργαστής με την κάρτα «Διάθεση & τιμή». */}
+                  <CommercialDraftCell commercial={s.commercial} disabled={s.saving} idPrefix={`storage-row-${s.editingId}`} />
                 </TableCell>
                 <TableCell>
                   <Select value={s.editStatus} onValueChange={(v) => s.setEditStatus(v as StorageStatus)} disabled={s.saving}>

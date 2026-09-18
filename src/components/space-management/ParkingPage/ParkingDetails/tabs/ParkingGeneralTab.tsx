@@ -49,6 +49,7 @@ import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { useSpaceGeneralSave } from '@/hooks/useSpaceGeneralSave';
+import { SpaceCommercialCard, useSpaceCommercial } from '@/components/shared/commercial';
 import {
   useSpaceNameSuggestion,
   type SpaceFormPatchApplier,
@@ -115,6 +116,8 @@ export function ParkingGeneralTab({
 
   // Form state — always bound to inputs (disabled when not editing)
   const [form, setForm] = useState<ParkingFormState>(() => buildFormState(parking));
+  // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο: το ΙΔΙΟ πρόχειρο με τη γρήγορη επεξεργασία.
+  const commercial = useSpaceCommercial(parking);
 
   // Reset form when a DIFFERENT parking spot is selected (not on edit mode toggle)
   useEffect(() => {
@@ -201,6 +204,7 @@ export function ParkingGeneralTab({
   // EDIT MODE: PATCH existing parking spot
   const handleUpdate = useCallback(async (): Promise<boolean> => {
     const patch = buildParkingPatch(form, parking, buildingLink.getPayload());
+    patch.merge(commercial.patchAgainst(parking));
 
     // Nothing changed
     if (patch.isEmpty) {
@@ -223,7 +227,7 @@ export function ParkingGeneralTab({
     logger.info('Parking spot updated', { id: parking.id });
     onEditingChange?.(false);
     return true;
-  }, [form, parking, onEditingChange, buildingLink, versioned.save]);
+  }, [form, parking, onEditingChange, buildingLink, versioned.save, commercial]);
 
   useSpaceGeneralSave({ createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, logger });
 
@@ -290,7 +294,17 @@ export function ParkingGeneralTab({
         </CardContent>
       </Card>
 
-      {/* ADR-193: Financial Card (price, price/m²) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
+      {/* ADR-193 → ADR-777 §8.60.18: η διάθεση επιστρέφει ως ΧΩΡΙΣΤΗ ομάδα (όχι ανάμειξη με τα
+          φυσικά), με το ίδιο πρωτότυπο με το ακίνητο. Νέα θέση ⇒ εκτός αγοράς μέχρι να δηλωθεί. */}
+      {!createMode && (
+        <SpaceCommercialCard
+          commercial={commercial}
+          area={parking.area ?? undefined}
+          pricingType="parking"
+          isEditing={isEditing}
+          idPrefix={`parking-${parking.id}`}
+        />
+      )}
 
       {/* ADR-194: Description & Notes — SSoT shared card (DescriptionNotesCard) */}
       <DescriptionNotesCard form={form} isEditing={isEditing} onChange={updateField} t={t} />

@@ -12,7 +12,9 @@
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
-import { formatCurrency, formatFloorString } from '@/lib/intl-utils';
+import { formatFloorString } from '@/lib/intl-utils';
+import { resolveDisplayPrice, type PricedPropertyLike } from '@/lib/properties/price-resolver';
+import { priceCellLabel, type PriceLabelT } from '@/lib/listings/listing-price-label';
 
 /** Floor / level row (localized via `formatFloorString`). */
 export function floorStat(value: string | undefined | null, label: string): StatItem | null {
@@ -36,14 +38,22 @@ export function areaStat(area: number | undefined | null, label: string): StatIt
   };
 }
 
-/** Whole-euro price row. */
-export function priceStat(price: number | undefined | null, label: string): StatItem | null {
-  if (!price || price <= 0) return null;
+/**
+ * Price row — **με τη μονάδα του ρόλου** («12.000 €» · «60 €/μήνα»), από τον ΕΝΑ επιλυτή.
+ *
+ * 🔴 ADR-777 §8.60.18: ως τις 2026-09-18 διάβαζε το @deprecated flat `price` — άρα θέση προς
+ * ενοικίαση **δεν έδειχνε καμία τιμή** στις λίστες θέσεων/αποθηκών, και μια παλιά `price`
+ * θα γραφόταν «€» ακόμη κι αν ήταν μηνιαίο ενοίκιο. Πλέον: `resolveDisplayPrice` → το ίδιο
+ * κείμενο κελιού με τους πίνακες (`priceCellLabel`). Χωρίς τιμή ⇒ καμία γραμμή.
+ */
+export function priceStat(item: PricedPropertyLike, label: string, t: PriceLabelT): StatItem | null {
+  const price = resolveDisplayPrice(item);
+  if (price.kind !== 'priced') return null;
   return {
     icon: NAVIGATION_ENTITIES.price.icon,
     iconColor: NAVIGATION_ENTITIES.price.color,
     label,
-    value: formatCurrency(price, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+    value: priceCellLabel(t, price),
     valueColor: NAVIGATION_ENTITIES.price.color,
   };
 }

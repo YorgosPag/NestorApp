@@ -73,10 +73,9 @@ export function getKindFromLabel(label: string): OverlayKind | null {
 // ============================================================================
 // 🏢 ADR-258: CommercialStatus → PropertyStatus Mapping (Twin Architecture)
 // ============================================================================
-// Κεντρική mapping function — parking/storage χρησιμοποιούν SpaceCommercialStatus
-// (υποσύνολο του CommercialStatus, χωρίς for-rent/for-sale-and-rent/rented)
+// Κεντρική mapping function — ακίνητα ΚΑΙ χώροι (θέσεις · αποθήκες) μιλούν το ΙΔΙΟ
+// `CommercialStatus` (ADR-777 §8.60.18: καταργήθηκε το 4τιμο `SpaceCommercialStatus`).
 import type { CommercialStatus } from '../../../types/property';
-import type { SpaceCommercialStatus } from '../../../types/sales-shared';
 
 const COMMERCIAL_TO_PROPERTY_STATUS: Record<string, PropertyStatus> = {
   'for-sale': 'for-sale',
@@ -89,7 +88,7 @@ const COMMERCIAL_TO_PROPERTY_STATUS: Record<string, PropertyStatus> = {
 };
 
 export function commercialToPropertyStatus(
-  status: CommercialStatus | SpaceCommercialStatus | undefined
+  status: CommercialStatus | undefined
 ): PropertyStatus {
   if (!status) return 'unavailable';
   return COMMERCIAL_TO_PROPERTY_STATUS[status] ?? 'unavailable';

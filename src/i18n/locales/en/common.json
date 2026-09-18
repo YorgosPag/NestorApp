@@ -956,6 +956,10 @@
     "rent": "{price}/m²/month",
     "nightly": "{price}/m²/night"
   },
+  "commercialCard": {
+    "title": "Availability & price",
+    "transactionLocked": "A reservation, sale or lease holds this availability — it changes only from Sales."
+  },
   "priceRangeFilter": {
     "unit": "Price unit",
     "role": {

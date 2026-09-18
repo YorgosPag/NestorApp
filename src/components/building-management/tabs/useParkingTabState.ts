@@ -22,6 +22,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
+import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
 import type { LinkableItem } from '../shared';
 import type {
   ParkingApiData,
@@ -70,7 +71,6 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [createFloor, setCreateFloor] = useState('');
   const [createLocation, setCreateLocation] = useState('');
   const [createArea, setCreateArea] = useState('');
-  const [createPrice, setCreatePrice] = useState('');
   const [createNotes, setCreateNotes] = useState('');
   const [createLocationZone, setCreateLocationZone] = useState<ParkingLocationZone | ''>('');
   const [creating, setCreating] = useState(false);
@@ -84,7 +84,9 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [editStatus, setEditStatus] = useState<ParkingSpotStatus>('available');
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
-  const [editPrice, setEditPrice] = useState('');
+  // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο (ήταν `editPrice` → @deprecated `price`, πάντα «πώληση»).
+  const commercial = useCommercialDraft();
+  const resetCommercial = commercial.reset;
   const [saving, setSaving] = useState(false);
 
   // ---------------------------------------------------------------------------
@@ -181,7 +183,6 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     setCreateFloor('');
     setCreateLocation('');
     setCreateArea('');
-    setCreatePrice('');
     setCreateNotes('');
     setCreateLocationZone('');
   }, []);
@@ -197,7 +198,6 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
         floor: createFloor.trim() || undefined,
         location: createLocation.trim() || undefined,
         area: createArea ? parseFloat(createArea) : undefined,
-        price: createPrice ? parseFloat(createPrice) : undefined,
         notes: createNotes.trim() || undefined,
         locationZone: createLocationZone || undefined,
         buildingId,
@@ -224,7 +224,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     }
   }, [
     createNumber, createType, createStatus, createFloor, createLocation,
-    createArea, createPrice, createNotes, createLocationZone,
+    createArea, createNotes, createLocationZone,
     buildingId, projectId, resetCreateForm, fetchParkingSpots,
   ]);
 
@@ -239,8 +239,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     setEditStatus(spot.status || 'available');
     setEditFloor(spot.floor || '');
     setEditArea(spot.area ? String(spot.area) : '');
-    setEditPrice(spot.price ? String(spot.price) : '');
-  }, []);
+    resetCommercial(spot);
+  }, [resetCommercial]);
 
   const cancelEdit = useCallback(() => {
     setEditingId(null);
@@ -259,13 +259,15 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       status: editStatus,
       floor: editFloor.trim() || undefined,
       area: editArea ? parseFloat(editArea) : undefined,
-      price: editPrice ? parseFloat(editPrice) : undefined,
     };
+    // Η διάθεση ταξιδεύει ΜΟΝΟ όταν άλλαξε — κρίνεται απέναντι στην αποθηκευμένη θέση.
+    const stored = parkingSpots.find((spot) => spot.id === editingId);
+    const commercialPatch = stored ? commercial.patchAgainst(stored) : {};
 
     try {
       const result = await updateParkingWithPolicy<ParkingMutationResult>({
         parkingSpotId: editingId,
-        payload: updates,
+        payload: { ...updates, ...commercialPatch },
       });
       if (result?.id) {
         RealtimeService.dispatch('PARKING_UPDATED', {
@@ -281,7 +283,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     } finally {
       setSaving(false);
     }
-  }, [editingId, editNumber, editType, editStatus, editFloor, editArea, editPrice, fetchParkingSpots]);
+  }, [editingId, editNumber, editType, editStatus, editFloor, editArea, parkingSpots, commercial, fetchParkingSpots]);
 
   // ===========================================================================
   // DELETE & UNLINK
@@ -425,7 +427,6 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     createFloor, setCreateFloor,
     createLocation, setCreateLocation,
     createArea, setCreateArea,
-    createPrice, setCreatePrice,
     createNotes, setCreateNotes,
     createLocationZone, setCreateLocationZone,
     creating,
@@ -439,7 +440,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     editStatus, setEditStatus,
     editFloor, setEditFloor,
     editArea, setEditArea,
-    editPrice, setEditPrice,
+    commercial,
     saving,
     startEdit,
     cancelEdit,
