@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |---|---|
-| **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-19) — εκκρεμεί μόνο η διαγραφή 4 νεκρών αρχείων (§6 #1) και ο ζωντανός έλεγχος (§6 #2) |
+| **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-19) — CHECK 3.90 πράσινη (0 οδηγίες)· ζωντανά επαληθευμένες οι αρνήσεις· εκκρεμεί ο έλεγχος με συνεδρία διαχειριστή (§6 #2) |
 | **Date** | 2026-09-19 |
 | **Category** | Security / API Boundary / Multi-tenancy |
 | **Canonical Locations** | `src/lib/auth/middleware.ts` (`withAuth`, `requireMfa`) · `src/server/admin/admin-guards-types.ts` (`ADMIN_SURFACE_AUTH`) · `src/app/api/admin/ai-inbox/communications/[communicationId]/triage/route.ts` · `scripts/check-server-action-boundary.js` (CHECK 3.90) |
@@ -160,13 +160,24 @@ ADR-817) ⇒ μια διαδρομή API γι' αυτόν θα ήταν **δομ
 
 ## §6. ⚠️ Δηλωμένα όρια
 
-1. **4 αρχεία περιμένουν διαγραφή από τον Giorgio** (ο αυτόματος ταξινομητής αρνήθηκε τη διαγραφή
-   στον πράκτορα): `src/services/communications.service.ts` (πλέον **μηδέν** εισαγωγείς) ·
-   `src/ai/flows/contact-follow-up-suggestions.ts` · `src/ai/flows/generate-report.ts` ·
-   `src/ai/genkit.ts`· και η γραμμή `"src/ai/**"` του `knip.json`. **Μέχρι τότε η CHECK 3.90 είναι
-   κόκκινη — σωστά**: τα τρία πρώτα είναι ακόμη δημόσια endpoints.
-2. **Ζωντανός έλεγχος** (localhost/παραγωγή): εκκρεμεί — ο AI inbox εγκρίνει/απορρίπτει ως διαχειριστής
-   με MFA· POST χωρίς συνεδρία ⇒ 401.
+1. ✅ **Διαγράφηκαν 2026-09-19 (από τον Giorgio — ο αυτόματος ταξινομητής αρνήθηκε τη διαγραφή στον
+   πράκτορα)**: `src/services/communications.service.ts` (μηδέν εισαγωγείς) · `src/ai/flows/contact-follow-up-suggestions.ts`
+   · `src/ai/flows/generate-report.ts` · `src/ai/genkit.ts`· αφαιρέθηκε και η γραμμή `"src/ai/**"` του `knip.json`.
+   Η CHECK 3.90 ήταν **κόκκινη ακριβώς σε αυτά τα 3 endpoints** μέχρι τη διαγραφή, και **πράσινη** μετά
+   (0 οδηγίες, 6 υποψήφια — όλα σχόλια).
+2. **Ζωντανός έλεγχος — ΜΕΡΙΚΟΣ (2026-09-19, dev server `localhost:3000`, Next 15.5.22)**:
+   - ✅ POST **χωρίς καμία συνεδρία** ⇒ **403 `MFA_REQUIRED`**, ΟΧΙ 401 — και αυτό είναι το σημαντικότερο εύρημα:
+     σε `NODE_ENV=development` το `buildRequestContext` **κατασκευάζει** ταυτότητα (`company_admin`,
+     `mfaEnrolled: false`, ADR-821). Χωρίς την πόρτα MFA ένα **ανώνυμο** `curl` στον dev server θα περνούσε το
+     ταβάνι ρόλου. Στην παραγωγή η κατασκευή αρνείται (`NODE_ENV` αυστηρό) ⇒ 401.
+   - ✅ Ίδιο αίτημα με `adminUid`/`companyId` στο σώμα ⇒ ίδια άρνηση **πριν** καν διαβαστεί το σώμα.
+   - ✅ Ψεύτικο `Bearer` ⇒ **401 `UNAUTHORIZED` (`invalid_token`)**.
+   - ⚠️ Ο dev server απαντά **403 χωρίς σώμα** σε αιτήματα **χωρίς `User-Agent`** (φίλτρο bot του
+     `src/middleware.ts`) — γι' αυτό ο πρώτος έλεγχος έμοιαζε «όχι δικός μας server».
+   - ⏳ **Δεν επαληθεύτηκε ζωντανά με πραγματική συνεδρία διαχειριστή**: ο Chrome του πράκτορα επέστρεφε σε
+     «Νέα καρτέλα» σε κάθε πλοήγηση στο `localhost:3000`. Και η **επιτυχής** έγκριση δεν δοκιμάζεται χωρίς
+     δεδομένα: μετρημένα **0 / 46** μηνύματα έχουν `triageStatus` (όλα εξερχόμενες ειδοποιήσεις **χωρίς
+     `companyId`**) — μια έγκριση θα απαιτούσε δοκιμαστικό μήνυμα και θα γεννούσε **πραγματική** εργασία CRM.
 3. Το κλειδί `aiInbox.loadFailedWithErrorId` έμεινε **ορφανό** (ο κλάδος φόρτωσης μέσω server
    αφαιρέθηκε). Δεν αφαιρέθηκε, για να μην τρέξουν οι γεννήτορες 3.33/3.34 πάνω σε κλειδιά άλλου agent.
 4. Το μήνυμα `'Live data is already up-to-date!'` του hook είναι προϋπάρχον hardcoded κείμενο (N.11)·
@@ -181,4 +192,5 @@ ADR-817) ⇒ μια διαδρομή API γι' αυτόν θα ήταν **δομ
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-19 | **Διαγραφή των 4 νεκρών αρχείων** (§6 #1) + `knip.json` — CHECK 3.90 κόκκινη → **πράσινη**. |
 | 2026-09-19 | **Δημιουργία + υλοποίηση.** Διαδρομή `POST /api/admin/ai-inbox/communications/[id]/triage` (`withSensitiveRateLimit(withAuth(…, ADMIN_SURFACE_AUTH))`)· `withAuth({ requireMfa })` + `createMfaRequiredResponse`· triage υπηρεσία `server-only` με `actor: AuthContext` και audit με τον πραγματικό καλούντα· hook μόνο realtime + `apiClient`· η σελίδα στενεύει σε `AIInboxAdminContext`· `server-only` στο `AssignmentPolicyRepository`· καμία οδηγία στο `contracts.ts`· **CHECK 3.90**. Κλείνει το ADR-777 §8.60.20.9 #12. |

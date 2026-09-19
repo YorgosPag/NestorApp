@@ -32,12 +32,15 @@ jest.mock('@/services/firestore', () => ({ firestoreQueryService: { subscribe: j
 jest.mock('@/services/firestore/firestore-query.service', () => ({ firestoreQueryService: { getAll: jest.fn(), getById: jest.fn() } }));
 jest.mock('@/services/file-record.service', () => ({
   FileRecordService: { getFilesByEntity: jest.fn(), getLinkedFiles: jest.fn().mockResolvedValue([]), isVisibleInActiveLists: () => true },
+  toFileRecord: (raw: unknown) => raw,
 }));
 
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { FileRecordService } from '@/services/file-record.service';
+import { firestoreQueryService } from '@/services/firestore';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
+import { RealtimeService } from '@/services/realtime';
 import type { FileRecord } from '@/types/file-record';
 import { useEntityFiles } from '../useEntityFiles';
 import { useFileUpload } from '../useFileUpload';
@@ -94,5 +97,67 @@ describe('Α38.1γ — useEntityFiles διαβάζει με τις εμβέλε�
     const [, , options] = getFiles.mock.calls[getFiles.mock.calls.length - 1] as [string, string, { domain?: string; category?: string }];
     expect({ domain: options.domain, category: options.category }).toEqual({ domain: undefined, category: undefined });
     expect(result.current.files.map((file) => file.id)).toEqual(['f_deed']);
+  });
+});
+
+/**
+ * Α39.2 — ADR-866 §2.10.8 Β5: **ο ακροατής ΚΑΤΕΧΕΙ τη λίστα**. Στην παραγωγή το `refetch` μετά το ανέβασμα απαντιόταν
+ * από την όψη του ίδιου ακροατή ~100ms **πριν** φτάσει η εγγραφή — και έσβηνε ό,τι είχε φέρει ο ακροατής.
+ *
+ * | Μετάλλαξη (`useEntityFiles`) | Αποτέλεσμα |
+ * |---|---|
+ * | `readOnce` χωρίς `if (listenerOwnsList) return` | «refetch/FILE_CREATED δεν ξαναδιαβάζουν» ⇒ 🔴 |
+ * | `onFallback` χωρίς `setListenerFailed(true)` | «μετά από αποτυχία ακροατή, το refetch διαβάζει» ⇒ 🔴 |
+ */
+describe('Α39.2 — useEntityFiles: με ζωντανό ακροατή καμία εφάπαξ ανάγνωση δεν αντικαθιστά τη λίστα', () => {
+  const DEED: FileScope = { domain: 'admin', category: 'documents', purpose: 'study-title-deed' };
+  type Listener = { onData: (result: { documents: FileRecord[] }) => void; onError: (err: unknown) => void };
+
+  function renderLive() {
+    const listener = {} as Listener;
+    (firestoreQueryService.subscribe as jest.Mock).mockImplementation((_key: string, onData: Listener['onData'], onError: Listener['onError']) => {
+      listener.onData = onData;
+      listener.onError = onError;
+      return jest.fn();
+    });
+    const hook = renderHook(() => useEntityFiles({
+      entityType: 'property_dossier', entityId: 'pdos_1', custody: { userId: 'uid_owner' }, scopes: [DEED], realtime: true,
+    }));
+    return { hook, listener };
+  }
+
+  function busHandler(event: string): (payload: unknown) => void {
+    const calls = (RealtimeService.subscribe as jest.Mock).mock.calls as [string, (payload: unknown) => void][];
+    const found = [...calls].reverse().find(([name]) => name === event);
+    if (!found) throw new Error(`no ${event} handler`);
+    return found[1];
+  }
+
+  beforeEach(() => {
+    (FileRecordService.getFilesByEntity as jest.Mock).mockReset().mockResolvedValue([]);
+    (RealtimeService.subscribe as jest.Mock).mockClear();
+  });
+
+  it('ό,τι φέρει ο ακροατής ΜΕΝΕΙ: ούτε το refetch ούτε το FILE_CREATED κάνουν ανάγνωση', async () => {
+    const { hook, listener } = renderLive();
+    await waitFor(() => expect(listener.onData).toBeDefined());
+    act(() => { listener.onData({ documents: [fileWith('f_new', DEED)] }); });
+
+    await act(async () => { await hook.result.current.refetch(); });
+    act(() => { busHandler('FILE_CREATED')({ fileId: 'f_other', file: { entityId: 'pdos_1', entityType: 'property_dossier' } }); });
+
+    expect(FileRecordService.getFilesByEntity).not.toHaveBeenCalled();
+    expect(hook.result.current.files.map((file) => file.id)).toEqual(['f_new']);
+  });
+
+  it('ο ακροατής απέτυχε (όχι δικαίωμα) ⇒ εφάπαξ ανάγνωση — και από εκεί και πέρα το refetch διαβάζει', async () => {
+    const { hook, listener } = renderLive();
+    await waitFor(() => expect(listener.onError).toBeDefined());
+    act(() => { listener.onError({ code: 'unavailable' }); });
+    await waitFor(() => expect(FileRecordService.getFilesByEntity).toHaveBeenCalledTimes(1));
+
+    await act(async () => { await hook.result.current.refetch(); });
+
+    expect(FileRecordService.getFilesByEntity).toHaveBeenCalledTimes(2);
   });
 });

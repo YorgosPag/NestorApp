@@ -123,6 +123,22 @@ export function readQueryNarrowing(
   return scopes ? {} : narrowing;
 }
 
+/**
+ * **Πώς φτάνουν τα αρχεία στη λίστα** — `true` ⇒ ο ακροατής (`onSnapshot`) **κατέχει** τη λίστα· αλλιώς εφάπαξ ανάγνωση.
+ *
+ * 🔴 **Γιατί οι καρτέλες με εμβέλειες είναι ΠΑΝΤΑ ζωντανές (ADR-866 §2.10.8 Β5, μετρημένο στην παραγωγή)**: χωρίς
+ * στένεμα (`readQueryNarrowing`) όλες οι καρτέλες μιας οντότητας στέλνουν το **ίδιο** canonical ερώτημα. Όταν ένας
+ * ακροατής του ζει ήδη, το SDK απαντά την `getDocs` από τη **δική του** όψη — «συγχρονισμένη» (`fromCache: false`)
+ * αλλά ~100ms **πίσω** από την εγγραφή που μόλις επιβεβαιώθηκε. Μετρημένο: `getDocs` τη στιγμή του `ready` ⇒ 3
+ * έγγραφα· ο ακροατής 97ms μετά ⇒ 4. Άρα «γράφω και ξαναρωτώ» **δεν** εγγυάται ότι βλέπω ό,τι έγραψα· ο ακροατής ναι.
+ */
+export function fileListIsLive(
+  displayStyle: string | undefined,
+  scopes: readonly FileScope[] | undefined,
+): boolean {
+  return displayStyle === 'floorplan-gallery' || scopes !== undefined;
+}
+
 const INTERNED_SCOPES = new Map<string, readonly FileScope[]>();
 
 /**

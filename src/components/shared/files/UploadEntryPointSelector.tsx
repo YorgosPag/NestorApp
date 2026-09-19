@@ -24,18 +24,17 @@
 import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SearchInput } from '@/components/ui/search/SearchInput';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import { selectOfferedEntryPoints } from '@/config/upload-entry-points';
-import * as LucideIcons from 'lucide-react';
 import '@/lib/design-system';
 import { gridPatterns } from '@/styles/design-tokens';
 // ADR-784 §10.7 / CHECK 3.28 — κοινό συμβόλαιο + κοινό πεδίο τίτλου με τον HierarchicalEntryPointSelector.
+// ADR-866 §2.10.8 Β4 — και η ΜΙΑ κάρτα τύπου: ήταν χειρόγραφο αντίγραφο του `EntryCard` (χωρίς `relative`).
 import {
+  EntryCard,
   EntryPointCustomTitleInput,
   type EntryPointSelectorBaseProps,
 } from './entry-point-selector-shared';
@@ -79,7 +78,6 @@ export function UploadEntryPointSelector({
   contactType,
   activePersonas,
 }: UploadEntryPointSelectorProps) {
-  const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const [searchQuery, setSearchQuery] = useState('');
@@ -128,13 +126,6 @@ export function UploadEntryPointSelector({
 
   const showSearch = entryPoints.length > 8;
 
-  // Get icon component from lucide-react (type-safe dynamic lookup)
-  const getIcon = (iconName?: string): LucideIcons.LucideIcon => {
-    if (!iconName) return LucideIcons.File;
-    const icons: Record<string, LucideIcons.LucideIcon | undefined> = LucideIcons as unknown as Record<string, LucideIcons.LucideIcon | undefined>;
-    return icons[iconName] ?? LucideIcons.File;
-  };
-
   return (
     <section className={cn('space-y-2', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>
       {/* Header */}
@@ -165,78 +156,16 @@ export function UploadEntryPointSelector({
         </p>
       ) : (
         <div className={`gap-2 grid ${gridPatterns.cards.chip}`}>
-          {filteredEntryPoints.map((entryPoint) => {
-            const Icon = getIcon(entryPoint.icon);
-            const isSelected = selectedEntryPointId === entryPoint.id;
-            const isCustomTitle = entryPoint.requiresCustomTitle === true;
-
-            return (
-              <Tooltip key={entryPoint.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onSelect(entryPoint)}
-                    className={cn(
-                      'flex flex-col items-center gap-2 p-2 rounded-lg border-2 transition-all',
-                      'hover:shadow-md hover:scale-105',
-                      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                      isSelected
-                        ? 'border-primary bg-primary/10 shadow-md scale-105'
-                        : isCustomTitle
-                          ? 'border-dashed border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40 hover:border-[hsl(var(--text-warning))]'
-                          : 'border-border bg-card hover:border-primary/50'
-                    )}
-                    role="radio"
-                    aria-checked={isSelected}
-                    aria-label={entryPoint.label[currentLanguage]}
-                  >
-                    {/* Icon */}
-                    <div
-                      className={cn(
-                        'flex items-center justify-center w-10 h-10 rounded-full',
-                        isSelected
-                          ? 'bg-primary text-primary-foreground'
-                          : isCustomTitle
-                            ? 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
-                            : `bg-muted ${colors.text.muted}`
-                      )}
-                    >
-                      <Icon className={iconSizes.md} aria-hidden="true" />
-                    </div>
-
-                    {/* Label */}
-                    <span
-                      className={cn(
-                        'text-xs font-medium text-center leading-tight',
-                        isSelected
-                          ? 'text-primary'
-                          : isCustomTitle
-                            ? 'text-[hsl(var(--text-warning))]'
-                            : 'text-foreground'
-                      )}
-                    >
-                      {entryPoint.label[currentLanguage]}
-                    </span>
-
-                    {/* Free-title hint for custom title entries */}
-                    {isCustomTitle && (
-                      <span className="text-[10px] text-[hsl(var(--text-warning))] leading-tight">
-                        {t('upload.freeTitle')}
-                      </span>
-                    )}
-
-                    {/* Selected indicator */}
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                {entryPoint.description?.[currentLanguage] && (
-                  <TooltipContent>{entryPoint.description[currentLanguage]}</TooltipContent>
-                )}
-              </Tooltip>
-            );
-          })}
+          {filteredEntryPoints.map((entryPoint) => (
+            <EntryCard
+              key={entryPoint.id}
+              entryPoint={entryPoint}
+              isSelected={selectedEntryPointId === entryPoint.id}
+              currentLanguage={currentLanguage}
+              onSelect={onSelect}
+              freeTitleLabel={t('upload.freeTitle')}
+            />
+          ))}
         </div>
       )}
 

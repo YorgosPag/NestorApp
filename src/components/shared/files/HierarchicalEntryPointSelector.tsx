@@ -22,8 +22,7 @@ import { SearchInput } from '@/components/ui/search/SearchInput';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import * as LucideIcons from 'lucide-react';
-import type { EntityType, FileCategory } from '@/config/domain-constants';
-import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
+import type { FloorInfo } from '@/config/upload-entry-points';
 import {
   getSortedEntryPoints,
   getUngroupedEntryPoints,
@@ -38,17 +37,22 @@ import {
 import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted card components
-import { EntryCard, GroupCard, getIcon } from './hierarchical-entry-cards';
+import { GroupCard } from './hierarchical-entry-cards';
 import { gridPatterns } from '@/styles/design-tokens';
 // ADR-784 §10.7 / CHECK 3.28 — κοινό συμβόλαιο + κοινό πεδίο τίτλου με τον UploadEntryPointSelector.
+// ADR-866 §2.10.8 Β4 — και η ΜΙΑ κάρτα τύπου (`EntryCard`), με τον ρόλο χειριστηρίου επιλογής.
 import {
+  EntryCard,
   EntryPointCustomTitleInput,
+  getIcon,
   type EntryPointSelectorBaseProps,
 } from './entry-point-selector-shared';
 
 // Re-exports for backward compatibility
-export { EntryCard, GroupCard } from './hierarchical-entry-cards';
-export type { EntryCardProps, GroupCardProps } from './hierarchical-entry-cards';
+export { GroupCard } from './hierarchical-entry-cards';
+export { EntryCard } from './entry-point-selector-shared';
+export type { GroupCardProps } from './hierarchical-entry-cards';
+export type { EntryCardProps } from './entry-point-selector-shared';
 
 // ============================================================================
 // TYPES

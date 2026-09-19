@@ -57,7 +57,7 @@ function toolbar(showWorkspace: boolean) {
       onTreeViewModeChange={() => undefined}
       displayStyle="standard"
       category="photos"
-      onToggleUploadZone={() => undefined}
+      onOpenUploadZone={() => undefined}
       onCapture={async () => undefined}
       uploading={false}
       loading={false}
@@ -93,5 +93,27 @@ describe('🏆 Α37.9 — ο χώρος ρωτιέται ΜΟΝΟ για ετα�
 
     expect(source).not.toMatch(/\buseWorkspace\s*\(/);
     expect(source).not.toMatch(/from '@\/contexts\/WorkspaceContext'/);
+  });
+});
+
+/**
+ * Α39.4 — ADR-866 §2.10.8 Β5 · Π4: το δέσιμο του διαχειριστή — δύο γραμμές που η ζωντανή επαλήθευση βρήκε λάθος.
+ *
+ * | Μετάλλαξη (`EntityFilesManager.tsx`) | Αποτέλεσμα |
+ * |---|---|
+ * | `onOpenUploadZone={() => setShowUploadZone(!showUploadZone)}` (Π4) | «ανοίγει, ποτέ εναλλαγή» ⇒ 🔴 |
+ * | `realtime: displayStyle === 'floorplan-gallery'` (Β5) | «ο κανόνας παράδοσης είναι ο ΕΝΑΣ» ⇒ 🔴 |
+ */
+describe('Α39.4 — EntityFilesManager: η εντολή ανοίγει · η παράδοση έρχεται από τον ΕΝΑ κανόνα', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'EntityFilesManager.tsx'), 'utf8');
+
+  it('«Ανέβασμα αρχείου» ΑΝΟΙΓΕΙ τη ζώνη — δεύτερο πάτημα δεν την κλείνει σιωπηλά (Π4)', () => {
+    expect(source).toMatch(/onOpenUploadZone=\{\(\) => setShowUploadZone\(true\)\}/);
+    expect(source).not.toMatch(/setShowUploadZone\(\s*!/);
+  });
+
+  it('ζωντανή ή όχι λίστα ⇒ `fileListIsLive(displayStyle, scopePolicy?.readScopes)` — κανένα χειρόγραφο κριτήριο (Β5)', () => {
+    expect(source).toMatch(/realtime: fileListIsLive\(displayStyle, scopePolicy\?\.readScopes\)/);
+    expect(source).not.toMatch(/realtime: displayStyle ===/);
   });
 });

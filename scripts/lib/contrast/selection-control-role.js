@@ -67,6 +67,9 @@ const SELECTION_PRIMITIVES = Object.freeze({
   'src/components/ui/progress.tsx': 'selectionControl',
   'src/components/ui/switch.tsx': 'COLOR_BRIDGE.switch',
   'src/components/ui/slider.tsx': '--slider-accent',
+  // ADR-866 §2.10.8 Β4 — η κάρτα τύπου εγγράφου (`role="radio"`) των επιλογέων μεταφόρτωσης: η επιλεγμένη ετικέτα
+  // ήταν `text-primary` ⇒ αόρατη στο σκοτεινό θέμα (μετρημένο στην παραγωγή). Πρώτο primitive έξω από το `ui/`.
+  'src/components/shared/files/entry-point-selector-shared.tsx': 'selectionControl',
 });
 
 /**

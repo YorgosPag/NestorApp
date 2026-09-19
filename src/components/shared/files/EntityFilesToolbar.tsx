@@ -46,7 +46,11 @@ export interface EntityFilesToolbarProps {
   onTreeViewModeChange: (mode: 'business' | 'technical') => void;
   displayStyle: 'standard' | 'media-gallery' | 'floorplan-gallery';
   category: FileCategory;
-  onToggleUploadZone: () => void;
+  /**
+   * «Ανέβασμα αρχείου» **ανοίγει** τη ζώνη — ποτέ εναλλαγή (ADR-866 §2.10.8 Π4): ήταν `!showUploadZone`, οπότε η ίδια
+   * εντολή μενού έκλεινε σιωπηλά μια ήδη ανοιχτή ζώνη. Το κλείσιμο ανήκει στο ✕ της ζώνης.
+   */
+  onOpenUploadZone: () => void;
   onCapture: (file: File, metadata: CaptureMetadata) => Promise<void>;
   uploading: boolean;
   loading: boolean;
@@ -95,7 +99,7 @@ export function EntityFilesToolbar({
   onTreeViewModeChange,
   displayStyle,
   category,
-  onToggleUploadZone,
+  onOpenUploadZone,
   onCapture,
   uploading,
   loading,
@@ -263,7 +267,7 @@ export function EntityFilesToolbar({
             <>
               <AddCaptureMenu
                 category={category}
-                onUploadClick={onToggleUploadZone}
+                onUploadClick={onOpenUploadZone}
                 onCapture={onCapture}
                 disabled={uploading}
                 loading={uploading}

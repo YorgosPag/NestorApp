@@ -64,7 +64,7 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { useFileDownload } from './hooks/useFileDownload';
 import { useEntityFilesSearch } from './hooks/useEntityFilesSearch';
 import { useStableFileCustody } from './hooks/useStableFileCustody';
-import type { FilesTabScopePolicy } from './utils/upload-scope';
+import { fileListIsLive, type FilesTabScopePolicy } from './utils/upload-scope';
 
 // Components
 import { EntityFilesToolbar } from './EntityFilesToolbar';
@@ -193,7 +193,7 @@ export function EntityFilesManager({
     scopes: scopePolicy?.readScopes,
     levelFloorId,
     autoFetch: true,
-    realtime: displayStyle === 'floorplan-gallery',
+    realtime: fileListIsLive(displayStyle, scopePolicy?.readScopes),
   });
 
   // =========================================================================
@@ -392,7 +392,7 @@ export function EntityFilesManager({
           onTreeViewModeChange={setTreeViewMode}
           displayStyle={displayStyle}
           category={category}
-          onToggleUploadZone={() => setShowUploadZone(!showUploadZone)}
+          onOpenUploadZone={() => setShowUploadZone(true)}
           onCapture={handleCapture}
           uploading={uploading}
           loading={loading}

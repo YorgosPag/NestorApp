@@ -1,6 +1,6 @@
 /**
- * Sub-components for HierarchicalEntryPointSelector (ADR-191)
- * Entry card and Group card render components, extracted for file-size compliance.
+ * Sub-components for HierarchicalEntryPointSelector (ADR-191) — the Group card.
+ * The entry card is shared with the flat selector: `entry-point-selector-shared.tsx` (ADR-866 §2.10.8 Β4).
  */
 
 'use client';
@@ -8,120 +8,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import * as LucideIcons from 'lucide-react';
-import type { UploadEntryPoint } from '@/config/upload-entry-points';
-import { getStudyGroupMeta, type StudyGroupMeta, type StudyGroup } from '@/config/study-groups-config';
+import type { StudyGroupMeta, StudyGroup } from '@/config/study-groups-config';
+// ADR-866 §2.10.8 Β4 — η κάρτα τύπου (`EntryCard`) και το `getIcon` ζουν πλέον στο κοινό αρχείο των δύο επιλογέων.
+import { getIcon } from './entry-point-selector-shared';
 import '@/lib/design-system';
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-export const getIcon = (iconName?: string): LucideIcons.LucideIcon => {
-  if (!iconName) return LucideIcons.File;
-  const icons: Record<string, LucideIcons.LucideIcon | undefined> =
-    LucideIcons as unknown as Record<string, LucideIcons.LucideIcon | undefined>;
-  return icons[iconName] ?? LucideIcons.File;
-};
-
-// ============================================================================
-// ENTRY CARD
-// ============================================================================
-
-export interface EntryCardProps {
-  entryPoint: UploadEntryPoint;
-  isSelected: boolean;
-  currentLanguage: 'el' | 'en';
-  showGroupBadge?: boolean;
-  onSelect: (entryPoint: UploadEntryPoint) => void;
-  freeTitleLabel: string;
-}
-
-export function EntryCard({
-  entryPoint,
-  isSelected,
-  currentLanguage,
-  showGroupBadge = false,
-  onSelect,
-  freeTitleLabel,
-}: EntryCardProps) {
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
-  const Icon = getIcon(entryPoint.icon);
-  const isCustomTitle = entryPoint.requiresCustomTitle === true;
-  const groupMeta = entryPoint.group ? getStudyGroupMeta(entryPoint.group) : undefined;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={() => onSelect(entryPoint)}
-          className={cn(
-            'relative flex flex-col items-center gap-2 p-2 rounded-lg border-2 transition-all',
-            'hover:shadow-md hover:scale-105',
-            'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-            isSelected
-              ? 'border-primary bg-primary/10 shadow-md scale-105'
-              : isCustomTitle
-                ? 'border-dashed border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40 hover:border-[hsl(var(--text-warning))]'
-                : 'border-border bg-card hover:border-primary/50'
-          )}
-          role="radio"
-          aria-checked={isSelected}
-          aria-label={entryPoint.label[currentLanguage]}
-        >
-          <div
-            className={cn(
-              'flex items-center justify-center w-10 h-10 rounded-full',
-              isSelected
-                ? 'bg-primary text-primary-foreground'
-                : isCustomTitle
-                  ? 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
-                  : `bg-muted ${colors.text.muted}`
-            )}
-          >
-            <Icon className={iconSizes.md} aria-hidden="true" />
-          </div>
-
-          <span
-            className={cn(
-              'text-xs font-medium text-center leading-tight',
-              isSelected
-                ? 'text-primary'
-                : isCustomTitle
-                  ? 'text-[hsl(var(--text-warning))]'
-                  : 'text-foreground'
-            )}
-          >
-            {entryPoint.label[currentLanguage]}
-          </span>
-
-          {isCustomTitle && (
-            <span className="text-[10px] text-[hsl(var(--text-warning))] leading-tight">
-              {freeTitleLabel}
-            </span>
-          )}
-
-          {showGroupBadge && groupMeta && (
-            <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full', groupMeta.bgClass, groupMeta.colorClass)}>
-              {groupMeta.label[currentLanguage]}
-            </span>
-          )}
-
-          {isSelected && (
-            <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
-          )}
-        </button>
-      </TooltipTrigger>
-      {entryPoint.description?.[currentLanguage] && (
-        <TooltipContent>{entryPoint.description[currentLanguage]}</TooltipContent>
-      )}
-    </Tooltip>
-  );
-}
 
 // ============================================================================
 // GROUP CARD

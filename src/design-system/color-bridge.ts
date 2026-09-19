@@ -306,6 +306,8 @@ export const COLOR_BRIDGE = {
     /** Περίγραμμα ανεπίλεκτου — WCAG 1.4.11 ≥3:1 (το `--input` έδινε 1,31:1). */
     outline: 'border-control-outline',
     checkedOutline: 'data-[state=checked]:border-control-accent',
+    /** Περίγραμμα επιλεγμένου χωρίς Radix state (κάρτα `role="radio"`, ADR-866 §2.10.8 Β4) — όπως `fill` ↔ `checkedFill`. */
+    accentOutline: 'border-control-accent',
     checkedFill: 'data-[state=checked]:bg-control-accent',
     /** Μελάνι ΠΑΝΩ στον τονισμό (✓) — αντιστρέφεται σε σκούρο στο σκοτεινό θέμα. */
     checkedInk: 'data-[state=checked]:text-control-accent-foreground',

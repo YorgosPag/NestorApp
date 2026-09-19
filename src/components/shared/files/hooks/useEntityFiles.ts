@@ -245,9 +245,23 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   // =========================================================================
   // 🏢 ADR-240: REAL-TIME LISTENER (Firestore onSnapshot) — `useEntityFilesRealtime`
   // Active only when realtime=true **and** the owner is known (ADR-866 §5.2).
+  //
+  // 🔴 ADR-866 §2.10.8 Β5 — **ο ακροατής ΚΑΤΕΧΕΙ τη λίστα**: όσο ζει, καμία εφάπαξ ανάγνωση (`refetch`, γεγονότα
+  // bus) δεν την αντικαθιστά. Μετρημένο στην παραγωγή: η ανάγνωση αμέσως μετά από δική μας εγγραφή απαντιέται από
+  // την όψη του ίδιου ακροατή **πριν** φτάσει η εγγραφή (`fromCache: false`, ~100ms πίσω) ⇒ έσβηνε ό,τι είχε φέρει
+  // ο ακροατής, και το αρχείο έμενε αόρατο μέχρι το χειροκίνητο «Ανανέωση». Αποτυχία ακροατή ⇒ εφάπαξ ανάγνωση.
   // =========================================================================
+  const [listenerFailed, setListenerFailed] = useState(false);
+  useEffect(() => { setListenerFailed(false); }, [entityType, entityId]);
+  const listenerOwnsList = realtime && !listenerFailed;
+
+  const readOnce = useCallback(async () => {
+    if (listenerOwnsList) return;
+    await fetchFiles();
+  }, [listenerOwnsList, fetchFiles]);
+
   useEntityFilesRealtime({
-    enabled: realtime,
+    enabled: listenerOwnsList,
     entityType,
     entityId,
     custody,
@@ -259,7 +273,10 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     onFiles: setFiles,
     onLoading: setLoading,
     onError: setError,
-    onFallback: () => { void fetchFiles().catch(() => { setLoading(false); }); },
+    onFallback: () => {
+      setListenerFailed(true);
+      void fetchFiles().catch(() => { setLoading(false); });
+    },
   });
 
   // =========================================================================
@@ -394,7 +411,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     const handleCreated = (payload: FileCreatedPayload) => {
       if (payload.file.entityId === entityId && payload.file.entityType === entityType) {
         logger.info('File created for current entity — refetching', { fileId: payload.fileId });
-        fetchFiles();
+        void readOnce();
       }
     };
 
@@ -420,13 +437,13 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
 
     const handleRestored = (payload: FileRestoredPayload) => {
       logger.info('File restored — refetching', { fileId: payload.fileId });
-      fetchFiles();
+      void readOnce();
     };
 
     const handleFileLinked = (payload: FileLinkCreatedPayload) => {
       if (payload.link.targetEntityType === entityType && payload.link.targetEntityId === entityId) {
         logger.info('File linked to current entity — refetching', { linkId: payload.linkId });
-        fetchFiles();
+        void readOnce();
       }
     };
 
@@ -438,7 +455,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     const unsub6 = RealtimeService.subscribe('FILE_SUPERSEDED', handleLeftActive);
 
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
-  }, [entityId, entityType, fetchFiles]);
+  }, [entityId, entityType, readOnce]);
 
   // =========================================================================
   // RETURN
@@ -448,7 +465,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     files,
     loading,
     error,
-    refetch: fetchFiles,
+    refetch: readOnce,
     moveToTrash,
     renameFile,
     updateDescription,

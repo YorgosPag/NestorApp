@@ -35,7 +35,6 @@
       "ignore": [
         "src/subapps/dxf-viewer-10-backup/**",
         "src/app/test.BACK/**",
-        "src/ai/**",
         "src/ai.back/**",
         "recovery/**",
         "functions/**",
