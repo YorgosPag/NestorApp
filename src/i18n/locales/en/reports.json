@@ -532,13 +532,6 @@
   "spaces": {
     "description": "Description",
     "parking": {
-      "statuses": {
-        "available": "Available",
-        "occupied": "Occupied",
-        "reserved": "Reserved",
-        "sold": "Sold",
-        "maintenance": "Maintenance"
-      },
       "types": {
         "standard": "Standard",
         "handicapped": "Handicapped",
@@ -578,14 +571,6 @@
       "description": "Description"
     },
     "storage": {
-      "statuses": {
-        "available": "Available",
-        "occupied": "Occupied",
-        "maintenance": "Maintenance",
-        "reserved": "Reserved",
-        "sold": "Sold",
-        "unavailable": "Unavailable"
-      },
       "types": {
         "large": "Large",
         "small": "Small",
@@ -598,6 +583,14 @@
       },
       "title": "Title",
       "description": "Description"
+    },
+    "operationalStatuses": {
+      "draft": "Draft",
+      "under-construction": "Under construction",
+      "inspection": "Inspection",
+      "maintenance": "Maintenance",
+      "ready": "Ready",
+      "unknown": "Not declared"
     }
   },
   "chart": {
@@ -621,7 +614,9 @@
       "insuranceClass": "Insurance class",
       "source": "Source",
       "priority": "Priority",
-      "milestone": "Milestone"
+      "milestone": "Milestone",
+      "availability": "Availability",
+      "operational": "Operational status"
     },
     "series": {
       "count": "Count",

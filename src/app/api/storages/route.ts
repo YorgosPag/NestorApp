@@ -7,7 +7,7 @@ import { isRoleBypass } from '@/lib/auth/roles';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { Storage, StorageType } from '@/types/storage/contracts';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -16,10 +16,11 @@ import {
   SPACE_COMMON_CREATE_FIELDS,
   mapCommonSpaceCreateFields,
 } from '@/lib/api/space-entity-fields';
-import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
+import { mapStorageDoc, isValidStorageType } from '@/lib/firestore-mappers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
+import { isTrashed } from '@/lib/firestore/trashed-status';
 
 // ADR-696 + ADR-742 §7undecies — βλ. `parking/route.ts`: τα κοινά πεδία των δύο
 // «χώρων» ζουν πλέον στον SSoT. Ιδιαίτερα των storages: `floorId`, `building`.
@@ -168,7 +169,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     snapshot.docs.forEach(doc => {
       const mapped = mapStorageDoc(doc.id, doc.data() as Record<string, unknown>);
       // ADR-281: Exclude soft-deleted records from normal list
-      if (mapped.status !== 'deleted') {
+      if (!isTrashed(mapped)) {
         allStorages.push(mapped);
       }
     });
@@ -220,7 +221,7 @@ interface StorageCreatePayload {
   /** Optional — storage can exist without building link */
   buildingId?: string;
   type?: StorageType;
-  status?: StorageStatus;
+  operationalStatus?: Storage['operationalStatus'];
   floor?: string;
   /** Floor document ID (Firestore foreign key) */
   floorId?: string;
@@ -246,14 +247,13 @@ export const POST = withStandardRateLimit(
         const buildingId = body.buildingId?.trim() || null;
 
         // Entity-specific fields (exclude common fields handled by createEntity)
-        // Τα έξι κοινά με τα `parking` έρχονται από τον SSoT· ο έλεγχος
-        // εγκυρότητας `type`/`status` μένει **εδώ** επίτηδες (τα parking δεν τον
-        // κάνουν — βλ. σχόλιο στον SSoT).
+        // Τα κοινά με τα `parking` (και η κατάσταση στη γέννηση, ADR-777 §8.60.20)
+        // έρχονται από τον SSoT· ο έλεγχος εγκυρότητας `type` μένει **εδώ**
+        // επίτηδες (τα parking δεν τον κάνουν — βλ. σχόλιο στον SSoT).
         const entitySpecificFields: Record<string, unknown> = {
           name: body.name.trim(),
           buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
-          status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
           ...mapCommonSpaceCreateFields(body),
         };
 

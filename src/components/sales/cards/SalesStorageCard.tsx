@@ -12,7 +12,8 @@ import { DollarSign, Calculator, Layers } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NO_PRICE_TOTAL } from '@/lib/listings/listing-price-label';
-import { salesCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
+import { salesCardPricing } from '@/components/sales/shared/sales-space-page';
+import { spaceStatusBadges } from '@/lib/units/unit-status-badges';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
 
@@ -40,15 +41,13 @@ export function SalesStorageCard({
   className,
 }: SalesStorageCardProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
+  // ADR-777 §8.60.20 — ξεχωριστό hook με ρητό namespace (ο CHECK 3.8 τα διαβάζει στατικά· πρότυπο ADR-744).
+  const { t: tUnit } = useTranslation('properties-enums');
 
-  const status = storage.status ?? 'available';
-
-  // Το χρώμα μιας κατάστασης είναι κοινό και για τους δύο χώρους — δες
-  // `sales-space-page`. Ήταν γραμμένο δύο φορές και μπορούσε να αποκλίνει.
-  const badges = useMemo(
-    () => [salesSpaceStatusBadge('storage', status, t)],
-    [t, status],
-  );
+  // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση, από το ΕΝΑ SSoT
+  // των μονάδων. Ως τις 2026-09-18 διάβαζε το παλιό `status`: θέση πωλημένη μαζί με ακίνητο
+  // εμφανιζόταν εδώ «Διαθέσιμη» — στη σελίδα ΠΩΛΗΣΕΩΝ.
+  const badges = useMemo(() => spaceStatusBadges(storage, tUnit), [storage, tUnit]);
 
   // ADR-777 Α6 + §8.60.14.14 — the ONE shared pricing helper, with the UNIT written in.
   const { price, pricePerSqm } = salesCardPricing(storage, t);

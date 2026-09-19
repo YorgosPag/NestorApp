@@ -108,7 +108,7 @@
         "createdAt": "Δημιουργία"
       }
     },
-    "units": {
+    "properties": {
       "label": "Μονάδες",
       "description": "Διαμερίσματα, καταστήματα, γραφεία και άλλες μονάδες ακινήτων",
       "fields": {
@@ -199,7 +199,7 @@
         "building": "Κτήριο",
         "locationZone": "Ζώνη",
         "type": "Τύπος",
-        "status": "Κατάσταση",
+        "operationalStatus": "Λειτουργική κατάσταση",
         "floor": "Όροφος",
         "area": "Εμβαδόν (τ.μ.)",
         "price": "Τιμή",
@@ -220,13 +220,6 @@
           "electric": "Ηλεκτρικό",
           "visitor": "Επισκέπτης"
         },
-        "status": {
-          "available": "Διαθέσιμη",
-          "occupied": "Κατειλημμένη",
-          "reserved": "Κρατημένη",
-          "sold": "Πωλημένη",
-          "maintenance": "Συντήρηση"
-        },
         "commercialStatus": {
           "unavailable": "Μη Διαθέσιμο",
           "for-sale": "Προς Πώληση",
@@ -246,7 +239,7 @@
         "code": "Κωδικός",
         "building": "Κτήριο",
         "type": "Τύπος",
-        "status": "Κατάσταση",
+        "operationalStatus": "Λειτουργική κατάσταση",
         "floor": "Όροφος",
         "area": "Εμβαδόν (τ.μ.)",
         "price": "Τιμή",
@@ -266,14 +259,6 @@
           "parking": "Parking",
           "garage": "Γκαράζ",
           "warehouse": "Αποθηκευτικός Χώρος"
-        },
-        "status": {
-          "available": "Διαθέσιμη",
-          "occupied": "Κατειλημμένη",
-          "maintenance": "Συντήρηση",
-          "reserved": "Κρατημένη",
-          "sold": "Πωλημένη",
-          "unavailable": "Μη Διαθέσιμη"
         },
         "commercialStatus": {
           "unavailable": "Μη Διαθέσιμο",

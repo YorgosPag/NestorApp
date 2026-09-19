@@ -532,13 +532,6 @@
   "spaces": {
     "description": "Επισκόπηση χώρων στάθμευσης και αποθήκευσης",
     "parking": {
-      "statuses": {
-        "available": "Διαθέσιμο",
-        "occupied": "Κατειλημμένο",
-        "reserved": "Δεσμευμένο",
-        "sold": "Πωλήθηκε",
-        "maintenance": "Συντήρηση"
-      },
       "types": {
         "standard": "Κανονικό",
         "handicapped": "ΑΜΕΑ",
@@ -578,14 +571,6 @@
       "description": "Στατιστικά χώρων ανά κτίριο"
     },
     "storage": {
-      "statuses": {
-        "available": "Διαθέσιμη",
-        "occupied": "Κατειλημμένη",
-        "maintenance": "Συντήρηση",
-        "reserved": "Δεσμευμένη",
-        "sold": "Πωλήθηκε",
-        "unavailable": "Μη διαθέσιμη"
-      },
       "types": {
         "large": "Μεγάλη",
         "small": "Μικρή",
@@ -598,6 +583,14 @@
       },
       "title": "Αποθήκες",
       "description": "Κατανομή αποθηκών ανά κατάσταση"
+    },
+    "operationalStatuses": {
+      "draft": "Ημιτελές",
+      "under-construction": "Υπό κατασκευή",
+      "inspection": "Σε επιθεώρηση",
+      "maintenance": "Υπό συντήρηση",
+      "ready": "Έτοιμο",
+      "unknown": "Δεν έχει δηλωθεί"
     }
   },
   "chart": {
@@ -621,7 +614,9 @@
       "insuranceClass": "Ασφαλιστική κλάση",
       "source": "Πηγή",
       "priority": "Προτεραιότητα",
-      "milestone": "Ορόσημο"
+      "milestone": "Ορόσημο",
+      "availability": "Διάθεση",
+      "operational": "Λειτουργία"
     },
     "series": {
       "count": "Πλήθος",

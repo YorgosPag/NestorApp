@@ -100,6 +100,7 @@ export type AppurtenanceUpdate = {
   'commercial.owners'?: SyncOwnerEntry[] | null;
   'commercial.ownerContactIds'?: string[] | null;
   'commercial.askingPrice'?: number | null;
+  'commercial.rentPrice'?: number | null;
   'commercial.finalPrice'?: number | null;
   'commercial.reservationDeposit'?: number | null;
   'commercial.reservationDate'?: string | null;
@@ -157,6 +158,9 @@ export function buildAppurtenanceUpdate(
         'commercial.owners': null,
         'commercial.ownerContactIds': null,
         'commercial.askingPrice': null,
+        // ADR-777 §8.60.20: και το ενοίκιο — ως τις 2026-09-18 έμενε κρυμμένο κάτω από το
+        // «Μη διαθέσιμο» και ξαναεμφανιζόταν στην επόμενη διάθεση ως τιμή που κανείς δεν έδωσε.
+        'commercial.rentPrice': null,
         'commercial.finalPrice': null,
         'commercial.reservationDeposit': null,
         'commercial.reservationDate': null,

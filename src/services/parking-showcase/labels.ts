@@ -24,7 +24,7 @@ import {
   resolveShowcaseMediaTitles,
   resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
-import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+import type { ParkingSpotType, ParkingLocationZone } from '@/types/parking';
 
 // ============================================================================
 // ENUM LABEL MAPS
@@ -47,24 +47,9 @@ const PARKING_TYPE_LABELS: Record<EnumLocale, Record<ParkingSpotType, string>> =
   },
 };
 
-const PARKING_STATUS_LABELS: Record<EnumLocale, Record<ParkingSpotStatus, string>> = {
-  el: {
-    available:   'Διαθέσιμη',
-    occupied:    'Κατειλημμένη',
-    reserved:    'Δεσμευμένη',
-    sold:        'Πουλήθηκε',
-    maintenance: 'Συντήρηση',
-    deleted:     'Διαγραμμένη',
-  },
-  en: {
-    available:   'Available',
-    occupied:    'Occupied',
-    reserved:    'Reserved',
-    sold:        'Sold',
-    maintenance: 'Maintenance',
-    deleted:     'Deleted',
-  },
-};
+// 🧹 ADR-777 §8.60.20 — εδώ ζούσε χάρτης ετικετών πάνω στο παλιό ανάμεικτο `status`
+//    («Διαθέσιμη / Κατειλημμένη / Συντήρηση…»). Η ετικέτα κατάστασης του showcase βγαίνει πλέον
+//    από το `translateSpaceStatus` (διάθεση + λειτουργική εξαίρεση, μέσω του ΕΝΟΣ αναγνώστη).
 
 const PARKING_ZONE_LABELS: Record<EnumLocale, Record<ParkingLocationZone, string>> = {
   el: {
@@ -84,7 +69,6 @@ const PARKING_ZONE_LABELS: Record<EnumLocale, Record<ParkingLocationZone, string
 };
 
 export const translateParkingType = createEnumLabelTranslator(PARKING_TYPE_LABELS);
-export const translateParkingStatus = createEnumLabelTranslator(PARKING_STATUS_LABELS);
 export const translateParkingZone = createEnumLabelTranslator(PARKING_ZONE_LABELS);
 
 // ============================================================================

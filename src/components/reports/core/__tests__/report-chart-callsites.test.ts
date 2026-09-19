@@ -45,8 +45,15 @@ const PALETTE_SLOT = /--(?:report-)?chart-\d/;
 /** A category label that came from the locale files, in any of its three spellings. */
 const TRANSLATED_CATEGORY_LABEL = /categoryLabel[:=]\s*\{?\s*t\(|labelKey:/;
 
-/** How many charts this domain had when the gate was written (ADR-710 §3.1). */
-const KNOWN_CALL_SITE_COUNT = 34;
+/**
+ * How many chart call-site FILES this domain has (ADR-710 §3.1 counted 34).
+ *
+ * 33 since ADR-777 §8.60.20: `ParkingOccupancyChart` and `StorageUtilizationChart` were twin
+ * files (CHECK 3.28) and now both render through ONE `SpaceStatusChart` — the same pies, one
+ * file fewer. A real de-duplication, not a scan that lost files: the canary still fails on
+ * an empty (or shrunken-by-accident) list.
+ */
+const KNOWN_CALL_SITE_COUNT = 33;
 
 function collectTsx(dir: string, found: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

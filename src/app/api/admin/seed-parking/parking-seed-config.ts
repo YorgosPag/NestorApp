@@ -12,7 +12,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-001',
     type: 'standard',
-    status: 'available',
+    commercialStatus: 'for-sale',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Δεξιά της εισόδου',
     area: 12.5,
@@ -22,7 +23,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-002',
     type: 'standard',
-    status: 'sold',
+    commercialStatus: 'sold',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Δεξιά της εισόδου',
     area: 12.5,
@@ -32,7 +34,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-003',
     type: 'handicapped',
-    status: 'available',
+    commercialStatus: 'for-sale',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Κοντά στον ανελκυστήρα',
     area: 15.0,
@@ -42,7 +45,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-004',
     type: 'standard',
-    status: 'reserved',
+    commercialStatus: 'reserved',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Αριστερά της εισόδου',
     area: 12.5,
@@ -52,7 +56,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-005',
     type: 'electric',
-    status: 'available',
+    commercialStatus: 'for-sale',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Κοντά στον πίνακα ρεύματος',
     area: 13.0,
@@ -62,7 +67,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-006',
     type: 'motorcycle',
-    status: 'available',
+    commercialStatus: 'for-sale',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Γωνία βόρεια',
     area: 5.0,
@@ -72,7 +78,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-007',
     type: 'motorcycle',
-    status: 'sold',
+    commercialStatus: 'sold',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -1',
     location: 'Γωνία βόρεια',
     area: 5.0,
@@ -82,7 +89,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-008',
     type: 'standard',
-    status: 'available',
+    commercialStatus: 'for-sale',
+    operationalStatus: 'ready',
     floor: 'Υπόγειο -2',
     location: 'Κεντρική περιοχή',
     area: 12.5,
@@ -92,7 +100,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-009',
     type: 'visitor',
-    status: 'available',
+    commercialStatus: 'for-sale',
+    operationalStatus: 'ready',
     floor: 'Ισόγειο',
     location: 'Μπροστά από την είσοδο',
     area: 14.0,
@@ -102,7 +111,8 @@ export const PARKING_TEMPLATES: readonly ParkingSpotTemplate[] = [
   {
     number: 'P-010',
     type: 'standard',
-    status: 'maintenance',
+    commercialStatus: 'unavailable',
+    operationalStatus: 'maintenance',
     floor: 'Υπόγειο -2',
     location: 'Πίσω αριστερά',
     area: 12.5,

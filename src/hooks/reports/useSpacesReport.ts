@@ -31,10 +31,13 @@ const spacesReportCache = createStaleCache<SpacesReportPayload>('report-spaces')
 
 export interface UseSpacesReportReturn {
   kpis: ReportKPI[];
-  parkingStatusPie: { name: string; value: number }[];
+  /** ADR-777 §8.60.20 — ανά `commercialStatus` / ανά `operationalStatus` (ήταν ένα ανάμεικτο `status`). */
+  parkingCommercialPie: { name: string; value: number }[];
+  parkingOperationalPie: { name: string; value: number }[];
   parkingTypePie: { name: string; value: number }[];
   parkingZonePie: { name: string; value: number }[];
-  storageStatusPie: { name: string; value: number }[];
+  storageCommercialPie: { name: string; value: number }[];
+  storageOperationalPie: { name: string; value: number }[];
   storageTypePie: { name: string; value: number }[];
   buildingValues: BuildingValueItem[];
   loading: boolean;
@@ -138,8 +141,13 @@ export function useSpacesReport(): UseSpacesReportReturn {
     () => payload ? buildSpaceKPIs(payload, t) : [],
     [payload, t],
   );
-  const parkingStatusPie = useMemo(
-    () => payload ? buildRecordPie(payload.parking.byStatus, 'spaces.parking.statuses', t) : [],
+  // ADR-777 §8.60.20 — τα ΙΔΙΑ προθέματα με το `space-status-pies` (αλλιώς η σειρά δεν ταιριάζει).
+  const parkingCommercialPie = useMemo(
+    () => payload ? buildRecordPie(payload.parking.byCommercialStatus, 'projects.unitStatus.statuses', t) : [],
+    [payload, t],
+  );
+  const parkingOperationalPie = useMemo(
+    () => payload ? buildRecordPie(payload.parking.byOperationalStatus, 'spaces.operationalStatuses', t) : [],
     [payload, t],
   );
   const parkingTypePie = useMemo(
@@ -150,8 +158,12 @@ export function useSpacesReport(): UseSpacesReportReturn {
     () => payload ? buildRecordPie(payload.parking.byZone, 'spaces.parking.zones', t) : [],
     [payload, t],
   );
-  const storageStatusPie = useMemo(
-    () => payload ? buildRecordPie(payload.storage.byStatus, 'spaces.storage.statuses', t) : [],
+  const storageCommercialPie = useMemo(
+    () => payload ? buildRecordPie(payload.storage.byCommercialStatus, 'projects.unitStatus.statuses', t) : [],
+    [payload, t],
+  );
+  const storageOperationalPie = useMemo(
+    () => payload ? buildRecordPie(payload.storage.byOperationalStatus, 'spaces.operationalStatuses', t) : [],
     [payload, t],
   );
   const storageTypePie = useMemo(
@@ -165,10 +177,12 @@ export function useSpacesReport(): UseSpacesReportReturn {
 
   return {
     kpis,
-    parkingStatusPie,
+    parkingCommercialPie,
+    parkingOperationalPie,
     parkingTypePie,
     parkingZonePie,
-    storageStatusPie,
+    storageCommercialPie,
+    storageOperationalPie,
     storageTypePie,
     buildingValues,
     loading,

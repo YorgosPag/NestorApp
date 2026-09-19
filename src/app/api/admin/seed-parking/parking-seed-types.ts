@@ -1,4 +1,6 @@
-import type { ParkingSpotStatus, ParkingSpotType } from '@/types/parking';
+import type { ParkingSpotType } from '@/types/parking';
+import type { CommercialStatus } from '@/constants/commercial-statuses';
+import type { OperationalStatus } from '@/constants/operational-statuses';
 
 export interface ParkingTargetBuilding {
   id: string;
@@ -9,7 +11,9 @@ export interface ParkingTargetBuilding {
 export interface ParkingSpotTemplate {
   number: string;
   type: ParkingSpotType;
-  status: ParkingSpotStatus;
+  /** ADR-777 §8.60.20 — διάθεση και λειτουργία χωριστά (όχι το παλιό ανάμεικτο `status`). */
+  commercialStatus: CommercialStatus;
+  operationalStatus: OperationalStatus;
   floor: string;
   location: string;
   area: number;
@@ -31,7 +35,8 @@ export interface ParkingPreviewRecord {
   previewId: string;
   buildingId: string;
   type: ParkingSpotType;
-  status: ParkingSpotStatus;
+  commercialStatus: CommercialStatus;
+  operationalStatus: OperationalStatus;
 }
 
 export interface ForeignKeyMigrationChange {

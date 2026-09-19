@@ -23,6 +23,7 @@ import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { operationalStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import '@/lib/design-system';
 
 import type { CardViewModel } from '../shared/card-model.types';
@@ -38,21 +39,7 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string;
 // 🏢 OPERATIONAL / COMMERCIAL STATUS MAPPINGS
 // =============================================================================
 
-// Grid: operational status only.
-const OPERATIONAL_STATUS_VARIANTS: Record<string, GridCardBadgeVariant> = {
-  'ready': 'success',
-  'under-construction': 'warning',
-  'inspection': 'info',
-  'maintenance': 'secondary',
-  'draft': 'default',
-};
-const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
-  'ready': 'operationalStatus.ready',
-  'under-construction': 'operationalStatus.underConstruction',
-  'inspection': 'operationalStatus.inspection',
-  'maintenance': 'operationalStatus.maintenance',
-  'draft': 'operationalStatus.draft',
-};
+// Grid: operational status only — ετικέτα + απόχρωση από το ΕΝΑ SSoT των μονάδων (ADR-777 §8.60.20).
 
 // List: operationalStatus||status, different variant/label map.
 const LIST_STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
@@ -156,13 +143,9 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
   }, [property, showCommercialPrices, t]);
 
   const badges = useMemo<GridCardBadge[]>(() => {
-    const opStatus = property.operationalStatus || 'ready';
-    return buildPropertyBadges(
-      OPERATIONAL_STATUS_LABEL_KEYS[opStatus] || 'operationalStatus.ready',
-      OPERATIONAL_STATUS_VARIANTS[opStatus] || 'success',
-      property,
-      t,
-    );
+    // Αδήλωτη ⇒ «Έτοιμο», όπως πάντα έκανε η κάρτα ακινήτου (αμετάβλητη συμπεριφορά).
+    const spec = operationalStatusBadge(property.operationalStatus) ?? operationalStatusBadge('ready');
+    return buildPropertyBadges(`${UNIT_STATUS_NAMESPACE}:${spec?.labelKey ?? ''}`, spec?.variant ?? 'success', property, t);
   }, [property, t]);
 
   const name = property.name || property.code || property.id;

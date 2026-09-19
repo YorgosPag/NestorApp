@@ -128,7 +128,10 @@ export interface CrmReportData {
 export interface SpacesReportData {
   parking: {
     total: number;
-    byStatus: Record<string, number>;
+    /** ADR-777 §8.60.20 — ανά `commercialStatus` (ήταν `byStatus`, πάνω στο παλιό ανάμεικτο πεδίο). */
+    byCommercialStatus: Readonly<Record<string, number>>;
+    /** ADR-777 §8.60.20 — ανά `operationalStatus` (αδήλωτο ⇒ `unknown`). */
+    byOperationalStatus: Readonly<Record<string, number>>;
     byType: Record<string, number>;
     byZone: Record<string, number>;
     byBuilding: Record<string, number>;
@@ -140,7 +143,8 @@ export interface SpacesReportData {
   };
   storage: {
     total: number;
-    byStatus: Record<string, number>;
+    byCommercialStatus: Readonly<Record<string, number>>;
+    byOperationalStatus: Readonly<Record<string, number>>;
     byType: Record<string, number>;
     byBuilding: Record<string, number>;
     utilizationRate: number;
@@ -285,7 +289,10 @@ export interface CommunicationDoc {
 }
 
 export interface ParkingDoc {
+  /** Κύκλος ζωής — ή, σε παλιά έγγραφα, το ανάμεικτο `status` (το διαβάζει μόνο ο αναγνώστης). */
   status?: string;
+  commercialStatus?: string;
+  operationalStatus?: string;
   type?: string;
   price?: number;
   buildingId?: string;
@@ -294,6 +301,8 @@ export interface ParkingDoc {
 
 export interface StorageDoc {
   status?: string;
+  commercialStatus?: string;
+  operationalStatus?: string;
   type?: string;
   area?: number;
   price?: number;

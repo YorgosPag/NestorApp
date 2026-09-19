@@ -685,7 +685,8 @@ export interface ParkingCreatedPayload {
     number?: string;
     buildingId?: string;
     type?: string;
-    status?: string;
+    /** ADR-777 §8.60.20 — λειτουργική κατάσταση (το `status` είναι πλέον μόνο κύκλος ζωής). */
+    operationalStatus?: string;
   };
   timestamp: number;
 }
@@ -698,7 +699,8 @@ export interface ParkingUpdatedPayload {
   updates: {
     number?: string;
     type?: string;
-    status?: string;
+    /** ADR-777 §8.60.20 — λειτουργική κατάσταση (το `status` είναι πλέον μόνο κύκλος ζωής). */
+    operationalStatus?: string;
     floor?: string;
     area?: number;
     price?: number;
@@ -728,7 +730,8 @@ export interface StorageCreatedPayload {
     name?: string;
     buildingId?: string;
     type?: string;
-    status?: string;
+    /** ADR-777 §8.60.20 — λειτουργική κατάσταση (το `status` είναι πλέον μόνο κύκλος ζωής). */
+    operationalStatus?: string;
   };
   timestamp: number;
 }
@@ -741,7 +744,8 @@ export interface StorageUpdatedPayload {
   updates: {
     name?: string;
     type?: string;
-    status?: string;
+    /** ADR-777 §8.60.20 — λειτουργική κατάσταση (το `status` είναι πλέον μόνο κύκλος ζωής). */
+    operationalStatus?: string;
     floor?: string;
     area?: number;
     buildingId?: string | null;

@@ -8,6 +8,7 @@ import {
   propertyTypeFilterField,
 } from './property-filter-fields';
 import { COMMON_FILTER_LABELS, FL, FT, PROPERTY_FILTER_LABELS, SP, UNIFIED_STATUS_FILTER_LABELS } from './shared';
+import { OPERATIONAL_STATUS_FILTER_OPTIONS } from './unit-status-filter-options';
 
 export const propertyListFiltersConfig: FilterPanelConfig = {
   title: FT.units,
@@ -53,22 +54,10 @@ export const propertyListFiltersConfig: FilterPanelConfig = {
           // ✅ DOMAIN SEPARATION: Operational statuses (physical truth)
           // Removed sales statuses (for-sale/sold/reserved)
           // 🏢 PR1.2: i18n keys directly (avoid circular dependency)
+          // ADR-777 §8.60.20 — ΙΔΙΕΣ επιλογές με τους χώρους (ήταν χειρόγραφο αντίγραφο εδώ).
           options: [
             { value: "all", label: "filters.allStatuses" },
-            { value: "ready", label: "properties-enums:operationalStatus.ready" },
-            {
-              value: "under-construction",
-              label: "properties-enums:operationalStatus.underConstruction",
-            },
-            {
-              value: "inspection",
-              label: "properties-enums:operationalStatus.inspection",
-            },
-            {
-              value: "maintenance",
-              label: "properties-enums:operationalStatus.maintenance",
-            },
-            { value: "draft", label: "properties-enums:operationalStatus.draft" },
+            ...OPERATIONAL_STATUS_FILTER_OPTIONS,
           ],
         },
       ],

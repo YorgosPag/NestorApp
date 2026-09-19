@@ -14,6 +14,11 @@
 import 'server-only';
 
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import {
+  isEditorCommercialStatus,
+  isTransactionOwnedCommercialStatus,
+  normalizeCommercialStatus,
+} from '@/constants/commercial-statuses';
 
 // ============================================================================
 // LOCKED FIELD DEFINITIONS
@@ -105,6 +110,38 @@ export function isPropertyRevertTransition(
 }
 
 /**
+ * 🛡️ **Έξοδος από συναλλαγή μόνο από τη δική της πράξη** (ADR-777 §8.60.20).
+ *
+ * Το `SOLD_LOCKED_FIELDS` κλειδώνει το `commercialStatus` για `sold`/`rented`, αλλά το
+ * `RESERVED_LOCKED_FIELDS` **όχι** — άρα ως τις 2026-09-18 ένα PATCH `reserved → for-rent` ή
+ * `→ unavailable` περνούσε, και το ακίνητο έβγαινε από την κράτηση **με τον αγοραστή ακόμη
+ * γραμμένο**. Ο ίδιος κανόνας που φυλάει ήδη τους χώρους (`mapSpaceCommercialFields`, §8.60.18),
+ * με τα **ίδια** κατηγορήματα — όχι δεύτερη λίστα.
+ *
+ * Επιτρέπονται: ίδια κατάσταση (ιδεμπότητα — `ChangePriceDialog`) · συναλλαγή → συναλλαγή
+ * (`reserved → sold`, την ελέγχει το `validateCommercialTransaction`) · η επίσημη ακύρωση
+ * (`isPropertyRevertTransition`, ελέγχεται **πριν** από εδώ).
+ *
+ * @throws ApiError(409) όταν μια φόρμα επιχειρεί να βγάλει μονάδα από συναλλαγή.
+ */
+export function validateTransactionExit(
+  currentStatus: string | null | undefined,
+  body: Record<string, unknown>,
+): void {
+  if (body.commercialStatus === undefined) return;
+  const current = normalizeCommercialStatus(currentStatus);
+  const requested = normalizeCommercialStatus(body.commercialStatus);
+  if (!isTransactionOwnedCommercialStatus(current)) return;
+  // Ίδια κατάσταση ή συναλλαγή → συναλλαγή: και τα δύο ΔΕΝ είναι κατάσταση επεξεργαστή ⇒ περνούν εδώ
+  // (ένας ξεχωριστός έλεγχος «ίδια κατάσταση» ήταν περιττός — ισοδύναμη μετάλλαξη M14).
+  if (!isEditorCommercialStatus(requested)) return;
+  throw new ApiError(
+    409,
+    `Cannot move a ${current} property to ${requested} from an editor; revert the transaction first`,
+  );
+}
+
+/**
  * Convenience wrapper: runs `validatePropertyFieldLocking` UNLESS the body
  * matches `isPropertyRevertTransition`. Keeps PATCH handlers concise while
  * preserving the defense-in-depth guard — the revert flow is the ONE
@@ -116,4 +153,5 @@ export function validatePropertyFieldLockingUnlessRevert(
 ): void {
   if (isPropertyRevertTransition(currentStatus, body)) return;
   validatePropertyFieldLocking(currentStatus, Object.keys(body));
+  validateTransactionExit(currentStatus, body);
 }

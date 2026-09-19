@@ -1,5 +1,6 @@
 // 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
 import type { ProjectStructure } from "@/services/projects/contracts";
+import { countSpaceStatuses } from "@/lib/spaces/space-availability";
 
 /**
  * 🏢 ENTERPRISE: Project Structure Statistics
@@ -57,13 +58,11 @@ export const getTotals = (structure: ProjectStructure): ProjectTotals => {
   // ==========================================================================
   // STORAGE STATS
   // ==========================================================================
-  const totalStorages = structure.buildings.reduce((s, b) => s + (b.storages?.length || 0), 0);
-  const soldStorages = structure.buildings.reduce(
-    (s, b) => s + (b.storages?.filter(st => st.status === "sold").length || 0), 0
-  );
-  const availableStorages = structure.buildings.reduce(
-    (s, b) => s + (b.storages?.filter(st => st.status === "available").length || 0), 0
-  );
+  // ADR-777 §8.60.20 — από το `commercialStatus`, μέσω του ΕΝΟΣ SSoT (όχι το παλιό ανάμεικτο `status`).
+  const storageCounts = countSpaceStatuses(structure.buildings.flatMap(b => b.storages ?? []));
+  const totalStorages = storageCounts.total;
+  const soldStorages = storageCounts.byAvailability.sold;
+  const availableStorages = storageCounts.byAvailability.listed;
   const storagesArea = structure.buildings.reduce(
     (s, b) => s + (b.storages?.reduce((x, st) => x + (st.area || 0), 0) || 0), 0
   );
@@ -71,13 +70,10 @@ export const getTotals = (structure: ProjectStructure): ProjectTotals => {
   // ==========================================================================
   // PARKING STATS
   // ==========================================================================
-  const totalParkingSpots = structure.buildings.reduce((s, b) => s + (b.parkingSpots?.length || 0), 0);
-  const soldParkingSpots = structure.buildings.reduce(
-    (s, b) => s + (b.parkingSpots?.filter(p => p.status === "sold").length || 0), 0
-  );
-  const availableParkingSpots = structure.buildings.reduce(
-    (s, b) => s + (b.parkingSpots?.filter(p => p.status === "available").length || 0), 0
-  );
+  const parkingCounts = countSpaceStatuses(structure.buildings.flatMap(b => b.parkingSpots ?? []));
+  const totalParkingSpots = parkingCounts.total;
+  const soldParkingSpots = parkingCounts.byAvailability.sold;
+  const availableParkingSpots = parkingCounts.byAvailability.listed;
   const parkingArea = structure.buildings.reduce(
     (s, b) => s + (b.parkingSpots?.reduce((x, p) => x + (p.area || 0), 0) || 0), 0
   );

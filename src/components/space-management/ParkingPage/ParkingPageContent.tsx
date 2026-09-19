@@ -37,10 +37,10 @@ import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
 import { parkingFiltersConfig } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 import { ListContainer, PageContainer, DetailsContainer } from '@/core/containers';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
-import {
-  PARKING_TYPE_LABELS,
-  PARKING_STATUS_LABELS
-} from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { PARKING_TYPE_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { spaceAvailabilityLabelKey } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
+import { isSpaceAvailabilityBucket } from '@/lib/spaces/space-availability';
+import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
 // ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
@@ -68,13 +68,13 @@ const EMPTY_PARKING: ParkingSpot = {
   id: '',
   number: '',
   type: 'standard',
-  status: 'available',
+  ...NEW_SPACE_STATUSES,
   floor: '',
 };
 
 export function ParkingPageContent() {
   // ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash', 'filters']);
   const iconSizes = useIconSizes();
   const _colors = useSemanticColors();
 
@@ -179,13 +179,14 @@ export function ParkingPageContent() {
       color: "blue"
     },
     {
-      title: PARKING_STATUS_LABELS.available,
+      // ADR-777 §8.60.20 — «στην αγορά», από το `commercialStatus` (ίδιος κουβάς με φίλτρα και πίνακες).
+      title: t(spaceAvailabilityLabelKey('listed'), { ns: 'filters' }),
       value: stats.availableParkingSpots,
       icon: CheckCircle,
       color: "green"
     },
     {
-      title: PARKING_STATUS_LABELS.sold,
+      title: t(spaceAvailabilityLabelKey('sold'), { ns: 'filters' }),
       value: stats.soldParkingSpots,
       icon: Euro,
       color: "purple"
@@ -247,9 +248,9 @@ export function ParkingPageContent() {
                   <DistributionCard
                     title={t('pages.parking.dashboard.statusDistribution')}
                     icon={BarChart3}
-                    distribution={stats.parkingByStatus}
-                    labelFor={(status) =>
-                      PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status
+                    distribution={stats.parkingByAvailability}
+                    labelFor={(bucket) =>
+                      isSpaceAvailabilityBucket(bucket) ? t(spaceAvailabilityLabelKey(bucket), { ns: 'filters' }) : bucket
                     }
                   />
                   <DistributionCard

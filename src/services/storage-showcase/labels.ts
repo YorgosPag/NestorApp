@@ -24,7 +24,7 @@ import {
   resolveShowcaseMediaTitles,
   resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
-import type { StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { StorageType } from '@/types/storage/contracts';
 
 // ============================================================================
 // ENUM LABEL MAPS
@@ -55,29 +55,11 @@ const STORAGE_TYPE_LABELS: Record<EnumLocale, Record<StorageType, string>> = {
   },
 };
 
-const STORAGE_STATUS_LABELS: Record<EnumLocale, Record<StorageStatus, string>> = {
-  el: {
-    available:   'Διαθέσιμη',
-    occupied:    'Κατειλημμένη',
-    maintenance: 'Συντήρηση',
-    reserved:    'Δεσμευμένη',
-    sold:        'Πουλήθηκε',
-    unavailable: 'Μη διαθέσιμη',
-    deleted:     'Διαγραμμένη',
-  },
-  en: {
-    available:   'Available',
-    occupied:    'Occupied',
-    maintenance: 'Maintenance',
-    reserved:    'Reserved',
-    sold:        'Sold',
-    unavailable: 'Unavailable',
-    deleted:     'Deleted',
-  },
-};
+// 🧹 ADR-777 §8.60.20 — εδώ ζούσε χάρτης ετικετών πάνω στο παλιό ανάμεικτο `status`
+//    («Διαθέσιμη / Κατειλημμένη / Συντήρηση…»). Η ετικέτα κατάστασης του showcase βγαίνει πλέον
+//    από το `translateSpaceStatus` (διάθεση + λειτουργική εξαίρεση, μέσω του ΕΝΟΣ αναγνώστη).
 
 export const translateStorageType = createEnumLabelTranslator(STORAGE_TYPE_LABELS);
-export const translateStorageStatus = createEnumLabelTranslator(STORAGE_STATUS_LABELS);
 
 // ============================================================================
 // LABEL TYPES

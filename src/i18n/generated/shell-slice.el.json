@@ -3653,16 +3653,6 @@
       "title": "Χρήστης"
     }
   },
-  "parking": {
-    "status": {
-      "available": "Διαθέσιμη",
-      "maintenance": "Συντήρηση",
-      "occupied": "Κατειλημμένη",
-      "owner": "Ιδιοκτήτης",
-      "reserved": "Κρατημένη",
-      "sold": "Πωλημένη"
-    }
-  },
   "projects": {
     "tabs": {
       "subtabs": {
@@ -3670,6 +3660,29 @@
           "backToProject": "Πίσω στο Έργο"
         }
       }
+    }
+  },
+  "properties-enums": {
+    "commercialStatus": {
+      "coming-soon": "Σύντομα Διαθέσιμο",
+      "deleted": "Διαγραμμένο",
+      "for-rent": "Προς ενοικίαση",
+      "for-sale": "Προς πώληση",
+      "for-sale-and-rent": "Προς πώληση και ενοικίαση",
+      "landowner": "Ιδιοκτήτης Γης",
+      "off-market": "Εκτός Αγοράς",
+      "rented": "Ενοικιάστηκε",
+      "reserved": "Κρατημένο",
+      "sold": "Πωλήθηκε",
+      "unavailable": "Μη διαθέσιμο",
+      "under-negotiation": "Υπό Διαπραγμάτευση"
+    },
+    "operationalStatus": {
+      "draft": "Ημιτελές",
+      "inspection": "Σε επιθεώρηση",
+      "maintenance": "Υπό συντήρηση",
+      "ready": "Έτοιμο",
+      "under-construction": "Υπό κατασκευή"
     }
   },
   "property-market": {

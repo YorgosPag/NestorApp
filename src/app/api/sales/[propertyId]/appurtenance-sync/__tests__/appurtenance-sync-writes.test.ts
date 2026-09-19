@@ -103,6 +103,14 @@ describe('Α2 · η επαναφορά βγάζει τον χώρο ΕΚΤΟΣ �
     expect(update['commercial.reservationDeposit']).toBeNull();
   });
 
+  it('🔴 Α2ε · ADR-777 §8.60.20 — η επαναφορά σβήνει ΚΑΙ τα δύο ζητούμενα ποσά (πώληση ΚΑΙ ενοίκιο)', () => {
+    // Ως τις 2026-09-18 έμενε το `rentPrice`: κρυμμένο κάτω από «Μη διαθέσιμο», ξαναεμφανιζόταν
+    // στην επόμενη διάθεση ως ενοίκιο που κανείς δεν έδωσε.
+    const update = build('revert');
+    expect(update['commercial.askingPrice']).toBeNull();
+    expect(update['commercial.rentPrice']).toBeNull();
+  });
+
   it('Α2δ · η σταθερά ΔΕΝ είναι ψευδώνυμο του DEFAULT — ίδια τιμή, άλλο ερώτημα', () => {
     // Συμπίπτουν σήμερα. Η άγκυρα κλειδώνει ότι είναι **δύο δηλώσεις**: όταν
     // αλλάξει «τι είναι μια νεοδημιουργημένη μονάδα», δεν σέρνει μαζί της το
@@ -158,6 +166,8 @@ describe('Α4 · καμία ενέργεια δεν αγγίζει πεδίο ε
     'commercial.owners',
     'commercial.ownerContactIds',
     'commercial.askingPrice',
+    // ADR-777 §8.60.20 — η επαναφορά σβήνει και το ενοίκιο (δηλωμένο στον τύπο `AppurtenanceUpdate`).
+    'commercial.rentPrice',
     'commercial.finalPrice',
     'commercial.reservationDeposit',
     'commercial.reservationDate',

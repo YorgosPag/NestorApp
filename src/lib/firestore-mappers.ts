@@ -7,11 +7,10 @@
  * @see ADR-index for centralization decision
  */
 
-import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { Storage, StorageType } from '@/types/storage/contracts';
 import type {
   ParkingSpot,
   ParkingSpotType,
-  ParkingSpotStatus,
   ParkingLocationZone,
 } from '@/types/parking';
 import type {
@@ -24,9 +23,9 @@ import type {
   PropertyCoverage,
 } from '@/types/property';
 import type { SpaceCommercialData } from '@/types/sales-shared';
-import { normalizeCommercialStatus, type CommercialStatus } from '@/constants/commercial-statuses';
-import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
+import type { OperationalStatus } from '@/constants/operational-statuses';
+import { resolveSpaceStatuses, type SpaceStatuses } from '@/lib/spaces/space-status-split';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { normalizeToDate } from '@/lib/date-local';
 
@@ -48,9 +47,8 @@ import { normalizeToDate } from '@/lib/date-local';
  * ρητά ότι δεν έχει»*, απουσία = *«κανείς δεν ρώτησε»*. Η τριάδα διατηρείται αυτούσια
  * από την αρχική γραφή.
  */
-function spaceAppurtenanceFields(data: Record<string, unknown>): {
+function spaceAppurtenanceFields(data: Record<string, unknown>): SpaceStatuses & {
   readonly millesimalShares: number | null | undefined;
-  readonly commercialStatus: CommercialStatus | undefined;
   readonly commercial: SpaceCommercialData | undefined;
 } {
   return {
@@ -60,8 +58,9 @@ function spaceAppurtenanceFields(data: Record<string, unknown>): {
         : data.millesimalShares === null
           ? null
           : undefined,
-    // ADR-777 §8.60.18 — ο ΕΝΑΣ κανονικοποιητής, όχι `as`: άγνωστη τιμή ⇒ απουσία, όχι ψέμα τύπου.
-    commercialStatus: normalizeCommercialStatus(data.commercialStatus) ?? undefined,
+    // ADR-777 §8.60.20 — κάδος · διάθεση · λειτουργία από τον ΕΝΑ αναγνώστη: τα νέα πεδία
+    // κερδίζουν, το παλιό ανάμεικτο `status` συμπληρώνει μόνο ό,τι λείπει, καμία μαντεψιά.
+    ...resolveSpaceStatuses(data),
     commercial: data.commercial as SpaceCommercialData | undefined,
   };
 }
@@ -74,16 +73,8 @@ const VALID_STORAGE_TYPES: readonly string[] = [
   'storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse', 'parking',
 ];
 
-const VALID_STORAGE_STATUSES: readonly string[] = [
-  'available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable', 'deleted',
-];
-
 export function isValidStorageType(value: string): value is StorageType {
   return VALID_STORAGE_TYPES.includes(value);
-}
-
-export function isValidStorageStatus(value: string): value is StorageStatus {
-  return VALID_STORAGE_STATUSES.includes(value);
 }
 
 /**
@@ -95,14 +86,12 @@ export function isValidStorageStatus(value: string): value is StorageStatus {
  */
 export function mapStorageDoc(docId: string, data: Record<string, unknown>): Storage {
   const rawType = (data.type as string) || 'small';
-  const rawStatus = (data.status as string) || 'available';
 
   return {
     id: docId,
     name: (data.name as string) || `Storage ${docId.substring(0, 6)}`,
     code: data.code as string | undefined,
     type: isValidStorageType(rawType) ? rawType : 'small',
-    status: isValidStorageStatus(rawStatus) ? rawStatus : 'available',
     building: (data.building as string) || '',
     buildingId: data.buildingId as string | undefined,
     companyId: data.companyId as string | undefined,
@@ -128,10 +117,6 @@ const VALID_PARKING_TYPES: readonly string[] = [
   'standard', 'handicapped', 'motorcycle', 'electric', 'visitor',
 ];
 
-const VALID_PARKING_STATUSES: readonly string[] = [
-  'available', 'occupied', 'reserved', 'sold', 'maintenance', 'deleted',
-];
-
 const VALID_LOCATION_ZONES: readonly string[] = [
   'pilotis', 'underground', 'open_space', 'rooftop', 'covered_outdoor',
 ];
@@ -145,7 +130,6 @@ const VALID_LOCATION_ZONES: readonly string[] = [
  */
 export function mapParkingDoc(docId: string, data: Record<string, unknown>): ParkingSpot {
   const rawType = data.type as string | undefined;
-  const rawStatus = data.status as string | undefined;
   const rawZone = data.locationZone as string | null | undefined;
 
   return {
@@ -159,9 +143,6 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
       : (rawZone === null ? null : undefined),
     type: rawType && VALID_PARKING_TYPES.includes(rawType)
       ? rawType as ParkingSpotType
-      : undefined,
-    status: rawStatus && VALID_PARKING_STATUSES.includes(rawStatus)
-      ? rawStatus as ParkingSpotStatus
       : undefined,
     floor: data.floor as string | undefined,
     location: data.location as string | undefined,

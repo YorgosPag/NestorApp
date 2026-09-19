@@ -22,7 +22,8 @@ import {
   createShowcaseRelationLoader,
   pickShowcaseString,
 } from '@/services/showcase-core/snapshot-field-primitives';
-import { translateParkingType, translateParkingStatus, translateParkingZone } from './labels';
+import { translateParkingType, translateParkingZone } from './labels';
+import { translateSpaceStatus } from '@/services/property-enum-labels/property-enum-labels.service';
 import type { ShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 
 export type { ShowcaseCompanyBranding };
@@ -82,7 +83,8 @@ export const buildParkingShowcaseSnapshot = createShowcaseSnapshotBuilder<
     code:             pickShowcaseString(raw.code),
     description:      pickShowcaseString(raw.description),
     typeLabel:        translateParkingType(pickShowcaseString(raw.type) ?? undefined, locale) ?? null,
-    statusLabel:      translateParkingStatus(pickShowcaseString(raw.status) ?? undefined, locale) ?? null,
+    // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση, όχι το παλιό `status`.
+    statusLabel:      translateSpaceStatus(raw, locale),
     locationZoneLabel:translateParkingZone(pickShowcaseString(raw.locationZone) ?? undefined, locale) ?? null,
     ...buildShowcaseMetricFields(raw, locale),
     buildingName:     relations.buildingName,

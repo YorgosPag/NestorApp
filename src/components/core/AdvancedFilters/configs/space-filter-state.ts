@@ -14,7 +14,10 @@ import { EMPTY_PRICE_RANGE, type RolePriceRange } from '@/lib/properties/price-r
 export interface SpaceFilterState {
   [key: string]: unknown;
   searchTerm?: string;
+  /** ADR-777 §8.60.20 — κουβάδες διάθεσης (`lib/spaces/space-availability`), όχι το παλιό `status`. */
   status?: string[];
+  /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`OPERATIONAL_STATUSES`). */
+  operationalStatus?: string[];
   type?: string[];
   building?: string[];
   floor?: string[];
@@ -31,6 +34,7 @@ export interface SpaceFilterState {
 export const DEFAULT_SPACE_FILTERS: SpaceFilterState = {
   searchTerm: '',
   status: [],
+  operationalStatus: [],
   type: [],
   building: [],
   floor: [],

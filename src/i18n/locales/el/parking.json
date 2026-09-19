@@ -25,14 +25,6 @@
     "vip": "VIP",
     "visitor": "Επισκεπτών"
   },
-  "status": {
-    "sold": "Πωλημένη",
-    "owner": "Ιδιοκτήτης",
-    "available": "Διαθέσιμη",
-    "reserved": "Κρατημένη",
-    "occupied": "Κατειλημμένη",
-    "maintenance": "Συντήρηση"
-  },
   "locationZone": {
     "label": "Ζώνη Τοποθεσίας",
     "pilotis": "Πυλωτή",
@@ -84,13 +76,6 @@
       "vip": "VIP",
       "reserved": "Κρατημένη",
       "visitor": "Επισκεπτών"
-    },
-    "statuses": {
-      "available": "Διαθέσιμη",
-      "occupied": "Κατειλημμένη",
-      "reserved": "Κρατημένη",
-      "maintenance": "Συντήρηση",
-      "sold": "Πωλημένη"
     },
     "priceValues": {
       "shared": "Κοινόχρηστη (Δωρεάν)",

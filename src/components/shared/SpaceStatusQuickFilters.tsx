@@ -11,29 +11,39 @@ import {
   HardHat,
   PauseCircle,
   Lock,
-  Wrench,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TypeQuickFilters } from './TypeQuickFilters';
+import {
+  ALL_SPACE_AVAILABILITY,
+  SPACE_AVAILABILITY_BUCKETS,
+  type SpaceAvailabilityBucket,
+} from '@/lib/spaces/space-availability';
 import type { TypeFilterOption, TypeQuickFiltersProps } from './TypeQuickFilters';
 
-export const PARKING_STATUS_OPTIONS: TypeFilterOption[] = [
-  { value: 'all', label: 'filters:parkingStatuses.all', icon: LayoutGrid, tooltip: 'filters:parkingStatuses.allTooltip' },
-  { value: 'available', label: 'filters:parkingStatuses.available', icon: CheckCircle, tooltip: 'filters:parkingStatuses.availableTooltip' },
-  { value: 'occupied', label: 'filters:parkingStatuses.occupied', icon: Lock, tooltip: 'filters:parkingStatuses.occupiedTooltip' },
-  { value: 'reserved', label: 'filters:parkingStatuses.reserved', icon: Clock, tooltip: 'filters:parkingStatuses.reservedTooltip' },
-  { value: 'sold', label: 'filters:parkingStatuses.sold', icon: CircleCheck, tooltip: 'filters:parkingStatuses.soldTooltip' },
-  { value: 'maintenance', label: 'filters:parkingStatuses.maintenance', icon: Wrench, tooltip: 'filters:parkingStatuses.maintenanceTooltip' },
-];
+/** Το εικονίδιο κάθε κουβά διάθεσης — εξαντλητικό, ώστε νέος κουβάς χωρίς εικονίδιο να μη μεταγλωττίζεται. */
+const SPACE_AVAILABILITY_ICONS: Readonly<Record<SpaceAvailabilityBucket, TypeFilterOption['icon']>> = {
+  listed: CheckCircle,
+  reserved: Clock,
+  sold: CircleCheck,
+  rented: Lock,
+  unavailable: XCircle,
+};
 
-export const STORAGE_STATUS_OPTIONS: TypeFilterOption[] = [
-  { value: 'all', label: 'filters:storageStatuses.all', icon: LayoutGrid, tooltip: 'filters:storageStatuses.allTooltip' },
-  { value: 'available', label: 'filters:storageStatuses.available', icon: CheckCircle, tooltip: 'filters:storageStatuses.availableTooltip' },
-  { value: 'occupied', label: 'filters:storageStatuses.occupied', icon: Lock, tooltip: 'filters:storageStatuses.occupiedTooltip' },
-  { value: 'reserved', label: 'filters:storageStatuses.reserved', icon: Clock, tooltip: 'filters:storageStatuses.reservedTooltip' },
-  { value: 'maintenance', label: 'filters:storageStatuses.maintenance', icon: Wrench, tooltip: 'filters:storageStatuses.maintenanceTooltip' },
-  { value: 'sold', label: 'filters:storageStatuses.sold', icon: CircleCheck, tooltip: 'filters:storageStatuses.soldTooltip' },
-  { value: 'unavailable', label: 'filters:storageStatuses.unavailable', icon: XCircle, tooltip: 'filters:storageStatuses.unavailableTooltip' },
+/**
+ * **ΟΙ** γρήγορες επιλογές διάθεσης χώρων (ADR-777 §8.60.20) — θέσεις **και** αποθήκες, σελίδα
+ * χώρων **και** σελίδα πωλήσεων. Ήταν **τέσσερις** χειρόγραφες λίστες πάνω στο παλιό ανάμεικτο
+ * `status` (με «Κατειλημμένη» και «Συντήρηση» ανάμεσα στις εμπορικές). Κουβάδες και κατηγόρημα:
+ * `lib/spaces/space-availability`.
+ */
+export const SPACE_AVAILABILITY_QUICK_OPTIONS: TypeFilterOption[] = [
+  { value: ALL_SPACE_AVAILABILITY, label: 'filters:spaceAvailability.all', icon: LayoutGrid, tooltip: 'filters:spaceAvailability.allTooltip' },
+  ...SPACE_AVAILABILITY_BUCKETS.map((bucket) => ({
+    value: bucket,
+    label: `filters:spaceAvailability.${bucket}`,
+    icon: SPACE_AVAILABILITY_ICONS[bucket],
+    tooltip: `filters:spaceAvailability.${bucket}Tooltip`,
+  })),
 ];
 
 export const BUILDING_STATUS_OPTIONS: TypeFilterOption[] = [
@@ -53,24 +63,14 @@ export const PROJECT_STATUS_OPTIONS: TypeFilterOption[] = [
   { value: 'cancelled', label: 'filters:projectStatuses.cancelled', icon: XCircle, tooltip: 'filters:projectStatuses.cancelledTooltip' },
 ];
 
-export function ParkingStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+/** Γρήγορες επιλογές διάθεσης — **ένα** component για θέσεις και αποθήκες. */
+export function SpaceAvailabilityQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   const { t } = useTranslation(['filters']);
   return (
     <TypeQuickFilters
       {...props}
-      options={PARKING_STATUS_OPTIONS}
-      ariaLabel={props.ariaLabel ?? t('parkingStatuses.ariaLabel')}
-    />
-  );
-}
-
-export function StorageStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
-  const { t } = useTranslation(['filters']);
-  return (
-    <TypeQuickFilters
-      {...props}
-      options={STORAGE_STATUS_OPTIONS}
-      ariaLabel={props.ariaLabel ?? t('storageStatuses.ariaLabel')}
+      options={SPACE_AVAILABILITY_QUICK_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('spaceAvailability.ariaLabel')}
     />
   );
 }

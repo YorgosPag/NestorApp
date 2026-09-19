@@ -76,7 +76,12 @@ export type SalesViewMode = 'list' | 'grid';
  */
 export interface SalesSpaceItem {
   id: string;
+  /** Κύκλος ζωής εγγραφής (ή το παλιό ανάμεικτο `status` σε παλιά έγγραφα — το διαβάζει μόνο ο αναγνώστης). */
   status?: string;
+  /** ADR-777 §8.60.20 — η διάθεση: η ΜΟΝΗ πηγή για «διαθέσιμη / κρατημένη / πωλημένη». */
+  commercialStatus?: string | null;
+  /** ADR-777 §8.60.20 — φυσική χρηστικότητα (ίδιο λεξιλόγιο με τα ακίνητα). */
+  operationalStatus?: string | null;
   type?: string;
   floor?: string;
   area?: number | null;

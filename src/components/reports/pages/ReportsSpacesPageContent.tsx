@@ -34,7 +34,8 @@ export function ReportsSpacesPageContent() {
       <SpacesKPIs kpis={report.kpis} loading={report.loading} />
 
       <ParkingOccupancyChart
-        statusData={report.parkingStatusPie}
+        commercialData={report.parkingCommercialPie}
+        operationalData={report.parkingOperationalPie}
         typeData={report.parkingTypePie}
         loading={report.loading}
       />
@@ -42,7 +43,8 @@ export function ReportsSpacesPageContent() {
       <ParkingZoneChart data={report.parkingZonePie} loading={report.loading} />
 
       <StorageUtilizationChart
-        statusData={report.storageStatusPie}
+        commercialData={report.storageCommercialPie}
+        operationalData={report.storageOperationalPie}
         typeData={report.storageTypePie}
         loading={report.loading}
       />

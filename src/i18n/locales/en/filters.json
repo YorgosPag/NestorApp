@@ -291,38 +291,6 @@
     "telegram": "Telegram",
     "telegramTooltip": "Telegram messages"
   },
-  "parkingStatuses": {
-    "ariaLabel": "Parking spot status filters",
-    "all": "All",
-    "allTooltip": "Show all parking spots",
-    "available": "Available",
-    "availableTooltip": "Available parking spots",
-    "occupied": "Occupied",
-    "occupiedTooltip": "Occupied parking spots",
-    "reserved": "Reserved",
-    "reservedTooltip": "Reserved parking spots",
-    "sold": "Sold",
-    "soldTooltip": "Sold parking spots",
-    "maintenance": "Maintenance",
-    "maintenanceTooltip": "Parking spots under maintenance"
-  },
-  "storageStatuses": {
-    "ariaLabel": "Storage status filters",
-    "all": "All",
-    "allTooltip": "Show all storage units",
-    "available": "Available",
-    "availableTooltip": "Available storage units",
-    "occupied": "Occupied",
-    "occupiedTooltip": "Occupied storage units",
-    "reserved": "Reserved",
-    "reservedTooltip": "Reserved storage units",
-    "maintenance": "Maintenance",
-    "maintenanceTooltip": "Storage units under maintenance",
-    "sold": "Sold",
-    "soldTooltip": "Sold storage units",
-    "unavailable": "Unavailable",
-    "unavailableTooltip": "Unavailable storage units"
-  },
   "buildingStatuses": {
     "ariaLabel": "Building status filters",
     "all": "All",
@@ -419,5 +387,21 @@
     "view": "View",
     "pool": "Pool"
   },
-  "availability": "Availability"
+  "availability": "Availability",
+  "spaceAvailability": {
+    "ariaLabel": "Availability filter",
+    "all": "All",
+    "allTooltip": "Every availability",
+    "listed": "On the market",
+    "listedTooltip": "For sale, for rent or both",
+    "reserved": "Reserved",
+    "reservedTooltip": "Reservation in progress",
+    "sold": "Sold",
+    "soldTooltip": "Sale completed",
+    "rented": "Rented",
+    "rentedTooltip": "Lease completed",
+    "unavailable": "Off market",
+    "unavailableTooltip": "Not offered (or availability not declared)",
+    "inUse": "In use"
+  }
 }

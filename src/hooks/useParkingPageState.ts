@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 import { defaultParkingFilters, type ParkingFilterState } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 import { resolveParkingById, isArchivedEntity } from './entity-deep-link-sources';
+import { matchesSpaceStatusFilters } from '@/lib/spaces/space-availability';
 import { matchesPriceRange } from '@/lib/properties/price-range';
 import {
   useEntityPageState,
@@ -38,8 +39,8 @@ function filterParkingSpots(parkingSpots: ParkingSpot[], filters: ParkingFilterS
     }
 
     // Select filters
-    const statusVal = filters.status?.[0];
-    if (statusVal && statusVal !== 'all' && parking.status !== statusVal) return false;
+    // ADR-777 §8.60.20 — διάθεση + λειτουργία από το ΕΝΑ SSoT (όχι το παλιό ανάμεικτο `status`).
+    if (!matchesSpaceStatusFilters(parking, filters)) return false;
 
     const typeVal = filters.type?.[0];
     if (typeVal && typeVal !== 'all' && parking.type !== typeVal) return false;

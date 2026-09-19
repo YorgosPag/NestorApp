@@ -2,7 +2,8 @@
 'use client';
 
 import { Package, Warehouse } from 'lucide-react';
-import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import type { StorageUnit, StorageType } from '@/types/storage';
+import { countSpaceStatuses, matchesSpaceAvailability } from '@/lib/spaces/space-availability';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 
 // 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
@@ -21,14 +22,15 @@ export const filterUnits = (
     units: StorageUnit[], 
     searchTerm: string, 
     filterType: StorageType | 'all', 
-    filterStatus: StorageStatus | 'all',
+    filterStatus: string,
     filterFloor: string
   ) => {
     return units.filter(unit => {
         const matchesSearch = unit.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                              unit.description.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = filterType === 'all' || unit.type === filterType;
-        const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
+        // ADR-777 §8.60.20 — διάθεση από το `commercialStatus`, όχι από το παλιό ανάμεικτο `status`.
+        const matchesStatus = matchesSpaceAvailability(unit, filterStatus);
         const matchesFloor = filterFloor === 'all' || unit.floor === filterFloor;
         
         return matchesSearch && matchesType && matchesStatus && matchesFloor;
@@ -36,11 +38,13 @@ export const filterUnits = (
 }
 
 export const calculateStats = (units: StorageUnit[]) => {
+    // ADR-777 §8.60.20 — οι μετρήσεις από το ΕΝΑ SSoT (κουβάδες του `commercialStatus`).
+    const counts = countSpaceStatuses(units);
     return {
         total: units.length,
-        available: units.filter(u => u.status === 'available').length,
-        sold: units.filter(u => u.status === 'sold').length,
-        reserved: units.filter(u => u.status === 'reserved').length,
+        available: counts.byAvailability.listed,
+        sold: counts.byAvailability.sold,
+        reserved: counts.byAvailability.reserved,
         // ADR-777 Α6 + §8.60.14.13 — ο ΕΝΑΣ επιλυτής, ανά ρόλο. Ήταν το τέταρτο
         // χειρόγραφο άθροισμα, και διάβαζε το @deprecated flat `price` χωρίς ρόλο.
         priceTotals: totalPriceByRole(units),

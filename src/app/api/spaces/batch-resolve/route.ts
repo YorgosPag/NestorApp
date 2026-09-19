@@ -24,6 +24,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { filterSnapshotsByTenant } from '@/lib/auth/tenant-isolation';
 import type { BatchResolvedSpace, BatchResolveResponse } from '@/types/spaces';
+import { resolveSpaceStatuses } from '@/lib/spaces/space-status-split';
 
 // =============================================================================
 // VALIDATION
@@ -91,12 +92,12 @@ async function fetchCollection(
       // The price resolver's inputs, whole (ADR-777 §8.60.14.14): the sale dialog asks it for
       // the SALE role, and without the commercial status it cannot tell rent from sale.
       commercial: data.commercial as BatchResolvedSpace['commercial'],
-      commercialStatus: (data.commercialStatus as BatchResolvedSpace['commercialStatus']) ?? undefined,
+      // ADR-777 §8.60.20 — κάδος · διάθεση · λειτουργία από τον ΕΝΑ αναγνώστη (read-both).
+      ...resolveSpaceStatuses(data),
       offerKinds: Array.isArray(data.offerKinds) ? (data.offerKinds as string[]) : undefined,
       name: (data.name as string) ?? undefined,
       buildingId: (data.buildingId as string) ?? undefined,
       floorId: (data.floorId as string) ?? undefined,
-      status: (data.status as string) ?? undefined,
     };
   });
 

@@ -9,6 +9,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy, sumBy, sumByKey, countBy, rate, avg, groupByKey } from '@/utils/collection-utils';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
+import { countSpaceStatuses, spaceStatusDistributions } from '@/lib/spaces/space-availability';
+import { isTrashed } from '@/lib/firestore/trashed-status';
 import { normalizeCommercialStatus, requiresAskingPrice } from '@/constants/commercial-statuses';
 import { computeEVM } from './evm-calculator';
 import type { EVMResult } from './evm-calculator';
@@ -263,16 +265,18 @@ export class ReportDataAggregator {
 
     const parkingSnap = await db.collection(COLLECTIONS.PARKING_SPACES)
       .where('companyId', '==', filter.companyId).get();
-    const parking = parkingSnap.docs.map(d => d.data() as ParkingDoc);
+    // ADR-777 §8.60.20 — ο κάδος (ADR-281) ΔΕΝ μετρά· ως τις 2026-09-18 μετρούσε.
+    const parking = parkingSnap.docs.map(d => d.data() as ParkingDoc).filter(p => !isTrashed(p));
 
     const storageSnap = await db.collection(COLLECTIONS.STORAGE)
       .where('companyId', '==', filter.companyId).get();
-    const storage = storageSnap.docs.map(d => d.data() as StorageDoc);
+    const storage = storageSnap.docs.map(d => d.data() as StorageDoc).filter(s => !isTrashed(s));
 
-    const parkingOccupied = countBy(parking, p => p.status === 'occupied' || p.status === 'sold');
-    const storageOccupied = countBy(storage, s => s.status === 'occupied' || s.status === 'sold');
-    const parkingSold = countBy(parking, p => p.status === 'sold');
-    const storageSold = countBy(storage, s => s.status === 'sold');
+    // ADR-777 §8.60.20 — από το `commercialStatus`, μέσω του ΕΝΟΣ SSoT (όχι το παλιό ανάμεικτο `status`).
+    const parkingCounts = countSpaceStatuses(parking);
+    const storageCounts = countSpaceStatuses(storage);
+    const parkingSold = parkingCounts.byAvailability.sold;
+    const storageSold = storageCounts.byAvailability.sold;
 
     const storageTotalArea = sumBy(storage, s => s.area ?? 0);
 
@@ -287,11 +291,11 @@ export class ReportDataAggregator {
     return {
       parking: {
         total: parking.length,
-        byStatus: tallyBy(parking, p => p.status ?? 'unknown'),
+        ...spaceStatusDistributions(parking),
         byType: tallyBy(parking, p => p.type ?? 'unknown'),
         byZone: tallyBy(parking, p => p.locationZone ?? 'unknown'),
         byBuilding: tallyBy(parking, p => p.buildingId ?? 'unassigned'),
-        utilizationRate: rate(parkingOccupied, parking.length),
+        utilizationRate: parkingCounts.utilizationRate,
         // ADR-777 Α6 + §8.60.14.13 — ο SSoT τιμής, ΑΝΑ ΡΟΛΟ.
         priceTotals: totalPriceByRole(parking),
         soldCount: parkingSold,
@@ -299,10 +303,10 @@ export class ReportDataAggregator {
       },
       storage: {
         total: storage.length,
-        byStatus: tallyBy(storage, s => s.status ?? 'unknown'),
+        ...spaceStatusDistributions(storage),
         byType: tallyBy(storage, s => s.type ?? 'unknown'),
         byBuilding: tallyBy(storage, s => s.buildingId ?? 'unassigned'),
-        utilizationRate: rate(storageOccupied, storage.length),
+        utilizationRate: storageCounts.utilizationRate,
         totalArea: storageTotalArea,
         // Το €/m² διαιρεί με το εμβαδόν των ΙΔΙΩΝ μονάδων που άθροισε — όχι όλων.
         priceTotals: totalPriceByRole(storage, s => s.area),

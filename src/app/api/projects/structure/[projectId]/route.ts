@@ -28,6 +28,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { resolveSpaceStatuses } from '@/lib/spaces/space-status-split';
 import { checkProjectAccess, PROJECT_NOT_FOUND_MESSAGE } from '../../_shared/project-ownership';
 
 const logger = createModuleLogger('ProjectStructureRoute');
@@ -178,7 +179,8 @@ export const GET = withStandardRateLimit(async function GET(
               id: storageDoc.id,
               name: data.name || data.code || `Storage ${storageDoc.id.slice(-4)}`,
               type: data.type,
-              status: data.status,
+              // ADR-777 §8.60.20 — κάδος · διάθεση · λειτουργία από τον ΕΝΑ αναγνώστη.
+              ...resolveSpaceStatuses(data),
               area: data.area,
               floor: data.floor
             };
@@ -197,7 +199,7 @@ export const GET = withStandardRateLimit(async function GET(
               id: parkingDoc.id,
               code: data.code || data.number || `P${parkingDoc.id.slice(-4)}`,
               type: data.type,
-              status: data.status,
+              ...resolveSpaceStatuses(data),
               level: data.level,
               area: data.area
             };

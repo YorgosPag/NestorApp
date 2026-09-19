@@ -19,7 +19,19 @@ import { createParkingWithPolicy, deleteParkingWithPolicy, updateParkingWithPoli
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { Car, CheckCircle, Euro, Ruler } from 'lucide-react';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+import type { ParkingSpot, ParkingSpotType, ParkingLocationZone } from '@/types/parking';
+import {
+  NEW_SPACE_OPERATIONAL_STATUS,
+  operationalDraftOf,
+  operationalPatchOf,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
+import {
+  ALL_SPACE_AVAILABILITY,
+  countSpaceStatuses,
+  matchesSpaceAvailability,
+  type SpaceAvailabilityFilter,
+} from '@/lib/spaces/space-availability';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
 import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
@@ -48,7 +60,7 @@ const buildingParkingCache = createStaleCache<ParkingSpot[]>('building-parking-t
 // ============================================================================
 
 export function useParkingTabState({ buildingId, projectId }: UseParkingTabStateParams) {
-  const { t } = useTranslation('parking');
+  const { t } = useTranslation(['parking', 'properties-enums']);
   const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   // ---------------------------------------------------------------------------
@@ -67,7 +79,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createNumber, setCreateNumber] = useState('');
   const [createType, setCreateType] = useState<ParkingSpotType>('standard');
-  const [createStatus, setCreateStatus] = useState<ParkingSpotStatus>('available');
+  const [createStatus, setCreateStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
   const [createFloor, setCreateFloor] = useState('');
   const [createLocation, setCreateLocation] = useState('');
   const [createArea, setCreateArea] = useState('');
@@ -81,7 +93,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNumber, setEditNumber] = useState('');
   const [editType, setEditType] = useState<ParkingSpotType>('standard');
-  const [editStatus, setEditStatus] = useState<ParkingSpotStatus>('available');
+  const [editStatus, setEditStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο (ήταν `editPrice` → @deprecated `price`, πάντα «πώληση»).
@@ -108,7 +120,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // ---------------------------------------------------------------------------
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<ParkingSpotType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<ParkingSpotStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<SpaceAvailabilityFilter>(ALL_SPACE_AVAILABILITY);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // ===========================================================================
@@ -179,7 +191,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     setCreateNumber('');
     createNameManuallyChanged.current = false;
     setCreateType('standard');
-    setCreateStatus('available');
+    setCreateStatus(NEW_SPACE_OPERATIONAL_STATUS);
     setCreateFloor('');
     setCreateLocation('');
     setCreateArea('');
@@ -194,7 +206,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
       const result = await createParkingWithPolicy<ParkingCreateResult>({ payload: {
         number: createNumber.trim(),
         type: createType,
-        status: createStatus,
+        operationalStatus: createStatus || undefined,
         floor: createFloor.trim() || undefined,
         location: createLocation.trim() || undefined,
         area: createArea ? parseFloat(createArea) : undefined,
@@ -210,7 +222,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
             number: createNumber.trim(),
             buildingId,
             type: createType,
-            status: createStatus,
+            operationalStatus: createStatus || undefined,
           },
           timestamp: Date.now(),
         });
@@ -236,7 +248,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     setEditingId(spot.id);
     setEditNumber(spot.number);
     setEditType(spot.type || 'standard');
-    setEditStatus(spot.status || 'available');
+    setEditStatus(operationalDraftOf(spot));
     setEditFloor(spot.floor || '');
     setEditArea(spot.area ? String(spot.area) : '');
     resetCommercial(spot);
@@ -253,15 +265,15 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     // ΕΝΑ αντικείμενο, δύο παραλήπτες: η εγγραφή και η ειδοποίηση realtime. Ήταν
     // γραμμένο δύο φορές, κι έτσι ένα πεδίο μπορούσε να γραφτεί στη βάση και να
     // ΜΗΝ ταξιδέψει στην οθόνη — μια απόκλιση που φαίνεται σαν «δεν αποθηκεύτηκε».
+    // Διάθεση ΚΑΙ λειτουργία ταξιδεύουν ΜΟΝΟ όταν άλλαξαν — κρίνονται απέναντι στην αποθηκευμένη θέση.
+    const stored = parkingSpots.find((spot) => spot.id === editingId);
     const updates = {
       number: editNumber.trim(),
       type: editType,
-      status: editStatus,
+      ...(stored ? operationalPatchOf(editStatus, stored) : {}),
       floor: editFloor.trim() || undefined,
       area: editArea ? parseFloat(editArea) : undefined,
     };
-    // Η διάθεση ταξιδεύει ΜΟΝΟ όταν άλλαξε — κρίνεται απέναντι στην αποθηκευμένη θέση.
-    const stored = parkingSpots.find((spot) => spot.id === editingId);
     const commercialPatch = stored ? commercial.patchAgainst(stored) : {};
 
     try {
@@ -375,7 +387,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
 
   const stats = useMemo(() => ({
     total: parkingSpots.length,
-    available: parkingSpots.filter(s => s.status === 'available').length,
+    // ADR-777 §8.60.20 — «διαθέσιμη» = στην αγορά, από το `commercialStatus` (όχι το παλιό `status`).
+    available: countSpaceStatuses(parkingSpots).byAvailability.listed,
     // ADR-777 Α5/Α6 + §8.60.14.13 — the price SSoT, PER ROLE.
     priceTotals: totalPriceByRole(parkingSpots),
     totalArea: parkingSpots.reduce((sum, s) => sum + (s.area || 0), 0),
@@ -388,7 +401,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
         (spot.location || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (spot.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || spot.type === filterType;
-      const matchesStatus = filterStatus === 'all' || spot.status === filterStatus;
+      const matchesStatus = matchesSpaceAvailability(spot, filterStatus);
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [parkingSpots, searchTerm, filterType, filterStatus]);

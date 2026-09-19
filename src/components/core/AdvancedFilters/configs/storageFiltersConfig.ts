@@ -1,7 +1,7 @@
 import type { FilterPanelConfig } from '../types';
 import { DEFAULT_SPACE_FILTERS, type SpaceFilterState } from './space-filter-state';
+import { spaceStatusFilterFields } from './unit-status-filter-options';
 import {
-  UNIFIED_STATUS_FILTER_LABELS,
   COMMON_FILTER_LABELS,
   PROPERTY_FILTER_LABELS,
   STORAGE_LABELS
@@ -29,21 +29,8 @@ export const storageFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'filters.storage.ariaLabels.search',
           width: 2
         },
-        {
-          id: 'status',
-          type: 'select',
-          label: 'filters.common.status',
-          placeholder: 'filters.common.selectStatus',
-          ariaLabel: 'filters.storage.ariaLabels.status',
-          width: 1,
-          options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'available', label: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE },
-            { value: 'occupied', label: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED },
-            { value: 'maintenance', label: UNIFIED_STATUS_FILTER_LABELS.MAINTENANCE },
-            { value: 'reserved', label: UNIFIED_STATUS_FILTER_LABELS.RESERVED }
-          ]
-        },
+        // ADR-777 §8.60.20 — διάθεση + λειτουργία: οι ΔΥΟ όψεις από ΕΝΑ σημείο (ίδιες με τις αποθήκες/θέσεις).
+        ...spaceStatusFilterFields('filters.storage.ariaLabels.status'),
         {
           id: 'type',
           type: 'select',

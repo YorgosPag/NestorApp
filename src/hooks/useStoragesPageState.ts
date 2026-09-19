@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { defaultStorageFilters, type StorageFilterState } from '@/components/core/AdvancedFilters/configs/storageFiltersConfig';
 import { resolveStorageById, isArchivedEntity } from './entity-deep-link-sources';
+import { matchesSpaceStatusFilters } from '@/lib/spaces/space-availability';
 import { matchesPriceRange } from '@/lib/properties/price-range';
 import {
   useEntityPageState,
@@ -38,8 +39,8 @@ function filterStorages(storages: Storage[], filters: StorageFilterState): Stora
     }
 
     // Select filters
-    const statusVal = filters.status?.[0];
-    if (statusVal && statusVal !== 'all' && storage.status !== statusVal) return false;
+    // ADR-777 §8.60.20 — διάθεση + λειτουργία από το ΕΝΑ SSoT (όχι το παλιό ανάμεικτο `status`).
+    if (!matchesSpaceStatusFilters(storage, filters)) return false;
 
     const typeVal = filters.type?.[0];
     if (typeVal && typeVal !== 'all' && storage.type !== typeVal) return false;

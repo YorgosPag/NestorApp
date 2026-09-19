@@ -39,9 +39,40 @@ export const OPERATIONAL_STATUSES = [
 /** Canonical TypeScript union — derived automatically from `OPERATIONAL_STATUSES`. */
 export type OperationalStatus = (typeof OPERATIONAL_STATUSES)[number];
 
+/**
+ * Η λειτουργική κατάσταση μιας **νέας** μονάδας — ακίνητο, θέση στάθμευσης ή αποθήκη.
+ * Ήταν ωμό `'draft'` στη δημιουργία ακινήτου· έγινε σταθερά όταν απέκτησε δεύτερο
+ * καταναλωτή, τη δημιουργία χώρου (ADR-777 §8.60.20).
+ */
+export const DEFAULT_OPERATIONAL_STATUS: OperationalStatus = 'draft';
+
 // =============================================================================
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
+
+/** `true` αν η τιμή είναι μία από τις κανονικές λειτουργικές καταστάσεις. */
+export function isOperationalStatus(value: unknown): value is OperationalStatus {
+  return typeof value === 'string' && (OPERATIONAL_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * Οποιαδήποτε αποθηκευμένη τιμή → κανονική κατάσταση, ή `null` αν δεν αναγνωρίζεται.
+ * Δέχεται και το παλιό `underConstruction` (το locale κρατά ακόμη και τις δύο γραφές).
+ * Άγνωστη τιμή ⇒ `null` — **ποτέ** μαντεψιά.
+ */
+export function normalizeOperationalStatus(value: unknown): OperationalStatus | null {
+  if (value === 'underConstruction') return 'under-construction';
+  return isOperationalStatus(value) ? value : null;
+}
+
+/**
+ * `true` αν η μονάδα **δεν** είναι έτοιμη για χρήση — η μόνη λειτουργική πληροφορία που αξίζει
+ * σήμα σε λίστα (αρχή «δείξε μόνο ό,τι διαφέρει»). Απούσα κατάσταση ⇒ `false`: δεν δηλώθηκε,
+ * άρα δεν ισχυριζόμαστε τίποτα.
+ */
+export function isOperationalException(value: unknown): value is Exclude<OperationalStatus, 'ready'> {
+  return isOperationalStatus(value) && value !== 'ready';
+}
 
 
 // =============================================================================

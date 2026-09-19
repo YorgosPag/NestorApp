@@ -111,6 +111,20 @@ export const FINALIZED_COMMERCIAL_STATUSES = [
 ] as const satisfies readonly CommercialStatus[];
 
 /**
+ * `true` αν η μονάδα έχει **χρήστη** (ιδιοκτήτη ή ενοικιαστή) — η «κατοίκηση», **παραγόμενη**.
+ *
+ * 🔑 Για θέσεις και αποθήκες η κατοίκηση **δεν αποθηκεύεται** (ADR-777 §8.60.20): το παλιό
+ * `status: 'occupied'` ήταν δεύτερη δήλωση της συναλλαγής και μπορούσε να αποκλίνει. Ό,τι
+ * παράγεται από την αλήθεια δεν χρειάζεται δεύτερο γραφέα.
+ */
+export function isFinalizedCommercialStatus(value: unknown): boolean {
+  return (
+    typeof value === 'string' &&
+    (FINALIZED_COMMERCIAL_STATUSES as readonly string[]).includes(value)
+  );
+}
+
+/**
  * Η κατάσταση «πωλήθηκε», ονομασμένη — για **ερωτήματα** Firestore, όπου δεν
  * μπορεί να μπει κατηγόρημα και ένα ωμό `'sold'` αποκλίνει σιωπηλά.
  *

@@ -291,38 +291,6 @@
     "telegram": "Telegram",
     "telegramTooltip": "Telegram μηνύματα"
   },
-  "parkingStatuses": {
-    "ariaLabel": "Φίλτρα κατάστασης θέσης στάθμευσης",
-    "all": "Όλες",
-    "allTooltip": "Εμφάνιση όλων των θέσεων",
-    "available": "Διαθέσιμες",
-    "availableTooltip": "Διαθέσιμες θέσεις στάθμευσης",
-    "occupied": "Κατειλημμένες",
-    "occupiedTooltip": "Κατειλημμένες θέσεις στάθμευσης",
-    "reserved": "Κρατημένες",
-    "reservedTooltip": "Θέσεις σε κράτηση",
-    "sold": "Πωλημένες",
-    "soldTooltip": "Πωλημένες θέσεις στάθμευσης",
-    "maintenance": "Συντήρηση",
-    "maintenanceTooltip": "Θέσεις υπό συντήρηση"
-  },
-  "storageStatuses": {
-    "ariaLabel": "Φίλτρα κατάστασης αποθήκης",
-    "all": "Όλες",
-    "allTooltip": "Εμφάνιση όλων των αποθηκών",
-    "available": "Διαθέσιμες",
-    "availableTooltip": "Διαθέσιμες αποθήκες",
-    "occupied": "Κατειλημμένες",
-    "occupiedTooltip": "Κατειλημμένες αποθήκες",
-    "reserved": "Κρατημένες",
-    "reservedTooltip": "Αποθήκες σε κράτηση",
-    "maintenance": "Συντήρηση",
-    "maintenanceTooltip": "Αποθήκες υπό συντήρηση",
-    "sold": "Πωλημένες",
-    "soldTooltip": "Πωλημένες αποθήκες",
-    "unavailable": "Μη Διαθέσιμες",
-    "unavailableTooltip": "Μη διαθέσιμες αποθήκες"
-  },
   "buildingStatuses": {
     "ariaLabel": "Φίλτρα κατάστασης κτιρίου",
     "all": "Όλα",
@@ -419,5 +387,21 @@
     "view": "Θέα",
     "pool": "Πισίνα"
   },
-  "availability": "Διαθεσιμότητα"
+  "availability": "Διαθεσιμότητα",
+  "spaceAvailability": {
+    "ariaLabel": "Φίλτρο διάθεσης",
+    "all": "Όλες",
+    "allTooltip": "Όλες οι διαθέσεις",
+    "listed": "Στην αγορά",
+    "listedTooltip": "Προς πώληση, προς ενοικίαση ή και τα δύο",
+    "reserved": "Κρατημένες",
+    "reservedTooltip": "Με κράτηση σε εξέλιξη",
+    "sold": "Πωλημένες",
+    "soldTooltip": "Ολοκληρωμένη πώληση",
+    "rented": "Ενοικιασμένες",
+    "rentedTooltip": "Ολοκληρωμένη μίσθωση",
+    "unavailable": "Εκτός αγοράς",
+    "unavailableTooltip": "Δεν διατίθενται (ή δεν έχει δηλωθεί διάθεση)",
+    "inUse": "Σε χρήση"
+  }
 }

@@ -3,8 +3,10 @@
 // 🏢 ENTERPRISE: Extended storage types for all use cases
 export type StorageType = 'large' | 'small' | 'basement' | 'ground' | 'special' | 'storage' | 'parking' | 'garage' | 'warehouse';
 
-// 🏢 ENTERPRISE: Extended storage status for all use cases
-export type StorageStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'sold' | 'unavailable' | 'deleted';
+// ⛔ Εδώ ζούσε το ανάμεικτο `StorageStatus` — βλ. `types/parking.ts` και ADR-777 §8.60.20.
+// Εμπορικό → `commercialStatus` · φυσικό → `operationalStatus` · κάδος → `status`.
+type RecordLifecycleStatus = import('@/lib/firestore/trashed-status').RecordLifecycleStatus;
+type OperationalStatus = import('@/constants/operational-statuses').OperationalStatus;
 
 export interface Coordinates {
   x: number;
@@ -18,7 +20,10 @@ export interface Storage {
   /** ADR-233: Entity coding system identifier, e.g. "A-AP-Y1.01" */
   code?: string;
   type: StorageType;
-  status: StorageStatus;
+  /** Κύκλος ζωής εγγραφής — ζωντανή ή στον κάδο (ADR-281). **Όχι** εμπορική ή φυσική κατάσταση. */
+  status: RecordLifecycleStatus;
+  /** Φυσική χρηστικότητα — ίδιο λεξιλόγιο με τα ακίνητα (ADR-777 §8.60.20). Απούσα = αδήλωτη. */
+  operationalStatus?: OperationalStatus;
   /** @deprecated Use buildingId instead. Kept for backward compatibility. */
   building: string;
   /** 🏢 ENTERPRISE: Building document ID (foreign key) - added via migration 006 */
@@ -65,7 +70,9 @@ export interface StorageUnit {
   commercialStatus?: import('@/constants/commercial-statuses').CommercialStatus;
   /** ADR-777 §8.60.18 — τα ποσά ανά ρόλο (`askingPrice` · `rentPrice`). */
   commercial?: import('@/types/sales-shared').SpaceCommercialData;
-  status: StorageStatus;
+  status: RecordLifecycleStatus;
+  /** ADR-777 §8.60.20 — φυσική χρηστικότητα (ίδιο λεξιλόγιο με τα ακίνητα). */
+  operationalStatus?: OperationalStatus;
   description: string;
   building: string;
   /** 🏢 ENTERPRISE: Building document ID (foreign key) - added via migration 006 */
@@ -106,49 +113,6 @@ export interface StorageUnit {
   hasSecurity?: boolean;
 }
 
-export interface StorageFilter {
-  type?: 'storage' | 'parking' | 'all';
-  status?: 'available' | 'sold' | 'reserved' | 'maintenance' | 'all';
-  floor?: string | 'all';
-  minArea?: number;
-  maxArea?: number;
-  minPrice?: number;
-  maxPrice?: number;
-  hasLinkedProperty?: boolean;
-  searchTerm?: string;
-}
-
-export interface StorageStats {
-  total: number;
-  byType: {
-    storage: number;
-  };
-  byStatus: {
-    available: number;
-    sold: number;
-    reserved: number;
-    maintenance: number;
-  };
-  byFloor: Record<string, number>;
-  totalValue: number;
-  totalArea: number;
-  averagePricePerSqm: number;
-  linkedUnits: number;
-  unlinkedUnits: number;
-}
-
-export interface StorageTransaction {
-  id: string;
-  storageUnitId: string;
-  type: 'sale' | 'reservation' | 'cancellation';
-  amount: number;
-  customerName: string;
-  customerContact: string;
-  date: string;
-  notes?: string;
-  linkedPropertyCode?: string;
-}
-
 // Utility functions type definitions
 export type StorageValidator = (unit: Partial<StorageUnit>) => { isValid: boolean; errors: string[] };
 
@@ -157,19 +121,4 @@ export type StorageCalculator = {
   calculateTotalValue: (units: StorageUnit[]) => number;
   calculateAverageArea: (units: StorageUnit[]) => number;
   calculateOccupancyRate: (units: StorageUnit[]) => number;
-};
-
-export type StorageReportData = {
-  summary: StorageStats;
-  salesData: StorageTransaction[];
-  availabilityByFloor: Record<string, { available: number; total: number }>;
-  priceAnalysis: {
-    averageStoragePrice: number;
-    priceRangeStorage: { min: number; max: number };
-  };
-  revenueProjection: {
-    currentRevenue: number;
-    potentialRevenue: number;
-    projectedMonthlyRevenue: number;
-  };
 };

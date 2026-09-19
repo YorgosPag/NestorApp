@@ -8,7 +8,14 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import type { StorageUnit, StorageType } from '@/types/storage';
+import {
+  NEW_SPACE_OPERATIONAL_STATUS,
+  operationalDraftOf,
+  operationalPatchOf,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
+import { ALL_SPACE_AVAILABILITY, type SpaceAvailabilityFilter } from '@/lib/spaces/space-availability';
 import type { Building } from '@/types/building/contracts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -20,7 +27,6 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
-import { getStatusLabel } from '@/lib/status-helpers';
 import { getStorageTypeLabel, filterUnits, calculateStats } from './utils';
 import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 import { useCommercialDraft } from '@/components/shared/commercial/useCommercialDraft';
@@ -39,7 +45,7 @@ interface StorageMutationResult {
 }
 
 export function useStorageTabState(building: Building) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'properties-enums']);
   const { success, error: notifyError } = useNotifications();
 
   // ── Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation ──
@@ -50,7 +56,6 @@ export function useStorageTabState(building: Building) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createCode, setCreateCode] = useState('');
   const [createType, setCreateType] = useState<StorageType>('storage');
-  const [createStatus, setCreateStatus] = useState<StorageStatus>('available');
   const [createFloor, setCreateFloor] = useState('');
   const [createArea, setCreateArea] = useState('');
   const [createDescription, setCreateDescription] = useState('');
@@ -60,7 +65,7 @@ export function useStorageTabState(building: Building) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCode, setEditCode] = useState('');
   const [editType, setEditType] = useState<StorageType>('storage');
-  const [editStatus, setEditStatus] = useState<StorageStatus>('available');
+  const [editStatus, setEditStatus] = useState<OperationalStatusDraft>(NEW_SPACE_OPERATIONAL_STATUS);
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο (ήταν `editPrice` → @deprecated `price`, πάντα «πώληση»).
@@ -86,16 +91,11 @@ export function useStorageTabState(building: Building) {
   // ── Filter & view state ──
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<StorageType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<StorageStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<SpaceAvailabilityFilter>(ALL_SPACE_AVAILABILITY);
   const filterFloor = 'all';
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // ── Label translators ──
-
-  const translatedGetStatusLabel = useCallback(
-    (status: StorageStatus) => getStatusLabel('storage', status, { t }),
-    [t],
-  );
 
   const translatedGetTypeLabel = useCallback(
     (type: StorageType) => getStorageTypeLabel(type, t),
@@ -117,7 +117,9 @@ export function useStorageTabState(building: Building) {
           id: s.id,
           code: s.name || s.code || `S-${s.id.substring(0, 6)}`,
           type: (s.type || 'small') as StorageType,
-          status: (s.status || 'available') as StorageStatus,
+          // ADR-777 §8.60.20 — κάδος · λειτουργία (ο ΕΝΑΣ αναγνώστης τα έλυσε ήδη στον mapper).
+          status: s.status,
+          operationalStatus: s.operationalStatus,
           floor: s.floor || '',
           area: typeof s.area === 'number' ? s.area : 0,
           price: typeof s.price === 'number' ? s.price : 0,
@@ -183,7 +185,6 @@ export function useStorageTabState(building: Building) {
     setShowCreateForm(false);
     setCreateCode('');
     setCreateType('storage');
-    setCreateStatus('available');
     setCreateFloor('');
     setCreateArea('');
     setCreateDescription('');
@@ -198,7 +199,6 @@ export function useStorageTabState(building: Building) {
         buildingId: building.id,
         projectId: building.projectId || null,
         type: createType,
-        status: createStatus,
         floor: createFloor.trim() || null,
         area: createArea ? parseFloat(createArea) : null,
         description: createDescription.trim() || null,
@@ -222,7 +222,7 @@ export function useStorageTabState(building: Building) {
     setEditingId(unit.id);
     setEditCode(unit.code || '');
     setEditType(unit.type || 'storage');
-    setEditStatus(unit.status || 'available');
+    setEditStatus(operationalDraftOf(unit));
     setEditFloor(unit.floor || '');
     setEditArea(unit.area ? String(unit.area) : '');
     commercial.reset(unit);
@@ -233,7 +233,8 @@ export function useStorageTabState(building: Building) {
   /** Το σώμα διάθεσης της γραμμής — απέναντι στην ΑΠΟΘΗΚΕΥΜΕΝΗ αποθήκη, μόνο ό,τι άλλαξε. */
   const commercialPatchFor = (id: string) => {
     const stored = units.find((unit) => unit.id === id);
-    return stored ? commercial.patchAgainst(stored) : {};
+    // ADR-777 §8.60.20 — και η λειτουργική κατάσταση, με τον ίδιο κανόνα «μόνο ό,τι άλλαξε».
+    return stored ? { ...commercial.patchAgainst(stored), ...operationalPatchOf(editStatus, stored) } : {};
   };
 
   const handleSaveEdit = async () => {
@@ -243,7 +244,6 @@ export function useStorageTabState(building: Building) {
       await updateStorageWithPolicy<StorageMutationResult>({ storageId: editingId, payload: {
         name: editCode.trim() || undefined,
         type: editType,
-        status: editStatus,
         floor: editFloor.trim() || null,
         area: editArea ? parseFloat(editArea) : null,
         // Η διάθεση ταξιδεύει ΜΟΝΟ όταν άλλαξε — κρίνεται απέναντι στην αποθηκευμένη αποθήκη.
@@ -351,7 +351,6 @@ export function useStorageTabState(building: Building) {
     showCreateForm, setShowCreateForm,
     createCode, setCreateCode,
     createType, setCreateType,
-    createStatus, setCreateStatus,
     createFloor, setCreateFloor,
     createArea, setCreateArea,
     createDescription, setCreateDescription,
@@ -376,6 +375,6 @@ export function useStorageTabState(building: Building) {
     filterStatus, setFilterStatus,
     viewMode, setViewMode,
     // Label translators
-    translatedGetStatusLabel, translatedGetTypeLabel,
+    translatedGetTypeLabel,
   };
 }

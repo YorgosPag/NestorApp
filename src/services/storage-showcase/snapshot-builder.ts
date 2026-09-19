@@ -23,7 +23,8 @@ import {
   createShowcaseRelationLoader,
   pickShowcaseString,
 } from '@/services/showcase-core/snapshot-field-primitives';
-import { translateStorageType, translateStorageStatus } from './labels';
+import { translateStorageType } from './labels';
+import { translateSpaceStatus } from '@/services/property-enum-labels/property-enum-labels.service';
 import type { ShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 
 export type { ShowcaseCompanyBranding };
@@ -79,7 +80,8 @@ export const buildStorageShowcaseSnapshot = createShowcaseSnapshotBuilder<
   buildInfo: ({ entityId, raw, relations, locale }) => ({
     ...buildShowcaseIdentityFields(entityId, raw),
     typeLabel:   translateStorageType(pickShowcaseString(raw.type) ?? undefined, locale) ?? null,
-    statusLabel: translateStorageStatus(pickShowcaseString(raw.status) ?? undefined, locale) ?? null,
+    // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση, όχι το παλιό `status`.
+    statusLabel: translateSpaceStatus(raw, locale),
     ...buildShowcaseMetricFields(raw, locale),
     buildingName: relations.buildingName,
   }),

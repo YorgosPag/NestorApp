@@ -22,14 +22,16 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { Map, List, Car, AlertCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { formatCurrency } from '@/lib/intl-utils';
 import { ProjectFloorplanTab } from './ProjectFloorplanTab';
 import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import {
   PARKING_TYPE_LABELS,
-  PARKING_STATUS_LABELS,
   PARKING_LOCATION_ZONE_LABELS,
 } from '@/types/parking';
+import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
+import { countSpaceStatuses } from '@/lib/spaces/space-availability';
+import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
+import { priceCellLabel } from '@/lib/listings/listing-price-label';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -153,6 +155,9 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
     );
   }
 
+  // ADR-777 §8.60.20 — οι μετρήσεις από το ΕΝΑ SSoT (κουβάδες του `commercialStatus`).
+  const counts = countSpaceStatuses(parkingSpots);
+
   return (
     <section className={spacing.spaceBetween.sm}>
       {/* Summary */}
@@ -163,19 +168,19 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
         </article>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn(typography.heading.h3, colors.text.success)}>
-            {parkingSpots.filter(s => s.status === 'available').length}
+            {counts.byAvailability.listed}
           </p>
           <p className={typography.special.secondary}>{t('projectTab.stats.available')}</p>
         </article>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn(typography.heading.h3, colors.text.warning)}>
-            {parkingSpots.filter(s => s.status === 'reserved').length}
+            {counts.byAvailability.reserved}
           </p>
           <p className={typography.special.secondary}>{t('projectTab.stats.reserved')}</p>
         </article>
         <article className={cn('bg-card p-2 text-center', quick.card)}>
           <p className={cn(typography.heading.h3, colors.text.info)}>
-            {parkingSpots.filter(s => s.status === 'sold').length}
+            {counts.byAvailability.sold}
           </p>
           <p className={typography.special.secondary}>{t('projectTab.stats.sold')}</p>
         </article>
@@ -205,43 +210,21 @@ function ParkingSpotsList({ parkingSpots, loading, error, t, colors, quick, icon
                   </span>
                 </td>
                 <td className="p-2">
-                  <ParkingStatusBadge status={spot.status || 'available'} colors={colors} />
+                  <SpaceStatusBadges space={spot} />
                 </td>
                 <td className="p-2">{spot.floor || '—'}</td>
                 <td className="p-2">
                   {spot.locationZone ? PARKING_LOCATION_ZONE_LABELS[spot.locationZone] : '—'}
                 </td>
                 <td className="p-2">{spot.area ? `${spot.area} m²` : '—'}</td>
-                <td className="p-2 text-right">{spot.price ? formatCurrency(spot.price) : '—'}</td>
+                {/* ADR-777 §8.60.18/§8.60.20 — ο ΕΝΑΣ επιλυτής, με μονάδα (ήταν το @deprecated `price`, που δεν γράφεται πια ⇒ πάντα «—»). */}
+                <td className="p-2 text-right">{priceCellLabel(t, resolveDisplayPrice(spot))}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </article>
     </section>
-  );
-}
-
-// =============================================================================
-// STATUS BADGE
-// =============================================================================
-
-function ParkingStatusBadge({ status, colors }: { status: string; colors: ReturnType<typeof useSemanticColors> }) {
-  const typography = useTypography();
-  const colorMap: Record<string, string> = {
-    available: `${colors.bg.successSubtle} ${colors.text.success}`,
-    occupied: `${colors.bg.warningSubtle} ${colors.text.warning}`,
-    reserved: `${colors.bg.infoSubtle} ${colors.text.info}`,
-    sold: `${colors.bg.accentSubtle} ${colors.text.accent}`,
-    maintenance: `${colors.bg.errorSubtle} ${colors.text.error}`,
-  };
-
-  const label = status ? (PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status) : '—';
-
-  return (
-    <span className={cn('rounded px-2 py-1', typography.body.xs, colorMap[status] || `${colors.bg.muted} ${colors.text.muted}`)}>
-      {label}
-    </span>
   );
 }
 

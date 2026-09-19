@@ -1,7 +1,7 @@
 /**
  * SpaceCoreFields — the three attributes every space entity has
  *
- * "What kind is it, what state is it in, how big is it" — type + status + area,
+ * "What kind is it, is it usable, how big is it" — type + operational status + area,
  * rendered as consecutive grid cells in the identity card of every space general
  * tab. SSoT for those three fields' label keys and input semantics (numeric step,
  * m² unit), which drifted between the Parking and Storage twins before.
@@ -21,6 +21,10 @@ import {
   type SelectOption,
 } from '@/components/shared/space-info/OptionSelectField';
 import { LabeledInputField } from '@/components/shared/space-info/LabeledInputField';
+import {
+  OPERATIONAL_STATUS_SELECT_OPTIONS,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
 
 // ============================================================================
 // TYPES
@@ -33,12 +37,19 @@ interface SpaceSelectBinding<T extends string> {
   onChange: (value: T) => void;
 }
 
-interface SpaceCoreFieldsProps<TType extends string, TStatus extends string> {
-  /** Namespaced translator (ADR-280) — the label keys are the same everywhere. */
+interface SpaceCoreFieldsProps<TType extends string> {
+  /**
+   * Namespaced translator (ADR-280) — the label keys are the same everywhere. Must have
+   * `properties-enums` loaded: the operational options share the property form's labels.
+   */
   t: (key: string) => string;
   disabled?: boolean;
   type: SpaceSelectBinding<TType>;
-  status: SpaceSelectBinding<TStatus>;
+  /**
+   * ADR-777 §8.60.20 — ΜΟΝΟ η λειτουργική κατάσταση (ίδιο λεξιλόγιο με τα ακίνητα). Η διάθεση
+   * ζει στην κάρτα «Διάθεση & τιμή» και η κράτηση/πώληση στη συναλλαγή.
+   */
+  operationalStatus: { value: OperationalStatusDraft; onChange: (value: OperationalStatusDraft) => void };
   /** Raw numeric input, in m². */
   area: { value: string; onChange: (value: string) => void };
 }
@@ -47,13 +58,13 @@ interface SpaceCoreFieldsProps<TType extends string, TStatus extends string> {
 // COMPONENT
 // ============================================================================
 
-export function SpaceCoreFields<TType extends string, TStatus extends string>({
+export function SpaceCoreFields<TType extends string>({
   t,
   disabled,
   type,
-  status,
+  operationalStatus,
   area,
-}: SpaceCoreFieldsProps<TType, TStatus>) {
+}: SpaceCoreFieldsProps<TType>) {
   return (
     <>
       <OptionSelectField
@@ -64,13 +75,14 @@ export function SpaceCoreFields<TType extends string, TStatus extends string>({
         t={t}
         disabled={disabled}
       />
-      <OptionSelectField
-        label={t('general.fields.status')}
-        value={status.value}
-        options={status.options}
-        onValueChange={status.onChange}
+      <OptionSelectField<OperationalStatusDraft>
+        label={t('properties-enums:unitStatus.operational')}
+        value={operationalStatus.value}
+        options={OPERATIONAL_STATUS_SELECT_OPTIONS}
+        onValueChange={operationalStatus.onChange}
         t={t}
         disabled={disabled}
+        placeholder={t('properties-enums:unitStatus.undeclared')}
       />
       <LabeledInputField
         label={t('general.fields.area')}

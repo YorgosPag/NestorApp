@@ -4,9 +4,9 @@
  * 🅿️ PARKING CARD VIEW-MODEL HOOK (ADR-585)
  *
  * Shared derived model for ParkingGridCard + ParkingListCard. Stats are
- * identical across views; the badge/type i18n key namespaces differ per view
- * (Grid uses `general.statuses.*` / `general.types.*`, List uses `status.*` /
- * `types.*`) — that pre-existing inconsistency is preserved via the `view` arg.
+ * identical across views; the type i18n key namespaces differ per view
+ * (Grid uses `general.types.*`, List uses `types.*`) — preserved via the `view` arg.
+ * Τα σήματα κατάστασης έρχονται από το ΕΝΑ SSoT των μονάδων (ADR-777 §8.60.20).
  *
  * @see ADR-585 Domain card view-model hook SSoT
  */
@@ -14,30 +14,21 @@
 import { useMemo } from 'react';
 
 import type { StatItem } from '@/design-system';
-import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { spaceStatusBadges, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 
 import { floorStat, areaStat, priceStat } from '../shared/spot-card-stats';
 import type { CardViewModel } from '../shared/card-model.types';
 import type { ParkingSpotAdapter } from './parking-types';
-
-const STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
-  available: 'success',
-  occupied: 'info',
-  reserved: 'warning',
-  sold: 'secondary',
-  maintenance: 'destructive',
-};
 
 /**
  * Build the shared Parking card view-model. `view` selects the i18n key
  * namespace to reproduce the exact per-view labels.
  */
 export function useParkingCardModel(parking: ParkingSpotAdapter, view: 'grid' | 'list'): CardViewModel {
-  const { t } = useTranslation('parking');
+  const { t } = useTranslation(['parking', UNIT_STATUS_NAMESPACE]);
 
-  const statusPrefix = view === 'grid' ? 'general.statuses' : 'status';
   const typePrefix = view === 'grid' ? 'general.types' : 'types';
 
   /** Build stats array (identical across views): level → area → price */
@@ -49,14 +40,8 @@ export function useParkingCardModel(parking: ParkingSpotAdapter, view: 'grid' | 
     ].filter((s): s is StatItem => s !== null);
   }, [parking, t]);
 
-  /** Build badges from status */
-  const badges = useMemo(() => {
-    const status = parking.status || 'available';
-    const statusLabel = t(`${statusPrefix}.${status}`, { defaultValue: status });
-    const variant = STATUS_BADGE_VARIANTS[status] || 'default';
-
-    return [{ label: statusLabel, variant }];
-  }, [parking.status, statusPrefix, t]);
+  /** Διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση — ποτέ το παλιό ανάμεικτο πεδίο. */
+  const badges = useMemo(() => spaceStatusBadges(parking, t), [parking, t]);
 
   /** Get type label for subtitle */
   const typeLabel = useMemo(() => {

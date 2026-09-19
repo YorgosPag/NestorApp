@@ -31,9 +31,8 @@ type TFn = (key: string) => string;
 // Domain status types
 // ============================================================================
 
-export type StorageStatusValue =
-  | 'available' | 'occupied' | 'maintenance' | 'reserved'
-  | 'sold' | 'unavailable' | 'deleted';
+// 🧹 ADR-777 §8.60.20: ο τομέας `storage` (ανάμεικτο `status` αποθήκης) αφαιρέθηκε — η κατάσταση
+//    ενός χώρου ζωγραφίζεται από το `SpaceStatusBadges` / `lib/units/unit-status-badges`.
 
 export type ObligationStatusValue =
   | 'draft' | 'completed' | 'approved' | 'in_progress' | 'pending';
@@ -66,7 +65,6 @@ export type BuildingProjectStatusValue =
 export type ProjectStatusValue = ProjectStatus | 'default';
 
 export type StatusByDomain = {
-  storage: StorageStatusValue;
   obligation: ObligationStatusValue;
   lead: LeadStageValue;
   communication: CommunicationStatusValue;
@@ -86,26 +84,6 @@ export interface StatusOptions {
 // ============================================================================
 // Per-domain color helpers
 // ============================================================================
-
-// ✅ ADR-365 follow-up: storage status are FILL indicators (dots/cards) → SOLID vivid
-function colorStorage(status: string, colors?: SemanticColors): string {
-  if (!colors) {
-    switch (status) {
-      case 'available': return 'bg-[hsl(var(--status-success))]';
-      case 'sold': return 'bg-[hsl(var(--status-info))]';
-      case 'reserved': return 'bg-[hsl(var(--status-warning))]';
-      case 'maintenance': return 'bg-[hsl(var(--status-error))]';
-      default: return 'bg-muted';
-    }
-  }
-  switch (status) {
-    case 'available': return colors.bg.successSolid;
-    case 'sold': return colors.bg.infoSolid;
-    case 'reserved': return colors.bg.warningSolid;
-    case 'maintenance': return colors.bg.errorSolid;
-    default: return colors.bg.muted;
-  }
-}
 
 function colorObligation(status: string, colors?: SemanticColors): string {
   if (!colors) {
@@ -233,7 +211,6 @@ function colorProject(status: string, colors?: SemanticColors): string {
 
 function labelKey(domain: StatusDomain, status: string): string {
   switch (domain) {
-    case 'storage': return `pages.storage.statusLabels.${status}`;
     case 'obligation': return `obligations.status.${status}`;
     case 'lead': return `leads.stage.${status}`;
     case 'communication': return `communications.status.${status}`;
@@ -284,7 +261,6 @@ export function getStatusColor<D extends StatusDomain>(
 ): string {
   const s = String(status ?? '');
   switch (domain) {
-    case 'storage': return colorStorage(s, opts?.colors);
     case 'obligation': return colorObligation(s, opts?.colors);
     case 'lead': return colorLead(s, opts?.colors);
     case 'communication': return colorCommunication(s);

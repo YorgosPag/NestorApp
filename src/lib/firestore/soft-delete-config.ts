@@ -12,6 +12,7 @@ import "server-only";
 
 import { COLLECTIONS } from "@/config/firestore-collections";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
+import { ACTIVE_RECORD_STATUS } from "./trashed-status";
 
 /**
  * The single status value that means "in the trash".
@@ -132,7 +133,8 @@ export const SOFT_DELETE_CONFIG: Record<
   },
   parking: {
     collection: COLLECTIONS.PARKING_SPACES,
-    defaultRestoreStatus: "available",
+    // ADR-777 §8.60.20: το `status` χώρου = μόνο κύκλος ζωής (`active` · `deleted`).
+    defaultRestoreStatus: ACTIVE_RECORD_STATUS,
     permission: "units:units:delete",
     labelEl: "Thesi stathmeysis",
     labelEn: "Parking Spot",
@@ -146,7 +148,8 @@ export const SOFT_DELETE_CONFIG: Record<
   },
   storage: {
     collection: COLLECTIONS.STORAGE,
-    defaultRestoreStatus: "available",
+    // ADR-777 §8.60.20: το `status` χώρου = μόνο κύκλος ζωής (`active` · `deleted`).
+    defaultRestoreStatus: ACTIVE_RECORD_STATUS,
     permission: "units:units:delete",
     labelEl: "Apothiki",
     labelEn: "Storage Unit",

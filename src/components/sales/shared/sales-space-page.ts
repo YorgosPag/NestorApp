@@ -102,51 +102,8 @@ export function salesCardPricing(
   };
 }
 
-// =============================================================================
-// ΚΑΤΑΣΤΑΣΗ → ΣΗΜΑΝΣΗ
-// =============================================================================
-
-export type SalesSpaceBadgeVariant =
-  | 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info';
-
-/**
- * Το variant κάθε κατάστασης — ΚΟΙΝΟ, ό,τι κι αν είναι ο χώρος.
- *
- * «Πουλημένο» δεν βάφεται αλλιώς επειδή τυχαίνει να είναι αποθήκη αντί για
- * θέση στάθμευσης. Ζούσε δύο φορές (μία σε κάθε κάρτα) και μπορούσε να
- * αποκλίνει σιωπηλά — ο χρήστης θα έβλεπε το ίδιο νόημα με δύο χρώματα.
- */
-const STATUS_VARIANT: Record<string, SalesSpaceBadgeVariant> = {
-  available: 'success',
-  occupied: 'info',
-  reserved: 'warning',
-  sold: 'destructive',
-  maintenance: 'secondary',
-  unavailable: 'default',
-};
-
-export interface SalesSpaceBadge {
-  label: string;
-  variant: SalesSpaceBadgeVariant;
-}
-
-/**
- * Η σήμανση κατάστασης μιας κάρτας βοηθητικού χώρου.
- *
- * @param namespace — το i18n namespace του χώρου (`'parking'` | `'storage'`)
- * @param status — η κατάσταση· άγνωστη πέφτει στη «διαθέσιμη», όπως πριν
- * @param t — ο μεταφραστής του καλούντος
- */
-export function salesSpaceStatusBadge(
-  namespace: string,
-  status: string,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): SalesSpaceBadge {
-  return {
-    label: t(`${namespace}:status.${status}`, { defaultValue: status }),
-    variant: STATUS_VARIANT[status] ?? STATUS_VARIANT.available,
-  };
-}
+// 🧹 Εδώ ζούσε το `salesSpaceStatusBadge` + `STATUS_VARIANT` πάνω στο παλιό ανάμεικτο `status`
+// (ADR-777 §8.60.20): οι κάρτες ζωγραφίζουν πλέον τα σήματα του ΕΝΟΣ SSoT (`spaceStatusBadges`).
 
 /**
  * Μια επιλογή του panel: **πίνακας** όταν ο πίνακας ξεκίνησε από πίνακα, **κείμενο** όταν ξεκίνησε

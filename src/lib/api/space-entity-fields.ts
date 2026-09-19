@@ -16,8 +16,10 @@
  * failing loudly):
  *  - `undefined` = «not provided» → the key is omitted, leaving the stored value alone.
  *  - explicit `null` or a blank string → written as `null` (Firestore-clean).
- *  - the display field (`number` / `name`), `type` and `status` use a TRUTHY
- *    guard — a blank value is ignored rather than nulled.
+ *  - the display field (`number` / `name`) and `type` use a TRUTHY guard — a
+ *    blank value is ignored rather than nulled.
+ *  - `status` is NOT writable here (ADR-777 §8.60.20): it is the record lifecycle
+ *    (`active` · `deleted`), owned by creation + the soft-delete engine (ADR-281).
  *
  * @module lib/api/space-entity-fields
  * @see ADR-696 space-entity route SSoT · ADR-233 Entity coding
@@ -25,6 +27,25 @@
 
 import { z } from 'zod';
 import { SPACE_COMMERCIAL_UPDATE_FIELDS } from '@/lib/api/space-commercial-fields';
+import {
+  OPERATIONAL_STATUSES,
+  normalizeOperationalStatus,
+} from '@/constants/operational-statuses';
+import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
+
+/**
+ * 🔒 **Το `status` ενός χώρου ΔΕΝ γράφεται από σώμα αιτήματος** (ADR-777 §8.60.20).
+ *
+ * Είναι ο κύκλος ζωής της εγγραφής — `active` στη γέννηση, `deleted` από τον κάδο (ADR-281).
+ * Ως τις 2026-09-18 ήταν ανάμεικτο πεδίο και η γρήγορη επεξεργασία έγραφε εκεί «Πωλημένη»,
+ * παρακάμπτοντας τη συναλλαγή. `z.undefined()` και όχι παράλειψη: με `.passthrough()` ένα
+ * παραλειπόμενο πεδίο **περνά σιωπηλά** και απλώς αγνοείται — εδώ ο παλιός πελάτης παίρνει
+ * **400** και το μαθαίνει.
+ */
+const RECORD_STATUS_NOT_WRITABLE = z.undefined();
+
+/** Η λειτουργική κατάσταση — το **ίδιο** λεξιλόγιο με τα ακίνητα, ή `null` («δεν δηλώνεται»). */
+const OPERATIONAL_STATUS_FIELD = z.enum(OPERATIONAL_STATUSES);
 
 /** Human-facing identifier of the space — parking spots use `number`, storage units `name`. */
 export type SpaceDisplayField = 'number' | 'name';
@@ -49,7 +70,8 @@ export const SPACE_COMMON_UPDATE_FIELDS = {
   /** ADR-233: Entity coding system identifier */
   code: z.string().max(50).nullable().optional(),
   type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
+  status: RECORD_STATUS_NOT_WRITABLE,
+  operationalStatus: OPERATIONAL_STATUS_FIELD.nullable().optional(),
   floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
@@ -77,8 +99,11 @@ export const SPACE_COMMON_UPDATE_FIELDS = {
  * από το σώμα (`body.projectId?.trim()`), ενώ το `parking` το **έχει ήδη
  * επιλύσει** νωρίτερα (`resolvedProjectId`, με έλεγχο ιδιοκτησίας γονέα). Ίδιο
  * όνομα, **άλλη πηγή**. Εξομάλυνση θα άλλαζε σιωπηλά ποιο `projectId` γράφεται
- * — δηλαδή θα «ενοποιούσε» δύο διαφορετικές αποφάσεις. Ομοίως το `type`/`status`:
- * το `storages` τα **επικυρώνει** με `isValidStorageType`, το `parking` όχι.
+ * — δηλαδή θα «ενοποιούσε» δύο διαφορετικές αποφάσεις. Ομοίως το `type`:
+ * το `storages` το **επικυρώνει** με `isValidStorageType`, το `parking` όχι.
+ *
+ * 🔑 Το `status` και το `operationalStatus` **μπήκαν** εδώ (ADR-777 §8.60.20): είναι πλέον
+ * ίδια απόφαση για τους δύο χώρους — βλ. `mapCommonSpaceCreateFields`.
  */
 export const SPACE_COMMON_CREATE_FIELDS = {
   /** ADR-233: Entity coding system identifier */
@@ -86,7 +111,8 @@ export const SPACE_COMMON_CREATE_FIELDS = {
   buildingId: z.string().max(128).optional(),
   projectId: z.string().max(128).optional(),
   type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
+  status: RECORD_STATUS_NOT_WRITABLE,
+  operationalStatus: OPERATIONAL_STATUS_FIELD.optional(),
   floor: z.string().max(50).optional(),
   area: z.number().min(0).max(999_999).optional(),
   description: z.string().max(2000).optional(),
@@ -94,8 +120,11 @@ export const SPACE_COMMON_CREATE_FIELDS = {
 } as const;
 
 /**
- * Τα **πέντε** πεδία δημιουργίας που οι δύο χώροι έγραφαν με **πανομοιότυπη**
- * σημασιολογία.
+ * Τα πεδία δημιουργίας που οι δύο χώροι γράφουν με **πανομοιότυπη** σημασιολογία.
+ *
+ * 🔑 **Κατάσταση στη γέννηση** (ADR-777 §8.60.20): `status` = `active` **πάντα** (κύκλος ζωής)·
+ * `operationalStatus` = ό,τι δηλώθηκε, αλλιώς `DEFAULT_OPERATIONAL_STATUS` — ο ίδιος κανόνας με
+ * τη γέννηση ακινήτου. Διάθεση **δεν** γράφεται: νέα μονάδα = εκτός αγοράς (§8.60.18).
  *
  * 🔴 Η σημασιολογία **δεν** είναι ομοιόμορφη και **δεν πρέπει** να γίνει:
  *
@@ -116,7 +145,10 @@ export const SPACE_COMMON_CREATE_FIELDS = {
 export function mapCommonSpaceCreateFields(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
-  const fields: Record<string, unknown> = {};
+  const fields: Record<string, unknown> = {
+    status: NEW_SPACE_STATUSES.status,
+    operationalStatus: normalizeOperationalStatus(body.operationalStatus) ?? NEW_SPACE_STATUSES.operationalStatus,
+  };
 
   const floor = trimmedOrNull(body.floor);
   if (floor) fields.floor = floor;
@@ -161,7 +193,9 @@ export function mapCommonSpaceFields(
 
   if (isProvided(body.code)) updateData.code = trimmedOrNull(body.code);
   if (body.type) updateData.type = body.type;
-  if (body.status) updateData.status = body.status;
+  if (isProvided(body.operationalStatus)) {
+    updateData.operationalStatus = normalizeOperationalStatus(body.operationalStatus);
+  }
   if (isProvided(body.floor)) {
     updateData.floor = typeof body.floor === 'string'
       ? body.floor.trim() || null

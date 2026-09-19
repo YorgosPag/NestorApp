@@ -67,7 +67,7 @@ interface ParkingCreatePayload {
   /** Required when buildingId is absent; auto-resolved from building otherwise */
   projectId?: string;
   type?: CanonicalParkingSpot['type'];
-  status?: CanonicalParkingSpot['status'];
+  operationalStatus?: CanonicalParkingSpot['operationalStatus'];
   locationZone?: CanonicalParkingSpot['locationZone'];
   floor?: string;
   location?: string;
@@ -118,7 +118,6 @@ export const POST = withStandardRateLimit(
           number: body.number.trim(),
           buildingId: buildingId,
           type: body.type || 'standard',
-          status: body.status || 'available',
           ...mapCommonSpaceCreateFields(body),
         };
 

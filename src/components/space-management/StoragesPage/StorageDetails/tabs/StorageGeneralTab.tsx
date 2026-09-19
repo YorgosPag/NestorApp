@@ -17,9 +17,7 @@ import {
   type StorageGeneralTabProps,
   type StorageFormState,
   STORAGE_TYPES,
-  STORAGE_STATUSES,
   DEFAULT_STORAGE_TYPE,
-  DEFAULT_STORAGE_STATUS,
   buildFormState,
 } from './storage-general-tab-config';
 import { Lock } from 'lucide-react';
@@ -38,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { LabeledInputField } from '@/components/shared/space-info/LabeledInputField';
 import { SpaceFloorCard } from '@/components/shared/space-info/SpaceFloorCard';
 import { SpaceCoreFields } from '@/components/shared/space-info/SpaceCoreFields';
+import { useSpaceFormState } from '@/components/shared/space-info/useSpaceFormState';
 import {
   createSpaceDraft,
   createSpacePatch,
@@ -69,15 +68,18 @@ const logger = createModuleLogger('StorageGeneralTab');
 // PAYLOAD BUILDERS (module scope — referentially stable)
 // ============================================================================
 
-/** POST body: the shared space fields plus storage's own identity, floor doc and price. */
+/**
+ * POST body: the shared space fields plus storage's own identity and floor doc.
+ * ⛔ Καμία τιμή (ADR-777 §8.60.18/§8.60.20): το πεδίο «Τιμή» εδώ έστελνε το @deprecated `price`, που ο
+ * server **πετούσε σιωπηλά** — πεδίο στην οθόνη που δεν αποθηκευόταν. Η τιμή ζει στην κάρτα «Διάθεση & τιμή».
+ */
 function buildStorageDraft(form: StorageFormState, buildingId: string | null): SpacePayloadBuilder {
   const draft = createSpaceDraft(
-    { name: form.name.trim(), type: form.type, status: form.status },
+    { name: form.name.trim(), type: form.type },
     form,
     buildingId,
   );
   draft.optionalText('floorId', form.floorId);
-  draft.optionalNumber('price', form.price);
   return draft;
 }
 
@@ -90,9 +92,7 @@ function buildStoragePatch(
   const patch = createSpacePatch(form, storage, linkPayload);
   patch.textChanged('name', form.name, storage.name);
   patch.valueChanged('type', form.type, storage.type || DEFAULT_STORAGE_TYPE);
-  patch.valueChanged('status', form.status, storage.status || DEFAULT_STORAGE_STATUS);
   patch.nullableTextChanged('floorId', form.floorId, storage.floorId);
-  patch.nullableNumberChanged('price', form.price, storage.price);
   return patch;
 }
 
@@ -111,7 +111,7 @@ export function StorageGeneralTab({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'properties-enums']);
 
   /** Guards against a double-submit while the POST is in flight. */
   const submittingRef = useRef(false);
@@ -120,13 +120,13 @@ export function StorageGeneralTab({
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Form state — always bound to inputs (disabled when not editing)
-  const [form, setForm] = useState<StorageFormState>(() => buildFormState(storage));
+  // ADR-777 §8.60.20 — νέα επιλογή ⇒ reset· προβολή ⇒ ακολουθεί τον server· επεξεργασία ⇒ πρόχειρο.
+  const [form, setForm] = useSpaceFormState(storage, isEditing, buildFormState);
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο: το ΙΔΙΟ πρόχειρο με τη γρήγορη επεξεργασία.
   const commercial = useSpaceCommercial(storage);
 
-  // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
+  // Νέα επιλογή ⇒ καθαρίζει και το σφάλμα δημιουργίας (η φόρμα ξαναγεμίζει στο `useSpaceFormState`).
   useEffect(() => {
-    setForm(buildFormState(storage));
     if (createMode) setCreateError(null);
   }, [storage.id]);
 
@@ -313,10 +313,9 @@ export function StorageGeneralTab({
               t={t}
               disabled={!isEditing}
               type={{ value: form.type, options: STORAGE_TYPES, onChange: handleTypeChange }}
-              status={{
-                value: form.status,
-                options: STORAGE_STATUSES,
-                onChange: (v) => updateField('status', v),
+              operationalStatus={{
+                value: form.operationalStatus,
+                onChange: (v) => updateField('operationalStatus', v),
               }}
               area={{ value: form.area, onChange: handleAreaChange }}
             />
@@ -330,15 +329,6 @@ export function StorageGeneralTab({
                 <p className="text-sm font-semibold">{storage.millesimalShares}‰</p>
               </fieldset>
             )}
-            <LabeledInputField
-              label={t('general.fields.price')}
-              value={form.price}
-              onChange={(v) => updateField('price', v)}
-              type="number"
-              step="0.01"
-              placeholder="€"
-              disabled={!isEditing}
-            />
           </div>
         </CardContent>
       </Card>

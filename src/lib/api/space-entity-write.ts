@@ -58,7 +58,7 @@ export function planSpaceWrite<TBody extends Record<string, unknown>>(
 }
 
 /** Τα πεδία που αλλάζουν «κατάσταση» — το φίλτρο «κατάσταση» του Ιστορικού τα ξεχωρίζει. */
-const STATUS_FIELDS: ReadonlySet<string> = new Set(['status', 'commercialStatus']);
+const STATUS_FIELDS: ReadonlySet<string> = new Set(['status', 'commercialStatus', 'operationalStatus']);
 
 /** Το ίχνος μιας γραφής: οι αλλαγές και η ενέργεια — ή `null` όταν δεν άλλαξε τίποτα. */
 export interface SpaceAuditEntry {

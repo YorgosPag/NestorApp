@@ -22,6 +22,7 @@
 import type { Property } from '@/types/property-viewer';
 import type { CommercialStatus, OperationalStatus, LevelData } from '@/types/property';
 import type { PropertyFieldsFormData } from '@/features/property-details/components/property-fields-form-types';
+import { DEFAULT_OPERATIONAL_STATUS } from '@/constants/operational-statuses';
 
 /** Server-side snapshot of the fields mirrored into `PropertyFieldsFormData`. */
 export type PropertyServerSnapshot = PropertyFieldsFormData;
@@ -48,7 +49,7 @@ export function buildFormDataFromProperty(property: Property): PropertyFieldsFor
     projectId: (extra.projectId as string | undefined) ?? '',
     buildingId: property.buildingId ?? '',
     floorId: property.floorId ?? '',
-    operationalStatus: (extra.operationalStatus as OperationalStatus | undefined) ?? 'draft',
+    operationalStatus: (extra.operationalStatus as OperationalStatus | undefined) ?? DEFAULT_OPERATIONAL_STATUS,
     commercialStatus: (property.commercialStatus ?? 'unavailable') as CommercialStatus,
     description: property.description ?? '',
     floor: property.floor ?? 0,

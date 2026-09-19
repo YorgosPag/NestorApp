@@ -9,7 +9,11 @@
  * @see ADR-588 §General tab — space tab de-duplication (Phase 2)
  */
 
-import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { Storage, StorageType } from '@/types/storage/contracts';
+import {
+  operationalDraftOf,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
 import type { SelectOption } from '@/components/shared/space-info/OptionSelectField';
 import type { SpaceGeneralTabProps } from '@/components/shared/space-info/space-general-tab-contracts';
 
@@ -26,11 +30,11 @@ export interface StorageFormState {
   /** ADR-233: Entity coding system */
   code: string;
   type: StorageType;
-  status: StorageStatus;
+  /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`''` = αδήλωτη). */
+  operationalStatus: OperationalStatusDraft;
   floor: string;
   floorId: string;
   area: string;
-  price: string;
   description: string;
   notes: string;
 }
@@ -40,7 +44,6 @@ export interface StorageFormState {
 // ============================================================================
 
 export const DEFAULT_STORAGE_TYPE: StorageType = 'storage';
-export const DEFAULT_STORAGE_STATUS: StorageStatus = 'available';
 
 export const STORAGE_TYPES: SelectOption<StorageType>[] = [
   { value: 'large', labelKey: 'general.types.large' },
@@ -53,15 +56,6 @@ export const STORAGE_TYPES: SelectOption<StorageType>[] = [
   { value: 'warehouse', labelKey: 'general.types.warehouse' },
 ];
 
-export const STORAGE_STATUSES: SelectOption<StorageStatus>[] = [
-  { value: 'available', labelKey: 'general.statuses.available' },
-  { value: 'occupied', labelKey: 'general.statuses.occupied' },
-  { value: 'maintenance', labelKey: 'general.statuses.maintenance' },
-  { value: 'reserved', labelKey: 'general.statuses.reserved' },
-  { value: 'sold', labelKey: 'general.statuses.sold' },
-  { value: 'unavailable', labelKey: 'general.statuses.unavailable' },
-];
-
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -71,11 +65,10 @@ export function buildFormState(storage: Storage): StorageFormState {
     name: storage.name || '',
     code: storage.code || '',
     type: storage.type || DEFAULT_STORAGE_TYPE,
-    status: storage.status || DEFAULT_STORAGE_STATUS,
+    operationalStatus: operationalDraftOf(storage),
     floor: storage.floor || '',
     floorId: storage.floorId || '',
     area: storage.area !== undefined ? String(storage.area) : '',
-    price: storage.price !== undefined ? String(storage.price) : '',
     description: storage.description || '',
     notes: storage.notes || '',
   };

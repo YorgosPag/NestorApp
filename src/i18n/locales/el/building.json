@@ -340,13 +340,6 @@
         "label": "Φίλτρα Αποθηκών",
         "mobileTitle": "Φίλτρα Αποθηκών"
       },
-      "statusLabels": {
-        "available": "Διαθέσιμο",
-        "occupied": "Κατειλημμένο",
-        "sold": "Πωλήθηκε",
-        "maintenance": "Συντήρηση",
-        "reserved": "Κρατημένο"
-      },
       "typeLabels": {
         "storage": "Αποθήκη",
         "parking": "Θέση Στάθμευσης",

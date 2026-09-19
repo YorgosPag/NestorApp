@@ -10,8 +10,10 @@
  * - Ισότιμη οντότητα στην πλοήγηση
  */
 
+import { PARKING_TYPES } from '@/types/parking';
 import type { FilterPanelConfig } from '../types';
 import { DEFAULT_SPACE_FILTERS, type SpaceFilterState } from './space-filter-state';
+import { spaceStatusFilterFields } from './unit-status-filter-options';
 import {
   COMMON_FILTER_LABELS,
   PROPERTY_FILTER_LABELS,
@@ -35,18 +37,17 @@ export const PARKING_TYPE_LABELS = {
   visitor: 'parking.types.visitor'
 } as const;
 
-// =============================================================================
-// 🅿️ PARKING STATUS LABELS (Enterprise Centralized)
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-// =============================================================================
+/**
+ * Οι επιλογές τύπου θέσης — **μία** λίστα για panel **και** toolbar (ήταν γραμμένη δύο φορές,
+ * CHECK 3.28). Παράγεται από το `PARKING_TYPES`, ώστε νέος τύπος να μπαίνει παντού μαζί.
+ */
+export const PARKING_TYPE_FILTER_OPTIONS = PARKING_TYPES.map((type) => ({
+  value: type,
+  label: PARKING_TYPE_LABELS[type],
+}));
 
-export const PARKING_STATUS_LABELS = {
-  available: 'parking.status.available',
-  occupied: 'parking.status.occupied',
-  reserved: 'parking.status.reserved',
-  sold: 'parking.status.sold',
-  maintenance: 'parking.status.maintenance'
-} as const;
+// 🧹 Εδώ ζούσε το `PARKING_STATUS_LABELS` πάνω στο παλιό ανάμεικτο `status` (ADR-777 §8.60.20).
+// Οι επιλογές κατάστασης ζουν πλέον ΜΙΑ φορά: `unit-status-filter-options.ts`.
 
 // =============================================================================
 // 🅿️ PARKING FLOOR LABELS (Enterprise Centralized)
@@ -95,22 +96,8 @@ export const parkingFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'filters.parking.ariaLabels.search',
           width: 2
         },
-        {
-          id: 'status',
-          type: 'select',
-          label: 'filters.common.status',
-          placeholder: 'filters.common.selectStatus',
-          ariaLabel: 'filters.parking.ariaLabels.status',
-          width: 1,
-          options: [
-            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'available', label: PARKING_STATUS_LABELS.available },
-            { value: 'occupied', label: PARKING_STATUS_LABELS.occupied },
-            { value: 'reserved', label: PARKING_STATUS_LABELS.reserved },
-            { value: 'sold', label: PARKING_STATUS_LABELS.sold },
-            { value: 'maintenance', label: PARKING_STATUS_LABELS.maintenance }
-          ]
-        },
+        // ADR-777 §8.60.20 — διάθεση + λειτουργία: οι ΔΥΟ όψεις από ΕΝΑ σημείο (ίδιες με τις αποθήκες/θέσεις).
+        ...spaceStatusFilterFields('filters.parking.ariaLabels.status'),
         {
           id: 'type',
           type: 'select',
@@ -120,11 +107,7 @@ export const parkingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            { value: 'standard', label: PARKING_TYPE_LABELS.standard },
-            { value: 'handicapped', label: PARKING_TYPE_LABELS.handicapped },
-            { value: 'motorcycle', label: PARKING_TYPE_LABELS.motorcycle },
-            { value: 'electric', label: PARKING_TYPE_LABELS.electric },
-            { value: 'visitor', label: PARKING_TYPE_LABELS.visitor }
+            ...PARKING_TYPE_FILTER_OPTIONS,
           ]
         }
       ]

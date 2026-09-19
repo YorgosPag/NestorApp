@@ -12,6 +12,7 @@
 
 import type { PropertyType, OperationalStatus } from '@/types/property';
 import { CREATABLE_PROPERTY_TYPES } from '@/constants/property-types';
+import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import type {
   OrientationType,
   ConditionType,
@@ -96,9 +97,8 @@ export const EDITABLE_PROPERTY_TYPES: PropertyType[] = [...CREATABLE_PROPERTY_TY
 // καταναλωτή — τους χώρους και τον server που αρνείται ό,τι λείπει (ADR-777 §8.60.18).
 // Κράτηση · πώληση · μίσθωση γίνονται ΜΟΝΟ από τους διαλόγους πωλήσεων (Sentry 2026-03-24).
 
-export const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
-  'draft', 'under-construction', 'inspection', 'ready', 'maintenance',
-];
+/** Οι λειτουργικές καταστάσεις του επιλογέα — **παράγονται** από το SSoT (ADR-777 §8.60.20· ήταν χειρόγραφη λίστα). */
+export const OPERATIONAL_STATUS_OPTIONS: readonly OperationalStatus[] = OPERATIONAL_STATUSES;
 
 // =============================================================================
 // SSoT: Visual tokens for property detail cards (SALES_ICON_COLORS pattern)

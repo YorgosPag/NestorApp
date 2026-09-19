@@ -22,7 +22,9 @@ import {
   PackageCheck
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { spaceAvailabilityLabelKey } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
+import { isSpaceAvailabilityBucket } from '@/lib/spaces/space-availability';
+import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
 import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { MobileDetailsSlideIn } from '@/core/layouts';
@@ -60,7 +62,7 @@ const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
   id: '',
   name: 'Αποθήκη',
   type: 'storage',
-  status: 'available',
+  ...NEW_SPACE_STATUSES,
   building: '',
   floor: '',
   area: 0,
@@ -68,7 +70,7 @@ const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
 
 export function StoragePageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash', 'storage']);
+  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash', 'storage', 'filters']);
   const { success } = useNotifications();
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
@@ -176,14 +178,16 @@ export function StoragePageContent() {
       color: "blue"
     },
     {
-      title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }),
+      // ADR-777 §8.60.20 — «στην αγορά», από το `commercialStatus` (ίδιος κουβάς με φίλτρα και πίνακες).
+      title: t(spaceAvailabilityLabelKey('listed'), { ns: 'filters' }),
       value: stats.availableStorages,
       icon: TrendingUp,
       color: "green"
     },
     {
-      title: t(UNIFIED_STATUS_FILTER_LABELS.OCCUPIED, { ns: 'common' }),
-      value: stats.occupiedStorages,
+      // «Σε χρήση» = πωλημένες + ενοικιασμένες — ΠΑΡΑΓΟΜΕΝΟ, όχι το αποθηκευμένο «occupied».
+      title: t('spaceAvailability.inUse', { ns: 'filters' }),
+      value: stats.inUseStorages,
       icon: PackageCheck,
       color: "purple"
     },
@@ -244,8 +248,10 @@ export function StoragePageContent() {
                   <DistributionCard
                     title={t('pages.storage.dashboard.statusDistribution')}
                     icon={BarChart3}
-                    distribution={stats.storagesByStatus}
-                    labelFor={(status) => t(`pages.storage.statusLabels.${status}`)}
+                    distribution={stats.storagesByAvailability}
+                    labelFor={(bucket) =>
+                      isSpaceAvailabilityBucket(bucket) ? t(spaceAvailabilityLabelKey(bucket), { ns: 'filters' }) : bucket
+                    }
                   />
                   <DistributionCard
                     title={t('pages.storage.dashboard.typeDistribution')}

@@ -5,6 +5,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { generateParkingId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { ACTIVE_RECORD_STATUS } from '@/lib/firestore/trashed-status';
 import type {
   CreatedParkingSpotRecord,
   ExistingParkingSpotRecord,
@@ -38,7 +39,8 @@ export function buildParkingPreviewRecords(): ParkingPreviewRecord[] {
     previewId: PARKING_PREVIEW_ID,
     buildingId: TARGET_BUILDING.id,
     type: template.type,
-    status: template.status,
+    commercialStatus: template.commercialStatus,
+    operationalStatus: template.operationalStatus,
   }));
 }
 
@@ -76,11 +78,15 @@ export async function createSeedParkingSpots(): Promise<CreatedParkingSpotRecord
       buildingId: TARGET_BUILDING.id,
       projectId: TARGET_BUILDING.projectId,
       type: template.type,
-      status: template.status,
+      // ADR-777 §8.60.20: κάδος · διάθεση · λειτουργία — τρία πεδία, όχι ένα ανάμεικτο.
+      status: ACTIVE_RECORD_STATUS,
+      commercialStatus: template.commercialStatus,
+      operationalStatus: template.operationalStatus,
       floor: template.floor,
       location: template.location,
       area: template.area,
-      price: template.price,
+      // ADR-777 §8.60.18: η τιμή ζει ανά ρόλο — το @deprecated `price` δεν γράφεται.
+      commercial: { askingPrice: template.price },
       notes: template.notes || '',
       createdAt: now,
       updatedAt: now,

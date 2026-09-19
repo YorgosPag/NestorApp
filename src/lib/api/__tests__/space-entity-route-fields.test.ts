@@ -28,9 +28,15 @@ import {
  * στο PATCH. Ο επιλυτής το διάβαζε **πάντα** ως πώληση, άρα θέση προς ενοικίαση δεν μπορούσε να
  * δηλωθεί. Η τιμή ζει στο `commercial` ανά ρόλο (`space-commercial-fields.ts`).
  */
+/**
+ * ADR-777 §8.60.20 — η κατάσταση στη γέννηση: **πάντα** ζωντανή εγγραφή + η λειτουργική της
+ * (ή η προεπιλογή, ίδια με την γέννηση ακινήτου). Όλα τα υπόλοιπα της ομάδας μένουν ως ήταν.
+ */
+const BIRTH = { status: 'active', operationalStatus: 'draft' } as const;
+
 describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟΥΡΓΙΑ', () => {
-  it('άδειο σώμα ⇒ κανένα πεδίο (ποτέ `undefined` στο Firestore)', () => {
-    expect(mapCommonSpaceCreateFields({})).toEqual({});
+  it('άδειο σώμα ⇒ ΜΟΝΟ η κατάσταση γέννησης (ποτέ `undefined` στο Firestore)', () => {
+    expect(mapCommonSpaceCreateFields({})).toEqual(BIRTH);
   });
 
   it('περνά τα πέντε κοινά πεδία, με trim — και ΠΕΤΑ το `price`', () => {
@@ -44,6 +50,7 @@ describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟ
         code: ' P-1 ',
       }),
     ).toEqual({
+      ...BIRTH,
       floor: '2',
       area: 12.5,
       description: 'περιγραφή',
@@ -53,29 +60,31 @@ describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟ
   });
 
   it('🔴 `price` ΔΕΝ γράφεται ποτέ (ADR-777 §8.60.18) — ούτε μηδέν ούτε θετικό', () => {
-    expect(mapCommonSpaceCreateFields({ price: 0 })).toEqual({});
-    expect(mapCommonSpaceCreateFields({ price: 12000 })).toEqual({});
+    expect(mapCommonSpaceCreateFields({ price: 0 })).toEqual(BIRTH);
+    expect(mapCommonSpaceCreateFields({ price: 12000 })).toEqual(BIRTH);
   });
 
   it('🔴 `area: 0` ΔΕΝ γράφεται — μηδενικό εμβαδόν είναι κενή φόρμα', () => {
-    expect(mapCommonSpaceCreateFields({ area: 0 })).toEqual({});
+    expect(mapCommonSpaceCreateFields({ area: 0 })).toEqual(BIRTH);
   });
 
   it('κενές/λευκές συμβολοσειρές παραλείπονται, δεν γράφονται ως `null`', () => {
     expect(
       mapCommonSpaceCreateFields({ floor: '   ', description: '', notes: '  ', code: '' }),
-    ).toEqual({});
+    ).toEqual(BIRTH);
   });
 
   it('αρνητική τιμή ή μη-αριθμός αγνοείται', () => {
-    expect(mapCommonSpaceCreateFields({ price: -1, area: -5 })).toEqual({});
-    expect(mapCommonSpaceCreateFields({ price: '10', area: '10' })).toEqual({});
+    expect(mapCommonSpaceCreateFields({ price: -1, area: -5 })).toEqual(BIRTH);
+    expect(mapCommonSpaceCreateFields({ price: '10', area: '10' })).toEqual(BIRTH);
   });
 
-  it('🔴 ΔΕΝ αγγίζει `projectId` / `type` / `status` — διαφέρουν ανά χώρο', () => {
-    expect(
-      mapCommonSpaceCreateFields({ projectId: 'prj_1', type: 'small', status: 'available' }),
-    ).toEqual({});
+  it('🔴 ΔΕΝ αγγίζει `projectId` / `type` — διαφέρουν ανά χώρο', () => {
+    expect(mapCommonSpaceCreateFields({ projectId: 'prj_1', type: 'small' })).toEqual(BIRTH);
+  });
+
+  it('🔴 ADR-777 §8.60.20 — ένα παλιό `status` στο σώμα ΔΕΝ ορίζει τον κύκλο ζωής', () => {
+    expect(mapCommonSpaceCreateFields({ status: 'sold' })).toEqual(BIRTH);
   });
 });
 
@@ -149,13 +158,13 @@ describe('mapCommonSpaceFields — numeric fields reject non-numbers', () => {
   });
 });
 
-describe('mapCommonSpaceFields — type/status use a truthy guard', () => {
-  it('writes non-empty type/status', () => {
+describe('mapCommonSpaceFields — type uses a truthy guard; status is NEVER written', () => {
+  it('writes a non-empty type — and drops `status` (ADR-777 §8.60.20: record lifecycle only)', () => {
     expect(mapCommonSpaceFields({ type: 'large', status: 'available' }, 'number'))
-      .toEqual({ type: 'large', status: 'available' });
+      .toEqual({ type: 'large' });
   });
 
-  it('ignores empty type/status instead of writing an empty string', () => {
+  it('ignores an empty type instead of writing an empty string', () => {
     expect(mapCommonSpaceFields({ type: '', status: '' }, 'number')).toEqual({});
   });
 });

@@ -1,19 +1,5 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-import type { StorageUnit, StorageType, StorageStatus } from './contracts';
-
-// Export default storage unit template
-export const defaultStorageUnit: Partial<StorageUnit> = {
-  type: 'storage',
-  status: 'available',
-  floor: 'storage.floors.basement', // i18n key
-  area: 0,
-  price: 0,
-  linkedProperty: null,
-  coordinates: { x: 0, y: 0 },
-  features: [],
-  description: '',
-  notes: ''
-};
+import type { StorageUnit, StorageType } from './contracts';
 
 const BASE_STORAGE_FEATURES = [
   'storage.features.electricity',
@@ -44,17 +30,6 @@ export const commonStorageFeatures: Record<StorageType, string[]> = {
     'storage.features.security',
     'storage.features.easyAccess'
   ]
-};
-
-// Status labels (i18n keys)
-export const statusLabels: Record<StorageStatus, string> = {
-  available: 'storage.status.available',
-  occupied: 'storage.status.occupied',
-  sold: 'storage.status.sold',
-  reserved: 'storage.status.reserved',
-  maintenance: 'storage.status.maintenance',
-  unavailable: 'storage.status.unavailable',
-  deleted: 'storage.status.deleted'
 };
 
 // Type labels (i18n keys)

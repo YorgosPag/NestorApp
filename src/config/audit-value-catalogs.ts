@@ -81,6 +81,13 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // normalised by the resolver before lookup.
   commercialStatus: { ns: 'properties-enums', path: 'auditCommercialStatus' },
 
+  // ── ADR-777 §8.60.20: λειτουργική κατάσταση (θέσεις · αποθήκες — ίδιο λεξιλόγιο με τα ακίνητα).
+  // Όπως το `commercialStatus`: υποκατάλογος ΜΟΝΟ camelCase (`auditOperationalStatus`, ADR-279 §3)·
+  // ο resolver κανονικοποιεί το αποθηκευμένο `under-construction` σε `underConstruction` πριν
+  // την αναζήτηση. Ο κατάλογος του επιλογέα (`operationalStatus`) κρατά ΚΑΙ το kebab κλειδί —
+  // είναι η κανονική τιμή που ζητά το `unit-status-badges` — άρα δεν περνά τον έλεγχο 3.14.
+  operationalStatus: { ns: 'properties-enums', path: 'auditOperationalStatus' },
+
   // ── ADR-864 §5.1: κοινό αγγελίας (custodians/network/public). Ο ΙΔΙΟΣ κατάλογος με τη
   // διεπαφή επιλογής (`MarketingAudienceControl`) — μία ετικέτα ανά τιμή, όχι δύο.
   marketingAudience: { ns: 'properties-enums', path: 'marketingAudience' },

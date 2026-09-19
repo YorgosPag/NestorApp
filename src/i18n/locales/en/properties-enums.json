@@ -302,6 +302,18 @@
     "maintenance": "Under Maintenance",
     "draft": "Incomplete"
   },
+  "auditOperationalStatus": {
+    "ready": "Ready",
+    "underConstruction": "Under Construction",
+    "inspection": "Under Inspection",
+    "maintenance": "Under Maintenance",
+    "draft": "Incomplete"
+  },
+  "unitStatus": {
+    "operational": "Operational status",
+    "availability": "Availability",
+    "undeclared": "Not declared"
+  },
   "offerKind": {
     "sell": "Sale",
     "leaseOut": "Rental",

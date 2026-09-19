@@ -25,14 +25,6 @@
     "vip": "VIP",
     "visitor": "Visitor"
   },
-  "status": {
-    "sold": "Sold",
-    "owner": "Owner",
-    "available": "Available",
-    "reserved": "Reserved",
-    "occupied": "Occupied",
-    "maintenance": "Maintenance"
-  },
   "locationZone": {
     "label": "Location Zone",
     "pilotis": "Pilotis",
@@ -84,13 +76,6 @@
       "vip": "VIP",
       "reserved": "Reserved",
       "visitor": "Visitor"
-    },
-    "statuses": {
-      "available": "Available",
-      "occupied": "Occupied",
-      "reserved": "Reserved",
-      "maintenance": "Maintenance",
-      "sold": "Sold"
     },
     "priceValues": {
       "shared": "Shared (Free)",

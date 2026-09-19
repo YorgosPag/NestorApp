@@ -18,11 +18,10 @@ import { Car, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
-import { SalesGridCard } from '@/components/sales/shared/SalesGridCard';
+import { SalesSpaceGridCard } from '@/components/sales/shared/SalesSpaceGridCard';
 import {
   SalesCardGrid,
   SalesListPageShell,
-  salesCardPricing,
   salesSpaceSidebarProps,
   useSalesSpacePanelFilters,
 } from '@/components/sales/shared';
@@ -93,15 +92,12 @@ function SalesParkingContent() {
           renderCard={item => {
             const zone = item.locationZone ? ` · ${t(`parking:locationZone.${item.locationZone}`)}` : '';
             return (
-              <SalesGridCard
+              <SalesSpaceGridCard
                 key={item.id}
-                id={item.id}
+                item={item}
                 icon={Car}
                 title={item.number || item.id}
-                statusKey={item.status ?? 'available'}
-                statusLabel={t(`parking:status.${item.status ?? 'available'}`)}
                 description={`${t(`parking:types.${item.type ?? 'standard'}`)}${zone}`}
-                {...salesCardPricing(item, t)}
                 onClick={handleSelectItem}
               />
             );

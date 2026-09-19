@@ -4,20 +4,17 @@
  * ParkingQuickCreateSheet — Sheet wrapping the canonical ParkingGeneralTab in
  * create mode, identical to the creation panel in /spaces/parking.
  *
- * SSoT: uses the same ParkingGeneralTab + EntityDetailsHeader + DetailsContainer
- * pattern as ParkingPageContent (lines 335-360).
+ * Το κέλυφος (Sheet + κεφαλίδα + αποθήκευση/ακύρωση) είναι το κοινό `SpaceQuickCreateSheet`
+ * (ADR-777 §8.60.20)· εδώ μένει μόνο ό,τι είναι της θέσης.
  */
 
-import React, { useRef, useCallback } from 'react';
-import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Car } from 'lucide-react';
-import { DIALOG_SCROLL } from '@/styles/design-tokens';
-import { DetailsContainer } from '@/core/containers';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { ParkingGeneralTab } from '@/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
 import type { ParkingSpot } from '@/types/parking';
+import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
+import { SpaceQuickCreateSheet } from './SpaceQuickCreateSheet';
 
 export interface ParkingQuickCreateSheetProps {
   readonly open: boolean;
@@ -35,65 +32,32 @@ export function ParkingQuickCreateSheet({
   onParkingCreated,
 }: ParkingQuickCreateSheetProps) {
   const { t: tParking } = useTranslation('parking');
-  const saveRef = useRef<(() => Promise<boolean>) | null>(null);
 
   const emptyParking: ParkingSpot = {
     id: '',
     number: '',
     type: 'standard',
-    status: 'available',
+    // ADR-777 §8.60.20 — νέα εγγραφή: ζωντανή, λειτουργικά «πρόχειρο» (ίδιος κανόνας με τα ακίνητα).
+    ...NEW_SPACE_STATUSES,
     floor: '',
     buildingId,
     projectId: projectId || undefined,
   };
 
-  const handleClose = useCallback(() => onOpenChange(false), [onOpenChange]);
-
-  const handleSave = useCallback(() => {
-    saveRef.current?.();
-  }, []);
-
-  const handleCreated = useCallback(() => {
-    onParkingCreated?.();
-    onOpenChange(false);
-  }, [onParkingCreated, onOpenChange]);
-
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <SheetContent
-        side="right"
-        className={cn(
-          'w-[min(960px,96vw)] sm:max-w-none p-0 flex flex-col overflow-hidden',
-          DIALOG_SCROLL.scrollable,
-        )}
-      >
-        <SheetTitle className="sr-only">{tParking('header.newParking')}</SheetTitle>
-        <DetailsContainer
-          selectedItem={{ id: 'create' }}
-          header={
-            <EntityDetailsHeader
-              icon={Car}
-              title={tParking('header.newParking')}
-              actions={[
-                createEntityAction('save', tParking('form.create'), handleSave),
-                createEntityAction('cancel', tParking('form.cancel'), handleClose),
-              ]}
-              variant="detailed"
-            />
-          }
-          tabsRenderer={
-            open ? (
-              <ParkingGeneralTab
-                parking={emptyParking}
-                isEditing
-                createMode
-                onSaveRef={saveRef}
-                onCreated={handleCreated}
-              />
-            ) : undefined
-          }
-        />
-      </SheetContent>
-    </Sheet>
+    <SpaceQuickCreateSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Car}
+      labels={{
+        title: tParking('header.newParking'),
+        save: tParking('form.create'),
+        cancel: tParking('form.cancel'),
+      }}
+      onCreated={onParkingCreated}
+      renderForm={({ saveRef, onCreated }) => (
+        <ParkingGeneralTab parking={emptyParking} isEditing createMode onSaveRef={saveRef} onCreated={onCreated} />
+      )}
+    />
   );
 }

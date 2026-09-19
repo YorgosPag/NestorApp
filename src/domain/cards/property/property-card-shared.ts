@@ -24,6 +24,8 @@ import {
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
 import type { CommercialStatus } from '@/types/property';
+import { isEditorCommercialStatus } from '@/constants/commercial-statuses';
+import { commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import type { Property } from '@/types/property-viewer';
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
@@ -32,28 +34,19 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string;
 // 🏢 COMMERCIAL STATUS MAPPINGS (identical Grid + List)
 // =============================================================================
 
-export const COMMERCIAL_STATUS_BADGE_VARIANTS: Record<string, GridCardBadge['variant']> = {
-  'for-sale': 'info',
-  'for-rent': 'warning',
-  'for-sale-and-rent': 'secondary',
-  'unavailable': 'default',
-};
-
-export const COMMERCIAL_STATUS_LABEL_KEYS: Record<string, string> = {
-  'for-sale': 'commercialStatus.for-sale',
-  'for-rent': 'commercialStatus.for-rent',
-  'for-sale-and-rent': 'commercialStatus.for-sale-and-rent',
-  'unavailable': 'commercialStatus.unavailable',
-};
-
-/** Optional commercial-status badge appended after the primary status badge. */
+/**
+ * Optional commercial-status badge appended after the primary status badge.
+ *
+ * Μόνο για καταστάσεις **αγοράς** (`isEditorCommercialStatus`): κράτηση / πώληση τις δείχνει
+ * ήδη το κύριο σήμα (`resolvePropertyBadge`) — δεύτερο ίδιο σήμα θα ήταν θόρυβος. Ετικέτα και
+ * απόχρωση από το **ένα** SSoT των μονάδων (ADR-777 §8.60.20· ήταν δύο τοπικοί χάρτες εδώ).
+ */
 export function buildCommercialBadge(property: Property, t: TFn): GridCardBadge | null {
-  const cs = property.commercialStatus;
-  if (!cs || !COMMERCIAL_STATUS_LABEL_KEYS[cs]) return null;
-  return {
-    label: t(COMMERCIAL_STATUS_LABEL_KEYS[cs], { ns: 'properties-enums' }),
-    variant: COMMERCIAL_STATUS_BADGE_VARIANTS[cs] ?? 'default',
-  };
+  if (!isEditorCommercialStatus(property.commercialStatus)) return null;
+  const spec = commercialStatusBadge(property.commercialStatus);
+  return spec
+    ? { label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }), variant: spec.variant }
+    : null;
 }
 
 /**

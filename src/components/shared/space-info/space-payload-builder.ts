@@ -21,6 +21,12 @@
  * @see ADR-588 §General tab — space tab de-duplication (Phase 2)
  */
 
+import {
+  operationalPatchOf,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
+import type { SpaceStatusSource } from '@/lib/spaces/space-status-split';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -69,6 +75,8 @@ function parseOptionalNumber(formValue: string): number | undefined {
 /** The form fields every space entity has, whatever else its schema adds. */
 export interface CommonSpaceFormSlice {
   code: string;
+  /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`''` = αδήλωτη). Κοινή σε θέση και αποθήκη. */
+  operationalStatus: OperationalStatusDraft;
   floor: string;
   /** Raw numeric input. */
   area: string;
@@ -77,7 +85,7 @@ export interface CommonSpaceFormSlice {
 }
 
 /** The stored counterpart of {@link CommonSpaceFormSlice}. */
-export interface CommonSpaceEntitySlice {
+export interface CommonSpaceEntitySlice extends SpaceStatusSource {
   code?: string | null;
   floor?: string | null;
   area?: number | null;
@@ -137,7 +145,7 @@ export function createSpacePayload(initial: Record<string, unknown> = {}): Space
  * Start a create payload: the entity's required identity fields, plus the
  * optional fields every space shares. The caller adds its own extras.
  *
- * @param required Entity-specific identity, e.g. `{ number, type, status }`.
+ * @param required Entity-specific identity, e.g. `{ number, type }`.
  */
 export function createSpaceDraft(
   required: Record<string, unknown>,
@@ -146,6 +154,8 @@ export function createSpaceDraft(
 ): SpacePayloadBuilder {
   const draft = createSpacePayload(required);
   draft.optionalText('code', form.code);
+  // ADR-777 §8.60.20 — αδήλωτη ⇒ ο server βάζει την προεπιλογή (ίδια με τη γέννηση ακινήτου).
+  draft.optionalText('operationalStatus', form.operationalStatus);
   draft.optionalText('buildingId', buildingId);
   draft.optionalText('floor', form.floor);
   draft.optionalNumber('area', form.area);
@@ -165,6 +175,8 @@ export function createSpacePatch(
 ): SpacePayloadBuilder {
   const patch = createSpacePayload();
   patch.nullableTextChanged('code', form.code, entity.code);
+  // ADR-777 §8.60.20 — κρίνεται απέναντι στο αποθηκευμένο μέσω του ΕΝΟΣ αναγνώστη (και για παλιά έγγραφα).
+  patch.merge(operationalPatchOf(form.operationalStatus, entity));
   patch.textChanged('floor', form.floor, entity.floor);
   patch.nullableNumberChanged('area', form.area, entity.area);
   patch.textChanged('description', form.description, entity.description);
@@ -180,7 +192,7 @@ export function createSpacePatch(
  */
 export interface SpaceRealtimeUpdates {
   type?: string;
-  status?: string;
+  operationalStatus?: string;
   floor?: string;
   area?: number;
   buildingId?: string | null;
@@ -188,12 +200,12 @@ export interface SpaceRealtimeUpdates {
 
 /** Build the shared {@link SpaceRealtimeUpdates} slice from the form state. */
 export function buildSpaceRealtimeUpdates(
-  form: CommonSpaceFormSlice & { type: string; status: string },
+  form: CommonSpaceFormSlice & { type: string },
   buildingId: string | null,
 ): SpaceRealtimeUpdates {
   return {
     type: form.type,
-    status: form.status,
+    operationalStatus: form.operationalStatus || undefined,
     floor: form.floor.trim() || undefined,
     area: parseOptionalNumber(form.area),
     buildingId,

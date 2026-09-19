@@ -302,6 +302,18 @@
     "maintenance": "Υπό συντήρηση",
     "draft": "Ημιτελές"
   },
+  "auditOperationalStatus": {
+    "ready": "Έτοιμο",
+    "underConstruction": "Υπό κατασκευή",
+    "inspection": "Σε επιθεώρηση",
+    "maintenance": "Υπό συντήρηση",
+    "draft": "Ημιτελές"
+  },
+  "unitStatus": {
+    "operational": "Λειτουργική κατάσταση",
+    "availability": "Διάθεση",
+    "undeclared": "Δεν έχει δηλωθεί"
+  },
   "offerKind": {
     "sell": "Πώληση",
     "leaseOut": "Ενοικίαση",

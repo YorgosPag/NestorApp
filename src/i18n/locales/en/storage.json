@@ -61,14 +61,6 @@
     "unknown": "Unknown",
     "parking": "Parking Spot"
   },
-  "status": {
-    "available": "Available",
-    "occupied": "Occupied",
-    "reserved": "Reserved",
-    "maintenance": "Maintenance",
-    "sold": "Sold",
-    "unknown": "Unknown"
-  },
   "general": {
     "basicInfo": "Basic Information",
     "identity": "Identity",
@@ -106,14 +98,6 @@
       "storage": "Storage",
       "garage": "Garage",
       "warehouse": "Warehouse"
-    },
-    "statuses": {
-      "available": "Available",
-      "occupied": "Occupied",
-      "reserved": "Reserved",
-      "maintenance": "Maintenance",
-      "sold": "Sold",
-      "unavailable": "Unavailable"
     },
     "status": {
       "available": "Available",

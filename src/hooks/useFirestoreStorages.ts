@@ -19,6 +19,7 @@ import { mapStorageDoc } from '@/lib/firestore-mappers';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
+import { isTrashed } from '@/lib/firestore/trashed-status';
 
 const logger = createModuleLogger('useFirestoreStorages');
 
@@ -82,7 +83,7 @@ export function useFirestoreStorages(
             return mapStorageDoc(id as string, rest as Record<string, unknown>);
           })
           // ADR-281: Exclude soft-deleted records from normal list
-          .filter(s => s.status !== 'deleted');
+          .filter(s => !isTrashed(s));
 
         logger.info('Storages snapshot received', { count: mapped.length, buildingId });
         setStorages(mapped);

@@ -14,6 +14,8 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { ParkingSpot } from '@/types/parking';
+import { NEW_SPACE_STATUSES } from '@/lib/spaces/space-status-split';
+import { normalizeOperationalStatus } from '@/constants/operational-statuses';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { createStaleCache } from '@/lib/stale-cache';
 import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
@@ -22,7 +24,7 @@ import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
 // TYPE RE-EXPORTS — Canonical SSoT from @/types/parking (ADR-191)
 // =============================================================================
 
-export type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+export type { ParkingSpot, ParkingSpotType, ParkingLocationZone } from '@/types/parking';
 
 interface UseFirestoreParkingOptions {
   /** Filter by building ID */
@@ -97,7 +99,10 @@ export function useFirestoreParkingSpots(
         id: payload.parkingSpotId,
         number: payload.parkingSpot.number ?? '',
         type: (payload.parkingSpot.type as ParkingSpot['type']) ?? 'standard',
-        status: (payload.parkingSpot.status as ParkingSpot['status']) ?? 'available',
+        // ADR-777 §8.60.20 — νέα εγγραφή: ζωντανή, με τη λειτουργική που δηλώθηκε (ο server συμφωνεί).
+        status: NEW_SPACE_STATUSES.status,
+        operationalStatus:
+          normalizeOperationalStatus(payload.parkingSpot.operationalStatus) ?? NEW_SPACE_STATUSES.operationalStatus,
         buildingId: payload.parkingSpot.buildingId ?? null,
       };
       patch(prev => ({

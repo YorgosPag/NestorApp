@@ -340,13 +340,6 @@
         "label": "Storage Filters",
         "mobileTitle": "Storage Filters"
       },
-      "statusLabels": {
-        "available": "Available",
-        "occupied": "Occupied",
-        "sold": "Sold",
-        "maintenance": "Maintenance",
-        "reserved": "Reserved"
-      },
       "typeLabels": {
         "storage": "Storage",
         "parking": "Parking Spot",

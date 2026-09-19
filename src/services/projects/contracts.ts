@@ -15,12 +15,12 @@ export type ProjectProperty = Property & { customerName?: string | null };
 /**
  * 🏢 ENTERPRISE: Storage summary for project structure (minimal fields)
  */
-export type ProjectStorage = Pick<Storage, 'id' | 'name' | 'type' | 'status' | 'area' | 'floor'>;
+export type ProjectStorage = Pick<Storage, 'id' | 'name' | 'type' | 'status' | 'commercialStatus' | 'operationalStatus' | 'area' | 'floor'>;
 
 /**
  * 🏢 ENTERPRISE: Parking summary for project structure (minimal fields)
  */
-export type ProjectParking = Pick<ParkingSpot, 'id' | 'number' | 'type' | 'status' | 'floor' | 'area'>;
+export type ProjectParking = Pick<ParkingSpot, 'id' | 'number' | 'type' | 'status' | 'commercialStatus' | 'operationalStatus' | 'floor' | 'area'>;
 
 /**
  * 🏢 ENTERPRISE: Building with full hierarchy (Units, Storage, Parking)

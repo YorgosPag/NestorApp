@@ -13,16 +13,25 @@ import {
   totalPriceByRole,
   type PriceTotalsByRole,
 } from '@/lib/properties/price-totals';
-import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
+import { useEntityStats, groupBy, rate } from './useEntityStats';
+import {
+  countSpaceStatuses,
+  spaceAvailabilityBucket,
+  type SpaceAvailabilityBucket,
+} from '@/lib/spaces/space-availability';
 
 export interface ParkingStats {
-  // Basic metrics
+  // Basic metrics — ADR-777 §8.60.20: ΟΛΑ από το `commercialStatus` (+ η λειτουργική εξαίρεση)
   totalParkingSpots: number;
+  /** Στην αγορά (προς πώληση · ενοικίαση · και τα δύο). */
   availableParkingSpots: number;
-  occupiedParkingSpots: number;
   reservedParkingSpots: number;
   soldParkingSpots: number;
-  maintenanceParkingSpots: number;
+  rentedParkingSpots: number;
+  /** Με χρήστη (πώληση · μίσθωση) — η «κατοίκηση», παραγόμενη. */
+  inUseParkingSpots: number;
+  /** Όχι έτοιμες για χρήση (λειτουργική εξαίρεση). */
+  notReadyParkingSpots: number;
 
   // Area metrics
   totalArea: number;
@@ -35,7 +44,8 @@ export interface ParkingStats {
   // Distribution metrics
   uniqueBuildings: number;
   parkingByType: Record<string, number>;
-  parkingByStatus: Record<string, number>;
+  /** Κατανομή ανά κουβά διάθεσης (`lib/spaces/space-availability`). */
+  parkingByAvailability: Readonly<Record<SpaceAvailabilityBucket, number>>;
   parkingByFloor: Record<string, number>;
   parkingByBuilding: Record<string, number>;
 
@@ -49,7 +59,8 @@ const getArea = (p: ParkingSpot): number => p.area || 0;
 // ⛔ No `getValue` (ADR-777 §8.60.14.13): a price is not a unitless number — the value
 //    is answered per role by `totalPriceByRole` (which also keeps Α5: priceless spots
 //    are named, never entered as zero).
-const getStatus = (p: ParkingSpot): string => p.status || 'unknown';
+// ADR-777 §8.60.20 — η «κατάσταση» των στατιστικών είναι ο κουβάς διάθεσης, όχι το παλιό `status`.
+const getStatus = (p: ParkingSpot): string => spaceAvailabilityBucket(p);
 const getType = (p: ParkingSpot): string => p.type || 'unknown';
 
 export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
@@ -58,12 +69,8 @@ export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
   const stats = useMemo<ParkingStats>(() => {
     const total = base.total;
 
-    // Status counts
-    const available = countBy(parkingSpots, p => p.status === 'available');
-    const occupied = countBy(parkingSpots, p => p.status === 'occupied');
-    const reserved = countBy(parkingSpots, p => p.status === 'reserved');
-    const sold = countBy(parkingSpots, p => p.status === 'sold');
-    const maintenance = countBy(parkingSpots, p => p.status === 'maintenance');
+    // ADR-777 §8.60.20 — οι μετρήσεις από το ΕΝΑ SSoT (ίδιες με πίνακες κτιρίου και πωλήσεις).
+    const counts = countSpaceStatuses(parkingSpots);
 
     // Distributions
     const uniqueBuildings = new Set(parkingSpots.map(p => p.buildingId).filter(Boolean)).size;
@@ -72,11 +79,12 @@ export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
 
     return {
       totalParkingSpots: total,
-      availableParkingSpots: available,
-      occupiedParkingSpots: occupied,
-      reservedParkingSpots: reserved,
-      soldParkingSpots: sold,
-      maintenanceParkingSpots: maintenance,
+      availableParkingSpots: counts.byAvailability.listed,
+      reservedParkingSpots: counts.byAvailability.reserved,
+      soldParkingSpots: counts.byAvailability.sold,
+      rentedParkingSpots: counts.byAvailability.rented,
+      inUseParkingSpots: counts.inUse,
+      notReadyParkingSpots: counts.notReady,
 
       totalArea: base.totalArea,
       averageArea: base.averageArea,
@@ -84,19 +92,13 @@ export function useParkingStats(parkingSpots: ParkingSpot[]): ParkingStats {
 
       uniqueBuildings,
       parkingByType: base.byType,
-      parkingByStatus: {
-        available,
-        occupied,
-        reserved,
-        sold,
-        maintenance,
-      },
+      parkingByAvailability: counts.byAvailability,
       parkingByFloor,
       parkingByBuilding,
 
-      utilizationRate: rate(occupied, total),
-      availabilityRate: rate(available, total),
-      salesRate: rate(sold, total),
+      utilizationRate: counts.utilizationRate,
+      availabilityRate: counts.availabilityRate,
+      salesRate: rate(counts.byAvailability.sold, total),
     };
   }, [base, parkingSpots]);
 

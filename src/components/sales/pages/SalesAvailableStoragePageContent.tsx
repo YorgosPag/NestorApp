@@ -19,11 +19,10 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
-import { SalesGridCard } from '@/components/sales/shared/SalesGridCard';
+import { SalesSpaceGridCard } from '@/components/sales/shared/SalesSpaceGridCard';
 import {
   SalesCardGrid,
   SalesListPageShell,
-  salesCardPricing,
   salesSpaceSidebarProps,
   useSalesSpacePanelFilters,
 } from '@/components/sales/shared';
@@ -92,15 +91,12 @@ function SalesStorageContent() {
           ariaLabel={t('salesStorage.gridLabel')}
           emptyMessage={t('salesStorage.noResults')}
           renderCard={item => (
-            <SalesGridCard
+            <SalesSpaceGridCard
               key={item.id}
-              id={item.id}
+              item={item}
               icon={Package}
               title={item.name || item.id}
-              statusKey={item.status ?? 'available'}
-              statusLabel={t(`storage:status.${item.status}`)}
               description={`${t(`storage:types.${item.type}`)} · ${item.area ?? '—'} m²`}
-              {...salesCardPricing(item, t)}
               onClick={handleSelectItem}
             />
           )}

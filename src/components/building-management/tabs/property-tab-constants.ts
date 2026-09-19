@@ -10,7 +10,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
+import type { PropertyType, CommercialStatus } from '@/types/property';
 import { isLandProperty } from '@/constants/property-classification';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 
@@ -68,14 +68,6 @@ export const CREATION_COMMERCIAL_OPTION_KEYS: { value: CommercialStatus; labelKe
   { value: 'unavailable', labelKey: 'commercialStatus.unavailable' },
   { value: 'for-sale', labelKey: 'commercialStatus.for-sale' },
   { value: 'for-rent', labelKey: 'commercialStatus.for-rent' },
-];
-
-export const OPERATIONAL_STATUS_OPTION_KEYS: { value: OperationalStatus; labelKey: string }[] = [
-  { value: 'draft', labelKey: 'operationalStatus.draft' },
-  { value: 'under-construction', labelKey: 'operationalStatus.under-construction' },
-  { value: 'ready', labelKey: 'operationalStatus.ready' },
-  { value: 'inspection', labelKey: 'operationalStatus.inspection' },
-  { value: 'maintenance', labelKey: 'operationalStatus.maintenance' },
 ];
 
 // ============================================================================

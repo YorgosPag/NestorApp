@@ -312,3 +312,4 @@ Early validation στο route handler:
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-03-19 | Initial audit documentation — 8 findings documented | Claude Code |
+| 2026-09-19 | **Έξοδος από συναλλαγή μόνο από τη δική της πράξη** (ADR-777 §8.60.20): το `RESERVED_LOCKED_FIELDS` κλειδώνει μόνο `code/type/name`, άρα ένα PATCH `reserved → for-rent/unavailable` περνούσε με τον αγοραστή γραμμένο. **ΝΕΟ** `validateTransactionExit` στο `property-field-locking.ts` (409), με τα **ίδια** κατηγορήματα με τους χώρους (`isTransactionOwnedCommercialStatus` · `isEditorCommercialStatus`)· καλείται **μετά** το ADR-249 (το `sold` απαντά ακόμη 403) και **μετά** την εξαίρεση ακύρωσης. Άγκυρα `property-transaction-exit.test.ts` + μετάλλαξη M13. | Claude Code |

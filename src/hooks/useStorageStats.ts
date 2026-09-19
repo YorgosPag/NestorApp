@@ -8,13 +8,15 @@
 
 import { useMemo } from 'react';
 import type { Storage } from '@/types/storage/contracts';
-import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
+import { useEntityStats, groupBy } from './useEntityStats';
+import { countSpaceStatuses, spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
 
 const getArea = (s: Storage): number => s.area || 0;
 // ⛔ No `getValue` (ADR-777 §8.60.14.13): the page never showed a storage value, and the
 //    generic sum would have added sale prices to monthly rents. A future value tile asks
 //    `totalPriceByRole` — the per-role answer — not this hook.
-const getStatus = (s: Storage): string => s.status || 'unknown';
+// ADR-777 §8.60.20 — η «κατάσταση» των στατιστικών είναι ο κουβάς διάθεσης, όχι το παλιό `status`.
+const getStatus = (s: Storage): string => spaceAvailabilityBucket(s);
 const getType = (s: Storage): string => s.type || 'unknown';
 
 export function useStorageStats(storages: Storage[]) {
@@ -23,11 +25,8 @@ export function useStorageStats(storages: Storage[]) {
   const stats = useMemo(() => {
     const total = base.total;
 
-    // Status counts
-    const available = countBy(storages, s => s.status === 'available');
-    const occupied = countBy(storages, s => s.status === 'occupied');
-    const maintenance = countBy(storages, s => s.status === 'maintenance');
-    const reserved = countBy(storages, s => s.status === 'reserved');
+    // ADR-777 §8.60.20 — οι μετρήσεις από το ΕΝΑ SSoT (ίδιες με πίνακες κτιρίου και πωλήσεις).
+    const counts = countSpaceStatuses(storages);
 
     // Distributions
     const uniqueBuildings = new Set(storages.map(s => s.building).filter(Boolean)).size;
@@ -36,27 +35,25 @@ export function useStorageStats(storages: Storage[]) {
 
     return {
       totalStorages: total,
-      availableStorages: available,
-      occupiedStorages: occupied,
-      maintenanceStorages: maintenance,
-      reservedStorages: reserved,
+      /** Στην αγορά. */
+      availableStorages: counts.byAvailability.listed,
+      /** Με χρήστη (πώληση · μίσθωση) — παραγόμενο, όχι αποθηκευμένο «occupied». */
+      inUseStorages: counts.inUse,
+      /** Όχι έτοιμες για χρήση (λειτουργική εξαίρεση). */
+      notReadyStorages: counts.notReady,
+      reservedStorages: counts.byAvailability.reserved,
 
       totalArea: base.totalArea,
       averageArea: base.averageArea,
 
       uniqueBuildings,
       storagesByType: base.byType,
-      storagesByStatus: {
-        available,
-        occupied,
-        maintenance,
-        reserved,
-      },
+      storagesByAvailability: counts.byAvailability,
       storagesByFloor,
       storagesByBuilding,
 
-      utilizationRate: rate(occupied, total),
-      availabilityRate: rate(available, total),
+      utilizationRate: counts.utilizationRate,
+      availabilityRate: counts.availabilityRate,
     };
   }, [base, storages]);
 

@@ -20,8 +20,11 @@ import { Car, Plus, Layers, Table as TableIcon, Link2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
-import type { ParkingSpot, ParkingSpotStatus } from '@/types/parking';
-import { PARKING_TYPES, PARKING_STATUSES } from '@/types/parking';
+import type { ParkingSpot } from '@/types/parking';
+import { PARKING_TYPES } from '@/types/parking';
+import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
+import { useSpaceAvailabilityOptions } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
+import { spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -30,7 +33,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 import { useParkingTabState } from './useParkingTabState';
-import { getStatusBadgeClasses } from './parking-tab-config';
 import { ParkingQuickCreateSheet } from '../dialogs/ParkingQuickCreateSheet';
 import { ParkingEditRow } from './parking-tab-forms';
 import { useHasAnyParking } from '@/hooks/useHasAnyUnits';
@@ -52,16 +54,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
 
   const { t, tBuilding } = state;
   const hasAnyParking = useHasAnyParking();
-
-  /** Renders a colored status badge for a parking spot. */
-  const getStatusBadge = (status: ParkingSpotStatus | undefined) => {
-    const s = status || 'available';
-    return (
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClasses(status)}`}>
-        {t(`status.${s}`)}
-      </span>
-    );
-  };
+  const availability = useSpaceAvailabilityOptions();
 
   const parkingColumns: SpaceColumn<ParkingSpot>[] = useMemo(() => [
     { key: 'number', label: t('general.fields.spotCode'), sortValue: (s) => s.number, render: (s) => <span className="font-mono font-medium">{s.number}</span> },
@@ -70,7 +63,8 @@ export function ParkingTabContent({ building }: { building: Building }) {
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
     // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης).
     buildPriceColumn<ParkingSpot>(t('general.fields.price'), t, (s) => s.number),
-    { key: 'status', label: t('general.fields.status'), width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
+    // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση· ποτέ το παλιό `status`.
+    { key: 'status', label: t('properties-enums:unitStatus.availability'), width: 'w-36', sortValue: (s) => spaceAvailabilityBucket(s), render: (s) => <SpaceStatusBadges space={s} /> },
   ], [t, colors.text.muted]);
 
   const parkingCardFields: SpaceCardField<ParkingSpot>[] = useMemo(() => [
@@ -149,8 +143,8 @@ export function ParkingTabContent({ building }: { building: Building }) {
         statusFilter={{
           value: state.filterStatus,
           onChange: state.setFilterStatus,
-          options: PARKING_STATUSES.map((ps) => ({ value: ps, label: t(`status.${ps}`) })),
-          allLabel: t('allStatuses', { ns: 'filters' }),
+          options: availability.options,
+          allLabel: availability.allLabel,
         }}
         exportLabel={tBuilding('parkingStats.exportReport')}
       />
@@ -202,7 +196,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
             items={state.filteredSpots}
             getKey={(s) => s.id}
             getName={(s) => s.number || s.code || s.id}
-            renderStatus={(s) => getStatusBadge(s.status)}
+            renderStatus={(s) => <SpaceStatusBadges space={s} />}
             fields={parkingCardFields}
             actions={spaceActions}
             actionState={spaceActionState}

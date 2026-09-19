@@ -5,7 +5,7 @@ import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
  *
  * Carries **every field the price resolver reads** (`commercial` · `commercialStatus` ·
  * `offerKinds`), because the sale dialog asks it «what does this space SELL for?»
- * (ADR-777 §8.60.14.14). With only `commercial.askingPrice` and the physical `status`,
+ * (ADR-777 §8.60.14.14). With only `commercial.askingPrice` and the old mixed `status`,
  * the resolver could not tell a space offered for rent from one offered for sale.
  */
 export interface BatchResolvedSpace
@@ -16,7 +16,10 @@ export interface BatchResolvedSpace
   name?: string;
   buildingId?: string;
   floorId?: string;
-  status?: string;
+  /** ADR-777 §8.60.20 — κύκλος ζωής εγγραφής (`active` · `deleted`), όχι εμπορική κατάσταση. */
+  status?: import('@/lib/firestore/trashed-status').RecordLifecycleStatus;
+  /** ADR-777 §8.60.20 — φυσική χρηστικότητα (ίδιο λεξιλόγιο με τα ακίνητα). */
+  operationalStatus?: import('@/constants/operational-statuses').OperationalStatus;
 }
 
 /** Response payload for POST /api/spaces/batch-resolve */

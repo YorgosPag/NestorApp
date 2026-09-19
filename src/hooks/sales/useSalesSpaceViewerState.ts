@@ -12,6 +12,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { matchesPriceRange } from '@/lib/properties/price-range';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
+import { matchesSpaceAvailability } from '@/lib/spaces/space-availability';
 import type {
   SalesSpaceFilterState,
   SalesDashboardStats,
@@ -87,10 +88,11 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
   const term = filters.searchTerm.trim().toLowerCase();
 
   return items.filter((item) => {
-    if (quick.status !== 'all' && item.status !== quick.status) return false;
+    // ADR-777 §8.60.20 — «διάθεση» από το `commercialStatus` (κουβάδες του ΕΝΟΣ SSoT), όχι το παλιό `status`.
+    if (!matchesSpaceAvailability(item, quick.status)) return false;
     if (quick.type !== 'all' && item.type !== quick.type) return false;
 
-    if (filters.status !== 'all' && item.status !== filters.status) return false;
+    if (!matchesSpaceAvailability(item, filters.status)) return false;
     if (filters.type !== 'all' && item.type !== filters.type) return false;
     if (filters.building !== 'all' && !matchesBuilding(item, filters.building)) return false;
     if (filters.floor !== 'all' && item.floor !== filters.floor) return false;
@@ -114,7 +116,8 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
 // =============================================================================
 
 function computeDashboardStats(items: SalesSpaceItem[]): SalesDashboardStats {
-  const available = items.filter((item) => item.status === 'available');
+  // ADR-777 §8.60.20 — «διαθέσιμες» = στην αγορά (κουβάς `listed` του `commercialStatus`).
+  const available = items.filter((item) => matchesSpaceAvailability(item, 'listed'));
 
   // ADR-777 Α5/Α6 + §8.60.14.13 — per role, and the €/m² divides by the area of the
   // SAME units it summed: it used to divide the priced total by the area of ALL

@@ -7,7 +7,8 @@
  * @module types/parking
  */
 
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import type { OperationalStatus } from '@/constants/operational-statuses';
+import type { RecordLifecycleStatus } from '@/lib/firestore/trashed-status';
 
 // =============================================================================
 // ENUMS (string unions for Firestore compatibility)
@@ -21,14 +22,12 @@ export type ParkingSpotType =
   | 'electric'
   | 'visitor';
 
-/** Current status of parking spot */
-export type ParkingSpotStatus =
-  | 'available'
-  | 'occupied'
-  | 'reserved'
-  | 'sold'
-  | 'maintenance'
-  | 'deleted';
+/**
+ * ⛔ Εδώ ζούσε το ανάμεικτο `ParkingSpotStatus` (`available · occupied · reserved · sold ·
+ * maintenance · deleted`) — τρία ερωτήματα σε ένα πεδίο. ADR-777 §8.60.20: εμπορικό →
+ * `commercialStatus` · φυσικό → `operationalStatus` · κάδος → `status` (`RecordLifecycleStatus`).
+ * Το παλιό πεδίο το διαβάζει **μόνο** το `lib/spaces/space-status-split`.
+ */
 
 /** Location zone — where the parking spot is physically situated */
 export type ParkingLocationZone =
@@ -63,8 +62,10 @@ export interface ParkingSpot {
   locationZone?: ParkingLocationZone | null;
   /** Spot type */
   type?: ParkingSpotType;
-  /** Current status */
-  status?: ParkingSpotStatus;
+  /** Κύκλος ζωής εγγραφής — ζωντανή ή στον κάδο (ADR-281). **Όχι** εμπορική ή φυσική κατάσταση. */
+  status?: RecordLifecycleStatus;
+  /** Φυσική χρηστικότητα — ίδιο λεξιλόγιο με τα ακίνητα (ADR-777 §8.60.20). Απούσα = αδήλωτη. */
+  operationalStatus?: OperationalStatus;
   /** Floor/level identifier, e.g. "-1", "0", "pilotis" — canonical field (ADR-145) */
   floor?: string;
   /** Freeform location description */
@@ -108,18 +109,6 @@ export interface ParkingSpot {
 //    δήλωνε `totalValue`/`averagePrice` χωρίς ρόλο. Τα στατιστικά θέσεων ζουν στο
 //    `hooks/useParkingStats` (`ParkingStats`, με `priceTotals` ανά ρόλο).
 
-export interface ParkingFilters {
-  searchTerm: string;
-  type: string;
-  status: string;
-  floor: string;
-  locationZone: string;
-  minArea: number | null;
-  maxArea: number | null;
-  minPrice: number | null;
-  maxPrice: number | null;
-}
-
 // =============================================================================
 // I18N LABEL MAPS (values are i18n keys)
 // =============================================================================
@@ -132,15 +121,6 @@ export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
   visitor: 'parking.types.visitor',
 };
 
-export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
-  available: 'parking.status.available',
-  occupied: 'parking.status.occupied',
-  reserved: 'parking.status.reserved',
-  sold: 'parking.status.sold',
-  maintenance: 'parking.status.maintenance',
-  deleted: 'parking.status.deleted',
-};
-
 export const PARKING_LOCATION_ZONE_LABELS: Record<ParkingLocationZone, string> = {
   pilotis: 'parking.locationZone.pilotis',
   underground: 'parking.locationZone.underground',
@@ -150,31 +130,11 @@ export const PARKING_LOCATION_ZONE_LABELS: Record<ParkingLocationZone, string> =
 };
 
 // =============================================================================
-// SEMANTIC COLORS (deprecated — use useSemanticColors().getParkingStatusClass())
-// =============================================================================
-
-/**
- * @deprecated Use colors.getParkingStatusClass(status) from useSemanticColors hook
- */
-export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
-  sold: `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,
-  available: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`,
-  occupied: `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,
-  reserved: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,
-  maintenance: `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,
-  deleted: `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`,
-};
-
-// =============================================================================
 // CANONICAL ARRAYS (for iteration in UI)
 // =============================================================================
 
 export const PARKING_TYPES: ParkingSpotType[] = [
   'standard', 'handicapped', 'motorcycle', 'electric', 'visitor',
-];
-
-export const PARKING_STATUSES: ParkingSpotStatus[] = [
-  'available', 'occupied', 'reserved', 'sold', 'maintenance',
 ];
 
 export const PARKING_LOCATION_ZONES: ParkingLocationZone[] = [

@@ -6,10 +6,8 @@ import {
   PROPERTY_BUILDING_TYPE_LABELS,
   CONTACT_BUSINESS_TYPE_LABELS,
 } from '@/constants/property-statuses-enterprise';
-import {
-  PARKING_TYPE_LABELS,
-  PARKING_STATUS_LABELS,
-} from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { PARKING_TYPE_FILTER_OPTIONS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+import { SPACE_AVAILABILITY_FILTER_OPTIONS } from '@/components/core/AdvancedFilters/configs/unit-status-filter-options';
 
 // ============================================================================
 // TYPES
@@ -178,24 +176,23 @@ export function getFilterCategoriesForType(type: ToolbarType) {
         {
           id: 'status',
           label: 'toolbar.filters.categories.status',
-          options: [
-            { value: 'available', label: PARKING_STATUS_LABELS.available },
-            { value: 'occupied', label: PARKING_STATUS_LABELS.occupied },
-            { value: 'reserved', label: PARKING_STATUS_LABELS.reserved },
-            { value: 'sold', label: PARKING_STATUS_LABELS.sold },
-            { value: 'maintenance', label: PARKING_STATUS_LABELS.maintenance },
-          ],
+          // ADR-777 §8.60.20 — κουβάδες διάθεσης (ίδιοι με γρήγορες επιλογές και panel).
+          options: [...SPACE_AVAILABILITY_FILTER_OPTIONS],
         },
         {
           id: 'type',
           label: 'toolbar.filters.categories.parkingType',
-          options: [
-            { value: 'standard', label: PARKING_TYPE_LABELS.standard },
-            { value: 'handicapped', label: PARKING_TYPE_LABELS.handicapped },
-            { value: 'motorcycle', label: PARKING_TYPE_LABELS.motorcycle },
-            { value: 'electric', label: PARKING_TYPE_LABELS.electric },
-            { value: 'visitor', label: PARKING_TYPE_LABELS.visitor },
-          ],
+          options: [...PARKING_TYPE_FILTER_OPTIONS],
+        },
+      ];
+    case 'storages':
+      // ADR-777 §8.60.20 — οι αποθήκες έπεφταν στο γενικό «διαθέσιμη/κατειλημμένη/κράτηση/συντήρηση»
+      // (το παλιό ανάμεικτο `status`)· τώρα ίδιοι κουβάδες διάθεσης με τις θέσεις.
+      return [
+        {
+          id: 'status',
+          label: 'toolbar.filters.categories.status',
+          options: [...SPACE_AVAILABILITY_FILTER_OPTIONS],
         },
       ];
     case 'communications':

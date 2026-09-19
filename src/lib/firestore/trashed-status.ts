@@ -20,6 +20,17 @@
 /** Η **μοναδική** τιμή κατάστασης που σημαίνει «στον κάδο». */
 export const TRASHED_STATUS = 'deleted';
 
+/**
+ * Η τιμή «ζωντανή εγγραφή» — η απάντηση «όχι» στο «είναι στον κάδο;». Ήταν ωμό `'active'`
+ * στο `soft-delete-config` (επαφή · κτίριο). Για θέσεις και αποθήκες είναι πλέον η **μόνη**
+ * άλλη τιμή του `status` (ADR-777 §8.60.20): η εμπορική αλήθεια ζει στο `commercialStatus`,
+ * η φυσική στο `operationalStatus`.
+ */
+export const ACTIVE_RECORD_STATUS = 'active';
+
+/** Ο κύκλος ζωής μιας εγγραφής: ζωντανή ή στον κάδο — τίποτε άλλο. */
+export type RecordLifecycleStatus = typeof ACTIVE_RECORD_STATUS | typeof TRASHED_STATUS;
+
 /** Το ελάχιστο σχήμα που χρειάζεται για να απαντηθεί το ερώτημα. */
 export interface MaybeTrashed {
   readonly status?: string | null;

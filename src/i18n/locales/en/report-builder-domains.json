@@ -108,7 +108,7 @@
         "createdAt": "Created"
       }
     },
-    "units": {
+    "properties": {
       "label": "Units",
       "description": "Apartments, shops, offices, and other property units",
       "fields": {
@@ -199,7 +199,7 @@
         "building": "Building",
         "locationZone": "Zone",
         "type": "Type",
-        "status": "Status",
+        "operationalStatus": "Operational status",
         "floor": "Floor",
         "area": "Area (m²)",
         "price": "Price",
@@ -220,13 +220,6 @@
           "electric": "Electric",
           "visitor": "Visitor"
         },
-        "status": {
-          "available": "Available",
-          "occupied": "Occupied",
-          "reserved": "Reserved",
-          "sold": "Sold",
-          "maintenance": "Maintenance"
-        },
         "commercialStatus": {
           "unavailable": "Unavailable",
           "for-sale": "For Sale",
@@ -246,7 +239,7 @@
         "code": "Code",
         "building": "Building",
         "type": "Type",
-        "status": "Status",
+        "operationalStatus": "Operational status",
         "floor": "Floor",
         "area": "Area (m²)",
         "price": "Price",
@@ -266,14 +259,6 @@
           "parking": "Parking",
           "garage": "Garage",
           "warehouse": "Warehouse"
-        },
-        "status": {
-          "available": "Available",
-          "occupied": "Occupied",
-          "maintenance": "Maintenance",
-          "reserved": "Reserved",
-          "sold": "Sold",
-          "unavailable": "Unavailable"
         },
         "commercialStatus": {
           "unavailable": "Unavailable",

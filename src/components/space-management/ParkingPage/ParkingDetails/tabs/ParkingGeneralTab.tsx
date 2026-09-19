@@ -16,7 +16,7 @@
  * @see SPEC-256A — optimistic versioning (`useVersionedSave`)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { ParkingSpot, ParkingSpotType } from '@/hooks/useFirestoreParkingSpots';
 import { Car } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -39,6 +39,7 @@ import {
   type SpacePayloadBuilder,
 } from '@/components/shared/space-info/space-payload-builder';
 import { SpaceCoreFields } from '@/components/shared/space-info/SpaceCoreFields';
+import { useSpaceFormState } from '@/components/shared/space-info/useSpaceFormState';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useParkingNotifications } from '@/hooks/notifications/useParkingNotifications';
@@ -60,9 +61,7 @@ import {
   type ParkingGeneralTabProps,
   type ParkingFormState,
   PARKING_TYPES,
-  PARKING_STATUSES,
   DEFAULT_PARKING_TYPE,
-  DEFAULT_PARKING_STATUS,
   buildFormState,
 } from './parking-general-tab-config';
 
@@ -75,7 +74,7 @@ const logger = createModuleLogger('ParkingGeneralTab');
 /** POST body: the shared space fields plus parking's own identity and location. */
 function buildParkingDraft(form: ParkingFormState, buildingId: string | null): SpacePayloadBuilder {
   const draft = createSpaceDraft(
-    { number: form.name.trim(), type: form.type, status: form.status },
+    { number: form.name.trim(), type: form.type },
     form,
     buildingId,
   );
@@ -92,7 +91,6 @@ function buildParkingPatch(
   const patch = createSpacePatch(form, parking, linkPayload);
   patch.textChanged('number', form.name, parking.number);
   patch.valueChanged('type', form.type, parking.type || DEFAULT_PARKING_TYPE);
-  patch.valueChanged('status', form.status, parking.status || DEFAULT_PARKING_STATUS);
   patch.textChanged('location', form.location, parking.location);
   return patch;
 }
@@ -111,18 +109,14 @@ export function ParkingGeneralTab({
 }: ParkingGeneralTabProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
-  const { t } = useTranslation('parking');
+  const { t } = useTranslation(['parking', 'properties-enums']);
   const parkingNotifications = useParkingNotifications();
 
   // Form state — always bound to inputs (disabled when not editing)
-  const [form, setForm] = useState<ParkingFormState>(() => buildFormState(parking));
+  // ADR-777 §8.60.20 — νέα επιλογή ⇒ reset· προβολή ⇒ ακολουθεί τον server· επεξεργασία ⇒ πρόχειρο.
+  const [form, setForm] = useSpaceFormState(parking, isEditing, buildFormState);
   // ADR-777 §8.60.18 — διάθεση + τιμή ανά ρόλο: το ΙΔΙΟ πρόχειρο με τη γρήγορη επεξεργασία.
   const commercial = useSpaceCommercial(parking);
-
-  // Reset form when a DIFFERENT parking spot is selected (not on edit mode toggle)
-  useEffect(() => {
-    setForm(buildFormState(parking));
-  }, [parking.id]);
 
   const updateField = <K extends keyof ParkingFormState>(key: K, value: ParkingFormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -283,10 +277,9 @@ export function ParkingGeneralTab({
               t={t}
               disabled={!isEditing}
               type={{ value: form.type, options: PARKING_TYPES, onChange: handleTypeChange }}
-              status={{
-                value: form.status,
-                options: PARKING_STATUSES,
-                onChange: (v) => updateField('status', v),
+              operationalStatus={{
+                value: form.operationalStatus,
+                onChange: (v) => updateField('operationalStatus', v),
               }}
               area={{ value: form.area, onChange: handleAreaChange }}
             />

@@ -9,6 +9,13 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
 import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
+import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
+
+/**
+ * ADR-777 §8.60.20 — η λειτουργική κατάσταση χώρου έχει το ΙΔΙΟ λεξιλόγιο με τα ακίνητα, άρα και
+ * τις ΙΔΙΕΣ ετικέτες τιμών (όχι τρίτο αντίγραφο ανά χώρο).
+ */
+const OPERATIONAL_STATUS_LABEL_PREFIX = 'domains.properties.enums.operationalStatus';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data)
@@ -16,10 +23,6 @@ import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 
 const PARKING_TYPES = [
   'standard', 'handicapped', 'motorcycle', 'electric', 'visitor',
-] as const;
-
-const PARKING_STATUSES = [
-  'available', 'occupied', 'reserved', 'sold', 'maintenance',
 ] as const;
 
 const PARKING_LOCATION_ZONES = [
@@ -31,9 +34,8 @@ const STORAGE_TYPES = [
   'storage', 'parking', 'garage', 'warehouse',
 ] as const;
 
-const STORAGE_STATUSES = [
-  'available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable',
-] as const;
+// 🧹 ADR-777 §8.60.20 — εδώ ζούσαν τα `PARKING_STATUSES` / `STORAGE_STATUSES` του παλιού ανάμεικτου
+//    `status`. Η κατάσταση χώρου είναι πλέον δύο πεδία: `commercialStatus` + `operationalStatus`.
 
 // ============================================================================
 // A5 — Parking Spots
@@ -96,14 +98,14 @@ export const PARKING_DEFINITION: DomainDefinition = {
       enumLabelPrefix: 'domains.parking.enums.type',
     },
     {
-      key: 'status',
-      labelKey: 'domains.parking.fields.status',
+      key: 'operationalStatus',
+      labelKey: 'domains.parking.fields.operationalStatus',
       type: 'enum',
       filterable: true,
       sortable: true,
-      defaultVisible: true,
-      enumValues: PARKING_STATUSES,
-      enumLabelPrefix: 'domains.parking.enums.status',
+      defaultVisible: false,
+      enumValues: OPERATIONAL_STATUSES,
+      enumLabelPrefix: OPERATIONAL_STATUS_LABEL_PREFIX,
     },
     {
       key: 'floor',
@@ -196,14 +198,14 @@ export const STORAGE_DEFINITION: DomainDefinition = {
       enumLabelPrefix: 'domains.storage.enums.type',
     },
     {
-      key: 'status',
-      labelKey: 'domains.storage.fields.status',
+      key: 'operationalStatus',
+      labelKey: 'domains.storage.fields.operationalStatus',
       type: 'enum',
       filterable: true,
       sortable: true,
-      defaultVisible: true,
-      enumValues: STORAGE_STATUSES,
-      enumLabelPrefix: 'domains.storage.enums.status',
+      defaultVisible: false,
+      enumValues: OPERATIONAL_STATUSES,
+      enumLabelPrefix: OPERATIONAL_STATUS_LABEL_PREFIX,
     },
     {
       key: 'floor',

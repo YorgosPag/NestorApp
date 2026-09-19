@@ -156,7 +156,8 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
     titleField: 'number',
     subtitleFields: ['type', 'status'],
     searchableFields: ['number', 'code'],
-    statusField: 'status',
+    // ADR-777 §8.60.20 — η διάθεση (όπως στα ακίνητα)· το `status` είναι πλέον μόνο κύκλος ζωής.
+    statusField: 'commercialStatus',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
     routeTemplate: '/parking/{id}',
@@ -175,7 +176,8 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
     titleField: 'name',
     subtitleFields: ['type', 'status'],
     searchableFields: ['name', 'code'],
-    statusField: 'status',
+    // ADR-777 §8.60.20 — η διάθεση (όπως στα ακίνητα)· το `status` είναι πλέον μόνο κύκλος ζωής.
+    statusField: 'commercialStatus',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
     routeTemplate: '/storage/{id}',

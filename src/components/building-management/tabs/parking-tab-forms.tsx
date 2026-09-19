@@ -16,16 +16,19 @@ import { Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
-import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types/parking';
+import type { ParkingSpotType, ParkingLocationZone } from '@/types/parking';
+import { PARKING_TYPES, PARKING_LOCATION_ZONES } from '@/types/parking';
+import {
+  OPERATIONAL_STATUS_SELECT_OPTIONS,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
+import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
 import { useParkingTabState } from './useParkingTabState';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { OptionSelectField, type SelectOption } from '@/components/shared/space-info/OptionSelectField';
 
 const PARKING_TYPE_OPTIONS: ReadonlyArray<SelectOption<ParkingSpotType>> =
   PARKING_TYPES.map((value) => ({ value, labelKey: `types.${value}` }));
-const PARKING_STATUS_OPTIONS: ReadonlyArray<SelectOption<ParkingSpotStatus>> =
-  PARKING_STATUSES.map((value) => ({ value, labelKey: `status.${value}` }));
 const PARKING_ZONE_OPTIONS: ReadonlyArray<SelectOption<ParkingLocationZone>> =
   PARKING_LOCATION_ZONES.map((value) => ({ value, labelKey: `locationZone.${value}` }));
 
@@ -64,10 +67,11 @@ export function ParkingCreateForm({ state, t, colors }: ParkingCreateFormProps) 
           t={t}
           disabled={state.creating}
         />
-        <OptionSelectField
-          label={t('general.fields.status')}
+        {/* ADR-777 §8.60.20 — λειτουργική κατάσταση (ίδιο λεξιλόγιο με τα ακίνητα)· η διάθεση ΔΕΝ δηλώνεται εδώ. */}
+        <OptionSelectField<OperationalStatusDraft>
+          label={t('properties-enums:unitStatus.operational')}
           value={state.createStatus}
-          options={PARKING_STATUS_OPTIONS}
+          options={OPERATIONAL_STATUS_SELECT_OPTIONS}
           onValueChange={state.setCreateStatus}
           t={t}
           disabled={state.creating}
@@ -167,12 +171,8 @@ export function ParkingEditRow({ state, t }: ParkingEditRowProps) {
         <CommercialDraftCell commercial={state.commercial} disabled={state.saving} idPrefix={`parking-row-${state.editingId}`} />
       </TableCell>
       <TableCell>
-        <Select value={state.editStatus} onValueChange={(v) => state.setEditStatus(v as ParkingSpotStatus)} disabled={state.saving}>
-          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {PARKING_STATUSES.map(ps => (<SelectItem key={ps} value={ps}>{t(`status.${ps}`)}</SelectItem>))}
-          </SelectContent>
-        </Select>
+        {/* ADR-777 §8.60.20 — ΜΟΝΟ λειτουργική κατάσταση· «Πωλημένη/Κρατημένη» ανήκουν στη συναλλαγή. */}
+        <OperationalStatusSelect value={state.editStatus} onValueChange={state.setEditStatus} disabled={state.saving} />
       </TableCell>
       <TableCell>
         <nav className="flex justify-end gap-1">

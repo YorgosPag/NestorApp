@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import type { StorageType, StorageStatus } from '@/types/storage';
+import type { StorageType } from '@/types/storage';
+import type { SpaceAvailabilityFilter } from '@/lib/spaces/space-availability';
+import { useSpaceAvailabilityOptions } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingSpaceFilterBar } from '../shared';
@@ -11,8 +13,8 @@ interface StorageTabFiltersProps {
     onSearchChange: (value: string) => void;
     filterType: StorageType | 'all';
     onFilterTypeChange: (value: StorageType | 'all') => void;
-    filterStatus: StorageStatus | 'all';
-    onFilterStatusChange: (value: StorageStatus | 'all') => void;
+    filterStatus: SpaceAvailabilityFilter;
+    onFilterStatusChange: (value: SpaceAvailabilityFilter) => void;
 }
 
 const FILTER_TYPES: ReadonlyArray<readonly [StorageType, string]> = [
@@ -21,12 +23,6 @@ const FILTER_TYPES: ReadonlyArray<readonly [StorageType, string]> = [
     ['basement', 'pages.storage.typeLabels.basement'],
     ['ground', 'pages.storage.typeLabels.ground'],
     ['special', 'pages.storage.typeLabels.special'],
-];
-const FILTER_STATUSES: ReadonlyArray<readonly [StorageStatus, string]> = [
-    ['available', 'pages.storage.statusLabels.available'],
-    ['sold', 'pages.storage.statusLabels.sold'],
-    ['reserved', 'pages.storage.statusLabels.reserved'],
-    ['maintenance', 'pages.storage.statusLabels.maintenance'],
 ];
 
 /** Storage labels over the ONE building space filter bar (shared with Units + Parking). */
@@ -40,6 +36,7 @@ export function StorageTabFilters({
 }: StorageTabFiltersProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
     const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+    const availability = useSpaceAvailabilityOptions();
 
     return (
         <BuildingSpaceFilterBar
@@ -55,8 +52,9 @@ export function StorageTabFilters({
             statusFilter={{
                 value: filterStatus,
                 onChange: onFilterStatusChange,
-                options: FILTER_STATUSES.map(([value, key]) => ({ value, label: t(key) })),
-                allLabel: t('allStatuses', { ns: 'filters' }),
+                // ADR-777 §8.60.20 — «Διάθεση» από το `commercialStatus` (ίδιοι κουβάδες με τις θέσεις).
+                options: availability.options,
+                allLabel: availability.allLabel,
             }}
             exportLabel={t('tabs.storageTab.exportReport')}
         />

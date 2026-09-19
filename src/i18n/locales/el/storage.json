@@ -61,14 +61,6 @@
     "unknown": "Άγνωστο",
     "parking": "Θέση Στάθμευσης"
   },
-  "status": {
-    "available": "Διαθέσιμη",
-    "occupied": "Κατειλημμένη",
-    "reserved": "Κρατημένη",
-    "maintenance": "Συντήρηση",
-    "sold": "Πωλημένη",
-    "unknown": "Άγνωστη"
-  },
   "general": {
     "basicInfo": "Βασικές Πληροφορίες",
     "identity": "Ταυτότητα",
@@ -106,14 +98,6 @@
       "storage": "Αποθήκη",
       "garage": "Γκαράζ",
       "warehouse": "Αποθήκευση"
-    },
-    "statuses": {
-      "available": "Διαθέσιμη",
-      "occupied": "Κατειλημμένη",
-      "reserved": "Κρατημένη",
-      "maintenance": "Συντήρηση",
-      "sold": "Πωλημένη",
-      "unavailable": "Μη Διαθέσιμη"
     },
     "status": {
       "available": "Διαθέσιμο",

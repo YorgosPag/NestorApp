@@ -601,10 +601,19 @@ const SPACE_COMMERCIAL_TRACKED_FIELDS_RAW: Record<string, string> = {
   'commercial.rentPrice': 'commercial.rentPrice',
 };
 
+/**
+ * ADR-777 §8.60.20 — η λειτουργική κατάσταση του χώρου (ίδιο λεξιλόγιο με τα ακίνητα). Το
+ * `status` μένει: είναι πλέον ο κύκλος ζωής (`active` · `deleted`) και τον γράφει ο κάδος.
+ */
+const SPACE_OPERATIONAL_TRACKED_FIELDS_RAW: Record<string, string> = {
+  operationalStatus: 'operationalStatus',
+};
+
 const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
   name: 'name',
   type: 'type',
   status: 'status',
+  ...SPACE_OPERATIONAL_TRACKED_FIELDS_RAW,
   buildingId: 'buildingId',
   floor: 'floor',
   area: 'area',
@@ -625,6 +634,7 @@ const PARKING_TRACKED_FIELDS_RAW: Record<string, string> = {
   number: 'number',
   type: 'type',
   status: 'status',
+  ...SPACE_OPERATIONAL_TRACKED_FIELDS_RAW,
   buildingId: 'buildingId',
   floor: 'floor',
   code: 'code',

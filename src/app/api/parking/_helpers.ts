@@ -13,6 +13,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { mapParkingDoc } from '@/lib/firestore-mappers';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
+import { isTrashed } from '@/lib/firestore/trashed-status';
 
 export interface ParkingData {
   parkingSpots: CanonicalParkingSpot[];
@@ -42,7 +43,7 @@ interface ParkingDocLike {
 function mapActiveParkingSpots(docs: readonly ParkingDocLike[]): CanonicalParkingSpot[] {
   return docs
     .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
-    .filter(spot => spot.status !== 'deleted');
+    .filter(spot => !isTrashed(spot));
 }
 
 /**

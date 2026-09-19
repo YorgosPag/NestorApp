@@ -9,7 +9,11 @@
  * @see ADR-588 §General tab — space tab de-duplication (Phase 2)
  */
 
-import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus } from '@/hooks/useFirestoreParkingSpots';
+import type { ParkingSpot, ParkingSpotType } from '@/hooks/useFirestoreParkingSpots';
+import {
+  operationalDraftOf,
+  type OperationalStatusDraft,
+} from '@/lib/spaces/space-operational-draft';
 import type { SelectOption } from '@/components/shared/space-info/OptionSelectField';
 import type { SpaceGeneralTabProps } from '@/components/shared/space-info/space-general-tab-contracts';
 
@@ -31,7 +35,8 @@ export interface ParkingFormState {
   /** ADR-233: Entity coding system */
   code: string;
   type: ParkingSpotType;
-  status: ParkingSpotStatus;
+  /** ADR-777 §8.60.20 — λειτουργική κατάσταση (`''` = αδήλωτη). */
+  operationalStatus: OperationalStatusDraft;
   floor: string;
   location: string;
   area: string;
@@ -44,7 +49,6 @@ export interface ParkingFormState {
 // ============================================================================
 
 export const DEFAULT_PARKING_TYPE: ParkingSpotType = 'standard';
-export const DEFAULT_PARKING_STATUS: ParkingSpotStatus = 'available';
 
 export const PARKING_TYPES: SelectOption<ParkingSpotType>[] = [
   { value: 'standard', labelKey: 'general.types.standard' },
@@ -52,14 +56,6 @@ export const PARKING_TYPES: SelectOption<ParkingSpotType>[] = [
   { value: 'motorcycle', labelKey: 'general.types.motorcycle' },
   { value: 'electric', labelKey: 'general.types.electric' },
   { value: 'visitor', labelKey: 'general.types.visitor' },
-];
-
-export const PARKING_STATUSES: SelectOption<ParkingSpotStatus>[] = [
-  { value: 'available', labelKey: 'general.statuses.available' },
-  { value: 'occupied', labelKey: 'general.statuses.occupied' },
-  { value: 'reserved', labelKey: 'general.statuses.reserved' },
-  { value: 'sold', labelKey: 'general.statuses.sold' },
-  { value: 'maintenance', labelKey: 'general.statuses.maintenance' },
 ];
 
 // ============================================================================
@@ -71,7 +67,7 @@ export function buildFormState(parking: ParkingSpot): ParkingFormState {
     name: parking.number || '',
     code: parking.code || '',
     type: parking.type || DEFAULT_PARKING_TYPE,
-    status: parking.status || DEFAULT_PARKING_STATUS,
+    operationalStatus: operationalDraftOf(parking),
     floor: parking.floor || '',
     location: parking.location || '',
     area: parking.area !== undefined ? String(parking.area) : '',

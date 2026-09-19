@@ -19,6 +19,8 @@
  * @enterprise ADR-312 (Phase 3.5 + Phase 4 full-field extension)
  */
 
+import { isOperationalException } from '@/constants/operational-statuses';
+import { resolveSpaceStatuses, type SpaceStatusSource } from '@/lib/spaces/space-status-split';
 import elEnums from '@/i18n/locales/el/properties-enums.json';
 import enEnums from '@/i18n/locales/en/properties-enums.json';
 
@@ -96,6 +98,24 @@ export function translateOperationalStatus(
   locale: EnumLocale = 'el'
 ): string | undefined {
   return lookup(locale, ['operationalStatus'], key);
+}
+
+/**
+ * Η **κατάσταση ενός χώρου** (θέση · αποθήκη) για showcase/PDF — διάθεση + λειτουργική εξαίρεση,
+ * π.χ. «Προς πώληση» ή «Πωλήθηκε · Υπό συντήρηση» (ADR-777 §8.60.20). Διαβάζει μέσω του ΕΝΟΣ
+ * αναγνώστη (και παλιά έγγραφα)· ως τις 2026-09-18 κάθε showcase είχε δικό του χάρτη πάνω στο
+ * παλιό ανάμεικτο `status` και τύπωνε «Διαθέσιμη» για πωλημένη θέση.
+ */
+export function translateSpaceStatus(
+  raw: SpaceStatusSource,
+  locale: EnumLocale = 'el',
+): string | null {
+  const { commercialStatus, operationalStatus } = resolveSpaceStatuses(raw);
+  const parts = [
+    translateCommercialStatus(commercialStatus, locale),
+    isOperationalException(operationalStatus) ? translateOperationalStatus(operationalStatus, locale) : undefined,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 export function translateHeatingType(

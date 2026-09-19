@@ -13,7 +13,10 @@
 
 import { useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
-import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import type { StorageUnit, StorageType } from '@/types/storage';
+import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
+import { spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
+import { OperationalStatusSelect } from '@/components/shared/unit-status/OperationalStatusSelect';
 import type { Building } from '@/types/building/contracts';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -41,7 +44,6 @@ import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
 
 const STORAGE_TYPES: StorageType[] = ['storage', 'large', 'small', 'basement', 'ground', 'special', 'garage', 'warehouse'];
-const STORAGE_STATUSES: StorageStatus[] = ['available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable'];
 
 interface StorageTabProps {
   building: Building;
@@ -62,12 +64,9 @@ export function StorageTab({ building }: StorageTabProps) {
     { key: 'area', label: s.t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
     // ADR-777 §8.60.14.14 — κελί ΜΕ μονάδα, σειρά ΣΕ ΟΜΑΔΕΣ ανά μονάδα (ποτέ €/μήνα δίπλα σε € πώλησης).
     buildPriceColumn<StorageUnit>(s.t('storageTable.columns.price'), s.t, (u) => u.code),
-    { key: 'status', label: s.t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStorageBadgeClass(u.status)}`}>
-        {s.translatedGetStatusLabel(u.status)}
-      </span>
-    )},
-  ], [s.t, s.translatedGetTypeLabel, s.translatedGetStatusLabel, colors.text.muted]);
+    // ADR-777 §8.60.20 — διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση· ποτέ το παλιό `status`.
+    { key: 'status', label: s.t('properties-enums:unitStatus.availability'), width: 'w-36', sortValue: (u) => spaceAvailabilityBucket(u), render: (u) => <SpaceStatusBadges space={u} /> },
+  ], [s.t, s.translatedGetTypeLabel, colors.text.muted]);
 
   const storageCardFields: SpaceCardField<StorageUnit>[] = useMemo(() => [
     buildTypeCodeField(s.t('storageTable.columns.type'), (u) => s.translatedGetTypeLabel(u.type), (u) => u.code),
@@ -182,11 +181,7 @@ export function StorageTab({ building }: StorageTabProps) {
             items={s.filteredUnits}
             getKey={(u) => u.id}
             getName={(u) => u.name || u.code}
-            renderStatus={(u) => (
-              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStorageBadgeClass(u.status)}`}>
-                {s.translatedGetStatusLabel(u.status)}
-              </span>
-            )}
+            renderStatus={(u) => <SpaceStatusBadges space={u} />}
             fields={storageCardFields}
             actions={spaceActions}
             actionState={spaceActionState}
@@ -228,12 +223,8 @@ export function StorageTab({ building }: StorageTabProps) {
                   <CommercialDraftCell commercial={s.commercial} disabled={s.saving} idPrefix={`storage-row-${s.editingId}`} />
                 </TableCell>
                 <TableCell>
-                  <Select value={s.editStatus} onValueChange={(v) => s.setEditStatus(v as StorageStatus)} disabled={s.saving}>
-                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {STORAGE_STATUSES.map((ss) => (<SelectItem key={ss} value={ss}>{s.translatedGetStatusLabel(ss)}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  {/* ADR-777 §8.60.20 — ΜΟΝΟ λειτουργική κατάσταση· «Πωλημένη/Κρατημένη» ανήκουν στη συναλλαγή. */}
+                  <OperationalStatusSelect value={s.editStatus} onValueChange={s.setEditStatus} disabled={s.saving} />
                 </TableCell>
                 <TableCell>
                   <nav className="flex justify-end gap-1">
@@ -307,19 +298,4 @@ export function StorageTab({ building }: StorageTabProps) {
       />
     </section>
   );
-}
-
-// ── Status badge class mapping ──
-
-function getStorageBadgeClass(status: StorageStatus): string {
-  const statusMap: Record<string, string> = {
-    available: 'available',
-    occupied: 'pending',      // info/blue
-    maintenance: 'error',     // red
-    reserved: 'reserved',     // warning/amber
-    sold: 'sold',             // purple
-    unavailable: 'cancelled', // neutral/error
-  };
-  const mapped = statusMap[status] || 'cancelled';
-  return `${getStatusColor(mapped, 'bg')}/10 ${getStatusColor(mapped, 'text')}`;
 }

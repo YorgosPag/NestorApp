@@ -20,8 +20,10 @@ export interface ParkingSpotAdapter {
   floor?: string;
   /** Spot type */
   type?: string;
-  /** Availability status */
+  /** Κύκλος ζωής εγγραφής (ή, σε παλιά έγγραφα, το ανάμεικτο `status` — το διαβάζει μόνο ο αναγνώστης). */
   status?: string;
+  /** Φυσική χρηστικότητα — ίδιο λεξιλόγιο με τα ακίνητα (ADR-777 §8.60.20). */
+  operationalStatus?: string | null;
   /** Area (m²) */
   area?: number;
   /** @deprecated flat price — διαβάζεται μόνο ως δίχτυ για παλιά έγγραφα (ADR-777 §8.60.18). */

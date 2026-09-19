@@ -13,9 +13,9 @@
 import { useMemo } from 'react';
 
 import type { StatItem } from '@/design-system';
-import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { spaceStatusBadges, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import type { Storage } from '@/types/storage/contracts';
 
 import { floorStat, areaStat, priceStat } from '../shared/spot-card-stats';
@@ -24,20 +24,6 @@ import type { CardViewModel } from '../shared/card-model.types';
 // =============================================================================
 // 🏢 STATUS / TYPE MAPPINGS (Shared Grid + List)
 // =============================================================================
-
-const STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
-  available: 'success',
-  occupied: 'info',
-  reserved: 'warning',
-  maintenance: 'destructive',
-};
-
-const STATUS_LABEL_KEYS: Record<string, string> = {
-  available: 'status.available',
-  occupied: 'status.occupied',
-  reserved: 'status.reserved',
-  maintenance: 'status.maintenance',
-};
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
   storage: 'types.storage',
@@ -54,7 +40,7 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
  * Build the shared Storage card view-model. Stat order follows the view.
  */
 export function useStorageCardModel(storage: Storage, view: 'grid' | 'list'): CardViewModel {
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', UNIT_STATUS_NAMESPACE]);
 
   /** Build stats — Grid: floor→area→price, List: area→price→floor */
   const stats = useMemo<StatItem[]>(() => {
@@ -65,15 +51,8 @@ export function useStorageCardModel(storage: Storage, view: 'grid' | 'list'): Ca
     return ordered.filter((s): s is StatItem => s !== null);
   }, [storage, view, t]);
 
-  /** Build badges from status */
-  const badges = useMemo(() => {
-    const status = storage.status || 'available';
-    const labelKey = STATUS_LABEL_KEYS[status] || 'status.unknown';
-    const statusLabel = t(labelKey);
-    const variant = STATUS_BADGE_VARIANTS[status] || 'default';
-
-    return [{ label: statusLabel, variant }];
-  }, [storage.status, t]);
+  /** Διάθεση (από το `commercialStatus`) + λειτουργική εξαίρεση — ποτέ το παλιό ανάμεικτο πεδίο. */
+  const badges = useMemo(() => spaceStatusBadges(storage, t), [storage, t]);
 
   /** Get type label for subtitle */
   const typeLabel = useMemo(() => {

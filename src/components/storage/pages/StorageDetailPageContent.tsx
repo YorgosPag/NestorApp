@@ -11,8 +11,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UnitBadge } from '@/core/badges';
-import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getStorageUnitById } from '@/services/storage.service';
@@ -29,8 +27,7 @@ import {
   ArrowLeft,
   User
 } from 'lucide-react';
-import { getParkingStatusLabel, getParkingStatusColor } from '@/components/projects/utils/parking-utils';
-import type { ParkingSpotStatus } from '@/types/parking';
+import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -103,9 +100,6 @@ export function StorageDetailPageContent() {
 
   const isStorage = unit.type === 'storage';
   const MainIcon = isStorage ? Package : Car;
-  const mappedStatus = (unit.status === 'maintenance' ? 'reserved' : unit.status) as ParkingSpotStatus;
-  const statusColor = getParkingStatusColor(mappedStatus);
-  const _statusLabel = getParkingStatusLabel(mappedStatus);
 
   return (
     <div className="p-4 md:p-8">
@@ -129,11 +123,9 @@ export function StorageDetailPageContent() {
                     <CardDescription>{unit.type === 'storage' ? t('common.storage') : t('common.parking')}</CardDescription>
                 </div>
             </div>
-             <UnitBadge
-               status={(unit.status === 'sold' ? 'available' : unit.status) as UnitStatus}
-               size="sm"
-               className={cn("text-base", statusColor)}
-             />
+             {/* ADR-777 §8.60.20 — διάθεση + λειτουργική εξαίρεση από το ΕΝΑ SSoT. Ως τις 2026-09-18
+                 εδώ ένα `sold` γινόταν ρητά «available» και ένα `maintenance` «reserved». */}
+             <SpaceStatusBadges space={unit} />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
