@@ -18,6 +18,7 @@ import {
   NETWORK_AUDIENCE_REASONS,
   NETWORK_AUDIENCE_ROLES,
   NETWORK_AUDIENCE_SIDES,
+  NETWORK_HOST_ROLES,
   NETWORK_THREAD_STATES,
   type NetworkAudienceEntry,
   type NetworkMessage,
@@ -71,6 +72,8 @@ export function networkAudienceFromDocument(raw: unknown, id: string): NetworkAu
     muted: raw.muted === true,
     following: raw.following === true,
     threadActivityAt: str(raw.threadActivityAt) ?? since,
+    // Γραμμή προ-Β9 ⇒ `null` = «μία ιδιότητα» — ποτέ μαντεψιά δεύτερου ρόλου.
+    alsoHostRole: oneOf(NETWORK_HOST_ROLES, raw.alsoHostRole),
   };
 }
 

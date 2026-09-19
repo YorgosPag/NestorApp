@@ -48,6 +48,7 @@ function row(uid: string, patch: Partial<NetworkAudienceEntry> = {}): NetworkAud
     muted: false,
     following: false,
     threadActivityAt: NOW,
+    alsoHostRole: null,
   };
   return { ...base, ...patch };
 }

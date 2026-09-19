@@ -1,15 +1,28 @@
 
-'use server';
+import 'server-only';
 
 /**
  * =============================================================================
- * COMMUNICATIONS TRIAGE ACTIONS (Server Actions)
+ * COMMUNICATIONS TRIAGE — approve / reject (server-only υπηρεσία)
  * =============================================================================
  *
  * Approve/Reject operations for AI Inbox triage workflow.
  *
+ * 🔴 **ΗΤΑΝ `'use server'` — ΔΗΛΑΔΗ ΔΗΜΟΣΙΟ ENDPOINT ΧΩΡΙΣ ΤΑΥΤΟΤΗΤΑ** (ADR-868).
+ *    Κάθε εξαγωγή ήταν καλέσιμη με σκέτο POST, και δεχόταν `adminUid` + `companyId`
+ *    **από τον πελάτη**: ο έλεγχος ιδιοκτησίας συνέκρινε το έγγραφο με εταιρεία που
+ *    **διάλεγε ο καλών**, και η εργασία που γεννιόταν ανατίθετο σε όποιο `uid` έστελνε.
+ *
+ * 🔑 **Πλέον ο καλών είναι ΠΑΝΤΑ το `AuthContext` του συνόρου** (`withAuth`, μέσω της
+ *    διαδρομής `/api/admin/ai-inbox/communications/[id]/triage`). Η ταυτότητα και ο
+ *    μισθωτής **δεν είναι ορίσματα** — είναι το αποτέλεσμα της επαλήθευσης. Ένας τρόπος να
+ *    γράψεις λάθος εταιρεία εδώ δεν «απαγορεύεται»· **δεν εκφράζεται** στην υπογραφή.
+ *
+ * ⚠️ Το όνομα του αρχείου κρατήθηκε επίτηδες: το αναφέρουν ονομαστικά οι άγκυρες
+ *    ιδιοκτησίας του ADR-742 (`ownership-callsite-coverage-anchor`).
+ *
  * @module services/communications-triage-actions
- * @enterprise ADR-214 - Communications Service Refactoring
+ * @enterprise ADR-214 - Communications Service Refactoring · ADR-868 - ένα δημόσιο σύνορο
  */
 
 import { randomUUID } from 'crypto';
@@ -29,10 +42,11 @@ import type { AuthContext } from '@/lib/auth/types';
 const logger = createModuleLogger('COMMUNICATIONS_TRIAGE_ACTIONS');
 
 // ============================================================================
-// ERROR HELPERS (shared with communications.service.ts)
+// ERROR HELPERS
 // ============================================================================
 
-type ActionErrorCode = 'invalid_context' | 'not_found' | 'tenant_mismatch' | 'unknown';
+/** Οι λόγοι αποτυχίας — εξάγονται ώστε το σύνορο HTTP να τους χαρτογραφεί χωρίς αντίγραφο. */
+export type ActionErrorCode = 'invalid_context' | 'not_found' | 'tenant_mismatch' | 'unknown';
 
 function getErrorDetails(error: unknown): { message: string; stack?: string; cause?: unknown } {
   if (error instanceof Error) {
@@ -82,15 +96,16 @@ function buildActionErrorMetadata(params: {
 async function openOwnedCommunication(spec: {
   readonly action: string;
   readonly communicationId: string;
-  readonly companyId: string;
-  readonly adminUid: string;
+  readonly actor: AuthContext;
   readonly operationId?: string;
   readonly errorId: string;
 }): Promise<
   | { readonly ok: true; readonly snap: FirebaseFirestore.DocumentSnapshot }
   | { readonly ok: false; readonly code: ActionErrorCode }
 > {
-  const { action, communicationId, companyId, adminUid, operationId, errorId } = spec;
+  const { action, communicationId, actor, operationId, errorId } = spec;
+  // Η εταιρεία και ο διαχειριστής είναι **του επαληθευμένου καλούντος** — ποτέ ορίσματα.
+  const { companyId, uid: adminUid } = actor;
   const meta = (error: Error) =>
     buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error });
 
@@ -135,18 +150,18 @@ async function openOwnedCommunication(spec: {
  */
 export async function approveCommunication(
   communicationId: string,
-  adminUid: string,
-  companyId: string,
+  actor: AuthContext,
   operationId?: string
 ): Promise<
   | { ok: true; taskId: string }
   | { ok: false; errorId: string; code: ActionErrorCode }
 > {
   const errorId = randomUUID();
+  const { companyId, uid: adminUid } = actor;
 
   try {
     const opened = await openOwnedCommunication({
-      action: 'approveCommunication', communicationId, companyId, adminUid, operationId, errorId,
+      action: 'approveCommunication', communicationId, actor, operationId, errorId,
     });
     if (!opened.ok) return { ok: false, errorId, code: opened.code };
 
@@ -201,19 +216,12 @@ export async function approveCommunication(
       updatedAt: AdminFieldValue.serverTimestamp()
     });
 
-    // Audit log
+    // Audit log — ο **πραγματικός** καλών. Μέχρι το ADR-868 εδώ κατασκευαζόταν
+    // `{ email: '', globalRole: 'company_admin', mfaEnrolled: false }`: το ίχνος ελέγχου
+    // κατέγραφε ρόλο που **κανείς δεν επαλήθευσε** (και super_admin ως company_admin).
     try {
-      const authContext: AuthContext = {
-        uid: adminUid,
-        email: '',
-        companyId,
-        globalRole: 'company_admin',
-        mfaEnrolled: false,
-        isAuthenticated: true,
-      };
-
       await logCommunicationApproved(
-        authContext,
+        actor,
         communicationId,
         comm.triageStatus ?? 'pending',
         taskId,
@@ -253,18 +261,18 @@ export async function approveCommunication(
  */
 export async function rejectCommunication(
   communicationId: string,
-  companyId: string,
-  adminUid: string,
+  actor: AuthContext,
   operationId?: string
 ): Promise<
   | { ok: true }
   | { ok: false; errorId: string; code: ActionErrorCode }
 > {
   const errorId = randomUUID();
+  const { companyId, uid: adminUid } = actor;
 
   try {
     const opened = await openOwnedCommunication({
-      action: 'rejectCommunication', communicationId, companyId, adminUid, operationId, errorId,
+      action: 'rejectCommunication', communicationId, actor, operationId, errorId,
     });
     if (!opened.ok) return { ok: false, errorId, code: opened.code };
 
@@ -277,19 +285,10 @@ export async function rejectCommunication(
       updatedAt: AdminFieldValue.serverTimestamp()
     });
 
-    // Audit log
+    // Audit log — ο πραγματικός καλών (βλ. approve).
     try {
-      const authContext: AuthContext = {
-        uid: adminUid,
-        email: '',
-        companyId,
-        globalRole: 'company_admin',
-        mfaEnrolled: false,
-        isAuthenticated: true,
-      };
-
       await logCommunicationRejected(
-        authContext,
+        actor,
         communicationId,
         data?.triageStatus ?? 'pending',
         'Communication rejected by admin'

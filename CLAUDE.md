@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:e2516b3e4cca9931931821b9b8e1e3bb61aea376ebfc62c6b22f7a0e904e2d91 -->
+     fingerprint: sha256:db6674f910467e8484e03b501f084fbdd9991777c173d34a12ee0475caa4e576 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -384,6 +384,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.87** | **Πύλη της αρχής της κατάστασης CDE** (ADR-862) — «γράφει κάποιος την κατάσταση CDE ενός αρχείου **ΕΞΩ από τον ΕΝΑ γραφέα** — ή διαβάζει client λίστα `files` **χωρίς φράχτη**; (οι κανόνες κλείνουν τον…» · `npm run test:cde-authority` · `SKIP_CDE_AUTHORITY=1` · 📘 `docs/gates/3.87.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 | **3.88** | **Πύλη της αρχής της ομάδας έργου** (ADR-862) — «γράφει κάποιος μέλος έργου **ΕΞΩ από τον ΕΝΑ γραφέα** — ή γεννά έργο **ΧΩΡΙΣ την αρχική του ομάδα**; (οι κανόνες κλείνουν τον πελάτη, **όχι** το Admi…» · `npm run test:project-member-authority` · `SKIP_PROJECT_MEMBER_AUTHORITY=1` · 📘 `docs/gates/3.88.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 | **3.89** | **Πύλη της αρχής του νήματος** (ADR-867) — «γράφει κάποιος **ακροατήριο** ή **μήνυμα** έξω από τον **ΕΝΑ** γραφέα — ή αλλάζει ομάδα **ΧΩΡΙΣ** να ξαναγράψει το ακροατήριο; (οι κανόνες κλείνουν τ…» · `npm run test:network-thread-authority` · `SKIP_NETWORK_THREAD_AUTHORITY=1` · 📘 `docs/gates/3.89.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5+Κ6+Κ7) | — |
+| **3.90** | **Πύλη του ενός συνόρου** (ADR-868) — «υπάρχει **δημόσιο endpoint** που **ΔΕΝ** περνά από το σύνορο `withAuth`; — κάθε `'use server'` είναι server action, δηλαδή δημόσιο POST που δεν το κρ…» · `npm run test:server-action-boundary` · `SKIP_SERVER_ACTION_BOUNDARY=1` · 📘 `docs/gates/3.90.md` | ⛔ ZERO TOL | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -397,8 +398,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **82** (εκτελεστής 74 + hook 21) ·
-γραμμές εδώ: **71** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **83** (εκτελεστής 75 + hook 21) ·
+γραμμές εδώ: **72** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

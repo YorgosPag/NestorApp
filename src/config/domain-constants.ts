@@ -621,6 +621,9 @@ export const API_ROUTES = {
     ENSURE_USER_PROFILE: '/api/admin/ensure-user-profile',
     SETUP_CONFIG: '/api/admin/setup-admin-config',
     OPERATOR_INBOX: '/api/admin/operator-inbox',
+    /** ADR-868 — έγκριση/απόρριψη μηνύματος AI Inbox (σώμα: `{ decision }`· ταυτότητα από το σύνορο). */
+    AI_INBOX_TRIAGE: (communicationId: string) =>
+      `/api/admin/ai-inbox/communications/${encodeURIComponent(communicationId)}/triage` as const,
     SEARCH_BACKFILL: '/api/admin/search-backfill',
     SEED_PARKING: '/api/admin/seed-parking',
     SET_USER_CLAIMS: '/api/admin/set-user-claims',

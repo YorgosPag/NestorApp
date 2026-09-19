@@ -13,6 +13,8 @@ jest.mock('@/lib/api/enterprise-api-client', () => {
   }
   return {
     ApiClientError,
+    // Η ΠΡΑΓΜΑΤΙΚΗ σταθερά — ο ισχυρισμός κάτω ελέγχει την ΤΙΜΗ (`{ skipAuth: true }`), όχι το όνομα.
+    PUBLIC_REQUEST: jest.requireActual('@/lib/api/api-client-types').PUBLIC_REQUEST,
     apiClient: { post: (...args: unknown[]) => postMock(...args) },
   };
 });

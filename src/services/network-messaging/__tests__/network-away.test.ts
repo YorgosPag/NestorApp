@@ -36,6 +36,7 @@ const row = (uid: string, over: Partial<NetworkAudienceEntry> = {}): NetworkAudi
   muted: false,
   following: false,
   threadActivityAt: YESTERDAY,
+  alsoHostRole: null,
   ...over,
 });
 const away = (uid: string, startsAt = YESTERDAY, endsAt = TOMORROW): NetworkAway => ({

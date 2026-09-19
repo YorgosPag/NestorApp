@@ -23,6 +23,7 @@ import type {
   NetworkAudienceReason,
   NetworkAudienceRole,
   NetworkAudienceSide,
+  NetworkHostRole,
 } from '@/types/network-thread';
 
 /** Ό,τι χρειάζεται η προβολή από την ομάδα — **δομικός** τύπος, όχι το έγγραφο. */
@@ -68,27 +69,37 @@ interface Seat {
   readonly side: NetworkAudienceSide;
   readonly role: NetworkAudienceRole;
   readonly reason: NetworkAudienceReason;
+  readonly alsoHostRole: NetworkHostRole | null;
+}
+
+/** Ο ρόλος κάποιου **στο γραφείο** — ένας ορισμός, για τη θέση `host` **και** για τη δεύτερη ιδιότητα. */
+function hostRoleOf(uid: string, team: AudienceTeamSource): NetworkHostRole {
+  return uid === team.responsibleUid ? 'responsible' : 'collaborator';
 }
 
 /**
- * **Ποιος δικαιούται θέση τώρα** — ο αντισυμβαλλόμενος πρώτος, ώστε να μην μπορεί
- * μια ανώμαλη ομάδα (ίδιο uid και στις δύο πλευρές) να τον κάνει «συνεργάτη του γραφείου».
+ * **Ποιος δικαιούται θέση τώρα** — ένας άνθρωπος, **μία** θέση (κλειδί = `uid`).
+ *
+ * 🔑 **Ο ΑΝΤΙΣΥΜΒΑΛΛΟΜΕΝΟΣ ΠΡΩΤΟΣ, ΑΛΛΑ ΧΩΡΙΣ ΝΑ ΧΑΝΕΤΑΙ Η ΑΛΛΗ ΙΔΙΟΤΗΤΑ** (ADR-867 Β9): ο εντολέας
+ * δεν υποβιβάζεται ποτέ σε «συνεργάτη του γραφείου» (η θέση του, ο προορισμός των ειδοποιήσεών του)·
+ * αν είναι **και** μέλος της ομάδας, ο ρόλος του εκεί γράφεται στο `alsoHostRole` — όπως το Figma
+ * κρατά την **υψηλότερη** πρόσβαση από κάθε δρόμο, και όπως το NAR Άρθρο 4 ζητά το ιδιοκτησιακό
+ * συμφέρον του μεσίτη **δηλωμένο** σε όλα τα μέρη. Ως τη Β9 η δεύτερη ιδιότητα **χανόταν σιωπηλά**
+ * και η πλευρά του γραφείου φαινόταν άδεια.
  */
 function seatsOf(input: AudienceProjectionInput): ReadonlyMap<string, Seat> {
+  const { team, counterpartUid } = input;
   const seats = new Map<string, Seat>();
-  seats.set(input.counterpartUid, {
+  seats.set(counterpartUid, {
     side: 'counterpart',
     role: 'counterpart',
     reason: 'counterpart',
+    alsoHostRole: team.memberUids.includes(counterpartUid) ? hostRoleOf(counterpartUid, team) : null,
   });
 
-  for (const uid of input.team.memberUids) {
+  for (const uid of team.memberUids) {
     if (seats.has(uid)) continue;
-    seats.set(uid, {
-      side: 'host',
-      role: uid === input.team.responsibleUid ? 'responsible' : 'collaborator',
-      reason: input.newcomerReason,
-    });
+    seats.set(uid, { side: 'host', role: hostRoleOf(uid, team), reason: input.newcomerReason, alsoHostRole: null });
   }
   return seats;
 }
@@ -110,6 +121,7 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
       muted: false,
       following: false,
       threadActivityAt: input.threadActivityAt,
+      alsoHostRole: seat.alsoHostRole,
     },
   };
 }
@@ -138,6 +150,7 @@ function rejoined(
       side: seat.side,
       role: seat.role,
       reason: seat.reason,
+      alsoHostRole: seat.alsoHostRole,
       addedBy: input.addedBy,
       since: input.nowISO,
       until: null,
@@ -149,14 +162,25 @@ function rejoined(
 
 /**
  * **Η αλλαγή ρόλου** — ο συνεργάτης έγινε υπεύθυνος (ή το αντίστροφο, μετά από
- * μεταβίβαση). Το `since` **μένει**: δεν μπήκε τώρα, **ανέβηκε** τώρα.
+ * μεταβίβαση), ή ο ιδιοκτήτης μπήκε/βγήκε από την ομάδα του γραφείου (`alsoHostRole`).
+ * Το `since` **μένει**: δεν μπήκε τώρα, **ανέβηκε** τώρα.
  */
 function roleChanged(previous: NetworkAudienceEntry, seat: Seat): AudienceWrite {
   return {
     uid: previous.uid,
     change: 'role-changed',
-    entry: { ...previous, role: seat.role, side: seat.side },
+    entry: { ...previous, role: seat.role, side: seat.side, alsoHostRole: seat.alsoHostRole },
   };
+}
+
+/**
+ * Διαφέρει η θέση από τη γραμμή; ⚠️ Γραμμή **προ-Β9** δεν έχει `alsoHostRole` — `undefined` ≡ `null`,
+ * αλλιώς κάθε παλιό νήμα θα έγραφε μια άσκοπη «αλλαγή ρόλου» στην πρώτη προβολή.
+ */
+function seatDiffers(previous: NetworkAudienceEntry, seat: Seat): boolean {
+  return previous.role !== seat.role
+    || previous.side !== seat.side
+    || (previous.alsoHostRole ?? null) !== seat.alsoHostRole;
 }
 
 /** **Η σφραγίδα** — η γραμμή μένει, το `until` απαντά «ως πότε διάβαζε». */
@@ -181,9 +205,7 @@ export function projectActAudience(
     const previous = byUid.get(uid);
     if (previous === undefined) writes.push(joined(uid, seat, input));
     else if (previous.until !== null) writes.push(rejoined(previous, seat, input));
-    else if (previous.role !== seat.role || previous.side !== seat.side) {
-      writes.push(roleChanged(previous, seat));
-    }
+    else if (seatDiffers(previous, seat)) writes.push(roleChanged(previous, seat));
   }
 
   // 🔴 Η **έξοδος**: ζωντανή γραμμή χωρίς θέση ⇒ σφραγίζεται. Ποτέ `delete` — δες κεφαλίδα.

@@ -21,6 +21,7 @@ jest.mock('@/lib/api/enterprise-api-client', () => {
     apiClient: { get: jest.fn(), post: jest.fn(), patch: jest.fn() },
     ApiClientError: types.ApiClientError,
     apiErrorBodyOf: types.apiErrorBodyOf,
+    PUBLIC_REQUEST: types.PUBLIC_REQUEST,
   };
 });
 

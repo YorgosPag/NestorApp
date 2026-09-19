@@ -12,6 +12,9 @@
  *   Γ-2  🔴 Δεύτερη γέννηση ⇒ **καμία** γραφή (το backfill ξανατρέχει ακίνδυνα)
  *   Γ-3  🔴 Χωρίς πρόσωπο στην άλλη πλευρά ⇒ ομάδα ναι, νήμα **όχι** (§8 #1)
  *   Γ-4  🔴 Υπάρχουσα ομάδα με μεταβίβαση ⇒ το νήμα προβάλλει την ομάδα που **ισχύει**, όχι τη γέννηση
+ *   Δ-1  🔴 Ιδιοκτήτης ΚΑΙ υπεύθυνος ⇒ **μία** θέση `counterpart` με `alsoHostRole` (όχι χαμένη ιδιότητα)
+ *   Δ-2  Γραμμή προ-Β9 ⇒ η πρώτη προβολή τη **συμπληρώνει**, η δεύτερη **δεν** γράφει
+ *   Δ-3  Ο ιδιοκτήτης βγαίνει από την ομάδα ⇒ `alsoHostRole: null`, η θέση του **μένει**
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
@@ -28,6 +31,7 @@ import {
   ensureActTeam,
   type ActTeamBirth,
 } from '@/services/network-messaging/act-team-writer';
+import { projectActAudience } from '@/services/network-messaging/thread-audience';
 import type { NetworkAudienceEntry } from '@/types/network-thread';
 import { nextResponsible, transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-departure';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -256,5 +260,49 @@ describe('Γ — η γέννηση της πράξης: ομάδα ΚΑΙ νήμ
     expect(seats.find((s) => s.uid === 'user_eleni')).toMatchObject({ role: 'responsible' });
     expect(seats.find((s) => s.uid === 'user_maria')).toMatchObject({ role: 'collaborator' });
     expect(storedTeam(fake, BIRTH.actSeed)).toMatchObject({ responsibleUid: 'user_eleni', version: 2 });
+  });
+});
+
+// ============================================================================
+describe('Δ — ο ιδιοκτήτης που είναι ΚΑΙ μέλος του γραφείου (Β9)', () => {
+  const OWNER = 'user_maria';
+  const project = (team: { responsibleUid: string; memberUids: string[] }, existing: NetworkAudienceEntry[] = []) =>
+    projectActAudience({
+      team,
+      counterpartUid: OWNER,
+      existing,
+      newcomerReason: 'creator',
+      addedBy: 'user_maria',
+      nowISO: NOW,
+      threadActivityAt: NOW,
+    });
+
+  it('Δ-1 🔴 μία θέση `counterpart`, με τη δεύτερη ιδιότητα ΓΡΑΜΜΕΝΗ', () => {
+    const writes = project({ responsibleUid: OWNER, memberUids: [OWNER] });
+
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.entry).toMatchObject({ uid: OWNER, side: 'counterpart', role: 'counterpart', alsoHostRole: 'responsible' });
+  });
+
+  it('Δ-2 γραμμή προ-Β9 ⇒ συμπληρώνεται μία φορά· ξένη γραμμή προ-Β9 δεν αγγίζεται', () => {
+    const legacy = { ...project({ responsibleUid: 'user_eleni', memberUids: ['user_eleni'] })[0]!.entry } as Record<string, unknown>;
+    delete legacy.alsoHostRole;
+    const preB9 = legacy as unknown as NetworkAudienceEntry;
+
+    // Ιδιοκτήτης ΕΚΤΟΣ ομάδας: `undefined` ≡ `null` ⇒ καμία άσκοπη «αλλαγή ρόλου».
+    expect(project({ responsibleUid: 'user_eleni', memberUids: ['user_eleni'] }, [preB9]).filter((w) => w.uid === OWNER)).toEqual([]);
+
+    const filled = project({ responsibleUid: OWNER, memberUids: [OWNER] }, [preB9]);
+    expect(filled).toStrictEqual([expect.objectContaining({ uid: OWNER, change: 'role-changed' })]);
+    expect(filled[0]?.entry).toMatchObject({ alsoHostRole: 'responsible', since: preB9.since });
+    expect(project({ responsibleUid: OWNER, memberUids: [OWNER] }, [filled[0]!.entry])).toEqual([]);
+  });
+
+  it('Δ-3 βγαίνει από την ομάδα ⇒ `alsoHostRole: null`, η θέση του ΜΕΝΕΙ ζωντανή', () => {
+    const [dual] = project({ responsibleUid: OWNER, memberUids: [OWNER, 'user_eleni'] });
+    const writes = project({ responsibleUid: 'user_eleni', memberUids: ['user_eleni'] }, [dual!.entry]);
+
+    const own = writes.find((w) => w.uid === OWNER);
+    expect(own?.entry).toMatchObject({ side: 'counterpart', alsoHostRole: null, until: null });
   });
 });

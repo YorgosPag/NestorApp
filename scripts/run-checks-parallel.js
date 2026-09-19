@@ -1066,6 +1066,15 @@ if (!process.env.SKIP_PROJECT_MEMBER_AUTHORITY)
 if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
   addThread('3.89', 'Network thread authority', 'scripts/check-network-thread-authority.js');
 
+// CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
+// Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
+// κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με
+// `companyId: undefined`. Η Next.js λέει «διάλεξε έναν τρόπο» — εδώ επιβάλλεται.
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: η οδηγία γεννιέται σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο, και το `git grep` προφίλτρο
+// κάνει την πλήρη σάρωση φθηνή. AST (πρόλογος αρχείου + συνάρτησης), ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_SERVER_ACTION_BOUNDARY)
+  addThread('3.90', 'Server action boundary', 'scripts/check-server-action-boundary.js');
+
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {

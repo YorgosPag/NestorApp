@@ -15,7 +15,8 @@
  * - Audit trail (createdBy, updatedBy, timestamps)
  */
 
-'use server';
+// ADR-868 — `server-only`, ΟΧΙ `'use server'`. Το δεύτερο θα έκανε κάθε εξαγωγή **δημόσιο
+// endpoint** με `companyId` από τον πελάτη· το πρώτο απλώς αρνείται να μπει σε bundle πελάτη.
 import 'server-only';
 
 import { getAdminFirestore } from '@/server/admin/admin-guards';

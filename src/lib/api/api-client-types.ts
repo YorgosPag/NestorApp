@@ -29,6 +29,18 @@ export interface ApiRequestConfig {
   responseType?: 'auto' | 'json' | 'text' | 'blob';
 }
 
+/**
+ * 🔴 **Η ΔΗΜΟΣΙΑ ΚΛΗΣΗ — ΜΙΑ ΣΤΑΘΕΡΑ, ΠΟΤΕ inline `{ skipAuth: true }`.**
+ *
+ * Για διαδρομές που **δεν** κοιτούν ταυτότητα (ανώνυμος επισκέπτης). Χωρίς αυτή, το
+ * `buildHeaders` ζητά `getIdToken()` από ανύπαρκτο χρήστη και πετά **401 ΠΡΙΝ φύγει το
+ * αίτημα** — ο server δεν το βλέπει ποτέ, και ο συνδεδεμένος developer δεν το βλέπει επίσης.
+ *
+ * 📏 Μετρημένο 2026-09-19 (ADR-777 §8.60.21.7): η δημόσια διαθεσιμότητα διαμονής το ξέχασε
+ * ⇒ **κάθε** ανώνυμος επισκέπτης έβλεπε «ημερολόγιο που δεν διαβάστηκε» και καμία τιμή.
+ */
+export const PUBLIC_REQUEST = { skipAuth: true } as const satisfies Pick<ApiRequestConfig, 'skipAuth'>;
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;

@@ -19,6 +19,7 @@ function row(uid: string, extra: Partial<NetworkAudienceEntry>): NetworkAudience
     muted: false,
     following: false,
     threadActivityAt: '2026-09-19T00:00:00.000Z',
+    alsoHostRole: null,
     ...extra,
   };
 }
@@ -77,6 +78,40 @@ describe('audience-roster — ποιοι διαβάζουν', () => {
       'uid_nikos',
       'uid_owner',
     ]);
+  });
+});
+
+// ADR-867 Β9 — ΜΙΑ ΘΕΣΗ, ΔΥΟ ΙΔΙΟΤΗΤΕΣ (Figma «υψηλότερη πρόσβαση» · NAR Άρθρο 4 «δηλωμένο συμφέρον»).
+describe('audience-roster — ο ιδιοκτήτης που είναι ΚΑΙ μέλος του γραφείου', () => {
+  const DUAL = row('uid_owner', { side: 'counterpart', role: 'counterpart', reason: 'counterpart', alsoHostRole: 'responsible' });
+
+  it('Λ-9 🔴 η πλευρά του γραφείου ΔΕΝ φαίνεται άδεια: το είδωλο του ιδιοκτήτη, με τον ρόλο του εκεί (μετάλλαξη: χωρίς είδωλο)', () => {
+    const roster = buildAudienceRoster([DUAL, ELENI], ELENI.uid, 'act');
+    const mine = roster.sides.find((side) => side.relation === 'mine');
+    expect(mine?.current.map((m) => [m.uid, m.role, m.mirror])).toStrictEqual([
+      ['uid_owner', 'responsible', true],
+      ['uid_eleni', 'collaborator', false],
+    ]);
+  });
+
+  it('Λ-10 🔴 η θέση του ιδιοκτήτη ΔΗΛΩΝΕΙ τη δεύτερη ιδιότητα (μετάλλαξη: alsoHostRole χάνεται)', () => {
+    const theirs = buildAudienceRoster([DUAL, ELENI], ELENI.uid, 'act').sides.find((side) => side.relation === 'theirs');
+    expect(theirs?.current).toStrictEqual([
+      expect.objectContaining({ uid: 'uid_owner', role: 'counterpart', alsoHostRole: 'responsible', mirror: false }),
+    ]);
+  });
+
+  it('Λ-11 μόνος του ⇒ `solo`, και οι δύο πλευρές τον δείχνουν· με δεύτερο πρόσωπο ⇒ ΟΧΙ solo', () => {
+    const alone = buildAudienceRoster([DUAL], DUAL.uid, 'act');
+    expect(alone.solo).toBe(true);
+    expect(alone.sides).toHaveLength(2);
+    expect(buildAudienceRoster([DUAL, ELENI], DUAL.uid, 'act').solo).toBe(false);
+    expect(buildAudienceRoster(ACT_AUDIENCE, OWNER.uid, 'act').solo).toBe(false);
+  });
+
+  it('Λ-12 χωρίς δεύτερη ιδιότητα ⇒ ΚΑΝΕΝΑ είδωλο (μετάλλαξη: είδωλο για κάθε αντισυμβαλλόμενο)', () => {
+    const roster = buildAudienceRoster(ACT_AUDIENCE, ELENI.uid, 'act');
+    expect(roster.sides.flatMap((side) => side.current).filter((m) => m.mirror)).toStrictEqual([]);
   });
 });
 

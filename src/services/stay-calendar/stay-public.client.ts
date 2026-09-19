@@ -7,9 +7,13 @@
  *
  * ⚠️ Αποτυχία δικτύου ⇒ `failed`, **ποτέ** κενή απάντηση: η οθόνη τη μετρά ως `unreadable`
  * (δικό μας χρέος), όχι ως «ελεύθερο» ή «αδήλωτο».
+ *
+ * 🔴 **Και οι δύο κλήσεις είναι `PUBLIC_REQUEST`**: οι διαδρομές είναι ανοιχτές στον ανώνυμο
+ * (Airbnb/Booking: τιμή + διαθεσιμότητα **χωρίς** σύνδεση· σύνδεση μόνο στο αίτημα). Χωρίς τη
+ * σημαία ο ανώνυμος έπαιρνε 401 στον browser — ADR-777 §8.60.21.7 «Ζωντανή επαλήθευση».
  */
 
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, PUBLIC_REQUEST } from '@/lib/api/enterprise-api-client';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import type { StayPublicNights } from '@/lib/stay/stay-nights-view';
 import { STAY_PUBLIC_MAX_LISTINGS, type PublicStayAnswer } from '@/lib/stay/stay-public-request';
@@ -30,7 +34,7 @@ export async function fetchPublicStayNights(
   const query = new URLSearchParams({ from: fromMonth, months: String(months) });
   try {
     const url = `/api/public-listings/${encodeURIComponent(listingId)}/stay-nights?${query}`;
-    return { kind: 'loaded', nights: await apiClient.get<StayPublicNights>(url) };
+    return { kind: 'loaded', nights: await apiClient.get<StayPublicNights>(url, PUBLIC_REQUEST) };
   } catch (cause) {
     logger.warn('Το δημόσιο ημερολόγιο δεν φορτώθηκε', {
       data: { listingId, fromMonth },
@@ -48,6 +52,7 @@ async function fetchChunk(listingIds: readonly string[], query: StayQuery): Prom
   const body = await apiClient.post<{ answers: Record<string, PublicStayAnswer> }>(
     '/api/public-listings/stay-availability',
     { listingIds, ...query },
+    PUBLIC_REQUEST,
   );
   return body.answers;
 }

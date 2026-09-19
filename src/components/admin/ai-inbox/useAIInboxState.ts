@@ -4,8 +4,19 @@
  * =============================================================================
  *
  * Extracted from AIInboxClient.tsx for SRP compliance (ADR N.7.1).
- * Contains: state declarations, realtime/server data source unification,
- * approve/reject handlers, filter logic, dashboard stats, loading/error states.
+ * Contains: state declarations, realtime data source, approve/reject handlers,
+ * filter logic, dashboard stats, loading/error states.
+ *
+ * 🔴 **ADR-868 — ΕΝΑ ΣΥΝΟΡΟ, ΚΑΜΙΑ SERVER ACTION.** Μέχρι 2026-09-19 το hook καλούσε
+ *    τέσσερις server actions του `communications.service.ts` και τους έδινε **το ίδιο**
+ *    `adminUid` / `companyId` — ή `undefined`, που ο server διάβαζε ως «GLOBAL_ACCESS»:
+ *    μηνύματα **όλων** των εταιρειών, σε οποιονδήποτε έστελνε ένα POST.
+ *    Πλέον:
+ *    - **ανάγνωση** = μόνο ο realtime listener, που τον κρίνουν τα `firestore.rules`·
+ *    - **έγκριση/απόρριψη** = `POST /api/admin/ai-inbox/.../triage` μέσω `apiClient`, με
+ *      σώμα **μόνο** `{ decision }` — ο server ξέρει ποιος ρωτά, δεν του το λέμε.
+ *    - Η σελίδα δεν αποδίδει καν αυτό το hook χωρίς εταιρεία (`AIInboxAdminContext`):
+ *      η κατάσταση «διαχειριστής χωρίς εταιρεία» είναι **μη εκφράσιμη** εδώ.
  *
  * @module useAIInboxState
  * @enterprise Google SRP — single responsibility per module
@@ -16,18 +27,17 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { createStaleCache } from '@/lib/stale-cache';
-import { useRealtimeTriageCommunications } from '@/hooks/inbox/useRealtimeTriageCommunications';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiErrorBodyOf } from '@/lib/api/api-client-types';
+import { API_ROUTES } from '@/config/domain-constants';
+import {
+  useRealtimeTriageCommunications,
+  type TriageStats,
+} from '@/hooks/inbox/useRealtimeTriageCommunications';
 import type { Communication, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
 import { defaultAIInboxFilters, type AIInboxFilterState } from '@/components/core/AdvancedFilters';
 import type { AdminContext } from '@/server/admin/admin-guards';
-import {
-  getTriageCommunications,
-  getTriageStats,
-  approveCommunication,
-  rejectCommunication,
-} from '@/services/communications.service';
 import { getDisplayContent, resolveFirestoreTimestamp } from './ai-inbox-helpers';
 
 // ============================================================================
@@ -36,25 +46,28 @@ import { getDisplayContent, resolveFirestoreTimestamp } from './ai-inbox-helpers
 
 const logger = createModuleLogger('AI_INBOX_STATE');
 
-const aiInboxCommsCache = createStaleCache<Array<Communication & { id: string }>>('ai-inbox-state');
-const aiInboxStatsCache = createStaleCache<TriageStats>('ai-inbox-stats');
-
-const TRIAGE_STATUS_SET = new Set<TriageStatus>(Object.values(TRIAGE_STATUSES));
+const TRIAGE_STATUS_SET = new Set<string>(Object.values(TRIAGE_STATUSES));
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface TriageStats {
-  total: number;
-  pending: number;
-  approved: number;
-  rejected: number;
-  reviewed: number;
-}
+export type { TriageStats };
+
+/**
+ * Το `AdminContext` της σελίδας **με εγγυημένη εταιρεία** (ADR-868).
+ *
+ * Ο φύλακας της σελίδας (`requireAdminForPage`) επιστρέφει `companyId?` — ο
+ * διαχειριστής χωρίς εταιρεία **υπάρχει** ως ταυτότητα. Τα εισερχόμενα όμως είναι
+ * **ανά εταιρεία**, και η παλιά «καθολική όψη» ήταν ακριβώς η διαρροή. Η σελίδα
+ * στενεύει τον τύπο **πριν** αποδώσει τον πελάτη.
+ */
+export type AIInboxAdminContext = AdminContext & { readonly companyId: string };
+
+type TriageDecision = 'approve' | 'reject';
 
 export interface AIInboxState {
-  /** Unified communications list (realtime or server) */
+  /** Live communications list */
   communications: Array<Communication & { id: string }>;
   /** Filtered communications based on current filter state */
   filteredCommunications: Array<Communication & { id: string }>;
@@ -66,7 +79,7 @@ export interface AIInboxState {
   error: string | null;
   /** ID of the communication currently being acted on */
   actionLoading: string | null;
-  /** Unified triage stats */
+  /** Live triage stats */
   stats: TriageStats | null;
   /** Pending count shortcut */
   pendingCount: number;
@@ -90,349 +103,160 @@ export interface AIInboxState {
 }
 
 // ============================================================================
-// HOOK
+// PURE HELPERS
 // ============================================================================
 
+/** Το `errorId` που στέλνει ο server στο σώμα της άρνησης — για συσχέτιση με τα logs. */
+function errorIdOf(cause: unknown): string | null {
+  const errorId = apiErrorBodyOf(cause)?.errorId;
+  return typeof errorId === 'string' ? errorId : null;
+}
+
+function toStatusFilter(status: string): TriageStatus | undefined {
+  if (status === 'all') return undefined;
+  return TRIAGE_STATUS_SET.has(status) ? (status as TriageStatus) : undefined;
+}
+
+function applyFilters(
+  communications: Array<Communication & { id: string }>,
+  filters: AIInboxFilterState,
+): Array<Communication & { id: string }> {
+  const term = filters.searchTerm.trim().toLowerCase();
+  const fromTime = filters.dateFrom ? new Date(filters.dateFrom).getTime() : null;
+  const toTime = filters.dateTo ? new Date(filters.dateTo).getTime() : null;
+
+  return communications.filter((comm) => {
+    if (term && !(
+      (comm.from || '').toLowerCase().includes(term) ||
+      (comm.subject || '').toLowerCase().includes(term) ||
+      getDisplayContent(comm.content).toLowerCase().includes(term)
+    )) return false;
+    if (filters.channel !== 'all' && comm.type !== filters.channel) return false;
+    if (fromTime === null && toTime === null) return true;
+    const createdAt = resolveFirestoreTimestamp(comm.createdAt)?.getTime();
+    if (createdAt === undefined) return false;
+    return (fromTime === null || createdAt >= fromTime) && (toTime === null || createdAt <= toTime);
+  });
+}
+
+// ============================================================================
+// SUB-HOOKS
+// ============================================================================
+
+/** Αποτυχία του realtime listener → μήνυμα οθόνης. */
+function useRealtimeErrorMessage(realtimeError: string | null): string | null {
+  const { t } = useTranslation('admin');
+  return useMemo(() => {
+    if (!realtimeError) return null;
+    if (realtimeError.includes('AUTHENTICATION_ERROR')) return t('aiInbox.errors.authRequired');
+    if (realtimeError.includes('Firestore') || realtimeError.includes('listener')) {
+      return t('aiInbox.errors.firestoreListener');
+    }
+    return t('aiInbox.errors.generic');
+  }, [realtimeError, t]);
+}
+
 /**
- * Manages all AI Inbox state: data fetching (realtime + server fallback),
- * approve/reject actions, filtering, and dashboard stats.
+ * Έγκριση / απόρριψη — **μία** διαδρομή για τις δύο αποφάσεις.
  *
- * @param adminContext - Server-verified admin context (uid, companyId, role, etc.)
- * @returns Complete state object for rendering
+ * ⚠️ Το σώμα είναι **μόνο** `{ decision }`: ούτε `adminUid` ούτε `companyId`. Ο
+ *    server ξέρει ποιος ρωτά από το token· η διαδρομή απορρίπτει με 400 κάθε
+ *    επιπλέον πεδίο (`.strict()`). Η λίστα ενημερώνεται από τον listener.
  */
-export function useAIInboxState(adminContext: AdminContext): AIInboxState {
+function useTriageActions(adminUid: string) {
   const { t } = useTranslation('admin');
   const { success, error: notifyError } = useNotifications();
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // =========================================================================
-  // UI STATE
-  // =========================================================================
+  // Κυριολεκτικά κλειδιά (όχι `t(μεταβλητή)`), ώστε οι CHECK 3.8/3.13 να τα βλέπουν.
+  const successMessage = useCallback((decision: TriageDecision) => (
+    decision === 'approve' ? t('aiInbox.approveSuccess') : t('aiInbox.rejectSuccess')
+  ), [t]);
 
+  const failureMessage = useCallback((decision: TriageDecision, errorId: string | null) => {
+    if (decision === 'approve') {
+      return errorId ? t('aiInbox.approveFailedWithErrorId', { errorId }) : t('aiInbox.approveFailed');
+    }
+    return errorId ? t('aiInbox.rejectFailedWithErrorId', { errorId }) : t('aiInbox.rejectFailed');
+  }, [t]);
+
+  const runTriage = useCallback(async (commId: string, decision: TriageDecision) => {
+    setActionLoading(commId);
+    try {
+      await apiClient.post(API_ROUTES.ADMIN.AI_INBOX_TRIAGE(commId), { decision });
+      success(successMessage(decision));
+      logger.info('Communication triaged', { communicationId: commId, decision, adminUid });
+    } catch (err) {
+      const errorId = errorIdOf(err);
+      logger.error('Triage failed', { communicationId: commId, decision, errorId, error: err });
+      notifyError(failureMessage(decision, errorId));
+    } finally {
+      setActionLoading(null);
+    }
+  }, [adminUid, failureMessage, notifyError, success, successMessage]);
+
+  const handleApprove = useCallback((commId: string) => runTriage(commId, 'approve'), [runTriage]);
+  const handleReject = useCallback((commId: string) => runTriage(commId, 'reject'), [runTriage]);
+
+  return { actionLoading, handleApprove, handleReject };
+}
+
+/** Κατάσταση οθόνης (φίλτρα, εναλλαγές, mount) — καμία σχέση με δεδομένα. */
+function useInboxUiState() {
   const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState<AIInboxFilterState>(defaultAIInboxFilters);
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // =========================================================================
-  // SERVER ACTION STATE (super admin fallback)
-  // =========================================================================
+  useEffect(() => { setIsMounted(true); }, []);
 
-  const _cacheKey = adminContext.companyId ?? '';
-  const [serverCommunications, setServerCommunications] = useState<Array<Communication & { id: string }>>(
-    aiInboxCommsCache.get(_cacheKey) ?? []
-  );
-  const [serverLoading, setServerLoading] = useState(!aiInboxCommsCache.hasLoaded(_cacheKey));
-  const [serverStatsLoading, setServerStatsLoading] = useState(!aiInboxStatsCache.hasLoaded(_cacheKey));
-  const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [serverStats, setServerStats] = useState<TriageStats | null>(null);
+  return { isMounted, filters, setFilters, showDashboard, setShowDashboard, showFilters, setShowFilters };
+}
 
-  // =========================================================================
-  // REALTIME vs SERVER DATA SOURCE
-  // =========================================================================
+// ============================================================================
+// HOOK
+// ============================================================================
 
-  const isRealtimeEnabled = !!adminContext.companyId;
+/**
+ * Manages all AI Inbox state: realtime data, approve/reject actions,
+ * filtering, and dashboard stats.
+ *
+ * @param adminContext - Server-verified admin context **with a company** (ADR-868)
+ * @returns Complete state object for rendering
+ */
+export function useAIInboxState(adminContext: AIInboxAdminContext): AIInboxState {
+  const { success } = useNotifications();
+  const ui = useInboxUiState();
+  const { filters } = ui;
 
-  const realtimeStatusFilter = useMemo((): TriageStatus | undefined => {
-    if (filters.status === 'all') return undefined;
-    const validStatuses = new Set<string>(Object.values(TRIAGE_STATUSES));
-    return validStatuses.has(filters.status) ? (filters.status as TriageStatus) : undefined;
-  }, [filters.status]);
+  const statusFilter = useMemo(() => toStatusFilter(filters.status), [filters.status]);
+  const { communications, stats, loading, error: realtimeError, connected } =
+    useRealtimeTriageCommunications({ companyId: adminContext.companyId, statusFilter, enabled: true });
 
-  const {
-    communications: realtimeCommunications,
-    stats: realtimeStats,
-    loading: realtimeLoading,
-    error: realtimeError,
-    connected,
-  } = useRealtimeTriageCommunications({
-    companyId: adminContext.companyId,
-    statusFilter: realtimeStatusFilter,
-    enabled: isRealtimeEnabled,
-  });
-
-  // Unified data source
-  const communications = isRealtimeEnabled ? realtimeCommunications : serverCommunications;
-  const loading = isRealtimeEnabled ? realtimeLoading : serverLoading;
-  const stats = isRealtimeEnabled ? realtimeStats : serverStats;
-  const statsLoading = isRealtimeEnabled ? realtimeLoading : serverStatsLoading;
-
-  // =========================================================================
-  // ERROR PROPAGATION
-  // =========================================================================
-
-  useEffect(() => {
-    if (realtimeError && isRealtimeEnabled) {
-      if (realtimeError.includes('AUTHENTICATION_ERROR')) {
-        setError(t('aiInbox.errors.authRequired'));
-      } else if (realtimeError.includes('Firestore') || realtimeError.includes('listener')) {
-        setError(t('aiInbox.errors.firestoreListener'));
-      } else {
-        setError(t('aiInbox.errors.generic'));
-      }
-    }
-  }, [realtimeError, isRealtimeEnabled, t]);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // =========================================================================
-  // HELPERS
-  // =========================================================================
-
-  const isTriageStatus = useCallback((value: string): value is TriageStatus => {
-    return TRIAGE_STATUS_SET.has(value as TriageStatus);
-  }, []);
-
-  const resolveStatusFilter = useCallback((): TriageStatus | undefined => {
-    if (filters.status === 'all') return undefined;
-    return isTriageStatus(filters.status) ? filters.status : undefined;
-  }, [filters.status, isTriageStatus]);
-
-  // =========================================================================
-  // SERVER ACTION LOADERS (super admin only)
-  // =========================================================================
-
-  const loadTriageCommunications = useCallback(async () => {
-    if (isRealtimeEnabled) return;
-    if (!aiInboxCommsCache.hasLoaded(adminContext.companyId ?? '')) setServerLoading(true);
-    setError(null);
-
-    try {
-      const result = await getTriageCommunications(undefined, adminContext.operationId, resolveStatusFilter());
-      if (!result.ok) {
-        throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
-      }
-      aiInboxCommsCache.set(result.data as Array<Communication & { id: string }>, adminContext.companyId ?? '');
-      setServerCommunications(result.data as Array<Communication & { id: string }>);
-      logger.info('Loaded pending communications (super admin)', {
-        count: result.data.length,
-        source: 'server-action',
-        adminUid: adminContext.uid,
-      });
-    } catch (err) {
-      logger.error('Failed to load communications', { error: err });
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setServerLoading(false);
-    }
-  }, [isRealtimeEnabled, adminContext.operationId, adminContext.uid, resolveStatusFilter, t]);
-
-  const loadTriageStats = useCallback(async () => {
-    if (isRealtimeEnabled) return;
-    if (!aiInboxStatsCache.hasLoaded(adminContext.companyId ?? '')) setServerStatsLoading(true);
-
-    try {
-      const result = await getTriageStats(undefined, adminContext.operationId);
-      if (!result.ok) {
-        throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
-      }
-      aiInboxStatsCache.set(result.data, adminContext.companyId ?? '');
-      setServerStats(result.data);
-    } catch (err) {
-      logger.error('Failed to load triage stats', { error: err });
-    } finally {
-      setServerStatsLoading(false);
-    }
-  }, [isRealtimeEnabled, adminContext.operationId, t]);
-
-  useEffect(() => {
-    if (!isRealtimeEnabled) {
-      loadTriageCommunications();
-    }
-  }, [loadTriageCommunications, isRealtimeEnabled]);
-
-  useEffect(() => {
-    if (!isRealtimeEnabled) {
-      loadTriageStats();
-    }
-  }, [loadTriageStats, isRealtimeEnabled]);
-
-  // =========================================================================
-  // REFRESH
-  // =========================================================================
+  const error = useRealtimeErrorMessage(realtimeError);
+  const { actionLoading, handleApprove, handleReject } = useTriageActions(adminContext.uid);
 
   const handleRefresh = useCallback(async () => {
-    if (isRealtimeEnabled) {
-      success('Live data is already up-to-date!');
-      return;
-    }
-    await Promise.all([loadTriageCommunications(), loadTriageStats()]);
-  }, [isRealtimeEnabled, loadTriageCommunications, loadTriageStats, success]);
+    success('Live data is already up-to-date!');
+  }, [success]);
 
-  // =========================================================================
-  // APPROVE / REJECT ACTIONS
-  // =========================================================================
-
-  const handleApprove = useCallback(async (commId: string) => {
-    setActionLoading(commId);
-    try {
-      const comm = communications.find(c => c.id === commId);
-      const commCompanyId = comm?.companyId || adminContext.companyId;
-
-      if (!commCompanyId) {
-        notifyError('Cannot approve: missing company context');
-        return;
-      }
-
-      const result = await approveCommunication(
-        commId,
-        adminContext.uid,
-        commCompanyId,
-        adminContext.operationId,
-      );
-
-      if (!result.ok) {
-        notifyError(t('aiInbox.approveFailedWithErrorId', { errorId: result.errorId }));
-        return;
-      }
-
-      if (!isRealtimeEnabled) {
-        setServerCommunications(prev => {
-          const updated = prev.map(c =>
-            c.id === commId
-              ? { ...c, triageStatus: TRIAGE_STATUSES.APPROVED, linkedTaskId: result.taskId }
-              : c,
-          );
-          if (filters.status !== 'all' && filters.status !== TRIAGE_STATUSES.APPROVED) {
-            return updated.filter(c => c.id !== commId);
-          }
-          return updated;
-        });
-
-        setServerStats(prev => {
-          if (!prev) return prev;
-          return { ...prev, pending: Math.max(0, prev.pending - 1), approved: prev.approved + 1 };
-        });
-      }
-
-      success(t('aiInbox.approveSuccess'));
-      logger.info('Communication approved', { communicationId: commId, taskId: result.taskId, adminUid: adminContext.uid });
-    } catch (err) {
-      logger.error('Approve failed', { communicationId: commId, error: err });
-      notifyError(t('aiInbox.approveFailed'));
-    } finally {
-      setActionLoading(null);
-    }
-  }, [communications, adminContext, filters.status, isRealtimeEnabled, notifyError, success, t]);
-
-  const handleReject = useCallback(async (commId: string) => {
-    setActionLoading(commId);
-    try {
-      const comm = communications.find(c => c.id === commId);
-      const commCompanyId = comm?.companyId || adminContext.companyId;
-
-      if (!commCompanyId) {
-        notifyError('Cannot reject: missing company context');
-        return;
-      }
-
-      const result = await rejectCommunication(
-        commId,
-        commCompanyId,
-        adminContext.uid,
-        adminContext.operationId,
-      );
-
-      if (!result.ok) {
-        notifyError(t('aiInbox.rejectFailedWithErrorId', { errorId: result.errorId }));
-        return;
-      }
-
-      if (!isRealtimeEnabled) {
-        setServerCommunications(prev => {
-          const updated = prev.map(c =>
-            c.id === commId
-              ? { ...c, triageStatus: TRIAGE_STATUSES.REJECTED }
-              : c,
-          );
-          if (filters.status !== 'all' && filters.status !== TRIAGE_STATUSES.REJECTED) {
-            return updated.filter(c => c.id !== commId);
-          }
-          return updated;
-        });
-
-        setServerStats(prev => {
-          if (!prev) return prev;
-          return { ...prev, pending: Math.max(0, prev.pending - 1), rejected: prev.rejected + 1 };
-        });
-      }
-
-      success(t('aiInbox.rejectSuccess'));
-      logger.info('Communication rejected', { communicationId: commId, adminUid: adminContext.uid });
-    } catch (err) {
-      logger.error('Reject failed', { communicationId: commId, error: err });
-      notifyError(t('aiInbox.rejectFailed'));
-    } finally {
-      setActionLoading(null);
-    }
-  }, [communications, adminContext, filters.status, isRealtimeEnabled, notifyError, success, t]);
-
-  // =========================================================================
-  // FILTERED COMMUNICATIONS
-  // =========================================================================
-
-  const filteredCommunications = useMemo(() => {
-    let list = [...communications];
-
-    if (filters.searchTerm.trim()) {
-      const term = filters.searchTerm.trim().toLowerCase();
-      list = list.filter(comm =>
-        (comm.from || '').toLowerCase().includes(term) ||
-        (comm.subject || '').toLowerCase().includes(term) ||
-        getDisplayContent(comm.content).toLowerCase().includes(term),
-      );
-    }
-
-    if (filters.channel !== 'all') {
-      list = list.filter(comm => comm.type === filters.channel);
-    }
-
-    if (filters.dateFrom) {
-      const fromDate = new Date(filters.dateFrom);
-      list = list.filter(comm => {
-        const createdAt = resolveFirestoreTimestamp(comm.createdAt);
-        return createdAt ? createdAt.getTime() >= fromDate.getTime() : false;
-      });
-    }
-
-    if (filters.dateTo) {
-      const toDate = new Date(filters.dateTo);
-      list = list.filter(comm => {
-        const createdAt = resolveFirestoreTimestamp(comm.createdAt);
-        return createdAt ? createdAt.getTime() <= toDate.getTime() : false;
-      });
-    }
-
-    return list;
-  }, [communications, filters.channel, filters.dateFrom, filters.dateTo, filters.searchTerm]);
-
-  // =========================================================================
-  // DERIVED VALUES
-  // =========================================================================
-
-  const pendingCount = stats?.pending ?? 0;
-  const isRefreshing = loading || statsLoading;
+  const filteredCommunications = useMemo(
+    () => applyFilters(communications, filters),
+    [communications, filters],
+  );
 
   return {
+    ...ui,
     communications,
     filteredCommunications,
     loading,
-    statsLoading,
+    statsLoading: loading,
     error,
     actionLoading,
     stats,
-    pendingCount,
-    isRefreshing,
+    pendingCount: stats?.pending ?? 0,
+    isRefreshing: loading,
     connected,
-    filters,
-    showDashboard,
-    showFilters,
-    isMounted,
-    setFilters,
-    setShowDashboard,
-    setShowFilters,
     handleRefresh,
     handleApprove,
     handleReject,

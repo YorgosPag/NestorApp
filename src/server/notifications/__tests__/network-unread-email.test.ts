@@ -130,7 +130,7 @@ const NOW = '2026-09-18T12:00:00.000Z';
 function entry(patch: Partial<NetworkAudienceEntry> = {}): NetworkAudienceEntry {
   return {
     uid: 'u1', side: 'host', role: 'responsible', reason: 'creator', addedBy: 'u1',
-    since: '2026-09-01T00:00:00.000Z', until: null, lastReadAt: null, muted: false, following: false, threadActivityAt: SINCE,
+    since: '2026-09-01T00:00:00.000Z', until: null, lastReadAt: null, muted: false, following: false, threadActivityAt: SINCE, alsoHostRole: null,
     ...patch,
   };
 }

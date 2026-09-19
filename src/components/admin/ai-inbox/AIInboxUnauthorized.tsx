@@ -14,7 +14,8 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 interface AIInboxUnauthorizedProps {
-  error: string;
+  /** Αιτία από τον φύλακα της σελίδας· απούσα ⇒ μόνο η γενική άρνηση (ADR-868: χωρίς εταιρεία). */
+  error?: string;
 }
 
 export function AIInboxUnauthorized({ error }: AIInboxUnauthorizedProps) {
@@ -35,11 +36,13 @@ export function AIInboxUnauthorized({ error }: AIInboxUnauthorizedProps) {
             <CardDescription>{t('accessDenied.description')}</CardDescription>
           </CardHeader>
           <CardContent className={layout.flexColGap2}>
-            <p className={`text-sm ${colors.text.muted}`}>
-              {/MFA enrollment required/i.test(error)
-                ? t('accessDenied.mfaRequired')
-                : error}
-            </p>
+            {error && (
+              <p className={`text-sm ${colors.text.muted}`}>
+                {/MFA enrollment required/i.test(error)
+                  ? t('accessDenied.mfaRequired')
+                  : error}
+              </p>
+            )}
             <div className={layout.flexGap2}>
               <Button asChild variant="default">
                 <Link href={AUTH_ROUTES.login}>

@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { AuthContext, GlobalRole, PermissionId } from './types';
 import { isAuthenticated } from './types';
 import { buildRequestContext } from './auth-context';
+import { extractBearerToken } from './token-credentials';
 import {
   checkPermission,
   createPermissionCache,
@@ -31,6 +32,7 @@ import {
   createUnauthorizedResponse,
   createForbiddenResponse,
   createRoleRequiredResponse,
+  createMfaRequiredResponse,
   type ErrorResponse,
 } from './api-denial';
 import { apiErrorHandler } from '@/lib/api/ApiErrorHandler';
@@ -66,6 +68,15 @@ export interface WithAuthOptions {
   permissionOptions?: PermissionCheckOptions | ((request: NextRequest) => PermissionCheckOptions);
   /** Required global role(s) - user must have at least one of these roles */
   requiredGlobalRoles?: GlobalRole | GlobalRole[];
+  /**
+   * Require an MFA-enrolled session (claim `mfaEnrolled`) — ADR-868.
+   *
+   * 🔑 **Η δίδυμη πόρτα του `requireAdminForPage`**: η σελίδα της κονσόλας κρίνει ρόλο
+   *    **και** MFA· μια διαδρομή που την εξυπηρετεί χωρίς MFA θα ήταν **πιο χαλαρή από την
+   *    οθόνη της** — ακριβώς το σχήμα «η σελίδα φυλάει, το endpoint όχι» που κλείνει το ADR-868.
+   *    Δηλώνεται στο σύνορο, όπως το ταβάνι ρόλου — ποτέ `if` μέσα στον handler.
+   */
+  requireMfa?: boolean;
   /** Allow unauthenticated access (handler receives RequestContext) */
   allowUnauthenticated?: boolean;
   /** Custom error response for unauthorized */
@@ -170,6 +181,14 @@ export function withAuth<T = unknown, R = unknown>(
 
         return errorResponse as NextResponse<ErrorResponse>;
       }
+    }
+
+    // Step 4b: Second factor, declared at the boundary (ADR-868). ΜΕΤΑ τον ρόλο: ο
+    // χρήστης χωρίς τον ρόλο μαθαίνει «όχι ρόλος», όχι «λείπει MFA» (η πόρτα δεν
+    // αποκαλύπτει τι θα χρειαζόταν κάποιος που ούτως ή άλλως δεν δικαιούται).
+    if (options.requireMfa && ctx.mfaEnrolled !== true) {
+      logger.warn(`[withAuth] MFA denied: user ${ctx.uid} (role: ${ctx.globalRole}) has no second factor`);
+      return createMfaRequiredResponse() as NextResponse<ErrorResponse>;
     }
 
     // Step 5: Check permissions if specified
@@ -332,17 +351,7 @@ export function withProjectAuth<T = unknown>(
  * @returns Token string or null
  */
 export function extractToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) {
-    return null;
-  }
-
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
-    return null;
-  }
-
-  return parts[1];
+  return extractBearerToken(request);
 }
 
 /**

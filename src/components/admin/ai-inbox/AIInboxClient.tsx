@@ -28,7 +28,6 @@ import { Inbox, CheckCircle, XCircle, Eye, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmailContentWithSignature } from '@/components/shared/email/EmailContentRenderer';
 import { TRIAGE_STATUSES } from '@/types/crm';
-import type { AdminContext } from '@/server/admin/admin-guards';
 import { PageContainer, ListContainer } from '@/core/containers';
 import AIInboxHeader from '@/components/admin/ai-inbox/AIInboxHeader';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
@@ -51,7 +50,7 @@ import {
   resolveFirestoreTimestamp,
   AttachmentDisplay,
 } from './ai-inbox-helpers';
-import { useAIInboxState } from './useAIInboxState';
+import { useAIInboxState, type AIInboxAdminContext } from './useAIInboxState';
 
 // Re-exports for backward compatibility
 export {
@@ -62,14 +61,15 @@ export {
   AttachmentDisplay,
 } from './ai-inbox-helpers';
 export { useAIInboxState } from './useAIInboxState';
-export type { TriageStats, AIInboxState } from './useAIInboxState';
+export type { TriageStats, AIInboxState, AIInboxAdminContext } from './useAIInboxState';
 
 // ============================================================================
 // PROPS
 // ============================================================================
 
 interface AIInboxClientProps {
-  adminContext: AdminContext;
+  /** ADR-868 — με εγγυημένη εταιρεία: η σελίδα στενεύει τον τύπο πριν αποδώσει. */
+  adminContext: AIInboxAdminContext;
 }
 
 // ============================================================================

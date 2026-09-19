@@ -21,7 +21,7 @@
  * ένωση αποτελεσμάτων** — η οθόνη δεν πιάνει εξαιρέσεις.
  */
 
-import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
+import { apiClient, apiErrorBodyOf, PUBLIC_REQUEST } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   isFirstContactRejection,
@@ -316,8 +316,10 @@ const GUEST_URL = `${CONTACTS_URL}/guest`;
  * ⚠️ Ισχύει **και** για τον συνδεδεμένο που περνά από εδώ *(ανεπαλήθευτο κανάλι,
  * απόφαση #3)*: οι διαδρομές **δεν κοιτούν** ταυτότητα, οπότε ένα `Authorization`
  * header θα ήταν byte που κανείς δεν διαβάζει.
+ *
+ * 🔑 Η σταθερά ζει **μία φορά** στο `api-client-types` (`PUBLIC_REQUEST`) — εδώ μένει η απόφαση.
  */
-const PUBLIC_CALL = { skipAuth: true } as const;
+const PUBLIC_CALL = PUBLIC_REQUEST;
 
 /**
  * **Τι απέγινε η ΔΗΛΩΣΗ** — που **δεν** είναι ακόμη πράξη.

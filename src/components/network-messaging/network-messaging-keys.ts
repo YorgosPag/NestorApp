@@ -10,7 +10,7 @@
  */
 
 import type { NetworkFailure } from '@/services/network-messaging/network-thread.client';
-import type { NetworkAudienceReason, NetworkAudienceRole } from '@/types/network-thread';
+import type { NetworkAudienceReason, NetworkAudienceRole, NetworkHostRole } from '@/types/network-thread';
 
 export const NETWORK_NS = 'network-messaging';
 const K = 'network-messaging:';
@@ -91,7 +91,15 @@ export const ROSTER_KEYS = {
   until: `${K}roster.until`,
   past: `${K}roster.past`,
   personal: `${K}roster.personal`,
+  mirror: `${K}roster.mirror`,
+  solo: `${K}roster.solo`,
 } as const;
+
+/** ADR-867 Β9 — η **δεύτερη** ιδιότητα του ιδιοκτήτη που είναι και μέλος του γραφείου (NAR Άρθρο 4). */
+export const ALSO_HOST_KEYS: { readonly [R in NetworkHostRole]: string } = {
+  responsible: `${K}roster.alsoHost.responsible`,
+  collaborator: `${K}roster.alsoHost.collaborator`,
+};
 
 export const ROLE_KEYS: { readonly [R in NetworkAudienceRole]: string } = {
   responsible: `${K}roster.role.responsible`,

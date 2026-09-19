@@ -11,12 +11,18 @@
  * 🔑 **Οι πλευρές λέγονται ΣΧΕΤΙΚΑ με τον θεατή** («η πλευρά σας» / «η άλλη πλευρά»), ποτέ `host`/
  * `counterpart`: ο ιδιοκτήτης δεν ξέρει ότι είναι «αντισυμβαλλόμενος» — ξέρει ότι είναι **αυτός**.
  * Στο νήμα **σχέσης** κάθε πρόσωπο είναι πλευρά μόνο του και το νήμα είναι **προσωπικό** (γ) ②.
+ *
+ * 🔑 **ΜΙΑ ΘΕΣΗ, ΔΥΟ ΙΔΙΟΤΗΤΕΣ, ΔΗΛΩΜΕΝΕΣ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** (ADR-867 Β9 · NAR Άρθρο 4): ο ιδιοκτήτης
+ * που είναι **και** μέλος της ομάδας (`alsoHostRole`) εμφανίζεται στη θέση του **και** ως **είδωλο** στην
+ * πλευρά του γραφείου (`mirror`). Αλλιώς η πλευρά του γραφείου θα φαινόταν **άδεια** ενώ διαβάζει
+ * κάποιος — και το ιδιοκτησιακό συμφέρον του μεσίτη δεν θα το έβλεπε κανείς.
  */
 
 import type {
   NetworkAudienceEntry,
   NetworkAudienceRole,
   NetworkAudienceSide,
+  NetworkHostRole,
   NetworkThreadKind,
 } from '@/types/network-thread';
 
@@ -38,6 +44,10 @@ export interface RosterMember {
   /** `null` ⇒ διαβάζει **τώρα**. */
   readonly until: string | null;
   readonly isViewer: boolean;
+  /** Η **δεύτερη** ιδιότητα του ιδιοκτήτη στο γραφείο — `null` ⇒ μία ιδιότητα. */
+  readonly alsoHostRole: NetworkHostRole | null;
+  /** `true` ⇒ η γραμμή είναι το **είδωλο** του ιδιοκτήτη στην πλευρά του γραφείου, όχι δεύτερο πρόσωπο. */
+  readonly mirror: boolean;
 }
 
 export interface RosterSide {
@@ -50,19 +60,40 @@ export interface RosterSide {
 export interface AudienceRoster {
   /** `true` ⇒ νήμα **σχέσης**: η οθόνη λέει «προσωπικό», όχι «ομάδα». */
   readonly personal: boolean;
+  /** `true` ⇒ ο θεατής είναι το **μόνο** πρόσωπο που διαβάζει (Teams «συνομιλία με τον εαυτό σου»). */
+  readonly solo: boolean;
   /** Πρώτα η **άλλη** πλευρά (σε αυτήν γράφω), μετά η δική μου. Άδεια πλευρά ⇒ λείπει. */
   readonly sides: readonly RosterSide[];
 }
 
-function memberOf(entry: NetworkAudienceEntry, viewerUid: string): RosterMember {
+/** Μια γραμμή της λίστας: η γραμμή ακροατηρίου **ή** το είδωλό της στην πλευρά του γραφείου. */
+interface RosterRow {
+  readonly entry: NetworkAudienceEntry;
+  readonly side: NetworkAudienceSide;
+  readonly mirror: boolean;
+}
+
+function memberOf(row: RosterRow, viewerUid: string): RosterMember {
+  const { entry, mirror } = row;
   return {
     uid: entry.uid,
-    role: entry.role,
+    role: mirror && entry.alsoHostRole !== null ? entry.alsoHostRole : entry.role,
     reason: entry.reason,
     since: entry.since,
     until: entry.until,
     isViewer: entry.uid === viewerUid,
+    alsoHostRole: mirror ? null : entry.alsoHostRole,
+    mirror,
   };
+}
+
+/** Κάθε γραμμή στη θέση της + το είδωλο κάθε ιδιοκτήτη που είναι **και** μέλος του γραφείου. */
+function rowsOf(audience: readonly NetworkAudienceEntry[]): readonly RosterRow[] {
+  const own = audience.map((entry) => ({ entry, side: entry.side, mirror: false }));
+  const mirrors = audience
+    .filter((entry) => entry.side === 'counterpart' && entry.alsoHostRole !== null)
+    .map((entry) => ({ entry, side: 'host' as const, mirror: true }));
+  return [...own, ...mirrors];
 }
 
 function byRoleThenSince(a: RosterMember, b: RosterMember): number {
@@ -74,11 +105,11 @@ function byLatestExit(a: RosterMember, b: RosterMember): number {
 }
 
 function sideOf(
-  entries: readonly NetworkAudienceEntry[],
+  rows: readonly RosterRow[],
   relation: RosterSideRelation,
   viewerUid: string,
 ): RosterSide {
-  const members = entries.map((entry) => memberOf(entry, viewerUid));
+  const members = rows.map((row) => memberOf(row, viewerUid));
   return {
     relation,
     current: members.filter((m) => m.until === null).sort(byRoleThenSince),
@@ -98,13 +129,21 @@ export function buildAudienceRoster(
   threadKind: NetworkThreadKind,
 ): AudienceRoster {
   const viewerSide: NetworkAudienceSide | null = audience.find((e) => e.uid === viewerUid)?.side ?? null;
-  const isMine = (entry: NetworkAudienceEntry) =>
-    threadKind === 'relationship' ? entry.uid === viewerUid : entry.side === viewerSide;
+  const rows = threadKind === 'relationship'
+    ? audience.map((entry) => ({ entry, side: entry.side, mirror: false }))
+    : rowsOf(audience);
+  const isMine = (row: RosterRow) =>
+    threadKind === 'relationship' ? row.entry.uid === viewerUid : row.side === viewerSide;
 
-  const theirs = sideOf(audience.filter((e) => !isMine(e)), 'theirs', viewerUid);
-  const mine = sideOf(audience.filter(isMine), 'mine', viewerUid);
+  const theirs = sideOf(rows.filter((row) => !isMine(row)), 'theirs', viewerUid);
+  const mine = sideOf(rows.filter(isMine), 'mine', viewerUid);
   const sides = [theirs, mine].filter((side) => side.current.length + side.past.length > 0);
-  return { personal: threadKind === 'relationship', sides };
+  const live = new Set(audience.filter((entry) => entry.until === null).map((entry) => entry.uid));
+  return {
+    personal: threadKind === 'relationship',
+    solo: live.size === 1 && live.has(viewerUid),
+    sides,
+  };
 }
 
 /** Όλα τα πρόσωπα που **ονομάζει** η οθόνη — για **μία** ερώτηση ονομάτων (ταξινομημένα, χωρίς διπλά). */

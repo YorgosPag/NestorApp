@@ -146,6 +146,7 @@ describe('Κ — τα καθαρά κομμάτια του καταλόγου', 
     muted: false,
     following: false,
     threadActivityAt: T1,
+    alsoHostRole: null,
   };
 
   it('Κ-1 αδιάβαστο = μήνυμα ΜΕΤΑ την ανάγνωση· ποτέ σε νήμα χωρίς μήνυμα', () => {

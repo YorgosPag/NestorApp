@@ -84,7 +84,13 @@
       "admin-self": "the administrator joined",
       "counterpart": "party to the mandate",
       "relationship": "personal relationship"
-    }
+    },
+    "alsoHost": {
+      "responsible": "also the agency's lead",
+      "collaborator": "also an agency collaborator"
+    },
+    "mirror": "the owner, in person",
+    "solo": "Only you are in this conversation — no one else has joined yet."
   },
   "away": {
     "absent": "{name} is away until {date}",

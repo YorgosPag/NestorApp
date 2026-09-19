@@ -18,7 +18,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
 import type { AudienceRoster, RosterMember, RosterSide } from '@/lib/network-messaging/audience-roster';
 
-import { NETWORK_NS, REASON_KEYS, ROLE_KEYS, ROSTER_KEYS } from './network-messaging-keys';
+import { ALSO_HOST_KEYS, NETWORK_NS, REASON_KEYS, ROLE_KEYS, ROSTER_KEYS } from './network-messaging-keys';
 import { initialsOf, type PersonLabeler } from './thread-labels';
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -45,6 +45,11 @@ function MemberRow({ member, labeler }: { readonly member: RosterMember; readonl
         </p>
         <p className="m-0 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
           <Badge variant="outline" className="px-1 py-0 text-[0.7rem]">{t(ROLE_KEYS[member.role])}</Badge>
+          {/* ADR-867 Β9 — η δεύτερη ιδιότητα ΔΗΛΩΝΕΤΑΙ και στις δύο πλευρές (NAR Άρθρο 4), ποτέ δεν κρύβεται. */}
+          {member.alsoHostRole !== null && (
+            <Badge variant="secondary" className="px-1 py-0 text-[0.7rem]">{t(ALSO_HOST_KEYS[member.alsoHostRole])}</Badge>
+          )}
+          {member.mirror && <Badge variant="secondary" className="px-1 py-0 text-[0.7rem]">{t(ROSTER_KEYS.mirror)}</Badge>}
           <span>{when}</span>
           {SPOKEN_REASONS.has(member.reason) && <span>· {t(REASON_KEYS[member.reason])}</span>}
         </p>
@@ -82,6 +87,7 @@ export function AudienceRosterPanel({ roster, labeler }: { readonly roster: Audi
     <section aria-label={t(ROSTER_KEYS.title)} className="flex flex-col gap-3">
       <h3 className="m-0 text-sm font-semibold text-foreground">{t(ROSTER_KEYS.title)}</h3>
       {roster.personal && <p className="m-0 text-xs text-muted-foreground">{t(ROSTER_KEYS.personal)}</p>}
+      {roster.solo && <p className="m-0 text-xs text-muted-foreground">{t(ROSTER_KEYS.solo)}</p>}
       {roster.sides.map((side) => <SideBlock key={side.relation} side={side} labeler={labeler} />)}
     </section>
   );

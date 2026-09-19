@@ -27,6 +27,7 @@ import {
 import {
   getAdminAuth,
 } from '@/lib/firebaseAdmin';
+import { extractBearerToken } from '@/lib/auth/token-credentials';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AdminGuards');
@@ -46,6 +47,7 @@ export type {
 
 export {
   ADMIN_ROLES,
+  ADMIN_SURFACE_AUTH,
   roleRequiresMfa,
   SERVER_COLLECTIONS,
 } from './admin-guards-types';
@@ -72,23 +74,6 @@ export { getAdminFirestore } from '@/lib/firebaseAdmin';
 // ============================================================================
 // FIREBASE AUTH VERIFICATION
 // ============================================================================
-
-const AUTHORIZATION_HEADER = 'authorization';
-
-/** Extract Bearer token from Authorization header */
-function extractBearerToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get(AUTHORIZATION_HEADER);
-  if (!authHeader) {
-    return null;
-  }
-
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
-    return null;
-  }
-
-  return parts[1];
-}
 
 /**
  * Verify Firebase ID token and extract claims

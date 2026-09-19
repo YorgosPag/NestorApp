@@ -41,6 +41,7 @@ export type {
 } from './api-client-types';
 
 export {
+  PUBLIC_REQUEST,
   ApiClientError,
   ContractViolationError,
   hasContentTypeHeader,

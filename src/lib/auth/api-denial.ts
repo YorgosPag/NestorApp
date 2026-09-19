@@ -156,3 +156,21 @@ export function createRoleRequiredResponse(requiredRoles: GlobalRole[]): NextRes
     { status: 403 }
   );
 }
+
+/**
+ * Create 403 response for a session without a second factor (ADR-868).
+ *
+ * ⚠️ **403, ΟΧΙ 401**: η ταυτότητα ισχύει — λείπει **ο δεύτερος παράγοντας**, και καμία
+ *    ανανέωση token δεν τον προσθέτει. Ένα 401 θα έβαζε τον `enterprise-api-client` σε
+ *    αναγκαστική ανανέωση + επανάληψη για κατάσταση που δεν αλλάζει (ίδιο σκεπτικό με το
+ *    `workspace_personal` παραπάνω).
+ */
+export function createMfaRequiredResponse(): NextResponse<ErrorResponse> {
+  return NextResponse.json(
+    {
+      error: 'MFA enrollment required',
+      code: 'MFA_REQUIRED',
+    },
+    { status: 403 }
+  );
+}

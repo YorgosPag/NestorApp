@@ -2,6 +2,7 @@ import 'server-only';
 
 import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
 import type { GlobalRole } from '@/lib/auth/types';
+import type { WithAuthOptions } from '@/lib/auth/middleware';
 
 /**
  * 🔐 ADMIN GUARDS — TYPES & CONSTANTS
@@ -165,6 +166,29 @@ const MFA_REQUIRED_ROLES: readonly AdminRole[] = ADMINISTRATIVE_ROLES;
 export function roleRequiresMfa(role: AdminRole): boolean {
   return MFA_REQUIRED_ROLES.includes(role);
 }
+
+/**
+ * 🔐 **Η πολιτική της κονσόλας `/admin` για τις διαδρομές API** — η δίδυμη του
+ * `requireAdminForPage` (ADR-868).
+ *
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ**: η σελίδα `/admin/ai-inbox` έκρινε *ρόλο διαχειριστή + MFA*, ενώ οι
+ *    πράξεις της ήταν server actions που δεν έκριναν **τίποτα** — δέχονταν `companyId` και
+ *    `adminUid` από τον πελάτη. *Η σελίδα φύλαγε, το endpoint όχι.* Η Next.js το λέει
+ *    ρητά: *«A page-level authentication check does not extend to the Server Actions
+ *    defined within it»*.
+ *
+ * 🔑 **ΙΔΙΟ ΣΥΝΟΛΟ, ΟΧΙ ΑΝΤΙΓΡΑΦΟ**: ρόλοι = `ADMIN_ROLES` (το ίδιο ταβάνι με τη σελίδα) και
+ *    MFA **πάντα**, επειδή `MFA_REQUIRED_ROLES` **είναι** `ADMINISTRATIVE_ROLES` — η ταύτιση
+ *    είναι δηλωμένη παραπάνω. Αν ποτέ αποκλίνουν, αυτή η σταθερά πρέπει να γίνει συνάρτηση
+ *    του ρόλου, όχι δεύτερη λίστα.
+ *
+ * ⚠️ Νέος πίνακας (`[...]`) επειδή το `requiredGlobalRoles` του `withAuth` δηλώνεται
+ *    μεταβλητός· το ταβάνι μένει παγωμένο.
+ */
+export const ADMIN_SURFACE_AUTH = Object.freeze({
+  requiredGlobalRoles: [...ADMIN_ROLES],
+  requireMfa: true,
+}) satisfies WithAuthOptions;
 
 // ============================================================================
 // SERVER-ONLY COLLECTIONS (ZERO HARDCODED STRINGS IN ROUTES)

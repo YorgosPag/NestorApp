@@ -1,4 +1,3 @@
-'use server';
 import type { CrmTask } from '@/types/crm';
 
 export interface TasksStats {

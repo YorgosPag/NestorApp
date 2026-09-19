@@ -14,7 +14,10 @@
  * ARCHITECTURE:
  * - Tier 1: Navigation visibility (permissions: ['admin_access'])
  * - Tier 2: Page-level server-side auth (requireAdminForPage)
- * - Tier 3: API-level enforcement (server actions με requireAdminContext)
+ * - Tier 3: API-level enforcement — `POST /api/admin/ai-inbox/.../triage` με
+ *   `ADMIN_SURFACE_AUTH` (ADR-868). ⚠️ Εδώ έγραφε «server actions με requireAdminContext»·
+ *   **ψευδές**: οι actions δεν έλεγχαν τίποτα, και η Next.js το λέει ρητά — *«A page-level
+ *   authentication check does not extend to the Server Actions defined within it»*.
  *
  * SECURITY:
  * - Server-side authentication με Firebase Admin
@@ -37,8 +40,15 @@ export default async function AIInboxPage() {
   try {
     const adminContext = await requireAdminForPage('AI_INBOX_PAGE_ACCESS');
 
+    // 🔴 ADR-868 — τα εισερχόμενα είναι **ανά εταιρεία**. Ο διαχειριστής χωρίς εταιρεία
+    //    έπαιρνε «καθολική όψη» μέσω server action (μηνύματα ΟΛΩΝ των εταιρειών) — ακριβώς
+    //    η διαρροή. Μετρημένο 2026-09-19: 0 από 4 διαχειριστές παραγωγής χωρίς εταιρεία.
+    if (!adminContext.companyId) {
+      return <AIInboxUnauthorized />;
+    }
+
     // Authorized → render client component (breadcrumb inside AIInboxHeader)
-    return <AIInboxClient adminContext={adminContext} />;
+    return <AIInboxClient adminContext={{ ...adminContext, companyId: adminContext.companyId }} />;
   } catch (error) {
     // Not authorized → render unauthorized view
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

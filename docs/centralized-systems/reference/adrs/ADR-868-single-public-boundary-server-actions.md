@@ -1,0 +1,184 @@
+# ADR-868 — Ένα δημόσιο σύνορο: **καμία server action**, η ταυτότητα δεν είναι όρισμα
+
+| Metadata | Value |
+|---|---|
+| **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-19) — εκκρεμεί μόνο η διαγραφή 4 νεκρών αρχείων (§6 #1) και ο ζωντανός έλεγχος (§6 #2) |
+| **Date** | 2026-09-19 |
+| **Category** | Security / API Boundary / Multi-tenancy |
+| **Canonical Locations** | `src/lib/auth/middleware.ts` (`withAuth`, `requireMfa`) · `src/server/admin/admin-guards-types.ts` (`ADMIN_SURFACE_AUTH`) · `src/app/api/admin/ai-inbox/communications/[communicationId]/triage/route.ts` · `scripts/check-server-action-boundary.js` (CHECK 3.90) |
+| **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
+| **Σχετικά** | **ADR-777 §8.60.20.9 #9 και #12** *(τα ευρήματα)* · **ADR-801** *(κριτής — CHECK 3.68)* · **ADR-602** *(`defineRoute`)* · **ADR-742** *(ιδιοκτησία, `concealCrossTenant`)* · **ADR-214** *(communications service)* · **ADR-813** *(ταβάνι ρόλων διαχείρισης)* |
+
+---
+
+## §1. Το πρόβλημα — μετρημένο 2026-09-19
+
+Κάθε εξαγωγή αρχείου `'use server'` είναι **server action**, δηλαδή **δημόσιο POST endpoint**:
+*«By default, when a Server Action is created and exported, it is reachable via a direct POST request,
+not just through your application's UI»* (Next.js, *Data Security*).
+
+Στο `src/` υπήρχαν **7** τέτοια αρχεία, και **κανένα** δεν επαλήθευε ταυτότητα:
+
+| Αρχείο | Τι εξέθετε | Βαρύτητα |
+|---|---|---|
+| `services/communications.service.ts` | `getTriageCommunications(companyId?)` / `getTriageStats` — με `undefined` ⇒ «GLOBAL_ACCESS»: `messages` **όλων** των εταιρειών | 🔴 διαρροή μεταξύ εταιρειών |
+| ίδιο + `communications-triage-actions.ts` | `approve/rejectCommunication(id, adminUid, companyId)` — ο έλεγχος ιδιοκτησίας συνέκρινε με εταιρεία **του καλούντος-πελάτη**· η εργασία ανατίθετο σε όποιο `uid` έστελνε | 🔴 εγγραφή σε ξένη εταιρεία |
+| `services/storage.service.ts` | οποιαδήποτε αποθήκη με οποιοδήποτε id | 🔴 (έκλεισε στο ADR-777 #9) |
+| `ai/flows/*` (2) | κλήσεις LLM χωρίς auth — **και** εισαγωγές που δεν υπάρχουν (`genkit`, `@/lib/data-services`) | 🟠 νεκρός, μη μεταγλωττίσιμος |
+| `assignment/AssignmentPolicyRepository.ts` | Admin SDK με `companyId` όρισμα (σήμερα μόνο server εισαγωγείς) | 🟡 λάθος εργαλείο |
+| `crm/tasks/contracts.ts` | **μόνο τύποι** | ⚪ άσκοπη οδηγία |
+
+Η **σελίδα** `/admin/ai-inbox` φύλαγε (`requireAdminForPage`: ρόλος διαχειριστή + MFA)· τα **endpoints**
+όχι. Το docblock της σελίδας έγραφε *«Tier 3: API-level enforcement (server actions με
+requireAdminContext)»* — **ψευδές**. Η Next.js το λέει κατά λέξη: *«A page-level authentication check
+does not extend to the Server Actions defined within it.»*
+
+---
+
+## §2. Απόφαση
+
+### §2.1 Ένας τρόπος endpoint: `withAuth` — καμία server action
+
+Η Next.js: *«We recommend choosing one data fetching approach and avoiding mixing them. This makes it
+clear for both developers working in your code base and security auditors what to expect.»* Για
+**υπάρχουσες μεγάλες εφαρμογές** προτείνει **HTTP APIs**. Αυτό είναι ακριβώς το δέντρο: ~319 διαδρομές
+`withAuth`, με rate limit (ADR-855), κρίση χώρου (ADR-787), ταβάνια ρόλων (ADR-801), φάκελο
+απάντησης (`defineRoute`, ADR-602) και τον `apiClient` του πελάτη.
+
+⇒ Οι server actions **δεν** είναι δεύτερος μηχανισμός που «θέλει κι αυτός φύλακα» — **αφαιρούνται**.
+Δεύτερος μηχανισμός θα χρειαζόταν δεύτερο κατασκευαστή ταυτότητας (χωρίς `NextRequest`), δεύτερη
+κρίση χώρου, δεύτερο rate limit — **ADR-749 μέσα στη θεραπεία**.
+
+### §2.2 Η ταυτότητα και ο μισθωτής **δεν είναι ορίσματα**
+
+OWASP *Multi-Tenant Security*: *«Bind tenant context to a server-verified identity»* · *«Treat
+client-supplied tenant identifiers as selectors only»*.
+- Το `approveCommunication` / `rejectCommunication` δέχονται πλέον `(communicationId, actor: AuthContext)`.
+  Το `AuthContext` **παράγεται μόνο** από το `withAuth`. Λάθος εταιρεία εδώ δεν «απαγορεύεται» —
+  **δεν εκφράζεται** στην υπογραφή.
+- Το σώμα της διαδρομής είναι **μόνο** `{ decision }` με `.strict()`: παλιός πελάτης που στέλνει
+  `adminUid`/`companyId` παίρνει **400**, όχι σιωπηλή αγνόηση.
+- Ξένο μήνυμα ⇒ **404 πανομοιότυπο** με το «δεν υπάρχει» (`concealCrossTenant`, ADR-742)· ο bypass
+  ρόλος, που έχει ήδη καθολική ορατότητα, παίρνει την ειλικρινή άρνηση **403**.
+- **Παράπλευρη διόρθωση ακεραιότητας**: το ίχνος ελέγχου κατασκεύαζε
+  `{ email: '', globalRole: 'company_admin', mfaEnrolled: false }` — ρόλο που **κανείς δεν επαλήθευσε**
+  (ένας super_admin καταγραφόταν ως company_admin). Πλέον γράφεται ο **πραγματικός** καλών.
+
+### §2.3 Η διαδρομή API είναι **το ίδιο αυστηρή με τη σελίδα της**
+
+Νέα επιλογή `withAuth({ requireMfa })` — **δήλωση στο σύνορο**, όπως το ταβάνι ρόλου, ποτέ `if` στον
+handler. Κρίνεται **μετά** τον ρόλο (ο χρήστης χωρίς ρόλο μαθαίνει «όχι ρόλος», όχι «λείπει MFA»),
+απαντά **403 `MFA_REQUIRED`** (όχι 401: καμία ανανέωση token δεν προσθέτει δεύτερο παράγοντα, και ο
+`apiClient` θα ξανάστελνε το αίτημα).
+
+Η πολιτική της κονσόλας ζει **μία φορά**: `ADMIN_SURFACE_AUTH = { requiredGlobalRoles: ADMIN_ROLES,
+requireMfa: true }` δίπλα στο `MFA_REQUIRED_ROLES` — η ταύτιση «κάθε ρόλος του `/admin` οφείλει MFA»
+είναι ήδη δηλωμένη εκεί. **Προεπιλογή: απενεργοποιημένη** — οι ~319 διαδρομές δεν αλλάζουν (άγκυρα Μ1).
+
+### §2.4 Ανάγνωση: μόνο ο realtime listener — η «καθολική όψη» αφαιρέθηκε
+
+Ο κλάδος server-action της ανάγνωσης υπήρχε **μόνο** για διαχειριστή **χωρίς** εταιρεία, και έδινε
+καθολική όψη. **Μετρημένο στην παραγωγή (`users`, 2026-09-19): 0 από 4 διαχειριστές χωρίς
+`companyId`.** Επιπλέον, το `withAuth` **αρνείται** ήδη τον άνθρωπο χωρίς εταιρεία (`missing_claims`,
+ADR-817) ⇒ μια διαδρομή API γι' αυτόν θα ήταν **δομικά απρόσιτη** — νεκρός κώδικας.
+- Η σελίδα στενεύει τον τύπο: `AIInboxAdminContext = AdminContext & { companyId: string }`. Χωρίς
+  εταιρεία αποδίδεται η άρνηση **πριν** φτάσει ο πελάτης ⇒ η κατάσταση είναι **μη εκφράσιμη** στο hook.
+- Η ανάγνωση περνά από τα `firestore.rules` (listener) — η απομόνωση την κρίνει η βάση.
+- Αν ποτέ χρειαστεί διαχειριστική όψη **όλων** των εταιρειών, θα είναι **ρητή** διαδρομή με
+  `resolveSuperAdminProjectScope` (ADR-356) — ποτέ `undefined` από τον πελάτη.
+
+### §2.5 `server-only`, όχι `'use server'`, για ό,τι είναι κώδικας διακομιστή
+
+Το `'use server'` **δημοσιεύει**· το `import 'server-only'` **αρνείται** το bundle πελάτη. Τα
+`communications-triage-actions.ts` και `AssignmentPolicyRepository.ts` είναι πλέον `server-only`. Το
+`contracts.ts` (μόνο τύποι) δεν έχει οδηγία.
+
+---
+
+## §3. 🏆 «Καλύτερα από τους μεγάλους» — CHECK 3.90
+
+Η σύσταση της Next.js («ένας τρόπος») **μένει σύσταση**: κανένα εργαλείο του οικοσυστήματος δεν την
+επιβάλλει. Και το προφανές ερώτημα *«καλεί κάθε action τον φύλακα;»* είναι **αναποκρίσιμο** στατικά
+(φύλακας υπό συνθήκη, σε βοηθό, μετά από ανάγνωση) — ένας τέτοιος έλεγχος ή θα είχε ψευδώς αρνητικά
+ή θα απαιτούσε baseline.
+
+Η **CHECK 3.90** ρωτά το **αποκρίσιμο** ερώτημα: *υπάρχει δεύτερος τύπος endpoint;*
+- **AST**, όχι κείμενο: οδηγία είναι **μόνο** συμβολοσειρά στον **πρόλογο** αρχείου ή σώματος
+  συνάρτησης (ECMAScript §14.1.1). Μετρημένο: από τα **9** υποψήφια του `git grep`, τα **6** ήταν
+  σχόλια που **τεκμηριώνουν** τη βλάβη ⇒ η σάρωση κειμένου θα είχε **67%** ψευδώς θετικά.
+- **Inline actions** καλύπτονται (πρόλογος κάθε συνάρτησης).
+- **Untracked** αρχεία καλύπτονται (`git grep --untracked`) — πιάνει το νέο αρχείο πριν το `git add`.
+- **ZERO-TOL, χωρίς κλειστό σύνολο εξαιρέσεων**: endpoint εκτός συνόρου δεν είναι «εξαίρεση με
+  λόγο» αλλά δεύτερη αρχιτεκτονική — αλλάζει **με τροποποίηση αυτού του ADR**, όχι με γραμμή σε JSON.
+
+📘 `docs/gates/3.90.md`
+
+---
+
+## §4. Άγκυρες
+
+| Σουίτα | Τι αποδεικνύει |
+|---|---|
+| `src/app/api/admin/ai-inbox/.../triage/__tests__/triage-route.test.ts` (9) | Α1 χωρίς συνεδρία 401, 0 εγγραφές · Α2 ρόλος εκτός 403 · Α3 χωρίς MFA 403 · Α4 σώμα με ταυτότητα 400 · Β1 ξένο = «δεν υπάρχει» **πανομοιότυπα** · Β2 bypass 403 · Γ1 ανάθεση στον **επαληθευμένο** καλούντα, στην εταιρεία **του** · Γ2 audit με τον **πραγματικό** ρόλο · Γ3 reject |
+| `src/lib/auth/__tests__/with-auth-mfa.test.ts` (3) | Μ1 χωρίς δήλωση καμία αλλαγή · Μ2 με δήλωση 403 · Μ3 ρόλος πριν το MFA |
+| `scripts/__tests__/check-server-action-boundary.test.js` | Κ1–Κ6 κριτήριο (θετικά **και** αρνητικά) · Ε1–Ε4 **εκτέλεση** της πύλης σε προσωρινό git |
+| `src/services/__tests__/ownership-upstream-guarded.test.ts` | ενημερώθηκε στη νέα υπογραφή (ο ανάντη φύλακας ζει) |
+
+**Μεταλλάξεις 8/8 κόκκινες**:
+1. `ADMIN_SURFACE_AUTH.requireMfa: false` ⇒ Α3·
+2. χωρίς `.strict()` ⇒ Α4·
+3. αποκάλυψη σε όλους ⇒ Β1·
+4. παράκαμψη ιδιοκτησίας ⇒ Β1 + Β2·
+5. το `withAuth` αγνοεί το `requireMfa` ⇒ Α3·
+6. η πύλη: ο πρόλογος δεν σταματά στην πρώτη μη-οδηγία ⇒ Κ5·
+7. η πύλη: καμία σάρωση σωμάτων συνάρτησης ⇒ Κ4·
+8. η πύλη: χωρίς `--untracked` ⇒ Ε3.
+
+### §4.1 Γιατί ρητός wrapper ρυθμού και όχι `defineRoute`
+
+Η πρώτη γραφή χρησιμοποίησε το `defineRoute` (ADR-602). Η **CHECK 3.78** τη μπλόκαρε:
+*«νέα διαδρομή με βαθμίδα κρυμμένη σε εργοστάσιο»*. Ο αναγνώστης του `route.ts` πρέπει να **βλέπει** ποιο
+όριο ισχύει. Ακολουθήθηκε η πύλη: `withSensitiveRateLimit(withAuth(handler, ADMIN_SURFACE_AUTH))`, ίδιο
+σχήμα με το `workspace-invitations/[invitationId]/revoke`. Τα βοηθήματα φακέλου (`ok` / `notFound` /
+`httpError`) και το `safeParseBody` είναι τα **ίδια** SSoT· το `ApiError` αποδίδεται από τον
+`apiErrorHandler` του `withAuth`, με την **ίδια** ταξινόμηση (`asApiError`) που χρησιμοποιεί και το
+`defineRoute`.
+
+---
+
+## §5. Απορριφθείσες εναλλακτικές
+
+| Εναλλακτική | Γιατί όχι |
+|---|---|
+| Φύλακας (`requireAdminForPage`) **μέσα** σε κάθε server action — το παράδειγμα της Next.js | Δύο μηχανισμοί endpoint· δεύτερος κατασκευαστής ταυτότητας/κρίση χώρου/rate limit. Και το «το θυμήθηκε κάθε action;» δεν ελέγχεται στατικά. |
+| Έλεγχος πάνω στο `companyId` που στέλνει ο πελάτης | Είναι το ίδιο ελάττωμα με άλλο όνομα — ο πελάτης διαλέγει και τη σύγκριση. |
+| Διαδρομή API ανάγνωσης με «καθολική όψη» για super_admin | 0/4 χρήστες τη χρειάζονται· το `withAuth` αρνείται ήδη τον άνθρωπο χωρίς εταιρεία ⇒ νεκρή διαδρομή. Αν χρειαστεί: ρητή, με `resolveSuperAdminProjectScope`. |
+| Πύλη «κάθε action καλεί τον φύλακα» | Αναποκρίσιμη στατικά ⇒ ψευδώς αρνητικά ή baseline. |
+| MFA ως προεπιλογή σε κάθε διαδρομή με ρόλο διαχείρισης | Θα άλλαζε δεκάδες διαδρομές σιωπηλά (π.χ. super_admin χωρίς MFA στην παραγωγή) — σκλήρυνση που σπάει λειτουργία. Opt-in, δηλωμένο. |
+
+---
+
+## §6. ⚠️ Δηλωμένα όρια
+
+1. **4 αρχεία περιμένουν διαγραφή από τον Giorgio** (ο αυτόματος ταξινομητής αρνήθηκε τη διαγραφή
+   στον πράκτορα): `src/services/communications.service.ts` (πλέον **μηδέν** εισαγωγείς) ·
+   `src/ai/flows/contact-follow-up-suggestions.ts` · `src/ai/flows/generate-report.ts` ·
+   `src/ai/genkit.ts`· και η γραμμή `"src/ai/**"` του `knip.json`. **Μέχρι τότε η CHECK 3.90 είναι
+   κόκκινη — σωστά**: τα τρία πρώτα είναι ακόμη δημόσια endpoints.
+2. **Ζωντανός έλεγχος** (localhost/παραγωγή): εκκρεμεί — ο AI inbox εγκρίνει/απορρίπτει ως διαχειριστής
+   με MFA· POST χωρίς συνεδρία ⇒ 401.
+3. Το κλειδί `aiInbox.loadFailedWithErrorId` έμεινε **ορφανό** (ο κλάδος φόρτωσης μέσω server
+   αφαιρέθηκε). Δεν αφαιρέθηκε, για να μην τρέξουν οι γεννήτορες 3.33/3.34 πάνω σε κλειδιά άλλου agent.
+4. Το μήνυμα `'Live data is already up-to-date!'` του hook είναι προϋπάρχον hardcoded κείμενο (N.11)·
+   δεν αγγίχτηκε.
+5. Η `ownership-callsite-coverage-anchor` είναι **ήδη κόκκινη στο HEAD** για 3 αρχεία που **δεν**
+   αγγίχτηκαν εδώ (`lib/agency/showcase-canonical-segment.ts` · `lib/mandate/attestation-document-verdict.ts`
+   · `server/auth/workspace-invitation.ts`).
+
+---
+
+## §7. Changelog
+
+| Ημερομηνία | Αλλαγή |
+|---|---|
+| 2026-09-19 | **Δημιουργία + υλοποίηση.** Διαδρομή `POST /api/admin/ai-inbox/communications/[id]/triage` (`withSensitiveRateLimit(withAuth(…, ADMIN_SURFACE_AUTH))`)· `withAuth({ requireMfa })` + `createMfaRequiredResponse`· triage υπηρεσία `server-only` με `actor: AuthContext` και audit με τον πραγματικό καλούντα· hook μόνο realtime + `apiClient`· η σελίδα στενεύει σε `AIInboxAdminContext`· `server-only` στο `AssignmentPolicyRepository`· καμία οδηγία στο `contracts.ts`· **CHECK 3.90**. Κλείνει το ADR-777 §8.60.20.9 #12. |

@@ -24,7 +24,7 @@
  *
  * | σημείο | ο ανάντη φύλακας |
  * |---|---|
- * | `services/communications-triage-actions.ts` | `if (!companyId \|\| !adminUid)` στην ίδια συνάρτηση |
+ * | `services/communications-triage-actions.ts` | `if (!companyId \|\| !adminUid)` στην ίδια συνάρτηση — **και από το ADR-868 ανάντη του, το `withAuth`**: ο καλών είναι `AuthContext`, όχι ορίσματα |
  * | `services/showcase-core/api/create-unified-public-pdf-route.ts` | `lookupPublicShowcaseShare`: `if (!entityId \|\| !companyId \|\| !expiresAt) return null` |
  * | `app/api/showcase/[token]/pdf/route.ts` | `resolveShare` **και** `loadEntityHeader`: `if (!companyId) return null` |
  *
@@ -85,6 +85,7 @@ import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-fi
 import { streamPdfFromStorage } from '@/app/api/showcase/shared-pdf-proxy-helpers';
 import { approveCommunication, rejectCommunication } from '@/services/communications-triage-actions';
 import { createUnifiedPublicShowcasePdfRoute } from '@/services/showcase-core/api/create-unified-public-pdf-route';
+import type { AuthContext } from '@/lib/auth/types';
 
 const COMM_ID = 'msg_target_001';
 const TOKEN = 'tok_public_001';
@@ -104,9 +105,15 @@ beforeEach(() => {
 // =============================================================================
 
 describe('ADR-742 — ανάντη φύλακας: communications-triage-actions', () => {
+  // ADR-868: ο καλών είναι το επαληθευμένο `AuthContext` — εδώ κατασκευάζεται **μόνο**
+  // για να ασκηθεί ο φύλακας με κενό μισθωτή, κατάσταση που το `withAuth` δεν παράγει.
+  const actorOf = (companyId: string): AuthContext => ({
+    uid: 'admin_A', email: 'admin@a.test', companyId,
+    globalRole: 'company_admin', mfaEnrolled: true, isAuthenticated: true,
+  });
   const actions = [
-    { name: 'approveCommunication', fn: (companyId: string) => approveCommunication(COMM_ID, 'admin_A', companyId) },
-    { name: 'rejectCommunication', fn: (companyId: string) => rejectCommunication(COMM_ID, 'admin_A', companyId) },
+    { name: 'approveCommunication', fn: (companyId: string) => approveCommunication(COMM_ID, actorOf(companyId)) },
+    { name: 'rejectCommunication', fn: (companyId: string) => rejectCommunication(COMM_ID, actorOf(companyId)) },
   ];
 
   test.each(actions)(

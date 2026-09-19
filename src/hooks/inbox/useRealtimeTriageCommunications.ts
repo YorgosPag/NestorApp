@@ -46,7 +46,7 @@ interface UseRealtimeTriageCommunicationsOptions {
   enabled?: boolean;
 }
 
-interface TriageStats {
+export interface TriageStats {
   total: number;
   pending: number;
   approved: number;

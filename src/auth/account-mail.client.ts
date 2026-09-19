@@ -12,7 +12,7 @@
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { resolveHumanLanguage } from '@/i18n/languages';
-import { ApiClientError, apiClient } from '@/lib/api/enterprise-api-client';
+import { ApiClientError, apiClient, PUBLIC_REQUEST } from '@/lib/api/enterprise-api-client';
 
 /** Οι κωδικοί που ο χάρτης μηνυμάτων της σύνδεσης **ήδη** μεταφράζει. */
 export type AccountMailErrorCode = 'auth/too-many-requests' | 'auth/invalid-email' | 'auth/network-request-failed';
@@ -39,7 +39,7 @@ function accountMailErrorOf(cause: unknown): AccountMailError {
  */
 export async function requestPasswordResetMail(email: string, language: string): Promise<void> {
   try {
-    await apiClient.post(API_ROUTES.AUTH.PASSWORD_RESET, { email, language: resolveHumanLanguage(language) }, { skipAuth: true });
+    await apiClient.post(API_ROUTES.AUTH.PASSWORD_RESET, { email, language: resolveHumanLanguage(language) }, PUBLIC_REQUEST);
   } catch (cause: unknown) {
     throw accountMailErrorOf(cause);
   }
