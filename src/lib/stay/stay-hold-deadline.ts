@@ -22,7 +22,9 @@
  * 🏆 ΤΡΙΑ ΤΑΒΑΝΙΑ — ΤΟ ΜΙΚΡΟΤΕΡΟ ΚΕΡΔΙΖΕΙ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * 1. **Ρολόι ανθρώπου** — οι ώρες απόκρισης του οικοδεσπότη (`responseHours`)· `null` = ρολόι τοίχου.
+ * 1. **Ρολόι ανθρώπου** — οι ώρες απόκρισης του οικοδεσπότη (`responseHours`)· `null` = ρολόι τοίχου,
+ *    και τότε το ταβάνι λέγεται **`tier`**, όχι `response-hours`: η οθόνη δεν επικαλείται ώρες που
+ *    κανείς δεν δήλωσε (ADR-835 §23.12 Ε1 — μετρημένο ζωντανά).
  * 2. **Ταβάνι τέντωσης** — οι ήσυχες ώρες **το πολύ διπλασιάζουν** την αναμονή. Χωρίς αυτό, ωράριο
  *    «Σάββατο 10–11» θα έκανε 2 ώρες προθεσμίας μια εβδομάδα.
  * 3. **Ταβάνι άφιξης** — ο επισκέπτης μαθαίνει **πριν από το μεσημέρι της άφιξης**, πάντα.
@@ -90,8 +92,12 @@ export const STAY_HOLD_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   minute: '2-digit',
 };
 
-/** **Ποιο ταβάνι κέρδισε** — η οθόνη το λέει με λέξεις («ως το μεσημέρι της άφιξης»). */
-export const STAY_HOLD_BOUNDS = ['response-hours', 'stretch', 'arrival'] as const;
+/**
+ * **Ποιο ταβάνι κέρδισε** — η οθόνη το λέει με λέξεις («ως το μεσημέρι της άφιξης»).
+ * `tier` = η βαθμίδα σε ρολόι τοίχου, **χωρίς** δηλωμένες ώρες απόκρισης· `response-hours` = το ρολόι
+ * του ανθρώπου που **δήλωσε** ώρες. ⚠️ Μόνο προσθήκη: ο αναγνώστης δέχεται ό,τι είναι σε αυτόν τον πίνακα.
+ */
+export const STAY_HOLD_BOUNDS = ['response-hours', 'tier', 'stretch', 'arrival'] as const;
 
 export type StayHoldBound = (typeof STAY_HOLD_BOUNDS)[number];
 
@@ -140,7 +146,7 @@ export function stayHoldDeadline(input: StayHoldDeadlineInput): StayHoldDeadline
   const tier = stayHoldTierOf(days * MINUTES_PER_DAY - input.clock.minutes);
   const wall = STAY_HOLD_TIER_RULES[tier].responseHours * MINUTES_PER_HOUR;
   const candidates: readonly (readonly [StayHoldBound, number])[] = [
-    ['response-hours', humanClockMinutes(input, wall) ?? Number.POSITIVE_INFINITY],
+    [input.responseHours === null ? 'tier' : 'response-hours', humanClockMinutes(input, wall) ?? Number.POSITIVE_INFINITY],
     ['stretch', wall * STAY_HOLD_QUIET_HOURS_STRETCH],
     ['arrival', days * MINUTES_PER_DAY + STAY_HOLD_ARRIVAL_CUTOFF_MINUTES - input.clock.minutes],
   ];

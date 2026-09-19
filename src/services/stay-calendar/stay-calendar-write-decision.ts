@@ -49,7 +49,11 @@ export interface WriteContext {
  * 🔑 Το γεγονός είναι η **μετάβαση**, όχι η ώρα: ταυτότητα ειδοποίησης = `booking:μετάβαση`.
  */
 export interface StayBookingNotice {
-  readonly event: Extract<StayCommandAction, 'request' | 'withdraw' | 'accept' | 'decline' | 'expire'>;
+  /**
+   * 🔴 `cancel` (§23.12 Ε5): ακύρωση **επιβεβαιωμένης κράτησης επισκέπτη** από τον οικοδεσπότη — ο
+   * άνθρωπος στην άλλη άκρη μαθαίνει. Η χειροκίνητη κράτηση του ίδιου του οικοδεσπότη δεν γεννά notice.
+   */
+  readonly event: Extract<StayCommandAction, 'request' | 'withdraw' | 'accept' | 'decline' | 'expire' | 'cancel'>;
   /** Η κράτηση **μετά** τη μετάβαση. */
   readonly booking: StayBooking;
 }

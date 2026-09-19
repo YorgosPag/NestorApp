@@ -44,6 +44,9 @@ const CELL_LABEL: Readonly<Record<StayDayMeaning, string>> = {
   'in-stay': 'short-stay:calendar.cell.in-stay',
 };
 
+/** 🔴 §23.12 Ε3 — η νύχτα `held` του **δικού μου** αιτήματος· κυριολεκτικό, όπως τα παραπάνω (ADR-744). */
+const HELD_MINE_LABEL = 'short-stay:calendar.cell.heldMine';
+
 const CELL_TONE: Readonly<Record<StayDayMeaning, string>> = {
   'check-in': 'border-border bg-card text-foreground hover:bg-accent/50',
   'check-out': 'border-foreground/40 bg-card text-foreground hover:bg-accent/50',
@@ -61,10 +64,13 @@ const CELL_TONE: Readonly<Record<StayDayMeaning, string>> = {
 };
 
 /** Η περιγραφή μιας μέρας με λέξεις: νόημα + ελάχιστη διαμονή + αίρεση. */
-function useStayDayDescription(): (day: string, meaning: StayDayMeaning, night: StayPublicNight | undefined) => string {
+function useStayDayDescription(
+  isMine: (day: string) => boolean,
+): (day: string, meaning: StayDayMeaning, night: StayPublicNight | undefined) => string {
   const { t } = useTranslation(['short-stay']);
   return (day, meaning, night) => {
-    const parts = [t(CELL_LABEL[meaning], { day: formatCalendarDay(day, true) })];
+    const label = meaning === 'held' && isMine(day) ? HELD_MINE_LABEL : CELL_LABEL[meaning];
+    const parts = [t(label, { day: formatCalendarDay(day, true) })];
     if (meaning === 'check-in' && night?.minNights !== null && night?.minNights !== undefined && night.minNights > 1) {
       parts.push(t('short-stay:calendar.minNights', { count: night.minNights }));
     }
@@ -83,11 +89,12 @@ interface ListingStayMonthProps {
   readonly focusDay: string;
   readonly onFocusDay: (day: string) => void;
   readonly onPick: (day: string) => void;
+  readonly isMine: (day: string) => boolean;
 }
 
-function ListingStayMonth({ monthKey, nights, selection, focusDay, onFocusDay, onPick }: ListingStayMonthProps): React.ReactElement {
+function ListingStayMonth({ monthKey, nights, selection, focusDay, onFocusDay, onPick, isMine }: ListingStayMonthProps): React.ReactElement {
   const { t } = useTranslation(['short-stay']);
-  const describe = useStayDayDescription();
+  const describe = useStayDayDescription(isMine);
   const index = React.useMemo(() => nightsIndex(nights), [nights]);
   return (
     <section className="flex flex-col gap-1">
@@ -122,11 +129,13 @@ interface ListingStayCalendarProps {
   readonly selection: StayPublicSelection;
   readonly onShiftMonth: (delta: number) => void;
   readonly onPick: (day: string) => void;
+  /** Είναι η νύχτα μέρος **δικού μου** ζωντανού αιτήματος; (§23.12 Ε3 — ο ανώνυμος: πάντα όχι) */
+  readonly isMine: (day: string) => boolean;
 }
 
-export function ListingStayCalendar({ monthKey, nights, selection, onShiftMonth, onPick }: ListingStayCalendarProps): React.ReactElement {
+export function ListingStayCalendar({ monthKey, nights, selection, onShiftMonth, onPick, isMine }: ListingStayCalendarProps): React.ReactElement {
   const { t } = useTranslation(['short-stay']);
-  const describe = useStayDayDescription();
+  const describe = useStayDayDescription(isMine);
   const [focusDay, setFocusDay] = React.useState(`${monthKey}-01`);
   const months = [monthKey, addMonthsToMonthKey(monthKey, 1)];
   const focusMeaning = stayDayMeaning(focusDay, nights, selection);
@@ -141,7 +150,7 @@ export function ListingStayCalendar({ monthKey, nights, selection, onShiftMonth,
         {months.map((month) => (
           <ListingStayMonth
             key={month} monthKey={month} nights={nights} selection={selection}
-            focusDay={focusDay} onFocusDay={setFocusDay} onPick={onPick}
+            focusDay={focusDay} onFocusDay={setFocusDay} onPick={onPick} isMine={isMine}
           />
         ))}
       </span>

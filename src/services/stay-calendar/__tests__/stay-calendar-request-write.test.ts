@@ -107,7 +107,8 @@ describe('Α — ο πίνακας εξουσίας: ποιος εκδίδει �
     expect(stored).toMatchObject({
       lifecycle: 'requested', channel: 'platform', guestUserId: 'guest-1',
       holder: { kind: 'user', userId: 'guest-1', displayName: 'Μαρία' },
-      hold: { tier: 'distant', bound: 'response-hours', respondentUserId: 'user-1', expiresAt: result.holdExpiresAt },
+      // §23.12 Ε1: `STAY_RULES_NONE` δεν έχει ώρες απόκρισης ⇒ `tier`, όχι `response-hours`.
+      hold: { tier: 'distant', bound: 'tier', respondentUserId: 'user-1', expiresAt: result.holdExpiresAt },
     });
     expect(guestHolds('guest-1')).toBe(1);
     expect(mockAnnounce).toHaveBeenCalledTimes(1);
@@ -245,6 +246,33 @@ describe('Μ — οι μεταβάσεις: μία φορά η καθεμία, �
     givenStay();
     givenRequest('stay_a', 'guest-1', FAR_FUTURE);
     expect(await run({ action: 'cancel', bookingId: 'stay_a' }, HOST)).toEqual({ kind: 'not-changeable', reason: 'lifecycle' });
+  });
+
+  it('🔴 Μ7. (§23.12 Ε5) ακύρωση ΕΠΙΒΕΒΑΙΩΜΕΝΗΣ κράτησης επισκέπτη ⇒ ο επισκέπτης μαθαίνει· δεύτερη ακύρωση σιωπηλή', async () => {
+    givenStay();
+    expect((await run(request(), GUEST)).kind).toBe('ok');
+    expect((await run({ action: 'accept', bookingId: 'stay_1' }, HOST)).kind).toBe('ok');
+    mockAnnounce.mockReset();
+    expect((await run({ action: 'cancel', bookingId: 'stay_1' }, HOST)).kind).toBe('ok');
+    expect(db.pathBucket(COLLECTIONS.STAY_BOOKINGS).get('stay_1')).toMatchObject({ lifecycle: 'cancelled' });
+    expect(mockAnnounce).toHaveBeenCalledTimes(1);
+    expect(mockAnnounce.mock.calls[0][2]).toMatchObject({
+      event: 'cancel', booking: { id: 'stay_1', lifecycle: 'cancelled', guestUserId: 'guest-1' },
+    });
+    expect((await run({ action: 'cancel', bookingId: 'stay_1' }, HOST)).kind).toBe('ok');
+    expect(mockAnnounce).toHaveBeenCalledTimes(1);
+  });
+
+  it('Μ8. ακύρωση ΧΕΙΡΟΚΙΝΗΤΗΣ κράτησης του οικοδεσπότη ⇒ καμία ειδοποίηση (δεν υπάρχει άλλος άνθρωπος)', async () => {
+    givenStay();
+    const booked = await run({
+      action: 'book', checkIn: '2027-10-10', checkOut: '2027-10-12', guests: 2, pets: 0, guestLabel: 'κ. Π.', acknowledgedWarnings: [],
+    } as StayCalendarCommand, HOST);
+    expect(booked.kind).toBe('ok');
+    if (booked.kind !== 'ok') throw new Error(booked.kind);
+    mockAnnounce.mockReset();
+    expect((await run({ action: 'cancel', bookingId: booked.entryId ?? '' }, HOST)).kind).toBe('ok');
+    expect(mockAnnounce).not.toHaveBeenCalled();
   });
 });
 

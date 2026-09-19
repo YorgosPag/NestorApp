@@ -42,6 +42,8 @@ type T = (key: string, params?: Record<string, unknown>) => string;
 /** Η υπόσχεση, ανά ταβάνι που κέρδισε — κλειδιά ΚΥΡΙΟΛΕΚΤΙΚΑ (ADR-744). */
 const PROMISE_KEY: Readonly<Record<StayHoldBound, string>> = {
   'response-hours': 'short-stay:request.promise.response-hours',
+  // §23.12 Ε1: χωρίς δηλωμένες ώρες — καμία επίκληση «ωρών απόκρισης».
+  tier: 'short-stay:request.promise.tier',
   stretch: 'short-stay:request.promise.stretch',
   arrival: 'short-stay:request.promise.arrival',
 };

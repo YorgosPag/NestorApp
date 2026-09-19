@@ -60,7 +60,8 @@
       "selected-check-out": "{day} — your check-out",
       "in-stay": "{day} — within your stay",
       "unsynced": "{day} · availability can't be confirmed",
-      "held": "{day} — on hold for another guest"
+      "held": "{day} — on hold for another guest",
+      "heldMine": "{day} — your request, awaiting a reply"
     },
     "minNights": "minimum stay {count, plural, one {# night} other {# nights}}",
     "conditional": "conditional: the property is for sale",
@@ -127,6 +128,7 @@
     "signInLink": "Sign in",
     "promise": {
       "response-hours": "The host will reply by {until} (within their reply hours). Until then the dates are held for you.",
+      "tier": "The host will reply by {until}. Until then the dates are held for you.",
       "stretch": "The host will reply by {until}. Until then the dates are held for you.",
       "arrival": "The host will reply by {until}, before your arrival. Until then the dates are held for you."
     },

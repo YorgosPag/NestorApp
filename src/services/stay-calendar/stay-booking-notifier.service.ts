@@ -17,6 +17,7 @@ import 'server-only';
  * | `accept` | — | «η κράτηση επιβεβαιώθηκε» |
  * | `decline` | — | «ο οικοδεσπότης δεν μπορεί» |
  * | `expire` | «δεν απάντησες — το αίτημα έληξε» | «δεν απαντήθηκε — ρώτα ξανά» |
+ * | `cancel` | — (ο ίδιος ακύρωσε) | «ο οικοδεσπότης ακύρωσε την κράτησή σας» (§23.12 Ε5) |
  *
  * 🔴 **Η λήξη μιλά ΚΑΙ στους δύο, με ΔΙΑΦΟΡΕΤΙΚΑ λόγια** (§4.11 #3): στον επισκέπτη δεν είναι
  * «όχι» (είναι «ρώτα ξανά»), και στον οικοδεσπότη είναι γεγονός που **δεν** του κοστίζει θέση στην
@@ -75,6 +76,8 @@ const AUDIENCES: Readonly<Record<NoticeEvent, readonly Audience[]>> = {
   accept: ['guest'],
   decline: ['guest'],
   expire: ['guest', 'host'],
+  // 🔴 §23.12 Ε5 — μόνο για κράτηση επισκέπτη (ο γραφέας δεν γεννά notice για χειροκίνητη).
+  cancel: ['guest'],
 };
 
 /** Ο τύπος γεγονότος ανά ακροατήριο — δύο αγωγοί, δύο διακόπτες στις ρυθμίσεις. */
@@ -97,6 +100,7 @@ const TITLE_KEYS: Readonly<Record<Audience, Partial<Record<NoticeEvent, string>>
     accept: 'stayRequestAnswered.acceptedTitle',
     decline: 'stayRequestAnswered.declinedTitle',
     expire: 'stayRequestAnswered.expiredTitle',
+    cancel: 'stayRequestAnswered.cancelledTitle',
   },
 };
 
@@ -115,6 +119,7 @@ const EMAIL_SUBJECTS: Readonly<Record<Audience, Partial<Record<NoticeEvent, Subj
     accept: ({ title, range }) => `Η κράτησή σας στο «${title}» (${range}) επιβεβαιώθηκε`,
     decline: ({ title, range }) => `Ο οικοδεσπότης του «${title}» δεν μπορεί να σας φιλοξενήσει (${range})`,
     expire: ({ title, range }) => `Το αίτημά σας για «${title}» (${range}) δεν απαντήθηκε — δοκιμάστε ξανά`,
+    cancel: ({ title, range }) => `Ο οικοδεσπότης ακύρωσε την κράτησή σας στο «${title}» (${range})`,
   },
 };
 

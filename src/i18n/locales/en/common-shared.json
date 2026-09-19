@@ -803,7 +803,8 @@
   "stayRequestAnswered": {
     "acceptedTitle": "Your stay at \"{title}\" ({range}) is confirmed",
     "declinedTitle": "The host of \"{title}\" can't host you ({range})",
-    "expiredTitle": "Your request for \"{title}\" ({range}) got no reply — try again"
+    "expiredTitle": "Your request for \"{title}\" ({range}) got no reply — try again",
+    "cancelledTitle": "The host cancelled your stay at \"{title}\" ({range})"
   },
   "mandateRequestAnswered": {
     "acceptedTitle": "{agency} took on the listing \"{title}\"",

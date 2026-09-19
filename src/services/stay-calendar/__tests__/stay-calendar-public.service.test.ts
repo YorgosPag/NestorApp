@@ -94,7 +94,7 @@ describe('Α — απαντήσεις αναζήτησης', () => {
         totalMinor: 20000,
       },
       // 🏆 Στάδιο Δ (§23.5): η υπόσχεση ΠΡΙΝ το αίτημα — άφιξη σε 18 ημέρες ⇒ 48 ώρες, ρολόι τοίχου.
-      hold: { kind: 'held', expiresAt: '2027-09-03T07:00:00.000Z', tier: 'upcoming', bound: 'response-hours' },
+      hold: { kind: 'held', expiresAt: '2027-09-03T07:00:00.000Z', tier: 'upcoming', bound: 'tier' },
     });
   });
 

@@ -133,10 +133,13 @@ function decideCancel(ctx: WriteContext, bookingId: string): Decision {
   if (entry.booking.lifecycle === 'cancelled') return { kind: 'write', entryId: bookingId, apply: () => undefined };
   if (entry.booking.lifecycle !== 'confirmed') return refuse({ kind: 'not-changeable', reason: 'lifecycle' });
   const ref = ctx.adminDb.collection(COLLECTIONS.STAY_BOOKINGS).doc(bookingId);
+  const after = { ...entry.booking, lifecycle: 'cancelled' as const, updatedAt: ctx.now };
   return {
     kind: 'write',
     entryId: bookingId,
-    apply: (tx) => tx.update(ref, { lifecycle: 'cancelled', updatedAt: ctx.now }),
+    // 🔴 §23.12 Ε5: κράτηση **επισκέπτη** ⇒ ο επισκέπτης μαθαίνει (μετρημένο ζωντανά: δεν μάθαινε).
+    ...(after.guestUserId !== null ? { notice: { event: 'cancel' as const, booking: after } } : {}),
+    apply: (tx) => tx.update(ref, { lifecycle: after.lifecycle, updatedAt: after.updatedAt }),
   };
 }
 

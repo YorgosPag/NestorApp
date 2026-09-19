@@ -49,10 +49,19 @@ describe('stay-public.client — δημόσια διαδρομή = ανώνυμ�
 
   it('🔴 Α2 — το δημόσιο ημερολόγιο της σελίδας καλείται με `skipAuth`', async () => {
     getMock.mockResolvedValue({ nights: [] });
-    await fetchPublicStayNights('ownp_a', '2026-10', 2);
+    await fetchPublicStayNights('ownp_a', '2026-10', 2, 'cached');
     expect(getMock).toHaveBeenCalledWith(
       '/api/public-listings/ownp_a/stay-nights?from=2026-10&months=2',
       { skipAuth: true },
+    );
+  });
+
+  it('🔴 Α2′ (ADR-835 §23.12 Ε2) — μετά από δική μου γραφή: `reload` ΚΑΙ ανώνυμο — ποτέ η cache του SWR', async () => {
+    getMock.mockResolvedValue({ nights: [] });
+    await fetchPublicStayNights('ownp_a', '2026-10', 2, 'fresh');
+    expect(getMock).toHaveBeenCalledWith(
+      '/api/public-listings/ownp_a/stay-nights?from=2026-10&months=2',
+      { skipAuth: true, cache: 'reload' },
     );
   });
 

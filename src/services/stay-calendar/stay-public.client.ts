@@ -25,16 +25,25 @@ export type StayNightsLoad =
   | { readonly kind: 'loaded'; readonly nights: StayPublicNights }
   | { readonly kind: 'failed' };
 
+/**
+ * **Πόσο φρέσκο** — `cached` σέβεται την cache της απάντησης (60″ + SWR)· `fresh` πάει στο δίκτυο **και**
+ * ενημερώνει την cache. 🔴 `fresh` μετά από **δική σου** γραφή: αλλιώς το SWR σού δείχνει τον κόσμο
+ * **πριν** την πράξη σου — μετρημένο ζωντανά και προς τις δύο κατευθύνσεις (ADR-835 §23.12 Ε2).
+ */
+export type StayNightsFreshness = 'cached' | 'fresh';
+
 /** Το δημόσιο ημερολόγιο μιας αγγελίας για `months` μήνες από τον `fromMonth`. */
 export async function fetchPublicStayNights(
   listingId: string,
   fromMonth: string,
   months: number,
+  freshness: StayNightsFreshness,
 ): Promise<StayNightsLoad> {
   const query = new URLSearchParams({ from: fromMonth, months: String(months) });
+  const config = freshness === 'fresh' ? { ...PUBLIC_REQUEST, cache: 'reload' as const } : PUBLIC_REQUEST;
   try {
     const url = `/api/public-listings/${encodeURIComponent(listingId)}/stay-nights?${query}`;
-    return { kind: 'loaded', nights: await apiClient.get<StayPublicNights>(url, PUBLIC_REQUEST) };
+    return { kind: 'loaded', nights: await apiClient.get<StayPublicNights>(url, config) };
   } catch (cause) {
     logger.warn('Το δημόσιο ημερολόγιο δεν φορτώθηκε', {
       data: { listingId, fromMonth },

@@ -27,6 +27,12 @@ export interface ApiRequestConfig {
   maxRetries?: number;
   skipAuth?: boolean;
   responseType?: 'auto' | 'json' | 'text' | 'blob';
+  /**
+   * Η πολιτική cache του browser (`RequestInit.cache`). `undefined` = η προεπιλογή του browser.
+   * 🔑 `'reload'` μετά από **δική σου** γραφή: πάει στο δίκτυο **και** ενημερώνει την cache — αλλιώς ένα
+   * `stale-while-revalidate` σού δείχνει τον κόσμο **πριν** την πράξη σου (ADR-835 §23.12 Ε2).
+   */
+  cache?: RequestCache;
 }
 
 /**

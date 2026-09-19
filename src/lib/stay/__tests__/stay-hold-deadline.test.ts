@@ -50,9 +50,11 @@ describe('Β — η κλίμακα (μία, σε πίνακα)', () => {
 });
 
 describe('Ρ — ρολόι τοίχου (προεπιλογή, η πρακτική της αγοράς)', () => {
-  it('άφιξη αύριο ⇒ 2 ώρες από τώρα', () => {
+  // 🔴 ADR-835 §23.12 Ε1: ως 19/09 εδώ έγραφε `bound: 'response-hours'` — η άγκυρα **κλείδωνε το σφάλμα**,
+  //    και η οθόνη έλεγε «μέσα στις ώρες απόκρισής του» σε οικοδεσπότη που δεν δήλωσε ώρες (μετρημένο ζωντανά).
+  it('🔴 άφιξη αύριο ⇒ 2 ώρες από τώρα, ταβάνι `tier` — ΟΧΙ «ώρες απόκρισης» που κανείς δεν δήλωσε', () => {
     expect(stayHoldDeadline({ clock: TUESDAY_10, checkIn: '2026-09-02', responseHours: null })).toEqual({
-      kind: 'held', expiresAt: '2026-09-01T09:00:00.000Z', tier: 'imminent', bound: 'response-hours',
+      kind: 'held', expiresAt: '2026-09-01T09:00:00.000Z', tier: 'imminent', bound: 'tier',
     });
   });
 
@@ -74,7 +76,8 @@ describe('🏆 Α — ρολόι ανθρώπου', () => {
 
   it('🔴 ο παρονομαστής: ΧΩΡΙΣ ώρες απόκρισης η ίδια στιγμή δίνει Κυριακή 23:40', () => {
     const hold = stayHoldDeadline({ clock: FRIDAY_2340, checkIn: '2026-09-20', responseHours: null });
-    expect(hold).toMatchObject({ expiresAt: '2026-09-06T20:40:00.000Z' });
+    // Ίδια βαθμίδα, άλλο ταβάνι στο όνομα: με ώρες `response-hours` (πάνω), χωρίς ώρες `tier`.
+    expect(hold).toMatchObject({ expiresAt: '2026-09-06T20:40:00.000Z', bound: 'tier' });
   });
 
   it('🔑 οι αργίες ΔΕΝ παγώνουν το ρολόι — οι ώρες είναι δήλωση ανθρώπου, όχι ωράριο καταστήματος', () => {

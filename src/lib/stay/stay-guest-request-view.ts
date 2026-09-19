@@ -79,3 +79,17 @@ export function stayGuestRequestsFrom(raw: unknown): StayGuestRequests | null {
   }
   return { kind: 'readable', requests };
 }
+
+/**
+ * **Είναι αυτή η νύχτα μέρος ενός ΔΙΚΟΥ ΜΟΥ ζωντανού αιτήματος;** (ADR-835 §23.12 Ε3)
+ *
+ * 🔑 Το δημόσιο πλέγμα λέει «σε αναμονή» **χωρίς ποιος** — σωστά, για κάθε ξένο. Ο ίδιος ο επισκέπτης
+ * όμως έβλεπε τις νύχτες του **δικού του** αιτήματος ως «για άλλον επισκέπτη» (μετρημένο ζωντανά).
+ * Η σελίδα **ήδη ξέρει** τα αιτήματά του· η απάντηση συντίθεται **στον πελάτη**, από δύο αληθινά
+ * γεγονότα — ο διακομιστής δεν αποκαλύπτει ποτέ ποιος κρατά.
+ *
+ * Ημι-ανοιχτό `[checkIn, checkOut)`, όπως κάθε διάστημα διαμονής· συγκρίσεις `YYYY-MM-DD` ως κείμενο.
+ */
+export function isMyPendingNight(requests: readonly StayGuestRequestView[], day: string): boolean {
+  return requests.some((request) => request.pending && request.checkIn <= day && day < request.checkOut);
+}

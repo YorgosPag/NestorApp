@@ -803,7 +803,8 @@
   "stayRequestAnswered": {
     "acceptedTitle": "Η κράτησή σας στο «{title}» ({range}) επιβεβαιώθηκε",
     "declinedTitle": "Ο οικοδεσπότης του «{title}» δεν μπορεί να σας φιλοξενήσει ({range})",
-    "expiredTitle": "Το αίτημά σας για «{title}» ({range}) δεν απαντήθηκε — δοκιμάστε ξανά"
+    "expiredTitle": "Το αίτημά σας για «{title}» ({range}) δεν απαντήθηκε — δοκιμάστε ξανά",
+    "cancelledTitle": "Ο οικοδεσπότης ακύρωσε την κράτησή σας στο «{title}» ({range})"
   },
   "mandateRequestAnswered": {
     "acceptedTitle": "Το «{agency}» ανέλαβε την αγγελία «{title}»",

@@ -168,3 +168,22 @@ describe('EnterpriseApiClient — stale-token 401 auto-recovery', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * 🔴 ΑΓΚΥΡΑ ADR-835 §23.12 Ε2 — **η πολιτική cache ΦΤΑΝΕΙ στο `fetch`**. Χωρίς αυτήν, ο καταναλωτής που
+ * ζητά «φρέσκο μετά από δική μου γραφή» παίρνει σιωπηλά την απάντηση του `stale-while-revalidate`
+ * (μετρημένο ζωντανά: ο επισκέπτης έβλεπε τον κόσμο ΠΡΙΝ το αίτημα/την απόσυρσή του).
+ */
+describe('EnterpriseApiClient — RequestInit.cache passthrough', () => {
+  it('`cache: reload` ⇒ φτάνει αυτούσιο στο fetch', async () => {
+    fetchMock.mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    await apiClient.get('/api/public-listings/x/stay-nights', { skipAuth: true, cache: 'reload' });
+    expect(fetchMock.mock.calls[0][1]?.cache).toBe('reload');
+  });
+
+  it('χωρίς `cache` ⇒ κανένα πεδίο — η προεπιλογή του browser μένει ανέγγιχτη', async () => {
+    fetchMock.mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    await apiClient.get('/api/public-listings/x/stay-nights', { skipAuth: true });
+    expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('cache');
+  });
+});

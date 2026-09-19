@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { StayPublicNights } from '@/lib/stay/stay-nights-view';
-import { fetchPublicStayNights } from '@/services/stay-calendar/stay-public.client';
+import { fetchPublicStayNights, type StayNightsFreshness } from '@/services/stay-calendar/stay-public.client';
 
 /**
  * Πόσοι μήνες φορτώνονται μαζί: οι **δύο** που φαίνονται + **ένας** ακόμη, ώστε μια διαμονή
@@ -31,16 +31,17 @@ export function usePublicStayNights(
   const [state, setState] = useState<PublicStayNightsState>({ kind: 'loading' });
   const sequence = useRef(0);
 
-  const load = useCallback(async (): Promise<void> => {
+  const load = useCallback(async (freshness: StayNightsFreshness): Promise<void> => {
     const seq = ++sequence.current;
     setState({ kind: 'loading' });
-    const result = await fetchPublicStayNights(listingId, monthKey, PUBLIC_STAY_MONTHS);
+    const result = await fetchPublicStayNights(listingId, monthKey, PUBLIC_STAY_MONTHS, freshness);
     if (seq === sequence.current) setState(result);
   }, [listingId, monthKey]);
 
   useEffect(() => {
-    void load();
+    void load('cached');
   }, [load]);
 
-  return { state, reload: () => void load() };
+  // 🔴 Το `reload` καλείται μετά από **δική μου** γραφή ή «Δοκίμασε ξανά» ⇒ ΠΑΝΤΑ φρέσκο (§23.12 Ε2).
+  return { state, reload: () => void load('fresh') };
 }

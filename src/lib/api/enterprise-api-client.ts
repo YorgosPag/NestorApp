@@ -172,6 +172,7 @@ export class EnterpriseApiClient {
       maxRetries = 3,
       skipAuth = false,
       responseType = 'auto',
+      cache,
     } = config;
 
     const fullUrl = buildUrl(url, params);
@@ -191,7 +192,7 @@ export class EnterpriseApiClient {
 
       try {
         const requestHeaders = await this.buildHeaders(headers, skipAuth, body, forceTokenRefresh);
-        const fetchOptions: RequestInit = { method, headers: requestHeaders };
+        const fetchOptions: RequestInit = { method, headers: requestHeaders, ...(cache ? { cache } : {}) };
 
         if (body !== undefined && body !== null) {
           fetchOptions.body = shouldSerializeBodyAsJson(body)
