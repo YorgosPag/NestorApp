@@ -44,13 +44,17 @@ gcloud iam workload-identity-pools providers create-oidc nestor-app \
 #     ΚΑΘΕ έγγραφο πελάτη — ρόλος «μόνο ανάγνωση δεικτών» ΔΕΝ υπάρχει (μετρημένο 2026-09-18).
 gcloud iam roles create nestorFirebaseDriftReader --project=$PROJECT --stage=GA \
   --title="Nestor - Firebase drift reader (ADR-865)" \
-  --description="Read-only: rules releases, index definitions, default bucket. NO data access." \
-  --permissions=firebaserules.releases.get,firebaserules.rulesets.get,datastore.databases.getMetadata,datastore.schemas.list,firebasestorage.defaultBucket.get,firebasestorage.buckets.get,resourcemanager.projects.get,serviceusage.services.use
+  --description="Read-only: rules releases, index definitions. NO data access." \
+  --permissions=firebaserules.releases.get,firebaserules.rulesets.get,datastore.databases.getMetadata,datastore.schemas.list,serviceusage.services.use
+#     ⚠️ ΚΑΝΕΝΑ firebasestorage.* — ο bucket ΔΗΛΩΝΕΤΑΙ (§11.7), δεν ανακαλύπτεται. Ελάχιστα δικαιώματα
+#     μετρημένα 2026-09-19 (ADR-865 Changelog): πλάνο πράσινο με ΑΥΤΑ τα 5 (runs 35429150868 · 35431491440).
 
 gcloud iam roles create nestorFirebaseRulesDeployer --project=$PROJECT --stage=GA \
   --title="Nestor - Firebase rules/indexes deployer (ADR-865)" \
   --description="Deploy rules and create/update indexes. NO deletes, NO data, NO IAM." \
-  --permissions=firebaserules.releases.get,firebaserules.releases.list,firebaserules.releases.create,firebaserules.releases.update,firebaserules.rulesets.get,firebaserules.rulesets.list,firebaserules.rulesets.create,firebaserules.rulesets.test,datastore.databases.getMetadata,datastore.schemas.get,datastore.schemas.list,datastore.schemas.create,datastore.schemas.update,datastore.operations.get,firebasestorage.defaultBucket.get,firebasestorage.buckets.get,serviceusage.services.get,serviceusage.services.use,resourcemanager.projects.get
+  --permissions=firebaserules.releases.get,firebaserules.releases.list,firebaserules.releases.create,firebaserules.releases.update,firebaserules.rulesets.get,firebaserules.rulesets.list,firebaserules.rulesets.create,firebaserules.rulesets.test,datastore.databases.getMetadata,datastore.schemas.get,datastore.schemas.list,datastore.schemas.create,datastore.schemas.update,datastore.operations.get,serviceusage.services.get,serviceusage.services.use,resourcemanager.projects.get
+#     17 δικαιώματα — dry-run πράσινο με ΑΥΤΑ (run 35431491440, 2026-09-19). Τα create/update
+#     ruleset·release·δείκτη μετριούνται στην πρώτη ΠΡΑΓΜΑΤΙΚΗ ανάπτυξη μέσα από τη γραμμή.
 
 # (δ) Δύο λογαριασμοί υπηρεσίας — ΧΩΡΙΣ κλειδί (κανένα αρχείο JSON δεν δημιουργείται ποτέ)
 gcloud iam service-accounts create gh-firebase-verify --project=$PROJECT \
@@ -114,7 +118,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 | push χωρίς αλλαγή κανόνων/δεικτών | τίποτα νέο — το `firebase-plan` λέει `none` σε ~1′ | τίποτα |
 | push **με** αλλαγή | email/ειδοποίηση GitHub «waiting for review» · η σελίδα δείχνει **τι** θα αλλάξει | **Review deployments → Approve** |
 | απορρίπτεις | ο κώδικας **δεν** κυκλοφορεί · Telegram «Deploy FALLITO» | διόρθωσε και ξανά push |
-| νεότερο push πριν εγκρίνεις | η παλαιότερη εκκρεμής έγκριση ακυρώνεται — εγκρίνεις τη νεότερη | Approve τη νεότερη |
+| νεότερο push πριν εγκρίνεις | 🔴 η παλαιότερη **ΔΕΝ** ακυρώνεται: όσο περιμένει έγκριση **κρατά την ουρά** `firebase-production` · η νεότερη μένει `pending` **χωρίς** κουμπί έγκρισης · **καμία** κυκλοφορία στο Netcup μέχρι να αποφασίσεις (μετρημένο 2026-09-19, ADR-865 Changelog) | **Reject** την παλαιότερη ⇒ η νεότερη περνά αμέσως σε αναμονή έγκρισης ⇒ **Approve** τη νεότερη |
 | πρωινός έλεγχος βρίσκει διαφορά | σχόλιο στο CI Health issue + Telegram (μόνο στην **αλλαγή** κατάστασης) | άνοιξε το τρέξιμο, δες τον πίνακα |
 
 **Δείκτες που υπάρχουν στην παραγωγή αλλά όχι στο αρχείο** δεν σβήνονται **ποτέ** αυτόματα
