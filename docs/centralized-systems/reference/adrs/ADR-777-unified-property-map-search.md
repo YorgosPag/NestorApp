@@ -13613,10 +13613,20 @@ DemandAxisLostInFilters += 'stayNights' | 'stayParty'     // η παρέα τα�
    ✅ **Deploy 2026-09-19**: `firebase deploy --only functions:onParkingWrite,functions:onStorageWrite` (`pagonis-87766`,
    v1 · us-central1, «Successful update operation» και για τα δύο)· **στοχευμένο** επίτηδες, ώστε να μην ανέβει άλλος
    μη αναπτυγμένος κώδικας functions. Το `functions/` δεν είχε αδέσμευτες αλλαγές ⇒ ανέβηκε ο κώδικας του HEAD.
-   ⏳ **Επαναδεικτοδότηση: ΕΚΚΡΕΜΕΙ.** ⚠️ Το `scripts/search-backfill.ts` είναι **μπαγιάτικο** — δικός του κατάλογος τύπων
-   (project/building/unit/contact/file), **χωρίς** parking/storage ⇒ δεν μπορεί να το κάνει. Ο σωστός δρόμος είναι το
-   `POST /api/admin/search-backfill` (super_admin · `{ "type": "parking" | "storage", "dryRun": true }` → `false`), που
-   διαβάζει το SSoT `src/config/search-index-config.ts` — ήδη στην παραγωγή (`035530bc` πρόγονος του `e93c68a0`).
+   ✅ **Επαναδεικτοδότηση 2026-09-19 (παραγωγή `7057264b`, με έγκριση Giorgio)**. ⚠️ Το `scripts/search-backfill.ts` είναι
+   **μπαγιάτικο** — δικός του κατάλογος τύπων (project/building/unit/contact/file), **χωρίς** parking/storage.
+   `GET /api/admin/search-backfill`: parking **2**, storage **0**. Ξηρό: parking 2 · storage **0 έγγραφα στη συλλογή** (τίποτα
+   να ξαναχτιστεί). 🔴 **Το `dryRun: false` ΚΡΕΜΑΣΕ δύο φορές με μηδέν εγγραφές** — προϋπάρχον αδιέξοδο στο `backfill-engine.ts`:
+   ο **κοινός** BulkWriter του `backfillAllTypesParallel` κλείνει **μετά** το `await Promise.all(writePromises)` του
+   `backfillEntityType`, και το BulkWriter στέλνει μη γεμάτη δέσμη **μόνο** σε `flush`/`close` ⇒ κάθε εκτέλεση με υπόλοιπο
+   < μέγεθος δέσμης δεν τελείωνε ποτέ. **Διορθώθηκε** (`await bulkWriter.flush()` πριν την αναμονή) + άγκυρα
+   `search-backfill/__tests__/backfill-engine-flush.test.ts` (ψεύτικος writer με το **πραγματικό** συμβόλαιο: ολοκλήρωση μόνο σε
+   flush/close)· μετάλλαξη «χωρίς flush» ⇒ `TIMEOUT` (αναπαράγει την παραγωγή). ⏳ Ισχύει στην παραγωγή **μετά** το επόμενο
+   push. Οι 2 θέσεις ξαναδεικτοδοτήθηκαν **τώρα** μέσω `POST /api/search/reindex` (ανά οντότητα, ίδιο SSoT config, απλό `set`)
+   ⇒ Firestore: ΔΟΚΙΜΗ Θ `status: "for-rent"` · ΔΟΚΙΜΗ Ι `"for-sale"` (ήταν `"active"`). **Ζωντανά**: Ctrl+K «ΔΟΚΙΜΗ Θ» ⇒
+   σήμα **«Προς ενοικίαση»** ✅. ⚠️ **Νέο, μικρό**: ο υπότιτλος δείχνει ακόμη ωμό **`standard - active`** — το
+   `subtitleFields: ['type', 'status']` διαβάζει το `status` που είναι πλέον **μόνο κύκλος ζωής** (αγγλική τιμή στον χρήστη).
+   Διόρθωση = config + mirror + νέο deploy των 2 triggers + reindex· **δεν** έγινε (απόφαση Giorgio).
 5. **Πλοήγηση κτιρίου** (`BuildingSpacesTabs`): τα φίλτρα κατάστασης/τύπου/θέσης των χώρων είναι **αδρανή για ΟΛΕΣ** τις
    κατηγορίες (η επιλογή δεν εφαρμόζεται πουθενά — προϋπάρχον) και δείχνουν ακόμη το παλιό λεξιλόγιο. Χωριστή οικογένεια.
 6. **`UnitBadge` / `createUnitStatuses` / `VOCAB_STORAGE_STATUS_LABELS`** (τομέας `UNIT` του `core/badges`) έμειναν **χωρίς

@@ -231,6 +231,11 @@ export async function backfillEntityType(
 
   // Wait for all writes to complete
   if (!options.dryRun && writePromises.length > 0) {
+    // 🔴 `flush()` ΠΡΙΝ την αναμονή (ADR-777 §8.60.20.9 #4). Το BulkWriter στέλνει δέσμη μόνο όταν
+    // γεμίσει ή σε `flush`/`close` — και ο κοινός writer κλείνει ο καλών ΜΕΤΑ από αυτή την αναμονή.
+    // Χωρίς αυτό, κάθε μη γεμάτη δέσμη = αδιέξοδο: μετρημένο 2026-09-19 στην παραγωγή, 2 θέσεις,
+    // το `dryRun: false` κρέμασε δύο φορές με μηδέν εγγραφές.
+    await bulkWriter.flush();
     await Promise.all(writePromises);
     if (!sharedBulkWriter) {
       await bulkWriter.close();
