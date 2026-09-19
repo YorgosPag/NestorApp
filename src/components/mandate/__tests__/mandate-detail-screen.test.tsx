@@ -72,6 +72,19 @@ jest.mock('@/services/owner-property/owner-property.service', () => ({
   setOwnerListingLifecycle: jest.fn(),
 }));
 
+// 💬 ADR-867 Β7 — το πάνελ του νήματος έχει δικές του άγκυρες· εδώ κρίνεται ΜΟΝΟ ότι η οθόνη του δίνει
+//    τα id **της διαδρομής**, ως γραφείο (Ο7). Στέλεχος που καταγράφει τα props.
+const threadPanelProps = jest.fn();
+jest.mock('@/components/network-messaging/NetworkThreadPanel', () => ({
+  NetworkThreadPanel: (props: Record<string, unknown>) => {
+    threadPanelProps(props);
+    return null;
+  },
+}));
+
+/** Τα id νήματος/ομάδας όπως τα στέλνει η διαδρομή της εντολής (ADR-867 Β7 · §8 #8). */
+const NETWORK = { threadId: 'nthr_route-thread', teamId: 'nteam_route-team' } as const;
+
 /**
  * 🔴 **Η ΑΚΡΙΒΗΣ ΓΡΑΜΜΗ ΠΟΥ ΕΠΕΣΤΡΕΨΕ Ο ΖΩΝΤΑΝΟΣ ΔΙΑΚΟΜΙΣΤΗΣ** (2026-09-05, `curl` στο
  * `/api/owner-properties/brokered/ownp_cef8a729-…`) — **αντιγραμμένη από τη μέτρηση**,
@@ -104,6 +117,7 @@ const ANNOUNCED: MandateCatalogRow = {
 
 beforeEach(() => {
   fetchMandateDetail.mockReset();
+  threadPanelProps.mockReset();
 });
 
 describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής', () => {
@@ -112,7 +126,7 @@ describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής',
   // ===========================================================================
 
   it('Ο1 🔴 — δείχνει ΤΗΝ ΕΝΤΟΛΗ ΠΟΥ ΑΝΑΚΟΙΝΩΣΕ Η ΕΙΔΟΠΟΙΗΣΗ, με την κατάστασή της', async () => {
-    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED });
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED, network: NETWORK });
 
     render(<MandateDetailContent ownerPropertyId={ANNOUNCED.ownerPropertyId} />);
 
@@ -143,7 +157,7 @@ describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής',
    * κουμπιών είναι ο **ίδιος** (`allowedActionsFor`) με τον κατάλογο, όχι δεύτερος.
    */
   it('Ο2 🏆 — η κάρτα κουβαλά ΚΑΙ τις πράξεις, όχι μόνο την κατάσταση', async () => {
-    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED });
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED, network: NETWORK });
 
     render(<MandateDetailContent ownerPropertyId={ANNOUNCED.ownerPropertyId} />);
     const article = await screen.findByRole('article');
@@ -179,7 +193,7 @@ describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής',
    * διάδρομο»* του §8.33, που το δέντρο πλήρωσε ήδη **δύο φορές**.
    */
   it('Ο3 🔴 — υπάρχει δρόμος πίσω στον κατάλογο', async () => {
-    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED });
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED, network: NETWORK });
 
     render(<MandateDetailContent ownerPropertyId={ANNOUNCED.ownerPropertyId} />);
     await screen.findByRole('article');
@@ -253,7 +267,7 @@ describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής',
    * μπορούσαν να αποκλίνουν και **και τα δύο** να είναι πράσινα.
    */
   it('Ο6 — ό,τι ζητά η οθόνη είναι ό,τι έβαλε η ειδοποίηση στη διεύθυνση', async () => {
-    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED });
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED, network: NETWORK });
 
     render(<MandateDetailContent ownerPropertyId={ANNOUNCED.ownerPropertyId} />);
     await screen.findByRole('article');
@@ -263,5 +277,18 @@ describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής',
     expect(mandateDetailHref(asked)).toBe(
       `${MANDATE_CATALOG_ROUTE}/${ANNOUNCED.ownerPropertyId}`,
     );
+  });
+
+  // ===========================================================================
+  // Ο7 — ADR-867 Β7: Η ΣΥΝΟΜΙΛΙΑ ΚΑΤΩ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ, ΜΕ ΤΑ ID ΤΗΣ ΔΙΑΔΡΟΜΗΣ
+  // ===========================================================================
+  it('Ο7 — το νήμα παίρνει τα id της ΔΙΑΔΡΟΜΗΣ, ως γραφείο (μετάλλαξη: id υπολογισμένα στον πελάτη / variant owner)', async () => {
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED, network: NETWORK });
+
+    render(<MandateDetailContent ownerPropertyId={ANNOUNCED.ownerPropertyId} />);
+    await screen.findByRole('article');
+
+    await waitFor(() => expect(threadPanelProps).toHaveBeenCalled());
+    expect(threadPanelProps).toHaveBeenLastCalledWith({ threadId: NETWORK.threadId, teamId: NETWORK.teamId, variant: 'office' });
   });
 });

@@ -341,6 +341,9 @@ describe('EnterpriseIdService', () => {
       generateDeterministicNetworkActThreadId: 'nthr_57bd03ab-cf49-47c7-86f2-f56494788cde',
       generateDeterministicNetworkAwayId: 'naway_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicNetworkBlockId: 'nblk_aa044400-10b9-4583-865f-97901fb1d075',
+      // ADR-867 Β7 — κλειδί ιδεμποτησίας αποστολής: σπόρος `msg:anchor-seed:undefined` (δύο παράμετροι, ένα όρισμα —
+      //    ίδιο σχήμα με το `wacr`). Καταγεγραμμένο από τον ίδιο τον γεννήτορα, 2026-09-19.
+      generateDeterministicNetworkMessageId: 'nmsg_4e71aa59-cb50-4751-803e-556f9c4a46d0',
       generateDeterministicNetworkRelationshipThreadId: 'nthr_6b688050-cdbb-459e-850d-70f955dfb818',
     };
 

@@ -17,6 +17,8 @@
 
 import { isDateKey } from '@/lib/calendar/date-key';
 import { isRecord } from '@/lib/type-guards';
+import { isDeclaredPetCount } from '@/lib/offers/offer-amount';
+import { stayBookingPriceFrom } from '@/lib/stay/stay-quote-record';
 import { stayDayRuleFrom, stayRulesFrom } from '@/lib/stay/stay-rules-shape';
 import { STAY_RULES_NONE, type StayCalendarMonth, type StayDayRule } from '@/types/stay-rules';
 import type { SpaceRef } from '@/lib/spaces/space-ref';
@@ -222,6 +224,15 @@ function stageDInvariantsHold(
   return guestUserId === stayGuestUserIdOf(holder);
 }
 
+/**
+ * Κατοικίδια κράτησης (ADR-777 §8.60.21.7): απόν/`null` ⇒ `null` («δεν ρωτήθηκε» — κράτηση πριν τη
+ * Φ5)· παρόν ⇒ `0..5`, αλλιώς `undefined` (χαλασμένο, ποτέ σιωπηλό «κανένα»).
+ */
+function bookingPetsOf(raw: unknown): number | null | undefined {
+  if (raw === null || raw === undefined) return null;
+  return isDeclaredPetCount(raw) ? raw : undefined;
+}
+
 /** **Η κράτηση.** Χωρίς αναγνώσιμο κάτοχο, διάστημα ή κατάσταση ⇒ `null` (δες κεφαλίδα). */
 export function stayBookingFromDocument(raw: unknown, id: string): StayBooking | null {
   if (!isRecord(raw)) return null;
@@ -245,11 +256,14 @@ export function stayBookingFromDocument(raw: unknown, id: string): StayBooking |
   const resolution = resolutionOf(stored.resolution);
   const guestUserId = textOrNull(stored.guestUserId);
   if (hold === undefined || resolution === undefined || guestUserId === undefined) return null;
+  const pets = bookingPetsOf(stored.pets);
+  const price = stayBookingPriceFrom(stored.price);
+  if (pets === undefined || price === undefined) return null;
   if (!stageDInvariantsHold(stored.lifecycle, hold, resolution, guestUserId, holder)) return null;
   return {
     id, propertyId, offerKind: 'leaseShort', covers,
     checkIn: range.from, checkOut: range.to,
-    holder, channel: stored.channel, authorUserId, guests,
+    holder, channel: stored.channel, authorUserId, guests, pets, price,
     lifecycle: stored.lifecycle, riskDisclosedAt, hold, resolution, guestUserId, createdAt, updatedAt,
   };
 }

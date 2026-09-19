@@ -38,9 +38,8 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideCapability } from '@/lib/auth/authority';
-import { listMemberWorkspaces, normalizeMembership } from '@/lib/auth/workspace-membership';
+import { listActiveWorkspaceMembers, listMemberWorkspaces } from '@/lib/auth/workspace-membership';
 import { createModuleLogger } from '@/lib/telemetry';
-import { workspaceMembersCollection } from '@/lib/workspace/workspace-member-ref';
 import { isGranted } from '@/types/capability-authority';
 import type { NetworkActTeam } from '@/types/network-thread';
 
@@ -110,9 +109,8 @@ export async function resolveDepartureHeir(
   },
 ): Promise<string | null> {
   if (input.actorIsMember && input.actorUid !== input.departingUid) return input.actorUid;
-  const snapshot = await workspaceMembersCollection(adminDb, input.companyId).where('status', '==', 'active').get();
-  const candidates = snapshot.docs.map((doc) => {
-    const member = normalizeMembership(doc.id, doc.data());
+  const members = await listActiveWorkspaceMembers(adminDb, input.companyId);
+  const candidates = members.map((member) => {
     return {
       uid: member.uid,
       globalRole: member.globalRole === '' ? null : member.globalRole,

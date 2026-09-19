@@ -20,6 +20,10 @@
  * ζήτησε άλλος· άρνηση ή απόσυρση μετά τη λήξη θα **ονόμαζε λάθος** ένα γεγονός που ήδη έγινε
  * (§4.11 #3: *«η σιωπή δεν είναι όχι»*). Η ίδια πράξη πάνω στην ίδια κατάσταση-στόχο ⇒ **ιδιοδύναμη**.
  *
+ * 🏆 **Η τιμή παγώνει στο αίτημα** (ADR-777 §8.60.21.7): ο γραφέας τιμολογεί με την **ίδια** συνάρτηση
+ * (`stayQuoteOf`) πάνω στα **φρέσκα** δεδομένα της συναλλαγής και τη συγκρίνει με το σύνολο που **είδε**
+ * ο επισκέπτης. Διαφορά ⇒ `price-changed` με το νέο ποσό· ίδιο ⇒ γράφεται ως στιγμιότυπο (`price`).
+ *
  * **Layering**: καθαρές ως προς τα δεδομένα· γράφουν **μόνο** μέσω `apply`.
  */
 
@@ -36,8 +40,12 @@ import {
 } from '@/lib/stay/stay-guest-head';
 import { isStayable } from '@/lib/stay/stay-availability-vocabulary';
 import { stayRequestPreview } from '@/lib/stay/stay-request-preview';
+import { stayDayRulesOf } from '@/lib/stay/stay-calendar-of';
+import { stayQuoteOf } from '@/lib/stay/stay-nightly-quote';
+import { stayBookingPriceOf } from '@/lib/stay/stay-quote-record';
+import type { PublicListing } from '@/types/public-listing';
 import { ownerPropertyOfferKinds } from '@/types/owner-property';
-import { stayHoldLivesAt, type StayBooking, type StayResolution } from '@/types/stay-booking';
+import { stayHoldLivesAt, type StayBooking, type StayBookingPrice, type StayResolution } from '@/types/stay-booking';
 
 import { alreadyDone, newStayBooking, refuse, type Decision, type WriteContext } from './stay-calendar-write-decision';
 import { refusalOf } from './stay-calendar-write-result';
@@ -61,6 +69,7 @@ function requestedBooking(
   guest: { readonly uid: string; readonly displayName: string | null },
   hold: NonNullable<StayBooking['hold']>,
   riskDisclosedAt: string | null,
+  price: StayBookingPrice | null,
 ): StayBooking {
   return newStayBooking(ctx, {
     checkIn: command.checkIn,
@@ -68,10 +77,18 @@ function requestedBooking(
     holder: { kind: 'user', userId: guest.uid, displayName: guest.displayName },
     channel: 'platform',
     guests: command.guests,
+    pets: command.pets,
+    price,
     lifecycle: 'requested',
     riskDisclosedAt,
     hold,
   });
+}
+
+/** Η τιμή που **θα** γραφτεί: η ίδια τιμολόγηση με τη σελίδα, πάνω στα φρέσκα δεδομένα. `null` = δεν τιμολογείται. */
+function freshPriceOf(ctx: WriteContext, listing: PublicListing, command: RequestCommand): StayBookingPrice | null {
+  const quote = stayQuoteOf(listing, stayDayRulesOf(ctx.reading.months), command);
+  return quote !== null && quote.kind === 'priced' ? stayBookingPriceOf(quote) : null;
 }
 
 /**
@@ -85,7 +102,9 @@ export function decideRequest(ctx: WriteContext, command: RequestCommand): Decis
   // Ο οικοδεσπότης κλείνει μέρες από το ημερολόγιό του — ποτέ αίτημα στη δική του αγγελία.
   if (ctx.property.authorUserId === guest.uid) return refuse({ kind: 'own-listing' });
 
-  const query = { checkIn: command.checkIn, checkOut: command.checkOut, guests: command.guests };
+  // 🔴 Τα κατοικίδια κρίνονται ΕΔΩ, από τον ίδιο κριτή (`petsVerdict`) — χωρίς αυτά, αίτημα με
+  //    κατοικίδιο σε κατάλυμα που λέει «όχι» θα περνούσε (ADR-777 §8.60.21.7).
+  const query = { checkIn: command.checkIn, checkOut: command.checkOut, guests: command.guests, pets: command.pets };
   const { answer, hold } = stayRequestPreview(ctx.listing, ctx.reading, ctx.clock, query);
   if (!isStayable(answer.kind)) return refuse({ kind: 'unavailable', answer: answer.kind });
   if (hold === null || hold.kind === 'too-late') return refuse({ kind: 'too-late' });
@@ -95,25 +114,34 @@ export function decideRequest(ctx: WriteContext, command: RequestCommand): Decis
   if (guestHoldLimitReached(ctx.guestHead, ctx.now)) {
     return refuse({ kind: 'guest-hold-limit', limit: STAY_GUEST_MAX_ACTIVE_HOLDS });
   }
+  // 🏆 Κανείς δεν δεσμεύεται σε ποσό που δεν είδε: ίδιο σύνολο, ή `price-changed` με το νέο.
+  const price = freshPriceOf(ctx, ctx.listing, command);
+  const totalMinor = price?.totalMinor ?? null;
+  if (totalMinor !== command.expectedTotalMinor) return refuse({ kind: 'price-changed', totalMinor });
 
   const booking = requestedBooking(ctx, command, guest, {
     expiresAt: hold.expiresAt, tier: hold.tier, bound: hold.bound, respondentUserId: ctx.property.authorUserId,
-  }, conditional ? ctx.now : null);
+  }, conditional ? ctx.now : null, price);
+  return requestWrite(ctx, booking, guest.uid, hold.expiresAt);
+}
+
+/** Η εγγραφή του κριμένου αιτήματος: ο κριτής κατάληψης (ζώνη και τιράντες) + κράτηση + κεφαλή επισκέπτη. */
+function requestWrite(ctx: WriteContext, booking: StayBooking, guestUid: string, expiresAt: string): Decision {
   // Ζώνη και τιράντες: ο **ΕΝΑΣ** κριτής, πάνω στην ίδια την εγγραφή που θα γραφτεί.
   const refusal = refusalOf(stayCalendarConflicts({ kind: 'booking', booking }, ctx.entries, ctx.now));
   if (refusal !== null) return refuse(refusal);
 
-  const head = guestHeadWithHold(ctx.guestHead, guest.uid, {
-    bookingId: booking.id, propertyId: booking.propertyId, expiresAt: hold.expiresAt,
+  const head = guestHeadWithHold(ctx.guestHead, guestUid, {
+    bookingId: booking.id, propertyId: booking.propertyId, expiresAt,
   }, ctx.now);
   return {
     kind: 'write',
     entryId: booking.id,
-    holdExpiresAt: hold.expiresAt,
+    holdExpiresAt: expiresAt,
     notice: { event: 'request', booking },
     apply: (tx) => {
       tx.set(bookingRef(ctx, booking.id), booking);
-      tx.set(stayGuestHeadRef(ctx.adminDb, guest.uid), head);
+      tx.set(stayGuestHeadRef(ctx.adminDb, guestUid), head);
     },
   };
 }

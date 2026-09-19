@@ -32,12 +32,9 @@ import { petsVerdict, stayAvailabilityFor } from '@/lib/stay/stay-availability';
 import { isStayable } from '@/lib/stay/stay-availability-vocabulary';
 import type { PublicStayAnswer } from '@/lib/stay/stay-public-request';
 import { computeStayLedger, stayLedgerBalances } from '@/lib/listings/stay-ledger';
-import {
-  listingsWithUnpricedPetFee,
-  stayTotalOf,
-  stayTotalsOf,
-} from '@/lib/listings/listing-stay-total';
+import { stayTotalOf, stayTotalsOf } from '@/lib/listings/listing-stay-total';
 import type { MinorAmount } from '@/lib/money/money';
+import { stayQuoteOf } from '@/lib/stay/stay-nightly-quote';
 
 import { judgeStayTerms } from '@/lib/demand/demand-match-stay';
 import {
@@ -321,16 +318,18 @@ describe('Λ — η λογιστική κλείνει και με τους νέ�
   });
 });
 
-describe('Τ — σύνολο διαμονής: ποτέ μερικό άθροισμα', () => {
+describe('Τ — σύνολο διαμονής: ΟΛΟΚΛΗΡΟ, ποτέ μερικό άθροισμα (Φ5, §8.60.21.7)', () => {
   const priced = (kind: 'free' | 'pets-on-request' | 'pets-not-allowed'): PublicStayAnswer => ({
     answer: { kind },
     quote: {
       kind: 'priced',
-      nights: [{ date: '2026-09-10', amountMinor: 8000 as MinorAmount }],
+      nights: [{ date: '2026-09-10', amountMinor: 8000 as MinorAmount, source: 'base' }],
+      nightsMinor: 8000 as MinorAmount,
+      fees: [],
       totalMinor: 8000 as MinorAmount,
     },
     hold: null,
-  }) as PublicStayAnswer;
+  });
   const lodgeWith = (id: string, pets: StayPetPolicy) => ({
     ...listingOf({ minNights: null, maxGuests: 4, pets, nextAvailableFrom: null }),
     id,
@@ -341,16 +340,15 @@ describe('Τ — σύνολο διαμονής: ποτέ μερικό άθροι
     expect(stayTotalOf(priced('pets-not-allowed'))).toBeNull();
   });
 
-  it('🔴 Τ2 — κατοικίδιο + χρέωση κατόχου ⇒ ΚΑΝΕΝΑ σύνολο (η χρέωση δεν είναι ακόμη μέσα)', () => {
+  it('🔴 Τ2 — κατοικίδιο + χρέωση κατόχου ⇒ ΠΛΗΡΕΣ σύνολο: νύχτες + χρέωση, από την ΙΔΙΑ τιμολόγηση', () => {
+    // 80 €/νύχτα × 3 νύχτες = 240 € · 10 €/νύχτα κατοικίδιο × 3 = 30 € ⇒ 270 €.
     const charged = lodgeWith('charged', welcomes(2, { amount: 10, per: 'night' }));
-    const free = lodgeWith('free', welcomes(2));
-    const query = { checkIn: '2026-09-10', checkOut: '2026-09-11', guests: 2, pets: 1 };
-    const incomplete = listingsWithUnpricedPetFee([charged, free], query);
-    expect([...incomplete]).toEqual(['charged']);
-    const totals = stayTotalsOf({ charged: priced('free'), free: priced('free') }, incomplete);
-    expect(Object.keys(totals)).toEqual(['free']);
-    // Χωρίς κατοικίδιο στο ερώτημα, η χρέωση δεν αφορά ⇒ σύνολο κανονικά.
-    expect(listingsWithUnpricedPetFee([charged], { ...query, pets: null }).size).toBe(0);
+    const window = { checkIn: '2026-09-10', checkOut: '2026-09-13' };
+    const withPet = stayQuoteOf(charged, {}, { ...window, pets: 1 });
+    const answers = { charged: { answer: { kind: 'free' as const }, quote: withPet, hold: null } };
+    expect(stayTotalsOf(answers)).toEqual({ charged: { totalMinor: 27000, nights: 3 } });
+    // Χωρίς κατοικίδιο στο ερώτημα, η χρέωση δεν αφορά ⇒ μόνο οι νύχτες.
+    expect(stayQuoteOf(charged, {}, { ...window, pets: null })).toMatchObject({ totalMinor: 24000, fees: [] });
   });
 });
 

@@ -21,6 +21,7 @@ import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import type { StayCalendarEntryView } from '@/lib/stay/stay-calendar-view';
 import { STAY_HOLD_TIME_FORMAT } from '@/lib/stay/stay-hold-deadline';
 import { cn } from '@/lib/utils';
+import { StayEntryParty } from './StayEntryParty';
 
 const ACTION = 'rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50';
 
@@ -40,7 +41,7 @@ function RequestItem({ request, busy, onSend }: {
       <p className="text-sm font-medium text-foreground">
         {request.guestLabel ?? t('property-market:offer.stayCalendar.requests.guestWithoutName')} · {range}
       </p>
-      <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.entry.guests', { count: request.guests })}</p>
+      <StayEntryParty entry={request} />
       {request.holdExpiresAt !== null && (
         <p className="text-sm text-foreground">
           {t('property-market:offer.stayCalendar.requests.replyBy', { until: formatDateTime(request.holdExpiresAt, STAY_HOLD_TIME_FORMAT) })}

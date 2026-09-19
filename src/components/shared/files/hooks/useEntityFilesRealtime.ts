@@ -25,7 +25,7 @@ import { fileOwnerConstraints, fileReadKindOf } from '@/services/file-record-que
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
-import { buildPurposeFilter } from './useEntityFiles-purpose-filter';
+import { buildFileReadFilter, type FileScope } from '../utils/upload-scope';
 
 const logger = createModuleLogger('USE_ENTITY_FILES');
 
@@ -38,6 +38,8 @@ interface UseEntityFilesRealtimeParams {
   readonly domain?: FileDomain;
   readonly category?: FileCategory;
   readonly purpose?: string;
+  /** ADR-866 §2.10 Β1 — interned (`internFileScopes`): ίδια ταυτότητα για ίδιο περιεχόμενο, ασφαλές σε deps. */
+  readonly scopes?: readonly FileScope[];
   readonly levelFloorId?: string;
   readonly onFiles: (files: FileRecord[]) => void;
   readonly onLoading: (loading: boolean) => void;
@@ -63,7 +65,7 @@ function realtimeConstraints(params: UseEntityFilesRealtimeParams): QueryConstra
 }
 
 export function useEntityFilesRealtime(params: UseEntityFilesRealtimeParams): void {
-  const { enabled, entityType, entityId, custody, domain, category, purpose, levelFloorId } = params;
+  const { enabled, entityType, entityId, custody, domain, category, purpose, scopes, levelFloorId } = params;
 
   // Stable refs — avoids subscription re-creation on every render
   const purposeRef = useRef(purpose);
@@ -81,7 +83,7 @@ export function useEntityFilesRealtime(params: UseEntityFilesRealtimeParams): vo
     const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
       FILE_COLLECTION[fileReadKindOf(custody)],
       (result: QueryResult<DocumentData>) => {
-        const filterByPurpose = buildPurposeFilter(purposeRef.current);
+        const filterByPurpose = buildFileReadFilter(purposeRef.current, scopes);
         const records = result.documents
           .map(doc => toFileRecord(doc))
           .filter((r): r is FileRecord => r !== null)
@@ -111,5 +113,5 @@ export function useEntityFilesRealtime(params: UseEntityFilesRealtimeParams): vo
     return () => {
       unsubscribe();
     };
-  }, [enabled, entityType, entityId, custody, domain, category, levelFloorId]);
+  }, [enabled, entityType, entityId, custody, domain, category, scopes, levelFloorId]);
 }

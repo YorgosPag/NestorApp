@@ -18,7 +18,7 @@ import { isPermissionDeniedError } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileSupersededPayload, FileLinkCreatedPayload } from '@/services/realtime';
-import { buildPurposeFilter } from './useEntityFiles-purpose-filter';
+import { buildFileReadFilter, internFileScopes, readQueryNarrowing, type FileScope } from '../utils/upload-scope';
 import { useEntityFilesRealtime } from './useEntityFilesRealtime';
 import { useStableFileCustody } from './useStableFileCustody';
 
@@ -52,6 +52,11 @@ export interface UseEntityFilesParams {
   category?: FileCategory;
   /** Optional purpose filter (e.g., 'project-floorplan', 'parking-floorplan') */
   purpose?: string;
+  /**
+   * ADR-866 §2.10 Β1 — **τι διαβάζει η καρτέλα**, παραγόμενο από το τι γράφει (`tabReadScopes`). Όταν δίνεται,
+   * αντικαθιστά `domain`/`category`/`purpose` ως κριτής: ό,τι ανεβαίνει από την καρτέλα, φαίνεται σε αυτήν.
+   */
+  scopes?: readonly FileScope[];
   /** ADR-236 Phase 3: Filter unit floorplans by level floor ID */
   levelFloorId?: string;
   /** Auto-fetch on mount (default: true) */
@@ -121,14 +126,15 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   const {
     entityType,
     entityId,
-    domain,
-    category,
     purpose,
     levelFloorId,
     autoFetch = true,
     realtime = false,
   } = params;
   const custody = useStableFileCustody(params.custody);
+  // ADR-866 §2.10 Β1 — με εμβέλειες το ερώτημα δεν στενεύει κατά domain/category· κρίνει το ΕΝΑ φίλτρο ανάγνωσης.
+  const scopes = internFileScopes(params.scopes);
+  const { domain, category } = readQueryNarrowing(params, scopes);
 
   // State
   const [files, setFiles] = useState<FileRecordWithLinkStatus[]>([]);
@@ -188,7 +194,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
       // Helper extracted to useEntityFiles-purpose-filter — see module docs
       // for META_PHOTO_PURPOSES and '*-floorplan' semantics (ADR-293 Phase 7).
-      const filterByPurpose = buildPurposeFilter(purpose);
+      const filterByPurpose = buildFileReadFilter(purpose, scopes);
 
       const filteredOwned = fetchedFiles
         .filter(FileRecordService.isVisibleInActiveLists)
@@ -234,7 +240,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, custody, domain, category, purpose, levelFloorId]);
+  }, [entityType, entityId, custody, domain, category, purpose, scopes, levelFloorId]);
 
   // =========================================================================
   // 🏢 ADR-240: REAL-TIME LISTENER (Firestore onSnapshot) — `useEntityFilesRealtime`
@@ -248,6 +254,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     domain,
     category,
     purpose,
+    scopes,
     levelFloorId,
     onFiles: setFiles,
     onLoading: setLoading,

@@ -31,7 +31,7 @@ describe('stayCalendarCommandFrom', () => {
   });
 
   it('κράτηση χωρίς όνομα ΔΕΝ είναι κράτηση — είναι block', () => {
-    const parsed = stayCalendarCommandFrom({ action: 'book', checkIn: FROM, checkOut: plus(3), guests: 2, guestLabel: '' });
+    const parsed = stayCalendarCommandFrom({ action: 'book', checkIn: FROM, checkOut: plus(3), guests: 2, pets: 0, guestLabel: '' });
     expect(parsed).toEqual({ ok: false, malformed: ['guestLabel'] });
   });
 
@@ -41,15 +41,16 @@ describe('stayCalendarCommandFrom', () => {
       checkIn: FROM,
       checkOut: plus(STAY_BOOKING_MAX_NIGHTS + 1),
       guests: 1.5,
+      pets: 6,
       guestLabel: 'x'.repeat(STAY_GUEST_LABEL_MAX_LENGTH + 1),
     });
-    expect(parsed).toEqual({ ok: false, malformed: ['checkIn', 'checkOut', 'guests', 'guestLabel'] });
+    expect(parsed).toEqual({ ok: false, malformed: ['checkIn', 'checkOut', 'guests', 'pets', 'guestLabel'] });
   });
 
   it('έγκυρη κράτηση', () => {
-    expect(stayCalendarCommandFrom({ action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, guestLabel: ' Μαρία ' })).toEqual({
+    expect(stayCalendarCommandFrom({ action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, pets: 1, guestLabel: ' Μαρία ' })).toEqual({
       ok: true,
-      command: { action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, guestLabel: 'Μαρία', acknowledgedWarnings: [] },
+      command: { action: 'book', checkIn: FROM, checkOut: plus(3), guests: 4, pets: 1, guestLabel: 'Μαρία', acknowledgedWarnings: [] },
     });
   });
 

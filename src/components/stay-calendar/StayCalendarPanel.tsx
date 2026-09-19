@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import type { StayCalendarMessage, StayCalendarMessageId } from './stay-calendar-outcome';
 import { StayBlockForm, StayBookingForm } from './StayCalendarForms';
 import { StayDayRulesForm } from './StayDayRulesForm';
+import { StayEntryParty } from './StayEntryParty';
 import { StayRuleWarningsConfirm, type StayPendingWarnings } from './StayRuleWarningsConfirm';
 import type { StayDayRules } from '@/types/stay-rules';
 
@@ -100,7 +101,7 @@ function BookingDetails({ entry, range, busy, onSend }: DetailsProps<'booking'>)
       </h3>
       <p className="text-sm text-foreground">{range}</p>
       {entry.guestLabel !== null && <p className="text-sm text-foreground">{entry.guestLabel}</p>}
-      <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.entry.guests', { count: entry.guests })}</p>
+      <StayEntryParty entry={entry} />
       {pendingRequest && <p className="text-sm text-muted-foreground">{t('property-market:offer.stayCalendar.entry.requestHint')}</p>}
       {entry.lifecycle === 'confirmed' && (
         <button type="button" disabled={busy} onClick={() => onSend({ action: 'cancel', bookingId: entry.id })} className={cn(ACTION, COLOR_BRIDGE.action.caution)}>

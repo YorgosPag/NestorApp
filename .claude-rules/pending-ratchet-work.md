@@ -2,6 +2,14 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **19/09 — ΤΟ `crm/inbox/ThreadView` ΕΧΕΙ ΣΥΝΑΡΤΗΣΗ 188 ΓΡΑΜΜΩΝ** (εύρημα ADR-867 Β7, N.7.1 — προϋπάρχον)
+
+  Στο Β7 εξήχθησαν τα **παρουσιαστικά** του (`components/shared/messaging/MessageBubble.tsx`: φούσκα · κεφαλίδα ·
+  «παλαιότερα» · κενό νήμα) και διορθώθηκαν 3 ωμά αγγλικά `aria-label` (N.11). Μένει το σώμα του `ThreadView`
+  (**188** γραμμές) + ένα εσωτερικό map (**59**) — πάνω από το όριο των 40. **Θεραπεία**: `ThreadHeader` ·
+  `SelectionBar` · `ThreadStates` (loading/error/empty) · `InboxMessageRow`. >1h μόνο λόγω των σουιτών του inbox
+  (`crm/inbox/__tests__`) ⇒ ξεχωριστή εργασία. Μέτρηση: `scratchpad/fn-length.js` (AST, > 40 γραμμές).
+
 - 🟡 **18/09 — ΤΟ ΚΕΛΥΦΟΣ ΚΑΡΤΕΛΩΝ ΑΡΧΕΙΩΝ ADR-588 ΕΦΑΡΜΟΖΕΤΑΙ ΣΤΑ ΜΙΣΑ** (εύρημα ADR-866 §2.7.7, N.0.2)
 
   Το `space-management/shared/tabs/EntityMediaFilesTab` + `media-tab-configs` ενοποίησε Parking/Storage, αλλά **7** αρχεία
@@ -14,6 +22,13 @@
   `building-files-tab.tsx:62` · `project-files-tab.tsx:58`) καρφώνουν `{ companyId }` με το χέρι, και τα `PhotosTab`/`FloorPlanTab`
   του ακινήτου κουβαλούν συστατικά που **δεν** είναι του κελύφους (σειρά φωτογραφιών αγγελίας · πολυεπίπεδη κάτοψη · IFC) ⇒ το
   κέλυφος χρειάζεται πρώτα **υποδοχή παιδιών**.
+  🔴 **19/09 — ΝΕΑ ΜΕΤΡΗΜΕΝΑ ΒΑΡΗ (ADR-866 §2.10 Ξ2 · Ξ3, ζωντανή επαλήθευση)**: το κέλυφος απέκτησε `entryPointScope` (ό,τι
+  προσφέρει η καρτέλα = ό,τι διαβάζει, `media-tab-scope.ts`). (α) **Ξ2**: θέσεις/αποθήκες — καρτέλες **Έγγραφα** και **Βίντεο** με
+  **μηδέν** τύπους στον κατάλογο (`entries-parking`/`entries-storage` έχουν μόνο κατόψεις+φωτογραφίες) ⇒ δεν ανεβάζουν. Κλειστό
+  σύνολο `KNOWN_DEAD` στην άγκυρα Α38.1 (`media-tab-scope.test.ts`) — **μόνο μικραίνει**. Θεραπεία: τύποι εγγράφων/βίντεο θέσης &
+  αποθήκης στον κατάλογο (ή όψη κοινών τύπων) + αφαίρεση από το `KNOWN_DEAD`. (β) **Ξ3 (στατικό)**: `PhotosTab`/`VideosTab` του
+  ακινήτου διαβάζουν `sales` αλλά προσφέρουν `unit-progress-photo`/`unit-progress-video` (`construction`) ⇒ **αόρατο ανέβασμα**.
+  Θεραπεία: τα 7 σημεία δηλώνουν `entryPointScope` (η ανάγνωση παράγεται από την προσφορά).
 
 - 🟡 **18/09 — ΤΟ ΜΟΝΟΠΑΤΙ ΜΕΛΟΥΣ ΧΩΡΟΥ ΧΤΙΖΟΤΑΝ ΧΕΙΡΟΓΡΑΦΑ ΣΕ 7 ΣΗΜΕΙΑ** (εύρημα ADR-867 Β5, N.0.2)
 
@@ -26,6 +41,8 @@
   `services/mandate/holiday-hours-question-notifier.ts:51`. **Θεραπεία**: import από το SSoT, και πύλη που
   απαγορεύει `SUBCOLLECTIONS.WORKSPACE_MEMBERS` έξω από αυτό (σχήμα Κ1 της CHECK 3.89). <1h, αλλά αγγίζει
   τον κριτή μέλους ⇒ ξεχωριστό commit.
+  ✅ **19/09 (Β7)**: γεννήθηκε `listActiveWorkspaceMembers` στο `lib/auth/workspace-membership.ts` **πάνω** στο
+  `workspaceMembersCollection` (το ερώτημα ζούσε inline στη μεταβίβαση — δύο καταναλωτές: αποχώρηση · επιλογέας ομάδας).
 
 - 🟡 **18/09 — Η ΛΙΣΤΑ ΤΗΣ CHECK 3.17 ΕΙΝΑΙ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ ΤΟΥ `AUDIT_ENTITIES`** (εύρημα ADR-867 Β5)
 

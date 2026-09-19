@@ -11,39 +11,21 @@ import 'server-only';
  * Ρυθμός: **HIGH** — ανάγνωση που ανανεώνει η ανοιχτή οθόνη (ADR-855).
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
-
 import { nowISO } from '@/lib/date-local';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import { readThreadPresence, type ThreadPresence } from '@/services/network-messaging/network-away';
+import { readThreadPresence } from '@/services/network-messaging/network-away';
+import type { NetworkPresenceResult } from '@/types/network-wire';
 
-import {
-  networkRefusal,
-  networkServerError,
-  withNetworkDoor,
-  type NetworkActor,
-} from '../../../_shared/network-door';
-import { requireRouteParam } from '../../../_shared/network-params';
-
-const logger = createModuleLogger('NetworkPresenceRoute');
+import { withNetworkDoor } from '../../../_shared/network-door';
+import { threadReaderHandler } from '../../../_shared/thread-reader-route';
 
 type ThreadRoute = { readonly params: Promise<{ threadId: string }> };
-type PresenceResponse = { readonly success: true } & ThreadPresence;
 
-async function handler(_request: NextRequest, actor: NetworkActor, routeContext?: ThreadRoute) {
-  const thread = await requireRouteParam(routeContext, 'threadId');
-  if (!thread.ok) return thread.response;
-  const threadId = thread.value;
+const handler = threadReaderHandler({
+  read: (adminDb, threadId, callerUid) => readThreadPresence(adminDb, threadId, callerUid, nowISO()),
+  logger: createModuleLogger('NetworkPresenceRoute'),
+  failure: '[NETWORK] Η παρουσία νήματος απέτυχε',
+});
 
-  try {
-    const outcome = await readThreadPresence(getAdminFirestore(), threadId, actor.uid, nowISO());
-    if (outcome.kind === 'not-audience') return networkRefusal('not-audience');
-    return NextResponse.json<PresenceResponse>({ success: true, ...outcome.presence });
-  } catch (error) {
-    return networkServerError(logger, '[NETWORK] Η παρουσία νήματος απέτυχε', error, { threadId });
-  }
-}
-
-export const GET = withHighRateLimit(withNetworkDoor<PresenceResponse, ThreadRoute>(handler));
+export const GET = withHighRateLimit(withNetworkDoor<NetworkPresenceResult, ThreadRoute>(handler));

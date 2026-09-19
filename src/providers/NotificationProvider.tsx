@@ -4,6 +4,7 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { useInterval } from '@/hooks/useInterval';
 import { toast, Toaster } from 'sonner';
+import { useTheme } from 'next-themes';
 import { CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n';
@@ -21,6 +22,7 @@ import type {
 
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+import { resolveToastDuration, toasterThemeOf } from './notification-policy';
 const logger = createModuleLogger('NotificationProvider');
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -44,6 +46,8 @@ export function NotificationProvider({
 }: NotificationProviderProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
+  // ADR-866 §2.10 Β3 — το toast ακολουθεί το ΙΔΙΟ θέμα με την εφαρμογή (χωρίς αυτό το sonner αποδίδει φωτεινό)
+  const { resolvedTheme } = useTheme();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [settings, setSettings] = useState<{
     defaultDuration: number;
@@ -160,7 +164,7 @@ export function NotificationProvider({
   const notify = useCallback((message: string, options: NotificationOptions = {}): string => {
     const {
       type = 'info',
-      duration = settings.defaultDuration,
+      duration: requestedDuration,
       id: customId,
       dismissible = true,
       ariaLabel: _ariaLabel,
@@ -174,8 +178,9 @@ export function NotificationProvider({
     // 🏢 ENTERPRISE: Auto-translate i18n keys
     const resolvedMessage = resolveI18nMessage(message);
 
-    // Rate limiting - SKIP για μεγάλα μηνύματα (test results)
-    const skipRateLimiting = resolvedMessage.length > 500; // Large messages are likely test results
+    // Rate limiting - SKIP για μεγάλα μηνύματα (test results) ΚΑΙ για ρητό `id`: η ταυτότητα λύνει ήδη τη διπλοτυπία
+    // με ΑΝΤΙΚΑΤΑΣΤΑΣΗ — αλλιώς «αρχειοθέτηση → αναίρεση → αρχειοθέτηση» σε <3″ έχανε το 2ο «Αναίρεση» (ADR-866 §2.10 Π3)
+    const skipRateLimiting = resolvedMessage.length > 500 || customId !== undefined;
     if (!skipRateLimiting && !canShowNotification(resolvedMessage)) {
       logger.info('RATE LIMITED: Skipping duplicate notification');
       return ''; // Return empty ID for rate-limited notifications
@@ -193,9 +198,9 @@ export function NotificationProvider({
       options
     };
 
-    // Add to internal state
+    // Add to internal state — ίδιο `id` ⇒ ΑΝΤΙΚΑΤΑΣΤΑΣΗ (το sonner ενημερώνει το ίδιο toast), ποτέ δεύτερη εγγραφή
     setNotifications(prev => {
-      const updated = [...prev, notificationData];
+      const updated = [...prev.filter(n => n.id !== notificationId), notificationData];
       // Limit max notifications
       if (updated.length > settings.maxNotifications) {
         return updated.slice(-settings.maxNotifications);
@@ -209,7 +214,8 @@ export function NotificationProvider({
     // Create toast with Sonner
     toast(resolvedMessage, {
       id: notificationId,
-      duration: duration === 0 ? Infinity : duration,
+      // ADR-866 §2.10 Β2 — toast με ενέργεια ΜΕΝΕΙ μέχρι να ενεργήσει/κλείσει ο χρήστης (Material 3 · WCAG 2.2.1)
+      duration: resolveToastDuration(requestedDuration, actions.length > 0, settings.defaultDuration),
       icon: getNotificationIcon(type),
       action: actions.length > 0 ? {
         label: actions[0].label,
@@ -352,6 +358,7 @@ export function NotificationProvider({
     <NotificationContext.Provider value={contextValue}>
       {children}
       <Toaster
+        theme={toasterThemeOf(resolvedTheme)}
         position="top-right"
         toastOptions={{
           className: 'notification-toast',

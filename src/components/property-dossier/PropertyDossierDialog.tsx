@@ -86,16 +86,14 @@ function submitDraft(
     : updatePropertyDossierDetails(mode.dossier.id, draft);
 }
 
-function InvariantList({ violations }: { readonly violations: readonly PropertyDossierInvariant[] }) {
+/**
+ * Το λάθος του **ονόματος** — όλοι οι κανόνες του φακέλου κρίνουν σήμερα **ένα** πεδίο (`PROPERTY_DOSSIER_INVARIANTS`),
+ * άρα το μήνυμα ζει **δίπλα** του (ADR-866 §2.10 Π1), όχι σε λίστα κάτω από το «Είδος».
+ */
+function useLabelError(violations: readonly PropertyDossierInvariant[]): string | undefined {
   const { t } = useTranslation([NS]);
-  if (violations.length === 0) return null;
-  return (
-    <ul aria-live="polite" className="m-0 list-none p-0 text-sm text-foreground">
-      {violations.map((code) => (
-        <li key={code}>{t(`${NS}:dossier.invariant.${code}`, { max: PROPERTY_DOSSIER_LABEL_MAX })}</li>
-      ))}
-    </ul>
-  );
+  const [first] = violations;
+  return first === undefined ? undefined : t(`${NS}:dossier.invariant.${first}`, { max: PROPERTY_DOSSIER_LABEL_MAX });
 }
 
 /** Το πεδίο είδους — προαιρετικό, με «Χωρίς είδος» (SSoT `ClearableSelect`, ποτέ `<SelectItem value="">`). */
@@ -134,20 +132,32 @@ type BodyProps = PropertyDossierDialogProps & { readonly mode: PropertyDossierDi
 /**
  * **Η υποβολή** — κρίση με τον **ίδιο** κριτή της πόρτας, μία κλήση, ρητές καταστάσεις.
  *
- * ⚠️ Οι παραβιάσεις δείχνονται **μόλις** ο άνθρωπος γράψει κάτι ή πατήσει υποβολή — όχι σε άδεια φόρμα που μόλις
- * άνοιξε (δεν επιπλήττουμε πριν προλάβει να πληκτρολογήσει). Η πόρτα (422) έχει **προτεραιότητα**: αν ο διακομιστής
- * αρνηθεί με κωδικό, δείχνεται **αυτός** (π.χ. κανόνας που άλλαξε και η οθόνη δεν τον ξέρει ακόμη).
+ * ⚠️ Οι παραβιάσεις δείχνονται **μόλις** ο άνθρωπος **περάσει** από το πεδίο (blur/αλλαγή) ή πατήσει υποβολή — όχι
+ * σε άδεια φόρμα που μόλις άνοιξε (δεν επιπλήττουμε πριν προλάβει να πληκτρολογήσει). ⚠️ **ΔΙΟΡΘΩΣΗ 2026-09-19
+ * (ADR-866 §2.10 Π1)**: το «αγγίχτηκε» κρινόταν από την **τιμή** (`label !== ''`) ⇒ «γράφω και σβήνω» έκρυβε ξανά
+ * το λάθος. Τώρα το λέει η φόρμα (`touched`/`dirty` του react-hook-form). Απόρριψη ⇒ **εστίαση** στο πεδίο (WCAG 3.3.1).
+ * Η πόρτα (422) έχει **προτεραιότητα**: αν ο διακομιστής αρνηθεί με κωδικό, δείχνεται **αυτός**.
  */
-function useDossierSubmit({ mode, onClose, onSaved }: BodyProps, values: PropertyDossierFormValues) {
+function useDossierSubmit(
+  { mode, onClose, onSaved }: BodyProps,
+  values: PropertyDossierFormValues,
+  interacted: boolean,
+  focusLabel: () => void,
+) {
   const [birthId] = React.useState(newPropertyDossierId);
   const [submit, setSubmit] = React.useState<SubmitState>({ kind: 'idle' });
   const validation = validatePropertyDossierForm(values);
-  const touched = values.label !== '' || submit.kind !== 'idle';
+  const touched = interacted || submit.kind !== 'idle';
   const local = touched && validation.kind === 'incomplete' ? validation.violations : [];
+
+  const reject = (violations: readonly PropertyDossierInvariant[]): void => {
+    setSubmit({ kind: 'rejected', violations });
+    focusLabel();
+  };
 
   const send = async (): Promise<void> => {
     if (validation.kind !== 'ready') {
-      setSubmit({ kind: 'rejected', violations: validation.violations });
+      reject(validation.violations);
       return;
     }
     setSubmit({ kind: 'saving' });
@@ -157,7 +167,8 @@ function useDossierSubmit({ mode, onClose, onSaved }: BodyProps, values: Propert
       onClose();
       return;
     }
-    setSubmit(result.kind === 'invalid' ? { kind: 'rejected', violations: result.violations } : { kind: 'failed' });
+    if (result.kind === 'invalid') reject(result.violations);
+    else setSubmit({ kind: 'failed' });
   };
 
   const shown = submit.kind === 'rejected' ? submit.violations : local;
@@ -168,10 +179,12 @@ function useDossierSubmit({ mode, onClose, onSaved }: BodyProps, values: Propert
 function DossierDialogBody(props: BodyProps) {
   const { mode, onClose } = props;
   const { t } = useTranslation([NS]);
-  const { control, handleSubmit, watch } = useForm<PropertyDossierFormValues>({
+  const { control, handleSubmit, watch, setFocus, formState } = useForm<PropertyDossierFormValues>({
     defaultValues: mode.kind === 'rename' ? propertyDossierFormFrom(mode.dossier) : EMPTY_PROPERTY_DOSSIER_FORM,
   });
-  const { submit, shown, send } = useDossierSubmit(props, watch());
+  const interacted = formState.touchedFields.label === true || formState.dirtyFields.label === true;
+  const { submit, shown, send } = useDossierSubmit(props, watch(), interacted, () => setFocus('label'));
+  const labelError = useLabelError(shown);
   const onSubmit = handleSubmit(send);
 
   const saving = submit.kind === 'saving';
@@ -190,20 +203,28 @@ function DossierDialogBody(props: BodyProps) {
         kind="text"
         label={t(`${K}.labelLabel`)}
         placeholder={t(`${K}.labelPlaceholder`)}
+        error={labelError}
       />
       <DossierTypeField control={control} />
-      <InvariantList violations={shown} />
       {submit.kind === 'failed' && <p aria-live="polite" className="m-0 text-sm text-foreground">{t(`${K}.failed`)}</p>}
 
-      <DialogFooter>
-        <button type="button" onClick={onClose} className={cn('rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}>
-          {t(`${K}.cancel`)}
-        </button>
-        <button type="submit" disabled={saving} className={cn('rounded-md px-4 py-2 font-medium disabled:opacity-50', COLOR_BRIDGE.action.primary)}>
-          {saving ? t(`${K}.saving`) : t(isCreate ? `${K}.create` : `${K}.save`)}
-        </button>
-      </DialogFooter>
+      <DossierDialogFooter saving={saving} isCreate={isCreate} onClose={onClose} />
     </form>
+  );
+}
+
+/** Ακύρωση · υποβολή — η υποβολή κλειδώνει όσο η αίτηση είναι σε πτήση (όχι διπλή γέννηση). */
+function DossierDialogFooter({ saving, isCreate, onClose }: { readonly saving: boolean; readonly isCreate: boolean; readonly onClose: () => void }) {
+  const { t } = useTranslation([NS]);
+  return (
+    <DialogFooter>
+      <button type="button" onClick={onClose} className={cn('rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}>
+        {t(`${K}.cancel`)}
+      </button>
+      <button type="submit" disabled={saving} className={cn('rounded-md px-4 py-2 font-medium disabled:opacity-50', COLOR_BRIDGE.action.primary)}>
+        {saving ? t(`${K}.saving`) : t(isCreate ? `${K}.create` : `${K}.save`)}
+      </button>
+    </DialogFooter>
   );
 }
 

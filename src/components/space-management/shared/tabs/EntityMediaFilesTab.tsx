@@ -27,6 +27,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { EntityMediaBinding } from './entity-media-binding';
 import type { MediaTabConfig } from './media-tab-configs';
+import { mediaTabAllowedEntryPointIds, mediaTabPurpose, mediaTabScopePolicy } from './media-tab-scope';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -53,6 +54,7 @@ interface ResolvedMediaFilesProps extends EntityMediaFilesTabProps {
 
 /** Η **μία** απόδοση του `EntityFilesManager` — οι δύο κλάδοι διαφέρουν **μόνο** στο πώς βρίσκουν τον κάτοχο. */
 function ResolvedMediaFiles({ binding, media, custody, currentUserId, companyName }: ResolvedMediaFilesProps) {
+  const { t } = useTranslation(binding.i18nNamespace);
   return (
     <section className="p-2">
       <EntityFilesManager
@@ -64,9 +66,12 @@ function ResolvedMediaFiles({ binding, media, custody, currentUserId, companyNam
         projectId={binding.projectId}
         domain={media.domain}
         category={media.category}
-        purpose={`${binding.purposePrefix}-${media.purposeKey}`}
+        purpose={mediaTabPurpose(binding, media)}
         entryPointCategoryFilter={media.entryPointCategoryFilter}
         entryPointExcludeCategories={media.entryPointExcludeCategories}
+        allowedEntryPointIds={mediaTabAllowedEntryPointIds(media)}
+        scopePolicy={mediaTabScopePolicy(binding, media)}
+        emptyMessage={media.emptyKey ? t(media.emptyKey) : undefined}
         displayStyle={media.displayStyle}
         acceptedTypes={media.acceptedTypes}
         companyName={companyName}

@@ -20,9 +20,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatMessageHTML } from '@/lib/message-utils';
-import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { MESSAGE_DIRECTION } from '@/types/conversations';
-import { MessageSquare, ChevronUp, RefreshCw, AlertCircle, Trash2, X, CheckSquare, Pin } from 'lucide-react';
+import { MessageSquare, RefreshCw, AlertCircle, Trash2, X, CheckSquare, Pin } from 'lucide-react';
+import { EmptyThreadNotice, LoadEarlierNav, MessageBubble, MessageMeta } from '@/components/shared/messaging/MessageBubble';
 import type { MessageListItem, ConversationListItem } from '@/hooks/inbox/useInboxApi';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -179,20 +179,18 @@ export function ThreadView({
 
       <CardContent className={`flex-1 overflow-y-auto ${spacing.padding.md}`}>
         {hasMore && (
-          <nav className={`flex justify-center ${spacing.margin.bottom.md}`} aria-label="Pagination">
-            <Button variant="outline" size="sm" onClick={onLoadMore} disabled={loading} className={spacing.gap.sm}>
-              <ChevronUp className={iconSizes.sm} />{t('inbox.thread.loadEarlier')}
-            </Button>
-          </nav>
+          <LoadEarlierNav
+            label={t('inbox.thread.loadEarlier')}
+            navLabel={t('inbox.thread.paginationLabel')}
+            onLoadMore={onLoadMore}
+            disabled={loading}
+          />
         )}
 
         {messages.length === 0 ? (
-          <section className="text-center py-8" aria-label="Empty thread">
-            <MessageSquare className={`${iconSizes.xl} ${colors.text.muted} mx-auto ${spacing.margin.bottom.sm} opacity-30`} />
-            <p className={colors.text.muted}>{t('inbox.thread.noMessages')}</p>
-          </section>
+          <EmptyThreadNotice message={t('inbox.thread.noMessages')} label={t('inbox.thread.emptyLabel')} />
         ) : (
-          <ul className={spacing.spaceBetween.md} role="log" aria-label="Messages">
+          <ul className={spacing.spaceBetween.md} role="log" aria-label={t('inbox.thread.messagesLabel')}>
             {messages.map((message) => {
               const isOutbound = message.direction === MESSAGE_DIRECTION.OUTBOUND;
               const relativeTime = getRelativeTime(message.createdAt, t);
@@ -211,9 +209,11 @@ export function ThreadView({
                     onReaction={onToggleReaction ? handleReaction : undefined}
                     userReactions={getReactionsFn ? getReactionsFn(message.id).userReactions : undefined}
                   >
-                    <article
+                    <MessageBubble
+                      outbound={isOutbound}
+                      selected={messageIsSelected}
+                      selectable={isSelectionMode}
                       onClick={isSelectionMode ? () => toggleSelect(message.id) : undefined}
-                      className={`ds-messageBubble ${isOutbound ? 'ds-messageBubble--outbound' : 'ds-messageBubble--inbound'} max-w-[75%] ${TRANSITION_PRESETS.STANDARD_COLORS} ${isOutbound ? 'ml-auto' : ''} ${messageIsSelected ? 'ring-2 ring-primary ring-offset-2' : ''} ${isSelectionMode ? 'cursor-pointer hover:opacity-80' : ''}`}
                     >
                       {isSelectionMode && (
                         <div className="absolute -left-6 top-1/2 -translate-y-1/2">
@@ -221,15 +221,18 @@ export function ThreadView({
                         </div>
                       )}
 
-                      <header className={`flex items-center ${spacing.gap.sm} ${spacing.margin.bottom.xs} text-sm ${colors.text.muted}`}>
-                        {getSenderIcon(message.senderType, iconSizes)}
-                        <span className="font-medium">{message.senderName}</span>
-                        <time dateTime={message.createdAt} className="text-xs">{relativeTime}</time>
-                        {isOutbound && getMessageStatusIcon(message.deliveryStatus, iconSizes, colors)}
-                        {isPinnedFn && isPinnedFn(message.id) && (
-                          <Tooltip><TooltipTrigger asChild><span><Pin className={`${iconSizes.xs} text-[hsl(var(--text-warning))]`} /></span></TooltipTrigger><TooltipContent>{t('inbox.message.pinned')}</TooltipContent></Tooltip>
-                        )}
-                      </header>
+                      <MessageMeta
+                        icon={getSenderIcon(message.senderType, iconSizes)}
+                        name={message.senderName}
+                        at={message.createdAt}
+                        timeLabel={relativeTime}
+                        trailing={<>
+                          {isOutbound && getMessageStatusIcon(message.deliveryStatus, iconSizes, colors)}
+                          {isPinnedFn && isPinnedFn(message.id) && (
+                            <Tooltip><TooltipTrigger asChild><span><Pin className={`${iconSizes.xs} text-[hsl(var(--text-warning))]`} /></span></TooltipTrigger><TooltipContent>{t('inbox.message.pinned')}</TooltipContent></Tooltip>
+                          )}
+                        </>}
+                      />
 
                       <div className="ds-messageContent" dangerouslySetInnerHTML={{ __html: formatMessageHTML(message.content) }} />
 
@@ -242,7 +245,7 @@ export function ThreadView({
                         if (Object.keys(reactions).length === 0) return null;
                         return <ReactionBubbles messageId={message.id} reactions={reactions} userReactions={userReactions} onReactionClick={onToggleReaction ? handleReaction : undefined} isOutbound={isOutbound} />;
                       })()}
-                    </article>
+                    </MessageBubble>
                   </MessageContextMenu>
                 </li>
               );

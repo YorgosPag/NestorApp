@@ -121,6 +121,14 @@ export function isWholePetCount(value: number): boolean {
   return isWholeStayCount(value) && value <= STAY_PETS_CEILING;
 }
 
+/**
+ * **Δηλωμένο πλήθος κατοικιδίων σε αίτημα/κράτηση**: `0` («κανένα», ρητά) ή {@link isWholePetCount}
+ * (ADR-777 §8.60.21.7). Ο **ένας** κριτής του «0..5» — όχι inline σύγκριση σε κάθε αναλυτή.
+ */
+export function isDeclaredPetCount(value: unknown): value is number {
+  return typeof value === 'number' && (value === 0 || isWholePetCount(value));
+}
+
 // =============================================================================
 // 2. ΤΟ ΠΟΣΟ ΜΙΑΣ ΔΙΑΘΕΣΗΣ
 // =============================================================================

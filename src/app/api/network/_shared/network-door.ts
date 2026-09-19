@@ -30,6 +30,7 @@ import {
   type ApiActor,
 } from '@/lib/auth/personal-scope-middleware';
 import type { AuthContext } from '@/lib/auth/types';
+import type { NetworkRefusalCode } from '@/types/network-thread';
 import { belongsHere } from '@/types/workspace-membership';
 
 /** Ο δρων όπως τον χρειάζονται οι γραφείς του δικτύου — **τίποτα** από το σώμα του αιτήματος. */
@@ -115,9 +116,10 @@ export const NETWORK_REFUSAL_STATUS = {
   'target-not-in-workspace': 422,
   'target-is-counterpart': 422,
   'responsible-not-removable': 422,
-} as const satisfies Record<string, 403 | 404 | 409 | 422>;
+} as const satisfies Record<NetworkRefusalCode, 403 | 404 | 409 | 422>;
 
-export type NetworkRefusal = keyof typeof NETWORK_REFUSAL_STATUS;
+/** = το κοινό κλειστό σύνολο (`types/network-thread.ts`) — η οθόνη μεταφράζει **τα ίδια** ονόματα. */
+export type NetworkRefusal = NetworkRefusalCode;
 
 /** Το σώμα κάθε άρνησης — **ένα** σχήμα για όλες τις πόρτες. */
 export interface NetworkRefusalBody {

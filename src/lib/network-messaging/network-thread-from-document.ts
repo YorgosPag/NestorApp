@@ -1,0 +1,109 @@
+/**
+ * @fileoverview **ΤΑ ΣΥΝΟΡΑ ΑΝΑΓΝΩΣΗΣ ΤΟΥ ΝΗΜΑΤΟΣ ΣΤΟΝ ΠΕΛΑΤΗ** — αποθηκευμένο έγγραφο ⇒ τύπος του τομέα.
+ * @related ADR-867 Β7 · CHECK 3.74 (το δόγμα: `*-from-document.ts`, ποτέ `as T`) · `types/network-thread.ts`
+ * @module lib/network-messaging/network-thread-from-document
+ *
+ * 🔴 **ΓΙΑΤΙ ΟΧΙ `snapshot.data() as NetworkMessage`**: το έγγραφο έρχεται από τη **βάση**, όχι από τον
+ * μεταγλωττιστή. Μηνύματα γραμμένα **πριν** από ένα πεδίο (`readBeforeEdit` · Β7, `following` · Β7) δεν το
+ * έχουν — και ένα `undefined` που ο τύπος λέει `boolean | null` γίνεται «επεξεργάστηκε αφού το διάβασαν;
+ * όχι» σε μια οθόνη που το πιστεύει. Εδώ κάθε πεδίο κρίνεται και κάθε απουσία παίρνει την **ουδέτερη**
+ * τιμή που σημαίνει «δεν συνέβη».
+ *
+ * 🔑 **`null` ⇒ «δεν είναι έγγραφο του τομέα»** (λείπει ταυτότητα/αποστολέας/χρόνος) — **όχι** «λείπει
+ * προαιρετικό πεδίο». Ίδιο συμβόλαιο με τα σύνορα του ADR-777 (`useOwnedDocuments`).
+ */
+
+import {
+  NETWORK_ACT_KINDS,
+  NETWORK_AUDIENCE_REASONS,
+  NETWORK_AUDIENCE_ROLES,
+  NETWORK_AUDIENCE_SIDES,
+  NETWORK_THREAD_STATES,
+  type NetworkAudienceEntry,
+  type NetworkMessage,
+  type NetworkThread,
+  type NetworkThreadTopic,
+} from '@/types/network-thread';
+
+type Raw = Readonly<Record<string, unknown>>;
+
+const isRecord = (value: unknown): value is Raw => typeof value === 'object' && value !== null;
+const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+const strOrNull = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+const boolOrNull = (value: unknown): boolean | null => (typeof value === 'boolean' ? value : null);
+const oneOf = <T extends string>(set: readonly T[], value: unknown): T | null =>
+  typeof value === 'string' && (set as readonly string[]).includes(value) ? (value as T) : null;
+
+/** Το μήνυμα — ό,τι διαβάζει ο πελάτης. Κενό σώμα επιτρέπεται (ταφόπλακα). */
+export function networkMessageFromDocument(raw: unknown, id: string): NetworkMessage | null {
+  if (!isRecord(raw)) return null;
+  const senderUid = str(raw.senderUid);
+  const createdAt = str(raw.createdAt);
+  if (senderUid === null || createdAt === null) return null;
+  return {
+    id,
+    senderUid,
+    text: typeof raw.text === 'string' ? raw.text : '',
+    createdAt,
+    editedAt: strOrNull(raw.editedAt),
+    retractedAt: strOrNull(raw.retractedAt),
+    readBeforeRetraction: boolOrNull(raw.readBeforeRetraction),
+    readBeforeEdit: boolOrNull(raw.readBeforeEdit),
+  };
+}
+
+/** Μια γραμμή ακροατηρίου. Άγνωστη πλευρά/ρόλος ⇒ `null`: η λίστα δεν μαντεύει ποιος είναι ποιος. */
+export function networkAudienceFromDocument(raw: unknown, id: string): NetworkAudienceEntry | null {
+  if (!isRecord(raw)) return null;
+  const side = oneOf(NETWORK_AUDIENCE_SIDES, raw.side);
+  const role = oneOf(NETWORK_AUDIENCE_ROLES, raw.role);
+  const since = str(raw.since);
+  if (side === null || role === null || since === null) return null;
+  return {
+    uid: str(raw.uid) ?? id,
+    side,
+    role,
+    reason: oneOf(NETWORK_AUDIENCE_REASONS, raw.reason) ?? 'added',
+    addedBy: strOrNull(raw.addedBy) ?? '',
+    since,
+    until: strOrNull(raw.until),
+    lastReadAt: strOrNull(raw.lastReadAt),
+    muted: raw.muted === true,
+    following: raw.following === true,
+    threadActivityAt: str(raw.threadActivityAt) ?? since,
+  };
+}
+
+function topicOf(raw: unknown): NetworkThreadTopic | null {
+  if (!isRecord(raw)) return null;
+  if (raw.kind === 'act') {
+    const actKind = oneOf(NETWORK_ACT_KINDS, raw.actKind);
+    const actSeed = str(raw.actSeed);
+    const hostCompanyId = str(raw.hostCompanyId);
+    const counterpartUid = str(raw.counterpartUid);
+    if (actKind === null || actSeed === null || hostCompanyId === null || counterpartUid === null) return null;
+    return { kind: 'act', actKind, actSeed, hostCompanyId, counterpartUid };
+  }
+  if (raw.kind === 'relationship' && Array.isArray(raw.personUids) && raw.personUids.length === 2) {
+    const [a, b] = raw.personUids.map(str);
+    return a && b ? { kind: 'relationship', personUids: [a, b] } : null;
+  }
+  return null;
+}
+
+/** Το νήμα. Άγνωστο θέμα ⇒ `null` (η οθόνη δεν δείχνει νήμα που δεν καταλαβαίνει). */
+export function networkThreadFromDocument(raw: unknown, id: string): NetworkThread | null {
+  if (!isRecord(raw)) return null;
+  const topic = topicOf(raw.topic);
+  const createdAt = str(raw.createdAt);
+  if (topic === null || createdAt === null) return null;
+  return {
+    id,
+    topic,
+    // ⚠️ Άγνωστη κατάσταση ⇒ `closed`, ΠΟΤΕ `open`: η οθόνη κρύβει το «γράψε» αντί να υποσχεθεί
+    //    αποστολή που ο γραφέας θα αρνηθεί (`thread-closed`).
+    state: oneOf(NETWORK_THREAD_STATES, raw.state) ?? 'closed',
+    createdAt,
+    lastMessageAt: strOrNull(raw.lastMessageAt),
+  };
+}

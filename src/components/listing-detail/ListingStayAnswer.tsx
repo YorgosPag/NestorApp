@@ -5,9 +5,12 @@
  *
  * 🏆 Εκεί όπου η αγορά γράφει «μη διαθέσιμο», εδώ λέμε **γιατί** και **τι μπορείς να κάνεις**:
  * νωρίτερη άφιξη, κοντινότερη επιτρεπτή μέρα, «ελεύθερο ξανά από», τα κομμάτια που χωράνε.
- * Η τιμή δίνεται **σύνολο + ανάλυση ανά νύχτα** (Omnibus: ο επισκέπτης βλέπει τι πληρώνει).
+ * Η τιμή δίνεται **σύνολο + ανάλυση**: νύχτες (ανά νύχτα) **και** χρεώσεις με την αριθμητική τους
+ * («10 € × 2 κατοικίδια × 3 νύχτες») — Οδηγία 2011/83/ΕΕ άρ. 6(1)(e): ο επισκέπτης βλέπει τι πληρώνει
+ * και **πώς** βγήκε (ADR-777 §8.60.21.7). Τίποτα δεν ξαναϋπολογίζεται εδώ: όλα έρχονται από το `stayQuoteOf`.
  *
- * @related ADR-835 §4.7 · §18.4 · §21 · lib/stay/stay-availability-vocabulary.ts · lib/stay/stay-nightly-quote.ts
+ * @related ADR-835 §4.7 · §18.4 · §21 · ADR-777 §8.60.21.7 · lib/stay/stay-availability-vocabulary.ts ·
+ *   lib/stay/stay-nightly-quote.ts · lib/stay/stay-quote-fees.ts
  */
 
 import React from 'react';
@@ -16,7 +19,9 @@ import { formatCalendarDay, formatDateTime, formatList } from '@/lib/intl-format
 import { formatMinor } from '@/lib/money/money';
 import { isStayable, type StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
 import { STAY_HOLD_TIME_FORMAT } from '@/lib/stay/stay-hold-deadline';
-import type { StayQuote } from '@/lib/stay/stay-nightly-quote';
+import type { StayPricedQuote, StayQuote } from '@/lib/stay/stay-nightly-quote';
+import type { StayQuoteFee } from '@/lib/stay/stay-quote-fees';
+import type { PetFeeBasis } from '@/types/property-offers';
 import type { StayAnswersState } from '@/hooks/listings/useStayAnswers';
 
 /** Η κύρια πρόταση — κλειδιά ΚΥΡΙΟΛΕΚΤΙΚΑ (ADR-744), παράμετροι από την απάντηση. */
@@ -67,14 +72,36 @@ function remediesOf(answer: StayAvailabilityAnswer, t: (key: string, params?: Re
   return out;
 }
 
-function QuoteView({ quote }: { readonly quote: StayQuote }): React.ReactElement {
+/**
+ * Η γραμμή κάθε τρόπου χρέωσης — κλειδιά ΚΥΡΙΟΛΕΚΤΙΚΑ (CHECK 3.13/3.34). `Record` πάνω στο κλειστό
+ * σύνολο ⇒ νέος τρόπος δεν μεταγλωττίζεται χωρίς πρόταση.
+ */
+const PET_FEE_LINE_KEY: Readonly<Record<PetFeeBasis, string>> = {
+  stay: 'short-stay:quote.fee.pet.stay',
+  night: 'short-stay:quote.fee.pet.night',
+  pet: 'short-stay:quote.fee.pet.pet',
+  petNight: 'short-stay:quote.fee.pet.petNight',
+};
+
+/** «Κατοικίδιο: 10 € × 2 κατοικίδια × 3 νύχτες = 60 €» — η αριθμητική **ως ήρθε**, ποτέ ξαναϋπολογισμένη. */
+function feeLine(fee: StayQuoteFee, nights: number, t: (key: string, params?: Record<string, unknown>) => string): string {
+  return t(PET_FEE_LINE_KEY[fee.basis], {
+    unit: formatMinor(fee.unitMinor), pets: fee.pets, nights, amount: formatMinor(fee.amountMinor),
+  });
+}
+
+function PricedQuote({ quote }: { readonly quote: StayPricedQuote }): React.ReactElement {
   const { t } = useTranslation(['short-stay']);
-  if (quote.kind === 'unpriced') return <p className="text-sm text-muted-foreground">{t('short-stay:quote.unpriced')}</p>;
+  const count = quote.nights.length;
   return (
     <details className="text-sm">
       <summary className="cursor-pointer font-semibold text-foreground">
-        {t('short-stay:quote.total', { total: formatMinor(quote.totalMinor), count: quote.nights.length })}
+        {t('short-stay:quote.total', { total: formatMinor(quote.totalMinor), count })}
       </summary>
+      <ul className="mt-1 flex flex-col gap-0.5 text-foreground">
+        <li>{t('short-stay:quote.nights', { amount: formatMinor(quote.nightsMinor), count })}</li>
+        {quote.fees.map((fee) => <li key={fee.kind}>{feeLine(fee, count, t)}</li>)}
+      </ul>
       <p className="mt-1 text-xs text-muted-foreground">{t('short-stay:quote.breakdown')}</p>
       <ul className="mt-1 flex flex-col gap-0.5 text-muted-foreground">
         {quote.nights.map((night) => (
@@ -83,6 +110,14 @@ function QuoteView({ quote }: { readonly quote: StayQuote }): React.ReactElement
       </ul>
     </details>
   );
+}
+
+function QuoteView({ quote }: { readonly quote: StayQuote }): React.ReactElement {
+  const { t } = useTranslation(['short-stay']);
+  if (quote.kind === 'priced') return <PricedQuote quote={quote} />;
+  // Νύχτες χωρίς τιμή, ή χρέωση που δεν διαβάζεται — ονομάζεται **ποιο**, ποτέ σύνολο με τρύπα.
+  const line = quote.missing.length > 0 ? t('short-stay:quote.unpriced') : t('short-stay:quote.unpricedFee');
+  return <p className="text-sm text-muted-foreground">{line}</p>;
 }
 
 export function ListingStayAnswer({ listingId, state }: {

@@ -24,9 +24,7 @@
  */
 
 import type { MinorAmount } from '@/lib/money/money';
-import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import type { PublicStayAnswer } from '@/lib/stay/stay-public-request';
-import type { PublicListing } from '@/types/public-listing';
 
 /** Το σύνολο μιας διαμονής που **μπορεί** να γίνει: ποσό και πλήθος νυχτών. */
 export interface StayTotal {
@@ -61,34 +59,15 @@ export function stayTotalOf(stay: PublicStayAnswer | undefined): StayTotal | nul
 }
 
 /**
- * Αγγελίες όπου το σύνολο **δεν θα ήταν ολόκληρο**: ο επισκέπτης φέρνει κατοικίδιο και ο κάτοχος
- * χρεώνει (ADR-777 §8.60.21). Η χρέωση δεν μπαίνει ακόμη στο σύνολο του διακομιστή (δηλωμένο
- * όριο, Φ5) ⇒ **κανένα σύνολο** — ίδιος λόγος με το `unpriced`: μερικό άθροισμα = φθηνότερο ψέμα.
- * Η σελίδα της αγγελίας λέει τη χρέωση ρητά.
+ * Όλες οι απαντήσεις → πίνακας συνόλων. Αγγελίες χωρίς σύνολο **λείπουν** από τον πίνακα.
+ *
+ * 🔑 **Το σύνολο είναι ολόκληρο ΚΑΙ με κατοικίδιο** (ADR-777 §8.60.21.7): ο διακομιστής βάζει τη
+ * χρέωση κατοικιδίου στην **ίδια** τιμολόγηση (`stayQuoteOf`). Μέχρι τη Φ5 οι αγγελίες με χρέωση
+ * **σβήνονταν** εδώ (`listingsWithUnpricedPetFee`) — ποτέ μερικό άθροισμα· τώρα δεν χρειάζεται.
  */
-export function listingsWithUnpricedPetFee(
-  listings: readonly PublicListing[],
-  query: StayQuery | null,
-): ReadonlySet<string> {
-  const pets = query?.pets ?? null;
-  if (pets === null || pets <= 0) return NO_LISTINGS;
-  const charged = listings.filter((listing) => {
-    const policy = listing.stay?.pets ?? null;
-    return policy !== null && policy.accepts !== 'no' && policy.fee !== null;
-  });
-  return new Set(charged.map((listing) => listing.id));
-}
-
-const NO_LISTINGS: ReadonlySet<string> = new Set();
-
-/** Όλες οι απαντήσεις → πίνακας συνόλων. Αγγελίες χωρίς σύνολο **λείπουν** από τον πίνακα. */
-export function stayTotalsOf(
-  answers: Readonly<Record<string, PublicStayAnswer>>,
-  incomplete: ReadonlySet<string> = NO_LISTINGS,
-): StayTotals {
+export function stayTotalsOf(answers: Readonly<Record<string, PublicStayAnswer>>): StayTotals {
   const totals: Record<string, StayTotal> = {};
   for (const [listingId, stay] of Object.entries(answers)) {
-    if (incomplete.has(listingId)) continue;
     const total = stayTotalOf(stay);
     if (total !== null) totals[listingId] = total;
   }

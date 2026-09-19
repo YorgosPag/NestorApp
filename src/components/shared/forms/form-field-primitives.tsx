@@ -34,6 +34,9 @@
 
 import React from 'react';
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 
 /**
  * Μια ομάδα πεδίων με λεζάντα — **σημασιολογικό `<fieldset>`**, όχι `<div>` (N.4).
@@ -115,22 +118,7 @@ const INPUT_ADAPTERS: Readonly<
   },
 };
 
-/**
- * **Ένα πεδίο εισόδου** — αριθμητικό ή κειμενικό, με ρητό είδος.
- *
- * ⚠️ Τα `min`/`max` αφορούν **μόνο** το αριθμητικό, και **δεν** επιβάλλεται στον τύπο: ένα
- * `min` σε κειμενικό πεδίο είναι αγνοούμενο από τον περιηγητή, ενώ μια διακριτή ένωση
- * props θα διπλασίαζε την υπογραφή — δηλαδή θα ξαναγεννούσε τον κλώνο στον **τύπο**.
- */
-export function FormInputField<TValues extends FieldValues>({
-  control,
-  name,
-  label,
-  kind,
-  min,
-  max,
-  placeholder,
-}: {
+interface FormInputFieldProps<TValues extends FieldValues> {
   control: Control<TValues>;
   name: FieldPath<TValues>;
   label: string;
@@ -139,8 +127,37 @@ export function FormInputField<TValues extends FieldValues>({
   /** Ανώτατο όριο του περιηγητή — **υπόδειξη**· την αλήθεια την κρίνει το invariant. */
   max?: number;
   placeholder?: string;
-}): React.ReactElement {
+  /**
+   * Το μήνυμα λάθους **αυτού** του πεδίου (ADR-866 §2.10 Π1) — δίπλα του, όχι σε λίστα κάτω από άλλο πεδίο.
+   * ⇒ `aria-invalid` + `aria-describedby`: ο αναγνώστης οθόνης ακούει το λάθος **μαζί** με την ετικέτα (WCAG 3.3.1).
+   */
+  error?: string;
+}
+
+const INPUT_CLASS = 'rounded-md border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground';
+
+/** Η κατάσταση λάθους ενός πεδίου — ARIA **και** περίγραμμα από **μία** κρίση (όχι τρεις `error !== undefined`). */
+function fieldErrorState(error: string | undefined, errorId: string) {
+  const invalid = error !== undefined;
+  return {
+    'aria-invalid': invalid ? true : undefined,
+    'aria-describedby': invalid ? errorId : undefined,
+    className: cn(INPUT_CLASS, invalid ? 'border-destructive' : 'border-border'),
+  };
+}
+
+/**
+ * **Ένα πεδίο εισόδου** — αριθμητικό ή κειμενικό, με ρητό είδος.
+ *
+ * ⚠️ Τα `min`/`max` αφορούν **μόνο** το αριθμητικό, και **δεν** επιβάλλεται στον τύπο: ένα
+ * `min` σε κειμενικό πεδίο είναι αγνοούμενο από τον περιηγητή, ενώ μια διακριτή ένωση
+ * props θα διπλασίαζε την υπογραφή — δηλαδή θα ξαναγεννούσε τον κλώνο στον **τύπο**.
+ */
+export function FormInputField<TValues extends FieldValues>({
+  control, name, label, kind, min, max, placeholder, error,
+}: FormInputFieldProps<TValues>): React.ReactElement {
   const inputId = React.useId();
+  const errorId = `${inputId}-error`;
   const adapter = INPUT_ADAPTERS[kind];
 
   return (
@@ -154,6 +171,8 @@ export function FormInputField<TValues extends FieldValues>({
         render={({ field }) => (
           <input
             id={inputId}
+            // `ref` ⇒ το `setFocus` του react-hook-form φτάνει στο πεδίο (εστίαση στο πρώτο μη έγκυρο).
+            ref={field.ref}
             type={adapter.type}
             inputMode={adapter.inputMode}
             min={min}
@@ -161,10 +180,13 @@ export function FormInputField<TValues extends FieldValues>({
             placeholder={placeholder}
             value={adapter.toInput(field.value)}
             onChange={(event) => field.onChange(adapter.fromInput(event.target.value))}
-            className="rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+            // `onBlur` ⇒ `touchedFields`: η φόρμα ξέρει ότι ο άνθρωπος **πέρασε** από το πεδίο, όχι μόνο αν έγραψε.
+            onBlur={field.onBlur}
+            {...fieldErrorState(error, errorId)}
           />
         )}
       />
+      {error !== undefined && <p id={errorId} className={cn('m-0 text-sm', COLOR_BRIDGE.text.error)}>{error}</p>}
     </div>
   );
 }

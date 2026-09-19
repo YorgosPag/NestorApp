@@ -64,6 +64,7 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { useFileDownload } from './hooks/useFileDownload';
 import { useEntityFilesSearch } from './hooks/useEntityFilesSearch';
 import { useStableFileCustody } from './hooks/useStableFileCustody';
+import type { FilesTabScopePolicy } from './utils/upload-scope';
 
 // Components
 import { EntityFilesToolbar } from './EntityFilesToolbar';
@@ -108,6 +109,10 @@ export interface EntityFilesManagerProps {
   levelFloorId?: string;
   /** Open a specific tab on first render (e.g. 'trash' when parent entity is in trash) */
   defaultActiveTab?: 'files' | 'archived' | 'trash';
+  /** ADR-866 §2.10 Β1 — «τι διαβάζω» παραγόμενο από «τι προσφέρω» (`upload-scope.ts`). Παράλειψη ⇒ `domain`/`category`. */
+  scopePolicy?: FilesTabScopePolicy;
+  /** Κείμενο κενής όψης της καρτέλας (π.χ. «Τοπογραφικό») — παράλειψη ⇒ το γενικό της `displayStyle`. */
+  emptyMessage?: string;
 }
 
 // ============================================================================
@@ -141,6 +146,8 @@ export function EntityFilesManager({
   listGroupingMode,
   levelFloorId,
   defaultActiveTab,
+  scopePolicy,
+  emptyMessage,
 }: EntityFilesManagerProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const fullscreen = useFullscreen();
@@ -183,6 +190,7 @@ export function EntityFilesManager({
     domain: fetchAllDomains ? undefined : domain,
     category: fetchAllDomains ? undefined : category,
     purpose: fetchAllDomains ? undefined : purpose,
+    scopes: scopePolicy?.readScopes,
     levelFloorId,
     autoFetch: true,
     realtime: displayStyle === 'floorplan-gallery',
@@ -206,8 +214,8 @@ export function EntityFilesManager({
 
   const { handleUpload, handleCapture, uploading } = useFileUpload({
     custody, projectId, entityType, entityId,
-    domain, category, entityLabel, purpose, levelFloorId, currentUserId,
-    selectedEntryPoint, customTitle, refetch, recordFileActivity,
+    domain, category, entityLabel, purpose, purposeAuthority: scopePolicy?.purposeAuthority, levelFloorId,
+    currentUserId, selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete: () => {
       setShowUploadZone(false);
       setSelectedEntryPoint(null);
@@ -425,6 +433,7 @@ export function EntityFilesManager({
           viewMode={viewMode}
           treeViewMode={treeViewMode}
           displayStyle={displayStyle}
+          emptyMessage={emptyMessage}
           fetchAllDomains={fetchAllDomains}
           listGroupingMode={listGroupingMode}
           companyName={companyName}

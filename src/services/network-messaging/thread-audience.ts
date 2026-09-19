@@ -108,6 +108,7 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
       until: null,
       lastReadAt: null,
       muted: false,
+      following: false,
       threadActivityAt: input.threadActivityAt,
     },
   };
@@ -120,7 +121,7 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
  * ιστορικό θητειών θα ήθελε δεύτερη υποσυλλογή· για το ερώτημα του Β8 *(«υπήρξε ποτέ
  * ομάδα;»)* αρκεί η **ύπαρξη** της γραμμής, που εδώ δεν χάνεται ποτέ.
  *
- * 🔑 `lastReadAt` και `muted` **επιβιώνουν**: είναι «τι έχει διαβάσει» και «τι θέλει να
+ * 🔑 `lastReadAt`, `muted` και `following` **επιβιώνουν**: είναι «τι έχει διαβάσει» και «τι θέλει να
  * ακούει» — δικά **του**, όχι της ομάδας. Ένα μηδένισμα θα του ξανάστελνε ειδοποιήσεις
  * που είχε σιγήσει ο ίδιος.
  */

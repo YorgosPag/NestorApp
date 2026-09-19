@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { StayCountSelect, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   STAY_BOOKING_MAX_GUESTS,
@@ -62,19 +63,49 @@ export function StayBlockForm({ selection, busy, onSend }: FormProps): React.Rea
   );
 }
 
+/** Η παρέα της χειροκίνητης κράτησης: άτομα + κατοικίδια (ADR-777 §8.60.21.7). */
+function BookingPartyFields({ guests, onGuests, pets, onPets }: {
+  readonly guests: number;
+  readonly onGuests: (guests: number) => void;
+  readonly pets: number | null;
+  readonly onPets: (pets: number | null) => void;
+}): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  const guestsId = React.useId();
+  return (
+    <>
+      <Label htmlFor={guestsId}>{t('property-market:offer.stayCalendar.book.guests')}</Label>
+      <Input
+        id={guestsId}
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={STAY_BOOKING_MAX_GUESTS}
+        value={guests}
+        onChange={(event) => onGuests(Number(event.target.value))}
+      />
+      <StayCountSelect
+        label={t('property-market:offer.stayCalendar.book.pets')} anyLabel={t('property-market:offer.stayCalendar.book.petsNone')}
+        choices={STAY_PET_CHOICES} value={pets} onChange={onPets}
+      />
+    </>
+  );
+}
+
 export function StayBookingForm({ selection, busy, onSend }: FormProps): React.ReactElement {
   const { t } = useTranslation(['property-market']);
   const [guestLabel, setGuestLabel] = React.useState('');
   const [guests, setGuests] = React.useState(2);
+  // ADR-777 §8.60.21.7: `null` στον επιλογέα = «χωρίς κατοικίδια» ⇒ ρητό `0` στην εντολή.
+  const [pets, setPets] = React.useState<number | null>(null);
   const labelId = React.useId();
-  const guestsId = React.useId();
   const ready = guestLabel.trim() !== '' && Number.isInteger(guests) && guests >= 1;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!ready) return;
     onSend({
-      action: 'book', checkIn: selection.from, checkOut: selection.to, guests, guestLabel: guestLabel.trim(),
+      action: 'book', checkIn: selection.from, checkOut: selection.to, guests, pets: pets ?? 0, guestLabel: guestLabel.trim(),
       // Καμία αποδοχή εκ των προτέρων: αν παρακάμπτει κανόνες, ο διακομιστής τους ονομάζει.
       acknowledgedWarnings: [],
     });
@@ -93,16 +124,7 @@ export function StayBookingForm({ selection, busy, onSend }: FormProps): React.R
         placeholder={t('property-market:offer.stayCalendar.book.guestLabelPlaceholder')}
         onChange={(event) => setGuestLabel(event.target.value)}
       />
-      <Label htmlFor={guestsId}>{t('property-market:offer.stayCalendar.book.guests')}</Label>
-      <Input
-        id={guestsId}
-        type="number"
-        inputMode="numeric"
-        min={1}
-        max={STAY_BOOKING_MAX_GUESTS}
-        value={guests}
-        onChange={(event) => setGuests(Number(event.target.value))}
-      />
+      <BookingPartyFields guests={guests} onGuests={setGuests} pets={pets} onPets={setPets} />
       <button type="submit" disabled={busy || !ready} className={cn(BUTTON, COLOR_BRIDGE.action.primary)}>
         {t('property-market:offer.stayCalendar.book.submit')}
       </button>

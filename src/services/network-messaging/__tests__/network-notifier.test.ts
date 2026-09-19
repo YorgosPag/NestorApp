@@ -197,6 +197,22 @@ describe('Ε — νέο μήνυμα, στην πραγματική διαδρο
     await send(db, OWNER, T1, 'ΜΥΣΤΙΚΗ-ΤΙΜΗ-420000');
     expect(JSON.stringify(sent())).not.toContain('ΜΥΣΤΙΚΗ-ΤΙΜΗ-420000');
   });
+
+  it('Ε-8 🔗 Β7 §8 #9 — «Άνοιγμα» στο ΝΗΜΑ: γραφείο ⇒ εντολή · ιδιοκτήτης ⇒ η αγγελία του, με τον χώρο (μετάλλαξη: μόνο χώρος)', async () => {
+    const { db } = await world();
+    await send(db, OWNER, T1);
+    await send(db, MARIA, T2);
+
+    const byRecipient = new Map(sent().map((r) => [r.recipientId, r]));
+    expect(byRecipient.get(MARIA)).toMatchObject({
+      workspace: { kind: 'org', companyId: HOST },
+      actions: [{ id: 'view', url: `/listings/mandates/ownp_1#network-thread-${THREAD_ID}` }],
+    });
+    expect(byRecipient.get(OWNER)).toMatchObject({
+      workspace: { kind: 'personal', userId: OWNER },
+      actions: [{ id: 'view', url: `/offers/ownp_1#network-thread-${THREAD_ID}` }],
+    });
+  });
 });
 
 describe('Ο — είσοδος στην ομάδα, στις πραγματικές διαδρομές', () => {
@@ -213,6 +229,8 @@ describe('Ο — είσοδος στην ομάδα, στις πραγματικ
       workspace: { kind: 'org', companyId: HOST },
       titleKey: 'networkTeamJoined.addedTitle',
       eventId: `network-team:${TEAM_ID}:v2`,
+      // 🔗 Β7 §8 #9 — ο νέος ανοίγει την εντολή, στο νήμα της (εκεί ζει και η ομάδα).
+      actions: [{ id: 'view', url: `/listings/mandates/ownp_1#network-thread-${THREAD_ID}` }],
     });
   });
 

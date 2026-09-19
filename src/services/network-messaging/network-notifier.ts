@@ -37,8 +37,9 @@ import {
 import { listingNoticeTitle } from '@/lib/listings/listing-notice-title';
 import { actSubjectOf } from '@/lib/network-edge/edge-sources';
 import { createModuleLogger } from '@/lib/telemetry';
+import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import { resolveUserDisplayName } from '@/services/entity-audit.service';
-import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+import { dispatchNotification, type DispatchDestination } from '@/server/notifications/notification-orchestrator';
 import { resolveRecipientEmail } from '@/server/notifications/notification-email-leg';
 import type {
   NetworkActKind,
@@ -54,6 +55,7 @@ import {
 } from '@/types/workspace-membership';
 
 import { readAwaysOf } from './network-away';
+import { actHostDestination, threadMessageDestination } from './network-destination';
 import {
   planMessageNotifications,
   type MessageRecipient,
@@ -177,6 +179,28 @@ function messageWording(
   return { key: 'direct', params: { sender, subject } };
 }
 
+/**
+ * 🔗 ADR-867 Β7 · §8 #9 — «Άνοιγμα» προς το νήμα, **με τον χώρο του** (ADR-849 Β1). Νήμα σχέσης ⇒ κανένας
+ * προορισμός ακόμη (δεν έχει οθόνη, Β8): μόνο ο χώρος, ποτέ κουμπί προς το πουθενά (ADR-848).
+ */
+function messageDispatchDestination(
+  notice: NetworkMessageNotice,
+  recipientUid: string,
+  workspace: WorkspaceRef,
+): DispatchDestination {
+  return threadMessageDestination(notice.topic, notice.threadId, recipientUid) ?? { workspace };
+}
+
+/**
+ * 🔗 ADR-867 Β7 · §8 #9 — ο νέος υπεύθυνος/συνεργάτης ανοίγει την **εντολή, στο νήμα της** (εκεί ζει και η
+ * ομάδα). Το νήμα μπορεί να μην υπάρχει ακόμη (ιδιοκτήτης χωρίς λογαριασμό, §8 #1): η σελίδα ανοίγει
+ * κανονικά και η άγκυρα απλώς δεν βρίσκει τίποτα να αποκαλύψει.
+ */
+function arrivalDispatchDestination(notice: TeamArrivalNotice, workspace: WorkspaceRef): DispatchDestination {
+  const threadId = generateDeterministicNetworkActThreadId(notice.team.actSeed);
+  return actHostDestination(notice.team, threadId) ?? { workspace };
+}
+
 function dispatchMessage(
   notice: NetworkMessageNotice,
   recipient: MessageRecipient,
@@ -187,7 +211,7 @@ function dispatchMessage(
     eventType: NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE,
     recipientId: recipient.uid,
     tenantId: workspaceTenantId(workspace),
-    workspace,
+    ...messageDispatchDestination(notice, recipient.uid, workspace),
     title: MESSAGE_SUBJECTS[wording.key](wording.params),
     titleKey: MESSAGE_TITLE_KEYS[wording.key],
     titleParams: { ...wording.params },
@@ -251,7 +275,7 @@ function dispatchArrival(
     eventType: NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED,
     recipientId: arrival.uid,
     tenantId: workspaceTenantId(workspace),
-    workspace,
+    ...arrivalDispatchDestination(notice, workspace),
     title: ARRIVAL_SUBJECTS[arrival.kind](params),
     titleKey: ARRIVAL_TITLE_KEYS[arrival.kind],
     titleParams: { ...params },

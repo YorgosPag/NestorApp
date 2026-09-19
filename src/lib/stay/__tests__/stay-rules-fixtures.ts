@@ -68,6 +68,8 @@ export function bookingEntry(id: string, checkIn: string, checkOut: string): Sta
     guests: 2,
     lifecycle: 'confirmed',
     riskDisclosedAt: null,
+    pets: null,
+    price: null,
     hold: null,
     resolution: null,
     guestUserId: null,

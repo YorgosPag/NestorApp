@@ -197,7 +197,10 @@
       "noMessages": "No messages in this conversation",
       "selectConversation": "Select a conversation to view messages",
       "participants": "Participants",
-      "unread": "{count} unread"
+      "unread": "{count} unread",
+      "paginationLabel": "Message pagination",
+      "emptyLabel": "Empty conversation",
+      "messagesLabel": "Messages"
     },
     "composer": {
       "placeholder": "Type your message...",

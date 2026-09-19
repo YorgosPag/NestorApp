@@ -62,6 +62,47 @@ describe('ListingStayAnswer', () => {
     expect(screen.getByText('short-stay:answer.freeRuns')).toBeInTheDocument();
   });
 
+  it('🏆 ADR-777 §8.60.21.7 — ανάλυση: νύχτες ΚΑΙ γραμμή κατοικιδίου με τον τρόπο της (όχι σκέτο «Pet fee»)', () => {
+    render(
+      <ListingStayAnswer
+        listingId="ownp_a"
+        state={{
+          kind: 'loaded',
+          answers: {
+            ownp_a: {
+              answer: { kind: 'free' },
+              quote: {
+                kind: 'priced',
+                nights: [{ date: '2027-10-05', amountMinor: 8000, source: 'base' }],
+                nightsMinor: 8000,
+                fees: [{ kind: 'pet', basis: 'petNight', unitMinor: 1000, units: 2, pets: 2, amountMinor: 2000 }],
+                totalMinor: 10000,
+              },
+              hold: null,
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('short-stay:quote.total')).toBeInTheDocument();
+    expect(screen.getByText('short-stay:quote.nights')).toBeInTheDocument();
+    expect(screen.getByText('short-stay:quote.fee.pet.petNight')).toBeInTheDocument();
+  });
+
+  it('🔴 χρέωση που δεν διαβάζεται ⇒ ονομάζεται, ποτέ σύνολο χωρίς αυτήν', () => {
+    render(
+      <ListingStayAnswer
+        listingId="ownp_a"
+        state={{
+          kind: 'loaded',
+          answers: { ownp_a: { answer: { kind: 'free' }, quote: { kind: 'unpriced', missing: [], missingFees: ['pet'] }, hold: null } },
+        }}
+      />,
+    );
+    expect(screen.getByText('short-stay:quote.unpricedFee')).toBeInTheDocument();
+    expect(screen.queryByText('short-stay:quote.total')).not.toBeInTheDocument();
+  });
+
   it('🔴 αποτυχία ⇒ δηλωμένη αποτυχία, ποτέ «ελεύθερο»', () => {
     render(<ListingStayAnswer listingId="ownp_a" state={{ kind: 'failed' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('short-stay:answer.failed');

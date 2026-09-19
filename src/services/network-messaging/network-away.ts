@@ -33,8 +33,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateDeterministicNetworkAwayId } from '@/services/enterprise-id.service';
 import type { NetworkAudienceEntry, NetworkAudienceRole } from '@/types/network-thread';
 
-import { networkThreadAudience } from './network-thread-ref';
 import { isLiveAudience } from './thread-audience';
+import { readAudienceAsReader } from './thread-reader';
 
 /**
  * **Ανώτατη διάρκεια.** Πέρα από έναν χρόνο δεν είναι «απουσία» — είναι **αποχώρηση**, και έχει
@@ -182,22 +182,22 @@ export async function readOwnAway(adminDb: AdminFirestore, uid: string, nowISO: 
 /**
  * 🔑 **Η παρουσία ενός νήματος**, για όποιον **διαβάζει ήδη** αυτό το νήμα — και για κανέναν άλλον.
  *
- * ⚠️ `not-audience` για ξένο **και** για ανύπαρκτο νήμα: η ίδια απάντηση (ADR-742). Αλλιώς η
- * διαδρομή θα έλεγε σε αγνώστους *«αυτό το νήμα υπάρχει, και ο Κώστας λείπει»*.
+ * ⚠️ `null` για ξένο **και** για ανύπαρκτο νήμα: η ίδια απάντηση (ADR-742). Αλλιώς η διαδρομή θα έλεγε
+ * σε αγνώστους *«αυτό το νήμα υπάρχει, και ο Κώστας λείπει»*. Ίδια σύμβαση με το `readAudienceAsReader`
+ * και το `readThreadPeople` (Β7) — ώστε η διαδρομή να τους περνά **αυτούσιους** (`thread-reader-route.ts`).
  */
 export async function readThreadPresence(
   adminDb: AdminFirestore,
   threadId: string,
   callerUid: string,
   nowISO: string,
-): Promise<{ readonly kind: 'ok'; readonly presence: ThreadPresence } | { readonly kind: 'not-audience' }> {
-  const audience = (await networkThreadAudience(adminDb, threadId).get()).docs
-    .map((doc) => doc.data() as NetworkAudienceEntry);
-  if (!isLiveAudience(audience.find((entry) => entry.uid === callerUid))) return { kind: 'not-audience' };
+): Promise<ThreadPresence | null> {
+  const audience = await readAudienceAsReader(adminDb, threadId, callerUid);
+  if (audience === null) return null;
 
   const others = audience.filter((entry) => isLiveAudience(entry) && entry.uid !== callerUid);
   const aways = await readAwaysOf(adminDb, others.map((entry) => entry.uid));
-  return { kind: 'ok', presence: presenceOf(audience, aways, callerUid, nowISO) };
+  return presenceOf(audience, aways, callerUid, nowISO);
 }
 
 /**

@@ -236,11 +236,19 @@ const LEDGER_DOC =
   + 'APPEND-ONLY: γραμμή που γράφτηκε δεν αλλάζει και δεν σβήνεται ποτέ (CHECK 3.86 Κ3). '
   + 'ΜΗΝ το γράψεις στο χέρι — η γραμμή είναι ΠΑΡΑΓΩΓΟ της πράξης, όχι ισχυρισμός για αυτήν.';
 
-/** Το μητρώο, ή κενό όταν δεν υπάρχει ακόμη. */
-function loadLedger() {
-  if (!fs.existsSync(paths.ledger)) return { $doc: LEDGER_DOC, deployments: [] };
-  const parsed = JSON.parse(fs.readFileSync(paths.ledger, 'utf8'));
+/**
+ * Το μητρώο από **κείμενο** — από όποιο δέντρο κι αν διαβάστηκε (δίσκος · index · commit, ADR-865
+ * §11.8). `null` ⇒ δεν υπάρχει εκεί ⇒ κενό μητρώο.
+ */
+function parseLedger(text) {
+  if (text === null) return { $doc: LEDGER_DOC, deployments: [] };
+  const parsed = JSON.parse(text);
   return { $doc: parsed.$doc ?? LEDGER_DOC, deployments: Array.isArray(parsed.deployments) ? parsed.deployments : [] };
+}
+
+/** Το μητρώο του **δίσκου**, ή κενό όταν δεν υπάρχει ακόμη. */
+function loadLedger() {
+  return parseLedger(fs.existsSync(paths.ledger) ? fs.readFileSync(paths.ledger, 'utf8') : null);
 }
 
 /** Κανονικά bytes μητρώου — ταξινομημένα κλειδιά, LF, τελικό newline (ίδια μηχανή με το 3.85). */
@@ -273,6 +281,8 @@ const FIREBASE_TOOLS_VERSION = '15.13.0';
  */
 const PIPELINE = Object.freeze({
   workflow: '.github/workflows/docker-build.yml',
+  /** Το **μόνο** ref που πυροδοτεί τη γραμμή (`on.push.branches`) — push αλλού δεν αναπτύσσει τίποτα. */
+  ref: 'refs/heads/main',
   environment: 'firebase-production',
   jobs: Object.freeze({ plan: 'firebase-plan', apply: 'firebase-apply', release: 'release' }),
 });
@@ -284,6 +294,27 @@ const PIPELINE = Object.freeze({
  * Argo CD (`diff normalization`): συγκρίνεται **σημασία**, όχι τέχνημα του checkout.
  */
 const normalizeEol = (text) => (typeof text === 'string' ? text.replace(/\r\n/g, '\n') : text);
+
+/**
+ * **Ποια απόδοση γραμμών του `text` έχει το αποτύπωμα `digest`;** — τα bytes που ταιριάζουν, ή
+ * `null`. Υποψήφιες: ως έχει · LF · CRLF.
+ *
+ * 🔴 ADR-865 Ε2 (μετρημένο 2026-09-19): το μητρώο κρατά το sha256 των bytes που **στάλθηκαν**, και
+ * από Windows (`core.autocrlf=true`) αυτά είναι **CRLF** (`storage.rules` → `bb78d397…`), ενώ το
+ * blob και το checkout του CI είναι **LF**. Σύγκριση `digest === digestOf(bytes)` έβγαζε άλλη
+ * απάντηση **ανάλογα με το μηχάνημα**. Το μητρώο είναι **append-only** ⇒ οι παλιές γραμμές **δεν**
+ * ξαναγράφονται: η κανονικοποίηση γίνεται στη **σύγκριση** (Argo CD *diff normalization*), όχι στην
+ * αποθήκευση. Ένα sha256 που ταιριάζει σε **μία** απόδοση είναι απόδειξη ίδιου περιεχομένου
+ * modulo αλλαγές γραμμής — καμία μαντεψιά.
+ */
+function renderingOf(digest, text) {
+  if (typeof text !== 'string') return null;
+  const lf = text.replace(/\r\n/g, '\n');
+  for (const bytes of [text, lf, lf.replace(/\n/g, '\r\n')]) {
+    if (digestOf(bytes) === digest) return bytes;
+  }
+  return null;
+}
 
 /** Η **τελευταία** καταγεγραμμένη ανάπτυξη ενός στόχου, ή `null`. */
 function lastDeployment(ledger, target) {
@@ -318,6 +349,7 @@ module.exports = {
   FIREBASE_TOOLS_VERSION,
   PIPELINE,
   normalizeEol,
+  renderingOf,
   NOT_JUDGED,
   LEDGER_DOC,
   declaredPath,
@@ -327,6 +359,7 @@ module.exports = {
   storageEntriesOf,
   releaseNameOf,
   wireOf,
+  parseLedger,
   loadLedger,
   renderLedger,
   rowKey,

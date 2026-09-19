@@ -151,6 +151,9 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
 
   it('Λ3 — οι τέσσερις τύποι της βάσης (μετρημένοι 2026-09-11) + η επιστροφή email κάρτας (Α21.20) + η ερώτηση αργιών (Α21.21) έχουν κανόνα', () => {
     expect([...RULED_EVENT_TYPES].sort()).toEqual([
+      // ADR-867 Β7 · §8 #9 — νέο μήνυμα (η πλευρά από το θέμα) · είσοδος στην ομάδα (η εντολή, στο νήμα).
+      'network.teamJoined',
+      'network.threadMessage',
       'properties.cardEmailReturned',
       'properties.demandInterest',
       'properties.demandListingMatch',

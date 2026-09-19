@@ -42,6 +42,7 @@
  * κανόνας, όχι η εξαίρεση. Ενικός εδώ θα προδίκαζε **μία** ανά χρήστη, και θα το
  * ανακάλυπτε κανείς όταν ήταν αργά. Ίδιο σκεπτικό με το `MY_DEMANDS_ROUTE`.
  */
+import { networkThreadFragment } from '@/lib/network-messaging/thread-anchor';
 import { typedHref } from '@/lib/workspace/route-worlds';
 
 export const MY_OFFERS_ROUTE = '/offers' as const;
@@ -74,6 +75,16 @@ export const OFFER_DETAIL_ROUTE_BASE = '/offers';
  */
 export function offerDetailHref(ownerPropertyId: string) {
   return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}`);
+}
+
+/**
+ * **Η αγγελία του ιδιοκτήτη, ανοιχτή στο νήμα με ένα γραφείο** (ADR-867 Β7 · §8 #9) — ο προορισμός της
+ * ειδοποίησης «νέο μήνυμα» για τον ιδιοκτήτη. Ένα νήμα **ανά γραφείο** ⇒ η άγκυρα κρατά το id του νήματος.
+ */
+export function offerThreadHref(ownerPropertyId: string, threadId: string) {
+  return typedHref(
+    `${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}${networkThreadFragment(threadId)}`,
+  );
 }
 
 /** ADR-835 §20 — το **ημερολόγιο κρατήσεων** μιας καταχώρησης βραχυχρόνιας μίσθωσης. */

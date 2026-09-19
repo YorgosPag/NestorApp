@@ -67,6 +67,8 @@ import 'server-only';
 
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { workspaceMembersCollection } from '@/lib/workspace/workspace-member-ref';
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { isRoleBypass } from './roles';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -255,6 +257,24 @@ export function normalizeMembership(
     addedBy: typeof data.addedBy === 'string' ? data.addedBy : null,
     updatedAt: data.updatedAt,
   };
+}
+
+/**
+ * **Τα ΕΝΕΡΓΑ μέλη ενός χώρου** — μεταφρασμένα από τον **έναν** κριτή (`normalizeMembership`).
+ *
+ * 🔗 ADR-867 Β7 (N.0.2): το ίδιο ερώτημα ζούσε **inline** στη μεταβίβαση της αποχώρησης
+ * (`act-team-departure.ts`) και θα γραφόταν **δεύτερη** φορά για τον επιλογέα της ομάδας πράξης.
+ * ⚠️ Το `where('status', '==', 'active')` είναι **φίλτρο κόστους**· η αλήθεια «είναι ενεργός;» την
+ * κρίνει **ξανά** ο `normalizeMembership` (fail-closed σε άγνωστη τιμή) — ό,τι δεν περνά, πέφτει.
+ */
+export async function listActiveWorkspaceMembers(
+  db: AdminFirestore,
+  companyId: string,
+): Promise<readonly WorkspaceMembership[]> {
+  const snapshot = await workspaceMembersCollection(db, companyId).where('status', '==', 'active').get();
+  return snapshot.docs
+    .map((doc) => normalizeMembership(doc.id, doc.data()))
+    .filter((member) => member.status === 'active');
 }
 
 // =============================================================================

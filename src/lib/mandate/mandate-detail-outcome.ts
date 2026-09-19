@@ -25,6 +25,7 @@
  */
 
 import type { MandateCatalogRow } from '@/lib/mandate/mandate-catalog-row';
+import type { ActNetworkRefs } from '@/lib/network-messaging/act-network-refs';
 
 /** Η εντολή βρέθηκε, και η γραμμή της είναι έτοιμη. */
 export const MANDATE_FOUND = 'found';
@@ -80,10 +81,17 @@ export type MandateDetailOutcome =
  * {@link MANDATE_NOT_YOURS} **δομική**. Μια μελλοντική πέμπτη έκβαση θα μπει εδώ
  * **μόνο αν κάποιος το γράψει** — δεν κληρονομείται σιωπηλά.
  */
-export type MandateDetailResponse = Exclude<
-  MandateDetailOutcome,
-  { readonly kind: typeof MANDATE_NOT_YOURS }
->;
+export type MandateDetailResponse =
+  | (Extract<MandateDetailOutcome, { readonly kind: typeof MANDATE_FOUND }> & {
+      /**
+       * 💬 ADR-867 Β7 · §8 #8 — **το νήμα και η ομάδα αυτής της εντολής**, για την οθόνη του γραφείου.
+       * Παράγονται από τον **ίδιο** καθαρό τόπο (`mandateNetworkRefs`) με την οθόνη του ιδιοκτήτη, με το
+       * γραφείο που **έκρινε ο φρουρός** — ο πελάτης θα έπρεπε να το μαντέψει (μέλος πολλών γραφείων).
+       * ⚠️ Η γνώση των id **δεν δίνει** τίποτα: την ανάγνωση την κρίνει ο κανόνας του ακροατηρίου.
+       */
+      readonly network: ActNetworkRefs;
+    })
+  | Exclude<MandateDetailOutcome, { readonly kind: typeof MANDATE_NOT_YOURS } | { readonly kind: typeof MANDATE_FOUND }>;
 
 /**
  * **Μετράει αυτό το σώμα ως «δεν βρέθηκε»;** — ο ΕΝΑΣ κριτής, για τον πελάτη δικτύου.

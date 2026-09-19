@@ -74,6 +74,7 @@ const BUCKET_OF: Readonly<Record<StayCalendarWriteKind, 'expired' | 'alreadyReso
   'guest-hold-limit': 'failed',
   'hold-lapsed': 'failed',
   'own-listing': 'failed',
+  'price-changed': 'failed',
 };
 
 type Bucket = (typeof BUCKET_OF)[StayCalendarWriteKind];

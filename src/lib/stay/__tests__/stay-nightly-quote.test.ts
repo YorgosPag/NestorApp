@@ -24,7 +24,7 @@ describe('money — ακέραια λεπτά', () => {
 
 describe('stayQuoteOf', () => {
   it('βάση της αγγελίας + υπέρβαση ημέρας, νύχτα-νύχτα', () => {
-    const quote = stayQuoteOf(listingOf(), { '2026-09-11': { nightlyRateMinor: 12000 } }, '2026-09-10', '2026-09-13');
+    const quote = stayQuoteOf(listingOf(), { '2026-09-11': { nightlyRateMinor: 12000 } }, { checkIn: '2026-09-10', checkOut: '2026-09-13' });
     expect(quote).toEqual({
       kind: 'priced',
       nights: [
@@ -32,22 +32,24 @@ describe('stayQuoteOf', () => {
         { date: '2026-09-11', amountMinor: 12000, source: 'day' },
         { date: '2026-09-12', amountMinor: 8000, source: 'base' },
       ],
+      nightsMinor: 28000,
+      fees: [],
       totalMinor: 28000,
     });
   });
 
   it('🔴 χωρίς τιμή αγγελίας: μόνο οι νύχτες με υπέρβαση έχουν τιμή — οι άλλες ΟΝΟΜΑΖΟΝΤΑΙ', () => {
-    const quote = stayQuoteOf(listingOf(undefined, undefined, null), { '2026-09-10': { nightlyRateMinor: 5000 } }, '2026-09-10', '2026-09-12');
-    expect(quote).toEqual({ kind: 'unpriced', missing: ['2026-09-11'] });
+    const quote = stayQuoteOf(listingOf(undefined, undefined, null), { '2026-09-10': { nightlyRateMinor: 5000 } }, { checkIn: '2026-09-10', checkOut: '2026-09-12' });
+    expect(quote).toEqual({ kind: 'unpriced', missing: ['2026-09-11'], missingFees: [] });
   });
 
   it('🔴 υπέρβαση 0 λεπτών είναι ΤΙΜΗ (δωρεάν νύχτα), όχι απουσία', () => {
-    const quote = stayQuoteOf(listingOf(undefined, undefined, null), { '2026-09-10': { nightlyRateMinor: 0 } }, '2026-09-10', '2026-09-11');
-    expect(quote).toEqual({ kind: 'priced', nights: [{ date: '2026-09-10', amountMinor: 0, source: 'day' }], totalMinor: 0 });
+    const quote = stayQuoteOf(listingOf(undefined, undefined, null), { '2026-09-10': { nightlyRateMinor: 0 } }, { checkIn: '2026-09-10', checkOut: '2026-09-11' });
+    expect(quote).toEqual({ kind: 'priced', nights: [{ date: '2026-09-10', amountMinor: 0, source: 'day' }], nightsMinor: 0, fees: [], totalMinor: 0 });
   });
 
   it('ανάποδο ή κενό διάστημα ⇒ null', () => {
-    expect(stayQuoteOf(listingOf(), {}, '2026-09-12', '2026-09-10')).toBeNull();
-    expect(stayQuoteOf(listingOf(), {}, '2026-09-10', '2026-09-10')).toBeNull();
+    expect(stayQuoteOf(listingOf(), {}, { checkIn: '2026-09-12', checkOut: '2026-09-10' })).toBeNull();
+    expect(stayQuoteOf(listingOf(), {}, { checkIn: '2026-09-10', checkOut: '2026-09-10' })).toBeNull();
   });
 });

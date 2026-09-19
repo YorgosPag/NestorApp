@@ -62,6 +62,7 @@ const SIMPLE: Readonly<Record<SimpleKind, StayCalendarMessage>> = {
   'guest-hold-limit': { id: 'failed', tone: 'alert' },
   'hold-alive': { id: 'failed', tone: 'alert' },
   'own-listing': { id: 'failed', tone: 'alert' },
+  'price-changed': { id: 'failed', tone: 'alert' },
 };
 
 export function stayCalendarMessageOf(outcome: StayCalendarSendOutcome): StayCalendarMessage {

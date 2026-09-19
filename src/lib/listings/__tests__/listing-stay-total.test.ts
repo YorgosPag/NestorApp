@@ -18,6 +18,8 @@ const PRICED: StayQuote = {
     { date: '2026-10-04', amountMinor: 6500, source: 'day' },
     { date: '2026-10-05', amountMinor: 5000, source: 'base' },
   ],
+  nightsMinor: 16500,
+  fees: [],
   totalMinor: 16500,
 };
 
@@ -45,7 +47,7 @@ describe('Σ1 — σύνολο ΜΟΝΟ για διαθέσιμη διαμονή
 
 describe('Σ2 — σύνολο ΜΟΝΟ όταν τιμολογείται ΚΑΘΕ νύχτα', () => {
   it('νύχτες χωρίς τιμή ⇒ κανένα μερικό άθροισμα', () => {
-    expect(stayTotalOf(stay({ kind: 'free' }, { kind: 'unpriced', missing: ['2026-10-04'] }))).toBeNull();
+    expect(stayTotalOf(stay({ kind: 'free' }, { kind: 'unpriced', missing: ['2026-10-04'], missingFees: [] }))).toBeNull();
   });
 
   it('χωρίς τιμολόγηση ⇒ κανένα σύνολο', () => {
@@ -53,7 +55,7 @@ describe('Σ2 — σύνολο ΜΟΝΟ όταν τιμολογείται ΚΑΘ
   });
 
   it('μηδέν νύχτες ⇒ κανένα σύνολο («0 € · 0 νύχτες» δεν είναι απάντηση)', () => {
-    expect(stayTotalOf(stay({ kind: 'free' }, { kind: 'priced', nights: [], totalMinor: 0 }))).toBeNull();
+    expect(stayTotalOf(stay({ kind: 'free' }, { kind: 'priced', nights: [], nightsMinor: 0, fees: [], totalMinor: 0 }))).toBeNull();
   });
 
   it('καμία απάντηση ⇒ κανένα σύνολο', () => {

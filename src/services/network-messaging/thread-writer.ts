@@ -222,7 +222,8 @@ export async function ensureActThread(
  */
 export type AudienceSelfPatch =
   | { readonly lastReadAt: string }
-  | { readonly muted: boolean };
+  | { readonly muted: boolean }
+  | { readonly following: boolean };
 
 export type AudienceSelfOutcome = 'updated' | 'not-audience';
 

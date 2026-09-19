@@ -24,6 +24,8 @@ import type { PropertyDossier, PropertyDossierLifecycle } from '@/types/property
 
 const NS = 'property-market';
 const K = `${NS}:dossier.lifecycle`;
+/** Ταυτότητα toast κύκλου ζωής — μία ανά φάκελο (όχι έγγραφο Firestore ⇒ εκτός N.6). */
+export const LIFECYCLE_TOAST_PREFIX = 'dossier-lifecycle-';
 
 export interface PropertyDossierLifecycleControls {
   /** Μια αλλαγή κατάστασης είναι σε πτήση — τα κουμπιά απενεργοποιούνται (όχι διπλή αίτηση). */
@@ -48,11 +50,16 @@ export function usePropertyDossierLifecycle(): PropertyDossierLifecycleControls 
         notifications.error(t(`${K}.failed`));
         return;
       }
+      // ADR-866 §2.10 Π3 — ΕΝΑ toast ανά φάκελο (Gmail): το νέο αντικαθιστά το παλιό, ώστε ένα «Αναίρεση» που έπαψε
+      // να ισχύει (ο φάκελος επανήλθε) να μη μένει στη στοίβα δίπλα σε αντίθετο μήνυμα.
+      const id = `${LIFECYCLE_TOAST_PREFIX}${dossier.id}`;
       if (lifecycle === 'active') {
-        notifications.success(t(`${K}.restoredToast`, { label: dossier.label }));
+        notifications.success(t(`${K}.restoredToast`, { label: dossier.label }), { id });
         return;
       }
+      // Με ενέργεια ⇒ μένει μέχρι να ενεργήσει/κλείσει ο χρήστης (Β2, `notification-policy.ts`).
       notifications.success(t(`${K}.archivedToast`, { label: dossier.label }), {
+        id,
         actions: [{ label: t(`${K}.undo`), onClick: () => void transition(dossier, 'active') }],
       });
     },

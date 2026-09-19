@@ -121,7 +121,7 @@ describe('ADR-865 §11 — η γραμμή παραγωγής', () => {
     });
 
     it('🌍 δημοσιευμένο ref: άγνωστο ref ⇒ unknown (ποτέ ψευδές «ίδιο»)', () => {
-      expect(publishedStateOf('storage.rules', 'refs/heads/δεν-υπάρχει')).toBe('unknown');
+      expect(publishedStateOf('storage.rules', 'refs/heads/δεν-υπάρχει', M.readSource)).toBe('unknown');
     });
   });
 
@@ -201,5 +201,141 @@ describe('ADR-865 §11 — η γραμμή παραγωγής', () => {
       expect((await sendTelegram('x', { env, fetchImpl: async () => { throw new Error('down'); } })).sent).toBe(false);
       expect((await sendTelegram('x', { env, fetchImpl: async () => ({ ok: true, status: 200 }) })).sent).toBe(true);
     });
+  });
+});
+
+// ============================================================================
+// ADR-865 §11.8 — Ε1 «κρίνε ό,τι ΦΕΥΓΕΙ» · Ε2 «ίδια απάντηση σε Windows και CI»
+// ============================================================================
+
+/**
+ * Καρφωμένο commit που **άλλαξε** το `firestore.rules` (γονέας ≠ παιδί, μετρημένο 2026-09-19:
+ * `5c9a5834…` έναντι `6e3d61c0…`) και που **δεν** είναι το HEAD — άρα ο δίσκος διαφέρει από αυτό
+ * **όποιες** κι αν είναι οι ακομμίτιστες αλλαγές του κοινού δέντρου.
+ */
+const RULES_CHANGE = '428a23bb';
+const gitShow = (spec) => execFileSync('git', ['show', spec], { cwd: ROOT, encoding: 'utf8' });
+
+describe('ADR-865 §11.8 — Ε1: κρίνεται ό,τι φεύγει, όχι ο δίσκος', () => {
+  const { loadWorld, parsePushLines, TREE } = require('../lib/firestore-deploy/world');
+  const { worldsFor } = require('../check-firestore-deploy-proof');
+  const { judgeFirestoreDeploy, RULES } = require('../lib/firestore-deploy/judge');
+  const ZERO = '0'.repeat(40);
+
+  it('stdin του pre-push (githooks(5)): διαγραφή ⇒ εκτός · νέο remote ref ⇒ remoteSha null', () => {
+    const a = 'a'.repeat(40);
+    const b = 'b'.repeat(40);
+    const text = `refs/heads/main ${a} refs/heads/main ${b}\r\n(delete) ${ZERO} refs/heads/old ${b}\nrefs/heads/x ${a} refs/heads/x ${ZERO}\n\n`;
+    expect(parsePushLines(text)).toEqual([
+      { localRef: 'refs/heads/main', localSha: a, remoteRef: 'refs/heads/main', remoteSha: b },
+      { localRef: 'refs/heads/x', localSha: a, remoteRef: 'refs/heads/x', remoteSha: null },
+    ]);
+    expect(parsePushLines('')).toEqual([]);
+  });
+
+  it('⛔ κόσμος χωρίς δηλωμένο δέντρο ⇒ ρίχνει (η σιωπηλή προεπιλογή «δίσκος» ήταν η βλάβη)', () => {
+    expect(() => loadWorld()).toThrow(/δέντρο/);
+    expect(() => loadWorld({ tree: 'refs/heads/δεν-υπάρχει' })).toThrow(/δεν είναι commit/);
+  });
+
+  it('🔴 δέντρο = commit ⇒ τα bytes ΤΟΥ commit, όχι του δίσκου', () => {
+    const world = loadWorld({ tree: RULES_CHANGE, published: null });
+    const rules = world.targets.find((t) => t.target === 'firestore:rules');
+    expect(rules.digest).toBe(M.digestOf(gitShow(`${RULES_CHANGE}:firestore.rules`)));
+    expect(world.worktreeDrift).toContain('firestore.rules'); // ΟΡΑΤΗ σημείωση, ποτέ σιωπηλή
+    expect(loadWorld({ tree: TREE.WORKTREE, published: null }).worktreeDrift).toEqual([]);
+  });
+
+  it('🔴 push που ΑΛΛΑΖΕΙ κανόνα προς το ref της γραμμής ⇒ Κ5 «έγκριση»', () => {
+    const line = `refs/heads/main ${RULES_CHANGE} ${M.PIPELINE.ref} ${RULES_CHANGE}^`;
+    const [{ label, world }] = worldsFor(['--at-push'], () => line);
+    expect(label).toContain(M.PIPELINE.ref);
+    expect(world.targets.find((t) => t.target === 'firestore:rules').published).toBe('differs');
+    expect(judgeFirestoreDeploy(world).map((f) => f.rule)).toContain(RULES.K5);
+  });
+
+  it('✅ θετικός μάρτυρας: push ΙΔΙΟ με τον remote ⇒ κανένας Κ5, ό,τι κι αν λέει ο δίσκος', () => {
+    const [{ world }] = worldsFor(['--at-push'], () => `refs/heads/main ${RULES_CHANGE} ${M.PIPELINE.ref} ${RULES_CHANGE}`);
+    expect(world.targets.every((t) => t.published === 'same')).toBe(true);
+    expect(judgeFirestoreDeploy(world).filter((f) => f.rule === RULES.K5)).toEqual([]);
+  });
+
+  it('push σε ref που ΔΕΝ πυροδοτεί τη γραμμή ⇒ off-pipeline, ποτέ ψευδές «θα ζητηθεί έγκριση»', () => {
+    const [{ world }] = worldsFor(['--at-push'], () => `refs/heads/main ${RULES_CHANGE} refs/heads/feat ${ZERO}`);
+    expect(new Set(world.targets.map((t) => t.published))).toEqual(new Set(['off-pipeline']));
+    expect(judgeFirestoreDeploy(world).filter((f) => f.rule === RULES.K5)).toEqual([]);
+  });
+
+  it('commit ⇒ index · --report ⇒ δίσκος · push χωρίς stdin ⇒ HEAD — κάθε λειτουργία ΔΗΛΩΝΕΙ το δέντρο της', () => {
+    expect(worldsFor([])[0].world.tree).toBe(TREE.INDEX);
+    expect(worldsFor(['--report'])[0].world.tree).toBe(TREE.WORKTREE);
+    expect(worldsFor(['--at-push'], () => '')[0].world.tree).toBe('HEAD');
+  });
+
+  it('firestore:verify κρίνει HEAD εκτός αν ζητηθεί ρητά άλλο · μετά από τοπική ανάπτυξη κρίνει τον ΔΙΣΚΟ που στάλθηκε', () => {
+    const { treeOf } = require('../firestore-deploy/verify-live');
+    const { verifyArgsAfterDeploy } = require('../firestore-deploy/record-deploy');
+    expect(treeOf([])).toBe('HEAD');
+    expect(treeOf(['--tree', TREE.WORKTREE])).toBe(TREE.WORKTREE);
+    const args = verifyArgsAfterDeploy('p', ['--wait', '--timeout', '60']);
+    expect(treeOf(args)).toBe(TREE.WORKTREE);
+    expect(args).toEqual(expect.arrayContaining(['--project', 'p', '--wait', '--timeout', '60']));
+  });
+
+  it('⚓ το ref της γραμμής είναι ΑΥΤΟ που ξυπνά το workflow (on.push.branches), όχι δεύτερο αντίγραφο', () => {
+    const branches = readWorkflowTriggers(WORKFLOW).pushBranches;
+    expect(branches.map((b) => `refs/heads/${b}`)).toEqual([M.PIPELINE.ref]);
+  });
+
+  it('ο αναγνώστης κλάδων: εν σειρά · λίστα · απουσία (= ΚΑΘΕ κλάδος, όχι «κανένας»)', () => {
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wf-'));
+    const wf = (body) => {
+      const file = path.join(dir, `${Math.random().toString(36).slice(2)}.yml`);
+      fs.writeFileSync(file, `name: t\non:\n${body}jobs: {}\n`);
+      return readWorkflowTriggers(file).pushBranches;
+    };
+    try {
+      expect(wf("  push:\n    branches: [main, 'rel/*']  # σχόλιο\n")).toEqual(['main', 'rel/*']);
+      expect(wf('  push:\n    branches:\n      - main\n      - dev\n')).toEqual(['main', 'dev']);
+      expect(wf('  push:\n    paths: [a]\n')).toBeNull();
+      expect(wf('  schedule:\n    - cron: "0 5 * * *"\n')).toBeNull();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('ADR-865 §11.8 — Ε2: το ledger κρίνεται modulo CRLF/LF (append-only, καμία επανεγγραφή)', () => {
+  const { loadWorld, loadDesired } = require('../lib/firestore-deploy/world');
+  const LF = 'service firebase.storage {\n  match /b {}\n}\n';
+  const CRLF = LF.replace(/\n/g, '\r\n');
+
+  it('αποτύπωμα Windows (CRLF) ⇐ περιεχόμενο CI (LF), και αντίστροφα', () => {
+    expect(M.renderingOf(M.digestOf(CRLF), LF)).toBe(CRLF);
+    expect(M.renderingOf(M.digestOf(LF), CRLF)).toBe(LF);
+    expect(M.renderingOf(M.digestOf(LF), LF)).toBe(LF);
+  });
+
+  it('✅ θετικός μάρτυρας: αλλαγή ΠΕΡΙΕΧΟΜΕΝΟΥ δεν ταιριάζει σε καμία απόδοση', () => {
+    expect(M.renderingOf(M.digestOf(CRLF), `${LF}// άλλο\n`)).toBeNull();
+    expect(M.renderingOf(M.digestOf(LF), null)).toBeNull();
+  });
+
+  it('🌍 ΠΡΑΓΜΑΤΙΚΟ: η γραμμή storage της 2026-09-18 (CRLF, από Windows) αναγνωρίζεται από το blob LF — όπως τη βλέπει το CI', () => {
+    const desired = loadDesired(loadWorld({ tree: '38dde0d5', published: null }));
+    const { recorded, digest } = desired.storage;
+    expect(recorded.digest).not.toBe(digest); // τα bytes ΔΙΑΦΕΡΟΥΝ (CRLF ≠ LF) — αυτό έκρυβε το Ε2
+    expect(recorded.matchesTree).toBe(true);
+    const live = { release: 'r', rulesetName: 'projects/p/rulesets/x', updateTime: 't', files: [{ content: desired.storage.wire }] };
+    expect(D.judgeRules('storage', desired.storage, live).detail).not.toContain('δεν το κατέγραψε');
+  });
+
+  it('✅ θετικός μάρτυρας: περιεχόμενο που ΔΕΝ κατέγραψε το μητρώο ⇒ η σημείωση μένει', () => {
+    const desired = { kind: 'ruleset', source: 'storage.rules', digest: M.digestOf(LF), wire: LF,
+      recorded: { at: 'a', commit: 'c', digest: 'sha256:x', wire: 'x', why: null, matchesTree: false } };
+    const live = { release: 'r', rulesetName: 'projects/p/rulesets/x', updateTime: 't', files: [{ content: LF }] };
+    expect(D.judgeRules('storage', desired, live).detail).toContain('δεν το κατέγραψε');
   });
 });

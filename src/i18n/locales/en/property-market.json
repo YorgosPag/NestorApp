@@ -805,6 +805,8 @@
         "guestLabel": "Guest name (only for you)",
         "guestLabelPlaceholder": "e.g. Maria Papadopoulou, phone",
         "guests": "Guests",
+        "pets": "Pets",
+        "petsNone": "No pets",
         "submit": "Record booking"
       },
       "entry": {
@@ -814,6 +816,8 @@
         "bookingTitle": "Booking",
         "range": "{from} – check-out {to}",
         "guests": "{count, plural, one {# guest} other {# guests}}",
+        "pets": "{count, plural, one {# pet} other {# pets}}",
+        "total": "total {total} (as quoted in the request)",
         "unblock": "Open nights",
         "cancel": "Cancel booking",
         "cancelled": "Cancelled",
@@ -2117,6 +2121,12 @@
         "photos": "Photos of the property",
         "videos": "Videos of the property",
         "history": "Every change to the property file"
+      },
+      "empty": {
+        "floorplan": "No floor plan yet — upload a floor plan, section, installation drawings or a site survey.",
+        "topographic": "No site survey yet — upload the land’s topographic survey.",
+        "photos": "No photos yet.",
+        "videos": "No videos yet."
       }
     },
     "history": {

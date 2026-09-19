@@ -47,9 +47,14 @@ NC='\033[0m'
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT" || exit 0
 
-# Η πύλη είναι φθηνή: sha256 τριών αρχείων + ανάγνωση ενός JSON + `git show origin/main`.
+# Η πύλη είναι φθηνή: sha256 τριών αρχείων + ανάγνωση ενός JSON + `git show` του remote.
 # Κανένα δίκτυο, καμία ταυτότητα — γι' αυτό ακριβώς μπορεί να ζει σε hook. Τον ΠΑΡΟΧΟ τον
 # ρωτά η γραμμή παραγωγής (ταυτότητα χωρίς κλειδί), όχι ο υπολογιστής σου.
+#
+# 🔑 ADR-865 §11.8: το stdin του hook (githooks(5): `<local ref> <local sha> <remote ref>
+# <remote sha>`) περνά ΑΥΤΟΥΣΙΟ στο node — κρίνεται το `<local sha>` που ΣΤΕΛΝΕΤΑΙ, όχι ο δίσκος.
+# Μετρημένο 2026-09-19: με +9 ακομμίτιστες γραμμές άλλης συνεδρίας στο firestore.rules ο φύλακας
+# έλεγε «στο push: έγκριση» για push που ΔΕΝ τις περιείχε. ⚠️ ΜΗΝ ανακατευθύνεις το stdin εδώ.
 if [[ -f "scripts/check-firestore-deploy-proof.js" ]]; then
     if ! node scripts/check-firestore-deploy-proof.js --at-push; then
         echo ""

@@ -30,10 +30,10 @@ import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { ActTeamNext } from '@/services/network-messaging/act-team-change';
+import { listActiveWorkspaceMembers } from '@/lib/auth/workspace-membership';
 import { changeActTeam, readActTeamInWorkspace } from '@/services/network-messaging/act-team-writer';
-import type { AudienceWrite } from '@/services/network-messaging/thread-audience';
-import type { NetworkActTeam } from '@/types/network-thread';
+import { readNetworkPeople } from '@/services/network-messaging/thread-people';
+import type { NetworkActTeamChangeResult, NetworkActTeamResult } from '@/types/network-wire';
 
 import {
   isActTeamManager,
@@ -47,11 +47,12 @@ import { ActTeamChangeBodySchema, readNetworkBody, requireRouteParam } from '../
 const logger = createModuleLogger('NetworkActTeamRoute');
 
 type TeamRoute = { readonly params: Promise<{ teamId: string }> };
-type TeamView = Pick<NetworkActTeam, 'id' | 'actKind' | 'responsibleUid' | 'memberUids' | 'version'>;
-type TeamResponse = { readonly success: true; readonly team: TeamView; readonly canManage: boolean };
-type ChangeResponse =
-  | { readonly success: true; readonly applied: true; readonly team: ActTeamNext; readonly audience: readonly AudienceWrite[] }
-  | { readonly success: true; readonly applied: false };
+type TeamResponse = NetworkActTeamResult;
+/**
+ * ⚠️ Β7: η απάντηση **δεν** κουβαλά πια τις γραμμές ακροατηρίου — η οθόνη διαβάζει το ακροατήριο **ζωντανά**
+ * (κανόνας Firestore), και ένα δεύτερο αντίγραφο στο σώμα ήταν φορτίο χωρίς καταναλωτή.
+ */
+type ChangeResponse = NetworkActTeamChangeResult;
 
 /** Ο δρων, η ομάδα που ζητά, και ο χώρος όπου είναι **πραγματικό** μέλος. */
 interface TeamInput {
@@ -88,11 +89,18 @@ async function getHandler(_request: NextRequest, { actor, teamId, workspaceId }:
     const team = await readActTeamInWorkspace(getAdminFirestore(), teamId, workspaceId);
     if (team === null) return networkRefusal('team-absent');
     const { id, actKind, responsibleUid, memberUids, version } = team;
+    // 👥 Β7 — από ποιους διαλέγει ο επιλογέας: τα ΕΝΕΡΓΑ μέλη του γραφείου (ο δρων είναι μέλος του — `teamInput`).
+    const members = await listActiveWorkspaceMembers(getAdminFirestore(), workspaceId);
+    const [canManage, candidates] = await Promise.all([
+      // 🔑 Η οθόνη δείχνει «άλλαξε υπεύθυνο» μόνο σε όποιον μπορεί — ο κριτής ξαναρωτιέται στο PATCH.
+      isActTeamManager(actor, cache),
+      readNetworkPeople(getAdminFirestore(), members.map((member) => member.uid)),
+    ]);
     return NextResponse.json<TeamResponse>({
       success: true,
       team: { id, actKind, responsibleUid, memberUids, version },
-      // 🔑 Η οθόνη δείχνει «άλλαξε υπεύθυνο» μόνο σε όποιον μπορεί — ο κριτής ξαναρωτιέται στο PATCH.
-      canManage: await isActTeamManager(actor, cache),
+      canManage,
+      candidates,
     });
   } catch (error) {
     return networkServerError(logger, '[NETWORK] Η ανάγνωση ομάδας απέτυχε', error, { teamId });
@@ -120,7 +128,6 @@ async function patchHandler(request: NextRequest, { actor, teamId, workspaceId }
       success: true,
       applied: true,
       team: outcome.team,
-      audience: outcome.audienceWrites,
     });
   } catch (error) {
     return networkServerError(logger, '[NETWORK] Η αλλαγή ομάδας απέτυχε', error, { teamId });

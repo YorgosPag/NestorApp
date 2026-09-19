@@ -180,6 +180,7 @@
     "addFilesTooltip": "Upload new files",
     "belongsTo": "Belongs to",
     "selectDocumentType": "Select document type first",
+    "noDocumentTypes": "This tab does not accept uploads yet — no document type has been defined.",
     "enterTitleToContinue": "Enter title to continue with upload",
     "fileList": "File list",
     "file": "file",

@@ -28,7 +28,11 @@ export type StayAnswersState =
   | { readonly kind: 'loaded'; readonly answers: Readonly<Record<string, PublicStayAnswer>> }
   | { readonly kind: 'failed' };
 
-export function useStayAnswers(listingIds: readonly string[], query: StayQuery | null): StayAnswersState {
+/**
+ * @param revision — αύξηση ⇒ **ξαναρωτά** την ίδια ερώτηση (π.χ. ο διακομιστής είπε `price-changed`:
+ *   η τιμή που δείχνουμε είναι πλέον μπαγιάτικη). Προεπιλογή `0`: καμία αλλαγή για την αναζήτηση.
+ */
+export function useStayAnswers(listingIds: readonly string[], query: StayQuery | null, revision = 0): StayAnswersState {
   const [state, setState] = useState<StayAnswersState>({ kind: 'idle' });
   const sequence = useRef(0);
   // Οι τελευταίες τιμές, διαβασμένες τη στιγμή του αιτήματος (getter, όχι στιγμιότυπο).
@@ -36,8 +40,8 @@ export function useStayAnswers(listingIds: readonly string[], query: StayQuery |
   latest.current = { listingIds, query };
   // Σταθερό κλειδί: η ίδια ερώτηση για τις ίδιες αγγελίες ΔΕΝ ξαναστέλνεται.
   const key = useMemo(
-    () => (query === null ? null : JSON.stringify([[...listingIds].sort(), query])),
-    [listingIds, query],
+    () => (query === null ? null : JSON.stringify([[...listingIds].sort(), query, revision])),
+    [listingIds, query, revision],
   );
 
   useEffect(() => {

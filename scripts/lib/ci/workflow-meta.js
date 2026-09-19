@@ -156,15 +156,16 @@ function readWorkflowRunWatchList(filePath) {
  * η πύλη λέει «εκτελείται» για κάτι που **κανείς δεν τρέχει ποτέ**.
  *
  * @param {string} filePath
- * @returns {{ automatic: string[], pathFiltered: boolean }}
+ * @returns {{ automatic: string[], pathFiltered: boolean, pushBranches: string[]|null }}
  *   `automatic` = όσα από `push`/`pull_request`/`schedule`/`workflow_run` υπάρχουν·
  *   `pathFiltered` = **κάθε** αυτόματη σκανδάλη έχει `paths:` ⇒ υπάρχει αλλαγή που δεν
- *   την ξυπνά (δηλωμένο κενό, όχι παράβαση).
+ *   την ξυπνά (δηλωμένο κενό, όχι παράβαση)·
+ *   `pushBranches` = οι κλάδοι του `push` (ADR-865 §11.8: ποιο ref πυροδοτεί τη γραμμή).
  */
 function readWorkflowTriggers(filePath) {
   const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
   const onIndex = findKey(lines, 'on', 0);
-  if (onIndex === -1) return { automatic: [], pathFiltered: false };
+  if (onIndex === -1) return { automatic: [], pathFiltered: false, pushBranches: null };
 
   const onChildren = childLines(lines, onIndex);
   const topIndent = onChildren.length > 0 ? onChildren[0].indent : 0;
@@ -172,14 +173,30 @@ function readWorkflowTriggers(filePath) {
 
   const automatic = [];
   let filtered = 0;
+  let pushBranches = null;
   for (let i = 0; i < onChildren.length; i += 1) {
     if (onChildren[i].indent !== topIndent) continue;
     const key = onChildren[i].body.replace(/:.*$/, '').trim();
     if (!AUTOMATIC.includes(key)) continue;
     automatic.push(key);
     if (findKey(childLines(onChildren, i), 'paths') !== -1) filtered += 1;
+    if (key === 'push') pushBranches = branchesOf(childLines(onChildren, i));
   }
-  return { automatic, pathFiltered: automatic.length > 0 && filtered === automatic.length };
+  return { automatic, pathFiltered: automatic.length > 0 && filtered === automatic.length, pushBranches };
+}
+
+/**
+ * `branches:` μιας σκανδάλης — εν σειρά (`[main, dev]`) ή λίστα με `- `. `null` ⇒ δεν δηλώνεται
+ * (το GitHub τότε ξυπνά σε **κάθε** κλάδο — διαφορετικό από «κανένας»).
+ */
+function branchesOf(children) {
+  const index = findKey(children, 'branches');
+  if (index === -1) return null;
+  const inline = children[index].body.slice('branches:'.length).trim();
+  if (inline.startsWith('[')) {
+    return inline.replace(/^\[|\]\s*(?:#.*)?$/g, '').split(',').map((b) => scalar(b.trim())).filter(Boolean);
+  }
+  return childLines(children, index).filter((l) => l.body.startsWith('- ')).map((l) => scalar(l.body.slice(2).trim()));
 }
 
 /**

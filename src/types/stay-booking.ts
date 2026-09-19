@@ -44,6 +44,8 @@ import type { Occupancy } from '@/lib/occupancy/occupancy-conflict';
 import type { OccupancyResource } from '@/lib/occupancy/occupancy-resource';
 import type { SpaceRef } from '@/lib/spaces/space-ref';
 import type { StayHoldBound, StayHoldTier } from '@/lib/stay/stay-hold-deadline';
+import type { StayPricedQuote } from '@/lib/stay/stay-nightly-quote';
+import type { MONEY_CURRENCY } from '@/lib/money/money';
 import type { OfferKind } from '@/types/property-offers';
 
 // =============================================================================
@@ -322,6 +324,17 @@ export interface StayHold {
   readonly respondentUserId: string;
 }
 
+/**
+ * **Η τιμή της κράτησης, όπως ειπώθηκε τη στιγμή του αιτήματος** (ADR-777 §8.60.21.7) — ο
+ * **ίδιος** τύπος με την τιμολόγηση (`StayPricedQuote`: νύχτες · χρεώσεις · σύνολο), συν νόμισμα.
+ *
+ * 🔑 **Στιγμιότυπο, ποτέ ξαναϋπολογισμένο** — ίδιο δόγμα με το {@link StayHold} και το
+ * `displayName`: αν ο οικοδεσπότης αλλάξει αύριο τιμή, το αίτημα που **ήδη** έγινε λέει ό,τι
+ * υποσχέθηκε η πλατφόρμα. Ο γραφέας το υπολογίζει **μέσα στη συναλλαγή** και το συγκρίνει με το
+ * σύνολο που είδε ο επισκέπτης (`price-changed`).
+ */
+export type StayBookingPrice = StayPricedQuote & { readonly currency: typeof MONEY_CURRENCY };
+
 /** Οι λόγοι λήξης — `expired` **με λόγο**, όπως το §4.11 #3. */
 export const STAY_EXPIRY_REASONS = ['no-answer'] as const;
 export type StayExpiryReason = (typeof STAY_EXPIRY_REASONS)[number];
@@ -406,6 +419,16 @@ export interface StayBooking {
    */
   readonly authorUserId: string;
   readonly guests: number;
+  /**
+   * **Κατοικίδια** (ADR-777 §8.60.21.7): `0` = κανένα, ρητά. `null` = **δεν ρωτήθηκε** — κρατήσεις
+   * πριν τη Φ5 (καμία μετανάστευση: αυτή **είναι** η αλήθεια τους). ⛔ Ο σκύλος βοήθειας δεν μετριέται.
+   */
+  readonly pets: number | null;
+  /**
+   * **Η τιμή τη στιγμή του αιτήματος.** `null` = δεν τιμολογήθηκε: χειροκίνητη κράτηση του
+   * οικοδεσπότη, νύχτες χωρίς τιμή, ή κράτηση πριν τη Φ5. Δες {@link StayBookingPrice}.
+   */
+  readonly price: StayBookingPrice | null;
   readonly lifecycle: StayBookingLifecycle;
   /**
    * **Πότε ειπώθηκε στον επισκέπτη ότι το ακίνητο πωλείται.** `null` = δεν ίσχυε.

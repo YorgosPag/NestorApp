@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { markNetworkThreadRead } from '@/services/network-messaging/thread-messages';
+import type { NetworkReadResult } from '@/types/network-wire';
 
 import {
   networkRefusal,
@@ -30,7 +31,7 @@ import { requireRouteParam } from '../../../_shared/network-params';
 const logger = createModuleLogger('NetworkReadRoute');
 
 type ThreadRoute = { readonly params: Promise<{ threadId: string }> };
-type ReadResponse = { readonly success: true; readonly lastReadAt: string };
+type ReadResponse = NetworkReadResult;
 
 async function handler(_request: NextRequest, actor: NetworkActor, routeContext?: ThreadRoute) {
   const thread = await requireRouteParam(routeContext, 'threadId');

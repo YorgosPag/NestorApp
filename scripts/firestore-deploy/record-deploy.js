@@ -39,7 +39,7 @@ const fs = require('node:fs');
 const { execFileSync, spawnSync } = require('node:child_process');
 
 const M = require('../lib/firestore-deploy/model');
-const { loadWorld } = require('../lib/firestore-deploy/world');
+const { loadWorld, TREE } = require('../lib/firestore-deploy/world');
 const { resolveProject, argValue } = require('../lib/firestore-deploy/live');
 const { runVerification } = require('./verify-live');
 
@@ -139,7 +139,8 @@ async function main(argv) {
 
   const mode = modeOf(argv);
   const project = projectId(argv);
-  const world = loadWorld();
+  // Το `firebase deploy` διαβάζει τον ΔΙΣΚΟ ⇒ αυτά είναι τα bytes που στέλνονται (ADR-865 §11.8).
+  const world = loadWorld({ tree: TREE.WORKTREE });
   const only = argValue(argv, '--only');
   const known = world.targets.map((t) => t.target);
   const targets = only ? only.split(',').map((s) => s.trim()).filter(Boolean) : known;
@@ -153,9 +154,18 @@ async function main(argv) {
   }
   if (!mode.pipeline) recordRows(world, targets);
 
+  return runVerification(verifyArgsAfterDeploy(project, argv));
+}
+
+/**
+ * Η ερώτηση προς τον πάροχο **μετά** την ανάπτυξη — πάνω στον **δίσκο**, γιατί αυτόν έστειλε το
+ * `firebase deploy` (ADR-865 §11.8). Με την προεπιλογή `HEAD` θα έκρινε **άλλο** πράγμα από αυτό
+ * που μόλις ανέβηκε, όποτε ο δίσκος ≠ HEAD.
+ */
+function verifyArgsAfterDeploy(project, argv) {
   const timeout = argValue(argv, '--timeout');
   const waitFlags = argv.includes('--wait') ? ['--wait', ...(timeout ? ['--timeout', timeout] : [])] : [];
-  return runVerification(['--project', project, ...waitFlags]);
+  return ['--project', project, '--tree', TREE.WORKTREE, ...waitFlags];
 }
 
 if (require.main === module) {
@@ -165,4 +175,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { main, firebaseArgs, modeOf };
+module.exports = { main, firebaseArgs, modeOf, verifyArgsAfterDeploy };

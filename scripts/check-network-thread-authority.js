@@ -23,6 +23,9 @@
  *  Κ5 κάθε δηλωμένο αρχείο ΥΠΑΡΧΕΙ (source drift)
  *  Κ6 κάθε γραφέας ΟΜΑΔΑΣ ρωτά την προβολή (`writeActThread(`) — αλλιώς «πράσινο επειδή
  *     κανείς δεν την καλεί», το μετρημένο σχήμα του CHECK 3.88 Κ4
+ *  Κ7 (Β7) ο τόπος μονοπατιών του ΠΕΛΑΤΗ (`network-thread-client-ref.ts`, Web SDK) ΔΕΝ ΓΡΑΦΕΙ ΠΟΤΕ —
+ *     ένας τόπος ανά SDK για το Κ1, αλλά οι κανόνες κλείνουν κάθε γραφή πελάτη και κάθε πράξη
+ *     περνά από διαδρομή· μια εισαγωγή `setDoc`/`updateDoc`/… εκεί = δεύτερος γραφέας εν αναμονή
  *
  * ⚠️ AST, ΠΟΤΕ ΚΕΙΜΕΝΟ: τα αρχεία κουβαλούν σχόλια που ΟΝΟΜΑΖΟΥΝ τις κλήσεις και τις
  * συλλογές — ένα `grep` θα κατήγγειλε την ίδια την τεκμηρίωση.
@@ -42,6 +45,15 @@ const { collectSourceFiles } = require('./lib/module-graph/scan-config');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
 
 const REF_FILE = 'src/services/network-messaging/network-thread-ref.ts';
+/**
+ * ADR-867 Β7 — ο ΕΝΑΣ τόπος μονοπατιών για το **Web SDK** (η ζωντανή οθόνη). Ο Κ1 ζητά «ένα σημείο»· με
+ * δύο SDK με διαφορετικούς τύπους, «ένα σημείο» = **ένα ανά SDK**, ρητά δηλωμένο — και **μόνο ανάγνωση** (Κ7).
+ */
+const CLIENT_REF_FILE = 'src/lib/network-messaging/network-thread-client-ref.ts';
+/** Όπου επιτρέπεται να εμφανίζονται τα ονόματα συλλογής του νήματος (Κ1). */
+const PATH_HOMES = new Set([REF_FILE, CLIENT_REF_FILE]);
+/** Οι συναρτήσεις γραφής του Web SDK — καμία δεν επιτρέπεται στον τόπο του πελάτη (Κ7). */
+const CLIENT_WRITE_CALLS = /\b(setDoc|updateDoc|addDoc|deleteDoc|writeBatch|runTransaction)\b/;
 const AUDIENCE_WRITER = 'src/services/network-messaging/thread-writer.ts';
 const MESSAGE_WRITER = 'src/services/network-messaging/thread-messages.ts';
 /** Το αρχείο όπου ζουν τα ονόματα — εκεί ΠΡΕΠΕΙ να εμφανίζονται. */
@@ -53,8 +65,8 @@ const CONSUMERS = {
   [MESSAGE_WRITER]: 'η αποστολή μηνύματος (υποσυλλογή μηνυμάτων)',
   'src/services/network-messaging/thread-directory.ts':
     'ο κατάλογος νημάτων (ADR-867 Β5): collection group ΑΝΑΓΝΩΣΗ του ακροατηρίου — καμία γραφή',
-  'src/services/network-messaging/network-away.ts':
-    'η παρουσία νήματος (ADR-867 Β5): ΑΝΑΓΝΩΣΗ του ακροατηρίου για «ποιος λείπει, ποιος διαβάζει» — καμία γραφή',
+  'src/services/network-messaging/thread-reader.ts':
+    'ο αναγνώστης του ακροατηρίου (ADR-867 Β5 παρουσία · Β7 ονόματα): ΑΝΑΓΝΩΣΗ «διαβάζει ο καλών; ποιοι είναι όλοι;» — καμία γραφή',
   'src/services/network-messaging/network-unread-email.ts':
     'η πύλη του email «αδιάβαστο» (ADR-867 Β6): ΑΝΑΓΝΩΣΗ νήματος + γραμμής του παραλήπτη τη στιγμή της αποστολής — καμία γραφή',
 };
@@ -72,6 +84,7 @@ const PROJECTION_CALL = 'writeActThread(';
 const COLLECTION_NAMES = [
   'COLLECTIONS.NETWORK_THREADS',
   'COLLECTIONS.NETWORK_MESSAGE_RETRACTIONS',
+  'COLLECTIONS.NETWORK_MESSAGE_REVISIONS',
   'SUBCOLLECTIONS.NETWORK_THREAD_MESSAGES',
   'SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE',
 ];
@@ -81,6 +94,7 @@ const REF_CALLS = new Set([
   'networkAudienceRef',
   'networkThreadMessages',
   'networkRetractionRef',
+  'networkRevisionRef',
   'networkAudienceGroup',
 ]);
 const AUDIENCE_CALLS = new Set(['networkThreadAudience', 'networkAudienceRef']);
@@ -89,8 +103,11 @@ const AUDIENCE_CALLS = new Set(['networkThreadAudience', 'networkAudienceRef']);
  * αντίγραφο** του ίδιου γεγονότος και γράφεται στην **ίδια** συναλλαγή. Χωριστό κριτήριο
  * θα επέτρεπε «ταφόπλακα εδώ, αντίγραφο αλλού» — δηλαδή ακριβώς τη μισή ανάκληση που η
  * ατομικότητα υπάρχει για να αποκλείσει.
+ *
+ * ✏️ **Και οι ΑΝΑΘΕΩΡΗΣΕΙΣ (ADR-867 Β7), για τον ΙΔΙΟ λόγο**: η προηγούμενη μορφή και το νέο σώμα
+ * γράφονται στην ίδια συναλλαγή — μια επεξεργασία χωρίς αντίγραφο είναι ξαναγραμμένη ιστορία.
  */
-const MESSAGE_CALLS = new Set(['networkThreadMessages', 'networkRetractionRef']);
+const MESSAGE_CALLS = new Set(['networkThreadMessages', 'networkRetractionRef', 'networkRevisionRef']);
 
 const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete', 'add']);
 const EXEMPT = /network-thread-authority-exempt:\s*(\S.*)?$/;
@@ -106,6 +123,7 @@ const STATES = {
   PROJECTION_UNASKED: 'audience-projection-unasked',
   EXEMPT_NO_REASON: 'exempt-without-reason',
   SOURCE_DRIFT: 'source-drift',
+  CLIENT_REF_WRITES: 'client-ref-writes',
 };
 const BLOCKING = [
   STATES.PATH_OUTSIDE_REF,
@@ -115,6 +133,7 @@ const BLOCKING = [
   STATES.PROJECTION_UNASKED,
   STATES.EXEMPT_NO_REASON,
   STATES.SOURCE_DRIFT,
+  STATES.CLIENT_REF_WRITES,
 ];
 
 function sourceFileOf(absPath, text) {
@@ -207,7 +226,7 @@ function findingsIn(sf, rel) {
 
   const visit = (node) => {
     if (ts.isPropertyAccessExpression(node) && COLLECTION_NAMES.includes(node.getText())
-      && rel !== REF_FILE && rel !== COLLECTION_HOME) {
+      && !PATH_HOMES.has(rel) && rel !== COLLECTION_HOME) {
       findings.push(classifyByExemption(sf, node, rel, STATES.PATH_OUTSIDE_REF,
         `χτίζει το μονοπάτι του νήματος — ζήτα το από το \`${REF_FILE}\``));
     }
@@ -244,10 +263,16 @@ function consumerFinding(sf, node, rel) {
 /** Κ5 + Κ6. */
 function wiringFindings(root) {
   const findings = [];
-  for (const declared of [REF_FILE, AUDIENCE_WRITER, MESSAGE_WRITER, ...PROJECTION_CONSUMERS]) {
+  for (const declared of [REF_FILE, CLIENT_REF_FILE, AUDIENCE_WRITER, MESSAGE_WRITER, ...PROJECTION_CONSUMERS]) {
     if (!fs.existsSync(path.join(root, declared))) {
       findings.push({ state: STATES.SOURCE_DRIFT, file: declared, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' });
     }
+  }
+  // Κ7 — ο τόπος του πελάτη διαβάζει μόνο.
+  const clientRef = path.join(root, CLIENT_REF_FILE);
+  if (fs.existsSync(clientRef) && CLIENT_WRITE_CALLS.test(stripComments(fs.readFileSync(clientRef, 'utf8')))) {
+    findings.push({ state: STATES.CLIENT_REF_WRITES, file: CLIENT_REF_FILE,
+      detail: 'ο τόπος μονοπατιών του ΠΕΛΑΤΗ εισάγει/καλεί γραφή — κάθε πράξη περνά από διαδρομή (`network-thread.client.ts`)' });
   }
   for (const consumer of PROJECTION_CONSUMERS) {
     const abs = path.join(root, consumer);
@@ -262,6 +287,11 @@ function wiringFindings(root) {
 // ⚠️ ADR-867 Β5: το `networkAudienceGroup` ΠΡΕΠΕΙ να είναι εδώ — αλλιώς αρχείο που καλεί ΜΟΝΟ
 //    αυτό δεν σαρώνεται καν, και ο Κ2 είναι πράσινος επειδή δεν κοίταξε.
 const RELEVANT = /NETWORK_THREAD|networkThread|networkAudienceRef|networkAudienceGroup|writeActThread/;
+
+/** Κ7: τα σχόλια ΟΝΟΜΑΖΟΥΝ τις απαγορευμένες κλήσεις («ένα `setDoc` εδώ…») — κρίνεται μόνο ο κώδικας. */
+function stripComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
 
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
@@ -312,5 +342,5 @@ if (require.main === module) process.exit(main());
 
 module.exports = {
   measure, report, main, findingsIn, wiringFindings, sourceFileOf,
-  STATES, BLOCKING, REF_FILE, AUDIENCE_WRITER, MESSAGE_WRITER, CONSUMERS, PROJECTION_CONSUMERS,
+  STATES, BLOCKING, REF_FILE, CLIENT_REF_FILE, AUDIENCE_WRITER, MESSAGE_WRITER, CONSUMERS, PROJECTION_CONSUMERS,
 };

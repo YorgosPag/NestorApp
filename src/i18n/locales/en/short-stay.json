@@ -109,7 +109,17 @@
     "total": "Total {total} for {count, plural, one {# night} other {# nights}}",
     "breakdown": "Price per night",
     "night": "{date}: {amount}",
-    "unpriced": "Some nights have no declared price. Ask the host."
+    "unpriced": "Some nights have no declared price. Ask the host.",
+    "unpricedFee": "The pet fee can't be read — ask the host before requesting.",
+    "nights": "Nights: {amount} ({count, plural, one {# night} other {# nights}})",
+    "fee": {
+      "pet": {
+        "stay": "Pet fee: {amount} (per booking)",
+        "night": "Pet fee: {unit} × {nights, plural, one {# night} other {# nights}} = {amount}",
+        "pet": "Pet fee: {unit} × {pets, plural, one {# pet} other {# pets}} = {amount}",
+        "petNight": "Pet fee: {unit} × {pets, plural, one {# pet} other {# pets}} × {nights, plural, one {# night} other {# nights}} = {amount}"
+      }
+    }
   },
   "request": {
     "title": "Booking request",
@@ -127,6 +137,8 @@
     "sending": "Sending…",
     "mineLine": "{range} · {status}",
     "minePending": "{range} · awaiting a reply until {until}",
+    "mineTotal": "total {total}",
+    "total": "Total: {total} — this amount is locked in with the request.",
     "withdraw": "Withdraw",
     "mineFailed": "Your requests didn't load — please try again.",
     "status": {
@@ -145,7 +157,9 @@
       "limit": "You already have {limit} requests awaiting a reply — wait for an answer or withdraw one.",
       "lapsed": "This request's deadline has already passed.",
       "own-listing": "You can't request your own listing — block dates from its calendar instead.",
-      "failed": "Something went wrong — please try again."
+      "failed": "Something went wrong — please try again.",
+      "price-changed": "The price changed to {total}. Check the new total and send again.",
+      "price-unpriced": "The price for these dates no longer applies. Check the stay again."
     }
   },
   "pets": {

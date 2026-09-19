@@ -13,8 +13,8 @@ import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { getStorageUnitById } from '@/services/storage.service';
-import type { StorageUnit } from '@/types/storage';
+import { resolveStorageById } from '@/hooks/entity-deep-link-sources';
+import type { Storage } from '@/types/storage/contracts';
 import {
   Package,
   Car,
@@ -22,8 +22,6 @@ import {
   Ruler,
   Building,
   MapPin,
-  CheckCircle,
-  Link as LinkIcon,
   ArrowLeft,
   User
 } from 'lucide-react';
@@ -37,7 +35,7 @@ import { createStaleCache } from '@/lib/stale-cache';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('StorageDetailPage');
-const storageDetailCache = createStaleCache<StorageUnit>('storage-detail');
+const storageDetailCache = createStaleCache<Storage>('storage-detail');
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) {
     const iconSizes = useIconSizes();
@@ -58,7 +56,7 @@ export function StorageDetailPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation('storage');
-  const [unit, setUnit] = useState<StorageUnit | null>(
+  const [unit, setUnit] = useState<Storage | null>(
     params.id ? (storageDetailCache.get(params.id) ?? null) : null
   );
   const [loading, setLoading] = useState(
@@ -67,7 +65,11 @@ export function StorageDetailPageContent() {
 
   useEffect(() => {
     if (params.id) {
-      getStorageUnitById(params.id)
+      // 🔒 ADR-777 §8.60.20 — ΜΟΝΟ από τη διαδρομή με φύλακα εταιρείας (`requireStorageInTenant`).
+      // Ως τις 2026-09-19 εδώ καλούνταν server action (`'use server'`) με Admin SDK και σκέτο
+      // `doc(id).get()`: οποιοσδήποτε client διάβαζε αποθήκη ΞΕΝΗΣ εταιρείας με μια ταυτότητα.
+      // Ξένη ή ανύπαρκτη ⇒ `null` ⇒ `notFound()` — ίδια απάντηση, ώστε να μην απαριθμούνται ταυτότητες.
+      resolveStorageById(params.id)
         .then(data => {
           if (data) {
             storageDetailCache.set(data, params.id);
@@ -132,14 +134,12 @@ export function StorageDetailPageContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-3">
                      <InfoRow icon={Ruler} label={t('card.sections.area')} value={`${unit.area} m²`} />
-                     <InfoRow icon={Euro} label={t('general.fields.price')} value={`${unit.price.toLocaleString('el-GR')} €`} />
-                     <InfoRow icon={MapPin} label={t('general.fields.floor')} value={unit.level} />
+                     <InfoRow icon={Euro} label={t('general.fields.price')} value={unit.price != null ? `${unit.price.toLocaleString('el-GR')} €` : null} />
+                     <InfoRow icon={MapPin} label={t('general.fields.floor')} value={unit.floor} />
                      <InfoRow icon={Building} label={t('general.fields.project')} value={unit.projectId} />
                  </div>
                  <div className="space-y-3">
                      <InfoRow icon={User} label={t('general.fields.owner')} value={unit.owner || t('general.status.available')} />
-                     {unit.propertyCode && <InfoRow icon={LinkIcon} label={t('page.linkedTo')} value={unit.propertyCode} />}
-                     <InfoRow icon={CheckCircle} label={t('page.registeredBy')} value={unit.constructedBy} />
                  </div>
             </div>
             {unit.notes && (

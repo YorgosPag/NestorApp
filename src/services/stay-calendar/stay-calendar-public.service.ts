@@ -85,7 +85,8 @@ async function answerOne(adminDb: AdminFirestore, listingId: string, query: Stay
   const { answer, hold } = stayRequestPreview(stay.listing, stay.reading, stayClockAt(now), query);
   // Οι τιμές ανά ημέρα ισχύουν και σε αδήλωτο ημερολόγιο· σε αδιάβαστο, δεν τιμολογούμε.
   const days = stay.reading.kind === 'readable' ? stayDayRulesOf(stay.reading.months) : null;
-  const quote = days === null ? null : stayQuoteOf(stay.listing, days, query.checkIn, query.checkOut);
+  // 🔑 Το σύνολο είναι ΟΛΟΚΛΗΡΟ: τα κατοικίδια του ερωτήματος μπαίνουν στην ΙΔΙΑ τιμολόγηση (ADR-777 §8.60.21.7).
+  const quote = days === null ? null : stayQuoteOf(stay.listing, days, query);
   return { answer, quote, hold };
 }
 

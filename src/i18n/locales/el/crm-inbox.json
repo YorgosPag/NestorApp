@@ -197,7 +197,10 @@
       "noMessages": "Δεν υπάρχουν μηνύματα σε αυτή τη συνομιλία",
       "selectConversation": "Επιλέξτε μια συνομιλία για να δείτε τα μηνύματα",
       "participants": "Συμμετέχοντες",
-      "unread": "{count} αδιάβαστα"
+      "unread": "{count} αδιάβαστα",
+      "paginationLabel": "Σελιδοποίηση μηνυμάτων",
+      "emptyLabel": "Κενή συνομιλία",
+      "messagesLabel": "Μηνύματα"
     },
     "composer": {
       "placeholder": "Γράψτε το μήνυμά σας...",

@@ -11,6 +11,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις.
  */
 
+import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 import { isRecord } from '@/lib/type-guards';
 import {
   isStayBookingLifecycle,
@@ -24,6 +25,8 @@ export interface StayGuestRequestView {
   readonly checkIn: string;
   readonly checkOut: string;
   readonly guests: number;
+  /** Το σύνολο που **παγώθηκε** στο αίτημα (ADR-777 §8.60.21.7) — `null` = δεν τιμολογήθηκε. */
+  readonly totalMinor: MinorAmount | null;
   readonly lifecycle: StayBookingLifecycle;
   /** Ως πότε κρατιούνται οι μέρες — `null` αν δεν γεννήθηκε ως αίτημα. */
   readonly holdExpiresAt: string | null;
@@ -41,6 +44,7 @@ export function stayGuestRequestViewOf(booking: StayBooking, instant: string): S
     checkIn: booking.checkIn,
     checkOut: booking.checkOut,
     guests: booking.guests,
+    totalMinor: booking.price?.totalMinor ?? null,
     lifecycle: booking.lifecycle,
     holdExpiresAt: booking.hold?.expiresAt ?? null,
     pending: booking.lifecycle === 'requested' && stayBookingOccupiesAt(booking, instant),
@@ -54,11 +58,12 @@ export type StayGuestRequests =
 
 function requestViewFrom(raw: unknown): StayGuestRequestView | null {
   if (!isRecord(raw)) return null;
-  const { id, checkIn, checkOut, guests, lifecycle, holdExpiresAt, pending } = raw;
+  const { id, checkIn, checkOut, guests, totalMinor, lifecycle, holdExpiresAt, pending } = raw;
   if (typeof id !== 'string' || typeof checkIn !== 'string' || typeof checkOut !== 'string') return null;
   if (typeof guests !== 'number' || !isStayBookingLifecycle(lifecycle) || typeof pending !== 'boolean') return null;
   if (holdExpiresAt !== null && typeof holdExpiresAt !== 'string') return null;
-  return { id, checkIn, checkOut, guests, lifecycle, holdExpiresAt, pending };
+  if (totalMinor !== null && !isMinorAmount(totalMinor)) return null;
+  return { id, checkIn, checkOut, guests, totalMinor, lifecycle, holdExpiresAt, pending };
 }
 
 /** **Από το σύρμα** — άγνωστο σχήμα ⇒ `null` (ο καλών το λέει «απέτυχε»). */

@@ -37,6 +37,7 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 
 import { Link } from '@/lib/workspace/navigation';
 import { MandateCatalogRow } from '@/components/mandate/catalog/MandateCatalogRow';
@@ -83,6 +84,16 @@ import routeSlice from '@/i18n/generated/routes/o__workspace__listings__mandates
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
+
+/**
+ * 💬 ADR-867 Β7 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): η συνομιλία είναι νησίδα **μόνο για συνδεδεμένους**
+ * (στον διακομιστή δεν υπάρχει χρήστης ⇒ δεν αποδίδει τίποτα), με δικό της namespace που φορτώνεται όταν
+ * ανοίξει. Στατικά θα φούσκωνε το route slice κατά ~7 KB για κείμενα που το SSR δεν δείχνει ποτέ.
+ * ⚠️ Όχι `ssr: false` — ίδιο ιδίωμα με το `PrivateMarketingAgencySection`.
+ */
+const NetworkThreadPanel = dynamic(() =>
+  import('@/components/network-messaging/NetworkThreadPanel').then((mod) => mod.NetworkThreadPanel),
+);
 
 /**
  * **Ο δρόμος πίσω — και είναι ΥΠΟΧΡΕΩΤΙΚΟΣ, όχι ευγένεια.**
@@ -193,6 +204,15 @@ export function MandateDetailContent({
       */}
       {view.state === 'settled' && view.loaded.kind === MANDATE_FOUND && (
         <PrivateMarketingAgencySection ownerPropertyId={ownerPropertyId} />
+      )}
+
+      {/*
+        💬 ADR-867 Β7 — **η συνομιλία με τον ιδιοκτήτη, κάτω από την εντολή** (Follow Up Boss: «Messages»
+        στο προφίλ · Procore: απαντήσεις στη σελίδα του αντικειμένου). Τα id έρχονται από τη διαδρομή,
+        με το γραφείο που **έκρινε ο φρουρός** — ποτέ μαντεψιά στον πελάτη.
+      */}
+      {view.state === 'settled' && view.loaded.kind === MANDATE_FOUND && (
+        <NetworkThreadPanel threadId={view.loaded.network.threadId} teamId={view.loaded.network.teamId} variant="office" />
       )}
     </section>
   );

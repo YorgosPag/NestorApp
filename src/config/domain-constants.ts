@@ -939,6 +939,25 @@ export const API_ROUTES = {
     MESSAGES: (conversationId: string) => `/api/conversations/${conversationId}/messages` as const,
     SEND: (conversationId: string) => `/api/conversations/${conversationId}/send` as const,
   },
+  /**
+   * ADR-867 — **μηνύματα ανάμεσα σε συνεργάτες** (χώρος ↔ χώρος). ⚠️ ΞΕΧΩΡΙΣΤΑ από τα `MESSAGES` /
+   * `CONVERSATIONS` του omnichannel (ADR-029): άλλο μοντέλο ορατότητας, άλλη πόρτα (`withNetworkDoor`).
+   */
+  NETWORK: {
+    THREADS: '/api/network/threads',
+    AWAY: '/api/network/away',
+    MESSAGES: (threadId: string) => `/api/network/threads/${threadId}/messages` as const,
+    MESSAGE: (threadId: string, messageId: string) =>
+      `/api/network/threads/${threadId}/messages/${messageId}` as const,
+    RETRACTION: (threadId: string, messageId: string) =>
+      `/api/network/threads/${threadId}/messages/${messageId}/retraction` as const,
+    READ: (threadId: string) => `/api/network/threads/${threadId}/read` as const,
+    MUTE: (threadId: string) => `/api/network/threads/${threadId}/mute` as const,
+    FOLLOW: (threadId: string) => `/api/network/threads/${threadId}/follow` as const,
+    PRESENCE: (threadId: string) => `/api/network/threads/${threadId}/presence` as const,
+    PEOPLE: (threadId: string) => `/api/network/threads/${threadId}/people` as const,
+    ACT_TEAM: (teamId: string) => `/api/network/act-teams/${teamId}` as const,
+  },
 
   // ── Notifications ─────────────────────────────────────────────────────
   NOTIFICATIONS: {

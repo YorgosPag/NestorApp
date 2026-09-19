@@ -36,6 +36,47 @@ describe('Κ1 — το μονοπάτι του νήματος χτίζεται �
   });
 });
 
+describe('Κ1 (Β7) — ένας τόπος ανά SDK: ο πελάτης έχει ΔΙΚΟ ΤΟΥ, δηλωμένο', () => {
+  it('✅ το μονοπάτι μέσα στον τόπο του πελάτη (Web SDK)', () => {
+    expect(findingsOf('collection(db, COLLECTIONS.NETWORK_THREADS, t, SUBCOLLECTIONS.NETWORK_THREAD_MESSAGES);', gate.CLIENT_REF_FILE))
+      .toEqual([]);
+  });
+
+  it('⛔ το ίδιο μονοπάτι σε hook του πελάτη — η παραβίαση που έπιασε η πύλη στο Β7 (μετάλλαξη: ο πελάτης χτίζει μόνος του)', () => {
+    expect(findingsOf('doc(db, COLLECTIONS.NETWORK_THREADS, threadId);', 'src/hooks/network-messaging/useNetworkThread.ts'))
+      .toEqual([gate.STATES.PATH_OUTSIDE_REF]);
+  });
+});
+
+describe('Κ7 (Β7) — ο τόπος του ΠΕΛΑΤΗ δεν γράφει ΠΟΤΕ', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+
+  /** Ένα ψεύτικο δέντρο με ΟΛΑ τα δηλωμένα αρχεία (αλλιώς Κ5), και τον τόπο του πελάτη όπως ζητηθεί. */
+  function treeWith(clientRefSource) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'k7-'));
+    const write = (rel, text) => {
+      fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+      fs.writeFileSync(path.join(root, rel), text);
+    };
+    for (const rel of [gate.REF_FILE, gate.AUDIENCE_WRITER, gate.MESSAGE_WRITER]) write(rel, '');
+    for (const rel of gate.PROJECTION_CONSUMERS) write(rel, 'writeActThread(');
+    write(gate.CLIENT_REF_FILE, clientRefSource);
+    return root;
+  }
+
+  it('⛔ εισαγωγή/κλήση `setDoc` στον τόπο του πελάτη (μετάλλαξη: Κ7 σβηστό)', () => {
+    const root = treeWith("import { doc, setDoc } from 'firebase/firestore';\nexport const w = () => setDoc(doc(db, 'x', 'y'), {});");
+    expect(gate.wiringFindings(root).map((f) => f.state)).toEqual([gate.STATES.CLIENT_REF_WRITES]);
+  });
+
+  it('✅ σχόλιο που ΟΝΟΜΑΖΕΙ το `setDoc` δεν είναι γραφή', () => {
+    const root = treeWith("/** ένα `setDoc` εδώ θα ήταν δεύτερος γραφέας */\n// ούτε updateDoc\nexport const r = () => doc(db, 'x', 'y');");
+    expect(gate.wiringFindings(root)).toEqual([]);
+  });
+});
+
 describe('Κ2 — δηλωμένοι καταναλωτές', () => {
   it('⛔ αδήλωτος καταναλωτής του μονοπατιού', () => {
     expect(findingsOf('networkThreadRef(db, threadId).get();')).toEqual([gate.STATES.UNDECLARED_CONSUMER]);

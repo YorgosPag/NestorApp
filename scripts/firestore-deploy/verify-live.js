@@ -6,6 +6,13 @@
  *   npm run firestore:verify -- --project pagonis-87766 --wait     # μέχρι να μη χτίζεται τίποτα
  *   npm run firestore:verify -- --project pagonis-87766 --json     # για μηχανή (CI, πύλη)
  *   npm run firestore:verify -- --project pagonis-87766 --plan     # πλάνο για τη γραμμή παραγωγής (§11)
+ *   npm run firestore:verify -- --project pagonis-87766 --tree worktree   # κρίνει τον ΔΙΣΚΟ (προεπιλογή: HEAD)
+ *
+ * 🔑 ADR-865 §11.8 — **ΠΟΙΟ ΔΕΝΤΡΟ**: προεπιλογή `HEAD`, όπως το Argo CD κρίνει *«the tip of the
+ * specified branch»*, όχι ένα working copy. Μετρημένο 2026-09-19: με ακομμίτιστες γραμμές **άλλης**
+ * συνεδρίας στο `firestore.rules` ο έλεγχος του δίσκου έβγαινε **EXIT 2** ενώ η παραγωγή = HEAD.
+ * `--tree worktree` όταν κρίνεις ό,τι μόλις ανέπτυξες **από τον δίσκο** (`firestore:deploy`).
+ * Όταν ο δίσκος ≠ το κρινόμενο δέντρο, αυτό **τυπώνεται** — ποτέ σιωπηλή επιλογή πηγής.
  *
  * **ΜΟΝΟ ΑΝΑΓΝΩΣΗ** — κανένα deploy, καμία γραφή στο μητρώο. Ασφαλές από πράκτορα.
  *
@@ -34,6 +41,12 @@
 const M = require('../lib/firestore-deploy/model');
 const fs = require('node:fs');
 const { loadWorld, loadDesired, attributeFromHistory } = require('../lib/firestore-deploy/world');
+
+/** Προεπιλεγμένο δέντρο: ό,τι κρίνει η γραμμή (commit), όχι ο δίσκος (ADR-865 §11.8). */
+const DEFAULT_TREE = 'HEAD';
+
+/** Το δέντρο που κρίνεται: `--tree <HEAD|worktree|index|rev>`, αλλιώς `HEAD`. */
+const treeOf = (argv) => argValue(argv, '--tree') || DEFAULT_TREE;
 const { createTransport, loadLiveWorld, resolveProject, argValue } = require('../lib/firestore-deploy/live');
 const { judgeLive, withHistory, liveContent, SYNC, HEALTH, EXIT, ORIGIN } = require('../lib/firestore-deploy/drift');
 const { planDeployment, renderPlanMarkdown, ACTION } = require('../lib/firestore-deploy/plan');
@@ -88,7 +101,10 @@ const SUMMARY = {
 };
 
 function printReport(project, result) {
-  console.log(`\n🔎 ADR-865 — ζωντανό έναντι δέντρου · ${project}`);
+  console.log(`\n🔎 ADR-865 — ζωντανό έναντι δέντρου · ${project} · δέντρο: ${result.tree}`);
+  for (const source of result.worktreeDrift) {
+    console.log(c.yellow(`   ⚠️  ο δίσκος διαφέρει από το ${result.tree} στο ${source} — ΔΕΝ κρίθηκε (--tree worktree για τον δίσκο)`));
+  }
   for (const v of result.verdicts) printVerdict(v);
   console.log(`\n${SUMMARY[result.exitCode]()}\n`);
 }
@@ -110,26 +126,27 @@ function attributeForeign(result, desired, live) {
   return { ...result, verdicts };
 }
 
-/** Μία ερώτηση — επιθυμητό (δίσκος + git) έναντι ζωντανού (πάροχος). */
-async function verifyOnce(project, transport) {
-  const world = loadWorld();
+/** Μία ερώτηση — επιθυμητό (το δέντρο `tree` + git) έναντι ζωντανού (πάροχος). */
+async function verifyOnce(project, transport, tree = DEFAULT_TREE) {
+  const world = loadWorld({ tree });
   const desired = loadDesired(world);
   const live = await loadLiveWorld({ project, firebaseJson: world.firebaseJson, transport });
-  return attributeForeign(judgeLive(desired, live), desired, live);
+  const result = attributeForeign(judgeLive(desired, live), desired, live);
+  return { ...result, tree: world.tree, worktreeDrift: world.worktreeDrift };
 }
 
 /**
  * `argocd app wait --health`: ξαναρωτά **μόνο** όσο η ετυμηγορία είναι `Progressing`.
  * Απόκλιση ή βλάβη δεν «περνούν με την αναμονή» — επιστρέφονται αμέσως.
  */
-async function verifyUntilSettled(project, transport, timeoutSeconds, log) {
+async function verifyUntilSettled(project, transport, timeoutSeconds, log, tree) {
   const deadline = Date.now() + timeoutSeconds * 1000;
-  let result = await verifyOnce(project, transport);
+  let result = await verifyOnce(project, transport, tree);
   while (result.exitCode === EXIT.PROGRESSING && Date.now() + POLL_MS < deadline) {
     const building = result.verdicts.flatMap((v) => v.notReady || []).length;
     log(c.dim(`   … ${building} σε εξέλιξη — ξανά σε ${POLL_MS / 1000}s`));
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-    result = await verifyOnce(project, transport);
+    result = await verifyOnce(project, transport, tree);
   }
   return result;
 }
@@ -170,9 +187,10 @@ async function runVerification(argv, { transport } = {}) {
   const t = transport || createTransport(project);
   const timeout = Number(argValue(argv, '--timeout')) || DEFAULT_TIMEOUT_S;
   const log = json ? () => {} : (line) => console.log(line);
+  const tree = treeOf(argv);
   const result = argv.includes('--wait')
-    ? await verifyUntilSettled(project, t, timeout, log)
-    : await verifyOnce(project, t);
+    ? await verifyUntilSettled(project, t, timeout, log, tree)
+    : await verifyOnce(project, t, tree);
   if (json) console.log(M.stableStringify({ project, ...result }));
   else printReport(project, result);
   const plan = publishToGithub(project, result);
@@ -189,4 +207,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { runVerification, verifyOnce, publishToGithub };
+module.exports = { runVerification, verifyOnce, publishToGithub, treeOf };

@@ -15,7 +15,7 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative as relativePath } from 'node:path';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 const read = (relative: string): string => readFileSync(join(REPO_ROOT, relative), 'utf8');
@@ -34,6 +34,20 @@ const withoutComments = (source: string): string =>
   source
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+/**
+ * Κάθε αρχείο πηγαίου κώδικα του `src/` (εκτός tests) του οποίου ο κώδικας —
+ * **χωρίς σχόλια** — ταιριάζει στο `pattern`. Σάρωση **όλου** του δέντρου, όχι
+ * λίστας: μια λίστα βλέπει μόνο όσους ήξερε ήδη κάποιος (άγκυρα `Α7`).
+ */
+const sourceFilesMatching = (pattern: RegExp): string[] =>
+  readdirSync(join(REPO_ROOT, 'src'), { recursive: true, withFileTypes: true })
+    // ⚠️ `isFile()`: υπάρχουν ΦΑΚΕΛΟΙ με όνομα που τελειώνει σε `.ts` (EISDIR).
+    .filter((dirent) => dirent.isFile())
+    .map((dirent) => relativePath(join(REPO_ROOT, 'src'), join(dirent.parentPath, dirent.name)).replace(/\\/g, '/'))
+    .filter((entry) => /\.(ts|tsx)$/.test(entry) && !/(^|\/)__tests__\//.test(entry))
+    .filter((entry) => pattern.test(withoutComments(read(`src/${entry}`))))
+    .map((entry) => `src/${entry}`);
 
 const GENERIC_HOOK = 'src/hooks/useEntityPageState.ts';
 
@@ -129,18 +143,24 @@ describe('ADR-777 §8.31 — το κοινό εξάρτημα ρωτά, και �
   // Α7 — 🔴 Η ΕΦΕΔΡΙΚΗ ΠΗΓΗ ΣΕΒΕΤΑΙ ΕΤΑΙΡΕΙΑ
   // ==========================================================================
 
-  it('Α7 🔴 καμία οθόνη/hook δεν καλεί το getStorageUnitById (παρακάμπτει tenant)', () => {
+  it('Α7 🔴 το getStorageUnitById δεν υπάρχει ΠΟΥΘΕΝΑ στο src/ — ούτε ορισμός, ούτε κλήση', () => {
     /*
-     * 🔴 `services/storage.service.ts` → Admin SDK με σκέτο
-     * `db.collection(...).doc(id).get()`, **κανέναν** έλεγχο `companyId`. Το
-     * Admin SDK παρακάμπτει τους κανόνες Firestore ⇒ αν μια οθόνη το καλέσει με
-     * ταυτότητα από τη διεύθυνση, διαβάζει **ξένη εταιρεία** (CHECK 3.35).
+     * 🔴 `services/storage.service.ts` ήταν αρχείο **`'use server'`** ⇒ server
+     * action, **καλέσιμη από κάθε client με κάθε id**· Admin SDK με σκέτο
+     * `doc(id).get()`, **κανέναν** έλεγχο `companyId` ⇒ ανάγνωση **ξένης
+     * εταιρείας** (CHECK 3.35). Διαγράφηκε 2026-09-19 (ADR-777 §8.60.20).
+     *
+     * ⚠️ Η πρώτη γραφή κοίταζε **ονομαστική λίστα** (`WRAPPERS`/`PAGES`) — και ο
+     * πραγματικός καλών (`StorageDetailPageContent`) **δεν ήταν σε αυτήν**: πράσινο
+     * που σήμαινε «δεν κοίταξα». Γι' αυτό τώρα σαρώνει **όλο** το `src/`.
      */
-    const offenders: string[] = [];
-    for (const file of [...WRAPPERS, ...PAGES, 'src/hooks/entity-deep-link-sources.ts']) {
-      if (/\bgetStorageUnitById\b/.test(withoutComments(read(file)))) offenders.push(file);
-    }
-    expect(offenders).toEqual([]);
+    expect(sourceFilesMatching(/\bgetStorageUnitById\b/)).toEqual([]);
+  });
+
+  it('Α7β η σελίδα λεπτομέρειας αποθήκης διαβάζει από την πηγή με φύλακα εταιρείας', () => {
+    const page = withoutComments(read('src/components/storage/pages/StorageDetailPageContent.tsx'));
+    expect(page).toContain("from '@/hooks/entity-deep-link-sources'");
+    expect(page).toMatch(/resolveStorageById\(params\.id\)/);
   });
 
   it('Α8 οι εφεδρικές πηγές περνούν από τις διαδρομές με φύλακα εταιρείας', () => {

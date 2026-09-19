@@ -10,7 +10,7 @@
  * @enterprise ADR-031 + ADR-121 + ADR-191
  */
 
-import type { EntityType } from '../domain-constants';
+import type { EntityType, FileCategory } from '../domain-constants';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { ContactType } from '@/types/contacts';
 import type { EntityLevel, StudyGroup } from '../study-groups-config';
@@ -25,6 +25,7 @@ import { PARKING_ENTRY_POINTS } from './entries-parking';
 import { STORAGE_ENTRY_POINTS } from './entries-storage';
 import { PROJECT_ENTRY_POINTS } from './entries-project';
 import { STUDY_ENTRIES } from './entries-studies';
+import { PROPERTY_DOSSIER_ENTRY_POINTS } from './entries-property-dossier';
 
 // ============================================================================
 // Study Entry Assembly (ADR-191 — shared visibility)
@@ -62,6 +63,8 @@ export const UPLOAD_ENTRY_POINTS: UploadEntryPointsConfig = {
   parking_spot: PARKING_ENTRY_POINTS,
   storage: STORAGE_ENTRY_POINTS,
   project: [...PROJECT_ENTRY_POINTS, ...getStudyEntriesForEntityLevel('project')],
+  // ADR-866 §2.10 Β1 — όψη του ίδιου καταλόγου (ακίνητο + μελέτες), όχι αντίγραφο.
+  property_dossier: PROPERTY_DOSSIER_ENTRY_POINTS,
 };
 
 // ============================================================================
@@ -153,6 +156,36 @@ export function getFilteredContactEntryPoints(
 
     return false;
   });
+}
+
+// ============================================================================
+// ADR-866 §2.10 Β1: «Τι προσφέρει αυτή η καρτέλα;» — ΜΙΑ απάντηση
+// ============================================================================
+
+/** Τα κριτήρια μιας καρτέλας για το ποιους τύπους εγγράφου προσφέρει (τα ίδια props του `EntityFilesManager`). */
+export interface EntryPointOfferQuery {
+  readonly entityType: EntityType;
+  readonly contactType?: ContactType;
+  readonly activePersonas?: PersonaType[];
+  readonly categoryFilter?: FileCategory;
+  readonly excludeCategories?: readonly FileCategory[];
+  readonly allowedEntryPointIds?: readonly string[];
+}
+
+/**
+ * **Οι τύποι εγγράφου που προσφέρει μια καρτέλα** — ο ΕΝΑΣ κριτής, κοινός για τον επιλογέα, την κενή όψη της
+ * ζώνης ανεβάσματος και την άγκυρα Α38.1. Πριν ζούσε **μέσα** στο `UploadEntryPointSelector` ⇒ κανείς άλλος δεν
+ * μπορούσε να ρωτήσει «είναι άδειο;» — και η ζώνη έλεγε «επιλέξτε πρώτα τύπο» πάνω από **μηδέν** τύπους.
+ */
+export function selectOfferedEntryPoints(query: EntryPointOfferQuery): UploadEntryPoint[] {
+  const { entityType, contactType, activePersonas, categoryFilter, excludeCategories, allowedEntryPointIds } = query;
+  const base = entityType === 'contact' && contactType
+    ? getFilteredContactEntryPoints(contactType, activePersonas)
+    : getSortedEntryPoints(entityType);
+  return base.filter((ep) =>
+    (!allowedEntryPointIds || allowedEntryPointIds.includes(ep.id))
+    && (!categoryFilter || ep.category === categoryFilter)
+    && (!excludeCategories || !excludeCategories.includes(ep.category)));
 }
 
 // ============================================================================

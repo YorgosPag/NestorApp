@@ -17,6 +17,8 @@
  */
 
 import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
+import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
+import { isDeclaredPetCount } from '@/lib/offers/offer-amount';
 import { isRecord } from '@/lib/type-guards';
 import { isStayRuleWarningKind, type StayRuleWarningKind } from '@/lib/stay/stay-rule-warnings';
 import { stayDayRuleFrom, stayRulesFrom } from '@/lib/stay/stay-rules-shape';
@@ -47,6 +49,8 @@ export type StayCalendarCommand =
       readonly checkIn: string;
       readonly checkOut: string;
       readonly guests: number;
+      /** Κατοικίδια της διαμονής: `0` = κανένα (ADR-777 §8.60.21.7). */
+      readonly pets: number;
       readonly guestLabel: string;
       /** Οι κανόνες που ο οικοδεσπότης **ρητά** αποδέχεται να παρακάμψει (ADR-835 §21). */
       readonly acknowledgedWarnings: readonly StayRuleWarningKind[];
@@ -61,6 +65,17 @@ export type StayCalendarCommand =
       readonly checkIn: string;
       readonly checkOut: string;
       readonly guests: number;
+      /**
+       * Κατοικίδια: `0` = κανένα, **ρητά** (ADR-777 §8.60.21.7). Κρίνονται από τον **ίδιο** κριτή
+       * (`petsVerdict`) μέσα στη συναλλαγή και μπαίνουν στην **ίδια** τιμολόγηση.
+       */
+      readonly pets: number;
+      /**
+       * 🏆 **Το σύνολο που ΕΙΔΕ ο επισκέπτης** — `null` = δεν του δείχτηκε σύνολο (νύχτες χωρίς τιμή).
+       * Ο γραφέας ξαναϋπολογίζει μέσα στη συναλλαγή· διαφορά ⇒ `price-changed`, ποτέ δέσμευση σε
+       * ποσό που δεν είδε (Οδηγία 2011/83/ΕΕ άρ. 6(6)).
+       */
+      readonly expectedTotalMinor: MinorAmount | null;
       readonly riskAcknowledged: boolean;
     }
   /** Ο επισκέπτης αποσύρει το αίτημά του πριν απαντηθεί. */
@@ -138,21 +153,35 @@ function stayGuestsWithin(body: Body, bad: string[]): number | null {
   return null;
 }
 
+/** Κατοικίδια του σώματος: **υποχρεωτικό** `0..5` — ποτέ σιωπηλό «κανένα» από απουσία. */
+function petsWithin(body: Body, bad: string[]): number | null {
+  if (isDeclaredPetCount(body.pets)) return body.pets;
+  bad.push('pets');
+  return null;
+}
+
+/** Το σύνολο που είδε ο επισκέπτης: λεπτά ή ρητό `null`. Απών ⇒ άκυρο (`undefined`). */
+function expectedTotalOf(value: unknown): MinorAmount | null | undefined {
+  if (value === null) return null;
+  return isMinorAmount(value) ? value : undefined;
+}
+
 function parseBook(body: Body): StayCalendarCommandParse {
   const guestLabel = boundedText(body.guestLabel, STAY_GUEST_LABEL_MAX_LENGTH);
   const bad: string[] = [];
   const guests = stayGuestsWithin(body, bad);
+  const pets = petsWithin(body, bad);
   // 🔑 Χειροκίνητη κράτηση **χωρίς** όνομα δεν είναι κράτηση — είναι block.
   if (guestLabel === undefined || guestLabel === null) bad.push('guestLabel');
   const acknowledgedWarnings = warningsOf(body.acknowledgedWarnings);
   if (acknowledgedWarnings === null) bad.push('acknowledgedWarnings');
-  if (bad.length > 0 || guests === null || !guestLabel || acknowledgedWarnings === null) {
+  if (bad.length > 0 || guests === null || pets === null || !guestLabel || acknowledgedWarnings === null) {
     return malformed(...bad);
   }
   return {
     ok: true,
     command: {
-      action: 'book', checkIn: String(body.checkIn), checkOut: String(body.checkOut), guests, guestLabel,
+      action: 'book', checkIn: String(body.checkIn), checkOut: String(body.checkOut), guests, pets, guestLabel,
       acknowledgedWarnings,
     },
   };
@@ -162,12 +191,19 @@ function parseRequest(body: Body): StayCalendarCommandParse {
   const { riskAcknowledged } = body;
   const bad: string[] = [];
   const guests = stayGuestsWithin(body, bad);
+  const pets = petsWithin(body, bad);
+  const expectedTotalMinor = expectedTotalOf(body.expectedTotalMinor);
+  if (expectedTotalMinor === undefined) bad.push('expectedTotalMinor');
   // Ρητό `boolean`, ποτέ «απών = όχι»: η αποκάλυψη είναι γεγονός και γράφεται μόνο αν ειπώθηκε.
   if (typeof riskAcknowledged !== 'boolean') bad.push('riskAcknowledged');
-  if (bad.length > 0 || guests === null || typeof riskAcknowledged !== 'boolean') return malformed(...bad);
+  if (bad.length > 0 || guests === null || pets === null || expectedTotalMinor === undefined
+    || typeof riskAcknowledged !== 'boolean') return malformed(...bad);
   return {
     ok: true,
-    command: { action: 'request', checkIn: String(body.checkIn), checkOut: String(body.checkOut), guests, riskAcknowledged },
+    command: {
+      action: 'request', checkIn: String(body.checkIn), checkOut: String(body.checkOut), guests, pets,
+      expectedTotalMinor, riskAcknowledged,
+    },
   };
 }
 

@@ -99,17 +99,26 @@ export function unreadEpisodeOf(entry: Pick<NetworkAudienceEntry, 'lastReadAt'>)
   return entry.lastReadAt ?? 'never';
 }
 
-/** Η ειδοποίηση μιας πλευράς: κύρια πρόσωπα πάντα· συνεργάτες όσο λείπει κύριο πρόσωπο. */
+/**
+ * **Ειδοποιείται πάντα;** — το κύριο πρόσωπο, **ή** ο συνεργάτης που **ακολουθεί** (ADR-867 Β7 · §8 #10,
+ * HubSpot «Follow a record»: *«By default, you follow all records you own»* — οι άλλοι με opt-in).
+ */
+function alwaysNotified(row: NetworkAudienceEntry): boolean {
+  return PRIMARY_NOTIFY_ROLES.has(row.role) || row.following === true;
+}
+
+/** Η ειδοποίηση μιας πλευράς: κύρια πρόσωπα + όσοι ακολουθούν πάντα· οι υπόλοιποι όσο λείπει κύριο πρόσωπο. */
 function planForParty(
   rows: readonly NetworkAudienceEntry[],
   isAway: (uid: string) => boolean,
 ): MessageRecipient[] {
-  const primaries = rows.filter((row) => PRIMARY_NOTIFY_ROLES.has(row.role));
-  const direct = primaries.map((row) => recipient(row, 'direct', null));
-  const absent = primaries.find((row) => isAway(row.uid)) ?? null;
+  const direct = rows.filter(alwaysNotified).map((row) => recipient(row, 'direct', null));
+  // ⚠️ «Λείπει» μετράει **μόνο** το κύριο πρόσωπο: ένας συνεργάτης που ακολουθεί και λείπει δεν
+  //    κάνει τους άλλους αναπληρωτές — δεν ήταν αυτός που περίμενε ο αποστολέας.
+  const absent = rows.find((row) => PRIMARY_NOTIFY_ROLES.has(row.role) && isAway(row.uid)) ?? null;
   if (absent === null) return direct;
   const covering = rows
-    .filter((row) => !PRIMARY_NOTIFY_ROLES.has(row.role) && !isAway(row.uid))
+    .filter((row) => !alwaysNotified(row) && !isAway(row.uid))
     .map((row) => recipient(row, 'covering', absent.uid));
   return [...direct, ...covering];
 }

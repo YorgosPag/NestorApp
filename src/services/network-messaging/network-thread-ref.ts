@@ -99,3 +99,14 @@ export function networkRetractionRef(
 ): DocumentReference {
   return adminDb.collection(COLLECTIONS.NETWORK_MESSAGE_RETRACTIONS).doc(messageId);
 }
+
+/**
+ * `network_message_revisions/{nmrv_*}` — **το κείμενο πριν από μια επεξεργασία** (ADR-867 Β7).
+ * Top-level και κλειστό για τον **ίδιο** λόγο με το αντίγραφο ανάκλησης (δες από πάνω).
+ */
+export function networkRevisionRef(
+  adminDb: AdminFirestore,
+  revisionId: string,
+): DocumentReference {
+  return adminDb.collection(COLLECTIONS.NETWORK_MESSAGE_REVISIONS).doc(revisionId);
+}

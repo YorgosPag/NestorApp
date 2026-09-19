@@ -1,0 +1,152 @@
+{
+  "thread": {
+    "withAgency": "Conversation with {name}",
+    "withAgencyUnnamed": "Conversation with the agency",
+    "withOwner": "Conversation with the owner",
+    "externalNotice": "You are writing to another organization. Who reads, and since when, is always shown on the right.",
+    "personalNotice": "Personal conversation — nobody else from your workspace can see it.",
+    "loading": "Loading conversation…",
+    "absent": "There is no conversation here yet.",
+    "absentHint": "The conversation opens once both sides have an account and the mandate has been accepted.",
+    "absentOfficeHint": "Only the mandate team and the owner can see this conversation — or it has not opened yet because the owner has no account.",
+    "failed": "The conversation could not be loaded.",
+    "closed": "This conversation is closed and accepts no new messages. Its history remains.",
+    "empty": "No messages yet. Write the first one.",
+    "emptyLabel": "Empty conversation",
+    "messagesLabel": "Messages",
+    "loadEarlier": "Earlier messages",
+    "paginationLabel": "Load earlier messages",
+    "newMessages": "New messages",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "message": {
+    "you": "You",
+    "fallbackName": {
+      "responsible": "Agency lead",
+      "collaborator": "Agency member",
+      "counterpart": "Owner",
+      "person": "Partner"
+    },
+    "edited": "edited",
+    "editedAfterRead": "edited after it was read",
+    "editedAt": "Edited: {at}",
+    "retractedRead": "This message was retracted — it had already been read.",
+    "retractedUnread": "This message was retracted before anyone saw it.",
+    "retractedUnknown": "This message was retracted.",
+    "sending": "Sending…",
+    "failed": "Not sent",
+    "retry": "Try again",
+    "discard": "Discard",
+    "actions": "Message actions",
+    "edit": "Edit",
+    "retract": "Retract",
+    "retractWindow": "Can be retracted for {minutes, plural, one {# more minute} other {# more minutes}}",
+    "retractConfirmTitle": "Retract message?",
+    "retractConfirmBody": "The text will leave the conversation for both sides; it will show that it was retracted, and you will learn whether it had already been read. For record-keeping the text is kept in a closed archive that nobody can see.",
+    "retractConfirm": "Retract",
+    "cancel": "Cancel",
+    "retractDoneRead": "Retracted — the other side had already read it.",
+    "retractDoneUnread": "Retracted before anyone read it.",
+    "editLabel": "Edit message",
+    "editSave": "Save",
+    "editNotice": "It will show as edited; the previous version is kept in a closed archive.",
+    "editDoneAfterRead": "Saved — the other side had already read the previous version."
+  },
+  "composer": {
+    "label": "New message",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "hint": "Enter to send · Shift+Enter for a new line",
+    "counter": "{count}/{max}",
+    "tooLong": "The message exceeds {max} characters."
+  },
+  "roster": {
+    "title": "Who reads this",
+    "theirs": "The other side",
+    "mine": "Your side",
+    "you": "(you)",
+    "since": "since {date}",
+    "until": "until {date}",
+    "past": "Used to read",
+    "personal": "Personal conversation",
+    "role": {
+      "responsible": "Lead",
+      "collaborator": "Collaborator",
+      "counterpart": "Owner",
+      "person": "Person"
+    },
+    "reason": {
+      "creator": "from the start",
+      "assigned": "assigned",
+      "added": "added",
+      "failover": "took over after a departure",
+      "admin-self": "the administrator joined",
+      "counterpart": "party to the mandate",
+      "relationship": "personal relationship"
+    }
+  },
+  "away": {
+    "absent": "{name} is away until {date}",
+    "covering": "Reading in their place: {names}",
+    "nobody": "Nobody reads in their place until then.",
+    "you": "you",
+    "mine": {
+      "title": "My time away",
+      "none": "You have not set any time away.",
+      "active": "You are away until {date}.",
+      "scheduled": "You will be away from {from} to {to}.",
+      "set": "Set time away",
+      "end": "I'm back",
+      "from": "From",
+      "to": "Until",
+      "save": "Save",
+      "hint": "While you are away, the people who read with you are notified in your place. Dates only — no message.",
+      "invalid": "Check the dates: the end must be after the start, within one year."
+    }
+  },
+  "seat": {
+    "mute": "Mute notifications",
+    "muteHint": "Messages still arrive, you just are not notified. The other side is not told.",
+    "follow": "Notify me about every message",
+    "followHint": "As a collaborator you are notified only when the lead is away. Turn this on to always be notified."
+  },
+  "team": {
+    "title": "The mandate team",
+    "visibleNotice": "Every change is visible to the other side too, with who reads and since when.",
+    "responsible": "Lead",
+    "collaborators": "Collaborators",
+    "none": "No collaborators.",
+    "assign": "New lead",
+    "add": "Add collaborator",
+    "remove": "Remove",
+    "choose": "Choose a person",
+    "addSelfNotice": "If you add yourself, the other side will see it.",
+    "loading": "Loading team…",
+    "outcome": {
+      "applied": "The team was updated.",
+      "unchanged": "No change needed — it was already so.",
+      "conflict": "Someone else changed the team in the meantime. Review the current version and try again."
+    }
+  },
+  "failure": {
+    "thread-absent": "The conversation does not exist or you have no access.",
+    "not-audience": "The conversation does not exist or you have no access.",
+    "team-absent": "The team was not found.",
+    "message-absent": "The message was not found.",
+    "thread-closed": "The conversation is closed and accepts no changes.",
+    "already-retracted": "The message had already been retracted.",
+    "stale-version": "Someone else made a change in the meantime.",
+    "window-expired": "The retraction window has passed. You can edit it or write a correction.",
+    "not-sender": "Only the sender can change it.",
+    "not-permitted": "You are not allowed to do this.",
+    "empty-text": "The message is empty.",
+    "too-long": "The message is too long.",
+    "target-not-in-workspace": "This person is not an active member of the agency.",
+    "target-is-counterpart": "The owner cannot join the agency team.",
+    "responsible-not-removable": "The lead cannot be removed — assign a new lead first.",
+    "invalid-request": "The request was not valid.",
+    "internal-error": "Something went wrong. Please try again.",
+    "unreachable": "No connection. Check your network and try again."
+  }
+}

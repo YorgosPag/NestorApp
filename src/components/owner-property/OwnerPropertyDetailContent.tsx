@@ -28,6 +28,7 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -81,6 +82,15 @@ import routeSlice from '@/i18n/generated/routes/offers__offerId.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
+
+/**
+ * 💬 ADR-867 Β7 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): οι συνομιλίες με τα γραφεία είναι νησίδα **μόνο για
+ * συνδεδεμένους** (στον διακομιστή δεν υπάρχει χρήστης ⇒ δεν αποδίδουν τίποτα), με δικό τους namespace που
+ * φορτώνεται όταν ανοίξουν. ⚠️ Όχι `ssr: false` — ίδιο ιδίωμα με το `PrivateMarketingAgencySection`.
+ */
+const OwnerMandateThreads = dynamic(() =>
+  import('@/components/network-messaging/OwnerMandateThreads').then((mod) => mod.OwnerMandateThreads),
+);
 
 const NS = 'property-market';
 const K = `${NS}:offer`;
@@ -200,6 +210,12 @@ function OwnerPropertyView({
         μεσίτη δεν έχει λόγο να διαβάσει για μεσιτεία στη σελίδα του σπιτιού του.
       */}
       <OwnerMandatePanel views={mandateViews} />
+
+      {/*
+        💬 **ADR-867 Β7 — Η ΣΥΝΟΜΙΛΙΑ ΜΕ ΤΟ ΓΡΑΦΕΙΟ, ΑΜΕΣΩΣ ΚΑΤΩ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ ΤΟΥ.** Ένα νήμα ανά εντολή με
+        ακμή (ο ίδιος κριτής με τον διακομιστή). Χωρίς ακμή ⇒ τίποτα — κανένα κενό πάνελ.
+      */}
+      <OwnerMandateThreads record={{ propertyId: property.id, mandates: property.mandates }} />
 
       {/*
         🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6, ADR-777 Ε2** — «N άνθρωποι ψάχνουν κάτι σαν το δικό

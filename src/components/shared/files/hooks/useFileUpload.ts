@@ -32,7 +32,7 @@ import type { FileCustody } from '@/lib/files/file-custody';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { isAIClassifiable } from './useFileClassification';
-import { META_PHOTO_PURPOSES } from './useEntityFiles-purpose-filter';
+import { resolveUploadScope, type PurposeAuthority } from '../utils/upload-scope';
 import { RealtimeService } from '@/services/realtime';
 import { useAuth } from '@/auth/hooks/useAuth';
 
@@ -80,6 +80,8 @@ interface UseFileUploadParams {
   category: FileCategory;
   entityLabel?: string;
   purpose?: string;
+  /** ADR-866 §2.10 Β1 — ποιος ορίζει τον σκοπό (`upload-scope.ts`)· παράλειψη ⇒ ο ιστορικός κανόνας. */
+  purposeAuthority?: PurposeAuthority;
   /** ADR-236 Phase 3: Tag uploaded file with multi-level floor ID */
   levelFloorId?: string;
   currentUserId: string;
@@ -122,6 +124,7 @@ export function useFileUpload({
   category,
   entityLabel,
   purpose,
+  purposeAuthority,
   levelFloorId,
   currentUserId,
   selectedEntryPoint,
@@ -179,18 +182,15 @@ export function useFileUpload({
     setUploading(true);
 
     try {
-      // Entry point overrides for correct tree folder structure.
-      // Purpose precedence: tab-specific purpose wins unless it is a meta-photo purpose
-      // (photo, building-photo, …) where entry points supply meaningful sub-purposes
-      // (interior, exterior, …).  Without this guard, the generic 'floorplan' entry
-      // point purpose overwrites 'project-floorplan' / 'parking-floorplan', making
-      // files appear in every *-floorplan tab simultaneously.
-      const uploadDomain = selectedEntryPoint?.domain || domain;
-      const uploadCategory = selectedEntryPoint?.category || category;
-      const isTabPurposeOverrideable = !purpose || META_PHOTO_PURPOSES.has(purpose);
-      const uploadPurpose = isTabPurposeOverrideable
-        ? (selectedEntryPoint?.purpose || purpose)
-        : purpose;
+      // Entry point overrides for correct tree folder structure — ο ΕΝΑΣ επιλυτής (ADR-866 §2.10 Β1), τον
+      // ίδιο που ρωτά η καρτέλα για το τι διαβάζει: ό,τι γράφεται εδώ είναι κατασκευαστικά ορατό εκεί.
+      // Σκοπός: της καρτέλας, εκτός αν είναι μετα-σκοπός φωτογραφίας (photo, building-photo, …) ή η καρτέλα
+      // δηλώνει `purposeAuthority: 'entry'` — αλλιώς το γενικό 'floorplan' θα εμφανιζόταν σε κάθε *-floorplan.
+      const {
+        domain: uploadDomain,
+        category: uploadCategory,
+        purpose: uploadPurpose,
+      } = resolveUploadScope(selectedEntryPoint, { domain, category, purpose, purposeAuthority });
 
       let successCount = 0;
       let failCount = 0;
@@ -257,7 +257,7 @@ export function useFileUpload({
       setUploading(false);
     }
   }, [
-    custody, projectId, entityType, entityId, domain, category, entityLabel, purpose, levelFloorId,
+    custody, projectId, entityType, entityId, domain, category, entityLabel, purpose, purposeAuthority, levelFloorId,
     currentUserId, currentUserName, selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete, fileNotifications, t,
   ]);

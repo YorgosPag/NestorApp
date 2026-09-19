@@ -11,6 +11,7 @@
 
 import type { StayCalendarVerdict } from '@/lib/stay/stay-conflict';
 import { isStayAvailabilityKind, type StayAvailabilityKind } from '@/lib/stay/stay-availability-vocabulary';
+import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 import { isRecord } from '@/lib/type-guards';
 import { isStayRuleWarningKind, type StayRuleWarningKind } from '@/lib/stay/stay-rule-warnings';
 
@@ -77,7 +78,13 @@ export type StayCalendarWriteResult =
   /** Λήξη αιτήματος που **ζει ακόμη** — ο δρομέας δεν σκοτώνει ζωντανή υπόσχεση. */
   | { readonly kind: 'hold-alive' }
   /** Αίτημα στη **δική σου** αγγελία — ο οικοδεσπότης κλείνει μέρες από το ημερολόγιό του. */
-  | { readonly kind: 'own-listing' };
+  | { readonly kind: 'own-listing' }
+  /**
+   * 🏆 **Η τιμή άλλαξε από τη στιγμή που την είδε ο επισκέπτης** (ADR-777 §8.60.21.7) — με το **νέο**
+   * σύνολο (`null` = πλέον δεν τιμολογείται). Κανείς δεν δεσμεύεται σε ποσό που δεν είδε
+   * (Οδηγία 2011/83/ΕΕ άρ. 6(6)): η οθόνη το λέει και ξαναρωτά.
+   */
+  | { readonly kind: 'price-changed'; readonly totalMinor: MinorAmount | null };
 
 export type StayCalendarWriteKind = StayCalendarWriteResult['kind'];
 
@@ -143,6 +150,10 @@ export function stayCalendarWriteResultFrom(raw: unknown): StayCalendarWriteResu
         : null;
     case 'contradictory-rules':
       return typeof raw.date === 'string' ? { kind: 'contradictory-rules', date: raw.date } : null;
+    case 'price-changed':
+      return raw.totalMinor === null || isMinorAmount(raw.totalMinor)
+        ? { kind: 'price-changed', totalMinor: raw.totalMinor }
+        : null;
     case 'not-changeable':
       return raw.reason === 'external-source' || raw.reason === 'lifecycle'
         ? { kind: 'not-changeable', reason: raw.reason }
@@ -180,4 +191,5 @@ export const STAY_CALENDAR_WRITE_STATUS: Readonly<Record<StayCalendarWriteKind, 
   'hold-lapsed': 409,
   'hold-alive': 409,
   'own-listing': 409,
+  'price-changed': 409,
 };

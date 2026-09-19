@@ -10,14 +10,22 @@
  * 🔑 **Η τελική απάντηση έρχεται από τον ΔΙΑΚΟΜΙΣΤΗ** (`useStayAnswers`), όχι από το πλέγμα: το
  * πλέγμα είναι ένδειξη, η μηχανή ετυμηγορία — και η απάντηση φέρνει και την τιμολόγηση.
  *
- * @related ADR-835 §4.5 · §21 · hooks/listings/usePublicStayNights.ts · hooks/listings/useStayAnswers.ts
+ * 🏆 **Τα κατοικίδια ταξιδεύουν από την αναζήτηση** (ADR-777 §8.60.21.7): το `?pets=` διαβάζεται από τον
+ * **ίδιο** αναλυτή (`parseListingFilters`), ώστε το σύνολο της σελίδας να είναι το σύνολο της κάρτας.
+ * Ο επιλογέας ζει **έξω** από τη φόρμα αιτήματος: ένα «πάνω από το όριο» κρύβει τη φόρμα — όχι τον
+ * τρόπο να το διορθώσεις.
+ *
+ * @related ADR-835 §4.5 · §21 · ADR-777 §8.60.21.7 · hooks/listings/usePublicStayNights.ts · hooks/listings/useStayAnswers.ts
  */
 
 import React from 'react';
+import { useSearchParams } from 'next/navigation';
+import { StayCountSelect, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
-import { usePublicStayNights } from '@/hooks/listings/usePublicStayNights';
+import { usePublicStayNights, type PublicStayNightsState } from '@/hooks/listings/usePublicStayNights';
 import { formatCalendarDay } from '@/lib/intl-formatting';
+import { parseListingFilters } from '@/lib/listings/listing-filters';
 import { addMonthsToMonthKey, monthKeyOf } from '@/lib/stay/stay-calendar-month';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import { NO_STAY_SELECTION, nextStaySelection, type StayPublicSelection } from '@/lib/stay/stay-public-selection';
@@ -28,8 +36,14 @@ import { ListingStayAnswer } from './ListingStayAnswer';
 import { ListingStayCalendar } from './ListingStayCalendar';
 import { ListingStayRequest } from './ListingStayRequest';
 
-function queryOf(selection: StayPublicSelection): StayQuery | null {
-  return selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, guests: null } : null;
+function queryOf(selection: StayPublicSelection, pets: number | null): StayQuery | null {
+  return selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, guests: null, pets } : null;
+}
+
+/** Τα κατοικίδια της αναζήτησης που έφερε τον επισκέπτη εδώ — `null` = δεν δηλώθηκαν. */
+function usePetsFromSearch(): number | null {
+  const searchParams = useSearchParams();
+  return React.useMemo(() => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')).pets, [searchParams]);
 }
 
 function SelectionLine({ selection, onClear }: {
@@ -47,31 +61,60 @@ function SelectionLine({ selection, onClear }: {
   );
 }
 
-export default function ListingStayBooking({ listing }: { readonly listing: PublicListing }): React.ReactElement {
+/** Ό,τι λέγεται **αντί** για ημερολόγιο: φόρτωση · αποτυχία · αδήλωτο · αδιάβαστο. */
+function NightsNotice({ state, onRetry }: {
+  readonly state: PublicStayNightsState;
+  readonly onRetry: () => void;
+}): React.ReactElement | null {
   const { t } = useTranslation(['short-stay']);
-  const [monthKey, setMonthKey] = React.useState(() => monthKeyOf(todayLocalDate()));
-  const [selection, setSelection] = React.useState<StayPublicSelection>(NO_STAY_SELECTION);
-  const { state, reload } = usePublicStayNights(listing.id, monthKey);
-  const listingIds = React.useMemo(() => [listing.id], [listing.id]);
-  const query = React.useMemo(() => queryOf(selection), [selection]);
-  const answers = useStayAnswers(listingIds, query);
-
   if (state.kind === 'loading') return <p className="text-sm text-muted-foreground">{t('short-stay:calendar.loading')}</p>;
   if (state.kind === 'failed') {
     return (
       <p role="alert" className="flex items-center gap-2 text-sm text-foreground">
         {t('short-stay:calendar.failed')}
-        <button type="button" onClick={reload} className="underline">{t('short-stay:calendar.retry')}</button>
+        <button type="button" onClick={onRetry} className="underline">{t('short-stay:calendar.retry')}</button>
       </p>
     );
   }
   if (state.nights.kind === 'undeclared') return <p className="text-sm text-foreground">{t('short-stay:calendar.undeclared')}</p>;
   if (state.nights.kind === 'unreadable') return <p role="alert" className="text-sm text-foreground">{t('short-stay:calendar.unreadable')}</p>;
+  return null;
+}
+
+/**
+ * **Η ερώτηση του επισκέπτη** — επιλογή νυχτών, κατοικίδια (από την αναζήτηση), και η απάντηση του
+ * διακομιστή. `refreshAnswers` = ξαναρωτά την ίδια ερώτηση (ο γραφέας είπε `price-changed`).
+ */
+function useStayQuestion(listingId: string) {
+  const [selection, setSelection] = React.useState<StayPublicSelection>(NO_STAY_SELECTION);
+  const petsFromSearch = usePetsFromSearch();
+  const [pets, setPets] = React.useState<number | null>(petsFromSearch);
+  const [revision, setRevision] = React.useState(0);
+  const listingIds = React.useMemo(() => [listingId], [listingId]);
+  const query = React.useMemo(() => queryOf(selection, pets), [selection, pets]);
+  const answers = useStayAnswers(listingIds, query, revision);
+  const refreshAnswers = React.useCallback(() => setRevision((current) => current + 1), []);
+  return { selection, setSelection, pets, setPets, answers, refreshAnswers };
+}
+
+export default function ListingStayBooking({ listing }: { readonly listing: PublicListing }): React.ReactElement {
+  const { t } = useTranslation(['short-stay']);
+  const [monthKey, setMonthKey] = React.useState(() => monthKeyOf(todayLocalDate()));
+  const { state, reload } = usePublicStayNights(listing.id, monthKey);
+  const { selection, setSelection, pets, setPets, answers, refreshAnswers } = useStayQuestion(listing.id);
+
+  if (state.kind !== 'loaded' || state.nights.kind !== 'declared') {
+    return <NightsNotice state={state} onRetry={reload} />;
+  }
   const nights = state.nights.nights;
 
   return (
     <>
       <SelectionLine selection={selection} onClear={() => setSelection(NO_STAY_SELECTION)} />
+      <StayCountSelect
+        label={t('short-stay:pets.filterLabel')} anyLabel={t('short-stay:pets.filterAny')}
+        choices={STAY_PET_CHOICES} value={pets} onChange={setPets}
+      />
       <ListingStayCalendar
         monthKey={monthKey} nights={nights} selection={selection}
         onShiftMonth={(delta) => setMonthKey((current) => addMonthsToMonthKey(current, delta))}
@@ -81,10 +124,11 @@ export default function ListingStayBooking({ listing }: { readonly listing: Publ
       {/* Στάδιο Δ (ADR-835 §23): η υπόσχεση πριν, το αίτημα, και τα αιτήματά μου. */}
       <ListingStayRequest
         listingId={listing.id}
-        query={selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut } : null}
+        query={selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, pets: pets ?? 0 } : null}
         answer={answers.kind === 'loaded' ? answers.answers[listing.id] : undefined}
         maxGuests={listing.stay?.maxGuests ?? null}
         onChanged={() => { setSelection(NO_STAY_SELECTION); reload(); }}
+        onPriceChanged={refreshAnswers}
       />
     </>
   );

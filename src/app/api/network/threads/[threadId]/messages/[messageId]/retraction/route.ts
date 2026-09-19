@@ -23,25 +23,25 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { retractNetworkMessage } from '@/services/network-messaging/thread-messages';
+import type { NetworkRetractionResult } from '@/types/network-wire';
 
 import {
-  networkBadRequest,
   networkRefusal,
   networkServerError,
   withNetworkDoor,
   type NetworkActor,
 } from '../../../../../_shared/network-door';
-import { routeParam } from '../../../../../_shared/network-params';
+import { messageRouteParams, type MessageRouteContext } from '../../../../../_shared/network-params';
 
 const logger = createModuleLogger('NetworkRetractionRoute');
 
-type MessageRoute = { readonly params: Promise<{ threadId: string; messageId: string }> };
-type RetractionResponse = { readonly success: true; readonly readBeforeRetraction: boolean };
+type MessageRoute = MessageRouteContext;
+type RetractionResponse = NetworkRetractionResult;
 
 async function handler(_request: NextRequest, actor: NetworkActor, routeContext?: MessageRoute) {
-  const threadId = await routeParam(routeContext, 'threadId');
-  const messageId = await routeParam(routeContext, 'messageId');
-  if (threadId === null || messageId === null) return networkBadRequest({ route: 'invalid' });
+  const params = await messageRouteParams(routeContext);
+  if (!params.ok) return params.response;
+  const { threadId, messageId } = params.value;
 
   try {
     const outcome = await retractNetworkMessage(getAdminFirestore(), {

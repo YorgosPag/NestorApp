@@ -38,7 +38,7 @@ const liveOverride = (state = 'READY', ttlState = 'ACTIVE') => ({
     fields: [{ fieldPath: 'expiresAt', ...(i.order ? { order: i.order } : { arrayConfig: i.arrayConfig }) }] })),
 });
 
-const recorded = (wire, extra = {}) => ({ at: '2026-09-18', commit: 'abc1234', digest: M.digestOf(RULES), wire, why: null, ...extra });
+const recorded = (wire, extra = {}) => ({ at: '2026-09-18', commit: 'abc1234', digest: M.digestOf(RULES), wire, why: null, matchesTree: true, ...extra });
 
 function desiredWorld(over = {}) {
   return {
@@ -91,7 +91,7 @@ describe('ADR-865 §10 — ζωντανό έναντι δέντρου', () => {
     it('ζωντανό = δέντρο αλλά το τοπικό μητρώο δεν το κατέγραψε ⇒ Synced, με ορατή σημείωση (§11)', () => {
       // Από ADR-865 §11 αυτό είναι το ΚΑΝΟΝΙΚΟ μετά από ανάπτυξη της γραμμής παραγωγής: το αρχείο
       // της πράξης είναι το GitHub Deployment, όχι το τοπικό μητρώο — σημείωση, όχι «⚠️».
-      const d = desiredWorld({ rules: { recorded: recorded('παλιό\n', { digest: 'sha256:old' }) } });
+      const d = desiredWorld({ rules: { recorded: recorded('παλιό\n', { digest: 'sha256:old', matchesTree: false }) } });
       const v = verdictOf(D.judgeLive(d, liveWorld()), 'firestore:rules');
       expect(v.sync).toBe(D.SYNC.SYNCED);
       expect(v.detail).toContain('δεν το κατέγραψε');
@@ -360,7 +360,7 @@ describe('ADR-865 §10 — live.js με ψεύτικη μεταφορά', () => 
 
 describe('🌍 ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΑΠΟΘΕΤΗΡΙΟ', () => {
   it('το επιθυμητό έχει και τους τρεις στόχους, με τα bytes του δίσκου', () => {
-    const desired = loadDesired(loadWorld());
+    const desired = loadDesired(loadWorld({ tree: 'HEAD' }));
     expect(Object.keys(desired).sort()).toEqual(['firestore:indexes', 'firestore:rules', 'storage']);
     expect(desired['firestore:indexes'].indexes.length).toBeGreaterThan(0);
   });

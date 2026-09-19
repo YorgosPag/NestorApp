@@ -12,7 +12,7 @@
 
 const M = require('../lib/firestore-deploy/model');
 const { RULES, judgeFirestoreDeploy, blocking } = require('../lib/firestore-deploy/judge');
-const { loadWorld, resolveTargets } = require('../lib/firestore-deploy/world');
+const { loadWorld, resolveTargets, TREE } = require('../lib/firestore-deploy/world');
 
 const RULES_BYTES = 'rules { allow read: if false; }\n';
 const INDEX_BYTES = '{"indexes":[]}\n';
@@ -176,13 +176,13 @@ describe('CHECK 3.86 — απόδειξη ανάπτυξης (ADR-865)', () => {
 
   describe('🌍 ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΑΠΟΘΕΤΗΡΙΟ', () => {
     it('Π — ο παρονομαστής δεν είναι κενός: το firebase.json δηλώνει και τους τρεις στόχους', () => {
-      const { targets } = resolveTargets(M.loadFirebaseJson());
+      const { targets } = resolveTargets(M.loadFirebaseJson(), M.readSource);
       expect(targets.map((t) => t.target).sort()).toEqual(['firestore:indexes', 'firestore:rules', 'storage']);
       for (const t of targets) expect(t.digest).toMatch(M.DIGEST_RE);
     });
 
     it('το πραγματικό δέντρο δεν παράγει κανένα εύρημα Κ1-Κ4 (μόνο ο Κ5 επιτρέπεται)', () => {
-      const findings = judgeFirestoreDeploy(loadWorld());
+      const findings = judgeFirestoreDeploy(loadWorld({ tree: TREE.INDEX }));
       expect(findings.filter((f) => f.rule !== RULES.K5)).toEqual([]);
     });
   });

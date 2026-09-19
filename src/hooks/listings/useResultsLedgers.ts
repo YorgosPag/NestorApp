@@ -49,7 +49,6 @@ import type {
 import { useListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
 import {
-  listingsWithUnpricedPetFee,
   NO_STAY_TOTALS,
   stayTotalsOf,
   type StayTotals,
@@ -219,11 +218,9 @@ export function useResultsLedgers(
   }, [visible, stayQuery, stayAnswers]);
 
   const stayTotals = useMemo(
-    () => (stayAnswers.kind === 'loaded'
-      // ADR-777 §8.60.21: με κατοικίδιο, όπου ο κάτοχος χρεώνει, το σύνολο δεν θα ήταν ολόκληρο.
-      ? stayTotalsOf(stayAnswers.answers, listingsWithUnpricedPetFee(visible, stayQuery))
-      : NO_STAY_TOTALS),
-    [stayAnswers, visible, stayQuery],
+    // ADR-777 §8.60.21.7: το σύνολο του διακομιστή περιέχει ήδη τη χρέωση κατοικιδίου — ολόκληρο.
+    () => (stayAnswers.kind === 'loaded' ? stayTotalsOf(stayAnswers.answers) : NO_STAY_TOTALS),
+    [stayAnswers],
   );
 
   return {

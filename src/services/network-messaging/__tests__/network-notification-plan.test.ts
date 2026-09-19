@@ -14,6 +14,7 @@
  *   Π-9  Νήμα σχέσης: κάθε πρόσωπο είναι πλευρά μόνο του
  *   Π-10 🔑 Νέος αποκλεισμός (φραγή του Β8) = **μία** γραμμή, ο πυρήνας δεν αλλάζει
  *   Π-11 Απουσία που **έληξε** ⇒ καμία αναπλήρωση
+ *   Φ-1…Φ-4  «Ακολουθώ» (Β7): ο ακόλουθος ειδοποιείται άμεσα · η σίγαση νικά · κανένα διπλό · «λείπει» = μόνο το κύριο πρόσωπο
  *   Ο-1…Ο-6  Είσοδος στην ομάδα: ανάθεση · μεταβίβαση · προσθήκη · **ποτέ ο δρων** · προαγωγή μέλους · καμία αλλαγή
  */
 
@@ -45,6 +46,7 @@ function row(uid: string, patch: Partial<NetworkAudienceEntry> = {}): NetworkAud
     until: null,
     lastReadAt: null,
     muted: false,
+    following: false,
     threadActivityAt: NOW,
   };
   return { ...base, ...patch };
@@ -121,6 +123,32 @@ describe('Π — νέο μήνυμα: ποιος ειδοποιείται', () =
 
   it('Π-11 απουσία που έληξε ⇒ καμία αναπλήρωση', () => {
     expect(uidsOf(plan(TEAM, OWNER, [away(KOSTAS, '2026-09-18T11:59:59.000Z')]))).toStrictEqual([KOSTAS]);
+  });
+});
+
+describe('Φ — «ακολουθώ» (ADR-867 Β7 · §8 #10 · HubSpot «Follow a record»)', () => {
+  const FOLLOWING_ELENI = [row(KOSTAS), row(ELENI, { following: true }), row(NIKOS), row(OWNER)];
+
+  it('Φ-1 ο συνεργάτης που ακολουθεί ειδοποιείται ΑΜΕΣΑ — οι άλλοι συνεργάτες όχι (μετάλλαξη: αγνοείται το following)', () => {
+    const recipients = plan(FOLLOWING_ELENI, OWNER);
+    expect(uidsOf(recipients)).toStrictEqual([ELENI, KOSTAS].sort());
+    expect(recipients.find((r) => r.uid === ELENI)).toMatchObject({ reason: 'direct', coversUid: null });
+  });
+
+  it('Φ-2 🔴 η σίγαση ΝΙΚΑ το follow (μετάλλαξη: το follow παρακάμπτει τα βέτο)', () => {
+    const muted = [row(KOSTAS), row(ELENI, { following: true, muted: true }), row(OWNER)];
+    expect(uidsOf(plan(muted, OWNER))).toStrictEqual([KOSTAS]);
+  });
+
+  it('Φ-3 λείπει ο υπεύθυνος ⇒ όποιος ακολουθεί μένει «άμεσος», οι υπόλοιποι αναπληρώνουν — χωρίς διπλό (μετάλλαξη: ο ακόλουθος μετράει δύο φορές)', () => {
+    const recipients = plan(FOLLOWING_ELENI, OWNER, [away(KOSTAS)]);
+    expect(recipients).toHaveLength(3);
+    expect(recipients.find((r) => r.uid === ELENI)).toMatchObject({ reason: 'direct', coversUid: null });
+    expect(recipients.find((r) => r.uid === NIKOS)).toMatchObject({ reason: 'covering', coversUid: KOSTAS });
+  });
+
+  it('Φ-4 λείπει ΜΟΝΟ ο ακόλουθος συνεργάτης ⇒ κανείς δεν γίνεται αναπληρωτής (μετάλλαξη: «λείπει» μετράει και ο ακόλουθος)', () => {
+    expect(uidsOf(plan(FOLLOWING_ELENI, OWNER, [away(ELENI)]))).toStrictEqual([ELENI, KOSTAS].sort());
   });
 });
 

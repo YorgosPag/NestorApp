@@ -399,6 +399,7 @@ describe('Π — χειρόγραφα γεγονότα του πραγματικ
     expect(readWorkflowTriggers(path.join(WORKFLOW_DIR, 'jest-suite.yml'))).toEqual({
       automatic: ['pull_request', 'push'],
       pathFiltered: false,
+      pushBranches: ['main'],
     });
     expect(readWorkflowTriggers(path.join(WORKFLOW_DIR, 'coverage-ratchet.yml')).pathFiltered).toBe(true);
   });

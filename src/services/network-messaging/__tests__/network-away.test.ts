@@ -34,6 +34,7 @@ const row = (uid: string, over: Partial<NetworkAudienceEntry> = {}): NetworkAudi
   until: null,
   lastReadAt: null,
   muted: false,
+  following: false,
   threadActivityAt: YESTERDAY,
   ...over,
 });

@@ -381,6 +381,17 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_NETWORK_MESSAGE_RETRACTIONS_COLLECTION || 'network_message_retractions',
 
   /**
+   * **ΤΟ ΚΕΙΜΕΝΟ ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΕΠΕΞΕΡΓΑΣΙΑ** (ADR-867 Β7) — `network_message_revisions/{nmrv_*}`.
+   *
+   * 🔑 Η επεξεργασία **δεν έχει όριο χρόνου** (Teams · Slack · Google Chat — απόφαση της έρευνας,
+   * 2026-09-19)· γι' αυτό **κάθε** προηγούμενη μορφή μένει εδώ: ένα νήμα πράξης είναι **τεκμήριο**
+   * (ADR-834 (β) ③), και μια επεξεργασία χωρίς ίχνος θα ήταν **ξαναγραμμένη ιστορία**.
+   * ⛔ **ΚΛΕΙΣΤΗ ΣΕ ΚΑΘΕ ΠΕΛΑΤΗ** — ίδιο δόγμα, ίδιος λόγος διατήρησης με τις ανακλήσεις.
+   */
+  NETWORK_MESSAGE_REVISIONS:
+    process.env.NEXT_PUBLIC_NETWORK_MESSAGE_REVISIONS_COLLECTION || 'network_message_revisions',
+
+  /**
    * **Η ΑΠΟΥΣΙΑ ΤΟΥ ΑΝΘΡΩΠΟΥ** (ADR-867 §4.4 · Β5 · ADR-834 (ε) 🏆) — `network_away/{naway_*}`,
    * κλειδί **ντετερμινιστικό** ανά πρόσωπο: μία δήλωση ανά άνθρωπο, ποτέ δύο που διαφωνούν.
    *

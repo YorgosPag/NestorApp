@@ -11,6 +11,7 @@
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import type { StayActor } from '@/lib/stay/stay-command-authority';
 import { STAY_GUEST_MAX_ACTIVE_HOLDS } from '@/lib/stay/stay-guest-head';
@@ -18,7 +19,7 @@ import { listingOf } from '@/lib/stay/__tests__/stay-rules-fixtures';
 import { offerOf, validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { executeStayCalendarCommand } from '@/services/stay-calendar/stay-calendar-write.service';
-import type { OfferKind } from '@/types/property-offers';
+import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import { STAY_RULES_NONE } from '@/types/stay-rules';
 
 const mockRecordChange = jest.fn();
@@ -52,11 +53,11 @@ const SYSTEM: StayActor = { kind: 'system' };
 const db = new FakeFirestore();
 const adminDb = db as unknown as AdminFirestore;
 
-function givenStay(offerKinds: readonly OfferKind[] = ['leaseShort']): void {
+function givenStay(offerKinds: readonly OfferKind[] = ['leaseShort'], pets: StayPetPolicy | null = null): void {
   const offers = offerKinds.map((kind) => (kind === 'leaseShort' ? offerOf('leaseShort', 65) : offerOf(kind, 210_000)));
   db.seed(COLLECTIONS.OWNER_PROPERTIES, PROPERTY, { ...validOwnerProperty({ offers }) });
   db.seed(COLLECTIONS.PUBLIC_LISTINGS, PROPERTY, {
-    ...listingOf({ minNights: null, maxGuests: 4, pets: null, nextAvailableFrom: null }, offerKinds), id: PROPERTY,
+    ...listingOf({ minNights: null, maxGuests: 4, pets, nextAvailableFrom: null }, offerKinds), id: PROPERTY,
   });
   db.seed(COLLECTIONS.STAY_CALENDARS, PROPERTY, {
     propertyId: PROPERTY, authorUserId: 'user-1', declaredAt: STAMP, version: 1, rules: STAY_RULES_NONE,
@@ -76,8 +77,12 @@ function givenRequest(id: string, guest: string, expiresAt: string, checkIn = '2
 }
 
 const run = (command: StayCalendarCommand, actor: StayActor) => executeStayCalendarCommand(adminDb, PROPERTY, command, actor);
+/** Η τιμή νύχτας της δημόσιας προβολής (`listingOf`: 80 €) — ό,τι δείχνει η σελίδα, σε λεπτά. */
+const NIGHT_MINOR = 8000;
+/** Το σύνολο που **είδε** ο επισκέπτης (ADR-777 §8.60.21.7) — αριθμητική του test, όχι η μηχανή. */
+const shownTotal = (checkIn: string, checkOut: string): number => (daysBetweenDateKeys(checkIn, checkOut) ?? 0) * NIGHT_MINOR;
 const request = (checkIn = '2027-10-10', checkOut = '2027-10-14', riskAcknowledged = false): StayCalendarCommand => ({
-  action: 'request', checkIn, checkOut, guests: 2, riskAcknowledged,
+  action: 'request', checkIn, checkOut, guests: 2, pets: 0, expectedTotalMinor: shownTotal(checkIn, checkOut), riskAcknowledged,
 });
 const guestHolds = (uid: string): number => {
   const head = db.pathBucket(COLLECTIONS.STAY_GUESTS).get(uid) as { holds?: readonly unknown[] } | undefined;
@@ -253,3 +258,43 @@ describe('Π — η αποκάλυψη πώλησης είναι ΓΕΓΟΝΟΣ 
   });
 });
 
+
+describe('Κ — κατοικίδια και τιμή στο αίτημα (ADR-777 §8.60.21.7, Φ5)', () => {
+  const withPets = (pets: number, expectedTotalMinor: number | null): StayCalendarCommand => ({
+    action: 'request', checkIn: '2027-10-10', checkOut: '2027-10-14', guests: 2, pets, expectedTotalMinor, riskAcknowledged: false,
+  });
+  const charged: StayPetPolicy = { accepts: 'yes', maxPets: 2, fee: { amount: 10, per: 'night' } };
+
+  it('🔴 Κ1. κατοικίδιο σε κατάλυμα που λέει «όχι» ⇒ unavailable — ο ΙΔΙΟΣ κριτής, μέσα στη συναλλαγή', async () => {
+    givenStay(['leaseShort'], { accepts: 'no' });
+    expect(await run(withPets(1, 32000), GUEST)).toEqual({ kind: 'unavailable', answer: 'pets-not-allowed' });
+    expect(await run(withPets(3, 32000 + 3 * 4 * 1000), OTHER_GUEST)).toEqual({ kind: 'unavailable', answer: 'pets-not-allowed' });
+    expect(db.pathBucket(COLLECTIONS.STAY_BOOKINGS).size).toBe(0);
+  });
+
+  it('🔴 Κ2. σύνολο που ΔΕΝ είδε ο επισκέπτης ⇒ price-changed με το ΝΕΟ ποσό, τίποτα γραμμένο', async () => {
+    givenStay(['leaseShort'], charged);
+    // 80 € × 4 νύχτες = 320 € · + 10 €/νύχτα κατοικίδιο × 4 = 40 € ⇒ 360 €. Ο επισκέπτης «είδε» 320 €.
+    expect(await run(withPets(1, 32000), GUEST)).toEqual({ kind: 'price-changed', totalMinor: 36000 });
+    expect(db.pathBucket(COLLECTIONS.STAY_BOOKINGS).size).toBe(0);
+    expect(guestHolds('guest-1')).toBe(0);
+  });
+
+  it('Κ3. ίδιο σύνολο ⇒ ok· η κράτηση κρατά κατοικίδια ΚΑΙ στιγμιότυπο τιμής με τη γραμμή της χρέωσης', async () => {
+    givenStay(['leaseShort'], charged);
+    expect((await run(withPets(1, 36000), GUEST)).kind).toBe('ok');
+    expect(db.pathBucket(COLLECTIONS.STAY_BOOKINGS).get('stay_1')).toMatchObject({
+      pets: 1,
+      price: {
+        kind: 'priced', currency: 'EUR', nightsMinor: 32000, totalMinor: 36000,
+        fees: [{ kind: 'pet', basis: 'night', unitMinor: 1000, units: 4, pets: 1, amountMinor: 4000 }],
+      },
+    });
+  });
+
+  it('Κ4. χωρίς κατοικίδιο: σύνολο = μόνο νύχτες, `pets: 0` γραμμένο ρητά', async () => {
+    givenStay(['leaseShort'], charged);
+    expect((await run(request(), GUEST)).kind).toBe('ok');
+    expect(db.pathBucket(COLLECTIONS.STAY_BOOKINGS).get('stay_1')).toMatchObject({ pets: 0, price: { totalMinor: 32000, fees: [] } });
+  });
+});

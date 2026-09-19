@@ -75,7 +75,7 @@ export const refuse = (result: StayCalendarWriteResult): Decision => ({ kind: 'r
 /** Ό,τι διαφέρει ανάμεσα σε χειροκίνητη κράτηση και αίτημα επισκέπτη — όλα τα άλλα είναι της αγγελίας. */
 export type StayBookingSpec = Pick<
   StayBooking,
-  'checkIn' | 'checkOut' | 'guests' | 'holder' | 'channel' | 'lifecycle' | 'riskDisclosedAt' | 'hold'
+  'checkIn' | 'checkOut' | 'guests' | 'pets' | 'price' | 'holder' | 'channel' | 'lifecycle' | 'riskDisclosedAt' | 'hold'
 >;
 
 /**

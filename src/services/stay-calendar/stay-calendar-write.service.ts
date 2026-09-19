@@ -94,6 +94,9 @@ function decideBook(ctx: WriteContext, command: Extract<StayCalendarCommand, { a
     holder: { kind: 'offline', label: command.guestLabel },
     channel: 'direct',
     guests: command.guests,
+    pets: command.pets,
+    // Ο οικοδεσπότης γράφει κράτηση που **συμφώνησε αλλού** — η πλατφόρμα δεν υπόσχεται τιμή.
+    price: null,
     // 🔑 Ο οικοδεσπότης **είναι** αυτός που δέχεται — η χειροκίνητη κράτηση γεννιέται επιβεβαιωμένη.
     lifecycle: 'confirmed',
     riskDisclosedAt: null,

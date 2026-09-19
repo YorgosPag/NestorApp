@@ -50,6 +50,42 @@ export const NETWORK_AUDIENCE_REASONS = [
 ] as const;
 export type NetworkAudienceReason = (typeof NETWORK_AUDIENCE_REASONS)[number];
 
+/**
+ * **Κάθε λόγος άρνησης των πορτών του δικτύου** — κλειστό σύνολο, **κοινό** σε διακομιστή και οθόνη.
+ *
+ * 🔑 Ο διακομιστής τον αντιστοιχίζει σε HTTP (`NETWORK_REFUSAL_STATUS`, `satisfies Record<…>` ⇒ νέος λόγος
+ * χωρίς γραμμή εκεί **δεν μεταγλωττίζεται**)· η οθόνη τον μεταφράζει σε ανθρώπινο κείμενο (N.11) — ποτέ
+ * κείμενο από τον διακομιστή. Ζει εδώ ώστε ο πελάτης να **μη** χρειάζεται αρχείο `server-only`.
+ */
+export const NETWORK_REFUSAL_CODES = [
+  'thread-absent',
+  'not-audience',
+  'team-absent',
+  'message-absent',
+  'thread-closed',
+  'already-retracted',
+  'stale-version',
+  'window-expired',
+  'not-sender',
+  'not-permitted',
+  'empty-text',
+  'too-long',
+  'target-not-in-workspace',
+  'target-is-counterpart',
+  'responsible-not-removable',
+] as const;
+export type NetworkRefusalCode = (typeof NETWORK_REFUSAL_CODES)[number];
+
+/**
+ * **Ανώτατο μήκος μηνύματος** — ένας αριθμός για τον γραφέα (`too-long`) **και** το πλαίσιο γραφής (μετρητής).
+ *
+ * ⚠️ Δεν είναι «ασφάλεια», είναι **σχήμα**: ένα έγγραφο Firestore έχει όριο 1 MiB, και ένα
+ * μήνυμα που το πλησιάζει κάνει **κάθε** ανάγνωση του νήματος ακριβή για όλους. Το όριο
+ * είναι το ίδιο μέγεθος που δίνει το Slack στο μήνυμα (~4.000 χαρακτήρες) — πάνω από αυτό
+ * ο άνθρωπος στέλνει **αρχείο**, και τα συνημμένα έχουν δικό τους βήμα (§8 #2, Β8β).
+ */
+export const MAX_NETWORK_MESSAGE_CHARS = 4000;
+
 // ============================================================================
 // ΣΧΗΜΑΤΑ
 // ============================================================================
@@ -115,6 +151,34 @@ export interface NetworkMessage {
    * έφτασε, και θα χτίσει πάνω σε ψέμα. `null` = δεν είχε ανακληθεί ποτέ.
    */
   readonly readBeforeRetraction: boolean | null;
+  /**
+   * 🏆 **ΕΠΕΞΕΡΓΑΣΤΗΚΕ ΑΦΟΥ ΤΟ ΕΙΧΑΝ ΔΙΑΒΑΣΕΙ;** (ADR-867 Β7) — το ίδιο γεγονός με το
+   * `readBeforeRetraction`, για την **τελευταία** επεξεργασία. Teams/Slack/Google Chat γράφουν μόνο
+   * «Edited»· εδώ ο αναγνώστης μαθαίνει ότι **αυτό που διάβασε άλλαξε** — σε επαγγελματικό νήμα, η
+   * διαφορά ανάμεσα σε «διόρθωσα τυπογραφικό» και «άλλαξα την τιμή που ήδη είδες».
+   * `null` = δεν επεξεργάστηκε ποτέ.
+   */
+  readonly readBeforeEdit: boolean | null;
+}
+
+/**
+ * `network_message_revisions/{nmrv_*}` — **ΤΟ ΚΕΙΜΕΝΟ ΠΡΙΝ ΑΠΟ ΜΙΑ ΕΠΕΞΕΡΓΑΣΙΑ** (ADR-867 Β7).
+ *
+ * ⛔ **Κλειστό σε κάθε πελάτη**, όπως το αντίγραφο ανάκλησης. Μία γραμμή **ανά επεξεργασία**: η
+ * σειρά `replacedAt` ξαναχτίζει όλο το ιστορικό του μηνύματος για ΓΚΠΔ άρθρο 17 §3(ε).
+ */
+export interface NetworkMessageRevision {
+  readonly id: string;
+  readonly messageId: string;
+  readonly threadId: string;
+  readonly threadKind: NetworkThreadKind;
+  readonly senderUid: string;
+  /** 🔒 Το κείμενο **όπως ήταν** πριν αντικατασταθεί. */
+  readonly previousText: string;
+  /** Πότε είχε γραφτεί αυτή η μορφή (`createdAt` ή η προηγούμενη επεξεργασία). */
+  readonly previousAt: string;
+  readonly replacedAt: string;
+  readonly readBeforeEdit: boolean;
 }
 
 /**
@@ -159,6 +223,15 @@ export interface NetworkAudienceEntry {
   readonly until: string | null;
   readonly lastReadAt: string | null;
   readonly muted: boolean;
+  /**
+   * 🔔 **«ΑΚΟΛΟΥΘΩ»** (ADR-867 Β7 · §8 #10) — opt-in ειδοποιήσεων για **συνεργάτη**: ειδοποιείται για
+   * κάθε νέο εισερχόμενο **σαν** κύριο πρόσωπο, όχι μόνο ως αναπληρωτής (HubSpot «Follow a record»).
+   *
+   * ⚠️ **Δεν αφορά τα κύρια πρόσωπα** (`PRIMARY_NOTIFY_ROLES`): εκείνα ειδοποιούνται **πάντα** (Β6)·
+   * όποιος θέλει ησυχία έχει τη **σίγαση**, που νικά το follow. Επιβιώνει αλλαγής ρόλου και επιστροφής,
+   * όπως το `muted` — είναι επιλογή **του ανθρώπου**, όχι της ομάδας.
+   */
+  readonly following: boolean;
   /**
    * 🔑 **ΠΟΤΕ ΚΙΝΗΘΗΚΕ ΤΟ ΝΗΜΑ — ΑΝΤΙΓΡΑΜΜΕΝΟ ΕΔΩ ΕΠΙΤΗΔΕΣ** (fan-out on write, ADR-867 Β5).
    *

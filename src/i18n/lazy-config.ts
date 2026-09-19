@@ -58,6 +58,7 @@ export const SUPPORTED_NAMESPACES = [
   'model-freshness',  // ADR-845 O-25 — «isxyei akoma to dimosievmeno 3D;» (mono o katoxos)
   'short-stay',       // ADR-835 F3 — o xronos stin anazitisi (vraxyxronia diamoni)
   'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)
+  'network-messaging', // ADR-867 B7 — minymata anamesa se synergates (nima · poioi diavazoun · apousia · omada)
   'crm',
   'navigation',
   'auth',

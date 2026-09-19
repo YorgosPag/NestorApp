@@ -295,8 +295,13 @@ const DOOR_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
     // Η απουσία είναι ΠΑΝΤΑ η δική του (`actor.uid`) — και ο ιδιοκτήτης μπορεί να λείπει.
     'src/app/api/network/away/route.ts',
     'src/app/api/network/threads/[threadId]/messages/[messageId]/retraction/route.ts',
+    // ✏️ Β7 — η επεξεργασία: ο γραφέας κρίνει «αποστολέας + ζωντανή γραμμή», ποτέ ο χώρος.
+    'src/app/api/network/threads/[threadId]/messages/[messageId]/route.ts',
+    'src/app/api/network/threads/[threadId]/follow/route.ts',
     'src/app/api/network/threads/[threadId]/messages/route.ts',
     'src/app/api/network/threads/[threadId]/mute/route.ts',
+    // 👥 Β7 — τα ονόματα: μόνο για όποιον διαβάζει ήδη (`readThreadAsReader`), κανένα email.
+    'src/app/api/network/threads/[threadId]/people/route.ts',
     'src/app/api/network/threads/[threadId]/presence/route.ts',
     'src/app/api/network/threads/[threadId]/read/route.ts',
     'src/app/api/network/threads/route.ts',

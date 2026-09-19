@@ -527,6 +527,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...networkServerOnlyMatrix(),
   },
   {
+    // ✏️ ADR-867 Β7 — **ΟΙ ΑΝΑΘΕΩΡΗΣΕΙΣ**: το κείμενο **πριν** από κάθε επεξεργασία. **Τέταρτος**
+    // καταναλωτής, ίδιος λόγος με τις ανακλήσεις: η επεξεργασία δεν έχει όριο χρόνου, άρα ό,τι
+    // αντικαταστάθηκε πρέπει να επιβιώνει **εκτός** κάθε πελάτη — και του **ίδιου** του αποστολέα
+    // (`same_tenant_user × read → deny`), αλλιώς το ίχνος θα ήταν ένα ερώτημα μακριά από διαγραφή.
+    collection: 'network_message_revisions',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/network-message-revisions.rules.test.ts',
+    ...networkServerOnlyMatrix(),
+  },
+  {
     // 🌴 ADR-867 §4.4 (Β5) — **Η ΑΠΟΥΣΙΑ**. **Τρίτος** καταναλωτής του ίδιου προτύπου: ο
     // αντισυμβαλλόμενος μαθαίνει «ως πότε» **μόνο** από τον διακομιστή, και μόνο για το νήμα
     // που διαβάζει ήδη. Το κελί που μετράει είναι το `same_tenant_user × read → deny`: ούτε ο

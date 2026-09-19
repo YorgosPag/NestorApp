@@ -1,5 +1,6 @@
 /**
- * @fileoverview **Η ΑΠΟΣΤΟΛΗ, Η ΑΝΑΓΝΩΣΗ, Η ΣΙΓΑΣΗ** — οι τρεις πράξεις πάνω σε υπαρκτό νήμα.
+ * @fileoverview **Η ΑΠΟΣΤΟΛΗ, Η ΑΝΑΚΛΗΣΗ, Η ΕΠΕΞΕΡΓΑΣΙΑ, Η ΑΝΑΓΝΩΣΗ, Η ΣΙΓΑΣΗ, ΤΟ «ΑΚΟΛΟΥΘΩ»** —
+ * οι πράξεις πάνω σε υπαρκτό νήμα (επεξεργασία + follow: ADR-867 Β7).
  * @related ADR-867 §4.1 · §4.2 · §7 Α1/Α4 · ADR-834 §5 Β (α) ② (σίγαση) · CHECK 3.89
  * @module services/network-messaging/thread-messages
  *
@@ -16,10 +17,21 @@
 
 import 'server-only';
 
-import { generateNetworkMessageId } from '@/services/enterprise-id.service';
-import type { NetworkMessage, NetworkThread } from '@/types/network-thread';
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import {
+  generateDeterministicNetworkMessageId,
+  generateNetworkMessageId,
+  generateNetworkMessageRevisionId,
+} from '@/services/enterprise-id.service';
+import { MAX_NETWORK_MESSAGE_CHARS, type NetworkMessage, type NetworkThread } from '@/types/network-thread';
+import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 
+import {
+  currentVersionAt,
+  editedMessage,
+  judgeEdit,
+  revisionRecord,
+  type EditRefusal,
+} from './message-edit';
 import {
   judgeRetraction,
   retractionRecord,
@@ -29,6 +41,7 @@ import {
 } from './message-retraction';
 import {
   networkRetractionRef,
+  networkRevisionRef,
   networkThreadMessages,
   networkThreadRef,
 } from './network-thread-ref';
@@ -41,15 +54,8 @@ import {
   type AudienceSelfOutcome,
 } from './thread-writer';
 
-/**
- * **Ανώτατο μήκος μηνύματος.**
- *
- * ⚠️ Δεν είναι «ασφάλεια», είναι **σχήμα**: ένα έγγραφο Firestore έχει όριο 1 MiB, και ένα
- * μήνυμα που το πλησιάζει κάνει **κάθε** ανάγνωση του νήματος ακριβή για όλους. Το όριο
- * είναι το ίδιο μέγεθος που δίνει το Slack στο μήνυμα (~4.000 χαρακτήρες) — πάνω από αυτό
- * ο άνθρωπος στέλνει **αρχείο**, και τα συνημμένα έχουν δικό τους βήμα (§8 #2, Β8β).
- */
-export const MAX_NETWORK_MESSAGE_CHARS = 4000;
+/** Το ανώτατο μήκος ζει στους **κοινούς** τύπους (Β7): το κρίνει και το πλαίσιο γραφής, με την ίδια τιμή. */
+export { MAX_NETWORK_MESSAGE_CHARS };
 
 export type SendRefusal =
   | 'thread-absent'
@@ -67,6 +73,13 @@ export interface SendNetworkMessageInput {
   readonly senderUid: string;
   readonly text: string;
   readonly nowISO: string;
+  /**
+   * 🔑 **Κλειδί ιδεμποτησίας του πελάτη** (ADR-867 Β7 · Slack `client_msg_id`). Με κλειδί, το id του
+   * μηνύματος **παράγεται** από (αποστολέας, κλειδί) ⇒ η επανάληψη της ίδιας αποστολής — χαμένη απάντηση,
+   * επανάληψη 5xx του μεταφορέα — βρίσκει το **ίδιο** μήνυμα και **δεν** γράφει ούτε ειδοποιεί δεύτερη φορά.
+   * Χωρίς κλειδί (εσωτερικοί καλούντες) ⇒ τυχαίο id, όπως πριν.
+   */
+  readonly clientKey?: string;
 }
 
 /** Το μήνυμα ως έγγραφο — καθαρό, ώστε να ελέγχεται χωρίς Firestore. */
@@ -84,6 +97,7 @@ export function networkMessageDocument(
     // ⚠️ `null` = **δεν ανακλήθηκε ποτέ**, ρητά διαφορετικό από `false` (= ανακλήθηκε
     //    και δεν το είχε δει κανείς). Ένα `false` εδώ θα έκανε τα δύο αδιάκριτα.
     readBeforeRetraction: null,
+    readBeforeEdit: null,
   };
 }
 
@@ -122,24 +136,27 @@ type CommitResult = { readonly outcome: SendOutcome; readonly notice: NetworkMes
 async function commitNetworkMessage(adminDb: AdminFirestore, input: SendNetworkMessageInput): Promise<CommitResult> {
   const { text } = input;
   const threadRef = networkThreadRef(adminDb, input.threadId);
-  const messageId = generateNetworkMessageId();
+  const messageId = input.clientKey === undefined
+    ? generateNetworkMessageId()
+    : generateDeterministicNetworkMessageId(input.senderUid, input.clientKey);
+  const messageRef = networkThreadMessages(adminDb, input.threadId).doc(messageId);
 
   return adminDb.runTransaction<CommitResult>(async (transaction) => {
     // 🔑 **ΟΛΟ** το ακροατήριο, όχι μόνο η γραμμή του αποστολέα: το fan-out χρειάζεται κάθε
     //    ζωντανό μέλος, και οι αναγνώσεις πρέπει να προηγούνται **κάθε** γραφής.
-    const [threadSnap, audience] = await Promise.all([
+    const [threadSnap, audience, existing] = await Promise.all([
       transaction.get(threadRef),
       readThreadAudience(transaction, adminDb, input.threadId),
+      transaction.get(messageRef),
     ]);
+    // 🔁 Η ΙΔΙΑ αποστολή ξανά ⇒ το ίδιο μήνυμα, **καμία** γραφή, **καμία** δεύτερη ειδοποίηση.
+    if (existing.exists) return { outcome: { kind: 'sent', messageId }, notice: null };
     const entry = audience.find((row) => row.uid === input.senderUid) ?? null;
 
     const refusal = sendRefusal(threadSnap.exists, threadSnap.data(), entry);
     if (refusal !== null) return { outcome: { kind: 'refused', reason: refusal }, notice: null };
 
-    transaction.set(
-      networkThreadMessages(adminDb, input.threadId).doc(messageId),
-      networkMessageDocument({ ...input, text }, messageId),
-    );
+    transaction.set(messageRef, networkMessageDocument({ ...input, text }, messageId));
     transaction.update(threadRef, { lastMessageAt: input.nowISO, updatedAt: input.nowISO });
     writeThreadActivity(transaction, adminDb, input.threadId, audience, {
       senderUid: input.senderUid,
@@ -166,6 +183,34 @@ function sendRefusal(
   //    το διαβάζει μόνο όποιος διαβάζει **τώρα** — ίδια ερώτηση με τον κανόνα Firestore.
   if (!isLiveAudience(entry)) return 'not-audience';
   return null;
+}
+
+// =============================================================================
+// Η ΦΑΣΗ ΑΝΑΓΝΩΣΗΣ ΜΙΑΣ ΠΡΑΞΗΣ ΠΑΝΩ ΣΕ ΥΠΑΡΚΤΟ ΜΗΝΥΜΑ — ΚΟΙΝΗ (ανάκληση · επεξεργασία)
+// =============================================================================
+
+/**
+ * Νήμα + μήνυμα + **όλο** το ακροατήριο, με **μία** φάση ανάγνωσης, πριν από κάθε γραφή (απαίτηση Firestore).
+ * 🔗 Β7 (N.18 / CHECK 3.28): η ανάκληση και η επεξεργασία το έγραφαν η καθεμία — δίδυμα που θα απέκλιναν την
+ * ημέρα που η μία αποκτούσε έλεγχο (π.χ. φραγή, Β8) και η άλλη όχι.
+ */
+async function readMessageSlot(
+  transaction: Transaction,
+  adminDb: AdminFirestore,
+  target: { readonly threadId: string; readonly messageId: string },
+) {
+  const messageRef = networkThreadMessages(adminDb, target.threadId).doc(target.messageId);
+  const [threadSnap, messageSnap, audience] = await Promise.all([
+    transaction.get(networkThreadRef(adminDb, target.threadId)),
+    transaction.get(messageRef),
+    readThreadAudience(transaction, adminDb, target.threadId),
+  ]);
+  return {
+    messageRef,
+    thread: threadSnap.exists ? (threadSnap.data() as NetworkThread) : undefined,
+    message: messageSnap.data() as NetworkMessage | undefined,
+    audience,
+  };
 }
 
 // =============================================================================
@@ -207,22 +252,10 @@ export async function retractNetworkMessage(
   adminDb: AdminFirestore,
   input: RetractNetworkMessageInput,
 ): Promise<RetractOutcome> {
-  const threadRef = networkThreadRef(adminDb, input.threadId);
-  const messageRef = networkThreadMessages(adminDb, input.threadId).doc(input.messageId);
-
   return adminDb.runTransaction<RetractOutcome>(async (transaction) => {
-    const [threadSnap, messageSnap, audience] = await Promise.all([
-      transaction.get(threadRef),
-      transaction.get(messageRef),
-      readThreadAudience(transaction, adminDb, input.threadId),
-    ]);
+    const { messageRef, thread, message, audience } = await readMessageSlot(transaction, adminDb, input);
+    if (thread === undefined) return { kind: 'refused', reason: 'thread-absent' };
 
-    const thread = threadSnap.data() as NetworkThread | undefined;
-    if (!threadSnap.exists || thread === undefined) {
-      return { kind: 'refused', reason: 'thread-absent' };
-    }
-
-    const message = messageSnap.data() as NetworkMessage | undefined;
     const verdict = judgeRetraction(message, input.actorUid, input.nowISO);
     if (verdict.kind === 'refused') return { kind: 'refused', reason: verdict.reason };
 
@@ -241,6 +274,69 @@ export async function retractNetworkMessage(
     );
 
     return { kind: 'retracted', readBeforeRetraction: readBefore };
+  });
+}
+
+// =============================================================================
+// Η ΕΠΕΞΕΡΓΑΣΙΑ — ΔΥΟ ΕΓΓΡΑΦΑ, ΜΙΑ ΣΥΝΑΛΛΑΓΗ (ADR-867 Β7 · Teams «compliance copy»)
+// =============================================================================
+
+export type EditOutcome =
+  | { readonly kind: 'edited'; readonly editedAt: string; readonly readBeforeEdit: boolean }
+  | { readonly kind: 'unchanged' }
+  | { readonly kind: 'refused'; readonly reason: EditRefusal | SendRefusal };
+
+export interface EditNetworkMessageInput {
+  readonly threadId: string;
+  readonly messageId: string;
+  readonly actorUid: string;
+  readonly text: string;
+  readonly nowISO: string;
+}
+
+/**
+ * 🔑 **Η ΕΠΕΞΕΡΓΑΣΙΑ: Η ΠΑΛΙΑ ΜΟΡΦΗ ΑΛΛΑΖΕΙ ΤΟΠΟ, ΔΕΝ ΧΑΝΕΤΑΙ** — ίδιο δόγμα με την ανάκληση.
+ *
+ * Μία συναλλαγή, **δύο** γραφές: νέο σώμα στο μήνυμα *(ό,τι διαβάζει ο πελάτης)* και η **προηγούμενη**
+ * μορφή στο `network_message_revisions` *(ό,τι δεν διαβάζει κανείς)*. Ή και τα δύο ή κανένα.
+ *
+ * ⚠️ **Οι έλεγχοι της ΑΠΟΣΤΟΛΗΣ ξαναγίνονται εδώ**: κλειστό νήμα (ΓΚΠΔ (β)) ⇒ καμία αλλαγή κειμένου·
+ * σφραγισμένη γραμμή ⇒ όχι — όποιος έφυγε από την ομάδα **δεν** ξαναγράφει ό,τι είπε ως μέλος της.
+ * ⚠️ **Καμία ειδοποίηση, καμία κίνηση στον κατάλογο** (δες `message-edit.ts`).
+ */
+export async function editNetworkMessage(
+  adminDb: AdminFirestore,
+  input: EditNetworkMessageInput,
+): Promise<EditOutcome> {
+  const revisionRef = networkRevisionRef(adminDb, generateNetworkMessageRevisionId());
+
+  return adminDb.runTransaction<EditOutcome>(async (transaction) => {
+    const { messageRef, thread, message, audience } = await readMessageSlot(transaction, adminDb, input);
+    if (thread === undefined) return { kind: 'refused', reason: 'thread-absent' };
+    const editor = audience.find((row) => row.uid === input.actorUid) ?? null;
+    const refusal = sendRefusal(true, thread, editor);
+    if (refusal !== null) return { kind: 'refused', reason: refusal };
+
+    const verdict = judgeEdit(message, input.actorUid, input.text, MAX_NETWORK_MESSAGE_CHARS);
+    if (verdict.kind !== 'allowed') return verdict;
+
+    const found = message as NetworkMessage;
+    // 🏆 «Το είχαν διαβάσει;» — για την **τρέχουσα** μορφή, όχι την αρχική: διαβασμένη αρχική και
+    //    αδιάβαστη πρώτη διόρθωση σημαίνει ότι η δεύτερη διόρθωση **δεν** άλλαξε κάτι που είδαν.
+    const readBefore = wasReadByOthers({ senderUid: found.senderUid, createdAt: currentVersionAt(found) }, audience);
+
+    transaction.set(messageRef, editedMessage(found, verdict.text, input.nowISO, readBefore));
+    transaction.set(
+      revisionRef,
+      revisionRecord(found, {
+        revisionId: revisionRef.id,
+        threadId: input.threadId,
+        threadKind: thread.topic.kind,
+        nowISO: input.nowISO,
+        readBefore,
+      }),
+    );
+    return { kind: 'edited', editedAt: input.nowISO, readBeforeEdit: readBefore };
   });
 }
 
@@ -275,4 +371,20 @@ export async function setNetworkThreadMuted(
   muted: boolean,
 ): Promise<AudienceSelfOutcome> {
   return touchOwnAudience(adminDb, threadId, uid, { muted });
+}
+
+/**
+ * **«Ακολουθώ»** — ο συνεργάτης ζητά να ειδοποιείται σαν κύριο πρόσωπο (ADR-867 Β7 · HubSpot «Follow»).
+ *
+ * 🔑 **Μονομερές, όπως η σίγαση**: ο άλλος δεν μαθαίνει τίποτα, το ακροατήριο **δεν** αλλάζει (ο
+ * συνεργάτης **ήδη** διαβάζει — εδώ αλλάζει μόνο αν χτυπά το καμπανάκι). Η σίγαση **νικά** (Β6: βέτο).
+ * ⚠️ Τελική κατάσταση, όχι εναλλαγή (ιδεμποτησία, N.7.2 #3).
+ */
+export async function setNetworkThreadFollowing(
+  adminDb: AdminFirestore,
+  threadId: string,
+  uid: string,
+  following: boolean,
+): Promise<AudienceSelfOutcome> {
+  return touchOwnAudience(adminDb, threadId, uid, { following });
 }

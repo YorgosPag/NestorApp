@@ -35,8 +35,8 @@ export const META_PHOTO_PURPOSES: ReadonlySet<string> = new Set([
  */
 export function buildPurposeFilter(
   purpose: string | undefined,
-): (file: FileRecord) => boolean {
-  return (file: FileRecord): boolean => {
+): (file: Pick<FileRecord, 'purpose'>) => boolean {
+  return (file: Pick<FileRecord, 'purpose'>): boolean => {
     if (!purpose) return true;
     if (!file.purpose) return true;
     if (file.purpose === purpose) return true;

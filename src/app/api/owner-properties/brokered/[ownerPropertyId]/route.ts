@@ -54,6 +54,7 @@ import {
   revokeMandateInvitation,
   type MandateActionOutcome,
 } from '@/services/mandate/mandate-actions.service';
+import { mandateNetworkRefs } from '@/lib/network-messaging/act-network-refs';
 import { readMandateDetail } from '@/services/mandate/mandate-detail.service';
 // 🔑 **Ο τύπος της απόκρισης ΔΕΝ γεννιέται εδώ**: το `MandateDetailResponse` είναι
 //    `Exclude<…, not-yours>` πάνω στο λεξιλόγιο — άρα η παράλειψη του ξένου εγγράφου
@@ -185,7 +186,8 @@ async function detailHandler(
 
   switch (outcome.kind) {
     case MANDATE_FOUND:
-      return NextResponse.json(outcome);
+      // 💬 ADR-867 Β7 — το νήμα + η ομάδα της εντολής, με το γραφείο που **έκρινε ο φρουρός**.
+      return NextResponse.json({ ...outcome, network: mandateNetworkRefs(ownerPropertyId, authority.companyId) });
     case MANDATE_NOT_A_MANDATE:
       // **200**: το έγγραφο **υπάρχει και είναι δικό του**. Ένα 404 θα έλεγε «δεν
       // υπάρχει» για αγγελία που ο ίδιος βλέπει στον κατάλογό του — ψέμα της διαδρομής.

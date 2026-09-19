@@ -57,7 +57,12 @@ export type UnresolvableReason =
   /** Η οντότητα δεν υπάρχει πια. */
   | 'entity-absent'
   /** Ακίνητο γραφείου χωρίς εταιρεία — δεν έχει χώρο, άρα ούτε πόρτα. */
-  | 'unscoped';
+  | 'unscoped'
+  /**
+   * Η οντότητα υπάρχει, αλλά **δεν έχει ακόμη οθόνη** να ανοίξει (ADR-867 Β7: νήμα **σχέσης** — Β8).
+   * ⚠️ Όχι `no-entity`: η ειδοποίηση **ονομάζει** οντότητα, και θα έλεγε ψέματα.
+   */
+  | 'no-surface';
 
 export type ExpectedDestination =
   | { readonly kind: 'expected'; readonly destination: NotificationDestination }

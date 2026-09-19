@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { sendNetworkMessage } from '@/services/network-messaging/thread-messages';
+import type { NetworkSendResult } from '@/types/network-wire';
 
 import {
   networkRefusal,
@@ -30,7 +31,7 @@ import { SendMessageBodySchema, threadInput } from '../../../_shared/network-par
 const logger = createModuleLogger('NetworkSendRoute');
 
 type ThreadRoute = { readonly params: Promise<{ threadId: string }> };
-type SendResponse = { readonly success: true; readonly messageId: string };
+type SendResponse = NetworkSendResult;
 
 async function handler(request: NextRequest, actor: NetworkActor, routeContext?: ThreadRoute) {
   const input = await threadInput(request, routeContext, SendMessageBodySchema);
@@ -42,6 +43,7 @@ async function handler(request: NextRequest, actor: NetworkActor, routeContext?:
       threadId,
       senderUid: actor.uid,
       text: body.text,
+      clientKey: body.clientKey,
       nowISO: nowISO(),
     });
     if (outcome.kind === 'refused') return networkRefusal(outcome.reason);

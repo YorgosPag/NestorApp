@@ -42,7 +42,7 @@ function entriesAfter(
     case 'book':
       return [...entries, {
         kind: 'booking', id: pendingId, from: command.checkIn, to: command.checkOut, guests: command.guests,
-        guestLabel: command.guestLabel, channel: 'direct', lifecycle: 'confirmed', occupies: true,
+        pets: command.pets, totalMinor: null, guestLabel: command.guestLabel, channel: 'direct', lifecycle: 'confirmed', occupies: true,
         holdExpiresAt: null, riskDisclosedAt: null,
       }];
     case 'unblock':

@@ -189,6 +189,9 @@ export const generateDeterministicNetworkBlockId = (blockerUid: string, blockedU
 export const generateDeterministicNetworkAwayId = (uid: string) =>
   enterpriseIdService.generateDeterministicNetworkAwayId(uid);
 export const generateNetworkMessageId = () => enterpriseIdService.generateNetworkMessageId();
+export const generateDeterministicNetworkMessageId = (senderUid: string, clientKey: string) =>
+  enterpriseIdService.generateDeterministicNetworkMessageId(senderUid, clientKey);
+export const generateNetworkMessageRevisionId = () => enterpriseIdService.generateNetworkMessageRevisionId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)

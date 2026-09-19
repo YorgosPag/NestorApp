@@ -86,6 +86,7 @@ export async function seedNetworkActThread(
         until: entry.until,
         lastReadAt: null,
         muted: false,
+        following: false,
       });
     }
   });

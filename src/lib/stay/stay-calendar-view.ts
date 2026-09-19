@@ -14,6 +14,7 @@
  */
 
 import { intervalsOverlap } from '@/lib/date-local';
+import type { MinorAmount } from '@/lib/money/money';
 import type { StayDayRule, StayDayRules, StayRules } from '@/types/stay-rules';
 import type { StayBookingChannel, StayBookingLifecycle } from '@/types/stay-booking';
 import { stayEntryOccupies, type StayBlockSource, type StayCalendarEntry } from '@/types/stay-calendar';
@@ -33,6 +34,10 @@ export type StayCalendarEntryView =
       readonly from: string;
       readonly to: string;
       readonly guests: number;
+      /** Κατοικίδια (ADR-777 §8.60.21.7): `0` = κανένα· `null` = δεν ρωτήθηκε (πριν τη Φ5). */
+      readonly pets: number | null;
+      /** Το σύνολο που υποσχέθηκε η πλατφόρμα στο αίτημα — στιγμιότυπο· `null` = δεν τιμολογήθηκε. */
+      readonly totalMinor: MinorAmount | null;
       /**
        * Ποιον βλέπει ο οικοδεσπότης: η ιδιωτική του σημείωση (χειροκίνητη κράτηση) ή το όνομα
        * του λογαριασμού τη στιγμή του αιτήματος (Στάδιο Δ). Ποτέ uid, ποτέ email· `null` = χωρίς όνομα.
@@ -88,6 +93,8 @@ export function stayCalendarEntryViewOf(entry: StayCalendarEntry, instant: strin
     from: booking.checkIn,
     to: booking.checkOut,
     guests: booking.guests,
+    pets: booking.pets,
+    totalMinor: booking.price?.totalMinor ?? null,
     guestLabel: booking.holder.kind === 'offline' ? booking.holder.label : booking.holder.displayName,
     channel: booking.channel,
     lifecycle: booking.lifecycle,

@@ -54,7 +54,7 @@ const run = (command: StayCalendarCommand, actor: ListingActor = OWNER) =>
 
 const block = (from: string, to: string): StayCalendarCommand => ({ action: 'block', from, to, note: null });
 const book = (checkIn: string, checkOut: string): StayCalendarCommand => ({
-  action: 'book', checkIn, checkOut, guests: 2, guestLabel: 'κ. Παπαδόπουλος', acknowledgedWarnings: [],
+  action: 'book', checkIn, checkOut, guests: 2, pets: 0, guestLabel: 'κ. Παπαδόπουλος', acknowledgedWarnings: [],
 });
 
 beforeEach(() => {

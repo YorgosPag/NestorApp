@@ -133,6 +133,8 @@ function bookingOf(
     guests: 2,
     lifecycle: 'confirmed',
     riskDisclosedAt: null,
+    pets: null,
+    price: null,
     hold: null,
     resolution: null,
     guestUserId: spec.holder,

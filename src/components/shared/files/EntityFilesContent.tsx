@@ -42,7 +42,7 @@ import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
-import { getAvailableGroups } from '@/config/upload-entry-points';
+import { getAvailableGroups, selectOfferedEntryPoints } from '@/config/upload-entry-points';
 import { FilesList } from './FilesList';
 import { GroupedFilesList } from './GroupedFilesList';
 import { GroupedFilesByDomainCategoryList } from './GroupedFilesByDomainCategoryList';
@@ -110,6 +110,8 @@ export interface EntityFilesContentProps {
   viewMode: 'list' | 'tree' | 'gallery';
   treeViewMode: 'business' | 'technical';
   displayStyle: 'standard' | 'media-gallery' | 'floorplan-gallery';
+  /** Κείμενο κενής όψης της καρτέλας — παράλειψη ⇒ το γενικό της `displayStyle`. */
+  emptyMessage?: string;
   fetchAllDomains?: boolean;
   listGroupingMode?: 'studyGroup' | 'domainCategory';
   companyName?: string;
@@ -203,6 +205,11 @@ function UploadZoneSection({
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
+  // ADR-866 §2.10 Β1 — μηδέν τύποι ⇒ το λέμε, αντί για «επιλέξτε πρώτα τύπο» πάνω από κενό επιλογέα (αδιέξοδο).
+  const offersNothing = getAvailableGroups(entityType).length === 0 && selectOfferedEntryPoints({
+    entityType, contactType, activePersonas, allowedEntryPointIds,
+    categoryFilter: entryPointCategoryFilter, excludeCategories: entryPointExcludeCategories,
+  }).length === 0;
   return (
     <div className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
       <Button
@@ -266,12 +273,12 @@ function UploadZoneSection({
         </>
       )}
 
-      {/* Hint when no entry point selected */}
+      {/* Hint when no entry point selected — ή ρητή δήλωση ότι η καρτέλα δεν δέχεται τίποτα */}
       {!selectedEntryPoint && (
-        <div className={cn("p-2 text-center text-sm flex items-center justify-center gap-2", colors.text.muted)}>
-          <ArrowUp className={iconSizes.sm} aria-hidden="true" />
-          {t('manager.selectDocumentType')}
-        </div>
+        <p role="status" className={cn("m-0 p-2 text-center text-sm flex items-center justify-center gap-2", colors.text.muted)}>
+          {!offersNothing && <ArrowUp className={iconSizes.sm} aria-hidden="true" />}
+          {t(offersNothing ? 'manager.noDocumentTypes' : 'manager.selectDocumentType')}
+        </p>
       )}
     </div>
   );
@@ -424,7 +431,7 @@ function GalleryView(props: EntityFilesContentProps) {
         onDelete={async (file) => { await props.onDelete(file.id); }}
         onDownload={props.onDownload}
         onRefresh={() => { /* refetch handled by parent */ }}
-        emptyMessage={t('floorplan.noFloorplans')}
+        emptyMessage={props.emptyMessage ?? t('floorplan.noFloorplans')}
       />
     );
   }
@@ -442,7 +449,7 @@ function GalleryView(props: EntityFilesContentProps) {
             await props.onDelete(file.id);
           }
         }}
-        emptyMessage={t('media.noMedia')}
+        emptyMessage={props.emptyMessage ?? t('media.noMedia')}
       />
     );
   }

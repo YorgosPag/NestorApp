@@ -56,4 +56,10 @@ describe('ADR-867 network id generators', () => {
     expect(a).toMatch(/^nmsg_/);
     expect(a).not.toBe(service.generateNetworkMessageId());
   });
+
+  it('revision ids are random and carry their own prefix — every edit is its own event (ADR-867 Β7)', () => {
+    const a = service.generateNetworkMessageRevisionId();
+    expect(a).toMatch(/^nmrv_/);
+    expect(a).not.toBe(service.generateNetworkMessageRevisionId());
+  });
 });

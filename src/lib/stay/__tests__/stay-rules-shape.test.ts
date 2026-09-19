@@ -69,7 +69,7 @@ describe('πράξεις Σταδίου Β', () => {
   });
 
   it('book: άγνωστη ή διπλή αποδοχή προειδοποίησης ⇒ malformed', () => {
-    const book = { action: 'book', checkIn: '2027-10-10', checkOut: '2027-10-12', guests: 2, guestLabel: 'Α' };
+    const book = { action: 'book', checkIn: '2027-10-10', checkOut: '2027-10-12', guests: 2, pets: 0, guestLabel: 'Α' };
     expect(stayCalendarCommandFrom({ ...book, acknowledgedWarnings: ['preparation'] }).ok).toBe(true);
     expect(stayCalendarCommandFrom({ ...book, acknowledgedWarnings: ['whatever'] }).ok).toBe(false);
     expect(stayCalendarCommandFrom({ ...book, acknowledgedWarnings: ['preparation', 'preparation'] }).ok).toBe(false);

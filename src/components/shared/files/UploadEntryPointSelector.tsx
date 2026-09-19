@@ -28,11 +28,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { SearchInput } from '@/components/ui/search/SearchInput';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { EntityType, FileCategory } from '@/config/domain-constants';
 import type { ContactType } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
-import type { UploadEntryPoint } from '@/config/upload-entry-points';
-import { getSortedEntryPoints, getFilteredContactEntryPoints } from '@/config/upload-entry-points';
+import { selectOfferedEntryPoints } from '@/config/upload-entry-points';
 import * as LucideIcons from 'lucide-react';
 import '@/lib/design-system';
 import { gridPatterns } from '@/styles/design-tokens';
@@ -90,26 +88,10 @@ export function UploadEntryPointSelector({
   // Fixes bug where cards showed Greek text even with English selected
   const currentLanguage = (language || i18n.language?.split('-')[0] || 'en') as 'el' | 'en';
 
-  // 🏢 ENTERPRISE: Get entry points — persona-aware for contacts, standard for others
-  const baseEntryPoints = (entityType === 'contact' && contactType)
-    ? getFilteredContactEntryPoints(contactType, activePersonas)
-    : getSortedEntryPoints(entityType);
-
-  // 🏢 ENTERPRISE: Apply category filters on top of persona filtering
-  // - categoryFilter: show ONLY entries with this category (e.g., 'photos' for PhotosTab)
-  // - excludeCategories: hide entries with these categories (e.g., ['photos', 'videos'] for DocumentsTab)
-  const entryPoints = baseEntryPoints.filter((ep) => {
-    // 🏢 ENTERPRISE: Whitelist mode — if allowedEntryPointIds is set, ONLY show these
-    if (allowedEntryPointIds && !allowedEntryPointIds.includes(ep.id)) {
-      return false;
-    }
-    if (categoryFilter && ep.category !== categoryFilter) {
-      return false;
-    }
-    if (excludeCategories && excludeCategories.includes(ep.category)) {
-      return false;
-    }
-    return true;
+  // 🏢 ENTERPRISE: persona-aware για επαφές + φίλτρα κατηγορίας/λευκής λίστας — ο ΕΝΑΣ κριτής του καταλόγου
+  // (ADR-866 §2.10 Β1), τον ίδιο που ρωτά η ζώνη ανεβάσματος για την κενή όψη.
+  const entryPoints = selectOfferedEntryPoints({
+    entityType, contactType, activePersonas, categoryFilter, excludeCategories, allowedEntryPointIds,
   });
 
   // 🏢 ENTERPRISE: Search filtering — searches both el/en label + description

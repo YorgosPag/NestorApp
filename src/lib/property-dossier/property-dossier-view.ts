@@ -39,8 +39,11 @@ export function partitionDossiers(dossiers: readonly PropertyDossier[]): Partiti
 /**
  * **Πώς λέγεται η «κάτοψη» αυτού του ακινήτου** — σε **γη** δεν υπάρχει κάτοψη, υπάρχει **τοπογραφικό** (§2.7.1).
  *
- * 🔑 Η ίδια κατηγορία αρχείων (`floorplans`) — αλλάζει **μόνο** η λέξη που βλέπει ο άνθρωπος. Η κλάση έρχεται από
- * το **ένα** `PROPERTY_TYPE_CLASS` (όχι δεύτερη λίστα «οικοπέδων»)· άγνωστο είδος ⇒ «κάτοψη» (η συνήθης περίπτωση).
+ * 🔑 Η κλάση έρχεται από το **ένα** `PROPERTY_TYPE_CLASS` (όχι δεύτερη λίστα «οικοπέδων»)· άγνωστο είδος ⇒ «κάτοψη».
+ * ⚠️ **ΔΙΟΡΘΩΣΗ 2026-09-19 (ADR-866 §2.10 Β1)**: εδώ έγραφε «ίδια κατηγορία `floorplans`, αλλάζει μόνο η λέξη» —
+ * αλλά ο κατάλογος κατατάσσει το τοπογραφικό ως **έγγραφο** (`admin`/`documents`). Πλέον η πρώτη καρτέλα διαβάζει
+ * κατόψεις **και** τοπογραφικό και **προσφέρει** ανά κλάση (`property-dossier-media.ts`) — ο ίδιος κριτής ορίζει και
+ * την κλάση της όψης (`propertyDossierViewClass`).
  */
 export function floorplanTabKind(type: PropertyDossier['type']): 'floorplan' | 'topographic' {
   return type !== null && PROPERTY_TYPE_CLASS[type] === 'land' ? 'topographic' : 'floorplan';

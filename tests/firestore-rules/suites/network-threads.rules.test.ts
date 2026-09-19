@@ -274,6 +274,7 @@ describe('network_threads.rules — διαβάζει ΟΠΟΙΟΣ ΕΧΕΙ ΖΩ�
             until: null,
             lastReadAt: null,
             muted: false,
+            following: false,
           }),
       );
     });

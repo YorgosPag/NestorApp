@@ -52,6 +52,24 @@ export async function threadInput<T>(
   return body.ok ? { ok: true, value: { threadId: threadId.value, body: body.value } } : body;
 }
 
+/** Οι παράμετροι μιας διαδρομής **μηνύματος** (`…/threads/{threadId}/messages/{messageId}/…`). */
+export type MessageRouteContext = { readonly params: Promise<{ threadId: string; messageId: string }> };
+
+/**
+ * **Νήμα + μήνυμα από τη διαδρομή** — το προοίμιο της ανάκλησης **και** της επεξεργασίας (Β7).
+ * Χαλασμένο οποιοδήποτε ⇒ **ένα** 400 (`route: invalid`), χωρίς να λέει ποιο — όπως πριν.
+ */
+export async function messageRouteParams(
+  routeContext: MessageRouteContext | undefined,
+): Promise<NetworkInputStep<{ readonly threadId: string; readonly messageId: string }>> {
+  const threadId = await routeParam(routeContext, 'threadId');
+  const messageId = await routeParam(routeContext, 'messageId');
+  if (threadId === null || messageId === null) {
+    return { ok: false, response: networkBadRequest({ route: 'invalid' }) };
+  }
+  return { ok: true, value: { threadId, messageId } };
+}
+
 /**
  * **Το σώμα του αιτήματος, ελεγμένο** — ή η απάντηση 400. Χαλασμένο JSON και λάθος σχήμα δίνουν
  * την **ίδια** μορφή άρνησης (`invalid-request`), ώστε η οθόνη να έχει **έναν** δρόμο σφάλματος.
@@ -95,13 +113,25 @@ export const ThreadListQuerySchema = z.object({
   cursor: z.string().min(1).max(512).optional(),
 });
 
-/** `POST …/messages` — το φράγμα είναι **διπλάσιο** του ορίου του γραφέα, επίτηδες (κεφαλίδα). */
-export const SendMessageBodySchema = z.object({
+/** Ένα κείμενο μηνύματος — το φράγμα είναι **διπλάσιο** του ορίου του γραφέα, επίτηδες (κεφαλίδα). */
+export const MessageTextBodySchema = z.object({
   text: z.string().max(MAX_NETWORK_MESSAGE_CHARS * 2),
+});
+
+/**
+ * `POST …/messages` — το κείμενο **και** το κλειδί ιδεμποτησίας του πελάτη (ADR-867 Β7 · Slack `client_msg_id`).
+ * 🔴 **Υποχρεωτικό**: ο μεταφορέας (`apiClient`) ξαναστέλνει `POST` σε 5xx/χαμένη σύνδεση — χωρίς κλειδί,
+ * μια καταχωρημένη αποστολή με χαμένη απάντηση θα γεννούσε **δεύτερο** μήνυμα και δεύτερη ειδοποίηση.
+ */
+export const SendMessageBodySchema = MessageTextBodySchema.extend({
+  clientKey: z.string().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
 });
 
 /** `PUT …/mute` */
 export const MuteBodySchema = z.object({ muted: z.boolean() });
+
+/** `PUT …/follow` (ADR-867 Β7) */
+export const FollowBodySchema = z.object({ following: z.boolean() });
 
 /**
  * `PUT /api/network/away` — έναρξη **προαιρετική** (απούσα ⇒ «από τώρα»), λήξη υποχρεωτική.

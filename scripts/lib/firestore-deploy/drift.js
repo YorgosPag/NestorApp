@@ -116,7 +116,8 @@ function rulesDetail(origin, desired, live) {
   const rec = desired.recorded;
   switch (origin) {
     case ORIGIN.TREE:
-      return rec && rec.digest !== desired.digest
+      // `matchesTree` (world.js) = modulo CRLF/LF — ίδια απάντηση σε Windows και CI (ADR-865 Ε2)
+      return rec && !rec.matchesTree
         ? `${since}${eolNote(liveContent(live), desired.wire)} · ζωντανό = δέντρο· το τοπικό μητρώο δεν `
           + 'το κατέγραψε (γραμμή παραγωγής ⇒ GitHub Deployments, ή ανάπτυξη εκτός εργαλείου)'
         : `${since}${eolNote(liveContent(live), desired.wire)}`;

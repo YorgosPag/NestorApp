@@ -20,6 +20,8 @@
  * **Layering**: leaf — μόνο σταθερές.
  */
 
+import { networkThreadFragment } from '@/lib/network-messaging/thread-anchor';
+
 /**
  * **Ο κατάλογος εντολών** — τι περιμένει το γραφείο, και από ποιον (§8.34).
  *
@@ -70,6 +72,14 @@ export const MANDATE_CATALOG_ROUTE = '/listings/mandates' as const;
  */
 export function mandateDetailHref(ownerPropertyId: string): string {
   return `${MANDATE_CATALOG_ROUTE}/${encodeURIComponent(ownerPropertyId)}`;
+}
+
+/**
+ * **Η εντολή, ανοιχτή στο νήμα της** (ADR-867 Β7 · §8 #9) — ο προορισμός της ειδοποίησης «νέο μήνυμα»
+ * για την πλευρά του γραφείου. Η άγκυρα από το **ένα** SSoT (`thread-anchor.ts`).
+ */
+export function mandateThreadHref(ownerPropertyId: string, threadId: string): string {
+  return `${mandateDetailHref(ownerPropertyId)}${networkThreadFragment(threadId)}`;
 }
 
 /** **Καταχώρηση ακινήτου για λογαριασμό πελάτη** (§8.33). */

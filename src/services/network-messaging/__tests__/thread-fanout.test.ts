@@ -144,6 +144,7 @@ describe('Κ — τα καθαρά κομμάτια του καταλόγου', 
     until: null,
     lastReadAt: null,
     muted: false,
+    following: false,
     threadActivityAt: T1,
   };
 

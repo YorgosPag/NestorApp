@@ -24,6 +24,7 @@ import {
   setNetworkAway,
   type NetworkAway,
 } from '@/services/network-messaging/network-away';
+import type { NetworkAwayResult, NetworkAwayView } from '@/types/network-wire';
 
 import {
   networkBadRequest,
@@ -35,10 +36,9 @@ import { AwayBodySchema, readNetworkBody } from '../_shared/network-params';
 
 const logger = createModuleLogger('NetworkAwayRoute');
 
-type AwayView = Pick<NetworkAway, 'startsAt' | 'endsAt'>;
-type AwayResponse = { readonly success: true; readonly away: AwayView | null };
+type AwayResponse = NetworkAwayResult;
 
-const view = (away: NetworkAway | null): AwayView | null =>
+const view = (away: NetworkAway | null): NetworkAwayView | null =>
   away === null ? null : { startsAt: away.startsAt, endsAt: away.endsAt };
 
 async function getHandler(_request: NextRequest, actor: NetworkActor) {
