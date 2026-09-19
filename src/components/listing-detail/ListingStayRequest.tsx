@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useMyStayRequests } from '@/hooks/listings/useMyStayRequests';
+import { readableStayRequestsOf, type MyStayRequests } from '@/hooks/listings/useMyStayRequests';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatDateTime } from '@/lib/intl-formatting';
 import { formatMinor, type MinorAmount } from '@/lib/money/money';
@@ -179,7 +179,6 @@ function MyRequests({ requests, busy, onWithdraw, t }: {
 }
 
 interface ListingStayRequestProps {
-  readonly listingId: string;
   /** Νύχτες + κατοικίδια (`0` = κανένα) — ό,τι ρώτησε η σελίδα, ώστε το αίτημα να είναι η **ίδια** ερώτηση. */
   readonly query: { readonly checkIn: string; readonly checkOut: string; readonly pets: number } | null;
   readonly answer: PublicStayAnswer | undefined;
@@ -188,15 +187,16 @@ interface ListingStayRequestProps {
   readonly onChanged: () => void;
   /** Η τιμή άλλαξε από τη στιγμή που τη δείξαμε — ξαναρώτα, ώστε να φανεί το νέο σύνολο. */
   readonly onPriceChanged: () => void;
+  /** Τα αιτήματά μου — τα κατέχει ο γονέας, που τα δίνει **και** στο πλέγμα (§23.12 Ε3: ένα fetch). */
+  readonly mine: MyStayRequests;
 }
 
 export function ListingStayRequest({
-  listingId, query, answer, maxGuests, onChanged, onPriceChanged,
+  query, answer, maxGuests, onChanged, onPriceChanged, mine,
 }: ListingStayRequestProps): React.ReactElement | null {
   const { t } = useTranslation(['short-stay']);
   const { user } = useAuth();
   const pathname = usePathname();
-  const mine = useMyStayRequests(listingId, user !== null);
   const stayable = answer !== undefined && isStayable(answer.answer.kind);
 
   const act = async (command: Parameters<typeof mine.send>[0]): Promise<void> => {
@@ -204,7 +204,7 @@ export function ListingStayRequest({
     if (outcome.kind === 'ok') onChanged();
     if (outcome.kind === 'price-changed') onPriceChanged();
   };
-  const requests = mine.state.kind === 'loaded' && mine.state.requests.kind === 'readable' ? mine.state.requests.requests : [];
+  const requests = readableStayRequestsOf(mine.state);
 
   return (
     <section aria-label={t('short-stay:request.title')} className="flex flex-col gap-2">

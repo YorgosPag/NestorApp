@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { StayGuestRequestView } from '@/lib/stay/stay-guest-request-view';
 import type { StayCalendarSendOutcome } from '@/services/stay-calendar/stay-calendar.client';
 import {
   fetchMyStayRequests,
@@ -22,6 +23,14 @@ import {
 } from '@/services/stay-calendar/stay-request.client';
 
 export type MyStayRequestsState = { readonly kind: 'idle' } | { readonly kind: 'loading' } | StayGuestRequestsLoad;
+
+/**
+ * **Τα αιτήματά μου που διαβάστηκαν** — κενό σε κάθε άλλη κατάσταση. Ένα σημείο για τους δύο
+ * καταναλωτές (γραμμές αιτημάτων · σήμανση «το αίτημά σας» στο πλέγμα, ADR-835 §23.12 Ε3).
+ */
+export function readableStayRequestsOf(state: MyStayRequestsState): readonly StayGuestRequestView[] {
+  return state.kind === 'loaded' && state.requests.kind === 'readable' ? state.requests.requests : [];
+}
 
 export interface MyStayRequests {
   readonly state: MyStayRequestsState;

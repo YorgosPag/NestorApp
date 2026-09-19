@@ -23,12 +23,15 @@ import { useSearchParams } from 'next/navigation';
 import { StayCountSelect, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
+import { readableStayRequestsOf, useMyStayRequests } from '@/hooks/listings/useMyStayRequests';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { usePublicStayNights, type PublicStayNightsState } from '@/hooks/listings/usePublicStayNights';
 import { formatCalendarDay } from '@/lib/intl-formatting';
 import { parseListingFilters } from '@/lib/listings/listing-filters';
 import { addMonthsToMonthKey, monthKeyOf } from '@/lib/stay/stay-calendar-month';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import { NO_STAY_SELECTION, nextStaySelection, type StayPublicSelection } from '@/lib/stay/stay-public-selection';
+import { isMyPendingNight } from '@/lib/stay/stay-guest-request-view';
 import { todayLocalDate } from '@/lib/date-local';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -97,11 +100,25 @@ function useStayQuestion(listingId: string) {
   return { selection, setSelection, pets, setPets, answers, refreshAnswers };
 }
 
+/**
+ * **Τα αιτήματά μου** — ζουν ΕΔΩ, στον γονέα: ένα fetch για τις γραμμές αιτημάτων **και** για τη
+ * σήμανση «το αίτημά σας» στο πλέγμα (ADR-835 §23.12 Ε3 — πριν, ο επισκέπτης έβλεπε το δικό του
+ * αίτημα ως «σε αναμονή για άλλον επισκέπτη»).
+ */
+function useMyRequests(listingId: string) {
+  const { user } = useAuth();
+  const mine = useMyStayRequests(listingId, user !== null);
+  const myRequests = readableStayRequestsOf(mine.state);
+  const isMine = React.useCallback((day: string) => isMyPendingNight(myRequests, day), [myRequests]);
+  return { mine, isMine };
+}
+
 export default function ListingStayBooking({ listing }: { readonly listing: PublicListing }): React.ReactElement {
   const { t } = useTranslation(['short-stay']);
   const [monthKey, setMonthKey] = React.useState(() => monthKeyOf(todayLocalDate()));
   const { state, reload } = usePublicStayNights(listing.id, monthKey);
   const { selection, setSelection, pets, setPets, answers, refreshAnswers } = useStayQuestion(listing.id);
+  const { mine, isMine } = useMyRequests(listing.id);
 
   if (state.kind !== 'loaded' || state.nights.kind !== 'declared') {
     return <NightsNotice state={state} onRetry={reload} />;
@@ -119,11 +136,12 @@ export default function ListingStayBooking({ listing }: { readonly listing: Publ
         monthKey={monthKey} nights={nights} selection={selection}
         onShiftMonth={(delta) => setMonthKey((current) => addMonthsToMonthKey(current, delta))}
         onPick={(day) => setSelection((current) => nextStaySelection(current, day, nights))}
+        isMine={isMine}
       />
       <ListingStayAnswer listingId={listing.id} state={answers} />
       {/* Στάδιο Δ (ADR-835 §23): η υπόσχεση πριν, το αίτημα, και τα αιτήματά μου. */}
       <ListingStayRequest
-        listingId={listing.id}
+        mine={mine}
         query={selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, pets: pets ?? 0 } : null}
         answer={answers.kind === 'loaded' ? answers.answers[listing.id] : undefined}
         maxGuests={listing.stay?.maxGuests ?? null}

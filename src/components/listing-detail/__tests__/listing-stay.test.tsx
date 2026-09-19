@@ -10,6 +10,7 @@ import { ListingStayAnswer } from '@/components/listing-detail/ListingStayAnswer
 import { ListingStayCalendar } from '@/components/listing-detail/ListingStayCalendar';
 import type { StayPublicNight } from '@/lib/stay/stay-nights-view';
 import { NO_STAY_SELECTION } from '@/lib/stay/stay-public-selection';
+import { isMyPendingNight } from '@/lib/stay/stay-guest-request-view';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
@@ -29,7 +30,7 @@ const NIGHTS: readonly StayPublicNight[] = Array.from({ length: 61 }, (_, i) => 
 describe('ListingStayCalendar', () => {
   it('«μόνο αναχώρηση» και «μη διαθέσιμη» ΛΕΓΟΝΤΑΙ· δεν επιλέγονται αλλά δεν σιωπούν', () => {
     const onPick = jest.fn();
-    render(<ListingStayCalendar monthKey="2027-10" nights={NIGHTS} selection={NO_STAY_SELECTION} onShiftMonth={jest.fn()} onPick={onPick} />);
+    render(<ListingStayCalendar monthKey="2027-10" nights={NIGHTS} selection={NO_STAY_SELECTION} onShiftMonth={jest.fn()} onPick={onPick} isMine={() => false} />);
     const checkoutOnly = screen.getAllByRole('button', { name: /check-out-only/ })[0];
     const closed = screen.getAllByRole('button', { name: /cell\.closed/ })[0];
     expect(checkoutOnly).toHaveAttribute('aria-disabled', 'true');
@@ -38,6 +39,30 @@ describe('ListingStayCalendar', () => {
     expect(onPick).not.toHaveBeenCalled();
     fireEvent.click(screen.getAllByRole('button', { name: /cell\.check-in/ })[0]);
     expect(onPick).toHaveBeenCalledWith('2027-10-01');
+  });
+
+  it('🔴 ADR-835 §23.12 Ε3 — η ΔΙΚΗ ΜΟΥ αναμονή λέγεται «το αίτημά σας»· η ξένη «για άλλον επισκέπτη»', () => {
+    const held = { state: 'held', heldUntil: '2027-09-01T10:00:00.000Z', checkInAllowed: false, checkOutAllowed: false } as const;
+    const nights = NIGHTS.map((n) => (n.date >= '2027-10-20' && n.date <= '2027-10-22' ? { ...n, ...held } : n));
+    const mine = [{ id: 'stay_1', checkIn: '2027-10-20', checkOut: '2027-10-22', guests: 1, totalMinor: null, lifecycle: 'requested', holdExpiresAt: held.heldUntil, pending: true }] as const;
+    render(
+      <ListingStayCalendar monthKey="2027-10" nights={nights} selection={NO_STAY_SELECTION} onShiftMonth={jest.fn()} onPick={jest.fn()}
+        isMine={(day) => isMyPendingNight(mine, day)} />,
+    );
+    // 20 και 21 = οι νύχτες του αιτήματός μου (ημι-ανοιχτό: η 22 ΔΕΝ είναι δική μου).
+    expect(screen.getAllByRole('button', { name: /cell\.heldMine/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /cell\.held(?!Mine)/ })).toHaveLength(1);
+  });
+});
+
+describe('isMyPendingNight — ADR-835 §23.12 Ε3', () => {
+  const request = { id: 's', checkIn: '2027-10-20', checkOut: '2027-10-22', guests: 1, totalMinor: null, lifecycle: 'requested', holdExpiresAt: null } as const;
+  it('ημι-ανοιχτό [άφιξη, αναχώρηση) — η μέρα αναχώρησης δεν είναι «δική μου» νύχτα', () => {
+    expect(['2027-10-19', '2027-10-20', '2027-10-21', '2027-10-22'].map((d) => isMyPendingNight([{ ...request, pending: true }], d)))
+      .toEqual([false, true, true, false]);
+  });
+  it('🔴 ληγμένο ή απαντημένο (`pending: false`) ⇒ ΠΟΤΕ δικό μου — αλλιώς θα έκρυβε νύχτες που κρατά άλλος', () => {
+    expect(isMyPendingNight([{ ...request, pending: false }], '2027-10-20')).toBe(false);
   });
 });
 
