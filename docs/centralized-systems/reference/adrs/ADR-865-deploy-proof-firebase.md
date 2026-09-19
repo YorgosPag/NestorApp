@@ -521,12 +521,85 @@ bytes στο `drift` · σιωπηλή προεπιλογή δέντρου · co
 που γράφει στην παραγωγή. (2) Ο Κ3 στο push κρίνει το ref **ένα-ένα**. Αν ένα push στείλει πολλά refs,
 το καθένα κρίνεται με τη δική του βάση.
 
+### 11.9 Η διαδοχή — μόνο η **κορυφή** αναπτύσσει και κυκλοφορεί *(2026-09-19, Ε3)*
+
+**Η αφορμή, μετρημένη** (Changelog 2026-09-19, runs `35429150868` / `35431491440`): job σε αναμονή
+έγκρισης **κρατά** το `concurrency: firebase-production`. Το νεότερο μένει `pending` με
+`pending_deployments = 0`, δηλαδή **χωρίς** κουμπί ⇒ **καμία** κυκλοφορία στο Netcup μέχρι Reject/Approve.
+Η απάντηση του §11.6 #2 είναι λοιπόν: **κρατά θέση**.
+
+**Έρευνα (πρωτογενείς πηγές, αυτούσια)**:
+
+| Πηγή | Αυτούσιο | Τι μας λέει |
+|---|---|---|
+| GitHub, *Control the concurrency* | *«any existing `pending` job or workflow in the same concurrency group will be canceled and the new queued job or workflow will take its place»* | **Τρίτο** τρέξιμο: ακυρώνεται το εκκρεμές Β, μπαίνει το Γ, το Α **κρατά**. Τεκμηριωμένο, όχι μετρημένο |
+| GitHub, changelog 2026-05-07 | `queue: max`: *«Up to 100 jobs or workflow runs can be `pending`»* | Δεν βοηθά: όλα στέκονται πίσω από το Α. ❌ |
+| GitHub, *Control deployments* | *«If a job is not approved within 30 days, it will automatically fail.»* | Όριο 30 ημερών, όχι ακύρωση |
+| GitHub, «job σε αναμονή έγκρισης κρατά το group» | **ΜΗ ΤΕΚΜΗΡΙΩΜΕΝΟ** | Μοναδική απόδειξη η μέτρησή μας |
+| GitHub REST (fine-grained) | `POST …/runs/{id}/cancel` ⇒ *Actions: write* · `POST …/pending_deployments` ⇒ *«Required reviewers … can use this endpoint»* | Ο bot **ακυρώνει**, **δεν** απορρίπτει |
+| **AWS CodePipeline** | *«A stage with an approval action is locked until the approval action is approved or rejected or has timed out»* · *«Waiting executions are superseded by more recent executions … only … in between stages»* | **Ίδια** συμπεριφορά με το GitHub. Λύση: χρονικό όριο (7 μέρες) + αντικατάσταση όσων περιμένουν **μπροστά** από το στάδιο |
+| **GitLab** | *«prevent older deployment jobs from running when a newer deployment job is started»* | Φρουρός φρεσκάδας |
+| **HCP Terraform** | *«a run remains pending until every run before it has completed»* · *«stale saved plan runs are automatically detected and discarded»* | Ίδιο μπλοκάρισμα ουράς· το μπαγιάτικο πλάνο **απορρίπτεται** |
+| Argo CD | *«only attempt one synchronization per unique combination of commit SHA1»* | Καμία έγκριση: πάντα η κορυφή |
+| Spinnaker Manual Judgment | χρονικό όριο/σημαίες: **ΜΗ ΤΕΚΜΗΡΙΩΜΕΝΑ** στο spinnaker.io | δεν επικαλούμαστε |
+
+**Η απόφαση (Giorgio, «ΝΑΙ»)**: GitOps διαδοχή — το δέντρο της κορυφής είναι **υπερσύνολο** κάθε
+παλαιότερου, άρα ένα παλαιότερο τρέξιμο έχει μόνο κάτι να **γυρίσει πίσω**. Απορρίφθηκαν:
+`cancel-in-progress: true` (κόβει ανάπτυξη που τρέχει) · `queue: max` · χρονικό όριο (η κορυφή **πρέπει** να
+περιμένει τους κανόνες της) · αυτόματη έγκριση δεικτών (**μετρημένο**: 14 από τα 20 commits δεικτών των 90
+ημερών άλλαξαν **και** κανόνες ⇒ ελάχιστο όφελος για νέα ταυτότητα εγγραφής).
+
+| Job / βήμα (`docker-build.yml`) | Λειτουργία (`succession.js`) | Τι κάνει |
+|---|---|---|
+| `firebase-succession` (μετά το πλάνο) | `claim` | όχι κορυφή ⇒ **αυτοακύρωση**· κορυφή ⇒ ακυρώνει κάθε **άλλο** ενεργό τρέξιμο με `pending_deployments` στο environment. Ποτέ τρέξιμο που **αναπτύσσει** (0 εκκρεμείς) |
+| ίδιο, βήμα Telegram | — | *«⏸ Firebase: ζητείται έγκριση»* τη **στιγμή** του αιτήματος |
+| `firebase-queue-watch` (μόνο όταν `apply`) | `watch` | όσο το **δικό μου** apply κάθεται στην ουρά χωρίς κουμπί, ξανασκουπίζει κάθε 30″ (όριο 70′) — κλείνει τον αγώνα «ο παλιός μπήκε σε αναμονή μετά τη σκούπα» |
+| πρώτο βήμα `firebase-apply` (πριν την ταυτότητα) | `guard` | έγκριση που δόθηκε **μετά** από νεότερο push ⇒ αυτοακύρωση **πριν** εκδοθεί το κλειδί του deployer |
+| πρώτο βήμα `release` + `concurrency: netcup-release` | `guard` | αργό build παλαιότερου commit **δεν** γυρίζει πίσω το `:latest`. Οι κυκλοφορίες σειριοποιούνται |
+| `notify` | `tip` | μιλά **μόνο** η κορυφή (ή όποιος κυκλοφόρησε)· κανένα ψευδές «FALLITO» |
+| `firebase-drift.yml` (`actions: read`) | `remind` | κάθε πρωί Telegram για έγκριση που περιμένει ≥ `REMINDER_AFTER_HOURS` (8)· ποτέ κόκκινο |
+
+🔑 **Κορυφή** = το **νεότερο** τρέξιμο **push** στο commit της κορυφής του `main`. Αν δεν υπάρχει ακόμη ⇒
+**κανείς** δεν ακυρώνεται. **Αντικατάσταση = ακύρωση, ποτέ αποτυχία**: ο CI Health (ADR-757) μετρά ως
+«έσπασε» **μόνο** το `failure`, άρα ένα κόκκινο αντικατεστημένο τρέξιμο θα έστελνε ψευδές Tier 1.
+
+🏆 **Πού ξεπερνάμε**: το CodePipeline **δεν** αντικαθιστά αυτόν που **κρατά** την έγκριση (μόνο το χρονικό
+όριο τον βγάζει). Εμείς τον αντικαθιστούμε **αμέσως**, αλλά **μόνο** όσο περιμένει. Επιπλέον ο φρουρός
+κάνει το παράθυρο «εγκρίθηκε ακριβώς τη στιγμή της ακύρωσης» **ακίνδυνο**: ένα τρέξιμο που δεν είναι
+κορυφή δεν φτάνει ποτέ στο βήμα ανάπτυξης.
+
+**SSoT**: ο πελάτης GitHub REST εξήχθη από το `ci-health-report.js` (inline `api()`) στο **ένα**
+`scripts/lib/ci/github-api.js`. Ο συγγραφέας `GITHUB_OUTPUT`/`STEP_SUMMARY` εξήχθη από το `verify-live.js`
+στο `scripts/lib/ci/actions-io.js`. Ο αναγνώστης YAML (`workflow-meta`) επεκτάθηκε: `name` · `permissions` ·
+`concurrency` ανά job + `readWorkflowPermissions`. Ονόματα jobs και ουράς στο `M.PIPELINE`. Αποστολέας: το
+`telegram.js`.
+
+**Μετρημένο 2026-09-19 (τοπικά)**: jest `firestore-deploy-{gate,drift,pipeline,succession}` +
+`check-anchor-execution` + `ci-gate-tiers` **201/201** (νέα σουίτα: 32 tests · +9 άγκυρες δομής).
+**19/19 εκτελεσμένες μεταλλάξεις σκοτωμένες**, με επαναφορά md5 OK. Η 19η επέζησε στο πρώτο πέρασμα
+(φίλτρο «ολοκληρωμένο» του πυρήνα, κρυμμένο πίσω από το CLI) ⇒ νέα άγκυρα ⇒ σκοτώθηκε. CHECK 3.54 ✓ ·
+3.47 ✓ · 3.37 ✓ · `jscpd:diff` 0 κλώνοι σε 10 αρχεία · YAML έγκυρο (`yaml` 2.8.2). Repo:
+`default_workflow_permissions: "read"` (`gh api`, ανάγνωση), και ήδη το `packages: write` του `release`
+πέτυχε (run `35432199109`) ⇒ το `permissions:` του job **ανεβάζει** δικαίωμα ⇒ **καμία** ρύθμιση GitHub.
+
+⚠️ **Δηλωμένα όρια**:
+1. **ΑΜΕΤΡΗΤΟ στην παραγωγή** μέχρι το πρώτο push: ότι η ακύρωση τρεξίματος σε `waiting` **ελευθερώνει**
+   αμέσως το group και ότι το νεότερο παίρνει κουμπί. Και ότι η αυτοακύρωση σκοτώνει το βήμα μέσα στη
+   χάρη των 2′ (αλλιώς έξοδος 3 ⇒ fail-closed).
+2. Push στην κορυφή αντικαθιστά και **δοκιμή deployer** (`workflow_dispatch`) που περιμένει έγκριση.
+3. **Re-run** παλιού τρεξίματος αυτοακυρώνεται ⇒ rollback = `git revert` + push (GitOps).
+4. Ο φύλακας βρίσκει το δικό του apply με το `name:` του job (το API `…/jobs` επιστρέφει αυτό). Το
+   διαβάζει από το workflow με τον **έναν** αναγνώστη, και η άγκυρα δένει κάθε λειτουργία του YAML με το CLI.
+5. Εγγραφή **κανόνων Firestore** μέσα από τη γραμμή: **ακόμη αμέτρητη**. Το `firestore.rules` (+9) μπήκε στο
+   commit `37be5d1d`, αλλά **δεν** έχει γίνει push (`ls-remote` = `eca0e195`).
+
 ---
 
 ## §9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-19 | ✅ **§11.9 — Η ΔΙΑΔΟΧΗ: ΜΟΝΟ Η ΚΟΡΥΦΗ ΑΝΑΠΤΥΣΣΕΙ ΚΑΙ ΚΥΚΛΟΦΟΡΕΙ (Ε3)** *(εντολή Giorgio: «ΝΑΙ» στα Ε3+Ε4+Ε5 της σύγκρισης)*. Κλείνει το μετρημένο «ξεχασμένη έγκριση κρατά την ουρά `firebase-production` ⇒ καμία κυκλοφορία στο Netcup». Έρευνα σε πρωτογενείς πηγές: το AWS CodePipeline έχει **την ίδια** συμπεριφορά (*«A stage with an approval action is locked until … approved or rejected or has timed out»*)· το GitLab έχει φρουρό (*«prevent older deployment jobs from running»*)· το HCP Terraform απορρίπτει μπαγιάτικα πλάνα· το GitHub τεκμηριώνει ότι το τρίτο τρέξιμο αντικαθιστά το εκκρεμές δεύτερο, **όχι** τον κάτοχο. Νέα: `succession.js` (καθαρός πυρήνας + CLI `claim/guard/watch/tip/remind`) · jobs `firebase-succession` και `firebase-queue-watch` · φρουρός κορυφής ως **πρώτο** βήμα του `firebase-apply` (πριν την ταυτότητα) και του `release` (+ `concurrency: netcup-release`) · `notify` μόνο από την κορυφή · πρωινή υπενθύμιση στο `firebase-drift.yml` (`actions: read`) · Telegram τη στιγμή του αιτήματος έγκρισης. **Καμία** ρύθμιση GitHub/Google: `actions: write` ανά job (μετρημένο `default_workflow_permissions: read`). ⛔ Κανένα `cancel-in-progress: true` (άγκυρα). SSoT: ο πελάτης GitHub REST εξήχθη σε `lib/ci/github-api.js`, οι έξοδοι Actions σε `lib/ci/actions-io.js`, και το `workflow-meta` διαβάζει `name/permissions/concurrency`. Jest **201/201**, **19/19** εκτελεσμένες μεταλλάξεις (md5 OK), CHECK 3.54/3.47/3.37 ✓, `jscpd:diff` 0. ⏳ **Αμέτρητο** στην παραγωγή μέχρι το πρώτο push (§11.9 όριο 1). Εγγραφή κανόνων Firestore: ακόμη αμέτρητη, γιατί το `37be5d1d` δεν έχει γίνει push. |
 | 2026-09-19 | ✅ **§11.8 — ΚΡΙΝΕΤΑΙ Ο,ΤΙ ΦΕΥΓΕΙ, ΟΧΙ Ο ΔΙΣΚΟΣ (Ε1) · ΤΟ ΜΗΤΡΩΟ MODULO CRLF/LF (Ε2)**. Κλείνουν τα δύο ανοιχτά ευρήματα της προηγούμενης γραμμής. **Ε1**: το `loadWorld` παίρνει **υποχρεωτικό** δέντρο (`index` στο pre-commit · `<local sha>` του stdin στο pre-push · `HEAD` στο `firestore:verify` · `worktree` στο `firestore:deploy`/`--report`) και **ένα** σημείο ανάγνωσης. Βρέθηκε και **τρίτη** διαδρομή του ίδιου σχήματος: το pre-commit διάβαζε και το **μητρώο** από τον δίσκο, άρα μπορούσε να μπλοκάρει (Κ3/Κ4) για ξένη ακομμίτιστη γραμμή. Push εκτός `refs/heads/main` ⇒ `off-pipeline`. Το `workflow-meta.readWorkflowTriggers` επιστρέφει `pushBranches`, και η άγκυρα δένει το `M.PIPELINE.ref` με το πραγματικό workflow. **Ε2**: ένα `M.renderingOf` (ως έχει · LF · CRLF) για το `recordedBytes` **και** το νέο `recorded.matchesTree`. Καμία αλλαγή σχήματος και καμία επανεγγραφή του append-only μητρώου. **Μετρημένο** με +9 ξένες ακομμίτιστες γραμμές στο `firestore.rules`: πραγματικός pre-push με stdin `eca0e195 → refs/heads/main` ✓ ίδιο (πριν: ⏳ διαφέρει) · `firestore:verify --project pagonis-87766` **EXIT 0**, 3/3 Synced·Healthy (πριν: **EXIT 2**) · `--tree worktree` **EXIT 2** (θετικός μάρτυρας) · στο `38dde0d5` η γραμμή storage με CRLF ⇒ `matchesTree: true`. Jest **160/160**, **12/12** εκτελεσμένες μεταλλάξεις σκοτωμένες (md5 OK), `jscpd:diff` 0. Το `check-anchor-execution.test.js` Π ενημερώθηκε (`toEqual` με το νέο `pushBranches`). ⏳ Το **Ε3** (ξεχασμένη έγκριση) μένει ανοιχτό· και η εγγραφή κανόνων Firestore μέσα από τη γραμμή μένει **αμέτρητη**, γιατί το `firestore.rules` της άλλης συνεδρίας **δεν** έχει γίνει push (`HEAD` = `origin/main` = `eca0e195`). |
 | 2026-09-19 | ✅ **§11 — Η ΠΡΩΤΗ ΠΡΑΓΜΑΤΙΚΗ ΑΝΑΠΤΥΞΗ ΜΕΣΑ ΑΠΟ ΤΗ ΓΡΑΜΜΗ (μετρημένο)**. Push `e93c68a0..eca0e195` (`storage.rules`: avatars `image/(webp\|png)`, ADR-798). Run `35432199109` **success**. Πλάνο (job `105868680976`): rules **Synced** · indexes **Synced** (478/478) · storage **OutOfSync** (*«τρέχει η ανάπτυξη της 2026-09-18 (@38dde0d5) — το δέντρο προχώρησε»*) ⇒ `apply · storage`. Έγκριση Giorgio (deployment `6538927993`). Apply (job `105868765800`, 08:35:46→08:36:58Z): *«deploying storage» → «storage.rules compiled successfully» → «uploading rules storage.rules» → «released rules storage.rules to firebase.storage» → «Deploy complete!»* ⇒ `verify --wait` **3/3 Synced·Healthy**. ✅ **§11.6 #3 για το storage ΜΕΤΡΗΘΗΚΕ**: ο `gh-firebase-deploy` με **17** δικαιώματα (χωρίς κανένα `firebasestorage.*`) **δημιούργησε ruleset και ενημέρωσε release**. Νέο release storage: `23bbdcef…` 2026-09-19T08:36:53Z. ⏳ Για **κανόνες Firestore** και **δείκτες**, τα δικαιώματα εγγραφής μέσα από τη γραμμή μένουν **αμέτρητα**, αφού δεν αναπτύχθηκαν σε αυτό το run. Release Netcup (job `105870589192`) **success** 08:47:13Z · Ειδοποίηση success. Στο ίδιο push, το `storage-rules.yml` `35432199164` ⇒ **13/13 σουίτες, 187/187**: το πρώτο πράσινο από το `31471274680` (11/08). 🔴 **Εύρημα, ανοιχτό — τα τοπικά όργανα κρίνουν τον ΔΙΣΚΟ, όχι αυτό που στέλνεται**. Το `firestore.rules` είχε **+9 ακομμίτιστες** γραμμές στο working tree, από άλλη συνεδρία, που **δεν** ήταν στο push. (α) Ο pre-push (CHECK 3.86) τύπωσε *«firestore:rules · διαφέρει από το origin/main — στο push: πλάνο → έγκριση»*, ενώ το πλάνο του CI στο HEAD βρήκε **Synced**. (β) Μετά το run, το τοπικό `firestore:verify` ⇒ **EXIT 2** (*rules OutOfSync*), ενώ η παραγωγή = HEAD. Και τα δύο είναι ψευδώς θετικά σε κοινό working tree. Η ετυμηγορία της γραμμής παραγωγής **δεν** επηρεάζεται, γιατί κρίνει το checkout του commit. **Δεν** διορθώθηκε. Πρωινός έλεγχος απόκλισης: `firebase-drift.yml` χειροκίνητα ⇒ run `35433199321` (`eca0e195`, job `105871418397`, 08:53:56→08:54:39Z) **success**, **3/3 Synced·Healthy** με την ταυτότητα CI (reader με **5** δικαιώματα). |
 | 2026-09-19 | ✅ **§11 — ΤΟ ΠΡΩΤΟ ΠΡΑΣΙΝΟ ΤΡΕΞΙΜΟ ΤΗΣ ΓΡΑΜΜΗΣ (μετρημένο)**. Run `35426414076` (headSha `e93c68a0`) **success**. Πλάνο (job `105853042665`, 06:23:22→06:24:09Z): **3/3 Synced·Healthy** — rules release `ac5ed685…` 2026-09-18T20:51:01Z · indexes **478/478**, overrides 2/2 · storage release `3dd4e096…` 20:50:59Z ⇒ `action=none`. **Το 404 `NO_DEFAULT_BUCKET` της ταυτότητας CI εξαφανίστηκε** με το §11.7: ο bucket λύθηκε από το target, **χωρίς** αλλαγή IAM. `firebase-apply` (job `105853274768`) **skipped**, `approvals` = `[]`. Αιτία: οι στόχοι είχαν ήδη αναπτυχθεί **τοπικά**, με διαπιστευτήρια χρήστη, από το `38dde0d5` (καταγραφή ledger `e93c68a0`), **πριν** το push. Release (job `105854573579`, 06:35:07→06:35:14Z): `main-e93c68a` → `:latest` · Coolify *«Deployment request queued»* (`m12p20pny7w6xxqscfk4apj4`). Η ολοκλήρωση στο Netcup **δεν** μετρήθηκε. Τοπικό `firestore:verify` μετά το run ⇒ **EXIT 0**. ⇒ **§11.6 #1 έκλεισε**. §11.6 #3: η ταυτότητα CI (WIF + `google-auth-library`) ✅ **μετρήθηκε** στο πλάνο· τα δικαιώματα **εγγραφής** του deployer **ΑΜΕΤΡΗΤΑ**, επειδή το apply δεν έτρεξε ποτέ. **Μερική μέτρηση του deployer (ίδια μέρα)**: `workflow_dispatch` `firebase_dry_run=true` ⇒ run `35427334871` **success**, στο commit `e93c68a0`. Το environment **κράτησε** το apply σε `waiting` από 06:43:21Z μέχρι την έγκριση του Giorgio (deployment `6538085045`). Apply (job `105855541133`, 07:05:02→07:06:16Z): με `TARGETS` κενό ⇒ *«deploying storage, firestore»*. Ο `gh-firebase-deploy` (WIF) πέρασε: predeploy `build-firestore-rules.js` · `firebase.storage` *«storage.rules compiled successfully»* **μέσω target** · *«required API firestore.googleapis.com is enabled»* · ανάγνωση `firestore.indexes.json` · `cloud.firestore` *«firestore.rules.compiled compiled successfully»* ⇒ *«Dry run complete!»*. Release/Ειδοποίηση **skipped** (`inputs.firebase_dry_run`). ⚠️ Το dry-run **δεν** δημιουργεί ruleset, **δεν** ενημερώνει release και **δεν** γράφει δείκτη. Αυτά τα δικαιώματα μένουν **αμέτρητα** μέχρι την πρώτη πραγματική αλλαγή μέσα από τη γραμμή. 🔴 **§11.6 #2 ΜΕΤΡΗΘΗΚΕ, και ο runbook §2 ΔΙΑΨΕΥΣΤΗΚΕ** («νεότερο push ⇒ η παλαιότερη εκκρεμής ακυρώνεται»). Δύο dry-runs στο `e93c68a0`: το A `35429150868` έμεινε με το apply σε `waiting` (έγκριση) από 07:23Z. Το B `35431491440`, που δημιουργήθηκε 08:15:05Z, είχε το apply **`pending`** με `pending_deployments` = **0** (08:16:00→08:19:52Z), ενώ το A **έμενε** `waiting`. ⇒ Ένα job που περιμένει έγκριση **κρατά** το `concurrency: firebase-production`· το νεότερο **δεν** το ακυρώνει, αλλά μπαίνει σε ουρά **χωρίς** κουμπί έγκρισης. ⇒ Μια ξεχασμένη έγκριση **μπλοκάρει κάθε επόμενη ανάπτυξη Firebase και κάθε κυκλοφορία στο Netcup**. Απόρριψη του A (deployment `6538390239`) ⇒ A `failure`, και το B σε `waiting` **αμέσως** (08:21:25Z). Έγκριση του B ⇒ apply `105866904367` **success** (08:22:57→08:24:10Z, *«Dry run complete!»*). Ό,τι γίνεται με **τρίτο** run στην ουρά **δεν** μετρήθηκε. Runbook §2 διορθώθηκε. ✅ **Ελάχιστα δικαιώματα (07:10Z, από τον Giorgio)**: `nestorFirebaseDriftReader` −`firebasestorage.buckets.get` −`firebasestorage.defaultBucket.get` −`resourcemanager.projects.get` ⇒ **5** · `nestorFirebaseRulesDeployer` −`firebasestorage.buckets.get` −`firebasestorage.defaultBucket.get` ⇒ **17** (το `resourcemanager.projects.get` μένει). Μετά από **≥13′** διάδοσης: πλάνο πράσινο και στα A και B (reader με 5) · dry-run του B πράσινο (deployer με 17). Ο runbook §1.1 καθρεφτίζει πλέον τους ζωντανούς ρόλους. Η περιγραφή του ζωντανού ρόλου reader ενημερώθηκε σε *«Read-only: rules releases, index definitions. NO data access.»* (etag `BwZb0cR24VM=`), ίδια με τον runbook. `storage-rules.yml` `35426414115`: ο emulator **ξεκίνησε** με το target (κανένα `Must supply 'target'`, 13 σουίτες) · **182/183**. Το 1 κόκκινο (`user-avatars` · same_tenant_user × write ⇒ `storage/unauthorized`) είναι **ίδιο** με το run `35226081869` (17/09, πριν το §11.7), δηλαδή προϋπάρχει. Ποιους κανόνες φόρτωσε ο emulator **δεν** τυπώνεται στο log· το «`storage.rules`, όχι ανοιχτοί» είναι συμπέρασμα από την πηγή, όχι μέτρηση. 🔴 **Εύρημα, ανοιχτό**: η γραμμή `storage` του ledger κρατά sha256 των bytes του **δίσκου**. Στα Windows (CRLF) είναι `bb78d397…`, στο blob (LF) `10cbeeb1…`, ενώ ο πάροχος έχει LF. Έτσι τοπικά η απόδοση προέλευσης βρίσκει την καταγραφή, αλλά στο CI (checkout LF) τυπώνει *«το τοπικό μητρώο δεν το κατέγραψε»*. Η ετυμηγορία (`Synced`) **δεν** αλλάζει· η **απόδοση** είναι ασύμμετρη Windows↔CI. **Δεν** διορθώθηκε. |

@@ -284,7 +284,22 @@ const PIPELINE = Object.freeze({
   /** Το **μόνο** ref που πυροδοτεί τη γραμμή (`on.push.branches`) — push αλλού δεν αναπτύσσει τίποτα. */
   ref: 'refs/heads/main',
   environment: 'firebase-production',
-  jobs: Object.freeze({ plan: 'firebase-plan', apply: 'firebase-apply', release: 'release' }),
+  jobs: Object.freeze({
+    plan: 'firebase-plan',
+    /** §11.9 — «είμαι η κορυφή;» · αντικατάσταση εκκρεμούς έγκρισης (`succession.js claim`). */
+    succession: 'firebase-succession',
+    /** §11.9 — φύλακας της ουράς: η κορυφή ΠΑΙΡΝΕΙ κουμπί έγκρισης (`succession.js watch`). */
+    queueWatch: 'firebase-queue-watch',
+    apply: 'firebase-apply',
+    release: 'release',
+    notify: 'notify',
+  }),
+  /**
+   * §11.9 — η ουρά της κυκλοφορίας στο Netcup. Σειριοποιεί τις προωθήσεις του `:latest` ώστε ο
+   * φρουρός φρεσκάδας να κρίνει **μετά** από κάθε προηγούμενη προώθηση (καμία επιστροφή σε
+   * παλαιότερη εικόνα). ⛔ ΠΟΤΕ `cancel-in-progress: true` — θα έκοβε κυκλοφορία στη μέση.
+   */
+  releaseConcurrency: 'netcup-release',
 });
 
 /**

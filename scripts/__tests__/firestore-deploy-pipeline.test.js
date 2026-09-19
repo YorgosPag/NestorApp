@@ -20,7 +20,13 @@ const D = require('../lib/firestore-deploy/drift');
 const { ACTION, planDeployment, renderPlanMarkdown } = require('../lib/firestore-deploy/plan');
 const { attributeFromHistory, publishedStateOf } = require('../lib/firestore-deploy/world');
 const { firebaseArgs, modeOf } = require('../firestore-deploy/record-deploy');
-const { readWorkflowJobs, readWorkflowRunSteps, readWorkflowTriggers, readWorkflowName } = require('../lib/ci/workflow-meta');
+const {
+  readWorkflowJobs,
+  readWorkflowRunSteps,
+  readWorkflowTriggers,
+  readWorkflowName,
+  readWorkflowPermissions,
+} = require('../lib/ci/workflow-meta');
 const { tier1Alert } = require('../lib/ci/health-state');
 const { composeMessage, sendTelegram } = require('../lib/ci/telegram');
 
@@ -175,6 +181,75 @@ describe('ADR-865 §11 — η γραμμή παραγωγής', () => {
     it('ο καθημερινός έλεγχος υπάρχει, είναι Tier 1 και ξυπνά μόνος του (schedule)', () => {
       expect(readWorkflowName(DRIFT_WORKFLOW)).toMatch(/^T1 /);
       expect(readWorkflowTriggers(DRIFT_WORKFLOW).automatic).toContain('schedule');
+    });
+  });
+
+  // ADR-865 §11.9 — Ε3: μια ξεχασμένη έγκριση κρατούσε την ουρά `firebase-production` ⇒ το νεότερο
+  // τρέξιμο χωρίς κουμπί ⇒ ΚΑΜΙΑ κυκλοφορία στο Netcup (μετρημένο 2026-09-19). Η λογική ζει στο
+  // `succession.js` (σουίτα `firestore-deploy-succession.test.js`)· εδώ ρωτιέται αν η ΓΡΑΜΜΗ τη ΦΟΡΑΕΙ.
+  describe('⚓ Η ΔΙΑΔΟΧΗ ΣΤΗ ΓΡΑΜΜΗ — μόνο η κορυφή αναπτύσσει και κυκλοφορεί', () => {
+    const jobs = readWorkflowJobs(WORKFLOW);
+    const steps = readWorkflowRunSteps(WORKFLOW);
+    const { plan, succession, queueWatch, apply, release, notify } = M.PIPELINE.jobs;
+    const SUCCESSION = /node scripts\/firestore-deploy\/succession\.js (\w+)/;
+    const runSteps = (job) => steps.filter((s) => s.job === job);
+    const modeOf = (step) => (step && SUCCESSION.exec(step.run) ? SUCCESSION.exec(step.run)[1] : null);
+
+    it('η διαδοχή τρέχει ΜΕΤΑ το πλάνο (όσο πιο κοντά στο αίτημα έγκρισης), με δικαίωμα ακύρωσης', () => {
+      expect(jobs[succession].needs).toEqual([plan]);
+      expect(jobs[succession].permissions).toMatchObject({ actions: 'write' });
+      expect(runSteps(succession).map(modeOf)).toContain('claim');
+    });
+
+    it('🔴 η ανάπτυξη ΚΑΙ η κυκλοφορία περιμένουν τη διαδοχή — και η κυκλοφορία την απαιτεί επιτυχή', () => {
+      expect(jobs[apply].needs).toContain(succession);
+      expect(jobs[release].needs).toContain(succession);
+      expect(jobs[release].if.replace(/\s+/g, ' ')).toContain(`needs.${succession}.result == 'success'`);
+    });
+
+    it('🔴 το ΠΡΩΤΟ βήμα εντολής της ανάπτυξης και της κυκλοφορίας είναι ο φρουρός της κορυφής', () => {
+      for (const job of [apply, release]) {
+        expect(modeOf(runSteps(job)[0])).toBe('guard');
+        expect(runSteps(job)[0].conditional).toBe(false);
+        expect(jobs[job].permissions).toMatchObject({ actions: 'write' });
+      }
+    });
+
+    it('⛔ ΚΑΝΕΝΑ `cancel-in-progress: true` — ανάπτυξη ή κυκλοφορία που ΤΡΕΧΕΙ δεν κόβεται ποτέ', () => {
+      for (const job of Object.values(jobs)) expect(job.concurrency?.['cancel-in-progress']).not.toBe('true');
+      expect(jobs[apply].concurrency).toEqual({ group: M.PIPELINE.environment, 'cancel-in-progress': 'false' });
+      expect(jobs[release].concurrency).toEqual({ group: M.PIPELINE.releaseConcurrency, 'cancel-in-progress': 'false' });
+    });
+
+    it('ο φύλακας της ουράς υπάρχει όταν ζητείται έγκριση, μετά τη διαδοχή', () => {
+      expect(jobs[queueWatch].needs).toEqual(expect.arrayContaining([plan, succession]));
+      expect(jobs[queueWatch].if).toContain(`needs.${plan}.outputs.action == 'apply'`);
+      expect(runSteps(queueWatch).map(modeOf)).toEqual(['watch']);
+    });
+
+    it('📣 μιλά ΜΟΝΟ η κορυφή — αντικατεστημένο τρέξιμο δεν στέλνει ψευδές «FALLITO»', () => {
+      expect(jobs[notify].if).toContain('!cancelled()');
+      const telegram = runSteps(notify).find((s) => /telegram-notify\.js/.test(s.run));
+      expect(runSteps(notify).map(modeOf)).toContain('tip');
+      expect(telegram.conditional).toBe(true);
+    });
+
+    it('⏸ η ζήτηση έγκρισης ειδοποιεί ΤΗ ΣΤΙΓΜΗ που ζητείται (όχι μόνο το email του GitHub)', () => {
+      const ask = runSteps(succession).find((s) => /telegram-notify\.js/.test(s.run));
+      expect(ask.conditional).toBe(true);
+      expect(ask.env).toMatchObject({ TELEGRAM_BOT_TOKEN: expect.any(String), TARGETS: expect.any(String) });
+    });
+
+    it('⏸ ο πρωινός έλεγχος θυμίζει ξεχασμένη έγκριση — ΜΟΝΟ ανάγνωση, ποτέ ακύρωση', () => {
+      const remind = readWorkflowRunSteps(DRIFT_WORKFLOW).find((s) => modeOf(s) === 'remind');
+      expect(remind).toBeDefined();
+      expect(readWorkflowPermissions(DRIFT_WORKFLOW)).toMatchObject({ actions: 'read' });
+    });
+
+    it('✅ θετικός μάρτυρας: κάθε λειτουργία που καλεί το YAML ΥΠΑΡΧΕΙ στο CLI (κανένα τυπογραφικό)', () => {
+      const { MODES } = require('../firestore-deploy/succession');
+      const used = [...steps, ...readWorkflowRunSteps(DRIFT_WORKFLOW)].map(modeOf).filter(Boolean);
+      expect(new Set(used)).toEqual(new Set(MODES));
     });
   });
 

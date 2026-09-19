@@ -8,18 +8,27 @@
  *   Ο-3  🔴 Δεύτερη γέννηση **ΔΕΝ ΕΠΑΝΑΦΕΡΕΙ** υπεύθυνο που άλλαξε νόμιμα (ε) ②
  *   Ο-4  Δύο διαφορετικές πράξεις ⇒ δύο ομάδες
  *   Ο-5  Ο σπόρος είναι ο **ΙΔΙΟΣ** με του κριτή ακμής — μία πράξη, ένα νήμα, μία ομάδα
+ *   Γ-1  (Β9) Η γέννηση της πράξης: ομάδα **ΚΑΙ** νήμα, ακροατήριο = υπεύθυνος + αντισυμβαλλόμενος
+ *   Γ-2  🔴 Δεύτερη γέννηση ⇒ **καμία** γραφή (το backfill ξανατρέχει ακίνδυνα)
+ *   Γ-3  🔴 Χωρίς πρόσωπο στην άλλη πλευρά ⇒ ομάδα ναι, νήμα **όχι** (§8 #1)
+ *   Γ-4  🔴 Υπάρχουσα ομάδα με μεταβίβαση ⇒ το νήμα προβάλλει την ομάδα που **ισχύει**, όχι τη γέννηση
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { mandateActSeed, mandateEdgesOf } from '@/lib/network-edge/edge-sources';
 import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
-import { generateDeterministicNetworkActTeamId } from '@/services/enterprise-id.service';
+import {
+  generateDeterministicNetworkActTeamId,
+  generateDeterministicNetworkActThreadId,
+} from '@/services/enterprise-id.service';
 import {
   actTeamDocument,
+  ensureActBirth,
   ensureActTeam,
   type ActTeamBirth,
 } from '@/services/network-messaging/act-team-writer';
+import type { NetworkAudienceEntry } from '@/types/network-thread';
 import { nextResponsible, transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-departure';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
@@ -184,5 +193,68 @@ describe('Μ — η μεταβίβαση της ευθύνης', () => {
     expect(nextResponsible({ memberUids: ['user_maria'] }, 'user_maria', 'user_admin')).toBe('user_admin');
     expect(nextResponsible({ memberUids: [] }, 'user_maria', 'user_admin')).toBe('user_admin');
     expect(nextResponsible({ memberUids: ['user_maria', 'user_eleni'] }, 'user_maria', 'user_admin')).toBe('user_eleni');
+  });
+});
+
+// ============================================================================
+describe('Γ — η γέννηση της πράξης: ομάδα ΚΑΙ νήμα (Β9)', () => {
+  const OWNER = 'user_kostas';
+  const THREAD_ID = generateDeterministicNetworkActThreadId(BIRTH.actSeed);
+  const audienceOf = (fake: FakeFirestore): readonly NetworkAudienceEntry[] =>
+    fake.all<NetworkAudienceEntry>(
+      `${COLLECTIONS.NETWORK_THREADS}/${THREAD_ID}/${SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE}`,
+    );
+
+  it('Γ-1 ομάδα ΚΑΙ νήμα· ακροατήριο = υπεύθυνος + αντισυμβαλλόμενος', async () => {
+    const { db, fake } = freshDb();
+
+    const born = await ensureActBirth(db, BIRTH, OWNER, NOW);
+
+    expect(born.teamCreated).toBe(true);
+    expect(born.thread).toMatchObject({ threadId: THREAD_ID, created: true });
+    expect(storedTeam(fake, BIRTH.actSeed)).toMatchObject({ responsibleUid: 'user_maria' });
+    const seats = audienceOf(fake);
+    expect(seats).toHaveLength(2);
+    expect(seats.find((s) => s.uid === 'user_maria')).toMatchObject({ side: 'host', role: 'responsible' });
+    expect(seats.find((s) => s.uid === OWNER)).toMatchObject({ side: 'counterpart', role: 'counterpart' });
+  });
+
+  it('Γ-2 🔴 δεύτερη γέννηση ⇒ ΚΑΜΙΑ γραφή', async () => {
+    const { db, fake } = freshDb();
+    await ensureActBirth(db, BIRTH, OWNER, NOW);
+    const writesAfterBirth = fake.writes;
+
+    const again = await ensureActBirth(db, BIRTH, OWNER, LATER);
+
+    expect(again.teamCreated).toBe(false);
+    expect(again.thread).toMatchObject({ threadId: THREAD_ID, created: false, audienceWrites: [] });
+    expect(fake.writes).toBe(writesAfterBirth);
+  });
+
+  it('Γ-3 🔴 χωρίς πρόσωπο στην άλλη πλευρά ⇒ ομάδα ναι, νήμα ΟΧΙ', async () => {
+    const { db, fake } = freshDb();
+
+    const born = await ensureActBirth(db, BIRTH, null, NOW);
+
+    expect(born.teamCreated).toBe(true);
+    expect(born.thread).toMatchObject({ threadId: null, created: false });
+    expect(fake.snapshotOf(COLLECTIONS.NETWORK_THREADS, THREAD_ID)).toBe('null');
+  });
+
+  it('Γ-4 🔴 υπάρχουσα ομάδα με μεταβίβαση ⇒ το νήμα προβάλλει ΑΥΤΗ, όχι τη γέννηση', async () => {
+    const { db, fake } = freshDb();
+    fake.seed(COLLECTIONS.NETWORK_ACT_TEAMS, generateDeterministicNetworkActTeamId(BIRTH.actSeed), {
+      ...actTeamDocument(BIRTH, NOW),
+      responsibleUid: 'user_eleni',
+      memberUids: ['user_maria', 'user_eleni'],
+      version: 2,
+    });
+
+    await ensureActBirth(db, BIRTH, OWNER, LATER);
+
+    const seats = audienceOf(fake);
+    expect(seats.find((s) => s.uid === 'user_eleni')).toMatchObject({ role: 'responsible' });
+    expect(seats.find((s) => s.uid === 'user_maria')).toMatchObject({ role: 'collaborator' });
+    expect(storedTeam(fake, BIRTH.actSeed)).toMatchObject({ responsibleUid: 'user_eleni', version: 2 });
   });
 });

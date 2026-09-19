@@ -21,30 +21,18 @@ const path = require('path');
 
 const { parseState, projectGateStatus, diffState, renderBody, tier1Alert } = require('../lib/ci/health-state');
 const { composeMessage, sendTelegram } = require('../lib/ci/telegram');
+const { githubApiFromEnv } = require('../lib/ci/github-api');
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const TOKEN = process.env.GITHUB_TOKEN;
-const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 const BRANCH = process.env.CI_HEALTH_BRANCH || 'main';
 const LABEL = 'ci-health';
 const TITLE = '🚨 CI Health — κατάσταση πυλών (ADR-757)';
 
-async function api(method, route, body) {
-  const response = await fetch(route.startsWith('http') ? route : `${API}${route}`, {
-    method,
-    headers: {
-      accept: 'application/vnd.github+json',
-      authorization: `Bearer ${TOKEN}`,
-      'x-github-api-version': '2022-11-28',
-      ...(body ? { 'content-type': 'application/json' } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  if (!response.ok) {
-    throw new Error(`${method} ${route} → ${response.status} ${await response.text()}`);
-  }
-  return response.status === 204 ? null : response.json();
-}
+// Ο ΕΝΑΣ πελάτης GitHub REST (ADR-865 §11.9) — δημιουργείται στην πρώτη χρήση, αφού το
+// `main()` έχει ήδη ελέγξει ότι υπάρχει token.
+let github = null;
+const api = (method, route, body) => (github ??= githubApiFromEnv()).request(method, route, body);
 
 /** Τα τελευταία ολοκληρωμένα τρεξίματα μιας πύλης στο `main`, νεότερο πρώτο. */
 async function runsFor(file) {

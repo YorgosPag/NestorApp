@@ -79,7 +79,12 @@ const PROJECTION_CONSUMERS = [
   'src/services/network-messaging/act-team-writer.ts',
   'src/services/mandate/mandate-acceptance.service.ts',
 ];
-const PROJECTION_CALL = 'writeActThread(';
+/**
+ * Οι κλήσεις που **είναι** προβολή. Το `writeActBirth(` (Β9) ζει στον `act-team-writer.ts` και καλεί το
+ * `writeActThread(` εσωτερικά — η αποδοχή το ζητά αντί να ξαναγράφει τη γέννηση ομάδας+νήματος μόνη της.
+ * ⚠️ Κρίνεται ο **κώδικας**, όχι τα σχόλια: ένα σχόλιο που ονομάζει την κλήση δεν είναι προβολή.
+ */
+const PROJECTION_CALLS = ['writeActThread(', 'writeActBirth('];
 
 const COLLECTION_NAMES = [
   'COLLECTIONS.NETWORK_THREADS',
@@ -276,9 +281,11 @@ function wiringFindings(root) {
   }
   for (const consumer of PROJECTION_CONSUMERS) {
     const abs = path.join(root, consumer);
-    if (fs.existsSync(abs) && !fs.readFileSync(abs, 'utf8').includes(PROJECTION_CALL)) {
+    if (!fs.existsSync(abs)) continue;
+    const code = stripComments(fs.readFileSync(abs, 'utf8'));
+    if (!PROJECTION_CALLS.some((call) => code.includes(call))) {
       findings.push({ state: STATES.PROJECTION_UNASKED, file: consumer,
-        detail: `δεν καλεί \`${PROJECTION_CALL}\` — η ομάδα αλλάζει και το ακροατήριο μένει να λέει ψέματα` });
+        detail: `δεν καλεί ${PROJECTION_CALLS.map((c) => `\`${c}\``).join(' / ')} — η ομάδα αλλάζει και το ακροατήριο μένει να λέει ψέματα` });
     }
   }
   return findings;

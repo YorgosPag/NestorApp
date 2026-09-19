@@ -189,6 +189,69 @@ export async function ensureActTeam(
 }
 
 // =============================================================================
+// Η ΓΕΝΝΗΣΗ ΤΗΣ ΠΡΑΞΗΣ — ΟΜΑΔΑ ΚΑΙ ΝΗΜΑ, ΣΤΗΝ ΙΔΙΑ ΣΥΝΑΛΛΑΓΗ
+// =============================================================================
+
+/** Οι δύο αναγνώσεις που ζητά η γέννηση — και οι δύο **πριν** από κάθε γραφή. */
+export interface ActBirthSlots {
+  readonly team: ActTeamSlot;
+  readonly thread: ActThreadSlot;
+}
+
+/**
+ * 🔑 **Η ΓΕΝΝΗΣΗ ΤΗΣ ΠΡΑΞΗΣ, ΜΙΑ ΦΟΡΑ** (ADR-867 Β9): ομάδα **και** —όταν υπάρχει ακμή— νήμα, με
+ * ακροατήριο = **προβολή της ομάδας που ισχύει**. Ως τώρα το έγραφε μόνη της η αποδοχή, και το
+ * backfill έγραφε **μόνο ομάδα** ⇒ κάθε εντολή προ-Β4 έμενε **χωρίς νήμα για πάντα**.
+ *
+ * `counterpartUid: null` ⇒ **καμία ακμή με πρόσωπο** (ιδιοκτήτης χωρίς λογαριασμό — §8 #1): γράφεται
+ * μόνο η ομάδα. Ο αντισυμβαλλόμενος **δεν** υπολογίζεται εδώ· τον δίνει ο καλών από το
+ * `mandateEdgesOf` ή από το αίτημα, ώστε «υπάρχει ακμή;» να απαντιέται σε **ένα** μέρος.
+ */
+export function writeActBirth(
+  transaction: Transaction,
+  slots: ActBirthSlots,
+  birth: ActTeamBirth,
+  counterpartUid: string | null,
+  nowISO: string,
+): ActThreadOutcome {
+  writeActTeamBirth(transaction, slots.team, birth, nowISO);
+  const topic =
+    counterpartUid === null
+      ? null
+      : {
+          kind: 'act' as const,
+          actKind: birth.actKind,
+          actSeed: birth.actSeed,
+          hostCompanyId: birth.hostCompanyId,
+          counterpartUid,
+        };
+  return writeActThread(transaction, slots.thread, {
+    birth: topic,
+    team: effectiveActTeam(slots.team, birth),
+    newcomerReason: 'creator',
+    addedBy: birth.responsibleUid,
+    nowISO,
+  });
+}
+
+/** Η πόρτα του {@link writeActBirth} για όποιον **δεν** έχει συναλλαγή (backfill). */
+export async function ensureActBirth(
+  adminDb: AdminFirestore,
+  birth: ActTeamBirth,
+  counterpartUid: string | null,
+  nowISO: string,
+): Promise<{ readonly teamCreated: boolean; readonly thread: ActThreadOutcome }> {
+  return adminDb.runTransaction(async (transaction) => {
+    const [team, thread] = await Promise.all([
+      readActTeam(transaction, adminDb, birth.actSeed),
+      readActThreadSlot(transaction, adminDb, birth.actSeed),
+    ]);
+    const outcome = writeActBirth(transaction, { team, thread }, birth, counterpartUid, nowISO);
+    return { teamCreated: !team.exists, thread: outcome };
+  });
+}
+
+// =============================================================================
 // Ο ΕΝΑΣ ΤΟΠΟΣ ΟΠΟΥ Η ΟΜΑΔΑ ΑΠΟΚΤΑ ΝΕΑ ΕΚΔΟΣΗ
 // =============================================================================
 

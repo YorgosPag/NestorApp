@@ -87,15 +87,8 @@ import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
-import {
-  effectiveActTeam,
-  readActTeam,
-  writeActTeamBirth,
-} from '@/services/network-messaging/act-team-writer';
-import {
-  readActThreadSlot,
-  writeActThread,
-} from '@/services/network-messaging/thread-writer';
+import { readActTeam, writeActBirth } from '@/services/network-messaging/act-team-writer';
+import { readActThreadSlot } from '@/services/network-messaging/thread-writer';
 import { prepare, type Prepared } from '@/services/mandate/mandate-acceptance-prepare';
 import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import type {
@@ -264,29 +257,20 @@ async function commit(
         hostCompanyId: prepared.mandate.agencyCompanyId,
         responsibleUid: input.deciderUid,
       } as const;
-      writeActTeamBirth(transaction, teamSlot, birth, input.nowISO);
 
       // 🔴 **ADR-867 Β4 — ΤΟ ΝΗΜΑ ΓΕΝΝΙΕΤΑΙ ΜΕ ΤΗΝ ΑΚΜΗ, ΟΧΙ ΜΕ ΤΟ ΠΡΩΤΟ ΜΗΝΥΜΑ.** Αν
       //    περίμενε το πρώτο «γεια σας», τότε **ο πελάτης** θα αποφάσιζε ποιος του
-      //    απαντά — και το ακροατήριο θα γραφόταν με την ομάδα **εκείνης** της στιγμής,
-      //    όχι με την ομάδα που ανέλαβε την πράξη.
-      // ⚠️ **Η ομάδα έρχεται από το `effectiveActTeam`, ΠΟΤΕ από τη γέννηση**: σε
-      //    **ανανέωση όρων** η αποθηκευμένη ομάδα μπορεί να έχει άλλον υπεύθυνο
-      //    (μεταβίβαση) και περισσότερα μέλη. Το ακροατήριο είναι **προβολή** της
-      //    ομάδας (§4.3) — μια δεύτερη λίστα εδώ θα την ακύρωνε σιωπηλά.
-      writeActThread(transaction, threadSlot, {
-        birth: {
-          kind: 'act',
-          actKind: 'mandate',
-          actSeed,
-          hostCompanyId: prepared.mandate.agencyCompanyId,
-          counterpartUid: input.request.requestedByUserId,
-        },
-        team: effectiveActTeam(teamSlot, birth),
-        newcomerReason: 'creator',
-        addedBy: input.deciderUid,
-        nowISO: input.nowISO,
-      });
+      //    απαντά. Ο αντισυμβαλλόμενος = `requestedByUserId` (= `confirmedByUserId`).
+      // ⚠️ Ομάδα + νήμα + ακροατήριο (προβολή της ομάδας που **ισχύει** — σε ανανέωση
+      //    όρων μπορεί να έχει άλλον υπεύθυνο) από τον **έναν** γραφέα γέννησης (Β9):
+      //    τον ίδιο που τρέχει και το backfill των εντολών προ-Β4.
+      writeActBirth(
+        transaction,
+        { team: teamSlot, thread: threadSlot },
+        birth,
+        input.request.requestedByUserId,
+        input.nowISO,
+      );
 
       return {
         kind: 'accepted',

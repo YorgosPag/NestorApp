@@ -3,9 +3,14 @@ name: T1 🚀 Build & Deploy Docker Image
 # =============================================================================
 # ADR-865 §11 — Η ΓΡΑΜΜΗ ΠΑΡΑΓΩΓΗΣ: ο κώδικας ΔΕΝ κυκλοφορεί πριν τους κανόνες/δείκτες του.
 #
-#   build-and-push ─────────────────────────────────────┐
-#   firebase-plan (ρωτά τον ΠΑΡΟΧΟ, μόνο ανάγνωση) ──┐   ├─► release (:latest → Coolify)
-#        └─ apply ─► firebase-apply (⏸ ΕΓΚΡΙΣΗ) ─────┴───┘        └─► notify (Telegram)
+#   build-and-push ───────────────────────────────────────────────────┐
+#   firebase-plan (ρωτά τον ΠΑΡΟΧΟ, μόνο ανάγνωση) ─► firebase-succession ├─► release (:latest → Coolify)
+#        └─ apply ─► firebase-apply (⏸ ΕΓΚΡΙΣΗ) ◄── firebase-queue-watch ┘        └─► notify (Telegram)
+#
+# ADR-865 §11.9 — ΔΙΑΔΟΧΗ: ισχύει ΜΟΝΟ η κορυφή του main (GitOps). Ένα παλαιότερο τρέξιμο που
+# περιμένει έγκριση ΑΚΥΡΩΝΕΤΑΙ από το νεότερο (κρατούσε την ουρά firebase-production και το νεότερο
+# έμενε χωρίς κουμπί — μετρημένο 2026-09-19)· ένα τρέξιμο που ΔΕΝ είναι πια κορυφή αυτοακυρώνεται
+# πριν αναπτύξει ή κυκλοφορήσει. ΠΟΤΕ cancel-in-progress: true — ανάπτυξη που ΤΡΕΧΕΙ δεν κόβεται.
 #
 # Πριν: η εικόνα έφευγε στο Netcup, οι κανόνες/δείκτες ΠΟΤΕ (το push δεν πάει στο Firebase) ⇒
 # δύο φορές σε μία εβδομάδα «Missing or insufficient permissions» με σωστό κώδικα (16/09, 18/09).
@@ -197,6 +202,75 @@ jobs:
         run: node scripts/firestore-deploy/verify-live.js --plan --wait --timeout 1800
 
   # ───────────────────────────────────────────────────────────────────────────
+  # ADR-865 §11.9 — ΔΙΑΔΟΧΗ. Τρέχει ΜΕΤΑ το πλάνο (όσο πιο κοντά γίνεται στο αίτημα έγκρισης):
+  #   · όχι κορυφή του main ⇒ το τρέξιμο αυτοακυρώνεται (γκρι, όχι κόκκινο — ο CI Health μετρά
+  #     ως «έσπασε» μόνο το failure) και ΔΕΝ ζητά ποτέ έγκριση για παλαιότερο δέντρο·
+  #   · κορυφή ⇒ ακυρώνει κάθε παλαιότερο τρέξιμο που ΠΕΡΙΜΕΝΕΙ έγκριση (pending_deployments),
+  #     ποτέ ένα που ήδη αναπτύσσει. Έτσι η κορυφή παίρνει ΠΑΝΤΑ δικό της κουμπί έγκρισης.
+  # Γιατί ακύρωση και όχι «Reject»: το POST …/pending_deployments το καλούν μόνο «Required
+  # reviewers» (docs GitHub) — ο bot δεν είναι, και σωστά.
+  # ───────────────────────────────────────────────────────────────────────────
+  firebase-succession:
+    name: 🧭 Firebase — διαδοχή (μόνο η κορυφή)
+    needs: firebase-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write # docs: «actions: write permits an action to cancel a workflow run»
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+
+      - name: 🧭 Είμαι η κορυφή; — αντικατάσταση εκκρεμούς έγκρισης
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/firestore-deploy/succession.js claim
+
+      # Ο ΕΝΑΣ αποστολέας (scripts/lib/ci/telegram.js). Η ίδια η σελίδα του τρεξίματος έχει το
+      # κουμπί «Review deployments»· το email του GitHub δεν αρκεί για κάτι που φράζει την παραγωγή.
+      - name: ⏸ Ειδοποίηση — ζητείται έγκριση
+        if: needs.firebase-plan.outputs.action == 'apply' && inputs.firebase_dry_run != true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          TARGETS: ${{ needs.firebase-plan.outputs.targets }}
+        run: >-
+          node scripts/ci/telegram-notify.js --status info --title "NestorApp — ⏸ Firebase: ζητείται έγκριση"
+          --line "στόχοι: $TARGETS" --line "Review deployments → Approve · ο κώδικας περιμένει την έγκριση"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # ADR-865 §11.9 — ΦΥΛΑΚΑΣ ΤΗΣ ΟΥΡΑΣ. Κλείνει τον αγώνα που μένει μετά το claim: ένα παλαιότερο
+  # τρέξιμο που ήταν ακόμη κορυφή στο δικό του claim μπορεί να μπει σε αναμονή έγκρισης ΑΦΟΥ
+  # σκούπισε η νεότερη κορυφή. Όσο το apply αυτού του τρεξίματος κάθεται στην ουρά ΧΩΡΙΣ κουμπί,
+  # ξανασκουπίζει κάθε 30″· τελειώνει μόλις πάρει κουμπί, τρέξει ή τελειώσει.
+  # ───────────────────────────────────────────────────────────────────────────
+  firebase-queue-watch:
+    name: 🛎️ Firebase — φύλακας ουράς έγκρισης
+    needs: [firebase-plan, firebase-succession]
+    if: needs.firebase-plan.outputs.action == 'apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      # Το workflow χρειάζεται: το API `…/jobs` επιστρέφει το `name:` του job, και ο φύλακας το
+      # διαβάζει από εδώ με τον ΕΝΑ αναγνώστη YAML — όχι από δεύτερο αντίγραφο.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            .github/workflows
+
+      - name: 🛎️ Η κορυφή παίρνει κουμπί έγκρισης
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/firestore-deploy/succession.js watch
+
+  # ───────────────────────────────────────────────────────────────────────────
   # ADR-865 §11 — ΑΝΑΠΤΥΞΗ, ΜΕ ΕΓΚΡΙΣΗ. Το environment ΔΕΝ είναι διακόσμηση: η ταυτότητα εγγραφής
   # είναι δεμένη (WIF) στο claim `environment=firebase-production` ⇒ ΔΕΝ εκδίδεται χωρίς την
   # έγκριση του Giorgio. Αναπτύσσονται ΜΟΝΟ οι στόχοι που διαφέρουν, και μετά ρωτιέται ξανά ο
@@ -205,7 +279,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────
   firebase-apply:
     name: 🚀 Firebase — ανάπτυξη (με έγκριση)
-    needs: firebase-plan
+    needs: [firebase-plan, firebase-succession]
     if: needs.firebase-plan.outputs.action == 'apply' || inputs.firebase_dry_run == true
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -216,10 +290,19 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      actions: write # §11.9: αυτοακύρωση όταν η έγκριση δόθηκε αφού ήρθε νεότερο push
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # §11.9 — ΠΡΙΝ από την ταυτότητα: ένα τρέξιμο που δεν είναι πια κορυφή δεν παίρνει ΚΑΝ το
+      # κλειδί του deployer. Η έγκριση μπορεί να δόθηκε ώρες μετά από νεότερο push· το δέντρο του
+      # είναι παλαιότερο ⇒ θα γύριζε πίσω κανόνες (GitLab: «outdated deployment job»).
+      - name: 🧭 Ακόμη η κορυφή;
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/firestore-deploy/succession.js guard
 
       - uses: ./.github/actions/firebase-identity
         with:
@@ -240,18 +323,37 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────
   release:
     name: 📦 Κυκλοφορία στο Netcup
-    needs: [build-and-push, firebase-plan, firebase-apply]
+    needs: [build-and-push, firebase-plan, firebase-succession, firebase-apply]
     if: >-
       always() && !cancelled() && inputs.firebase_dry_run != true
       && needs.build-and-push.result == 'success'
       && needs.firebase-plan.result == 'success'
+      && needs.firebase-succession.result == 'success'
       && (needs.firebase-apply.result == 'success' || needs.firebase-apply.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # §11.9 — μία κυκλοφορία τη φορά: ο φρουρός παρακάτω κρίνει ΜΕΤΑ από κάθε προηγούμενη
+    # προώθηση του :latest. Εκκρεμής παλαιότερη αντικαθίσταται από νεότερη (queue: single).
+    # ⛔ ΠΟΤΕ cancel-in-progress: true — θα έκοβε προώθηση/Coolify στη μέση.
+    concurrency:
+      group: netcup-release
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
+      actions: write # §11.9: αυτοακύρωση όταν δεν είναι πια κορυφή
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+
+      # §11.9 — ένα αργό build παλαιότερου commit δεν γυρίζει ΠΟΤΕ πίσω το :latest (και το Netcup)
+      # πάνω από νεότερη κυκλοφορία. GitLab: «prevent older deployment jobs from running».
+      - name: 🧭 Ακόμη η κορυφή;
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/firestore-deploy/succession.js guard
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -277,8 +379,8 @@ jobs:
 
   notify:
     name: 📣 Ειδοποίηση
-    needs: [build-and-push, firebase-plan, firebase-apply, release]
-    if: always() && inputs.firebase_dry_run != true
+    needs: [build-and-push, firebase-plan, firebase-succession, firebase-apply, release]
+    if: always() && !cancelled() && inputs.firebase_dry_run != true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -288,9 +390,18 @@ jobs:
         with:
           sparse-checkout: scripts
 
+      # §11.9 — μιλά ΜΟΝΟ η κορυφή (ή όποιος κυκλοφόρησε). Ένα τρέξιμο που το αντικατέστησε νεότερο
+      # push δεν στέλνει «Deploy FALLITO»: δεν απέτυχε τίποτα — θα μιλήσει η κορυφή.
+      - name: 🧭 Είμαι η κορυφή;
+        id: tip
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/firestore-deploy/succession.js tip
+
       # Ο ΕΝΑΣ αποστολέας (scripts/lib/ci/telegram.js). Το μήνυμα του commit ΜΟΝΟ ως μεταβλητή
       # περιβάλλοντος — ποτέ `${{ }}` μέσα στο script (script injection, GitHub hardening guide).
       - name: Telegram notification
+        if: steps.tip.outputs.fresh != 'false' || needs.release.result == 'success'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -299,6 +410,7 @@ jobs:
           TITLE: ${{ needs.release.result == 'success' && 'NestorApp — Deploy completato' || 'NestorApp — Deploy FALLITO' }}
           STAGES: >-
             build ${{ needs.build-and-push.result }} · firebase-plan ${{ needs.firebase-plan.result }}
-            (${{ needs.firebase-plan.outputs.action || '—' }}) · firebase-apply ${{ needs.firebase-apply.result }}
+            (${{ needs.firebase-plan.outputs.action || '—' }}) · διαδοχή ${{ needs.firebase-succession.result }}
+            · firebase-apply ${{ needs.firebase-apply.result }}
             · release ${{ needs.release.result }}
         run: node scripts/ci/telegram-notify.js --status "$STATUS" --title "$TITLE" --line "$STAGES"

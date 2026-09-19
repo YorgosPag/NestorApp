@@ -316,12 +316,48 @@ function jobValue(body, key) {
 }
 
 /**
+ * Χάρτης μπλοκ (`permissions:` / `concurrency:`) ⇒ αντικείμενο. Η τιμή εν σειρά
+ * (`permissions: read-all`) μένει **ως έχει** κάτω από το κλειδί `''` — ποτέ σιωπηλό «κανένα».
+ * @param {string|string[]|null} value η έξοδος του `jobValue`
+ * @returns {Record<string,string>|null}
+ */
+function mapOf(value) {
+  if (value === null) return null;
+  const text = [].concat(value).join('\n');
+  const out = {};
+  for (const line of text.split('\n')) {
+    const match = line.match(/^([A-Za-z_][\w-]*):\s*(.*)$/);
+    if (match) out[match[1]] = scalar(match[2]);
+    else if (line.trim() !== '') out[''] = scalar(line.trim());
+  }
+  return out;
+}
+
+/**
+ * ADR-865 §11.9 — τα δικαιώματα του `GITHUB_TOKEN` στο **επίπεδο του workflow** (`permissions:`
+ * στη ρίζα). Όπου ένα job δεν δηλώνει δικά του, ισχύουν αυτά.
+ * @param {string} filePath
+ * @returns {Record<string,string>|null}
+ */
+function readWorkflowPermissions(filePath) {
+  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+  const index = findKey(lines, 'permissions', 0);
+  if (index === -1) return null;
+  const inline = lines[index].body.slice('permissions:'.length).trim();
+  if (inline !== '') return { '': scalar(inline) };
+  return mapOf(childLines(lines, index).map((l) => l.body));
+}
+
+/**
  * ADR-865 §11 — **η ΔΟΜΗ** ενός workflow: ποιο job περιμένει ποιο (`needs`), ποιο ζει πίσω από
  * **environment** (ανθρώπινη έγκριση), και με ποια συνθήκη (`if`). Χωρίς αυτό, καμία άγκυρα δεν
  * μπορεί να ρωτήσει «κυκλοφορεί ο κώδικας ΜΟΝΟ αφού αναπτυχθούν οι κανόνες του;» — και μια
  * αφαίρεση του `needs` θα άνοιγε ξανά την τρύπα **σιωπηλά**.
+ * §11.9: και το **όνομα** (αυτό επιστρέφει το API `…/jobs` — η διαδοχή βρίσκει εκεί το δικό της
+ * apply), τα **δικαιώματα** και το **concurrency** (ουρά · `cancel-in-progress`).
  * @param {string} filePath
- * @returns {Record<string, {needs:string[], environment:string|null, if:string|null}>}
+ * @returns {Record<string, {name:string|null, needs:string[], environment:string|null, if:string|null,
+ *   permissions:Record<string,string>|null, concurrency:Record<string,string>|null}>}
  */
 function readWorkflowJobs(filePath) {
   const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
@@ -335,9 +371,12 @@ function readWorkflowJobs(filePath) {
     const body = childLines(jobLines, i);
     const needs = jobValue(body, 'needs');
     jobs[jobLines[i].body.replace(/:.*$/, '').trim()] = {
+      name: jobValue(body, 'name'),
       needs: needs === null ? [] : [].concat(needs),
       environment: jobValue(body, 'environment'),
       if: jobValue(body, 'if'),
+      permissions: mapOf(jobValue(body, 'permissions')),
+      concurrency: mapOf(jobValue(body, 'concurrency')),
     };
   }
   return jobs;
@@ -350,6 +389,7 @@ module.exports = {
   readWorkflowRunSteps,
   readWorkflowTriggers,
   readWorkflowJobs,
+  readWorkflowPermissions,
   // εκτεθειμένα για τα tests — η αυστηρότητα του αναγνώστη ΕΙΝΑΙ ο μηχανισμός
   significantLines,
   scalar,

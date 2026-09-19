@@ -39,7 +39,7 @@
 'use strict';
 
 const M = require('../lib/firestore-deploy/model');
-const fs = require('node:fs');
+const { setOutputs, appendSummary } = require('../lib/ci/actions-io');
 const { loadWorld, loadDesired, attributeFromHistory } = require('../lib/firestore-deploy/world');
 
 /** Προεπιλεγμένο δέντρο: ό,τι κρίνει η γραμμή (commit), όχι ο δίσκος (ADR-865 §11.8). */
@@ -158,10 +158,8 @@ async function verifyUntilSettled(project, transport, timeoutSeconds, log, tree)
  */
 function publishToGithub(project, result, env = process.env) {
   const plan = planDeployment(result);
-  if (env.GITHUB_STEP_SUMMARY) fs.appendFileSync(env.GITHUB_STEP_SUMMARY, renderPlanMarkdown(project, result, plan));
-  if (env.GITHUB_OUTPUT) {
-    fs.appendFileSync(env.GITHUB_OUTPUT, `action=${plan.action}\ntargets=${plan.targets.join(',')}\n`);
-  }
+  appendSummary(renderPlanMarkdown(project, result, plan), env);
+  setOutputs({ action: plan.action, targets: plan.targets.join(',') }, env);
   return plan;
 }
 

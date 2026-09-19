@@ -29,6 +29,7 @@ on:
 permissions:
   contents: read
   id-token: write # GitHub OIDC → Google (ταυτότητα χωρίς κλειδί)
+  actions: read # ADR-865 §11.9: ανάγνωση εκκρεμών εγκρίσεων της γραμμής (ΠΟΤΕ ακύρωση από εδώ)
 
 concurrency:
   group: firebase-drift
@@ -57,3 +58,16 @@ jobs:
       # --wait: δείκτης σε CREATING δεν είναι «κόκκινο» αν γίνει READY μέσα στο χρονικό όριο.
       - name: 🔎 Επαλήθευση ζωντανού (μόνο ανάγνωση)
         run: node scripts/firestore-deploy/verify-live.js --wait --timeout 1800
+
+      # ADR-865 §11.9 — ΞΕΧΑΣΜΕΝΗ ΕΓΚΡΙΣΗ. Το GitHub την κρατά 30 μέρες («If a job is not approved
+      # within 30 days, it will automatically fail») και ο κώδικας της κορυφής ΔΕΝ κυκλοφορεί ως
+      # τότε (fail-closed, σωστά). Το AWS CodePipeline κόβει με χρονικό όριο· εδώ δεν κόβουμε
+      # (η κορυφή ΠΡΕΠΕΙ να περιμένει τους κανόνες της) — ΘΥΜΙΖΟΥΜΕ, κάθε πρωί, ό,τι περιμένει
+      # πάνω από το όριο (`REMINDER_AFTER_HOURS`, scripts/lib/firestore-deploy/succession.js). Πλάγιο κανάλι: τρέχει και όταν η επαλήθευση κοκκίνισε, και ΠΟΤΕ δεν κοκκινίζει.
+      - name: ⏸ Υπενθύμιση έγκρισης που περιμένει
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node scripts/firestore-deploy/succession.js remind
