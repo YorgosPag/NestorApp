@@ -293,6 +293,11 @@ service firebase.storage {
     //
     // 2 MB: η έξοδος του δικού μας encoder είναι 512×512 WebP (~40-70 KB). Το
     // όριο δεν είναι πρόβλεψη μεγέθους — είναι ταβάνι για ό,τι δεν προέβλεψα.
+    //
+    // 🔴 `image/(webp|png)` και ΟΧΙ `image/.*` (2026-09-19): το `.*` δεχόταν
+    // `image/svg+xml`, που το download URL σερβίρει ως ΕΚΤΕΛΕΣΙΜΟ έγγραφο — φορέας
+    // stored-XSS, ο ίδιος που κλείνει το ADR-366 §12 στα συνημμένα. Ο encoder
+    // βγάζει ΜΟΝΟ `webp | png` (`RenderedAvatar.ext`)· ο κανόνας λέει το ίδιο.
     // =========================================================================
 
     // @pathId: user_avatars
@@ -300,7 +305,7 @@ service firebase.storage {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId)
                    && request.resource.size < 2 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+                   && request.resource.contentType.matches('image/(webp|png)');
       allow delete: if isOwner(userId) || isSuperAdmin();
     }
 

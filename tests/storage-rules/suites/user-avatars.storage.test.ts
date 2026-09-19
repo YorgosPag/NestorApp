@@ -7,7 +7,7 @@
  *
  * Rules:
  *   read:   `isAuthenticated()`
- *   write:  `isOwner(userId) && size < 2 MB && contentType matches image/*`
+ *   write:  `isOwner(userId) && size < 2 MB && contentType matches image/(webp|png)`
  *   delete: `isOwner(userId) || isSuperAdmin()`
  *
  * Τι κλειδώνει αυτή η σουίτα — και **γιατί κάθε γραμμή είναι απαραίτητη**:
@@ -39,7 +39,12 @@ import {
   resetStorageData,
 } from '../_harness/emulator';
 import { getStorageContext } from '../_harness/auth-contexts';
-import { assertStorageCell, type AssertStorageTarget } from '../_harness/assertions';
+import {
+  assertStorageCell,
+  expectStorageAllow,
+  expectStorageDeny,
+  type AssertStorageTarget,
+} from '../_harness/assertions';
 import { seedStorageFile } from '../_harness/seed-helpers';
 import { STORAGE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { OWNER_USER_UID } from '../_registry/personas';
@@ -52,6 +57,14 @@ export const COVERAGE = STORAGE_RULES_COVERAGE.find((c) => c.pathId === 'user_av
  * αλλιώς η σουίτα δοκιμάζει «κανείς δεν είναι ιδιοκτήτης» — δηλαδή άλλο ερώτημα.
  */
 const TEST_PATH = `users/${OWNER_USER_UID}/avatar.webp`;
+
+/**
+ * Ο κανόνας απαιτεί `contentType.matches('image/(webp|png)')`. Το προεπιλεγμένο
+ * `application/octet-stream` του harness έκοβε **και το allow cell** του ιδιοκτήτη ⇒ η σουίτα
+ * ήταν κόκκινη για λάθος λόγο από τη γέννησή της (941d4c56, 2026-08-24) — ίδια παγίδα με το
+ * `dxf-external-references`. `image/webp` = ό,τι στέλνει πράγματι ο encoder (`avatar-upload.service`).
+ */
+const AVATAR_CONTENT_TYPE = 'image/webp';
 
 describe('user-avatars.storage — authenticated_read_owner_write pattern', () => {
   let env: RulesTestEnvironment;
@@ -79,10 +92,54 @@ describe('user-avatars.storage — authenticated_read_owner_write pattern', () =
         }
 
         const ctx = getStorageContext(env, cell.persona);
-        const target: AssertStorageTarget = { path: TEST_PATH };
+        const target: AssertStorageTarget = { path: TEST_PATH, contentType: AVATAR_CONTENT_TYPE };
 
         await assertStorageCell(ctx, cell, target);
       });
     });
   }
+});
+
+/**
+ * Η ρήτρα `contentType` του κανόνα **χωρίς** αυτά τα pins δεν τη φυλάει κανείς: ο πίνακας
+ * ελέγχει «ΠΟΙΟΣ», όχι «ΤΙ». Ο κανόνας γράφει `image/(webp|png)` και **ΟΧΙ** `image/.*`: το
+ * `image/svg+xml` σερβίρεται από το download URL ως εκτελέσιμο έγγραφο (stored-XSS, ADR-366 §12)
+ * — και η επιστροφή στο `.*` είναι αλλαγή δύο χαρακτήρων, οπότε χρειάζεται pin.
+ */
+describe('user-avatars.storage — content-type guard (ADR-798 §16)', () => {
+  let env: RulesTestEnvironment;
+
+  beforeAll(async () => {
+    env = await initStorageEmulator();
+  });
+
+  afterAll(async () => {
+    await teardownStorageEmulator(env);
+  });
+
+  afterEach(async () => {
+    await resetStorageData(env);
+  });
+
+  const ownerPut = (suffix: string, contentType: string) =>
+    getStorageContext(env, 'same_tenant_user')
+      .storage()
+      .ref(`${TEST_PATH}--${suffix}`)
+      .put(new Uint8Array([0xaa]), { contentType });
+
+  it('δέχεται PNG — το δεύτερο σκέλος του `webp|png` είναι ζωντανό (ο encoder το βγάζει)', async () => {
+    await expectStorageAllow(ownerPut('png', 'image/png'));
+  });
+
+  it('απορρίπτει SVG — ο φορέας του stored-XSS', async () => {
+    await expectStorageDeny(ownerPut('svg', 'image/svg+xml'));
+  });
+
+  it('απορρίπτει JPEG — ο encoder δεν το βγάζει ποτέ, άρα ο κανόνας δεν το υπόσχεται', async () => {
+    await expectStorageDeny(ownerPut('jpeg', 'image/jpeg'));
+  });
+
+  it('απορρίπτει octet-stream — τίποτα αδιαφανές σε αυτό το path', async () => {
+    await expectStorageDeny(ownerPut('octet', 'application/octet-stream'));
+  });
 });
