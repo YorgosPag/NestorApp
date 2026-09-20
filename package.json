@@ -68,7 +68,7 @@
     "firestore:tenant-scope:check": "node scripts/check-firestore-tenant-scope.js --all",
     "firestore:tenant-scope:baseline": "node scripts/check-firestore-tenant-scope.js --write-baseline",
     "test:firestore-tenant-scope": "jest scripts/__tests__/check-firestore-tenant-scope.test.js --verbose",
-    "test:firestore-index-gates": "jest scripts/__tests__/firestore-custody-partition-gates.test.js scripts/__tests__/firestore-index-read-paths.test.js",
+    "test:firestore-index-gates": "jest scripts/__tests__/firestore-custody-partition-gates.test.js scripts/__tests__/firestore-index-read-paths.test.js scripts/__tests__/firestore-index-range-coverage.test.js",
     "firestore:timestamps:audit": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/audit-unreadable-timestamps.ts",
     "firestore:dangling-fk:audit": "node scripts/audit-dangling-foreign-keys.js",
     "esco:fabricated-isco:audit": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/audit-fabricated-isco-codes.ts",

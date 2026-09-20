@@ -64,7 +64,7 @@ const ts = require('typescript');
 
 const {
   loadIndexCatalog,
-  requiresCompositeIndex,
+  requiredIndexFor,
   findMatchingIndex,
   suggestIndexJson,
 } = require('./_shared/firestore-index-matcher');
@@ -325,6 +325,9 @@ function parseCallBranch(call, methodName, filePath, sf, collectionKey) {
     equalityFields: [],
     orderBy: [],
     arrayContainsField: null,
+    // ADR-869 §7 — το εύρος είναι ΔΕΔΟΜΕΝΟ του σχήματος, όχι προειδοποίηση. Όσο ήταν
+    // προειδοποίηση, η πύλη έκρινε την ΠΡΟΒΟΛΗ ΙΣΟΤΗΤΩΝ ενός άλλου ερωτήματος.
+    rangeFields: [],
     tenantSkipped,
     warnings: [...warnings],
   };
@@ -360,7 +363,10 @@ function parseCallBranch(call, methodName, filePath, sf, collectionKey) {
       } else if (op === 'array-contains' || op === 'array-contains-any') {
         site.arrayContainsField = field;
       } else {
-        site.warnings.push(`where() uses inequality operator "${op}" on ${field} — composite coverage uncertain`);
+        // `<` `<=` `>` `>=` `!=` `not-in` — όλα απαιτούν την ΙΔΙΑ θέση στον δείκτη
+        // (μετά τις ισότητες, πριν τα υπόλοιπα orderBy). Δύο `>=`/`<=` στο ΙΔΙΟ πεδίο
+        // είναι ΕΝΑ εύρος, όχι δύο: γι' αυτό σύνολο, όχι πίνακας.
+        if (!site.rangeFields.includes(field)) site.rangeFields.push(field);
       }
     } else if (callee === 'orderBy') {
       const dirArg = el.arguments[1];
@@ -477,6 +483,7 @@ function deriveTenantShapes(site, collectionsMap, tenantOverrides) {
     equalityFields: defaultEq,
     orderBy: site.orderBy,
     arrayContainsField: site.arrayContainsField,
+    rangeFields: site.rangeFields || [],
     variant: 'default',
   });
 
@@ -491,6 +498,7 @@ function deriveTenantShapes(site, collectionsMap, tenantOverrides) {
       equalityFields: [...site.equalityFields],
       orderBy: site.orderBy,
       arrayContainsField: site.arrayContainsField,
+      rangeFields: site.rangeFields || [],
       variant: 'super_admin',
     });
   }
@@ -565,13 +573,19 @@ function fingerprintShape(shape) {
   const eq = [...shape.equalityFields].sort().join(',');
   const ob = shape.orderBy.map((o) => `${o.field}:${o.direction}`).join(',');
   const ac = shape.arrayContainsField || '';
-  return `${shape.collection}|${eq}|${ob}|${ac}`;
+  // Το εύρος ΜΕΣΑ στο αποτύπωμα: χωρίς αυτό, δύο σχήματα που διαφέρουν ΜΟΝΟ στο πεδίο
+  // εύρους θα συγχωνεύονταν και το δεύτερο δεν θα κρινόταν ποτέ.
+  const rg = [...(shape.rangeFields || [])].sort().join(',');
+  return `${shape.collection}|${eq}|${ob}|${ac}|${rg}`;
 }
 
 function formatShape(shape) {
   const eq = shape.equalityFields.map((f) => `where('${f}','==')`).join(' + ');
+  // Το εύρος ΦΑΙΝΕΤΑΙ: αλλιώς ο άνθρωπος διαβάζει σχήμα ισοτήτων και δεν καταλαβαίνει
+  // γιατί ζητείται τρίτο πεδίο στον δείκτη.
+  const rg = (shape.rangeFields || []).map((f) => `where('${f}',<εύρος>)`).join(' + ');
   const ob = shape.orderBy.map((o) => `orderBy('${o.field}','${o.direction === 'DESCENDING' ? 'desc' : 'asc'}')`).join(' + ');
-  return [eq, ob].filter(Boolean).join(' + ') || '(empty)';
+  return [eq, rg, ob].filter(Boolean).join(' + ') || '(empty)';
 }
 
 // ---------------------------------------------------------------------------
@@ -608,6 +622,8 @@ function main() {
   const missing = [];
   /** @type {CallSite[]} */
   const unanalyzable = [];
+  /** @type {{site: CallSite, shape: object, required: {status: string, reason: string}}[]} */
+  const unjudged = [];
   let analyzed = 0;
 
   for (const file of targetFiles) {
@@ -626,10 +642,17 @@ function main() {
       /** @type {Set<string>} Dedupe key per call-site: avoids double-reporting when default and super_admin variants happen to collapse to the same fingerprint. */
       const seenFingerprints = new Set();
       for (const shape of shapes) {
-        if (!requiresCompositeIndex(shape)) continue;
+        const required = requiredIndexFor(shape);
+        if (required.status === 'free') continue;
         const fingerprint = fingerprintShape(shape);
         if (seenFingerprints.has(fingerprint)) continue;
         seenFingerprints.add(fingerprint);
+        // ADR-869 §7 — «δεν αποφασίζεται» και «άκυρο ερώτημα» ΔΕΝ σιωπούν: ένα ερώτημα που
+        // η πύλη δεν μπορεί να κρίνει είναι ακριβώς η τυφλή ζώνη που τη γέννησε.
+        if (required.status !== 'required') {
+          unjudged.push({ site, shape, required });
+          continue;
+        }
         analyzed++;
         const match = findMatchingIndex(catalog, shape);
         if (!match) missing.push({ site, shape });
@@ -638,7 +661,7 @@ function main() {
   }
 
   // ---- Report ------------------------------------------------------------
-  if (missing.length === 0) {
+  if (missing.length === 0 && unjudged.length === 0) {
     if (verbose) {
       console.log(c.green(`✔ Firestore index coverage OK — analysed ${analyzed} composite query shape(s) across ${targetFiles.length} file(s).`));
       if (unanalyzable.length > 0) {
@@ -649,6 +672,26 @@ function main() {
   }
 
   console.error('');
+  if (unjudged.length > 0) {
+    console.error(c.red(c.bold(`✖ CHECK 3.15 — ${unjudged.length} ερώτημα(τα) με ΕΥΡΟΣ που η πύλη ΔΕΝ μπορεί να κρίνει`)));
+    console.error('');
+    for (const { site, shape, required } of unjudged) {
+      console.error(c.bold(`  ${formatCallSiteLocation(site)}`));
+      console.error(`    ${c.cyan('call:')}     ${site.methodName}('${site.collectionKey}', …)`);
+      console.error(`    ${c.cyan('variant:')}  ${shape.variant}`);
+      console.error(`    ${c.cyan('γιατί:')}    ${required.reason}`);
+      if (required.status === 'invalid-query') {
+        console.error(c.yellow('    → Το ερώτημα ΣΚΑΕΙ σε χρόνο εκτέλεσης. Βάλε πρώτο orderBy στο πεδίο του εύρους.'));
+      } else {
+        console.error(c.yellow('    → Δήλωσε ρητό orderBy που να ορίζει τη σειρά των πεδίων εύρους, ή σπάσε το'));
+        console.error(c.yellow('      ερώτημα. Η πύλη ΔΕΝ μαντεύει σειρά που κρίνεται από επιλεκτικότητα.'));
+      }
+      console.error('');
+    }
+  }
+
+  if (missing.length === 0) process.exit(1);
+
   console.error(c.red(c.bold(`✖ CHECK 3.15 — Firestore Index Coverage: ${missing.length} missing composite index(es)`)));
   console.error('');
 

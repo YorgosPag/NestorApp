@@ -60,7 +60,6 @@ import {
   restoreFromTrash,
   getTrashedFiles,
   getArchivedFiles,
-  getFilesEligibleForPurge,
 } from '@/services/file-record-lifecycle';
 import {
   linkFileToEntity,
@@ -337,9 +336,6 @@ export class FileRecordService {
 
   /** 📦 Get archived files — @see file-record-lifecycle.ts */
   static getArchivedFiles = getArchivedFiles;
-
-  /** 📋 Get files eligible for purge — @see file-record-lifecycle.ts */
-  static getFilesEligibleForPurge = getFilesEligibleForPurge;
 
   /** 🔗 Link file to entity — @see file-record-links.ts */
   static linkFileToEntity = linkFileToEntity;

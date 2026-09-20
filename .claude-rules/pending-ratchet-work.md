@@ -2,6 +2,17 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **20/09 — 40 σημεία ΕΥΡΟΥΣ στο Admin SDK, αφύλακτα** (ADR-869 §7.4)
+
+  Η CHECK 3.15 σαρώνει **μόνο** κλήσεις του `firestoreQueryService`. Μετρημένα **40**
+  `where()` με `<` `<=` `>` `>=` `!=` έξω από αυτό — `lib/cron/jobs/*`,
+  `app/api/admin/role-management/audit-log/*`, `services/ai-pipeline/*` κ.ά. **8× τα 5**
+  σημεία του SSoT, και **κανείς δεν τα ελέγχει** (ούτε η 3.10, που ρωτά για `companyId`).
+  Άλλο σχήμα AST: αλυσίδα με επανανάθεση (`query = query.where(…)`), όχι literal
+  `constraints: [...]`.
+  🔑 Ο **κριτής υπάρχει ήδη** (`requiredIndexFor`, ADR-869 §7.1) — λείπει μόνο ο εξαγωγέας
+  σχημάτων για αυτό το ύφος κλήσης. **ΜΗΝ** γράψεις δεύτερο κανόνα δεικτών.
+
 - 🔴 **20/09 — 1 ΔΕΙΚΤΗΣ FIRESTORE ΠΕΡΙΜΕΝΕΙ ΤΗΝ ΕΓΚΡΙΣΗ ΣΟΥ ΣΤΟ PUSH** (ADR-869 §12.6)
 
   `firestore:verify --tree worktree` ⇒ **`exit=2 OutOfSync`** · `ζωντανά 478 · αρχείο 479` ·

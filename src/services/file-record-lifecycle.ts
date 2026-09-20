@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { fieldToISO, nowISO } from '@/lib/date-local';
+import { fieldToISO } from '@/lib/date-local';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   type EntityType,
@@ -32,7 +32,6 @@ import {
 import type { FileRecord } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
-import { isHoldActive } from '@/lib/files/file-hold';
 import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
 import {
   custodyKindOfScope,
@@ -342,40 +341,16 @@ export async function getArchivedFiles(options: LifecycleListOptions): Promise<F
   );
 }
 
-/**
- * 📋 Get files eligible for purge
- * 🏢 ADR-214 Phase 3: tenantOverride: 'skip' — server-side, sees ALL files
- */
-export async function getFilesEligibleForPurge(): Promise<FileRecord[]> {
-  const now = nowISO();
-
-  const constraints = [
-    where('isDeleted', '==', true),
-    where('purgeAt', '<=', now),
-  ];
-
-  // tenant-scope-exempt: εργασία συντήρησης server-side (ADR-214 Φάση 3) — ο εκκαθαριστής
-  // οφείλει να δει τα ληγμένα αρχεία ΟΛΩΝ των μισθωτών, αλλιώς όσα ανήκουν σε άλλη εταιρεία
-  // δεν σβήνονται ποτέ. Δεν εξυπηρετεί αίτημα χρήστη και δεν επιστρέφει δεδομένα σε UI.
-  const result = await firestoreQueryService.getAll<DocumentData>('FILES', {
-    constraints,
-    tenantOverride: 'skip',
-  });
-
-  const eligibleFiles: FileRecord[] = [];
-  for (const raw of result.documents) {
-    // Ο ΕΝΑΣ κριτής (ADR-864 §21): δέσμευση ή διατήρηση που δεν έληξε ⇒ παράλειψη.
-    if (isHoldActive(raw, Date.now())) {
-      logger.info('Skipping held file', { fileId: raw.id });
-      continue;
-    }
-
-    const normalized = normalizeFileRecord(raw, 'updatedAt');
-    if (normalized) {
-      eligibleFiles.push(normalized);
-    }
-  }
-
-  logger.info('Found files eligible for purge', { count: eligibleFiles.length });
-  return eligibleFiles;
-}
+// 🔴 ΔΙΑΓΡΑΦΗΚΕ 2026-09-20 (ADR-869 §7): `getFilesEligibleForPurge()`.
+//
+// Ήταν **δομικά ανίκανο** να κάνει αυτό που δήλωνε. Το σχόλιό του έλεγε «server-side», αλλά
+// περνούσε από το `firestoreQueryService` (client SDK), όπου το `buildLeadingPaths` προσθέτει
+// ΠΑΝΤΑ τους δρόμους ανάγνωσης του `files` (`cdeReadReach ==` / `createdBy ==`) από το
+// `requireAuthContext().uid` — ταυτότητα που ένα cron **δεν έχει**. Το `tenantOverride:'skip'`
+// μηδενίζει τον μισθωτή, **όχι** τους δρόμους.
+//
+// Μετρημένα: **0 καλούντες** σε όλο το δέντρο, και ζωντανή δοκιμή του πραγματικού του
+// σχήματος (`cdeReadReach == · isDeleted == · purgeAt <=`) επιστρέφει `FAILED_PRECONDITION`.
+// Ο ΕΝΑΣ ζωντανός εκκαθαριστής είναι το `src/lib/cron/jobs/file-purge.job.ts` (Admin SDK,
+// χωρίς δρόμους ανάγνωσης) — και γι' αυτό του αρκεί ο δείκτης `(isDeleted, purgeAt)` που
+// υπάρχει ήδη. Δύο εκκαθαριστές δεν χρειάζονται· χρειάζεται **ένας που δουλεύει**.

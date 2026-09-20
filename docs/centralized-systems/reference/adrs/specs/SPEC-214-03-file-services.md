@@ -28,7 +28,7 @@ Migration file-related services στον κεντρικοποιημένο `Fires
 | `getFilesByEntity(...)` | `firestoreQueryService.getAll()` — removed explicit `companyId` | AUTO tenant filter |
 | `queryFileRecords(params)` | `firestoreQueryService.getAll()` — removed explicit `companyId` | AUTO tenant filter |
 | `getTrashedFiles(opts)` | `firestoreQueryService.getAll()` — removed explicit `companyId` | AUTO tenant filter |
-| `getFilesEligibleForPurge()` | `firestoreQueryService.getAll()` with `tenantOverride: 'skip'` | Skip (server-side) |
+| ~~`getFilesEligibleForPurge()`~~ | 🔴 **ΔΙΑΓΡΑΦΗΚΕ 2026-09-20 (ADR-869 §7.2)** — το `tenantOverride:'skip'` μηδενίζει τον μισθωτή, **όχι** τους δρόμους ανάγνωσης· απαιτούσε `uid`, που ένα cron δεν έχει. 0 καλούντες. Ο ΕΝΑΣ εκκαθαριστής = `lib/cron/jobs/file-purge.job.ts` | — |
 | `getLinkedFiles(...)` | `firestoreQueryService.getAll()` — removed explicit `companyId` | AUTO tenant filter |
 | `findByHash(hash)` | `firestoreQueryService.getAll()` with `maxResults: 1` | AUTO tenant filter |
 
@@ -65,5 +65,7 @@ Migration file-related services στον κεντρικοποιημένο `Fires
 - [x] File classification (updateDoc) works (unchanged)
 - [x] Search by entityType works
 - [x] companyId filtering is now automatic
-- [x] `getFilesEligibleForPurge` uses `tenantOverride: 'skip'`
+- [~] ~~`getFilesEligibleForPurge` uses `tenantOverride: 'skip'`~~ — η συνάρτηση **διαγράφηκε**
+  2026-09-20 (ADR-869 §7.2): το `'skip'` **δεν** αρκούσε, γιατί οι δρόμοι ανάγνωσης του `files`
+  προστίθενται ανεξάρτητα και απαιτούν ταυτότητα χρήστη.
 - [x] Public API signatures preserved

@@ -1007,8 +1007,20 @@ if (navTriggers.length > 0)
 if (auditCatalogsTrigger.length > 0)
   addThread('3.14', 'Audit value catalogs', 'scripts/check-audit-value-catalogs.js');
 
+// CHECK 3.15 — ΚΑΙ με σκανδάλη στο ίδιο το μανιφέστο δεικτών (ADR-869 §7).
+// 🔴 ΓΙΑΤΙ: το `STAGED_SRC_TS_FILES` γεννιέται από `grep -E '^src/.*\.(ts|tsx)$'`, άρα
+// σταδιοποίηση ΜΟΝΟ του `firestore.indexes.json` — δηλαδή **διαγραφή δείκτη** — δεν έτρεχε
+// την πύλη **καθόλου**. Η ίδια η πύλη φύλαγε τη μία κατεύθυνση («νέο ερώτημα χωρίς δείκτη»)
+// και ήταν τυφλή στην άλλη («ίδιο ερώτημα, ο δείκτης έφυγε»).
+// Το πέρασμα είναι ΟΛΙΚΟ εδώ, γιατί ένας δείκτης που φεύγει μπορεί να αφορά ΟΠΟΙΟΔΗΠΟΤΕ
+// αρχείο — και κοστίζει **μετρημένα 4s** για 13.238 αρχεία (όχι 40s, μετρήθηκε 2026-09-20).
+const indexManifestStaged = allFiles.includes('firestore.indexes.json');
+if (srcTsFiles.length > 0 || indexManifestStaged) {
+  addThread('3.15', 'Firestore index coverage',  'scripts/check-firestore-index-coverage.js',
+    indexManifestStaged ? ['--all'] : srcTsFiles);
+}
+
 if (srcTsFiles.length > 0) {
-  addThread('3.15', 'Firestore index coverage',  'scripts/check-firestore-index-coverage.js',    srcTsFiles);
   addThread('3.17', 'Entity audit coverage',     'scripts/check-entity-audit-coverage.js',       srcTsFiles);
   addThread('3.18', 'SSoT discover',             'scripts/check-ssot-discover-ratchet.js',       ssotFull ? ['--full'] : []);
   addThread('3.20', 'Notification keys ratchet', 'scripts/check-notification-keys-ratchet.js',   srcTsFiles);
