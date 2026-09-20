@@ -13658,6 +13658,10 @@ DemandAxisLostInFilters += 'stayNights' | 'stayParty'     // η παρέα τα�
    η «καθολική όψη» αφαιρέθηκε)· `server-only` στα `communications-triage-actions` / `AssignmentPolicyRepository`. **Νέα
    CHECK 3.90** (AST, ZERO-TOL): καμία οδηγία `'use server'` στο `src/`. Άγκυρες 9+3+Κ1–Κ6/Ε1–Ε4, μεταλλάξεις 8/8 κόκκινες.
    ✅ Τα `communications.service.ts` + `src/ai/**` **διαγράφηκαν** (ADR-868 §6 #1) — η 3.90 είναι πράσινη.
+   ✅ **ΕΠΑΛΗΘΕΥΜΕΝΟ ΣΤΗΝ ΠΑΡΑΓΩΓΗ 2026-09-20** (`nestorconstruct.gr`, commit `b2aaee0f`, ADR-868 §6 #2): ανώνυμος ⇒ **401**·
+   με πραγματική συνεδρία `super_admin`+MFA ⇒ 404 (ανύπαρκτο) · **403** (μήνυμα χωρίς `companyId`) · **400** `Unrecognized
+   key(s): 'companyId'` (το `.strict()` **λέει** ότι η ταυτότητα δεν ανήκει στο συμβόλαιο) · `Next-Action` στη σελίδα ⇒
+   **404 «Server action not found»**. **Μηδέν εγγραφές αποδεδειγμένες** (Firestore: `updatedAt` αμετάβλητο, `tasks` 0 → 0).
 10. **Ετικέτες ουδέτερου γένους** («Κρατημένο», «Μη διαθέσιμο») και σε θέση/αποθήκη — ίδιο λεξιλόγιο με τα ακίνητα (Φάση 5).
 11. **Γεννήτορες 3.33/3.34** — γράφουν και κλειδιά του άλλου agent (ντετερμινιστικά).
 

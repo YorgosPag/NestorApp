@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |---|---|
-| **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-19) — CHECK 3.90 πράσινη (0 οδηγίες)· ζωντανά επαληθευμένες οι αρνήσεις· εκκρεμεί ο έλεγχος με συνεδρία διαχειριστή (§6 #2) |
+| **Status** | ✅ **ΕΝΕΡΓΟ — ΕΠΑΛΗΘΕΥΜΕΝΟ ΣΤΗΝ ΠΑΡΑΓΩΓΗ** (2026-09-20, `nestorconstruct.gr`, commit `b2aaee0f`). CHECK 3.90 πράσινη (0 οδηγίες)· ανώνυμος ⇒ **401**· με συνεδρία `super_admin`+MFA και οι 8 αρνήσεις (404/403/400/405/«Server action not found») **όπως προβλέφθηκαν**, με **μηδέν εγγραφές** αποδεδειγμένες σε Firestore (§6 #2). Μοναδικό υπόλοιπο: η **επιτυχής** έγκριση δεν δοκιμάστηκε ζωντανά (καλύπτεται από άγκυρες). |
 | **Date** | 2026-09-19 |
 | **Category** | Security / API Boundary / Multi-tenancy |
 | **Canonical Locations** | `src/lib/auth/middleware.ts` (`withAuth`, `requireMfa`) · `src/server/admin/admin-guards-types.ts` (`ADMIN_SURFACE_AUTH`) · `src/app/api/admin/ai-inbox/communications/[communicationId]/triage/route.ts` · `scripts/check-server-action-boundary.js` (CHECK 3.90) |
@@ -165,7 +165,46 @@ ADR-817) ⇒ μια διαδρομή API γι' αυτόν θα ήταν **δομ
    · `src/ai/flows/generate-report.ts` · `src/ai/genkit.ts`· αφαιρέθηκε και η γραμμή `"src/ai/**"` του `knip.json`.
    Η CHECK 3.90 ήταν **κόκκινη ακριβώς σε αυτά τα 3 endpoints** μέχρι τη διαγραφή, και **πράσινη** μετά
    (0 οδηγίες, 6 υποψήφια — όλα σχόλια).
-2. **Ζωντανός έλεγχος — ΜΕΡΙΚΟΣ (2026-09-19, dev server `localhost:3000`, Next 15.5.22)**:
+2. ✅ **Ζωντανός έλεγχος — ΟΛΟΚΛΗΡΩΘΗΚΕ ΣΤΗΝ ΠΑΡΑΓΩΓΗ (2026-09-20, `nestorconstruct.gr`, commit `b2aaee0f`)**
+
+   **α) Ανώνυμος καλών** (`curl`, με `User-Agent`) — η πρόβλεψη του dev ελέγχου **επαληθεύτηκε**:
+
+   | Αίτημα | Απάντηση | Σώμα |
+   |---|---|---|
+   | `POST …/triage` χωρίς συνεδρία | **401** | `UNAUTHORIZED` · `reason: missing_token` |
+   | ίδιο με ψεύτικο `Bearer` | **401** | `UNAUTHORIZED` · `reason: invalid_token` |
+   | `GET …/triage` | **405** | — (εξάγεται **μόνο** `POST`) |
+
+   🔑 Στην παραγωγή έρχεται **401**, όχι το 403 `MFA_REQUIRED` του dev: επιβεβαιώνεται ότι το
+   `buildRequestContext` **δεν** κατασκευάζει ταυτότητα εκτός `development` (ADR-821). Η πόρτα MFA είναι
+   **δεύτερη** γραμμή, όχι η μόνη.
+
+   **β) Με πραγματική συνεδρία `super_admin` + MFA** (κονσόλα του browser στο
+   `https://nestorconstruct.gr/admin/ai-inbox`, το οποίο απέδωσε «● Live» με **0/0/0/0**).
+   Και οι δύο αποφάσεις, **μηδέν εγγραφές by design** — ο έλεγχος ιδιοκτησίας προηγείται κάθε εγγραφής
+   στην `openOwnedCommunication`:
+
+   | Αίτημα | Αναμ. | Ελήφθη | Τι αποδεικνύει |
+   |---|---|---|---|
+   | `{decision:'approve'}` σε ανύπαρκτο id | 404 | ✅ **404** `Communication not found` | ύπαρξη **πριν** ιδιοκτησία |
+   | `{decision:'reject'}` σε ανύπαρκτο id | 404 | ✅ **404** ίδιο μήνυμα | **και οι δύο** κλάδοι στην ίδια `openOwnedCommunication` |
+   | `{decision:'approve'}` σε `msg_019fa196…` (**χωρίς `companyId`**) | 403 | ✅ **403** `Communication is outside your company` | «χωρίς μισθωτή ⇒ κανενός» (`isPayloadOwnedByCompany`) **και** `concealCrossTenant` → ο bypass ρόλος παίρνει την **ειλικρινή** άρνηση (ADR-742) |
+   | `{decision:'reject'}` στο ίδιο | 403 | ✅ **403** ίδιο | — |
+   | `{decision:'approve', companyId:'x'}` | 400 | ✅ **400** `Unrecognized key(s) in object: 'companyId'` | το `.strict()` **λέει** ότι η ταυτότητα δεν ανήκει στο συμβόλαιο — δεν την αγνοεί σιωπηλά |
+   | `{decision:'nuke'}` | 400 | ✅ **400** `Expected 'approve' \| 'reject'` | κλειστό λεξιλόγιο απόφασης |
+   | σώμα `not-json` | 400 | ✅ **400** `Expected object, received null` | μη-JSON ⇒ 400, **όχι 500** |
+   | `POST /admin/ai-inbox` με `Next-Action` | — | ✅ **404** `Server action not found.` | η σελίδα **δεν έχει πια** server action· το CHECK 3.90 το φυλάει στατικά, η παραγωγή το επιβεβαιώνει |
+
+   **γ) Απόδειξη μηδενικής εγγραφής** (Firestore MCP, πριν/μετά):
+   `messages/msg_019fa196…` → `updatedAt` **αμετάβλητο** (`1788627607.893`), κανένα `triageStatus`, κανένα
+   `linkedTaskId` · `tasks` → **0 → 0** έγγραφα. Οι 403/404 **δεν έγραψαν τίποτα**.
+
+   ⏳ **Δεν δοκιμάστηκε η ΕΠΙΤΥΧΗΣ έγκριση** (θα απαιτούσε δοκιμαστικό μήνυμα με `triageStatus: 'pending'`
+   στην εταιρεία του Giorgio και θα γεννούσε **πραγματική** εργασία CRM): μετρημένα **0 / 46** μηνύματα
+   έχουν `triageStatus`, όλα εξερχόμενες ειδοποιήσεις **χωρίς `companyId`**. Η ιδιοτροπία (idempotency)
+   καλύπτεται από τις άγκυρες `triage-route.test.ts`, όχι ζωντανά.
+
+   **δ) Ιστορικό — ο ΜΕΡΙΚΟΣ έλεγχος του dev server (2026-09-19, `localhost:3000`, Next 15.5.22)**:
    - ✅ POST **χωρίς καμία συνεδρία** ⇒ **403 `MFA_REQUIRED`**, ΟΧΙ 401 — και αυτό είναι το σημαντικότερο εύρημα:
      σε `NODE_ENV=development` το `buildRequestContext` **κατασκευάζει** ταυτότητα (`company_admin`,
      `mfaEnrolled: false`, ADR-821). Χωρίς την πόρτα MFA ένα **ανώνυμο** `curl` στον dev server θα περνούσε το
@@ -174,10 +213,8 @@ ADR-817) ⇒ μια διαδρομή API γι' αυτόν θα ήταν **δομ
    - ✅ Ψεύτικο `Bearer` ⇒ **401 `UNAUTHORIZED` (`invalid_token`)**.
    - ⚠️ Ο dev server απαντά **403 χωρίς σώμα** σε αιτήματα **χωρίς `User-Agent`** (φίλτρο bot του
      `src/middleware.ts`) — γι' αυτό ο πρώτος έλεγχος έμοιαζε «όχι δικός μας server».
-   - ⏳ **Δεν επαληθεύτηκε ζωντανά με πραγματική συνεδρία διαχειριστή**: ο Chrome του πράκτορα επέστρεφε σε
-     «Νέα καρτέλα» σε κάθε πλοήγηση στο `localhost:3000`. Και η **επιτυχής** έγκριση δεν δοκιμάζεται χωρίς
-     δεδομένα: μετρημένα **0 / 46** μηνύματα έχουν `triageStatus` (όλα εξερχόμενες ειδοποιήσεις **χωρίς
-     `companyId`**) — μια έγκριση θα απαιτούσε δοκιμαστικό μήνυμα και θα γεννούσε **πραγματική** εργασία CRM.
+   - ⏳ Δεν επαληθεύτηκε τότε με πραγματική συνεδρία διαχειριστή (ο Chrome του πράκτορα επέστρεφε σε
+     «Νέα καρτέλα» σε κάθε πλοήγηση στο `localhost:3000`) — **έκλεισε στην παραγωγή, βλ. (β) παραπάνω**.
 3. Το κλειδί `aiInbox.loadFailedWithErrorId` έμεινε **ορφανό** (ο κλάδος φόρτωσης μέσω server
    αφαιρέθηκε). Δεν αφαιρέθηκε, για να μην τρέξουν οι γεννήτορες 3.33/3.34 πάνω σε κλειδιά άλλου agent.
 4. Το μήνυμα `'Live data is already up-to-date!'` του hook είναι προϋπάρχον hardcoded κείμενο (N.11)·
@@ -192,5 +229,6 @@ ADR-817) ⇒ μια διαδρομή API γι' αυτόν θα ήταν **δομ
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-20 | **Ζωντανή επαλήθευση ΠΑΡΑΓΩΓΗΣ — το ADR κλείνει** (§6 #2 α/β/γ). Ανώνυμος ⇒ **401** (`missing_token` / `invalid_token`), `GET` ⇒ **405**· με πραγματική συνεδρία `super_admin`+MFA: ανύπαρκτο id ⇒ **404** *και* στο approve *και* στο reject· `msg_019fa196…` (χωρίς `companyId`) ⇒ **403** ειλικρινής άρνηση (`concealCrossTenant` + bypass ρόλος)· `companyId` στο σώμα ⇒ **400** `Unrecognized key(s)` (`.strict()`)· άκυρη απόφαση ⇒ **400**· μη-JSON ⇒ **400** (όχι 500)· `Next-Action` στη σελίδα ⇒ **404 «Server action not found»**. **Μηδέν εγγραφές αποδεδειγμένες**: `updatedAt` του μηνύματος αμετάβλητο, `tasks` 0 → 0. Το 403 `MFA_REQUIRED` του dev **δεν** εμφανίζεται στην παραγωγή ⇒ επιβεβαιώνεται ότι η κατασκευασμένη ταυτότητα του ADR-821 μένει στο `development`. |
 | 2026-09-19 | **Διαγραφή των 4 νεκρών αρχείων** (§6 #1) + `knip.json` — CHECK 3.90 κόκκινη → **πράσινη**. |
 | 2026-09-19 | **Δημιουργία + υλοποίηση.** Διαδρομή `POST /api/admin/ai-inbox/communications/[id]/triage` (`withSensitiveRateLimit(withAuth(…, ADMIN_SURFACE_AUTH))`)· `withAuth({ requireMfa })` + `createMfaRequiredResponse`· triage υπηρεσία `server-only` με `actor: AuthContext` και audit με τον πραγματικό καλούντα· hook μόνο realtime + `apiClient`· η σελίδα στενεύει σε `AIInboxAdminContext`· `server-only` στο `AssignmentPolicyRepository`· καμία οδηγία στο `contracts.ts`· **CHECK 3.90**. Κλείνει το ADR-777 §8.60.20.9 #12. |
