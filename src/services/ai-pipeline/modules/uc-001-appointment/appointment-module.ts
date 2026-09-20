@@ -26,6 +26,7 @@ import { generateAppointmentId } from '@/services/enterprise-id.service';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
+import { withAppointmentSchedule } from '@/services/appointments/appointment-schedule';
 import { extractDateTimeFromEntities } from './appointment-entity-extractor';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
@@ -350,11 +351,13 @@ export class AppointmentModule implements IUCModule {
           contactId: (params.contactId as string) ?? null,
           isKnownContact: (params.isKnownContact as boolean) ?? false,
         },
-        appointment: {
+        // ADR-869 §12 — το `effectiveDate` παράγεται ΕΔΩ, μαζί με τις λεπτομέρειες: δεν
+        // υπάρχει εκδοχή του εγγράφου χωρίς την ερωτήσιμη ημερομηνία.
+        appointment: withAppointmentSchedule({
           requestedDate: (params.requestedDate as string) ?? null,
           requestedTime: (params.requestedTime as string) ?? null,
           description: (params.description as string) || 'Αίτημα ραντεβού',
-        },
+        }),
         assignedRole: 'salesManager',
         status: 'approved' as AppointmentStatus,
         createdAt: now,

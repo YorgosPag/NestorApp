@@ -19,6 +19,10 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import {
+  resolveAppointmentSchedule,
+  type AppointmentScheduleSource,
+} from '@/services/appointments/appointment-schedule';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -28,11 +32,19 @@ const logger = createModuleLogger('AVAILABILITY_CHECK');
 // TYPES
 // ============================================================================
 
+/**
+ * Ένα ραντεβού που **ήδη κρατά** χώρο στην ημέρα.
+ *
+ * 🔑 ADR-869 §12.2 — τα πεδία λέγονται `effective*` και **όχι** `requested*` επίτηδες:
+ * αυτό που πιάνει ώρα είναι η μέρα/ώρα **που ισχύει**, όχι εκείνη που ζητήθηκε κάποτε.
+ * Το `AvailabilityResult` από κάτω κρατά `requested*`, γιατί εκεί η ερώτηση **είναι**
+ * «τι ζήτησε ο αποστολέας». Δύο διαφορετικές ερωτήσεις ⇒ δύο διαφορετικά ονόματα.
+ */
 export interface ExistingAppointment {
   id: string;
   requesterName: string;
-  requestedDate: string | null;
-  requestedTime: string | null;
+  effectiveDate: string | null;
+  effectiveTime: string | null;
   description: string;
   status: string;
 }
@@ -88,35 +100,44 @@ export async function checkAvailability(
     const adminDb = getAdminFirestore();
 
     // Query active appointments for the same date and company
+    // 🔴 ADR-869 §12.2 — ΡΩΤΑΕΙ ΤΗΝ ΙΣΧΥΟΥΣΑ, ΟΧΙ ΤΗΝ ΑΙΤΟΥΜΕΝΗ.
+    // Ρωτούσε `appointment.requestedDate`. Όσο η έγκριση αντιγράφει την αιτούμενη στην
+    // επιβεβαιωμένη οι δύο ταυτίζονται — αλλά την πρώτη φορά που ένα ραντεβού εγκριθεί
+    // για **άλλη** μέρα, ο έλεγχος θα το μετρούσε ακόμη στην **παλιά** (ψεύτικη
+    // κατειλημμένη ώρα) και **καθόλου** στη νέα (**διπλοκράτηση**). Το `effectiveDate`
+    // είναι εξ ορισμού «η μέρα που ισχύει», άρα η ερώτηση γίνεται σωστή **πριν** ανοίξει
+    // το κενό, όχι αφού σκάσει.
     const snapshot = await adminDb
       .collection(COLLECTIONS.APPOINTMENTS)
       .where(FIELDS.COMPANY_ID, '==', companyId)
-      .where('appointment.requestedDate', '==', requestedDate)
+      .where(FIELDS.APPOINTMENT_EFFECTIVE_DATE, '==', requestedDate)
       .where(FIELDS.STATUS, 'in', ['approved', 'pending_approval'])
       .get();
 
     const existingAppointments: ExistingAppointment[] = snapshot.docs.map(
       (doc) => {
         const data = doc.data();
+        // Ο ΕΝΑΣ αναγνώστης του «πότε» — παράγει όταν το κανονικό πεδίο λείπει (παλαιό έγγραφο).
+        const schedule = resolveAppointmentSchedule(data as AppointmentScheduleSource);
         return {
           id: doc.id,
           requesterName:
             (data.requester?.name as string) ??
             (data.requester?.email as string) ??
             'Άγνωστος',
-          requestedDate: (data.appointment?.requestedDate as string) ?? null,
-          requestedTime: (data.appointment?.requestedTime as string) ?? null,
+          effectiveDate: schedule?.date ?? null,
+          effectiveTime: schedule?.time ?? null,
           description: (data.appointment?.description as string) ?? '',
           status: (data.status as string) ?? 'unknown',
         };
       }
     );
 
-    // Time conflict: exact match on requested time
+    // Σύγκρουση ώρας: η ώρα ΠΟΥ ΙΣΧΥΕΙ για το υπάρχον ραντεβού, όχι η αρχικά ζητούμενή του.
     const hasTimeConflict =
       requestedTime !== null &&
       existingAppointments.some(
-        (appt) => appt.requestedTime === requestedTime
+        (appt) => appt.effectiveTime === requestedTime
       );
 
     const isDateFree = existingAppointments.length === 0;
@@ -201,7 +222,7 @@ function buildBriefing(params: {
     );
 
     for (const appt of existingAppointments) {
-      const timeStr = appt.requestedTime ?? 'χωρίς ώρα';
+      const timeStr = appt.effectiveTime ?? 'χωρίς ώρα';
       const statusLabel =
         appt.status === 'approved' ? 'εγκεκριμένο' : 'σε αναμονή';
       lines.push(

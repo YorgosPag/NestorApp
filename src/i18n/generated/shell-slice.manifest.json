@@ -89,7 +89,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b639843dc9509242be0c4efd47540dc88ace194c69f5611eec5217060785e5b3",
+  "inputsSha256": "da83a893d3fb60f7525a55a85c6669fea3a5f480807e5f6c583bda014eb2dea8",
   "languages": [
     "el"
   ],
@@ -466,7 +466,7 @@
     "src/components/workspace/use-create-workspace.ts": "368c25f2417786ca77d6370fceb1db9fc6e5593f01f4ddf75f4c3875bf76dbf3",
     "src/config/audit-tracked-fields.ts": "c988f9e6560776746e0d6b3e29e572d08761615cdbe89cb0996f19f9150d1fbd",
     "src/config/environment-contract.ts": "825c68e2c33bb5b274eadc3aadd787626a312d05436201c0e1cb75b2f849c460",
-    "src/config/firestore-field-constants.ts": "42527b3933288078c2032f12b95ff0f0c0ceaa16a3a848e824ceefdafa990634",
+    "src/config/firestore-field-constants.ts": "f1ff5180ebfe932a4eaff2688560c576f17d7a32e0386b3e322749a11ad3ba36",
     "src/config/gcs-buckets.ts": "d4c16be886703d65a4bf35239a56fd439572bb5d1ca49afbc5fc10274caeb59d",
     "src/config/holiday-question-policy.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/legal-document-versions/index.generated.ts": "95a15a9d079144d3f6a8e7d5c66dd6751ee711d0b1436c4fad7d9d8b82cac84a",

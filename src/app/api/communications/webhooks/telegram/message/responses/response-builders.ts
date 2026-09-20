@@ -4,18 +4,23 @@ import { getTemplateResolver } from '../../templates/template-resolver';
 import { getActiveTypes } from '../../catalogs/type-catalog';
 import { createInlineKeyboard, getCompanyConfig } from './response-shared';
 
-export function createStartResponse(
+/**
+ * Μήνυμα με τη ΜΙΑ σειρά ενεργειών «αναζήτηση + επικοινωνία».
+ *
+ * ADR-869 §13.3 — ήταν γραμμένη **δύο** φορές μέσα σε αυτό το αρχείο (καλωσόρισμα +
+ * προεπιλεγμένη απάντηση), δώδεκα ταυτόσημες γραμμές. Το πιασε η CHECK 3.28 όταν το
+ * αρχείο αγγίχθηκε — μια σειρά κουμπιών που αλλάζει σε ένα σημείο και όχι στο άλλο
+ * είναι ακριβώς ο τρόπος που ένα bot αρχίζει να απαντά διαφορετικά στην ίδια ερώτηση.
+ */
+function messageWithSearchAndContact(
   chatId: string | number,
-  locale: TelegramLocale = 'el',
+  text: string,
+  t: ReturnType<typeof getTemplateResolver>,
 ): TelegramSendPayload {
-  const t = getTemplateResolver(locale);
-
-  const welcomeText = `${t.getText('start.welcome')} 🏠\n\n🤖 <b>${t.getText('start.description')}</b>\n\n🎯 <b>${t.getText('start.callToAction')}</b>`;
-
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: welcomeText,
+    text,
     parse_mode: 'HTML',
     reply_markup: createInlineKeyboard([
       [
@@ -24,6 +29,17 @@ export function createStartResponse(
       ],
     ]),
   };
+}
+
+export function createStartResponse(
+  chatId: string | number,
+  locale: TelegramLocale = 'el',
+): TelegramSendPayload {
+  const t = getTemplateResolver(locale);
+
+  const welcomeText = `${t.getText('start.welcome')} 🏠\n\n🤖 <b>${t.getText('start.description')}</b>\n\n🎯 <b>${t.getText('start.callToAction')}</b>`;
+
+  return messageWithSearchAndContact(chatId, welcomeText, t);
 }
 
 export function createSearchMenuResponse(
@@ -74,7 +90,9 @@ export function createHelpResponse(
   locale: TelegramLocale = 'el',
 ): TelegramSendPayload {
   const t = getTemplateResolver(locale);
-  const examples = t.getText('help.tips.examples') as unknown as string[];
+  // ADR-869 §13.2 — ήταν `getText(…) as unknown as string[]`: η τιμή είναι ΠΙΝΑΚΑΣ, το
+  // `getText` επέστρεφε το γενικό σφάλμα, και το `.map()` από κάτω πετούσε `TypeError`.
+  const examples = t.getList('help.tips.examples');
 
   const helpText = `❓ <b>${t.getText('help.title')}</b>\n\n📋 <b>${t.getText('help.commands.start')}</b>\n${t.getText('help.commands.help')}\n${t.getText('help.commands.search')}\n${t.getText('help.commands.stats')}\n${t.getText('help.commands.contact')}\n\n💡 <b>${t.getText('help.tips.title')}</b>\n${examples.map((example) => `• ${example}`).join('\n')}`;
 
@@ -112,18 +130,7 @@ export function createDefaultResponse(
 
   const defaultText = `🤔 ${t.getText('errors.notUnderstood')}\n\n💡 <b>${t.getText('search.tooGeneric.suggestion')}</b>`;
 
-  return {
-    method: 'sendMessage',
-    chat_id: chatId,
-    text: defaultText,
-    parse_mode: 'HTML',
-    reply_markup: createInlineKeyboard([
-      [
-        { text: `🔍 ${t.getText('buttons.search')}`, callback_data: 'property_search' },
-        { text: `📞 ${t.getText('buttons.contact')}`, callback_data: 'contact_agent' },
-      ],
-    ]),
-  };
+  return messageWithSearchAndContact(chatId, defaultText, t);
 }
 
 export function createErrorResponse(

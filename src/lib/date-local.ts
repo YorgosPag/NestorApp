@@ -48,6 +48,53 @@ export function localDateOf(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+/** Υπάρχει αυτή η μέρα στο ημερολόγιο; (πιάνει 31/02, 30/02 σε δίσεκτο, μήνα 13) */
+function isRealCalendarDay(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1) return false;
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return probe.getUTCFullYear() === year
+    && probe.getUTCMonth() === month - 1
+    && probe.getUTCDate() === day;
+}
+
+/**
+ * **Ημερολογιακή ημέρα σε κανονική μορφή `YYYY-MM-DD`** — ή `null` αν δεν είναι ημέρα.
+ *
+ * 🔑 **Γιατί έχει σημασία η μορφή**: το ερώτημα εύρους του Firestore συγκρίνει
+ * συμβολοσειρές **λεξικογραφικά**. Για `YYYY-MM-DD` αυτό **ταυτίζεται** με τη
+ * χρονολογική σειρά· για `DD/MM/YYYY` **όχι** (`12/03/2026` < `31/01/2026`). Πεδίο που
+ * δέχεται και τις δύο μορφές δίνει **σιωπηλά λάθος** αποτελέσματα εύρους.
+ *
+ * Δέχεται τη μορφή `DD/MM/YYYY` επειδή ο πράκτορας AI την παρήγαγε ιστορικά
+ * (`appointment-entity-extractor.ts`), και μια σιωπηλή απώλεια θα κόστιζε ραντεβού.
+ *
+ * ⚠️ **Αυστηρότερο από τα τρία αντίγραφα που αντικατέστησε** (ADR-869 §12.3): εκείνα
+ * περνούσαν ό,τι **έμοιαζε** με ISO χωρίς να ελέγξουν αν η μέρα υπάρχει, δηλαδή
+ * δέχονταν `2026-13-45`. Για **κανονικό** πεδίο αυτό είναι απαράδεκτο: μια ανύπαρκτη
+ * μέρα θα ταξινομούνταν κανονικά και θα εμφανιζόταν σε εύρη όπου δεν ανήκει.
+ *
+ * 🔴 **ΔΕΝ είναι στιγμή και ΔΕΝ έχει ζώνη ώρας** — είναι *ημερολογιακή ημέρα*, όπως τη
+ * λέει ο άνθρωπος. Για στιγμή χρησιμοποίησε `normalizeToDate` / `normalizeToISO`.
+ */
+export function normalizeCalendarDay(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (iso) {
+    return isRealCalendarDay(Number(iso[1]), Number(iso[2]), Number(iso[3])) ? raw : null;
+  }
+
+  const eu = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
+  if (eu) {
+    const [, day, month, year] = eu;
+    return isRealCalendarDay(Number(year), Number(month), Number(day))
+      ? `${year}-${month}-${day}`
+      : null;
+  }
+
+  return null;
+}
+
 export function normalizeToDate(val: unknown): Date | null {
   if (!val) return null;
   // Firestore Timestamp (client or admin SDK) — both expose toDate()

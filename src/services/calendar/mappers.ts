@@ -12,8 +12,8 @@
 import type { CrmTask } from '@/types/crm';
 import type { AppointmentDocument } from '@/types/appointment';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
-import { normalizeToDate } from '@/lib/date-local';
-import { parse, isValid, format } from 'date-fns';
+import { normalizeToDate, normalizeCalendarDay } from '@/lib/date-local';
+import { appointmentStartAt } from '@/services/appointments/appointment-schedule';
 
 // ============================================================================
 // HELPERS
@@ -58,12 +58,9 @@ function taskTypeToEventType(taskType: CrmTask['type']): CalendarEventType {
  * Returns null if the task has no dueDate (cannot be placed on calendar).
  */
 export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
-  // Normalize DD/MM/YYYY → YYYY-MM-DD before parsing (AI agent writes this format)
-  let dueDateVal = task.dueDate;
-  if (typeof dueDateVal === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dueDateVal)) {
-    const parsed = parse(dueDateVal, 'dd/MM/yyyy', new Date());
-    dueDateVal = isValid(parsed) ? format(parsed, 'yyyy-MM-dd') : dueDateVal;
-  }
+  // ADR-869 §12.3 — ΤΕΤΑΡΤΟ αντίγραφο του ίδιου μεταφραστή, και το μόνο εκτός ραντεβού:
+  // απόδειξη ότι η ερώτηση ήταν «τι μορφή έχει αυτή η ημέρα;», όχι ερώτηση του τομέα.
+  const dueDateVal = normalizeCalendarDay(task.dueDate) ?? task.dueDate;
   const start = normalizeToDate(dueDateVal);
   if (!start) return null;
 
@@ -112,36 +109,14 @@ export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
 
 /**
  * Convert an AppointmentDocument into a CalendarEvent.
- * Returns null if the appointment has no requestedDate (cannot be placed on calendar).
+ * Returns null όταν το ραντεβού δεν έχει ημέρα — δηλαδή δεν μπορεί να μπει σε ημερολόγιο.
  */
-/** Normalize date string: handles both YYYY-MM-DD and DD/MM/YYYY from AI agent */
-function resolveDateStr(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
-    const parsed = parse(raw, 'dd/MM/yyyy', new Date());
-    return isValid(parsed) ? format(parsed, 'yyyy-MM-dd') : null;
-  }
-  return null;
-}
-
 export function appointmentToCalendarEvent(appt: AppointmentDocument): CalendarEvent | null {
-  // Support both nested format (UC-001) and flat format (AI agent via Telegram)
   const flat = appt as unknown as Record<string, unknown>;
-  const rawDateStr =
-    appt.appointment?.confirmedDate ??
-    appt.appointment?.requestedDate ??
-    (flat['date'] as string | undefined);
-  const dateStr = resolveDateStr(rawDateStr);
-  if (!dateStr) return null;
-
-  const timeStr =
-    appt.appointment?.confirmedTime ??
-    appt.appointment?.requestedTime ??
-    (flat['time'] as string | undefined) ??
-    '09:00';
-  const start = new Date(`${dateStr}T${timeStr}:00`);
-  if (isNaN(start.getTime())) return null;
+  // ADR-869 §12 — η ερώτηση «πότε είναι αυτό;» έχει ΕΝΑΝ ιδιοκτήτη. Εδώ ζούσε το ΔΕΥΤΕΡΟ
+  // από τρία αντίγραφα (σειρά προτίμησης + κανονικοποιητής DD/MM/YYYY + προεπιλογή ώρας).
+  const start = appointmentStartAt(appt);
+  if (start === null) return null;
 
   // Duration from flat format (durationMinutes field)
   const durationMs =

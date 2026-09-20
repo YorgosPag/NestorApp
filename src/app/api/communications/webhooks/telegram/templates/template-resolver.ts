@@ -26,7 +26,12 @@ export interface TemplateParams {
 }
 
 // Type for nested translation object
-type TranslationValue = string | { [key: string]: TranslationValue };
+/**
+ * ⚠️ ADR-869 §13.2 — ο `string[]` ΛΕΙΠΕ, και τα JSON τον είχαν ανέκαθεν
+ * (`help.tips.examples`). Τύπος που δεν περιγράφει τα δεδομένα δεν προστατεύει κανέναν:
+ * ο μόνος καταναλωτής «έλυσε» τη διαφωνία με `as unknown as string[]` και το `/help` έσκαγε.
+ */
+type TranslationValue = string | string[] | { [key: string]: TranslationValue };
 type TranslationObject = { [key: string]: TranslationValue };
 
 // ============================================================================
@@ -91,6 +96,28 @@ export class TelegramTemplateResolver {
   }
 
   /**
+   * **Λίστα** κειμένων για ένα κλειδί που κρατά πίνακα — π.χ. `help.tips.examples`.
+   *
+   * 🔴 ADR-869 §13.2 — γιατί υπάρχει: ο μόνος καταναλωτής έγραφε
+   * `t.getText('help.tips.examples') as unknown as string[]` και μετά `examples.map(…)`.
+   * Το `getText` όμως **απαιτεί string**: σε πίνακα γύριζε το γενικό μήνυμα σφάλματος,
+   * άρα το `.map()` έτρεχε πάνω σε **string** ⇒ `TypeError` ⇒ η εντολή `/help` του bot
+   * **έσκαγε**. Η διπλή μετατροπή (`as unknown as`) ήταν ακριβώς ο λόγος που ο compiler
+   * δεν το είπε ποτέ — ο κανόνας «όχι `as any`» αφορά **και** αυτήν.
+   *
+   * Κενός πίνακας όταν το κλειδί λείπει ή δεν είναι πίνακας κειμένων: μια λίστα που
+   * λείπει αφήνει κενό, δεν ρίχνει την απάντηση.
+   */
+  getList(key: string): string[] {
+    const value = this.getNestedValue(key);
+    if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+      return value as string[];
+    }
+    logger.error('MISSING_LIST_KEY', { key, locale: this.locale });
+    return [];
+  }
+
+  /**
    * Get nested value from translations using dot notation
    */
   private getNestedValue(key: string): TranslationValue | undefined {
@@ -131,13 +158,25 @@ export class TelegramTemplateResolver {
   }
 
   /**
-   * Interpolate parameters into template string
-   * Supports {{param}} syntax
+   * 🔴 ΜΙΑ ΣΥΜΒΑΣΗ ΠΑΡΕΜΒΟΛΗΣ: **μονά** άγκιστρα — `{param}` (ADR-869 §13).
+   *
+   * Ήταν `/\{\{(\w+)\}\}/g`, δηλαδή **διπλά**. Τα ίδια τα `locales/{el,en}/telegram.json`
+   * όμως γράφουν **μονά** (`"Βρέθηκαν {count} ακίνητα"`) — γιατί αυτό **απαιτεί η CHECK 3.9**
+   * (ICU: `{variable}`, ποτέ `{{variable}}`). Άρα **καμία** παράμετρος δεν αντικαθίστατο
+   * ποτέ, και ο πελάτης έβλεπε ωμό `{count}` μέσα στο Telegram.
+   *
+   * ⚠️ Δύο κανόνες που ήταν **και οι δύο σωστοί**, σε δύο αρχεία που κανείς δεν διάβασε
+   * μαζί. Μετρημένο 2026-09-20 εκτελώντας τον resolver, όχι διαβάζοντάς τον — και τα
+   * **μηδέν** `{{` στα δύο JSON (επαληθευμένο σε άγκυρα) λένε ότι η μία πλευρά ήταν
+   * ανέκαθεν μόνη της.
+   *
+   * Παράμετρος που λείπει αφήνει το μοτίβο **ορατό** (`{count}`) αντί για `undefined`:
+   * ένα ορατό κενό είναι αναφέρσιμο σφάλμα· ένα «undefined» μοιάζει με κείμενο.
    */
   private interpolate(template: string, params?: TemplateParams): string {
     if (!params) return template;
 
-    return template.replace(/\{\{(\w+)\}\}/g, (match, paramName) => {
+    return template.replace(/\{(\w+)\}/g, (match, paramName) => {
       const value = params[paramName];
       return value !== undefined ? String(value) : match;
     });

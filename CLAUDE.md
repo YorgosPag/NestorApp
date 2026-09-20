@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:db6674f910467e8484e03b501f084fbdd9991777c173d34a12ee0475caa4e576 -->
+     fingerprint: sha256:f4e089275f61d605291822b8ee5d2b3b78cb7ccbbd6ff5ebce238afbbc2489e3 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -318,7 +318,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 🔴 **ΔΙΟΡΘΩΣΗ 2026-08-26**: ο πίνακας του `CLAUDE.md` διαφήμιζε **«378 violations / 13 files»**
 ενώ… · 📘 `docs/gates/3.13.md` | RATCHET | `.i18n-resolver-reachability-baseline.json` |
 | **3.14** | Audit Value Catalogs SSoT (ADR-195) · 📘 `docs/gates/3.14.md` | ZERO TOL | — |
-| **3.15** | **Firestore Index Coverage** — «κάθε ερώτημα του `firestoreQueryService` έχει δείκτη — παραλλαγή super_admin + κλάδοι διαμερίσματος κατόχου `X[kind]`» · 📘 `docs/gates/3.15.md` | ZERO TOL on touch | — |
+| **3.15** | **Firestore Index Coverage** (ADR-869) — «κάθε ερώτημα του `firestoreQueryService` έχει δείκτη — παραλλαγή super_admin + κλάδοι διαμερίσματος κατόχου `X[kind]`» · `npm run test:firestore-index-gates` · 📘 `docs/gates/3.15.md` | ZERO TOL on touch | — |
 | **3.16** | **Firestore Rules Test Coverage** (ADR-298) — «καλύπτεται κάθε μπλοκ κανόνα από σουίτα — και δηλώνει η σουίτα **και τα 35 κελιά**, ή σιωπά για κάποια;» · `npm run test:rules-coverage-completeness` · 📘 `docs/gates/3.16.md` | ⛔ ZERO-TOL (A-G) + 🔴 RATCHET (G/Κ3) | `.firestore-rules-coverage-baseline.json` |
 | **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` · 📘 `docs/gates/3.17.md` | RATCHET | `.entity-audit-coverage-baseline.json` |
 | **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) · 📘 `docs/gates/3.22.md` | RATCHET | `.deadcode-baseline.json` |

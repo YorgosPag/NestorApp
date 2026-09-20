@@ -31,6 +31,47 @@ export type AppointmentStatus =
   | 'completed';
 
 // ============================================================================
+// DETAILS — οι ημερομηνίες του ραντεβού, και η ΜΙΑ που μετράει
+// ============================================================================
+
+/**
+ * Οι λεπτομέρειες ενός ραντεβού.
+ *
+ * 🔑 **ΤΡΕΙΣ ημερομηνίες, ΜΙΑ αλήθεια** (ADR-869 §12). Οι `requestedDate`/`confirmedDate`
+ * είναι **ιστορικό**: τι ζητήθηκε, τι εγκρίθηκε. Το `effectiveDate` είναι **η απάντηση**
+ * στο *«πότε είναι αυτό το ραντεβού;»* — παραγόμενο, κανονικοποιημένο σε `YYYY-MM-DD`,
+ * και **το μόνο που ρωτιέται** σε `where()`/`orderBy()`.
+ *
+ * ⛔ **ΜΗΝ το γράψεις με το χέρι.** Το παράγει αποκλειστικά το
+ * `services/appointments/appointment-schedule.ts` — `withAppointmentSchedule()` στη
+ * γέννηση, `appointmentConfirmationPatch()` στην έγκριση. Χειρόγραφη εγγραφή σημαίνει
+ * ότι κάποια στιγμή θα διαφωνήσει με τις δύο πηγές του, και τότε το ημερολόγιο θα λέει
+ * άλλα από το ίδιο το έγγραφο.
+ */
+export interface AppointmentDetails {
+  /** Requested date — ISO format YYYY-MM-DD (extracted by AI, may be null) */
+  requestedDate?: string | null;
+  /** Requested time — HH:mm format (extracted by AI, may be null) */
+  requestedTime?: string | null;
+  /** Confirmed date — set after operator approval */
+  confirmedDate?: string;
+  /** Confirmed time — set after operator approval */
+  confirmedTime?: string;
+  /**
+   * 🔑 **Η ΜΙΑ ημερομηνία που ρωτιέται** — `confirmedDate ?? requestedDate`,
+   * κανονικοποιημένη σε `YYYY-MM-DD` ώστε η λεξικογραφική σειρά **να είναι** η χρονολογική.
+   * Δείκτης: `(companyId, appointment.effectiveDate)`. Παράγεται, ποτέ χειρόγραφη.
+   */
+  effectiveDate?: string | null;
+  /** Η ώρα που αντιστοιχεί στην `effectiveDate` — `HH:mm`. Παράγεται μαζί της, ποτέ χωριστά. */
+  effectiveTime?: string | null;
+  /** Summarized description of the appointment request */
+  description: string;
+  /** Additional notes from operator or AI */
+  notes?: string;
+}
+
+// ============================================================================
 // DOCUMENT
 // ============================================================================
 
@@ -72,20 +113,7 @@ export interface AppointmentDocument {
   };
 
   /** Appointment details */
-  appointment: {
-    /** Requested date — ISO format YYYY-MM-DD (extracted by AI, may be null) */
-    requestedDate?: string | null;
-    /** Requested time — HH:mm format (extracted by AI, may be null) */
-    requestedTime?: string | null;
-    /** Confirmed date — set after operator approval */
-    confirmedDate?: string;
-    /** Confirmed time — set after operator approval */
-    confirmedTime?: string;
-    /** Summarized description of the appointment request */
-    description: string;
-    /** Additional notes from operator or AI */
-    notes?: string;
-  };
+  appointment: AppointmentDetails;
 
   /** User ID of the assigned sales manager/responsible person */
   assignedTo?: string;

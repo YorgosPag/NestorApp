@@ -13,6 +13,11 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { formatDateGreek } from './booking-codec';
 import { nowISO } from '@/lib/date-local';
+import { appointmentConfirmationPatch } from '@/services/appointments/appointment-schedule';
+// ADR-869 §13 — ο ΕΝΑΣ μεταφραστής του bot (ήδη σε χρήση από `search/` και `templates/`).
+import { TelegramTemplateResolver } from '../templates/template-resolver';
+
+const templates = new TelegramTemplateResolver();
 
 // =============================================================================
 // CALLBACK PARSER
@@ -44,11 +49,11 @@ export async function handleAdminAppointmentAction(
   const appointmentDoc = await appointmentRef.get();
 
   if (!appointmentDoc.exists) {
-    return { method: 'sendMessage', chat_id: adminChatId, text: '❌ Το ραντεβού δεν βρέθηκε.' };
+    return { method: 'sendMessage', chat_id: adminChatId, text: templates.getText('booking.notFound') };
   }
 
   const apptData = appointmentDoc.data();
-  const propertyName = apptData?.propertyName ?? 'Ακίνητο';
+  const propertyName = apptData?.propertyName ?? templates.getText('booking.unnamedProperty');
   const requestedDate = apptData?.appointment?.requestedDate ?? '';
   const requestedTime = apptData?.appointment?.requestedTime ?? '';
   const dateLabel = requestedDate ? formatDateGreek(requestedDate) : '';
@@ -83,31 +88,29 @@ async function handleApprove(
   adminChatId: number | string,
   sendTelegramMessage: SendFn,
 ): Promise<TelegramSendPayload> {
+  // ADR-869 §12 — ΜΙΑ ατομική εγγραφή: το επιβεβαιωμένο και το ερωτήσιμο μετακινούνται
+  // ΜΑΖΙ. Τα δύο dotted κλειδιά γράφονταν εδώ με το χέρι· τίποτα δεν θα εμπόδιζε έναν
+  // τέταρτο γραφέα να γράψει μόνο το `confirmedDate` και να αφήσει το ημερολόγιο να λέει
+  // άλλα από το έγγραφο.
   await appointmentRef.update({
     status: 'approved',
-    'appointment.confirmedDate': requestedDate,
-    'appointment.confirmedTime': requestedTime,
+    ...appointmentConfirmationPatch(requestedDate, requestedTime),
     approvedAt: nowISO(),
     updatedAt: nowISO(),
   });
 
+  const params = { property: propertyName, date: dateLabel, time: requestedTime };
+
   await sendTelegramMessage({
     chat_id: Number(customerChatId),
-    text: [
-      '✅ <b>Το ραντεβού σας επιβεβαιώθηκε!</b>',
-      '',
-      `🏠 ${propertyName}`,
-      `📅 ${dateLabel} στις ${requestedTime}`,
-      '',
-      'Σας περιμένουμε! 😊',
-    ].join('\n'),
+    text: templates.getText('booking.approved.customer', params),
     parse_mode: 'HTML',
   });
 
   return {
     method: 'sendMessage',
     chat_id: adminChatId,
-    text: `✅ Ραντεβού <b>επιβεβαιώθηκε</b> — ${propertyName}, ${dateLabel} ${requestedTime}.\nΟ πελάτης ειδοποιήθηκε.`,
+    text: templates.getText('booking.approved.admin', params),
     parse_mode: 'HTML',
   };
 }
@@ -126,21 +129,16 @@ async function handleReject(
     updatedAt: nowISO(),
   });
 
+  const params = { property: propertyName, date: dateLabel, time: requestedTime };
+
   await sendTelegramMessage({
     chat_id: Number(customerChatId),
-    text: [
-      '😔 <b>Το ραντεβού σας δεν μπόρεσε να επιβεβαιωθεί.</b>',
-      '',
-      `🏠 ${propertyName}`,
-      `📅 ${dateLabel} στις ${requestedTime}`,
-      '',
-      'Παρακαλώ επιλέξτε νέα ημερομηνία ή επικοινωνήστε μαζί μας.',
-    ].join('\n'),
+    text: templates.getText('booking.rejected.customer', params),
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
-        [{ text: '📅 Νέο ραντεβού', callback_data: 'new_search' }],
-        [{ text: '📞 Επικοινωνία', callback_data: 'contact_agent' }],
+        [{ text: templates.getText('booking.buttons.newAppointment'), callback_data: 'new_search' }],
+        [{ text: templates.getText('booking.buttons.contact'), callback_data: 'contact_agent' }],
       ],
     },
   });
@@ -148,7 +146,7 @@ async function handleReject(
   return {
     method: 'sendMessage',
     chat_id: adminChatId,
-    text: `❌ Ραντεβού <b>ακυρώθηκε</b> — ${propertyName}, ${dateLabel} ${requestedTime}.\nΟ πελάτης ειδοποιήθηκε.`,
+    text: templates.getText('booking.rejected.admin', params),
     parse_mode: 'HTML',
   };
 }
@@ -170,18 +168,16 @@ async function handleReschedule(
 
   await sendTelegramMessage({
     chat_id: Number(customerChatId),
-    text: [
-      '🔄 <b>Αλλαγή ραντεβού</b>',
-      '',
-      `Η ώρα ${requestedTime} στις ${dateLabel} δεν είναι διαθέσιμη για το ${propertyName}.`,
-      '',
-      'Παρακαλώ επιλέξτε νέα ημερομηνία:',
-    ].join('\n'),
+    text: templates.getText('booking.rescheduled.customer', {
+      property: propertyName,
+      date: dateLabel,
+      time: requestedTime,
+    }),
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
-        [{ text: '📅 Επιλογή νέας ημερομηνίας', callback_data: `book_${propertyId ?? ''}` }],
-        [{ text: '📞 Επικοινωνία', callback_data: 'contact_agent' }],
+        [{ text: templates.getText('booking.buttons.pickNewDate'), callback_data: `book_${propertyId ?? ''}` }],
+        [{ text: templates.getText('booking.buttons.contact'), callback_data: 'contact_agent' }],
       ],
     },
   });
@@ -189,7 +185,7 @@ async function handleReschedule(
   return {
     method: 'sendMessage',
     chat_id: adminChatId,
-    text: `🔄 Ο πελάτης ειδοποιήθηκε να επιλέξει νέα ημερομηνία για ${propertyName}.`,
+    text: templates.getText('booking.rescheduleAck', { property: propertyName }),
     parse_mode: 'HTML',
   };
 }

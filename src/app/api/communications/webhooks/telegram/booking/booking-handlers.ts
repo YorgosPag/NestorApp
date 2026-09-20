@@ -9,6 +9,9 @@
 import type { TelegramSendPayload } from '../telegram/types';
 import { getBookableDates } from '@/config/business-hours';
 import { getAvailableSlots } from '@/services/appointments/slot-generator';
+import { withAppointmentSchedule } from '@/services/appointments/appointment-schedule';
+// ADR-869 §13 — ο ΕΝΑΣ μεταφραστής του bot (ήδη σε χρήση από `search/` και `templates/`).
+import { TelegramTemplateResolver } from '../templates/template-resolver';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateEntityId } from '@/services/enterprise-id.service';
@@ -26,6 +29,7 @@ import { handleAdminAppointmentAction } from './booking-admin-actions';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TelegramBookingHandlers');
+const templates = new TelegramTemplateResolver();
 
 // =============================================================================
 // MAIN CALLBACK ROUTER
@@ -83,12 +87,12 @@ async function showDatePicker(
     }));
     keyboard.push(row);
   }
-  keyboard.push([{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${resolvedId}` }]);
+  keyboard.push([{ text: templates.getText('booking.buttons.backToProperty'), callback_data: `detail_${resolvedId}` }]);
 
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `📅 <b>Κλείσε ραντεβού — ${propertyName}</b>\n\nΕπιλέξτε ημερομηνία:`,
+    text: templates.getText('booking.datePicker.title', { property: propertyName }),
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: keyboard },
   };
@@ -114,12 +118,12 @@ async function showTimePicker(
     return {
       method: 'sendMessage',
       chat_id: chatId,
-      text: `😔 Δεν υπάρχουν διαθέσιμες ώρες για <b>${dateLabel}</b>.\n\nΕπιλέξτε άλλη ημέρα:`,
+      text: templates.getText('booking.timePicker.none', { date: dateLabel }),
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '📅 Αλλαγή ημερομηνίας', callback_data: `book_${resolvedId}` }],
-          [{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${resolvedId}` }],
+          [{ text: templates.getText('booking.buttons.changeDate'), callback_data: `book_${resolvedId}` }],
+          [{ text: templates.getText('booking.buttons.backToProperty'), callback_data: `detail_${resolvedId}` }],
         ],
       },
     };
@@ -133,13 +137,13 @@ async function showTimePicker(
     }));
     keyboard.push(row);
   }
-  keyboard.push([{ text: '📅 Αλλαγή ημερομηνίας', callback_data: `book_${resolvedId}` }]);
-  keyboard.push([{ text: '↩️ Πίσω στο ακίνητο', callback_data: `detail_${resolvedId}` }]);
+  keyboard.push([{ text: templates.getText('booking.buttons.changeDate'), callback_data: `book_${resolvedId}` }]);
+  keyboard.push([{ text: templates.getText('booking.buttons.backToProperty'), callback_data: `detail_${resolvedId}` }]);
 
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `🕐 <b>Διαθέσιμες ώρες — ${dateLabel}</b>\n\nΕπιλέξτε ώρα:`,
+    text: templates.getText('booking.timePicker.title', { date: dateLabel }),
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: keyboard },
   };
@@ -174,19 +178,19 @@ async function confirmAndSave(
     method: 'sendMessage',
     chat_id: chatId,
     text: [
-      `📋 <b>Ραντεβού: ${propertyName}</b>`,
-      `📅 ${dateLabel} στις ${time}`,
+      templates.getText('booking.contactPrompt.title', { property: propertyName }),
+      templates.getText('booking.contactPrompt.when', { date: dateLabel, time }),
       '',
-      '📱 Για να ολοκληρωθεί η κράτηση, πατήστε <b>"Κοινοποίηση τηλεφώνου"</b> ή πληκτρολογήστε:',
+      templates.getText('booking.contactPrompt.instruction'),
       '',
-      '<b>Ονοματεπώνυμο Τηλέφωνο</b>',
-      'π.χ. <i>Γιάννης Παπαδόπουλος 6971234567</i>',
+      templates.getText('booking.contactPrompt.format'),
+      templates.getText('booking.contactPrompt.example'),
     ].join('\n'),
     parse_mode: 'HTML',
     reply_markup: {
       keyboard: [
-        [{ text: '📱 Κοινοποίηση τηλεφώνου', request_contact: true }],
-        [{ text: '❌ Ακύρωση' }],
+        [{ text: templates.getText('booking.buttons.sharePhone'), request_contact: true }],
+        [{ text: templates.getText('booking.buttons.cancel') }],
       ],
       resize_keyboard: true,
       one_time_keyboard: true,
@@ -224,12 +228,14 @@ export async function saveAppointment(
         contactId: null,
         isKnownContact: false,
       },
-      appointment: {
+      // ADR-869 §12 — ο ίδιος γραφέας του προγράμματος με τον αγωγό AI· η ερωτήσιμη
+      // ημερομηνία δεν εξαρτάται από το ποιο κανάλι γέννησε το ραντεβού.
+      appointment: withAppointmentSchedule({
         requestedDate: date,
         requestedTime: time,
-        description: `Επίσκεψη ακινήτου: ${propertyName}`,
+        description: templates.getText('booking.visitDescription', { property: propertyName }),
         notes: `Property ID: ${propertyId}`,
-      },
+      }),
       propertyId,
       propertyName,
       createdAt: nowISO(),
@@ -248,15 +254,15 @@ export async function saveAppointment(
       method: 'sendMessage',
       chat_id: chatId,
       text: [
-        '✅ <b>Το ραντεβού σας καταχωρήθηκε!</b>',
+        templates.getText('booking.saved.title'),
         '',
-        `🏠 Ακίνητο: <b>${propertyName}</b>`,
-        `📅 Ημερομηνία: <b>${dateLabel}</b>`,
-        `🕐 Ώρα: <b>${time}</b>`,
-        `👤 Όνομα: <b>${customerName}</b>`,
-        ...(phone ? [`📱 Τηλέφωνο: <b>${phone}</b>`] : []),
+        templates.getText('booking.saved.property', { property: propertyName }),
+        templates.getText('booking.saved.date', { date: dateLabel }),
+        templates.getText('booking.saved.time', { time }),
+        templates.getText('booking.saved.name', { customer: customerName }),
+        ...(phone ? [templates.getText('booking.saved.phone', { phone })] : []),
         '',
-        '⏳ Θα λάβετε επιβεβαίωση σύντομα.',
+        templates.getText('booking.saved.footer'),
       ].join('\n'),
       parse_mode: 'HTML',
       reply_markup: { remove_keyboard: true },
@@ -266,7 +272,7 @@ export async function saveAppointment(
     return {
       method: 'sendMessage',
       chat_id: chatId,
-      text: '😔 Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά ή επικοινωνήστε μαζί μας.',
+      text: templates.getText('booking.error'),
       reply_markup: { remove_keyboard: true },
     };
   }
@@ -291,24 +297,24 @@ async function notifyAdmin(
   await sendTelegramMessage({
     chat_id: Number(adminChatId),
     text: [
-      '📅 <b>Νέο αίτημα ραντεβού!</b>',
+      templates.getText('booking.adminNotice.title'),
       '',
-      `🏠 ${propertyName}`,
-      `📅 ${dateLabel} στις ${time}`,
-      `👤 ${customerName}`,
-      ...(phone ? [`📱 ${phone}`] : []),
+      templates.getText('booking.adminNotice.property', { property: propertyName }),
+      templates.getText('booking.adminNotice.when', { date: dateLabel, time }),
+      templates.getText('booking.adminNotice.customer', { customer: customerName }),
+      ...(phone ? [templates.getText('booking.adminNotice.phone', { phone })] : []),
       '',
-      'Τι θέλετε να κάνετε;',
+      templates.getText('booking.adminNotice.question'),
     ].join('\n'),
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '✅ Επιβεβαίωση', callback_data: `aa_${appointmentId.replace('ent_', '')}_${customerChatId}` },
-          { text: '❌ Ακύρωση', callback_data: `ar_${appointmentId.replace('ent_', '')}_${customerChatId}` },
+          { text: templates.getText('booking.buttons.confirm'), callback_data: `aa_${appointmentId.replace('ent_', '')}_${customerChatId}` },
+          { text: templates.getText('booking.buttons.cancel'), callback_data: `ar_${appointmentId.replace('ent_', '')}_${customerChatId}` },
         ],
         [
-          { text: '🔄 Πρόταση αλλαγής', callback_data: `as_${appointmentId.replace('ent_', '')}_${customerChatId}` },
+          { text: templates.getText('booking.buttons.proposeChange'), callback_data: `as_${appointmentId.replace('ent_', '')}_${customerChatId}` },
         ],
       ],
     },

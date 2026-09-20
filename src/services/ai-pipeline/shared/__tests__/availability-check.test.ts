@@ -29,9 +29,13 @@ jest.mock('@/config/firestore-collections', () => ({
   COLLECTIONS: { APPOINTMENTS: 'appointments' },
 }));
 
-jest.mock('@/config/firestore-field-constants', () => ({
-  FIELDS: { COMPANY_ID: 'companyId', STATUS: 'status' },
-}));
+// ⚠️ ADR-869 §12.5 — ΤΑ ΠΡΑΓΜΑΤΙΚΑ ονόματα, όχι χειρόγραφο υποσύνολο.
+// Ήταν `{ COMPANY_ID, STATUS }`: τη στιγμή που το ερώτημα ζήτησε τρίτο πεδίο, το μοκ
+// επέστρεψε `undefined` και ο έλεγχος κοκκίνισε για **λάθος λόγο**. Μερικό μοκ ενός
+// καταλόγου σταθερών είναι μπαγιάτικο από τη γέννησή του.
+jest.mock('@/config/firestore-field-constants', () =>
+  jest.requireActual('@/config/firestore-field-constants'),
+);
 
 import { checkAvailability } from '../availability-check';
 import type { AvailabilityCheckParams } from '../availability-check';
@@ -209,5 +213,76 @@ describe('checkAvailability', () => {
 
     expect(result.existingAppointments).toHaveLength(2);
     expect(result.operatorBriefing).toContain('2 ραντεβού');
+  });
+
+  // ==========================================================================
+  // ADR-869 §12.2 — Η ΔΙΠΛΟΚΡΑΤΗΣΗ ΠΟΥ ΔΕΝ ΕΙΧΕ ΣΚΑΣΕΙ ΑΚΟΜΑ
+  // ==========================================================================
+
+  it('🔴 ρωτά την ΙΣΧΥΟΥΣΑ ημερομηνία, όχι την αιτούμενη', async () => {
+    const { mockQuery } = setupFirestoreMock([]);
+
+    await checkAvailability(createParams());
+
+    const queriedFields = mockQuery.where.mock.calls.map((call: unknown[]) => call[0]);
+    expect(queriedFields).toContain('appointment.effectiveDate');
+    expect(queriedFields).not.toContain('appointment.requestedDate');
+  });
+
+  it('🔴 ραντεβού που ΜΕΤΑΚΙΝΗΘΗΚΕ πιάνει τη ΝΕΑ του ώρα, όχι την παλιά', async () => {
+    // Ζητήθηκε 09:00, εγκρίθηκε για 10:00 — και ο αποστολέας ζητά τώρα 10:00.
+    setupFirestoreMock([
+      {
+        requester: { name: 'Γιάννης' },
+        appointment: {
+          requestedDate: '2026-04-15',
+          requestedTime: '09:00',
+          confirmedDate: '2026-04-15',
+          confirmedTime: '10:00',
+          effectiveDate: '2026-04-15',
+          effectiveTime: '10:00',
+        },
+        status: 'approved',
+      },
+    ]);
+
+    const result = await checkAvailability(createParams({ requestedTime: '10:00' }));
+
+    // Με τη ΖΗΤΟΥΜΕΝΗ ώρα (09:00) του υπάρχοντος, αυτό θα ήταν `false` — διπλοκράτηση.
+    expect(result.hasTimeConflict).toBe(true);
+    expect(result.existingAppointments[0].effectiveTime).toBe('10:00');
+  });
+
+  it('η παλιά ώρα ενός μετακινημένου ραντεβού ΕΛΕΥΘΕΡΩΝΕΤΑΙ', async () => {
+    setupFirestoreMock([
+      {
+        requester: { name: 'Γιάννης' },
+        appointment: {
+          requestedTime: '09:00',
+          confirmedTime: '10:00',
+          effectiveDate: '2026-04-15',
+          effectiveTime: '10:00',
+        },
+        status: 'approved',
+      },
+    ]);
+
+    const result = await checkAvailability(createParams({ requestedTime: '09:00' }));
+
+    expect(result.hasTimeConflict).toBe(false);
+  });
+
+  it('παλαιό έγγραφο χωρίς κανονικά πεδία εξακολουθεί να πιάνει την ώρα του', async () => {
+    setupFirestoreMock([
+      {
+        requester: { name: 'Μαρία' },
+        appointment: { requestedDate: '2026-04-15', requestedTime: '10:00' },
+        status: 'approved',
+      },
+    ]);
+
+    const result = await checkAvailability(createParams({ requestedTime: '10:00' }));
+
+    expect(result.hasTimeConflict).toBe(true);
   });
 });

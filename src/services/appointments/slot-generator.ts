@@ -15,6 +15,11 @@ import 'server-only';
 import { generateTimeSlots } from '@/config/business-hours';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import {
+  resolveAppointmentSchedule,
+  type AppointmentScheduleSource,
+} from './appointment-schedule';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('SlotGenerator');
@@ -41,10 +46,14 @@ export async function getAvailableSlots(
   // Query existing appointments for this date
   try {
     const db = getAdminFirestore();
+    // 🔴 ADR-869 §12.2 — «ΠΟΙΑ ΩΡΑ ΕΙΝΑΙ ΠΙΑΣΜΕΝΗ;» ΡΩΤΑ ΤΗΝ ΙΣΧΥΟΥΣΑ.
+    // Ρωτούσε `appointment.requestedDate` + `requestedTime`. Ένα ραντεβού που εγκρίθηκε
+    // για άλλη ώρα θα κρατούσε πιασμένη την **παλιά** ώρα και θα άφηνε ελεύθερη τη
+    // **νέα** — δηλαδή ο πελάτης θα μπορούσε να κλείσει ώρα που είναι ήδη κλεισμένη.
     const snapshot = await db
       .collection(COLLECTIONS.APPOINTMENTS)
-      .where('companyId', '==', companyId)
-      .where('appointment.requestedDate', '==', date)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
+      .where(FIELDS.APPOINTMENT_EFFECTIVE_DATE, '==', date)
       .get();
 
     const occupiedTimes = new Set<string>();
@@ -53,8 +62,8 @@ export async function getAvailableSlots(
       const status = data.status as string;
       // Only block slots for active appointments
       if (status === 'pending_approval' || status === 'approved') {
-        const time = data.appointment?.requestedTime as string | undefined;
-        if (time) occupiedTimes.add(time);
+        const schedule = resolveAppointmentSchedule(data as AppointmentScheduleSource);
+        if (schedule !== null) occupiedTimes.add(schedule.time);
       }
     });
 

@@ -5,8 +5,8 @@
  */
 
 import { Phone, Users, Calendar, Mail, FileText, AlertCircle, Clock } from 'lucide-react';
-import { format, parse, isValid } from 'date-fns';
 import type React from 'react';
+import { appointmentStartAt } from '@/services/appointments/appointment-schedule';
 import type { AppointmentDocument } from '@/types/appointment';
 import type { CrmTask, CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm';
 
@@ -39,24 +39,10 @@ export type ActivityItem =
   | { kind: 'task'; task: CrmTask; sortDate: number }
   | { kind: 'appointment'; appt: AppointmentDocument; sortDate: number; title: string; date: Date | null };
 
+/**
+ * ADR-869 §12 — εδώ ζούσε το **ΤΡΙΤΟ** αντίγραφο της ερώτησης «πότε είναι αυτό;», με δικό
+ * του κανονικοποιητή και δική του προεπιλογή ώρας. Πλέον **δείχνει** στον ιδιοκτήτη.
+ */
 export function resolveAppointmentDate(appt: AppointmentDocument): Date | null {
-  const flat = appt as unknown as Record<string, unknown>;
-  const rawDate =
-    appt.appointment?.confirmedDate ??
-    appt.appointment?.requestedDate ??
-    (flat['date'] as string | undefined);
-  if (!rawDate) return null;
-  let dateStr = rawDate;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
-    const parsed = parse(rawDate, 'dd/MM/yyyy', new Date());
-    if (!isValid(parsed)) return null;
-    dateStr = format(parsed, 'yyyy-MM-dd');
-  }
-  const timeStr =
-    appt.appointment?.confirmedTime ??
-    appt.appointment?.requestedTime ??
-    (flat['time'] as string | undefined) ??
-    '09:00';
-  const dt = new Date(`${dateStr}T${timeStr}:00`);
-  return isNaN(dt.getTime()) ? null : dt;
+  return appointmentStartAt(appt);
 }

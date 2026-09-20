@@ -85,6 +85,24 @@ export const FIELDS = {
 
   // 🗑️ SOFT DELETE
   IS_DELETED: 'isDeleted',
+
+  /**
+   * 🗓️ **Η ΜΙΑ ημερομηνία ενός ραντεβού που ρωτιέται** (ADR-869 §12) —
+   * `confirmedDate ?? requestedDate`, κανονικοποιημένη σε `YYYY-MM-DD`.
+   * Δείκτης: `(companyId, appointment.effectiveDate)`.
+   *
+   * 🔑 **Γιατί ένθετη διαδρομή ΕΝΟΣ τομέα ζει στο κοινό λεξιλόγιο**: εδώ είναι ο **μόνος**
+   * κατάλογος ονομάτων που **λύνει η στατική ανάλυση** — το CHECK 3.15 δέχεται `FIELDS.X`
+   * (ADR-869 §12.5) και το CHECK 3.35 διαβάζει αυτό το αρχείο ως μία από τις τέσσερις
+   * αυθεντίες του. Όνομα γραμμένο αλλού γίνεται, με τα ίδια τα λόγια του `AUTHOR_USER_ID`
+   * παραπάνω, *«πέμπτη αυθεντία»* — δηλαδή ερώτημα που **καμία πύλη δεν ελέγχει**.
+   *
+   * ⛔ Το **περιεχόμενο** του πεδίου το παράγει αποκλειστικά το
+   * `services/appointments/appointment-schedule.ts`. Εδώ ζει μόνο το **όνομα**.
+   */
+  APPOINTMENT_EFFECTIVE_DATE: 'appointment.effectiveDate',
+  /** Η ώρα που αντιστοιχεί στο {@link FIELDS.APPOINTMENT_EFFECTIVE_DATE} — `HH:mm`. */
+  APPOINTMENT_EFFECTIVE_TIME: 'appointment.effectiveTime',
 } as const;
 
 // ============================================================================

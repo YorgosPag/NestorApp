@@ -107,5 +107,65 @@
     "currency": "€",
     "areaUnit": "sqm",
     "roomsUnit": "rooms"
+  },
+  "booking": {
+    "datePicker": {
+      "title": "📅 <b>Book a viewing — {property}</b>\n\nPick a date:"
+    },
+    "timePicker": {
+      "title": "🕐 <b>Available times — {date}</b>\n\nPick a time:",
+      "none": "😔 No available times for <b>{date}</b>.\n\nPick another day:"
+    },
+    "contactPrompt": {
+      "title": "📋 <b>Appointment: {property}</b>",
+      "when": "📅 {date} at {time}",
+      "instruction": "📱 To complete the booking, tap <b>\"Share phone number\"</b> or type:",
+      "format": "<b>Full name Phone</b>",
+      "example": "e.g. <i>John Smith 6971234567</i>"
+    },
+    "saved": {
+      "title": "✅ <b>Your appointment has been registered!</b>",
+      "property": "🏠 Property: <b>{property}</b>",
+      "date": "📅 Date: <b>{date}</b>",
+      "time": "🕐 Time: <b>{time}</b>",
+      "name": "👤 Name: <b>{customer}</b>",
+      "phone": "📱 Phone: <b>{phone}</b>",
+      "footer": "⏳ You will receive a confirmation shortly."
+    },
+    "adminNotice": {
+      "title": "📅 <b>New appointment request!</b>",
+      "property": "🏠 {property}",
+      "when": "📅 {date} at {time}",
+      "customer": "👤 {customer}",
+      "phone": "📱 {phone}",
+      "question": "What would you like to do?"
+    },
+    "error": "😔 Something went wrong. Please try again or get in touch with us.",
+    "notFound": "❌ The appointment was not found.",
+    "unnamedProperty": "Property",
+    "visitDescription": "Property viewing: {property}",
+    "rescheduleAck": "🔄 The customer has been asked to pick a new date for {property}.",
+    "approved": {
+      "customer": "✅ <b>Your appointment is confirmed!</b>\n\n🏠 {property}\n📅 {date} at {time}\n\nWe look forward to seeing you! 😊",
+      "admin": "✅ Appointment <b>confirmed</b> — {property}, {date} {time}.\nThe customer has been notified."
+    },
+    "rejected": {
+      "customer": "😔 <b>Your appointment could not be confirmed.</b>\n\n🏠 {property}\n📅 {date} at {time}\n\nPlease pick another date or get in touch with us.",
+      "admin": "❌ Appointment <b>cancelled</b> — {property}, {date} {time}.\nThe customer has been notified."
+    },
+    "rescheduled": {
+      "customer": "🔄 <b>Appointment change</b>\n\n{time} on {date} is not available for {property}.\n\nPlease pick another date:"
+    },
+    "buttons": {
+      "newAppointment": "📅 New appointment",
+      "contact": "📞 Contact",
+      "pickNewDate": "📅 Pick a new date",
+      "sharePhone": "📱 Share phone number",
+      "cancel": "❌ Cancel",
+      "confirm": "✅ Confirm",
+      "proposeChange": "🔄 Propose a change",
+      "backToProperty": "↩️ Back to the property",
+      "changeDate": "📅 Change date"
+    }
   }
 }

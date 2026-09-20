@@ -138,12 +138,25 @@ export class TasksRepository implements ITasksRepository {
     return deletePromises.length;
   }
 
+  /**
+   * 🔴 Ο ΑΠΟΚΛΕΙΣΜΟΣ ΤΟΥ «cancelled» ΕΓΙΝΕ ΠΕΛΑΤΗ — και ο μετρητής του γέμισε (ADR-869 §4).
+   *
+   * Ήταν `where('status', '!=', 'cancelled')`. **Δύο μετρημένα προβλήματα** (2026-09-20):
+   * (α) Το `!=` είναι φίλτρο **εύρους** για το Firestore: μαζί με το `companyId` που
+   *     εγχέει ο μισθωτής **και** το προαιρετικό `assignedTo`, απαιτούσε composite
+   *     δείκτη `(assignedTo, companyId, status)` που **δεν υπάρχει** — ζωντανή δοκιμή
+   *     στην παραγωγή: `FAILED_PRECONDITION`. Η μέθοδος δεν έχει σήμερα κανέναν καλούντα,
+   *     οπότε η παγίδα ήταν **οπλισμένη αλλά απυροδότητη**: θα έσκαγε στον πρώτο.
+   * (β) Το ίδιο φίλτρο έκανε τον μετρητή `stats.cancelled` **μονίμως 0** — αρχικοποιείται
+   *     και δεν αυξάνεται ποτέ, γιατί τα ακυρωμένα δεν έφταναν ποτέ στον βρόχο.
+   *
+   * Πλέον το ερώτημα είναι **μόνο ισότητες** (το Firestore το εξυπηρετεί με συγχώνευση
+   * δεικτών ενός πεδίου — καμία ανάγκη composite) και ο αποκλεισμός γίνεται στον βρόχο,
+   * όπου ήδη γινόταν κάθε άλλη κατηγοριοποίηση. Κάθε υπάρχων μετρητής κρατά την **ίδια**
+   * σημασία: το `total` εξακολουθεί να **μην** μετρά ακυρωμένα.
+   */
   async getStats(userId?: string | null) {
-    // Build constraints: exclude cancelled, optionally filter by user
-    const statsConstraints = [
-      where('status', '!=', 'cancelled'),
-      ...(userId ? [where('assignedTo', '==', userId)] : []),
-    ];
+    const statsConstraints = userId ? [where('assignedTo', '==', userId)] : [];
 
     const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('TASKS', {
       constraints: statsConstraints,
@@ -161,6 +174,11 @@ export class TasksRepository implements ITasksRepository {
     const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     tasks.forEach(task => {
+      // Ο αποκλεισμός που ΗΤΑΝ στο ερώτημα — εδώ, και με τον μετρητή του να γεμίζει.
+      if (task.status === 'cancelled') {
+        stats.cancelled++;
+        return;
+      }
       stats.total++;
       if (task.status === 'pending') stats.pending++;
       if (task.status === 'in_progress') stats.inProgress++;

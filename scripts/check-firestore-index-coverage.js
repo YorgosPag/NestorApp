@@ -79,11 +79,34 @@ const {
   loadCollectionsMap,
   loadTenantOverrides,
   loadReadPathFields,
+  loadFieldConstants,
+  resolveFieldArg,
   resolveTenantFor,
   loadCustodyPartitions,
   buildPartitionAliasMap,
   resolveCollectionKeys,
 } = require('./_shared/firestore-ast-loaders');
+
+/**
+ * 🔴 ADR-869 §12.5 — Ο RESOLVER ΥΠΗΡΧΕ ΚΑΙ ΚΑΝΕΙΣ ΔΕΝ ΤΟΝ ΚΑΛΟΥΣΕ.
+ *
+ * Ο κοινός αναγνώστης εξάγει `resolveFieldArg` (literal **ή** `FIELDS.X`) από το 3.35.
+ * Εδώ όμως το πρώτο όρισμα κάθε `where()` περνούσε από σκέτο `ts.isStringLiteral`, άρα
+ * **κάθε** ερώτημα που ζητούσε το όνομα πεδίου από το SSoT σταμάτησε να ελέγχεται —
+ * σιωπηλά, με μια γραμμή `unanalyzable` που φαινόταν μόνο με `--verbose`.
+ *
+ * Μετρημένο 2026-09-20: τύφλωνε ήδη το `survey-record.service.ts:36` (`FIELDS.PROJECT_ID`).
+ * Δηλαδή **η πύλη τιμωρούσε τη χρήση του δικού της SSoT** — ίδιο σχήμα με την ειρωνεία
+ * των 28 BIM services (§2.3), αλλά εδώ ήταν διορθώσιμο.
+ *
+ * Μνημονεύεται τεμπέλικα: ο κατάλογος διαβάζεται **μία** φορά ανά διεργασία, όχι ανά
+ * αρχείο — η πύλη σαρώνει 13.238 αρχεία.
+ */
+let fieldConstantsCache = null;
+function fieldConstants() {
+  if (fieldConstantsCache === null) fieldConstantsCache = loadFieldConstants();
+  return fieldConstantsCache;
+}
 
 // ---------------------------------------------------------------------------
 // Paths & constants
@@ -322,12 +345,12 @@ function parseCallBranch(call, methodName, filePath, sf, collectionKey) {
       continue;
     }
     const callee = el.expression.getText();
-    const firstArg = el.arguments[0];
-    if (!firstArg || !ts.isStringLiteral(firstArg)) {
+    // Literal **ή** `FIELDS.X` (ADR-869 §12.5) — ζητώντας το όνομα από το SSoT δεν χάνεις έλεγχο.
+    const field = resolveFieldArg(el.arguments[0], fieldConstants());
+    if (field === null) {
       site.warnings.push(`dynamic field in ${callee}() — unanalyzable`);
       continue;
     }
-    const field = firstArg.text;
 
     if (callee === 'where') {
       const opArg = el.arguments[1];
