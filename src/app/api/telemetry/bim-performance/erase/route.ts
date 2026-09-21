@@ -58,6 +58,13 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  */
 async function deleteAllForSession(sessionId: string): Promise<number> {
   const db = getAdminFirestore();
+  // tenant-scope-exempt: **ανώνυμο** endpoint διαγραφής (GDPR) — δεν υπάρχει συνδεδεμένος
+  // χρήστης, άρα δεν υπάρχει μισθωτής να φιλτραριστεί. Ο άξονας απομόνωσης είναι το
+  // `sessionId`, που ο καλών πρέπει να **κατέχει** και το οποίο επαληθεύεται δύο φορές
+  // (κεφαλίδα ⟷ σώμα) πριν φτάσει εδώ. ⚠️ **Η ΣΥΝΘΗΚΗ**: το μόνο που επιτρέπει ένα
+  // μαντεμένο `sessionId` είναι **διαγραφή** ξένης τηλεμετρίας — μη αυθεντικών δεδομένων
+  // απόδοσης, και προς την κατεύθυνση της ιδιωτικότητας. Αν αυτή η συλλογή αποκτήσει ποτέ
+  // δεδομένα που κάποιος θα ήθελε να **διαβάσει**, η εξαίρεση παύει να ισχύει.
   const col = db.collection(COLLECTIONS.BIM_PERFORMANCE_TELEMETRY);
   let total = 0;
   while (true) {

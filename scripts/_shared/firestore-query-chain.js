@@ -53,6 +53,7 @@ const {
   buildCollectionAliasMap,
   resolveCollectionArgs,
   resolveFieldArg,
+  enclosingScope,
 } = require('./firestore-ast-loaders');
 
 const RANGE_OPS = new Set(['<', '<=', '>', '>=', '!=', 'not-in']);
@@ -96,10 +97,14 @@ const TENANT_FIELD = 'companyId';
 /**
  * @typedef {Object} ChainSite
  * @property {string}      file
- * @property {number}      line
+ * @property {number}      line       η γραμμή του **τέρματος** — εκεί εκτελείται το ερώτημα
+ * @property {number}      rootLine   η γραμμή όπου **ρίζωσε** η αλυσίδα· ίση με `line` όταν
+ *                                    η ρίζα και το τέρμα είναι η ίδια εντολή
  * @property {string|null} collectionKey
  * @property {string|null} collectionName
  * @property {boolean}     group          collectionGroup αντί για collection
+ * @property {boolean}     docScoped      η ρίζα κρέμεται από `.doc(…)` ⇒ **η διαδρομή** είναι
+ *                                        ο άξονας, όχι πεδίο
  * @property {Clause[]}    clauses
  * @property {boolean}     rootUnknown
  */
@@ -124,16 +129,6 @@ function unwrap(expr) {
     e = e.expression;
   }
   return e;
-}
-
-/** Η περικλείουσα συνάρτηση ενός κόμβου (ή το SourceFile αν είναι top-level). */
-function enclosingScope(node) {
-  let s = node;
-  while (s.parent && !ts.isFunctionDeclaration(s) && !ts.isFunctionExpression(s)
-    && !ts.isArrowFunction(s) && !ts.isMethodDeclaration(s) && !ts.isSourceFile(s)) {
-    s = s.parent;
-  }
-  return s;
 }
 
 /**
@@ -164,28 +159,35 @@ function branchOf(node, scope) {
 // Ρήτρες
 // ---------------------------------------------------------------------------
 
-/** `where(field, op, v)` → ρήτρα ισότητας/εύρους/πίνακα. */
+/**
+ * `where(field, op, v)` → ρήτρα ισότητας/εύρους/πίνακα.
+ *
+ * ⚠️ Κάθε `unresolved` κουβαλά **από ποια μέθοδο** ήρθε (`from`). Χωρίς αυτό, καταναλωτής που
+ * ρωτά «φιλτράρει καθόλου;» (CHECK 3.35) δεν ξεχωρίζει ένα **δυναμικό `where()`** — που ΕΙΝΑΙ
+ * φίλτρο — από ένα δυναμικό `orderBy()` που δεν είναι, και κατατάσσει list query ως «δεν είναι
+ * list query». Η άγνοια για το **πεδίο** δεν είναι άγνοια για το **είδος**.
+ */
 function whereClause(call, fieldConstants) {
   const field = resolveFieldArg(call.arguments[0], fieldConstants);
-  if (field === null) return { kind: 'unresolved', why: 'δυναμικό πεδίο σε where()' };
+  if (field === null) return { kind: 'unresolved', from: 'where', why: 'δυναμικό πεδίο σε where()' };
   const opArg = call.arguments[1];
   if (!opArg || !ts.isStringLiteral(opArg)) {
-    return { kind: 'unresolved', why: `δυναμικός τελεστής σε where('${field}')` };
+    return { kind: 'unresolved', from: 'where', why: `δυναμικός τελεστής σε where('${field}')` };
   }
   const op = opArg.text;
   if (EQUALITY_OPS.has(op)) return { kind: 'eq', field };
   if (ARRAY_OPS.has(op)) return { kind: 'ac', field };
   if (RANGE_OPS.has(op)) return { kind: 'range', field };
-  return { kind: 'unresolved', why: `άγνωστος τελεστής '${op}'` };
+  return { kind: 'unresolved', from: 'where', why: `άγνωστος τελεστής '${op}'` };
 }
 
 /** `orderBy(field, dir?)` → ρήτρα ταξινόμησης. */
 function orderByClause(call, fieldConstants) {
   const field = resolveFieldArg(call.arguments[0], fieldConstants);
-  if (field === null) return { kind: 'unresolved', why: 'δυναμικό πεδίο σε orderBy()' };
+  if (field === null) return { kind: 'unresolved', from: 'orderBy', why: 'δυναμικό πεδίο σε orderBy()' };
   const dirArg = call.arguments[1];
   if (dirArg && !ts.isStringLiteral(dirArg)) {
-    return { kind: 'unresolved', why: `δυναμική φορά σε orderBy('${field}')` };
+    return { kind: 'unresolved', from: 'orderBy', why: `δυναμική φορά σε orderBy('${field}')` };
   }
   const direction = dirArg && dirArg.text === 'desc' ? 'DESCENDING' : 'ASCENDING';
   return { kind: 'order', field, direction };
@@ -247,7 +249,7 @@ function callsToClauses(calls, fieldConstants, scope, inheritedBranch) {
  * @param {ReturnType<typeof createChainContext>} ctx
  * @returns {ChainSite[]}
  */
-function scanFileChains(filePath, ctx) {
+function scanFileChains(filePath, ctx, opts = {}) {
   const src = fs.readFileSync(filePath, 'utf8');
   if (!/\.collection(Group)?\s*\(/.test(src) && !hasRootHelper(src)) return [];
 
@@ -259,11 +261,62 @@ function scanFileChains(filePath, ctx) {
 
   /** @type {ChainSite[]} */
   const sites = [];
+  /** Ποιες ρίζες έπιασε ήδη το πέρασμα των τερμάτων — ώστε να μη μετρηθούν δεύτερη φορά. */
+  const claimed = new Set();
   (function visit(node) {
-    if (isTerminalCall(node)) collectSite(node, resolver, sites, filePath);
+    if (isTerminalCall(node)) collectSite(node, resolver, sites, filePath, claimed);
     ts.forEachChild(node, visit);
   })(sf);
+
+  if (opts.includeUnterminated) collectUnterminated(sf, resolver, sites, filePath, claimed);
   return sites;
+}
+
+/**
+ * 🔴 ΤΟ ΕΡΩΤΗΜΑ ΠΟΥ ΧΤΙΖΕΤΑΙ ΕΔΩ ΚΑΙ ΕΚΤΕΛΕΙΤΑΙ ΑΛΛΟΥ.
+ *
+ *     export const q = (db, kind) => db.collection(COLLECTIONS[X[kind]]).where('entityId', '==', id);
+ *
+ * Καμία `.get()` — ο καλών την εκτελεί. Η αγκύρωση στο **τέρμα** είναι ακριβώς αυτό που κάνει
+ * ορατή την τέταρτη μορφή, αλλά στην ίδια κίνηση θα **εξαφάνιζε σιωπηλά** κάθε τέτοιον
+ * κατασκευαστή: μετρημένο, δύο ζωντανές άγκυρες του ADR-866 §2.6.7 έπαψαν να βλέπουν οτιδήποτε.
+ *
+ * 🔑 «Δεν το είδα» ΔΕΝ είναι «καθαρό» — είναι το ίδιο σχήμα που γέννησε και το 3.35 και το
+ * 3.18 και το i18n `0`. Γι' αυτό το πέρασμα υπάρχει, και γι' αυτό είναι **opt-in**: το CHECK
+ * 3.91 ρωτά «ποιο ερώτημα **εκτελείται** και χρειάζεται δείκτη;» — ένας κατασκευαστής δεν
+ * εκτελεί τίποτα και **δεν** του ανήκει. Το 3.35 ρωτά «φτάνει φίλτρο μισθωτή;», και εκεί ο
+ * κατασκευαστής μετρά: το σχήμα που παραδίδει είναι αυτό που θα φύγει.
+ */
+function collectUnterminated(sf, resolver, sites, filePath, claimed) {
+  (function visit(node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && (node.expression.name.getText() === 'collection' || node.expression.name.getText() === 'collectionGroup')
+      && !claimed.has(node)) {
+      collectSite(topOfChain(node), resolver, sites, filePath, claimed, true);
+    }
+    ts.forEachChild(node, visit);
+  })(sf);
+}
+
+/** Σε ποιο όνομα δεσμεύεται το αποτέλεσμα αυτής της αλυσίδας — αν δεσμεύεται. */
+function boundNameOf(expr) {
+  const p = expr.parent;
+  if (!p) return null;
+  if (ts.isVariableDeclaration(p) && ts.isIdentifier(p.name)) return p.name.text;
+  if (ts.isBinaryExpression(p) && p.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    && ts.isIdentifier(p.left)) return p.left.text;
+  return null;
+}
+
+/** Ανέβα ως την πιο έξω κλήση της ίδιας αλυσίδας — εκεί ζει το πλήρες σχήμα. */
+function topOfChain(node) {
+  let cur = node;
+  while (cur.parent && ts.isPropertyAccessExpression(cur.parent)
+    && cur.parent.parent && ts.isCallExpression(cur.parent.parent)
+    && cur.parent.parent.expression === cur.parent) {
+    cur = cur.parent.parent;
+  }
+  return cur;
 }
 
 function hasRootHelper(src) {
@@ -278,21 +331,36 @@ function isTerminalCall(node) {
 }
 
 /** Λύσε **ένα** τέρμα σε σημεία (ένα ανά κλάδο συλλογής) και βάλ' τα στη λίστα. */
-function collectSite(node, resolver, sites, filePath) {
+function collectSite(node, resolver, sites, filePath, claimed, skipIfClaimed = false) {
   const { ctx, sf } = resolver;
   const scope = enclosingScope(node);
-  const resolved = resolveChain(node, resolver, scope, 0, new Set(), null);
+  // Δεμένο σε όνομα ⇒ λύσε **το όνομα**, όχι τη συντακτική αλυσίδα: αλλιώς χάνονται οι
+  // επαναναθέσεις (`x = x.where(USER_ID, …)`) που είναι η **τρίτη** μορφή του σχήματος.
+  const bound = boundNameOf(node);
+  const resolved = bound
+    ? resolveBoundName(bound, resolver, scope, 1, new Set([bound]))
+    : resolveChain(node, resolver, scope, 0, new Set(), null);
   if (resolved.rootUnknown && resolved.clauses.length === 0) return;
+  // Ο γονέας μιας υποσυλλογής (`collection(A).doc(x).collection(B)`) ανεβαίνει στην ΙΔΙΑ
+  // αλυσίδα και λύνει στην ΙΔΙΑ ρίζα· χωρίς αυτόν τον φράχτη το δεύτερο πέρασμα θα
+  // διπλομετρούσε κάθε υποσυλλογή — μετρημένο στο fixture `notScoped_subcollectionUnderDoc`.
+  if (skipIfClaimed && claimed && resolved.rootNode && claimed.has(resolved.rootNode)) return;
+  if (claimed && resolved.rootNode) claimed.add(resolved.rootNode);
 
   const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+  const rootLine = resolved.rootNode
+    ? sf.getLineAndCharacterOfPosition(resolved.rootNode.getStart(sf)).line + 1
+    : line + 1;
   const branches = resolved.colls.length > 0 ? resolved.colls : [null];
   for (const coll of branches) {
     sites.push({
       file: filePath,
       line: line + 1,
+      rootLine,
       collectionKey: coll ? coll.key : null,
       collectionName: coll ? coll.name : null,
       group: resolved.group,
+      docScoped: resolved.docScoped,
       clauses: resolved.clauses,
       rootUnknown: resolved.rootUnknown,
     });
@@ -313,19 +381,49 @@ function resolveChain(expr, resolver, scope, depth, seen, inheritedBranch) {
     colls: base.colls,
     group: base.group,
     rootUnknown: base.rootUnknown,
+    rootNode: base.rootNode,
+    docScoped: base.docScoped,
     clauses: [...base.clauses, ...clauses],
   };
 }
 
-/** Η ρίζα μιας αλυσίδας: `.collection()`, βοηθός του ADR-742, ή όνομα που δέθηκε αλλού. */
+/**
+ * Κρέμεται αυτή η `.collection(…)` από `.doc(…)`;
+ *
+ * `db.collection(A).doc(x).collection(B)` ⇒ η `B` ζει **μέσα** σε ένα έγγραφο της `A`. Το
+ * `.doc()` μπορεί να είναι τυλιγμένο (`(ref as Foo).doc(id)`), γι' αυτό ξετυλίγεται πρώτα.
+ */
+function isDocScoped(collectionCall) {
+  const recv = unwrap(collectionCall.expression.expression);
+  return !!recv && ts.isCallExpression(recv)
+    && ts.isPropertyAccessExpression(recv.expression)
+    && recv.expression.name.getText() === 'doc';
+}
+
+/**
+ * 🔴 ΠΟΤΕ Η ΡΙΖΑ ΔΕΝ ΕΙΝΑΙ ΠΛΕΟΝ ΑΝΩΝΥΜΗ. Δύο πράγματα κρατιούνται μαζί με τη συλλογή:
+ *
+ *  - `node` — η **γραμμή όπου ρίζωσε** η αλυσίδα. Αγκύρωση στο τέρμα σημαίνει ότι, όταν η
+ *    ρίζα δένεται σε όνομα, το σημείο κρίσης απέχει **δεκατέσσερις γραμμές** από τη γραμμή
+ *    όπου ο άνθρωπος έγραψε την αιτιολογία του (μετρημένο: `entity-audit.service.ts` 342→356).
+ *    Χωρίς αυτή τη γραμμή, τεκμηριωμένη εξαίρεση γίνεται **ψευδώς κόκκινη** — δηλαδή η
+ *    μετάβαση θα τιμωρούσε ακριβώς όποιον έκανε ό,τι του ζητήθηκε.
+ *
+ *  - `docScoped` — η ρίζα κρέμεται από `.doc(…)`: `contacts/{id}/bank_accounts`. Εκεί ο άξονας
+ *    απομόνωσης είναι **η διαδρομή**, και `where('companyId')` θα ήταν ανοησία. Ο σαρωτής
+ *    σταματούσε στην εσώτερη `.collection()` χωρίς **ποτέ** να κοιτάξει τον παραλήπτη της,
+ *    άρα υποσυλλογή και ρίζα ήταν **αδιάκριτες** (μετρημένο: 6 σημεία / 4 αρχεία).
+ */
 function resolveRoot(root, resolver, scope, depth, seen, inheritedBranch) {
-  const empty = { colls: [], group: false, rootUnknown: true, clauses: [] };
+  const empty = { colls: [], group: false, rootUnknown: true, clauses: [], rootNode: null, docScoped: false };
   if (root.type === 'collection') {
     return {
       colls: resolveCollectionArgs(root.node.arguments[0], resolver.alias, resolver.ctx.collections, resolver.partitionAlias),
       group: root.group,
       rootUnknown: false,
       clauses: [],
+      rootNode: root.node,
+      docScoped: isDocScoped(root.node),
     };
   }
   if (root.type === 'helper') return resolveHelperRoot(root, resolver, scope, depth, seen, inheritedBranch);
@@ -351,6 +449,9 @@ function resolveHelperRoot(root, resolver, scope, depth, seen, inheritedBranch) 
       group: false,
       rootUnknown: false,
       clauses: [],
+      // Ο βοηθός **είναι** η ρίζα εδώ: η αιτιολογία γράφεται πάνω από την κλήση του.
+      rootNode: node,
+      docScoped: false,
     };
   const tenantClause = {
     kind: 'eq',
@@ -365,13 +466,19 @@ function resolveHelperRoot(root, resolver, scope, depth, seen, inheritedBranch) 
  * συνάρτηση. Οι ρήτρες που μπαίνουν υπό συνθήκη κληρονομούν τον κλάδο της εντολής.
  */
 function resolveBoundName(name, resolver, scope, depth, seen) {
-  const out = { colls: [], group: false, rootUnknown: true, clauses: [] };
+  const out = { colls: [], group: false, rootUnknown: true, clauses: [], rootNode: null, docScoped: false };
   (function scan(n) {
     const source = assignmentSourceFor(n, name);
     if (source) {
       const branch = branchOf(n, scope);
       const r = resolveChain(source, resolver, scope, depth, seen, branch);
-      if (!r.rootUnknown) { out.colls = r.colls; out.group = r.group; out.rootUnknown = false; }
+      if (!r.rootUnknown) {
+        out.colls = r.colls; out.group = r.group; out.rootUnknown = false;
+        // 🔑 Η ΠΡΩΤΗ ρίζα κρατιέται, όχι η τελευταία: η δήλωση είναι η εντολή που ο
+        // αναγνώστης θεωρεί «το ερώτημα», και εκεί γράφει την αιτιολογία. Οι επόμενες
+        // είναι επαναναθέσεις που **προσθέτουν** ρήτρες, όχι νέα ερωτήματα.
+        if (!out.rootNode) { out.rootNode = r.rootNode; out.docScoped = r.docScoped; }
+      }
       out.clauses.push(...r.clauses);
     }
     ts.forEachChild(n, scan);

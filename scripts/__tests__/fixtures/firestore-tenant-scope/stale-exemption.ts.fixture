@@ -1,0 +1,31 @@
+/**
+ * FIXTURE — **η αντίστροφη ερώτηση**: ποια εξαίρεση δεν εξαιρεί τίποτα;
+ *
+ * Μετρημένο από τη μελέτη FSE 2025 («An Empirical Study of Suppressed Static Analysis
+ * Warnings», 7.357 suppressions σε 46 έργα): **50,8%** των suppressions δεν επηρεάζουν
+ * καμία προειδοποίηση, το πλήθος τους αυξάνεται μονότονα, και — το επικίνδυνο — κρύβουν
+ * **ακούσια μελλοντικές** προειδοποιήσεις.
+ */
+
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+/**
+ * 🔴 Η ΑΔΡΑΝΗΣ: η αιτιολογία κάθεται πάνω από **ανάγνωση ενός εγγράφου** — που δεν είναι
+ * ερώτημα, άρα ο κανόνας δεν παράγει σημείο και η εξαίρεση δεν καταστέλλει τίποτα. Δεν
+ * είναι λάθος ο λόγος· είναι ότι **δεν έχει αντικείμενο**. Αύριο, αν αυτό γίνει `where()`,
+ * θα το καταπιεί σιωπηλά.
+ */
+export async function inert_reasonOverSingleDocRead(id: string) {
+  // tenant-scope-exempt: δημόσια προβολή — ο δεσμός κατά ταυτότητα ΕΙΝΑΙ η εξουσιοδότηση
+  return getAdminFirestore().collection(COLLECTIONS.BUILDINGS).doc(id).get();
+}
+
+/** Η ΕΝΕΡΓΗ, για αντιπαραβολή: ο λόγος κάθεται πάνω σε πραγματικό ερώτημα και τον καταναλώνει. */
+export async function live_reasonOverRealQuery(token: string) {
+  // tenant-scope-exempt: public showcase — ο δεσμός token ΕΙΝΑΙ η εξουσιοδότηση
+  return getAdminFirestore()
+    .collection(COLLECTIONS.SHARES)
+    .where('token', '==', token)
+    .get();
+}

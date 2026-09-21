@@ -65,7 +65,18 @@ const {
   buildPartitionAliasMap,
   resolveFieldArg,
   hasReasonedExemption,
+  findReasonedExemption,
+  allExemptionLines,
+  enclosingScope,
 } = require('./firestore-ast-loaders');
+
+// 🔑 Ο ΚΑΝΟΝΑΣ 2 ΔΕΝ ΕΧΕΙ ΔΙΚΟ ΤΟΥ ΑΝΑΛΥΤΗ ΑΛΥΣΙΔΑΣ (ADR-870). Είχε, και αυτό ήταν το
+// σφάλμα: δύο αναλυτές για την ίδια αλυσίδα, με **διαφορετική** αγκύρωση — ο ένας στο
+// `.collection(X)` ανεβαίνοντας, ο άλλος στο τέρμα κατεβαίνοντας — άρα δύο απαντήσεις στην
+// ερώτηση «ποιο ερώτημα φεύγει από αυτή τη γραμμή;». Ο σαρωτής του 3.35 ρωτά **άλλο** πράγμα
+// («φτάνει φίλτρο μισθωτή;») αλλά πάνω στο **ίδιο** αντικείμενο· το αντικείμενο έχει έναν
+// ιδιοκτήτη.
+const { createChainContext, scanFileChains } = require('./firestore-query-chain');
 
 /**
  * Ονόματα που, όταν τυλίγουν ή παράγουν το query, **εγγυώνται** το φίλτρο.
@@ -98,11 +109,15 @@ const SCOPE_HELPER_RE = /\b(scopeQueryToCompany|scopeQueryToTenant|tenantScopedC
  */
 const EXEMPT_RE = /tenant-scope-exempt:\s*\S+/;
 
-/** @typedef {'violation'|'ok'|'unanalyzable'|'exempt'|'not-tenant-scoped'} SiteStatus */
+/**
+ * ⚠️ Το `stale-exempt` **δεν είναι παραβίαση**: μια εξαίρεση που δεν καλύπτει τίποτα δεν
+ * διαρρέει δεδομένα. Είναι δική της κατηγορία ώστε να μετριέται χωρίς να μολύνει το ratchet.
+ * @typedef {'violation'|'ok'|'unanalyzable'|'exempt'|'not-tenant-scoped'|'stale-exempt'} SiteStatus
+ */
 
 /**
  * @typedef {Object} Site
- * @property {'R1-client'|'R2-admin'|'R3-service'} rule
+ * @property {'R0-exempt'|'R1-client'|'R2-admin'|'R3-service'} rule
  * @property {string}      file
  * @property {number}      line
  * @property {string|null} collectionKey
@@ -128,6 +143,8 @@ function createScanContext() {
     tenant: loadTenantOverrides(),
     // ADR-866 §2.6.7 — `X[kind]` διαμερίσματος κατόχου ⇒ ένας κλάδος ανά κάτοχο.
     partitions: loadCustodyPartitions(),
+    // Ο ΚΟΙΝΟΣ αναλυτής αλυσίδας (ADR-870), φτιαγμένος **μία** φορά ανά εκτέλεση.
+    chain: createChainContext(),
   };
 }
 
@@ -165,27 +182,17 @@ const COMMENT_OR_BLANK_RE = /^\s*(\/\/|\/\*|\*|$)/;
  * @param {string[]} lines
  * @param {number} lineIndex 0-based
  */
-function isExempt(lines, lineIndex) {
+function isExempt(lines, lineIndex, consumed) {
   // ⚠️ Ο αναγνώστης είναι ΚΟΙΝΟΣ (ADR-870): το CHECK 3.91 ζητά τον ίδιο κανόνα με άλλο
   // σύνθημα. Δεύτερο αντίγραφο = δύο κανόνες που αποκλίνουν σιωπηλά.
-  return hasReasonedExemption(lines, lineIndex, 'tenant-scope-exempt');
-}
-
-/**
- * Η περικλείουσα συνάρτηση ενός κόμβου (ή το SourceFile αν είναι top-level).
- * @param {ts.Node} node
- * @returns {ts.Node}
- */
-function enclosingScope(node) {
-  let s = node;
-  while (
-    s.parent &&
-    !ts.isFunctionDeclaration(s) && !ts.isFunctionExpression(s) &&
-    !ts.isArrowFunction(s) && !ts.isMethodDeclaration(s) && !ts.isSourceFile(s)
-  ) {
-    s = s.parent;
-  }
-  return s;
+  //
+  // 🔴 ΚΑΙ ΚΡΑΤΑΜΕ **ΠΟΙΑ** ΓΡΑΜΜΗ ΤΟ ΚΑΛΥΨΕ. Χωρίς αυτό ο κανόνας ξέρει μόνο ποια σημεία
+  // εξαιρούνται — ποτέ ποιες εξαιρέσεις **δεν εξαιρούν τίποτα**. Μετρημένο από τη μελέτη
+  // FSE 2025: **50,8%** των suppressions δεν καταστέλλουν καμία προειδοποίηση, και κρύβουν
+  // σιωπηλά ό,τι εμφανιστεί εκεί αργότερα. Ίδιο δόγμα με τους «αδρανείς φρουρούς» (N.12).
+  const at = findReasonedExemption(lines, lineIndex, 'tenant-scope-exempt');
+  if (at >= 0 && consumed) consumed.add(at);
+  return at >= 0;
 }
 
 /**
@@ -268,7 +275,7 @@ function collectFieldsFromIdentifier(scope, name, fieldConstants, out) {
 // ΚΑΝΟΝΑΣ 1 — Client SDK: query(ref, ...constraints)
 // ---------------------------------------------------------------------------
 
-function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
+function scanClientQueries(filePath, src, sf, ctx, lines, sites, consumed) {
   if (!/\bquery\s*\(/.test(src)) return;
   const partitionAlias = partitionAliasOf(sf, ctx);
   const alias = buildCollectionAliasMap(sf, partitionAlias);
@@ -303,7 +310,7 @@ function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
         pushPerBranch(sites, colls, (coll) => classify({
           rule: 'R1-client', file: filePath, line: line + 1, coll, fields, unresolved,
           // ΟΧΙ κριτήριο επιπέδου αρχείου — βλ. σχόλιο πάνω από το SCOPE_HELPER_RE.
-          ctx, exempt: isExempt(lines, line), ssotGuaranteed: false,
+          ctx, exempt: isExempt(lines, line, consumed), ssotGuaranteed: false,
         }));
       }
     }
@@ -315,137 +322,93 @@ function scanClientQueries(filePath, src, sf, ctx, lines, sites) {
 // ΚΑΝΟΝΑΣ 2 — Admin SDK: .collection(X)….where(…)
 // ---------------------------------------------------------------------------
 
-function scanAdminQueries(filePath, src, sf, ctx, lines, sites) {
-  if (!/\.collection(Group)?\s*\(/.test(src)) return;
-  const partitionAlias = partitionAliasOf(sf, ctx);
-  const alias = buildCollectionAliasMap(sf, partitionAlias);
+function scanAdminQueries(filePath, src, sf, ctx, lines, sites, consumed) {
+  if (!/\.collection(Group)?\s*\(/.test(src) && !SCOPE_HELPER_RE.test(src)) return;
 
-  (function visit(node) {
-    const isCollCall =
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      (node.expression.name.getText() === 'collection' || node.expression.name.getText() === 'collectionGroup');
+  // `includeUnterminated`: ο κανόνας κρίνει και τα ερωτήματα που **χτίζονται εδώ και
+  // εκτελούνται αλλού**. Το CHECK 3.91 ΔΕΝ το ζητά — εκεί η ερώτηση είναι «ποιο ερώτημα
+  // εκτελείται;», και ένας κατασκευαστής δεν εκτελεί. Δύο ερωτήσεις, ένας αναλυτής, ρητή
+  // διαφορά — όχι δύο αναλυτές.
+  for (const site of scanFileChains(filePath, ctx.chain, { includeUnterminated: true })) {
+    const { fields, hasWhere, unresolved } = tenantShapeOf(site.clauses);
+    const coll = site.collectionKey
+      ? { key: site.collectionKey, name: site.collectionName }
+      : null;
 
-    if (isCollCall) {
-      const colls = resolveCollectionArgs(node.arguments[0], alias, ctx.collections, partitionAlias);
-      const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
-
-      const fields = new Set();
-      let hasWhere = false;
-      let unresolved = false;
-
-      // — ανέβα τη συντακτική αλυσίδα .where().orderBy().limit()…
-      let cur = node;
-      while (
-        cur.parent && ts.isPropertyAccessExpression(cur.parent) &&
-        cur.parent.parent && ts.isCallExpression(cur.parent.parent) &&
-        cur.parent.parent.expression === cur.parent
-      ) {
-        const call = cur.parent.parent;
-        if (cur.parent.name.getText() === 'where') {
-          hasWhere = true;
-          const f = resolveFieldArg(call.arguments[0], ctx.fields);
-          if (f) fields.add(f); else unresolved = true;
-        }
-        cur = call;
-      }
-
-      // — τυλιγμένο **επί τόπου** σε SSoT helper; `scopeQueryToCompany(db.collection(X)…, id)`
-      let wrapped =
-        !!cur.parent && ts.isCallExpression(cur.parent) && SCOPE_HELPER_RE.test(cur.parent.expression.getText());
-
-      // — 🔑 δεσμεύεται σε όνομα; τότε δύο ακόμη πράγματα μπορεί να συμβαίνουν αργότερα
-      const bound = boundNameOf(cur);
-      if (bound) {
-        const scope = enclosingScope(node);
-        // (α) επανανάθεση με φίλτρο: `q = q.where(COMPANY_ID, …)` — η 3η μορφή του σχήματος
-        const r = collectChainedReassignments(scope, bound, ctx.fields, fields);
-        if (r.sawWhere) hasWhere = true;
-        if (r.unresolved) unresolved = true;
-        // (β) το όνομα δίνεται **σε** SSoT helper: `scopeQueryToCompany(col, companyId)`
-        if (!wrapped && isPassedToScopeHelper(scope, bound)) wrapped = true;
-      }
-
-      pushPerBranch(sites, colls, (coll) => classify({
-        rule: 'R2-admin', file: filePath, line: line + 1, coll, fields, unresolved,
-        ctx, exempt: isExempt(lines, line), ssotGuaranteed: !!wrapped,
-        requiresWhere: true, hasWhere,
-      }));
-    }
-    ts.forEachChild(node, visit);
-  })(sf);
-}
-
-/** Σε ποιο όνομα δεσμεύεται το αποτέλεσμα της αλυσίδας; */
-function boundNameOf(chainEnd) {
-  const p = chainEnd.parent;
-  if (!p) return null;
-  if (ts.isVariableDeclaration(p) && ts.isIdentifier(p.name)) return p.name.text;
-  if (ts.isBinaryExpression(p) && p.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(p.left)) {
-    return p.left.text;
+    sites.push(classify({
+      rule: 'R2-admin',
+      file: filePath,
+      // Η ΡΙΖΑ, όχι το τέρμα: εκεί είναι γραμμένο το ερώτημα στα μάτια του ανθρώπου, και
+      // εκεί έδειχνε ο κανόνας πριν τη μετάβαση — η αλλαγή αγκύρωσης δεν οφείλει να
+      // μετακινήσει κάθε γραμμή κάθε αναφοράς.
+      line: site.rootLine,
+      coll,
+      fields,
+      unresolved,
+      ctx,
+      exempt: isExemptAtEither(lines, site, consumed),
+      // Οι βοηθοί του ADR-742 εισάγουν το `companyId` ως ρήτρα μέσα στον αναλυτή, άρα
+      // φαίνονται στα `fields`. Δεύτερο, ξεχωριστό κριτήριο «τυλίγεται;» θα ήταν δεύτερη
+      // αυθεντία για το ίδιο ερώτημα.
+      ssotGuaranteed: false,
+      requiresWhere: true,
+      hasWhere,
+      docScoped: site.docScoped,
+    }));
   }
-  return null;
 }
 
 /**
- * Δίνεται το όνομα **ως όρισμα** σε SSoT helper αργότερα;
+ * Οι ρήτρες του αναλυτή → το επίπεδο σχήμα που ρωτά ο {@link classify}.
  *
- *     const col = db.collection(X).where('status','==','active');
- *     return scopeQueryToCompany(col, companyId).get();       // ← εδώ
+ * 🔴 **ΑΝΑ ΣΗΜΕΙΟ, ΟΧΙ ΑΝΑ ΚΛΑΔΟ** — και αυτό είναι απόφαση, όχι λεπτομέρεια. Ο αναλυτής
+ * απαριθμεί κλάδους επειδή το CHECK 3.91 ρωτά **διαθεσιμότητα** («σκάει ΚΑΠΟΙΑ διαδρομή;»):
+ * εκεί μία διαδρομή χωρίς δείκτη είναι σφάλμα παραγωγής. Εδώ η ερώτηση είναι **απομόνωση**,
+ * και ο κανονικός κώδικας του έργου βάζει το φίλτρο **υπό συνθήκη** (`if (!isSuperAdmin)`).
+ * Κρίση ανά κλάδο θα κατήγγειλε κάθε τέτοιο σημείο — μετρημένο: **5 ψευδώς θετικά**, όλα
+ * νόμιμος κώδικας που περνά από τους βοηθούς του ADR-742. Η πολιτική «ποιος δικαιούται
+ * cross-tenant» ανήκει στο `scopeQueryToTenant` (ADR-702)· εδώ κρίνεται αν το φίλτρο
+ * **υπάρχει πουθενά** στο σημείο.
  *
- * Χωρίς αυτό, ο κανονικός τρόπος χρήσης του SSoT του ADR-702/742 μετριόταν
- * **παραβίαση** — δηλαδή η πύλη τιμωρούσε ακριβώς τη συμπεριφορά που επιβάλλει.
- *
- * @param {ts.Node} scope
- * @param {string} name
- * @returns {boolean}
+ * @param {import('./firestore-query-chain').Clause[]} clauses
  */
-function isPassedToScopeHelper(scope, name) {
-  let found = false;
-  (function scan(n) {
-    if (found) return;
-    if (ts.isCallExpression(n) && SCOPE_HELPER_RE.test(n.expression.getText())) {
-      for (const a of n.arguments) {
-        if (ts.isIdentifier(a) && a.text === name) { found = true; return; }
-      }
-    }
-    ts.forEachChild(n, scan);
-  })(scope);
-  return found;
-}
-
-/**
- * `q = q.where(FIELDS.COMPANY_ID, '==', ctx.companyId)` σε **άλλη εντολή**.
- *
- * Το idiom του υπό-συνθήκη super-admin bypass. Χωρίς αυτό, νόμιμος κώδικας
- * μετριέται παραβίαση (μετρημένο: −6 ψευδώς θετικά μόνο σε αυτή τη μορφή).
- */
-function collectChainedReassignments(scope, name, fieldConstants, out) {
-  let sawWhere = false;
+function tenantShapeOf(clauses) {
+  const fields = new Set();
+  let hasWhere = false;
   let unresolved = false;
-
-  (function scan(n) {
-    if (
-      ts.isBinaryExpression(n) &&
-      n.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isIdentifier(n.left) && n.left.text === name &&
-      ts.isCallExpression(n.right)
-    ) {
-      let c = n.right;
-      while (c && ts.isCallExpression(c) && ts.isPropertyAccessExpression(c.expression)) {
-        if (c.expression.name.getText() === 'where') {
-          sawWhere = true;
-          const f = resolveFieldArg(c.arguments[0], fieldConstants);
-          if (f) out.add(f); else unresolved = true;
-        }
-        c = c.expression.expression;
-      }
+  for (const cl of clauses) {
+    if (cl.kind === 'unresolved') {
+      unresolved = true;
+      // Άγνωστο **πεδίο** δεν σημαίνει άγνωστο **είδος**: ένα δυναμικό `where()` εξακολουθεί
+      // να είναι φίλτρο, άρα το σημείο ΕΙΝΑΙ list query και οφείλει να κριθεί
+      // (`unanalyzable`, ποτέ violation — η άγνοια δεν είναι ενοχή). Χωρίς αυτή τη γραμμή
+      // καταλήγει «χωρίς where()», δηλαδή **εκτός εμβέλειας**: σιωπηλή αθώωση.
+      if (cl.from === 'where') hasWhere = true;
+      continue;
     }
-    ts.forEachChild(n, scan);
-  })(scope);
-
-  return { sawWhere, unresolved };
+    if (cl.kind === 'order') continue;      // ταξινόμηση δεν φιλτράρει
+    hasWhere = true;
+    if (cl.field) fields.add(cl.field); else unresolved = true;
+  }
+  return { fields, hasWhere, unresolved };
 }
+
+/**
+ * 🔴 Η ΑΙΤΙΟΛΟΓΙΑ ΓΙΝΕΤΑΙ ΔΕΚΤΗ ΚΑΙ ΣΤΑ ΔΥΟ ΑΚΡΑ ΤΗΣ ΑΛΥΣΙΔΑΣ.
+ *
+ * Η αγκύρωση στο τέρμα είναι ακριβώς αυτό που κάνει ορατή την **τέταρτη μορφή** (ρίζα δεμένη
+ * σε όνομα, φίλτρα σε άλλη εντολή) — αλλά στην ίδια μορφή το τέρμα απέχει από τη γραμμή όπου
+ * ο άνθρωπος γράφει τον λόγο του. Μετρημένο στο `entity-audit.service.ts`: η αιτιολογία στη
+ * γρ. 342, το `.get()` στη γρ. 356 — **δεκατέσσερις γραμμές**, με κώδικα ανάμεσα που κόβει
+ * τον αναγνώστη μπλοκ. Ένα άκρο μόνο ⇒ **4 σημεία / 2 αρχεία** με τεκμηριωμένη εξαίρεση θα
+ * γίνονταν ψευδώς κόκκινα: η πύλη θα τιμωρούσε όποιον έκανε ό,τι του ζητήθηκε.
+ */
+function isExemptAtEither(lines, site, consumed) {
+  const atRoot = isExempt(lines, site.rootLine - 1, consumed);
+  const atEnd = isExempt(lines, site.line - 1, consumed);
+  return atRoot || atEnd;
+}
+
 
 // ---------------------------------------------------------------------------
 // ΚΑΝΟΝΑΣ 3 — το κεντρικό API: `firestoreQueryService.*(KEY, { tenantOverride: 'skip' })`
@@ -529,7 +492,7 @@ function partitionAliasOf(sf, ctx) {
   return buildPartitionAliasMap(sf, ctx.partitions || new Map());
 }
 
-function scanServiceOverrides(filePath, src, sf, ctx, lines, sites) {
+function scanServiceOverrides(filePath, src, sf, ctx, lines, sites, consumed) {
   if (!/tenantOverride/.test(src) || !QUERY_SERVICE_RE.test(src)) return;
 
   (function visit(node) {
@@ -561,7 +524,7 @@ function scanServiceOverrides(filePath, src, sf, ctx, lines, sites) {
             ctx,
             // ΔΥΟ άγκυρες: πάνω από την κλήση **ή** πάνω από το ίδιο το `tenantOverride`.
             // Και οι δύο θέσεις είναι φυσικές για τον αναγνώστη — βλ. findSkipOverride.
-            exempt: isExempt(lines, line) || isExempt(lines, skipLine),
+            exempt: isExempt(lines, line, consumed) || isExempt(lines, skipLine, consumed),
             ssotGuaranteed: false,
             skipOverride: true,
           }),
@@ -584,7 +547,7 @@ function scanServiceOverrides(filePath, src, sf, ctx, lines, sites) {
  *
  * @returns {Site}
  */
-function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, ssotGuaranteed, requiresWhere, hasWhere, skipOverride }) {
+function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, ssotGuaranteed, requiresWhere, hasWhere, skipOverride, docScoped }) {
   const base = {
     rule, file, line,
     collectionKey: coll ? coll.key : null,
@@ -600,6 +563,16 @@ function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, sso
 
   if (tenant.mode === 'none') {
     return { ...withMode, status: 'not-tenant-scoped', detail: 'tenant-config: mode=none' };
+  }
+  // 🔴 ΥΠΟΣΥΛΛΟΓΗ ΚΑΤΩ ΑΠΟ ΕΓΓΡΑΦΟ: `contacts/{id}/bank_accounts`. Ο άξονας απομόνωσης είναι
+  // **η διαδρομή** — το έγγραφο-γονέας είναι ήδη ένα, και ένα `where('companyId')` εκεί δεν
+  // στενεύει τίποτα. Ο σαρωτής σταματούσε στην εσώτερη `.collection()` χωρίς ΠΟΤΕ να κοιτάξει
+  // τον παραλήπτη της, άρα υποσυλλογή και ρίζα ήταν **αδιάκριτες**: 6 σημεία / 4 αρχεία θα
+  // γεννιόνταν κόκκινα ζητώντας φίλτρο που θα ήταν ανοησία (ADR-742 «ένα gate δεν γεννιέται
+  // κόκκινο»). ⚠️ ΔΕΝ είναι «ασφαλές»: λέει ότι η ερώτηση της απομόνωσης ανήκει στον ΓΟΝΕΑ —
+  // ποιος έλυσε το `{id}` — και αυτή κρίνεται στο σημείο που τον έλυσε, όχι εδώ.
+  if (docScoped) {
+    return { ...withMode, status: 'not-tenant-scoped', detail: 'υποσυλλογή κάτω από .doc() — ο άξονας είναι η διαδρομή' };
   }
   if (requiresWhere && !hasWhere) {
     // Σκέτο `.collection(X).get()` / `.doc(id)` — άλλη ερώτηση, το κρίνουν τα rules.
@@ -645,6 +618,41 @@ function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, sso
 }
 
 // ---------------------------------------------------------------------------
+// Η ΑΝΤΙΣΤΡΟΦΗ ΕΡΩΤΗΣΗ — «ποια εξαίρεση δεν εξαιρεί τίποτα;»
+// ---------------------------------------------------------------------------
+
+/**
+ * 🔴 ΤΟ 50,8%.
+ *
+ * Η μελέτη **FSE 2025** («An Empirical Study of Suppressed Static Analysis Warnings»,
+ * 7.357 suppressions σε 46 έργα, Pylint/Checkstyle/PMD/ESLint) μέτρησε ότι **50,8% των
+ * suppressions δεν επηρεάζουν καμία προειδοποίηση** — είναι πρακτικά άχρηστα — και ότι το
+ * πλήθος τους **αυξάνεται μονότονα** στη ζωή ενός έργου. Το χειρότερο δεν είναι ο θόρυβος:
+ * *«μερικά, συμπεριλαμβανομένων των άχρηστων, μπορεί να κρύψουν ακούσια ΜΕΛΛΟΝΤΙΚΕΣ
+ * προειδοποιήσεις»*. Μια εξαίρεση που σήμερα δεν καλύπτει τίποτα είναι **προ-εγκεκριμένο
+ * veto** σε ό,τι γραφτεί εκεί αύριο.
+ *
+ * Γι' αυτό η επιλογή «αιτιολογία inline αντί για φούσκωμα της baseline» — που η ίδια η
+ * βιβλιογραφία συνιστά για μακροπρόθεσμη συντηρησιμότητα — **δεν είναι ασφαλής χωρίς αυτόν
+ * τον φρουρό**. Είναι ακριβώς το δόγμα των «αδρανών φρουρών» του N.12 (`ssot:audit
+ * --dormant`: 606/671 patterns χωρίς απόδειξη ζωής), στραμμένο στις εξαιρέσεις.
+ *
+ * ⚠️ **ΔΕΝ είναι παραβίαση**: μια άχρηστη εξαίρεση δεν διαρρέει δεδομένα. Είναι δική της
+ * κατηγορία (`stale-exempt`) ώστε να **μετριέται** χωρίς να μολύνει τον αριθμό του ratchet.
+ */
+function collectStaleExemptions(filePath, lines, sites, consumed) {
+  for (const i of allExemptionLines(lines, 'tenant-scope-exempt')) {
+    if (consumed.has(i)) continue;
+    sites.push({
+      rule: 'R0-exempt', file: filePath, line: i + 1,
+      collectionKey: null, collectionName: null, tenantMode: '-', fields: [],
+      status: 'stale-exempt',
+      detail: 'αιτιολογημένη εξαίρεση που δεν καλύπτει κανένα σημείο — σιωπηλό veto σε ό,τι γραφτεί εδώ αύριο',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Δημόσιο API
 // ---------------------------------------------------------------------------
 
@@ -665,9 +673,11 @@ function scanFile(filePath, ctx) {
 
   /** @type {Site[]} */
   const sites = [];
-  scanClientQueries(filePath, src, sf, ctx, lines, sites);
-  scanAdminQueries(filePath, src, sf, ctx, lines, sites);
-  scanServiceOverrides(filePath, src, sf, ctx, lines, sites);
+  const consumed = new Set();
+  scanClientQueries(filePath, src, sf, ctx, lines, sites, consumed);
+  scanAdminQueries(filePath, src, sf, ctx, lines, sites, consumed);
+  scanServiceOverrides(filePath, src, sf, ctx, lines, sites, consumed);
+  collectStaleExemptions(filePath, lines, sites, consumed);
   return sites;
 }
 
@@ -676,9 +686,6 @@ module.exports = {
   scanFile,
   classify,
   collectFieldsFromIdentifier,
-  collectChainedReassignments,
-  isPassedToScopeHelper,
-  enclosingScope,
   isExempt,
   findSkipOverride,
   resolveCollectionKeyArgs,

@@ -384,6 +384,10 @@ export async function rollback(): Promise<MigrationResult> {
 
   try {
     const database = getFirestore();
+    // tenant-scope-exempt: επαναφορά μετανάστευσης — η μετανάστευση έτρεξε σε **όλους** τους
+    // μισθωτές, άρα η επαναφορά οφείλει να φτάσει σε όλους. Ο άξονας εδώ είναι το ίχνος
+    // `_migratedFrom`, που το έγραψε **αυτό** το script: περιορισμός ανά εταιρεία θα άφηνε
+    // μισές τις αλλαγές — χειρότερη κατάσταση και από τις δύο άκρες.
     const storagesRef = database.collection(COLLECTIONS.STORAGE);
 
     // Find all storages that were migrated by this script

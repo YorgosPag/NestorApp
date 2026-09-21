@@ -100,6 +100,10 @@ export async function purgeExpiredInvitations(
   adminDb: AdminFirestore,
   at: string = clockNowISO(),
 ): Promise<InvitationExpiryReport> {
+  // tenant-scope-exempt: καθολικό πέρασμα λήξης (Admin SDK, ποτέ από αίτημα χρήστη). Η λήξη
+  // μιας πρόσκλησης είναι **γεγονός του ρολογιού**, όχι δεδομένο μισθωτή — το πέρασμα οφείλει
+  // να δει κάθε ληγμένη, ανεξάρτητα από εταιρεία. Καμία απάντηση δεν φεύγει προς πελάτη: το
+  // μόνο αποτέλεσμα είναι ότι ληγμένες προσκλήσεις **διαγράφονται**.
   const collection = adminDb.collection(COLLECTIONS.FIRST_CONTACT_INVITATIONS);
 
   // 🔑 **`SCAN_LIMIT + 1`**: το επιπλέον έγγραφο είναι ο **μόνος** τρόπος να ξεχωρίσεις

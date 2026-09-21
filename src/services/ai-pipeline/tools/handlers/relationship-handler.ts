@@ -164,6 +164,12 @@ export class RelationshipHandler implements ToolHandler {
     if (!ownedTarget.ok) return ownedTarget.result;
 
     // Check duplicate — both directions (A→B or B→A) since UI queries bidirectionally
+    //
+    // tenant-scope-exempt: **ο γονέας ελέγχθηκε ΠΡΙΝ** — και οι δύο επαφές πέρασαν από
+    // `resolveOwnedToolDoc(..., ctx)` λίγες γραμμές πάνω, που επιστρέφει «not found» όταν δεν
+    // ανήκουν στον μισθωτή του `ctx`. Άρα τα `sourceContactId`/`targetContactId` **δεν είναι
+    // ελεύθερη είσοδος**: το ερώτημα δεν μπορεί να δείξει σε ξένο ζεύγος. Ο άξονας εδώ είναι
+    // η **ταυτότητα των επαφών**, ήδη περιορισμένη.
     const col = db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS);
     const [forwardSnap, reverseSnap] = await Promise.all([
       col.where('sourceContactId', '==', sourceContactId)

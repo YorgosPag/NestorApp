@@ -135,6 +135,10 @@ export async function claimNextPipelineItems(
   batchSize: number = PIPELINE_QUEUE_CONFIG.BATCH_SIZE
 ): Promise<PipelineQueueItem[]> {
   const adminDb = getAdminFirestore();
+  // tenant-scope-exempt: εργάτης ουράς — διεκδικεί εργασία για **κάθε** μισθωτή εκ σχεδιασμού
+  // (Admin SDK, καλείται από τον `ai-pipeline-worker`, ποτέ από αίτημα χρήστη). Ο άξονας εδώ
+  // είναι η **σειρά FIFO**· ένα `where('companyId')` θα έκανε τον εργάτη να λιμοκτονεί όλους
+  // τους άλλους μισθωτές. Το `companyId` κάθε στοιχείου διαβάζεται **μετά**, στην επεξεργασία.
   const collectionRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE);
 
   // Query pending items ordered by creation time (FIFO)
@@ -195,6 +199,9 @@ export async function claimRetryablePipelineItems(
   batchSize: number = PIPELINE_QUEUE_CONFIG.BATCH_SIZE
 ): Promise<PipelineQueueItem[]> {
   const adminDb = getAdminFirestore();
+  // tenant-scope-exempt: ίδιος εργάτης, ίδιος άξονας — η επανάληψη αποτυχημένων είναι καθολική
+  // εκ σχεδιασμού. Φιλτράρισμα ανά εταιρεία θα άφηνε αποτυχίες μισθωτών που δεν τυχαίνει να
+  // ρωτηθούν να μένουν για πάντα αδιεκδίκητες.
   const collectionRef = adminDb.collection(COLLECTIONS.AI_PIPELINE_QUEUE);
 
   const failedSnapshot = await collectionRef
@@ -332,6 +339,9 @@ export async function recoverStalePipelineItems(): Promise<number> {
     Date.now() - PIPELINE_QUEUE_CONFIG.STALE_PROCESSING_THRESHOLD_MS
   ).toISOString();
 
+  // tenant-scope-exempt: ανάκτηση μετά από κατάρρευση εργάτη — στοιχείο κολλημένο σε
+  // `processing` είναι **βλάβη υποδομής**, όχι δεδομένο μισθωτή. Ο σαρωτής οφείλει να δει
+  // κάθε κολλημένο, αλλιώς οι μισθωτές που δεν ρωτήθηκαν μένουν μπλοκαρισμένοι.
   const staleSnapshot = await adminDb
     .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
     .where(FIELDS.STATUS, '==', QUEUE_STATUS.PROCESSING satisfies PipelineQueueStatus)

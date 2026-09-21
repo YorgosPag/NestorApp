@@ -176,6 +176,10 @@ export async function validateQrToken(tokenString: string): Promise<QrTokenValid
 
   // Step 4: Check Firestore
   const db = getAdminFirestore();
+  // tenant-scope-exempt: αναζήτηση κατά **υπογεγραμμένο** token — ο δεσμός ΕΙΝΑΙ η
+  // εξουσιοδότηση. Η υπογραφή επαληθεύτηκε ήδη παραπάνω (`decodeSignedToken`), άρα το
+  // `tokenString` δεν μπορεί να κατασκευαστεί από τον καλούντα· ο μισθωτής **προκύπτει** από
+  // το έγγραφο που θα βρεθεί, δεν μπορεί να είναι είσοδος του ερωτήματος.
   const snapshot = await db
     .collection(COLLECTIONS.ATTENDANCE_QR_TOKENS)
     .where('token', '==', tokenString)

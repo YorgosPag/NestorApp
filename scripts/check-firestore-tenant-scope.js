@@ -231,7 +231,7 @@ function runReport(targets) {
 }
 
 function runCheck(targets, { full }) {
-  const { violations, perFile, totals } = scanTargets(targets);
+  const { sites, violations, perFile, totals } = scanTargets(targets);
   const baseline = loadBaseline();
 
   if (!baseline) {
@@ -253,6 +253,37 @@ function runCheck(targets, { full }) {
       const now = perFile[file] || 0;
       if (now < before) improvements.push({ file, before, now });
     }
+  }
+
+  // ═══ ΑΔΡΑΝΗΣ ΕΞΑΙΡΕΣΗ — ZERO TOL **ΜΟΝΟ ΣΤΟ ΑΓΓΙΓΜΑ** ═══════════════════════════════
+  //
+  // 🔴 Η μελέτη FSE 2025 μέτρησε ότι **50,8%** των suppressions δεν καταστέλλουν τίποτα, ότι
+  // το πλήθος τους **αυξάνεται μονότονα**, και — το κρίσιμο — ότι κρύβουν ακούσια
+  // **μελλοντικές** προειδοποιήσεις. Μια εξαίρεση που σήμερα δεν καλύπτει σημείο είναι
+  // προ-εγκεκριμένο veto σε ό,τι γραφτεί εκεί αύριο.
+  //
+  // ⚠️ ΓΙΑΤΙ «ΣΤΟ ΑΓΓΙΓΜΑ» ΚΑΙ ΟΧΙ ΚΑΘΟΛΙΚΑ: μετρήθηκαν **8** αδρανείς εξαιρέσεις στο
+  // σημερινό δέντρο (όλες νόμιμες κατά τον λόγο τους, όλες αδρανείς κατά τον σαρωτή — π.χ.
+  // αιτιολογία πάνω από `onSnapshot(doc(...))`, που δεν είναι ερώτημα). Καθολικό μπλοκ θα
+  // γεννούσε την πύλη **κόκκινη**, και μια πύλη που γεννιέται κόκκινη αγνοείται (ADR-742).
+  // Στο άγγιγμα: αν πειράξεις το αρχείο, καθαρίζεις — ίδιο σχήμα με το CHECK 3.15.
+  //
+  // ⚠️ ΚΑΙ ΔΕΝ ΜΠΑΙΝΕΙ ΣΤΟΝ ΑΡΙΘΜΟ ΤΟΥ RATCHET: αδρανής εξαίρεση **δεν διαρρέει δεδομένα**.
+  // Ανακατεύοντάς τη με τις παραβιάσεις θα χαλούσε το μόνο νούμερο που μετράει απομόνωση.
+  const stale = full ? [] : sites.filter((s) => s.status === 'stale-exempt');
+  if (stale.length > 0) {
+    console.error('');
+    console.error(c.red(c.bold('🚫 CHECK 3.35 — αδρανής εξαίρεση σε αρχείο που άγγιξες')));
+    console.error('');
+    for (const s of stale) {
+      console.error(`  ${c.bold(rel(s.file))}${c.cyan(`:${s.line}`)}  ${s.detail}`);
+    }
+    console.error('');
+    console.error(c.yellow('  Διόρθωση — μία από τις δύο:'));
+    console.error('    1. σβήσε την: δεν καλύπτει τίποτα, και αύριο θα καλύψει κάτι εν αγνοία σου');
+    console.error('    2. αν το σημείο ΟΝΤΩΣ χρειάζεται εξαίρεση, μετακίνησέ την στη γραμμή του query');
+    console.error('');
+    process.exit(1);
   }
 
   if (offenders.length === 0) {

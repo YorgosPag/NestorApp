@@ -230,8 +230,20 @@ describe('4. Admin SDK — τα σχήματα, ένα προς ένα', () => {
     expect(byFn.notScoped_modeNone).toEqual(['not-tenant-scoped']);
   });
 
-  test('ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ: χωρίς where() δεν είναι list query', () => {
-    expect(byFn.notScoped_noWhere).toEqual(['not-tenant-scoped']);
+  // ═════ ΤΟ ΣΥΝΟΡΟ ΤΗΣ ΕΜΒΕΛΕΙΑΣ, ΚΑΙ ΑΠΟ ΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ ══════════════════════════════
+  //
+  // Με την αγκύρωση στο ΤΕΡΜΑ (ADR-870), ο κανόνας κρίνει **εκτελούμενα ερωτήματα**. Μια
+  // ανάγνωση ενός εγγράφου δεν είναι ερώτημα — δεν εκπέμπεται πια καθόλου, αντί να
+  // εκπέμπεται ως μη-απάντηση («not-tenant-scoped»). **Αυτό είναι στένεμα εμβέλειας, και
+  // ένα στένεμα χωρίς σύνορο γίνεται διαρροή**: γι' αυτό οι δύο έλεγχοι ζουν μαζί και η
+  // ανάγνωση ΟΛΟΚΛΗΡΗΣ συλλογής — που επιστρέφει κάθε μισθωτή — οφείλει ακόμη να κρίνεται.
+
+  test('ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ: ανάγνωση ΕΝΟΣ εγγράφου δεν είναι ερώτημα — κανένα σημείο', () => {
+    expect(byFn.notScoped_singleDocRead).toBeUndefined();
+  });
+
+  test('🔴 ΕΝΤΟΣ: ανάγνωση ΟΛΟΚΛΗΡΗΣ συλλογής χωρίς where() κρίνεται ακόμη', () => {
+    expect(byFn.notScoped_wholeCollectionRead).toEqual(['not-tenant-scoped']);
   });
 
   test('ΜΗ ΑΝΑΛΥΣΙΜΟ (όχι παραβίαση): δυναμικό όνομα συλλογής', () => {
@@ -240,6 +252,21 @@ describe('4. Admin SDK — τα σχήματα, ένα προς ένα', () => {
 
   test('ΜΗ ΑΝΑΛΥΣΙΜΟ (όχι παραβίαση): δυναμικό όνομα πεδίου — η άγνοια δεν είναι ενοχή', () => {
     expect(byFn.unanalyzable_dynamicField).toEqual(['unanalyzable']);
+  });
+
+  // ═════ Η ΤΕΤΑΡΤΗ ΜΟΡΦΗ (ADR-870) ══════════════════════════════════════════════════════
+
+  test('🔴 ΠΑΡΑΒΙΑΣΗ: ρίζα δεμένη σε όνομα, φίλτρα σε ΑΛΛΗ εντολή — ήταν ΑΟΡΑΤΟ', () => {
+    expect(byFn.violation_boundRootFiltersElsewhere).toContain('violation');
+  });
+
+  test('🔴 ΕΞΑΙΡΕΣΗ: ο λόγος γραμμένος πάνω από τη ΡΙΖΑ γίνεται δεκτός, όχι μόνο στο τέρμα', () => {
+    expect(byFn.exempt_boundRootReasonAtRoot).toContain('exempt');
+    expect(byFn.exempt_boundRootReasonAtRoot).not.toContain('violation');
+  });
+
+  test('ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ: υποσυλλογή κάτω από .doc() — ο άξονας είναι η διαδρομή', () => {
+    expect(byFn.notScoped_subcollectionUnderDoc).toEqual(['not-tenant-scoped']);
   });
 });
 
@@ -403,6 +430,42 @@ describe('6β. 🔴 ΚΑΝΟΝΑΣ 3 — το κεντρικό API, το κεν�
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+describe('6γ. 🔴 Η ΑΝΤΙΣΤΡΟΦΗ ΕΡΩΤΗΣΗ — ποια εξαίρεση δεν εξαιρεί τίποτα;', () => {
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Η βιβλιογραφία (FSE 2025, 7.357 suppressions σε 46 έργα) μετρά **50,8%** suppressions που
+// δεν καταστέλλουν καμία προειδοποίηση — και προειδοποιεί ότι κρύβουν **μελλοντικές**. Η
+// επιλογή «αιτιολογία inline αντί για φούσκωμα της baseline» δεν είναι ασφαλής χωρίς αυτόν
+// τον φρουρό: χωρίς αυτόν, κάθε εξαίρεση που γράφουμε σήμερα είναι προ-εγκεκριμένο veto.
+
+  let sites;
+  beforeAll(() => { sites = scanFile(fixture('stale-exemption.ts.fixture'), ctx); });
+
+  test('η ΑΔΡΑΝΗΣ αιτιολογία αναφέρεται ρητά, δεν εξαφανίζεται', () => {
+    const stale = sites.filter((s) => s.status === 'stale-exempt');
+    expect(stale).toHaveLength(1);
+    expect(stale[0].rule).toBe('R0-exempt');
+  });
+
+  test('η ΕΝΕΡΓΗ αιτιολογία ΔΕΝ αναφέρεται — αλλιώς ο φρουρός είναι θόρυβος', () => {
+    expect(sites.some((s) => s.status === 'exempt')).toBe(true);
+    // Μία και μόνο μία αδρανής: η ενεργή καταναλώθηκε από το σημείο της.
+    expect(sites.filter((s) => s.status === 'stale-exempt')).toHaveLength(1);
+  });
+
+  test('αδρανής εξαίρεση ΔΕΝ είναι παραβίαση — δεν μολύνει τον αριθμό του ratchet', () => {
+    const stale = sites.find((s) => s.status === 'stale-exempt');
+    expect(stale.status).not.toBe('violation');
+    expect(gate.scanTargets([fixture('stale-exemption.ts.fixture')]).totals.violations).toBe(0);
+  });
+
+  test('τα πραγματικά αρχεία με τεκμηριωμένες εξαιρέσεις ΔΕΝ βγαίνουν αδρανή', () => {
+    const real = scanFile(fixture('admin-sdk-shapes.ts.fixture'), ctx);
+    expect(real.filter((s) => s.status === 'stale-exempt')).toHaveLength(0);
+  });
+});
+
 describe('7. Ratchet — η αριθμητική του φύλακα', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -450,6 +513,10 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
 
   const SCANNER = path.join(__dirname, '..', '_shared', 'firestore-tenant-scope-scan.js');
   const LOADERS = path.join(__dirname, '..', '_shared', 'firestore-ast-loaders.js');
+  // Ο R2 δεν έχει πια δικό του αναλυτή αλυσίδας (ADR-870): η ανάλυση ζει στον ΚΟΙΝΟ
+  // αναλυτή. Οι μεταλλάξεις οφείλουν να στοχεύουν **εκεί που ζει ο κανόνας τώρα** —
+  // άγκυρα που δείχνει σε κώδικα που δεν εκτελείται πια είναι σχόλιο (CHECK 3.54).
+  const CHAIN = path.join(__dirname, '..', '_shared', 'firestore-query-chain.js');
 
   /**
    * Εφάρμοσε μετάλλαξη στο αρχείο, **επαλήθευσε ότι προσγειώθηκε**, φόρτωσε το
@@ -583,9 +650,9 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
 
   test('Μ5: αν πάψει να παρακολουθεί την επανανάθεση → νόμιμος κώδικας γίνεται κόκκινος', () => {
     const result = withMutation(
-      SCANNER,
-      'const bound = boundNameOf(cur);',
-      'const bound = null;',
+      CHAIN,
+      '    && ts.isIdentifier(node.left) && node.left.text === name && ts.isCallExpression(node.right)) {',
+      '    && false) {',
       (fresh) => {
         const c = fresh.createScanContext();
         return fresh.scanFile(fixture('admin-sdk-shapes.ts.fixture'), c);
@@ -610,8 +677,8 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
     // θέλει να ενθαρρύνει — και ΑΥΤΟ πρέπει να το δει το δίχτυ.
     const result = withMutation(
       SCANNER,
-      'isExempt(lines, line) || isExempt(lines, skipLine)',
-      'isExempt(lines, line)',
+      'isExempt(lines, line, consumed) || isExempt(lines, skipLine, consumed)',
+      'isExempt(lines, line, consumed)',
       (fresh) => fresh.scanFile(fixture('service-override.ts.fixture'), fresh.createScanContext()),
     );
     const lines = fs.readFileSync(fixture('service-override.ts.fixture'), 'utf8').split(/\r?\n/);
@@ -636,6 +703,65 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
       (fresh) => fresh.scanFile(fixture('service-override.ts.fixture'), fresh.createScanContext()),
     );
     expect(result.some((s) => s.status === 'not-tenant-scoped')).toBe(false);
+  });
+
+  test('Μ8: αν η αιτιολογία ζητηθεί ΜΟΝΟ στο τέρμα → τεκμηριωμένη εξαίρεση γίνεται κόκκινη', () => {
+    // 🔴 Η ΑΚΡΙΒΩΣ ΑΝΤΙΣΤΡΟΦΗ ΖΗΜΙΑ ΤΗΣ ΜΕΤΑΒΑΣΗΣ. Η αγκύρωση στο τέρμα είναι αυτό που
+    // κάνει ορατή την τέταρτη μορφή — και στην ίδια μορφή απομακρύνει το σημείο κρίσης από
+    // τη γραμμή όπου ο άνθρωπος έγραψε τον λόγο του (μετρημένο: 14 γραμμές, 4 σημεία σε 2
+    // πραγματικά αρχεία). Κόβοντας το άκρο της ρίζας, η πύλη τιμωρεί τη συμμόρφωση.
+    const result = withMutation(
+      SCANNER,
+      '  const atRoot = isExempt(lines, site.rootLine - 1, consumed);',
+      '  const atRoot = false;',
+      (fresh) => fresh.scanFile(fixture('admin-sdk-shapes.ts.fixture'), fresh.createScanContext()),
+    );
+    const lines = fs.readFileSync(fixture('admin-sdk-shapes.ts.fixture'), 'utf8').split(/\r?\n/);
+    const nameAt = (line) => {
+      for (let i = line - 1; i >= 0; i--) {
+        const m = /function\s+([A-Za-z0-9_]+)/.exec(lines[i] || '');
+        if (m) return m[1];
+      }
+      return '';
+    };
+    const atRoot = result.filter((s) => nameAt(s.line) === 'exempt_boundRootReasonAtRoot');
+    expect(atRoot.some((s) => s.status === 'violation')).toBe(true);
+  });
+
+  test('Μ9: αν πάψει να ρωτά «υποσυλλογή;» → η διαδρομή ζητείται ως πεδίο, ψευδώς κόκκινο', () => {
+    // Το `contacts/{id}/bank_accounts` έχει ΕΝΑ έγγραφο-γονέα· ένα `where('companyId')` εκεί
+    // δεν στενεύει τίποτα. Χωρίς αυτόν τον κλάδο, η πύλη γεννιέται κόκκινη σε 6 σημεία / 4
+    // αρχεία ζητώντας φίλτρο που θα ήταν ανοησία (ADR-742: «ένα gate δεν γεννιέται κόκκινο»).
+    const result = withMutation(
+      CHAIN,
+      '  return !!recv && ts.isCallExpression(recv)',
+      '  return false && !!recv && ts.isCallExpression(recv)',
+      (fresh) => fresh.scanFile(fixture('admin-sdk-shapes.ts.fixture'), fresh.createScanContext()),
+    );
+    const lines = fs.readFileSync(fixture('admin-sdk-shapes.ts.fixture'), 'utf8').split(/\r?\n/);
+    const nameAt = (line) => {
+      for (let i = line - 1; i >= 0; i--) {
+        const m = /function\s+([A-Za-z0-9_]+)/.exec(lines[i] || '');
+        if (m) return m[1];
+      }
+      return '';
+    };
+    const sub = result.filter((s) => nameAt(s.line) === 'notScoped_subcollectionUnderDoc');
+    expect(sub.some((s) => s.status === 'violation')).toBe(true);
+  });
+
+  test('Μ10: αν πάψει να κρατά ΠΟΙΑ αιτιολογία καταναλώθηκε → κάθε νόμιμη γίνεται «αδρανής»', () => {
+    // 🔴 Ο φρουρός των αδρανών εξαιρέσεων είναι ο ΜΟΝΟΣ λόγος που επιτρέπεται να λύνουμε
+    // τα νόμιμα σημεία με inline αιτιολογία αντί για φούσκωμα της baseline. Αν χάσει τη
+    // μνήμη του, καταγγέλλει **κάθε** σωστά γραμμένη εξαίρεση — δηλαδή γίνεται ακριβώς ο
+    // θόρυβος που υποτίθεται ότι αποτρέπει, και ο κανόνας τιμωρεί ξανά τη συμμόρφωση.
+    const result = withMutation(
+      SCANNER,
+      'if (at >= 0 && consumed) consumed.add(at);',
+      '/* μεταλλαγμένο: καμία μνήμη κατανάλωσης */',
+      (fresh) => fresh.scanFile(fixture('admin-sdk-shapes.ts.fixture'), fresh.createScanContext()),
+    );
+    expect(result.filter((s) => s.status === 'stale-exempt').length).toBeGreaterThan(0);
   });
 
   test('ΜΕΤΑ ΤΙΣ ΜΕΤΑΛΛΑΞΕΙΣ: τα αρχεία επανήλθαν byte-για-byte και η πύλη ξαναλειτουργεί', () => {

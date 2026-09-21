@@ -517,22 +517,90 @@ function resolveCollectionKeys(expr, partitionAlias) {
  * @param {string}   token Το σύνθημα, π.χ. `tenant-scope-exempt`.
  * @returns {boolean}
  */
-function hasReasonedExemption(lines, lineIndex, token) {
-  // ⚠️ Διπλή διαφυγή: μέσα σε template literal το `\s` γίνεται σκέτο `s`. Μετρημένο —
-  // η πρώτη εκδοχή παρήγαγε `token:sS+` και δεχόταν **καμία** εξαίρεση, σιωπηλά.
-  const re = new RegExp(`${token}:\\s*\\S+`);
-  const commentOrBlank = /^\s*(\/\/|\/\*|\*|$)/;
-  if (re.test(lines[lineIndex] || '')) return true;
+/**
+ * **Ποια ΓΡΑΜΜΗ** κρατά την αιτιολογημένη εξαίρεση αυτού του σημείου — ή `-1`.
+ *
+ * 🔴 ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ Η ΓΡΑΜΜΗ ΚΑΙ ΟΧΙ ΜΟΝΟ «ΝΑΙ/ΟΧΙ»: μετρημένο από τη μελέτη FSE 2025
+ * (7.357 suppressions σε 46 έργα, Pylint/Checkstyle/PMD/ESLint) — **50,8% των suppressions
+ * δεν καταστέλλουν τίποτα**: είναι άχρηστα, και χειρότερα, «μπορεί να κρύψουν ΜΕΛΛΟΝΤΙΚΕΣ
+ * προειδοποιήσεις». Μια εξαίρεση που δεν αντιστοιχεί σε κανένα σημείο είναι **σιωπηλό veto
+ * σε ό,τι εμφανιστεί εκεί αύριο**. Ξέροντας ποια γραμμή καταναλώθηκε, η πύλη μπορεί να
+ * ρωτήσει το αντίστροφο: «ποια εξαίρεση **δεν** χρησιμοποιήθηκε;» — ίδιο δόγμα με τους
+ * «αδρανείς φρουρούς» του N.12 (`ssot:audit --dormant`).
+ *
+ * @param {string[]} lines
+ * @param {number} lineIndex 0-based
+ * @param {string} token
+ * @returns {number} 0-based γραμμή της αιτιολογίας, ή `-1`
+ */
+/**
+ * **ΤΟ ΕΝΑ regex** της αιτιολογημένης εξαίρεσης.
+ *
+ * ⚠️ Διπλή διαφυγή: μέσα σε template literal το `\s` γίνεται σκέτο `s`. Μετρημένο — μια
+ * εκδοχή παρήγαγε `token:sS+` και δεχόταν **καμία** εξαίρεση, σιωπηλά. Γι' αυτό ζει σε
+ * **μία** συνάρτηση: τρία αντίγραφα θα ήταν τρεις ευκαιρίες να ξανασυμβεί, και δύο από
+ * αυτά όντως το ξανάπαθαν τη στιγμή που γράφτηκαν.
+ */
+function exemptionPattern(token) {
+  return new RegExp(`${token}:\\s*\\S+`);
+}
+
+/** Γραμμή που είναι σχόλιο ή κενή — μέρος του «μπλοκ αιτιολογίας». */
+const COMMENT_OR_BLANK = /^\s*(\/\/|\/\*|\*|$)/;
+
+function findReasonedExemption(lines, lineIndex, token) {
+  const re = exemptionPattern(token);
+  if (re.test(lines[lineIndex] || '')) return lineIndex;
   for (let i = lineIndex - 1; i >= 0; i--) {
     const line = lines[i] || '';
-    if (!commentOrBlank.test(line)) break;   // φτάσαμε σε κώδικα
-    if (re.test(line)) return true;
+    if (!COMMENT_OR_BLANK.test(line)) break;   // φτάσαμε σε κώδικα
+    if (re.test(line)) return i;
   }
-  return false;
+  return -1;
+}
+
+/** Όλες οι γραμμές του αρχείου που **δηλώνουν** εξαίρεση με αυτό το σύνθημα. */
+function allExemptionLines(lines, token) {
+  const re = exemptionPattern(token);
+  const out = [];
+  for (let i = 0; i < lines.length; i++) if (re.test(lines[i] || '')) out.push(i);
+  return out;
+}
+
+function hasReasonedExemption(lines, lineIndex, token) {
+  return findReasonedExemption(lines, lineIndex, token) !== -1;
+}
+
+/**
+ * Η περικλείουσα συνάρτηση ενός κόμβου (ή το `SourceFile` αν είναι top-level).
+ *
+ * 🔴 ΖΕΙ ΕΔΩ ΕΠΕΙΔΗ ΗΤΑΝ ΔΙΔΥΜΟ. Υπήρχε **δύο φορές** — μία στον αναλυτή αλυσίδας
+ * (ADR-870) και μία στον σαρωτή μισθωτή (ADR-747), με ίδια λογική και άλλη μορφοποίηση,
+ * άρα αόρατο σε κάθε name-based έλεγχο. Το έπιασε το **jscpd** (CHECK 3.28, token-based)
+ * τη στιγμή που τα δύο αρχεία βρέθηκαν στο ίδιο diff — 21 γραμμές / 72 tokens. Δύο
+ * αντίγραφα του «πού ανήκει αυτός ο κόμβος;» είναι δύο ορισμοί εμβέλειας που αποκλίνουν
+ * σιωπηλά, και η εμβέλεια είναι **ακριβώς** το θεμέλιο και των δύο κανόνων.
+ *
+ * @param {ts.Node} node
+ * @returns {ts.Node}
+ */
+function enclosingScope(node) {
+  let s = node;
+  while (
+    s.parent &&
+    !ts.isFunctionDeclaration(s) && !ts.isFunctionExpression(s) &&
+    !ts.isArrowFunction(s) && !ts.isMethodDeclaration(s) && !ts.isSourceFile(s)
+  ) {
+    s = s.parent;
+  }
+  return s;
 }
 
 module.exports = {
   hasReasonedExemption,
+  findReasonedExemption,
+  allExemptionLines,
+  enclosingScope,
   PROJECT_ROOT,
   CUSTODY_PARTITION_ROOT,
   loadCustodyPartitions,

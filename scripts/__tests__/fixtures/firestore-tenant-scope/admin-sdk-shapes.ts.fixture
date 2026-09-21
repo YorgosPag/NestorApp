@@ -7,7 +7,7 @@
  */
 
 import { getAdminFirestore } from '@/lib/firebase-admin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
 
@@ -83,9 +83,23 @@ export async function notScoped_modeNone(projectId: string) {
     .get();
 }
 
-/** ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ — χωρίς `where()` δεν είναι list query· το κρίνουν τα rules. */
-export async function notScoped_noWhere(id: string) {
+/**
+ * ΕΚΤΟΣ ΤΗΣ ΕΜΒΕΛΕΙΑΣ ΤΟΥ ΚΑΝΟΝΑ — ανάγνωση **ΕΝΟΣ** εγγράφου. Δεν είναι ερώτημα: δεν
+ * μπορεί να επιστρέψει λίστα, άρα δεν μπορεί να διαρρεύσει λίστα. Το κρίνουν τα rules.
+ * Ο κανόνας αγκυρώνει σε **εκτελούμενα ερωτήματα**, και αυτό δεν είναι ένα.
+ */
+export async function notScoped_singleDocRead(id: string) {
   return getAdminFirestore().collection(COLLECTIONS.BUILDINGS).doc(id).get();
+}
+
+/**
+ * 🔴 ΚΑΙ ΤΟ ΣΥΝΟΡΟ ΑΠΟ ΤΗΝ ΑΛΛΗ ΠΛΕΥΡΑ — ανάγνωση **ΟΛΟΚΛΗΡΗΣ** συλλογής, χωρίς κανένα
+ * `where()`. Αυτό ΕΙΝΑΙ ερώτημα, επιστρέφει **κάθε** μισθωτή, και οφείλει να κατατάσσεται.
+ * Χωρίς αυτή την άγκυρα, «δεν εκπέμπω για το `.doc().get()`» θα μπορούσε να γίνει σιωπηλά
+ * «δεν εκπέμπω για τίποτα χωρίς where()» — δηλαδή αθώωση της χειρότερης μορφής.
+ */
+export async function notScoped_wholeCollectionRead() {
+  return getAdminFirestore().collection(COLLECTIONS.BUILDINGS).get();
 }
 
 /** ΜΗ ΑΝΑΛΥΣΙΜΟ — το όνομα της συλλογής προκύπτει σε χρόνο εκτέλεσης. */
@@ -96,4 +110,61 @@ export async function unanalyzable_dynamicCollection(name: string, companyIdOrOt
 /** ΜΗ ΑΝΑΛΥΣΙΜΟ — δυναμικό όνομα πεδίου· η άγνοια ΔΕΝ είναι ενοχή. */
 export async function unanalyzable_dynamicField(field: string, value: string) {
   return getAdminFirestore().collection(COLLECTIONS.BUILDINGS).where(field, '==', value).get();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// Η ΤΕΤΑΡΤΗ ΜΟΡΦΗ — ρίζα δεμένη σε όνομα, φίλτρα σε ΑΛΛΗ εντολή (ADR-870)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ΠΑΡΑΒΙΑΣΗ — **αυτό ακριβώς ήταν αόρατο**: η ρίζα δένεται σε όνομα, οπότε ο παλιός σαρωτής
+ * (αγκύρωση στο `.collection()`, ανεβαίνοντας) έβλεπε αλυσίδα **χωρίς κανένα `where()`** και
+ * αποφαινόταν «δεν είναι list query». Είναι, φιλτράρει, και δεν έχει `companyId`.
+ */
+export async function violation_boundRootFiltersElsewhere(now: string) {
+  const tasksRef = getAdminFirestore().collection(COLLECTIONS.BUILDINGS);
+  const snapshot = await tasksRef
+    .where('reminderDate', '<=', now)
+    .where('reminderSent', '==', false)
+    .limit(50)
+    .get();
+  return snapshot;
+}
+
+/**
+ * 🔴 ΕΞΑΙΡΕΣΗ ΣΤΗΝ ΤΕΤΑΡΤΗ ΜΟΡΦΗ — ο λόγος γράφεται πάνω από τη **ΡΙΖΑ**, γιατί εκεί ο
+ * άνθρωπος βλέπει «το ερώτημα». Το `.get()` ζει εννέα γραμμές πιο κάτω, πίσω από κώδικα που
+ * κόβει τον αναγνώστη μπλοκ. Αν ο κανόνας διαβάζει μόνο το ένα άκρο, **τιμωρεί όποιον έκανε
+ * ό,τι του ζητήθηκε**. (Πραγματικό σχήμα: `entity-audit.service.ts` 342 → 356.)
+ */
+export async function exempt_boundRootReasonAtRoot(now: string) {
+  const deadline = now;
+
+  // tenant-scope-exempt: καθολικό πέρασμα συντήρησης από cron (Admin SDK) — καμία απάντηση
+  // δεν φεύγει προς πελάτη· το σχήμα είναι το ίδιο με το `mandate-expiry.service.ts`.
+  let query = getAdminFirestore()
+    .collection(COLLECTIONS.BUILDINGS)
+    .where('expiresAt', '<=', deadline)
+    .limit(50);
+
+  if (deadline) {
+    query = query.limit(10);
+  }
+
+  const snapshot = await query.get();
+  return snapshot;
+}
+
+/**
+ * ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ — υποσυλλογή **κάτω από έγγραφο**: `contacts/{id}/bank_accounts`. Ο άξονας
+ * απομόνωσης είναι η **διαδρομή**· ένα `where('companyId')` εδώ δεν στενεύει τίποτα, γιατί ο
+ * γονέας είναι ήδη ΕΝΑ έγγραφο. Η ερώτηση της απομόνωσης ανήκει σε **όποιον έλυσε το `{id}`**.
+ */
+export async function notScoped_subcollectionUnderDoc(contactId: string, iban: string) {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.CONTACTS)
+    .doc(contactId)
+    .collection(SUBCOLLECTIONS.BANK_ACCOUNTS)
+    .where('iban', '==', iban)
+    .get();
 }

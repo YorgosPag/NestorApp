@@ -39,6 +39,10 @@ export async function claimNextQueueItems(
   batchSize: number = EMAIL_QUEUE_CONFIG.BATCH_SIZE
 ): Promise<EmailIngestionQueueItem[]> {
   const adminDb = getAdminFirestore();
+  // tenant-scope-exempt: εργάτης ουράς — διεκδικεί εργασία για **κάθε** μισθωτή εκ σχεδιασμού
+  // (Admin SDK, ποτέ από αίτημα χρήστη). Ο άξονας εδώ είναι η **σειρά FIFO**, όχι η εταιρεία:
+  // ένα `where('companyId')` θα έκανε τον εργάτη να λιμοκτονεί όλους τους άλλους μισθωτές.
+  // Το `companyId` του κάθε στοιχείου διαβάζεται **μετά**, για τη δρομολόγηση.
   const queueCollection = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
 
   try {
@@ -108,6 +112,9 @@ export async function claimRetryableItems(
   batchSize: number = EMAIL_QUEUE_CONFIG.BATCH_SIZE
 ): Promise<EmailIngestionQueueItem[]> {
   const adminDb = getAdminFirestore();
+  // tenant-scope-exempt: ίδιος εργάτης, ίδιος άξονας — η επανάληψη αποτυχημένων είναι
+  // καθολική εκ σχεδιασμού. Φιλτράρισμα ανά εταιρεία θα άφηνε αποτυχίες μισθωτών που δεν
+  // τυχαίνει να ρωτηθούν να μένουν για πάντα αδιεκδίκητες.
   const queueCollection = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
 
   try {
@@ -369,6 +376,9 @@ export async function markQueueItemFailed(
  */
 export async function recoverStaleItems(): Promise<number> {
   const adminDb = getAdminFirestore();
+  // tenant-scope-exempt: ανάκτηση μετά από κατάρρευση εργάτη — ένα στοιχείο κολλημένο σε
+  // `processing` είναι **βλάβη της υποδομής**, όχι δεδομένο μισθωτή. Ο σαρωτής οφείλει να
+  // δει κάθε κολλημένο, αλλιώς οι μισθωτές που δεν ρωτήθηκαν μένουν μπλοκαρισμένοι.
   const queueCollection = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
 
   const threshold = new Date(Date.now() - EMAIL_QUEUE_CONFIG.STALE_PROCESSING_THRESHOLD_MS);

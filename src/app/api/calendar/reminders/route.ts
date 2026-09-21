@@ -46,6 +46,11 @@ async function handleGET(request: NextRequest) {
     const now = nowISO();
 
     // Query tasks where reminderDate <= now AND reminderSent != true
+    //
+    // tenant-scope-exempt: διαδρομή **cron**, φυλαγμένη από `verifyCronAuthorization` στην
+    // αρχή του handler — δεν υπάρχει συνδεδεμένος χρήστης να δώσει μισθωτή, και η υπενθύμιση
+    // που έληξε είναι γεγονός του ρολογιού. Η απάντηση προς τον καλούντα είναι **αριθμός**
+    // (`processed`), ποτέ τα ίδια τα έγγραφα.
     const tasksRef = adminDb.collection(COLLECTIONS.TASKS);
     const snapshot = await tasksRef
       .where('reminderDate', '<=', now)

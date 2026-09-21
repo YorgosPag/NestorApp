@@ -192,6 +192,11 @@ export async function getQueueStats(): Promise<EmailIngestionQueueStats> {
     })
   );
 
+  // tenant-scope-exempt: **λειτουργική τηλεμετρία** της ουράς υποδομής — πλήθη ανά κατάσταση
+  // και η παλαιότερη εκκρεμής, ποτέ τα ίδια τα έγγραφα. Μοναδικός καλών: το `getQueueHealth()`
+  // αυτού του αρχείου (επαληθεύτηκε με grep). ⚠️ **Η ΣΥΝΘΗΚΗ ΠΟΥ ΤΗΝ ΑΚΥΡΩΝΕΙ**: αν αυτά τα
+  // νούμερα φτάσουν ποτέ σε επιφάνεια μισθωτή, γίνονται διαρροή **όγκου** άλλων εταιρειών και
+  // η εξαίρεση παύει να ισχύει — τότε θέλει scoping, όχι αιτιολογία.
   const oldestPendingQuery = await queueCollection
     .where(FIELDS.STATUS, '==', QUEUE_STATUS.PENDING)
     .orderBy(FIELDS.CREATED_AT, 'asc')
