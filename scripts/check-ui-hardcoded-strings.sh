@@ -39,17 +39,24 @@ HAS_BLOCK=0
 #    comments …»). Ένα ψευδώς θετικό σε σωστό κώδικα είναι ο δρόμος προς το SKIP_.
 #
 # ⚠️ ΜΗΝ το κάνεις με `grep -v` ανά γραμμή: η κατάσταση «είμαι μέσα σε σχόλιο» ΔΕΝ
-#    διαβάζεται από μία γραμμή. Γι' αυτό διαβάζεται ολόκληρο το αρχείο (`-0777`).
-strip_block_comments() {
-    perl -0777 -pe 's{/\*.*?\*/}{ $& =~ s/[^
-]//gr }gse' "$1" 2>/dev/null
+#    διαβάζεται από μία γραμμή. Γι' αυτό διαβάζεται ολόκληρο το αρχείο.
+#
+# 🔴 ΚΑΙ ΤΑ ΣΧΟΛΙΑ ΤΕΛΟΥΣ ΓΡΑΜΜΗΣ (2026-09-21): ως τότε εδώ ζούσε ιδιωτικό `perl` που έσβηνε
+#    ΜΟΝΟ `/* … */`. Το `code; // … <πεδίο> …` περνούσε — το φίλτρο από κάτω πιάνει `//` μόνο
+#    στην ΑΡΧΗ της γραμμής — και 7 αρχεία μπλόκαραν πάνω στο ίδιο σχόλιο
+#    («`${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox»). Τώρα ρωτά το ΕΝΑ SSoT
+#    `stripComments` (`scripts/lib/i18n-namespace-extract.js`, ήδη σε 5 πύλες): σβήνει `//`
+#    ΚΑΙ `/* */`, κρατά offsets + αλλαγές γραμμής, και δεν τρώει το `//` ενός URL σε string.
+strip_comments() {
+    node -e "process.stdout.write(require('./scripts/lib/i18n-namespace-extract').stripComments(require('fs').readFileSync(process.argv[1], 'utf8')))" "$1" 2>/dev/null
 }
 
-# Count hardcoded UI violations in a file (4 patterns, de-duplicated by line)
-count_ui_violations() {
-    local file="$1"
+# Hardcoded UI violations of a file as `line:text`, one per line, sorted by line.
+# ΜΙΑ πηγή για το «πόσες» ΚΑΙ το «ποιες» — ως 2026-09-21 τα 4 patterns ζούσαν δύο φορές
+# και η αναφορά έτρεχε πάνω στο ΩΜΟ αρχείο (έδειχνε σχόλια που η μέτρηση είχε σβήσει).
+match_ui_violations() {
     local src
-    src="$(strip_block_comments "$file")"
+    src="$(strip_comments "$1")"
     {
         # Pattern 1: JSX text with Greek
         printf '%s
@@ -63,7 +70,12 @@ count_ui_violations() {
         # Pattern 4: toast calls with Greek
         printf '%s
 ' "$src" | grep -nP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" 2>/dev/null
-    } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | grep -vP "^\d+:\s*\{/\*" | awk -F: '{print $1}' | sort -u | wc -l | tr -d ' '
+    } | sort -u -t: -k1,1n
+}
+
+# Count hardcoded UI violations in a file (4 patterns, de-duplicated by line)
+count_ui_violations() {
+    match_ui_violations "$1" | awk -F: '{print $1}' | sort -u | wc -l | tr -d ' '
 }
 
 # Get baseline count for a file (0 if not in baseline)
@@ -87,13 +99,7 @@ is_in_baseline() {
 }
 
 show_violations() {
-    local file="$1"
-    {
-        grep -nP ">[^<>{}]*\p{Greek}[^<>{}]*<" "$file" 2>/dev/null
-        grep -nP "(placeholder|title|aria-label|alt|label)=\"[^\"]*\p{Greek}[^\"]*\"" "$file" 2>/dev/null
-        grep -nP "(throw new Error|alert|confirm|prompt)\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
-        grep -nP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
-    } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | grep -vP "^\d+:\s*\{/\*" | sort -u -t: -k1,1n | head -5
+    match_ui_violations "$1" | head -5
 }
 
 for file in $FILES; do
