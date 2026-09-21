@@ -46,10 +46,10 @@ import { after, NextResponse, type NextRequest } from 'next/server';
 
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
-  markWorkspaceInvitationOpened,
   previewWorkspaceInvitation,
   type InvitationPreviewOutcome,
-} from '@/server/auth/workspace-invitation-redeem';
+} from '@/server/auth/workspace-invitation-preview';
+import { markWorkspaceInvitationOpened } from '@/server/auth/workspace-invitation-redeem';
 import { createModuleLogger } from '@/lib/telemetry';
 import type {
   WorkspaceInvitationPreview,
@@ -91,7 +91,6 @@ const STATUS_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, number>> = 
   'revoked': 410,
   // ── Άφταστα από αυτή την πόρτα (θέλουν ταυτότητα) ─────────────────────────
   'wrong-recipient': 403,
-  'email-unverified': 403,
   'already-member': 409,
   'role-above-inviter': 422,
 };

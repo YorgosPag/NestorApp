@@ -32,6 +32,7 @@ import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/
 import { createModuleLogger } from '@/lib/telemetry';
 import { listActiveWorkspaceMembers } from '@/lib/auth/workspace-membership';
 import { changeActTeam, readActTeamInWorkspace } from '@/services/network-messaging/act-team-writer';
+import { canServeOnActTeam } from '@/services/network-messaging/act-team-eligibility';
 import { readNetworkPeople } from '@/services/network-messaging/thread-people';
 import type { NetworkActTeamChangeResult, NetworkActTeamResult } from '@/types/network-wire';
 
@@ -91,10 +92,14 @@ async function getHandler(_request: NextRequest, { actor, teamId, workspaceId }:
     const { id, actKind, responsibleUid, memberUids, version } = team;
     // 👥 Β7 — από ποιους διαλέγει ο επιλογέας: τα ΕΝΕΡΓΑ μέλη του γραφείου (ο δρων είναι μέλος του — `teamInput`).
     const members = await listActiveWorkspaceMembers(getAdminFirestore(), workspaceId);
+    // 🔑 ADR-867 Ε1β — υποψήφιοι = όσοι **μπορούν να αναλάβουν** (ο ΙΔΙΟΣ έλεγχος με τον κριτή του PATCH)·
+    //    συν όσοι είναι **ήδη** στην ομάδα, ώστε το όνομά τους να φαίνεται πάντα (ποτέ «Μέλος του γραφείου»).
+    const eligible = members.filter((member) => canServeOnActTeam(member.globalRole)).map((member) => member.uid);
+    const shown = [...new Set([...eligible, responsibleUid, ...memberUids])];
     const [canManage, candidates] = await Promise.all([
       // 🔑 Η οθόνη δείχνει «άλλαξε υπεύθυνο» μόνο σε όποιον μπορεί — ο κριτής ξαναρωτιέται στο PATCH.
       isActTeamManager(actor, cache),
-      readNetworkPeople(getAdminFirestore(), members.map((member) => member.uid)),
+      readNetworkPeople(getAdminFirestore(), shown),
     ]);
     return NextResponse.json<TeamResponse>({
       success: true,

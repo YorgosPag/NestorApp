@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isNotificationUnread } from '@/lib/notifications/notification-state';
 import { API_ROUTES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
@@ -68,7 +69,7 @@ export function NotificationDrawer() {
     // 2. Persist to Firestore
     const targetIds = ids ?? order.filter(id => {
       const n = items.get(id);
-      return n && n.delivery.state !== 'seen';
+      return n && isNotificationUnread(n.delivery.state);
     });
 
     if (targetIds.length > 0) {
@@ -309,7 +310,7 @@ export function NotificationDrawer() {
               {notificationsList.map(n => {
                 const Icon = iconMap[n.severity];
                 const colorClass = colorMap[n.severity];
-                const isUnread = n.delivery.state !== 'seen' && n.delivery.state !== 'acted';
+                const isUnread = isNotificationUnread(n.delivery.state);
 
                 // 🔴 **Η ΑΠΟΦΑΣΗ ΕΦΥΓΕ ΑΠΟ ΤΟ RENDER** (ADR-841 §7 Α18.10). Ζούσε εδώ ως
                 //    κλειστή συνάρτηση μέσα σε `.map()`, και ήταν **σιωπηλά λάθος**: το

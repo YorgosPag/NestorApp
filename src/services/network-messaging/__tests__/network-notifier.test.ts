@@ -83,7 +83,7 @@ afterEach(() => jest.restoreAllMocks());
 async function world(): Promise<{ db: AdminFirestore; fake: FakeFirestore }> {
   const fake = new FakeFirestore();
   const db = fake as unknown as AdminFirestore;
-  for (const uid of [MARIA, ELENI]) fake.seed(MEMBERS_PATH, uid, { uid, status: 'active' });
+  for (const uid of [MARIA, ELENI]) fake.seed(MEMBERS_PATH, uid, { uid, status: 'active', globalRole: 'internal_user' });
   fake.seed(COLLECTIONS.NETWORK_ACT_TEAMS, TEAM_ID, {
     ...actTeamDocument({ actKind: 'mandate', actSeed: ACT_SEED, hostCompanyId: HOST, responsibleUid: MARIA }, BORN),
   });

@@ -7,7 +7,7 @@ import 'server-only';
 
 import { getAdminFirestore, getAdminAuth, FieldValue } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
 import { generateCompanyId } from '@/services/enterprise-id.service';
@@ -27,12 +27,35 @@ import {
   NAVIGATION_COLLECTION,
 } from './migration-config';
 import { nowISO } from '@/lib/date-local';
+import { chunkArray } from '@/lib/array-utils';
 
 const logger = createModuleLogger('MigrateCompanyId');
 
 // =============================================================================
 // BATCH HELPERS
 // =============================================================================
+
+type DocSnapshot = FirebaseFirestore.QueryDocumentSnapshot;
+
+/**
+ * Ο ΕΝΑΣ βρόχος «δέσμες των `BATCH_LIMIT`» — ήταν γραμμένος τρεις φορές (CHECK 3.28, ADR-867 Ε1
+ * Boy Scout). Τον τεμαχισμό τον κάνει το υπάρχον SSoT `chunkArray`.
+ * @returns πόσα έγγραφα δεσμεύτηκαν.
+ */
+async function commitInChunks(
+  db: FirebaseFirestore.Firestore,
+  docs: readonly DocSnapshot[],
+  write: (batch: FirebaseFirestore.WriteBatch, doc: DocSnapshot) => void
+): Promise<number> {
+  let committed = 0;
+  for (const chunk of chunkArray([...docs], BATCH_LIMIT)) {
+    const batch = db.batch();
+    for (const doc of chunk) write(batch, doc);
+    await batch.commit();
+    committed += chunk.length;
+  }
+  return committed;
+}
 
 export async function migrateCollection(
   db: FirebaseFirestore.Firestore,
@@ -61,18 +84,9 @@ export async function migrateCollection(
       return result;
     }
 
-    const docs = snapshot.docs;
-    for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
-      const batch = db.batch();
-      const chunk = docs.slice(i, i + BATCH_LIMIT);
-
-      for (const doc of chunk) {
-        batch.update(doc.ref, { [fieldName]: newId });
-      }
-
-      await batch.commit();
-      result.documentsUpdated += chunk.length;
-    }
+    result.documentsUpdated = await commitInChunks(db, snapshot.docs, (batch, doc) => {
+      batch.update(doc.ref, { [fieldName]: newId });
+    });
 
     logger.info(`Collection "${collectionName}": ${result.documentsUpdated}/${result.documentsFound} docs updated`);
   } catch (error) {
@@ -109,30 +123,13 @@ export async function migrateSubcollection(
       return result;
     }
 
-    const docs = snapshot.docs;
-    for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
-      const batch = db.batch();
-      const chunk = docs.slice(i, i + BATCH_LIMIT);
-
-      for (const doc of chunk) {
-        const newDocRef = db.collection(newPath).doc(doc.id);
-        batch.set(newDocRef, doc.data());
-      }
-
-      await batch.commit();
-    }
-
-    for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
-      const batch = db.batch();
-      const chunk = docs.slice(i, i + BATCH_LIMIT);
-
-      for (const doc of chunk) {
-        batch.delete(doc.ref);
-      }
-
-      await batch.commit();
-      result.documentsDeleted += chunk.length;
-    }
+    // Αντιγραφή ΠΡΩΤΑ, διαγραφή ΜΕΤΑ — αποτυχία ανάμεσα αφήνει διπλό, ποτέ χαμένο.
+    await commitInChunks(db, snapshot.docs, (batch, doc) => {
+      batch.set(db.collection(newPath).doc(doc.id), doc.data());
+    });
+    result.documentsDeleted = await commitInChunks(db, snapshot.docs, (batch, doc) => {
+      batch.delete(doc.ref);
+    });
 
     logger.info(`Subcollection "${oldPath}": ${result.documentsCopied} docs copied, ${result.documentsDeleted} deleted`);
   } catch (error) {
@@ -272,6 +269,16 @@ export async function executeMigration(
     report.steps.companyDocument = { status: 'error', details: msg };
     report.errors.push(msg);
   }
+
+  // STEP 1b: ΟΙ ΘΕΣΕΙΣ ΠΡΙΝ ΑΠΟ ΤΑ CLAIMS (ADR-867 Β9(β) Ε1). Το `setClaimsWithMirror` αρνείται
+  //    claim `companyId` χωρίς ενεργή θέση στον **νέο** χώρο (`claims-seat.ts`) — και ούτως ή
+  //    άλλως, χωρίς αυτό το βήμα, κάθε μέλος θα έφτανε στο νέο γραφείο **αόρατο** στους
+  //    καταλόγους, ενώ οι θέσεις του θα έμεναν ορφανές στο παλιό.
+  const seatResult = await migrateSubcollection(
+    db, `${COLLECTIONS.COMPANIES}/${oldId}`, `${COLLECTIONS.COMPANIES}/${newId}`,
+    SUBCOLLECTIONS.WORKSPACE_MEMBERS, dryRun
+  );
+  report.steps.subcollections.push(seatResult);
 
   // STEP 2: Update Firebase custom claims
   try {

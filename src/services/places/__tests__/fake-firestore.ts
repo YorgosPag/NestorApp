@@ -14,11 +14,13 @@
  * υπάρχουσα ταυτότητα), οπότε ο πλαστός **οφείλει** να το τηρεί.
  */
 
+import { FieldValue } from 'firebase-admin/firestore';
+
 type Doc = Record<string, unknown>;
 
 interface WhereClause {
   readonly field: string;
-  readonly op: '==' | '>=' | '<=' | 'in';
+  readonly op: '==' | '>=' | '<=' | '<' | '>' | 'in';
   readonly value: unknown;
 }
 
@@ -62,7 +64,15 @@ function matches(doc: Doc, clause: WhereClause): boolean {
 
   const left = value as number | string;
   const right = clause.value as number | string;
+  // ADR-867 Ε10 — «το προηγούμενο ζωντανό μήνυμα» ρωτά `where('createdAt', '<', …)`: αυστηρή σύγκριση.
+  if (clause.op === '<') return left < right;
+  if (clause.op === '>') return left > right;
   return clause.op === '>=' ? left >= right : left <= right;
+}
+
+/** Είναι η τιμή το σύμβολο `FieldValue.delete()` του Admin SDK; */
+function isFieldDelete(value: unknown): boolean {
+  return value instanceof FieldValue && value.isEqual(FieldValue.delete());
 }
 
 export class FakeFirestore {
@@ -296,6 +306,20 @@ export class FakeTransaction {
   }
 
   /**
+   * 🔴 **ΤΟ `transaction.getAll` ΕΛΕΙΠΕ — ΕΝΑΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΣΧΗΜΑΤΟΣ** (ADR-867 Β9(β) Ε9).
+   *
+   * Το Admin SDK διαβάζει N έγγραφα σε **ένα** ταξίδι και μέσα σε συναλλαγή· η ιδιωτική πλευρά της θέσης
+   * (`network_audience_private`) διαβάζεται έτσι στην αποστολή, την ανάκληση και την επεξεργασία. Κάθε
+   * έγγραφο **καταγράφεται** ως ανάγνωση (ίδιος έλεγχος φρεσκάδας με το `get`), και η σειρά αντιστοιχεί ένα
+   * προς ένα στις αναφορές — και για τα ανύπαρκτα, όπως το αληθινό.
+   */
+  async getAll(...refs: readonly FakeDocRef[]): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }[]> {
+    const snapshots: { id: string; exists: boolean; data: () => Doc | undefined }[] = [];
+    for (const ref of refs) snapshots.push(await this.get(ref));
+    return snapshots;
+  }
+
+  /**
    * Ο ανταγωνιστής, **μία φορά ανά συναλλαγή**.
    *
    * ⚠️ **Εξήχθη μόλις απέκτησε δεύτερο καλούντα** (ADR-853 Φ2 — η ανάγνωση ερωτήματος).
@@ -497,7 +521,10 @@ export class FakeDocRef {
         if (child === null || typeof child !== 'object') node[key] = {};
         node = node[key] as Doc;
       }
-      node[leaf] = value;
+      // ⚠️ `FieldValue.delete()` **σβήνει** το κλειδί, όπως στο αληθινό — αλλιώς ο πλαστός θα έγραφε το
+      //    σύμβολο ως τιμή και μια άγκυρα «το πεδίο έφυγε» θα ήταν πράσινη για λάθος λόγο (ADR-867 Ε9).
+      if (isFieldDelete(value)) delete node[leaf];
+      else node[leaf] = value;
     }
 
     this.bucket.set(this.id, next);
@@ -587,6 +614,17 @@ export class FakeQuery {
      * λήξεις· χωρίς ταξινόμηση στο πλαστό, η περικοπή θα ήταν «όποια έτυχε» και η άγκυρα τυφλή.
      */
     private readonly order: string | null = null,
+    /**
+     * 🔑 **Η ΦΟΡΑ ΕΛΕΙΠΕ** (ADR-867 Ε10): ο πλαστός ταξινομούσε **μόνο** αύξουσα, οπότε ένα
+     * `orderBy('createdAt', 'desc').limit(20)` επέστρεφε τα **παλαιότερα** 20 — δηλαδή ο επανυπολογισμός
+     * «ποιο είναι τώρα το τελευταίο ζωντανό μήνυμα» θα δοκιμαζόταν πάνω σε λάθος σελίδα.
+     */
+    private readonly direction: 'asc' | 'desc' = 'asc',
+    /**
+     * 🔑 **Δρομέας εγγράφου** (`startAfter(snapshot)`, ADR-867 Ε10) — η σελιδοποίηση που **δεν** χάνει έγγραφα με
+     * ίδια τιμή ταξινόμησης στο όριο της σελίδας. Κρίνεται στη **θέση** του εγγράφου μέσα στην ίδια ταξινόμηση.
+     */
+    private readonly afterId: string | null = null,
   ) {}
 
   where(field: string, op: WhereClause['op'], value: unknown): FakeQuery {
@@ -598,16 +636,23 @@ export class FakeQuery {
       this.collectionName,
       this.refOf,
       this.order,
+      this.direction,
+      this.afterId,
     );
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName, this.refOf, this.order);
+    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName, this.refOf, this.order, this.direction, this.afterId);
   }
 
-  /** Αύξουσα ταξινόμηση — ίδια σύγκριση με το `matches` (ISO σε UTC ⇒ αλφαβητική = χρονολογική). */
-  orderBy(field: string): FakeQuery {
-    return new FakeQuery(this.bucket, this.clauses, this.cap, this.failing, this.collectionName, this.refOf, field);
+  /** Ταξινόμηση — ίδια σύγκριση με το `matches` (ISO σε UTC ⇒ αλφαβητική = χρονολογική). Προεπιλογή: αύξουσα. */
+  orderBy(field: string, direction: 'asc' | 'desc' = 'asc'): FakeQuery {
+    return new FakeQuery(this.bucket, this.clauses, this.cap, this.failing, this.collectionName, this.refOf, field, direction, this.afterId);
+  }
+
+  /** Συνέχεια **μετά** από ένα έγγραφο της προηγούμενης σελίδας (όπως το `startAfter(DocumentSnapshot)`). */
+  startAfter(snapshot: { readonly id: string }): FakeQuery {
+    return new FakeQuery(this.bucket, this.clauses, this.cap, this.failing, this.collectionName, this.refOf, this.order, this.direction, snapshot.id);
   }
 
   /**
@@ -625,9 +670,11 @@ export class FakeQuery {
     const sorted = order === null ? filtered : [...filtered].sort(([, a], [, b]) => {
       const left = readPath(a, order) as string | number;
       const right = readPath(b, order) as string | number;
-      return left < right ? -1 : left > right ? 1 : 0;
+      const ascending = left < right ? -1 : left > right ? 1 : 0;
+      return this.direction === 'desc' ? -ascending : ascending;
     });
-    const hits = sorted.slice(0, this.cap);
+    const start = this.afterId === null ? 0 : sorted.findIndex(([id]) => id === this.afterId) + 1;
+    const hits = sorted.slice(start, start + this.cap);
 
     return {
       docs: hits.map(([id, doc]) => ({ id, data: () => doc, ref: this.refOf?.(id) })),

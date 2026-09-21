@@ -29,6 +29,7 @@
 import 'server-only';
 
 import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
+import { deadlineDaysLeft } from '@/lib/date-local';
 import { publicUrl } from '@/lib/http/public-origin';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
 import { brandedSubject } from '@/server/comms/email-texts';
@@ -150,10 +151,11 @@ const INVITATION_TEXTS: Readonly<Record<HumanLanguage, InvitationWording>> = {
 // 2. Ο ΧΡΟΝΟΣ ΠΟΥ ΑΠΟΜΕΝΕΙ
 // =============================================================================
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 /**
- * **Πόσες ημέρες μένουν** — προς τα πάνω, με δάπεδο το 1.
+ * **Πόσες ημέρες μένουν** — ο κανόνας του SSoT (`deadlineDaysLeft`), με δάπεδο το 1.
+ *
+ * 🔑 **Η οθόνη ρωτά τον ΙΔΙΟ κανόνα** (ADR-853 §13 ε.γ): πριν, εδώ ζούσε δικό του
+ * `Math.ceil` ενώ η οθόνη έκοβε ⇒ «7» στο email, «6» στην οθόνη για την ίδια λήξη.
  *
  * 🔑 **Γιατί «σε Ν ημέρες» επιτρέπεται ΕΔΩ, ενώ απαγορεύεται στην όψη**
  * (`WorkspaceInvitationView`: *«στιγμιότυπο που παλιώνει στο σύρμα»*): το email
@@ -166,9 +168,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * αλήθεια — σε ό,τι αφορά προθεσμία, ποτέ δεν υποσχόμαστε λιγότερα από όσα δίνουμε.
  */
 function daysRemaining(expiresAt: string, nowValue: string): number {
-  const remaining = Date.parse(expiresAt) - Date.parse(nowValue);
-  if (!Number.isFinite(remaining)) return 1;
-  return Math.max(1, Math.ceil(remaining / MS_PER_DAY));
+  return deadlineDaysLeft(expiresAt, Date.parse(nowValue)) ?? 1;
 }
 
 // =============================================================================

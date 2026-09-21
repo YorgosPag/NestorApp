@@ -35,16 +35,18 @@ import {
   SOURCE_SERVICES,
 } from '@/config/notification-events';
 import { listingNoticeTitle } from '@/lib/listings/listing-notice-title';
+import { hasLiveUnread } from '@/lib/network-messaging/thread-liveness';
 import { actSubjectOf } from '@/lib/network-edge/edge-sources';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import { resolveUserDisplayName } from '@/services/entity-audit.service';
 import { dispatchNotification, type DispatchDestination } from '@/server/notifications/notification-orchestrator';
 import { resolveRecipientEmail } from '@/server/notifications/notification-email-leg';
+import { withdrawNotifications, type WithdrawTarget } from '@/server/notifications/notification-withdraw';
 import type {
   NetworkActKind,
   NetworkActTeam,
-  NetworkAudienceEntry,
+  NetworkAudienceSeat,
   NetworkThreadTopic,
 } from '@/types/network-thread';
 import {
@@ -58,6 +60,7 @@ import { readAwaysOf } from './network-away';
 import { threadDestination } from './network-destination';
 import {
   planMessageNotifications,
+  unreadEpisodeOf,
   type MessageRecipient,
   type TeamArrival,
   type TeamArrivalKind,
@@ -158,8 +161,11 @@ async function settle(tasks: readonly Promise<unknown>[], context: Readonly<Reco
 export interface NetworkMessageNotice {
   readonly threadId: string;
   readonly topic: NetworkThreadTopic;
-  /** Το ακροατήριο **όπως το διάβασε** η συναλλαγή (πριν από τις δικές της γραφές). */
-  readonly audience: readonly NetworkAudienceEntry[];
+  /**
+   * Το ακροατήριο **όπως το διάβασε** η συναλλαγή (πριν από τις δικές της γραφές) — 🔒 θέσεις **με** την ιδιωτική
+   * πλευρά (σίγαση · follow · επεισόδιο αδιάβαστων, Ε9), που μένουν στον διακομιστή.
+   */
+  readonly audience: readonly NetworkAudienceSeat[];
   readonly senderUid: string;
   readonly sentAt: string;
 }
@@ -200,6 +206,14 @@ function arrivalDispatchDestination(notice: TeamArrivalNotice, recipientUid: str
   return threadDestination(generateDeterministicNetworkActThreadId(notice.team.actSeed), recipientUid);
 }
 
+/**
+ * 🔑 **Η ταυτότητα της ειδοποίησης «νέο μήνυμα»** — ένας ορισμός, για τη γέννηση **και** για την απόσυρση (Ε10).
+ * Δύο διατυπώσεις θα έκαναν την απόσυρση να ψάχνει έγγραφο που δεν γράφτηκε ποτέ — σιωπηλά, χωρίς κόκκινο.
+ */
+export function messageEventId(threadId: string, episode: string): string {
+  return `network-thread:${threadId}:${episode}`;
+}
+
 function dispatchMessage(
   notice: NetworkMessageNotice,
   recipient: MessageRecipient,
@@ -215,7 +229,7 @@ function dispatchMessage(
     titleKey: MESSAGE_TITLE_KEYS[wording.key],
     titleParams: { ...wording.params },
     // 🔑 Η ΤΑΥΤΟΤΗΤΑ ΕΙΝΑΙ ΤΟ ΔΙΑΣΤΗΜΑ ΑΔΙΑΒΑΣΤΩΝ — δες `network-notification-plan.ts`.
-    eventId: `network-thread:${notice.threadId}:${recipient.episode}`,
+    eventId: messageEventId(notice.threadId, recipient.episode),
     entityId: notice.threadId,
     entityType: NOTIFICATION_ENTITY_TYPES.NETWORK_THREAD,
     source: { service: SOURCE_SERVICES.NETWORK, feature: 'thread-message', env: getCurrentEnvironment() },
@@ -246,6 +260,53 @@ export async function announceNetworkMessage(adminDb: AdminFirestore, notice: Ne
     );
   } catch (error) {
     logger.error('Οι ειδοποιήσεις νέου μηνύματος δεν στάλθηκαν', {
+      data: { threadId: notice.threadId },
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// =============================================================================
+// ΑΝΑΚΛΗΣΗ — Η ΑΠΟΣΥΡΣΗ ΟΣΩΝ ΕΙΔΟΠΟΙΗΣΕΩΝ ΕΜΕΙΝΑΝ ΧΩΡΙΣ ΑΝΤΙΚΕΙΜΕΝΟ (ADR-867 Β9(β) Ε10)
+// =============================================================================
+
+/** Ό,τι είχε ήδη στα χέρια της η συναλλαγή της ανάκλησης — **καμία** δεύτερη ανάγνωση. */
+export interface NetworkRetractionNotice {
+  readonly threadId: string;
+  readonly senderUid: string;
+  /** Οι θέσεις **με** την ιδιωτική πλευρά, όπως τις διάβασε η συναλλαγή (το `lastReadAt` ορίζει το επεισόδιο). */
+  readonly audience: readonly NetworkAudienceSeat[];
+  /** Το τελευταίο **ζωντανό** μήνυμα **μετά** την ανάκληση (`thread-liveness.ts`). */
+  readonly liveAt: string | null;
+  readonly retractedAt: string;
+}
+
+/**
+ * 🔑 **Ποιων η ειδοποίηση του τρέχοντος επεισοδίου δεν έχει πια αντικείμενο** — καθαρό.
+ *
+ * Όποιος έχει **ακόμη** ζωντανό αδιάβαστο κρατά την ειδοποίησή του: «Νέο μήνυμα» εξακολουθεί να είναι αλήθεια.
+ * ⚠️ Ο αποστολέας δεν ειδοποιήθηκε ποτέ για το δικό του μήνυμα. Τα σφραγισμένα μέλη **μετρούν**: μπορεί να
+ * ειδοποιήθηκαν πριν φύγουν, και μια ειδοποίηση για κάτι ανύπαρκτο δεν γίνεται αληθινή επειδή έφυγαν.
+ */
+export function retractionWithdrawals(notice: NetworkRetractionNotice): readonly WithdrawTarget[] {
+  const thread = { lastMessageAt: notice.liveAt, lastLiveMessageAt: notice.liveAt };
+  return notice.audience
+    .filter((seat) => seat.uid !== notice.senderUid && !hasLiveUnread(thread, seat.lastReadAt))
+    .map((seat) => ({
+      eventType: NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE,
+      recipientId: seat.uid,
+      eventId: messageEventId(notice.threadId, unreadEpisodeOf(seat)),
+    }));
+}
+
+/** **Αποσύρει** ό,τι έμεινε χωρίς αντικείμενο. Καλείται **μόνο** μετά από δεσμευμένη ανάκληση. **Κανένα πέταγμα.** */
+export async function withdrawRetractedEpisodes(adminDb: AdminFirestore, notice: NetworkRetractionNotice): Promise<void> {
+  try {
+    const targets = retractionWithdrawals(notice);
+    if (targets.length === 0) return;
+    await withdrawNotifications(adminDb, targets, 'source-retracted', notice.retractedAt);
+  } catch (error) {
+    logger.error('Η απόσυρση ειδοποιήσεων μετά την ανάκληση απέτυχε', {
       data: { threadId: notice.threadId },
       error: error instanceof Error ? error.message : String(error),
     });

@@ -121,6 +121,17 @@ describe('Κ3 — ΑΚΡΟΑΤΗΡΙΟ: ένας γραφέας', () => {
     expect(findingsOf('await networkAudienceRef(db, t, uid).get();', gate.MESSAGE_WRITER))
       .toEqual([gate.STATES.CONSUMER]);
   });
+
+  it('⛔ 🔒 (Ε9) η ΙΔΙΩΤΙΚΗ πλευρά της θέσης είναι ακροατήριο — δεύτερος γραφέας εκεί «ξε-σιγά» ανθρώπους (μετάλλαξη: λείπει από το AUDIENCE_CALLS)', () => {
+    const code = 'transaction.set(networkAudiencePrivateRef(db, t, uid), { muted: false }, { merge: true });';
+    expect(findingsOf(code, gate.MESSAGE_WRITER))
+      .toEqual(expect.arrayContaining([gate.STATES.SECOND_AUDIENCE_WRITER]));
+  });
+
+  it('✅ (Ε9) η ένωση των δύο πλευρών ΔΙΑΒΑΖΕΙ την ιδιωτική — δηλωμένη, καμία γραφή', () => {
+    expect(findingsOf('read(networkAudiencePrivateRef(db, t, uid));', 'src/services/network-messaging/audience-seats.ts'))
+      .toEqual([gate.STATES.CONSUMER]);
+  });
 });
 
 describe('Κ4 — ΜΗΝΥΜΑΤΑ: ένας γραφέας', () => {

@@ -63,6 +63,8 @@ import 'server-only';
  * *«τι σημαίνει αυτή η απόδειξη για τα διαπιστευτήρια του λογαριασμού»*.
  */
 
+import type { UserRecord } from 'firebase-admin/auth';
+
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger, sentryCaptureMessage } from '@/lib/telemetry';
@@ -84,6 +86,22 @@ export interface ProvenMailboxAccount {
   readonly emailVerified: boolean;
   /** Έχει εγγεγραμμένο **δεύτερο παράγοντα**; */
   readonly secondFactorEnrolled: boolean;
+}
+
+/**
+ * **`UserRecord` → ό,τι χρειάζεται η κρίση** — ο ΕΝΑΣ ορισμός του «έχει 2ο παράγοντα».
+ *
+ * 🔑 Ήταν γραμμένο μέσα στο `citizen-identity.ts`· η πρόσκληση χώρου (ADR-853 §15) έγινε
+ * δεύτερος καταναλωτής, και δεύτερο αντίγραφο της έκφρασης MFA θα μπορούσε να αποκλίνει.
+ */
+export function provenMailboxAccountOf(
+  record: Pick<UserRecord, 'uid' | 'emailVerified' | 'multiFactor'>,
+): ProvenMailboxAccount {
+  return {
+    uid: record.uid,
+    emailVerified: record.emailVerified,
+    secondFactorEnrolled: (record.multiFactor?.enrolledFactors.length ?? 0) > 0,
+  };
 }
 
 /**

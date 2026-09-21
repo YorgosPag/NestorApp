@@ -45,50 +45,25 @@ import type { Metadata } from 'next';
 import { after } from 'next/server';
 
 import { WorkspaceInviteContent } from '@/components/workspace-invite/WorkspaceInviteContent';
+// 🔑 **Ο ΕΝΑΣ πίνακας εξόδων** — τον διαβάζει **και** η οθόνη για την άρνηση την ώρα της
+//    πράξης. Μέχρι 2026-09-21 ζούσε εδώ, και η οθόνη έδινε σε κάθε τέτοια άρνηση «αρχική».
+import { EXIT_BY_REFUSAL } from '@/components/workspace-invite/workspace-invite-labels';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { loginHref } from '@/lib/routes/return-path';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
 import { readPageIdentity } from '@/server/auth/page-identity';
 import {
-  markWorkspaceInvitationOpened,
   previewWorkspaceInvitation,
   type InvitationPreviewOutcome,
-} from '@/server/auth/workspace-invitation-redeem';
-import type { WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
-import type {
-  WorkspaceInvitationLinkView,
-  WorkspaceInviteExitName,
-} from '@/types/workspace-invitation-view';
+} from '@/server/auth/workspace-invitation-preview';
+import { markWorkspaceInvitationOpened } from '@/server/auth/workspace-invitation-redeem';
+import type { WorkspaceInvitationLinkView } from '@/types/workspace-invitation-view';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   referrer: 'no-referrer',
-};
-
-/**
- * **Κάθε άρνηση ξέρει πού στέλνει τον άνθρωπο** — και ο τύπος απαιτεί **και οι εννέα** να
- * απαντηθούν. Ένα `switch` με `default` θα κατάπινε τη δέκατη σιωπηλά.
- *
- * 🔑 Ο διαχωρισμός δεν είναι αισθητικός: `sign-in` σημαίνει *«υπάρχει πράξη, λείπει η σωστή
- * ταυτότητα»*· `home` σημαίνει *«δεν υπάρχει τίποτα να κάνεις εδώ»*. Να δώσουμε «Σύνδεση»
- * σε ληγμένη πρόσκληση θα ήταν κουμπί που **δεν οδηγεί πουθενά** — αδιέξοδο **με** κουμπί,
- * χειρότερο από αδιέξοδο χωρίς (ADR-844 Α3).
- */
-const EXIT_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, WorkspaceInviteExitName>> = {
-  'link-invalid': 'home',
-  'invitation-unknown': 'home',
-  expired: 'home',
-  /** Απάντησε ήδη — **επιτυχία στο παρελθόν**. Ο δρόμος του είναι μέσα. */
-  'already-used': 'sign-in',
-  revoked: 'home',
-  /** Είναι **λάθος λογαριασμός**, όχι λάθος σύνδεσμος: ξανασυνδέσου ως ο παραλήπτης. */
-  'wrong-recipient': 'sign-in',
-  /** Επιβεβαίωσε το γραμματοκιβώτιο και ξαναπάτησε — η πράξη **υπάρχει** ακόμη. */
-  'email-unverified': 'sign-in',
-  'already-member': 'sign-in',
-  'role-above-inviter': 'home',
 };
 
 /**
@@ -103,23 +78,38 @@ const EXIT_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, WorkspaceInvi
 function viewOf(
   outcome: InvitationPreviewOutcome,
   token: string,
-  signedIn: boolean,
+  viewerEmail: string | null,
 ): WorkspaceInvitationLinkView {
   switch (outcome.kind) {
-    case 'preview':
+    case 'preview': {
+      const returnHere = loginHref(workspaceInvitationHref(token));
       return {
         kind: 'preview',
         preview: outcome.preview,
         token,
-        respond: signedIn
-          ? { kind: 'ready' }
-          : { kind: 'sign-in', href: loginHref(workspaceInvitationHref(token)) },
+        respond: respondOf(outcome.addressedToViewer, viewerEmail, returnHere),
+        switchAccountHref: returnHere,
       };
+    }
     case 'refused':
       return { kind: 'refused', reason: outcome.reason, exit: EXIT_BY_REFUSAL[outcome.reason] };
     case 'unavailable':
       return { kind: 'unavailable', exit: 'home' };
   }
+}
+
+/**
+ * **Μπορεί να απαντήσει τώρα;** — ανώνυμος ⇒ σύνδεση· **άλλος λογαριασμός ⇒ το λέμε ΠΡΙΝ**
+ * το κλικ (ADR-853 §13 ε.δ, πρότυπο Google/Slack «signed in as…»)· αλλιώς έτοιμος.
+ */
+function respondOf(
+  addressedToViewer: boolean | null,
+  viewerEmail: string | null,
+  signInHref: string,
+): Extract<WorkspaceInvitationLinkView, { kind: 'preview' }>['respond'] {
+  if (viewerEmail === null) return { kind: 'sign-in', href: signInHref };
+  if (addressedToViewer === false) return { kind: 'other-account', signedInAs: viewerEmail };
+  return { kind: 'ready' };
 }
 
 export default async function WorkspaceInvitePage({
@@ -134,10 +124,17 @@ export default async function WorkspaceInvitePage({
   //    χαλασμένη τιμή αυτούσια και την απορρίπτει ο κριτής της **υπογραφής**.
   const token = decodeRouteParam(raw);
 
+  // ⚠️ **Ανάγνωση cookie, ΟΧΙ φρουρός**: δεν αποφασίζει αν θα δει τη σελίδα — αποφασίζει
+  //    αν του δείχνουμε **κουμπιά απάντησης**, **πρόσκληση για σύνδεση** ή **«αλλαγή
+  //    λογαριασμού»** (§13 ε.δ). Η άδεια της πράξης κρίνεται στον διακομιστή, ξανά, στην
+  //    εξαργύρωση.
+  const identity = await readPageIdentity();
+  const viewerEmail = identity.ok ? identity.ctx.email : null;
+
   // 🔑 **Η υπηρεσία ελέγχει την υπογραφή ΠΡΙΝ αγγίξει Firestore** (ADR-327 §11): πλαστός
   //    σύνδεσμος δεν μας κοστίζει ούτε ένα αίτημα, και ένας σαρωτής δεν μπορεί να
   //    συμπεράνει τίποτα από τον χρόνο απόκρισης.
-  const outcome = await previewWorkspaceInvitation({ token });
+  const outcome = await previewWorkspaceInvitation({ token, viewerEmail });
 
   if (outcome.kind === 'preview') {
     // 🔑 **`after()` και όχι fire-and-forget**: η σήμανση τρέχει **μετά** την απόκριση —
@@ -149,10 +146,5 @@ export default async function WorkspaceInvitePage({
     });
   }
 
-  // ⚠️ **Ανάγνωση cookie, ΟΧΙ φρουρός**: δεν αποφασίζει αν θα δει τη σελίδα — αποφασίζει
-  //    αν του δείχνουμε **κουμπιά απάντησης** ή **πρόσκληση για σύνδεση**. Η άδεια της
-  //    πράξης κρίνεται στον διακομιστή, ξανά, στην εξαργύρωση.
-  const identity = await readPageIdentity();
-
-  return <WorkspaceInviteContent view={viewOf(outcome, token, identity.ok)} />;
+  return <WorkspaceInviteContent view={viewOf(outcome, token, viewerEmail)} />;
 }

@@ -8,6 +8,7 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCurrentLocale } from './intl-utils';
+import { deadlineDaysLeft, MS_PER_DAY } from './date-local';
 
 const logger = createModuleLogger('intl-formatting');
 
@@ -215,6 +216,22 @@ export const formatRelativeTime = (date: Date | string | number): string => {
 
   const diffInMonths = Math.trunc(diffInDays / 30);
   return rtf.format(diffInMonths, 'month');
+};
+
+/**
+ * **Προθεσμία, σχετικά** — «σε 7 ημέρες». Ο κανόνας ημερών είναι του SSoT
+ * `deadlineDaysLeft` (προς τα πάνω), **ίδιος** με ό,τι γράφουν τα email.
+ *
+ * 🔑 **Γιατί όχι `formatRelativeTime`**: εκείνο κόβει (`Math.trunc`) — σωστό για «πριν από
+ * Ν ημέρες», **λάθος** για προθεσμία (6η21ω ⇒ «σε 6», ενώ το email έλεγε «7» — ADR-853
+ * §13 ε.γ). Και `numeric: 'always'`: το «αύριο» για λήξη σε 20 ώρες θα έλεγε λάθος ημέρα.
+ * Κάτω από μία ημέρα μένουν οι ώρες του `formatRelativeTime`.
+ */
+export const formatDeadlineRelative = (date: Date | string | number): string => {
+  const ms = new Date(date).getTime();
+  const days = deadlineDaysLeft(ms);
+  if (days === null || ms - Date.now() < MS_PER_DAY) return formatRelativeTime(date);
+  return new Intl.RelativeTimeFormat(getCurrentLocale(), { numeric: 'always' }).format(days, 'day');
 };
 
 // ============================================================================

@@ -14,11 +14,12 @@
  *   Μ-3  🔴 **Σφραγισμένη** γραμμή ⇒ `not-audience` — ίδια ερώτηση με τον κανόνα Firestore
  *   Μ-4  Κλειστό νήμα (ΓΚΠΔ) ⇒ `thread-closed`
  *   Σ-1  🔴 `touchOwnAudience` σε μη-μέλος **ΔΕΝ ΔΗΜΙΟΥΡΓΕΙ** γραμμή (update, ποτέ set)
- *   Σ-2  Η σίγαση αγγίζει **μόνο** το `muted`
+ *   Σ-2  Η σίγαση πάει στο **ιδιωτικό** έγγραφο — η δημόσια γραμμή μένει ανέγγιχτη (Ε9)
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { privateFieldsOnPublicRows, privateSideOf } from './audience-private-fixture';
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import {
   generateDeterministicNetworkActThreadId,
@@ -351,18 +352,35 @@ describe('Σ — η δική του γραμμή', () => {
     expect(audienceOf(fake).map((s) => s.uid).sort()).toStrictEqual([MARIA, OWNER].sort());
   });
 
-  it('Σ-2 η σίγαση αγγίζει ΜΟΝΟ το `muted` — το `until` και το `since` μένουν', async () => {
+  it('🔒 Σ-2 η σίγαση πάει στο ΙΔΙΩΤΙΚΟ έγγραφο — η δημόσια γραμμή μένει ανέγγιχτη και ΔΕΝ τη μαρτυρά (Ε9)', async () => {
     const { db, fake } = freshDb();
     await bornThread(db);
+    const before = audienceOf(fake).find((s) => s.uid === MARIA);
 
     expect(await setNetworkThreadMuted(db, THREAD_ID, MARIA, true)).toBe('updated');
 
-    expect(audienceOf(fake).find((s) => s.uid === MARIA)).toMatchObject({
-      muted: true,
-      until: null,
-      since: NOW,
-      role: 'responsible',
-    });
+    expect(privateSideOf(fake, THREAD_ID, MARIA)).toStrictEqual({ muted: true });
+    // 🔴 Μετάλλαξη «γράψε στη δημόσια γραμμή»: η άλλη πλευρά θα διάβαζε `muted: true` με κανόνες.
+    expect(audienceOf(fake).find((s) => s.uid === MARIA)).toStrictEqual(before);
+    expect(privateFieldsOnPublicRows(fake, THREAD_ID)).toStrictEqual([]);
+  });
+
+  it('Σ-3 δεύτερη ρύθμιση ΔΕΝ σβήνει την πρώτη — `merge`, όχι αντικατάσταση', async () => {
+    const { db, fake } = freshDb();
+    await bornThread(db);
+
+    await setNetworkThreadMuted(db, THREAD_ID, MARIA, true);
+    await touchOwnAudience(db, THREAD_ID, MARIA, { lastReadAt: LATER });
+
+    expect(privateSideOf(fake, THREAD_ID, MARIA)).toStrictEqual({ muted: true, lastReadAt: LATER });
+  });
+
+  it('Σ-4 🔴 μη-μέλος ΔΕΝ γεννά ούτε ιδιωτικό έγγραφο', async () => {
+    const { db, fake } = freshDb();
+    await bornThread(db);
+
+    expect(await setNetworkThreadMuted(db, THREAD_ID, 'user_stranger', true)).toBe('not-audience');
+    expect(privateSideOf(fake, THREAD_ID, 'user_stranger')).toBeNull();
   });
 });
 

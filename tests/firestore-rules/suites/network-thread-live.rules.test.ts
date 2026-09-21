@@ -40,13 +40,24 @@ import { getFirestore, type Firestore as AdminFirestore } from 'firebase-admin/f
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { transferActTeamsOnDeparture } from '@/services/network-messaging/act-team-departure';
 import { ensureActTeam } from '@/services/network-messaging/act-team-writer';
-import { retractNetworkMessage, sendNetworkMessage } from '@/services/network-messaging/thread-messages';
+import {
+  retractNetworkMessage,
+  sendNetworkMessage,
+  setNetworkThreadFollowing,
+  setNetworkThreadMuted,
+} from '@/services/network-messaging/thread-messages';
 import { decodeDirectoryCursor, listNetworkThreads } from '@/services/network-messaging/thread-directory';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
+import { NETWORK_AUDIENCE_PRIVATE_FIELDS } from '@/types/network-thread';
 
 import { getContext } from '../_harness/auth-contexts';
 import { initEmulator, resetData, teardownEmulator } from '../_harness/emulator';
-import { NETWORK_THREADS, NETWORK_THREAD_MESSAGES } from '../_harness/seed-helpers-network';
+import {
+  NETWORK_THREADS,
+  NETWORK_THREAD_AUDIENCE,
+  NETWORK_THREAD_AUDIENCE_PRIVATE,
+  NETWORK_THREAD_MESSAGES,
+} from '../_harness/seed-helpers-network';
 import { PERSONA_CLAIMS, SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 
 const NOW = '2026-09-17T10:00:00.000Z';
@@ -165,6 +176,36 @@ describe('🧪 ΖΩΝΤΑΝΗ — ο γραφέας γράφει, ο κανόν�
       await assertFails(threadDocOf(env, persona, threadId).get());
       await assertFails(messagesOf(env, persona, threadId).get());
     }
+  });
+
+  // ==========================================================================
+  // Ζ8 — 🔒 Ε9: Η ΣΙΓΑΣΗ, ΤΟ FOLLOW ΚΑΙ ΤΟ «ΔΙΑΒΑΣΤΗΚΕ» ΔΕΝ ΠΕΡΝΟΥΝ ΣΤΗΝ ΑΛΛΗ ΠΛΕΥΡΑ
+  // ==========================================================================
+
+  it('🔒 Ζ8 — ο υπεύθυνος σιγά, ακολουθεί, διαβάζει· ο ιδιοκτήτης ΔΕΝ μαθαίνει τίποτα από αυτά (ADR-867 Ε9)', async () => {
+    const threadId = await birthFromRealWriter();
+    // Ο υπεύθυνος γράφει ⇒ «διάβασε ως τώρα»· μετά σιγά και ακολουθεί — όλα με τους ΠΡΑΓΜΑΤΙΚΟΥΣ γραφείς.
+    await sendNetworkMessage(adminDb, { threadId, senderUid: RESPONSIBLE, text: 'Καλησπέρα', nowISO: NOW });
+    expect(await setNetworkThreadMuted(adminDb, threadId, RESPONSIBLE, true)).toBe('updated');
+    expect(await setNetworkThreadFollowing(adminDb, threadId, RESPONSIBLE, true)).toBe('updated');
+
+    // 🔴 Μετρημένο 2026-09-21: εδώ ο ιδιοκτήτης διάβαζε `muted: true` / `following: true` / `lastReadAt`.
+    const audience = await assertSucceeds(
+      threadDocOf(env, 'external_user', threadId).collection(NETWORK_THREAD_AUDIENCE).get(),
+    );
+    expect(audience.size).toBe(2);
+    const leaked = audience.docs.flatMap((doc) =>
+      NETWORK_AUDIENCE_PRIVATE_FIELDS.filter((field) => field in doc.data()).map((field) => `${doc.id}.${field}`));
+    expect(leaked).toStrictEqual([]);
+
+    const privateOf = (persona: Parameters<typeof getContext>[1], uid: string) =>
+      threadDocOf(env, persona, threadId).collection(NETWORK_THREAD_AUDIENCE_PRIVATE).doc(uid);
+    await assertFails(privateOf('external_user', RESPONSIBLE).get());
+    await assertFails(threadDocOf(env, 'external_user', threadId).collection(NETWORK_THREAD_AUDIENCE_PRIVATE).get());
+
+    // 🔑 Και ο ίδιος τα ΒΛΕΠΕΙ — αλλιώς το «ιδιωτικό» θα ήταν απλώς «χαμένο».
+    const mine = await assertSucceeds(privateOf('same_tenant_user', RESPONSIBLE).get());
+    expect(mine.data()).toStrictEqual({ lastReadAt: NOW, muted: true, following: true });
   });
 
   // ==========================================================================

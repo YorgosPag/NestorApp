@@ -180,6 +180,7 @@ export const FAILURE_KEYS: { readonly [F in NetworkFailure]: string } = {
   'empty-text': `${K}failure.empty-text`,
   'too-long': `${K}failure.too-long`,
   'target-not-in-workspace': `${K}failure.target-not-in-workspace`,
+  'target-cannot-serve': `${K}failure.target-cannot-serve`,
   'target-is-counterpart': `${K}failure.target-is-counterpart`,
   'responsible-not-removable': `${K}failure.responsible-not-removable`,
   'invalid-request': `${K}failure.invalid-request`,

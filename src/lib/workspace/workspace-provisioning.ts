@@ -78,7 +78,7 @@ import 'server-only';
 
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getAdminAuth, getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
@@ -90,6 +90,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import type { ProvisioningRejection } from '@/types/workspace';
 
 import { claimAlias } from './alias-registry';
+import { grantWorkspaceMembershipInBatch } from './grant-membership';
 
 const logger = createModuleLogger('workspace-provisioning');
 
@@ -316,8 +317,8 @@ async function readExistingClaims(uid: string): Promise<Record<string, unknown>>
  * παράθυρο όπου ο άνθρωπος είναι μέλος αλλά το προφίλ του λέει άλλα — και το
  * παράθυρο είναι ακριβώς η στιγμή που ο πελάτης ανανεώνει το token.
  *
- * ⚠️ Το σχήμα του μέλους **αντιγράφει** το `set-user-claims/claims-handler.ts`
- * (`uid` · `globalRole` · `status` · `joinedAt` · `addedBy` · `permissionSetIds`)
+ * ⚠️ Το σχήμα του μέλους **δεν γράφεται εδώ** — το γράφει ο ΕΝΑΣ γραφέας
+ * (`grant-membership.ts`, ADR-867 Ε1· μέχρι τότε ήταν **αντίγραφο** του `claims-handler`)
  * — είναι το **υπάρχον** συμβόλαιο που διαβάζει ο `decideMembership`. Ένα
  * διαφορετικό σχήμα εδώ θα έφτιαχνε μέλη που ο κριτής **δεν αναγνωρίζει**.
  *
@@ -338,19 +339,15 @@ async function writeFounderMembership(
   const companyRef = db.collection(COLLECTIONS.COMPANIES).doc(companyId);
   batch.set(companyRef, { alias, updatedAt: now }, { merge: true });
 
-  batch.set(
-    companyRef.collection(SUBCOLLECTIONS.WORKSPACE_MEMBERS).doc(input.uid),
-    {
-      uid: input.uid,
-      globalRole: FOUNDER_ROLE,
-      status: 'active',
-      joinedAt: now,
-      addedBy: input.uid,
-      updatedAt: now,
-      permissionSetIds: [],
-    },
-    { merge: true },
-  );
+  // 🔑 Ο ΕΝΑΣ γραφέας της θέσης (ADR-867 Ε1 · N.0.2) — εδώ ζούσε αντίγραφο του σχήματος, που
+  //    δεν θα έγραφε ποτέ το `enrollment`. Ο ιδρυτής είναι ο **μόνος** δρων της πράξης.
+  grantWorkspaceMembershipInBatch(batch, {
+    uid: input.uid,
+    companyId,
+    globalRole: FOUNDER_ROLE,
+    grantedByUid: input.uid,
+    enrollment: 'founder',
+  });
 
   batch.set(
     db.collection(COLLECTIONS.USERS).doc(input.uid),

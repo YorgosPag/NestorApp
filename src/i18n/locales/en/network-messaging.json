@@ -149,6 +149,7 @@
     "empty-text": "The message is empty.",
     "too-long": "The message is too long.",
     "target-not-in-workspace": "This person is not an active member of the agency.",
+    "target-cannot-serve": "This person is a guest of the agency and cannot take on or reply to the conversation.",
     "target-is-counterpart": "The owner cannot join the agency team.",
     "responsible-not-removable": "The lead cannot be removed — assign a new lead first.",
     "invalid-request": "The request was not valid.",

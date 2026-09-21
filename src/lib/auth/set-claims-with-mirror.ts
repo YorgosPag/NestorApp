@@ -8,6 +8,10 @@
  * trigger a token force-refresh (see `use-claims-refresh.ts`).
  *
  * ALL server code paths that mutate custom claims MUST go through this helper.
+ *
+ * 🔴 ADR-867 Β9(β) Ε1: because it is the ONE path, it is also where the claim-is-a-projection
+ * rule lives — a `companyId` claim is refused unless an ACTIVE `workspace_members` seat with the
+ * same role already exists (`claims-seat.ts`). Callers write the seat FIRST.
  */
 import 'server-only';
 
@@ -16,6 +20,7 @@ import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { assertClaimsHaveSeat } from '@/lib/auth/claims-seat';
 
 const logger = createModuleLogger('SetClaimsWithMirror');
 
@@ -39,6 +44,9 @@ export async function setClaimsWithMirror(
   uid: string,
   claims: Record<string, unknown>,
 ): Promise<SetClaimsResult> {
+  // 🔴 Fail-closed BEFORE the Auth write: a claim without a seat is access nobody can see.
+  await assertClaimsHaveSeat(uid, claims);
+
   const claimsUpdatedAt = Date.now();
   const stampedClaims = { ...claims, claimsUpdatedAt };
 

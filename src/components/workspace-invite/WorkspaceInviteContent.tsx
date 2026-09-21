@@ -26,8 +26,9 @@ import { useCallback, useRef, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatRelativeTime } from '@/lib/intl-formatting';
+import { formatDateTime, formatDeadlineRelative } from '@/lib/intl-formatting';
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import { cn } from '@/lib/utils';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -40,10 +41,14 @@ import type {
   WorkspaceInviteExitName,
   WorkspaceInviteSetback,
 } from '@/types/workspace-invitation-view';
-import type { WorkspaceInvitationPreview } from '@/types/workspace-invitation';
+import type {
+  WorkspaceInvitationPreview,
+  WorkspaceInvitationRefusal,
+} from '@/types/workspace-invitation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import {
+  EXIT_BY_REFUSAL,
   EXIT_HREF,
   EXIT_KEY,
   INVITE_PAGE_KEYS,
@@ -51,6 +56,7 @@ import {
   REFUSAL_KEY,
 } from './workspace-invite-labels';
 import { WORKSPACE_INVITE_NS } from './workspace-invite-namespace';
+import { OtherAccountNotice, SwitchAccountButton } from './SwitchAccount';
 
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE.
 //
@@ -75,16 +81,30 @@ export function WorkspaceInviteContent({ view }: { view: WorkspaceInvitationLink
 
   if (view.kind !== 'preview') return <SetbackScreen setback={view} />;
   if (response.outcome !== null) {
-    return <OutcomeScreen outcome={response.outcome} busy={response.busy} onRetry={response.retry} />;
+    return (
+      <OutcomeScreen
+        outcome={response.outcome}
+        busy={response.busy}
+        onRetry={response.retry}
+        switchAccountHref={view.switchAccountHref}
+      />
+    );
   }
 
-  return <PreviewScreen view={view} busy={response.busy} onRespond={response.respond} />;
+  return <PreviewScreen view={view} pendingAction={response.pendingAction} onRespond={response.respond} />;
 }
 
 type InviteAction = 'accept' | 'decline';
 
 interface InvitationResponse {
   readonly outcome: RedeemInvitationResult | null;
+  /**
+   * 🔑 **ΠΟΙΑ πράξη εκκρεμεί, όχι «κάτι εκκρεμεί»** (ADR-853 §13 ε.β): η ένδειξη ζωγραφίζεται
+   * στο κουμπί που **πατήθηκε**. Ένα σκέτο `busy` δεν μπορεί να το πει — γι' αυτό η αναμονή
+   * της άρνησης εμφανιζόταν πάνω στην αποδοχή.
+   */
+  readonly pendingAction: InviteAction | null;
+  /** Παράγωγο του `pendingAction` — για την επανάληψη, που δεν διαλέγει πράξη. */
   readonly busy: boolean;
   readonly respond: (action: InviteAction) => Promise<void>;
   /** Ξανατρέχει **την ΙΔΙΑ** πράξη που πάτησε ο άνθρωπος — ποτέ άλλη. */
@@ -104,18 +124,18 @@ interface InvitationResponse {
  */
 function useInvitationResponse(token: string | null): InvitationResponse {
   const [outcome, setOutcome] = useState<RedeemInvitationResult | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<InviteAction | null>(null);
   const lastAction = useRef<InviteAction | null>(null);
 
   const respond = useCallback(
     async (action: InviteAction) => {
       if (token === null) return;
       lastAction.current = action;
-      setBusy(true);
+      setPendingAction(action);
       try {
         setOutcome(await redeemWorkspaceInvitationFromScreen({ token, action }));
       } finally {
-        setBusy(false);
+        setPendingAction(null);
       }
     },
     [token],
@@ -125,7 +145,7 @@ function useInvitationResponse(token: string | null): InvitationResponse {
     if (lastAction.current !== null) void respond(lastAction.current);
   }, [respond]);
 
-  return { outcome, busy, respond, retry };
+  return { outcome, pendingAction, busy: pendingAction !== null, respond, retry };
 }
 
 // =============================================================================
@@ -186,14 +206,57 @@ function RetryButton({ busy, onRetry }: { busy: boolean; onRetry: () => void }) 
 // =============================================================================
 
 function SetbackScreen({ setback }: { setback: WorkspaceInviteSetback }) {
-  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
-
   if (setback.kind === 'unavailable') return <UnavailableViewScreen />;
+
+  return <RefusalScreen reason={setback.reason} exit={setback.exit} />;
+}
+
+/**
+ * **Η ΟΝΟΜΑΣΜΕΝΗ ΑΡΝΗΣΗ — μία οθόνη, είτε ήρθε από την όψη είτε από την πράξη.**
+ *
+ * 🔴 **Τίτλος της πρόσκλησης, ΟΧΙ του παροδικού**: η άρνηση είναι **οριστική** και έχει
+ *    **συγκεκριμένη** λύση. Ο τίτλος «δεν μπορούμε αυτή τη στιγμή» θα έλεγε *«περιμένετε»*
+ *    πάνω από σώμα που λέει *«κάντε κάτι»* (ADR-853 §13, 2026-09-21).
+ */
+function RefusalScreen({
+  reason,
+  exit,
+  switchAccountHref = null,
+}: {
+  reason: WorkspaceInvitationRefusal;
+  exit: WorkspaceInviteExitName;
+  /**
+   * 🔑 §13 ε.δ — «λάθος παραλήπτης» την ώρα της πράξης: ο δρόμος είναι **αλλαγή λογαριασμού
+   * με επιστροφή εδώ**, όχι σκέτο `/login` που χάνει την πρόσκληση. `null` όταν δεν
+   * υπάρχει πρόσκληση να επιστρέψει κανείς (άρνηση της όψης).
+   */
+  switchAccountHref?: string | null;
+}) {
+  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
+  const switchHref = reason === 'wrong-recipient' ? switchAccountHref : null;
 
   return (
     <InviteCard title={t(INVITE_PAGE_KEYS.title)}>
-      <p className="text-sm">{t(REFUSAL_KEY[setback.reason])}</p>
-      <ExitLink exit={setback.exit} />
+      <p className="text-sm">{t(REFUSAL_KEY[reason])}</p>
+      {switchHref ? <SwitchAccountButton href={switchHref} /> : <ExitLink exit={exit} />}
+    </InviteCard>
+  );
+}
+
+/**
+ * **ΤΟ ΠΑΡΟΔΙΚΟ — μία οθόνη**· αλλάζει **μόνο** τι ξανατρέχει το «Δοκιμάστε ξανά».
+ *
+ * ⚠️ Εδώ, και **μόνο** εδώ, ζει ο τίτλος `unavailableTitle`: είναι η **μόνη** κατάσταση όπου
+ *    το «αυτή τη στιγμή» λέει αλήθεια.
+ */
+function TransientScreen({ busy, onRetry }: { busy: boolean; onRetry: () => void }) {
+  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
+
+  return (
+    <InviteCard title={t(INVITE_PAGE_KEYS.unavailableTitle)}>
+      <p className="text-sm">{t(INVITE_PAGE_KEYS.unavailableBody)}</p>
+      <RetryButton busy={busy} onRetry={onRetry} />
+      <ExitLink exit="home" />
     </InviteCard>
   );
 }
@@ -207,27 +270,22 @@ function SetbackScreen({ setback }: { setback: WorkspaceInviteSetback }) {
  * φτάσει η νέα απόδοση** — όχι μέχρι να επιστρέψει η κλήση, που επιστρέφει αμέσως.
  */
 function UnavailableViewScreen() {
-  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  return (
-    <InviteCard title={t(INVITE_PAGE_KEYS.unavailableTitle)}>
-      <p className="text-sm">{t(INVITE_PAGE_KEYS.unavailableBody)}</p>
-      <RetryButton busy={pending} onRetry={() => startTransition(() => router.refresh())} />
-      <ExitLink exit="home" />
-    </InviteCard>
-  );
+  return <TransientScreen busy={pending} onRetry={() => startTransition(() => router.refresh())} />;
 }
 
 function OutcomeScreen({
   outcome,
   busy,
   onRetry,
+  switchAccountHref,
 }: {
   outcome: RedeemInvitationResult;
   busy: boolean;
   onRetry: () => void;
+  switchAccountHref: string;
 }) {
   const { t } = useTranslation([WORKSPACE_INVITE_NS]);
 
@@ -254,28 +312,29 @@ function OutcomeScreen({
     );
   }
 
-  return (
-    <InviteCard title={t(INVITE_PAGE_KEYS.unavailableTitle)}>
-      <p className="text-sm">
-        {outcome.kind === 'refused'
-          ? t(REFUSAL_KEY[outcome.reason])
-          : t(INVITE_PAGE_KEYS.unavailableBody)}
-      </p>
-      {outcome.kind === 'failed' && <RetryButton busy={busy} onRetry={onRetry} />}
-      <ExitLink exit="home" />
-    </InviteCard>
-  );
+  // 🔑 Η έξοδος από τον **ΕΝΑ** πίνακα που διαβάζει και η όψη — όχι σταθερό «αρχική».
+  if (outcome.kind === 'refused') {
+    return (
+      <RefusalScreen
+        reason={outcome.reason}
+        exit={EXIT_BY_REFUSAL[outcome.reason]}
+        switchAccountHref={switchAccountHref}
+      />
+    );
+  }
+
+  return <TransientScreen busy={busy} onRetry={onRetry} />;
 }
 
 type PreviewBranch = Extract<WorkspaceInvitationLinkView, { kind: 'preview' }>;
 
 function PreviewScreen({
   view,
-  busy,
+  pendingAction,
   onRespond,
 }: {
   view: PreviewBranch;
-  busy: boolean;
+  pendingAction: InviteAction | null;
   onRespond: (action: InviteAction) => Promise<void>;
 }) {
   const { t } = useTranslation([WORKSPACE_INVITE_NS]);
@@ -283,19 +342,69 @@ function PreviewScreen({
   return (
     <InviteCard title={t(INVITE_PAGE_KEYS.title)}>
       <InvitationFacts preview={view.preview} />
-      {view.respond.kind === 'ready' ? (
+      {view.respond.kind === 'ready' && (
         <nav className="flex flex-col gap-2" aria-label={t(INVITE_PAGE_KEYS.title)}>
-          <Button disabled={busy} onClick={() => void onRespond('accept')}>
-            {busy ? t(INVITE_PAGE_KEYS.working) : t(INVITE_PAGE_KEYS.accept)}
-          </Button>
-          <Button variant="outline" disabled={busy} onClick={() => void onRespond('decline')}>
-            {t(INVITE_PAGE_KEYS.decline)}
-          </Button>
+          <InviteActionButton action="accept" pendingAction={pendingAction} onRespond={onRespond} />
+          <InviteActionButton action="decline" pendingAction={pendingAction} onRespond={onRespond} />
         </nav>
-      ) : (
-        <SignInInvitation href={view.respond.href} />
+      )}
+      {view.respond.kind === 'sign-in' && <SignInInvitation href={view.respond.href} />}
+      {/* 🔑 §13 ε.δ — άλλος λογαριασμός: το λέμε ΠΡΙΝ το κλικ, με τον δρόμο έτοιμο. */}
+      {view.respond.kind === 'other-account' && (
+        <OtherAccountNotice signedInAs={view.respond.signedInAs} href={view.switchAccountHref} />
       )}
     </InviteCard>
+  );
+}
+
+/**
+ * **Η λέξη του κουμπιού** — κάθε κλειδί γραμμένο **ρητά** σε κλήση `t()`.
+ *
+ * ⚠️ **ΟΧΙ πίνακας `{ idle, pending }` με `t(spec[...])`**: ο γεννήτορας του route slice
+ * (ADR-744 §18) δεν επιλύει δυναμικό κλειδί και **αρνείται να εκπέμψει** — μετρημένο
+ * 2026-09-21. Χωρίς slice, η σελίδα βάφει ωμά κλειδιά σε άνθρωπο που ήρθε από email.
+ */
+function useActionLabel(action: InviteAction, pending: boolean): string {
+  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
+  if (action === 'accept') return pending ? t(INVITE_PAGE_KEYS.accepting) : t(INVITE_PAGE_KEYS.accept);
+  return pending ? t(INVITE_PAGE_KEYS.declining) : t(INVITE_PAGE_KEYS.decline);
+}
+
+/**
+ * **Ένα κουμπί πράξης — η αναμονή ζει ΜΟΝΟ στο πατημένο** (ADR-853 §13 ε.β).
+ *
+ * ⚠️ **Και τα δύο απενεργοποιούνται** όσο εκκρεμεί οποιαδήποτε πράξη: δεύτερη απάντηση πριν
+ * έρθει η πρώτη δεν έχει νόημα (η συναλλαγή θα την απέρριπτε ως `already-used`). Το
+ * `aria-busy` λέει στον αναγνώστη οθόνης **ποιο** δουλεύει.
+ */
+function InviteActionButton({
+  action,
+  pendingAction,
+  onRespond,
+}: {
+  action: InviteAction;
+  pendingAction: InviteAction | null;
+  onRespond: (action: InviteAction) => Promise<void>;
+}) {
+  const pending = pendingAction === action;
+  const label = useActionLabel(action, pending);
+
+  return (
+    <Button
+      variant={action === 'accept' ? 'default' : 'outline'}
+      disabled={pendingAction !== null}
+      aria-busy={pending}
+      onClick={() => void onRespond(action)}
+    >
+      {/* ⚠️ Διακοσμητικό: η λέξη του κουμπιού λέει ήδη τι γίνεται, και το προεπιλεγμένο
+          `aria-label` του Spinner είναι αγγλικό — θα διαβαζόταν δίπλα στην ελληνική λέξη. */}
+      {pending && (
+        <span aria-hidden="true" className="mr-2 inline-flex">
+          <Spinner size="small" color="inherit" />
+        </span>
+      )}
+      {label}
+    </Button>
   );
 }
 
@@ -316,7 +425,12 @@ function InvitationFacts({ preview }: { preview: WorkspaceInvitationPreview }) {
         {t(INVITE_PAGE_KEYS.roleLine, { role: t(INVITED_ROLE_KEY[preview.role]) })}
       </p>
       <p className={cn('text-sm', colors.text.muted)}>
-        {t(INVITE_PAGE_KEYS.expiresLine, { when: formatRelativeTime(preview.expiresAt) })}
+        {/* 🔑 ADR-853 §13 ε.γ — σχετικό ΚΑΙ απόλυτο (πρότυπο Slack/Google): «σε 7 ημέρες»
+            με τον ΙΔΙΟ κανόνα του email, και η ακριβής στιγμή στη ζώνη του θεατή. */}
+        {t(INVITE_PAGE_KEYS.expiresLine, {
+          when: formatDeadlineRelative(preview.expiresAt),
+          date: formatDateTime(preview.expiresAt, { dateStyle: 'long', timeStyle: 'short' }),
+        })}
       </p>
       {/*
         🔑 §5 #4 · ADR-798 — «ΔΗΛΩΜΕΝΗ, ΟΧΙ ΕΠΑΛΗΘΕΥΜΕΝΗ», γραμμένο στην οθόνη.

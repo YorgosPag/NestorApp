@@ -38,7 +38,7 @@ import 'server-only';
  * `decideCapability` (ADR-801) και τρέχει **πριν**, στο σύνορο HTTP.
  */
 
-import { FieldValue as AdminFieldValue, type Transaction } from 'firebase-admin/firestore';
+import { FieldValue as AdminFieldValue, type Transaction, type WriteBatch } from 'firebase-admin/firestore';
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -47,6 +47,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { GlobalRole } from '@/lib/auth/types';
+import type { WorkspaceMemberEnrollment } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('grant-membership');
 
@@ -62,8 +63,14 @@ export interface GrantMembershipInput {
   readonly uid: string;
   readonly companyId: string;
   readonly globalRole: GlobalRole;
-  /** Ποιος έδωσε την ιδιότητα — διαχειριστής (έγκριση) ή ο **ίδιος** (αποδοχή πρόσκλησης). */
+  /**
+   * Ποιος έδωσε την ιδιότητα — ο διαχειριστής (έγκριση), ο **προσκαλών** (αποδοχή πρόσκλησης),
+   * ο **ίδιος** μόνο όταν δεν υπάρχει άλλος δρων (ιδρυτής · bootstrap).
+   * 🔴 ADR-853 Ε4: η αποδοχή έγραφε εδώ τον **προσκεκλημένο** — «invited by» που έλεγε «εγώ».
+   */
   readonly grantedByUid: string;
+  /** **Γιατί** — η πράξη που ανοίγει τη θητεία (ADR-867 Ε1). */
+  readonly enrollment: WorkspaceMemberEnrollment;
 }
 
 /**
@@ -102,15 +109,39 @@ export function grantWorkspaceMembershipInTx(tx: Transaction, input: GrantMember
 }
 
 /**
- * **Η γραφή, αυτοτελώς** — για καλούντες χωρίς συναλλαγή (η έγκριση αιτήματος).
+ * **Η γραφή, ΜΕΣΑ σε `WriteBatch`** — για τη γέννηση χώρου, όπου μέλος + προφίλ + ψευδώνυμο
+ * απαντούν **μαζί** στο «ποιος είναι ο χώρος μου;» (`workspace-provisioning`).
  *
- * ⚠️ Ο `claims-handler` έχει **ήδη** δώσει τα claims όταν φτάνει εδώ, οπότε μια αποτυχία
- * **δεν** αναιρεί πρόσβαση που δόθηκε — γι' αυτό επιστρέφει `boolean` αντί να πετάξει,
- * διατηρώντας τη σημερινή μη-μπλοκάρουσα συμπεριφορά του.
+ * 🔗 ADR-867 Ε1 (N.0.2): ο ιδρυτής γραφόταν από **δικό του** αντίγραφο του σχήματος — ο
+ * πέμπτος γραφέας του «τι σημαίνει μέλος», που θα έχανε σιωπηλά κάθε νέο πεδίο (όπως το
+ * `enrollment`). Ίδια πειθαρχία με το {@link grantWorkspaceMembershipInTx}: καμία ανάγνωση.
+ */
+export function grantWorkspaceMembershipInBatch(batch: WriteBatch, input: GrantMembershipInput): void {
+  batch.set(memberRef(input.companyId, input.uid), membershipDocument(input), { merge: true });
+}
+
+/**
+ * **Η γραφή, αυτοτελώς** — για καλούντες χωρίς συναλλαγή (έγκριση αιτήματος · bootstrap · backfill).
+ *
+ * 🔴 **ADR-867 Ε1 — ΤΟ ΕΓΓΡΑΦΟ ΠΡΙΝ ΑΠΟ ΤΟ CLAIM.** Ο καλών καλεί εδώ **πρώτα** και δίνει claims
+ * **μόνο** σε `true`: το `setClaimsWithMirror` αρνείται claim χωρίς ενεργό έγγραφο
+ * (`claims-seat.ts`). Γι' αυτό επιστρέφει `boolean` — η αποτυχία είναι **απόφαση του καλούντα**
+ * (σταματά), όχι σιωπηλή σημείωση σε log.
+ *
+ * 🔑 **Η ΠΡΟΕΛΕΥΣΗ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ ΑΝΑ ΘΗΤΕΙΑ** — γι' αυτό συναλλαγή με ανάγνωση: σε **ενεργό**
+ * μέλος αλλάζει μόνο ο ρόλος. Χωρίς αυτό, διαχειριστής που αλλάζει ρόλο στον ιδρυτή θα έσβηνε
+ * το `founder`, το `joinedAt` και το `addedBy` — το ίχνος ενός ελέγχου πρόσβασης (ISO 27001
+ * A.5.18) θα έλεγε «μπήκε σήμερα, με έγκριση» για τον άνθρωπο που **έφτιαξε** τον χώρο.
+ * Ανενεργό ή απόν ⇒ **νέα** θητεία ⇒ πλήρες έγγραφο.
  */
 export async function grantWorkspaceMembership(input: GrantMembershipInput): Promise<boolean> {
+  const ref = memberRef(input.companyId, input.uid);
   try {
-    await memberRef(input.companyId, input.uid).set(membershipDocument(input), { merge: true });
+    await getAdminFirestore().runTransaction(async (tx) => {
+      const current = await tx.get(ref);
+      const tenureOpen = current.exists && current.get('status') === 'active';
+      tx.set(ref, tenureOpen ? roleUpdate(input) : membershipDocument(input), { merge: true });
+    });
     logger.info('Γράφτηκε ιδιότητα μέλους', { uid: input.uid, companyId: input.companyId });
     return true;
   } catch (error: unknown) {
@@ -174,6 +205,16 @@ function membershipDocument(input: GrantMembershipInput) {
     status: 'active',
     joinedAt: AdminFieldValue.serverTimestamp(),
     addedBy: input.grantedByUid,
+    enrollment: input.enrollment,
+    updatedAt: AdminFieldValue.serverTimestamp(),
+  };
+}
+
+/** Ενεργή θητεία: **μόνο** ο ρόλος — η προέλευση ανήκει στην πράξη που την άνοιξε. */
+function roleUpdate(input: GrantMembershipInput) {
+  return {
+    uid: input.uid,
+    globalRole: input.globalRole,
     updatedAt: AdminFieldValue.serverTimestamp(),
   };
 }

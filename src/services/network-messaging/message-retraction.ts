@@ -28,7 +28,7 @@
  */
 
 import type {
-  NetworkAudienceEntry,
+  NetworkAudienceSeat,
   NetworkMessage,
   NetworkMessageRetraction,
   NetworkThreadKind,
@@ -122,7 +122,7 @@ export function isOutsideWindow(createdAt: string, nowISO: string): boolean {
  */
 export function wasReadByOthers(
   message: Pick<NetworkMessage, 'senderUid' | 'createdAt'>,
-  audience: readonly NetworkAudienceEntry[],
+  audience: readonly Pick<NetworkAudienceSeat, 'uid' | 'lastReadAt'>[],
 ): boolean {
   return audience.some(
     (entry) =>

@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { navigateDocument } from '@/lib/browser/document-navigation';
 import {
   Card,
   CardContent,
@@ -154,7 +155,7 @@ export function OAuthConsentCard({
         const payload = (await response.json()) as { redirectTo?: string; reason?: string };
 
         if (typeof payload.redirectTo === 'string') {
-          window.location.assign(payload.redirectTo);
+          navigateDocument(payload.redirectTo);
           return;
         }
         setState({ status: 'error', reason: payload.reason ?? 'generic' });

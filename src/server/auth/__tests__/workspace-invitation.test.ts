@@ -35,7 +35,19 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   //    `fake.reset()` σε κάθε test, αλλιώς έγγραφο προηγούμενου test κάνει το επόμενο να
   //    περνά ή να κόβει για **λάθος λόγο**.
   getAdminFirestore: () => fake,
+  // 🔑 ADR-853 §15 — η απόδειξη γραμματοκιβωτίου γράφει **μόνο** `updateUser`, μέσω του SSoT.
+  getAdminAuth: () => ({ updateUser: (...args: unknown[]) => updateUserMock(...args) }),
   isFirebaseAdminAvailable: () => true,
+}));
+
+const updateUserMock = jest.fn().mockResolvedValue(undefined);
+// ⛔ Η διεκδίκηση (`claimed`) είναι **δομικά ανέφικτη** από την πρόσκληση — αν καλεστεί, κόκκινο.
+const reprovisionMock = jest.fn();
+jest.mock('../account-reprovision', () => ({
+  reprovisionAuthAccount: (...args: unknown[]) => reprovisionMock(...args),
+}));
+jest.mock('@/services/ai-pipeline/shared/mailgun-sender', () => ({
+  sendReplyViaMailgun: jest.fn(),
 }));
 
 const grantInTx = jest.fn();
@@ -69,8 +81,8 @@ import {
   acceptWorkspaceInvitation,
   declineWorkspaceInvitation,
   markWorkspaceInvitationOpened,
-  previewWorkspaceInvitation,
 } from '../workspace-invitation-redeem';
+import { previewWorkspaceInvitation } from '../workspace-invitation-preview';
 import type { WorkspaceInvitationDocument } from '@/types/workspace-invitation';
 import {
   describeOwnershipCallSites,
@@ -94,6 +106,7 @@ function identity(overrides: Record<string, unknown> = {}) {
     uid: INVITEE,
     email: EMAIL,
     emailVerified: true,
+    secondFactorEnrolled: false,
     claimCompanyId: '',
     globalRole: 'external_user',
     ...overrides,
@@ -123,6 +136,8 @@ beforeEach(() => {
   fake.reset();
   grantInTx.mockClear();
   grantStandalone.mockClear();
+  updateUserMock.mockReset().mockResolvedValue(undefined);
+  reprovisionMock.mockReset();
   // Προεπιλογή: **δεν** είναι μέλος πουθενά — κάθε άγκυρα αλλάζει μόνο ό,τι δοκιμάζει.
   decideMembershipMock.mockReset().mockResolvedValue({ verdict: 'not-a-member' });
   readWorkspaceNameMock.mockClear().mockResolvedValue('Παγώνης Τεχνική');
@@ -166,7 +181,7 @@ describe('Τ — το token', () => {
     expect(grantInTx).not.toHaveBeenCalled();
   });
 
-  it('🔑 Τ1β — ο ΣΩΣΤΟΣ άνθρωπος με ΑΝΕΠΑΛΗΘΕΥΤΟ email ⇒ `email-unverified`, ΟΧΙ «λάθος παραλήπτης»', async () => {
+  it('🔑 Τ1β — ο ΣΩΣΤΟΣ άνθρωπος με ΑΝΕΠΑΛΗΘΕΥΤΟ email ⇒ ΜΠΑΙΝΕΙ, και η πρόσκληση ΕΠΙΒΕΒΑΙΩΝΕΙ το email (§15)', async () => {
     const { token } = await issue();
 
     const outcome = await acceptWorkspaceInvitation({
@@ -175,9 +190,10 @@ describe('Τ — το token', () => {
       nowISOValue: LATER,
     });
 
-    // ⚠️ Η διάκριση ΕΙΝΑΙ η αξία: «δεν είσαι ο παραλήπτης» θα έστελνε άνθρωπο που ΕΙΝΑΙ
-    //    ο παραλήπτης να ψάξει άλλον λογαριασμό, αντί να επιβεβαιώσει το email του.
-    expect(outcome).toEqual({ kind: 'refused', reason: 'email-unverified' });
+    // ⚠️ Μέχρι 2026-09-21 αυτό ήταν `email-unverified` — αδιέξοδο για άνθρωπο ΗΔΗ
+    //    συνδεδεμένο. Ο σύνδεσμος φτάνει μόνο στο γραμματοκιβώτιο (Auth0 · Clerk).
+    expect(outcome.kind).toBe('accepted');
+    expect(updateUserMock).toHaveBeenCalledWith(INVITEE, { emailVerified: true });
   });
 
   it('🔴 Τ2 — ληγμένο ⇒ `expired`, ΚΑΙ όταν το έγγραφο λέει ακόμη `pending`', async () => {
@@ -384,6 +400,23 @@ describe('Μ — μέλος', () => {
     expect(grantInTx).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ uid: INVITEE, globalRole: 'internal_user' }),
+    );
+  });
+
+  it('🔴 Ε4 (ADR-867 Β9(β)) — «ποιος τον έβαλε» = ο ΠΡΟΣΚΑΛΩΝ, ποτέ ο ίδιος ο προσκεκλημένος', async () => {
+    // Μετρημένο ζωντανά: το έγγραφο μέλους έγραφε `addedBy` = ο προσκεκλημένος — ένα «invited by»
+    // που έλεγε «εγώ». Ο παρονομαστής: η ΙΔΙΑ αποδοχή γράφει θέση (το Π1)· αλλάζει μόνο ο δρων.
+    const { token } = await issue();
+
+    await acceptWorkspaceInvitation({ token, identity: identity(), nowISOValue: LATER });
+
+    expect(grantInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ uid: INVITEE, grantedByUid: INVITER, enrollment: 'invitation' }),
+    );
+    expect(grantInTx).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ grantedByUid: INVITEE }),
     );
   });
 
@@ -690,5 +723,145 @@ describe('Ο — η όψη πριν την απόφαση', () => {
     //    πρώτη φορά»*, και μια ανανέωση σελίδας δεν είναι νέο άνοιγμα.
     expect({ first, second: (await stored(invitation.id)).openedAt })
       .toEqual({ first: LATER, second: LATER });
+  });
+});
+
+// =============================================================================
+// Ψ — Η ΠΡΟΣΚΛΗΣΗ ΩΣ ΑΠΟΔΕΙΞΗ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟΥ (ADR-853 §15 · ADR-844 §13)
+// =============================================================================
+//
+// 🔑 Κάθε άγκυρα εδώ ρωτά ΕΝΑ πράγμα: «επιβεβαιώνεται το email ΜΟΝΟ όταν ο σύνδεσμος θα
+//    ΕΞΑΡΓΥΡΩΝΟΤΑΝ;». Ο παρονομαστής είναι η Τ1β (σωστός σύνδεσμος ⇒ `updateUser`).
+
+const UNVERIFIED = { emailVerified: false } as const;
+
+async function acceptAsUnverified(token: string, overrides: Record<string, unknown> = {}) {
+  return acceptWorkspaceInvitation({
+    token,
+    identity: identity({ ...UNVERIFIED, ...overrides }),
+    nowISOValue: LATER,
+  });
+}
+
+describe('Ψ — η πρόσκληση επιβεβαιώνει email ΜΟΝΟ όταν εξαργυρώνεται', () => {
+  it('🔑 Ψ1 — αποδοχή: ΕΝΑ `updateUser` με ΜΟΝΟ `emailVerified`, ίχνος στο έγγραφο, ΚΑΜΙΑ διεκδίκηση', async () => {
+    const { token, invitation } = await issue();
+
+    const outcome = await acceptAsUnverified(token);
+
+    expect(outcome.kind).toBe('accepted');
+    expect(updateUserMock).toHaveBeenCalledTimes(1);
+    expect(updateUserMock).toHaveBeenCalledWith(INVITEE, { emailVerified: true });
+    // ⛔ Ο κάτοχος της συνεδρίας ΕΙΝΑΙ ο λογαριασμός ⇒ ποτέ επαναδημιουργία.
+    expect(reprovisionMock).not.toHaveBeenCalled();
+    expect((await stored(invitation.id)).mailboxProvenAt).toBe(LATER);
+  });
+
+  it('🔴 Ψ2 — άλλο email (προωθημένος σύνδεσμος) ⇒ `wrong-recipient` ΚΑΙ ΚΑΜΙΑ επιβεβαίωση', async () => {
+    const { token } = await issue();
+
+    const outcome = await acceptAsUnverified(token, { email: 'allos@example.com' });
+
+    expect(outcome).toEqual({ kind: 'refused', reason: 'wrong-recipient' });
+    expect(updateUserMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ψ3 — nonce που δεν δείχνει στο έγγραφο ⇒ `link-invalid` ΚΑΙ ΚΑΜΙΑ επιβεβαίωση', async () => {
+    const { token, invitation } = await issue();
+    fake.seed(COLLECTIONS.WORKSPACE_INVITATIONS, invitation.id, {
+      ...(await stored(invitation.id)),
+      nonceHash: '0'.repeat(64),
+    });
+
+    const outcome = await acceptAsUnverified(token);
+
+    expect(outcome).toEqual({ kind: 'refused', reason: 'link-invalid' });
+    expect(updateUserMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ψ4 — ήδη απαντημένη πρόσκληση ⇒ `already-used` ΚΑΙ ΚΑΜΙΑ επιβεβαίωση', async () => {
+    const { token, invitation } = await issue();
+    fake.seed(COLLECTIONS.WORKSPACE_INVITATIONS, invitation.id, {
+      ...(await stored(invitation.id)),
+      state: 'declined',
+    });
+
+    const outcome = await acceptAsUnverified(token);
+
+    expect(outcome).toEqual({ kind: 'refused', reason: 'already-used' });
+    expect(updateUserMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ψ5 — ήδη μέλος ⇒ `already-member` ΚΑΙ ΚΑΜΙΑ επιβεβαίωση', async () => {
+    const { token } = await issue();
+    decideMembershipMock.mockResolvedValue({ verdict: 'member' });
+
+    const outcome = await acceptAsUnverified(token);
+
+    expect(outcome).toEqual({ kind: 'refused', reason: 'already-member' });
+    expect(updateUserMock).not.toHaveBeenCalled();
+  });
+
+  it('🔑 Ψ6 — ΑΡΝΗΣΗ από ανεπιβεβαίωτο: γίνεται δεκτή, ο λογαριασμός ΔΕΝ αλλάζει (Better Auth 1.6.14)', async () => {
+    const { token, invitation } = await issue();
+
+    const outcome = await declineWorkspaceInvitation({
+      token,
+      identity: identity(UNVERIFIED),
+      nowISOValue: LATER,
+    });
+
+    expect(outcome.kind).toBe('declined');
+    expect(updateUserMock).not.toHaveBeenCalled();
+    expect((await stored(invitation.id)).mailboxProvenAt).toBeNull();
+  });
+
+  it('Ψ7 — ήδη επιβεβαιωμένος: ΜΗΔΕΝ γραφές στο Auth, `mailboxProvenAt: null`', async () => {
+    const { token, invitation } = await issue();
+
+    await acceptWorkspaceInvitation({ token, identity: identity(), nowISOValue: LATER });
+
+    expect(updateUserMock).not.toHaveBeenCalled();
+    expect((await stored(invitation.id)).mailboxProvenAt).toBeNull();
+  });
+
+  it('🔴 Ψ8 — το Auth δεν απαντά ⇒ `unavailable`, η πρόσκληση ΜΕΝΕΙ `pending`, ΚΑΝΕΝΑ μέλος', async () => {
+    const { token, invitation } = await issue();
+    updateUserMock.mockRejectedValue(new Error('auth/internal-error'));
+
+    const outcome = await acceptAsUnverified(token);
+
+    // ⛔ Μέλος με ανεπιβεβαίωτο email θα ήταν η κατάσταση που ο §7.5 απαγορεύει — και το
+    //    «Δοκιμάστε ξανά» δουλεύει μόνο αν η πρόσκληση δεν καταναλώθηκε.
+    expect(outcome).toEqual({ kind: 'unavailable', reason: 'mailbox-proof-unknown' });
+    expect(grantInTx).not.toHaveBeenCalled();
+    expect((await stored(invitation.id)).state).toBe('pending');
+  });
+});
+
+// =============================================================================
+// Ω — «ΣΥΝΔΕΔΕΜΕΝΟΙ ΩΣ…»: Η ΑΝΑΝΤΙΣΤΟΙΧΙΑ ΛΕΓΕΤΑΙ ΠΡΙΝ ΤΟ ΚΛΙΚ (ADR-853 §13 ε.δ)
+// =============================================================================
+
+describe('Ω — η όψη ξέρει αν απευθύνεται στον συνδεδεμένο, χωρίς να προδώσει τον παραλήπτη', () => {
+  it('Ω1 — ίδιο email (άλλη γραφή) ⇒ `true`· άλλο ⇒ `false`· ανώνυμος ⇒ `null`', async () => {
+    const { token } = await issue();
+    const ask = (viewerEmail: string | null) =>
+      previewWorkspaceInvitation({ token, viewerEmail, nowISOValue: NOW });
+
+    const [same, other, anonymous] = await Promise.all([
+      ask('  NIKOS@Example.com '), ask('allos@example.com'), ask(null),
+    ]);
+
+    expect([same, other, anonymous].map((o) => (o.kind === 'preview' ? o.addressedToViewer : o.kind)))
+      .toEqual([true, false, null]);
+  });
+
+  it('🔒 Ω2 — η όψη ΔΕΝ κουβαλά το email του παραλήπτη, ούτε όταν ο θεατής είναι άλλος', async () => {
+    const { token } = await issue();
+
+    const outcome = await previewWorkspaceInvitation({ token, viewerEmail: 'allos@example.com', nowISOValue: NOW });
+
+    expect(JSON.stringify(outcome)).not.toContain(EMAIL);
   });
 });

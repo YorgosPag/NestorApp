@@ -114,23 +114,10 @@ async function syncFirestoreRecords(
     firestoreSuccess = false;
   }
 
-  // 🔑 **Ο ΕΝΑΣ ΓΡΑΦΕΑΣ** (ADR-853 Φ3 · άγκυρα **Μ2**): η **έγκριση αιτήματος** και η
-  //    **αποδοχή πρόσκλησης** γράφουν μέλος από **την ίδια** συνάρτηση. Ήταν γραμμένο εδώ
-  //    inline, μη εξαγόμενο — και η αποδοχή θα γεννούσε τον **τέταρτο** γραφέα του «τι
-  //    σημαίνει μέλος αυτού του χώρου» (ADR-749, μετρημένο στο ADR-853 §2).
-  //
-  // 🔴 **ΤΟ `permissionSetIds: []` ΕΦΥΓΕ, ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ — ΟΧΙ ΠΑΡΑΛΕΙΨΗ ΤΗΣ ΕΞΑΓΩΓΗΣ.**
-  //    Με `merge: true` μια **κενή** λίστα δεν μπορεί να **δώσει** τίποτα· μπορεί μόνο να
-  //    **σβήσει** τα σύνολα δικαιωμάτων που όρισε η κονσόλα ρόλων (ADR-244) — σε **κάθε**
-  //    ανάθεση ρόλου, σιωπηλά. Η **απουσία** του πεδίου διαβάζεται ούτως ή άλλως ως `[]`
-  //    από το `normalizeMembership`, οπότε η αφαίρεση κλείνει διαδρομή απώλειας δεδομένων
-  //    χωρίς να αλλάξει τίποτα άλλο.
-  //
-  // ⚠️ Παραμένει **μη μπλοκάρον**: τα claims έχουν ήδη δοθεί όταν φτάνουμε εδώ, οπότε
-  //    αποτυχία γραφής δεν επιτρέπεται να αναιρέσει πρόσβαση που **δόθηκε**.
-  await grantWorkspaceMembership({ uid, companyId, globalRole, grantedByUid: callerUid });
+  // 🔑 Η **θέση** γράφτηκε ήδη, ΠΡΙΝ από τα claims (ADR-867 Ε1 — δες `handleSetUserClaims`)·
+  //    εδώ μένει μόνο το **ίχνος**, που ποτέ δεν μπλοκάρει.
   await recordMembershipGrantAudit({
-    uid, companyId, globalRole, grantedByUid: callerUid, grantedByName: callerEmail,
+    uid, companyId, globalRole, grantedByUid: callerUid, grantedByName: callerEmail, enrollment: 'approval',
   });
 
   return firestoreSuccess;
@@ -274,6 +261,18 @@ export async function handleSetUserClaims(
         },
         { status: 400 }
       );
+    }
+
+    // 🔴 **Η ΘΕΣΗ ΠΡΙΝ ΑΠΟ ΤΟ CLAIM** (ADR-867 Β9(β) Ε1). Ήταν ανάποδα: claims πρώτα, έγγραφο μετά,
+    //    και η αποτυχία του εγγράφου γινόταν μόνο γραμμή log — άνθρωπος που **μπαίνει** χωρίς να
+    //    **φαίνεται**. Ο ΕΝΑΣ γραφέας (ADR-853 άγκυρα **Μ2**: ίδιος με την αποδοχή πρόσκλησης),
+    //    και ό,τι δεν γράφτηκε **σταματά** την ανάθεση· το `setClaimsWithMirror` θα την αρνιόταν
+    //    ούτως ή άλλως (`claims-seat.ts`).
+    const seated = await grantWorkspaceMembership({
+      uid, companyId, globalRole, grantedByUid: ctx.uid, enrollment: 'approval',
+    });
+    if (!seated) {
+      return NextResponse.json({ success: false, message: 'Failed to write workspace membership', error: 'membership-write-failed' }, { status: 500 });
     }
 
     try {

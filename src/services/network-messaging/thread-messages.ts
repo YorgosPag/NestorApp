@@ -22,6 +22,7 @@ import {
   generateNetworkMessageId,
   generateNetworkMessageRevisionId,
 } from '@/services/enterprise-id.service';
+import { liveMessageAtOf } from '@/lib/network-messaging/thread-liveness';
 import { MAX_NETWORK_MESSAGE_CHARS, type NetworkMessage, type NetworkThread } from '@/types/network-thread';
 import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 
@@ -45,7 +46,12 @@ import {
   networkThreadMessages,
   networkThreadRef,
 } from './network-thread-ref';
-import { announceNetworkMessage, type NetworkMessageNotice } from './network-notifier';
+import {
+  announceNetworkMessage,
+  withdrawRetractedEpisodes,
+  type NetworkMessageNotice,
+  type NetworkRetractionNotice,
+} from './network-notifier';
 import { isLiveAudience } from './thread-audience';
 import {
   readThreadAudience,
@@ -157,7 +163,8 @@ async function commitNetworkMessage(adminDb: AdminFirestore, input: SendNetworkM
     if (refusal !== null) return { outcome: { kind: 'refused', reason: refusal }, notice: null };
 
     transaction.set(messageRef, networkMessageDocument({ ...input, text }, messageId));
-    transaction.update(threadRef, { lastMessageAt: input.nowISO, updatedAt: input.nowISO });
+    // 🔑 Ε10: νέο μήνυμα ⇒ και το τελευταίο **ζωντανό** είναι αυτό (`thread-liveness.ts`).
+    transaction.update(threadRef, { lastMessageAt: input.nowISO, lastLiveMessageAt: input.nowISO, updatedAt: input.nowISO });
     writeThreadActivity(transaction, adminDb, input.threadId, audience, {
       senderUid: input.senderUid,
       nowISO: input.nowISO,
@@ -251,30 +258,82 @@ export interface RetractNetworkMessageInput {
 export async function retractNetworkMessage(
   adminDb: AdminFirestore,
   input: RetractNetworkMessageInput,
+  withdraw: (adminDb: AdminFirestore, notice: NetworkRetractionNotice) => Promise<void> = withdrawRetractedEpisodes,
 ): Promise<RetractOutcome> {
-  return adminDb.runTransaction<RetractOutcome>(async (transaction) => {
+  const result = await commitRetraction(adminDb, input);
+  // 🔔 ADR-867 Ε10 — η απόσυρση είναι **παρενέργεια** (N.7.2 #6), μετά το commit, όπως η ειδοποίηση της
+  //    αποστολής. Δεν πετά ποτέ· το email το φρουρεί ούτως ή άλλως η πύλη αποστολής με την ίδια αλήθεια.
+  if (result.notice !== null) await withdraw(adminDb, result.notice);
+  return result.outcome;
+}
+
+/** Η συναλλαγή της ανάκλησης — επιστρέφει και ό,τι χρειάζεται η απόσυρση, χωρίς δεύτερη ανάγνωση. */
+async function commitRetraction(
+  adminDb: AdminFirestore,
+  input: RetractNetworkMessageInput,
+): Promise<{ readonly outcome: RetractOutcome; readonly notice: NetworkRetractionNotice | null }> {
+  return adminDb.runTransaction(async (transaction) => {
     const { messageRef, thread, message, audience } = await readMessageSlot(transaction, adminDb, input);
-    if (thread === undefined) return { kind: 'refused', reason: 'thread-absent' };
+    if (thread === undefined) return { outcome: { kind: 'refused', reason: 'thread-absent' }, notice: null };
 
     const verdict = judgeRetraction(message, input.actorUid, input.nowISO);
-    if (verdict.kind === 'refused') return { kind: 'refused', reason: verdict.reason };
+    if (verdict.kind === 'refused') return { outcome: { kind: 'refused', reason: verdict.reason }, notice: null };
 
     const found = message as NetworkMessage;
     const readBefore = wasReadByOthers(found, audience);
+    // ⚠️ Ανάγνωση ΠΡΙΝ από κάθε γραφή (απαίτηση Firestore) — και μέσα στη συναλλαγή: μια αποστολή που μπαίνει
+    //    ενδιάμεσα αλλάζει το «τελευταίο ζωντανό», και η συναλλαγή τότε ξανατρέχει.
+    const liveAt = await nextLiveMessageAt(transaction, adminDb, input.threadId, thread, found);
 
     transaction.set(messageRef, retractionTombstone(found, input.nowISO, readBefore));
     transaction.set(
       networkRetractionRef(adminDb, input.messageId),
-      retractionRecord(found, {
-        threadId: input.threadId,
-        threadKind: thread.topic.kind,
-        nowISO: input.nowISO,
-        readBefore,
-      }),
+      retractionRecord(found, { threadId: input.threadId, threadKind: thread.topic.kind, nowISO: input.nowISO, readBefore }),
     );
+    transaction.update(networkThreadRef(adminDb, input.threadId), { lastLiveMessageAt: liveAt });
 
-    return { kind: 'retracted', readBeforeRetraction: readBefore };
+    return {
+      outcome: { kind: 'retracted', readBeforeRetraction: readBefore },
+      notice: { threadId: input.threadId, senderUid: found.senderUid, audience, liveAt, retractedAt: input.nowISO },
+    };
   });
+}
+
+/** Πόσα μηνύματα ζητά κάθε σελίδα του επανυπολογισμού — σχεδόν πάντα αρκεί η πρώτη. */
+const LIVE_SCAN_PAGE = 20;
+
+/**
+ * 🔑 **Το τελευταίο ζωντανό μήνυμα ΜΕΤΑ την ανάκληση** (ADR-867 Ε10 · `thread-liveness.ts`).
+ *
+ * Αν το ανακλημένο **δεν** ήταν το τελευταίο ζωντανό, τίποτα δεν αλλάζει. Αν **ήταν**, ψάχνουμε προς τα πίσω το
+ * αμέσως προηγούμενο που ζει — ερώτημα πάνω **μόνο** στο `createdAt` (αυτόματος δείκτης ενός πεδίου, κανένας
+ * σύνθετος). ⚠️ `<=` και όχι `<`: ζωντανό μήνυμα στο **ίδιο** χιλιοστό με το ανακλημένο μετράει. ⚠️ Σελιδοποίηση
+ * με **δρομέα εγγράφου** (`startAfter`), όχι με τιμή: με τιμή, πολλά μηνύματα στο ίδιο χιλιοστό ξαναφέρνουν την
+ * ίδια σελίδα και το ζωντανό χάνεται (μετρημένο: άγκυρα Ζ-6).
+ */
+async function nextLiveMessageAt(
+  transaction: Transaction,
+  adminDb: AdminFirestore,
+  threadId: string,
+  thread: NetworkThread,
+  retracted: NetworkMessage,
+): Promise<string | null> {
+  const liveNow = liveMessageAtOf(thread);
+  if (liveNow === null || liveNow > retracted.createdAt) return liveNow;
+
+  const older = networkThreadMessages(adminDb, threadId)
+    .where('createdAt', '<=', retracted.createdAt)
+    .orderBy('createdAt', 'desc');
+  let page = await transaction.get(older.limit(LIVE_SCAN_PAGE));
+  for (;;) {
+    const live = page.docs
+      .map((doc) => doc.data() as NetworkMessage)
+      .find((m) => m.id !== retracted.id && m.retractedAt === null);
+    if (live !== undefined) return live.createdAt;
+    const last = page.docs[page.docs.length - 1];
+    if (last === undefined || page.docs.length < LIVE_SCAN_PAGE) return null;
+    page = await transaction.get(older.startAfter(last).limit(LIVE_SCAN_PAGE));
+  }
 }
 
 // =============================================================================

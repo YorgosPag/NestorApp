@@ -19,6 +19,7 @@ import type { Notification, Severity } from '@/types/notification';
 import { formatRelativeTime } from '@/lib/intl-utils';
 import i18n from '@/i18n/config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isNotificationRead } from '@/lib/notifications/notification-state';
 import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('crm/notifications');
@@ -103,7 +104,7 @@ function transformNotification(notification: Notification): CrmNotificationData 
     title: notification.title,
     description: notification.body ?? '',
     time: formatRelativeTime(notification.createdAt),
-    read: notification.delivery.state === 'seen' || notification.delivery.state === 'acted',
+    read: isNotificationRead(notification.delivery.state),
     _original: notification,
   };
 }

@@ -11,7 +11,9 @@ export type DeliveryState =
   | 'acted'
   | 'failed'
   | 'expired'
-  | 'dismissed';
+  | 'dismissed'
+  /** Η **πηγή** την απέσυρε (π.χ. ανακλήθηκε το μήνυμα πριν διαβαστεί — ADR-867 Ε10). Κρυφή, όχι σβησμένη. */
+  | 'withdrawn';
 
 export interface NotificationAction {
   id: string;

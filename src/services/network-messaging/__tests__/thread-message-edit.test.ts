@@ -10,13 +10,14 @@
  *   Γ-4  🔴 Όχι ο αποστολέας ⇒ τίποτα δεν αλλάζει
  *   Γ-5  🔴 Σφραγισμένος αποστολέας ⇒ `not-audience` (δεν ξαναγράφει ό,τι είπε ως μέλος)
  *   Γ-6  Η επεξεργασία ΔΕΝ κινεί το νήμα στον κατάλογο
- *   Γ-7  Follow: αγγίζει ΜΟΝΟ το `following` · μη-μέλος δεν γεννά γραμμή
+ *   Γ-7  Follow: στο **ιδιωτικό** έγγραφο (Ε9) · η δημόσια γραμμή ανέγγιχτη · μη-μέλος δεν γεννά τίποτα
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { privateFieldsOnPublicRows, privateSideOf } from './audience-private-fixture';
 import { ensureActThread, type ActThreadTopic } from '@/services/network-messaging/thread-writer';
 import {
   editNetworkMessage,
@@ -130,16 +131,14 @@ describe('Γ — η επεξεργασία: η παλιά μορφή ΑΛΛΑΖ�
 });
 
 describe('Γ — «ακολουθώ»: μονομερές, στη δική μου γραμμή', () => {
-  it('Γ-7 αγγίζει ΜΟΝΟ το `following` — και μη-μέλος δεν γεννά γραμμή (μετάλλαξη: `set` αντί `update`)', async () => {
+  it('🔒 Γ-7 το follow πάει στο ΙΔΙΩΤΙΚΟ έγγραφο — η άλλη πλευρά δεν το μαθαίνει (Ε9) · μη-μέλος δεν γεννά τίποτα', async () => {
     const { db, fake } = await world();
+    const before = fake.all<NetworkAudienceEntry>(audiencePath).find((r) => r.uid === ELENI);
 
     expect(await setNetworkThreadFollowing(db, THREAD_ID, ELENI, true)).toBe('updated');
-    expect(fake.all<NetworkAudienceEntry>(audiencePath).find((r) => r.uid === ELENI)).toMatchObject({
-      following: true,
-      muted: false,
-      until: null,
-      role: 'collaborator',
-    });
+    expect(privateSideOf(fake, THREAD_ID, ELENI)).toStrictEqual({ following: true });
+    expect(fake.all<NetworkAudienceEntry>(audiencePath).find((r) => r.uid === ELENI)).toStrictEqual(before);
+    expect(privateFieldsOnPublicRows(fake, THREAD_ID)).toStrictEqual([]);
 
     expect(await setNetworkThreadFollowing(db, THREAD_ID, 'user_stranger', true)).toBe('not-audience');
     expect(fake.all<NetworkAudienceEntry>(audiencePath)).toHaveLength(3);

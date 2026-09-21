@@ -20,7 +20,7 @@
  * {@link ensureActThread} για όποιον **δεν έχει**.
  *
  * ⛔ **ΚΑΝΕΝΑΣ ΑΛΛΟΣ ΓΡΑΦΕΑΣ ΑΚΡΟΑΤΗΡΙΟΥ** (§4.3) — ούτε για το `lastReadAt`, ούτε για τη
- * σίγαση. Το επιβάλλει το **Κ3** του CHECK 3.89. Ο λόγος δεν είναι καθαρότητα: το ίδιο
+ * σίγαση (που ζουν πλέον στο **ιδιωτικό** έγγραφο της θέσης, Ε9 — ίδιος γραφέας). Το επιβάλλει το **Κ3** του CHECK 3.89. Ο λόγος δεν είναι καθαρότητα: το ίδιο
  * έγγραφο απαντά *«ποιος διαβάζει;»* **και** στον κανόνα Firestore· ένας δεύτερος γραφέας
  * που «απλώς ενημερώνει την ώρα ανάγνωσης» μπορεί να γράψει `until` με ένα `set` χωρίς
  * merge — δηλαδή να **βγάλει άνθρωπο από το νήμα** κατά λάθος.
@@ -28,22 +28,26 @@
 
 import 'server-only';
 
-import type {
-  CollectionReference,
-  DocumentReference,
-  Firestore as AdminFirestore,
-  Transaction,
+import {
+  FieldValue,
+  type CollectionReference,
+  type DocumentReference,
+  type Firestore as AdminFirestore,
+  type Transaction,
 } from 'firebase-admin/firestore';
 
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import type {
   NetworkAudienceEntry,
   NetworkAudienceReason,
+  NetworkAudienceSeat,
   NetworkThread,
   NetworkThreadTopic,
 } from '@/types/network-thread';
 
+import { legacyPrivateResidue, seatsOfThread } from './audience-seats';
 import {
+  networkAudiencePrivateRef,
   networkAudienceRef,
   networkThreadAudience,
   networkThreadRef,
@@ -210,11 +214,11 @@ export async function ensureActThread(
 }
 
 // =============================================================================
-// Η ΔΙΚΗ ΤΟΥ ΓΡΑΜΜΗ — ώρα ανάγνωσης και σίγαση, ΑΠΟ ΤΟΝ ΙΔΙΟ ΓΡΑΦΕΑ
+// Η ΙΔΙΩΤΙΚΗ ΠΛΕΥΡΑ ΤΗΣ ΘΕΣΗΣ — ώρα ανάγνωσης, σίγαση, follow, ΑΠΟ ΤΟΝ ΙΔΙΟ ΓΡΑΦΕΑ (ADR-867 Β9(β) Ε9)
 // =============================================================================
 
 /**
- * Ό,τι επιτρέπεται να αλλάξει **ο ίδιος** πάνω στη γραμμή του.
+ * Ό,τι επιτρέπεται να αλλάξει **ο ίδιος** — και ζει στο **ιδιωτικό** του έγγραφο, όχι στη δημόσια γραμμή.
  *
  * 🔑 **Ο ΤΥΠΟΣ ΕΙΝΑΙ Ο ΦΡΟΥΡΟΣ, ΟΧΙ ΕΝΑΣ ΕΛΕΓΧΟΣ ΜΕΣΑ ΣΤΗ ΣΥΝΑΡΤΗΣΗ**: με ένα ανοιχτό
  * `Partial<NetworkAudienceEntry>` η **ίδια** διαδρομή θα μπορούσε να γράψει `until` — να
@@ -228,10 +232,12 @@ export type AudienceSelfPatch =
 export type AudienceSelfOutcome = 'updated' | 'not-audience';
 
 /**
- * **Ο άνθρωπος αγγίζει τη ΔΙΚΗ του γραμμή** — και μόνο αν **διαβάζει τώρα**.
+ * **Ο άνθρωπος αγγίζει τη ΔΙΚΗ του ιδιωτική πλευρά** — και μόνο αν **διαβάζει τώρα**.
  *
- * ⚠️ `update` και **ποτέ** `set`: το `set` σε ανύπαρκτη γραμμή θα **δημιουργούσε
- * ακροατήριο** — δηλαδή θα έβαζε στο νήμα όποιον ζητήσει «σημείωσε ότι το διάβασα».
+ * 🔑 Η **δημόσια** γραμμή διαβάζεται (είναι η απάντηση στο «διαβάζει;») αλλά **δεν** γράφεται: η γραφή πάει
+ * στο ιδιωτικό έγγραφο, που η άλλη πλευρά δεν βλέπει (Ε9). `set` με `merge`: το έγγραφο γεννιέται με την
+ * **πρώτη** πράξη του ανθρώπου, και ένα πεδίο δεν σβήνει τα άλλα. ⚠️ Το `set` εδώ **δεν** γεννά ακροατήριο —
+ * το ιδιωτικό έγγραφο δεν απαντά ποτέ «ποιος διαβάζει», και ο φρουρός της ζωντανής γραμμής προηγείται.
  */
 export async function touchOwnAudience(
   adminDb: AdminFirestore,
@@ -239,13 +245,43 @@ export async function touchOwnAudience(
   uid: string,
   patch: AudienceSelfPatch,
 ): Promise<AudienceSelfOutcome> {
-  const ref = networkAudienceRef(adminDb, threadId, uid);
+  const seatRef = networkAudienceRef(adminDb, threadId, uid);
   return adminDb.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
+    const snapshot = await transaction.get(seatRef);
     const entry = snapshot.data() as NetworkAudienceEntry | undefined;
     if (entry === undefined || entry.until !== null) return 'not-audience';
-    transaction.update(ref, patch);
+    transaction.set(networkAudiencePrivateRef(adminDb, threadId, uid), patch, { merge: true });
     return 'updated';
+  });
+}
+
+export type LegacyPrivateMove = 'moved' | 'clean' | 'absent';
+
+/**
+ * 🔁 **Η ΜΕΤΑΚΙΝΗΣΗ ΤΟΥ ΠΑΛΙΟΥ ΣΧΗΜΑΤΟΣ** (ADR-867 Β9(β) Ε9 · contract) — τα ιδιωτικά πεδία φεύγουν από τη
+ * δημόσια γραμμή και πάνε στο ιδιωτικό έγγραφο, **στην ίδια συναλλαγή**: ποτέ στιγμή όπου τα πεδία λείπουν
+ * και από τα δύο, ποτέ στιγμή όπου η άλλη πλευρά τα βλέπει ενώ ο άνθρωπος έχει ήδη ιδιωτικό έγγραφο.
+ *
+ * 🔑 **Ιδεμποτής**: δεύτερη κλήση βρίσκει καθαρή γραμμή ⇒ `clean`, καμία γραφή. Ό,τι λέει ήδη το ιδιωτικό
+ * έγγραφο **νικά** (το έγραψε ο νέος κώδικας, άρα είναι νεότερο) — δες `legacyPrivateResidue`.
+ * ⚠️ Εδώ και όχι στο script: είναι γραφή ακροατηρίου (CHECK 3.89 Κ3) — ο μετανάστης **ζητά**, δεν γράφει.
+ */
+export async function moveLegacyPrivateSeat(
+  adminDb: AdminFirestore,
+  threadId: string,
+  uid: string,
+): Promise<LegacyPrivateMove> {
+  const seatRef = networkAudienceRef(adminDb, threadId, uid);
+  const privateRef = networkAudiencePrivateRef(adminDb, threadId, uid);
+  return adminDb.runTransaction(async (transaction) => {
+    const [seatSnap, privateSnap] = await transaction.getAll(seatRef, privateRef);
+    const publicRaw = seatSnap?.data();
+    if (publicRaw === undefined) return 'absent';
+    const residue = legacyPrivateResidue(publicRaw, privateSnap?.data());
+    if (residue === null) return 'clean';
+    if (Object.keys(residue.carry).length > 0) transaction.set(privateRef, residue.carry, { merge: true });
+    transaction.update(seatRef, Object.fromEntries(residue.strip.map((field) => [field, FieldValue.delete()])));
+    return 'moved';
   });
 }
 
@@ -256,7 +292,9 @@ export async function touchOwnAudience(
  * ⚠️ **Γιατί εδώ και όχι στον γραφέα μηνυμάτων**: είναι γραφή **ακροατηρίου** (CHECK 3.89 Κ3).
  * ⚠️ **Μόνο ζωντανές γραμμές**: η σφραγισμένη δεν εμφανίζεται σε κατάλογο (το ερώτημα φιλτράρει
  * `until == null`), και η **επιστροφή** την ξαναγράφει με τη δραστηριότητα της στιγμής.
- * ⚠️ `update`, **ποτέ** `set`: το `set` θα έσβηνε `lastReadAt`/`muted` — ή θα **γεννούσε** γραμμή.
+ * ⚠️ Στη **δημόσια** γραμμή `update`, **ποτέ** `set`: το `set` θα **γεννούσε** γραμμή — δηλαδή ακροατήριο.
+ * 🔒 Το `lastReadAt` του αποστολέα πάει στο **ιδιωτικό** του έγγραφο (Ε9): αλλιώς η άλλη πλευρά θα έβλεπε
+ * «διάβασε ως τις 14:32» σε κάθε μήνυμα που στέλνει.
  *
  * 🔑 **Ο αποστολέας δεν γίνεται «αδιάβαστο» από το δικό του μήνυμα** (Slack/Teams: η αποστολή
  * σημαίνει και ανάγνωση ως εκεί). Χωρίς αυτό, κάθε νήμα όπου μίλησε τελευταίος θα φαινόταν έντονο.
@@ -273,15 +311,17 @@ export function writeThreadActivity(
 ): void {
   for (const entry of audience) {
     if (entry.until !== null) continue;
-    const patch = entry.uid === activity.senderUid
-      ? { threadActivityAt: activity.nowISO, lastReadAt: activity.nowISO }
-      : { threadActivityAt: activity.nowISO };
-    transaction.update(networkAudienceRef(adminDb, threadId, entry.uid), patch);
+    transaction.update(networkAudienceRef(adminDb, threadId, entry.uid), { threadActivityAt: activity.nowISO });
+    if (entry.uid === activity.senderUid) {
+      transaction.set(networkAudiencePrivateRef(adminDb, threadId, entry.uid), { lastReadAt: activity.nowISO }, { merge: true });
+    }
   }
 }
 
 /**
- * **ΟΛΟ το ακροατήριο** — για την ερώτηση *«το πρόλαβε κάποιος;»* της ανάκλησης.
+ * **ΟΛΟ το ακροατήριο, με την ιδιωτική πλευρά κάθε θέσης** — για την ερώτηση *«το πρόλαβε κάποιος;»* της
+ * ανάκλησης/επεξεργασίας και για τον σχεδιασμό ειδοποιήσεων της αποστολής. ⚠️ Οι θέσεις (`NetworkAudienceSeat`)
+ * μένουν στον διακομιστή: **καμία** απάντηση προς πελάτη δεν τις σερβίρει.
  *
  * ⚠️ Επιστρέφει **και τα σφραγισμένα** μέλη, επίτηδες: κάποιος που έφυγε από την ομάδα
  * **αφού** διάβασε το μήνυμα, **το διάβασε**. Η σφραγίδα αφαιρεί μελλοντική πρόσβαση —
@@ -292,7 +332,7 @@ export async function readThreadAudience(
   transaction: Transaction,
   adminDb: AdminFirestore,
   threadId: string,
-): Promise<readonly NetworkAudienceEntry[]> {
+): Promise<readonly NetworkAudienceSeat[]> {
   const snapshot = await transaction.get(networkThreadAudience(adminDb, threadId));
-  return snapshot.docs.map((doc) => doc.data() as NetworkAudienceEntry);
+  return seatsOfThread((...refs) => transaction.getAll(...refs), adminDb, threadId, snapshot.docs);
 }

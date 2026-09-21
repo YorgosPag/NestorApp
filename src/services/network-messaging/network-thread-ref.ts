@@ -59,6 +59,20 @@ export function networkAudienceRef(
 }
 
 /**
+ * `network_threads/{id}/network_audience_private/{uid}` — **η ιδιωτική πλευρά της θέσης** (ADR-867 Β9(β) Ε9):
+ * ώρα ανάγνωσης, σίγαση, follow. Ο κανόνας τη δίνει **μόνο** στον ίδιο· γράφει **μόνο** ο `thread-writer.ts`.
+ */
+export function networkAudiencePrivateRef(
+  adminDb: AdminFirestore,
+  threadId: string,
+  uid: string,
+): DocumentReference {
+  return networkThreadRef(adminDb, threadId)
+    .collection(SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE_PRIVATE)
+    .doc(uid);
+}
+
+/**
  * **ΟΛΕΣ οι γραμμές ακροατηρίου, σε ΟΛΑ τα νήματα** — collection group, για τον κατάλογο.
  *
  * 🔴 **Εδώ φαίνεται γιατί το όνομα είναι `network_audience` και όχι `audience`**: ένα collection

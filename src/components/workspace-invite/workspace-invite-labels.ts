@@ -55,7 +55,17 @@ export const INVITE_PAGE_KEYS = {
 
   accept: 'auth:workspaceInvite.accept',
   decline: 'auth:workspaceInvite.decline',
-  working: 'auth:workspaceInvite.working',
+  /**
+   * 🔑 **ΜΙΑ λέξη αναμονής ΑΝΑ ΠΡΑΞΗ, στο κουμπί που ΠΑΤΗΘΗΚΕ** (ADR-853 §13 ε.β). Ήταν ένα
+   * κοινό «Γίνεται αποθήκευση…» ζωγραφισμένο **πάντα** στην αποδοχή: όποιος απέρριπτε έβλεπε
+   * ότι «αποθηκεύεται» η **αποδοχή** (Material/Slack: η ένδειξη ζει στο πατημένο κουμπί).
+   */
+  accepting: 'auth:workspaceInvite.accepting',
+  declining: 'auth:workspaceInvite.declining',
+  /** §13 ε.δ — «συνδεδεμένοι ως Χ», **πριν** το κλικ· και ο δρόμος: αλλαγή με επιστροφή. */
+  otherAccount: 'auth:workspaceInvite.otherAccount',
+  switchAccount: 'auth:workspaceInvite.switchAccount',
+  switchingAccount: 'auth:workspaceInvite.switchingAccount',
 
   acceptedTitle: 'auth:workspaceInvite.accepted.title',
   acceptedActiveNow: 'auth:workspaceInvite.accepted.activeNow',
@@ -94,7 +104,6 @@ export const REFUSAL_KEY: Readonly<Record<WorkspaceInvitationRefusal, string>> =
   'already-used': 'auth:workspaceInvite.refusal.already-used',
   revoked: 'auth:workspaceInvite.refusal.revoked',
   'wrong-recipient': 'auth:workspaceInvite.refusal.wrong-recipient',
-  'email-unverified': 'auth:workspaceInvite.refusal.email-unverified',
   'already-member': 'auth:workspaceInvite.refusal.already-member',
   'role-above-inviter': 'auth:workspaceInvite.refusal.role-above-inviter',
 };
@@ -133,3 +142,31 @@ export const EXIT_HREF = {
   'sign-in': '/login',
   home: '/',
 } as const satisfies Record<WorkspaceInviteExitName, string>;
+
+/**
+ * **Κάθε άρνηση ξέρει πού στέλνει τον άνθρωπο** — και ο τύπος απαιτεί **και οι εννέα** να
+ * απαντηθούν. Ένα `switch` με `default` θα κατάπινε τη δέκατη σιωπηλά.
+ *
+ * 🔑 Ο διαχωρισμός δεν είναι αισθητικός: `sign-in` σημαίνει *«υπάρχει πράξη, λείπει η σωστή
+ * ταυτότητα»*· `home` σημαίνει *«δεν υπάρχει τίποτα να κάνεις εδώ»*. Να δώσουμε «Σύνδεση»
+ * σε ληγμένη πρόσκληση θα ήταν κουμπί που **δεν οδηγεί πουθενά** — αδιέξοδο **με** κουμπί,
+ * χειρότερο από αδιέξοδο χωρίς (ADR-844 Α3).
+ *
+ * 🔴 **ΕΝΑΣ πίνακας για ΔΥΟ στιγμές** — την **όψη** (`page.tsx`) **και** την **πράξη**
+ * (`WorkspaceInviteContent`). Μέχρι 2026-09-21 ζούσε ιδιωτικός στο `page.tsx`, και η άρνηση
+ * την ώρα της πράξης ζωγραφιζόταν **με τον τίτλο του παροδικού** («δεν μπορούμε αυτή τη
+ * στιγμή») και **πάντα** «αρχική»: ο τίτλος υποσχόταν *«περιμένετε»* ενώ το σώμα έλεγε
+ * *«κάντε κάτι»* — δύο αντίθετες οδηγίες στην ίδια κάρτα (ADR-853 §13).
+ */
+export const EXIT_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, WorkspaceInviteExitName>> = {
+  'link-invalid': 'home',
+  'invitation-unknown': 'home',
+  expired: 'home',
+  /** Απάντησε ήδη — **επιτυχία στο παρελθόν**. Ο δρόμος του είναι μέσα. */
+  'already-used': 'sign-in',
+  revoked: 'home',
+  /** Είναι **λάθος λογαριασμός**, όχι λάθος σύνδεσμος: ξανασυνδέσου ως ο παραλήπτης. */
+  'wrong-recipient': 'sign-in',
+  'already-member': 'sign-in',
+  'role-above-inviter': 'home',
+};

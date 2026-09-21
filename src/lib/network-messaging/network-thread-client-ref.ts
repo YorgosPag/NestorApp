@@ -37,6 +37,11 @@ export function clientThreadAudience(threadId: string): CollectionReference {
   return collection(db, COLLECTIONS.NETWORK_THREADS, threadId, SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE);
 }
 
+/** `…/network_audience_private/{uid}` — η **δική μου** ιδιωτική πλευρά (κανόνας: μόνο ο ίδιος · ADR-867 Ε9). */
+export function clientAudiencePrivateDoc(threadId: string, uid: string): DocumentReference {
+  return doc(db, COLLECTIONS.NETWORK_THREADS, threadId, SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE_PRIVATE, uid);
+}
+
 /** `…/network_messages` — τα **τελευταία** `windowSize` μηνύματα (νεότερο πρώτο· η οθόνη αντιστρέφει). */
 export function clientRecentMessages(threadId: string, windowSize: number): Query {
   return query(

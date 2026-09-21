@@ -1825,6 +1825,20 @@ service cloud.firestore {
         allow read: if readsThisThread();
         allow create, update, delete: if false;
       }
+
+      // 🔒 ADR-867 Β9(β) Ε9 — Η ΙΔΙΩΤΙΚΗ ΠΛΕΥΡΑ ΤΗΣ ΘΕΣΗΣ: ώρα ανάγνωσης, σίγαση, follow.
+      //    Ζούσαν στη γραμμή ακροατηρίου, που τη διαβάζει και η ΑΛΛΗ πλευρά — και η Firestore
+      //    ΔΕΝ κρύβει πεδία («You either retrieve the full document, or you retrieve nothing»).
+      //    Άρα η οθόνη υποσχόταν «η άλλη πλευρά δεν το μαθαίνει» και ο κανόνας το έδινε.
+      //    Τώρα: ΜΟΝΟ ο ίδιος, και μόνο όσο διαβάζει το νήμα (Slack/Gmail: η σίγαση είναι του
+      //    χρήστη· Teams: καμία ένδειξη ανάγνωσης προς άλλον οργανισμό).
+      // 🚫 LIST: ΠΟΤΕ — μια λίστα θα ρωτούσε τα ιδιωτικά ΟΛΩΝ. GET μόνο με το ΔΙΚΟ μου κλειδί.
+      // ✍️ Γράφει ΜΟΝΟ ο `thread-writer.ts` (CHECK 3.89 Κ3).
+      match /network_audience_private/{memberUid} {
+        allow get: if readsThisThread() && request.auth.uid == memberUid;
+        allow list: if false;
+        allow create, update, delete: if false;
+      }
     }
 
     // ADR-835 §22 (Στάδιο Γ) — ΤΑ ΚΑΝΑΛΙΑ: πηγές iCal + γενιά του συνδέσμου εξαγωγής.

@@ -58,11 +58,11 @@ export function useThreadPanelModel(threadId: string, teamId: string | null) {
   const viewerUid = user?.uid ?? null;
   const view = useNetworkThread(threadId, viewerUid);
   const me = view.audience?.find((entry) => entry.uid === viewerUid) ?? null;
-  const actions = useNetworkThreadActions(threadId, viewerUid, view.messages, me?.lastReadAt ?? null);
+  const actions = useNetworkThreadActions(threadId, viewerUid, view.messages, view.mine?.lastReadAt ?? null);
   const roster = useThreadRoster(threadId, view.audience);
   const labeler = usePersonLabeler(roster.people, view.audience, viewerUid);
-  const mute = useSeatToggle(threadId, 'muted', me?.muted ?? false);
-  const follow = useSeatToggle(threadId, 'following', me?.following ?? false);
+  const mute = useSeatToggle(threadId, 'muted', view.mine?.muted ?? false);
+  const follow = useSeatToggle(threadId, 'following', view.mine?.following ?? false);
   const away = useMyNetworkAway(viewerUid !== null && view.thread.state === 'ready');
   const team = useActTeam(teamId);
   const [notice, setNotice] = useState<PanelNotice | null>(null);

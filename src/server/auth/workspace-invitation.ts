@@ -145,6 +145,7 @@ export async function issueWorkspaceInvitation(
     openedAt: null,
     resolvedAt: null,
     resolvedByUid: null,
+    mailboxProvenAt: null,
   };
 
   const supersededCount = await writeWithSupersede(invitation, input.inviterUid, nowValue);

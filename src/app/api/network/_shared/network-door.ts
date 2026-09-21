@@ -114,6 +114,7 @@ export const NETWORK_REFUSAL_STATUS = {
   'empty-text': 422,
   'too-long': 422,
   'target-not-in-workspace': 422,
+  'target-cannot-serve': 422,
   'target-is-counterpart': 422,
   'responsible-not-removable': 422,
 } as const satisfies Record<NetworkRefusalCode, 403 | 404 | 409 | 422>;

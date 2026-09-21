@@ -49,6 +49,7 @@ function facts(change: ActTeamChange, overrides: Partial<ActTeamChangeFacts> = {
     actorWorkspaceId: HOST,
     actorIsManager: true,
     targetIsActiveMember: true,
+    targetCanServe: true,
     counterpartUid: OWNER,
     expectedVersion: TEAM.version,
     ...overrides,
@@ -118,6 +119,24 @@ describe('Ε — ο στόχος', () => {
       .toStrictEqual({ kind: 'refused', reason: 'target-not-in-workspace' });
     expect(judgeActTeamChange(facts({ kind: 'remove-collaborator', uid: ELENI }, suspended)).kind)
       .toBe('apply');
+  });
+
+  it('🔴 Ε-5β (ADR-867 Ε1β) ο ΕΠΙΣΚΕΠΤΗΣ του γραφείου: δεν αναλαμβάνει, δεν γίνεται συνεργάτης — αλλά ΒΓΑΙΝΕΙ', () => {
+    // Zendesk light agent: υπάρχει στον χώρο, δεν ανατίθεται, δεν απαντά. Παρονομαστής: ίδια γεγονότα,
+    // μόνο το `targetCanServe` αλλάζει — το Ε-5 έδειξε ήδη ότι με `true` η ίδια αλλαγή εφαρμόζεται.
+    const guest = { targetCanServe: false };
+
+    expect(judgeActTeamChange(facts({ kind: 'add-collaborator', uid: NIKOS }, guest)))
+      .toStrictEqual({ kind: 'refused', reason: 'target-cannot-serve' });
+    expect(judgeActTeamChange(facts({ kind: 'assign-responsible', uid: NIKOS }, guest)))
+      .toStrictEqual({ kind: 'refused', reason: 'target-cannot-serve' });
+    expect(judgeActTeamChange(facts({ kind: 'add-collaborator', uid: NIKOS })).kind).toBe('apply');
+    expect(judgeActTeamChange(facts({ kind: 'remove-collaborator', uid: ELENI }, guest)).kind).toBe('apply');
+  });
+
+  it('Ε-5γ η σειρά: ανενεργός ΚΑΙ επισκέπτης ⇒ λέει «ανενεργός» (η θέση κρίνεται πριν την ικανότητα)', () => {
+    expect(judgeActTeamChange(facts({ kind: 'add-collaborator', uid: NIKOS }, { targetIsActiveMember: false, targetCanServe: false })))
+      .toStrictEqual({ kind: 'refused', reason: 'target-not-in-workspace' });
   });
 
   it('Ε-6 ο αντισυμβαλλόμενος δεν γίνεται συνεργάτης του γραφείου', () => {

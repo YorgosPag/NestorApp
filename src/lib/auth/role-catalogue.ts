@@ -67,6 +67,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.companyAdmin.name",
     description: "auth.roles.companyAdmin.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "admin_access",
       "users:users:view",
       "users:users:manage",
@@ -222,6 +224,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.internalUser.name",
     description: "auth.roles.internalUser.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "projects:projects:view",
       "projects:floors:view",
       "buildings:buildings:view",
@@ -280,6 +284,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.projectManager.name",
     description: "auth.roles.projectManager.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "projects:projects:view",
       "projects:projects:update",
       "projects:members:view",
@@ -342,6 +348,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.architect.name",
     description: "auth.roles.architect.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "dxf:files:view",
       "dxf:layers:view",
       "dxf:text:create",
@@ -389,6 +397,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.engineer.name",
     description: "auth.roles.engineer.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "dxf:files:view",
       "dxf:layers:view",
       "dxf:text:create",
@@ -435,6 +445,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.siteManager.name",
     description: "auth.roles.siteManager.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "dxf:text:create",
       "dxf:text:edit",
       "dxf:dictionary:view",
@@ -455,6 +467,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.accountant.name",
     description: "auth.roles.accountant.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "finance:invoices:view",
       "finance:invoices:update",
       "reports:reports:view",
@@ -468,6 +482,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.salesAgent.name",
     description: "auth.roles.salesAgent.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "crm:contacts:view",
       "crm:contacts:create",
       "crm:contacts:update",
@@ -489,6 +505,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.dataEntry.name",
     description: "auth.roles.dataEntry.description",
     permissions: [
+      // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
+      "network:threads:respond",
       "projects:projects:view",
       "properties:properties:view",
       "units:units:view",

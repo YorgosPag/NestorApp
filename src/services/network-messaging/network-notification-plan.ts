@@ -35,6 +35,7 @@
 import type {
   NetworkActTeam,
   NetworkAudienceEntry,
+  NetworkAudienceSeat,
   NetworkAudienceRole,
 } from '@/types/network-thread';
 
@@ -72,7 +73,7 @@ export interface MessageRecipient {
 }
 
 /** Ένας κανόνας αποκλεισμού: `true` ⇒ **καμία** ειδοποίηση σε αυτή τη γραμμή. */
-export type RecipientVeto = (entry: NetworkAudienceEntry) => boolean;
+export type RecipientVeto = (entry: NetworkAudienceSeat) => boolean;
 
 /** ADR-834 (α) ② — **σίγαση**: τα μηνύματα φτάνουν, το καμπανάκι όχι. */
 export const mutedVeto: RecipientVeto = (entry) => entry.muted === true;
@@ -82,7 +83,7 @@ export const MESSAGE_VETOES: readonly RecipientVeto[] = [mutedVeto];
 
 export interface MessagePlanInput {
   /** **Όλο** το ακροατήριο (και σφραγισμένα — φιλτράρονται εδώ). */
-  readonly audience: readonly NetworkAudienceEntry[];
+  readonly audience: readonly NetworkAudienceSeat[];
   readonly senderUid: string;
   /** Οι δηλώσεις απουσίας των μελών (όσες υπάρχουν). */
   readonly aways: ReadonlyMap<string, NetworkAway>;
@@ -95,7 +96,7 @@ function partyOf(entry: Pick<NetworkAudienceEntry, 'side' | 'uid'>): string {
 }
 
 /** Το κλειδί του διαστήματος αδιάβαστων — ένα σημείο, και για τον σχεδιαστή και για τις άγκυρες. */
-export function unreadEpisodeOf(entry: Pick<NetworkAudienceEntry, 'lastReadAt'>): string {
+export function unreadEpisodeOf(entry: Pick<NetworkAudienceSeat, 'lastReadAt'>): string {
   return entry.lastReadAt ?? 'never';
 }
 
@@ -103,13 +104,13 @@ export function unreadEpisodeOf(entry: Pick<NetworkAudienceEntry, 'lastReadAt'>)
  * **Ειδοποιείται πάντα;** — το κύριο πρόσωπο, **ή** ο συνεργάτης που **ακολουθεί** (ADR-867 Β7 · §8 #10,
  * HubSpot «Follow a record»: *«By default, you follow all records you own»* — οι άλλοι με opt-in).
  */
-function alwaysNotified(row: NetworkAudienceEntry): boolean {
+function alwaysNotified(row: NetworkAudienceSeat): boolean {
   return PRIMARY_NOTIFY_ROLES.has(row.role) || row.following === true;
 }
 
 /** Η ειδοποίηση μιας πλευράς: κύρια πρόσωπα + όσοι ακολουθούν πάντα· οι υπόλοιποι όσο λείπει κύριο πρόσωπο. */
 function planForParty(
-  rows: readonly NetworkAudienceEntry[],
+  rows: readonly NetworkAudienceSeat[],
   isAway: (uid: string) => boolean,
 ): MessageRecipient[] {
   const direct = rows.filter(alwaysNotified).map((row) => recipient(row, 'direct', null));
@@ -124,7 +125,7 @@ function planForParty(
 }
 
 function recipient(
-  row: NetworkAudienceEntry,
+  row: NetworkAudienceSeat,
   reason: MessageNotifyReason,
   coversUid: string | null,
 ): MessageRecipient {
@@ -148,7 +149,7 @@ export function planMessageNotifications(
   const senderParty = partyOf(sender);
   const isAway = (uid: string) => isAwayActive(input.aways.get(uid) ?? null, input.nowISO);
 
-  const byParty = new Map<string, NetworkAudienceEntry[]>();
+  const byParty = new Map<string, NetworkAudienceSeat[]>();
   for (const entry of live) {
     if (entry.uid === input.senderUid || partyOf(entry) === senderParty) continue;
     if (vetoes.some((veto) => veto(entry))) continue;

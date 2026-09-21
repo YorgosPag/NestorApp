@@ -19,8 +19,10 @@ import {
   NETWORK_AUDIENCE_ROLES,
   NETWORK_AUDIENCE_SIDES,
   NETWORK_HOST_ROLES,
+  NETWORK_AUDIENCE_PRIVATE_DEFAULTS,
   NETWORK_THREAD_STATES,
   type NetworkAudienceEntry,
+  type NetworkAudiencePrivate,
   type NetworkMessage,
   type NetworkThread,
   type NetworkThreadTopic,
@@ -68,13 +70,36 @@ export function networkAudienceFromDocument(raw: unknown, id: string): NetworkAu
     addedBy: strOrNull(raw.addedBy) ?? '',
     since,
     until: strOrNull(raw.until),
-    lastReadAt: strOrNull(raw.lastReadAt),
-    muted: raw.muted === true,
-    following: raw.following === true,
     threadActivityAt: str(raw.threadActivityAt) ?? since,
     // Γραμμή προ-Β9 ⇒ `null` = «μία ιδιότητα» — ποτέ μαντεψιά δεύτερου ρόλου.
     alsoHostRole: oneOf(NETWORK_HOST_ROLES, raw.alsoHostRole),
   };
+}
+
+/** Τα αναλυμένα ιδιωτικά πεδία **ενός** εγγράφου — λείπει κλειδί ⇒ «αυτό το έγγραφο δεν το λέει». */
+export function audiencePrivateFieldsOf(raw: unknown): Partial<NetworkAudiencePrivate> {
+  if (!isRecord(raw)) return {};
+  const found: { lastReadAt?: string | null; muted?: boolean; following?: boolean } = {};
+  // ⚠️ `null` στο `lastReadAt` είναι **τιμή** («δεν διάβασε ποτέ»), όχι απουσία.
+  if (typeof raw.lastReadAt === 'string' || raw.lastReadAt === null) found.lastReadAt = raw.lastReadAt;
+  if (typeof raw.muted === 'boolean') found.muted = raw.muted;
+  if (typeof raw.following === 'boolean') found.following = raw.following;
+  return found;
+}
+
+/**
+ * 🔒 **Η ιδιωτική πλευρά της θέσης** (ADR-867 Β9(β) Ε9) — **ποτέ `null`**: η απουσία εγγράφου είναι έγκυρη
+ * κατάσταση («δεν διάβασε ποτέ, δεν σίγασε, δεν ακολουθεί»).
+ *
+ * 🔁 **Expand/contract**: ως τη μετανάστευση τα πεδία ζούσαν στη **δημόσια** γραμμή. Ανά πεδίο: ό,τι λέει το
+ * ιδιωτικό έγγραφο νικά (γράφτηκε από τον νέο κώδικα, άρα είναι νεότερο)· αλλιώς ό,τι λέει το παλιό
+ * `legacyRaw`· αλλιώς η ουδέτερη τιμή. Ανά **πεδίο** και όχι ανά έγγραφο: μια σίγαση πριν τη μετανάστευση
+ * γεννά ιδιωτικό έγγραφο **μόνο** με `muted` — δεν πρέπει να σβήσει το παλιό `lastReadAt`.
+ * ⚠️ Μετά το `npm run migrate:network-audience-private -- --apply` (απόκλιση 0) το `legacyRaw` δεν
+ * κουβαλά πια τίποτα και η εφεδρεία είναι αδρανής.
+ */
+export function networkAudiencePrivateFromDocuments(privateRaw: unknown, legacyRaw?: unknown): NetworkAudiencePrivate {
+  return { ...NETWORK_AUDIENCE_PRIVATE_DEFAULTS, ...audiencePrivateFieldsOf(legacyRaw), ...audiencePrivateFieldsOf(privateRaw) };
 }
 
 function topicOf(raw: unknown): NetworkThreadTopic | null {
@@ -108,5 +133,7 @@ export function networkThreadFromDocument(raw: unknown, id: string): NetworkThre
     state: oneOf(NETWORK_THREAD_STATES, raw.state) ?? 'closed',
     createdAt,
     lastMessageAt: strOrNull(raw.lastMessageAt),
+    // Νήμα προ-Ε10 ⇒ `undefined` (όχι `null`): «δεν ξέρω» ≠ «κανένα ζωντανό μήνυμα» — δες `thread-liveness.ts`.
+    ...('lastLiveMessageAt' in raw ? { lastLiveMessageAt: strOrNull(raw.lastLiveMessageAt) } : {}),
   };
 }

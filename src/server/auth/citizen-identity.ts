@@ -79,6 +79,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import {
   mailboxProofMaySignIn,
+  provenMailboxAccountOf,
   settleProvenMailbox,
   type ProvenMailboxAccount,
   type SessionHolderProbe,
@@ -191,11 +192,9 @@ function isUserNotFound(error: unknown): boolean {
  */
 function fromRecord(record: UserRecord): ResolvedAccount {
   return {
-    uid: record.uid,
+    ...provenMailboxAccountOf(record),
     disabled: record.disabled,
     customClaims: record.customClaims,
-    emailVerified: record.emailVerified,
-    secondFactorEnrolled: (record.multiFactor?.enrolledFactors.length ?? 0) > 0,
     born: false,
   };
 }

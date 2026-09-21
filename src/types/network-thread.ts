@@ -79,6 +79,7 @@ export const NETWORK_REFUSAL_CODES = [
   'empty-text',
   'too-long',
   'target-not-in-workspace',
+  'target-cannot-serve',
   'target-is-counterpart',
   'responsible-not-removable',
 ] as const;
@@ -122,7 +123,14 @@ export interface NetworkThread {
   readonly topic: NetworkThreadTopic;
   readonly state: NetworkThreadState;
   readonly createdAt: string;
+  /** Πότε **κινήθηκε** το νήμα — ταξινόμηση. Η ανάκληση **δεν** το αλλάζει: η ταφόπλακα είναι κίνηση. */
   readonly lastMessageAt: string | null;
+  /**
+   * Πότε γράφτηκε το τελευταίο μήνυμα που **ζει** (όχι ανακλημένο) — η βάση του «αδιάβαστο» (ADR-867 Ε10 ·
+   * `lib/network-messaging/thread-liveness.ts`). `undefined` ⇒ νήμα **προ-Ε10**: ισχύει το `lastMessageAt`.
+   * Γράφεται **μόνο** στην αποστολή (= τώρα) και στην ανάκληση (επανυπολογισμός, στην ίδια συναλλαγή).
+   */
+  readonly lastLiveMessageAt?: string | null;
 }
 
 /**
@@ -219,7 +227,14 @@ export interface NetworkMessageRetraction {
   readonly readBeforeRetraction: boolean;
 }
 
-/** `network_threads/{id}/audience/{uid}` — **η** απάντηση στο «ποιος διαβάζει;», με ιστορικό. */
+/**
+ * `network_threads/{id}/network_audience/{uid}` — **η** απάντηση στο «ποιος διαβάζει;», με ιστορικό.
+ *
+ * 🔒 **ΜΟΝΟ ΔΗΜΟΣΙΑ ΠΕΔΙΑ** (ADR-867 Β9(β) Ε9): αυτό το έγγραφο το διαβάζει **όλο το ακροατήριο**, και
+ * των δύο πλευρών, και η Firestore **δεν κρύβει πεδία** («You either retrieve the full document, or you
+ * retrieve nothing»). Ό,τι είναι επιλογή ή ίχνος **του ανθρώπου** ζει στο {@link NetworkAudiencePrivate}.
+ * Κάθε πεδίο δηλώνεται σε **μία** από τις δύο λίστες ορατότητας — δες {@link NETWORK_AUDIENCE_FIELD_VISIBILITY}.
+ */
 export interface NetworkAudienceEntry {
   readonly uid: string;
   readonly side: NetworkAudienceSide;
@@ -229,17 +244,6 @@ export interface NetworkAudienceEntry {
   readonly since: string;
   /** `null` = διαβάζει **τώρα**. Η έξοδος **σφραγίζεται**, δεν σβήνεται. */
   readonly until: string | null;
-  readonly lastReadAt: string | null;
-  readonly muted: boolean;
-  /**
-   * 🔔 **«ΑΚΟΛΟΥΘΩ»** (ADR-867 Β7 · §8 #10) — opt-in ειδοποιήσεων για **συνεργάτη**: ειδοποιείται για
-   * κάθε νέο εισερχόμενο **σαν** κύριο πρόσωπο, όχι μόνο ως αναπληρωτής (HubSpot «Follow a record»).
-   *
-   * ⚠️ **Δεν αφορά τα κύρια πρόσωπα** (`PRIMARY_NOTIFY_ROLES`): εκείνα ειδοποιούνται **πάντα** (Β6)·
-   * όποιος θέλει ησυχία έχει τη **σίγαση**, που νικά το follow. Επιβιώνει αλλαγής ρόλου και επιστροφής,
-   * όπως το `muted` — είναι επιλογή **του ανθρώπου**, όχι της ομάδας.
-   */
-  readonly following: boolean;
   /**
    * 🔑 **ΠΟΤΕ ΚΙΝΗΘΗΚΕ ΤΟ ΝΗΜΑ — ΑΝΤΙΓΡΑΜΜΕΝΟ ΕΔΩ ΕΠΙΤΗΔΕΣ** (fan-out on write, ADR-867 Β5).
    *
@@ -264,6 +268,89 @@ export interface NetworkAudienceEntry {
    * γραφείου να φαίνεται άδεια. `null` ⇒ μία ιδιότητα. ⚠️ **Παράγεται** από την προβολή, ποτέ χειρόγραφα.
    */
   readonly alsoHostRole: NetworkHostRole | null;
+}
+
+/**
+ * `network_threads/{id}/network_audience_private/{uid}` — **Η ΙΔΙΩΤΙΚΗ ΠΛΕΥΡΑ ΤΗΣ ΘΕΣΗΣ** (ADR-867 Β9(β) Ε9).
+ *
+ * 🌐 **Η πρακτική των μεγάλων**: η σίγαση στο Slack είναι προτίμηση του χρήστη που κανείς δεν βλέπει· στο
+ * Gmail είναι ετικέτα **του δικού του** γραμματοκιβωτίου· το `last_read` του Slack επιστρέφεται **μόνο** για
+ * όποιον ρωτά· και το Teams **δεν** δείχνει ποτέ ένδειξη ανάγνωσης προς άλλον οργανισμό. Ο αντισυμβαλλόμενος
+ * ενός νήματος είναι **πάντα** άλλος οργανισμός ⇒ τίποτα από αυτά δεν περνά στην άλλη πλευρά.
+ *
+ * 🔑 **Χωριστό έγγραφο, όχι κρυφά πεδία** — το πρότυπο της ίδιας της Firebase (*Control access to specific
+ * fields*: `employees/{id}` + `employees/{id}/private/finances`). Ο κανόνας δίνει ανάγνωση **μόνο** στον ίδιο.
+ *
+ * ⚠️ **Η απουσία εγγράφου είναι έγκυρη κατάσταση** = {@link NETWORK_AUDIENCE_PRIVATE_DEFAULTS} («δεν διάβασε
+ * ποτέ, δεν σίγασε, δεν ακολουθεί»). Γράφεται **πρώτη φορά** όταν ο άνθρωπος κάνει κάτι — και επιβιώνει
+ * έξοδο και επιστροφή, γιατί είναι δικό **του**, όχι της ομάδας.
+ * ⛔ Γράφει **μόνο** ο `thread-writer.ts` (CHECK 3.89 Κ3).
+ */
+export interface NetworkAudiencePrivate {
+  /** Ως πού έχει διαβάσει. 🔒 Ιδιωτικό: εκτεθειμένο, θα ήταν ένδειξη ανάγνωσης (§8 #4 την αρνείται). */
+  readonly lastReadAt: string | null;
+  /** Σίγαση — τα μηνύματα φτάνουν, το καμπανάκι όχι. «Η άλλη πλευρά δεν το μαθαίνει» (`muteHint`). */
+  readonly muted: boolean;
+  /**
+   * 🔔 **«ΑΚΟΛΟΥΘΩ»** (ADR-867 Β7 · §8 #10) — opt-in ειδοποιήσεων για **συνεργάτη**: ειδοποιείται για
+   * κάθε νέο εισερχόμενο **σαν** κύριο πρόσωπο, όχι μόνο ως αναπληρωτής (HubSpot «Follow a record»).
+   *
+   * ⚠️ **Δεν αφορά τα κύρια πρόσωπα** (`PRIMARY_NOTIFY_ROLES`): εκείνα ειδοποιούνται **πάντα** (Β6)·
+   * όποιος θέλει ησυχία έχει τη **σίγαση**, που νικά το follow. Επιβιώνει αλλαγής ρόλου και επιστροφής,
+   * όπως το `muted` — είναι επιλογή **του ανθρώπου**, όχι της ομάδας.
+   */
+  readonly following: boolean;
+}
+
+/** Η θέση όπως τη βλέπει **ο διακομιστής**: δημόσια + ιδιωτική πλευρά. ⛔ Ποτέ σε απάντηση προς άλλον. */
+export interface NetworkAudienceSeat extends NetworkAudienceEntry, NetworkAudiencePrivate {}
+
+/** Ό,τι σημαίνει «δεν υπάρχει ακόμη ιδιωτικό έγγραφο». */
+export const NETWORK_AUDIENCE_PRIVATE_DEFAULTS: NetworkAudiencePrivate = {
+  lastReadAt: null,
+  muted: false,
+  following: false,
+};
+
+/**
+ * 🏆 **ΤΟ ΜΗΤΡΩΟ ΟΡΑΤΟΤΗΤΑΣ ΤΗΣ ΘΕΣΗΣ** — «ποιος βλέπει αυτό το πεδίο;», απαντημένο για **κάθε** πεδίο.
+ *
+ * Το Ε9 δεν ήταν λάθος ενός πεδίου· ήταν ότι **κανείς δεν ρωτούσε**: τρία πεδία ιδιωτικής φύσης μπήκαν σε
+ * έγγραφο που διαβάζει η άλλη πλευρά, σε τρεις διαφορετικές φάσεις (Β5, Β5, Β7). Εδώ η ερώτηση γίνεται
+ * **υποχρεωτική**: νέο πεδίο σε οποιονδήποτε από τους δύο τύπους χωρίς γραμμή ⇒ ο μεταγλωττιστής αρνείται
+ * (δες τους ελέγχους αμέσως κάτω). Οι λίστες **χρησιμοποιούνται** — από τον αναλυτή του ιδιωτικού εγγράφου,
+ * τη μετανάστευση και τη σουίτα κανόνων — δεν είναι σχόλιο.
+ */
+export const NETWORK_AUDIENCE_FIELD_VISIBILITY = declareAudienceVisibility({
+  /** Όλο το ακροατήριο, και των δύο πλευρών (ADR-834 (ε) 🏆 «ποιοι διαβάζουν και από πότε»). */
+  audience: ['uid', 'side', 'role', 'reason', 'addedBy', 'since', 'until', 'threadActivityAt', 'alsoHostRole'],
+  /** Μόνο ο ίδιος (και ο διακομιστής). */
+  self: ['lastReadAt', 'muted', 'following'],
+});
+
+/** Τα ιδιωτικά πεδία ως λίστα — ό,τι μετακινεί η μετανάστευση και ό,τι απαγορεύεται στο δημόσιο έγγραφο. */
+export const NETWORK_AUDIENCE_PRIVATE_FIELDS = NETWORK_AUDIENCE_FIELD_VISIBILITY.self;
+
+/** `{}` αν δεν λείπει τίποτα· αλλιώς ένα πεδίο που **ονομάζει** ό,τι λείπει στο μήνυμα του μεταγλωττιστή. */
+type Undeclared<T, Declared extends PropertyKey, Label extends string> =
+  [Exclude<keyof T, Declared>] extends [never] ? unknown : { readonly [K in Label]: Exclude<keyof T, Declared> };
+
+/**
+ * ⛔ Η δήλωση **αρνείται να μεταγλωττιστεί** αν πεδίο της θέσης δεν έχει πει **ποιος το βλέπει**, ή αν ένα
+ * όνομα ζει **και στις δύο** πλευρές (αυτό ακριβώς ήταν το Ε9). Το σφάλμα ονομάζει το πεδίο.
+ */
+function declareAudienceVisibility<
+  const A extends readonly (keyof NetworkAudienceEntry)[],
+  const S extends readonly (keyof NetworkAudiencePrivate)[],
+>(
+  lists: { readonly audience: A; readonly self: S }
+    & Undeclared<NetworkAudienceEntry, A[number], 'undeclaredAudienceField'>
+    & Undeclared<NetworkAudiencePrivate, S[number], 'undeclaredSelfField'>
+    & ([Extract<keyof NetworkAudienceEntry, keyof NetworkAudiencePrivate>] extends [never]
+      ? unknown
+      : { readonly fieldOnBothSides: Extract<keyof NetworkAudienceEntry, keyof NetworkAudiencePrivate> }),
+): { readonly audience: A; readonly self: S } {
+  return { audience: lists.audience, self: lists.self };
 }
 
 /** `network_act_teams/{nteam_*}` — **το SSoT** της ομάδας· το ακροατήριο είναι προβολή του (§4.3). */

@@ -23,6 +23,8 @@
  * 3. Κάνε το `SignInInvitation` να δείχνει σκέτο `/login` → **Β3**.
  * 4. Γύρνα το `acceptedNotActive` σε `acceptedActiveNow` → **Γ2** *(το δηλωμένο όριο §6 #1)*.
  * 5. Βάλε ωμό `preview.role` αντί για `INVITED_ROLE_KEY` → **Β4**.
+ * 6. Δώσε στο `RefusalScreen` τον τίτλο `unavailableTitle` → **Ε1**.
+ * 7. Γύρνα την έξοδο της άρνησης στην πράξη σε σταθερό `home` → **Ε2** (οι λόγοι `sign-in`).
  */
 
 import React from 'react';
@@ -44,7 +46,8 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 }));
 
 jest.mock('@/lib/intl-formatting', () => ({
-  formatRelativeTime: (iso: string) => `rel(${iso})`,
+  formatDeadlineRelative: (iso: string) => `rel(${iso})`,
+  formatDateTime: (iso: string) => `abs(${iso})`,
 }));
 
 jest.mock('@/lib/workspace/navigation', () => ({
@@ -58,12 +61,23 @@ jest.mock('@/services/workspace/workspace-invitation.client', () => ({
   redeemWorkspaceInvitationFromScreen: (input: unknown) => mockRedeem(input),
 }));
 
+// 🔑 §13 ε.δ — η «Αλλαγή λογαριασμού» αποσυνδέει μέσω του ΕΝΟΣ `signOut` του AuthContext.
+const mockSignOut = jest.fn();
+const mockNavigateDocument = jest.fn();
+jest.mock('@/lib/browser/document-navigation', () => ({
+  navigateDocument: (url: string) => mockNavigateDocument(url),
+}));
+jest.mock('@/auth', () => ({
+  useAuthOptional: () => ({ signOut: () => mockSignOut() }),
+}));
+
 // 🔴 **ΚΑΝΕΝΑ mock στο `useSemanticColors` / `useLayoutClasses`** — μάθημα μετρημένο στη
 //    σουίτα της ΒΗΜΑ Α: ένα μισό σχήμα εκεί έριξε **17 από 26** άγκυρες, επειδή το
 //    `badge.tsx` καλεί το ίδιο άγκιστρο. Είναι `useMemo` πάνω σε σταθερές — τρέχουν.
 
 import { WorkspaceInviteContent } from '../WorkspaceInviteContent';
 import {
+  EXIT_BY_REFUSAL,
   EXIT_HREF,
   EXIT_KEY,
   INVITE_PAGE_KEYS,
@@ -83,10 +97,13 @@ const PREVIEW = {
   identityAssurance: 'declared',
 } as const;
 
+/** Η σύνδεση με επιστροφή — **έτοιμη από τον διακομιστή**, όπως στο `page.tsx`. */
+const SWITCH_HREF = '/login?next=%2Finvite%2Ftok_1';
+
 function previewView(
   respond: Extract<WorkspaceInvitationLinkView, { kind: 'preview' }>['respond'],
 ): WorkspaceInvitationLinkView {
-  return { kind: 'preview', preview: PREVIEW, token: 'tok_1', respond };
+  return { kind: 'preview', preview: PREVIEW, token: 'tok_1', respond, switchAccountHref: SWITCH_HREF };
 }
 
 beforeEach(() => {
@@ -264,5 +281,126 @@ describe('Δ — το παροδικό προσφέρει επανάληψη, τ
     render(<WorkspaceInviteContent view={{ kind: 'refused', reason: 'expired', exit: 'home' }} />);
 
     expect(screen.queryByRole('button', { name: INVITE_PAGE_KEYS.retry })).toBeNull();
+  });
+});
+
+// ===========================================================================
+// Ε — Η ΑΡΝΗΣΗ ΤΗΝ ΩΡΑ ΤΗΣ ΠΡΑΞΗΣ ΕΙΝΑΙ Η ΙΔΙΑ ΟΘΟΝΗ ΜΕ ΤΗΝ ΑΡΝΗΣΗ ΣΤΗΝ ΟΨΗ (2026-09-21)
+// ===========================================================================
+
+describe('Ε — ο τίτλος και η έξοδος λένε την ίδια αλήθεια με το σώμα', () => {
+  it.each(WORKSPACE_INVITATION_REFUSALS)(
+    '🔴 Ε1 — «%s» στην πράξη: τίτλος της πρόσκλησης, ΠΟΤΕ «δεν μπορούμε αυτή τη στιγμή»',
+    async (reason: WorkspaceInvitationRefusal) => {
+      await respondWith({ kind: 'refused', reason }, INVITE_PAGE_KEYS.accept);
+
+      await screen.findByText(REFUSAL_KEY[reason]);
+      // Το «αυτή τη στιγμή» υπόσχεται ότι η αναμονή βοηθά — σε οριστική άρνηση είναι ψέμα.
+      expect(screen.getByText(INVITE_PAGE_KEYS.title)).toBeInTheDocument();
+      expect(screen.queryByText(INVITE_PAGE_KEYS.unavailableTitle)).toBeNull();
+    },
+  );
+
+  // ⚠️ Χωρίς το `wrong-recipient`: εκείνο έχει **δικό του** δρόμο στην πράξη — αλλαγή
+  //    λογαριασμού με επιστροφή (ομάδα **Η**), όχι σύνδεσμο του πίνακα.
+  it.each(WORKSPACE_INVITATION_REFUSALS.filter((reason) => reason !== 'wrong-recipient'))(
+    '🔴 Ε2 — «%s» στην πράξη: η έξοδος από τον ΕΝΑ πίνακα της όψης, όχι σταθερή «αρχική»',
+    async (reason: WorkspaceInvitationRefusal) => {
+      await respondWith({ kind: 'refused', reason }, INVITE_PAGE_KEYS.accept);
+
+      await screen.findByText(REFUSAL_KEY[reason]);
+      // ⚠️ Δένει τη **σύνδεση** με τον πίνακα, όχι τις **τιμές** του (δες την κεφαλίδα).
+      expect(screen.getByRole('link')).toHaveAttribute('href', EXIT_HREF[EXIT_BY_REFUSAL[reason]]);
+    },
+  );
+
+  it('🔑 Ε3 — παροδική αποτυχία της πράξης: ΜΟΝΟ εδώ ο τίτλος «αυτή τη στιγμή»', async () => {
+    await respondWith({ kind: 'failed' }, INVITE_PAGE_KEYS.accept);
+
+    expect(await screen.findByText(INVITE_PAGE_KEYS.unavailableTitle)).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Ζ — Η ΑΝΑΜΟΝΗ ΖΕΙ ΣΤΟ ΚΟΥΜΠΙ ΠΟΥ ΠΑΤΗΘΗΚΕ (2026-09-21, ADR-853 §13 ε.β)
+// ===========================================================================
+
+/** Πάτα ένα κουμπί και **κράτα** την απάντηση ανοιχτή — η οθόνη μένει στην αναμονή. */
+async function pressAndHold(name: string): Promise<void> {
+  mockRedeem.mockReturnValue(new Promise(() => undefined));
+  render(<WorkspaceInviteContent view={previewView({ kind: 'ready' })} />);
+  await userEvent.setup().click(screen.getByRole('button', { name }));
+}
+
+describe('Ζ — η ένδειξη αναμονής ζει στο ΣΩΣΤΟ κουμπί', () => {
+  it('🔴 Ζ1 — «Δεν ενδιαφέρομαι»: η αναμονή στην ΑΡΝΗΣΗ, η αποδοχή μένει ως έχει', async () => {
+    await pressAndHold(INVITE_PAGE_KEYS.decline);
+
+    // Ζωντανά 21/09: η αναμονή της άρνησης ζωγραφιζόταν πάνω στην **αποδοχή**.
+    const declining = await screen.findByRole('button', { name: INVITE_PAGE_KEYS.declining });
+    expect(declining).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: INVITE_PAGE_KEYS.accept })).toHaveAttribute('aria-busy', 'false');
+    expect(screen.queryByText(INVITE_PAGE_KEYS.accepting)).toBeNull();
+  });
+
+  it('Ζ2 — «Αποδοχή»: η αναμονή στην ΑΠΟΔΟΧΗ, με δική της λέξη', async () => {
+    await pressAndHold(INVITE_PAGE_KEYS.accept);
+
+    expect(await screen.findByRole('button', { name: INVITE_PAGE_KEYS.accepting })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText(INVITE_PAGE_KEYS.declining)).toBeNull();
+  });
+
+  it('⛔ Ζ3 — όσο εκκρεμεί μία πράξη, ΚΑΙ τα δύο κουμπιά είναι απενεργά (όχι δεύτερη απάντηση)', async () => {
+    await pressAndHold(INVITE_PAGE_KEYS.accept);
+
+    await screen.findByRole('button', { name: INVITE_PAGE_KEYS.accepting });
+    for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled();
+  });
+});
+
+// ===========================================================================
+// Η — ΑΛΛΟΣ ΛΟΓΑΡΙΑΣΜΟΣ: ΤΟ ΛΕΜΕ ΠΡΙΝ ΤΟ ΚΛΙΚ, ΚΑΙ Ο ΔΡΟΜΟΣ ΓΥΡΙΖΕΙ ΕΔΩ (2026-09-21, §13 ε.δ)
+// ===========================================================================
+
+describe('Η — αλλαγή λογαριασμού με επιστροφή στην πρόσκληση', () => {
+  beforeEach(() => {
+    mockSignOut.mockReset().mockResolvedValue(undefined);
+    mockNavigateDocument.mockReset();
+  });
+
+  it('🔑 Η1 — άλλος λογαριασμός: «συνδεδεμένοι ως Χ» ΠΡΙΝ το κλικ, ΚΑΝΕΝΑ κουμπί απάντησης', () => {
+    render(<WorkspaceInviteContent view={previewView({ kind: 'other-account', signedInAs: 'allos@example.com' })} />);
+
+    expect(screen.getByText(`${INVITE_PAGE_KEYS.otherAccount}|allos@example.com`)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: INVITE_PAGE_KEYS.accept })).toBeNull();
+    expect(screen.queryByRole('button', { name: INVITE_PAGE_KEYS.decline })).toBeNull();
+  });
+
+  it('🔴 Η2 — «Αλλαγή λογαριασμού»: ΠΡΩΤΑ αποσύνδεση, ΜΕΤΑ σύνδεση με επιστροφή ΕΔΩ', async () => {
+    render(<WorkspaceInviteContent view={previewView({ kind: 'other-account', signedInAs: 'allos@example.com' })} />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: INVITE_PAGE_KEYS.switchAccount }));
+
+    await waitFor(() => expect(mockNavigateDocument).toHaveBeenCalledWith(SWITCH_HREF));
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(mockSignOut.mock.invocationCallOrder[0]).toBeLessThan(mockNavigateDocument.mock.invocationCallOrder[0]);
+  });
+
+  it('🔴 Η3 — `wrong-recipient` την ώρα της ΠΡΑΞΗΣ: αλλαγή λογαριασμού, ΟΧΙ σκέτο `/login`', async () => {
+    await respondWith({ kind: 'refused', reason: 'wrong-recipient' }, INVITE_PAGE_KEYS.accept);
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: INVITE_PAGE_KEYS.switchAccount }));
+
+    await waitFor(() => expect(mockNavigateDocument).toHaveBeenCalledWith(SWITCH_HREF));
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('Η4 — η αποσύνδεση αποτυγχάνει: ο άνθρωπος ΔΕΝ κολλά — πηγαίνει στη σύνδεση', async () => {
+    mockSignOut.mockRejectedValue(new Error('network'));
+    render(<WorkspaceInviteContent view={previewView({ kind: 'other-account', signedInAs: 'allos@example.com' })} />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: INVITE_PAGE_KEYS.switchAccount }));
+
+    await waitFor(() => expect(mockNavigateDocument).toHaveBeenCalledWith(SWITCH_HREF));
   });
 });

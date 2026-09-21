@@ -24,6 +24,8 @@ import { SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 export const NETWORK_THREADS = 'network_threads';
 export const NETWORK_THREAD_MESSAGES = 'network_messages';
 export const NETWORK_THREAD_AUDIENCE = 'network_audience';
+/** 🔒 ADR-867 Ε9 — η ιδιωτική πλευρά της θέσης (ώρα ανάγνωσης · σίγαση · follow). */
+export const NETWORK_THREAD_AUDIENCE_PRIVATE = 'network_audience_private';
 
 /** Οι δύο πλευρές μιας γραμμής ακροατηρίου, όσο χρειάζεται το seed. */
 export interface SeedAudienceEntry {
@@ -84,9 +86,13 @@ export async function seedNetworkActThread(
         addedBy: 'persona-same-user',
         since: '2026-09-17T09:00:00.000Z',
         until: entry.until,
-        lastReadAt: null,
-        muted: false,
-        following: false,
+      });
+      // 🔑 **Γεμάτο, επίτηδες** (`muted: true` κ.λπ.): μια άγκυρα «η άλλη πλευρά δεν το βλέπει» πάνω σε
+      //    **ανύπαρκτο** έγγραφο θα ήταν πράσινη επειδή δεν υπήρχε τίποτα να δει — «0 = κανείς δεν κοίταξε».
+      await thread.collection(NETWORK_THREAD_AUDIENCE_PRIVATE).doc(entry.uid).set({
+        lastReadAt: '2026-09-17T09:06:00.000Z',
+        muted: true,
+        following: true,
       });
     }
   });

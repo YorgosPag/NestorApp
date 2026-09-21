@@ -72,6 +72,11 @@ export interface ActTeamChangeFacts {
   readonly actorIsManager: boolean;
   /** Είναι ο **στόχος** ενεργό μέλος του χώρου της πράξης; (ADR-787 — `normalizeMembership`) */
   readonly targetIsActiveMember: boolean;
+  /**
+   * Μπορεί ο στόχος να **απαντά για το γραφείο**; (ADR-867 Ε1β — `canServeOnActTeam`, ικανότητα
+   * `network:threads:respond`). Ο επισκέπτης **υπάρχει** στο γραφείο, αλλά δεν αναλαμβάνει (Zendesk light agent).
+   */
+  readonly targetCanServe: boolean;
   /** Το πρόσωπο της **άλλης** πλευράς, αν υπάρχει νήμα — δεν γίνεται και μέλος του γραφείου. */
   readonly counterpartUid: string | null;
   /** Η έκδοση που **είδε** ο άνθρωπος όταν αποφάσισε (`If-Match`). */
@@ -83,6 +88,7 @@ export type ActTeamChangeRefusal =
   | 'team-absent'
   | 'not-permitted'
   | 'target-not-in-workspace'
+  | 'target-cannot-serve'
   | 'target-is-counterpart'
   | 'responsible-not-removable'
   | 'stale-version';
@@ -145,6 +151,8 @@ function targetRefusal(team: NetworkActTeam, facts: ActTeamChangeFacts): ActTeam
   if (facts.counterpartUid !== null && change.uid === facts.counterpartUid) return 'target-is-counterpart';
   // ⚠️ Μόνο για όποιον **μπαίνει**. Η αφαίρεση αναστειλαμένου ανθρώπου πρέπει να δουλεύει.
   if (!facts.targetIsActiveMember) return 'target-not-in-workspace';
+  // 🔑 Ε1β — μετά τη θέση, η ικανότητα: «είσαι στο γραφείο» ≠ «μιλάς για το γραφείο».
+  if (!facts.targetCanServe) return 'target-cannot-serve';
   return null;
 }
 

@@ -18,6 +18,12 @@ import 'server-only';
  * ⚠️ Και το **επαληθευμένο** κάνει τη μισή δουλειά: χωρίς αυτό, οποιοσδήποτε δηλώνει το
  * email του στόχου σε νέο λογαριασμό και το «ταίριασμα» περνά.
  *
+ * 🔑 **ΑΠΟ 2026-09-21 (§15) Η ΙΔΙΑ Η ΠΡΟΣΚΛΗΣΗ ΕΙΝΑΙ Η ΕΠΑΛΗΘΕΥΣΗ** — ο σύνδεσμος φτάνει
+ * μόνο στο γραμματοκιβώτιο, άρα ανεπιβεβαίωτος λογαριασμός **με το ίδιο email** που τον
+ * κρατά επιβεβαιώνεται μέσω του SSoT `mailbox-proof-custody` (Auth0/Clerk). Η δέσμευση
+ * στον παραλήπτη **μένει**: τρίτος με άλλο email παίρνει `wrong-recipient` όπως πριν.
+ * Δες `workspace-invitation-redeem-guards.ts`.
+ *
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔑 ΓΙΑΤΙ Ο ΕΛΕΓΧΟΣ ΜΕΛΟΥΣ ΤΡΕΧΕΙ **ΠΡΙΝ** ΤΗ ΣΥΝΑΛΛΑΓΗ
  * ─────────────────────────────────────────────────────────────────────────────
@@ -32,44 +38,46 @@ import type { Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideMembership } from '@/lib/auth/workspace-membership';
-import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO as clockNowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { sha256HexOfText } from '@/lib/hash/sha256';
 import { createModuleLogger } from '@/lib/telemetry';
-import { decodeSignedToken, equalsInConstantTime, requireTokenSecret } from '@/lib/tokens/signed-token';
+import { decodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
 import { grantWorkspaceMembershipInTx } from '@/lib/workspace/grant-membership';
-// 🔑 ADR-853 Φ4 — ο ΕΝΑΣ αναγνώστης ονόματος χώρου του διακομιστή (εξήχθη 2026-09-12).
-// ⛔ ΜΗΝ διαβάσεις εδώ το `companies/{id}` μόνος σου, και ΜΗΝ καλέσεις τον πελατικό
-//    `useCompanyDisplayName`: εκείνος ρωτά **άλλη συλλογή** (`contacts`) με άλλα πεδία.
-import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import { orgWorkspace } from '@/types/workspace-membership';
 import {
   isInvitableRole,
   readStoredInvitationState,
   type WorkspaceInvitation,
   type WorkspaceInvitationDocument,
-  type WorkspaceInvitationPreview,
   type WorkspaceInvitationRefusal,
-  type WorkspaceInvitationState,
 } from '@/types/workspace-invitation';
+
+import type { ProvenMailboxAccount } from './mailbox-proof-custody';
+import {
+  proveMailboxByInvitation,
+  refusalOfStoredInvitation,
+  WORKSPACE_INVITE_SECRET_ENV as SECRET_ENV,
+} from './workspace-invitation-redeem-guards';
 
 const logger = createModuleLogger('workspace-invitation-redeem');
 
-/** ⚠️ Ίδιο με του εκδότη — και **ποτέ** κοινό με άλλη πύλη (δες `workspace-invitation.ts`). */
-const SECRET_ENV = 'WORKSPACE_INVITE_SECRET';
-
-/** Ο άνθρωπος που πατά τον σύνδεσμο — **ήδη συνδεδεμένος**, από το σύνορο HTTP. */
-export interface RedeemingIdentity {
-  readonly uid: string;
-  readonly email: string;
+/**
+ * Ο άνθρωπος που πατά τον σύνδεσμο — **ήδη συνδεδεμένος**, από το σύνορο HTTP.
+ *
+ * 🔑 **ΕΙΝΑΙ `ProvenMailboxAccount`** (uid · `emailVerified` · 2ος παράγοντας), γιατί σε αυτόν
+ * εφαρμόζεται η απόδειξη γραμματοκιβωτίου (§15). ⚠️ Όλα **από το Firebase Auth**
+ * (`getUser(uid)`, μέσω `provenMailboxAccountOf`), **ΟΧΙ** από το ID token ή custom claim:
+ * ένα claim `emailVerified` θα ήταν **δεύτερη αυθεντία** (ADR-749), και το token ζει έως
+ * μία ώρα.
+ */
+export interface RedeemingIdentity extends ProvenMailboxAccount {
   /**
-   * ⚠️ **Από το Firebase Auth, ΟΧΙ από custom claim.** Το `AuthContext` δεν το εκθέτει· ο
-   * ιδιοκτήτης του είναι το Auth (`getUser(uid).emailVerified`), και ένα custom claim με
-   * το ίδιο όνομα θα ήταν **δεύτερη αυθεντία** που μπορεί να λέει «ναι» ενώ το Auth λέει
-   * «όχι» (ADR-749· γραμμένο ήδη στο `workspace-provisioning.ts`).
+   * 🔴 **Το email του λογαριασμού ΣΤΟ AUTH, όχι του ID token** (§15 σύνορο 2): αυτό κρίνεται
+   * ως παραλήπτης **και** αυτό επιβεβαιώνεται. Αν ήταν του token, ένα email που άλλαξε μέσα
+   * στην ώρα ζωής του θα επιβεβαιωνόταν σε λογαριασμό που δεν το κατέχει πια.
    */
-  readonly emailVerified: boolean;
+  readonly email: string;
   /** Ο χώρος του **claim** του — για να κριθεί αν είναι ήδη μέλος (ποτέ από τον πελάτη). */
   readonly claimCompanyId: string;
   /**
@@ -94,16 +102,9 @@ export type RedeemOutcome =
    */
   | {
       readonly kind: 'unavailable';
-      readonly reason: 'membership-unknown' | 'invitation-corrupt';
+      /** `mailbox-proof-unknown`: το Auth δεν απάντησε στην επιβεβαίωση του email (§15). */
+      readonly reason: 'membership-unknown' | 'invitation-corrupt' | 'mailbox-proof-unknown';
     };
-
-/** Η αποθηκευμένη κατάσταση → ο λόγος που βλέπει ο άνθρωπος. */
-const REFUSAL_BY_STATE: Readonly<Record<Exclude<WorkspaceInvitationState, 'pending'>, WorkspaceInvitationRefusal>> = {
-  accepted: 'already-used',
-  declined: 'already-used',
-  revoked: 'revoked',
-  expired: 'expired',
-};
 
 // =============================================================================
 // 1. ΑΠΟΔΟΧΗ
@@ -174,29 +175,69 @@ async function redeem(
   //    ο χρόνος ζει σε δύο μέρη και **και τα δύο** πρέπει να συμφωνούν.
   if (expiryMs <= Date.parse(nowValue)) return refuse('expired');
 
-  if (!identity.emailVerified) return refuse('email-unverified');
-
+  // 🔴 **ΤΟ `email-unverified` ΚΑΤΑΡΓΗΘΗΚΕ ΕΔΩ (§15)** — ήταν ο πρώτος έλεγχος, **πριν** από
+  //    nonce και έγγραφο: απέρριπτε τον άνθρωπο πριν μάθουμε αν ο σύνδεσμος είναι δικός του,
+  //    και τον έστελνε «στη σύνδεση» ενώ ήταν **ήδη** συνδεδεμένος (αδιέξοδο, 21/09).
   const nonceHash = await sha256HexOfText(nonce);
-  const companyId = await readInvitationCompany(invitationId);
-  if (companyId === null) return refuse('invitation-unknown');
+  const checked = await readRedeemableInvitation(invitationId, identity, nowValue, nonceHash);
+  if (checked.kind === 'refused') return checked;
 
-  if (target === 'accepted') {
-    const blocked = await refuseIfAlreadyMember(identity, companyId);
-    if (blocked !== null) return blocked;
+  // ⚠️ Η άρνηση **δεν** δίνει τίποτα ⇒ ούτε κριτής μέλους ούτε απόδειξη (§15 σύνορο 3).
+  if (target === 'declined') {
+    return consume(invitationId, identity, target, { nowValue, nonceHash, mailboxProvenAt: null });
   }
 
-  return consume(invitationId, identity, target, nowValue, nonceHash);
+  const ready = await prepareAcceptance(identity, checked.companyId, nowValue);
+  if (ready.kind !== 'ready') return ready;
+  return consume(invitationId, identity, target, { nowValue, nonceHash, mailboxProvenAt: ready.mailboxProvenAt });
 }
 
-/** Ο χώρος της πρόσκλησης — **πριν** τη συναλλαγή, ώστε να κριθεί η ιδιότητα μέλους. */
-async function readInvitationCompany(invitationId: string): Promise<string | null> {
+/**
+ * **Ό,τι χρειάζεται μόνο η αποδοχή** — ο κριτής μέλους, και μετά η απόδειξη.
+ *
+ * 🔑 **Η απόδειξη είναι ΤΕΛΕΥΤΑΙΑ πριν τη συναλλαγή** (§15 σύνορο 1): κάθε έλεγχος έχει
+ * περάσει. Αν χάσει αγώνα με ταυτόχρονο κλικ, το email **μένει** επιβεβαιωμένο — αληθές:
+ * ίδιος σύνδεσμος, ίδιος λογαριασμός, ίδια διεύθυνση. ⛔ Ποτέ **μετά** τη συναλλαγή: μέλος
+ * με ανεπιβεβαίωτο email δεν θα ξαναδοκιμαζόταν (η πρόσκληση θα ήταν ήδη `accepted`).
+ */
+async function prepareAcceptance(
+  identity: RedeemingIdentity,
+  companyId: string,
+  nowValue: string,
+): Promise<{ readonly kind: 'ready'; readonly mailboxProvenAt: string | null } | RedeemOutcome> {
+  const blocked = await refuseIfAlreadyMember(identity, companyId);
+  if (blocked !== null) return blocked;
+
+  const proof = await proveMailboxByInvitation(identity, identity.email);
+  if (proof === 'unknown') return { kind: 'unavailable', reason: 'mailbox-proof-unknown' };
+  return { kind: 'ready', mailboxProvenAt: proof === 'proven-now' ? nowValue : null };
+}
+
+/**
+ * **Προέλεγχος εκτός συναλλαγής** — ο χώρος (για τον κριτή μέλους) **και** ο ΙΔΙΟΣ έλεγχος
+ * με τη συναλλαγή, ώστε η απόδειξη γραμματοκιβωτίου να μην εφαρμοστεί ποτέ σε σύνδεσμο που
+ * θα απορριφθεί. ⚠️ Συμβουλευτικός· η συναλλαγή **ξαναρωτά** τα πάντα.
+ */
+async function readRedeemableInvitation(
+  invitationId: string,
+  identity: RedeemingIdentity,
+  nowValue: string,
+  nonceHash: string,
+): Promise<{ readonly kind: 'redeemable'; readonly companyId: string } | Extract<RedeemOutcome, { kind: 'refused' }>> {
   const snap = await getAdminFirestore()
     .collection(COLLECTIONS.WORKSPACE_INVITATIONS)
     .doc(invitationId)
     .get();
-  if (!snap.exists) return null;
-  const companyId = (snap.data() as WorkspaceInvitationDocument).companyId;
-  return typeof companyId === 'string' && companyId.length > 0 ? companyId : null;
+  if (!snap.exists) return { kind: 'refused', reason: 'invitation-unknown' };
+
+  const stored = snap.data() as WorkspaceInvitationDocument;
+  if (typeof stored.companyId !== 'string' || stored.companyId.length === 0) {
+    return { kind: 'refused', reason: 'invitation-unknown' };
+  }
+  const refusal = refusalOfStoredInvitation(stored, { nowValue, nonceHash, recipientEmail: identity.email });
+  return refusal === null
+    ? { kind: 'redeemable', companyId: stored.companyId }
+    : { kind: 'refused', reason: refusal };
 }
 
 /**
@@ -231,9 +272,9 @@ async function consume(
   invitationId: string,
   identity: RedeemingIdentity,
   target: 'accepted' | 'declined',
-  nowValue: string,
-  nonceHash: string,
+  seal: { readonly nowValue: string; readonly nonceHash: string; readonly mailboxProvenAt: string | null },
 ): Promise<RedeemOutcome> {
+  const { nowValue, nonceHash } = seal;
   const db = getAdminFirestore();
   const ref = db.collection(COLLECTIONS.WORKSPACE_INVITATIONS).doc(invitationId);
 
@@ -242,19 +283,10 @@ async function consume(
     if (!snap.exists) return refuse('invitation-unknown');
 
     const stored = snap.data() as WorkspaceInvitationDocument;
-    const state = readStoredInvitationState(stored.state);
-    if (state !== 'pending') return refuse(REFUSAL_BY_STATE[state]);
-
-    // ⚠️ **ΔΕΥΤΕΡΟΣ** έλεγχος λήξης (Τ2): το έγγραφο μπορεί να λέει `pending` ενώ η ώρα
-    //    του πέρασε — κανείς δεν «σκουπίζει» τις ληγμένες σε πραγματικό χρόνο.
-    if (Date.parse(stored.expiresAt) <= Date.parse(nowValue)) return refuse('expired');
-
-    // 🔴 Το nonce ελέγχεται **μέσα** στη συναλλαγή: η υπογραφή αποδεικνύει ότι **εμείς**
-    //    φτιάξαμε το κείμενο, **όχι** ότι δείχνει σε αυτό το έγγραφο.
-    if (!equalsInConstantTime(nonceHash, stored.nonceHash)) return refuse('link-invalid');
-
-    // 🔴 Η ΔΕΣΜΕΥΣΗ ΣΤΟΝ ΠΑΡΑΛΗΠΤΗ (§7.5) — εδώ σπάει το προωθημένο email.
-    if (!sameChannelEmail(identity.email, stored.inviteeEmail)) return refuse('wrong-recipient');
+    // 🔴 Κατάσταση · λήξη (Τ2) · nonce · παραλήπτης (§7.5) — **ξανά**, μέσα στη συναλλαγή:
+    //    ο προέλεγχος ήταν συμβουλευτικός, η ατομικότητα ζει μόνο εδώ.
+    const refusal = refusalOfStoredInvitation(stored, { nowValue, nonceHash, recipientEmail: identity.email });
+    if (refusal !== null) return refuse(refusal);
 
     // 🔴 **Ο ΡΟΛΟΣ ΞΑΝΑΡΩΤΙΕΤΑΙ ΣΤΗΝ ΕΞΑΡΓΥΡΩΣΗ, ΟΧΙ ΜΟΝΟ ΣΤΗΝ ΕΚΔΟΣΗ.** Το Ρ1/Ρ2
     //    κρίθηκαν όταν στάλθηκε η πρόσκληση· εδώ η τιμή έρχεται **από τη βάση**, και ο
@@ -274,7 +306,14 @@ async function consume(
     }
     const role = stored.role;
 
-    const resolved = { state: target, resolvedAt: nowValue, resolvedByUid: identity.uid } as const;
+    const resolved = {
+      state: target,
+      resolvedAt: nowValue,
+      resolvedByUid: identity.uid,
+      // 🔑 §15 — το ίχνος της απόδειξης ζει **στην πρόσκληση που την έκανε**: «γιατί
+      //    επιβεβαιώθηκε αυτό το email;» απαντιέται από το ίδιο έγγραφο.
+      mailboxProvenAt: seal.mailboxProvenAt,
+    } as const;
     tx.update(ref, resolved);
 
     if (target === 'accepted') {
@@ -283,7 +322,12 @@ async function consume(
         uid: identity.uid,
         companyId: stored.companyId,
         globalRole: role,
-        grantedByUid: identity.uid,
+        // 🔴 ADR-853 Ε4 (ADR-867 Β9(β)): ήταν `identity.uid` — το «ποιος τον έβαλε» έλεγε τον
+        //    **ίδιο** τον προσκεκλημένο. Ο άνθρωπος που **αποφάσισε** την ένταξη είναι ο
+        //    προσκαλών (Slack/GitHub «invited by»)· ο προσκεκλημένος απλώς **δέχτηκε**, και αυτό
+        //    το λέει ήδη η πρόσκληση (`resolvedByUid`).
+        grantedByUid: stored.invitedByUid,
+        enrollment: 'invitation',
       });
     }
 
@@ -332,117 +376,4 @@ export async function markWorkspaceInvitationOpened(
     });
   }
 }
-
-// =============================================================================
-// 4. Η ΟΨΗ ΠΡΙΝ ΤΗΝ ΑΠΟΦΑΣΗ — «ποιος με καλεί, και για τι θέση;»
-// =============================================================================
-
-/**
- * 🔴 **ΟΥΤΕ ΟΝΟΜΑΣΜΕΝΗ ΑΡΝΗΣΗ ΟΥΤΕ ΟΨΗ** — ίδια διάκριση με το `unavailable` της
- * εξαργύρωσης: το «λείπει το μυστικό μας» δεν λέγεται στον άνθρωπο ως «πλαστός σύνδεσμος».
- */
-export type InvitationPreviewOutcome =
-  | {
-      readonly kind: 'preview';
-      readonly preview: WorkspaceInvitationPreview;
-      /**
-       * ⚠️ **ΔΕΝ ταξιδεύει στο σύρμα** — ζει στην έκβαση επειδή τη χρειάζεται ο καλών για
-       * τη σήμανση «ανοίχτηκε». Δες τον τύπο {@link WorkspaceInvitationPreview}: το
-       * αναγνωριστικό δεν έχει λόγο να φτάσει σε ανώνυμο φυλλομετρητή.
-       */
-      readonly invitationId: string;
-    }
-  | { readonly kind: 'refused'; readonly reason: WorkspaceInvitationRefusal }
-  | { readonly kind: 'unavailable' };
-
-function previewRefuse(reason: WorkspaceInvitationRefusal): InvitationPreviewOutcome {
-  return { kind: 'refused', reason };
-}
-
-/**
- * **Η όψη της πρόσκλησης, ΧΩΡΙΣ ταυτότητα και ΧΩΡΙΣ κατανάλωση** (ADR-853 §5 #4).
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * 🔴 ΓΙΑΤΙ ΔΕΝ ΕΛΕΓΧΕΙ EMAIL — ΚΑΙ ΓΙΑΤΙ Η ΔΕΣΜΕΥΣΗ ΜΕΝΕΙ ΑΚΕΡΑΙΗ
- * ─────────────────────────────────────────────────────────────────────────────
- * Εδώ **δεν υπάρχει συνδεδεμένος άνθρωπος**: η σελίδα ανοίγει από το email **πριν** από
- * κάθε ταυτότητα, και ο παραλήπτης περνά από `/login` **μετά** (§6 #2). Ένας έλεγχος
- * παραλήπτη θα ήταν δομικά αδύνατος — δεν υπάρχει ποιον να ελέγξει.
- *
- * ⚠️ **Η δέσμευση στο επαληθευμένο email ΔΕΝ χαλαρώνει**: κρίνεται στην **εξαργύρωση**
- * (§7.5, άγκυρες Τ1/Τ1β), που είναι η πράξη που **γράφει**. Αυτή εδώ δεν γράφει τίποτα
- * *(πλην της τηλεμετρίας «ανοίχτηκε»)*, άρα ό,τι μαθαίνει ο κρατών τον σύνδεσμο είναι
- * **όνομα γραφείου, ρόλος, λήξη** — και κανένα προσωπικό δεδομένο.
- *
- * 🔑 **Και γι' αυτό η ανάγνωση ΔΕΝ ΚΑΙΕΙ ΤΗΝ ΠΡΟΣΚΛΗΣΗ** — ίδιο δόγμα με το
- * `open-invite.ts` της πύλης προμηθευτών: το `pending` μένει `pending`, όσες φορές κι αν
- * ανοίξει ο άνθρωπος τη σελίδα. Αλλιώς μια προ-φόρτωση του πελάτη email θα κατανάλωνε
- * πρόσκληση που **κανένας άνθρωπος δεν είδε**.
- *
- * ⚠️ **Η υπογραφή ελέγχεται ΠΡΙΝ από κάθε ανάγνωση βάσης**: πλαστός σύνδεσμος δεν μας
- * κοστίζει ούτε ένα αίτημα Firestore (ίδιο σκεπτικό με το `redeem`, και ρητή απαίτηση του
- * ADR-327 §11 για τις δημόσιες πύλες).
- */
-export async function previewWorkspaceInvitation(input: {
-  readonly token: string;
-  readonly nowISOValue?: string;
-}): Promise<InvitationPreviewOutcome> {
-  const nowValue = input.nowISOValue ?? clockNowISO();
-
-  let secret: string;
-  try {
-    secret = requireTokenSecret(SECRET_ENV);
-  } catch {
-    logger.error('Λείπει το μυστικό των προσκλήσεων — καμία όψη δεν μπορεί να δοθεί');
-    return { kind: 'unavailable' };
-  }
-
-  const verdict = decodeSignedToken(secret, input.token, 3);
-  if (!verdict.ok || verdict.fields.length !== 3) return previewRefuse('link-invalid');
-
-  const [invitationId, nonce, expiresAtMs] = verdict.fields as [string, string, string];
-  const expiryMs = Number(expiresAtMs);
-  if (!Number.isFinite(expiryMs)) return previewRefuse('link-invalid');
-  if (expiryMs <= Date.parse(nowValue)) return previewRefuse('expired');
-
-  const snap = await getAdminFirestore()
-    .collection(COLLECTIONS.WORKSPACE_INVITATIONS)
-    .doc(invitationId)
-    .get();
-  if (!snap.exists) return previewRefuse('invitation-unknown');
-
-  const stored = snap.data() as WorkspaceInvitationDocument;
-
-  const state = readStoredInvitationState(stored.state);
-  if (state !== 'pending') return previewRefuse(REFUSAL_BY_STATE[state]);
-
-  // ⚠️ **ΔΕΥΤΕΡΟΣ** έλεγχος λήξης, όπως στην εξαργύρωση (Τ2): ο χρόνος ζει σε δύο μέρη.
-  if (Date.parse(stored.expiresAt) <= Date.parse(nowValue)) return previewRefuse('expired');
-
-  // 🔴 Η υπογραφή αποδεικνύει ότι **εμείς** φτιάξαμε το κείμενο — **όχι** ότι δείχνει σε
-  //    αυτό το έγγραφο. Το nonce είναι εκείνο που το δένει.
-  if (!equalsInConstantTime(await sha256HexOfText(nonce), stored.nonceHash)) {
-    return previewRefuse('link-invalid');
-  }
-
-  // ⚠️ Ίδιος φρουρός με την εξαργύρωση (Μ3) και για τον **ίδιο** λόγο: ο τύπος του
-  //    εγγράφου δηλώνει τον ρόλο `string` επίτηδες. Εδώ δεν γράφεται τίποτα — αλλά μια
-  //    όψη που δείχνει ρόλο **εκτός λεξιλογίου** υπόσχεται θέση που δεν θα δοθεί ποτέ.
-  if (!isInvitableRole(stored.role)) {
-    logger.error('Πρόσκληση με ρόλο εκτός λεξιλογίου — δεν εμφανίζεται', { invitationId });
-    return { kind: 'unavailable' };
-  }
-
-  return {
-    kind: 'preview',
-    invitationId,
-    preview: {
-      workspaceName: await readWorkspaceName(stored.companyId),
-      role: stored.role,
-      expiresAt: stored.expiresAt,
-      // 🔑 §6 #4 — «καμία επαλήθευση ΓΕΜΗ/ΑΦΜ σε αυτή τη φάση». Δες τον τύπο για το
-      //    γιατί δηλώνεται ρητά αντί να παραλείπεται.
-      identityAssurance: 'declared',
-    },
-  };
-}
+

@@ -227,11 +227,52 @@ export interface WorkspaceMembership {
   /** Πότε μπήκε. ISO ή Firestore `Timestamp` κατά την ανάγνωση. */
   readonly joinedAt?: unknown;
 
-  /** Ποιος τον έβαλε — το ίχνος του ADR-787 Α4 #3. */
+  /**
+   * Ποιος τον έβαλε — το ίχνος του ADR-787 Α4 #3.
+   * ⚠️ Στην αποδοχή πρόσκλησης είναι ο **προσκαλών**, όχι ο προσκεκλημένος (ADR-853 Ε4 · Slack/GitHub «invited by»).
+   */
   readonly addedBy: string | null;
+
+  /** **Γιατί** είναι μέλος — η πράξη που άνοιξε την τρέχουσα θητεία. `null` = έγγραφο προ-ADR-867 Ε1. */
+  readonly enrollment: WorkspaceMemberEnrollment | null;
 
   /** Τελευταία μεταβολή. */
   readonly updatedAt?: unknown;
+}
+
+// ============================================================================
+// Η ΠΡΟΕΛΕΥΣΗ — «ΓΙΑΤΙ ΕΙΝΑΙ ΜΕΛΟΣ;» (ADR-867 Β9(β) Ε1)
+// ============================================================================
+
+/**
+ * Η πράξη που **άνοιξε** την τρέχουσα θητεία μέλους — αδελφό του `ProjectMemberEnrollment`
+ * (ADR-862 Β14), για τον **χώρο** αντί για το έργο.
+ *
+ * - `founder`    — δημιούργησε τον χώρο (ADR-787 Κ-1 · `workspace-provisioning`).
+ * - `invitation` — αποδέχτηκε πρόσκληση (ADR-853)· `addedBy` = ο προσκαλών.
+ * - `approval`   — διαχειριστής ενέκρινε αίτημα / έδωσε ρόλο (`set-user-claims`, ADR-660).
+ * - `bootstrap`  — ο πρώτος διαχειριστής της πλατφόρμας (`bootstrap-admin`, μόνο dev).
+ * - `backfill`   — γράφτηκε από τη μετανάστευση για άνθρωπο που είχε **μόνο** claim (προ-Ε1).
+ *
+ * ⚠️ **ΠΛΗΡΟΦΟΡΙΑ, ΟΧΙ ΕΞΟΥΣΙΟΔΟΤΗΣΗ** — κανένας κριτής δεν το διαβάζει για να αποφασίσει·
+ * η μετάφραση είναι **ανεκτική** (άγνωστο ⇒ `null`), όπως στο `project-member-enrollment`.
+ * 🔑 **Γράφεται ΜΙΑ φορά ανά θητεία**: αλλαγή ρόλου σε ενεργό μέλος **δεν** το ξαναγράφει
+ * (`grantWorkspaceMembership`) — ο ιδρυτής μένει `founder` κι αν του αλλάξει ρόλο διαχειριστής.
+ */
+export type WorkspaceMemberEnrollment = 'founder' | 'invitation' | 'approval' | 'bootstrap' | 'backfill';
+
+/** Ο **ΕΝΑΣ** κατάλογος — κάθε αγκύρωση και κάθε φρουρός διαβάζουν από εδώ. */
+export const WORKSPACE_MEMBER_ENROLLMENTS: readonly WorkspaceMemberEnrollment[] = [
+  'founder',
+  'invitation',
+  'approval',
+  'bootstrap',
+  'backfill',
+] as const;
+
+/** Στενεύει `unknown → WorkspaceMemberEnrollment` για ό,τι έρχεται από τη βάση. */
+export function isWorkspaceMemberEnrollment(value: unknown): value is WorkspaceMemberEnrollment {
+  return typeof value === 'string' && (WORKSPACE_MEMBER_ENROLLMENTS as readonly string[]).includes(value);
 }
 
 // ============================================================================

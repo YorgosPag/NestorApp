@@ -13,7 +13,7 @@
  *   Δ-6  Ταυτόχρονη αλλαγή ⇒ 409 **με** την έκδοση που ισχύει
  *   Δ-7  Ο διαχειριστής χώρου αλλάζει υπεύθυνο· το απλό μέλος παίρνει 403
  *   Δ-8  Παρουσία: μόνο για όποιον διαβάζει ήδη — ξένος ⇒ 404
- *   Δ-9  (Β7) «Ακολουθώ»: η ΔΙΚΗ μου γραμμή, τελική κατάσταση — ξένος ⇒ 404
+ *   Δ-9  (Β7) «Ακολουθώ»: η ΔΙΚΗ μου ιδιωτική πλευρά (Ε9), τελική κατάσταση — ξένος ⇒ 404
  *   Δ-10 (Β7) Επεξεργασία: μόνο ο αποστολέας (403 στον άλλον) · ίδιο κείμενο ⇒ `edited: false`
  *   Δ-12 (Β7) Επιλογέας ομάδας: μόνο ενεργά μέλη του γραφείου, με όνομα, κανένα email
  *   Δ-11 (Β7) Ονόματα: όνομα + φωτογραφία + επωνυμία γραφείου, ΚΑΝΕΝΑ email — ξένος ⇒ 404
@@ -33,6 +33,10 @@ import {
 import { actTeamDocument } from '@/services/network-messaging/act-team-writer';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import {
+  privateFieldsOnPublicRows,
+  privateSideOf,
+} from '@/services/network-messaging/__tests__/audience-private-fixture';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 // ── Η πλαστή πόρτα: ο δρων ορίζεται από το test, τίποτα άλλο δεν πλαστογραφείται ──────────
@@ -101,7 +105,7 @@ beforeEach(async () => {
   fake = new FakeFirestore();
   const db = fake as unknown as AdminFirestore;
   for (const uid of [MARIA, ELENI, 'user_admin']) {
-    fake.seed(`${COLLECTIONS.COMPANIES}/${HOST}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}`, uid, { uid, status: 'active' });
+    fake.seed(`${COLLECTIONS.COMPANIES}/${HOST}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}`, uid, { uid, status: 'active', globalRole: 'internal_user' });
   }
   fake.seed(COLLECTIONS.NETWORK_ACT_TEAMS, TEAM_ID, {
     ...actTeamDocument({ actKind: 'mandate', actSeed: ACT_SEED, hostCompanyId: HOST, responsibleUid: MARIA }, NOW),
@@ -223,6 +227,21 @@ describe('Δ — η ομάδα', () => {
     expect(JSON.stringify(body)).not.toContain('@');
   });
 
+  it('🔴 Δ-12β (ADR-867 Ε1β) ο ΕΠΙΣΚΕΠΤΗΣ του γραφείου δεν προτείνεται — και ο κριτής τον αρνείται ονομαστικά', async () => {
+    // Zendesk light agent: υπάρχει στον χώρο (ενεργή θέση), δεν ανατίθεται. Παρονομαστής: Δ-12 (ίδιο σχήμα, ρόλος προσωπικού ⇒ προτείνεται).
+    fake.seed(`${COLLECTIONS.COMPANIES}/${HOST}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}`, 'user_guest', { uid: 'user_guest', status: 'active', globalRole: 'external_user' });
+    orgCtx = ctxOf('user_admin', 'company_admin', 'home');
+
+    const res = await readTeam(json(`http://x/api/network/act-teams/${TEAM_ID}`, 'GET'), params({ teamId: TEAM_ID }));
+    const body = (await res.json()) as { candidates: { uid: string }[] };
+    expect(body.candidates.map((c) => c.uid)).not.toContain('user_guest');
+    expect(body.candidates.map((c) => c.uid)).toContain(ELENI);
+
+    const refused = await patch({ change: { kind: 'add-collaborator', uid: 'user_guest' }, expectedVersion: 1 });
+    expect(refused.status).toBe(422);
+    expect(await refused.json()).toMatchObject({ error: 'target-cannot-serve' });
+  });
+
 
   it('Δ-6 ταυτόχρονη αλλαγή ⇒ 409 ΜΕ την έκδοση που ισχύει', async () => {
     orgCtx = ctxOf('user_admin', 'company_admin', 'home');
@@ -256,18 +275,16 @@ describe('Δ — η παρουσία', () => {
 // ============================================================================
 // Β7 — ΟΙ ΝΕΕΣ ΠΟΡΤΕΣ ΤΗΣ ΟΘΟΝΗΣ
 // ============================================================================
-const audienceRow = (uid: string) =>
-  fake.all<{ uid: string; following: boolean; muted: boolean }>(
-    `${COLLECTIONS.NETWORK_THREADS}/${THREAD_ID}/${SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE}`,
-  ).find((row) => row.uid === uid);
 
 describe('Δ — Β7: ακολουθώ · επεξεργασία · ονόματα', () => {
-  it('Δ-9 «ακολουθώ» γράφει ΜΟΝΟ το following της δικής μου γραμμής — ξένος ⇒ 404 (μετάλλαξη: γράφει τη σίγαση)', async () => {
+  it('Δ-9 «ακολουθώ» γράφει ΜΟΝΟ το following της δικής μου ιδιωτικής πλευράς — ξένος ⇒ 404 (μετάλλαξη: γράφει τη σίγαση)', async () => {
     personalActor = asPerson(MARIA);
     const ok = await follow(json(`http://x/api/network/threads/${THREAD_ID}/follow`, 'PUT', { following: true }), params({ threadId: THREAD_ID }));
     expect(ok.status).toBe(200);
     expect(await ok.json()).toEqual({ success: true, following: true });
-    expect(audienceRow(MARIA)).toMatchObject({ following: true, muted: false });
+    // 🔒 Ε9: στο ΙΔΙΩΤΙΚΟ έγγραφο, μόνο το `following` — και καμία δημόσια γραμμή δεν το μαρτυρά.
+    expect(privateSideOf(fake, THREAD_ID, MARIA)).toStrictEqual({ following: true });
+    expect(privateFieldsOnPublicRows(fake, THREAD_ID)).toStrictEqual([]);
 
     personalActor = asPerson('user_stranger');
     const stranger = await follow(json(`http://x/api/network/threads/${THREAD_ID}/follow`, 'PUT', { following: true }), params({ threadId: THREAD_ID }));

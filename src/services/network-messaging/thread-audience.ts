@@ -117,9 +117,6 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
       addedBy: input.addedBy,
       since: input.nowISO,
       until: null,
-      lastReadAt: null,
-      muted: false,
-      following: false,
       threadActivityAt: input.threadActivityAt,
       alsoHostRole: seat.alsoHostRole,
     },
@@ -133,9 +130,9 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
  * ιστορικό θητειών θα ήθελε δεύτερη υποσυλλογή· για το ερώτημα του Β8 *(«υπήρξε ποτέ
  * ομάδα;»)* αρκεί η **ύπαρξη** της γραμμής, που εδώ δεν χάνεται ποτέ.
  *
- * 🔑 `lastReadAt`, `muted` και `following` **επιβιώνουν**: είναι «τι έχει διαβάσει» και «τι θέλει να
- * ακούει» — δικά **του**, όχι της ομάδας. Ένα μηδένισμα θα του ξανάστελνε ειδοποιήσεις
- * που είχε σιγήσει ο ίδιος.
+ * 🔑 `lastReadAt`, `muted` και `following` **επιβιώνουν — δομικά**: ζουν στο **ιδιωτικό** έγγραφο της
+ * θέσης (ADR-867 Β9(β) Ε9), που η προβολή **δεν αγγίζει ποτέ**. Είναι «τι έχει διαβάσει» και «τι θέλει να
+ * ακούει» — δικά **του**, όχι της ομάδας· ένα μηδένισμα θα του ξανάστελνε ειδοποιήσεις που είχε σιγήσει.
  */
 function rejoined(
   previous: NetworkAudienceEntry,

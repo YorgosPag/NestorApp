@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Notification } from '@/types/notification';
+import { isHiddenFromInbox, isNotificationUnread } from '@/lib/notifications/notification-state';
 
 export type CenterState = {
   items: Map<string, Notification>; // by id
@@ -25,7 +26,7 @@ export type CenterState = {
 
 const recalcUnread = (items: Map<string, Notification>) => {
   let c = 0;
-  for (const n of items.values()) if (n.delivery.state !== 'seen') c++;
+  for (const n of items.values()) if (isNotificationUnread(n.delivery.state)) c++;
   return c;
 };
 
@@ -39,8 +40,8 @@ export const useNotificationCenter = create<CenterState>()(devtools((set, get) =
     const items = new Map(s.items);
     let order = [...s.order];
     for (const n of ns) {
-      // Skip dismissed notifications — they should not appear in the UI
-      if (n.delivery.state === 'dismissed') {
+      // Κρυμμένες (dismissed · withdrawn — ADR-867 Ε10) δεν εμφανίζονται — ένας κριτής, `notification-state.ts`.
+      if (isHiddenFromInbox(n.delivery.state)) {
         items.delete(n.id);
         order = order.filter(id => id !== n.id);
         continue;
@@ -63,7 +64,7 @@ export const useNotificationCenter = create<CenterState>()(devtools((set, get) =
     const target = ids ?? s.order;
     for (const id of target) {
       const cur = items.get(id);
-      if (cur && cur.delivery.state !== 'seen') {
+      if (cur && isNotificationUnread(cur.delivery.state)) {
         items.set(id, { ...cur, delivery: { ...cur.delivery, state: 'seen' } });
       }
     }

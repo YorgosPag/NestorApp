@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
+import { grantWorkspaceMembership } from '@/lib/workspace/grant-membership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -103,7 +104,20 @@ async function handleBootstrapPost(
     const uid = firebaseUser.uid;
     const email = firebaseUser.email || userIdentifier;
 
-    // STEP 3: Set custom claims via ADR-360 mirror
+    // STEP 3a: Η ΘΕΣΗ ΠΡΙΝ ΑΠΟ ΤΟ CLAIM (ADR-867 Β9(β) Ε1). Από εδώ περνούσε ο πρώτος
+    //    διαχειριστής **χωρίς** έγγραφο μέλους — έμπαινε ως `home` και έλειπε από κάθε κατάλογο
+    //    («Υπεύθυνος: Μέλος του γραφείου»). Ο ΕΝΑΣ γραφέας· ο bootstrap είναι ο μόνος δρων.
+    const seated = await grantWorkspaceMembership({
+      uid, companyId, globalRole, grantedByUid: uid, enrollment: 'bootstrap',
+    });
+    if (!seated) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to write workspace membership', error: 'membership-write-failed' },
+        { status: 500 }
+      );
+    }
+
+    // STEP 3b: Set custom claims via ADR-360 mirror
     try {
       // ⚠️ **ΤΟ ΙΔΙΟ ΕΛΑΤΤΩΜΑ ΜΕ ΤΟΝ `claims-handler`, ΣΠΑΝΙΟΤΕΡΗ ΔΙΑΔΡΟΜΗ**
       //    (ADR-813 Φάση Β). Ήταν σταθερό `mfaEnrolled: false`, και **φαίνεται**

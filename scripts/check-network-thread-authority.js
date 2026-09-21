@@ -67,6 +67,8 @@ const CONSUMERS = {
     'ο κατάλογος νημάτων (ADR-867 Β5): collection group ΑΝΑΓΝΩΣΗ του ακροατηρίου — καμία γραφή',
   'src/services/network-messaging/thread-reader.ts':
     'ο αναγνώστης του ακροατηρίου (ADR-867 Β5 παρουσία · Β7 ονόματα): ΑΝΑΓΝΩΣΗ «διαβάζει ο καλών; ποιοι είναι όλοι;» — καμία γραφή',
+  'src/services/network-messaging/audience-seats.ts':
+    'η ένωση δημόσιας γραμμής + ιδιωτικής πλευράς της θέσης (ADR-867 Β9(β) Ε9): ΑΝΑΓΝΩΣΗ με `getAll` — καμία γραφή',
   'src/services/network-messaging/network-unread-email.ts':
     'η πύλη του email «αδιάβαστο» (ADR-867 Β6): ΑΝΑΓΝΩΣΗ νήματος + γραμμής του παραλήπτη τη στιγμή της αποστολής — καμία γραφή',
 };
@@ -92,6 +94,7 @@ const COLLECTION_NAMES = [
   'COLLECTIONS.NETWORK_MESSAGE_REVISIONS',
   'SUBCOLLECTIONS.NETWORK_THREAD_MESSAGES',
   'SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE',
+  'SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE_PRIVATE',
 ];
 const REF_CALLS = new Set([
   'networkThreadRef',
@@ -101,8 +104,13 @@ const REF_CALLS = new Set([
   'networkRetractionRef',
   'networkRevisionRef',
   'networkAudienceGroup',
+  'networkAudiencePrivateRef',
 ]);
-const AUDIENCE_CALLS = new Set(['networkThreadAudience', 'networkAudienceRef']);
+/**
+ * 🔒 **Η ιδιωτική πλευρά της θέσης (Ε9) είναι ακροατήριο για τον Κ3**: ένας δεύτερος γραφέας εκεί θα μπορούσε
+ * να «ξε-σιγάσει» κάποιον ή να του σβήσει το «διαβάστηκε» — ίδιος γραφέας, ίδιος λόγος.
+ */
+const AUDIENCE_CALLS = new Set(['networkThreadAudience', 'networkAudienceRef', 'networkAudiencePrivateRef']);
 /**
  * 🔑 **ΤΟ ΒΙΒΛΙΟ ΑΝΑΚΛΗΣΕΩΝ ΜΠΑΙΝΕΙ ΕΔΩ, ΜΕ ΤΑ ΜΗΝΥΜΑΤΑ** (Κ4): είναι το **δεύτερο
  * αντίγραφο** του ίδιου γεγονότος και γράφεται στην **ίδια** συναλλαγή. Χωριστό κριτήριο

@@ -66,12 +66,13 @@
 import 'server-only';
 
 import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { workspaceMembersCollection } from '@/lib/workspace/workspace-member-ref';
+import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { workspaceMemberRef, workspaceMembersCollection } from '@/lib/workspace/workspace-member-ref';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { isRoleBypass } from './roles';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
+  isWorkspaceMemberEnrollment,
   workspaceRefKey,
   type MembershipDecision,
   type MembershipVerdict,
@@ -190,12 +191,7 @@ async function readMembership(
   }
 
   try {
-    const snapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(companyId)
-      .collection(SUBCOLLECTIONS.WORKSPACE_MEMBERS)
-      .doc(uid)
-      .get();
+    const snapshot = await workspaceMemberRef(getAdminFirestore(), companyId, uid).get();
 
     if (!snapshot.exists) {
       return { verdict: 'not-a-member', workspace };
@@ -255,6 +251,8 @@ export function normalizeMembership(
       : [],
     joinedAt: data.joinedAt,
     addedBy: typeof data.addedBy === 'string' ? data.addedBy : null,
+    // ADR-867 Ε1 — πληροφορία, όχι εξουσιοδότηση ⇒ ανεκτικά: άγνωστο ή απόν ⇒ `null`.
+    enrollment: isWorkspaceMemberEnrollment(data.enrollment) ? data.enrollment : null,
     updatedAt: data.updatedAt,
   };
 }

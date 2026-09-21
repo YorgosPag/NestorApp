@@ -11,6 +11,7 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { navigateDocument } from '@/lib/browser/document-navigation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('mandate-evidence.client');
@@ -45,7 +46,7 @@ export async function downloadMandateEvidence(source: EvidenceSource, evidenceId
   try {
     const url = await signedUrlFor(source, evidenceId);
     if (url === null) return 'unavailable';
-    window.location.assign(url);
+    navigateDocument(url);
     return 'opened';
   } catch (cause) {
     logger.error('Η λήψη αποδεικτικού απέτυχε', { data: { evidenceId }, error: cause instanceof Error ? cause.message : String(cause) });

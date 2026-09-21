@@ -515,6 +515,22 @@ export function daysUntilOrNull(val: unknown, now: number = Date.now()): number 
 }
 
 /**
+ * **Πόσες ημέρες μένουν μέχρι μια ΠΡΟΘΕΣΜΙΑ** — ακέραιος, στρογγυλεμένος **προς τα πάνω**,
+ * ή `null` αν η στιγμή δεν διαβάζεται ή έχει ήδη περάσει.
+ *
+ * 🔑 **Ο ΕΝΑΣ κανόνας για «λήγει σε Ν ημέρες»** (ADR-853 §13 ε.γ, 2026-09-21): η οθόνη της
+ * πρόσκλησης έλεγε «6», το email της «7», για την **ίδια** λήξη (6η21ω): το ένα έκοβε
+ * (`Math.trunc`), το άλλο στρογγύλευε πάνω. Δύο κανόνες για το ίδιο ερώτημα.
+ *
+ * ⚠️ **Προς τα πάνω, και είναι απόφαση**: σε προθεσμία δεν υποσχόμαστε ποτέ **λιγότερα**
+ * από όσα δίνουμε — «σε 0 ημέρες» για κάτι που ισχύει ακόμη ώρες είναι ψέμα προς τα κάτω.
+ */
+export function deadlineDaysLeft(val: unknown, now: number = Date.now()): number | null {
+  const days = daysUntilOrNull(val, now);
+  return days === null || days <= 0 ? null : Math.ceil(days);
+}
+
+/**
  * Extract timestamp from nested object path (e.g., "audit.createdAt").
  * Replaces `getNestedTimestamp()` in conversations/route.ts.
  * @see ADR-218

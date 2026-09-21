@@ -16,6 +16,7 @@ import {
   compareInstantsDesc,
   daysSinceOrNull,
   daysUntilOrNull,
+  deadlineDaysLeft,
   MS_PER_DAY,
   fieldToISO,
   intervalsOverlap,
@@ -459,5 +460,31 @@ describe('utcDateOf — στιγμή → ημερολογιακή ημέρα, σ
   it('🔴 μη πεπερασμένη τιμή ⇒ `null`, ΠΟΤΕ «Invalid Date» που ταξιδεύει', () => {
     expect(utcDateOf(Number.NaN)).toBeNull();
     expect(utcDateOf(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+});
+
+/**
+ * 🔑 **Ο ΕΝΑΣ κανόνας για «λήγει σε Ν ημέρες»** (ADR-853 §13 ε.γ). Ζωντανά 21/09: λήξη σε
+ * 6η21ω ⇒ η οθόνη έλεγε «6» (`Math.trunc`), το email «7» (`Math.ceil`).
+ */
+describe('deadlineDaysLeft — προθεσμία, προς τα πάνω', () => {
+  const NOW = Date.parse('2026-09-21T11:40:00.000Z');
+
+  it('🔴 6 ημέρες και 21 ώρες ⇒ 7 (ποτέ λιγότερα από όσα δίνουμε)', () => {
+    expect(deadlineDaysLeft('2026-09-28T08:40:00.000Z', NOW)).toBe(7);
+  });
+
+  it('ακριβώς 7 ημέρες ⇒ 7, όχι 8', () => {
+    expect(deadlineDaysLeft(NOW + 7 * MS_PER_DAY, NOW)).toBe(7);
+  });
+
+  it('λίγες ώρες ⇒ 1, όχι 0', () => {
+    expect(deadlineDaysLeft(NOW + 3 * 60 * 60 * 1000, NOW)).toBe(1);
+  });
+
+  it('περασμένη ή μη αναγνώσιμη ⇒ null (ο αριθμός δεν έχει νόημα)', () => {
+    expect(deadlineDaysLeft(NOW, NOW)).toBeNull();
+    expect(deadlineDaysLeft(NOW - MS_PER_DAY, NOW)).toBeNull();
+    expect(deadlineDaysLeft('όχι ημερομηνία', NOW)).toBeNull();
   });
 });

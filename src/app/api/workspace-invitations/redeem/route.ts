@@ -19,7 +19,8 @@ import 'server-only';
  * 🔑 ΜΙΑ ΔΙΑΔΡΟΜΗ ΓΙΑ ΔΥΟ ΠΡΑΞΕΙΣ — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΣΥΝΤΟΜΙΑ
  * ─────────────────────────────────────────────────────────────────────────────
  * Η αποδοχή και η άρνηση μοιράζονται **την ίδια κλειδαριά** στην υπηρεσία (`redeem()`:
- * υπογραφή → λήξη → email → nonce → παραλήπτης → ρόλος → ατομική κατανάλωση). Δύο
+ * υπογραφή → λήξη → nonce → παραλήπτης → [αποδοχή: μέλος → απόδειξη email, §15] → ρόλος →
+ * ατομική κατανάλωση). Δύο
  * διαδρομές θα αντέγραφαν τον φρουρό και θα μεγάλωναν το **κλειστό σύνολο** του
  * `withPersonalOrOrgAuth` κατά **δύο** — και ο κανόνας του απαιτεί ξεχωριστή αιτιολόγηση
  * για κάθε καταναλωτή (ADR-817 §5).
@@ -52,8 +53,10 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   acceptWorkspaceInvitation,
   declineWorkspaceInvitation,
+  type RedeemingIdentity,
   type RedeemOutcome,
 } from '@/server/auth/workspace-invitation-redeem';
+import { provenMailboxAccountOf, type ProvenMailboxAccount } from '@/server/auth/mailbox-proof-custody';
 import type { InvitableRole, WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
 
 const logger = createModuleLogger('WORKSPACE_INVITATION_REDEEM');
@@ -73,19 +76,19 @@ type RedeemResponse =
   | { readonly error: 'REDEEM_UNAVAILABLE' };
 
 /**
- * **Είναι επαληθευμένο το email αυτού του λογαριασμού;** — από τον **ιδιοκτήτη**.
+ * **Ο λογαριασμός όπως τον ξέρει ο ΙΔΙΟΚΤΗΤΗΣ του** — email, `emailVerified`, 2ος παράγοντας.
  *
- * 🔴 **ΤΟ `AuthContext` ΔΕΝ ΤΟ ΕΚΘΕΤΕΙ, ΚΑΙ ΤΟ TOKEN ΔΕΝ ΑΡΚΕΙ.** Το `email_verified` ζει
- * στο ID token, αλλά ένα token ζει **έως μία ώρα**: ο άνθρωπος που μόλις επιβεβαίωσε το
- * γραμματοκιβώτιό του και πάτησε τον σύνδεσμο θα έπαιρνε `false` και ονομασμένη άρνηση
- * `email-unverified` — δηλαδή θα του λέγαμε να κάνει κάτι που **μόλις έκανε**.
+ * 🔴 **ΤΟ TOKEN ΔΕΝ ΑΡΚΕΙ.** Ζει **έως μία ώρα**: ένα `email_verified` ή ένα `email` από
+ * εκεί μπορεί να είναι μπαγιάτικο. Και από τον ADR-853 §15 το email **επιβεβαιώνεται** από
+ * την πρόσκληση — αν ήταν του token, ένα email που άλλαξε μέσα στην ώρα θα επιβεβαιωνόταν
+ * σε λογαριασμό που δεν το κατέχει πια.
  *
- * ⛔ Και **ποτέ** custom claim με αυτό το όνομα: ο ιδιοκτήτης είναι το Firebase Auth, και
- *    ένα claim θα ήταν **δεύτερη αυθεντία** που μπορεί να λέει «ναι» ενώ το Auth λέει «όχι»
- *    (ADR-749· γραμμένο ήδη στο `workspace-provisioning.ts`).
+ * ⛔ Και **ποτέ** custom claim `emailVerified`: ο ιδιοκτήτης είναι το Firebase Auth, και
+ *    ένα claim θα ήταν **δεύτερη αυθεντία** (ADR-749· γραμμένο ήδη στο `workspace-provisioning.ts`).
  */
-async function readEmailVerified(uid: string): Promise<boolean> {
-  return (await getAdminAuth().getUser(uid)).emailVerified;
+async function readAuthAccount(uid: string): Promise<{ readonly email: string; readonly account: ProvenMailboxAccount }> {
+  const record = await getAdminAuth().getUser(uid);
+  return { email: record.email ?? '', account: provenMailboxAccountOf(record) };
 }
 
 /**
@@ -142,22 +145,21 @@ async function handler(request: NextRequest, actor: ApiActor): Promise<NextRespo
   const parsed = await readJsonBody(request, redeemBodySchema);
   if ('rejected' in parsed) return parsed.rejected;
 
-  let emailVerified: boolean;
+  let authAccount: Awaited<ReturnType<typeof readAuthAccount>>;
   try {
-    emailVerified = await readEmailVerified(actor.ctx.uid);
+    authAccount = await readAuthAccount(actor.ctx.uid);
   } catch (error: unknown) {
-    // ⚠️ **ΟΧΙ `email-unverified`**: δεν ξέρουμε: ο ιδιοκτήτης δεν απάντησε. Ονομασμένη
-    //    άρνηση εδώ θα έστελνε τον άνθρωπο να επιβεβαιώσει email που ίσως είναι εντάξει.
-    logger.error('Το Firebase Auth δεν απάντησε για το emailVerified', {
+    // ⚠️ **ΟΧΙ ονομασμένη άρνηση**: δεν ξέρουμε — ο ιδιοκτήτης δεν απάντησε.
+    logger.error('Το Firebase Auth δεν απάντησε για τον λογαριασμό', {
       uid: actor.ctx.uid, error: getErrorMessage(error),
     });
     return NextResponse.json({ error: 'REDEEM_UNAVAILABLE' } as const, { status: 503 });
   }
 
-  const identity = {
-    uid: actor.ctx.uid,
-    email: actor.ctx.email,
-    emailVerified,
+  const identity: RedeemingIdentity = {
+    ...authAccount.account,
+    // 🔴 §15 — το email **του Auth**, όχι του token: αυτό κρίνεται και αυτό επιβεβαιώνεται.
+    email: authAccount.email,
     // 🔑 **ΤΟ `?? ''` ΕΙΝΑΙ ΣΩΣΤΟ ΕΔΩ — ΚΑΙ ΜΟΙΑΖΕΙ ΜΕ ΤΟ ΑΠΑΓΟΡΕΥΜΕΝΟ, ΓΙ' ΑΥΤΟ ΓΡΑΦΕΤΑΙ.**
     //
     // Το JSDoc του `actorWorkspace` απαγορεύει ρητά το `?? ''` — αλλά για **άλλο ερώτημα**:
@@ -216,8 +218,8 @@ export function respond(outcome: RedeemOutcome): NextResponse<RedeemResponse> {
 
     case 'refused':
       // 🔑 **422, ΠΟΤΕ 404/403**: το αίτημα ήταν κατανοητό· ο **κόσμος** δεν το επιτρέπει.
-      //    Και ο λόγος **ταξιδεύει**: «έληξε» · «ανακλήθηκε» · «λάθος παραλήπτης» ·
-      //    «ανεπιβεβαίωτο email» στέλνουν τον άνθρωπο σε **τέσσερις διαφορετικές** ενέργειες.
+      //    Και ο λόγος **ταξιδεύει**: «έληξε» · «ανακλήθηκε» · «λάθος παραλήπτης» · «ήδη
+      //    μέλος» στέλνουν τον άνθρωπο σε **διαφορετικές** ενέργειες.
       return NextResponse.json(
         { error: 'LINK_REFUSED', reason: outcome.reason } as const,
         { status: 422 },
@@ -226,7 +228,8 @@ export function respond(outcome: RedeemOutcome): NextResponse<RedeemResponse> {
     case 'unavailable':
       // 🔴 **503**: *«δεν μάθαμε»* ≠ *«δεν επιτρέπεσαι»*. Το `membership-unknown` σημαίνει ότι
       //    ο κριτής δεν απάντησε· το `invitation-corrupt` ότι το έγγραφο φέρει ρόλο εκτός
-      //    λεξιλογίου. **Καμία** ενέργεια του ανθρώπου δεν διορθώνει κανένα από τα δύο.
+      //    λεξιλογίου· το `mailbox-proof-unknown` ότι το Auth δεν δέχτηκε την επιβεβαίωση του
+      //    email (§15) — εκείνο **είναι** παροδικό, και η οθόνη προσφέρει «Δοκιμάστε ξανά».
       return NextResponse.json({ error: 'REDEEM_UNAVAILABLE' } as const, { status: 503 });
   }
 }

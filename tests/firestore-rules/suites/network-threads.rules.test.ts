@@ -6,6 +6,7 @@
  *   - `list`:   `if false` — το ακροατήριο είναι **υποσυλλογή**, δεν φιλτράρεται
  *   - γραφές:   `if false` — **ένας** γραφέας διακομιστή, μέσα σε συναλλαγή
  *   - `network_messages/*` · `network_audience/*`: **ίδια** ερώτηση ανάγνωσης
+ *   - `network_audience_private/{uid}` (Ε9): **μόνο** ο ίδιος (`uid == auth.uid`) και μόνο όσο διαβάζει· λίστα ΠΟΤΕ
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΤΙ ΦΡΟΥΡΕΙ ΑΥΤΗ Η ΣΟΥΙΤΑ ΠΟΥ Ο ΠΙΝΑΚΑΣ ΤΩΝ 35 **ΔΕΝ ΜΠΟΡΕΙ**
@@ -47,6 +48,7 @@ import { initEmulator, resetData, teardownEmulator } from '../_harness/emulator'
 import {
   NETWORK_THREADS,
   NETWORK_THREAD_AUDIENCE,
+  NETWORK_THREAD_AUDIENCE_PRIVATE,
   NETWORK_THREAD_MESSAGES,
   seedNetworkActThread,
 } from '../_harness/seed-helpers-network';
@@ -329,6 +331,66 @@ describe('network_threads.rules — διαβάζει ΟΠΟΙΟΣ ΕΧΕΙ ΖΩ�
           .doc('nmsg-seed-1')
           .delete(),
       );
+    });
+  });
+
+  // ==========================================================================
+  // Α8 — 🔒 Ε9: Η ΙΔΙΩΤΙΚΗ ΠΛΕΥΡΑ ΤΗΣ ΘΕΣΗΣ — ΜΟΝΟ Ο ΙΔΙΟΣ
+  // ==========================================================================
+
+  describe('🔒 Α8 — σίγαση · follow · «διαβάστηκε»: τα βλέπει ΜΟΝΟ ο ίδιος (ADR-867 Ε9)', () => {
+    const WITH_SEALED = [
+      { uid: RESPONSIBLE_UID, side: 'host', role: 'responsible', until: null },
+      { uid: COUNTERPART_UID, side: 'counterpart', role: 'counterpart', until: null },
+      { uid: PERSONA_CLAIMS.same_tenant_admin.uid, side: 'host', role: 'collaborator', until: '2026-09-17T09:30:00.000Z' },
+    ] as const;
+
+    const privateDoc = (persona: Parameters<typeof getContext>[1], uid: string) =>
+      getContext(env, persona)
+        .firestore()
+        .collection(NETWORK_THREADS)
+        .doc(THREAD_ID)
+        .collection(NETWORK_THREAD_AUDIENCE_PRIVATE)
+        .doc(uid);
+
+    beforeEach(async () => {
+      await seedNetworkActThread(env, THREAD_ID, COUNTERPART_UID, WITH_SEALED);
+    });
+
+    it('ο ίδιος διαβάζει τη ΔΙΚΗ του πλευρά (αλλιώς το «ιδιωτικό» θα ήταν «χαμένο»)', async () => {
+      const mine = await assertSucceeds(privateDoc('external_user', COUNTERPART_UID).get());
+      expect(mine.data()?.muted).toBe(true);
+      await assertSucceeds(privateDoc('same_tenant_user', RESPONSIBLE_UID).get());
+    });
+
+    it('🔴 Η ΑΛΛΗ ΠΛΕΥΡΑ δεν διαβάζει τη σίγαση/το follow/την ανάγνωση — ΚΑΙ ΣΤΙΣ ΔΥΟ ΚΑΤΕΥΘΥΝΣΕΙΣ (το Ε9)', async () => {
+      await assertFails(privateDoc('external_user', RESPONSIBLE_UID).get());
+      await assertFails(privateDoc('same_tenant_user', COUNTERPART_UID).get());
+    });
+
+    it('🔴 ΚΑΜΙΑ λίστα — ούτε από μέλος που διαβάζει (θα ρωτούσε τα ιδιωτικά ΟΛΩΝ)', async () => {
+      await assertFails(
+        getContext(env, 'external_user')
+          .firestore()
+          .collection(NETWORK_THREADS)
+          .doc(THREAD_ID)
+          .collection(NETWORK_THREAD_AUDIENCE_PRIVATE)
+          .get(),
+      );
+    });
+
+    it('🔴 ο ΣΦΡΑΓΙΣΜΕΝΟΣ δεν διαβάζει ούτε τη δική του — μόνο όποιος διαβάζει ΤΩΡΑ', async () => {
+      await assertFails(privateDoc('same_tenant_admin', PERSONA_CLAIMS.same_tenant_admin.uid).get());
+    });
+
+    it('🔴 ο τρίτος και ο super_admin: άρνηση', async () => {
+      await assertFails(privateDoc('cross_tenant_admin', RESPONSIBLE_UID).get());
+      await assertFails(privateDoc('super_admin', RESPONSIBLE_UID).get());
+    });
+
+    it('🔴 καμία γραφή — ούτε ο ίδιος στη δική του (η σίγαση περνά από τον διακομιστή)', async () => {
+      await assertFails(privateDoc('external_user', COUNTERPART_UID).set({ muted: false }, { merge: true }));
+      await assertFails(privateDoc('external_user', COUNTERPART_UID).delete());
     });
   });
 });

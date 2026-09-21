@@ -1120,6 +1120,10 @@ export const SUBCOLLECTIONS = {
   // σχήμα που το repo έχει ήδη πληρώσει τέσσερις φορές (CHECK 3.34 · 3.37 · 3.49 · 3.57).
   NETWORK_THREAD_MESSAGES: process.env.NEXT_PUBLIC_NETWORK_THREAD_MESSAGES_SUBCOL || 'network_messages',
   NETWORK_THREAD_AUDIENCE: process.env.NEXT_PUBLIC_NETWORK_THREAD_AUDIENCE_SUBCOL || 'network_audience',
+  // 🔒 ADR-867 Β9(β) Ε9 — Η ΙΔΙΩΤΙΚΗ ΠΛΕΥΡΑ ΤΗΣ ΘΕΣΗΣ (`lastReadAt` · `muted` · `following`). Χωριστό
+  // έγγραφο επειδή η Firestore δεν κρύβει πεδία: στο `network_audience` τα διάβαζε η ΑΛΛΗ πλευρά.
+  NETWORK_THREAD_AUDIENCE_PRIVATE:
+    process.env.NEXT_PUBLIC_NETWORK_THREAD_AUDIENCE_PRIVATE_SUBCOL || 'network_audience_private',
 
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
@@ -1275,6 +1279,7 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
   // Network thread subcollections → NETWORK_THREADS (ADR-867 §4.1/§4.2)
   NETWORK_THREAD_MESSAGES: 'NETWORK_THREADS',
   NETWORK_THREAD_AUDIENCE: 'NETWORK_THREADS',
+  NETWORK_THREAD_AUDIENCE_PRIVATE: 'NETWORK_THREADS',
 } as const;
 
 // ============================================================================

@@ -414,3 +414,16 @@ GitHub Notifications (`subject.url` = αναφορά οντότητας) · Slac
   **θέμα** (παραλήπτης, αγγελία), οι αιτίες (ζητήσεις) είναι **περιεχόμενο**, όχι ταυτότητα. Οι κανόνες `notifications`
   δεν αλλάζουν (create μόνο από τον server). Προορισμός ίδιος (`listingMatchDestination`). Στη σύνοψη email, μέλη με ίδιο
   τύπο + θέμα + σώμα αποδίδονται **μία** φορά (`distinctDigestMembers`)· η κλειστή λογιστική μετρά πάντα όλα τα μηνύματα.
+- **2026-09-21** — 🔁 **Η ΑΠΟΣΥΡΣΗ ΕΙΔΟΠΟΙΗΣΗΣ ΑΠΕΚΤΗΣΕ ΣΠΙΤΙ** (ADR-867 Β9(β) Ε10). Ως σήμερα μια ειδοποίηση δεν
+  μπορούσε να «ξε-ειπωθεί» όταν έπαυε το γεγονός της (grep withdraw/retract/cancel: 0). Νέο
+  `server/notifications/notification-withdraw.ts` (`withdrawNotifications`): **ανά κλειδί** (`generateNotificationDedupeId`
+  — ο ίδιος γεννήτορας με τον orchestrator ⇒ κανένα ερώτημα), `delivery.state = 'withdrawn'` + `withdrawnAt` +
+  `withdrawnReason` (**καμία διαγραφή**), ιδεμποτής (ήδη κρυμμένη ⇒ ανέγγιχτη · ανύπαρκτη ⇒ τίποτα). Η κατάσταση
+  `withdrawn` μπήκε στο `DeliveryState` (`types/notification.ts` + `schemas/notification.ts`). 🔑 **Ένας κριτής**
+  `lib/notifications/notification-state.ts` (`isHiddenFromInbox` · `isNotificationRead` · `isNotificationUnread`): ως
+  τότε το «αδιάβαστη» ήταν **τέσσερις** διατυπώσεις με **δύο** απαντήσεις (το σήμα μετρούσε το `acted` ως αδιάβαστο,
+  η λίστα ως διαβασμένο). ⚠️ **Εύρημα, ΟΧΙ διορθωμένο** (ανήκει στο ADR-848): ο σύνδεσμος email και το `ack` γράφουν
+  `seen: true`, ενώ η καμπάνα διαβάζει `delivery.state` ⇒ ειδοποίηση ανοιγμένη από email μένει «αδιάβαστη» στην
+  καμπάνα· και υπάρχουν **τρεις** ορισμοί `DeliveryState` (`config/notification-events.ts` με `pending/…/read`).
+  Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
+

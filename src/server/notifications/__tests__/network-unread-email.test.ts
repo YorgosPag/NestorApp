@@ -11,6 +11,7 @@
  *   Π-2  🔴 Email νήματος **χωρίς** παραλήπτη ⇒ `thread-settled` (δεν κρίνεται ⇒ δεν φεύγει)
  *   Π-3  Πέρασμα χωρίς email νήματος ⇒ ο φορτωτής **δεν** καλείται
  *   Κ-1…Κ-6  Ο κριτής: διαβάστηκε · ποτέ δεν άνοιξε · σίγαση · σφράγιση · απουσία · κλειστό νήμα
+ *   Κ-7  🔴 (Ε10) Το μόνο αδιάβαστο **ανακλήθηκε** ⇒ δεν φεύγει · υπάρχει κι άλλο ζωντανό ⇒ φεύγει
  *   Γ-1  Ο αναγνώστης γεγονότων: επιστροφή του είδους · σκουπίδι ⇒ `undefined`
  *   Γ-2  🔴 Τα κουμπιά αργιών **δεν** χτίζονται πάνω σε γεγονότα νήματος
  */
@@ -28,7 +29,7 @@ import {
   getDefaultNotificationSettings,
   type UserNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
-import type { NetworkAudienceEntry } from '@/types/network-thread';
+import type { NetworkAudienceSeat } from '@/types/network-thread';
 import { networkUnreadKey, readNotificationEmailFacts } from '@/types/notification-email-facts';
 
 const settings = (patch: Partial<UserNotificationSettings> = {}): UserNotificationSettings =>
@@ -127,7 +128,7 @@ describe('Π — η πύλη αποστολής ρωτά «εκκρεμεί ακ
 // =============================================================================
 const NOW = '2026-09-18T12:00:00.000Z';
 
-function entry(patch: Partial<NetworkAudienceEntry> = {}): NetworkAudienceEntry {
+function entry(patch: Partial<NetworkAudienceSeat> = {}): NetworkAudienceSeat {
   return {
     uid: 'u1', side: 'host', role: 'responsible', reason: 'creator', addedBy: 'u1',
     since: '2026-09-01T00:00:00.000Z', until: null, lastReadAt: null, muted: false, following: false, threadActivityAt: SINCE, alsoHostRole: null,
@@ -135,7 +136,11 @@ function entry(patch: Partial<NetworkAudienceEntry> = {}): NetworkAudienceEntry 
   };
 }
 
-const truth = (patch: Partial<UnreadTruth> = {}): UnreadTruth => ({ threadOpen: true, entry: entry(), away: null, ...patch });
+/** Νήμα με ζωντανό μήνυμα **μετά** το `SINCE` — η κανονική περίπτωση ενός αδιάβαστου. */
+const LIVE_THREAD = { lastMessageAt: '2026-09-18T10:00:00.000Z', lastLiveMessageAt: '2026-09-18T10:00:00.000Z' };
+
+const truth = (patch: Partial<UnreadTruth> = {}): UnreadTruth =>
+  ({ threadOpen: true, thread: LIVE_THREAD, entry: entry(), away: null, ...patch });
 
 describe('Κ — ο κριτής «εκκρεμεί;»', () => {
   it('Κ-1 διάβασε ΜΕΤΑ το μήνυμα ⇒ όχι · ΠΡΙΝ ⇒ ναι', () => {
@@ -163,6 +168,15 @@ describe('Κ — ο κριτής «εκκρεμεί;»', () => {
 
   it('Κ-6 κλειστό νήμα ⇒ όχι', () => {
     expect(isUnreadStillPending(truth({ threadOpen: false }), SINCE, NOW)).toBe(false);
+  });
+
+  it('Κ-7 🔴 (Ε10) το μόνο αδιάβαστο ΑΝΑΚΛΗΘΗΚΕ ⇒ όχι · υπάρχει κι άλλο ζωντανό ⇒ ναι (μετάλλαξη: η πύλη αγνοεί τη ζωντάνια)', () => {
+    const retractedOnly = { lastMessageAt: '2026-09-18T10:00:00.000Z', lastLiveMessageAt: null };
+    expect(isUnreadStillPending(truth({ thread: retractedOnly }), SINCE, NOW)).toBe(false);
+    const olderStillLive = { lastMessageAt: '2026-09-18T10:00:00.000Z', lastLiveMessageAt: '2026-09-18T09:30:00.000Z' };
+    expect(isUnreadStillPending(truth({ thread: olderStillLive }), SINCE, NOW)).toBe(true);
+    // 🔁 Νήμα προ-Ε10 (χωρίς πεδίο) ⇒ ισχύει το `lastMessageAt` — ίδια συμπεριφορά με πριν.
+    expect(isUnreadStillPending(truth({ thread: { lastMessageAt: '2026-09-18T10:00:00.000Z' } }), SINCE, NOW)).toBe(true);
   });
 });
 

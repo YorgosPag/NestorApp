@@ -28,7 +28,9 @@ import {
   encodeDirectoryCursor,
 } from '@/services/network-messaging/thread-directory';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
-import type { NetworkAudienceEntry, NetworkThread } from '@/types/network-thread';
+import type { NetworkAudienceEntry, NetworkAudienceSeat, NetworkThread } from '@/types/network-thread';
+
+import { privateFieldsOnPublicRows, privateSideOf } from './audience-private-fixture';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const BORN = '2026-09-17T10:00:00.000Z';
@@ -51,7 +53,7 @@ afterEach(() => jest.restoreAllMocks());
 async function world(): Promise<{ db: AdminFirestore; fake: FakeFirestore }> {
   const fake = new FakeFirestore();
   const db = fake as unknown as AdminFirestore;
-  for (const uid of [MARIA, ELENI]) fake.seed(MEMBERS_PATH, uid, { uid, status: 'active' });
+  for (const uid of [MARIA, ELENI]) fake.seed(MEMBERS_PATH, uid, { uid, status: 'active', globalRole: 'internal_user' });
   fake.seed(COLLECTIONS.NETWORK_ACT_TEAMS, TEAM_ID, {
     ...actTeamDocument({ actKind: 'mandate', actSeed: ACT_SEED, hostCompanyId: HOST, responsibleUid: MARIA }, BORN),
   });
@@ -94,8 +96,13 @@ describe('Φ — fan-out on write', () => {
 
     await sendNetworkMessage(db, { threadId: THREAD_ID, senderUid: OWNER, text: 'Καλημέρα', nowISO: T1 });
 
-    expect(rowOf(fake, OWNER)).toMatchObject({ threadActivityAt: T1, lastReadAt: T1 });
-    expect(rowOf(fake, MARIA)).toMatchObject({ threadActivityAt: T1, lastReadAt: null });
+    expect(rowOf(fake, OWNER)).toMatchObject({ threadActivityAt: T1 });
+    expect(rowOf(fake, MARIA)).toMatchObject({ threadActivityAt: T1 });
+    // 🔒 Ε9: «διάβασε ως τις T1» ζει στο ΙΔΙΩΤΙΚΟ έγγραφο του αποστολέα — ο παραλήπτης δεν έχει καν έγγραφο,
+    //    και η δημόσια γραμμή (που βλέπει η άλλη πλευρά) δεν λέει τίποτα από τα δύο.
+    expect(privateSideOf(fake, THREAD_ID, OWNER)).toStrictEqual({ lastReadAt: T1 });
+    expect(privateSideOf(fake, THREAD_ID, MARIA)).toBeNull();
+    expect(privateFieldsOnPublicRows(fake, THREAD_ID)).toStrictEqual([]);
   });
 
   it('Φ-3 🔴 σφραγισμένη γραμμή: ΚΑΜΙΑ γραφή — μένει σφραγισμένη, με την παλιά δραστηριότητα', async () => {
@@ -134,7 +141,7 @@ describe('Κ — τα καθαρά κομμάτια του καταλόγου', 
     createdAt: BORN,
     lastMessageAt: T1,
   };
-  const ENTRY: NetworkAudienceEntry = {
+  const ENTRY: NetworkAudienceSeat = {
     uid: MARIA,
     side: 'host',
     role: 'responsible',

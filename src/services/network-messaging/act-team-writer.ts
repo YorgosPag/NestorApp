@@ -44,6 +44,7 @@ import {
   type ActTeamChangeRefusal,
   type ActTeamNext,
 } from './act-team-change';
+import { canServeOnActTeam } from './act-team-eligibility';
 import { announceTeamArrivals } from './network-notifier';
 import { teamArrivals } from './network-notification-plan';
 import type { AudienceWrite } from './thread-audience';
@@ -437,13 +438,14 @@ async function changeActTeamInTransaction(
     readActThreadSlot(transaction, adminDb, team.actSeed),
     transaction.get(workspaceMemberRef(adminDb, team.hostCompanyId, request.change.uid)),
   ]);
-  const targetRaw = targetSnap.exists ? targetSnap.data() : undefined;
+  const target = targetSnap.exists ? normalizeMembership(request.change.uid, targetSnap.data()) : null;
 
   const verdict = judgeActTeamChange({
     ...request,
     team,
-    targetIsActiveMember:
-      targetRaw !== undefined && normalizeMembership(request.change.uid, targetRaw).status === 'active',
+    targetIsActiveMember: target !== null && target.status === 'active',
+    // 🔑 ADR-867 Ε1β — ο ρόλος του **εγγράφου μέλους**, κριμένος από τον ΕΝΑ κριτή ικανοτήτων.
+    targetCanServe: target !== null && canServeOnActTeam(target.globalRole),
     counterpartUid: threadSlot.topic?.counterpartUid ?? null,
   });
   if (verdict.kind === 'unchanged') return { outcome: verdict, before: team };

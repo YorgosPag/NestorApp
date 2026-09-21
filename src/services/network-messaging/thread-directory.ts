@@ -24,11 +24,13 @@ import 'server-only';
 import { FieldPath, type Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { createModuleLogger } from '@/lib/telemetry';
-import type { NetworkAudienceEntry, NetworkAudienceRole, NetworkThread } from '@/types/network-thread';
+import type { NetworkAudienceEntry, NetworkAudienceSeat, NetworkThread } from '@/types/network-thread';
 import type { NetworkThreadDirectoryResult, NetworkThreadListItem } from '@/types/network-wire';
 
 import { threadHref } from '@/lib/network-messaging/network-messaging-routes';
+import { hasLiveUnread } from '@/lib/network-messaging/thread-liveness';
 
+import { joinAudienceSeats, type PublicSeatRow } from './audience-seats';
 import { networkAudienceGroup, networkAudienceRef, networkThreadRef } from './network-thread-ref';
 
 const logger = createModuleLogger('NetworkThreadDirectory');
@@ -81,7 +83,7 @@ export function decodeDirectoryCursor(raw: string): ThreadDirectoryCursor | null
  */
 export function directoryItem(
   threadId: string,
-  entry: NetworkAudienceEntry,
+  entry: NetworkAudienceSeat,
   thread: NetworkThread,
   href: string,
 ): NetworkThreadListItem {
@@ -92,7 +94,8 @@ export function directoryItem(
     state: thread.state,
     lastMessageAt,
     activityAt: entry.threadActivityAt,
-    unread: lastMessageAt !== null && (entry.lastReadAt === null || entry.lastReadAt < lastMessageAt),
+    // 🔑 Ε10: «υπάρχει ΑΚΟΜΗ κάτι να διαβάσει;» — όχι «ήρθε κάτι;». Ανακλημένο πριν διαβαστεί ⇒ όχι αδιάβαστο.
+    unread: hasLiveUnread(thread, entry.lastReadAt),
     muted: entry.muted,
     role: entry.role,
     side: entry.side,
@@ -159,7 +162,8 @@ export async function listNetworkThreads(
   const visible = rows.slice(0, query.limit);
   const items = await hydrate(adminDb, visible.map((doc) => ({
     threadId: doc.ref.parent.parent?.id ?? '',
-    entry: doc.data() as NetworkAudienceEntry,
+    uid: doc.id,
+    publicRaw: doc.data(),
   })));
 
   const last = visible[visible.length - 1];
@@ -172,23 +176,30 @@ export async function listNetworkThreads(
   return { items, next };
 }
 
-/** Τα νήματα της σελίδας με **ένα** `getAll` — ποτέ ένα ερώτημα ανά γραμμή. */
+/**
+ * Τα νήματα **και** η ιδιωτική πλευρά κάθε θέσης της σελίδας — δύο `getAll`, παράλληλα, ποτέ ένα ερώτημα
+ * ανά γραμμή. 🔒 Το «αδιάβαστο» και η «σίγαση» βγαίνουν από το **ιδιωτικό** έγγραφο (ADR-867 Β9(β) Ε9).
+ */
 async function hydrate(
   adminDb: AdminFirestore,
-  rows: readonly { readonly threadId: string; readonly entry: NetworkAudienceEntry }[],
+  rows: readonly PublicSeatRow[],
 ): Promise<readonly NetworkThreadListItem[]> {
   if (rows.length === 0) return [];
-  const snaps = await adminDb.getAll(...rows.map((row) => networkThreadRef(adminDb, row.threadId)));
+  const [snaps, seats] = await Promise.all([
+    adminDb.getAll(...rows.map((row) => networkThreadRef(adminDb, row.threadId))),
+    joinAudienceSeats((...refs) => adminDb.getAll(...refs), adminDb, rows),
+  ]);
   const present: PresentRow[] = [];
   rows.forEach((row, index) => {
     const thread = snaps[index]?.data() as NetworkThread | undefined;
+    const entry = seats[index];
     // ⚠️ Γραμμή χωρίς νήμα δεν γεννιέται από τον γραφέα (ίδια συναλλαγή). Αν τη δούμε, είναι
     //    βλάβη δεδομένων: την **ονομάζουμε** και δεν δείχνουμε κενό στοιχείο.
-    if (thread === undefined) {
+    if (thread === undefined || entry === null || entry === undefined) {
       logger.error('[DIRECTORY] Γραμμή ακροατηρίου χωρίς νήμα', { threadId: row.threadId });
       return;
     }
-    present.push({ threadId: row.threadId, entry: row.entry, thread });
+    present.push({ threadId: row.threadId, entry, thread });
   });
 
   return present.map((row) => directoryItem(row.threadId, row.entry, row.thread, threadHref(row.threadId)));
@@ -197,7 +208,7 @@ async function hydrate(
 /** Μία γραμμή, όπως την είδε η `hydrate` αφού βρέθηκε το νήμα της. */
 interface PresentRow {
   readonly threadId: string;
-  readonly entry: NetworkAudienceEntry;
+  readonly entry: NetworkAudienceSeat;
   readonly thread: NetworkThread;
 }
 
