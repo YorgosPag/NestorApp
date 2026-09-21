@@ -45,17 +45,18 @@ export function AppSidebar() {
     const mainMenuItems = React.useMemo(
         () => {
             if (!hasBuildingsWithNoUnits) return jobFilteredMainItems;
-            return jobFilteredMainItems.map(item => {
-                if (!item.subItems) return item;
-                return {
-                    ...item,
-                    subItems: item.subItems.map(sub =>
-                        sub.href === '/spaces/properties'
-                            ? { ...sub, warningDot: true }
-                            : sub
-                    ),
-                };
-            });
+            // ADR-871 §10.6 — η κουκκίδα ανήκει στον ΣΥΝΔΕΣΜΟ «Ακίνητα» των Χώρων· η ομάδα
+            // τη δείχνει μόνη της όταν κάποιο παιδί της την έχει.
+            return jobFilteredMainItems.map(item =>
+                item.kind === 'group'
+                    ? {
+                        ...item,
+                        items: item.items.map(link =>
+                            link.href === '/spaces/properties' ? { ...link, warningDot: true } : link
+                        ),
+                    }
+                    : item
+            );
         },
         [jobFilteredMainItems, hasBuildingsWithNoUnits]
     )

@@ -221,7 +221,7 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
                 className={layout.cursorPointer}
               >
                 <item.icon className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
-                <span>{tNav(item.title)}</span>
+                <span>{tNav(item.navLabelKey)}</span>
               </DropdownMenuItem>
             ))}
         </DropdownMenuGroup>
