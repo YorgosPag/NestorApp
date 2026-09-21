@@ -51,6 +51,7 @@ import {
   TenantIsolationError,
   filterSnapshotsByTenant,
   requireBuildingInTenant,
+  requireEmploymentRecordInTenant,
   requireOpportunityInTenant,
   requireParkingInTenant,
   requireProjectInTenant,
@@ -119,6 +120,17 @@ const GUARDS = [
     notFound: 'Opportunity not found',
     call: (ctx: AuthContext, id: string) =>
       requireOpportunityInTenant({ ctx, opportunityId: id, path: PATH }),
+  },
+  {
+    // ADR-747 §13.7 — ο έβδομος φύλακας. Μία γραμμή, όπως υπόσχεται η κεφαλίδα:
+    // το έγγραφο φέρει ένσημα ΕΦΚΑ, άρα η άρνηση εδώ αφορά **ασφαλιστικό
+    // ιστορικό τρίτου**, όχι απλώς ξένη εγγραφή.
+    label: 'employment record',
+    collection: COLLECTIONS.EMPLOYMENT_RECORDS,
+    targetType: 'employment_record',
+    notFound: 'Employment record not found',
+    call: (ctx: AuthContext, id: string) =>
+      requireEmploymentRecordInTenant({ ctx, employmentRecordId: id, path: PATH }),
   },
 ] as const;
 

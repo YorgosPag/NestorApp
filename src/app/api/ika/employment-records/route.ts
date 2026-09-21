@@ -21,13 +21,19 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireProjectInTenant } from '@/lib/auth/tenant-isolation';
+import { guardParentScope } from '@/lib/api/tenant-scope-http';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
 import { generateEmploymentRecordId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { nowISO } from '@/lib/date-local';
 
 export const maxDuration = 30;
+
+/** Η διαδρομή, μία φορά — μπαίνει **αυτούσια** στο ίχνος ελέγχου κάθε άρνησης. */
+const EMPLOYMENT_RECORDS_PATH = '/api/ika/employment-records';
 
 // =============================================================================
 // TYPES
@@ -64,13 +70,50 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
+        // 🔒 **Ο ΓΟΝΕΑΣ ΠΡΙΝ ΤΟ ΕΡΩΤΗΜΑ** — ADR-745 §9.5 · ADR-747 §13.7 #1.
+        //
+        // Το `projectId` έρχεται από το **σώμα του αιτήματος**, δηλαδή από τον καλούντα.
+        // Το `withAuth` απαντά *«είσαι συνδεδεμένος;»*, **ποτέ** *«είναι δικό σου;»* —
+        // οπότε χωρίς αυτή τη γραμμή κάθε πιστοποιημένος χρήστης διάβαζε (και μέσω του
+        // `existingMap` **επανέγραφε**) τα ένσημα **οποιουδήποτε** έργου του οποίου
+        // ήξερε το id.
+        //
+        // ⛔ **ΓΙΑΤΙ ΟΧΙ «ΣΚΕΤΟ `where(companyId)`»**: τα έγγραφα του ΙΚΑ απέκτησαν
+        // `companyId` **μετά** τη γέννηση της συλλογής. Ερώτημα που φιλτράρει μόνο σε
+        // αυτό **δεν βλέπει** τα παλαιότερα ⇒ το `existingMap` βγαίνει κενό ⇒ ο ίδιος
+        // εργαζόμενος αποκτά **δεύτερη** εγγραφή για τον ίδιο μήνα. Δηλαδή ο προφανής
+        // «φράχτης» θα γεννούσε **διπλά ένσημα**: σφάλμα **τιμής**, όχι πρόσβασης.
+        // Ο έλεγχος **ιδιοκτησίας του γονέα** κλείνει την πόρτα χωρίς να αγγίξει την
+        // πληρότητα της ανάγνωσης.
+        // 🔑 **Μέσω του `guardParentScope`, ΟΧΙ με δικό μας `catch`** — ADR-742 §7undecies.
+        //    Το `try/catch (e instanceof TenantIsolationError)` είναι **ήδη** κεντρικό·
+        //    η πρώτη γραφή αυτής της διόρθωσης το ξανάγραψε εδώ και στο `apd-status`, και
+        //    το **jscpd το έπιασε ως δίδυμο 11 γραμμών** (N.18) — ακριβώς το σχήμα που
+        //    εκείνος ο κανόνας υπάρχει για να πιάνει. Εδώ μένει **μία** κλήση.
+        const refusal = await guardParentScope(
+          () => requireProjectInTenant({
+            ctx,
+            projectId: body.projectId,
+            path: EMPLOYMENT_RECORDS_PATH,
+          }),
+          'Project not found',
+        );
+        if (refusal) return refusal;
+
         const db = getAdminFirestore();
         const now = nowISO();
         const collRef = db.collection(COLLECTIONS.EMPLOYMENT_RECORDS);
 
-        // Load existing records for this project+month+year
+        // Load existing records for this project+month+year.
+        //
+        // ✅ **Ο ΔΕΥΤΕΡΟΣ ΦΡΑΧΤΗΣ, ΣΚΟΠΙΜΑ ΧΩΡΙΣ `companyId`** — ο άξονας απομόνωσης
+        // εδώ είναι ο **γονέας**, που μόλις αποδείχθηκε δικός μας μία γραμμή πιο πάνω
+        // (OWASP Multi-Tenant §"enforce ownership in the data-access layer"). Η
+        // πληρότητα της ανάγνωσης είναι **απαίτηση ορθότητας**: ό,τι δεν βρεθεί εδώ
+        // γεννιέται ξανά παρακάτω.
+        // tenant-scope-exempt: γονέας επαληθευμένος πριν (requireProjectInTenant)
         const existingSnapshot = await collRef
-          .where('projectId', '==', body.projectId)
+          .where(FIELDS.PROJECT_ID, '==', body.projectId)
           .where('year', '==', body.year)
           .where('month', '==', body.month)
           .get();

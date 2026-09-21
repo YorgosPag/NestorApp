@@ -392,6 +392,48 @@ export async function requireOpportunityInTenant(params: {
   });
 }
 
+/**
+ * Minimal employment-record data required for tenant verification.
+ * Avoids widening to the full ΕΦΚΑ record type.
+ */
+export interface TenantEmploymentRecord {
+  companyId: string;
+  projectId?: string;
+  contactId?: string;
+}
+
+/**
+ * 🔒 Require employment record to belong to authenticated user's tenant.
+ *
+ * 🔴 **Η ΠΙΟ ΑΚΡΙΒΗ ΑΡΝΗΣΗ ΑΥΤΟΥ ΤΟΥ ΑΡΧΕΙΟΥ, ΚΑΙ ΟΧΙ ΜΕΤΑΦΟΡΙΚΑ**: το έγγραφο
+ * φέρει **ένσημα ΕΦΚΑ, εισφορές και κατάσταση ΑΠΔ** — νομικά δεσμευτικά στοιχεία
+ * ασφάλισης εργαζομένου. Γραφή σε ξένο τέτοιο έγγραφο δεν είναι «διαρροή
+ * δεδομένων»· είναι **αλλοίωση ασφαλιστικού ιστορικού τρίτου**.
+ *
+ * ⚠️ **Γιατί χρειάστηκε δήλωση εδώ και όχι έλεγχος στο σημείο κλήσης**: μέχρι τις
+ * 2026-09-21 το `PATCH /api/ika/employment-records/[id]/apd-status` διάβαζε
+ * `.doc(id)` και **έγραφε** χωρίς καμία ερώτηση ιδιοκτησίας — μόνο `withAuth`,
+ * που απαντά *«είσαι συνδεδεμένος;»*, **ποτέ** *«είναι δικό σου;»*. Το
+ * ίδιο το `logAuditEvent` του route κατέγραφε `targetType: 'project'` για έγγραφο
+ * που **δεν είναι έργο**, δηλαδή ούτε το ίχνος ελέγχου έλεγε την αλήθεια.
+ *
+ * Δήλωση, **όχι** αντίγραφο — όπως επιβάλλει η κεφαλίδα του αρχείου.
+ */
+export async function requireEmploymentRecordInTenant(params: {
+  ctx: AuthContext;
+  employmentRecordId: string;
+  path: string;
+}): Promise<TenantEmploymentRecord> {
+  return requireDocInTenant<TenantEmploymentRecord>({
+    ctx: params.ctx,
+    id: params.employmentRecordId,
+    path: params.path,
+    collection: COLLECTIONS.EMPLOYMENT_RECORDS,
+    targetType: 'employment_record',
+    notFoundMessage: 'Employment record not found',
+  });
+}
+
 // =============================================================================
 // BATCH TENANT FILTER — for pre-fetched Firestore snapshots
 // =============================================================================

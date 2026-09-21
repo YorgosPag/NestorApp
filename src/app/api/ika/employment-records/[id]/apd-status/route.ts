@@ -18,12 +18,17 @@ import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireEmploymentRecordInTenant } from '@/lib/auth/tenant-isolation';
+import { guardParentScope } from '@/lib/api/tenant-scope-http';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { nowISO } from '@/lib/date-local';
 
 type SegmentData = { params: Promise<{ id: string }> };
+
+/** Η διαδρομή, μία φορά — μπαίνει **αυτούσια** στο ίχνος ελέγχου κάθε άρνησης. */
+const APD_STATUS_PATH = '/api/ika/employment-records/[id]/apd-status';
 
 const PatchApdStatusSchema = z.object({
   status: z.enum(['pending', 'submitted', 'accepted', 'rejected']),
@@ -47,16 +52,31 @@ async function handlePatch(
         if (parsed.error) return parsed.error;
         const body = parsed.data;
 
+        // 🔒 **Η ΙΔΙΟΚΤΗΣΙΑ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** — ADR-747 §13.7.
+        //
+        // Μέχρι τις 2026-09-21 εδώ υπήρχε `.doc(id).get()` και **σκέτος έλεγχος
+        // ύπαρξης**: κάθε πιστοποιημένος χρήστης που ήξερε ένα `emrec_*` άλλαζε την
+        // κατάσταση ΑΠΔ **ξένου** εργαζομένου. Δεν είναι ανάγνωση ξένων δεδομένων —
+        // είναι **γραφή σε ασφαλιστικό ιστορικό τρίτου**, και το `withAuth` από πάνω
+        // απαντά *«είσαι συνδεδεμένος;»*, ποτέ *«είναι δικό σου;»*.
+        //
+        // Ο φύλακας φέρνει το έγγραφο, κρίνει την ιδιοκτησία, **καταγράφει** την
+        // άρνηση και μεταμφιέζει το «ξένο» σε «δεν βρέθηκε» (§7septies) — δηλαδή
+        // αντικαθιστά **και** τον έλεγχο ύπαρξης παραπάνω: μία ανάγνωση, όχι δύο.
+        // Μέσω του κεντρικού `guardParentScope` — βλ. το αδελφό route για το γιατί
+        // δεν ξαναγράφεται εδώ `catch (e instanceof TenantIsolationError)`.
+        const refusal = await guardParentScope(
+          () => requireEmploymentRecordInTenant({
+            ctx,
+            employmentRecordId: id,
+            path: APD_STATUS_PATH,
+          }),
+          'Employment record not found',
+        );
+        if (refusal) return refusal;
+
         const db = getAdminFirestore();
         const docRef = db.collection(COLLECTIONS.EMPLOYMENT_RECORDS).doc(id);
-        const docSnap = await docRef.get();
-
-        if (!docSnap.exists) {
-          return NextResponse.json(
-            { success: false, error: 'Employment record not found' },
-            { status: 404 }
-          );
-        }
 
         const now = nowISO();
         const updateData: Record<string, unknown> = {
@@ -74,7 +94,10 @@ async function handlePatch(
 
         await docRef.update(updateData);
 
-        await logAuditEvent(ctx, 'data_updated', id, 'project', {
+        // ⚠️ `'employment_record'`, **όχι** `'project'`: το ίχνος κατέγραφε το id ενός
+        //    ενσήμου κάτω από τύπο «έργο», οπότε η ερώτηση *«ποιος πείραξε τα ένσημα
+        //    ποιου;»* **δεν απαντιόταν από το ίδιο το ίχνος**.
+        await logAuditEvent(ctx, 'data_updated', id, 'employment_record', {
           metadata: { reason: `APD status → ${body.status}` },
         }).catch(() => {/* non-blocking */});
 

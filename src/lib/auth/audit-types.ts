@@ -105,6 +105,10 @@ export const AUDIT_TARGET_TYPES = {
   purchase_order: true,
   contact: true,
   asset_pack: true, // ADR-655 — gated content libraries
+  // ADR-090 — εγγραφές απασχόλησης ΕΦΚΑ (ένσημα/εισφορές/ΑΠΔ). Ξεχωριστός τύπος
+  // επειδή το ίχνος ελέγχου τις κατέγραφε ως `project`: το «ποιος πείραξε τα
+  // ένσημα ΠΟΙΟΥ» δεν διαβαζόταν από το ίδιο το ίχνος.
+  employment_record: true,
 } as const;
 
 /** Audit target type derived from registry. */
