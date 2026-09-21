@@ -118,6 +118,12 @@ function pruneNamespace(source, want) {
     if (readPath(slice, key) !== undefined) continue;   // already inside a copied subtree
     const value = readPath(source, key);
     if (value === undefined) { missing.push(key); continue; }
+    // 🔴 ΑΚΡΙΒΕΣ ΚΛΕΙΔΙ = ΦΥΛΛΟ (ADR-871 §10.6, 2026-09-22). Το `t('sales')` δεν επιστρέφει ΠΟΤΕ
+    // αντικείμενο· ένα «κλειδί» που λύνεται σε υπο-δέντρο είναι ΥΠΟΨΗΦΙΟ ΠΟΥ ΑΣΤΟΧΗΣΕ, όχι αίτημα
+    // για το υπο-δέντρο (αυτό το εκφράζει μόνο το `prefixes`). Ήταν: αντιγραφή ολόκληρου του
+    // υπο-δέντρου — και η συγκομιδή ιδιοτήτων (`id: 'sales'` σε κατάλογο πλοήγησης) έσερνε έτσι
+    // ΟΛΟ το `common-sales` στο κέλυφος. Μετρημένο στο HEAD: 0 artifacts αλλάζουν.
+    if (value !== null && typeof value === 'object') continue;
     writePath(slice, key, value);
     copyPluralSiblings(source, slice, key);
     matched += 1;

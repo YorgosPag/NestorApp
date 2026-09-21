@@ -380,6 +380,17 @@ describe('Group 7 — pruning a namespace down to the keys the shell asks for', 
     expect(target).toEqual({ a: { b_other: 'y' } });
   });
 
+  it('🔴 an exact key that lands on a SUBTREE takes nothing — only `prefixes` may take a subtree', () => {
+    // ADR-871 §10.6: the property harvest offered `id: 'sales'` (a navigation group id) to a
+    // `t(x.id)` elsewhere in the shell, `common-sales` HAS a `sales` object, and the whole
+    // namespace travelled. `t()` never returns an object — a key that resolves to one is a
+    // candidate that missed, not a request for the subtree.
+    // ⛔ MUTATION: drop the object guard in pruneNamespace ⇒ `search.hints` travels ⇒ red.
+    const { slice, matched } = pruneNamespace(source, { keys: new Set(['search.hints', 'search']), prefixes: new Set(), whole: false });
+    expect(slice).toEqual({});
+    expect(matched).toBe(0);
+  });
+
   it('a key no locale defines is reported, never invented', () => {
     const { slice, missing } = pruneNamespace(source, { keys: new Set(['nope.here']), prefixes: new Set(), whole: false });
     expect(slice).toEqual({});
