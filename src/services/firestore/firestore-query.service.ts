@@ -37,7 +37,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, FIRESTORE_LIMITS, type CollectionKey } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
-import { requireAuthContext, waitForAuthReady, resolveEffectiveCompanyId } from './auth-context';
+import { requireAuthContext, requireUserContext, waitForAuthReady, resolveEffectiveCompanyId } from './auth-context';
 import { onSuperAdminActiveCompanyChange } from './super-admin-active-company';
 import { getTenantConfig, resolveTenantValue } from './tenant-config';
 import { buildReadPaths, hasReadPaths } from './read-scope-config';
@@ -123,6 +123,12 @@ function buildLeadingPaths(
   return buildReadPaths(key, ctx.uid).map(scope => [...tenant, ...scope]);
 }
 
+/** Η ΜΙΑ πύλη ταυτότητας: συλλογή ανθρώπου (`userId`) ⇒ αρκεί ο συνδεδεμένος· αλλιώς οργανισμός. */
+function contextFor(key: CollectionKey, override?: QueryOptions['tenantOverride']): Promise<TenantContext> {
+  const mode = override ?? getTenantConfig(key).mode;
+  return mode === 'userId' ? requireUserContext() : requireAuthContext();
+}
+
 // ADR-218: chunkArray imported from centralized @/lib/array-utils
 
 /** «Κανένας ακροατής» — ΕΝΑ όνομα αντί για έξι σκόρπια `() => {}` (CHECK 3.28). */
@@ -191,6 +197,7 @@ function guardedCollectionListener<T extends DocumentData>(
  */
 function subscribeToCollection<T extends DocumentData>(
   ref: CollectionReference,
+  requireCtx: () => Promise<TenantContext>,
   leading: (ctx: TenantContext) => readonly (readonly QueryConstraint[])[],
   followScope: boolean,
   onData: (result: QueryResult<T>) => void,
@@ -218,7 +225,7 @@ function subscribeToCollection<T extends DocumentData>(
     if (stale()) return;
     if (!(await waitForAuthReady())) return;
     if (stale()) return;
-    const ctx = await requireAuthContext();
+    const ctx = await requireCtx();
     if (stale()) return;
     const queries = leading(ctx).map(path => composeQuery(ref, path, options));
     innerUnsub = listenToPaths<T>(queries, options.maxResults, listener, onError);
@@ -265,7 +272,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     key: CollectionKey,
     options: QueryOptions = {}
   ): Promise<QueryResult<T>> {
-    const ctx = await requireAuthContext();
+    const ctx = await contextFor(key, options.tenantOverride);
     const colRef = collection(db, resolveCollectionName(key));
     const snapshots = await Promise.all(
       buildLeadingPaths(key, ctx, options.tenantOverride).map(path =>
@@ -300,7 +307,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     }
 
     if (addTenantContext) {
-      const ctx = await requireAuthContext();
+      const ctx = await contextFor(key);
       const config = getTenantConfig(key);
       if (config.mode !== 'none') {
         const tenantValue = resolveTenantValue(config.mode, ctx);
@@ -354,6 +361,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
   ): Unsubscribe {
     return subscribeToCollection(
       collection(db, resolveCollectionName(key)),
+      () => contextFor(key, options.tenantOverride),
       ctx => buildLeadingPaths(key, ctx, options.tenantOverride),
       true,
       onData,
@@ -388,7 +396,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
 
     void waitForAuthReady().then(hasUser => {
       if (cancelled || !hasUser) return;
-      return requireAuthContext();
+      return contextFor(key);
     }).then(() => {
       if (cancelled) return;
 
@@ -424,6 +432,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     // φίλτρο πρώτο, και καμία ανοικοδόμηση όταν αλλάζει ο χώρος — ίδια συμπεριφορά με πριν.
     return subscribeToCollection(
       collection(db, resolveCollectionName(parentKey), parentId, subcollectionName),
+      requireAuthContext,
       () => [[]],
       false,
       onData,
@@ -449,7 +458,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     // λίστα απορρίπτεται. Η ταυτότητα ζητείται ΜΟΝΟ όπου η συλλογή έχει φράχτη, ώστε οι
     // υπόλοιπες να κρατούν ακριβώς τη σημερινή συμπεριφορά.
     const paths = hasReadPaths(key)
-      ? buildReadPaths(key, (await requireAuthContext()).uid)
+      ? buildReadPaths(key, (await contextFor(key)).uid)
       : buildReadPaths(key, '');
 
     const chunkPromises = chunks.flatMap(chunk => paths.map(async path => {

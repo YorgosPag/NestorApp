@@ -109,7 +109,28 @@ export function isMissingTenantError(error: unknown): boolean {
  * @throws {Error} If a non-super-admin user has no companyId claim
  * @returns Promise resolving to TenantContext
  */
-export async function requireAuthContext(): Promise<TenantContext> {
+export function requireAuthContext(): Promise<TenantContext> {
+  return resolveAuthContext('tenant');
+}
+
+/**
+ * Η ταυτότητα **χωρίς** απαίτηση εταιρείας — για δεδομένα που ανήκουν σε **άνθρωπο**
+ * (συλλογές `mode: 'userId'`: ειδοποιήσεις, ρυθμίσεις ειδοποιήσεων, …).
+ *
+ * 🔴 **Γιατί υπάρχει (2026-09-21)**: το `requireAuthContext` ήταν η **μόνη** πύλη κάθε
+ * ανάγνωσης του `firestoreQueryService` και πετούσε `MissingTenantError` **πριν** κοιτάξει
+ * τι ζητήθηκε. Ο αυτόνομος (ADR-809) και κάθε άνθρωπος στο `/o/me` έχαναν **σιωπηλά** τις
+ * **δικές** τους ειδοποιήσεις — οι κανόνες τις επέτρεπαν (`request.auth.uid`), ο πελάτης όχι.
+ * Το `companyId` επιστρέφεται όπως είναι (ίσως `null`)· κανείς εδώ δεν το χρειάζεται.
+ */
+export function requireUserContext(): Promise<TenantContext> {
+  return resolveAuthContext('user');
+}
+
+/** `tenant` = χρειάζεται οργανισμός (ή super-admin / ζητούμενος οργανισμός)· `user` = αρκεί ο άνθρωπος. */
+type ContextRequirement = 'tenant' | 'user';
+
+async function resolveAuthContext(requirement: ContextRequirement): Promise<TenantContext> {
   // Wait for Firebase Auth to finish initializing (handles SSR/hydration race)
   // — early-mounted consumers (NotificationDrawer, opportunities, navigation) hit
   // requireAuthContext before AuthContext finishes wiring; without this gate they
@@ -137,7 +158,7 @@ export async function requireAuthContext(): Promise<TenantContext> {
 
   // Χωρίς claim εταιρείας ο άνθρωπος είναι ο αυτόνομος επαγγελματίας (ADR-809) — ΕΚΤΟΣ
   // αν η διεύθυνση ζητά οργανισμό: τότε ο φύλακας του χώρου **ήδη** έκρινε ότι είναι μέλος.
-  if (!companyId && !isSuperAdmin && requested.kind !== 'org') {
+  if (requirement === 'tenant' && !companyId && !isSuperAdmin && requested.kind !== 'org') {
     throw new MissingTenantError();
   }
 
