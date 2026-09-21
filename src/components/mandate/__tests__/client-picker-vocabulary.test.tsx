@@ -46,7 +46,12 @@ jest.mock('@/services/realtime/hooks/useOrganizationCapability', () => ({
 
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
-  useTranslation: () => ({ t: (key: string) => key }),
+  // SSoT: `@/test-utils/i18n-mock` — ΚΑΙ `i18n`, γιατί το `SearchableCombobox` περνά από τον
+  // hook του έργου, που διαβάζει `i18n.language`.
+  useTranslation: () =>
+    jest
+      .requireActual<typeof import('@/test-utils/i18n-mock')>('@/test-utils/i18n-mock')
+      .keyEchoTranslation(),
 }));
 
 const getAllContacts = jest.fn();

@@ -697,3 +697,25 @@ renderer ήδη βάζει στο `<Label htmlFor>`. Boy Scout στα ίδια �
 `PointerEvent` — χωρίς αυτό η μετάλλαξη της καταστολής **επέζησε**).
 
 ⛔ Καμία επανασπορά baseline.
+
+### 2026-09-21 (ε) — Πρόβλεψη CI πριν το push: **δύο νέα κόκκινα, ένα διορθωμένο εδώ**
+
+Το `main` ήταν 24 commits μπροστά του `origin` (`af32dc60`)· οι έλεγχοι έτρεξαν **τοπικά** για να χωριστεί το νέο
+κόκκινο από το παλιό.
+
+- **`ui-contrast-ratchet` — παλιό κόκκινο, ρίζα βρέθηκε, ήδη λυμένο στο `09c672d8`**: το
+  `check-text-primary-ratchet.js --all` έτρεχε **πριν** το `pnpm install`, ενώ από το `fcd8e094` φορτώνει
+  `tailwindcss/loadConfig` ⇒ `Cannot find module` σε κάθε τρέξιμο, και τα βήματα από κάτω δεν εκτελέστηκαν ποτέ.
+  Τοπικά 3.38/3.39/3.41/3.42/3.43/3.45 **πράσινα**.
+- **G11 — νέο κόκκινο, ξένο**: `src/components/ui/sidebar-trigger.tsx` (`bc44d86d`, ADR-871) χωρίς axe test.
+  Το component έχει όνομα (`sr-only`)· λείπει το test (και προτείνεται `aria-expanded`/`aria-controls`, μοτίβο
+  disclosure). Ανήκει στον τομέα του sidebar.
+- **`jest-suite` — νέο κόκκινο, ΔΙΚΟ ΜΑΣ, διορθώθηκε**: `mandate/__tests__/client-picker-vocabulary.test.tsx` 6/6.
+  Το `e704cacd` έδωσε στο `SearchableCombobox` `useTranslation('common')`· το test έκανε mock το `react-i18next`
+  με μόνο `{ t }` ⇒ ο hook του έργου διάβασε `i18n.language` σε `undefined`. **Όχι** θωράκιση του hook
+  (`i18n?.language` θα έκρυβε ελλιπή mocks — στην παραγωγή το `i18n` υπάρχει πάντα): νέο SSoT
+  `src/test-utils/i18n-mock.ts` (`keyEchoTranslation()`), πρώτος καταναλωτής αυτό το test ⇒ 6/6. Τα ~240
+  χειρόγραφα mocks (25 χωρίς `i18n`) → `.claude-rules/pending-ratchet-work.md`.
+- Node 20: όλα τα ενεργά workflows σε `checkout@v5`/`setup-node@v5`/`pnpm/action-setup@v5`· `@v4` μένει μόνο σε
+  `*.yml.disabled` (το `docker/login-action@v4` είναι ήδη μία major πάνω από το `@v3` που προειδοποιούσε στο `af32dc60`). `package-manager-cache: false`: 9 jobs.
+- Διόρθωση αριθμού του handoff: το `jest-suite` @ `af32dc60` είχε **53** κόκκινες σουίτες, όχι ~15.

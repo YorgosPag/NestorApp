@@ -2,6 +2,19 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **21/09 — ~240 ΧΕΙΡΟΓΡΑΦΑ MOCK ΤΟΥ `useTranslation` ΣΤΑ TESTS· ~25 ΧΩΡΙΣ `i18n`** *(N.0.2 · ADR-598)*
+
+  SSoT πλέον: `src/test-utils/i18n-mock.ts` → `keyEchoTranslation()` (`t` ηχεί το κλειδί + `i18n.language` + `ready`
+  + `currentLanguage`). Πρώτος καταναλωτής: `mandate/__tests__/client-picker-vocabulary.test.tsx` — ήταν κόκκινο 6/6
+  από το `e704cacd` (το `SearchableCombobox` απέκτησε `useTranslation('common')`, ο hook διάβασε `i18n.language` σε
+  `undefined`). Μέτρηση: `grep -rhoE "useTranslation: \(\) => \(\{" src --include=*.test.tsx | wc -l` ≈ **240**·
+  τα 25 που κάνουν mock το `react-i18next` χωρίς `i18n` είναι **ωρολογιακές βόμβες**: σπάνε μόλις ένα component του
+  δέντρου τους περάσει από τον hook του έργου (σήμερα πράσινα 23/25· το `email-type-preferences` κόκκινο για άλλο
+  λόγο). Διόρθωση: μετανάστευση στο `keyEchoTranslation()` ανά τομέα, πρώτα τα 25. ⚠️ Όσα test **μεταφράζουν** από
+  JSON (π.χ. `area-combobox-cold-load`) μένουν ως έχουν ή παίρνουν δεύτερο helper — όχι μαζικό `sed`.
+  Επιπλέον εύρημα: `mandate/BrokeredMandateFields.tsx` + `BrokeredListingPageContent.tsx` (και άλλα) εισάγουν το
+  `react-i18next` **απευθείας**, παρακάμπτοντας τον hook του έργου (`grep -rln "from 'react-i18next'" src | grep -v __tests__`).
+
 - 🟡 **21/09 — ΣΕΛΙΔΕΣ ΤΟΥ `(app)` ΜΕ ΔΙΚΟ ΤΟΥΣ `<main>` ΜΕΣΑ ΣΤΟ `<main>` ΤΟΥ ΚΕΛΥΦΟΥΣ** *(ADR-871 §10.5 Β2/Υ9)*
 
   Το κέλυφος έχει πλέον **έναν** `main` (`MainContentBridge`· το `SidebarInset` έγινε `div`). Δεκάδες σελίδες όμως
