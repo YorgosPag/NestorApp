@@ -14,19 +14,18 @@
  */
 
 import { useMemo } from 'react';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import { useFirestoreProjects, type FirestoreProject } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // PROJECT SELECTOR
 // ============================================================================
 
-interface POProjectSelectorProps {
+interface POProjectSelectorOwnProps {
   value: string;
   /** Called with (projectId, project) — project used for delivery address auto-fill */
   onSelect: (projectId: string, project: FirestoreProject | null) => void;
@@ -34,11 +33,15 @@ interface POProjectSelectorProps {
   error?: string;
 }
 
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+type POProjectSelectorProps = POProjectSelectorOwnProps & FieldAccessibleName;
+
 export function POProjectSelector({
   value,
   onSelect,
   disabled,
   error,
+  ...accessibleName
 }: POProjectSelectorProps) {
   const { t } = useTranslation('procurement');
   const { projects, loading } = useFirestoreProjects();
@@ -55,6 +58,7 @@ export function POProjectSelector({
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={(v) => {
         const project = projects.find((p) => p.id === v) ?? null;
@@ -74,36 +78,31 @@ export function POProjectSelector({
 // SUPPLIER SELECTOR
 // ============================================================================
 
-interface POSupplierSelectorProps {
+interface POSupplierSelectorOwnProps {
   value: string;
   onSelect: (supplierId: string) => void;
   disabled?: boolean;
   error?: string;
 }
 
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+type POSupplierSelectorProps = POSupplierSelectorOwnProps & FieldAccessibleName;
+
 export function POSupplierSelector({
   value,
   onSelect,
   disabled,
   error,
+  ...accessibleName
 }: POSupplierSelectorProps) {
   const { t } = useTranslation('procurement');
   const { suppliers, loading } = usePOSupplierContacts();
 
-  const options = useMemo<ComboboxOption[]>(
-    () =>
-      suppliers
-        .filter((c): c is typeof c & { id: string } => typeof c.id === 'string')
-        .map((c) => ({
-          value: c.id,
-          label: getContactDisplayName(c),
-          secondaryLabel: c.type === 'company' ? c.companyName ?? undefined : undefined,
-        })),
-    [suppliers]
-  );
+  const options = useMemo(() => supplierContactsToOptions(suppliers), [suppliers]);
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={(v) => onSelect(v)}
       options={options}
@@ -120,7 +119,7 @@ export function POSupplierSelector({
 // BUILDING SELECTOR
 // ============================================================================
 
-interface POBuildingSelectorProps {
+interface POBuildingSelectorOwnProps {
   value: string;
   projectId: string | null;
   onSelect: (buildingId: string | null) => void;
@@ -128,12 +127,16 @@ interface POBuildingSelectorProps {
   error?: string;
 }
 
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+type POBuildingSelectorProps = POBuildingSelectorOwnProps & FieldAccessibleName;
+
 export function POBuildingSelector({
   value,
   projectId,
   onSelect,
   disabled,
   error,
+  ...accessibleName
 }: POBuildingSelectorProps) {
   const { t } = useTranslation('procurement');
   const { buildings, loading } = useFirestoreBuildings();
@@ -154,6 +157,7 @@ export function POBuildingSelector({
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={(v) => onSelect(v || null)}
       options={options}

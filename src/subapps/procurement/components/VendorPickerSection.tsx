@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ interface VendorPickerSectionProps {
 
 export function VendorPickerSection({ value, onChange }: VendorPickerSectionProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const [contacts, setContacts] = useState<VendorContact[]>([]);
   const [pickerValue, setPickerValue] = useState('');
 
@@ -66,9 +67,10 @@ export function VendorPickerSection({ value, onChange }: VendorPickerSectionProp
 
   return (
     <section className="space-y-2">
-      <Label>{t('rfqs.vendorPicker.label')}</Label>
+      <Label htmlFor={`${idBase}-vendors`}>{t('rfqs.vendorPicker.label')}</Label>
 
       <SearchableCombobox
+        id={`${idBase}-vendors`}
         value={pickerValue}
         onValueChange={handlePick}
         options={options}

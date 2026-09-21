@@ -11,23 +11,16 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
-import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import { ContactsService } from '@/services/contacts.service';
 import { DoyPicker } from '@/components/ui/doy-picker';
-import {
-  isIndividualContact,
-  isCompanyContact,
-  type Contact,
-  type AddressInfo,
-  type PhoneInfo,
-  type EmailInfo,
-} from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
+import { extractContactParty } from '../../utils/contact-party';
+import { useContactAutoFill } from '../../hooks/useContactAutoFill';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import type { EscoPickerValue } from '@/types/contacts/esco-types';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
@@ -52,65 +45,25 @@ interface BasicInfoSectionProps {
 // ============================================================================
 
 /**
- * Βρίσκει το primary item σε array (isPrimary === true), αλλιώς fallback στο πρώτο
- */
-function findPrimary<T extends { isPrimary: boolean }>(items: T[] | undefined): T | undefined {
-  if (!items || items.length === 0) return undefined;
-  return items.find((item) => item.isPrimary) ?? items[0];
-}
-
-/**
- * Εξάγει address street (οδός + αριθμός) από AddressInfo
- */
-function extractStreet(addr: AddressInfo | undefined): string {
-  if (!addr) return '';
-  return addr.number ? `${addr.street} ${addr.number}` : addr.street;
-}
-
-/**
- * Map full Contact → partial CompanySetupInput fields
+ * Επαφή → στοιχεία εταιρείας. Η εξαγωγή είναι SSoT (`extractContactParty`)· εδώ μόνο τα πεδία.
+ * Δημόσια υπηρεσία: ΑΦΜ / ΔΟΥ / επάγγελμα **δεν** αγγίζονται (μένει ό,τι έγραψε ο άνθρωπος).
  */
 function mapContactToSetupFields(contact: Contact): Partial<CompanySetupInput> {
-  const primaryAddress = findPrimary<AddressInfo>(contact.addresses);
-  const primaryPhone = findPrimary<PhoneInfo>(contact.phones);
-  const primaryEmail = findPrimary<EmailInfo>(contact.emails);
-
-  if (isIndividualContact(contact)) {
-    return {
-      businessName: `${contact.firstName} ${contact.lastName}`.trim(),
-      profession: contact.profession ?? '',
-      vatNumber: contact.vatNumber ?? '',
-      taxOffice: contact.taxOffice ?? '',
-      address: extractStreet(primaryAddress),
-      city: primaryAddress?.city ?? '',
-      postalCode: primaryAddress?.postalCode ?? '',
-      phone: primaryPhone?.number ?? null,
-      email: primaryEmail?.email ?? null,
-    };
-  }
-
-  if (isCompanyContact(contact)) {
-    return {
-      businessName: contact.companyName,
-      profession: '',
-      vatNumber: contact.vatNumber ?? '',
-      taxOffice: contact.taxOffice ?? '',
-      address: extractStreet(primaryAddress),
-      city: primaryAddress?.city ?? '',
-      postalCode: primaryAddress?.postalCode ?? '',
-      phone: primaryPhone?.number ?? null,
-      email: primaryEmail?.email ?? null,
-    };
-  }
-
-  // ServiceContact
+  const party = extractContactParty(contact);
+  const fields: Partial<CompanySetupInput> = {
+    businessName: party.name,
+    address: party.street,
+    city: party.city ?? '',
+    postalCode: party.postalCode ?? '',
+    phone: party.phone,
+    email: party.email,
+  };
+  if (!party.hasTaxIdentity) return fields;
   return {
-    businessName: contact.serviceName,
-    address: extractStreet(primaryAddress),
-    city: primaryAddress?.city ?? '',
-    postalCode: primaryAddress?.postalCode ?? '',
-    phone: primaryPhone?.number ?? null,
-    email: primaryEmail?.email ?? null,
+    ...fields,
+    profession: party.profession ?? '',
+    vatNumber: party.vatNumber ?? '',
+    taxOffice: party.taxOffice ?? '',
   };
 }
 
@@ -121,8 +74,11 @@ function mapContactToSetupFields(contact: Contact): Partial<CompanySetupInput> {
 export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
-  const [selectedContactId, setSelectedContactId] = useState('');
-  const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
+  const applyContact = useCallback(
+    (contact: Contact) => onChange(mapContactToSetupFields(contact)),
+    [onChange],
+  );
+  const { selectedContactId, autoFillMessage, handleContactAutoFill } = useContactAutoFill(applyContact);
   const { result: vatResult } = useVatUniqueness(data.vatNumber);
 
   /**
@@ -132,36 +88,6 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
     onChange({ profession: escoValue.profession });
   }, [onChange]);
 
-  /**
-   * Handle contact selection → fetch full details → auto-fill fields
-   */
-  const handleContactAutoFill = useCallback(async (contact: ContactSummary | null) => {
-    if (!contact) {
-      setSelectedContactId('');
-      setAutoFillMessage(null);
-      return;
-    }
-
-    setSelectedContactId(contact.id);
-
-    try {
-      const fullContact = await ContactsService.getContact(contact.id);
-      if (!fullContact) {
-        setAutoFillMessage(t('setup.contactAutoFillError'));
-        return;
-      }
-
-      const fields = mapContactToSetupFields(fullContact);
-      onChange(fields);
-      setAutoFillMessage(t('setup.contactAutoFilled'));
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setAutoFillMessage(null), 3000);
-    } catch {
-      console.error('Contact auto-fill failed for id:', contact.id);
-      setAutoFillMessage(t('setup.contactAutoFillError'));
-    }
-  }, [onChange, t]);
 
   return (
     <Card>
@@ -230,8 +156,9 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
               )}
             </div>
             <div className="space-y-2">
-              <Label>{t('setup.taxOffice')} *</Label>
+              <Label htmlFor="taxOffice">{t('setup.taxOffice')} *</Label>
               <DoyPicker
+                id="taxOffice"
                 value={data.taxOffice}
                 onValueChange={(value) => onChange({ taxOffice: value })}
                 error={errors.taxOffice}

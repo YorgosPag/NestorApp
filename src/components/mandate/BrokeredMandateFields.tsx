@@ -120,14 +120,9 @@ function ClientField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/*
-        ⚠️ **στοιχείο `span` και όχι `Label` με `htmlFor`**: το `SearchableCombobox` δεν δέχεται
-        `id` (δες `searchable-combobox-types.ts`), οπότε ένα `htmlFor` θα έδειχνε σε
-        στοιχείο που **δεν υπάρχει** — ετικέτα που ο αναγνώστης οθόνης ανακοινώνει
-        και δεν συνδέει με τίποτα είναι χειρότερη από καμία.
-      */}
-      <span className="text-sm font-medium text-foreground">{t(`${K}.clientLabel`)}</span>
+      <Label htmlFor="mandate-client">{t(`${K}.clientLabel`)}</Label>
       <SearchableCombobox
+        id="mandate-client"
         options={options}
         value={values.clientContactId}
         onValueChange={(clientContactId) => onChange({ ...values, clientContactId })}

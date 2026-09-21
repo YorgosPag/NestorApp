@@ -9,7 +9,7 @@
  * @see ADR-267 §Phase A
  */
 
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ export function PurchaseOrderForm({
   onCancel,
 }: PurchaseOrderFormProps) {
   const { t } = useTranslation('procurement');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const {
     form,
     setField,
@@ -139,8 +140,9 @@ export function PurchaseOrderForm({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Project */}
             <div className="space-y-1.5">
-              <Label>{t('form.project')} <span className="text-destructive">*</span></Label>
+              <Label htmlFor={`${idBase}-project`}>{t('form.project')} <span className="text-destructive">*</span></Label>
               <POProjectSelector
+                id={`${idBase}-project`}
                 value={form.projectId}
                 onSelect={(projectId, project) =>
                   handleProjectSelect(projectId, project ?? undefined)
@@ -150,8 +152,9 @@ export function PurchaseOrderForm({
 
             {/* Supplier */}
             <div className="space-y-1.5">
-              <Label>{t('form.supplier')} <span className="text-destructive">*</span></Label>
+              <Label htmlFor={`${idBase}-supplier`}>{t('form.supplier')} <span className="text-destructive">*</span></Label>
               <POSupplierSelector
+                id={`${idBase}-supplier`}
                 value={form.supplierId}
                 onSelect={(id) => setField('supplierId', id)}
               />
@@ -159,8 +162,9 @@ export function PurchaseOrderForm({
 
             {/* Building (optional) */}
             <div className="space-y-1.5">
-              <Label>{t('form.building')}</Label>
+              <Label htmlFor={`${idBase}-building`}>{t('form.building')}</Label>
               <POBuildingSelector
+                id={`${idBase}-building`}
                 value={form.buildingId ?? ''}
                 projectId={form.projectId || null}
                 onSelect={(id) => setField('buildingId', id)}

@@ -4,11 +4,11 @@
     "src/**/*.tsx (χωρίς subapps · χωρίς __tests__)"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά πλέγματα των οποίων τα παιδιά προέρχονται από .map() (άγνωστο πλήθος) και που παρ΄ όλα αυτά αποφασίζουν το πλήθος στηλών από το πλάτος του ΠΑΡΑΘΥΡΟΥ. Η θεραπεία είναι κρίση ανά περίπτωση — ένα πλέγμα σταθερής αρίτητας που θα γινόταν εγγενές μειώνει τον αριθμό και ΧΑΛΑΕΙ την οθόνη.",
-  "violation_count": 1,
-  "declaration_count": 294,
+  "violation_count": 0,
+  "declaration_count": 293,
   "files_scanned": 1679,
   "by_state": {
-    "catalog-window-ladder": 1,
+    "catalog-window-ladder": 0,
     "catalog-intrinsic": 33,
     "catalog-single-column": 6,
     "fixed-arity-ladder": 155,
@@ -23,7 +23,6 @@
     "why": "className που δεν αποδίδεται σε κείμενο. Μετριέται, ΔΕΝ απαριθμείται — πρότυπο «unanalyzable» του CHECK 3.35."
   },
   "violations": [
-    "catalog-window-ladder::src/components/contacts/pickers/AdministrativeAddressPicker.tsx::grid grid-cols-1 gap-2 sm:grid-cols-2"
   ],
   "declarations": [
     "src/app/(app)/admin/bim-diagnostics/components/DiagnosticsDetailPanel.tsx::grid grid-cols-2 gap-x-3 gap-y-1 text-xs",
@@ -107,7 +106,6 @@
     "src/components/contacts/creation/ContactTypeSelector.tsx::grid grid-cols-1 sm:grid-cols-3 gap-2 w-full max-w-xl",
     "src/components/contacts/dynamic/AddressesSectionWithFullscreen.tsx::grid grid-cols-1 lg:grid-cols-2 gap-2",
     "src/components/contacts/dynamic/ContactKadSection.tsx::grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-start",
-    "src/components/contacts/pickers/AdministrativeAddressPicker.tsx::grid grid-cols-1 gap-2 sm:grid-cols-2",
     "src/components/contacts/relationships/OrganizationTree.tsx::gap-2 grid gridPatterns.cards.tile",
     "src/components/contacts/relationships/OrganizationTree.tsx::grid grid-cols-1 gap-2 mb-2 stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''",
     "src/components/contacts/relationships/RelationshipCard.tsx::grid grid-cols-1 md:grid-cols-2 gap-2",

@@ -23,10 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
-import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
+import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import {
   MAX_PREFERRED_SUPPLIERS,
@@ -119,15 +118,8 @@ export function MaterialFormDialog({
     }
   }, [open, initial]);
 
-  const supplierOptions = useMemo<ComboboxOption[]>(
-    () =>
-      suppliers
-        .filter((c): c is typeof c & { id: string } => typeof c.id === 'string')
-        .filter((c) => !form.preferredSupplierContactIds.includes(c.id))
-        .map((c) => ({
-          value: c.id,
-          label: getContactDisplayName(c),
-        })),
+  const supplierOptions = useMemo(
+    () => supplierContactsToOptions(suppliers, form.preferredSupplierContactIds),
     [suppliers, form.preferredSupplierContactIds],
   );
 
@@ -349,7 +341,10 @@ export function MaterialFormDialog({
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">
-              {t('hub.materialCatalog.form.preferredSuppliers')}{' '}
+              {/* Το όνομα του πεδίου προσθήκης: η λεζάντα ΧΩΡΙΣ τον μετρητή (ADR-598 G11). */}
+              <span id="material-suppliers-label">
+                {t('hub.materialCatalog.form.preferredSuppliers')}
+              </span>{' '}
               <span className="text-xs text-muted-foreground font-normal">
                 ({form.preferredSupplierContactIds.length}/{MAX_PREFERRED_SUPPLIERS})
               </span>
@@ -379,6 +374,7 @@ export function MaterialFormDialog({
               <div className="flex gap-2 items-stretch">
                 <div className="flex-1">
                   <SearchableCombobox
+                    aria-labelledby="material-suppliers-label"
                     value={supplierPick}
                     onValueChange={(v) => setSupplierPick(v)}
                     options={supplierOptions}

@@ -260,8 +260,9 @@ export function CalendarCreateDialog({
         />
       </TaskFormField>
 
-      <TaskFormField label={t('calendarPage.dialog.fields.contact')}>
+      <TaskFormField htmlFor="event-contact" label={t('calendarPage.dialog.fields.contact')}>
         <SearchableCombobox
+          id="event-contact"
           value={contactId}
           onValueChange={(v) => setContactId(v)}
           options={contactOptions}
@@ -269,8 +270,9 @@ export function CalendarCreateDialog({
         />
       </TaskFormField>
 
-      <TaskFormField label={t('calendarPage.dialog.fields.project')}>
+      <TaskFormField htmlFor="event-project" label={t('calendarPage.dialog.fields.project')}>
         <SearchableCombobox
+          id="event-project"
           value={projectId}
           onValueChange={(v) => setProjectId(v)}
           options={projectOptions}

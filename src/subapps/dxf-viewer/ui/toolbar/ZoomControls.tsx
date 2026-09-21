@@ -10,11 +10,10 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -25,11 +24,9 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n';
 // 🏢 ADR-418: view-scale presets + formatting SSoT
-import {
-  VIEW_SCALE_MENU_PRESETS,
-  isViewRatioActive,
-  formatViewScale,
-} from '../../utils/view-scale';
+import { formatViewScale } from '../../utils/view-scale';
+// ADR-598 G11 — presets as ONE `menuitemradio` group (shared with RulerCornerBox)
+import { ViewScalePresetRadioItems } from '../components/ViewScalePresetRadioItems';
 // ADR-364 — Escape Command Bus SSoT (no inline ESC key comparison in this file)
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
@@ -124,16 +121,11 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ currentRatioN, onSet
           />
         </div>
         <DropdownMenuSeparator />
-        {VIEW_SCALE_MENU_PRESETS.map(presetN => (
-          <DropdownMenuItem
-            key={presetN}
-            onSelect={() => handlePreset(presetN)}
-            className={`flex items-center justify-between ${PANEL_LAYOUT.TYPOGRAPHY.XS} cursor-pointer font-mono`}
-          >
-            <span>{`1:${presetN}`}</span>
-            {isViewRatioActive(currentRatioN, presetN) && <Check className="w-3 h-3" />}
-          </DropdownMenuItem>
-        ))}
+        <ViewScalePresetRadioItems
+          currentRatioN={currentRatioN}
+          onSelectPreset={handlePreset}
+          itemClassName={`${PANEL_LAYOUT.TYPOGRAPHY.XS} cursor-pointer font-mono`}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

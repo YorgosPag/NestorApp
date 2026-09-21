@@ -120,6 +120,8 @@ export function OccupationSelect({
 }: OccupationSelectProps): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
 
+  const fieldId = React.useId();
+
   /**
    * ⚠️ **Μεμονωμένος πίνακας ανά κατάσταση, όχι ανά απόδοση**: το `SearchableCombobox` έχει
    * το `options` στις εξαρτήσεις του effect συγχρονισμού. Ίδιο σχήμα με το `selector ?? []`
@@ -151,17 +153,18 @@ export function OccupationSelect({
    * ρωτά *«χωράει;»*. ⚠️ Η αιτία **δεν εξαφανίστηκε** επειδή άλλαξε το χειριστήριο — το
    * όριο μετακόμισε από τον πυροδότη στην ετικέτα, που κατέχει πλέον το κουτί.
    *
-   * 🔑 **`<label>` που ΠΕΡΙΤΥΛΙΓΕΙ**: τώρα περιτυλίγει πραγματικό `<input>`, άρα η σύνδεση
-   * ετικέτας-χειριστηρίου είναι **σιωπηρή** και δεν χρειάζεται `id` — ο SSoT δεν δέχεται.
-   * *(Το `BrokeredMandateFields` αναγκάστηκε σε σκέτο `span`, δηλαδή σε χειριστήριο
-   * **χωρίς προσβάσιμο όνομα**. Εδώ αποφεύγεται.)*
+   * 🔑 **Ρητό `htmlFor`, όχι `<label>` που περιτυλίγει** *(2026-09-21, ADR-598 G11)*. Η
+   * περιτύλιξη ονόμαζε σωστά (μετρημένο), αλλά **σιωπηρά**: ο τύπος `FieldAccessibleName`
+   * ζητά **δηλωμένο** όνομα, και η σιωπηρή σύνδεση δεν δηλώνεται πουθενά. Το κουτί (και το
+   * ταβάνι πλάτους) μένει εδώ· η ετικέτα δείχνει με `id`, όπως σε κάθε άλλο combobox.
    */
   return (
-    <label className="flex min-w-56 max-w-72 flex-col gap-1 text-sm">
-      <span className="font-medium text-foreground">
+    <div className="flex min-w-56 max-w-72 flex-col gap-1 text-sm">
+      <label htmlFor={fieldId} className="font-medium text-foreground">
         {t(DIRECTORY_KEYS.occupationFilterLabel)}
-      </span>
+      </label>
       <SearchableCombobox
+        id={fieldId}
         value={value ?? ALL_OCCUPATIONS}
         options={comboOptions}
         placeholder={t(DIRECTORY_KEYS.occupationSearchPlaceholder)}
@@ -174,6 +177,6 @@ export function OccupationSelect({
           onChange(next === ALL_OCCUPATIONS || next === '' ? null : next)
         }
       />
-    </label>
+    </div>
   );
 }

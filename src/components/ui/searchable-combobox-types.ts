@@ -4,6 +4,11 @@
  * @see searchable-combobox.tsx
  */
 
+import type { FieldAccessibleName } from '@/lib/a11y/accessible-name';
+
+// Wrappers (`DoyPicker`, `TradeSelector`, …) take the same name and FORWARD it — never invent one.
+export type { FieldAccessibleName } from '@/lib/a11y/accessible-name';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -21,15 +26,14 @@ export interface ComboboxOption {
   disabledHint?: string;
 }
 
-export interface SearchableComboboxProps {
-  /**
-   * `id` of the search input — lets a `<Label htmlFor>` NAME the combobox (react-select
-   * `inputId`). Without one of `id` + label, `aria-label` or `aria-labelledby`, the
-   * `role="combobox"` is announced with no name (axe `aria-input-field-name`, ADR-598 G11).
-   */
-  id?: string;
-  'aria-label'?: string;
-  'aria-labelledby'?: string;
+/**
+ * Everything except the NAME — the name is a separate, REQUIRED axis (`FieldAccessibleName`):
+ * `id` (named by a `<Label htmlFor>`, react-select `inputId`), `aria-label` or `aria-labelledby`.
+ * A nameless `role="combobox"` is a compile error, not an axe finding (ADR-598 G11,
+ * ADR-841 §7 Α19.4δ). A dangling `id` passes the type — the runtime guard in
+ * `searchable-combobox.tsx` reports it (`findMissingAccessibleName`).
+ */
+export interface SearchableComboboxBaseProps {
   /** Current value (matches option.value or free text) */
   value: string;
   /** Callback on value change. Passes the selected option or null for free text. */
@@ -67,6 +71,8 @@ export interface SearchableComboboxProps {
    */
   formatAddNewLabel?: (inputValue: string) => string;
 }
+
+export type SearchableComboboxProps = SearchableComboboxBaseProps & FieldAccessibleName;
 
 // ============================================================================
 // CONSTANTS

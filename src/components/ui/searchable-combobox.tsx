@@ -39,7 +39,8 @@ import { SearchableComboboxListbox, optionDomId } from './searchable-combobox-li
 
 import { applyRovingArrowKey } from '@/lib/a11y/roving-highlight';
 import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
-export type { ComboboxOption, SearchableComboboxProps } from './searchable-combobox-types';
+import { findMissingAccessibleName } from '@/lib/a11y/accessible-name';
+export type { ComboboxOption, SearchableComboboxProps, FieldAccessibleName } from './searchable-combobox-types';
 
 // ============================================================================
 // COMPONENT
@@ -75,6 +76,20 @@ export function SearchableCombobox({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 🔑 Όνομα που ΔΗΛΩΘΗΚΕ ≠ όνομα που ΥΠΑΡΧΕΙ (ADR-598 G11). Ο τύπος απαιτεί το πρώτο· ένα
+  // `id` χωρίς `<label htmlFor>` το περνά και δεν ονομάζει τίποτα — το λέει μόνο το DOM.
+  // Δεν πετά: μια κρεμασμένη ετικέτα δεν ρίχνει οθόνη (πρότυπο `select.tsx` / `base-tabs.tsx`).
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' || !inputRef.current) return;
+    const missing = findMissingAccessibleName(inputRef.current);
+    if (missing === null) return;
+    // eslint-disable-next-line no-console
+    console.error(
+      `[SearchableCombobox] unnamed combobox — ${missing}. ` +
+        'Pass id + <Label htmlFor>, aria-labelledby or aria-label (ADR-598 G11).',
+    );
+  }, [id, ariaLabel, ariaLabelledBy]);
 
   // ---------------------------------------------------------------------------
   // Ιδιοκτησία του πεδίου (field ownership).

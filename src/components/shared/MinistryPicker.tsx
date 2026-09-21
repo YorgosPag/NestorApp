@@ -15,7 +15,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { GREEK_MINISTRIES } from '@/data/greek-ministries';
 
@@ -23,7 +23,7 @@ import { GREEK_MINISTRIES } from '@/data/greek-ministries';
 // TYPES
 // ============================================================================
 
-export interface MinistryPickerProps {
+interface MinistryPickerOwnProps {
   /** Current ministry name value */
   value: string;
   /** Disabled state */
@@ -31,6 +31,9 @@ export interface MinistryPickerProps {
   /** Callback when a ministry is selected or typed */
   onChange: (name: string) => void;
 }
+
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+export type MinistryPickerProps = MinistryPickerOwnProps & FieldAccessibleName;
 
 // ============================================================================
 // OPTIONS (static — only 21 entries, no lazy loading needed)
@@ -49,11 +52,13 @@ export function MinistryPicker({
   value,
   disabled = false,
   onChange,
+  ...accessibleName
 }: MinistryPickerProps) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={(selectedValue) => {
         onChange(selectedValue);

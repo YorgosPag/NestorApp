@@ -148,6 +148,8 @@ export function CoverageAreaPicker({
     onChange(next.length === 0 ? null : { adminIds: next });
   };
 
+  const legendId = React.useId();
+
   const toggleNationwide = (checked: boolean): void => {
     setAbsorption(null);
     // ⚠️ Το ξεκλείδωμα **δεν επαναφέρει** την παλιά λίστα: θα ήταν κατάσταση που ο
@@ -157,7 +159,7 @@ export function CoverageAreaPicker({
 
   return (
     <fieldset className="flex flex-col gap-2 border-0 p-0">
-      <legend className="text-sm font-medium text-foreground">
+      <legend id={legendId} className="text-sm font-medium text-foreground">
         {t(SHOWCASE_KEYS.coverageLabel)}
       </legend>
       <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_KEYS.coverageHint)}</p>
@@ -239,7 +241,9 @@ export function CoverageAreaPicker({
             </ul>
           )}
 
+          {/* Ορατό όνομα = η λεζάντα της ομάδας: το πεδίο ΠΡΟΣΘΕΤΕΙ περιοχή κάλυψης (ADR-598 G11). */}
           <AreaCombobox
+            aria-labelledby={legendId}
             value=""
             onValueChange={add}
             placeholder={t(SHOWCASE_KEYS.coverageAddPlaceholder)}

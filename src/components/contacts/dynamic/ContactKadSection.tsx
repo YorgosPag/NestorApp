@@ -15,7 +15,7 @@
  * @module components/contacts/dynamic/ContactKadSection
  */
 
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,7 @@ export function ContactKadSection({
   onChange,
 }: ContactKadSectionProps) {
   const { t } = useTranslation('forms');
+  const primaryHeadingId = useId();
   const colors = useSemanticColors();
   const { success, info, warning, showConfirmDialog } = useNotifications();
 
@@ -261,14 +262,14 @@ export function ContactKadSection({
 
   return (
     <fieldset className="space-y-6" disabled={disabled}>
-      {/* Primary KAD */}
-      <section aria-label={t('kad.primaryActivity')}>
-        <h3 className="text-sm font-semibold text-foreground mb-3">
+      {/* Primary KAD — η κεφαλίδα ονομάζει ΚΑΙ την ενότητα ΚΑΙ το πεδίο (ADR-598 G11) */}
+      <section aria-labelledby={primaryHeadingId}>
+        <h3 id={primaryHeadingId} className="text-sm font-semibold text-foreground mb-3">
           {t('kad.primaryActivity')}
         </h3>
         <KadCodePicker
+          aria-labelledby={primaryHeadingId}
           value={primary.code}
-          description={primary.description}
           disabled={disabled}
           onChange={handlePrimaryChange}
         />
@@ -307,8 +308,8 @@ export function ContactKadSection({
               <li key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-start">
                 <div className="space-y-1">
                   <KadCodePicker
+                    aria-label={t('kad.secondaryActivityItem', { position: index + 1 })}
                     value={kad.code}
-                    description={kad.description}
                     disabled={disabled}
                     onChange={(val) => void handleSecondaryChange(index, val)}
                   />

@@ -12,21 +12,17 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox';
+import { SearchableCombobox, type ComboboxOption } from '@/components/ui/searchable-combobox';
 import { Plus, Trash2 } from 'lucide-react';
 import type { CompanySetupInput, KadEntry } from '../../types';
-import type { KadCode } from '../../data/greek-kad-codes';
-import { createStaleCache } from '@/lib/stale-cache';
-
-const kadSectionCache = createStaleCache<ComboboxOption[]>('accounting-kad-options');
-
+// ΚΑΔ ως επιλογές — ΕΝΑ SSoT με μία cache, κοινό με το `shared/KadCodePicker`.
+import { useKadOptions } from '@/hooks/useKadOptions';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
@@ -55,60 +51,13 @@ function createEmptyKad(): KadEntry {
   };
 }
 
-/**
- * Convert KadCode[] to ComboboxOption[] for the SearchableCombobox.
- * Label = "code — description", value = code, secondaryLabel = description.
- */
-function kadCodesToOptions(codes: KadCode[]): ComboboxOption[] {
-  return codes.map((kad) => ({
-    value: kad.code,
-    label: `${kad.code} — ${kad.description}`,
-    secondaryLabel: kad.description,
-  }));
-}
-
-// ============================================================================
-// HOOK: Lazy-load ΚΑΔ data
-// ============================================================================
-
-function useKadOptions() {
-  const [options, setOptions] = useState<ComboboxOption[]>(kadSectionCache.get() ?? []);
-  const [isLoading, setIsLoading] = useState(!kadSectionCache.hasLoaded());
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadKadCodes() {
-      try {
-        if (!kadSectionCache.hasLoaded()) setIsLoading(true);
-        const { GREEK_KAD_CODES } = await import('../../data/greek-kad-codes');
-        if (!cancelled) {
-          const loaded = kadCodesToOptions(GREEK_KAD_CODES);
-          kadSectionCache.set(loaded);
-          setOptions(loaded);
-        }
-      } catch (error) {
-        console.error('Failed to load ΚΑΔ codes:', error);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadKadCodes();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { options, isLoading };
-}
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function KadSection({ data, onChange, errors }: KadSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const colors = useSemanticColors();
   const { options: kadOptions, isLoading: kadLoading } = useKadOptions();
 
@@ -196,8 +145,9 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
               {t('setup.mainKad')} *
             </h3>
             <div className="space-y-2">
-              <Label>{t('setup.kadCode')}</Label>
+              <Label htmlFor={`${idBase}-main`}>{t('setup.kadCode')}</Label>
               <SearchableCombobox
+                id={`${idBase}-main`}
                 value={data.mainKad.code}
                 onValueChange={handleMainKadSelect}
                 options={kadOptions}
@@ -247,8 +197,9 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
                 {data.secondaryKads.map((kad, index) => (
                   <li key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-start">
                     <div className="space-y-1">
-                      <Label>{t('setup.kadCode')}</Label>
+                      <Label htmlFor={`${idBase}-secondary-${index}`}>{t('setup.kadCode')}</Label>
                       <SearchableCombobox
+                        id={`${idBase}-secondary-${index}`}
                         value={kad.code}
                         onValueChange={(value, option) =>
                           handleSecondaryKadSelect(index, value, option)

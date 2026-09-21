@@ -18,7 +18,7 @@
  * Δύο αντίγραφα θα σήμαιναν ότι ο επαγγελματίας μπορεί να δηλώσει περιοχή που ο
  * επισκέπτης δεν μπορεί να ζητήσει — δηλαδή δήλωση που **κανείς δεν βρίσκει ποτέ**.
  *
- * ⚠️ **ΔΕΝ είναι ο `AdministrativeAddressPicker`, και δεν γίνεται να είναι.** Εκείνος
+ * ⚠️ **ΔΕΝ είναι ο επιλογέας διεύθυνσης (`AddressWithHierarchy`), και δεν γίνεται να είναι.** Εκείνος
  * γεμίζει **οκτώ βαθμίδες ταυτόχρονα** ως **μία διεύθυνση** *(«αυτό το κτίριο είναι στην
  * κοινότητα Χ, του δήμου Ψ, της ΠΕ Ζ…»)*. Εδώ ζητιέται **ένα** όνομα ως **όριο**
  * *(«δουλεύω στη Χαλκιδική»)*, και το επίπεδο το διαλέγει ο άνθρωπος. Ίδια δεδομένα,
@@ -44,7 +44,7 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import {
   ADMIN_LEVELS,
@@ -69,7 +69,7 @@ const OFFERED_LEVELS: readonly AdminLevel[] = [
   ADMIN_LEVELS.COMMUNITY,
 ];
 
-interface AreaComboboxProps {
+interface AreaComboboxOwnProps {
   /** Η επιλεγμένη ταυτότητα, ή `''` για καμία. */
   readonly value: string;
   /** `''` = καθαρίστηκε. **Πάντα** ταυτότητα του λεξιλογίου — ποτέ ελεύθερο κείμενο. */
@@ -78,6 +78,9 @@ interface AreaComboboxProps {
   readonly emptyMessage: string;
   readonly disabled?: boolean;
 }
+
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+type AreaComboboxProps = AreaComboboxOwnProps & FieldAccessibleName;
 
 /**
  * 🔒 **`allowFreeText` μένει `false`** — ίδια εγγύηση με το `OccupationSelect`: η μόνη
@@ -90,13 +93,14 @@ export function AreaCombobox({
   placeholder,
   emptyMessage,
   disabled = false,
+  ...accessibleName
 }: AreaComboboxProps): React.ReactElement {
   const { t } = useTranslation('addresses');
   const { isLoading, levelOptions } = useAdministrativeHierarchy();
 
   /**
    * ⚠️ **Δίνονται ΟΛΕΣ (~7.400) και φιλτράρει το combobox** — δεν είναι παράλειψη, είναι
-   * το **υπάρχον** ιδίωμα: ο `AdministrativeAddressPicker` δίνει ήδη **6.064** κοινότητες
+   * το **υπάρχον** ιδίωμα: ο `AddressWithHierarchy` δίνει ήδη **6.064** κοινότητες
    * σε ένα πεδίο. Το `SearchableCombobox` φιλτράρει εσωτερικά *(`filterOptions`)* με
    * `maxDisplayed`, οπότε ένα δεύτερο, δικό μας μονοπάτι αναζήτησης θα ήταν **δεύτερος
    * κριτής** για το *«ποια επιλογή εννοεί ο άνθρωπος;»* — ακριβώς ο κλώνος που το N.18
@@ -128,6 +132,7 @@ export function AreaCombobox({
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={onValueChange}
       options={options}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import {
   Dialog,
@@ -30,6 +30,7 @@ export function ManualQuoteDialog({
   vendorContactId,
 }: ManualQuoteDialogProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const router = useRouter();
 
   const [projectId, setProjectId] = useState('');
@@ -79,16 +80,17 @@ export function ManualQuoteDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label>{t('quotes.project')}</Label>
+            <Label htmlFor={`${idBase}-project`}>{t('quotes.project')}</Label>
             <POProjectSelector
+              id={`${idBase}-project`}
               value={projectId}
               onSelect={(id) => setProjectId(id)}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t('quotes.trade')}</Label>
-            <TradeSelector value={trade} onChange={setTrade} />
+            <Label htmlFor={`${idBase}-trade`}>{t('quotes.trade')}</Label>
+            <TradeSelector id={`${idBase}-trade`} value={trade} onChange={setTrade} />
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

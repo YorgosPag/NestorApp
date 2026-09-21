@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useId } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,7 @@ interface FormState {
 
 export default function ScanQuotePage() {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const router = useRouter();
   const search = useSearchParams();
   const spacing = useSpacingTokens();
@@ -156,31 +157,34 @@ export default function ScanQuotePage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>
+              <Label htmlFor={`${idBase}-project`}>
                 {t('quotes.project')}
                 <span className="ml-0.5 text-destructive">*</span>
               </Label>
               <POProjectSelector
+                id={`${idBase}-project`}
                 value={form.projectId}
                 onSelect={(id) => setForm((prev) => ({ ...prev, projectId: id }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>
+              <Label htmlFor={`${idBase}-vendor`}>
                 {t('quotes.vendor')}
                 <span className="ml-0.5 text-destructive">*</span>
               </Label>
               <POSupplierSelector
+                id={`${idBase}-vendor`}
                 value={form.vendorContactId}
                 onSelect={(id) => setForm((prev) => ({ ...prev, vendorContactId: id }))}
               />
             </div>
             <div className="col-span-full space-y-1.5">
-              <Label>
+              <Label htmlFor={`${idBase}-trade`}>
                 {t('quotes.trade')}
                 <span className="ml-0.5 text-destructive">*</span>
               </Label>
               <TradeSelector
+                id={`${idBase}-trade`}
                 value={form.trade}
                 onChange={(code) => setForm((prev) => ({ ...prev, trade: code }))}
               />

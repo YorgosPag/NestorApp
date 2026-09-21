@@ -7,12 +7,12 @@
  */
 
 import React, { useCallback } from 'react';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { usePublicServiceRegistry } from '@/hooks/usePublicServiceRegistry';
 import { useTranslation } from 'react-i18next';
 
-interface PublicServicePickerProps {
+interface PublicServicePickerOwnProps {
   /** Current service name value */
   value: string;
   /** Whether the field is disabled */
@@ -27,11 +27,15 @@ interface PublicServicePickerProps {
   }) => void;
 }
 
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+type PublicServicePickerProps = PublicServicePickerOwnProps & FieldAccessibleName;
+
 export function PublicServicePicker({
   value,
   disabled = false,
   onNameChange,
-  onEntitySelected
+  onEntitySelected,
+  ...accessibleName
 }: PublicServicePickerProps) {
   const { options, findByName, isLoading } = usePublicServiceRegistry();
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
@@ -54,6 +58,7 @@ export function PublicServicePicker({
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={handleValueChange}
       options={options}

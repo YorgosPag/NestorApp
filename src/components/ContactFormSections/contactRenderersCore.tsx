@@ -29,6 +29,8 @@ const logger = createModuleLogger('ContactRenderers');
 
 /** Custom renderer field interface */
 export interface CustomRendererField {
+  /** Το `id` του descriptor — ίδιο με το `<Label htmlFor>` που αποδίδει ο renderer της φόρμας. */
+  id: string;
   name: string;
   type?: string;
   label?: string;
@@ -70,7 +72,7 @@ export type RendererFn = (
 ) => React.ReactNode;
 
 /**
- * Προσαρμογέας για renderer που χρειάζεται **ΜΟΝΟ** το `fieldDisabled`.
+ * Προσαρμογέας για renderer που χρειάζεται **ΜΟΝΟ** το `fieldDisabled` και το `field.id`.
  *
  * Οι picker renderers (`communication` · `taxOffice` εδώ, `profession` · `employer` ·
  * `skills` · `name` · `supervisionMinistry` στο `contactRenderersTyped`) διαβάζουν το
@@ -79,17 +81,21 @@ export type RendererFn = (
  * (jscpd, token-based) μετρούσε ως κλώνους του ίδιου μπλοκ. Ζούσε τοπικά στο
  * `contactRenderersTyped`· ανέβηκε εδώ ώστε να είναι **ένα** και για τα δύο αρχεία.
  *
- * ⚠️ **ΜΗΝ το κάνεις γενικό «προσαρμογέα με options»**: η μόνη παράμετρος που
- * καταναλώνεται πραγματικά είναι το `fieldDisabled`. Ένας προσαρμογέας που
- * δέχεται και τις πέντε θα ήταν η **ίδια boilerplate με άλλο όνομα**.
+ * 🔑 **Το `fieldId` είναι το ΟΝΟΜΑ του πεδίου** (ADR-598 G11): ο renderer της φόρμας
+ * αποδίδει ήδη `<Label htmlFor={field.id}>`· ο picker που δεν δίνει `id={fieldId}` στο
+ * χειριστήριό του αφήνει την ετικέτα **κρεμασμένη** και το combobox **ανώνυμο**.
+ *
+ * ⚠️ **ΜΗΝ το κάνεις γενικό «προσαρμογέα με options»**: οι μόνες παράμετροι που
+ * καταναλώνονται πραγματικά είναι το `fieldDisabled` και το `field.id`. Ένας
+ * προσαρμογέας που δέχεται και τις πέντε θα ήταν η **ίδια boilerplate με άλλο όνομα**.
  *
  * ⚠️ Οι παράμετροι **δεν** φέρουν ρητούς τύπους: τους δίνει το contextual typing
  * από το `: RendererFn` της επιστροφής.
  */
-export const disabledOnly =
-  (render: (fieldDisabled: boolean) => React.ReactNode): RendererFn =>
-  (_field, _fieldFormData, _onChange, _onSelectChange, fieldDisabled) =>
-    render(fieldDisabled);
+export const pickerRenderer =
+  (render: (fieldDisabled: boolean, fieldId: string) => React.ReactNode): RendererFn =>
+  (field, _fieldFormData, _onChange, _onSelectChange, fieldDisabled) =>
+    render(fieldDisabled, field.id);
 
 /**
  * Build core custom renderers shared across all contact types.
@@ -112,7 +118,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
 
   return {
     // ── Communication ──────────────────────────────────────────
-    communication: disabledOnly((fieldDisabled) => (
+    communication: pickerRenderer((fieldDisabled) => (
       <div className="w-full max-w-none min-w-full col-span-full">
         <DynamicContactArrays
           phones={formData.phones || []}
@@ -145,8 +151,9 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
     ),
 
     // ── Tax Office (DOY) ───────────────────────────────────────
-    taxOffice: disabledOnly((fieldDisabled) => (
+    taxOffice: pickerRenderer((fieldDisabled, fieldId) => (
       <DoyPicker
+        id={fieldId}
         value={formData.taxOffice ?? ''}
         onValueChange={(value) => handleSelectChange('taxOffice', value)}
         disabled={fieldDisabled ?? disabled}

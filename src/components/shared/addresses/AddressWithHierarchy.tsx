@@ -9,15 +9,16 @@
  * 2. Collapsible Greek administrative hierarchy (toggle): Community, Municipal Unit,
  *    Municipality, Regional Unit, Region
  *
- * Uses the same hierarchy data as AdministrativeAddressPicker, but reorganized
- * to eliminate field duplication (settlement + postal code appear only in Section 1).
+ * The ONE administrative-address picker: its dead twin `AdministrativeAddressPicker`
+ * (0 consumers) was deleted 2026-09-21 (ADR-598 G11 «(δ)», CHECK 3.22). Settlement +
+ * postal code appear only in Section 1 (no field duplication).
  *
  * For non-Greek addresses: the hierarchy section is simply not expanded.
  *
  * @module components/shared/addresses/AddressWithHierarchy
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useId, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -87,6 +88,8 @@ export function AddressWithHierarchy({
 }: AddressWithHierarchyProps) {
   const { isLoading, resolvePath, levelOptions } = useAdministrativeHierarchy();
   const { t } = useTranslation('addresses');
+  // `${idBase}-<πεδίο>`: κάθε <Label> ονομάζει το πεδίο της (ADR-598 G11).
+  const idBase = useId();
   const colors = useSemanticColors();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
   const editorCtx = React.useContext(AddressEditorContext);
@@ -241,12 +244,13 @@ export function AddressWithHierarchy({
         {showStreetFields && (
           <div className={addressFieldGroup}>
             <fieldset className={cn(addressFieldCellWide, "space-y-1")}>
-              <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.street')}</Label>
+              <Label htmlFor={`${idBase}-street`} className={cn("text-xs font-medium", colors.text.muted)}>{t('form.street')}</Label>
               <AddressFieldControlRow
                 field="street"
                 badge={fieldStatus && <AddressFieldBadge status={fieldStatus.street} />}
               >
                 <Input
+                  id={`${idBase}-street`}
                   data-address-field="street"
                   value={current.street}
                   onChange={e => handleBasicChange('street', e.target.value)}
@@ -256,12 +260,13 @@ export function AddressWithHierarchy({
               </AddressFieldControlRow>
             </fieldset>
             <fieldset className={cn(addressFieldCell, "space-y-1")}>
-              <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.number')}</Label>
+              <Label htmlFor={`${idBase}-number`} className={cn("text-xs font-medium", colors.text.muted)}>{t('form.number')}</Label>
               <AddressFieldControlRow
                 field="number"
                 badge={fieldStatus && <AddressFieldBadge status={fieldStatus.number} />}
               >
                 <Input
+                  id={`${idBase}-number`}
                   data-address-field="number"
                   value={current.number}
                   onChange={e => handleBasicChange('number', e.target.value)}
@@ -276,7 +281,7 @@ export function AddressWithHierarchy({
         {/* Row 2: Postal Code + Settlement / City (same line) */}
         <div className={addressFieldGroup}>
           <fieldset className={cn(addressFieldCell, "space-y-1")}>
-            <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.postalCode')}</Label>
+            <Label htmlFor={`${idBase}-postalCode`} className={cn("text-xs font-medium", colors.text.muted)}>{t('form.postalCode')}</Label>
             <AddressFieldControlRow
               field="postalCode"
               badge={fieldStatus && <AddressFieldBadge status={fieldStatus.postalCode} />}
@@ -284,6 +289,7 @@ export function AddressWithHierarchy({
               {/* Μάσκα εμφάνισης: το μοντέλο κρατά «54624», η οθόνη δείχνει
                   «546 24» (ADR-332 D16). Σε ξένη διεύθυνση περνά αυτούσιο. */}
               <Input
+                id={`${idBase}-postalCode`}
                 data-address-field="postalCode"
                 value={isGreekAddress ? formatGreekPostalCode(current.postalCode) : current.postalCode}
                 onChange={e => handleBasicChange('postalCode', e.target.value)}
@@ -295,7 +301,7 @@ export function AddressWithHierarchy({
             </AddressFieldControlRow>
           </fieldset>
           <fieldset className={cn(addressFieldCellWide, "space-y-1")}>
-            <Label className={cn("text-xs font-medium", colors.text.muted)}>
+            <Label htmlFor={`${idBase}-city`} className={cn("text-xs font-medium", colors.text.muted)}>
               {t('hierarchy.settlementCity')}
             </Label>
             <AddressFieldControlRow
@@ -303,6 +309,7 @@ export function AddressWithHierarchy({
               badge={fieldStatus && <AddressFieldBadge status={fieldStatus.city} />}
             >
               <SearchableCombobox
+                id={`${idBase}-city`}
                 value={current.settlementName}
                 onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
                 options={settlementOptions}
@@ -318,8 +325,9 @@ export function AddressWithHierarchy({
         </div>
         {/* Row 3: Country */}
         <fieldset className="space-y-1">
-          <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
+          <Label htmlFor={`${idBase}-country`} className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
           <SearchableCombobox
+            id={`${idBase}-country`}
             value={countryDisplay}
             onValueChange={handleCountryChange}
             options={countryOptions}
@@ -352,7 +360,7 @@ export function AddressWithHierarchy({
         {isHierarchyOpen && (
           /* catalog-exempt: πεδία φόρμας διοικητικής ιεραρχίας (ετικέτα + συνδυαστικό πλαίσιο),
              όχι κάρτες. Το πλάτος του πεδίου το ορίζει η φόρμα και το ζευγάρωμα ετικέτας-πεδίου,
-             όχι δηλωμένο δάπεδο κάρτας — ίδια απόφαση με το `AdministrativeAddressPicker`. */
+             όχι δηλωμένο δάπεδο κάρτας. */
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200">
             {visibleFields.map(field => {
               const currentName = current[field.nameField] as string;
@@ -360,10 +368,11 @@ export function AddressWithHierarchy({
               const isAutoFilled = currentId !== null;
               return (
                 <fieldset key={field.level} className="space-y-1">
-                  <label className={cn("text-xs font-medium", colors.text.muted)}>
+                  <label htmlFor={`${idBase}-${field.level}`} className={cn("text-xs font-medium", colors.text.muted)}>
                     {t(field.labelKey)}
                   </label>
                   <SearchableCombobox
+                    id={`${idBase}-${field.level}`}
                     value={currentName}
                     onValueChange={(newValue, option) =>
                       handleHierarchyChange(field.level, newValue, option)

@@ -8,7 +8,8 @@
  * - Single Click: Zoom to Fit (all entities)
  * - Double Click: Zoom 100% (1:1 scale)
  * - Ctrl+Click: Zoom Previous (history)
- * - Right Click: Context Menu with zoom options
+ * - Right Click / ArrowDown / Shift+F10: zoom menu (APG menu button with a default action —
+ *   click stays Zoom to Fit, the menu is the secondary path; ADR-598 G11)
  * - Scroll Wheel: Quick zoom in/out
  * - Hover: Tooltip with instructions
  * - Keyboard: F=Fit, 0=100%, +/- zoom (when focused)
@@ -18,7 +19,7 @@
  * @see ADR-009 in docs/centralized-systems/reference/adr-index.md
  */
 
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import {
   Tooltip,
@@ -27,10 +28,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from '@/components/ui/popover';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import styles from './RulerCornerBox.module.css';
 // 🏢 ADR-098: Centralized Timing Constants (Double-Click Window)
@@ -46,7 +51,8 @@ import {
 } from '../../ui/icons/MenuIcons';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf hook + ratio presets SSoT
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
-import { VIEW_SCALE_MENU_PRESETS, isViewRatioActive } from '../../utils/view-scale';
+// ADR-598 G11: presets = ONE `menuitemradio` group (shared with ZoomControls)
+import { ViewScalePresetRadioItems } from '../../ui/components/ViewScalePresetRadioItems';
 
 // ===== TYPES =====
 
@@ -102,33 +108,22 @@ function ZoomDisplayLeaf({
   return <span className={styles.zoomLevel} aria-live="polite">{label}</span>;
 }
 
-// 🏢 ADR-418: renders 1:N preset buttons with correct active state.
-// Radix lazy-renders PopoverContent → this leaf only runs when popover is open.
-function ZoomPresetButtons({
+// 🏢 ADR-418: the 1:N presets with the real active scale (`aria-checked`).
+// Radix lazy-renders DropdownMenuContent → this leaf only subscribes while the menu is open.
+function ZoomPresetRadioLeaf({
   onZoomToRatio,
-  closeMenu,
+  labelledBy,
 }: {
   onZoomToRatio: (ratioN: number) => void;
-  closeMenu: () => void;
+  labelledBy: string;
 }) {
   const { ratioN } = useViewScale();
   return (
-    <>
-      {VIEW_SCALE_MENU_PRESETS.map((presetN) => {
-        const active = isViewRatioActive(ratioN, presetN);
-        return (
-          <button
-            key={presetN}
-            type="button"
-            className={cn(styles.zoomPresetButton, active && styles.active)}
-            onClick={() => { onZoomToRatio(presetN); closeMenu(); }}
-            aria-pressed={active}
-          >
-            {`1:${presetN}`}
-          </button>
-        );
-      })}
-    </>
+    <ViewScalePresetRadioItems
+      currentRatioN={ratioN}
+      onSelectPreset={onZoomToRatio}
+      aria-labelledby={labelledBy}
+    />
   );
 }
 
@@ -154,7 +149,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
   showUnits,
 }: RulerCornerBoxProps) {
   const { t } = useTranslation('dxf-viewer-panels');
-  // No useViewScale() here — zoom-reactive rendering pushed to ZoomDisplayLeaf + ZoomPresetButtons.
+  // No useViewScale() here — zoom-reactive rendering pushed to ZoomDisplayLeaf + ZoomPresetRadioLeaf.
   // React.memo on this component now works for zoom too (only re-renders on prop/state change).
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const lastClickRef = useRef<number>(0);
@@ -167,7 +162,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
     [t],
   );
 
-  const closeMenu = useCallback(() => setIsMenuOpen(false), []);
+  const presetsLabelId = useId();
 
   // ===== CLICK HANDLERS =====
 
@@ -286,19 +281,23 @@ const RulerCornerBox = memo(function RulerCornerBox({
     </section>
   ), [t]);
 
-  const handlePopoverOpenChange = useCallback((open: boolean) => {
-    if (!open) setIsMenuOpen(false);
+  // Split button: the Radix trigger opens on left `pointerdown`, but here the left click IS
+  // Zoom to Fit. `preventDefault` makes Radix skip its handler (composeEventHandlers); the
+  // `click` still fires. Enter/Space are already prevented in `handleKeyDown`, so only
+  // ArrowDown (Radix) and the context-menu path (right click, Shift+F10, Menu key) open it.
+  const suppressTriggerPointerToggle = useCallback((e: React.PointerEvent) => {
+    if (e.button === 0) e.preventDefault();
   }, []);
 
   // ===== RENDER =====
-  // PopoverAnchor wraps the button: positions the PopoverContent without adding click handlers.
-  // Tooltip wraps the same button for hover behavior — both use the same anchor element.
+  // DropdownMenuTrigger wraps the button (menu-button semantics: aria-haspopup/expanded/controls
+  // come from Radix). Tooltip wraps the same button for hover behavior.
 
   return (
     <TooltipProvider delayDuration={500}>
-    <Popover open={isMenuOpen} onOpenChange={handlePopoverOpenChange}>
+    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <Tooltip>
-        <PopoverAnchor asChild>
+        <DropdownMenuTrigger asChild>
           <TooltipTrigger asChild>
             <button
               ref={buttonRef}
@@ -314,12 +313,11 @@ const RulerCornerBox = memo(function RulerCornerBox({
                 color: textColor,
               }}
               onClick={handleClick}
+              onPointerDown={suppressTriggerPointerToggle}
               onContextMenu={handleContextMenu}
               onWheel={handleWheel}
               onKeyDown={handleKeyDown}
               aria-label={t('rulerCornerBox.aria.viewScale', { scale: '1:1' })}
-              aria-haspopup="menu"
-              aria-expanded={isMenuOpen}
               tabIndex={0}
             >
               <div className={styles.content}>
@@ -337,64 +335,55 @@ const RulerCornerBox = memo(function RulerCornerBox({
               </span>
             </button>
           </TooltipTrigger>
-        </PopoverAnchor>
+        </DropdownMenuTrigger>
 
         <TooltipContent side="right" sideOffset={8}>
           {tooltipContent}
         </TooltipContent>
       </Tooltip>
 
-      {/* Anchor-only ⇒ όνομα ρητό (ADR-598 G11). ⚠️ Τα `menuitem` ΧΩΡΙΣ `menu` είναι γνωστό
-          ελάττωμα → μετάβαση σε `DropdownMenu` (pending-ratchet-work). */}
-      <PopoverContent
-        aria-label={t('rulerCornerBox.tooltip.zoomMenu')}
+      <DropdownMenuContent
         side="right"
         align="end"
         sideOffset={8}
         alignOffset={80}
         className={`${styles.menuContent} z-[var(--z-index-tooltip)]`}
-        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomToFit(); closeMenu(); }}>
-          <span className={styles.menuItemIcon}><FitIcon /></span>
-          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoomToFit')}</span>
-          <span className={styles.menuItemShortcut}>F</span>
-        </button>
+        <DropdownMenuItem onSelect={onZoomToFit}>
+          <span className={styles.menuItemIcon} aria-hidden><FitIcon /></span>
+          {t('rulerCornerBox.menu.zoomToFit')}
+          <DropdownMenuShortcut>F</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onZoomActualSize}>
+          <span className={styles.menuItemIcon} aria-hidden><Zoom100Icon /></span>
+          {t('rulerCornerBox.menu.actualSize')}
+          <DropdownMenuShortcut>0</DropdownMenuShortcut>
+        </DropdownMenuItem>
 
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomActualSize(); closeMenu(); }}>
-          <span className={styles.menuItemIcon}><Zoom100Icon /></span>
-          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.actualSize')}</span>
-          <span className={styles.menuItemShortcut}>0</span>
-        </button>
+        <DropdownMenuSeparator />
 
-        <div role="separator" className={styles.menuSeparator} />
+        <DropdownMenuItem onSelect={onZoomIn}>
+          <span className={styles.menuItemIcon} aria-hidden><ZoomInIcon /></span>
+          {t('rulerCornerBox.menu.zoomIn')}
+          <DropdownMenuShortcut>+</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onZoomOut}>
+          <span className={styles.menuItemIcon} aria-hidden><ZoomOutIcon /></span>
+          {t('rulerCornerBox.menu.zoomOut')}
+          <DropdownMenuShortcut>-</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onZoomPrevious}>
+          <span className={styles.menuItemIcon} aria-hidden><HistoryIcon /></span>
+          {t('rulerCornerBox.menu.previousView')}
+          <DropdownMenuShortcut>P</DropdownMenuShortcut>
+        </DropdownMenuItem>
 
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomIn(); closeMenu(); }}>
-          <span className={styles.menuItemIcon}><ZoomInIcon /></span>
-          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoomIn')}</span>
-          <span className={styles.menuItemShortcut}>+</span>
-        </button>
+        <DropdownMenuSeparator />
 
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomOut(); closeMenu(); }}>
-          <span className={styles.menuItemIcon}><ZoomOutIcon /></span>
-          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoomOut')}</span>
-          <span className={styles.menuItemShortcut}>-</span>
-        </button>
-
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomPrevious(); closeMenu(); }}>
-          <span className={styles.menuItemIcon}><HistoryIcon /></span>
-          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.previousView')}</span>
-          <span className={styles.menuItemShortcut}>P</span>
-        </button>
-
-        <div role="separator" className={styles.menuSeparator} />
-
-        <div className={styles.menuSection}>{t('rulerCornerBox.menu.viewScalePresets')}</div>
-        <nav className={styles.zoomPresets} aria-label={t('rulerCornerBox.aria.viewScalePresets')}>
-          <ZoomPresetButtons onZoomToRatio={onZoomToRatio} closeMenu={closeMenu} />
-        </nav>
-      </PopoverContent>
-    </Popover>
+        <DropdownMenuLabel id={presetsLabelId}>{t('rulerCornerBox.menu.viewScalePresets')}</DropdownMenuLabel>
+        <ZoomPresetRadioLeaf onZoomToRatio={onZoomToRatio} labelledBy={presetsLabelId} />
+      </DropdownMenuContent>
+    </DropdownMenu>
     </TooltipProvider>
   );
 });

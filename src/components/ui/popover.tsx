@@ -4,6 +4,7 @@ import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
+import type { ExplicitAccessibleName } from '@/lib/a11y/accessible-name'
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useDropdownTokens } from '@/hooks/useDropdownTokens'
 import { componentSizes } from '@/styles/design-tokens'
@@ -96,8 +97,7 @@ const PopoverAnchor = PopoverPrimitive.Anchor
 
 /** Ρητό όνομα διαλόγου: **ένα** από τα δύο, ή κανένα (⇒ το όνομα του trigger). */
 type PopoverDialogName =
-  | { readonly 'aria-label': string; readonly 'aria-labelledby'?: never }
-  | { readonly 'aria-labelledby': string; readonly 'aria-label'?: never }
+  | ExplicitAccessibleName
   | { readonly 'aria-label'?: undefined; readonly 'aria-labelledby'?: undefined }
 
 /** Η σημασιολογία του δοχείου: διάλογος με όνομα, ή ουδέτερος φορέας άλλου popup. */

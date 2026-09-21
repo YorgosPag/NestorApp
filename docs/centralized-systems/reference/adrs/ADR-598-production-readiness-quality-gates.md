@@ -637,3 +637,63 @@ listbox, όπως ο `searchable-combobox`) · `RulerCornerBox` → «Μενού
 
 🔴 **Ανοιχτό, στο `pending-ratchet-work`**: ~17 καταναλωτές του `SearchableCombobox` δεν του δίνουν
 όνομα. Το SSoT το δέχεται πλέον, αλλά αυτοί δεν το περνούν ακόμα. Πρόταση: υποχρεωτικό από τον τύπο.
+
+### 2026-09-21 (δ) — G11: **κανένα `SearchableCombobox` χωρίς όνομα** — ο τύπος το απαιτεί, το DOM το επαληθεύει
+
+**Μέτρηση πρώτα**: 18 αρχεία / ~27 σημεία / 6 τομείς αποδίδαν `role="combobox"` **χωρίς όνομα**, και
+δύο ορατές ετικέτες έδειχναν με `htmlFor` σε `id` που **δεν αποδιδόταν ποτέ** (`fwa-vendor`,
+`customerTaxOffice`).
+
+| Πρότυπο | Τι κάνει | Εδώ |
+|---|---|---|
+| React Aria `useLabel` | `label` ή `aria-label`/`-labelledby`, αλλιώς **runtime** προειδοποίηση | ✅ και καλύτερα: **σφάλμα μεταγλώττισης** |
+| Fluent `Field` / MUI `InputLabel` | η ετικέτα δείχνει στο `id` του control | ✅ `id` + `<Label htmlFor>` είναι ο προτιμώμενος δρόμος |
+| — (κανείς τους) | ελέγχει ότι το `id` **έχει** ετικέτα | ✅ **φύλακας εκτέλεσης** στο πραγματικό DOM |
+
+**Η λύση — τρία εργαλεία για τρεις ερωτήσεις:**
+1. **«Δήλωσε όνομα;» → ο τύπος.** Νέο SSoT `src/lib/a11y/accessible-name.ts`: `ExplicitAccessibleName` (ακριβώς ένα από
+   `aria-label` / `aria-labelledby`) και `FieldAccessibleName` (+ σκέτο `id`). Το πρώτο **αντικατέστησε δύο αντίγραφα**
+   (`AnchoredPopoverName`, `PopoverDialogName`). `SearchableComboboxProps = Base & FieldAccessibleName`.
+   Οι 9 wrappers (`DoyPicker`, `KadCodePicker`, `MinistryPicker`, `PublicServicePicker`, `AreaCombobox`, `TradeSelector`,
+   `PO{Project,Supplier,Building}Selector`) δηλώνουν `Own & FieldAccessibleName` και **προωθούν** (`...accessibleName`).
+2. **«Το όνομα ΥΠΑΡΧΕΙ;» → το DOM.** `findMissingAccessibleName(input)` (`input.labels`, **κάθε** στόχος του
+   `aria-labelledby`, μη κενό `aria-label`). Ο combobox το ρωτά μετά το mount, εκτός production, και κάνει `console.error`
+   (δεν πετά· πρότυπο `select.tsx` / `base-tabs.tsx`).
+3. **«Και όπου δεν φτάνει ο tsc;» → φρουρά AST** `ui/__tests__/combobox-naming.test.ts` σε **όλο** το `src/` (και το
+   `dxf-viewer`, εκτός root tsconfig). Οι wrappers βρίσκονται **από τον τύπο των props τους**, όχι από λίστα· και η φρουρά
+   αποτυγχάνει αν ελέγξει <20 αρχεία ή δεν βρει τους γνωστούς wrappers («0 = κανείς δεν κοίταξε»).
+
+**Καταναλωτές**, με σειρά προτίμησης (WCAG 2.5.3): ορατή ετικέτα ⇒ `useId` + `htmlFor` · ορατό κείμενο που δεν είναι
+`<label>` (legend, `h3`) ⇒ `aria-labelledby` · τίποτα ορατό (κελιά πίνακα, γραμμή προσθήκης) ⇒ `aria-label` με το
+κλειδί της κεφαλίδας. Φόρμες επαφών: το `disabledOnly` έγινε **`pickerRenderer`** και δίνει και το `field.id` που ο
+renderer ήδη βάζει στο `<Label htmlFor>`. Boy Scout στα ίδια σημεία: τα ανώνυμα `Input` των `AddressWithHierarchy`
+(οδός/αριθμός/Τ.Κ.), `RfqBuilder` και `RfqLinesPanel` (+ εικονίδιο διαγραφής).
+
+⚠️ **Διορθωμένη υπόθεση, μετρημένη**: έγραψα αρχικά ότι το `<label>` που **περιτυλίγει** το combobox βάζει τα ×/▾ στο
+όνομα. **Ψευδές**: το test έδειξε σωστό όνομα. Αληθές, και ανακαλύφθηκε με το ίδιο test: όταν μέσα στην ετικέτα ζει
+**υπαινιγμός** (`AgencyDirectoryFilters` → `WhereHint`), μπαίνει **ολόκληρος** στο όνομα. Τα σχόλια λένε το μετρημένο.
+
+**Κλώνοι που φάνηκαν όταν τα αρχεία άλλαξαν μαζί (CHECK 3.28) — προϋπάρχοντες, οι μικροί λύθηκαν εδώ (N.0.2):**
+`src/hooks/useKadOptions.ts` (ο ίδιος hook ΚΑΔ ×2, **δύο** caches) · `accounting/utils/contact-party.ts` +
+`accounting/hooks/useContactAutoFill.ts` (mapping επαφής ×3 και handler ×2 — ο χρονιστής του μηνύματος **δεν
+καθαριζόταν** σε unmount / νέα επιλογή· τώρα ναι) · `supplierContactsToOptions` στο `usePOSupplierContacts` (×3).
+Μένουν 8 προϋπάρχοντα ζεύγη procurement → `pending-ratchet-work`.
+**Διαγράφηκε το `AdministrativeAddressPicker`** (CHECK 3.22 στο commit): 0 καταναλωτές, νεκρό δίδυμο του
+`AddressWithHierarchy` (ADR-772 §9 το έγραφε ήδη «ακριβές δίδυμο»). Οι εγγραφές του αφαιρέθηκαν **χειροκίνητα** από τις
+`.deadcode-` / `.address-vocabulary-` / `.catalog-columns-baseline.json` (ratchet προς τα κάτω, μαζί με τους μετρητές τους·
+**όχι** αναπαραγωγή)· το `address-vocabulary-gate.test.js` μετρά πλέον τρία γνωστά αντί για τέσσερα.
+
+| Απόδειξη | |
+|---|---|
+| `searchable-combobox-naming.test.tsx` | όνομα από κάθε δρόμο · φύλακας: κρεμασμένο `id`, λάθος `htmlFor`, φάντασμα `aria-labelledby` · πίνακας `findMissingAccessibleName` · περιτύλιξη μετρημένη |
+| `combobox-naming.test.ts` | fixtures + όλο το `src/`: **0** ανώνυμα |
+| `contact-party.test.ts` · `useContactAutoFill.test.tsx` | 9/9 (χρονιστής: νέα επιλογή, unmount) |
+| Μεταλλάξεις | **6/6** κόκκινες: καταναλωτής χωρίς όνομα · wrapper χωρίς forwarding · φύλακας σβηστός · καταστολή pointerdown (Γ) · ενεργή κλίμακα (Γ) · cleanup χρονιστή |
+| Παλινδρόμηση | 37 σουίτες / 318 tests |
+
+➡️ **Γ ίδια μέρα**: `RulerCornerBox` → `DropdownMenu` (λεπτομέρειες ADR-418 changelog). Νέο κοινό leaf
+`ui/components/ViewScalePresetRadioItems.tsx` — οι κλίμακες ως **`menuitemradio` + `aria-checked`**, κοινό με το
+`ZoomControls` (που τις έδειχνε με ✓ μόνο οπτικά). Test: `RulerCornerBox.a11y.test.tsx` (7 tests· χρειάστηκε polyfill
+`PointerEvent` — χωρίς αυτό η μετάλλαξη της καταστολής **επέζησε**).
+
+⛔ Καμία επανασπορά baseline.

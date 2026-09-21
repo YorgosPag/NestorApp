@@ -130,10 +130,11 @@ describe('Μ0 — το ζωντανό δέντρο', () => {
     ]);
   });
 
-  it('το ΖΩΝΤΑΝΟ δέντρο βρίσκει ακριβώς τα τέσσερα γνωστά, ονομαστικά', () => {
+  // 2026-09-21: τέσσερα → τρία — το `AdministrativeAddressPicker` (νεκρό δίδυμο του
+  // `AddressWithHierarchy`, 0 καταναλωτές) διαγράφηκε (ADR-598 G11 «(δ)», CHECK 3.22).
+  it('το ΖΩΝΤΑΝΟ δέντρο βρίσκει ακριβώς τα τρία γνωστά, ονομαστικά', () => {
     const baseline = JSON.parse(fs.readFileSync(gate.baselineFile(), 'utf8'));
     expect(baseline.violations).toEqual([
-      'unregistered-vocabulary::src/components/contacts/pickers/AdministrativeAddressPicker.tsx::AdministrativeAddress',
       'unregistered-vocabulary::src/components/contacts/relationships/hooks/useDerivedWorkAddresses.ts::DerivedWorkAddress',
       'unregistered-vocabulary::src/types/ContactFormTypes.ts::ContactFormData',
       'unregistered-vocabulary::src/types/ContactFormTypes.ts::IndividualAddress',

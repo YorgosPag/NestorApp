@@ -22,6 +22,7 @@ const OPTIONS: ComboboxOption[] = [
 function renderCombobox(value: string, onValueChange = jest.fn()) {
   const utils = render(
     <SearchableCombobox
+      aria-label="Πόλη"
       value={value}
       onValueChange={onValueChange}
       options={OPTIONS}

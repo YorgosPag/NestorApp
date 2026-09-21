@@ -2,7 +2,6 @@
   "generated": "2026-09-10T00:00:00.000Z",
   "knipVersion": "6",
   "files": [
-    "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
     "src/services/security/EnterpriseSecurityService.ts",
@@ -13,5 +12,5 @@
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 10
+  "fileCount": 9
 }

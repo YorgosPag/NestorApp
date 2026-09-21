@@ -10,7 +10,7 @@ import type { EmployerPickerValue } from '@/components/shared/EmployerPicker';
 import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
-import { disabledOnly, type RendererContext, type RendererFn } from './contactRenderersCore';
+import { pickerRenderer, type RendererContext, type RendererFn } from './contactRenderersCore';
 import '@/lib/design-system';
 
 
@@ -23,7 +23,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
   const { formData, setFormData, t } = ctx;
 
   return {
-    profession: disabledOnly((fieldDisabled) => (
+    profession: pickerRenderer((fieldDisabled) => (
       <EscoOccupationPicker
         value={formData.profession ?? ''}
         escoUri={formData.escoUri ?? undefined}
@@ -43,7 +43,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
       />
     )),
 
-    employer: disabledOnly((fieldDisabled) => (
+    employer: pickerRenderer((fieldDisabled) => (
       <EmployerPicker
         value={formData.employer ?? ''}
         employerId={formData.employerId ?? undefined}
@@ -60,7 +60,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
       />
     )),
 
-    skills: disabledOnly((fieldDisabled) => (
+    skills: pickerRenderer((fieldDisabled) => (
       <EscoSkillPicker
         value={formData.escoSkills ?? []}
         disabled={fieldDisabled}
@@ -104,8 +104,9 @@ export function buildServiceRenderers(ctx: RendererContext): Record<string, Rend
   const { formData, setFormData } = ctx;
 
   return {
-    name: disabledOnly((fieldDisabled) => (
+    name: pickerRenderer((fieldDisabled, fieldId) => (
       <PublicServicePicker
+        id={fieldId}
         value={(formData.name as string) ?? ''}
         disabled={fieldDisabled}
         onNameChange={(name: string) => { if (setFormData) setFormData({ ...formData, name }); }}
@@ -115,8 +116,9 @@ export function buildServiceRenderers(ctx: RendererContext): Record<string, Rend
       />
     )),
 
-    supervisionMinistry: disabledOnly((fieldDisabled) => (
+    supervisionMinistry: pickerRenderer((fieldDisabled, fieldId) => (
       <MinistryPicker
+        id={fieldId}
         value={formData.supervisionMinistry ?? ''}
         disabled={fieldDisabled}
         onChange={(name: string) => { if (setFormData) setFormData({ ...formData, supervisionMinistry: name }); }}

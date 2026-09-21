@@ -12,7 +12,31 @@
   `'delivery.state': 'seen'`, και το `config` παράγεται από τον έναν τύπο. Ο κριτής ανάγνωσης είναι ήδη ένας
   (`lib/notifications/notification-state.ts`). ⚠️ Ο άλλος agent δουλεύει στον τομέα ειδοποιήσεων — συντονισμός πριν.
 
+- 🟠 **21/09 — 8 ΠΡΟΫΠΑΡΧΟΝΤΑ ΔΙΔΥΜΑ ΣΤΟ PROCUREMENT (CHECK 3.28 τα βλέπει όταν αλλάζουν ΜΑΖΙ)** *(N.18 · ADR-584)*
+
+  Φάνηκαν στην εργασία ονομάτων των combobox (ADR-598 «(δ)»)· **υπήρχαν ήδη στο HEAD** (μετρημένο: 7 κλώνοι
+  `QuoteForm`↔`RfqBuilder` μόνο εκεί). `FrameworkAgreementFormDialog`↔`MaterialFormDialog` (σκελετός διαλόγου:
+  κατάσταση φόρμας/`useEffect` ανοίγματος + footer ακύρωση/αποθήκευση, 2 ζεύγη) · `QuoteForm`↔`RfqBuilder`
+  (γραμμή πίνακα + διάταξη φόρμας, 5 ζεύγη) · `PurchaseOrderForm`↔`RfqBuilder` (μπλοκ imports). Διόρθωση: κοινό
+  `ProcurementFormDialog` (σκελετός + footer) και κοινό leaf γραμμής RFQ/προσφοράς. >1h, 5 αρχεία.
+  ⚠️ **Μέχρι τότε**: αρχεία του ίδιου ζεύγους **δεν** μπαίνουν στο ίδιο commit, αλλιώς το 3.28 μπλοκάρει. Διαμέριση που
+  δουλεύει: {`FrameworkAgreementFormDialog`, `RfqBuilder`} σε ένα commit, {`MaterialFormDialog`, `PurchaseOrderForm`,
+  `QuoteForm`} σε άλλο.
+
+- 🟡 **21/09 — `<Label>` ΧΩΡΙΣ `htmlFor` ΣΤΙΣ ΦΟΡΜΕΣ PROCUREMENT** *(ADR-598 G11)*
+
+  Τα combobox τους συνδέθηκαν (21/09)· τα **απλά** `Input`/`Select` των ίδιων φορμών (`PurchaseOrderForm`, `QuoteForm`,
+  `RfqBuilder`, `ManualQuoteDialog`, `quotes/scan`) έχουν ακόμα ορατή ετικέτα **χωρίς** σύνδεση ⇒ ανώνυμα. Ίδιο μοτίβο:
+  `useId` + `htmlFor`. ⚠️ Καμία πύλη δεν το πιάνει σήμερα για απλά inputs· μόνο το axe ανά οθόνη.
+
+- 🟡 **21/09 — ΦΟΡΜΕΣ ΕΠΑΦΩΝ: `EscoOccupationPicker` / `EmployerPicker` / `EscoSkillPicker` ΔΕΝ ΠΑΙΡΝΟΥΝ `field.id`**
+
+  Το `pickerRenderer` (`contactRenderersCore.tsx`) δίνει πλέον το `fieldId` που ο renderer βάζει στο `<Label htmlFor>`·
+  το περνούν ΔΟΥ/Υπουργείο/Υπηρεσία. Οι τρεις ESCO/εργοδότη **δεν ελέγχθηκαν** αν δέχονται `id` — πιθανώς ίδιο κενό.
+
 - 🟠 **21/09 — ΤΟ `SearchableCombobox` ΜΕΝΕΙ ΑΝΩΝΥΜΟ ΣΕ ~17 ΚΑΤΑΝΑΛΩΤΕΣ** *(ADR-598 G11 · ADR-841 §7 Α19.4δ)*
+
+  ✅ **ΥΛΟΠΟΙΗΘΗΚΕ 21/09 — ΑΚΟΜΙΤΙΣΤΟ** (ADR-598 «(δ)»). Αφαίρεση της εγγραφής **μόνο με εντολή Giorgio** (N.13).
 
   Το SSoT δέχεται πλέον `id` / `aria-label` / `aria-labelledby` (21/09). **Συνδέθηκε μόνο** το
   `RelationshipFormFields`. Όποιος δεν τυλίγει το πεδίο σε `<label>` ανακοινώνεται «combobox»
@@ -27,6 +51,8 @@
   ⚠️ >5 αρχεία / πολλοί τομείς ⇒ N.8: ρώτα τον Giorgio για τον τρόπο εκτέλεσης.
 
 - 🟠 **21/09 — `RulerCornerBox`: `menuitem` ΧΩΡΙΣ `menu`** *(ADR-598 G11 · Δ)*
+
+  ✅ **ΥΛΟΠΟΙΗΘΗΚΕ 21/09 — ΑΚΟΜΙΤΙΣΤΟ** (ADR-418 changelog). Αφαίρεση **μόνο με εντολή Giorgio** (N.13).
 
   Το μενού κλίμακας (`dxf-viewer/canvas-v2/overlays/RulerCornerBox.tsx`) είναι `Popover` με
   `role="menuitem"` κουμπιά, **χωρίς** γονέα `menu` (axe `aria-required-parent`), **χωρίς** βελάκια

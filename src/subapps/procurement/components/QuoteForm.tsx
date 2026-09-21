@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useId } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -180,6 +180,7 @@ const FORM_ID = 'quote-form';
 
 export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const { registerDirty, clearDirty } = useDirtyForm();
   const [form, setForm] = useState<FormState>({
     projectId: '',
@@ -285,22 +286,25 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>{t('quotes.project')}</Label>
+            <Label htmlFor={`${idBase}-project`}>{t('quotes.project')}</Label>
             <POProjectSelector
+              id={`${idBase}-project`}
               value={form.projectId}
               onSelect={(id) => setField('projectId', id)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>{t('quotes.vendor')}</Label>
+            <Label htmlFor={`${idBase}-vendor`}>{t('quotes.vendor')}</Label>
             <POSupplierSelector
+              id={`${idBase}-vendor`}
               value={form.vendorContactId}
               onSelect={(id) => setField('vendorContactId', id)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>{t('quotes.trade')}</Label>
+            <Label htmlFor={`${idBase}-trade`}>{t('quotes.trade')}</Label>
             <TradeSelector
+              id={`${idBase}-trade`}
               value={form.trade}
               onChange={(code) => setField('trade', code)}
             />

@@ -100,6 +100,7 @@ const PAYLOAD = {
 function renderPicker(): HTMLInputElement {
   render(
     <AreaCombobox
+      aria-label="Περιοχή"
       value=""
       onValueChange={jest.fn()}
       placeholder={PLACEHOLDER}

@@ -910,7 +910,7 @@
       "viewScalePresets": "View Scales"
     },
     "aria": {
-      "viewScale": "View scale {scale}. Click to fit, double-click for actual size, right-click for menu.",
+      "viewScale": "View scale {scale}. Click to fit, double-click for actual size, right-click or Down Arrow for menu.",
       "viewScalePresets": "View scales",
       "srOnly": "Corner box scale controls"
     }

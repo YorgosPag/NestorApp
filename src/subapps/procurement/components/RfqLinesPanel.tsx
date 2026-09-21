@@ -155,18 +155,22 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
 
       {showForm && (
         <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-4">
+          {/* Χωρίς ορατές ετικέτες: κάθε πεδίο ονομάζεται με το κείμενο της στήλης του (ADR-598 G11). */}
           <Input
+            aria-label={t('rfqs.lineDescription')}
             placeholder={t('rfqs.lineDescription')}
             value={newLine.description}
             onChange={(e) => setNewLine((p) => ({ ...p, description: e.target.value }))}
             className="sm:col-span-2"
           />
           <TradeSelector
+            aria-label={t('rfqs.lineTrade')}
             value={newLine.trade}
             onChange={(trade) => setNewLine((p) => ({ ...p, trade }))}
           />
           <div className="flex gap-2">
             <Input
+              aria-label={t('rfqs.lineQuantity')}
               type="number"
               placeholder={t('rfqs.lineQuantity')}
               value={newLine.quantity}
@@ -185,7 +189,7 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
                   }
                 }}
               >
-                <SelectTrigger className="h-9 w-24 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-label={t('rfqs.lineUnit')} className="h-9 w-24 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                   <SelectSeparator />
@@ -194,6 +198,7 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
               </Select>
               {newLine.customUnit && (
                 <Input
+                  aria-label={t('rfqs.lineUnit')}
                   placeholder={t('rfqs.lineEdit.unitOption.otherPlaceholder')}
                   value={newLine.unit}
                   onChange={(e) => setNewLine((p) => ({ ...p, unit: e.target.value }))}

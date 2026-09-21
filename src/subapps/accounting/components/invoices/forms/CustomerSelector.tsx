@@ -8,22 +8,15 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
-import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
-import { ContactsService } from '@/services/contacts.service';
-import {
-  isIndividualContact,
-  isCompanyContact,
-  type Contact,
-  type AddressInfo,
-  type PhoneInfo,
-  type EmailInfo,
-} from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
+import { extractContactParty } from '@/subapps/accounting/utils/contact-party';
+import { useContactAutoFill } from '@/subapps/accounting/hooks/useContactAutoFill';
 import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import type { InvoiceCustomer } from '@/subapps/accounting/types';
 
@@ -44,57 +37,19 @@ interface CustomerSelectorProps {
 // HELPERS
 // ============================================================================
 
-function findPrimary<T extends { isPrimary: boolean }>(items: T[] | undefined): T | undefined {
-  if (!items || items.length === 0) return undefined;
-  return items.find((item) => item.isPrimary) ?? items[0];
-}
-
-function extractStreet(addr: AddressInfo | undefined): string {
-  if (!addr) return '';
-  return addr.number ? `${addr.street} ${addr.number}` : addr.street;
-}
-
-/**
- * Map full Contact → InvoiceCustomer fields
- */
+/** Επαφή → πελάτης τιμολογίου. Η εξαγωγή είναι SSoT (`extractContactParty`)· εδώ μόνο τα πεδία. */
 function mapContactToCustomer(contact: Contact): InvoiceCustomer {
-  const primaryAddress = findPrimary<AddressInfo>(contact.addresses);
-  const primaryPhone = findPrimary<PhoneInfo>(contact.phones);
-  const primaryEmail = findPrimary<EmailInfo>(contact.emails);
-
-  const base: Pick<InvoiceCustomer, 'contactId' | 'address' | 'city' | 'postalCode' | 'country' | 'email'> = {
-    contactId: contact.id ?? null,
-    address: extractStreet(primaryAddress) || null,
-    city: primaryAddress?.city ?? null,
-    postalCode: primaryAddress?.postalCode ?? null,
-    country: primaryAddress?.country ?? 'GR',
-    email: primaryEmail?.email ?? null,
-  };
-
-  if (isIndividualContact(contact)) {
-    return {
-      ...base,
-      name: `${contact.firstName} ${contact.lastName}`.trim(),
-      vatNumber: contact.vatNumber ?? null,
-      taxOffice: contact.taxOffice ?? null,
-    };
-  }
-
-  if (isCompanyContact(contact)) {
-    return {
-      ...base,
-      name: contact.companyName,
-      vatNumber: contact.vatNumber ?? null,
-      taxOffice: contact.taxOffice ?? null,
-    };
-  }
-
-  // ServiceContact
+  const party = extractContactParty(contact);
   return {
-    ...base,
-    name: contact.serviceName,
-    vatNumber: null,
-    taxOffice: null,
+    contactId: contact.id ?? null,
+    name: party.name,
+    vatNumber: party.vatNumber,
+    taxOffice: party.taxOffice,
+    address: party.street || null,
+    city: party.city,
+    postalCode: party.postalCode,
+    country: party.country ?? 'GR',
+    email: party.email,
   };
 }
 
@@ -105,42 +60,18 @@ function mapContactToCustomer(contact: Contact): InvoiceCustomer {
 export function CustomerSelector({ customer, onCustomerChange }: CustomerSelectorProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
-  const [selectedContactId, setSelectedContactId] = useState(customer.contactId ?? '');
-  const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
+  const applyContact = useCallback(
+    (contact: Contact) => onCustomerChange(mapContactToCustomer(contact)),
+    [onCustomerChange],
+  );
+  const { selectedContactId, autoFillMessage, handleContactAutoFill } =
+    useContactAutoFill(applyContact, customer.contactId ?? '');
   const { result: vatResult } = useVatUniqueness(customer.vatNumber ?? undefined);
 
   const updateField = (field: keyof InvoiceCustomer, value: string | null) => {
     onCustomerChange({ ...customer, [field]: value || null });
   };
 
-  /**
-   * Handle contact selection → fetch full details → auto-fill customer fields
-   */
-  const handleContactAutoFill = useCallback(async (contact: ContactSummary | null) => {
-    if (!contact) {
-      setSelectedContactId('');
-      setAutoFillMessage(null);
-      return;
-    }
-
-    setSelectedContactId(contact.id);
-
-    try {
-      const fullContact = await ContactsService.getContact(contact.id);
-      if (!fullContact) {
-        setAutoFillMessage(t('setup.contactAutoFillError'));
-        return;
-      }
-
-      const mapped = mapContactToCustomer(fullContact);
-      onCustomerChange(mapped);
-      setAutoFillMessage(t('setup.contactAutoFilled'));
-      setTimeout(() => setAutoFillMessage(null), 3000);
-    } catch {
-      console.error('Customer auto-fill failed for id:', contact.id);
-      setAutoFillMessage(t('setup.contactAutoFillError'));
-    }
-  }, [onCustomerChange, t]);
 
   return (
     <div className="space-y-4">
@@ -189,6 +120,7 @@ export function CustomerSelector({ customer, onCustomerChange }: CustomerSelecto
         <fieldset>
           <Label htmlFor="customerTaxOffice">{t('invoices.customerForm.taxOffice')}</Label>
           <DoyPicker
+            id="customerTaxOffice"
             value={customer.taxOffice ?? ''}
             onValueChange={(val) => updateField('taxOffice', val)}
             showAddNew={false}

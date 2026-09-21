@@ -301,6 +301,7 @@
     "noResults": "No KAD code found",
     "primaryActivity": "Primary Activity",
     "secondaryActivities": "Secondary Activities",
+    "secondaryActivityItem": "Secondary activity {position}",
     "noSecondaryActivities": "No secondary activities added",
     "addActivity": "Add KAD",
     "removeActivity": "Remove KAD",

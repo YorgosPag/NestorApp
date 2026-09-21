@@ -22,70 +22,26 @@
  * @module components/shared/KadCodePicker
  */
 
-import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox';
-import { createStaleCache } from '@/lib/stale-cache';
-
-const kadOptionsCache = createStaleCache<ComboboxOption[]>('shared-kad-options');
+import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
+// ΚΑΔ ως επιλογές — ΕΝΑ SSoT με μία cache, κοινό με το accounting `KadSection`.
+import { useKadOptions } from '@/hooks/useKadOptions';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface KadCodePickerProps {
+interface KadCodePickerOwnProps {
   /** Current KAD code value */
   value: string;
-  /** Current activity description (for display when value is set but options not loaded yet) */
-  description?: string;
   /** Disabled state */
   disabled?: boolean;
   /** Callback when a KAD code is selected or typed */
   onChange: (val: { code: string; description: string }) => void;
 }
 
-// ============================================================================
-// HOOK: Lazy-load ΚΑΔ data
-// ============================================================================
-
-function useKadOptions() {
-  const [options, setOptions] = useState<ComboboxOption[]>(kadOptionsCache.get() ?? []);
-  const [isLoading, setIsLoading] = useState(!kadOptionsCache.hasLoaded());
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadKadCodes() {
-      try {
-        if (!kadOptionsCache.hasLoaded()) setIsLoading(true);
-        const { GREEK_KAD_CODES } = await import(
-          '@/subapps/accounting/data/greek-kad-codes'
-        );
-        if (!cancelled) {
-          const loaded = GREEK_KAD_CODES.map((kad) => ({
-            value: kad.code,
-            label: `${kad.code} — ${kad.description}`,
-            secondaryLabel: kad.description,
-          }));
-          kadOptionsCache.set(loaded);
-          setOptions(loaded);
-        }
-      } catch (error) {
-        console.error('Failed to load ΚΑΔ codes:', error);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadKadCodes();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { options, isLoading };
-}
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+export type KadCodePickerProps = KadCodePickerOwnProps & FieldAccessibleName;
 
 // ============================================================================
 // COMPONENT
@@ -95,12 +51,14 @@ export function KadCodePicker({
   value,
   disabled = false,
   onChange,
+  ...accessibleName
 }: KadCodePickerProps) {
   const { t } = useTranslation('forms');
   const { options, isLoading } = useKadOptions();
 
   return (
     <SearchableCombobox
+      {...accessibleName}
       value={value}
       onValueChange={(selectedValue, option) => {
         if (option) {

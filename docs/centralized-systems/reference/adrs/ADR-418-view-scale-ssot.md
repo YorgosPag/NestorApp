@@ -159,3 +159,15 @@ subscription. `StandaloneStatusBar` no longer subscribes to zoom at all (improve
   άφηνε μπαγιάτικο. **Άγκυρα**: `systems/zoom/__tests__/view-ratio-landing.test.ts` — 13 tests που
   ρωτούν «ΠΟΥ προσγειώθηκα;» αντί για τα μαθηματικά· επαληθευμένη με **2/2 μεταλλάξεις** (επαναφορά
   του wheel δρόμου → 8 κόκκινα· αφαίρεση του συγχρονισμού → 1 κόκκινο).
+
+- **2026-09-21 — Το μενού της γωνίας έγινε ΠΡΑΓΜΑΤΙΚΟ μενού, και οι κλίμακες επιλογή μίας από σύνολο** (ADR-598 G11 · Γ).
+  Ήταν `PopoverContent` με `button[role=menuitem]` **χωρίς** `menu`, χωρίς βελάκια, και `nav` + `aria-pressed` για τις
+  κλίμακες· το κουμπί δήλωνε `aria-haspopup="menu"` αλλά άνοιγε **μόνο** με δεξί κλικ (WCAG 2.1.1). Τώρα
+  `DropdownMenu` του SSoT ως **menu button με προεπιλεγμένη ενέργεια** (split button, AutoCAD/Revit): κλικ και
+  Enter/Space μένουν «Προσαρμογή» (το `pointerdown` του Radix trigger ακυρώνεται με `preventDefault`), το μενού ανοίγει
+  με ↓ ή με το μονοπάτι του context menu (δεξί κλικ · Shift+F10 · πλήκτρο Menu). Νέο κοινό leaf
+  **`ui/components/ViewScalePresetRadioItems.tsx`**: οι `VIEW_SCALE_MENU_PRESETS` ως `DropdownMenuRadioGroup`
+  (`menuitemradio` + `aria-checked` της τρέχουσας κλίμακας μέσω `isViewRatioActive`), **κοινό** με το `ZoomControls`.
+  ADR-040: η συνδρομή `useViewScale` μένει σε leaf (`ZoomPresetRadioLeaf`), που αποδίδεται μόνο όσο το μενού είναι
+  ανοιχτό. Νεκρό CSS αφαιρέθηκε. **Άγκυρα**: `canvas-v2/overlays/__tests__/RulerCornerBox.a11y.test.tsx` (7 tests, axe
+  κλειστό/ανοιχτό· μεταλλάξεις 2/2).

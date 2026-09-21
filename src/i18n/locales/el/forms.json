@@ -301,6 +301,7 @@
     "noResults": "Δεν βρέθηκε ΚΑΔ",
     "primaryActivity": "Κύρια Δραστηριότητα",
     "secondaryActivities": "Δευτερεύουσες Δραστηριότητες",
+    "secondaryActivityItem": "Δευτερεύουσα δραστηριότητα {position}",
     "noSecondaryActivities": "Δεν έχουν προστεθεί δευτερεύουσες δραστηριότητες",
     "addActivity": "Προσθήκη ΚΑΔ",
     "removeActivity": "Αφαίρεση ΚΑΔ",

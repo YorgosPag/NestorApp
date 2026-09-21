@@ -85,6 +85,7 @@ import {
   type Placement,
 } from '@floating-ui/react';
 import { cn } from '@/lib/utils';
+import type { ExplicitAccessibleName } from '@/lib/a11y/accessible-name';
 import styles from './AnchoredPopover.module.css';
 
 /** Το κενό ανάμεσα στην άγκυρα και το popup — ίδιο με το «ξεκομμένο» της mini μπάρας. */
@@ -110,9 +111,7 @@ const MIN_USABLE_HEIGHT_PX = 120;
  * (axe `aria-dialog-name`). Ακριβώς ένα από τα δύο — το `never` κάνει το «και τα δύο» και το
  * «κανένα» **αδύνατα στη μεταγλώττιση**, αντί για ένα ακόμη σχόλιο που κανείς δεν διαβάζει.
  */
-type AnchoredPopoverName =
-  | { readonly 'aria-labelledby': string; readonly 'aria-label'?: never }
-  | { readonly 'aria-label': string; readonly 'aria-labelledby'?: never };
+type AnchoredPopoverName = ExplicitAccessibleName;
 
 interface AnchoredPopoverOwnProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'role' | 'aria-label' | 'aria-labelledby'> {

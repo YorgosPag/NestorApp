@@ -16,7 +16,7 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Plus } from 'lucide-react';
-import { SearchableCombobox, type ComboboxOption } from '@/components/ui/searchable-combobox';
+import { SearchableCombobox, type ComboboxOption, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import { GREEK_TAX_OFFICES, type TaxOffice } from '@/subapps/accounting/data/greek-tax-offices';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +34,7 @@ import '@/lib/design-system';
 // TYPES
 // ============================================================================
 
-export interface DoyPickerProps {
+interface DoyPickerOwnProps {
   /** Current value (tax office code or free text) */
   value: string;
   /** Callback on value change */
@@ -45,11 +45,12 @@ export interface DoyPickerProps {
   error?: string;
   /** Additional CSS classes */
   className?: string;
-  /** Translation namespace override (default: 'common') */
-  translationNamespace?: string;
   /** Show add-new button (default: true) */
   showAddNew?: boolean;
 }
+
+/** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
+export type DoyPickerProps = DoyPickerOwnProps & FieldAccessibleName;
 
 interface NewDoyFormState {
   code: string;
@@ -68,6 +69,7 @@ export function DoyPicker({
   error,
   className,
   showAddNew = true,
+  ...accessibleName
 }: DoyPickerProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
 
@@ -106,6 +108,7 @@ export function DoyPicker({
   return (
     <div className={className}>
       <SearchableCombobox
+        {...accessibleName}
         value={value}
         onValueChange={(val) => onValueChange(val)}
         options={options}

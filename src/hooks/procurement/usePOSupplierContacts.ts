@@ -16,6 +16,8 @@ import { useState, useEffect } from 'react';
 import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { Contact } from '@/types/contacts';
+import { getContactDisplayName } from '@/types/contacts/helpers';
+import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
 import { useAuth } from '@/hooks/useAuth';
@@ -87,4 +89,23 @@ export function usePOSupplierContacts(): UsePOSupplierContactsReturn {
   }, [authLoading, user]);
 
   return { suppliers, loading, error };
+}
+
+/**
+ * Προμηθευτές → επιλογές combobox — **μία** αντιστοίχιση για κάθε επιλογέα προμηθευτή
+ * (παραγγελία, συμφωνία-πλαίσιο, προτιμώμενοι προμηθευτές υλικού). Ήταν γραμμένη τρεις
+ * φορές· το CHECK 3.28 τις είδε όταν άλλαξαν μαζί (2026-09-21).
+ * `exclude`: ταυτότητες που **δεν** προσφέρονται (π.χ. ήδη επιλεγμένες).
+ */
+export function supplierContactsToOptions(
+  suppliers: readonly Contact[],
+  exclude: readonly string[] = [],
+): ComboboxOption[] {
+  return suppliers
+    .filter((c): c is Contact & { id: string } => typeof c.id === 'string' && !exclude.includes(c.id))
+    .map((c) => ({
+      value: c.id,
+      label: getContactDisplayName(c),
+      secondaryLabel: c.type === 'company' ? c.companyName ?? undefined : undefined,
+    }));
 }

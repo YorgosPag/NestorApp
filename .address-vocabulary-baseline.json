@@ -12,17 +12,16 @@
   "ratcheted_states": [
     "unregistered-vocabulary"
   ],
-  "violation_count": 4,
+  "violation_count": 3,
   "by_state": {
     "below-vocabulary-threshold": 20095,
     "unanalyzable-heritage": 213,
-    "unregistered-vocabulary": 4,
+    "unregistered-vocabulary": 3,
     "registered-vocabulary": 5,
     "base-of-registered": 1,
     "generated-artifact": 1
   },
   "violations": [
-    "unregistered-vocabulary::src/components/contacts/pickers/AdministrativeAddressPicker.tsx::AdministrativeAddress",
     "unregistered-vocabulary::src/components/contacts/relationships/hooks/useDerivedWorkAddresses.ts::DerivedWorkAddress",
     "unregistered-vocabulary::src/types/ContactFormTypes.ts::ContactFormData",
     "unregistered-vocabulary::src/types/ContactFormTypes.ts::IndividualAddress"
