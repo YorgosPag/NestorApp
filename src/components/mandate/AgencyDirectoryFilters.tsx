@@ -198,8 +198,13 @@ function WhereControl({
   const areaId = where !== null && isAdministrativeWhere(where) ? where.adminId : '';
 
   return (
-    <div className="flex flex-wrap items-end gap-4">
-      <label className="flex flex-col gap-1 text-sm">
+    // ⚠️ **`basis-full` εδώ ΚΑΙ `w-full max-w-md` στην ετικέτα — χρειάζονται ΚΑΙ ΤΑ ΔΥΟ.**
+    //    Αυτό το δοχείο είναι στοιχείο της εξωτερικής σειράς `flex-wrap`: χωρίς `basis-full`
+    //    γίνεται shrink-to-fit, και το `w-full` της ετικέτας είναι 100% ενός ήδη στενού
+    //    δοχείου *(πρώτη διόρθωση 2026-09-21: μηδέν ορατή αλλαγή)*. Στενό πεδίο ⇒ στενή λίστα
+    //    *(`--radix-popover-trigger-width`)* ⇒ ονόματα περιφερειών σε τρεις γραμμές.
+    <div className="flex basis-full flex-wrap items-end gap-4">
+      <label className="flex w-full max-w-md flex-col gap-1 text-sm">
         <span className="font-medium text-foreground">{t(DIRECTORY_KEYS.placeFilterLabel)}</span>
         {/*
           ⚠️ **ΤΟ ΚΕΝΟ ΠΕΔΙΟ ΣΕ ΕΡΩΤΗΜΑ-ΚΥΚΛΟ ΕΙΝΑΙ ΣΩΣΤΟ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΤΟ ΕΛΑΤΤΩΜΑ.**

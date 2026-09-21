@@ -2859,6 +2859,15 @@ CHECK 3.61)* και η διαδρομή γράφεται **χωρίς** πρόθ
 
 ## 11. Changelog
 
+- **2026-09-21** — 🎨 **ΤΟ ΠΕΔΙΟ «ΠΕΡΙΟΧΗ» ΣΤΟ `/pro` ΗΤΑΝ ΣΤΕΝΟ** *(ζωντανό περπάτημα)*. Η ετικέτα του
+  `WhereControl` (`AgencyDirectoryFilters.tsx`) ζούσε σε σειρά `flex-wrap` χωρίς πλάτος ⇒ shrink-to-fit στο
+  ελάχιστο πλάτος του input (~170 px): ο placeholder κοβόταν, και επειδή το `SearchableCombobox` ανοίγει τη
+  λίστα στο `--radix-popover-trigger-width`, τα ονόματα περιφερειών αναδιπλώνονταν σε 2–3 γραμμές. Διόρθωση:
+  `w-full max-w-md` στην ετικέτα **ΚΑΙ** `basis-full` στο δοχείο του `WhereControl`. ⚠️ Η πρώτη απόπειρα (μόνο
+  η ετικέτα) **δεν άλλαξε τίποτα ορατό**: το ίδιο το δοχείο είναι στοιχείο της εξωτερικής σειράς `flex-wrap`
+  του `<section>`, άρα shrink-to-fit — και `w-full` μέσα σε στενό δοχείο είναι στενό. Το `AreaCombobox` **δεν** άλλαξε — ο δεύτερος καταναλωτής
+  (`CoverageAreaPicker`) ζει σε block δοχείο και έπαιρνε ήδη όλο το πλάτος.
+
 - **2026-09-15** — 🔴 **ΚΑΛΩΝ ΠΟΥ ΔΕΝ ΑΚΟΛΟΥΘΗΣΕ ΤΗ ΜΕΤΟΝΟΜΑΣΙΑ `near` → `where` (Φ2)**. Το
   `components/search/PlaceSearchBox.tsx` (ADR-841 Α4.5, 09-04) έστελνε ακόμη
   `serializeShowcaseFilters({ occupation, near })` ⇒ στην εκτέλεση `filters.where === undefined` περνούσε το
