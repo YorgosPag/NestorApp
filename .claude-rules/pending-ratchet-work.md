@@ -2,21 +2,53 @@
 
 **STATUS: ACTIVE**
 
-- 🟡 **20/09 — 40 σημεία ΕΥΡΟΥΣ στο Admin SDK, αφύλακτα** (ADR-869 §7.4)
+- 🔴 **21/09 — Η CHECK 3.35 ΕΙΝΑΙ ΤΥΦΛΗ ΣΕ ΑΛΥΣΙΔΕΣ ΜΕ ΔΕΜΕΝΗ ΡΙΖΑ** (ADR-870 §4)
 
-  Η CHECK 3.15 σαρώνει **μόνο** κλήσεις του `firestoreQueryService`. Μετρημένα **40**
-  `where()` με `<` `<=` `>` `>=` `!=` έξω από αυτό — `lib/cron/jobs/*`,
-  `app/api/admin/role-management/audit-log/*`, `services/ai-pipeline/*` κ.ά. **8× τα 5**
-  σημεία του SSoT, και **κανείς δεν τα ελέγχει** (ούτε η 3.10, που ρωτά για `companyId`).
-  Άλλο σχήμα AST: αλυσίδα με επανανάθεση (`query = query.where(…)`), όχι literal
-  `constraints: [...]`.
-  🔑 Ο **κριτής υπάρχει ήδη** (`requiredIndexFor`, ADR-869 §7.1) — λείπει μόνο ο εξαγωγέας
-  σχημάτων για αυτό το ύφος κλήσης. **ΜΗΝ** γράψεις δεύτερο κανόνα δεικτών.
+  **ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΥΠΟΘΕΣΗ.** Ο σαρωτής του 3.35 αγκυρώνει στο `.collection(X)` και
+  **ανεβαίνει** την αλυσίδα. Όταν η ρίζα δένεται σε όνομα και τα φίλτρα μπαίνουν σε **άλλη
+  εντολή**, κατατάσσει το σημείο `not-tenant-scoped` — «χωρίς where(), δεν είναι list query»:
 
-- 🔴 **20/09 — 1 ΔΕΙΚΤΗΣ FIRESTORE ΠΕΡΙΜΕΝΕΙ ΤΗΝ ΕΓΚΡΙΣΗ ΣΟΥ ΣΤΟ PUSH** (ADR-869 §12.6)
+      const tasksRef = adminDb.collection(COLLECTIONS.TASKS);
+      const snap = await tasksRef.where('reminderDate','<=',now)
+                                 .where('reminderSent','!=',true).limit(50).get();
 
-  `firestore:verify --tree worktree` ⇒ **`exit=2 OutOfSync`** · `ζωντανά 478 · αρχείο 479` ·
-  `missing: ["appointments: companyId↑, appointment.effectiveDate↑"]` · `extra: []`.
+  Είναι list query, φιλτράρει, και **δεν** έχει `companyId`. Επιβεβαιωμένα τυφλά σημεία:
+  `api/calendar/reminders` (`tasks`, `notifications`), `first-contact-invitation-expiry`
+  (`first_contact_invitations`), `communications/inbound/email-queue-worker` (**5** σημεία
+  στο `email_ingestion_queue`). Είναι η **τέταρτη** μορφή του σχήματος που απαριθμεί η
+  κεφαλίδα του ίδιου του σαρωτή.
+
+  🔑 **Η ΘΕΡΑΠΕΙΑ ΥΠΑΡΧΕΙ ΗΔΗ**: `scripts/_shared/firestore-query-chain.js` (ADR-870) λύνει
+  ακριβώς αυτό, αγκυρώνοντας στο **τέρμα**. Η δουλειά είναι να **μεταπηδήσει** ο σαρωτής του
+  3.35 σε αυτόν — **όχι** να προστεθεί «μια ακόμη περίπτωση».
+  ⚠️ **ΑΛΛΑΖΕΙ BASELINE ΑΛΛΗΣ ΠΥΛΗΣ** (`.firestore-tenant-scope-baseline.json`, 91 αρχεία):
+  τα τυφλά σημεία θα εμφανιστούν ως **νέες** παραβιάσεις. Χρειάζεται μέτρηση πρώτα, μετά
+  απόφαση (baseline refresh vs διόρθωση), μετά πράξη. **Δική του συνεδρία.**
+
+- 🟡 **21/09 — CHECK 3.91 / Κ2: 18 ΣΗΜΕΙΑ ΧΩΡΙΣ ΕΥΡΟΣ, ΑΝΕΠΑΛΗΘΕΥΤΑ** (ADR-870 §3.1)
+
+  Baseline: `.firestore-admin-index-baseline.json`. **Κανένα δεν έχει επιβεβαιωθεί ζωντανά.**
+  ⚠️ **ΜΗΝ τα επικαλεστείς ως «18 σφάλματα»**: στο `audit_logs` η **συγχώνευση δεικτών**
+  αθώωσε **12 κλάδους** που η στατική ανάλυση κατήγγειλε. Η σωστή σειρά είναι
+  **μέτρησε ζωντανά → διόρθωσε → κατέβασε τη baseline**, ποτέ το αντίστροφο.
+
+- ⏳ **21/09 — Η ΣΥΓΧΩΝΕΥΣΗ >3 ΔΕΙΚΤΩΝ ΕΙΝΑΙ ΠΡΟΕΚΤΑΣΗ, ΟΧΙ ΜΕΤΡΗΣΗ** (ADR-870 §6)
+
+  Επαληθεύτηκε ζωντανά με **2** και **3** δείκτες. Τα **10** σχήματα του
+  `accounting_audit_log` που στηρίζονται σε **5** τα δηλώνει η ίδια η πύλη
+  (`⏳ N σχήματα … ΠΕΡΑ από το μετρημένο`). **Μετά την ανάπτυξη** των νέων δεικτών:
+  ένα ζωντανό ερώτημα με `companyId== entityType== entityId== eventType== userId==`
+  + `orderBy(timestamp desc)` απαντά οριστικά.
+
+- 🔴 **21/09 — 11 ΔΕΙΚΤΕΣ FIRESTORE ΠΕΡΙΜΕΝΟΥΝ ΤΗΝ ΕΓΚΡΙΣΗ ΣΟΥ ΣΤΟ PUSH** (ADR-869 §12.6 · ADR-870 §7)
+
+  `firestore:verify --tree worktree` ⇒ **`exit=2 OutOfSync`** · `ζωντανά 478 · αρχείο 489` ·
+  `extra: []` · λείπουν ζωντανά **11**:
+  `appointments(companyId↑, appointment.effectiveDate↑)` — ο παλιός, ADR-869 §12.6 ·
+  `iso19650_cost_log(companyId↑, createdAt↓)` · `ai_agent_feedback(rating↑, createdAt↑)` ·
+  `tasks(reminderDate↑, reminderSent↑)` · `storage_units(status↑, deletedAt↑)` ·
+  `sourcing_events` ×3 · `accounting_audit_log` ×3 — **οι 10 νέοι, ADR-870**.
+  🔴 **Και οι 10 αντιστοιχούν σε ερώτημα που ΣΚΑΕΙ ΤΩΡΑ ζωντανά** (επιβεβαιωμένο ένα προς ένα).
   ✅ **ΔΕΝ μπλοκάρει το commit**: η CHECK 3.86 το χαρακτηρίζει `⏳ deploy-pending` και η
   γραμμή παραγωγής κάνει **push → πλάνο → ΕΓΚΡΙΣΗ σου → ανάπτυξη → κώδικας** (ADR-865 §11).
   ⚠️ **Μέχρι να αναπτυχθεί, το `getByDateRange` πετά `FAILED_PRECONDITION`** — δεν είναι
@@ -27,6 +59,11 @@
   Κανένα ερώτημα δεν τον χρησιμοποιεί πλέον. ⚠️ **ΜΗΝ τον σβήσεις από το αρχείο σκέτα**:
   χωρίς `firebase deploy --force` ο ζωντανός μένει ⇒ `extra` ⇒ **OutOfSync**. Χωριστή
   απόφαση, χωριστή πράξη.
+
+- ✅ **ΕΚΛΕΙΣΕ 21/09 — «40 σημεία ΕΥΡΟΥΣ στο Admin SDK»** ⇒ ADR-870 / CHECK 3.91.
+  Το μέτρο **δεν ήταν 40**: ήταν σημεία κλήσης. Πραγματικά ακάλυπτα με εύρος: **5**
+  (+1 που η πύλη δεν βλέπει, §6), **και τα 6 επιβεβαιωμένα ζωντανά**. Διορθώθηκαν με
+  **+10 δείκτες**· η πύλη γεννήθηκε στο **0** στο Κ1.
 
 - 🟡 **20/09 — Η ΤΥΦΛΗ ΖΩΝΗ ΤΗΣ CHECK 3.15 ΔΕΝ ΦΥΛΑΓΕΤΑΙ ΑΠΟ ΤΙΠΟΤΑ** (ADR-869 §7)
 

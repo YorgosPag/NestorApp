@@ -64,6 +64,7 @@ const {
   loadCustodyPartitions,
   buildPartitionAliasMap,
   resolveFieldArg,
+  hasReasonedExemption,
 } = require('./firestore-ast-loaders');
 
 /**
@@ -165,13 +166,9 @@ const COMMENT_OR_BLANK_RE = /^\s*(\/\/|\/\*|\*|$)/;
  * @param {number} lineIndex 0-based
  */
 function isExempt(lines, lineIndex) {
-  if (EXEMPT_RE.test(lines[lineIndex] || '')) return true;
-  for (let i = lineIndex - 1; i >= 0; i--) {
-    const line = lines[i] || '';
-    if (!COMMENT_OR_BLANK_RE.test(line)) break;   // φτάσαμε σε κώδικα
-    if (EXEMPT_RE.test(line)) return true;
-  }
-  return false;
+  // ⚠️ Ο αναγνώστης είναι ΚΟΙΝΟΣ (ADR-870): το CHECK 3.91 ζητά τον ίδιο κανόνα με άλλο
+  // σύνθημα. Δεύτερο αντίγραφο = δύο κανόνες που αποκλίνουν σιωπηλά.
+  return hasReasonedExemption(lines, lineIndex, 'tenant-scope-exempt');
 }
 
 /**

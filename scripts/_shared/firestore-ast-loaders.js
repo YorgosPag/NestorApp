@@ -497,7 +497,42 @@ function resolveCollectionKeys(expr, partitionAlias) {
   return resolvePartitionKeys(expr, partitionAlias) || [];
 }
 
+/**
+ * **Ρητή εξαίρεση στο σημείο χρήσης, με ΥΠΟΧΡΕΩΤΙΚΟ λόγο** — ο ΕΝΑΣ αναγνώστης.
+ *
+ * Ψάχνει στη γραμμή του ευρήματος **και σε ολόκληρο το συνεχόμενο μπλοκ σχολίων από πάνω
+ * του**, σταματώντας στην πρώτη γραμμή κώδικα.
+ *
+ * 🔴 ΓΙΑΤΙ ΟΛΟΚΛΗΡΟ ΤΟ ΜΠΛΟΚ: ο κανόνας απαιτεί **λόγο**, και ένας σοβαρός λόγος δεν χωράει
+ * σε μία γραμμή — θέλει παραπομπή στο ADR, στο τι σπάει αν αλλάξει. Η πρώτη εκδοχή του
+ * CHECK 3.35 κοιτούσε μία γραμμή και **απέρριπτε την τεκμηριωμένη εξαίρεση ενώ δεχόταν τη
+ * βιαστική** — δηλαδή τιμωρούσε ακριβώς τη συμπεριφορά που θέλει να ενθαρρύνει.
+ *
+ * ⚠️ Ζει εδώ, στο κοινό, επειδή το CHECK 3.91 (ADR-870) χρειάστηκε **ακριβώς** τον ίδιο
+ * αναγνώστη με άλλο σύνθημα. Δεύτερο αντίγραφο θα ήταν σιωπηλή απόκλιση δύο κανόνων που ο
+ * αναγνώστης νομίζει ότι είναι ένας (N.0.2 · CHECK 3.28).
+ *
+ * @param {string[]} lines  Οι γραμμές του αρχείου (CRLF-ανθεκτικά σπασμένες).
+ * @param {number}   lineIndex 0-based γραμμή του ευρήματος.
+ * @param {string}   token Το σύνθημα, π.χ. `tenant-scope-exempt`.
+ * @returns {boolean}
+ */
+function hasReasonedExemption(lines, lineIndex, token) {
+  // ⚠️ Διπλή διαφυγή: μέσα σε template literal το `\s` γίνεται σκέτο `s`. Μετρημένο —
+  // η πρώτη εκδοχή παρήγαγε `token:sS+` και δεχόταν **καμία** εξαίρεση, σιωπηλά.
+  const re = new RegExp(`${token}:\\s*\\S+`);
+  const commentOrBlank = /^\s*(\/\/|\/\*|\*|$)/;
+  if (re.test(lines[lineIndex] || '')) return true;
+  for (let i = lineIndex - 1; i >= 0; i--) {
+    const line = lines[i] || '';
+    if (!commentOrBlank.test(line)) break;   // φτάσαμε σε κώδικα
+    if (re.test(line)) return true;
+  }
+  return false;
+}
+
 module.exports = {
+  hasReasonedExemption,
   PROJECT_ROOT,
   CUSTODY_PARTITION_ROOT,
   loadCustodyPartitions,

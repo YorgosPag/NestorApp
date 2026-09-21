@@ -25,6 +25,8 @@ const {
   requiredIndexFor,
   indexCoversShape,
   findMatchingIndex,
+  findCoveringIndexes,
+  noIndexCarriesRangeFields,
   suggestIndexJson,
 } = require('../_shared/firestore-index-matcher');
 const { extractCallSitesFromFile } = require('../check-firestore-index-coverage');
@@ -100,10 +102,39 @@ describe('CHECK 3.15 × εύρος — φορά ταξινόμησης', () => {
 });
 
 describe('CHECK 3.15 × εύρος — όσα η πύλη ΑΡΝΕΙΤΑΙ να κρίνει', () => {
-  it('ρητό πρώτο orderBy σε ΑΛΛΟ πεδίο ⇒ άκυρο ερώτημα, όχι «δείκτης που λείπει»', () => {
+  it('🔴 ADR-870: ρητό orderBy σε ΑΛΛΟ πεδίο ΔΕΝ είναι άκυρο ερώτημα — το εύρος πάει ΤΕΛΟΣ', () => {
+    // Ζωντανή μέτρηση 2026-09-21 (`rfqs`: companyId== status!= orderBy(title asc)): το
+    // Firestore **πρότεινε δείκτη** `companyId↑, title↑, status↑` αντί να απορρίψει το
+    // ερώτημα. Ο παλιός κανόνας («πρώτη ταξινόμηση = πεδίο εύρους») έλεγε «ΣΚΑΕΙ».
     const required = requiredIndexFor(shape({ orderBy: [{ field: 'createdAt', direction: 'ASCENDING' }] }));
-    expect(required.status).toBe('invalid-query');
-    expect(required.reason).toMatch(/πρώτη ταξινόμηση/);
+    expect(required.status).toBe('required');
+    expect(required.fields).toEqual([
+      { fieldPath: 'cdeReadReach', order: 'ASCENDING' },
+      { fieldPath: 'isDeleted', order: 'ASCENDING' },
+      { fieldPath: 'createdAt', order: 'ASCENDING' },
+      { fieldPath: 'purgeAt', order: 'ASCENDING' },
+    ]);
+  });
+
+  it('🔴 ADR-870: η φορά του σιωπηρού εύρους ακολουθεί το ΤΕΛΕΥΤΑΙΟ ρητό orderBy', () => {
+    // Ζωντανή μέτρηση (`rfqs`: status!= orderBy(title asc, budget desc)) ⇒ `title↑, budget↓, status↓`.
+    const required = requiredIndexFor(shape({
+      equalityFields: [],
+      rangeFields: ['status'],
+      orderBy: [{ field: 'title', direction: 'ASCENDING' }, { field: 'budget', direction: 'DESCENDING' }],
+    }));
+    expect(required.fields).toEqual([
+      { fieldPath: 'title', order: 'ASCENDING' },
+      { fieldPath: 'budget', order: 'DESCENDING' },
+      { fieldPath: 'status', order: 'DESCENDING' },
+    ]);
+  });
+
+  it('🔴 ADR-870: ΜΟΝΟ ισότητες ⇒ ελεύθερο — το Firestore συγχωνεύει μονοπεδιακούς', () => {
+    // Ζωντανή μέτρηση (`audit_logs`: action== actorType== targetType==, κανένας σύνθετος
+    // δείκτης σε δύο από τα τρία): επιστρέφει κανονικά. Η παλιά εκδοχή ζητούσε σύνθετο.
+    const required = requiredIndexFor(shape({ equalityFields: ['a', 'b', 'c'], rangeFields: [] }));
+    expect(required.status).toBe('free');
   });
 
   it('πολλαπλά πεδία εύρους ⇒ «δεν αποφασίζεται» — η πύλη ΔΕΝ μαντεύει επιλεκτικότητα', () => {
@@ -115,6 +146,49 @@ describe('CHECK 3.15 × εύρος — όσα η πύλη ΑΡΝΕΙΤΑΙ να 
     const s = shape({ rangeFields: ['purgeAt', 'createdAt'] });
     const catalog = new Map([['files', [idx('cdeReadReach', 'isDeleted', 'purgeAt', 'createdAt')]]]);
     expect(findMatchingIndex(catalog, s)).toBeNull();
+  });
+
+  it('🔴 ADR-870: «δεν αποφασίζεται» ΔΕΝ σωπαίνει όταν λείπουν ΚΑΙ ΤΑ ΔΥΟ πεδία εύρους', () => {
+    // Ζωντανή μέτρηση: `tasks` με `reminderDate <=` + `reminderSent !=` ⇒ FAILED_PRECONDITION
+    // σε cron job. Η σειρά είναι όντως άγνωστη — το «δεν έχεις ΚΑΝΕΝΑΝ» δεν είναι.
+    const s = shape({ rangeFields: ['purgeAt', 'createdAt'] });
+    expect(noIndexCarriesRangeFields(new Map([['files', [idx('isDeleted', 'purgeAt')]]]), s)).toBe(true);
+    expect(noIndexCarriesRangeFields(new Map([['files', [idx('purgeAt', 'createdAt')]]]), s)).toBe(false);
+  });
+});
+
+describe('CHECK 3.15 × εύρος — ΣΥΓΧΩΝΕΥΣΗ ΔΕΙΚΤΩΝ (ADR-870)', () => {
+  /** `action== actorId== orderBy(timestamp desc)` — το σχήμα που μετρήθηκε ζωντανά. */
+  const merged = () => ({
+    collection: 'audit_logs',
+    equalityFields: ['action', 'actorId'],
+    orderBy: [{ field: 'timestamp', direction: 'DESCENDING' }],
+    arrayContainsField: null,
+    rangeFields: [],
+    variant: 'admin',
+  });
+  const aidx = (...fields) => ({ ...idx(...fields), collectionGroup: 'audit_logs' });
+
+  it('δύο δείκτες με ΚΟΙΝΗ ουρά ταξινόμησης καλύπτουν το ερώτημα — μετρημένο ζωντανά', () => {
+    const catalog = new Map([['audit_logs', [aidx('action', 'timestamp↓'), aidx('actorId', 'timestamp↓')]]]);
+    expect(findMatchingIndex(catalog, merged())).toBeNull();          // κανένας ΕΝΑΣ δεν αρκεί
+    const cover = findCoveringIndexes(catalog, merged());
+    expect(cover).not.toBeNull();
+    expect(cover.mode).toBe('merge');
+    expect(cover.indexes).toHaveLength(2);
+  });
+
+  it('🔴 ΤΟ ΟΡΙΟ: αν ΕΝΑ πεδίο ισότητας δεν έχει δικό του δείκτη, ΔΕΝ συγχωνεύεται', () => {
+    // Ζωντανή μέτρηση: `action== actorType== orderBy(timestamp desc)` ⇒ FAILED_PRECONDITION,
+    // επειδή το `actorType` δεν έχει `(actorType, timestamp↓)`.
+    const catalog = new Map([['audit_logs', [aidx('action', 'timestamp↓')]]]);
+    const shapeB = { ...merged(), equalityFields: ['action', 'actorType'] };
+    expect(findCoveringIndexes(catalog, shapeB)).toBeNull();
+  });
+
+  it('η ουρά πρέπει να είναι Η ΙΔΙΑ — δείκτης με άλλη φορά δεν συγχωνεύεται', () => {
+    const catalog = new Map([['audit_logs', [aidx('action', 'timestamp↓'), aidx('actorId', 'timestamp↑')]]]);
+    expect(findCoveringIndexes(catalog, merged())).toBeNull();
   });
 });
 

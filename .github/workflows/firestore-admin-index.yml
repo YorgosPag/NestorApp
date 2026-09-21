@@ -1,0 +1,105 @@
+name: T2 🗂️ Admin SDK Index Coverage (CHECK 3.91)
+
+# =============================================================================
+# Layer 2 — η πλήρης σάρωση. Η τυφλή ζώνη **έξω** από το SSoT.
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ (ADR-870)
+# -----------------------
+# Το CHECK 3.15 σαρώνει **μόνο** κλήσεις του `firestoreQueryService`. Κάθε
+# `adminDb.collection(X).where('t','>=',v)` ήταν **αόρατο** — και ζει σε cron
+# jobs και API routes, όπου κανένα UI δεν θα δείξει το `FAILED_PRECONDITION`.
+# Απογραφή 2026-09-21: **39 ωμά χτυπήματα → 5** πραγματικά ακάλυπτα ερωτήματα
+# με εύρος, **και τα 5 επιβεβαιωμένα ζωντανά**.
+#
+# ΓΙΑΤΙ ΔΥΟ ΣΤΡΩΜΑΤΑ
+# ------------------
+# Layer 1 (pre-commit): **μόνο τα staged** αρχεία — και ολικό πέρασμα όταν
+#   σταδιοποιείται το `firestore.indexes.json` (δείκτης που **φεύγει** αφορά
+#   οποιοδήποτε αρχείο). Μετρημένο ολικό: **4,2s** για 13.242 αρχεία.
+# Layer 2 (εδώ): `--all` σε κάθε PR — πιάνει αρχείο που **μετακινήθηκε** μαζί με
+#   την παραβίασή του, και **κλειδώνει τις μειώσεις** του Κ2, που το Layer 1
+#   δεν βλέπει ποτέ.
+#
+# ΔΥΟ ΚΑΘΕΣΤΩΤΑ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΑ
+# -----------------------------------
+# Κ1 (ερωτήματα ΜΕ ΕΥΡΟΣ) = ⛔ zero-tolerance: γεννήθηκε στο **0** αφού
+#   διορθώθηκαν και τα 5 ευρήματα, στο ίδιο commit.
+# Κ2 (χωρίς εύρος) = 🔴 ratchet: **18** ταυτότητες, **καμία** επιβεβαιωμένη
+#   ζωντανά. Zero-tolerance εκεί θα ήταν πύλη που **γεννιέται κόκκινη**
+#   (ADR-742, `b4ec47e2`) — και πρόωρη: η **συγχώνευση δεικτών** αθώωσε 12
+#   κλάδους που η στατική ανάλυση κατήγγειλε (ADR-870 §2.2).
+#
+# Πρότυπο: .github/workflows/firestore-tenant-scope.yml (CHECK 3.35)
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'firestore.indexes.json'
+      - 'scripts/check-firestore-admin-index.js'
+      - 'scripts/_shared/firestore-query-chain.js'
+      - 'scripts/_shared/firestore-index-matcher.js'
+      - 'scripts/_shared/firestore-ast-loaders.js'
+      - '.firestore-admin-index-baseline.json'
+      - '.github/workflows/firestore-admin-index.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'firestore.indexes.json'
+      - 'scripts/check-firestore-admin-index.js'
+      - 'scripts/_shared/firestore-query-chain.js'
+      - 'scripts/_shared/firestore-index-matcher.js'
+      - 'scripts/_shared/firestore-ast-loaders.js'
+      - '.firestore-admin-index-baseline.json'
+      - '.github/workflows/firestore-admin-index.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: firestore-admin-index-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  admin-index:
+    name: 🗂️ Admin SDK Index Coverage (CHECK 3.91)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (typescript)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Ο φύλακας ελέγχεται ΠΡΙΝ φυλάξει: 14 άγκυρες, εκ των οποίων **5 μεταλλάξεις**
+      # με επαλήθευση ότι έφτασαν στη μνήμη (το Jest έχει δικό του module registry).
+      - name: 🧪 Self-test της πύλης (14 tests, 5 μεταλλάξεις + Μ0)
+        run: npx jest scripts/__tests__/firestore-admin-index-gate.test.js
+
+      # Ο **κοινός κριτής** ελέγχεται κι αυτός: η 3.91 και η 3.15 τον μοιράζονται,
+      # άρα ρωγμή εκεί ακυρώνει ΚΑΙ ΤΙΣ ΔΥΟ πύλες ταυτόχρονα.
+      - name: 🧪 Self-test του κοινού κριτή (CHECK 3.15 × εύρος)
+        run: npx jest scripts/__tests__/firestore-index-range-coverage.test.js
+
+      - name: 🗂️ CHECK 3.91 — πλήρης σάρωση Admin SDK
+        run: node scripts/check-firestore-admin-index.js --all
+
+      - name: ✅ Σύνοψη
+        if: success()
+        run: |
+          echo "::notice title=Admin SDK Index Coverage::Κ1 (εύρος) = 0 · Κ2 εντός baseline (.firestore-admin-index-baseline.json)"

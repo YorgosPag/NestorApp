@@ -79,10 +79,21 @@ export async function createAuditEntry(
 /**
  * Query audit entries with filters
  *
- * Composite indexes:
- * 1. entityType + entityId + timestamp DESC — per-document history
- * 2. eventType + timestamp DESC — cross-entity analytics
- * 3. userId + timestamp DESC — user activity audit
+ * 🔴 ΔΕΙΚΤΕΣ — ΔΙΟΡΘΩΘΗΚΕ 2026-09-21 (ADR-870 · CHECK 3.91). Εδώ έγραφε:
+ *     «1. entityType + entityId + timestamp DESC · 2. eventType + timestamp DESC
+ *      3. userId + timestamp DESC»
+ * και το `firestore.indexes.json` **συμφωνούσε με το σχόλιο** — αλλά **κανένα από τα δύο**
+ * δεν είχε `companyId`, που η συνάρτηση προσθέτει **πάντα** (γρ. 95). Ζωντανά: κάθε κλήση
+ * επέστρεφε `FAILED_PRECONDITION`, σε **32** συνδυασμούς φίλτρων. Δύο πηγές συμφωνούσαν
+ * μεταξύ τους και **και οι δύο** διαφωνούσαν με ό,τι τρέχει.
+ *
+ * ⚠️ **ΜΗΝ γράψεις ξανά λίστα δεικτών εδώ.** Αυτή η λίστα ήταν η ρίζα: ήταν *δεύτερη
+ * αυθεντία* που κανείς δεν επαλήθευε. Η αυθεντία είναι το `firestore.indexes.json`, και
+ * το ερώτημα «καλύπτεται;» το απαντά **εκτελώντας** την πύλη:
+ *     npm run firestore:admin-index
+ *
+ * 🔑 Η κάλυψη γίνεται με **συγχώνευση**: ένας δείκτης `(πεδίο, timestamp DESC)` ανά πεδίο
+ * φίλτρου καλύπτει **και τους 32** συνδυασμούς — αντί για 32 σύνθετους (ADR-870 §3).
  */
 export async function listAuditEntries(
   tenant: TenantContext,

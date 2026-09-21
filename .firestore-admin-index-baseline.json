@@ -1,0 +1,31 @@
+{
+  "_meta": {
+    "description": "CHECK 3.91 — Admin SDK index coverage (ADR-870). Κ2: ερωτήματα ΧΩΡΙΣ εύρος, ανά (αρχείο, συλλογή). Μόνο μειώνεται.",
+    "check": "CHECK 3.91",
+    "adr": "ADR-870",
+    "generatedBy": "node scripts/check-firestore-admin-index.js --generate-baseline",
+    "totalSites": 18,
+    "note": "Το Κ1 (ερωτήματα ΜΕ ΕΥΡΟΣ) ΔΕΝ έχει baseline — είναι zero-tolerance, γεννήθηκε στο 0.",
+    "unverified": "Κανένα από αυτά ΔΕΝ έχει επιβεβαιωθεί ζωντανά. Η συγχώνευση δεικτών αθώωσε 12 κλάδους στο audit_logs — μην τα επικαλεστείς ως «σφάλματα» πριν τα μετρήσεις."
+  },
+  "sites": {
+    "src/app/api/buildings/[buildingId]/construction-resource-assignments/route.ts::construction_resource_assignments": 1,
+    "src/app/api/conversations/route.ts::conversations": 4,
+    "src/app/api/dxf-levels/dxf-levels.handlers.ts::dxf_viewer_levels": 4,
+    "src/app/api/floorplan-overlays/floorplan-overlays.handlers.ts::floorplan_overlays": 3,
+    "src/services/procurement/procurement-repository.ts::purchase_orders": 4,
+    "src/services/sales-accounting/sales-accounting-helpers.ts::accounting_invoices": 1,
+    "src/subapps/accounting/services/repository/accounting-repo-balances.ts::accounting_customer_balances": 1,
+    "src/subapps/accounting/services/repository/accounting-repo-balances.ts::accounting_fiscal_periods": 1,
+    "src/subapps/accounting/services/repository/accounting-repo-documents.ts::accounting_apy_certificates": 4,
+    "src/subapps/accounting/services/repository/accounting-repo-documents.ts::accounting_expense_documents": 2,
+    "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_invoices": 63,
+    "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_journal_entries": 60,
+    "src/subapps/accounting/services/repository/accounting-repo-financial.ts::accounting_tax_installments": 1,
+    "src/subapps/accounting/services/repository/accounting-repo-operations.ts::accounting_bank_transactions": 11,
+    "src/subapps/accounting/services/repository/accounting-repo-operations.ts::accounting_fixed_assets": 4,
+    "src/subapps/procurement/services/framework-agreement-service.ts::framework_agreements": 5,
+    "src/subapps/procurement/services/material-service.ts::materials": 2,
+    "src/subapps/procurement/services/trade-registry.ts::trades": 2
+  }
+}

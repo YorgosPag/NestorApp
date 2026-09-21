@@ -65,7 +65,8 @@ const ts = require('typescript');
 const {
   loadIndexCatalog,
   requiredIndexFor,
-  findMatchingIndex,
+  findCoveringIndexes,
+  noIndexCarriesRangeFields,
   suggestIndexJson,
 } = require('./_shared/firestore-index-matcher');
 
@@ -650,12 +651,16 @@ function main() {
         // ADR-869 §7 — «δεν αποφασίζεται» και «άκυρο ερώτημα» ΔΕΝ σιωπούν: ένα ερώτημα που
         // η πύλη δεν μπορεί να κρίνει είναι ακριβώς η τυφλή ζώνη που τη γέννησε.
         if (required.status !== 'required') {
-          unjudged.push({ site, shape, required });
+          // ADR-870 — «δεν αποφασίζεται» ΔΕΝ είναι άλλοθι όταν η απάντηση δεν χρειάζεται
+          // σειρά: αν κανένας δείκτης δεν κουβαλά καν τα πεδία του εύρους, λείπει. Τελεία.
+          if (noIndexCarriesRangeFields(catalog, shape)) missing.push({ site, shape });
+          else unjudged.push({ site, shape, required });
           continue;
         }
         analyzed++;
-        const match = findMatchingIndex(catalog, shape);
-        if (!match) missing.push({ site, shape });
+        // ADR-870 — ΚΑΙ η συγχώνευση δεικτών μετρά ως κάλυψη· αλλιώς η πύλη καταγγέλλει
+        // ερωτήματα που τρέχουν (μετρημένο: 12 κλάδοι του audit-log).
+        if (!findCoveringIndexes(catalog, shape)) missing.push({ site, shape });
       }
     }
   }
@@ -680,12 +685,8 @@ function main() {
       console.error(`    ${c.cyan('call:')}     ${site.methodName}('${site.collectionKey}', …)`);
       console.error(`    ${c.cyan('variant:')}  ${shape.variant}`);
       console.error(`    ${c.cyan('γιατί:')}    ${required.reason}`);
-      if (required.status === 'invalid-query') {
-        console.error(c.yellow('    → Το ερώτημα ΣΚΑΕΙ σε χρόνο εκτέλεσης. Βάλε πρώτο orderBy στο πεδίο του εύρους.'));
-      } else {
-        console.error(c.yellow('    → Δήλωσε ρητό orderBy που να ορίζει τη σειρά των πεδίων εύρους, ή σπάσε το'));
-        console.error(c.yellow('      ερώτημα. Η πύλη ΔΕΝ μαντεύει σειρά που κρίνεται από επιλεκτικότητα.'));
-      }
+      console.error(c.yellow('    → Δήλωσε ρητό orderBy που να ορίζει τη σειρά των πεδίων εύρους, ή σπάσε το'));
+      console.error(c.yellow('      ερώτημα. Η πύλη ΔΕΝ μαντεύει σειρά που κρίνεται από επιλεκτικότητα.'));
       console.error('');
     }
   }

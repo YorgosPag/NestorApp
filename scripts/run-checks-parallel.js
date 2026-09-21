@@ -1020,6 +1020,17 @@ if (srcTsFiles.length > 0 || indexManifestStaged) {
     indexManifestStaged ? ['--all'] : srcTsFiles);
 }
 
+// CHECK 3.91 — ΤΟ ΙΔΙΟ ΕΡΩΤΗΜΑ, ΕΞΩ ΑΠΟ ΤΟ SSoT (ADR-870). Η 3.15 σαρώνει μόνο κλήσεις του
+// `firestoreQueryService`· κάθε `adminDb.collection(X).where(…)` ήταν αόρατο — και ζει σε
+// cron jobs και API routes, όπου κανένα UI δεν θα δείξει το FAILED_PRECONDITION.
+// Ίδια σκανδάλη με την 3.15, και για τον ίδιο λόγο: **δείκτης που φεύγει** αφορά οποιοδήποτε
+// αρχείο, άρα σταδιοποίηση μόνο του μανιφέστου ⇒ ολικό πέρασμα. Μετρημένο: **4,2s** για
+// 13.242 αρχεία.
+if (!process.env.SKIP_FIRESTORE_ADMIN_INDEX && (srcTsFiles.length > 0 || indexManifestStaged)) {
+  addThread('3.91', 'Admin SDK index coverage', 'scripts/check-firestore-admin-index.js',
+    indexManifestStaged ? ['--all'] : srcTsFiles);
+}
+
 if (srcTsFiles.length > 0) {
   addThread('3.17', 'Entity audit coverage',     'scripts/check-entity-audit-coverage.js',       srcTsFiles);
   addThread('3.18', 'SSoT discover',             'scripts/check-ssot-discover-ratchet.js',       ssotFull ? ['--full'] : []);
