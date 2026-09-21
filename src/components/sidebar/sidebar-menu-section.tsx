@@ -9,16 +9,18 @@ import {
 } from "@/components/ui/sidebar"
 import { SidebarMenuItem } from "@/components/sidebar/sidebar-menu-item"
 import { cn } from "@/lib/utils"
-import type { MenuItem } from "@/types/sidebar"
+import type { MenuEntry } from "@/types/sidebar"
+import { navNodeKey } from "@/config/navigation-node"
 import type { WorkspaceHref } from "@/lib/workspace/route-worlds"
 import type { JobRevealView } from "@/hooks/useJobFilteredNavigation"
 import '@/lib/design-system';
 
 interface SidebarMenuSectionProps {
   label?: string
-  items: MenuItem[]
+  items: readonly MenuEntry[]
+  /** Τα `id` των ανοιχτών ομάδων (ADR-871 §10.6 Υ20). */
   expandedItems: string[]
-  onToggleExpanded: (title: string) => void
+  onToggleExpanded: (groupId: string) => void
   /** Το ένα ενεργό στοιχείο **όλου** του καταλόγου — από το `useSidebarState` (ADR-871 §10.5 Υ11). */
   activeHref: WorkspaceHref | null
   className?: string
@@ -47,9 +49,9 @@ export function SidebarMenuSection({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem
-              key={item.title}
+              key={navNodeKey(item)}
               item={item}
-              isExpanded={expandedItems.includes(item.title)}
+              isExpanded={item.kind === "group" && expandedItems.includes(item.id)}
               activeHref={activeHref}
               onToggleExpanded={onToggleExpanded}
               reveal={reveal}

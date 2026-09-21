@@ -4,7 +4,7 @@
  * Τι κλειδώνει:
  * - Ε1: ακριβώς ΕΝΑ `aria-current="page"` — όχι όλα τα αδέλφια του γονιού (το παλιό bug).
  * - Ε2: ο γονιός του ενεργού ανοίγει μόνος του, με `aria-expanded="true"`.
- * - Ε3: γονιός με ξένο href παιδιού (`/legal-documents` → `/obligations`) ανοίγει επίσης.
+ * - Ε3: ομάδα χωρίς διεύθυνση («Νομικά», μόνο παιδί `/obligations`) ανοίγει επίσης (ADR-871 §10.6).
  * - Ε4: ο άνθρωπος κλείνει τον γονιό ⇒ μένει κλειστός, και ο φωτισμός ανεβαίνει σε αυτόν.
  * - Ε5: πλοήγηση σε άλλη ομάδα ⇒ ανοίγει ο νέος γονιός.
  */
@@ -36,24 +36,27 @@ jest.mock('@/lib/workspace/navigation', () => ({
 import { SidebarProvider } from '@/components/ui/sidebar-context';
 import { SidebarMenuSection } from '@/components/sidebar/sidebar-menu-section';
 import { useSidebarState } from '@/hooks/useSidebarState';
-import type { MenuItem } from '@/types/sidebar';
+import type { MenuEntry } from '@/types/sidebar';
 
-const ITEMS: MenuItem[] = [
+// ADR-871 §10.6 Υ13 — ομάδες ΧΩΡΙΣ διεύθυνση· η «Επισκόπηση» είναι σύνδεσμος της ομάδας.
+const ITEMS: MenuEntry[] = [
   {
-    title: 'pages.crm',
+    kind: 'group',
+    id: 'crm',
+    navLabelKey: 'pages.crm',
     icon: Users,
-    href: '/crm',
-    subItems: [
-      { title: 'crm_overview', icon: Users, href: '/crm' },
-      { title: 'customers', icon: Users, href: '/crm/customers' },
-      { title: 'leads', icon: Users, href: '/crm/leads' },
+    items: [
+      { kind: 'link', navLabelKey: 'menu.overview', icon: Users, href: '/crm' },
+      { kind: 'link', navLabelKey: 'crm.customers', icon: Users, href: '/crm/customers' },
+      { kind: 'link', navLabelKey: 'crm.leads', icon: Users, href: '/crm/leads' },
     ],
   },
   {
-    title: 'tools.legal',
+    kind: 'group',
+    id: 'legal',
+    navLabelKey: 'tools.legal',
     icon: FileText,
-    href: '/legal-documents',
-    subItems: [{ title: 'tools.obligations', icon: FileText, href: '/obligations' }],
+    items: [{ kind: 'link', navLabelKey: 'tools.obligations', icon: FileText, href: '/obligations' }],
   },
 ];
 
