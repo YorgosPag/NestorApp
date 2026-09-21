@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,7 +86,9 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
   return (
     <tr className="border-b text-sm">
       <td className="py-1 pr-2">
+        {/* Κάθε κελί ονομάζεται με το κείμενο της κεφαλίδας του (WCAG 2.5.3, ADR-598 G11). */}
         <Input
+          aria-label={t('rfqs.lineDescription')}
           value={line.description}
           onChange={(e) => onUpdate(index, 'description', e.target.value)}
           placeholder={t('rfqs.lineDescription')}
@@ -95,6 +97,7 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
       </td>
       <td className="py-1 pr-2 w-40">
         <TradeSelector
+          aria-label={t('rfqs.lineTrade')}
           value={line.trade ?? ''}
           onChange={handleTradeChange}
           className="h-8"
@@ -105,7 +108,7 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
           value={line.categoryCode ?? SELECT_CLEAR_VALUE}
           onValueChange={(v) => onUpdate(index, 'categoryCode', v === SELECT_CLEAR_VALUE ? null : v)}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('rfqs.categoryCodePlaceholder')} /></SelectTrigger>
+          <SelectTrigger aria-label={t('rfqs.lineCategoryCode')} className="h-8 text-sm"><SelectValue placeholder={t('rfqs.categoryCodePlaceholder')} /></SelectTrigger>
           <SelectContent>
             <SelectItem value={SELECT_CLEAR_VALUE}>{t('rfqs.noCategoryCode')}</SelectItem>
             {suggestedCodes.map((c) => (
@@ -120,6 +123,7 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
       </td>
       <td className="py-1 pr-2 w-20">
         <Input
+          aria-label={t('rfqs.lineQuantity')}
           type="number"
           value={line.quantity ?? ''}
           onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || null)}
@@ -130,6 +134,7 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
       </td>
       <td className="py-1 pr-2 w-20">
         <Input
+          aria-label={t('rfqs.lineUnit')}
           value={line.unit ?? ''}
           onChange={(e) => onUpdate(index, 'unit', e.target.value || null)}
           className="h-8 text-sm"
@@ -137,8 +142,8 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
         />
       </td>
       <td className="py-1">
-        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onRemove(index)}>
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onRemove(index)} aria-label={t('rfqs.removeLine')}>
+          <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden />
         </Button>
       </td>
     </tr>
@@ -157,6 +162,7 @@ interface RfqBuilderProps {
 
 export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const [form, setForm] = useState<FormState>({
     projectId: initialState?.projectId ?? '',
     title: initialState?.title ?? '',
@@ -312,8 +318,9 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>{t('rfqs.project')}</Label>
+            <Label htmlFor={`${idBase}-project`}>{t('rfqs.project')}</Label>
             <POProjectSelector
+              id={`${idBase}-project`}
               value={form.projectId}
               onSelect={(id) => setField('projectId', id)}
             />

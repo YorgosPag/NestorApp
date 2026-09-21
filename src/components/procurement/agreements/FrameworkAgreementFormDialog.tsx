@@ -21,10 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { normalizeToDate, nowISO } from '@/lib/date-local';
 import { BreakpointsEditor } from './BreakpointsEditor';
 import {
@@ -134,16 +132,7 @@ export function FrameworkAgreementFormDialog({
     }
   }, [open, initial]);
 
-  const supplierOptions = useMemo<ComboboxOption[]>(
-    () =>
-      suppliers
-        .filter((c): c is typeof c & { id: string } => typeof c.id === 'string')
-        .map((c) => ({
-          value: c.id,
-          label: getContactDisplayName(c),
-        })),
-    [suppliers],
-  );
+  const supplierOptions = useMemo(() => supplierContactsToOptions(suppliers), [suppliers]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -262,6 +251,7 @@ export function FrameworkAgreementFormDialog({
               {t('hub.frameworkAgreements.form.vendor')} *
             </Label>
             <SearchableCombobox
+              id="fwa-vendor"
               value={form.vendorContactId}
               onValueChange={(v) => update('vendorContactId', v)}
               options={supplierOptions}
