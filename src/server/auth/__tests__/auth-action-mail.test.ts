@@ -45,6 +45,8 @@ jest.mock('@/lib/middleware/rate-limiter', () => ({
   checkQuota: (...args: unknown[]) => quotaMock(...args),
 }));
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
+
 import { sendEmailVerificationMail, sendPasswordResetMail } from '../auth-action-mail';
 
 const ORIGINAL_APP_URL = process.env.NEXT_PUBLIC_APP_URL;
@@ -92,7 +94,10 @@ describe('Γ — η γλώσσα του παραλήπτη', () => {
 
     await sendPasswordResetMail({ email: 'maria@example.com', requestedLanguage: 'el' });
 
-    expect(sentMail().subject).toBe('Set a new password — Nestor');
+    // 🔑 Η ΓΛΩΣΣΑ είναι το κριτήριο· η υπογραφή ανήκει στο SSoT της ταυτότητας (ADR-857).
+    //    Το καρφωμένο «— Nestor» πάλιωσε όταν το `91063ffb` ενοποίησε την υπογραφή στο
+    //    `PRODUCT_NAME` — κόκκινο από ΜΟΡΦΗ, ενώ η γλώσσα ήταν σωστή.
+    expect(sentMail().subject).toBe(`Set a new password — ${PRODUCT_NAME}`);
     expect(sentMail().htmlBody).toContain('<html lang="en">');
   });
 

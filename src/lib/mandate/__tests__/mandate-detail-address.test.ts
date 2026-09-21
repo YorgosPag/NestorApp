@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * =============================================================================
  * ADR-841 §7 **Α18.12** — **Η ΕΝΤΟΛΗ ΕΧΕΙ ΔΙΕΥΘΥΝΣΗ, ΚΑΙ ΟΔΗΓΕΙ ΕΚΕΙ ΠΟΥ ΠΡΕΠΕΙ**
  * =============================================================================
@@ -23,6 +27,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+
+import { firstActionUrl } from '@/lib/notifications/notification-destination';
+import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { announceMandateDecision } from '@/services/mandate/mandate-decision-notifier.service';
+import { announceMandateRequestAnswer } from '@/services/mandate/mandate-request-notifier.service';
+import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 import {
   mandateDetailHref,
   MANDATE_CATALOG_ROUTE,
@@ -40,8 +52,30 @@ const ROOT = process.cwd();
 const read = (relative: string): string =>
   fs.readFileSync(path.join(ROOT, relative), 'utf8');
 
-const DECISION_NOTIFIER = 'src/services/mandate/mandate-decision-notifier.service.ts';
-const REQUEST_NOTIFIER = 'src/services/mandate/mandate-request-notifier.service.ts';
+/**
+ * **Ό,τι φτάνει στον αγωγό** — η έξοδος των ειδοποιητών, πριν από κάθε κανάλι. Οι
+ * δύο ειδοποιητές καλούνται **αληθινοί**· μόνο ο αγωγός αιχμαλωτίζεται.
+ */
+const dispatched: Record<string, unknown>[] = [];
+
+jest.mock('@/server/notifications/notification-orchestrator', () => ({
+  dispatchNotification: jest.fn(async (request: Record<string, unknown>) => {
+    dispatched.push(request);
+    return { success: true, dedupeKey: 'k', skipped: false };
+  }),
+}));
+
+beforeEach(() => {
+  dispatched.length = 0;
+});
+
+const LISTING = 'ownp_abc';
+const AGENCY = 'comp_alfa';
+/** Ο **υπάλληλος** που καταχώρησε — παραλήπτης της απόφασης. */
+const CLERK = 'user_maria';
+/** Ο **ιδιώτης** που ζήτησε — παραλήπτης της απάντησης. */
+const PRIVATE_OWNER = 'user_kostas';
+
 const DETAIL_ROUTE = 'src/app/api/owner-properties/brokered/[ownerPropertyId]/route.ts';
 const DETAIL_PAGE =
   'src/app/(app)/o/[workspace]/listings/mandates/[ownerPropertyId]/page.tsx';
@@ -98,18 +132,37 @@ describe('ADR-841 §7 Α18.12 — η εντολή έχει διεύθυνση', 
   // Μ3 — Ο ΕΙΔΟΠΟΙΗΤΗΣ ΑΠΟΦΑΣΗΣ ΣΤΕΛΝΕΙ ΣΤΟ ΓΡΑΦΕΙΟ
   // ===========================================================================
 
-  it('Μ3 🔴 — ο ειδοποιητής ΑΠΟΦΑΣΗΣ οδηγεί στην εντολή, ΟΧΙ στον ιδιωτικό χώρο', () => {
-    const source = read(DECISION_NOTIFIER);
+  /**
+   * 🔴 **ΕΚΤΕΛΕΙ ΤΟΝ ΕΙΔΟΠΟΙΗΤΗ, ΔΕΝ ΔΙΑΒΑΖΕΙ ΤΗΝ ΠΗΓΗ ΤΟΥ** (2026-09-21). Η πρώτη
+   * εκδοχή έψαχνε κειμενικά ένα literal `actions: [ … ]` — και **τυφλώθηκε** όταν το
+   * `8da65273` (ADR-849 §6δ Β1) μετέφερε τον προορισμό στον κεντρικό κατασκευαστή
+   * `viewDestination(...)`: 0 ευρήματα ⇒ κόκκινο, ενώ η συμπεριφορά ήταν **ίδια**. Ο
+   * προορισμός είναι **τιμή**, άρα κρίνεται στην **έξοδο** του αγωγού — ό,τι φτάνει στο
+   * `dispatchNotification` — ανεξάρτητα από το πώς γράφτηκε.
+   */
+  it('Μ3 🔴 — ο ειδοποιητής ΑΠΟΦΑΣΗΣ οδηγεί στην εντολή, ΟΧΙ στον ιδιωτικό χώρο', async () => {
+    const sent = await announceMandateDecision(new FakeFirestore() as unknown as AdminFirestore, {
+      ownerPropertyId: LISTING,
+      listingTitle: 'Οικόπεδο Κώστα',
+      clientContactId: 'cont_kostas',
+      recipientUserId: CLERK,
+      tenantId: AGENCY,
+      custody: { kind: 'company', companyId: AGENCY },
+      previous: 'pending',
+      next: 'confirmed',
+      decidedAt: '2026-08-21T10:00:00.000Z',
+    });
 
-    // ΠΑΡΟΝΟΜΑΣΤΗΣ: το αρχείο όντως παράγει ειδοποίηση με ενέργειες.
-    const actions = [...source.matchAll(/\n\s*actions:\s*\[[^\]]*\]/g)].map((m) => m[0]);
-    expect(actions.length).toBe(1);
+    // ΠΑΡΟΝΟΜΑΣΤΗΣ: ο αγωγός όντως έστειλε **μία** ειδοποίηση.
+    expect(sent).toBe(true);
+    expect(dispatched).toHaveLength(1);
 
-    expect(actions[0]).toContain('mandateDetailHref(');
+    expect(firstActionUrl(dispatched[0]?.actions)).toBe(mandateDetailHref(LISTING));
     // 🔴 Ο παραλήπτης είναι **υπάλληλος γραφείου**: το `(me)/offers/<id>` είναι ο
     //    **ιδιωτικός χώρος του ιδιώτη** και δεν έχει ούτε την κατάσταση της εντολής
     //    ούτε τα κουμπιά της.
-    expect(actions[0]).not.toContain('offerDetailHref(');
+    expect(firstActionUrl(dispatched[0]?.actions)).not.toBe(offerDetailHref(LISTING));
+    expect(dispatched[0]?.workspace).toEqual(orgWorkspace(AGENCY));
   });
 
   // ===========================================================================
@@ -129,14 +182,22 @@ describe('ADR-841 §7 Α18.12 — η εντολή έχει διεύθυνση', 
    * που ο κανόνας Firestore **δεν** του ανοίγει. Το κριτήριο φυλά ότι ο δεύτερος
    * **έμεινε ακέραιος**.
    */
-  it('Μ4 🔴 — ο ειδοποιητής ΑΙΤΗΜΑΤΟΣ μένει στον ιδιωτικό χώρο του ιδιώτη', () => {
-    const source = read(REQUEST_NOTIFIER);
+  it('Μ4 🔴 — ο ειδοποιητής ΑΙΤΗΜΑΤΟΣ μένει στον ιδιωτικό χώρο του ιδιώτη', async () => {
+    const sent = await announceMandateRequestAnswer(new FakeFirestore() as unknown as AdminFirestore, {
+      requestId: 'mreq_1',
+      ownerPropertyId: LISTING,
+      recipientUserId: PRIVATE_OWNER,
+      agencyName: 'Άλφα Ακίνητα',
+      decision: 'accepted',
+    });
 
-    const actions = [...source.matchAll(/\n\s*actions:\s*\[[^\]]*\]/g)].map((m) => m[0]);
-    expect(actions.length).toBe(1); // ΠΑΡΟΝΟΜΑΣΤΗΣ
+    expect(sent).toBe(true);
+    expect(dispatched).toHaveLength(1); // ΠΑΡΟΝΟΜΑΣΤΗΣ
 
-    expect(actions[0]).toContain('offerDetailHref(');
-    expect(actions[0]).not.toContain('mandateDetailHref(');
+    expect(firstActionUrl(dispatched[0]?.actions)).toBe(offerDetailHref(LISTING));
+    expect(firstActionUrl(dispatched[0]?.actions)).not.toBe(mandateDetailHref(LISTING));
+    // …και ο χώρος είναι ο **δικός του** — ποτέ του γραφείου που απάντησε.
+    expect(dispatched[0]?.workspace).toEqual(personalWorkspace(PRIVATE_OWNER));
   });
 
   // ===========================================================================
