@@ -11,7 +11,7 @@
  * Οι **8** καταναλωτές των `MY_OFFERS_ROUTE` / `MY_DEMANDS_ROUTE` ζούσαν **όλοι**
  * μέσα στον κόσμο του ιδιώτη *(`components/demand` · `owner-property` ·
  * `public-site` · `search`)*. **ΜΗΔΕΝ** σε `app-sidebar` · `app-header` ·
- * `smart-navigation-factory` · `ShellUtilities` · `user-menu`.
+ * `office-navigation` · `ShellUtilities` · `user-menu`.
  *
  * Και το ανάποδο ήταν εξίσου κενό: ο `PublicSiteHeader` — η κεφαλίδα **και** του
  * `(me)` **και** του `(light)` — δεν είχε **καμία** πόρτα προς το γραφείο. Ο

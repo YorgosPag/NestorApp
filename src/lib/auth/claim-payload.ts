@@ -65,8 +65,8 @@ export const FIREBASE_CLAIM_LIMIT_BYTES = 1000;
 /**
  * Οι ρόλοι που παίρνουν `admin_access` **ρητά** στο claim.
  *
- * 🔑 **ΓΙΑΤΙ ΡΗΤΑ, ΑΦΟΥ Ο ΚΑΤΑΛΟΓΟΣ ΤΟ ΕΧΕΙ ΗΔΗ**: το `filterItemsByPermissions`
- * του `smart-navigation-factory` κάνει **ωμό `includes`** πάνω στο claim — δεν
+ * 🔑 **ΓΙΑΤΙ ΡΗΤΑ, ΑΦΟΥ Ο ΚΑΤΑΛΟΓΟΣ ΤΟ ΕΧΕΙ ΗΔΗ**: η μηχανή του καταλόγου
+ * (`office-navigation/resolve-office-navigation.ts`) κάνει **ωμό `includes`** πάνω στο claim — δεν
  * ρωτά κριτή, δεν κοιτά ρόλο — και **και οι 8** δηλώσεις του ζητούν αυτό το ένα
  * id. Χωρίς τη ρητή προσθήκη, ο διαχειριστής θα έχανε ολόκληρο το μενού.
  *

@@ -211,7 +211,7 @@ export async function handleSetUserClaims(
     //    `permissions: []` (όλη του η δύναμη είναι το `isBypass`). Το
     //    `filterItemsByPermissions` του sidebar κάνει **ωμό `includes`** στο
     //    claim — δεν ρωτά κριτή, δεν κοιτά ρόλο — και **και οι 8** δηλώσεις του
-    //    `smart-navigation-factory.ts` ζητούν ακριβώς αυτό το ένα id. Χωρίς
+    //    καταλόγου `config/office-navigation/catalog-*.ts` ζητούν ακριβώς αυτό το ένα id. Χωρίς
     //    αυτή τη γραμμή, ο διαχειριστής θα έχανε **ολόκληρο** το μενού.
     //
     // ⚠️ **ΜΗΝ ξαναβάλεις τα role permissions «για ασφάλεια»**: θα ξαναφέρει το
