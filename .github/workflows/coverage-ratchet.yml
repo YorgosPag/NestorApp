@@ -50,16 +50,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -93,7 +93,7 @@ jobs:
 
       - name: 📤 Upload seeded baseline (seed mode only)
         if: ${{ inputs.seed == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-baseline
           path: .coverage-baseline.json

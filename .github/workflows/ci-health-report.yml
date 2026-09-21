@@ -71,11 +71,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
+          # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
+          package-manager-cache: false
 
       # Καμία εγκατάσταση εξαρτήσεων: ο συγκεντρωτής χρησιμοποιεί μόνο built-ins (fetch).
       # Tier 1 μετάβαση ⇒ σχόλιο (γραπτό αρχείο) **και** Telegram (ξύπνα) — ADR-865 §11.

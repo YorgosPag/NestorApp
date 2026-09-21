@@ -65,15 +65,15 @@ jobs:
       # Π3/Π4 γίνονται κόκκινα για λόγο άσχετο με την εκτελεσιμότητα — δηλαδή η
       # πύλη αυτοακυρώνεται: κόκκινη πάντα, άρα δεν λέει τίποτα για τον κώδικα.
       # Ίδιο μπλοκ με το ui-contrast-ratchet.yml, όπου το ίδιο πληρώθηκε πρώτο.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'

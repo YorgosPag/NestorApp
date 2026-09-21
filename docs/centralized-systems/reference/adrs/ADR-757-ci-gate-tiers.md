@@ -382,6 +382,31 @@ tests που δηλώνει;»*. Η κλάση «test που τραβά ιστο
 
 ## Changelog
 
+### 2026-09-21 — Όλα τα actions σε Node 24 (deprecation του Node 20)
+
+Κάθε workflow έγραφε *«Node.js 20 is deprecated…»*. **Μία** μαζική αλλαγή σε `.github/workflows/*.yml` +
+`.github/actions/*/action.yml` (όχι στα `.disabled`), στη **μικρότερη** major που τρέχει σε `node24` —
+επαληθευμένο στο `runs.using` του `action.yml` **κάθε** tag, όχι από μνήμη:
+
+| Action | Από → Σε | Breaking που ελέγχθηκε |
+|---|---|---|
+| `actions/checkout` | v4 → **v5** | μόνο runtime (runner ≥ 2.327.1 — GitHub-hosted) |
+| `actions/setup-node` | v4 → **v5** | 🔴 **σιωπηρό cache** για τον `packageManager` (pnpm εδώ) ⇒ ρητό `package-manager-cache: false` στα 9 jobs χωρίς install· κανόνας-μηχανή στο ADR-770 (β) |
+| `pnpm/action-setup` | v4 → **v5** | μόνο runtime· τα inputs (`version`, `run_install`) ίδια |
+| `actions/upload-artifact` | v4 → **v6** | η v5 είχε **ακόμη** `node20` ως προεπιλογή — η v6 είναι η πρώτη σε `node24` |
+| `actions/setup-java` · `actions/cache` | v4 → **v5** | μόνο runtime |
+| `docker/login-action` · `setup-buildx-action` | v3 → **v4** | ESM· αφαιρέθηκαν deprecated inputs — τα δικά μας (`driver-opts`, `buildkitd-config-inline`) υπάρχουν |
+| `docker/metadata-action` | v5 → **v6** | `#` μέσα σε τιμές λίστας διατηρείται — τα `tags` μας δεν έχουν `#` |
+| `docker/build-push-action` | v6 → **v7** | αφαιρέθηκαν `DOCKER_BUILD_NO_SUMMARY` / `…EXPORT_RETENTION_DAYS` — δεν τα χρησιμοποιούμε |
+| `google-github-actions/auth` | v3 | ήδη `node24` |
+
+Κάθε `with:` input που περνάμε επαληθεύτηκε ότι υπάρχει στη νέα major. **Γιατί η μικρότερη και όχι η
+τελευταία** (checkout v7, setup-node v7…): ο σκοπός είναι η deprecation· κάθε επιπλέον major φέρνει
+breaking changes χωρίς όφελος εδώ (πρακτική Dependabot/Renovate: ένα βήμα, διαβασμένο). ⚠️ Το runtime
+**της εφαρμογής** (`node-version: '20'`) **δεν** άλλαξε — είναι άλλη απόφαση (`dependency-cruiser` v16 κ.λπ.).
+Επαλήθευση: `ci-gate-tiers` **31/31**, `ci-preinstall-steps` **17/17**. Η πραγματική απόδειξη είναι το
+πρώτο CI μετά το push.
+
 ### 2026-09-18 — Δεύτερο Tier 1 + Telegram στην πολιτική `alert` (ADR-865 §11)
 
 - **Νέο Tier 1**: `firebase-drift.yml` (`T1 🔭 Firebase Drift (ADR-865)`) — καθημερινός έλεγχος

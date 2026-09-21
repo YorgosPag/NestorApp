@@ -231,23 +231,52 @@ function branchesOf(children) {
  * @returns {Record<string,string>}
  */
 function stepEnv(stepLines) {
+  return stepMap(stepLines, 'env');
+}
+
+/**
+ * Ένας χάρτης στο **άμεσο** επίπεδο ενός βήματος (`env:`, `with:`), γραμμένος είτε ως μπλοκ
+ * είτε ως flow (`with: { node-version: '20' }` — υπάρχει στο `ssot-discover.yml`). Μόνο τα
+ * **άμεσα** παιδιά: οι γραμμές ενός `script: |` μέσα στο `with:` δεν είναι κλειδιά.
+ * @param {{indent:number, body:string}[]} stepLines γραμμές ΕΝΟΣ βήματος, με εσοχή
+ * @param {string} key
+ * @returns {Record<string,string>}
+ */
+function stepMap(stepLines, key) {
   if (stepLines.length === 0) return {};
   const keyIndent = stepLines[0].indent + 2;
   const normalized = stepLines.map((line, index) =>
     index === 0 ? { indent: keyIndent, body: line.body.replace(/^- /, '') } : line,
   );
-  const envIndex = findKey(normalized, 'env', keyIndent);
-  if (envIndex === -1) return {};
+  const mapIndex = findKey(normalized, key, keyIndent);
+  if (mapIndex === -1) return {};
+
+  const inline = normalized[mapIndex].body.slice(key.length + 1).trim();
+  const children = childLines(normalized, mapIndex);
+  const entries = inline.startsWith('{')
+    ? inline.replace(/^\{|\}$/g, '').split(',')
+    : children.filter((line) => line.indent === children[0].indent).map((line) => line.body);
 
   const out = {};
-  for (const line of childLines(normalized, envIndex)) {
-    const match = line.body.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/);
+  for (const entry of entries) {
+    const match = entry.trim().match(/^([A-Za-z_][\w-]*):\s*(.*)$/);
     if (match) out[match[1]] = scalar(match[2]);
   }
   return out;
 }
 
+/** Τα βήματα `run:` κάθε job, με τη σειρά τους. */
 function readWorkflowRunSteps(filePath) {
+  return readWorkflowSteps(filePath).filter((s) => s.run !== null).map(({ uses, ...step }) => step);
+}
+
+/**
+ * **Όλα** τα βήματα κάθε job, με τη σειρά τους — `run:` **και** `uses:` (ένα από τα δύο είναι `null`).
+ * Χρειάζεται όταν η **σειρά** μετρά: ένα composite action (`uses: ./.github/actions/…`) μπορεί να
+ * κάνει το `pnpm install` που ένα `run:` βήμα από κάτω προϋποθέτει (ADR-770, `preinstall-steps.js`).
+ * Τα βήματα `uses:` φέρουν και το `with` τους — το χρειάζεται ο κανόνας του σιωπηρού cache.
+ */
+function readWorkflowSteps(filePath) {
   const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
   const jobsIndex = findKey(lines, 'jobs', 0);
   if (jobsIndex === -1) return [];
@@ -275,7 +304,18 @@ function readWorkflowRunSteps(filePath) {
       const end = n + 1 < starts.length ? starts[n + 1] : stepLines.length;
       const chunk = stepLines.slice(start, end).map((l) => l.body.replace(/^- /, ''));
       const runIndex = chunk.findIndex((b) => b.startsWith('run:'));
-      if (runIndex === -1) return;
+      if (runIndex === -1) {
+        const usesLine = chunk.find((b) => b.startsWith('uses:'));
+        if (usesLine) {
+          steps.push({
+            job,
+            run: null,
+            uses: scalar(usesLine.slice('uses:'.length).trim()),
+            with: stepMap(stepLines.slice(start, end), 'with'),
+          });
+        }
+        return;
+      }
 
       // `run: |` / `run: >` ⇒ το σώμα είναι οι γραμμές που ακολουθούν. Το `>` (folded)
       // ενώνει με ΚΕΝΟ: μια εντολή σπασμένη σε γραμμές είναι ΜΙΑ εντολή, και αν διαβαστεί
@@ -287,6 +327,7 @@ function readWorkflowRunSteps(filePath) {
       steps.push({
         job,
         run,
+        uses: null,
         env: stepEnv(stepLines.slice(start, end)),
         continueOnError: jobContinue || chunk.some((b) => /^continue-on-error:\s*true\b/.test(b)),
         conditional: chunk.some((b) => /^if:/.test(b)),
@@ -387,6 +428,7 @@ module.exports = {
   readWorkflowName,
   readWorkflowRunWatchList,
   readWorkflowRunSteps,
+  readWorkflowSteps,
   readWorkflowTriggers,
   readWorkflowJobs,
   readWorkflowPermissions,

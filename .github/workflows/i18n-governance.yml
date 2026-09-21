@@ -77,12 +77,14 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
+          # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
+          package-manager-cache: false
 
       # We do not need a full dependency install — every governance script is
       # pure Node.js (no runtime deps) that walks the repo filesystem. This
@@ -179,14 +181,16 @@ jobs:
       # ΠΡΑΓΜΑΤΙΚΑ διπλότυπα (6 αρχεία). Με ρηχό checkout το αντικείμενο δεν υπάρχει
       # και η βαθμονόμηση σκάει — η πύλη γίνεται κόκκινη για λόγο άσχετο με τα locale.
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
+          # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
+          package-manager-cache: false
 
       # ⚠️ ΚΑΜΙΑ ΕΓΚΑΤΑΣΤΑΣΗ: ο σαρωτής είναι καθαρό Node χωρίς εξαρτήσεις — ΔΕΝ
       # χρησιμοποιεί καν `JSON.parse` για την κρίση (γι' αυτό ακριβώς υπάρχει).

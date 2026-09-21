@@ -192,12 +192,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
+          # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
+          package-manager-cache: false
 
       # No dependency install required — scanner is pure bash + Node stdlib.
       # Keeps the workflow under 2 minutes wall-clock on Linux runners.
@@ -231,16 +233,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -319,18 +321,18 @@ jobs:
       # object name`) και η βαθμονόμηση σκάει — η πύλη γίνεται μονίμως κόκκινη για
       # λόγο άσχετο με τα `SelectItem`, δηλαδή σταματά να λέει οτιδήποτε.
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -397,16 +399,16 @@ jobs:
       - name: 📥 Checkout
         # Το `fetch-depth: 0` ΔΕΝ χρειάζεται: η πύλη ρωτά το **index** (`git ls-files`),
         # δηλαδή το δέντρο του commit — ποτέ ιστορικό.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -478,16 +480,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -552,18 +554,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` στο ΚΑΡΦΩΜΕΝΟ a19347d3
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -604,18 +606,18 @@ jobs:
         # ⚠️ ΠΛΗΡΕΣ ιστορικό: ο κανόνας Κ2 ρωτά το git (`git grep --untracked`) για την
         # αντίστροφη κλειστότητα των δημόσιων hooks. Ρηχό checkout αρκεί για grep, αλλά το
         # `fetch-depth: 0` κρατά τη συμπεριφορά ταυτόσημη με το pre-commit.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -660,16 +662,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -722,18 +724,18 @@ jobs:
       - name: 📥 Checkout
         # ⚠️ ΠΛΗΡΕΣ ιστορικό: η πύλη διαβάζει το **index του git** (`git ls-files`), όχι τον
         # δίσκο — ο δίσκος βλέπει untracked προσχέδια ⇒ άλλο αποτέλεσμα ανά εκτέλεση.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -780,18 +782,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` στο ΚΑΡΦΩΜΕΝΟ dbd89df8
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -833,16 +835,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -885,18 +887,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -919,18 +921,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` στο ΚΑΡΦΩΜΕΝΟ 7ccfc4fd
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -978,16 +980,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1033,16 +1035,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1095,18 +1097,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` σε ΚΑΡΦΩΜΕΝΟ commit
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1165,18 +1167,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0   # η άγκυρα Π1 κάνει `git show` σε ΚΑΡΦΩΜΕΝΟ commit
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1239,9 +1241,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: '20', package-manager-cache: false }
       - run: node scripts/check-font-promise.js
 
   # ⚠️ CHECK 3.69 (ADR-805) — έχει κάθε διανεμόμενη γραμματοσειρά εγκεκριμένη άδεια;
@@ -1253,16 +1255,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1296,18 +1298,18 @@ jobs:
       # ΠΡΑΓΜΑΤΙΚΕΣ βλάβες (8 αρχεία). Με ρηχό checkout το αντικείμενο δεν υπάρχει και η
       # βαθμονόμηση σκάει — η πύλη γίνεται μονίμως κόκκινη για λόγο άσχετο με τον κώδικα.
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1353,16 +1355,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -1415,16 +1417,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'

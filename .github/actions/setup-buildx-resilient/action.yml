@@ -50,7 +50,7 @@ runs:
         exit 1
 
     - name: Set up Docker Buildx (mirror-pinned driver)
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
       with:
         # Driver runs the image we just pre-pulled locally → no Docker Hub hit.
         driver-opts: |

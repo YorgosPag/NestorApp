@@ -30,6 +30,7 @@ permissions:
   contents: read
   id-token: write # GitHub OIDC → Google (ταυτότητα χωρίς κλειδί)
   actions: read # ADR-865 §11.9: ανάγνωση εκκρεμών εγκρίσεων της γραμμής (ΠΟΤΕ ακύρωση από εδώ)
+  deployments: read # ADR-865 §11.10: ποιο GitHub Deployment ανέπτυξε ό,τι τρέχει
 
 concurrency:
   group: firebase-drift
@@ -46,7 +47,7 @@ jobs:
     steps:
       # Πλήρες ιστορικό: η προέλευση του ζωντανού βρίσκεται με ταύτιση περιεχομένου στο git
       # (world.attributeFromHistory) — με ρηχό checkout θα έμενε «foreign».
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -57,6 +58,8 @@ jobs:
 
       # --wait: δείκτης σε CREATING δεν είναι «κόκκινο» αν γίνει READY μέσα στο χρονικό όριο.
       - name: 🔎 Επαλήθευση ζωντανού (μόνο ανάγνωση)
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # ADR-865 §11.10: ποιο GitHub Deployment ανέπτυξε ό,τι τρέχει
         run: node scripts/firestore-deploy/verify-live.js --wait --timeout 1800
 
       # ADR-865 §11.9 — ΞΕΧΑΣΜΕΝΗ ΕΓΚΡΙΣΗ. Το GitHub την κρατά 30 μέρες («If a job is not approved

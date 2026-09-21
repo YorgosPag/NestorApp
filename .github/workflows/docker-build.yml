@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Add extra swap — GitHub runner already has /swapfile, use /swapfile2
       - name: Configure swap
@@ -61,10 +61,10 @@ jobs:
           free -h
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -116,7 +116,7 @@ jobs:
           NEXT_PUBLIC_DEPLOYMENT_ID: ${{ github.sha }}
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -152,7 +152,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           # ADR-865 §11 — ΜΟΝΟ η αμετάβλητη ετικέτα του commit. Το `:latest` = «ό,τι ΚΥΚΛΟΦΟΡΗΣΕ»
@@ -162,7 +162,7 @@ jobs:
             type=sha,prefix=main-,format=short
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -184,11 +184,12 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      deployments: read # ADR-865 §11.10: ποιο GitHub Deployment ανέπτυξε ό,τι τρέχει
     outputs:
       action: ${{ steps.plan.outputs.action }}
       targets: ${{ steps.plan.outputs.targets }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # προέλευση του ζωντανού από το ιστορικό (world.attributeFromHistory)
 
@@ -199,6 +200,8 @@ jobs:
 
       - name: 🔎 Ζωντανό έναντι δέντρου → πλάνο
         id: plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # ADR-865 §11.10: ποιο GitHub Deployment ανέπτυξε ό,τι τρέχει
         run: node scripts/firestore-deploy/verify-live.js --plan --wait --timeout 1800
 
   # ───────────────────────────────────────────────────────────────────────────
@@ -219,7 +222,7 @@ jobs:
       contents: read
       actions: write # docs: «actions: write permits an action to cancel a workflow run»
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           sparse-checkout: scripts
 
@@ -259,7 +262,7 @@ jobs:
     steps:
       # Το workflow χρειάζεται: το API `…/jobs` επιστρέφει το `name:` του job, και ο φύλακας το
       # διαβάζει από εδώ με τον ΕΝΑ αναγνώστη YAML — όχι από δεύτερο αντίγραφο.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           sparse-checkout: |
             scripts
@@ -291,8 +294,9 @@ jobs:
       contents: read
       id-token: write
       actions: write # §11.9: αυτοακύρωση όταν η έγκριση δόθηκε αφού ήρθε νεότερο push
+      deployments: read # §11.10: η επαλήθευση μετά την ανάπτυξη αποδίδει στο ΔΙΚΟ της Deployment
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -312,6 +316,7 @@ jobs:
       - name: 🚀 firebase deploy → επαλήθευση μέχρι READY
         env:
           TARGETS: ${{ needs.firebase-plan.outputs.targets }}
+          GITHUB_TOKEN: ${{ github.token }} # §11.10: απόδοση στο ΔΙΚΟ της GitHub Deployment
           DRY_RUN: ${{ inputs.firebase_dry_run == true && '--dry-run' || '' }}
         run: >-
           node scripts/firestore-deploy/record-deploy.js --pipeline
@@ -343,7 +348,7 @@ jobs:
       packages: write
       actions: write # §11.9: αυτοακύρωση όταν δεν είναι πια κορυφή
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           sparse-checkout: scripts
 
@@ -355,7 +360,7 @@ jobs:
         run: node scripts/firestore-deploy/succession.js guard
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -386,7 +391,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           sparse-checkout: scripts
 

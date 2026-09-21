@@ -151,7 +151,7 @@ jobs:
       # πέρασε σπασμένος. Με ρηχό checkout (depth 1) το αντικείμενο δεν υπάρχει και
       # τρία tests γίνονται κόκκινα για λόγο άσχετο με την αντίθεση.
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -160,13 +160,13 @@ jobs:
       # step here fails the job before it reaches a single check. Same block as
       # a11y-ratchet.yml / deadcode-ratchet.yml; version pinned to packageManager.
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -185,11 +185,8 @@ jobs:
       # μετάλλαξης από κάτω — **δεν εκτελέστηκαν ποτέ**. Πριν προσθέσεις βήμα εδώ:
       # `grep -rn "require('typescript')" scripts/lib/<το lib σου>`. Ένα CSS parse
       # είναι όντως pure Node· ένα AST parse ποτέ.
-
-      # The full scan Layer 1 deliberately skips. ~8s. Pure Node: filesystem walk +
-      # colour arithmetic, κανένα `require` πακέτου.
-      - name: 🔍 CHECK 3.38 — text-primary ratchet, FULL tree (ADR-770)
-        run: node scripts/check-text-primary-ratchet.js --all
+      # ✅ Από 2026-09-21 το ελέγχει ΜΗΧΑΝΗ σε όλα τα workflows:
+      # `scripts/__tests__/ci-preinstall-steps.test.js` (ADR-770).
 
       # CHECK 3.43 (ADR-774) — τα CSS Modules είναι η ΟΓΔΟΗ αρχή χρώματος, που το ADR-773
       # δεν χαρτογράφησε. Ίδιο workflow, ίδιος λόγος με τα 3.39/3.40/3.41: νέο αρχείο workflow
@@ -216,6 +213,15 @@ jobs:
       # needed to run gates and tests that never import the app.
       - name: 📦 Install dependencies (jest + TypeScript parser + Tailwind)
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # The full scan Layer 1 deliberately skips. ~8s.
+      # ⚠️ ΜΕΤΑ το install: από το `fcd8e094` (27/08) το `surface-ink-tokens.js` φορτώνει το
+      # `tailwindcss/loadConfig` (μέσω `require.resolve` — αόρατο σε grep για `require('`). Έτρεχε
+      # εδώ πάνω με σχόλιο «κανένα require πακέτου» ⇒ `Cannot find module` σε ΚΑΘΕ τρέξιμο από
+      # τότε, και τα βήματα από κάτω δεν εκτελέστηκαν ποτέ. Φύλακας πλέον ΜΗΧΑΝΗ, όχι σχόλιο:
+      # `scripts/__tests__/ci-preinstall-steps.test.js` (όλα τα workflows).
+      - name: 🔍 CHECK 3.38 — text-primary ratchet, FULL tree (ADR-770)
+        run: node scripts/check-text-primary-ratchet.js --all
 
       # CHECK 3.39 / Στρώμα 2 — the OTHER route to the same invisible text: ~250ms,
       # AST walk πάνω σε 12 token modules + ένα CSS parse, fails closed χωρίς baseline.
@@ -382,18 +388,18 @@ jobs:
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ⚠️ pnpm, ΠΟΤΕ `npm ci`: το repo δεν έχει καθόλου `package-lock.json` και το
       # `engines` λέει κατά λέξη `"npm": "please-use-pnpm"`.
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.14.0
           run_install: false
 
       - name: 📦 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -437,7 +443,7 @@ jobs:
       # τα υπολογισμένα χρώματα — και χωρίς αυτά η αιτιολόγηση θα ήταν εικασία.
       - name: 📤 Upload snapshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: runtime-contrast-snapshot
           path: /tmp/snapshot.json
