@@ -16,9 +16,9 @@ import {
   DAILY_WINDOW_HOUR,
   WEEKLY_WINDOW_HOUR,
   decideEmailDelivery,
-  resolveTimeZone,
   type EmailDeliveryDecision,
 } from '@/server/notifications/email-delivery-window';
+import { resolveTimeZone } from '@/lib/datetime/supported-timezones';
 import {
   getDefaultNotificationSettings,
   type EmailFrequency,

@@ -50,3 +50,34 @@ export function listSupportedTimeZones(): readonly string[] {
 
   return [...unique].sort();
 }
+
+/**
+ * ⚠️ **Fail-safe, και δεν είναι πολυτέλεια.** Το `Intl.DateTimeFormat` πετά
+ * `RangeError` σε άγνωστο identifier. Το πεδίο `timezone` έρχεται από **έγγραφο
+ * Firestore** — δηλαδή από δεδομένα, όχι από τον μεταγλωττιστή. Ένα κακογραμμένο
+ * `"Europe/Athina"` σε **έναν** χρήστη θα έριχνε την εργασία που παραδίδει
+ * αλληλογραφία για **όλους** — και, στον πελάτη, ολόκληρο το συρτάρι ειδοποιήσεων.
+ *
+ * Ίδιο σχήμα με το `minutesOfDay`: άκυρη ρύθμιση ⇒ **αγνοείται**, ποτέ κατάρρευση.
+ */
+function isKnownTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Η ζώνη του χρήστη, ή η προεπιλογή όταν λείπει/είναι άκυρη.
+ *
+ * 🔑 **Ζει εδώ και όχι στο `server/`** (2026-09-21): τη ρωτούν **δύο** αναγνώστες της
+ * ίδιας ρύθμισης — το παράθυρο παράδοσης email *(cron)* **και** το συρτάρι
+ * ειδοποιήσεων *(πελάτης)*. Αντίγραφο στον πελάτη θα ήταν δεύτερος κριτής του
+ * *«ποια ζώνη ισχύει;»*, και οι δύο θα διαφωνούσαν στην πρώτη αλλαγή της προεπιλογής.
+ */
+export function resolveTimeZone(timeZone: string | undefined): string {
+  if (!timeZone || !isKnownTimeZone(timeZone)) return DEFAULT_NOTIFICATION_TIMEZONE;
+  return timeZone;
+}

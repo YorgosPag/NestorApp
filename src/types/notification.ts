@@ -67,14 +67,3 @@ export interface ListResponse {
 export interface AckRequest { ids: string[]; seenAt?: string; }
 export interface ActionRequest { id: string; actionId: string; payload?: Record<string, unknown>; }
 
-export interface QuietHours { start: string; end: string; days?: number[] } // HH:mm, 0=Sun
-
-export interface UserPreferences {
-  locale: string; // e.g. 'el-GR'
-  timezone: string; // IANA
-  quietHours?: QuietHours;
-  mutedTags?: string[];
-  mutedSeverities?: Severity[];
-  channels?: Record<Channel, { enabled: boolean; address?: string }>;
-  digest?: { enabled: boolean; frequency: 'hourly' | 'daily' | 'weekly' };
-}

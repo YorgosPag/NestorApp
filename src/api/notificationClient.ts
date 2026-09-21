@@ -1,8 +1,8 @@
 // api/notificationClient.ts
 // ✅ ENTERPRISE: REST/SSE/WS client με ETag, backoff, heartbeat, polling fallback
 
-import { ListResponse, AckRequest, ActionRequest, UserPreferences } from '@/types/notification';
-import { ListResponseSchema, NotificationSchema, UserPreferencesSchema } from '@/schemas/notification';
+import { ListResponse, AckRequest, ActionRequest } from '@/types/notification';
+import { ListResponseSchema, NotificationSchema } from '@/schemas/notification';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('NotificationClient');
@@ -69,19 +69,6 @@ export class NotificationClient {
   async act(body: ActionRequest) {
     const resp = await this.fetcher(`${this.base}/action`, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) });
     if (!resp.ok) throw new Error(`action failed: ${resp.status}`);
-  }
-
-  async getPrefs(): Promise<UserPreferences> {
-    const r = await this.fetcher(`${this.base}/preferences`, { headers: this.headers() });
-    if (!r.ok) throw new Error(`prefs failed: ${r.status}`);
-    const json = await r.json();
-    const parsed = UserPreferencesSchema.parse(json);
-    return parsed as UserPreferences;
-  }
-
-  async setPrefs(p: Partial<UserPreferences>): Promise<void> {
-    const r = await this.fetcher(`${this.base}/preferences`, { method: 'PUT', headers: this.headers(), body: JSON.stringify(p) });
-    if (!r.ok) throw new Error(`setPrefs failed: ${r.status}`);
   }
 
   /** WebSocket with heartbeat + backoff. Falls back to SSE, then polling. */

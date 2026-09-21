@@ -5,16 +5,15 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useNotificationDrawer } from '@/stores/notificationDrawer';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRouter } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
-import { useAuth } from '@/auth/hooks/useAuth';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { useUserTimeZone } from '@/hooks/useUserTimeZone';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
-import type { Notification, Severity, UserPreferences } from '@/types/notification';
+import type { Notification, Severity } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
 import { notificationDisplayTitle } from '@/components/notifications/notification-display-title';
 import { drawerDestination, type DrawerDestination } from '@/components/notifications/drawer-destination';
@@ -53,8 +52,6 @@ const colorMap: Record<Severity, string> = {
 };
 
 export function NotificationDrawer() {
-  // 🔐 ENTERPRISE: Wait for auth state before making API calls
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const { isOpen, close } = useNotificationDrawer();
@@ -111,44 +108,10 @@ export function NotificationDrawer() {
     clientRef.current = new NotificationClient({ baseUrl: API_ROUTES.NOTIFICATIONS.LIST });
   }
 
-  // ✅ ENTERPRISE: Load user preferences για timezone
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
-
-  useEffect(() => {
-    // 🔐 AUTH-READY GATING - Wait for authentication
-    if (authLoading) {
-      logger.info('Waiting for auth state');
-      return;
-    }
-
-    if (!user) {
-      // User not authenticated - skip preferences loading
-      return;
-    }
-
-    // Fetch user preferences on mount
-    const loadPreferences = async () => {
-      try {
-        logger.info('Loading user preferences');
-
-        // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
-        // apiClient.get() returns unwrapped data: { preferences: {...} }
-        const data = await apiClient.get<{ preferences: UserPreferences }>(API_ROUTES.NOTIFICATIONS.PREFERENCES);
-
-        if (!data || !data.preferences) {
-          throw new Error('Invalid response format from API');
-        }
-
-        setUserPreferences(data.preferences);
-
-        logger.info('User preferences loaded');
-      } catch (error) {
-        logger.error('Failed to load user preferences', { error });
-      }
-    };
-
-    loadPreferences();
-  }, [authLoading, user]);
+  // 🕐 Η ζώνη του ανθρώπου από το ΕΝΑ SSoT (`user_notification_settings/{uid}`), ζωντανά.
+  //    ⚠️ Ήταν fetch στο `/api/notifications/preferences` — αποθήκη-φάντασμα που κανείς δεν
+  //    έγραφε, πίσω από `withAuth` ⇒ 401 + `[ERROR]` σε ΚΑΘΕ φόρτωση για κάθε πολίτη.
+  const userTimeZone = useUserTimeZone();
 
   // ✅ ENTERPRISE: Retry handler
   const handleRetry = async () => {
@@ -208,17 +171,19 @@ export function NotificationDrawer() {
     }
   };
 
-  // ✅ ENTERPRISE: Intl.DateTimeFormat με user locale + timezone από preferences
-  const dateFormatter = new Intl.DateTimeFormat(
-    userPreferences?.locale || i18n.language || 'en-US',
-    {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: userPreferences?.timezone || undefined // User's timezone preference
-    }
+  // 🌐 Γλώσσα = η γλώσσα της ΟΘΟΝΗΣ (ό,τι διαβάζει ο άνθρωπος τώρα)· ζώνη = η δηλωμένη.
+  //    Memo: ένα `Intl.DateTimeFormat` ανά απόδοση είναι ακριβό και εδώ αποδίδεται λίστα.
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language || 'el', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: userTimeZone,
+      }),
+    [i18n.language, userTimeZone],
   );
 
   // ✅ ENTERPRISE: Focus management - trap and restore

@@ -970,7 +970,8 @@ export const API_ROUTES = {
     DISPATCH: '/api/notifications/dispatch',
     ERROR_REPORT: '/api/notifications/error-report',
     READ: '/api/notifications/read',
-    PREFERENCES: '/api/notifications/preferences',
+    // ⛔ `PREFERENCES` ΑΦΑΙΡΕΘΗΚΕ (2026-09-21): αποθήκη-φάντασμα. Η ζώνη/γλώσσα του ανθρώπου
+    //    ζει στο `user_notification_settings/{uid}` (→ `hooks/useUserTimeZone`).
     PROFESSIONAL_ASSIGNED: '/api/notifications/professional-assigned',
   },
 

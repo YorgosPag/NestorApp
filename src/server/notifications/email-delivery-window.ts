@@ -81,6 +81,8 @@ import {
 
 // 🔗 ADR-867 Β6 (N.7.1) — η αριθμητική «ώρα σε ζώνη» (ησυχία, τοπική ώρα → στιγμή) ζει σε
 // δικό της module: εδώ μένει η ΠΟΛΙΤΙΚΗ («πότε επιτρέπεται να διακόψω;»).
+import { resolveTimeZone } from '@/lib/datetime/supported-timezones';
+
 import { insideQuietHours, instantAtLocalHour, quietHoursEnd, zonedParts } from './email-delivery-clock';
 
 /**
@@ -100,31 +102,8 @@ import { insideQuietHours, instantAtLocalHour, quietHoursEnd, zonedParts } from 
  */
 export const NOTIFICATION_TIMEZONE = DEFAULT_NOTIFICATION_TIMEZONE;
 
-/**
- * **Είναι αυτό αναγνωρίσιμη ζώνη ώρας;**
- *
- * ⚠️ **Fail-safe, και δεν είναι πολυτέλεια.** Το `Intl.DateTimeFormat` πετά
- * `RangeError` σε άγνωστο identifier. Το πεδίο `timezone` έρχεται από **έγγραφο
- * Firestore** — δηλαδή από δεδομένα, όχι από τον μεταγλωττιστή. Ένα κακογραμμένο
- * `"Europe/Athina"` σε **έναν** χρήστη θα έριχνε την εργασία που παραδίδει
- * αλληλογραφία για **όλους**.
- *
- * Ίδιο σχήμα με το `minutesOfDay`: άκυρη ρύθμιση ⇒ **αγνοείται**, ποτέ κατάρρευση.
- */
-function isKnownTimeZone(timeZone: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Η ζώνη του χρήστη, ή η προεπιλογή όταν λείπει/είναι άκυρη. */
-export function resolveTimeZone(timeZone: string | undefined): string {
-  if (!timeZone || !isKnownTimeZone(timeZone)) return DEFAULT_NOTIFICATION_TIMEZONE;
-  return timeZone;
-}
+// 🔗 Το `resolveTimeZone` (fail-safe κριτής ζώνης) ζει στο `lib/datetime/supported-timezones`
+//    από 2026-09-21 — τον διαβάζει και το συρτάρι ειδοποιήσεων του πελάτη.
 
 /** Ώρα του ημερήσιου παραθύρου — απόγευμα, αφού τελειώσει η δουλειά. */
 export const DAILY_WINDOW_HOUR = 20;

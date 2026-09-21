@@ -49,14 +49,3 @@ export const ListResponseSchema = z.object({
   cursor: z.string().optional(),
 });
 
-
-export const QuietHoursSchema = z.object({ start: z.string().regex(/^\d{2}:\d{2}$/), end: z.string().regex(/^\d{2}:\d{2}$/), days: z.array(z.number().int().min(0).max(6)).optional() });
-export const UserPreferencesSchema = z.object({
-  locale: z.string(),
-  timezone: z.string(),
-  quietHours: QuietHoursSchema.optional(),
-  mutedTags: z.array(z.string()).optional(),
-  mutedSeverities: z.array(Severity).optional(),
-  channels: z.record(Channel, z.object({ enabled: z.boolean(), address: z.string().optional() })).optional(),
-  digest: z.object({ enabled: z.boolean(), frequency: z.enum(['hourly','daily','weekly']) }).optional(),
-});

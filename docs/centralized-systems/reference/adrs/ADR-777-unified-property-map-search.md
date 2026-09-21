@@ -4006,6 +4006,24 @@ rate-limit και audit trail) δηλώνει `locale: 'el-GR'` **και** `time
 **γραμμένη ονομαστικά** στο docblock του πεδίου: ο επόμενος που θα ψάξει «πού ζει η
 γλώσσα;» θα τη βρει πρώτη, γιατί έχει το πιο εύλογο όνομα.
 
+✅ **ΔΙΑΓΡΑΦΗΚΕ 2026-09-21 — και η μέτρηση παραπάνω ήταν ΛΑΘΟΣ.** Το *«κανείς δεν την
+καλεί»* μετρήθηκε ψάχνοντας το **μονοπάτι** — αλλά ο καλών έφτανε μέσω της **σταθεράς**
+`API_ROUTES.NOTIFICATIONS.PREFERENCES`: το `NotificationDrawer` τη ζητούσε σε **κάθε**
+φόρτωση σελίδας για τη ζώνη ώρας των ημερομηνιών. Επειδή ήταν `withAuth`, κάθε **πολίτης**
+(ADR-817) έπαιρνε `401` — δύο φορές, λόγω της επανάληψης του client σε 401 — και ένα
+`[ERROR] Failed to load user preferences` στην κονσόλα (ζωντανό περπάτημα `/pro`).
+⚠️ **Μάθημα**: «κανείς δεν καλεί» μετριέται στο **σύμβολο**, όχι μόνο στο κείμενο του μονοπατιού.
+
+| Αρχείο | Τι |
+|---|---|
+| `app/api/notifications/preferences/route.ts` | **διαγράφηκε** — το PUT έγραφε σώμα **χωρίς επικύρωση** στο `users/{uid}` |
+| `config/domain-constants.ts` | −`NOTIFICATIONS.PREFERENCES` |
+| `api/notificationClient.ts` · `types/` · `schemas/notification.ts` | −`getPrefs`/`setPrefs`/`UserPreferences`/`QuietHours` (μηδέν καλούντες) |
+| `hooks/useUserTimeZone.ts` | **νέο** — ζωντανή συνδρομή στο `user_notification_settings/{uid}`· `undefined` ⇒ ζώνη συσκευής |
+| `NotificationDrawer.enterprise.tsx` | ζώνη από το hook, γλώσσα = γλώσσα οθόνης· formatter σε `useMemo` |
+| `lib/datetime/supported-timezones.ts` | **+`resolveTimeZone`** (μετακινήθηκε από `server/notifications/email-delivery-window`): ένας κριτής ζώνης για cron **και** πελάτη |
+| `UserNotificationSettingsService.ts` | −χάρτης «μία συνδρομή ανά χρήστη»: η **δεύτερη** συνδρομή έκλεινε **σιωπηλά** την πρώτη (οθόνη ρυθμίσεων ⇒ πάγωμα συρταριού)· −`unsubscribe(userId)` (μηδέν καλούντες) |
+
 #### 8.29.3 Τι γράφτηκε
 
 | Αρχείο | Τι |

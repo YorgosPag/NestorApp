@@ -87,7 +87,6 @@ function writableSettingRef(path: string): NotificationSettingRef {
 class UserNotificationSettingsService {
   private static instance: UserNotificationSettingsService | null = null;
   private db: Firestore | null = null;
-  private unsubscribeMap = new Map<string, () => void>();
 
   private constructor() {}
 
@@ -412,7 +411,16 @@ class UserNotificationSettingsService {
   // ==========================================================================
 
   /**
-   * Subscribe to settings changes
+   * Subscribe to settings changes.
+   *
+   * 🔴 **ΚΑΘΕ ΣΥΝΔΡΟΜΗ ΕΙΝΑΙ ΑΝΕΞΑΡΤΗΤΗ — ο καλών κρατά το δικό του `unsubscribe`**
+   * (2026-09-21). Εδώ ζούσε ένας χάρτης «μία συνδρομή ανά χρήστη» που **έκλεινε την
+   * προηγούμενη** σε κάθε νέα κλήση. Με **έναν** αναγνώστη (η οθόνη ρυθμίσεων) ήταν
+   * αόρατο· με **δεύτερο** (το συρτάρι ειδοποιήσεων, μόνιμα ανοιχτό) σήμαινε ότι το
+   * άνοιγμα της οθόνης ρυθμίσεων **πάγωνε σιωπηλά** το συρτάρι. Η μέθοδος
+   * `unsubscribe(userId)` που τον συνόδευε δεν είχε **κανέναν** καλούντα. Το Firestore
+   * SDK ήδη μοιράζει έναν ακροατή ανά έγγραφο — δεύτερη αποδεδουπλοποίηση εδώ ήταν
+   * περιττή **και** επιβλαβής.
    */
   public subscribeToSettings(
     userId: string,
@@ -423,16 +431,10 @@ class UserNotificationSettingsService {
       throw new Error('UserNotificationSettingsService not initialized');
     }
 
-    // Unsubscribe from previous subscription if exists
-    const existingUnsubscribe = this.unsubscribeMap.get(userId);
-    if (existingUnsubscribe) {
-      existingUnsubscribe();
-    }
-
     // ADR-355: route through firestoreQueryService SSOT — tenant-aware,
     // auth-gated, switcher-aware. Replaces the previous RealtimeService
     // subscribeToDocument path (deleted) with the unified subscription API.
-    const unsubscribe = firestoreQueryService.subscribeDoc(
+    return firestoreQueryService.subscribeDoc(
       'USER_NOTIFICATION_SETTINGS',
       userId,
       (data) => {
@@ -448,20 +450,6 @@ class UserNotificationSettingsService {
         onError?.(error);
       }
     );
-
-    this.unsubscribeMap.set(userId, unsubscribe);
-    return unsubscribe;
-  }
-
-  /**
-   * Unsubscribe from settings changes
-   */
-  public unsubscribe(userId: string): void {
-    const unsubscribe = this.unsubscribeMap.get(userId);
-    if (unsubscribe) {
-      unsubscribe();
-      this.unsubscribeMap.delete(userId);
-    }
   }
 
   // ==========================================================================
