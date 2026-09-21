@@ -205,7 +205,8 @@
   "menu": {
     "main": "Main Menu",
     "tools": "Tools",
-    "settings": "Settings"
+    "settings": "Settings",
+    "overview": "Overview"
   },
   "jobs": {
     "design": {
@@ -331,7 +332,6 @@
     "reports": "Reports"
   },
   "crm": {
-    "overview": "Overview",
     "dashboard": "Dashboard",
     "customers": "Customer Management",
     "communications": "Communications",

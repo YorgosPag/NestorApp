@@ -205,7 +205,8 @@
   "menu": {
     "main": "Κύριο Μενού",
     "tools": "Εργαλεία",
-    "settings": "Ρυθμίσεις"
+    "settings": "Ρυθμίσεις",
+    "overview": "Επισκόπηση"
   },
   "jobs": {
     "design": {
@@ -331,7 +332,6 @@
     "reports": "Αναφορές"
   },
   "crm": {
-    "overview": "Επισκόπηση",
     "dashboard": "Πίνακας Ελέγχου",
     "customers": "Διαχείριση Πελατών",
     "communications": "Επικοινωνίες",
