@@ -2,6 +2,50 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **21/09 — ΤΟ «ΔΙΑΒΑΣΤΗΚΕ» ΤΗΣ ΕΙΔΟΠΟΙΗΣΗΣ ΕΧΕΙ ΔΥΟ ΠΕΔΙΑ ΚΑΙ ΤΡΕΙΣ ΤΥΠΟΥΣ** (εύρημα ADR-867 Ε10 · ανήκει στο ADR-848)
+
+  Ο `seenFields()` (`server/notifications/notification-read.ts` — σύνδεσμος email `/n/{id}` + `POST /ack`) γράφει
+  `seen: true, seenAt`· η καμπάνα (`stores/notificationCenter.ts`, συρτάρι, `useNotifications`) διαβάζει **μόνο** το
+  `delivery.state` ⇒ ειδοποίηση ανοιγμένη από το email μένει **αδιάβαστη** στην καμπάνα. Και το `DeliveryState` ορίζεται
+  **τρεις** φορές (`types/notification.ts` · `schemas/notification.ts` · `config/notification-events.ts` με
+  `pending/delivered/failed/read` — το `read` εκεί δεν υπάρχει στους άλλους). Διόρθωση: ο `seenFields` γράφει **και**
+  `'delivery.state': 'seen'`, και το `config` παράγεται από τον έναν τύπο. Ο κριτής ανάγνωσης είναι ήδη ένας
+  (`lib/notifications/notification-state.ts`). ⚠️ Ο άλλος agent δουλεύει στον τομέα ειδοποιήσεων — συντονισμός πριν.
+
+- 🟠 **21/09 — ΤΟ `SearchableCombobox` ΜΕΝΕΙ ΑΝΩΝΥΜΟ ΣΕ ~17 ΚΑΤΑΝΑΛΩΤΕΣ** *(ADR-598 G11 · ADR-841 §7 Α19.4δ)*
+
+  Το SSoT δέχεται πλέον `id` / `aria-label` / `aria-labelledby` (21/09). **Συνδέθηκε μόνο** το
+  `RelationshipFormFields`. Όποιος δεν τυλίγει το πεδίο σε `<label>` ανακοινώνεται «combobox»
+  σκέτο: `DoyPicker` · `MinistryPicker` · `KadCodePicker` · `PublicServicePicker` ·
+  `CalendarCreateDialog` (2) · `VendorPickerSection` · `TradeSelector` · `POEntitySelectors` (3) ·
+  `MaterialFormDialog` · `FrameworkAgreementFormDialog` (**`htmlFor="fwa-vendor"` προς id που δεν
+  αποδιδόταν ποτέ**) · `BrokeredMandateFields` (το έγραφε ήδη σε σχόλιο) · `AreaCombobox` ·
+  `KadSection` (2) · `AddressWithHierarchy` / `AdministrativeAddressPicker` (ετικέτα-αδελφός).
+  **Πρόταση GOL**: ο **τύπος** του `SearchableComboboxProps` απαιτεί ένα από τα τρία (σχήμα
+  `never`, όπως στο `AnchoredPopover`). Έτσι οι παραβάτες γίνονται σφάλματα μεταγλώττισης, όχι λίστα.
+  Οι wrappers (`DoyPicker`, `KadCodePicker`…) προωθούν `id` προς τα κάτω.
+  ⚠️ >5 αρχεία / πολλοί τομείς ⇒ N.8: ρώτα τον Giorgio για τον τρόπο εκτέλεσης.
+
+- 🟠 **21/09 — `RulerCornerBox`: `menuitem` ΧΩΡΙΣ `menu`** *(ADR-598 G11 · Δ)*
+
+  Το μενού κλίμακας (`dxf-viewer/canvas-v2/overlays/RulerCornerBox.tsx`) είναι `Popover` με
+  `role="menuitem"` κουμπιά, **χωρίς** γονέα `menu` (axe `aria-required-parent`), **χωρίς** βελάκια
+  (APG Menu) και με `nav` μέσα του. Το κουμπί λέει `aria-haspopup="menu"`. Στο Δ πήρε **μόνο όνομα**
+  («Μενού κλίμακας»). **Θεραπεία**: μετάβαση στο `@/components/ui/dropdown-menu` (Radix Menu:
+  roving focus, typeahead, `menuitem`/`separator`/`group` σωστά), με τις προεπιλογές κλίμακας ως
+  `DropdownMenuGroup` αντί για `nav`. ⚠️ Αρχείο dxf-viewer: CHECK 6D θέλει ADR στο ίδιο commit.
+
+- 🟠 **21/09 — ADR-867 Ε9: ΤΟ «CONTRACT» ΤΗΣ ΙΔΙΩΤΙΚΗΣ ΠΛΕΥΡΑΣ ΤΗΣ ΘΕΣΗΣ ΜΕΝΕΙ ΝΑ ΤΡΕΞΕΙ**
+
+  Ο κώδικας διαβάζει/γράφει το `network_audience_private/{uid}`· τα **παλιά** `lastReadAt`/`muted`/`following`
+  μένουν στη δημόσια γραμμή — **ορατά στην άλλη πλευρά** — ώσπου να τρέξει η μετανάστευση. **Σειρά (Giorgio)**:
+  ① `firebase deploy --only firestore:rules` (αλλιώς η οθόνη παίρνει άρνηση στη **δική** της πλευρά) → ② push →
+  ③ `npm run migrate:network-audience-private` (ξηρό: αναφορά) → `-- --apply` → ξηρό ξανά = **απόκλιση 0**.
+  **Μετά το ③**: αφαίρεσε την εφεδρεία `legacyRaw` του `networkAudiencePrivateFromDocuments`
+  (`lib/network-messaging/network-thread-from-document.ts`) και το `publicRaw` που του περνά το `audienceSeatOf`
+  (`services/network-messaging/audience-seats.ts`) — είναι νεκρός κώδικας από τη στιγμή που η απόκλιση είναι 0.
+  Κράτα το script (είναι ο ανιχνευτής αν ποτέ ξαναμπεί ιδιωτικό πεδίο σε δημόσια γραμμή).
+
 - 🟠 **21/09 — ΤΟ CHECK 3.28 `--diff` ΛΕΕΙ «new clone» ΧΩΡΙΣ ΝΑ ΕΛΕΓΧΕΙ ΑΝ ΕΙΝΑΙ ΝΕΟΣ**
 
   **Μετρημένο, όχι υπόθεση.** Το `scripts/check-jscpd-ratchet.js --diff` σαρώνει **μόνο** τα
@@ -230,6 +274,10 @@
   τον κριτή μέλους ⇒ ξεχωριστό commit.
   ✅ **19/09 (Β7)**: γεννήθηκε `listActiveWorkspaceMembers` στο `lib/auth/workspace-membership.ts` **πάνω** στο
   `workspaceMembersCollection` (το ερώτημα ζούσε inline στη μεταβίβαση — δύο καταναλωτές: αποχώρηση · επιλογέας ομάδας).
+  ✅ **21/09 (ADR-867 Ε1)**: έφυγαν **3 από τα 5** — `role-management/bootstrap/route.ts` (**διαγράφηκε**) ·
+  `workspace-provisioning.ts` (ιδρυτής μέσω `grantWorkspaceMembershipInBatch`) · ο κριτής `workspace-membership.ts:194`
+  (`workspaceMemberRef`). **Μένουν 3**: `…/users/route.ts:109` · `workspace-membership.ts` collection group ·
+  `holiday-hours-question-notifier.ts:51`.
 
 - 🟡 **18/09 — Η ΛΙΣΤΑ ΤΗΣ CHECK 3.17 ΕΙΝΑΙ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ ΤΟΥ `AUDIT_ENTITIES`** (εύρημα ADR-867 Β5)
 
@@ -3657,6 +3705,18 @@
 - **Αφαίρεση μέλους = διαγραφή** (Β14): ιστορικό ανάκλησης (`revokedAt`/`revokedBy`, ADR-787 Ε-2 §4) με τη Φ1.
 - **Μαζική ένταξη «ομάδα γραφείου» από το UI** (Procore «Add from Company Directory»): ο γραφέας τη στηρίζει
   (`enrollProjectMembers` με πίνακα), η οθόνη λείπει.
+
+### ⏳ «Ημέρες μέχρι προθεσμία» — ΕΝΑΣ κανόνας στρογγυλοποίησης (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-21)
+
+- [ ] Το ADR-853 §15 (Ε-3) γέννησε το SSoT `deadlineDaysLeft` στο `lib/date-local.ts` (προς τα πάνω, `null` αν
+  πέρασε) + `formatDeadlineRelative` στο `lib/intl-formatting.ts`, αφού οθόνη και email πρόσκλησης έλεγαν «6» και
+  «7» για την ίδια λήξη. Μένουν **χειρόγραφα** `Math.ceil(… / MS_PER_DAY)` / `(1000*60*60*24)` σε ~10 αρχεία
+  (>1h, πολλοί τομείς): `lib/mandate/mandate-standing.ts` (`daysUntilExpiry` — ίδια σημασία, απλή μετάβαση) ·
+  `subapps/procurement/utils/quote-expiration.ts` · `lib/intl-domain.ts` (`getDaysUntilCompletion`, **χωρίς** `null`
+  για περασμένη) · `components/shared/files/TrashView.tsx` · `building-management/.../OverallProgressCard.tsx` ·
+  `useScheduleDashboard.ts` · `types/contacts/relationships/utils/helpers.ts`. ⚠️ **Διάκρινε σημασία**: «ημέρες
+  μέχρι προθεσμία» (ceil) ≠ «διάρκεια διαστήματος» (π.χ. `useResourceHistogram`, Gantt) ≠ «πριν από» (trunc) —
+  μετέφερε **μόνο** τις προθεσμίες.
 
 ### 🔔 AccountNotice — μετάβαση του χειρόγραφου κουτιού ειδοποίησης (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-11)
 

@@ -246,7 +246,9 @@ describe('ADR-841 §7 Α19 — η ειδικότητα πληκτρολογεί�
   it('Κ5β — το «×» (καθαρισμός) σημαίνει το ίδιο πράγμα: null', () => {
     const { onChange } = renderField(OPTIONS[0].escoUri);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    // Το όνομα του «×» είναι πλέον i18n (`common:dropdown.clearSelection`, N.11)· το mock
+    // φορτώνει μόνο το `property-market`, άρα επιστρέφει το κλειδί.
+    fireEvent.click(screen.getByRole('button', { name: 'dropdown.clearSelection' }));
 
     expect(onChange).toHaveBeenCalledWith(null);
   });

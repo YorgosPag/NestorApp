@@ -1385,7 +1385,10 @@
     "a11y": {
       "addFavorite": "Προσθήκη στα αγαπημένα",
       "cardActions": "Ενέργειες κάρτας",
+      "chooseDate": "Επιλογή ημερομηνίας",
+      "chooseTime": "Επιλογή ώρας",
       "escKey": "ESC",
+      "moreInfo": "Περισσότερες πληροφορίες",
       "removeFavorite": "Αφαίρεση από αγαπημένα"
     },
     "accessDenied": {
@@ -1837,8 +1840,10 @@
       "search": "Αναζήτηση Δ.Ο.Υ..."
     },
     "dropdown": {
+      "addNewOption": "Προσθήκη «{value}»",
       "clearSelection": "Καθαρισμός επιλογής",
       "createNewContact": "Δημιουργία νέας επαφής",
+      "toggleOptions": "Εμφάνιση επιλογών",
       "totalContacts": "{count} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση"
     },
     "dropdowns": {
@@ -2478,7 +2483,6 @@
       "title": "Λογαριασμός"
     },
     "userMenu": {
-      "account": "Λογαριασμός",
       "defaultUser": "Χρήστης",
       "keyboard": {
         "logout": "⇧⌘Q"
@@ -2486,9 +2490,6 @@
       "loggingOut": "Αποσύνδεση...",
       "logout": "Αποσύνδεση",
       "menuLabel": "Μενού χρήστη",
-      "myContacts": "Οι επαφές μου",
-      "myDossiers": "Οι φάκελοί μου",
-      "myMessages": "Τα μηνύματά μου",
       "noEmail": "Δεν υπάρχει email",
       "spaces": {
         "current": "εδώ βρίσκεσαι",
@@ -3476,6 +3477,27 @@
       "projects": "Έργα",
       "properties": "Ευρετήριο Ακινήτων",
       "reports": "Αναφορές"
+    },
+    "personal": {
+      "groups": {
+        "account": "Λογαριασμός",
+        "communication": "Επικοινωνία",
+        "discovery": "Ανακάλυψη",
+        "listings": "Οι αγγελίες μου",
+        "organization": "Οργάνωση"
+      },
+      "items": {
+        "account": "Λογαριασμός",
+        "createWorkspace": "Δημιουργώ τον χώρο γραφείου μου",
+        "myContacts": "Οι επαφές μου",
+        "myDemands": "Οι ζητήσεις μου",
+        "myDossiers": "Οι φάκελοί μου",
+        "myMessages": "Τα μηνύματά μου",
+        "myOffers": "Τα ακίνητά μου",
+        "professionals": "Επαγγελματίες",
+        "searchListings": "Αναζήτηση ακινήτων"
+      },
+      "sidebarLabel": "Ο προσωπικός μου χώρος"
     },
     "reports": {
       "builder": "Δημιουργός Αναφορών",

@@ -128,7 +128,9 @@
   "dropdown": {
     "clearSelection": "Καθαρισμός επιλογής",
     "totalContacts": "{count} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση",
-    "createNewContact": "Δημιουργία νέας επαφής"
+    "createNewContact": "Δημιουργία νέας επαφής",
+    "addNewOption": "Προσθήκη «{value}»",
+    "toggleOptions": "Εμφάνιση επιλογών"
   },
   "propertyStatus": {
     "sold": "Πωλήθηκε",
@@ -684,7 +686,10 @@
     "addFavorite": "Προσθήκη στα αγαπημένα",
     "removeFavorite": "Αφαίρεση από αγαπημένα",
     "cardActions": "Ενέργειες κάρτας",
-    "escKey": "ESC"
+    "escKey": "ESC",
+    "moreInfo": "Περισσότερες πληροφορίες",
+    "chooseDate": "Επιλογή ημερομηνίας",
+    "chooseTime": "Επιλογή ώρας"
   },
   "deletionGuard": {
     "blocked": "Η διαγραφή δεν είναι δυνατή",

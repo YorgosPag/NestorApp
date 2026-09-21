@@ -8,7 +8,7 @@
 //
 // ============================================================================
 'use client';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useId, useMemo, useState } from 'react';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -259,8 +259,13 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   // RENDER HELPERS
   // ============================================================================
 
-  const renderFieldLabel = (text: string, required: boolean = false) => (
-    <Label className={designSystem.getTypographyClass('sm', 'medium')}>
+  // 🔑 Η ετικέτα ΟΝΟΜΑΖΕΙ το combobox μόνο μέσω `htmlFor` → `id` (ADR-598 G11). Χωρίς
+  //    αυτό ο αναγνώστης οθόνης ανακοίνωνε «combobox» σκέτο, τρεις φορές στην ίδια φόρμα.
+  const fieldIdPrefix = useId();
+  const fieldId = (field: keyof RelationshipFormData) => `${fieldIdPrefix}-${field}`;
+
+  const renderFieldLabel = (text: string, required: boolean = false, htmlFor?: string) => (
+    <Label htmlFor={htmlFor} className={designSystem.getTypographyClass('sm', 'medium')}>
       {text}{required && <span className={designSystem.getStatusColor('error', 'text')}>*</span>}
     </Label>
   );
@@ -290,9 +295,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         <div className="md:col-span-1 space-y-2">
           {renderFieldLabel(
             t('relationships.form.labels.relationshipType'),
-            finalFieldConfig.required.relationshipType
+            finalFieldConfig.required.relationshipType,
+            fieldId('relationshipType')
           )}
           <SearchableCombobox
+            id={fieldId('relationshipType')}
             value={formData.relationshipType}
             onValueChange={(value) => setFormData(prev => ({ ...prev, relationshipType: value }))}
             options={relationshipTypeOptions}
@@ -301,7 +308,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
             disabled={loading}
             error={errors.relationshipType}
             onAddNew={handleAddNewRelType}
-            addNewButtonLabel={t('relationships.form.addCustomType')}
           />
           {renderError('relationshipType')}
         </div>
@@ -310,9 +316,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         <div className="md:col-span-1 space-y-2">
           {renderFieldLabel(
             t('relationships.form.labels.position'),
-            finalFieldConfig.required.position
+            finalFieldConfig.required.position,
+            fieldId('position')
           )}
           <SearchableCombobox
+            id={fieldId('position')}
             value={formData.position || ''}
             onValueChange={(value, option) => {
               setFormData(prev => ({ ...prev, position: option?.label || value }));
@@ -324,7 +332,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
             error={errors.position}
             allowFreeText
             onAddNew={handleAddNewPosition}
-            addNewButtonLabel={t('relationships.form.addCustomType')}
           />
           {renderError('position')}
         </div>
@@ -333,9 +340,11 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         <div className="md:col-span-1 space-y-2">
           {renderFieldLabel(
             t('relationships.form.labels.department'),
-            finalFieldConfig.required.department
+            finalFieldConfig.required.department,
+            fieldId('department')
           )}
           <SearchableCombobox
+            id={fieldId('department')}
             value={formData.department || ''}
             onValueChange={(value, option) => {
               setFormData(prev => ({ ...prev, department: option?.label || value }));
@@ -347,7 +356,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
             error={errors.department}
             allowFreeText
             onAddNew={handleAddNewDepartment}
-            addNewButtonLabel={t('relationships.form.addCustomType')}
           />
           {renderError('department')}
         </div>

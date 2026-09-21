@@ -3412,6 +3412,7 @@ OwnerPropertyMedia.kind  ──►  PublicShelfSource.material  ──►  Publi
 
 | Ημ/νία | Τι |
 |---|---|
+| **2026-09-21** | ♿ **§7 Α19.4δ — Η «ΠΡΟΣΘΗΚΗ ΝΕΟΥ» ΤΟΥ `SearchableCombobox` ΕΓΙΝΕ ΕΠΙΛΟΓΗ ΤΗΣ ΛΙΣΤΑΣ** (react-select *Creatable* / MUI `freeSolo`). Ήταν κουμπί **έξω** από το `role="listbox"` με δεύτερο πεδίο κειμένου, απρόσιτο με ↑/↓ (WCAG 2.1.1). Πλέον είναι το τελευταίο `role="option"` με το κείμενο της αναζήτησης, και δεν προσφέρει διπλότυπο (`normalizeForSearch`). Νέο leaf `searchable-combobox-listbox.tsx` · **διαγράφηκε** το `searchable-combobox-add-new.tsx`, και μαζί του το «ESC κλείνει και το popover» της 04/09. Το axe του **ανοιχτού** combobox βρήκε και διόρθωσε τρία ακόμη ελαττώματα: ανώνυμο `dialog` → `role="presentation"` · `aria-expanded` χωρίς `aria-controls` · combobox που **δεν ονομαζόταν** (νέα `id`/`aria-label`/`aria-labelledby`). N.11: τρία hardcoded κείμενα → i18n. 75/75 · μεταλλάξεις 7/7 · G11 −5. |
 | **2026-09-21** | 🧪 **§7 Α18.12 — τα Μ3/Μ4 έγιναν ΣΥΜΠΕΡΙΦΟΡΙΚΑ: ο ανιχνευτής τυφλώθηκε από την κεντρικοποίηση, όχι η λογική.** Κόκκινα στο `main` με `actions.length` **0** αντί **1**. 🔍 **Ρίζα αποδεδειγμένη**: `git log -S "actions: ["` δείχνει **και για τους δύο** ειδοποιητές το **`8da65273`** (ADR-849 §6δ Β1), που μετέφερε τον προορισμό στους εξαγόμενους `mandateDecisionDestination` / `mandateRequestDestination` πάνω στο `viewDestination(...)` — **ίδια** href (`mandateDetailHref` / `offerDetailHref`), **μόνο** η μορφή γραφής άλλαξε. Το `6f5d6023` (ADR-867 Β6) άγγιξε τον request notifier **μόνο** στον τίτλο, **όχι** στον προορισμό. ✅ **Απόφαση: αλλάζει το test, όχι ο κώδικας** — και **όχι** με regex `viewDestination(` (θα τυφλωνόταν στο επόμενο refactor). Τα Μ3/Μ4 **εκτελούν** τους **αληθινούς** `announceMandateDecision` / `announceMandateRequestAnswer` με αιχμαλωτισμένο **μόνο** τον `dispatchNotification`, και κρίνουν την **έξοδο**: `firstActionUrl(actions)` **και** `workspace` *(Μ3 → `orgWorkspace` του γραφείου · Μ4 → `personalWorkspace` του ιδιώτη)*, με παρονομαστή «στάλθηκε **μία**». 🔬 **Μεταλλάξεις 4/4 κόκκινες στο σωστό κριτήριο**, μετρητής εφαρμογής = 1 πριν από το χρώμα, επαναφορά ταυτόσημη στο ίδιο κάλεσμα: (α) `mandateDetailHref`→`offerDetailHref` στον decision · (β) ο decision **παρακάμπτει** τον κανόνα με χειρόγραφο `actions` *(αποδεικνύει ότι κρίνεται ο **ειδοποιητής**, όχι μόνο ο βοηθός)* · (γ) η «συνεπής» αλλαγή `offerDetailHref`→`mandateDetailHref` στον request · (δ) ξένος `personalWorkspace` στον request. ✅ **Και το μπαγιάτικο σχόλιο** στον `mandate-request-notifier` *(«ο decision-notifier **δεν** πήρε διεύθυνση»* — ψευδές από την Α18.12)* ξαναγράφτηκε: λέει πλέον τους **αντίθετους** προορισμούς και παραπέμπει στο Μ4. |
 | **2026-09-15** | ⚖️ **§7 Α23.12 — Φ4 Φέτα Β2: διατήρηση του αντιγράφου ΓΕΜΗ δεμένη με τον σκοπό.** Αλλαγή/σβήσιμο αριθμού στο προφίλ ⇒ διαγραφή **στην ίδια συναλλαγή** (σύντροφος `saveCompanySetup`) · «δεν υπάρχει» ⇒ διαγραφή **μόνο** αυτού του αριθμού · αίτημα κατόχου ⇒ `DELETE` + κουμπί με επιβεβαίωση · απάντηση για αριθμό που δεν δηλώνεται πια **δεν γράφεται** · κλείσιμο εταιρείας = **υποχρέωση** όταν γραφτεί. Έκλεισαν **δύο race** (τυφλό `set`/`delete`). Ίχνος `COMPANY_REGISTRY_COPY_ERASED` στην ίδια δέσμευση, χωρίς επωνυμία/έδρα. `isAnswerForNumber` = ένας κριτής (N.0.2). Jest 91/91 · μεταλλάξεις **12/12** · 3.28 ✅. ⚖️ 5(1)(ε) · 5(2) · 17 · 21. |
 | **2026-09-15** | 📨 **§7 Α21.21.7–Α21.21.12 — Φάση Β Φέτα 4: η σελίδα απάντησης χωρίς σύνδεση και ο δεύτερος έλεγχος στην αποστολή.** `app/(auth)/hours-question/[token]` (GET δείχνει, τα κουμπιά του email μόνο προσυμπληρώνουν) · λίστα ανά κατάστημα × ημερομηνία με «Κλειστά / Κανονικό ωράριο» (ίδια λέξη με τη φόρμα), «Ίδιο για όλες», «Πέρσι: …», μερική απάντηση · «Άλλο ωράριο» ⇒ φόρμα στον χώρο του γραφείου μέσα από `loginHref` (χώρος χωρίς διεύθυνση ⇒ κανένα κουμπί) · η φόρμα κερδίζει **και το λέει**. Πύλη αποστολής: `holidayQuestionsStillAsking` ⇒ `question-settled` (κλείνει το ⚠️ PARTIAL της Φέτας 3). N.0.2: `AuthCardSection` (4 οθόνες) · `refusalOf` (έκλεισε cast που θα έβγαζε ωμό κλειδί). routeSlice σφραγισμένο 3.294. Jest send-gate 13/13 · υπηρεσία + σελίδα 33/33. |
@@ -5972,6 +5973,61 @@ debounce είναι σωστό, γιατί προστατεύει τον **serve
 🔑 **Η θεραπεία δεν προσθέτει κατάσταση**: αν το κείμενο είναι **ακριβώς** η ετικέτα του
 κατόχου, κανείς δεν έψαξε τίποτα ⇒ κενό ερώτημα. Μια δεύτερη σημαία *«έγραψε ο χρήστης;»*
 θα ήταν κάτι που μπορεί να **αποκλίνει** από την αλήθεια του πεδίου.
+
+##### (δ) 🔴 Η «Προσθήκη νέου» ήταν **κουμπί έξω από τη λίστα** — τώρα είναι **επιλογή** *(2026-09-21)*
+
+**Το ελάττωμα**: το `SearchableComboboxAddNew` ήταν `<button>` **κάτω από** το `role="listbox"`
+και άνοιγε **δεύτερο** πεδίο κειμένου μέσα στο popover. Η εστίαση DOM όμως μένει **πάντα** στο
+πεδίο αναζήτησης (APG «list autocomplete»). Άρα τα ↑/↓ **δεν έφταναν ποτέ** στο κουμπί (WCAG
+2.1.1), και ο άνθρωπος έγραφε το ίδιο πράγμα **δύο φορές**: μία για να ψάξει, μία για να το φτιάξει.
+Το axe δεν το βλέπει, γιατί το κουμπί έχει όνομα και είναι εστιάσιμο.
+
+**Οι μεγάλοι**: react-select *Creatable* (`isValidNewOption` + `formatCreateLabel`,
+`createOptionPosition: 'last'`) · MUI Autocomplete `freeSolo` («Add "x"») · Headless UI *custom
+values* · Linear «Create label». **Ένα** πεδίο: το κείμενο της αναζήτησης **είναι** το κείμενο της
+νέας επιλογής.
+
+**Η λύση** (`searchable-combobox-listbox.tsx`, νέο leaf χωρίς κατάσταση):
+
+| Ερώτηση | Απάντηση | Πού |
+|---|---|---|
+| Προσφέρεται δημιουργία; | κείμενο μη κενό **και** καμία ετικέτα ίδια μετά το `normalizeForSearch` (ίδιο με το `resolveOptionByText` ⇒ «Κουμπαρος» = «Κουμπάρος», κανένα διπλότυπο) · ελέγχει **όλες** τις επιλογές, όχι μόνο τις ορατές | `resolveAddNewLabel` στο `searchable-combobox-matching.ts` |
+| Πού; | **τελευταίο** `role="option"`, δείκτης `filtered.length`, `id` από το ίδιο `optionDomId` ⇒ `aria-activedescendant` την ανακοινώνει | leaf |
+| Πώς ενεργοποιείται; | ↓ ως εκεί + Enter · ή κλικ (`mousedown` με `preventDefault`, όπως κάθε επιλογή) | `handleKeyDown` / leaf |
+| Τι κείμενο; | `formatAddNewLabel?(x)` του καταναλωτή, αλλιώς `common:dropdown.addNewOption` «Προσθήκη «x»» / `Add "x"` | prop · locale |
+
+**Ό,τι έφυγε**: το `searchable-combobox-add-new.tsx` **διαγράφηκε**, μαζί με τα 4 tokens
+`combobox.addNew{Section,Input,Button,Row}` (τα αντικατέστησε το `addNewDivider`) και την
+είσοδο του allowlist `escape-command-bus`. Με αυτό λύνεται και το δηλωμένο «ESC κλείνει και το
+popover» της 04/09: δεν υπάρχει πια δεύτερο πεδίο, άρα ούτε δικός του χειριστής Escape.
+Στο `addNewButtonLabel` είχε μείνει ένας καταναλωτής (`RelationshipFormFields`, 3 σημεία) και
+πέρασε στην προεπιλογή. Το κλειδί `relationships.form.addCustomType` («Προσθήκη νέου τύπου» και
+για **θέση** και για **τμήμα**) αφαιρέθηκε.
+
+**Τρία ελαττώματα που βρήκε το axe μόλις το component σαρώθηκε ανοιχτό** (ADR-598 G11):
+
+1. 🔴 Το `PopoverContent` ήταν `role="dialog"` **ανώνυμο** (`aria-dialog-name`) και **ψευδές**,
+   αφού η εστίαση δεν μπαίνει ποτέ μέσα. Το popup του combobox είναι το **listbox**. Πλέον
+   `role="presentation"`, όπως το `PopoverSurface` του Fluent χωρίς `trapFocus`.
+2. 🔴 `aria-expanded="true"` **χωρίς** `aria-controls` όταν ο κατάλογος ήταν άδειος
+   (`aria-required-attr`). Πλέον `aria-expanded = open && listboxRendered`. Το «κανένα
+   αποτέλεσμα» ζει **έξω** από το listbox, ως `role="status"` (ζωντανή περιοχή), και όχι ως
+   ψευδο-γραμμή μέσα σε αυτό.
+3. 🔴 Το combobox **δεν μπορούσε να ονομαστεί**: δεν δεχόταν `id`, `aria-label` ή
+   `aria-labelledby`. Το `BrokeredMandateFields` το είχε ήδη γράψει σε σχόλιο, και το
+   `FrameworkAgreementFormDialog` έχει `htmlFor="fwa-vendor"` προς `id` που δεν αποδιδόταν ποτέ.
+   Πλέον τα δέχεται (react-select `inputId`). Συνδέθηκε το `RelationshipFormFields`· οι υπόλοιποι
+   καταναλωτές **δεν** αγγίχθηκαν (N.8).
+
+Και N.11: `'No results found'` → `common:placeholders.noResults` · `aria-label="Clear"` →
+`common:dropdown.clearSelection` · `"Toggle dropdown"` → **νέο** `common:dropdown.toggleOptions`.
+
+**Απόδειξη**: `form-controls.a11y.test.tsx` — axe κλειστό · ανοιχτό · με νέο κείμενο · με την
+προσφορά επισημασμένη · κενό χωρίς `onAddNew`, και το leaf σε 4 καταστάσεις. Επιπλέον
+πληκτρολόγιο (↓↓ → `aria-activedescendant` = προσφορά → Enter ⇒ `onAddNew('φίλ')`), κανένα
+διπλότυπο με «ΦΙΛΟΣ», μόνο η προσφορά όταν δεν ταιριάζει τίποτα. **75/75** σε 7 σουίτες του
+combobox · **μεταλλάξεις 7/7 κόκκινες** · G11 `--check` ✅ (**−5** paid down, ο
+`searchable-combobox.tsx` βγήκε από τα ακάλυπτα, χωρίς reseed) · jscpd καθαρό · 3.8 ✅.
 
 ---
 

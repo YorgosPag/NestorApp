@@ -344,7 +344,10 @@ const RulerCornerBox = memo(function RulerCornerBox({
         </TooltipContent>
       </Tooltip>
 
+      {/* Anchor-only ⇒ όνομα ρητό (ADR-598 G11). ⚠️ Τα `menuitem` ΧΩΡΙΣ `menu` είναι γνωστό
+          ελάττωμα → μετάβαση σε `DropdownMenu` (pending-ratchet-work). */}
       <PopoverContent
+        aria-label={t('rulerCornerBox.tooltip.zoomMenu')}
         side="right"
         align="end"
         sideOffset={8}

@@ -22,6 +22,14 @@ export interface ComboboxOption {
 }
 
 export interface SearchableComboboxProps {
+  /**
+   * `id` of the search input — lets a `<Label htmlFor>` NAME the combobox (react-select
+   * `inputId`). Without one of `id` + label, `aria-label` or `aria-labelledby`, the
+   * `role="combobox"` is announced with no name (axe `aria-input-field-name`, ADR-598 G11).
+   */
+  id?: string;
+  'aria-label'?: string;
+  'aria-labelledby'?: string;
   /** Current value (matches option.value or free text) */
   value: string;
   /** Callback on value change. Passes the selected option or null for free text. */
@@ -47,13 +55,17 @@ export interface SearchableComboboxProps {
   /** Additional CSS classes for the wrapper */
   className?: string;
   /**
-   * When set, shows a "+ Add new" button at the bottom of the dropdown.
-   * Callback receives the new label typed by the user.
+   * When set, typed text that matches no existing option is offered as the LAST option
+   * of the list (`role="option"`), reachable with ↑/↓ + Enter — react-select *Creatable*,
+   * MUI Autocomplete `freeSolo`. Receives the typed text, trimmed (ADR-841 §7 Α19.4δ).
    * The parent is responsible for adding the new option to the options array.
    */
   onAddNew?: (label: string) => void;
-  /** Label for the "add new" button. Default: "+ Add new" */
-  addNewButtonLabel?: string;
+  /**
+   * Visible text of the add-new option for the typed text (react-select `formatCreateLabel`).
+   * Default: `common:dropdown.addNewOption` — «Προσθήκη «x»» / `Add "x"`.
+   */
+  formatAddNewLabel?: (inputValue: string) => string;
 }
 
 // ============================================================================

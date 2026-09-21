@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { Clock } from 'lucide-react';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -165,6 +166,7 @@ interface TimePickerPopoverProps {
 }
 
 export function TimePickerPopover({ value, onChange, disabled, open, onOpenChange, inputId, placeholder }: TimePickerPopoverProps) {
+  const { t } = useTranslation('common');
   const anchorRef = useRef<HTMLDivElement>(null);
 
   // Wheel state DERIVED from value — single source of truth, no sync bugs.
@@ -193,6 +195,7 @@ export function TimePickerPopover({ value, onChange, disabled, open, onOpenChang
             disabled={disabled}
             tabIndex={-1}
             onClick={() => { if (!disabled) onOpenChange(true); }}
+            aria-label={t('a11y.chooseTime')}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-40"
           >
             <Clock className="h-4 w-4" />
@@ -223,7 +226,9 @@ export function TimePickerPopover({ value, onChange, disabled, open, onOpenChang
           />
         </div>
       </PopoverAnchor>
+      {/* Anchor-only (το πεδίο είναι το ερέθισμα) ⇒ κανένα trigger να δώσει όνομα: ρητό (ADR-598 G11). */}
       <PopoverContent
+        aria-label={t('a11y.chooseTime')}
         className="w-auto p-3"
         align="start"
         onInteractOutside={(e) => {

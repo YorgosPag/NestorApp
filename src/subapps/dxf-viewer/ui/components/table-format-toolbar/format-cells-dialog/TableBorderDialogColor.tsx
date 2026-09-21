@@ -119,6 +119,9 @@ export function TableBorderDialogColor({
         open={open}
         onOpenChange={setOpen}
         anchor={anchor}
+        // Η άγκυρα υπόσχεται `aria-haspopup="dialog"` — ο διάλογος ονομάζεται από την ΙΔΙΑ
+        // ετικέτα «Χρώμα:» που ονομάζει και την άγκυρα (ADR-598 G11).
+        aria-labelledby={labelId}
         className={cn(styles.colorPanel, SURFACE_SKIN)}
         {...TABLE_CELL_SESSION_MARKER}
       >

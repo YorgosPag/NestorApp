@@ -102,8 +102,26 @@ const VIEWPORT_PADDING_PX = 8;
  */
 const MIN_USABLE_HEIGHT_PX = 120;
 
-export interface AnchoredPopoverProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
+/**
+ * **Το όνομα του αναδυόμενου — υποχρεωτικό από τον ΤΥΠΟ, όχι από σύσταση** (ADR-598 G11).
+ *
+ * Η άγκυρα λέει στον αναγνώστη οθόνης «ανοίγει διάλογο» (`aria-haspopup="dialog"`)· ό,τι
+ * ανοίγει οφείλει να **είναι** διάλογος **με όνομα**, αλλιώς ανακοινώνεται σκέτο «διάλογος»
+ * (axe `aria-dialog-name`). Ακριβώς ένα από τα δύο — το `never` κάνει το «και τα δύο» και το
+ * «κανένα» **αδύνατα στη μεταγλώττιση**, αντί για ένα ακόμη σχόλιο που κανείς δεν διαβάζει.
+ */
+type AnchoredPopoverName =
+  | { readonly 'aria-labelledby': string; readonly 'aria-label'?: never }
+  | { readonly 'aria-label': string; readonly 'aria-labelledby'?: never };
+
+interface AnchoredPopoverOwnProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'role' | 'aria-label' | 'aria-labelledby'> {
+  /**
+   * Ο ρόλος του αναδυόμενου. Προεπιλογή **`dialog`** — ό,τι αποδίδει και το Radix
+   * `PopoverContent`, και ό,τι δίνει το `useRole` του floating-ui: ένα πάνελ με ελεύθερο
+   * περιεχόμενο (κουμπιά, πλέγμα δειγμάτων). Μενού ή λίστα επιλογής το δηλώνουν ρητά.
+   */
+  readonly role?: 'dialog' | 'menu' | 'listbox';
   /** Ανοιχτό; Ο καταναλωτής κατέχει την κατάσταση — εδώ δεν υπάρχει μνήμη. */
   readonly open: boolean;
   /** Κλείσιμο από **light dismiss** (πάτημα εκτός). Ό,τι άλλο το αποφασίζει ο καταναλωτής. */
@@ -123,6 +141,8 @@ export interface AnchoredPopoverProps
   readonly children: React.ReactNode;
 }
 
+export type AnchoredPopoverProps = AnchoredPopoverOwnProps & AnchoredPopoverName;
+
 /**
  * Υποστηρίζει αυτός ο browser το Popover API;
  *
@@ -139,6 +159,7 @@ export function AnchoredPopover({
   anchor,
   placement = 'bottom-start',
   dismissOnOutsidePress = true,
+  role = 'dialog',
   className,
   children,
   ...rest
@@ -212,6 +233,7 @@ export function AnchoredPopover({
     <FloatingPortal>
       <div
         ref={setFloating}
+        role={role}
         className={cn(styles.popover, className)}
         style={floatingStyles}
         data-positioned={isPositioned ? 'true' : 'false'}

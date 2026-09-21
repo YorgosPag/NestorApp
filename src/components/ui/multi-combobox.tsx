@@ -4,6 +4,8 @@ import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 // ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
 import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership';
+// ADR-598 G11 · Δ — Root/Trigger από το SSoT ώστε το ωμό Content να παίρνει το όνομα του trigger.
+import { Popover, PopoverTrigger, usePopoverContentNaming } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -179,6 +181,9 @@ function MultiComboboxContent({ state, searchPlaceholder, emptyMessage, clearAll
     if (opt) state.toggleOption(opt.value);
   }, [state]);
 
+  // Ο διάλογος (πεδίο αναζήτησης + listbox) ονομάζεται από το `combobox` που τον ανοίγει.
+  const naming = usePopoverContentNaming();
+
   const handleKeyDown = useListKeyboard(
     state.filteredOptions.length,
     state.focusedIndex,
@@ -195,6 +200,7 @@ function MultiComboboxContent({ state, searchPlaceholder, emptyMessage, clearAll
       // ADR-364 §10.15 — δήλωση Κ3. Αυτό το αρχείο χρησιμοποιεί το **ωμό** Radix primitive και όχι
       // το κοινό `PopoverContent`, οπότε δεν κληρονομεί τη δήλωση — έπρεπε να τη ζητήσει ρητά.
       onEscapeKeyDown={withRadixEscapeOwner('ui/multi-combobox-content')}
+      {...naming}
     >
       <MultiComboboxSearch value={state.search} onChange={state.setSearch} placeholder={searchPlaceholder} onKeyDown={handleKeyDown} />
       <ul role="listbox" aria-multiselectable className="max-h-60 overflow-y-auto p-1">
@@ -249,8 +255,8 @@ export function MultiCombobox({
   const overflowCount = value.length - maxChipsDisplay;
 
   return (
-    <PopoverPrimitive.Root open={state.open} onOpenChange={disabled ? undefined : state.setOpen}>
-      <PopoverPrimitive.Trigger asChild disabled={disabled}>
+    <Popover open={state.open} onOpenChange={disabled ? undefined : state.setOpen}>
+      <PopoverTrigger asChild disabled={disabled}>
         <div
           role="combobox"
           tabIndex={disabled ? -1 : 0}
@@ -274,7 +280,7 @@ export function MultiCombobox({
           )}
           <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
         </div>
-      </PopoverPrimitive.Trigger>
+      </PopoverTrigger>
       <MultiComboboxContent
         state={state}
         searchPlaceholder={searchPlaceholder ?? t('multiCombobox.searchPlaceholder')}
@@ -283,6 +289,6 @@ export function MultiCombobox({
         hasClearAll={value.length > 0}
         onClearAll={() => onChange([])}
       />
-    </PopoverPrimitive.Root>
+    </Popover>
   );
 }

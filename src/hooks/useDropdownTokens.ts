@@ -132,14 +132,8 @@ export interface DropdownTokens {
     readonly inputPaddingRight: string;
     /** List wrapper padding: py-1 */
     readonly listPadding: string;
-    /** Add-new section border: border-t p-1 */
-    readonly addNewSection: string;
-    /** Add-new input sizing: h-8 text-sm flex-1 */
-    readonly addNewInput: string;
-    /** Add-new button sizing: h-8 px-2 text-sm */
-    readonly addNewButton: string;
-    /** Add-new row layout: gap-2 px-2 py-1 */
-    readonly addNewRow: string;
+    /** Divider above the add-new OPTION when real options precede it: border-t border-border */
+    readonly addNewDivider: string;
     /** Empty state padding: p-3 text-sm */
     readonly emptyState: string;
     /** Loading state padding: py-4 */

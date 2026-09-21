@@ -128,7 +128,9 @@
   "dropdown": {
     "clearSelection": "Clear selection",
     "totalContacts": "{count} total contacts - use scroll or search to navigate",
-    "createNewContact": "Create new contact"
+    "createNewContact": "Create new contact",
+    "addNewOption": "Add \"{value}\"",
+    "toggleOptions": "Show options"
   },
   "propertyStatus": {
     "sold": "Sold",
@@ -684,7 +686,10 @@
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
     "cardActions": "Card actions",
-    "escKey": "ESC"
+    "escKey": "ESC",
+    "moreInfo": "More information",
+    "chooseDate": "Choose date",
+    "chooseTime": "Choose time"
   },
   "deletionGuard": {
     "blocked": "Deletion is not allowed",

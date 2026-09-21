@@ -85,7 +85,6 @@
         "notes": "Πρόσθετες πληροφορίες..."
       },
       "noTypesFound": "Δεν βρέθηκαν τύποι",
-      "addCustomType": "Προσθήκη νέου τύπου",
       "validation": {
         "contactRequired": "Η επιλογή επαφής είναι υποχρεωτική",
         "relationshipTypeRequired": "Ο τύπος σχέσης είναι υποχρεωτικός",

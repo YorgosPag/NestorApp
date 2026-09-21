@@ -1947,6 +1947,13 @@ tabpanel · **πλήρως εντός** viewport · **78** δείγματα · �
 
 ## Changelog
 
+- **2026-09-21** — ♿ **Το αγκυρωμένο αναδυόμενο (§21.10) έγινε ΔΙΑΛΟΓΟΣ ΜΕ ΟΝΟΜΑ** (ADR-598 G11). Η άγκυρα
+  του «Χρώμα:» δήλωνε `aria-haspopup="dialog"`, αλλά το `AnchoredPopover` αποδιδόταν ως σκέτο `<div>` χωρίς ρόλο και
+  όνομα — υπόσχεση προς τον αναγνώστη οθόνης που δεν τηρούνταν. Τώρα `role="dialog"` από προεπιλογή (Radix
+  `PopoverContent` / floating-ui `useRole`, ρητό `menu` / `listbox` όταν χρειάζεται) και **ο τύπος απαιτεί** ακριβώς ένα
+  από `aria-label` / `aria-labelledby`. Το `TableBorderDialogColor` ονομάζεται από την **ίδια** ετικέτα που ονομάζει και
+  την άγκυρα (`labelId`) — κανένα νέο κλειδί i18n. Άγκυρα: `components/ui/floating/__tests__/floating.a11y.test.tsx`
+  (axe σε ανοιχτό portal)· μετάλλαξη `role` ⇒ κόκκινο. Τα `table-border-dialog` / `table-format-cells-dialog` tests πράσινα.
 - **2026-09-11** — ✅ **Η ρίζα του §21.10 διορθώθηκε με μέτρηση**: `overflow-x: hidden → clip` μέσα σε `:where(...)` στον
   καθολικό κανόνα header / main / section του `globals.css` (και στον κανόνα κινητού, χωρίς `!important`). Δεύτερη εμφάνιση
   της παγίδας: κεφαλίδα ύψους 0 σε πλήρη οθόνη (ADR-332 D27 Ζ8). Εύρος μετρημένο με προσομοίωση στη ζωντανή σελίδα σε 5

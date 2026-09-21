@@ -7,6 +7,7 @@
  *   - Keyboard navigation (ArrowUp/Down, Enter, Escape)
  *   - ARIA combobox roles
  *   - Optional free text input
+ *   - Optional «Add "x"» as the LAST option of the list (ADR-841 §7 Α19.4δ)
  *   - Optional secondary label per option
  *   - Loading state for lazy-loaded options
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
@@ -23,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useDropdownTokens } from '@/hooks/useDropdownTokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 import {
   ComboboxOption,
@@ -31,40 +33,27 @@ import {
   DEFAULT_DEBOUNCE_MS,
 } from './searchable-combobox-types';
 // 🔑 «Ποια επιλογή εννοεί ο άνθρωπος;» — καθαρές συναρτήσεις, δοκιμάσιμες χωρίς DOM.
-import { filterOptions, resolveOptionByText } from './searchable-combobox-matching';
-// 🔑 «Ποια ΝΕΑ;» — άλλη ερώτηση, δική της κατάσταση, δικό της αρχείο.
-import { SearchableComboboxAddNew } from './searchable-combobox-add-new';
+import { filterOptions, resolveAddNewLabel, resolveOptionByText } from './searchable-combobox-matching';
+// 🔑 Ο κατάλογος (και η «Προσθήκη «x»» ως τελευταία επιλογή) — leaf χωρίς κατάσταση.
+import { SearchableComboboxListbox, optionDomId } from './searchable-combobox-listbox';
 
 import { applyRovingArrowKey } from '@/lib/a11y/roving-highlight';
 import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
 export type { ComboboxOption, SearchableComboboxProps } from './searchable-combobox-types';
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Το `id` της **επισημασμένης** επιλογής — ο μόνος τρόπος να την **ακούσει** κανείς.
- *
- * 🔴 Η εστίαση DOM **δεν φεύγει ποτέ** από το `<input>` (APG «list autocomplete»), άρα
- * χωρίς `aria-activedescendant` το `ArrowDown` μετακινούσε την επισήμανση **οπτικά** και
- * ο αναγνώστης οθόνης **δεν ανακοίνωνε τίποτα**: το `Enter` επέλεγε κάτι που δεν είχε
- * ακουστεί ποτέ. Ίδιο `index` με το `filtered` ⇒ δείκτης και στόχος **δεν αποκλίνουν**.
- *
- * @see ADR-841 §7 Α19.4β — W3C ARIA APG, Combobox Pattern
- */
-const optionDomId = (listboxId: string, index: number): string => `${listboxId}-opt-${index}`;
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export function SearchableCombobox({
+  id,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
   value,
   onValueChange,
   options,
   placeholder = '',
-  emptyMessage = 'No results found',
+  emptyMessage,
   isLoading = false,
   maxDisplayed = DEFAULT_MAX_DISPLAYED,
   debounceMs = DEFAULT_DEBOUNCE_MS,
@@ -73,9 +62,10 @@ export function SearchableCombobox({
   error,
   className,
   onAddNew,
-  addNewButtonLabel = '+ Προσθήκη νέου',
+  formatAddNewLabel,
 }: SearchableComboboxProps) {
   const dropdown = useDropdownTokens();
+  const { t } = useTranslation('common');
   const listboxId = useId();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -184,11 +174,17 @@ export function SearchableCombobox({
     [options, query, maxDisplayed],
   );
 
+  // «Προσθήκη «x»» ως ΤΕΛΕΥΤΑΙΑ επιλογή (ADR-841 §7 Α19.4δ). Διαβάζει το ΙΔΙΟ `query` με
+  // το `filtered`, ώστε ο δείκτης της (`filtered.length`) να μην αποκλίνει από τον κατάλογο.
+  const addNewLabel = onAddNew ? resolveAddNewLabel(options, query) : null;
+  const optionCount = filtered.length + (addNewLabel === null ? 0 : 1);
+
   // ⚠️ **Ίδια συνθήκη με την απόδοση παρακάτω, γραμμένη ΜΙΑ φορά**: το `aria-controls`
   //    δείχνει σε `id` που πρέπει να **υπάρχει**. Όταν δεν αποδίδεται `<ul>` (φόρτωση, ή
-  //    μηδέν αποτελέσματα χωρίς «προσθήκη»), ένας δείκτης σε ανύπαρκτο στοιχείο είναι
-  //    σφάλμα ARIA — χειρότερο από την απουσία του.
-  const listboxRendered = !isLoading && !(filtered.length === 0 && !onAddNew);
+  //    καμία επιλογή), ένας δείκτης σε ανύπαρκτο στοιχείο είναι σφάλμα ARIA — χειρότερο
+  //    από την απουσία του. Ένα `listbox` χωρίς `option` δεν αποδίδεται ποτέ: το μήνυμα
+  //    «κανένα αποτέλεσμα» ζει **έξω** από αυτό, όχι ως ψευδο-γραμμή μέσα του.
+  const listboxRendered = !isLoading && optionCount > 0;
 
   // Reset highlight when filtered list changes
   useEffect(() => {
@@ -232,6 +228,17 @@ export function SearchableCombobox({
     [onValueChange],
   );
 
+  const handleAddNew = useCallback(() => {
+    if (!onAddNew || addNewLabel === null) return;
+    onAddNew(addNewLabel);
+    // Αισιόδοξα: ο γονέας προσθέτει την επιλογή, και το sync effect (με κλειστό popover)
+    // ξαναγράφει το πεδίο από την τιμή του. Ως τότε δείχνουμε ό,τι μόλις φτιάχτηκε.
+    setInputValue(addNewLabel);
+    isSystemProvidedRef.current = false;
+    setOpen(false);
+    setHighlightedIndex(-1);
+  }, [onAddNew, addNewLabel]);
+
   const handleClear = useCallback(() => {
     setInputValue('');
     isSystemProvidedRef.current = false;
@@ -271,9 +278,9 @@ export function SearchableCombobox({
         return;
       }
 
-      if (filtered.length === 0) return;
+      if (optionCount === 0) return;
 
-      if (applyRovingArrowKey(e, filtered.length, setHighlightedIndex)) return;
+      if (applyRovingArrowKey(e, optionCount, setHighlightedIndex)) return;
 
       switch (e.key) {
         case 'Enter':
@@ -281,6 +288,8 @@ export function SearchableCombobox({
           if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
             const target = filtered[highlightedIndex];
             if (!target.disabled) handleSelect(target);
+          } else if (highlightedIndex === filtered.length) {
+            handleAddNew();
           }
           break;
         case 'Escape':
@@ -290,7 +299,7 @@ export function SearchableCombobox({
           break;
       }
     },
-    [open, filtered, highlightedIndex, handleSelect],
+    [open, optionCount, filtered, highlightedIndex, handleSelect, handleAddNew],
   );
 
   // Το `select()` μέσα στο onFocus ακυρώνεται από το mouseup που ακολουθεί ένα
@@ -331,6 +340,9 @@ export function SearchableCombobox({
         <div className={cn('relative w-full', className)}>
           <Input
             ref={inputRef}
+            id={id}
+            aria-label={ariaLabel}
+            aria-labelledby={ariaLabelledBy}
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -340,7 +352,10 @@ export function SearchableCombobox({
             placeholder={placeholder}
             disabled={disabled}
             role="combobox"
-            aria-expanded={open}
+            // 🔴 «Ανοιχτό» = υπάρχει **listbox** για να ελέγξει (ARIA 1.2: `expanded` ⇒ `controls`,
+            //    axe `aria-required-attr`). Ένα popover με μόνο «κανένα αποτέλεσμα» ή spinner
+            //    ΔΕΝ είναι το popup που δηλώνει το `aria-haspopup` (ADR-598 G11).
+            aria-expanded={open && listboxRendered}
             aria-haspopup="listbox"
             aria-autocomplete="list"
             // 🔴 ΤΑ ΔΥΟ ΠΟΥ ΕΛΕΙΠΑΝ (ADR-841 §7 Α19.4β) — δες `optionDomId`.
@@ -362,7 +377,7 @@ export function SearchableCombobox({
               type="button"
               onClick={handleClear}
               className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear"
+              aria-label={t('dropdown.clearSelection')}
               tabIndex={-1}
             >
               <X className="h-4 w-4" />
@@ -374,7 +389,7 @@ export function SearchableCombobox({
             tabIndex={-1}
             onClick={() => { if (!disabled) setOpen(!open); }}
             className="absolute right-0 top-0 h-full px-2 flex items-center cursor-pointer"
-            aria-label="Toggle dropdown"
+            aria-label={t('dropdown.toggleOptions')}
           >
             <ChevronDown
               className={cn(
@@ -391,74 +406,39 @@ export function SearchableCombobox({
         align="start"
         sideOffset={dropdown.content.sideOffset}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        // 🔴 Το popup του combobox είναι το **listbox** (`aria-haspopup="listbox"`), όχι διάλογος.
+        //    Το Radix δίνει σε κάθε `Popover.Content` `role="dialog"`, εδώ **ανώνυμο** (axe
+        //    `aria-dialog-name`) και ψευδές: η εστίαση δεν μπαίνει ποτέ μέσα. Ουδέτερο δοχείο,
+        //    όπως το `PopoverSurface` του Fluent χωρίς `trapFocus` (ADR-598 G11).
+        role="presentation"
       >
         {isLoading ? (
           <div className={`flex items-center justify-center ${dropdown.combobox.loadingState}`}>
             <Spinner />
           </div>
         ) : (
-          <>
-            {filtered.length === 0 && !onAddNew ? (
-              <p className={`${dropdown.combobox.emptyState} text-muted-foreground text-center`}>
-                {emptyMessage}
-              </p>
-            ) : (
-              <ul ref={listRef} id={listboxId} role="listbox" className={`${dropdown.combobox.listPadding} ${dropdown.content.maxHeightCombobox} overflow-y-auto`}>
-                {filtered.length === 0 && (
-                  <li className={`px-3 py-2 ${dropdown.item.fontSize} text-muted-foreground text-center`}>
-                    {emptyMessage}
-                  </li>
-                )}
-                {filtered.map((option, index) => (
-                  <li
-                    key={option.value}
-                    id={optionDomId(listboxId, index)}
-                    role="option"
-                    aria-selected={highlightedIndex === index}
-                    aria-disabled={option.disabled || undefined}
-                    className={cn(
-                      `flex flex-col ${dropdown.item.combobox} transition-colors ${dropdown.item.fontSize}`,
-                      option.disabled
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer',
-                      !option.disabled && highlightedIndex === index
-                        ? 'bg-accent text-accent-foreground'
-                        : !option.disabled ? 'hover:bg-muted' : '',
-                    )}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (!option.disabled) handleSelect(option);
-                    }}
-                    onMouseEnter={() => { if (!option.disabled) setHighlightedIndex(index); }}
-                  >
-                    <span className="font-medium">
-                      {option.label}
-                      {option.disabled && option.disabledHint && (
-                        <span className={`ml-2 ${dropdown.item.fontSizeSecondary} font-normal text-muted-foreground italic`}>
-                          ({option.disabledHint})
-                        </span>
-                      )}
-                    </span>
-                    {option.secondaryLabel && (
-                      <span className={`${dropdown.item.fontSizeSecondary} text-muted-foreground`}>
-                        {option.secondaryLabel}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* «Δεν υπάρχει — φτιάξε το»: ξεχωριστή ευθύνη, ξεχωριστό αρχείο (ADR-841 §7 Α19.4). */}
-            {onAddNew && (
-              <SearchableComboboxAddNew
-                onAddNew={onAddNew}
-                onSubmitted={() => setOpen(false)}
-                placeholder={placeholder}
-                buttonLabel={addNewButtonLabel}
-              />
-            )}
-          </>
+          listboxRendered ? (
+            <SearchableComboboxListbox
+              id={listboxId}
+              listRef={listRef}
+              options={filtered}
+              highlightedIndex={highlightedIndex}
+              addNewText={
+                addNewLabel === null
+                  ? null
+                  : formatAddNewLabel?.(addNewLabel) ?? t('dropdown.addNewOption', { value: addNewLabel })
+              }
+              onSelect={handleSelect}
+              onAddNew={handleAddNew}
+              onHighlight={setHighlightedIndex}
+            />
+          ) : (
+            // `role="status"`: χωρίς listbox δεν υπάρχει `activedescendant` να ανακοινωθεί, άρα
+            // το «κανένα αποτέλεσμα» ακούγεται μόνο ως ζωντανή περιοχή (APG, Combobox).
+            <p role="status" className={`${dropdown.combobox.emptyState} text-muted-foreground text-center`}>
+              {emptyMessage ?? t('placeholders.noResults')}
+            </p>
+          )
         )}
       </PopoverContent>
     </Popover>

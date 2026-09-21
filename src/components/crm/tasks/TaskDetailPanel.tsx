@@ -270,6 +270,7 @@ export function TaskDetailPanel({
                   disabled={disabled}
                   tabIndex={-1}
                   onClick={() => { if (!disabled) setCalendarOpen(true); }}
+                  aria-label={t('common:a11y.chooseDate')}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-40"
                 >
                   <CalendarIcon className="h-4 w-4" />
@@ -299,7 +300,9 @@ export function TaskDetailPanel({
                 />
               </div>
             </PopoverAnchor>
+            {/* Anchor-only ⇒ κανένα trigger να δώσει όνομα: ρητό, όπως στο `date-picker-field` (ADR-598 G11). */}
             <PopoverContent
+              aria-label={t('common:a11y.chooseDate')}
               className="w-auto p-0"
               align="start"
               onInteractOutside={(e) => {

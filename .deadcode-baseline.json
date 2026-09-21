@@ -11,8 +11,7 @@
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
-    "src/subapps/procurement/services/trade-registry.ts",
-    "src/test-utils/a11y.tsx"
+    "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 11
+  "fileCount": 10
 }

@@ -96,3 +96,34 @@ export function resolveOptionByText(
 
   return { incumbent, match };
 }
+
+/**
+ * **Ποια ΝΕΑ επιλογή προσφέρεται για το κείμενο** — ή `null` αν δεν προσφέρεται καμία.
+ *
+ * Το ερώτημα είναι το ίδιο με τις δύο συναρτήσεις πιο πάνω: *«υπάρχει ήδη αυτό που
+ * πληκτρολόγησε ο άνθρωπος;»* Αν **όχι**, το combobox προσφέρει να το φτιάξει, ως
+ * **τελευταία επιλογή του καταλόγου** (ADR-841 §7 Α19.4δ).
+ *
+ * 🔑 **Κριτήριο των μεγάλων**: react-select *Creatable* (`isValidNewOption`), MUI
+ * Autocomplete `freeSolo` («Add "x"»). Κενό κείμενο ⇒ τίποτα να φτιαχτεί. **Ίδια ετικέτα**
+ * ήδη στις επιλογές ⇒ τίποτα να φτιαχτεί, γιατί η προσφορά θα γεννούσε **διπλότυπο**.
+ * Η σύγκριση γίνεται με το **ίδιο** `normalizeForSearch` που χρησιμοποιεί το
+ * `resolveOptionByText`. Έτσι το «υπάρχει ήδη» και το «εννοείς αυτό» δεν μπορούν να
+ * διαφωνήσουν: «Κουμπαρος» και «Κουμπάρος» είναι **μία** επιλογή, όχι δύο.
+ *
+ * ⚠️ Ελέγχει **όλες** τις επιλογές, όχι μόνο τις φιλτραρισμένες. Το `maxDisplayed` κόβει
+ * τι **φαίνεται**, όχι τι **υπάρχει**.
+ *
+ * @returns Το κείμενο **χωρίς κενά στα άκρα**: αυτό παραδίδεται στο `onAddNew`.
+ */
+export function resolveAddNewLabel(
+  options: readonly ComboboxOption[],
+  query: string,
+): string | null {
+  const label = query.trim();
+  if (!label) return null;
+
+  const normalized = normalizeForSearch(label);
+  const exists = options.some((option) => normalizeForSearch(option.label) === normalized);
+  return exists ? null : label;
+}

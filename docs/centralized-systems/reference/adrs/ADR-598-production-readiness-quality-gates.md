@@ -107,7 +107,7 @@
 > **Seeding:** τα βαριά (G3/G9/G10/G15 — jest --coverage / depcruise / knip crawl) seed-άρονται via **CI seed dispatch** (N.17, ίδιο μηχανισμό με Φ2)· το **G11 seed-άρεται τοπικά** (γρήγορο string-scan, χωρίς tsc/build) → baseline committed.
 - **G3** ✅ **DONE**: `scripts/check-coverage-ratchet.js` διαβάζει `coverage/coverage-summary.json` (πρόσθεσα `coverageReporters: ['json-summary','text-summary','lcov']` στο `jest.config.js`), gate στο **lines %** (headline number· statements/functions/branches καταγράφονται) ratchet **UP** → `.coverage-baseline.json` + `coverage-ratchet.yml` (τρέχει `test:coverage` πρώτα, `continue-on-error`). Το jest `coverageThreshold={0,0,0,0}` μένει ως hard floor· ο ratchet είναι το κινούμενο δάπεδο. Scripts: `coverage-floor:check`/`:baseline`.
 - **G9 + G10** ✅ **DONE**: ΕΝΑ `.dependency-cruiser.cjs` (SSoT, rules: `no-circular` + `services-not-to-components` + `not-to-dxf-internals` [πλην public barrel `index.ts[x]`] + `no-test-utils-in-prod`) → **ΕΝΑ** engine `scripts/check-depcruise-ratchet.js --gate cycles|boundaries` (ΟΧΙ 2 clone scripts — SSoT διόρθωση όπως το eslint engine· το ADR αρχικά έλεγε `check-circular-deps-ratchet.js`+`check-arch-boundaries-ratchet.js`) → `.depcruise-{cycles,boundaries}-baseline.json` ratchet **DOWN** (seed υπαρχόντων violations, ΟΧΙ zero-tol) + `depcruise-ratchet.yml` (matrix). `dependency-cruiser@16.10.4` (MIT· **ΟΧΙ v18 — απαιτεί Node≥22, το CI τρέχει Node 20**). Scripts: `depcruise:cycles`/`:boundaries`(+`:baseline`).
-- **G11** ✅ **DONE**: `scripts/check-a11y-test-coverage-ratchet.js` — **set-diff ratchet** (όπως dead-code baseline): `.a11y-coverage-baseline.json` grandfather-άρει τα υπάρχοντα uncovered (**143** σε `src/components/ui`+`generic`)· block μόνο σε **ΝΕΟ** uncovered component (zero-tol-on-touch). «Covered» = test file με axe marker που κάνει import το component. SSoT helper `src/test-utils/a11y.tsx` (`expectNoA11yViolations`). `jest-axe`(MIT)+`axe-core`(**MPL-2.0**) ήταν **ήδη** devDeps (το `license:check --production` δεν τα σκανάρει)· πρόσθεσα ρητή MPL-2.0 exception `axe-core` στο `.license-allowlist.json` (dev/test-only, **εγκρίθηκε Giorgio 2026-07-08**). Baseline seeded τοπικά + `a11y-ratchet.yml`. Scripts: `a11y-coverage:check`/`:baseline`.
+- **G11** ✅ **DONE**: `scripts/check-a11y-test-coverage-ratchet.js` — **set-diff ratchet** (όπως dead-code baseline): `.a11y-coverage-baseline.json` grandfather-άρει τα υπάρχοντα uncovered (**143** σε `src/components/ui`+`generic`)· block μόνο σε **ΝΕΟ** uncovered component (zero-tol-on-touch). «Covered» = test file (οπουδήποτε στο `src/`) με axe marker που κάνει import το **αρχείο** του component — επίλυση **μονοπατιού** (σχετικό · alias `@/` · barrel με ονομαστικό re-export), **όχι** ταίριασμα ονόματος *(έως 2026-09-21 ήταν basename: τυφλό στο `@/`, υπερ-μετρούσε ομώνυμα — βλ. changelog)*. SSoT helper `src/test-utils/a11y.tsx` (`expectNoA11yViolations`). `jest-axe`(MIT)+`axe-core`(**MPL-2.0**) ήταν **ήδη** devDeps (το `license:check --production` δεν τα σκανάρει)· πρόσθεσα ρητή MPL-2.0 exception `axe-core` στο `.license-allowlist.json` (dev/test-only, **εγκρίθηκε Giorgio 2026-07-08**). Baseline seeded τοπικά + `a11y-ratchet.yml`. Scripts: `a11y-coverage:check`/`:baseline`.
 - **G12** ✅ **DONE**: pre-commit **CHECK 14** (`gitleaks protect --staged` — soft: BLOCK αν το binary υπάρχει & βρει secret, αλλιώς warn· το CI είναι authoritative) + `gitleaks-scan.yml` (full-history, pinned binary v8.18.4, **ΟΧΙ** gitleaks-action για license-free) + `.gitleaks.toml` (built-in rules + allowlist test/locale/lockfile). ΟΧΙ ratchet — secrets = zero-tol. (Το ADR έλεγε «CHECK 10b» — δεν υπήρχε CHECK 10· έγινε **CHECK 14**, N.0.1 code-wins.) · 🔴 **Το gate είναι κόκκινο από 22/07 — σκόπιμα.** 3 γνήσια διαπιστευτήρια στο ιστορικό, rotation **αναβλήθηκε μέχρι το production** (Giorgio 28/07) ⇒ **καμία καταστολή δεν μπαίνει πριν από αυτό** (§0 του runbook). **Remediation record + βήματα: [`docs/security/secret-rotation-runbook.md`](../../../security/secret-rotation-runbook.md)** — ο δείκτης που το ίδιο το `.gitleaks.toml` (γρ. 17-18) υποσχόταν και δεν υπήρχε.
 - **G15** ✅ **DONE (scoped)**: `scripts/check-knip-deps-ratchet.js` ratchet-άρει **DOWN** τα knip **dependency** findings (unused deps/devDeps/unlisted/binaries/unresolved, `knip --dependencies --reporter json`) → `.knip-deps-baseline.json` + `knip-deps-ratchet.yml`. **⚠️ ΔΕΝ** επεκτάθηκε το `knip.json` project glob να include dxf-viewer (όπως πρότεινε αρχικά το ADR): verified 2026-06-21 ([[reference_knip_ignores_dxf_viewer]], ADR-357) ότι το dxf-viewer αγνοείται **σκόπιμα** (dynamic registries → false-positive dead code· το CHECK 3.22 baseline βασίζεται σε αυτό). Include = θα φούσκωνε το dead-code ratchet & θα έσπαγε το commit flow → N.0.1 reality-wins: ratchet-άρω μόνο dependency hygiene, file-level scope αμετάβλητο. Scripts: `knip-deps:check`/`:baseline`.
 
@@ -488,3 +488,152 @@ manifest· κανείς δεν εισάγει το πακέτο· react/next/fir
 **απόφαση**: 67.885 bytes στο route chunk θα έκαιγαν **7,6%** του περιθωρίου των 897.358 για
 σελίδα που ανοίγει σπάνια. Το τίμημα είναι ότι η αύξησή του **δεν** κοκκινίζει εδώ — το φυλά το
 Κ1 του **CHECK 3.84** (αποτύπωμα), όχι το μέγεθος.
+
+### 2026-09-21 — G11: **ΠΡΑΣΙΝΟ ΞΑΝΑ — 19 components με axe σε κάθε ορατή κατάσταση, 4 πραγματικά ελαττώματα, και ο ανιχνευτής βλέπει πλέον `@/`**
+
+Το *T3 ♿ A11y Test-Coverage Ratchet* ήταν κόκκινο από **2026-07-17** (πρώτο fail `b8c225b2`).
+**Πραγματική παλινδρόμηση, όχι μπαγιάτικη baseline**: 19 components μπήκαν στο `src/components/ui`
+μετά τη baseline (143, 2026-07-08) χωρίς κανένα test που να τρέχει axe. ⛔ **Καμία** επανασπορά
+(`--write-baseline`) — ο ratchet πράσινισε επειδή **πληρώθηκε** το χρέος.
+
+**Πέντε αρχεία axe, ανά φάκελο — όχι 19** · όλα μέσω `@/test-utils/a11y`:
+
+| Αρχείο | Components | Καταστάσεις (όχι μόνο mount) |
+|---|---|---|
+| `ui/__tests__/form-controls.a11y.test.tsx` | `hinted-field` · `date-picker-field` · `enum-select` · `filter-chip` · `InfoLabel` · `searchable-combobox-add-new` | σφάλμα/disabled/readOnly/κενή υπόδειξη · ημερολόγιο **ανοιχτό** · λίστα **ανοιχτή** · επεξήγηση **ανοιχτή με Tab** · «νέο» σε πληκτρολόγηση |
+| `ui/__tests__/surfaces.a11y.test.tsx` | `auth-card-section` · `surface-context` | outline `h1→h2→h3→h4` και κόψιμο στο `h6` με **ενεργό `heading-order`** |
+| `ui/chart-card/__tests__/chart-card.a11y.test.tsx` | τα 8 του κελύφους | πίνακας δεδομένων **ανοιχτός** · επεξήγηση κεφαλίδας ανοιχτή · κενά δεδομένα · μία σειρά · χρώμα ανά κατηγορία · tooltip recharts · `ChartPlot` εμφωλευμένο (`h4`) · φόρμα σε **pending** |
+| `ui/floating/__tests__/floating.a11y.test.tsx` | `AnchoredPopover` · `FloatingPanelResizeHandles` | κλειστό · **ανοιχτό σε portal** · ρόλος μενού · 8 λαβές χωρίς στάση Tab |
+| `ui/numeric-field/__tests__/numeric-field.a11y.test.tsx` | `NumericField` | ετικέτα-λαβή · `aria-label` · **κενό** (χωρίς `aria-valuenow`) · όρια · disabled · σφάλμα |
+
+**Διορθώθηκε το component, ποτέ το test** — δύο από το axe, δύο που το axe **δομικά δεν βλέπει**:
+
+1. 🔴 **`date-picker-field`** — το ανοιχτό ημερολόγιο ήταν `role="dialog"` **χωρίς όνομα** (axe
+   `aria-dialog-name`). Όνομα `common:a11y.chooseDate` στο `PopoverContent` (πρότυπο MUI DatePicker).
+2. 🔴 **`AnchoredPopover`** — ο καταναλωτής (`TableBorderDialogColor`) λέει `aria-haspopup="dialog"`
+   και το αναδυόμενο δεν ήταν διάλογος ούτε είχε όνομα. Τώρα `role="dialog"` από προεπιλογή (όπως
+   Radix `PopoverContent` / floating-ui `useRole`) και **ο τύπος απαιτεί** ακριβώς ένα από
+   `aria-label` / `aria-labelledby` (`never` ⇒ «κανένα» και «και τα δύο» δεν μεταγλωττίζονται).
+   Ο καταναλωτής ονομάζεται από την **ίδια** ετικέτα «Χρώμα:» (`labelId`).
+3. 🔴 **`InfoLabel`** (το axe δεν το πιάνει) — και τα δύο ερεθίσματα ήταν **μη εστιάσιμα** (`<svg>`
+   και `<span>`), άρα **καμία** επεξήγηση δεν έφτανε σε πληκτρολόγιο ή αναγνώστη οθόνης (WCAG
+   2.1.1 / 4.1.2), σε 17 οθόνες. Πλέον `<button>`: εικονίδιο κατά **Fluent `InfoLabel`**
+   (`aria-labelledby="ετικέτα κουμπί"` ⇒ «Επιτόκιο, Περισσότερες πληροφορίες», στόχος 24px, WCAG
+   2.5.8)· υπογραμμισμένος όρος κατά **Carbon `DefinitionTooltip`**. Νέο `common:a11y.moreInfo`.
+4. 🔴 **`searchable-combobox-add-new`** (το axe δεν το πιάνει) — η ενέργεια ζούσε στο `mousedown`·
+   Enter/Space σε εστιασμένο κουμπί παράγουν `click`, άρα η υποβολή ήταν **νεκρή για το
+   πληκτρολόγιο**. Πλέον `mousedown` = μόνο κράτημα εστίασης, `click` = ενέργεια (σχήμα cmdk /
+   Radix). Και το hardcoded **«OK»** (N.11) → `common:buttons.add`· το πεδίο ονομάζεται από την
+   ενέργεια που το άνοιξε, όχι από το placeholder της αναζήτησης.
+
+**Ο ανιχνευτής — το τυφλό σημείο κρίθηκε και διορθώθηκε, με tests.** Το ταίριασμα γινόταν με το
+**όνομα αρχείου** των **σχετικών** imports, και έσφαλλε **προς δύο κατευθύνσεις**: **(α)** τυφλό σε
+κάθε `@/components/ui/X` — την κανονική γραφή του έργου· **(β)** υπερ-μέτρηση: test που κάνει
+import το `./Button` στον φάκελο Α «κάλυπτε» **κάθε** `Button.tsx`. Επιπλέον σάρωνε tests **μόνο
+μέσα στις ρίζες components**. Τώρα κάθε import **επιλύεται σε μονοπάτι** (σχετικό · `@/` = `src/` ·
+barrel ⇒ το αρχείο από το οποίο ο barrel κάνει **ονομαστικό** re-export· το `export *` δεν
+ονομάζει τίποτα, άρα δεν αποδεικνύει τίποτα) και τα tests σαρώνονται σε **όλο** το `src/`
+(`A11Y_TEST_ROOTS`). Μετρημένο πριν την αλλαγή: **ίδιο σύνολο** (19 νέα, 0 ψευδείς απώλειες).
+Το `a11y-ratchet.yml` τρέχει πλέον και σε αλλαγή οποιουδήποτε `src/**/*.test.ts(x)`.
+
+**SSoT του helper**: το `expectNoA11yViolations` κλείνει τον κανόνα **σελίδας** `region` (ένα
+component δεν έχει landmarks — ίδια στάση με το Storybook a11y addon), με γραπτό λόγο, **μία**
+φορά· και εξάγει `HEADING_OUTLINE_RULES` για το `heading-order`, αντί για σταθερά ανά test.
+
+**Αποδείξεις**: `--check` ✅ *«no new uncovered component (139/143) (−4 paid down)»* — τα 4 είναι
+το `chart.tsx` (δεν υπάρχει πια) και `label` / `table` / `tooltip`, που τα νέα tests **αποδίδουν
+και σαρώνουν** (το tooltip και ανοιχτό). **Δεν κλειδώθηκαν** — reseed μόνο με εντολή Giorgio.
+Jest **335/335** (νέα + όλα τα υπάρχοντα των αγγιγμένων αρχείων, μαζί τα 2 του
+`table-format-toolbar`). **Μεταλλάξεις 7/7 κόκκινες**: σβήσιμο του axe test του chart-card ⇒
+ratchet FAIL με τα 8 · κλάδος `@/` του ανιχνευτή · `<button>`→`<span>` στον όρο · υποβολή εκτός
+`click` · όνομα διαλόγου ημερολογίου · `role` του `AnchoredPopover` · `region` ξανά ανοιχτό.
+
+**Boy Scout**: το `check-phase3-ratchets.test.js` ήταν **κόκκινο** (2 tests G9/G10) από το
+`694d7fb6` (12/09), που πρόσθεσε `identities` στο `summarize` χωρίς να ενημερώσει το test.
+Διορθώθηκε με **ουσία**: ο ίδιος κύκλος αναφερόμενος από δύο μέλη = 2 μετρήσεις, **1** ταυτότητα.
+
+⚠️ **Ανοιχτά, δηλωμένα**: (1) το «Προσθήκη νέου» του `searchable-combobox` είναι κουμπί **έξω από
+το listbox** — μέσα σε portal, άρα **απρόσιτο με Tab** από το πεδίο αναζήτησης. Οι μεγάλοι (MUI
+Autocomplete `freeSolo`, react-select *Create*) το βάζουν ως **επιλογή** στη λίστα, πλοηγήσιμη με
+βελάκια — αλλαγή στο `searchable-combobox.tsx`, εκτός αυτού του βήματος. Το ίδιο αρχείο έχει
+ακόμη hardcoded προεπιλογές (`'No results found'`, `'+ Προσθήκη νέου'`). (2) Άλλα `PopoverContent`
+της εφαρμογής μπορεί να είναι ανώνυμοι διάλογοι — το ερώτημα δεν σαρώθηκε πέρα από τα 19.
+
+### 2026-09-21 (β) — G11: η «Προσθήκη νέου» του combobox έγινε **επιλογή**, και ο ίδιος ο `searchable-combobox.tsx` καλύφθηκε
+
+Συνέχεια του παραπάνω. Το ελάττωμα #4 (`searchable-combobox-add-new`) είχε διορθωθεί **μισό**: το
+κουμπί δούλευε πλέον με Enter, αλλά ήταν **έξω** από το listbox, άρα το πληκτρολόγιο **δεν έφτανε
+ποτέ εκεί** από το πεδίο αναζήτησης. Το αρχείο **διαγράφηκε**: η δημιουργία είναι πλέον το
+τελευταίο `role="option"` (react-select *Creatable* / MUI `freeSolo`), και η απόδοση της λίστας
+βγήκε στο νέο leaf `searchable-combobox-listbox.tsx`. Λεπτομέρειες: **ADR-841 §7 Α19.4δ**.
+
+Η πρώτη σάρωση axe του **ανοιχτού** combobox βρήκε **τρία** ελαττώματα στο component, και
+διορθώθηκαν εκεί, όχι στο test:
+
+1. `aria-dialog-name`: το `PopoverContent` ήταν ανώνυμος `dialog` → `role="presentation"`
+   (το popup είναι το listbox).
+2. `aria-required-attr`: `aria-expanded` χωρίς `aria-controls` σε κενό κατάλογο →
+   `expanded = open && listboxRendered`, και το μήνυμα κενού γίνεται `role="status"`.
+3. Το combobox **δεν ονομαζόταν** (χωρίς `id`, `aria-label`, `aria-labelledby`) → δέχεται πλέον
+   και τα τρία.
+
+| | Πριν | Τώρα |
+|---|---|---|
+| G11 `--check` | 139/143 (−4) | **138/143 (−5)** — βγήκε ο `searchable-combobox.tsx` |
+| Μεταλλάξεις | — | **7/7** κόκκινες |
+
+⛔ **Καμία επανασπορά** — τα −5 **δεν** κλειδώθηκαν (μόνο με εντολή Giorgio).
+
+➡️ Το Δ (ανώνυμα `PopoverContent`) **έκλεισε** στο (γ) παρακάτω.
+
+### 2026-09-21 (γ) — G11 · Δ: **κανένα αναδυόμενο δεν μένει ανώνυμος διάλογος**, λυμένο στο SSoT `popover.tsx`
+
+**Μέτρηση πρώτα**: 29 `PopoverContent` στο `src/`, **28 ανώνυμα σε 27 αρχεία / 12 τομείς** (τα 11
+στο dxf-viewer). Μόνο το `date-picker-field` είχε όνομα, και αυτό από το πρωί. Αιτία: το Radix δίνει
+σε **κάθε** `Popover.Content` `role="dialog"` και **κανένα** όνομα (axe `aria-dialog-name`).
+
+**Έρευνα, στον κώδικα των μεγάλων:**
+
+| Πρότυπο | Τι κάνει | Εδώ |
+|---|---|---|
+| React Aria `DialogTrigger` | `triggerProps.id = useId()` · `overlayProps['aria-labelledby'] = triggerProps.id` | ✅ **προεπιλογή**: ο διάλογος ονομάζεται από το trigger |
+| Fluent v9 `PopoverSurface` | `role: trapFocus ? 'dialog' : 'group'` | ✅ `role="presentation"` όταν το popup είναι **listbox** |
+| ARIA APG | διάλογος **πρέπει** να έχει όνομα | ✅ ρητό όνομα κερδίζει· χωρίς trigger ⇒ υποχρεωτικό |
+
+**Γιατί ΟΧΙ «υποχρεωτικό όνομα από τον τύπο» (το αρχικό σχέδιο)**: 24 από τα 28 έχουν `PopoverTrigger`,
+του οποίου το όνομα **είναι** το σωστό όνομα του διαλόγου («Φίλτρα» ανοίγει «Φίλτρα»). Ο τύπος θα
+ανάγκαζε 24 αρχεία να **ξαναγράψουν** ένα όνομα που υπάρχει ήδη, σε δεύτερο σημείο που μπορεί να
+**αποκλίνει**. Το React Aria το λύνει **χωρίς** γραμμή στον καταναλωτή, και έτσι το λύνουμε κι εμείς.
+
+**Η λύση** (`src/components/ui/popover.tsx`):
+
+1. `Popover` = Radix `Root` + context ονομασίας. Το `PopoverTrigger` καταχωρεί το `id` που **διαβάζει
+   από το DOM**: με `asChild` το Slot αφήνει το `id` του **παιδιού** να κερδίσει, και ένα
+   `aria-labelledby` προς το δικό μας θα έδειχνε σε στοιχείο που δεν υπάρχει.
+2. `PopoverContent`: ο **τύπος** δέχεται **ένα** από `aria-label` / `aria-labelledby` (`never` για
+   το άλλο), ή `role="presentation"`, οπότε το όνομα **απαγορεύεται**. Το `role="menu"` **δεν**
+   προσφέρεται: υπόσχεται βελάκια (APG Menu) που το Popover δεν δίνει, άρα τα μενού πάνε στο `DropdownMenu`.
+3. `usePopoverContentNaming()`: **η μία απάντηση**, εξαγόμενη για όποιον αποδίδει ωμό
+   `PopoverPrimitive.Content` (το `multi-combobox`, χωρίς Portal, που κράτησε τον δικό του Escape owner).
+
+**Τα 4 αρχεία χωρίς trigger**, όπου κανένα runtime δεν μπορεί να μαντέψει όνομα:
+`TaskDetailPanel` → `common:a11y.chooseDate` · `TimePickerPopover` → **νέο** `common:a11y.chooseTime`
+(στα δύο, και το κουμπί-εικονίδιο πήρε όνομα) · `picker-popover-shell` → `role="presentation"` (host
+listbox, όπως ο `searchable-combobox`) · `RulerCornerBox` → «Μενού κλίμακας». Το τελευταίο έχει και
+`menuitem` **χωρίς** `menu`: καταγράφηκε στο `pending-ratchet-work`, μετάβαση σε `DropdownMenu`.
+
+**Η φρουρά** (`ui/__tests__/popover-naming.test.ts`, AST του TypeScript σε **όλο** το `src/`):
+**Κ1**: `<PopoverContent>` σε αρχείο χωρίς `<PopoverTrigger>` δηλώνει όνομα ή `role`. **Κ2**: το ωμό
+`@radix-ui/react-popover` δεν αποδίδει `Root`/`Trigger` (θα έσπαγε το context) και ζητά το όνομα από
+το hook. Fixtures αποδεικνύουν ότι κάθε κανόνας **πιάνει**. ⚠️ Δηλωμένο όριο: ο Κ1 κρίνει ανά αρχείο
+⇒ trigger σε **άλλο** αρχείο = ψευδώς θετικό, με θεραπεία ένα ρητό όνομα. Ψευδώς αρνητικό δεν γίνεται.
+
+| Απόδειξη | |
+|---|---|
+| `popover.a11y.test.tsx` | όνομα από trigger · ρητό κερδίζει · `asChild` με ξένο `id` · `presentation` · anchor ανώνυμο (η απόδειξη ότι χρειάζεται ο Κ1) · `multi-combobox` ανοιχτό |
+| Μεταλλάξεις | **5/5** κόκκινες (όνομα από trigger · id από DOM · presentation · TimePicker · hook στο multi-combobox) |
+| Παλινδρόμηση | **265/265** σε 17 σουίτες καταναλωτών · `radix-escape-ownership` 11/11 |
+| G11 `--check` | **135/143 (−8)** — χωρίς reseed |
+
+🔴 **Ανοιχτό, στο `pending-ratchet-work`**: ~17 καταναλωτές του `SearchableCombobox` δεν του δίνουν
+όνομα. Το SSoT το δέχεται πλέον, αλλά αυτοί δεν το περνούν ακόμα. Πρόταση: υποχρεωτικό από τον τύπο.

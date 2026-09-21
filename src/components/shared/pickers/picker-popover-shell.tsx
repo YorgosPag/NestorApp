@@ -88,7 +88,10 @@ export function PickerPopoverShell({
       <PopoverAnchor asChild>
         <div className={ANCHOR_CLASSES}>{anchor}</div>
       </PopoverAnchor>
+      {/* Το popup είναι το `listbox` των παιδιών και η εστίαση μένει στο πεδίο ⇒ ουδέτερο
+          δοχείο, όχι ανώνυμος διάλογος (Fluent `PopoverSurface` · ADR-598 G11). */}
       <PopoverContent
+        role="presentation"
         className="w-[var(--radix-popover-trigger-width)] p-0 max-h-80 overflow-y-auto"
         align="start"
         sideOffset={4}

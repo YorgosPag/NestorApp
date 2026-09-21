@@ -30,7 +30,9 @@
         "src/**/*.{ts,tsx}",
         "!src/**/*.test.{ts,tsx}",
         "!src/**/*.spec.{ts,tsx}",
-        "!src/**/__tests__/**"
+        "!src/**/__tests__/**",
+        "!src/**/test-utils/**",
+        "!src/**/testing/**"
       ],
       "ignore": [
         "src/subapps/dxf-viewer-10-backup/**",

@@ -144,10 +144,7 @@ export const componentSizes = {
     combobox: {
       inputPaddingRight: 'pr-16',         // Space for clear + chevron buttons
       listPadding: 'py-1',
-      addNewSection: 'border-t p-1',
-      addNewInput: 'h-8 text-sm flex-1',
-      addNewButton: 'h-8 px-2 text-sm',
-      addNewRow: 'gap-2 px-2 py-1',
+      addNewDivider: 'border-t border-border', // Add-new is an OPTION (ADR-841 §7 Α19.4δ)
       emptyState: 'p-3 text-sm',
       loadingState: 'py-4',
     },

@@ -30,6 +30,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useDateFnsLocale } from '@/i18n/date-fns-locale';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
@@ -61,6 +62,7 @@ export function DatePickerField({
   const locale = useDateFnsLocale();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
+  const { t } = useTranslation('common');
 
   return (
     <Popover>
@@ -72,11 +74,14 @@ export function DatePickerField({
           disabled={disabled}
           className="w-full justify-start text-left font-normal"
         >
-          <CalendarIcon className={`${sp.margin.right.sm} ${iconSizes.sm}`} />
+          <CalendarIcon aria-hidden="true" className={`${sp.margin.right.sm} ${iconSizes.sm}`} />
           {value ? format(value, 'PPP', { locale }) : placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={`w-auto ${sp.padding.none}`}>
+      {/* Το Radix Popover αποδίδει `role="dialog"` — και διάλογος χωρίς όνομα ανακοινώνεται
+          ως σκέτο «διάλογος» (axe `aria-dialog-name`, ADR-598 G11). Όνομα όπως στο MUI
+          DatePicker: η ενέργεια, όχι η τιμή. */}
+      <PopoverContent aria-label={t('a11y.chooseDate')} className={`w-auto ${sp.padding.none}`}>
         <Calendar mode="single" selected={value} onSelect={onSelect} disabled={disabledDates} autoFocus />
       </PopoverContent>
     </Popover>
