@@ -111,6 +111,13 @@ export function downstreamCallProbe(...mocks: readonly jest.Mock[]): SideEffectP
   return { effects: () => mocks.flatMap(m => m.mock.calls) };
 }
 
+/**
+ * Ανιχνευτής για **καθαρές συναρτήσεις** (κριτές χωρίς I/O): δεν υπάρχει βάση να
+ * γράψει ούτε κατάντη να καλέσει — η ζημιά **είναι** η ίδια η ετυμηγορία, και τη
+ * μετρά το `refused` της προδιαγραφής. Κενό εξ ορισμού, **ρητά** — όχι σιωπηλά.
+ */
+export const PURE_VERDICT_PROBE: SideEffectProbe = { effects: () => [] };
+
 /** Ένα σημείο κλήσης του SSoT, όπως το βλέπει η **δημόσια** διαδρομή του. */
 export interface OwnershipCallSiteSpec {
   /**

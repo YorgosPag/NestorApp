@@ -72,6 +72,10 @@ import {
   previewWorkspaceInvitation,
 } from '../workspace-invitation-redeem';
 import type { WorkspaceInvitationDocument } from '@/types/workspace-invitation';
+import {
+  describeOwnershipCallSites,
+  withOwner,
+} from '@/lib/auth/__tests__/_harness/ownership-callsite-contract';
 
 process.env.WORKSPACE_INVITE_SECRET ??= 'δοκιμαστικό-μυστικό-πρόσκλησης-χώρου';
 
@@ -523,6 +527,37 @@ describe('Α — άρνηση και ανάκληση', () => {
     expect(outcome).toEqual({ kind: 'refused', reason: 'revoked' });
   });
 });
+
+// =============================================================================
+// 🔴 ADR-742 §7terdecies — ανάκληση με ζεύγος κενό/κενό
+// =============================================================================
+// Το Α2 δίνει **υπαρκτό** ξένο χώρο (`comp_allo`): μένει πράσινο και με σκέτο `===` στη θέση
+// του SSoT. Η προειδοποίηση της κεφαλίδας του module *(«καλών με χαλασμένο token ταιριάζει
+// με κάθε έγγραφο με κενό companyId»)* αποδεικνύεται **μόνο** εδώ.
+
+const OWNERSHIP_INVITATION_ID = 'winv_ownership_probe';
+
+describeOwnershipCallSites('revokeWorkspaceInvitation — ιδιοκτησία πρόσκλησης (ADR-742)', [
+  {
+    file: 'server/auth/workspace-invitation.ts',
+    name: 'revokeWorkspaceInvitation',
+    arrange: owner => {
+      // Μόνο ό,τι διαβάζει η ανάκληση: ιδιοκτήτης + `pending`. Ο `seed` δεν μετρά ως γραφή.
+      fake.seed(COLLECTIONS.WORKSPACE_INVITATIONS, OWNERSHIP_INVITATION_ID, withOwner({ state: 'pending' }, owner));
+      // Η ζημιά εδώ είναι **γραφή** σε ξένη πρόσκληση — ο μετρητής του πλαστού την πιάνει.
+      return { effects: () => (fake.writes > 0 ? [`${fake.writes} γραφή(ές)`] : []) };
+    },
+    act: callerCompanyId =>
+      revokeWorkspaceInvitation({
+        invitationId: OWNERSHIP_INVITATION_ID,
+        companyId: callerCompanyId,
+        revokedByUid: INVITER,
+        nowISOValue: LATER,
+      }),
+    // Πολιτική «σιωπηλή»: ξένο = `absent`, αδιάκριτο από ανύπαρκτο.
+    refused: result => (result as { readonly kind: string }).kind === 'absent',
+  },
+]);
 
 // =============================================================================
 // Λ — Η ΛΙΣΤΑ ΤΟΥ ΧΩΡΟΥ (ADR-853 Φ4 · §5 #5 κατάσταση παράδοσης)

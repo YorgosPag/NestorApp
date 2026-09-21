@@ -127,6 +127,40 @@ const PHASE_C_PERIMETER: Readonly<Record<string, Classification>> = {
 };
 
 /**
+ * 🔴 Σημεία **μεταγενέστερα της Φάσης Γ**, αποδεδειγμένα με την **ίδια** αυστηρότητα.
+ *
+ * Γεννήθηκαν μετά τις 2026-08-01 (βιτρίνα ADR-841 · βεβαίωση ADR-864 · πρόσκληση ADR-853)
+ * και ο anchor τα έπιασε στις 2026-09-21 **χωρίς** απόδειξη. Δεν μπαίνουν στο
+ * {@link PHASE_C_PERIMETER}: εκείνος είναι **ιστορικό γεγονός** (13 αρχεία, 10+3) και οι
+ * αριθμοί του κλειδώνονται παρακάτω. Ούτε στο {@link OUTSIDE_PHASE_C_PERIMETER}: εκεί μια
+ * γραμμή **δεν αποδεικνύει τίποτα** — θα ήταν το «ψεύτικο 0».
+ *
+ * ⇒ Ίδιος τύπος, **ίδιος** έλεγχος «η σουίτα ονομάζει τη διαδρομή», ίδιο τριπλό συμβόλαιο
+ * (`describeOwnershipCallSites`). Μετάλλαξη `x?.companyId === y` στη θέση του SSoT:
+ * **3/3 κόκκινα**, μετρημένα (ADR-742 §7terdecies).
+ */
+const PROVEN_AFTER_PHASE_C: Readonly<Record<string, Classification>> = {
+  'lib/agency/showcase-canonical-segment.ts': {
+    kind: 'empty-pair',
+    suite: 'src/lib/agency/__tests__/showcase-canonical-segment.test.ts',
+  },
+  'lib/mandate/attestation-document-verdict.ts': {
+    kind: 'empty-pair',
+    suite: 'src/lib/mandate/__tests__/attestation-document-verdict.test.ts',
+  },
+  'server/auth/workspace-invitation.ts': {
+    kind: 'empty-pair',
+    suite: 'src/server/auth/__tests__/workspace-invitation.test.ts',
+  },
+};
+
+/** Κάθε σημείο με **απόδειξη** — ό,τι ελέγχει ο πίνακας «η σουίτα ονομάζει τη διαδρομή». */
+const PROVEN_CALLSITES: Readonly<Record<string, Classification>> = {
+  ...PHASE_C_PERIMETER,
+  ...PROVEN_AFTER_PHASE_C,
+};
+
+/**
  * Σημεία **εκτός** της περιμέτρου της Φάσης Γ — άλλες φάσεις, δικές τους
  * σουίτες. **Μετρημένα 2026-08-01: 16 αρχεία.**
  *
@@ -238,7 +272,7 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
   describe('κάθε σημείο κλήσης είναι ρητά ταξινομημένο', () => {
     test('καμία κλήση χωρίς ταξινόμηση (νέο σημείο ⇒ κόκκινο)', () => {
       const classified = new Set([
-        ...Object.keys(PHASE_C_PERIMETER),
+        ...Object.keys(PROVEN_CALLSITES),
         ...OUTSIDE_PHASE_C_PERIMETER,
       ]);
       const unclassified = callSiteFiles.filter(file => !classified.has(file));
@@ -247,7 +281,7 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
     });
 
     test('καμία μπαγιάτικη καταχώρηση (αρχείο χωρίς κλήση πια ⇒ κόκκινο)', () => {
-      const known = [...Object.keys(PHASE_C_PERIMETER), ...OUTSIDE_PHASE_C_PERIMETER];
+      const known = [...Object.keys(PROVEN_CALLSITES), ...OUTSIDE_PHASE_C_PERIMETER];
       const stale = known.filter(file => !callSiteFiles.includes(file));
 
       expect(stale).toEqual([]);
@@ -255,7 +289,7 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
   });
 
   describe('η επικαλούμενη σουίτα αναφέρει όντως τη διαδρομή', () => {
-    const entries = Object.entries(PHASE_C_PERIMETER);
+    const entries = Object.entries(PROVEN_CALLSITES);
 
     test.each(entries)('%s → η σουίτα υπάρχει και την ονομάζει', (file, classification) => {
       const suiteSource = readFileSync(join(process.cwd(), classification.suite), 'utf8');
@@ -280,6 +314,23 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
       );
 
       expect(byKind).toEqual({ 'empty-pair': 10, 'upstream-guarded': 3 });
+    });
+  });
+
+  describe('μεταγενέστερα της Φάσης Γ: απόδειξη, ποτέ σκέτη λίστα', () => {
+    test('κανένα αρχείο δεν ταξινομείται ΔΥΟ φορές', () => {
+      const proven = Object.keys(PROVEN_AFTER_PHASE_C);
+      const doubled = proven.filter(
+        file => file in PHASE_C_PERIMETER || OUTSIDE_PHASE_C_PERIMETER.includes(file),
+      );
+
+      expect(doubled).toEqual([]);
+    });
+
+    test('και τα τρία αποδεικνύονται με ζεύγος κενό/κενό (μετάλλαξη 3/3)', () => {
+      const kinds = Object.values(PROVEN_AFTER_PHASE_C).map(c => c.kind);
+
+      expect(kinds).toEqual(['empty-pair', 'empty-pair', 'empty-pair']);
     });
   });
 });

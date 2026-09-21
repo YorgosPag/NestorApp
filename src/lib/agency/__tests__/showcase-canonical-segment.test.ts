@@ -9,6 +9,12 @@
 
 import { canonicalShowcaseSegment } from '@/lib/agency/showcase-canonical-segment';
 import type { AliasResolution } from '@/lib/workspace/alias-registry';
+import {
+  describeOwnershipCallSites,
+  PURE_VERDICT_PROBE,
+  withOwner,
+  type OwnerFixture,
+} from '@/lib/auth/__tests__/_harness/ownership-callsite-contract';
 
 const COMPANY = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 
@@ -94,3 +100,32 @@ describe('canonicalShowcaseSegment', () => {
     ).toBe('pagonis-ae');
   });
 });
+
+// =============================================================================
+// 🔴 ADR-742 §7terdecies — «ίδιο γραφείο;» με ζεύγος κενό/κενό
+// =============================================================================
+// Το Κ4 δίνει **υπαρκτό** ξένο γραφείο: μένει πράσινο και με σκέτο `===` στη θέση του SSoT.
+// Η μόνη είσοδος που διακρίνει τους δύο είναι αίτημα **και** ψευδώνυμο χωρίς `companyId`
+// — τότε το `===` θα έστελνε 308 σε ψευδώνυμο που **δεν** αποδείχθηκε δικό μας.
+
+/** Ο ιδιοκτήτης του δημοσιευμένου ψευδωνύμου, όπως τον στήνει το `arrange` του harness. */
+let publishedOwner: OwnerFixture = { kind: 'named', companyId: COMPANY };
+
+describeOwnershipCallSites('canonicalShowcaseSegment — ιδιοκτησία ψευδωνύμου (ADR-742)', [
+  {
+    file: 'lib/agency/showcase-canonical-segment.ts',
+    name: 'canonicalShowcaseSegment (ταυτότητα → ψευδώνυμο)',
+    arrange: owner => {
+      publishedOwner = owner;
+      return PURE_VERDICT_PROBE;
+    },
+    act: async callerCompanyId =>
+      canonicalShowcaseSegment({
+        requested: identity(callerCompanyId),
+        publishedAlias: 'pagonis',
+        // `absent` = το πεδίο λείπει εντελώς — ο τύπος το υπόσχεται, η βάση δεν το εγγυάται.
+        publishedAliasResolution: withOwner(alias(), publishedOwner) as Found,
+      }),
+    refused: result => result === null,
+  },
+]);
