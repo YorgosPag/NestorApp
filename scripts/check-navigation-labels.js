@@ -1,44 +1,40 @@
 #!/usr/bin/env node
 /**
  * =============================================================================
- * ENTERPRISE: Navigation Label Completeness — Pre-commit Check
+ * CHECK 3.11 — Navigation Label Completeness (ADR-871 §10.6 Υ16)
  * =============================================================================
- * Verifies that EVERY `href` in `src/config/smart-navigation-factory.ts`
- * has a complete translation chain:
+ * «Υπάρχει κάθε `navLabelKey` του καταλόγου της στήλης σε `el` ΚΑΙ `en`;»
  *
- *   href ('/admin/audit-log')
- *     → getLabelKeyForPath() → 'audit_log'
- *     → NAVIGATION_LABELS[]   → 'admin.auditLog'
- *     → exists in el/navigation.json AND en/navigation.json
+ * ΤΙ ΑΛΛΑΞΕ (2026-09-21): μέχρι τότε ο τίτλος **συμπεραινόταν** από το href μέσα από
+ * τρία βήματα (href → getLabelKeyForPath → NAVIGATION_LABELS → locale), και αυτός ο
+ * έλεγχος υπήρχε για να επαληθεύει ότι η αλυσίδα δεν έσπασε. Πλέον ο τίτλος είναι
+ * **δηλωμένος** δίπλα στον προορισμό (`navLabelKey`, στα `src/config/office-navigation/
+ * catalog-*.ts`), οπότε η ερώτηση απλοποιείται σε ένα βήμα: κλειδί → locale.
  *
- * If ANY link in the chain is missing, the sidebar item silently falls back
- * to displaying its raw `href` (e.g. "/admin/audit-log") — which is exactly
- * the bug that motivated this check (ADR-195 Phase 7 / sidebar regression).
+ * Κανένα `t('…')` δεν υπάρχει για αυτά τα κλειδιά (είναι **δεδομένα**), άρα ο
+ * `check-i18n-missing-keys.js` (CHECK 3.8) δεν τα βλέπει — αυτός είναι ο δικός τους έλεγχος.
  *
- * No `t()` call exists for these labels (the factory stores i18n keys as
- * plain strings inside maps), so `check-i18n-missing-keys.js` cannot see
- * the link. This script is the dedicated completeness check.
+ * 🔴 ΚΑΝΕΝΑ ΤΥΦΛΟ ΣΗΜΕΙΟ: ένα `navLabelKey:` που δεν είναι κυριολεκτικό string **ούτε** σταθερά
+ * `const X = '…'` του ίδιου αρχείου **ΜΠΛΟΚΑΡΕΙ** — «δεν μπορώ να το διαβάσω» δεν είναι «καθαρό»
+ * (το σχήμα του «0 = κανείς δεν κοίταξε», N.11/N.12). Η εκτελούμενη απόδειξη ζει στο jest
+ * `office-navigation-integrity.test.ts`· αυτό είναι το γρήγορο φρένο του hook.
  *
- * EXIT CODES:
- *   0 — all hrefs resolve to valid translations in BOTH locales
- *   1 — at least one href has a broken chain → BLOCK commit
- *
- * Usage:
- *   node scripts/check-navigation-labels.js              # full sweep
- *   node scripts/check-navigation-labels.js <files...>   # ignored (always full)
+ * EXIT: 0 — όλα τα κλειδιά λύνονται και στις δύο γλώσσες · 1 — τουλάχιστον ένα όχι.
+ * Usage: node scripts/check-navigation-labels.js   (πάντα πλήρης σάρωση· αγνοεί ορίσματα)
  * =============================================================================
  */
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const FACTORY_FILE = path.join(ROOT, 'src', 'config', 'smart-navigation-factory.ts');
-const LOCALE_EL = path.join(ROOT, 'src', 'i18n', 'locales', 'el', 'navigation.json');
-const LOCALE_EN = path.join(ROOT, 'src', 'i18n', 'locales', 'en', 'navigation.json');
+const CATALOG_DIR = path.join(ROOT, 'src', 'config', 'office-navigation');
+const LOCALE = {
+  el: path.join(ROOT, 'src', 'i18n', 'locales', 'el', 'navigation.json'),
+  en: path.join(ROOT, 'src', 'i18n', 'locales', 'en', 'navigation.json'),
+};
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
-const YELLOW = '\x1b[1;33m';
 const CYAN = '\x1b[0;36m';
 const NC = '\x1b[0m';
 
@@ -47,180 +43,84 @@ function fail(msg) {
   process.exit(1);
 }
 
-if (!fs.existsSync(FACTORY_FILE)) {
-  // Factory file is optional — if it does not exist, the check is a no-op.
-  process.exit(0);
+function catalogFiles() {
+  if (!fs.existsSync(CATALOG_DIR)) fail(`check-navigation-labels: λείπει ο κατάλογος ${CATALOG_DIR}`);
+  return fs
+    .readdirSync(CATALOG_DIR)
+    .filter((name) => /^catalog-.+\.ts$/.test(name))
+    .map((name) => path.join(CATALOG_DIR, name));
 }
 
-const source = fs.readFileSync(FACTORY_FILE, 'utf8');
-
-// ---------------------------------------------------------------------------
-// 1. Extract NAVIGATION_LABELS keys
-// ---------------------------------------------------------------------------
-function extractNavigationLabels(src) {
-  const start = src.indexOf('const NAVIGATION_LABELS');
-  if (start === -1) fail('check-navigation-labels: could not locate NAVIGATION_LABELS in factory file');
-  const braceStart = src.indexOf('{', start);
-  let depth = 0;
-  let end = -1;
-  for (let i = braceStart; i < src.length; i++) {
-    const c = src[i];
-    if (c === '{') depth++;
-    else if (c === '}') {
-      depth--;
-      if (depth === 0) { end = i; break; }
-    }
-  }
-  if (end === -1) fail('check-navigation-labels: could not parse NAVIGATION_LABELS body');
-  const body = src.slice(braceStart + 1, end);
-  const labels = {};
-  // Match `  key: 'value',` and `  'key': 'value',`
-  const re = /(?:^|\n)\s*['"]?([a-zA-Z0-9_]+)['"]?\s*:\s*['"]([^'"]+)['"]/g;
+/** `const NAME = 'value'` του αρχείου — οι μόνες μη-κυριολεκτικές τιμές που δεχόμαστε. */
+function fileConstants(src) {
+  const constants = new Map();
+  const re = /const\s+([A-Z_][A-Z0-9_]*)\s*=\s*['"]([^'"]+)['"]/g;
   let m;
-  while ((m = re.exec(body)) !== null) {
-    labels[m[1]] = m[2];
-  }
-  return labels;
+  while ((m = re.exec(src)) !== null) constants.set(m[1], m[2]);
+  return constants;
 }
 
-// ---------------------------------------------------------------------------
-// 2. Extract getLabelKeyForPath() pathMappings
-// ---------------------------------------------------------------------------
-function extractPathMappings(src) {
-  const fnIdx = src.indexOf('function getLabelKeyForPath');
-  if (fnIdx === -1) fail('check-navigation-labels: could not locate getLabelKeyForPath()');
-  const mapStart = src.indexOf('pathMappings', fnIdx);
-  if (mapStart === -1) fail('check-navigation-labels: could not locate pathMappings');
-  const braceStart = src.indexOf('{', mapStart);
-  let depth = 0;
-  let end = -1;
-  for (let i = braceStart; i < src.length; i++) {
-    const c = src[i];
-    if (c === '{') depth++;
-    else if (c === '}') {
-      depth--;
-      if (depth === 0) { end = i; break; }
-    }
-  }
-  if (end === -1) fail('check-navigation-labels: could not parse pathMappings body');
-  const body = src.slice(braceStart + 1, end);
-  const map = {};
-  const re = /(?:^|\n)\s*['"]([^'"]*)['"]\s*:\s*['"]([^'"]+)['"]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    map[m[1]] = m[2];
-  }
-  return map;
-}
-
-// ---------------------------------------------------------------------------
-// 3. Extract every href: '...' literal
-// ---------------------------------------------------------------------------
-function extractHrefs(src) {
-  const hrefs = new Set();
-  const re = /href\s*:\s*['"]([^'"]+)['"]/g;
+/** Κάθε `navLabelKey:` του αρχείου → κλειδί, ή σημείωση ότι δεν διαβάζεται. */
+function extractTitleKeys(file) {
+  const src = fs.readFileSync(file, 'utf8');
+  const constants = fileConstants(src);
+  const found = [];
+  const re = /navLabelKey\s*:\s*(?:['"]([^'"]+)['"]|([A-Za-z_$][\w$]*))/g;
   let m;
   while ((m = re.exec(src)) !== null) {
-    const href = m[1];
-    // Skip dynamic/external links
-    if (href.startsWith('http')) continue;
-    if (href.includes('${')) continue;
-    hrefs.add(href);
+    const line = src.slice(0, m.index).split('\n').length;
+    if (m[1] !== undefined) found.push({ file, line, key: m[1] });
+    else if (constants.has(m[2])) found.push({ file, line, key: constants.get(m[2]) });
+    else found.push({ file, line, key: null, raw: m[2] });
   }
-  return Array.from(hrefs).sort();
+  return found;
 }
 
-// ---------------------------------------------------------------------------
-// 4. Resolve a dotted i18n key inside a nested JSON object
-// ---------------------------------------------------------------------------
 function resolveKey(obj, dottedKey) {
-  const parts = dottedKey.split('.');
   let cur = obj;
-  for (const p of parts) {
-    if (cur == null || typeof cur !== 'object' || !(p in cur)) return undefined;
-    cur = cur[p];
+  for (const part of dottedKey.split('.')) {
+    if (cur == null || typeof cur !== 'object' || !(part in cur)) return undefined;
+    cur = cur[part];
   }
   return typeof cur === 'string' ? cur : undefined;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-const labels = extractNavigationLabels(source);
-const pathMappings = extractPathMappings(source);
-const hrefs = extractHrefs(source);
-
-if (!fs.existsSync(LOCALE_EL) || !fs.existsSync(LOCALE_EN)) {
-  fail(`check-navigation-labels: locale files missing (${LOCALE_EL} / ${LOCALE_EN})`);
+function loadLocales() {
+  const out = {};
+  for (const [lang, file] of Object.entries(LOCALE)) {
+    try {
+      out[lang] = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (err) {
+      fail(`check-navigation-labels: δεν διαβάζεται το ${file} — ${err.message}`);
+    }
+  }
+  return out;
 }
 
-let elJson, enJson;
-try {
-  elJson = JSON.parse(fs.readFileSync(LOCALE_EL, 'utf8'));
-  enJson = JSON.parse(fs.readFileSync(LOCALE_EN, 'utf8'));
-} catch (err) {
-  fail(`check-navigation-labels: failed to parse locale JSON — ${err.message}`);
-}
+function main() {
+  const locales = loadLocales();
+  const entries = catalogFiles().flatMap(extractTitleKeys);
+  if (entries.length === 0) fail('check-navigation-labels: 0 `navLabelKey` βρέθηκαν — ο έλεγχος δεν κοίταξε τίποτα');
 
-const violations = [];
-
-for (const href of hrefs) {
-  // Mirror the runtime logic in createNavigationConfig():
-  //   const labelKey = itemConfig.href.replace('/', '') || 'home';
-  //   const titleKey = getLabelKeyForPath(labelKey);
-  //   const title    = labels[titleKey];
-  const pathKey = href.replace('/', '') || 'home';
-  const labelKey = pathMappings[pathKey] || pathKey;
-  const i18nKey = labels[labelKey];
-
-  if (!i18nKey) {
-    violations.push({
-      href,
-      stage: 'NAVIGATION_LABELS',
-      detail: `pathKey "${pathKey}" → labelKey "${labelKey}" — no entry in NAVIGATION_LABELS`,
-      fix: `Add  ${labelKey}: 'navigation.path.here',  to NAVIGATION_LABELS in smart-navigation-factory.ts`,
-    });
-    continue;
+  const violations = [];
+  for (const entry of entries) {
+    const where = `${path.relative(ROOT, entry.file)}:${entry.line}`;
+    if (entry.key === null) {
+      violations.push(`${where} — navLabelKey: ${entry.raw} (ούτε κυριολεκτικό ούτε const του αρχείου — δεν επαληθεύεται)`);
+      continue;
+    }
+    const missing = Object.keys(LOCALE).filter((lang) => !resolveKey(locales[lang], entry.key));
+    if (missing.length > 0) violations.push(`${where} — "${entry.key}" λείπει από: ${missing.join(', ')}`);
   }
 
-  const elValue = resolveKey(elJson, i18nKey);
-  const enValue = resolveKey(enJson, i18nKey);
-
-  if (!elValue || !enValue) {
-    const missingIn = [];
-    if (!elValue) missingIn.push('el');
-    if (!enValue) missingIn.push('en');
-    violations.push({
-      href,
-      stage: 'locale-json',
-      detail: `i18n key "${i18nKey}" missing in: ${missingIn.join(', ')}/navigation.json`,
-      fix: `Add the key "${i18nKey}" to src/i18n/locales/{${missingIn.join(',')}}/navigation.json`,
-    });
+  if (violations.length > 0) {
+    console.error(`${RED}❌ CHECK 3.11 — ${violations.length} τίτλος(οι) στήλης χωρίς μετάφραση:${NC}`);
+    for (const v of violations) console.error(`   ${CYAN}${v}${NC}`);
+    console.error(`${RED}   Πρόσθεσε το κλειδί στο navigation.json σε el ΚΑΙ en (N.11).${NC}`);
+    process.exit(1);
   }
+  const unique = new Set(entries.map((e) => e.key)).size;
+  console.log(`${GREEN}✅ CHECK 3.11 — ${entries.length} τίτλοι (${unique} κλειδιά) λύνονται σε el + en${NC}`);
 }
 
-if (violations.length === 0) {
-  console.log(`${GREEN}  ✅ Navigation labels: all ${hrefs.length} hrefs resolve to valid translations${NC}`);
-  process.exit(0);
-}
-
-console.error('');
-console.error(`${RED}❌ Navigation label completeness check FAILED${NC}`);
-console.error(`${RED}   ${violations.length} broken translation chain(s) in src/config/smart-navigation-factory.ts${NC}`);
-console.error('');
-console.error(`${YELLOW}WHY THIS MATTERS:${NC}`);
-console.error(`  Each sidebar item's title is resolved through:`);
-console.error(`    href → pathMappings → NAVIGATION_LABELS → navigation.json (el + en)`);
-console.error(`  If any link is missing, the sidebar silently displays the raw URL.`);
-console.error('');
-
-for (const v of violations) {
-  console.error(`${CYAN}  • href: ${v.href}${NC}`);
-  console.error(`      stage : ${v.stage}`);
-  console.error(`      reason: ${v.detail}`);
-  console.error(`      fix   : ${v.fix}`);
-  console.error('');
-}
-
-console.error(`${YELLOW}Reference: CLAUDE.md SOS. N.11 (i18n SSoT) — fix BEFORE commit${NC}`);
-process.exit(1);
+main();

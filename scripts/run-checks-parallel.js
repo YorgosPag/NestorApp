@@ -17,7 +17,7 @@
  *   STAGED_QUERY_FILES             TS files containing query() + where()
  *   STAGED_SRC_TS_FILES            staged .ts/.tsx under src/
  *   STAGED_ALL_FILES               all staged files
- *   STAGED_NAV_TRIGGER_FILES       navigation factory / nav locale changes
+ *   STAGED_NAV_TRIGGER_FILES       office navigation catalog / nav locale changes
  *   STAGED_RULES_COVERAGE_TRIGGERS firestore.rules or tests/firestore-rules changes
  *   STAGED_STORAGE_COVERAGE_TRIGGERS storage.rules changes
  *   STAGED_NOTIF_LOCALE_TRIGGERS   notification-key locale changes

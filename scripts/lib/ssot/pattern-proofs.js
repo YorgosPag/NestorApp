@@ -24,6 +24,33 @@
 'use strict';
 
 module.exports = {
+  // ADR-871 §10.6 — ΕΝΑΣ κατάλογος της στήλης του γραφείου, ΜΙΑ μηχανή. Αντικατέστησε το
+  // `smart-navigation-factory` + `config/navigation`: δεύτερη συνάρτηση που χτίζει τα μενού θα
+  // ήταν δεύτερη αλήθεια για το «τι βλέπει ο χρήστης». Οι παγίδες του `shouldSkip` είναι οι
+  // ΝΟΜΙΜΕΣ χρήσεις: κλήση, εισαγωγή, επανεξαγωγή, μη-εξαγόμενη τοπική βοηθητική.
+  'office-navigation': {
+    shouldMatch: `export function getMainMenuItems(permissions: string[]) { return build(permissions); }
+export function getSettingsMenuItems(p: string[]): MenuEntry[] { return []; }
+export function resolveOfficeMenu(catalog, audience) { return catalog; }`,
+    shouldSkip: `import { getMainMenuItems } from '@/config/office-navigation/resolve-office-navigation';
+const items = getMainMenuItems(permissions, 'production');
+export { getToolsMenuItems } from '@/config/office-navigation/resolve-office-navigation';
+function getMainMenuItemsForTest() { return []; }`,
+  },
+  // ADR-871 §10.6 Υ13 — ΤΟ ΕΝΑ συμβόλαιο «στοιχείου μενού» (ήταν ΠΕΝΤΕ δηλώσεις). Τα ονόματα
+  // των παλιών interfaces είναι απαγορευμένα αλλού· τα `NavItem`/`MenuItemProps`/το React
+  // `SidebarMenuItem` είναι ΑΛΛΕΣ έννοιες και δεν πρέπει να πιάνονται.
+  'menu-item-contract': {
+    shouldMatch: `interface MenuItem { title: string; href: string }
+export interface SmartNavigationItem { href: string; subItems?: SmartNavigationItem[] }
+interface SubMenuItem { href: string }
+interface NavigationConfigBase { href: string }`,
+    shouldSkip: `import type { MenuLink, MenuGroup } from '@/types/sidebar';
+interface NavItem { href: WorkspaceHref; labelKey: string }
+interface SidebarMenuItemProps { item: MenuEntry }
+interface MenuItemProps { label: string }
+export function SidebarMenuItem() { return null; }`,
+  },
   // ADR-857 Φ9 — «ΠΟΙΟΣ ΥΠΟΓΡΑΦΕΙ ΑΥΤΟ ΤΟ ΜΗΝΥΜΑ;» απαντιέται σε ΕΝΑ σημείο.
   //
   // 🔴 Η ΑΠΟΔΕΙΞΗ ΕΡΧΕΤΑΙ ΜΑΖΙ ΜΕ ΤΑ PATTERNS, ΣΤΗΝ ΙΔΙΑ ΔΕΣΜΕΥΣΗ — και ο λόγος είναι

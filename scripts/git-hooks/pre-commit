@@ -112,7 +112,7 @@ if [[ -z "$SKIP_MEMORY_GATE" ]]; then
 fi
 
 # ─── Precompute trigger variables ─────────────────────────────────────────────
-NAV_TRIGGER_FILES=$(echo "$STAGED_FILES" | grep -E '(src/config/smart-navigation-factory\.ts|src/i18n/locales/(el|en)/navigation\.json)$' || true)
+NAV_TRIGGER_FILES=$(echo "$STAGED_FILES" | grep -E '(src/config/office-navigation/catalog-[a-z]+\.ts|src/i18n/locales/(el|en)/navigation\.json)$' || true)
 RULES_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^firestore\.rules$|^tests/firestore-rules/' || true)
 STORAGE_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^storage\.rules$|^tests/storage-rules/' || true)
 NOTIF_LOCALE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^src/config/notification-keys\.ts$|^src/i18n/locales/(el|en)/.*\.json$' || true)

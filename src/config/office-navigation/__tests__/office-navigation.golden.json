@@ -1,0 +1,1140 @@
+{
+  "main|development|none": [
+    {
+      "title": "crm.dashboard",
+      "href": "/dashboard"
+    },
+    {
+      "title": "pages.properties",
+      "href": "/properties"
+    },
+    {
+      "title": "pages.contacts",
+      "href": "/contacts"
+    },
+    {
+      "title": "sidebar.mandates",
+      "href": "/listings/mandates"
+    },
+    {
+      "title": "pages.projects",
+      "href": "/projects"
+    },
+    {
+      "title": "pages.buildings",
+      "href": "/buildings"
+    },
+    {
+      "title": "pages.construction_portfolio",
+      "href": "/construction/portfolio"
+    },
+    {
+      "title": "sidebar.spaces",
+      "href": "/spaces",
+      "children": [
+        {
+          "title": "sidebar.properties",
+          "href": "/spaces/properties"
+        },
+        {
+          "title": "sidebar.storage",
+          "href": "/spaces/storage"
+        },
+        {
+          "title": "sidebar.parking",
+          "href": "/spaces/parking"
+        },
+        {
+          "title": "sidebar.commonAreas",
+          "href": "/spaces/common"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.procurement",
+      "href": "/procurement"
+    },
+    {
+      "title": "sidebar.sales",
+      "href": "/sales",
+      "children": [
+        {
+          "title": "sidebar.availableProperties",
+          "href": "/sales/available-properties"
+        },
+        {
+          "title": "sidebar.availableStorage",
+          "href": "/sales/available-storage"
+        },
+        {
+          "title": "sidebar.availableParking",
+          "href": "/sales/available-parking"
+        },
+        {
+          "title": "sidebar.soldProperties",
+          "href": "/sales/sold"
+        },
+        {
+          "title": "sidebar.financialIntelligence",
+          "href": "/sales/financial-intelligence"
+        }
+      ]
+    },
+    {
+      "title": "pages.crm",
+      "href": "/crm",
+      "children": [
+        {
+          "title": "crm.overview",
+          "href": "/crm"
+        },
+        {
+          "title": "crm.dashboard",
+          "href": "/crm/dashboard"
+        },
+        {
+          "title": "crm.customers",
+          "href": "/crm/customers"
+        },
+        {
+          "title": "crm.communications",
+          "href": "/crm/communications"
+        },
+        {
+          "title": "crm.leads",
+          "href": "/crm/leads"
+        },
+        {
+          "title": "crm.tasks",
+          "href": "/crm/tasks"
+        },
+        {
+          "title": "crm.calendar",
+          "href": "/crm/calendar"
+        },
+        {
+          "title": "crm.pipeline",
+          "href": "/crm/pipeline"
+        },
+        {
+          "title": "crm.teams",
+          "href": "/crm/teams"
+        },
+        {
+          "title": "crm.notifications",
+          "href": "/crm/notifications"
+        }
+      ]
+    },
+    {
+      "title": "reports.overview",
+      "href": "/reports",
+      "children": [
+        {
+          "title": "reports.overview",
+          "href": "/reports"
+        },
+        {
+          "title": "reports.financial",
+          "href": "/reports/financial"
+        },
+        {
+          "title": "reports.projects",
+          "href": "/reports/projects"
+        },
+        {
+          "title": "reports.sales",
+          "href": "/reports/sales"
+        },
+        {
+          "title": "reports.contacts",
+          "href": "/reports/contacts"
+        },
+        {
+          "title": "reports.crm",
+          "href": "/reports/crm"
+        },
+        {
+          "title": "reports.spaces",
+          "href": "/reports/spaces"
+        },
+        {
+          "title": "reports.construction",
+          "href": "/reports/construction"
+        },
+        {
+          "title": "reports.compliance",
+          "href": "/reports/compliance"
+        },
+        {
+          "title": "reports.export",
+          "href": "/reports/export"
+        },
+        {
+          "title": "reports.cashFlow",
+          "href": "/reports/cash-flow"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.accounting",
+      "href": "/accounting",
+      "children": [
+        {
+          "title": "accounting.setup",
+          "href": "/accounting/setup"
+        },
+        {
+          "title": "accounting.invoices",
+          "href": "/accounting/invoices"
+        },
+        {
+          "title": "accounting.journal",
+          "href": "/accounting/journal"
+        },
+        {
+          "title": "accounting.vat",
+          "href": "/accounting/vat"
+        },
+        {
+          "title": "accounting.bank",
+          "href": "/accounting/bank"
+        },
+        {
+          "title": "accounting.reconciliation",
+          "href": "/accounting/reconciliation"
+        },
+        {
+          "title": "accounting.efka",
+          "href": "/accounting/efka"
+        },
+        {
+          "title": "accounting.assets",
+          "href": "/accounting/assets"
+        },
+        {
+          "title": "accounting.documents",
+          "href": "/accounting/documents"
+        },
+        {
+          "title": "accounting.apyCertificates",
+          "href": "/accounting/apy-certificates"
+        },
+        {
+          "title": "accounting.reports",
+          "href": "/accounting/reports"
+        }
+      ]
+    }
+  ],
+  "main|development|admin": [
+    {
+      "title": "crm.dashboard",
+      "href": "/dashboard"
+    },
+    {
+      "title": "pages.properties",
+      "href": "/properties"
+    },
+    {
+      "title": "pages.contacts",
+      "href": "/contacts"
+    },
+    {
+      "title": "sidebar.mandates",
+      "href": "/listings/mandates"
+    },
+    {
+      "title": "pages.projects",
+      "href": "/projects"
+    },
+    {
+      "title": "pages.buildings",
+      "href": "/buildings"
+    },
+    {
+      "title": "pages.construction_portfolio",
+      "href": "/construction/portfolio"
+    },
+    {
+      "title": "sidebar.spaces",
+      "href": "/spaces",
+      "children": [
+        {
+          "title": "sidebar.properties",
+          "href": "/spaces/properties"
+        },
+        {
+          "title": "sidebar.storage",
+          "href": "/spaces/storage"
+        },
+        {
+          "title": "sidebar.parking",
+          "href": "/spaces/parking"
+        },
+        {
+          "title": "sidebar.commonAreas",
+          "href": "/spaces/common"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.procurement",
+      "href": "/procurement"
+    },
+    {
+      "title": "sidebar.sales",
+      "href": "/sales",
+      "children": [
+        {
+          "title": "sidebar.availableProperties",
+          "href": "/sales/available-properties"
+        },
+        {
+          "title": "sidebar.availableStorage",
+          "href": "/sales/available-storage"
+        },
+        {
+          "title": "sidebar.availableParking",
+          "href": "/sales/available-parking"
+        },
+        {
+          "title": "sidebar.soldProperties",
+          "href": "/sales/sold"
+        },
+        {
+          "title": "sidebar.financialIntelligence",
+          "href": "/sales/financial-intelligence"
+        }
+      ]
+    },
+    {
+      "title": "pages.crm",
+      "href": "/crm",
+      "children": [
+        {
+          "title": "admin.aiInbox",
+          "href": "/admin/ai-inbox"
+        },
+        {
+          "title": "admin.operatorInbox",
+          "href": "/admin/operator-inbox"
+        },
+        {
+          "title": "crm.overview",
+          "href": "/crm"
+        },
+        {
+          "title": "crm.dashboard",
+          "href": "/crm/dashboard"
+        },
+        {
+          "title": "crm.customers",
+          "href": "/crm/customers"
+        },
+        {
+          "title": "crm.communications",
+          "href": "/crm/communications"
+        },
+        {
+          "title": "crm.leads",
+          "href": "/crm/leads"
+        },
+        {
+          "title": "crm.tasks",
+          "href": "/crm/tasks"
+        },
+        {
+          "title": "crm.calendar",
+          "href": "/crm/calendar"
+        },
+        {
+          "title": "crm.pipeline",
+          "href": "/crm/pipeline"
+        },
+        {
+          "title": "crm.teams",
+          "href": "/crm/teams"
+        },
+        {
+          "title": "crm.notifications",
+          "href": "/crm/notifications"
+        }
+      ]
+    },
+    {
+      "title": "reports.overview",
+      "href": "/reports",
+      "children": [
+        {
+          "title": "reports.overview",
+          "href": "/reports"
+        },
+        {
+          "title": "reports.financial",
+          "href": "/reports/financial"
+        },
+        {
+          "title": "reports.projects",
+          "href": "/reports/projects"
+        },
+        {
+          "title": "reports.sales",
+          "href": "/reports/sales"
+        },
+        {
+          "title": "reports.contacts",
+          "href": "/reports/contacts"
+        },
+        {
+          "title": "reports.crm",
+          "href": "/reports/crm"
+        },
+        {
+          "title": "reports.spaces",
+          "href": "/reports/spaces"
+        },
+        {
+          "title": "reports.construction",
+          "href": "/reports/construction"
+        },
+        {
+          "title": "reports.compliance",
+          "href": "/reports/compliance"
+        },
+        {
+          "title": "reports.export",
+          "href": "/reports/export"
+        },
+        {
+          "title": "reports.cashFlow",
+          "href": "/reports/cash-flow"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.accounting",
+      "href": "/accounting",
+      "children": [
+        {
+          "title": "accounting.setup",
+          "href": "/accounting/setup"
+        },
+        {
+          "title": "accounting.invoices",
+          "href": "/accounting/invoices"
+        },
+        {
+          "title": "accounting.journal",
+          "href": "/accounting/journal"
+        },
+        {
+          "title": "accounting.vat",
+          "href": "/accounting/vat"
+        },
+        {
+          "title": "accounting.bank",
+          "href": "/accounting/bank"
+        },
+        {
+          "title": "accounting.reconciliation",
+          "href": "/accounting/reconciliation"
+        },
+        {
+          "title": "accounting.efka",
+          "href": "/accounting/efka"
+        },
+        {
+          "title": "accounting.assets",
+          "href": "/accounting/assets"
+        },
+        {
+          "title": "accounting.documents",
+          "href": "/accounting/documents"
+        },
+        {
+          "title": "accounting.apyCertificates",
+          "href": "/accounting/apy-certificates"
+        },
+        {
+          "title": "accounting.reports",
+          "href": "/accounting/reports"
+        }
+      ]
+    }
+  ],
+  "main|production|none": [
+    {
+      "title": "crm.dashboard",
+      "href": "/dashboard"
+    },
+    {
+      "title": "pages.properties",
+      "href": "/properties"
+    },
+    {
+      "title": "pages.contacts",
+      "href": "/contacts"
+    },
+    {
+      "title": "sidebar.mandates",
+      "href": "/listings/mandates"
+    },
+    {
+      "title": "pages.projects",
+      "href": "/projects"
+    },
+    {
+      "title": "pages.buildings",
+      "href": "/buildings"
+    },
+    {
+      "title": "pages.construction_portfolio",
+      "href": "/construction/portfolio"
+    },
+    {
+      "title": "sidebar.spaces",
+      "href": "/spaces",
+      "children": [
+        {
+          "title": "sidebar.properties",
+          "href": "/spaces/properties"
+        },
+        {
+          "title": "sidebar.storage",
+          "href": "/spaces/storage"
+        },
+        {
+          "title": "sidebar.parking",
+          "href": "/spaces/parking"
+        },
+        {
+          "title": "sidebar.commonAreas",
+          "href": "/spaces/common"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.procurement",
+      "href": "/procurement"
+    },
+    {
+      "title": "sidebar.sales",
+      "href": "/sales",
+      "children": [
+        {
+          "title": "sidebar.availableProperties",
+          "href": "/sales/available-properties"
+        },
+        {
+          "title": "sidebar.availableStorage",
+          "href": "/sales/available-storage"
+        },
+        {
+          "title": "sidebar.availableParking",
+          "href": "/sales/available-parking"
+        },
+        {
+          "title": "sidebar.soldProperties",
+          "href": "/sales/sold"
+        },
+        {
+          "title": "sidebar.financialIntelligence",
+          "href": "/sales/financial-intelligence"
+        }
+      ]
+    },
+    {
+      "title": "pages.crm",
+      "href": "/crm",
+      "children": [
+        {
+          "title": "crm.overview",
+          "href": "/crm"
+        },
+        {
+          "title": "crm.dashboard",
+          "href": "/crm/dashboard"
+        },
+        {
+          "title": "crm.customers",
+          "href": "/crm/customers"
+        },
+        {
+          "title": "crm.communications",
+          "href": "/crm/communications"
+        },
+        {
+          "title": "crm.leads",
+          "href": "/crm/leads"
+        },
+        {
+          "title": "crm.tasks",
+          "href": "/crm/tasks"
+        },
+        {
+          "title": "crm.calendar",
+          "href": "/crm/calendar"
+        },
+        {
+          "title": "crm.pipeline",
+          "href": "/crm/pipeline"
+        },
+        {
+          "title": "crm.teams",
+          "href": "/crm/teams"
+        },
+        {
+          "title": "crm.notifications",
+          "href": "/crm/notifications"
+        }
+      ]
+    },
+    {
+      "title": "reports.overview",
+      "href": "/reports",
+      "children": [
+        {
+          "title": "reports.overview",
+          "href": "/reports"
+        },
+        {
+          "title": "reports.financial",
+          "href": "/reports/financial"
+        },
+        {
+          "title": "reports.projects",
+          "href": "/reports/projects"
+        },
+        {
+          "title": "reports.sales",
+          "href": "/reports/sales"
+        },
+        {
+          "title": "reports.contacts",
+          "href": "/reports/contacts"
+        },
+        {
+          "title": "reports.crm",
+          "href": "/reports/crm"
+        },
+        {
+          "title": "reports.spaces",
+          "href": "/reports/spaces"
+        },
+        {
+          "title": "reports.construction",
+          "href": "/reports/construction"
+        },
+        {
+          "title": "reports.compliance",
+          "href": "/reports/compliance"
+        },
+        {
+          "title": "reports.export",
+          "href": "/reports/export"
+        },
+        {
+          "title": "reports.cashFlow",
+          "href": "/reports/cash-flow"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.accounting",
+      "href": "/accounting",
+      "children": [
+        {
+          "title": "accounting.setup",
+          "href": "/accounting/setup"
+        },
+        {
+          "title": "accounting.invoices",
+          "href": "/accounting/invoices"
+        },
+        {
+          "title": "accounting.journal",
+          "href": "/accounting/journal"
+        },
+        {
+          "title": "accounting.vat",
+          "href": "/accounting/vat"
+        },
+        {
+          "title": "accounting.bank",
+          "href": "/accounting/bank"
+        },
+        {
+          "title": "accounting.reconciliation",
+          "href": "/accounting/reconciliation"
+        },
+        {
+          "title": "accounting.efka",
+          "href": "/accounting/efka"
+        },
+        {
+          "title": "accounting.assets",
+          "href": "/accounting/assets"
+        },
+        {
+          "title": "accounting.documents",
+          "href": "/accounting/documents"
+        },
+        {
+          "title": "accounting.apyCertificates",
+          "href": "/accounting/apy-certificates"
+        },
+        {
+          "title": "accounting.reports",
+          "href": "/accounting/reports"
+        }
+      ]
+    }
+  ],
+  "main|production|admin": [
+    {
+      "title": "crm.dashboard",
+      "href": "/dashboard"
+    },
+    {
+      "title": "pages.properties",
+      "href": "/properties"
+    },
+    {
+      "title": "pages.contacts",
+      "href": "/contacts"
+    },
+    {
+      "title": "sidebar.mandates",
+      "href": "/listings/mandates"
+    },
+    {
+      "title": "pages.projects",
+      "href": "/projects"
+    },
+    {
+      "title": "pages.buildings",
+      "href": "/buildings"
+    },
+    {
+      "title": "pages.construction_portfolio",
+      "href": "/construction/portfolio"
+    },
+    {
+      "title": "sidebar.spaces",
+      "href": "/spaces",
+      "children": [
+        {
+          "title": "sidebar.properties",
+          "href": "/spaces/properties"
+        },
+        {
+          "title": "sidebar.storage",
+          "href": "/spaces/storage"
+        },
+        {
+          "title": "sidebar.parking",
+          "href": "/spaces/parking"
+        },
+        {
+          "title": "sidebar.commonAreas",
+          "href": "/spaces/common"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.procurement",
+      "href": "/procurement"
+    },
+    {
+      "title": "sidebar.sales",
+      "href": "/sales",
+      "children": [
+        {
+          "title": "sidebar.availableProperties",
+          "href": "/sales/available-properties"
+        },
+        {
+          "title": "sidebar.availableStorage",
+          "href": "/sales/available-storage"
+        },
+        {
+          "title": "sidebar.availableParking",
+          "href": "/sales/available-parking"
+        },
+        {
+          "title": "sidebar.soldProperties",
+          "href": "/sales/sold"
+        },
+        {
+          "title": "sidebar.financialIntelligence",
+          "href": "/sales/financial-intelligence"
+        }
+      ]
+    },
+    {
+      "title": "pages.crm",
+      "href": "/crm",
+      "children": [
+        {
+          "title": "admin.aiInbox",
+          "href": "/admin/ai-inbox"
+        },
+        {
+          "title": "admin.operatorInbox",
+          "href": "/admin/operator-inbox"
+        },
+        {
+          "title": "crm.overview",
+          "href": "/crm"
+        },
+        {
+          "title": "crm.dashboard",
+          "href": "/crm/dashboard"
+        },
+        {
+          "title": "crm.customers",
+          "href": "/crm/customers"
+        },
+        {
+          "title": "crm.communications",
+          "href": "/crm/communications"
+        },
+        {
+          "title": "crm.leads",
+          "href": "/crm/leads"
+        },
+        {
+          "title": "crm.tasks",
+          "href": "/crm/tasks"
+        },
+        {
+          "title": "crm.calendar",
+          "href": "/crm/calendar"
+        },
+        {
+          "title": "crm.pipeline",
+          "href": "/crm/pipeline"
+        },
+        {
+          "title": "crm.teams",
+          "href": "/crm/teams"
+        },
+        {
+          "title": "crm.notifications",
+          "href": "/crm/notifications"
+        }
+      ]
+    },
+    {
+      "title": "reports.overview",
+      "href": "/reports",
+      "children": [
+        {
+          "title": "reports.overview",
+          "href": "/reports"
+        },
+        {
+          "title": "reports.financial",
+          "href": "/reports/financial"
+        },
+        {
+          "title": "reports.projects",
+          "href": "/reports/projects"
+        },
+        {
+          "title": "reports.sales",
+          "href": "/reports/sales"
+        },
+        {
+          "title": "reports.contacts",
+          "href": "/reports/contacts"
+        },
+        {
+          "title": "reports.crm",
+          "href": "/reports/crm"
+        },
+        {
+          "title": "reports.spaces",
+          "href": "/reports/spaces"
+        },
+        {
+          "title": "reports.construction",
+          "href": "/reports/construction"
+        },
+        {
+          "title": "reports.compliance",
+          "href": "/reports/compliance"
+        },
+        {
+          "title": "reports.export",
+          "href": "/reports/export"
+        },
+        {
+          "title": "reports.cashFlow",
+          "href": "/reports/cash-flow"
+        }
+      ]
+    },
+    {
+      "title": "sidebar.accounting",
+      "href": "/accounting",
+      "children": [
+        {
+          "title": "accounting.setup",
+          "href": "/accounting/setup"
+        },
+        {
+          "title": "accounting.invoices",
+          "href": "/accounting/invoices"
+        },
+        {
+          "title": "accounting.journal",
+          "href": "/accounting/journal"
+        },
+        {
+          "title": "accounting.vat",
+          "href": "/accounting/vat"
+        },
+        {
+          "title": "accounting.bank",
+          "href": "/accounting/bank"
+        },
+        {
+          "title": "accounting.reconciliation",
+          "href": "/accounting/reconciliation"
+        },
+        {
+          "title": "accounting.efka",
+          "href": "/accounting/efka"
+        },
+        {
+          "title": "accounting.assets",
+          "href": "/accounting/assets"
+        },
+        {
+          "title": "accounting.documents",
+          "href": "/accounting/documents"
+        },
+        {
+          "title": "accounting.apyCertificates",
+          "href": "/accounting/apy-certificates"
+        },
+        {
+          "title": "accounting.reports",
+          "href": "/accounting/reports"
+        }
+      ]
+    }
+  ],
+  "tools|development|none": [
+    {
+      "title": "pages.navigation",
+      "href": "/navigation"
+    },
+    {
+      "title": "tools.fileManager",
+      "href": "/files"
+    },
+    {
+      "title": "tools.legal",
+      "href": "/legal-documents",
+      "children": [
+        {
+          "title": "tools.obligations",
+          "href": "/obligations"
+        }
+      ]
+    }
+  ],
+  "tools|development|admin": [
+    {
+      "title": "pages.navigation",
+      "href": "/navigation"
+    },
+    {
+      "title": "tools.fileManager",
+      "href": "/files"
+    },
+    {
+      "title": "tools.legal",
+      "href": "/legal-documents",
+      "children": [
+        {
+          "title": "tools.obligations",
+          "href": "/obligations"
+        }
+      ]
+    }
+  ],
+  "tools|production|none": [
+    {
+      "title": "pages.navigation",
+      "href": "/navigation"
+    },
+    {
+      "title": "tools.fileManager",
+      "href": "/files"
+    },
+    {
+      "title": "tools.legal",
+      "href": "/legal-documents",
+      "children": [
+        {
+          "title": "tools.obligations",
+          "href": "/obligations"
+        }
+      ]
+    }
+  ],
+  "tools|production|admin": [
+    {
+      "title": "pages.navigation",
+      "href": "/navigation"
+    },
+    {
+      "title": "tools.fileManager",
+      "href": "/files"
+    },
+    {
+      "title": "tools.legal",
+      "href": "/legal-documents",
+      "children": [
+        {
+          "title": "tools.obligations",
+          "href": "/obligations"
+        }
+      ]
+    }
+  ],
+  "settings|development|none": [
+    {
+      "title": "tools.dxf",
+      "href": "/dxf/viewer"
+    },
+    {
+      "title": "menu.settings",
+      "href": "/settings",
+      "children": [
+        {
+          "title": "sidebar.agencyShowcase",
+          "href": "/settings/agency-profile"
+        },
+        {
+          "title": "tools.shortcuts",
+          "href": "/settings/shortcuts"
+        }
+      ]
+    }
+  ],
+  "settings|development|admin": [
+    {
+      "title": "tools.dxf",
+      "href": "/dxf/viewer"
+    },
+    {
+      "title": "menu.settings",
+      "href": "/settings",
+      "children": [
+        {
+          "title": "sidebar.debug",
+          "href": "/debug",
+          "badge": "DEBUG"
+        },
+        {
+          "title": "admin.setup",
+          "href": "/admin/setup"
+        },
+        {
+          "title": "admin.roleManagement",
+          "href": "/admin/role-management"
+        },
+        {
+          "title": "admin.auditLog",
+          "href": "/admin/audit-log"
+        },
+        {
+          "title": "admin.backup",
+          "href": "/admin/backup"
+        },
+        {
+          "title": "sidebar.agencyShowcase",
+          "href": "/settings/agency-profile"
+        },
+        {
+          "title": "admin.companySettings",
+          "href": "/settings/company"
+        },
+        {
+          "title": "tools.shortcuts",
+          "href": "/settings/shortcuts"
+        }
+      ]
+    }
+  ],
+  "settings|production|none": [
+    {
+      "title": "tools.dxf",
+      "href": "/dxf/viewer"
+    },
+    {
+      "title": "menu.settings",
+      "href": "/settings",
+      "children": [
+        {
+          "title": "sidebar.agencyShowcase",
+          "href": "/settings/agency-profile"
+        },
+        {
+          "title": "tools.shortcuts",
+          "href": "/settings/shortcuts"
+        }
+      ]
+    }
+  ],
+  "settings|production|admin": [
+    {
+      "title": "tools.dxf",
+      "href": "/dxf/viewer"
+    },
+    {
+      "title": "menu.settings",
+      "href": "/settings",
+      "children": [
+        {
+          "title": "sidebar.debug",
+          "href": "/debug",
+          "badge": "DEBUG"
+        },
+        {
+          "title": "admin.setup",
+          "href": "/admin/setup"
+        },
+        {
+          "title": "admin.roleManagement",
+          "href": "/admin/role-management"
+        },
+        {
+          "title": "admin.auditLog",
+          "href": "/admin/audit-log"
+        },
+        {
+          "title": "admin.backup",
+          "href": "/admin/backup"
+        },
+        {
+          "title": "sidebar.agencyShowcase",
+          "href": "/settings/agency-profile"
+        },
+        {
+          "title": "admin.companySettings",
+          "href": "/settings/company"
+        },
+        {
+          "title": "tools.shortcuts",
+          "href": "/settings/shortcuts"
+        }
+      ]
+    }
+  ]
+}

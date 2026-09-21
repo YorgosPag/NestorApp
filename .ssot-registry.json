@@ -1828,16 +1828,27 @@
       ],
       "tier": 3
     },
-    "smart-navigation-factory": {
-      "ssotFile": "src/config/smart-navigation-factory.ts",
-      "description": "Navigation config factory — createNavigationConfig, getNavigationStats, validateNavigationConfig, findNavigationItemByPath, createMainMenuItems, createToolsMenuItems, createSettingsMenuItems, debugNavigationFactory. Re-implementation forks menu structure, item priorities, and environment-based filtering. ADR-314 Phase D.1b.",
+    "office-navigation": {
+      "ssotFile": "src/config/office-navigation/resolve-office-navigation.ts",
+      "description": "ADR-871 §10.6 — Ο ΕΝΑΣ κατάλογος της στήλης του γραφείου (δεδομένα: src/config/office-navigation/catalog-{main,tools,settings}.ts) και η ΜΙΑ μηχανή του (δικαίωμα + περιβάλλον + κενή ομάδα). Αντικατέστησε το smart-navigation-factory.ts (1.173 γρ.) και το config/navigation.ts. Δεύτερη συνάρτηση που χτίζει τα μενού = δεύτερη αλήθεια για το τι βλέπει ο χρήστης.",
       "forbiddenPatterns": [
-        "export\\s+(function|const)\\s+(createNavigationConfig|getNavigationStats|validateNavigationConfig|findNavigationItemByPath|createMainMenuItems|createToolsMenuItems|createSettingsMenuItems|debugNavigationFactory)\\b"
+        "export\\s+function\\s+(getMainMenuItems|getToolsMenuItems|getSettingsMenuItems|resolveOfficeMenu)\\b"
       ],
       "allowlist": [
-        "src/config/smart-navigation-factory.ts"
+        "src/config/office-navigation/resolve-office-navigation.ts"
       ],
-      "tier": 6
+      "tier": 3
+    },
+    "menu-item-contract": {
+      "ssotFile": "src/types/sidebar.ts",
+      "description": "ADR-871 §10.6 Υ13 — ΤΟ ΕΝΑ συμβόλαιο «στοιχείου μενού»: MenuLink | MenuGroup (διακριτή ένωση· η ομάδα ΔΕΝ έχει διεύθυνση). Ήταν ΠΕΝΤΕ δηλώσεις (types/sidebar, config/navigation, smart-navigation-factory ×3). Το δομικό σχήμα των φίλτρων ζει στο src/config/navigation-node.ts. Νέο interface στοιχείου μενού αλλού = το πρόβλημα των πέντε, ξαναγεννημένο.",
+      "forbiddenPatterns": [
+        "interface\\s+(MenuItem|SubMenuItem|SmartNavigationItem|NavigationConfigBase)\\b"
+      ],
+      "allowlist": [
+        "src/types/sidebar.ts"
+      ],
+      "tier": 3
     },
     "_comment_adr748_phase1": "=== ADR-748 ΦΑΣΗ 1 (2026-08-02): μητρώο δουλειών + ανάθεση ribbon καρτελών ανά ειδικότητα ===",
     "jobs-registry": {
@@ -2316,18 +2327,6 @@
       ],
       "allowlist": [
         "src/config/contact-dependency-registry.ts"
-      ],
-      "tier": 3
-    },
-    "navigation-config": {
-      "ssotFile": "src/config/navigation.ts",
-      "description": "Navigation menu configuration — mainMenuItems, toolsMenuItems, settingsMenuItem, getMainMenuItems, getToolsMenuItems, getSettingsMenuItems. Canonical SSoT for app navigation structure. ADR-314 Phase D.3f.",
-      "forbiddenPatterns": [
-        "export\\s+const\\s+(mainMenuItems|toolsMenuItems|settingsMenuItem)\\b",
-        "export\\s+function\\s+(getMainMenuItems|getToolsMenuItems|getSettingsMenuItems)\\b"
-      ],
-      "allowlist": [
-        "src/config/navigation.ts"
       ],
       "tier": 3
     },

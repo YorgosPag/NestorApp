@@ -283,7 +283,11 @@ describe('Κάλυψη αποδείξεων', () => {
   // 605 μόλις μπήκε το `browser-sha256` χωρίς απόδειξη) — δηλαδή αυτό το test ήταν κόκκινο
   // στο main. Το ADR-789 πρόσθεσε 2 patterns **με** την απόδειξή τους (καθαρό 0) και
   // ξεχρέωσε τρία: `browser-sha256`, `point-in-polygon-semantics`, `geometry`.
-  const UNPROVEN_CEILING = 600;
+  // 2026-09-22 (ADR-871 §10.6): 600 → 599. Το ταβάνι ήταν **ήδη σπασμένο** — μετρημένο **602**
+  // στο `13d15291` (καθαρό worktree), δηλαδή κόκκινο στο main. Διαγράφηκαν τα
+  // `smart-navigation-factory` (1) και `navigation-config` (2) — patterns χωρίς απόδειξη — και
+  // μπήκαν τα `office-navigation` + `menu-item-contract` **με** την απόδειξή τους: 602 − 3 = 599.
+  const UNPROVEN_CEILING = 599;
 
   it(`τα patterns χωρίς δηλωμένη απόδειξη δεν ξεπερνούν τα ${UNPROVEN_CEILING}`, () => {
     const proven = provenPatternKeys(modules);
