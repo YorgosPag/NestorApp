@@ -99,6 +99,31 @@ function useRestoredSidebarOpen(name: string, enabled: boolean): boolean | null 
 }
 
 // ╭─────────────────────────────────────────────╮
+// │          Canvas override (ADR-871 Υ10)       │
+// ╰─────────────────────────────────────────────╯
+
+/**
+ * Η **επικάλυψη καμβά**: όσο ισχύει, η στήλη έχει δική της, **παροδική** κατάσταση.
+ *
+ * Ξεκινά κλειστή σε **κάθε** είσοδο (όχι μόνο στην πρώτη φόρτωση)· ο άνθρωπος μπορεί να
+ * την ανοίξει, αλλά αυτό **δεν** είναι προτίμηση και δεν αποθηκεύεται. Στην έξοδο
+ * επιστρέφει η αλυσίδα της προτίμησης. Είναι το γνωστό bug του VS Code (vscode #73408:
+ * η εναλλαγή μέσα στο Zen «διαρρέει» στην προτίμηση) — εδώ αποκλεισμένο **δομικά**.
+ *
+ * Επαναφορά με το μοτίβο «state από αλλαγή prop» (React docs, *storing information
+ * from previous renders*): **χωρίς** effect ⇒ κανένα καρέ με ανοιχτή στήλη πάνω από τον καμβά.
+ */
+function useCanvasOverride(canvasMode: boolean): readonly [boolean, (open: boolean) => void] {
+  const [canvasOpen, setCanvasOpen] = React.useState(false)
+  const [wasCanvasMode, setWasCanvasMode] = React.useState(canvasMode)
+  if (wasCanvasMode !== canvasMode) {
+    setWasCanvasMode(canvasMode)
+    setCanvasOpen(false)
+  }
+  return [canvasOpen, setCanvasOpen] as const
+}
+
+// ╭─────────────────────────────────────────────╮
 // │          Provider Component                 │
 // ╰─────────────────────────────────────────────╯
 
@@ -118,6 +143,11 @@ const SidebarProvider = React.forwardRef<
      * Προεπιλογή `false`: όποιος δεν το ζητά συμπεριφέρεται **ακριβώς** όπως πριν.
      */
     restoreFromCookie?: boolean
+    /**
+     * ADR-871 §10.5 Υ10 — **ζωντανό**: η διαδρομή είναι καμβάς (DXF). Όσο ισχύει, η
+     * στήλη είναι κλειστή σε κάθε είσοδο και η εναλλαγή της **δεν** γράφει cookie.
+     */
+    canvasMode?: boolean
   }
 >(
   (
@@ -127,6 +157,7 @@ const SidebarProvider = React.forwardRef<
       onOpenChange: setOpenProp,
       cookieName = SIDEBAR_COOKIE_NAME,
       restoreFromCookie = false,
+      canvasMode = false,
       className,
       style,
       children,
@@ -140,19 +171,24 @@ const SidebarProvider = React.forwardRef<
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState<boolean | null>(null)
-    // ⚠️ Το `defaultOpen` διαβάζεται **μία** φορά, στην προσάρτηση — όπως πριν. Το
-    // `(app)` το υπολογίζει από τη διαδρομή· αν ακολουθούσε κάθε αλλαγή της, η στήλη
-    // θα άνοιγε/έκλεινε μόνη της στην πλοήγηση.
+    // ⚠️ Το `defaultOpen` διαβάζεται **μία** φορά, στην προσάρτηση — όπως πριν: αν
+    // ακολουθούσε κάθε αλλαγή του, η στήλη θα άνοιγε/έκλεινε μόνη της στην πλοήγηση.
+    // Ό,τι εξαρτάται **ζωντανά** από τη διαδρομή είναι το `canvasMode` (Υ10), όχι αυτό.
     const [initialOpen] = React.useState(defaultOpen)
     const restoredOpen = useRestoredSidebarOpen(cookieName, restoreFromCookie)
-    // Σειρά κρίσης: ελεγχόμενο απ' έξω → επιλογή αυτής της συνεδρίας → αποθηκευμένη
-    // προτίμηση → προεπιλογή. Μία έκφραση, ώστε να μη χρειάζεται effect συγχρονισμού.
-    const open = openProp ?? _open ?? restoredOpen ?? initialOpen
+    const [canvasOpen, setCanvasOpen] = useCanvasOverride(canvasMode)
+    // Σειρά κρίσης: ελεγχόμενο απ' έξω → επικάλυψη καμβά → επιλογή αυτής της συνεδρίας
+    // → αποθηκευμένη προτίμηση → προεπιλογή. Μία έκφραση, χωρίς effect συγχρονισμού.
+    const open = openProp ?? (canvasMode ? canvasOpen : _open ?? restoredOpen ?? initialOpen)
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
         if (setOpenProp) {
           setOpenProp(openState)
+        } else if (canvasMode) {
+          // Παροδικό: ούτε η επιλογή της συνεδρίας ούτε το cookie αγγίζονται (Υ10).
+          setCanvasOpen(openState)
+          return
         } else {
           _setOpen(openState)
         }
@@ -162,7 +198,7 @@ const SidebarProvider = React.forwardRef<
         document.cookie = `${cookieName}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
         window.dispatchEvent(new Event(SIDEBAR_COOKIE_EVENT))
       },
-      [setOpenProp, open, cookieName]
+      [setOpenProp, open, cookieName, canvasMode, setCanvasOpen]
     )
 
     // Helper to toggle the sidebar.

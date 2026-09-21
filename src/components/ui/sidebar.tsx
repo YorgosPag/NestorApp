@@ -10,7 +10,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation'
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
 import { useSidebar, SIDEBAR_WIDTH_MOBILE } from "@/components/ui/sidebar-context"
 import '@/lib/design-system';
@@ -39,11 +39,18 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+    /**
+     * ADR-871 §11 — το ΟΝΟΜΑ της στήλης. Στο κινητό η στήλη είναι Radix Dialog, και
+     * χωρίς τίτλο ο αναγνώστης οθόνης ανακοινώνει «παράθυρο διαλόγου» χωρίς όνομα
+     * (το Radix το καταγγέλλει). Υποχρεωτικό: κάθε στήλη οφείλει να λέει ΤΙ είναι.
+     */
+    label: string
   }
 >(
   (
     {
       side = "left",
+      label,
       variant = "sidebar",
       collapsible = "offcanvas",
       className,
@@ -82,7 +89,9 @@ const Sidebar = React.forwardRef<
               } as React.CSSProperties
             }
             side={side}
+            aria-describedby={undefined}
           >
+            <SheetTitle className="sr-only">{label}</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>

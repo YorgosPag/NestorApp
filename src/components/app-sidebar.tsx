@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useIconSizes } from '@/hooks/useIconSizes'
 import {
     Sidebar,
     SidebarContent,
@@ -18,20 +17,14 @@ import { useJobFilteredNavigation } from "@/hooks/useJobFilteredNavigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useBuildingsNoUnits } from "@/contexts/BuildingsNoUnitsContext"
 import { useTranslation } from "@/i18n/hooks/useTranslation"
-import { MapPin } from "lucide-react"
-import { useSidebar } from "@/components/ui/sidebar"
-import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
 import '@/lib/design-system';
 
 export function AppSidebar() {
-  const iconSizes = useIconSizes()
-    const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
     // 🔴 ADR-744 — ΟΧΙ `useTranslationLazy`. Εκείνος αρχικοποιεί την ετοιμότητά του σε
     // `useState(false)` και τη διορθώνει μόνο μέσα σε `useEffect`, που **δεν τρέχει σε SSR**.
     // Εδώ δεν υπήρχε φρουρός `isLoading`, οπότε το αρχείο δούλευε **κατά τύχη** — επειδή το
     // `navigation` ταξιδεύει ΟΛΟΚΛΗΡΟ στο shell slice. Ήταν οπλισμένο, όχι σπασμένο.
     const { t } = useTranslation('navigation')
-    const { isMobile, setOpenMobile } = useSidebar()
 
     // 🏢 ADR-748 Φάση 3: τα δύο διαδοχικά φίλτρα (δικαίωμα → ενεργή δουλειά)
     // ζουν πλέον σε ΕΝΑΝ hook, κοινό με τον διακόπτη δουλειάς του header ώστε
@@ -67,15 +60,16 @@ export function AppSidebar() {
         [jobFilteredMainItems, hasBuildingsWithNoUnits]
     )
 
-    // Handle navigation click with mobile sidebar auto-close
-    const handleNavigationClick = () => {
-        if (isMobile) {
-            setOpenMobile(false)
-        }
-    }
+    // ADR-871 §10.5 Υ11 — το ενεργό λύνεται ΜΙΑ φορά, πάνω σε όλες τις ενότητες μαζί.
+    const { expandedItems, toggleExpanded, activeHref } = useSidebarState([
+        ...mainMenuItems,
+        ...toolsMenuItems,
+        ...settingsMenuItems,
+    ])
 
+    // ADR-871 §11 — το όνομα του συρταριού στο κινητό (αναγνώστης οθόνης).
     return (
-        <Sidebar collapsible="icon">
+        <Sidebar collapsible="icon" label={t('menu.main')}>
             <SidebarHeader>
                 <SidebarLogo />
             </SidebarHeader>
@@ -94,28 +88,16 @@ export function AppSidebar() {
                     items={mainMenuItems}
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
-                    isItemActive={isItemActive}
+                    activeHref={activeHref}
                     reveal={reveal}
                 />
-
-                {/* Navigation Link */}
-                <div className="px-3 py-2">
-                    <a
-                        href="/navigation"
-                        onClick={handleNavigationClick}
-                        className={`flex items-center gap-2 text-foreground py-2 px-1 w-full text-left rounded-md ${HOVER_TEXT_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                    >
-                        <MapPin className={iconSizes.sm} />
-                        <span className="font-medium">{t('pages.navigation')}</span>
-                    </a>
-                </div>
 
                 <SidebarMenuSection
                     label={t('menu.tools')}
                     items={toolsMenuItems}
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
-                    isItemActive={isItemActive}
+                    activeHref={activeHref}
                     reveal={reveal}
                 />
 
@@ -124,7 +106,7 @@ export function AppSidebar() {
                     className="mt-auto"
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
-                    isItemActive={isItemActive}
+                    activeHref={activeHref}
                     reveal={reveal}
                 />
             </SidebarContent>

@@ -10,6 +10,7 @@ import {
 import { SidebarMenuItem } from "@/components/sidebar/sidebar-menu-item"
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
+import type { WorkspaceHref } from "@/lib/workspace/route-worlds"
 import type { JobRevealView } from "@/hooks/useJobFilteredNavigation"
 import '@/lib/design-system';
 
@@ -18,7 +19,8 @@ interface SidebarMenuSectionProps {
   items: MenuItem[]
   expandedItems: string[]
   onToggleExpanded: (title: string) => void
-  isItemActive: (href: string) => boolean
+  /** Το ένα ενεργό στοιχείο **όλου** του καταλόγου — από το `useSidebarState` (ADR-871 §10.5 Υ11). */
+  activeHref: WorkspaceHref | null
   className?: string
   /**
    * ADR-748 Φάση 3.6 — τα επίπεδα 2 & 3 ταξιδεύουν ως **ένα** prop.
@@ -34,7 +36,7 @@ export function SidebarMenuSection({
   items,
   expandedItems,
   onToggleExpanded,
-  isItemActive,
+  activeHref,
   className,
   reveal,
 }: SidebarMenuSectionProps) {
@@ -48,7 +50,7 @@ export function SidebarMenuSection({
               key={item.title}
               item={item}
               isExpanded={expandedItems.includes(item.title)}
-              isActive={isItemActive(item.href)}
+              activeHref={activeHref}
               onToggleExpanded={onToggleExpanded}
               reveal={reveal}
             />

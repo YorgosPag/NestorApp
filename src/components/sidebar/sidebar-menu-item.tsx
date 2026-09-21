@@ -15,6 +15,8 @@ import { SidebarBadge } from "@/components/sidebar/sidebar-badge"
 import { SidebarHiddenRow } from "@/components/sidebar/sidebar-hidden-row"
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
+import type { WorkspaceHref } from "@/lib/workspace/route-worlds"
+import { containsActive } from "@/components/sidebar/active-navigation"
 import type { JobRevealView } from "@/hooks/useJobFilteredNavigation"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
@@ -27,7 +29,8 @@ import '@/lib/design-system';
 interface SidebarMenuItemProps {
   item: MenuItem
   isExpanded: boolean
-  isActive: boolean
+  /** Το ένα ενεργό στοιχείο όλου του καταλόγου (ADR-871 §10.5 Υ11). */
+  activeHref: WorkspaceHref | null
   onToggleExpanded: (title: string) => void
   /** ADR-748 Φάση 3.6 — τα επίπεδα 2 & 3 του δείκτη. Απόν ⇒ καμία αλλαγή. */
   reveal?: JobRevealView
@@ -90,17 +93,23 @@ function hiddenHereCount(reveal: JobRevealView | undefined, href: string): numbe
 export function SidebarMenuItem({
   item,
   isExpanded,
-  isActive,
+  activeHref,
   onToggleExpanded,
   reveal,
 }: SidebarMenuItemProps) {
-  const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const iconSizes = useIconSizes();
   const { t } = useTranslation('navigation');
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isCollapsed = state === 'collapsed';
+  /**
+   * ADR-871 §10.5 Υ11 — **περιέχει** αυτό το στοιχείο την τρέχουσα σελίδα (το ίδιο ή παιδί
+   * του). Ο **πλήρης** φωτισμός πηγαίνει εκεί όπου η σελίδα **φαίνεται**: στο παιδί όταν η
+   * ομάδα είναι ανοιχτή, στον γονιό όταν είναι κλειστή ή η στήλη συμπτυγμένη (Carbon roll-up).
+   */
+  const isActive = containsActive(item, activeHref);
 
   /**
    * 🔴 ΕΔΩ ΕΓΡΑΦΕ `if (isLoading) return title;` — ΚΑΙ ΑΥΤΟ ΗΤΑΝ ΤΟ ΩΜΟ ΚΛΕΙΔΙ.
@@ -131,12 +140,11 @@ export function SidebarMenuItem({
     return translated === title ? title : translated;
   };
 
-  const handleNavigationClick = (href: string) => {
-    if (isMobile) {
-      setOpenMobile(false);
-    } else if (href === '/dxf/viewer') {
-      setOpen(false);
-    }
+  // ⚠️ ΕΔΩ ΖΟΥΣΕ `href === '/dxf/viewer' → setOpen(false)`: δίδυμο της λίστας καμβά του
+  // `(app)/layout.tsx` που **έγραφε και το cookie** ⇒ μία επίσκεψη στον DXF «αποθήκευε»
+  // κλειστή στήλη για όλο το γραφείο. Ο καμβάς είναι πλέον επικάλυψη του provider (Υ10).
+  const handleNavigationClick = () => {
+    if (isMobile) setOpenMobile(false);
   };
 
   const getHoverPrefetchHandlers = (href: string) => {
@@ -203,11 +211,13 @@ export function SidebarMenuItem({
                 <Link
                   key={subItem.href}
                   href={subItem.href}
-                  onClick={() => { setPopoverOpen(false); handleNavigationClick(subItem.href); }}
+                  onClick={() => { setPopoverOpen(false); handleNavigationClick(); }}
                   {...getHoverPrefetchHandlers(subItem.href)}
+                  aria-current={subItem.href === activeHref ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
                     "hover:bg-accent hover:text-accent-foreground",
+                    "aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-accent-foreground",
                     TRANSITION_PRESETS.FAST_ALL,
                     demotedClass(reveal, subItem.href)
                   )}
@@ -252,7 +262,7 @@ export function SidebarMenuItem({
               >
                 <Link
                   href={item.href}
-                  onClick={() => handleNavigationClick(item.href)}
+                  onClick={() => handleNavigationClick()}
                   {...getHoverPrefetchHandlers(item.href)}
                 >
                   <item.icon
@@ -280,11 +290,13 @@ export function SidebarMenuItem({
         <>
           <SidebarMenuButton
             onClick={() => onToggleExpanded(item.title)}
-            isActive={isActive}
+            // Ανοιχτή ομάδα ⇒ ο φωτισμός ανήκει στο παιδί· εδώ μένει μόνο το εικονίδιο (Υ11).
+            isActive={isActive && !isExpanded}
+            aria-expanded={isExpanded}
             className={cn(
               "group relative",
               TRANSITION_PRESETS.STANDARD_ALL,
-              isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+              isActive && !isExpanded && "bg-sidebar-accent text-sidebar-accent-foreground",
               demotedClass(reveal, item.href)
             )}
           >
@@ -309,16 +321,15 @@ export function SidebarMenuItem({
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton
                     asChild
-                    isActive={isActive}
+                    isActive={subItem.href === activeHref}
                     className={cn(
                       TRANSITION_PRESETS.STANDARD_ALL,
-                      isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
                       demotedClass(reveal, subItem.href)
                     )}
                   >
                     <Link
                       href={subItem.href}
-                      onClick={() => handleNavigationClick(subItem.href)}
+                      onClick={() => handleNavigationClick()}
                       {...getHoverPrefetchHandlers(subItem.href)}
                     >
                       <subItem.icon className={iconSizes.sm} />
@@ -356,7 +367,7 @@ export function SidebarMenuItem({
         >
           <Link
             href={item.href}
-            onClick={() => handleNavigationClick(item.href)}
+            onClick={() => handleNavigationClick()}
             {...getHoverPrefetchHandlers(item.href)}
           >
             <SidebarItemLabel item={item} isActive={isActive} title={translateTitle(item.title)} />

@@ -121,6 +121,9 @@ export interface JobDefinition {
  *    αταξινόμητη και σωζόταν **μόνο** από το φίλτρο θορύβου του Ε14.ζ.
  *  • `/projects` ειδικά: είναι ο **άξονας 2** (Ε4.η′), όχι περιεχόμενο δουλειάς
  *  • `/obligations` → βλ. LEGAL_DOCUMENTS_STATUS παρακάτω
+ *  • `/navigation` → ο ιεραρχικός περιηγητής Εταιρεία → Έργο → Κτίριο → Όροφος → Μονάδα
+ *    (ADR-871 §10.5 Υ12). Όπως το `/projects`, είναι **πλαίσιο** — ο χάρτης του χώρου,
+ *    όχι περιεχόμενο μιας δουλειάς. Ήταν ωμό `<a>` εκτός καταλόγου, άρα εκτός φίλτρου.
  */
 export const COMMON_SIDEBAR_ROUTES: readonly string[] = [
   '/dashboard',
@@ -129,6 +132,7 @@ export const COMMON_SIDEBAR_ROUTES: readonly string[] = [
   '/files',
   '/settings',
   '/obligations',
+  '/navigation',
 ] as const;
 
 /** §14.2, γραμμή «όλες». */

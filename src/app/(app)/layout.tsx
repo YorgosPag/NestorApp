@@ -51,7 +51,12 @@ import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
 import '@/lib/design-system';
 
 /**
- * Διαδρομές όπου η πλαϊνή μπάρα ξεκινά **κλειστή** σε φόρτωση/ανανέωση.
+ * Διαδρομές **καμβά**: η πλαϊνή μπάρα είναι κλειστή σε **κάθε** είσοδο.
+ *
+ * ADR-871 §10.5 Υ10 — είναι **επικάλυψη**, όχι προτίμηση (Figma `Ctrl+\` / VS Code Zen):
+ * ο άνθρωπος μπορεί να την ανοίξει εδώ, αλλά αυτό **δεν** γράφεται στη μνήμη σύμπτυξης·
+ * στην έξοδο επιστρέφει ό,τι είχε διαλέξει ο ίδιος. Η **ΜΟΝΗ** λίστα — το δίδυμο
+ * `href === '/dxf/viewer'` του `sidebar-menu-item.tsx` διαγράφηκε.
  *
  * ⚠️ **ΔΕΝ ΕΙΝΑΙ Η ΛΙΣΤΑ ΠΟΥ ΔΙΑΓΡΑΦΗΚΕ.** Απαντά **άλλο ερώτημα**: «ανοιχτό ή
  * κλειστό sidebar», όχι «υπάρχει sidebar». Το δεύτερο το απαντά πλέον ο φάκελος·
@@ -71,15 +76,16 @@ function isSidebarCollapsedRoute(pathname: string): boolean {
 /** Το ορατό κέλυφος: μπάρα, κεφαλίδα, και η γέφυρα του κυρίως περιεχομένου. */
 function AppShellBody({
   children,
-  sidebarDefaultOpen,
+  canvasMode,
 }: {
   children: React.ReactNode;
-  sidebarDefaultOpen: boolean;
+  canvasMode: boolean;
 }) {
   const layout = useLayoutClasses();
 
   return (
-    <SidebarProvider defaultOpen={sidebarDefaultOpen}>
+    // ADR-871 §10.5 Υ10 — η αποθηκευμένη προτίμηση (`sidebar_state`) + η επικάλυψη καμβά.
+    <SidebarProvider restoreFromCookie canvasMode={canvasMode}>
       <div className={layout.shellAppContainer}>
         <AppSidebar />
         {/*
@@ -93,7 +99,8 @@ function AppShellBody({
 
           ⚠️ Πρέπει να μείνει **αδελφός** της μπάρας: οι επιλογείς είναι `~`.
         */}
-        <SidebarInset data-shell-inset className={layout.shellAppContent}>
+        {/* ADR-871 §10.5 Υ9 — `div`: ο ΜΟΝΟΣ `<main>` του κελύφους είναι ο `MainContentBridge`. */}
+        <SidebarInset as="div" data-shell-inset className={layout.shellAppContent}>
           <AppHeader />
           <MainContentBridge>{children}</MainContentBridge>
         </SidebarInset>
@@ -138,7 +145,7 @@ export default function AppGroupLayout({ children }: Readonly<{ children: React.
                             (ADR-032, άξονας 1, Φάση 4). Δύο ανεξάρτητοι άξονες, δύο
                             providers (Ε6.β/Ε6.στ). */}
                         <ActiveJobProvider>
-                          <AppShellBody sidebarDefaultOpen={!isSidebarCollapsedRoute(pathname)}>
+                          <AppShellBody canvasMode={isSidebarCollapsedRoute(pathname)}>
                             {children}
                           </AppShellBody>
                         </ActiveJobProvider>

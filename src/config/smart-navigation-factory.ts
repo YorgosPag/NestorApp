@@ -72,6 +72,7 @@ import {
   DatabaseBackup,
   Network,
   Store,
+  MapPin,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -105,6 +106,9 @@ const NAVIGATION_LABELS = {
   dxf_viewer: 'tools.dxf',
   login: 'pages.login',
   debug: 'sidebar.debug',
+
+  // ADR-871 §10.5 Υ12 — ο ιεραρχικός περιηγητής (ήταν ωμό `<a>` στο `AppSidebar`).
+  navigation: 'pages.navigation',
 
   // ✅ ENTERPRISE FIX: Legal Documents menu labels
   legal_documents: 'tools.legal',
@@ -625,6 +629,19 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
       return {
         baseItems: [
           {
+            // ADR-871 §10.5 Υ12 — ο ιεραρχικός περιηγητής (Εταιρεία → Έργο → Κτίριο →
+            // Όροφος → Μονάδα). Ήταν ωμό `<a>` έξω από τον κατάλογο: πλήρης επαναφόρτωση,
+            // εκτός συνόρου `Link` (CHECK 3.61), χωρίς ενεργό, χωρίς φίλτρο δουλειάς.
+            icon: MapPin,
+            href: "/navigation",
+            badge: null,
+            smartConfig: {
+              priority: 'medium',
+              displayOrder: 85,
+              analyticsKey: 'nav_navigation'
+            }
+          },
+          {
             icon: FolderTree,
             href: "/files",
             badge: null,
@@ -894,6 +911,7 @@ function getLabelKeyForPath(path: string): string {
 
     // Tools paths
     'files': 'file_manager',
+    'navigation': 'navigation',
     'dxf/viewer': 'dxf_viewer',
     'login': 'login',
     'debug': 'debug'

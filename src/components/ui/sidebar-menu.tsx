@@ -230,6 +230,9 @@ const SidebarMenuSubButton = React.forwardRef<
       data-sidebar="menu-sub-button"
       data-size={size}
       data-active={isActive}
+      // ADR-871 §10.5 Υ11 — το υπο-στοιχείο είναι ΠΑΝΤΑ σύνδεσμος (`a`), άρα το ενεργό
+      // δηλώνει `aria-current="page"` χωρίς τον όρο `asChild` του `SidebarMenuButton`.
+      aria-current={isActive ? "page" : undefined}
       className={cn(
         `flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring ${INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER} focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground`,
         "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",

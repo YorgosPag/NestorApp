@@ -66,18 +66,20 @@ function PrimaryAction({ label }: Readonly<{ label: string }>): React.JSX.Elemen
 export function PersonalSidebar(): React.JSX.Element {
   const { t } = useTranslation(['navigation', 'property-market']);
   const { user, loading } = useAuth();
-  const { expandedItems, toggleExpanded, isItemActive } = useSidebarState();
-
   // `null` όσο η ταυτότητα δεν έχει λυθεί — ο κατάλογος τότε κρύβει ό,τι εξαρτάται
   // από τον οργανισμό (ADR-871 §10.3 Υ5).
   const groups = resolvePersonalNavigation(
     loading || user === null ? null : { companyId: user.companyId },
     'sidebar',
   );
+  // Το ενεργό λύνεται πάνω σε ΟΛΕΣ τις ομάδες μαζί (ADR-871 §10.5 Υ11).
+  const { expandedItems, toggleExpanded, activeHref } = useSidebarState(
+    groups.flatMap((group) => group.items),
+  );
   const lastIndex = groups.length - 1;
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" label={t('personal.sidebarLabel')}>
       <SidebarHeader>
         <SidebarLogo />
         <PrimaryAction label={t(PERSONAL_PRIMARY_ACTION.labelKey)} />
@@ -92,7 +94,7 @@ export function PersonalSidebar(): React.JSX.Element {
               items={[...group.items]}
               expandedItems={expandedItems}
               onToggleExpanded={toggleExpanded}
-              isItemActive={isItemActive}
+              activeHref={activeHref}
               // Ο λογαριασμός κάθεται στη βάση, όπως οι ρυθμίσεις στο γραφείο.
               className={index === lastIndex ? 'mt-auto' : undefined}
             />

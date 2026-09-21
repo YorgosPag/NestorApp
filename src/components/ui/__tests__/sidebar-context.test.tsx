@@ -7,6 +7,8 @@
  * - Μ2: ΜΕ `restoreFromCookie` η αποθηκευμένη προτίμηση υπερισχύει του `defaultOpen`.
  * - Μ3: η εναλλαγή γράφει στο ΔΙΚΟ ΤΗΣ όνομα, όχι στο `sidebar_state` του γραφείου.
  * - Μ4: το `defaultOpen` διαβάζεται μία φορά (η στήλη δεν ανοιγοκλείνει μόνη της).
+ * - Κ1-Κ4 (ADR-871 §10.5 Υ10): ο καμβάς είναι ΕΠΙΚΑΛΥΨΗ — κλειστός σε κάθε είσοδο,
+ *   η εναλλαγή μέσα του δεν γράφει cookie, στην έξοδο επιστρέφει η προτίμηση.
  */
 
 import * as React from 'react';
@@ -85,5 +87,54 @@ describe('Μ — μνήμη σύμπτυξης', () => {
     const { rerender } = render(<SidebarProvider defaultOpen><Probe /></SidebarProvider>);
     rerender(<SidebarProvider defaultOpen={false}><Probe /></SidebarProvider>);
     expect(screen.getByTestId('probe').textContent).toBe('expanded');
+  });
+});
+
+describe('Κ — επικάλυψη καμβά (ADR-871 §10.5 Υ10)', () => {
+  const shell = (canvasMode: boolean): React.JSX.Element => (
+    <SidebarProvider restoreFromCookie canvasMode={canvasMode}>
+      <Probe />
+      <Toggle />
+    </SidebarProvider>
+  );
+  const state = (): string | null => screen.getByTestId('probe').textContent;
+  const officeCookie = (): string | undefined =>
+    document.cookie.split('; ').find((c) => c.startsWith('sidebar_state='));
+
+  it('Κ1: ο καμβάς ξεκινά κλειστός ακόμη κι αν η προτίμηση είναι «ανοιχτό»', () => {
+    document.cookie = 'sidebar_state=true; path=/';
+    render(shell(true));
+    expect(state()).toBe('collapsed');
+  });
+
+  it('Κ2: άνοιγμα μέσα στον καμβά ΔΕΝ γράφει την προτίμηση', () => {
+    document.cookie = 'sidebar_state=false; path=/';
+    render(shell(true));
+    act(() => screen.getByRole('button', { name: 'toggle' }).click());
+    expect(state()).toBe('expanded');
+    expect(officeCookie()).toBe('sidebar_state=false');
+  });
+
+  it('Κ3: στην έξοδο από τον καμβά επιστρέφει η αποθηκευμένη προτίμηση', () => {
+    document.cookie = 'sidebar_state=true; path=/';
+    const { rerender } = render(shell(true));
+    expect(state()).toBe('collapsed');
+    rerender(shell(false));
+    expect(state()).toBe('expanded');
+  });
+
+  it('Κ4: δεύτερη είσοδος στον καμβά ⇒ πάλι κλειστός, όσο κι αν τον άνοιξε την πρώτη', () => {
+    const { rerender } = render(shell(true));
+    act(() => screen.getByRole('button', { name: 'toggle' }).click());
+    expect(state()).toBe('expanded');
+    rerender(shell(false));
+    rerender(shell(true));
+    expect(state()).toBe('collapsed');
+  });
+
+  it('Κ5: έξω από τον καμβά η εναλλαγή γράφει κανονικά την προτίμηση', () => {
+    render(shell(false));
+    act(() => screen.getByRole('button', { name: 'toggle' }).click());
+    expect(officeCookie()).toBe('sidebar_state=false');
   });
 });
