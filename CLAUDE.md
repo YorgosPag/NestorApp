@@ -313,17 +313,12 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
 | **3.9** | ICU interpolation — `{variable}` not `{{variable}}` in locale JSONs · 📘 `docs/gates/3.9.md` | RATCHET | `.icu-violations-baseline.json` |
 | **3.10** | Firestore `query()` with `where()` MUST include `companyId` · 📘 `docs/gates/3.10.md` | RATCHET | `.firestore-companyid-baseline.json` |
-| **3.13** | i18n Runtime Resolver Reachability (ADR-279/280)
-
-🔴 **ΔΙΟΡΘΩΣΗ 2026-08-26**: ο πίνακας του `CLAUDE.md` διαφήμιζε **«378 violations / 13 files»**
-ενώ… · 📘 `docs/gates/3.13.md` | RATCHET | `.i18n-resolver-reachability-baseline.json` |
+| **3.13** | i18n Runtime Resolver Reachability (ADR-279/280) · 📘 `docs/gates/3.13.md` | RATCHET | `.i18n-resolver-reachability-baseline.json` |
 | **3.14** | Audit Value Catalogs SSoT (ADR-195) · 📘 `docs/gates/3.14.md` | ZERO TOL | — |
 | **3.15** | **Firestore Index Coverage** (ADR-869) — «κάθε ερώτημα του `firestoreQueryService` έχει δείκτη — **μαζί με το πεδίο εύρους**, παραλλαγή super_admin + κλάδοι διαμερίσματος κατόχου `X[kind]`· σ…» · `npm run test:firestore-index-gates` · 📘 `docs/gates/3.15.md` | ZERO TOL on touch | — |
 | **3.16** | **Firestore Rules Test Coverage** (ADR-298) — «καλύπτεται κάθε μπλοκ κανόνα από σουίτα — και δηλώνει η σουίτα **και τα 35 κελιά**, ή σιωπά για κάποια;» · `npm run test:rules-coverage-completeness` · 📘 `docs/gates/3.16.md` | ⛔ ZERO-TOL (A-G) + 🔴 RATCHET (G/Κ3) | `.firestore-rules-coverage-baseline.json` |
 | **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` · 📘 `docs/gates/3.17.md` | RATCHET | `.entity-audit-coverage-baseline.json` |
-| **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI)
-
-## Κώδικας υποστήριξης tests (`test-utils/`, `testing/`) — ΕΚΤΟΣ γράφου παραγωγής (2026-09-21)… · 📘 `docs/gates/3.22.md` | RATCHET | `.deadcode-baseline.json` |
+| **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) · 📘 `docs/gates/3.22.md` | RATCHET | `.deadcode-baseline.json` |
 | **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) · 📘 `docs/gates/3.23.md` | RATCHET | `.native-tooltip-baseline.json` |
 | **3.29** | **CI** (ADR-663) — hook = baseline smoke only · 📘 `docs/gates/3.29.md` | RATCHET | `.dxf-tsc-baseline.json` |
 | **3.30** | **ADR-700** (ADR-700) — hook = baseline smoke only · `npm run test:barrel-deadcode` · 📘 `docs/gates/3.30.md` | RATCHET | `.barrel-deadcode-baseline.json` |

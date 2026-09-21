@@ -77,11 +77,21 @@ function leadDescription(body) {
   return (stop > 0 ? rest.slice(0, stop) : rest).trim();
 }
 
+/**
+ * Η πρώτη παράγραφος του σώματος, σε ΜΙΑ γραμμή. Ένα κελί πίνακα markdown δεν χωρά αλλαγή
+ * γραμμής: μέχρι 2026-09-21 το σώμα έμπαινε ωμό, και κάθε πύλη χωρίς `title` με δεύτερη
+ * παράγραφο έσπαγε τη γραμμή της — η 3.13 ήταν ήδη σπασμένη στο `CLAUDE.md`, η 3.22 έσπασε
+ * μόλις απέκτησε ενότητα `##`.
+ */
+function leadParagraph(body) {
+  return body.split(/\r?\n\s*\r?\n/)[0].replace(/\s+/g, ' ').trim();
+}
+
 /** Το δεύτερο κελί: ταυτότητα → ερώτημα → πώς το τρέχεις → πού είναι τα υπόλοιπα. */
 function describeCell(gate) {
   const parts = [];
   if (gate.title) parts.push(`**${gate.title}**` + (gate.adr ? ` (${gate.adr})` : ''));
-  else parts.push(clip(gate.body, CLIP.fallback)); // παλιές σύντομες πύλες: το σώμα ΕΙΝΑΙ η περιγραφή
+  else parts.push(clip(leadParagraph(gate.body), CLIP.fallback)); // παλιές σύντομες πύλες: το σώμα ΕΙΝΑΙ η περιγραφή
   if (gate.summary) parts.push(`— «${clip(gate.summary, CLIP.summary)}»`);
   else if (gate.title) {
     const lead = leadDescription(gate.body);

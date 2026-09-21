@@ -120,6 +120,15 @@ describe('Ρ — προβολή στη γραμμή', () => {
     const { problems } = renderRows([{ ...g, body: 'σώμα' }], REAL);
     expect(problems.join(' ')).toMatch(/ταβάνι/);
   });
+
+  test('Ρ7: πύλη ΧΩΡΙΣ title με πολλές παραγράφους ⇒ ΜΙΑ γραμμή, μόνο η πρώτη παράγραφος (3.13/3.22)', () => {
+    const body = 'Dead-code Ratchet (knip)\n\n## Ενότητα — με παύλα\n\nκείμενο\nσε δύο γραμμές';
+    const { rows } = renderRows([{ ...FM('3.1', { title: '', summary: '' }), body }], REAL);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].line).not.toMatch(/\n/);
+    expect(rows[0].line).toContain('Dead-code Ratchet (knip) · 📘');
+    expect(rows[0].line).not.toContain('Ενότητα');
+  });
 });
 
 // ═══ Ζ — το δεύτερο κατάστιχο (φρεσκάδα) ══════════════════════════════════════
