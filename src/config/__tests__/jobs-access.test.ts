@@ -15,9 +15,12 @@
  */
 
 import { PERMISSIONS } from '@/lib/auth/types';
-import { createMainMenuItems, createToolsMenuItems, createSettingsMenuItems } from '../smart-navigation-factory';
+import { getMainMenuItems, getToolsMenuItems, getSettingsMenuItems } from '../office-navigation/resolve-office-navigation';
+import type { MenuGroup, MenuLink } from '@/types/sidebar';
+import { navNodeKey } from '../navigation-node';
+import { childHrefs, filterFixtures, group, keyOf, link } from './helpers/nav-node-fixtures';
 import {
-  COMMON_SIDEBAR_ROUTES,
+  COMMON_SIDEBAR_NODES,
   JOBS,
   JOB_ORDER,
   LEGAL_DOCUMENTS_STATUS,
@@ -34,14 +37,18 @@ import {
 // ΦΑΣΗ 3.6 — η **ορατότητα** χωρίστηκε από την **απόφαση**. Οι αναλλοίωτες
 // παρακάτω δεν άλλαξαν: μόνο η διαδρομή εισαγωγής τους.
 import {
-  REPORTS_PARENT_ROUTE,
+  REPORTS_GROUP_ID,
   filterItemsByJob,
   filterTilesByJob,
+  isNodeVisibleForJob,
   isReportSubItemVisibleForJob,
-  isRouteVisibleForJob,
   isTileVisibleForJob,
   tileIdFromHref,
 } from '../jobs-visibility';
+
+/** Το ζωντανό φίλτρο πάνω στο συμβόλαιο απόδοσης (ADR-871 §10.6). */
+const filterLive = (items: readonly (MenuLink | MenuGroup)[], job: Parameters<typeof filterFixtures>[1]) =>
+  filterItemsByJob<MenuLink, MenuGroup>(items, job);
 
 /** Ο browser σήμερα: μόνο ο ρόλος οργανισμού απαντά (Π-15). */
 const CLIENT_SOURCES = ['globalRole'] as const;
@@ -149,34 +156,31 @@ describe('Ε7.δ — η προεπιλεγμένη δουλειά είναι υ�
 // ============================================================================
 
 describe('Μ-3 — §5/Ε5.η: η δουλειά ΠΟΤΕ δεν προσθέτει, μόνο αφαιρεί', () => {
+  // ADR-871 §10.6: οι ομάδες έχουν `id`, όχι διαδρομή — ίδια ταξινόμηση, ένα-προς-ένα.
   const items = [
-    { href: '/dxf/viewer' },
-    { href: '/accounting' },
-    { href: '/settings' },
-    { href: REPORTS_PARENT_ROUTE, subItems: [{ href: '/reports/financial' }] },
+    link('/dxf/viewer'),
+    group('accounting', '/accounting/invoices'),
+    group('settings', '/settings/shortcuts'),
+    group(REPORTS_GROUP_ID, '/reports/financial'),
   ];
 
   it.each([...JOB_ORDER, JOB_ALL])('η έξοδος είναι πάντα υποσύνολο της εισόδου (%s)', (job) => {
-    const result = filterItemsByJob(items, job);
+    const result = filterFixtures(items, job);
     for (const visible of result.visible) {
-      expect(items.some((item) => item.href === visible.href)).toBe(true);
+      expect(items.some((item) => keyOf(item) === keyOf(visible))).toBe(true);
     }
     expect(result.visible.length).toBeLessThanOrEqual(items.length);
   });
 
   it('«Όλα» δεν αγγίζει τίποτα — υπάρχων χρήστης βλέπει ό,τι έβλεπε χθες', () => {
-    const result = filterItemsByJob(items, JOB_ALL);
+    const result = filterFixtures(items, JOB_ALL);
     expect(result.visible).toBe(items);
     expect(result.hiddenCount).toBe(0);
   });
 
   it('ό,τι κρύβεται ΜΕΤΡΙΕΤΑΙ — καμία σιωπηλή απόκρυψη (Α-3)', () => {
-    const result = filterItemsByJob(items, 'finance');
-    expect(result.visible.map((i) => i.href)).toEqual([
-      '/accounting',
-      '/settings',
-      REPORTS_PARENT_ROUTE,
-    ]);
+    const result = filterFixtures(items, 'finance');
+    expect(result.visible.map(keyOf)).toEqual(['accounting', 'settings', REPORTS_GROUP_ID]);
     expect(result.hiddenCount).toBe(1); // το /dxf/viewer
   });
 });
@@ -186,69 +190,61 @@ describe('Μ-3 — §5/Ε5.η: η δουλειά ΠΟΤΕ δεν προσθέτ�
 //
 // 🔴 Βρέθηκε ΖΩΝΤΑΝΑ στην οθόνη (2026-08-02), όχι από test: το `/obligations`
 // δηλώνεται ΚΟΙΝΟ σε όλες τις δουλειές, αλλά ζει αποκλειστικά ως παιδί του
-// `/legal-documents` (smart-navigation-factory.ts:605-617) — και εξαφανιζόταν
+// τότε γονιού `/legal-documents` (σήμερα ομάδα `legal`, ADR-871 §10.6) — και εξαφανιζόταν
 // μαζί του. Το φίλτρο έκρυβε κάτι που το ίδιο το μητρώο δηλώνει ορατό παντού.
 // ============================================================================
 
 describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ορατό παιδί', () => {
-  const legalBranch = [
-    { href: LEGAL_DOCUMENTS_STATUS.route, subItems: [{ href: LEGAL_DOCUMENTS_STATUS.livingChildRoute }] },
-  ];
+  const legalBranch = [group(LEGAL_DOCUMENTS_STATUS.groupId, LEGAL_DOCUMENTS_STATUS.livingChildRoute)];
 
   it.each([...JOB_ORDER])('το /obligations επιβιώνει σε κάθε δουλειά (%s)', (job) => {
-    const result = filterItemsByJob(legalBranch, job);
-    const survivors = result.visible.flatMap((i) => i.subItems?.map((s) => s.href) ?? []);
+    const result = filterFixtures(legalBranch, job);
+    const survivors = result.visible.flatMap(childHrefs);
     expect(survivors).toContain(LEGAL_DOCUMENTS_STATUS.livingChildRoute);
   });
 
-  it('🔴 το /legal-documents ΔΕΝ κρύβεται — Ε14.στ: απόκρυψη χωρίς επιβολή = OWASP A01', () => {
+  it('🔴 τα «Νομικά» ΔΕΝ κρύβονται — Ε14.στ: απόκρυψη χωρίς επιβολή = OWASP A01', () => {
     // Είναι ανεπίβλητο (Π-13): rules tenant-only, /api/contracts χωρίς
     // permission. Απόκρυψη θα έκρυβε το ΣΦΑΛΜΑ, όχι τα δεδομένα.
     expect(LEGAL_DOCUMENTS_STATUS.enforced).toBe(false);
     for (const job of JOB_ORDER) {
-      expect(isRouteVisibleForJob(LEGAL_DOCUMENTS_STATUS.route, job)).toBe(true);
+      expect(isNodeVisibleForJob(LEGAL_DOCUMENTS_STATUS.groupId, job)).toBe(true);
     }
   });
 
   it('αταξινόμητη διαδρομή ⇒ ορατή (φίλτρο θορύβου, όχι πύλη)', () => {
-    expect(isRouteVisibleForJob('/kapoia-nea-diadromi', 'finance')).toBe(true);
+    expect(isNodeVisibleForJob('/kapoia-nea-diadromi', 'finance')).toBe(true);
   });
 
   it('…αλλά ταξινομημένη σε ΑΛΛΗ δουλειά ⇒ κρύβεται κανονικά', () => {
-    expect(isRouteVisibleForJob('/dxf/viewer', 'finance')).toBe(false);
-    expect(isRouteVisibleForJob('/dxf/viewer', 'design')).toBe(true);
+    expect(isNodeVisibleForJob('/dxf/viewer', 'finance')).toBe(false);
+    expect(isNodeVisibleForJob('/dxf/viewer', 'design')).toBe(true);
   });
 
-  it('γονιός που ανήκει αλλού σώζεται ΜΟΝΟ από ρητά κοινό παιδί, και κρατά μόνο αυτό', () => {
-    // `/construction/portfolio` ανήκει **μόνο** στο `construction` (jobs-registry),
-    // ακριβώς όπως ανήκε το `/geo/canvas` στο `design` πριν κλείσει η πόρτα του (ADR-777 §Α4).
-    const branch = [{ href: '/dxf/viewer', subItems: [{ href: '/settings' }, { href: '/construction/portfolio' }] }];
-    const result = filterItemsByJob(branch, 'finance');
-    expect(result.visible[0]?.subItems?.map((s) => s.href)).toEqual(['/settings']);
+  it('ομάδα που ανήκει αλλού σώζεται ΜΟΝΟ από ρητά κοινό παιδί, και κρατά μόνο αυτό', () => {
+    // Η ομάδα `crm` ανήκει στους Πελάτες· το `/files` είναι ρητά κοινό· το
+    // `/construction/portfolio` ανήκει **μόνο** στο Εργοτάξιο (jobs-registry).
+    const result = filterFixtures([group('crm', '/files', '/construction/portfolio')], 'finance');
+    expect(childHrefs(result.visible[0])).toEqual(['/files']);
   });
 
   it('🔴 ΑΤΑΞΙΝΟΜΗΤΟ παιδί ΔΕΝ σώζει γονιό που ανήκει αλλού — αλλιώς το φίλτρο ακυρώνεται', () => {
     // Βρέθηκε ΖΩΝΤΑΝΑ (2026-08-02 16:58): «Χώροι · Πωλήσεις · CRM» έμειναν
     // στα Οικονομικά επειδή τα 4+5+11 παιδιά τους δεν έχουν δική τους ετικέτα.
     // Το παιδί χωρίς ταξινόμηση ΚΛΗΡΟΝΟΜΕΙ τον γονιό — δεν είναι ελεύθερο.
-    const branch = [
-      { href: '/spaces', subItems: [{ href: '/spaces/properties' }, { href: '/spaces/parking' }] },
-    ];
-    const removed = filterItemsByJob(branch, 'finance');
+    const branch = [group('spaces', '/spaces/properties', '/spaces/parking')];
+    const removed = filterFixtures(branch, 'finance');
     expect(removed.visible).toEqual([]);
     expect(removed.hiddenCount).toBe(1);
     // …και στη δουλειά του, ο γονιός φέρνει ΟΛΑ τα παιδιά του (κληρονομιά).
-    const kept = filterItemsByJob(branch, 'clients');
-    expect(kept.visible[0]?.subItems).toHaveLength(2);
+    const kept = filterFixtures(branch, 'clients');
+    expect(childHrefs(kept.visible[0])).toHaveLength(2);
     expect(kept.hiddenCount).toBe(0);
   });
 
   it('παιδί με ΔΙΚΗ ΤΟΥ ετικέτα κρίνεται μόνο του (§14.1/11: admin μέσα στο /crm)', () => {
-    const branch = [
-      { href: '/crm', subItems: [{ href: '/crm/leads' }, { href: '/admin/ai-inbox' }] },
-    ];
-    const result = filterItemsByJob(branch, 'clients');
-    expect(result.visible[0]?.subItems?.map((s) => s.href)).toEqual(['/crm/leads']);
+    const result = filterFixtures([group('crm', '/crm/leads', '/admin/ai-inbox')], 'clients');
+    expect(childHrefs(result.visible[0])).toEqual(['/crm/leads']);
     // Το παιδί ΚΛΑΔΕΥΤΗΚΕ (το `visible` το αποδεικνύει) αλλά ΔΕΝ μετρήθηκε: ο
     // γονιός `/crm` είναι στη θέση του — από την οθόνη δεν λείπει τίποτα.
     expect(result.hiddenCount).toBe(0);
@@ -257,8 +253,8 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
   it('ο δείκτης μετρά ΕΝΑ ανά κλάδο που φεύγει — όχι τα κλειστά υπο-στοιχεία', () => {
     // Ο χρήστης έχασε ένα στοιχείο από το μενού, όχι δεκατρία. Αλλιώς ο
     // δείκτης δείχνει δεκάδες και παύει να σημαίνει κάτι.
-    const branch = [{ href: '/crm', subItems: Array.from({ length: 11 }, (_, i) => ({ href: `/crm/x${i}` })) }];
-    expect(filterItemsByJob(branch, 'finance').hiddenCount).toBe(1);
+    const branch = [group('crm', ...Array.from({ length: 11 }, (_, i) => `/crm/x${i}`))];
+    expect(filterFixtures(branch, 'finance').hiddenCount).toBe(1);
   });
 
   it('🔴 Ε14.ιβ — ο ΙΔΙΟΣ κανόνας και στα δύο επίπεδα: ορατός γονιός που έχασε παιδιά μετρά 0', () => {
@@ -268,14 +264,14 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
     // είχε γραφτεί μόνο για τους κλάδους που φεύγουν. Ο δείκτης μετρά ό,τι
     // λείπει από την ΟΘΟΝΗ — έναν ορατό γονιό δεν τον έχασε κανείς.
     const tree = [
-      // ορατός γονιός, χάνει ταξινομημένο αλλού παιδί ⇒ 0
-      { href: '/crm', subItems: [{ href: '/crm/leads' }, { href: '/admin/ai-inbox' }] },
+      // ορατή ομάδα, χάνει ταξινομημένο αλλού παιδί ⇒ 0
+      group('crm', '/crm/leads', '/admin/ai-inbox'),
       // κλάδος που φεύγει ολόκληρος ⇒ 1
-      { href: '/dxf/viewer', subItems: [{ href: '/dxf/viewer/x' }] },
+      link('/dxf/viewer'),
     ];
-    const result = filterItemsByJob(tree, 'clients');
-    expect(result.visible.map((i) => i.href)).toEqual(['/crm']);
-    expect(result.visible[0]?.subItems).toHaveLength(1);
+    const result = filterFixtures(tree, 'clients');
+    expect(result.visible.map(keyOf)).toEqual(['crm']);
+    expect(childHrefs(result.visible[0])).toHaveLength(1);
     expect(result.hiddenCount).toBe(1);
   });
 });
@@ -287,7 +283,7 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
 describe('Μ-4 — /reports: κληρονομιά από την πηγή, όχι ταξινόμηση', () => {
   it('ο γονιός μένει ορατός σε ΚΑΘΕ δουλειά (Ε14.α/Π-14)', () => {
     for (const job of JOB_ORDER) {
-      expect(isRouteVisibleForJob(REPORTS_PARENT_ROUTE, job)).toBe(true);
+      expect(isNodeVisibleForJob(REPORTS_GROUP_ID, job)).toBe(true);
     }
   });
 
@@ -306,17 +302,13 @@ describe('Μ-4 — /reports: κληρονομιά από την πηγή, όχι
   });
 
   it('τα παιδιά κλαδεύονται και μετριούνται μέσα στον γονιό', () => {
-    const parent = {
-      href: REPORTS_PARENT_ROUTE,
-      subItems: Object.keys(REPORT_SOURCES).map((href) => ({ href })),
-    };
-    const result = filterItemsByJob([parent], 'finance');
+    const result = filterFixtures([group(REPORTS_GROUP_ID, ...Object.keys(REPORT_SOURCES))], 'finance');
     expect(result.visible).toHaveLength(1);
     // Δύο από το /accounting (πηγή «Οικονομικά») ΚΑΙ μία από το /projects —
     // που είναι **κοινή** διαδρομή (ο άξονας 2, §14.1/2), άρα ορατή παντού.
     // Αυτό ΕΙΝΑΙ η κληρονομιά: η αναφορά δεν ξέρει τίποτα για δουλειές, ρωτά
     // την πηγή της. Ετικέτα «Οικονομικά» στο /reports/projects θα ήταν το Υ-5.
-    expect(result.visible[0].subItems?.map((s) => s.href)).toEqual([
+    expect(childHrefs(result.visible[0])).toEqual([
       '/reports/financial',
       '/reports/cash-flow',
       '/reports/projects',
@@ -333,7 +325,7 @@ describe('Μ-4 — /reports: κληρονομιά από την πηγή, όχι
     for (const [subRoute, source] of Object.entries(REPORT_SOURCES)) {
       for (const job of JOB_ORDER) {
         const expected =
-          source.kind === 'job' ? source.job === job : isRouteVisibleForJob(source.route, job);
+          source.kind === 'job' ? source.job === job : isNodeVisibleForJob(source.node, job);
         expect(isReportSubItemVisibleForJob(subRoute, job)).toBe(expected);
       }
     }
@@ -369,11 +361,11 @@ describe('§14.2 — πλακίδια της ενεργής δουλειάς', (
 
   it('🔴 ΕΝΑΣ κανόνας για διαδρομές ΚΑΙ πλακίδια — αλλιώς η ίδια οθόνη λέει δύο πράγματα', () => {
     // Το `/legal-documents` είναι το ακριβές σημείο όπου δύο κανόνες θα
-    // αποκλίνανε: ορατό στο sidebar, εξαφανισμένο από την αρχική.
-    expect(LEGAL_DOCUMENTS_STATUS.hasPage).toBe(false);
+    // αποκλίνανε: ορατό στο sidebar, εξαφανισμένο από την αρχική. Σήμερα δεν το
+    // ισχυρίζεται κανείς (ADR-871 §10.6) — ο κανόνας για το αταξινόμητο μένει ΕΝΑΣ.
     for (const job of JOB_ORDER) {
-      expect(isTileVisibleForJob(LEGAL_DOCUMENTS_STATUS.route, job)).toBe(
-        isRouteVisibleForJob(LEGAL_DOCUMENTS_STATUS.route, job),
+      expect(isTileVisibleForJob(LEGAL_DOCUMENTS_STATUS.deadRoute, job)).toBe(
+        isNodeVisibleForJob(LEGAL_DOCUMENTS_STATUS.deadRoute, job),
       );
     }
   });
@@ -393,18 +385,19 @@ describe('§14.2 — πλακίδια της ενεργής δουλειάς', (
 
 describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκει κάπου', () => {
   const ALL_PERMISSIONS = Object.keys(PERMISSIONS);
-  const liveTopLevelRoutes = [
-    ...createMainMenuItems('production', ALL_PERMISSIONS),
-    ...createToolsMenuItems('production', ALL_PERMISSIONS),
-    ...createSettingsMenuItems('production', ALL_PERMISSIONS),
-  ].map((item) => item.href);
+  const liveMenus = () => [
+    ...getMainMenuItems(ALL_PERMISSIONS, 'production'),
+    ...getToolsMenuItems(ALL_PERMISSIONS, 'production'),
+    ...getSettingsMenuItems(ALL_PERMISSIONS, 'production'),
+  ];
+  const liveTopLevelRoutes = liveMenus().map(navNodeKey);
 
   const CLASSIFIED = new Set<string>([
-    ...COMMON_SIDEBAR_ROUTES,
+    ...COMMON_SIDEBAR_NODES,
     ...JOB_ORDER.flatMap((job) => JOBS[job].sidebar),
-    REPORTS_PARENT_ROUTE,
-    // Καταγεγραμμένο σφάλμα, ΟΧΙ στοιχείο του μητρώου (Ε14.ε).
-    LEGAL_DOCUMENTS_STATUS.route,
+    REPORTS_GROUP_ID,
+    // Καταγεγραμμένο κενό επιβολής, ΟΧΙ στοιχείο του μητρώου (Ε14.ε).
+    LEGAL_DOCUMENTS_STATUS.groupId,
   ]);
 
   it('η ζωντανή πλοήγηση δεν είναι κενή (αλλιώς ο έλεγχος είναι ψεύτικος)', () => {
@@ -419,15 +412,15 @@ describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκε
   it('🔴 Η ΖΩΝΤΑΝΗ ΜΕΤΡΗΣΗ: τι μένει όρθιο στα «Οικονομικά»', () => {
     // Το test που θα είχε πιάσει το ελάττωμα των 16:58 πριν φτάσει στην οθόνη:
     // τρέχει πάνω στην ΠΡΑΓΜΑΤΙΚΗ πλοήγηση, όχι σε πλασματικά items.
-    const main = filterItemsByJob(createMainMenuItems('production', ALL_PERMISSIONS), 'finance');
-    const survivors = main.visible.map((item) => item.href);
+    const main = filterLive(getMainMenuItems(ALL_PERMISSIONS, 'production'), 'finance');
+    const survivors = main.visible.map(navNodeKey);
 
-    // Τα κοινά + το εγκάρσιο + η διαδρομή της δουλειάς. Τίποτα άλλο.
-    expect(survivors).toContain('/accounting');
-    expect(survivors).toContain(REPORTS_PARENT_ROUTE);
+    // Τα κοινά + το εγκάρσιο + η ομάδα της δουλειάς. Τίποτα άλλο.
+    expect(survivors).toContain('accounting');
+    expect(survivors).toContain(REPORTS_GROUP_ID);
     expect(survivors).toContain('/projects');
     // Ό,τι ανήκει ρητά σε ΑΛΛΗ δουλειά ΔΕΝ επιβιώνει — ούτε ως άδειο δοχείο.
-    for (const route of ['/spaces', '/sales', '/crm', '/contacts', '/buildings']) {
+    for (const route of ['spaces', 'sales', 'crm', '/contacts', '/buildings']) {
       expect(survivors).not.toContain(route);
     }
   });
@@ -435,13 +428,16 @@ describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκε
   it('και αντίστροφα: κάθε διαδρομή του μητρώου υπάρχει στην πλοήγηση', () => {
     // Πιάνει το ανάποδο σφάλμα: ετικέτα σε διαδρομή που διαγράφηκε ⇒ νεκρό
     // δεδομένο που κανείς δεν θα παρατηρούσε.
-    const live = new Set(
-      [
-        ...createMainMenuItems('production', ALL_PERMISSIONS),
-        ...createToolsMenuItems('production', ALL_PERMISSIONS),
-        ...createSettingsMenuItems('production', ALL_PERMISSIONS),
-      ].flatMap((item) => [item.href, ...(item.subItems ?? []).map((s) => s.href)]),
-    );
+    // 🔑 ADR-871 §10.6 Υ18: το `environments` πλέον ΕΠΙΒΑΛΛΕΤΑΙ — το «Debug» (που το μητρώο
+    // ταξινομεί στη Διαχείριση) ζει μόνο στην ανάπτυξη. Το μητρώο ταξινομεί τον ΚΑΤΑΛΟΓΟ,
+    // όχι την όψη ενός περιβάλλοντος ⇒ «υπάρχει» = σε ΚΑΠΟΙΟ περιβάλλον.
+    const everyEnvironment = [
+      ...liveMenus(),
+      ...getMainMenuItems(ALL_PERMISSIONS, 'development'),
+      ...getToolsMenuItems(ALL_PERMISSIONS, 'development'),
+      ...getSettingsMenuItems(ALL_PERMISSIONS, 'development'),
+    ];
+    const live = new Set(everyEnvironment.flatMap((item) => [navNodeKey(item), ...childHrefs(item)]));
     const dangling = JOB_ORDER.flatMap((job) => JOBS[job].sidebar).filter((r) => !live.has(r));
     expect(dangling).toEqual([]);
   });
@@ -456,14 +452,14 @@ describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκε
   // πράσινη όταν προστεθεί διαδρομή, κόκκινη μόνο αν αλλάξει ο **κανόνας**.
   // ==========================================================================
 
-  const LIVE_MENUS = [createMainMenuItems, createToolsMenuItems, createSettingsMenuItems] as const;
+  const LIVE_MENUS = [getMainMenuItems, getToolsMenuItems, getSettingsMenuItems] as const;
 
   it.each([...JOB_ORDER])(
     '🔑 ο δείκτης ΙΣΟΥΤΑΙ με τους κλάδους που έφυγαν — ποτέ με τα κλαδεμένα παιδιά (%s)',
     (job) => {
       for (const buildMenu of LIVE_MENUS) {
-        const items = buildMenu('production', ALL_PERMISSIONS);
-        const result = filterItemsByJob(items, job);
+        const items = buildMenu(ALL_PERMISSIONS, 'production');
+        const result = filterLive(items, job);
         expect(result.hiddenCount).toBe(items.length - result.visible.length);
       }
     },
@@ -472,12 +468,11 @@ describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκε
   it('🔑 …και το κλάδεμα των παιδιών ΣΥΜΒΑΙΝΕΙ — απλώς δεν μετριέται εκεί', () => {
     // Χωρίς αυτόν τον έλεγχο, η παραπάνω ισότητα θα ήταν πράσινη και σε έναν
     // κώδικα που σταμάτησε να κλαδεύει παιδιά — δηλαδή στο ελάττωμα των 16:58.
-    const main = filterItemsByJob(createMainMenuItems('production', ALL_PERMISSIONS), 'finance');
-    const reports = main.visible.find((item) => item.href === REPORTS_PARENT_ROUTE);
-    const liveReports = createMainMenuItems('production', ALL_PERMISSIONS).find(
-      (item) => item.href === REPORTS_PARENT_ROUTE,
-    );
-    expect(liveReports?.subItems?.length).toBeGreaterThan(reports?.subItems?.length ?? 0);
+    const live = getMainMenuItems(ALL_PERMISSIONS, 'production');
+    const main = filterLive(live, 'finance');
+    const reports = main.visible.find((item) => navNodeKey(item) === REPORTS_GROUP_ID);
+    const liveReports = live.find((item) => navNodeKey(item) === REPORTS_GROUP_ID);
+    expect(childHrefs(liveReports).length).toBeGreaterThan(childHrefs(reports).length);
   });
 
   it('η μετρημένη τιμή των «Οικονομικών» είναι 9 — ο αριθμός του στιγμιότυπου, συν τον κατάλογο', () => {

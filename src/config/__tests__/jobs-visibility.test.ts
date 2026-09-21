@@ -13,30 +13,39 @@
  * **ακριβώς** η ένωση των δύο αριθμών (22 = 9 κλάδοι + 13 υπο-στοιχεία). Η
  * Φάση 3.6 φέρνει τον δεύτερο αριθμό **πίσω στην οθόνη** — άρα φέρνει και τον
  * πειρασμό να ξανα-προστεθεί. Το Μ-9 κοκκινίζει την ημέρα που θα συμβεί.
+ *
+ * ADR-871 §10.6 (2026-09-21): ο κατάλογος μιλά **σύνδεσμο | ομάδα** — η ομάδα έχει
+ * `id`, όχι διεύθυνση. Τα στημένα δέντρα έρχονται από το `helpers/nav-node-fixtures`.
  */
 
 import { PERMISSIONS } from '@/lib/auth/types';
+import type { MenuGroup, MenuLink } from '@/types/sidebar';
 import {
-  createMainMenuItems,
-  createToolsMenuItems,
-  createSettingsMenuItems,
-} from '../smart-navigation-factory';
+  getMainMenuItems,
+  getToolsMenuItems,
+  getSettingsMenuItems,
+} from '../office-navigation/resolve-office-navigation';
+import { navNodeKey } from '../navigation-node';
 import { JOB_ORDER } from '../jobs-registry';
-import { JOB_ALL } from '../jobs-access';
+import { JOB_ALL, type JobSelection } from '../jobs-access';
 import {
-  REPORTS_PARENT_ROUTE,
+  REPORTS_GROUP_ID,
   filterItemsByJob,
   filterTilesByJob,
   summarizeHidden,
 } from '../jobs-visibility';
+import { childHrefs, filterFixtures, group, keyOf, link } from './helpers/nav-node-fixtures';
 
 const ALL_PERMISSIONS = Object.keys(PERMISSIONS);
-const LIVE_MENUS = [createMainMenuItems, createToolsMenuItems, createSettingsMenuItems] as const;
+const LIVE_MENUS = [getMainMenuItems, getToolsMenuItems, getSettingsMenuItems] as const;
 
 /** Τα τρία ζωντανά μενού, όπως τα χτίζει η πραγματική πλοήγηση. */
 function liveMenus() {
-  return LIVE_MENUS.map((build) => build('production', ALL_PERMISSIONS));
+  return LIVE_MENUS.map((build) => build(ALL_PERMISSIONS, 'production'));
 }
+
+const filterLive = (items: readonly (MenuLink | MenuGroup)[], job: JobSelection) =>
+  filterItemsByJob<MenuLink, MenuGroup>(items, job);
 
 // ============================================================================
 // Μ-8 — ΤΟ ΦΙΛΤΡΟ ΔΕΝ ΠΕΤΑΕΙ Ο,ΤΙ ΚΟΒΕΙ
@@ -50,9 +59,9 @@ describe('Μ-8 — τα κρυμμένα είναι ανακτήσιμα, όχι
     '🔑 visible ∪ hidden = η είσοδος, χωρίς επικάλυψη και χωρίς απώλεια (%s)',
     (job) => {
       for (const items of liveMenus()) {
-        const result = filterItemsByJob(items, job);
-        const seen = [...result.visible, ...result.hidden].map((item) => item.href);
-        expect(seen.slice().sort()).toEqual(items.map((item) => item.href).sort());
+        const result = filterLive(items, job);
+        const seen = [...result.visible, ...result.hidden].map(navNodeKey);
+        expect(seen.slice().sort()).toEqual(items.map(navNodeKey).sort());
         expect(new Set(seen).size).toBe(items.length);
       }
     },
@@ -64,37 +73,43 @@ describe('Μ-8 — τα κρυμμένα είναι ανακτήσιμα, όχι
     // απόκλιση παύει να είναι εκφράσιμη — δεν φυλάσσεται από σύμβαση.
     for (const job of [...JOB_ORDER, JOB_ALL]) {
       for (const items of liveMenus()) {
-        const result = filterItemsByJob(items, job);
+        const result = filterLive(items, job);
         expect(result.hiddenCount).toBe(result.hidden.length);
       }
     }
   });
 
-  it('τα κλαδεμένα παιδιά ΟΡΑΤΩΝ γονέων κρατιούνται με κλειδί τον γονιό τους', () => {
-    const branch = [
-      { href: '/crm', subItems: [{ href: '/crm/leads' }, { href: '/admin/ai-inbox' }] },
-    ];
-    const result = filterItemsByJob(branch, 'clients');
-    expect(result.hiddenSubItems.get('/crm')?.map((s) => s.href)).toEqual(['/admin/ai-inbox']);
-    // …και ΔΕΝ μετρήθηκαν στον δείκτη: ο γονιός είναι στη θέση του (Ε14.ιβ).
+  it('τα κλαδεμένα παιδιά ΟΡΑΤΩΝ ομάδων κρατιούνται με κλειδί το `id` της ομάδας', () => {
+    const result = filterFixtures([group('crm', '/crm/leads', '/admin/ai-inbox')], 'clients');
+    expect(result.hiddenSubItems.get('crm')?.map((s) => s.href)).toEqual(['/admin/ai-inbox']);
+    // …και ΔΕΝ μετρήθηκαν στον δείκτη: η ομάδα είναι στη θέση της (Ε14.ιβ).
     expect(result.hiddenCount).toBe(0);
   });
 
   it('ο κλάδος που φεύγει ΟΛΟΚΛΗΡΟΣ μπαίνει στο `hidden` με τα παιδιά του άθικτα', () => {
     // Η «Αποκάλυψη» πρέπει να τον ξαναδείξει **ολόκληρο**, όχι ακρωτηριασμένο.
-    const branch = [
-      { href: '/spaces', subItems: [{ href: '/spaces/properties' }, { href: '/spaces/parking' }] },
-    ];
-    const result = filterItemsByJob(branch, 'finance');
+    const result = filterFixtures([group('spaces', '/spaces/properties', '/spaces/parking')], 'finance');
     expect(result.visible).toEqual([]);
     expect(result.hidden).toHaveLength(1);
-    expect(result.hidden[0]?.subItems).toHaveLength(2);
+    expect(childHrefs(result.hidden[0])).toHaveLength(2);
+    expect(result.hiddenSubItems.size).toBe(0);
+  });
+
+  it('🔑 Υ19 — ορατή ομάδα που ΑΔΕΙΑΣΕ μετρά στα κρυμμένα (όχι κενό κουμπί, όχι σιωπή)', () => {
+    // Αταξινόμητη ⇒ ορατή (Ε14.θ), αλλά ΚΑΘΕ παιδί της ανήκει αλλού ⇒ δεν έχει τι να δείξει.
+    // Στα `visible` θα ήταν κουμπί που ανοίγει το τίποτα· χαμένη σιωπηλά, ο δείκτης «Χ
+    // κρυμμένα» θα έλεγε ψέματα. Πηγαίνει στα `hidden` — ανακτήσιμη στην «Αποκάλυψη».
+    // ⛔ ΜΕΤΑΛΛΑΞΗ: κράτα την ομάδα με `items: []` αντί για `withGroupItems` ⇒ κόκκινο.
+    const result = filterFixtures([group('x', '/contacts', '/listings/mandates')], 'finance');
+    expect(result.visible).toEqual([]);
+    expect(result.hidden.map(keyOf)).toEqual(['x']);
+    expect(result.hiddenCount).toBe(1);
     expect(result.hiddenSubItems.size).toBe(0);
   });
 
   it('«Όλα» ⇒ τίποτα κρυμμένο, σε κανένα από τα τρία πεδία', () => {
     for (const items of liveMenus()) {
-      const result = filterItemsByJob(items, JOB_ALL);
+      const result = filterLive(items, JOB_ALL);
       expect(result.visible).toBe(items);
       expect(result.hidden).toEqual([]);
       expect(result.hiddenSubItems.size).toBe(0);
@@ -117,7 +132,7 @@ describe('Μ-8 — τα κρυμμένα είναι ανακτήσιμα, όχι
 
 describe('Μ-9 — ο δείκτης της κεφαλίδας μένει ΑΝΑΓΝΩΣΙΜΟΣ (Ε14.ιβ/Ε14.ιγ)', () => {
   const financeSummary = () =>
-    summarizeHidden(liveMenus().map((items) => filterItemsByJob(items, 'finance')));
+    summarizeHidden(liveMenus().map((items) => filterLive(items, 'finance')));
 
   it('🔴 τα «Οικονομικά» δίνουν 9 κλάδους — ο αριθμός του ανθρώπου, συν τον κατάλογο', () => {
     // Το ένα καρφωμένο νούμερο, επίτηδες (§14.6.3): αν αλλάξει, κάποιος άλλαξε
@@ -133,23 +148,25 @@ describe('Μ-9 — ο δείκτης της κεφαλίδας μένει ΑΝΑ
     //   Σχέδιο 7→**8** · Εργοτάξιο 7→**8** · Πελάτες 5→**5** (ορατό εκεί, δεν μετριέται)
     //   Οικονομικά 8→**9** · Προμήθειες 8→**9** · Διαχείριση 9→**10**
     // ⚠️ Το **9** είναι **υπολογισμένο**, όχι ιδωμένο· ο δεύτερος μάρτυρας λείπει.
+    // ✅ 2026-09-21 (ADR-871 §10.6): **αμετάβλητο** μετά τη μετάβαση γονιός → ομάδα — οι
+    //    ομάδες ταξινομούνται με το `id` τους ένα-προς-ένα με τις παλιές διαδρομές.
     expect(financeSummary().hiddenCount).toBe(9);
   });
 
-  it('🔑 …και τα υπο-στοιχεία μετριούνται ΧΩΡΙΣΤΑ — 9 + 13 δεν γίνεται ποτέ 22', () => {
+  it('🔑 …και τα υπο-στοιχεία μετριούνται ΧΩΡΙΣΤΑ — 9 + 12 δεν γίνεται ποτέ 21', () => {
     // Αυτό ΕΙΝΑΙ το ελάττωμα των 17:13, γραμμένο ως anchor. Η ημέρα που κάποιος
     // «απλοποιήσει» ενώνοντας τους δύο αριθμούς, εδώ γίνεται κόκκινο.
     const summary = financeSummary();
-    // Τα **13** της ανάλυσης του §14.6.2 — 7 στο `/reports`, 6 admin στο
-    // `/settings`. Είναι ο αριθμός που **έλειπε** από τον δείκτη μετά τη
-    // διόρθωση των 17:13, και ο λόγος ύπαρξης ολόκληρης της Φάσης 3.6.
-    // ⚠️ Τα **13** ΔΕΝ κουνήθηκαν από το κλείσιμο της πόρτας (ADR-777 §Α4) — το
-    // `/geo/canvas` ήταν **φύλλο**, χωρίς υπο-στοιχεία. Ο ένας αριθμός άλλαξε και ο
-    // άλλος όχι· αυτό **είναι** η απόδειξη ότι μετριούνται χωριστά.
-    // ⚠️ Τα **13** ΔΕΝ κουνήθηκαν ούτε από τον κατάλογο εντολών (§8.34) — είναι κι
-    // αυτός **φύλλο**, χωρίς υπο-στοιχεία. Δεύτερη φορά που ο ένας αριθμός αλλάζει
-    // και ο άλλος όχι: **είναι** η απόδειξη ότι μετριούνται χωριστά.
-    expect(summary.hiddenSubItemCount).toBe(13);
+    // Ήταν τα **13** του §14.6.2 — 7 στις αναφορές, 6 admin στις ρυθμίσεις. Ο αριθμός
+    // που **έλειπε** από τον δείκτη μετά τη διόρθωση των 17:13, ο λόγος της Φάσης 3.6.
+    // ⚠️ Δεν κουνήθηκε ούτε από το κλείσιμο της πόρτας (ADR-777 §Α4) ούτε από τον
+    // κατάλογο εντολών (§8.34): και τα δύο ήταν **φύλλα**. Ο ένας αριθμός αλλάζει και ο
+    // άλλος όχι — **αυτό είναι** η απόδειξη ότι μετριούνται χωριστά.
+    // 🔴 ΑΛΛΑΞΕ 2026-09-21: **13 → 12** (ADR-871 §10.6 Υ18). Ένα από τα 6 admin των
+    //    ρυθμίσεων ήταν το «Debug», δηλωμένο `environments: ['development']` που ΔΕΝ
+    //    επιβαλλόταν — εμφανιζόταν στην παραγωγή. Πλέον επιβάλλεται, και το ζωντανό μενού
+    //    εδώ είναι `'production'`. Οι κλάδοι (9) δεν κουνήθηκαν — τρίτη φορά.
+    expect(summary.hiddenSubItemCount).toBe(12);
     expect(summary.hiddenCount).toBe(9);
     // …και το άθροισμά τους ΔΕΝ είναι ο δείκτης. Αυτό ήταν το 22.
     expect(summary.hiddenCount).not.toBe(summary.hiddenCount + summary.hiddenSubItemCount);
@@ -161,11 +178,11 @@ describe('Μ-9 — ο δείκτης της κεφαλίδας μένει ΑΝΑ
     expect(sum).toBe(summary.hiddenSubItemCount);
   });
 
-  it('🔑 το `/reports` δηλώνει κρυμμένα παιδιά — εκεί ζει το Επίπεδο 2', () => {
-    // Ο εγκάρσιος γονιός μένει ΠΑΝΤΑ ορατός (Ε14.α) ενώ τα παιδιά του
-    // κληρονομούν (Ε14.β). Είναι το κατεξοχήν δοχείο που «έχασε χωρίς να λείπει».
+  it('🔑 η ομάδα `reports` δηλώνει κρυμμένα παιδιά — εκεί ζει το Επίπεδο 2', () => {
+    // Η εγκάρσια ομάδα μένει ΠΑΝΤΑ ορατή (Ε14.α) ενώ τα παιδιά της κληρονομούν
+    // (Ε14.β). Είναι το κατεξοχήν δοχείο που «έχασε χωρίς να λείπει».
     const summary = financeSummary();
-    expect(summary.hiddenSubItemCountByParent.get(REPORTS_PARENT_ROUTE)).toBeGreaterThan(0);
+    expect(summary.hiddenSubItemCountByParent.get(REPORTS_GROUP_ID)).toBeGreaterThan(0);
   });
 });
 
@@ -174,32 +191,30 @@ describe('Μ-9 — ο δείκτης της κεφαλίδας μένει ΑΝΑ
 // ============================================================================
 
 describe('Μ-10 — summarizeHidden: μία ένωση, δύο επίπεδα', () => {
-  it('🔑 το `hiddenHrefs` περιέχει ΚΑΙ κλάδους ΚΑΙ υπο-στοιχεία', () => {
+  it('🔑 το `hiddenKeys` περιέχει ΚΑΙ κλάδους ΚΑΙ υπο-στοιχεία', () => {
     // Το Επίπεδο 3 υποβαθμίζει οπτικά ό,τι έκρυψε το φίλτρο, σε **οποιοδήποτε**
     // επίπεδο. Αν το σύνολο κάλυπτε μόνο το ένα, η «Αποκάλυψη» θα έδειχνε
     // κάποια στοιχεία κανονικά — δηλαδή θα έλεγε ψέματα για το τι έλειπε.
-    const result = filterItemsByJob(
-      [
-        { href: '/crm', subItems: [{ href: '/crm/leads' }, { href: '/admin/ai-inbox' }] },
-        { href: '/dxf/viewer' },
-      ],
+    const result = filterFixtures(
+      [group('crm', '/crm/leads', '/admin/ai-inbox'), link('/dxf/viewer')],
       'clients',
     );
     const summary = summarizeHidden([result]);
-    expect(summary.hiddenHrefs.has('/dxf/viewer')).toBe(true); // κλάδος
-    expect(summary.hiddenHrefs.has('/admin/ai-inbox')).toBe(true); // υπο-στοιχείο
-    expect(summary.hiddenHrefs.has('/crm')).toBe(false); // ορατός γονιός
+    expect(summary.hiddenKeys.has('/dxf/viewer')).toBe(true); // κλάδος
+    expect(summary.hiddenKeys.has('/admin/ai-inbox')).toBe(true); // υπο-στοιχείο
+    expect(summary.hiddenKeys.has('crm')).toBe(false); // ορατή ομάδα
     expect(summary.hiddenCount).toBe(1);
     expect(summary.hiddenSubItemCount).toBe(1);
   });
 
-  it('αθροίζει και τα τρία μενού χωρίς να χάσει δοχείο με ίδιο href', () => {
-    const a = filterItemsByJob([{ href: '/x', subItems: [{ href: '/spaces' }] }], 'finance');
-    const b = filterItemsByJob([{ href: '/x', subItems: [{ href: '/sales' }] }], 'finance');
+  it('αθροίζει και τα τρία μενού χωρίς να χάσει δοχείο με ίδιο id', () => {
+    // Η `x` είναι αταξινόμητη ⇒ ορατή (Ε14.θ)· το κοινό `/files` την κρατά, ενώ τα
+    // `/contacts` και `/listings/mandates` ανήκουν στους Πελάτες ⇒ κλαδεύονται. Το
+    // κλειδί είναι το ίδιο: πρέπει να **προστεθούν**.
+    const a = filterFixtures([group('x', '/files', '/contacts')], 'finance');
+    const b = filterFixtures([group('x', '/files', '/listings/mandates')], 'finance');
     const summary = summarizeHidden([a, b]);
-    // Το `/x` είναι αταξινόμητο ⇒ ορατό (Ε14.θ)· τα δύο παιδιά του ανήκουν
-    // αλλού ⇒ κλαδεύονται. Το κλειδί είναι το ίδιο: πρέπει να **προστεθούν**.
-    expect(summary.hiddenSubItemCountByParent.get('/x')).toBe(2);
+    expect(summary.hiddenSubItemCountByParent.get('x')).toBe(2);
     expect(summary.hiddenSubItemCount).toBe(2);
   });
 
@@ -207,7 +222,7 @@ describe('Μ-10 — summarizeHidden: μία ένωση, δύο επίπεδα', 
     const summary = summarizeHidden([]);
     expect(summary.hiddenCount).toBe(0);
     expect(summary.hiddenSubItemCount).toBe(0);
-    expect(summary.hiddenHrefs.size).toBe(0);
+    expect(summary.hiddenKeys.size).toBe(0);
     expect(summary.hiddenSubItemCountByParent.size).toBe(0);
   });
 });

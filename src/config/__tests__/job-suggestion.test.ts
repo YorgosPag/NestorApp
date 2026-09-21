@@ -13,10 +13,11 @@
  *   Σ-6  Το άθροισμα κλείνει: `visible + hidden = total`
  */
 
-import { createMainMenuItems, createToolsMenuItems, createSettingsMenuItems } from '../smart-navigation-factory';
+import { getMainMenuItems, getToolsMenuItems, getSettingsMenuItems } from '../office-navigation/resolve-office-navigation';
+import { filterFixtures, link, type NavFixture } from './helpers/nav-node-fixtures';
 import { JOBS, JOB_ORDER, type JobId } from '../jobs-registry';
 import { JOB_ALL, decideJobAccess, pickDefaultJob, resolveAvailableJobs, type JobAccessInput } from '../jobs-access';
-import { filterItemsByJob, summarizeHidden, type JobFilterableItem } from '../jobs-visibility';
+import { summarizeHidden } from '../jobs-visibility';
 import { MIN_JOBS_FOR_SUGGESTION, computeJobSuggestion } from '../job-suggestion';
 import {
   ISCO_JOB_AFFINITY,
@@ -44,12 +45,12 @@ function access(overrides: Partial<JobAccessInput> = {}): JobAccessInput {
  * πράσινα ενώ η αληθινή πλοήγηση σπάει (Ε14.θ/Ε14.ια — δύο ελαττώματα που
  * **κανένα** test δεν έβλεπε). Ο έλεγχος πρέπει να ρωτά ό,τι ρωτά η οθόνη.
  */
-function realMenus(permissions: readonly string[]): readonly (readonly JobFilterableItem[])[] {
+function realMenus(permissions: readonly string[]): readonly (readonly NavFixture[])[] {
   const list = [...permissions];
   return [
-    createMainMenuItems('production', list),
-    createToolsMenuItems('production', list),
-    createSettingsMenuItems('production', list),
+    getMainMenuItems(list, 'production'),
+    getToolsMenuItems(list, 'production'),
+    getSettingsMenuItems(list, 'production'),
   ];
 }
 
@@ -192,7 +193,7 @@ describe('Σ-4 — καμία πρόταση χωρίς αποτέλεσμα', (
       access: BYPASS,
       activeJob: JOB_ALL,
       dismissed: false,
-      menus: [[{ href: '/projects' }, { href: '/properties' }, { href: '/files' }]],
+      menus: [[link('/projects'), link('/properties'), link('/files')]],
     });
     expect(outcome).toBeNull();
   });
@@ -215,7 +216,7 @@ describe('Σ-5 — ο αριθμός είναι ο ΙΔΙΟΣ με το πραγ
 
     // Ο ΙΔΙΟΣ υπολογισμός που τρέχει το `useJobFilteredNavigation` αφού δεχτεί.
     const menus = realMenus(BYPASS.permissions);
-    const results = menus.map((items) => filterItemsByJob(items, outcome!.job));
+    const results = menus.map((items) => filterFixtures(items, outcome!.job));
     const { hiddenCount } = summarizeHidden(results);
     const visibleFromFilter = results.reduce((sum, r) => sum + r.visible.length, 0);
 

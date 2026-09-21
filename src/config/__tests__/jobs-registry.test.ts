@@ -17,19 +17,20 @@
 import { PERMISSIONS } from '@/lib/auth/types';
 import {
   COMMON_DASHBOARD_TILES,
-  COMMON_SIDEBAR_ROUTES,
+  COMMON_SIDEBAR_NODES,
   JOBS,
   JOB_ORDER,
   LEGAL_DOCUMENTS_STATUS,
   REPORT_SOURCES,
   type JobId,
 } from '../jobs-registry';
+import { OFFICE_GROUP_IDS } from '../office-navigation/catalog-types';
 
 const ALL_JOBS = JOB_ORDER.map((id) => JOBS[id]);
 
-/** Κάθε διαδρομή που το μητρώο ταξινομεί (κοινή ή δουλειάς). */
-const ALL_KNOWN_ROUTES = new Set<string>([
-  ...COMMON_SIDEBAR_ROUTES,
+/** Κάθε κόμβος που το μητρώο ταξινομεί (κοινός ή δουλειάς) — ομάδα με `id`, σύνδεσμος με διαδρομή. */
+const ALL_KNOWN_NODES = new Set<string>([
+  ...COMMON_SIDEBAR_NODES,
   ...ALL_JOBS.flatMap((job) => job.sidebar),
 ]);
 
@@ -146,7 +147,7 @@ describe('ετικέτες ορατότητας — καμία επικάλυψ�
   it('καμία δουλειά δεν ξαναδηλώνει κοινή διαδρομή', () => {
     for (const job of ALL_JOBS) {
       for (const route of job.sidebar) {
-        expect(COMMON_SIDEBAR_ROUTES).not.toContain(route);
+        expect(COMMON_SIDEBAR_NODES).not.toContain(route);
       }
     }
   });
@@ -159,9 +160,12 @@ describe('ετικέτες ορατότητας — καμία επικάλυψ�
     }
   });
 
-  it('κάθε διαδρομή είναι απόλυτη (ξεκινά με «/»)', () => {
-    for (const route of [...COMMON_SIDEBAR_ROUTES, ...ALL_JOBS.flatMap((j) => j.sidebar)]) {
-      expect(route.startsWith('/')).toBe(true);
+  it('κάθε κλειδί είναι ΕΙΤΕ απόλυτη διαδρομή συνδέσμου ΕΙΤΕ γνωστή ομάδα (ADR-871 §10.6 Υ14)', () => {
+    // Η ομάδα δεν έχει διαδρομή· το `id` της είναι κλειστή ένωση χωρίς «/», άρα τα δύο
+    // είδη κλειδιών δεν μπορούν να συγχυστούν. Τρίτο είδος εδώ = τυπογραφικό λάθος.
+    const groups: readonly string[] = OFFICE_GROUP_IDS;
+    for (const key of [...COMMON_SIDEBAR_NODES, ...ALL_JOBS.flatMap((j) => j.sidebar)]) {
+      expect({ key, ok: key.startsWith('/') || groups.includes(key) }).toEqual({ key, ok: true });
     }
   });
 
@@ -181,7 +185,7 @@ describe('ετικέτες ορατότητας — καμία επικάλυψ�
   });
 });
 
-describe('🔴 /legal-documents — νεκρός σύνδεσμος, ΕΚΤΟΣ μητρώου (απόφαση 2026-08-02)', () => {
+describe('🔴 /legal-documents — νεκρή διαδρομή, ΕΚΤΟΣ μητρώου (απόφαση 2026-08-02)', () => {
   it('δεν εμφανίζεται σε καμία δουλειά', () => {
     for (const job of ALL_JOBS) {
       expect(job.sidebar).not.toContain('/legal-documents');
@@ -190,23 +194,30 @@ describe('🔴 /legal-documents — νεκρός σύνδεσμος, ΕΚΤΟΣ 
   });
 
   it('δεν εμφανίζεται ούτε στα κοινά', () => {
-    expect(COMMON_SIDEBAR_ROUTES).not.toContain('/legal-documents');
+    expect(COMMON_SIDEBAR_NODES).not.toContain('/legal-documents');
     expect(COMMON_DASHBOARD_TILES).not.toContain('legal-documents');
   });
 
   it('το ζωντανό παιδί του («/obligations») είναι κοινό σε όλες', () => {
-    expect(COMMON_SIDEBAR_ROUTES).toContain(LEGAL_DOCUMENTS_STATUS.livingChildRoute);
+    expect(COMMON_SIDEBAR_NODES).toContain(LEGAL_DOCUMENTS_STATUS.livingChildRoute);
   });
 
-  it('η κατάσταση παραμένει καταγεγραμμένη ως ανοιχτό κενό, όχι λυμένη', () => {
-    expect(LEGAL_DOCUMENTS_STATUS.hasPage).toBe(false);
+  it('η στήλη το έχει ως ΟΜΑΔΑ χωρίς διαδρομή — το κενό επιβολής μένει ανοιχτό', () => {
+    // ADR-871 §10.6: ο γονιός «Νομικά» ήταν `href: '/legal-documents'` (σελίδα που δεν
+    // υπάρχει). Πλέον ομάδα `legal` — η μισή κατάσταση λύθηκε, η άλλη μισή (τα `legal:*`
+    // δεν επιβάλλονται) ΟΧΙ, και μένει καταγεγραμμένη.
+    const groups: readonly string[] = OFFICE_GROUP_IDS;
+    expect(groups).toContain(LEGAL_DOCUMENTS_STATUS.groupId);
     expect(LEGAL_DOCUMENTS_STATUS.enforced).toBe(false);
   });
 });
 
 describe('αναφορές — κληρονομιά από την πηγή, ΠΟΤΕ αντιγραμμένη ετικέτα (Υ-5)', () => {
-  it('ο γονιός «/reports» δεν ανήκει σε καμία δουλειά (ορατός σε όλες)', () => {
-    for (const job of ALL_JOBS) expect(job.sidebar).not.toContain('/reports');
+  it('η ομάδα «reports» δεν ανήκει σε καμία δουλειά (ορατή σε όλες)', () => {
+    for (const job of ALL_JOBS) {
+      expect(job.sidebar).not.toContain('reports');
+      expect(job.sidebar).not.toContain('/reports');
+    }
     expect(REPORT_SOURCES['/reports']).toBeUndefined();
   });
 
@@ -216,10 +227,10 @@ describe('αναφορές — κληρονομιά από την πηγή, ΠΟ
     }
   });
 
-  it('κάθε αναφορά που κληρονομεί από διαδρομή δείχνει σε διαδρομή που ΥΠΑΡΧΕΙ', () => {
+  it('κάθε αναφορά που κληρονομεί από κόμβο δείχνει σε κόμβο που ΥΠΑΡΧΕΙ', () => {
     for (const [report, source] of Object.entries(REPORT_SOURCES)) {
-      if (source.kind !== 'route') continue;
-      expect({ report, known: ALL_KNOWN_ROUTES.has(source.route) })
+      if (source.kind !== 'node') continue;
+      expect({ report, known: ALL_KNOWN_NODES.has(source.node) })
         .toEqual({ report, known: true });
     }
   });
@@ -237,7 +248,7 @@ describe('αναφορές — κληρονομιά από την πηγή, ΠΟ
     }
   });
 
-  it('καλύπτονται και τα δέκα υπο-στοιχεία του smart-navigation-factory', () => {
+  it('καλύπτονται και τα δέκα υπο-στοιχεία του καταλόγου (office-navigation)', () => {
     const expected = [
       'financial', 'projects', 'sales', 'contacts', 'crm',
       'spaces', 'construction', 'compliance', 'export', 'cash-flow',

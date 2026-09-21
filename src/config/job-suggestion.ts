@@ -53,7 +53,8 @@ import {
   type JobAccessInput,
   type JobSelection,
 } from './jobs-access';
-import { filterItemsByJob, summarizeHidden, type JobFilterableItem } from './jobs-visibility';
+import { filterItemsByJob, summarizeHidden } from './jobs-visibility';
+import type { NavGroupNode, NavLinkNode } from './navigation-node';
 import type { JobId } from './jobs-registry';
 
 // =============================================================================
@@ -68,7 +69,7 @@ import type { JobId } from './jobs-registry';
  */
 export const MIN_JOBS_FOR_SUGGESTION = 2;
 
-export interface JobSuggestionInput<T extends JobFilterableItem & { readonly subItems?: readonly T[] }> {
+export interface JobSuggestionInput {
   /** Η **ίδια** είσοδος με τον ζωντανό υπολογισμό (Ε5.α) — ποτέ αποθηκευμένη. */
   readonly access: JobAccessInput;
   /** Η ενεργή δουλειά **τώρα**. Πρόταση υπάρχει μόνο όσο δεν έχει διαλέξει. */
@@ -94,7 +95,7 @@ export interface JobSuggestionInput<T extends JobFilterableItem & { readonly sub
    * καθαρό (μηδέν εξάρτηση από `navigation`/React) και ο έλεγχος μπορεί να
    * περάσει στημένα δέντρα.
    */
-  readonly menus: readonly (readonly T[])[];
+  readonly menus: readonly (readonly (NavLinkNode | NavGroupNode)[])[];
 }
 
 /**
@@ -140,8 +141,8 @@ export interface JobSuggestionOutcome {
  * Χωριστά από το μέτρημα επίτηδες: το φιλτράρισμα τρέχει σε τρία δέντρα και
  * είναι το ακριβό μέρος — δεν έχει νόημα να τρέξει για να απορριφθεί μετά.
  */
-function findSuggestableJob<T extends JobFilterableItem & { readonly subItems?: readonly T[] }>(
-  input: JobSuggestionInput<T>,
+function findSuggestableJob(
+  input: JobSuggestionInput,
 ): JobId | null {
   if (input.dismissed) return null;
   // Έχει ήδη διαλέξει ⇒ η πρόταση θα ήταν δεύτερη γνώμη σε απόφαση που πάρθηκε.
@@ -217,8 +218,8 @@ function findSuggestableJob<T extends JobFilterableItem & { readonly subItems?: 
  * There!» του Revit. Απαντιέται **μόνο** με πραγματικό φιλτράρισμα, γι' αυτό
  * μπαίνει τελευταία.
  */
-export function computeJobSuggestion<T extends JobFilterableItem & { readonly subItems?: readonly T[] }>(
-  input: JobSuggestionInput<T>,
+export function computeJobSuggestion(
+  input: JobSuggestionInput,
 ): JobSuggestionOutcome | null {
   const job = findSuggestableJob(input);
   if (job === null) return null;
@@ -234,7 +235,7 @@ export function computeJobSuggestion<T extends JobFilterableItem & { readonly su
   const withoutSignal = input.access.isBypass ? null : pickDefaultJob(input.access, null);
   const basis: JobSuggestionBasis = withoutSignal === job ? 'permissions' : 'occupation';
 
-  const results = input.menus.map((items) => filterItemsByJob(items, job));
+  const results = input.menus.map((items) => filterItemsByJob<NavLinkNode, NavGroupNode>(items, job));
   const { hiddenCount } = summarizeHidden(results);
   if (hiddenCount === 0) return null;
 

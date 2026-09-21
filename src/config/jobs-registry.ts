@@ -32,6 +32,7 @@
  */
 
 import type { PermissionId } from '@/lib/auth/types';
+import type { SidebarNodeKey } from '@/config/office-navigation/catalog-types';
 
 // =============================================================================
 // ΤΑΥΤΟΤΗΤΑ
@@ -68,8 +69,11 @@ export type JobId =
  * η ετικέτα του `/reports/sales` μένει πίσω και **αποκλίνει σιωπηλά**.
  */
 export type ReportSource =
-  /** Κληρονομεί ό,τι ισχύει για αυτή τη διαδρομή (η συνήθης περίπτωση). */
-  | { readonly kind: 'route'; readonly route: string }
+  /**
+   * Κληρονομεί ό,τι ισχύει για αυτόν τον **κόμβο** της στήλης (η συνήθης περίπτωση) —
+   * ομάδα με το `id` της, σύνδεσμος με τη διαδρομή του (ADR-871 §10.6 Υ14).
+   */
+  | { readonly kind: 'node'; readonly node: SidebarNodeKey }
   /** Κληρονομεί από δουλειά — μόνο όπου δεν υπάρχει διαδρομή-πηγή. */
   | { readonly kind: 'job'; readonly job: JobId };
 
@@ -94,8 +98,13 @@ export interface JobDefinition {
    * επαναμέτρηση στο `lib/auth/roles.ts` — μην την κάνεις «με το μάτι».
    */
   readonly permissions: readonly PermissionId[];
-  /** Στοιχεία sidebar **αποκλειστικά** αυτής της δουλειάς (§14.1). */
-  readonly sidebar: readonly string[];
+  /**
+   * Κόμβοι sidebar **αποκλειστικά** αυτής της δουλειάς (§14.1). Ομάδα = το `id` της
+   * (`'crm'`), σύνδεσμος = η διαδρομή του (ADR-871 §10.6 Υ14): η ομάδα **δεν έχει**
+   * διαδρομή. Κάθε κλειδί **υπάρχει** στον κατάλογο — το ελέγχει το
+   * `office-navigation-integrity.test.ts`.
+   */
+  readonly sidebar: readonly SidebarNodeKey[];
   /** Πλακίδια dashboard **αποκλειστικά** αυτής της δουλειάς (§14.2). */
   readonly dashboardTiles: readonly string[];
   /**
@@ -112,8 +121,9 @@ export interface JobDefinition {
 // =============================================================================
 
 /**
- * Ορατά σε κάθε δουλειά. Δεν είναι «αταξινόμητα» — είναι το **πλαίσιο**:
- *  • `/dashboard` `/projects` `/properties` `/files` `/settings` → §14.1 (1-4, 15)
+ * Ορατοί σε κάθε δουλειά **κόμβοι** της στήλης (ομάδα = `id`, σύνδεσμος = διαδρομή —
+ * ADR-871 §10.6 Υ14). Δεν είναι «αταξινόμητοι» — είναι το **πλαίσιο**:
+ *  • `/dashboard` `/projects` `/properties` `/files` + ομάδα `settings` → §14.1 (1-4, 15)
  *  • `/dashboard` **αντικατέστησε** το `/` (ADR-777 §8.13, `4cfe274e`): η αρχική του
  *    συνδεδεμένου μετακόμισε και το `/` έγινε **δημόσια** οθόνη αναζήτησης. Το μενού
  *    εκπέμπει `AUTH_ROUTES.home` και **ωμό `/` δεν εκπέμπει πουθενά** — άρα η παλιά
@@ -125,12 +135,12 @@ export interface JobDefinition {
  *    (ADR-871 §10.5 Υ12). Όπως το `/projects`, είναι **πλαίσιο** — ο χάρτης του χώρου,
  *    όχι περιεχόμενο μιας δουλειάς. Ήταν ωμό `<a>` εκτός καταλόγου, άρα εκτός φίλτρου.
  */
-export const COMMON_SIDEBAR_ROUTES: readonly string[] = [
+export const COMMON_SIDEBAR_NODES: readonly SidebarNodeKey[] = [
   '/dashboard',
   '/projects',
   '/properties',
   '/files',
-  '/settings',
+  'settings',
   '/obligations',
   '/navigation',
 ] as const;
@@ -248,7 +258,7 @@ export const JOBS: Readonly<Record<JobId, JobDefinition>> = {
     // εντολή είναι σχέση με άνθρωπο (ποιος ενέκρινε, ποιος δεν απάντησε), όχι
     // διαχείριση κτίσματος. Χωρίς αυτή τη γραμμή η διαδρομή θα ήταν **αταξινόμητη**
     // και η άγκυρα Μ-5 (πύλη Υ-4) θα κοκκίνιζε — σωστά.
-    sidebar: ['/spaces', '/sales', '/crm', '/contacts', '/listings/mandates'],
+    sidebar: ['spaces', 'sales', 'crm', '/contacts', '/listings/mandates'],
     dashboardTiles: ['contacts', 'crm', 'sales', 'spaces'],
     ownsDxfViewer: false,
   },
@@ -270,7 +280,7 @@ export const JOBS: Readonly<Record<JobId, JobDefinition>> = {
       'finance:invoices:update',
       'finance:invoices:approve',
     ],
-    sidebar: ['/accounting'],
+    sidebar: ['accounting'],
     dashboardTiles: ['accounting'],
     ownsDxfViewer: false,
   },
@@ -370,14 +380,14 @@ export const JOB_ORDER: readonly JobId[] = [
  * (πού είσαι · τι κάνει εδώ · μία κίνηση) — ΠΟΤΕ εξαφανισμένο μενού (Α-3, Ε7.ε).
  */
 export const REPORT_SOURCES: Readonly<Record<string, ReportSource>> = {
-  '/reports/financial':    { kind: 'route', route: '/accounting' },
-  '/reports/cash-flow':    { kind: 'route', route: '/accounting' },
-  '/reports/construction': { kind: 'route', route: '/construction/portfolio' },
-  '/reports/sales':        { kind: 'route', route: '/sales' },
-  '/reports/crm':          { kind: 'route', route: '/crm' },
-  '/reports/contacts':     { kind: 'route', route: '/contacts' },
-  '/reports/spaces':       { kind: 'route', route: '/spaces' },
-  '/reports/projects':     { kind: 'route', route: '/projects' },
+  '/reports/financial':    { kind: 'node',  node: 'accounting' },
+  '/reports/cash-flow':    { kind: 'node',  node: 'accounting' },
+  '/reports/construction': { kind: 'node',  node: '/construction/portfolio' },
+  '/reports/sales':        { kind: 'node',  node: 'sales' },
+  '/reports/crm':          { kind: 'node',  node: 'crm' },
+  '/reports/contacts':     { kind: 'node',  node: '/contacts' },
+  '/reports/spaces':       { kind: 'node',  node: 'spaces' },
+  '/reports/projects':     { kind: 'node',  node: '/projects' },
   '/reports/compliance':   { kind: 'job',   job: 'administration' },
   '/reports/export':       { kind: 'job',   job: 'administration' },
 } as const;
@@ -389,6 +399,14 @@ export const REPORT_SOURCES: Readonly<Record<string, ReportSource>> = {
 /**
  * 🔴 ΤΟ `/legal-documents` ΔΕΝ ΕΙΝΑΙ ΣΤΟΙΧΕΙΟ ΤΟΥ ΜΗΤΡΩΟΥ — ΕΙΝΑΙ ΣΦΑΛΜΑ.
  * Απόφαση Γιώργου 2026-08-02, μετά από μέτρηση.
+ *
+ * ✅ **ΛΥΘΗΚΕ ΤΟ ΜΙΣΟ — ADR-871 §10.6 (2026-09-21).** Ο γονιός «Νομικά» ήταν
+ * `href: '/legal-documents'` — διεύθυνση χωρίς σελίδα. Αποδιδόταν όμως **πάντα ως
+ * κουμπί** (ποτέ σύνδεσμος), άρα το href ήταν ταυτότητα με ρούχα διεύθυνσης. Πλέον
+ * είναι **ομάδα** `legal` χωρίς διεύθυνση (Primer/Carbon/Atlassian): **κανείς** στο
+ * σύστημα δεν ισχυρίζεται πια ότι το `/legal-documents` είναι σελίδα — ο αυστηρός
+ * τύπος `WorkspaceHref` θα το απέρριπτε. Μένει **το άλλο μισό**, το (γ) παρακάτω:
+ * τα `legal:*` δεν επιβάλλονται.
  *
  * ΤΙ ΜΕΤΡΗΘΗΚΕ:
  *  (α) `find src/app -name page.tsx | grep -i legal` → **ΚΕΝΟ**. Κανένα
@@ -418,10 +436,11 @@ export const REPORT_SOURCES: Readonly<Record<string, ReportSource>> = {
  * περιγράφει ό,τι **υπάρχει**· σφάλμα στα θεμέλια δεν είναι πληρότητα.
  */
 export const LEGAL_DOCUMENTS_STATUS = {
-  route: '/legal-documents',
-  /** Νεκρός σύνδεσμος: δεν υπάρχει `page.tsx` ούτε rewrite (μετρήθηκε 2026-08-02). */
-  hasPage: false,
-  /** Το ζωντανό υπο-στοιχείο, δηλωμένο στα COMMON_SIDEBAR_ROUTES. */
+  /** Η ομάδα της στήλης — **χωρίς** διεύθυνση (ADR-871 §10.6 Υ13). */
+  groupId: 'legal',
+  /** Η διαδρομή που **δεν** υπάρχει και που κανείς δεν πρέπει να ξαναδηλώσει (2026-08-02). */
+  deadRoute: '/legal-documents',
+  /** Το ζωντανό (και μόνο) παιδί της ομάδας, δηλωμένο στα COMMON_SIDEBAR_NODES. */
   livingChildRoute: '/obligations',
   /** Τα permissions υπάρχουν αλλά δεν επιβάλλονται σε rules/API. */
   enforced: false,
