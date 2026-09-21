@@ -26,6 +26,7 @@ import type {
   NetworkPeopleResult,
   NetworkPresenceResult,
   NetworkRetractionResult,
+  NetworkThreadContextResult,
   NetworkSendResult,
   NetworkThreadDirectoryResult,
 } from '@/types/network-wire';
@@ -74,6 +75,14 @@ export const networkThreadClient = {
     call(() => apiClient.put<unknown>(R.FOLLOW(threadId), { following })),
   presence: (threadId: string) => call(() => apiClient.get<NetworkPresenceResult>(R.PRESENCE(threadId))),
   people: (threadId: string) => call(() => apiClient.get<NetworkPeopleResult>(R.PEOPLE(threadId))),
+  /**
+   * **Τα συμφραζόμενα μιας συνομιλίας** (ADR-867 Β9γ) — πλευρά, ομάδα, και «για ποιο πράγμα».
+   *
+   * ⚠️ Χρειάζεται επειδή η συνομιλία απέκτησε **δική της** διεύθυνση: ο άνθρωπος φτάνει εκεί χωρίς
+   * να έχει δει τη σελίδα της πράξης, και ο πελάτης **δεν** επιτρέπεται να συμπεράνει τίποτα από
+   * αυτά μόνος του (το `actSeed` είναι εσωτερικός, η πλευρά ζει στη γραμμή ακροατηρίου).
+   */
+  context: (threadId: string) => call(() => apiClient.get<NetworkThreadContextResult>(R.THREAD(threadId))),
   /**
    * **Ο κατάλογος των νημάτων ΜΟΥ** (ADR-867 Β9β) — μία σελίδα, με **δρομέα**.
    *

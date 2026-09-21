@@ -114,7 +114,7 @@ const send = (db: AdminFirestore, senderUid: string, nowISO: string, text = 'Π�
 
 // ============================================================================
 describe('Ε — νέο μήνυμα, στην πραγματική διαδρομή αποστολής', () => {
-  it('Ε-1 ο ιδιοκτήτης γράφει ⇒ ο υπεύθυνος, στον χώρο του γραφείου, email μόνο αν μείνει αδιάβαστο 15′', async () => {
+  it('Ε-1 ο ιδιοκτήτης γράφει ⇒ ο υπεύθυνος, στον ΙΔΙΩΤΙΚΟ του χώρο (Β9γ), email μόνο αν μείνει αδιάβαστο 15′', async () => {
     const { db } = await world();
     await send(db, OWNER, T1);
 
@@ -122,8 +122,11 @@ describe('Ε — νέο μήνυμα, στην πραγματική διαδρο
     expect(sent()[0]).toMatchObject({
       eventType: NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE,
       recipientId: MARIA,
+      // 🔑 **ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΠΡΑΓΜΑΤΑ, ΚΑΙ ΔΕΝ ΤΑΥΤΙΖΟΝΤΑΙ ΠΙΑ** (Β9γ): το `tenantId` λέει
+      //    **από πού ήρθε** το γεγονός (το γραφείο)· το `workspace` λέει **πού ανοίγει** — και η
+      //    συνομιλία ζει στον ιδιωτικό χώρο κάθε ανθρώπου, έξω από κάθε πρόθεμα.
       tenantId: HOST,
-      workspace: { kind: 'org', companyId: HOST },
+      workspace: { kind: 'personal', userId: MARIA },
       titleKey: 'networkMessage.directTitle',
       titleParams: { sender: 'Κώστας Ιδιοκτήτης', subject: 'Διαμέρισμα Κυψέλη' },
       eventId: `network-thread:${THREAD_ID}:never`,
@@ -198,20 +201,24 @@ describe('Ε — νέο μήνυμα, στην πραγματική διαδρο
     expect(JSON.stringify(sent())).not.toContain('ΜΥΣΤΙΚΗ-ΤΙΜΗ-420000');
   });
 
-  it('Ε-8 🔗 Β7 §8 #9 — «Άνοιγμα» στο ΝΗΜΑ: γραφείο ⇒ εντολή · ιδιοκτήτης ⇒ η αγγελία του, με τον χώρο (μετάλλαξη: μόνο χώρος)', async () => {
+  it('Ε-8 🔗 §8 #9 · Β9γ — «Άνοιγμα» στη ΣΥΝΟΜΙΛΙΑ, ίδια διαδρομή και στις δύο πλευρές (μετάλλαξη: επιστροφή στη σελίδα της πράξης)', async () => {
     const { db } = await world();
     await send(db, OWNER, T1);
     await send(db, MARIA, T2);
 
     const byRecipient = new Map(sent().map((r) => [r.recipientId, r]));
+    // 🔴 **Η ΠΛΕΥΡΑ ΤΟΥ ΓΡΑΦΕΙΟΥ ΗΤΑΝ ΤΟ ΕΛΑΤΤΩΜΑ**: έδειχνε στο `/listings/mandates/…`, που για
+    //    αγγελία **ιδιώτη** απαντά «Αυτή η εντολή δεν βρέθηκε» (μετρημένο ζωντανά, 2026-09-21).
     expect(byRecipient.get(MARIA)).toMatchObject({
-      workspace: { kind: 'org', companyId: HOST },
-      actions: [{ id: 'view', url: `/listings/mandates/ownp_1#network-thread-${THREAD_ID}` }],
+      workspace: { kind: 'personal', userId: MARIA },
+      actions: [{ id: 'view', url: `/messages/${THREAD_ID}` }],
     });
     expect(byRecipient.get(OWNER)).toMatchObject({
       workspace: { kind: 'personal', userId: OWNER },
-      actions: [{ id: 'view', url: `/offers/ownp_1#network-thread-${THREAD_ID}` }],
+      actions: [{ id: 'view', url: `/messages/${THREAD_ID}` }],
     });
+    // Μετάλλαξη που ξαναφέρνει διακλάδωση πλευράς πεθαίνει εδώ: οι **διαδρομές** ταυτίζονται.
+    expect(byRecipient.get(MARIA)?.actions?.[0]?.url).toBe(byRecipient.get(OWNER)?.actions?.[0]?.url);
   });
 });
 
@@ -226,11 +233,12 @@ describe('Ο — είσοδος στην ομάδα, στις πραγματικ
       eventType: NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED,
       recipientId: ELENI,
       tenantId: HOST,
-      workspace: { kind: 'org', companyId: HOST },
+      workspace: { kind: 'personal', userId: ELENI },
       titleKey: 'networkTeamJoined.addedTitle',
       eventId: `network-team:${TEAM_ID}:v2`,
-      // 🔗 Β7 §8 #9 — ο νέος ανοίγει την εντολή, στο νήμα της (εκεί ζει και η ομάδα).
-      actions: [{ id: 'view', url: `/listings/mandates/ownp_1#network-thread-${THREAD_ID}` }],
+      // 🔗 §8 #9 · Β9γ — ο νέος ανοίγει τη **συνομιλία**, όπου ζει και η διαχείριση της ομάδας. Η
+      //    σελίδα της εντολής δεν χωρά εδώ: για αγγελία ιδιώτη δεν ανοίγει από το γραφείο.
+      actions: [{ id: 'view', url: `/messages/${THREAD_ID}` }],
     });
   });
 

@@ -15,8 +15,8 @@
  * | `properties.mandateDecided` | `custodyOf` + `mandateDecisionDestination` | `announceMandateDecision` |
  * | `properties.stayRequestReceived` | `custodyOf` + `stayRequestReceivedDestination` | `announceStayBookingNotice` |
  * | `properties.stayRequestAnswered` | `stayRequestAnsweredDestination` | `announceStayBookingNotice` |
- * | `network.threadMessage` | `readThreadTopic` + `threadMessageDestination` | `announceNetworkMessage` |
- * | `network.teamJoined` | `actTeamRefById` + `actHostDestination` | `announceTeamArrivals` |
+ * | `network.threadMessage` | `readThreadTopic` + `threadDestination` | `announceNetworkMessage` |
+ * | `network.teamJoined` | `actTeamRefById` + `threadDestination` | `announceTeamArrivals` |
  *
  * 🔑 **Κανένας κανόνας δεν γράφει δική του διαδρομή ή δικό του χώρο.** Αν αύριο ο
  * παραγωγός αλλάξει πόρτα, ο ανιχνευτής την ξέρει την ίδια στιγμή — δεν υπάρχει δεύτερο
@@ -57,10 +57,7 @@ import {
 } from '@/services/stay-calendar/stay-booking-notifier.service';
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import { actTeamRefById } from '@/services/network-messaging/act-team-writer';
-import {
-  actHostDestination,
-  threadMessageDestination,
-} from '@/services/network-messaging/network-destination';
+import { threadDestination } from '@/services/network-messaging/network-destination';
 import { readThreadTopic } from '@/services/network-messaging/thread-reader';
 import type { NetworkActTeam } from '@/types/network-thread';
 
@@ -112,22 +109,22 @@ const stayRequestReceivedRule: DestinationRule = async (db, _notification, entit
 };
 
 /**
- * ADR-867 Β7 · §8 #9 — **νέο μήνυμα δικτύου**: η οντότητα είναι το νήμα· η πλευρά του παραλήπτη βγαίνει
- * από το **θέμα** (ο αντισυμβαλλόμενος είναι γραμμένος εκεί) — ο **ίδιος** πυρήνας με τον αποστολέα.
+ * ADR-867 Β7 · §8 #9 · **Β9γ** — **νέο μήνυμα δικτύου**: η οντότητα είναι το νήμα, και το νήμα ανοίγει
+ * στη **συνομιλία** — ο **ίδιος** πυρήνας με τον αποστολέα, χωρίς διακλάδωση πλευράς.
  */
 const networkThreadMessageRule: DestinationRule = async (db, notification, entityId) => {
   const topic = await readThreadTopic(db, entityId);
   if (topic === null) return unresolvable('entity-absent');
-  const destination = threadMessageDestination(topic, entityId, notification.userId);
-  return destination === null ? unresolvable('no-surface') : expected(destination);
+  // ⚠️ Το θέμα διαβάζεται **μόνο** για το «υπάρχει το νήμα;» παραπάνω — ο προορισμός δεν το ρωτά πια
+  //    (Β9γ): κάθε νήμα ανοίγει στη **συνομιλία**, στον ιδιωτικό χώρο του παραλήπτη.
+  return expected(threadDestination(entityId, notification.userId));
 };
 
-/** ADR-867 Β7 · §8 #9 — **είσοδος στην ομάδα**: η εντολή, στο νήμα της, στον χώρο του γραφείου. */
-const networkTeamJoinedRule: DestinationRule = async (db, _notification, entityId) => {
+/** ADR-867 Β7 · §8 #9 · **Β9γ** — **είσοδος στην ομάδα**: η συνομιλία της πράξης, όπου ζει και η ομάδα. */
+const networkTeamJoinedRule: DestinationRule = async (db, notification, entityId) => {
   const team = (await actTeamRefById(db, entityId).get()).data() as NetworkActTeam | undefined;
   if (team === undefined) return unresolvable('entity-absent');
-  const destination = actHostDestination(team, generateDeterministicNetworkActThreadId(team.actSeed));
-  return destination === null ? unresolvable('no-surface') : expected(destination);
+  return expected(threadDestination(generateDeterministicNetworkActThreadId(team.actSeed), notification.userId));
 };
 
 const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> = {

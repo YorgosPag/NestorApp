@@ -222,3 +222,30 @@ export const DIRECTORY_TITLE_KEYS: { readonly [S in NetworkAudienceSide]: string
   counterpart: THREAD_KEYS.withAgencyUnnamed,
   person: `${K}directory.withPerson`,
 };
+
+/**
+ * **Η ΟΘΟΝΗ ΜΙΑΣ ΣΥΝΟΜΙΛΙΑΣ** (ADR-867 Β9γ) — `/messages/{threadId}`.
+ *
+ * ⚠️ Το `missing` λέει «δεν βρέθηκε», **ποτέ** «δεν σου επιτρέπεται»: ξένο και ανύπαρκτο νήμα
+ * απαντούν ίδια (ADR-742), και η οθόνη δεν επιτρέπεται να προδώσει τη διαφορά.
+ */
+export const SCREEN_KEYS = {
+  back: `${K}screen.back`,
+  loading: `${K}screen.loading`,
+  missing: `${K}screen.missing`,
+  missingHint: `${K}screen.missingHint`,
+} as const;
+
+/**
+ * **Η ΚΑΡΤΑ ΣΥΜΦΡΑΖΟΜΕΝΩΝ** — «για ποιο πράγμα μιλάμε» (Zillow: το ακίνητο μέσα στη συνομιλία).
+ *
+ * 🏆 Το `noAccess` είναι το σημείο όπου ξεπερνάμε τους μεγάλους: όταν η σελίδα της πράξης **δεν
+ * ανοίγει από τον χώρο σου** (αγγελία ιδιώτη, πλευρά γραφείου), η κάρτα το **λέει** αντί να δώσει
+ * σύνδεσμο που απαντά «δεν βρέθηκε» (ADR-848).
+ */
+export const CONTEXT_KEYS = {
+  label: `${K}context.label`,
+  untitled: `${K}context.untitled`,
+  open: `${K}context.open`,
+  noAccess: `${K}context.noAccess`,
+} as const;

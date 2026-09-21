@@ -55,7 +55,7 @@ import {
 } from '@/types/workspace-membership';
 
 import { readAwaysOf } from './network-away';
-import { actHostDestination, threadMessageDestination } from './network-destination';
+import { threadDestination } from './network-destination';
 import {
   planMessageNotifications,
   type MessageRecipient,
@@ -180,25 +180,24 @@ function messageWording(
 }
 
 /**
- * 🔗 ADR-867 Β7 · §8 #9 — «Άνοιγμα» προς το νήμα, **με τον χώρο του** (ADR-849 Β1). Νήμα σχέσης ⇒ κανένας
- * προορισμός ακόμη (δεν έχει οθόνη, Β8): μόνο ο χώρος, ποτέ κουμπί προς το πουθενά (ADR-848).
+ * 🔗 ADR-867 Β7 · §8 #9 · **Β9γ** — «Άνοιγμα» προς τη **συνομιλία**, στον ιδιωτικό χώρο του παραλήπτη.
+ *
+ * ⚠️ **Δεν επιστρέφει πια `null`**, και αυτό είναι η διόρθωση: εδώ έγραφε *«νήμα σχέσης ⇒ κανένας
+ * προορισμός ακόμη (δεν έχει οθόνη, Β8)»*, ενώ η **πράξη** οδηγούσε στη σελίδα της — που για αγγελία
+ * ιδιώτη **δεν ανοίγει στο γραφείο**. Τώρα κάθε νήμα έχει διεύθυνση, άρα ούτε κουμπί προς το πουθενά
+ * (ADR-848) ούτε κουμπί προς το 404.
  */
-function messageDispatchDestination(
-  notice: NetworkMessageNotice,
-  recipientUid: string,
-  workspace: WorkspaceRef,
-): DispatchDestination {
-  return threadMessageDestination(notice.topic, notice.threadId, recipientUid) ?? { workspace };
+function messageDispatchDestination(notice: NetworkMessageNotice, recipientUid: string): DispatchDestination {
+  return threadDestination(notice.threadId, recipientUid);
 }
 
 /**
- * 🔗 ADR-867 Β7 · §8 #9 — ο νέος υπεύθυνος/συνεργάτης ανοίγει την **εντολή, στο νήμα της** (εκεί ζει και η
- * ομάδα). Το νήμα μπορεί να μην υπάρχει ακόμη (ιδιοκτήτης χωρίς λογαριασμό, §8 #1): η σελίδα ανοίγει
- * κανονικά και η άγκυρα απλώς δεν βρίσκει τίποτα να αποκαλύψει.
+ * 🔗 ADR-867 Β7 · §8 #9 · **Β9γ** — ο νέος υπεύθυνος/συνεργάτης ανοίγει τη **συνομιλία** (εκεί ζει και η
+ * διαχείριση της ομάδας, `ActTeamManager`). Το νήμα μπορεί να μην υπάρχει ακόμη (ιδιοκτήτης χωρίς
+ * λογαριασμό, §8 #1): η οθόνη λέει «δεν βρέθηκε», ειλικρινά — ίδια απάντηση με το ξένο νήμα (ADR-742).
  */
-function arrivalDispatchDestination(notice: TeamArrivalNotice, workspace: WorkspaceRef): DispatchDestination {
-  const threadId = generateDeterministicNetworkActThreadId(notice.team.actSeed);
-  return actHostDestination(notice.team, threadId) ?? { workspace };
+function arrivalDispatchDestination(notice: TeamArrivalNotice, recipientUid: string): DispatchDestination {
+  return threadDestination(generateDeterministicNetworkActThreadId(notice.team.actSeed), recipientUid);
 }
 
 function dispatchMessage(
@@ -211,7 +210,7 @@ function dispatchMessage(
     eventType: NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE,
     recipientId: recipient.uid,
     tenantId: workspaceTenantId(workspace),
-    ...messageDispatchDestination(notice, recipient.uid, workspace),
+    ...messageDispatchDestination(notice, recipient.uid),
     title: MESSAGE_SUBJECTS[wording.key](wording.params),
     titleKey: MESSAGE_TITLE_KEYS[wording.key],
     titleParams: { ...wording.params },
@@ -275,7 +274,7 @@ function dispatchArrival(
     eventType: NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED,
     recipientId: arrival.uid,
     tenantId: workspaceTenantId(workspace),
-    ...arrivalDispatchDestination(notice, workspace),
+    ...arrivalDispatchDestination(notice, arrival.uid),
     title: ARRIVAL_SUBJECTS[arrival.kind](params),
     titleKey: ARRIVAL_TITLE_KEYS[arrival.kind],
     titleParams: { ...params },

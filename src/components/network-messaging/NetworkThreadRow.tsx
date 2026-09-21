@@ -12,9 +12,12 @@
  * (`alsoHostRole`). Το σενάριο του ιδιοκτήτη που είναι **και** υπεύθυνος του γραφείου δεν μπορεί
  * καν να διατυπωθεί σε δύο χωριστές εφαρμογές.
  *
- * ⚠️ **Γραμμή χωρίς προορισμό ΔΕΝ είναι σύνδεσμος** (`href === null`, νήμα σχέσης — Β8). Ένα
- * «Άνοιγμα» προς το πουθενά θα ήταν ψέμα (ADR-848), και ένας `<a>` χωρίς `href` δεν εστιάζεται
- * ούτε ανακοινώνεται — άρα η γραμμή μένει **κείμενο**, ειλικρινά.
+ * 🔑 **ΚΑΘΕ ΓΡΑΜΜΗ ΕΙΝΑΙ ΣΥΝΔΕΣΜΟΣ** (Β9γ). Εδώ υπήρχε κλάδος «`href === null` ⇒ κείμενο, όχι
+ * σύνδεσμος» για το νήμα σχέσης που «δεν είχε οθόνη». Τώρα **κάθε** νήμα έχει διεύθυνση, οπότε ο
+ * κλάδος έφυγε μαζί με το `| null` του τύπου: κλάδος που δεν εκτελείται ποτέ δεν είναι
+ * προνοητικότητα, είναι νεκρός κώδικας (CHECK 3.22).
+ * ⚠️ Η **τρέχουσα** γραμμή δηλώνεται με `aria-current="page"` — στο πλαϊνό φύλλο της οθόνης
+ * συνομιλίας κάποιος που δεν βλέπει το χρώμα πρέπει να ξέρει ποια είναι ανοιχτή.
  */
 
 import * as React from 'react';
@@ -36,9 +39,11 @@ const MOMENT: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', yea
 
 export interface NetworkThreadRowProps {
   readonly item: NetworkThreadListItem;
+  /** Η γραμμή που είναι **ανοιχτή τώρα** — μόνο στο πλαϊνό φύλλο της συνομιλίας. */
+  readonly current?: boolean;
 }
 
-/** Ο κορμός — ίδιος είτε η γραμμή είναι σύνδεσμος είτε όχι, ώστε να μην αποκλίνουν δύο όψεις. */
+/** Ο κορμός της γραμμής — τίτλος, ιδιότητα, στιγμή. */
 function RowBody({ item }: NetworkThreadRowProps): React.ReactElement {
   const { t } = useTranslation([NETWORK_NS]);
   const moment = item.lastMessageAt ?? item.activityAt;
@@ -69,18 +74,16 @@ function RowBody({ item }: NetworkThreadRowProps): React.ReactElement {
 
 const SHAPE = 'flex items-center justify-between gap-4 rounded-md border border-border px-4 py-3';
 
-export function NetworkThreadRow({ item }: NetworkThreadRowProps): React.ReactElement {
+export function NetworkThreadRow({ item, current = false }: NetworkThreadRowProps): React.ReactElement {
   return (
     <li className="list-none">
-      {item.href === null ? (
-        <span className={SHAPE}>
-          <RowBody item={item} />
-        </span>
-      ) : (
-        <Link href={item.href} className={`${SHAPE} transition-colors hover:bg-muted`}>
-          <RowBody item={item} />
-        </Link>
-      )}
+      <Link
+        href={item.href}
+        aria-current={current ? 'page' : undefined}
+        className={`${SHAPE} transition-colors hover:bg-muted ${current ? 'border-primary bg-muted' : ''}`}
+      >
+        <RowBody item={item} />
+      </Link>
     </li>
   );
 }

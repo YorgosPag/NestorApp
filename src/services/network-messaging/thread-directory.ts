@@ -27,10 +27,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { NetworkAudienceEntry, NetworkAudienceRole, NetworkThread } from '@/types/network-thread';
 import type { NetworkThreadDirectoryResult, NetworkThreadListItem } from '@/types/network-wire';
 
-import { workspacePath } from '@/lib/workspace/workspace-path';
-import { workspaceSegmentFor } from '@/lib/workspace/workspace-segment';
+import { threadHref } from '@/lib/network-messaging/network-messaging-routes';
 
-import { threadMessageDestination } from './network-destination';
 import { networkAudienceGroup, networkAudienceRef, networkThreadRef } from './network-thread-ref';
 
 const logger = createModuleLogger('NetworkThreadDirectory');
@@ -78,14 +76,14 @@ export function decodeDirectoryCursor(raw: string): ThreadDirectoryCursor | null
 /**
  * Γραμμή ακροατηρίου + νήμα ⇒ στοιχείο καταλόγου.
  *
- * ⚠️ Το `href` έρχεται **έτοιμο** — δεν υπολογίζεται εδώ. Η διεύθυνση του γραφείου χρειάζεται το
- * **τμήμα του χώρου**, που είναι ανάγνωση· αυτή η συνάρτηση μένει **καθαρή** και ελέγξιμη.
+ * ⚠️ Το `href` έρχεται **έτοιμο**, και μένει έτσι αν και έγινε απλό (Β9γ): αυτή η συνάρτηση είναι ο
+ * **μεταφραστής σχήματος** — δεν ξέρει διευθύνσεις, ώστε να μένει καθαρή και ελέγξιμη.
  */
 export function directoryItem(
   threadId: string,
   entry: NetworkAudienceEntry,
   thread: NetworkThread,
-  href: string | null,
+  href: string,
 ): NetworkThreadListItem {
   const { lastMessageAt } = thread;
   return {
@@ -193,8 +191,7 @@ async function hydrate(
     present.push({ threadId: row.threadId, entry: row.entry, thread });
   });
 
-  const hrefs = await addressed(present);
-  return present.map((row, index) => directoryItem(row.threadId, row.entry, row.thread, hrefs[index] ?? null));
+  return present.map((row) => directoryItem(row.threadId, row.entry, row.thread, threadHref(row.threadId)));
 }
 
 /** Μία γραμμή, όπως την είδε η `hydrate` αφού βρέθηκε το νήμα της. */
@@ -204,44 +201,15 @@ interface PresentRow {
   readonly thread: NetworkThread;
 }
 
-/**
- * 🔑 **ΤΟ ΤΕΛΙΚΟ href ΚΑΘΕ ΓΡΑΜΜΗΣ — ΜΕ ΤΟΝ ΧΩΡΟ ΤΗΣ ΜΕΣΑ.**
- *
- * Ο προορισμός έρχεται από τον **ίδιο** πίνακα με την ειδοποίηση (`threadMessageDestination`), και
- * κουβαλά **χώρο**: η σελίδα του γραφείου ζει πίσω από `/o/<τμήμα>/`, που είναι **ανάγνωση**. Ο
- * κατάλογος όμως σερβίρεται στον **ιδιωτικό** χώρο, όπου κανένα πρόθεμα δεν μπαίνει μόνο του —
- * άρα το πρόθεμα μπαίνει **εδώ**, μία φορά ανά **διακριτό** χώρο, ποτέ ανά γραμμή.
- *
- * ⚠️ **Χώρος χωρίς διεύθυνση ΔΕΝ ρίχνει τη σελίδα**: το `workspaceDestinationOf` πετά επίτηδες
- * (ADR-819 §5 Α7), αλλά εδώ μία χαλασμένη παροχή δεν επιτρέπεται να σβήσει **όλα** τα μηνύματα
- * του ανθρώπου. Η γραμμή χάνει τον σύνδεσμό της, η βλάβη **ονομάζεται** στα ίχνη.
- */
-async function addressed(rows: readonly PresentRow[]): Promise<readonly (string | null)[]> {
-  const destinations = rows.map((row) => threadMessageDestination(row.thread.topic, row.threadId, row.entry.uid));
-  const segments = new Map<string, Promise<string | null>>();
-
-  return Promise.all(destinations.map((destination) => {
-    const path = destination?.actions[0]?.url ?? null;
-    if (destination === null || path === null) return null;
-    if (destination.workspace.kind !== 'org') return path;
-
-    const { companyId } = destination.workspace;
-    const cached = segments.get(companyId) ?? segmentOf(companyId);
-    segments.set(companyId, cached);
-    return cached.then((segment) => (segment === null ? null : workspacePath(segment, path)));
-  }));
-}
-
-/**
- * Το **τμήμα διεύθυνσης** ενός γραφείου — μία ανάγνωση ανά γραφείο, όσες γραμμές κι αν το δείχνουν.
- *
- * ⚠️ Ρωτά το `workspaceSegmentFor`, **όχι** το `workspaceDestinationOf`: εκείνο **πετά** στο
- * `unaddressable` (ADR-819 §5 Α7, σωστά για **μία** σελίδα) — εδώ μία χαλασμένη παροχή δεν
- * επιτρέπεται να σβήσει **όλα** τα μηνύματα του ανθρώπου. Η ερώτηση απαντιέται, η βλάβη ονομάζεται.
- */
-async function segmentOf(companyId: string): Promise<string | null> {
-  const resolution = await workspaceSegmentFor({ kind: 'organization', companyId });
-  if (resolution.outcome === 'segment') return resolution.segment;
-  logger.error('[DIRECTORY] Χώρος χωρίς διεύθυνση — η γραμμή μένει χωρίς σύνδεσμο', { companyId });
-  return null;
-}
+// =============================================================================
+// 🔑 ΤΟ href ΚΑΘΕ ΓΡΑΜΜΗΣ — ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ ΜΙΑ ΟΛΟΚΛΗΡΗ ΣΥΝΑΡΤΗΣΗ (Β9γ)
+// =============================================================================
+//
+// Εδώ υπήρχε η `addressed()`: ρωτούσε τον πίνακα προορισμών ανά γραμμή, κρατούσε τον προορισμό ΜΕ
+// ΤΟΝ ΧΩΡΟ ΤΟΥ, και για κάθε ΔΙΑΚΡΙΤΟ γραφείο έκανε ΜΙΑ ΑΝΑΓΝΩΣΗ (`workspaceSegmentFor`) ώστε να
+// μπει το πρόθεμα `/o/<τμήμα>/`. Σωστή μηχανική για λάθος ερώτηση: η σελίδα στην οποία οδηγούσε
+// ΔΕΝ ΥΠΗΡΧΕ για αγγελία ιδιώτη (δες `network-destination.ts`).
+//
+// Τώρα κάθε νήμα ανοίγει στη ΣΥΝΟΜΙΛΙΑ, που ζει στον ιδιωτικό χώρο του αναγνώστη — κανένα πρόθεμα,
+// καμία ανάγνωση, καμία έκβαση «χώρος χωρίς διεύθυνση». Η σελίδα του καταλόγου κόστιζε μέχρι τώρα
+// 1 ερώτημα + 1 getAll + Ν αναγνώσεις γραφείων· πλέον κοστίζει τα δύο πρώτα.

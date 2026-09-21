@@ -77,7 +77,7 @@ function entry(patch: Partial<NetworkAudienceEntry> = {}): NetworkAudienceEntry 
 }
 
 function row(patch: Partial<NetworkThreadListItem> = {}): NetworkThreadListItem {
-  return { ...directoryItem('nthr_1', entry(), THREAD, '/offers/ownp_1#thread-nthr_1'), ...patch };
+  return { ...directoryItem('nthr_1', entry(), THREAD, '/messages/nthr_1'), ...patch };
 }
 
 beforeEach(() => list.mockReset());
@@ -88,7 +88,7 @@ beforeEach(() => list.mockReset());
 
 describe('Κ-3 — η δεύτερη ιδιότητα ταξιδεύει ως τη γραμμή', () => {
   it('περνά το `alsoHostRole` όταν υπάρχει', () => {
-    const item = directoryItem('nthr_1', entry({ alsoHostRole: 'responsible' }), THREAD, null);
+    const item = directoryItem('nthr_1', entry({ alsoHostRole: 'responsible' }), THREAD, '/messages/nthr_1');
     expect(item.alsoHostRole).toBe('responsible');
   });
 
@@ -102,17 +102,17 @@ describe('Κ-3 — η δεύτερη ιδιότητα ταξιδεύει ως τ
 
 describe('Κ-4 — αδιάβαστο από το ΔΙΚΟ μου `lastReadAt`', () => {
   it('διαβασμένο μετά το τελευταίο μήνυμα ⇒ όχι αδιάβαστο', () => {
-    const item = directoryItem('nthr_1', entry({ lastReadAt: '2026-09-19T11:00:00.000Z' }), THREAD, null);
+    const item = directoryItem('nthr_1', entry({ lastReadAt: '2026-09-19T11:00:00.000Z' }), THREAD, '/messages/nthr_1');
     expect(item.unread).toBe(false);
   });
 
   it('διαβασμένο ΠΡΙΝ το τελευταίο μήνυμα ⇒ αδιάβαστο', () => {
-    const item = directoryItem('nthr_1', entry({ lastReadAt: '2026-09-18T10:00:00.000Z' }), THREAD, null);
+    const item = directoryItem('nthr_1', entry({ lastReadAt: '2026-09-18T10:00:00.000Z' }), THREAD, '/messages/nthr_1');
     expect(item.unread).toBe(true);
   });
 
   it('νήμα χωρίς κανένα μήνυμα ΔΕΝ είναι αδιάβαστο', () => {
-    const item = directoryItem('nthr_1', entry(), { ...THREAD, lastMessageAt: null }, null);
+    const item = directoryItem('nthr_1', entry(), { ...THREAD, lastMessageAt: null }, '/messages/nthr_1');
     expect(item.unread).toBe(false);
   });
 });
@@ -207,8 +207,8 @@ describe('η ρίζα δεν διεκδικεί γεωμετρία που ανή
 });
 
 describe('η οθόνη λέει την αλήθεια', () => {
-  it('γραμμή ΧΩΡΙΣ προορισμό δεν είναι σύνδεσμος — «Άνοιγμα» προς το πουθενά θα ήταν ψέμα', async () => {
-    list.mockResolvedValue({ ok: true, value: { items: [row({ href: null })], next: null } });
+  it('🔴 ΚΑΘΕ γραμμή είναι σύνδεσμος — και οδηγεί στη ΣΥΝΟΜΙΛΙΑ (Β9γ)', async () => {
+    list.mockResolvedValue({ ok: true, value: { items: [row({ href: '/messages/nthr_1' })], next: null } });
     const { container } = render(<NetworkThreadDirectoryContent />);
 
     await screen.findByRole('listitem');
@@ -216,18 +216,19 @@ describe('η οθόνη λέει την αλήθεια', () => {
     //    ένα `<a>` **χωρίς** `href` δεν έχει ρόλο `link`, άρα η ερώτηση απαντούσε «κανένας» και στις
     //    δύο περιπτώσεις. Η μετάλλαξη «απόδωσε πάντα σύνδεσμο» **επέζησε**. Η ερώτηση που
     //    διακρίνει είναι η ύπαρξη του ίδιου του στοιχείου.
-    expect(container.querySelector('a')).toBeNull();
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/messages/nthr_1');
   });
 
-  it('γραμμή ΜΕ προορισμό οδηγεί εκεί, αυτούσια — το πρόθεμα χώρου το έβαλε ο διακομιστής', async () => {
-    list.mockResolvedValue({
-      ok: true,
-      value: { items: [row({ href: '/o/pagonis/listings/mandates/ownp_1#thread-nthr_1' })], next: null },
-    });
+  it('🔴 Η ΓΡΑΜΜΗ ΔΕΝ ΟΔΗΓΕΙ ΣΕ ΣΕΛΙΔΑ ΧΩΡΟΥ — εκεί ήταν το σπασμένο κλικ του γραφείου', async () => {
+    // Μέχρι το Β9β η γραμμή του γραφείου έδειχνε στο `/o/<χώρος>/listings/mandates/<ownp>`, που για
+    // αγγελία **ιδιώτη** απαντά «Αυτή η εντολή δεν βρέθηκε» (μετρημένο ζωντανά, 2026-09-21). Ο
+    // διακομιστής δίνει πλέον **μία** διεύθυνση· η οθόνη την περνά **αυτούσια**, χωρίς να μαντεύει.
+    list.mockResolvedValue({ ok: true, value: { items: [row({ href: '/messages/nthr_1' })], next: null } });
     render(<NetworkThreadDirectoryContent />);
 
     const link = await screen.findByRole('link');
-    expect(link.getAttribute('href')).toBe('/o/pagonis/listings/mandates/ownp_1#thread-nthr_1');
+    expect(link.getAttribute('href')).toBe('/messages/nthr_1');
+    expect(link.getAttribute('href')).not.toContain('/o/');
   });
 
   it('αποτυχία ⇒ ο κωδικός μεταφράζεται και προσφέρεται δεύτερη προσπάθεια', async () => {

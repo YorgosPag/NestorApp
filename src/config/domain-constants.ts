@@ -948,6 +948,8 @@ export const API_ROUTES = {
    */
   NETWORK: {
     THREADS: '/api/network/threads',
+    /** ADR-867 Β9γ — τα **συμφραζόμενα** μιας συνομιλίας (πλευρά · ομάδα · αντικείμενο). */
+    THREAD: (threadId: string) => `/api/network/threads/${threadId}` as const,
     AWAY: '/api/network/away',
     MESSAGES: (threadId: string) => `/api/network/threads/${threadId}/messages` as const,
     MESSAGE: (threadId: string, messageId: string) =>

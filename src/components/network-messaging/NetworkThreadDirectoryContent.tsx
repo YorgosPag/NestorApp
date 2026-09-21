@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η ΟΘΟΝΗ «ΤΑ ΜΗΝΥΜΑΤΑ ΜΟΥ»** — ο κατάλογος των νημάτων ενός ανθρώπου (ADR-867 Β9β).
- * @related `hooks/network-messaging/useNetworkThreadDirectory` · `NetworkThreadRow` ·
+ * @related `NetworkThreadDirectoryBody` (ο κορμός, κοινός με την οθόνη συνομιλίας) ·
  *          `app/(me)/messages/page.tsx` · `services/firestore/tenant-config.ts` (`cross-space-thread`)
  * @module components/network-messaging/NetworkThreadDirectoryContent
  *
@@ -19,49 +19,20 @@
  * τη δήλωση `dossiers` του `workspace-scope.ts`, με ένα παραπάνω: εκεί ο κάτοχος είναι `userId`,
  * εδώ **δεν υπάρχει καν** κάτοχος-χώρος.
  *
- * 🔑 **Οι γραμμές του γραφείου οδηγούν σωστά**: το `href` έρχεται από τον διακομιστή **με το
- * πρόθεμα χώρου ήδη μέσα** — εδώ δεν μπαίνει πρόθεμα από μόνο του.
+ * 🔑 **Κάθε γραμμή οδηγεί στη ΣΥΝΟΜΙΛΙΑ** (Β9γ): το `href` το δίνει ο διακομιστής, και είναι το ίδιο
+ * σημείο όπου οδηγεί και η **ειδοποίηση**. Μέχρι το Β9β η γραμμή του γραφείου οδηγούσε στη σελίδα
+ * της εντολής — που για αγγελία **ιδιώτη** απαντά «δεν βρέθηκε» (δες `network-destination.ts`).
  */
 
 import * as React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useNetworkThreadDirectory } from '@/hooks/network-messaging/useNetworkThreadDirectory';
 
-import { DIRECTORY_KEYS, FAILURE_KEYS, NETWORK_NS } from './network-messaging-keys';
-import { NetworkThreadRow } from './NetworkThreadRow';
-
-/** Κενό, αποτυχία ή «φορτώνει» — **μία** θέση, ώστε να μη δείχνουν δύο ταυτόχρονα. */
-function DirectoryNotice({ view }: { readonly view: ReturnType<typeof useNetworkThreadDirectory> }): React.ReactElement | null {
-  const { t } = useTranslation([NETWORK_NS]);
-
-  if (view.failure !== null) {
-    return (
-      <section role="alert" className="flex flex-col items-start gap-2">
-        <p className="m-0 text-sm text-destructive">{t(FAILURE_KEYS[view.failure])}</p>
-        <button type="button" onClick={view.reload} className="text-sm font-medium text-foreground underline underline-offset-4">
-          {t(DIRECTORY_KEYS.retry)}
-        </button>
-      </section>
-    );
-  }
-  if (view.isLoading && view.items.length === 0) {
-    return <p role="status" className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.loading)}</p>;
-  }
-  if (view.items.length === 0) {
-    return (
-      <section className="flex flex-col gap-1">
-        <p className="m-0 text-sm font-medium text-foreground">{t(DIRECTORY_KEYS.empty)}</p>
-        <p className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.emptyHint)}</p>
-      </section>
-    );
-  }
-  return null;
-}
+import { DIRECTORY_KEYS, NETWORK_NS } from './network-messaging-keys';
+import { NetworkThreadDirectoryBody } from './NetworkThreadDirectoryBody';
 
 export function NetworkThreadDirectoryContent(): React.ReactElement {
   const { t } = useTranslation([NETWORK_NS]);
-  const view = useNetworkThreadDirectory();
 
   return (
     // 🔴 **ΟΥΤΕ ΓΕΩΜΕΤΡΙΑ ΟΥΤΕ ΔΕΥΤΕΡΟ `ShellSurface` ΕΔΩ — ΔΥΟ ΛΑΘΗ, ΔΥΟ ΜΑΘΗΜΑΤΑ** (ADR-797).
@@ -89,26 +60,7 @@ export function NetworkThreadDirectoryContent(): React.ReactElement {
         <p className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.subtitle)}</p>
       </header>
 
-      <DirectoryNotice view={view} />
-
-      {view.items.length > 0 && (
-        <ul aria-label={t(DIRECTORY_KEYS.listLabel)} className="m-0 flex list-none flex-col gap-2 p-0">
-          {view.items.map((item) => <NetworkThreadRow key={item.threadId} item={item} />)}
-        </ul>
-      )}
-
-      {view.hasMore && (
-        <footer className="flex justify-center">
-          <button
-            type="button"
-            onClick={view.loadMore}
-            disabled={view.isLoading}
-            className="text-sm font-medium text-foreground underline underline-offset-4 disabled:opacity-60"
-          >
-            {t(view.isLoading ? DIRECTORY_KEYS.loading : DIRECTORY_KEYS.loadMore)}
-          </button>
-        </footer>
-      )}
+      <NetworkThreadDirectoryBody />
     </main>
   );
 }

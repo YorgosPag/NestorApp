@@ -167,5 +167,17 @@
     "muted": "Muted",
     "retry": "Try again",
     "withPerson": "Personal conversation"
+  },
+  "screen": {
+    "back": "All messages",
+    "loading": "Loading the conversation…",
+    "missing": "This conversation was not found",
+    "missingHint": "The link may be old, or you may no longer be part of this conversation."
+  },
+  "context": {
+    "label": "The listing",
+    "untitled": "Untitled listing",
+    "open": "Open the listing",
+    "noAccess": "Its page does not open from your workspace."
   }
 }
