@@ -49,7 +49,7 @@
     "src/i18n/generated/routes/terms__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "76f04c4176fbfea5b69e8983b4de7381e625583ab21a71d0fa0413f68a78b2e3",
+    "src/i18n/generated/shell-slice.el.json": "b3d993a767ed728e1103ee32921a6a7f028f9de71175cbd7502ebc41007c7dc5",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -89,7 +89,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fe966f981703b917a94166ffc5e0acbe00a7acd3edddcff8c2978d7e463e281d",
+  "inputsSha256": "4247335ac6a7e4705dafd0fed46d8659bc93d157c55d22afe4c6fa9466bad422",
   "languages": [
     "el"
   ],
@@ -2968,6 +2968,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -2993,6 +2994,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail",
             "userMenu.spaces.current",
             "userMenu.spaces.label"
@@ -3022,6 +3024,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3047,6 +3050,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3072,6 +3076,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3097,6 +3102,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3122,6 +3128,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3148,6 +3155,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3173,6 +3181,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -3198,6 +3207,7 @@
             "userMenu.menuLabel",
             "userMenu.myContacts",
             "userMenu.myDossiers",
+            "userMenu.myMessages",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -7273,7 +7283,7 @@
     "src/components/header/help-button.tsx": "dc22b85d44c8a74a38cd8923d6bbd3b04e40ba775bc55cd5a2f22b51eb9ccb29",
     "src/components/header/language-switcher.tsx": "25414678713ac486b99364f5133bd21e3bfb54138c46a18443d29f2d39447ba1",
     "src/components/header/theme-toggle.tsx": "b3f84f46495466cb3891d4a6ecb9d61e61d90406dfd5aa91f9727b9b9d544038",
-    "src/components/header/user-menu.tsx": "d5eea195c9dda95627e7c0763b5d049a137486ae46db83221ea20bad1c1f6396",
+    "src/components/header/user-menu.tsx": "84a987e9cdcc856b0aafaeb518546ca22200ce8936052f8f7267cdb5b79fd6a8",
     "src/components/header/voice-assistant-button.tsx": "c56a417da0fd30f53ba7046c5293b0f09395d03f3149675787f6d1ca109f9e05",
     "src/components/job/HiddenItemsBadge.tsx": "4a787cd073d257838351379574abe8e8dd222efca9c44e05fb0fdb3ff3e7b58d",
     "src/components/job/JobSuggestion.tsx": "d84189b720848db336ca46f0b48c1d6c52e03bef6544d2c8f268d3389490bc64",
@@ -7689,6 +7699,7 @@
     "src/lib/mandate/mandate-term-window.ts": "b0862fc1c7339be12ae58f95e05f5fb2901b13a5be45f6128627ebde587622af",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/money/money.ts": "21731d773372e01a474b0c7fa8081fdac26d14b37e625efd88ad0be20848b75b",
+    "src/lib/network-messaging/network-messaging-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/network-messaging/thread-anchor.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/notifications/notification-destination.ts": "fe48c0fe021fa12751e361088d38bf70700022cc2ee35559731f45037246b033",
     "src/lib/notifications/notification-permalink-route.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -7995,10 +8006,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 19,
-    "matchedKeys": 183,
+    "matchedKeys": 184,
     "routeBoundaries": 0,
-    "shellFiles": 749,
-    "sliceBytes": 551443
+    "shellFiles": 750,
+    "sliceBytes": 551495
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -8750,6 +8761,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -9067,6 +9079,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "userMenu.spaces.current",
         "userMenu.spaces.label",
@@ -9384,6 +9397,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -9698,6 +9712,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -10012,6 +10027,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -10331,6 +10347,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -10645,6 +10662,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -10971,6 +10989,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -11287,6 +11306,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -11601,6 +11621,7 @@
         "userMenu.menuLabel",
         "userMenu.myContacts",
         "userMenu.myDossiers",
+        "userMenu.myMessages",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",

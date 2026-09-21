@@ -10,7 +10,12 @@
  */
 
 import type { NetworkFailure } from '@/services/network-messaging/network-thread.client';
-import type { NetworkAudienceReason, NetworkAudienceRole, NetworkHostRole } from '@/types/network-thread';
+import type {
+  NetworkAudienceReason,
+  NetworkAudienceRole,
+  NetworkAudienceSide,
+  NetworkHostRole,
+} from '@/types/network-thread';
 
 export const NETWORK_NS = 'network-messaging';
 const K = 'network-messaging:';
@@ -180,4 +185,40 @@ export const FAILURE_KEYS: { readonly [F in NetworkFailure]: string } = {
   'invalid-request': `${K}failure.invalid-request`,
   'internal-error': `${K}failure.internal-error`,
   unreachable: `${K}failure.unreachable`,
+};
+
+/**
+ * **Ο ΚΑΤΑΛΟΓΟΣ «ΤΑ ΜΗΝΥΜΑΤΑ ΜΟΥ»** (ADR-867 Β9β).
+ *
+ * ⚠️ Ο **ρόλος** και η **δεύτερη ιδιότητα** της γραμμής διαβάζονται από τα `ROLE_KEYS`/`ALSO_HOST_KEYS`
+ * παραπάνω — **όχι** από δικά τους αντίγραφα εδώ. Μία λέξη για τον «υπεύθυνο», όπου κι αν φαίνεται.
+ */
+export const DIRECTORY_KEYS = {
+  title: `${K}directory.title`,
+  subtitle: `${K}directory.subtitle`,
+  loading: `${K}directory.loading`,
+  empty: `${K}directory.empty`,
+  emptyHint: `${K}directory.emptyHint`,
+  listLabel: `${K}directory.listLabel`,
+  loadMore: `${K}directory.loadMore`,
+  unread: `${K}directory.unread`,
+  muted: `${K}directory.muted`,
+  retry: `${K}directory.retry`,
+} as const;
+
+/**
+ * **ΠΩΣ ΛΕΓΕΤΑΙ ΜΙΑ ΓΡΑΜΜΗ ΤΟΥ ΚΑΤΑΛΟΓΟΥ** — από την **πλευρά** μου, όχι από το όνομα του άλλου.
+ *
+ * 🔑 **Γιατί η πλευρά και όχι το όνομα**: το όνομα του γραφείου ζει στη διαδρομή `…/people`, **ανά
+ * νήμα**. Μια λίστα 30 γραμμών θα έκανε 30 κλήσεις για έναν τίτλο — το κλασικό N+1. Η `side`
+ * ταξιδεύει **ήδη** μέσα στη γραμμή και απαντά το ίδιο ερώτημα που απαντά το `variant` της
+ * ανοιχτής οθόνης. 📌 Δηλωμένο όριο: η γραμμή λέει «με το γραφείο», όχι «με το γραφείο Χ».
+ *
+ * ⚠️ Το `person` **δεν είναι μελλοντικό**: είναι το νήμα σχέσης του Β8. Ο πίνακας το έχει **από
+ * τώρα**, ώστε το Β8 να μη χρειαστεί να αγγίξει τον κατάλογο.
+ */
+export const DIRECTORY_TITLE_KEYS: { readonly [S in NetworkAudienceSide]: string } = {
+  host: THREAD_KEYS.withOwner,
+  counterpart: THREAD_KEYS.withAgencyUnnamed,
+  person: `${K}directory.withPerson`,
 };

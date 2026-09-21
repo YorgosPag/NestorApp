@@ -27,6 +27,7 @@ import type {
   NetworkPresenceResult,
   NetworkRetractionResult,
   NetworkSendResult,
+  NetworkThreadDirectoryResult,
 } from '@/types/network-wire';
 
 /** Πώς απέτυχε — κλειστό σύνολο: οι αρνήσεις του γραφέα + τρεις του μεταφορέα. */
@@ -73,7 +74,28 @@ export const networkThreadClient = {
     call(() => apiClient.put<unknown>(R.FOLLOW(threadId), { following })),
   presence: (threadId: string) => call(() => apiClient.get<NetworkPresenceResult>(R.PRESENCE(threadId))),
   people: (threadId: string) => call(() => apiClient.get<NetworkPeopleResult>(R.PEOPLE(threadId))),
+  /**
+   * **Ο κατάλογος των νημάτων ΜΟΥ** (ADR-867 Β9β) — μία σελίδα, με **δρομέα**.
+   *
+   * ⚠️ Ο `cursor` είναι **αδιαφανής**: έρχεται αυτούσιος από το `next` της προηγούμενης σελίδας και
+   * επιστρέφεται αυτούσιος. Ο πελάτης **ποτέ** δεν τον κατασκευάζει ούτε τον διαβάζει — χαλασμένος
+   * δρομέας απαντά **400** (`invalid-request`), ποτέ σιωπηλά «πρώτη σελίδα».
+   *
+   * 🔑 **Καμία εμβέλεια χώρου, επίτηδες**: το νήμα είναι `cross-space-thread` (`tenant-config.ts`) —
+   * η εμβέλεια είναι ο **άνθρωπος** (`uid`), και τη βάζει ο διακομιστής από την ταυτότητα.
+   */
+  list: (page?: { readonly limit?: number; readonly cursor?: string }) =>
+    call(() => apiClient.get<NetworkThreadDirectoryResult>(withListQuery(R.THREADS, page))),
 } as const;
+
+/** Χτίζει το ερώτημα **μόνο** από όσα δόθηκαν — κενό `?` θα ήταν διαφορετική διεύθυνση για τον ίδιο πόρο. */
+function withListQuery(route: string, page: { readonly limit?: number; readonly cursor?: string } | undefined): string {
+  const params = new URLSearchParams();
+  if (page?.limit !== undefined) params.set('limit', String(page.limit));
+  if (page?.cursor !== undefined) params.set('cursor', page.cursor);
+  const query = params.toString();
+  return query === '' ? route : `${route}?${query}`;
+}
 
 export const networkAwayClient = {
   read: () => call(() => apiClient.get<NetworkAwayResult>(R.AWAY)),

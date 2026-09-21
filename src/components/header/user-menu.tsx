@@ -39,6 +39,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   FolderArchive,
   Handshake,
+  MessagesSquare,
   User,
   LogOut,
 } from 'lucide-react';
@@ -52,6 +53,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES, resolveAccountRoute } from '@/lib/routes';
 import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
+import { MY_MESSAGES_ROUTE } from '@/lib/network-messaging/network-messaging-routes';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -230,6 +232,20 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
           >
             <FolderArchive className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
             <span>{t('userMenu.myDossiers')}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            /* ADR-867 Β9β — «ΤΑ ΜΗΝΥΜΑΤΑ ΜΟΥ». Ίδιος λόγος θέσης με τις επαφές και τους φακέλους:
+               ΛΙΣΤΑ του συνδεδεμένου, όχι πρόθεση που βλέπει ο ανώνυμος (Zillow «Premier Agent Inbox»
+               · Slack Connect). 🔑 ΚΑΙ ΕΙΝΑΙ Ο ΜΟΝΟΣ ΤΟΠΟΣ ΠΟΥ ΧΡΕΙΑΖΕΤΑΙ: το νήμα είναι
+               `cross-space-thread` — η εμβέλειά του είναι ο ΑΝΘΡΩΠΟΣ, άρα ο ίδιος προορισμός για
+               ιδιώτη ΚΑΙ υπάλληλο, και αυτό το μενού αποδίδεται και στους πέντε κόσμους (CHECK 3.72).
+               Ένα δεύτερο στοιχείο στο sidebar του γραφείου θα υπονοούσε «τα μηνύματα ΑΥΤΟΥ του
+               γραφείου», που η μηχανή από κάτω δεν ξέρει να απαντήσει. */
+            onClick={() => router.push(MY_MESSAGES_ROUTE)}
+            className={layout.cursorPointer}
+          >
+            <MessagesSquare className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
+            <span>{t('userMenu.myMessages')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             /* 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΚΡΙΝΕΤΑΙ, ΔΕΝ ΕΙΝΑΙ ΣΤΑΘΕΡΟΣ — και ήταν ΖΩΝΤΑΝΟ 404.**

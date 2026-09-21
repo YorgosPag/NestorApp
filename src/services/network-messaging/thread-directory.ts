@@ -24,15 +24,13 @@ import 'server-only';
 import { FieldPath, type Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { createModuleLogger } from '@/lib/telemetry';
-import type {
-  NetworkAudienceEntry,
-  NetworkAudienceRole,
-  NetworkAudienceSide,
-  NetworkThread,
-  NetworkThreadState,
-  NetworkThreadTopic,
-} from '@/types/network-thread';
+import type { NetworkAudienceEntry, NetworkAudienceRole, NetworkThread } from '@/types/network-thread';
+import type { NetworkThreadDirectoryResult, NetworkThreadListItem } from '@/types/network-wire';
 
+import { workspacePath } from '@/lib/workspace/workspace-path';
+import { workspaceSegmentFor } from '@/lib/workspace/workspace-segment';
+
+import { threadMessageDestination } from './network-destination';
 import { networkAudienceGroup, networkAudienceRef, networkThreadRef } from './network-thread-ref';
 
 const logger = createModuleLogger('NetworkThreadDirectory');
@@ -42,31 +40,17 @@ export const NETWORK_THREAD_PAGE_SIZE = 30;
 /** Ανώτατη σελίδα — πάνω από αυτό ο πελάτης ζητά **επόμενη** σελίδα, όχι μεγαλύτερη. */
 export const NETWORK_THREAD_PAGE_MAX = 50;
 
-/** Μία γραμμή του καταλόγου — ό,τι χρειάζεται η λίστα **χωρίς** να ανοίξει το νήμα. */
-export interface NetworkThreadListItem {
-  readonly threadId: string;
-  readonly topic: NetworkThreadTopic;
-  readonly state: NetworkThreadState;
-  readonly lastMessageAt: string | null;
-  readonly activityAt: string;
-  /** Υπάρχει μήνυμα **μετά** την τελευταία του ανάγνωση; (§8 #4 — όχι ένδειξη ανά μήνυμα.) */
-  readonly unread: boolean;
-  readonly muted: boolean;
-  readonly role: NetworkAudienceRole;
-  readonly side: NetworkAudienceSide;
-  /** Από πότε διαβάζει — η «ζωντανή διαφάνεια» του (ε) 🏆, και για τον ίδιο. */
-  readonly since: string;
-}
+/**
+ * ⚠️ **ΤΟ ΣΧΗΜΑ ΤΗΣ ΓΡΑΜΜΗΣ ΚΑΙ ΤΗΣ ΣΕΛΙΔΑΣ ΖΟΥΝ ΣΤΟ `types/network-wire.ts`** (ADR-867 Β9β):
+ * αυτό το αρχείο είναι `server-only`, άρα ο πελάτης δεν μπορεί να εισαγάγει τύπο από εδώ. **Ένα**
+ * σχήμα, **δύο** άκρα — όπως κάθε άλλη πόρτα του δικτύου.
+ */
+export type { NetworkThreadListItem, NetworkThreadDirectoryResult };
 
 /** Ο δρομέας: η **θέση** της τελευταίας γραμμής της σελίδας. Αδιαφανής για τον πελάτη. */
 export interface ThreadDirectoryCursor {
   readonly activityAt: string;
   readonly threadId: string;
-}
-
-export interface ThreadDirectoryPage {
-  readonly items: readonly NetworkThreadListItem[];
-  readonly next: string | null;
 }
 
 // =============================================================================
@@ -91,11 +75,17 @@ export function decodeDirectoryCursor(raw: string): ThreadDirectoryCursor | null
   }
 }
 
-/** Γραμμή ακροατηρίου + νήμα ⇒ στοιχείο καταλόγου. */
+/**
+ * Γραμμή ακροατηρίου + νήμα ⇒ στοιχείο καταλόγου.
+ *
+ * ⚠️ Το `href` έρχεται **έτοιμο** — δεν υπολογίζεται εδώ. Η διεύθυνση του γραφείου χρειάζεται το
+ * **τμήμα του χώρου**, που είναι ανάγνωση· αυτή η συνάρτηση μένει **καθαρή** και ελέγξιμη.
+ */
 export function directoryItem(
   threadId: string,
   entry: NetworkAudienceEntry,
   thread: NetworkThread,
+  href: string | null,
 ): NetworkThreadListItem {
   const { lastMessageAt } = thread;
   return {
@@ -108,6 +98,10 @@ export function directoryItem(
     muted: entry.muted,
     role: entry.role,
     side: entry.side,
+    // 🔑 **Η δεύτερη ιδιότητα ταξιδεύει ως τη λίστα** (Β9β): χωρίς αυτήν, οι δύο γραμμές του
+    //    ίδιου ανθρώπου («ιδιοκτήτης» και «υπεύθυνος») φαίνονται ταυτόσημες στον κατάλογο.
+    alsoHostRole: entry.alsoHostRole,
+    href,
     since: entry.since,
   };
 }
@@ -148,7 +142,7 @@ export const THREAD_DIRECTORY_INDEX = {
 export async function listNetworkThreads(
   adminDb: AdminFirestore,
   query: ThreadDirectoryQuery,
-): Promise<ThreadDirectoryPage> {
+): Promise<NetworkThreadDirectoryResult> {
   const [uidField, untilField] = THREAD_DIRECTORY_INDEX.equality;
   const { field: activityField, direction } = THREAD_DIRECTORY_INDEX.orderBy;
   let page = networkAudienceGroup(adminDb)
@@ -187,7 +181,7 @@ async function hydrate(
 ): Promise<readonly NetworkThreadListItem[]> {
   if (rows.length === 0) return [];
   const snaps = await adminDb.getAll(...rows.map((row) => networkThreadRef(adminDb, row.threadId)));
-  const items: NetworkThreadListItem[] = [];
+  const present: PresentRow[] = [];
   rows.forEach((row, index) => {
     const thread = snaps[index]?.data() as NetworkThread | undefined;
     // ⚠️ Γραμμή χωρίς νήμα δεν γεννιέται από τον γραφέα (ίδια συναλλαγή). Αν τη δούμε, είναι
@@ -196,7 +190,58 @@ async function hydrate(
       logger.error('[DIRECTORY] Γραμμή ακροατηρίου χωρίς νήμα', { threadId: row.threadId });
       return;
     }
-    items.push(directoryItem(row.threadId, row.entry, thread));
+    present.push({ threadId: row.threadId, entry: row.entry, thread });
   });
-  return items;
+
+  const hrefs = await addressed(present);
+  return present.map((row, index) => directoryItem(row.threadId, row.entry, row.thread, hrefs[index] ?? null));
+}
+
+/** Μία γραμμή, όπως την είδε η `hydrate` αφού βρέθηκε το νήμα της. */
+interface PresentRow {
+  readonly threadId: string;
+  readonly entry: NetworkAudienceEntry;
+  readonly thread: NetworkThread;
+}
+
+/**
+ * 🔑 **ΤΟ ΤΕΛΙΚΟ href ΚΑΘΕ ΓΡΑΜΜΗΣ — ΜΕ ΤΟΝ ΧΩΡΟ ΤΗΣ ΜΕΣΑ.**
+ *
+ * Ο προορισμός έρχεται από τον **ίδιο** πίνακα με την ειδοποίηση (`threadMessageDestination`), και
+ * κουβαλά **χώρο**: η σελίδα του γραφείου ζει πίσω από `/o/<τμήμα>/`, που είναι **ανάγνωση**. Ο
+ * κατάλογος όμως σερβίρεται στον **ιδιωτικό** χώρο, όπου κανένα πρόθεμα δεν μπαίνει μόνο του —
+ * άρα το πρόθεμα μπαίνει **εδώ**, μία φορά ανά **διακριτό** χώρο, ποτέ ανά γραμμή.
+ *
+ * ⚠️ **Χώρος χωρίς διεύθυνση ΔΕΝ ρίχνει τη σελίδα**: το `workspaceDestinationOf` πετά επίτηδες
+ * (ADR-819 §5 Α7), αλλά εδώ μία χαλασμένη παροχή δεν επιτρέπεται να σβήσει **όλα** τα μηνύματα
+ * του ανθρώπου. Η γραμμή χάνει τον σύνδεσμό της, η βλάβη **ονομάζεται** στα ίχνη.
+ */
+async function addressed(rows: readonly PresentRow[]): Promise<readonly (string | null)[]> {
+  const destinations = rows.map((row) => threadMessageDestination(row.thread.topic, row.threadId, row.entry.uid));
+  const segments = new Map<string, Promise<string | null>>();
+
+  return Promise.all(destinations.map((destination) => {
+    const path = destination?.actions[0]?.url ?? null;
+    if (destination === null || path === null) return null;
+    if (destination.workspace.kind !== 'org') return path;
+
+    const { companyId } = destination.workspace;
+    const cached = segments.get(companyId) ?? segmentOf(companyId);
+    segments.set(companyId, cached);
+    return cached.then((segment) => (segment === null ? null : workspacePath(segment, path)));
+  }));
+}
+
+/**
+ * Το **τμήμα διεύθυνσης** ενός γραφείου — μία ανάγνωση ανά γραφείο, όσες γραμμές κι αν το δείχνουν.
+ *
+ * ⚠️ Ρωτά το `workspaceSegmentFor`, **όχι** το `workspaceDestinationOf`: εκείνο **πετά** στο
+ * `unaddressable` (ADR-819 §5 Α7, σωστά για **μία** σελίδα) — εδώ μία χαλασμένη παροχή δεν
+ * επιτρέπεται να σβήσει **όλα** τα μηνύματα του ανθρώπου. Η ερώτηση απαντιέται, η βλάβη ονομάζεται.
+ */
+async function segmentOf(companyId: string): Promise<string | null> {
+  const resolution = await workspaceSegmentFor({ kind: 'organization', companyId });
+  if (resolution.outcome === 'segment') return resolution.segment;
+  logger.error('[DIRECTORY] Χώρος χωρίς διεύθυνση — η γραμμή μένει χωρίς σύνδεσμο', { companyId });
+  return null;
 }

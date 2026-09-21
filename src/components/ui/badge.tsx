@@ -51,8 +51,24 @@ export type BadgeVariantProps = {
   variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple' | 'light' | 'muted' | 'subtle';
 }
 
+/**
+ * ⚠️ **ΤΟ ΣΗΜΑΤΑΚΙ ΕΙΝΑΙ `<span>`, ΟΧΙ `<div>` — ΚΑΙ ΕΙΝΑΙ ΚΑΝΟΝΑΣ, ΟΧΙ ΓΟΥΣΤΟ** (ADR-867 Β9)
+ *
+ * Ένα `<div>` μέσα σε `<p>` είναι **άκυρη HTML**: ο parser του browser κλείνει το `<p>`
+ * **πριν** από το div, δηλαδή παράγει **άλλο δέντρο** από αυτό που έστειλε ο server ⇒
+ * `hydration error` και **ξαναχτίσιμο ολόκληρου του υποδέντρου** από τον React.
+ * Η αστοχία είναι **σιωπηλή στην οθόνη**: το σηματάκι φαίνεται μια χαρά.
+ *
+ * Μετρημένο 2026-09-20: **2** σημεία του `src/` έβαζαν `<Badge>` μέσα σε `<p>`
+ * (`AudienceRosterPanel` · `PropertyCustomerTab`). Το πρώτο ΕΣΠΑΣΕ σε ζωντανό browser
+ * στο `/offers/[offerId]`· το δεύτερο απλώς δεν το είχε ανοίξει κανείς.
+ * Η διόρθωση ζει **εδώ** ώστε να μη ρωτηθεί ποτέ ξανά σε 364 σημεία χρήσης.
+ *
+ * Το `inline-flex` της βάσης ισχύει αυτούσιο σε `<span>` ⇒ **καμία οπτική αλλαγή**.
+ * Ίδια απόφαση με το shadcn/ui upstream, για τον ίδιο λόγο.
+ */
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLSpanElement>,
     BadgeVariantProps {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
@@ -62,7 +78,7 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   const badgeVariants = createBadgeVariants(borderTokens, colors);
 
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span className={cn(badgeVariants({ variant }), className)} {...props} />
   )
 }
 

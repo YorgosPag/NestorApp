@@ -20,7 +20,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   decodeDirectoryCursor,
   listNetworkThreads,
-  type ThreadDirectoryPage,
+  type NetworkThreadDirectoryResult,
 } from '@/services/network-messaging/thread-directory';
 
 import {
@@ -33,7 +33,7 @@ import { ThreadListQuerySchema } from '../_shared/network-params';
 
 const logger = createModuleLogger('NetworkThreadsRoute');
 
-type ThreadListResponse = { readonly success: true } & ThreadDirectoryPage;
+type ThreadListResponse = { readonly success: true } & NetworkThreadDirectoryResult;
 
 async function handler(request: NextRequest, actor: NetworkActor) {
   const query = ThreadListQuerySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams));

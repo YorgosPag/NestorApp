@@ -154,5 +154,18 @@
     "invalid-request": "The request was not valid.",
     "internal-error": "Something went wrong. Please try again.",
     "unreachable": "No connection. Check your network and try again."
+  },
+  "directory": {
+    "title": "My messages",
+    "subtitle": "Your conversations with agencies and collaborators, in the order they moved.",
+    "loading": "Loading conversations…",
+    "empty": "No conversations yet",
+    "emptyHint": "As soon as a collaboration starts, its conversation will appear here.",
+    "listLabel": "My conversations",
+    "loadMore": "Load older",
+    "unread": "New messages",
+    "muted": "Muted",
+    "retry": "Try again",
+    "withPerson": "Personal conversation"
   }
 }
