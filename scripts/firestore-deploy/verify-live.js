@@ -40,7 +40,9 @@
 
 const M = require('../lib/firestore-deploy/model');
 const { setOutputs, appendSummary } = require('../lib/ci/actions-io');
-const { loadWorld, loadDesired, attributeFromHistory } = require('../lib/firestore-deploy/world');
+const { loadWorld, loadDesired, attributeFromHistory, wireMatchesAt } = require('../lib/firestore-deploy/world');
+const { fetchPipelineDeployments, deploymentForRelease } = require('../lib/firestore-deploy/deployments');
+const { githubApiFromEnv } = require('../lib/ci/github-api');
 
 /** Προεπιλεγμένο δέντρο: ό,τι κρίνει η γραμμή (commit), όχι ο δίσκος (ADR-865 §11.8). */
 const DEFAULT_TREE = 'HEAD';
@@ -48,7 +50,9 @@ const DEFAULT_TREE = 'HEAD';
 /** Το δέντρο που κρίνεται: `--tree <HEAD|worktree|index|rev>`, αλλιώς `HEAD`. */
 const treeOf = (argv) => argValue(argv, '--tree') || DEFAULT_TREE;
 const { createTransport, loadLiveWorld, resolveProject, argValue } = require('../lib/firestore-deploy/live');
-const { judgeLive, withHistory, liveContent, SYNC, HEALTH, EXIT, ORIGIN } = require('../lib/firestore-deploy/drift');
+const {
+  judgeLive, withHistory, withDeployment, needsDeployment, liveContent, SYNC, HEALTH, EXIT, ORIGIN,
+} = require('../lib/firestore-deploy/drift');
 const { planDeployment, renderPlanMarkdown, ACTION } = require('../lib/firestore-deploy/plan');
 
 const POLL_MS = 15_000;
@@ -126,12 +130,55 @@ function attributeForeign(result, desired, live) {
   return { ...result, verdicts };
 }
 
+/**
+ * Το αρχείο της πράξης της γραμμής (ADR-865 §11.10) — ο **ένας** πελάτης GitHub, ή **ο λόγος** που
+ * λείπει. Τοπικά: `GITHUB_TOKEN=$(gh auth token) GITHUB_REPOSITORY=<owner>/<repo>`.
+ */
+function pipelineRecordFromEnv(env = process.env) {
+  if (!env.GITHUB_TOKEN || !env.GITHUB_REPOSITORY) return { why: 'λείπει GITHUB_TOKEN ή GITHUB_REPOSITORY' };
+  return { api: githubApiFromEnv(env), repo: env.GITHUB_REPOSITORY };
+}
+
+/** Πρώτη γραμμή σφάλματος, κομμένη — το σώμα HTTP του GitHub δεν χωρά σε σημείωση. */
+const brief = (error) => String(error.message || error).split(/\r?\n/)[0].slice(0, 160);
+
+/**
+ * `(verdict) => provenance` για το `withDeployment`. **Ένα** αίτημα λίστας για όλους τους στόχους·
+ * το GitHub που δεν απαντά είναι «δεν ρωτήθηκε», **ποτέ** «εκτός εργαλείου» (ψευδής κατηγορία).
+ */
+async function deploymentProvenance(pending, desired, live, record) {
+  if (!record.api) return () => ({ consulted: false, why: record.why });
+  const before = pending.map((v) => live[v.target].updateTime).filter(Boolean).sort().pop();
+  let records;
+  try {
+    records = await fetchPipelineDeployments(record.api, record.repo, { environment: M.PIPELINE.environment, before });
+  } catch (error) {
+    return () => ({ consulted: false, why: `το GitHub δεν απάντησε — ${brief(error)}` });
+  }
+  return (v) => {
+    const found = deploymentForRelease(records, live[v.target].updateTime);
+    const proven = found !== null
+      && wireMatchesAt(v.target, desired[v.target].source, found.sha, liveContent(live[v.target]));
+    return { consulted: true, found: proven ? found : null };
+  };
+}
+
+/** Τρίτη φάση της προέλευσης (ADR-865 §11.10) — **μόνο** για ό,τι δεν εξήγησε το μητρώο. */
+async function attributeDeployments(result, desired, live, record) {
+  const pending = result.verdicts.filter(needsDeployment);
+  if (pending.length === 0) return result;
+  const provenanceOf = await deploymentProvenance(pending, desired, live, record);
+  const verdicts = result.verdicts.map((v) => (needsDeployment(v) ? withDeployment(v, provenanceOf(v)) : v));
+  return { ...result, verdicts };
+}
+
 /** Μία ερώτηση — επιθυμητό (το δέντρο `tree` + git) έναντι ζωντανού (πάροχος). */
-async function verifyOnce(project, transport, tree = DEFAULT_TREE) {
+async function verifyOnce(project, transport, tree = DEFAULT_TREE, record = pipelineRecordFromEnv()) {
   const world = loadWorld({ tree });
   const desired = loadDesired(world);
   const live = await loadLiveWorld({ project, firebaseJson: world.firebaseJson, transport });
-  const result = attributeForeign(judgeLive(desired, live), desired, live);
+  const foreign = attributeForeign(judgeLive(desired, live), desired, live);
+  const result = await attributeDeployments(foreign, desired, live, record);
   return { ...result, tree: world.tree, worktreeDrift: world.worktreeDrift };
 }
 
@@ -205,4 +252,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { runVerification, verifyOnce, publishToGithub, treeOf };
+module.exports = { runVerification, verifyOnce, publishToGithub, treeOf, attributeDeployments, pipelineRecordFromEnv };

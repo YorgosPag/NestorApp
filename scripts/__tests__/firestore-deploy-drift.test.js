@@ -95,7 +95,8 @@ describe('ADR-865 §10 — ζωντανό έναντι δέντρου', () => {
       const v = verdictOf(D.judgeLive(d, liveWorld()), 'firestore:rules');
       expect(v.sync).toBe(D.SYNC.SYNCED);
       expect(v.detail).toContain('δεν το κατέγραψε');
-      expect(v.detail).toContain('GitHub Deployments');
+      // Η απάντηση («γραμμή παραγωγής» ή «εκτός εργαλείου») έρχεται από το `withDeployment` (§11.10)
+      expect(v.unrecorded).toBe(true);
     });
 
     it('release που δεν υπάρχει ⇒ OutOfSync («δεν αναπτύχθηκε ΠΟΤΕ»)', () => {

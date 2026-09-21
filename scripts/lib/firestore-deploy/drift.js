@@ -99,28 +99,33 @@ function judgeRules(target, desired, live) {
       detail: `το ruleset έχει ${(live.files || []).length} αρχεία — το CLI στέλνει πάντα ΕΝΑ` };
   }
   const origin = originOf(content, desired);
+  // `matchesTree` (world.js) = modulo CRLF/LF — ίδια απάντηση σε Windows και CI (ADR-865 Ε2)
+  const unrecorded = origin === ORIGIN.TREE && Boolean(desired.recorded) && !desired.recorded.matchesTree;
   return {
     target,
     sync: origin === ORIGIN.TREE ? SYNC.SYNCED : SYNC.OUT_OF_SYNC,
     health: HEALTH.HEALTHY,
     origin,
-    detail: rulesDetail(origin, desired, live),
+    ...(unrecorded ? { unrecorded: true } : {}),
+    detail: rulesDetail(origin, desired, live, unrecorded),
   };
 }
 
 /** Σημείωση όταν ταιριάζει η σημασία αλλά όχι τα bytes — ορατή, ποτέ σιωπηλή. */
 const eolNote = (content, wire) => (content === wire ? '' : ' · διαφορά ΜΟΝΟ σε αλλαγές γραμμής (CRLF/LF)');
 
-function rulesDetail(origin, desired, live) {
+/**
+ * Το μητρώο δεν εξηγεί το ζωντανό = δέντρο. **Ερώτηση**, όχι ετυμηγορία: την απαντά το
+ * `withDeployment` (ADR-865 §11.10) — γραμμή παραγωγής, ή ανάπτυξη **εκτός** εργαλείου.
+ */
+const UNRECORDED_NOTE = 'ζωντανό = δέντρο· το τοπικό μητρώο δεν το κατέγραψε';
+
+function rulesDetail(origin, desired, live, unrecorded) {
   const since = `release ${live.updateTime ?? ';'} · ${live.rulesetName.split('/').pop()}`;
   const rec = desired.recorded;
   switch (origin) {
     case ORIGIN.TREE:
-      // `matchesTree` (world.js) = modulo CRLF/LF — ίδια απάντηση σε Windows και CI (ADR-865 Ε2)
-      return rec && !rec.matchesTree
-        ? `${since}${eolNote(liveContent(live), desired.wire)} · ζωντανό = δέντρο· το τοπικό μητρώο δεν `
-          + 'το κατέγραψε (γραμμή παραγωγής ⇒ GitHub Deployments, ή ανάπτυξη εκτός εργαλείου)'
-        : `${since}${eolNote(liveContent(live), desired.wire)}`;
+      return `${since}${eolNote(liveContent(live), desired.wire)}${unrecorded ? ` · ${UNRECORDED_NOTE}` : ''}`;
     case ORIGIN.RECORDED:
       return `${since} · τρέχει η ανάπτυξη της ${rec.at} (@${rec.commit}) — το δέντρο προχώρησε, `
         + 'εκκρεμεί ανάπτυξη';
@@ -152,6 +157,42 @@ function withHistory(verdict, found) {
     detail: `${since} · τρέχει η έκδοση του δέντρου @${found.commit} (${found.at}) — το δέντρο `
       + 'προχώρησε, εκκρεμεί ανάπτυξη',
   };
+}
+
+/** Χρειάζεται αυτή η ετυμηγορία το αρχείο της γραμμής παραγωγής; (ADR-865 §11.10) */
+const needsDeployment = (verdict) => Boolean(verdict.unrecorded) || verdict.origin === ORIGIN.HISTORY;
+
+const deploymentLabel = (d) =>
+  `γραμμή παραγωγής @${String(d.sha).slice(0, 8)} (GitHub Deployment #${d.id} · ${d.state} · `
+  + `${d.start} → ${d.end ?? 'σε εξέλιξη'})`;
+
+/**
+ * **Τρίτη φάση της απόδοσης προέλευσης** (ADR-865 §11.10): ό,τι δεν εξήγησε το μητρώο το ρωτάμε
+ * στο **αρχείο της πράξης της γραμμής** — τα GitHub Deployments. Καθαρή: την αναζήτηση (χρόνος
+ * release ∈ παράθυρο εκτέλεσης **και** περιεχόμενο @sha = ζωντανό) την κάνει ο καλών.
+ *
+ * Ποτέ δεν αλλάζει `sync`/`health`/κωδικό εξόδου: το περιεχόμενο κρίθηκε ήδη. Αλλάζει **μόνο**
+ * την απάντηση στο «ποιος το έβαλε εκεί» — και η απάντηση είναι πάντα **μία από τρεις**, ορατή:
+ * γραμμή παραγωγής (με απόδειξη) · **εκτός εργαλείου** (ρωτήθηκε, δεν βρέθηκε) · δεν ρωτήθηκε (γιατί).
+ *
+ * @param {object} verdict ετυμηγορία κανόνων (μετά το `withHistory`)
+ * @param {{consulted:true, found:object|null}|{consulted:false, why:string}} provenance
+ */
+function withDeployment(verdict, provenance) {
+  if (!needsDeployment(verdict)) return verdict;
+  const history = verdict.origin === ORIGIN.HISTORY;
+  const swap = (note) => (history
+    ? `${verdict.detail} · ${note}`
+    : verdict.detail.replace(UNRECORDED_NOTE, `ζωντανό = δέντρο· ${note}`));
+  if (!provenance.consulted) {
+    return { ...verdict, detail: `${verdict.detail} (GitHub Deployments δεν ρωτήθηκαν: ${provenance.why})` };
+  }
+  if (provenance.found === null) {
+    return { ...verdict, outOfBand: true,
+      detail: swap('ΚΑΜΙΑ ανάπτυξη της γραμμής παραγωγής (GitHub Deployments) ούτε το μητρώο δεν το εξηγεί '
+        + '⇒ ανάπτυξη ΕΚΤΟΣ εργαλείου (Console · CLI χωρίς μητρώο)') };
+  }
+  return { ...verdict, deployment: provenance.found, detail: swap(`αναπτύχθηκε από τη ${deploymentLabel(provenance.found)}`) };
 }
 
 // ============================================================================
@@ -339,6 +380,9 @@ module.exports = {
   judgeLive,
   judgeRules,
   withHistory,
+  withDeployment,
+  needsDeployment,
+  UNRECORDED_NOTE,
   liveContent,
   judgeIndexes,
   indexIdentity,

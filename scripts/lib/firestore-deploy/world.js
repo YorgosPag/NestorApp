@@ -192,13 +192,22 @@ function attributeFromHistory(target, source, liveContent, limit = HISTORY_LIMIT
   if (typeof liveContent !== 'string') return null;
   const log = git(['log', `-n${limit}`, '--format=%h %cs', '--', source]);
   if (!log) return null;
-  const want = M.normalizeEol(liveContent);
   for (const line of log.split('\n')) {
     const [commit, at] = line.split(' ');
-    const blob = gitBytes(['show', `${commit}:${source}`]);
-    if (blob !== null && M.normalizeEol(M.wireOf(target, blob)) === want) return { commit, at };
+    if (wireMatchesAt(target, source, commit, liveContent)) return { commit, at };
   }
   return null;
+}
+
+/**
+ * **Είναι το ζωντανό η μεταγλώττιση της πηγής @commit;** — modulo αλλαγές γραμμής. Η **μία**
+ * ταύτιση περιεχομένου έναντι του git: την κάνουν το `attributeFromHistory` **και** η απόδοση
+ * από τα GitHub Deployments (ADR-865 §11.10). Commit που λείπει (ρηχό checkout) ⇒ `false`.
+ */
+function wireMatchesAt(target, source, commit, liveContent) {
+  if (typeof liveContent !== 'string') return false;
+  const blob = gitBytes(['show', `${commit}:${source}`]);
+  return blob !== null && M.normalizeEol(M.wireOf(target, blob)) === M.normalizeEol(liveContent);
 }
 
 // ============================================================================
@@ -279,6 +288,7 @@ module.exports = {
   loadDesired,
   recordedBytes,
   attributeFromHistory,
+  wireMatchesAt,
   publishedStateOf,
   publishedRef,
   parsePushLines,
@@ -287,4 +297,5 @@ module.exports = {
   resolveTargets,
   treeReader,
   git,
+  gitBytes,
 };
