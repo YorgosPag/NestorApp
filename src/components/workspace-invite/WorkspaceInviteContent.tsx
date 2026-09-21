@@ -22,13 +22,13 @@
  * ⛔ **Σύνδεσμοι μόνο από το `@/lib/workspace/navigation`** (CHECK 3.61) — ποτέ `next/link`.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatRelativeTime } from '@/lib/intl-formatting';
-import { Link } from '@/lib/workspace/navigation';
+import { Link, useRouter } from '@/lib/workspace/navigation';
 import { cn } from '@/lib/utils';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import {
@@ -71,12 +71,61 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 registerRouteSlice(routeSlice);
 
 export function WorkspaceInviteContent({ view }: { view: WorkspaceInvitationLinkView }) {
-  const [outcome, setOutcome] = useState<RedeemInvitationResult | null>(null);
+  const response = useInvitationResponse(view.kind === 'preview' ? view.token : null);
 
   if (view.kind !== 'preview') return <SetbackScreen setback={view} />;
-  if (outcome !== null) return <OutcomeScreen outcome={outcome} />;
+  if (response.outcome !== null) {
+    return <OutcomeScreen outcome={response.outcome} busy={response.busy} onRetry={response.retry} />;
+  }
 
-  return <PreviewScreen view={view} onSettled={setOutcome} />;
+  return <PreviewScreen view={view} busy={response.busy} onRespond={response.respond} />;
+}
+
+type InviteAction = 'accept' | 'decline';
+
+interface InvitationResponse {
+  readonly outcome: RedeemInvitationResult | null;
+  readonly busy: boolean;
+  readonly respond: (action: InviteAction) => Promise<void>;
+  /** Ξανατρέχει **την ΙΔΙΑ** πράξη που πάτησε ο άνθρωπος — ποτέ άλλη. */
+  readonly retry: () => void;
+}
+
+/**
+ * **Η απάντηση στην πρόσκληση — και η επανάληψή της.**
+ *
+ * 🔑 **Το «δοκιμάστε ξανά» επαναλαμβάνει την ΙΔΙΑ πράξη**, δεν γυρίζει τον άνθρωπο στην όψη
+ * να ξαναδιαλέξει (πρότυπο Gmail/Slack για παροδικές αποτυχίες). Είναι **ασφαλές**: η
+ * εξαργύρωση τρέχει σε συναλλαγή που ελέγχει `state === 'pending'` — δεύτερη κλήση μετά από
+ * επιτυχία που «χάθηκε» στο δίκτυο απαντά `already-used`, **ποτέ** διπλή ένταξη.
+ *
+ * ⚠️ Η πράξη κρατιέται σε **ref**, όχι σε state: δεν ζωγραφίζεται, και ένα state θα
+ *    ξανάφτιαχνε το `retry` σε κάθε αλλαγή του.
+ */
+function useInvitationResponse(token: string | null): InvitationResponse {
+  const [outcome, setOutcome] = useState<RedeemInvitationResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const lastAction = useRef<InviteAction | null>(null);
+
+  const respond = useCallback(
+    async (action: InviteAction) => {
+      if (token === null) return;
+      lastAction.current = action;
+      setBusy(true);
+      try {
+        setOutcome(await redeemWorkspaceInvitationFromScreen({ token, action }));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [token],
+  );
+
+  const retry = useCallback(() => {
+    if (lastAction.current !== null) void respond(lastAction.current);
+  }, [respond]);
+
+  return { outcome, busy, respond, retry };
 }
 
 // =============================================================================
@@ -116,6 +165,22 @@ function ExitLink({ exit }: { exit: WorkspaceInviteExitName }) {
   );
 }
 
+/**
+ * **ΤΟ «ΔΟΚΙΜΑΣΤΕ ΞΑΝΑ»** — μόνο για το **παροδικό** (`unavailable` / `failed`).
+ *
+ * ⛔ **Ποτέ σε ονομασμένη άρνηση**: «λάθος παραλήπτης» ή «έληξε» δεν αλλάζουν με επανάληψη —
+ *    κουμπί εκεί θα ήταν υπόσχεση που δεν τηρείται (ADR-844 Α3).
+ */
+function RetryButton({ busy, onRetry }: { busy: boolean; onRetry: () => void }) {
+  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
+
+  return (
+    <Button className="w-full" disabled={busy} onClick={onRetry}>
+      {busy ? t(INVITE_PAGE_KEYS.retrying) : t(INVITE_PAGE_KEYS.retry)}
+    </Button>
+  );
+}
+
 // =============================================================================
 // ΟΙ ΤΡΕΙΣ ΟΘΟΝΕΣ
 // =============================================================================
@@ -123,23 +188,47 @@ function ExitLink({ exit }: { exit: WorkspaceInviteExitName }) {
 function SetbackScreen({ setback }: { setback: WorkspaceInviteSetback }) {
   const { t } = useTranslation([WORKSPACE_INVITE_NS]);
 
-  const title = setback.kind === 'unavailable'
-    ? t(INVITE_PAGE_KEYS.unavailableTitle)
-    : t(INVITE_PAGE_KEYS.title);
-
-  const body = setback.kind === 'unavailable'
-    ? t(INVITE_PAGE_KEYS.unavailableBody)
-    : t(REFUSAL_KEY[setback.reason]);
+  if (setback.kind === 'unavailable') return <UnavailableViewScreen />;
 
   return (
-    <InviteCard title={title}>
-      <p className="text-sm">{body}</p>
+    <InviteCard title={t(INVITE_PAGE_KEYS.title)}>
+      <p className="text-sm">{t(REFUSAL_KEY[setback.reason])}</p>
       <ExitLink exit={setback.exit} />
     </InviteCard>
   );
 }
 
-function OutcomeScreen({ outcome }: { outcome: RedeemInvitationResult }) {
+/**
+ * **Η ΟΨΗ δεν δόθηκε** — ο διακομιστής δεν μπόρεσε να ρωτήσει.
+ *
+ * 🔑 `router.refresh()` και όχι `location.reload()`: ξανατρέχει **μόνο** το Server Component
+ * της σελίδας (νέα `previewWorkspaceInvitation`), χωρίς να πετά την κατάσταση του πελάτη ή
+ * να ξαναφορτώνει ολόκληρη την εφαρμογή. Το `useTransition` δίνει το «εκκρεμεί» **μέχρι να
+ * φτάσει η νέα απόδοση** — όχι μέχρι να επιστρέψει η κλήση, που επιστρέφει αμέσως.
+ */
+function UnavailableViewScreen() {
+  const { t } = useTranslation([WORKSPACE_INVITE_NS]);
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <InviteCard title={t(INVITE_PAGE_KEYS.unavailableTitle)}>
+      <p className="text-sm">{t(INVITE_PAGE_KEYS.unavailableBody)}</p>
+      <RetryButton busy={pending} onRetry={() => startTransition(() => router.refresh())} />
+      <ExitLink exit="home" />
+    </InviteCard>
+  );
+}
+
+function OutcomeScreen({
+  outcome,
+  busy,
+  onRetry,
+}: {
+  outcome: RedeemInvitationResult;
+  busy: boolean;
+  onRetry: () => void;
+}) {
   const { t } = useTranslation([WORKSPACE_INVITE_NS]);
 
   if (outcome.kind === 'accepted') {
@@ -172,6 +261,7 @@ function OutcomeScreen({ outcome }: { outcome: RedeemInvitationResult }) {
           ? t(REFUSAL_KEY[outcome.reason])
           : t(INVITE_PAGE_KEYS.unavailableBody)}
       </p>
+      {outcome.kind === 'failed' && <RetryButton busy={busy} onRetry={onRetry} />}
       <ExitLink exit="home" />
     </InviteCard>
   );
@@ -181,35 +271,24 @@ type PreviewBranch = Extract<WorkspaceInvitationLinkView, { kind: 'preview' }>;
 
 function PreviewScreen({
   view,
-  onSettled,
+  busy,
+  onRespond,
 }: {
   view: PreviewBranch;
-  onSettled: (outcome: RedeemInvitationResult) => void;
+  busy: boolean;
+  onRespond: (action: InviteAction) => Promise<void>;
 }) {
   const { t } = useTranslation([WORKSPACE_INVITE_NS]);
-  const [busy, setBusy] = useState(false);
-
-  const respond = useCallback(
-    async (action: 'accept' | 'decline') => {
-      setBusy(true);
-      try {
-        onSettled(await redeemWorkspaceInvitationFromScreen({ token: view.token, action }));
-      } finally {
-        setBusy(false);
-      }
-    },
-    [view.token, onSettled],
-  );
 
   return (
     <InviteCard title={t(INVITE_PAGE_KEYS.title)}>
       <InvitationFacts preview={view.preview} />
       {view.respond.kind === 'ready' ? (
         <nav className="flex flex-col gap-2" aria-label={t(INVITE_PAGE_KEYS.title)}>
-          <Button disabled={busy} onClick={() => void respond('accept')}>
+          <Button disabled={busy} onClick={() => void onRespond('accept')}>
             {busy ? t(INVITE_PAGE_KEYS.working) : t(INVITE_PAGE_KEYS.accept)}
           </Button>
-          <Button variant="outline" disabled={busy} onClick={() => void respond('decline')}>
+          <Button variant="outline" disabled={busy} onClick={() => void onRespond('decline')}>
             {t(INVITE_PAGE_KEYS.decline)}
           </Button>
         </nav>

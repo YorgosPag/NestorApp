@@ -71,6 +71,13 @@ export const INVITE_PAGE_KEYS = {
 
   unavailableTitle: 'auth:workspaceInvite.unavailable.title',
   unavailableBody: 'auth:workspaceInvite.unavailable.body',
+  /**
+   * 🔑 **Το «δοκιμάστε ξανά» ΠΡΟΣΦΕΡΕΤΑΙ, δεν περιγράφεται** (ADR-844 Α3). Το `unavailable`
+   * είναι **παροδικό** από ορισμό *(«δεν μπορέσαμε να ρωτήσουμε»)* — μόνη διέξοδος «αρχική»
+   * σήμαινε: ξαναβρές το email, ξαναπάτα τον σύνδεσμο.
+   */
+  retry: 'auth:workspaceInvite.unavailable.retry',
+  retrying: 'auth:workspaceInvite.unavailable.retrying',
 } as const;
 
 /**

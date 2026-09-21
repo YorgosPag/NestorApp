@@ -31,6 +31,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 const mockRedeem = jest.fn();
+const mockRefresh = jest.fn();
 
 // ⚠️ Το `t` κουβαλά **και τις παραμέτρους**: αλλιώς μια ένθετη κλήση `t(roleLine, { role:
 //    t(ROLE_KEY[...]) })` θα κατάπινε το κλειδί του ρόλου και η άγκυρα **Β4** θα ήταν
@@ -50,6 +51,7 @@ jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
   ),
+  useRouter: () => ({ refresh: mockRefresh }),
 }));
 
 jest.mock('@/services/workspace/workspace-invitation.client', () => ({
@@ -222,5 +224,45 @@ describe('Γ — τι μαθαίνει ο άνθρωπος αφού απαντή
     await respondWith({ kind: 'failed' }, INVITE_PAGE_KEYS.accept);
 
     expect(await screen.findByText(INVITE_PAGE_KEYS.unavailableBody)).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Δ — ΤΟ «ΔΟΚΙΜΑΣΤΕ ΞΑΝΑ» (2026-09-21): το παροδικό ΠΡΟΣΦΕΡΕΙ επανάληψη
+// ===========================================================================
+
+describe('Δ — το παροδικό προσφέρει επανάληψη, το οριστικό όχι', () => {
+  it('🔑 Δ1 — η ΟΨΗ δεν δόθηκε: «Δοκιμάστε ξανά» ξαναρωτά τον διακομιστή (router.refresh)', async () => {
+    mockRefresh.mockReset();
+    render(<WorkspaceInviteContent view={{ kind: 'unavailable', exit: 'home' }} />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: INVITE_PAGE_KEYS.retry }));
+
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔴 Δ2 — αποτυχία της ΠΡΑΞΗΣ: η επανάληψη στέλνει την ΙΔΙΑ πράξη, όχι άλλη', async () => {
+    await respondWith({ kind: 'failed' }, INVITE_PAGE_KEYS.decline);
+    mockRedeem.mockResolvedValue({ kind: 'declined' });
+
+    await userEvent.setup().click(
+      await screen.findByRole('button', { name: INVITE_PAGE_KEYS.retry }),
+    );
+
+    expect(await screen.findByText(INVITE_PAGE_KEYS.declinedBody)).toBeInTheDocument();
+    expect(mockRedeem).toHaveBeenNthCalledWith(2, { token: 'tok_1', action: 'decline' });
+  });
+
+  it('⛔ Δ3 — ονομασμένη άρνηση: ΚΑΝΕΝΑ «Δοκιμάστε ξανά» (η επανάληψη δεν αλλάζει τίποτα)', async () => {
+    await respondWith({ kind: 'refused', reason: 'wrong-recipient' }, INVITE_PAGE_KEYS.accept);
+
+    await screen.findByText(REFUSAL_KEY['wrong-recipient']);
+    expect(screen.queryByRole('button', { name: INVITE_PAGE_KEYS.retry })).toBeNull();
+  });
+
+  it('⛔ Δ4 — ονομασμένη άρνηση στην ΟΨΗ: ΚΑΝΕΝΑ «Δοκιμάστε ξανά»', () => {
+    render(<WorkspaceInviteContent view={{ kind: 'refused', reason: 'expired', exit: 'home' }} />);
+
+    expect(screen.queryByRole('button', { name: INVITE_PAGE_KEYS.retry })).toBeNull();
   });
 });

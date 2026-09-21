@@ -13,7 +13,7 @@
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "9728bd6be9289e9ab6326ec02867953d9536d578af1e9adaa2a34dfe09b19acb",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/invite__token.el.json": "10b3915e457027e71f08a179e0b13a024cc7901c25b3a46c1bf060ad25f8c9ac",
+    "src/i18n/generated/routes/invite__token.el.json": "dae7a63a95179fd9fb221c75e11999d6511bf4eda5ba2ad74b2ff6918784f752",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "195ef3ea03c5d4a096e852c96c6c363d76e382e74ce0bae02b69b710ddd9538e",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
@@ -89,7 +89,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d6616a7763baac60bade743277a781a32cb3c65ccde1fc236ef90c1a15748a77",
+  "inputsSha256": "61419a9b76998e069cf436c0bb49d1906a4ddebe8aa08d9d8075139536ba594a",
   "languages": [
     "el"
   ],
@@ -458,8 +458,8 @@
     "src/components/ui/toggle.tsx": "1926d8456f2be2f2525bcb9e85ee8717c230cf99b5094110954e6900b75d4d76",
     "src/components/ui/utils/dynamic-styles-generators.ts": "0132df0754f76bd4348660fa27d024526a5db2df3a8081562d677102a3ae5912",
     "src/components/ui/utils/dynamic-styles-internals.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
-    "src/components/workspace-invite/WorkspaceInviteContent.tsx": "92deeaa1f3b57f4430962d81bd0af7b46bae1985cd2fef58dace1cf247966a41",
-    "src/components/workspace-invite/workspace-invite-labels.ts": "ce8b29fadb7f48e11cedccc8674fe9da9bab174b92e96867d31b7802e8114265",
+    "src/components/workspace-invite/WorkspaceInviteContent.tsx": "56720c6c766ebae2b8926c0cb03168ef60ab71867dfb0cddf3863588b401684c",
+    "src/components/workspace-invite/workspace-invite-labels.ts": "6a7d816b85b72de31988cbc27fb96568df821ac070ea981468a7c91bf1e370f7",
     "src/components/workspace-invite/workspace-invite-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -2538,6 +2538,8 @@
             "workspaceInvite.signInToAccept",
             "workspaceInvite.title",
             "workspaceInvite.unavailable.body",
+            "workspaceInvite.unavailable.retry",
+            "workspaceInvite.unavailable.retrying",
             "workspaceInvite.unavailable.title",
             "workspaceInvite.working"
           ],
@@ -8011,7 +8013,7 @@
     "matchedKeys": 184,
     "routeBoundaries": 0,
     "shellFiles": 752,
-    "sliceBytes": 551495
+    "sliceBytes": 551597
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
