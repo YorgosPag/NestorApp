@@ -25,6 +25,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
+import { resolvePersonalNavigation } from '@/config/personal-navigation';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import {
   ACCOUNT_ROUTES,
@@ -342,11 +343,23 @@ describe('Λ — ο λογαριασμός ΕΧΕΙ σπίτι, και για τ
    * τι έγραφε πριν, και ένας έλεγχος στην ωμή πηγή θα κρινόταν από την **τεκμηρίωση**.
    *
    * ⛔ ΜΕΤΑΛΛΑΞΗ: ξαναγράψε `router.push(ACCOUNT_ROUTES.root)` ⇒ κόκκινο.
+   *
+   * 🔁 **ADR-871 Ε5 — η κρίση ΜΕΤΑΚΟΜΙΣΕ, δεν χάθηκε.** Το μενού δεν γράφει πια
+   * στοιχεία με το χέρι· τα διαβάζει από τον ΕΝΑ κατάλογο (`config/personal-navigation`),
+   * που καλεί τον `resolveAccountRoute`. Η άγκυρα ρωτά τώρα **τη συμπεριφορά** του
+   * καταλόγου (και για τους δύο κόσμους) **και** ότι το μενού περνά από αυτόν.
    */
-  it('Λ4: το μενού ΚΑΛΕΙ τον επιλυτή — δεν έχει σταθερό προορισμό', () => {
-    const src = readCode(USER_MENU);
+  it('Λ4: το μενού παίρνει τον λογαριασμό από τον κατάλογο — ποτέ σταθερό προορισμό', () => {
+    const accountOf = (companyId: string | null) =>
+      resolvePersonalNavigation({ companyId }, 'userMenu')
+        .flatMap((group) => group.items)
+        .find((item) => item.id === 'account')?.href;
 
-    expect(src).toMatch(/router\s*\.\s*push\s*\(\s*resolveAccountRoute\s*\(/);
+    expect(accountOf('comp_9c7c1a50')).toBe(ACCOUNT_ROUTES.root);
+    expect(accountOf(null)).toBe(PRIVATE_PROFILE_ROUTE);
+
+    const src = readCode(USER_MENU);
+    expect(src).toMatch(/resolvePersonalNavigation\s*\(/);
     expect(src).not.toMatch(/router\s*\.\s*push\s*\(\s*[\w.]*ACCOUNT_ROUTES\s*\./);
   });
 });

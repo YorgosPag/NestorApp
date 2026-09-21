@@ -22,7 +22,9 @@
  * 3. **Κανένα σύμβολο κελύφους.** Το `@/components/app-header` και το
  *    `@/components/app-sidebar` εισάγονται **μόνο** από το `(app)/layout.tsx` — το
  *    φρουρεί η **CHECK 3.52 Κ3**, και η παράβαση εδώ θα ήταν ακριβώς η διαρροή του
- *    εσωτερικού μενού που η πύλη γεννήθηκε να αποτρέψει.
+ *    εσωτερικού μενού που η πύλη γεννήθηκε να αποτρέψει. Η στήλη εδώ είναι ο
+ *    {@link PersonalSidebar} (ADR-871): **ίδιο primitive**, **δικός του** κατάλογος,
+ *    κανένας από τους βαρείς providers του `(app)` — μόνο `SidebarProvider`.
  *
  * ⚠️ **Ο `ProtectedRoute` ανακατευθύνει, δεν αρνείται.** Ο ανώνυμος που φτάνει σε
  * `/demands` πάει στη σύνδεση — και αυτό είναι το σωστό: η ζήτηση **απαιτεί**
@@ -33,7 +35,9 @@ import React from 'react';
 
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { ProtectedRoute } from '@/auth/components/ProtectedRoute';
+import { PersonalSidebar } from '@/components/private-space/PersonalSidebar';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES } from '@/lib/routes';
 
@@ -60,9 +64,30 @@ function IdentityPending(): React.ReactElement {
   );
 }
 
+/**
+ * ADR-871 Ε4 — **η δική του μνήμη σύμπτυξης**. Το γραφείο κρατά το `sidebar_state`·
+ * ένας άνθρωπος που συμπτύσσει τη στήλη του γραφείου δεν τη βρίσκει συμπτυγμένη εδώ.
+ */
+const PERSONAL_SIDEBAR_COOKIE = 'personal_sidebar_state';
+
 export function PrivateSpaceShell({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <>
+    /*
+      🏛️ ADR-871 — Η ΣΤΗΛΗ ΤΟΥ ΠΡΟΣΩΠΙΚΟΥ ΧΩΡΟΥ, ΜΕ ΤΗ ΔΙΑΤΑΞΗ ΤΟΥ ΓΡΑΦΕΙΟΥ.
+
+      Το primitive ζωγραφίζει τη στήλη σε **πλήρες ύψος** (`fixed inset-y-0`), άρα η
+      κεφαλίδα ζει **μέσα** στο inset, δεξιά της — ίδια διάταξη με το `(app)`.
+
+      ⚠️ `as="div"`: οι σελίδες του `(me)` αποδίδουν **δικό τους** `<main>` — δύο
+      `main` το ένα μέσα στο άλλο θα έσπαγαν τα ορόσημα (ADR-871 §10.1 Α4).
+      ⚠️ `data-shell-inset` και **αδελφός** της στήλης: από αυτόν οι αδελφικοί
+      επιλογείς του `shell-surface.css` βγάζουν το `--shell-sidebar-occupied`, ώστε ο
+      διάδρομος να μετρά το **πραγματικό** διαθέσιμο πλάτος (CHECK 3.63).
+      ⚠️ Η στήλη ζει **έξω** από τον φρουρό, για τον ίδιο λόγο με την κεφαλίδα.
+    */
+    <SidebarProvider cookieName={PERSONAL_SIDEBAR_COOKIE} restoreFromCookie>
+      <PersonalSidebar />
+      <SidebarInset as="div" data-shell-inset>
       {/*
         Η κεφαλίδα ζωγραφίζεται **έξω** από τον φρουρό, επίτηδες: ο άνθρωπος που
         περιμένει να λυθεί η ταυτότητά του βλέπει **ιστοσελίδα**, όχι κενή οθόνη με
@@ -109,6 +134,7 @@ export function PrivateSpaceShell({ children }: Readonly<{ children: React.React
           {children}
         </ShellSurface>
       </ProtectedRoute>
-    </>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

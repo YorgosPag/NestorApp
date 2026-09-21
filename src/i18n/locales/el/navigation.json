@@ -359,6 +359,27 @@
     "backup": "Αντίγραφα Ασφαλείας",
     "companySettings": "Ρυθμίσεις Εταιρείας"
   },
+  "personal": {
+    "sidebarLabel": "Ο προσωπικός μου χώρος",
+    "groups": {
+      "listings": "Οι αγγελίες μου",
+      "communication": "Επικοινωνία",
+      "organization": "Οργάνωση",
+      "discovery": "Ανακάλυψη",
+      "account": "Λογαριασμός"
+    },
+    "items": {
+      "myOffers": "Τα ακίνητά μου",
+      "myDemands": "Οι ζητήσεις μου",
+      "myMessages": "Τα μηνύματά μου",
+      "myContacts": "Οι επαφές μου",
+      "myDossiers": "Οι φάκελοί μου",
+      "searchListings": "Αναζήτηση ακινήτων",
+      "professionals": "Επαγγελματίες",
+      "account": "Λογαριασμός",
+      "createWorkspace": "Δημιουργώ τον χώρο γραφείου μου"
+    }
+  },
   "legal": {
     "privacyPolicy": "Πολιτική Απορρήτου",
     "termsOfService": "Όροι Χρήσης",

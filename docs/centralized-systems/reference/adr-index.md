@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 818 ADRs | Last Updated: 2026-09-20
+**📊 Stats**: 820 ADRs | Last Updated: 2026-09-21
 
 ---
 
@@ -16,7 +16,7 @@
 | Category | Count | Quick Jump |
 |----------|-------|------------|
 | 📐 **Domain - Geometry** | 1 | [View](#domain-geometry) |
-| 🎨 **UI Components** | 12 | [View](#ui-components) |
+| 🎨 **UI Components** | 13 | [View](#ui-components) |
 | 🎨 **Design System** | 7 | [View](#design-system) |
 | 🖼️ **Canvas & Rendering** | 44 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 12 | [View](#data-state) |
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 573 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 574 | [View](#uncategorized) |
 
 ---
 
@@ -853,7 +853,8 @@
 | **ADR-867** | Μηνύματα ανάμεσα σε συνεργάτες: **ένας πυρήνας νημάτων, παραγόμενο δικαίωμα** | ✅ 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — ✅ Β1 · ✅ Β2 · ✅ Β3 · ✅ **Β4** · ✅ **Β4β** (2026-09-17) · ✅ **Β5** (2026-09-18, μαζί με τον **κληρονόμο της αποχώρησης** — §8 #6) · ✅ **Β6** (2026-09-18, ειδοποιήσεις) · ✅ **Β7** (2026-09-19, οι οθόνες) · 🟡 **Β9** σε εξέλιξη (2026-09-19: γέννηση πράξης ενιαία + backfill νημάτων + **μία θέση, δύο ιδιότητες**) · επόμενο Β8 | 2026-09-17 | Collaboration / Messaging / Identity / Privacy | [📄](./adrs/ADR-867-network-messaging-core.md) |
 | **ADR-868** | Ένα δημόσιο σύνορο: **καμία server action**, η ταυτότητα δεν είναι όρισμα | ✅ ✅ **ΕΝΕΡΓΟ — ΕΠΑΛΗΘΕΥΜΕΝΟ ΣΤΗΝ ΠΑΡΑΓΩΓΗ** (2026-09-20, `nestorconstruct.gr`, commit `b2aaee0f`). CHECK 3.90 πράσινη (0 οδηγίες)· ανώνυμος ⇒ **401**· με συνεδρία `super_admin`+MFA και οι 8 αρνήσεις (404/403/400/405/«Server action not found») **όπως προβλέφθηκαν**, με **μηδέν εγγραφές** αποδεδειγμένες σε Firestore (§6 #2). Μοναδικό υπόλοιπο: η **επιτυχής** έγκριση δεν δοκιμάστηκε ζωντανά (καλύπτεται από άγκυρες). | 2026-09-19 | Security / API Boundary / Multi-tenancy | [📄](./adrs/ADR-868-single-public-boundary-server-actions.md) |
 | **ADR-869** | Η τυφλή ζώνη της CHECK 3.15: **«0 missing» σήμαινε «κοίταξα τα μισά»** | ✅ ✅ **ΜΕΤΡΗΘΗΚΕ ΚΑΙ ΕΚΛΕΙΣΕ** (2026-09-20) — 1 πραγματικό κενό βρέθηκε **ζωντανά** και διορθώθηκε· 1 οπλισμένο-απυροδότητο διορθώθηκε· 0 μη επαληθευμένα σημεία κινδύνου· **η ρίζα θεραπεύτηκε** με κανονικό πεδίο `appointment.effectiveDate` (**§12**, εντολή Giorgio). ⏳ **Εκκρεμεί ΜΟΝΟ η ανάπτυξη 1 δείκτη** (`firestore:verify` ⇒ `OutOfSync`, §12.6) | 2026-09-20 | Firestore / Indexes / Static analysis / Gate authority | [📄](./adrs/ADR-869-firestore-index-blind-zone.md) |
-| **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ ✅ **ΕΝΕΡΓΟ** (2026-09-21) — CHECK 3.91 (⛔ Κ1 με εύρος + 🔴 Κ2 ratchet). Απογραφή **39 ωμά → 5** ακάλυπτα με εύρος (+1 εκτός πύλης), **και τα 6 επιβεβαιωμένα ζωντανά** με `FAILED_PRECONDITION` σε cron/routes. 🔴 Κύριο εύρημα: ο **κοινός** κριτής έλεγε «σκάει» για ερώτημα που **τρέχει** (καταργημένος κανόνας «πρώτο orderBy = πεδίο εύρους») και αγνοούσε τη **συγχώνευση δεικτών** — 25% ψευδώς θετικά αν έμενε. +10 δείκτες. ⏳ **Εκκρεμεί η ανάπτυξή τους** (πράξη Giorgio, CHECK 3.86) | 2026-09-21 | Firestore / Indexes / Static analysis / Admin SDK | [📄](./adrs/ADR-870-admin-sdk-index-coverage.md) |
+| **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-870-admin-sdk-index-coverage.md) |
+| **ADR-871** | Sidebar στον προσωπικό χώρο: **ΝΑΙ, αλλά μόνο στα «δικά μου»** | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-21, όχι ακόμη committed) | 2026-09-21 | UI Components | [📄](./adrs/ADR-871-personal-space-sidebar.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -882,6 +883,7 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | [View](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
+| **ADR-871** | Sidebar στον προσωπικό χώρο: **ΝΑΙ, αλλά μόνο στα «δικά μου»** | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-21, όχι ακόμη committed) | [View](./adrs/ADR-871-personal-space-sidebar.md) |
 
 ---
 
@@ -1663,6 +1665,7 @@
 | **ADR-854** | **Το σήμα μετρητή αποκτά ιδιοκτήτη — `IconCountBadge`** — το ίδιο pattern γραμμένο **6 φορές** με **4 χρώματα / 6 μεγέθη / 4 θέσεις / 3 cutoff**· 🔴 τα δύο που ζητούσαν `--bg-error` (soft surface) ήταν στο **φωτεινό θέμα 1,02:1 — αόρατα**, και πέρασαν απαρατήρητα επειδή η ανάπτυξη γίνεται στο σκοτεινό. 🏆 Ο **τόνος δεσμεύει ΖΕΥΓΟΣ** γέμισμα+μελάνι (ο MUI δίνει `success`+λευκό = 2,30:1· εδώ `success`+μαύρο = 9,14:1)· χωρίς `className` prop επίτηδες· `tabular-nums`, logical `-end-1`, `aria-live`, πραγματικός αριθμός στον αναγνώστη. **Στενεύει** το ADR-770 §15 (ρόλος ≠ μέγεθος κειμένου: 3,59:1 περνά στα 14px, όχι στα 10px). 31 αγκυρώσεις **επαληθευμένες με μετάλλαξη** | ✅ APPROVED | [View](./adrs/ADR-854-icon-count-badge.md) |
 | **ADR-863** | Η ΑΠΟΔΟΣΗ ΑΔΕΙΩΝ ΓΙΑ Ο,ΤΙ ΔΙΑΝΕΜΕΤΑΙ | ✅ APPROVED | [View](./adrs/ADR-863-third-party-attribution.md) |
 | **ADR-865** | Η ΑΠΟΔΕΙΞΗ ΑΝΑΠΤΥΞΗΣ: «γραμμένο» δεν σημαίνει «ανεπτυγμένο» | ✅ APPROVED | [View](./adrs/ADR-865-deploy-proof-firebase.md) |
+| **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ APPROVED | [View](./adrs/ADR-870-admin-sdk-index-coverage.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

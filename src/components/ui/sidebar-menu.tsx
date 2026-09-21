@@ -97,6 +97,10 @@ const SidebarMenuButton = React.forwardRef<
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
+        // ADR-871 §10.2 — WAI-ARIA APG «Disclosure Navigation»: ο τρέχων σύνδεσμος
+        // δηλώνει `aria-current="page"`. Μόνο ως σύνδεσμος (`asChild`): σε κουμπί
+        // που ανοίγει υπο-μενού το «σελίδα» θα ήταν ψέμα.
+        aria-current={asChild && isActive ? "page" : undefined}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
       />

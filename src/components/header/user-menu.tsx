@@ -36,13 +36,7 @@ import { DeclaredOccupationBadge } from '@/components/header/DeclaredOccupationB
 // ADR-820 §5.1 — «σε ποιου τον χώρο;»: η ΜΙΑ πόρτα ανάμεσα στους δύο κόσμους.
 import { MySpacesSection } from '@/components/header/MySpacesSection';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import {
-  FolderArchive,
-  Handshake,
-  MessagesSquare,
-  User,
-  LogOut,
-} from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized design system
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -50,10 +44,9 @@ import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
-import { AUTH_ROUTES, resolveAccountRoute } from '@/lib/routes';
-import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
-import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
-import { MY_MESSAGES_ROUTE } from '@/lib/network-messaging/network-messaging-routes';
+import { AUTH_ROUTES } from '@/lib/routes';
+// ADR-871 Ε5 — οι συντομεύσεις «τα δικά μου» έρχονται από τον ΕΝΑ κατάλογο.
+import { resolvePersonalNavigation } from '@/config/personal-navigation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -80,6 +73,8 @@ const logger = createModuleLogger('UserMenu');
 export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }> = {}) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(COMMON_NAMESPACES);
+  // Οι ετικέτες του καταλόγου ζουν στο `navigation` (ADR-871 §10.1 Α7).
+  const { t: tNav } = useTranslation('navigation');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
@@ -207,61 +202,28 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
         <MySpacesSection />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem
-            /* ADR-843 §10.19 — «ΟΙ ΕΠΑΦΕΣ ΜΟΥ». Μέχρι 2026-09-10 ΚΑΝΕΝΑ μενού δεν
-               οδηγούσε εκεί. Ζουν ΕΚΤΟΣ χώρου (η χωρητικότητα μετριέται ανά ΑΝΘΡΩΠΟ),
-               άρα ο ίδιος προορισμός για ιδιώτη ΚΑΙ υπάλληλο — ο `workspaceHref` τον
-               αφήνει άθικτο, και κανένας επιλυτής δεν χρειάζεται.
-               🔑 ΕΔΩ, ΚΑΙ ΟΧΙ ΩΣ ΠΟΡΤΑ ΤΟΥ `PublicSiteHeader`: εκείνες είναι ΠΡΟΘΕΣΕΙΣ
-               («Ζητώ» · «Προσφέρω») που βλέπει και ο ανώνυμος· αυτό είναι ΛΙΣΤΑ του
-               συνδεδεμένου — πρότυπο Zillow «Profile → Saved homes». Και αυτό το μενού
-               αποδίδεται και στους πέντε κόσμους (CHECK 3.72): μία ένθεση, παντού. */
-            onClick={() => router.push(MY_FIRST_CONTACTS_ROUTE)}
-            className={layout.cursorPointer}
-          >
-            <Handshake className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
-            <span>{t('userMenu.myContacts')}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            /* ADR-866 Φ1.2 (Ε-Φ1.2-4) — «ΟΙ ΦΑΚΕΛΟΙ ΜΟΥ». Ίδιος λόγος με τις επαφές: είναι ΛΙΣΤΑ του
-               συνδεδεμένου, όχι πρόθεση που βλέπει ο ανώνυμος (Zillow «Profile → Your home» · idealista
-               «Mis anuncios»). Εκτός χώρου (`OUTSIDE_WORKSPACE`) ⇒ ίδιος προορισμός για ιδιώτη ΚΑΙ υπάλληλο:
-               ο φάκελος του σπιτιού του υπαλλήλου είναι δικός του, όχι του γραφείου. */
-            onClick={() => router.push(MY_DOSSIERS_ROUTE)}
-            className={layout.cursorPointer}
-          >
-            <FolderArchive className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
-            <span>{t('userMenu.myDossiers')}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            /* ADR-867 Β9β — «ΤΑ ΜΗΝΥΜΑΤΑ ΜΟΥ». Ίδιος λόγος θέσης με τις επαφές και τους φακέλους:
-               ΛΙΣΤΑ του συνδεδεμένου, όχι πρόθεση που βλέπει ο ανώνυμος (Zillow «Premier Agent Inbox»
-               · Slack Connect). 🔑 ΚΑΙ ΕΙΝΑΙ Ο ΜΟΝΟΣ ΤΟΠΟΣ ΠΟΥ ΧΡΕΙΑΖΕΤΑΙ: το νήμα είναι
-               `cross-space-thread` — η εμβέλειά του είναι ο ΑΝΘΡΩΠΟΣ, άρα ο ίδιος προορισμός για
-               ιδιώτη ΚΑΙ υπάλληλο, και αυτό το μενού αποδίδεται και στους πέντε κόσμους (CHECK 3.72).
-               Ένα δεύτερο στοιχείο στο sidebar του γραφείου θα υπονοούσε «τα μηνύματα ΑΥΤΟΥ του
-               γραφείου», που η μηχανή από κάτω δεν ξέρει να απαντήσει. */
-            onClick={() => router.push(MY_MESSAGES_ROUTE)}
-            className={layout.cursorPointer}
-          >
-            <MessagesSquare className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
-            <span>{t('userMenu.myMessages')}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            /* 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΚΡΙΝΕΤΑΙ, ΔΕΝ ΕΙΝΑΙ ΣΤΑΘΕΡΟΣ — και ήταν ΖΩΝΤΑΝΟ 404.**
-               Έγραφε `ACCOUNT_ROUTES.root`, δηλαδή `/account`. Αυτό το μενού
-               αποδίδεται **και στους πέντε κόσμους** (`ShellUtilities`, CHECK 3.72),
-               και για τον **ιδιώτη** το ψευδώνυμο είναι `null` ⇒ ο `workspaceHref`
-               αφήνει τη διεύθυνση άθικτη ⇒ `/account`, **που δεν έχει σελίδα**: ο
-               κατάλογος `account/` ζει αποκλειστικά κάτω από `o/[workspace]/`.
-               ⚠️ Η κρίση δεν γίνεται **εδώ**: τη δίνει έτοιμη ο ΕΝΑΣ επιλυτής, με το
-               **ίδιο** `hasOrganization` που κρίνει και την προσγείωση. */
-            onClick={() => router.push(resolveAccountRoute({ companyId: user?.companyId }))}
-            className={layout.cursorPointer}
-          >
-            <User className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
-            <span>{t('userMenu.account')}</span>
-          </DropdownMenuItem>
+          {/* ADR-871 Ε5 — «ΤΑ ΔΙΚΑ ΜΟΥ», ΑΠΟ ΤΟΝ ΕΝΑ ΚΑΤΑΛΟΓΟ.
+              Ήταν τέσσερα χειρόγραφα στοιχεία (ADR-843 §10.19 επαφές · ADR-866 Φ1.2 φάκελοι ·
+              ADR-867 Β9β μηνύματα · λογαριασμός) με δική τους σειρά. Πλέον ο ίδιος κατάλογος
+              τροφοδοτεί και τη στήλη του `(me)` — προσθήκη = μία γραμμή στο
+              `config/personal-navigation.ts`.
+              🔑 ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ SIDEBAR ΤΟΥ ΓΡΑΦΕΙΟΥ: είναι ΛΙΣΤΕΣ του ΑΝΘΡΩΠΟΥ (εκτός χώρου,
+              `cross-space-thread`), και αυτό το μενού αποδίδεται σε ΟΛΟΥΣ τους κόσμους
+              (CHECK 3.72) — ο υπάλληλος φτάνει στα δικά του μηνύματα χωρίς αλλαγή χώρου.
+              ⚠️ Ο λογαριασμός ΚΡΙΝΕΤΑΙ (γραφείο `/account` · ιδιώτης `/profile` — ήταν ζωντανό
+              404), από τον ΕΝΑ `resolveAccountRoute` μέσα στον κατάλογο· καμία κρίση εδώ. */}
+          {resolvePersonalNavigation({ companyId: user?.companyId }, 'userMenu')
+            .flatMap((group) => group.items)
+            .map((item) => (
+              <DropdownMenuItem
+                key={item.id}
+                onClick={() => router.push(item.href)}
+                className={layout.cursorPointer}
+              >
+                <item.icon className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
+                <span>{tNav(item.title)}</span>
+              </DropdownMenuItem>
+            ))}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -51,6 +51,10 @@
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { ShellUtilities } from '@/core/containers/ShellUtilities';
+// ⚠️ ΟΧΙ από το `@/components/ui/sidebar`: εκείνο σέρνει `Sheet`/`Input`/`Separator`
+//    σε κάθε δημόσια σελίδα του `(light)`, όπου στήλη δεν υπάρχει ποτέ (ADR-871 Υ2).
+import { useOptionalSidebar } from '@/components/ui/sidebar-context';
+import { SidebarTrigger } from '@/components/ui/sidebar-trigger';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
@@ -64,16 +68,30 @@ export function PublicSiteHeader() {
   //    φορτώνει ένα namespace μία φορά, άρα ήταν θόρυβος, όχι σφάλμα. Καθαρίστηκε
   //    επιτόπου (Boy Scout, N.0.2) αφού το αρχείο ανοίχτηκε για την ADR-857 Φ4.
   const { t } = useTranslation(['search-results', 'property-market']);
+  /*
+    🏛️ ADR-871 Ε2 / §10.3 Υ2 — **ΡΩΤΑ ΤΗΝ ΠΑΡΟΥΣΙΑ ΤΗΣ ΣΤΗΛΗΣ, ΟΧΙ ΤΗ ΔΙΑΔΡΟΜΗ.**
+    Στο `(me)` ο `PrivateSpaceShell` τυλίγει αυτή την κεφαλίδα σε `SidebarProvider`·
+    στο `(light)` όχι. Ο provider **είναι** η απάντηση — λίστα `pathname` εδώ θα ήταν
+    ο `ConditionalAppShell` που διέγραψε το ADR-777 §8.12.
+    Με στήλη: «Ζητώ»/«Προσφέρω» είναι ήδη στοιχεία της ⇒ δεν διπλασιάζονται· στο
+    κινητό η στήλη είναι συρτάρι και η πόρτα της είναι το ☰. Το σήμα κρύβεται από
+    `md` και πάνω, όπου το δείχνει ήδη η στήλη.
+  */
+  const hasSidebar = useOptionalSidebar() !== null;
 
   return (
     <header className="w-full border-b border-border bg-card">
       <nav
         aria-label={t('search-results:site.nav')}
-        className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6"
+        // Με στήλη η κεφαλίδα απλώνεται σε όλο το inset, όπως στο γραφείο: αλλιώς το ☰
+        // κάθεται στη μέση της οθόνης, μακριά από τη στήλη που ελέγχει (ADR-871 §11).
+        className={`flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6${hasSidebar ? '' : ' mx-auto max-w-5xl'}`}
       >
+        <div className="flex items-center gap-2">
+        {hasSidebar && <SidebarTrigger />}
         <Link
           href={SEARCH_LANDING_ROUTE}
-          className="text-base font-semibold tracking-tight text-foreground"
+          className={`text-base font-semibold tracking-tight text-foreground${hasSidebar ? ' md:hidden' : ''}`}
           aria-label={t('search-results:site.home')}
         >
           {/*
@@ -86,6 +104,7 @@ export function PublicSiteHeader() {
           */}
           {PRODUCT_NAME}
         </Link>
+        </div>
 
         <div className="flex items-center gap-2">
           {/*
@@ -95,12 +114,14 @@ export function PublicSiteHeader() {
             προς `/demands/new` θα τον έστελνε, σε κινητό, σε οθόνη που λέει «όχι εδώ»
             (Α8). Η πόρτα οφείλει να ανοίγει σε **κάθε** συσκευή.
           */}
+          {!hasSidebar && (
           <Link
             href={MY_DEMANDS_ROUTE}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
           >
             {t('property-market:demand.door.label')}
           </Link>
+          )}
 
           {/*
             ✅ **Η ΤΡΙΤΗ ΠΟΡΤΑ — «ΠΡΟΣΦΕΡΩ» (2026-08-11, Α14).** Η δεύτερη προϋπόθεση
@@ -113,12 +134,14 @@ export function PublicSiteHeader() {
             **αποκλειστικά desktop** (Α8), ενώ η πόρτα οφείλει να ανοίγει σε **κάθε**
             συσκευή.
           */}
+          {!hasSidebar && (
           <Link
             href={MY_OFFERS_ROUTE}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
           >
             {t('property-market:offer.door.label')}
           </Link>
+          )}
 
           {/*
             ✅ **ΤΟ CTA — Η ΚΥΡΙΑ ΠΡΑΞΗ (2026-08-23, ADR-660 §5.11 / §5.8 κενό Β).**
@@ -144,9 +167,12 @@ export function PublicSiteHeader() {
             έσπαγε τις CHECK 3.26/3.38/3.42, και σε **σκοτεινό** θέμα το `text-primary`
             λύνεται ταυτόσημα με το `--card` (ADR-770) — δηλαδή αόρατο.
           */}
+          {/* ADR-871 §11 (Giorgio 2026-09-21): με στήλη, από `md` και πάνω η πράξη ζει ήδη
+              στην κορυφή της στήλης — δεύτερη φορά στην ίδια οθόνη θα ήταν θόρυβος. Στο
+              κινητό η στήλη είναι συρτάρι, οπότε εδώ μένει η μόνη ορατή πόρτα. */}
           <Link
             href={NEW_OFFER_ROUTE}
-            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${COLOR_BRIDGE.action.primary}`}
+            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${COLOR_BRIDGE.action.primary}${hasSidebar ? ' md:hidden' : ''}`}
           >
             {t('property-market:offer.door.cta')}
           </Link>

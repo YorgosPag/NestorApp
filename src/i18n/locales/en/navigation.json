@@ -359,6 +359,27 @@
     "backup": "Backup & Restore",
     "companySettings": "Company Settings"
   },
+  "personal": {
+    "sidebarLabel": "My personal space",
+    "groups": {
+      "listings": "My listings",
+      "communication": "Communication",
+      "organization": "Organisation",
+      "discovery": "Discover",
+      "account": "Account"
+    },
+    "items": {
+      "myOffers": "My properties",
+      "myDemands": "My requests",
+      "myMessages": "My messages",
+      "myContacts": "My contacts",
+      "myDossiers": "My property files",
+      "searchListings": "Search properties",
+      "professionals": "Professionals",
+      "account": "Account",
+      "createWorkspace": "Create my office workspace"
+    }
+  },
   "legal": {
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",

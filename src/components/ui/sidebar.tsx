@@ -3,13 +3,11 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import { PanelLeft } from "lucide-react"
 
 import { useIconSizes } from "@/hooks/useIconSizes"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 import { useTranslation } from '@/i18n/hooks/useTranslation'
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
@@ -18,7 +16,8 @@ import { useSidebar, SIDEBAR_WIDTH_MOBILE } from "@/components/ui/sidebar-contex
 import '@/lib/design-system';
 
 // ── Re-exports for backward compatibility ──────────
-export { SidebarProvider, useSidebar } from "@/components/ui/sidebar-context"
+export { SidebarProvider, useSidebar, useOptionalSidebar } from "@/components/ui/sidebar-context"
+export { SidebarTrigger } from "@/components/ui/sidebar-trigger"
 export {
   SidebarMenu,
   SidebarMenuAction,
@@ -137,34 +136,6 @@ const Sidebar = React.forwardRef<
 )
 Sidebar.displayName = "Sidebar"
 
-const SidebarTrigger = React.forwardRef<
-  React.ComponentRef<typeof Button>,
-  React.ComponentProps<typeof Button>
->(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
-  const iconSizes = useIconSizes()
-  const { t } = useTranslation(COMMON_NAMESPACES)
-
-  return (
-    <Button
-      ref={ref}
-      data-sidebar="trigger"
-      variant="ghost"
-      size="icon"
-      className={cn(iconSizes.lg, className)}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      {...props}
-    >
-      <PanelLeft />
-      <span className="sr-only">{t('buttons.toggleSidebar')}</span>
-    </Button>
-  )
-})
-SidebarTrigger.displayName = "SidebarTrigger"
-
 const SidebarRail = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
@@ -196,21 +167,26 @@ const SidebarRail = React.forwardRef<
 SidebarRail.displayName = "SidebarRail"
 
 const SidebarInset = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"main">
->(({ className, ...props }, ref) => {
+  HTMLElement,
+  React.ComponentProps<"main"> & {
+    /**
+     * ADR-871 §10.1 Α4 — `div` όπου οι **σελίδες** αποδίδουν δικό τους `<main>`
+     * (ο προσωπικός χώρος): δύο `main` το ένα μέσα στο άλλο σπάνε τα ορόσημα.
+     */
+    as?: "main" | "div"
+  }
+>(({ as: Tag = "main", className, ...props }, ref) => {
   const colors = useSemanticColors();
-  return (
-    <main
-      ref={ref}
-      className={cn(
-        `relative flex min-h-svh flex-1 flex-col ${colors.bg.primary}`,
-        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
-        className
-      )}
-      {...props}
-    />
-  )
+  // `createElement` αντί για JSX: η ένωση `main | div` τυπώνεται με **ένα** `HTMLElement` ref.
+  return React.createElement(Tag, {
+    ...props,
+    ref,
+    className: cn(
+      `relative flex min-h-svh flex-1 flex-col ${colors.bg.primary}`,
+      "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
+      className
+    ),
+  })
 })
 SidebarInset.displayName = "SidebarInset"
 
@@ -391,5 +367,4 @@ export {
   SidebarInset,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger,
 }
