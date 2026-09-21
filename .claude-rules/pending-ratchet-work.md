@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **21/09 — ΣΕΛΙΔΕΣ ΤΟΥ `(app)` ΜΕ ΔΙΚΟ ΤΟΥΣ `<main>` ΜΕΣΑ ΣΤΟ `<main>` ΤΟΥ ΚΕΛΥΦΟΥΣ** *(ADR-871 §10.5 Β2/Υ9)*
+
+  Το κέλυφος έχει πλέον **έναν** `main` (`MainContentBridge`· το `SidebarInset` έγινε `div`). Δεκάδες σελίδες όμως
+  αποδίδουν **δεύτερο** μέσα του: π.χ. `NavigationPageContent`, `DashboardHome`, `ReportPage`, τα admin `*PageContent`,
+  `(app)/admin/layout.tsx`, `o/[workspace]/dxf/viewer/page.tsx`, procurement (`AnalyticsPageContent`, `RfqDetailClient`, …).
+  Μέτρηση: `grep -rlE "<main[ >]|as=\"main\"" src --include=*.tsx` = **121** αρχεία (όλοι οι χώροι μαζί). ⚠️ Κάποια
+  components αποδίδονται **και** στο `(me)`/`(light)`, όπου το δικό τους `main` είναι **σωστό** (π.χ. `mandate/*Content`,
+  `listing-detail`) ⇒ **όχι** μαζικό `sed`. Διόρθωση: σελίδα του `(app)` → `section` με `aria-labelledby`· κοινό component →
+  prop ορόσημου. Πύλη: ratchet «ένα `main` ανά αποδοσμένη σελίδα» (axe `landmark-no-duplicate-main` σε smoke ανά διαδρομή).
+
 - 🟠 **21/09 — ΤΟ «ΔΙΑΒΑΣΤΗΚΕ» ΤΗΣ ΕΙΔΟΠΟΙΗΣΗΣ ΕΧΕΙ ΔΥΟ ΠΕΔΙΑ ΚΑΙ ΤΡΕΙΣ ΤΥΠΟΥΣ** (εύρημα ADR-867 Ε10 · ανήκει στο ADR-848)
 
   Ο `seenFields()` (`server/notifications/notification-read.ts` — σύνδεσμος email `/n/{id}` + `POST /ack`) γράφει
