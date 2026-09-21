@@ -5,9 +5,9 @@
  *
  * ΤΑ ΔΥΟ ΦΙΛΤΡΑ ΕΙΝΑΙ ΔΙΑΔΟΧΙΚΑ ΚΑΙ ΑΝΕΞΑΡΤΗΤΑ (§14.5) — μην τα ενώσεις:
  *
- *   1. **ΔΙΚΑΙΩΜΑ** → `filterItemsByPermissions()` μέσα στο
- *      `smart-navigation-factory`. Υπάρχει και τρέχει από πριν· είναι ασφάλεια
- *      στο UI επίπεδο και **δεν το αγγίζουμε**.
+ *   1. **ΔΙΚΑΙΩΜΑ** (+ περιβάλλον) → η μηχανή του καταλόγου
+ *      (`office-navigation/resolve-office-navigation.ts`, ADR-871 §10.6). Είναι
+ *      φίλτρο UX, όχι ασφάλεια — η προστασία ζει στον διακομιστή.
  *   2. **ΕΝΕΡΓΗ ΔΟΥΛΕΙΑ** → `filterItemsByJob()`. Καθαρή ετικέτα ορατότητας.
  *
  * Ένα στοιχείο εμφανίζεται όταν *(α)* ανήκει στην ενεργή δουλειά **ΚΑΙ** *(β)*
@@ -30,7 +30,7 @@
  *                                 γονέων, ανά δοχείο· ο δείκτης ζει **μέσα** στο
  *                                 ανοιγμένο δοχείο, εκεί που αφορά.
  *   3. `reveal.isRevealing`     — ο τρόπος «Αποκάλυψη»: τα δέντρα επιστρέφουν
- *                                 **αφιλτράριστα** και το `hiddenHrefs` λέει
+ *                                 **αφιλτράριστα** και το `hiddenKeys` λέει
  *                                 ποια να υποβαθμιστούν οπτικά.
  *
  * 🔑 **Ο αριθμός ΔΕΝ αλλάζει όταν αποκαλύπτεις** — και είναι σκόπιμο: ο δείκτης
@@ -45,8 +45,8 @@ import {
   getMainMenuItems,
   getToolsMenuItems,
   getSettingsMenuItems,
-} from '@/config/navigation';
-import type { MenuItem } from '@/config/navigation';
+} from '@/config/office-navigation/resolve-office-navigation';
+import type { MenuEntry, MenuGroup, MenuLink } from '@/types/sidebar';
 import { filterItemsByJob, summarizeHidden } from '@/config/jobs-visibility';
 import {
   filterItemsByCapability,
@@ -61,9 +61,9 @@ import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrga
 
 /** Τα τρία δέντρα του sidebar, περασμένα **μόνο** από το φίλτρο δικαιωμάτων. */
 export interface JobMenus {
-  readonly main: MenuItem[];
-  readonly tools: MenuItem[];
-  readonly settings: MenuItem[];
+  readonly main: MenuEntry[];
+  readonly tools: MenuEntry[];
+  readonly settings: MenuEntry[];
 }
 
 /**
@@ -95,9 +95,9 @@ export function buildJobMenus(
   // αυτόν που βάφει η οθόνη: το «22 αντί για 9» ξαναγεννημένο. Γι' αυτό η παράμετρος
   // είναι **υποχρεωτική** και όχι προαιρετική με προεπιλογή.
   return {
-    main: filterItemsByCapability(getMainMenuItems(permissionList), capabilities),
-    tools: filterItemsByCapability(getToolsMenuItems(permissionList), capabilities),
-    settings: filterItemsByCapability(getSettingsMenuItems(permissionList), capabilities),
+    main: filterItemsByCapability<MenuLink, MenuGroup>(getMainMenuItems(permissionList), capabilities),
+    tools: filterItemsByCapability<MenuLink, MenuGroup>(getToolsMenuItems(permissionList), capabilities),
+    settings: filterItemsByCapability<MenuLink, MenuGroup>(getSettingsMenuItems(permissionList), capabilities),
   };
 }
 
@@ -105,23 +105,23 @@ export function buildJobMenus(
  * Ό,τι χρειάζεται η **οθόνη** για τα επίπεδα 2 και 3 — ένα αντικείμενο, ώστε να
  * ταξιδεύει ως **ένα** prop μέσα από το `SidebarMenuSection`.
  *
- * ⚠️ Σκόπιμα **δεν** είναι σημαία πάνω στα ίδια τα `MenuItem`: θα μόλυνε τον
+ * ⚠️ Σκόπιμα **δεν** είναι σημαία πάνω στα ίδια τα `MenuEntry`: θα μόλυνε τον
  * κοινό τύπο της πλοήγησης με πεδίο που αφορά μόνο αυτόν τον τρόπο λειτουργίας.
  */
 export interface JobRevealView {
-  /** Επίπεδο 2 — «+7 κρυμμένα» μέσα στο δοχείο, με κλειδί το `href` του γονιού. */
+  /** Επίπεδο 2 — «+7 κρυμμένα» μέσα στην ομάδα, με κλειδί το `id` της. */
   readonly hiddenSubItemCountByParent: ReadonlyMap<string, number>;
-  /** Επίπεδο 3 — ποια `href` να δείχνονται υποβαθμισμένα κατά την αποκάλυψη. */
-  readonly hiddenHrefs: ReadonlySet<string>;
+  /** Επίπεδο 3 — ποιοι κόμβοι (`navNodeKey`) δείχνονται υποβαθμισμένοι στην αποκάλυψη. */
+  readonly hiddenKeys: ReadonlySet<string>;
   readonly isRevealing: boolean;
   readonly onReveal: () => void;
   readonly onStopRevealing: () => void;
 }
 
 export interface JobFilteredNavigation {
-  readonly mainMenuItems: MenuItem[];
-  readonly toolsMenuItems: MenuItem[];
-  readonly settingsMenuItems: MenuItem[];
+  readonly mainMenuItems: MenuEntry[];
+  readonly toolsMenuItems: MenuEntry[];
+  readonly settingsMenuItems: MenuEntry[];
   /**
    * Α-3/Ε5.ε — πόσα στοιχεία έκρυψε **η ενεργή δουλειά** (όχι τα δικαιώματα:
    * όσα κόβει το permission δεν είναι «κρυμμένα», είναι **ανύπαρκτα** για τον
@@ -150,9 +150,9 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
   const computed = useMemo(() => {
     const menus = buildJobMenus(permissions, capabilities);
     const results = {
-      main: filterItemsByJob(menus.main, activeJob),
-      tools: filterItemsByJob(menus.tools, activeJob),
-      settings: filterItemsByJob(menus.settings, activeJob),
+      main: filterItemsByJob<MenuLink, MenuGroup>(menus.main, activeJob),
+      tools: filterItemsByJob<MenuLink, MenuGroup>(menus.tools, activeJob),
+      settings: filterItemsByJob<MenuLink, MenuGroup>(menus.settings, activeJob),
     };
     const summary = summarizeHidden([results.main, results.tools, results.settings]);
     return { menus, results, summary };
@@ -166,7 +166,7 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
     // Επίπεδο 3: στην «Αποκάλυψη» επιστρέφουν τα **αφιλτράριστα** δέντρα, ώστε
     // κάθε κρυμμένο στοιχείο να ξαναβρεθεί **στη θέση του** — όχι σε λίστα στο
     // τέλος. Η θέση είναι η μισή πληροφορία: «τι έλειπε **από πού**».
-    const pick = (all: MenuItem[], result: { readonly visible: readonly MenuItem[] }): MenuItem[] =>
+    const pick = (all: MenuEntry[], result: { readonly visible: readonly MenuEntry[] }): MenuEntry[] =>
       isRevealingHidden ? [...all] : [...result.visible];
 
     return {
@@ -177,7 +177,7 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
       hiddenSubItemCount: summary.hiddenSubItemCount,
       reveal: {
         hiddenSubItemCountByParent: summary.hiddenSubItemCountByParent,
-        hiddenHrefs: summary.hiddenHrefs,
+        hiddenKeys: summary.hiddenKeys,
         isRevealing: isRevealingHidden,
         onReveal,
         onStopRevealing,

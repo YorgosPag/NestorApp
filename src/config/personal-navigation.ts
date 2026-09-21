@@ -13,9 +13,9 @@
  * φαίνεται όπου δηλώνει το `surfaces` του. Πριν, το μενού είχε τέσσερα χειρόγραφα
  * στοιχεία με δική του σειρά.
  *
- * ⚠️ **ΔΕΝ περνά από το `smart-navigation-factory`** (ADR-871 §4 λόγος 3 · §10.1 Α11):
+ * ⚠️ **ΔΕΝ περνά από τον κατάλογο του γραφείου (`office-navigation`)** (ADR-871 §4 λόγος 3 · §10.1 Α11):
  * εκείνο φιλτράρει με δικαιώματα/ικανότητα/δουλειά **εταιρείας**, ενώ εδώ η εμβέλεια
- * είναι ο **άνθρωπος**. Μιλά απευθείας το συμβόλαιο απόδοσης {@link MenuItem}.
+ * είναι ο **άνθρωπος**. Μιλά απευθείας το συμβόλαιο απόδοσης {@link MenuLink}.
  *
  * ⚠️ **Καμία διαδρομή γραμμένη με το χέρι** — όλες από τις σταθερές των ιδιοκτητών
  * τους, και καμία με πρόθεμα `/o/…` (ADR-820 §6: ο προσωπικός χώρος ζει εκτός χώρου
@@ -46,7 +46,7 @@ import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-route
 import { hasOrganization, resolveAccountRoute, type LandingIdentity } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
-import type { MenuItem } from '@/types/sidebar';
+import type { MenuLink } from '@/types/sidebar';
 
 /** Πού εμφανίζεται ένα στοιχείο. */
 export type PersonalNavigationSurface = 'sidebar' | 'userMenu';
@@ -60,8 +60,12 @@ const ACCOUNT_DESTINATION = 'account' as const;
 
 export interface PersonalNavigationEntry {
   readonly id: string;
-  /** Κλειδί στο namespace `navigation` (το διαβάζει αυτούσιο το `SidebarMenuItem`). */
-  readonly labelKey: string;
+  /**
+   * Κλειδί στο namespace `navigation` — **ίδιο όνομα** με το `MenuLink.navLabelKey` (ADR-871
+   * §10.6): η συγκομιδή ιδιοτήτων του shell slice βρίσκει έτσι αυτές τις τιμές ως υποψήφιες
+   * του `t(link.navLabelKey)` της στήλης και του μενού avatar.
+   */
+  readonly navLabelKey: string;
   readonly icon: LucideIcon;
   readonly href: WorkspaceHref | typeof ACCOUNT_DESTINATION;
   readonly surfaces: readonly PersonalNavigationSurface[];
@@ -87,41 +91,41 @@ export const PERSONAL_NAVIGATION: readonly PersonalNavigationGroup[] = [
     id: 'listings',
     labelKey: 'personal.groups.listings',
     entries: [
-      { id: 'myOffers', labelKey: 'personal.items.myOffers', icon: House, href: MY_OFFERS_ROUTE, surfaces: SIDEBAR_ONLY },
-      { id: 'myDemands', labelKey: 'personal.items.myDemands', icon: SearchCheck, href: MY_DEMANDS_ROUTE, surfaces: SIDEBAR_ONLY },
+      { id: 'myOffers', navLabelKey: 'personal.items.myOffers', icon: House, href: MY_OFFERS_ROUTE, surfaces: SIDEBAR_ONLY },
+      { id: 'myDemands', navLabelKey: 'personal.items.myDemands', icon: SearchCheck, href: MY_DEMANDS_ROUTE, surfaces: SIDEBAR_ONLY },
     ],
   },
   {
     id: 'communication',
     labelKey: 'personal.groups.communication',
     entries: [
-      { id: 'myMessages', labelKey: 'personal.items.myMessages', icon: MessagesSquare, href: MY_MESSAGES_ROUTE, surfaces: BOTH },
-      { id: 'myContacts', labelKey: 'personal.items.myContacts', icon: Handshake, href: MY_FIRST_CONTACTS_ROUTE, surfaces: BOTH },
+      { id: 'myMessages', navLabelKey: 'personal.items.myMessages', icon: MessagesSquare, href: MY_MESSAGES_ROUTE, surfaces: BOTH },
+      { id: 'myContacts', navLabelKey: 'personal.items.myContacts', icon: Handshake, href: MY_FIRST_CONTACTS_ROUTE, surfaces: BOTH },
     ],
   },
   {
     id: 'organization',
     labelKey: 'personal.groups.organization',
     entries: [
-      { id: 'myDossiers', labelKey: 'personal.items.myDossiers', icon: FolderArchive, href: MY_DOSSIERS_ROUTE, surfaces: BOTH },
+      { id: 'myDossiers', navLabelKey: 'personal.items.myDossiers', icon: FolderArchive, href: MY_DOSSIERS_ROUTE, surfaces: BOTH },
     ],
   },
   {
     id: 'discovery',
     labelKey: 'personal.groups.discovery',
     entries: [
-      { id: 'searchListings', labelKey: 'personal.items.searchListings', icon: Search, href: SEARCH_LANDING_ROUTE, surfaces: SIDEBAR_ONLY },
-      { id: 'professionals', labelKey: 'personal.items.professionals', icon: Briefcase, href: AGENCY_DIRECTORY_ROUTE, surfaces: SIDEBAR_ONLY },
+      { id: 'searchListings', navLabelKey: 'personal.items.searchListings', icon: Search, href: SEARCH_LANDING_ROUTE, surfaces: SIDEBAR_ONLY },
+      { id: 'professionals', navLabelKey: 'personal.items.professionals', icon: Briefcase, href: AGENCY_DIRECTORY_ROUTE, surfaces: SIDEBAR_ONLY },
     ],
   },
   {
     id: 'account',
     labelKey: 'personal.groups.account',
     entries: [
-      { id: 'account', labelKey: 'personal.items.account', icon: User, href: ACCOUNT_DESTINATION, surfaces: BOTH },
+      { id: 'account', navLabelKey: 'personal.items.account', icon: User, href: ACCOUNT_DESTINATION, surfaces: BOTH },
       {
         id: 'createWorkspace',
-        labelKey: 'personal.items.createWorkspace',
+        navLabelKey: 'personal.items.createWorkspace',
         icon: Building2,
         href: CREATE_WORKSPACE_ROUTE,
         surfaces: SIDEBAR_ONLY,
@@ -143,8 +147,8 @@ export const PERSONAL_PRIMARY_ACTION = {
   href: NEW_OFFER_ROUTE,
 } as const;
 
-/** Ένα στοιχείο **έτοιμο για απόδοση**, μαζί με το `id` του καταλόγου. */
-export interface ResolvedPersonalItem extends MenuItem {
+/** Ένας σύνδεσμος **έτοιμος για απόδοση** (το ΕΝΑ συμβόλαιο, ADR-871 §10.6), μαζί με το `id` του καταλόγου. */
+export interface ResolvedPersonalItem extends MenuLink {
   readonly id: string;
 }
 
@@ -177,9 +181,10 @@ export function resolvePersonalNavigation(
     items: group.entries
       .filter((entry) => entry.surfaces.includes(surface))
       .filter((entry) => !(entry.onlyWithoutOrganization && hideOrganizationDependent))
-      .map((entry) => ({
+      .map((entry): ResolvedPersonalItem => ({
+        kind: 'link',
         id: entry.id,
-        title: entry.labelKey,
+        navLabelKey: entry.navLabelKey,
         icon: entry.icon,
         href: entry.href === ACCOUNT_DESTINATION ? resolveAccountRoute(known) : entry.href,
       })),

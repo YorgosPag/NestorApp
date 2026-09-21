@@ -1,6 +1,6 @@
 /**
  * @fileoverview 🏆 **Η ΒΙΤΡΙΝΑ ΦΤΑΝΕΙ ΣΤΟΝ ΜΗ-ΔΙΑΧΕΙΡΙΣΤΗ** (ADR-841 §7 Α21.11).
- * @related ADR-841 §7 Α21.11 · Α9.3 · config/smart-navigation-factory ·
+ * @related ADR-841 §7 Α21.11 · Α9.3 · config/office-navigation ·
  *   components/mandate/ShowcasePublicDoor
  *
  * ════════════════════════════════════════════════════════════════════════════
@@ -24,7 +24,8 @@
  * ΚΟΒΕΤΑΙ** στον ίδιο χρήστη.
  */
 
-import { getSettingsMenuItems } from '@/config/navigation';
+import { getSettingsMenuItems } from '@/config/office-navigation/resolve-office-navigation';
+import type { MenuLink } from '@/types/sidebar';
 
 /** Η διεύθυνση της βιτρίνας μέσα στο μενού. */
 const SHOWCASE = '/settings/agency-profile';
@@ -36,18 +37,20 @@ const KOSTAS: string[] = [];
 /** Ο διαχειριστής μιας οργανωμένης εταιρείας. */
 const ADMIN = ['admin_access'];
 
-/** Όλες οι διαδρομές του μενού ρυθμίσεων, ισοπεδωμένες. */
+/** Όλοι οι σύνδεσμοι του μενού ρυθμίσεων, ισοπεδωμένοι (ADR-871 §10.6: η ομάδα δεν έχει διεύθυνση). */
+function linksFor(permissions: string[]): MenuLink[] {
+  return getSettingsMenuItems(permissions).flatMap((entry) => (entry.kind === 'link' ? [entry] : entry.items));
+}
+
+/** Όλες οι διαδρομές του μενού ρυθμίσεων. */
 function routesFor(permissions: string[]): string[] {
-  return getSettingsMenuItems(permissions).flatMap((item) => [
-    item.href,
-    ...(item.subItems ?? []).map((sub) => sub.href),
-  ]);
+  return linksFor(permissions).map((link) => link.href);
 }
 
 describe('Κ1 — 🔴 Η ΒΙΤΡΙΝΑ ΔΕΝ ΕΙΝΑΙ ΡΥΘΜΙΣΗ ΟΡΓΑΝΙΣΜΟΥ', () => {
   it('🔴 ο Κώστας — ΜΗΔΕΝ δικαιώματα — ΒΛΕΠΕΙ τη βιτρίνα του', () => {
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: πρόσθεσε `permissions: ['admin_access']` στη γραμμή της
-    //    βιτρίνας στο `smart-navigation-factory` ⇒ κοκκινίζει αμέσως.
+    //    βιτρίνας στο `office-navigation/catalog-settings.ts` ⇒ κοκκινίζει αμέσως.
     expect(routesFor(KOSTAS)).toContain(SHOWCASE);
   });
 
@@ -66,19 +69,15 @@ describe('Κ1 — 🔴 Η ΒΙΤΡΙΝΑ ΔΕΝ ΕΙΝΑΙ ΡΥΘΜΙΣΗ ΟΡΓ
 
 describe('Κ2 — 🔴 Η ΓΡΑΜΜΗ ΕΧΕΙ ΟΝΟΜΑ, ΟΧΙ ΩΜΗ ΔΙΕΥΘΥΝΣΗ', () => {
   it('🔴 ο τίτλος ΔΕΝ είναι η ίδια η διαδρομή — αλλιώς λείπει το κλειδί i18n', () => {
-    // 🔴 **ΤΟ ΣΙΩΠΗΛΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΠΙΑΝΕΙ**: ο εργοστασιακός κατασκευαστής πέφτει σε
-    //    `itemConfig.href` όταν λείπει η αντιστοίχιση — δηλαδή στο μενού θα εμφανιζόταν
-    //    **«/settings/agency-profile»** ως ετικέτα, χωρίς κανένα σφάλμα πουθενά. Δύο
-    //    πράγματα πρέπει να υπάρχουν: γραμμή στο `pathMappings` **και** κλειδί στο
-    //    `NAVIGATION_LABELS`. Αυτό τα ρωτά **και τα δύο** με μία μέτρηση.
-    const item = getSettingsMenuItems(KOSTAS)
-      .flatMap((entry) => [entry, ...(entry.subItems ?? [])])
-      .find((entry) => entry.href === SHOWCASE);
+    // 🔴 **ΤΟ ΣΙΩΠΗΛΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΕΠΙΑΝΕ**: ο παλιός εργοστασιακός κατασκευαστής έπεφτε σε
+    //    `itemConfig.href` όταν έλειπε η αντιστοίχιση — στο μενού θα εμφανιζόταν
+    //    **«/settings/agency-profile»** ως ετικέτα. Από το ADR-871 §10.6 ο τίτλος είναι
+    //    **δηλωμένος** (`navLabelKey`)· η άγκυρα μένει: ρωτά ότι είναι κλειδί, όχι διεύθυνση.
+    const item = linksFor(KOSTAS).find((link) => link.href === SHOWCASE);
 
     expect(item).toBeDefined();
-    expect(item?.title).not.toBe(SHOWCASE);
-    expect(item?.title).not.toBe('Unknown');
-    // Το `title` κρατά **κλειδί** i18n (`sidebar.*`), ποτέ έτοιμο κείμενο (N.11).
-    expect(item?.title).toMatch(/^sidebar\./);
+    expect(item?.navLabelKey).not.toBe(SHOWCASE);
+    // Το `navLabelKey` κρατά **κλειδί** i18n (`sidebar.*`), ποτέ έτοιμο κείμενο (N.11).
+    expect(item?.navLabelKey).toMatch(/^sidebar\./);
   });
 });

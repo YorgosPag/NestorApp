@@ -11,13 +11,19 @@
  * χαλασμένο. Γι' αυτό κάθε ομάδα δείχνει και **τι ΕΠΙΒΙΩΝΕΙ**.
  */
 
-import { getMainMenuItems } from '@/config/navigation';
+import { getMainMenuItems } from '@/config/office-navigation/resolve-office-navigation';
+import { navNodeKey, type NavGroupNode, type NavLinkNode } from '@/config/navigation-node';
+import { childHrefs, group, link, type NavFixture } from './helpers/nav-node-fixtures';
 import {
   CAPABILITY_GATED_ROUTES,
   filterItemsByCapability,
   isRouteOfferable,
   type OrganizationCapabilityView,
 } from '@/config/navigation-capability';
+
+/** Το φίλτρο ικανότητας πάνω στο δομικό σχήμα (ADR-871 §10.6) — παράμετροι τύπου μία φορά. */
+const filterCap = (items: readonly NavFixture[], view: OrganizationCapabilityView) =>
+  filterItemsByCapability<NavLinkNode, NavGroupNode>(items, view);
 import {
   CAPABILITY_STATUSES,
   isCapabilityActive,
@@ -132,47 +138,41 @@ describe('Π — ποια διαδρομή προσφέρεται', () => {
 });
 
 describe('Π/Υ — το φίλτρο κόβει ό,τι δεν προσφέρεται, και ΜΟΝΟ αυτό', () => {
-  const tree = [
-    { href: '/contacts' },
-    { href: MANDATES },
-    { href: '/projects' },
-  ] as const;
+  const tree = [link('/contacts'), link(MANDATES), link('/projects')];
 
   it('Υ1 — «δεν ζήτησε ποτέ»: φεύγει η μία γραμμή, μένουν οι άλλες', () => {
-    const kept = filterItemsByCapability([...tree], viewWith('unrequested'));
-    expect(kept.map((i) => i.href)).toEqual(['/contacts', '/projects']);
+    const kept = filterCap(tree, viewWith('unrequested'));
+    expect(kept.map(navNodeKey)).toEqual(['/contacts', '/projects']);
   });
 
   /** Ο παρονομαστής: με ικανότητα, **τίποτα** δεν χάνεται. */
   it('Υ2 — «active»: το δέντρο μένει ΑΚΕΡΑΙΟ', () => {
-    const kept = filterItemsByCapability([...tree], viewWith('active'));
-    expect(kept.map((i) => i.href)).toEqual(['/contacts', MANDATES, '/projects']);
+    const kept = filterCap(tree, viewWith('active'));
+    expect(kept.map(navNodeKey)).toEqual(['/contacts', MANDATES, '/projects']);
   });
 
   /**
-   * ⛔ ΜΕΤΑΛΛΑΞΗ: κάνε το φίλτρο ρηχό (μην κατεβαίνεις στα `subItems`) ⇒ κόκκινο.
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: κάνε το φίλτρο ρηχό (μην κατεβαίνεις στις ομάδες) ⇒ κόκκινο.
    *
-   * Σήμερα ο πίνακας έχει **μόνο** διαδρομή πρώτου επιπέδου, άρα ένα ρηχό φίλτρο θα
+   * Σήμερα ο πίνακας έχει **μόνο** σύνδεσμο πρώτου επιπέδου, άρα ένα ρηχό φίλτρο θα
    * περνούσε κάθε άλλη δοκιμή — και θα αστοχούσε **σιωπηλά** την ημέρα που μια
-   * ρυθμιζόμενη διαδρομή μπει ως υπο-στοιχείο.
+   * ρυθμιζόμενη διαδρομή μπει σε ομάδα.
    */
-  it('Υ3 — αναδρομικό: ρυθμιζόμενο υπο-στοιχείο φεύγει, τα αδέλφια του μένουν', () => {
-    const nested = [
-      {
-        href: '/listings',
-        subItems: [{ href: MANDATES }, { href: '/listings/public' }],
-      },
-    ];
-    const kept = filterItemsByCapability(nested, viewWith('unrequested'));
+  it('Υ3 — μέσα σε ομάδα: ο ρυθμιζόμενος σύνδεσμος φεύγει, τα αδέλφια του μένουν', () => {
+    const kept = filterCap([group('listings', MANDATES, '/listings/public')], viewWith('unrequested'));
 
     expect(kept).toHaveLength(1);
-    expect(kept[0]?.subItems?.map((s) => s.href)).toEqual(['/listings/public']);
+    expect(childHrefs(kept[0])).toEqual(['/listings/public']);
   });
 
-  /** ⛔ ΜΕΤΑΛΛΑΞΗ: κράτα τα παιδιά όταν πέφτει ο γονιός ⇒ κόκκινο. */
-  it('Υ4 — όταν πέφτει ο γονιός, πέφτουν μαζί του και τα παιδιά', () => {
-    const nested = [{ href: MANDATES, subItems: [{ href: '/listings/mandates/new' }] }];
-    expect(filterItemsByCapability(nested, viewWith('unrequested'))).toEqual([]);
+  /**
+   * ADR-871 §10.6 Υ19 — ήταν «πέφτει ο γονιός, πέφτουν τα παιδιά». Σύνδεσμος με παιδιά
+   * **δεν υπάρχει πια** (αδύνατη κατάσταση από τον τύπο)· η ερώτηση του νέου μοντέλου είναι
+   * η ανάποδη: ομάδα που **αδειάζει** φεύγει, δεν μένει κουμπί που ανοίγει το τίποτα.
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: κράτα την ομάδα με `items: []` ⇒ κόκκινο.
+   */
+  it('Υ4 — ομάδα που αδειάζει από την ικανότητα φεύγει ολόκληρη', () => {
+    expect(filterCap([group('listings', MANDATES)], viewWith('unrequested'))).toEqual([]);
   });
 
   /**
@@ -183,18 +183,14 @@ describe('Π/Υ — το φίλτρο κόβει ό,τι δεν προσφέρε
    * Έμενε **πράσινη** ενώ το φίλτρο έγραφε πάνω στα `subItems` του καλούντος. Πλέον
    * κρίνει το **βάθος**, εκεί που η μετάλλαξη πραγματικά χτυπά.
    *
-   * ⛔ ΜΕΤΑΛΛΑΞΗ: γράψε `item.subItems = filterItemsByCapability(...)` αντί για
-   *    `Object.assign({}, item, …)` ⇒ κόκκινο.
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: γράψε πάνω στα `items` της ομάδας αντί για `withGroupItems` ⇒ κόκκινο.
    */
   it('Υ5 — η είσοδος ΔΕΝ μεταλλάσσεται, ούτε σε βάθος', () => {
-    const child = { href: MANDATES };
-    const sibling = { href: '/listings/public' };
-    const input = [{ href: '/listings', subItems: [child, sibling] }];
+    const input = [group('listings', MANDATES, '/listings/public')];
 
-    filterItemsByCapability(input, viewWith('unrequested'));
+    filterCap(input, viewWith('unrequested'));
 
-    expect(input[0]?.subItems).toHaveLength(2);
-    expect(input[0]?.subItems?.map((s) => s.href)).toEqual([MANDATES, '/listings/public']);
+    expect(childHrefs(input[0])).toEqual([MANDATES, '/listings/public']);
   });
 });
 
@@ -210,7 +206,7 @@ describe('Π/Υ — το φίλτρο κόβει ό,τι δεν προσφέρε
  * `'/listings/mandate'` (χωρίς `s`), ή ένα `'/o/x/listings/mandates'` με πρόθεμα χώρου,
  * θα περνούσε κάθε άλλη δοκιμή και θα ήταν **σιωπηλά ανενεργό στην παραγωγή**.
  *
- * Εδώ διαβάζεται το **αληθινό** δέντρο του `smart-navigation-factory`.
+ * Εδώ διαβάζεται το **αληθινό** δέντρο του καταλόγου (`office-navigation`, ADR-871 §10.6).
  */
 describe('Μ — ο πίνακας δένει με ΠΡΑΓΜΑΤΙΚΗ γραμμή του μενού', () => {
   const realMenu = () => getMainMenuItems([]);
@@ -222,18 +218,18 @@ describe('Μ — ο πίνακας δένει με ΠΡΑΓΜΑΤΙΚΗ γραμ
    *    οι Π/Υ μένουν πράσινες. Αυτό ακριβώς είναι το κενό που κλείνει αυτή η ομάδα.
    */
   it('Μ1 — το πραγματικό μενού ΟΝΤΩΣ περιέχει τον κατάλογο εντολών', () => {
-    expect(realMenu().map((item) => item.href)).toContain(MANDATES);
+    expect(realMenu().map(navNodeKey)).toContain(MANDATES);
   });
 
   it('Μ2 — «δεν ζήτησε ποτέ»: η γραμμή φεύγει από το ΠΡΑΓΜΑΤΙΚΟ μενού', () => {
     const filtered = filterItemsByCapability(realMenu(), viewWith('unrequested'));
-    expect(filtered.map((item) => item.href)).not.toContain(MANDATES);
+    expect(filtered.map(navNodeKey)).not.toContain(MANDATES);
   });
 
   /** Ο παρονομαστής: με `active` το πραγματικό μενού μένει **ακέραιο**. */
   it('Μ3 — «active»: το πραγματικό μενού δεν χάνει ΚΑΜΙΑ γραμμή', () => {
-    const before = realMenu().map((item) => item.href);
-    const after = filterItemsByCapability(realMenu(), viewWith('active')).map((i) => i.href);
+    const before = realMenu().map(navNodeKey);
+    const after = filterItemsByCapability(realMenu(), viewWith('active')).map(navNodeKey);
     expect(after).toEqual(before);
   });
 

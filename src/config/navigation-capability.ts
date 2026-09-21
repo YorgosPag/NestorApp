@@ -65,6 +65,12 @@ import {
   type CapabilityStatus,
   type OrganizationCapability,
 } from '@/types/organization-capability';
+import {
+  isNavGroup,
+  withGroupItems,
+  type NavGroupNode,
+  type NavLinkNode,
+} from './navigation-node';
 
 // =============================================================================
 // Ο ΠΙΝΑΚΑΣ — ποια διαδρομή απαιτεί ποια ικανότητα
@@ -74,7 +80,7 @@ import {
  * **Κλειστός πίνακας: διαδρομή → ικανότητα οργανισμού.**
  *
  * ⚠️ **Οι διαδρομές γράφονται ΧΩΡΙΣ το πρόθεμα χώρου** (`/o/<ψευδώνυμο>`), όπως
- * ακριβώς είναι γραμμένες στο `smart-navigation-factory` και στο `jobs-registry`
+ * ακριβώς είναι γραμμένες στον κατάλογο `office-navigation/catalog-*` και στο `jobs-registry`
  * (`'/listings/mandates'`). Το πρόθεμα το προσθέτει το σύνορο πλοήγησης αργότερα·
  * μια εγγραφή με πρόθεμα εδώ **δεν θα ταίριαζε ποτέ** και θα ήταν σιωπηλά ανενεργή.
  *
@@ -99,11 +105,6 @@ export type OrganizationCapabilityView = Readonly<
   Record<OrganizationCapability, CapabilityStatus>
 >;
 
-/** Το ελάχιστο που χρειάζεται το φίλτρο. Δομικός τύπος: **καμία** σύζευξη με το `MenuItem`. */
-export interface CapabilityFilterableItem {
-  readonly href: string;
-}
-
 // =============================================================================
 // Η ΚΡΙΣΗ
 // =============================================================================
@@ -114,7 +115,7 @@ export interface CapabilityFilterableItem {
  * 🔴 **ΑΤΑΞΙΝΟΜΗΤΟ ⇒ ΠΡΟΣΦΕΡΕΤΑΙ.** Διαδρομή εκτός πίνακα δεν είναι ρυθμιζόμενη, άρα
  * δεν αφορά αυτό το φίλτρο. Η αντίστροφη επιλογή («δεν το ξέρω ⇒ κρύψ' το») θα έκρυβε
  * **ολόκληρο το μενού** την πρώτη φορά που κάποιος ξεχνούσε μια γραμμή — και είναι
- * ακριβώς το λάθος που το `isRouteVisibleForJob` τεκμηριώνει ότι πλήρωσε ζωντανά.
+ * ακριβώς το λάθος που το `isNodeVisibleForJob` τεκμηριώνει ότι πλήρωσε ζωντανά.
  *
  * ⚠️ Το fail-closed **δεν** ζει εδώ, ζει στην **πηγή**: ο
  * {@link useOrganizationCapability} επιστρέφει `unrequested` σε κάθε αστοχία ανάγνωσης,
@@ -127,35 +128,33 @@ export function isRouteOfferable(href: string, view: OrganizationCapabilityView)
 }
 
 /**
- * **Κόβει ό,τι δεν προσφέρεται — αναδρομικά.**
+ * **Κόβει ό,τι δεν προσφέρεται** — σε συνδέσμους **και** μέσα σε ομάδες.
  *
- * ⚠️ **Αναδρομικό επίτηδες, παρότι σήμερα ο πίνακας έχει ΜΟΝΟ διαδρομή πρώτου
- * επιπέδου.** Και τα δύο αδελφά φίλτρα (`filterItemsByPermissions`, `filterItemsByJob`)
- * είναι αναδρομικά· ένα ρηχό τρίτο θα δούλευε **σήμερα** και θα αστοχούσε σιωπηλά την
- * ημέρα που μια ρυθμιζόμενη διαδρομή μπει ως υπο-στοιχείο. Άγκυρα: ομάδα «Υ».
+ * ⚠️ **Κατεβαίνει στις ομάδες επίτηδες, παρότι σήμερα ο πίνακας έχει ΜΟΝΟ σύνδεσμο
+ * πρώτου επιπέδου.** Και τα δύο αδελφά φίλτρα (δικαίωμα, δουλειά) κατεβαίνουν· ένα
+ * ρηχό τρίτο θα δούλευε **σήμερα** και θα αστοχούσε σιωπηλά την ημέρα που μια
+ * ρυθμιζόμενη διαδρομή μπει σε ομάδα. Άγκυρα: ομάδα «Υ».
  *
- * ⚠️ **Ο γονιός κρίνεται ΠΡΩΤΑ**: αν πέφτει ο γονιός, πέφτουν και τα παιδιά του μαζί
- * του — δεν έχει νόημα να επιβιώσει παιδί κάτω από πόρτα που δεν ζωγραφίζεται.
- *
- * 🔑 `Object.assign` και όχι `{ ...item }`: το spread πάνω σε generic `T` **δεν** είναι
- * εκχωρήσιμο στο `T` (γνωστός περιορισμός TS) και θα απαιτούσε assertion — το ίδιο
- * ιδίωμα, για τον ίδιο λόγο, με το `filterItemsByJob`.
+ * 🔑 Η ικανότητα κρίνει **διαδρομές** — η ομάδα **δεν έχει** διαδρομή (ADR-871 §10.6
+ * Υ13), άρα κρίνονται τα παιδιά της· ομάδα που αδειάζει φεύγει με τον **έναν** κανόνα
+ * `withGroupItems` (Υ19). Ποτέ δεν γράφει πάνω στην είσοδο του καλούντος.
  */
-export function filterItemsByCapability<
-  T extends CapabilityFilterableItem & { readonly subItems?: readonly T[] },
->(items: readonly T[], view: OrganizationCapabilityView): T[] {
-  const kept: T[] = [];
+export function filterItemsByCapability<L extends NavLinkNode, G extends NavGroupNode<L>>(
+  items: readonly (L | G)[],
+  view: OrganizationCapabilityView,
+): (L | G)[] {
+  const kept: (L | G)[] = [];
 
-  for (const item of items) {
-    if (!isRouteOfferable(item.href, view)) continue;
-
-    const subItems = item.subItems;
-    if (subItems === undefined) {
-      kept.push(item);
+  for (const entry of items) {
+    if (!isNavGroup<L, G>(entry)) {
+      if (isRouteOfferable(entry.href, view)) kept.push(entry);
       continue;
     }
-
-    kept.push(Object.assign({}, item, { subItems: filterItemsByCapability(subItems, view) }));
+    const group = withGroupItems<L, G>(
+      entry,
+      entry.items.filter((sub) => isRouteOfferable(sub.href, view)),
+    );
+    if (group !== null) kept.push(group);
   }
 
   return kept;

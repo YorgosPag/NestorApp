@@ -102,7 +102,7 @@ describe('Λ — ετικέτες', () => {
     const keys = [
       'personal.sidebarLabel',
       ...PERSONAL_NAVIGATION.map((g) => g.labelKey),
-      ...entries.map((e) => e.labelKey),
+      ...entries.map((e) => e.navLabelKey),
     ];
     for (const key of keys) {
       expect([key, typeof lookup(locale, key)]).toEqual([key, 'string']);
@@ -111,7 +111,7 @@ describe('Λ — ετικέτες', () => {
 
   it('Λ2: ΚΑΘΕ κλειδί στοιχείου είναι `personal.items.*` (η δήλωση του `.i18n-shell-slice.json`)', () => {
     for (const entry of entries) {
-      expect(entry.labelKey.startsWith('personal.items.')).toBe(true);
+      expect(entry.navLabelKey.startsWith('personal.items.')).toBe(true);
     }
   });
 
