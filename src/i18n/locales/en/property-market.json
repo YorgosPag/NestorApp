@@ -629,7 +629,19 @@
       "publishedCount": "{published} of {max} are published. The first one is the card image.",
       "privateNote": "Your files are private. Only the ones you select are published in the listing, and only after their metadata (location, device, capture time) has been stripped.",
       "signIn": "Sign in",
-      "isFloorplan": "This is a floor plan"
+      "isFloorplan": "This is a floor plan",
+      "dossier": {
+        "untitled": "Untitled property",
+        "addPhotos": "Add photos",
+        "addFloorplan": "Add floor plan",
+        "addTopographic": "Add survey plan",
+        "uploading": "Uploading {fileName}…",
+        "kindPhoto": "Photo",
+        "kindFloorplan": "Floor plan",
+        "kindTopographic": "Survey plan",
+        "notDeliverable": "Cannot be published in this format — it stays in your dossier.",
+        "keptNote": "Files are uploaded to your property dossier and stay there even if you withdraw the listing."
+      }
     },
     "invariant": {
       "heading": "The listing is not saved yet:",

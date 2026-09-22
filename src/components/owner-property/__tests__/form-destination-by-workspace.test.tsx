@@ -88,6 +88,27 @@ jest.mock('@/auth/hooks/useAuth', () => ({
   useAuth: () => ({ user: { uid: 'user_maria', email: 'maria@example.gr' } }),
 }));
 
+/**
+ * Ο **ζωντανός αναγνώστης αρχείων** του φακέλου (ADR-866 Φ1.3β) — σύνορο **δικτύου**, όπως ο ταχυδρόμος παραπάνω.
+ *
+ * ⚠️ Από τη Φ1.3β η φόρμα δημιουργίας ιδιώτη προσαρτά ακροατή Firestore στον προ-γεννημένο φάκελο **πριν** ανεβεί
+ * οτιδήποτε (§2.10.8 Β5: ο ακροατής πρέπει να ζει **πριν** την εγγραφή, αλλιώς το αρχείο μένει αόρατο). Αυτή η
+ * σουίτα κρίνει **προορισμό πλοήγησης** και δεν έχει Firestore — άρα το σύνορο αντικαθίσταται, όχι η απόφαση.
+ */
+jest.mock('@/components/shared/files/hooks/useEntityFiles', () => ({
+  useEntityFiles: () => ({
+    files: [],
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+    moveToTrash: jest.fn(),
+    renameFile: jest.fn(),
+    updateDescription: jest.fn(),
+    deleteFile: jest.fn(),
+    totalStorageBytes: 0,
+  }),
+}));
+
 // ⚠️ `requireActual` και ΟΧΙ ολικό mock: το `src/i18n/config.ts` ζητά το
 //    `initReactI18next` τη στιγμή της εισαγωγής — ίδιο μάθημα με το
 //    `brokered-listing-gate.test.tsx`. Αντικαθίσταται **μόνο** ο μεταφραστής.

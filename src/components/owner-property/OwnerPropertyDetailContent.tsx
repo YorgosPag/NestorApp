@@ -368,6 +368,9 @@ export function OwnerPropertyDetailContent({
             initialValues={ownerPropertyFormFrom(lookup.property)}
             editingId={lookup.property.id}
             previousOffers={lookup.property.offers}
+            // 🔑 ADR-866 Φ1.3β — ο φάκελος **της αποθηκευμένης αγγελίας**, ποτέ νέος: η φόρμα δείχνει τα αρχεία
+            //    του και ξαναδηλώνει από αυτά. Παλιά αγγελία (χωρίς φάκελο) ⇒ `null` ⇒ το `media[]` αυτούσιο.
+            existingDossierId={lookup.property.dossierId ?? null}
             onClose={() => setEditing(false)}
           />
         ) : (
