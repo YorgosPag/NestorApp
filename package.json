@@ -318,6 +318,7 @@
     "dev:emulator": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 STORAGE_EMULATOR_HOST=http://localhost:9199 NEXT_DIST_DIR=.next-emulator NODE_OPTIONS=--max-old-space-size=4096 next dev --turbopack",
     "emulator:seed-demo": "tsx scripts/emulator-seed-demo-tenant.ts",
     "emulator:seed-personas": "tsx scripts/emulator-seed-personas.ts",
+    "emulator:seed-stay": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/emulator-seed-stay.ts",
     "verify:titleblock-live": "tsx scripts/verify-titleblock-landowner-live.ts",
     "verify:titleblock-designers": "tsx scripts/verify-titleblock-designers.ts",
     "test:qa": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 npx tsx scripts/qa-tests/contact-individual.qa.ts",
