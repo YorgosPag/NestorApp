@@ -1331,3 +1331,31 @@ network_act_teams/{actKey}      responsibleUid · memberUids[] · hostCompanyId 
   ADR-854: γονέας με `aria-label` **χωρίς** αριθμό + σήμα με `announce` ⇒ το `aria-label` υπερισχύει και ο αριθμός **χάνεται**
   (καμπάνα «Ειδοποιήσεις», κάδος «Κάδος»)· το ίδιο το παράδειγμα JSDoc του `IconCountBadge` διδάσκει τον λάθος συνδυασμό.
   (γ) Δεύτερη «κουκκίδα» εκτός SSoT: `WarningDot` (`sidebar-menu-shared.tsx`, φυσική θέση `right-1`).
+- **2026-09-22** — 🧪 **Β10 — ΕΝΑΠΟΜΕΙΝΑΣΕΣ ΕΠΑΛΗΘΕΥΣΕΙΣ (Β0 · Δ4 · Δ5 · Β3)**
+  (`HANDOFFS/2026-09-22_ADR-867-B10_remaining-verifications_handoff.md`). **Κανένας κώδικας δεν άλλαξε** — μόνο μετρήσεις.
+  **Β0 ⏳** η διόρθωση `renderSectionSlot` είναι στο **τοπικό** commit `93c7e877` (`main` ahead 1· `origin/main` =
+  `cad3fa3a`) ⇒ **ΔΕΝ** είναι ακόμη στην παραγωγή. ⚠️ Το commit τιτλοφορείται «refactor(forms): procurement… (ADR-598 η)»
+  αλλά περιέχει **και** τη διόρθωση του crash Επαφών + την εγγραφή ADR-867 (κοινό working tree, δύο agents) ⇒ στο
+  `git log` η διόρθωση δεν ανιχνεύεται από τον τίτλο· αναζήτηση με `git log -- src/components/generic/form-tabs-shell.tsx`.
+  **Δ5 ✅** `MissingFontBanner` → `textFonts:missingBanner.title` (+ `affectedCount`) είναι ICU `{count, plural, …}` σε
+  el/en, με case στο `namespace-loaders.ts` και για τις δύο γλώσσες· λυμένο με την **πραγματική** μηχανή (i18next +
+  i18next-icu από `node_modules`): el «1 γραμματοσειρά δεν βρέθηκε» / «3 γραμματοσειρές δεν βρέθηκαν», en «1 font not
+  found» / «3 fonts not found» — κείμενο, όχι ωμό κλειδί. **Κλάση**: 0 κλειδιά `_one/_other/_few/_many/_zero` σε όλα τα
+  locales· τη φυλάνε το ερώτημα Ρ του `scripts/__tests__/i18n-runtime-dialect.test.js` + CHECK 3.9 κανόνας 2. Ζωντανή
+  μέτρηση δεν έγινε (δεν ανέβηκε DXF με γραμματοσειρά που λείπει — στατική απόδειξη, όπως όριζε το handoff).
+  **Β3 ✅** `npm run migrate:network-inbox` (ξηρό τρέξιμο, χωρίς `--apply`, project `pagonis-87766`): «Θέσεις όπου το
+  κουτί αδιάβαστων διαφωνεί με την αλήθεια: **0** · ✅ Απόκλιση 0».
+  **Δ4 ⏳ ζωντανά / ✅ στατικά**: αλυσίδα `TrashActionsBar` (ns `contacts-lifecycle`) → `EntityTrashActionsBar` →
+  `useTrashBarRestore` → `successMessage(ids.length)` → `trash.restoreSuccess` = `{count, plural, one {Η επαφή
+  επαναφέρθηκε} other {Επαναφέρθηκαν # επαφές}}` (ακίνητα: `properties-viewer` ίδιο σχήμα). Η ζωντανή μέτρηση (DOM +
+  Firestore) περιμένει το deploy του `93c7e877`, επειδή η μόνη επαφή στον κάδο είναι εταιρεία (ρίχνει τη σελίδα πριν από αυτό).
+  ✏️ **ΛΕΚΤΙΚΟ «Πίσω» vs «Επιστροφή» — ΔΙΟΡΘΩΣΗ ΚΛΑΣΗΣ, όχι δείγματος** (απόφαση Giorgio: «όπως οι μεγάλοι»). Το εύρημα
+  του Δ4 («Πίσω στις Επαφές» / «Επιστροφή στα Ακίνητα») ήταν **ένα από 30** λεκτικά επιστροφής (19 «Πίσω» / 11
+  «Επιστροφή»). Κρίσιμη μέτρηση: στα **en** είναι **ΟΛΑ** «Back to …» ⇒ η διάσπαση ήταν απόκλιση μετάφρασης, όχι πρόθεση.
+  **Σύμβαση** (Windows/Chrome ελληνικά: Back = «Πίσω»· διάκριση Back/Up της Material): **«Πίσω σε Χ»** = πλοήγηση
+  μέσα στην εφαρμογή προς λίστα/προβολή· **«Επιστροφή …»** = έξοδος από ροή ή κατάσταση προς σημείο εισόδου (σφάλμα →
+  αρχική, σύνδεση, έξοδος πλήρους οθόνης), όπου είναι το ιδιωματικό ελληνικό. Διορθώθηκαν οι **5** παραβάτες (μόνο el,
+  τα en ήταν ήδη σωστά): `contacts` `page.filterIndicator.backToList` · `obligations` `…back` · `properties-viewer`
+  `trash.backToProperties` · `storage` `page.backToProjects` · `tasks` `detail.backToTasks`. Τα 7 «Επιστροφή» που
+  μένουν είναι **όλα** έξοδοι ροής (`auth` ×3, `errors` ×2, `exitTooltip`, `exitFullscreenTooltip`). Κανένα παραγόμενο
+  artifact (`shell-slice.el.json`, `src/types/i18n.ts` — μόνο κλειδιά) ή test δεν περιείχε τα παλιά κείμενα.
