@@ -51,6 +51,11 @@ import type { MandateRefusal } from '@/lib/agency/showcase-registry-closure';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { MandateRequestOutcomeNotice } from './MandateRequestOutcomeNotice';
 
+// 🔴 ΧΩΡΙΣ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ τα `mandate.request.*` του `MandateRequestOutcomeNotice`
+// έφταναν ωμά στο HTML του server (2026-09-22): ζουν ΜΟΝΟ στο route slice, και το
+// καταχωρούσε μόνο η φόρμα — που σε αυτόν τον κλάδο δεν αποδίδεται.
+import './mandate-request-route-slice';
+
 export interface MandateUnavailableNoticeProps {
   /** **Ο λόγος** — από τον κριτή `mandateRefusalOf` της σελίδας (ADR-841 §7 Α23 Φ3.3: και `agency-closed`). */
   readonly reason: MandateRefusal;

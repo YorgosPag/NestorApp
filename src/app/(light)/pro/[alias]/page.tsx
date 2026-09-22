@@ -25,9 +25,11 @@
  * - `not-found` → `companyId = null` ⇒ **ίδια οθόνη** με «δεν δημοσίευσε». Δες την
  *   κεφαλίδα του {@link AgencyProfileContent}: αν τα ξεχωρίζαμε, η σελίδα θα ήταν
  *   μαντείο *«υπάρχει τέτοιο γραφείο;»*.
- * - `unknown` → **ρίχνει**. ⛔ **ΠΟΤΕ 404 εδώ**: το *«δεν μπόρεσα να ρωτήσω»* που
- *   φοράει τη στολή του *«δεν υπάρχει»* στέλνει τον άνθρωπο μακριά από γραφείο που
- *   **υπάρχει** (N.12 · Ε-5 §4 #3). Ίδιο ιδίωμα με το `o/[workspace]/layout.tsx`.
+ * - `unknown` → **ρίχνει** μέσω του SSoT `throwBackendUnavailable` (5xx + `digest`).
+ *   ⛔ **ΠΟΤΕ 404 εδώ**: το *«δεν μπόρεσα να ρωτήσω»* που φοράει τη στολή του *«δεν
+ *   υπάρχει»* στέλνει τον άνθρωπο μακριά από γραφείο που **υπάρχει** (N.12 · Ε-5 §4 #3).
+ *   ⛔ **ΚΑΙ ΠΟΤΕ 200 με οθόνη σφάλματος**: για δημόσια σελίδα η Google το μετρά soft
+ *   404 (δες `lib/errors/backend-unavailable.ts`). Ίδιο ιδίωμα με το `o/[workspace]/layout.tsx`.
  *
  * ⚠️ **Το `params` είναι `Promise` (Next 15)** — συγχρονισμένο `params.alias` θα
  * μεταγλωττιζόταν και θα έσπαγε **στην εκτέλεση**.
@@ -72,6 +74,7 @@ import { AgencyProfileContent } from '@/components/mandate/AgencyProfileContent'
 import { agencyProfileRoute } from '@/components/mandate/agency-directory-route';
 import { JsonLdScript } from '@/components/seo/JsonLdScript';
 import { canonicalShowcaseSegment } from '@/lib/agency/showcase-canonical-segment';
+import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { showcaseStructuredData } from '@/lib/agency/showcase-structured-data';
 import { athensClockAt } from '@/lib/calendar/weekly-hours';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -146,8 +149,8 @@ export default async function AgencyProfilePage({ params }: AgencyProfilePagePro
   const resolution = await resolveAlias(alias);
 
   if (resolution.outcome === 'unknown') {
-    // ⛔ Δες την κεφαλίδα: **503, ποτέ 404**.
-    throw new Error('AGENCY_ALIAS_LOOKUP_UNAVAILABLE');
+    // ⛔ Δες την κεφαλίδα: **5xx, ποτέ 404** — με digest που ξέρουν boundary και χρησμός.
+    throwBackendUnavailable('agency-alias-lookup');
   }
 
   if (resolution.outcome === 'not-found') {

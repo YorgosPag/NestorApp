@@ -21,7 +21,12 @@
  * **ίδιο** πίνακα — και η οθόνη μπορεί να δείξει *ακριβώς* ό,τι θα φύγει.
  */
 
-import type { OwnerPropertyMedia } from '@/types/owner-property';
+import { mediaOf, type OwnerProperty, type OwnerPropertyMedia } from '@/types/owner-property';
+import { declaredFileIds } from '@/lib/listings/declared-file-ids';
+import {
+  publishedDossierMediaSources,
+  type DossierMediaRead,
+} from '@/services/property-dossier/dossier-media-publication';
 import {
   PUBLISHED_MEDIA_LIMIT,
   type PublicShelfSource,
@@ -169,6 +174,31 @@ export function publishedOwnerMediaSources(
     privateStoragePath: item.storagePath,
     material: ownerMediaMaterial(item),
   }));
+}
+
+/**
+ * 🔴 **Η ΜΙΑ ΠΗΓΗ ΤΗΣ ΒΙΤΡΙΝΑΣ ΤΗΣ ΑΓΓΕΛΙΑΣ ΙΔΙΩΤΗ — ΜΕ ΔΙΠΛΗ ΑΝΑΓΝΩΣΗ** (ADR-866 Φ1.3, φάση dual-read ως το Φ1.6).
+ *
+ * - αγγελία **με** φάκελο ⇒ η **δήλωση** (`publishedFileIds`) πάνω στα αρχεία **του φακέλου**· το `media[]` **δεν**
+ *   διαβάζεται ποτέ, ακόμη κι αν ο φάκελος δεν διαβάστηκε (⇒ κενό, όχι παλιές φωτογραφίες από δεύτερη πηγή)·
+ * - αγγελία **χωρίς** φάκελο (πριν τη Φ1.3 · γραφείου, Ε-Φ1-2) ⇒ το παλιό `media[]`, αυτούσιο.
+ *
+ * 🔑 **Ο διακόπτης είναι η ΥΠΑΡΞΗ φακέλου, όχι η ύπαρξη δήλωσης**: αγγελία με φάκελο και κενή δήλωση **είναι** «δεν
+ * διάλεξα τίποτα» — μια πτώση στο `media[]` εκεί θα δημοσίευε αρχεία που ο άνθρωπος δεν διάλεξε **για αυτή** την αγγελία.
+ *
+ * @param dossierMedia — ό,τι διάβασε ο διακομιστής (`readDossierMedia`)· `null` όταν ο καλών δεν ρωτά τη βιτρίνα.
+ */
+export function ownerListingMediaSources(
+  listing: Pick<OwnerProperty, 'media' | 'dossierId' | 'publishedFileIds'>,
+  dossierMedia: DossierMediaRead | null,
+): readonly PublicShelfSource[] {
+  if (listing.dossierId === undefined) return publishedOwnerMediaSources(mediaOf(listing));
+  if (dossierMedia === null || dossierMedia.dossier.id !== listing.dossierId) return [];
+  return publishedDossierMediaSources(
+    dossierMedia.dossier,
+    dossierMedia.files,
+    declaredFileIds(listing.publishedFileIds),
+  );
 }
 
 /**

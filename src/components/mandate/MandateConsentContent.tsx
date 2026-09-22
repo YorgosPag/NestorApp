@@ -38,16 +38,10 @@ import { PrivateMarketingLinkSection, type PrivateMarketingLinkView } from './Pr
 // αυτή τη γραμμή, αυτή η οθόνη θα έβαφε **ωμά κλειδιά στο πρώτο καρέ** — η μία κλάση
 // ελαττώματος ανταλλαγμένη με άλλη, που το ADR-744 §8 απαγορεύει ρητά.
 //
-// 🔴 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ `page.tsx`**: εκείνο είναι Server Component, και τα Server/Client
-// δέντρα έχουν **ΞΕΧΩΡΙΣΤΟΥΣ γράφους module** — εγγραφή από εκεί θα έγραφε σε **άλλο**
-// στιγμιότυπο i18next: πράσινη κλήση που δεν κάνει τίποτα.
-//
-// ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE** — με `import()` το ωμό κλειδί απλώς
-// μετακομίζει σε «ένα καρέ» και κρύβεται από το CHECK 3.51.
-import routeSlice from '@/i18n/generated/routes/mandate__token.el.json';
-import { registerRouteSlice } from '@/i18n/route-slice';
-
-registerRouteSlice(routeSlice);
+// 🔴 **Η καταχώρηση ΑΝΗΚΕΙ ΣΤΗ ΔΙΑΔΡΟΜΗ, όχι σε αυτόν τον κλάδο** (2026-09-22): ζούσε
+// εδώ, και ο κλάδος άρνησης (`MandateConsentRefusal`) έστελνε ωμά κλειδιά. Δες το
+// `mandate-consent-route-slice.ts` — ΕΝΑ module, που το εισάγει ΚΑΘΕ κλάδος.
+import './mandate-consent-route-slice';
 
 const NS = 'property-market';
 const K = `${NS}:mandate.consent`;

@@ -188,6 +188,8 @@ export async function createBrokeredListing(
       authorUserId: identity.authorUserId,
       authorCompanyId: authority.companyId,
       mandates: [mandate],
+      // ADR-866 Ε-Φ1-2 — η αγγελία γραφείου **δεν** έχει φάκελο: τα αρχεία της ανήκουν στο γραφείο (Φ1.5).
+      dossierId: null,
     },
     draft,
   );

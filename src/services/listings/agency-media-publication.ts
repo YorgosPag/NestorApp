@@ -32,10 +32,8 @@ import { compareInstantsAsc, normalizeToISO } from '@/lib/date-local';
 import {
   FILE_CATEGORIES,
   FILE_CLASSIFICATIONS,
-  FILE_LIFECYCLE_STATES,
-  FILE_STATUS,
 } from '@/config/domain-constants';
-import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
+import { isDeliverableListingImage, isDeliverableListingModel } from '@/lib/listings/listing-file-deliverability';
 import {
   MODEL_MATERIAL,
   PHOTO_MATERIAL,
@@ -74,26 +72,12 @@ export type AgencyMediaCandidate = Pick<
 >;
 
 /**
- * Οι μορφές που ο καθαριστής του ραφιού μπορεί να **αποκωδικοποιήσει**.
- *
- * 🔑 **Δανεικές από το SSoT των ανεβασμάτων** (`FILE_TYPE_CONFIG.image`) και όχι
- * γραμμένες ξανά εδώ: μια δεύτερη λίστα θα σήμαινε ότι κάτι που **επιτρέπεται** να
- * ανέβει μπορεί να **μη** δημοσιεύεται ποτέ, χωρίς να το λέει κανείς.
+ * 🔑 **Οι μορφές (`DECODABLE_IMAGE_TYPES` · `DELIVERABLE_MODEL_TYPES`) και η καταλληλότητα ζουν στο
+ * `lib/listings/listing-file-deliverability`** (ADR-866 Φ1.3): ο φάκελος του ιδιώτη ρωτά την **ίδια** ερώτηση για τα
+ * δικά του αρχεία. Εδώ μένει **μόνο** ό,τι είναι του γραφείου — η εξουσιοδότηση (`classification`) και ο κάτοχος
+ * `entityType: 'property'`.
  */
-const DECODABLE_IMAGE_TYPES: readonly string[] = FILE_TYPE_CONFIG.image.mimeTypes;
-
-/**
- * Οι μορφές που ο **ψήστης μοντέλου** μπορεί να παραλάβει *(ADR-845 Φ4.2β/Βήμα Γ)*.
- *
- * 🔴 **ΚΑΤΑΦΑΤΙΚΟΣ ΑΔΕΛΦΟΣ, ΠΟΤΕ ΑΡΝΗΣΗ ΤΟΥ {@link DECODABLE_IMAGE_TYPES}.** Ένα
- * `!DECODABLE_IMAGE_TYPES.includes(...)` θα σήμαινε *«ό,τι δεν είναι εικόνα είναι μοντέλο»* —
- * **άρνηση πάνω σε λεξιλόγιο που μεγαλώνει**, δηλαδή το γραμμένο σφάλμα της Φ4.1: την ημέρα
- * που μπει τρίτο είδος υλικού, θα δημοσιευόταν **ως μοντέλο** χωρίς κανείς να το ζητήσει.
- *
- * 🔑 **Ίδια πηγή με τον αδελφό του**: `FILE_TYPE_CONFIG.model.mimeTypes`. Ό,τι επιτρέπεται να
- * **ανέβει** ως μοντέλο είναι ακριβώς ό,τι μπορεί να **φύγει** ως μοντέλο — μία λίστα, ποτέ δύο.
- */
-const DELIVERABLE_MODEL_TYPES: readonly string[] = FILE_TYPE_CONFIG.model.mimeTypes;
+const AGENCY_ENTITY_TYPE = 'property';
 
 /**
  * **Επιτρέπεται αυτό το αρχείο να φύγει από την εταιρεία;** — ο φρουρός #1.
@@ -113,7 +97,7 @@ export function isPubliclyClassified(file: AgencyMediaCandidate): boolean {
  * **χωρίς** το σκέλος της κατηγορίας.
  *
  * 🔴 **ΕΞΗΧΘΗ ΣΤΗΝ Α17.7, ΚΑΙ Η ΓΡΑΜΜΗ ΤΗΣ ΤΟΜΗΣ ΕΙΝΑΙ Η ΑΠΟΦΑΣΗ.** Το υλικο-ανεξάρτητο
- * μέρος *(κηδεμονία · ετοιμότητα · ζωή · μονοπάτι)* ζει στο {@link isDeliverableAgencyFile}·
+ * μέρος *(κηδεμονία · ετοιμότητα · ζωή · μονοπάτι)* ζει στο `isDeliverableListingFile` (`lib/listings/listing-file-deliverability`)·
  * εδώ μένει **μόνο** το *«είναι αποκωδικοποιήσιμη εικόνα;»*. Το *«τι είδους υλικό είναι;»*
  * απαντιέται **χωριστά** από κάθε οικογένεια — γιατί οι δύο οικογένειες το απαντούν
  * **ανόμοια**, και η ανομοιότητα είναι δικαιολογημένη *(Α17.7.4)*.
@@ -127,7 +111,7 @@ export function isPubliclyClassified(file: AgencyMediaCandidate): boolean {
  * σε `<img>`**, όσο κι αν κάποιος τις δηλώσει. Η δήλωση της Α17.7 **δεν** τις ξεκλειδώνει.
  */
 export function isDeliverableAgencyImage(file: AgencyMediaCandidate): boolean {
-  return isDeliverableAgencyFile(file) && DECODABLE_IMAGE_TYPES.includes(file.contentType);
+  return isDeliverableListingImage(file, AGENCY_ENTITY_TYPE);
 }
 
 /**
@@ -135,40 +119,15 @@ export function isDeliverableAgencyImage(file: AgencyMediaCandidate): boolean {
  * {@link isDeliverableAgencyImage} *(ADR-845 Φ4.2β/Βήμα Γ, φράγμα Ο-9)*.
  *
  * 🔴 **ΚΑΤΑΦΑΤΙΚΟΣ**: ρωτά *«είναι μοντέλο;»*, **ποτέ** *«δεν είναι εικόνα;»*. Δες
- * {@link DELIVERABLE_MODEL_TYPES} για το γιατί η άρνηση θα ήταν δομικά λάθος.
+ * το `DELIVERABLE_MODEL_TYPES` (`lib/listings/listing-file-deliverability`) για το γιατί η άρνηση θα ήταν δομικά λάθος.
  *
  * ⚠️ **Δεν επαναλαμβάνει ΤΙΠΟΤΑ από τον αδελφό του**: κηδεμονία, ετοιμότητα, ζωή και
- * μονοπάτι ζουν στο {@link isDeliverableAgencyFile}. Δύο σώματα που θα έλεγαν τους ίδιους
+ * μονοπάτι ζουν στο `isDeliverableListingFile` (`lib/listings/listing-file-deliverability`). Δύο σώματα που θα έλεγαν τους ίδιους
  * τέσσερις ελέγχους θα ήταν **sibling clone** — ο N.18 τον έπιασε ήδη μία φορά σε αυτή τη
  * φάση, και το `ssot:discover` **δεν** θα τον έβλεπε ποτέ *(διαφορετικά ονόματα)*.
  */
 export function isDeliverableAgencyModel(file: AgencyMediaCandidate): boolean {
-  return isDeliverableAgencyFile(file) && DELIVERABLE_MODEL_TYPES.includes(file.contentType);
-}
-
-/**
- * **Ό,τι ισχύει ΑΝΕΞΑΡΤΗΤΑ από το είδος του υλικού** — κηδεμονία · ετοιμότητα · ζωή · μονοπάτι.
- *
- * 🔑 **Η γραμμή της τομής μετακινήθηκε ΕΝΑ σκαλί, και είναι η ίδια απόφαση της Α17.7.** Ως το
- * Βήμα Γ, ο έλεγχος MIME ζούσε **μέσα** στο *«παραδοτέο»*, επειδή υπήρχε **ένα** είδος bytes.
- * Με δύο, το *«αποκωδικοποιήσιμη εικόνα»* έπαψε να είναι υλικο-ανεξάρτητο — και ό,τι έπαψε να
- * είναι κοινό **βγαίνει από το κοινό**, αντί να αντιγραφεί.
- *
- * ⚠️ Το `lifecycleState` και το `isDeleted` είναι **δύο** πεδία για μία κατάσταση *(η ζωντανή
- * βάση έχει και τα δύο σε κάθε έγγραφο)*. Ελέγχονται **αμφότερα**: το ένα να λείπει σε παλιό
- * έγγραφο δεν επιτρέπεται να σημαίνει «δημοσίευσέ το».
- */
-function isDeliverableAgencyFile(file: AgencyMediaCandidate): boolean {
-  if (file.entityType !== 'property') return false;
-  if (file.status !== FILE_STATUS.READY) return false;
-  if (file.isDeleted === true) return false;
-  if (
-    file.lifecycleState !== undefined &&
-    file.lifecycleState !== FILE_LIFECYCLE_STATES.ACTIVE
-  ) {
-    return false;
-  }
-  return typeof file.storagePath === 'string' && file.storagePath.trim() !== '';
+  return isDeliverableListingModel(file, AGENCY_ENTITY_TYPE);
 }
 
 /**

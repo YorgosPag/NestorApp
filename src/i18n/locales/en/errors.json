@@ -62,6 +62,15 @@
     "tryAgain": "Try again",
     "backToHome": "Back to home"
   },
+  "backendUnavailable": {
+    "title": "This page is temporarily unavailable",
+    "body": "We could not load the details right now. It is not your fault, and the link is correct.",
+    "retryIn": "Trying again in {seconds}s",
+    "retrying": "Trying again…",
+    "retryNow": "Try now",
+    "offline": "You are offline. We will try again as soon as the connection is back.",
+    "gaveUp": "The problem persists. Please try again in a few minutes."
+  },
   "boundary": {
     "title": "An error occurred",
     "subtitle": "Something went wrong",

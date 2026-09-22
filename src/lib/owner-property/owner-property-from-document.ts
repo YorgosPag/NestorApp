@@ -58,6 +58,7 @@
 
 import { readPropertyType } from '@/constants/property-type-aliases';
 import { mediaOf, type OwnerProperty } from '@/types/owner-property';
+import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
 
@@ -112,12 +113,14 @@ export function readStoredOwnerProperty(
 
   const stored = raw as Readonly<Record<string, unknown>>;
   const { type, drift } = readPropertyType(stored.type);
+  // ⚠️ Τα ωμά κλειδιά του δεσμού φακέλου **βγαίνουν** από το απλωμα και ξαναμπαίνουν **μόνο** κανονικοποιημένα.
+  const { dossierId: _rawDossierId, publishedFileIds: _rawPublishedFileIds, ...rest } = stored;
 
   return {
     // 🔴 Ο ΕΝΑΣ ισχυρισμός — δες την κεφαλίδα. Το CHECK 3.74 απαγορεύει
     //    `as OwnerProperty` οπουδήποτε αλλού στο repo.
     property: {
-      ...(stored as unknown as OwnerProperty),
+      ...(rest as unknown as OwnerProperty),
       id,
       type,
       // 🔴 ADR-864 Α3 — έγγραφο γραμμένο πριν τον άξονα **δεν έχει** το πεδίο· η απουσία
@@ -131,8 +134,30 @@ export function readStoredOwnerProperty(
           readonly mandate?: Parameters<typeof mandatesOf>[0]['mandate'];
         },
       ),
+      ...dossierLinkOf(stored),
     },
     vocabularyDrift: drift,
+  };
+}
+
+/**
+ * **Ο δεσμός με τον φάκελο, όπως τον κρατά η βάση** (ADR-866 Φ1.3) — κανονικοποιημένος **εδώ, μία φορά**.
+ *
+ * ⚠️ **Απόν μένει απόν**: ένα `publishedFileIds: []` σε παλιό έγγραφο θα εμφανιζόταν ως «αλλαγή» στο ίχνος της
+ * πρώτης αποθήκευσης που δεν άλλαξε τίποτα. Σκουπίδι (όχι-συμβολοσειρά) στο `dossierId` ⇒ **απόν** — ποτέ δείκτης
+ * σε φάκελο που κανείς δεν μπορεί να βρει.
+ */
+function dossierLinkOf(
+  stored: Readonly<Record<string, unknown>>,
+): Pick<OwnerProperty, 'dossierId' | 'publishedFileIds'> {
+  // 🔴 **Κλειδί που ΛΕΙΠΕΙ, ποτέ `dossierId: undefined`**: το Admin SDK δεν έχει `ignoreUndefinedProperties`
+  //    ⇒ το `set` της επόμενης αποθήκευσης θα έσκαγε (`lib/audit/tracked-field-def.ts`).
+  const { dossierId } = stored;
+  return {
+    ...(typeof dossierId === 'string' && dossierId.trim() !== '' ? { dossierId } : {}),
+    ...(stored.publishedFileIds !== undefined
+      ? { publishedFileIds: declaredFileIds(stored.publishedFileIds) }
+      : {}),
   };
 }
 

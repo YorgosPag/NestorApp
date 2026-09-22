@@ -34,6 +34,8 @@ import {
   type PublishOutcome,
 } from '@/services/listings/publish-public-listing';
 import type { PublicAgencyIdentity } from '@/types/public-listing';
+import { readDossierMedia } from '@/services/property-dossier/dossier-media.reader';
+import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import { resolveListedAt } from '@/services/listings/listed-at-stamp';
 import { resolvePriceHistory } from '@/services/listings/price-history-stamp';
@@ -41,6 +43,30 @@ import { marketPriceOf } from '@/lib/listings/price-history';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('owner-property-publication');
+
+/** Ό,τι η δημοσίευση διαβάζει **έξω** από το έγγραφο της αγγελίας — τη στιγμή της γραφής. */
+interface PublicationInputs {
+  readonly agency: PublicAgencyIdentity;
+  readonly dossierMedia: DossierMediaRead | null;
+}
+
+/**
+ * 🔴 ADR-866 Φ1.3 — **Ο ΦΑΚΕΛΟΣ ΔΙΑΒΑΖΕΤΑΙ ΜΑΖΙ ΜΕ ΤΗΝ ΤΑΥΤΟΤΗΤΑ ΓΡΑΦΕΙΟΥ, ΜΕ ΤΟ ΙΔΙΟ ΣΥΜΒΟΛΑΙΟ**: αγγελία με φάκελο
+ * δημοσιεύει τα **δηλωμένα** αρχεία του φακέλου. **Πετά** σε αποτυχία ⇒ ο καλών απαντά `failed`, **ποτέ** «κενή
+ * βιτρίνα» (θα έσβηνε τις φωτογραφίες της αγγελίας σε μια παροδική βλάβη).
+ */
+async function readPublicationInputs(
+  adminDb: AdminFirestore,
+  property: OwnerProperty,
+): Promise<PublicationInputs> {
+  const [agency, dossierMedia] = await Promise.all([
+    readPublicAgencyIdentity(adminDb, property.authorCompanyId),
+    property.dossierId === undefined
+      ? Promise.resolve(null)
+      : readDossierMedia(adminDb, property.dossierId, property.authorUserId),
+  ]);
+  return { agency, dossierMedia };
+}
 
 /**
  * Ξαναγράφει (ή σβήνει) τη δημόσια προβολή **αυτής** της καταχώρησης.
@@ -84,13 +110,13 @@ async function republishOwnerListing(
   // 🔴 ADR-841 §7 Α22 — **Η ΑΝΑΓΝΩΣΗ ΜΠΟΡΕΙ ΠΛΕΟΝ ΝΑ ΠΕΤΑΞΕΙ**: όταν η βιτρίνα δεν διαβάζεται,
   //    δεν ξέρουμε **ποιο** όνομα ισχύει. Μετράει ως `failed` ⇒ η προηγούμενη προβολή μένει
   //    άθικτη — ίδιο συμβόλαιο με τον γραφέα του επαγγελματία, **μία** διατύπωση αποτυχίας.
-  let agency: PublicAgencyIdentity;
+  let inputs: PublicationInputs;
   try {
-    agency = await readPublicAgencyIdentity(adminDb, property.authorCompanyId);
+    inputs = await readPublicationInputs(adminDb, property);
   } catch (error) {
     return reportProjectionFailure(property.id, error);
   }
-  const projectable = projectableFromOwnerProperty(property, at, agency);
+  const projectable = projectableFromOwnerProperty(property, at, inputs.agency, inputs.dossierMedia);
 
   // 🔴 **Η ΣΦΡΑΓΙΔΑ ΕΙΣΟΔΟΥ ΣΤΗΝ ΑΓΟΡΑ** (ADR-777 §8.61) — **ίδια** πολιτική με τον
   //    επαγγελματία, **άλλη** διεύθυνση. Η απόφαση ζει μία φορά στο `listed-at-stamp`·

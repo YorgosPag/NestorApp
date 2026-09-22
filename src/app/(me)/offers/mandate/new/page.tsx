@@ -42,6 +42,7 @@ import { redirect } from 'next/navigation';
 import { MandateRequestFormContent } from '@/components/mandate/MandateRequestFormContent';
 import { MandateUnavailableNotice } from '@/components/mandate/MandateUnavailableNotice';
 import { mandateRefusalOf } from '@/lib/agency/showcase-registry-closure';
+import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { resolveAlias } from '@/lib/workspace/alias-registry';
 import { AGENCY_DIRECTORY_ROUTE, agencyProfileRoute } from '@/components/mandate/agency-directory-route';
@@ -58,8 +59,8 @@ export default async function MandateRequestPage({ searchParams }: MandateReques
 
   const resolution = await resolveAlias(agency);
   if (resolution.outcome === 'unknown') {
-    // ⛔ **503, ποτέ 404** — ίδιο ιδίωμα με το `/pro/[alias]` και το `o/[workspace]`.
-    throw new Error('AGENCY_ALIAS_LOOKUP_UNAVAILABLE');
+    // ⛔ **5xx, ποτέ 404** — ίδιο SSoT με το `/pro/[alias]` και το `o/[workspace]`.
+    throwBackendUnavailable('agency-alias-lookup');
   }
   if (resolution.outcome === 'not-found') redirect(AGENCY_DIRECTORY_ROUTE);
 
@@ -70,7 +71,7 @@ export default async function MandateRequestPage({ searchParams }: MandateReques
   //    διακομιστής το ξαναρωτά στη γραφή· εδώ είναι για να μη γεμίσει ο άνθρωπος
   //    φόρμα που θα απορριφθεί (N.7.2 #4).
   const profile = await lookupAgencyProfile(getAdminFirestore(), resolution.companyId);
-  if (profile.outcome === 'unavailable') throw new Error('AGENCY_PROFILE_UNAVAILABLE');
+  if (profile.outcome === 'unavailable') throwBackendUnavailable('agency-profile');
   if (profile.outcome === 'not-published') redirect(AGENCY_DIRECTORY_ROUTE);
 
   // 🔴 **ΤΟ ΓΡΑΦΕΙΟ ΥΠΑΡΧΕΙ — Η ΠΡΑΞΗ ΟΧΙ** (ADR-841 §7 Α5). Ο **ίδιος** κριτής που

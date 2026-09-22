@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **22/09 — ΠΕΝΤΕ ΧΕΙΡΟΓΡΑΦΑ ΑΝΤΙΓΡΑΦΑ ΤΟΥ ΚΑΤΟΠΤΡΟΥ CLAIMS, ΠΛΕΟΝ ΠΛΕΟΝΑΣΜΟΣ** *(N.0.2 · ADR-853 §16)*
+
+  Από 22/09 ο ΕΝΑΣ γραφέας (`setClaimsWithMirror`) γράφει `companyId`/`globalRole` στο `users/{uid}`. Ο
+  `claims-handler.ts` καθαρίστηκε· **μένουν πέντε** που τα ξαναγράφουν μετά την κλήση:
+  `lib/workspace/workspace-provisioning.ts` · `server/auth/citizen-identity.ts` ·
+  `api/admin/migrate-company-id/migration-operations.ts` · `api/admin/bootstrap-admin/route.ts` ·
+  `api/admin/role-management/users/[uid]/role/route.ts` (+ ops `scripts/claims.setCompanyId.js`).
+  Σήμερα γράφουν **την ίδια τιμή** ⇒ ακίνδυνα, αλλά κάθε ένα είναι δεύτερη απάντηση που μπορεί να αποκλίνει.
+  ⚠️ Το `citizen-identity` θέλει προσοχή: γράφει **μαζί** ταυτότητα + κατάσταση σε μία πράξη, με δηλωμένη σειρά.
+
 - 🟠 **22/09 — ΠΡΟΣΚΛΗΣΕΙΣ ΠΡΟΜΗΘΕΥΤΩΝ: ΤΟ ΘΕΜΑ/ΚΕΙΜΕΝΟ ΠΟΥ ΕΠΕΞΕΡΓΑΖΕΤΑΙ Ο ΧΡΗΣΤΗΣ ΔΕΝ ΣΤΕΛΝΕΤΑΙ ΠΟΤΕ** *(ADR-598 «(θ)» · ADR-328 §5.Y)*
 
   Στο `VendorInviteDialog` ο άνθρωπος γράφει θέμα + μήνυμα, αλλά το `CreateInviteInput` (`hooks/useVendorInvites.ts`)

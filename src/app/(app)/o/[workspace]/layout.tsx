@@ -50,6 +50,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { WorkspaceScopeBridge } from '@/components/workspace/WorkspaceScopeBridge';
 import { resolveWorkspaceFromPath } from '@/lib/auth/workspace-from-path';
+import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { readPageIdentity } from '@/server/auth/page-identity';
 import { workspacePath } from '@/lib/workspace/workspace-path';
 import { AUTH_ROUTES } from '@/lib/routes';
@@ -115,8 +116,8 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
       );
 
     case 'unavailable':
-      // ⛔ ΠΟΤΕ 404 εδώ. Δες τον πίνακα παραπάνω.
-      throw new Error('WORKSPACE_LOOKUP_UNAVAILABLE');
+      // ⛔ ΠΟΤΕ 404 εδώ. Δες τον πίνακα παραπάνω — SSoT: `lib/errors/backend-unavailable`.
+      throwBackendUnavailable('workspace-lookup');
 
     case 'not-found':
     case 'no-workspace':

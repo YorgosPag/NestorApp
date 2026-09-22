@@ -59,6 +59,7 @@ import {
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createOwnerProperty } from '@/services/owner-property/owner-property-write.service';
+import { ownerPropertyDossierIdFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
 
 import {
   respondToMalformed,
@@ -85,6 +86,9 @@ async function handler(
   if (!parsed.ok) return respondToMalformed(parsed.malformed);
 
   const { id } = parsed;
+  // ADR-866 Φ1.3 — ο φάκελος που προ-γέννησε η φόρμα (Δ4). Άκυρη ταυτότητα ⇒ 400, **ποτέ** σιωπηλά «χωρίς φάκελο».
+  const dossier = ownerPropertyDossierIdFromRequest((parsed.body as { dossierId?: unknown } | null)?.dossierId);
+  if (!dossier.ok) return respondToMalformed(['dossierId']);
 
   return respondToWrite(
     await createOwnerProperty(
@@ -93,7 +97,7 @@ async function handler(
       // και στα δύο μέλη της ένωσης. Μια διάκριση εδώ θα ήταν φρουρός χωρίς
       // ετυμηγορία — και τα δύο σκέλη θα έγραφαν την ίδια γραμμή.
       // ADR-832: κενός πίνακας = ο ιδιώτης μόνος του. Καμία εντολή, κανένα sentinel.
-      { id, authorUserId: actor.ctx.uid, authorCompanyId: null, mandates: [] },
+      { id, authorUserId: actor.ctx.uid, authorCompanyId: null, mandates: [], dossierId: dossier.dossierId },
       parsed.draft,
     ),
   );

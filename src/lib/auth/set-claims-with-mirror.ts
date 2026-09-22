@@ -12,6 +12,12 @@
  * 🔴 ADR-867 Β9(β) Ε1: because it is the ONE path, it is also where the claim-is-a-projection
  * rule lives — a `companyId` claim is refused unless an ACTIVE `workspace_members` seat with the
  * same role already exists (`claims-seat.ts`). Callers write the seat FIRST.
+ *
+ * 🔴 ADR-853 §16 (Ε-Α): the mirror is ALSO the projection of the claim-owned profile fields
+ * (`companyId`, `globalRole` — derived from `MATERIALISED_FIELDS`, `claims-mirror-fields.ts`).
+ * Before, every caller re-wrote them by hand after this call — and invitation acceptance did
+ * not, leaving `users/{uid}` stale until the next sign-in. One writer of claims ⇒ one writer of
+ * their mirror. `emailVerified` is NOT here: its owner is Auth, not claims.
  */
 import 'server-only';
 
@@ -21,6 +27,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { assertClaimsHaveSeat } from '@/lib/auth/claims-seat';
+import { claimMirrorOf } from '@/lib/auth/claims-mirror-fields';
 
 const logger = createModuleLogger('SetClaimsWithMirror');
 
@@ -33,9 +40,11 @@ export interface SetClaimsResult {
  * Apply custom claims atomically with a Firestore mirror.
  *
  * - Stamps `claimsUpdatedAt` (epoch ms) inside the claims AND in the mirror doc
+ * - Mirrors the claim-owned profile fields (`claimMirrorOf`) in the SAME
+ *   write — absence in the claim ⇒ `null`, never "keep the old value"
  * - Auth write is authoritative; Firestore mirror failure is logged but
- *   non-fatal (Auth claims are the source of truth; the mirror is only a
- *   notification channel)
+ *   non-fatal (Auth claims are the source of truth; the mirror is a
+ *   notification channel + read-side projection, healed by the next sign-in)
  * - Caller passes the FULL claim payload (this helper does NOT merge with
  *   existing claims — that responsibility stays with the caller so audit logs
  *   keep a complete before/after view).
@@ -59,6 +68,7 @@ export async function setClaimsWithMirror(
       .doc(uid)
       .set(
         {
+          ...claimMirrorOf(claims),
           claimsUpdatedAt,
           updatedAt: AdminFieldValue.serverTimestamp(),
         },

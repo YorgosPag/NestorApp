@@ -44,12 +44,12 @@ import {
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import { mandatesOf } from '@/types/owner-property-mandate';
-import { publishedOwnerMediaSources } from '@/lib/owner-property/owner-media-publication';
+import { ownerListingMediaSources } from '@/lib/owner-property/owner-media-publication';
+import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
 import { NO_AGENCY_IDENTITY, type PublicAgencyIdentity } from '@/types/public-listing';
 import {
   isOwnerPropertyOnTheMarket,
   listingAuthorshipOf,
-  mediaOf,
   type OwnerProperty,
 } from '@/types/owner-property';
 
@@ -74,6 +74,11 @@ export function projectableFromOwnerProperty(
   property: OwnerProperty,
   atISO: string,
   agency: PublicAgencyIdentity = NO_AGENCY_IDENTITY,
+  /**
+   * ADR-866 Φ1.3 — ό,τι διάβασε ο διακομιστής από τον φάκελο. **Μόνο** η δημοσίευση το δίνει· οι υπόλοιποι
+   * καλούντες (γεγονότα · καθρέφτης κατόχου · πύλη) δεν ρωτούν τη βιτρίνα, και η συνάρτηση μένει καθαρή.
+   */
+  dossierMedia: DossierMediaRead | null = null,
 ): ProjectableProperty {
   /**
    * 🔴 **Η ΑΠΟΣΥΡΣΗ ΕΚΦΡΑΖΕΤΑΙ ΩΣ «ΚΑΜΙΑ ΔΙΑΘΕΣΗ», ΟΧΙ ΩΣ ΔΕΥΤΕΡΟ ΚΡΙΤΗΡΙΟ.**
@@ -188,7 +193,7 @@ export function projectableFromOwnerProperty(
      * καταναλωτές που φτιάχνουν `OwnerProperty` στη μνήμη (φόρμα, δοκιμές). Ο
      * {@link mediaOf} είναι ιδιοδύναμος· δεύτερη κλήση κοστίζει έναν έλεγχο πίνακα.
      */
-    publishedMedia: publishedOwnerMediaSources(mediaOf(property)),
+    publishedMedia: ownerListingMediaSources(property, dossierMedia),
 
     /**
      * 🔶 **ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ΤΗΣ Φ3 ΔΕΝ ΓΡΑΦΟΝΤΑΙ ΕΔΩ — ΔΗΛΩΜΕΝΟ ΚΕΝΟ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ**

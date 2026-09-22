@@ -746,6 +746,22 @@
       ],
       "tier": 3
     },
+    "backend-unavailable": {
+      "ssotFile": "src/lib/errors/backend-unavailable.ts",
+      "description": "ADR-781 · 2026-09-22 — the ONE declaration a render boundary (page/layout Server Component) makes when it could NOT ask the backend: throwBackendUnavailable(dependency) ⇒ BackendUnavailableError with digest 'NESTOR_BACKEND_UNAVAILABLE:<dependency>'. WHY a digest and not a message: Next.js strips the message in production but RESPECTS a code-set digest and ships it to the client (measured on 15.5.22) — so (1) RouteErrorFallback shows the public 'temporarily unavailable' screen with auto-retry instead of the internal error tool, and (2) the CHECK 3.51 Χ oracle tells a DECLARED backend outage (5xx + flight row E{digest}) from a crash (⛔). Forbidden: the ad-hoc `throw new Error('X_UNAVAILABLE')` idiom it replaced (4 copies: o/[workspace] layout, /pro/[alias], /offers/mandate/new ×2). Allowlisted: alias-registry.ts claimAlias (a WRITE called from API routes, not a render boundary) and test fakes.",
+      "forbiddenPatterns": [
+        "throw new Error\\('[A-Z_]+_UNAVAILABLE'\\)"
+      ],
+      "allowlist": [
+        "src/lib/errors/backend-unavailable.ts",
+        "src/lib/workspace/alias-registry.ts",
+        "src/services/places/__tests__/fake-firestore.ts",
+        "src/services/__tests__/file-audit-admin-anchor.test.ts"
+      ],
+      "tier": 3,
+      "addedDate": "2026-09-22",
+      "addedByAdr": "ADR-781"
+    },
     "dxf-raster-generator": {
       "ssotFile": "src/services/dxf-raster/dxf-raster-generator.ts",
       "description": "Server-side DXF scene → PNG rasterisation (ADR-312 Phase 3). Canonical entry point for every surface that needs a DXF thumbnail: Cloud Function trigger (functions/src/storage/dxf-thumbnail-onfinalize.ts), migration endpoint (/api/admin/migrate-dxf-thumbnails), and any future reader. Uses @resvg/resvg-js (pure WASM) to stay serverless-safe. Inline `new Resvg(...)` outside the allowlist = forbidden: we must not scatter SVG→PNG calls across the codebase, or the thumbnail size/background/padding drift from the browser-side DXF Viewer. The functions/shared mirror is the SSoT mirror kept byte-for-byte in sync.",

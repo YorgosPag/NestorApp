@@ -103,6 +103,7 @@ const path = require('node:path');
 
 const O = require('./lib/i18n-ssr/oracle');
 const { decorateWithholding, DECLARATIONS } = require('./lib/i18n-ssr/served-surface');
+const { loadBackendContract } = require('./lib/i18n-ssr/backend-contract');
 const { runSetRatchetCli } = require('./lib/ratchet-baseline');
 
 const CHECK = 'CHECK 3.51 Χ (ADR-781)';
@@ -218,6 +219,8 @@ function sweepRoutes(selected, universe, controls, verbose) {
     baseUrl: baseUrl(),
     userAgent: USER_AGENT,
     oracle: { universe, shellControls: controls.shell, pageControls: controls.page },
+    // ADR-781 — 5xx με digest του SSoT = δηλωμένη αδυναμία backend, όχι crash (backend-contract.js).
+    backendContract: loadBackendContract(PROJECT_ROOT),
     timeoutMs: Number(process.env.I18N_SSR_ORACLE_TIMEOUT_MS || 300000),
     concurrency: Number(process.env.I18N_SSR_ORACLE_CONCURRENCY || 2),
     onProgress: verbose

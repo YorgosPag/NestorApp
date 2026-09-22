@@ -184,3 +184,16 @@ export function propertyDossierInvariantViolations(
   if (label === '') return ['label-required'];
   return label.length > PROPERTY_DOSSIER_LABEL_MAX ? ['label-too-long'] : [];
 }
+
+/**
+ * **Όνομα φακέλου από ελεύθερο κείμενο** (ADR-866 Φ1.3) — π.χ. τον τίτλο της αγγελίας που τον γεννά.
+ *
+ * 🔑 Κόβει σε **χαρακτήρες** (`Array.from`), όχι σε μονάδες UTF-16, ώστε ένα emoji στο όριο να μη σπάσει στη μέση·
+ * μετά ξανακόβει ώσπου να χωρά στο **ίδιο** μέτρο που κρίνει το invariant (`length`). Κενό αποτέλεσμα ⇒ ο καλών
+ * οφείλει να δώσει όνομα — εδώ **δεν** επινοείται κείμενο (N.11: το προεπιλεγμένο όνομα είναι του locale, στον πελάτη).
+ */
+export function propertyDossierLabelFrom(text: string): string {
+  const characters = Array.from(text.trim()).slice(0, PROPERTY_DOSSIER_LABEL_MAX);
+  while (characters.join('').length > PROPERTY_DOSSIER_LABEL_MAX) characters.pop();
+  return characters.join('').trim();
+}

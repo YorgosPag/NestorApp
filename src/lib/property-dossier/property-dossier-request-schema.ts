@@ -84,6 +84,6 @@ export function propertyDossierChangeOf(request: PropertyDossierPatchRequest): P
  * **Η ταυτότητα φακέλου από το αίτημα** (σώμα γέννησης **ή** διαδρομή μεταβολής) — πρόθεμα `pdos` + uuid v4 από το **μητρώο**, ή `null`.
  * Η πόρτα απαντά `null` με **404** (ποτέ 400): μια άκυρη ταυτότητα είναι «δεν υπάρχει εδώ», όχι «δεν σε κατάλαβα».
  */
-export function propertyDossierIdFrom(value: string): string | null {
+export function propertyDossierIdFrom(value: unknown): string | null {
   return enterpriseIdFromRequest(value, ENTERPRISE_ID_PREFIXES.PROPERTY_DOSSIER);
 }

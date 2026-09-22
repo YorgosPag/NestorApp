@@ -21,11 +21,26 @@ import { createErrorDialogTourConfig } from './errorDialogTour';
 import { useErrorActions } from './useErrorActions';
 import { useErrorReporting } from './useErrorReporting';
 import { ErrorFallbackUI } from './ErrorFallbackUI';
+import { BackendUnavailableFallback } from './BackendUnavailableFallback';
+import { isBackendUnavailableDigest } from '@/lib/errors/backend-unavailable';
 import type { RouteErrorFallbackProps } from './types';
 
 const logger = createModuleLogger('RouteErrorFallback');
 
-export function RouteErrorFallback({
+/**
+ * **Ο ΔΙΑΚΟΠΤΗΣ** — ΕΝΑ σημείο για τα 60+ `error.tsx` και το `global-error.tsx`.
+ *
+ * 🔑 Δηλωμένη αδυναμία backend (`digest` του `lib/errors/backend-unavailable.ts`) ⇒
+ * δημόσια οθόνη «προσωρινά μη διαθέσιμο» με αυτόματη επανάληψη· **κάθε άλλο** σφάλμα ⇒
+ * το εργαλείο σφαλμάτων της εφαρμογής, όπως πριν. Η κρίση γίνεται **πριν** από κάθε hook,
+ * σε δικό της component, ώστε οι δύο κλάδοι να μη μοιράζονται σειρά hooks.
+ */
+export function RouteErrorFallback(props: RouteErrorFallbackProps) {
+  if (isBackendUnavailableDigest(props.error.digest)) return <BackendUnavailableFallback />;
+  return <ApplicationErrorFallback {...props} />;
+}
+
+function ApplicationErrorFallback({
   error,
   reset,
   componentName = 'Route',

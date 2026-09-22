@@ -73,7 +73,14 @@ describe('Ι — ο αδελφός της εφαρμογής και ο αδελ�
     //    γίνεται δεύτερος κριτής (CHECK 3.68) — και τότε είναι ADR-749 στα
     //    αλήθεια. Ο έλεγχος κοιτά τον **κώδικα**, χωρίς σχόλια: το docblock
     //    αναφέρει τις λέξεις ως τεκμηρίωση (σχήμα `Κ7β` του CHECK 3.50).
-    const code = cjs.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    //
+    // ⚠️ ADR-853 §16: η **δήλωση** `CLAIM_MIRRORED_FIELDS` αφαιρείται πριν τον έλεγχο — είναι
+    //    ονόματα πεδίων του κατόπτρου (δεδομένο, όχι κρίση), και την ισοτιμία της τη φυλά το
+    //    `Ι4`. Οποιαδήποτε **άλλη** εμφάνιση (π.χ. `claims.globalRole === …`) κοκκινίζει ακόμη.
+    const code = cjs
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '')
+      .replace(/const CLAIM_MIRRORED_FIELDS = Object\.freeze\(\[[^\]]*\]\);/, '');
     for (const word of ['super_admin', 'company_admin', 'admin_access', 'globalRole']) {
       expect(code).not.toContain(word);
     }
@@ -220,5 +227,42 @@ describe('Κ — η συμπεριφορά του γραφέα', () => {
     await expect(setClaimsWithMirror(admin, '', { a: 1 })).rejects.toThrow(/uid/);
     await expect(setClaimsWithMirror(admin, 'u', null)).rejects.toThrow(/claims/);
     expect(calls.claims).toBeNull();
+  });
+});
+
+// ============================================================================
+// Ε-Α — ΤΟ ΚΑΤΟΠΤΡΟ ΤΩΝ CLAIM-ΠΕΔΙΩΝ (ADR-853 §16)
+// ============================================================================
+
+describe('Ε-Α — ο ops γραφέας καθρεφτίζει τα ίδια πεδία με τον αδελφό', () => {
+  const { CLAIM_MIRRORED_FIELDS, claimMirrorOf } = require('../_shared/setClaimsWithMirror');
+  const MATERIALISATION_TS = path.join(REPO, 'src', 'lib', 'auth', 'identity-materialisation.ts');
+  const RULES = path.join(REPO, 'firestore.rules');
+
+  test('Ι4 — η χειρόγραφη λίστα = ό,τι δηλώνει `claims` το MATERIALISED_FIELDS = ό,τι ελέγχουν οι κανόνες', () => {
+    const table = /MATERIALISED_FIELDS = \{([\s\S]*?)\} as const/.exec(fs.readFileSync(MATERIALISATION_TS, 'utf8'));
+    const fromTable = [...(table ? table[1] : '').matchAll(/(\w+): 'claims'/g)].map((m) => m[1]).sort();
+    const rulesBody = /function mirrorsOwnClaims\(data\)\s*\{([\s\S]*?)\n\s*\}/.exec(fs.readFileSync(RULES, 'utf8'));
+    const fromRules = [...(rulesBody ? rulesBody[1] : '').matchAll(/data\.get\('(\w+)'/g)].map((m) => m[1]).sort();
+
+    expect(fromTable.length).toBeGreaterThan(0); // παρονομαστής
+    expect([...CLAIM_MIRRORED_FIELDS].sort()).toEqual(fromTable);
+    expect([...CLAIM_MIRRORED_FIELDS].sort()).toEqual(fromRules);
+  });
+
+  test('Κ7 — claims και κάτοπτρο στην ΙΔΙΑ γραφή· απουσία ⇒ null', async () => {
+    const admin = { writes: [] };
+    admin.auth = () => ({ setCustomUserClaims: () => Promise.resolve() });
+    admin.firestore = () => ({
+      collection: () => ({ doc: () => ({ set: (data) => { admin.writes.push(data); return Promise.resolve(); } }) }),
+    });
+    admin.firestore.FieldValue = { serverTimestamp: () => '<ts>' };
+
+    await setClaimsWithMirror(admin, 'uid-7', { companyId: 'comp_x', globalRole: 'internal_user' });
+    await setClaimsWithMirror(admin, 'uid-8', { globalRole: 'external_user' });
+
+    expect(admin.writes[0]).toMatchObject({ companyId: 'comp_x', globalRole: 'internal_user' });
+    expect(admin.writes[1]).toMatchObject({ companyId: null, globalRole: 'external_user' });
+    expect(claimMirrorOf({ companyId: '', globalRole: 7 })).toEqual({ companyId: null, globalRole: null });
   });
 });

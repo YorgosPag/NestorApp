@@ -56,6 +56,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import { placeLinkRefusal } from '@/services/owner-property/owner-property-place-link';
+import { createOwnerPropertyWithDossier } from '@/services/owner-property/owner-property-dossier-birth';
 import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import {
   newOwnerProperty,
@@ -100,21 +101,27 @@ async function persist(
   audit: OwnerPropertyAuditContext,
 ): Promise<OwnerPropertyWriteResult> {
   const ref = adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(property.id);
+  const { dossierId } = property;
 
   try {
-    // 🔴 **`create()` στη γέννηση, `set()` στην ενημέρωση — ΠΟΤΕ `add`** (N.6).
-    //
-    // Η ταυτότητα έρχεται από τον **πελάτη** (χρειάζεται πριν το ανέβασμα των
-    // αρχείων· δες `owner-property-draft-schema.ts`), άρα ένα `set()` στη δημιουργία
-    // θα σήμαινε ότι ο πελάτης μπορεί να **γράψει πάνω σε υπάρχον** έγγραφο απλώς
-    // στέλνοντας την ταυτότητά του. Το `create()` **πετά** αν υπάρχει — και η
-    // απόρριψη είναι του Firestore, όχι ελέγχου που κάποιος πρέπει να θυμηθεί.
-    //
-    // ⚠️ Στην **ενημέρωση** ισχύει το αντίθετο: `set` ολόκληρου, ποτέ `update`. Μια
-    // μερική ενημέρωση που άφηνε παλιό πεδίο ζωντανό θα έδινε έγγραφο **μείγμα δύο
-    // καταστάσεων** — ίδιο σκεπτικό με τον γραφέα της προβολής. Και ο πλήρης όρος
-    // συντίθεται από **γνωστά** μέρη: προσχέδιο + τα αμετάβλητα του υπάρχοντος.
-    if (mode === 'create') {
+    // 🔴 ADR-866 Φ1.3 — γέννηση **με φάκελο** ⇒ αγγελία + (γέννηση ή σύνδεση) φακέλου σε **μία** συναλλαγή.
+    //    Ξένος φάκελος ⇒ `absent`, ίδια απάντηση με «δεν υπάρχει» (ποτέ επιβεβαίωση ύπαρξης).
+    if (mode === 'create' && dossierId !== undefined) {
+      const linked = await createOwnerPropertyWithDossier(adminDb, ref, { ...property, dossierId });
+      if (linked === 'foreign') return { kind: 'absent' };
+    } else if (mode === 'create') {
+      // 🔴 **`create()` στη γέννηση, `set()` στην ενημέρωση — ΠΟΤΕ `add`** (N.6).
+      //
+      // Η ταυτότητα έρχεται από τον **πελάτη** (χρειάζεται πριν το ανέβασμα των
+      // αρχείων· δες `owner-property-draft-schema.ts`), άρα ένα `set()` στη δημιουργία
+      // θα σήμαινε ότι ο πελάτης μπορεί να **γράψει πάνω σε υπάρχον** έγγραφο απλώς
+      // στέλνοντας την ταυτότητά του. Το `create()` **πετά** αν υπάρχει — και η
+      // απόρριψη είναι του Firestore, όχι ελέγχου που κάποιος πρέπει να θυμηθεί.
+      //
+      // ⚠️ Στην **ενημέρωση** ισχύει το αντίθετο: `set` ολόκληρου, ποτέ `update`. Μια
+      // μερική ενημέρωση που άφηνε παλιό πεδίο ζωντανό θα έδινε έγγραφο **μείγμα δύο
+      // καταστάσεων** — ίδιο σκεπτικό με τον γραφέα της προβολής. Και ο πλήρης όρος
+      // συντίθεται από **γνωστά** μέρη: προσχέδιο + τα αμετάβλητα του υπάρχοντος.
       await ref.create(property);
     } else {
       await ref.set(property);
@@ -123,6 +130,15 @@ async function persist(
     return failure('Η αγγελία δεν αποθηκεύτηκε', property.id, error);
   }
 
+  return completeWrite(adminDb, property, audit);
+}
+
+/** Ίχνος → επαναπροβολή, **μετά** από γραφή που έγινε — η **μία** συνέχεια κάθε διαδρομής του {@link persist}. */
+async function completeWrite(
+  adminDb: AdminFirestore,
+  property: OwnerProperty,
+  audit: OwnerPropertyAuditContext,
+): Promise<OwnerPropertyWriteResult> {
   await recordOwnerPropertyWrite(property, audit);
 
   const republished = await republishOwnerProperty(adminDb, property);
@@ -154,6 +170,12 @@ export async function createOwnerProperty(
 ): Promise<OwnerPropertyWriteResult> {
   const violations = ownerPropertyInvariantViolations(draft);
   if (violations.length > 0) return { kind: 'invalid', violations };
+
+  // 🔴 ADR-866 Ε-Φ1-2 — **αγγελία γραφείου ΔΕΝ έχει φάκελο**: τα αρχεία της ανήκουν στο γραφείο («listings belong to
+  //    the broker»). Καμία πόρτα δεν το στέλνει· αν το στείλει κάποτε, είναι σφάλμα **δικό μας** (500), όχι του ανθρώπου.
+  if (authorship.dossierId !== null && authorship.mandates.length > 0) {
+    return failure('Φάκελος σε αγγελία γραφείου', authorship.id, new Error('dossier-on-brokered-listing'));
+  }
 
   // ⚠️ **Κάθε εντολή κρίνεται χωριστά** (ADR-832): η αγγελία μπορεί να γεννηθεί με
   //    περισσότερες από μία, και μια παράβαση σε **οποιαδήποτε** ακυρώνει τη γραφή.

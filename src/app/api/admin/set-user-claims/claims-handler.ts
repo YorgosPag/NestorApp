@@ -95,11 +95,16 @@ async function syncFirestoreRecords(
     //    έχει ήδη παραπλανήσει άνθρωπο δεν το ξαναγράφουμε.
     //
     // ⚠️ Τα **effective** δικαιώματα δεν αποθηκεύονται πουθενά, επίτηδες:
-    //    παράγονται από το `globalRole` (που είναι εδώ) μέσω του καταλόγου.
+    //    παράγονται από το `globalRole` μέσω του καταλόγου.
+    //
+    // 🔑 ADR-853 §16 (Ε-Α): `companyId`/`globalRole` **ΔΕΝ** γράφονται πια εδώ — τα έγραψε
+    //    ήδη το `setClaimsWithMirror` (`claimMirrorOf`), ο ΕΝΑΣ γραφέας του κατόπτρου τους.
+    //    Το χειρόγραφο αντίγραφο ήταν ο λόγος που η αποδοχή πρόσκλησης, που δεν το είχε,
+    //    άφηνε το έγγραφο μπαγιάτικο. ⛔ Μην το ξαναβάλεις «για σιγουριά».
     const userData = {
       email: firebaseUser?.email || email,
       displayName: firebaseUser?.displayName ?? null,
-      companyId, globalRole, permissions: finalPermissions,
+      permissions: finalPermissions,
       status: 'active', updatedAt: AdminFieldValue.serverTimestamp(),
     };
     if (userDoc.exists) {

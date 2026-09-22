@@ -21,6 +21,10 @@ import { useTranslation } from 'react-i18next';
 
 import type { ConsentRejection } from '@/services/mandate/mandate-consent.service';
 
+// 🔴 ΧΩΡΙΣ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ ο server έστελνε ωμό `mandate.consent.reason.*` (CHECK 3.51 Χ,
+// 2026-09-22): το slice το καταχωρούσε μόνο ο ΑΛΛΟΣ κλάδος, που εδώ δεν αποδίδεται.
+import './mandate-consent-route-slice';
+
 const NS = 'property-market';
 const K = `${NS}:mandate.consent`;
 

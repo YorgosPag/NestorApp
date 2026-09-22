@@ -61,6 +61,25 @@ const CLAIMS_UPDATED_AT_FIELD = 'claimsUpdatedAt';
 const USERS_COLLECTION = 'users';
 
 /**
+ * Τα πεδία του `users/{uid}` που **κατέχουν τα claims** (ADR-853 §16, Ε-Α).
+ *
+ * ⚠️ Στον αδελφό **παράγονται** από το `MATERIALISED_FIELDS` (`claims-mirror-fields.ts`)·
+ * εδώ ένα CJS δεν μπορεί να το εισαγάγει, άρα η λίστα γράφεται — και η ισοτιμία της με
+ * τον πίνακα **ΚΑΙ** με τους κανόνες (`mirrorsOwnClaims`) φυλάσσεται από την άγκυρα `Ι4`.
+ */
+const CLAIM_MIRRORED_FIELDS = Object.freeze(['companyId', 'globalRole']);
+
+/** Απουσία ⇒ `null`, ποτέ «κράτα την παλιά τιμή» — ίδια σημασία με το `claimMirrorOf`. */
+function claimMirrorOf(claims) {
+  const mirror = {};
+  for (const field of CLAIM_MIRRORED_FIELDS) {
+    const value = claims[field];
+    mirror[field] = typeof value === 'string' && value.length > 0 ? value : null;
+  }
+  return mirror;
+}
+
+/**
  * Γράφει custom claims **και** χτυπά το καμπανάκι ανανέωσης.
  *
  * Ο καλών δίνει το **ΠΛΗΡΕΣ** φορτίο claims — αυτό το αρχείο **δεν συγχωνεύει**
@@ -103,6 +122,7 @@ async function setClaimsWithMirror(admin, uid, claims) {
       .doc(uid)
       .set(
         {
+          ...claimMirrorOf(claims),
           [CLAIMS_UPDATED_AT_FIELD]: claimsUpdatedAt,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -120,4 +140,10 @@ async function setClaimsWithMirror(admin, uid, claims) {
   return { claimsUpdatedAt, firestoreMirrorOk };
 }
 
-module.exports = { setClaimsWithMirror, CLAIMS_UPDATED_AT_FIELD, USERS_COLLECTION };
+module.exports = {
+  setClaimsWithMirror,
+  claimMirrorOf,
+  CLAIMS_UPDATED_AT_FIELD,
+  CLAIM_MIRRORED_FIELDS,
+  USERS_COLLECTION,
+};

@@ -96,6 +96,44 @@ export function stagePropertyDossierBirth(
   writer.create(dossierRef(adminDb, dossier.id), dossier);
 }
 
+/** Η έκβαση του {@link stagePropertyDossierForListing} — κλειστό σύνολο. */
+export type ListingDossierStaging =
+  /** Ο φάκελος **δεν υπήρχε** ⇒ η γέννηση μπήκε στη συναλλαγή· ίχνος **μετά** το commit, από τον καλούντα. */
+  | { readonly kind: 'born'; readonly dossier: PropertyDossier }
+  /** Ο φάκελος υπήρχε ήδη, **του ίδιου** κατόχου (π.χ. γεννήθηκε στο πρώτο ανέβασμα της φόρμας) ⇒ απλή σύνδεση. */
+  | { readonly kind: 'existing'; readonly dossier: PropertyDossier }
+  /** Υπάρχει και **δεν** είναι δικός του ⇒ ο καλών απαντά `absent` (ποτέ επιβεβαίωση ύπαρξης ξένου φακέλου). */
+  | { readonly kind: 'foreign' };
+
+/**
+ * **Ο φάκελος μιας αγγελίας που γεννιέται** (ADR-866 Φ1.3 · Ε-Φ1-1 · §2.11) — γέννηση **ή** σύνδεση, **μέσα** στη
+ * συναλλαγή της αγγελίας. Έτσι δεν υπάρχει στιγμή όπου η αγγελία δείχνει σε φάκελο που δεν υπάρχει.
+ *
+ * 🔑 **Γιατί «ή σύνδεση»** (απόφαση Φ1.3, πρότυπο Airbnb «In progress» / Gmail πρόχειρα): η φόρμα γεννά τον φάκελο στο
+ * **πρώτο ανέβασμα**, ώστε τα αρχεία να έχουν **πάντα** κάτοχο — εγκαταλελειμμένη φόρμα ⇒ ο φάκελος και τα αρχεία του
+ * μένουν στο «Οι φάκελοί μου», **κανένα** ορφανό. Χωρίς ανέβασμα, ο φάκελος γεννιέται **εδώ**.
+ *
+ * ⚠️ Συναλλαγή ⇒ **ανάγνωση πρώτα**, μετά εγγραφές (περιορισμός Firestore). **Καμία** παρενέργεια: το σώμα
+ * ξανατρέχει. Ο καλών κάνει το `create` της αγγελίας **μετά** από αυτό, στην ίδια συναλλαγή.
+ */
+export async function stagePropertyDossierForListing(
+  tx: Transaction,
+  adminDb: AdminFirestore,
+  birth: PropertyDossierBirth,
+  draft: PropertyDossierDraft,
+  now: string,
+): Promise<ListingDossierStaging> {
+  const snapshot = await tx.get(dossierRef(adminDb, birth.id));
+  if (snapshot.exists) {
+    const dossier = propertyDossierFromDocument(snapshot.data(), birth.id);
+    const owned = dossier !== null && isOwnedByCustody(snapshot.data(), { userId: birth.userId });
+    return owned ? { kind: 'existing', dossier } : { kind: 'foreign' };
+  }
+  const dossier = newPropertyDossier(birth, draft, now);
+  stagePropertyDossierBirth(tx, adminDb, dossier);
+  return { kind: 'born', dossier };
+}
+
 /**
  * **Η επανάληψη μιας γέννησης** — η ταυτότητα υπάρχει ήδη.
  *

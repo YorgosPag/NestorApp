@@ -60,6 +60,8 @@ import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import { OFFER_LIFECYCLES, type OfferLifecycle } from '@/types/property-offers';
 import { stayPetPolicySchema } from '@/lib/offers/stay-pet-policy';
+import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
+import { propertyDossierIdFrom } from '@/lib/property-dossier/property-dossier-request-schema';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 
 /** Αριθμός ή ρητή απουσία. **Ποτέ `0` για το κενό** — δες `owner-property-form-values.ts`. */
@@ -256,6 +258,19 @@ export const ownerPropertyDraftSchema = z.object({
   offers: z.array(offer),
   place,
   media: z.array(media),
+  /**
+   * **Η δήλωση δημοσίευσης αρχείων του φακέλου** (ADR-866 Φ1.3, §2.7.4) — ταυτότητες `FileRecord`, με σειρά.
+   *
+   * ⚠️ **Εδώ ΔΕΝ ελέγχεται ότι ανήκουν στον φάκελο, επίτηδες**: ο αναγνώστης της δημοσίευσης φέρνει **μόνο** αρχεία
+   * του **ίδιου** φακέλου και του **ίδιου** κατόχου, άρα ξένη ταυτότητα **αγνοείται** δομικά — ένας έλεγχος εδώ θα
+   * ήταν ανάγνωση βάσης για κάτι που η ανάγνωση της δημοσίευσης ήδη εγγυάται. Όριο = όσα **χωρούν** στο ράφι:
+   * δήλωση που δεν μπορεί να δημοσιευτεί ολόκληρη θα έλεγε ψέματα στον άνθρωπο.
+   */
+  publishedFileIds: z
+    .array(z.string().trim().min(1))
+    .max(PUBLISHED_MEDIA_LIMIT)
+    .refine((ids) => new Set(ids).size === ids.length)
+    .optional(),
 });
 
 /**
@@ -325,4 +340,19 @@ export function ownerPropertyIdFromRequest(value: unknown): string | null {
   // ⚠️ Πραγματικό uuid v4 στο δεύτερο μισό (γνωστό πρόθεμα **δεν αρκεί**) **και** ότι είναι
   // αγγελία και όχι ζήτηση — ο ΕΝΑΣ κριτής του μητρώου (ADR-866 §2.8, N.0.2).
   return enterpriseIdFromRequest(value, ENTERPRISE_ID_PREFIXES.OWNER_PROPERTY);
+}
+
+/**
+ * **Ο φάκελος που δηλώνει η γέννηση αγγελίας** (ADR-866 Φ1.3) — τρεις ρητές καταστάσεις, ποτέ μαντεψιά.
+ *
+ * - απόν / `null` ⇒ `{ ok: true, dossierId: null }` — πελάτης χωρίς φάκελο (παλιά φόρμα)·
+ * - έγκυρο `pdos_*` από το **μητρώο** ⇒ η ταυτότητα (Δ4: ο πελάτης την προ-γεννά, ο διακομιστής **δεν** την εμπιστεύεται)·
+ * - οτιδήποτε άλλο ⇒ `{ ok: false }` — **ποτέ** σιωπηλή πτώση σε «χωρίς φάκελο»: τα αρχεία που ανέβηκαν θα χάνονταν από την αγγελία.
+ */
+export function ownerPropertyDossierIdFromRequest(
+  value: unknown,
+): { readonly ok: true; readonly dossierId: string | null } | { readonly ok: false } {
+  if (value === undefined || value === null) return { ok: true, dossierId: null };
+  const dossierId = propertyDossierIdFrom(value);
+  return dossierId === null ? { ok: false } : { ok: true, dossierId };
 }

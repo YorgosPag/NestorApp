@@ -30,6 +30,10 @@ import {
   type PropertyDossierViewClass,
 } from '@/config/upload-entry-points/entries-property-dossier';
 import { floorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
+import { propertyDossierMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
+import { mediaTabScopePolicy } from '@/components/space-management/shared/tabs/media-tab-scope';
+import { matchesFileScopes } from '@/components/shared/files/utils/upload-scope';
+import type { FileRecord } from '@/types/file-record';
 import type { PropertyDossier } from '@/types/property-dossier';
 
 /**
@@ -70,4 +74,27 @@ export function propertyDossierMediaTab(tab: PropertyDossierFileTab, type: Prope
       purposeAuthority: 'entry',
     },
   };
+}
+
+/**
+ * **Σε ποια καρτέλα του φακέλου φαίνεται αυτό το αρχείο;** (ADR-866 Φ1.3 · §2.11) — ή `null`.
+ *
+ * 🔑 **Η ΙΔΙΑ απάντηση με τη σελίδα, όχι δεύτερη αντιστοίχιση**: ρωτά τις εμβέλειες ανάγνωσης που **παράγει** το
+ * κέλυφος (`mediaTabScopePolicy` → `matchesFileScopes`). Μετρημένο: το τοπογραφικό είναι `admin`/`documents` με
+ * `purpose: study-topographic` — ένας κανόνας «κατηγορία `floorplans` ⇒ κάτοψη» θα το έχανε, και ό,τι ο άνθρωπος
+ * βλέπει στην καρτέλα «Τοπογραφικό» **δεν** θα δημοσιευόταν ποτέ ως τέτοιο.
+ *
+ * @param tabs — οι καρτέλες που ρωτά ο καλών, **με σειρά προτεραιότητας** (πρώτη που ταιριάζει).
+ */
+export function propertyDossierFileTabOf(
+  dossier: Pick<PropertyDossier, 'id' | 'label' | 'userId' | 'type'>,
+  file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>,
+  tabs: readonly PropertyDossierFileTab[],
+): PropertyDossierFileTab | null {
+  const binding = propertyDossierMediaBinding(dossier);
+  const match = tabs.find((tab) => {
+    const scopes = mediaTabScopePolicy(binding, propertyDossierMediaTab(tab, dossier.type))?.readScopes;
+    return scopes !== undefined && matchesFileScopes(file, scopes);
+  });
+  return match ?? null;
 }

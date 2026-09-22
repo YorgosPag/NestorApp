@@ -96,13 +96,10 @@ import {
   type MandateRequestBlocker,
 } from './mandate-request-form-labels';
 
-// 🔴 ADR-744 §18 — Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΔΟΣΗ. Η εγγραφή ζει στο **client**
-// component και όχι στο `page.tsx`: ένα `page.tsx` που είναι server component θα το
-// εισήγαγε μόνο στον διακομιστή ⇒ ωμά κλειδιά στον πελάτη (Π6).
-import routeSlice from '@/i18n/generated/routes/offers__mandate__new.el.json';
-import { registerRouteSlice } from '@/i18n/route-slice';
-
-registerRouteSlice(routeSlice);
+// 🔴 ADR-744 §18 — Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΔΟΣΗ. Η καταχώρηση ανήκει στη **διαδρομή**
+// (2026-09-22): ζούσε εδώ, και ο κλάδος `MandateUnavailableNotice` έστελνε ωμά
+// `mandate.request.*`. ΕΝΑ module, που το εισάγει ΚΑΘΕ κλάδος της σελίδας.
+import './mandate-request-route-slice';
 
 /** Ό,τι έμαθε η οθόνη μετά την υποβολή — ποτέ `boolean` + μήνυμα. */
 type SubmitOutcome =

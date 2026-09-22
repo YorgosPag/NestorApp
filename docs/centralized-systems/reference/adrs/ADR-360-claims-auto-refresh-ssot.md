@@ -64,3 +64,4 @@ and force-refreshes the token within seconds of the server update.
 | Date | Change |
 |------|--------|
 | 2026-05-16 | Initial implementation (Phase 1) |
+| 2026-09-22 | ADR-853 §16: ο καθρέφτης δεν είναι **μόνο** κανάλι ειδοποίησης — προβάλλει πλέον και τα πεδία του `users/{uid}` που **κατέχουν τα claims** (`claimMirrorOf`, παραγόμενα από το `MATERIALISED_FIELDS`), στην ίδια γραφή με το `claimsUpdatedAt`. Αιτία: η αποδοχή πρόσκλησης άφηνε το έγγραφο μπαγιάτικο ως την επόμενη σύνδεση. Ίδιο και στο δίδυμο των ops. |

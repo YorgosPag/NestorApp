@@ -1117,6 +1117,20 @@ onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
 const onPointerDown = (e: React.MouseEvent) => e.preventDefault();`,
   },
 
+  // ADR-781 (2026-09-22) — «δεν μπόρεσα να ρωτήσω» στο σύνορο απόδοσης = ΕΝΑ SSoT με digest.
+  // Το χειρόγραφο `throw new Error('X_UNAVAILABLE')` χάνει το μήνυμα στην παραγωγή: ούτε ο
+  // άνθρωπος ούτε ο χρησμός μπορούν πια να το ξεχωρίσουν από crash. Νόμιμα: η κλήση του SSoT.
+  'backend-unavailable': {
+    shouldMatch: `if (resolution.outcome === 'unknown') {
+    throw new Error('AGENCY_ALIAS_LOOKUP_UNAVAILABLE');
+  }
+  if (profile.outcome === 'unavailable') throw new Error('AGENCY_PROFILE_UNAVAILABLE');`,
+    shouldSkip: `import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
+  if (resolution.outcome === 'unknown') throwBackendUnavailable('agency-alias-lookup');
+  throw new ApiError(503, 'Firestore not available', 'DB_UNAVAILABLE');
+  // σχόλιο που ΑΝΑΦΕΡΕΙ το παλιό ιδίωμα δεν είναι παράβαση: «throw new Error» σκέτο`,
+  },
+
   // ADR-866 §5.2 — ο κάτοχος εγγράφου (εταιρεία Ή άνθρωπος) δηλώνεται ΜΙΑ φορά. Το σχήμα που
   // φυλάγεται είναι ακριβώς ο πειρασμός του ADR-866: «ίδιο σχήμα με το audit-ledger» ⇒ αντίγραφο.
   'custody-scope': {

@@ -123,7 +123,7 @@ describe('🏆 Β2 — κάθε πράξη ⇒ ΑΚΡΙΒΩΣ ΕΝΑ ίχνος,
 
   it('γέννηση ⇒ `created` με τις αρχικές τιμές', async () => {
     const db = new FakeFirestore();
-    const authorship = { id: 'ownp_new', authorUserId: 'user-1', authorCompanyId: null, mandates: [] };
+    const authorship = { id: 'ownp_new', authorUserId: 'user-1', authorCompanyId: null, mandates: [], dossierId: null };
 
     const result = await write.createOwnerProperty(db as unknown as AdminFirestore, authorship, validDraft());
 
@@ -143,7 +143,7 @@ describe('🏆 Β2 — κάθε πράξη ⇒ ΑΚΡΙΒΩΣ ΕΝΑ ίχνος,
 
   it('🔴 αποτυχημένη γραφή ⇒ ΜΗΔΕΝ εγγραφές (ίχνος για πράξη που δεν έγινε = ψέμα)', async () => {
     const { property, adminDb } = seeded();
-    const authorship = { id: property.id, authorUserId: 'user-1', authorCompanyId: null, mandates: [] };
+    const authorship = { id: property.id, authorUserId: 'user-1', authorCompanyId: null, mandates: [], dossierId: null };
 
     const result = await write.createOwnerProperty(adminDb, authorship, validDraft());
 

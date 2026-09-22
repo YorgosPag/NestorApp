@@ -78,6 +78,7 @@ const path = require('node:path');
 
 const { buildKeyUniverse, flattenAnswerableKeys } = require('../i18n/locale-keys');
 const { assertClosedLedger } = require('./ledger');
+const { declaredBackendUnavailable } = require('./backend-contract');
 
 const X_STATES = Object.freeze({
   UNREACHABLE: 'route-unreachable',
@@ -89,18 +90,25 @@ const X_STATES = Object.freeze({
   WITHHELD_ANSWERED: 'withheld-but-answered',
   SYNTHETIC_ID: 'surface-synthetic-id',
   WITHHELD: 'route-withheld',
+  BACKEND_UNAVAILABLE: 'backend-unavailable',
   CLEAN: 'clean',
 });
 
 /** ⛔ ΠΟΤΕ σε baseline: ένας χρησμός που δεν απέδειξε ότι κοίταξε δεν έχει «πρόοδο». */
 const X_ZERO_TOLERANCE = Object.freeze([X_STATES.UNREACHABLE, X_STATES.PROBE_UNPROVEN]);
-/** 🔴 ratchet κατά ταυτότητα `διαδρομή|επιφάνεια|κλειδί` — ανταλλαγή ⇒ μπλοκ (ADR-749). */
+/**
+ * 🔴 ratchet κατά ταυτότητα `διαδρομή|επιφάνεια|κλειδί` — ανταλλαγή ⇒ μπλοκ (ADR-749).
+ * ⚠️ Το `backend-unavailable` (βλ. `backend-contract.js`) είναι ΕΔΩ και όχι στο 🔶: μια
+ * διαδρομή που σήμερα κρίνεται και αύριο κρύβει την επιφάνειά της πίσω από δηλωμένη
+ * αδυναμία backend οφείλει να **μπλοκάρει** — «απουσία δεν είναι πρόοδος» (CHECK 3.38).
+ */
 const X_RATCHETED = Object.freeze([
   X_STATES.RAW_KEY,
   X_STATES.SKIPPED,
   X_STATES.SHELL_ONLY,
   X_STATES.NOT_RENDERED,
   X_STATES.WITHHELD_ANSWERED,
+  X_STATES.BACKEND_UNAVAILABLE,
 ]);
 /**
  * 🔶 ΜΕΤΡΙΕΤΑΙ, ΔΕΝ ΑΠΑΡΙΘΜΕΙΤΑΙ — και **δεν** μπλοκάρει (πρότυπο
@@ -402,6 +410,12 @@ async function probeRoute(route, options) {
     return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: null, keys: [], detail: error.message };
   }
 
+  const declared = response.status >= 500 && options.backendContract
+    ? declaredBackendUnavailable(html, options.backendContract)
+    : null;
+  if (declared !== null) {
+    return { ...route, route: route.url, state: X_STATES.BACKEND_UNAVAILABLE, status: response.status, keys: [], detail: `δηλωμένη αδυναμία backend: ${declared}` };
+  }
   if (!response.ok) {
     // 🔶 ΔΗΛΩΜΕΝΗ ΠΑΡΑΚΡΑΤΗΣΗ + Ο SERVER ΣΥΜΦΩΝΗΣΕ = ΤΟ ΣΥΜΒΟΛΑΙΟ ΤΗΡΗΘΗΚΕ.
     //    Δεν είναι «δεν κοίταξα»: είναι «δεν υπάρχει τίποτα να κοιτάξω, και ο

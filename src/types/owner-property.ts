@@ -88,6 +88,7 @@ import {
 } from '@/types/owner-property-mandate';
 import type { ListedAt, ListingAuthorship } from '@/types/public-listing';
 import type { ListingMaterialKind } from '@/lib/listings/listing-material';
+import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
 // =============================================================================
@@ -410,7 +411,29 @@ export interface OwnerProperty {
   readonly bedrooms: number | null;
 
   // ── §25.6: ΦΩΤΟΓΡΑΦΙΑ / ΚΑΤΟΨΗ ────────────────────────────────────────────
+  /**
+   * ⚠️ **ΠΑΛΙΟ ΣΧΗΜΑ — dual-read ως το Φ1.6** (ADR-866 §2.11). Αγγελία **με** {@link dossierId}
+   * δεν το διαβάζει ποτέ για δημοσίευση· τα αρχεία της ζουν στον φάκελο.
+   */
   readonly media: readonly OwnerPropertyMedia[];
+
+  /**
+   * **Ο φάκελος του ακινήτου** (ADR-866 Φ1.3) — εκεί **ζουν** τα αρχεία· η αγγελία μόνο **δηλώνει**.
+   *
+   * 🔑 **Αμετάβλητο, και δεν είναι στο {@link OwnerPropertyDraft}**: μπαίνει από το {@link OwnerPropertyAuthorship}
+   * στη γέννηση, όπως η ταυτότητα — άρα το PATCH (`{...existing, ...draft}`) **δεν μπορεί** να το αλλάξει.
+   * ⚠️ **Απόν = αγγελία πριν τη Φ1.3 ή αγγελία γραφείου** (Ε-Φ1-2): διαβάζεται το {@link media}.
+   */
+  readonly dossierId?: string;
+
+  /**
+   * **Ποια αρχεία του φακέλου φεύγουν, με ποια σειρά** (ADR-866 §2.7.4) — η δήλωση **είναι** η εξουσιοδότηση.
+   *
+   * ⛔ **Όχι `classification: 'public'`**: στο γραφείο απαντά *«επιτρέπεται να φύγει από την εταιρεία;»* — σε φάκελο
+   * **ενός** ανθρώπου δεν υπάρχει εταιρεία, και η απόφαση είναι **ανά αγγελία** (η πώληση του 2026 και η ενοικίαση του
+   * 2028 δείχνουν άλλες φωτογραφίες από τον **ίδιο** φάκελο). Αρχείο εκτός δήλωσης **δεν φεύγει** (ADR-841 Α2.7).
+   */
+  readonly publishedFileIds?: DeclaredFileIds;
 
   // ── ΤΙΤΛΟΣ ────────────────────────────────────────────────────────────────
   /** Κείμενο **του ανθρώπου** — όχι κλειδί i18n (N.11 εξαίρεση: δεδομένο, όχι διεπαφή). */
@@ -645,7 +668,7 @@ export function ownerPropertyOfferKinds(
 /** Τα πεδία που η φόρμα συντάσσει — **χωρίς** ταυτότητα, κάτοχο, ή χρόνο. */
 export type OwnerPropertyDraft = Pick<
   OwnerProperty,
-  'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'bedrooms' | 'media' | 'title'
+  'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'bedrooms' | 'media' | 'title' | 'publishedFileIds'
 >;
 
 // =============================================================================
@@ -666,6 +689,11 @@ export interface OwnerPropertyAuthorship {
   readonly authorCompanyId: string | null;
   /** Δες {@link OwnerProperty.mandates} — κενός πίνακας = ο ιδιώτης μόνος του. */
   readonly mandates: readonly BrokeredListingMandate[];
+  /**
+   * Δες {@link OwnerProperty.dossierId} — `null` = χωρίς φάκελο (παλιά φόρμα · αγγελία γραφείου, Ε-Φ1-2).
+   * 🔑 Ταξιδεύει **εδώ** και όχι στο προσχέδιο: είναι ταυτότητα που προ-γεννά ο πελάτης (Δ4), όχι απάντηση του ανθρώπου.
+   */
+  readonly dossierId: string | null;
 }
 
 /**
@@ -698,6 +726,8 @@ export function newOwnerProperty(
     mandates: authorship.mandates,
     // ⚠️ **Παράγεται, ποτέ δεν δηλώνεται** — δες `OwnerProperty.mandatesExpireAt`.
     mandatesExpireAt: nextMandateExpiry(authorship.mandates),
+    // ⚠️ **Απόν, ποτέ `undefined`** — το Firestore πετά σε `undefined` πεδίο.
+    ...(authorship.dossierId !== null ? { dossierId: authorship.dossierId } : {}),
     ...draft,
     lifecycle: 'listed',
     // 🔑 ADR-864 Α3 — η γέννηση είναι **δημόσια**, όπως ως τώρα. Το κοινό στενεύει μόνο
