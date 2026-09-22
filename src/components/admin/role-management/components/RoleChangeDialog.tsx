@@ -20,9 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { DialogConfirmFooter } from './DialogConfirmFooter';
 import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
 import {
@@ -132,7 +131,7 @@ export function RoleChangeDialog({
           <fieldset className="space-y-2">
             <Label>{t('roleManagement.currentRole')}</Label>
             <Badge variant={ROLE_BADGE_VARIANT[user.globalRole]}>
-              {t(`roleManagement.roleNames.${user.globalRole}`)}
+              {t(`common:globalRoles.${user.globalRole}`)}
             </Badge>
           </fieldset>
 
@@ -155,10 +154,10 @@ export function RoleChangeDialog({
                   return (
                     <SelectItem key={role} value={role}>
                       <span className="flex flex-col">
-                        <span>{t(`roleManagement.roleNames.${role}`)}</span>
+                        <span>{t(`common:globalRoles.${role}`)}</span>
                         {roleDef && (
                           <span className={cn("text-xs", colors.text.muted)}>
-                            L{roleDef.level} — {t(`roleManagement.roleDescriptions.${role}`)}
+                            L{roleDef.level} — {t(`common:globalRoleDescriptions.${role}`)}
                           </span>
                         )}
                       </span>
@@ -202,16 +201,13 @@ export function RoleChangeDialog({
           )}
         </section>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {isSubmitting
-              ? t('common.saving')
-              : t('roleManagement.confirmRoleChange')}
-          </Button>
-        </DialogFooter>
+        <DialogConfirmFooter
+          onCancel={onClose}
+          onConfirm={handleSubmit}
+          confirmKey="roleManagement.confirmRoleChange"
+          isSubmitting={isSubmitting}
+          canSubmit={canSubmit}
+        />
       </DialogContent>
     </Dialog>
   );

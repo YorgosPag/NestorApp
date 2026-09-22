@@ -34,12 +34,11 @@
 import { useCallback, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { DialogConfirmFooter } from './DialogConfirmFooter';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -153,14 +152,13 @@ export function InviteUserDialog({ open, onClose, onIssued }: InviteUserDialogPr
           </Alert>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {isSubmitting ? t('common.saving') : t(INVITE_KEYS.submit)}
-          </Button>
-        </DialogFooter>
+        <DialogConfirmFooter
+          onCancel={onClose}
+          onConfirm={handleSubmit}
+          confirmKey={INVITE_KEYS.submit}
+          isSubmitting={isSubmitting}
+          canSubmit={canSubmit}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -214,10 +212,10 @@ function InviteFields({ email, role, disabled, onEmailChange, onRoleChange }: In
               return (
                 <SelectItem key={invitable} value={invitable}>
                   <span className="flex flex-col">
-                    <span>{t(`roleManagement.roleNames.${invitable}`)}</span>
+                    <span>{t(`common:globalRoles.${invitable}`)}</span>
                     {definition && (
                       <span className={cn('text-xs', colors.text.muted)}>
-                        L{definition.level} — {t(`roleManagement.roleDescriptions.${invitable}`)}
+                        L{definition.level} — {t(`common:globalRoleDescriptions.${invitable}`)}
                       </span>
                     )}
                   </span>

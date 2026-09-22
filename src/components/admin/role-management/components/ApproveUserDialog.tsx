@@ -22,9 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { DialogConfirmFooter } from './DialogConfirmFooter';
 import { Alert } from '@/components/ui/alert';
 import {
   Select,
@@ -121,10 +120,10 @@ export function ApproveUserDialog({ user, open, onClose, onSuccess }: ApproveUse
                   return (
                     <SelectItem key={globalRole} value={globalRole}>
                       <span className="flex flex-col">
-                        <span>{t(`roleManagement.roleNames.${globalRole}`)}</span>
+                        <span>{t(`common:globalRoles.${globalRole}`)}</span>
                         {roleDef && (
                           <span className={cn('text-xs', colors.text.muted)}>
-                            L{roleDef.level} — {t(`roleManagement.roleDescriptions.${globalRole}`)}
+                            L{roleDef.level} — {t(`common:globalRoleDescriptions.${globalRole}`)}
                           </span>
                         )}
                       </span>
@@ -140,14 +139,13 @@ export function ApproveUserDialog({ user, open, onClose, onSuccess }: ApproveUse
           </Alert>
         </section>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {isSubmitting ? t('common.saving') : t('roleManagement.approve.confirm')}
-          </Button>
-        </DialogFooter>
+        <DialogConfirmFooter
+          onCancel={onClose}
+          onConfirm={handleSubmit}
+          confirmKey="roleManagement.approve.confirm"
+          isSubmitting={isSubmitting}
+          canSubmit={canSubmit}
+        />
       </DialogContent>
     </Dialog>
   );

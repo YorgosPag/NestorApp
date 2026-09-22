@@ -11,12 +11,11 @@
 import { useCallback, useState } from 'react';
 
 import { API_ROUTES } from '@/config/domain-constants';
-import { Button } from '@/components/ui/button';
+import { DialogConfirmFooter } from './DialogConfirmFooter';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -67,14 +66,13 @@ export function DenyAccessRequestDialog({ user, open, onClose, onSuccess }: Deny
           <span className={cn('text-xs', colors.text.muted)}>{user.email}</span>
         </article>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="destructive" onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? t('common.saving') : t('roleManagement.deny.confirm')}
-          </Button>
-        </DialogFooter>
+        <DialogConfirmFooter
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmKey="roleManagement.deny.confirm"
+          isSubmitting={isSubmitting}
+          confirmVariant="destructive"
+        />
       </DialogContent>
     </Dialog>
   );
