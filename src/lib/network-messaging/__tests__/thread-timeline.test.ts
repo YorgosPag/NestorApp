@@ -1,5 +1,5 @@
 /**
- * @fileoverview Άγκυρες του χρονολογίου νήματος (ADR-867 Β7) — Χ-1…Χ-9.
+ * @fileoverview Άγκυρες του χρονολογίου νήματος (ADR-867 Β7) — Χ-1…Χ-11.
  * Κάθε μία κοκκινίζει σε **συγκεκριμένη** μετάλλαξη (γραμμένη δίπλα).
  */
 
@@ -7,6 +7,7 @@ import {
   affordancesOf,
   buildTimeline,
   continuesPrevious,
+  pendingNotArrived,
   retractMinutesLeft,
   type TimelineItem,
 } from '../thread-timeline';
@@ -119,5 +120,19 @@ describe('thread-timeline — δυνατότητες του θεατή', () => {
     expect(affordancesOf(old, ME, '2026-09-19T10:00:00.000Z')).toStrictEqual({ retractMinutesLeft: null, canEdit: true });
     const tomb = msg('b', ME, '2026-09-19T10:00:00.000Z', { text: '', retractedAt: '2026-09-19T10:01:00.000Z' });
     expect(affordancesOf(tomb, ME, '2026-09-19T10:02:00.000Z')).toStrictEqual({ retractMinutesLeft: null, canEdit: false });
+  });
+});
+
+describe('thread-timeline — εκκρεμείς αποστολές απέναντι στο snapshot', () => {
+  const entry = (messageId: string | null) => ({ clientKey: `k-${messageId}`, messageId });
+
+  it('Χ-10 φτασμένο id ⇒ η φούσκα φεύγει· άγνωστο ή ακόμη χωρίς id ⇒ μένει (μετάλλαξη: `!arrived.has` ⇒ `arrived.has`)', () => {
+    const pending = [entry(null), entry('m1'), entry('m2')];
+    expect(pendingNotArrived(pending, [msg('m1', ME, '2026-09-22T07:33:00.000Z')])).toStrictEqual([entry(null), entry('m2')]);
+  });
+
+  it('Χ-11 τίποτα δεν φεύγει ⇒ η ΙΔΙΑ αναφορά (μετάλλαξη: πάντα νέος πίνακας ⇒ βρόχος effect)', () => {
+    const pending = [entry(null), entry('m2')];
+    expect(pendingNotArrived(pending, [msg('m1', ME, '2026-09-22T07:33:00.000Z')])).toBe(pending);
   });
 });

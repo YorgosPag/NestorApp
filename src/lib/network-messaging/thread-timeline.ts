@@ -95,6 +95,25 @@ export function continuesPrevious(previous: NetworkMessage | null, message: Netw
 }
 
 /**
+ * **Ποιες εκκρεμείς αποστολές ΔΕΝ έχουν φτάσει ακόμη στο snapshot** — η φούσκα φαίνεται μόνο γι' αυτές.
+ *
+ * 🔑 **Είναι ΠΑΡΑΓΩΓΗ, όχι παρενέργεια του snapshot** (ADR-872 ζωντανή επαλήθευση, 2026-09-22): οι δύο
+ * είσοδοι φτάνουν **σε οποιαδήποτε σειρά**. Όταν το snapshot προλάβαινε την απάντηση HTTP (listener
+ * γρηγορότερος από το δίκτυο, ή επανάληψη μετά από χαμένη απάντηση), η εκκρεμής φούσκα έπαιρνε το
+ * `messageId` **αφού** είχε περάσει ο μόνος έλεγχος — και έμενε **διπλή για πάντα**.
+ * Επιστρέφει την **ίδια** αναφορά όταν δεν φεύγει τίποτα (σταθερή ταυτότητα για React).
+ */
+export function pendingNotArrived<T extends { readonly messageId: string | null }>(
+  pending: readonly T[],
+  live: readonly Pick<NetworkMessage, 'id'>[],
+): readonly T[] {
+  if (pending.every((entry) => entry.messageId === null)) return pending;
+  const arrived = new Set(live.map((message) => message.id));
+  const next = pending.filter((entry) => entry.messageId === null || !arrived.has(entry.messageId));
+  return next.length === pending.length ? pending : next;
+}
+
+/**
  * **Το χρονολόγιο** — μηνύματα ⇒ στοιχεία οθόνης (ημέρες · γραμμή «νέα» · μηνύματα).
  *
  * 🔑 Η γραμμή «νέα» μπαίνει **μία** φορά, πριν από το **πρώτο** αδιάβαστο. Μετά από αυτήν, και μετά

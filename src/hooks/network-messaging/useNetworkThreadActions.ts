@@ -15,9 +15,10 @@
  * `lastReadAt` μου — μία φορά ανά νεότερο μήνυμα, ποτέ σε βρόχο.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { nowISO } from '@/lib/date-local';
+import { pendingNotArrived } from '@/lib/network-messaging/thread-timeline';
 import { generateOpaqueToken } from '@/services/enterprise-id.service';
 import {
   networkThreadClient,
@@ -45,26 +46,32 @@ function pendingOf(text: string): PendingMessage {
   return { clientKey: generateOpaqueToken(), text: text.trim(), createdAt: nowISO(), status: 'sending', messageId: null, failure: null };
 }
 
-/** Οι εκκρεμείς φούσκες σβήνουν **μόνο** όταν το ΙΔΙΟ id φτάσει στο snapshot — ποτέ νωρίτερα, ποτέ διπλές. */
+/**
+ * Οι εκκρεμείς φούσκες σβήνουν **μόνο** όταν το ΙΔΙΟ id φτάσει στο snapshot — ποτέ νωρίτερα, ποτέ διπλές.
+ *
+ * 🔑 Η **ορατότητα** παράγεται (`pendingNotArrived`) από **και τις δύο** εισόδους σε κάθε απόδοση — όχι
+ * από effect που ξυπνά μόνο με το snapshot: αν το snapshot φτάσει **πριν** την απάντηση με το `messageId`,
+ * το effect δεν ξανατρέχει ποτέ και η φούσκα μένει διπλή (μετρημένο ζωντανά, ADR-872). Το effect μόνο
+ * **καθαρίζει τη μνήμη** — η οθόνη δεν το περιμένει.
+ */
 function useReconcileArrivals(
   threadId: string | null,
   liveMessages: readonly NetworkMessage[],
+  pending: readonly PendingMessage[],
   setPending: React.Dispatch<React.SetStateAction<readonly PendingMessage[]>>,
-) {
+): readonly PendingMessage[] {
   useEffect(() => setPending([]), [threadId, setPending]);
+  const visible = useMemo(() => pendingNotArrived(pending, liveMessages), [pending, liveMessages]);
   useEffect(() => {
-    const arrived = new Set(liveMessages.map((message) => message.id));
-    setPending((list) => {
-      const next = list.filter((entry) => entry.messageId === null || !arrived.has(entry.messageId));
-      return next.length === list.length ? list : next;
-    });
-  }, [liveMessages, setPending]);
+    if (visible !== pending) setPending((list) => pendingNotArrived(list, liveMessages));
+  }, [visible, pending, liveMessages, setPending]);
+  return visible;
 }
 
 /** Εκκρεμείς αποστολές + ταύτιση με το snapshot κατά `messageId`. */
 function usePendingSends(threadId: string | null, liveMessages: readonly NetworkMessage[]) {
-  const [pending, setPending] = useState<readonly PendingMessage[]>([]);
-  useReconcileArrivals(threadId, liveMessages, setPending);
+  const [stored, setPending] = useState<readonly PendingMessage[]>([]);
+  const pending = useReconcileArrivals(threadId, liveMessages, stored, setPending);
 
   const dispatch = useCallback(
     async (entry: Pick<PendingMessage, 'clientKey' | 'text'>) => {
