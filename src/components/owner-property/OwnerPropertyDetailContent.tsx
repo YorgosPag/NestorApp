@@ -368,6 +368,7 @@ export function OwnerPropertyDetailContent({
             initialValues={ownerPropertyFormFrom(lookup.property)}
             editingId={lookup.property.id}
             previousOffers={lookup.property.offers}
+            onClose={() => setEditing(false)}
           />
         ) : (
           <OwnerPropertyView

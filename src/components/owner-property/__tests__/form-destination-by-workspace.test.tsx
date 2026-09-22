@@ -244,3 +244,66 @@ describe('🔴 Χ — μία φόρμα, δύο χώροι, ΔΥΟ προορι�
     expect(pushed).toEqual([offerDetailHref(PERSONAL.id)]);
   });
 });
+
+// ============================================================================
+// Ε — ΕΠΙ ΤΟΠΟΥ: Ο ΦΟΡΕΑΣ ΚΛΕΙΝΕΙ ΤΗ ΦΟΡΜΑ (ADR-777 §8.60.21.7, 2026-09-22)
+// ============================================================================
+
+/**
+ * 🔴 Μετρημένο ζωντανά: η σελίδα `/offers/<id>` ανοίγει την επεξεργασία **στη θέση της**, και η
+ * φόρμα έστελνε μετά το `PATCH 200` `router.push` στην **ίδια** διεύθυνση ⇒ τίποτα δεν
+ * ξαναστηνόταν και το κουμπί έμενε για πάντα «Αποθηκεύεται…».
+ */
+describe('🔴 Ε — επεξεργασία ΕΠΙ ΤΟΠΟΥ: την κλείνει ο φορέας, όχι μια πλοήγηση', () => {
+  function renderInPlace(onClose: () => void): void {
+    render(
+      <OwnerPropertyFormContent
+        initialValues={ownerPropertyFormFrom(PERSONAL)}
+        editingId={PERSONAL.id}
+        previousOffers={PERSONAL.offers}
+        onClose={onClose}
+      />,
+    );
+  }
+
+  it('🔴 Ε1 — αποθήκευση ⇒ ο φορέας κλείνει τη φόρμα, ΚΑΜΙΑ πλοήγηση στην ίδια σελίδα', async () => {
+    updateOwnerListing.mockResolvedValue({ kind: 'saved', property: PERSONAL, publish: { kind: 'published' } });
+    const onClose = jest.fn();
+    renderInPlace(onClose);
+
+    const form = document.querySelector('form');
+    if (form === null) throw new Error('ο παρονομαστής έσπασε: η φόρμα δεν αποδόθηκε');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+    expect(updateOwnerListing).toHaveBeenCalledWith(PERSONAL.id, expect.anything());
+    expect(pushed).toEqual([]);
+  });
+
+  it('Ε2 — αποτυχία ⇒ η φόρμα ΜΕΝΕΙ ανοιχτή (ό,τι έγραψε ο άνθρωπος δεν χάνεται)', async () => {
+    updateOwnerListing.mockResolvedValue({ kind: 'failed' });
+    const onClose = jest.fn();
+    renderInPlace(onClose);
+
+    const form = document.querySelector('form');
+    if (form === null) throw new Error('ο παρονομαστής έσπασε: η φόρμα δεν αποδόθηκε');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(updateOwnerListing).toHaveBeenCalled();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ε3 — «Ακύρωση» ⇒ πίσω στην αγγελία, ΟΧΙ έξω στον κατάλογο', () => {
+    const onClose = jest.fn();
+    renderInPlace(onClose);
+
+    fireEvent.click(screen.getByRole('button', { name: 'property-market:offer.form.cancel' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(pushed).toEqual([]);
+  });
+});

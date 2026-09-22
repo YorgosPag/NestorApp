@@ -105,6 +105,19 @@ export interface OwnerPropertyFormContentProps
   readonly previousOffers?: readonly PropertyOffer[];
 
   /**
+   * 🔴 **ΕΠΙ ΤΟΠΟΥ: ο φορέας κλείνει τη φόρμα** — μετά την αποθήκευση **και** την ακύρωση.
+   *
+   * ADR-777 §8.60.21.7, μετρημένο ζωντανά 2026-09-22: η σελίδα του ακινήτου ανοίγει την
+   * επεξεργασία **στη θέση της** (`/offers/<id>`), και η φόρμα έστελνε μετά το `PATCH 200`
+   * `router.push` **στην ίδια διεύθυνση** ⇒ τίποτα δεν ξαναστηνόταν, και το κουμπί έμενε
+   * **για πάντα** «Αποθηκεύεται…». Η «Ακύρωση» έβγαζε τον άνθρωπο από την αγγελία του.
+   *
+   * 🔑 Απών ⇒ η φόρμα **είναι** σελίδα και πλοηγεί (δημιουργία · γραφείο). Παρών ⇒ ο
+   * κύκλος ζωής ανήκει σε όποιον την άνοιξε — ένας ιδιοκτήτης, όχι «πλοήγηση που τυχαίνει».
+   */
+  readonly onClose?: () => void;
+
+  /**
    * 🔴 **ΤΟ ΑΚΡΟΑΤΗΡΙΟ (§8.33)** — απών για τον ιδιώτη, παρών για το γραφείο.
    *
    * 🔑 **Μία φόρμα, δύο ακροατήρια — ΟΧΙ δεύτερη φόρμα.** Τα πεδία του ακινήτου
@@ -139,6 +152,7 @@ export function OwnerPropertyFormContent({
   editingId = null,
   previousOffers = [],
   mandate,
+  onClose,
 }: OwnerPropertyFormContentProps): React.ReactElement {
   const router = useRouter();
   const { user } = useAuth();
@@ -284,6 +298,12 @@ export function OwnerPropertyFormContent({
     // του θα επανερχόταν ως «ημιτελές» πάνω σε αγγελία που **δημοσιεύτηκε**.
     memory.forget();
 
+    // Επί τόπου: η σελίδα **ήδη** είναι ο προορισμός — την κλείνει ο φορέας (δες `onClose`).
+    if (onClose !== undefined) {
+      onClose();
+      return;
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     // 🔴 Ο ΠΡΟΟΡΙΣΜΟΣ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟΝ ΧΩΡΟ **ΤΗΣ ΑΓΓΕΛΙΑΣ** (ADR-787 §5.3 ο)
     // ────────────────────────────────────────────────────────────────────────
@@ -350,7 +370,7 @@ export function OwnerPropertyFormContent({
       validation={validation}
       submitState={submitState}
       onSubmit={handleSubmit}
-      onCancel={() => router.push(MY_OFFERS_ROUTE)}
+      onCancel={onClose ?? (() => router.push(MY_OFFERS_ROUTE))}
     >
       {memory.noticeVisible && (
         <RestoredDraftNotice onKeep={memory.acknowledge} onDiscard={discardRestoredDraft} />
