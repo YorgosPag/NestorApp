@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 import { X, Plus } from 'lucide-react';
 import {
   Dialog,
@@ -8,9 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { FormActions } from '@/components/ui/form/FormActions';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { parseLocaleNumber } from '@/lib/number/locale-number';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,18 +107,9 @@ export function MaterialFormDialog({
   const { t } = useTranslation('procurement');
   const { suppliers } = usePOSupplierContacts();
 
+  const formId = useId();
   const [form, setForm] = useState<FormState>(emptyState());
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [supplierPick, setSupplierPick] = useState<string>('');
-
-  useEffect(() => {
-    if (open) {
-      setForm(initial ? fromMaterial(initial) : emptyState());
-      setError(null);
-      setSupplierPick('');
-    }
-  }, [open, initial]);
 
   const supplierOptions = useMemo(
     () => supplierContactsToOptions(suppliers, form.preferredSupplierContactIds),
@@ -154,13 +147,6 @@ export function MaterialFormDialog({
   }
 
   function buildPayload(): CreateMaterialDTO | UpdateMaterialDTO {
-    const numOrNull = (s: string): number | null => {
-      const trimmed = s.trim();
-      if (!trimmed) return null;
-      const n = Number(trimmed);
-      return Number.isFinite(n) ? n : null;
-    };
-
     return {
       code: form.code.trim(),
       name: form.name.trim(),
@@ -168,29 +154,28 @@ export function MaterialFormDialog({
       atoeCategoryCode: form.atoeCategoryCode,
       description: form.description.trim() || null,
       preferredSupplierContactIds: form.preferredSupplierContactIds,
-      avgPrice: numOrNull(form.avgPrice),
-      lastPrice: numOrNull(form.lastPrice),
+      avgPrice: parseLocaleNumber(form.avgPrice),
+      lastPrice: parseLocaleNumber(form.lastPrice),
       lastPurchaseDate: form.lastPurchaseDate || null,
     };
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      const payload = buildPayload();
-      await onSubmit(payload, initial?.id);
-      onOpenChange(false);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   const isEdit = initial !== null;
+  const canSubmit = !!form.code.trim() && !!form.name.trim();
+  const { submitting, error, handleSubmit, clearError } = useFormSubmission({
+    submit: () => onSubmit(buildPayload(), initial?.id),
+    canSubmit,
+    onSuccess: () => onOpenChange(false),
+    errorFallback: t('hub.materialCatalog.form.saveFailed'),
+  });
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial ? fromMaterial(initial) : emptyState());
+      clearError();
+      setSupplierPick('');
+    }
+  }, [open, initial, clearError]);
   const reachedSupplierCap =
     form.preferredSupplierContactIds.length >= MAX_PREFERRED_SUPPLIERS;
 
@@ -209,6 +194,7 @@ export function MaterialFormDialog({
         </DialogHeader>
 
         <form
+          id={formId}
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
         >
@@ -394,35 +380,18 @@ export function MaterialFormDialog({
               </div>
             )}
           </fieldset>
-
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
         </form>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-          >
-            {t('hub.materialCatalog.form.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={submitting || !form.code.trim() || !form.name.trim()}
-          >
-            {submitting
-              ? t('hub.materialCatalog.form.saving')
-              : isEdit
-                ? t('hub.materialCatalog.form.save')
-                : t('hub.materialCatalog.form.create')}
-          </Button>
-        </DialogFooter>
+        <FormActions
+          formId={formId}
+          submitLabel={isEdit ? t('hub.materialCatalog.form.save') : t('hub.materialCatalog.form.create')}
+          pendingLabel={t('hub.materialCatalog.form.saving')}
+          cancelLabel={t('hub.materialCatalog.form.cancel')}
+          onCancel={() => onOpenChange(false)}
+          submitting={submitting}
+          submitDisabled={!canSubmit}
+          error={error}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { FormActions } from '@/components/ui/form/FormActions';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { parseLocaleNumber } from '@/lib/number/locale-number';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,13 +106,6 @@ function fromAgreement(a: FrameworkAgreement): FormState {
   };
 }
 
-function numOrNull(s: string): number | null {
-  const trimmed = s.trim();
-  if (!trimmed) return null;
-  const n = Number(trimmed);
-  return Number.isFinite(n) ? n : null;
-}
-
 export function FrameworkAgreementFormDialog({
   open,
   onOpenChange,
@@ -121,16 +115,8 @@ export function FrameworkAgreementFormDialog({
   const { t } = useTranslation('procurement');
   const { suppliers } = usePOSupplierContacts();
 
+  const formId = useId();
   const [form, setForm] = useState<FormState>(emptyState());
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setForm(initial ? fromAgreement(initial) : emptyState());
-      setError(null);
-    }
-  }, [open, initial]);
 
   const supplierOptions = useMemo(() => supplierContactsToOptions(suppliers), [suppliers]);
 
@@ -148,27 +134,13 @@ export function FrameworkAgreementFormDialog({
       validFrom: form.validFrom,
       validUntil: form.validUntil,
       currency: form.currency.trim() || 'EUR',
-      totalCommitment: numOrNull(form.totalCommitment),
+      totalCommitment: parseLocaleNumber(form.totalCommitment),
       discountType: form.discountType,
       flatDiscountPercent:
-        form.discountType === 'flat' ? numOrNull(form.flatDiscountPercent) : null,
+        form.discountType === 'flat' ? parseLocaleNumber(form.flatDiscountPercent) : null,
       volumeBreakpoints:
         form.discountType === 'volume_breakpoints' ? form.volumeBreakpoints : [],
     };
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      await onSubmit(buildPayload(), initial?.id);
-      onOpenChange(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
   }
 
   const isEdit = initial !== null;
@@ -178,6 +150,20 @@ export function FrameworkAgreementFormDialog({
     !!form.vendorContactId &&
     !!form.validFrom &&
     !!form.validUntil;
+
+  const { submitting, error, handleSubmit, clearError } = useFormSubmission({
+    submit: () => onSubmit(buildPayload(), initial?.id),
+    canSubmit,
+    onSuccess: () => onOpenChange(false),
+    errorFallback: t('hub.frameworkAgreements.form.saveFailed'),
+  });
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial ? fromAgreement(initial) : emptyState());
+      clearError();
+    }
+  }, [open, initial, clearError]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,6 +180,7 @@ export function FrameworkAgreementFormDialog({
         </DialogHeader>
 
         <form
+          id={formId}
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
         >
@@ -371,35 +358,18 @@ export function FrameworkAgreementFormDialog({
               onChange={(next) => update('volumeBreakpoints', next)}
             />
           )}
-
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
         </form>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-          >
-            {t('hub.frameworkAgreements.form.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={submitting || !canSubmit}
-          >
-            {submitting
-              ? t('hub.frameworkAgreements.form.saving')
-              : isEdit
-                ? t('hub.frameworkAgreements.form.save')
-                : t('hub.frameworkAgreements.form.create')}
-          </Button>
-        </DialogFooter>
+        <FormActions
+          formId={formId}
+          submitLabel={isEdit ? t('hub.frameworkAgreements.form.save') : t('hub.frameworkAgreements.form.create')}
+          pendingLabel={t('hub.frameworkAgreements.form.saving')}
+          cancelLabel={t('hub.frameworkAgreements.form.cancel')}
+          onCancel={() => onOpenChange(false)}
+          submitting={submitting}
+          submitDisabled={!canSubmit}
+          error={error}
+        />
       </DialogContent>
     </Dialog>
   );

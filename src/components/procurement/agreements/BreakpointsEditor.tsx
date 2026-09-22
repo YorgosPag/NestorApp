@@ -1,9 +1,9 @@
 'use client';
 
+import { useId } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { VolumeBreakpoint } from '@/subapps/procurement/types/framework-agreement';
 
@@ -14,6 +14,8 @@ interface BreakpointsEditorProps {
 
 export function BreakpointsEditor({ breakpoints, onChange }: BreakpointsEditorProps) {
   const { t } = useTranslation('procurement');
+  const thresholdHeaderId = useId();
+  const discountHeaderId = useId();
 
   function add() {
     onChange([...breakpoints, { thresholdEur: 0, discountPercent: 0 }]);
@@ -43,12 +45,14 @@ export function BreakpointsEditor({ breakpoints, onChange }: BreakpointsEditorPr
 
       {breakpoints.length > 0 && (
         <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
-          <Label className="text-xs">
+          {/* Κεφαλίδες ΣΤΗΛΩΝ, όχι <label>: μία ετικέτα δεν ονομάζει Ν πεδία. Κάθε πεδίο
+              γραμμής τη δείχνει με `aria-labelledby` (ADR-598 G11). */}
+          <span id={thresholdHeaderId} className="text-xs font-medium">
             {t('hub.frameworkAgreements.form.thresholdEur')}
-          </Label>
-          <Label className="text-xs">
+          </span>
+          <span id={discountHeaderId} className="text-xs font-medium">
             {t('hub.frameworkAgreements.form.discountPercent')}
-          </Label>
+          </span>
           <span className="w-9" aria-hidden />
           {breakpoints.map((bp, i) => (
             <BreakpointRow
@@ -57,6 +61,8 @@ export function BreakpointsEditor({ breakpoints, onChange }: BreakpointsEditorPr
               onChange={(patch) => update(i, patch)}
               onRemove={() => remove(i)}
               removeLabel={t('hub.frameworkAgreements.form.removeBreakpoint')}
+              thresholdLabelledBy={thresholdHeaderId}
+              discountLabelledBy={discountHeaderId}
             />
           ))}
         </div>
@@ -75,12 +81,22 @@ interface BreakpointRowProps {
   onChange: (patch: Partial<VolumeBreakpoint>) => void;
   onRemove: () => void;
   removeLabel: string;
+  thresholdLabelledBy: string;
+  discountLabelledBy: string;
 }
 
-function BreakpointRow({ breakpoint, onChange, onRemove, removeLabel }: BreakpointRowProps) {
+function BreakpointRow({
+  breakpoint,
+  onChange,
+  onRemove,
+  removeLabel,
+  thresholdLabelledBy,
+  discountLabelledBy,
+}: BreakpointRowProps) {
   return (
     <>
       <Input
+        aria-labelledby={thresholdLabelledBy}
         type="number"
         min="0"
         step="0.01"
@@ -88,6 +104,7 @@ function BreakpointRow({ breakpoint, onChange, onRemove, removeLabel }: Breakpoi
         onChange={(e) => onChange({ thresholdEur: Number(e.target.value) })}
       />
       <Input
+        aria-labelledby={discountLabelledBy}
         type="number"
         min="0"
         max="100"

@@ -51,7 +51,7 @@ export function PurchaseOrderForm({
   onCancel,
 }: PurchaseOrderFormProps) {
   const { t } = useTranslation('procurement');
-  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
   const {
     form,
     setField,
@@ -173,8 +173,9 @@ export function PurchaseOrderForm({
 
             {/* Date needed */}
             <div className="space-y-1.5">
-              <Label>{t('form.dateNeeded')}</Label>
+              <Label htmlFor={`${idBase}-date-needed`}>{t('form.dateNeeded')}</Label>
               <Input
+                id={`${idBase}-date-needed`}
                 type="date"
                 value={form.dateNeeded}
                 onChange={(e) => setField('dateNeeded', e.target.value)}
@@ -183,14 +184,14 @@ export function PurchaseOrderForm({
 
             {/* VAT Rate */}
             <div className="space-y-1.5">
-              <Label>{t('form.vatRate')}</Label>
+              <Label htmlFor={`${idBase}-vat-rate`}>{t('form.vatRate')}</Label>
               <Select
                 value={String(form.taxRate)}
                 onValueChange={(v) =>
                   setField('taxRate', parseInt(v, 10) as POVatRate)
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id={`${idBase}-vat-rate`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,8 +206,9 @@ export function PurchaseOrderForm({
 
             {/* Payment terms */}
             <div className="space-y-1.5">
-              <Label>{t('form.paymentTerms')}</Label>
+              <Label htmlFor={`${idBase}-payment-terms`}>{t('form.paymentTerms')}</Label>
               <Input
+                id={`${idBase}-payment-terms`}
                 type="number"
                 min={0}
                 max={365}
@@ -296,8 +298,9 @@ export function PurchaseOrderForm({
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>{t('form.supplierNotes')}</Label>
+              <Label htmlFor={`${idBase}-supplier-notes`}>{t('form.supplierNotes')}</Label>
               <Textarea
+                id={`${idBase}-supplier-notes`}
                 value={form.supplierNotes}
                 onChange={(e) => setField('supplierNotes', e.target.value)}
                 placeholder={t('form.supplierNotesPlaceholder')}
@@ -305,8 +308,9 @@ export function PurchaseOrderForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>{t('form.internalNotes')}</Label>
+              <Label htmlFor={`${idBase}-internal-notes`}>{t('form.internalNotes')}</Label>
               <Textarea
+                id={`${idBase}-internal-notes`}
                 value={form.internalNotes}
                 onChange={(e) => setField('internalNotes', e.target.value)}
                 placeholder={t('form.internalNotesPlaceholder')}

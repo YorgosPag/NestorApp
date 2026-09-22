@@ -17,7 +17,7 @@
  * @see ADR-332 §3.10 / §10 Phase 8
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -59,6 +59,7 @@ export function PODeliveryAddressField({
 }: PODeliveryAddressFieldProps) {
   const { t: tProc } = useTranslation('procurement');
   const { t: tAddr } = useTranslation('addresses');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
   const { projects } = useFirestoreProjects();
   const [chosenAddress, setChosenAddress] = useState<ProjectAddress | null>(null);
 
@@ -115,14 +116,14 @@ export function PODeliveryAddressField({
     <div className="space-y-2">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[200px_1fr] md:gap-4">
         <div className="space-y-1.5">
-          <Label>{tProc('form.deliveryAddressType')}</Label>
+          <Label htmlFor={`${idBase}-type`}>{tProc('form.deliveryAddressType')}</Label>
           <Select
             value=""
             onValueChange={handleTypeSelect}
             disabled={!hasProject || !hasOptions}
           >
             <SelectTrigger
-              aria-label={tProc('form.deliveryAddressType')}
+              id={`${idBase}-type`}
               disabled={!hasProject || !hasOptions}
             >
               <SelectValue
@@ -148,8 +149,9 @@ export function PODeliveryAddressField({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>{tProc('form.deliveryAddress')}</Label>
+          <Label htmlFor={`${idBase}-address`}>{tProc('form.deliveryAddress')}</Label>
           <Input
+            id={`${idBase}-address`}
             value={value}
             onChange={handleFreeTextChange}
             placeholder={tProc('form.deliveryPlaceholder')}
