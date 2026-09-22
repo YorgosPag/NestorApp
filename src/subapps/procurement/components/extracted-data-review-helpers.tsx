@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,10 +45,11 @@ export function FieldRow<T>({ label, field }: FieldRowProps<T>) {
   return (
     <div className={`rounded-md px-3 py-2 ${levelClasses(level)}`}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <Label className="text-xs text-muted-foreground">{label}</Label>
-          <p className="break-words text-sm font-medium">{display}</p>
-        </div>
+        {/* Ζεύγος «όνομα → τιμή» προς ανάγνωση, ΟΧΙ πεδίο: `<dl>`, όχι `<label>` χωρίς πεδίο. */}
+        <dl className="min-w-0 flex-1">
+          <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+          <dd className="break-words text-sm font-medium">{display}</dd>
+        </dl>
         <ConfidenceBadge confidence={field.confidence} />
       </div>
     </div>
@@ -65,12 +67,14 @@ export interface EditableFieldRowProps {
 
 export function EditableFieldRow({ label, value, confidence, onChange, type = 'text', placeholder }: EditableFieldRowProps) {
   const level = levelOf(value, confidence);
+  const inputId = useId(); // η ετικέτα και το πεδίο ζουν ΕΔΩ ⇒ η σύνδεση επίσης (React Aria `TextField`)
   return (
     <div className={`rounded-md px-3 py-2 ${levelClasses(level)}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <Label className="text-xs text-muted-foreground">{label}</Label>
+          <Label htmlFor={inputId} className="text-xs text-muted-foreground">{label}</Label>
           <Input
+            id={inputId}
             type={type}
             value={value}
             placeholder={placeholder}

@@ -34,6 +34,7 @@
     "unitPrice": "Τιμή Μον.",
     "vatRate": "ΦΠΑ %",
     "lineTotal": "Σύνολο Γραμμής",
+    "lineActions": "Ενέργειες",
     "subtotal": "Υποσύνολο",
     "vatAmount": "ΦΠΑ",
     "loading": "Φόρτωση...",
@@ -43,6 +44,7 @@
       "goBack": "Επιστροφή"
     },
     "submit": "Αποθήκευση",
+    "submitting": "Αποθήκευση…",
     "cancel": "Ακύρωση",
     "searchPlaceholder": "Αναζήτηση...",
     "filterStatus": "Κατάσταση",
@@ -363,6 +365,7 @@
     "lineUnit": "Μονάδα",
     "addLine": "Προσθήκη Γραμμής",
     "removeLine": "Αφαίρεση",
+    "lineActions": "Ενέργειες",
     "fromBoq": {
       "button": "Δημιουργία RFQ από BOQ",
       "loading": "Φόρτωση BOQ...",
@@ -381,10 +384,12 @@
       "label": "Vendors προς πρόσκληση",
       "placeholder": "Αναζήτηση vendor...",
       "empty": "Δεν βρέθηκαν vendors",
-      "noSelected": "Κανένας vendor επιλεγμένος"
+      "noSelected": "Κανένας vendor επιλεγμένος",
+      "remove": "Αφαίρεση {name}"
     },
     "loading": "Φόρτωση...",
     "submit": "Δημιουργία RFQ",
+    "submitting": "Δημιουργία…",
     "cancel": "Ακύρωση",
     "searchPlaceholder": "Αναζήτηση RFQ...",
     "createSuccess": "Το RFQ δημιουργήθηκε",

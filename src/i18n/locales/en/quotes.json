@@ -34,6 +34,7 @@
     "unitPrice": "Unit Price",
     "vatRate": "VAT %",
     "lineTotal": "Line Total",
+    "lineActions": "Actions",
     "subtotal": "Subtotal",
     "vatAmount": "VAT",
     "loading": "Loading...",
@@ -43,6 +44,7 @@
       "goBack": "Go back"
     },
     "submit": "Save",
+    "submitting": "Saving…",
     "cancel": "Cancel",
     "searchPlaceholder": "Search...",
     "filterStatus": "Status",
@@ -363,8 +365,10 @@
     "lineUnit": "Unit",
     "addLine": "Add Line",
     "removeLine": "Remove",
+    "lineActions": "Actions",
     "loading": "Loading...",
     "submit": "Create RFQ",
+    "submitting": "Creating…",
     "cancel": "Cancel",
     "searchPlaceholder": "Search RFQs...",
     "createSuccess": "RFQ created",
@@ -396,7 +400,8 @@
       "label": "Vendors to invite",
       "placeholder": "Search vendor...",
       "empty": "No vendors found",
-      "noSelected": "No vendors selected"
+      "noSelected": "No vendors selected",
+      "remove": "Remove {name}"
     },
     "detail": {
       "fallback": {

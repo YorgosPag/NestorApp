@@ -86,13 +86,14 @@ export function VendorPickerSection({ value, onChange }: VendorPickerSectionProp
               <Badge key={id} variant="secondary" className="gap-1 pr-1">
                 {name}
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="h-4 w-4 rounded-full p-0 hover:bg-transparent"
                   onClick={() => handleRemove(id)}
-                  aria-label={`Remove ${name}`}
+                  aria-label={t('rfqs.vendorPicker.remove', { name })}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden />
                 </Button>
               </Badge>
             );
