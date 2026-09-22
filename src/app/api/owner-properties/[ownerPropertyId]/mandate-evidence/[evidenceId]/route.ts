@@ -9,7 +9,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { actorWorkspace, withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { listingActorOf, withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { decodeRouteParam } from '@/lib/routes/route-param';
@@ -26,7 +26,7 @@ async function handler(_request: NextRequest, actor: ApiActor, routeContext?: Ro
   const evidenceId = decodeRouteParam(params?.evidenceId ?? '').trim();
   if (ownerPropertyId === '' || evidenceId === '') return respondToEvidenceDownload({ kind: 'absent' });
 
-  const listingActor = { uid: actor.ctx.uid, companyId: actorWorkspace(actor) };
+  const listingActor = listingActorOf(actor);
   return respondToEvidenceDownload(
     await openMandateEvidence(getAdminFirestore(), {
       ownerPropertyId,

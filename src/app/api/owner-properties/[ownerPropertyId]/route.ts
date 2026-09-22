@@ -27,10 +27,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import {
   withPersonalOrOrgAuth,
-  actorWorkspace,
+  listingActorOf,
   type ApiActor,
 } from '@/lib/auth/personal-scope-middleware';
-import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ownerPropertyDraftFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
@@ -68,28 +67,6 @@ type RouteContext = { params: Promise<{ ownerPropertyId: string }> };
  * το ακίνητό του τον κλειδώνει έξω από την έξοδο»*). Αντίστροφη σειρά θα σήμαινε ότι
  * μια άκυρη αγγελία **δεν μπορεί να αποσυρθεί**.
  */
-/**
- * **Ποιος ρωτά** — και **τα δύο** σκέλη της ταυτότητας, όχι μόνο το uid.
- *
- * 🔴 ADR-777 §8.39: το `companyId` υπήρχε πάντα εδώ και **δεν το ζητούσε κανείς**,
- * οπότε η διαδρομή μπορούσε να κρίνει μόνο «είναι δική σου;» — ποτέ «είναι του
- * γραφείου σου;». Η {@link mayAdminister} απαντά και τα δύο, **χωρίς** να διευρύνει τον
- * ιδιωτικό χώρο.
- *
- * 🔴 **ADR-817 — Ο ΝΕΚΡΟΣ ΚΛΑΔΟΣ ΖΩΝΤΑΝΕΨΕ.** Μέχρι τις 2026-08-26 εδώ έγραφε
- * `{ uid: ctx.uid, companyId: ctx.companyId }` με σχόλιο *«κανένα `?? null` εδώ: θα
- * ήταν νεκρός κλάδος που μοιάζει με φρουρός»* — **σωστό όσο ο πολίτης έπαιρνε 401 και
- * δεν έφτανε ποτέ**. Τώρα φτάνει, και ο τύπος-στόχος ήταν **ήδη έτοιμος**: το
- * `ListingActor.companyId` δηλώνεται `string | null` με αιτιολογία *«γιατί ο ιδιώτης
- * δεν έχει εταιρεία»*.
- *
- * ⚠️ Η μετάφραση γίνεται από το **ΕΝΑ** `actorWorkspace` — ποτέ με `?? null` εδώ:
- * κενή/απούσα εταιρεία **δεν ταιριάζει με τίποτα** στο `mayAdminister` (`hasTenant`),
- * και δεύτερη μετάφραση θα ήταν δεύτερη ερμηνεία του «απουσία».
- */
-function actorOf(actor: ApiActor): ListingActor {
-  return { uid: actor.ctx.uid, companyId: actorWorkspace(actor) };
-}
 
 async function handler(
   request: NextRequest,
@@ -111,7 +88,7 @@ async function handler(
       return respondToMalformed(['lifecycle']);
     }
     return respondToWrite(
-      await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, actorOf(actor)),
+      await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, listingActorOf(actor)),
     );
   }
 
@@ -122,7 +99,7 @@ async function handler(
       return respondToMalformed(['marketingAudience']);
     }
     return respondToWrite(
-      await setOwnerPropertyAudience(adminDb, ownerPropertyId, marketingAudience, actorOf(actor)),
+      await setOwnerPropertyAudience(adminDb, ownerPropertyId, marketingAudience, listingActorOf(actor)),
     );
   }
 
@@ -132,7 +109,7 @@ async function handler(
     const action = accountPrivateMarketingFrom(privateMarketing);
     if (!action.ok) return respondToMalformed(action.malformed);
     return respondToPrivateMarketing(
-      await dispatchAccountPrivateMarketing(adminDb, ownerPropertyId, action.body, actorOf(actor)),
+      await dispatchAccountPrivateMarketing(adminDb, ownerPropertyId, action.body, listingActorOf(actor)),
     );
   }
 
@@ -140,7 +117,7 @@ async function handler(
   if (!parsed.ok) return respondToMalformed(parsed.malformed);
 
   return respondToWrite(
-    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, actorOf(actor)),
+    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, listingActorOf(actor)),
   );
 }
 

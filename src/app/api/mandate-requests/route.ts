@@ -53,7 +53,7 @@ import { mandateRequestBodySchema } from './mandate-request-body';
 import { nowISO } from '@/lib/date-local';
 import {
   withPersonalOrOrgAuth,
-  actorWorkspace,
+  listingActorOf,
   type ApiActor,
 } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -86,10 +86,10 @@ async function submitHandler(
 
   const result = await submitMandateRequest(
     getAdminFirestore(),
-    // 🔑 **Η ΜΟΝΗ νόμιμη μετάφραση προς `ListingActor`** ζει στο `actorWorkspace`
-    //    (ADR-817). ⛔ **ΜΗΝ γράψεις `?? ''`**: κενή εταιρεία δεν ταιριάζει με τίποτα
-    //    — ούτε με κενή — και είναι ακριβώς ό,τι κυνηγά η CHECK 3.35.
-    { uid: actor.ctx.uid, companyId: actorWorkspace(actor) },
+    // 🔑 **Η ΜΟΝΗ νόμιμη μετάφραση προς `ListingActor`** ζει στο `listingActorOf`
+    //    (ADR-817 · ADR-777 §8.60.21.7). ⛔ **ΜΗΝ τη γράψεις inline με `?? ''`**: κενή
+    //    εταιρεία δεν ταιριάζει με τίποτα — ούτε με κενή — και είναι ό,τι κυνηγά η CHECK 3.35.
+    listingActorOf(actor),
     parsed.data,
     // ⚠️ Το ρολόι διαβάζεται **εδώ, στο σύνορο**, και περνά ως τιμή. Κάθε συνάρτηση
     //    πιο μέσα είναι καθαρή — γι' αυτό τα άκρα του νόμου είναι δοκιμάσιμα.

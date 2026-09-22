@@ -28,7 +28,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { actorWorkspace, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { listingActorOf, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 // ⛔ ΤΟ ΡΟΛΟΪ ΕΧΕΙ ΜΙΑ ΠΗΓΗ (`.ssot-registry.json` → module `date-local`, CHECK 3.7).
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -37,7 +37,7 @@ import type { ListingActor } from '@/lib/owner-property/listing-custody';
 /** Τα τρία που κάθε γραφέας της πράξης ζητά — και **τίποτε άλλο**. */
 export interface FirstContactRequestContext {
   readonly db: Firestore;
-  /** 🔑 Η **μόνη** νόμιμη μετάφραση προς `ListingActor` ζει στο `actorWorkspace` (ADR-817). */
+  /** 🔑 Η **μόνη** νόμιμη μετάφραση προς `ListingActor` ζει στο `listingActorOf` (ADR-817). */
   readonly seeker: ListingActor;
   /** ⚠️ **Μία** στιγμή ανά αίτημα: δύο κλήσεις `nowISO()` είναι δύο διαφορετικά «τώρα». */
   readonly at: string;
@@ -53,7 +53,7 @@ export interface FirstContactRequestContext {
 export function firstContactRequestContext(actor: ApiActor): FirstContactRequestContext {
   return {
     db: getAdminFirestore(),
-    seeker: { uid: actor.ctx.uid, companyId: actorWorkspace(actor) },
+    seeker: listingActorOf(actor),
     at: nowISO(),
   };
 }

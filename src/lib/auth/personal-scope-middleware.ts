@@ -49,6 +49,7 @@ import type { NextRequest, NextResponse } from 'next/server';
 import { buildApiIdentity } from './auth-context';
 import { createUnauthorizedResponse, type ErrorResponse } from './api-denial';
 import type { AuthContext, PersonalIdentityContext } from './types';
+import type { ListingActor } from '@/lib/owner-property/listing-custody';
 
 /**
  * **Ο δρων, ΚΑΙ Ο ΧΩΡΟΣ ΤΟΥ** — διακριτή ένωση, ποτέ σκέτο `AuthContext`.
@@ -83,6 +84,27 @@ export type ApiActor =
  */
 export function actorWorkspace(actor: ApiActor): string | null {
   return actor.scope === 'organization' ? actor.ctx.companyId : null;
+}
+
+/**
+ * **Ο δρων ως ερωτών προς τη θεματοφυλακή αγγελίας** — `ApiActor` → `ListingActor` (**CHECK 3.56**).
+ *
+ * 🔑 **Ζει ΕΔΩ, στο σύνορο του δρώντος, όχι στο `listing-custody`**: η μετάφραση χρειάζεται το
+ * `ApiActor`, και το lib της θεματοφυλακής δεν έχει δουλειά να γνωρίζει τύπους του συνόρου API. Η
+ * κατεύθυνση είναι μία (auth → owner-property, μόνο τύπος).
+ *
+ * 🔴 **Και τα δύο σκέλη, όχι μόνο το uid** (ADR-777 §8.39): με μόνο το uid η θεματοφυλακή κρίνει
+ * «είναι δική σου;» αλλά ποτέ «είναι του γραφείου σου;». Ως τις 2026-08-26 οι διαδρομές έγραφαν
+ * `companyId: ctx.companyId`, που ήταν σωστό όσο ο πολίτης έπαιρνε 401. Από το ADR-817 φτάνει εδώ,
+ * και το `null` είναι η **δηλωμένη** τιμή του «χωρίς εταιρεία» (`mayAdminister` το απορρίπτει ρητά
+ * στον εταιρικό κλάδο).
+ *
+ * ⚠️ **Εξήχθη όταν μετρήθηκαν ΕΠΤΑ πανομοιότυπες inline γραφές** σε διαδρομές (ADR-777 §8.60.21.7).
+ * Κάθε inline αντίγραφο ήταν μία ακόμη θέση όπου κάποιος θα μπορούσε να γράψει `?? ''`, δηλαδή
+ * ακριβώς ό,τι απαγορεύει το {@link actorWorkspace}.
+ */
+export function listingActorOf(actor: ApiActor): ListingActor {
+  return { uid: actor.ctx.uid, companyId: actorWorkspace(actor) };
 }
 
 /**

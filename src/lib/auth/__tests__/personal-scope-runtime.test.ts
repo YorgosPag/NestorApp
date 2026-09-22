@@ -17,7 +17,7 @@
  */
 
 import { custodyOf, mayAdminister } from '@/lib/owner-property/listing-custody';
-import { actorWorkspace, type ApiActor } from '../personal-scope-middleware';
+import { actorWorkspace, listingActorOf, type ApiActor } from '../personal-scope-middleware';
 
 const CITIZEN: ApiActor = {
   scope: 'personal',
@@ -61,24 +61,30 @@ describe('ADR-817 §2.4 — ο ιδιωτικός χώρος ΔΕΝ διευρύ
   const OWN_LISTING = { authorUserId: 'uid-ext-owner', authorCompanyId: null };
   const AGENCY_LISTING = { authorUserId: 'someone-else', authorCompanyId: 'comp_alpha_emulator' };
 
-  const actorOf = (a: ApiActor) => ({ uid: a.ctx.uid, companyId: actorWorkspace(a) });
+  // ADR-777 §8.60.21.7: η ΠΡΑΓΜΑΤΙΚΗ μετάφραση των διαδρομών — όχι αντίγραφό της στο test.
+
+  it('Κ0 — το listingActorOf κρατά ΚΑΙ τα δύο σκέλη, με null (ποτέ κενό) για τον πολίτη', () => {
+    expect(listingActorOf(CITIZEN)).toEqual({ uid: CITIZEN.ctx.uid, companyId: null });
+    expect(listingActorOf(EMPLOYEE)).toEqual({ uid: EMPLOYEE.ctx.uid, companyId: actorWorkspace(EMPLOYEE) });
+    expect(listingActorOf(EMPLOYEE).companyId).not.toBeNull();
+  });
 
   it('Κ2 — ο πολίτης διαχειρίζεται τη ΔΙΚΗ ΤΟΥ αγγελία', () => {
-    expect(mayAdminister(custodyOf(OWN_LISTING), actorOf(CITIZEN))).toBe(true);
+    expect(mayAdminister(custodyOf(OWN_LISTING), listingActorOf(CITIZEN))).toBe(true);
   });
 
   it('Κ3 — ο πολίτης ΔΕΝ αγγίζει εταιρική αγγελία', () => {
-    expect(mayAdminister(custodyOf(AGENCY_LISTING), actorOf(CITIZEN))).toBe(false);
+    expect(mayAdminister(custodyOf(AGENCY_LISTING), listingActorOf(CITIZEN))).toBe(false);
   });
 
   it('Κ4 — ούτε ο ΥΠΑΛΛΗΛΟΣ αγγίζει το προσωπικό ακίνητο ξένου ανθρώπου', () => {
     // 🔑 Η άλλη κατεύθυνση, και είναι η σημαντικότερη: αλλιώς το γραφείο ενός
     //    υπαλλήλου θα αποκτούσε δικαίωμα πάνω στο **σπίτι του**.
-    expect(mayAdminister(custodyOf(OWN_LISTING), actorOf(EMPLOYEE))).toBe(false);
+    expect(mayAdminister(custodyOf(OWN_LISTING), listingActorOf(EMPLOYEE))).toBe(false);
   });
 
   it('Π2 — ΠΑΡΟΝΟΜΑΣΤΗΣ: ο υπάλληλος διαχειρίζεται την αγγελία ΤΟΥ ΓΡΑΦΕΙΟΥ του', () => {
-    expect(mayAdminister(custodyOf(AGENCY_LISTING), actorOf(EMPLOYEE))).toBe(true);
+    expect(mayAdminister(custodyOf(AGENCY_LISTING), listingActorOf(EMPLOYEE))).toBe(true);
   });
 });
 
