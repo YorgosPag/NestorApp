@@ -25,8 +25,11 @@
  * ⛔ **ΚΑΜΙΑ ΣΤΗΛΗ «ΛΗΓΕΙ ΣΕ Ν ΜΕΡΕΣ» ΑΠΟ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ**: ταξιδεύει το `expiresAt`
  *    (απόλυτη στιγμή) και το «σε Ν» το υπολογίζει **η οθόνη τη στιγμή που ζωγραφίζει** —
  *    ένα στιγμιότυπο θα ήταν λάθος μετά από δύο μέρες στην ίδια ανοιχτή καρτέλα.
- * ⛔ **ΚΑΝΕΝΑΣ ΔΕΥΤΕΡΟΣ ΜΟΡΦΟΠΟΙΗΤΗΣ ΧΡΟΝΟΥ**: το `formatRelativeTime` δίνει
- *    **προσημασμένη** διαφορά, άρα χειρίζεται **μέλλον και παρελθόν** με το ίδιο κάλεσμα.
+ * ⛔ **ΚΑΝΕΝΑΣ ΔΕΥΤΕΡΟΣ ΚΑΝΟΝΑΣ ΗΜΕΡΩΝ**: η λήξη είναι **προθεσμία** ⇒ `formatDeadlineRelative`
+ *    (ο κανόνας `deadlineDaysLeft`, προς τα πάνω — ο ίδιος με το email και τη σελίδα της
+ *    πρόσκλησης, ADR-853 §13 ε.γ). Το `formatRelativeTime` κόβει: 6η21ω ⇒ «σε 6» ενώ το email
+ *    έλεγε «7». Το άνοιγμα είναι **παρελθόν** ⇒ `formatRelativeTime`. Η ληγμένη πέφτει μόνη της
+ *    στο «πριν από Ν» (κάτω από μία ημέρα το `formatDeadlineRelative` αναθέτει στο ίδιο).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-853-workspace-invitations.md §8 Φ6
  */
@@ -48,7 +51,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatRelativeTime } from '@/lib/intl-formatting';
+import { formatDeadlineRelative, formatRelativeTime } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
 import type { WorkspaceInvitationView } from '@/types/workspace-invitation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -162,7 +165,7 @@ function InvitationRow({ invitation, canManage, isBusy, onRevoke, onResend }: In
       </TableCell>
 
       <TableCell className={cn('text-sm', colors.text.muted)}>
-        {formatRelativeTime(invitation.expiresAt)}
+        {formatDeadlineRelative(invitation.expiresAt)}
       </TableCell>
 
       <TableCell className={cn('text-sm', colors.text.muted)}>

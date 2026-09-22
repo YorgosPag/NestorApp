@@ -60,6 +60,7 @@ jest.mock('@/providers/NotificationProvider', () => ({
 
 jest.mock('@/lib/intl-formatting', () => ({
   formatRelativeTime: (iso: string) => `rel(${iso})`,
+  formatDeadlineRelative: (iso: string) => `deadline(${iso})`,
 }));
 
 jest.mock('@/services/workspace/workspace-invitation.client', () => ({
@@ -335,6 +336,15 @@ describe('Γ — ο πίνακας των εκκρεμών', () => {
       expect(screen.getByText(INVITATION_STATE_KEY[state])).toBeInTheDocument();
     },
   );
+
+  it('🔴 Γ7 — η λήξη είναι ΠΡΟΘΕΣΜΙΑ: ο ΕΝΑΣ κανόνας ημερών, ίδιος με το email', () => {
+    // «Λήγει σε 6 ημέρες» στον πίνακα, «7» στο email, για την ΙΔΙΑ λήξη (ADR-853 §13 ε.γ):
+    // ο πίνακας έκοβε με `formatRelativeTime`. Το άνοιγμα (παρελθόν) μένει στο σχετικό.
+    renderTable([invitationWith({ openedAt: '2026-09-02T08:00:00.000Z' })]);
+    expect(screen.getByText('deadline(2026-09-08T10:00:00.000Z)')).toBeInTheDocument();
+    expect(screen.queryByText('rel(2026-09-08T10:00:00.000Z)')).not.toBeInTheDocument();
+    expect(screen.getByText('rel(2026-09-02T08:00:00.000Z)')).toBeInTheDocument();
+  });
 
   it('Γ2 — ασύνδετος σύνδεσμος: λέει «δεν ανοίχτηκε», ΠΟΤΕ κενό κελί', () => {
     renderTable([invitationWith({ openedAt: null })]);
