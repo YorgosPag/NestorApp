@@ -24,6 +24,8 @@
 
 import { useCallback, useRef, useState, useTransition } from 'react';
 
+import { useAuthOptional } from '@/auth';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -123,6 +125,9 @@ interface InvitationResponse {
  *    ξανάφτιαχνε το `retry` σε κάθε αλλαγή του.
  */
 function useInvitationResponse(token: string | null): InvitationResponse {
+  // ⚠️ **`useAuthOptional`**: η σελίδα είναι **δημόσια** — ο ανώνυμος τη βλέπει κανονικά
+  //    (§5 #4), και ένα `useAuth()` εκεί θα έριχνε ολόκληρη την οθόνη.
+  const auth = useAuthOptional();
   const [outcome, setOutcome] = useState<RedeemInvitationResult | null>(null);
   const [pendingAction, setPendingAction] = useState<InviteAction | null>(null);
   const lastAction = useRef<InviteAction | null>(null);
@@ -133,12 +138,27 @@ function useInvitationResponse(token: string | null): InvitationResponse {
       lastAction.current = action;
       setPendingAction(action);
       try {
-        setOutcome(await redeemWorkspaceInvitationFromScreen({ token, action }));
+        const result = await redeemWorkspaceInvitationFromScreen({ token, action });
+        // 🔑 **ΠΡΟΛΑΒΑΙΝΟΥΜΕ ΤΗΝ ΚΟΥΡΣΑ, ΔΕΝ ΤΗ ΜΕΤΡΙΑΖΟΥΜΕ** (N.7.2 #1, ADR-853 §18): ο
+        //    διακομιστής μόλις έδωσε claim χώρου, αλλά το **cookie** του φυλλομετρητή κρατά
+        //    ακόμη το παλιό. Ο ακροατής του ADR-360 θα το διόρθωνε σε δευτερόλεπτα — ο
+        //    άνθρωπος όμως πατά το κουμπί **τώρα**, και θα κατέληγε στον προσωπικό του χώρο.
+        //    Εδώ ξέρουμε **ότι** άλλαξε, άρα ζητάμε την ανανέωση αντί να την περιμένουμε.
+        // ⚠️ **Μη μπλοκάρον**: η ένταξη **έγινε**· αποτυχία ανανέωσης δεν την ακυρώνει, και
+        //    το `/home` παραμένει τίμιο (θα στείλει εκεί που ξέρει ο διακομιστής).
+        if (result.kind === 'accepted' && result.activeWorkspaceChanged) {
+          try {
+            await auth?.refreshToken();
+          } catch {
+            // Ο ακροατής του `claimsUpdatedAt` παραμένει το δίχτυ ασφαλείας.
+          }
+        }
+        setOutcome(result);
       } finally {
         setPendingAction(null);
       }
     },
-    [token],
+    [auth, token],
   );
 
   const retry = useCallback(() => {
@@ -298,7 +318,9 @@ function OutcomeScreen({
             ? t(INVITE_PAGE_KEYS.acceptedActiveNow)
             : t(INVITE_PAGE_KEYS.acceptedNotActive)}
         </p>
-        <ExitLink exit="sign-in" />
+        {/* 🔴 Ε-Γ (§18): ο άνθρωπος **είναι** συνδεδεμένος — η εξαργύρωση το απαιτεί. Η έξοδος
+            είναι ο **χώρος**, και το `/home` τον λύνει στον διακομιστή τη στιγμή του κλικ. */}
+        <ExitLink exit="workspace" />
       </InviteCard>
     );
   }

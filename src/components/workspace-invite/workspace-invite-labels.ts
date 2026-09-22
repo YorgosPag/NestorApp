@@ -35,6 +35,7 @@
  */
 
 import type { InvitableRole, WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
+import { HOME_REDIRECT_ROUTE } from '@/lib/workspace/workspace-routes';
 import type { WorkspaceInviteExitName } from '@/types/workspace-invitation-view';
 
 /**
@@ -110,23 +111,28 @@ export const REFUSAL_KEY: Readonly<Record<WorkspaceInvitationRefusal, string>> =
 };
 
 /**
- * **Ο ρόλος → λέξη**, στη **δική μας** βάση.
+ * **Ο ρόλος → λέξη** — ο **ΕΝΑΣ** κατάλογος, ADR-853 §17 (Ε-Β).
  *
- * 🔴 **ΓΙΑΤΙ ΔΕΝ ΞΑΝΑΧΡΗΣΙΜΟΠΟΙΟΥΝΤΑΙ ΤΑ `roleManagement.roleNames.*`**: ζουν στο
- * namespace **`admin`**, που **δεν φορτώνεται ποτέ** σε αυτή τη δημόσια σελίδα — ο
- * άνθρωπος φτάνει από email, χωρίς ταυτότητα. Χωρίς αυτόν τον πίνακα η οθόνη θα έβαφε
- * **ωμό `internal_user`**.
+ * 🔴 **ΗΤΑΝ ΤΡΙΑ ΟΝΟΜΑΤΑ ΓΙΑ ΤΟΝ ΙΔΙΟ ΡΟΛΟ** (μετρημένο 2026-09-22): «Εσωτερικός» στη
+ * διαχείριση, «Εσωτερικός συνεργάτης» εδώ, «Εσωτερικός χρήστης» στο email — ο ίδιος
+ * άνθρωπος, τρεις λέξεις, στην ίδια ροή. Πλέον **ένα** κλειδί ανά ρόλο.
+ *
+ * 🔑 **ΓΙΑΤΙ `common` ΚΑΙ ΟΧΙ `admin`**: το παλιό αντίγραφο υπήρχε επειδή το namespace
+ * `admin` **δεν φορτώνεται ποτέ** σε αυτή τη δημόσια σελίδα (ο άνθρωπος φτάνει από email,
+ * χωρίς ταυτότητα) — ο λόγος ήταν σωστός, η θεραπεία λάθος: το σωστό ήταν να **μετακομίσει
+ * το λεξιλόγιο** εκεί που το φτάνουν **όλοι**, όχι να αντιγραφεί.
  */
 export const INVITED_ROLE_KEY: Readonly<Record<InvitableRole, string>> = {
-  company_admin: 'auth:workspaceInvite.role.company_admin',
-  internal_user: 'auth:workspaceInvite.role.internal_user',
-  external_user: 'auth:workspaceInvite.role.external_user',
+  company_admin: 'common:globalRoles.company_admin',
+  internal_user: 'common:globalRoles.internal_user',
+  external_user: 'common:globalRoles.external_user',
 };
 
 /** **Η διέξοδος → λέξη κουμπιού.** Τρίτη διέξοδος δεν μεταγλωττίζεται χωρίς λέξη. */
 export const EXIT_KEY: Readonly<Record<WorkspaceInviteExitName, string>> = {
   'sign-in': 'auth:workspaceInvite.exit.sign-in',
   home: 'auth:workspaceInvite.exit.home',
+  workspace: 'auth:workspaceInvite.exit.workspace',
 };
 
 /**
@@ -142,6 +148,10 @@ export const EXIT_KEY: Readonly<Record<WorkspaceInviteExitName, string>> = {
 export const EXIT_HREF = {
   'sign-in': '/login',
   home: '/',
+  // 🔑 **`/home`, ΟΧΙ `/o/<ψευδώνυμο>`** (ADR-819 §8): η οθόνη **δεν ξέρει** ψευδώνυμο — έχει
+  //    μόνο `companyId` — και μια κατασκευασμένη διεύθυνση θα ήταν μαντεψιά. Το `/home`
+  //    ρωτά τον διακομιστή «πού ανήκει αυτός;» τη στιγμή του κλικ, με **307**.
+  workspace: HOME_REDIRECT_ROUTE,
 } as const satisfies Record<WorkspaceInviteExitName, string>;
 
 /**
@@ -159,6 +169,46 @@ export const EXIT_HREF = {
  * στιγμή») και **πάντα** «αρχική»: ο τίτλος υποσχόταν *«περιμένετε»* ενώ το σώμα έλεγε
  * *«κάντε κάτι»* — δύο αντίθετες οδηγίες στην ίδια κάρτα (ADR-853 §13).
  */
+/**
+ * **Αυτή η άρνηση σημαίνει «δεν υπάρχει τίποτα εδώ», ή «υπάρχει, και να η κατάστασή του»;**
+ * — ADR-853 §18 (Ε-Η).
+ *
+ * 🔴 **Το εύρημα**: η σελίδα απαντούσε **HTTP 200** σε **κάθε** άρνηση, ακόμη και σε σύνδεσμο
+ * που δεν δείχνει πουθενά — ενώ το API της όψης απαντά σωστά 400/421
+ * (`preview/[token]/route.ts`). Δύο πόρτες για το ίδιο ερώτημα, δύο απαντήσεις.
+ *
+ * 🔑 **Η γραμμή δεν είναι «σφάλμα ή όχι» — είναι ΤΙ ΡΩΤΗΣΕ Ο ΠΕΛΑΤΗΣ**:
+ *   · `true`  ⇒ ο σύνδεσμος **δεν αντιστοιχεί σε πρόσκληση αυτού του κόσμου** (χαλασμένη
+ *     υπογραφή · άλλο περιβάλλον · έγγραφο που δεν υπάρχει) ⇒ **404**, με `notFound()`.
+ *   · `false` ⇒ η πρόσκληση **υπάρχει** και το σώμα είναι η **αναπαράστασή της** («έληξε»,
+ *     «ανακλήθηκε», «απαντήθηκε ήδη», «άλλος παραλήπτης») ⇒ **200**, που είναι και η
+ *     συμπεριφορά Slack/Figma/GitHub για ληγμένο σύνδεσμο: η κατάσταση **είναι** η απάντηση.
+ *
+ * ⚠️ **Γιατί όχι 410/422 για τις δεύτερες**: στο App Router ένα server component μπορεί να
+ * εκφράσει **404** (`notFound()`) και — πειραματικά, πίσω από `authInterrupts` — 401/403.
+ * Αυθαίρετο status θέλει route handler ή middleware, δηλαδή **δεύτερη** επικύρωση του token
+ * σε άλλο στρώμα. Το τίμημα (δύο κριτές για την ίδια πρόσκληση) είναι μεγαλύτερο από το
+ * κέρδος (ακριβέστερος κωδικός σε σελίδα που είναι ήδη `noindex`).
+ *
+ * ⚠️ **`Record` πάνω στο κλειστό σύνολο**: μια **δέκατη** άρνηση δεν μεταγλωττίζεται μέχρι
+ * κάποιος να πει τι απαντά το δίκτυο γι' αυτήν.
+ */
+export const REFUSAL_IS_NOT_FOUND: Readonly<Record<WorkspaceInvitationRefusal, boolean>> = {
+  /** Η υπογραφή δεν στέκει — δεν υπάρχει πρόσκληση πίσω από αυτόν τον σύνδεσμο. */
+  'link-invalid': true,
+  /** Υπογεγραμμένος για **άλλο** περιβάλλον: σε **αυτόν** τον host δεν υπάρχει. */
+  'link-foreign': true,
+  /** Έγκυρος σύνδεσμος, **κανένα έγγραφο** — η κλασική περίπτωση 404. */
+  'invitation-unknown': true,
+  /** Οι επόμενες **υπάρχουν όλες**: το σώμα λέει την κατάστασή τους. */
+  expired: false,
+  'already-used': false,
+  revoked: false,
+  'wrong-recipient': false,
+  'already-member': false,
+  'role-above-inviter': false,
+};
+
 export const EXIT_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, WorkspaceInviteExitName>> = {
   'link-invalid': 'home',
   'link-foreign': 'home',

@@ -42,12 +42,16 @@
 import 'server-only';
 
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 
 import { WorkspaceInviteContent } from '@/components/workspace-invite/WorkspaceInviteContent';
 // 🔑 **Ο ΕΝΑΣ πίνακας εξόδων** — τον διαβάζει **και** η οθόνη για την άρνηση την ώρα της
 //    πράξης. Μέχρι 2026-09-21 ζούσε εδώ, και η οθόνη έδινε σε κάθε τέτοια άρνηση «αρχική».
-import { EXIT_BY_REFUSAL } from '@/components/workspace-invite/workspace-invite-labels';
+import {
+  EXIT_BY_REFUSAL,
+  REFUSAL_IS_NOT_FOUND,
+} from '@/components/workspace-invite/workspace-invite-labels';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { loginHref } from '@/lib/routes/return-path';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
@@ -144,6 +148,17 @@ export default async function WorkspaceInvitePage({
     after(async () => {
       await markWorkspaceInvitationOpened(outcome.invitationId);
     });
+  }
+
+  // 🔴 **Ε-Η (§18) — Ο ΣΥΝΔΕΣΜΟΣ ΠΟΥ ΔΕΝ ΔΕΙΧΝΕΙ ΠΟΥΘΕΝΑ ΑΠΑΝΤΑ 404, ΟΧΙ 200.**
+  //    Ο πίνακας κρίνει **τι ρώτησε ο πελάτης**, όχι «σφάλμα ή όχι»: χαλασμένη υπογραφή ·
+  //    άλλο περιβάλλον · έγγραφο που δεν υπάρχει ⇒ δεν υπάρχει πρόσκληση να περιγράψουμε.
+  //    Οι υπόλοιπες αρνήσεις **περιγράφουν υπαρκτή** πρόσκληση και μένουν 200 (ό,τι κάνουν
+  //    Slack/Figma/GitHub για ληγμένο σύνδεσμο) — η κατάστασή της **είναι** η απάντηση.
+  // ⚠️ Το `notFound()` ζωγραφίζει το `not-found.tsx` **αυτής** της διαδρομής, που λέει στον
+  //    άνθρωπο ακριβώς το ίδιο πράγμα με λόγια — ποτέ γυμνό «η σελίδα δεν βρέθηκε».
+  if (outcome.kind === 'refused' && REFUSAL_IS_NOT_FOUND[outcome.reason]) {
+    notFound();
   }
 
   return <WorkspaceInviteContent view={viewOf(outcome, token, viewerEmail)} />;

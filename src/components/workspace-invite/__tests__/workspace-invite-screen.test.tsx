@@ -67,8 +67,9 @@ const mockNavigateDocument = jest.fn();
 jest.mock('@/lib/browser/document-navigation', () => ({
   navigateDocument: (url: string) => mockNavigateDocument(url),
 }));
+const mockRefreshToken = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/auth', () => ({
-  useAuthOptional: () => ({ signOut: () => mockSignOut() }),
+  useAuthOptional: () => ({ signOut: () => mockSignOut(), refreshToken: () => mockRefreshToken() }),
 }));
 
 // 🔴 **ΚΑΝΕΝΑ mock στο `useSemanticColors` / `useLayoutClasses`** — μάθημα μετρημένο στη
@@ -108,6 +109,7 @@ function previewView(
 
 beforeEach(() => {
   mockRedeem.mockReset().mockResolvedValue({ kind: 'accepted', activeWorkspaceChanged: true });
+  mockRefreshToken.mockClear();
 });
 
 // ===========================================================================
@@ -183,7 +185,7 @@ describe('Β — η όψη πριν την απόφαση', () => {
     render(<WorkspaceInviteContent view={previewView({ kind: 'ready' })} />);
 
     // Το `admin` namespace **δεν φορτώνεται** σε αυτή τη δημόσια σελίδα — ένα
-    // `roleManagement.roleNames.*` εδώ θα έβαφε ωμό κλειδί.
+    // `common:globalRoles.*` εδώ θα έβαφε ωμό κλειδί.
     expect(screen.getByText(new RegExp(INVITED_ROLE_KEY.internal_user))).toBeInTheDocument();
   });
 });
@@ -218,6 +220,33 @@ describe('Γ — τι μαθαίνει ο άνθρωπος αφού απαντή
     //    δέχτηκε — και νομίζει ότι κάτι έσπασε. Ο ήδη-μέλος-αλλού ΔΕΝ μετακινείται (§11).
     expect(await screen.findByText(INVITE_PAGE_KEYS.acceptedNotActive)).toBeInTheDocument();
     expect(screen.queryByText(INVITE_PAGE_KEYS.acceptedActiveNow)).toBeNull();
+  });
+
+  /**
+   * 🔴 **Ε-Γ (§18)**: η οθόνη επιτυχίας έδινε «Μετάβαση στη **σύνδεση**» σε άνθρωπο που μόλις
+   * απάντησε την πρόσκλησή του — δηλαδή που **είναι** συνδεδεμένος (η εξαργύρωση το απαιτεί).
+   */
+  it('🔴 Γ6 — μετά την αποδοχή η έξοδος είναι ο ΧΩΡΟΣ, ποτέ η σύνδεση', async () => {
+    await respondWith({ kind: 'accepted', activeWorkspaceChanged: true }, INVITE_PAGE_KEYS.accept);
+
+    const exit = await screen.findByRole('link', { name: EXIT_KEY.workspace });
+    expect(exit).toHaveAttribute('href', EXIT_HREF.workspace);
+    expect(screen.queryByRole('link', { name: EXIT_KEY['sign-in'] })).toBeNull();
+  });
+
+  it('🔴 Γ7 — ο ΝΕΟΣ χώρος έγινε ενεργός ⇒ ζητάμε ανανέωση ΤΩΡΑ (δεν περιμένουμε τον ακροατή)', async () => {
+    await respondWith({ kind: 'accepted', activeWorkspaceChanged: true }, INVITE_PAGE_KEYS.accept);
+
+    // Χωρίς αυτό, το cookie συνεδρίας κρατά τα παλιά claims και το `/home` στέλνει τον
+    // άνθρωπο στον **προσωπικό** του χώρο, δευτερόλεπτα μετά την ένταξή του στο γραφείο.
+    await waitFor(() => expect(mockRefreshToken).toHaveBeenCalledTimes(1));
+  });
+
+  it('Γ8 — τίποτα δεν άλλαξε στα claims ⇒ καμία ανανέωση (ιδεμποτικό, χωρίς θόρυβο)', async () => {
+    await respondWith({ kind: 'accepted', activeWorkspaceChanged: false }, INVITE_PAGE_KEYS.accept);
+
+    expect(await screen.findByText(INVITE_PAGE_KEYS.acceptedNotActive)).toBeInTheDocument();
+    expect(mockRefreshToken).not.toHaveBeenCalled();
   });
 
   it('Γ3 — ρητή άρνηση: το λέει ήρεμα και δίνει δρόμο', async () => {
