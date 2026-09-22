@@ -49,7 +49,7 @@
     "src/i18n/generated/routes/terms__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "b67681862df31eec3232537677fab484cc09a24a0ff1d466b4ad015d3a650dac",
+    "src/i18n/generated/shell-slice.el.json": "0b6423cdf9a897b54f321b5bddb4696f728e111bbcf2bb8652a12f89ba5e8b58",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -89,7 +89,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "58c48203cc2ee4d103ff3a9d769479c2384cb3f943d33e3502daf39e368486f0",
+  "inputsSha256": "009d502b6b0dd0b1aabc9824ee8de1340f0f4da053180338e6bc8ed6c2c7bd6d",
   "languages": [
     "el"
   ],
@@ -415,7 +415,7 @@
     "src/components/shared/pickers/use-async-picker-search.ts": "d148b56564da04f304760a213a458de4cb84ccdd9be045ffcff751ea1749dc72",
     "src/components/shared/pickers/use-linked-single-picker.ts": "668230ffadc7763783a3054c91f463374c85f8c56ae54f680fa8c38eaeb1185f",
     "src/components/shared/price-sections/PriceClassSection.tsx": "6ec9687d78b5b954973536444ca258ff403f3d5904a694a7405b3664659c9a7e",
-    "src/components/shared/stay/StayCountSelect.tsx": "ca4d23a70ea91380b5412e5aeaf7c41726e6c948eefde6c15af0b2ce929ce6fd",
+    "src/components/shared/stay/StayCountSelect.tsx": "d7f347fee5c3efc1284f0c0c4f65174f5f3b656813569cb1c2be89cf554a3333",
     "src/components/stay-calendar/StayCalendarChrome.tsx": "c4e1561b946c84e3d5081d5375bffb4385fc218a45475410b5f490decae83501",
     "src/components/stay-calendar/StayCalendarContent.tsx": "6acbc4d497c3443aa87984206e4d869dd13a7a4e97b4b1a5931d25e5cd683ed4",
     "src/components/stay-calendar/StayCalendarForms.tsx": "a4acede44e398790c1460e280fe7f72385bf7e5c888f5f932fe5658b7ed40253",
@@ -7623,7 +7623,7 @@
     "src/contexts/WebSocketContext.tsx": "81d0d84f3c95cf98dba7c0a2cbcaed8e39f69f439ad1a692798a587a2ec50de7",
     "src/contexts/WorkspaceContext.tsx": "c40dbeb3540512babfe1cff26671f17a22fdccc3fd976e2d70432636384931f9",
     "src/core/badges/BadgeFactory.ts": "e569d039be441aa6e904a2e16e92d719c152b9e64b9bb201199c7c8acb69af9e",
-    "src/core/badges/IconCountBadge.tsx": "5eb35564e829b0b3ddb6408a6dc7aca1536063e0ab20b18cfb1dc0eb0412c870",
+    "src/core/badges/IconCountBadge.tsx": "2b52403c5663d849155983b589e4718719ca50136fbfcdc4a5f4bf73fdd1c01e",
     "src/core/badges/UnifiedBadgeSystem.tsx": "5e4f6cafd55aa3b90c5de5b517011c39c308a669a8f1462b5a638fd45b55d405",
     "src/core/badges/badge-label-key.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/core/containers/PageContainer.tsx": "86e6be0e84bbc0fb7ccc86167856ebcf5591b2d8f9dad105c8b2154dc66b04c8",
@@ -7906,7 +7906,7 @@
     "src/lib/stay/stay-calendar-command.ts": "be5c44659ad551c8bf999ad5bae257b250336355670229ee2b6fbfa939353014",
     "src/lib/stay/stay-conflict.ts": "e44a9bd455cc03d0c196e7639572eb0d913e010113578345033287eb1ca378f5",
     "src/lib/stay/stay-free-runs.ts": "69fb4bfb99da7160ef37b13f615777aa84bfca6139629fbcb0eddc122d899e01",
-    "src/lib/stay/stay-hold-deadline.ts": "6fea156058e27afbca9f1d9914072e5563754743951f46b04180f2bddf51d1fd",
+    "src/lib/stay/stay-hold-deadline.ts": "6c428d60aa1d9b8c6b489ecc5ffb9858a4f8f3a1a8dea1db7d0c1304edc2b6e3",
     "src/lib/stay/stay-nightly-quote.ts": "72ae0384b54c4bc1d311c879124dd4e23c69b7fe4bb15de0c3a04709ad8c4a99",
     "src/lib/stay/stay-public-request.ts": "d272a3337770c7fbe772d4e1d7d23874a768957e1e2f9d5eb43abbcc095363fc",
     "src/lib/stay/stay-quote-fees.ts": "c8c289b336ee534c66384436089f2a4cb62e2693389f26ef7e7b2b12649cee4f",
@@ -8172,7 +8172,7 @@
     "matchedKeys": 180,
     "routeBoundaries": 0,
     "shellFiles": 773,
-    "sliceBytes": 553811
+    "sliceBytes": 553462
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

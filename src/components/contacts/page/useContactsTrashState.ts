@@ -59,7 +59,7 @@ export function useContactsTrashState({
     }
     setSelectedContactIds([]);
     refreshContacts();
-    showSuccess(count === 1 ? t('permanentDeleteSuccess_one') : t('permanentDeleteSuccess', { count }));
+    showSuccess(t('permanentDeleteSuccess', { count }));
   }, [selectedContact, selectedContactIds, refreshContacts, setSelectedContact, setSelectedContactIds, showSuccess, t]);
 
   /** After a trash action (restore/delete), clear selection AND refresh list */

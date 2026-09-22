@@ -23,13 +23,11 @@
     "invalidFormat": "Μη υποστηριζόμενη μορφή. Επιτρεπόμενα: TTF, OTF, WOFF, WOFF2, SHX"
   },
   "missingBanner": {
-    "title_one": "{count} γραμματοσειρά δεν βρέθηκε",
-    "title_other": "{count} γραμματοσειρές δεν βρέθηκαν",
+    "title": "{count, plural, one {# γραμματοσειρά δεν βρέθηκε} other {# γραμματοσειρές δεν βρέθηκαν}}",
     "subtitle": "Αντικαταστάθηκαν αυτόματα με παρόμοιες γραμματοσειρές.",
     "viewAffected": "Δες επηρεαζόμενα",
     "upload": "Ανέβασε",
     "dismiss": "Απόκρυψη",
-    "affectedCount_one": "{count} στοιχείο επηρεάζεται",
-    "affectedCount_other": "{count} στοιχεία επηρεάζονται"
+    "affectedCount": "{count, plural, one {# στοιχείο επηρεάζεται} other {# στοιχεία επηρεάζονται}}"
   }
 }

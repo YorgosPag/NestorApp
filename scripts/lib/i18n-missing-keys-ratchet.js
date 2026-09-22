@@ -2,11 +2,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-/**
- * i18next CLDR plural suffixes: ένα κλειδί που καλείται ως `t('foo', { count })`
- * ορίζεται στο locale ως `foo_one` / `foo_other` (κ.λπ.), **ΟΧΙ** ως σκέτο `foo`.
- */
-const I18NEXT_PLURAL_SUFFIXES = ['_zero', '_one', '_two', '_few', '_many', '_other', '_plural'];
 
 /**
  * Υπάρχει το κλειδί; — **Η ΜΟΝΗ ΑΠΑΝΤΗΣΗ** (ADR-777 §8.41).
@@ -18,6 +13,12 @@ const I18NEXT_PLURAL_SUFFIXES = ['_zero', '_one', '_two', '_few', '_many', '_oth
  * το compat. Το έπιασε ο **N.18 / jscpd** — όχι σκέψη: οι δύο υλοποιήσεις έμοιαζαν
  * αρκετά ώστε ένας άνθρωπος να τις προσπεράσει, και **αρκετά διαφορετικές ώστε να
  * δίνουν άλλο αριθμό**.
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΕΝΙΑΙΟ ΚΡΙΤΗΡΙΟ ΗΤΑΝ ΤΟΥ ΛΑΘΟΣ RUNTIME** (ADR-867, 2026-09-22): δεχόταν το `foo_other` ως
+ * «υπαρκτό `foo`» — το μοντέλο του **σκέτου** i18next. Ο runtime μας είναι **i18next-icu**, που τα επιθήματα
+ * **δεν** τα λύνει (μετρημένο: ωμό κλειδί στην οθόνη). Έτσι το `MissingFontBanner` — που η πύλη είχε **σωστά**
+ * πιάσει — βγήκε από τη baseline ως «θεραπευμένο» ενώ έδειχνε `missingBanner.title` στον χρήστη. Πλέον:
+ * υπάρχει **μόνο** ό,τι λύνει ο runtime — το **ίδιο** κλειδί (`scripts/lib/i18n-runtime-dialect.js`).
  */
 function keyExists(obj, dottedKey) {
   if (!obj) return false;
@@ -30,8 +31,7 @@ function keyExists(obj, dottedKey) {
     current = current[part];
   }
   if (current === null || current === undefined || typeof current !== 'object') return false;
-  if (last in current) return true;
-  return I18NEXT_PLURAL_SUFFIXES.some((sfx) => `${last}${sfx}` in current);
+  return last in current;
 }
 
 /** Φορτωτής locale με cache — ένας, ώστε οι δύο καταναλωτές να διαβάζουν το ίδιο. */
@@ -172,5 +172,4 @@ module.exports = {
   makeDeps,
   keyExists,
   makeLocaleReader,
-  I18NEXT_PLURAL_SUFFIXES,
 };

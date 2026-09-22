@@ -164,6 +164,16 @@ describe('ADR-854 · Ομάδα 6 — μέγεθος & λογική θέση', (
     expect(cls).not.toContain('-top-1');
   });
 
+  it('top-end-inset μένει ΜΕΣΑ στο κουτί που κόβει — καμία αρνητική μετατόπιση (ADR-867 Ζ3)', () => {
+    // ⛔ MUTATION: δώσε στο top-end-inset τις κλάσεις του top-end ⇒ `-top-1` ⇒ κόκκινο.
+    render(<IconCountBadge count={3} placement="top-end-inset" data-testid={BADGE} />);
+    const cls = badge()?.className ?? '';
+    expect(cls).toMatch(/(^|\s)absolute(\s|$)/);
+    expect(cls).toMatch(/(^|\s)top-0(\s|$)/);
+    expect(cls).toMatch(/(^|\s)end-0(\s|$)/);
+    expect(cls).not.toMatch(/(^|\s)-(top|end|start)-/);
+  });
+
   it.each(['sm', 'md'] as const)('size=%s χρησιμοποιεί min-w (ο τριψήφιος δεν κόβεται)', (size) => {
     render(<IconCountBadge count={100} size={size} data-testid={BADGE} />);
     const cls = badge()?.className ?? '';

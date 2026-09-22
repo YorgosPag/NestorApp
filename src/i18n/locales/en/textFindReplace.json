@@ -16,8 +16,7 @@
     "regex": "Regular expressions"
   },
   "results": {
-    "count_one": "{count} match",
-    "count_other": "{count} matches",
+    "count": "{count, plural, one {# match} other {# matches}}",
     "noMatches": "No matches found",
     "noSearch": "Enter text to search",
     "entityLabel": "Entity {id}",

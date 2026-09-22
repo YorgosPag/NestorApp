@@ -304,13 +304,9 @@
   "trash": {
     "viewTrash": "Κάδος Ανακύκλωσης",
     "backToProperties": "Επιστροφή στα Ακίνητα",
-    "trashCount": "{count} στον κάδο",
     "autoDeleteWarning": "Τα αντικείμενα στον κάδο διαγράφονται οριστικά μετά από 30 ημέρες.",
-    "restoreSelected": "Επαναφορά",
-    "restoreSuccess_one": "Το ακίνητο επαναφέρθηκε.",
-    "restoreSuccess": "{count} ακίνητα επαναφέρθηκαν.",
+    "restoreSuccess": "{count, plural, one {Το ακίνητο επαναφέρθηκε.} other {# ακίνητα επαναφέρθηκαν.}}",
     "restoreFailed": "Η επαναφορά απέτυχε. Δοκιμάστε ξανά.",
-    "permanentDelete": "Οριστική Διαγραφή",
     "emptyTitle": "Ο κάδος είναι άδειος",
     "emptyDescription": "Δεν βρέθηκαν διαγραμμένα ακίνητα."
   },

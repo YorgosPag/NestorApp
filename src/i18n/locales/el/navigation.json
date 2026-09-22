@@ -380,12 +380,8 @@
       "createWorkspace": "Δημιουργώ τον χώρο γραφείου μου"
     },
     "unread": {
-      "threads": "{count} αδιάβαστες συνομιλίες",
-      "threads_one": "{count} αδιάβαστη συνομιλία",
-      "threads_other": "{count} αδιάβαστες συνομιλίες",
-      "threadsAtLeast": "τουλάχιστον {count} αδιάβαστες συνομιλίες",
-      "threadsAtLeast_one": "τουλάχιστον {count} αδιάβαστη συνομιλία",
-      "threadsAtLeast_other": "τουλάχιστον {count} αδιάβαστες συνομιλίες"
+      "threads": "{count, plural, one {# αδιάβαστη συνομιλία} other {# αδιάβαστες συνομιλίες}}",
+      "threadsAtLeast": "{count, plural, one {τουλάχιστον # αδιάβαστη συνομιλία} other {τουλάχιστον # αδιάβαστες συνομιλίες}}"
     }
   },
   "legal": {

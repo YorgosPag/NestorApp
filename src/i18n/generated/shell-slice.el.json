@@ -1767,11 +1767,9 @@
       "empty": "—",
       "relative": {
         "daysAgo": "πριν {n} ημέρες",
-        "hoursAgo": "πριν {n} ώρα",
-        "hoursAgo_plural": "πριν {n} ώρες",
+        "hoursAgo": "{n, plural, one {πριν # ώρα} other {πριν # ώρες}}",
         "justNow": "μόλις τώρα",
-        "minutesAgo": "πριν {n} λεπτό",
-        "minutesAgo_plural": "πριν {n} λεπτά",
+        "minutesAgo": "{n, plural, one {πριν # λεπτό} other {πριν # λεπτά}}",
         "yesterdayAt": "χθες στις {time}"
       }
     },
@@ -2683,9 +2681,7 @@
   },
   "common-shared": {
     "iconCountBadge": {
-      "items": "{count} στοιχεία",
-      "items_one": "{count} στοιχείο",
-      "items_other": "{count} στοιχεία"
+      "items": "{count, plural, one {# στοιχείο} other {# στοιχεία}}"
     },
     "personalMessage": {
       "charsRemaining": "{count} χαρακτήρες",
@@ -2759,9 +2755,7 @@
       "noResults": "Δεν βρέθηκαν αποτελέσματα",
       "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",
       "results": "Αποτελέσματα αναζήτησης",
-      "resultsCount": "{count} αποτελέσματα",
-      "resultsCount_one": "{count} αποτέλεσμα",
-      "resultsCount_other": "{count} αποτελέσματα",
+      "resultsCount": "{count, plural, one {# αποτέλεσμα} other {# αποτελέσματα}}",
       "select": "επιλογή",
       "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση"
     },
@@ -3499,12 +3493,8 @@
       },
       "sidebarLabel": "Ο προσωπικός μου χώρος",
       "unread": {
-        "threads": "{count} αδιάβαστες συνομιλίες",
-        "threadsAtLeast": "τουλάχιστον {count} αδιάβαστες συνομιλίες",
-        "threadsAtLeast_one": "τουλάχιστον {count} αδιάβαστη συνομιλία",
-        "threadsAtLeast_other": "τουλάχιστον {count} αδιάβαστες συνομιλίες",
-        "threads_one": "{count} αδιάβαστη συνομιλία",
-        "threads_other": "{count} αδιάβαστες συνομιλίες"
+        "threads": "{count, plural, one {# αδιάβαστη συνομιλία} other {# αδιάβαστες συνομιλίες}}",
+        "threadsAtLeast": "{count, plural, one {τουλάχιστον # αδιάβαστη συνομιλία} other {τουλάχιστον # αδιάβαστες συνομιλίες}}"
       }
     },
     "reports": {

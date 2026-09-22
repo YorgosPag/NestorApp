@@ -75,22 +75,9 @@ function writePath(target, dotted, value) {
   cursor[last] = value;
 }
 
-// i18next resolves `t('foo', { count })` against foo_one / foo_other, so a slice
-// that copied only the bare `foo` would ship a pluralized string that renders as
-// a raw key on every plural form. Siblings travel with their stem.
-const PLURAL_SUFFIXES = ['_zero', '_one', '_two', '_few', '_many', '_other', '_plural'];
-
-function copyPluralSiblings(source, target, dotted) {
-  const cut = dotted.lastIndexOf('.');
-  const parentPath = cut === -1 ? null : dotted.slice(0, cut);
-  const stem = cut === -1 ? dotted : dotted.slice(cut + 1);
-  const parent = parentPath === null ? source : readPath(source, parentPath);
-  if (parent === null || typeof parent !== 'object') return;
-  for (const suffix of PLURAL_SUFFIXES) {
-    const sibling = `${stem}${suffix}`;
-    if (sibling in parent) writePath(target, parentPath ? `${parentPath}.${sibling}` : sibling, parent[sibling]);
-  }
-}
+// 🔑 Κανένα «αδέλφι» πληθυντικού δεν ταξιδεύει μαζί με το κλειδί: ο runtime (i18next-icu) λύνει τον πληθυντικό
+// ΜΕΣΑ στο ίδιο κλειδί, και τα `foo_one`/`foo_other` ούτε τα διαβάζει ούτε επιτρέπονται πια (CHECK 3.9 ·
+// scripts/lib/i18n-runtime-dialect.js). Η παλιά αντιγραφή τους μοντελοποιούσε το ΣΚΕΤΟ i18next (ADR-867, 2026-09-22).
 
 /**
  * @param {object} source      the full locale namespace
@@ -125,7 +112,6 @@ function pruneNamespace(source, want) {
     // ΟΛΟ το `common-sales` στο κέλυφος. Μετρημένο στο HEAD: 0 artifacts αλλάζουν.
     if (value !== null && typeof value === 'object') continue;
     writePath(slice, key, value);
-    copyPluralSiblings(source, slice, key);
     matched += 1;
   }
   return { slice, matched, missing };
@@ -234,10 +220,8 @@ function buildSlices({ wants, languages, readNamespace }) {
 }
 
 module.exports = {
-  PLURAL_SUFFIXES,
   readPath,
   writePath,
-  copyPluralSiblings,
   pruneNamespace,
   aggregateMissing,
   stableStringify,

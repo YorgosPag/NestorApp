@@ -40,11 +40,9 @@ export function useStoragesTrashState({
     forceDataRefresh,
     clearSelection,
     notifyRestored: count =>
-      showSuccess(count === 1 ? t('restoreSuccess_one') : t('restoreSuccess', { count })),
+      showSuccess(t('restoreSuccess', { count })),
     notifyPermanentlyDeleted: count =>
-      showSuccess(
-        count === 1 ? t('permanentDeleteSuccess_one') : t('permanentDeleteSuccess', { count }),
-      ),
+      showSuccess(t('permanentDeleteSuccess', { count })),
   });
 
   return useMemo(

@@ -18,8 +18,15 @@ import { IconCountBadge, type IconCountBadgePlacement } from "@/core/badges"
 import { useNetworkUnreadCount } from "@/hooks/network-messaging/useNetworkUnreadCount"
 import type { MenuCount, MenuCountSource } from "@/types/sidebar"
 
+/**
+ * 🔒 Οι θέσεις που **χωρούν** σε στοιχείο μενού. Κάθε στοιχείο (στήλη, μενού avatar) αποδίδεται μέσα σε κουτί που
+ * **κόβει** (`SidebarMenuButton` = `overflow-hidden`)· το `top-end`/`top-start` βγαίνει 4px έξω και κόβεται — μετρημένο
+ * ζωντανά στη συμπτυγμένη στήλη (ADR-867 2026-09-22). Ο **τύπος** το αποκλείει, όχι μια σύμβαση.
+ */
+type MenuCountPlacement = Extract<IconCountBadgePlacement, "inline-end" | "top-end-inset">
+
 interface SourceBadgeProps {
-  readonly placement: IconCountBadgePlacement
+  readonly placement: MenuCountPlacement
 }
 
 interface AnnounceRef {

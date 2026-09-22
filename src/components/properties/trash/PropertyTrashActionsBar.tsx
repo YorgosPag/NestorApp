@@ -5,22 +5,15 @@
  *
  * Toolbar for the properties trash view.
  * Shows restore/permanent-delete actions + 30-day auto-purge warning.
- * Follows the pattern of contacts/trash/TrashActionsBar (ADR-191).
+ * Διάταξη: η ΜΙΑ `shared/trash/TrashActionsBar` (ADR-867 2026-09-22) — εδώ μόνο η επαναφορά + τα κείμενα.
  *
  * @module components/properties/trash/PropertyTrashActionsBar
  */
 
 import '@/lib/design-system';
-import { createModuleLogger } from '@/lib/telemetry';
-import { Trash2, RotateCcw, ArrowLeft, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { EntityTrashActionsBar } from '@/components/shared/trash/EntityTrashActionsBar';
 import { useTranslation } from '@/i18n';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { TrashService } from '@/services/trash.service';
-import { useNotifications } from '@/providers/NotificationProvider';
-
-const logger = createModuleLogger('PropertyTrashActionsBar');
 
 interface PropertyTrashActionsBarProps {
   selectedIds: string[];
@@ -33,98 +26,22 @@ interface PropertyTrashActionsBarProps {
   activePropertyId?: string | null;
 }
 
-export function PropertyTrashActionsBar({
-  selectedIds,
-  onBack,
-  onRefresh,
-  onPermanentDelete,
-  trashCount,
-  activePropertyId,
-}: PropertyTrashActionsBarProps) {
+const restoreProperties = (ids: string[]) => TrashService.bulkRestore('property', ids);
+
+export function PropertyTrashActionsBar({ activePropertyId, ...bar }: PropertyTrashActionsBarProps) {
   const { t } = useTranslation('properties-viewer');
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
-  const { notify } = useNotifications();
-
-  const effectiveIds = selectedIds.length > 0
-    ? selectedIds
-    : activePropertyId ? [activePropertyId] : [];
-
-  const canAct = effectiveIds.length > 0;
-
-  const handleRestore = async () => {
-    if (!canAct) return;
-    logger.info('Restoring properties', { effectiveIds });
-    try {
-      await TrashService.bulkRestore('property', effectiveIds);
-      logger.info('Restore succeeded', { effectiveIds });
-      notify(
-        effectiveIds.length === 1
-          ? t('trash.restoreSuccess_one')
-          : t('trash.restoreSuccess', { count: effectiveIds.length }),
-        { type: 'success' },
-      );
-      onRefresh();
-    } catch (err) {
-      logger.error('Restore failed', { effectiveIds, error: err });
-      notify(t('trash.restoreFailed'), { type: 'error' });
-      onRefresh();
-    }
-  };
-
   return (
-    <section
-      className="flex flex-col gap-2 px-3 py-2 border-b"
-      role="toolbar"
-      aria-label={t('trash.viewTrash')}
-    >
-      {/* 30-day auto-purge warning */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))] text-sm ${colors.text.muted}`}>
-        <AlertTriangle className={`${iconSizes.sm} text-[hsl(var(--text-warning))] shrink-0`} />
-        <p>{t('trash.autoDeleteWarning')}</p>
-      </div>
-
-      {/* Action buttons */}
-      <nav className="flex items-center gap-2 flex-wrap">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onBack}
-          className="gap-1.5"
-        >
-          <ArrowLeft className={iconSizes.xs} />
-          {t('trash.backToProperties')}
-        </Button>
-
-        <span className={`text-sm ${colors.text.muted} px-2`}>
-          {t('trash.trashCount', { count: trashCount })}
-        </span>
-
-        <div className="flex-1" />
-
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleRestore}
-          disabled={!canAct}
-          className="gap-1.5"
-        >
-          <RotateCcw className={iconSizes.xs} />
-          {t('trash.restoreSelected')}
-          {effectiveIds.length > 0 && ` (${effectiveIds.length})`}
-        </Button>
-
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => onPermanentDelete(effectiveIds.length > 0 ? effectiveIds : undefined)}
-          disabled={!canAct}
-          className="gap-1.5"
-        >
-          <Trash2 className={iconSizes.xs} />
-          {t('trash.permanentDelete')}
-        </Button>
-      </nav>
-    </section>
+    <EntityTrashActionsBar
+      {...bar}
+      activeId={activePropertyId}
+      entity="properties"
+      restore={restoreProperties}
+      text={{
+        back: t('trash.backToProperties'),
+        warning: t('trash.autoDeleteWarning'),
+        restoreSuccess: (count) => t('trash.restoreSuccess', { count }),
+        restoreFailed: t('trash.restoreFailed'),
+      }}
+    />
   );
 }

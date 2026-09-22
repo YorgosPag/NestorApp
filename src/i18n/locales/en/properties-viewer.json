@@ -304,13 +304,9 @@
   "trash": {
     "viewTrash": "View Trash",
     "backToProperties": "Back to Properties",
-    "trashCount": "{count} in trash",
     "autoDeleteWarning": "Items in trash are permanently deleted after 30 days.",
-    "restoreSelected": "Restore",
-    "restoreSuccess_one": "Property restored.",
-    "restoreSuccess": "{count} properties restored.",
+    "restoreSuccess": "{count, plural, one {Property restored.} other {# properties restored.}}",
     "restoreFailed": "Restore failed. Try again.",
-    "permanentDelete": "Delete permanently",
     "emptyTitle": "Trash is empty",
     "emptyDescription": "No deleted properties found."
   },

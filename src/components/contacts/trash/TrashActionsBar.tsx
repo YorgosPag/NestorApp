@@ -11,16 +11,9 @@
 'use client';
 
 import '@/lib/design-system';
-import { createModuleLogger } from '@/lib/telemetry';
-import { Trash2, RotateCcw, ArrowLeft, AlertTriangle } from 'lucide-react';
-
-const logger = createModuleLogger('TrashActionsBar');
-import { Button } from '@/components/ui/button';
+import { EntityTrashActionsBar } from '@/components/shared/trash/EntityTrashActionsBar';
 import { useTranslation } from '@/i18n';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { restoreMultipleDeletedContactsWithPolicy } from '@/services/contact-mutation-gateway';
-import { useNotifications } from '@/providers/NotificationProvider';
 
 interface TrashActionsBarProps {
   selectedIds: string[];
@@ -33,100 +26,23 @@ interface TrashActionsBarProps {
   activeContactId?: string | null;
 }
 
-export function TrashActionsBar({
-  selectedIds,
-  onBack,
-  onRefresh,
-  onPermanentDelete,
-  trashCount,
-  activeContactId,
-}: TrashActionsBarProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
-  const { notify } = useNotifications();
+/** Οι επαφές επανέρχονται μέσω πολιτικής· σε αποτυχία (π.χ. 409 «ήδη επανήλθε») η λίστα ανανεώνεται ούτως ή άλλως. */
+const restoreContacts = (ids: string[]) => restoreMultipleDeletedContactsWithPolicy({ ids });
 
-  /** Effective IDs to act on: multi-selected, or the single active contact */
-  const effectiveIds = selectedIds.length > 0
-    ? selectedIds
-    : activeContactId ? [activeContactId] : [];
-
-  const canAct = effectiveIds.length > 0;
-
-  const handleRestoreSelected = async () => {
-    if (!canAct) return;
-    logger.info('Restoring contacts', { effectiveIds });
-    try {
-      await restoreMultipleDeletedContactsWithPolicy({ ids: effectiveIds });
-      logger.info('Restore succeeded', { effectiveIds });
-      notify(
-        effectiveIds.length === 1
-          ? t('trash.restoreSuccess_one')
-          : t('trash.restoreSuccess', { count: effectiveIds.length }),
-        { type: 'success' },
-      );
-      onRefresh();
-    } catch (err) {
-      logger.error('Restore failed', { effectiveIds, error: err });
-      notify(t('trash.restoreFailed'), { type: 'error' });
-      // Refresh anyway — contact may already be restored (409 = not in trash anymore)
-      onRefresh();
-    }
-  };
-
+export function TrashActionsBar({ activeContactId, ...bar }: TrashActionsBarProps) {
+  const { t } = useTranslation('contacts-lifecycle');
   return (
-    <section
-      className="flex flex-col gap-2 px-3 py-2 border-b"
-      role="toolbar"
-      aria-label={t('trash.viewTrash')}
-    >
-      {/* Warning banner */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))] text-sm ${colors.text.muted}`}>
-        <AlertTriangle className={`${iconSizes.sm} text-[hsl(var(--text-warning))] shrink-0`} />
-        <p>{t('trash.autoDeleteWarning')}</p>
-      </div>
-
-      {/* Action buttons */}
-      <nav className="flex items-center gap-2 flex-wrap">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onBack}
-          className="gap-1.5"
-        >
-          <ArrowLeft className={iconSizes.xs} />
-          {t('trash.backToContacts')}
-        </Button>
-
-        <span className={`text-sm ${colors.text.muted} px-2`}>
-          {t('trash.trashCount', { count: trashCount })}
-        </span>
-
-        <div className="flex-1" />
-
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleRestoreSelected}
-          disabled={!canAct}
-          className="gap-1.5"
-        >
-          <RotateCcw className={iconSizes.xs} />
-          {t('trash.restoreSelected')}
-          {effectiveIds.length > 0 && ` (${effectiveIds.length})`}
-        </Button>
-
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => onPermanentDelete(effectiveIds.length > 0 ? effectiveIds : undefined)}
-          disabled={!canAct}
-          className="gap-1.5"
-        >
-          <Trash2 className={iconSizes.xs} />
-          {t('trash.permanentDelete')}
-        </Button>
-      </nav>
-    </section>
+    <EntityTrashActionsBar
+      {...bar}
+      activeId={activeContactId}
+      entity="contacts"
+      restore={restoreContacts}
+      text={{
+        back: t('trash.backToContacts'),
+        warning: t('trash.autoDeleteWarning'),
+        restoreSuccess: (count) => t('trash.restoreSuccess', { count }),
+        restoreFailed: t('trash.restoreFailed'),
+      }}
+    />
   );
 }

@@ -16,8 +16,7 @@
     "regex": "Κανονικές εκφράσεις"
   },
   "results": {
-    "count_one": "{count} αποτέλεσμα",
-    "count_other": "{count} αποτελέσματα",
+    "count": "{count, plural, one {# αποτέλεσμα} other {# αποτελέσματα}}",
     "noMatches": "Δεν βρέθηκαν αποτελέσματα",
     "noSearch": "Εισάγετε κείμενο για αναζήτηση",
     "entityLabel": "Οντότητα {id}",

@@ -67,7 +67,6 @@ const {
   sha256,
   fingerprintShellFile,
   buildSlices,
-  copyPluralSiblings,
 } = require(path.join(LIB, 'slice-build'));
 const { DEFAULTS, loadConfig, policyFor, parsePolicyEntry, assertKnownFields } = require(path.join(LIB, 'config'));
 const { patternToRegExp, serializeWants, hydrateWants } = require(path.join(LIB, 'plan'));
@@ -369,15 +368,13 @@ describe('Group 7 — pruning a namespace down to the keys the shell asks for', 
     expect(slice.unrelated).toBeUndefined();
   });
 
-  it('plural siblings travel with their stem — otherwise t(k,{count}) renders the raw key', () => {
+  it('🔴 a plural suffix NEVER travels with its stem — the runtime (i18next-icu) never reads it', () => {
+    // ADR-867 (2026-09-22): the old builder copied `item_other` next to `item`, modelling PLAIN i18next.
+    // Our runtime resolves the plural INSIDE the key (`{count, plural, …}`); suffixes are dead weight in the
+    // shell bundle and are forbidden in locales (CHECK 3.9 · scripts/lib/i18n-runtime-dialect.js).
+    // ⛔ MUTATION: re-add the sibling copy ⇒ `item_other` travels ⇒ red.
     const { slice } = pruneNamespace(source, { keys: new Set(['item']), prefixes: new Set(), whole: false });
-    expect(slice).toEqual({ item: 'μία', item_other: 'πολλές' });
-  });
-
-  it('copyPluralSiblings handles a nested stem', () => {
-    const target = {};
-    copyPluralSiblings({ a: { b: 'x', b_other: 'y' } }, target, 'a.b');
-    expect(target).toEqual({ a: { b_other: 'y' } });
+    expect(slice).toEqual({ item: 'μία' });
   });
 
   it('🔴 an exact key that lands on a SUBTREE takes nothing — only `prefixes` may take a subtree', () => {

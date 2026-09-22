@@ -124,7 +124,7 @@ export function usePropertiesTrashState({
 
     if (failed === 0 && succeeded > 0) {
       notify(
-        succeeded === 1 ? t('permanentDeleteSuccess_one', { ns: 'trash' }) : t('permanentDeleteSuccess', { ns: 'trash', count: succeeded }),
+        t('permanentDeleteSuccess', { ns: 'trash', count: succeeded }),
         { type: 'success' },
       );
     } else if (succeeded > 0 && failed > 0) {

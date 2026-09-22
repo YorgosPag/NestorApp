@@ -67,8 +67,9 @@ function SidebarMenuLinkItem({ link, isActive, isCollapsed, reveal }: LinkItemPr
         {isCollapsed ? (
           <>
             <link.icon className={TRANSITION_PRESETS.STANDARD_ALL} />
-            {/* 🔢 Συμπτυγμένη στήλη: το σήμα κάθεται πάνω στο εικονίδιο (ο σύνδεσμος είναι ήδη `relative`). */}
-            {link.countSource !== undefined && <MenuCountBadge source={link.countSource} placement="top-end" />}
+            {/* 🔢 Συμπτυγμένη στήλη: το σήμα κάθεται πάνω στο εικονίδιο. `-inset`, γιατί ο σύνδεσμος είναι `relative` ΚΑΙ
+                `overflow-hidden` (SidebarMenuButton) — το `top-end` έβγαινε 4px έξω και κοβόταν (ADR-867 2026-09-22). */}
+            {link.countSource !== undefined && <MenuCountBadge source={link.countSource} placement="top-end-inset" />}
           </>
         ) : (
           <SidebarItemLabel item={link} title={title} />

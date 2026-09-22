@@ -2,6 +2,17 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **22/09 — ΕΠΑΦΕΣ + ΑΚΙΝΗΤΑ ΕΞΩ ΑΠΟ ΤΗ ΜΗΧΑΝΗ ΚΑΔΟΥ `useEntityTrashState`** *(N.0.2 · ADR-281 · βρέθηκε από CHECK 3.28
+  στη διόρθωση πληθυντικών ICU του ADR-867, 2026-09-22)*
+
+  Κτίρια, parking, έργα, αποθήκες τρέχουν στη **μία** μηχανή (`src/hooks/trash/useEntityTrashState.ts`). Επαφές
+  (`contacts/page/useContactsTrashState.ts`) και ακίνητα (`hooks/usePropertiesTrashState.ts`) έχουν **δική** τους μηχανή
+  κατάστασης. Στις 22/09 ενοποιήθηκε μόνο η **μπάρα** τους (`shared/trash/EntityTrashActionsBar.tsx` + `useTrashBarRestore.ts`)
+  — ήταν δίδυμοι 20+ γραμμών. Διαφορές που πρέπει να σεβαστεί η μεταφορά: οι επαφές επανέρχονται μέσω **πολιτικής**
+  (`restoreMultipleDeletedContactsWithPolicy`, όχι `TrashService`)· η μπάρα δρα και στο **ενεργό** στοιχείο του πάνελ
+  (`effectiveTrashIds`)· η αποτυχία επαναφοράς **ανανεώνει** τη λίστα (409), ενώ η μηχανή σήμερα **δεν** ειδοποιεί αποτυχία.
+  Διόρθωση: `EntityTrashSpec` με `restore` υπέρβαση + ειδοποίηση αποτυχίας στη μηχανή ⇒ το `useTrashBarRestore` απορροφάται.
+
 - 🟡 **21/09 — ~240 ΧΕΙΡΟΓΡΑΦΑ MOCK ΤΟΥ `useTranslation` ΣΤΑ TESTS· ~25 ΧΩΡΙΣ `i18n`** *(N.0.2 · ADR-598)*
 
   SSoT πλέον: `src/test-utils/i18n-mock.ts` → `keyEchoTranslation()` (`t` ηχεί το κλειδί + `i18n.language` + `ready`

@@ -56,8 +56,11 @@ export type IconCountBadgeSize = 'sm' | 'md';
  * Λογικές θέσεις (`start`/`end`), όχι φυσικές — σωστές σε RTL χωρίς δεύτερο κανόνα.
  * `top-*` = **πάνω στο εικονίδιο** (ο γονέας πρέπει να είναι `relative`)· `inline-end` = **στο τέλος της
  * γραμμής** ενός στοιχείου μενού (ADR-871 Π5 — στήλη ανοιχτή, μενού avatar), μέσα στη ροή, χωρίς `relative` γονέα.
+ * `top-end-inset` = πάνω στο εικονίδιο **μέσα** σε γονέα που **κόβει** (`overflow-hidden`): το `-top-1 -end-1` βγαίνει
+ * 4px έξω και κόβεται (μετρημένο ζωντανά, συμπτυγμένη στήλη — ADR-867 2026-09-22). Γεωμετρία MD3 navigation rail /
+ * Gmail: το σήμα καλύπτει το πάνω-τέλος τεταρτημόριο του εικονιδίου, **ποτέ** έξω από το κουτί του στοιχείου.
  */
-export type IconCountBadgePlacement = 'top-end' | 'top-start' | 'inline-end';
+export type IconCountBadgePlacement = 'top-end' | 'top-start' | 'inline-end' | 'top-end-inset';
 
 /** Ανακοίνωση σε αναγνώστη οθόνης: `true` = προεπιλεγμένο «N στοιχεία», ή δικό σου κλειδί. */
 export type IconCountBadgeAnnounce = true | { readonly ns: string; readonly key: string };
@@ -111,6 +114,7 @@ const PLACEMENT_CLASSES: Readonly<Record<IconCountBadgePlacement, string>> = {
   'top-end': 'absolute -top-1 -end-1',
   'top-start': 'absolute -top-1 -start-1',
   'inline-end': 'relative ms-auto shrink-0',
+  'top-end-inset': 'absolute top-0 end-0',
 };
 
 /** Σύμβαση MD3/MUI: πάνω από την οροφή δείχνουμε «<max>+», ποτέ τον ωμό αριθμό. */

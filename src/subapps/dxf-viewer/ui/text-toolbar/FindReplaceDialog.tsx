@@ -185,7 +185,7 @@ export function FindReplaceDialog({
     if (!searchText) return t('textFindReplace:results.noSearch');
     if (regexError) return t('textFindReplace:invalidRegex');
     if (matches.length === 0) return t('textFindReplace:results.noMatches');
-    return t('textFindReplace:results.count_other', { count: matches.length });
+    return t('textFindReplace:results.count', { count: matches.length });
   }, [searchText, regexError, matches.length, t]);
 
   return (
@@ -270,7 +270,7 @@ export function FindReplaceDialog({
             </p>
             {matches.length > 0 && (
               <ScrollArea className="h-44 rounded-md border">
-                <ul className="divide-y divide-border" role="listbox" aria-label={t('textFindReplace:results.count_other', { count: matches.length })}>
+                <ul className="divide-y divide-border" role="listbox" aria-label={t('textFindReplace:results.count', { count: matches.length })}>
                   {matches.map((item, idx) => (
                     <li
                       key={`${item.entityId}-${item.location.paragraphIndex}-${item.location.runIndex}-${item.location.start}`}

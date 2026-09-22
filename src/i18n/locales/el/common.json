@@ -1051,10 +1051,8 @@
   "datetime": {
     "relative": {
       "justNow": "μόλις τώρα",
-      "minutesAgo": "πριν {n} λεπτό",
-      "minutesAgo_plural": "πριν {n} λεπτά",
-      "hoursAgo": "πριν {n} ώρα",
-      "hoursAgo_plural": "πριν {n} ώρες",
+      "minutesAgo": "{n, plural, one {πριν # λεπτό} other {πριν # λεπτά}}",
+      "hoursAgo": "{n, plural, one {πριν # ώρα} other {πριν # ώρες}}",
       "yesterdayAt": "χθες στις {time}",
       "daysAgo": "πριν {n} ημέρες"
     },

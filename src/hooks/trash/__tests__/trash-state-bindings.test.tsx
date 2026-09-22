@@ -367,7 +367,8 @@ describe('per-entity divergences the merge must not flatten', () => {
       await result.current.handleRestoreStorages(['s1']);
     });
 
-    expect(mockShowSuccess).toHaveBeenCalledWith('restoreSuccess_one');
+    // ICU (ADR-867, 2026-09-22): ο πληθυντικός ζει ΜΕΣΑ στο κλειδί — ΕΝΑ κλειδί και για count=1.
+    expect(mockShowSuccess).toHaveBeenCalledWith('restoreSuccess');
   });
 
   it('buildings notify on restore and pluralise by count', async () => {

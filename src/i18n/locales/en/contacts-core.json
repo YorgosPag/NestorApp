@@ -291,8 +291,7 @@
       "byChannel": "By Channel"
     },
     "entry": {
-      "photosShared": "{count} photo shared",
-      "photosShared_plural": "{count} photos shared",
+      "photosShared": "{count, plural, one {# photo shared} other {# photos shared}}",
       "via": "via {channel}",
       "status": {
         "sent": "Sent",

@@ -462,9 +462,7 @@
     "noResults": "Δεν βρέθηκαν αποτελέσματα",
     "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
     "results": "Αποτελέσματα αναζήτησης",
-    "resultsCount": "{count} αποτελέσματα",
-    "resultsCount_one": "{count} αποτέλεσμα",
-    "resultsCount_other": "{count} αποτελέσματα",
+    "resultsCount": "{count, plural, one {# αποτέλεσμα} other {# αποτελέσματα}}",
     "navigate": "πλοήγηση",
     "select": "επιλογή",
     "hints": {
@@ -838,8 +836,6 @@
     "poApproved": "Το PO {poNumber} εγκρίθηκε"
   },
   "iconCountBadge": {
-    "items": "{count} στοιχεία",
-    "items_one": "{count} στοιχείο",
-    "items_other": "{count} στοιχεία"
+    "items": "{count, plural, one {# στοιχείο} other {# στοιχεία}}"
   }
 }

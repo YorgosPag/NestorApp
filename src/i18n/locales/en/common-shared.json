@@ -462,9 +462,7 @@
     "noResults": "No results found",
     "tryDifferent": "Try a different search",
     "results": "Search results",
-    "resultsCount": "{count} results",
-    "resultsCount_one": "{count} result",
-    "resultsCount_other": "{count} results",
+    "resultsCount": "{count, plural, one {# result} other {# results}}",
     "navigate": "navigate",
     "select": "select",
     "hints": {
@@ -838,8 +836,6 @@
     "poApproved": "PO {poNumber} has been approved"
   },
   "iconCountBadge": {
-    "items": "{count} items",
-    "items_one": "{count} item",
-    "items_other": "{count} items"
+    "items": "{count, plural, one {# item} other {# items}}"
   }
 }

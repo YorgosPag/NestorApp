@@ -505,8 +505,7 @@
       "confirmDelete": "Delete comment?",
       "closeAria": "Close comments",
       "internalOnly": "Internal only — not visible to vendor",
-      "count_one": "{count} comment",
-      "count_other": "{count} comments"
+      "count": "{count, plural, one {# comment} other {# comments}}"
     },
     "history": {
       "title": "Change History",

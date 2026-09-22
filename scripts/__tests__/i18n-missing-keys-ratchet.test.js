@@ -66,42 +66,38 @@ describe('Κ — το ratchet κρίνει ΑΝΑ ΚΑΔΟ', () => {
 // έπεσε **25/8 → 24/7** μόλις ενοποιήθηκαν. Το βρήκε ο **N.18 (jscpd)**, όχι σκέψη:
 // οι δύο υλοποιήσεις έμοιαζαν αρκετά ώστε ένας άνθρωπος να τις προσπεράσει.
 
-describe('Π — plural-aware, σε ΜΙΑ θέση', () => {
-  const { keyExists, I18NEXT_PLURAL_SUFFIXES } = require('../lib/i18n-missing-keys-ratchet');
+describe('Π — «υπάρχει;» = ό,τι ΛΥΝΕΙ ο runtime (i18next-icu), σε ΜΙΑ θέση', () => {
+  const { keyExists } = require('../lib/i18n-missing-keys-ratchet');
 
-  it('Π1 — κλειδί ορισμένο ΜΟΝΟ ως πληθυντικός CLDR μετράει υπαρκτό', () => {
-    expect(keyExists({ items_other: 'x' }, 'items')).toBe(true);
-    expect(keyExists({ items_one: 'x' }, 'items')).toBe(true);
+  // 🔴 ADR-867 (2026-09-22): αυτό το μπλοκ λεγόταν «plural-aware» και ΚΛΕΙΔΩΝΕ ότι το `items_other` ικανοποιεί
+  // το `t('items')` — το μοντέλο του ΣΚΕΤΟΥ i18next. Ο runtime μας είναι i18next-icu: επίθημα ⇒ ΩΜΟ ΚΛΕΙΔΙ στην
+  // οθόνη (μετρημένο στην `i18n-runtime-dialect.test.js` με την πραγματική μηχανή). Ο «μάρτυρας» Π5 ήταν το ίδιο
+  // το σφάλμα: το `missingBanner.title` υπήρχε ΜΟΝΟ ως `title_one/_other` και έδειχνε ωμό κλειδί στο DXF.
+
+  it('Π1 — κλειδί ορισμένο ΜΟΝΟ με επίθημα ΔΕΝ υπάρχει (ο runtime δεν το λύνει)', () => {
+    // ⛔ MUTATION: ξαναβάλε την αποδοχή επιθημάτων στο keyExists ⇒ κόκκινο.
+    expect(keyExists({ items_other: 'x' }, 'items')).toBe(false);
+    expect(keyExists({ items_one: 'x' }, 'items')).toBe(false);
   });
 
-  it('Π2 — και ο παρονομαστής: ανύπαρκτο παραμένει ανύπαρκτο', () => {
-    expect(keyExists({ items_other: 'x' }, 'other')).toBe(false);
+  it('Π2 — ο παρονομαστής: το ίδιο το κλειδί υπάρχει· το ανύπαρκτο μένει ανύπαρκτο', () => {
+    expect(keyExists({ items: '{count, plural, one {# x} other {# x}}' }, 'items')).toBe(true);
     expect(keyExists({}, 'items')).toBe(false);
   });
 
-  it('Π3 — εμφωλευμένη διαδρομή, με τον πληθυντικό στο ΤΕΛΕΥΤΑΙΟ τμήμα', () => {
-    expect(keyExists({ a: { b: { c_other: 'x' } } }, 'a.b.c')).toBe(true);
+  it('Π3 — εμφωλευμένη διαδρομή: μόνο το ακριβές φύλλο', () => {
+    expect(keyExists({ a: { b: { c: 'x' } } }, 'a.b.c')).toBe(true);
+    expect(keyExists({ a: { b: { c_other: 'x' } } }, 'a.b.c')).toBe(false);
     expect(keyExists({ a: { b: 'leaf' } }, 'a.b.c')).toBe(false);
   });
 
-  // ⚠️ Ο ΠΡΑΓΜΑΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: το `MissingFontBanner.tsx` έφυγε από τη baseline
-  // ακριβώς επειδή το κλειδί του ζει σε πληθυντική μορφή. Αν χαθεί η plural
-  // επίγνωση, το αρχείο ξαναεμφανίζεται — και ο αριθμός ξαναγίνεται 25.
-  // 🔑 Ο ΙΣΧΥΡΟΤΕΡΟΣ ΠΑΡΟΝΟΜΑΣΤΗΣ — ΠΡΑΓΜΑΤΙΚΟ locale, όχι fixture. Χωρίς αυτό, το
-  // Π1 θα μπορούσε να είναι πράσινο επειδή το `keyExists` λέει «ναι» σε οτιδήποτε.
-  // Εδώ το ΣΚΕΤΟ κλειδί όντως ΔΕΝ υπάρχει στο δέντρο, και **μόνο** ο πληθυντικός το
-  // κάνει υπαρκτό — δηλαδή αυτή είναι η ίδια η θεραπεία του 25/8 → 24/7.
-  it('Π5 — ο μάρτυρας: `textFonts.missingBanner.title` υπάρχει ΜΟΝΟ ως πληθυντικός', () => {
-    const locale = JSON.parse(fs.readFileSync(
-      path.join(__dirname, '..', '..', 'src', 'i18n', 'locales', 'el', 'textFonts.json'), 'utf8'));
-    expect(locale.missingBanner.title).toBeUndefined();
-    expect(locale.missingBanner.title_other).toBeDefined();
-    expect(keyExists(locale, 'missingBanner.title')).toBe(true);
-  });
-
-  it('Π6 — η λίστα καλύπτει όλες τις κατηγορίες CLDR που εκπέμπει το i18next', () => {
-    for (const sfx of ['_zero', '_one', '_two', '_few', '_many', '_other']) {
-      expect(I18NEXT_PLURAL_SUFFIXES).toContain(sfx);
+  it('Π5 — ο (πρώην) μάρτυρας: `textFonts.missingBanner.title` είναι ΕΝΑ κλειδί ICU, σε el ΚΑΙ en', () => {
+    for (const lang of ['el', 'en']) {
+      const locale = JSON.parse(fs.readFileSync(
+        path.join(__dirname, '..', '..', 'src', 'i18n', 'locales', lang, 'textFonts.json'), 'utf8'));
+      expect(locale.missingBanner.title).toEqual(expect.stringContaining('{count, plural,'));
+      expect(locale.missingBanner.title_other).toBeUndefined();
+      expect(keyExists(locale, 'missingBanner.title')).toBe(true);
     }
   });
 

@@ -19,6 +19,9 @@
 # PATTERN: {{word}} — matches i18next double-brace interpolation
 # VALID:   {word}   — ICU single-brace interpolation
 # VALID:   {count, plural, =1 {one} other {{count} items}} — ICU plural (nested braces)
+#
+# ΚΑΝΟΝΑΣ 2 (ZERO TOL): κανένα κλειδί με επίθημα πληθυντικού (`foo_one`, `foo_other` …) —
+# βλ. scripts/lib/i18n-runtime-dialect.js (η μία λίστα, η μέτρηση, ο λόγος).
 # =============================================================================
 
 RED='\033[0;31m'
@@ -93,6 +96,14 @@ for file in $FILES; do
     fi
     HAS_BLOCK=1
 done
+
+# ── ΚΑΝΟΝΑΣ 2 (ZERO TOL, ADR-867 2026-09-22): κλειδί με επίθημα πληθυντικού (`foo_one` / `foo_other` …) ──
+# Το i18next-icu ΔΕΝ τα λύνει: με βάση δίπλα ⇒ πάντα η βάση («1 αδιάβαστες»), χωρίς βάση ⇒ ωμό κλειδί.
+# Η μία λίστα + η εξήγηση ζουν στο scripts/lib/i18n-runtime-dialect.js — ΜΗΝ τη ξαναγράψεις εδώ σε regex.
+if ! node scripts/lib/i18n-runtime-dialect.js $FILES; then
+    echo -e "${RED}  ❌ ICU plural: κλειδί με επίθημα _one/_other — ο πληθυντικός γράφεται ΜΕΣΑ στο κλειδί (ICU)${NC}"
+    HAS_BLOCK=1
+fi
 
 if [[ -n "$RATCHET_UPDATES" ]]; then
     echo -e "${GREEN}  📉 ICU ratchet improvements:${RATCHET_UPDATES}${NC}"

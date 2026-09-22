@@ -36,7 +36,7 @@ export function useBuildingsTrashState({
     forceDataRefresh,
     clearSelection,
     notifyRestored: count =>
-      showSuccess(count === 1 ? t('restoreSuccess_one') : t('restoreSuccess', { count })),
+      showSuccess(t('restoreSuccess', { count })),
   });
 
   return useMemo(

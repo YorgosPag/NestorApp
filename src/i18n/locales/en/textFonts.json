@@ -23,13 +23,11 @@
     "invalidFormat": "Unsupported format. Allowed: TTF, OTF, WOFF, WOFF2, SHX"
   },
   "missingBanner": {
-    "title_one": "{count} font not found",
-    "title_other": "{count} fonts not found",
+    "title": "{count, plural, one {# font not found} other {# fonts not found}}",
     "subtitle": "Automatically replaced with similar fonts.",
     "viewAffected": "View affected",
     "upload": "Upload",
     "dismiss": "Dismiss",
-    "affectedCount_one": "{count} entity affected",
-    "affectedCount_other": "{count} entities affected"
+    "affectedCount": "{count, plural, one {# entity affected} other {# entities affected}}"
   }
 }

@@ -505,8 +505,7 @@
       "confirmDelete": "Διαγραφή σχολίου;",
       "closeAria": "Κλείσιμο σχολίων",
       "internalOnly": "Εσωτερικά — μη ορατά στον προμηθευτή",
-      "count_one": "{count} σχόλιο",
-      "count_other": "{count} σχόλια"
+      "count": "{count, plural, one {# σχόλιο} other {# σχόλια}}"
     },
     "history": {
       "title": "Ιστορικό Αλλαγών",

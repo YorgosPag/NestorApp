@@ -380,12 +380,8 @@
       "createWorkspace": "Create my office workspace"
     },
     "unread": {
-      "threads": "{count} unread conversations",
-      "threads_one": "{count} unread conversation",
-      "threads_other": "{count} unread conversations",
-      "threadsAtLeast": "at least {count} unread conversations",
-      "threadsAtLeast_one": "at least {count} unread conversation",
-      "threadsAtLeast_other": "at least {count} unread conversations"
+      "threads": "{count, plural, one {# unread conversation} other {# unread conversations}}",
+      "threadsAtLeast": "{count, plural, one {at least # unread conversation} other {at least # unread conversations}}"
     }
   },
   "legal": {

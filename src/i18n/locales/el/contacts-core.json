@@ -291,8 +291,7 @@
       "byChannel": "Ανά Κανάλι"
     },
     "entry": {
-      "photosShared": "{count} φωτογραφία κοινοποιήθηκε",
-      "photosShared_plural": "{count} φωτογραφίες κοινοποιήθηκαν",
+      "photosShared": "{count, plural, one {# φωτογραφία κοινοποιήθηκε} other {# φωτογραφίες κοινοποιήθηκαν}}",
       "via": "μέσω {channel}",
       "status": {
         "sent": "Εστάλη",
