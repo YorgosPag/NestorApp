@@ -19,6 +19,7 @@ import {
   type NetworkAway,
 } from '@/services/network-messaging/network-away';
 import type { NetworkAudienceEntry } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 
 const NOW = '2026-09-18T10:00:00.000Z';
 const TOMORROW = '2026-09-19T10:00:00.000Z';
@@ -36,6 +37,7 @@ const row = (uid: string, over: Partial<NetworkAudienceEntry> = {}): NetworkAudi
   muted: false,
   following: false,
   threadActivityAt: YESTERDAY,
+  tenureHistory: NO_EARLIER_TENURES,
   alsoHostRole: null,
   ...over,
 });

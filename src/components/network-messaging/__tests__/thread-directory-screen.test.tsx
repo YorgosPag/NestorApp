@@ -26,6 +26,7 @@ import userEvent from '@testing-library/user-event';
 
 import { directoryItem, THREAD_DIRECTORY_INDEX } from '@/services/network-messaging/thread-directory';
 import type { NetworkAudienceEntry, NetworkThread } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 import type { NetworkThreadListItem } from '@/types/network-wire';
 
 import { NetworkThreadDirectoryContent } from '../NetworkThreadDirectoryContent';
@@ -72,6 +73,7 @@ function entry(patch: Partial<NetworkAudienceEntry> = {}): NetworkAudienceEntry 
     following: false,
     alsoHostRole: null,
     threadActivityAt: '2026-09-19T10:00:00.000Z',
+    tenureHistory: NO_EARLIER_TENURES,
     ...patch,
   } as NetworkAudienceEntry;
 }

@@ -30,6 +30,7 @@ import {
   type UserNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { NetworkAudienceSeat } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 import { networkUnreadKey, readNotificationEmailFacts } from '@/types/notification-email-facts';
 
 const settings = (patch: Partial<UserNotificationSettings> = {}): UserNotificationSettings =>
@@ -132,6 +133,7 @@ function entry(patch: Partial<NetworkAudienceSeat> = {}): NetworkAudienceSeat {
   return {
     uid: 'u1', side: 'host', role: 'responsible', reason: 'creator', addedBy: 'u1',
     since: '2026-09-01T00:00:00.000Z', until: null, lastReadAt: null, muted: false, following: false, threadActivityAt: SINCE, alsoHostRole: null,
+    tenureHistory: NO_EARLIER_TENURES,
     ...patch,
   };
 }

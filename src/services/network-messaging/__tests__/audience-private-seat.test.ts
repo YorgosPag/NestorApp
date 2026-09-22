@@ -22,7 +22,7 @@ import { joinAudienceSeats, legacyPrivateResidue } from '@/services/network-mess
 import { networkUnreadStillPending } from '@/services/network-messaging/network-unread-email';
 import { listNetworkThreads } from '@/services/network-messaging/thread-directory';
 import { moveLegacyPrivateSeat } from '@/services/network-messaging/thread-writer';
-import { NETWORK_AUDIENCE_PRIVATE_DEFAULTS } from '@/types/network-thread';
+import { NETWORK_AUDIENCE_PRIVATE_DEFAULTS, NO_EARLIER_TENURES } from '@/types/network-thread';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { privateFieldsOnPublicRows, privateSideOf, seedPrivateSide } from './audience-private-fixture';
@@ -46,6 +46,7 @@ const publicRow = (uid: string, side: 'host' | 'counterpart', extra: Record<stri
   since: BORN,
   until: null,
   threadActivityAt: LATER,
+  tenureHistory: NO_EARLIER_TENURES,
   alsoHostRole: null,
   ...extra,
 });

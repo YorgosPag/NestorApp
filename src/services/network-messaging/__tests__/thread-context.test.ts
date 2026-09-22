@@ -20,6 +20,7 @@ import { mandateActSeed } from '@/lib/network-edge/edge-sources';
 import { actNetworkRefs } from '@/lib/network-messaging/act-network-refs';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import type { NetworkAudienceEntry, NetworkThread } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 
 import { readThreadContext } from '../thread-context';
 
@@ -56,6 +57,7 @@ function seat(uid: string, side: NetworkAudienceEntry['side']): NetworkAudienceE
     following: false,
     alsoHostRole: null,
     threadActivityAt: NOW,
+    tenureHistory: NO_EARLIER_TENURES,
   } as NetworkAudienceEntry;
 }
 

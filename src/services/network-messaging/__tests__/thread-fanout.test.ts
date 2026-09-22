@@ -29,6 +29,7 @@ import {
 } from '@/services/network-messaging/thread-directory';
 import { ensureActThread } from '@/services/network-messaging/thread-writer';
 import type { NetworkAudienceEntry, NetworkAudienceSeat, NetworkThread } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 
 import { privateFieldsOnPublicRows, privateSideOf } from './audience-private-fixture';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -153,6 +154,7 @@ describe('Κ — τα καθαρά κομμάτια του καταλόγου', 
     muted: false,
     following: false,
     threadActivityAt: T1,
+    tenureHistory: NO_EARLIER_TENURES,
     alsoHostRole: null,
   };
 

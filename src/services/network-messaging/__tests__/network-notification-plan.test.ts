@@ -19,6 +19,7 @@
  */
 
 import type { NetworkAudienceEntry } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 
 import type { NetworkAway } from '../network-away';
 import {
@@ -48,6 +49,7 @@ function row(uid: string, patch: Partial<NetworkAudienceEntry> = {}): NetworkAud
     muted: false,
     following: false,
     threadActivityAt: NOW,
+    tenureHistory: NO_EARLIER_TENURES,
     alsoHostRole: null,
   };
   return { ...base, ...patch };
