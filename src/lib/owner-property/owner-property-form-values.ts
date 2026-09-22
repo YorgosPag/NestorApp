@@ -180,6 +180,23 @@ export const ownerPropertyFormSchema = z.object({
       kind: z.enum(LISTING_MATERIAL_KINDS).optional(),
     }),
   ),
+
+  /**
+   * **Η ΔΗΛΩΣΗ ΔΗΜΟΣΙΕΥΣΗΣ ΑΠΟ ΤΟΝ ΦΑΚΕΛΟ** (ADR-866 Φ1.3β · §2.7.4) — ταυτότητες `FileRecord`, **με σειρά**.
+   *
+   * 🔴 **ΤΡΕΙΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΙ ΟΙ ΔΥΟ «ΚΕΝΕΣ» ΔΕΝ ΕΙΝΑΙ Η ΙΔΙΑ** — το ίδιο ιδίωμα με το `type` (`null` του
+   * εγγράφου ≠ `''` της οθόνης):
+   * · **απόν/`null`** ⇒ *«αυτή η φόρμα δεν έχει φάκελο»* (παλιά αγγελία · αγγελία γραφείου · προσχέδιο έκδοσης 1)
+   *   ⇒ το προσχέδιο **δεν** κουβαλά το πεδίο, και το `media[]` μένει η αλήθεια (dual-read, §2.11.2 Δ4)·
+   * · **`[]`** ⇒ *«έχω φάκελο και δεν δήλωσα τίποτα»* ⇒ **ταξιδεύει** στον διακομιστή, γιατί είναι η **μόνη**
+   *   διατύπωση με την οποία ο άνθρωπος μπορεί να **αποσύρει** ό,τι είχε δηλώσει (το PATCH είναι
+   *   `{...existing, ...draft}` — παράλειψη σημαίνει «κράτα ό,τι είχες», όχι «τίποτα»).
+   *
+   * ⚠️ **Καμία επικύρωση περιεχομένου εδώ**: το «ανήκει στον φάκελο;» το απαντά ο αναγνώστης της δημοσίευσης
+   * ({@link publishedDossierFiles}, που ξαναρωτά `entityId`+`userId`), και το όριο ραφιού το σχήμα του αιτήματος.
+   * Μια τρίτη κρίση εδώ θα ήταν η πρώτη που θα χαλάρωνε.
+   */
+  publishedFileIds: z.array(z.string()).nullable().optional(),
 });
 
 export type OwnerPropertyFormValues = z.input<typeof ownerPropertyFormSchema>;
@@ -218,6 +235,9 @@ export const EMPTY_OWNER_PROPERTY_FORM: OwnerPropertyFormValues = {
   placeAccuracy: null,
   placeRef: null,
   media: [],
+  // ⚠️ `null`, **όχι `[]`**: η κενή φόρμα δεν ξέρει ακόμη αν θα έχει φάκελο — το λέει η οθόνη που την ανοίγει
+  //    (δημιουργία ιδιώτη ⇒ ναι· γραφείο και επεξεργασία παλιάς αγγελίας ⇒ όχι).
+  publishedFileIds: null,
 };
 
 // =============================================================================
@@ -349,6 +369,10 @@ export function ownerPropertyDraftFrom(
     offers: [...values.offerKinds].sort().map((kind) => offerFrom(kind, values, source)),
     place: placeFrom(values),
     media: values.media as readonly OwnerPropertyMedia[],
+    // 🔑 **Απόν μένει απόν** (ADR-866 §2.11.3): μόνο φόρμα **με φάκελο** κουβαλά δήλωση. Ένα `publishedFileIds: []`
+    //    σε αγγελία χωρίς φάκελο θα έγραφε πεδίο που κανείς δεν διαβάζει — ο διακόπτης dual-read είναι η **ύπαρξη
+    //    φακέλου**, όχι η ύπαρξη δήλωσης (Δ4).
+    ...(values.publishedFileIds ? { publishedFileIds: [...values.publishedFileIds] } : {}),
   };
 }
 
@@ -409,6 +433,12 @@ export function ownerPropertyFormFrom(
     placeAccuracy: declared?.accuracy ?? null,
     placeRef: declared?.link ?? null,
     media: property.media.map((item) => ({ ...item })),
+    /**
+     * 🔑 **Ο διακόπτης είναι ο ΦΑΚΕΛΟΣ, όχι η δήλωση** (ADR-866 §2.11.2 Δ4): αγγελία με φάκελο και **κενή** δήλωση
+     * ανοίγει τη φόρμα στο `[]` (*«δεν έχω διαλέξει τίποτα»*) και **όχι** στο `null`, γιατί αλλιώς η πρώτη
+     * αποθήκευση θα παρέλειπε το πεδίο και το PATCH θα **ανάσταινε** ό,τι ο άνθρωπος μόλις ξεδιάλεξε.
+     */
+    publishedFileIds: property.dossierId === undefined ? null : [...(property.publishedFileIds ?? [])],
   };
 }
 

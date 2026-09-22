@@ -58,8 +58,20 @@ export interface DossierMediaRead {
 /**
  * **Οι καρτέλες που ΜΠΟΡΟΥΝ να φύγουν στη βιτρίνα**, με σειρά προτεραιότητας.
  * ⛔ Έγγραφα (συμβόλαια, ΠΕΑ, τίτλοι) και βίντεο **δεν** φεύγουν — ο δημόσιος πίνακας έχει μόνο `gallery` και `floorplans`.
+ *
+ * 🔑 **Εξάγεται για τη ΦΟΡΜΑ** (Φ1.3β): η οθόνη που ζητά τη δήλωση προσφέρει **ακριβώς** όσα μπορεί να δημοσιεύσει ο
+ * γραφέας. Μια δεύτερη λίστα εκεί θα ήταν η ημέρα που η φόρμα προσφέρει βίντεο και η βιτρίνα το αγνοεί σιωπηλά.
  */
-const PUBLISHABLE_TABS: readonly PropertyDossierFileTab[] = ['photos', 'floorplan'];
+export const PUBLISHABLE_TABS = ['photos', 'floorplan'] as const satisfies readonly PropertyDossierFileTab[];
+
+/**
+ * Μια καρτέλα που **μπορεί** να φύγει στη βιτρίνα — ο τύπος που κρατά τη φόρμα ευθυγραμμισμένη με τον γραφέα.
+ *
+ * ⚠️ **`as const satisfies`, ΟΧΙ σχολιασμός τύπου**: ένα `: readonly PropertyDossierFileTab[]` θα **φάρδαινε** τον
+ * τύπο σε **και τις τέσσερις** καρτέλες, και αυτός ο τύπος θα επέτρεπε στη φόρμα να ζητήσει ανέβασμα σε «Έγγραφα»
+ * — δηλαδή ακριβώς αυτό που η λίστα υπάρχει για να αποκλείσει. Το `satisfies` κρατά **και** τον έλεγχο **και** το στένεμα.
+ */
+export type PublishableDossierTab = (typeof PUBLISHABLE_TABS)[number];
 
 const DOSSIER_ENTITY_TYPE = ENTITY_TYPES.PROPERTY_DOSSIER;
 

@@ -165,15 +165,29 @@ export function newOwnerPropertyId(): string {
   return enterpriseIdService.generateOwnerPropertyId();
 }
 
-/** **Νέα αγγελία** — γράφεται και δημοσιεύεται στην ίδια πράξη διακομιστή. */
+/**
+ * **Νέα αγγελία** — γράφεται και δημοσιεύεται στην ίδια πράξη διακομιστή.
+ *
+ * @param dossierId — ο **φάκελος** που προ-γέννησε η φόρμα (ADR-866 Φ1.3β). Ο διακομιστής τον **γεννά ή τον
+ *   συνδέει** μέσα στη συναλλαγή της αγγελίας (`stagePropertyDossierForListing`) ⇒ καμία στιγμή όπου η αγγελία
+ *   δείχνει σε φάκελο που δεν υπάρχει.
+ *
+ *   🔴 **Χωριστό όρισμα, ΟΧΙ πεδίο του προσχεδίου** (§2.11.2 Δ2): είναι **ταυτότητα** που κόβει ο πελάτης, όχι
+ *   απάντηση του ανθρώπου — και έτσι το PATCH (`{...existing, ...draft}`) **δεν μπορεί** να την αλλάξει, στη
+ *   μεταγλώττιση και όχι με έλεγχο.
+ */
 export async function createOwnerListing(
   ownerPropertyId: string,
   draft: OwnerPropertyDraft,
+  dossierId: string | null = null,
 ): Promise<OwnerListingResult> {
   try {
     const payload = await apiClient.post<WriteResponse>(API_BASE, {
       id: ownerPropertyId,
       ...draft,
+      // ⚠️ **Κλειδί που λείπει όταν δεν υπάρχει φάκελος** — η πόρτα διαβάζει «απόν ⇒ χωρίς φάκελο» (Δ4) και ένα
+      //    ρητό `null` θα ήταν δεύτερη γραφή της ίδιας απουσίας.
+      ...(dossierId === null ? {} : { dossierId }),
     });
     return { kind: 'saved', ...payload };
   } catch (cause) {

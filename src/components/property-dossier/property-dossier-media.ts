@@ -85,12 +85,16 @@ export function propertyDossierMediaTab(tab: PropertyDossierFileTab, type: Prope
  * βλέπει στην καρτέλα «Τοπογραφικό» **δεν** θα δημοσιευόταν ποτέ ως τέτοιο.
  *
  * @param tabs — οι καρτέλες που ρωτά ο καλών, **με σειρά προτεραιότητας** (πρώτη που ταιριάζει).
+ *
+ * 🔑 **Γενικό στο `tabs`, ώστε η απάντηση να είναι ΤΟΣΟ στενή όσο η ερώτηση**: όποιος ρωτά μόνο για τις καρτέλες που
+ * δημοσιεύονται (`PUBLISHABLE_TABS`) παίρνει πίσω **αυτές**, όχι όλο το λεξιλόγιο — και δεν χρειάζεται `as` για να
+ * το πει (N.2). Η προσθήκη έγινε στη Φ1.3β, όταν η φόρμα έγινε ο δεύτερος καταναλωτής.
  */
-export function propertyDossierFileTabOf(
+export function propertyDossierFileTabOf<T extends PropertyDossierFileTab>(
   dossier: Pick<PropertyDossier, 'id' | 'label' | 'userId' | 'type'>,
   file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>,
-  tabs: readonly PropertyDossierFileTab[],
-): PropertyDossierFileTab | null {
+  tabs: readonly T[],
+): T | null {
   const binding = propertyDossierMediaBinding(dossier);
   const match = tabs.find((tab) => {
     const scopes = mediaTabScopePolicy(binding, propertyDossierMediaTab(tab, dossier.type))?.readScopes;

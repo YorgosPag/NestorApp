@@ -29,6 +29,8 @@ import { STORAGE_KEYS } from '@/lib/storage';
 import { useOwnerPropertyDraftMemory } from '@/hooks/owner-property/useOwnerPropertyDraftMemory';
 
 const DRAFT_ID = 'ownp_bc548607-c39e-4926-92f8-69ab833d59a2';
+/** Ο **φάκελος** που προ-γεννά η φόρμα δίπλα στην αγγελία (ADR-866 Φ1.3β). */
+const DOSSIER_ID = 'pdos_3f1c2d90-4a8b-4c77-9e21-5b6d7a8f0c13';
 
 function someValues(): OwnerPropertyFormValues {
   return {
@@ -55,7 +57,7 @@ beforeEach(() => localStorage.clear());
 
 describe('Ν — η μνήμη του προσχεδίου', () => {
   it('Ν1 — ό,τι θυμήθηκε επιστρέφει αυτούσιο, ΜΑΖΙ με την ταυτότητα', () => {
-    rememberOwnerPropertyDraft(DRAFT_ID, someValues());
+    rememberOwnerPropertyDraft(DRAFT_ID, null, someValues());
     const recalled = recallOwnerPropertyDraft();
 
     expect(recalled).not.toBeNull();
@@ -71,7 +73,7 @@ describe('Ν — η μνήμη του προσχεδίου', () => {
   });
 
   it('Ν3 — μετά τη λήθη δεν επιστρέφει τίποτα (η υποβολή που πέτυχε δεν αφήνει «ημιτελές»)', () => {
-    rememberOwnerPropertyDraft(DRAFT_ID, someValues());
+    rememberOwnerPropertyDraft(DRAFT_ID, null, someValues());
     forgetOwnerPropertyDraft();
     expect(recallOwnerPropertyDraft()).toBeNull();
   });
@@ -121,6 +123,51 @@ describe('Ν — η μνήμη του προσχεδίου', () => {
     localStorage.setItem(STORAGE_KEYS.OWNER_PROPERTY_DRAFT, 'δεν είναι json');
     expect(recallOwnerPropertyDraft()).toBeNull();
   });
+
+  // ===========================================================================
+  // Α42.1 — Ο ΦΑΚΕΛΟΣ ΕΠΙΒΙΩΝΕΙ ΜΑΖΙ ΜΕ ΤΗΝ ΑΓΓΕΛΙΑ (ADR-866 Φ1.3β)
+  // ===========================================================================
+
+  it('Ν8 — 🔴 ΚΑΙ ΟΙ ΔΥΟ ταυτότητες επιστρέφουν: αγγελία **και** φάκελος', () => {
+    // Χωρίς αυτό, ο άνθρωπος που γύρισε από τη σύνδεση θα έκοβε **νέο** φάκελο και ό,τι
+    // είχε ήδη ανεβάσει θα έμενε σε φάκελο που η αγγελία **δεν δηλώνει** — ορφανό με άλλο πρόσωπο.
+    rememberOwnerPropertyDraft(DRAFT_ID, DOSSIER_ID, someValues());
+    const recalled = recallOwnerPropertyDraft();
+
+    expect(recalled?.draftId).toBe(DRAFT_ID);
+    expect(recalled?.dossierId).toBe(DOSSIER_ID);
+  });
+
+  it('Ν9 — 🔑 ΑΝΟΧΗ ΠΑΛΙΟΥ ΠΡΟΧΕΙΡΟΥ: έκδοση 1 (χωρίς φάκελο) ΕΠΑΝΑΦΕΡΕΤΑΙ', () => {
+    // Η έκδοση 1 γράφτηκε **πριν** υπάρξει φάκελος ⇒ η απουσία διαβάζεται **σωστά**, δεν
+    // μαντεύεται. Απόρριψή της θα πετούσε δουλειά που ο άνθρωπος πληκτρολόγησε για πεδίο
+    // που δεν υπήρχε όταν την έγραψε.
+    writeRaw({ version: 1, draftId: DRAFT_ID, values: someValues() });
+    const recalled = recallOwnerPropertyDraft();
+
+    expect(recalled?.draftId).toBe(DRAFT_ID);
+    expect(recalled?.dossierId).toBeNull();
+  });
+
+  it('Ν10 — 🔴 ΑΣΦΑΛΕΙΑ: άκυρος φάκελος ⇒ `null`, ΧΩΡΙΣ να πέσει το προσχέδιο', () => {
+    // Το `dossierId` καταλήγει σε διαδρομή `people/{uid}/entities/property_dossier/{pdos}/…`,
+    // άρα κρίνεται από τον **ίδιο** κριτή με το δίκτυο. Αλλά η πληκτρολογημένη δουλειά **δεν**
+    // χάνεται επειδή χάλασε μια ταυτότητα που κανείς δεν πρόλαβε να χρησιμοποιήσει.
+    for (const evil of ['../../etc/passwd', 'pdos_../..', DRAFT_ID, '', 7]) {
+      writeRaw({ version: 2, draftId: DRAFT_ID, dossierId: evil, values: someValues() });
+      const recalled = recallOwnerPropertyDraft();
+
+      expect(recalled?.draftId).toBe(DRAFT_ID);
+      expect(recalled?.dossierId).toBeNull();
+    }
+  });
+
+  it('Ν11 — η δήλωση δημοσίευσης ταξιδεύει ΜΕΣΑ στις τιμές (είναι περιεχόμενο, όχι ταυτότητα)', () => {
+    const values = { ...someValues(), publishedFileIds: ['file_a', 'file_b'] };
+    rememberOwnerPropertyDraft(DRAFT_ID, DOSSIER_ID, values);
+
+    expect(recallOwnerPropertyDraft()?.values.publishedFileIds).toEqual(['file_a', 'file_b']);
+  });
 });
 
 // =============================================================================
@@ -129,7 +176,7 @@ describe('Ν — η μνήμη του προσχεδίου', () => {
 
 describe('Ρ — useOwnerPropertyDraftMemory', () => {
   it('Ρ1 — δημιουργία: επαναφέρει, και ΤΟ ΛΕΕΙ (η επαναφορά δεν είναι σιωπηλή)', () => {
-    rememberOwnerPropertyDraft(DRAFT_ID, someValues());
+    rememberOwnerPropertyDraft(DRAFT_ID, null, someValues());
     const { result } = renderHook(() => useOwnerPropertyDraftMemory(null));
 
     expect(result.current.restored?.draftId).toBe(DRAFT_ID);
@@ -137,7 +184,7 @@ describe('Ρ — useOwnerPropertyDraftMemory', () => {
   });
 
   it('Ρ2 — 🔴 ΕΠΕΞΕΡΓΑΣΙΑ: ΠΟΤΕ δεν επαναφέρει (θα έγραφε ημιτελή πάνω σε δημοσιευμένη)', () => {
-    rememberOwnerPropertyDraft(DRAFT_ID, someValues());
+    rememberOwnerPropertyDraft(DRAFT_ID, null, someValues());
     const { result } = renderHook(() => useOwnerPropertyDraftMemory('ownp_άλλη'));
 
     expect(result.current.restored).toBeNull();
@@ -145,7 +192,7 @@ describe('Ρ — useOwnerPropertyDraftMemory', () => {
   });
 
   it('Ρ3 — «κράτα το» κρύβει την ειδοποίηση ΧΩΡΙΣ να σβήσει τη μνήμη', () => {
-    rememberOwnerPropertyDraft(DRAFT_ID, someValues());
+    rememberOwnerPropertyDraft(DRAFT_ID, null, someValues());
     const { result } = renderHook(() => useOwnerPropertyDraftMemory(null));
 
     act(() => result.current.acknowledge());
@@ -161,13 +208,13 @@ describe('Ρ — useOwnerPropertyDraftMemory', () => {
     const { result } = renderHook(() => useOwnerPropertyDraftMemory(null));
 
     act(() => result.current.forget());
-    act(() => result.current.remember(DRAFT_ID, someValues()));
+    act(() => result.current.remember(DRAFT_ID, null, someValues()));
 
     expect(recallOwnerPropertyDraft()).toBeNull();
   });
 
   it('Ρ4 — «ξεκίνα από την αρχή» ΣΒΗΝΕΙ (αλλιώς θα επανερχόταν στην επόμενη επίσκεψη)', () => {
-    rememberOwnerPropertyDraft(DRAFT_ID, someValues());
+    rememberOwnerPropertyDraft(DRAFT_ID, null, someValues());
     const { result } = renderHook(() => useOwnerPropertyDraftMemory(null));
 
     act(() => result.current.forget());

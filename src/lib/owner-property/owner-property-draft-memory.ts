@@ -77,6 +77,7 @@ import {
   type OwnerPropertyFormValues,
 } from './owner-property-form-values';
 import { ownerPropertyIdFromRequest } from './owner-property-draft-schema';
+import { propertyDossierIdFrom } from '@/lib/property-dossier/property-dossier-request-schema';
 
 /**
  * Η έκδοση του **σχήματος αποθήκευσης**, όχι του σχήματος της φόρμας.
@@ -86,11 +87,32 @@ import { ownerPropertyIdFromRequest } from './owner-property-draft-schema';
  * **νόημα** (π.χ. ένα πεδίο που κράταγε τετραγωνικά και τώρα κρατά στρέμματα). Το
  * πρώτο είναι σφάλμα τύπου, το δεύτερο σιωπηλό λάθος δεδομένων.
  */
-const MEMORY_VERSION = 1;
+const MEMORY_VERSION = 2;
+
+/**
+ * **Οι εκδόσεις που ΔΙΑΒΑΖΟΝΤΑΙ ακόμη** — η τρέχουσα και όσες παλιές έχουν **σωστή ανάγνωση χωρίς μαντεψιά**.
+ *
+ * 🔑 **Η `1` δεν πετιέται, και δεν είναι επιείκεια**: γράφτηκε πριν υπάρξει φάκελος ακινήτου, άρα ένα προσχέδιο
+ * εκείνης της έκδοσης **όντως** δεν έχει φάκελο — η απουσία διαβάζεται σωστά, δεν συμπληρώνεται. Το να την
+ * απορρίπταμε θα πετούσε **δουλειά που ο άνθρωπος πληκτρολόγησε** για ένα πεδίο που δεν υπήρχε όταν την έγραφε.
+ *
+ * ⚠️ **Η επόμενη αλλαγή που αλλάζει ΝΟΗΜΑ πεδίου κόβει τη λίστα σε ένα μέλος** — η ανοχή είναι για **προσθήκη**,
+ * ποτέ για μετατόπιση σημασίας (δες το σκεπτικό του {@link MEMORY_VERSION}).
+ */
+const READABLE_MEMORY_VERSIONS: readonly number[] = [1, MEMORY_VERSION];
 
 /** Τι ακριβώς επιβίωσε από την προηγούμενη επίσκεψη. */
 export interface RememberedOwnerPropertyDraft {
   readonly draftId: string;
+  /**
+   * Ο **φάκελος** που προ-γέννησε η φόρμα (ADR-866 Φ1.3β) — `null` όταν δεν υπάρχει (παλιό προσχέδιο, έκδοση 1).
+   *
+   * 🔴 **Δεύτερο πεδίο δίπλα στο `draftId`, ΟΧΙ μέσα στις τιμές**, για τον **ίδιο** λόγο που το `draftId` είναι εκεί:
+   * είναι **ταυτότητα** που κόβεται μία φορά, όχι απάντηση που πληκτρολόγησε ο άνθρωπος (ADR-866 §2.11.2 Δ2). Και
+   * είναι η **μισή ουσία** της επαναφοράς: αν γυρνώντας από τη σύνδεση κοβόταν **νέος** φάκελος, ό,τι είχε ήδη
+   * ανέβει θα έμενε σε φάκελο που η αγγελία **δεν δηλώνει** — ορφανό με άλλο πρόσωπο.
+   */
+  readonly dossierId: string | null;
   readonly values: OwnerPropertyFormValues;
 }
 
@@ -104,11 +126,15 @@ export interface RememberedOwnerPropertyDraft {
  */
 export function rememberOwnerPropertyDraft(
   draftId: string,
+  dossierId: string | null,
   values: OwnerPropertyFormValues,
 ): void {
   safeSetItem(STORAGE_KEYS.OWNER_PROPERTY_DRAFT, {
     version: MEMORY_VERSION,
     draftId,
+    // ⚠️ **Κλειδί που ΛΕΙΠΕΙ, ποτέ `dossierId: null`**: η ανάγνωση ρωτά τον ίδιο κριτή με το δίκτυο, και το `null`
+    //    θα ήταν δεύτερη γραφή της ίδιας απουσίας — μία να την παράγει, μία να τη διαβάζει.
+    ...(dossierId === null ? {} : { dossierId }),
     values,
   });
 }
@@ -128,17 +154,28 @@ export function recallOwnerPropertyDraft(): RememberedOwnerPropertyDraft | null 
   const stored = safeGetItem<unknown>(STORAGE_KEYS.OWNER_PROPERTY_DRAFT, null);
   if (stored === null || typeof stored !== 'object') return null;
 
-  const memory = stored as Partial<{ version: number; draftId: string; values: unknown }>;
-  if (memory.version !== MEMORY_VERSION) return null;
+  const memory = stored as Partial<{
+    version: number;
+    draftId: string;
+    dossierId: unknown;
+    values: unknown;
+  }>;
+  if (typeof memory.version !== 'number' || !READABLE_MEMORY_VERSIONS.includes(memory.version)) return null;
   const draftId = ownerPropertyIdFromRequest(memory.draftId);
   if (draftId === null) return null;
+
+  // 🔑 **Ο ίδιος κριτής που κρίνει το δίκτυο** (`propertyDossierIdFrom`), για τον λόγο που τεκμηριώνεται από πάνω για
+  //    το `draftId`: το `localStorage` είναι επεξεργάσιμο από τον χρήστη και η ταυτότητα καταλήγει σε **διαδρομή
+  //    αποθήκευσης**. Σκουπίδι ⇒ `null` (κόβεται νέος), ποτέ **απόρριψη ολόκληρου** του προσχεδίου: η πληκτρολογημένη
+  //    δουλειά δεν χάνεται επειδή χάλασε μια ταυτότητα που κανείς δεν πρόλαβε να χρησιμοποιήσει.
+  const dossierId = memory.dossierId === undefined ? null : propertyDossierIdFrom(memory.dossierId);
 
   // 🔑 Ο **ίδιος** κριτής που κρίνει ό,τι πληκτρολογείται ζωντανά. Αν δεν περνά,
   // δεν είναι προσχέδιο — είναι σκουπίδι που μοιάζει με προσχέδιο.
   const parsed = ownerPropertyFormSchema.safeParse(memory.values);
   if (!parsed.success) return null;
 
-  return { draftId, values: memory.values as OwnerPropertyFormValues };
+  return { draftId, dossierId, values: memory.values as OwnerPropertyFormValues };
 }
 
 /**
