@@ -12,8 +12,7 @@ import { usePatchQuoteStatus } from '@/subapps/procurement/hooks/usePatchQuoteSt
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { useFirestoreStatus } from '@/hooks/useFirestoreStatus';
+import { useConnectivity } from '@/hooks/useConnectivity';
 import { toast } from 'sonner';
 import type { Quote } from '@/subapps/procurement/types/quote';
 
@@ -25,9 +24,7 @@ export default function QuotesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const isOnline = useOnlineStatus();
-  const isFirestoreConnected = useFirestoreStatus();
-  const isConnected = isOnline && isFirestoreConnected;
+  const isConnected = useConnectivity();
 
   const { quotes, loading } = useQuotes();
 

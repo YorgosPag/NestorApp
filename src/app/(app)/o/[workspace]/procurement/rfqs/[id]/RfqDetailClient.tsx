@@ -48,8 +48,7 @@ import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state
 import { rfqIsMultiTrade, type RFQ } from '@/subapps/procurement/types/rfq';
 import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
 import { OfflineBanner } from '@/subapps/procurement/components/OfflineBanner';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { useFirestoreStatus } from '@/hooks/useFirestoreStatus';
+import { useConnectivity } from '@/hooks/useConnectivity';
 interface RfqDetailClientProps {
   id: string;
 }
@@ -57,9 +56,7 @@ interface RfqDetailClientProps {
 export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const { t } = useTranslation('quotes');
   const router = useRouter();
-  const isOnline = useOnlineStatus();
-  const isFirestoreConnected = useFirestoreStatus();
-  const isConnected = isOnline && isFirestoreConnected;
+  const isConnected = useConnectivity();
   // Belt-and-suspenders: SC page.tsx has redirect() but Turbopack dev mode may skip it.
   useEffect(() => {
     if (id.startsWith('[')) {

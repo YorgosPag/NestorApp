@@ -16,6 +16,7 @@
 import 'server-only';
 
 import admin from 'firebase-admin';
+import { vendorPortalUrl, vendorDeclineUrl } from './vendor-portal-links';
 import { safeFirestoreOperation, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
@@ -79,18 +80,6 @@ async function fetchVendorContact(
 // =============================================================================
 // PORTAL URL
 // =============================================================================
-
-function getPortalBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://nestor-app.vercel.app';
-}
-
-function buildPortalUrl(token: string): string {
-  return `${getPortalBaseUrl()}/vendor/quote/${encodeURIComponent(token)}`;
-}
-
-function buildDeclineUrl(token: string): string {
-  return `${getPortalBaseUrl()}/vendor/quote/${encodeURIComponent(token)}/decline`;
-}
 
 // =============================================================================
 // CREATE
@@ -161,8 +150,8 @@ export async function createVendorInvite(
     recipient.vendorContactId,
     expiresInDays,
   );
-  const portalUrl = buildPortalUrl(generated.token);
-  const declineUrl = buildDeclineUrl(generated.token);
+  const portalUrl = vendorPortalUrl(generated.token);
+  const declineUrl = vendorDeclineUrl(generated.token);
 
   const requestedChannel: DeliveryChannel = dto.deliveryChannel;
   const channelDriver =
@@ -294,34 +283,41 @@ export async function getVendorInviteByToken(token: string): Promise<VendorInvit
   }, null);
 }
 
-export async function listVendorInvitesByRfq(
+/**
+ * Οι προσκλήσεις μιας εταιρείας, **φιλτραρισμένες σε ένα ακόμη πεδίο**, νεότερες πρώτα.
+ *
+ * ⚠️ **Το `companyId` μένει ΠΡΩΤΟ και δεν είναι παράμετρος**: είναι ο φράχτης μισθωτή
+ * (CHECK 3.10/3.35), όχι κριτήριο αναζήτησης. Παραμετροποιώντας **και** αυτόν, το επόμενο
+ * κάλεσμα θα μπορούσε να τον παραλείψει — ακριβώς η διαρροή που η πύλη υπάρχει για να κόψει.
+ */
+function listInvitesWhere(
   companyId: string,
-  rfqId: string,
+  field: 'rfqId' | 'vendorContactId',
+  value: string,
 ): Promise<VendorInvite[]> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.VENDOR_INVITES)
       .where('companyId', '==', companyId)
-      .where('rfqId', '==', rfqId)
+      .where(field, '==', value)
       .orderBy('createdAt', 'desc')
       .get();
     return snap.docs.map((d) => ({ id: d.id, ...d.data() } as VendorInvite));
   }, []);
 }
 
-export async function listVendorInvitesByVendor(
+export function listVendorInvitesByRfq(
+  companyId: string,
+  rfqId: string,
+): Promise<VendorInvite[]> {
+  return listInvitesWhere(companyId, 'rfqId', rfqId);
+}
+
+export function listVendorInvitesByVendor(
   companyId: string,
   vendorContactId: string,
 ): Promise<VendorInvite[]> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.VENDOR_INVITES)
-      .where('companyId', '==', companyId)
-      .where('vendorContactId', '==', vendorContactId)
-      .orderBy('createdAt', 'desc')
-      .get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as VendorInvite));
-  }, []);
+  return listInvitesWhere(companyId, 'vendorContactId', vendorContactId);
 }
 
 // =============================================================================
@@ -448,10 +444,10 @@ export async function resendVendorInvite(
     recipient: recipientEmail,
     rfqTitle: rfq.title,
     projectName: null,
-    portalUrl: buildPortalUrl(invite.token),
+    portalUrl: vendorPortalUrl(invite.token),
     expiresAt: expiresDate.toISOString(),
     locale: options.locale ?? 'el',
-    declineUrl: buildDeclineUrl(invite.token),
+    declineUrl: vendorDeclineUrl(invite.token),
   });
 
   if (dispatch.success && invite.status === 'pending') {

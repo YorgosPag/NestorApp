@@ -24,21 +24,12 @@ import { recomputeSourcingEventStatus } from './sourcing-event-service';
 import { emailVendorInviteChannel } from './channels/email-channel';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
 
+import { vendorPortalUrl, vendorDeclineUrl } from './vendor-portal-links';
 const logger = createModuleLogger('RFQ_SERVICE');
 
 // ============================================================================
 // EMAIL DISPATCH HELPERS — post-create invite fan-out (ADR-327 §7 step h)
 // ============================================================================
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://nestor-app.vercel.app';
-
-function rfqPortalUrl(token: string): string {
-  return `${APP_URL}/vendor/quote/${encodeURIComponent(token)}`;
-}
-
-function rfqDeclineUrl(token: string): string {
-  return `${APP_URL}/vendor/quote/${encodeURIComponent(token)}/decline`;
-}
 
 interface InviteMeta {
   inviteId: string;
@@ -70,7 +61,7 @@ async function dispatchRfqInviteEmails(
       const email = getContactEmail(data as Parameters<typeof getContactEmail>[0]);
       if (!email) return;
       const vendorName = String(data.displayName ?? data.companyName ?? data.fullName ?? meta.vendorId);
-      const portalUrl = rfqPortalUrl(meta.token);
+      const portalUrl = vendorPortalUrl(meta.token);
       const result = await emailVendorInviteChannel.send({
         inviteId: meta.inviteId,
         vendorName,
@@ -80,7 +71,7 @@ async function dispatchRfqInviteEmails(
         portalUrl,
         expiresAt: meta.expiresAt,
         locale: 'el',
-        declineUrl: rfqDeclineUrl(meta.token),
+        declineUrl: vendorDeclineUrl(meta.token),
       });
       if (result.success) {
         await db.collection(COLLECTIONS.VENDOR_INVITES).doc(meta.inviteId).update({

@@ -393,18 +393,28 @@ describe('sourcing-events/[eventId]/rfqs — POST / DELETE', () => {
 });
 
 describe('[poId]/share — POST / DELETE', () => {
+  // ADR-853 §19 Θ6 — ο σύνδεσμος χτίζεται πάνω στη **δηλωμένη** δημόσια διεύθυνση. Ήταν
+  // καρφωμένο `nestor-app.vercel.app`, δηλαδή το fixture **επικύρωνε νεκρό** domain: ο
+  // παραλήπτης της κοινοποίησης θα πήγαινε σε host που δεν ελέγχουμε.
   it('POST → 201 { success, data:{shareId,token,url,expiresAt} }', async () => {
-    const res = (await sharePost(req(`${BASE}/po_1/share`, {}), poSeg)) as Envelope;
-    expect(res.status).toBe(201);
-    expect(await res.json()).toEqual({
-      success: true,
-      data: {
-        shareId: 'sh1',
-        token: 'tok123',
-        url: 'https://nestor-app.vercel.app/shared/po/tok123',
-        expiresAt: '2026-08-01T00:00:00.000Z',
-      },
-    });
+    const previousOrigin = process.env.NEXT_PUBLIC_APP_URL;
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
+    try {
+      const res = (await sharePost(req(`${BASE}/po_1/share`, {}), poSeg)) as Envelope;
+      expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({
+        success: true,
+        data: {
+          shareId: 'sh1',
+          token: 'tok123',
+          url: 'https://nestorconstruct.gr/shared/po/tok123',
+          expiresAt: '2026-08-01T00:00:00.000Z',
+        },
+      });
+    } finally {
+      if (previousOrigin === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = previousOrigin;
+    }
   });
 
   it('POST PO not found → 404 PO not found', async () => {

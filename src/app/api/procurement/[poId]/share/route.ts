@@ -12,6 +12,7 @@ import 'server-only';
 import { z } from 'zod';
 import { defineRoute, ok, created, badRequest, notFound, httpError } from '@/lib/api/define-route';
 import { getPO } from '@/services/procurement';
+import { publicUrl } from '@/lib/http/public-origin';
 import { createPOShare, revokePOShare } from '@/services/procurement/po-share-service';
 import { ownedPO, poResource } from '../../_shared/po-ownership';
 
@@ -35,8 +36,9 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
 
     const result = await createPOShare(poId, auth.uid, auth.companyId);
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
-    const shareUrl = `${baseUrl}/shared/po/${result.token}`;
+    // ADR-853 §19 Θ6 — ο νεκρός host έφυγε· `null` όταν δεν ξέρουμε ποιοι είμαστε, ώστε η
+    // οθόνη να μην προσφέρει «αντιγραφή συνδέσμου» που δείχνει σε ξένο domain.
+    const shareUrl = publicUrl(`/shared/po/${result.token}`);
 
     return created({
       shareId: result.shareId,
