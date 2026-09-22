@@ -152,6 +152,18 @@ describe('ADR-854 · Ομάδα 6 — μέγεθος & λογική θέση', (
     expect(cls).not.toContain('-end-1');
   });
 
+  it('top-* κάθεται ΠΑΝΩ στο εικονίδιο (absolute)· inline-end ΜΕΣΑ στη ροή, στο τέλος της γραμμής (ADR-871 Π5)', () => {
+    const { unmount } = render(<IconCountBadge count={3} data-testid={BADGE} />);
+    expect(badge()?.className).toMatch(/(^|\s)absolute(\s|$)/);
+    unmount();
+
+    render(<IconCountBadge count={3} placement="inline-end" data-testid={BADGE} />);
+    const cls = badge()?.className ?? '';
+    expect(cls).not.toMatch(/(^|\s)absolute(\s|$)/);
+    expect(cls).toContain('ms-auto');
+    expect(cls).not.toContain('-top-1');
+  });
+
   it.each(['sm', 'md'] as const)('size=%s χρησιμοποιεί min-w (ο τριψήφιος δεν κόβεται)', (size) => {
     render(<IconCountBadge count={100} size={size} data-testid={BADGE} />);
     const cls = badge()?.className ?? '';

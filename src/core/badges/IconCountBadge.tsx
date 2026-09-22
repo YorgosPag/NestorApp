@@ -52,8 +52,12 @@ export type IconCountBadgeTone = 'urgent' | 'count' | 'success' | 'warning';
 /** Κλειστό σύνολο μεγεθών — `min-w` (όχι `w`) ώστε ο τριψήφιος να μην κόβεται. */
 export type IconCountBadgeSize = 'sm' | 'md';
 
-/** Λογικές θέσεις (`start`/`end`), όχι φυσικές — σωστές σε RTL χωρίς δεύτερο κανόνα. */
-export type IconCountBadgePlacement = 'top-end' | 'top-start';
+/**
+ * Λογικές θέσεις (`start`/`end`), όχι φυσικές — σωστές σε RTL χωρίς δεύτερο κανόνα.
+ * `top-*` = **πάνω στο εικονίδιο** (ο γονέας πρέπει να είναι `relative`)· `inline-end` = **στο τέλος της
+ * γραμμής** ενός στοιχείου μενού (ADR-871 Π5 — στήλη ανοιχτή, μενού avatar), μέσα στη ροή, χωρίς `relative` γονέα.
+ */
+export type IconCountBadgePlacement = 'top-end' | 'top-start' | 'inline-end';
 
 /** Ανακοίνωση σε αναγνώστη οθόνης: `true` = προεπιλεγμένο «N στοιχεία», ή δικό σου κλειδί. */
 export type IconCountBadgeAnnounce = true | { readonly ns: string; readonly key: string };
@@ -102,9 +106,11 @@ const SIZE_CLASSES: Readonly<Record<IconCountBadgeSize, string>> = {
   md: 'h-5 min-w-5 px-1.5 text-xs',
 };
 
+/** 🔑 Ο **τρόπος** τοποθέτησης ζει στη θέση (όχι στη βάση): `absolute` πάνω στο εικονίδιο, ροή στη γραμμή. */
 const PLACEMENT_CLASSES: Readonly<Record<IconCountBadgePlacement, string>> = {
-  'top-end': '-top-1 -end-1',
-  'top-start': '-top-1 -start-1',
+  'top-end': 'absolute -top-1 -end-1',
+  'top-start': 'absolute -top-1 -start-1',
+  'inline-end': 'relative ms-auto shrink-0',
 };
 
 /** Σύμβαση MD3/MUI: πάνω από την οροφή δείχνουμε «<max>+», ποτέ τον ωμό αριθμό. */
@@ -155,7 +161,7 @@ export function IconCountBadge({
       <span
         // `tabular-nums`: ο δίσκος δεν μεταπηδά σε πλάτος όταν 8→9→10.
         className={cn(
-          'pointer-events-none absolute inline-flex items-center justify-center',
+          'pointer-events-none inline-flex items-center justify-center',
           'rounded-full font-medium leading-none tabular-nums',
           PLACEMENT_CLASSES[placement],
           SIZE_CLASSES[size],
