@@ -67,8 +67,9 @@
     "mine": "Η πλευρά σας",
     "you": "(εσείς)",
     "since": "από {date}",
-    "until": "ως {date}",
+    "between": "{from} – {to}",
     "past": "Διάβαζαν παλαιότερα",
+    "pastOmitted": "{count, plural, one {και # παλαιότερη θητεία} other {και # παλαιότερες θητείες}}",
     "personal": "Προσωπική συνομιλία",
     "role": {
       "responsible": "Υπεύθυνος",

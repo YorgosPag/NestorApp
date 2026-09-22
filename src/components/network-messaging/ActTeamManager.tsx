@@ -12,7 +12,7 @@
  * **πριν** το κάνει. ⚔️ Σύγκρουση (`stale-version`) ⇒ ξαναφόρτωση + «άλλαξε στο μεταξύ», ποτέ σιωπηλά.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,6 +26,16 @@ function personName(candidates: readonly NetworkPerson[], uid: string, fallback:
   return candidates.find((person) => person.uid === uid)?.name ?? fallback;
 }
 
+/**
+ * **Επιλογέας-ΠΡΑΞΗ, όχι κατάσταση**: η επιλογή **ξεκινά** αλλαγή — δεν κρατιέται. Η αλήθεια (ποιος είναι
+ * υπεύθυνος/μέλος) ζει στον server και φαίνεται **πάνω** από τον επιλογέα.
+ *
+ * 🔴 **`value=""`, ποτέ `undefined`** (ADR-867 Β9(β) εύρημα Ε2): στο Radix το `undefined` σημαίνει
+ * **μη ελεγχόμενο** ⇒ το `setValue(undefined)` δεν έκανε τίποτα και η **απορριφθείσα** επιλογή έμενε στο
+ * πεδίο μετά από σύγκρουση (`stale-version`), σαν να είχε ισχύσει. Το `''` είναι η δεσμευμένη τιμή του
+ * Radix για «καμία επιλογή — δείξε το placeholder» (το `SelectItem value=""` το απαγορεύει το CHECK 3.48·
+ * η **ρίζα** είναι ο νόμιμος χρήστης του). Ίδιο σχήμα: `LinePatternLayersEditor`.
+ */
 function PersonPicker({ label, people, onPick, disabled }: {
   readonly label: string;
   readonly people: readonly NetworkPerson[];
@@ -33,19 +43,11 @@ function PersonPicker({ label, people, onPick, disabled }: {
   readonly disabled: boolean;
 }): React.ReactElement | null {
   const { t } = useTranslation([NETWORK_NS]);
-  const [value, setValue] = useState<string | undefined>(undefined);
   if (people.length === 0) return null;
   return (
     <label className="flex flex-col gap-1 text-xs text-muted-foreground">
       {label}
-      <Select
-        value={value}
-        disabled={disabled}
-        onValueChange={(uid) => {
-          setValue(undefined);
-          onPick(uid);
-        }}
-      >
+      <Select value="" disabled={disabled} onValueChange={onPick}>
         <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t(TEAM_KEYS.choose)} /></SelectTrigger>
         <SelectContent>
           {people.map((person) => (

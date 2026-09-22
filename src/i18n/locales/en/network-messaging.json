@@ -67,8 +67,9 @@
     "mine": "Your side",
     "you": "(you)",
     "since": "since {date}",
-    "until": "until {date}",
+    "between": "{from} – {to}",
     "past": "Used to read",
+    "pastOmitted": "{count, plural, one {and # earlier stint} other {and # earlier stints}}",
     "personal": "Personal conversation",
     "role": {
       "responsible": "Lead",

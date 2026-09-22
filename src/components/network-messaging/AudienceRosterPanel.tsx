@@ -30,9 +30,10 @@ function MemberRow({ member, labeler }: { readonly member: RosterMember; readonl
   const { t } = useTranslation([NETWORK_NS]);
   const name = labeler.nameOf(member.uid);
   const photo = labeler.photoOf(member.uid);
+  // Θητεία που έληξε ⇒ **διάστημα**: ο ίδιος άνθρωπος μπορεί να έχει πολλές (Ε8), το «ως» μόνο δεν τις ξεχωρίζει.
   const when = member.until === null
     ? t(ROSTER_KEYS.since, { date: formatDate(member.since, DAY) })
-    : t(ROSTER_KEYS.until, { date: formatDate(member.until, DAY) });
+    : t(ROSTER_KEYS.between, { from: formatDate(member.since, DAY), to: formatDate(member.until, DAY) });
   return (
     <li className="flex items-start gap-2">
       <Avatar className="h-7 w-7">
@@ -66,14 +67,15 @@ function SideBlock({ side, labeler }: { readonly side: RosterSide; readonly labe
         {t(side.relation === 'theirs' ? ROSTER_KEYS.theirs : ROSTER_KEYS.mine)}
       </h4>
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {side.current.map((member) => <MemberRow key={member.uid} member={member} labeler={labeler} />)}
+        {side.current.map((member) => <MemberRow key={member.key} member={member} labeler={labeler} />)}
       </ul>
-      {side.past.length > 0 && (
+      {side.past.length + side.pastOmitted > 0 && (
         <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer">{t(ROSTER_KEYS.past)}</summary>
           <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
-            {side.past.map((member) => <MemberRow key={member.uid} member={member} labeler={labeler} />)}
+            {side.past.map((member) => <MemberRow key={member.key} member={member} labeler={labeler} />)}
           </ul>
+          {side.pastOmitted > 0 && <p className="m-0 mt-2">{t(ROSTER_KEYS.pastOmitted, { count: side.pastOmitted })}</p>}
         </details>
       )}
     </section>
