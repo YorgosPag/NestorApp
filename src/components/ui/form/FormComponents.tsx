@@ -37,9 +37,16 @@ export function FormGrid({ children, className }: FormGridProps) {
 // FormField - Single field με label και input
 interface FormFieldProps {
   label: string;
+  /** Ρητό id του πεδίου. Χωρίς αυτό, το `FormField` φτιάχνει ένα (`useId`) — βλ. `children`. */
   htmlFor?: string;
   required?: boolean;
-  children: React.ReactNode;
+  /**
+   * Το πεδίο — ή **συνάρτηση που δέχεται το id του** (React Aria `TextField` / Chakra
+   * `FormControl`): η ετικέτα και η σύνδεσή της ζουν στο ΙΔΙΟ σημείο, άρα ένα πεδίο
+   * χωρίς όνομα γίνεται **δομικά αδύνατο** (ADR-598 G11 §3 procurement — 35 ετικέτες
+   * χωρίς πεδίο μετρήθηκαν επειδή η σύνδεση γινόταν με το χέρι).
+   */
+  children: React.ReactNode | ((fieldId: string) => React.ReactNode);
   className?: string;
   helpText?: string;
   errorText?: string;
@@ -47,7 +54,9 @@ interface FormFieldProps {
   tooltip?: string;
 }
 
-export function FormField({ label, htmlFor, required = false, children, className, helpText, errorText, tooltip }: FormFieldProps) {
+export function FormField({ label, htmlFor: explicitId, required = false, children, className, helpText, errorText, tooltip }: FormFieldProps) {
+  const generatedId = React.useId();
+  const htmlFor = typeof children === 'function' ? explicitId ?? generatedId : explicitId;
   return (
     <div className={cn("w-full space-y-2", className)}>
       {tooltip ? (
@@ -61,7 +70,7 @@ export function FormField({ label, htmlFor, required = false, children, classNam
         </FormLabel>
       )}
       <div className="w-full">
-        {children}
+        {typeof children === 'function' ? children(htmlFor ?? generatedId) : children}
         {helpText && (
           <p className="text-xs text-muted-foreground mt-1">{helpText}</p>
         )}
