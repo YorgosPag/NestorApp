@@ -12,12 +12,12 @@
 
 import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import { isRecord } from '@/lib/type-guards';
-import { isWholePetCount } from '@/lib/offers/offer-amount';
+import { isWholeGuestCount, isWholePetCount } from '@/lib/offers/offer-amount';
 
 import type { StayAvailabilityAnswer, StayQuery } from './stay-availability-vocabulary';
 import type { StayHoldDeadline } from './stay-hold-deadline';
 import type { StayQuote } from './stay-nightly-quote';
-import { STAY_BOOKING_MAX_GUESTS, STAY_BOOKING_MAX_NIGHTS } from './stay-calendar-command';
+import { STAY_BOOKING_MAX_NIGHTS } from './stay-calendar-command';
 
 /** Μέγιστοι μήνες σε ένα αίτημα ημερολογίου (Airbnb: 2 ορατοί + 1 προφόρτωση). */
 export const STAY_PUBLIC_MAX_MONTHS = 3;
@@ -67,10 +67,7 @@ function queryOf(body: Readonly<Record<string, unknown>>): StayQuery | null {
   const pets = petsOf(body.pets);
   if (pets === undefined) return null;
   if (guests === null) return { checkIn, checkOut, guests: null, pets };
-  if (typeof guests !== 'number' || !Number.isInteger(guests) || guests < 1 || guests > STAY_BOOKING_MAX_GUESTS) {
-    return null;
-  }
-  return { checkIn, checkOut, guests, pets };
+  return isWholeGuestCount(guests) ? { checkIn, checkOut, guests, pets } : null;
 }
 
 /** Σώμα `{ listingIds, checkIn, checkOut, guests, pets? }`. */

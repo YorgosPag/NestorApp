@@ -23,6 +23,22 @@ export type StayPublicSelection =
 
 export const NO_STAY_SELECTION: StayPublicSelection = { kind: 'none' };
 
+/**
+ * **Η επιλογή από τους δύο ιδιοκτήτες της** (ADR-777 §8.60.21.7): το ολοκληρωμένο παράθυρο ζει στη
+ * **διεύθυνση**, και η ενδιάμεση «μόνο άφιξη» στη μνήμη της σελίδας.
+ *
+ * ⚠️ **Η εκκρεμής άφιξη προηγείται**: μόλις ο επισκέπτης ξεκινήσει νέα επιλογή, το παλιό παράθυρο δεν
+ * είναι πια η ερώτησή του. Μισό ζεύγος **δεν** γράφεται ποτέ στη διεύθυνση (ίδιος κανόνας με τον
+ * αναγνώστη της), άρα μια άφιξη χωρίς αναχώρηση **δεν επιβιώνει ανανέωση** — δηλωμένο όριο.
+ */
+export function staySelectionOf(
+  window: { readonly checkIn: string; readonly checkOut: string } | null,
+  pendingCheckIn: string | null,
+): StayPublicSelection {
+  if (pendingCheckIn !== null) return { kind: 'check-in', checkIn: pendingCheckIn };
+  return window === null ? NO_STAY_SELECTION : { kind: 'range', checkIn: window.checkIn, checkOut: window.checkOut };
+}
+
 /** Τι σημαίνει μια μέρα για τον επισκέπτη, **με την τρέχουσα επιλογή**. */
 export type StayDayMeaning =
   | 'check-in'        // μπορεί να ξεκινήσει διαμονή

@@ -6,6 +6,7 @@ import {
   NO_STAY_SELECTION,
   nextStaySelection,
   stayDayMeaning,
+  staySelectionOf,
 } from '@/lib/stay/stay-public-selection';
 
 import { bookingEntry, calendarOf, listingOf, rulesInput } from './stay-rules-fixtures';
@@ -57,5 +58,21 @@ describe('stayDayMeaning — ονομασμένη εξήγηση', () => {
     const range = { kind: 'range', checkIn: '2026-09-05', checkOut: '2026-09-08' } as const;
     expect(stayDayMeaning('2026-09-06', nights(), range)).toBe('in-stay');
     expect(stayDayMeaning('2026-09-08', nights(), range)).toBe('selected-check-out');
+  });
+});
+
+describe('ADR-777 §8.60.21.7 — `staySelectionOf`: η επιλογή από τη διεύθυνση + την εκκρεμή άφιξη', () => {
+  const WINDOW = { checkIn: '2026-10-11', checkOut: '2026-10-14' };
+
+  it('παράθυρο της διεύθυνσης ⇒ εύρος', () => {
+    expect(staySelectionOf(WINDOW, null)).toEqual({ kind: 'range', ...WINDOW });
+  });
+
+  it('τίποτα ⇒ καμία επιλογή', () => {
+    expect(staySelectionOf(null, null)).toBe(NO_STAY_SELECTION);
+  });
+
+  it('🔴 η εκκρεμής άφιξη ΠΡΟΗΓΕΙΤΑΙ του παλιού παραθύρου — ο επισκέπτης ξεκίνησε νέα ερώτηση', () => {
+    expect(staySelectionOf(WINDOW, '2026-10-20')).toEqual({ kind: 'check-in', checkIn: '2026-10-20' });
   });
 });

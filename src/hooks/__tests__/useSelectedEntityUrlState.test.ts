@@ -27,6 +27,20 @@ function startAt(url: string): void {
   window.history.replaceState(null, '', url);
 }
 
+/**
+ * Αφήνει την ειδοποίηση του `url-query-state` να φτάσει στο React.
+ *
+ * 🔴 Από το `8c1f8fd7` (2026-09-14) η ειδοποίηση φεύγει σε **microtask** — σκόπιμα, γιατί ο App Router
+ * γράφει στο History API μέσα από `useInsertionEffect`. Ένα σύγχρονο `act(() => …)` **δεν** αδειάζει
+ * microtask, οπότε ο ισχυρισμός έτρεχε πριν την ειδοποίηση: τα 4 tests αντιδραστικότητας ήταν
+ * **κόκκινα επί μία εβδομάδα** χωρίς να το δει κανείς (ADR-777 §8.60.21.7). Οι ισχυρισμοί δεν άλλαξαν.
+ */
+async function flushUrlNotifications(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 describe('useSelectedEntityUrlState', () => {
   beforeEach(() => {
     startAt('/contacts');
@@ -47,10 +61,11 @@ describe('useSelectedEntityUrlState', () => {
     expect(result.current.selectedId).toBeNull();
   });
 
-  it('writes the selection into the URL and re-renders WITHOUT any rerender() nudge', () => {
+  it('writes the selection into the URL and re-renders WITHOUT any rerender() nudge', async () => {
     const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
 
     act(() => result.current.setSelectedId('cont_2'));
+    await flushUrlNotifications();
 
     expect(window.location.search).toBe('?contactId=cont_2');
     // Καμία χειροκίνητη επανασχεδίαση: αν αυτό περάσει, η ανάγνωση είναι όντως
@@ -58,13 +73,14 @@ describe('useSelectedEntityUrlState', () => {
     expect(result.current.selectedId).toBe('cont_2');
   });
 
-  it('re-renders on browser back/forward (popstate)', () => {
+  it('re-renders on browser back/forward (popstate)', async () => {
     const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
 
     act(() => {
       window.history.replaceState(null, '', '/contacts?contactId=cont_back');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
+    await flushUrlNotifications();
 
     expect(result.current.selectedId).toBe('cont_back');
   });
@@ -90,24 +106,27 @@ describe('useSelectedEntityUrlState', () => {
     expect(params.get('tab')).toBe('basic');
   });
 
-  it('clears the param on null — deselection leaves no trace', () => {
+  it('clears the param on null — deselection leaves no trace', async () => {
     startAt('/contacts?contactId=cont_1');
 
     const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
     act(() => result.current.setSelectedId(null));
+    await flushUrlNotifications();
 
     expect(window.location.search).toBe('');
     expect(result.current.selectedId).toBeNull();
   });
 
-  it('switches between two ids in a row — the second click is not swallowed', () => {
+  it('switches between two ids in a row — the second click is not swallowed', async () => {
     startAt('/contacts?contactId=cont_1');
 
     const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
     act(() => result.current.setSelectedId('cont_2'));
+    await flushUrlNotifications();
     expect(result.current.selectedId).toBe('cont_2');
 
     act(() => result.current.setSelectedId('cont_3'));
+    await flushUrlNotifications();
     expect(result.current.selectedId).toBe('cont_3');
   });
 
