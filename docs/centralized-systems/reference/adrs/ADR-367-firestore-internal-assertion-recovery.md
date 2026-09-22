@@ -124,8 +124,60 @@ anonymous browsing):**
 4. `firestore-recovery.ts` → `terminate` + reload only (nothing on disk to clear).
 
 **Only trade-off:** writes still pending when a tab is **closed while offline** are lost (they
-were kept in IndexedDB before). Re-introducing persistence requires an offline app shell **and**
+were kept in IndexedDB before) — **closed by §2.6** (warning on close + no auto-reload over them). Re-introducing persistence requires an offline app shell **and**
 an explicit per-device opt-in — see the ⚠️ in `firebase.ts`.
+
+### 2.6 Pending writes → unsaved-work registry (2026-09-22) — closes the §2.5 trade-off
+
+With memory cache, unacknowledged writes live only in tab memory: offline they queue and flush on
+reconnect, but a tab **closed** before that loses them. Industry practice (Google Docs, Gmail, Figma):
+the owner of the save queue knows when it is non-empty → *"Changes you made may not be saved"* on
+close, and no automatic reload over it.
+
+**Ask the owner, don't wrap the writers.** ~100 client files call `setDoc`/`updateDoc` directly; a
+wrapper would have to be remembered by every future write, and the first to forget would lose data
+silently. The queue's owner is the SDK, and its one public question is `waitForPendingWrites(db)` —
+measured in @firebase/firestore 4.9.3 (`__PRIVATE_syncEngineRegisterPendingWritesCallback`): it
+resolves **immediately** when nothing is pending, **even offline**, otherwise on server ack.
+
+`src/lib/firestore-pending-writes.ts` (**NEW**) — pure state machine + installer:
+- probe every `PROBE_INTERVAL_MS` (500) + on `offline` + on `visibilitychange`;
+- the owner `firestore:pending-writes` is marked in `unsaved-work-registry` only if a probe stays
+  open past `SETTLE_THRESHOLD_MS` (400 — above a normal online ack) → no flicker on every save;
+- a **slow** resolution never clears — it re-probes (writes enqueued while waiting were not covered);
+  only a **fast** resolution ("nothing pending") clears; rejection (terminated / user change) clears.
+- Failure direction: a busy SDK queue > threshold may mark briefly (harmless false positive). The
+  opposite — "clean" while writes are pending — cannot happen.
+
+Consumers of the registry (ADR-860 §Ε3β/§Ε3γ): the single `beforeunload` guard warns the human; the
+deploy-skew recovery **defers** its automatic reload. Installed lazily from `GlobalErrorSetup` (root).
+
+### 2.7 Visible save status in the header (2026-09-22) — Google Docs pattern
+
+`src/components/header/SaveStatusIndicator.tsx` (**NEW**), first item of the `AppHeader` right cluster.
+State from `src/hooks/useSaveStatus.ts` (**NEW**) = pure `deriveSaveStatus({pending, connected}, previous)`:
+
+| pending | connected | status | shown |
+|---|---|---|---|
+| ✔ | ✔ | `saving` | «Αποθήκευση…» |
+| ✔ | ✘ | `offline-pending` | «Εκτός σύνδεσης — αλλαγές σε αναμονή» + tooltip **«Μην κλείσετε την καρτέλα»** |
+| ✘ | ✘ | `offline` | «Εκτός σύνδεσης» (warns *before* the human writes) |
+| ✘ | ✔ | `saved` only right after `saving`/`offline-pending`, 3 s → `idle` | «Όλες οι αλλαγές αποθηκεύτηκαν» |
+| ✘ | ✔ | `idle` otherwise | nothing (zero visible DOM) |
+
+- `pending` = `hasUnsavedWorkFrom('firestore:pending-writes')` (**NEW** registry query) — *only* Firestore
+  writes; an open dirty form is a different sentence.
+- `connected` = `src/hooks/useConnectivity.ts` (**NEW** SSoT: `navigator.onLine` ∧ Firestore channel).
+  It was hand-composed in `procurement/quotes/page.tsx` and `procurement/rfqs/[id]/RfqDetailClient.tsx`
+  (N.0.2) — both migrated.
+- **No change count**: the SDK exposes only empty/non-empty (`waitForPendingWrites`), never the queue
+  size. Showing a number would be invented. (Google Docs shows no count either.)
+- **Beyond Docs**: Docs persists offline edits to disk; we keep them in the tab (§2.5), so the
+  `offline-pending` tooltip says explicitly not to close the tab — and §2.6 enforces it on close.
+- A11y: icon **and** text per state (CHECK 3.41); permanent `sr-only` `role="status"` live region
+  (a region born with its first message is not reliably announced); the visible chip is `aria-hidden`.
+- i18n: `common:saveStatus.*` (el + en) with **literal** `t()` keys — the header lives in the shell,
+  where the slice generator (CHECK 3.34) refuses unresolved dynamic keys.
 
 ## 3. Trade-offs
 
@@ -157,6 +209,8 @@ an explicit per-device opt-in — see the ⚠️ in `firebase.ts`.
 | `src/components/GlobalErrorSetup.tsx` | Wire-in dynamic import of recovery listener. |
 | `src/lib/firestore-legacy-cache.ts` | **NEW (§2.5)** — one-time purge of the orphaned `persistentLocalCache` IndexedDB + SDK zombie lease keys. |
 | `src/app/layout.tsx` / `src/app/(app)/layout.tsx` | **§2.5** — `GlobalErrorSetup` moved from the `(app)` group to the root layout. |
+| `src/lib/firestore-pending-writes.ts` + `__tests__/firestore-pending-writes.test.ts` | **NEW (§2.6)** — SDK pending-writes → `unsaved-work-registry`; 7 tests pin no-flicker, slow-never-clears, stale-timer, rejection. |
+| `src/components/header/SaveStatusIndicator.tsx` · `src/hooks/useSaveStatus.ts` · `src/hooks/useConnectivity.ts` + 2 tests | **NEW (§2.7)** — header save status; 21 derive cases + 6 component tests. |
 | `src/lib/__tests__/firestore-legacy-cache.test.ts` | **NEW (§2.5)** — pins the exact SDK database name, zombie-only key removal, success-only flag. |
 | `docs/centralized-systems/reference/adrs/ADR-367-...md` | **NEW** — this document. |
 
@@ -197,3 +251,5 @@ an explicit per-device opt-in — see the ⚠️ in `firebase.ts`.
 - **2026-05-20** — Initial decision: single-tab manager + recovery listener. Triggered by Sentry event `a4374d38b9374d089437a899341626a6` at `/dxf/viewer` on commit `e660b1de`.
 - **2026-06-08** — Added §2.4 **Root fix #2 (subscription listener-churn stabilization)**. A second, deterministic `ca9 {ve:-1}` trigger was found: BIM persistence hooks re-subscribed `onSnapshot` on every render because their effect depended on the unstable `levelManager` object — amplified into a render storm by the MEP pipe auto-design reconcilers. Stabilized all 20 persistence hooks to key off `currentLevelId` + scope primitives via a `levelManagerRef` (mirror of the `useMepFittingAutoReconciliation` render-loop fix). No behavior change; §2.1/§2.2 remain as the SDK-internal safety net.
 - **2026-09-22** — §2.5 **memory cache in every environment** (supersedes §2.1 single-tab). Trigger: `b815` with *"Failed to obtain exclusive access to the persistence layer"* at public `/search/results` (errorId `err_9a24e54b`). Both tab managers proven to produce `b815`; §4's offline rationale void (`sw.js` = zero-cache passthrough). NEW `firestore-legacy-cache.ts` purges orphaned IndexedDB; `GlobalErrorSetup` moved to root layout so public route groups get the recovery net; recovery drops `clearIndexedDbPersistence`.
+- **2026-09-22** — §2.6 **pending writes → unsaved-work registry**: closes the §2.5 trade-off. `waitForPendingWrites` probe (immediate when empty, even offline — measured in SDK source) with a 400ms settle threshold; registry drives the single `beforeunload` guard (ADR-860 §Ε3γ) and defers deploy auto-reload.
+- **2026-09-22** — §2.7 **visible save status in the header** (Google Docs pattern): `saving` / `offline-pending` ("do not close the tab") / `offline` / `saved` (3 s) / `idle`. New `useConnectivity` SSoT replaced two hand-composed copies in procurement. No change count — the SDK does not expose one.

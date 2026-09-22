@@ -36,6 +36,12 @@ export function GlobalErrorSetup() {
     import('@/lib/firestore-legacy-cache').then(({ purgeLegacyFirestoreCache }) => {
       purgeLegacyFirestoreCache();
     });
+
+    // ADR-367 §2.6 — ανεπιβεβαίωτες εγγραφές Firestore → `unsaved-work-registry`
+    // (προειδοποίηση στο κλείσιμο + καμία αυτόματη ανανέωση από κάτω τους).
+    import('@/lib/firestore-pending-writes').then(({ installFirestorePendingWritesWatcher }) => {
+      installFirestorePendingWritesWatcher();
+    });
   }, []);
 
   return null;

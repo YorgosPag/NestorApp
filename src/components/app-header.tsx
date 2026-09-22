@@ -11,6 +11,7 @@ import { HelpButton } from "@/components/header/help-button"
 import { VoiceAssistantButton } from "@/components/header/voice-assistant-button"
 import { CompanySwitcher } from "@/components/header/CompanySwitcher"
 import { JobSwitch } from "@/components/header/JobSwitch"
+import { SaveStatusIndicator } from "@/components/header/SaveStatusIndicator"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
 import { useTranslation } from "@/i18n/hooks/useTranslation"
 import { cn } from "@/lib/utils"
@@ -84,6 +85,10 @@ export function AppHeader() {
         </button>
 
         <div className="flex items-center gap-2 px-2 flex-shrink-0">
+          {/* ADR-367 §2.7 — «τι γίνεται με τις αλλαγές μου» (πρότυπο Google Docs):
+              ΜΗΔΕΝ ορατό DOM όσο δεν έχει κάτι να πει· ΠΡΩΤΟ στη σειρά, γιατί
+              αφορά ό,τι έκανε ο άνθρωπος, όχι πού βρίσκεται. */}
+          <SaveStatusIndicator />
           {/* ADR-748 Ε6.β — η ΔΟΥΛΕΙΑ έχει δικό της, μόνιμα ορατό χειριστήριο,
               ΕΞΩ από το μονοπάτι *οργανισμός › έργο* (πρότυπο: Figma Dev Mode).
               Το μονοπάτι της Φάσης 4 θα χτιστεί ΑΡΙΣΤΕΡΑ — δεν αντικαθιστά
