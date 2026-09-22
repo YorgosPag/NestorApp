@@ -12,6 +12,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/components/ui/sidebar"
 import { SidebarBadge } from "@/components/sidebar/sidebar-badge"
+import { MenuCountBadge } from "@/components/sidebar/menu-count-badge"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useTranslation } from '@/i18n/hooks/useTranslation'
 import { preloadOnHover, getPreloadableRouteFromHref } from '@/utils/preloadRoutes'
@@ -92,6 +93,9 @@ export function SidebarItemLabel({
       <Icon className={TRANSITION_PRESETS.STANDARD_ALL} />
       <span className="font-medium">{title}</span>
       {item.badge && <SidebarBadge badge={item.badge} />}
+      {item.kind === "link" && item.countSource !== undefined && (
+        <MenuCountBadge source={item.countSource} placement="inline-end" />
+      )}
     </>
   )
 }

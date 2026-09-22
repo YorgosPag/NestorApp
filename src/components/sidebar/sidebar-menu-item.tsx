@@ -20,6 +20,7 @@ import type { MenuEntry, MenuLink } from "@/types/sidebar"
 import type { WorkspaceHref } from "@/lib/workspace/route-worlds"
 import { containsActive } from "@/components/sidebar/active-navigation"
 import { SidebarMenuGroup } from "@/components/sidebar/sidebar-menu-group"
+import { MenuCountBadge } from "@/components/sidebar/menu-count-badge"
 import {
   demotedClass,
   prefetchHandlersFor,
@@ -64,7 +65,11 @@ function SidebarMenuLinkItem({ link, isActive, isCollapsed, reveal }: LinkItemPr
     >
       <Link href={link.href} onClick={onNavigate} {...prefetchHandlersFor(link.href)}>
         {isCollapsed ? (
-          <link.icon className={TRANSITION_PRESETS.STANDARD_ALL} />
+          <>
+            <link.icon className={TRANSITION_PRESETS.STANDARD_ALL} />
+            {/* 🔢 Συμπτυγμένη στήλη: το σήμα κάθεται πάνω στο εικονίδιο (ο σύνδεσμος είναι ήδη `relative`). */}
+            {link.countSource !== undefined && <MenuCountBadge source={link.countSource} placement="top-end" />}
+          </>
         ) : (
           <SidebarItemLabel item={link} title={title} />
         )}

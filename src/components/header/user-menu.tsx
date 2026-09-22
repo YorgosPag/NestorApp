@@ -47,6 +47,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES } from '@/lib/routes';
 // ADR-871 Ε5 — οι συντομεύσεις «τα δικά μου» έρχονται από τον ΕΝΑ κατάλογο.
 import { resolvePersonalNavigation } from '@/config/personal-navigation';
+import { MenuCountBadge } from '@/components/sidebar/menu-count-badge';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -222,6 +223,8 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
               >
                 <item.icon className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
                 <span>{tNav(item.navLabelKey)}</span>
+                {/* 🔢 ADR-871 Π5 — ίδια πηγή με τη στήλη, στο τέλος της γραμμής. */}
+                {item.countSource !== undefined && <MenuCountBadge source={item.countSource} placement="inline-end" />}
               </DropdownMenuItem>
             ))}
         </DropdownMenuGroup>
