@@ -43,7 +43,13 @@ Zero-tolerance on new intra-diff clones (Giorgio's choice: *hybrid* gate). Escap
 `.github/workflows/jscpd-ratchet.yml` re-runs a **full `src/` scan** on every PR / push to `main`, reads `statistics.total.clones` from the JSON report, and compares it to `.jscpd-baseline.json`. **Total rose → BLOCK.** Ratchet-down only: duplication may only decrease (β). This is the authoritative gate and also catches a new file cloning **already-committed** code, which a staged-only scan cannot see. Also runnable locally: `JSCPD_FULL=1` or `npm run jscpd:check`.
 
 ### Config SSoT
-`.jscpdrc.json` is the single source of truth for `minTokens`, formats, and ignore globs. The engine, the npm scripts, and CI all defer to it — no second threshold is hardcoded anywhere.
+`.jscpdrc.json` is the single source of truth for `minTokens`, formats, ignore globs **and `ignorePattern`**. The engine, the npm scripts, and CI all defer to it — no second threshold is hardcoded anywhere.
+
+### §8 — Οι δηλώσεις `import` ΔΕΝ είναι διπλότυπο (2026-09-21)
+`ignorePattern: ["\\bimport\\s[^;]*?from\\s*['\"][^'\"]+['\"];?"]`. Πρακτική των μεγάλων: SonarQube CPD, PMD CPD, Simian αγνοούν import/using/package **εξ ορισμού**· το jscpd το έχει ανοιχτό upstream ([#1003](https://github.com/kucherenko/jscpd/issues/1003)). Χωρίς αυτό, δύο φόρμες που εισάγουν τα ίδια έξι primitives ήταν BLOCK — και η μόνη «λύση» ήταν αναδιάταξη imports για να ξεγελαστεί η πύλη.
+⚠️ **Το pattern είναι παγίδα — μετρημένο, όχι υποθετικό** (άγκυρα: Group 11 του `check-jscpd-ratchet.test.js`, 2/2 μεταλλάξεις κόκκινες):
+- `[\s\S]*?` αντί για `[^;]*?` ⇒ ένα side-effect import (`import 'x';`, χωρίς `from`) **καταπίνει τον κώδικα** μέχρι το πρώτο string `from '…'` ⇒ **έκρυψε πραγματικό δίδυμο 60 tokens** (1 → 0).
+- `^import` (χωρίς `/m`, το `^` = αρχή **αρχείου**) ⇒ αφαιρεί **μόνο το πρώτο** import· σε αρχεία με `'use client'` πρώτο **κανένα**. Το πρώτο fixture πέρασε **για λάθος λόγο** (το πρώτο import του ήταν το μεγάλο πολυγραμμικό).
 
 ### Resolved open decisions (Giorgio, 2026-07-08)
 | Decision | Choice | Rationale |
@@ -99,6 +105,10 @@ Before declaring any centralization "done", the agent runs `npm run jscpd:diff <
 ---
 
 ## Changelog
+
+- **2026-09-21** — **§8 imports ≠ διπλότυπο + εκστρατεία procurement (ADR-598 §3): 8 δίδυμα → 0.** Πλήρες `src/` (Layer 2): **1.757 / baseline 2.641**. Αποσύνθεση **μετρημένη**, όχι εκτιμημένη: χωρίς το `ignorePattern` = **1.880** ⇒ **−123 (6,5%) είναι imports**, τα **−761** είναι δουλειά άλλων από τις 25/07. 🔒 **Baseline κλειδώθηκε 2641 → 1788** (εντολή Giorgio) — μετρημένη σε **HEAD + μόνο αυτή τη δουλειά** (`git archive HEAD src` + επικάλυψη των 21 αρχείων, `JSCPD_SCAN_ROOT`), **όχι** στο κοινό δέντρο (1.757: τα −31 είναι ξένη ακομίτιστη δουλειά — κλείδωμα πάνω της θα κοκκίνιζε το CI αν εκείνη δεν έμπαινε). Πρακτική PHPStan/presubmit: η baseline μετριέται στο **δέντρο που θα γίνει commit**. ⚠️ **Ίδιο commit με το `.jscpdrc.json`**: χωρίς `ignorePattern` η μέτρηση = 1911 ⇒ κόκκινο.
+  Τα 8 δίδυμα (FWA↔Material · Quote↔Rfq ×5 · PO↔Rfq) + 3 που φάνηκαν στην πορεία (Invite↔Renewal↔Notification · project-field Quote↔Rfq · Award↔RfqCancel) λύθηκαν με **SSoT, όχι με αναδιάταξη**: `hooks/useFormSubmission` · `ui/form/FormActions` · `FormField` με render-prop id · `procurement/components/{AtoeCategoryCodeSelect,LineItemsSection,EmailMessageFields}`. Τα δύο που ήταν **καθαρά imports** τα έκλεισε το §8 — **με απόδειξη** ότι το (β) πραγματικό δίδυμο κάτω από ίδια imports **εξακολουθεί** να μπλοκάρει.
+  🔑 **Τα δίδυμα έκρυβαν ελαττώματα, όχι στιλ** (βλ. ADR-598 «2026-09-21 (ζ)»): φόρμες που δεν ήταν `<form>`, ωμό σώμα απάντησης ως μήνυμα σφάλματος, κελιά χωρίς όνομα, `Date.now()` ως ταυτότητα γραμμής. **Verified:** `jscpd:diff` σε 21 αρχεία **0**, χωρίς `SKIP_JSCPD_DIFF`· Group 11 **45/45**.
 
 - **2026-08-25** — Clone dedup (ζεύγος — οι δύο οθόνες ιεραρχικής πλοήγησης): `DesktopMultiColumn` ↔ `MobileNavigation` = **6 κλώνοι → 0**. Το CHECK 3.28 τους έβλεπε μόνο επειδή και τα δύο αρχεία θα προσγειώνονταν στο ίδιο commit — η αλλαγή τους ήταν **μία γραμμή** το καθένα (import path, μετακίνηση λεξιλογίου). 🔑 **Δεν ήταν αντίγραφα· ήταν αντίγραφα ΠΟΥ ΕΙΧΑΝ ΑΠΟΚΛΙΝΕΙ, και κάθε απόκλιση ήταν ελάττωμα στην οθόνη.** Το εύρημα το γέννησε **η ίδια η αφαίρεση του διπλότυπου** — αυτό είναι το επιχείρημα του SSoT, όχι η αισθητική.
   🔴 **ΩΜΑ ΚΛΕΙΔΙΑ i18n, ΣΕ ΕΞΙ ΣΗΜΕΙΑ ΑΠΟΔΟΣΗΣ (3 badge × 2 οθόνες), ΖΩΝΤΑΝΑ.** Οι ετικέτες των badge («Χωρίς Έργα» κ.λπ.) ζουν στο namespace **`navigation-entities`**, ενώ **και τα δύο** component καλούν `useTranslation('navigation')`. ⚠️ **Το `t()` του Desktop ΔΕΝ ήταν η σωστή εκδοχή** — ήταν η **ίδια** βλάβη με πιο πειστική όψη: ρωτούσε **λάθος namespace**, και το `src/i18n/config.ts` **δεν ορίζει `fallbackNS`**, άρα η αστοχία κατέληγε στο ίδιο αποτέλεσμα με το Mobile, που δεν καλούσε **καθόλου** `t()`: το κλειδί **ζωγραφισμένο αυτούσιο** πάνω στην κάρτα.

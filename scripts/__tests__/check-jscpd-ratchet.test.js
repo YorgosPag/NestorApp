@@ -439,3 +439,106 @@ module.exports = { ${fnName} };
     expect(r.status).toBe(0);
   }, 120000);
 });
+
+// =============================================================================
+// Group 11 — import declarations are NOT duplication (ADR-584 §8 · ADR-598 §3)
+//
+// SonarQube CPD, PMD CPD and Simian ignore import/using/package declarations by
+// default; jscpd has it as an open upstream proposal (#1003, 2026-09) and offers
+// `ignorePattern` meanwhile. Two forms importing the same six shadcn primitives
+// were a BLOCK (PurchaseOrderForm↔RfqBuilder, 2026-09-21) — the only "fix" was
+// reordering imports to fool the gate, i.e. a green that means nothing.
+//
+// ⚠️ The pattern is a trap. Measured 2026-09-21 on these very fixtures: the
+// "obvious" `^import\s[\s\S]*?from\s*'…'` swallows a side-effect import
+// (`import 'x';`, no `from`) PLUS the code after it up to the first `from '…'`
+// string — it HID a real 60-token twin (1 → 0). `[^;]` stops at the statement
+// end. Case (γ) below is what fails if anyone "simplifies" the regex back.
+// =============================================================================
+describe('diff gate — imports are not duplication, code still is (ADR-584 §8)', () => {
+  const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+  const REL_DIR = `scripts/jscpd-import-anchor-tmp-${process.pid}`;
+  // Shaped like a REAL file: a directive first, then MANY imports. The first draft of
+  // these fixtures opened with the big multi-line import — and a `^import` pattern
+  // (no /m flag: `^` = start of FILE) stripped exactly that one and left the rest
+  // under minTokens, so (α) passed for the wrong reason while
+  // AwardReasonDialog↔RfqCancelDialog (both start with 'use client') stayed blocked.
+  // Measured 2026-09-21. Case (δ) pins it.
+  const IMPORTS = [
+    "'use client';",
+    "import { useEffect, useId, useState } from 'react';",
+    'import {',
+    '  Alpha,',
+    '  Beta,',
+    '  Gamma,',
+    '  Delta,',
+    "} from './alpha-beta-gamma-delta';",
+    "import { Epsilon, Zeta } from './epsilon';",
+    "import { Eta, Theta, Iota } from './eta';",
+    "import { Kappa } from './kappa';",
+    "import { Lambda, Mu } from './lambda';",
+    "import type { Nu, Xi } from './nu';",
+    "import { Omicron, Pi, Rho, Sigma } from './omicron';",
+    "import { Tau, Upsilon } from './tau';",
+  ].join('\n');
+  const CODE = (fnName) => `export function ${fnName}(lines: { qty: number; price: number; vat: number }[]) {
+  let subtotal = 0; let vat = 0;
+  for (const line of lines) {
+    const net = line.qty * line.price;
+    subtotal += net;
+    vat += net * (line.vat / 100);
+  }
+  return { subtotal, vat, total: subtotal + vat, count: lines.length, first: lines[0] ?? null };
+}
+`;
+  const SIDE_EFFECT = (fnName) => `import './design-system';
+export function ${fnName}(rows: string[]) {
+  const label = "copied from 'excel' sheet";
+  const out: string[] = [];
+  for (const r of rows) { out.push(label + r.trim().toUpperCase() + String(r.length)); }
+  return { out, size: out.length, head: out[0] ?? null, tail: out[out.length - 1] ?? null };
+}
+`;
+  const FILES = {
+    'imports-a.ts': `${IMPORTS}\n\nexport const onlyA = 1;\n`,
+    'imports-b.ts': `${IMPORTS}\n\nexport const onlyB = 2;\n`,
+    'code-a.ts': `${IMPORTS}\n\n${CODE('computeTotals')}`,
+    'code-b.ts': `${IMPORTS}\n\n${CODE('computeSums')}`,
+    'side-a.ts': SIDE_EFFECT('mapRowsA'),
+    'side-b.ts': SIDE_EFFECT('mapRowsB'),
+  };
+  const rel = (name) => `${REL_DIR}/${name}`;
+  const diff = (a, b) => spawnSync('node', [SCRIPT_UNDER_TEST, '--diff', rel(a), rel(b)], {
+    cwd: PROJECT_ROOT,
+    encoding: 'utf8',
+    env: { ...process.env },
+  });
+
+  beforeAll(() => {
+    fs.mkdirSync(path.join(PROJECT_ROOT, REL_DIR), { recursive: true });
+    for (const [name, body] of Object.entries(FILES)) fs.writeFileSync(path.join(PROJECT_ROOT, rel(name)), body);
+  });
+
+  afterAll(() => {
+    fs.rmSync(path.join(PROJECT_ROOT, REL_DIR), { recursive: true, force: true });
+  });
+
+  it('(α) two files sharing ONLY imports (incl. multi-line) ⇒ PASS', () => {
+    expect(diff('imports-a.ts', 'imports-b.ts').status).toBe(0);
+  }, 120000);
+
+  it('(β) a real code twin UNDER identical imports ⇒ still BLOCKED', () => {
+    const r = diff('code-a.ts', 'code-b.ts');
+    expect(r.status).toBe(1);
+    expect(r.stderr + r.stdout).toMatch(/CHECK 3\.28/);
+  }, 120000);
+
+  it('(γ) side-effect import + code containing `from \'…\'` ⇒ the twin is NOT swallowed', () => {
+    expect(diff('side-a.ts', 'side-b.ts').status).toBe(1);
+  }, 120000);
+
+  it('(δ) the pattern is NOT anchored to start-of-file (checked-in config)', () => {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    expect(cfg.ignorePattern).toEqual([expect.not.stringMatching(/^\^/)]);
+  });
+});
