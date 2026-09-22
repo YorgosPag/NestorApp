@@ -39,15 +39,8 @@ export function DirtyFormProvider({ children }: { children: ReactNode }) {
     return () => clearUnsavedWork(ownerId);
   }, [isAnyDirty, ownerId]);
 
-  useEffect(() => {
-    if (!isAnyDirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isAnyDirty]);
+  // Η προειδοποίηση στο κλείσιμο ΔΕΝ ζει πια εδώ: τη δίνει ο ΕΝΑΣ listener της
+  // `unsaved-work-guard` (ADR-860 §Ε3γ), από το ίδιο μητρώο που γράφει το παραπάνω effect.
 
   return (
     <DirtyFormContext.Provider value={{ registerDirty, clearDirty, isAnyDirty, isDirty }}>

@@ -163,6 +163,22 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
   Το `common` είναι ήδη εγγυημένο εκεί. ⛔ Όχι `next/dynamic` για να γλιτώσει το namespace: το
   banner εμφανίζεται **ακριβώς** όταν η φόρτωση chunks είναι σπασμένη.
 
+### Ε3γ — ΕΝΑΣ `beforeunload`, οδηγούμενος από το μητρώο (2026-09-22)
+
+- `src/lib/app-version/unsaved-work-guard.ts` — ο **μόνος** native listener προειδοποίησης.
+  Εγκαθίσταται στο `instrumentation-client.ts` (κάθε σελίδα, πριν το hydration, **χωρίς** firebase).
+  Listener **μόνο όσο** το μητρώο δεν είναι άδειο (οδηγία Chrome Page Lifecycle API — στο Firefox
+  μόνιμος `beforeunload` βγάζει τη σελίδα από το bfcache).
+- Ο `DirtyFormProvider` **έχασε** τον δικό του `beforeunload` (N.0.2): ήταν ήδη ιδιοκτήτης στο
+  μητρώο, άρα η απάντηση υπήρχε σε δύο σημεία.
+- **Δεύτερος ιδιοκτήτης**: `firestore:pending-writes` (ADR-367 §2.6) — ανεπιβεβαίωτες εγγραφές του
+  Firestore SDK. Κάθε editor που γράφει μέσω του client SDK (DXF/BIM, ~100 αρχεία) καλύπτεται
+  **χωρίς** να αγγιχτεί.
+- **Ορατή πλευρά** (ADR-367 §2.7): η κεφαλίδα διαβάζει τον ιδιοκτήτη `firestore:pending-writes`
+  μέσω του νέου `hasUnsavedWorkFrom(ownerId)` — «Αποθήκευση…» / «Εκτός σύνδεσης — αλλαγές σε αναμονή».
+- ⚠️ Οι `beforeunload` των `user-settings-repository` / `WebSocketContext` / `AnalyticsBridge`
+  **δεν** είναι προειδοποιήσεις (flush / κλείσιμο socket) — σωστά μένουν όπου είναι.
+
 ### Ε4 — Παρατηρησιμότητα
 
 - Αφαιρέθηκαν τα `'Loading chunk'` / `'Loading CSS chunk'` από τα αγνοούμενα.
@@ -194,7 +210,7 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
   (`middleware.ts:258`, `BLOCKED_BOT_PATTERNS`). Χρησιμοποίησε `-A` με UA browser — αλλιώς το
   `403` μοιάζει με βλάβη του route ενώ ο κώδικας δεν έτρεξε καν.
   5. Καρτέλα ανοιχτή από το deploy N, deploy N+1, άνοιγμα 3D αγγελίας ⇒ φορτώνει χωρίς σφάλμα.
-- 🔶 **Μόνο ο `DirtyFormProvider` δηλώνει μη αποθηκευμένη δουλειά**, και είναι mounted σε **ένα**
+- 🔶 ~~**Μόνο ο `DirtyFormProvider` δηλώνει μη αποθηκευμένη δουλειά**~~ — **2026-09-22: και οι ανεπιβεβαίωτες εγγραφές Firestore (§Ε3γ)**. Το υπόλοιπο ισχύει για editors με δική τους έννοια «μη αποθηκευμένο» **πριν** φτάσει στο SDK:, και είναι mounted σε **ένα**
   σημείο (`RfqDetailClient.tsx`). Κάθε editor με δική του έννοια «μη αποθηκευμένο» (DXF, φόρμες
   αγγελιών) προσχωρεί στο `unsaved-work-registry` **όταν αγγιχτεί**. Ως τότε ισχύουν τα native
   `beforeunload`.
@@ -212,3 +228,5 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
 | 2026-09-14 | Δημιουργία. Ε0–Ε4 υλοποιημένα· tests 5 + 28 + 13 πράσινα, μετάλλαξη Ε2 επιβεβαιωμένη. Ζωντανή επιβεβαίωση εκκρεμεί (§6). |
 | 2026-09-14 | **Πρώτο deploy (`4dfbbce1`) — ζωντανά, 3 από 5 έλεγχοι του §6 ✅.** (1) `/_next/static/chunks/doesnotexist.js` → **404** · `no-store` · `nosniff` (πριν: `200` + `immutable`). (2) `/api/build-info` → **200** · `no-store` · `{"deploymentId":"4dfbbce1…"}` = HEAD. (4) Carry-forward στο T1: **973 αρχεία (22 MB)** μεταφέρθηκαν, **2** deployments (`4dfbbce1` + `pre-retention`). 🔶 Εκκρεμούν (3) και (5): απαιτούν **δεύτερο** deploy. ⚠️ Δύο διορθώσεις κειμένου από τη μέτρηση: το μανιφέστο **δεν** σερβίρεται (`400`, dotfile) και το `403` σε `curl` ήταν ο φραγμός bots του middleware, όχι το route. Επίσης το namespace του banner διορθώθηκε στο κείμενο σε `common` (ο κώδικας ήταν ήδη σωστός). |
 | 2026-09-14 | **Το `instrumentation-client.ts` αναλαμβάνει και το Sentry του browser.** Αφορμή: `ACTION REQUIRED: onRouterTransitionStart` σε κάθε `npm run dev`. Μετρημένο στο `@sentry/nextjs` 10.45: το `sentry.client.config.ts` εισάγεται **μόνο** μέσω του webpack entry (`config/webpack.js`) ⇒ στο `next dev --turbopack` ο client **δεν είχε ποτέ Sentry**, και στο `next build` έβγαινε `DEPRECATION WARNING`. Το `Sentry.init` μεταφέρθηκε **αυτούσιο** (τιμές από το SSoT `config/sentry-config.ts`, ίδιο φίλτρο `selectNode`) μέσα στο αρχείο — όχι σε εισαγόμενο module, γιατί η έγχυση τιμών του SDK στοχεύει `**/instrumentation-client.*`. Προστέθηκε `export const onRouterTransitionStart = Sentry.captureRouterTransitionStart` (επίσημη οδηγία Sentry). Σειρά: Sentry **πριν** το `installChunkRecovery`. Διαγράφηκε το `sentry.client.config.ts`· ενημερώθηκαν `knip.json` (entry) και η άγκυρα `Σ17` του CHECK 3.50, που πλέον **απαιτεί** να υπάρχει το αρχείο αντί να το προσπερνά (αλλιώς η μετακίνηση θα την άφηνε να περνά κενή). Στο dev το SDK μένει `enabled: false` (`SENTRY_ENABLED` = μόνο production) ⇒ κανένας θόρυβος τοπικά. |
+| 2026-09-22 | **Ε3γ — ΕΝΑΣ `beforeunload` από το μητρώο.** Νέο `unsaved-work-guard.ts` (εγκατάσταση στο `instrumentation-client.ts`, listener μόνο όσο υπάρχει δουλειά). Ο `DirtyFormProvider` έχασε τον δικό του listener. Δεύτερος ιδιοκτήτης: `firestore:pending-writes` (ADR-367 §2.6). Tests: `unsaved-work-guard.test.ts` 4 + `firestore-pending-writes.test.ts` 7. |
+| 2026-09-22 | Νέο `hasUnsavedWorkFrom(ownerId)` στο μητρώο — το διαβάζει η ορατή ένδειξη αποθήκευσης της κεφαλίδας (ADR-367 §2.7). |

@@ -55,6 +55,7 @@ import {
   installChunkRecovery,
   type WebpackChunkRuntime,
 } from '@/lib/app-version/chunk-recovery/install-chunk-recovery';
+import { installUnsavedWorkGuard } from '@/lib/app-version/unsaved-work-guard';
 
 declare const __webpack_require__: WebpackChunkRuntime | undefined;
 
@@ -81,3 +82,6 @@ Sentry.init({
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
 installChunkRecovery(typeof __webpack_require__ === 'undefined' ? undefined : __webpack_require__);
+
+// ADR-860 §Ε3γ — ο ΕΝΑΣ native `beforeunload`, οδηγούμενος από το `unsaved-work-registry`.
+installUnsavedWorkGuard();

@@ -49,5 +49,13 @@ export function hasUnsavedWork(): boolean {
   return store.get().size > 0;
 }
 
+/**
+ * Έχει **αυτή** η πηγή μη αποθηκευμένη δουλειά; Για ενδείξεις που μιλούν για **ένα** είδος
+ * δουλειάς (ADR-367 §2.7: «Αποθήκευση…» αφορά τις εγγραφές Firestore, όχι μια ανοιχτή φόρμα).
+ */
+export function hasUnsavedWorkFrom(ownerId: string): boolean {
+  return store.get().has(ownerId);
+}
+
 /** Ειδοποίηση σε κάθε πραγματική αλλαγή (για `useSyncExternalStore`). Επιστρέφει την απεγγραφή. */
 export const subscribeUnsavedWork = store.subscribe;
