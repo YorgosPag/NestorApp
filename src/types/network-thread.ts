@@ -331,6 +331,9 @@ export const NETWORK_AUDIENCE_FIELD_VISIBILITY = declareAudienceVisibility({
 /** Τα ιδιωτικά πεδία ως λίστα — ό,τι μετακινεί η μετανάστευση και ό,τι απαγορεύεται στο δημόσιο έγγραφο. */
 export const NETWORK_AUDIENCE_PRIVATE_FIELDS = NETWORK_AUDIENCE_FIELD_VISIBILITY.self;
 
+/** Τα δημόσια πεδία ως λίστα — ό,τι **μόνο** επιτρέπεται να γραφτεί στη γραμμή ακροατηρίου (`publicAudienceRow`). */
+export const NETWORK_AUDIENCE_PUBLIC_FIELDS = NETWORK_AUDIENCE_FIELD_VISIBILITY.audience;
+
 /** `{}` αν δεν λείπει τίποτα· αλλιώς ένα πεδίο που **ονομάζει** ό,τι λείπει στο μήνυμα του μεταγλωττιστή. */
 type Undeclared<T, Declared extends PropertyKey, Label extends string> =
   [Exclude<keyof T, Declared>] extends [never] ? unknown : { readonly [K in Label]: Exclude<keyof T, Declared> };

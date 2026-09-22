@@ -41,8 +41,10 @@ jest.mock('@/lib/telemetry', () => ({
   }),
 }));
 
+let idempotencyKeySeq = 0;
 jest.mock('@/services/enterprise-id.service', () => ({
   generateRequestId: () => 'req_test_1',
+  generateIdempotencyKey: () => `idk_test_${++idempotencyKeySeq}`,
 }));
 
 // Defensive: the auth-refresh path uses `continue` without sleeping, but a plain
@@ -62,14 +64,14 @@ interface FakeResponseBody {
   [key: string]: unknown;
 }
 
-function makeResponse(status: number, body: FakeResponseBody): Response {
+function makeResponse(status: number, body: FakeResponseBody, extraHeaders: Record<string, string> = {}): Response {
+  const headers: Record<string, string> = { 'content-type': 'application/json', ...extraHeaders };
   return {
     status,
     statusText: '',
     ok: status >= 200 && status < 300,
     headers: {
-      get: (name: string) =>
-        name.toLowerCase() === 'content-type' ? 'application/json' : null,
+      get: (name: string) => headers[name.toLowerCase()] ?? null,
     },
     json: async () => body,
     text: async () => JSON.stringify(body),
@@ -189,52 +191,94 @@ describe('EnterpriseApiClient — RequestInit.cache passthrough', () => {
 });
 
 /**
- * 🔴 ΑΓΚΥΡΕΣ ADR-853 Ε3 (Φάση 1 της επιλογής Γ) — **η αυτόματη επανάληψη ΔΕΝ ξαναστέλνει πράξη**.
- * Σφάλμα δικτύου/`5xx` δεν σημαίνει «δεν εκτελέστηκε»: η επανάληψη ενός `POST` θα ήταν **δεύτερη** πράξη
- * (μετρημένο 21/09: 3×503 ⇒ τρεις αποστολές). Google AIP-194 · Stripe `Idempotency-Key`.
+ * 🔴 ΑΓΚΥΡΕΣ ADR-853 Ε3 — **η επανάληψη ΔΕΝ είναι ποτέ δεύτερη πράξη**.
+ * Φάση 1: χωρίς κλειδί ξαναστέλνεται μόνο το `GET`. Φάση 2: κάθε άλλη πράξη φεύγει με `Idempotency-Key`,
+ * **ίδιο** σε κάθε επανάληψη, και το σύνορο του διακομιστή εκτελεί μία φορά (Stripe · IETF draft-07).
  */
-describe('EnterpriseApiClient — επανάληψη μόνο ό,τι επιτρέπεται να ξανασταλεί (ADR-853 Ε3)', () => {
+describe('EnterpriseApiClient — επανάληψη μόνο με ταυτότητα πράξης (ADR-853 Ε3)', () => {
   const UNAVAILABLE: FakeResponseBody = { error: 'Service unavailable', errorCode: 'UNAVAILABLE' };
+  const keyOf = (call: number): string | undefined =>
+    (fetchMock.mock.calls[call][1]?.headers as Record<string, string>)['Idempotency-Key'];
 
-  it('Ρ1: POST σε 503 ⇒ ΜΙΑ αποστολή, το σφάλμα φτάνει στον καλούντα', async () => {
-    fetchMock.mockResolvedValue(makeResponse(503, UNAVAILABLE));
-    await expect(apiClient.post('/api/x', { a: 1 })).rejects.toMatchObject({ statusCode: 503 });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+  it('Ρ1: POST σε 503 ⇒ ξαναστέλνεται με το ΙΔΙΟ κλειδί σε κάθε προσπάθεια', async () => {
+    fetchMock
+      .mockResolvedValueOnce(makeResponse(503, UNAVAILABLE))
+      .mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    await expect(apiClient.post('/api/x', { a: 1 })).resolves.toEqual(OK_ENVELOPE.data);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(keyOf(0)).toMatch(/^idk_test_/);
+    expect(keyOf(1)).toBe(keyOf(0));
   });
 
-  it('Ρ2: POST σε κομμένο δίκτυο ⇒ ΜΙΑ αποστολή (η απάντηση μπορεί να χάθηκε ΜΕΤΑ την εκτέλεση)', async () => {
-    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
-    await expect(apiClient.post('/api/x', { a: 1 })).rejects.toThrow('Failed to fetch');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+  it('Ρ2: POST σε κομμένο δίκτυο ⇒ ξαναστέλνεται με το ΙΔΙΟ κλειδί (το σύνορο αναπαράγει)', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    await expect(apiClient.post('/api/x', { a: 1 })).resolves.toEqual(OK_ENVELOPE.data);
+    expect(keyOf(1)).toBe(keyOf(0));
   });
 
-  it.each(['put', 'patch', 'delete'] as const)('Ρ3: %s σε 503 ⇒ ΜΙΑ αποστολή (οι handlers μας δεν είναι ιδεμποτικοί κατά RFC)', async (verb) => {
-    fetchMock.mockResolvedValue(makeResponse(503, UNAVAILABLE));
-    const call = verb === 'delete' ? apiClient.delete('/api/x') : apiClient[verb]('/api/x', { a: 1 });
-    await expect(call).rejects.toMatchObject({ statusCode: 503 });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+  it.each(['put', 'patch', 'delete'] as const)('Ρ3: %s ⇒ φεύγει με κλειδί και ξαναστέλνεται με το ίδιο', async (verb) => {
+    fetchMock.mockResolvedValueOnce(makeResponse(503, UNAVAILABLE)).mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    await (verb === 'delete' ? apiClient.delete('/api/x') : apiClient[verb]('/api/x', { a: 1 }));
+    expect(keyOf(0)).toBeDefined();
+    expect(keyOf(1)).toBe(keyOf(0));
   });
 
-  it('Ρ4: GET σε 503 ⇒ ξαναδοκιμάζεται ως το όριο και πετυχαίνει', async () => {
+  it('Ρ4: GET ⇒ ΧΩΡΙΣ κλειδί, και ξαναδοκιμάζεται ως το όριο', async () => {
     fetchMock
       .mockResolvedValueOnce(makeResponse(503, UNAVAILABLE))
       .mockResolvedValueOnce(makeResponse(503, UNAVAILABLE))
       .mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
     await expect(apiClient.get('/api/x')).resolves.toEqual(OK_ENVELOPE.data);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(keyOf(0)).toBeUndefined();
   });
 
-  it('Ρ5: POST με ρητό `idempotent: true` ⇒ ξαναδοκιμάζεται', async () => {
-    fetchMock
-      .mockResolvedValueOnce(makeResponse(503, UNAVAILABLE))
-      .mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
-    await expect(apiClient.post('/api/x', { a: 1 }, { idempotent: true })).resolves.toEqual(OK_ENVELOPE.data);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('Ρ6: `idempotent: true` ΔΕΝ υπερισχύει του `retry: false`', async () => {
+  it('Ρ5: FormData ⇒ ΧΩΡΙΣ κλειδί και ΜΙΑ αποστολή (δεν ορίζεται αποτύπωμα πάνω σε ροή)', async () => {
     fetchMock.mockResolvedValue(makeResponse(503, UNAVAILABLE));
-    await expect(apiClient.post('/api/x', { a: 1 }, { idempotent: true, retry: false })).rejects.toMatchObject({ statusCode: 503 });
+    await expect(apiClient.post('/api/x', new FormData())).rejects.toMatchObject({ statusCode: 503 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(keyOf(0)).toBeUndefined();
+  });
+
+  it('Ρ6: `retry: false` ⇒ ΜΙΑ αποστολή, ακόμη και με κλειδί', async () => {
+    fetchMock.mockResolvedValue(makeResponse(503, UNAVAILABLE));
+    await expect(apiClient.post('/api/x', { a: 1 }, { retry: false })).rejects.toMatchObject({ statusCode: 503 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ρ7: δύο κλήσεις ⇒ δύο κλειδιά (δύο κλικ = δύο πράξεις)', async () => {
+    fetchMock.mockResolvedValue(makeResponse(200, OK_ENVELOPE));
+    await apiClient.post('/api/x', { a: 1 });
+    await apiClient.post('/api/x', { a: 1 });
+    expect(keyOf(1)).not.toBe(keyOf(0));
+  });
+
+  it('Ρ8: `409 IDEMPOTENCY_IN_FLIGHT` ⇒ ξαναστέλνεται με το ίδιο κλειδί', async () => {
+    fetchMock
+      .mockResolvedValueOnce(makeResponse(409, { error: 'busy', errorCode: 'IDEMPOTENCY_IN_FLIGHT' }, { 'retry-after': '2' }))
+      .mockResolvedValueOnce(makeResponse(200, OK_ENVELOPE));
+    await expect(apiClient.post('/api/x', { a: 1 })).resolves.toEqual(OK_ENVELOPE.data);
+    expect(keyOf(1)).toBe(keyOf(0));
+  });
+
+  it.each([
+    [409, 'IDEMPOTENCY_OUTCOME_UNKNOWN'],
+    [409, 'IDEMPOTENCY_REPLAY_UNAVAILABLE'],
+    [409, 'VERSION_CONFLICT'],
+    [422, 'IDEMPOTENCY_KEY_REUSED'],
+  ])('Ρ9: %i %s ⇒ ΜΙΑ αποστολή — κρίση, όχι παροδικό', async (status, errorCode) => {
+    fetchMock.mockResolvedValue(makeResponse(status, { error: 'no', errorCode }));
+    await expect(apiClient.post('/api/x', { a: 1 })).rejects.toMatchObject({ statusCode: status, errorCode });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ρ10: κλειδί του καλούντος (οποιαδήποτε γραφή) ΜΕΝΕΙ — χωρίς δεύτερη κεφαλίδα', async () => {
+    fetchMock.mockResolvedValue(makeResponse(200, OK_ENVELOPE));
+    await apiClient.post('/api/x', { a: 1 }, { headers: { 'idempotency-key': 'mine-1' } });
+    const sent = fetchMock.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(sent['Idempotency-Key']).toBe('mine-1');
+    expect(Object.keys(sent).filter((name) => name.toLowerCase() === 'idempotency-key')).toHaveLength(1);
   });
 });

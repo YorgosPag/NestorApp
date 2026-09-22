@@ -18,7 +18,7 @@ import { setNetworkThreadFollowing } from '@/services/network-messaging/thread-m
 
 import { withNetworkDoor } from '../../../_shared/network-door';
 import { FollowBodySchema } from '../../../_shared/network-params';
-import { ownSeatHandler, type OwnSeatResponse } from '../../../_shared/own-seat-route';
+import { OWN_SEAT_IDEMPOTENCY, ownSeatHandler, type OwnSeatResponse } from '../../../_shared/own-seat-route';
 
 type ThreadRoute = { readonly params: Promise<{ threadId: string }> };
 
@@ -30,4 +30,4 @@ const handler = ownSeatHandler({
   failure: '[NETWORK] Το «ακολουθώ» απέτυχε',
 });
 
-export const PUT = withStandardRateLimit(withNetworkDoor<OwnSeatResponse<'following'>, ThreadRoute>(handler));
+export const PUT = withStandardRateLimit(withNetworkDoor<OwnSeatResponse<'following'>, ThreadRoute>(handler, { idempotency: OWN_SEAT_IDEMPOTENCY }));

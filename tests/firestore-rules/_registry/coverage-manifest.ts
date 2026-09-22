@@ -1581,6 +1581,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/cron-job-state.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ─── Η ΜΝΗΜΗ ΤΟΥ ΣΥΝΟΡΟΥ ΙΔΕΜΠΟΤΙΑΣ (ADR-853 Ε3 Φάση 2) ────────────────────
+  // Ανάγνωση = απάντηση άλλου ανθρώπου· γραφή = ψεύτικο «έγινε» ή μόνιμο κλείδωμα.
+  {
+    collection: 'idempotency_records',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/idempotency-records.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   {
     collection: 'workspace_aliases',
     pattern: 'deny_all',

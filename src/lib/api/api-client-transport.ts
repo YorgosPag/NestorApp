@@ -16,7 +16,11 @@
  * κορυφώνεται στα 10s» ήταν ελέγξιμο μόνο **έμμεσα**, μέσα από ολόκληρο αίτημα.
  */
 
-import { ApiClientError, type HttpMethod } from './api-client-types';
+import { retryAfterMs } from '@/lib/http/retry-after';
+import { generateIdempotencyKey } from '@/services/enterprise-id.service';
+
+import { ApiClientError, isBinaryRequestBody, type HttpMethod } from './api-client-types';
+import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENCY_RETRYABLE_CODES } from './idempotency/idempotency-contract';
 
 /** Εκθετικό backoff: βάση, οροφή, και το εύρος του τυχαίου «τρέμουλου». */
 const BACKOFF_BASE_MS = 1000;
@@ -25,27 +29,51 @@ const BACKOFF_MAX_MS = 10_000;
 const BACKOFF_JITTER_RATIO = 0.2;
 
 /**
- * **Οι μέθοδοι που ο πελάτης ξαναστέλνει ΜΟΝΟΣ του** — ADR-853 Ε3 (Φάση 1 της επιλογής Γ).
+ * **Οι μέθοδοι που ο πελάτης ξαναστέλνει ΜΟΝΟΣ του, ΧΩΡΙΣ κλειδί** — ADR-853 Ε3.
  *
  * 🔴 Σφάλμα δικτύου ή `5xx` **ΔΕΝ** σημαίνει «δεν εκτελέστηκε»: ο handler μπορεί να έγραψε και να χάθηκε
- * μόνο η απάντηση (504 · κομμένη σύνδεση). Η επανάληψη ενός `POST` τότε είναι **δεύτερη πράξη**
+ * μόνο η απάντηση (504 · κομμένη σύνδεση). Η επανάληψη ενός `POST` **χωρίς** κλειδί είναι **δεύτερη πράξη**
  * (μετρημένο 21/09: 3×503 ⇒ τρεις αποστολές της ίδιας πράξης πρόσκλησης).
- *
- * 🔑 Google AIP-194: αυτόματη επανάληψη **μόνο** όπου η επανάληψη δεν αλλάζει κατάσταση· Stripe: `POST`
- * ξαναστέλνεται **μόνο** με `Idempotency-Key`. ⚠️ `PUT`/`DELETE` είναι ιδεμποτικά **κατά το RFC 9110**, όχι
- * κατά τους δικούς μας handlers (ίχνος ελέγχου ανά κλήση · `404` στη 2η διαγραφή) ⇒ **δεν** μπαίνουν εδώ.
+ * ⚠️ `PUT`/`DELETE` είναι ιδεμποτικά **κατά το RFC 9110**, όχι κατά τους δικούς μας handlers (ίχνος ελέγχου ανά
+ * κλήση · `404` στη 2η διαγραφή) ⇒ ξαναστέλνονται **μόνο** με κλειδί, όπως το `POST`.
  */
 const REPLAYABLE_METHODS: ReadonlySet<HttpMethod> = new Set<HttpMethod>(['GET']);
 
 /**
+ * **Παίρνει αυτό το αίτημα `Idempotency-Key`;** — ADR-853 Ε3 Φάση 2 (Stripe: «All POST requests accept
+ * idempotency keys»). Κάθε πράξη εκτός `GET`, με σώμα JSON ή χωρίς σώμα. ⚠️ **Όχι** δυαδικό σώμα
+ * (`FormData`/`Blob`): το σύνορο δεν ορίζει αποτύπωμα πάνω σε ροή, άρα δεν το αναγνωρίζει ως «την ίδια» πράξη.
+ */
+export function isKeyedRequest(method: HttpMethod, body: unknown): boolean {
+  return !REPLAYABLE_METHODS.has(method) && !isBinaryRequestBody(body);
+}
+
+/**
+ * Οι κεφαλίδες του καλούντος **συν** το `Idempotency-Key`, όταν η πράξη το παίρνει (ADR-853 Ε3 Φάση 2).
+ *
+ * 🔑 Καλείται **ΜΙΑ φορά ανά κλήση, ΠΡΙΝ τον βρόχο** επανάληψης: κάθε επανάληψη στέλνει το **ίδιο** κλειδί,
+ * άρα ο διακομιστής τη βλέπει ως **την ίδια** πράξη και αναπαράγει την απάντηση αντί να εκτελέσει ξανά.
+ * Κλειδί που έδωσε ήδη ο καλών (σε οποιαδήποτε γραφή κεφαλαίων) **μένει** — χωρίς δεύτερο αντίγραφο.
+ *
+ * ⚠️ Ο **ένας** κριτής του «ξαναστέλνεται;» είναι ο `shouldRetry`· ο βρόχος κρατά μόνο το ταβάνι. Όταν η
+ * απόφαση ζούσε και στο όριο του βρόχου, κάθε μισό έκρυβε το άλλο (μετάλλαξη Φάσης 1: 2 επιζώντες).
+ */
+export function keyedHeaders(method: HttpMethod, body: unknown, headers: Record<string, string>): Record<string, string> {
+  if (!isKeyedRequest(method, body)) return headers;
+  const given = Object.keys(headers).find((name) => name.toLowerCase() === IDEMPOTENCY_KEY_HEADER.toLowerCase());
+  const key = given === undefined ? generateIdempotencyKey() : headers[given];
+  const rest = Object.fromEntries(Object.entries(headers).filter(([name]) => name !== given));
+  return { ...rest, [IDEMPOTENCY_KEY_HEADER]: key };
+}
+
+/**
  * **Επιτρέπεται να ξανασταλεί αυτό το αίτημα χωρίς να ρωτηθεί ο άνθρωπος;**
  *
- * Ασφαλής μέθοδος — ή ρητή δήλωση του καλούντος (`idempotent: true`) ότι η πράξη είναι ιδεμποτική
- * **εκ κατασκευής** (π.χ. έλεγχος `pending` μέσα στη συναλλαγή, ταυτότητα από κλειδί του πελάτη).
- * Ό,τι άλλο αστοχεί **μία** φορά και φτάνει στην οθόνη ως «Δοκιμάστε ξανά» — απόφαση ανθρώπου.
+ * Ασφαλής μέθοδος — ή πράξη που **έφυγε με κλειδί**: το σύνορο του διακομιστή εκτελεί μία φορά και στις
+ * επαναλήψεις αναπαράγει την απάντηση (ADR-853 Ε3 Φάση 2). Ό,τι άλλο αστοχεί **μία** φορά.
  */
-export function isReplayableRequest(method: HttpMethod, declaredIdempotent: boolean): boolean {
-  return declaredIdempotent || REPLAYABLE_METHODS.has(method);
+export function isReplayableRequest(method: HttpMethod, keyed: boolean): boolean {
+  return keyed || REPLAYABLE_METHODS.has(method);
 }
 
 /**
@@ -62,8 +90,10 @@ export function shouldRetry(
 ): boolean {
   if (!retryEnabled || attempt >= maxRetries) return false;
   if (error instanceof TypeError && error.message.includes('fetch')) return true;
-  if (ApiClientError.isApiClientError(error)) return error.statusCode >= 500 && error.statusCode < 600;
-  return false;
+  if (!ApiClientError.isApiClientError(error)) return false;
+  // 🔑 ADR-853 Ε3 — «η ίδια πράξη τρέχει ακόμη» (IETF 409): ξανά με το ΙΔΙΟ κλειδί, όχι κρίση του διακομιστή.
+  if (error.statusCode === 409) return IDEMPOTENCY_RETRYABLE_CODES.has(error.errorCode ?? '');
+  return error.statusCode >= 500 && error.statusCode < 600;
 }
 
 /** Εκθετικό backoff με τρέμουλο, φραγμένο στην οροφή. */
@@ -71,6 +101,15 @@ export function calculateBackoff(attempt: number): number {
   const delay = Math.min(BACKOFF_BASE_MS * Math.pow(2, attempt - 1), BACKOFF_MAX_MS);
   const jitter = delay * BACKOFF_JITTER_RATIO * (Math.random() - 0.5);
   return Math.round(delay + jitter);
+}
+
+/**
+ * Πόσο περιμένουμε πριν την επόμενη προσπάθεια. 🔑 **Ο διακομιστής προηγείται**: αν είπε `Retry-After`
+ * (π.χ. `409 IDEMPOTENCY_IN_FLIGHT`), ξέρει πότε τελειώνει η πρώτη εκτέλεση· αλλιώς το εκθετικό backoff.
+ */
+export function retryDelay(error: unknown, attempt: number): number {
+  const asked = ApiClientError.isApiClientError(error) ? retryAfterMs(error.response, BACKOFF_MAX_MS) : null;
+  return asked ?? calculateBackoff(attempt);
 }
 
 /** Προσαρτά παραμέτρους ερωτήματος, σεβόμενο τυχόν υπάρχον `?`. */

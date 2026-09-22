@@ -169,6 +169,10 @@ export const generateDeterministicAuthReprovisionJournalId = (normalizedEmail: s
   enterpriseIdService.generateDeterministicAuthReprovisionJournalId(normalizedEmail);
 export const generateDeterministicWorkspaceAccessRequestId = (companyId: string, uid: string) =>
   enterpriseIdService.generateDeterministicWorkspaceAccessRequestId(companyId, uid);
+// ADR-853 Ε3 Φάση 2 — ΤΟ ΣΥΝΟΡΟ ΙΔΕΜΠΟΤΙΑΣ: κλειδί του πελάτη + εγγραφή του διακομιστή.
+export const generateIdempotencyKey = () => enterpriseIdService.generateIdempotencyKey();
+export const generateDeterministicIdempotencyRecordId = (principal: string, method: string, path: string, key: string) =>
+  enterpriseIdService.generateDeterministicIdempotencyRecordId(principal, method, path, key);
 // ADR-841 §7 Α21.21 Φάση Β — Η ΕΡΩΤΗΣΗ ΑΡΓΙΩΝ, μία ανά (γραφείο, περίοδος). Μαζί με τη μέθοδο.
 export const generateDeterministicHolidayHoursQuestionId = (companyId: string, seasonKey: string) =>
   enterpriseIdService.generateDeterministicHolidayHoursQuestionId(companyId, seasonKey);

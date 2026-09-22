@@ -125,4 +125,18 @@ export abstract class AccessLifecycleIdGenerators extends PublicRegistryIdGenera
    * token** για το ίδιο πρόσωπο, που είναι και η άμυνα στο race-condition των ορίων.
    */
   generateWorkspaceInvitationId(): string { return this.generateId(P.WORKSPACE_INVITATION).id; }
+
+  /**
+   * ADR-853 Ε3 Φάση 2 — **το κλειδί ιδεμποτίας μιας λογικής πράξης** (Stripe `Idempotency-Key`).
+   * Τυχαίο: δύο κλικ είναι δύο πράξεις· **μία** πράξη που ξαναστέλνεται κρατά το **ίδιο** κλειδί.
+   */
+  generateIdempotencyKey(): string { return this.generateId(P.IDEMPOTENCY_KEY).id; }
+
+  /**
+   * ADR-853 Ε3 Φάση 2 — **η εγγραφή του συνόρου για ένα κλειδί**. Ο **εντολέας** μπαίνει στον σπόρο:
+   * το κλειδί ενός ανθρώπου δεν μπορεί ποτέ να «πιάσει» την αποθηκευμένη απάντηση άλλου.
+   */
+  generateDeterministicIdempotencyRecordId(principal: string, method: string, path: string, key: string): string {
+    return this.mintDeterministicV4Id(P.IDEMPOTENCY_RECORD, `${principal}:${method}:${path}:${key}`);
+  }
 }

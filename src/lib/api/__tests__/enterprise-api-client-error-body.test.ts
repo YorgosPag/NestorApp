@@ -39,6 +39,7 @@ jest.mock('@/lib/telemetry', () => ({
 
 jest.mock('@/services/enterprise-id.service', () => ({
   generateRequestId: () => 'req_test_1',
+  generateIdempotencyKey: () => 'idk_test_1',
 }));
 
 jest.mock('@/lib/async-utils', () => ({ sleep: () => Promise.resolve() }));

@@ -91,15 +91,13 @@ export function audiencePrivateFieldsOf(raw: unknown): Partial<NetworkAudiencePr
  * 🔒 **Η ιδιωτική πλευρά της θέσης** (ADR-867 Β9(β) Ε9) — **ποτέ `null`**: η απουσία εγγράφου είναι έγκυρη
  * κατάσταση («δεν διάβασε ποτέ, δεν σίγασε, δεν ακολουθεί»).
  *
- * 🔁 **Expand/contract**: ως τη μετανάστευση τα πεδία ζούσαν στη **δημόσια** γραμμή. Ανά πεδίο: ό,τι λέει το
- * ιδιωτικό έγγραφο νικά (γράφτηκε από τον νέο κώδικα, άρα είναι νεότερο)· αλλιώς ό,τι λέει το παλιό
- * `legacyRaw`· αλλιώς η ουδέτερη τιμή. Ανά **πεδίο** και όχι ανά έγγραφο: μια σίγαση πριν τη μετανάστευση
- * γεννά ιδιωτικό έγγραφο **μόνο** με `muted` — δεν πρέπει να σβήσει το παλιό `lastReadAt`.
- * ⚠️ Μετά το `npm run migrate:network-audience-private -- --apply` (απόκλιση 0) το `legacyRaw` δεν
- * κουβαλά πια τίποτα και η εφεδρεία είναι αδρανής.
+ * 🔒 **ΜΙΑ πηγή — το ιδιωτικό έγγραφο.** Η εφεδρεία στη δημόσια γραμμή (expand/contract) **αφαιρέθηκε**
+ * 2026-09-22, μετά το `migrate:network-audience-private -- --apply` (4 γραμμές, ξηρό ξανά = απόκλιση 0).
+ * ⚠️ **ΜΗΝ την ξαναφέρεις**: ό,τι ιδιωτικό όνομα εμφανιστεί ξανά στη δημόσια γραμμή είναι **διαρροή** προς
+ * την άλλη πλευρά, όχι τιμή — ο ανιχνευτής του είναι το ίδιο script (ξηρό ⇒ exit 1).
  */
-export function networkAudiencePrivateFromDocuments(privateRaw: unknown, legacyRaw?: unknown): NetworkAudiencePrivate {
-  return { ...NETWORK_AUDIENCE_PRIVATE_DEFAULTS, ...audiencePrivateFieldsOf(legacyRaw), ...audiencePrivateFieldsOf(privateRaw) };
+export function networkAudiencePrivateFromDocument(privateRaw: unknown): NetworkAudiencePrivate {
+  return { ...NETWORK_AUDIENCE_PRIVATE_DEFAULTS, ...audiencePrivateFieldsOf(privateRaw) };
 }
 
 function topicOf(raw: unknown): NetworkThreadTopic | null {

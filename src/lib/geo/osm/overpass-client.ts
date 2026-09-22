@@ -37,6 +37,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sleep, type Deadline } from '@/lib/async-utils';
 import { calculateBackoffDelay } from '@/services/entity-linking/utils/retry';
+import { retryAfterMs } from '@/lib/http/retry-after';
 
 const logger = createModuleLogger('overpass-client');
 
@@ -139,14 +140,7 @@ const BACKOFF = {
  * ({@link calculateBackoffDelay}) — καμία δεύτερη φόρμουλα εκθετικής υποχώρησης.
  */
 function retryDelayMs(response: Response | null, attempt: number): number {
-  const header = response?.headers.get('retry-after');
-  if (header !== null && header !== undefined) {
-    const seconds = Number.parseFloat(header);
-    if (Number.isFinite(seconds) && seconds >= 0) {
-      return Math.min(seconds * 1000, MAX_HONOURED_RETRY_AFTER_MS);
-    }
-  }
-  return calculateBackoffDelay(attempt, BACKOFF);
+  return retryAfterMs(response, MAX_HONOURED_RETRY_AFTER_MS) ?? calculateBackoffDelay(attempt, BACKOFF);
 }
 
 /**

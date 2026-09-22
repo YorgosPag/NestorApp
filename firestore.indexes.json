@@ -8387,6 +8387,12 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "idempotency_records",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "audit_logs",
       "fieldPath": "expiresAt",
       "ttl": true,

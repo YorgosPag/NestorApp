@@ -695,6 +695,14 @@ export const COLLECTIONS = {
    */
   CRON_JOB_STATE: 'cron_job_state',
 
+  /**
+   * 🔒 ADR-853 Ε3 Φάση 2 — **Η ΜΝΗΜΗ ΤΟΥ ΣΥΝΟΡΟΥ ΙΔΕΜΠΟΤΙΑΣ**: ένα έγγραφο ανά (εντολέας, μέθοδος, διαδρομή,
+   * `Idempotency-Key`) — κλείδωμα όσο τρέχει η πράξη, αποθηκευμένη απάντηση μετά (Stripe · IETF draft).
+   * Ντετερμινιστικό ID ⇒ δύο αιτήματα με το ίδιο κλειδί συγκρούονται στο **ίδιο** έγγραφο. Λήγει σε 24 ώρες
+   * (πολιτική TTL στο `expiresAt`). **Μόνο Admin SDK**: η απάντηση μπορεί να κουβαλά προσωπικά δεδομένα.
+   */
+  IDEMPOTENCY_RECORDS: 'idempotency_records',
+
   // 📋 AUDIT LOGS
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
   /** Cloud Function audit log (orphan cleanup, system events) */

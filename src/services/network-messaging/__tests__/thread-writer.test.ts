@@ -214,6 +214,32 @@ describe('Ν — το νήμα και το ακροατήριό του', () => {
     expect(audienceOf(fake).find((s) => s.uid === MARIA)).toMatchObject({ role: 'collaborator', until: null });
   });
 
+  it('🔒 Ν-7 αδέσποτο ιδιωτικό πεδίο στη δημόσια γραμμή ΔΕΝ ξαναγράφεται από την προβολή (Ε9 contract)', async () => {
+    const { db, fake } = freshDb();
+    await ensureActThread(db, {
+      actSeed: ACT_SEED,
+      birth: TOPIC,
+      team: { responsibleUid: MARIA, memberUids: [MARIA, ELENI] },
+      newcomerReason: 'creator',
+      addedBy: MARIA,
+      nowISO: NOW,
+    });
+    const eleniRow = audienceOf(fake).find((s) => s.uid === ELENI);
+    fake.write(audiencePath(), ELENI, { ...eleniRow, muted: true, lastReadAt: NOW });
+
+    await ensureActThread(db, {
+      actSeed: ACT_SEED,
+      birth: null,
+      team: { responsibleUid: ELENI, memberUids: [MARIA, ELENI] },
+      newcomerReason: 'failover',
+      addedBy: ADMIN,
+      nowISO: LATER,
+    });
+
+    expect(audienceOf(fake).find((s) => s.uid === ELENI)).toMatchObject({ role: 'responsible' });
+    expect(privateFieldsOnPublicRows(fake, THREAD_ID)).toStrictEqual([]);
+  });
+
   it('Ν-6 ο αντισυμβαλλόμενος του ΥΠΑΡΧΟΝΤΟΣ νήματος δεν αντικαθίσταται από νέο plan', async () => {
     const { db, fake } = freshDb();
     await bornThread(db);

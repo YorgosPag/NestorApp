@@ -35,7 +35,9 @@ import {
   createMfaRequiredResponse,
   type ErrorResponse,
 } from './api-denial';
-import { apiErrorHandler } from '@/lib/api/ApiErrorHandler';
+import type { IdempotencyPolicy } from '@/lib/api/idempotency/idempotency-contract';
+import { runIdempotently } from '@/lib/api/idempotency/with-idempotency';
+import { executeHandler } from './handler-execution';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('middleware');
 
@@ -79,6 +81,12 @@ export interface WithAuthOptions {
   requireMfa?: boolean;
   /** Allow unauthenticated access (handler receives RequestContext) */
   allowUnauthenticated?: boolean;
+  /**
+   * 🔑 ADR-853 Ε3 Φάση 2 — **η ΜΟΝΗ εξαίρεση από το σύνορο ιδεμποτίας**. Κάθε πράξη με `Idempotency-Key`
+   * εκτελείται **μία** φορά εξ ορισμού· `{ mode: 'natural', why }` μόνο για route ιδεμποτικό **εκ κατασκευής**
+   * και συχνό (π.χ. `set` boolean), με τον λόγο γραμμένο (CHECK 3.92 Κ1).
+   */
+  idempotency?: IdempotencyPolicy;
   /** Custom error response for unauthorized */
   unauthorizedResponse?: (reason: string) => NextResponse;
   /** Custom error response for forbidden */
@@ -149,7 +157,11 @@ export function withAuth<T = unknown, R = unknown>(
       if (options.allowUnauthenticated) {
         // Handler can receive unauthenticated context
         // This is a type-unsafe escape hatch for public endpoints
-        return handler(request, ctx as unknown as AuthContext, createPermissionCache(), routeContext);
+        // 🔑 ADR-853 Ε3: και η δημόσια πράξη (κράτηση, πρώτη επαφή) εκτελείται ΜΙΑ φορά ανά κλειδί.
+        const anonymous = ctx as unknown as AuthContext;
+        return (await runIdempotently(request, 'anon', options.idempotency, () =>
+          executeHandler(request, () => handler(request, anonymous, createPermissionCache(), routeContext), {}),
+        )) as NextResponse<T | ErrorResponse>;
       }
 
       const errorResponse = options.unauthorizedResponse
@@ -230,37 +242,13 @@ export function withAuth<T = unknown, R = unknown>(
       }
     }
 
-    // Step 6: Call handler with authenticated context + automatic error handling + performance tracking
-    const requestStart = Date.now();
-    try {
-      const response = await handler(request, ctx, cache, routeContext);
-
-      // 🏢 ENTERPRISE: Performance tracking — alert if route takes > 5s
-      const duration = Date.now() - requestStart;
-      if (duration >= 5000 && typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
-        import('@/lib/telemetry/telegram-alert-service')
-          .then(({ sendTelegramAlert }) => {
-            void sendTelegramAlert('slow', 'API', `${request.method} ${request.nextUrl.pathname} — ${(duration / 1000).toFixed(1)}s`, {
-              duration: `${duration}ms`,
-              method: request.method,
-            });
-          })
-          .catch(() => { /* swallow */ });
-      }
-
-      return response;
-    } catch (error) {
-      // 🏢 ENTERPRISE: Central error handling - no need for per-endpoint wrappers
-      return await apiErrorHandler.handleError(error, request, {
-        operation: request.nextUrl.pathname,
+    // Step 6: Call handler — ΜΙΑ φορά ανά `Idempotency-Key` (ADR-853 Ε3) — με κεντρικό χειρισμό σφαλμάτων
+    return (await runIdempotently(request, ctx.uid, options.idempotency, () =>
+      executeHandler(request, () => handler(request, ctx, cache, routeContext), {
         userId: ctx.uid,
-        endpoint: request.nextUrl.pathname,
-        metadata: {
-          globalRole: ctx.globalRole,
-          companyId: ctx.companyId,
-        },
-      });
-    }
+        metadata: { globalRole: ctx.globalRole, companyId: ctx.companyId },
+      }),
+    )) as NextResponse<T | ErrorResponse>;
   };
 }
 

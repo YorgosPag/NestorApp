@@ -69,6 +69,19 @@
   `Input` **δεν** δέχεται `id` / `aria-label` / `aria-labelledby` ⇒ η ετικέτα στο `SignatoryProposalCard`
   (`ProfessionEscoField`) μένει ασύνδετη — δηλωμένη εξαίρεση στη φρουρά του procurement, που **ζητά σβήσιμο** μόλις κλείσει.
 
+- 🟡 **22/09 — ΔΥΟ ΕΚΘΕΤΙΚΑ BACKOFF (βρέθηκε στο ADR-872)**
+
+  `lib/api/api-client-transport.ts` `calculateBackoff` (βάση 1s, οροφή 10s, jitter **±10%**) και
+  `services/entity-linking/utils/retry.ts` `calculateBackoffDelay` (παραμετρικό, jitter **±25%**). Ίδια ερώτηση, δύο φόρμουλες.
+  **Δεν** ενοποιήθηκαν: η αλλαγή jitter αλλάζει συμπεριφορά του `apiClient` (ADR-826 §4.3 δοκιμάζει την οροφή 10s).
+  Θεραπεία: ο transport καλεί το `calculateBackoffDelay` με δική του σταθερά ρύθμισης· απόφαση Giorgio για το jitter.
+
+- 🟡 **22/09 — CHECK 3.92 Κ3: 38 routes που αλλάζουν δεδομένα ΕΚΤΟΣ συνόρου (ADR-872 §5)**
+
+  Τα server-to-server (webhooks, cron, OAuth, MCP) είναι σωστά εκτός. Χρέος: όσα κάνουν έλεγχο ταυτότητας **μέσα** στον
+  handler (`*/showcase/email`, `*/showcase/pdf`, `contacts/*/identity-impact-preview`, `contacts/*/address-positions`,
+  `telemetry/bim-performance*`) — δεν παίρνουν ούτε ιδεμποτία ούτε το ενιαίο σύνορο. `npm run idempotency-boundary:report`.
+
 - 🟠 **21/09 — ΤΟ CHECK 3.28 `--diff` ΛΕΕΙ «new clone» ΧΩΡΙΣ ΝΑ ΕΛΕΓΧΕΙ ΑΝ ΕΙΝΑΙ ΝΕΟΣ**
 
   **Μετρημένο, όχι υπόθεση.** Το `scripts/check-jscpd-ratchet.js --diff` σαρώνει **μόνο** τα

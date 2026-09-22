@@ -1098,6 +1098,14 @@ if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
 if (!process.env.SKIP_SERVER_ACTION_BOUNDARY)
   addThread('3.90', 'Server action boundary', 'scripts/check-server-action-boundary.js');
 
+// CHECK 3.92 (ADR-872 · ADR-853 Ε3) — το σύνορο ιδεμποτίας. «Εκτελείται κάθε πράξη ΜΙΑ φορά ανά
+// `Idempotency-Key` — και όποιος το παρακάμπτει, το είπε με λόγο;» Κ1 `natural` χωρίς λόγο · Κ2 ρίζα-σύνορο
+// που έπαψε να καλεί το στρώμα (⛔) · Κ3 νέο route που αλλάζει δεδομένα ΕΚΤΟΣ συνόρου (🔴 ratchet κατά
+// ταυτότητα). 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: τα σύνορα ΥΠΟΛΟΓΙΖΟΝΤΑΙ (σταθερό σημείο) από όλο το src/lib + app/api —
+// μια νέα factory οπουδήποτε αλλάζει την απάντηση. AST, ~3s.
+if (!process.env.SKIP_IDEMPOTENCY_BOUNDARY)
+  addThread('3.92', 'Idempotency boundary', 'scripts/check-idempotency-boundary.js');
+
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {

@@ -23,15 +23,12 @@ export interface ApiRequestConfig {
   headers?: Record<string, string>;
   params?: Record<string, string | number | boolean>;
   timeout?: number;
-  /** Αυτόματη επανάληψη σε δίκτυο/5xx. Ισχύει **μόνο** για αίτημα που επιτρέπεται να ξανασταλεί (βλ. `idempotent`). */
+  /**
+   * Αυτόματη επανάληψη σε δίκτυο/5xx. Ισχύει **μόνο** για `GET` ή πράξη που φεύγει με `Idempotency-Key`
+   * (ADR-853 Ε3 — κάθε μη-`GET` με σώμα JSON ή χωρίς σώμα· `FormData`/`Blob` ποτέ).
+   */
   retry?: boolean;
   maxRetries?: number;
-  /**
-   * 🔑 Ο καλών **εγγυάται** ότι η επανάληψη αυτής της πράξης δεν αλλάζει κατάσταση δεύτερη φορά
-   * (ADR-853 Ε3). Χωρίς αυτό, μόνο το `GET` ξαναστέλνεται αυτόματα — ένα `POST` που χάθηκε μετά την
-   * εκτέλεση θα ήταν **δεύτερη** πράξη. Δήλωσέ το **μόνο** με απόδειξη στον handler, ποτέ «για ανθεκτικότητα».
-   */
-  idempotent?: boolean;
   skipAuth?: boolean;
   responseType?: 'auto' | 'json' | 'text' | 'blob';
   /**

@@ -252,6 +252,9 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicAuthReprovisionJournalId',
       'generateDeterministicHolidayHoursQuestionId',
       'generateDeterministicWorkspaceAccessRequestId',
+      // ADR-853 Ε3 Φάση 2 — η εγγραφή ιδεμποτίας ΕΙΝΑΙ το κλείδωμα: δύο αιτήματα με το ίδιο κλειδί
+      // ΟΦΕΙΛΟΥΝ να συγκρουστούν στο ίδιο έγγραφο. Τυχαίο id = δύο κλειδώματα = δύο εκτελέσεις.
+      'generateDeterministicIdempotencyRecordId',
       // ADR-867 — κανένα νήμα/ομάδα/φραγή/απουσία δεν επιτρέπεται να γεννηθεί τυχαίο:
       // η ιδεμποτησία ΕΙΝΑΙ η εγγύηση «ένα νήμα ανά πράξη / ανά ζεύγος».
       'generateDeterministicNetworkActTeamId',
@@ -319,6 +322,9 @@ describe('EnterpriseIdService', () => {
       // μηχανή είναι μία.
       generateDeterministicAuthReprovisionJournalId: 'arj_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicCompanyId: 'comp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
+      //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».
+      generateDeterministicIdempotencyRecordId: 'idr_4ad60692-1f51-41af-8816-c25429d2e5f9',
       generateDeterministicDrawingRevisionId: 'drev_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',
       generateDeterministicFileId: 'file_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',
       generateDeterministicRailingId: 'ral_a387d0b1-9ad7-5af3-8db1-b8faf2f9bf16',

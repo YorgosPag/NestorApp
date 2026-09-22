@@ -66,6 +66,7 @@ export {
   generateShowcaseEmailConfirmationId,
   generateDeterministicAuthReprovisionJournalId,
   generateDeterministicWorkspaceAccessRequestId,
+  generateIdempotencyKey, generateDeterministicIdempotencyRecordId,
   generateDeterministicHolidayHoursQuestionId,
   generateWorkspaceInvitationId,
   generateDeterministicNetworkActThreadId, generateDeterministicNetworkRelationshipThreadId,

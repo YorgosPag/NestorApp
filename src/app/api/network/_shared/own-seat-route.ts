@@ -22,6 +22,15 @@ import { threadInput } from './network-params';
 
 export type OwnSeatField = 'muted' | 'following';
 
+/**
+ * 🔑 ADR-853 Ε3 — **ιδεμποτικό εκ κατασκευής**: `set` μιας boolean στο **δικό** του ιδιωτικό έγγραφο θέσης.
+ * Η επανάληψη γράφει την **ίδια** τιμή· η αποθήκη του συνόρου θα ήταν κόστος χωρίς όφελος.
+ */
+export const OWN_SEAT_IDEMPOTENCY = {
+  mode: 'natural',
+  why: 'set boolean στο δικό του ιδιωτικό έγγραφο θέσης — η επανάληψη γράφει την ίδια τιμή',
+} as const;
+
 type ThreadRoute = { readonly params: Promise<{ threadId: string }> };
 
 export type OwnSeatResponse<F extends OwnSeatField> = { readonly success: true } & Readonly<Record<F, boolean>>;

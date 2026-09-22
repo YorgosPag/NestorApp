@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 820 ADRs | Last Updated: 2026-09-21
+**📊 Stats**: 821 ADRs | Last Updated: 2026-09-22
 
 ---
 
@@ -24,7 +24,7 @@
 | 📂 **Entity Systems** | 16 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 11 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 12 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
@@ -855,6 +855,7 @@
 | **ADR-869** | Η τυφλή ζώνη της CHECK 3.15: **«0 missing» σήμαινε «κοίταξα τα μισά»** | ✅ ✅ **ΜΕΤΡΗΘΗΚΕ ΚΑΙ ΕΚΛΕΙΣΕ** (2026-09-20) — 1 πραγματικό κενό βρέθηκε **ζωντανά** και διορθώθηκε· 1 οπλισμένο-απυροδότητο διορθώθηκε· 0 μη επαληθευμένα σημεία κινδύνου· **η ρίζα θεραπεύτηκε** με κανονικό πεδίο `appointment.effectiveDate` (**§12**, εντολή Giorgio). ⏳ **Εκκρεμεί ΜΟΝΟ η ανάπτυξη 1 δείκτη** (`firestore:verify` ⇒ `OutOfSync`, §12.6) | 2026-09-20 | Firestore / Indexes / Static analysis / Gate authority | [📄](./adrs/ADR-869-firestore-index-blind-zone.md) |
 | **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-870-admin-sdk-index-coverage.md) |
 | **ADR-871** | Sidebar στον προσωπικό χώρο: **ΝΑΙ, αλλά μόνο στα «δικά μου»** | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-21, όχι ακόμη committed) | 2026-09-21 | UI Components | [📄](./adrs/ADR-871-personal-space-sidebar.md) |
+| **ADR-872** | Το σύνορο ιδεμποτίας: **μία εκτέλεση ανά πράξη**, όσες φορές κι αν φτάσει | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-22, όχι ακόμη committed) | 2026-09-22 | Security & Auth | [📄](./adrs/ADR-872-idempotency-boundary.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1055,6 +1056,7 @@
 | **ADR-855** | Η δήλωση ορίου ρυθμού γίνεται **αυθεντία** — και κάθε διαδρομή οφείλει να δηλώσει | ✅ 🚧 ΣΕ ΕΞΕΛΙΞΗ — Φάση 0 (αυτό το έγγραφο, γραμμένο **ΠΡΙΝ** τον κώδικα, N.0.1 Φάση 1) | [View](./adrs/ADR-855-rate-limit-policy-authority.md) |
 | **ADR-856** | **Το email αλλαγής διεύθυνσης φεύγει από ΕΜΑΣ — και ο φρουρός πρόσφατης σύνδεσης μετακομίζει μαζί του** — η Google **πάγωσε** τα πρότυπα email του project (ούτε API, ούτε `roles/owner`, ούτε η ίδια η κονσόλα) ⇒ το `callbackUri` έμεινε σε **νεκρό Vercel** και η ροή του ADR-850 **δεν λειτουργεί στην παραγωγή**, ενώ η οθόνη **ήδη υπόσχεται** «ειδοποίηση της τωρινής διεύθυνσης με δυνατότητα αναίρεσης». 🏆 Ανατρέπει **τον έναν** από τους δύο λόγους απόρριψης του ADR-850 (η «αυτόματη ειδοποίηση της παλιάς» **μετρήθηκε σπασμένη**) και **απαντά** τον άλλο αντί να τον αγνοήσει: ο φρουρός `requires-recent-login` **ξαναχτίζεται στον διακομιστή** (`auth_time` ≤ 5′ + `checkRevoked` + MFA από το `UserRecord`) — φρουρός πελάτη δεν φυλάει πράξη διακομιστή. **Ειδοποίηση, όχι έγκριση** από την παλιά (η αυστηρή σειρά του OWASP εγκλωβίζει όποιον έχασε το γραμματοκιβώτιο — anti-pattern που το repo ονομάζει δύο φορές)· αναίρεση με **δικό της** έγγραφο + **POST πίσω από σελίδα** (οι σαρωτές email πατούν GET)· **κλιμακωτή** πράξη, ποτέ `reprovisionAuthAccount` χωρίς λόγο. Μετρημένα όρια: **δεν υπάρχει** `generateRecoverEmailLink`, ο εκκρεμής oobCode **δεν ακυρώνεται**, το Admin SDK **δεν** υπόκειται στην προστασία απαρίθμησης | ✅ 📋 **ΑΠΟΦΑΣΙΣΜΕΝΟ — ΜΗ ΥΛΟΠΟΙΗΜΕΝΟ** (N.0.1 Φάση 1: γραμμένο **ΠΡΙΝ** τον κώδικα) | [View](./adrs/ADR-856-account-email-change-owned-mail.md) |
 | **ADR-859** | Η σύνδεση ολοκληρώνεται σε **ΕΝΑ** σημείο — ο δεύτερος παράγοντας είναι κατάσταση, όχι επιτυχία | ✅ ΥΛΟΠΟΙΗΜΕΝΟ — ζωντανή επιβεβαίωση **εκκρεμεί** (μετά το deploy) | [View](./adrs/ADR-859-sign-in-completion-single-point.md) |
+| **ADR-872** | Το σύνορο ιδεμποτίας: **μία εκτέλεση ανά πράξη**, όσες φορές κι αν φτάσει | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-22, όχι ακόμη committed) | [View](./adrs/ADR-872-idempotency-boundary.md) |
 
 ---
 

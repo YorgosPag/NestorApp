@@ -29,7 +29,7 @@ import {
 } from '@/lib/network-messaging/network-thread-client-ref';
 import {
   networkAudienceFromDocument,
-  networkAudiencePrivateFromDocuments,
+  networkAudiencePrivateFromDocument,
   networkMessageFromDocument,
   networkThreadFromDocument,
 } from '@/lib/network-messaging/network-thread-from-document';
@@ -97,7 +97,7 @@ function useMyPrivateSeat(threadId: string | null, viewerUid: string | null): Ne
   const live = useLiveDocument(
     threadId === null || viewerUid === null ? null : `${threadId}:private:${viewerUid}`,
     () => clientAudiencePrivateDoc(threadId ?? '', viewerUid ?? ''),
-    (raw) => networkAudiencePrivateFromDocuments(raw),
+    (raw) => networkAudiencePrivateFromDocument(raw),
     'network-thread-private-seat',
   );
   return live.state === 'ready' ? (live.value ?? NETWORK_AUDIENCE_PRIVATE_DEFAULTS) : null;

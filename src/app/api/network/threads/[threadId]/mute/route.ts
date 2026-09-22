@@ -18,7 +18,7 @@ import { setNetworkThreadMuted } from '@/services/network-messaging/thread-messa
 
 import { withNetworkDoor } from '../../../_shared/network-door';
 import { MuteBodySchema } from '../../../_shared/network-params';
-import { ownSeatHandler, type OwnSeatResponse } from '../../../_shared/own-seat-route';
+import { OWN_SEAT_IDEMPOTENCY, ownSeatHandler, type OwnSeatResponse } from '../../../_shared/own-seat-route';
 
 type ThreadRoute = { readonly params: Promise<{ threadId: string }> };
 
@@ -30,4 +30,4 @@ const handler = ownSeatHandler({
   failure: '[NETWORK] Η σίγαση απέτυχε',
 });
 
-export const PUT = withStandardRateLimit(withNetworkDoor<OwnSeatResponse<'muted'>, ThreadRoute>(handler));
+export const PUT = withStandardRateLimit(withNetworkDoor<OwnSeatResponse<'muted'>, ThreadRoute>(handler, { idempotency: OWN_SEAT_IDEMPOTENCY }));

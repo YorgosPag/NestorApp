@@ -24,7 +24,8 @@ import { sleep, withTimeout } from '@/lib/async-utils';
 //    αυτής της κλάσης, αλλά **καμία** δεν άγγιζε το `this`. Έφυγαν όταν το φράγμα
 //    ετοιμότητας ταυτότητας πέρασε το αρχείο τις 500 γραμμές (N.7.1) — **εξαγωγή, όχι
 //    ψαλίδισμα σχολίων**: το όριο ζητά να φύγει ευθύνη.
-import { shouldRetry, calculateBackoff, buildUrl, fetchWithTimeout, isReplayableRequest } from './api-client-transport';
+import { shouldRetry, retryDelay, buildUrl, fetchWithTimeout, keyedHeaders, isReplayableRequest } from './api-client-transport';
+import { IDEMPOTENCY_KEY_HEADER } from './idempotency/idempotency-contract';
 import { createModuleLogger } from '@/lib/telemetry';
 import { requestedWorkspaceScope } from '@/lib/api/workspace-scope-source';
 import {
@@ -170,7 +171,6 @@ export class EnterpriseApiClient {
       timeout = 60000,
       retry = true,
       maxRetries = 3,
-      idempotent = false,
       skipAuth = false,
       responseType = 'auto',
       cache,
@@ -187,16 +187,15 @@ export class EnterpriseApiClient {
     let attempts = 0;
     let authRefreshed = false;
     let forceTokenRefresh = false;
-    // ADR-853 Ε3 — η επανάληψη σε δίκτυο/5xx είναι **δεύτερη πράξη** για ό,τι δεν είναι ιδεμποτικό.
-    // 🔑 **ΕΝΑΣ** κριτής, ο `shouldRetry`: ο βρόχος κρατά μόνο το ταβάνι. Όταν η απόφαση ζούσε και
-    // στο όριο του βρόχου, κάθε μισό έκρυβε το άλλο (μετάλλαξη: 2 επιζώντες).
-    const replay = retry && isReplayableRequest(method, idempotent);
+    // ADR-853 Ε3 — ΕΝΑ κλειδί ανά κλήση, ΠΡΙΝ τον βρόχο (`keyedHeaders`)· ΕΝΑΣ κριτής, ο `shouldRetry`.
+    const idempotencyHeaders = keyedHeaders(method, body, headers);
+    const replay = retry && isReplayableRequest(method, IDEMPOTENCY_KEY_HEADER in idempotencyHeaders);
 
     while (attempts < Math.max(maxRetries, 1)) {
       attempts++;
 
       try {
-        const requestHeaders = await this.buildHeaders(headers, skipAuth, body, forceTokenRefresh);
+        const requestHeaders = await this.buildHeaders(idempotencyHeaders, skipAuth, body, forceTokenRefresh);
         const fetchOptions: RequestInit = { method, headers: requestHeaders, ...(cache ? { cache } : {}) };
 
         if (body !== undefined && body !== null) {
@@ -242,7 +241,7 @@ export class EnterpriseApiClient {
         const shouldRetryNow = shouldRetry(error, attempts, maxRetries, replay);
 
         if (shouldRetryNow) {
-          const delay = calculateBackoff(attempts);
+          const delay = retryDelay(error, attempts);
           logger.warn(`[API] Retrying request (${attempts}/${maxRetries}) after ${delay}ms...`);
           await sleep(delay);
           continue;

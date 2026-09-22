@@ -26,7 +26,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { ErrorResponse } from '@/lib/auth/api-denial';
 import { hasPermission, type PermissionCache } from '@/lib/auth/permissions';
 import {
-  withPersonalOrOrgAuth,
+  withPersonalOrOrgAuth, type PersonalOrOrgAuthOptions,
   type ApiActor,
 } from '@/lib/auth/personal-scope-middleware';
 import type { AuthContext } from '@/lib/auth/types';
@@ -71,9 +71,10 @@ export type NetworkHandler<T, R> = (
  * @example
  * export const POST = withStandardRateLimit(withNetworkDoor<SendResponse, ThreadRoute>(handler));
  */
-export function withNetworkDoor<T = unknown, R = unknown>(handler: NetworkHandler<T, R>) {
-  return withPersonalOrOrgAuth<T, R>((request, actor, routeContext) =>
-    handler(request, networkActorOf(actor), routeContext),
+export function withNetworkDoor<T = unknown, R = unknown>(handler: NetworkHandler<T, R>, options: PersonalOrOrgAuthOptions = {}) {
+  return withPersonalOrOrgAuth<T, R>(
+    (request, actor, routeContext) => handler(request, networkActorOf(actor), routeContext),
+    options,
   );
 }
 

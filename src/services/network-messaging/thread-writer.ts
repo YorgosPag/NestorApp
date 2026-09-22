@@ -45,7 +45,7 @@ import type {
   NetworkThreadTopic,
 } from '@/types/network-thread';
 
-import { legacyPrivateResidue, seatsOfThread } from './audience-seats';
+import { legacyPrivateResidue, publicAudienceRow, seatsOfThread } from './audience-seats';
 import {
   networkAudiencePrivateRef,
   networkAudienceRef,
@@ -193,7 +193,8 @@ export function writeActThread(
   });
 
   for (const write of audienceWrites) {
-    transaction.set(slot.audienceRef.doc(write.uid), write.entry);
+    // 🔒 Ε9: μόνο δηλωμένα δημόσια πεδία — η προβολή ξεκινά από το ακατέργαστο `previous`.
+    transaction.set(slot.audienceRef.doc(write.uid), publicAudienceRow(write.entry));
   }
 
   return { threadId: document.id, created: !slot.exists, audienceWrites };

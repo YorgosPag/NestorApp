@@ -48,4 +48,7 @@ async function handler(_request: NextRequest, actor: NetworkActor, routeContext?
   }
 }
 
-export const POST = withStandardRateLimit(withNetworkDoor<ReadResponse, ThreadRoute>(handler));
+// 🔑 ADR-853 Ε3 — ιδεμποτικό εκ κατασκευής, και τρέχει σε ΚΑΘΕ άνοιγμα νήματος: η αποθήκη θα ήταν κόστος.
+export const POST = withStandardRateLimit(withNetworkDoor<ReadResponse, ThreadRoute>(handler, {
+  idempotency: { mode: 'natural', why: '«διάβασα ως τώρα» — η επανάληψη μετακινεί μόνο το ίδιο δικό του σημάδι μπροστά' },
+}));

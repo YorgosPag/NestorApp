@@ -48,6 +48,9 @@ import type { NextRequest, NextResponse } from 'next/server';
 
 import { buildApiIdentity } from './auth-context';
 import { createUnauthorizedResponse, type ErrorResponse } from './api-denial';
+import { executeHandler } from './handler-execution';
+import { runIdempotently } from '@/lib/api/idempotency/with-idempotency';
+import type { IdempotencyPolicy } from '@/lib/api/idempotency/idempotency-contract';
 import type { AuthContext, PersonalIdentityContext } from './types';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 
@@ -132,8 +135,14 @@ export type PersonalOrOrgHandler<T = unknown, R = unknown> = (
  * export const POST = withStandardRateLimit(withPersonalOrOrgAuth(handler));
  * ```
  */
+/** Ό,τι δηλώνει μια διαδρομή στο σύνορο — **μόνο** η εξαίρεση ιδεμποτίας (ADR-853 Ε3), όπως στο `withAuth`. */
+export interface PersonalOrOrgAuthOptions {
+  readonly idempotency?: IdempotencyPolicy;
+}
+
 export function withPersonalOrOrgAuth<T = unknown, R = unknown>(
   handler: PersonalOrOrgHandler<T, R>,
+  options: PersonalOrOrgAuthOptions = {},
 ): (request: NextRequest, routeContext?: R) => Promise<NextResponse<T | ErrorResponse>> {
   return async (request, routeContext) => {
     const identity = await buildApiIdentity(request);
@@ -151,6 +160,12 @@ export function withPersonalOrOrgAuth<T = unknown, R = unknown>(
         ? { scope: 'organization', ctx: identity.ctx }
         : { scope: 'personal', ctx: identity.ctx };
 
-    return handler(request, actor, routeContext);
+    // 🔑 ADR-853 Ε3 Φάση 2 — το ΙΔΙΟ σύνορο ιδεμποτίας με το `withAuth`: μία εκτέλεση ανά `Idempotency-Key`.
+    return (await runIdempotently(request, actor.ctx.uid, options.idempotency, () =>
+      executeHandler(request, () => handler(request, actor, routeContext), {
+        userId: actor.ctx.uid,
+        metadata: { scope: actor.scope },
+      }),
+    )) as NextResponse<T | ErrorResponse>;
   };
 }

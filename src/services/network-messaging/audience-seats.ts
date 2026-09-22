@@ -25,10 +25,11 @@ import type {
 
 import {
   audiencePrivateFieldsOf,
-  networkAudiencePrivateFromDocuments,
+  networkAudiencePrivateFromDocument,
 } from '@/lib/network-messaging/network-thread-from-document';
 import {
   NETWORK_AUDIENCE_PRIVATE_FIELDS,
+  NETWORK_AUDIENCE_PUBLIC_FIELDS,
   type NetworkAudienceEntry,
   type NetworkAudiencePrivate,
   type NetworkAudienceSeat,
@@ -47,11 +48,26 @@ export interface PublicSeatRow {
 }
 
 /**
- * Δημόσια + ιδιωτική πλευρά ⇒ θέση. ⚠️ Τα ιδιωτικά πεδία **ξαναγράφονται** από τον αναλυτή, ώστε ό,τι
- * παλιό κουβαλά ακόμη η δημόσια γραμμή (πριν τη μετανάστευση) να μετρά **μόνο** ως εφεδρεία.
+ * Δημόσια + ιδιωτική πλευρά ⇒ θέση. 🔒 Τα ιδιωτικά πεδία έρχονται **μόνο** από το ιδιωτικό έγγραφο και
+ * **ξαναγράφουν** κάθε ομώνυμο της δημόσιας γραμμής — ό,τι ιδιωτικό κουβαλούσε εκείνη είναι διαρροή, όχι τιμή
+ * (η εφεδρεία expand/contract αφαιρέθηκε 2026-09-22, ADR-867 Ε9).
  */
 export function audienceSeatOf(publicRaw: DocumentData, privateRaw: DocumentData | undefined): NetworkAudienceSeat {
-  return { ...(publicRaw as NetworkAudienceEntry), ...networkAudiencePrivateFromDocuments(privateRaw, publicRaw) };
+  return { ...(publicRaw as NetworkAudienceEntry), ...networkAudiencePrivateFromDocument(privateRaw) };
+}
+
+/**
+ * 🔒 **Ό,τι γράφεται στη ΔΗΜΟΣΙΑ γραμμή — ΜΟΝΟ τα δηλωμένα `audience` πεδία** (ADR-867 Ε9 contract).
+ *
+ * Η προβολή χτίζει τη γραμμή με `{ ...previous }` από το **ακατέργαστο** έγγραφο και ο γραφέας κάνει `set`: χωρίς
+ * αυτό, ένα αδέσποτο ιδιωτικό πεδίο θα **ξαναγραφόταν** εκεί σε κάθε αλλαγή ρόλου/επιστροφή/σφραγίδα — ορατό
+ * στην άλλη πλευρά, και (μετά την αφαίρεση της εφεδρείας) **αόρατο** στον ίδιο. Λίστα επιτρεπόμενων, όχι
+ * απαγορευμένων: πεδίο που δεν δηλώθηκε δημόσιο **δεν** φτάνει ποτέ στη δημόσια γραμμή.
+ */
+export function publicAudienceRow(entry: NetworkAudienceEntry): NetworkAudienceEntry {
+  const row: Partial<Record<keyof NetworkAudienceEntry, unknown>> = {};
+  for (const field of NETWORK_AUDIENCE_PUBLIC_FIELDS) if (field in entry) row[field] = entry[field];
+  return row as NetworkAudienceEntry;
 }
 
 /**

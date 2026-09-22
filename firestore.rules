@@ -6775,6 +6775,14 @@ service cloud.firestore {
       allow read, write: if false; // Server-side only via Admin SDK
     }
 
+    // ── Η ΜΝΗΜΗ ΤΟΥ ΣΥΝΟΡΟΥ ΙΔΕΜΠΟΤΙΑΣ (ADR-853 Ε3 Φάση 2) ──────────────────────
+    // Κλείδωμα + αποθηκευμένη απάντηση ανά `Idempotency-Key`. Ρητή άρνηση, όχι
+    // default-deny: ανάγνωση = η απάντηση ΑΛΛΟΥ ανθρώπου (μπορεί να έχει προσωπικά
+    // δεδομένα)· γραφή = ψεύτικη «ήδη έγινε» ή μόνιμο κλείδωμα μιας πράξης.
+    match /idempotency_records/{recordId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
     // ── ΤΟ ΕΥΡΕΤΗΡΙΟ ΨΕΥΔΩΝΥΜΩΝ ΧΩΡΟΥ (ADR-787 §5.3 δ · Κ-1) ────────────────
     // «Ποιος χώρος λέγεται έτσι;» — κλειδί εγγράφου = ο σκελετός UTS #39.
     //

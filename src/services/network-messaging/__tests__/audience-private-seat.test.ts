@@ -4,19 +4,19 @@
  * ADR-867 Β9(β) Ε9 — ΑΓΚΥΡΕΣ της **ιδιωτικής πλευράς της θέσης** (ώρα ανάγνωσης · σίγαση · follow).
  *
  *   Ι-1  Ανύπαρκτο ιδιωτικό έγγραφο ⇒ οι ουδέτερες τιμές, όχι σφάλμα
- *   Ι-2  🔴 Ανά ΠΕΔΙΟ: ό,τι λέει το ιδιωτικό νικά· ό,τι δεν λέει έρχεται από το παλιό σχήμα
- *   Ι-3  🔴 `lastReadAt: null` στο ιδιωτικό είναι ΤΙΜΗ — δεν πέφτει στο παλιό
+ *   Ι-2  🔴 Contract: ιδιωτικό όνομα στη ΔΗΜΟΣΙΑ γραμμή ΔΕΝ είναι τιμή — η θέση το αγνοεί (εφεδρεία αφαιρέθηκε)
+ *   Ι-3  🔴 `lastReadAt: null` στο ιδιωτικό είναι ΤΙΜΗ — δεν αντικαθίσταται από την ουδέτερη
  *   Ι-4  Κατάλοιπο: μεταφέρει ΜΟΝΟ ό,τι λείπει από το ιδιωτικό · σβήνει ΚΑΘΕ ιδιωτικό όνομα, ακόμη και χαλασμένο
  *   Ι-5  Η ένωση: `null` όπου δεν υπάρχει θέση — και ΚΑΜΙΑ ανάγνωση για ξένο
  *   Μ-1  Μετακίνηση: το πεδίο φεύγει από τη δημόσια γραμμή και φτάνει στο ιδιωτικό, στην ίδια συναλλαγή
  *   Μ-2  🔴 Ό,τι είχε ήδη γράψει ο νέος κώδικας ΔΕΝ ξαναγράφεται από το παλιό
  *   Μ-3  Ιδεμποτησία: δεύτερη κλήση ⇒ `clean`, καμία γραφή · ανύπαρκτη θέση ⇒ `absent`
- *   Π-1  Πύλη email: η σίγαση στο ΙΔΙΩΤΙΚΟ κόβει το email · εφεδρεία στο παλιό σχήμα όσο δεν έτρεξε η μετανάστευση
+ *   Π-1  Πύλη email: η σίγαση στο ΙΔΙΩΤΙΚΟ κόβει το email · σίγαση ΜΟΝΟ στη δημόσια γραμμή δεν μετρά (contract)
  *   Κ-1  Κατάλογος: «αδιάβαστο» και «σίγαση» από το ΙΔΙΩΤΙΚΟ έγγραφο
  */
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { networkAudiencePrivateFromDocuments } from '@/lib/network-messaging/network-thread-from-document';
+import { networkAudiencePrivateFromDocument } from '@/lib/network-messaging/network-thread-from-document';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { joinAudienceSeats, legacyPrivateResidue } from '@/services/network-messaging/audience-seats';
 import { networkUnreadStillPending } from '@/services/network-messaging/network-unread-email';
@@ -65,20 +65,21 @@ function world(): { db: AdminFirestore; fake: FakeFirestore } {
 // ============================================================================
 describe('Ι — ο αναλυτής και το κατάλοιπο (καθαρά)', () => {
   it('Ι-1 ανύπαρκτο ιδιωτικό έγγραφο ⇒ οι ουδέτερες τιμές', () => {
-    expect(networkAudiencePrivateFromDocuments(undefined)).toStrictEqual(NETWORK_AUDIENCE_PRIVATE_DEFAULTS);
+    expect(networkAudiencePrivateFromDocument(undefined)).toStrictEqual(NETWORK_AUDIENCE_PRIVATE_DEFAULTS);
   });
 
-  it('Ι-2 🔴 ανά ΠΕΔΙΟ: ιδιωτικό νικά, το υπόλοιπο από το παλιό σχήμα (μετάλλαξη: ανά έγγραφο)', () => {
-    const legacy = publicRow(MARIA, 'host', { lastReadAt: READ, muted: false, following: true });
-    expect(networkAudiencePrivateFromDocuments({ muted: true }, legacy)).toStrictEqual({
-      lastReadAt: READ,
-      muted: true,
-      following: true,
-    });
+  it('Ι-2 🔴 contract: ιδιωτικό όνομα στη ΔΗΜΟΣΙΑ γραμμή δεν γίνεται τιμή της θέσης (μετάλλαξη: η εφεδρεία επιστρέφει)', async () => {
+    const { db } = world();
+    const noPrivateDoc = jest.fn(async (...refs: unknown[]) => refs.map(() => ({ data: () => undefined })));
+    const [seat] = await joinAudienceSeats(noPrivateDoc as never, db, [
+      { threadId: THREAD_ID, uid: MARIA, publicRaw: publicRow(MARIA, 'host', { lastReadAt: READ, muted: true, following: true }) },
+    ]);
+    expect(seat).toMatchObject({ uid: MARIA, ...NETWORK_AUDIENCE_PRIVATE_DEFAULTS });
   });
 
-  it('Ι-3 🔴 `lastReadAt: null` στο ιδιωτικό είναι ΤΙΜΗ — δεν πέφτει στο παλιό (μετάλλαξη: `??`)', () => {
-    expect(networkAudiencePrivateFromDocuments({ lastReadAt: null }, { lastReadAt: READ }).lastReadAt).toBeNull();
+  it('Ι-3 🔴 `lastReadAt: null` στο ιδιωτικό είναι ΤΙΜΗ — δεν αντικαθίσταται από την ουδέτερη', () => {
+    expect(networkAudiencePrivateFromDocument({ lastReadAt: null, muted: true }).lastReadAt).toBeNull();
+    expect(networkAudiencePrivateFromDocument({ muted: true })).toStrictEqual({ ...NETWORK_AUDIENCE_PRIVATE_DEFAULTS, muted: true });
   });
 
   it('Ι-4 κατάλοιπο: μεταφέρει ΜΟΝΟ ό,τι λείπει · σβήνει ΚΑΘΕ ιδιωτικό όνομα, ακόμη και χαλασμένο', () => {
@@ -155,10 +156,10 @@ describe('Π — η πύλη του email «αδιάβαστο» διαβάζε�
     expect((await networkUnreadStillPending(db, [REF], LATER)).size).toBe(0);
   });
 
-  it('Π-2 🔁 εφεδρεία: σίγαση στο ΠΑΛΙΟ σχήμα (πριν τη μετανάστευση) κόβει κι αυτή το email', async () => {
+  it('Π-2 🔴 contract: σίγαση ΜΟΝΟ στη δημόσια γραμμή ΔΕΝ μετρά — η μόνη πηγή είναι το ιδιωτικό', async () => {
     const { db, fake } = world();
     fake.seed(AUDIENCE, MARIA, publicRow(MARIA, 'host', { muted: true }));
-    expect((await networkUnreadStillPending(db, [REF], LATER)).size).toBe(0);
+    expect((await networkUnreadStillPending(db, [REF], LATER)).size).toBe(1);
   });
 });
 
