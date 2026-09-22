@@ -22,12 +22,13 @@
 'use strict';
 
 const fs = require('node:fs');
-const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 
 const O = require('../lib/i18n-ssr/oracle');
 const B = require('../lib/i18n-ssr/backend-contract');
+// ⚠️ ΕΝΑΣ fixture server για όλες τις άγκυρες του χρησμού (N.18 — ήταν τριπλός).
+const { serving } = require('./i18n-ssr-probe-fixture');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const CONTRACT = B.loadBackendContract(REPO_ROOT);
@@ -38,20 +39,6 @@ const REAL_ROW =
   '4:E{\\"digest\\":\\"NESTOR_BACKEND_UNAVAILABLE:agency-alias-lookup\\"}\\n"])</script>';
 
 const errorDocument = (inner) => `<!DOCTYPE html><html id="__next_error__"><head></head><body>${inner}</body></html>`;
-
-async function serving(status, html, fn) {
-  const server = http.createServer((_request, response) => {
-    response.writeHead(status, { 'content-type': 'text/html; charset=utf-8' });
-    response.end(html);
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address();
-  try {
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
-  }
-}
 
 const ROUTE = { file: 'src/app/(light)/pro/[alias]/page.tsx', url: '/pro/ssr-probe', dynamic: true, withheld: null };
 /** Χτυπά τη διαδρομή και **αποδεικνύει ότι ο server απάντησε** με τον αναμενόμενο κωδικό. */

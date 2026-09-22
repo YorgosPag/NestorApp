@@ -282,21 +282,12 @@ describe('Κ — συμβόλαια ratchet και λογιστικής', () => 
  * η μηχανή καταστάσεων ήταν διακοσμητική — το ίδιο μάθημα με τη `Μ8` του §8.43,
  * που απαίτησε άγκυρα η οποία εκτελεί το αληθινό μονοπάτι.
  */
-const http = require('node:http');
+// ⚠️ ΕΝΑΣ fixture server για όλες τις άγκυρες του χρησμού (N.18 — ήταν τριπλός:
+//    εδώ δύο φορές, `serving` + `servingWith`, και μία στο backend-contract).
+const { serving: servingWith } = require('./i18n-ssr-probe-fixture');
 
-async function serving(html, fn) {
-  const server = http.createServer((_request, response) => {
-    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    response.end(html);
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address();
-  try {
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
-  }
-}
+/** Το 200 είναι ο κανόνας — ο κωδικός δηλώνεται ρητά μόνο όπου **είναι** το θέμα. */
+const serving = (html, fn) => servingWith(200, html, fn);
 
 const probe = (baseUrl, route) =>
   O.probeRoute(route, { baseUrl, userAgent: CLI.USER_AGENT, oracle: ORACLE, timeoutMs: 5000 });
@@ -476,20 +467,8 @@ describe('Δ — ο χρησμός ρωτά την ΕΙΚΟΝΑ που στάλ�
 //     «δεν κοίταξα» ΔΕΝ είναι μία κατάσταση — είναι τρεις, με τρεις θεραπείες
 // ===========================================================================
 
-/** Σαν τη `serving`, αλλά με **δικό μας κωδικό κατάστασης** — το 404 είναι το θέμα. */
-async function servingWith(status, html, fn) {
-  const server = http.createServer((_request, response) => {
-    response.writeHead(status, { 'content-type': 'text/html; charset=utf-8' });
-    response.end(html);
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address();
-  try {
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
-  }
-}
+// ⚠️ Η `servingWith` (= `serving` του κοινού fixture, με ρητό κωδικό κατάστασης)
+//    δηλώνεται ΠΑΝΩ, μαζί με τη `serving`. Εδώ ήταν το δεύτερο αντίγραφο.
 
 /** Έγγραφο Next.js **χωρίς τίποτα στο σώμα** — η ζωντανή περίπτωση `/oauth/consent`. */
 const emptyBody = '<!doctype html><html><head><title>Nestor App</title></head><body><div id="r"></div></body></html>';
