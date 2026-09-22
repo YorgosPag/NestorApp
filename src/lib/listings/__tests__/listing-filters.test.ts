@@ -369,6 +369,16 @@ describe('Χ — ο χρόνος ταξιδεύει στη διεύθυνση, �
     expect(parseListingFilters(new URLSearchParams('guests=-2')).guests).toBeNull();
     expect(parseListingFilters(new URLSearchParams('guests=2.5')).guests).toBeNull();
     expect(parseListingFilters(new URLSearchParams('guests=2')).guests).toBe(2);
+    // ADR-777 §8.60.21.7: το ταβάνι της δημόσιας ερώτησης — πάνω από αυτό ο διακομιστής απαντούσε 400.
+    expect(parseListingFilters(new URLSearchParams('guests=50')).guests).toBe(50);
+    expect(parseListingFilters(new URLSearchParams('guests=51')).guests).toBeNull();
+  });
+
+  it('🔴 ο σειριοποιητής ΔΕΝ γράφει άτομα που ο αναγνώστης θα πετούσε (καθρέφτης, όχι `!== null`)', () => {
+    for (const guests of [0, 2.5, 51]) {
+      expect(serializeListingFilters({ ...EMPTY_LISTING_FILTERS, guests }).has('guests')).toBe(false);
+    }
+    expect(serializeListingFilters({ ...EMPTY_LISTING_FILTERS, guests: 3 }).get('guests')).toBe('3');
   });
 });
 

@@ -15,8 +15,26 @@ import React, { useId } from 'react';
 
 import { STAY_PETS_CEILING } from '@/lib/offers/offer-amount';
 
+/** Οι επιλογές `1..ceiling` — **παράγονται** από ένα ταβάνι, ποτέ χειρόγραφη λίστα. */
+export function stayCountChoices(ceiling: number): readonly number[] {
+  return Array.from({ length: Math.max(0, Math.floor(ceiling)) }, (_, index) => index + 1);
+}
+
 /** Πόσα κατοικίδια — **παράγεται** από το ταβάνι του κατόχου, ποτέ δεύτερος χειρόγραφος αριθμός. */
-export const STAY_PET_CHOICES: readonly number[] = Array.from({ length: STAY_PETS_CEILING }, (_, index) => index + 1);
+export const STAY_PET_CHOICES: readonly number[] = stayCountChoices(STAY_PETS_CEILING);
+
+/**
+ * Οι επιλογές που **αποδίδονται**: αν η τιμή είναι εκτός λίστας, προστίθεται στη θέση της.
+ *
+ * 🔴 ADR-777 §8.60.21.7: ένα `<select>` με τιμή που δεν έχει `<option>` δείχνει την **πρώτη** επιλογή,
+ * δηλαδή «δεν το έχω αποφασίσει», για ερώτηση που **έγινε** (π.χ. `?guests=12` με επιλογές 1–8, ή
+ * άτομα πάνω από το μέγιστο της αγγελίας). Η οθόνη δεν λέει ποτέ ψέματα για την ερώτηση· το αν
+ * «χωράει» το κρίνει ο διακομιστής.
+ */
+function renderedChoices(choices: readonly number[], value: number | null): readonly number[] {
+  if (value === null || choices.includes(value)) return choices;
+  return [...choices, value].sort((a, b) => a - b);
+}
 
 export function StayCountSelect({
   label,
@@ -44,7 +62,7 @@ export function StayCountSelect({
         className="mt-1 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
       >
         <option value="">{anyLabel}</option>
-        {choices.map((count) => (
+        {renderedChoices(choices, value).map((count) => (
           <option key={count} value={count}>
             {count}
           </option>

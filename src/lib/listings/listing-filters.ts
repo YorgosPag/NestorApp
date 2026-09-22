@@ -54,9 +54,16 @@ import {
   SEARCH_AREA_PARAM,
 } from '@/lib/listings/listing-search-area';
 import { isBoundingBox } from '@/lib/geo/geo-area';
-import { intervalShape } from '@/lib/date-local';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
-import { isWholePetCount } from '@/lib/offers/offer-amount';
+import {
+  readListingGuests,
+  readListingPets,
+  readListingStayWindow,
+  writeListingGuests,
+  writeListingPets,
+  writeListingStayWindow,
+  type ListingStayWindow,
+} from '@/lib/listings/listing-stay-url';
 
 import {
   EMPTY_LISTING_CRITERIA,
@@ -75,25 +82,6 @@ import {
   type ListingCriteriaLedger,
   type ListingCriteriaMatch,
 } from '@/lib/criteria/listing-criteria-judge';
-
-/**
- * **Ο ΧΡΟΝΙΚΟΣ ΑΞΟΝΑΣ** — η απάντηση στο *«πότε;»* (ADR-835 §4.6).
- *
- * 🔑 **Αντικείμενο `| null`, ΠΟΤΕ δύο επίπεδα πεδία** — ίδιο ιδίωμα με το
- * {@link GeoCircle}, και για τον **ίδιο ακριβώς λόγο**: μια άφιξη χωρίς
- * αναχώρηση δεν είναι «σχεδόν ερώτηση», είναι **μη ερώτηση**. Δύο `string | null`
- * πεδία θα επέτρεπαν στον τύπο να εκφράσει τη μισή, και κάθε καταναλωτής θα έπρεπε να
- * θυμάται τον έλεγχο — δηλαδή θα τον ξεχνούσε κάποιος.
- *
- * ⚠️ **Ημι-ανοιχτό `[checkIn, checkOut)`** (§16 · ADR-832 §5.2): η μέρα αναχώρησης
- * **είναι** μέρα άφιξης του επόμενου. **Μην το αγγίξεις.**
- */
-export interface ListingStayWindow {
-  /** ISO `YYYY-MM-DD` — η άφιξη. Ανήκει στο διάστημα. */
-  readonly checkIn: string;
-  /** ISO `YYYY-MM-DD` — η αναχώρηση. **ΔΕΝ** ανήκει στο διάστημα. */
-  readonly checkOut: string;
-}
 
 /**
  * **Κλειστό σχήμα — κάθε φίλτρο της οθόνης 2, και κανένα άλλο.**
@@ -167,9 +155,10 @@ export const EMPTY_LISTING_FILTERS: ListingFilters = {
 // ============================================================================
 
 /**
- * Οι παράμετροι των **τριών ειδικών** αξόνων.
+ * Οι παράμετροι του **γεωγραφικού** άξονα.
  *
- * ⚠️ Των υπολοίπων ζουν στο `CRITERION_PARAM` και **δεν αντιγράφονται εδώ**. Το ότι
+ * ⚠️ Των κριτηρίων ζουν στο `CRITERION_PARAM`, της ερώτησης διαμονής (`in` · `out` · `guests` ·
+ * `pets`) στο `listing-stay-url.ts` — και **δεν αντιγράφονται εδώ**. Το ότι
  * κανένα από τα δύο σύνολα δεν συγκρούεται με το άλλο είναι **άγκυρα**, όχι σχόλιο:
  * δες `RESERVED_SEARCH_PARAMS`.
  */
@@ -177,10 +166,6 @@ const PARAM = {
   lat: 'lat',
   lng: 'lng',
   radiusKm: 'r',
-  checkIn: 'in',
-  checkOut: 'out',
-  guests: 'guests',
-  pets: 'pets',
 } as const;
 
 /**
@@ -224,69 +209,6 @@ export function readGeoFilter(params: URLSearchParams): GeoCircle | null {
   return { center: { lat, lng }, radiusKm };
 }
 
-/**
- * **Αυστηρή ημερολογιακή μέρα `YYYY-MM-DD`** — τίποτα άλλο.
- *
- * 🔴 **ΓΙΑΤΙ REGEX ΚΑΙ ΟΧΙ ΣΚΕΤΟ `intervalShape`.** Ο αναγνώστης στιγμών δέχεται
- * **πολλές** μορφές (`2026-08-10T12:00:00Z`, `Timestamp`, …) και θα τις έκρινε μια
- * χαρά. Αλλά ο τύπος {@link ListingStayWindow} υπόσχεται **ημέρα**, και μια στιγμή με
- * **ώρα** μέσα σε ημι-ανοιχτό διάστημα νυχτών αλλάζει σιωπηλά τη σημασία της
- * αναχώρησης — δηλαδή θα έκανε τη **διαδοχή** δύο κρατήσεων να επικαλύπτεται κατά
- * μισή μέρα, στην πιο ακριβή δυνατή θέση.
- *
- * ⚠️ Ο έλεγχος είναι **μορφής**, όχι υπαρκτότητας: το `2026-02-31` περνά εδώ και
- * κόβεται από το {@link intervalShape} παρακάτω, που το διαβάζει ως στιγμή.
- */
-const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-function readDay(params: URLSearchParams, key: string): string | null {
-  const raw = params.get(key)?.trim() ?? '';
-  return CALENDAR_DAY.test(raw) ? raw : null;
-}
-
-/**
- * Διεύθυνση → χρονικό παράθυρο, ή `null`.
- *
- * ⚠️ **Απαιτούνται ΚΑΙ ΤΑ ΔΥΟ άκρα** — ίδιος κανόνας με το `lat`/`lng`: μισό παράθυρο
- * δεν είναι μισή ερώτηση, είναι **καμία**.
- *
- * 🔴 **ΚΑΙ ΤΟ ΔΙΑΣΤΗΜΑ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ `proper`** — ο φρουρός του Ε-10, στη μία θέση
- * που ο κόσμος γράφει ημερομηνίες με το χέρι. Ένα **κενό** (`in === out`) θα ήταν
- * αίτημα **μηδέν νυχτών**· ένα **ανάποδο** (`out < in`) δεν περιγράφει διάστημα. Και
- * τα δύο θα ταξίδευαν σε κάθε κοινοποιημένο σύνδεσμο, και ο κριτής θα τα έκρινε
- * **ασυνεπώς** (§17). Απορρίπτονται **εδώ**, στην πόρτα.
- */
-function readStayWindow(params: URLSearchParams): ListingStayWindow | null {
-  const checkIn = readDay(params, PARAM.checkIn);
-  const checkOut = readDay(params, PARAM.checkOut);
-  if (checkIn === null || checkOut === null) return null;
-  if (intervalShape(checkIn, checkOut) !== 'proper') return null;
-  return { checkIn, checkOut };
-}
-
-/**
- * Διεύθυνση → πλήθος ατόμων, ή `null`.
- *
- * ⚠️ **Θετικός ακέραιος, ή τίποτα.** Το `0` δεν είναι «χαλαρό φίλτρο» — είναι αίτημα
- * για **κανέναν επισκέπτη**, και το `2,5` δεν είναι άνθρωποι. Ο `readFiniteNumber`
- * δέχεται και τα δύο (είναι πεπερασμένα), οπότε ο περιορισμός ανήκει **εδώ**: το ίδιο
- * μάθημα με το *«ακτίνα ≤ 0 ⇒ αγνοείται ολόκληρο το φίλτρο»*.
- */
-function readGuests(params: URLSearchParams): number | null {
-  const value = readFiniteNumber(params, PARAM.guests);
-  if (value === null || !Number.isInteger(value) || value < 1) return null;
-  return value;
-}
-
-/**
- * Διεύθυνση → πλήθος κατοικιδίων, ή `null` — ακέραιος στο `[1, 5]` ({@link isWholePetCount}),
- * το **ίδιο** κατώφλι με τον κάτοχο. `0` ή `9` ⇒ αγνοείται, όπως κάθε άκυρη παράμετρος.
- */
-function readPets(params: URLSearchParams): number | null {
-  const value = readFiniteNumber(params, PARAM.pets);
-  return value !== null && isWholePetCount(value) ? value : null;
-}
-
 /** Διεύθυνση → φίλτρα. **Άγνωστη τιμή αγνοείται**, ποτέ δεν σκάει η οθόνη. */
 export function parseListingFilters(params: URLSearchParams): ListingFilters {
   return {
@@ -297,9 +219,9 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
     // πιο ρητή δήλωση για το πού κοιτάει. Ο σειριοποιητής γράφει πάντα **ένα** από
     // τα δύο, οπότε αυτή η προτεραιότητα κρίνει μόνο χειρόγραφες διευθύνσεις.
     near: readSearchAreaBox(params) ?? readGeoFilter(params),
-    stayWindow: readStayWindow(params),
-    guests: readGuests(params),
-    pets: readPets(params),
+    stayWindow: readListingStayWindow(params),
+    guests: readListingGuests(params),
+    pets: readListingPets(params),
   };
 }
 
@@ -334,13 +256,12 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
       params.set(PARAM.radiusKm, String(filters.near.radiusKm));
     }
   }
-  // ⚠️ **Τα δύο άκρα γράφονται μαζί ή καθόλου**, ίδιος κανόνας με τα γεωγραφικά.
-  if (filters.stayWindow !== null) {
-    params.set(PARAM.checkIn, filters.stayWindow.checkIn);
-    params.set(PARAM.checkOut, filters.stayWindow.checkOut);
-  }
-  if (filters.guests !== null) params.set(PARAM.guests, String(filters.guests));
-  if (filters.pets !== null) params.set(PARAM.pets, String(filters.pets));
+  // 🔑 Η ερώτηση διαμονής γράφεται από τους **καθρέφτες** των αναγνωστών της (ADR-777 §8.60.21.7):
+  //    ό,τι δεν θα διαβαζόταν πίσω, δεν γράφεται. Ως τις 2026-09-22 εδώ ζούσε `guests !== null`,
+  //    που έγραφε και `0` ή `2.5`, δηλαδή σύνδεσμο που ο αναγνώστης θα πετούσε.
+  writeListingStayWindow(filters.stayWindow, params);
+  writeListingGuests(filters.guests, params);
+  writeListingPets(filters.pets, params);
   return params;
 }
 
