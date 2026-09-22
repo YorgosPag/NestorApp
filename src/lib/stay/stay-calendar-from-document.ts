@@ -17,7 +17,7 @@
 
 import { isDateKey } from '@/lib/calendar/date-key';
 import { isRecord } from '@/lib/type-guards';
-import { isDeclaredPetCount } from '@/lib/offers/offer-amount';
+import { isDeclaredPetCount, isWholeStayCount } from '@/lib/offers/offer-amount';
 import { stayBookingPriceFrom } from '@/lib/stay/stay-quote-record';
 import { stayDayRuleFrom, stayRulesFrom } from '@/lib/stay/stay-rules-shape';
 import { STAY_RULES_NONE, type StayCalendarMonth, type StayDayRule } from '@/types/stay-rules';
@@ -248,7 +248,9 @@ export function stayBookingFromDocument(raw: unknown, id: string): StayBooking |
   if (createdAt === null || updatedAt === null || riskDisclosedAt === undefined) return null;
   if (stored.offerKind !== 'leaseShort') return null;
   if (!isStayBookingChannel(stored.channel) || !isStayBookingLifecycle(stored.lifecycle)) return null;
-  if (typeof guests !== 'number' || !Number.isInteger(guests) || guests < 1) return null;
+  // ⚠️ Αναγνώστης ΑΠΟΘΗΚΕΥΜΕΝΩΝ: μόνο το κατώφλι, χωρίς ταβάνι — ένας στενότερος αναγνώστης θα
+  //    έκρυβε σιωπηλά έγγραφα που κάποτε γράφτηκαν νόμιμα (ADR-777 §8.60.21.7).
+  if (typeof guests !== 'number' || !isWholeStayCount(guests)) return null;
   const covers = spaceRefsOf(stored.covers, propertyId);
   const range = nightsRange(stored.checkIn, stored.checkOut);
   if (covers === null || range === null) return null;

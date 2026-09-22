@@ -16,13 +16,12 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import {
-  actorWorkspace,
+  listingActorOf,
   withPersonalOrOrgAuth,
   type ApiActor,
 } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import {
   stayChannelCommandFrom,
   STAY_CHANNEL_WRITE_STATUS,
@@ -40,10 +39,6 @@ type ErrorBody = { readonly error: 'MISSING_ID' | 'ABSENT' | 'MALFORMED'; readon
 
 const NO_STORE = { 'Cache-Control': 'no-store' } as const;
 
-function actorOf(actor: ApiActor): ListingActor {
-  return { uid: actor.ctx.uid, companyId: actorWorkspace(actor) };
-}
-
 async function propertyIdOf(routeContext?: RouteContext): Promise<string> {
   const params = await routeContext?.params;
   return params?.ownerPropertyId?.trim() ?? '';
@@ -57,7 +52,7 @@ async function getHandler(
   const propertyId = await propertyIdOf(routeContext);
   if (propertyId === '') return NextResponse.json({ error: 'MISSING_ID' }, { status: 400 });
 
-  const view = await readStayChannelsView(getAdminFirestore(), propertyId, actorOf(actor));
+  const view = await readStayChannelsView(getAdminFirestore(), propertyId, listingActorOf(actor));
   if (view.kind === 'absent') return NextResponse.json({ error: 'ABSENT' }, { status: 404 });
   // 🔑 Το `unreadable` είναι **κατάσταση οθόνης** με 200, όπως στο `stay-calendar`.
   return NextResponse.json(view, { headers: NO_STORE });
@@ -77,7 +72,7 @@ async function postHandler(
   }
 
   const result = await executeStayChannelCommand(
-    getAdminFirestore(), propertyId, parsed.command, actorOf(actor),
+    getAdminFirestore(), propertyId, parsed.command, listingActorOf(actor),
   );
   return NextResponse.json(result, { status: STAY_CHANNEL_WRITE_STATUS[result.kind], headers: NO_STORE });
 }

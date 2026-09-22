@@ -13,7 +13,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { actorWorkspace, withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { listingActorOf, withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -35,7 +35,7 @@ async function handler(
   const read = await readPrivateMarketingPanels(
     getAdminFirestore(),
     ownerPropertyId,
-    { uid: actor.ctx.uid, companyId: actorWorkspace(actor) },
+    listingActorOf(actor),
     nowISO(),
   );
   if (read.kind === 'absent') return NextResponse.json({ kind: 'absent' } as const, { status: 404 });

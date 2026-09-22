@@ -18,7 +18,7 @@
 
 import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
-import { isDeclaredPetCount } from '@/lib/offers/offer-amount';
+import { isDeclaredPetCount, isWholeGuestCount } from '@/lib/offers/offer-amount';
 import { isRecord } from '@/lib/type-guards';
 import { isStayRuleWarningKind, type StayRuleWarningKind } from '@/lib/stay/stay-rule-warnings';
 import { stayDayRuleFrom, stayRulesFrom } from '@/lib/stay/stay-rules-shape';
@@ -33,7 +33,6 @@ import {
 export const STAY_BLOCK_MAX_NIGHTS = 1096;
 /** Ανώτατη διάρκεια χειροκίνητης κράτησης. Το όριο των 59 ημερών ΔΕΝ μπαίνει εδώ (§4.9). */
 export const STAY_BOOKING_MAX_NIGHTS = 366;
-export const STAY_BOOKING_MAX_GUESTS = 50;
 export const STAY_NOTE_MAX_LENGTH = 500;
 export const STAY_GUEST_LABEL_MAX_LENGTH = 120;
 /** Ανώτατο εύρος ρύθμισης ημερών σε μία πράξη — ένα έτος. */
@@ -146,9 +145,7 @@ function parseBlock(body: Body): StayCalendarCommandParse {
 function stayGuestsWithin(body: Body, bad: string[]): number | null {
   if (!nightsWithin(body.checkIn, body.checkOut, STAY_BOOKING_MAX_NIGHTS)) bad.push('checkIn', 'checkOut');
   const { guests } = body;
-  if (typeof guests === 'number' && Number.isInteger(guests) && guests >= 1 && guests <= STAY_BOOKING_MAX_GUESTS) {
-    return guests;
-  }
+  if (isWholeGuestCount(guests)) return guests;
   bad.push('guests');
   return null;
 }

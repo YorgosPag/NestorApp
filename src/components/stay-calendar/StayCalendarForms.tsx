@@ -16,8 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { StayCountSelect, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { isWholeGuestCount, STAY_BOOKING_MAX_GUESTS } from '@/lib/offers/offer-amount';
 import {
-  STAY_BOOKING_MAX_GUESTS,
   STAY_GUEST_LABEL_MAX_LENGTH,
   STAY_NOTE_MAX_LENGTH,
   type StayCalendarCommand,
@@ -99,7 +99,7 @@ export function StayBookingForm({ selection, busy, onSend }: FormProps): React.R
   // ADR-777 §8.60.21.7: `null` στον επιλογέα = «χωρίς κατοικίδια» ⇒ ρητό `0` στην εντολή.
   const [pets, setPets] = React.useState<number | null>(null);
   const labelId = React.useId();
-  const ready = guestLabel.trim() !== '' && Number.isInteger(guests) && guests >= 1;
+  const ready = guestLabel.trim() !== '' && isWholeGuestCount(guests);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();

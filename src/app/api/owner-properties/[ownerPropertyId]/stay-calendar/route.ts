@@ -12,14 +12,13 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import {
-  actorWorkspace,
+  listingActorOf,
   withPersonalOrOrgAuth,
   type ApiActor,
 } from '@/lib/auth/personal-scope-middleware';
 import { daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { stayCalendarCommandFrom } from '@/lib/stay/stay-calendar-command';
 import type { StayCalendarView } from '@/lib/stay/stay-calendar-view';
 import { readStayCalendarView } from '@/services/stay-calendar/stay-calendar-read.service';
@@ -35,10 +34,6 @@ type ErrorBody = { readonly error: 'MISSING_ID' | 'ABSENT' | 'MALFORMED'; readon
 
 /** Ανώτατο παράθυρο ανάγνωσης — 18 μήνες. Η οθόνη ζητά 2–3 μήνες τη φορά. */
 const MAX_WINDOW_DAYS = 550;
-
-function actorOf(actor: ApiActor): ListingActor {
-  return { uid: actor.ctx.uid, companyId: actorWorkspace(actor) };
-}
 
 async function propertyIdOf(routeContext?: RouteContext): Promise<string> {
   const params = await routeContext?.params;
@@ -64,7 +59,7 @@ async function getHandler(
     return malformed(['from', 'to']);
   }
 
-  const view = await readStayCalendarView(getAdminFirestore(), propertyId, actorOf(actor), { from, to });
+  const view = await readStayCalendarView(getAdminFirestore(), propertyId, listingActorOf(actor), { from, to });
   if (view.kind === 'absent') return NextResponse.json({ error: 'ABSENT' }, { status: 404 });
   // 🔑 Το `unreadable` είναι **κατάσταση οθόνης** με 200 — δες `StayCalendarView`.
   return NextResponse.json(view, { headers: { 'Cache-Control': 'no-store' } });
@@ -84,7 +79,7 @@ async function postHandler(
   // 🔑 Εδώ ενεργεί **πάντα** ο οικοδεσπότης: πράξη επισκέπτη ή συστήματος σε αυτή την πόρτα ⇒ ο
   //    πίνακας εξουσίας την αρνείται ως `absent` (ADR-835 §23.4) — ποτέ σιωπηλή εκτέλεση.
   const result = await executeStayCalendarCommand(
-    getAdminFirestore(), propertyId, parsed.command, { kind: 'host', actor: actorOf(actor) },
+    getAdminFirestore(), propertyId, parsed.command, { kind: 'host', actor: listingActorOf(actor) },
   );
   return NextResponse.json(result, { status: STAY_CALENDAR_WRITE_STATUS[result.kind] });
 }
