@@ -39,7 +39,7 @@
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
-import { useSearchParams } from 'next/navigation';
+import { useUrlQuery } from '@/hooks/useUrlQuery';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΟΘΟΝΗΣ 3.
 //
@@ -122,17 +122,22 @@ function DetailNotice({
 
 export function ListingDetailContent({ id }: ListingDetailContentProps) {
   const { t } = useTranslation(['search-results']);
-  const searchParams = useSearchParams();
+  const urlQuery = useUrlQuery();
   const lookup = usePublicListing(id);
 
   /**
    * Τα φίλτρα **κανονικοποιημένα**, όχι η ωμή διεύθυνση: ό,τι δεν αναγνωρίζει το
    * `parseListingFilters` δεν έχει λόγο να ταξιδέψει πίσω στην οθόνη 2.
+   *
+   * 🔴 **Ζωντανά, με `useUrlQuery` — όχι `useSearchParams`** (ADR-777 §8.60.21.7): η σελίδα αλλάζει τη
+   * διεύθυνση με `replaceState` (άτομα · νύχτες · κατοικίδια), και το `useSearchParams` **δεν** το
+   * βλέπει στον dev (μετρημένο — δες `useUrlQuery.ts`). Ο σύνδεσμος επιστροφής θα έφερνε τον
+   * επισκέπτη πίσω στην **παλιά** ερώτηση.
    */
-  const backHref = React.useMemo(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? '');
-    return searchResultsHref(serializeListingFilters(parseListingFilters(params)).toString());
-  }, [searchParams]);
+  const backHref = React.useMemo(
+    () => searchResultsHref(serializeListingFilters(parseListingFilters(new URLSearchParams(urlQuery))).toString()),
+    [urlQuery],
+  );
 
   if (lookup.state === 'loading') {
     return (

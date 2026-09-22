@@ -22,10 +22,12 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { ListingDetailContent } from '../ListingDetailContent';
+import { writeListingGuests } from '@/lib/listings/listing-stay-url';
+import { replaceUrlSearchParams } from '@/lib/url-query-state';
 import { LEGALITY_CLAIM_KINDS } from '@/lib/legality/legality-claim';
 import { legalitySignalsFor } from '@/lib/legality/legality-signal';
 import type { PublicListing } from '@/types/public-listing';
@@ -38,15 +40,18 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
-const mockSearchParams = { value: '' };
 // ⚠️ Το `usePathname` ΔΕΝ είναι διακοσμητικό εδώ: το component πλοηγεί μέσω του
 //    ΣΥΝΟΡΟΥ (`@/lib/workspace/navigation`, ADR-787 §5.3 μ), και το σύνορο ρωτά την
 //    τρέχουσα διαδρομή για να βρει τον ενεργό χώρο. Μερικό mock ⇒ `usePathname is
 //    not a function` ΠΡΙΝ τρέξει η πρώτη προσδοκία.
 jest.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(mockSearchParams.value),
   usePathname: () => '/',
 }));
+
+/** Η διεύθυνση όπως τη βλέπει ο browser — ο σύνδεσμος επιστροφής διαβάζει ΑΥΤΗΝ (`useUrlQuery`). */
+function atUrl(query: string): void {
+  window.history.replaceState(window.history.state, '', `/listing/prop_a0000001${query === '' ? '' : `?${query}`}`);
+}
 
 /**
  * ⚠️ Ο χάρτης αντικαθίσταται **επίτηδες**: ο `ResultsMap` φέρνει MapLibre + WebGL, που
@@ -158,13 +163,13 @@ function located(over: Partial<PublicListing> = {}): PublicListing {
 
 function renderWith(lookup: PublicListingLookup, query = '') {
   mockLookup.value = lookup;
-  mockSearchParams.value = query;
+  atUrl(query);
   return render(<ListingDetailContent id="prop_a0000001" />);
 }
 
 beforeEach(() => {
   mockLookup.value = { state: 'loading' };
-  mockSearchParams.value = '';
+  atUrl('');
 });
 
 // ============================================================================
@@ -218,6 +223,18 @@ describe('Ο2 — ο σύνδεσμος επιστροφής κρατά την �
     expect(href).not.toContain('άσχετο');
     // `lat` χωρίς `lng` δεν είναι μισό φίλτρο — είναι σημείο στον Ατλαντικό.
     expect(href).not.toContain('lat=');
+  });
+
+  it('🔴 ΑΚΟΛΟΥΘΕΙ την ερώτηση που άλλαξε Η ΣΕΛΙΔΑ (replaceState), όχι την ερώτηση της εισόδου', async () => {
+    // ADR-777 §8.60.21.7: η σελίδα γράφει άτομα/νύχτες/κατοικίδια με `replaceState`. Με
+    // `useSearchParams` ο σύνδεσμος έμενε στην παλιά ερώτηση στον dev (μετρημένο).
+    renderWith({ state: 'found', listing: listing() }, 'offer=sell&guests=2');
+    await act(async () => {
+      replaceUrlSearchParams((params) => writeListingGuests(4, params));
+    });
+    const href = screen.getAllByText('search-results:detail.back')[0].getAttribute('href') ?? '';
+    expect(href).toContain('guests=4');
+    expect(href).not.toContain('guests=2');
   });
 });
 

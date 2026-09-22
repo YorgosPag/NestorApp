@@ -11,6 +11,11 @@
  * στέλνει **αυτό που έδειξε** (`expectedTotalMinor`). Αν ο διακομιστής βγάλει άλλο, λέμε το νέο ποσό και
  * ξαναρωτάμε — ποτέ δέσμευση σε ποσό που ο επισκέπτης δεν είδε (Οδηγία 2011/83/ΕΕ άρ. 6(6)).
  *
+ * 🔑 **Τα άτομα είναι μέρος της ΕΡΩΤΗΣΗΣ, όχι της φόρμας** (ADR-777 §8.60.21.7): η φόρμα στέλνει
+ * **ακριβώς** ό,τι ρώτησε η σελίδα (`query`), άρα ο γραφέας κρίνει την ίδια ερώτηση που απάντησε ήδη ο
+ * διακομιστής. Ως τις 2026-09-22 η φόρμα είχε δικό της `useState(1)`: η αναζήτηση έλεγε 2 άτομα και το
+ * αίτημα γραφόταν με 1. Χωρίς δηλωμένα άτομα **δεν** στέλνεται αίτημα — ποτέ σιωπηλό «ένα».
+ *
  * ⚠️ **Καμία αισιόδοξη έκβαση**: «στάλθηκε» λέγεται μόνο όταν το είπε ο διακομιστής — ένα αίτημα που
  * φαίνεται κρατημένο και μετά αποδεικνύεται «όχι» είναι ψέμα για διαμονή (δες `useMyStayRequests`).
  *
@@ -21,18 +26,16 @@ import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { readableStayRequestsOf, type MyStayRequests } from '@/hooks/listings/useMyStayRequests';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatDateTime } from '@/lib/intl-formatting';
 import { formatMinor, type MinorAmount } from '@/lib/money/money';
 import { loginHref } from '@/lib/routes/return-path';
-import { STAY_BOOKING_MAX_GUESTS } from '@/lib/stay/stay-calendar-command';
 import type { StayGuestRequestView } from '@/lib/stay/stay-guest-request-view';
 import { STAY_HOLD_TIME_FORMAT, type StayHoldBound } from '@/lib/stay/stay-hold-deadline';
 import type { PublicStayAnswer } from '@/lib/stay/stay-public-request';
-import { isStayable } from '@/lib/stay/stay-availability-vocabulary';
+import { isStayable, type StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import { Link, usePathname } from '@/lib/workspace/navigation';
 import type { StayCalendarSendOutcome } from '@/services/stay-calendar/stay-calendar.client';
 import type { StayBookingLifecycle } from '@/types/stay-booking';
@@ -124,29 +127,26 @@ function MyRequestLine({ request, busy, onWithdraw, t }: {
   );
 }
 
-function RequestForm({ answer, maxGuests, busy, onSubmit, t }: {
+function RequestForm({ answer, guests, busy, onSubmit, t }: {
   readonly answer: PublicStayAnswer;
-  readonly maxGuests: number;
+  /** Τα άτομα **της ερώτησης** — `null` = δεν δηλώθηκαν, και τότε δεν στέλνεται τίποτα. */
+  readonly guests: number | null;
   readonly busy: boolean;
   readonly onSubmit: (guests: number, riskAcknowledged: boolean, expectedTotalMinor: MinorAmount | null) => void;
   readonly t: T;
 }): React.ReactElement | null {
-  const [guests, setGuests] = React.useState(1);
   const [risk, setRisk] = React.useState(false);
   const conditional = answer.answer.kind === 'conditional';
   const hold = answer.hold;
   if (hold === null) return null;
   if (hold.kind === 'too-late') return <p className="text-sm text-foreground">{t('short-stay:request.tooLate')}</p>;
-  const ready = Number.isInteger(guests) && guests >= 1 && guests <= maxGuests && (!conditional || risk);
+  // Το «χωράει;» το έκρινε ήδη ο διακομιστής πάνω στα ίδια άτομα (`stayable`) — εδώ μόνο «δηλώθηκαν;».
+  const ready = guests !== null && (!conditional || risk);
   const total = shownTotalOf(answer);
   return (
-    <form className="flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); if (ready) onSubmit(guests, risk, total); }}>
+    <form className="flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); if (ready && guests !== null) onSubmit(guests, risk, total); }}>
       <p className="text-sm text-foreground">{t(PROMISE_KEY[hold.bound], { until: untilOf(hold.expiresAt) })}</p>
-      <Label htmlFor="stay-request-guests">{t('short-stay:request.guests')}</Label>
-      <Input
-        id="stay-request-guests" type="number" min={1} max={maxGuests} value={guests}
-        onChange={(event) => setGuests(Number(event.target.value))} className="w-24"
-      />
+      {guests === null && <p className="text-sm text-muted-foreground">{t('short-stay:request.guestsNeeded')}</p>}
       {conditional && (
         <Label className="flex items-start gap-2 text-sm font-normal text-foreground">
           <Checkbox checked={risk} onCheckedChange={(value) => setRisk(value === true)} />
@@ -179,10 +179,9 @@ function MyRequests({ requests, busy, onWithdraw, t }: {
 }
 
 interface ListingStayRequestProps {
-  /** Νύχτες + κατοικίδια (`0` = κανένα) — ό,τι ρώτησε η σελίδα, ώστε το αίτημα να είναι η **ίδια** ερώτηση. */
-  readonly query: { readonly checkIn: string; readonly checkOut: string; readonly pets: number } | null;
+  /** Η ερώτηση της σελίδας (`stayQueryOf`) — το αίτημα στέλνει **αυτήν**, ώστε να κριθεί το ίδιο πράγμα. */
+  readonly query: StayQuery | null;
   readonly answer: PublicStayAnswer | undefined;
-  readonly maxGuests: number | null;
   /** Το ημερολόγιο άλλαξε (νέο αίτημα ή απόσυρση) — ξαναδιάβασε νύχτες και απαντήσεις. */
   readonly onChanged: () => void;
   /** Η τιμή άλλαξε από τη στιγμή που τη δείξαμε — ξαναρώτα, ώστε να φανεί το νέο σύνολο. */
@@ -192,7 +191,7 @@ interface ListingStayRequestProps {
 }
 
 export function ListingStayRequest({
-  query, answer, maxGuests, onChanged, onPriceChanged, mine,
+  query, answer, onChanged, onPriceChanged, mine,
 }: ListingStayRequestProps): React.ReactElement | null {
   const { t } = useTranslation(['short-stay']);
   const { user } = useAuth();
@@ -216,9 +215,11 @@ export function ListingStayRequest({
         </p>
       )}
       {stayable && query !== null && user !== null && answer !== undefined && (
-        <RequestForm answer={answer} maxGuests={maxGuests ?? STAY_BOOKING_MAX_GUESTS} busy={mine.busy} t={t}
+        <RequestForm answer={answer} guests={query.guests} busy={mine.busy} t={t}
           onSubmit={(guests, riskAcknowledged, expectedTotalMinor) => void act({
-            action: 'request', ...query, guests, expectedTotalMinor, riskAcknowledged,
+            // `pets: null` («δεν δηλώθηκαν») ⇒ ρητό `0` στην εντολή — σε ΕΝΑ σημείο.
+            action: 'request', checkIn: query.checkIn, checkOut: query.checkOut, guests, pets: query.pets ?? 0,
+            expectedTotalMinor, riskAcknowledged,
           })} />
       )}
       {mine.lastOutcome !== null && (

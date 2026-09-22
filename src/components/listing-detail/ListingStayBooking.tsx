@@ -10,26 +10,27 @@
  * 🔑 **Η τελική απάντηση έρχεται από τον ΔΙΑΚΟΜΙΣΤΗ** (`useStayAnswers`), όχι από το πλέγμα: το
  * πλέγμα είναι ένδειξη, η μηχανή ετυμηγορία — και η απάντηση φέρνει και την τιμολόγηση.
  *
- * 🏆 **Τα κατοικίδια ταξιδεύουν από την αναζήτηση** (ADR-777 §8.60.21.7): το `?pets=` διαβάζεται από τον
- * **ίδιο** αναλυτή (`parseListingFilters`), ώστε το σύνολο της σελίδας να είναι το σύνολο της κάρτας.
- * Ο επιλογέας ζει **έξω** από τη φόρμα αιτήματος: ένα «πάνω από το όριο» κρύβει τη φόρμα — όχι τον
+ * 🏆 **Η ερώτηση ΖΕΙ στη διεύθυνση** (ADR-777 §8.60.21.7): νύχτες (`?in&out`), άτομα (`?guests`) και
+ * κατοικίδια (`?pets`) έχουν **έναν** ιδιοκτήτη — όχι React state που σπέρνεται από αυτή και μετά την
+ * ξεχνά (`useListingStayQuestion`). Ανανέωση και κοινοποίηση κρατούν την ερώτηση, και η σελίδα ρωτά
+ * **ό,τι** η κάρτα της αναζήτησης (ίδιο `stayQueryOf`) — άρα ίδια απάντηση, ίδιο σύνολο.
+ * Οι επιλογείς ζουν **έξω** από τη φόρμα αιτήματος: ένα «πάνω από το όριο» κρύβει τη φόρμα — όχι τον
  * τρόπο να το διορθώσεις.
  *
  * @related ADR-835 §4.5 · §21 · ADR-777 §8.60.21.7 · hooks/listings/usePublicStayNights.ts · hooks/listings/useStayAnswers.ts
  */
 
 import React from 'react';
-import { useSearchParams } from 'next/navigation';
-import { StayCountSelect, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
+import { StayCountSelect, stayCountChoices, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
 import { readableStayRequestsOf, useMyStayRequests } from '@/hooks/listings/useMyStayRequests';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { usePublicStayNights, type PublicStayNightsState } from '@/hooks/listings/usePublicStayNights';
+import { useListingStayQuestion } from '@/hooks/listings/useListingStayQuestion';
 import { formatCalendarDay } from '@/lib/intl-formatting';
-import { parseListingFilters } from '@/lib/listings/listing-filters';
+import { STAY_BOOKING_MAX_GUESTS } from '@/lib/offers/offer-amount';
 import { addMonthsToMonthKey, monthKeyOf } from '@/lib/stay/stay-calendar-month';
-import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import { NO_STAY_SELECTION, nextStaySelection, type StayPublicSelection } from '@/lib/stay/stay-public-selection';
 import { isMyPendingNight } from '@/lib/stay/stay-guest-request-view';
 import { todayLocalDate } from '@/lib/date-local';
@@ -38,16 +39,6 @@ import type { PublicListing } from '@/types/public-listing';
 import { ListingStayAnswer } from './ListingStayAnswer';
 import { ListingStayCalendar } from './ListingStayCalendar';
 import { ListingStayRequest } from './ListingStayRequest';
-
-function queryOf(selection: StayPublicSelection, pets: number | null): StayQuery | null {
-  return selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, guests: null, pets } : null;
-}
-
-/** Τα κατοικίδια της αναζήτησης που έφερε τον επισκέπτη εδώ — `null` = δεν δηλώθηκαν. */
-function usePetsFromSearch(): number | null {
-  const searchParams = useSearchParams();
-  return React.useMemo(() => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')).pets, [searchParams]);
-}
 
 function SelectionLine({ selection, onClear }: {
   readonly selection: StayPublicSelection;
@@ -85,19 +76,27 @@ function NightsNotice({ state, onRetry }: {
 }
 
 /**
- * **Η ερώτηση του επισκέπτη** — επιλογή νυχτών, κατοικίδια (από την αναζήτηση), και η απάντηση του
- * διακομιστή. `refreshAnswers` = ξαναρωτά την ίδια ερώτηση (ο γραφέας είπε `price-changed`).
+ * **Η ερώτηση του επισκέπτη** (από τη διεύθυνση) και η απάντηση του διακομιστή.
+ * `refreshAnswers` = ξαναρωτά την ίδια ερώτηση (ο γραφέας είπε `price-changed`).
  */
 function useStayQuestion(listingId: string) {
-  const [selection, setSelection] = React.useState<StayPublicSelection>(NO_STAY_SELECTION);
-  const petsFromSearch = usePetsFromSearch();
-  const [pets, setPets] = React.useState<number | null>(petsFromSearch);
+  const question = useListingStayQuestion();
   const [revision, setRevision] = React.useState(0);
   const listingIds = React.useMemo(() => [listingId], [listingId]);
-  const query = React.useMemo(() => queryOf(selection, pets), [selection, pets]);
-  const answers = useStayAnswers(listingIds, query, revision);
+  const answers = useStayAnswers(listingIds, question.query, revision);
   const refreshAnswers = React.useCallback(() => setRevision((current) => current + 1), []);
-  return { selection, setSelection, pets, setPets, answers, refreshAnswers };
+  return { ...question, answers, refreshAnswers };
+}
+
+/**
+ * Ο πρώτος μήνας του ημερολογίου: ο μήνας της άφιξης της διεύθυνσης (ποτέ παρελθόν), αλλιώς ο τρέχων.
+ * ⚠️ Διαβάζεται **μία** φορά: το `ssr: false` του `ListingStay` εγγυάται ότι η πρώτη απόδοση βλέπει ήδη
+ * τη διεύθυνση, και μετά ο μήνας ανήκει στον επισκέπτη που ξεφυλλίζει.
+ */
+function initialMonthKey(selection: StayPublicSelection): string {
+  const today = todayLocalDate();
+  const arrival = selection.kind === 'none' ? today : selection.checkIn;
+  return monthKeyOf(arrival > today ? arrival : today);
 }
 
 /**
@@ -115,9 +114,9 @@ function useMyRequests(listingId: string) {
 
 export default function ListingStayBooking({ listing }: { readonly listing: PublicListing }): React.ReactElement {
   const { t } = useTranslation(['short-stay']);
-  const [monthKey, setMonthKey] = React.useState(() => monthKeyOf(todayLocalDate()));
+  const { selection, setSelection, guests, setGuests, pets, setPets, query, answers, refreshAnswers } = useStayQuestion(listing.id);
+  const [monthKey, setMonthKey] = React.useState(() => initialMonthKey(selection));
   const { state, reload } = usePublicStayNights(listing.id, monthKey);
-  const { selection, setSelection, pets, setPets, answers, refreshAnswers } = useStayQuestion(listing.id);
   const { mine, isMine } = useMyRequests(listing.id);
 
   if (state.kind !== 'loaded' || state.nights.kind !== 'declared') {
@@ -128,6 +127,11 @@ export default function ListingStayBooking({ listing }: { readonly listing: Publ
   return (
     <>
       <SelectionLine selection={selection} onClear={() => setSelection(NO_STAY_SELECTION)} />
+      {/* Τα όρια του επιλογέα = το μέγιστο της αγγελίας· το «χωράει;» το κρίνει ο διακομιστής. */}
+      <StayCountSelect
+        label={t('short-stay:guests')} anyLabel={t('short-stay:guestsAny')}
+        choices={stayCountChoices(listing.stay?.maxGuests ?? STAY_BOOKING_MAX_GUESTS)} value={guests} onChange={setGuests}
+      />
       <StayCountSelect
         label={t('short-stay:pets.filterLabel')} anyLabel={t('short-stay:pets.filterAny')}
         choices={STAY_PET_CHOICES} value={pets} onChange={setPets}
@@ -135,16 +139,15 @@ export default function ListingStayBooking({ listing }: { readonly listing: Publ
       <ListingStayCalendar
         monthKey={monthKey} nights={nights} selection={selection}
         onShiftMonth={(delta) => setMonthKey((current) => addMonthsToMonthKey(current, delta))}
-        onPick={(day) => setSelection((current) => nextStaySelection(current, day, nights))}
+        onPick={(day) => setSelection(nextStaySelection(selection, day, nights))}
         isMine={isMine}
       />
       <ListingStayAnswer listingId={listing.id} state={answers} />
       {/* Στάδιο Δ (ADR-835 §23): η υπόσχεση πριν, το αίτημα, και τα αιτήματά μου. */}
       <ListingStayRequest
         mine={mine}
-        query={selection.kind === 'range' ? { checkIn: selection.checkIn, checkOut: selection.checkOut, pets: pets ?? 0 } : null}
+        query={query}
         answer={answers.kind === 'loaded' ? answers.answers[listing.id] : undefined}
-        maxGuests={listing.stay?.maxGuests ?? null}
         onChanged={() => { setSelection(NO_STAY_SELECTION); reload(); }}
         onPriceChanged={refreshAnswers}
       />

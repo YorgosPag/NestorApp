@@ -133,7 +133,7 @@
       "arrival": "The host will reply by {until}, before your arrival. Until then the dates are held for you."
     },
     "tooLate": "Arrival is too close for a request with a fair reply deadline — contact the host directly.",
-    "guests": "Guests",
+    "guestsNeeded": "Choose how many guests will stay to send a request.",
     "riskAcknowledge": "I understand the property is also for sale and the stay is conditional.",
     "submit": "Send request",
     "sending": "Sending…",
