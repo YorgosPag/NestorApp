@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { EmailMessageFields } from './EmailMessageFields';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { normalizeToDate } from '@/lib/date-local';
 import {
@@ -24,9 +25,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import type { Quote } from '@/subapps/procurement/types/quote';
@@ -269,32 +267,22 @@ function VendorNotificationRow({
         </div>
         <Collapsible open={editorOpen} onOpenChange={setEditorOpen}>
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs">
               {t('rfqs.notify.dialog.editMessage')}
               <ChevronDown className={`ml-1 h-3 w-3 transition-transform ${editorOpen ? 'rotate-180' : ''}`} />
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-2 space-y-2">
-              <div className="space-y-1">
-                <Label className="text-xs">{t('rfqs.notify.subject.label')}</Label>
-                <Input
-                  value={row.subject}
-                  onChange={(e) => onSubjectChange(e.target.value)}
-                  disabled={row.status === 'sending' || row.status === 'sent'}
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">{t('rfqs.notify.body.label')}</Label>
-                <Textarea
-                  value={row.body}
-                  onChange={(e) => onBodyChange(e.target.value)}
-                  rows={6}
-                  disabled={row.status === 'sending' || row.status === 'sent'}
-                  className="font-mono text-xs resize-none"
-                />
-              </div>
+            <div className="mt-2">
+              <EmailMessageFields
+                subjectLabel={t('rfqs.notify.subject.label')}
+                bodyLabel={t('rfqs.notify.body.label')}
+                subject={row.subject}
+                body={row.body}
+                onSubjectChange={onSubjectChange}
+                onBodyChange={onBodyChange}
+                disabled={row.status === 'sending' || row.status === 'sent'}
+              />
             </div>
           </CollapsibleContent>
         </Collapsible>

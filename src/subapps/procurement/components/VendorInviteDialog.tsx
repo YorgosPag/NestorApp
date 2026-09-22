@@ -16,7 +16,8 @@
 
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
+import { EmailMessageFields } from './EmailMessageFields';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
@@ -29,7 +30,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -85,6 +85,7 @@ export function VendorInviteDialog({
   onViewInvites,
 }: VendorInviteDialogProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
 
   const { suggested, others } = useMemo(
     () => rankVendors((rfq as (typeof rfq & { category?: string | null }))?.category ?? null, vendorContacts, alreadyInvitedIds),
@@ -215,9 +216,9 @@ export function VendorInviteDialog({
         />
 
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t('rfqs.invite.deadline.label')}</Label>
+          <Label htmlFor={`${idBase}-deadline`} className="text-sm font-medium">{t('rfqs.invite.deadline.label')}</Label>
           <Select value={deadlinePreset} onValueChange={(v) => setDeadlinePreset(v as DeadlinePreset)}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger id={`${idBase}-deadline`} className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -229,22 +230,16 @@ export function VendorInviteDialog({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{t('rfqs.invite.subject.label')}</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} disabled={sending} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{t('rfqs.invite.body.label')}</Label>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={5}
-              disabled={sending}
-              className="font-mono text-sm resize-none"
-            />
-          </div>
-        </div>
+        <EmailMessageFields
+          subjectLabel={t('rfqs.invite.subject.label')}
+          bodyLabel={t('rfqs.invite.body.label')}
+          subject={subject}
+          body={body}
+          onSubjectChange={setSubject}
+          onBodyChange={setBody}
+          bodyRows={5}
+          disabled={sending}
+        />
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={sending}>

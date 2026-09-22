@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,7 @@ export function AwardReasonDialog({
   onCancel,
 }: AwardReasonDialogProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
   const [category, setCategory] = useState<AwardReasonCategory | ''>('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -99,11 +100,11 @@ export function AwardReasonDialog({
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase text-muted-foreground">
+            <label htmlFor={`${idBase}-category`} className="text-xs font-medium uppercase text-muted-foreground">
               {t('rfqs.awardReason.label.category')}
             </label>
             <Select value={category} onValueChange={(v) => setCategory(v as AwardReasonCategory)}>
-              <SelectTrigger>
+              <SelectTrigger id={`${idBase}-category`}>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
@@ -117,12 +118,13 @@ export function AwardReasonDialog({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase text-muted-foreground">
+            <label htmlFor={`${idBase}-note`} className="text-xs font-medium uppercase text-muted-foreground">
               {requiresNote
                 ? t('rfqs.awardReason.label.noteRequired')
                 : t('rfqs.awardReason.label.note')}
             </label>
             <Textarea
+              id={`${idBase}-note`}
               rows={3}
               value={note}
               onChange={(e) => setNote(e.target.value)}

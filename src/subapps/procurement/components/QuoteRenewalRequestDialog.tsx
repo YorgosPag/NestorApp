@@ -6,7 +6,8 @@
  * Caller provides onSend(to, subject, body) — actual transport is outside scope.
  */
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { EmailMessageFields } from './EmailMessageFields';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
@@ -18,7 +19,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 export interface QuoteRenewalRequestDialogProps {
   open: boolean;
@@ -46,6 +46,7 @@ export function QuoteRenewalRequestDialog({
   onCancel,
 }: QuoteRenewalRequestDialogProps) {
   const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
 
   const defaultSubject = t('rfqs.expiry.renewal.subjectDefault', { rfqTitle });
   const defaultBody = t('rfqs.expiry.renewal.bodyDefault', {
@@ -78,27 +79,19 @@ export function QuoteRenewalRequestDialog({
 
         <div className="space-y-3 py-2">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{t('rfqs.expiry.renewal.toLabel')}</Label>
-            <Input value={vendorEmail} readOnly className="bg-muted text-muted-foreground" />
+            <Label htmlFor={`${idBase}-to`} className="text-xs text-muted-foreground">{t('rfqs.expiry.renewal.toLabel')}</Label>
+            <Input id={`${idBase}-to`} value={vendorEmail} readOnly className="bg-muted text-muted-foreground" />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{t('rfqs.expiry.renewal.subjectLabel')}</Label>
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              disabled={sending}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{t('rfqs.expiry.renewal.bodyLabel')}</Label>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={9}
-              disabled={sending}
-              className="resize-none font-mono text-sm"
-            />
-          </div>
+          <EmailMessageFields
+            subjectLabel={t('rfqs.expiry.renewal.subjectLabel')}
+            bodyLabel={t('rfqs.expiry.renewal.bodyLabel')}
+            subject={subject}
+            body={body}
+            onSubjectChange={setSubject}
+            onBodyChange={setBody}
+            bodyRows={9}
+            disabled={sending}
+          />
         </div>
 
         <DialogFooter>

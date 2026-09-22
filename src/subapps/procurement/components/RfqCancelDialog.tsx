@@ -91,12 +91,12 @@ export function RfqCancelDialog({
         <div className="space-y-4 py-2">
           {isActive && (
             <section className="space-y-2">
-              <label className="text-sm font-medium">
+              <label className="text-sm font-medium" htmlFor="rfq-cancel-reason">
                 {t('rfqs.cancelDialog.reasonLabel')}
                 <span className="ml-1 text-destructive">*</span>
               </label>
               <Select value={reason} onValueChange={(v) => setReason(v as RfqCancellationReason)}>
-                <SelectTrigger>
+                <SelectTrigger id="rfq-cancel-reason">
                   <SelectValue placeholder={t('rfqs.cancelDialog.reasonPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>

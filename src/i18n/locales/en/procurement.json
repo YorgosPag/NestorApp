@@ -526,6 +526,7 @@
         "save": "Save",
         "create": "Create",
         "saving": "Saving...",
+        "saveFailed": "Saving failed. Please try again.",
         "cancel": "Cancel"
       },
       "units": {
@@ -640,6 +641,7 @@
         "save": "Save",
         "create": "Create",
         "saving": "Saving...",
+        "saveFailed": "Saving failed. Please try again.",
         "cancel": "Cancel"
       }
     },
