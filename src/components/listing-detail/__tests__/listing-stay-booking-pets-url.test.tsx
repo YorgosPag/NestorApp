@@ -119,3 +119,25 @@ describe('ADR-777 §8.60.21.7 — ο επιλογέας κατοικιδίων �
     expect(window.history.length).toBe(before);
   });
 });
+
+/** ADR-777 §8.60.21.7 — ζωντανά 2026-09-22: «έως 2 κατοικίδια» πρόσφερε 1–5 (τα άτομα σταματούσαν στο 2). */
+describe('🔴 ο επιλογέας κατοικιδίων ζητά το όριο ΤΗΣ ΑΓΓΕΛΙΑΣ', () => {
+  const optionsOf = (select: HTMLSelectElement): readonly string[] => [...select.options].map((option) => option.value);
+  const TWO_PETS = {
+    id: 'ownp_test',
+    stay: { maxGuests: 2, pets: { accepts: 'yes', maxPets: 2, fee: null } },
+  } as unknown as PublicListing;
+
+  it('«έως 2 κατοικίδια» ⇒ επιλογές 1–2', () => {
+    atUrl('');
+    render(<ListingStayBooking listing={TWO_PETS} />);
+    expect(optionsOf(petsSelect())).toEqual(['', '1', '2']);
+  });
+
+  it('`?pets=3` πάνω από το όριο ⇒ η ερώτηση ΦΑΙΝΕΤΑΙ (όπως τα άτομα) — την απάντηση τη δίνει ο κριτής', () => {
+    atUrl('?pets=3');
+    render(<ListingStayBooking listing={TWO_PETS} />);
+    expect(petsSelect().value).toBe('3');
+    expect(optionsOf(petsSelect())).toEqual(['', '1', '2', '3']);
+  });
+});

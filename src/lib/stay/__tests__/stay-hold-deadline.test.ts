@@ -9,8 +9,12 @@
  */
 
 import type { WeeklyHours } from '@/lib/calendar/weekly-hours';
+import { formatDateTime } from '@/lib/intl-formatting';
+import elShortStay from '@/i18n/locales/el/short-stay.json';
+import enShortStay from '@/i18n/locales/en/short-stay.json';
 import {
   STAY_HOLD_MIN_WINDOW_MINUTES,
+  STAY_HOLD_TIME_FORMAT,
   STAY_HOLD_TIER_RULES,
   stayHoldDeadline,
   stayHoldTierOf,
@@ -110,5 +114,31 @@ describe('🏆 Τ — τα ταβάνια', () => {
 
   it('άφιξη στο παρελθόν ⇒ too-late', () => {
     expect(stayHoldDeadline({ clock: TUESDAY_10, checkIn: '2026-08-31', responseHours: null })).toEqual({ kind: 'too-late' });
+  });
+});
+
+/**
+ * ADR-777 §8.60.21.7 — μετρημένο ζωντανά 2026-09-22: η υπόσχεση έγραφε «ως Πέμ 24 Σεπ 2026, 10:17 π.μ..».
+ * Η άγκυρα αποδίδει την προθεσμία με τη **ζωντανή** μορφή μέσα στα **πραγματικά** πρότυπα `promise.*`.
+ */
+describe('🔴 Μ — η μορφή της προθεσμίας (24ωρο, ώρα Αθήνας)', () => {
+  const promisesOf = (locale: 'el' | 'en'): readonly string[] =>
+    Object.values((locale === 'el' ? elShortStay : enShortStay).request.promise);
+
+  it.each(['el', 'en'] as const)('%s: καμία υπόσχεση δεν γράφει διπλή τελεία μετά την ώρα', (locale) => {
+    const until = formatDateTime('2026-09-24T07:17:00.000Z', STAY_HOLD_TIME_FORMAT, locale);
+    for (const template of promisesOf(locale)) {
+      expect(template.replace('{until}', until)).not.toMatch(/\.\./);
+    }
+  });
+
+  it('η ώρα γράφεται 24ωρα σε ώρα Αθήνας — 14:05, όχι «02:05 μ.μ.»', () => {
+    expect(formatDateTime('2026-09-24T11:05:00.000Z', STAY_HOLD_TIME_FORMAT, 'el')).toContain('14:05');
+  });
+
+  it('τα μεσάνυχτα Αθήνας γράφονται 00:00, ποτέ 24:00', () => {
+    const midnight = formatDateTime('2026-09-23T21:00:00.000Z', STAY_HOLD_TIME_FORMAT, 'el');
+    expect(midnight).toContain('00:00');
+    expect(midnight).not.toContain('24:00');
   });
 });

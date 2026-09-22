@@ -21,7 +21,7 @@
  */
 
 import React from 'react';
-import { StayCountSelect, stayCountChoices, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
+import { StayCountSelect, stayCountChoices, stayPetChoicesOf } from '@/components/shared/stay/StayCountSelect';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useStayAnswers } from '@/hooks/listings/useStayAnswers';
 import { readableStayRequestsOf, useMyStayRequests } from '@/hooks/listings/useMyStayRequests';
@@ -134,7 +134,7 @@ export default function ListingStayBooking({ listing }: { readonly listing: Publ
       />
       <StayCountSelect
         label={t('short-stay:pets.filterLabel')} anyLabel={t('short-stay:pets.filterAny')}
-        choices={STAY_PET_CHOICES} value={pets} onChange={setPets}
+        choices={stayPetChoicesOf(listing.stay?.pets)} value={pets} onChange={setPets}
       />
       <ListingStayCalendar
         monthKey={monthKey} nights={nights} selection={selection}

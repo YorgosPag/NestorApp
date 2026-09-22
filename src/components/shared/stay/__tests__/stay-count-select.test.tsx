@@ -8,7 +8,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import { StayCountSelect, stayCountChoices, STAY_PET_CHOICES } from '../StayCountSelect';
+import { StayCountSelect, stayCountChoices, stayPetChoicesOf, STAY_PET_CHOICES } from '../StayCountSelect';
 
 function renderSelect(value: number | null, choices: readonly number[]): HTMLSelectElement {
   render(<StayCountSelect label="Άτομα" anyLabel="—" choices={choices} value={value} onChange={() => undefined} />);
@@ -40,5 +40,24 @@ describe('stayCountChoices — παράγεται από ταβάνι', () => {
   it('ταβάνι 0 ή αρνητικό ⇒ καμία επιλογή, ποτέ σφάλμα', () => {
     expect(stayCountChoices(0)).toEqual([]);
     expect(stayCountChoices(-3)).toEqual([]);
+  });
+});
+
+/** ADR-777 §8.60.21.7 — ζωντανά 2026-09-22: «έως 2 κατοικίδια» πρόσφερε 1–5. */
+describe('🔴 stayPetChoicesOf — ο επιλογέας σταματά στο όριο της αγγελίας', () => {
+  it('δηλωμένο maxPets ⇒ 1..maxPets (όπως τα άτομα με το maxGuests)', () => {
+    expect(stayPetChoicesOf({ accepts: 'yes', maxPets: 2, fee: null })).toEqual([1, 2]);
+    expect(stayPetChoicesOf({ accepts: 'onRequest', maxPets: 1, fee: null })).toEqual([1]);
+  });
+
+  it('maxPets πάνω από το ταβάνι ⇒ το ταβάνι, ποτέ περισσότερα', () => {
+    expect(stayPetChoicesOf({ accepts: 'yes', maxPets: 9, fee: null })).toEqual(STAY_PET_CHOICES);
+  });
+
+  it('⚠️ «όχι» · χωρίς όριο · αδήλωτο ⇒ το ταβάνι: την απάντηση τη δίνει ο κριτής, όχι άδεια λίστα', () => {
+    expect(stayPetChoicesOf({ accepts: 'no' })).toEqual(STAY_PET_CHOICES);
+    expect(stayPetChoicesOf({ accepts: 'yes', maxPets: null, fee: null })).toEqual(STAY_PET_CHOICES);
+    expect(stayPetChoicesOf(null)).toEqual(STAY_PET_CHOICES);
+    expect(stayPetChoicesOf(undefined)).toEqual(STAY_PET_CHOICES);
   });
 });

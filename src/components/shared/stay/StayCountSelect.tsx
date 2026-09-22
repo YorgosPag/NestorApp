@@ -14,6 +14,7 @@
 import React, { useId } from 'react';
 
 import { STAY_PETS_CEILING } from '@/lib/offers/offer-amount';
+import type { StayPetPolicy } from '@/types/property-offers';
 
 /** Οι επιλογές `1..ceiling` — **παράγονται** από ένα ταβάνι, ποτέ χειρόγραφη λίστα. */
 export function stayCountChoices(ceiling: number): readonly number[] {
@@ -22,6 +23,21 @@ export function stayCountChoices(ceiling: number): readonly number[] {
 
 /** Πόσα κατοικίδια — **παράγεται** από το ταβάνι του κατόχου, ποτέ δεύτερος χειρόγραφος αριθμός. */
 export const STAY_PET_CHOICES: readonly number[] = stayCountChoices(STAY_PETS_CEILING);
+
+/**
+ * **Πόσα κατοικίδια προσφέρει ο επιλογέας ΜΙΑΣ αγγελίας** — το δηλωμένο `maxPets`, αλλιώς το ταβάνι.
+ *
+ * 🔴 ADR-777 §8.60.21.7, μετρημένο ζωντανά 2026-09-22: αγγελία «έως 2 κατοικίδια» πρόσφερε 1–5, ενώ ο
+ * επιλογέας ατόμων της ίδιας οθόνης σταματά στο `maxGuests` — τρεις επιλογές που απαντώνται **πάντα**
+ * «Δέχεται έως 2». ⚠️ «Όχι» και «αδήλωτο» κρατούν το ταβάνι **επίτηδες**: την απάντηση
+ * (`pets-not-allowed` · `pets-unknown`) τη δίνει ο κριτής (`petsVerdict`), όχι μια άδεια λίστα.
+ */
+export function stayPetChoicesOf(policy: StayPetPolicy | null | undefined): readonly number[] {
+  if (policy === null || policy === undefined || policy.accepts === 'no' || policy.maxPets === null) {
+    return STAY_PET_CHOICES;
+  }
+  return stayCountChoices(Math.min(policy.maxPets, STAY_PETS_CEILING));
+}
 
 /**
  * Οι επιλογές που **αποδίδονται**: αν η τιμή είναι εκτός λίστας, προστίθεται στη θέση της.
