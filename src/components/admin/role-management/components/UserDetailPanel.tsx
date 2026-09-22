@@ -33,6 +33,7 @@ import { PREDEFINED_ROLES } from '@/lib/auth/roles';
 import type { RoleDefinition } from '@/lib/auth/roles';
 import { PERMISSION_SETS, computeEffectivePermissions } from '@/lib/auth/permission-sets';
 import type { PermissionId } from '@/lib/auth/types';
+import { groupPermissionsByDomain } from '@/lib/auth/permission-domains';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
@@ -91,17 +92,12 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
   // ---------------------------------------------------------------------------
   // Group permissions by domain
   // ---------------------------------------------------------------------------
-  const groupedPermissions = useMemo(() => {
-    const groups: Record<string, PermissionId[]> = {};
-    for (const perm of effectivePermissions) {
-      const domain = perm.includes(':') ? perm.split(':')[0] : 'other';
-      if (!groups[domain]) {
-        groups[domain] = [];
-      }
-      groups[domain].push(perm);
-    }
-    return groups;
-  }, [effectivePermissions]);
+  // 🔑 Ο κανόνας του τομέα ζει στο `lib/auth/permission-domains` (N.0.2) — ήταν
+  //    γραμμένος και εδώ και στο `RolePermissionMatrix`, ίδιος βρόχος δύο φορές.
+  const groupedPermissions = useMemo(
+    () => groupPermissionsByDomain(effectivePermissions),
+    [effectivePermissions],
+  );
 
   // ---------------------------------------------------------------------------
   // Render
@@ -134,7 +130,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
               <dt className={colors.text.muted}>{t('roleManagement.globalRole')}</dt>
               <dd>
                 <Badge variant={ROLE_BADGE_VARIANT[user.globalRole]}>
-                  {t(`roleManagement.roleNames.${user.globalRole}`)}
+                  {t(`common:globalRoles.${user.globalRole}`)}
                 </Badge>
               </dd>
 
@@ -216,7 +212,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
                       </TableCell>
                       <TableCell className="text-sm">
                         <Badge variant="secondary">
-                          {t(`roleManagement.roleNames.${membership.roleId}`, membership.roleId)}
+                          {t(`common:globalRoles.${membership.roleId}`, membership.roleId)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">

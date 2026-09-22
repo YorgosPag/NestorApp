@@ -24,6 +24,7 @@ import { PREDEFINED_ROLES } from '@/lib/auth/roles';
 import type { RoleDefinition } from '@/lib/auth/roles';
 import { PERMISSIONS } from '@/lib/auth/types';
 import type { PermissionId, GlobalRole } from '@/lib/auth/types';
+import { groupPermissionsByDomain } from '@/lib/auth/permission-domains';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { compareByLocale } from '@/lib/intl-formatting';
@@ -49,17 +50,12 @@ interface DomainGroup {
   permissions: PermissionId[];
 }
 
-function groupPermissionsByDomain(): DomainGroup[] {
-  const groups: Record<string, PermissionId[]> = {};
-  const allPerms = Object.keys(PERMISSIONS) as PermissionId[];
-
-  for (const perm of allPerms) {
-    const domain = perm.includes(':') ? perm.split(':')[0] : 'other';
-    if (!groups[domain]) {
-      groups[domain] = [];
-    }
-    groups[domain].push(perm);
-  }
+/**
+ * 🔑 **Ο κανόνας του τομέα ζει αλλού** (`lib/auth/permission-domains`, N.0.2): εδώ
+ * μένει **μόνο** η σειρά που δείχνει αυτή η οθόνη — αλφαβητικά κατά τοπική διάταξη.
+ */
+function orderedDomainGroups(): DomainGroup[] {
+  const groups = groupPermissionsByDomain(Object.keys(PERMISSIONS) as PermissionId[]);
 
   return Object.entries(groups)
     .map(([domain, permissions]) => ({ domain, permissions }))
@@ -98,7 +94,7 @@ const ACCESS_ICON: Record<AccessLevel, string> = {
 export function RolePermissionMatrix() {
   const { t } = useTranslation('admin');
 
-  const domainGroups = useMemo(() => groupPermissionsByDomain(), []);
+  const domainGroups = useMemo(() => orderedDomainGroups(), []);
   const colors = useSemanticColors();
 
   return (
@@ -111,7 +107,7 @@ export function RolePermissionMatrix() {
             </TableHead>
             {GLOBAL_ROLE_IDS.map((roleId) => (
               <TableHead key={roleId} className="text-center min-w-[100px]">
-                {t(`roleManagement.roleNames.${roleId}`)}
+                {t(`common:globalRoles.${roleId}`)}
               </TableHead>
             ))}
           </TableRow>
