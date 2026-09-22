@@ -192,7 +192,9 @@ export const QuickConfigAPI = {
   getCompanyPhone: _ConfigurationAPI.getCompanyPhone,
 
   /**
-   * Get app base URL (αντικαθιστά hardcoded 'https://nestor-app.vercel.app')
+   * Get app base URL — από το ΕΝΑ SSoT (`lib/http/public-origin`), ADR-853 §19.
+   * ⚠️ Το σχόλιο έλεγε «αντικαθιστά hardcoded nestor-app.vercel.app» ενώ η ίδια η
+   * προεπιλογή μάντευε `localhost:3001`. Η αντικατάσταση **δεν είχε γίνει**.
    */
   getAppBaseUrl: _ConfigurationAPI.getAppBaseUrl,
 

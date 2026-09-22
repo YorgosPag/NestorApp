@@ -10,6 +10,7 @@
  */
 
 import { designTokens, borderColors } from '@/styles/design-tokens';
+import { publicOrigin, publicUrl } from '@/lib/http/public-origin';
 import type { CompanyConfiguration, SystemConfiguration } from './types';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 
@@ -55,8 +56,12 @@ export const DEFAULT_SYSTEM_CONFIG: SystemConfiguration = {
     name: PRODUCT_NAME,
     version: '1.0.0',
     environment: 'development',
-    baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
-    apiUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api`
+    // 🔴 ADR-853 §19 Θ6 — ΗΤΑΝ ΤΡΙΤΟΣ ΑΝΑΓΝΩΣΤΗΣ του ίδιου env, με εφεδρεία
+    //    `http://localhost:3001`: **επινοημένη** διεύθυνση σε θύρα όπου δεν ακούει τίποτα
+    //    (η εφαρμογή τρέχει στην 3000). Χειρότερο από κενό: μοιάζει έγκυρο και δεν ανοίγει
+    //    ποτέ. Τώρα ρωτά το ΕΝΑ SSoT, και το κενό λέει **«δεν ξέρω»** αντί να μαντεύει.
+    baseUrl: publicOrigin() ?? '',
+    apiUrl: publicUrl('/api') ?? ''
   },
   admin: {
     primaryAdminUid: process.env.NEXT_PUBLIC_ADMIN_UID || '',

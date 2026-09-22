@@ -18,6 +18,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-651-auto-title-block-generator.md §5.11
  */
 
+import { publicOrigin } from '@/lib/http/public-origin';
+
 import { fnv1aBase36 } from '../../utils/fnv1a-hash';
 
 /** Τα raw facts που ταυτοποιούν την έκδοση ενός φύλλου — locale-independent (ακέραιη αναθεώρηση). */
@@ -69,8 +71,12 @@ export function buildTitleBlockFingerprint(facts: TitleBlockVersionFacts): strin
 
 /** Ό,τι χρειάζεται το QR payload: πού δείχνει (project) + ποια έκδοση κρατά (fingerprint). */
 export interface TitleBlockQrPayloadInput {
-  /** Το production origin της εφαρμογής (`NEXT_PUBLIC_APP_URL` ή το vercel fallback). */
-  readonly baseUrl: string;
+  /**
+   * Η δημόσια προέλευση της εφαρμογής — `null` όταν **δεν ξέρουμε ποιοι είμαστε**.
+   * ⛔ ADR-853 §19 Θ6: ήταν «`NEXT_PUBLIC_APP_URL` ή το vercel fallback», δηλαδή QR σε
+   * σχέδιο που τυπώνεται και **επιβιώνει χρόνια**, δείχνοντας σε νεκρό domain.
+   */
+  readonly baseUrl: string | null;
   /** Firestore doc id του έργου — ο στόχος του deep-link· απόν ⇒ μόνο αποτύπωμα (χωρίς έργο). */
   readonly projectId?: string;
   /** Το αποτύπωμα έκδοσης (`buildTitleBlockFingerprint`). */
@@ -85,13 +91,15 @@ export interface TitleBlockQrPayloadInput {
  */
 export function buildTitleBlockQrPayload(input: TitleBlockQrPayloadInput): string {
   const { baseUrl, projectId, fingerprint } = input;
+  // Καλύτερα **κανένα** QR παρά QR που οδηγεί σε ξένο domain — το χαρτί δεν διορθώνεται.
+  if (baseUrl === null || baseUrl === '') return '';
   const version = fingerprint ? `?v=${encodeURIComponent(fingerprint)}` : '';
   if (projectId) return `${baseUrl}/projects/${encodeURIComponent(projectId)}${version}`;
   if (fingerprint) return `${baseUrl}${version}`;
   return '';
 }
 
-/** Το production origin — env-first, ίδιο fallback με τα υπόλοιπα call sites της εφαρμογής. */
-export function resolveTitleBlockQrBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
+/** Η δημόσια προέλευση από το **ΕΝΑ** SSoT — `null` όταν δεν είναι ρυθμισμένη (ADR-853 §19). */
+export function resolveTitleBlockQrBaseUrl(): string | null {
+  return publicOrigin();
 }

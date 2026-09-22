@@ -14,7 +14,9 @@ import {
   type TitleBlockVersionFacts,
 } from '../title-block-fingerprint';
 
-const BASE = 'https://nestor-app.vercel.app';
+// ADR-853 §19 Θ6 — ήταν `https://nestor-app.vercel.app`: το fixture **επικύρωνε** QR προς
+// νεκρό domain, σε σχέδιο που τυπώνεται και επιβιώνει χρόνια.
+const BASE = 'https://nestorconstruct.gr';
 
 const FACTS: TitleBlockVersionFacts = {
   projectId: 'proj_ABC123',
@@ -77,6 +79,15 @@ describe('ADR-651 Φάση Λ — buildTitleBlockQrPayload (Δρόμος Γ: σ�
 
   it('χωρίς τίποτα να κωδικοποιηθεί ⇒ κενό (καθόλου QR)', () => {
     expect(buildTitleBlockQrPayload({ baseUrl: BASE, fingerprint: '' })).toBe('');
+  });
+
+  // 🔴 ADR-853 §19 Θ6 — καλύτερα ΚΑΝΕΝΑ QR παρά QR προς ξένο domain: το χαρτί δεν
+  //    διορθώνεται. Μετάλλαξη που κοκκινίζει: αφαίρεση του φρουρού `baseUrl === null`.
+  it('χωρίς δημόσια διεύθυνση ⇒ ΚΑΝΕΝΑ QR, ποτέ σχετική διαδρομή', () => {
+    expect(buildTitleBlockQrPayload({ baseUrl: null, projectId: 'proj_A', fingerprint: 'r1' }))
+      .toBe('');
+    expect(buildTitleBlockQrPayload({ baseUrl: '', projectId: 'proj_A', fingerprint: 'r1' }))
+      .toBe('');
   });
 
   it('end-to-end: ίδια έκδοση ⇒ ίδιο payload (δύο εκτυπώσεις = ίδιο QR)', () => {
