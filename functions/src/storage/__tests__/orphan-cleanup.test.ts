@@ -46,7 +46,7 @@ describe('orphan-cleanup — μηδέν διαγραφή Storage στο real-tim
 describe('candidateDocId — σταθερό, idempotent, έγκυρο ως Firestore doc id', () => {
   // Το import γίνεται εδώ ώστε τα mocks να είναι ενεργά πριν αποτιμηθεί το module scope.
   const load = (): typeof import('../orphan-cleanup') => {
-    jest.doMock('firebase-functions', () => ({
+    jest.doMock('firebase-functions/v1', () => ({
       logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
       runWith: () => ({ storage: { object: () => ({ onFinalize: (f: unknown) => f }) } }),
     }));

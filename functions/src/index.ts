@@ -24,7 +24,7 @@ export { onDeleteFloorplanBackground } from './floorplan-background/onDeleteFloo
 // 🏢 FLOOR · UNITS COUNTER (ADR-236) — maintain floors.units on property write.
 export { onPropertyWriteFloorUnits } from './aggregation/floorUnitsAggregation';
 
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
@@ -319,172 +319,11 @@ export const scheduledFilePurge = functions
     return null;
   });
 
-// ============================================================================
-// HTTP CALLABLE: MANUAL PURGE (Admin Only)
-// ============================================================================
-/**
- * Manually purge a specific file
- * @enterprise For admin use - bypasses purgeAt schedule
- *
- * Requires: super_admin role in custom claims
- *
- * @example
- * ```typescript
- * const result = await functions.httpsCallable('manualPurgeFile')({
- *   fileId: 'file_123',
- *   reason: 'User requested immediate deletion',
- * });
- * ```
- */
-export const manualPurgeFile = functions
-  .runWith({
-    timeoutSeconds: 60,
-    memory: '256MB',
-  })
-  .https.onCall(async (data, context) => {
-    // Check authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        'unauthenticated',
-        'Must be authenticated to purge files'
-      );
-    }
-
-    // Check super_admin role
-    const claims = context.auth.token;
-    if (claims.globalRole !== 'super_admin') {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Only super_admin can manually purge files'
-      );
-    }
-
-    const { fileId, reason } = data;
-
-    if (!fileId || typeof fileId !== 'string') {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'fileId is required'
-      );
-    }
-
-    functions.logger.info('Manual purge requested', {
-      fileId,
-      requestedBy: context.auth.uid,
-      reason,
-    });
-
-    // Get file record
-    const docRef = db.collection(COLLECTIONS.FILES).doc(fileId);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) {
-      throw new functions.https.HttpsError(
-        'not-found',
-        `File not found: ${fileId}`
-      );
-    }
-
-    const fileRecord = { id: fileId, ...docSnap.data() } as FileRecord;
-
-    // Check if file has hold
-    if (fileRecord.hold && fileRecord.hold !== HOLD_TYPES.NONE) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        `File has active hold (${fileRecord.hold}). Release hold before purging.`
-      );
-    }
-
-    // Purge the file
-    const result = await purgeFile(fileRecord);
-
-    // Write audit log
-    await writeAuditLog({
-      action: 'FILE_PURGED_MANUAL',
-      entityType: 'file',
-      entityId: fileId,
-      performedBy: context.auth.uid,
-      performedAt: admin.firestore.FieldValue.serverTimestamp(),
-      details: {
-        storagePath: fileRecord.storagePath,
-        displayName: fileRecord.displayName,
-        reason,
-        result,
-      },
-      success: result.success,
-    });
-
-    if (!result.success) {
-      throw new functions.https.HttpsError(
-        'internal',
-        `Failed to purge file: ${result.error}`
-      );
-    }
-
-    return {
-      success: true,
-      fileId,
-      message: 'File permanently deleted',
-    };
-  });
-
-// ============================================================================
-// HTTP CALLABLE: GET TRASH STATS
-// ============================================================================
-/**
- * Get trash statistics for a company
- * @enterprise Used in Trash view dashboard
- */
-export const getTrashStats = functions
-  .runWith({
-    timeoutSeconds: 30,
-    memory: '256MB',
-  })
-  .https.onCall(async (data, context) => {
-    // Check authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        'unauthenticated',
-        'Must be authenticated'
-      );
-    }
-    const companyId = data.companyId || context.auth.token.companyId;
-    if (!companyId) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'companyId is required'
-      );
-    }
-
-    // Get trashed files count and total size
-    const snapshot = await db.collection(COLLECTIONS.FILES)
-      .where('companyId', '==', companyId)
-      .where('isDeleted', '==', true)
-      .get();
-
-    let totalSize = 0;
-    let expiringInWeek = 0;
-    const now = new Date();
-    const oneWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      totalSize += data.sizeBytes || 0;
-
-      if (data.purgeAt) {
-        const purgeDate = new Date(data.purgeAt);
-        if (purgeDate <= oneWeek) {
-          expiringInWeek++;
-        }
-      }
-    });
-
-    return {
-      totalFiles: snapshot.size,
-      totalSizeBytes: totalSize,
-      expiringInWeek,
-    };
-  });
+// ΑΦΑΙΡΕΘΗΚΑΝ (ADR-873 Φάση 0): callables `manualPurgeFile` + `getTrashStats` —
+// μηδέν καταναλωτές, και το `getTrashStats` δεχόταν `data.companyId` από τον
+// πελάτη (διαρροή μεταξύ εταιρειών). Η αφαίρεση από τον κώδικα ΔΕΝ τα σβήνει
+// από το cloud: το `firebase deploy --only functions` ρωτά για διαγραφή (το
+// `--force` διαγράφει χωρίς ερώτηση) — απόφαση Giorgio, ADR-873 §5.
 
 // STORAGE TRIGGERS (ADR-694 mark-and-sweep — ΜΟΝΟ ο sweeper διαγράφει):
 //  - onStorageFinalize  → mark-only παρατηρητής, ΜΗΔΕΝ διαγραφή (Α1)

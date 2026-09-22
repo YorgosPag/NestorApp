@@ -45,7 +45,7 @@
  * @see ./orphan-spike-alert.ts — ADR-327 Layer 3 observability
  */
 
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();

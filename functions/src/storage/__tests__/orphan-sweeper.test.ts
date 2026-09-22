@@ -11,7 +11,7 @@
  *   4. επανέλεγχος τη στιγμή της διαγραφής
  */
 
-jest.mock('firebase-functions', () => ({
+jest.mock('firebase-functions/v1', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
   runWith: () => ({
     pubsub: { schedule: () => ({ timeZone: () => ({ onRun: (fn: unknown) => fn }) }) },

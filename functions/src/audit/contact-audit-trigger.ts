@@ -28,7 +28,7 @@
  * @enterprise ADR-195 — Entity Audit Trail (Phase 1 CDC PoC)
  */
 
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { deepDiff, type FieldChange } from './deep-diff';
 import { resolveAction } from './resolve-action';

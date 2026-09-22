@@ -29,7 +29,7 @@
  * @enterprise ADR-033 (Floorplan Processing), ADR-312 Phase 3 (Property Showcase)
  */
 
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 import { COLLECTIONS } from '../config/firestore-collections';

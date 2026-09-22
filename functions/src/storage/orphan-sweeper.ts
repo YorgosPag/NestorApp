@@ -38,7 +38,7 @@
  * @see ./orphan-cleanup.ts — η πλευρά «mark»
  */
 
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 import { COLLECTIONS } from '../config/firestore-collections';

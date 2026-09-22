@@ -49,7 +49,7 @@
  * @see functions/src/storage/orphan-cleanup.ts (the producer)
  */
 
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
 
