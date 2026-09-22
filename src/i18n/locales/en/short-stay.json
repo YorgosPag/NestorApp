@@ -64,6 +64,7 @@
       "heldMine": "{day} — your request, awaiting a reply"
     },
     "minNights": "minimum stay {count, plural, one {# night} other {# nights}}",
+    "checkOutOnly": "check-out only",
     "conditional": "conditional: the property is for sale",
     "legend": {
       "available": "Available",

@@ -64,6 +64,7 @@
       "heldMine": "{day} — το αίτημά σας, σε αναμονή απάντησης"
     },
     "minNights": "ελάχιστη διαμονή {count, plural, one {# νύχτα} other {# νύχτες}}",
+    "checkOutOnly": "μόνο αναχώρηση",
     "conditional": "υπό αίρεση: το ακίνητο πωλείται",
     "legend": {
       "available": "Διαθέσιμη",

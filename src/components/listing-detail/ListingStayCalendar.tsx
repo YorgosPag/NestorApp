@@ -47,6 +47,19 @@ const CELL_LABEL: Readonly<Record<StayDayMeaning, string>> = {
 /** 🔴 §23.12 Ε3 — η νύχτα `held` του **δικού μου** αιτήματος· κυριολεκτικό, όπως τα παραπάνω (ADR-744). */
 const HELD_MINE_LABEL = 'short-stay:calendar.cell.heldMine';
 
+/**
+ * 🔴 §23.12.3 Ε6 — «ποιανού είναι» και «τι μπορώ να κάνω εδώ» είναι **ΔΥΟ** ερωτήσεις.
+ *
+ * Η πρώτη νύχτα ενός αιτήματος δέχεται αναχώρηση (κάποιος που ήρθε την προηγούμενη **μπορεί** να
+ * φύγει), άρα το νόημά της είναι `check-out-only` — και η ιδιοκτησία έμενε **άρρητη** ζωντανά:
+ * 2 στις 3 νύχτες έλεγαν «το αίτημά σας», η πρώτη «μόνο αναχώρηση». Η ιδιοκτησία είναι ιδιότητα
+ * της **νύχτας** (`state === 'held'`), όχι του νοήματος του κελιού.
+ *
+ * ⚠️ **Μόνο** αυτά τα δύο νοήματα: στα `selected-*`/`in-stay` το κελί απαντά «τι διάλεξες τώρα»,
+ * και η ιδιοκτησία δεν επιτρέπεται να σβήσει την ανατροφοδότηση της επιλογής.
+ */
+const OWNABLE_MEANINGS: readonly StayDayMeaning[] = ['held', 'check-out-only'];
+
 const CELL_TONE: Readonly<Record<StayDayMeaning, string>> = {
   'check-in': 'border-border bg-card text-foreground hover:bg-accent/50',
   'check-out': 'border-foreground/40 bg-card text-foreground hover:bg-accent/50',
@@ -69,8 +82,12 @@ function useStayDayDescription(
 ): (day: string, meaning: StayDayMeaning, night: StayPublicNight | undefined) => string {
   const { t } = useTranslation(['short-stay']);
   return (day, meaning, night) => {
-    const label = meaning === 'held' && isMine(day) ? HELD_MINE_LABEL : CELL_LABEL[meaning];
-    const parts = [t(label, { day: formatCalendarDay(day, true) })];
+    const mine = night?.state === 'held' && OWNABLE_MEANINGS.includes(meaning) && isMine(day);
+    const parts = [t(mine ? HELD_MINE_LABEL : CELL_LABEL[meaning], { day: formatCalendarDay(day, true) })];
+    // Η ιδιοκτησία πήρε τη θέση της ετικέτας· η **δυνατότητα** αναχώρησης δεν χάνεται από πάνω της.
+    // ⚠️ ΟΧΙ το `legend.checkOutOnly`: εκείνο είναι **λεζάντα υπομνήματος** (κεφαλαίο αρχικό, στέκεται
+    // μόνο του)· εδώ χρειάζεται **επίθεμα μέσα σε φράση**, όπως τα `minNights`/`conditional` δίπλα.
+    if (mine && meaning === 'check-out-only') parts.push(t('short-stay:calendar.checkOutOnly'));
     if (meaning === 'check-in' && night?.minNights !== null && night?.minNights !== undefined && night.minNights > 1) {
       parts.push(t('short-stay:calendar.minNights', { count: night.minNights }));
     }

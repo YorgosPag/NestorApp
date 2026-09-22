@@ -53,6 +53,40 @@ describe('ListingStayCalendar', () => {
     expect(screen.getAllByRole('button', { name: /cell\.heldMine/ })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: /cell\.held(?!Mine)/ })).toHaveLength(1);
   });
+
+  it('🔴 ADR-835 §23.12.3 Ε6 — η ΠΡΩΤΗ νύχτα δέχεται αναχώρηση ΚΑΙ είναι δική μου: λέγονται ΚΑΙ ΤΑ ΔΥΟ', () => {
+    // Η γεωμετρία του ζωντανού ευρήματος: η 19 είναι ελεύθερη ⇒ η 20 δέχεται αναχώρηση ⇒ το
+    // νόημά της είναι `check-out-only`, ΟΧΙ `held` — εκεί ακριβώς σιωπούσε η ιδιοκτησία.
+    const held = { state: 'held', heldUntil: '2027-09-01T10:00:00.000Z', checkInAllowed: false } as const;
+    const nights = NIGHTS.map((n) =>
+      n.date >= '2027-10-20' && n.date <= '2027-10-22'
+        ? { ...n, ...held, checkOutAllowed: n.date === '2027-10-20' }
+        : n,
+    );
+    const mine = [{ id: 'stay_1', checkIn: '2027-10-20', checkOut: '2027-10-22', guests: 1, totalMinor: null, lifecycle: 'requested', holdExpiresAt: held.heldUntil, pending: true }] as const;
+    render(
+      <ListingStayCalendar monthKey="2027-10" nights={nights} selection={NO_STAY_SELECTION} onShiftMonth={jest.fn()} onPick={jest.fn()}
+        isMine={(day) => isMyPendingNight(mine, day)} />,
+    );
+    const first = screen.getAllByRole('button', { name: /cell\.heldMine/ })[0];
+    expect(first).toHaveAccessibleName(expect.stringContaining('calendar.checkOutOnly'));
+    // Η 20 (με αναχώρηση) και η 21 (χωρίς) λένε και οι δύο ότι είναι δικές μου.
+    expect(screen.getAllByRole('button', { name: /cell\.heldMine/ })).toHaveLength(2);
+    // Η ξένη 22 μένει «για άλλον επισκέπτη» — ο διακομιστής ΔΕΝ λέει ποιος κρατά.
+    expect(screen.getAllByRole('button', { name: /cell\.held(?!Mine)/ })).toHaveLength(1);
+  });
+
+  it('🔴 Ε6 — η ιδιοκτησία ΔΕΝ σβήνει την επιλογή: μέσα στη διαμονή το κελί λέει «in-stay»', () => {
+    const held = { state: 'held', heldUntil: '2027-09-01T10:00:00.000Z', checkInAllowed: false, checkOutAllowed: true } as const;
+    const nights = NIGHTS.map((n) => (n.date >= '2027-10-20' && n.date <= '2027-10-22' ? { ...n, ...held } : n));
+    const mine = [{ id: 'stay_1', checkIn: '2027-10-20', checkOut: '2027-10-23', guests: 1, totalMinor: null, lifecycle: 'requested', holdExpiresAt: held.heldUntil, pending: true }] as const;
+    render(
+      <ListingStayCalendar monthKey="2027-10" nights={nights} selection={{ kind: 'range', checkIn: '2027-10-19', checkOut: '2027-10-23' }}
+        onShiftMonth={jest.fn()} onPick={jest.fn()} isMine={(day) => isMyPendingNight(mine, day)} />,
+    );
+    expect(screen.getAllByRole('button', { name: /cell\.in-stay/ }).length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole('button', { name: /cell\.heldMine/ })).toHaveLength(0);
+  });
 });
 
 describe('isMyPendingNight — ADR-835 §23.12 Ε3', () => {
