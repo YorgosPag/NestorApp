@@ -35,65 +35,39 @@
   `'delivery.state': 'seen'`, και το `config` παράγεται από τον έναν τύπο. Ο κριτής ανάγνωσης είναι ήδη ένας
   (`lib/notifications/notification-state.ts`). ⚠️ Ο άλλος agent δουλεύει στον τομέα ειδοποιήσεων — συντονισμός πριν.
 
-- 🟠 **21/09 — 8 ΠΡΟΫΠΑΡΧΟΝΤΑ ΔΙΔΥΜΑ ΣΤΟ PROCUREMENT (CHECK 3.28 τα βλέπει όταν αλλάζουν ΜΑΖΙ)** *(N.18 · ADR-584)*
+- 🟡 **21/09 — ~29 ΧΕΙΡΟΓΡΑΦΕΣ ΥΠΟΒΟΛΕΣ ΦΟΡΜΑΣ (`setSubmitting(true)`) ΕΚΤΟΣ PROCUREMENT** *(ADR-598 «(ζ)» · N.0.2)*
 
-  Φάνηκαν στην εργασία ονομάτων των combobox (ADR-598 «(δ)»)· **υπήρχαν ήδη στο HEAD** (μετρημένο: 7 κλώνοι
-  `QuoteForm`↔`RfqBuilder` μόνο εκεί). `FrameworkAgreementFormDialog`↔`MaterialFormDialog` (σκελετός διαλόγου:
-  κατάσταση φόρμας/`useEffect` ανοίγματος + footer ακύρωση/αποθήκευση, 2 ζεύγη) · `QuoteForm`↔`RfqBuilder`
-  (γραμμή πίνακα + διάταξη φόρμας, 5 ζεύγη) · `PurchaseOrderForm`↔`RfqBuilder` (μπλοκ imports). Διόρθωση: κοινό
-  `ProcurementFormDialog` (σκελετός + footer) και κοινό leaf γραμμής RFQ/προσφοράς. >1h, 5 αρχεία.
-  ⚠️ **Μέχρι τότε**: αρχεία του ίδιου ζεύγους **δεν** μπαίνουν στο ίδιο commit, αλλιώς το 3.28 μπλοκάρει. Διαμέριση που
-  δουλεύει: {`FrameworkAgreementFormDialog`, `RfqBuilder`} σε ένα commit, {`MaterialFormDialog`, `PurchaseOrderForm`,
-  `QuoteForm`} σε άλλο.
+  SSoT πλέον: `src/hooks/useFormSubmission.ts` (κλείδωμα `ref` σύγχρονο + `canSubmit` **μέσα** στην υποβολή + `getErrorMessage`)
+  και `src/components/ui/form/FormActions.tsx` (`<Button type="submit" form={formId}>`). Μετρημένο: **37** αρχεία με
+  `setSubmitting(true)`, 8 στο procurement (4 μεταφέρθηκαν). Μέτρηση: `grep -rl "setSubmitting(true)" src | grep -v __tests__`.
+  Κάθε αντίγραφο έχει τα ίδια δύο κενά: φύλακας **μόνο** στο `disabled` και «υποβάλλεται» ως **state** (δύο υποβολές
+  στο ίδιο tick = δύο εγγραφές). ⚠️ Όχι μαζικό `sed`: όπου το κουμπί ζει έξω από το `<form>` με `onClick`, η φόρμα **δεν
+  έχει** κουμπί υποβολής και το Enter **δεν** υποβάλλει σήμερα — η μετάβαση στο `form=` **αλλάζει** συμπεριφορά (σωστά,
+  αλλά ορατά). Και: `crm/shared/TaskDialogFormFooter` → να γίνει λεπτό περίβλημα του `FormActions`.
 
-- 🟡 **21/09 — `<Label>` ΧΩΡΙΣ `htmlFor` ΣΤΙΣ ΦΟΡΜΕΣ PROCUREMENT** *(ADR-598 G11)*
+- 🟡 **21/09 — ΤΟ `Button` ΤΟΥ ΕΡΓΟΥ ΔΕΝ ΕΧΕΙ ΠΡΟΕΠΙΛΕΓΜΕΝΟ `type`** *(ADR-598 «(ζ)»)*
 
-  Τα combobox τους συνδέθηκαν (21/09)· τα **απλά** `Input`/`Select` των ίδιων φορμών (`PurchaseOrderForm`, `QuoteForm`,
-  `RfqBuilder`, `ManualQuoteDialog`, `quotes/scan`) έχουν ακόμα ορατή ετικέτα **χωρίς** σύνδεση ⇒ ανώνυμα. Ίδιο μοτίβο:
-  `useId` + `htmlFor`. ⚠️ Καμία πύλη δεν το πιάνει σήμερα για απλά inputs· μόνο το axe ανά οθόνη.
+  `src/components/ui/button.tsx` δεν ορίζει `type` ⇒ μέσα σε `<form>` **κάθε** `<Button>` χωρίς `type` είναι κουμπί
+  **υποβολής** (π.χ. «Προσθήκη γραμμής», «Διαγραφή»). Βρέθηκε στο `VendorPickerSection` (αφαίρεση προμηθευτή). React Aria,
+  MUI, Chakra ορίζουν `type="button"` εξ ορισμού. ⚠️ Η αλλαγή της προεπιλογής είναι **καθολική** — όσες φόρμες βασίζονται
+  σιωπηλά στο «submit» θα σταματήσουν να υποβάλλουν. Πρώτα μέτρηση: `<Button` μέσα σε `<form>` χωρίς `type` (AST).
+
+- 🟡 **21/09 — N.7.1: ΜΕΓΑΛΕΣ JSX ΣΥΝΑΡΤΗΣΕΙΣ ΣΤΙΣ ΦΟΡΜΕΣ PROCUREMENT** *(ADR-598 «(ζ)»)*
+
+  Μετά το §3 (AST, `>40` γρ.): `FrameworkAgreementFormDialog` **268** · `MaterialFormDialog` **298** · `QuoteForm` 52 ·
+  `RfqBuilder` 51 · `LineRow` 93 · `RfqLineRow` 62 · `BreakpointsEditor` 63. Διόρθωση: τμήματα πεδίων ανά ενότητα με
+  `FormField` render-prop (όπως έγινε σε Quote/Rfq: 238→52, 285→51). 2 dialogs κυρίως ⇒ <1h το καθένα.
+
+- 🟡 **21/09 — `rfq-service.ts:417` `id: \`rfql_boq_${idx}_${Date.now()}\`` (N.6)** — ο client πέρασε σε
+  `generateTempId`/`generateOptimisticId`· ο server φτιάχνει ακόμα id γραμμής από `Date.now()`, ενώ υπάρχει `generateRfqLineId`.
 
 - 🟡 **21/09 — ΦΟΡΜΕΣ ΕΠΑΦΩΝ: `EscoOccupationPicker` / `EmployerPicker` / `EscoSkillPicker` ΔΕΝ ΠΑΙΡΝΟΥΝ `field.id`**
 
   Το `pickerRenderer` (`contactRenderersCore.tsx`) δίνει πλέον το `fieldId` που ο renderer βάζει στο `<Label htmlFor>`·
   το περνούν ΔΟΥ/Υπουργείο/Υπηρεσία. Οι τρεις ESCO/εργοδότη **δεν ελέγχθηκαν** αν δέχονται `id` — πιθανώς ίδιο κενό.
-
-- 🟠 **21/09 — ΤΟ `SearchableCombobox` ΜΕΝΕΙ ΑΝΩΝΥΜΟ ΣΕ ~17 ΚΑΤΑΝΑΛΩΤΕΣ** *(ADR-598 G11 · ADR-841 §7 Α19.4δ)*
-
-  ✅ **ΥΛΟΠΟΙΗΘΗΚΕ 21/09 — ΑΚΟΜΙΤΙΣΤΟ** (ADR-598 «(δ)»). Αφαίρεση της εγγραφής **μόνο με εντολή Giorgio** (N.13).
-
-  Το SSoT δέχεται πλέον `id` / `aria-label` / `aria-labelledby` (21/09). **Συνδέθηκε μόνο** το
-  `RelationshipFormFields`. Όποιος δεν τυλίγει το πεδίο σε `<label>` ανακοινώνεται «combobox»
-  σκέτο: `DoyPicker` · `MinistryPicker` · `KadCodePicker` · `PublicServicePicker` ·
-  `CalendarCreateDialog` (2) · `VendorPickerSection` · `TradeSelector` · `POEntitySelectors` (3) ·
-  `MaterialFormDialog` · `FrameworkAgreementFormDialog` (**`htmlFor="fwa-vendor"` προς id που δεν
-  αποδιδόταν ποτέ**) · `BrokeredMandateFields` (το έγραφε ήδη σε σχόλιο) · `AreaCombobox` ·
-  `KadSection` (2) · `AddressWithHierarchy` / `AdministrativeAddressPicker` (ετικέτα-αδελφός).
-  **Πρόταση GOL**: ο **τύπος** του `SearchableComboboxProps` απαιτεί ένα από τα τρία (σχήμα
-  `never`, όπως στο `AnchoredPopover`). Έτσι οι παραβάτες γίνονται σφάλματα μεταγλώττισης, όχι λίστα.
-  Οι wrappers (`DoyPicker`, `KadCodePicker`…) προωθούν `id` προς τα κάτω.
-  ⚠️ >5 αρχεία / πολλοί τομείς ⇒ N.8: ρώτα τον Giorgio για τον τρόπο εκτέλεσης.
-
-- 🟠 **21/09 — `RulerCornerBox`: `menuitem` ΧΩΡΙΣ `menu`** *(ADR-598 G11 · Δ)*
-
-  ✅ **ΥΛΟΠΟΙΗΘΗΚΕ 21/09 — ΑΚΟΜΙΤΙΣΤΟ** (ADR-418 changelog). Αφαίρεση **μόνο με εντολή Giorgio** (N.13).
-
-  Το μενού κλίμακας (`dxf-viewer/canvas-v2/overlays/RulerCornerBox.tsx`) είναι `Popover` με
-  `role="menuitem"` κουμπιά, **χωρίς** γονέα `menu` (axe `aria-required-parent`), **χωρίς** βελάκια
-  (APG Menu) και με `nav` μέσα του. Το κουμπί λέει `aria-haspopup="menu"`. Στο Δ πήρε **μόνο όνομα**
-  («Μενού κλίμακας»). **Θεραπεία**: μετάβαση στο `@/components/ui/dropdown-menu` (Radix Menu:
-  roving focus, typeahead, `menuitem`/`separator`/`group` σωστά), με τις προεπιλογές κλίμακας ως
-  `DropdownMenuGroup` αντί για `nav`. ⚠️ Αρχείο dxf-viewer: CHECK 6D θέλει ADR στο ίδιο commit.
-
-- 🟠 **21/09 — ADR-867 Ε9: ΤΟ «CONTRACT» ΤΗΣ ΙΔΙΩΤΙΚΗΣ ΠΛΕΥΡΑΣ ΤΗΣ ΘΕΣΗΣ ΜΕΝΕΙ ΝΑ ΤΡΕΞΕΙ**
-
-  Ο κώδικας διαβάζει/γράφει το `network_audience_private/{uid}`· τα **παλιά** `lastReadAt`/`muted`/`following`
-  μένουν στη δημόσια γραμμή — **ορατά στην άλλη πλευρά** — ώσπου να τρέξει η μετανάστευση. **Σειρά (Giorgio)**:
-  ① `firebase deploy --only firestore:rules` (αλλιώς η οθόνη παίρνει άρνηση στη **δική** της πλευρά) → ② push →
-  ③ `npm run migrate:network-audience-private` (ξηρό: αναφορά) → `-- --apply` → ξηρό ξανά = **απόκλιση 0**.
-  **Μετά το ③**: αφαίρεσε την εφεδρεία `legacyRaw` του `networkAudiencePrivateFromDocuments`
-  (`lib/network-messaging/network-thread-from-document.ts`) και το `publicRaw` που του περνά το `audienceSeatOf`
-  (`services/network-messaging/audience-seats.ts`) — είναι νεκρός κώδικας από τη στιγμή που η απόκλιση είναι 0.
-  Κράτα το script (είναι ο ανιχνευτής αν ποτέ ξαναμπεί ιδιωτικό πεδίο σε δημόσια γραμμή).
+  ✔️ **Επιβεβαιώθηκε 21/09 για το `EscoOccupationPicker`**: η αλυσίδα `LinkedSinglePickerView` → `PickerSearchInput` →
+  `Input` **δεν** δέχεται `id` / `aria-label` / `aria-labelledby` ⇒ η ετικέτα στο `SignatoryProposalCard`
+  (`ProfessionEscoField`) μένει ασύνδετη — δηλωμένη εξαίρεση στη φρουρά του procurement, που **ζητά σβήσιμο** μόλις κλείσει.
 
 - 🟠 **21/09 — ΤΟ CHECK 3.28 `--diff` ΛΕΕΙ «new clone» ΧΩΡΙΣ ΝΑ ΕΛΕΓΧΕΙ ΑΝ ΕΙΝΑΙ ΝΕΟΣ**
 
@@ -4303,6 +4277,8 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-09-21 | ✅ **ΕΚΛΕΙΣΑΝ ΔΥΟ ΕΓΓΡΑΦΕΣ G11 (ADR-598 «(δ)» · ADR-418, εντολή Giorgio).** (1) **`SearchableCombobox` χωρίς όνομα σε ~17 καταναλωτές** — ο τύπος `FieldAccessibleName` το απαιτεί, έλεγχος DOM (`findMissingAccessibleName`) + φρουρά AST σε όλο το `src/` (`ui/__tests__/combobox-naming.test.ts`). (2) **`RulerCornerBox`: `menuitem` χωρίς `menu`** — έγινε `DropdownMenu` με τις κλίμακες ως `menuitemradio`. **Επαληθευμένο πριν τη διαγραφή**: και τα δύο στο `de2bd296`, ήδη στο `origin/main`, αρχεία **ταυτόσημα** με το HEAD, CI `jest-suite` χωρίς νέο κόκκινο. |
+| 2026-09-21 | ✅ **§3 PROCUREMENT — ΕΚΛΕΙΣΑΝ ΔΥΟ ΕΓΓΡΑΦΕΣ (ADR-598 «(ζ)» · ADR-584 §8, Opus 5· εντολή Giorgio).** (1) **8 προϋπάρχοντα δίδυμα → 0** (+3 που φάνηκαν στην πορεία) με SSoT, όχι αναδιάταξη: `useFormSubmission` · `FormActions` · `FormField` render-prop · `AtoeCategoryCodeSelect` · `LineItemsSection` · `EmailMessageFields`· τα 2 που ήταν μόνο imports τα έκλεισε το `ignorePattern` (πρακτική SonarQube/PMD CPD) με άγκυρα που αποδεικνύει ότι τα πραγματικά δίδυμα **εξακολουθούν** να μπλοκάρουν. (2) **35 ετικέτες χωρίς πεδίο → 0** + φρουρά AST μηδενικής ανοχής. 🔒 **Κλειδώθηκαν** `.jscpd-baseline.json` 2641 → **1788** και `.a11y-coverage-baseline.json` 143 → **134** — μετρημένα σε **HEAD + μόνο αυτή τη δουλειά** (εξαγωγή `git archive`), **όχι** στο κοινό δέντρο: εκεί τα jscpd έβγαιναν 1757, τα −31 είναι ξένη ακομίτιστη δουλειά. ⚠️ **Πάνε στο ΙΔΙΟ commit με** `.jscpdrc.json` (χωρίς το `ignorePattern` η μέτρηση = 1911 ⇒ κόκκινο) **και** `sidebar-trigger.a11y.test.tsx` (καλύπτει το `sidebar-context`). |
 | 2026-09-17 | ✅ **`FileRecord.hold` — ΕΚΛΕΙΣΕ (ADR-864 §21.8, Opus 5).** Η καταχώρηση **αφαιρέθηκε**: οι κανόνες (`holdCustodyKeys` = `FILE_HOLD_FIELDS` · `holdCustodyUnchanged` στα 4 σκέλη update · `holdBornAbsent` · `holdAllowsHardDelete`) μπήκαν σε `files` **και** `files_personal` (κάδος ανοιχτός — σιωπηλή δέσμευση Vault/Box), `mandate_evidence` deny-all + manifest 3.16 + σουίτα, άγκυρα **Α49**. Emulator **116/116** (πηγή + compiled) · μεταλλάξεις **M75-M80 6/6** κόκκινες · πύλες 3.16/3.28/3.35/3.68/3.70/3.78/3.87 ✅. **Αναπτύχθηκαν** στο `pagonis-87766` (εντολή Giorgio) — CHECK 3.86 ✓ και στους τρεις στόχους. |
 | 2026-09-17 | ✅ **ΔΟΧΕΙΑ CDE ΕΚΤΟΣ ΕΡΓΟΥ — ΑΠΟΦΑΣΙΣΤΗΚΑΝ ΚΑΙ ΓΡΑΦΤΗΚΑΝ (ADR-862 §5.3.7, Opus 5).** Αφαιρέθηκε η γραμμή «Δοχεία CDE εκτός έργου» από το ADR-862 Φ0. Έρευνα σε πρωτογενείς πηγές (Procore «no integration» · ProjectWise workflow `<none>` · ACC · ISO 19650-1 §3.3.15) ⇒ **εκδόσεις παντού, φάσεις μόνο σε δοχείο έργου**· «δοχείο γραφείου» απορρίφθηκε (κανείς μεγάλος). Νέα καθαρή κρίση `container-regime-policy.ts`· ο ΕΝΑΣ γραφέας γράφει σε `versions-only` μόνο τα ουδέτερα πεδία διαδοχής και αρνείται τις πράξεις φάσης με `no-project`. Άγκυρα Α33 (12 tests), 6/6 μεταλλάξεις κόκκινες. CDE ακινήτου (19650-3) = μελλοντική φάση στο ADR-866. |
 | 2026-09-09 | 🏆 **Η ΠΥΛΗ ΤΗΣ ΚΙΝΗΣΗΣ ΑΠΕΚΤΗΣΕ ΔΟΝΤΙΑ — CHECK 3.77 (ADR-847 §10.8, Opus 5).** Το όργανο **έτρεχε αλλά δεν φύλαγε**: καμία ροή CI δεν το καλούσε, άρα ίσχυε το ADR-587 *«ένα anchor χωρίς gate δεν είναι anchor — είναι σχόλιο»*. Τώρα: `.github/workflows/camera-motion-gate.yml` **tier 2**, path-filtered, με **ΔΥΟ jobs που δεν ενώνονται με «ή»** — `judgment` *(η ΜΕΖΟΥΡΑ: `camera-trajectory` + `camera-motion` σε jest, δευτερόλεπτα, χωρίς browser)* και `flight` *(Η ΠΤΗΣΗ: αληθινός MapLibre, παγωμένο ρολόι, 6 κριτήρια)*· ένα «ή» θα έμενε πράσινο πάνω στο **μισό** ελάττωμα. 📒 Μητρώα: `.ci-gate-tiers.json` *(36 πύλες)* · `.gate-inventory.json` **μόνο-CI** *(όπως το 3.40 — dev server + browser δεν χωρούν σε hook)* · `docs/gates/3.77.md` · πίνακας `CLAUDE.md` **παραγόμενος** *(59 γραμμές, ποτέ με το χέρι — CHECK 3.66 κρατά sha256)*. 🔴 **ΤΟ ΕΥΡΗΜΑ ΤΗΣ ΥΛΟΠΟΙΗΣΗΣ, ΜΕ ΠΗΓΗ**: **το MapLibre ΕΙΝΑΙ WebGL**, και τα Chromium docs *(`docs/gpu/swiftshader.md`)* λένε ότι **από το Chrome 130** η σιωπηλή πτώση σε SwiftShader είναι υπό κατάργηση ⇒ σε runner **χωρίς GPU** ο χάρτης δεν θα κτιζόταν καν και η πύλη θα κοκκίνιζε **για λόγο άσχετο με την κίνηση** — δηλαδή θα ήταν πύλη που **δεν λέει τίποτα**. Λύση: **δικό της Playwright project** `camera-motion` με ρητό `--enable-unsafe-swiftshader` *(ίδιες σημαίες με το `visual-bim-3d`, που το είχε ήδη πληρώσει)*. ⏱️ Και δεύτερο: `timeout: 300000`, επειδή **το timeout του project είναι ΚΑΙ του `beforeAll`** όπου γίνεται η **μοναδική** μέτρηση — με τα προεπιλεγμένα 30s η πύλη θα κοκκίνιζε για **ταχύτητα μηχανής**, τη στιγμή που το παγωμένο ρολόι υπάρχει ακριβώς για να μην εξαρτώνται οι αριθμοί από αυτήν. **Αργό ≠ λάθος.** ✅ Πράσινα: **3.37** · **3.46** *(8 projects· το φίλτρο `camera-motion` λύνεται)* · **3.66** *(0 φαντάσματα· **11 αδήλωτες αμετάβλητες** — η baseline μεγάλωσε ΜΟΝΟ κατά τη δήλωση μόνο-CI)* · `gate-index:check`. 🔶 **ΤΙΜΙΑ ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: η πύλη κρίνει **ΤΗΝ ΑΡΧΗ**, όχι κάθε σημείο κλήσης· τον καλόντα που παρακάμπτει το `cameraFlight()` τον φυλάει το job `judgment`. **Δύο ερωτήματα, δύο φρουροί.** ⚠️ **ΔΕΝ ΕΧΕΙ ΤΡΕΞΕΙ ΠΟΤΕ ΣΕ LINUX RUNNER** — η πρώτη πραγματική εκτέλεση θα είναι το πρώτο PR που αγγίζει σκανδάλη. Pending commit *(Giorgio· shared tree)*.  🧹 **Boy-scout (N.0.2) που βρέθηκε καλωδιώνοντας**: τα 5 γενικά Playwright projects σήκωναν **κάθε** spec — και τα **τρία** που έχουν δικό τους project μαζί, δηλαδή το `camera-motion` έτρεχε **χωρίς swiftshader** σε 5 από τις 6 φορές. Μία αυθεντία `DEDICATED_SPECS` τροφοδοτεί πλέον **και** το `testMatch` **και** το `testIgnore`· μετρημένο `--list`: **405 → 155** εκτελέσεις *(−250)*, ανά spec **6 → 1** project. Τεκμηριωμένο στο **ADR-775 §11** *(που η προκείμενή του έγινε ψευδής και διορθώθηκε με νέα μέτρηση)*.  🔴 **ΚΑΙ ΕΝΑ ΤΡΙΤΟ ΕΥΡΗΜΑ, ΠΟΥ ΤΟ ΕΠΙΑΣΕ ΠΥΛΗ ΚΑΙ ΟΧΙ ΕΓΩ**: το `CHECK 3.54` κοκκίνισε γιατί η δήλωση εξαίρεσης του spec στο `.anchor-execution.json` *(«κόστος ΜΗ εγκεκριμένο — απόφαση Giorgio»)* **έγινε ψέμα** τη στιγμή που ο Giorgio ενέκρινε και γράφτηκε το workflow. ⚠️ Το επικίνδυνο δεν ήταν ο αριθμός αλλά **η σειρά κρίσης**: το `classifyFile` προτιμά το `exemptWhy` **πριν** κοιτάξει εκτελεστή ⇒ ξεχασμένη δήλωση κάνει τον ΠΡΑΓΜΑΤΙΚΟ εκτελεστή **αόρατο**, και το αρχείο μετριέται για πάντα ως «κανείς δεν το τρέχει» ενώ μια πύλη το τρέχει — **το ανάποδο ψέμα** από αυτό που κυνηγά το ADR-587. Η δήλωση **αφαιρέθηκε** *(6→5)*, το spec ταξινομείται πλέον `blocking-path-filtered` με εκτελεστή `camera-motion-gate.yml`, και η άγκυρα **Π4** ενισχύθηκε ώστε να λέει **γιατί** είναι 5 *(το έκτο ΔΕΝ είναι εξαίρεση **και** ο εκτελεστής του ονομάζεται)* — χωρίς να καρφώνει τη μία κατάσταση, ώστε η αφαίρεση του φίλτρου `paths:` να μην κοκκινίζει άδικα. ✅ **Μετάλλαξη**: ξαναδήλωσα την εξαίρεση ⇒ **Π4 κόκκινο**· επαναφορά ⇒ **32/32**. |

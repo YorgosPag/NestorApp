@@ -719,3 +719,56 @@ renderer ήδη βάζει στο `<Label htmlFor>`. Boy Scout στα ίδια �
 - Node 20: όλα τα ενεργά workflows σε `checkout@v5`/`setup-node@v5`/`pnpm/action-setup@v5`· `@v4` μένει μόνο σε
   `*.yml.disabled` (το `docker/login-action@v4` είναι ήδη μία major πάνω από το `@v3` που προειδοποιούσε στο `af32dc60`). `package-manager-cache: false`: 9 jobs.
 - Διόρθωση αριθμού του handoff: το `jest-suite` @ `af32dc60` είχε **53** κόκκινες σουίτες, όχι ~15.
+
+### 2026-09-21 (στ) — Επαλήθευση CI μετά το push (`13d15291`): **η πρόβλεψη του (ε) επιβεβαιώθηκε, μηδέν νέα κόκκινα**
+
+Κάθε κόκκινο workflow συγκρίθηκε με το **προηγούμενο run του ίδιου workflow** (όχι του ίδιου commit: τα workflows
+έχουν φίλτρα διαδρομών)· στα workflows πολλών jobs η σύγκριση έγινε **ανά job**.
+
+- **`ui-contrast-ratchet` ✅** (πρώτη φορά που τρέχουν τα βήματα κάτω από το install). **Docker ✅**. `firebase-drift`: δεν ενεργοποιήθηκε (φίλτρο διαδρομών).
+- **`jest-suite`**: 52 → **48** κόκκινες σουίτες, **0 νέες**, 4 διορθώθηκαν· το `client-picker-vocabulary` **πράσινο**.
+- **Node 20: 0 προειδοποιήσεις** σε όλα τα ολοκληρωμένα runs. ⚠️ Η πρώτη σάρωση έδωσε ψευδές «καθαρό»: σφάλμα
+  σύνταξης του φίλτρου `jq` κρυβόταν πίσω από `2>/dev/null`. Το φίλτρο επικυρώθηκε **θετικά** στο `af32dc60` (πιάνει
+  την προειδοποίηση) πριν μετρηθεί το μηδέν — «0 ευρήματα» από όργανο που δεν αποδείχθηκε ότι βλέπει = «δεν κοίταξα».
+- **`package-manager-cache: false`**: το install περνά σε όλα τα jobs· τα κόκκινα των `ci-gate-tiers`/`ssot-discover`
+  είναι στα βήματα των πυλών (3.66 · 3.18 · μετάλλαξη 3.58), ίδια με το προηγούμενο run.
+- Προϋπάρχοντα, αμετάβλητα: Secret Scan, CVE, Functions Integration, ESLint, 3.82, Dependency-Graph, 3.30, 3.29,
+  3.34, G5, G14, G6· `firestore-rules` jest **ακυρώνεται** στο `timeout-minutes: 8` (ίδιο και στο `aee8f601`).
+- **G11 — το μόνο νέο κόκκινο — κλείνει**: `src/components/ui/__tests__/sidebar-trigger.a11y.test.tsx` (axe · όνομα
+  από το i18n κλειδί · η εναλλαγή **και** το `onClick` του καταναλωτή). Mock στον **hook του έργου** μέσω του SSoT
+  `keyEchoTranslation()` — mock στο `react-i18next` άφηνε τον πραγματικό loader να τρέχει και να γράφει state εκτός
+  `act(...)`. Τοπικά `--check` ✅ (134/143, −9 προς κλείδωμα — **όχι** reseed χωρίς εντολή).
+
+### 2026-09-21 (ζ) — §3 procurement: **8 δίδυμα → 0, 35 ετικέτες χωρίς πεδίο → 0, και τα ελαττώματα που έκρυβαν**
+
+Τα δίδυμα του CHECK 3.28 δεν ήταν ζήτημα στιλ· η αφαίρεσή τους **έφερε στο φως** ελαττώματα:
+- **FWA / Material dialog**: το κουμπί υποβολής ζούσε **έξω** από το `<form>` με `onClick` ⇒ η φόρμα δεν είχε κουμπί
+  υποβολής ⇒ κατά την HTML το **Enter δεν έκανε τίποτα** (μετρημένο σε Chromium/Playwright: `form=` ⇒ 1 υποβολή,
+  χωρίς κουμπί ⇒ 0). ⚠️ Η πρώτη μου διάγνωση («το Enter υποβάλλει χωρίς έλεγχο») ήταν **λάθος** — τη διέψευσε το test
+  πριν γραφτεί κώδικας. Με το `form=` το Enter υποβάλλει ⇒ ο φύλακας `canSubmit` και το κλείδωμα **πρέπει** να ζουν
+  **μέσα** στην υποβολή, όχι στο `disabled`.
+- **QuoteForm / RfqBuilder**: **καμία** δεν ήταν `<form>`· σφάλμα χωρίς `role="alert"`· αποτυχημένο αίτημα έδειχνε
+  το **ωμό σώμα** της απάντησης (`res.text()`) αντί για το μήνυμα του server· στο QuoteForm **κανένα** κελί γραμμής
+  δεν είχε όνομα, ούτε το κουμπί διαγραφής· ταυτότητες γραμμών `Date.now()` (διπλό κλικ στο ίδιο ms = διπλό κλειδί).
+- **VendorPickerSection**: κουμπί αφαίρεσης **χωρίς `type`** (μέσα στη νέα φόρμα θα την υπέβαλλε) και `aria-label`
+  **ωμό αγγλικό** (`Remove ${name}`) — N.11, αόρατο σε κάθε scanner.
+
+**SSoT (νέα):** `hooks/useFormSubmission` (κλείδωμα `ref` σύγχρονο — **όχι** `useActionState`, που βάζει τη 2η
+υποβολή **σε ουρά** = διπλή εγγραφή) · `ui/form/FormActions` (`<Button type="submit" form={formId}>`, Άκυρο =
+`outline`: μετρημένο 118/42/10 στα `DialogFooter`) · `procurement/components/{AtoeCategoryCodeSelect, LineItemsSection,
+EmailMessageFields}` · `test-utils/implicit-submission` (το user-event 14 ψάχνει κουμπί υποβολής μόνο σε **απογόνους** —
+θα έλεγε «δεν υποβάλλει» για φόρμα που στον φυλλομετρητή υποβάλλει).
+**SSoT (επεκτάθηκαν, συμβατά):** `FormField` δέχεται `children: (id) => …` και φτιάχνει το id (React Aria `TextField`
+/ Chakra `FormControl`) — η σύνδεση ετικέτας γίνεται **δομικά αναπόφευκτη**· `fetchJson`/`jsonRequest`,
+`parseLocaleNumber` (αντικατέστησε 2 `numOrNull`), `generateOptimisticId`/`generateTempId` (αντικατέστησαν `Date.now()`).
+**Φρουρά:** `subapps/procurement/__tests__/procurement-label-association.test.ts` (AST, μηδέν ανοχή, εξαιρέσεις
+**κατά ταυτότητα** που απαιτούν σβήσιμο όταν κλείσουν) — βρήκε **5 ετικέτες σε 3 αρχεία** που το χειροκίνητο audit
+είχε χάσει (PODeliveryAddressField · AwardReasonDialog · RfqCancelDialog).
+**Verified:** jest **209/209** (procurement + SSoT + sidebar)· `jscpd:diff` 21 αρχεία **0**· μεταλλάξεις **6/6** κόκκινες
+(κλείδωμα · `canSubmit` · `type="button"` · 2× regex jscpd · αγκύρωση `^`)· G11 `--check` ✅· CHECK 3.8/3.33 ✅. Χωρίς tsc (N.17).
+🔒 **Baselines κλειδώθηκαν (εντολή Giorgio)**: G11 `.a11y-coverage-baseline.json` **143 → 134** (βγήκαν `button`, `chart`,
+`label`, `multi-combobox`, `popover`, `searchable-combobox`, `sidebar-context`, `table`, `tooltip`) · jscpd **2641 → 1788**.
+Και τα δύο μετρήθηκαν σε **HEAD + μόνο αυτή τη δουλειά** (`git archive`), όχι στο κοινό δέντρο. Τα 8 καλύπτονται από tests
+ήδη στο HEAD· το `sidebar-context` από το `sidebar-trigger.a11y.test.tsx` ⇒ **ίδιο commit**, αλλιώς το G11 κοκκινίζει.
+⚠️ **N.7.1 — PARTIAL**: συναρτήσεις >40 γρ. μένουν οι **προϋπάρχουσες** μεγάλες JSX (FWA 292→268, Material 331→298,
+QuoteForm 238→52, RfqBuilder 285→51, γραμμές πίνακα 62/93) — καταγράφηκαν στο `pending-ratchet-work.md`.
