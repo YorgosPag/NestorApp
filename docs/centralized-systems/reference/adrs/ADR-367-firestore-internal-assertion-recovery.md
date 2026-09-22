@@ -1,6 +1,6 @@
 # ADR-367: Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net)
 
-**Status:** ✅ APPROVED
+**Status:** ✅ APPROVED — §2.1 superseded by §2.5 (2026-09-22)
 **Date:** 2026-05-20
 **Category:** Infrastructure / Performance
 **Owner:** Platform
@@ -90,6 +90,43 @@ and the §2.2 recovery listener remain as the safety net for any residual SDK-in
 path. ADR-040 micro-leaf files are untouched (persistence hooks are not on the CHECK
 6B/6D list). Related: ADR-408 (MEP auto-design — the reconcilers that amplify the churn).
 
+### 2.5 Root fix #3 — memory cache, every environment (2026-09-22) — SUPERSEDES §2.1
+
+**Symptom:** `b815` again, now on a **public** page with an anonymous visitor
+(`/search/results`, `userId: null`), CONTEXT = *"Failed to obtain exclusive access to the
+persistence layer"*. That is the **single-tab** manager: a second tab (or a tab frozen in the
+background by Chrome, whose lease then expires) loses exclusive IndexedDB access, the SDK's
+AsyncQueue enters its failed state, and the next Firestore call trips `b815`.
+
+**Finding 1 — both tab managers produce `b815`.** Multi-tab via the lease swap (§1), single-tab
+via lost exclusive access (this incident). The class is `persistentLocalCache` itself, open
+upstream for years across 8.x → 12.x (firebase-js-sdk #7884, #8250, #7161 — all IndexedDB-only;
+*"does not occur when persistence is disabled"*). No tab manager choice fixes it.
+
+**Finding 2 — the §4 reason for keeping persistence was void.** §4 rejected memory cache because
+*"field engineers on construction sites without network would be blocked"*. Measured: `public/sw.js`
+is a **zero-cache passthrough**, so without network the app shell never loads — a persistent
+Firestore cache can't deliver an offline cold start. What the field engineer actually gets
+(open listeners keep their data, writes queue and retry while the tab lives) is provided by
+`memoryLocalCache` identically.
+
+**Finding 3 — the §2.2 net did not cover public routes.** `GlobalErrorSetup` was mounted only in
+`(app)/layout.tsx`; `(light)` / `(auth)` / `(me)` load `db` too but had **no** recovery listener.
+
+**Decision (industry practice: Google Docs/Gmail keep offline storage an explicit per-device
+opt-in, never a silent default; portal sites like Zillow/Idealista keep no client DB for
+anonymous browsing):**
+1. `src/lib/firebase.ts` → `memoryLocalCache()` in **every** environment (was dev-only).
+2. `src/lib/firestore-legacy-cache.ts` (**NEW**) → deletes the orphaned IndexedDB
+   `firestore/<app.name>/<projectId>/main` + SDK `firestore_zombie_*` localStorage keys, once per
+   browser (flag set only on success). Tenant data no longer sits on shared-computer disks.
+3. `GlobalErrorSetup` moved to the **root** layout (zero DOM) → recovery net on every route group.
+4. `firestore-recovery.ts` → `terminate` + reload only (nothing on disk to clear).
+
+**Only trade-off:** writes still pending when a tab is **closed while offline** are lost (they
+were kept in IndexedDB before). Re-introducing persistence requires an offline app shell **and**
+an explicit per-device opt-in — see the ⚠️ in `firebase.ts`.
+
 ## 3. Trade-offs
 
 | Aspect | Before | After |
@@ -106,7 +143,7 @@ path. ADR-040 micro-leaf files are untouched (persistence hooks are not on the C
 
 | Option | Why rejected |
 |--------|--------------|
-| `memoryLocalCache` in production | Loses offline support — field engineers on construction sites without network would be blocked. |
+| `memoryLocalCache` in production | ~~Loses offline support~~ — **REVERSED 2026-09-22 (§2.5)**: the app shell has no offline cache (`sw.js` passthrough), so this offline support never existed. Now the adopted fix. |
 | SDK upgrade only (12.7 → latest) | The Firebase team has patched assertion variants across multiple releases; no guarantee any single upgrade closes this specific path. Not a strategy. |
 | Recovery-only (keep multi-tab + add listener) | Anti-pattern: leaves the known crash path in place. Recovery must be a safety net, not the only line of defense. |
 | Custom retry on assertion (no reload) | Not feasible — once the SDK trips its internal state machine, no public API can re-stabilize it without a process restart. |
@@ -118,6 +155,9 @@ path. ADR-040 micro-leaf files are untouched (persistence hooks are not on the C
 | `src/lib/firebase.ts` | Multi-tab manager → single-tab; comment block updated to point here. |
 | `src/lib/firestore-recovery.ts` | **NEW** — global listener + recovery sequence (~95 lines). |
 | `src/components/GlobalErrorSetup.tsx` | Wire-in dynamic import of recovery listener. |
+| `src/lib/firestore-legacy-cache.ts` | **NEW (§2.5)** — one-time purge of the orphaned `persistentLocalCache` IndexedDB + SDK zombie lease keys. |
+| `src/app/layout.tsx` / `src/app/(app)/layout.tsx` | **§2.5** — `GlobalErrorSetup` moved from the `(app)` group to the root layout. |
+| `src/lib/__tests__/firestore-legacy-cache.test.ts` | **NEW (§2.5)** — pins the exact SDK database name, zombie-only key removal, success-only flag. |
 | `docs/centralized-systems/reference/adrs/ADR-367-...md` | **NEW** — this document. |
 
 ## 6. Google-level checklist (N.7.2)
@@ -156,3 +196,4 @@ path. ADR-040 micro-leaf files are untouched (persistence hooks are not on the C
 
 - **2026-05-20** — Initial decision: single-tab manager + recovery listener. Triggered by Sentry event `a4374d38b9374d089437a899341626a6` at `/dxf/viewer` on commit `e660b1de`.
 - **2026-06-08** — Added §2.4 **Root fix #2 (subscription listener-churn stabilization)**. A second, deterministic `ca9 {ve:-1}` trigger was found: BIM persistence hooks re-subscribed `onSnapshot` on every render because their effect depended on the unstable `levelManager` object — amplified into a render storm by the MEP pipe auto-design reconcilers. Stabilized all 20 persistence hooks to key off `currentLevelId` + scope primitives via a `levelManagerRef` (mirror of the `useMepFittingAutoReconciliation` render-loop fix). No behavior change; §2.1/§2.2 remain as the SDK-internal safety net.
+- **2026-09-22** — §2.5 **memory cache in every environment** (supersedes §2.1 single-tab). Trigger: `b815` with *"Failed to obtain exclusive access to the persistence layer"* at public `/search/results` (errorId `err_9a24e54b`). Both tab managers proven to produce `b815`; §4's offline rationale void (`sw.js` = zero-cache passthrough). NEW `firestore-legacy-cache.ts` purges orphaned IndexedDB; `GlobalErrorSetup` moved to root layout so public route groups get the recovery net; recovery drops `clearIndexedDbPersistence`.

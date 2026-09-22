@@ -2,8 +2,6 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getFirestore,
   initializeFirestore,
-  persistentLocalCache,
-  persistentSingleTabManager,
   memoryLocalCache,
   connectFirestoreEmulator,
   type Firestore,
@@ -22,26 +20,27 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// ── Firestore cache strategy (ADR-367 — single-tab + recovery listener) ──
-// Production: persistentLocalCache + single-tab manager → offline support, no multi-tab
-//   lease race. Multi-tab was swapped on 2026-05-20 after Sentry caught
-//   "FIRESTORE INTERNAL ASSERTION FAILED (ID: b815)" at /dxf/viewer — a known
-//   firebase-js-sdk bug triggered by tab-lease swap during onSnapshot delivery.
-//   DXF viewer is a single-tab workflow; multi-tab sync is not worth the SDK risk.
-//   See src/lib/firestore-recovery.ts for the safety-net error listener.
-// Development: memoryLocalCache → no IndexedDB lease, eliminates "Failed to obtain primary
-//   lease for action 'Release target'" warnings caused by Turbopack HMR reinitializing
-//   the Firestore module while the previous instance tries to release query targets.
+// ── Firestore cache strategy (ADR-367 §2.5 — memory cache, every environment) ──
+// 🔴 ΚΑΜΙΑ IndexedDB. Και οι ΔΥΟ διαχειριστές καρτελών του persistentLocalCache παράγουν
+//   μετρημένα το `INTERNAL ASSERTION FAILED (ID: b815)`: ο multi-tab στην αλλαγή lease
+//   (/dxf/viewer, 2026-05-20), ο single-tab όταν δεύτερη καρτέλα ή παγωμένη καρτέλα χάνει
+//   την αποκλειστική πρόσβαση (/search/results, 2026-09-22). Ανοιχτά στο SDK επί χρόνια
+//   (firebase-js-sdk #7884, #8250) — δεν είναι δικό μας σφάλμα, άρα δεν διορθώνεται εδώ.
+// 🔑 Η «υποστήριξη εκτός σύνδεσης» που δικαιολογούσε τον δίσκο ΔΕΝ υπήρξε ποτέ: το
+//   `public/sw.js` είναι passthrough χωρίς cache, άρα χωρίς δίκτυο η εφαρμογή δεν ανοίγει
+//   καν. Ό,τι πραγματικά χρειάζεται ο μηχανικός στο εργοτάξιο — τα ανοιχτά listeners να
+//   κρατούν τα δεδομένα και οι εγγραφές να μπαίνουν σε ουρά σε απώλεια σήματος — το κάνει
+//   και το memory cache, όσο ζει η καρτέλα.
+// ⚠️ ΜΗΝ επαναφέρεις persistentLocalCache χωρίς πρώτα offline app shell ΚΑΙ ρητό opt-in
+//   ανά συσκευή (πρότυπο Google Docs «Διαθέσιμο εκτός σύνδεσης»): δεδομένα ενοικιαστή σε
+//   δίσκο κοινόχρηστου υπολογιστή δεν γράφονται σιωπηλά. Η IndexedDB που άφησε η παλιά
+//   ρύθμιση σβήνεται από το `firestore-legacy-cache.ts`.
 // SSR / Node: plain getFirestore (no IndexedDB available).
 const isClient = typeof window !== 'undefined';
-const isDev = process.env.NODE_ENV === 'development';
 function createDb(): Firestore {
   if (!isClient) return getFirestore(app);
   try {
-    const localCache = isDev
-      ? memoryLocalCache()
-      : persistentLocalCache({ tabManager: persistentSingleTabManager({ forceOwnership: false }) });
-    return initializeFirestore(app, { localCache });
+    return initializeFirestore(app, { localCache: memoryLocalCache() });
   } catch {
     // initializeFirestore already called (HMR / repeat import) — reuse existing.
     return getFirestore(app);

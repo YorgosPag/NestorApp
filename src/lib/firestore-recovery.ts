@@ -4,14 +4,18 @@
  * =============================================================================
  *
  * Detects "FIRESTORE … INTERNAL ASSERTION FAILED (ID: …)" errors from the
- * firebase-js-sdk and performs a clean teardown + IndexedDB reset + reload.
- * Belt-and-suspenders pair to the single-tab cache strategy in
- * `src/lib/firebase.ts` (ADR-367).
+ * firebase-js-sdk and performs a clean teardown + reload.
+ * Safety net under the memory-cache strategy in `src/lib/firebase.ts`
+ * (ADR-367 §2.5): memory cache removes the IndexedDB lease class of assertions,
+ * this catches whatever SDK-internal path remains (e.g. ca9 listener churn, §2.4).
  *
  * Recovery flow:
- *   1. terminate(db)                    — drop in-flight streams + connections
- *   2. clearIndexedDbPersistence(db)    — wipe corrupted local cache
- *   3. location.reload()                — clean app restart
+ *   1. terminate(db)      — drop in-flight streams + connections
+ *   2. location.reload()  — clean app restart (memory cache = nothing on disk to wipe)
+ *
+ * Mounted at the ROOT layout via `GlobalErrorSetup` — every route group, public
+ * or not (ADR-367 §2.5: it used to live only in `(app)`, so `/search/results`
+ * had no net at all).
  *
  * Guards:
  *   - Module-scope `installed` flag → listener mounted once per page lifetime.
@@ -22,7 +26,7 @@
  * @enterprise ADR-367 — Firestore Internal Assertion Recovery
  */
 
-import { clearIndexedDbPersistence, terminate } from 'firebase/firestore';
+import { terminate } from 'firebase/firestore';
 import { db } from './firebase';
 import { captureMessage } from './telemetry/sentry';
 
@@ -60,7 +64,6 @@ async function runRecovery(message: string): Promise<void> {
 
   try {
     await terminate(db);
-    await clearIndexedDbPersistence(db);
   } catch {
     // Swallow — reload is the ultimate fallback.
   } finally {

@@ -11,6 +11,7 @@ import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 import { densityBootScript } from '@/lib/appearance/density-boot-script';
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { AppUpdateBanner } from '@/components/app-update/AppUpdateBanner';
+import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 
 /**
@@ -157,6 +158,13 @@ export default function RootLayout({
                     ⚠️ ΜΗΔΕΝ DOM όσο δεν υπάρχει νέα έκδοση — το `(bare)` μένει ανέπαφο.
                   */}
                   <AppUpdateBanner />
+                  {/*
+                    🔴 ADR-367 §2.5 — ΤΟ ΔΙΧΤΥ ΤΟΥ FIRESTORE ΣΕ ΚΑΘΕ ΔΙΑΔΡΟΜΗ.
+                    Ζούσε στο `(app)/layout.tsx`, ενώ το `db` το φορτώνουν και οι δημόσιες
+                    σελίδες: το b815 στο `/search/results` (2026-09-22) δεν είχε ΚΑΝΕΝΑ δίχτυ.
+                    ⚠️ ΜΗΔΕΝ DOM (`return null`) — το `(bare)` μένει ανέπαφο.
+                  */}
+                  <GlobalErrorSetup />
                 </UserRoleProvider>
                 </SuperAdminCompanyProvider>
               </AuthProvider>

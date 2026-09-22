@@ -30,7 +30,6 @@ import { usePathname } from '@/lib/workspace/navigation';
 
 import { AppHeader } from '@/components/app-header';
 import { AppSidebar } from '@/components/app-sidebar';
-import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { NavigationProvider } from '@/components/navigation';
 import { GlobalFileUploadToast } from '@/components/layout/GlobalFileUploadToast';
 import { MainContentBridge } from '@/components/layout/MainContentBridge';
@@ -120,7 +119,7 @@ function GlobalSurfaces() {
     <>
       <VoiceAIPanel />
       <GlobalFileUploadToast />
-      <GlobalErrorSetup />
+      {/* `GlobalErrorSetup` ζει στο ROOT layout (ADR-367 §2.5) — καλύπτει και τα δημόσια groups. */}
     </>
   );
 }

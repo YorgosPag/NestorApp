@@ -27,9 +27,14 @@ export function GlobalErrorSetup() {
 
     // ADR-367 — Firestore SDK internal-assertion recovery net.
     // Detects "FIRESTORE INTERNAL ASSERTION FAILED (ID: …)" errors and runs
-    // terminate → clearIndexedDbPersistence → reload (1× per session).
+    // terminate → reload (1× per session).
     import('@/lib/firestore-recovery').then(({ installFirestoreRecoveryListener }) => {
       installFirestoreRecoveryListener();
+    });
+
+    // ADR-367 §2.5 — σβήνει την IndexedDB της παλιάς persistentLocalCache (1× ανά browser).
+    import('@/lib/firestore-legacy-cache').then(({ purgeLegacyFirestoreCache }) => {
+      purgeLegacyFirestoreCache();
     });
   }, []);
 
