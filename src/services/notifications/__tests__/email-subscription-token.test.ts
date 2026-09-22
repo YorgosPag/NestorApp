@@ -41,8 +41,9 @@ describe('Α — το σωστό token', () => {
     expect(readEmailSubscriptionToken(issued('u1'))).toEqual({ ok: true, uid: 'u1', scope: ALL_EMAILS });
   });
 
-  it('Α2 — base64url: ασφαλές μέσα σε διαδρομή και ερώτημα, χωρίς κωδικοποίηση', () => {
-    expect(issued('u1')).toMatch(/^[A-Za-z0-9_-]+$/);
+  it('Α2 — ασφαλές μέσα σε διαδρομή και ερώτημα, χωρίς κωδικοποίηση (RFC 3986 unreserved: `kid` + `.` + base64url)', () => {
+    // Η `.` χωρίζει το αποτύπωμα κλειδιού από το σώμα (ADR-853 §15.7 Ε-5) — unreserved, καμία κωδικοποίηση.
+    expect(issued('u1')).toMatch(/^[0-9a-f]{8}\.[A-Za-z0-9_-]+$/);
   });
 });
 

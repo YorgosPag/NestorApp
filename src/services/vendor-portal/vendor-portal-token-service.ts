@@ -171,6 +171,8 @@ const REJECTION_REASON: Record<SignedTokenRejection, VendorPortalTokenInvalidRea
   malformed: 'malformed_token',
   'invalid-format': 'invalid_format',
   'invalid-signature': 'invalid_signature',
+  // Άλλο κλειδί (άλλο περιβάλλον / εναλλαγή μυστικού) — για τον παραλήπτη ίδιο αποτέλεσμα, στο υπάρχον λεξιλόγιο.
+  'foreign-key': 'invalid_signature',
   'server-config': 'server_config_error',
 };
 

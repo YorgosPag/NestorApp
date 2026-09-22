@@ -13,7 +13,7 @@
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "9728bd6be9289e9ab6326ec02867953d9536d578af1e9adaa2a34dfe09b19acb",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/invite__token.el.json": "756d4f647f5a6f9f24a4edf6ae0421d11ca3e6455682c191372b378b16e5b206",
+    "src/i18n/generated/routes/invite__token.el.json": "599e88d64e8c58a061a33b817feb7ab3308b3cc8733fd70d812b53c7dee8ff17",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "195ef3ea03c5d4a096e852c96c6c363d76e382e74ce0bae02b69b710ddd9538e",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
@@ -89,7 +89,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2e72fc87e3f85083bc3b6f7239c5605bb2ea8ae300c8c5fbfc8f126339999293",
+  "inputsSha256": "58c48203cc2ee4d103ff3a9d769479c2384cb3f943d33e3502daf39e368486f0",
   "languages": [
     "el"
   ],
@@ -460,7 +460,7 @@
     "src/components/ui/utils/dynamic-styles-internals.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
     "src/components/workspace-invite/SwitchAccount.tsx": "2e7a683f2fde4c9c86a78ac9379b0310ec01099c7c3090fe938c4af10b4ee44e",
     "src/components/workspace-invite/WorkspaceInviteContent.tsx": "9140fe52d9cefc2d89ab0f5f00b1be822436a14162dd81f5bdc5af89875b82ab",
-    "src/components/workspace-invite/workspace-invite-labels.ts": "1367a78725f43fe7e23b526def8acfdc0cc6c596f2a1da2c336a0b75748c4348",
+    "src/components/workspace-invite/workspace-invite-labels.ts": "93aa2d8a76eeb63084fa406d1ee4b0e44b1810340267f2f3d6802a5dff62920e",
     "src/components/workspace-invite/workspace-invite-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/workspace/CreateWorkspaceForm.tsx": "10891f28f612692ea8aa332ab9d8ab835baad25beda77bbc552f4e1312ce3745",
     "src/components/workspace/alias-suggestion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -773,7 +773,7 @@
     "src/services/mandate/mandate-actions.service.ts": "c017fe22d216a7572e7f7e290226ca66ba3922dfaeb13e0b010d6517b5ca7793",
     "src/services/mandate/mandate-catalog.client.ts": "41c5bd36535fedb33fc332ab51abd83507c22afd982f4aa50fd4b7867d2d96b4",
     "src/services/mandate/mandate-catalog.service.ts": "2975d9316db3f60192c4de3bc4b9dfeaade64abb5022788db24085cf00680ec3",
-    "src/services/mandate/mandate-consent.service.ts": "77480d5cac01790908189cabf6bc59e0e1de983e7bc3354717e18a1900d71a21",
+    "src/services/mandate/mandate-consent.service.ts": "ecae65ad00d1c343fbfdd0231e32934209b74ff4b9a9ca180b680aaf9ee59b95",
     "src/services/mandate/mandate-decision-notifier.service.ts": "001fb35225aa1503d85129cc4a610a6ed0e7abd0eaa6967eedc54838110f8bf0",
     "src/services/mandate/mandate-decision-vocabulary.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/mandate/mandate-email-texts.ts": "36447d4bec3d582dc9279738c63d91671934b5c62dcc1392c0cdb744a15c17f9",
@@ -2534,6 +2534,7 @@
             "workspaceInvite.refusal.already-used",
             "workspaceInvite.refusal.expired",
             "workspaceInvite.refusal.invitation-unknown",
+            "workspaceInvite.refusal.link-foreign",
             "workspaceInvite.refusal.link-invalid",
             "workspaceInvite.refusal.revoked",
             "workspaceInvite.refusal.role-above-inviter",
@@ -8171,7 +8172,7 @@
     "matchedKeys": 180,
     "routeBoundaries": 0,
     "shellFiles": 773,
-    "sliceBytes": 553414
+    "sliceBytes": 553811
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

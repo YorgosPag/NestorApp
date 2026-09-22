@@ -112,9 +112,44 @@ export function encodeSignedToken(
       throw new Error('signed token fields must not contain ":"');
     }
   }
+  const kid = signingKeyId(secret);
   const payload = fields.join(':');
-  const hmac = createHmac('sha256', secret).update(payload).digest('hex');
-  return toBase64Url(`${payload}:${hmac}`);
+  const hmac = createHmac('sha256', secret).update(`${kid}:${payload}`).digest('hex');
+  return `${kid}${KID_SEPARATOR}${toBase64Url(`${payload}:${hmac}`)}`;
+}
+
+// =============================================================================
+// 3α. ΤΟ ΑΝΑΓΝΩΡΙΣΤΙΚΟ ΚΛΕΙΔΙΟΥ (`kid`) — ADR-853 §15.7 Ε-5 · ADR-867 Β9(β) Ε6
+// =============================================================================
+
+/**
+ * `.` **δεν** ανήκει στο αλφάβητο του base64url ⇒ token **χωρίς** τελεία = παλιάς μορφής, **χωρίς** αμφισημία.
+ * Είναι και ασφαλές σε URL (RFC 3986 unreserved) — καμία κωδικοποίηση στους συνδέσμους.
+ */
+const KID_SEPARATOR = '.';
+const KID_LENGTH = 8;
+const KID_LABEL = 'nestor/signed-token/kid/v1';
+const KID_SHAPE = new RegExp(`^[0-9a-f]{${KID_LENGTH}}$`);
+
+/**
+ * **Ποιο κλειδί υπέγραψε** — το αποτύπωμα του μυστικού, όπως το `kid` των JWT (RFC 7515 §4.1.4).
+ *
+ * 🔑 **Παράγεται, δεν ρυθμίζεται**: HMAC του μυστικού πάνω σε σταθερή ετικέτα ⇒ κάθε περιβάλλον έχει
+ * αυτόματα **διαφορετικό** `kid`, χωρίς μεταβλητή που μπορεί να ξεχαστεί, και το αποτύπωμα **δεν**
+ * αποκαλύπτει τίποτα για το μυστικό (32 bit ενός HMAC — μονόδρομο).
+ * 🔴 **Γιατί υπάρχει**: σύνδεσμος που υπέγραψε το dev (`NEXT_PUBLIC_APP_URL` → παραγωγή) άνοιγε στην
+ * παραγωγή ως «δεν είναι έγκυρος» — σαν πλαστός. Με το `kid` η ετυμηγορία λέει την **αλήθεια**
+ * (`foreign-key`: «υπογράφτηκε από άλλο κλειδί»), και η ίδια μηχανή επιτρέπει αύριο **εναλλαγή μυστικού**
+ * χωρίς να σκοτωθούν οι ενεργοί σύνδεσμοι (πρόσθεσε νέο, δέξου και τα δύο, αφαίρεσε το παλιό — JWKS).
+ */
+function signingKeyId(secret: string): string {
+  return createHmac('sha256', secret).update(KID_LABEL).digest('hex').slice(0, KID_LENGTH);
+}
+
+/** Token → (κλειδί που δηλώνει · σώμα base64url). `kid: null` ⇒ παλιά μορφή, πριν το `kid`. */
+function splitKeyId(token: string): { readonly kid: string | null; readonly body: string } {
+  const at = token.indexOf(KID_SEPARATOR);
+  return at === -1 ? { kid: null, body: token } : { kid: token.slice(0, at), body: token.slice(at + 1) };
 }
 
 // =============================================================================
@@ -137,6 +172,11 @@ export type SignedTokenRejection =
   | 'malformed'
   | 'invalid-format'
   | 'invalid-signature'
+  /**
+   * Υπογράφτηκε από **άλλο** κλειδί — άλλο περιβάλλον (dev ↔ παραγωγή) ή μυστικό που αντικαταστάθηκε.
+   * **Δεν** είναι πλαστογράφηση: ο παραλήπτης χρειάζεται **νέο** σύνδεσμο, όχι προειδοποίηση.
+   */
+  | 'foreign-key'
   | 'server-config';
 
 export type SignedTokenVerdict =
@@ -159,9 +199,20 @@ export function decodeSignedToken(
   token: string,
   minFields: number,
 ): SignedTokenVerdict {
+  const { kid, body } = splitKeyId(token);
+  let ownKid: string;
+  try {
+    ownKid = signingKeyId(secret);
+  } catch {
+    return { ok: false, reason: 'server-config' };
+  }
+  // 🔑 Φθηνός έλεγχος **πριν** το HMAC: ξένο κλειδί απορρίπτεται με τον **σωστό** λόγο.
+  if (kid !== null && !KID_SHAPE.test(kid)) return { ok: false, reason: 'malformed' };
+  if (kid !== null && kid !== ownKid) return { ok: false, reason: 'foreign-key' };
+
   let decoded: string;
   try {
-    decoded = fromBase64Url(token);
+    decoded = fromBase64Url(body);
   } catch {
     return { ok: false, reason: 'malformed' };
   }
@@ -177,7 +228,9 @@ export function decodeSignedToken(
 
   let expected: string;
   try {
-    expected = createHmac('sha256', secret).update(fields.join(':')).digest('hex');
+    // Νέα μορφή: το `kid` είναι **μέσα** στην υπογραφή (δεν αλλάζει χωρίς να σπάσει)· παλιά: μόνο τα πεδία.
+    const signed = kid === null ? fields.join(':') : `${kid}:${fields.join(':')}`;
+    expected = createHmac('sha256', secret).update(signed).digest('hex');
   } catch {
     return { ok: false, reason: 'server-config' };
   }

@@ -8,12 +8,15 @@
  * 🔴 Η ΠΙΟ ΣΗΜΑΝΤΙΚΗ ΑΓΚΥΡΑ ΕΔΩ ΕΙΝΑΙ Η **ΣΥΜΒΑΤΟΤΗΤΑ**
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Το SSoT δεν είναι νέα μορφή συνδέσμου — είναι **η ίδια** μορφή, γραμμένη μία φορά.
- * Αν το κείμενο που παράγεται άλλαζε έστω κατά ένα byte, **κάθε σύνδεσμος που έχει
- * ήδη σταλεί σε προμηθευτή θα έπαυε να ισχύει** — σιωπηλά, με μήνυμα «άκυρος
- * σύνδεσμος» που θα διαβαζόταν ως επίθεση. Γι' αυτό η άγκυρα **Σ1** δεν κάνει
- * round-trip: υπολογίζει την υπογραφή **με τον παλιό τρόπο, ωμά** και απαιτεί
- * **ταυτότητα χαρακτήρα προς χαρακτήρα**.
+ * **Κανένας σύνδεσμος που έχει ήδη σταλεί δεν επιτρέπεται να πάψει να ισχύει** — σιωπηλά,
+ * με μήνυμα «άκυρος σύνδεσμος» που θα διαβαζόταν ως επίθεση. Η **Σ3** επαληθεύει σύνδεσμο
+ * φτιαγμένο **με τον παλιό τρόπο, ωμά**.
+ *
+ * 🔁 **Η μορφή ΑΛΛΑΞΕ ΣΚΟΠΙΜΑ (ADR-853 §15.7 Ε-5, 2026-09-22)**: ο νέος σύνδεσμος φέρει μπροστά το
+ * αποτύπωμα του κλειδιού (`<kid>.<σώμα>`), για να λέει η απόρριψη «άλλο κλειδί» αντί «πλαστός».
+ * Οι **Σ1/Σ2** κλειδώνουν τη **νέα** μορφή ωμά, χαρακτήρα προς χαρακτήρα — ό,τι κλείδωναν και πριν,
+ * για τη νέα γραμματική. Η παλιά γίνεται **δεκτή για πάντα** (τα iCal feeds και οι σύνδεσμοι
+ * προτιμήσεων email ζουν χρόνια).
  */
 
 import { createHmac } from 'crypto';
@@ -34,15 +37,27 @@ import {
  */
 const TEST_SECRET = 'δοκιμαστικό-μυστικό-1234567890';
 
+const toB64Url = (text: string): string =>
+  Buffer.from(text, 'utf-8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64Url = (text: string): string =>
+  Buffer.from(text.replace(/-/g, '+').replace(/_/g, '/') + '===', 'base64').toString('utf-8');
+
 /** Ο **παλιός** αλγόριθμος, αντιγραμμένος αυτούσιος από τα δύο αρχεία πριν το §8.33. */
 function legacyToken(fields: readonly string[]): string {
   const payload = fields.join(':');
   const hmac = createHmac('sha256', TEST_SECRET).update(payload).digest('hex');
-  return Buffer.from(`${payload}:${hmac}`, 'utf-8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  return toB64Url(`${payload}:${hmac}`);
+}
+
+/** Η **νέα** γραμματική, ωμά: `kid` = HMAC(μυστικό, ετικέτα)[0..8] · το `kid` μέσα στην υπογραφή. */
+function kidOf(secret: string): string {
+  return createHmac('sha256', secret).update('nestor/signed-token/kid/v1').digest('hex').slice(0, 8);
+}
+function keyedToken(fields: readonly string[], secret: string = TEST_SECRET): string {
+  const kid = kidOf(secret);
+  const payload = fields.join(':');
+  const hmac = createHmac('sha256', secret).update(`${kid}:${payload}`).digest('hex');
+  return `${kid}.${toB64Url(`${payload}:${hmac}`)}`;
 }
 
 // =============================================================================
@@ -50,14 +65,14 @@ function legacyToken(fields: readonly string[]): string {
 // =============================================================================
 
 describe('🔴 Σ — κανένας υπάρχων σύνδεσμος δεν έπαψε να ισχύει', () => {
-  it('🔑 Σ1 — QR παρουσιών: ίδιο κείμενο, χαρακτήρα προς χαρακτήρα', () => {
+  it('🔑 Σ1 — QR παρουσιών: η νέα μορφή, χαρακτήρα προς χαρακτήρα', () => {
     const fields = ['proj_alfa', '2026-08-20', 'a1b2c3'];
-    expect(encodeSignedToken(TEST_SECRET, fields)).toBe(legacyToken(fields));
+    expect(encodeSignedToken(TEST_SECRET, fields)).toBe(keyedToken(fields));
   });
 
-  it('🔑 Σ2 — πύλη προμηθευτή: ίδιο κείμενο, με τα δικά της τέσσερα πεδία', () => {
+  it('🔑 Σ2 — πύλη προμηθευτή: η νέα μορφή, με τα δικά της τέσσερα πεδία', () => {
     const fields = ['rfq_1', 'cont_9', 'ff00', '1787788800000'];
-    expect(encodeSignedToken(TEST_SECRET, fields)).toBe(legacyToken(fields));
+    expect(encodeSignedToken(TEST_SECRET, fields)).toBe(keyedToken(fields));
   });
 
   it('Σ3 — και ο παλιός σύνδεσμος επαληθεύεται από τον νέο κώδικα', () => {
@@ -107,23 +122,39 @@ describe('Α — κάθε άρνηση λέει ΓΙΑΤΙ', () => {
     expect(decodeSignedToken(TEST_SECRET, token, 3).ok).toBe(true);
   });
 
-  it('🔴 Α2 — ΑΛΛΟ ΜΥΣΤΙΚΟ ⇒ `invalid-signature`, ποτέ σιωπηλή αποδοχή', () => {
+  it('🔴 Α2 — ΑΛΛΟ ΜΥΣΤΙΚΟ ⇒ `foreign-key` (όχι «πλαστός»), ποτέ σιωπηλή αποδοχή', () => {
     const token = encodeSignedToken(TEST_SECRET, ['a', 'b', 'c']);
     const verdict = decodeSignedToken('άλλο-μυστικό-0987654321', token, 3);
-    expect(verdict).toEqual({ ok: false, reason: 'invalid-signature' });
+    expect(verdict).toEqual({ ok: false, reason: 'foreign-key' });
+  });
+
+  it('🔴 Α2β — παλιός σύνδεσμος (χωρίς `kid`) με ΑΛΛΟ μυστικό ⇒ `invalid-signature` — δεν ξέρουμε τίποτα καλύτερο', () => {
+    expect(decodeSignedToken('άλλο-μυστικό-0987654321', legacyToken(['a', 'b', 'c']), 3)).toEqual({ ok: false, reason: 'invalid-signature' });
+  });
+
+  it('🔒 Α2γ — ΠΛΑΣΤΟ `kid`: ξένος σύνδεσμος που φορά το ΔΙΚΟ ΜΑΣ αποτύπωμα ⇒ `invalid-signature` (το `kid` είναι ΜΕΣΑ στην υπογραφή)', () => {
+    const foreign = keyedToken(['a', 'b', 'c'], 'άλλο-μυστικό-0987654321');
+    const forged = `${kidOf(TEST_SECRET)}.${foreign.slice(foreign.indexOf('.') + 1)}`;
+    expect(decodeSignedToken(TEST_SECRET, forged, 3)).toEqual({ ok: false, reason: 'invalid-signature' });
+  });
+
+  it('🔒 Α2ε — ΑΦΑΙΡΕΣΗ του `kid` από έγκυρο σύνδεσμο ⇒ ΔΕΝ περνά ως «παλιάς μορφής» (υποβάθμιση)', () => {
+    const token = encodeSignedToken(TEST_SECRET, ['a', 'b', 'c']);
+    const stripped = token.slice(token.indexOf('.') + 1);
+    expect(decodeSignedToken(TEST_SECRET, stripped, 3)).toEqual({ ok: false, reason: 'invalid-signature' });
+  });
+
+  it('Α2δ — `kid` που δεν έχει το σχήμα αποτυπώματος ⇒ `malformed`', () => {
+    const body = encodeSignedToken(TEST_SECRET, ['a', 'b', 'c']).split('.')[1] ?? '';
+    for (const kid of ['', 'XYZ', 'abcdef0', 'abcdef012']) {
+      expect(decodeSignedToken(TEST_SECRET, `${kid}.${body}`, 3)).toEqual({ ok: false, reason: 'malformed' });
+    }
   });
 
   it('🔴 Α3 — ΠΕΙΡΑΓΜΕΝΟ ΠΕΔΙΟ ⇒ `invalid-signature`', () => {
     const token = encodeSignedToken(TEST_SECRET, ['cont_kostas', 'b', 'c']);
-    const decoded = Buffer.from(
-      token.replace(/-/g, '+').replace(/_/g, '/') + '===',
-      'base64',
-    ).toString('utf-8');
-    const tampered = Buffer.from(decoded.replace('cont_kostas', 'cont_maria'), 'utf-8')
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    const [kid, body] = token.split('.') as [string, string];
+    const tampered = `${kid}.${toB64Url(fromB64Url(body).replace('cont_kostas', 'cont_maria'))}`;
 
     expect(decodeSignedToken(TEST_SECRET, tampered, 3)).toEqual({
       ok: false,

@@ -190,6 +190,7 @@ const TOKEN_REJECTION: Record<SignedTokenRejection, ConsentRejection> = {
   malformed: 'link-invalid',
   'invalid-format': 'link-invalid',
   'invalid-signature': 'link-invalid',
+  'foreign-key': 'link-invalid',
   // 🔴 Ο **μόνος** από τους τέσσερις που δεν αφορά τον παραλήπτη — δες
   //    {@link ConsentRejection}. Ήταν `'link-invalid'`.
   'server-config': 'service-unavailable',
