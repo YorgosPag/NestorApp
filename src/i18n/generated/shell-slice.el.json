@@ -3497,7 +3497,15 @@
         "professionals": "Επαγγελματίες",
         "searchListings": "Αναζήτηση ακινήτων"
       },
-      "sidebarLabel": "Ο προσωπικός μου χώρος"
+      "sidebarLabel": "Ο προσωπικός μου χώρος",
+      "unread": {
+        "threads": "{count} αδιάβαστες συνομιλίες",
+        "threadsAtLeast": "τουλάχιστον {count} αδιάβαστες συνομιλίες",
+        "threadsAtLeast_one": "τουλάχιστον {count} αδιάβαστη συνομιλία",
+        "threadsAtLeast_other": "τουλάχιστον {count} αδιάβαστες συνομιλίες",
+        "threads_one": "{count} αδιάβαστη συνομιλία",
+        "threads_other": "{count} αδιάβαστες συνομιλίες"
+      }
     },
     "reports": {
       "builder": "Δημιουργός Αναφορών",

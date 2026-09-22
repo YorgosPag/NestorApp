@@ -378,6 +378,14 @@
       "professionals": "Επαγγελματίες",
       "account": "Λογαριασμός",
       "createWorkspace": "Δημιουργώ τον χώρο γραφείου μου"
+    },
+    "unread": {
+      "threads": "{count} αδιάβαστες συνομιλίες",
+      "threads_one": "{count} αδιάβαστη συνομιλία",
+      "threads_other": "{count} αδιάβαστες συνομιλίες",
+      "threadsAtLeast": "τουλάχιστον {count} αδιάβαστες συνομιλίες",
+      "threadsAtLeast_one": "τουλάχιστον {count} αδιάβαστη συνομιλία",
+      "threadsAtLeast_other": "τουλάχιστον {count} αδιάβαστες συνομιλίες"
     }
   },
   "legal": {
