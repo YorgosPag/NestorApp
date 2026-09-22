@@ -5,7 +5,8 @@
  * this file pins the engine's own decisions — the ones that used to be retyped
  * 23 times, and so used to be wrong in 23 places at once when they were wrong.
  */
-import { runGatewayAction } from '../gateway-action';
+import { ActionResultError, runGatewayAction, unwrapActionResult } from '../gateway-action';
+import { getErrorMessage } from '@/lib/error-utils';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 // Mirrors the real contract: it takes ownership of the promise and logs the
@@ -151,5 +152,31 @@ describe('runGatewayAction', () => {
 
       expect(result).toEqual({ success: true, error: undefined });
     });
+  });
+});
+
+// ADR-598 «(θ)»: η γέφυρα ActionResult → εξαίρεση για τις φόρμες του SSoT `useFormSubmission`.
+describe('unwrapActionResult', () => {
+  it('success ⇒ δεν πετά', () => {
+    expect(() => unwrapActionResult({ success: true })).not.toThrow();
+  });
+
+  it('αποτυχία με λόγο ⇒ ActionResultError με τον λόγο αυτούσιο', () => {
+    expect(() => unwrapActionResult({ success: false, error: 'V-CHQ-003 violated' }))
+      .toThrow(new ActionResultError('V-CHQ-003 violated'));
+  });
+
+  it('αποτυχία ΧΩΡΙΣ λόγο ⇒ το μήνυμα του SSoT είναι το fallback, όχι κενό alert', () => {
+    let caught: unknown;
+    try {
+      unwrapActionResult({ success: false });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ActionResultError);
+    expect(getErrorMessage(caught, 'Αποτυχία')).toBe('Αποτυχία');
+    expect(getErrorMessage({ success: false, error: '  ' }, 'Αποτυχία')).toBe('Αποτυχία');
+    expect(getErrorMessage('', 'Αποτυχία')).toBe('Αποτυχία');
+    expect(getErrorMessage(new Error('HTTP 500'), 'Αποτυχία')).toBe('HTTP 500');
   });
 });

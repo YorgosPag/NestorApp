@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/useMobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { submitOnModEnter } from '@/components/ui/form/form-keyboard';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { quoteCommentService, formatCommentDate, type QuoteComment } from '@/services/quote-comment.service';
 import { nowISO } from '@/lib/date-local';
@@ -175,9 +176,7 @@ function QuoteCommentComposer({ quoteId, authorName, onCreated, t }: QuoteCommen
           aria-label={t('rfqs.comments.composerLabel')}
           placeholder={t('rfqs.comments.placeholder')}
           className="min-h-[56px] max-h-[120px] resize-none text-sm"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void handleSubmit(); }
-          }}
+          onKeyDown={submitOnModEnter}
         />
         <Button type="submit" size="sm" disabled={!text.trim() || submitting} className="shrink-0 h-9">
           <SendHorizontal className="size-4" aria-hidden />

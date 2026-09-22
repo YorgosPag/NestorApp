@@ -9,7 +9,7 @@
  * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Μετρημένο 2026-09-21: το `setSubmitting(true) … finally setSubmitting(false)` ήταν
+ * Μετρημένο 2026-09-21: το ζεύγος «σημαία υποβολής + `finally`» ήταν
  * γραμμένο με το χέρι σε **37** αρχεία (8 στο procurement), και το CHECK 3.28 έπιασε
  * δύο από αυτά ως δίδυμα. Κάθε αντίγραφο είχε τα ίδια δύο κενά:
  *
@@ -27,9 +27,10 @@
  * μετά από επιτυχία· μόνο το **τοπικό** state δεν γράφεται αν το component έχει φύγει.
  */
 
-import { useCallback, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useState, type FormEvent } from 'react';
 
 import { useMountedRef } from '@/hooks/useMountedRef';
+import { useSingleFlight } from '@/hooks/useSingleFlight';
 import { getErrorMessage } from '@/lib/error-utils';
 
 export interface UseFormSubmissionOptions<R> {
@@ -37,6 +38,12 @@ export interface UseFormSubmissionOptions<R> {
   readonly submit: () => Promise<R>;
   /** Επιτρέπεται υποβολή; Ελέγχεται σε ΚΑΘΕ δρόμο, όχι μόνο στο κουμπί. */
   readonly canSubmit: boolean;
+  /**
+   * Έλεγχος εγκυρότητας με **μήνυμα** (RHF `resolver`, Formik `validate`): επιστρέφει έτοιμο
+   * κείμενο ⇒ γίνεται `error` και ΔΕΝ ξεκινά αίτημα· `null` ⇒ έγκυρο. Το `canSubmit` είναι για
+   * ό,τι απενεργοποιεί το κουμπί σιωπηλά· αυτό για ό,τι ο άνθρωπος πρέπει να ΜΑΘΕΙ.
+   */
+  readonly validate?: () => string | null;
   readonly onSuccess?: (result: R) => void;
   /** Έτοιμο (μεταφρασμένο) κείμενο όταν το σφάλμα δεν έχει δικό του μήνυμα. */
   readonly errorFallback: string;
@@ -56,42 +63,40 @@ export interface FormSubmission {
   readonly clearError: () => void;
 }
 
+/** Η όψη «φόρμα» του `useSingleFlight`: ο φραγμός ζει εκεί, εδώ μόνο φύλακας + μήνυμα. */
 export function useFormSubmission<R>({
   submit,
   canSubmit,
+  validate,
   onSuccess,
   errorFallback,
   keepLockedOnSuccess = false,
 }: UseFormSubmissionOptions<R>): FormSubmission {
-  const [submitting, setSubmitting] = useState(false);
+  const { pending, run } = useSingleFlight();
   const [error, setError] = useState<string | null>(null);
-  const inFlight = useRef(false);
   const mounted = useMountedRef();
 
   const handleSubmit = useCallback(async (event?: Pick<FormEvent, 'preventDefault'>): Promise<void> => {
     event?.preventDefault();
-    if (inFlight.current || !canSubmit) return;
-
-    inFlight.current = true;
-    setSubmitting(true);
-    setError(null);
-    let release = true;
-    try {
-      const result = await submit();
-      release = !keepLockedOnSuccess;
-      onSuccess?.(result);
-    } catch (caught) {
-      release = true;
-      if (mounted.current) setError(getErrorMessage(caught, errorFallback));
-    } finally {
-      if (release) {
-        inFlight.current = false;
-        if (mounted.current) setSubmitting(false);
-      }
+    if (!canSubmit) return;
+    const invalid = validate?.() ?? null;
+    if (invalid) {
+      setError(invalid);
+      return;
     }
-  }, [submit, canSubmit, onSuccess, errorFallback, keepLockedOnSuccess]);
+
+    try {
+      const outcome = await run(async () => {
+        setError(null);
+        return submit();
+      }, { holdOnSuccess: keepLockedOnSuccess });
+      if (outcome.ran) onSuccess?.(outcome.value);
+    } catch (caught) {
+      if (mounted.current) setError(getErrorMessage(caught, errorFallback));
+    }
+  }, [run, submit, canSubmit, validate, onSuccess, errorFallback, keepLockedOnSuccess, mounted]);
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { submitting, error, handleSubmit, clearError };
+  return { submitting: pending, error, handleSubmit, clearError };
 }

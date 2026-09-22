@@ -79,6 +79,11 @@
       "preApprovalExpiring": "Pre-approval expires in {days} days!",
       "ltvExceeded": "LTV {value}% — exceeds limit {limit}%",
       "dstiExceeded": "DSTI {value}% — exceeds limit {limit}%"
+    },
+    "errors": {
+      "addFailed": "Adding the loan failed",
+      "saveFailed": "Saving failed",
+      "transitionFailed": "Changing the status failed"
     }
   },
   "chequeRegistry": {

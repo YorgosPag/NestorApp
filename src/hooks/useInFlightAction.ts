@@ -20,9 +20,12 @@
  * - Δεν ενημερώνει κατάσταση σε αποπροσαρτημένο component (ο διάλογος μπορεί να κλείσει ενώ τρέχει).
  */
 
+// ADR-598 «(θ)»: ο φραγμός ζει ΜΙΑ φορά στο `useSingleFlight`· αυτό είναι η προστακτική όψη του.
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
+
+import { useSingleFlight } from '@/hooks/useSingleFlight';
 
 export interface InFlightAction {
   /** `true` όσο η πράξη τρέχει — δέσε το σε `disabled` **και** σε `aria-busy`. */
@@ -32,29 +35,11 @@ export interface InFlightAction {
 }
 
 export function useInFlightAction(): InFlightAction {
-  const [isRunning, setIsRunning] = useState(false);
-  /** Ο φραγμός διαβάζεται **τη στιγμή του κλικ**: το `isRunning` του render είναι ήδη παλιό. */
-  const runningRef = useRef(false);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const { pending, run: runOnce } = useSingleFlight();
 
   const run = useCallback(async (action: () => Promise<void>): Promise<void> => {
-    if (runningRef.current) return;
-    runningRef.current = true;
-    setIsRunning(true);
-    try {
-      await action();
-    } finally {
-      runningRef.current = false;
-      if (mountedRef.current) setIsRunning(false);
-    }
-  }, []);
+    await runOnce(action);
+  }, [runOnce]);
 
-  return { isRunning, run };
+  return { isRunning: pending, run };
 }

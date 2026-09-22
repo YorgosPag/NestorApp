@@ -2,6 +2,31 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **22/09 — ΠΡΟΣΚΛΗΣΕΙΣ ΠΡΟΜΗΘΕΥΤΩΝ: ΤΟ ΘΕΜΑ/ΚΕΙΜΕΝΟ ΠΟΥ ΕΠΕΞΕΡΓΑΖΕΤΑΙ Ο ΧΡΗΣΤΗΣ ΔΕΝ ΣΤΕΛΝΕΤΑΙ ΠΟΤΕ** *(ADR-598 «(θ)» · ADR-328 §5.Y)*
+
+  Στο `VendorInviteDialog` ο άνθρωπος γράφει θέμα + μήνυμα, αλλά το `CreateInviteInput` (`hooks/useVendorInvites.ts`)
+  **δεν έχει** πεδία γι' αυτά ⇒ ο server στέλνει το δικό του πρότυπο και η επεξεργασία χάνεται σιωπηλά. Επιπλέον τα
+  προεπιλεγμένα κείμενα (`DEFAULT_SUBJECT`/`DEFAULT_BODY`) είναι **ωμά ελληνικά** (N.11, αόρατα στον scanner) με
+  `{{vendorName}}`/`{{deadline}}` που δεν αντικαθίστανται ποτέ στον client· και το `delivery.success === false` της
+  απάντησης αγνοείται (η πρόσκληση υπάρχει, το email δεν έφυγε). Διόρθωση = συμβόλαιο με τον server (ή αφαίρεση των
+  πεδίων από τον διάλογο) — **απόφαση Giorgio**.
+
+- 🟡 **22/09 — `ConfirmDialog`: ΤΟ RADIX ΚΛΕΙΝΕΙ ΤΟΝ ΔΙΑΛΟΓΟ ΠΡΙΝ ΤΕΛΕΙΩΣΕΙ Η ΕΝΕΡΓΕΙΑ** *(ADR-003 · ADR-598 «(θ)» · 40 καταναλωτές)*
+
+  Το `AlertDialogAction` κλείνει με το κλικ ⇒ ένα async `onConfirm` που αποτυγχάνει δεν έχει πού να δείξει σφάλμα, και το
+  `loading` δεν φαίνεται ποτέ. Πρακτική Radix: `preventDefault` στο κλικ, κλείσιμο μετά την επιτυχία. Πρόταση: το
+  `ConfirmDialog` αναλαμβάνει τον κύκλο ζωής πάνω στο `useSingleFlight` (μένει ανοιχτό, κλείδωμα, σφάλμα `role="alert"`).
+  Αλλάζει ορατή συμπεριφορά σε 40 σημεία ⇒ ξεχωριστό κύμα. Σήμερα το `EditInstallmentDialog` δείχνει το σφάλμα διαγραφής σε toast.
+
+- 🟡 **22/09 — Ο ΕΛΕΓΧΟΣ MIRROR ΤΟΥ SEARCH INDEX ΔΕΝ ΤΡΕΧΕΙ ΣΕ ΚΑΜΙΑ ΠΥΛΗ** *(N.0.2 · ADR-873 §7 Ε-873.2 · ADR-029)*
+
+  Το `scripts/check-search-config-sync.js` (`npm run search-config:sync`) συγκρίνει `src/config/search-index-config.ts`
+  με το `functions/src/search/search-config.mirror.ts` — τον χάρτη που διαβάζει ο **μοναδικός** writer του
+  `search_documents`. Grep σε hook / `.husky` / `.github/workflows`: **0** κλήσεις. Αποτέλεσμα: το `4bd107bd`
+  (2026-05-02) άλλαξε μόνο το SSoT και η διόρθωση **δεν έφτασε ποτέ στην παραγωγή** για ~5 μήνες (διορθώθηκε στο ADR-873).
+  Διόρθωση: πύλη ZERO-TOL όταν σταδιοποιείται οποιοδήποτε από τα δύο αρχεία (+ `docs/gates/3.NN.md` + μητρώο CHECK 3.66).
+  Καλύτερα ακόμη (όπως `3.33`/`3.34`): **παραγόμενο** mirror αντί για χειρόγραφο αντίγραφο.
+
 - 🟡 **22/09 — ΕΠΑΦΕΣ + ΑΚΙΝΗΤΑ ΕΞΩ ΑΠΟ ΤΗ ΜΗΧΑΝΗ ΚΑΔΟΥ `useEntityTrashState`** *(N.0.2 · ADR-281 · βρέθηκε από CHECK 3.28
   στη διόρθωση πληθυντικών ICU του ADR-867, 2026-09-22)*
 
@@ -56,8 +81,9 @@
 
 - 🟡 **22/09 — ΧΕΙΡΟΓΡΑΦΟ «mounted ref» ΣΕ 17 ΑΡΧΕΙΑ → `useMountedRef`** *(N.0.2)*
 
-  Νέο SSoT `src/hooks/useMountedRef.ts` (22/09, test `hooks/__tests__/useMountedRef.test.tsx`)· το `useFormSubmission` το χρησιμοποιεί.
-  Μένουν 17: `grep -rlE "(is)?[mM]ounted(Ref)?.current = (true|false)" src | grep -v __tests__`. Μηχανική αντικατάσταση,
+  Νέο SSoT `src/hooks/useMountedRef.ts` (22/09, test `hooks/__tests__/useMountedRef.test.tsx`)· το χρησιμοποιούν πλέον ο
+  πυρήνας `useSingleFlight` και οι όψεις του (το κύμα 2α έβγαλε τα δικά τους αντίγραφα από `useInFlightAction` + `useEntrySubmit`).
+  Μένουν **16** (μετρημένο 22/09 μετά το 2α, χωρίς το ίδιο το SSoT): `grep -rlE "(is)?[mM]ounted(Ref)?.current = (true|false)" src | grep -v __tests__`. Μηχανική αντικατάσταση,
   ⚠️ προσοχή σε όσα ΔΕΝ ξαναγράφουν `true` στο mount (StrictMode ⇒ ψευδές `false` στο dev).
 
 - 🟡 **22/09 — ΤΟ ALIAS `ReturnType<typeof useTranslation>['t']` ΣΕ 17 ΑΡΧΕΙΑ** *(N.0.2)*
@@ -71,8 +97,25 @@
   `setSaving`/`setIsSubmitting`/`setPending`: `grep -rlE "set(Submitting|Sending|Saving|IsSubmitting|IsSaving|Pending)(true)" src`
   = **109** αρχεία (π.χ. το `VendorInviteDialog`, που το commit `ca8e6152` δήλωνε μεταφερμένο, τρέχει ακόμα `setSending`).
   **Κύματα** (σειρά χαμηλού → υψηλού κινδύνου): ✅ **1 procurement** (22/09: Award · RfqCancel · ManualQuote · QuoteComments ·
-  PO form · scan) → **2** crm + sales + shared + components (`TaskDialogFormFooter` → περίβλημα `FormActions`) → **3** accounting
-  → **4** dxf-viewer (ADR-040). Μετά: τα υπόλοιπα του πληθυσμού των 109, ανά περιοχή.
+  PO form · scan) → **2** crm + sales + shared + components → **3** accounting → **4** dxf-viewer (ADR-040). Μετά: τα υπόλοιπα.
+  🔴 **Η περιοχή του κύματος 2 ήταν 28 αρχεία, όχι ~12** ⇒ ο Giorgio ενέκρινε 3 υποκύματα:
+  ✅ **2α** (22/09, ADR-598 «(θ)»): sales/payments (RecordPayment · EditInstallment · Wizard · AddLoan · AddCheque ·
+  LoanDetail) + υπόλοιπα procurement (QuoteRenewalRequest · RfqLinesPanel · VendorInvite). Πληθυσμός **103 → 93**.
+  Νέα SSoT: `useSingleFlight` (ΕΝΑΣ πυρήνας κάτω από `useFormSubmission`/`useInFlightAction`/`useEntrySubmit`) ·
+  `useFormSubmission({ validate })` · `FormDialog` (+ `secondaryAction`) · `unwrapActionResult` · `form-keyboard`
+  (Ctrl/⌘+Enter, Enter-στο-θέμα) · `bankSelection` · `NumericField` με `label` χωρίς `id` ⇒ πλέον ονομάζει το πεδίο.
+  → **2β** crm + shared: `crm/calendar/CalendarCreateDialog` · `crm/dashboard/dialogs/TaskEditDialog` (και οι δύο μέσω
+  `crm/shared/TaskDialogShell` + `TaskDialogFormFooter` ⇒ να γίνουν περίβλημα του `FormDialog`/`FormActions`) ·
+  `crm/tasks/TaskDetailPanel` (κρυφό submit + ορατό κουμπί εκτός φόρμας = δύο δρόμοι· `renderFormFields` ~115 γρ.·
+  `handleComplete`/`handleDelete` χωρίς κλείδωμα) · `shared/files/{ApprovalPanel,CommentsPanel,LinkToBuildingModal}` ·
+  `shared/files/media/CalibrateScaleDialog` (ωμό τεχνικό μήνυμα στην οθόνη).
+  → **2γ** (θέλουν απόφαση πριν τον κώδικα): `sales/dialogs/{ChangePriceDialog,RevertDialog}` + `use-sales-action-mutation` +
+  `use-sales-dialog-base` (**δύο** ανταγωνιστικά κοινά hooks για τους ίδιους διαλόγους — ενοποίηση πρώτα· `RevertDialog.handleRevert`
+  83 γρ.) · `sales/legal/ProfessionalsCard` · `shared/EntityLinkCard` (autosave widget — άλλο σχήμα) · procurement
+  `QuoteEditMode` (headless φόρμα με `useImperativeHandle`) · `quotes/[id]/review/QuoteReviewClient` (χωρίς `finally` στην
+  επιτυχία· ωμό `fetch`) · `signatory/SignatoryProposalCard` · `oauth/OAuthConsentCard` (⚠️ ροή OAuth — ΜΟΝΟ το κλείδωμα
+  των 2 κουμπιών, όχι η ανακατεύθυνση) · `auth/components/useAuthActionCode` (ήδη σωστό φύλακα — ίσως μόνο υιοθέτηση) ·
+  `hooks/company/useBrokerageDeclaration` (ωμό `fetch`).
 
   SSoT πλέον: `src/hooks/useFormSubmission.ts` (κλείδωμα `ref` σύγχρονο + `canSubmit` **μέσα** στην υποβολή + `getErrorMessage`)
   και `src/components/ui/form/FormActions.tsx` (`<Button type="submit" form={formId}>`). Μετρημένο: **37** αρχεία με
@@ -83,6 +126,9 @@
   αλλά ορατά). Και: `crm/shared/TaskDialogFormFooter` → να γίνει λεπτό περίβλημα του `FormActions`.
 
 - 🟡 **21/09 — N.7.1: ΜΕΓΑΛΕΣ JSX ΣΥΝΑΡΤΗΣΕΙΣ ΣΤΙΣ ΦΟΡΜΕΣ PROCUREMENT** *(ADR-598 «(ζ)»)*
+
+  ➕ 22/09 (κύμα 2α, προϋπάρχοντα σε αρχεία που αγγίχτηκαν): `RfqDetailDialogs` **71** · `QuoteCommentsDrawer` **145** /
+  `CommentItem` **76** · `banking/BankSelector` **119**. Όλες οι συναρτήσεις που γράφτηκαν στο 2α είναι ≤40.
 
   Μετά το §3 (AST, `>40` γρ.): `FrameworkAgreementFormDialog` **268** · `MaterialFormDialog` **298** · `QuoteForm` 52 ·
   `RfqBuilder` 51 · `LineRow` 93 · `RfqLineRow` 62 · `BreakpointsEditor` 63. Διόρθωση: τμήματα πεδίων ανά ενότητα με

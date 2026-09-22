@@ -849,3 +849,72 @@ dxf-viewer (ADR-040). 🔴 Ο πληθυσμός **δεν** είναι ~29: το
 **i18n:** `quotes.rfqs.comments.{composerLabel,addFailed}` · `procurement.form.saveFailed` (el+en) · `src/types/i18n.ts`
 ξαναπαραγμένο: μόνο τα 3 κλειδιά.
 **Άγκυρα:** `src/subapps/procurement/__tests__/procurement-form-submission.test.tsx`: Μ1/Μ2 · Ρ1/Ρ2 · Α1 · Σ1/Σ2 · Κ1/Κ2.
+
+### 2026-09-22 (θ) — Κύμα 2α: **ΕΝΑΣ πυρήνας «μία εκτέλεση τη φορά»**, `FormDialog`, και 9 καταναλωτές (sales/payments + procurement)
+
+**Ξαναμέτρηση πριν τον κώδικα:** ο πληθυσμός (`grep -rlE "set(Submitting|Sending|Saving|IsSubmitting|IsSaving|Pending)\(true\)" src`)
+ήταν **103** (109 − 6 του κύματος 1). Η περιοχή του κύματος 2 (crm/sales/shared/components + ό,τι έμεινε στο procurement) είχε
+**28** αρχεία, **όχι ~12**: η λίστα του handoff είχε βγει με το στενό grep `setSubmitting`. Ο Giorgio ενέκρινε **3 υποκύματα**:
+2α (αυτό), 2β crm/shared, 2γ (όσα θέλουν απόφαση πριν τον κώδικα). Λίστες: `pending-ratchet-work.md`. Μετά το 2α: **93**
+(−9 καταναλωτές, −1 ψευδώς θετικό: σχόλιο μέσα στο ίδιο το SSoT που περιέγραφε το παλιό μοτίβο).
+
+**SSoT audit → ΤΡΕΙΣ υλοποιήσεις του ίδιου μηχανισμού.** Ο φραγμός (`ref` + `pending` state + `finally` + προστασία
+unmount) ήταν γραμμένος τρεις φορές ως «SSoT»: `useFormSubmission` (φόρμες) · `useInFlightAction` (ADR-332 D27, κουμπιά
+ενέργειας) · `chart-card/editor/use-entry-submit` (ADR-710, **χωρίς** κανένα test). Και οι δύο τελευταίες είχαν δικό τους
+mounted ref.
+Έρευνα: **Remix/React Router `useFetcher`** = ΕΝΑ primitive με δύο όψεις (`<fetcher.Form>` / `fetcher.submit()`) πάνω
+στην ίδια κατάσταση. **TanStack Query v5** = ένας πυρήνας-μηχανή καταστάσεων· τη διπλή υποβολή την αφήνει στον χρήστη
+(`isPending`) ή τη βάζει **σε ουρά** (`scope`). **React 19 `useActionState`** = επίσης ουρά. Για μη-ιδεμποτική εγγραφή η ουρά
+**είναι** η διπλή εγγραφή, άρα εδώ η δεύτερη εκτέλεση **απορρίπτεται σύγχρονα**. Το δίχτυ ασφαλείας στον server υπάρχει
+ήδη (ADR-872, `Idempotency-Key`).
+
+| SSoT | Τι |
+|---|---|
+| **νέο** `hooks/useSingleFlight` | ο **μόνος** κάτοχος του φραγμού: `run(task, { holdOnSuccess })` → `{ ran:false }` \| `{ ran:true, value }`, ξαναπετά το σφάλμα |
+| `useFormSubmission` | όψη «φόρμα» πάνω στον πυρήνα· **ίδιο API** + νέο προαιρετικό `validate(): string \| null` (RHF `resolver` / Formik `validate`): μήνυμα ⇒ `error`, κανένα αίτημα |
+| `useInFlightAction` · `useEntrySubmit` | λεπτές όψεις· **ίδιο API** (οι 4 καταναλωτές τους δεν αγγίχτηκαν) |
+| `lib/mutations/gateway-action` → `unwrapActionResult` + `ActionResultError` | γέφυρα `ActionResult` (δεν πετά ποτέ) → εξαίρεση για το SSoT· το μήνυμα = `result.error` **αυτούσιο**, όπως πριν ⇒ **η πολιτική §3.1 ΔΕΝ άλλαξε** |
+| `lib/error-utils` → `getErrorMessage` | **κενό/whitespace** μήνυμα ⇒ `fallback` (πριν: κενό `role="alert"`)· μη-κενό μήνυμα: αμετάβλητο. Εγκρίθηκε ρητά στο πλάνο |
+| **νέο** `ui/form/FormDialog` | ο διάλογος που **είναι** φόρμα: τίτλος, `<form id>`, υποσέλιδο `FormActions`· **δεν κλείνει όσο υποβάλλει** (Atlassian `ModalDialog`)· `secondaryAction` στην αρχή του υποσέλιδου (Material: «Διαγραφή» απέναντι από την κύρια). Πρότυπο Ant Design `ModalForm`. Το CHECK 3.28 έπιασε το σχήμα ως κλώνο **δύο φορές** πριν εξαχθεί |
+| **νέο** `ui/form/form-keyboard` | `submitOnModEnter` (Ctrl/⌘+Enter σε textarea ⇒ `form.requestSubmit()`, ο ΕΝΑΣ δρόμος) · `focusNextOnEnter` (Enter στο «Θέμα» ⇒ στο κείμενο, **όχι** αποστολή — Gmail/Outlook). Αγνοούν IME (`isComposing`) |
+| `EmailMessageFields` | φορά τα δύο πλήκτρα ⇒ και οι **τρεις** composers (ανανέωση, πρόσκληση, ειδοποίηση) |
+| `banking/BankSelector` → `bankSelection` | η αντιστοίχιση `onChange` → `{ bankCode, bankName }` ήταν γραμμένη σε 3 διαλόγους (CHECK 3.28) |
+| `ui/numeric-field/NumericField` | με `label` και **χωρίς** `id` η ετικέτα δεν ονόμαζε το πεδίο· πλέον `useId` (React Aria `TextField`) |
+
+**Καταναλωτές και ελαττώματα που έκλεισαν:**
+| Αρχείο | Πριν | Μετά |
+|---|---|---|
+| `sales/payments/RecordPaymentDialog` | γυμνό flag γύρω από `await` χωρίς `try` ⇒ `onRecord` που πετά = **μόνιμο «υποβάλλεται»**· χωρίς `<form>` | `FormDialog` + `validate` (ποσό) · `formatCurrency` αντί για `el-GR` |
+| `sales/payments/EditInstallmentDialog` (456 γρ.) | `handleSubmit` **82 γρ.**, 3 αντιγραμμένοι κλάδοι χωρίς `try`, ωμό `'Error'`· το πεδίο «περιγραφή» είχε ετικέτα **«Ημ. Λήξης»**· 2 `Select` χωρίς όνομα | καθαρό μοντέλο `edit-installment-model.ts` (union `InstallmentChange`) + πεδία `EditInstallmentFields.tsx` + `FormDialog`· διαγραφή = `DeleteConfirmDialog` (SSoT ADR-003) + `useInFlightAction` · 181 γρ. |
+| `sales/payments/CreatePaymentPlanWizard` | `handleCreate` χωρίς `try` ⇒ **μόνιμο «υποβάλλεται»**· το «Πίσω» έγραφε **«Ακύρωση»**· ετικέτα φορολογικού = «Νεόδμητο — ΦΠΑ 24%» | **ΕΝΑ** `<form>` (Material Stepper / GOV.UK): Enter = κύρια ενέργεια του **τρέχοντος** βήματος· μοντέλο `payment-plan-wizard-model.ts` (δόσεις ≤40 γρ./συνάρτηση + test σε ΚΑΘΕ πρότυπο) · βήματα `PaymentPlanWizardSteps.tsx` |
+| `sales/payments/AddLoanDialog` | ωμά `'Error'`/`'Unexpected error'` · `setRequestedAmount('')` σε state **αριθμού** · τοπικό διπλότυπο `ActionResult` | `FormDialog`, SSoT τύπος |
+| `sales/payments/AddChequeDialog` | `<form>` υπήρχε αλλά το κουμπί ζούσε **έξω** με `onClick` ⇒ το Enter δεν έκανε τίποτα· **8** ετικέτες χωρίς πεδίο | `FormDialog` + `FormField` |
+| `sales/payments/LoanDetailDialog` (483 γρ.) | ένας χειρόγραφος `handleAction` για 4 ροές, ωμά αγγλικά | κέλυφος 106 γρ. · `LoanDetailsTab` (μεταβάσεις = `useInFlightAction`, στοιχεία = φόρμα) · `LoanActivityTabs` (εκταμίευση + επικοινωνία, δικό τους `<form>` η καθεμία) |
+| `procurement/QuoteRenewalRequestDialog` + `RfqDetailDialogs` | `try/finally` **χωρίς `catch`** ⇒ αθόρυβη αποτυχία· ο καλών ωμό `fetch` + toast, και απόρριψη δικτύου χωρίς χειρισμό | `FormDialog`· ο καλών `fetchJson` (πετά) ⇒ το σφάλμα στον διάλογο, που μένει ανοιχτός |
+| `procurement/RfqLinesPanel` | κουμπί προσθήκης γραμμής έγραφε **«Δημιουργία RFQ»**· `type="number"` (ADR-706)· διαγραφή **αθόρυβη** σε αποτυχία, κουμπί **χωρίς όνομα** | `<form>` + `FormActions` · `NumericField` · `useInFlightAction` ανά γραμμή + toast + `aria-label` |
+| `procurement/VendorInviteDialog` | `Promise.all` + ένα γενικό toast ⇒ η επανάληψη ξανάστελνε και στους **επιτυχημένους** (διπλές προσκλήσεις)· `aria-label` «Remove …» αγγλικά· email ad-hoc χωρίς όνομα | `allSettled`: όσοι πέτυχαν **φεύγουν από την επιλογή**, μήνυμα «Χ από Υ απέτυχαν»· `FormDialog` |
+
+⚠️ **Ορατές αλλαγές:**
+- Το **Enter υποβάλλει** στους διαλόγους πληρωμής/δανείου/επιταγής/δόσης. Αξιολόγηση ανά διάλογο: κάθε ένας έχει ρητό κουμπί
+  επιβεβαίωσης μέσα σε διάλογο που άνοιξε ο ίδιος ο χρήστης για αυτή την πράξη, και η HTML **δεν** υποβάλλει όταν το κουμπί είναι
+  `disabled` (επιταγή: 6 υποχρεωτικά· δάνειο: τράπεζα). Τα `Select`/combobox **δεν** υποβάλλουν (Radix: `button`· το
+  `SearchableCombobox` κάνει `preventDefault` στο Enter όταν είναι ανοιχτό). Στον wizard το Enter **προχωρά** βήμα και μόνο στο
+  τελευταίο δημιουργεί, με το άθροισμα να ταιριάζει.
+- Τα σφάλματα υποβολής εμφανίζονται **μέσα** στον διάλογο (`role="alert"`) αντί για toast· το toast επιτυχίας μένει.
+- Ο διάλογος **δεν κλείνει** (Esc/εκτός/Άκυρο) όσο τρέχει η υποβολή.
+- Σειρά κουμπιών «Άκυρο | Κύρια ενέργεια»· ο spinner έγινε κείμενο (`pendingLabel`)· οι ετικέτες του `FormField` είναι `text-sm`.
+
+**Άγκυρες:**
+- `hooks/__tests__/useSingleFlight.test.tsx` (Π1–Π4 + `useEntrySubmit` Ε1/Ε2 — το πρώτο του test)· τα **υπάρχοντα** tests των
+  `useFormSubmission`/`useInFlightAction` περνούν **αμετάβλητα** = απόδειξη ότι το API δεν άλλαξε. Μεταλλάξεις 2/2.
+- `components/sales/payments/__tests__/payment-form-submission.test.tsx` (11: Π1–Π4 · Δ1 · Ο1/Ο2 · Λ1/Λ2 · Μ1/Μ2). Μεταλλάξεις 2/2.
+- `subapps/procurement/__tests__/procurement-wave2a-submission.test.tsx` (Α1/Α2 · Γ1/Γ2 · Π1). Μεταλλάξεις 2/2.
+- `components/ui/form/__tests__/FormDialog.test.tsx` (Φ1–Φ3). Μετάλλαξη 1/1 (χωρίς φραγμό κλεισίματος ⇒ Φ2 κόκκινο).
+- `NumericField.test.tsx` +2 · `gateway-action.test.ts` +3.
+**Επαλήθευση:** jest **55 σουίτες / 884 tests** (όλα τα tests που αγγίζουν αρχείο που άλλαξε) · `jscpd:diff` **0** σε 29 αρχεία
+(έπιασε 2 κλώνους μέσα στο ίδιο το diff ⇒ `FormDialog` + `bankSelection`, **όχι** skip) · N.7.1: όλες οι συναρτήσεις του 2α ≤40
+γρ., όλα τα αρχεία <400 · κανένα native `<button>` χωρίς `type` στις νέες φόρμες. **Χωρίς tsc (N.17).**
+**i18n:** 19 κλειδιά el+en (`payments` 8 · `payments-loans` 3 · `quotes` 8)· `src/types/i18n.ts` ξαναπαραγμένο (μόνο αυτά).
+🔎 **Ανοιχτά (στο `pending-ratchet-work.md`):** το θέμα/κείμενο της πρόσκλησης **δεν στέλνεται ποτέ** (το `CreateInviteInput` δεν
+έχει πεδία) + ωμά ελληνικά προεπιλεγμένα κείμενα · το `ConfirmDialog` (40 καταναλωτές) κλείνει **πριν** τελειώσει η ενέργεια ·
+N.7.1 σε προϋπάρχουσες συναρτήσεις αρχείων που αγγίχτηκαν (`RfqDetailDialogs` 71, `QuoteCommentsDrawer` 145, `BankSelector` 119).

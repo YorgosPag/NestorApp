@@ -58,6 +58,20 @@ interface BankSelectorProps {
   allowOther?: boolean;
 }
 
+/** Το ζεύγος πεδίων που κρατούν οι φόρμες για μια επιλεγμένη τράπεζα. */
+export interface BankSelection {
+  bankCode: string;
+  bankName: string;
+}
+
+/**
+ * `onChange` → `{ bankCode, bankName }` (ADR-598 «(θ)»): η ίδια αντιστοίχιση ήταν γραμμένη σε
+ * τρεις διαλόγους πληρωμών (CHECK 3.28). «Άλλη» τράπεζα ⇒ κενό όνομα, όπως πριν.
+ */
+export function bankSelection(code: string, bank: BankInfo | undefined): BankSelection {
+  return { bankCode: code, bankName: bank?.name ?? '' };
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================

@@ -80,11 +80,16 @@ export const NumericField = React.forwardRef<HTMLInputElement, NumericFieldProps
     disabled,
   });
 
+  // Με `label` η ετικέτα ΠΡΕΠΕΙ να ονομάζει το πεδίο: χωρίς ρητό `id` φτιάχνουμε ένα (React Aria
+  // `TextField`, όπως το `FormField`). Πριν, `label` χωρίς `id` = πεδίο χωρίς όνομα (ADR-598 «(θ)»).
+  const generatedId = React.useId();
+  const fieldId = id ?? (label === undefined ? undefined : generatedId);
+
   const input = (
     <Input
       {...inputProps}
       {...fieldProps}
-      id={id}
+      id={fieldId}
       ref={ref}
       className={cn(isScrubbing && 'select-none', className)}
     />
@@ -94,7 +99,7 @@ export const NumericField = React.forwardRef<HTMLInputElement, NumericFieldProps
 
   return (
     <>
-      <Label htmlFor={id} {...scrubHandleProps} className={cn('select-none', labelClassName)}>
+      <Label htmlFor={fieldId} {...scrubHandleProps} className={cn('select-none', labelClassName)}>
         {label}
       </Label>
       {input}

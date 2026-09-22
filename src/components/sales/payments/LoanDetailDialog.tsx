@@ -4,11 +4,13 @@
  * LoanDetailDialog — Full loan details with tabs: Details, Disbursements, CommLog, Timeline
  *
  * @enterprise ADR-234 Phase 2 — SPEC-234C
+ * @enterprise ADR-598 «(θ)» — κέλυφος καρτελών· κάθε καρτέλα-φόρμα ζει στο δικό της αρχείο
+ *   πάνω στο SSoT υποβολής (`LoanDetailsTab`, `LoanActivityTabs`). Πριν: 483 γραμμές, ένας
+ *   χειρόγραφος `handleAction` για τέσσερις ροές, ωμά `'Error'`/`'Unexpected error'` (N.11).
  */
 
-import React, { useState, useCallback } from 'react';
-import { Loader2, Plus, ArrowRight } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import React, { useCallback } from 'react';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
   DialogContent,
@@ -16,52 +18,24 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { NumericField } from '@/components/ui/numeric-field';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { LoanStatusTimeline } from '@/components/sales/payments/LoanStatusTimeline';
 import { useNotifications } from '@/providers/NotificationProvider';
+import type { ActionResult } from '@/lib/mutations/gateway-action';
 import type {
   LoanTracking,
   UpdateLoanInput,
   LoanTransitionInput,
   RecordDisbursementInput,
   AddCommunicationLogInput,
-  CommunicationEntryType,
 } from '@/types/loan-tracking';
-import { getValidNextStatuses } from '@/types/loan-tracking';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { nowISO } from '@/lib/date-local';
+import { LoanDetailsTab } from './LoanDetailsTab';
+import { LoanCommLogTab, LoanDisbursementsTab } from './LoanActivityTabs';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
-
-/** The loan fields the details grid edits as numbers (ADR-706). */
-type NumericLoanField =
-  | 'requestedAmount'
-  | 'approvedAmount'
-  | 'interestRate'
-  | 'termYears'
-  | 'appraisalValue'
-  | 'monthlyPayment';
 
 interface LoanDetailDialogProps {
   open: boolean;
@@ -77,130 +51,43 @@ interface LoanDetailDialogProps {
 // COMPONENT
 // ============================================================================
 
-export function LoanDetailDialog({
-  open,
-  onOpenChange,
-  loan,
-  onUpdate,
-  onTransition,
-  onDisburse,
-  onAddCommLog,
-}: LoanDetailDialogProps) {
-  const colors = useSemanticColors();
+type LoanTabsProps = Omit<LoanDetailDialogProps, 'open' | 'onOpenChange'> & { onDone: (message: string) => void; t: Translate };
+
+function LoanTabs({ loan, onUpdate, onTransition, onDisburse, onAddCommLog, onDone, t }: LoanTabsProps) {
+  return (
+    <Tabs defaultValue="details">
+      <TabsList className="grid grid-cols-4 w-full">
+        <TabsTrigger value="details" className="text-xs">{t('actions.viewDetails')}</TabsTrigger>
+        <TabsTrigger value="disbursements" className="text-xs">{t('loanTracking.fields.disbursedAmount')}</TabsTrigger>
+        <TabsTrigger value="commlog" className="text-xs">{t('loanTracking.commLog.title')}</TabsTrigger>
+        <TabsTrigger value="timeline" className="text-xs">{t('loanTracking.timeline')}</TabsTrigger>
+      </TabsList>
+      <TabsContent value="details" className="pt-2">
+        <LoanDetailsTab loan={loan} onUpdate={onUpdate} onTransition={onTransition} onDone={onDone} t={t} />
+      </TabsContent>
+      <TabsContent value="disbursements" className="pt-2">
+        <LoanDisbursementsTab loan={loan} onDisburse={onDisburse} onDone={onDone} t={t} />
+      </TabsContent>
+      <TabsContent value="commlog" className="pt-2">
+        <LoanCommLogTab loan={loan} onAddCommLog={onAddCommLog} onDone={onDone} t={t} />
+      </TabsContent>
+      <TabsContent value="timeline" className="pt-2">
+        <LoanStatusTimeline status={loan.status} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+export function LoanDetailDialog({ open, onOpenChange, ...writers }: LoanDetailDialogProps) {
   const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
-  const { success, error: notifyError } = useNotifications();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { success } = useNotifications();
+  const { loan } = writers;
 
-  // --- Details Tab State ---
-  const [editFields, setEditFields] = useState<UpdateLoanInput>({});
-
-  // --- Transition State ---
-  const nextStatuses = getValidNextStatuses(loan.status);
-
-  // --- Disbursement State ---
-  // ADR-706: number model, 0 = "not entered" (rendered blank).
-  const [disbAmount, setDisbAmount] = useState(0);
-  const [disbMilestone, setDisbMilestone] = useState('');
-  const [disbDate, setDisbDate] = useState(nowISO().split('T')[0]);
-
-  // --- CommLog State ---
-  const [commType, setCommType] = useState<CommunicationEntryType>('phone');
-  const [commSummary, setCommSummary] = useState('');
-  const [commNextAction, setCommNextAction] = useState('');
-
-  const handleAction = useCallback(async (
-    action: () => Promise<ActionResult>,
-    successMsg: string
-  ) => {
-    setIsSubmitting(true);
-    try {
-      const result = await action();
-      if (result.success) {
-        success(successMsg);
-        onOpenChange(false);
-      } else {
-        notifyError(result.error ?? 'Error');
-      }
-    } catch {
-      notifyError('Unexpected error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [onOpenChange, success, notifyError]);
-
-  // Save details
-  const handleSaveDetails = useCallback(() => {
-    if (Object.keys(editFields).length === 0) return;
-    handleAction(
-      () => onUpdate(editFields),
-      t('loanTracking.actions.updateStatus')
-    );
-  }, [editFields, onUpdate, handleAction, t]);
-
-  // Transition
-  const handleTransition = useCallback((targetStatus: string) => {
-    handleAction(
-      () => onTransition({ targetStatus: targetStatus as LoanTransitionInput['targetStatus'] }),
-      t('loanTracking.actions.updateStatus')
-    );
-  }, [onTransition, handleAction, t]);
-
-  // Record disbursement
-  const handleDisburse = useCallback(() => {
-    const amount = disbAmount;
-    if (amount <= 0 || !disbMilestone.trim()) return;
-    handleAction(
-      () => onDisburse({
-        amount,
-        milestone: disbMilestone.trim(),
-        disbursementDate: new Date(disbDate).toISOString(),
-      }),
-      t('loanTracking.actions.recordDisbursement')
-    );
-  }, [disbAmount, disbMilestone, disbDate, onDisburse, handleAction, t]);
-
-  // Add comm log
-  const handleAddCommLog = useCallback(() => {
-    if (!commSummary.trim()) return;
-    handleAction(
-      () => onAddCommLog({
-        type: commType,
-        summary: commSummary.trim(),
-        nextAction: commNextAction.trim() || undefined,
-      }),
-      t('loanTracking.commLog.title')
-    );
-  }, [commType, commSummary, commNextAction, onAddCommLog, handleAction, t]);
-
-  const updateField = (field: keyof UpdateLoanInput, value: string | number | null) => {
-    setEditFields(prev => ({ ...prev, [field]: value }));
-  };
-
-  /**
-   * ADR-706 — these rows moved from uncontrolled `defaultValue` inputs to the
-   * controlled numeric SSoT, so the displayed value has to be resolved here.
-   * `field in editFields` (not `??`) is what distinguishes "no pending edit"
-   * from "the user deliberately cleared it": with `??` a cleared field would
-   * snap back to the stored loan value on the next render.
-   */
-  const numericValue = (field: NumericLoanField): number =>
-    (field in editFields ? editFields[field] : loan[field]) ?? 0;
-
-  /**
-   * The six numeric rows of the details grid. Kept as data so the rows share one
-   * `<NumericField>` call site instead of six near-identical copies (N.18), with
-   * every `t()` key spelled out literally so the i18n gates can still see them.
-   */
-  const numericRows: readonly { field: NumericLoanField; label: string; step: number }[] = [
-    { field: 'requestedAmount', label: t('loanTracking.fields.requestedAmount'), step: 0.01 },
-    { field: 'approvedAmount', label: t('loanTracking.fields.approvedAmount'), step: 0.01 },
-    { field: 'interestRate', label: t('loanTracking.fields.interestRate'), step: 0.01 },
-    // Whole years in practice, but it shares the grid: one step of 1 keeps the
-    // nudge sane while the field behaves identically to its siblings.
-    { field: 'termYears', label: t('loanTracking.fields.termYears'), step: 1 },
-    { field: 'appraisalValue', label: t('loanTracking.fields.appraisalValue'), step: 0.01 },
-    { field: 'monthlyPayment', label: t('loanTracking.fields.monthlyPayment'), step: 0.01 },
-  ];
+  /** Κάθε επιτυχής ενέργεια: μήνυμα + κλείσιμο (όπως πριν). */
+  const onDone = useCallback((message: string) => {
+    success(message);
+    onOpenChange(false);
+  }, [success, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -208,275 +95,10 @@ export function LoanDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {loan.bankName}
-            {loan.isPrimary && (
-              <Badge variant="outline" className="text-[10px]">
-                {t('loanTracking.primaryLoan')}
-              </Badge>
-            )}
+            {loan.isPrimary && <Badge variant="outline" className="text-[10px]">{t('loanTracking.primaryLoan')}</Badge>}
           </DialogTitle>
         </DialogHeader>
-
-        <Tabs defaultValue="details">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="details" className="text-xs">
-              {t('actions.viewDetails')}
-            </TabsTrigger>
-            <TabsTrigger value="disbursements" className="text-xs">
-              {t('loanTracking.fields.disbursedAmount')}
-            </TabsTrigger>
-            <TabsTrigger value="commlog" className="text-xs">
-              {t('loanTracking.commLog.title')}
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="text-xs">{t('loanTracking.timeline')}</TabsTrigger>
-          </TabsList>
-
-          {/* ============== DETAILS TAB ============== */}
-          <TabsContent value="details" className="space-y-3 pt-2">
-            {/* Status Transition */}
-            {nextStatuses.length > 0 && (
-              <fieldset className="space-y-2">
-                <legend className={cn("text-xs font-semibold", colors.text.muted)}>
-                  {t('loanTracking.actions.updateStatus')}
-                </legend>
-                <nav className="flex flex-wrap gap-1">
-                  {nextStatuses.map((ns) => (
-                    <Button
-                      key={ns}
-                      size="sm"
-                      variant="outline"
-                      className="text-[10px] h-6 gap-1"
-                      disabled={isSubmitting}
-                      onClick={() => handleTransition(ns)}
-                    >
-                      <ArrowRight className="h-2.5 w-2.5" />
-                      {t(`loanTracking.status.${ns}`)}
-                    </Button>
-                  ))}
-                </nav>
-              </fieldset>
-            )}
-
-            {/* Editable Fields */}
-            <fieldset className="grid grid-cols-2 gap-3">
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.bankName')}</Label>
-                <Input
-                  defaultValue={loan.bankName}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('bankName', e.target.value)}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.bankBranch')}</Label>
-                <Input
-                  defaultValue={loan.bankBranch ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('bankBranch', e.target.value || null)}
-                />
-              </span>
-              {numericRows.map(({ field, label, step }) => (
-                <span key={field} className="space-y-1">
-                  <NumericField
-                    id={`loan-${field}`}
-                    label={label}
-                    labelClassName="text-xs"
-                    className="h-8 text-xs"
-                    min={0}
-                    step={step}
-                    value={numericValue(field)}
-                    blankValue={0}
-                    onValueChange={(next) => updateField(field, next || null)}
-                  />
-                </span>
-              ))}
-            </fieldset>
-
-            <span className="space-y-1">
-              <Label className="text-xs">{t('labels.notes')}</Label>
-              <Textarea
-                defaultValue={loan.notes ?? ''}
-                className="text-xs min-h-[60px]"
-                onChange={(e) => updateField('notes', e.target.value || null)}
-              />
-            </span>
-
-            <Button
-              size="sm"
-              className="w-full"
-              disabled={isSubmitting || Object.keys(editFields).length === 0}
-              onClick={handleSaveDetails}
-            >
-              {isSubmitting && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-              {t('dialog.confirm')}
-            </Button>
-          </TabsContent>
-
-          {/* ============== DISBURSEMENTS TAB ============== */}
-          <TabsContent value="disbursements" className="space-y-3 pt-2">
-            {/* Existing disbursements */}
-            {loan.disbursements.length > 0 ? (
-              <ul className="space-y-1">
-                {loan.disbursements.map((d, i) => (
-                  <li key={i} className="flex items-center justify-between text-xs border-b pb-1">
-                    <span>
-                      <span className="font-medium">#{d.order}</span>{' '}
-                      {d.milestone}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="font-medium">€{d.amount.toLocaleString('el-GR')}</span>
-                      <Badge variant={d.status === 'disbursed' ? 'default' : 'secondary'} className="text-[10px]">
-                        {d.status}
-                      </Badge>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={cn("text-xs text-center py-2", colors.text.muted)}>
-                {t('loanTracking.noDisbursements')}
-              </p>
-            )}
-
-            {/* New disbursement form */}
-            <fieldset className="space-y-2 border-t pt-2">
-              <legend className="text-xs font-semibold">
-                {t('loanTracking.actions.recordDisbursement')}
-              </legend>
-              <span className="grid grid-cols-2 gap-2">
-                <span className="space-y-1">
-                  <NumericField
-                    id="loan-disbursement-amount"
-                    label={t('labels.amount')}
-                    labelClassName="text-xs"
-                    min={0}
-                    step={0.01}
-                    value={disbAmount}
-                    onValueChange={setDisbAmount}
-                    blankValue={0}
-                    className="h-8 text-xs"
-                    placeholder="€"
-                  />
-                </span>
-                <span className="space-y-1">
-                  <Label className="text-xs">{t('loanTracking.milestone')}</Label>
-                  <Input
-                    value={disbMilestone}
-                    onChange={(e) => setDisbMilestone(e.target.value)}
-                    className="h-8 text-xs"
-                    placeholder={t('loanTracking.milestonePlaceholder')}
-                  />
-                </span>
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('labels.paymentDate')}</Label>
-                <Input
-                  type="date"
-                  value={disbDate}
-                  onChange={(e) => setDisbDate(e.target.value)}
-                  className="h-8 text-xs"
-                />
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full gap-1"
-                disabled={isSubmitting || disbAmount <= 0 || !disbMilestone.trim()}
-                onClick={handleDisburse}
-              >
-                {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
-                <Plus className="h-3 w-3" />
-                {t('loanTracking.actions.recordDisbursement')}
-              </Button>
-            </fieldset>
-          </TabsContent>
-
-          {/* ============== COMM LOG TAB ============== */}
-          <TabsContent value="commlog" className="space-y-3 pt-2">
-            {/* Existing entries */}
-            {loan.communicationLog.length > 0 ? (
-              <ul className="space-y-2 max-h-48 overflow-y-auto">
-                {[...loan.communicationLog].reverse().map((entry, i) => (
-                  <li key={i} className="text-xs border-b pb-1.5 space-y-0.5">
-                    <span className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-[10px]">
-                        {t(`loanTracking.commLog.type.${entry.type}`)}
-                      </Badge>
-                      <time className={colors.text.muted}>
-                        {new Date(entry.date).toLocaleDateString('el-GR')}
-                      </time>
-                    </span>
-                    <p>{entry.summary}</p>
-                    {entry.nextAction && (
-                      <p className={colors.text.muted}>
-                        → {entry.nextAction}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={cn("text-xs text-center py-2", colors.text.muted)}>
-                {t('loanTracking.noCommLog')}
-              </p>
-            )}
-
-            {/* New entry form */}
-            <fieldset className="space-y-2 border-t pt-2">
-              <legend className="text-xs font-semibold">
-                {t('loanTracking.actions.addCommLog')}
-              </legend>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.commLog.typeLabel')}</Label>
-                <Select value={commType} onValueChange={(v) => setCommType(v as CommunicationEntryType)}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(['phone', 'email', 'meeting', 'document', 'note'] as const).map(ct => (
-                      <SelectItem key={ct} value={ct} className="text-xs">
-                        {t(`loanTracking.commLog.type.${ct}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.commLog.description')}</Label>
-                <Textarea
-                  value={commSummary}
-                  onChange={(e) => setCommSummary(e.target.value)}
-                  className="text-xs min-h-[50px]"
-                  placeholder={t('loanTracking.commLog.descriptionPlaceholder')}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.commLog.nextAction')}</Label>
-                <Input
-                  value={commNextAction}
-                  onChange={(e) => setCommNextAction(e.target.value)}
-                  className="h-8 text-xs"
-                  placeholder={t('loanTracking.commLog.nextActionPlaceholder')}
-                />
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full gap-1"
-                disabled={isSubmitting || !commSummary.trim()}
-                onClick={handleAddCommLog}
-              >
-                {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
-                <Plus className="h-3 w-3" />
-                {t('loanTracking.actions.addCommLog')}
-              </Button>
-            </fieldset>
-          </TabsContent>
-
-          {/* ============== TIMELINE TAB ============== */}
-          <TabsContent value="timeline" className="pt-2">
-            <LoanStatusTimeline status={loan.status} />
-          </TabsContent>
-        </Tabs>
+        <LoanTabs {...writers} onDone={onDone} t={t} />
       </DialogContent>
     </Dialog>
   );

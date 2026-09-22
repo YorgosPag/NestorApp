@@ -350,7 +350,9 @@
     },
     "errors": {
       "loadFailed": "Αποτυχία φόρτωσης αιτημάτων",
-      "createFailed": "Αποτυχία δημιουργίας αιτήματος"
+      "createFailed": "Αποτυχία δημιουργίας αιτήματος",
+      "addLineFailed": "Η προσθήκη της γραμμής απέτυχε",
+      "deleteLineFailed": "Η διαγραφή της γραμμής απέτυχε"
     },
     "project": "Έργο",
     "quoteCount": "Προσφορές",
@@ -715,7 +717,8 @@
         "bodyDefault": "Αγαπητέ {vendorName},\n\nΗ προσφορά σας {quoteNumber} με ισχύ έως {originalValidUntil} έχει λήξει.\n\nΕίναι ακόμη έγκυρη η τιμή των {total} €; Αν ναι, παρακαλούμε στείλτε ανανέωση. Αν όχι, στείλτε αναθεωρημένη προσφορά.\n\nΜε εκτίμηση,\n{senderName}",
         "sendButton": "Στείλε email",
         "cancelButton": "Ακύρωση",
-        "sendingButton": "Αποστολή..."
+        "sendingButton": "Αποστολή...",
+        "sendFailed": "Η αποστολή του αιτήματος ανανέωσης απέτυχε"
       },
       "stats": {
         "expiringSoonCard": "Λήγουν σύντομα"
@@ -872,8 +875,11 @@
       },
       "ccSelf": "Στείλε cc σε εμένα",
       "errors": {
-        "invalidEmail": "Μη έγκυρο email"
-      }
+        "invalidEmail": "Μη έγκυρο email",
+        "sendFailed": "Η αποστολή των προσκλήσεων απέτυχε",
+        "partialFailed": "Απέτυχαν {failed} από {total} προσκλήσεις. Όσες στάλθηκαν αφαιρέθηκαν από την επιλογή· ξαναδοκίμασε για τις υπόλοιπες."
+      },
+      "removeAdhoc": "Αφαίρεση {email}"
     },
     "lineEdit": {
       "error": {
@@ -918,7 +924,9 @@
       "queueFailed": "Δεν στάλθηκε. Δοκιμάστε ξανά.",
       "summaryToast": "{count} αλλαγές στη συνεδρία σας ενώ ήσασταν εκτός σύνδεσης.",
       "summaryAction": "Δες ιστορικό"
-    }
+    },
+    "addingLine": "Προσθήκη…",
+    "deleteLine": "Διαγραφή γραμμής: {description}"
   },
   "trades": {
     "title": "Ειδικότητες",

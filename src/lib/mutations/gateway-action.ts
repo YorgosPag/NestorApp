@@ -40,6 +40,27 @@ export interface ActionResult {
   error?: string;
 }
 
+/**
+ * Ένα αποτυχημένο `ActionResult`, ως εξαίρεση — ADR-598 «(θ)».
+ *
+ * Τα hooks επιστρέφουν `ActionResult` και **ποτέ** δεν πετούν (βήμα 4 παραπάνω)· οι φόρμες
+ * όμως υποβάλλουν μέσω `useFormSubmission`, που ξέρει μόνο «πέτυχε / πέταξε». Αυτή η γέφυρα
+ * ζει **εδώ**, στον κάτοχο του τύπου, ώστε κανένας διάλογος να μη γράφει δικό του
+ * `if (!result.success) …`. Το μήνυμα είναι το `result.error` αυτούσιο (όπως το έδειχνε ο
+ * διάλογος ως τώρα)· αν λείπει, το SSoT δείχνει το `errorFallback` του.
+ */
+export class ActionResultError extends Error {
+  constructor(message: string | undefined) {
+    super(message ?? '');
+    this.name = 'ActionResultError';
+  }
+}
+
+/** Αποτυχία ⇒ `ActionResultError`· επιτυχία ⇒ τίποτα. */
+export function unwrapActionResult(result: ActionResult): void {
+  if (!result.success) throw new ActionResultError(result.error);
+}
+
 export interface GatewayActionContext {
   /** Refetch to run after a successful mutation. */
   readonly run: () => Promise<void>;

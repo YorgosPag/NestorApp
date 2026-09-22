@@ -1,8 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+/**
+ * Γραμμές ενός RFQ: πίνακας + φόρμα νέας γραμμής.
+ *
+ * ADR-598 «(θ)» — προσθήκη: `<form>` + SSoT `useFormSubmission`/`FormActions` (πριν: `onClick` έξω
+ * από φόρμα, ωμό `'Error'` (N.11), και το κουμπί έγραφε «Δημιουργία RFQ» αντί για «Προσθήκη
+ * Γραμμής»)· ποσότητα με το SSoT `NumericField` (ADR-706, όχι `type="number"`). Διαγραφή:
+ * `useInFlightAction` ανά γραμμή, ορατό σφάλμα (πριν: αθόρυβη αποτυχία) και κουμπί με όνομα
+ * (πριν: μόνο εικονίδιο).
+ */
+
+import { useCallback, useId, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import {
   Select,
   SelectContent,
@@ -11,8 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { FormActions } from '@/components/ui/form/FormActions';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { useInFlightAction } from '@/hooks/useInFlightAction';
+import { getErrorMessage } from '@/lib/error-utils';
 import { TradeSelector } from './TradeSelector';
 import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
 import { UNITS, OTHER_UNIT } from '@/subapps/procurement/utils/units';
@@ -36,20 +52,170 @@ interface RfqLinesPanelProps {
 interface NewLineState {
   description: string;
   trade: TradeCode;
-  quantity: string;
+  /** ADR-706: number model, 0 = "not entered" (rendered blank, sent as `null`). */
+  quantity: number;
   unit: string;
   customUnit: boolean;
 }
 
-const DEFAULT_TRADE: TradeCode = 'concrete';
-
 const EMPTY_LINE: NewLineState = {
   description: '',
-  trade: DEFAULT_TRADE,
-  quantity: '',
+  trade: 'concrete',
+  quantity: 0,
   unit: UNITS[0],
   customUnit: false,
 };
+
+function toLineDto(line: NewLineState): CreateRfqLineDTO {
+  return {
+    source: 'ad_hoc',
+    description: line.description.trim(),
+    trade: line.trade,
+    categoryCode: getAtoeCodesForTrade(line.trade)[0] ?? null,
+    quantity: line.quantity > 0 ? line.quantity : null,
+    unit: line.customUnit ? line.unit.trim() || null : line.unit || null,
+  };
+}
+
+// ============================================================================
+// TABLE (διαγραφή ανά γραμμή)
+// ============================================================================
+
+function RfqLineRow({ line, locked, onDelete, t }: { line: RfqLine; locked: boolean; onDelete: (id: string) => Promise<void>; t: Translate }) {
+  const { isRunning, run } = useInFlightAction();
+  const remove = useCallback(async () => {
+    try {
+      await run(() => onDelete(line.id));
+    } catch (caught) {
+      toast.error(getErrorMessage(caught, t('rfqs.errors.deleteLineFailed')));
+    }
+  }, [run, onDelete, line.id, t]);
+
+  return (
+    <tr className="border-b">
+      <td className="py-1.5 pr-2">{line.description}</td>
+      <td className="py-1.5 pr-2 text-muted-foreground">{line.trade}</td>
+      <td className="py-1.5 pr-2 text-muted-foreground">{line.quantity ?? '—'}</td>
+      <td className="py-1.5 pr-2 text-muted-foreground">{line.unit ?? '—'}</td>
+      <td className="py-1.5">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          aria-label={t('rfqs.deleteLine', { description: line.description })}
+          aria-busy={isRunning}
+          disabled={isRunning || locked}
+          onClick={remove}
+        >
+          {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden />}
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+function RfqLinesTable({ lines, locked, onDelete, t }: { lines: RfqLine[]; locked: boolean; onDelete: (id: string) => Promise<void>; t: Translate }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-xs text-muted-foreground">
+            <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineDescription')}</th>
+            <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineTrade')}</th>
+            <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineQuantity')}</th>
+            <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineUnit')}</th>
+            <th><span className="sr-only">{t('rfqs.lineActions')}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => <RfqLineRow key={line.id} line={line} locked={locked} onDelete={onDelete} t={t} />)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ============================================================================
+// NEW LINE FORM
+// ============================================================================
+
+function useNewLineForm(onAdd: RfqLinesPanelProps['onAdd'], onDone: () => void, t: Translate) {
+  const [line, setLine] = useState<NewLineState>(EMPTY_LINE);
+  const update = useCallback((patch: Partial<NewLineState>) => setLine((p) => ({ ...p, ...patch })), []);
+  const canSubmit = line.description.trim() !== '';
+
+  const submission = useFormSubmission({
+    canSubmit,
+    submit: () => onAdd(toLineDto(line)),
+    onSuccess: () => { setLine(EMPTY_LINE); onDone(); },
+    errorFallback: t('rfqs.errors.addLineFailed'),
+  });
+
+  return { line, update, canSubmit, submission };
+}
+
+function UnitField({ line, update, t }: { line: NewLineState; update: (p: Partial<NewLineState>) => void; t: Translate }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Select
+        value={line.customUnit ? OTHER_UNIT : line.unit}
+        onValueChange={(val) => update(val === OTHER_UNIT ? { customUnit: true, unit: '' } : { customUnit: false, unit: val })}
+      >
+        <SelectTrigger aria-label={t('rfqs.lineUnit')} className="h-9 w-24 text-sm"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+          <SelectSeparator />
+          <SelectItem value={OTHER_UNIT}>{t('rfqs.lineEdit.unitOption.other')}</SelectItem>
+        </SelectContent>
+      </Select>
+      {line.customUnit && (
+        <Input
+          aria-label={t('rfqs.lineUnit')}
+          placeholder={t('rfqs.lineEdit.unitOption.otherPlaceholder')}
+          value={line.unit}
+          onChange={(e) => update({ unit: e.target.value })}
+          className="h-7 w-24 text-xs"
+        />
+      )}
+    </div>
+  );
+}
+
+function NewLineForm({ onAdd, onClose, t }: { onAdd: RfqLinesPanelProps['onAdd']; onClose: () => void; t: Translate }) {
+  const { line, update, canSubmit, submission } = useNewLineForm(onAdd, onClose, t);
+  const formId = `${useId()}-form`;
+  return (
+    <section className="space-y-2 rounded-md border p-3">
+      {/* Χωρίς ορατές ετικέτες: κάθε πεδίο ονομάζεται με το κείμενο της στήλης του (ADR-598 G11). */}
+      <form id={formId} onSubmit={submission.handleSubmit} className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+        <Input aria-label={t('rfqs.lineDescription')} placeholder={t('rfqs.lineDescription')} value={line.description} onChange={(e) => update({ description: e.target.value })} className="sm:col-span-2" />
+        <TradeSelector aria-label={t('rfqs.lineTrade')} value={line.trade} onChange={(trade) => update({ trade })} />
+        <div className="flex gap-2">
+          <NumericField
+            aria-label={t('rfqs.lineQuantity')}
+            placeholder={t('rfqs.lineQuantity')}
+            value={line.quantity}
+            onValueChange={(quantity) => update({ quantity })}
+            blankValue={0}
+            min={0}
+            className="w-20"
+          />
+          <UnitField line={line} update={update} t={t} />
+        </div>
+      </form>
+      <FormActions
+        formId={formId}
+        submitLabel={t('rfqs.addLine')}
+        pendingLabel={t('rfqs.addingLine')}
+        cancelLabel={t('rfqs.cancel')}
+        onCancel={onClose}
+        submitting={submission.submitting}
+        submitDisabled={!canSubmit}
+        error={submission.error}
+      />
+    </section>
+  );
+}
 
 // ============================================================================
 // COMPONENT
@@ -59,170 +225,24 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
   const locked = lockState !== 'unlocked';
   const { t } = useTranslation('quotes');
   const [showForm, setShowForm] = useState(false);
-  const [newLine, setNewLine] = useState<NewLineState>(EMPTY_LINE);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const handleAdd = async () => {
-    if (!newLine.description.trim()) return;
-    setSaving(true);
-    setFormError(null);
-    try {
-      const defaultCategoryCode = getAtoeCodesForTrade(newLine.trade)[0] ?? null;
-      const resolvedUnit = newLine.customUnit ? newLine.unit.trim() || null : newLine.unit || null;
-      const dto: CreateRfqLineDTO = {
-        source: 'ad_hoc',
-        description: newLine.description.trim(),
-        trade: newLine.trade,
-        categoryCode: defaultCategoryCode,
-        quantity: newLine.quantity ? parseFloat(newLine.quantity) : null,
-        unit: resolvedUnit,
-      };
-      await onAdd(dto);
-      setNewLine(EMPTY_LINE);
-      setShowForm(false);
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (lineId: string) => {
-    setDeleting(lineId);
-    try {
-      await onDelete(lineId);
-    } finally {
-      setDeleting(null);
-    }
-  };
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+      <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground" role="status">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         {t('rfqs.loading')}
-      </div>
+      </p>
     );
   }
 
   return (
     <section className="space-y-3">
-      {lines.length === 0 && !showForm && (
-        <p className="text-sm text-muted-foreground">{t('rfqs.linesEmpty')}</p>
-      )}
-
-      {lines.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineDescription')}</th>
-                <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineTrade')}</th>
-                <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineQuantity')}</th>
-                <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineUnit')}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((line) => (
-                <tr key={line.id} className="border-b">
-                  <td className="py-1.5 pr-2">{line.description}</td>
-                  <td className="py-1.5 pr-2 text-muted-foreground">{line.trade}</td>
-                  <td className="py-1.5 pr-2 text-muted-foreground">{line.quantity ?? '—'}</td>
-                  <td className="py-1.5 pr-2 text-muted-foreground">{line.unit ?? '—'}</td>
-                  <td className="py-1.5">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      disabled={deleting === line.id || locked}
-                      onClick={() => handleDelete(line.id)}
-                    >
-                      {deleting === line.id
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      }
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {showForm && (
-        <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-4">
-          {/* Χωρίς ορατές ετικέτες: κάθε πεδίο ονομάζεται με το κείμενο της στήλης του (ADR-598 G11). */}
-          <Input
-            aria-label={t('rfqs.lineDescription')}
-            placeholder={t('rfqs.lineDescription')}
-            value={newLine.description}
-            onChange={(e) => setNewLine((p) => ({ ...p, description: e.target.value }))}
-            className="sm:col-span-2"
-          />
-          <TradeSelector
-            aria-label={t('rfqs.lineTrade')}
-            value={newLine.trade}
-            onChange={(trade) => setNewLine((p) => ({ ...p, trade }))}
-          />
-          <div className="flex gap-2">
-            <Input
-              aria-label={t('rfqs.lineQuantity')}
-              type="number"
-              placeholder={t('rfqs.lineQuantity')}
-              value={newLine.quantity}
-              onChange={(e) => setNewLine((p) => ({ ...p, quantity: e.target.value }))}
-              className="w-20"
-              min={0}
-            />
-            <div className="flex flex-col gap-1">
-              <Select
-                value={newLine.customUnit ? OTHER_UNIT : newLine.unit}
-                onValueChange={(val) => {
-                  if (val === OTHER_UNIT) {
-                    setNewLine((p) => ({ ...p, customUnit: true, unit: '' }));
-                  } else {
-                    setNewLine((p) => ({ ...p, customUnit: false, unit: val }));
-                  }
-                }}
-              >
-                <SelectTrigger aria-label={t('rfqs.lineUnit')} className="h-9 w-24 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                  <SelectSeparator />
-                  <SelectItem value={OTHER_UNIT}>{t('rfqs.lineEdit.unitOption.other')}</SelectItem>
-                </SelectContent>
-              </Select>
-              {newLine.customUnit && (
-                <Input
-                  aria-label={t('rfqs.lineUnit')}
-                  placeholder={t('rfqs.lineEdit.unitOption.otherPlaceholder')}
-                  value={newLine.unit}
-                  onChange={(e) => setNewLine((p) => ({ ...p, unit: e.target.value }))}
-                  className="h-7 w-24 text-xs"
-                />
-              )}
-            </div>
-          </div>
-          {formError && <p className="col-span-full text-xs text-destructive">{formError}</p>}
-          <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={handleAdd} disabled={saving || !newLine.description.trim()}>
-              {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-              {t('rfqs.submit')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setShowForm(false); setNewLine(EMPTY_LINE); }}>
-              {t('rfqs.cancel')}
-            </Button>
-          </div>
-        </div>
-      )}
-
+      {lines.length === 0 && !showForm && <p className="text-sm text-muted-foreground">{t('rfqs.linesEmpty')}</p>}
+      {lines.length > 0 && <RfqLinesTable lines={lines} locked={locked} onDelete={onDelete} t={t} />}
+      {showForm && <NewLineForm onAdd={onAdd} onClose={() => setShowForm(false)} t={t} />}
       {!showForm && (
         <Button size="sm" variant="outline" disabled={locked} onClick={() => setShowForm(true)}>
-          <Plus className="mr-1 h-3.5 w-3.5" />
+          <Plus className="mr-1 h-3.5 w-3.5" aria-hidden />
           {t('rfqs.addLine')}
         </Button>
       )}

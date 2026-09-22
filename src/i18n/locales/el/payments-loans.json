@@ -79,6 +79,11 @@
       "preApprovalExpiring": "Η Προέγκριση λήγει σε {days} ημέρες!",
       "ltvExceeded": "LTV {value}% — υπερβαίνει το όριο {limit}%",
       "dstiExceeded": "DSTI {value}% — υπερβαίνει το όριο {limit}%"
+    },
+    "errors": {
+      "addFailed": "Η καταχώρηση του δανείου απέτυχε",
+      "saveFailed": "Η αποθήκευση απέτυχε",
+      "transitionFailed": "Η αλλαγή κατάστασης απέτυχε"
     }
   },
   "chequeRegistry": {

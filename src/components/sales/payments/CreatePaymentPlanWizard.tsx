@@ -3,43 +3,35 @@
 /**
  * CreatePaymentPlanWizard — Template → Configure → Review → Create
  * @enterprise ADR-234 - Payment Plan & Installment Tracking
+ * @enterprise ADR-598 «(θ)» — ΕΝΑ `<form>` για όλον τον οδηγό (Material Stepper / GOV.UK «one
+ *   thing per page»): το Enter = η κύρια ενέργεια του ΤΡΕΧΟΝΤΟΣ βήματος (Επόμενο ή, στο τελευταίο,
+ *   Δημιουργία μέσω SSoT `useFormSubmission`). Πριν: το `handleCreate` δεν είχε `try` ⇒ ένα
+ *   `onCreate` που πετούσε άφηνε το κουμπί μόνιμα σε «υποβάλλεται», και το «Πίσω» έγραφε «Ακύρωση».
+ *   Μοντέλο: `payment-plan-wizard-model.ts` · βήματα: `PaymentPlanWizardSteps.tsx`.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { NumericField } from '@/components/ui/numeric-field';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import React, { useCallback, useState, type FormEvent } from 'react';
+import { FormDialog } from '@/components/ui/form/FormDialog';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { unwrapActionResult, type ActionResult } from '@/lib/mutations/gateway-action';
 import { PAYMENT_PLAN_TEMPLATES } from '@/config/payment-plan-templates';
 import type {
-  PaymentPlanTemplate,
   CreatePaymentPlanInput,
   CreateInstallmentInput,
   SaleTaxRegime,
 } from '@/types/payment-plan';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { formatOwnerNames } from '@/lib/ownership/owner-utils';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { formatCurrency } from '@/lib/intl-utils';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import {
+  computeInstallments,
+  installmentsMatchTotal,
+  taxRateOf,
+  wizardSteps,
+} from './payment-plan-wizard-model';
+import { InstallmentsStep, PlanTypeStep, TemplateStep, type PlanMode } from './PaymentPlanWizardSteps';
 
 // ============================================================================
 // TYPES
@@ -54,7 +46,7 @@ interface CreatePaymentPlanWizardProps {
   ownerContactId: string;
   ownerName: string;
   suggestedAmount: number;
-  onCreate: (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => Promise<{ success: boolean; error?: string }>;
+  onCreate: (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => Promise<ActionResult>;
   /** ADR-244: Multi-owner support — if >1, shows joint/individual step */
   owners?: PropertyOwnerEntry[];
   /** ADR-244: Create split plans (individual mode) */
@@ -63,344 +55,162 @@ interface CreatePaymentPlanWizardProps {
     baseInput: Omit<CreatePaymentPlanInput, 'propertyId' | 'ownerContactId' | 'ownerName' | 'totalAmount' | 'installments'>,
     totalPrice: number,
     baseInstallments: CreateInstallmentInput[],
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<ActionResult>;
 }
 
-const TAX_REGIMES: { value: SaleTaxRegime; rate: number }[] = [
-  { value: 'vat_24', rate: 24 },
-  { value: 'vat_suspension_3', rate: 3 },
-  { value: 'transfer_tax_3', rate: 3 },
-  { value: 'custom', rate: 0 },
-];
+interface PlanDraft {
+  planMode: PlanMode;
+  templateId: string;
+  /** ADR-706: number model — ο οδηγός ανοίγει στην προτεινόμενη τιμή πώλησης. */
+  totalAmount: number;
+  taxRegime: SaleTaxRegime;
+  installments: CreateInstallmentInput[];
+}
+
+// ============================================================================
+// PURE: η εγγραφή (κοινό πλάνο ή ένα ανά ιδιοκτήτη — ADR-244)
+// ============================================================================
+
+function createPlan(props: CreatePaymentPlanWizardProps, draft: PlanDraft): Promise<ActionResult> {
+  const { owners, onCreateSplit, buildingId, projectId, ownerContactId, ownerName } = props;
+  const hasMultipleOwners = (owners?.length ?? 0) > 1;
+  const taxRate = taxRateOf(draft.taxRegime);
+  if (draft.planMode === 'individual' && hasMultipleOwners && onCreateSplit && owners) {
+    return onCreateSplit(owners, { buildingId, projectId, taxRegime: draft.taxRegime, taxRate }, draft.totalAmount, draft.installments);
+  }
+  return props.onCreate({
+    buildingId,
+    projectId,
+    ownerContactId,
+    ownerName: hasMultipleOwners && owners ? (formatOwnerNames(owners) ?? ownerName) : ownerName,
+    totalAmount: draft.totalAmount,
+    taxRegime: draft.taxRegime,
+    taxRate,
+    installments: draft.installments,
+    planType: hasMultipleOwners ? 'joint' : undefined,
+  });
+}
+
+// ============================================================================
+// STATE: βήμα + πρόχειρο
+// ============================================================================
+
+function useWizardState(props: CreatePaymentPlanWizardProps, t: Translate) {
+  const steps = wizardSteps((props.owners?.length ?? 0) > 1);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [stepError, setStepError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<PlanDraft>(() => ({
+    planMode: 'joint',
+    templateId: PAYMENT_PLAN_TEMPLATES[0].id,
+    totalAmount: props.suggestedAmount,
+    taxRegime: 'vat_24',
+    installments: [],
+  }));
+  const update = useCallback((patch: Partial<PlanDraft>) => setDraft((prev) => ({ ...prev, ...patch })), []);
+  const goTo = useCallback((index: number) => { setStepError(null); setStepIndex(index); }, []);
+
+  /** Η κύρια ενέργεια ενός ενδιάμεσου βήματος («Επόμενο»). */
+  const advance = useCallback(() => {
+    if (steps[stepIndex] === 'template') {
+      const template = PAYMENT_PLAN_TEMPLATES.find((tp) => tp.id === draft.templateId);
+      if (!template) return;
+      if (draft.totalAmount <= 0) { setStepError(t('errors.invalidAmount')); return; }
+      update({ installments: computeInstallments(template, draft.totalAmount) });
+    }
+    goTo(stepIndex + 1);
+  }, [steps, stepIndex, draft.templateId, draft.totalAmount, update, goTo, t]);
+
+  return { steps, stepIndex, stepError, draft, update, goTo, advance };
+}
+
+function useWizardForm(props: CreatePaymentPlanWizardProps, t: Translate) {
+  const state = useWizardState(props, t);
+  const { success } = useNotifications();
+  const isLast = state.stepIndex === state.steps.length - 1;
+  const canCreate = installmentsMatchTotal(state.draft.installments, state.draft.totalAmount);
+
+  const submission = useFormSubmission({
+    canSubmit: canCreate,
+    submit: async () => unwrapActionResult(await createPlan(props, state.draft)),
+    onSuccess: () => {
+      success(t('paymentPlan.createPlan'));
+      props.onOpenChange(false);
+      state.goTo(0);
+    },
+    errorFallback: t('errors.createFailed'),
+  });
+
+  const handleSubmit = useCallback((event: FormEvent) => {
+    if (isLast) return submission.handleSubmit(event);
+    event.preventDefault();
+    state.advance();
+  }, [isLast, submission, state]);
+
+  const back = useCallback(() => {
+    submission.clearError();
+    state.goTo(state.stepIndex - 1);
+  }, [submission, state]);
+
+  return { ...state, isLast, canCreate, submission, handleSubmit, back };
+}
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function CreatePaymentPlanWizard({
-  open,
-  onOpenChange,
-  buildingId,
-  projectId,
-  ownerContactId,
-  ownerName,
-  suggestedAmount,
-  onCreate,
-  owners,
-  onCreateSplit,
-}: CreatePaymentPlanWizardProps) {
-  const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
-  const { success, error: notifyError } = useNotifications();
-
-  // ADR-244: Multi-owner step — only shown when >1 owner
-  const hasMultipleOwners = (owners?.length ?? 0) > 1;
-  const [planMode, setPlanMode] = useState<'joint' | 'individual'>('joint');
-
-  // Step offset: if multi-owner, step 0 = plan type, step 1 = template, step 2 = installments
-  // If single owner, step 0 = template, step 1 = installments (no plan type step)
-  const STEP_PLAN_TYPE = 0;
-  const STEP_TEMPLATE = hasMultipleOwners ? 1 : 0;
-  const STEP_INSTALLMENTS = hasMultipleOwners ? 2 : 1;
-
-  const [step, setStep] = useState(0);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(PAYMENT_PLAN_TEMPLATES[0].id);
-  // ADR-706: number model — the wizard opens on the suggested sale price.
-  const [totalAmount, setTotalAmount] = useState(suggestedAmount);
-  const [taxRegime, setTaxRegime] = useState<SaleTaxRegime>('vat_24');
-  const [installments, setInstallments] = useState<CreateInstallmentInput[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  const selectedTemplate = useMemo(
-    () => PAYMENT_PLAN_TEMPLATES.find((tp) => tp.id === selectedTemplateId),
-    [selectedTemplateId]
-  );
-
-  // Compute installments from template + totalAmount
-  const computeInstallments = useCallback(
-    (template: PaymentPlanTemplate, total: number): CreateInstallmentInput[] => {
-      // Step 1: Compute fixed amounts first to determine percentage base
-      const fixedSum = template.slots.reduce((sum, slot) => {
-        if (slot.amountType === 'fixed' && slot.fixedAmount !== null) {
-          return sum + slot.fixedAmount;
-        }
-        return sum;
-      }, 0);
-
-      // Percentage-based slots distribute the REMAINING after fixed amounts
-      const percentageBase = Math.max(0, total - fixedSum);
-      let remainingAmount = total;
-
-      return template.slots.map((slot, idx) => {
-        let amount: number;
-        let percentage: number;
-
-        if (slot.amountType === 'fixed' && slot.fixedAmount !== null) {
-          amount = Math.min(slot.fixedAmount, Math.max(0, remainingAmount));
-          percentage = total > 0 ? Math.round((amount / total) * 10000) / 100 : 0;
-        } else {
-          // Last percentage-based slot gets remaining
-          const isLastPercentageSlot = !template.slots.slice(idx + 1).some(
-            (s) => s.amountType !== 'fixed'
-          );
-
-          if (isLastPercentageSlot) {
-            amount = Math.max(0, remainingAmount);
-            percentage = total > 0 ? Math.round((amount / total) * 10000) / 100 : 0;
-          } else {
-            percentage = slot.percentage;
-            amount = Math.round((percentageBase * slot.percentage) / 100);
-          }
-        }
-
-        remainingAmount -= amount;
-
-        // Due date: spread over months from today
-        const dueDate = new Date();
-        dueDate.setMonth(dueDate.getMonth() + idx);
-
-        return {
-          label: slot.defaultLabel,
-          type: slot.type,
-          amount: Math.max(0, amount),
-          percentage,
-          dueDate: dueDate.toISOString(),
-        };
-      });
-    },
-    []
-  );
-
-  // When moving to installment config step, compute installments
-  const goToInstallmentStep = useCallback(() => {
-    if (!selectedTemplate) return;
-    const total = totalAmount;
-    if (total <= 0) {
-      notifyError(t('errors.invalidAmount'));
-      return;
-    }
-    setInstallments(computeInstallments(selectedTemplate, total));
-    setStep(STEP_INSTALLMENTS);
-  }, [selectedTemplate, totalAmount, computeInstallments, STEP_INSTALLMENTS, t, notifyError]);
-
-  // Update individual installment amount
-  const updateInstallmentAmount = useCallback((idx: number, amount: number) => {
-    setInstallments((prev) => {
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], amount };
-      return updated;
-    });
-  }, []);
-
-  // Submit
-  const handleCreate = useCallback(async () => {
-    const total = totalAmount;
-    const taxRate = TAX_REGIMES.find((r) => r.value === taxRegime)?.rate ?? 0;
-
-    setSubmitting(true);
-
-    let result: { success: boolean; error?: string };
-
-    if (planMode === 'individual' && hasMultipleOwners && onCreateSplit && owners) {
-      // ADR-244: Create split plans (1 per owner, proportional amounts)
-      result = await onCreateSplit(
-        owners,
-        { buildingId, projectId, taxRegime, taxRate },
-        total,
-        installments,
+function CurrentStep({ props, form, t }: { props: CreatePaymentPlanWizardProps; form: ReturnType<typeof useWizardForm>; t: Translate }) {
+  const { draft, update } = form;
+  switch (form.steps[form.stepIndex]) {
+    case 'planType':
+      return (
+        <PlanTypeStep owners={props.owners ?? []} suggestedAmount={props.suggestedAmount} planMode={draft.planMode} onPlanModeChange={(planMode) => update({ planMode })} t={t} />
       );
-    } else {
-      // Standard: joint plan or single buyer
-      result = await onCreate({
-        buildingId,
-        projectId,
-        ownerContactId,
-        ownerName: hasMultipleOwners && owners ? (formatOwnerNames(owners) ?? ownerName) : ownerName,
-        totalAmount: total,
-        taxRegime,
-        taxRate,
-        installments,
-        planType: hasMultipleOwners ? 'joint' : undefined,
-      });
-    }
+    case 'template':
+      return (
+        <TemplateStep
+          templateId={draft.templateId}
+          onTemplateChange={(templateId) => update({ templateId })}
+          totalAmount={draft.totalAmount}
+          onTotalAmountChange={(totalAmount) => update({ totalAmount })}
+          taxRegime={draft.taxRegime}
+          onTaxRegimeChange={(taxRegime) => update({ taxRegime })}
+          t={t}
+        />
+      );
+    default:
+      return (
+        <InstallmentsStep
+          installments={draft.installments}
+          totalAmount={draft.totalAmount}
+          onAmountChange={(idx, amount) => update({ installments: draft.installments.map((inst, i) => (i === idx ? { ...inst, amount } : inst)) })}
+          t={t}
+        />
+      );
+  }
+}
 
-    setSubmitting(false);
-
-    if (result.success) {
-      success(t('paymentPlan.createPlan'));
-      onOpenChange(false);
-      setStep(0);
-    } else {
-      notifyError(result.error ?? t('errors.createFailed'));
-    }
-  }, [totalAmount, taxRegime, installments, buildingId, projectId, ownerContactId, ownerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t, success, notifyError]);
-
-  const installmentSum = installments.reduce((s, i) => s + i.amount, 0);
-  const total = totalAmount;
-  const sumMatch = Math.abs(installmentSum - total) < 0.02;
+export function CreatePaymentPlanWizard(props: CreatePaymentPlanWizardProps) {
+  const { open, onOpenChange } = props;
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const form = useWizardForm(props, t);
+  const atStart = form.stepIndex === 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {t('wizard.title')}
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* ADR-244: Step 0 — Plan Type (only for multi-owner) */}
-        {hasMultipleOwners && step === STEP_PLAN_TYPE && owners && (
-          <section className="space-y-4">
-            <p className={cn("text-sm", colors.text.muted)}>
-              {t('wizard.planTypeDescription')}
-            </p>
-            <RadioGroup value={planMode} onValueChange={(v) => setPlanMode(v as 'joint' | 'individual')}>
-              <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50">
-                <RadioGroupItem value="joint" className="mt-0.5" />
-                <article>
-                  <p className="text-sm font-medium">
-                    {t('wizard.jointPlan')}
-                  </p>
-                  <p className={cn("text-xs", colors.text.muted)}>
-                    {formatOwnerNames(owners)} — {formatCurrency(suggestedAmount)}
-                  </p>
-                </article>
-              </label>
-              <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50">
-                <RadioGroupItem value="individual" className="mt-0.5" />
-                <article>
-                  <p className="text-sm font-medium">
-                    {t('wizard.individualPlans')}
-                  </p>
-                  <ul className="mt-1 space-y-0.5">
-                    {owners.map((owner) => (
-                      <li key={owner.contactId} className={cn("text-xs", colors.text.muted)}>
-                        {owner.name} ({owner.ownershipPct}%) = {formatCurrency(Math.round(suggestedAmount * owner.ownershipPct / 100))}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              </label>
-            </RadioGroup>
-          </section>
-        )}
-
-        {/* Template + Amount step */}
-        {step === STEP_TEMPLATE && (
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label>{t('wizard.selectTemplate')}</Label>
-              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_PLAN_TEMPLATES.map((tp) => (
-                    <SelectItem key={tp.id} value={tp.id}>
-                      {tp.defaultName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedTemplate && (
-                <p className={cn("text-xs", colors.text.muted)}>{selectedTemplate.defaultDescription}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="wizard-total">
-                {t('wizard.totalAmount')}
-              </Label>
-              <NumericField
-                id="wizard-total"
-                min={1}
-                step={0.01}
-                value={totalAmount}
-                onValueChange={setTotalAmount}
-                blankValue={0}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>{t('taxRegime.vat_24')}</Label>
-              <Select value={taxRegime} onValueChange={(v) => setTaxRegime(v as SaleTaxRegime)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TAX_REGIMES.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {t(`taxRegime.${r.value}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {/* Configure Installments step */}
-        {step === STEP_INSTALLMENTS && (
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {installments.map((inst, idx) => (
-              <fieldset key={idx} className="flex items-center gap-2">
-                <span className={cn("text-xs w-6", colors.text.muted)}>{idx + 1}.</span>
-                <span className="text-sm flex-1 truncate">{inst.label}</span>
-                <NumericField
-                  min={0}
-                  step={0.01}
-                  value={inst.amount}
-                  onValueChange={(amount) => updateInstallmentAmount(idx, amount)}
-                  className="w-28 text-right"
-                  aria-label={inst.label}
-                />
-                <span className={cn("text-xs", colors.text.muted)}>€</span>
-              </fieldset>
-            ))}
-
-            <footer className="flex items-center justify-between pt-2 border-t text-sm">
-              <span className="font-medium">{t('wizard.totalInstallments')}</span>
-              <span className={sumMatch ? 'text-[hsl(var(--text-success))] font-semibold' : 'text-destructive font-semibold'}>
-                €{installmentSum.toLocaleString('el-GR')}
-                {!sumMatch && ` (≠ €${total.toLocaleString('el-GR')})`}
-              </span>
-            </footer>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2">
-          {step > 0 && (
-            <Button variant="outline" onClick={() => setStep(step - 1)}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              {t('dialog.cancel')}
-            </Button>
-          )}
-
-          {/* Plan type step → Template step */}
-          {hasMultipleOwners && step === STEP_PLAN_TYPE && (
-            <Button onClick={() => setStep(STEP_TEMPLATE)}>
-              {t('wizard.nextStep')}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
-
-          {/* Template step → Installments step */}
-          {step === STEP_TEMPLATE && (
-            <Button onClick={goToInstallmentStep}>
-              {t('wizard.nextStep')}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
-
-          {/* Installments step → Create */}
-          {step === STEP_INSTALLMENTS && (
-            <Button onClick={handleCreate} disabled={submitting || !sumMatch}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('wizard.reviewAndCreate')}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('wizard.title')}
+      contentClassName="sm:max-w-lg"
+      submission={form.submission}
+      onSubmit={form.handleSubmit}
+      error={form.stepError}
+      submitLabel={form.isLast ? t('wizard.reviewAndCreate') : t('wizard.nextStep')}
+      pendingLabel={t('wizard.creating')}
+      cancelLabel={atStart ? t('dialog.cancel') : t('wizard.previousStep')}
+      onCancel={atStart ? undefined : form.back}
+      submitDisabled={form.isLast && !form.canCreate}
+    >
+      <CurrentStep props={props} form={form} t={t} />
+    </FormDialog>
   );
 }

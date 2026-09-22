@@ -43,7 +43,8 @@
       "paid": "Πληρωμένη",
       "partial": "Μερικώς Πληρωμένη",
       "waived": "Χαρισμένη"
-    }
+    },
+    "labelField": "Περιγραφή δόσης"
   },
   "installmentType": {
     "reservation": "Κράτηση",
@@ -135,7 +136,10 @@
     "nextStep": "Επόμενο",
     "planTypeDescription": "Επιλέξτε τον τύπο πλάνου αποπληρωμής",
     "jointPlan": "Κοινό πλάνο (ένα για όλους)",
-    "individualPlans": "Ξεχωριστά πλάνα (ένα ανά ιδιοκτήτη)"
+    "individualPlans": "Ξεχωριστά πλάνα (ένα ανά ιδιοκτήτη)",
+    "previousStep": "Πίσω",
+    "taxRegime": "Φορολογικό καθεστώς",
+    "creating": "Δημιουργία…"
   },
   "dialog": {
     "title": "Καταγραφή Πληρωμής",
@@ -146,7 +150,9 @@
     "receiptNumber": "Αρ. Απόδειξης",
     "confirm": "Καταχώρηση",
     "cancel": "Ακύρωση",
-    "paymentRecorded": "Καταγράφηκε πληρωμή"
+    "paymentRecorded": "Καταγράφηκε πληρωμή",
+    "recording": "Καταχώρηση…",
+    "saving": "Αποθήκευση…"
   },
   "report": {
     "title": "Αναφορά Πληρωμών",
@@ -271,6 +277,8 @@
     "paymentFailed": "Σφάλμα καταγραφής πληρωμής",
     "invalidAmount": "Εισάγετε έγκυρο ποσό",
     "invalidLabel": "Εισάγετε ετικέτα",
-    "invalidDueDate": "Εισάγετε ημερομηνία λήξης"
+    "invalidDueDate": "Εισάγετε ημερομηνία λήξης",
+    "installmentSaveFailed": "Η αποθήκευση της δόσης απέτυχε",
+    "installmentDeleteFailed": "Η διαγραφή της δόσης απέτυχε"
   }
 }

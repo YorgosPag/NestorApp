@@ -3,22 +3,14 @@
 /**
  * RecordPaymentDialog — Dialog for recording a payment against an installment
  * @enterprise ADR-234 - Payment Plan & Installment Tracking
+ * @enterprise ADR-598 «(θ)» — υποβολή μέσω SSoT `useFormSubmission` + `FormActions`: ένας δρόμος
+ *   (κλικ + Enter), φραγμός διπλής καταχώρισης, και το κουμπί ΔΕΝ κολλά πια σε «υποβάλλεται»
+ *   όταν το `onRecord` πετάξει (πριν: σημαία υποβολής γύρω από `await` χωρίς `try`).
  */
 
-import React, { useState, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import React, { useCallback, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { NumericField } from '@/components/ui/numeric-field';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -27,11 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { FormDialog } from '@/components/ui/form/FormDialog';
+import { FormField } from '@/components/ui/form/FormComponents';
 import { formatCurrency } from '@/lib/intl-utils';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { BankSelector } from '@/components/banking/BankSelector';
-import type { BankInfo } from '@/constants/greek-banks';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { unwrapActionResult, type ActionResult } from '@/lib/mutations/gateway-action';
+import { BankSelector, bankSelection } from '@/components/banking/BankSelector';
 import type {
   Installment,
   PaymentMethod,
@@ -50,7 +45,7 @@ interface RecordPaymentDialogProps {
   onOpenChange: (open: boolean) => void;
   installment: Installment;
   paymentPlanId: string;
-  onRecord: (input: CreatePaymentInput) => Promise<{ success: boolean; error?: string }>;
+  onRecord: (input: CreatePaymentInput) => Promise<ActionResult>;
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
@@ -62,193 +57,205 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'offset',
 ];
 
+const BANK_METHODS: ReadonlySet<PaymentMethod> = new Set(['bank_transfer', 'bank_cheque', 'personal_cheque', 'bank_loan']);
+
+interface PaymentFields {
+  amount: number;
+  method: PaymentMethod;
+  paymentDate: string;
+  bankCode: string;
+  bankName: string;
+  referenceNumber: string;
+  notes: string;
+}
+
+// ============================================================================
+// PURE HELPERS
+// ============================================================================
+
+function buildMethodDetails(f: PaymentFields): PaymentMethodDetails {
+  const ref = f.referenceNumber || null;
+  switch (f.method) {
+    case 'bank_transfer':
+      return { method: 'bank_transfer', bankName: f.bankName, iban: null, referenceNumber: ref };
+    case 'bank_cheque':
+    case 'personal_cheque':
+      return {
+        method: f.method,
+        chequeNumber: f.referenceNumber || '',
+        bankName: f.bankName,
+        issueDate: f.paymentDate,
+        maturityDate: null,
+        drawerName: null,
+      };
+    case 'bank_loan':
+      return { method: 'bank_loan', bankName: f.bankName, loanReferenceNumber: ref, disbursementDate: f.paymentDate };
+    case 'cash':
+      return { method: 'cash', receiptNumber: ref };
+    case 'offset':
+      return { method: 'offset', offsetReason: f.notes || '', relatedDocumentId: null };
+    case 'promissory_note':
+      return {
+        method: 'promissory_note',
+        noteNumber: f.referenceNumber || '',
+        issueDate: f.paymentDate,
+        maturityDate: f.paymentDate,
+        drawerName: '',
+      };
+    default:
+      return { method: 'bank_transfer', bankName: '', iban: null, referenceNumber: null };
+  }
+}
+
+function toPaymentInput(f: PaymentFields, installment: Installment, paymentPlanId: string): CreatePaymentInput {
+  return {
+    paymentPlanId,
+    installmentIndex: installment.index,
+    amount: f.amount,
+    method: f.method,
+    paymentDate: new Date(f.paymentDate).toISOString(),
+    methodDetails: buildMethodDetails(f),
+    notes: f.notes || undefined,
+  };
+}
+
+// ============================================================================
+// FORM STATE + SUBMISSION
+// ============================================================================
+
+function useRecordPaymentForm(
+  { installment, paymentPlanId, onRecord, onOpenChange }: RecordPaymentDialogProps,
+  t: Translate,
+) {
+  const { success } = useNotifications();
+  // ADR-706: number model — the field opens on the remaining balance.
+  const [fields, setFields] = useState<PaymentFields>(() => ({
+    amount: installment.amount - installment.paidAmount,
+    method: 'bank_transfer',
+    paymentDate: nowISO().split('T')[0],
+    bankCode: '',
+    bankName: '',
+    referenceNumber: '',
+    notes: '',
+  }));
+  const update = useCallback(
+    (patch: Partial<PaymentFields>) => setFields((prev) => ({ ...prev, ...patch })),
+    [],
+  );
+
+  const submission = useFormSubmission({
+    canSubmit: true,
+    validate: () => (fields.amount > 0 ? null : t('errors.invalidAmount')),
+    submit: async () => unwrapActionResult(await onRecord(toPaymentInput(fields, installment, paymentPlanId))),
+    onSuccess: () => {
+      // ADR-314: currency rendering belongs to the Intl SSoT, not a hardcoded el-GR literal.
+      success(`${t('dialog.paymentRecorded')} ${formatCurrency(fields.amount)}`);
+      onOpenChange(false);
+    },
+    errorFallback: t('errors.paymentFailed'),
+  });
+
+  return { fields, update, submission };
+}
+
+// ============================================================================
+// FIELDS
+// ============================================================================
+
+interface PaymentFieldsProps {
+  fields: PaymentFields;
+  update: (patch: Partial<PaymentFields>) => void;
+  t: Translate;
+}
+
+function PaymentMethodField({ fields, update, t }: PaymentFieldsProps) {
+  return (
+    <FormField label={t('labels.method')}>
+      {(id) => (
+        <Select value={fields.method} onValueChange={(v) => update({ method: v as PaymentMethod })}>
+          <SelectTrigger id={id}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_METHODS.map((m) => (
+              <SelectItem key={m} value={m}>
+                {t(`paymentMethod.${m}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </FormField>
+  );
+}
+
+function BankFields({ fields, update, t }: PaymentFieldsProps) {
+  return (
+    <>
+      <BankSelector
+        value={fields.bankCode}
+        onChange={(code, bank) => update(bankSelection(code, bank))}
+        label={t('dialog.bankName')}
+        allowOther
+      />
+      <FormField label={t('dialog.referenceNumber')}>
+        {(id) => (
+          <Input id={id} value={fields.referenceNumber} onChange={(e) => update({ referenceNumber: e.target.value })} />
+        )}
+      </FormField>
+    </>
+  );
+}
+
+function PaymentFormFields(props: PaymentFieldsProps) {
+  const { fields, update, t } = props;
+  return (
+    <>
+      <FormField label={`${t('labels.amount')} (€)`}>
+        {(id) => (
+          <NumericField id={id} min={0.01} step={0.01} value={fields.amount} onValueChange={(amount) => update({ amount })} blankValue={0} />
+        )}
+      </FormField>
+      <PaymentMethodField {...props} />
+      <FormField label={t('labels.paymentDate')}>
+        {(id) => (
+          <Input id={id} type="date" value={fields.paymentDate} onChange={(e) => update({ paymentDate: e.target.value })} />
+        )}
+      </FormField>
+      {BANK_METHODS.has(fields.method) && <BankFields {...props} />}
+      <FormField label={t('labels.notes')}>
+        {(id) => (
+          <Textarea id={id} value={fields.notes} onChange={(e) => update({ notes: e.target.value })} rows={2} />
+        )}
+      </FormField>
+    </>
+  );
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function RecordPaymentDialog({
-  open,
-  onOpenChange,
-  installment,
-  paymentPlanId,
-  onRecord,
-}: RecordPaymentDialogProps) {
+export function RecordPaymentDialog(props: RecordPaymentDialogProps) {
+  const { open, onOpenChange, installment } = props;
   const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
-  const { success, error: notifyError } = useNotifications();
-
+  const { fields, update, submission } = useRecordPaymentForm(props, t);
   const remaining = installment.amount - installment.paidAmount;
-  // ADR-706: number model — the field opens on the remaining balance.
-  const [amount, setAmount] = useState(remaining);
-  const [method, setMethod] = useState<PaymentMethod>('bank_transfer');
-  const [paymentDate, setPaymentDate] = useState(nowISO().split('T')[0]);
-  const [bankCode, setBankCode] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [referenceNumber, setReferenceNumber] = useState('');
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const buildMethodDetails = useCallback((): PaymentMethodDetails => {
-    switch (method) {
-      case 'bank_transfer':
-        return { method: 'bank_transfer', bankName, iban: null, referenceNumber: referenceNumber || null };
-      case 'bank_cheque':
-      case 'personal_cheque':
-        return {
-          method,
-          chequeNumber: referenceNumber || '',
-          bankName,
-          issueDate: paymentDate,
-          maturityDate: null,
-          drawerName: null,
-        };
-      case 'bank_loan':
-        return { method: 'bank_loan', bankName, loanReferenceNumber: referenceNumber || null, disbursementDate: paymentDate };
-      case 'cash':
-        return { method: 'cash', receiptNumber: referenceNumber || null };
-      case 'offset':
-        return { method: 'offset', offsetReason: notes || '', relatedDocumentId: null };
-      case 'promissory_note':
-        return {
-          method: 'promissory_note',
-          noteNumber: referenceNumber || '',
-          issueDate: paymentDate,
-          maturityDate: paymentDate,
-          drawerName: '',
-        };
-      default:
-        return { method: 'bank_transfer', bankName: '', iban: null, referenceNumber: null };
-    }
-  }, [method, bankName, referenceNumber, paymentDate, notes]);
-
-  const handleSubmit = useCallback(async () => {
-    const numAmount = amount;
-    if (numAmount <= 0) {
-      notifyError(t('errors.invalidAmount'));
-      return;
-    }
-
-    setSubmitting(true);
-    const result = await onRecord({
-      paymentPlanId,
-      installmentIndex: installment.index,
-      amount: numAmount,
-      method,
-      paymentDate: new Date(paymentDate).toISOString(),
-      methodDetails: buildMethodDetails(),
-      notes: notes || undefined,
-    });
-    setSubmitting(false);
-
-    if (result.success) {
-      // ADR-314: currency rendering belongs to the Intl SSoT, not a hardcoded el-GR literal.
-      success(`${t('dialog.paymentRecorded')} ${formatCurrency(numAmount)}`);
-      onOpenChange(false);
-    } else {
-      notifyError(result.error ?? t('errors.paymentFailed'));
-    }
-  }, [amount, method, paymentDate, notes, installment.index, paymentPlanId, onRecord, onOpenChange, buildMethodDetails, t, success, notifyError]);
-
-  const showBankFields = method === 'bank_transfer' || method === 'bank_cheque' || method === 'personal_cheque' || method === 'bank_loan';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {t('dialog.title')}
-          </DialogTitle>
-          <DialogDescription>
-            {installment.label} — {t('labels.remainingAmount')}: €{remaining.toLocaleString('el-GR')}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Amount */}
-          <div className="space-y-1">
-            <Label htmlFor="pay-amount">{t('labels.amount')} (€)</Label>
-            <NumericField
-              id="pay-amount"
-              min={0.01}
-              step={0.01}
-              value={amount}
-              onValueChange={setAmount}
-              blankValue={0}
-            />
-          </div>
-
-          {/* Payment Method */}
-          <div className="space-y-1">
-            <Label>{t('labels.method')}</Label>
-            <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {t(`paymentMethod.${m}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Payment Date */}
-          <div className="space-y-1">
-            <Label htmlFor="pay-date">{t('labels.paymentDate')}</Label>
-            <Input
-              id="pay-date"
-              type="date"
-              value={paymentDate}
-              onChange={(e) => setPaymentDate(e.target.value)}
-            />
-          </div>
-
-          {/* Bank fields */}
-          {showBankFields && (
-            <>
-              <BankSelector
-                value={bankCode}
-                onChange={(code: string, bank: BankInfo | undefined) => {
-                  setBankCode(code);
-                  setBankName(bank?.name ?? '');
-                }}
-                label={t('dialog.bankName')}
-                allowOther
-              />
-              <div className="space-y-1">
-                <Label htmlFor="pay-ref">{t('dialog.referenceNumber')}</Label>
-                <Input
-                  id="pay-ref"
-                  value={referenceNumber}
-                  onChange={(e) => setReferenceNumber(e.target.value)}
-                />
-              </div>
-            </>
-          )}
-
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label htmlFor="pay-notes">{t('labels.notes')}</Label>
-            <Textarea
-              id="pay-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('dialog.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('dialog.confirm')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('dialog.title')}
+      description={`${installment.label} — ${t('labels.remainingAmount')}: ${formatCurrency(remaining)}`}
+      contentClassName="sm:max-w-md"
+      formClassName="space-y-4"
+      submission={submission}
+      submitLabel={t('dialog.confirm')}
+      pendingLabel={t('dialog.recording')}
+      cancelLabel={t('dialog.cancel')}
+    >
+      <PaymentFormFields fields={fields} update={update} t={t} />
+    </FormDialog>
   );
 }

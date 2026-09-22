@@ -1,67 +1,49 @@
 'use client';
-/* eslint-disable custom/no-hardcoded-strings */
-/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * EditInstallmentDialog — Add/Edit installment in a payment plan
  * Supports two modes: 'add' (create new) and 'edit' (update existing).
  *
  * @enterprise ADR-234 - Payment Plan & Installment Tracking (SPEC-234D)
+ * @enterprise ADR-598 «(θ)» — υποβολή: `<form>` + SSoT `useFormSubmission`/`FormActions`
+ *   (πριν: τρεις κλάδοι χωρίς `try` ⇒ ένα `onUpdate` που πετούσε άφηνε το κουμπί νεκρό· ωμό
+ *   `'Error'` σε toast). Διαγραφή: SSoT `DeleteConfirmDialog` + `useInFlightAction`.
+ *   Μοντέλο: `edit-installment-model.ts` · πεδία: `EditInstallmentFields.tsx`.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { NumericField } from '@/components/ui/numeric-field';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FormDialog } from '@/components/ui/form/FormDialog';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import type {
-  Installment,
-  InstallmentType,
-  CreateInstallmentInput,
-  UpdateInstallmentInput,
-  PaymentPlanStatus,
-} from '@/types/payment-plan';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { useInFlightAction } from '@/hooks/useInFlightAction';
+import { getErrorMessage } from '@/lib/error-utils';
+import { unwrapActionResult, type ActionResult } from '@/lib/mutations/gateway-action';
+import type { Installment, PaymentPlanStatus } from '@/types/payment-plan';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { EditInstallmentFields } from './EditInstallmentFields';
+import {
+  applyInstallmentChange,
+  buildInstallmentChange,
+  initialInstallmentFields,
+  installmentSuccessKey,
+  validateInstallment,
+  type InstallmentDialogMode,
+  type InstallmentFields,
+  type InstallmentWriters,
+} from './edit-installment-model';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface EditInstallmentDialogProps {
+interface EditInstallmentDialogProps extends InstallmentWriters {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: 'add' | 'edit';
+  mode: InstallmentDialogMode;
   planStatus: PaymentPlanStatus;
   /** Existing installment (required for edit mode) */
   installment?: Installment;
@@ -71,386 +53,128 @@ interface EditInstallmentDialogProps {
   maxAmount?: number;
   /** Total plan amount (sale price) for reference display */
   planTotalAmount?: number;
-  onAdd: (input: CreateInstallmentInput, insertAtIndex?: number) => Promise<{ success: boolean; error?: string }>;
-  onUpdate: (index: number, updates: UpdateInstallmentInput) => Promise<{ success: boolean; error?: string }>;
-  onDelete: (index: number) => Promise<{ success: boolean; error?: string }>;
+  onDelete: (index: number) => Promise<ActionResult>;
 }
 
-const INSTALLMENT_TYPES: InstallmentType[] = [
-  'reservation',
-  'down_payment',
-  'stage_payment',
-  'final_payment',
-  'custom',
-];
+// ============================================================================
+// FORM STATE + SUBMISSION
+// ============================================================================
+
+function useEditInstallmentForm(props: EditInstallmentDialogProps, t: Translate) {
+  const { open, mode, planStatus, onAdd, onUpdate, onOpenChange } = props;
+  const editing = mode === 'edit' ? props.installment : undefined;
+  const notesOnly = planStatus === 'active';
+  const { success } = useNotifications();
+  const [fields, setFields] = useState<InstallmentFields>(() => initialInstallmentFields(mode, editing));
+  const update = useCallback((patch: Partial<InstallmentFields>) => setFields((prev) => ({ ...prev, ...patch })), []);
+
+  // Κάθε άνοιγμα ξεκινά από την αποθηκευμένη δόση (ή κενό σε προσθήκη).
+  useEffect(() => {
+    if (open) setFields(initialInstallmentFields(mode, editing));
+  }, [open, mode, editing]);
+
+  const submission = useFormSubmission({
+    canSubmit: true,
+    validate: () => validateInstallment(fields, editing !== undefined, notesOnly, t),
+    submit: async () => {
+      const change = buildInstallmentChange(fields, editing, notesOnly);
+      unwrapActionResult(await applyInstallmentChange(change, { onAdd, onUpdate }));
+      return change;
+    },
+    onSuccess: (change) => {
+      success(t(installmentSuccessKey(change)));
+      onOpenChange(false);
+    },
+    errorFallback: t('errors.installmentSaveFailed'),
+  });
+
+  return { fields, update, notesOnly, submission };
+}
+
+function useDeleteInstallment({ installment, onDelete, onOpenChange }: EditInstallmentDialogProps, t: Translate) {
+  const { success, error: notifyError } = useNotifications();
+  const { isRunning: deleting, run } = useInFlightAction();
+
+  // Μη-φόρμα ενέργεια: ο διάλογος επιβεβαίωσης κλείνει με το κλικ (Radix), άρα το σφάλμα πάει σε toast.
+  const confirmDelete = useCallback(async () => {
+    if (!installment) return;
+    try {
+      await run(async () => unwrapActionResult(await onDelete(installment.index)));
+      success(t('installments.deleteSuccess'));
+      onOpenChange(false);
+    } catch (caught) {
+      notifyError(getErrorMessage(caught, t('errors.installmentDeleteFailed')));
+    }
+  }, [installment, onDelete, onOpenChange, run, success, notifyError, t]);
+
+  return { deleting, confirmDelete };
+}
+
+/** Διαγράφεται μόνο δόση πλάνου σε πρόχειρο/διαπραγμάτευση που δεν έχει εξοφληθεί καθόλου. */
+function isDeletable(planStatus: PaymentPlanStatus, installment: Installment): boolean {
+  return (planStatus === 'negotiation' || planStatus === 'draft') && installment.paidAmount === 0;
+}
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function EditInstallmentDialog({
-  open,
-  onOpenChange,
-  mode,
-  planStatus,
-  installment,
-  totalInstallments,
-  maxAmount,
-  planTotalAmount: _planTotalAmount,
-  onAdd,
-  onUpdate,
-  onDelete,
-}: EditInstallmentDialogProps) {
-  const colors = useSemanticColors();
+function DeleteInstallmentButton({ busy, onClick, t }: { busy: boolean; onClick: () => void; t: Translate }) {
+  return (
+    <Button variant="destructive" size="sm" onClick={onClick} disabled={busy}>
+      <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden />
+      {t('installments.deleteInstallment')}
+    </Button>
+  );
+}
+
+function ConfirmInstallmentDelete({ open, onOpenChange, onConfirm, loading, t }: {
+  open: boolean; onOpenChange: (open: boolean) => void; onConfirm: () => Promise<void>; loading: boolean; t: Translate;
+}) {
+  return (
+    <DeleteConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('installments.deleteInstallment')}
+      description={t('installments.confirmDelete')}
+      confirmText={t('installments.deleteInstallment')}
+      cancelText={t('dialog.cancel')}
+      onConfirm={onConfirm}
+      loading={loading}
+    />
+  );
+}
+
+export function EditInstallmentDialog(props: EditInstallmentDialogProps) {
+  const { open, onOpenChange, mode, planStatus, installment, totalInstallments, maxAmount } = props;
   const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
-  const { success, error: notifyError } = useNotifications();
-
-  const isNotesOnly = planStatus === 'active';
-  const isDraftOrNeg = planStatus === 'negotiation' || planStatus === 'draft';
-
-  // Form state
-  const [label, setLabel] = useState('');
-  const [type, setType] = useState<InstallmentType>('custom');
-  // ADR-706: number models, 0 = "not entered" (rendered blank).
-  const [amount, setAmount] = useState(0);
-  const [percentage, setPercentage] = useState(0);
-  const [dueDate, setDueDate] = useState('');
-  const [notes, setNotes] = useState('');
-  const [insertAtIndex, setInsertAtIndex] = useState<string>('end');
-  const [submitting, setSubmitting] = useState(false);
+  const { fields, update, notesOnly, submission } = useEditInstallmentForm(props, t);
+  const { deleting, confirmDelete } = useDeleteInstallment(props, t);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-
-  // Reset form when dialog opens
-  useEffect(() => {
-    if (!open) return;
-
-    if (mode === 'edit' && installment) {
-      setLabel(installment.label);
-      setType(installment.type);
-      setAmount(installment.amount);
-      setPercentage(installment.percentage);
-      setDueDate(installment.dueDate.split('T')[0]);
-      setNotes(installment.notes ?? '');
-    } else {
-      setLabel('');
-      setType('custom');
-      setAmount(0);
-      setPercentage(0);
-      setDueDate('');
-      setNotes('');
-      setInsertAtIndex('end');
-    }
-  }, [open, mode, installment]);
-
-  // Submit handler
-  const handleSubmit = useCallback(async () => {
-    if (mode === 'edit' && installment) {
-      // Edit mode
-      if (isNotesOnly) {
-        // Active plan: only notes
-        setSubmitting(true);
-        const result = await onUpdate(installment.index, { notes: notes || undefined });
-        setSubmitting(false);
-
-        if (result.success) {
-          success(t('installments.updateSuccess'));
-          onOpenChange(false);
-        } else {
-          notifyError(result.error ?? 'Error');
-        }
-        return;
-      }
-
-      // Draft/negotiation: full edit
-      if (amount <= 0) {
-        notifyError(t('errors.invalidAmount'));
-        return;
-      }
-
-      const updates: UpdateInstallmentInput = {
-        label: label || undefined,
-        amount,
-        // A blank percentage stays "unset", exactly as the parseFloat/NaN
-        // branch it replaces did — 0 is not sent as a real 0%.
-        percentage: percentage || undefined,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        notes: notes || undefined,
-      };
-
-      setSubmitting(true);
-      const result = await onUpdate(installment.index, updates);
-      setSubmitting(false);
-
-      if (result.success) {
-        success(t('installments.updateSuccess'));
-        onOpenChange(false);
-      } else {
-        notifyError(result.error ?? 'Error');
-      }
-    } else {
-      // Add mode
-      if (!label.trim()) {
-        notifyError(t('errors.invalidLabel'));
-        return;
-      }
-      if (amount <= 0) {
-        notifyError(t('errors.invalidAmount'));
-        return;
-      }
-      if (!dueDate) {
-        notifyError(t('errors.invalidDueDate'));
-        return;
-      }
-
-      const input: CreateInstallmentInput = {
-        label: label.trim(),
-        type,
-        amount,
-        percentage,
-        dueDate: new Date(dueDate).toISOString(),
-        notes: notes || undefined,
-      };
-
-      const idx = insertAtIndex === 'end' ? undefined : parseInt(insertAtIndex, 10);
-
-      setSubmitting(true);
-      const result = await onAdd(input, idx);
-      setSubmitting(false);
-
-      if (result.success) {
-        success(t('installments.addSuccess'));
-        onOpenChange(false);
-      } else {
-        notifyError(result.error ?? 'Error');
-      }
-    }
-  }, [mode, installment, isNotesOnly, label, type, amount, percentage, dueDate, notes, insertAtIndex, onAdd, onUpdate, onOpenChange, t, success, notifyError]);
-
-  // Delete handler
-  const handleDelete = useCallback(async () => {
-    if (!installment) return;
-
-    setSubmitting(true);
-    const result = await onDelete(installment.index);
-    setSubmitting(false);
-    setDeleteConfirmOpen(false);
-
-    if (result.success) {
-      success(t('installments.deleteSuccess'));
-      onOpenChange(false);
-    } else {
-      notifyError(result.error ?? 'Error');
-    }
-  }, [installment, onDelete, onOpenChange, t, success, notifyError]);
-
-  const canDelete =
-    mode === 'edit' &&
-    installment &&
-    isDraftOrNeg &&
-    installment.paidAmount === 0;
-
-  const dialogTitle = mode === 'add'
-    ? t('installments.addInstallment')
-    : t('installments.editInstallment');
+  const busy = submission.submitting || deleting;
+  const canDelete = mode === 'edit' && installment !== undefined && isDeletable(planStatus, installment);
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
-            {isNotesOnly && mode === 'edit' && (
-              <DialogDescription>
-                {t('installments.notesOnlyWarning')}
-              </DialogDescription>
-            )}
-          </DialogHeader>
+      <FormDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={mode === 'add' ? t('installments.addInstallment') : t('installments.editInstallment')}
+        description={notesOnly && mode === 'edit' ? t('installments.notesOnlyWarning') : undefined}
+        contentClassName="sm:max-w-md"
+        submission={submission}
+        submitLabel={mode === 'add' ? t('installments.addInstallment') : t('dialog.confirm')}
+        pendingLabel={t('dialog.saving')}
+        cancelLabel={t('dialog.cancel')}
+        submitDisabled={deleting}
+        secondaryAction={canDelete ? <DeleteInstallmentButton busy={busy} onClick={() => setDeleteConfirmOpen(true)} t={t} /> : undefined}
+      >
+        <fieldset className="space-y-4" disabled={busy}>
+          <EditInstallmentFields fields={fields} update={update} t={t} notesOnly={notesOnly} insertChoices={mode === 'add' ? totalInstallments : 0} maxAmount={maxAmount} />
+        </fieldset>
+      </FormDialog>
 
-          <fieldset className="space-y-4" disabled={submitting}>
-            {/* Label */}
-            {!isNotesOnly && (
-              <div className="space-y-1">
-                <Label htmlFor="inst-label">
-                  {t('labels.dueDate')}
-                </Label>
-                <Input
-                  id="inst-label"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  placeholder={t('installments.labelPlaceholder')}
-                />
-              </div>
-            )}
-
-            {/* Type */}
-            {!isNotesOnly && (
-              <div className="space-y-1">
-                <Label>{t('installments.typeLabel')}</Label>
-                <Select value={type} onValueChange={(v) => setType(v as InstallmentType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INSTALLMENT_TYPES.map((iType) => (
-                      <SelectItem key={iType} value={iType}>
-                        {t(`installmentType.${iType}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Amount + Percentage */}
-            {!isNotesOnly && (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="inst-amount">
-                      {t('labels.amount')} (€)
-                    </Label>
-                    <NumericField
-                      id="inst-amount"
-                      min={0.01}
-                      step={0.01}
-                      value={amount}
-                      onValueChange={setAmount}
-                      blankValue={0}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="inst-pct">%</Label>
-                    <NumericField
-                      id="inst-pct"
-                      min={0}
-                      max={100}
-                      step={0.01}
-                      value={percentage}
-                      onValueChange={setPercentage}
-                      blankValue={0}
-                    />
-                  </div>
-                </div>
-                {/* Max amount hint + validation warning */}
-                {maxAmount !== undefined && maxAmount > 0 && (
-                  <p className={cn("text-xs", colors.text.muted)}>
-                    {t('installments.maxAmountHint', {
-                      max: new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(maxAmount),
-                    })}
-                  </p>
-                )}
-                {maxAmount !== undefined && amount > maxAmount && (
-                  <p className="text-xs text-destructive font-medium">
-                    {t('installments.amountExceedsMax')}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Due Date */}
-            {!isNotesOnly && (
-              <div className="space-y-1">
-                <Label htmlFor="inst-due">
-                  {t('labels.dueDate')}
-                </Label>
-                <Input
-                  id="inst-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-            )}
-
-            {/* Insert position (add mode only) */}
-            {mode === 'add' && totalInstallments > 0 && (
-              <div className="space-y-1">
-                <Label>
-                  {t('installments.insertPosition')}
-                </Label>
-                <Select value={insertAtIndex} onValueChange={setInsertAtIndex}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="end">
-                      {t('installments.atEnd')}
-                    </SelectItem>
-                    {Array.from({ length: totalInstallments }, (_, i) => (
-                      <SelectItem key={i} value={i.toString()}>
-                        {t('installments.beforeInstallment', {
-                          index: (i + 1).toString(),
-                        })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="space-y-1">
-              <Label htmlFor="inst-notes">
-                {t('labels.notes')}
-              </Label>
-              <Textarea
-                id="inst-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-            </div>
-          </fieldset>
-
-          <DialogFooter className="flex justify-between sm:justify-between">
-            {canDelete ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteConfirmOpen(true)}
-                disabled={submitting}
-              >
-                <Trash2 className="mr-1 h-3.5 w-3.5" />
-                {t('installments.deleteInstallment')}
-              </Button>
-            ) : (
-              <span />
-            )}
-            <span className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                {t('dialog.cancel')}
-              </Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === 'add'
-                  ? t('installments.addInstallment')
-                  : t('dialog.confirm')}
-              </Button>
-            </span>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t('installments.deleteInstallment')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('installments.confirmDelete')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('dialog.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('installments.deleteInstallment')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmInstallmentDelete open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} onConfirm={confirmDelete} loading={deleting} t={t} />
     </>
   );
 }

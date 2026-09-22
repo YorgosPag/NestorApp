@@ -43,7 +43,8 @@
       "paid": "Paid",
       "partial": "Partially Paid",
       "waived": "Waived"
-    }
+    },
+    "labelField": "Installment label"
   },
   "installmentType": {
     "reservation": "Reservation",
@@ -135,7 +136,10 @@
     "nextStep": "Next",
     "planTypeDescription": "Select payment plan type",
     "jointPlan": "Joint plan (single for all)",
-    "individualPlans": "Individual plans (one per owner)"
+    "individualPlans": "Individual plans (one per owner)",
+    "previousStep": "Back",
+    "taxRegime": "Tax regime",
+    "creating": "Creating…"
   },
   "dialog": {
     "title": "Record Payment",
@@ -146,7 +150,9 @@
     "receiptNumber": "Receipt Number",
     "confirm": "Record",
     "cancel": "Cancel",
-    "paymentRecorded": "Payment recorded"
+    "paymentRecorded": "Payment recorded",
+    "recording": "Recording…",
+    "saving": "Saving…"
   },
   "report": {
     "title": "Payment Report",
@@ -271,6 +277,8 @@
     "paymentFailed": "Failed to record payment",
     "invalidAmount": "Enter a valid amount",
     "invalidLabel": "Enter a label",
-    "invalidDueDate": "Enter a due date"
+    "invalidDueDate": "Enter a due date",
+    "installmentSaveFailed": "Saving the installment failed",
+    "installmentDeleteFailed": "Deleting the installment failed"
   }
 }

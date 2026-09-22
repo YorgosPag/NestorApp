@@ -1,7 +1,6 @@
 'use client';
 
-import { toast } from 'sonner';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
 import { AwardReasonDialog } from '@/subapps/procurement/components/AwardReasonDialog';
 import { QuoteRevisionDetectedDialog } from '@/subapps/procurement/components/QuoteRevisionDetectedDialog';
 import { ExpiredAwardWarningDialog } from '@/subapps/procurement/components/ExpiredAwardWarningDialog';
@@ -45,7 +44,6 @@ interface RfqDetailDialogsProps {
 }
 
 export function RfqDetailDialogs(p: RfqDetailDialogsProps) {
-  const { t } = useTranslation('quotes');
   return (
     <>
       <AwardReasonDialog
@@ -91,12 +89,8 @@ export function RfqDetailDialogs(p: RfqDetailDialogsProps) {
           senderName=""
           onSend={async (to, subject, body) => {
             if (!p.renewalQuote) return;
-            const res = await fetch(`/api/quotes/${p.renewalQuote.id}/request-renewal`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to, subject, body }),
-            });
-            if (!res.ok) { toast.error(t('quotes.errors.updateFailed')); return; }
+            // ADR-598 «(θ)»: `fetchJson` ΠΕΤΑ σε αποτυχία ⇒ ο διάλογος δείχνει το σφάλμα και μένει ανοιχτός.
+            await fetchJson(`/api/quotes/${p.renewalQuote.id}/request-renewal`, jsonRequest('POST', { to, subject, body }));
             p.setRenewalQuoteId(null);
           }}
           onCancel={() => p.setRenewalQuoteId(null)}

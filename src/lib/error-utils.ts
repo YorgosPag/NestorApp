@@ -12,16 +12,28 @@
  * and falls back to a configurable default.
  */
 export function getErrorMessage(error: unknown, fallback = 'Unknown error'): string {
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message;
+  return readMessage(error) ?? fallback;
+}
+
+/**
+ * ADR-598 «(θ)»: ένα **κενό** μήνυμα δεν είναι μήνυμα — ήταν κενό `role="alert"` στην οθόνη
+ * (π.χ. `new Error()` ή `{ success:false, error:'' }`). Κενό/whitespace ⇒ πέφτει στο `fallback`.
+ */
+function readMessage(error: unknown): string | null {
+  if (typeof error === 'string') return nonBlank(error);
+  if (error instanceof Error) return nonBlank(error.message);
 
   if (error !== null && typeof error === 'object') {
     const obj = error as Record<string, unknown>;
-    if (typeof obj.message === 'string') return obj.message;
-    if (typeof obj.error === 'string') return obj.error;
+    if (typeof obj.message === 'string') return nonBlank(obj.message);
+    if (typeof obj.error === 'string') return nonBlank(obj.error);
   }
 
-  return fallback;
+  return null;
+}
+
+function nonBlank(text: string): string | null {
+  return text.trim() === '' ? null : text;
 }
 
 /**

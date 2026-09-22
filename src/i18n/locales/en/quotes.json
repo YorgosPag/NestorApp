@@ -350,7 +350,9 @@
     },
     "errors": {
       "loadFailed": "Failed to load RFQs",
-      "createFailed": "Failed to create RFQ"
+      "createFailed": "Failed to create RFQ",
+      "addLineFailed": "Adding the line failed",
+      "deleteLineFailed": "Deleting the line failed"
     },
     "project": "Project",
     "quoteCount": "Quotes",
@@ -715,7 +717,8 @@
         "bodyDefault": "Dear {vendorName},\n\nYour quote {quoteNumber} valid until {originalValidUntil} has expired.\n\nIs the price of {total} € still valid? If so, please send a renewal. If not, please send a revised quote.\n\nKind regards,\n{senderName}",
         "sendButton": "Send email",
         "cancelButton": "Cancel",
-        "sendingButton": "Sending..."
+        "sendingButton": "Sending...",
+        "sendFailed": "Sending the renewal request failed"
       },
       "stats": {
         "expiringSoonCard": "Expiring soon"
@@ -872,8 +875,11 @@
       },
       "ccSelf": "Send cc to myself",
       "errors": {
-        "invalidEmail": "Invalid email"
-      }
+        "invalidEmail": "Invalid email",
+        "sendFailed": "Sending the invitations failed",
+        "partialFailed": "{failed} of {total} invitations failed. The ones that were sent have been removed from the selection; retry for the rest."
+      },
+      "removeAdhoc": "Remove {email}"
     },
     "lineEdit": {
       "error": {
@@ -918,7 +924,9 @@
       "queueFailed": "Could not send. Try again.",
       "summaryToast": "{count} changes while you were offline.",
       "summaryAction": "View history"
-    }
+    },
+    "addingLine": "Adding…",
+    "deleteLine": "Delete line: {description}"
   },
   "trades": {
     "title": "Trades",

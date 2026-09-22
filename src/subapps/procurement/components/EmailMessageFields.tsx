@@ -11,11 +11,17 @@
  * δίδυμα. Εδώ η σύνδεση γίνεται από το `FormField` (id μέσω `useId`) — δεν ξεχνιέται.
  *
  * Δέχεται **κείμενο, όχι κλειδιά** (δόγμα `hinted-field`): κάθε `t()` μένει στον γονέα.
+ *
+ * ⌨️ ADR-598 «(θ)» — πλήκτρα composer (SSoT `ui/form/form-keyboard`): Enter στο θέμα ⇒ στο
+ * κείμενο (ΟΧΙ αποστολή, όπως Gmail/Outlook)· Ctrl/⌘+Enter στο κείμενο ⇒ υποβολή της φόρμας.
  */
+
+import { useRef } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/ui/form/FormComponents';
+import { focusNextOnEnter, submitOnModEnter } from '@/components/ui/form/form-keyboard';
 
 export interface EmailMessageFieldsProps {
   readonly subjectLabel: string;
@@ -38,19 +44,22 @@ export function EmailMessageFields({
   bodyRows = 6,
   disabled = false,
 }: EmailMessageFieldsProps) {
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="space-y-2">
       <FormField label={subjectLabel}>
         {(id) => (
-          <Input id={id} value={subject} onChange={(e) => onSubjectChange(e.target.value)} disabled={disabled} className="text-sm" />
+          <Input id={id} value={subject} onChange={(e) => onSubjectChange(e.target.value)} onKeyDown={focusNextOnEnter(bodyRef)} disabled={disabled} className="text-sm" />
         )}
       </FormField>
       <FormField label={bodyLabel}>
         {(id) => (
           <Textarea
             id={id}
+            ref={bodyRef}
             value={body}
             onChange={(e) => onBodyChange(e.target.value)}
+            onKeyDown={submitOnModEnter}
             rows={bodyRows}
             disabled={disabled}
             className="resize-none font-mono text-sm"

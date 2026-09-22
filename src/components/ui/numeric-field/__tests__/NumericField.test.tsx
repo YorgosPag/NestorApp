@@ -348,3 +348,17 @@ describe('NumericField — blankValue (empty-looking model value)', () => {
     expect(field()).toHaveAttribute('aria-valuenow', '1');
   });
 });
+
+// ADR-598 «(θ)»: με `label` η ετικέτα ονομάζει ΠΑΝΤΑ το πεδίο — και χωρίς ρητό `id`.
+describe('NumericField — label names the field', () => {
+  it('label χωρίς id ⇒ το πεδίο βρίσκεται από την ετικέτα του', () => {
+    render(<NumericField label="Ποσό" value={0} onValueChange={() => undefined} />);
+    expect(screen.getByLabelText('Ποσό')).toBe(field());
+  });
+
+  it('ρητό id ⇒ σεβαστό', () => {
+    render(<NumericField id="explicit" label="Ποσό" value={0} onValueChange={() => undefined} />);
+    expect(field()).toHaveAttribute('id', 'explicit');
+    expect(screen.getByLabelText('Ποσό')).toBe(field());
+  });
+});

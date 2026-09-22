@@ -17,7 +17,10 @@
  *   save that resolves after the card closes does not warn or leak.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
+
+import { useMountedRef } from '@/hooks/useMountedRef';
+import { useSingleFlight } from '@/hooks/useSingleFlight';
 
 export interface UseEntrySubmitOptions<TValue> {
   /** Performs the write. Rejections propagate to `onError`, never swallowed. */
@@ -37,44 +40,29 @@ export interface UseEntrySubmitResult<TValue> {
   readonly submit: (value: TValue) => Promise<void>;
 }
 
+/** ADR-598 «(θ)»: the lock lives once, in `useSingleFlight`; this is its value-taking face. */
 export function useEntrySubmit<TValue>({
   onSubmit,
   isValid,
   onSubmitted,
   onError,
 }: UseEntrySubmitOptions<TValue>): UseEntrySubmitResult<TValue> {
-  const [submitting, setSubmitting] = useState(false);
-  /** Read synchronously — `submitting` state would still be stale on a double click. */
-  const inFlight = useRef(false);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  const { pending, run } = useSingleFlight();
+  const mounted = useMountedRef();
 
   const submit = useCallback(
     async (value: TValue) => {
-      if (inFlight.current) return;
       if (isValid && !isValid(value)) return;
-
-      inFlight.current = true;
-      setSubmitting(true);
       try {
-        await onSubmit(value);
-        if (mounted.current) onSubmitted?.();
+        const outcome = await run(() => onSubmit(value));
+        if (outcome.ran && mounted.current) onSubmitted?.();
       } catch (error: unknown) {
         if (!onError) throw error;
         onError(error);
-      } finally {
-        inFlight.current = false;
-        if (mounted.current) setSubmitting(false);
       }
     },
-    [isValid, onError, onSubmit, onSubmitted],
+    [isValid, onError, onSubmit, onSubmitted, run, mounted],
   );
 
-  return { submitting, submit };
+  return { submitting: pending, submit };
 }
