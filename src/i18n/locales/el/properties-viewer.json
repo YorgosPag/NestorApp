@@ -303,7 +303,7 @@
   },
   "trash": {
     "viewTrash": "Κάδος Ανακύκλωσης",
-    "backToProperties": "Επιστροφή στα Ακίνητα",
+    "backToProperties": "Πίσω στα Ακίνητα",
     "autoDeleteWarning": "Τα αντικείμενα στον κάδο διαγράφονται οριστικά μετά από 30 ημέρες.",
     "restoreSuccess": "{count, plural, one {Το ακίνητο επαναφέρθηκε.} other {# ακίνητα επαναφέρθηκαν.}}",
     "restoreFailed": "Η επαναφορά απέτυχε. Δοκιμάστε ξανά.",
