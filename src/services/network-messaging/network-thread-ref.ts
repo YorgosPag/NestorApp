@@ -124,3 +124,36 @@ export function networkRevisionRef(
 ): DocumentReference {
   return adminDb.collection(COLLECTIONS.NETWORK_MESSAGE_REVISIONS).doc(revisionId);
 }
+
+/**
+ * `network_inbox/{uid}/network_inbox_unread/{threadId}` — **μία γραμμή ανά νήμα με αδιάβαστο** (ADR-867 §4.5 · Β10).
+ *
+ * 🔑 Η γραμμή **υπάρχει ⇔** η θέση του ανθρώπου μετρά ως αδιάβαστη (`seatCountsAsUnread`)· το badge «Μηνύματα»
+ * είναι το **πλήθος** τους — κανένας μετρητής, άρα τίποτα που να αποκλίνει. Είναι **προβολή του ακροατηρίου**:
+ * γράφει **μόνο** ο `thread-writer.ts` (CHECK 3.89 Κ3). Ανήκει στο **πρόσωπο** — κανένα `companyId`: ο άξονας
+ * είναι η διαδρομή (`network_inbox/{uid}`), που την επιβάλλει ο κανόνας `isOwner(uid)`.
+ */
+export function networkInboxRowRef(
+  adminDb: AdminFirestore,
+  uid: string,
+  threadId: string,
+): DocumentReference {
+  return networkInboxRows(adminDb, uid).doc(threadId);
+}
+
+/** `network_inbox/{uid}/network_inbox_unread` — όλες οι γραμμές ενός ανθρώπου (συμφιλίωση · μετανάστευση). */
+export function networkInboxRows(adminDb: AdminFirestore, uid: string): CollectionReference {
+  return adminDb
+    .collection(COLLECTIONS.NETWORK_INBOX)
+    .doc(uid)
+    .collection(SUBCOLLECTIONS.NETWORK_INBOX_UNREAD);
+}
+
+/**
+ * **ΟΛΕΣ οι γραμμές αδιάβαστων, ΟΛΩΝ των ανθρώπων** — collection group, **μόνο** για τη συμφιλίωση (ADR-867 §4.5 Β10):
+ * η αναφορά απόκλισης χρειάζεται και τις **ορφανές** γραμμές, που κανένα ακροατήριο δεν θα έδειχνε.
+ * ⚠️ Μόνο **ανάγνωση**· χωρίς φίλτρο ⇒ κανένας σύνθετος δείκτης.
+ */
+export function networkInboxUnreadGroup(adminDb: AdminFirestore): Query {
+  return adminDb.collectionGroup(SUBCOLLECTIONS.NETWORK_INBOX_UNREAD);
+}

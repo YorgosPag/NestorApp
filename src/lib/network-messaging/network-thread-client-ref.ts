@@ -50,3 +50,14 @@ export function clientRecentMessages(threadId: string, windowSize: number): Quer
     limit(windowSize),
   );
 }
+
+/**
+ * 🔢 **Οι γραμμές αδιάβαστων του ίδιου του αναγνώστη** (ADR-867 §4.5 · Β10) — `network_inbox/{uid}/network_inbox_unread`,
+ * με **οροφή**. Το badge είναι το πλήθος τους· `max` = πόσες χρειάζεται για να ξέρει ότι ξεπέρασε την οροφή του
+ * σήματος (99 ⇒ 100). ⚠️ **Χωρίς** `orderBy`/`where`: ένα ερώτημα χωρίς φίλτρο δεν χρειάζεται σύνθετο δείκτη.
+ */
+export function clientInboxUnreadRows(uid: string, max: number): Query {
+  // tenant-scope-exempt: ο άξονας είναι η ΔΙΑΔΡΟΜΗ, όχι πεδίο — `network_inbox/{uid}` ανήκει στο πρόσωπο (κανένα
+  // `companyId`) και ο κανόνας `isOwner(uid)` αρνείται λίστα σε κάθε άλλον (ADR-867 §4.5 · firestore.rules).
+  return query(collection(db, COLLECTIONS.NETWORK_INBOX, uid, SUBCOLLECTIONS.NETWORK_INBOX_UNREAD), limit(max));
+}

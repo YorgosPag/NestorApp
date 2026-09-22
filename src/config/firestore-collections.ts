@@ -402,6 +402,13 @@ export const COLLECTIONS = {
   NETWORK_AWAY: process.env.NEXT_PUBLIC_NETWORK_AWAY_COLLECTION || 'network_away',
 
   /**
+   * **ΤΟ ΚΟΥΤΙ ΑΔΙΑΒΑΣΤΩΝ ΤΟΥ ΑΝΘΡΩΠΟΥ** (ADR-867 §4.5 · Β10) — `network_inbox/{uid}`. Το ίδιο το έγγραφο
+   * **δεν έχει δεδομένα**· ζει μόνο ως γονέας της υποσυλλογής `network_inbox_unread` (μία γραμμή ανά νήμα με
+   * αδιάβαστο). Ανήκει στο **πρόσωπο** — χωρίς `companyId`, όπως το νήμα σχέσης.
+   */
+  NETWORK_INBOX: process.env.NEXT_PUBLIC_NETWORK_INBOX_COLLECTION || 'network_inbox',
+
+  /**
    * **Η ΠΡΟΣΚΛΗΣΗ — Ο,ΤΙ ΔΕΝ ΕΙΝΑΙ ΑΚΟΜΗ ΠΡΑΞΗ** (ADR-844).
    *
    * 🔴 **ΞΕΧΩΡΙΣΤΗ ΣΥΛΛΟΓΗ ΚΑΙ ΟΧΙ ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ ΣΤΟ `first_contacts`.** Η
@@ -1132,6 +1139,9 @@ export const SUBCOLLECTIONS = {
   // έγγραφο επειδή η Firestore δεν κρύβει πεδία: στο `network_audience` τα διάβαζε η ΑΛΛΗ πλευρά.
   NETWORK_THREAD_AUDIENCE_PRIVATE:
     process.env.NEXT_PUBLIC_NETWORK_THREAD_AUDIENCE_PRIVATE_SUBCOL || 'network_audience_private',
+  // 🔢 ADR-867 §4.5 Β10 — ΓΡΑΜΜΗ ΑΝΑ ΑΔΙΑΒΑΣΤΟ ΝΗΜΑ, κάτω από το κουτί του ανθρώπου. Υπάρχει ⇔ η θέση του
+  // μετρά ως αδιάβαστη· το badge «Μηνύματα» = πλήθος γραμμών. ⛔ Όχι σκέτο 'unread': ίδιος λόγος με τα από πάνω.
+  NETWORK_INBOX_UNREAD: process.env.NEXT_PUBLIC_NETWORK_INBOX_UNREAD_SUBCOL || 'network_inbox_unread',
 
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
@@ -1288,6 +1298,9 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
   NETWORK_THREAD_MESSAGES: 'NETWORK_THREADS',
   NETWORK_THREAD_AUDIENCE: 'NETWORK_THREADS',
   NETWORK_THREAD_AUDIENCE_PRIVATE: 'NETWORK_THREADS',
+
+  // Network inbox subcollection → NETWORK_INBOX (ADR-867 §4.5 Β10)
+  NETWORK_INBOX_UNREAD: 'NETWORK_INBOX',
 } as const;
 
 // ============================================================================

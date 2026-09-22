@@ -547,6 +547,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...networkServerOnlyMatrix(),
   },
   {
+    // 🔢 ADR-867 §4.5 (Β10) — **ΤΟ ΚΟΥΤΙ ΑΔΙΑΒΑΣΤΩΝ**. Το γονικό `network_inbox/{uid}` δεν έχει
+    // δεδομένα και είναι κλειστό σε όλους — **τέταρτος** καταναλωτής του ίδιου προτύπου. Η αξία ζει
+    // στην υποσυλλογή `network_inbox_unread` (λίστα **μόνο** ο ίδιος, γραφή κανείς)· τη φρουρούν οι
+    // άγκυρες Κ1-Κ3 της σουίτας, γιατί ο πίνακας των 35 μιλά μόνο για το γονικό έγγραφο.
+    collection: 'network_inbox',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/network-inbox.rules.test.ts',
+    ...networkServerOnlyMatrix(),
+  },
+  {
     // 💬 ADR-867 §4.1/§4.2 (Β4) — **ΤΟ ΝΗΜΑ**. Η **μόνη** συλλογή του αρχείου που κρίνει
     // την ανάγνωση από **υποσυλλογή**, και το `pattern` το λέει: `audience_gated`.
     //
