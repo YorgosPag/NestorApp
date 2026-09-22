@@ -14,6 +14,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { FirebaseAuthUser, SignInOutcome, SignUpData } from '@/auth/types/auth.types';
 import { SECOND_FACTOR_REQUIRED, SIGNED_IN } from './second-factor';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+import { syncServerSession } from './auth-context-session';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 import {
@@ -409,6 +410,14 @@ export function useAuthActions(params: UseAuthActionsParams) {
         permissions: readPermissionsClaim(idTokenResult.claims.permissions),
         mfaEnrolled: typeof idTokenResult.claims.mfaEnrolled === 'boolean' ? idTokenResult.claims.mfaEnrolled : prev.mfaEnrolled,
       } : prev);
+      // 🔴 **ΚΑΙ ΤΟ COOKIE ΑΚΟΛΟΥΘΕΙ** (ADR-853 §18, Ε-Γ). Ήταν **δύο** διαδρομές ανανέωσης με
+      //    **διαφορετικό νόημα**: ο ακροατής (`use-claims-refresh.ts`) ανανέωνε token **και**
+      //    συνεδρία διακομιστή· αυτή εδώ μόνο το token. Δηλαδή όποιος καλούσε «ανανέωσε τώρα»
+      //    έβλεπε τα νέα claims στην **οθόνη** και ο διακομιστής απαντούσε με τα **παλιά** —
+      //    μετρημένο στην αποδοχή πρόσκλησης: το `/home` έστελνε τον νέο μας άνθρωπο στον
+      //    προσωπικό του χώρο, επειδή το cookie δεν ήξερε ακόμη το γραφείο.
+      //    Το `syncServerSession` κάνει **το ίδιο** `getIdToken(true)` — καμία δεύτερη σημασία.
+      await syncServerSession(auth.currentUser);
       logger.info('[AuthContext] Token refreshed successfully - new permissions loaded');
     } catch (error) {
       logger.error('[AuthContext] Token refresh failed', { error });

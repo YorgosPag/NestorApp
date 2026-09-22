@@ -492,28 +492,6 @@
       "title": "Λεπτομέρειες Σετ Δικαιωμάτων",
       "permissions": "Δικαιώματα"
     },
-    "roleNames": {
-      "admin": "Διαχειριστής",
-      "super_admin": "Υπερδιαχειριστής",
-      "company_admin": "Διαχειριστής Εταιρείας",
-      "project_manager": "Υπεύθυνος Έργου",
-      "architect": "Αρχιτέκτονας",
-      "engineer": "Μηχανικός",
-      "site_manager": "Επιστάτης Εργοταξίου",
-      "accountant": "Λογιστής",
-      "sales_agent": "Πωλητής",
-      "data_entry": "Εισαγωγή Δεδομένων",
-      "vendor": "Προμηθευτής",
-      "viewer": "Θεατής",
-      "internal_user": "Εσωτερικός",
-      "external_user": "Εξωτερικός"
-    },
-    "roleDescriptions": {
-      "super_admin": "Πλήρης πρόσβαση στο σύστημα — παράκαμψη όλων των ελέγχων δικαιωμάτων",
-      "company_admin": "Διαχειρίζεται ολόκληρο τον οργανισμό",
-      "internal_user": "Εσωτερικός χρήστης οργανισμού",
-      "external_user": "Εξωτερικός χρήστης με περιορισμένη πρόσβαση"
-    },
     "definitions": {
       "dxf_editor": {
         "name": "DXF Editor",

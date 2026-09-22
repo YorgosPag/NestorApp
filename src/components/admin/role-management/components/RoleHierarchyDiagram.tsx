@@ -83,7 +83,7 @@ function TreeNode({ node }: { node: HierarchyNode }) {
           L{node.level}
         </Badge>
         <span className="font-medium text-sm">
-          {t(`roleManagement.roleNames.${node.roleId}`)}
+          {t(`common:globalRoles.${node.roleId}`)}
         </span>
         <span className={cn("text-[10px]", colors.text.muted)}>
           ({permCount} {t('roleManagement.hierarchy.permsSuffix')})
@@ -126,7 +126,7 @@ export function RoleHierarchyDiagram() {
               L{HIERARCHY.level}
             </Badge>
             <span className="font-medium text-sm">
-              {t(`roleManagement.roleNames.${HIERARCHY.roleId}`)}
+              {t(`common:globalRoles.${HIERARCHY.roleId}`)}
             </span>
             <span className={cn("text-[10px]", colors.text.muted)}>
               ({t('roleManagement.hierarchy.allPermsLabel')})

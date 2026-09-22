@@ -280,7 +280,7 @@ export function UsersTab({ canEdit, refreshNonce = 0 }: UsersTabProps) {
             <SelectItem value="all">{t('roleManagement.usersTab.allRoles')}</SelectItem>
             {GLOBAL_ROLES.map((role) => (
               <SelectItem key={role} value={role}>
-                {t(`roleManagement.roleNames.${role}`)}
+                {t(`common:globalRoles.${role}`)}
               </SelectItem>
             ))}
           </SelectContent>

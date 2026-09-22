@@ -231,7 +231,7 @@ export function UserTable({
                 {/* Global Role */}
                 <TableCell>
                   <Badge variant={ROLE_BADGE_VARIANT[companyUser.globalRole]}>
-                    {t(`roleManagement.roleNames.${companyUser.globalRole}`)}
+                    {t(`common:globalRoles.${companyUser.globalRole}`)}
                   </Badge>
                 </TableCell>
 

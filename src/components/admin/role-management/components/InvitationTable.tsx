@@ -155,7 +155,7 @@ function InvitationRow({ invitation, canManage, isBusy, onRevoke, onResend }: In
       <TableCell className="text-sm font-medium">{invitation.inviteeEmail}</TableCell>
 
       <TableCell className={cn('text-sm', colors.text.muted)}>
-        {t(`roleManagement.roleNames.${invitation.role}`)}
+        {t(`common:globalRoles.${invitation.role}`)}
       </TableCell>
 
       <TableCell>
