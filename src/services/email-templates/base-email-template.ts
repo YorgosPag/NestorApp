@@ -8,8 +8,9 @@
 
 import 'server-only';
 
+import { DEFAULT_COMPANY_LOGO, NESTOR_APP_LOGO, type EmailImageAsset } from '@/config/email-assets';
 import { PRODUCT_NAME } from '@/constants/product-identity';
-import { publicOrigin } from '@/lib/http/public-origin';
+import { emailAssetUrl } from '@/lib/http/public-origin';
 import { MAP_SEARCH_PROVIDER_BRANDS, MAP_SEARCH_PROVIDERS, MAP_SEARCH_URLS } from '@/lib/geo/map-links';
 
 // ============================================================================
@@ -118,9 +119,6 @@ interface BaseEmailParams {
   lang?: string;
 }
 
-/** Η διαδρομή του λογότυπου της **εφαρμογής** (όχι της εταιρείας) — ένα σημείο, όλα τα email. */
-export const NESTOR_APP_LOGO_PATH = '/images/nestor-app-logo.jpg';
-
 /**
  * Wraps content in the branded Pagonis Energo email template.
  *
@@ -149,11 +147,13 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
     lang,
   } = params;
 
-  const baseUrl = getAppBaseUrl();
-  const companyLogoUrl = companyLogoUrlOverride && companyLogoUrlOverride.trim().length > 0
-    ? companyLogoUrlOverride
-    : `${baseUrl}/images/pagonis-energo-logo.png`;
-  const appLogoUrl = `${baseUrl}${NESTOR_APP_LOGO_PATH}`;
+  // ADR-853 §19 (Θ2/Θ3) — τα δυαδικά ρωτούν **άλλη** διεύθυνση από τους συνδέσμους, και
+  // όταν εκείνη δεν είναι δημόσια, η `<img>` **δεν γράφεται καθόλου**.
+  // ⚠️ Το λογότυπο του ενοίκου είναι δεδομένα πελάτη (απόλυτο URL Storage) — προηγείται.
+  const companyLogoSrc = companyLogoUrlOverride && companyLogoUrlOverride.trim().length > 0
+    ? companyLogoUrlOverride.trim()
+    : emailAssetUrl(DEFAULT_COMPANY_LOGO.publicPath);
+  const appLogoSrc = emailAssetUrl(NESTOR_APP_LOGO.publicPath);
   // ADR-857 — από τη ρίζα. ⚠️ Το `companyName ?? appName` παρακάτω **μένει**: η εταιρεία του
   // πελάτη είναι **δεδομένα ενοίκου** και προηγείται· το όνομα του προϊόντος είναι η εφεδρεία.
   const appName = PRODUCT_NAME;
@@ -216,7 +216,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
           <!-- HEADER — Company identity (logo + name + contacts) -->
           <tr>
             <td style="background-color:${BRAND.navy};padding:28px 32px 24px;text-align:center;">
-              <img src="${escapeHtml(companyLogoUrl)}" alt="${escapeHtml(companyName ?? appName)}" width="120" height="120" style="display:block;margin:0 auto 12px;max-width:120px;height:auto;border-radius:12px;" />
+              ${renderEmailImage(companyLogoSrc, companyName ?? appName, DEFAULT_COMPANY_LOGO, 'display:block;margin:0 auto 12px;max-width:120px;height:auto;border-radius:12px;')}
               ${companyName ? `<p style="margin:0;font-size:20px;font-weight:700;color:${BRAND.white};line-height:1.3;">${escapeHtml(companyName)}</p>` : ''}
               ${headerSubtitle ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.navySoft};letter-spacing:0.04em;">${escapeHtml(headerSubtitle)}</p>` : ''}
               ${headerContacts}
@@ -243,8 +243,8 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
                (constants/platform-operator.ts) — αναθεωρεί το ADR-857 §3.Β. -->
           <tr>
             <td style="padding:16px 32px 20px;text-align:center;">
-              <!--[if !mso]><!-- Fallback: show logo only when hosted on production -->
-              <img src="${escapeHtml(appLogoUrl)}" alt="" width="28" height="28" style="display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;border:0;" />
+              <!--[if !mso]><!-- ADR-853 §19 Θ3: το λογότυπο εμφανίζεται **μόνο** όταν υπάρχει δημόσια διεύθυνση assets -->
+              ${renderEmailImage(appLogoSrc, '', NESTOR_APP_LOGO, 'display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;border:0;')}
               <!--<![endif]-->
               <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;font-weight:600;">
                 ${appName}
@@ -408,19 +408,28 @@ function renderEmailProviderLinks(emailValue: string, linkStyle: string): string
 export { BRAND };
 
 /**
- * Η δημόσια διεύθυνση για τα λογότυπα — από το **ΕΝΑ** SSoT (`publicOrigin`).
+ * Μία `<img>` email — ή **απολύτως τίποτα**, όταν δεν υπάρχει δημόσια διεύθυνση assets.
  *
- * 🔴 **Ήταν δεύτερος αναγνώστης του `NEXT_PUBLIC_APP_URL`, με εφεδρεία το
- * `https://nestor-app.vercel.app`** — νεκρό domain από το πάγωμα του Vercel
- * (2026-05-09). Χειρότερο από σπασμένη εικόνα: ένα **ελεύθερο** υποdomain τρίτου
- * μπορεί να το διεκδικήσει οποιοσδήποτε, και τότε **ξένος** σερβίρει εικόνες μέσα
- * στα email μας *(subdomain takeover)*.
+ * 🔴 **ΤΙ ΗΤΑΝ ΠΡΙΝ, ΚΑΙ ΓΙΑΤΙ ΗΤΑΝ ΧΕΙΡΟΤΕΡΟ ΑΠΟ «ΣΠΑΣΜΕΝΗ ΕΙΚΟΝΑ»** *(ADR-853 §19.3)*:
+ * εδώ ζούσε `getAppBaseUrl()` που επέστρεφε `publicOrigin() ?? ''`, και το πρότυπο συνένωνε
+ * `` `${baseUrl}/images/…` ``. Το `''` **δεν είναι άρνηση — είναι πρόθεμα**: χωρίς ρύθμιση
+ * το μήνυμα έφευγε με `src="/images/nestor-app-logo.jpg"`, δηλαδή **σχετική** διαδρομή μέσα
+ * σε έγγραφο που ζει στο `mail.google.com` ⇒ αίτημα προς **ξένο** origin. Το σχόλιο έλεγε
+ * «σπασμένη εικόνα από εμάς, ποτέ εικόνα από άλλον» — η πρόθεση σωστή, η υλοποίηση σιωπηλά
+ * το αντίθετο.
  *
- * ⚠️ Χωρίς ρύθμιση επιστρέφει `''` ⇒ σχετική διαδρομή εικόνας, που το πρόγραμμα
- * email απλώς δεν φορτώνει. Σπασμένη εικόνα από **εμάς**, ποτέ εικόνα από **άλλον**.
+ * ⛔ Οι διαστάσεις έρχονται από τον **κατάλογο**, όχι από το σημείο κλήσης: `width`/`height`
+ * κρατούν τον χώρο όσο η εικόνα είναι μπλοκαρισμένη, και μια δεύτερη γραφή τους θα ήταν
+ * δεύτερη αλήθεια για το ίδιο αρχείο.
  */
-function getAppBaseUrl(): string {
-  return publicOrigin() ?? '';
+function renderEmailImage(
+  src: string | null,
+  alt: string,
+  asset: EmailImageAsset,
+  style: string,
+): string {
+  if (src === null) return '';
+  return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" width="${asset.renderWidth}" height="${asset.renderHeight}" style="${style}" />`;
 }
 
 /** Escape HTML special chars to prevent XSS in dynamic content */

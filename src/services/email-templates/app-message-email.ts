@@ -12,10 +12,11 @@ import 'server-only';
 
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { HumanLanguage } from '@/i18n/languages';
-import { publicUrl } from '@/lib/http/public-origin';
+import { NESTOR_APP_LOGO } from '@/config/email-assets';
+import { emailAssetUrl } from '@/lib/http/public-origin';
 
 import type { AppMessageWording } from './app-message-wording';
-import { BRAND, NESTOR_APP_LOGO_PATH, escapeHtml, wrapInBrandedTemplate } from './base-email-template';
+import { BRAND, escapeHtml, wrapInBrandedTemplate } from './base-email-template';
 import { renderShareCta } from './showcase-email-shared';
 
 /** Ένα τμήμα μηνύματος σε **μία** γλώσσα. `lang` δηλώνεται μόνο όταν διαφέρει από του εγγράφου. */
@@ -41,7 +42,9 @@ export function wrapInAppFrame(contentHtml: string, language: HumanLanguage): st
     // ADR-857 — το όνομα του **προϊόντος**, από τη ρίζα. Ήταν πεδίο `brand` ανά γλώσσα, δηλαδή
     // δομή που επέτρεπε απόκλιση· και είχε ήδη αποκλίνει (`ΝΕΣΤΩΡ` / `Nestor` / `Nestor App`).
     companyName: PRODUCT_NAME,
-    companyLogoUrl: publicUrl(NESTOR_APP_LOGO_PATH) ?? undefined,
+    // ADR-853 §19 Θ2 — τα δυαδικά από τη **διεύθυνση assets**, ποτέ από τη διεύθυνση συνδέσμων:
+    // στο dev εκείνη είναι localhost, όπου ο proxy εικόνων της Google δεν φτάνει ποτέ.
+    companyLogoUrl: emailAssetUrl(NESTOR_APP_LOGO.publicPath) ?? undefined,
     lang: language,
   });
 }
