@@ -65,12 +65,20 @@ export async function syncUserProfileToFirestore(
       // ADR-660 §6: η κατάσταση είναι της **ταυτότητας** — `active` για όλους. Το «περιμένει
       // έγκριση για χώρο» ζει στο αίτημα ένταξης (`workspace_access_requests`), που το ανοίγει
       // ο διακομιστής (`ensureIdentityRecord`) — ποτέ ο πελάτης.
-      const newProfile: UserProfileDocument = {
+      // 🔴 **ΤΟ ΟΝΟΜΑ ΔΕΝ ΕΙΝΑΙ ΔΙΚΟ ΤΟΥ ΠΕΔΙΟ — ΚΑΙ ΓΙ' ΑΥΤΟ ΔΕΝ ΤΟ ΔΗΛΩΝΕΙ** (ADR-834 §6.6).
+      //
+      // Μέχρι 2026-09-22 έγραφε ρητά `givenName: null` / `familyName: null`. Σε **κάθε νέο**
+      // λογαριασμό αυτό τρέχει **ταυτόχρονα** με τον γραφέα των ονομάτων (`saveProfileNames`,
+      // από την εγγραφή): ανάγνωση-μετά-γραφή, δύο πελατικές γραφές, και όποια προσγειωθεί
+      // δεύτερη κερδίζει ⇒ **κούρσα που καταπίνει το όνομα** (N.7.2 #2).
+      //
+      // 🔑 **Η απουσία κλειδιού ΔΕΝ είναι ισχυρισμός** — το `null` είναι. Με `merge: true`,
+      // ό,τι δεν δηλώνεται εδώ δεν πειράζεται, ανεξάρτητα από τη σειρά άφιξης. Οι αναγνώστες
+      // ήδη διαβάζουν αμυντικά (`?? ''` / `data?.givenName &&` / `ownerIdentityOf`).
+      const newProfile: Omit<UserProfileDocument, 'givenName' | 'familyName'> = {
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',
         displayName: firebaseUser.displayName ?? null,
-        givenName: null,
-        familyName: null,
         photoURL: firebaseUser.photoURL ?? null,
         companyId: typeof customClaims.companyId === 'string' ? customClaims.companyId : null,
         globalRole: typeof customClaims.globalRole === 'string' ? customClaims.globalRole : null,

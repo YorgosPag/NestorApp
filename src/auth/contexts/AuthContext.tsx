@@ -359,7 +359,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     sessionPhase,
     signIn: actions.signIn,
     signInWithGoogle: actions.signInWithGoogle,
-    signUp: actions.signUp,
+    /**
+     * 🔴 **ADR-834 §6.6** — η **τρίτη** διαδρομή του ονόματος, που έλειπε: η εγγραφή με
+     * email/κωδικό έγραφε το όνομα **μόνο** σε Firebase Auth + `localStorage`, και ο
+     * ολοκαίνουργιος χρήστης έβρισκε `givenName: null` στο `users/{uid}`.
+     *
+     * 🔑 **Ίδιος γραφέας, ίδιος κριτής, ίδιο σχήμα** με τις δύο από κάτω — καμία νέα έννοια:
+     * μόνο η έκβαση `declared` κουβαλά `names`, άρα «καμία δήλωση» **δεν μπορεί** να γραφτεί.
+     */
+    signUp: async (data: SignUpData) => {
+      const outcome = await actions.signUp(data);
+      if (outcome.kind === 'declared') {
+        await saveProfileNames(db, outcome.uid, outcome.names);
+      }
+    },
     signOut: async () => {
       await actions.signOut();
       try {

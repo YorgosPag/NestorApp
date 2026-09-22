@@ -185,7 +185,19 @@ export function useAuthActions(params: UseAuthActionsParams) {
       logger.info('[AuthContext] Google Sign-In successful');
     }), [attemptSignIn, auth]);
 
-  const signUp = useCallback(async (data: SignUpData): Promise<void> => {
+  /**
+   * 🔴 **ADR-834 §6.6 — ΕΠΙΣΤΡΕΦΕΙ ΕΚΒΑΣΗ, ΟΠΩΣ ΟΙ ΑΛΛΕΣ ΔΥΟ ΔΙΑΔΡΟΜΕΣ ΤΟΥ ΟΝΟΜΑΤΟΣ.**
+   *
+   * Η φόρμα εγγραφής ζητά όνομα **και** επώνυμο (`useAuthFormState`, υποχρεωτικά), και
+   * μέχρι 2026-09-22 κατέληγαν **μόνο** σε Firebase Auth + `localStorage`: το
+   * `users/{uid}` γεννιόταν με `givenName: null` και ο κριτής ταυτότητας έστελνε τον
+   * **ολοκαίνουργιο** χρήστη στο `/profile` να ξαναγράψει όνομα που μόλις έδωσε.
+   *
+   * 🔑 Ο ΕΝΑΣ γραφέας του Firestore μένει στο `auth-context-profile.ts` (`saveProfileNames`):
+   * εδώ **δεν** αγγίζουμε Firestore — το αρχείο δεν το κάνει πουθενά. Ο συνθέτης
+   * (`AuthContext`) γράφει, όπως ακριβώς για το `updateUserProfile`/`completeProfile`.
+   */
+  const signUp = useCallback(async (data: SignUpData): Promise<ProfileNamesOutcome> => {
     try {
       setLoading(true);
       setError(null);
@@ -223,9 +235,20 @@ export function useAuthActions(params: UseAuthActionsParams) {
           photoURL: result.user.photoURL,
           profileIncomplete: false,
         });
+
+        logger.info('[AuthContext] Sign up successful');
+        // ⚠️ **Ο ΙΔΙΟΣ κριτής**, ποτέ δεύτερος κανόνας εδώ: η φόρμα τα απαιτεί ήδη, αλλά
+        //    ένα δικό μας `if` θα ήταν η απόκλιση του ADR-749 πάνω σε **γνωστό**
+        //    περιστατικό απώλειας ονόματος (2026-08-24).
+        const names: ProfileNames = { givenName, familyName };
+        return isNameDeclaration(names)
+          ? { kind: 'declared', uid: result.user.uid, displayName, names }
+          : { kind: 'unchanged', uid: result.user.uid, displayName };
       }
 
       logger.info('[AuthContext] Sign up successful');
+      // 🔑 Χωρίς `result.user` δεν υπάρχει **ούτε uid** — δεν υπάρχει τίποτα να γραφτεί.
+      return { kind: 'unchanged', uid: '', displayName: '' };
     } catch (error) {
       handleError(error);
       throw error;

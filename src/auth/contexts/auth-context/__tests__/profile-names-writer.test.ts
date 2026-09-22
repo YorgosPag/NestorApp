@@ -27,7 +27,7 @@ import path from 'node:path';
 import type { Firestore } from 'firebase/firestore';
 
 import { composedDisplayName, isNameDeclaration } from '@/auth/utils/profile-names';
-import { saveProfileNames } from '../auth-context-profile';
+import { saveProfileNames, syncUserProfileToFirestore } from '../auth-context-profile';
 
 /** Δείκτης-φρουρός: ό,τι φέρει αυτό, ζητήθηκε **διαγραφή** πεδίου. */
 const DELETE = Symbol('deleteField');
@@ -133,13 +133,46 @@ describe('Ρ — η ραφή: κανένας καλών δεν γράφει το
    * ⚠️ Και οι **δύο** μετρούν: η δεύτερη (`completeProfile`) είναι η διαδρομή του
    * χρήστη **Google**, δηλαδή ακριβώς εκείνου που είχε `givenName: null`.
    */
-  it('Ρ-1 και οι ΔΥΟ καλούντες γράφουν ΜΟΝΟ σε `declared`', () => {
+  it('Ρ-1 και οι ΤΡΕΙΣ καλούντες γράφουν ΜΟΝΟ σε `declared`', () => {
     const context = repoFile('src/auth/contexts/AuthContext.tsx');
 
     expect(context).toContain('await actions.updateUserProfile(givenName, familyName)');
     expect(context).toContain('await actions.completeProfile(givenName, familyName)');
-    // Δύο κλήσεις, δύο φρουροί, δύο γραφές — ποτέ γραφή χωρίς φρουρό.
-    expect(context.split("outcome.kind === 'declared'")).toHaveLength(3);
-    expect(context.split('await saveProfileNames(db, outcome.uid, outcome.names)')).toHaveLength(3);
+    // 🔴 ADR-834 §6.6 — η ΤΡΙΤΗ διαδρομή, που έλειπε: η εγγραφή με email/κωδικό.
+    expect(context).toContain('await actions.signUp(data)');
+    // Τρεις κλήσεις, τρεις φρουροί, τρεις γραφές — ποτέ γραφή χωρίς φρουρό.
+    expect(context.split("outcome.kind === 'declared'")).toHaveLength(4);
+    expect(context.split('await saveProfileNames(db, outcome.uid, outcome.names)')).toHaveLength(4);
+  });
+
+  /**
+   * 🔴 **Η ΚΟΥΡΣΑ ΠΟΥ ΘΑ ΕΤΡΩΓΕ ΤΟ ΟΝΟΜΑ** (§6.6). Ο συγχρονισμός προφίλ τρέχει στο
+   * `onAuthStateChanged` — δηλαδή **ταυτόχρονα** με τη γραφή των ονομάτων της εγγραφής.
+   * Όσο δήλωνε `givenName: null`, η σειρά άφιξης αποφάσιζε αν ο άνθρωπος κρατά το όνομά του.
+   */
+  it('Ρ-2 🔴 ο συγχρονισμός ΔΕΝ δηλώνει τα πεδία του ονόματος (απουσία ≠ ισχυρισμός)', async () => {
+    const { getDoc } = jest.requireMock('firebase/firestore') as { getDoc: jest.Mock };
+    getDoc.mockResolvedValueOnce({ exists: () => false, data: () => undefined });
+
+    await syncUserProfileToFirestore(
+      db,
+      {
+        uid: 'u-new',
+        email: 'neos@example.com',
+        displayName: 'Νέος Άνθρωπος',
+        photoURL: null,
+        emailVerified: false,
+        providerData: [{ providerId: 'password' }],
+      } as unknown as Parameters<typeof syncUserProfileToFirestore>[1],
+      {},
+    );
+
+    const payload = lastWrite();
+    expect(payload.__path).toBe('users/u-new');
+    expect(payload.__options).toEqual({ merge: true });
+    // ⚠️ `not.toHaveProperty`, ΟΧΙ `toBeUndefined()`: το ζητούμενο είναι να **λείπει το
+    //    κλειδί** — ένα `undefined` στο payload θα έσπαγε το `setDoc` ούτως ή άλλως.
+    expect(payload).not.toHaveProperty('givenName');
+    expect(payload).not.toHaveProperty('familyName');
   });
 });
