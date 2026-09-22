@@ -11,12 +11,10 @@ import type { Bucket } from '@google-cloud/storage';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FloorplanProcessedData, DxfSceneData } from '@/types/file-record';
 import { toDxfSceneData } from '@/services/floorplans/dxf-scene-data-projection';
+import { floorplanProcessKindOf, type FloorplanProcessKind } from '@/services/floorplans/floorplan-processability';
 import type { FileRecordData } from './floorplan-process.types';
 
 const logger = createModuleLogger('FloorplanProcessService');
-
-const SUPPORTED_DXF_EXTENSIONS = ['dxf'];
-const SUPPORTED_PDF_EXTENSIONS = ['pdf'];
 
 export interface ProcessResult {
   processedData: FloorplanProcessedData;
@@ -27,12 +25,10 @@ export interface ProcessResult {
 
 /**
  * Determine if file type is supported and which type it is.
+ * ADR-866 §2.10.9 — ο κανόνας ζει στο `floorplan-processability` (τον ρωτά και ο πελάτης).
  */
-export function getFileType(ext: string): 'dxf' | 'pdf' | null {
-  const normalized = ext.toLowerCase().replace('.', '');
-  if (SUPPORTED_DXF_EXTENSIONS.includes(normalized)) return 'dxf';
-  if (SUPPORTED_PDF_EXTENSIONS.includes(normalized)) return 'pdf';
-  return null;
+export function getFileType(ext: string): FloorplanProcessKind | null {
+  return floorplanProcessKindOf(ext);
 }
 
 /**

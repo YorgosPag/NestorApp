@@ -19,6 +19,7 @@ import {
   processFloorplanWithPolicy,
   isInProgress,
 } from '@/services/floorplans/floorplan-processing-mutation-gateway';
+import { isAutoProcessableFloorplan } from '@/services/floorplans/floorplan-processability';
 // ADR-635 Φ3 — Revit-style import-warnings toast (SSoT).
 import { useDxfImportNotifications } from '@/hooks/notifications/useDxfImportNotifications';
 
@@ -42,6 +43,34 @@ const logger = createModuleLogger('FLOORPLAN_AUTO_PROCESS');
 // HOOK
 // ============================================================================
 
+type ImportNotifications = ReturnType<typeof useDxfImportNotifications>;
+
+/** Ένα αρχείο → `true` όταν ο διακομιστής **έγραψε** αποτέλεσμα (όχι «ήδη σε εξέλιξη»). */
+async function processOne(
+  fileId: string,
+  submittedIds: Set<string>,
+  notifications: ImportNotifications,
+): Promise<boolean> {
+  try {
+    const result = await processFloorplanWithPolicy({ fileId, forceReprocess: false });
+    if (isInProgress(result)) {
+      // Server is already processing this file (another instance or concurrent request).
+      // Keep submittedIds guard — Firestore realtime listener will deliver processedData when done.
+      logger.info('Floorplan already processing (Firestore lock)', { fileId });
+      return false;
+    }
+    logger.info('Auto-processed floorplan', { fileId });
+    // ADR-635 Φ3 — surface partial-import warnings (skipped/failed/clamped entities).
+    notifications.importedWithWarnings(result.warnings);
+    return true;
+  } catch (err) {
+    // Allow retry on next render
+    submittedIds.delete(fileId);
+    logger.warn('Auto-process failed (non-blocking)', { fileId, error: String(err) });
+    return false;
+  }
+}
+
 export function useFloorplanAutoProcess({
   displayStyle,
   files,
@@ -53,57 +82,31 @@ export function useFloorplanAutoProcess({
   useEffect(() => {
     if (displayStyle !== 'floorplan-gallery') return;
 
-    const unprocessed = files.filter(
-      (f) =>
-        !f.processedData &&
-        f.downloadUrl &&
-        f.status === 'ready' &&
-        !submittedIds.current.has(f.id),
-    );
-
-    if (unprocessed.length === 0) return;
+    // ADR-866 §2.10.9 — μόνο ό,τι ο διακομιστής **μπορεί** να επεξεργαστεί (είδος + διαμέρισμα).
+    const pending = files
+      .filter((f) => isAutoProcessableFloorplan(f) && !submittedIds.current.has(f.id))
+      .map((f) => f.id);
+    if (pending.length === 0) return;
 
     // Mark as submitted immediately — prevents duplicate API calls on re-renders
-    unprocessed.forEach((f) => submittedIds.current.add(f.id));
-
+    pending.forEach((id) => submittedIds.current.add(id));
     let cancelled = false;
 
     const processFiles = async () => {
       let anyProcessed = false;
-
-      for (const file of unprocessed) {
-        if (cancelled) return;
-
-        try {
-          const result = await processFloorplanWithPolicy({ fileId: file.id, forceReprocess: false });
-          if (isInProgress(result)) {
-            // Server is already processing this file (another instance or concurrent request).
-            // Keep submittedIds guard — Firestore realtime listener will deliver processedData when done.
-            logger.info('Floorplan already processing (Firestore lock)', { fileId: file.id });
-          } else {
-            anyProcessed = true;
-            logger.info('Auto-processed floorplan', { fileId: file.id });
-            // ADR-635 Φ3 — surface partial-import warnings (skipped/failed/clamped entities).
-            dxfImportNotifications.importedWithWarnings(result.warnings);
-          }
-        } catch (err) {
-          // Allow retry on next render
-          submittedIds.current.delete(file.id);
-          logger.warn('Auto-process failed (non-blocking)', {
-            fileId: file.id,
-            error: String(err),
-          });
+      for (const [index, fileId] of pending.entries()) {
+        if (cancelled) {
+          // ADR-866 §2.10.9 — ό,τι δεν δοκιμάστηκε **ελευθερώνεται**· αλλιώς δεν ξαναστέλνεται ποτέ.
+          pending.slice(index).forEach((id) => submittedIds.current.delete(id));
+          return;
         }
+        if (await processOne(fileId, submittedIds.current, dxfImportNotifications)) anyProcessed = true;
       }
-
       // After API writes processedData to Firestore, refetch to get the updated record
-      if (anyProcessed && !cancelled) {
-        await refetch();
-      }
+      if (anyProcessed && !cancelled) await refetch();
     };
 
     processFiles();
-
     return () => {
       cancelled = true;
     };

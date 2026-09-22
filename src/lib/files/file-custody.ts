@@ -56,7 +56,7 @@ export const FILE_AUDIT_COLLECTION = {
 } as const satisfies CustodyPartition;
 
 /** Τα πεδία κατόχου όπως τα φέρει είσοδος ή έγγραφο — τιμές **αδιάβαστες** ως να κριθούν. */
-interface FileOwnerFields {
+export interface FileOwnerFields {
   readonly companyId?: unknown;
   readonly userId?: unknown;
 }

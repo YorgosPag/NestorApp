@@ -136,6 +136,17 @@ async function handleProcessFloorplan(
       });
     }
 
+    // 6. DETERMINE FILE TYPE — **ΠΡΙΝ** το κλείδωμα (ADR-866 §2.10.9): η άρνηση μετά το
+    // `processingStatus: 'processing'` επέστρεφε 400 **χωρίς** να το ελευθερώσει ⇒ αρχείο
+    // κλειδωμένο για πάντα, και κάθε επόμενο αίτημα απαντούσε «in_progress».
+    const fileType = getFileType(fileData.ext || '');
+    if (!fileType) {
+      return NextResponse.json(
+        { success: false, error: `Unsupported file type: ${fileData.ext}`, errorCode: 'UNSUPPORTED_TYPE' },
+        { status: 400 }
+      );
+    }
+
     // 5b. ATOMIC LOCK — cross-instance safe via Firestore transaction
     // Replaces the in-memory Set which was per-lambda and unreliable on Vercel.
     const fileRef = adminDb.collection(COLLECTIONS.FILES).doc(fileId);
@@ -161,15 +172,6 @@ async function handleProcessFloorplan(
     }
 
     lockedFileId = fileId;
-
-    // 6. DETERMINE FILE TYPE
-    const fileType = getFileType(fileData.ext || '');
-    if (!fileType) {
-      return NextResponse.json(
-        { success: false, error: `Unsupported file type: ${fileData.ext}`, errorCode: 'UNSUPPORTED_TYPE' },
-        { status: 400 }
-      );
-    }
 
     // 7. DOWNLOAD + PROCESS
     const rawBuffer = await downloadFile(bucket, fileData.storagePath);
