@@ -71,6 +71,7 @@ import {
   updateOwnerListing,
   type BrokeredNotifyOutcome,
 } from '@/services/owner-property/owner-property.service';
+import { newPropertyDossierId } from '@/services/property-dossier/property-dossier.service';
 import { useOwnerPropertyDraftMemory } from '@/hooks/owner-property/useOwnerPropertyDraftMemory';
 import { draftIdentityBlockers } from '@/lib/forms/draft-identity';
 import { withExtraBlockers } from '@/lib/forms/draft-validation';
@@ -80,9 +81,9 @@ import {
   type OfferViolation,
 } from '@/components/owner-property/offer-form-labels';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
-import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { PropertyOffer } from '@/types/property-offers';
 
+import { OwnerPropertyDossierField } from './form/OwnerPropertyDossierField';
 import { OwnerPropertyMediaField } from './form/OwnerPropertyMediaField';
 import { RestoredDraftNotice } from './form/RestoredDraftNotice';
 import { OwnerPropertyPlaceField } from './form/OwnerPropertyPlaceField';
@@ -103,6 +104,16 @@ export interface OwnerPropertyFormContentProps
    * θα γεννούσε **νέα** `offr_*` και το ιστορικό θα έσπαγε σιωπηλά.
    */
   readonly previousOffers?: readonly PropertyOffer[];
+
+  /**
+   * **Ο φάκελος που δηλώνει ΗΔΗ η αγγελία** (ADR-866 Φ1.3β) — μόνο στην επεξεργασία· `null` για τις παλιές.
+   *
+   * 🔴 **Ιδιότητα, ΟΧΙ πεδίο των `initialValues`** (§2.11.2 Δ2): το `dossierId` ζει στο `OwnerPropertyAuthorship`
+   * — είναι **ταυτότητα**, όχι κάτι που πληκτρολόγησε ο άνθρωπος. Μέσα στο σχήμα της φόρμας θα ταξίδευε στο
+   * `OwnerPropertyDraft`, και το PATCH (`{...existing, ...draft}`) θα μπορούσε να **αλλάξει τον φάκελο** μιας
+   * αποθηκευμένης αγγελίας από το δίκτυο. Έτσι δεν μεταγλωττίζεται καν.
+   */
+  readonly existingDossierId?: string | null;
 
   /**
    * 🔴 **ΕΠΙ ΤΟΠΟΥ: ο φορέας κλείνει τη φόρμα** — μετά την αποθήκευση **και** την ακύρωση.
@@ -151,6 +162,7 @@ export function OwnerPropertyFormContent({
   initialValues = EMPTY_OWNER_PROPERTY_FORM,
   editingId = null,
   previousOffers = [],
+  existingDossierId = null,
   mandate,
   onClose,
 }: OwnerPropertyFormContentProps): React.ReactElement {
@@ -173,6 +185,28 @@ export function OwnerPropertyFormContent({
     () => editingId ?? memory.restored?.draftId ?? newOwnerPropertyId(),
   );
 
+  /**
+   * 🔑 **Ο ΦΑΚΕΛΟΣ, ΠΡΟ-ΓΕΝΝΗΜΕΝΟΣ ΔΙΠΛΑ ΣΤΗΝ ΑΓΓΕΛΙΑ** (ADR-866 Φ1.3β · §2.11.2 Δ1/Δ4).
+   *
+   * Ίδιος αρχικοποιητής-συνάρτηση, ίδια **σειρά-συμβόλαιο** με το `draftId` από πάνω: επεξεργασία → ο φάκελος που
+   * **δηλώνει ήδη** η αγγελία· επαναφορά → **ο ίδιος** που είχε κοπεί πριν φύγει ο άνθρωπος να συνδεθεί· αλλιώς →
+   * καινούργιος. Νέος φάκελος στην επαναφορά θα άφηνε ό,τι είχε ήδη ανέβει σε φάκελο που η αγγελία **δεν** δηλώνει.
+   *
+   * 🔴 **`null` ΓΙΑ ΤΟ ΓΡΑΦΕΙΟ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (Ε-Φ1-2): τα αρχεία αγγελίας **γραφείου** ακολουθούν την
+   * `custodyOf(listing)` = εταιρικό διαμέρισμα. Φάκελος **ενός ανθρώπου** εκεί θα έβαζε τα αρχεία του πελάτη στον
+   * **προσωπικό** χώρο του υπαλλήλου — η ακριβώς αντίστροφη βλάβη από αυτήν που η Φ1 κλείνει. Ο ιδιοκτήτης-επαφή
+   * αποκτά φάκελο όταν γίνει **χρήστης** (Φ3/Φ4). Άρα η παλιά οθόνη μένει **αυτούσια** εκεί.
+   *
+   * 🔴 **`null` ΚΑΙ ΓΙΑ ΤΙΣ ΠΑΛΙΕΣ ΑΓΓΕΛΙΕΣ** (dual-read ως το Φ1.4): αγγελία χωρίς `dossierId` κρατά το `media[]`
+   * της. Η μετανάστευση είναι **ξεχωριστό** βήμα με ξηρή εκτέλεση — ποτέ σιωπηλά, στο πρώτο άνοιγμα της φόρμας.
+   */
+  const [mintedDossierId] = React.useState<string | null>(() =>
+    editingId !== null || mandate !== undefined
+      ? null
+      : (memory.restored?.dossierId ?? newPropertyDossierId()),
+  );
+  const dossierId = editingId !== null ? existingDossierId : mintedDossierId;
+
   const form = useForm<OwnerPropertyFormValues>({
     defaultValues: memory.restored?.values ?? initialValues,
   });
@@ -194,8 +228,8 @@ export function OwnerPropertyFormContent({
    */
   React.useEffect(() => {
     if (editingId !== null || !form.formState.isDirty) return;
-    memory.remember(draftId, values);
-  }, [editingId, form.formState.isDirty, memory, draftId, values]);
+    memory.remember(draftId, dossierId, values);
+  }, [editingId, form.formState.isDirty, memory, draftId, dossierId, values]);
 
   const propertyValidation = React.useMemo(
     () =>
@@ -278,7 +312,9 @@ export function OwnerPropertyFormContent({
       editingId !== null
         ? await updateOwnerListing(editingId, validation.draft)
         : mandate === undefined
-          ? await createOwnerListing(draftId, validation.draft)
+          // 🔑 **Ο φάκελος ταξιδεύει ΜΕ τη γέννηση** (§2.11.2 Δ1): ο διακομιστής τον γεννά **ή** τον συνδέει μέσα
+          //    στη **συναλλαγή** της αγγελίας ⇒ καμία στιγμή όπου η αγγελία δείχνει σε φάκελο που δεν υπάρχει.
+          ? await createOwnerListing(draftId, validation.draft, dossierId)
           : await createBrokeredOwnerListing(draftId, validation.draft, mandate.request);
 
     if (mandate !== undefined) {
@@ -384,10 +420,27 @@ export function OwnerPropertyFormContent({
           και ο λόγος που η δηλωμένη κάλυψη έχει υποκείμενο. Ανεξάρτητη σημαία εδώ θα
           μπορούσε μια μέρα να λέει «γραφείο» εκεί που η φόρμα λέει «ιδιώτης». */}
       <OwnerPropertyPlaceField brokered={mandate !== undefined} />
-      <OwnerPropertyMediaField
-        authorUserId={user?.uid ?? null}
-        ownerPropertyId={draftId}
-      />
+      {/*
+        🔴 **DUAL-READ ΣΤΗΝ ΟΘΟΝΗ, ΟΠΩΣ ΚΑΙ ΣΤΟΝ ΔΙΑΚΟΜΙΣΤΗ** (ADR-866 §2.11.2 Δ4 · Φ1.3β Β6). Ο διακόπτης είναι
+        **η ύπαρξη φακέλου** — ο ίδιος που κρίνει και το `ownerListingMediaSources`. Με φάκελο ⇒ τα αρχεία ζουν
+        στο σπίτι και η αγγελία **δηλώνει**· χωρίς ⇒ το `media[]` **αυτούσιο**, μέχρι τη Φ1.4/Φ1.5.
+
+        ⚠️ **Δύο ρητά μονοπάτια, όχι ένα με σημαία**: το παλιό πεδίο ανεβάζει σε **άλλον κάδο**, με **άλλο**
+        λεξιλόγιο («τι είναι;» ως κουτάκι) και **άλλη** αυθεντία σειράς. Μία συγχωνευμένη οθόνη θα κουβαλούσε και
+        τα δύο μοντέλα, και η αφαίρεση του `media[]` στη Φ1.6 θα ήταν ξήλωμα αντί για διαγραφή.
+      */}
+      {dossierId === null ? (
+        <OwnerPropertyMediaField
+          authorUserId={user?.uid ?? null}
+          ownerPropertyId={draftId}
+        />
+      ) : (
+        <OwnerPropertyDossierField
+          authorUserId={user?.uid ?? null}
+          dossierId={dossierId}
+          dossierExists={editingId !== null}
+        />
+      )}
     </DraftFormShell>
   );
 }

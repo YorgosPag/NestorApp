@@ -46,8 +46,18 @@ export interface OwnerPropertyDraftMemory {
   readonly noticeVisible: boolean;
   /** Κρύβει την ειδοποίηση **χωρίς** να σβήσει τίποτα. */
   readonly acknowledge: () => void;
-  /** Γράφει το τρέχον προσχέδιο. Ασφαλές να κληθεί σε κάθε πληκτρολόγηση. */
-  readonly remember: (draftId: string, values: OwnerPropertyFormValues) => void;
+  /**
+   * Γράφει το τρέχον προσχέδιο. Ασφαλές να κληθεί σε κάθε πληκτρολόγηση.
+   *
+   * 🔑 **Οι ΔΥΟ ταυτότητες μαζί** (ADR-866 Φ1.3β): η αγγελία και ο **φάκελός** της. Χωριστή διαδρομή για τη
+   * δεύτερη θα σήμαινε ότι μπορεί να ξεχαστεί, και ο άνθρωπος που γύρισε από τη σύνδεση θα ανέβαζε σε φάκελο που
+   * η αγγελία **δεν** δηλώνει.
+   */
+  readonly remember: (
+    draftId: string,
+    dossierId: string | null,
+    values: OwnerPropertyFormValues,
+  ) => void;
   /** Σβήνει το αποθηκευμένο — υποβολή που πέτυχε, ή ρητή απόρριψη. */
   readonly forget: () => void;
 }
@@ -88,9 +98,9 @@ export function useOwnerPropertyDraftMemory(
   const acknowledge = React.useCallback(() => setAcknowledged(true), []);
 
   const remember = React.useCallback(
-    (draftId: string, values: OwnerPropertyFormValues) => {
+    (draftId: string, dossierId: string | null, values: OwnerPropertyFormValues) => {
       if (sealed.current) return;
-      rememberOwnerPropertyDraft(draftId, values);
+      rememberOwnerPropertyDraft(draftId, dossierId, values);
     },
     [],
   );
