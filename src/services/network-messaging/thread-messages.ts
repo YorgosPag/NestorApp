@@ -57,6 +57,7 @@ import {
   readThreadAudience,
   touchOwnAudience,
   writeThreadActivity,
+  writeThreadInbox,
   type AudienceSelfOutcome,
 } from './thread-writer';
 
@@ -291,6 +292,8 @@ async function commitRetraction(
       retractionRecord(found, { threadId: input.threadId, threadKind: thread.topic.kind, nowISO: input.nowISO, readBefore }),
     );
     transaction.update(networkThreadRef(adminDb, input.threadId), { lastLiveMessageAt: liveAt });
+    // 🔢 Β10: ανακλήθηκε το μόνο αδιάβαστο ⇒ η γραμμή του κουτιού φεύγει μαζί του (ο ένας γραφέας, Κ3).
+    writeThreadInbox(transaction, adminDb, input.threadId, audience, { lastMessageAt: thread.lastMessageAt, lastLiveMessageAt: liveAt });
 
     return {
       outcome: { kind: 'retracted', readBeforeRetraction: readBefore },

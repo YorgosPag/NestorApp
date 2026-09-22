@@ -95,6 +95,9 @@ const COLLECTION_NAMES = [
   'SUBCOLLECTIONS.NETWORK_THREAD_MESSAGES',
   'SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE',
   'SUBCOLLECTIONS.NETWORK_THREAD_AUDIENCE_PRIVATE',
+  // 🔢 ADR-867 §4.5 Β10 — το κουτί αδιάβαστων: μονοπάτι σε ΕΝΑ σημείο ανά SDK, όπως το νήμα.
+  'COLLECTIONS.NETWORK_INBOX',
+  'SUBCOLLECTIONS.NETWORK_INBOX_UNREAD',
 ];
 const REF_CALLS = new Set([
   'networkThreadRef',
@@ -105,12 +108,23 @@ const REF_CALLS = new Set([
   'networkRevisionRef',
   'networkAudienceGroup',
   'networkAudiencePrivateRef',
+  'networkInboxRowRef',
+  'networkInboxRows',
+  'networkInboxUnreadGroup',
 ]);
 /**
  * 🔒 **Η ιδιωτική πλευρά της θέσης (Ε9) είναι ακροατήριο για τον Κ3**: ένας δεύτερος γραφέας εκεί θα μπορούσε
  * να «ξε-σιγάσει» κάποιον ή να του σβήσει το «διαβάστηκε» — ίδιος γραφέας, ίδιος λόγος.
  */
-const AUDIENCE_CALLS = new Set(['networkThreadAudience', 'networkAudienceRef', 'networkAudiencePrivateRef']);
+const AUDIENCE_CALLS = new Set([
+  'networkThreadAudience',
+  'networkAudienceRef',
+  'networkAudiencePrivateRef',
+  // 🔢 ADR-867 §4.5 Β10 — **το κουτί αδιάβαστων είναι ΠΡΟΒΟΛΗ του ακροατηρίου**: η γραμμή υπάρχει ⇔ η θέση μετρά
+  //    ως αδιάβαστη. Δεύτερος γραφέας θα «έσβηνε το badge» χωρίς ανάγνωση — ή θα άφηνε ορφανή γραμμή = ψέμα.
+  'networkInboxRowRef',
+  'networkInboxRows',
+]);
 /**
  * 🔑 **ΤΟ ΒΙΒΛΙΟ ΑΝΑΚΛΗΣΕΩΝ ΜΠΑΙΝΕΙ ΕΔΩ, ΜΕ ΤΑ ΜΗΝΥΜΑΤΑ** (Κ4): είναι το **δεύτερο
  * αντίγραφο** του ίδιου γεγονότος και γράφεται στην **ίδια** συναλλαγή. Χωριστό κριτήριο
@@ -195,7 +209,11 @@ function writesThrough(call, names, aliases) {
       || (ts.isPropertyAccessExpression(n) && aliases.has(n.name.text)));
 
   if (rootsFrom(call.expression.expression)) return true;
-  return call.arguments.length >= 2 && rootsFrom(call.arguments[0]);
+  // 🔴 ADR-867 Β10 — `tx|batch.delete(ref)` έχει **ΕΝΑ** όρισμα. Ως τις 2026-09-22 το κριτήριο ζητούσε `>= 2`
+  //    (σωστό για set/update/create) ⇒ κάθε διαγραφή μέσα σε συναλλαγή ήταν **αόρατη** στον Κ3 και στον Κ4.
+  //    Το `ref.delete()` (0 ορίσματα) το πιάνει ήδη ο πρώτος κλάδος.
+  const minArgs = call.expression.name.text === 'delete' ? 1 : 2;
+  return call.arguments.length >= minArgs && rootsFrom(call.arguments[0]);
 }
 
 /**
@@ -236,6 +254,8 @@ function findingsIn(sf, rel) {
   const messageAliases = refAliases(sf, MESSAGE_CALLS);
   // Το `slot.audienceRef` ταξιδεύει ανάμεσα σε συναρτήσεις — το όνομα του πεδίου ΕΙΝΑΙ το ψευδώνυμο.
   audienceAliases.add('audienceRef');
+  // 🔢 Β10 — ίδιο ιδίωμα: η γραμμή του κουτιού ταξιδεύει ως `slot.inboxRowOf(uid)`.
+  audienceAliases.add('inboxRowOf');
 
   const visit = (node) => {
     if (ts.isPropertyAccessExpression(node) && COLLECTION_NAMES.includes(node.getText())

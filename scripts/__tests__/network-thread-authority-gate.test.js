@@ -128,6 +128,35 @@ describe('Κ3 — ΑΚΡΟΑΤΗΡΙΟ: ένας γραφέας', () => {
       .toEqual(expect.arrayContaining([gate.STATES.SECOND_AUDIENCE_WRITER]));
   });
 
+  it('⛔ 🔢 (Β10) το ΚΟΥΤΙ ΑΔΙΑΒΑΣΤΩΝ είναι προβολή του ακροατηρίου — δεύτερος γραφέας «σβήνει το badge» χωρίς ανάγνωση (μετάλλαξη: λείπει από το AUDIENCE_CALLS)', () => {
+    expect(findingsOf('transaction.delete(networkInboxRowRef(db, uid, t));', gate.MESSAGE_WRITER))
+      .toEqual(expect.arrayContaining([gate.STATES.SECOND_AUDIENCE_WRITER]));
+    expect(findingsOf('const rows = networkInboxRows(db, uid);\nawait rows.doc(t).set({ liveMessageAt: x });', gate.MESSAGE_WRITER))
+      .toEqual(expect.arrayContaining([gate.STATES.SECOND_AUDIENCE_WRITER]));
+  });
+
+  it('⛔ 🔢 (Β10) μέσω του ψευδωνύμου `slot.inboxRowOf(uid)` — ταξιδεύει σε άλλη συνάρτηση, όπως το `audienceRef`', () => {
+    expect(findingsOf('transaction.set(slot.inboxRowOf(uid), row);'))
+      .toEqual([gate.STATES.SECOND_AUDIENCE_WRITER]);
+  });
+
+  it('⛔ 🔴 `tx.delete(ref)` ΕΧΕΙ ΕΝΑ ΟΡΙΣΜΑ — ως το Β10 κάθε διαγραφή σε συναλλαγή ήταν αόρατη (μετάλλαξη: `>= 2` για όλα)', () => {
+    expect(findingsOf('transaction.delete(networkAudienceRef(db, t, uid));', gate.MESSAGE_WRITER))
+      .toEqual(expect.arrayContaining([gate.STATES.SECOND_AUDIENCE_WRITER]));
+    expect(findingsOf('batch.delete(networkThreadMessages(db, t).doc(m));', gate.AUDIENCE_WRITER))
+      .toEqual(expect.arrayContaining([gate.STATES.SECOND_MESSAGE_WRITER]));
+  });
+
+  it('⛔ 🔢 (Β10) χειρόγραφο μονοπάτι του κουτιού εκτός ref (Κ1)', () => {
+    const code = 'db.collection(COLLECTIONS.NETWORK_INBOX).doc(uid).collection(SUBCOLLECTIONS.NETWORK_INBOX_UNREAD).get();';
+    expect(findingsOf(code)).toEqual([gate.STATES.PATH_OUTSIDE_REF, gate.STATES.PATH_OUTSIDE_REF]);
+  });
+
+  it('✅ (Β10) ο ΕΝΑΣ γραφέας γράφει τη γραμμή του κουτιού', () => {
+    expect(findingsOf('transaction.delete(networkInboxRowRef(db, uid, t));', gate.AUDIENCE_WRITER))
+      .toEqual([gate.STATES.CONSUMER]);
+  });
+
   it('✅ (Ε9) η ένωση των δύο πλευρών ΔΙΑΒΑΖΕΙ την ιδιωτική — δηλωμένη, καμία γραφή', () => {
     expect(findingsOf('read(networkAudiencePrivateRef(db, t, uid));', 'src/services/network-messaging/audience-seats.ts'))
       .toEqual([gate.STATES.CONSUMER]);

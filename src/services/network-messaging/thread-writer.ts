@@ -36,6 +36,8 @@ import {
   type Transaction,
 } from 'firebase-admin/firestore';
 
+import { inboxVerdictsOf, type InboxVerdict } from '@/lib/network-messaging/thread-liveness';
+import { networkAudiencePrivateFromDocument } from '@/lib/network-messaging/network-thread-from-document';
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import type {
   NetworkAudienceEntry,
@@ -49,6 +51,7 @@ import { legacyPrivateResidue, publicAudienceRow, seatsOfThread } from './audien
 import {
   networkAudiencePrivateRef,
   networkAudienceRef,
+  networkInboxRowRef,
   networkThreadAudience,
   networkThreadRef,
 } from './network-thread-ref';
@@ -91,9 +94,18 @@ export interface ActThreadSlot {
   readonly exists: boolean;
   /** Το θέμα του **υπάρχοντος** νήματος — από εκεί βγαίνει ο αντισυμβαλλόμενος. */
   readonly topic: ActThreadTopic | null;
-  readonly audience: readonly NetworkAudienceEntry[];
+  /**
+   * Οι θέσεις **με** την ιδιωτική πλευρά (ADR-867 §4.5 Β10): η προβολή χρειάζεται `lastReadAt`/`muted` για να
+   * κρίνει τη γραμμή αδιάβαστων όποιου **επιστρέφει**. ⚠️ Προς τη δημόσια γραμμή περνά **μόνο** μέσα από το
+   * `publicAudienceRow` — τα ιδιωτικά πεδία δεν φτάνουν ποτέ εκεί.
+   */
+  readonly audience: readonly NetworkAudienceSeat[];
   /** `lastMessageAt ?? createdAt` του **υπάρχοντος** νήματος· `null` ⇒ δεν υπάρχει ακόμη. */
   readonly activityAt: string | null;
+  /** Η ζωντάνια του **υπάρχοντος** νήματος (κρίση αδιάβαστου)· `null` ⇒ δεν υπάρχει ακόμη. */
+  readonly liveness: Pick<NetworkThread, 'lastMessageAt' | 'lastLiveMessageAt'> | null;
+  /** Η γραμμή αδιάβαστων ενός ανθρώπου **για αυτό το νήμα** — χτισμένη στη φάση ανάγνωσης, όπως το `audienceRef`. */
+  readonly inboxRowOf: InboxRowOf;
 }
 
 /**
@@ -124,8 +136,10 @@ export async function readActThreadSlot(
     audienceRef,
     exists: snapshot.exists,
     topic: stored?.topic.kind === 'act' ? stored.topic : null,
-    audience: audienceSnap.docs.map((doc) => doc.data() as NetworkAudienceEntry),
+    audience: await seatsOfThread((...refs) => transaction.getAll(...refs), adminDb, threadId, audienceSnap.docs),
     activityAt: stored === undefined ? null : threadActivityOf(stored),
+    liveness: stored === undefined ? null : { lastMessageAt: stored.lastMessageAt, lastLiveMessageAt: stored.lastLiveMessageAt },
+    inboxRowOf: (uid) => networkInboxRowRef(adminDb, uid, threadId),
   };
 }
 
@@ -185,7 +199,8 @@ export function writeActThread(
   const audienceWrites = projectActAudience({
     team: plan.team,
     counterpartUid: topic.counterpartUid,
-    existing: slot.audience,
+    // 🔒 Η προβολή βλέπει **μόνο** τη δημόσια πλευρά — ιδιωτικό πεδίο δεν ταξιδεύει ούτε στα `audienceWrites`.
+    existing: slot.audience.map(publicAudienceRow),
     newcomerReason: plan.newcomerReason,
     addedBy: plan.addedBy,
     nowISO: plan.nowISO,
@@ -195,6 +210,11 @@ export function writeActThread(
   for (const write of audienceWrites) {
     // 🔒 Ε9: μόνο δηλωμένα δημόσια πεδία — η προβολή ξεκινά από το ακατέργαστο `previous`.
     transaction.set(slot.audienceRef.doc(write.uid), publicAudienceRow(write.entry));
+  }
+  // 🔢 Β10: όποιος μπήκε/επέστρεψε/βγήκε — η γραμμή αδιάβαστων ακολουθεί τη θέση του, στην ίδια συναλλαγή.
+  //    Νέο νήμα ⇒ κανένα μήνυμα ⇒ καμία γραμμή να υπάρξει.
+  if (slot.liveness !== null) {
+    writeInboxVerdicts(transaction, slot.inboxRowOf, projectionVerdicts(slot, audienceWrites));
   }
 
   return { threadId: document.id, created: !slot.exists, audienceWrites };
@@ -211,6 +231,80 @@ export async function ensureActThread(
   return adminDb.runTransaction(async (transaction) => {
     const slot = await readActThreadSlot(transaction, adminDb, plan.actSeed);
     return writeActThread(transaction, slot, plan);
+  });
+}
+
+// =============================================================================
+// 🔢 ΤΟ ΚΟΥΤΙ ΑΔΙΑΒΑΣΤΩΝ — ΠΡΟΒΟΛΗ ΤΟΥ ΑΚΡΟΑΤΗΡΙΟΥ, ΑΠΟ ΤΟΝ ΙΔΙΟ ΓΡΑΦΕΑ (ADR-867 §4.5 · Β10)
+// =============================================================================
+
+/** Η γραμμή αδιάβαστων ενός ανθρώπου για **ένα** νήμα. */
+export type InboxRowOf = (uid: string) => DocumentReference;
+
+/** Ό,τι κουβαλά η γραμμή — η ώρα του ζωντανού μηνύματος που την κρατά (αύριο: ταξινόμηση «μόνο αδιάβαστα»). */
+export interface NetworkInboxUnreadRow {
+  readonly liveMessageAt: string;
+}
+
+/**
+ * 🔑 **Εκτελεί τις ετυμηγορίες** — `set` όπου η θέση μετρά, `delete` όπου όχι. **Κανένας μετρητής**: το badge είναι
+ * το πλήθος των γραμμών, άρα δεν υπάρχει άθροισμα που να αποκλίνει. Κάθε γραφή εξαρτάται **μόνο** από την αλήθεια
+ * ⇒ ιδεμποτής χωρίς να διαβάσει την προηγούμενη κατάσταση της γραμμής (N.7.2 #3).
+ * ⚠️ Γραφή, άρα καλείται **μετά** από κάθε ανάγνωση της συναλλαγής.
+ */
+export function writeInboxVerdicts(
+  transaction: Transaction,
+  rowOf: InboxRowOf,
+  verdicts: readonly InboxVerdict[],
+): void {
+  for (const verdict of verdicts) {
+    const row = rowOf(verdict.uid);
+    if (verdict.liveMessageAt === null) transaction.delete(row);
+    else transaction.set(row, { liveMessageAt: verdict.liveMessageAt } satisfies NetworkInboxUnreadRow);
+  }
+}
+
+/**
+ * Οι ετυμηγορίες της **προβολής**: μόνο για όσους άλλαξε η ζωντάνια της θέσης. Σφραγίδα ⇒ καμία γραμμή· είσοδος ή
+ * επιστροφή ⇒ η κρίση με την ιδιωτική πλευρά που επιβίωσε (νέος χωρίς ιδιωτικό έγγραφο ⇒ «δεν διάβασε ποτέ»).
+ * Η αλλαγή ρόλου **δεν** αγγίζει το αδιάβαστο — καμία γραφή.
+ */
+function projectionVerdicts(slot: ActThreadSlot, writes: readonly AudienceWrite[]): readonly InboxVerdict[] {
+  if (slot.liveness === null) return [];
+  const privateOf = new Map(slot.audience.map((seat) => [seat.uid, seat]));
+  const moved = writes.filter((write) => write.change !== 'role-changed');
+  return inboxVerdictsOf(
+    moved.map((write) => ({ ...networkAudiencePrivateFromDocument(privateOf.get(write.uid)), uid: write.uid, until: write.entry.until })),
+    slot.liveness,
+  );
+}
+
+export type InboxReconcileOutcome = 'unread' | 'clear';
+
+/**
+ * 🛟 **ΤΟ ΔΙΧΤΥ (N.7.2 #4)** — ξαναγράφει τη γραμμή ενός ανθρώπου για ένα νήμα από την **αλήθεια** (νήμα + θέση),
+ * σε δική της συναλλαγή. Ιδεμποτής: δεύτερη κλήση = ίδιο αποτέλεσμα. Τη ζητά η συμφιλίωση
+ * (`scripts/migrations/reconcile-network-inbox.ts`) — ο μετανάστης **ζητά**, δεν γράφει (CHECK 3.89 Κ3).
+ */
+export async function reconcileInboxSeat(
+  adminDb: AdminFirestore,
+  threadId: string,
+  uid: string,
+): Promise<InboxReconcileOutcome> {
+  return adminDb.runTransaction(async (transaction) => {
+    const [threadSnap, seatSnap, privateSnap] = await transaction.getAll(
+      networkThreadRef(adminDb, threadId),
+      networkAudienceRef(adminDb, threadId, uid),
+      networkAudiencePrivateRef(adminDb, threadId, uid),
+    );
+    const thread = threadSnap?.data() as NetworkThread | undefined;
+    const entry = seatSnap?.data() as NetworkAudienceEntry | undefined;
+    // Νήμα ή θέση που δεν υπάρχει ⇒ καμία γραμμή (ορφανή γραμμή = ψέμα στο badge).
+    const verdicts: readonly InboxVerdict[] = thread === undefined || entry === undefined
+      ? [{ uid, liveMessageAt: null }]
+      : inboxVerdictsOf([{ ...networkAudiencePrivateFromDocument(privateSnap?.data()), uid, until: entry.until }], thread);
+    writeInboxVerdicts(transaction, (who) => networkInboxRowRef(adminDb, who, threadId), verdicts);
+    return verdicts.some((verdict) => verdict.liveMessageAt !== null) ? 'unread' : 'clear';
   });
 }
 
@@ -246,14 +340,29 @@ export async function touchOwnAudience(
   uid: string,
   patch: AudienceSelfPatch,
 ): Promise<AudienceSelfOutcome> {
-  const seatRef = networkAudienceRef(adminDb, threadId, uid);
+  const privateRef = networkAudiencePrivateRef(adminDb, threadId, uid);
   return adminDb.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(seatRef);
-    const entry = snapshot.data() as NetworkAudienceEntry | undefined;
+    // 🔢 Β10: νήμα + ιδιωτική πλευρά διαβάζονται μαζί με τη θέση — η γραμμή αδιάβαστων κρίνεται με το patch εφαρμοσμένο.
+    const [seatSnap, threadSnap, privateSnap] = await transaction.getAll(
+      networkAudienceRef(adminDb, threadId, uid),
+      networkThreadRef(adminDb, threadId),
+      privateRef,
+    );
+    const entry = seatSnap?.data() as NetworkAudienceEntry | undefined;
     if (entry === undefined || entry.until !== null) return 'not-audience';
-    transaction.set(networkAudiencePrivateRef(adminDb, threadId, uid), patch, { merge: true });
+    transaction.set(privateRef, patch, { merge: true });
+    const thread = threadSnap?.data() as NetworkThread | undefined;
+    if (thread !== undefined && touchesUnread(patch)) {
+      const after = { ...networkAudiencePrivateFromDocument(privateSnap?.data()), ...patch, uid, until: entry.until };
+      writeInboxVerdicts(transaction, (who) => networkInboxRowRef(adminDb, who, threadId), inboxVerdictsOf([after], thread));
+    }
     return 'updated';
   });
+}
+
+/** Το `following` ορίζει ειδοποιήσεις, όχι αδιάβαστο — καμία γραφή στο κουτί. */
+function touchesUnread(patch: AudienceSelfPatch): boolean {
+  return 'lastReadAt' in patch || 'muted' in patch;
 }
 
 export type LegacyPrivateMove = 'moved' | 'clean' | 'absent';
@@ -307,16 +416,34 @@ export function writeThreadActivity(
   transaction: Transaction,
   adminDb: AdminFirestore,
   threadId: string,
-  audience: readonly NetworkAudienceEntry[],
+  audience: readonly NetworkAudienceSeat[],
   activity: { readonly senderUid: string; readonly nowISO: string },
 ): void {
-  for (const entry of audience) {
-    if (entry.until !== null) continue;
+  const live = audience.filter((entry) => entry.until === null);
+  for (const entry of live) {
     transaction.update(networkAudienceRef(adminDb, threadId, entry.uid), { threadActivityAt: activity.nowISO });
     if (entry.uid === activity.senderUid) {
       transaction.set(networkAudiencePrivateRef(adminDb, threadId, entry.uid), { lastReadAt: activity.nowISO }, { merge: true });
     }
   }
+  // 🔢 Β10: το νέο μήνυμα είναι το τελευταίο ζωντανό· ο αποστολέας το «διάβασε» γράφοντάς το.
+  const seats = live.map((seat) => (seat.uid === activity.senderUid ? { ...seat, lastReadAt: activity.nowISO } : seat));
+  writeThreadInbox(transaction, adminDb, threadId, seats, { lastMessageAt: activity.nowISO, lastLiveMessageAt: activity.nowISO });
+}
+
+/**
+ * 🔢 **Το κουτί ΟΛΟΥ του ακροατηρίου ενός νήματος, μετά από αλλαγή της ζωντάνιας του** (ADR-867 §4.5 · Β10) —
+ * η αποστολή (από εδώ) και η **ανάκληση** (`thread-messages.ts`, που δεν επιτρέπεται να γράψει κουτί — Κ3).
+ * Οι σφραγισμένες θέσεις παίρνουν `delete`: ιδεμποτές, και καθαρίζει ό,τι τυχόν έμεινε από πριν.
+ */
+export function writeThreadInbox(
+  transaction: Transaction,
+  adminDb: AdminFirestore,
+  threadId: string,
+  seats: readonly NetworkAudienceSeat[],
+  liveness: Pick<NetworkThread, 'lastMessageAt' | 'lastLiveMessageAt'>,
+): void {
+  writeInboxVerdicts(transaction, (uid) => networkInboxRowRef(adminDb, uid, threadId), inboxVerdictsOf(seats, liveness));
 }
 
 /**

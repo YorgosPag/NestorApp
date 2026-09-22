@@ -18,7 +18,7 @@
  * συναλλαγή (Slack/Teams), οπότε δικό του ζωντανό μήνυμα μετά την ανάγνωσή του δεν υπάρχει.
  */
 
-import type { NetworkThread } from '@/types/network-thread';
+import type { NetworkAudienceSeat, NetworkThread } from '@/types/network-thread';
 
 /**
  * Πότε γράφτηκε το τελευταίο **ζωντανό** μήνυμα. `null` ⇒ κανένα.
@@ -38,4 +38,46 @@ export function hasLiveUnread(
 ): boolean {
   const live = liveMessageAtOf(thread);
   return live !== null && (lastReadAt === null || lastReadAt < live);
+}
+
+// =============================================================================
+// ΤΟ ΚΟΥΤΙ ΑΔΙΑΒΑΣΤΩΝ (ADR-867 §4.5 · Β10) — η κρίση που ΥΛΟΠΟΙΕΙΤΑΙ ως γραμμή, αντί για μετρητή
+// =============================================================================
+
+/** Ό,τι χρειάζεται η κρίση από τη θέση — δημόσια (`until`) **και** ιδιωτική πλευρά (`muted`, `lastReadAt`). */
+export type InboxSeatFacts = Pick<NetworkAudienceSeat, 'uid' | 'until' | 'muted' | 'lastReadAt'>;
+
+/**
+ * 🔑 **Μετρά αυτή η θέση στο badge «Μηνύματα»;** — ζωντανή θέση ∧ όχι σίγαση ∧ υπάρχει ζωντανό αδιάβαστο.
+ *
+ * Σιγασμένο νήμα **δεν** μετρά (Slack: σιγασμένο κανάλι ⇒ κανένα badge). Σφραγισμένη θέση **δεν** μετρά: ο
+ * άνθρωπος δεν διαβάζει πια το νήμα, άρα δεν μπορεί και να το «διαβάσει» για να σβήσει τον αριθμό.
+ */
+export function seatCountsAsUnread(
+  seat: Omit<InboxSeatFacts, 'uid'>,
+  thread: Pick<NetworkThread, 'lastMessageAt' | 'lastLiveMessageAt'>,
+): boolean {
+  return seat.until === null && !seat.muted && hasLiveUnread(thread, seat.lastReadAt);
+}
+
+/**
+ * Η ετυμηγορία για **μία** γραμμή του κουτιού: `liveMessageAt` ⇒ η γραμμή **υπάρχει** με αυτή την τιμή·
+ * `null` ⇒ **δεν** υπάρχει. Συνάρτηση **μόνο** της αλήθειας ⇒ η γραφή που την εκτελεί είναι ιδεμποτής
+ * (`set`/`delete`) χωρίς να διαβάσει την προηγούμενη κατάσταση της γραμμής.
+ */
+export interface InboxVerdict {
+  readonly uid: string;
+  readonly liveMessageAt: string | null;
+}
+
+/** Μία ετυμηγορία ανά θέση — η **ίδια** κρίση για αποστολή, ανάκληση, ανάγνωση, σίγαση και προβολή. */
+export function inboxVerdictsOf(
+  seats: readonly InboxSeatFacts[],
+  thread: Pick<NetworkThread, 'lastMessageAt' | 'lastLiveMessageAt'>,
+): readonly InboxVerdict[] {
+  const live = liveMessageAtOf(thread);
+  return seats.map((seat) => ({
+    uid: seat.uid,
+    liveMessageAt: seatCountsAsUnread(seat, thread) ? live : null,
+  }));
 }
