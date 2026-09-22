@@ -25,7 +25,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonVariantProps } from '@/components/ui/button';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +40,8 @@ export interface FormActionsProps {
   readonly onCancel?: () => void;
   readonly submitting: boolean;
   readonly submitDisabled?: boolean;
+  /** Μη αναστρέψιμη ενέργεια (π.χ. ακύρωση) ⇒ `destructive`. Προεπιλογή: η κύρια ενέργεια. */
+  readonly submitVariant?: ButtonVariantProps['variant'];
   /** Έτοιμο κείμενο· ανακοινώνεται (`role="alert"`) τη στιγμή που εμφανίζεται. */
   readonly error?: string | null;
   readonly submitIcon?: LucideIcon;
@@ -57,6 +59,7 @@ export function FormActions({
   onCancel,
   submitting,
   submitDisabled = false,
+  submitVariant,
   error,
   submitIcon: SubmitIcon,
   cancelIcon: CancelIcon,
@@ -78,7 +81,7 @@ export function FormActions({
             {cancelLabel}
           </Button>
         )}
-        <Button type="submit" form={formId} disabled={submitting || submitDisabled}>
+        <Button type="submit" form={formId} variant={submitVariant} disabled={submitting || submitDisabled}>
           {SubmitIcon && <SubmitIcon className={ICON_CLASS} aria-hidden />}
           {submitting && pendingLabel ? pendingLabel : submitLabel}
         </Button>

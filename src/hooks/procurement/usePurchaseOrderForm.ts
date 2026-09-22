@@ -3,7 +3,9 @@
 /**
  * usePurchaseOrderForm — Form state management for PO create/edit
  *
- * Manages line items, totals calculation, validation, and API submission.
+ * Manages line items, totals calculation, validation, and the save call.
+ * Submission state (lock, pending, error) lives in the SSoT `useFormSubmission`,
+ * owned by the form component (ADR-598 «(η)») — `save()` only persists or throws.
  * Auto-calculates subtotal/tax/total on item changes.
  *
  * @module hooks/procurement/usePurchaseOrderForm
@@ -108,8 +110,6 @@ function getInitialState(po?: PurchaseOrder | null, initialProjectId?: string): 
 
 export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialProjectId?: string) {
   const [form, setForm] = useState<POFormState>(() => getInitialState(existingPO, initialProjectId));
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isEditMode = !!existingPO;
 
@@ -206,48 +206,19 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     internalNotes: form.internalNotes || null,
   }), [form]);
 
-  const submit = useCallback(async (
+  /** Persists the PO or throws. The caller's `useFormSubmission` guards validity and re-entry. */
+  const save = useCallback(async (
     poId?: string,
     faExtra?: Pick<CreatePurchaseOrderDTO, 'appliedFaId' | 'faDiscountPercent' | 'faDiscountAmount' | 'netTotal'>,
-  ): Promise<{
-    success: boolean;
-    id?: string;
-    poNumber?: string;
-    error?: string;
-  }> => {
-    if (!isValid) {
-      return { success: false, error: validationErrors[0] };
-    }
-
-    setSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const dto = faExtra ? { ...buildDTO(), ...faExtra } : buildDTO();
-      const result = await savePurchaseOrderWithPolicy(
-        poId ? dto as UpdatePurchaseOrderDTO : dto,
-        poId,
-      );
-
-      return {
-        success: true,
-        id: result.id,
-        poNumber: result.poNumber,
-      };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Network error';
-      setSubmitError(msg);
-      return { success: false, error: msg };
-    } finally {
-      setSubmitting(false);
-    }
-  }, [isValid, validationErrors, buildDTO]);
+  ) => {
+    const dto = faExtra ? { ...buildDTO(), ...faExtra } : buildDTO();
+    return savePurchaseOrderWithPolicy(poId ? dto as UpdatePurchaseOrderDTO : dto, poId);
+  }, [buildDTO]);
 
   // ── Reset ──
 
   const reset = useCallback(() => {
     setForm(getInitialState(existingPO));
-    setSubmitError(null);
   }, [existingPO]);
 
   return {
@@ -260,9 +231,7 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     validationErrors,
     isValid,
     isEditMode,
-    submitting,
-    submitError,
-    submit,
+    save,
     reset,
   };
 }

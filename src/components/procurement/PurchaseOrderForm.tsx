@@ -11,7 +11,7 @@
 
 import { useCallback, useId } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { FormActions } from '@/components/ui/form/FormActions';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,7 @@ import { useMaterials } from '@/hooks/procurement/useMaterials';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 import { formatPOCurrency } from './utils/procurement-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POEntitySelectors';
 import { PODeliveryAddressField } from './PODeliveryAddressField';
 import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
@@ -52,6 +53,7 @@ export function PurchaseOrderForm({
 }: PurchaseOrderFormProps) {
   const { t } = useTranslation('procurement');
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
+  const formId = `${idBase}-form`;
   const {
     form,
     setField,
@@ -62,29 +64,29 @@ export function PurchaseOrderForm({
     validationErrors,
     isValid,
     isEditMode,
-    submitting,
-    submitError,
-    submit,
+    save,
   } = usePurchaseOrderForm(existingPO, initialProjectId);
 
   const faInfo = usePOFrameworkAgreement(form.supplierId, form.projectId, totals.total);
   const { materials } = useMaterials();
 
-  const handleSubmit = async () => {
-    const faExtra = faInfo.activeFa
+  // ADR-598 «(η)»: ένας δρόμος υποβολής (κλικ + Enter) μέσω του SSoT. Νέα PO = `draft` ⇒ το Enter
+  // σε πεδίο (implicit submission της HTML) δημιουργεί πρόχειρο, δεν αποστέλλει τίποτα.
+  const { submitting, error, handleSubmit } = useFormSubmission({
+    canSubmit: isValid,
+    submit: () => save(existingPO?.id, faInfo.activeFa
       ? {
           appliedFaId: faInfo.activeFa.id,
           faDiscountPercent: faInfo.discountPercent,
           faDiscountAmount: faInfo.discountAmount,
           netTotal: faInfo.netTotal,
         }
-      : { appliedFaId: null, faDiscountPercent: null, faDiscountAmount: null, netTotal: null };
-
-    const result = await submit(existingPO?.id, faExtra);
-    if (result.success && result.id && result.poNumber) {
-      onSuccess?.(result.id, result.poNumber);
-    }
-  };
+      : { appliedFaId: null, faDiscountPercent: null, faDiscountAmount: null, netTotal: null }),
+    onSuccess: (result) => {
+      if (result.id && result.poNumber) onSuccess?.(result.id, result.poNumber);
+    },
+    errorFallback: t('form.saveFailed'),
+  });
 
   /**
    * When a project is selected:
@@ -126,7 +128,7 @@ export function PurchaseOrderForm({
   );
 
   return (
-    <div className="space-y-6">
+    <form id={formId} onSubmit={handleSubmit} className="space-y-6">
       {/* Header fields */}
       <Card>
         <CardHeader>
@@ -338,37 +340,22 @@ export function PurchaseOrderForm({
         </div>
       )}
 
-      {/* Submit error */}
-      {submitError && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
-          {submitError}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className={cn(
-        'flex gap-3',
-        'sticky bottom-0 bg-background/95 py-3 backdrop-blur-sm',
-        'md:static md:bg-transparent md:py-0 md:backdrop-blur-none',
-      )}>
-        <Button
-          onClick={handleSubmit}
-          disabled={!isValid || submitting}
-        >
-          <Save className="mr-1.5 h-4 w-4" />
-          {submitting
-            ? t('form.saving')
-            : isEditMode
-              ? t('form.save')
-              : t('form.create')}
-        </Button>
-        {onCancel && (
-          <Button variant="outline" onClick={onCancel}>
-            <X className="mr-1.5 h-4 w-4" />
-            {t('form.cancel')}
-          </Button>
+      <FormActions
+        formId={formId}
+        submitLabel={isEditMode ? t('form.save') : t('form.create')}
+        pendingLabel={t('form.saving')}
+        cancelLabel={t('form.cancel')}
+        onCancel={onCancel}
+        submitting={submitting}
+        submitDisabled={!isValid}
+        error={error}
+        submitIcon={Save}
+        cancelIcon={X}
+        className={cn(
+          'sticky bottom-0 bg-background/95 py-3 backdrop-blur-sm',
+          'md:static md:bg-transparent md:py-0 md:backdrop-blur-none',
         )}
-      </div>
-    </div>
+      />
+    </form>
   );
 }

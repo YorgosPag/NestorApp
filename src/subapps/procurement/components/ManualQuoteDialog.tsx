@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useId, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import {
   Dialog,
@@ -8,14 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { FormActions } from '@/components/ui/form/FormActions';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
 import { TradeSelector } from '@/subapps/procurement/components/TradeSelector';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
+import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 
 interface ManualQuoteDialogProps {
@@ -24,90 +24,74 @@ interface ManualQuoteDialogProps {
   vendorContactId: string;
 }
 
-export function ManualQuoteDialog({
-  open,
-  onOpenChange,
-  vendorContactId,
-}: ManualQuoteDialogProps) {
-  const { t } = useTranslation('quotes');
-  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
+/** Κατάσταση + υποβολή: POST μέσω `fetchJson` (μήνυμα του server) και ένας δρόμος υποβολής (ADR-598 «(η)»). */
+function useManualQuoteForm({ onOpenChange, vendorContactId }: Omit<ManualQuoteDialogProps, 'open'>, t: Translate) {
   const router = useRouter();
-
   const [projectId, setProjectId] = useState('');
   const [trade, setTrade] = useState<TradeCode | ''>('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const canSubmit = projectId.trim() !== '' && trade !== '';
 
-  const isValid = projectId.trim() !== '' && trade !== '';
+  const submission = useFormSubmission({
+    canSubmit,
+    submit: () => fetchJson<{ data: { id: string } }>(
+      '/api/quotes',
+      jsonRequest('POST', { projectId, vendorContactId, trade, source: 'manual' }),
+    ),
+    onSuccess: (json) => {
+      handleOpenChange(false);
+      router.push(`/procurement/quotes/${json.data.id}/review`);
+    },
+    errorFallback: t('quotes.errors.createFailed'),
+  });
 
-  const handleOpenChange = (next: boolean) => {
+  function handleOpenChange(next: boolean) {
     if (!next) {
       setProjectId('');
       setTrade('');
-      setError(null);
+      submission.clearError();
     }
     onOpenChange(next);
-  };
+  }
 
-  const handleSubmit = async () => {
-    if (!isValid || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/quotes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, vendorContactId, trade, source: 'manual' }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? t('quotes.errors.createFailed'));
-      handleOpenChange(false);
-      router.push(`/procurement/quotes/${json.data.id}/review`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('quotes.errors.createFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  return { projectId, setProjectId, trade, setTrade, canSubmit, handleOpenChange, ...submission };
+}
+
+export function ManualQuoteDialog({ open, onOpenChange, vendorContactId }: ManualQuoteDialogProps) {
+  const { t } = useTranslation('quotes');
+  const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
+  const formId = `${idBase}-form`;
+  const f = useManualQuoteForm({ onOpenChange, vendorContactId }, t);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={f.handleOpenChange}>
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{t('quotes.create')}</DialogTitle>
           <DialogDescription>{t('quotes.dialog.description')}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <form id={formId} onSubmit={f.handleSubmit} className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label htmlFor={`${idBase}-project`}>{t('quotes.project')}</Label>
-            <POProjectSelector
-              id={`${idBase}-project`}
-              value={projectId}
-              onSelect={(id) => setProjectId(id)}
-            />
+            <POProjectSelector id={`${idBase}-project`} value={f.projectId} onSelect={(id) => f.setProjectId(id)} />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor={`${idBase}-trade`}>{t('quotes.trade')}</Label>
-            <TradeSelector id={`${idBase}-trade`} value={trade} onChange={setTrade} />
+            <TradeSelector id={`${idBase}-trade`} value={f.trade} onChange={f.setTrade} />
           </div>
+        </form>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={submitting}
-          >
-            {t('quotes.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || submitting}>
-            {submitting ? <Spinner size="small" /> : t('quotes.create')}
-          </Button>
-        </DialogFooter>
+        <FormActions
+          formId={formId}
+          submitLabel={t('quotes.create')}
+          pendingLabel={t('quotes.loading')}
+          cancelLabel={t('quotes.cancel')}
+          onCancel={() => f.handleOpenChange(false)}
+          submitting={f.submitting}
+          submitDisabled={!f.canSubmit}
+          error={f.error}
+        />
       </DialogContent>
     </Dialog>
   );

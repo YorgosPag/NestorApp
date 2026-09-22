@@ -131,6 +131,7 @@
     "internalNotesPlaceholder": "Δεν εμφανίζονται στο PDF",
     "validationErrors": "Σφάλματα",
     "saving": "Αποθήκευση...",
+    "saveFailed": "Η παραγγελία δεν αποθηκεύτηκε. Δοκιμάστε ξανά.",
     "save": "Αποθήκευση",
     "create": "Δημιουργία PO",
     "cancel": "Ακύρωση",

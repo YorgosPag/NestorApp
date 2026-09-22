@@ -63,17 +63,21 @@ function getButtonVariants() {
 const buttonVariants = getButtonVariants();
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
     // 🏢 ENTERPRISE: Use centralized border tokens and semantic colors
     const dynamicBorderTokens = useBorderTokens();
     const colors = useSemanticColors();
     const dynamicButtonVariants = createButtonVariants(dynamicBorderTokens, colors);
 
     const Comp = asChild ? Slot : "button"
+    // ADR-598 «(η)»: το HTML κάνει κάθε <button> χωρίς `type` κουμπί ΥΠΟΒΟΛΗΣ μέσα σε <form>.
+    // Προεπιλογή `button` (MUI ButtonBase / React Aria useButton)· υποβολή μόνο με ρητό `type="submit"`.
+    // Με `asChild` το στοιχείο είναι του παιδιού (π.χ. <a>, Radix Trigger) ⇒ δεν επιβάλλουμε τίποτα.
     return (
       <Comp
         className={cn(dynamicButtonVariants({ variant, size }), className)}
         ref={ref}
+        type={asChild ? type : (type ?? "button")}
         {...props}
       />
     )

@@ -16,7 +16,7 @@ import {
 import { FormActions } from '@/components/ui/form/FormActions';
 import { FormField } from '@/components/ui/form/FormComponents';
 import { Plus, Trash2, Save, X, ListFilter } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
 import { generateTempId } from '@/services/enterprise-id.service';
@@ -245,7 +245,6 @@ interface RfqLinesProps {
   onRemove: RfqLineRowProps['onRemove'];
 }
 
-type Translate = ReturnType<typeof useTranslation>['t'];
 
 /** Οι κεφαλίδες ΚΑΙ τα ονόματα των κελιών (`aria-label` στο `RfqLineRow`) — τα ίδια κλειδιά. */
 function rfqLineColumns(t: Translate): LineItemColumn[] {

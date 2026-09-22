@@ -6,11 +6,12 @@
  * - Φ2: όσο τρέχει η υποβολή: κείμενο αναμονής, και τα δύο κουμπιά απενεργοποιημένα.
  * - Φ3: το σφάλμα ανακοινώνεται (`role="alert"`).
  * - Φ4: χωρίς `onCancel` ⇒ κανένα κουμπί Άκυρο.
+ * - Φ5: `submitVariant` φτάνει στο κουμπί υποβολής (π.χ. `destructive` για ακύρωση).
  * - Α1: κανένα εύρημα axe.
  */
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 import { expectNoA11yViolations } from '@/test-utils/a11y';
 import { defaultSubmitButton } from '@/test-utils/implicit-submission';
@@ -61,6 +62,16 @@ describe('FormActions', () => {
   it('Φ4: χωρίς onCancel ⇒ κανένα Άκυρο', () => {
     renderWithForm({ onCancel: undefined });
     expect(screen.queryByRole('button', { name: 'Ακύρωση' })).toBeNull();
+  });
+
+  it('Φ5: submitVariant="destructive" ⇒ το κουμπί υποβολής φέρει το ύφος του', () => {
+    renderWithForm();
+    const plain = screen.getByRole('button', { name: 'Αποθήκευση' }).className;
+    cleanup();
+    renderWithForm({ submitVariant: 'destructive' });
+    const destructive = screen.getByRole('button', { name: 'Αποθήκευση' });
+    expect(destructive.className).toContain('bg-destructive');
+    expect(plain).not.toContain('bg-destructive');
   });
 
   it('Α1: κανένα εύρημα axe (και με σφάλμα)', async () => {

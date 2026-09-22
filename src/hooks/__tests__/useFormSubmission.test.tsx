@@ -6,6 +6,7 @@
  * - Σ3: σφάλμα με μήνυμα ⇒ το μήνυμα· χωρίς μήνυμα ⇒ το `errorFallback`.
  * - Σ4: επιτυχία ⇒ `onSuccess(result)`, και το κλείδωμα ανοίγει ξανά.
  * - Σ5: το `preventDefault` του γεγονότος καλείται (αλλιώς ο φυλλομετρητής πλοηγείται).
+ * - Σ6/Σ7: `keepLockedOnSuccess` — κλειδωμένο μετά από επιτυχία (πλοήγηση), ανοιχτό μετά από αποτυχία.
  */
 
 import { act, renderHook } from '@testing-library/react';
@@ -75,5 +76,23 @@ describe('useFormSubmission', () => {
     const { result } = setup({ submit: async () => 'ok' });
     await act(() => result.current.handleSubmit({ preventDefault }));
     expect(preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it('Σ6: keepLockedOnSuccess ⇒ μετά την επιτυχία (πλοήγηση) το κλείδωμα ΜΕΝΕΙ', async () => {
+    const submit = jest.fn(async () => 'id-1');
+    const { result } = setup({ submit, keepLockedOnSuccess: true });
+    await act(() => result.current.handleSubmit());
+    await act(() => result.current.handleSubmit());
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(result.current.submitting).toBe(true);
+  });
+
+  it('Σ7: keepLockedOnSuccess + αποτυχία ⇒ το κλείδωμα ανοίγει (ξαναδοκιμή)', async () => {
+    const submit = jest.fn(async () => { throw new Error('όχι'); });
+    const { result } = setup({ submit, keepLockedOnSuccess: true });
+    await act(() => result.current.handleSubmit());
+    expect(result.current.submitting).toBe(false);
+    await act(() => result.current.handleSubmit());
+    expect(submit).toHaveBeenCalledTimes(2);
   });
 });

@@ -51,8 +51,43 @@ export type TabFieldCustomRenderer = (
   disabled: boolean,
 ) => React.ReactNode;
 
-/** Parameterless custom renderer for a whole special section. */
+/**
+ * Renderer που αγνοεί τα ορίσματά του. **ΔΕΝ** είναι δεύτερο συμβόλαιο κλήσης: καλείται κι αυτός μέσω
+ * {@link renderSectionSlot}, με τα ίδια πέντε ορίσματα, που απλώς δεν διαβάζει.
+ */
 export type TabSectionCustomRenderer = () => React.ReactNode;
+
+/**
+ * Ό,τι χρειάζεται μια ενότητα για να καλέσει τον renderer της με το συμβόλαιο πεδίου. Υποσύνολο των props κάθε tab
+ * renderer — δίνεις **τα ίδια τα props**, ώστε να μη χρειάζεται τοπικό αντίγραφο (το CHECK 3.28 το μέτρησε ως κλώνο).
+ */
+export interface SectionSlotContext {
+  readonly formData: ContactFormData;
+  readonly onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  readonly onSelectChange: (name: string, value: string) => void;
+  /** @default false — ίδια προεπιλογή με τους tab renderers. */
+  readonly disabled?: boolean;
+}
+
+/**
+ * 🔑 **ΕΝΑ συμβόλαιο κλήσης για renderer ενότητας** — το ΙΔΙΟ με του renderer πεδίου.
+ *
+ * Ο χάρτης `customRenderers` είναι **ένας** χώρος ονομάτων για πεδία ΚΑΙ ενότητες: το `communication`
+ * είναι και πεδίο (φυσικό πρόσωπο, πέντε ορίσματα) και ενότητα (εταιρεία/υπηρεσία). Οι tab renderers
+ * καλούσαν την ενότητα **χωρίς ορίσματα** (`renderer()`), με ένα `as () => ReactNode` να κρύβει την
+ * ασυμφωνία από τον compiler. Μόλις το `pickerRenderer` άρχισε να διαβάζει `field.id` (a11y, `de2bd296`),
+ * **κάθε** επαφή-εταιρεία έριχνε ολόκληρη τη σελίδα Επαφών — μετρημένο ζωντανά (ADR-867 changelog 2026-09-22).
+ *
+ * Εδώ η ενότητα δίνει **τον εαυτό της ως πεδίο** (`id` = `name` = id ενότητας): ο renderer πεδίου παίρνει
+ * ό,τι περιμένει, ο renderer χωρίς παραμέτρους απλώς τα αγνοεί. ⛔ ΜΗΝ ξαναγράψεις `renderer()` σε tab renderer.
+ */
+export function renderSectionSlot(
+  renderer: TabFieldCustomRenderer,
+  sectionId: string,
+  ctx: SectionSlotContext,
+): React.ReactNode {
+  return renderer({ id: sectionId, name: sectionId }, ctx.formData, ctx.onChange, ctx.onSelectChange, ctx.disabled ?? false);
+}
 
 // ============================================================================
 // I18N KEY RESOLVER

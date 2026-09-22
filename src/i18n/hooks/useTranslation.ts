@@ -229,4 +229,7 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
   };
 };
 
+/** Η συνάρτηση `t` του hook — για βοηθητικά components/συναρτήσεις που τη δέχονται ως όρισμα. */
+export type Translate = ReturnType<typeof useTranslation>['t'];
+
 export default useTranslation;

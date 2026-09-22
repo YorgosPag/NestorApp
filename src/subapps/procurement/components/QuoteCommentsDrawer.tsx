@@ -6,7 +6,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Pencil, Trash2, SendHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { useIsMobile } from '@/hooks/useMobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -144,6 +145,50 @@ function CommentItem({
 // MAIN COMPONENT
 // ============================================================================
 
+interface QuoteCommentComposerProps {
+  quoteId: string;
+  authorName: string;
+  onCreated: (comment: QuoteComment) => void;
+  t: Translate;
+}
+
+/**
+ * Νέο σχόλιο — `<form>` + `useFormSubmission` (ADR-598 «(η)»): κλείδωμα ref (δύο Ctrl+Enter = ΕΝΑ
+ * σχόλιο) και ορατή αποτυχία (πριν: απόρριψη χωρίς χειρισμό ⇒ κανένα μήνυμα).
+ * Το σκέτο Enter σε `<textarea>` αλλάζει γραμμή (η HTML δεν κάνει implicit submission εκεί).
+ */
+function QuoteCommentComposer({ quoteId, authorName, onCreated, t }: QuoteCommentComposerProps) {
+  const [text, setText] = useState('');
+  const { submitting, error, handleSubmit } = useFormSubmission({
+    canSubmit: text.trim().length > 0,
+    submit: () => quoteCommentService.createComment(quoteId, text.trim(), authorName),
+    onSuccess: (created) => { onCreated(created); setText(''); },
+    errorFallback: t('rfqs.comments.addFailed'),
+  });
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2">
+      <div className="flex gap-2 items-end">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          aria-label={t('rfqs.comments.composerLabel')}
+          placeholder={t('rfqs.comments.placeholder')}
+          className="min-h-[56px] max-h-[120px] resize-none text-sm"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void handleSubmit(); }
+          }}
+        />
+        <Button type="submit" size="sm" disabled={!text.trim() || submitting} className="shrink-0 h-9">
+          <SendHorizontal className="size-4" aria-hidden />
+          <span className="sr-only">{t('rfqs.comments.add')}</span>
+        </Button>
+      </div>
+      {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
+    </form>
+  );
+}
+
 export function QuoteCommentsDrawer({
   quoteId,
   open,
@@ -157,8 +202,6 @@ export function QuoteCommentsDrawer({
 
   const [comments, setComments] = useState<QuoteComment[]>([]);
   const [loading, setLoading] = useState(false);
-  const [newText, setNewText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -185,21 +228,13 @@ export function QuoteCommentsDrawer({
     }
   }, [comments.length]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!newText.trim() || submitting) return;
-    setSubmitting(true);
-    try {
-      const created = await quoteCommentService.createComment(quoteId, newText.trim(), authorName);
-      setComments((prev) => {
-        const next = [...prev, created];
-        onCountChange?.(next.length);
-        return next;
-      });
-      setNewText('');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [quoteId, newText, submitting, authorName, onCountChange]);
+  const handleCreated = useCallback((created: QuoteComment) => {
+    setComments((prev) => {
+      const next = [...prev, created];
+      onCountChange?.(next.length);
+      return next;
+    });
+  }, [onCountChange]);
 
   const handleSaveEdit = useCallback(async (commentId: string) => {
     if (!editText.trim()) return;
@@ -293,27 +328,7 @@ export function QuoteCommentsDrawer({
         </div>
 
         <footer className="flex-none border-t px-4 py-3">
-          <div className="flex gap-2 items-end">
-            <Textarea
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
-              placeholder={t('rfqs.comments.placeholder')}
-              className="min-h-[56px] max-h-[120px] resize-none text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void handleSubmit();
-              }}
-            />
-            <Button
-              size="sm"
-              onClick={() => void handleSubmit()}
-              disabled={!newText.trim() || submitting}
-              className="shrink-0 h-9"
-              title={t('rfqs.comments.add')}
-            >
-              <SendHorizontal className="size-4" />
-              <span className="sr-only">{t('rfqs.comments.add')}</span>
-            </Button>
-          </div>
+          <QuoteCommentComposer quoteId={quoteId} authorName={authorName} onCreated={handleCreated} t={t} />
         </footer>
       </SheetContent>
     </Sheet>

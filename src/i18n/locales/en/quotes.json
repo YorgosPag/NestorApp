@@ -496,6 +496,8 @@
       "empty": "No comments yet",
       "placeholder": "Write a comment... (@ to mention a team member)",
       "add": "Add",
+      "composerLabel": "New comment",
+      "addFailed": "The comment was not added. Please try again.",
       "cancel": "Cancel",
       "edited": "edited",
       "deleted": "Comment deleted",

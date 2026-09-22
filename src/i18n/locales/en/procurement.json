@@ -131,6 +131,7 @@
     "internalNotesPlaceholder": "Not visible on PDF",
     "validationErrors": "Errors",
     "saving": "Saving...",
+    "saveFailed": "The purchase order was not saved. Please try again.",
     "save": "Save",
     "create": "Create PO",
     "cancel": "Cancel",

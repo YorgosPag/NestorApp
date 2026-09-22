@@ -772,3 +772,80 @@ EmailMessageFields}` · `test-utils/implicit-submission` (το user-event 14 ψ�
 ήδη στο HEAD· το `sidebar-context` από το `sidebar-trigger.a11y.test.tsx` ⇒ **ίδιο commit**, αλλιώς το G11 κοκκινίζει.
 ⚠️ **N.7.1 — PARTIAL**: συναρτήσεις >40 γρ. μένουν οι **προϋπάρχουσες** μεγάλες JSX (FWA 292→268, Material 331→298,
 QuoteForm 238→52, RfqBuilder 285→51, γραμμές πίνακα 62/93) — καταγράφηκαν στο `pending-ratchet-work.md`.
+
+### 2026-09-22 (η) — Επαλήθευση CI μετά το push του «(ζ)» · **το `Button` έγινε κουμπί ΕΝΕΡΓΕΙΑΣ εξ ορισμού**
+
+**CI** — το «(ζ)» έφυγε στο push `0c0049ed`· σύγκριση ανά workflow με το προηγούμενο run του (`13d15291`):
+- `jscpd-ratchet` ✅ **1787/1788** · `a11y-ratchet` ✅ **134/134** (πριν: ❌) · `i18n-governance` ✅ · `ui-contrast-ratchet` ✅
+  (οι αριθμοί διαβάστηκαν **από το log**, όχι από το χρώμα).
+- `jest-suite`: 48 → **47**, **1 νέο**, 2 διορθώθηκαν. Φίλτρο `FAIL …test` επικυρωμένο **θετικά** (47 = `Test Suites: 47 failed`).
+  Καμία σουίτα procurement / form / jscpd στα κόκκινα.
+  - 🔴 **Νέο: `check-i18n-ssr-raw-keys` Μ8/Μ9** (CHECK 3.51, ADR-781) — **ξένο** προς το «(ζ)». Ρίζα: το test μεταλλάσσει
+    **πραγματικό** αρχείο παραγωγής (`sidebar-menu-item.tsx`) υποθέτοντας ότι δηλώνει `useTranslation('navigation')`·
+    το `c61e953d` (ADR-871 §10.6) το αναδόμησε και το `t` έρχεται πλέον από `useSidebarLinkBehavior()`. ⚠️ Το
+    σύμπτωμα είναι **`records: []`**, δηλαδή η Κ2 δεν κατέγραψε ούτε `namespace-injected`: **`t` από hook-περιτύλιγμα
+    είναι αόρατο στην Κ2**, όχι μόνο το fixture σπασμένο. Πρόταση: (α) fixture **συνθετικό** μέσα στο test (όχι
+    αρχείο παραγωγής ως όργανο)· (β) η Κ2 να ταξινομεί ρητά κάθε `t(...)` που δεν μπορεί να αποδώσει (κλειστό σύνολο
+    καταστάσεων, όχι σιωπηλή παράλειψη).
+- Επόμενο push `6eb34ba5`: 47 → 50, **3 νέα, όλα ξένα** (ADR-871 Π5 / ADR-867 Β10):
+  `personal-sidebar-mobile` + `shell-utilities-identity` — κοινή ρίζα: το `NetworkUnreadBadge` (`7df89eec`/`5b2191f5`)
+  έφερε `useAuth` μέσα στο `sidebar-menu-item` ⇒ τα tests του πλαϊνού χρειάζονται `AuthProvider` (ή mock του
+  `useNetworkUnreadCount`), και η εισαγωγή σέρνει το πραγματικό `i18n/config` (`initReactI18next` undefined στο mock).
+  `network-inbox` Ι-6/Ι-6β — timeout 10s μετά το `13202650` (tenureHistory)· υπόθεση, όχι επαληθευμένη: ο fake
+  Firestore του test δεν απαντά σε νέο ερώτημα του ιστορικού θητειών.
+
+**`Button` χωρίς προεπιλεγμένο `type` — ΕΚΛΕΙΣΕ.** Η HTML κάνει κάθε `<button>` χωρίς `type` κουμπί **υποβολής** μέσα
+σε `<form>`, άρα το «Προσθήκη γραμμής» υπέβαλλε, και το Enter πατούσε το **πρώτο** τέτοιο κουμπί κατά σειρά εγγράφου.
+Μέτρηση AST **πριν** την απόφαση (ανιχνευτής επικυρωμένος θετικά σε κάθε σκέλος):
+| Σκέλος | Πλήθος |
+|---|---|
+| `<Button>` από `ui/button` (όλο το `src`, εκτός tests) | 1571 |
+| μέσα σε `<form>` στο ίδιο αρχείο | 55 — **όλα** με ρητό `type` |
+| χωρίς `type` με `form=` (βασίζονται στο σιωπηρό submit) | **0** |
+| components εντός `<form>`, 1 επίπεδο διααρχειακά | 142 — **0** με κουμπί χωρίς `type` (9 με κουμπιά, όλα ρητά) |
+| χωρίς `type` και χωρίς handler, εκτός φόρμας | 65 (+16 native) — Radix triggers, `<Link>`, placeholders· **κανένα** submit |
+
+⇒ **Καμία** υπάρχουσα συμπεριφορά δεν αλλάζει· η αλλαγή κλείνει την **κατηγορία** για κάθε μελλοντική φόρμα.
+`button.tsx`: `type={asChild ? type : (type ?? "button")}`: ίδια σημασιολογία με MUI `ButtonBase` και React Aria
+`useButton` (προεπιλογή μόνο όταν το στοιχείο **είναι** `<button>`· με `asChild` το στοιχείο ανήκει στο παιδί: `<a>`
+δεν έχει `type`, οι Radix triggers βάζουν ήδη το δικό τους).
+**Άγκυρα:** `src/components/ui/__tests__/button-type-default.test.tsx`: Τ1 κλικ χωρίς `type` δεν υποβάλλει · Τ2
+`submit`/`reset` σεβαστά · Τ3 το προεπιλεγμένο κουμπί της φόρμας (SSoT `defaultSubmitButton`) είναι το `submit`, όχι
+το προηγούμενο κουμπί ενέργειας · Τ4 `asChild` χωρίς `type`. Μεταλλάξεις **2/2** (χωρίς προεπιλογή ⇒ Τ1+Τ3 κόκκινα ·
+προεπιλογή και στο `asChild` ⇒ Τ4 κόκκινο). Jest: 5/5 + 29 σουίτες φορμών (procurement · `ui/form` · auth · account ·
+export barrier) **312/312**. Χωρίς tsc (N.17).
+⚠️ **Εκτός εμβέλειας**: 317 native `<button>` χωρίς `type` (εκτός φόρμας σήμερα). Ο κανόνας `react/button-has-type`
+του ESLint θα τα κάλυπτε, αλλά το ESLint στο CI είναι ήδη κόκκινο (προϋπάρχον), άρα σήμερα δεν θα φύλαγε τίποτα.
+
+#### (η) συνέχεια — Χειρόγραφες υποβολές → SSoT, **κύμα 1: procurement** (6 καταναλωτές)
+
+Σειρά κυμάτων (χαμηλός → υψηλός κίνδυνος): **procurement** (όπου γεννήθηκε το SSoT) → crm/sales/shared → accounting →
+dxf-viewer (ADR-040). 🔴 Ο πληθυσμός **δεν** είναι ~29: το grep `setSubmitting(true)` δεν βλέπει `setSending`/`setSaving`/
+`setIsSubmitting` ⇒ **109** αρχεία. Το `VendorInviteDialog`, που το `ca8e6152` δήλωνε μεταφερμένο, τρέχει ακόμα `setSending`.
+
+**SSoT: δύο συμβατές επεκτάσεις** (+tests):
+- `useFormSubmission({ keepLockedOnSuccess })`: η επιτυχία οδηγεί σε **πλοήγηση** ⇒ το κλείδωμα **δεν** ανοίγει
+  (Remix `navigation.state`, RHF `isSubmitSuccessful`)· σε αποτυχία ανοίγει πάντα (Σ6/Σ7).
+- `FormActions({ submitVariant })`: `destructive` για μη αναστρέψιμη ενέργεια (Φ5).
+- `type Translate` εξάγεται από `@/i18n/hooks/useTranslation`: το ίδιο alias ήταν γραμμένο σε **17** αρχεία (2 μεταφέρθηκαν).
+- Νέο `hooks/useMountedRef`: το ζεύγος `mounted.current = true/false` ήταν χειρόγραφο σε **18** αρχεία· το SSoT το χρησιμοποιεί, τα 17 στο `pending-ratchet-work`.
+
+**Ελαττώματα που έκλεισαν:**
+| Καταναλωτής | Πριν | Μετά |
+|---|---|---|
+| `AwardReasonDialog` | χωρίς `finally` ⇒ σφάλμα δικτύου = **μόνιμο** «φόρτωση» | `<form>` + SSoT· ξεκλειδώνει πάντα |
+| `RfqCancelDialog` | φύλακας μόνο στο `disabled`· `onClick` έξω από φόρμα | `<form>` + `FormActions submitVariant="destructive"` |
+| `ManualQuoteDialog` | ωμό `fetch`, σφάλμα χωρίς `role="alert"` | `fetchJson` + SSoT |
+| `QuoteCommentsDrawer` | αποτυχία = **αθόρυβη** (unhandled rejection)· πεδίο **χωρίς όνομα** (μόνο placeholder)· `title=` | composer σε `<form>`, ορατό σφάλμα, `aria-label`, ένα σχόλιο ανά διπλό Ctrl+Enter |
+| `PurchaseOrderForm` + `usePurchaseOrderForm` | hook με δικό του `submitting`/`submitError` + ωμό `'Network error'` (N.11) | hook = καθαρό `save()`· η φόρμα έγινε `<form>` + `FormActions` |
+| σελίδα `quotes/scan` | σώμα απάντησης `res.text()` στην οθόνη· `'Scan failed'`/`'No quoteId returned'` αγγλικά | `fetchJson`, i18n, `keepLockedOnSuccess` |
+
+⚠️ **Ορατές αλλαγές:**
+- **Enter στη φόρμα παραγγελίας:** δημιουργεί/αποθηκεύει (HTML implicit submission). Είναι αποδεκτό γιατί μια νέα PO είναι `draft`.
+- **Σειρά κουμπιών της παραγγελίας:** «Άκυρο | Αποθήκευση» δεξιά (`FormActions`), αντί για «Αποθήκευση | Άκυρο» αριστερά.
+- **Αναμονή:** ο spinner έγινε κείμενο (`pendingLabel`).
+
+🔗 **Η εξάρτηση από το Β1, μετρημένη:** η μετατροπή της παραγγελίας σε `<form>` έφερε μέσα της 3 `<Button onClick>` χωρίς `type` (`PurchaseOrderItemsTable` :219/:251/:374)· χωρίς την προεπιλογή `type="button"` το «Προσθήκη γραμμής» **θα υπέβαλλε την παραγγελία**. Επαληθεύτηκε με το ίδιο audit AST, πριν και μετά.
+**i18n:** `quotes.rfqs.comments.{composerLabel,addFailed}` · `procurement.form.saveFailed` (el+en) · `src/types/i18n.ts`
+ξαναπαραγμένο: μόνο τα 3 κλειδιά.
+**Άγκυρα:** `src/subapps/procurement/__tests__/procurement-form-submission.test.tsx`: Μ1/Μ2 · Ρ1/Ρ2 · Α1 · Σ1/Σ2 · Κ1/Κ2.

@@ -27,8 +27,9 @@
  * μετά από επιτυχία· μόνο το **τοπικό** state δεν γράφεται αν το component έχει φύγει.
  */
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
 
+import { useMountedRef } from '@/hooks/useMountedRef';
 import { getErrorMessage } from '@/lib/error-utils';
 
 export interface UseFormSubmissionOptions<R> {
@@ -39,6 +40,12 @@ export interface UseFormSubmissionOptions<R> {
   readonly onSuccess?: (result: R) => void;
   /** Έτοιμο (μεταφρασμένο) κείμενο όταν το σφάλμα δεν έχει δικό του μήνυμα. */
   readonly errorFallback: string;
+  /**
+   * Η επιτυχία οδηγεί σε **πλοήγηση** (`router.push`)· η σελίδα μένει ζωντανή ώσπου να
+   * φύγει ⇒ το κλείδωμα ΔΕΝ ανοίγει, αλλιώς 2ο κλικ = 2η εγγραφή (Remix `navigation.state`,
+   * React Hook Form `isSubmitSuccessful`). Σε αποτυχία ανοίγει πάντα.
+   */
+  readonly keepLockedOnSuccess?: boolean;
 }
 
 export interface FormSubmission {
@@ -54,16 +61,12 @@ export function useFormSubmission<R>({
   canSubmit,
   onSuccess,
   errorFallback,
+  keepLockedOnSuccess = false,
 }: UseFormSubmissionOptions<R>): FormSubmission {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => { mounted.current = false; };
-  }, []);
+  const mounted = useMountedRef();
 
   const handleSubmit = useCallback(async (event?: Pick<FormEvent, 'preventDefault'>): Promise<void> => {
     event?.preventDefault();
@@ -72,16 +75,21 @@ export function useFormSubmission<R>({
     inFlight.current = true;
     setSubmitting(true);
     setError(null);
+    let release = true;
     try {
       const result = await submit();
+      release = !keepLockedOnSuccess;
       onSuccess?.(result);
     } catch (caught) {
+      release = true;
       if (mounted.current) setError(getErrorMessage(caught, errorFallback));
     } finally {
-      inFlight.current = false;
-      if (mounted.current) setSubmitting(false);
+      if (release) {
+        inFlight.current = false;
+        if (mounted.current) setSubmitting(false);
+      }
     }
-  }, [submit, canSubmit, onSuccess, errorFallback]);
+  }, [submit, canSubmit, onSuccess, errorFallback, keepLockedOnSuccess]);
 
   const clearError = useCallback(() => setError(null), []);
 

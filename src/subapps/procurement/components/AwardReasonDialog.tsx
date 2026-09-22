@@ -5,14 +5,14 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { FormActions } from '@/components/ui/form/FormActions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
 
@@ -48,6 +48,79 @@ interface AwardReasonDialogProps {
   onCancel: () => void;
 }
 
+
+interface AwardReasonFieldsProps {
+  idBase: string;
+  category: AwardReasonCategory | '';
+  onCategoryChange: (value: AwardReasonCategory) => void;
+  note: string;
+  onNoteChange: (value: string) => void;
+  requiresNote: boolean;
+  t: Translate;
+}
+
+function AwardReasonFields({ idBase, category, onCategoryChange, note, onNoteChange, requiresNote, t }: AwardReasonFieldsProps) {
+  return (
+    <>
+      <div className="space-y-1">
+        <label htmlFor={`${idBase}-category`} className="text-xs font-medium uppercase text-muted-foreground">
+          {t('rfqs.awardReason.label.category')}
+        </label>
+        <Select value={category} onValueChange={(v) => onCategoryChange(v as AwardReasonCategory)}>
+          <SelectTrigger id={`${idBase}-category`}>
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {t(`rfqs.awardReason.category.${cat}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor={`${idBase}-note`} className="text-xs font-medium uppercase text-muted-foreground">
+          {requiresNote ? t('rfqs.awardReason.label.noteRequired') : t('rfqs.awardReason.label.note')}
+        </label>
+        <Textarea
+          id={`${idBase}-note`}
+          rows={3}
+          value={note}
+          onChange={(e) => onNoteChange(e.target.value)}
+          placeholder={category ? t(`rfqs.awardReason.placeholder.note.${PLACEHOLDER_KEY[category]}`) : ''}
+        />
+      </div>
+    </>
+  );
+}
+
+/** Κατάσταση + υποβολή του διαλόγου. */
+function useAwardReasonForm(open: boolean, onConfirm: AwardReasonDialogProps['onConfirm'], t: Translate) {
+  const [category, setCategory] = useState<AwardReasonCategory | ''>('');
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      setCategory('');
+      setNote('');
+    }
+  }, [open]);
+
+  const requiresNote = category === 'other';
+  const canConfirm = category !== '' && (!requiresNote || note.trim().length > 0);
+  // ADR-598 «(η)»: ένας δρόμος (κλικ + Enter), κλείδωμα ref, και το κλείδωμα ανοίγει ΚΑΙ σε αποτυχία
+  // (πριν: χωρίς `finally` ⇒ σφάλμα δικτύου άφηνε τον διάλογο μόνιμα σε «φόρτωση»).
+  const { submitting, error, handleSubmit } = useFormSubmission({
+    canSubmit: canConfirm,
+    submit: () => onConfirm(category, note),
+    errorFallback: t('rfqs.award.errorToast'),
+  });
+
+  return { category, setCategory, note, setNote, requiresNote, canConfirm, submitting, error, handleSubmit };
+}
+
 export function AwardReasonDialog({
   open,
   entry,
@@ -57,27 +130,8 @@ export function AwardReasonDialog({
 }: AwardReasonDialogProps) {
   const { t } = useTranslation('quotes');
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
-  const [category, setCategory] = useState<AwardReasonCategory | ''>('');
-  const [note, setNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setCategory('');
-      setNote('');
-      setSubmitting(false);
-    }
-  }, [open]);
-
-  const requiresNote = category === 'other';
-  const canConfirm = category !== '' && (!requiresNote || note.trim().length > 0);
-
-  const handleConfirm = async () => {
-    if (!canConfirm || submitting || !category) return;
-    setSubmitting(true);
-    await onConfirm(category, note);
-    setSubmitting(false);
-  };
+  const formId = `${idBase}-form`;
+  const f = useAwardReasonForm(open, onConfirm, t);
 
   if (!entry) return null;
 
@@ -98,53 +152,28 @@ export function AwardReasonDialog({
           )}
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor={`${idBase}-category`} className="text-xs font-medium uppercase text-muted-foreground">
-              {t('rfqs.awardReason.label.category')}
-            </label>
-            <Select value={category} onValueChange={(v) => setCategory(v as AwardReasonCategory)}>
-              <SelectTrigger id={`${idBase}-category`}>
-                <SelectValue placeholder="—" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {t(`rfqs.awardReason.category.${cat}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <form id={formId} onSubmit={f.handleSubmit} className="space-y-4">
+          <AwardReasonFields
+            idBase={idBase}
+            category={f.category}
+            onCategoryChange={f.setCategory}
+            note={f.note}
+            onNoteChange={f.setNote}
+            requiresNote={f.requiresNote}
+            t={t}
+          />
+        </form>
 
-          <div className="space-y-1">
-            <label htmlFor={`${idBase}-note`} className="text-xs font-medium uppercase text-muted-foreground">
-              {requiresNote
-                ? t('rfqs.awardReason.label.noteRequired')
-                : t('rfqs.awardReason.label.note')}
-            </label>
-            <Textarea
-              id={`${idBase}-note`}
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                category
-                  ? t(`rfqs.awardReason.placeholder.note.${PLACEHOLDER_KEY[category as AwardReasonCategory]}`)
-                  : ''
-              }
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel} disabled={submitting}>
-            {t('rfqs.awardReason.cancelButton')}
-          </Button>
-          <Button onClick={handleConfirm} disabled={!canConfirm || submitting}>
-            {submitting ? t('quotes.loading') : t('rfqs.awardReason.confirmButton')}
-          </Button>
-        </DialogFooter>
+        <FormActions
+          formId={formId}
+          submitLabel={t('rfqs.awardReason.confirmButton')}
+          pendingLabel={t('quotes.loading')}
+          cancelLabel={t('rfqs.awardReason.cancelButton')}
+          onCancel={onCancel}
+          submitting={f.submitting}
+          submitDisabled={!f.canConfirm}
+          error={f.error}
+        />
       </DialogContent>
     </Dialog>
   );

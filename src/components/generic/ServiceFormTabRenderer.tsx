@@ -3,7 +3,13 @@
 import React from 'react';
 import { getIconComponent } from './utils/IconMapping';
 import { ServiceFormRenderer, type ServiceFormData, type PhotoData, type CustomFieldRenderer } from './ServiceFormRenderer';
-import { FormLogoUploadSection, FormTabsShell, type TabFieldCustomRenderer } from './form-tabs-shell';
+import {
+  FormLogoUploadSection,
+  FormTabsShell,
+  renderSectionSlot,
+  type TabFieldCustomRenderer,
+  type TabSectionCustomRenderer,
+} from './form-tabs-shell';
 import type { PhotoSlot as UploadPhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceSectionConfig } from '@/config/service-config';
 // 🏢 ENTERPRISE: i18n support for tab labels
@@ -48,7 +54,7 @@ export interface ServiceFormTabRendererProps {
   /** Multiple photos change handler (now used for logos too) */
   onPhotosChange?: (photos: PhotoSlot[]) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>;
+  customRenderers?: Record<string, CustomRendererFn | TabSectionCustomRenderer>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, CustomRendererFn>;
   fieldErrors?: Record<string, string>;
@@ -105,15 +111,13 @@ function createServiceFormTabsFromConfig(
       // Check for custom renderer FIRST (but exclude logo and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'logo' && section.id !== 'relationships') {
         logger.info('Using service custom renderer for section', { sectionId: section.id });
-        const renderer = customRenderers[section.id] as (() => React.ReactNode);
-        return renderer();
+        return renderSectionSlot(customRenderers[section.id], section.id, props);
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
         logger.info('Using relationships custom renderer');
-        const renderer = customRenderers.relationships as (() => React.ReactNode);
-        return renderer();
+        return renderSectionSlot(customRenderers.relationships, section.id, props);
       }
 
       if (section.id === 'logo') {

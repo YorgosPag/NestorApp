@@ -7,7 +7,9 @@ import { GenericFormRenderer, type FormDataRecord, type PhotoData, type CustomRe
 import {
   FormLogoUploadSection,
   FormTabsShell,
+  renderSectionSlot,
   resolveI18nKeyLabel,
+  type TabSectionCustomRenderer,
 } from './form-tabs-shell';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi';
@@ -39,9 +41,6 @@ interface FormFieldData {
   [key: string]: unknown;
 }
 
-/** Local custom renderer function type (parameterless for special sections) */
-type LocalCustomRendererFn = () => React.ReactNode;
-
 /** Field renderer function type */
 type FieldRendererFn = (field: FormFieldData, formData: ContactFormData, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode;
 
@@ -59,7 +58,7 @@ export interface GenericFormTabRendererProps {
   /** Multiple photos change handler (now used for logos too) */
   onPhotosChange?: (photos: PhotoSlotData[]) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, FieldRendererFn | LocalCustomRendererFn>;
+  customRenderers?: Record<string, FieldRendererFn | TabSectionCustomRenderer>;
   /** Optional section footer renderers (rendered below section fields) */
   sectionFooterRenderers?: Record<string, FieldRendererFn>;
   fieldErrors?: Record<string, string>;
@@ -116,17 +115,16 @@ function createFormTabsFromConfig(
       // Check for custom renderer FIRST (but exclude companyPhotos and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
         logger.info('Using generic custom renderer for section', { sectionId: section.id });
-        const renderer = customRenderers[section.id] as LocalCustomRendererFn;
-        const customContent = renderer();
+        const customContent = renderSectionSlot(customRenderers[section.id], section.id, props);
 
         // 🗺️ Also render section footer (e.g. map preview) after custom section content
-        const footerFn = sectionFooterRenderers?.[section.id] as LocalCustomRendererFn | undefined;
+        const footerFn = sectionFooterRenderers?.[section.id];
         if (footerFn) {
           return (
             <>
               {customContent}
               <div className="w-full mt-4">
-                {footerFn()}
+                {renderSectionSlot(footerFn, section.id, props)}
               </div>
             </>
           );
@@ -138,15 +136,13 @@ function createFormTabsFromConfig(
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
         logger.info('Using relationships custom renderer');
-        const renderer = customRenderers.relationships as LocalCustomRendererFn;
-        return renderer();
+        return renderSectionSlot(customRenderers.relationships, section.id, props);
       }
 
       if (section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos) {
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
         logger.info('Using companyPhotos custom renderer');
-        const renderer = customRenderers.companyPhotos as LocalCustomRendererFn;
-        return renderer();
+        return renderSectionSlot(customRenderers.companyPhotos, section.id, props);
       }
 
       if (section.id === 'logo') {

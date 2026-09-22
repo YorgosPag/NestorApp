@@ -46,7 +46,33 @@
   `'delivery.state': 'seen'`, και το `config` παράγεται από τον έναν τύπο. Ο κριτής ανάγνωσης είναι ήδη ένας
   (`lib/notifications/notification-state.ts`). ⚠️ Ο άλλος agent δουλεύει στον τομέα ειδοποιήσεων — συντονισμός πριν.
 
-- 🟡 **21/09 — ~29 ΧΕΙΡΟΓΡΑΦΕΣ ΥΠΟΒΟΛΕΣ ΦΟΡΜΑΣ (`setSubmitting(true)`) ΕΚΤΟΣ PROCUREMENT** *(ADR-598 «(ζ)» · N.0.2)*
+- 🟡 **22/09 — `errorFallback` ΤΟΥ `useFormSubmission` ΣΧΕΔΟΝ ΠΟΤΕ ΔΕΝ ΦΑΙΝΕΤΑΙ** *(ADR-598 «(η)» · N.11 · απόφαση Giorgio)*
+
+  Το `getErrorMessage` επιστρέφει το `error.message` **κάθε** `Error` ⇒ ό,τι πετά ο καλούμενος φτάνει στην οθόνη αυτούσιο:
+  `fetchJson` σε μη-JSON απάντηση ⇒ **«Unknown error»** (ωμό αγγλικό, `lib/api/fetch-json.ts:33`) ή `HTTP 502`· Firestore
+  ⇒ τεχνικό αγγλικό. Το `errorFallback` μπαίνει μόνο για μη-`Error`. Πρόταση (πρότυπο Stripe/Google APIs): το `fetchJson` πετά
+  τυποποιημένο `ApiResponseError { status, serverMessage | null }`, και το SSoT δείχνει `serverMessage` όταν υπάρχει, αλλιώς
+  **πάντα** το `errorFallback` — ποτέ τεχνικό μήνυμα. Αγγίζει 9 καταναλωτές του `fetchJson` + το SSoT ⇒ απόφαση πολιτικής.
+
+- 🟡 **22/09 — ΧΕΙΡΟΓΡΑΦΟ «mounted ref» ΣΕ 17 ΑΡΧΕΙΑ → `useMountedRef`** *(N.0.2)*
+
+  Νέο SSoT `src/hooks/useMountedRef.ts` (22/09, test `hooks/__tests__/useMountedRef.test.tsx`)· το `useFormSubmission` το χρησιμοποιεί.
+  Μένουν 17: `grep -rlE "(is)?[mM]ounted(Ref)?.current = (true|false)" src | grep -v __tests__`. Μηχανική αντικατάσταση,
+  ⚠️ προσοχή σε όσα ΔΕΝ ξαναγράφουν `true` στο mount (StrictMode ⇒ ψευδές `false` στο dev).
+
+- 🟡 **22/09 — ΤΟ ALIAS `ReturnType<typeof useTranslation>['t']` ΣΕ 17 ΑΡΧΕΙΑ** *(N.0.2)*
+
+  Πλέον εξάγεται **μία** φορά: `type Translate` από `@/i18n/hooks/useTranslation` (22/09). Μεταφέρθηκαν τα 2 του procurement·
+  μένουν 15 (`grep -rln "ReturnType<typeof useTranslation>['t']" src`) — μηχανική αντικατάσταση, ξένες περιοχές.
+
+- 🟡 **21/09 — ΧΕΙΡΟΓΡΑΦΕΣ ΥΠΟΒΟΛΕΣ ΦΟΡΜΑΣ → `useFormSubmission` — ΚΥΜΑΤΑ** *(ADR-598 «(ζ)»/«(η)» · N.0.2)*
+
+  🔴 **Ο πληθυσμός ΔΕΝ είναι ~29 (μετρημένο 22/09):** το grep `setSubmitting(true)` είναι τυφλό στα `setSending`/
+  `setSaving`/`setIsSubmitting`/`setPending`: `grep -rlE "set(Submitting|Sending|Saving|IsSubmitting|IsSaving|Pending)(true)" src`
+  = **109** αρχεία (π.χ. το `VendorInviteDialog`, που το commit `ca8e6152` δήλωνε μεταφερμένο, τρέχει ακόμα `setSending`).
+  **Κύματα** (σειρά χαμηλού → υψηλού κινδύνου): ✅ **1 procurement** (22/09: Award · RfqCancel · ManualQuote · QuoteComments ·
+  PO form · scan) → **2** crm + sales + shared + components (`TaskDialogFormFooter` → περίβλημα `FormActions`) → **3** accounting
+  → **4** dxf-viewer (ADR-040). Μετά: τα υπόλοιπα του πληθυσμού των 109, ανά περιοχή.
 
   SSoT πλέον: `src/hooks/useFormSubmission.ts` (κλείδωμα `ref` σύγχρονο + `canSubmit` **μέσα** στην υποβολή + `getErrorMessage`)
   και `src/components/ui/form/FormActions.tsx` (`<Button type="submit" form={formId}>`). Μετρημένο: **37** αρχεία με
@@ -55,13 +81,6 @@
   στο ίδιο tick = δύο εγγραφές). ⚠️ Όχι μαζικό `sed`: όπου το κουμπί ζει έξω από το `<form>` με `onClick`, η φόρμα **δεν
   έχει** κουμπί υποβολής και το Enter **δεν** υποβάλλει σήμερα — η μετάβαση στο `form=` **αλλάζει** συμπεριφορά (σωστά,
   αλλά ορατά). Και: `crm/shared/TaskDialogFormFooter` → να γίνει λεπτό περίβλημα του `FormActions`.
-
-- 🟡 **21/09 — ΤΟ `Button` ΤΟΥ ΕΡΓΟΥ ΔΕΝ ΕΧΕΙ ΠΡΟΕΠΙΛΕΓΜΕΝΟ `type`** *(ADR-598 «(ζ)»)*
-
-  `src/components/ui/button.tsx` δεν ορίζει `type` ⇒ μέσα σε `<form>` **κάθε** `<Button>` χωρίς `type` είναι κουμπί
-  **υποβολής** (π.χ. «Προσθήκη γραμμής», «Διαγραφή»). Βρέθηκε στο `VendorPickerSection` (αφαίρεση προμηθευτή). React Aria,
-  MUI, Chakra ορίζουν `type="button"` εξ ορισμού. ⚠️ Η αλλαγή της προεπιλογής είναι **καθολική** — όσες φόρμες βασίζονται
-  σιωπηλά στο «submit» θα σταματήσουν να υποβάλλουν. Πρώτα μέτρηση: `<Button` μέσα σε `<form>` χωρίς `type` (AST).
 
 - 🟡 **21/09 — N.7.1: ΜΕΓΑΛΕΣ JSX ΣΥΝΑΡΤΗΣΕΙΣ ΣΤΙΣ ΦΟΡΜΕΣ PROCUREMENT** *(ADR-598 «(ζ)»)*
 
@@ -4301,6 +4320,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-09-22 | ✅ **`Button` ΧΩΡΙΣ ΠΡΟΕΠΙΛΕΓΜΕΝΟ `type` — ΕΚΛΕΙΣΕ (ADR-598 «(η)», Opus 5).** Πρώτα μέτρηση AST: 1571 `<Button>`, **0** χωρίς `type` μέσα σε `<form>` στο ίδιο αρχείο (55 εντός φόρμας, όλα ρητά)· ένα επίπεδο διααρχειακά 142 components εντός φόρμας, **0** με κουμπί χωρίς `type`· τα 65+16 κουμπιά χωρίς handler είναι Radix triggers / `<Link>` / placeholders. Άρα **καμία** υπάρχουσα συμπεριφορά δεν αλλάζει. `button.tsx`: `type ?? "button"` μόνο όταν **δεν** είναι `asChild` (MUI ButtonBase / React Aria). Άγκυρα `ui/__tests__/button-type-default.test.tsx` (5 tests, μεταλλάξεις 2/2). |
 | 2026-09-21 | ✅ **ΕΚΛΕΙΣΑΝ ΔΥΟ ΕΓΓΡΑΦΕΣ G11 (ADR-598 «(δ)» · ADR-418, εντολή Giorgio).** (1) **`SearchableCombobox` χωρίς όνομα σε ~17 καταναλωτές** — ο τύπος `FieldAccessibleName` το απαιτεί, έλεγχος DOM (`findMissingAccessibleName`) + φρουρά AST σε όλο το `src/` (`ui/__tests__/combobox-naming.test.ts`). (2) **`RulerCornerBox`: `menuitem` χωρίς `menu`** — έγινε `DropdownMenu` με τις κλίμακες ως `menuitemradio`. **Επαληθευμένο πριν τη διαγραφή**: και τα δύο στο `de2bd296`, ήδη στο `origin/main`, αρχεία **ταυτόσημα** με το HEAD, CI `jest-suite` χωρίς νέο κόκκινο. |
 | 2026-09-21 | ✅ **§3 PROCUREMENT — ΕΚΛΕΙΣΑΝ ΔΥΟ ΕΓΓΡΑΦΕΣ (ADR-598 «(ζ)» · ADR-584 §8, Opus 5· εντολή Giorgio).** (1) **8 προϋπάρχοντα δίδυμα → 0** (+3 που φάνηκαν στην πορεία) με SSoT, όχι αναδιάταξη: `useFormSubmission` · `FormActions` · `FormField` render-prop · `AtoeCategoryCodeSelect` · `LineItemsSection` · `EmailMessageFields`· τα 2 που ήταν μόνο imports τα έκλεισε το `ignorePattern` (πρακτική SonarQube/PMD CPD) με άγκυρα που αποδεικνύει ότι τα πραγματικά δίδυμα **εξακολουθούν** να μπλοκάρουν. (2) **35 ετικέτες χωρίς πεδίο → 0** + φρουρά AST μηδενικής ανοχής. 🔒 **Κλειδώθηκαν** `.jscpd-baseline.json` 2641 → **1788** και `.a11y-coverage-baseline.json` 143 → **134** — μετρημένα σε **HEAD + μόνο αυτή τη δουλειά** (εξαγωγή `git archive`), **όχι** στο κοινό δέντρο: εκεί τα jscpd έβγαιναν 1757, τα −31 είναι ξένη ακομίτιστη δουλειά. ⚠️ **Πάνε στο ΙΔΙΟ commit με** `.jscpdrc.json` (χωρίς το `ignorePattern` η μέτρηση = 1911 ⇒ κόκκινο) **και** `sidebar-trigger.a11y.test.tsx` (καλύπτει το `sidebar-context`). |
 | 2026-09-17 | ✅ **`FileRecord.hold` — ΕΚΛΕΙΣΕ (ADR-864 §21.8, Opus 5).** Η καταχώρηση **αφαιρέθηκε**: οι κανόνες (`holdCustodyKeys` = `FILE_HOLD_FIELDS` · `holdCustodyUnchanged` στα 4 σκέλη update · `holdBornAbsent` · `holdAllowsHardDelete`) μπήκαν σε `files` **και** `files_personal` (κάδος ανοιχτός — σιωπηλή δέσμευση Vault/Box), `mandate_evidence` deny-all + manifest 3.16 + σουίτα, άγκυρα **Α49**. Emulator **116/116** (πηγή + compiled) · μεταλλάξεις **M75-M80 6/6** κόκκινες · πύλες 3.16/3.28/3.35/3.68/3.70/3.78/3.87 ✅. **Αναπτύχθηκαν** στο `pagonis-87766` (εντολή Giorgio) — CHECK 3.86 ✓ και στους τρεις στόχους. |
