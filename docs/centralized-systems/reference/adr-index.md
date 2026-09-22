@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 821 ADRs | Last Updated: 2026-09-22
+**📊 Stats**: 822 ADRs | Last Updated: 2026-09-22
 
 ---
 
@@ -26,7 +26,7 @@
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 12 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
-| 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
+| 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
 | 📄 **Uncategorized** | 574 | [View](#uncategorized) |
 
@@ -856,6 +856,7 @@
 | **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-870-admin-sdk-index-coverage.md) |
 | **ADR-871** | Sidebar στον προσωπικό χώρο: **ΝΑΙ, αλλά μόνο στα «δικά μου»** | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-21, όχι ακόμη committed) | 2026-09-21 | UI Components | [📄](./adrs/ADR-871-personal-space-sidebar.md) |
 | **ADR-872** | Το σύνορο ιδεμποτίας: **μία εκτέλεση ανά πράξη**, όσες φορές κι αν φτάσει | ✅ ACCEPTED — **ΥΛΟΠΟΙΗΜΕΝΟ** (2026-09-22, όχι ακόμη committed) | 2026-09-22 | Security & Auth | [📄](./adrs/ADR-872-idempotency-boundary.md) |
+| **ADR-873** | Αναβάθμιση πλατφόρμας Cloud Functions: **ίδια ονόματα, ίδια γενιά — πρώτα η βάση, μετά η μετακόμιση** | ✅ ACCEPTED — **Φάση 0 ΥΛΟΠΟΙΗΜΕΝΗ** (2026-09-22, όχι ακόμη committed, **όχι ακόμη deployed**) · Φάσεις 1-2 **ΔΕΝ** εγκρίθηκαν | 2026-09-22 | Infrastructure | [📄](./adrs/ADR-873-cloud-functions-platform-upgrade.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1077,6 +1078,7 @@
 | **ADR-061** | Path Aliases Strategy | ✅ ✅ Active | [View](./adrs/ADR-061-path-aliases.md) |
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | [View](./adrs/ADR-092-centralized-localstorage-service.md) |
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | [View](./adrs/ADR-168-multi-agent-development-environment.md) |
+| **ADR-873** | Αναβάθμιση πλατφόρμας Cloud Functions: **ίδια ονόματα, ίδια γενιά — πρώτα η βάση, μετά η μετακόμιση** | ✅ ACCEPTED — **Φάση 0 ΥΛΟΠΟΙΗΜΕΝΗ** (2026-09-22, όχι ακόμη committed, **όχι ακόμη deployed**) · Φάσεις 1-2 **ΔΕΝ** εγκρίθηκαν | [View](./adrs/ADR-873-cloud-functions-platform-upgrade.md) |
 
 ---
 

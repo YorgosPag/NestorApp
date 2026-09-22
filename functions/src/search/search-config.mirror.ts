@@ -171,7 +171,7 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
     collection: COLLECTIONS.PARKING_SPACES,
     titleField: 'number',
     subtitleFields: ['type', 'status'],
-    searchableFields: ['number', 'type', 'notes'],
+    searchableFields: ['number', 'code'],
     // ADR-777 §8.60.20 — η διάθεση (όπως στα ακίνητα)· το `status` είναι πλέον μόνο κύκλος ζωής.
     statusField: 'commercialStatus',
     audience: SEARCH_AUDIENCE.INTERNAL,
@@ -182,7 +182,7 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
     collection: COLLECTIONS.STORAGE,
     titleField: 'name',
     subtitleFields: ['type', 'status'],
-    searchableFields: ['name', 'type', 'notes'],
+    searchableFields: ['name', 'code'],
     // ADR-777 §8.60.20 — η διάθεση (όπως στα ακίνητα)· το `status` είναι πλέον μόνο κύκλος ζωής.
     statusField: 'commercialStatus',
     audience: SEARCH_AUDIENCE.INTERNAL,
