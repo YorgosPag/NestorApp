@@ -138,3 +138,25 @@ describe('Δ — διαδρομές', () => {
     expect(new Set(all).size).toBe(all.length);
   });
 });
+
+describe('Μ — μετρητές (ADR-871 Π5 · ADR-867 §4.5 Β10)', () => {
+  const counted = (surface: PersonalNavigationSurface): Record<string, string> =>
+    Object.fromEntries(
+      resolvePersonalNavigation({ companyId: null }, surface)
+        .flatMap((g) => g.items)
+        .flatMap((i) => (i.countSource === undefined ? [] : [[i.id, i.countSource]])),
+    );
+
+  it('Μ1: μόνο τα «Μηνύματα» μετρούν — και με την ΙΔΙΑ πηγή σε στήλη ΚΑΙ μενού avatar', () => {
+    expect(counted('sidebar')).toStrictEqual({ myMessages: 'network-unread' });
+    expect(counted('userMenu')).toStrictEqual({ myMessages: 'network-unread' });
+  });
+
+  it('Μ2: οι ανακοινώσεις του σήματος υπάρχουν σε el ΚΑΙ en, με πληθυντικό', () => {
+    for (const tree of [elNavigation, enNavigation]) {
+      for (const key of ['personal.unread.threads_one', 'personal.unread.threads_other', 'personal.unread.threadsAtLeast_other']) {
+        expect(lookup(tree, key)).toEqual(expect.stringContaining('{count}'));
+      }
+    }
+  });
+});

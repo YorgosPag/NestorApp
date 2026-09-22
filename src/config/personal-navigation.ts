@@ -46,7 +46,7 @@ import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-route
 import { hasOrganization, resolveAccountRoute, type LandingIdentity } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
-import type { MenuLink } from '@/types/sidebar';
+import type { MenuCountSource, MenuLink } from '@/types/sidebar';
 
 /** Πού εμφανίζεται ένα στοιχείο. */
 export type PersonalNavigationSurface = 'sidebar' | 'userMenu';
@@ -71,6 +71,8 @@ export interface PersonalNavigationEntry {
   readonly surfaces: readonly PersonalNavigationSurface[];
   /** Εμφανίζεται **μόνο** σε όποιον δεν ανήκει σε οργανισμό (ADR-871 §5.2). */
   readonly onlyWithoutOrganization?: boolean;
+  /** 🔢 Τι μετρά το στοιχείο — ίδια πηγή σε στήλη **και** μενού avatar (ADR-867 §4.5 Β10). */
+  readonly countSource?: MenuCountSource;
 }
 
 export interface PersonalNavigationGroup {
@@ -99,7 +101,7 @@ export const PERSONAL_NAVIGATION: readonly PersonalNavigationGroup[] = [
     id: 'communication',
     labelKey: 'personal.groups.communication',
     entries: [
-      { id: 'myMessages', navLabelKey: 'personal.items.myMessages', icon: MessagesSquare, href: MY_MESSAGES_ROUTE, surfaces: BOTH },
+      { id: 'myMessages', navLabelKey: 'personal.items.myMessages', icon: MessagesSquare, href: MY_MESSAGES_ROUTE, surfaces: BOTH, countSource: 'network-unread' },
       { id: 'myContacts', navLabelKey: 'personal.items.myContacts', icon: Handshake, href: MY_FIRST_CONTACTS_ROUTE, surfaces: BOTH },
     ],
   },
@@ -187,6 +189,7 @@ export function resolvePersonalNavigation(
         navLabelKey: entry.navLabelKey,
         icon: entry.icon,
         href: entry.href === ACCOUNT_DESTINATION ? resolveAccountRoute(known) : entry.href,
+        ...(entry.countSource === undefined ? {} : { countSource: entry.countSource }),
       })),
   })).filter((group) => group.items.length > 0);
 }
