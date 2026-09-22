@@ -34,7 +34,7 @@ import {
 import { useAuthOptional } from '@/auth/contexts/AuthContext';
 import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { auth } from '@/lib/firebase';
-import { mapFirebaseError, type ActionErrorTranslator } from './auth-action-errors';
+import { firebaseErrorCode, mapFirebaseError, type ActionErrorTranslator } from './auth-action-errors';
 import type { AuthActionMode } from './auth-action-modes';
 
 export type ActionStatus = 'loading' | 'success' | 'error' | 'input';
@@ -48,6 +48,11 @@ export interface ActionState {
    */
   readonly email: string | null;
   readonly errorMessage: string | null;
+  /**
+   * Η ενέργεια **είχε ήδη γίνει** (σήμερα μόνο: email ήδη επιβεβαιωμένο) — επιτυχία, με δική της φράση.
+   * Απών ⇒ η επιτυχία είναι αυτής της επίσκεψης.
+   */
+  readonly alreadyDone?: true;
 }
 
 /** Ο νέος κωδικός **μετά από ανάκτηση** — ρητά, ποτέ `boolean` + `error`. */
@@ -81,6 +86,33 @@ async function applyEmailSwitch(
   return { status: 'success', mode, email: info.data.email ?? null, errorMessage: null };
 }
 
+/** Ο κωδικός δεν εξαργυρώνεται πια — ξοδεμένος ή ληγμένος. Η Firebase δεν λέει ποιο από τα δύο. */
+const SPENT_CODE_ERRORS: ReadonlySet<string> = new Set(['auth/invalid-action-code', 'auth/expired-action-code']);
+
+/**
+ * **Επιβεβαίωση email** — και ο **ξοδεμένος** σύνδεσμος (ADR-850 · ADR-867 Β9(β) εύρημα Ε7).
+ *
+ * 🔑 Ο σύνδεσμος πατιέται συχνά **δύο** φορές (σαρωτής email που προφορτώνει, δεύτερη καρτέλα, «πίσω»).
+ * Η δεύτερη φορά δεν είναι σφάλμα αν ο λογαριασμός **είναι** επιβεβαιωμένος — αυτό ρωτάμε, με `reload()`,
+ * γιατί το `emailVerified` του cache είναι της στιγμής σύνδεσης. Πρότυπο: Google / GitHub / Slack λένε
+ * «ήδη επιβεβαιωμένο», όχι «σφάλμα».
+ * 🔒 **Χωρίς συνεδρία ΔΕΝ μαθαίνουμε τίποτα** — ο ξοδεμένος κωδικός δεν αποκαλύπτει λογαριασμό, και δεν
+ * πρέπει: η φράση λέει τι να κάνει ο άνθρωπος (σύνδεση), χωρίς να ισχυριστεί τι ισχύει.
+ */
+async function applyEmailVerification(code: string, t: ActionErrorTranslator): Promise<ActionState> {
+  try {
+    await applyActionCode(auth, code);
+    return { status: 'success', mode: 'verifyEmail', email: null, errorMessage: null };
+  } catch (error: unknown) {
+    if (!SPENT_CODE_ERRORS.has(firebaseErrorCode(error) ?? '')) throw error;
+    const user = auth.currentUser;
+    if (user === null) return errorState('verifyEmail', t('action.errors.verifyLinkSpent'));
+    await user.reload().catch(() => undefined);
+    if (user.emailVerified) return { status: 'success', mode: 'verifyEmail', email: null, errorMessage: null, alreadyDone: true };
+    throw error;
+  }
+}
+
 async function settleActionCode(
   mode: AuthActionMode | null,
   code: string | null,
@@ -93,8 +125,7 @@ async function settleActionCode(
   try {
     switch (mode) {
       case 'verifyEmail':
-        await applyActionCode(auth, code);
-        return { status: 'success', mode, email: null, errorMessage: null };
+        return await applyEmailVerification(code, t);
       case 'resetPassword':
         return { status: 'input', mode, email: await verifyPasswordResetCode(auth, code), errorMessage: null };
       case 'recoverEmail':

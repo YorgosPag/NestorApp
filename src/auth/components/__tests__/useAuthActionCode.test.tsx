@@ -10,6 +10,8 @@
  *   άλλαξε· άλλος συνδεδεμένος λογαριασμός **μένει**.
  * - **Λ3** — ο κωδικός μιας χρήσης εξαργυρώνεται **μία** φορά, και στο StrictMode.
  * - **Λ4** — η ανάκτηση προσφέρει νέο κωδικό στη διεύθυνση που **αποκαταστάθηκε**.
+ * - **Λ7-Λ9** — ο **ξοδεμένος** σύνδεσμος επιβεβαίωσης (ADR-867 Β9(β) Ε7): επιβεβαιωμένος ⇒ επιτυχία
+ *   «ήδη»· χωρίς συνεδρία ⇒ ουδέτερη φράση· ανεπιβεβαίωτος ⇒ το σφάλμα του κωδικού.
  */
 
 import React from 'react';
@@ -26,7 +28,12 @@ jest.mock('firebase/auth', () => ({
   verifyPasswordResetCode: (...args: unknown[]) => verifyResetMock(...args),
 }));
 
-const firebaseAuth: { currentUser: { email: string | null } | null } = { currentUser: null };
+interface FakeUser {
+  email: string | null;
+  emailVerified?: boolean;
+  reload?: () => Promise<void>;
+}
+const firebaseAuth: { currentUser: FakeUser | null } = { currentUser: null };
 jest.mock('@/lib/firebase', () => ({
   get auth() {
     return firebaseAuth;
@@ -112,5 +119,38 @@ describe('Λ — αλλαγή και ανάκτηση email', () => {
     await waitFor(() => expect(result.current.state.status).toBe('error'));
     expect(result.current.state.errorMessage).toBe('action.errors.emailInUse');
     expect(signOutMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('Λ — ο ξοδεμένος σύνδεσμος επιβεβαίωσης', () => {
+  const spent = () => Object.assign(new Error('used'), { code: 'auth/invalid-action-code' });
+
+  it('🔴 Λ7 — συνδεδεμένος και ΗΔΗ επιβεβαιωμένος (μετά από reload): επιτυχία «ήδη», όχι «Σφάλμα»', async () => {
+    applyMock.mockRejectedValue(spent());
+    const user: FakeUser = { email: 'me@example.com', emailVerified: false };
+    user.reload = jest.fn(async () => { user.emailVerified = true; });
+    firebaseAuth.currentUser = user;
+    const { result } = render('verifyEmail');
+
+    await waitFor(() => expect(result.current.state.status).toBe('success'));
+    expect(result.current.state).toMatchObject({ mode: 'verifyEmail', alreadyDone: true, errorMessage: null });
+    expect(user.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔒 Λ8 — χωρίς συνεδρία: ουδέτερη φράση που λέει τι να κάνει, χωρίς ισχυρισμό για τον λογαριασμό', async () => {
+    applyMock.mockRejectedValue(spent());
+    const { result } = render('verifyEmail');
+
+    await waitFor(() => expect(result.current.state.status).toBe('error'));
+    expect(result.current.state.errorMessage).toBe('action.errors.verifyLinkSpent');
+  });
+
+  it('Λ9 — συνδεδεμένος αλλά ΑΝΕΠΙΒΕΒΑΙΩΤΟΣ: το σφάλμα του κωδικού, ποτέ ψεύτικη επιτυχία', async () => {
+    applyMock.mockRejectedValue(spent());
+    firebaseAuth.currentUser = { email: 'me@example.com', emailVerified: false, reload: jest.fn(async () => undefined) };
+    const { result } = render('verifyEmail');
+
+    await waitFor(() => expect(result.current.state.status).toBe('error'));
+    expect(result.current.state.errorMessage).toBe('action.errors.invalidCode');
   });
 });

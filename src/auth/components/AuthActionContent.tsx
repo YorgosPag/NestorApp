@@ -113,6 +113,7 @@ export function AuthActionContent() {
     if (state.status === 'loading') {
       return state.mode === null ? t('action.descriptions.processing') : t(ACTION_PENDING_KEYS[state.mode]);
     }
+    if (state.status === 'success' && state.alreadyDone === true) return t('action.messages.emailAlreadyVerified');
     if (state.status === 'success' && state.mode !== null) {
       return t(ACTION_SUCCESS_KEYS[state.mode], { email: state.email ?? '' });
     }

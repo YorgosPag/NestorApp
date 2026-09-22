@@ -47,9 +47,15 @@ const GENERIC_ERROR_KEY = 'action.errors.generic';
  * @param t μεταφραστής δεσμευμένος στο namespace `auth`
  * @returns μεταφρασμένο μήνυμα — ποτέ ωμό κλειδί, ποτέ κενό
  */
+/** Ο κωδικός σφάλματος του Firebase SDK (`auth/…`) — ή `null`. Ο **ένας** αναγνώστης του σχήματος. */
+export function firebaseErrorCode(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
 export function mapFirebaseError(error: unknown, t: ActionErrorTranslator): string {
-  if (!(error instanceof Error)) return t(GENERIC_ERROR_KEY);
-  const code = (error as { code?: string }).code;
+  const code = firebaseErrorCode(error);
   const key = code ? ACTION_ERROR_KEYS[code] : undefined;
   return t(key ?? GENERIC_ERROR_KEY);
 }
