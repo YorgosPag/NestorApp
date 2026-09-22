@@ -6,8 +6,10 @@
  * Helper functions for building SearchDocument objects for Firestore indexing.
  * Used by indexTriggers.ts for automatic indexing on entity create/update.
  *
- * Config + entity-type constants are owned by `./search-config.mirror.ts`
- * (the SSoT mirror of `src/config/search-index-config.ts` — ADR-029).
+ * Rules, entity types, text normalization and prefixes are NOT written here:
+ * they are the app SSoT (`src/config/search-index-core.ts`, `src/lib/search/search.ts`),
+ * projected into `../generated/` (ADR-874, CHECK 3.93). The app's `/api/search`
+ * normalizes the QUERY with the same function that normalizes the INDEX here.
  *
  * @module functions/search/indexBuilder
  * @enterprise ADR-029 — Global Search v1
@@ -18,14 +20,28 @@ import * as admin from 'firebase-admin';
 import {
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
-  SEARCH_INDEX_CONFIG,
   type SearchEntityType,
   type SearchAudience,
-  type SearchIndexConfig,
-} from './search-config.mirror';
+  type SearchIndexCoreConfig,
+} from '../generated/types/search-core';
+import {
+  SEARCH_INDEX_CORE,
+  extractTitle,
+  extractSubtitle,
+  determineAudience,
+  extractSearchableText,
+  extractStatus,
+  buildSearchResultHref,
+  generateSearchDocId,
+} from '../generated/config/search-index-core';
+import { normalizeSearchText, generateSearchPrefixes } from '../generated/lib/search/search';
+
+/** The indexing rules — THE app SSoT, projected (ADR-874). */
+const SEARCH_INDEX_CONFIG = SEARCH_INDEX_CORE;
+type SearchIndexConfig = SearchIndexCoreConfig;
 
 // Re-exports so `indexTriggers.ts` and other callers keep a stable import surface
-export { SEARCH_ENTITY_TYPES, SEARCH_AUDIENCE, SEARCH_INDEX_CONFIG };
+export { SEARCH_ENTITY_TYPES, SEARCH_AUDIENCE, SEARCH_INDEX_CONFIG, generateSearchDocId };
 export type { SearchEntityType, SearchAudience, SearchIndexConfig };
 export { COLLECTIONS } from '../config/firestore-collections';
 
@@ -81,107 +97,6 @@ export interface SearchDocumentInput {
 }
 
 // =============================================================================
-// TEXT NORMALIZATION (Greek-friendly)
-// =============================================================================
-
-/**
- * Greek accent mapping for normalization.
- * Maps accented characters to their base form.
- */
-const GREEK_ACCENT_MAP: Record<string, string> = {
-  'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω',
-  'Ά': 'α', 'Έ': 'ε', 'Ή': 'η', 'Ί': 'ι', 'Ό': 'ο', 'Ύ': 'υ', 'Ώ': 'ω',
-  'ϊ': 'ι', 'ϋ': 'υ', 'ΐ': 'ι', 'ΰ': 'υ',
-};
-
-/**
- * Normalize text for Greek-friendly search.
- * - Converts to lowercase
- * - Removes accents/diacritics
- * - Normalizes whitespace
- */
-export function normalizeSearchText(text: string): string {
-  if (!text) return '';
-
-  let result = text.toLowerCase();
-
-  for (const [accented, base] of Object.entries(GREEK_ACCENT_MAP)) {
-    result = result.replace(new RegExp(accented, 'g'), base);
-  }
-
-  result = result.replace(/\s+/g, ' ').trim();
-
-  return result;
-}
-
-/**
- * Generate prefix array from normalized text.
- * Used for Firestore array-contains queries for autocomplete.
- */
-export function generateSearchPrefixes(text: string, maxPrefixLength = 5): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  const prefixes: Set<string> = new Set();
-
-  for (const word of words) {
-    for (let len = 3; len <= Math.min(maxPrefixLength, word.length); len++) {
-      prefixes.add(word.substring(0, len));
-    }
-  }
-
-  return Array.from(prefixes);
-}
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-function extractTitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
-  if (typeof config.titleField === 'function') {
-    return config.titleField(doc);
-  }
-  return (doc[config.titleField] as string) || '';
-}
-
-function extractSubtitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
-  return config.subtitleFields
-    .map((field) => doc[field] as string | undefined)
-    .filter(Boolean)
-    .join(' - ');
-}
-
-function determineAudience(
-  doc: Record<string, unknown>,
-  config: SearchIndexConfig,
-): SearchAudience {
-  if (typeof config.audience === 'function') {
-    return config.audience(doc);
-  }
-  return config.audience;
-}
-
-function buildHref(config: SearchIndexConfig, entityId: string, data: Record<string, unknown>): string {
-  return config.routeTemplate
-    .replace('{id}', entityId)
-    .replace(/\{(\w+)\}/g, (_, field) => (data[field] as string) || entityId);
-}
-
-function extractSearchableText(
-  doc: Record<string, unknown>,
-  config: SearchIndexConfig,
-): string {
-  const parts: string[] = [];
-
-  for (const field of config.searchableFields) {
-    const value = doc[field];
-    if (typeof value === 'string' && value.trim()) {
-      parts.push(value);
-    }
-  }
-
-  return parts.join(' ');
-}
-
-// =============================================================================
 // MAIN BUILDER FUNCTION
 // =============================================================================
 
@@ -207,14 +122,14 @@ export function buildSearchDocument(
 
   const title = extractTitle(data, config);
   const subtitle = extractSubtitle(data, config);
-  const status = (data[config.statusField] as string) || 'active';
+  const status = extractStatus(data, config);
   const audience = determineAudience(data, config);
 
   const searchableText = extractSearchableText(data, config);
   const normalizedText = normalizeSearchText(searchableText);
   const prefixes = generateSearchPrefixes(normalizedText);
 
-  const href = buildHref(config, entityId, data);
+  const href = buildSearchResultHref(config, entityId, data);
 
   return {
     tenantId,
@@ -246,12 +161,4 @@ export function createSearchDocument(input: SearchDocumentInput): SearchDocument
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     indexedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
-}
-
-/**
- * Generate document ID for search document.
- * Format: {entityType}_{entityId}
- */
-export function generateSearchDocId(entityType: SearchEntityType, entityId: string): string {
-  return `${entityType}_${entityId}`;
 }

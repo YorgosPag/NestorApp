@@ -24,6 +24,7 @@ import {
   extractSubtitle,
   determineAudience,
   extractSearchableText,
+  extractStatus,
   normalizeSearchText,
   generateSearchPrefixes,
   stripUndefinedDeepAnyObject,
@@ -83,7 +84,7 @@ export async function buildSearchDocument(
 
   const title = extractTitle(data, config);
   const subtitle = extractSubtitle(data, config);
-  const status = (data[config.statusField] as string) || 'active';
+  const status = extractStatus(data, config);
   const audience = determineAudience(data, config);
   const searchableText = extractSearchableText(data, config);
   const normalizedText = normalizeSearchText(searchableText);

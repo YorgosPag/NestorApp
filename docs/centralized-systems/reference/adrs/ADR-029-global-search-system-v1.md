@@ -4,11 +4,11 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Revision** | 2026-04-22 |
+| **Last Revision** | 2026-09-22 |
 | **Category** | Search / Indexing / Cloud Functions |
 | **Canonical SSoT** | `src/config/search-index-config.ts` |
-| **Cloud Functions Mirror** | `functions/src/search/search-config.mirror.ts` |
-| **Sync Enforcement** | `scripts/check-search-config-sync.js` (`npm run search-config:sync`) |
+| **Portable core** | `src/config/search-index-core.ts` + `src/types/search-core.ts` + `src/lib/search/search.ts` (ADR-874) |
+| **Cloud Functions copy** | **GENERATED** into `functions/src/generated/` — `npm run generate:functions-projection`, gate **CHECK 3.93** (the hand mirror + `check-search-config-sync.js` were deleted 2026-09-22) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 
 ---
@@ -97,7 +97,11 @@ removal in a follow-up commit.
 
 ---
 
-## 4. Mirror Pair — Allowed Differences
+## 4. Mirror Pair — Allowed Differences (⛔ SUPERSEDED 2026-09-22 by ADR-874)
+
+> Historical. The mirror no longer exists: the Cloud Functions build compiles a **verbatim** projection of the
+> portable core, so there are **no** allowed differences. `statsFields` / `PermissionId` typing moved to the
+> app-only `src/config/search-index-config.ts`; the projection never sees them.
 
 The sync check normalizes these known, by-design differences:
 
@@ -202,3 +206,4 @@ enabled can be back-filled via `POST /api/admin/search-backfill`.
 | 2026-06-07 | Claude (Opus 4.8) | FEATURE (BUG #5 — floor search deep-link, Revit-grade): FLOOR `routeTemplate` changed from `/buildings/{buildingId}` to `/buildings?buildingId={buildingId}&floor={id}` (both SSoT `search-index-config.ts` and mirror `search-config.mirror.ts`, parity preserved). Direct query form is required because `/buildings/[id]` redirects to `/buildings?buildingId=:id` (path form), which would drop the `?floor=` segment. `buildSearchResultHref` upgraded to resolve any `{field}` placeholder from the source document (not just `{id}`), mirroring the Cloud Functions `buildHref` — `search-indexer.ts` now passes `entityData`. The building page focuses + highlights the target floor (Domain B, building-management UI; see `HANDOFFS/2026-06-07_bug5-floor-search-deeplink.md`). New unit test `src/config/__tests__/search-index-config.test.ts` (5/5). Requires a search reindex/backfill so existing floor docs pick up the new href. **NOTE:** pre-existing PARKING mirror drift surfaced by `search-config:sync` (`searchableFields: ['number','code']` SSoT vs `['number','type','notes']` mirror) — unrelated to this change, flagged in `.claude-rules/pending-ratchet-work.md`. |
 | 2026-06-07 | Claude (Opus 4.8) | BUGFIX (BUG #5 follow-up — invisible floor results): `GlobalSearchDialog` showed the footer "N αποτελέσματα" but rendered **zero result rows** for floor searches. Root cause: `global-search-config.ts` `ENTITY_DISPLAY_ORDER` (which `renderResults()` iterates) was missing `SEARCH_ENTITY_TYPES.FLOOR` — floor hits were counted in `totalResults` but never rendered. Added `FLOOR` after `BUILDING` (IFC hierarchy Building→Floor→Unit). `SearchResultItem` mapping/label/`NAVIGATION_ENTITIES.floor` + `search.entityTypes.floor` i18n already existed — single-line fix. Discovered via Giorgio screenshot during BUG #5 verification. |
 | 2026-06-07 | Claude (Opus 4.8) | I18N (BUG #5 follow-up — floor group label): the search-result group header rendered the raw key `SEARCH.ENTITYTYPES.FLOOR`. `search.entityTypes` lives in `common-shared.json` (NOT `common.json`, whose same-named block sits under `audit`) and lacked a `floor` entry. Added `floor` → "Όροφος" (el) / "Floor" (en). Existing entries (project/building/property/contact/file/parking/storage) were unaffected. |
+| 2026-09-22 | Claude (Opus 5) | STRUCTURAL (ADR-874): the hand mirror is gone. Indexing rules + pure helpers split into the PORTABLE `src/config/search-index-core.ts` (+ `src/types/search-core.ts`); the Cloud Functions build receives them — and `src/lib/search/search.ts` — as a GENERATED verbatim projection, verified by CHECK 3.93 (ZERO-TOL). Finding Ε-874.1: the functions builder normalized the INDEX with its own accent map (no final-sigma fold, no NFD, no `-._/` split) while `/api/search` normalized the QUERY with the app's — «001» could not find `PRJ-001`. Now one algorithm. Existing `search_documents` keep old prefixes until rewritten → backfill = Giorgio's decision. Remaining: three document builders (functions / `search-indexer.ts` / backfill-engine) still compose the document separately (Ε-874.4, pending). |

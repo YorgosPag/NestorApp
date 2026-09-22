@@ -4,7 +4,8 @@
  * =============================================================================
  *
  * Lightweight ID generator for Cloud Functions.
- * Mirrors the pattern from src/services/enterprise-id.service.ts.
+ * Mirrors the pattern from src/services/enterprise-id.service.ts; the prefixes
+ * themselves are projected from the app registry (ADR-874).
  *
  * Format: {prefix}_{uuid-v4}
  *
@@ -14,19 +15,19 @@
 
 import * as crypto from 'crypto';
 
-const PREFIXES = {
-  /** Cloud Function audit log entries */
-  CLOUD_AUDIT: 'cfaud',
-  /** Entity audit trail entries (ADR-195) — mirrors `eaud` in src/services/enterprise-id-prefixes.ts */
-  ENTITY_AUDIT: 'eaud',
-} as const;
+import { ENTERPRISE_ID_PREFIXES } from '../generated/services/enterprise-id-prefixes';
+
+// ADR-874 — the prefixes come from THE registry (`src/services/enterprise-id-prefixes.ts`)
+// by projection (CHECK 3.93); the projection carries exactly the keys read below.
+// A prefix declared only here — as `cfaud` was until 2026-09-22 — is invisible to
+// the app's collision checks.
 
 /**
  * Generate an enterprise-format ID for Cloud Function audit log entries.
  * Format: cfaud_{uuid}
  */
 export function generateCloudAuditId(): string {
-  return `${PREFIXES.CLOUD_AUDIT}_${crypto.randomUUID()}`;
+  return `${ENTERPRISE_ID_PREFIXES.CLOUD_FUNCTION_AUDIT}_${crypto.randomUUID()}`;
 }
 
 /**
@@ -38,7 +39,7 @@ export function generateCloudAuditId(): string {
  * shape from those produced by the service layer.
  */
 export function generateEntityAuditId(): string {
-  return `${PREFIXES.ENTITY_AUDIT}_${crypto.randomUUID()}`;
+  return `${ENTERPRISE_ID_PREFIXES.ENTITY_AUDIT}_${crypto.randomUUID()}`;
 }
 
 /**

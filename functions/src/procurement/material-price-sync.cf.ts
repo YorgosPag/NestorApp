@@ -72,7 +72,7 @@ interface MaterialDoc {
 
 export const materialPriceSyncOnPODelivery = functions
   .runWith({ timeoutSeconds: 60, memory: '256MB' })
-  .firestore.document('purchase_orders/{poId}')
+  .firestore.document(`${COLLECTIONS.PURCHASE_ORDERS}/{poId}`)
   .onUpdate(async (change, context) => {
     const before = change.before.exists ? (change.before.data() as PODoc) : null;
     const after = change.after.exists ? (change.after.data() as PODoc) : null;

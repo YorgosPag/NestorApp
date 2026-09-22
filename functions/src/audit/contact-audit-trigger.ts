@@ -128,7 +128,7 @@ function resolveContactName(data: DocData | null): string | null {
 
 export const auditContactWrite = functions
   .runWith({ timeoutSeconds: 60, memory: '256MB' })
-  .firestore.document('contacts/{docId}')
+  .firestore.document(`${COLLECTIONS.CONTACTS}/{docId}`)
   .onWrite(async (change, context) => {
     const entityId = context.params.docId as string;
     const before = change.before.exists

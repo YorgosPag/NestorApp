@@ -1,0 +1,16 @@
+{
+  "$comment": "ADR-874 · CHECK 3.93 — what the Cloud Functions build receives from the app SSoT. modules = copied verbatim (must import only node builtins and other projected modules). constants = key subset of an exported constant map; the KEYS are computed from every NAME.KEY read under consumerRoot — never list them here. Regenerate: npm run generate:functions-projection.",
+  "sourceRoot": "src",
+  "outputRoot": "functions/src/generated",
+  "consumerRoot": "functions/src",
+  "modules": [
+    "config/search-index-core.ts",
+    "lib/dxf/decode-processed-json.ts",
+    "lib/search/search.ts",
+    "types/search-core.ts"
+  ],
+  "constants": [
+    { "module": "config/firestore-collections.ts", "export": "COLLECTIONS" },
+    { "module": "services/enterprise-id-prefixes.ts", "export": "ENTERPRISE_ID_PREFIXES" }
+  ]
+}

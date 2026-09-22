@@ -39,7 +39,7 @@ import {
   DXF_THUMBNAIL_WIDTH,
   DXF_THUMBNAIL_HEIGHT,
 } from '../shared/dxf-raster-generator';
-import { decodeProcessedJsonBytes } from '../shared/decode-processed-json';
+import { decodeProcessedJsonBytes } from '../generated/lib/dxf/decode-processed-json';
 
 const PROCESSED_SUFFIX = '.dxf.processed.json';
 const THUMBNAIL_SUFFIX = '.thumbnail.png';

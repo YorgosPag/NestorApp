@@ -396,6 +396,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   FEEDBACK: 'fb',
   PIPELINE_AUDIT: 'paud',
   ENTITY_AUDIT: 'eaud',
+  CLOUD_FUNCTION_AUDIT: 'cfaud', // ADR-874: `audit_log` rows written by Cloud Functions (was declared only in functions/)
   AI_USAGE: 'aiu',            // ADR-259A
   CONTRACT: 'lc',
   PIPELINE_QUEUE: 'pq',

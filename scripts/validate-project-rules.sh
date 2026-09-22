@@ -103,7 +103,8 @@ check_inline_uuid() {
   local file="$1"
 
   # Skip the enterprise-id.* internal modules (the only canonical source of UUIDs)
-  if echo "$file" | grep -qE "enterprise-id(\.service|-class|-singleton|-prefixes|-convenience)"; then
+  # + the Cloud Functions generator (separate build, ADR-874: prefixes projected from the app SSoT)
+  if echo "$file" | grep -qE "enterprise-id(\.service|-class|-singleton|-prefixes|-convenience)|^functions/src/config/enterprise-id\.ts$"; then
     return
   fi
 

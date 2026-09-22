@@ -18,14 +18,14 @@
   `ConfirmDialog` αναλαμβάνει τον κύκλο ζωής πάνω στο `useSingleFlight` (μένει ανοιχτό, κλείδωμα, σφάλμα `role="alert"`).
   Αλλάζει ορατή συμπεριφορά σε 40 σημεία ⇒ ξεχωριστό κύμα. Σήμερα το `EditInstallmentDialog` δείχνει το σφάλμα διαγραφής σε toast.
 
-- 🟡 **22/09 — Ο ΕΛΕΓΧΟΣ MIRROR ΤΟΥ SEARCH INDEX ΔΕΝ ΤΡΕΧΕΙ ΣΕ ΚΑΜΙΑ ΠΥΛΗ** *(N.0.2 · ADR-873 §7 Ε-873.2 · ADR-029)*
+- 🟡 **22/09 — ΤΡΕΙΣ BUILDERS ΤΟΥ `search_documents`** *(N.0.2 · ADR-874 §4 Ε-874.4 · ADR-029)*
 
-  Το `scripts/check-search-config-sync.js` (`npm run search-config:sync`) συγκρίνει `src/config/search-index-config.ts`
-  με το `functions/src/search/search-config.mirror.ts` — τον χάρτη που διαβάζει ο **μοναδικός** writer του
-  `search_documents`. Grep σε hook / `.husky` / `.github/workflows`: **0** κλήσεις. Αποτέλεσμα: το `4bd107bd`
-  (2026-05-02) άλλαξε μόνο το SSoT και η διόρθωση **δεν έφτασε ποτέ στην παραγωγή** για ~5 μήνες (διορθώθηκε στο ADR-873).
-  Διόρθωση: πύλη ZERO-TOL όταν σταδιοποιείται οποιοδήποτε από τα δύο αρχεία (+ `docs/gates/3.NN.md` + μητρώο CHECK 3.66).
-  Καλύτερα ακόμη (όπως `3.33`/`3.34`): **παραγόμενο** mirror αντί για χειρόγραφο αντίγραφο.
+  `functions/src/search/indexBuilder.ts` (writer παραγωγής) · `src/lib/search/search-indexer.ts` ·
+  `src/app/api/admin/search-backfill/backfill-engine.ts`. Από το ADR-874 μοιράζονται **κανόνες + normalizer** (φορητό
+  core, προβολή CHECK 3.93), αλλά **συνθέτουν** το έγγραφο ο καθένας: το backfill λύνει μόνο `{id}` στο href (η FLOOR
+  **χάνει** το `buildingId`), μόνο αυτό γράφει `metadata`, λύνει tenant αλλιώς· ο indexer παραλείπει κενό κείμενο.
+  Fix: **ένα** `buildSearchDocumentCore` στο `src/config/search-index-core.ts`, οι τρεις το καλούν. Θέλει αποφάσεις
+  συμπεριφοράς (metadata σε όλους; κενό κείμενο;) ⇒ Giorgio.
 
 - 🟡 **22/09 — ΕΠΑΦΕΣ + ΑΚΙΝΗΤΑ ΕΞΩ ΑΠΟ ΤΗ ΜΗΧΑΝΗ ΚΑΔΟΥ `useEntityTrashState`** *(N.0.2 · ADR-281 · βρέθηκε από CHECK 3.28
   στη διόρθωση πληθυντικών ICU του ADR-867, 2026-09-22)*
@@ -4366,6 +4366,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-09-22 | ✅ **Ο ΕΛΕΓΧΟΣ MIRROR ΤΟΥ SEARCH INDEX — ΕΚΛΕΙΣΕ (ADR-873 Ε-873.2 → ADR-874, CHECK 3.93, Opus 5, εντολή Giorgio).** Το mirror δεν διορθώθηκε — **καταργήθηκε** μαζί με άλλα 4 χειρόγραφα αντίγραφα του `functions/` (ονόματα συλλογών, προθέματα ID, decoder DXF, normalizer). Το `functions/src/generated/` **παράγεται** (modules αυτούσια + κλειδιά σταθερών **υπολογισμένα**) και η πύλη ⛔ ZERO-TOL το ξαναπαράγει. Νέο εύρημα Ε-874.1: ευρετήριο και ερώτημα με **άλλο** normalizer. Νέα εκκρεμότητα: Ε-874.4 (τρεις builders). |
 | 2026-09-22 | ✅ **`Button` ΧΩΡΙΣ ΠΡΟΕΠΙΛΕΓΜΕΝΟ `type` — ΕΚΛΕΙΣΕ (ADR-598 «(η)», Opus 5).** Πρώτα μέτρηση AST: 1571 `<Button>`, **0** χωρίς `type` μέσα σε `<form>` στο ίδιο αρχείο (55 εντός φόρμας, όλα ρητά)· ένα επίπεδο διααρχειακά 142 components εντός φόρμας, **0** με κουμπί χωρίς `type`· τα 65+16 κουμπιά χωρίς handler είναι Radix triggers / `<Link>` / placeholders. Άρα **καμία** υπάρχουσα συμπεριφορά δεν αλλάζει. `button.tsx`: `type ?? "button"` μόνο όταν **δεν** είναι `asChild` (MUI ButtonBase / React Aria). Άγκυρα `ui/__tests__/button-type-default.test.tsx` (5 tests, μεταλλάξεις 2/2). |
 | 2026-09-21 | ✅ **ΕΚΛΕΙΣΑΝ ΔΥΟ ΕΓΓΡΑΦΕΣ G11 (ADR-598 «(δ)» · ADR-418, εντολή Giorgio).** (1) **`SearchableCombobox` χωρίς όνομα σε ~17 καταναλωτές** — ο τύπος `FieldAccessibleName` το απαιτεί, έλεγχος DOM (`findMissingAccessibleName`) + φρουρά AST σε όλο το `src/` (`ui/__tests__/combobox-naming.test.ts`). (2) **`RulerCornerBox`: `menuitem` χωρίς `menu`** — έγινε `DropdownMenu` με τις κλίμακες ως `menuitemradio`. **Επαληθευμένο πριν τη διαγραφή**: και τα δύο στο `de2bd296`, ήδη στο `origin/main`, αρχεία **ταυτόσημα** με το HEAD, CI `jest-suite` χωρίς νέο κόκκινο. |
 | 2026-09-21 | ✅ **§3 PROCUREMENT — ΕΚΛΕΙΣΑΝ ΔΥΟ ΕΓΓΡΑΦΕΣ (ADR-598 «(ζ)» · ADR-584 §8, Opus 5· εντολή Giorgio).** (1) **8 προϋπάρχοντα δίδυμα → 0** (+3 που φάνηκαν στην πορεία) με SSoT, όχι αναδιάταξη: `useFormSubmission` · `FormActions` · `FormField` render-prop · `AtoeCategoryCodeSelect` · `LineItemsSection` · `EmailMessageFields`· τα 2 που ήταν μόνο imports τα έκλεισε το `ignorePattern` (πρακτική SonarQube/PMD CPD) με άγκυρα που αποδεικνύει ότι τα πραγματικά δίδυμα **εξακολουθούν** να μπλοκάρουν. (2) **35 ετικέτες χωρίς πεδίο → 0** + φρουρά AST μηδενικής ανοχής. 🔒 **Κλειδώθηκαν** `.jscpd-baseline.json` 2641 → **1788** και `.a11y-coverage-baseline.json` 143 → **134** — μετρημένα σε **HEAD + μόνο αυτή τη δουλειά** (εξαγωγή `git archive`), **όχι** στο κοινό δέντρο: εκεί τα jscpd έβγαιναν 1757, τα −31 είναι ξένη ακομίτιστη δουλειά. ⚠️ **Πάνε στο ΙΔΙΟ commit με** `.jscpdrc.json` (χωρίς το `ignorePattern` η μέτρηση = 1911 ⇒ κόκκινο) **και** `sidebar-trigger.a11y.test.tsx` (καλύπτει το `sidebar-context`). |

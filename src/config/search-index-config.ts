@@ -7,243 +7,94 @@
  * Defines how each entity type is indexed for search.
  *
  * @module config/search-index-config
- * @enterprise ADR-XXX - Global Search v1 (Non-AI)
+ * @enterprise ADR-029 - Global Search v1 (Non-AI) · ADR-874 - portable core
  * @compliance Local_Protocol.txt - Centralization First, ZERO hardcoded
  *
  * @see docs/adr/global-search-v1.md
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 // Server-safe currency formatter (avoids @/lib/intl-utils → react-i18next → createContext)
 const formatSearchCurrency = (amount: number): string =>
   new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
 import type { PermissionId } from '@/lib/auth/types';
 import {
   SEARCH_ENTITY_TYPES,
-  SEARCH_AUDIENCE,
   type SearchEntityType,
   type SearchIndexConfig,
   type SearchIndexConfigMap,
+  type SearchStatsFieldConfig,
 } from '@/types/search';
+import { SEARCH_INDEX_CORE, SEARCH_REQUIRED_PERMISSIONS } from './search-index-core';
+
+// ADR-874 — the indexing rules and their pure application live in the PORTABLE
+// core, which the Cloud Functions build receives by projection (CHECK 3.93).
+// Re-exported here so every app caller keeps one import surface.
+export {
+  extractTitle,
+  extractSubtitle,
+  determineAudience,
+  extractSearchableText,
+  extractStatus,
+  buildSearchResultHref,
+  generateSearchDocId,
+} from './search-index-core';
+
+// =============================================================================
+// PERMISSION PROOF (app-only)
+// =============================================================================
+
+/**
+ * Every permission the core declares is a real `PermissionId`. The core keeps
+ * literal types (`as const`) and cannot import the app's RBAC types, so the
+ * proof happens here: an unknown permission string fails this assignment.
+ */
+const SEARCH_PERMISSIONS: Readonly<Record<SearchEntityType, PermissionId>> = SEARCH_REQUIRED_PERMISSIONS;
+
+// =============================================================================
+// RESULT-CARD STATS (presentation — never read by the indexer)
+// =============================================================================
+
+const SEARCH_STATS_FIELDS: Partial<Record<SearchEntityType, SearchStatsFieldConfig[]>> = {
+  // 🏢 ENTERPRISE: Stats for card display (like ParkingListCard)
+  [SEARCH_ENTITY_TYPES.PARKING]: [
+    { field: 'floor', label: 'parking.card.stats.level', iconKey: 'floor', formatter: 'floor' },
+    { field: 'area', label: 'parking.card.stats.area', iconKey: 'area', formatter: 'area' },
+  ],
+  // 🏢 ENTERPRISE: Stats for card display (like StorageListCard)
+  [SEARCH_ENTITY_TYPES.STORAGE]: [
+    { field: 'floor', label: 'storage.card.stats.level', iconKey: 'floor', formatter: 'floor' },
+    { field: 'area', label: 'storage.card.stats.area', iconKey: 'area', formatter: 'area' },
+  ],
+  [SEARCH_ENTITY_TYPES.OPPORTUNITY]: [
+    { field: 'estimatedValue', label: 'opportunity.card.stats.value', iconKey: 'price', formatter: 'currency' },
+    { field: 'stage', label: 'opportunity.card.stats.stage', iconKey: 'status' },
+  ],
+  [SEARCH_ENTITY_TYPES.TASK]: [
+    { field: 'priority', label: 'task.card.stats.priority', iconKey: 'priority' },
+    { field: 'dueDate', label: 'task.card.stats.dueDate', iconKey: 'calendar' },
+  ],
+};
 
 // =============================================================================
 // SEARCH INDEX CONFIGURATION MAP
 // =============================================================================
 
+function withPresentation(entityType: SearchEntityType): SearchIndexConfig {
+  const statsFields = SEARCH_STATS_FIELDS[entityType];
+  return {
+    ...SEARCH_INDEX_CORE[entityType],
+    requiredPermission: SEARCH_PERMISSIONS[entityType],
+    ...(statsFields ? { statsFields } : {}),
+  };
+}
+
 /**
- * Complete index configuration for all searchable entity types.
- *
- * @enterprise
- * - Uses centralized COLLECTIONS constants
- * - Uses centralized PERMISSIONS from auth/types.ts
- * - Follows consistent patterns across all entities
+ * Complete index configuration for all searchable entity types: the portable
+ * indexing rules (`./search-index-core`) plus the result-card stats.
  */
-export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
-  // =========================================================================
-  // PROJECT
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.PROJECT]: {
-    collection: COLLECTIONS.PROJECTS,
-    titleField: 'name',
-    subtitleFields: ['address', 'city'],
-    searchableFields: ['name', 'address', 'city', 'projectCode'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'projects:projects:view' satisfies PermissionId,
-    routeTemplate: '/projects/{id}',
-  },
-
-  // =========================================================================
-  // BUILDING
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.BUILDING]: {
-    collection: COLLECTIONS.BUILDINGS,
-    titleField: 'name',
-    subtitleFields: ['address'],
-    searchableFields: ['name', 'address', 'buildingCode'],
-    statusField: 'status',
-    audience: (doc) => {
-      const isPublished = doc.isPublished as boolean | undefined;
-      return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
-    },
-    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
-    routeTemplate: '/buildings/{id}',
-  },
-
-  // =========================================================================
-  // FLOOR
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.FLOOR]: {
-    collection: COLLECTIONS.FLOORS,
-    titleField: 'name',
-    subtitleFields: ['buildingName'],
-    searchableFields: ['name', 'buildingName'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
-    // Deep-link to the parent building + focus the floor (Revit "double-click a
-    // Level" pattern). Direct query form — NOT `/buildings/{buildingId}` — so the
-    // `?floor=` survives: the `/buildings/[id]` route redirects to the query form
-    // and would otherwise drop it. Resolved by buildSearchResultHref / buildHref.
-    routeTemplate: '/buildings?buildingId={buildingId}&floor={id}',
-  },
-
-  // =========================================================================
-  // UNIT
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.PROPERTY]: {
-    collection: COLLECTIONS.PROPERTIES,
-    titleField: 'name',
-    subtitleFields: ['floor', 'type'],
-    searchableFields: ['name', 'propertyCode', 'floor'],
-    // SSoT: commercial disposition is the canonical status (ADR-197/287).
-    // Legacy `status` is only a write-time mirror — index reads the source of truth.
-    statusField: 'commercialStatus',
-    audience: (doc: Record<string, unknown>) => {
-      const isPublished = doc.isPublished as boolean | undefined;
-      return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
-    },
-    requiredPermission: 'properties:properties:view' satisfies PermissionId,
-    routeTemplate: '/properties/{id}',
-  },
-
-  // =========================================================================
-  // CONTACT
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.CONTACT]: {
-    collection: COLLECTIONS.CONTACTS,
-    titleField: (doc) => {
-      const displayName = doc.displayName as string | undefined;
-      const firstName = doc.firstName as string | undefined;
-      const lastName = doc.lastName as string | undefined;
-      const companyName = doc.companyName as string | undefined;
-      const serviceName = doc.serviceName as string | undefined;
-      return (
-        displayName ||
-        `${firstName || ''} ${lastName || ''}`.trim() ||
-        companyName ||
-        serviceName ||
-        'Unknown'
-      );
-    },
-    subtitleFields: ['email', 'phone'],
-    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName', 'serviceName'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:contacts:view' satisfies PermissionId,
-    routeTemplate: '/contacts/{id}',
-  },
-
-  // =========================================================================
-  // FILE
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.FILE]: {
-    collection: COLLECTIONS.FILES,
-    titleField: 'displayName',
-    subtitleFields: ['category', 'domain'],
-    searchableFields: ['displayName', 'originalFilename'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'dxf:files:view' satisfies PermissionId,
-    routeTemplate: '/files/{id}',
-  },
-
-  // =========================================================================
-  // PARKING (ADR-029 Global Search v1)
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.PARKING]: {
-    collection: COLLECTIONS.PARKING_SPACES,
-    titleField: 'number',
-    subtitleFields: ['type', 'status'],
-    searchableFields: ['number', 'code'],
-    // ADR-777 §8.60.20 — η διάθεση (όπως στα ακίνητα)· το `status` είναι πλέον μόνο κύκλος ζωής.
-    statusField: 'commercialStatus',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
-    routeTemplate: '/parking/{id}',
-    // 🏢 ENTERPRISE: Stats for card display (like ParkingListCard)
-    statsFields: [
-      { field: 'floor', label: 'parking.card.stats.level', iconKey: 'floor', formatter: 'floor' },
-      { field: 'area', label: 'parking.card.stats.area', iconKey: 'area', formatter: 'area' },
-    ],
-  },
-
-  // =========================================================================
-  // STORAGE (ADR-029 Global Search v1)
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.STORAGE]: {
-    collection: COLLECTIONS.STORAGE,
-    titleField: 'name',
-    subtitleFields: ['type', 'status'],
-    searchableFields: ['name', 'code'],
-    // ADR-777 §8.60.20 — η διάθεση (όπως στα ακίνητα)· το `status` είναι πλέον μόνο κύκλος ζωής.
-    statusField: 'commercialStatus',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
-    routeTemplate: '/storage/{id}',
-    // 🏢 ENTERPRISE: Stats for card display (like StorageListCard)
-    statsFields: [
-      { field: 'floor', label: 'storage.card.stats.level', iconKey: 'floor', formatter: 'floor' },
-      { field: 'area', label: 'storage.card.stats.area', iconKey: 'area', formatter: 'area' },
-    ],
-  },
-
-  // =========================================================================
-  // OPPORTUNITY (ADR-029 Global Search v1 Phase 2 - CRM)
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.OPPORTUNITY]: {
-    collection: COLLECTIONS.OPPORTUNITIES,
-    titleField: 'title',
-    subtitleFields: ['stage', 'status'],
-    searchableFields: ['title', 'fullName', 'email', 'phone', 'notes'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:opportunities:view' satisfies PermissionId,
-    routeTemplate: '/crm/opportunities/{id}',
-    // 🏢 ENTERPRISE: Stats for card display
-    statsFields: [
-      { field: 'estimatedValue', label: 'opportunity.card.stats.value', iconKey: 'price', formatter: 'currency' },
-      { field: 'stage', label: 'opportunity.card.stats.stage', iconKey: 'status' },
-    ],
-  },
-
-  // =========================================================================
-  // COMMUNICATION (ADR-029 Global Search v1 Phase 2 - CRM)
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.COMMUNICATION]: {
-    collection: COLLECTIONS.COMMUNICATIONS,
-    titleField: (doc) => {
-      const subject = doc.subject as string | undefined;
-      const type = doc.type as string | undefined;
-      return subject || `${type || 'communication'}`;
-    },
-    subtitleFields: ['type', 'direction'],
-    searchableFields: ['subject', 'content', 'from', 'to'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:communications:view' satisfies PermissionId,
-    routeTemplate: '/crm/communications/{id}',
-  },
-
-  // =========================================================================
-  // TASK (ADR-029 Global Search v1 Phase 2 - CRM)
-  // =========================================================================
-  [SEARCH_ENTITY_TYPES.TASK]: {
-    collection: COLLECTIONS.TASKS,
-    titleField: 'title',
-    subtitleFields: ['type', 'priority'],
-    searchableFields: ['title', 'description'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:tasks:view' satisfies PermissionId,
-    routeTemplate: '/crm/tasks/{id}',
-    // 🏢 ENTERPRISE: Stats for card display
-    statsFields: [
-      { field: 'priority', label: 'task.card.stats.priority', iconKey: 'priority' },
-      { field: 'dueDate', label: 'task.card.stats.dueDate', iconKey: 'calendar' },
-    ],
-  },
-};
+export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = Object.fromEntries(
+  Object.values(SEARCH_ENTITY_TYPES).map((entityType) => [entityType, withPresentation(entityType)]),
+) as SearchIndexConfigMap;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -257,83 +108,6 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
  */
 export function getSearchIndexConfig(entityType: SearchEntityType): SearchIndexConfig | undefined {
   return SEARCH_INDEX_CONFIG[entityType];
-}
-
-/**
- * Extract title from document using config.
- *
- * @param doc - Document data
- * @param config - Index configuration
- * @returns Extracted title string
- */
-export function extractTitle(
-  doc: Record<string, unknown>,
-  config: SearchIndexConfig
-): string {
-  if (typeof config.titleField === 'function') {
-    return config.titleField(doc);
-  }
-  return (doc[config.titleField] as string) || '';
-}
-
-/**
- * Extract subtitle from document using config.
- *
- * @param doc - Document data
- * @param config - Index configuration
- * @returns Extracted subtitle string (joined with ' - ')
- */
-export function extractSubtitle(
-  doc: Record<string, unknown>,
-  config: SearchIndexConfig
-): string {
-  return config.subtitleFields
-    .map((field) => doc[field] as string | undefined)
-    .filter(Boolean)
-    .join(' - ');
-}
-
-/**
- * Determine audience from document using config.
- *
- * @param doc - Document data
- * @param config - Index configuration
- * @returns SearchAudience value
- */
-export function determineAudience(
-  doc: Record<string, unknown>,
-  config: SearchIndexConfig
-): typeof SEARCH_AUDIENCE[keyof typeof SEARCH_AUDIENCE] {
-  if (typeof config.audience === 'function') {
-    return config.audience(doc);
-  }
-  return config.audience;
-}
-
-/**
- * Build navigation href from template and entity ID.
- *
- * Resolves `{id}` from the entity ID and any other `{field}` placeholder from
- * the source document (e.g. FLOOR's `{buildingId}`). Mirrors the Cloud Functions
- * `buildHref` (functions/src/search/indexBuilder.ts) so both indexing paths
- * produce identical hrefs.
- *
- * @param config - Index configuration
- * @param entityId - Entity ID
- * @param data - Source document (optional) — supplies non-`{id}` placeholders
- * @returns Resolved href string
- */
-export function buildSearchResultHref(
-  config: SearchIndexConfig,
-  entityId: string,
-  data?: Record<string, unknown>,
-): string {
-  return config.routeTemplate
-    .replace('{id}', entityId)
-    .replace(/\{(\w+)\}/g, (_, field) => {
-      const value = data?.[field];
-      return typeof value === 'string' && value ? value : entityId;
-    });
 }
 
 /**

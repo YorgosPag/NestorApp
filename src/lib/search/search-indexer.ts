@@ -23,7 +23,10 @@ import {
   extractTitle,
   extractSubtitle,
   determineAudience,
+  extractSearchableText,
+  extractStatus,
   buildSearchResultHref,
+  generateSearchDocId,
 } from '@/config/search-index-config';
 import { SEARCH_ENTITY_TYPES, type SearchEntityType } from '@/types/search';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -61,14 +64,7 @@ export async function indexEntityForSearch(params: IndexEntityParams): Promise<v
     const subtitle = extractSubtitle(entityData, config);
     const audience = determineAudience(entityData, config);
 
-    // Build searchable text from configured fields
-    const searchableText = config.searchableFields
-      .map(field => {
-        const value = entityData[field];
-        return typeof value === 'string' && value.trim() ? value : '';
-      })
-      .filter(Boolean)
-      .join(' ');
+    const searchableText = extractSearchableText(entityData, config);
 
     const normalizedText = normalizeSearchText(searchableText);
     const prefixes = generateSearchPrefixes(normalizedText);
@@ -84,7 +80,7 @@ export async function indexEntityForSearch(params: IndexEntityParams): Promise<v
       entityId,
       title,
       subtitle,
-      status: (entityData[config.statusField] as string) ?? 'active',
+      status: extractStatus(entityData, config),
       search: { normalized: normalizedText, prefixes },
       audience,
       requiredPermission: config.requiredPermission,
@@ -98,7 +94,7 @@ export async function indexEntityForSearch(params: IndexEntityParams): Promise<v
     };
 
     const db = getAdminFirestore();
-    const docId = `${entityType}_${entityId}`;
+    const docId = generateSearchDocId(entityType, entityId);
     await db.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(docId).set(searchDoc);
 
     logger.info('Entity indexed for search', { entityType, entityId, docId });

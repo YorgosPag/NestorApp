@@ -1106,6 +1106,15 @@ if (!process.env.SKIP_SERVER_ACTION_BOUNDARY)
 if (!process.env.SKIP_IDEMPOTENCY_BOUNDARY)
   addThread('3.92', 'Idempotency boundary', 'scripts/check-idempotency-boundary.js');
 
+// CHECK 3.93 (ADR-874 · ADR-873 Ε-873.2) — η προβολή του Cloud Functions. «Μεταγλωττίζει το functions
+// build ΑΚΡΙΒΩΣ ό,τι λέει το SSoT της εφαρμογής;» Το χειρόγραφο mirror του search index απέκλινε ~5 μήνες
+// και ο μόνος writer της παραγωγής ευρετηρίαζε λάθος πεδία — το script συγχρονισμού υπήρχε, αλλά δεν
+// το έτρεχε ΚΑΝΕΙΣ. Τώρα το `functions/src/generated/` ΠΑΡΑΓΕΤΑΙ και η πύλη το συγκρίνει με το σχέδιο.
+// 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: τα κλειδιά ΥΠΟΛΟΓΙΖΟΝΤΑΙ από κάθε `COLLECTIONS.KEY` κάτω από το functions/src —
+// ένα νέο κλειδί σε οποιοδήποτε αρχείο αλλάζει την απάντηση. AST, ~0,5s, ZERO-TOL, καμία baseline.
+if (!process.env.SKIP_FUNCTIONS_PROJECTION)
+  addThread('3.93', 'Functions projection', 'scripts/check-functions-projection.js');
+
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {

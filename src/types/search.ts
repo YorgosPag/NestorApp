@@ -17,54 +17,23 @@ import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import type { Timestamp } from 'firebase/firestore';
 
 // =============================================================================
-// SEARCH ENTITY TYPES (Subset of ENTITY_TYPES for searchable entities)
+// PORTABLE CORE (ADR-874) — entity types, audience, indexing rule
 // =============================================================================
 
-/**
- * Entity types that are searchable via Global Search.
- * Subset of ENTITY_TYPES from domain-constants.ts
- *
- * @enterprise Uses centralized domain constants pattern
- */
-export const SEARCH_ENTITY_TYPES = {
-  PROJECT: 'project',
-  BUILDING: 'building',
-  FLOOR: 'floor',
-  PROPERTY: 'property',
-  CONTACT: 'contact',
-  FILE: 'file',
-  PARKING: 'parking',
-  STORAGE: 'storage',
-  // ADR-029 Global Search v1 Phase 2 - CRM Entities
-  OPPORTUNITY: 'opportunity',
-  COMMUNICATION: 'communication',
-  TASK: 'task',
-} as const;
+// The indexer's vocabulary lives in `./search-core` so that the Cloud Functions
+// build receives it by projection (CHECK 3.93) instead of a hand-kept mirror.
+import type { SearchEntityType, SearchAudience, SearchIndexCoreConfig } from './search-core';
 
-export type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
-
-/**
- * Type guard to check if a string is a valid SearchEntityType
- */
-export function isSearchEntityType(value: string): value is SearchEntityType {
-  return Object.values(SEARCH_ENTITY_TYPES).includes(value as SearchEntityType);
-}
-
-// =============================================================================
-// SEARCH AUDIENCE (Access Control)
-// =============================================================================
-
-/**
- * Audience types for search access control.
- * - internal: Only authenticated users with proper permissions
- * - external: Public inventory (published units/buildings)
- */
-export const SEARCH_AUDIENCE = {
-  INTERNAL: 'internal',
-  EXTERNAL: 'external',
-} as const;
-
-export type SearchAudience = typeof SEARCH_AUDIENCE[keyof typeof SEARCH_AUDIENCE];
+export {
+  SEARCH_ENTITY_TYPES,
+  SEARCH_AUDIENCE,
+  isSearchEntityType,
+  type SearchEntityType,
+  type SearchAudience,
+  type TitleFieldConfig,
+  type AudienceFieldConfig,
+  type SearchIndexCoreConfig,
+} from './search-core';
 
 // =============================================================================
 // SEARCH DOCUMENT (Firestore Document Schema)
@@ -299,18 +268,6 @@ export interface SearchAuditMetadata {
 // =============================================================================
 
 /**
- * Configuration for a single field that can be used as title.
- * Can be a simple field name or a function for computed titles.
- */
-export type TitleFieldConfig = string | ((doc: Record<string, unknown>) => string);
-
-/**
- * Configuration for audience field.
- * Can be a static value or a function for dynamic audience.
- */
-export type AudienceFieldConfig = SearchAudience | ((doc: Record<string, unknown>) => SearchAudience);
-
-/**
  * Stats field configuration for search results.
  * Maps document fields to display stats.
  */
@@ -330,31 +287,7 @@ export interface SearchStatsFieldConfig {
  *
  * @enterprise Centralized configuration pattern
  */
-export interface SearchIndexConfig {
-  /** Firestore collection name */
-  collection: string;
-
-  /** Field(s) to use as title */
-  titleField: TitleFieldConfig;
-
-  /** Field(s) to use as subtitle */
-  subtitleFields: string[];
-
-  /** Fields to include in search index */
-  searchableFields: string[];
-
-  /** Field containing entity status */
-  statusField: string;
-
-  /** Audience type or function */
-  audience: AudienceFieldConfig;
-
-  /** Required permission to view results */
-  requiredPermission: string;
-
-  /** Route template with {id} placeholder */
-  routeTemplate: string;
-
+export interface SearchIndexConfig extends SearchIndexCoreConfig {
   /**
    * 🏢 ENTERPRISE: Optional stats fields for card display
    * Used for parking, storage, units to show floor/area/price

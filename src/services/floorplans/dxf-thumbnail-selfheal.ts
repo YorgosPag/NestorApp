@@ -45,7 +45,7 @@ import {
   processDxf,
 } from '@/app/api/floorplans/process/floorplan-process.service';
 import type { FileRecordData } from '@/app/api/floorplans/process/floorplan-process.types';
-import { decodeProcessedJsonBytes } from '@/app/api/admin/migrate-dxf-thumbnails/decode-processed-json';
+import { decodeProcessedJsonBytes } from '@/lib/dxf/decode-processed-json';
 
 const logger = createModuleLogger('DxfThumbnailSelfheal');
 

@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:eec5bf4f70cd63bb5222590a948cc81814958b8a4c130ab2032f81f33c931091 -->
+     fingerprint: sha256:dfa68ff1ec2bf0afb9e5f60fc566a6e2e66b665e90de158f72f78812fd735356 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -384,6 +384,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.90** | **Πύλη του ενός συνόρου** (ADR-868) — «υπάρχει **δημόσιο endpoint** που **ΔΕΝ** περνά από το σύνορο `withAuth`; — κάθε `'use server'` είναι server action, δηλαδή δημόσιο POST που δεν το κρ…» · `npm run test:server-action-boundary` · `SKIP_SERVER_ACTION_BOUNDARY=1` · 📘 `docs/gates/3.90.md` | ⛔ ZERO TOL | — |
 | **3.91** | **Πύλη δεικτών του Admin SDK** (ADR-870) — «έχει δείκτη **και** το ερώτημα που **ΔΕΝ** περνά από το SSoT; — cron και API routes, όπου κανένα UI δεν θα δείξει ποτέ το `FAILED_PRECONDITION`» · `npm run test:firestore-admin-index` · `SKIP_FIRESTORE_ADMIN_INDEX=1` · 📘 `docs/gates/3.91.md` | ⛔ ZERO-TOL (Κ1: με εύρος) + 🔴 RATCHET (Κ2: χωρίς εύρος) | `.firestore-admin-index-baseline.json` |
 | **3.92** | **Πύλη του συνόρου ιδεμποτίας** (ADR-872) — «εκτελείται κάθε πράξη **ΜΙΑ** φορά ανά `Idempotency-Key` — και όποιος το παρακάμπτει, το είπε **με λόγο**; — η αυτόματη επανάληψη του πελάτη είναι ασ…» · `npm run test:idempotency-boundary` · `SKIP_IDEMPOTENCY_BOUNDARY=1` · 📘 `docs/gates/3.92.md` | ⛔ ZERO-TOL (Κ1+Κ2) + 🔴 RATCHET κατά ταυτότητα (Κ3) | `.idempotency-boundary-baseline.json` |
+| **3.93** | **Πύλη της προβολής του Cloud Functions** (ADR-874) — «μεταγλωττίζει το functions build **ΑΚΡΙΒΩΣ** ό,τι λέει το SSoT της εφαρμογής — ή ένα χειρόγραφο αντίγραφο που κάποτε του έμοιαζε;» · `npm run test:functions-projection` · `SKIP_FUNCTIONS_PROJECTION=1` · 📘 `docs/gates/3.93.md` | ⛔ ZERO TOL | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -397,8 +398,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **85** (εκτελεστής 77 + hook 21) ·
-γραμμές εδώ: **74** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **86** (εκτελεστής 78 + hook 21) ·
+γραμμές εδώ: **75** · αδήλωτες: **12** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

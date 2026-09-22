@@ -1138,13 +1138,14 @@
     "_comment_tier6": "=== TIER 6: CONFIG CONSOLIDATION (bypass = config drift) ===",
     "search-index-config": {
       "ssotFile": "src/config/search-index-config.ts",
-      "description": "Search index definitions must use SEARCH_INDEX_CONFIG — no inline search configs",
+      "description": "Search index definitions must use SEARCH_INDEX_CONFIG — no inline search configs. The indexing rules live in the portable core (src/config/search-index-core.ts, ADR-874); the Cloud Functions copy is GENERATED (CHECK 3.93), never hand-kept.",
       "forbiddenPatterns": [
-        "(SEARCH_INDEX_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
+        "(SEARCH_INDEX_CONFIG|SEARCH_INDEX_CORE)\\s*(=|:)\\s*(\\{|\\[|Record)"
       ],
       "allowlist": [
         "src/config/search-index-config.ts",
-        "functions/src/search/search-config.mirror.ts"
+        "src/config/search-index-core.ts",
+        "functions/src/generated/config/search-index-core.ts"
       ]
     },
     "ai-analysis-config": {
@@ -1535,7 +1536,7 @@
     "_comment_tier8": "=== TIER 8: ADR-314 PHASE A — CORE SSoT MODULES (2026-04-18) ===",
     "enterprise-id-convenience": {
       "ssotFile": "src/services/enterprise-id-convenience.ts",
-      "description": "All generate*Id() named functions must be declared ONLY in enterprise-id.service.ts (core) or enterprise-id-convenience.ts (barrel). No local wrappers/duplicates. Allowlist covers the sealed SSoT set + the React hook barrel (useEnterpriseIds) + the server-side composite-key ID generators (id-generation.ts — different purpose). ADR-314 Phase A.",
+      "description": "All generate*Id() named functions must be declared ONLY in enterprise-id.service.ts (core) or enterprise-id-convenience.ts (barrel). No local wrappers/duplicates. Allowlist covers the sealed SSoT set + the React hook barrel (useEnterpriseIds) + the server-side composite-key ID generators (id-generation.ts — different purpose) + the deterministic search_documents key {entityType}_{entityId} (search-index-core.ts, ADR-874 — not an enterprise ID). ADR-314 Phase A.",
       "forbiddenPatterns": [
         "(function|const)\\s+generate[A-Z][a-zA-Z]*Id\\b"
       ],
@@ -1547,7 +1548,9 @@
         "src/services/enterprise-id-prefixes.ts",
         "src/services/enterprise-id-migration.service.ts",
         "src/hooks/useEnterpriseIds.ts",
-        "src/server/lib/id-generation.ts"
+        "src/server/lib/id-generation.ts",
+        "src/config/search-index-core.ts",
+        "functions/src/generated/config/search-index-core.ts"
       ],
       "tier": 0
     },

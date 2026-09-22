@@ -4,10 +4,14 @@
  * ones are gzip-compressed. Detect by magic bytes and decode accordingly.
  *
  * Kept in its own module so tests can import it without pulling in the
- * server-only Firebase Admin surface that `helpers.ts` depends on.
+ * server-only Firebase Admin surface.
  *
- * Mirror of the Cloud-Function-side decoder in
- * `functions/src/storage/dxf-thumbnail-onfinalize.ts` — keep the two in sync.
+ * ⚠️ PORTABLE MODULE (ADR-874) — projected verbatim into
+ * `functions/src/generated/` for the thumbnail trigger
+ * (`npm run generate:functions-projection`, CHECK 3.93). Only node builtins
+ * and relative imports of other projected modules are allowed here.
+ *
+ * @module lib/dxf/decode-processed-json
  */
 import { gunzipSync } from 'zlib';
 

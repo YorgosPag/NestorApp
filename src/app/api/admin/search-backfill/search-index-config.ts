@@ -10,23 +10,19 @@
  * @enterprise ADR-029 - Global Search v1
  */
 
-import type { SearchIndexConfig } from '@/types/search';
 // SSoT: canonical text normalization and prefix generation (ADR-029, ADR-294)
 export { normalizeSearchText, generateSearchPrefixes } from '@/lib/search/search';
 
-// SSoT: Re-export from centralized config (ADR-294)
-export { SEARCH_INDEX_CONFIG, extractTitle, extractSubtitle, determineAudience } from '@/config/search-index-config';
-
-export function extractSearchableText(doc: Record<string, unknown>, config: SearchIndexConfig): string {
-  const parts: string[] = [];
-  for (const field of config.searchableFields) {
-    const value = doc[field];
-    if (typeof value === 'string' && value.trim()) {
-      parts.push(value);
-    }
-  }
-  return parts.join(' ');
-}
+// SSoT: Re-export from centralized config (ADR-294) — the rule application is the
+// portable core shared with the Cloud Functions writer (ADR-874).
+export {
+  SEARCH_INDEX_CONFIG,
+  extractTitle,
+  extractSubtitle,
+  determineAudience,
+  extractSearchableText,
+  extractStatus,
+} from '@/config/search-index-config';
 
 // =============================================================================
 // FIRESTORE UTILITIES
