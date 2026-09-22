@@ -21,7 +21,10 @@ import {
   NETWORK_HOST_ROLES,
   NETWORK_AUDIENCE_PRIVATE_DEFAULTS,
   NETWORK_THREAD_STATES,
+  NO_EARLIER_TENURES,
   type NetworkAudienceEntry,
+  type NetworkAudienceTenure,
+  type NetworkAudienceTenureHistory,
   type NetworkAudiencePrivate,
   type NetworkMessage,
   type NetworkThread,
@@ -55,6 +58,27 @@ export function networkMessageFromDocument(raw: unknown, id: string): NetworkMes
   };
 }
 
+function tenureOf(raw: unknown): NetworkAudienceTenure | null {
+  if (!isRecord(raw)) return null;
+  const role = oneOf(NETWORK_AUDIENCE_ROLES, raw.role);
+  const since = str(raw.since);
+  const until = str(raw.until);
+  if (role === null || since === null || until === null) return null;
+  return { role, reason: oneOf(NETWORK_AUDIENCE_REASONS, raw.reason) ?? 'added', since, until };
+}
+
+/**
+ * **Οι προηγούμενες θητείες** (ADR-867 Β9(β) Ε8) — ο **ένας** αναγνώστης, για πελάτη **και** προβολή.
+ * Γραμμή πριν το Ε8 (χωρίς πεδίο) ⇒ {@link NO_EARLIER_TENURES}. Χαλασμένη θητεία **δεν** χάνεται σιωπηλά:
+ * μετριέται στο `omitted`, ώστε η οθόνη να μην υποσχεθεί ότι δεν υπήρξε.
+ */
+export function tenureHistoryOf(raw: unknown): NetworkAudienceTenureHistory {
+  if (!isRecord(raw) || !Array.isArray(raw.earlier)) return NO_EARLIER_TENURES;
+  const earlier = raw.earlier.map(tenureOf).filter((tenure): tenure is NetworkAudienceTenure => tenure !== null);
+  const omitted = typeof raw.omitted === 'number' && Number.isInteger(raw.omitted) && raw.omitted > 0 ? raw.omitted : 0;
+  return { earlier, omitted: omitted + (raw.earlier.length - earlier.length) };
+}
+
 /** Μια γραμμή ακροατηρίου. Άγνωστη πλευρά/ρόλος ⇒ `null`: η λίστα δεν μαντεύει ποιος είναι ποιος. */
 export function networkAudienceFromDocument(raw: unknown, id: string): NetworkAudienceEntry | null {
   if (!isRecord(raw)) return null;
@@ -73,6 +97,7 @@ export function networkAudienceFromDocument(raw: unknown, id: string): NetworkAu
     threadActivityAt: str(raw.threadActivityAt) ?? since,
     // Γραμμή προ-Β9 ⇒ `null` = «μία ιδιότητα» — ποτέ μαντεψιά δεύτερου ρόλου.
     alsoHostRole: oneOf(NETWORK_HOST_ROLES, raw.alsoHostRole),
+    tenureHistory: tenureHistoryOf(raw.tenureHistory),
   };
 }
 

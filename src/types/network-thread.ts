@@ -227,6 +227,34 @@ export interface NetworkMessageRetraction {
   readonly readBeforeRetraction: boolean;
 }
 
+/** Μια θητεία που **έληξε** — με τον ρόλο και τον λόγο που ίσχυαν **τότε**, όχι τους σημερινούς. */
+export interface NetworkAudienceTenure {
+  readonly role: NetworkAudienceRole;
+  readonly reason: NetworkAudienceReason;
+  readonly since: string;
+  readonly until: string;
+}
+
+/**
+ * **Οι προηγούμενες θητείες μιας θέσης** (ADR-867 Β9(β) εύρημα Ε8) — χρονολογικά, η παλαιότερη πρώτη.
+ *
+ * 🔑 Η επανένταξη ξανανοίγει την **ίδια** γραμμή (κλειδί = `uid`) με νέο `since`· χωρίς αυτό το πεδίο η
+ * παλιά θητεία **χανόταν** από το «Διάβαζαν παλαιότερα» — και ο άλλος δικαιούται να ξέρει ότι κάποιος
+ * **είχε** δει ό,τι γράφτηκε ως τότε. Φραγμένο ({@link NETWORK_AUDIENCE_TENURE_CAP}): ό,τι πέφτει έξω
+ * **μετριέται** (`omitted`), ποτέ δεν σβήνεται σιωπηλά. Γράφεται **μόνο** από την προβολή (`thread-audience.ts`).
+ */
+export interface NetworkAudienceTenureHistory {
+  readonly earlier: readonly NetworkAudienceTenure[];
+  /** Πόσες ακόμη παλαιότερες θητείες υπήρξαν και δεν κρατιούνται πια ονομαστικά. */
+  readonly omitted: number;
+}
+
+/** Όριο θητειών ανά γραμμή — το έγγραφο μένει μικρό (1 MiB Firestore) και η οθόνη διαβάσιμη. */
+export const NETWORK_AUDIENCE_TENURE_CAP = 20;
+
+/** **Καμία** προηγούμενη θητεία — η μία τιμή για γέννηση, παλιές γραμμές και fixtures. */
+export const NO_EARLIER_TENURES: NetworkAudienceTenureHistory = Object.freeze({ earlier: Object.freeze([]), omitted: 0 });
+
 /**
  * `network_threads/{id}/network_audience/{uid}` — **η** απάντηση στο «ποιος διαβάζει;», με ιστορικό.
  *
@@ -268,6 +296,8 @@ export interface NetworkAudienceEntry {
    * γραφείου να φαίνεται άδεια. `null` ⇒ μία ιδιότητα. ⚠️ **Παράγεται** από την προβολή, ποτέ χειρόγραφα.
    */
   readonly alsoHostRole: NetworkHostRole | null;
+  /** Οι θητείες **πριν** την τρέχουσα — δες {@link NetworkAudienceTenureHistory}. */
+  readonly tenureHistory: NetworkAudienceTenureHistory;
 }
 
 /**
@@ -323,7 +353,7 @@ export const NETWORK_AUDIENCE_PRIVATE_DEFAULTS: NetworkAudiencePrivate = {
  */
 export const NETWORK_AUDIENCE_FIELD_VISIBILITY = declareAudienceVisibility({
   /** Όλο το ακροατήριο, και των δύο πλευρών (ADR-834 (ε) 🏆 «ποιοι διαβάζουν και από πότε»). */
-  audience: ['uid', 'side', 'role', 'reason', 'addedBy', 'since', 'until', 'threadActivityAt', 'alsoHostRole'],
+  audience: ['uid', 'side', 'role', 'reason', 'addedBy', 'since', 'until', 'threadActivityAt', 'alsoHostRole', 'tenureHistory'],
   /** Μόνο ο ίδιος (και ο διακομιστής). */
   self: ['lastReadAt', 'muted', 'following'],
 });

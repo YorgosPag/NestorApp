@@ -1,10 +1,11 @@
 /**
- * @fileoverview Άγκυρες της λίστας «ποιοι διαβάζουν» (ADR-834 (γ) ③ · (ε) 🏆) και της λωρίδας απουσίας — Λ-1…Λ-8.
+ * @fileoverview Άγκυρες της λίστας «ποιοι διαβάζουν» (ADR-834 (γ) ③ · (ε) 🏆) και της λωρίδας απουσίας — Λ-1…Λ-14.
  */
 
 import { buildAudienceRoster, rosterUids } from '../audience-roster';
 import { awayNotices } from '../away-strip';
 import type { NetworkAudienceEntry } from '@/types/network-thread';
+import { NO_EARLIER_TENURES } from '@/types/network-thread';
 
 function row(uid: string, extra: Partial<NetworkAudienceEntry>): NetworkAudienceEntry {
   return {
@@ -19,6 +20,7 @@ function row(uid: string, extra: Partial<NetworkAudienceEntry>): NetworkAudience
     muted: false,
     following: false,
     threadActivityAt: '2026-09-19T00:00:00.000Z',
+    tenureHistory: NO_EARLIER_TENURES,
     alsoHostRole: null,
     ...extra,
   };
@@ -112,6 +114,31 @@ describe('audience-roster — ο ιδιοκτήτης που είναι ΚΑΙ �
   it('Λ-12 χωρίς δεύτερη ιδιότητα ⇒ ΚΑΝΕΝΑ είδωλο (μετάλλαξη: είδωλο για κάθε αντισυμβαλλόμενο)', () => {
     const roster = buildAudienceRoster(ACT_AUDIENCE, ELENI.uid, 'act');
     expect(roster.sides.flatMap((side) => side.current).filter((m) => m.mirror)).toStrictEqual([]);
+  });
+});
+
+describe('audience-roster — η επανένταξη ΔΕΝ σβήνει την παλιά θητεία (ADR-867 Β9(β) Ε8)', () => {
+  const BACK = row('uid_nikos', {
+    since: '2026-09-15T00:00:00.000Z',
+    tenureHistory: {
+      earlier: [{ role: 'responsible', reason: 'assigned', since: '2026-09-01T00:00:00.000Z', until: '2026-09-10T00:00:00.000Z' }],
+      omitted: 2,
+    },
+  });
+
+  it('🔴 Λ-13 ξαναμπήκε ⇒ ΚΑΙ στους τρέχοντες ΚΑΙ στο «Διάβαζαν παλαιότερα», με τον ρόλο ΕΚΕΙΝΗΣ της θητείας (μετάλλαξη: past μόνο από `until`)', () => {
+    const [theirs] = buildAudienceRoster([BACK, OWNER], OWNER.uid, 'act').sides;
+    expect(theirs?.current.map((m) => m.uid)).toEqual(['uid_nikos']);
+    expect(theirs?.past).toEqual([
+      expect.objectContaining({ uid: 'uid_nikos', role: 'responsible', reason: 'assigned', since: '2026-09-01T00:00:00.000Z', until: '2026-09-10T00:00:00.000Z' }),
+    ]);
+  });
+
+  it('Λ-14 οι παραλειπόμενες θητείες ΛΕΓΟΝΤΑΙ και τα κλειδιά είναι ανά θητεία (μετάλλαξη: omitted αγνοείται / κλειδί = uid)', () => {
+    const [theirs] = buildAudienceRoster([BACK, OWNER], OWNER.uid, 'act').sides;
+    expect(theirs?.pastOmitted).toBe(2);
+    const keys = [...(theirs?.current ?? []), ...(theirs?.past ?? [])].map((m) => m.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
 

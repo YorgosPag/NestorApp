@@ -37,6 +37,8 @@ const ROLE_ORDER: Readonly<Record<NetworkAudienceRole, number>> = {
 export type RosterSideRelation = 'mine' | 'theirs';
 
 export interface RosterMember {
+  /** Μοναδικό ανά **θητεία** — το ίδιο πρόσωπο εμφανίζεται μία φορά ανά διάστημα που διάβαζε (Ε8). */
+  readonly key: string;
   readonly uid: string;
   readonly role: NetworkAudienceRole;
   readonly reason: NetworkAudienceEntry['reason'];
@@ -53,8 +55,13 @@ export interface RosterMember {
 export interface RosterSide {
   readonly relation: RosterSideRelation;
   readonly current: readonly RosterMember[];
-  /** Όσοι **διάβαζαν** και σφραγίστηκαν — πιο πρόσφατη έξοδος πρώτη. */
+  /**
+   * Οι θητείες που **έληξαν** — πιο πρόσφατη έξοδος πρώτη. Ένα πρόσωπο που ξαναμπήκε εμφανίζεται **και**
+   * εδώ (με το παλιό διάστημα) **και** στους τρέχοντες (ADR-867 Β9(β) Ε8).
+   */
   readonly past: readonly RosterMember[];
+  /** Παλαιότερες θητείες που δεν κρατιούνται ονομαστικά (όριο ανά γραμμή) — λέγονται, δεν κρύβονται. */
+  readonly pastOmitted: number;
 }
 
 export interface AudienceRoster {
@@ -76,6 +83,7 @@ interface RosterRow {
 function memberOf(row: RosterRow, viewerUid: string): RosterMember {
   const { entry, mirror } = row;
   return {
+    key: `${entry.uid}:${mirror ? 'mirror' : 'seat'}:${entry.since}`,
     uid: entry.uid,
     role: mirror && entry.alsoHostRole !== null ? entry.alsoHostRole : entry.role,
     reason: entry.reason,
@@ -96,6 +104,23 @@ function rowsOf(audience: readonly NetworkAudienceEntry[]): readonly RosterRow[]
   return [...own, ...mirrors];
 }
 
+/** Οι **προηγούμενες** θητείες μιας γραμμής, ως μέλη — με τον ρόλο και τον λόγο **εκείνης** της θητείας. */
+function earlierMembersOf(row: RosterRow, viewerUid: string): readonly RosterMember[] {
+  if (row.mirror) return [];
+  const { entry } = row;
+  return entry.tenureHistory.earlier.map((tenure) => ({
+    key: `${entry.uid}:tenure:${tenure.since}`,
+    uid: entry.uid,
+    role: tenure.role,
+    reason: tenure.reason,
+    since: tenure.since,
+    until: tenure.until,
+    isViewer: entry.uid === viewerUid,
+    alsoHostRole: null,
+    mirror: false,
+  }));
+}
+
 function byRoleThenSince(a: RosterMember, b: RosterMember): number {
   return ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.since.localeCompare(b.since) || a.uid.localeCompare(b.uid);
 }
@@ -110,10 +135,12 @@ function sideOf(
   viewerUid: string,
 ): RosterSide {
   const members = rows.map((row) => memberOf(row, viewerUid));
+  const earlier = rows.flatMap((row) => earlierMembersOf(row, viewerUid));
   return {
     relation,
     current: members.filter((m) => m.until === null).sort(byRoleThenSince),
-    past: members.filter((m) => m.until !== null).sort(byLatestExit),
+    past: [...members.filter((m) => m.until !== null), ...earlier].sort(byLatestExit),
+    pastOmitted: rows.reduce((sum, row) => sum + (row.mirror ? 0 : row.entry.tenureHistory.omitted), 0),
   };
 }
 
@@ -137,7 +164,7 @@ export function buildAudienceRoster(
 
   const theirs = sideOf(rows.filter((row) => !isMine(row)), 'theirs', viewerUid);
   const mine = sideOf(rows.filter(isMine), 'mine', viewerUid);
-  const sides = [theirs, mine].filter((side) => side.current.length + side.past.length > 0);
+  const sides = [theirs, mine].filter((side) => side.current.length + side.past.length + side.pastOmitted > 0);
   const live = new Set(audience.filter((entry) => entry.until === null).map((entry) => entry.uid));
   return {
     personal: threadKind === 'relationship',

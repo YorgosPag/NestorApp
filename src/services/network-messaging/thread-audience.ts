@@ -18,12 +18,16 @@
  * `since` κάθε μέλους, δηλαδή η «ζωντανή διαφάνεια» θα έλεγε ότι μπήκαν **σήμερα**.
  */
 
-import type {
-  NetworkAudienceEntry,
-  NetworkAudienceReason,
-  NetworkAudienceRole,
-  NetworkAudienceSide,
-  NetworkHostRole,
+import { tenureHistoryOf } from '@/lib/network-messaging/network-thread-from-document';
+import {
+  NETWORK_AUDIENCE_TENURE_CAP,
+  NO_EARLIER_TENURES,
+  type NetworkAudienceEntry,
+  type NetworkAudienceReason,
+  type NetworkAudienceRole,
+  type NetworkAudienceSide,
+  type NetworkAudienceTenureHistory,
+  type NetworkHostRole,
 } from '@/types/network-thread';
 
 /** Ό,τι χρειάζεται η προβολή από την ομάδα — **δομικός** τύπος, όχι το έγγραφο. */
@@ -119,16 +123,29 @@ function joined(uid: string, seat: Seat, input: AudienceProjectionInput): Audien
       until: null,
       threadActivityAt: input.threadActivityAt,
       alsoHostRole: seat.alsoHostRole,
+      tenureHistory: NO_EARLIER_TENURES,
     },
   };
 }
 
 /**
+ * **Η θητεία που έληξε μπαίνει στο ιστορικό** — πριν την ξανανοίξει η επιστροφή (ADR-867 Β9(β) Ε8).
+ * Φραγμένο στις {@link NETWORK_AUDIENCE_TENURE_CAP} πιο πρόσφατες· οι παλαιότερες **μετριούνται**.
+ */
+function withEndedTenure(previous: NetworkAudienceEntry): NetworkAudienceTenureHistory {
+  const history = tenureHistoryOf(previous.tenureHistory);
+  if (previous.until === null) return history;
+  const all = [...history.earlier, { role: previous.role, reason: previous.reason, since: previous.since, until: previous.until }];
+  const dropped = Math.max(all.length - NETWORK_AUDIENCE_TENURE_CAP, 0);
+  return { earlier: all.slice(dropped), omitted: history.omitted + dropped };
+}
+
+/**
  * **Η επιστροφή**: η σφραγίδα σπάει με **νέο** `since`.
  *
- * ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: το έγγραφο κρατά τη **ΤΡΕΧΟΥΣΑ** θητεία, όχι όλες. Πλήρες
- * ιστορικό θητειών θα ήθελε δεύτερη υποσυλλογή· για το ερώτημα του Β8 *(«υπήρξε ποτέ
- * ομάδα;»)* αρκεί η **ύπαρξη** της γραμμής, που εδώ δεν χάνεται ποτέ.
+ * 🔑 **Η παλιά θητεία ΔΕΝ χάνεται** (ADR-867 Β9(β) Ε8 — ήταν δηλωμένο όριο): περνά στο `tenureHistory`
+ * της **ίδιας** γραμμής, στην **ίδια** γραφή (`withEndedTenure`) — καμία δεύτερη συλλογή, κανένας δεύτερος
+ * γραφέας, καμία ασυνέπεια ανάμεσα σε «ποιος διαβάζει» και «ποιος διάβαζε».
  *
  * 🔑 `lastReadAt`, `muted` και `following` **επιβιώνουν — δομικά**: ζουν στο **ιδιωτικό** έγγραφο της
  * θέσης (ADR-867 Β9(β) Ε9), που η προβολή **δεν αγγίζει ποτέ**. Είναι «τι έχει διαβάσει» και «τι θέλει να
@@ -153,6 +170,7 @@ function rejoined(
       until: null,
       // ⚠️ Όσο έλειπε, η γραμμή του **δεν** ενημερωνόταν (το fan-out αγγίζει μόνο ζωντανές).
       threadActivityAt: input.threadActivityAt,
+      tenureHistory: withEndedTenure(previous),
     },
   };
 }
