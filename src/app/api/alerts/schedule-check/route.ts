@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { publicUrl } from '@/lib/http/public-origin';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -52,8 +53,10 @@ function buildTelegramDigest(
   buildingId: string,
   alerts: { severity: string; title: string; message: string }[],
 ): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
-  const dashboardUrl = `${appUrl}/buildings/${buildingId}?tab=timeline&view=dashboard`;
+  // ADR-853 §19 Θ6 — ο νεκρός `nestor-app.vercel.app` έφυγε. Χωρίς δημόσια διεύθυνση η
+  // γραμμή **παραλείπεται**: ειδοποίηση χωρίς σύνδεσμο λέει ακόμη τι συνέβη, ενώ σύνδεσμος
+  // σε domain που δεν ελέγχουμε κάνει τον διαχειριστή να νομίζει ότι κοίταξε.
+  const dashboardUrl = publicUrl(`/buildings/${buildingId}?tab=timeline&view=dashboard`);
 
   const lines = [
     `🚨 <b>SCHEDULE ALERT — ${buildingName}</b>`,
@@ -62,7 +65,7 @@ function buildTelegramDigest(
       .slice(0, 5)
       .map(a => `${SEVERITY_EMOJI[a.severity] ?? '⚠️'} <b>${a.title}</b>\n   ${a.message}`),
     '',
-    `📊 <a href="${dashboardUrl}">Dashboard</a>`,
+    ...(dashboardUrl ? [`📊 <a href="${dashboardUrl}">Dashboard</a>`] : []),
   ];
 
   return lines.join('\n');
@@ -166,7 +169,7 @@ async function handleCronAllBuildings(): Promise<NextResponse> {
   }
 
   if (summaryLines.length > 0) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
+    const portfolioUrl = publicUrl('/construction/portfolio');
     const text = [
       `🚨 <b>DAILY ALERT CHECK</b>`,
       `${buildings.length} κτήρια ελέγχθηκαν`,
@@ -174,7 +177,7 @@ async function handleCronAllBuildings(): Promise<NextResponse> {
       ...summaryLines,
       '',
       `📊 Σύνολο: ${totalAlertsGenerated} νέα alerts`,
-      `<a href="${appUrl}/construction/portfolio">Portfolio Dashboard</a>`,
+      ...(portfolioUrl ? [`<a href="${portfolioUrl}">Portfolio Dashboard</a>`] : []),
     ].join('\n');
 
     try {

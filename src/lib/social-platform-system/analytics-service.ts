@@ -42,6 +42,7 @@ const logger = createModuleLogger('analytics-service');
  * Single source για όλες τις analytics & tracking operations
  * Replaces scattered analytics functions across multiple files
  */
+import { publicOrigin } from '@/lib/http/public-origin';
 export class AnalyticsService {
 
   // ============================================================================
@@ -123,21 +124,17 @@ export class AnalyticsService {
       return options.customDomain;
     }
 
-    // Force production για social media sharing
+    // ADR-853 §19 Θ6 — «η παραγωγική διεύθυνση» είναι το **ΕΝΑ SSoT**, όχι καρφωμένο
+    // domain. Ήταν `https://nestor-app.vercel.app` σε **δύο** σημεία εδώ — νεκρό από το
+    // πάγωμα του Vercel, και εκτεθειμένο σε subdomain takeover.
+    const browserOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+
     if (options.forceProductionDomain !== false) {
-      const productionDomain = 'https://nestor-app.vercel.app';
-
-      // Check αν είμαστε σε development environment
-      if (typeof window !== 'undefined') {
-        const currentOrigin = window.location.origin;
-        return currentOrigin.includes('localhost') ? productionDomain : currentOrigin;
-      }
-
-      return productionDomain;
+      return publicOrigin() ?? browserOrigin;
     }
 
-    // Default: current domain (αν available)
-    return typeof window !== 'undefined' ? window.location.origin : 'https://nestor-app.vercel.app';
+    // Default: η τρέχουσα προέλευση — και η δηλωμένη μας ως εφεδρεία στον server.
+    return browserOrigin || (publicOrigin() ?? '');
   }
 
   /**

@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import type React from 'react';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
+import { publicOrigin } from '@/lib/http/public-origin';
 import { announceToScreenReader } from '@/utils/accessibility';
 import { FileNamingService } from '@/services/FileNamingService';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
@@ -395,11 +396,11 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
       sessionStorage.setItem(`photo_share_${photoId}`, JSON.stringify(photoShareData));
     }
 
-    const productionUrl = 'https://nestor-app.vercel.app';
-    const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const baseUrl = currentUrl.includes('localhost')
-      ? `${productionUrl}/share/photo/${photoId}`
-      : `${currentUrl}/share/photo/${photoId}`;
+    // ADR-853 §19 Θ6 — ήταν καρφωμένο `https://nestor-app.vercel.app` για κάθε localhost:
+    // δηλαδή κάθε κοινοποίηση από dev έδειχνε σε **νεκρό** domain. Τώρα η δημόσια διεύθυνση
+    // από το ΕΝΑ SSoT, με **τίμια** εφεδρεία την προέλευση όπου όντως τρέχουμε.
+    const origin = publicOrigin() ?? (typeof window !== 'undefined' ? window.location.origin : '');
+    const baseUrl = `${origin}/share/photo/${photoId}`;
 
     const urlParams = new URLSearchParams({
       utm_source: 'photo_modal',

@@ -118,17 +118,20 @@ export async function copyImageToClipboard(imageUrl: string): Promise<boolean> {
 /**
  * Generate shareable URL with UTM parameters
  */
+import { publicOrigin } from '@/lib/http/public-origin';
 export function generateShareableURL(
   baseUrl: string,
   utmParams: UTMParams,
   additionalParams?: Record<string, string>
 ): string {
-  // Always use production URL for social media sharing
-  const productionOrigin = 'https://nestor-app.vercel.app';
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-  const fallbackOrigin = currentOrigin.includes('localhost') ? productionOrigin : currentOrigin;
+  // 🔴 ADR-853 §19 Θ6 — ΕΔΩ ΗΤΑΝ Η ΧΕΙΡΟΤΕΡΗ ΑΝΑΦΟΡΑ ΤΟΥ ΝΕΚΡΟΥ HOST, και ήταν **δημόσια**:
+  //    κάθε κοινοποίηση σε κοινωνικό δίκτυο έδειχνε σε `nestor-app.vercel.app`, domain που
+  //    δεν ελέγχουμε από το πάγωμα του Vercel (2026-05-09). Ένα ελεύθερο υποdomain τρίτου
+  //    μπορεί να διεκδικηθεί από οποιονδήποτε ⇒ **subdomain takeover**: ξένος σερβίρει
+  //    περιεχόμενο κάτω από το όνομά μας, σε σύνδεσμο που **εμείς** δημοσιεύσαμε.
+  const origin = publicOrigin() ?? (typeof window !== 'undefined' ? window.location.origin : '');
 
-  const url = new URL(baseUrl, fallbackOrigin);
+  const url = new URL(baseUrl, origin);
   
   // Add UTM parameters
   url.searchParams.set('utm_source', utmParams.source);

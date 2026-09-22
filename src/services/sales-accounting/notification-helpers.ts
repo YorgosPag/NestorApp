@@ -8,6 +8,7 @@
 
 import 'server-only';
 
+import { publicUrl } from '@/lib/http/public-origin';
 import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
 import { BRAND, escapeHtml } from '@/services/email-templates';
 import { resolveTenantNotificationEmail } from '@/services/org-structure/org-routing-resolver';
@@ -28,9 +29,24 @@ export const VAT_DIVISOR = 1 + STANDARD_VAT_RATE / 100;
 // CONFIGURATION
 // ============================================================================
 
-/** Base URL της εφαρμογής */
-export function getAppBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://nestor-app.vercel.app';
+/**
+ * **Ο σύνδεσμος του τιμολογίου στο λογιστήριο** — ή `null` όταν δεν ξέρουμε ποιοι είμαστε.
+ *
+ * 🔴 **ΔΥΟ ΑΣΤΟΧΙΕΣ ΜΑΖΙ, ΚΑΙ ΟΙ ΔΥΟ ΜΕΤΡΗΜΕΝΕΣ** *(ADR-853 §19 Θ6)*:
+ * 1. Εδώ ζούσε `getAppBaseUrl()` με εφεδρεία το **νεκρό** `nestor-app.vercel.app`
+ *    *(πάγωμα Vercel, 2026-05-09)*. Χωρίς τη μεταβλητή, το λογιστήριο έπαιρνε email με
+ *    σύνδεσμο σε domain που **δεν ελέγχουμε** — και η αποστολή ανέφερε **επιτυχία**.
+ * 2. Η συνένωση `` `${appUrl}/accounting/invoices?view=…` `` ήταν γραμμένη **τρεις
+ *    φορές, πανομοιότυπα** στο `accounting-office-notify.ts` — ο κλασικός αδελφός
+ *    κλώνος του N.18, αόρατος σε κάθε αναζήτηση ονόματος.
+ *
+ * ⛔ **Το `null` ΕΙΝΑΙ Η ΥΠΗΡΕΣΙΑ**: ο καλών παραλείπει το κουμπί και τη γραμμή
+ * «Προβολή». Email χωρίς σύνδεσμο λέει ακόμη τι συνέβη· email με **νεκρό** σύνδεσμο
+ * κάνει τον λογιστή να νομίζει ότι κοίταξε.
+ */
+export function accountingInvoiceUrl(invoiceId?: string): string | null {
+  const query = invoiceId ? `?view=${encodeURIComponent(invoiceId)}` : '';
+  return publicUrl(`/accounting/invoices${query}`);
 }
 
 /**
@@ -107,6 +123,119 @@ export function htmlButton(label: string, url: string): string {
         </td>
       </tr>
     </table>`;
+}
+
+// ============================================================================
+// Ο ΣΚΕΛΕΤΟΣ ΤΗΣ ΕΙΔΟΠΟΙΗΣΗΣ — **ΕΝΑΣ**, ΟΧΙ ΤΕΣΣΕΡΙΣ (N.0.2 · CHECK 3.28)
+// ============================================================================
+//
+// 🔴 **Το εύρημα (2026-09-22)**: οι τέσσερις κατασκευαστές του `accounting-office-notify`
+// έγραφαν **τον ίδιο** σκελετό — τίτλος, γραμμή «Ημερομηνία | παραστατικό», κάρτα ακινήτου,
+// κάρτα αγοραστή, και το ίδιο προοίμιο στην εκδοχή κειμένου. Το jscpd τα μέτρησε: **4 κλώνοι**
+// μέσα σε **ένα** αρχείο.
+//
+// ⚠️ **Εδώ, όχι σε νέο αρχείο**: αυτό το module είναι ήδη το SSoT των δομικών στοιχείων του
+// ίδιου email (`htmlCard` · `htmlInfoRow` · `buildPropertyRows`). Πέμπτο αρχείο για τη σύνθεσή
+// τους θα χώριζε το «τούβλο» από τον «τοίχο» χωρίς λόγο.
+
+/** Το παραστατικό στην κεφαλίδα — `null` όταν η ειδοποίηση δεν αφορά κανένα (π.χ. κράτηση). */
+export interface NotificationDocumentRef {
+  /** «Τιμολόγιο» · «Πιστωτικό» — **τι** είναι το παραστατικό. */
+  readonly label: string;
+  /** «A-1234» ή «—». */
+  readonly value: string;
+}
+
+function metaLine(doc: NotificationDocumentRef | null, separator: string, value: string): string {
+  const date = `Ημερομηνία: ${formatNotificationDate(new Date())}`;
+  return doc === null ? date : `${date}${separator}${doc.label}: ${value}`;
+}
+
+/**
+ * Η κεφαλίδα της ειδοποίησης σε HTML.
+ *
+ * ⚠️ Το `titleHtml` περνά **αυτούσιο**: ο καλών ξέρει αν ο τίτλος του περιέχει δεδομένα
+ * χρήστη και τα έχει ήδη περάσει από `escapeHtml` (π.χ. η αιτιολογία του πιστωτικού).
+ */
+export function htmlNotificationHeader(titleHtml: string, doc: NotificationDocumentRef | null): string {
+  const meta = metaLine(doc, ' &nbsp;|&nbsp; ', `<strong>${doc?.value ?? ''}</strong>`);
+  return `
+    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
+      <strong>${titleHtml}</strong>
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:${BRAND.gray};">
+      ${meta}
+    </p>
+  `;
+}
+
+/** Οι δύο κάρτες που έχει **κάθε** ειδοποίηση: το ακίνητο και ο αγοραστής. */
+export function htmlPartyCards(event: SalesAccountingEvent): string {
+  return [
+    htmlCard('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', buildPropertyRows(event)),
+    htmlCard('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', htmlInfoRow('Αγοραστής', escapeHtml(event.buyerName ?? 'Μη καταχωρημένος'))),
+  ].join('\n');
+}
+
+/**
+ * Το προοίμιο της εκδοχής **κειμένου** — τίτλος, παραστατικό, και ποιος/τι αφορά.
+ *
+ * ⚠️ **Το «Έργο» μπαίνει παντού όπου υπάρχει**, και αυτό είναι **αλλαγή** για το πιστωτικό:
+ * εκεί το κείμενο το παρέλειπε ενώ η **δική του** κάρτα HTML το έδειχνε ήδη (`buildPropertyRows`).
+ * Ήταν ασυμφωνία του παραστατικού με τον εαυτό του, όχι απόφαση.
+ */
+export function textNotificationHeader(
+  title: string,
+  doc: NotificationDocumentRef | null,
+  event: SalesAccountingEvent,
+): readonly string[] {
+  return [
+    title,
+    metaLine(doc, '  |  ', doc?.value ?? ''),
+    ``,
+    `Μονάδα: ${event.propertyName}`,
+    ...(event.companyName ? [`Εταιρεία: ${event.companyName}`] : []),
+    ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
+    `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+  ];
+}
+
+/** Τα ποσά μιας προκαταβολής, όπως τα βλέπει το λογιστήριο. */
+export interface DepositAmounts {
+  readonly net: number;
+  readonly vat: number;
+  readonly total: number;
+  readonly paymentMethod: string;
+}
+
+/**
+ * Η οικονομική κάρτα της **προκαταβολής** — την έγραφαν πανομοιότυπα το τιμολόγιο
+ * προκαταβολής και η ειδοποίηση κράτησης, που **είναι** το ίδιο ποσό ειδωμένο δύο φορές.
+ *
+ * ⚠️ Η πώληση και το πιστωτικό έχουν **δικές τους** γραμμές (υπόλοιπο · επιστροφή) και
+ * επίτηδες **δεν** περνούν από εδώ: κοινή κάρτα για διαφορετικά ποσά θα γινόταν κάρτα με
+ * σημαίες.
+ */
+export function htmlDepositCard(amounts: DepositAmounts): string {
+  return htmlCard('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ', [
+    htmlInfoRow('Καθαρό ποσό', formatEuro(amounts.net)),
+    htmlInfoRow('ΦΠΑ 24%', formatEuro(amounts.vat)),
+    htmlTotalRow('Σύνολο (με ΦΠΑ)', formatEuro(amounts.total)),
+    htmlInfoRow('Τρόπος πληρωμής', formatPaymentMethod(amounts.paymentMethod)),
+  ].join(''));
+}
+
+/**
+ * Το κουμπί προς το παραστατικό — **τίποτα** όταν δεν έχουμε δημόσια διεύθυνση.
+ * @see accountingInvoiceUrl — γιατί η απουσία είναι `null` και όχι σχετικός σύνδεσμος
+ */
+export function htmlInvoiceLink(label: string, url: string | null): string {
+  return url === null ? '' : htmlButton(label, url);
+}
+
+/** Η ίδια απουσία στην εκδοχή κειμένου — γραμμή που **δεν μπαίνει**, ποτέ κενή γραμμή. */
+export function textInvoiceLink(url: string | null): readonly string[] {
+  return url === null ? [] : [`Προβολή: ${url}`];
 }
 
 // ============================================================================

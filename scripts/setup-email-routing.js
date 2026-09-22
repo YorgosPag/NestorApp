@@ -197,8 +197,10 @@ async function main() {
     console.log('\n🎉 Done! Email routing is now configured.\n');
     console.log('📌 Next Steps:');
     console.log('   1. Configure Mailgun receiving route in the Mailgun dashboard');
-    console.log('   2. Forward to: https://nestor-app.vercel.app/api/communications/webhooks/mailgun/inbound');
-    console.log('   3. Add MAILGUN_WEBHOOK_SIGNING_KEY to Vercel environment variables');
+    // ADR-853 §19 Θ6 — η οδηγία έστελνε τα ΕΙΣΕΡΧΟΜΕΝΑ email σε νεκρό host, και ζητούσε
+    // μεταβλητή σε **Vercel** που είναι παγωμένο από 2026-05-09. Η παραγωγή ζει στο Netcup.
+    console.log(`   2. Forward to: ${process.env.NEXT_PUBLIC_APP_URL ?? '<NEXT_PUBLIC_APP_URL>'}/api/communications/webhooks/mailgun/inbound`);
+    console.log('   3. Add MAILGUN_WEBHOOK_SIGNING_KEY to the production environment (Netcup)');
     console.log('   4. (Optional) Add OPENAI_API_KEY and set AI_PROVIDER=openai for AI analysis\n');
 
     process.exit(0);

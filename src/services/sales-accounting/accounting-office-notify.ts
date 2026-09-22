@@ -17,14 +17,18 @@ import {
   type AccountingNotification,
   VAT_DIVISOR,
   resolveAccountingEmail,
-  getAppBaseUrl,
+  accountingInvoiceUrl,
   htmlInfoRow,
   htmlTotalRow,
   htmlCard,
-  htmlButton,
-  buildPropertyRows,
+  htmlDepositCard,
+  htmlNotificationHeader,
+  htmlPartyCards,
+  htmlInvoiceLink,
+  textNotificationHeader,
+  textInvoiceLink,
+  type NotificationDocumentRef,
   formatEuro,
-  formatDate,
   formatPaymentMethod,
 } from './notification-helpers';
 
@@ -48,52 +52,34 @@ function buildDepositNotification(
   result: SalesAccountingResult
 ): AccountingNotification {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
-  const appUrl = getAppBaseUrl();
   const netAmount = event.depositAmount / VAT_DIVISOR;
   const vatAmount = event.depositAmount - netAmount;
-  const invoiceUrl = `${appUrl}/accounting/invoices${result.invoiceId ? `?view=${result.invoiceId}` : ''}`;
+  const invoiceUrl = accountingInvoiceUrl(result.invoiceId);
 
   const subject = `Νέα κράτηση — ${event.propertyName} (${formatEuro(event.depositAmount)})`;
+  const doc: NotificationDocumentRef = { label: 'Τιμολόγιο', value: invoiceRef };
 
   const contentHtml = `
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      <strong>Κράτηση Μονάδας — Τιμολόγιο Προκαταβολής</strong>
-    </p>
-    <p style="margin:0 0 24px;font-size:14px;color:${BRAND.gray};">
-      Ημερομηνία: ${formatDate(new Date())} &nbsp;|&nbsp; Τιμολόγιο: <strong>${invoiceRef}</strong>
-    </p>
+    ${htmlNotificationHeader('Κράτηση Μονάδας — Τιμολόγιο Προκαταβολής', doc)}
 
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', buildPropertyRows(event))}
+    ${htmlPartyCards(event)}
 
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', htmlInfoRow('Αγοραστής', escapeHtml(event.buyerName ?? 'Μη καταχωρημένος')))}
+    ${htmlDepositCard({ net: netAmount, vat: vatAmount, total: event.depositAmount, paymentMethod: event.paymentMethod })}
 
-    ${htmlCard('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ', [
-      htmlInfoRow('Καθαρό ποσό', formatEuro(netAmount)),
-      htmlInfoRow('ΦΠΑ 24%', formatEuro(vatAmount)),
-      htmlTotalRow('Σύνολο (με ΦΠΑ)', formatEuro(event.depositAmount)),
-      htmlInfoRow('Τρόπος πληρωμής', formatPaymentMethod(event.paymentMethod)),
-    ].join(''))}
-
-    ${htmlButton('Προβολή τιμολογίου', invoiceUrl)}
+    ${htmlInvoiceLink('Προβολή τιμολογίου', invoiceUrl)}
   `;
 
   const html = wrapInBrandedTemplate({ contentHtml });
 
   const text = [
-    `ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΠΡΟΚΑΤΑΒΟΛΗΣ`,
-    `Ημερομηνία: ${formatDate(new Date())}  |  Τιμολόγιο: ${invoiceRef}`,
-    ``,
-    `Μονάδα: ${event.propertyName}`,
-    ...(event.companyName ? [`Εταιρεία: ${event.companyName}`] : []),
-    ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
-    `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+    ...textNotificationHeader('ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΠΡΟΚΑΤΑΒΟΛΗΣ', doc, event),
     ``,
     `Καθαρό ποσό: ${formatEuro(netAmount)}`,
     `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
     `Σύνολο: ${formatEuro(event.depositAmount)}`,
     `Τρόπος πληρωμής: ${formatPaymentMethod(event.paymentMethod)}`,
     ``,
-    `Προβολή: ${invoiceUrl}`,
+    ...textInvoiceLink(invoiceUrl),
   ].join('\n');
 
   return { subject, html, text };
@@ -107,22 +93,15 @@ function buildFinalSaleNotification(
   const remaining = event.finalPrice - event.depositAlreadyInvoiced;
   const netRemaining = remaining / VAT_DIVISOR;
   const vatRemaining = remaining - netRemaining;
-  const appUrl = getAppBaseUrl();
-  const invoiceUrl = `${appUrl}/accounting/invoices${result.invoiceId ? `?view=${result.invoiceId}` : ''}`;
+  const invoiceUrl = accountingInvoiceUrl(result.invoiceId);
 
   const subject = `Πώληση — ${event.propertyName} (${formatEuro(event.finalPrice)})`;
+  const doc: NotificationDocumentRef = { label: 'Τιμολόγιο', value: invoiceRef };
 
   const contentHtml = `
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      <strong>Πώληση Μονάδας — Τιμολόγιο Υπολοίπου</strong>
-    </p>
-    <p style="margin:0 0 24px;font-size:14px;color:${BRAND.gray};">
-      Ημερομηνία: ${formatDate(new Date())} &nbsp;|&nbsp; Τιμολόγιο: <strong>${invoiceRef}</strong>
-    </p>
+    ${htmlNotificationHeader('Πώληση Μονάδας — Τιμολόγιο Υπολοίπου', doc)}
 
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', buildPropertyRows(event))}
-
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', htmlInfoRow('Αγοραστής', escapeHtml(event.buyerName ?? 'Μη καταχωρημένος')))}
+    ${htmlPartyCards(event)}
 
     ${htmlCard('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ', [
       htmlInfoRow('Τελική τιμή πώλησης', formatEuro(event.finalPrice)),
@@ -133,19 +112,13 @@ function buildFinalSaleNotification(
       htmlInfoRow('Τρόπος πληρωμής', formatPaymentMethod(event.paymentMethod)),
     ].join(''))}
 
-    ${htmlButton('Προβολή τιμολογίου', invoiceUrl)}
+    ${htmlInvoiceLink('Προβολή τιμολογίου', invoiceUrl)}
   `;
 
   const html = wrapInBrandedTemplate({ contentHtml });
 
   const text = [
-    `ΠΩΛΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΥΠΟΛΟΙΠΟΥ`,
-    `Ημερομηνία: ${formatDate(new Date())}  |  Τιμολόγιο: ${invoiceRef}`,
-    ``,
-    `Μονάδα: ${event.propertyName}`,
-    ...(event.companyName ? [`Εταιρεία: ${event.companyName}`] : []),
-    ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
-    `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+    ...textNotificationHeader('ΠΩΛΗΣΗ ΜΟΝΑΔΑΣ — ΤΙΜΟΛΟΓΙΟ ΥΠΟΛΟΙΠΟΥ', doc, event),
     ``,
     `Τελική τιμή: ${formatEuro(event.finalPrice)}`,
     `Προκαταβολή: ${formatEuro(event.depositAlreadyInvoiced)}`,
@@ -153,7 +126,7 @@ function buildFinalSaleNotification(
     `ΦΠΑ 24%: ${formatEuro(vatRemaining)}`,
     `Υπόλοιπο (με ΦΠΑ): ${formatEuro(remaining)}`,
     ``,
-    `Προβολή: ${invoiceUrl}`,
+    ...textInvoiceLink(invoiceUrl),
   ].join('\n');
 
   return { subject, html, text };
@@ -164,24 +137,17 @@ function buildCreditNotification(
   result: SalesAccountingResult
 ): AccountingNotification {
   const invoiceRef = result.invoiceNumber ? `A-${result.invoiceNumber}` : '—';
-  const appUrl = getAppBaseUrl();
   const netAmount = event.creditAmount / VAT_DIVISOR;
   const vatAmount = event.creditAmount - netAmount;
-  const invoiceUrl = `${appUrl}/accounting/invoices${result.invoiceId ? `?view=${result.invoiceId}` : ''}`;
+  const invoiceUrl = accountingInvoiceUrl(result.invoiceId);
 
   const subject = `Ακύρωση — ${event.propertyName} (${formatEuro(event.creditAmount)})`;
+  const doc: NotificationDocumentRef = { label: 'Πιστωτικό', value: invoiceRef };
 
   const contentHtml = `
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      <strong>${escapeHtml(event.reason)} — Πιστωτικό Τιμολόγιο</strong>
-    </p>
-    <p style="margin:0 0 24px;font-size:14px;color:${BRAND.gray};">
-      Ημερομηνία: ${formatDate(new Date())} &nbsp;|&nbsp; Πιστωτικό: <strong>${invoiceRef}</strong>
-    </p>
+    ${htmlNotificationHeader(`${escapeHtml(event.reason)} — Πιστωτικό Τιμολόγιο`, doc)}
 
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', buildPropertyRows(event))}
-
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', htmlInfoRow('Αγοραστής', escapeHtml(event.buyerName ?? 'Μη καταχωρημένος')))}
+    ${htmlPartyCards(event)}
 
     ${htmlCard('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ', [
       htmlInfoRow('Καθαρό ποσό επιστροφής', formatEuro(netAmount)),
@@ -191,25 +157,20 @@ function buildCreditNotification(
 
     ${htmlCard('ΑΙΤΙΟΛΟΓΙΑ', `<p style="margin:0;font-size:14px;color:${BRAND.navyDark};">${escapeHtml(event.reason)}</p>`)}
 
-    ${htmlButton('Προβολή πιστωτικού', invoiceUrl)}
+    ${htmlInvoiceLink('Προβολή πιστωτικού', invoiceUrl)}
   `;
 
   const html = wrapInBrandedTemplate({ contentHtml });
 
   const text = [
-    `${event.reason.toUpperCase()} — ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ`,
-    `Ημερομηνία: ${formatDate(new Date())}  |  Πιστωτικό: ${invoiceRef}`,
-    ``,
-    `Μονάδα: ${event.propertyName}`,
-    ...(event.companyName ? [`Εταιρεία: ${event.companyName}`] : []),
-    `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
+    ...textNotificationHeader(`${event.reason.toUpperCase()} — ΠΙΣΤΩΤΙΚΟ ΤΙΜΟΛΟΓΙΟ`, doc, event),
     ``,
     `Καθαρό ποσό: ${formatEuro(netAmount)}`,
     `ΦΠΑ 24%: ${formatEuro(vatAmount)}`,
     `Σύνολο: ${formatEuro(event.creditAmount)}`,
     `Αιτιολογία: ${event.reason}`,
     ``,
-    `Προβολή: ${invoiceUrl}`,
+    ...textInvoiceLink(invoiceUrl),
   ].join('\n');
 
   return { subject, html, text };
@@ -226,42 +187,22 @@ function buildReservationNotifyNotification(
     : `Νέα κράτηση — ${event.propertyName} (χωρίς προκαταβολή)`;
 
   const financialSection = event.depositAmount > 0
-    ? htmlCard('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ', [
-        htmlInfoRow('Καθαρό ποσό', formatEuro(netAmount)),
-        htmlInfoRow('ΦΠΑ 24%', formatEuro(vatAmount)),
-        htmlTotalRow('Σύνολο (με ΦΠΑ)', formatEuro(event.depositAmount)),
-        htmlInfoRow('Τρόπος πληρωμής', formatPaymentMethod(event.paymentMethod)),
-      ].join(''))
+    ? htmlDepositCard({ net: netAmount, vat: vatAmount, total: event.depositAmount, paymentMethod: event.paymentMethod })
     : `<p style="margin:0 0 20px;font-size:14px;color:${BRAND.gray};padding:12px 16px;background-color:${BRAND.bgLight};border-radius:6px;border:1px solid ${BRAND.border};">
         Η κράτηση δεν συνοδεύεται από προκαταβολή.
       </p>`;
 
   const contentHtml = `
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      <strong>Νέα Κράτηση Μονάδας</strong>
-    </p>
-    <p style="margin:0 0 24px;font-size:14px;color:${BRAND.gray};">
-      Ημερομηνία: ${formatDate(new Date())}
-    </p>
+    ${htmlNotificationHeader('Νέα Κράτηση Μονάδας', null)}
 
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', buildPropertyRows(event))}
-
-    ${htmlCard('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', htmlInfoRow('Αγοραστής', escapeHtml(event.buyerName ?? 'Μη καταχωρημένος')))}
+    ${htmlPartyCards(event)}
 
     ${financialSection}
   `;
 
   const html = wrapInBrandedTemplate({ contentHtml });
 
-  const textLines = [
-    `ΝΕΑ ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ`,
-    `Ημερομηνία: ${formatDate(new Date())}`,
-    ``,
-    `Μονάδα: ${event.propertyName}`,
-    ...(event.companyName ? [`Εταιρεία: ${event.companyName}`] : []),
-    ...(event.projectName ? [`Έργο: ${event.projectName}`] : []),
-    `Αγοραστής: ${event.buyerName ?? 'Μη καταχωρημένος'}`,
-  ];
+  const textLines = [...textNotificationHeader('ΝΕΑ ΚΡΑΤΗΣΗ ΜΟΝΑΔΑΣ', null, event)];
 
   if (event.depositAmount > 0) {
     textLines.push(
