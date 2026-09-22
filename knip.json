@@ -16,6 +16,8 @@
         "src/app/**/test-harness/**/*.prod.ts",
         "src/**/index.ts",
         "src/**/index.tsx",
+        "src/lib/idempotency/**/*.ts",
+        "src/lib/search/search-index-version.ts",
         "src/middleware.ts",
         "src/app/globals.css",
         "instrumentation-client.ts",

@@ -91,7 +91,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f96eda69aa4699282943ea80360c777734127aba6b3eaf7775db04265f91b9ba",
+  "inputsSha256": "d7a38dc46aab76672eb08f28f59cf59c87b4c7d06c3d8e2c4c858dc0fe930424",
   "languages": [
     "el"
   ],
@@ -7980,6 +7980,7 @@
     "src/lib/routes/landing.ts": "2cbede12097044eb0f2c0802c2fbbe5fedb9dd9d56abb0006405253aa1d5881b",
     "src/lib/routes/legalRoutes.ts": "756a9ec292d1dd228cc66ba4749d0d1ddf8c02e04525d2fccc233d3eb481157c",
     "src/lib/safe-fire-and-forget.ts": "7e6568024ebd6120e865d1681fa6dcf3db98600fc116d33b97e02f07dfef5375",
+    "src/lib/search/search-index-version.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/share-utils.ts": "8fde1a69f5c7f8f8aa1a9cbf473e09c87e40627efdcf2197b6430c09d3ba2972",
     "src/lib/sidebar-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/social-sharing/SocialSharingPlatforms.tsx": "0fbec2423b4140ef043cb7375a7fc39473b87aae1153ac349a8581196a58872f",
@@ -8205,7 +8206,7 @@
     "src/types/property.ts": "885df5ad690243b77619bcd7a343ac36c54feba938c2ea7977e9c4d6019f756c",
     "src/types/public-listing.ts": "bfdcd873afa021f5f2de9f9207910f11dc0361c85f785a5938c9c78ac6ec8384",
     "src/types/search-core.ts": "16866d35c5722806fcaa6857a5a39a4f616f22531da07ce25ea4a10e637d9ced",
-    "src/types/search.ts": "e1efff61fd4dd7ff692f04b213c3a68d648f0842d960c2b215f436d0f4ee0d22",
+    "src/types/search.ts": "2048c06631ca24ebf01adc50499e7485defe8a05e60a76fd2a3abd48f3794644",
     "src/types/sharing.ts": "4f540f9b2e1d98f8010b3fb17d71a4d66aa0c2e47a4a2fd863ffd3bd922b9c3e",
     "src/types/showcase-card.ts": "3a24f3fd2f7cb4f9b2d741fa6601b6a40d59bf8bbbfe5647bd77758584fcddc9",
     "src/types/showcase-legal-identity.ts": "be6bf11003b75cad92d2504d12334bb6e062b37bf0f7e5cbf108eb3d53487eb7",
@@ -8258,7 +8259,7 @@
     "dynamicBoundaries": 21,
     "matchedKeys": 180,
     "routeBoundaries": 0,
-    "shellFiles": 783,
+    "shellFiles": 784,
     "sliceBytes": 556718
   },
   "unresolvableKeys": [

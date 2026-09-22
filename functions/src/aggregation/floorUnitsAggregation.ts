@@ -30,11 +30,7 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 
 import { COLLECTIONS } from '../config/firestore-collections';
-
-const TRIGGER_RUNTIME = {
-  timeoutSeconds: 120,
-  memory: '256MB' as const,
-};
+import { AGGREGATION_TRIGGER_RUNTIME } from '../config/runtime';
 
 interface PropertyLevelLike {
   floorId?: unknown;
@@ -118,7 +114,7 @@ async function recomputeBuildingFloorUnits(
  * Reconciles both the previous and the new building (handles unit moves).
  */
 export const onPropertyWriteFloorUnits = functions
-  .runWith(TRIGGER_RUNTIME)
+  .runWith(AGGREGATION_TRIGGER_RUNTIME)
   .firestore.document(`${COLLECTIONS.PROPERTIES}/{docId}`)
   .onWrite(async (change) => {
     const db = admin.firestore();

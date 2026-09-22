@@ -16,6 +16,7 @@
 import * as crypto from 'crypto';
 
 import { ENTERPRISE_ID_PREFIXES } from '../generated/services/enterprise-id-prefixes';
+import { deterministicV4Uuid } from '../generated/services/enterprise-id-deterministic';
 
 // ADR-874 — the prefixes come from THE registry (`src/services/enterprise-id-prefixes.ts`)
 // by projection (CHECK 3.93); the projection carries exactly the keys read below.
@@ -40,6 +41,43 @@ export function generateCloudAuditId(): string {
  */
 export function generateEntityAuditId(): string {
   return `${ENTERPRISE_ID_PREFIXES.ENTITY_AUDIT}_${crypto.randomUUID()}`;
+}
+
+/**
+ * Deterministic ID for the "this CHANGE was already handled" marker (ADR-873 Φ1 §9.1).
+ * Format: fevt_{uuid-v4-shaped}
+ *
+ * 🔑 **Deterministic on purpose** — this is the whole mechanism: every observer of the same
+ * event derives the SAME id from the same seed, so `create()` fails for the second one.
+ * A random id here would make the marker useless.
+ *
+ * ⚠️ **One engine, not two.** The hash lives in the app SSoT
+ * (`src/services/enterprise-id-deterministic.ts`) and arrives here by projection
+ * (ADR-874 · CHECK 3.93). ⛔ Never re-implement it — a second hash would make the two
+ * packages disagree about which document a given change owns, and the marker would
+ * silently stop working. Build the seed with `generated/lib/idempotency/event-claim`.
+ */
+export function generateFunctionEventId(seed: string): string {
+  return `${ENTERPRISE_ID_PREFIXES.FUNCTION_EVENT}_${deterministicV4Uuid(seed)}`;
+}
+
+/**
+ * Deterministic ID for an entity audit row derived from a specific change (ADR-873 Φ1).
+ * Format: eaud_{uuid-v4-shaped}
+ *
+ * Same shape as {@link generateEntityAuditId}, but **stable**: a redelivered trigger writes
+ * the SAME document instead of a second audit row that nobody can tell from a real one.
+ */
+export function generateDeterministicEntityAuditId(seed: string): string {
+  return `${ENTERPRISE_ID_PREFIXES.ENTITY_AUDIT}_${deterministicV4Uuid(seed)}`;
+}
+
+/**
+ * Deterministic ID for a Cloud Function audit row derived from a specific action (ADR-873 Φ1).
+ * Format: cfaud_{uuid-v4-shaped}
+ */
+export function generateDeterministicCloudAuditId(seed: string): string {
+  return `${ENTERPRISE_ID_PREFIXES.CLOUD_FUNCTION_AUDIT}_${deterministicV4Uuid(seed)}`;
 }
 
 /**

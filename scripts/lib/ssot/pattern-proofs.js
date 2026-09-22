@@ -24,6 +24,15 @@
 'use strict';
 
 module.exports = {
+  // ADR-860 §Ε3γ — ΕΝΑΣ native `beforeunload`. Οι πηγές δηλώνουν στο μητρώο, δεν κρεμούν δικό τους.
+  'unsaved-work-guard': {
+    shouldMatch: `window.addEventListener('beforeunload', handler);
+window.addEventListener("beforeunload", (e) => { e.preventDefault(); });`,
+    shouldSkip: `import { markUnsavedWork } from '@/lib/app-version/unsaved-work-registry';
+markUnsavedWork('dirty-form-provider:r1');
+window.addEventListener('pagehide', flush);
+window.removeEventListener('beforeunload', handler);`,
+  },
   // ADR-871 §10.6 — ΕΝΑΣ κατάλογος της στήλης του γραφείου, ΜΙΑ μηχανή. Αντικατέστησε το
   // `smart-navigation-factory` + `config/navigation`: δεύτερη συνάρτηση που χτίζει τα μενού θα
   // ήταν δεύτερη αλήθεια για το «τι βλέπει ο χρήστης». Οι παγίδες του `shouldSkip` είναι οι
@@ -1155,5 +1164,26 @@ export const AUDIT_LEDGER_COLLECTION = { company: 'ENTITY_AUDIT_TRAIL', personal
 // ΑΛΛΟ ερώτημα — κανονικά πεδία κατόχου, όχι φρουρός ένωσης:
 const record = { companyId: 'comp_1', userId: null, createdBy: uid };
 interface Notification { userId: string; companyId?: string }`,
+  },
+  // ADR-873 Φ1 §9.1.1 — ΕΝΑΣ γραφέας του δείκτη ιδεμποτίας. Η παγίδα του `shouldSkip` είναι η
+  // ΝΟΜΙΜΗ διαδρομή: όνομα από το SSoT των συλλογών, γραφή μέσω `runEventOnce`.
+  'function-event-records': {
+    shouldMatch: `const ref = db.collection('function_event_records').doc(id);
+await db.collection("function_event_records").doc(eventId).set({ state: 'done' });`,
+    shouldSkip: `import { runEventOnce } from '../shared/event-idempotency';
+import { COLLECTIONS } from '../config/firestore-collections';
+const ref = db.collection(COLLECTIONS.FUNCTION_EVENT_RECORDS).doc(generateFunctionEventId(seed));
+await runEventOnce(db, seed, 'orphan-spike-alert', 'retain', async () => sendAlert());`,
+  },
+  // ADR-873 Φ1 §9.1.2 — ΕΝΑΣ γραφέας ανά πακέτο για το ευρετήριο, με φράχτη έκδοσης. Ωμό
+  // set()/delete() σβήνει το `sourceUpdateTime`· σκληρή διαγραφή αφήνει μόνιμο φάντασμα.
+  'search-index-writer': {
+    shouldMatch: `const ref = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(docId);
+await db.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(searchDocId).set(searchDoc);
+await adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(docId).delete();`,
+    shouldSkip: `import { writeSearchIndexEntry, writeSearchIndexTombstone } from '@/lib/search/search-index-write';
+const outcome = await writeSearchIndexEntry(db, docId, searchDoc, sourceUpdateTime);
+await writeSearchIndexTombstone(adminDb, docId, { tenantId, entityType, entityId }, null, Date.now());
+await applySearchIndexTombstone(searchDocRef, identity, version, Date.now());`,
   },
 };

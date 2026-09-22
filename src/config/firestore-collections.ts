@@ -710,6 +710,23 @@ export const COLLECTIONS = {
    */
   IDEMPOTENCY_RECORDS: 'idempotency_records',
 
+  /**
+   * 🔒 ADR-873 Φ1 §9.1 — **Ο ΔΕΙΚΤΗΣ «ΑΥΤΗ Η ΑΛΛΑΓΗ ΕΓΙΝΕ ΗΔΗ»** των Cloud Functions: ένα έγγραφο ανά
+   * αλλαγή (ή ανά επιχειρηματική ταυτότητα), με ντετερμινιστικό ID από τον σπόρο ⇒ κάθε παρατηρητής
+   * του **ίδιου** γεγονότος φτάνει στο **ίδιο** έγγραφο και το `create()` αποτυγχάνει στον δεύτερο.
+   *
+   * 🔴 **ΓΙΑΤΙ ΟΧΙ η `idempotency_records`**: εκείνη κρατά **HTTP απάντηση προς αναπαραγωγή** — ένα
+   * γεγονός **δεν έχει απάντηση**. Δύο σχήματα σε μία συλλογή θα ήταν δύο αλήθειες που αποκλίνουν
+   * σιωπηλά· ένας γραφέας, ένα σχήμα (απόφαση Giorgio 2026-09-22).
+   *
+   * ⛔ **ΔΕΝ γράφεται για κάθε trigger**: όπου ο στόχος κουβαλά μόνος του έκδοση ή ταυτότητα
+   * (search index με `sourceUpdateTime`) ο φρουρός είναι **φυσικός** και έγγραφο εδώ θα ήταν
+   * διπλάσιες εγγραφές για μηδέν κέρδος. Δες `lib/idempotency/event-claim.ts`.
+   *
+   * **Μόνο Admin SDK.** Λήγει (πολιτική TTL στο `expiresAt`).
+   */
+  FUNCTION_EVENT_RECORDS: 'function_event_records',
+
   // 📋 AUDIT LOGS
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
   /** Cloud Function audit log (orphan cleanup, system events) */
@@ -720,6 +737,16 @@ export const COLLECTIONS = {
    * ⚠️ Το `functions/src/config/firestore-collections.ts` κατοπτρίζει αυτή την τιμή.
    */
   STORAGE_ORPHAN_CANDIDATES: process.env.NEXT_PUBLIC_STORAGE_ORPHAN_CANDIDATES_COLLECTION || 'storage_orphan_candidates',
+  /**
+   * Ωριαίος κουβάς «ειδοποιήθηκε ήδη» του `orphanSpikeAlert` — ID εγγράφου = `yyyy-MM-ddTHH` (UTC),
+   * **όχι** enterprise ID: η κράτηση απαιτεί ντετερμινιστικό κλειδί, ίδιο σκεπτικό με το
+   * `CRON_JOB_STATE` από πάνω.
+   *
+   * 🔴 **Ε-873.8 (ADR-873 Φ1)**: μέχρι τις 2026-09-22 η τιμή ήταν **χειρόγραφη** μέσα στο
+   * `functions/src/storage/orphan-spike-alert.ts` — το **6ο** αντίγραφο που ξέφυγε από την
+   * απογραφή του ADR-874, και χωρίς μπλοκ κανόνων. Τώρα προβάλλεται από εδώ.
+   */
+  STORAGE_ORPHAN_SPIKE_ALERTS: 'system_orphan_spike_alerts',
 
   // 🏗️ CONSTRUCTION PHASES, TASKS & BASELINES (ADR-034, ADR-266)
   CONSTRUCTION_PHASES: process.env.NEXT_PUBLIC_CONSTRUCTION_PHASES_COLLECTION || 'construction_phases',

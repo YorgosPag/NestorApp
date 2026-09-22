@@ -22,6 +22,10 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getSearchIndexConfig } from '@/config/search-index-config';
 import { indexEntityForSearch } from '@/lib/search/search-indexer';
+import {
+  entityCommitVersion,
+  writeSearchIndexTombstone,
+} from '@/lib/search/search-index-write';
 import { isSearchEntityType, type SearchEntityType } from '@/types/search';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -84,6 +88,9 @@ const handlePOST = withAuth<ApiSuccessResponse<ReindexResponseData>>(
       entityId,
       entityData,
       tenantId: ctx.companyId,
+      // Η έκδοση που μόλις διαβάστηκε — το ίδιο νούμερο που βλέπει ο trigger για το ίδιο
+      // commit, ώστε η χειροκίνητη επανευρετηρίαση να μην πατάει πάνω σε νεότερη (ADR-873).
+      sourceUpdateTime: entityCommitVersion(snap),
     });
 
     logger.info('[SearchReindex] Entity reindexed', { entityType, entityId });
@@ -131,8 +138,18 @@ const handleDELETE = withAuth<ApiSuccessResponse<DeleteResponseData>>(
         if (data?.tenantId && data.tenantId !== ctx.companyId) {
           throw new ApiError(403, 'Access denied');
         }
-        await docRef.delete();
-        logger.info('[SearchReindex] Search document deleted', { docId });
+        // 🔴 ΤΑΦΟΠΛΑΚΑ, ΟΧΙ ΔΙΑΓΡΑΦΗ (ADR-873 §9.1.2): σκληρή διαγραφή καταστρέφει την έκδοση,
+        // και ένα καθυστερημένο trigger event της ίδιας οντότητας θα ξαναέγραφε την εγγραφή —
+        // **μόνιμα**, αφού καμία επόμενη αλλαγή δεν έρχεται για να τη διορθώσει. `null` έκδοση
+        // = ρητό αίτημα ανθρώπου: η ταφόπλακα γράφεται ό,τι κι αν κάθεται εκεί.
+        const outcome = await writeSearchIndexTombstone(
+          adminDb,
+          docId,
+          { tenantId: ctx.companyId, entityType, entityId },
+          null,
+          Date.now(),
+        );
+        logger.info('[SearchReindex] Search document tombstoned', { docId, outcome });
       }
 
       return apiSuccess<DeleteResponseData>(

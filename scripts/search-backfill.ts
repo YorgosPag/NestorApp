@@ -393,6 +393,12 @@ async function backfillEntityType(
     } else if (options.execute) {
       batch.set(searchDocRef, {
         ...searchDoc,
+        // Η έκδοση της οντότητας που μόλις διαβάστηκε (ADR-873 Φ1 §9.1.2). Το script γράφει με
+        // batch — δεν κρίνει — αλλά **σφραγίζει**: χωρίς τη σφραγίδα, κάθε πέρασμα backfill
+        // αφήνει το ευρετήριο τυφλό σε καθυστερημένα γεγονότα μέχρι την επόμενη εγγραφή.
+        sourceUpdateTime: doc.updateTime
+          ? { seconds: doc.updateTime.seconds, nanoseconds: doc.updateTime.nanoseconds }
+          : null,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         indexedAt: admin.firestore.FieldValue.serverTimestamp(),

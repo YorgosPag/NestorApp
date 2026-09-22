@@ -16,8 +16,9 @@ import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { normalizeSearchText, generateSearchPrefixes } from '@/lib/search/search';
+import { writeSearchIndexEntry } from '@/lib/search/search-index-write';
+import type { CommitVersion } from '@/lib/search/search-index-version';
 import {
   getSearchIndexConfig,
   extractTitle,
@@ -42,6 +43,14 @@ interface IndexEntityParams {
   entityId: string;
   entityData: Record<string, unknown>;
   tenantId: string;
+  /**
+   * Η έκδοση commit της οντότητας, από το στιγμιότυπο που τη διάβασε (ADR-873 Φ1).
+   *
+   * 🔑 Πέρασέ τη **όποτε την έχεις** (`entityCommitVersion(snapshot)`): είναι το ίδιο νούμερο
+   * που βλέπει ο trigger, άρα οι δύο δρόμοι προς το ευρετήριο συγκρίνονται αντί να
+   * αλληλοσβήνονται. Χωρίς αυτήν η γραφή περνά πάντα — σωστό, αλλά τυφλό.
+   */
+  sourceUpdateTime?: CommitVersion | null;
 }
 
 /**
@@ -51,7 +60,7 @@ interface IndexEntityParams {
  * @param params - Entity to index
  */
 export async function indexEntityForSearch(params: IndexEntityParams): Promise<void> {
-  const { entityType, entityId, entityData, tenantId } = params;
+  const { entityType, entityId, entityData, tenantId, sourceUpdateTime = null } = params;
 
   try {
     const config = getSearchIndexConfig(entityType);
@@ -95,9 +104,11 @@ export async function indexEntityForSearch(params: IndexEntityParams): Promise<v
 
     const db = getAdminFirestore();
     const docId = generateSearchDocId(entityType, entityId);
-    await db.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(docId).set(searchDoc);
+    // ΕΝΑΣ γραφέας, ένας φράχτης: ποτέ ωμό `set()` εδώ — θα έσβηνε το `sourceUpdateTime` και
+    // το ευρετήριο θα ξαναγινόταν τυφλό μέχρι την επόμενη εγγραφή οντότητας (ADR-873 §9.1.2).
+    const outcome = await writeSearchIndexEntry(db, docId, searchDoc, sourceUpdateTime);
 
-    logger.info('Entity indexed for search', { entityType, entityId, docId });
+    logger.info('Entity indexed for search', { entityType, entityId, docId, outcome });
   } catch (error) {
     // Non-fatal: search indexing failure should never block entity creation
     logger.error('Failed to index entity for search', {

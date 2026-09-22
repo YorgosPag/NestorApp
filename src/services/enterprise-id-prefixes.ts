@@ -397,6 +397,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   PIPELINE_AUDIT: 'paud',
   ENTITY_AUDIT: 'eaud',
   CLOUD_FUNCTION_AUDIT: 'cfaud', // ADR-874: `audit_log` rows written by Cloud Functions (was declared only in functions/)
+  // ADR-873 Φ1 §9.1 — ο δείκτης «αυτή η ΑΛΛΑΓΗ έγινε ήδη» των Cloud Functions.
+  // Η ταυτότητα είναι ντετερμινιστική από τον σπόρο της αλλαγής (`lib/idempotency/event-claim.ts`),
+  // ώστε ΚΑΘΕ παρατηρητής του ίδιου γεγονότος να φτάνει στο ΙΔΙΟ έγγραφο και το `create()` να
+  // αποτυγχάνει στον δεύτερο. Συλλογή: `function_event_records`.
+  FUNCTION_EVENT: 'fevt',
   AI_USAGE: 'aiu',            // ADR-259A
   CONTRACT: 'lc',
   PIPELINE_QUEUE: 'pq',

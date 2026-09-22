@@ -8393,6 +8393,18 @@
       "indexes": []
     },
     {
+      "collectionGroup": "function_event_records",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "search_documents",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "audit_logs",
       "fieldPath": "expiresAt",
       "ttl": true,

@@ -1540,12 +1540,60 @@
     },
     "firestore-recovery": {
       "ssotFile": "src/lib/firestore-recovery.ts",
-      "description": "Firestore SDK INTERNAL ASSERTION FAILED (b815/ca9) recovery listener — single owner. terminate(db) + clearIndexedDbPersistence(db) + reload, idempotent via module flag + sessionStorage. Blocks re-declaration of installFirestoreRecoveryListener outside canonical file. ADR-367.",
+      "description": "Firestore SDK INTERNAL ASSERTION FAILED (b815/ca9) recovery listener — single owner. terminate(db) + reload (memory cache since ADR-367 §2.5 — nothing on disk to clear), idempotent via module flag + sessionStorage. Blocks re-declaration of installFirestoreRecoveryListener outside canonical file. ADR-367.",
       "forbiddenPatterns": [
         "(function|const)\\s+installFirestoreRecoveryListener\\b"
       ],
       "allowlist": [
         "src/lib/firestore-recovery.ts"
+      ],
+      "tier": 3
+    },
+    "function-event-records": {
+      "ssotFile": "functions/src/shared/event-idempotency.ts",
+      "description": "ΕΝΑΣ γραφέας του δείκτη ιδεμποτίας των Cloud Functions (ADR-873 Φ1 §9.1.1). Η συλλογή `function_event_records` ονομάζεται ΜΟΝΟ στο SSoT των συλλογών· κάθε άλλη αναφορά είναι δεύτερος γραφέας που θα αποκλίνει στο σχήμα (state/seed/lockedAtMs/expiresAt) και θα σπάσει σιωπηλά τον δείκτη. Πέρνα από `runEventOnce` / `readEventClaimInTransaction`.",
+      "forbiddenPatterns": [
+        "['\"]function_event_records['\"]"
+      ],
+      "allowlist": [
+        "src/config/firestore-collections.ts",
+        "functions/src/generated/config/firestore-collections.ts"
+      ],
+      "tier": 3
+    },
+    "search-index-writer": {
+      "ssotFile": "src/lib/search/search-index-write.ts",
+      "description": "ΕΝΑΣ γραφέας ανά πακέτο για το `search_documents`, με φράχτη έκδοσης (ADR-873 Φ1 §9.1.2). Ωμό set()/delete() στη συλλογή σβήνει το `sourceUpdateTime` και ξανακάνει το ευρετήριο τυφλό σε καθυστερημένα γεγονότα — και σκληρή διαγραφή αφήνει ΜΟΝΙΜΟ φάντασμα. Γράψε μέσω `writeSearchIndexEntry` / `writeSearchIndexTombstone` (app) ή `applySearchIndexWrite` / `applySearchIndexTombstone` (functions).",
+      "forbiddenPatterns": [
+        "SEARCH_DOCUMENTS"
+      ],
+      "allowlist": [
+        "src/lib/search/search-index-write.ts",
+        "src/config/firestore-collections.ts",
+        "src/config/deletion-registry.ts",
+        "src/config/__tests__/deletion-registry-storage.test.ts",
+        "src/app/api/search/route.ts",
+        "src/app/api/search/reindex/route.ts",
+        "src/app/api/admin/search-backfill/backfill-engine.ts",
+        "src/app/api/admin/search-backfill/search-backfill.handlers.ts",
+        "functions/src/search/indexTriggers.ts",
+        "functions/src/search/search-index-writer.ts",
+        "functions/src/generated/config/firestore-collections.ts",
+        "scripts/search-backfill.ts"
+      ],
+      "tier": 3
+    },
+    "unsaved-work-guard": {
+      "ssotFile": "src/lib/app-version/unsaved-work-guard.ts",
+      "description": "ONE native beforeunload warning, driven by unsaved-work-registry (ADR-860 E3g). Sources of unsaved work call markUnsavedWork/clearUnsavedWork (DirtyFormProvider, firestore:pending-writes ADR-367 2.6) instead of attaching their own beforeunload. Allowlisted: flush/teardown handlers that do not warn.",
+      "forbiddenPatterns": [
+        "addEventListener\\(\\s*['\"]beforeunload['\"]"
+      ],
+      "allowlist": [
+        "src/lib/app-version/unsaved-work-guard.ts",
+        "src/services/user-settings/user-settings-repository.ts",
+        "src/contexts/WebSocketContext.tsx",
+        "src/services/AnalyticsBridge.ts"
       ],
       "tier": 3
     },

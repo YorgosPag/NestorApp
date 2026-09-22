@@ -35,6 +35,7 @@ import {
   generateSearchDocId,
 } from '../generated/config/search-index-core';
 import { normalizeSearchText, generateSearchPrefixes } from '../generated/lib/search/search';
+import type { CommitVersion } from '../generated/lib/search/search-index-version';
 
 /** The indexing rules — THE app SSoT, projected (ADR-874). */
 const SEARCH_INDEX_CONFIG = SEARCH_INDEX_CORE;
@@ -78,6 +79,16 @@ export interface SearchDocument {
   links: SearchResultLinks;
   createdAt: FirebaseFirestore.FieldValue;
   indexedAt: FirebaseFirestore.FieldValue;
+  /**
+   * The source entity's commit time this entry was built from (ADR-873 Φ1).
+   *
+   * Written by `search-index-writer.ts`, never by the builder: the builder sees the entity's
+   * DATA, and only the trigger sees the entity's VERSION. Absent on entries written before
+   * ADR-873 — the judge treats that as "unknown" and lets the write through.
+   */
+  sourceUpdateTime?: CommitVersion | null;
+  /** Tombstone marker. Never present on a live entry — see `search-index-writer.ts`. */
+  deleted?: boolean;
 }
 
 /**

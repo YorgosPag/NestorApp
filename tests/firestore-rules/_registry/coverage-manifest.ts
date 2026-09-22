@@ -1615,6 +1615,26 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/mandate-evidence.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ─── Ο ΔΕΙΚΤΗΣ «ΑΥΤΗ Η ΑΛΛΑΓΗ ΕΓΙΝΕ ΗΔΗ» ΤΩΝ CLOUD FUNCTIONS (ADR-873 Φ1 §9.1) ──
+  // Γραφή = ψεύτικο «έγινε ήδη» που ΑΚΥΡΩΝΕΙ σιωπηλά μια πραγματική ενημέρωση, ή μόνιμο
+  // `in-flight` που κλειδώνει την πράξη μέχρι τη λήξη του lease. Ανάγνωση = το ίδιο το
+  // κλειδί λέει ΠΟΙΟΣ άλλαξε ΤΙ και ΠΟΤΕ, ανά εταιρεία.
+  {
+    collection: 'function_event_records',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/function-event-records.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  // ─── Ο ΩΡΙΑΙΟΣ ΚΟΥΒΑΣ ΕΙΔΟΠΟΙΗΣΗΣ ΑΙΧΜΗΣ (ADR-694 · Ε-873.8) ──────────────────
+  // Γραφή εδώ = «κατάπιε την ειδοποίηση αιχμής»: ο φύλακας διαβάζει τον κουβά για να
+  // κρίνει αν ειδοποίησε ήδη γι' αυτή την ώρα. Μέχρι τις 2026-09-22 δεν είχε ΚΑΜΙΑ
+  // γραμμή κανόνων — σιωπή, επειδή ο μόνος γραφέας της είναι Admin SDK.
+  {
+    collection: 'system_orphan_spike_alerts',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/system-orphan-spike-alerts.rules.test.ts',
+    ...denyAllMatrix(),
+  },
 ] as const;
 
 /**

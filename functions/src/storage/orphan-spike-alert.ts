@@ -53,7 +53,9 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
 
-const SPIKE_ALERTS_COLLECTION = 'system_orphan_spike_alerts';
+// Ε-873.8 (ADR-873 Φ1) — this was a hand-written literal until 2026-09-22, the 6th copy
+// that escaped the ADR-874 inventory. It now comes from THE registry by projection.
+const SPIKE_ALERTS_COLLECTION = COLLECTIONS.STORAGE_ORPHAN_SPIKE_ALERTS;
 const DEFAULT_THRESHOLD = 5;
 const LOOKBACK_MS = 60 * 60 * 1000;
 const SUPER_ADMIN_DEFAULT_CHAT_ID = '5618410820';

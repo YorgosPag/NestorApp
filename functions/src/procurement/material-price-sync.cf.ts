@@ -12,12 +12,19 @@
  * no dual code path. If the trigger fails, Firebase retries automatically and
  * failures surface in Functions logs.
  *
- * IDEMPOTENCY:
- *   - Trigger fires only on transition `before.status !== 'delivered' &&
- *     after.status === 'delivered'`. Subsequent updates to a PO that is already
- *     delivered (e.g. status → closed) do NOT retrigger.
- *   - Material updates are unconditional writes (avgPrice / lastPrice /
- *     lastPurchaseDate / updatedAt), safe to retry on the same input.
+ * IDEMPOTENCY (ADR-873 Φ1 Στάδιο 1 — this header used to claim it and was wrong):
+ *   - The transition guard is NOT idempotency. Firestore triggers are at-least-once:
+ *     the SAME transition can be delivered twice, and the old unconditional
+ *     `avgPrice` write blended the same delivery into the average a second time.
+ *   - The guard now lives in `material-price-sync-write.ts`: a marker keyed by
+ *     (company, PO, material, line) and the new price commit in ONE transaction.
+ *     That also closes Ε-873.4 — two concurrent POs for one material no longer
+ *     lose an update.
+ *   - A failing line no longer gets swallowed. It used to be caught and counted as
+ *     "skipped", which meant a price update was lost and nobody ever retried it.
+ *     Now it throws, the platform retries the whole PO, and the marker makes that
+ *     safe: the lines that already committed skip, only the failed one runs again.
+ *     The swallow was only ever tolerable BECAUSE there was no way to retry safely.
  *
  * TENANT SAFETY:
  *   - Skips items whose target material has a different `companyId` than the PO.
@@ -35,11 +42,12 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
+import { shouldTriggerSync, type POStatus } from './material-price-sync-pure';
 import {
-  shouldTriggerSync,
-  computeNewAvgPrice,
-  type POStatus,
-} from './material-price-sync-pure';
+  syncMaterialPriceOnce,
+  type DeliveredLine,
+  type PriceSyncResult,
+} from './material-price-sync-write';
 
 // ============================================================================
 // MIRRORED DOC SHAPES (subset — only fields the trigger reads/writes)
@@ -60,10 +68,53 @@ interface PODoc {
   dateDelivered: string | null;
 }
 
-interface MaterialDoc {
-  companyId: string;
-  isDeleted: boolean;
-  avgPrice: number | null;
+// ============================================================================
+// ONE LINE AT A TIME
+// ============================================================================
+
+/**
+ * Apply one line and report it.
+ *
+ * `retry` is re-thrown on purpose: another execution holds this exact line right now, and the
+ * only correct answer is to let the platform try again later — by then the holder has either
+ * committed (so we skip) or vanished (so we take over). Returning quietly would report
+ * "handled" for work that may still fail.
+ */
+async function syncLine(
+  db: admin.firestore.Firestore,
+  line: DeliveredLine,
+): Promise<PriceSyncResult> {
+  const result = await syncMaterialPriceOnce(db, line, Date.now());
+
+  if (result.kind === 'retry') {
+    throw new Error(`Material price sync: line held by another execution (${line.lineId})`);
+  }
+  if (result.kind === 'applied') {
+    functions.logger.info('Material prices synced from PO delivery (CF)', {
+      materialId: line.materialId, poId: line.poId, avgPrice: result.avgPrice,
+      lastPrice: line.unitPrice,
+    });
+  } else {
+    const level = result.reason === 'claim-collision' ? 'error' : 'warn';
+    functions.logger[level]('Material price sync skipped', {
+      materialId: line.materialId, poId: line.poId, reason: result.reason,
+    });
+  }
+  return result;
+}
+
+/** The lines of a delivered PO that carry an explicit material, as this trigger sees them. */
+function deliveredLines(po: PODoc, poId: string, deliveredAt: admin.firestore.Timestamp): DeliveredLine[] {
+  return (Array.isArray(po.items) ? po.items : [])
+    .filter((item): item is POItem & { materialId: string } => item.materialId != null)
+    .map((item) => ({
+      companyId: po.companyId,
+      poId,
+      materialId: item.materialId,
+      lineId: item.id,
+      unitPrice: item.unitPrice,
+      deliveredAt,
+    }));
 }
 
 // ============================================================================
@@ -81,71 +132,28 @@ export const materialPriceSyncOnPODelivery = functions
     if (!shouldTriggerSync(before.status, after.status)) return null;
 
     const poId = context.params.poId as string;
-    const items = Array.isArray(after.items) ? after.items : [];
-    const linked = items.filter((i) => i.materialId != null);
-    if (linked.length === 0) {
-      functions.logger.info('Material price sync skipped — no linked items', { poId });
-      return null;
-    }
-
-    const db = admin.firestore();
     const deliveredAt = after.dateDelivered
       ? admin.firestore.Timestamp.fromDate(new Date(after.dateDelivered))
       : admin.firestore.Timestamp.now();
 
+    const lines = deliveredLines(after, poId, deliveredAt);
+    if (lines.length === 0) {
+      functions.logger.info('Material price sync skipped — no linked items', { poId });
+      return null;
+    }
+
+    // Sequential, and one transaction per line: two lines of the same PO may point at the
+    // same material, and running them in parallel would put a transaction in contention with
+    // its own sibling for no gain — the work is bounded by the PO's line count anyway.
+    const db = admin.firestore();
     let updated = 0;
-    let skipped = 0;
-
-    for (const item of linked) {
-      const materialId = item.materialId!;
-      try {
-        const ref = db.collection(COLLECTIONS.MATERIALS).doc(materialId);
-        const snap = await ref.get();
-
-        if (!snap.exists) {
-          functions.logger.warn('Material not found during price sync', { materialId, poId });
-          skipped++;
-          continue;
-        }
-
-        const mat = snap.data() as MaterialDoc;
-        if (mat.companyId !== after.companyId) {
-          functions.logger.warn('Material skip — tenant mismatch', {
-            materialId, poId, materialCompany: mat.companyId, poCompany: after.companyId,
-          });
-          skipped++;
-          continue;
-        }
-        if (mat.isDeleted) {
-          functions.logger.warn('Material skip — soft-deleted', { materialId, poId });
-          skipped++;
-          continue;
-        }
-
-        const newAvg = computeNewAvgPrice(mat.avgPrice ?? null, item.unitPrice);
-
-        await ref.update({
-          avgPrice: newAvg,
-          lastPrice: item.unitPrice,
-          lastPurchaseDate: deliveredAt,
-          updatedAt: admin.firestore.Timestamp.now(),
-        });
-
-        updated++;
-        functions.logger.info('Material prices synced from PO delivery (CF)', {
-          materialId, poId, avgPrice: newAvg, lastPrice: item.unitPrice,
-        });
-      } catch (err) {
-        functions.logger.error('Material price sync failed for item', {
-          materialId: item.materialId, poId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        skipped++;
-      }
+    for (const line of lines) {
+      const result = await syncLine(db, line);
+      if (result.kind === 'applied') updated++;
     }
 
     functions.logger.info('Material price sync complete', {
-      poId, totalLinked: linked.length, updated, skipped,
+      poId, totalLinked: lines.length, updated, skipped: lines.length - updated,
     });
 
     return null;

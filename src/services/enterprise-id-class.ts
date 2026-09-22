@@ -26,7 +26,7 @@
 
 import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
 import type { EnterpriseId, IdGenerationConfig } from './enterprise-id-types';
-import { deterministicUuid } from './enterprise-id-deterministic';
+import { deterministicUuid, deterministicV4Uuid } from './enterprise-id-deterministic';
 import { CompositeKeyIdGenerators } from './enterprise-id-composite-key-generators';
 
 // Alias for compact generator methods
@@ -167,8 +167,11 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
    * **όνομα** — χαλάρωση της σάρωσης θα άνοιγε την πόρτα σε κάθε μελλοντική μηχανή.
    */
   protected mintDeterministicV4Id(prefix: EnterpriseIdPrefix, seed: string): string {
-    const uuid = deterministicUuid(seed);
-    return `${prefix}_${uuid.slice(0, 14)}4${uuid.slice(15)}`;
+    // 🔑 Το σώμα μετακόμισε στο `./enterprise-id-deterministic` (ADR-873 Φ1 · S0.1) ώστε
+    //    να είναι **φορητό**: το `functions/` το παίρνει με προβολή (ADR-874 / CHECK 3.93)
+    //    αντί για δεύτερη μηχανή hash. Η μέθοδος μένει — είναι το όνομα που κρατά την
+    //    άγκυρα των γεννητόρων μακριά από τη μηχανή (ADR-851).
+    return `${prefix}_${deterministicV4Uuid(seed)}`;
   }
 
   // ⚠️ Οι ταυτότητες του **κύκλου ένταξης** (`arj` · `wacr` · `winv`) μετακόμισαν στο

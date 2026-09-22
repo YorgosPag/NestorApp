@@ -156,6 +156,10 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
 
       for (const doc of result.value.docs) {
         const searchDoc = doc.data() as SearchDocument;
+        // Ταφόπλακα (ADR-873 §9.1.2): η οντότητα έχει διαγραφεί και η εγγραφή ζει μόνο ως
+        // φορέας έκδοσης. Δεν φτάνει ως εδώ — τα `prefixes` της είναι κενά και το ερώτημα
+        // φιλτράρει με `array-contains-any` — αλλά ο φράχτης δεν στηρίζεται σε ένα μόνο σκαλί.
+        if (searchDoc.deleted === true) continue;
         if (searchDoc.search.normalized.includes(normalizedQuery)) {
           allResults.push(transformToSearchResult(searchDoc));
         }

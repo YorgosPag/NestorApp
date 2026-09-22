@@ -15,6 +15,7 @@
 
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import type { Timestamp } from 'firebase/firestore';
+import type { CommitVersion } from '@/lib/search/search-index-version';
 
 // =============================================================================
 // PORTABLE CORE (ADR-874) — entity types, audience, indexing rule
@@ -133,6 +134,24 @@ export interface SearchDocument {
     price?: number;
     type?: string;
   };
+
+  // === Έκδοση & ταφόπλακα (ADR-873 Φ1 §9.1.2) ===
+  /**
+   * Η έκδοση commit της **πηγής** που παρήγαγε αυτή την εγγραφή.
+   *
+   * Πάνω της κρίνεται ποια γραφή κερδίζει όταν δύο παρατηρητές της ίδιας αλλαγής φτάνουν
+   * ανάποδα. Λείπει σε εγγραφές γραμμένες πριν το ADR-873 — ο κριτής το διαβάζει ως «άγνωστη».
+   */
+  sourceUpdateTime?: CommitVersion | null;
+
+  /**
+   * Ταφόπλακα: η οντότητα διαγράφηκε σε αυτή την έκδοση.
+   *
+   * Η εγγραφή μένει επίτηδες, με **κενά** `search.prefixes` — δηλαδή δομικά αόρατη στο
+   * ερώτημα — ώστε ένα καθυστερημένο γεγονός να βρίσκει έκδοση να συγκριθεί μαζί της αντί για
+   * κενό. Σβήνεται μόνη της με TTL. Ποτέ σε ζωντανή εγγραφή.
+   */
+  deleted?: boolean;
 }
 
 /**

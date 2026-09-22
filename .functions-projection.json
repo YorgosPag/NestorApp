@@ -6,7 +6,10 @@
   "modules": [
     "config/search-index-core.ts",
     "lib/dxf/decode-processed-json.ts",
+    "lib/idempotency/event-claim.ts",
+    "lib/search/search-index-version.ts",
     "lib/search/search.ts",
+    "services/enterprise-id-deterministic.ts",
     "types/search-core.ts"
   ],
   "constants": [

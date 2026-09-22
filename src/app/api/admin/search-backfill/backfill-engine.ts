@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { entityCommitVersion } from '@/lib/search/search-index-write';
 import type { SearchEntityType, SearchDocumentInput } from '@/types/search';
 import {
   SEARCH_INDEX_CONFIG,
@@ -215,6 +216,11 @@ export async function backfillEntityType(
       const writePromise = bulkWriter
         .set(searchDocRef, {
           ...firestoreDoc,
+          // Η έκδοση της οντότητας που μόλις διαβάστηκε (ADR-873 §9.1.2). Το backfill γράφει
+          // με BulkWriter — **χωρίς** συναλλαγή, άρα δεν κρίνει· αλλά **σφραγίζει**, ώστε ο
+          // επόμενος trigger να ξέρει τι κάθεται εδώ. Χωρίς τη σφραγίδα, κάθε πέρασμα
+          // backfill θα άφηνε το ευρετήριο τυφλό μέχρι την επόμενη εγγραφή οντότητας.
+          sourceUpdateTime: entityCommitVersion(doc),
           updatedAt: FieldValue.serverTimestamp(),
           createdAt: FieldValue.serverTimestamp(),
           indexedAt: FieldValue.serverTimestamp(),

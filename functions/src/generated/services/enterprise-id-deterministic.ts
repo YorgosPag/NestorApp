@@ -1,3 +1,7 @@
+// ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/services/enterprise-id-deterministic.ts (ADR-874 · CHECK 3.93).
+// Edit the source, then run: npm run generate:functions-projection
+// sha256:f0cd2ea97b97bf8f84393ed326cfdd1eefb35150c4cdd824385befe5b4a78355
+
 /**
  * ENTERPRISE ID — DETERMINISTIC UUID SUFFIX (ADR-632 Φ5)
  *
