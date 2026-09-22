@@ -42,7 +42,7 @@ import 'server-only';
 import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
-import { equalsInConstantTime } from '@/lib/tokens/signed-token';
+import { equalsInConstantTime, type SignedTokenRejection } from '@/lib/tokens/signed-token';
 import {
   readStoredInvitationState,
   type WorkspaceInvitationDocument,
@@ -59,6 +59,15 @@ const logger = createModuleLogger('workspace-invitation-redeem-guards');
  * ⚠️ Ίδιο με του εκδότη — και **ποτέ** κοινό με άλλη πύλη (δες `workspace-invitation.ts`).
  */
 export const WORKSPACE_INVITE_SECRET_ENV = 'WORKSPACE_INVITE_SECRET';
+
+/**
+ * **Ο λόγος απόρριψης του συνδέσμου → η άρνηση που βλέπει ο άνθρωπος** — ένα σημείο για όψη **και** εξαργύρωση.
+ * 🔑 Το ξένο κλειδί λέγεται **ονομαστικά** (ADR-853 §15.7 Ε-5): «δεν είναι έγκυρος» θα έλεγε «πλαστός» για
+ * σύνδεσμο που απλώς εκδόθηκε από άλλο περιβάλλον.
+ */
+export function invitationRefusalOfToken(reason: SignedTokenRejection): WorkspaceInvitationRefusal {
+  return reason === 'foreign-key' ? 'link-foreign' : 'link-invalid';
+}
 
 /** Η αποθηκευμένη κατάσταση → ο λόγος που βλέπει ο άνθρωπος. */
 const REFUSAL_BY_STATE: Readonly<Record<Exclude<WorkspaceInvitationState, 'pending'>, WorkspaceInvitationRefusal>> = {

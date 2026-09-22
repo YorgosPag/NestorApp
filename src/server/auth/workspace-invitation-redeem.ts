@@ -57,6 +57,7 @@ import type { ProvenMailboxAccount } from './mailbox-proof-custody';
 import {
   proveMailboxByInvitation,
   refusalOfStoredInvitation,
+  invitationRefusalOfToken,
   WORKSPACE_INVITE_SECRET_ENV as SECRET_ENV,
 } from './workspace-invitation-redeem-guards';
 
@@ -165,7 +166,8 @@ async function redeem(
   // 🔑 Η υπογραφή ελέγχεται **πριν** από κάθε ανάγνωση: πλαστός σύνδεσμος απορρίπτεται
   //    χωρίς **κανένα** αίτημα στη βάση, οπότε κανείς δεν μας κοστίζει στέλνοντας σκουπίδια.
   const verdict = decodeSignedToken(secret, tokenString, 3);
-  if (!verdict.ok || verdict.fields.length !== 3) return refuse('link-invalid');
+  if (!verdict.ok) return refuse(invitationRefusalOfToken(verdict.reason));
+  if (verdict.fields.length !== 3) return refuse('link-invalid');
 
   const [invitationId, nonce, expiresAtMs] = verdict.fields as [string, string, string];
   const expiryMs = Number(expiresAtMs);
@@ -376,4 +378,4 @@ export async function markWorkspaceInvitationOpened(
     });
   }
 }
-
+

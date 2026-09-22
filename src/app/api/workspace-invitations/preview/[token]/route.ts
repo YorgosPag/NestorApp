@@ -84,6 +84,11 @@ type Segment = { params: Promise<{ token: string }> };
 const STATUS_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, number>> = {
   /** Το κείμενο δεν είναι σύνδεσμός μας — **σφάλμα αιτήματος**, όχι κατάσταση πόρου. */
   'link-invalid': 400,
+  /**
+   * RFC 9110 §15.5.20 **421 Misdirected Request** — ο σύνδεσμος εκδόθηκε για **άλλον** server (άλλο
+   * περιβάλλον/κλειδί)· αυτός εδώ δεν μπορεί να απαντήσει με κύρος.
+   */
+  'link-foreign': 421,
   /** Έγκυρη υπογραφή, ανύπαρκτο έγγραφο: ο πόρος δεν βρίσκεται. */
   'invitation-unknown': 404,
   'expired': 410,

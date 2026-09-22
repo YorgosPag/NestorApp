@@ -779,6 +779,18 @@ describe('Ψ — η πρόσκληση επιβεβαιώνει email ΜΟΝΟ �
     expect(updateUserMock).not.toHaveBeenCalled();
   });
 
+  it('🔴 Ψ3β — σύνδεσμος ΑΛΛΟΥ περιβάλλοντος (άλλο κλειδί) ⇒ `link-foreign`, όχι «άκυρος» — και στην όψη και στην εξαργύρωση (ADR-853 §15.7 Ε-5)', async () => {
+    const own = process.env.WORKSPACE_INVITE_SECRET;
+    process.env.WORKSPACE_INVITE_SECRET = 'μυστικό-άλλου-περιβάλλοντος-δοκιμών';
+    const { token } = await issue();
+    process.env.WORKSPACE_INVITE_SECRET = own;
+
+    const preview = await previewWorkspaceInvitation({ token, nowISOValue: NOW });
+    expect(preview.kind === 'refused' ? preview.reason : preview.kind).toBe('link-foreign');
+    expect(await acceptAsUnverified(token)).toEqual({ kind: 'refused', reason: 'link-foreign' });
+    expect(updateUserMock).not.toHaveBeenCalled();
+  });
+
   it('🔴 Ψ4 — ήδη απαντημένη πρόσκληση ⇒ `already-used` ΚΑΙ ΚΑΜΙΑ επιβεβαίωση', async () => {
     const { token, invitation } = await issue();
     fake.seed(COLLECTIONS.WORKSPACE_INVITATIONS, invitation.id, {

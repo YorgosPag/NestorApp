@@ -99,6 +99,7 @@ export const INVITE_PAGE_KEYS = {
  */
 export const REFUSAL_KEY: Readonly<Record<WorkspaceInvitationRefusal, string>> = {
   'link-invalid': 'auth:workspaceInvite.refusal.link-invalid',
+  'link-foreign': 'auth:workspaceInvite.refusal.link-foreign',
   'invitation-unknown': 'auth:workspaceInvite.refusal.invitation-unknown',
   expired: 'auth:workspaceInvite.refusal.expired',
   'already-used': 'auth:workspaceInvite.refusal.already-used',
@@ -160,6 +161,7 @@ export const EXIT_HREF = {
  */
 export const EXIT_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, WorkspaceInviteExitName>> = {
   'link-invalid': 'home',
+  'link-foreign': 'home',
   'invitation-unknown': 'home',
   expired: 'home',
   /** Απάντησε ήδη — **επιτυχία στο παρελθόν**. Ο δρόμος του είναι μέσα. */

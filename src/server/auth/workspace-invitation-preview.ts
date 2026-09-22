@@ -24,7 +24,11 @@ import {
   type WorkspaceInvitationRefusal,
 } from '@/types/workspace-invitation';
 
-import { refusalOfStoredInvitation, WORKSPACE_INVITE_SECRET_ENV as SECRET_ENV } from './workspace-invitation-redeem-guards';
+import {
+  invitationRefusalOfToken,
+  refusalOfStoredInvitation,
+  WORKSPACE_INVITE_SECRET_ENV as SECRET_ENV,
+} from './workspace-invitation-redeem-guards';
 
 const logger = createModuleLogger('workspace-invitation-preview');
 
@@ -101,7 +105,8 @@ export async function previewWorkspaceInvitation(input: {
   }
 
   const verdict = decodeSignedToken(secret, input.token, 3);
-  if (!verdict.ok || verdict.fields.length !== 3) return previewRefuse('link-invalid');
+  if (!verdict.ok) return previewRefuse(invitationRefusalOfToken(verdict.reason));
+  if (verdict.fields.length !== 3) return previewRefuse('link-invalid');
 
   const [invitationId, nonce, expiresAtMs] = verdict.fields as [string, string, string];
   const expiryMs = Number(expiresAtMs);
