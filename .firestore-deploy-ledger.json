@@ -168,6 +168,13 @@
       "digest": "sha256:bb78d3978a3245a55263446d35955a49977d21b2c053947e767a22ec113d89c4",
       "source": "storage.rules",
       "target": "storage"
+    },
+    {
+      "at": "2026-09-22",
+      "commit": "84b69422",
+      "digest": "sha256:e200f5f8d7599335a65aae2bc37630a1ef43b3710a33da264ac7c8381125d616",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
     }
   ]
 }
