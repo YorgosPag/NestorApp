@@ -15,6 +15,13 @@ import {
   buildWorkspaceInvitationEmail,
   everyLanguageHasInvitationWording,
 } from '../workspace-invitation-email';
+// 🔑 ADR-853 §17 — οι λέξεις **διαβάζονται** από τον ΕΝΑ κατάλογο· κυριολεκτικό αντίγραφο
+//    εδώ θα ήταν **τέταρτο** όνομα ρόλου, ακριβώς η βλάβη που η σουίτα φυλά.
+import elCommon from '@/i18n/locales/el/common.json';
+import enCommon from '@/i18n/locales/en/common.json';
+import elAdmin from '@/i18n/locales/el/admin.json';
+import elAuth from '@/i18n/locales/el/auth.json';
+import { INVITED_ROLE_KEY } from '@/components/workspace-invite/workspace-invite-labels';
 
 const ORIGIN = 'https://nestorconstruct.gr';
 const ORIGINAL_APP_URL = process.env.NEXT_PUBLIC_APP_URL;
@@ -52,7 +59,9 @@ describe('Π — ο παρονομαστής: η σωστή πρόσκληση �
 
     expect(email).not.toBeNull();
     expect(email?.html).toContain('Παγώνης Τεχνική');
-    expect(email?.html).toContain('Εσωτερικός χρήστης');
+    // 🔑 ADR-853 §17 — η λέξη **διαβάζεται** από τον ΕΝΑ κατάλογο, δεν ξαναγράφεται εδώ:
+    //    ένα κυριολεκτικό αντίγραφο στο test είναι **τέταρτο** όνομα ρόλου.
+    expect(email?.html).toContain(elCommon.globalRoles.internal_user);
     expect(email?.html).toContain('7 ημέρες');
     expect(email?.html).toContain(`${ORIGIN}/invite/tok_abc123`);
   });
@@ -100,7 +109,7 @@ describe('Γ — η γλώσσα', () => {
 
     expect(email?.subject).toBe('Παγώνης Τεχνική invited you to collaborate — Nestor App');
     expect(email?.html).toContain('<html lang="en">');
-    expect(email?.html).toContain('Internal user');
+    expect(email?.html).toContain(enCommon.globalRoles.internal_user);
   });
 
   it('Γ2 — ελληνικά ⇒ ελληνικό θέμα και `<html lang="el">`', () => {
@@ -202,8 +211,31 @@ describe('Ρ — ο ρόλος', () => {
       (role) => build({ role })?.html,
     );
 
-    expect(names[0]).toContain('Διαχειριστής εταιρείας');
-    expect(names[1]).toContain('Εσωτερικός χρήστης');
-    expect(names[2]).toContain('Εξωτερικός χρήστης');
+    expect(names[0]).toContain(elCommon.globalRoles.company_admin);
+    expect(names[1]).toContain(elCommon.globalRoles.internal_user);
+    expect(names[2]).toContain(elCommon.globalRoles.external_user);
+    // Και **διαφέρουν**: τρεις ρόλοι με την ίδια λέξη θα περνούσαν κάθε έλεγχο «υπάρχει».
+    expect(new Set([
+      elCommon.globalRoles.company_admin,
+      elCommon.globalRoles.internal_user,
+      elCommon.globalRoles.external_user,
+    ]).size).toBe(3);
+  });
+
+  /**
+   * 🔴 **Ρ2 — Ο ΛΟΓΟΣ ΠΟΥ ΥΠΑΡΧΕΙ ΑΥΤΗ Η ΣΟΥΙΤΑ** (Ε-Β): το email έγραφε «Εσωτερικός
+   * χρήστης», η σελίδα που ανοίγει ο σύνδεσμος «Εσωτερικός συνεργάτης», η διαχείριση
+   * «Εσωτερικός». Η άγκυρα ρωτά το **μόνο** ερώτημα που τα πιάνει και τα τρία:
+   * *«είναι η λέξη του email Η ΙΔΙΑ με εκείνη που ζητά η οθόνη;»*
+   */
+  it('🔴 Ρ2 — η λέξη του email είναι ΑΥΤΗ που ζητά η οθόνη, από το ΙΔΙΟ κλειδί', () => {
+    const html = build({ role: 'internal_user' })?.html ?? '';
+    const key = INVITED_ROLE_KEY.internal_user;
+
+    expect(key).toBe('common:globalRoles.internal_user');
+    expect(html).toContain(elCommon.globalRoles.internal_user);
+    // ⛔ Και **καμία** από τις τρεις παλιές λέξεις δεν επιβιώνει σε κανένα αντίγραφο.
+    expect(JSON.stringify(elAdmin)).not.toContain('roleNames');
+    expect(JSON.stringify(elAuth.workspaceInvite)).not.toContain('Εσωτερικός');
   });
 });

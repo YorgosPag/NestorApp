@@ -1,4 +1,14 @@
 {
+  "saveStatus": {
+    "saving": "Saving…",
+    "savingHint": "Your changes are being sent to the server.",
+    "saved": "All changes saved",
+    "savedHint": "The server confirmed every change you made.",
+    "offline": "Offline",
+    "offlineHint": "No connection. Anything you change will be saved once it returns.",
+    "offlinePending": "Offline — changes pending",
+    "offlinePendingHint": "Your changes are held in this tab and will be saved once the connection returns. Do not close this tab."
+  },
   "buttons": {
     "save": "Save",
     "cancel": "Cancel",
@@ -1080,5 +1090,27 @@
   "appUpdate": {
     "message": "A new version of the app is available. Save your changes and reload the page.",
     "reload": "Reload"
+  },
+  "globalRoleDescriptions": {
+    "super_admin": "Full system access — bypasses all permission checks",
+    "company_admin": "Manages the entire workspace",
+    "internal_user": "Member of the workspace, with access to its projects",
+    "external_user": "Outside collaborator, with limited access"
+  },
+  "globalRoles": {
+    "admin": "Administrator",
+    "super_admin": "Super Admin",
+    "company_admin": "Workspace admin",
+    "project_manager": "Project Manager",
+    "architect": "Architect",
+    "engineer": "Engineer",
+    "site_manager": "Site Manager",
+    "accountant": "Accountant",
+    "sales_agent": "Sales Agent",
+    "data_entry": "Data Entry",
+    "vendor": "Vendor",
+    "viewer": "Viewer",
+    "internal_user": "Member",
+    "external_user": "Guest"
   }
 }

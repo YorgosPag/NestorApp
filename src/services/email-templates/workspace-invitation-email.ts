@@ -29,6 +29,7 @@
 import 'server-only';
 
 import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
+import { globalRoleName } from '@/constants/global-role-text';
 import { deadlineDaysLeft } from '@/lib/date-local';
 import { publicUrl } from '@/lib/http/public-origin';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
@@ -73,15 +74,20 @@ interface InvitationWording {
   /** «Δεν το περίμενα» — η έξοδος χωρίς ενοχή, πρότυπο κάθε email ασφαλείας μας. */
   readonly footnote: string;
   /**
-   * ⚠️ **ΔΕΥΤΕΡΟΣ ΠΙΝΑΚΑΣ ΟΝΟΜΑΤΩΝ ΡΟΛΟΥ, ΚΑΙ ΕΙΝΑΙ ΑΝΑΓΚΗ — ΟΧΙ ΑΒΛΕΨΙΑ.** Τα
-   * ονόματα της **οθόνης** ζουν στα locales (`admin.json → roleManagement.roleNames`)
-   * και τα διαβάζει το `t()`, που **δεν υπάρχει στον διακομιστή** (δες την κεφαλίδα).
-   * ⛔ **ΜΗΝ «ενοποιήσεις» εισάγοντας το JSON εδώ**: θα έδενε τον αποστολέα email με
-   *    τον φορτωτή namespace του φυλλομετρητή (CHECK 3.36), για μηδέν όφελος.
-   * ⚠️ **ΟΦΕΙΛΟΥΝ ΝΑ ΣΗΜΑΙΝΟΥΝ ΤΟ ΙΔΙΟ** με εκείνα: ο ίδιος άνθρωπος διαβάζει το
-   *    email και μετά βλέπει την οθόνη. Αλλαγή εκεί ⇒ αλλαγή **και εδώ**.
+   * 🔴 **ΤΟ `roles` ΕΦΥΓΕ ΑΠΟ ΕΔΩ — ΚΑΙ Η ΠΡΟΗΓΟΥΜΕΝΗ ΓΡΑΦΗ ΤΟ ΑΠΑΓΟΡΕΥΕ ΡΗΤΑ** (ADR-853 §17).
+   *
+   * Έλεγε: *«ΜΗΝ ενοποιήσεις εισάγοντας το JSON εδώ — θα έδενε τον αποστολέα email με τον
+   * φορτωτή namespace του φυλλομετρητή (CHECK 3.36), για μηδέν όφελος»*, και ζητούσε από
+   * τον άνθρωπο να κρατά τις λέξεις συγχρονισμένες **με το χέρι**. Το τίμημα μετρήθηκε:
+   * **τρία ονόματα για τον ίδιο ρόλο** στην ίδια ροή («Εσωτερικός» · «Εσωτερικός
+   * συνεργάτης» · «Εσωτερικός χρήστης»). Η υπόσχεση «αλλαγή εκεί ⇒ αλλαγή εδώ» είναι
+   * ακριβώς το είδος που κανένας δεν κρατά και καμία πύλη δεν έβλεπε.
+   *
+   * 🔑 **Και ο φόβος δεν ίσχυε**: το `constants/global-role-text.ts` κάνει **στατικό import
+   * του JSON** — build-time, καμία σχέση με τον φορτωτή namespace του φυλλομετρητή. Ίδιο
+   * ιδίωμα με το `project-status-text.ts` (ADR-812), που σερβίρει ήδη λεξιλόγιο σε PDF και
+   * σε απαντήσεις εκτός React.
    */
-  readonly roles: Readonly<Record<InvitableRole, string>>;
   /**
    * **Όταν το γραφείο δεν έχει δηλώσει όνομα.** Ο διακομιστής στέλνει **κενό**
    * (`readWorkspaceName`) και ⛔ **ποτέ** ωμό `comp_*` — η ετικέτα είναι δουλειά της
@@ -114,11 +120,6 @@ const INVITATION_TEXTS: Readonly<Record<HumanLanguage, InvitationWording>> = {
     footnote:
       'Αν δεν περιμένατε αυτή την πρόσκληση, αγνοήστε το μήνυμα: χωρίς τη δική σας '
       + 'αποδοχή δεν αποκτά κανείς πρόσβαση σε τίποτα δικό σας.',
-    roles: {
-      company_admin: 'Διαχειριστής εταιρείας',
-      internal_user: 'Εσωτερικός χρήστης',
-      external_user: 'Εξωτερικός χρήστης',
-    },
     unnamedWorkspace: 'ένα γραφείο',
   },
   en: {
@@ -138,11 +139,6 @@ const INVITATION_TEXTS: Readonly<Record<HumanLanguage, InvitationWording>> = {
     footnote:
       'If you were not expecting this invitation, ignore this message: without your '
       + 'acceptance nobody gains access to anything of yours.',
-    roles: {
-      company_admin: 'Company administrator',
-      internal_user: 'Internal user',
-      external_user: 'External user',
-    },
     unnamedWorkspace: 'an office',
   },
 };
@@ -217,7 +213,10 @@ export function buildWorkspaceInvitationEmail(
   const workspace = input.workspaceName.trim().length > 0
     ? input.workspaceName.trim()
     : wording.unnamedWorkspace;
-  const roleName = wording.roles[input.role];
+  // 🔑 ADR-853 §17 — **ο ίδιος κατάλογος με την οθόνη**: το email έλεγε «Εσωτερικός χρήστης»
+  //    για τον ρόλο που η σελίδα προορισμού ονόμαζε αλλιώς. Το `??` δεν είναι μαντεψιά:
+  //    ο έλεγχος πληρότητας τρέχει ως άγκυρα, και εδώ μένει η τίμια εφεδρεία.
+  const roleName = globalRoleName(language, input.role) ?? input.role;
   const days = daysRemaining(input.expiresAt, input.nowISOValue);
 
   const contentHtml =
@@ -290,7 +289,7 @@ export function everyLanguageHasInvitationWording(): boolean {
       wording.boundToAddress(wording.onlyWord),
       wording.footnote,
       wording.unnamedWorkspace,
-      ...INVITABLE_ROLES.map((role) => wording.roles[role]),
+      ...INVITABLE_ROLES.map((role) => globalRoleName(language, role) ?? ''),
     ];
     return texts.every((text) => typeof text === 'string' && text.length > 0);
   });
