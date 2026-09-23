@@ -17,11 +17,16 @@
 import React, { useState } from 'react';
 import { CalendarDays, Eye, Mail, Minus, Sparkles, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatPercentage } from '@/lib/intl-formatting';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
+import { formatCalendarDay, formatPercentage } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
 import { daysOnMarket } from '@/lib/listings/listing-stats';
-import { comparableViewTrend, type ComparableTrend } from '@/lib/listings/listing-stats-view';
+import {
+  cardViewsReading,
+  comparableViewTrend,
+  type ComparableTrend,
+  type ViewsReading,
+} from '@/lib/listings/listing-stats-view';
 import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import type { ListedAt } from '@/types/public-listing';
 import type { PriceReduction } from '@/types/price-history';
@@ -68,6 +73,16 @@ function Metric({ icon: Icon, children }: { readonly icon: LucideIcon; readonly 
   );
 }
 
+/**
+ * «N προβολές σε D ημέρες» με τις **μετρημένες** ημέρες — ποτέ «0 σε 7 ημέρες» όταν μετράμε 2 ή
+ * καμία (μετρημένο σε ζωντανή σελίδα πριν την εποχή καταγραφής, ADR-777 §8.72.8).
+ */
+function viewsText(reading: ViewsReading, t: Translate): string {
+  if (reading.kind === 'unknown') return t(`${S}.row.viewsUnknown`);
+  if (reading.kind === 'not-yet') return t(`${S}.row.viewsNotYet`, { date: formatCalendarDay(reading.countingSince) });
+  return t(`${S}.row.views`, { count: reading.views, days: reading.days });
+}
+
 interface ReadyRowProps {
   readonly stats: Extract<ListingStatsState, { state: 'ready' }>;
   readonly listedAt: ListedAt | undefined;
@@ -79,13 +94,15 @@ function ReadyRow({ stats, listedAt, priceReduction }: ReadyRowProps): React.Rea
   // ⚠️ Μία ανάγνωση ρολογιού ανά mount (ίδιο συμβόλαιο με το `useFreshReduction`).
   const [nowMs] = useState(() => Date.now());
   const { summary, today } = stats;
-  const trend = comparableViewTrend(summary, today);
+  const views = cardViewsReading(summary, today);
+  // Πριν αρχίσει η μέτρηση δεν υπάρχει τάση — ούτε καν «νέα μέτρηση».
+  const trend = views.kind === 'not-yet' ? null : comparableViewTrend(summary, today);
   const days = daysOnMarket(listedAt, nowMs);
 
   return (
     <ul aria-label={t(`${S}.row.label`)} className="m-0 flex list-none flex-wrap items-center gap-x-4 gap-y-1 p-0 text-sm text-foreground">
       <Metric icon={Eye}>
-        {summary.views === null ? t(`${S}.row.viewsUnknown`) : t(`${S}.row.views`, { count: summary.views.lastWindow })}
+        {viewsText(views, t)}
       </Metric>
       {trend !== null && (
         <li className="inline-flex">

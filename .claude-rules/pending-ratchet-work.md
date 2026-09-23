@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **23/09 — ΠΑΤΗΜΕΝΟ ΚΟΥΜΠΙ = `variant="default"` ⇒ ΑΟΡΑΤΗ ΕΠΙΛΟΓΗ ΣΤΟ ΣΚΟΤΕΙΝΟ** *(ADR-770 §17 · ADR-777 §8.72.8 #2)*
+
+  Μετρημένο ζωντανά στον διακόπτη 30/90 των στατιστικών: `bg-primary` ≡ `--card` στο σκοτεινό (1,00:1) ⇒ το
+  πατημένο **χάνεται** και το ΜΗ πατημένο (`outline` = `bg-background`) μοιάζει επιλεγμένο. Εκείνο διορθώθηκε
+  (`COLOR_BRIDGE.selectionControl.fill`/`fillInk`/`accentOutline`). **Μένουν 42 εμφανίσεις σε 32 αρχεία**:
+  `grep -rn "? 'default' : 'outline'" src --include=*.tsx` (+ διπλά εισαγωγικά). Θεραπεία της κλάσης, όχι 42 μπαλώματα:
+  **ένα** primitive (π.χ. `ToggleButton`/segmented στο `components/ui`) που φορά τον ρόλο χειριστηρίου + `aria-pressed`,
+  και μετά μηχανική μετάβαση. Ύποπτο και το `ui/toggle.tsx` (`data-[state=on]:bg-accent` — στο σκοτεινό το `--accent`
+  είναι σκουρότερο από το `--card`): μέτρησέ το πριν το προτείνεις ως SSoT.
+
 - 🟡 **23/09 — ΤΟ URL `tile.openstreetmap.org` ΓΡΑΜΜΕΝΟ ΣΕ ΤΕΣΣΕΡΑ ΣΗΜΕΙΑ** *(N.0.2 · ADR-777 §8.70.7)*
 
   `components/projects/ika/map-shared/map-styles.ts` (`OSM_MAP_STYLE`, 5 καταναλωτές) · `geo-canvas/config/index.ts`

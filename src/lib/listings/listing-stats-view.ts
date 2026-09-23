@@ -81,6 +81,32 @@ export function countedDaysIn(countingSince: string, from: string, to: string): 
 }
 
 /**
+ * **Οι προβολές ενός εύρους όπως τις λέει η οθόνη** — ποτέ «0 σε 7 ημέρες» όταν μετράμε 2.
+ *
+ * `not-yet` = καμία μετρημένη ημέρα στο εύρος (η μέτρηση αρχίζει αργότερα): «δεν κοιτάξαμε» ≠
+ * «κανείς δεν ήρθε», άρα **κανένας** αριθμός. `counted.days` = οι **μετρημένες** ημέρες, ώστε το
+ * κείμενο να λέει το πραγματικό διάστημα («12 προβολές σε 3 ημέρες»).
+ */
+export type ViewsReading =
+  | { readonly kind: 'unknown' }
+  | { readonly kind: 'not-yet'; readonly countingSince: string }
+  | { readonly kind: 'counted'; readonly views: number; readonly days: number };
+
+export function viewsIn(summary: ListingStatsSummary, from: string, to: string): ViewsReading {
+  const { views, countingSince } = summary;
+  if (views === null) return { kind: 'unknown' };
+  const days = countedDaysIn(countingSince, from, to);
+  if (days === 0) return { kind: 'not-yet', countingSince };
+  const start = countingSince > from ? countingSince : from;
+  return { kind: 'counted', views: windowSum(views.daily, start, to), days };
+}
+
+/** Το εύρος της γραμμής της κάρτας — οι τελευταίες `LISTING_STATS_WINDOW_DAYS` ημέρες. */
+export function cardViewsReading(summary: ListingStatsSummary, today: string): ViewsReading {
+  return viewsIn(summary, shiftMarketDay(today, -(LISTING_STATS_WINDOW_DAYS - 1)), today);
+}
+
+/**
  * **Προβολές τελευταίων 7 ημερών έναντι των 7 πριν** — σε μέσο όρο ανά **μετρημένη** ημέρα.
  * `null` όταν οι προβολές είναι άγνωστες (βλάβη): η τάση του αγνώστου δεν είναι «σταθερή».
  */
@@ -146,21 +172,25 @@ function countOn(daily: ListingViewDaily | undefined, day: string, counted: bool
   return daily[day] ?? 0;
 }
 
-/** Οι `range` τελευταίες ημέρες (μαζί με τη σημερινή), σε αύξουσα σειρά. */
+/**
+ * Οι `range` τελευταίες ημέρες (μαζί με τη σημερινή), σε αύξουσα σειρά.
+ *
+ * 🔴 Το `countingSince` αφορά **μόνο τις προβολές**. Οι επαφές έρχονται από το `first_contacts`,
+ * που υπήρχε πριν από τη μέτρηση προβολών, και ο διακομιστής τις στέλνει για **όλη** τη σειρά —
+ * άρα είναι γνωστές κάθε ημέρα. Αν σβήνονταν κι αυτές, ο δείκτης «Επαφές: 1» πάνω από το γράφημα
+ * θα διαφωνούσε με μια άδεια ζώνη από κάτω (μετρημένο σε ζωντανή σελίδα, §8.72.8).
+ */
 export function listingStatsDays(
   summary: ListingStatsSummary,
   today: string,
   range: ListingStatsRange,
 ): readonly ListingStatsDay[] {
   const from = shiftMarketDay(today, -(range - 1));
-  return marketDaysBetween(from, today).map((day) => {
-    const counted = day >= summary.countingSince;
-    return {
-      day,
-      views: countOn(summary.views?.daily, day, counted),
-      contacts: countOn(summary.contacts?.daily, day, counted),
-    };
-  });
+  return marketDaysBetween(from, today).map((day) => ({
+    day,
+    views: countOn(summary.views?.daily, day, day >= summary.countingSince),
+    contacts: countOn(summary.contacts?.daily, day, true),
+  }));
 }
 
 // ============================================================================

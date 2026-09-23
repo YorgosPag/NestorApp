@@ -7,18 +7,23 @@
  *   Τ3 · άγνωστες προβολές ⇒ `null` (ποτέ «σταθερή»).
  *   Λ1 · ο λόγος επαφών/προβολών μετρά ΚΑΙ τα δύο στις ίδιες μετρημένες ημέρες.
  *   Λ2 · κάτω από 100 προβολές ⇒ `insufficient` με τους αριθμούς· άγνωστη πηγή ⇒ `unknown`.
- *   Γ1 · πριν το `countingSince` ⇒ `null`, μετά ⇒ 0 για απούσα μέρα.
+ *   Γ1 · πριν το `countingSince` ⇒ προβολές `null`, μετά ⇒ 0 για απούσα μέρα.
+ *   Γ2 · οι ΕΠΑΦΕΣ δεν έχουν «πριν»: είναι γνωστές κάθε ημέρα (ζωντανό εύρημα §8.72.8 — «Επαφές: 1»
+ *        πάνω από άδεια ζώνη).
+ *   Π1 · οι προβολές ενός εύρους λένε τις ΜΕΤΡΗΜΕΝΕΣ ημέρες· καμία ⇒ `not-yet`, ΠΟΤΕ «0 σε 7 ημέρες».
  *   Ε1 · γεγονότα τιμής: καταχώριση · μείωση με μονάδες βάσης · απόσυρση · επαναδημοσίευση.
  *   Ε2 · αλλαγή ρόλου ΔΕΝ είναι μείωση· σκουπίδι ⇒ κανένα γεγονός.
  */
 
 import {
+  cardViewsReading,
   comparableViewTrend,
   contactRateIn,
   countedDaysIn,
   listingPriceEvents,
   listingStatsDays,
   priceEventsIn,
+  viewsIn,
 } from '../listing-stats-view';
 import type { ListingStatsSummary, ListingViewDaily } from '../listing-stats';
 
@@ -90,7 +95,7 @@ describe('Γ — οι ημέρες του γραφήματος', () => {
     const s = summary({ countingSince: '2026-10-19', views: views(3, 0, { '2026-10-20': 3 }) });
     const days = listingStatsDays(s, TODAY, 30);
     expect(days).toHaveLength(30);
-    expect(days[0]).toEqual({ day: '2026-09-21', views: null, contacts: null });
+    expect(days[0]).toEqual({ day: '2026-09-21', views: null, contacts: 0 });
     expect(days[28]).toEqual({ day: '2026-10-19', views: 0, contacts: 0 });
     expect(days[29]).toEqual({ day: '2026-10-20', views: 3, contacts: 0 });
   });
@@ -98,6 +103,31 @@ describe('Γ — οι ημέρες του γραφήματος', () => {
   it('Γ1 · άγνωστη πηγή ⇒ null σε κάθε ημέρα της, η άλλη πηγή ανέγγιχτη', () => {
     const days = listingStatsDays(summary({ countingSince: '2026-10-01', contacts: null }), TODAY, 30);
     expect(days[29]).toEqual({ day: TODAY, views: 0, contacts: null });
+  });
+});
+
+describe('Γ2 — οι επαφές είναι γνωστές πριν από τη μέτρηση προβολών', () => {
+  it('Γ2 · επαφή πριν το countingSince ⇒ μετριέται στη ζώνη της', () => {
+    const s = summary({ countingSince: '2026-10-19', contacts: { total: 1, lastWindow: 0, daily: { '2026-10-01': 1 } } });
+    const day = listingStatsDays(s, TODAY, 30).find((d) => d.day === '2026-10-01');
+    expect(day).toEqual({ day: '2026-10-01', views: null, contacts: 1 });
+  });
+});
+
+describe('Π — οι προβολές ενός εύρους', () => {
+  it('Π1 · καμία μετρημένη ημέρα ⇒ not-yet, κανένας αριθμός', () => {
+    expect(cardViewsReading(summary({ countingSince: '2026-10-21' }), TODAY)).toEqual({ kind: 'not-yet', countingSince: '2026-10-21' });
+  });
+
+  it('Π1 · 3 μετρημένες από τις 7 ⇒ λέει 3 ημέρες', () => {
+    const s = summary({ countingSince: '2026-10-18', views: views(12, 0, { '2026-10-18': 5, '2026-10-20': 7 }) });
+    expect(cardViewsReading(s, TODAY)).toEqual({ kind: 'counted', views: 12, days: 3 });
+  });
+
+  it('Π1 · όλο το εύρος μετρημένο ⇒ όλες οι ημέρες· άγνωστη πηγή ⇒ unknown', () => {
+    const s = summary({ countingSince: '2026-09-01', views: views(9, 0, { '2026-10-01': 4, '2026-10-20': 5 }) });
+    expect(viewsIn(s, '2026-09-21', TODAY)).toEqual({ kind: 'counted', views: 9, days: 30 });
+    expect(viewsIn(summary({ views: null }), '2026-09-21', TODAY)).toEqual({ kind: 'unknown' });
   });
 });
 

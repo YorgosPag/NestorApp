@@ -18,9 +18,9 @@
  * δύο ζώνες. Το Rightmove σημειώνει τα δικά του γεγονότα (αναβάθμιση προβολής)· εδώ σημειώνεται η
  * απόφαση του **κατόχου**, ώστε η αιτία να κάθεται δίπλα στο αποτέλεσμα.
  *
- * ⚠️ **Πριν από το `countingSince` δεν υπάρχει μηδέν**: οι γραμμές έχουν `null` (το recharts δεν
- * σχεδιάζει ράβδο) και η περιοχή σκιάζεται ως «χωρίς μέτρηση». Ο πίνακας δεδομένων του κελύφους
- * λέει το ίδιο με παύλα.
+ * ⚠️ **Πριν από το `countingSince` δεν υπάρχει μηδέν προβολών**: οι ημέρες έχουν `null` (το recharts
+ * δεν σχεδιάζει ράβδο) και η περιοχή σκιάζεται με ετικέτα «Χωρίς μέτρηση» — **μόνο** στη ζώνη
+ * προβολών· οι επαφές είναι γνωστές κάθε ημέρα. Ο πίνακας δεδομένων του κελύφους λέει το ίδιο με παύλα.
  *
  * ⚡ Default export: φορτώνεται **μόνο** με `next/dynamic` από τον πίνακα — το recharts δεν μπαίνει
  * στο αρχικό bundle της σελίδας.
@@ -47,18 +47,27 @@ const S = 'property-market:offer.stats';
 
 const CHART_MARGIN = { top: 8, right: 8, bottom: 0, left: 0 } as const;
 const MUTED = 'hsl(var(--muted-foreground))';
-const NOT_COUNTED_FILL = 'hsl(var(--muted))';
+/**
+ * Η σκίαση «χωρίς μέτρηση» — το **μελάνι** του muted σε χαμηλή αδιαφάνεια, όχι η επιφάνεια `--muted`:
+ * το `--muted` απέχει από το `--card` 1% φωτεινότητας (φωτεινό) και είναι ΣΚΟΥΡΟΤΕΡΟ από αυτό
+ * (σκοτεινό) ⇒ η υπόσχεση της λεζάντας («η σκιασμένη περιοχή…») ήταν αόρατη και στα δύο θέματα.
+ */
+const NOT_COUNTED_FILL = MUTED;
+const NOT_COUNTED_OPACITY = 0.14;
 
 const formatCount = (value: number): string => formatNumber(value, { maximumFractionDigits: 0 });
 const formatDay = (value: unknown): string => formatCalendarDay(String(value));
 
 type SeriesKey = 'views' | 'contacts';
 
-/** Η τελευταία **μη** μετρημένη ημέρα του εύρους — ή `null` αν μετράμε όλο το εύρος. */
+/**
+ * Η τελευταία ημέρα του εύρους **χωρίς μέτρηση προβολών** — ή `null` αν μετράμε όλο το εύρος.
+ * Μόνο οι προβολές έχουν «πριν»: οι επαφές είναι γνωστές κάθε ημέρα (`listingStatsDays`).
+ */
 function lastUncountedDay(days: readonly ListingStatsDay[]): string | null {
   let last: string | null = null;
   for (const day of days) {
-    if (day.views !== null || day.contacts !== null) break;
+    if (day.views !== null) break;
     last = day.day;
   }
   return last;
@@ -81,7 +90,7 @@ function StatsBand({ seriesKey, days, events, syncId, size, caption }: BandProps
     [seriesKey, t],
   );
   const firstDay = days[0]?.day;
-  const uncountedUntil = lastUncountedDay(days);
+  const uncountedUntil = seriesKey === 'views' ? lastUncountedDay(days) : null;
 
   return (
     <ChartPlot
@@ -104,8 +113,9 @@ function StatsBand({ seriesKey, days, events, syncId, size, caption }: BandProps
               x1={firstDay}
               x2={uncountedUntil}
               fill={NOT_COUNTED_FILL}
-              fillOpacity={0.6}
+              fillOpacity={NOT_COUNTED_OPACITY}
               ifOverflow="extendDomain"
+              label={{ value: t(`${S}.chart.notCounted`), position: 'insideTop', fill: MUTED, fontSize: 12 }}
             />
           )}
           {events.map((event) => (

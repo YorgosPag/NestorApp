@@ -91,7 +91,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8b196865009faad0297e04bba41b2e7df15af007360e7f198a14e355800a2394",
+  "inputsSha256": "0d59e7d5e8e9faca53874e201fdc93137371a08fd0c9b1d1209311dc76b7cf2d",
   "languages": [
     "el"
   ],
@@ -371,7 +371,7 @@
     "src/components/owner-property/offer-form-labels.ts": "5d660c2140c814421ac75adb4bdde7719b3d2ebae7e6654e2d1619b1663d317e",
     "src/components/owner-property/owner-mandate-labels.ts": "adcfbdb334735a6e95e59baa8a884cb44a94b6b6121d3f6bace70d87f91785c2",
     "src/components/owner-property/owner-portfolio-layout.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/components/owner-property/owner-property-stats-pending.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/components/owner-property/owner-property-stats-pending.tsx": "c113252c63d6adac741d135617ca1121241f03c58611cb13781bad5f7859dc3f",
     "src/components/owner-property/usePrivateMarketingAgencyLabel.ts": "93d98fe3c3d883aef4be97a774ac4575967b73df49f466076ce29d6f21f8be59",
     "src/components/private-space/OwnedListStatus.tsx": "8e60eab3d209116341bda268c5a426de73bdfd1ca163193029d570fe65177e4f",
     "src/components/projects/ika/map-shared/map-styles.ts": "f8d164ffcb83a5eaa2f491f51117203407d7fac4d3a1b78d2d28e49afc99a1b7",
@@ -473,6 +473,7 @@
     "src/components/ui/alert.tsx": "97d4eb92aaed18eb820484c17385e7f8346c0e34ef0e7ee21b75c0e43c34ad13",
     "src/components/ui/auth-card-section.tsx": "f4f0dc247ab35023363c3e9938a7f0865589b3712d799e7de73796e8b3c3e4fc",
     "src/components/ui/calendar.tsx": "8bd3055c49e6b284ce7ab44c13b603c08e1f2df965c633f9b1947bb9dec4465b",
+    "src/components/ui/chart-card/figure-height.ts": "0f1b15309882f77ef32159229a18f76df254ce64b7df40fa7a0658a70af38efb",
     "src/components/ui/clearable-select.tsx": "3f2281d37ad0913b6b09ed6ab264ea72718bd5da2175c912912d10baa2688ed6",
     "src/components/ui/date-picker-field.tsx": "4ad7cf73e6139bf85b6b3d64a995732ace3f6779f387458af04a7f8b34a5c57f",
     "src/components/ui/filter-chip.tsx": "78d2c99eb285a47b9fa1b1853929c8910bc0672380a82615b21568157b561d1d",

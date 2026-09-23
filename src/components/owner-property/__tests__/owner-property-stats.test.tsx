@@ -5,10 +5,13 @@
  * Με πραγματικούς loaders + ICU (`test-utils/real-i18n`):
  *   Κ1 · κάρτα: προβολές 7 ημ. + τάση + επαφές + ημέρες στην αγορά, με κείμενο (όχι μόνο εικονίδιο).
  *   Κ2 · άγνωστο ≠ μηδέν: βλάβη επαφών ⇒ «μη διαθέσιμες», ΠΟΤΕ «0 επαφές»· αποτυχία fetch ⇒ «δεν φορτώθηκαν».
- *   Κ3 · νέα μέτρηση ⇒ «Νέα μέτρηση», ΚΑΝΕΝΑ ποσοστό· `absent` ⇒ τίποτα.
+ *   Κ3 · νέα μέτρηση ⇒ «Νέα μέτρηση», ΚΑΝΕΝΑ ποσοστό, και οι προβολές λένε τις ΜΕΤΡΗΜΕΝΕΣ ημέρες· `absent` ⇒ τίποτα.
+ *   Κ4 · πριν αρχίσει η μέτρηση ⇒ «μετράμε από …», ΠΟΤΕ «0 προβολές σε 7 ημέρες», καμία τάση (§8.72.8).
  *   Π1 · πίνακας: «Μετράμε από …» · ο λόγος με λίγες προβολές λέει τους αριθμούς, όχι «0».
  *   Π2 · το εύρος 30 → 90 αλλάζει ΚΑΙ τους δείκτες ΚΑΙ τις ημέρες του γραφήματος.
  *   Π3 · εξέλιξη τιμής: νεότερο πρώτο, μείωση με ποσοστό, «Αποσύρθηκε» χωρίς ψεύτικο ποσό.
+ *   Π4 · πριν αρχίσει η μέτρηση ο δείκτης προβολών λέει παύλα, όχι «0 · Τελευταίες 30 ημέρες».
+ *   Π5 · το πατημένο εύρος φορά τον ρόλο χειριστηρίου επιλογής (ADR-770 §17), όχι `bg-primary` ≡ `--card`.
  */
 
 import React from 'react';
@@ -96,6 +99,16 @@ describe('Κ — η γραμμή της κάρτας', () => {
     );
     expect(screen.getByText(/^Νέα μέτρηση/)).toBeInTheDocument();
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    expect(screen.getByText('70 προβολές σε 3 ημέρες')).toBeInTheDocument();
+  });
+
+  it('Κ4 · πριν αρχίσει η μέτρηση ⇒ «μετράμε από», κανένα «0», καμία τάση', () => {
+    renderWithI18n(
+      <OwnerPropertyStatsRow stats={ready(summary({ countingSince: '2026-10-21' }))} listedAt={LISTED} priceReduction={null} />,
+    );
+    expect(screen.getByText(/^Προβολές: μετράμε από/)).toBeInTheDocument();
+    expect(screen.queryByText(/προβολές σε/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Νέα μέτρηση/)).not.toBeInTheDocument();
   });
 
   it('Κ3 · absent ⇒ τίποτα', () => {
@@ -137,6 +150,23 @@ describe('Π — ο πίνακας της λεπτομέρειας', () => {
     expect(within(rows[1]).getByText('Μείωση τιμής')).toBeInTheDocument();
     expect(within(rows[1]).getByText(/^−8\s?%$/)).toBeInTheDocument();
     expect(within(rows[2]).getByText('Καταχώριση')).toBeInTheDocument();
+  });
+
+  it('Π4 · πριν αρχίσει η μέτρηση ⇒ παύλα στις προβολές, οι επαφές μετριούνται κανονικά', () => {
+    renderWithI18n(<OwnerPropertyStatsPanel stats={ready(summary({ countingSince: '2026-10-21' }))} listedAt={LISTED} priceHistory={[]} />);
+    const viewsKpi = screen.getByText('Προβολές', { selector: 'dt' }).closest('dl') as HTMLElement;
+    expect(within(viewsKpi).getByText('—')).toBeInTheDocument();
+    expect(within(viewsKpi).getByText(/^Μετράμε από/)).toBeInTheDocument();
+    const contactsKpi = screen.getByText('Επαφές', { selector: 'dt' }).closest('dl') as HTMLElement;
+    expect(within(contactsKpi).getByText('1')).toBeInTheDocument();
+  });
+
+  it('Π5 · το πατημένο εύρος φορά τον ρόλο χειριστηρίου επιλογής', () => {
+    renderWithI18n(<OwnerPropertyStatsPanel stats={ready(summary())} listedAt={LISTED} priceHistory={[]} />);
+    const pressed = screen.getByRole('button', { name: '30 ημέρες' });
+    expect(pressed).toHaveClass('bg-control-accent', 'text-control-accent-foreground');
+    expect(pressed).not.toHaveClass('bg-primary');
+    expect(screen.getByRole('button', { name: '90 ημέρες' })).not.toHaveClass('bg-control-accent');
   });
 
   it('Π · βλάβη προβολών ⇒ κανένα γράφημα, μήνυμα «δεν φορτώθηκαν»', () => {

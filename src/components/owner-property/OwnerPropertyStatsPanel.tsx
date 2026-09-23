@@ -19,8 +19,10 @@ import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatNumber } from '@/lib/intl-formatting';
+import { cn } from '@/lib/utils';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { daysOnMarket, shiftMarketDay, windowSum } from '@/lib/listings/listing-stats';
 import {
   CONTACT_RATE_MIN_VIEWS,
@@ -29,31 +31,27 @@ import {
   listingPriceEvents,
   listingStatsDays,
   priceEventsIn,
+  viewsIn,
   type ContactRate,
   type ListingStatsRange,
+  type ViewsReading,
 } from '@/lib/listings/listing-stats-view';
 import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import type { ListedAt } from '@/types/public-listing';
 
 import { OwnerPropertyPriceSteps } from './OwnerPropertyPriceSteps';
-import { StatsPanelPending } from './owner-property-stats-pending';
+import { StatsChartPending, StatsPanelPending, StatsPanelSkeleton } from './owner-property-stats-pending';
 
 const S = 'property-market:offer.stats';
 
-function ChartPending(): React.ReactElement {
-  return <p aria-hidden className="m-0 h-80 animate-pulse rounded-md bg-muted" />;
-}
-
 const OwnerPropertyStatsChart = dynamic(() => import('./OwnerPropertyStatsChart'), {
   ssr: false,
-  loading: ChartPending,
+  loading: StatsChartPending,
 });
 
 type ReadyStats = Extract<ListingStatsState, { state: 'ready' }>;
 
 const count = (value: number): string => formatNumber(value, { maximumFractionDigits: 0 });
-
-type Translate = ReturnType<typeof useTranslation>['t'];
 
 /** Η τιμή και η εξήγηση του λόγου — ο λόγος λέγεται **πάντα** με τον παρονομαστή του. */
 function rateView(rate: ContactRate, t: Translate): { readonly value: string; readonly detail: string } {
@@ -67,6 +65,19 @@ function rateView(rate: ContactRate, t: Translate): { readonly value: string; re
     return { value: '—', detail: t(`${S}.kpi.rateInsufficient`, { views: count(rate.views), min: count(CONTACT_RATE_MIN_VIEWS) }) };
   }
   return { value: '—', detail: t(`${S}.unknown`) };
+}
+
+/**
+ * Οι προβολές του εύρους — ο αριθμός λέει **σε πόσες μετρημένες** ημέρες. Πριν αρχίσει η μέτρηση:
+ * παύλα + «Μετράμε από …», ποτέ «0 · Τελευταίες 30 ημέρες» (ADR-777 §8.72.8).
+ */
+function viewsKpiView(reading: ViewsReading, range: ListingStatsRange, t: Translate): { readonly value: string; readonly detail: string } {
+  if (reading.kind === 'unknown') return { value: '—', detail: t(`${S}.unknown`) };
+  if (reading.kind === 'not-yet') {
+    return { value: '—', detail: t(`${S}.kpi.viewsNotYet`, { date: formatCalendarDay(reading.countingSince) }) };
+  }
+  const detail = reading.days < range ? t(`${S}.kpi.viewsCounted`, { days: reading.days }) : t(`${S}.kpi.inRange`, { days: range });
+  return { value: count(reading.views), detail };
 }
 
 /** Ένας δείκτης: όρος · τιμή · (προαιρετικά) λεπτομέρεια. `<dl>` επειδή αυτό είναι. */
@@ -90,7 +101,17 @@ function RangeSwitch({ value, onChange }: { readonly value: ListingStatsRange; r
           key={range}
           type="button"
           size="sm"
-          variant={range === value ? 'default' : 'outline'}
+          variant="outline"
+          // ☑️ ADR-770 §17 — επιλογή = ρόλος χειριστηρίου, ΟΧΙ `variant="default"` (`bg-primary` ≡ `--card`
+          //    στο σκοτεινό ⇒ το πατημένο κουμπί ήταν αόρατο· μετρημένο σε ζωντανή σελίδα, §8.72.8).
+          className={cn(
+            range === value && [
+              COLOR_BRIDGE.selectionControl.fill,
+              COLOR_BRIDGE.selectionControl.fillInk,
+              COLOR_BRIDGE.selectionControl.accentOutline,
+              'hover:bg-control-accent/90 hover:text-control-accent-foreground',
+            ],
+          )}
           aria-pressed={range === value}
           onClick={() => onChange(range)}
         >
@@ -112,14 +133,11 @@ function StatsKpis({ stats, range, listedAt }: { readonly stats: ReadyStats; rea
   const unknown = t(`${S}.unknown`);
 
   const rateShown = rateView(rate, t);
+  const viewsShown = viewsKpiView(viewsIn(summary, from, today), range, t);
 
   return (
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Kpi
-        label={t(`${S}.kpi.views`)}
-        value={summary.views === null ? '—' : count(windowSum(summary.views.daily, from, today))}
-        detail={summary.views === null ? unknown : inRange}
-      />
+      <Kpi label={t(`${S}.kpi.views`)} value={viewsShown.value} detail={viewsShown.detail} />
       <Kpi
         label={t(`${S}.kpi.contacts`)}
         value={summary.contacts === null ? '—' : count(windowSum(summary.contacts.daily, from, today))}
@@ -187,9 +205,14 @@ export function OwnerPropertyStatsPanel({ stats, listedAt, priceHistory }: Owner
   return isNamespaceReady ? (
     <section aria-label={t(`${S}.heading`)} className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
       {stats.state === 'loading' ? (
-        <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
-          {t(`${S}.loading`)}
-        </p>
+        // Ο σκελετός έχει τη ΔΟΜΗ του τελικού πίνακα: ένα «Φόρτωση…» μίας γραμμής θα μάζευε το πλαίσιο
+        // και θα το ξαναμεγάλωνε — μετρημένο CLS 0,056 στη σελίδα (ADR-777 §8.72.8).
+        <>
+          <p aria-busy="true" className="sr-only">
+            {t(`${S}.loading`)}
+          </p>
+          <StatsPanelSkeleton />
+        </>
       ) : stats.state === 'unavailable' ? (
         <p className="m-0 text-sm text-muted-foreground">{t(`${S}.unavailable`)}</p>
       ) : (

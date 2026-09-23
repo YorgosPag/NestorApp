@@ -1039,7 +1039,8 @@
       "countingSinceWhy": "A view is one visitor once per day. We do not count you or automated programs.",
       "row": {
         "label": "Listing statistics",
-        "views": "{count, plural, one {# view} other {# views}} in 7 days",
+        "views": "{count, plural, one {# view} other {# views}} in {days, plural, one {# day} other {# days}}",
+        "viewsNotYet": "Views: counting from {date}",
         "viewsUnknown": "Views: unavailable",
         "contacts": "{count, plural, one {# contact} other {# contacts}}",
         "contactsUnknown": "Contacts: unavailable",
@@ -1059,6 +1060,8 @@
         "rate": "Contacts per 1,000 views",
         "days": "Days on the market",
         "inRange": "Last {days} days",
+        "viewsCounted": "{days, plural, one {Over # tracked day} other {Over # tracked days}}",
+        "viewsNotYet": "Counting from {date}",
         "rateDetail": "{contacts, plural, one {# contact} other {# contacts}} from {views} views",
         "rateInsufficient": "Not enough views yet ({views} of the {min} the ratio needs)",
         "daysUnknown": "The listing date has not been recorded"
@@ -1074,7 +1077,7 @@
         "viewsSeries": "Views",
         "contactsTitle": "Contacts per day",
         "contactsSeries": "Contacts",
-        "caption": "The shaded area is days we were not counting yet. Vertical lines mark changes in price or availability.",
+        "caption": "The shaded area in views is days we were not counting them yet. Vertical lines mark changes in price or availability.",
         "empty": "No tracked days in this range yet.",
         "notCounted": "Not tracked"
       },
