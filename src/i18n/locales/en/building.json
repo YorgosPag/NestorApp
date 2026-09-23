@@ -196,6 +196,7 @@
     "sqm": "sq.m"
   },
   "viewMode": {
+    "label": "View",
     "list": "List View",
     "grid": "Grid View",
     "byType": "Group by Type",

@@ -21,7 +21,10 @@
 
 import { parseListingMapMark, type ListingMapMark } from '@/lib/listings/listing-map-mark';
 import { listingFeature, type ListingFeature, type ListingGeoJson } from '@/lib/listings/listings-geojson';
-import { ownerListingVisibility } from '@/lib/owner-property/owner-property-projection';
+import {
+  ownerListingVisibility,
+  placeKnowledgeFromOwnerProperty,
+} from '@/lib/owner-property/owner-property-projection';
 import type { OwnerProperty } from '@/types/owner-property';
 
 /**
@@ -34,7 +37,7 @@ import type { OwnerProperty } from '@/types/owner-property';
 export const OWNER_PORTFOLIO_MAP_MIN_MARKED = 2;
 
 /** Γιατί ένα ακίνητο **δεν** είναι στον χάρτη. Ο κάτοχος βλέπει την αιτία και τη θεραπεία. */
-export type OwnerPortfolioUnmappedReason = 'withdrawn' | 'failed' | 'no-mark';
+export type OwnerPortfolioUnmappedReason = 'withdrawn' | 'failed' | 'no-mark' | 'unrecorded';
 
 export interface MappedOwnerProperty {
   readonly property: OwnerProperty;
@@ -52,6 +55,49 @@ export interface OwnerPortfolioPartition {
 }
 
 /**
+ * **Πού βρίσκεται ΕΝΑ ακίνητο σε σχέση με τον δημόσιο χάρτη** — πέντε σκέλη, όχι δύο.
+ *
+ * 🔑 **Ο ΕΝΑΣ κριτής για δύο επιφάνειες** (ADR-777 §8.73): ο χάρτης χαρτοφυλακίου τον ρωτά για να
+ * διαμερίσει, η κάρτα για να πει μία πρόταση. Πριν, η κάρτα ρωτούσε μόνο το `ownerListingVisibility`
+ * και έλεγε «είναι στον δημόσιο χάρτη» για αγγελία **χωρίς πινέζα** — ενώ ο χάρτης ακριβώς δίπλα
+ * την έβαζε στη γραμμή «δεν φαίνονται». Δύο απαντήσεις στην ίδια ερώτηση, από δύο κριτές.
+ *
+ * `no-mark` = **δημόσια** (στη λίστα αποτελεσμάτων, στη γραμμή «N ακόμη»), **χωρίς** σημάδι.
+ * `unrecorded` = **δημόσια**, αλλά το αποτύπωμα γράφτηκε **πριν** υπάρξει το `mapMark` (§8.70.7):
+ * **δεν ξέρουμε** αν έχει σημάδι. 🔴 Μετρημένο 2026-09-23: 5/5 δημοσιευμένα ήταν έτσι, και ένα
+ * (δηλωμένη θέση) **έχει** πινέζα στον δημόσιο χάρτη — το «χωρίς σημάδι» θα ήταν ψέμα.
+ *
+ * 🔑 **Ό,τι είναι ΒΕΒΑΙΟ δεν λέγεται «άγνωστο».** Χωρίς αποτύπωμα, ρωτάμε την **ίδια** γνώση
+ * θέσης που τρέφει τον γραφέα (`placeKnowledgeFromOwnerProperty` → `resolveListingPosition`):
+ * καμία υποψήφια **και** κανένας δεσμός ⇒ η θέση βγαίνει `unknown` ⇒ **βέβαιο** `no-mark`
+ * (π.χ. `place.kind === 'declined'`, 4/5 μετρημένα). Διαβάζεται μόνο **αν υπάρχει** θέση, ποτέ
+ * σημείο — το σύνορο «σημάδι, ποτέ θέση» μένει ακέραιο.
+ */
+export type OwnerMapPresence =
+  | { readonly kind: 'marked'; readonly mark: ListingMapMark }
+  | { readonly kind: OwnerPortfolioUnmappedReason };
+
+export function ownerMapPresence(property: OwnerProperty, at: string): OwnerMapPresence {
+  const visibility = ownerListingVisibility(property, at);
+  if (visibility !== 'published') return { kind: visibility };
+  const raw = property.publication?.mapMark;
+  if (raw === undefined) return hasNoPositionSource(property, at) ? { kind: 'no-mark' } : { kind: 'unrecorded' };
+  const mark = parseListingMapMark(raw);
+  return mark === null ? { kind: 'no-mark' } : { kind: 'marked', mark };
+}
+
+/** Καμία υποψήφια θέση και κανένας δεσμός ⇒ ο γραφέας **δεν μπορεί** να βγάλει σημάδι. */
+function hasNoPositionSource(property: OwnerProperty, at: string): boolean {
+  const knowledge = placeKnowledgeFromOwnerProperty(property, at);
+  return knowledge.candidates.length === 0 && knowledge.ref === null;
+}
+
+/** Είναι η αγγελία **δημόσια** (στην αγορά), με ή χωρίς σημάδι — ή με άγνωστο σημάδι; */
+export function isOwnerListingPublic(presence: OwnerMapPresence): boolean {
+  return presence.kind !== 'withdrawn' && presence.kind !== 'failed';
+}
+
+/**
  * Χωρίζει το χαρτοφυλάκιο σε όσα **ζωγραφίζονται** και όσα **λέγονται**. Η σειρά διατηρείται.
  *
  * @param at Η στιγμή της κρίσης: **μία** ανάγνωση ρολογιού για όλη τη λίστα, όπως στην κάρτα.
@@ -64,14 +110,9 @@ export function partitionOwnerPortfolio(
   const unmapped: UnmappedOwnerProperty[] = [];
 
   for (const property of properties) {
-    const visibility = ownerListingVisibility(property, at);
-    if (visibility !== 'published') {
-      unmapped.push({ property, reason: visibility });
-      continue;
-    }
-    const mark = parseListingMapMark(property.publication?.mapMark);
-    if (mark === null) unmapped.push({ property, reason: 'no-mark' });
-    else mapped.push({ property, mark });
+    const presence = ownerMapPresence(property, at);
+    if (presence.kind === 'marked') mapped.push({ property, mark: presence.mark });
+    else unmapped.push({ property, reason: presence.kind });
   }
 
   return { mapped, unmapped };

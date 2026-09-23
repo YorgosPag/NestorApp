@@ -8,6 +8,7 @@
  *   Υ3 · `?view=map` με λίγα σημάδια ⇒ λίστα, και το URL ΔΕΝ ξαναγράφεται.
  *   Υ4 · η φούσκα: σύνδεσμος στην κάρτα του κατόχου · τιμή όπως τη βλέπει ο κόσμος · χωρίς φωτογραφία ⇒ κανένα `<img>`.
  *   Υ5 · η γραμμή «εκτός χάρτη» λέει ΓΙΑΤΙ, ανά ακίνητο.
+ *   Υ6 · η κάρτα ΔΕΝ λέει «στον δημόσιο χάρτη» για αγγελία χωρίς σημάδι (§8.73).
  */
 
 import React from 'react';
@@ -129,5 +130,28 @@ describe('Υ5 — όσα λείπουν από τον χάρτη λένε για
     fireEvent.click(screen.getByRole('button', { name: '1 ακίνητο δεν φαίνεται στον δημόσιο χάρτη' }));
     expect(screen.getByRole('link', { name: 'Αποσυρμένο' })).toHaveAttribute('href', '/offers/ownp_w');
     expect(screen.getByText('εκτός αγοράς')).toBeInTheDocument();
+  });
+});
+
+describe('Υ6 — «δημόσια» ≠ «στον χάρτη» (ADR-777 §8.73)', () => {
+  it('σημάδι ⇒ «στον χάρτη»· δηλωμένη απουσία ⇒ «χωρίς σημάδι» + θεραπεία· πριν το πεδίο ⇒ μόνο «δημόσια»', () => {
+    const marked = published('ownp_m');
+    const unmarked = published('ownp_n', { publication: { outcome: 'published', at: AT, mapMark: null } });
+    const unrecorded = published('ownp_u', { publication: { outcome: 'published', at: AT } });
+    renderWithI18n(<OwnerPortfolio properties={[marked, unmarked, unrecorded]} />);
+
+    expect(screen.getAllByText('Η αγγελία είναι στον δημόσιο χάρτη.')).toHaveLength(1);
+    expect(screen.getByText(/Η αγγελία είναι δημόσια, αλλά χωρίς σημάδι στον χάρτη/)).toHaveTextContent(
+      'Δήλωσε έστω την περιοχή',
+    );
+    expect(screen.getByText('Η αγγελία είναι δημόσια.')).toBeInTheDocument();
+  });
+
+  it('η γραμμή «εκτός χάρτη» λέει ότι η αγγελία είναι ΔΗΜΟΣΙΑ, όχι μόνο ότι λείπει', () => {
+    const unmarked = published('ownp_n', { title: 'Χωρίς θέση', publication: { outcome: 'published', at: AT, mapMark: null } });
+    renderWithI18n(<OwnerPortfolioUnmappedRow unmapped={[{ property: unmarked, reason: 'no-mark' }]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '1 ακίνητο δεν φαίνεται στον δημόσιο χάρτη' }));
+    expect(screen.getByText('δημόσια, χωρίς θέση στον χάρτη')).toBeInTheDocument();
   });
 });

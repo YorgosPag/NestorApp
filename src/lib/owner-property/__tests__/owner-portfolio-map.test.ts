@@ -8,6 +8,7 @@
  *   Κ3 · ο κριτής κρίνει ΠΡΩΤΟΣ: μπαγιάτικο σημάδι σε αποσυρμένη/αποτυχημένη αγγελία δεν ζωγραφίζεται.
  *   Κ4 · το όριο του διακόπτη.
  *   Κ5 · η προβολή στο URL: άγνωστο ⇒ λίστα, η λίστα δεν γράφεται.
+ *   Κ6 · ο ΕΝΑΣ κριτής παρουσίας (§8.73): πέντε σκέλη· η διαμέριση είναι προβολή του.
  */
 
 import { listingFeature } from '@/lib/listings/listings-geojson';
@@ -17,6 +18,8 @@ import type { OwnerProperty } from '@/types/owner-property';
 import {
   OWNER_PORTFOLIO_MAP_MIN_MARKED,
   hasOwnerPortfolioMap,
+  isOwnerListingPublic,
+  ownerMapPresence,
   ownerPortfolioGeoJson,
   parseOwnerPortfolioView,
   partitionOwnerPortfolio,
@@ -84,13 +87,38 @@ describe('Κ3 — ο κριτής κρίνει πρώτος, το σημάδι �
     ]);
   });
 
-  it('αγγελία πριν το πεδίο (χωρίς αποτύπωμα) ⇒ «χωρίς θέση», ποτέ πινέζα από το `place`', () => {
-    const legacy = validOwnerProperty({ id: 'ownp_legacy' });
-    expect(legacy.publication).toBeUndefined();
+  it('αγγελία πριν το πεδίο ⇒ «άγνωστο», ΟΧΙ «χωρίς θέση» — και ποτέ πινέζα από το `place` (§8.73)', () => {
+    const noFootprint = validOwnerProperty({ id: 'ownp_legacy' });
+    const beforeField = validOwnerProperty({ id: 'ownp_before', publication: { outcome: 'published', at: AT } });
+    expect(noFootprint.publication).toBeUndefined();
+    // ✅ Ο παρονομαστής: ο κάτοχος ΕΧΕΙ δηλωμένη θέση — ο δημόσιος χάρτης μάλλον δείχνει πινέζα.
+    expect(beforeField.place).toMatchObject({ kind: 'declared' });
 
-    const { mapped, unmapped } = partitionOwnerPortfolio([legacy], AT);
+    const { mapped, unmapped } = partitionOwnerPortfolio([noFootprint, beforeField], AT);
     expect(mapped).toHaveLength(0);
-    expect(unmapped[0]?.reason).toBe('no-mark');
+    expect(unmapped.map((u) => u.reason)).toEqual(['unrecorded', 'unrecorded']);
+  });
+});
+
+describe('Κ6 — ο ΕΝΑΣ κριτής παρουσίας (§8.73): «δημόσια» ≠ «στον χάρτη»', () => {
+  it.each([
+    ['σημάδι', published('ownp_m', CITY_MARK), 'marked', true],
+    ['δηλωμένη απουσία σημαδιού', published('ownp_n', null), 'no-mark', true],
+    ['πριν το πεδίο, με θέση', validOwnerProperty({ id: 'ownp_u', publication: { outcome: 'published', at: AT } }), 'unrecorded', true],
+    ['πριν το πεδίο, θέση που αρνήθηκε ⇒ ΒΕΒΑΙΟ', validOwnerProperty({ id: 'ownp_d', place: { kind: 'declined' }, publication: { outcome: 'published', at: AT } }), 'no-mark', true],
+    ['απέτυχε', validOwnerProperty({ id: 'ownp_f', publication: { outcome: 'failed', at: AT, mapMark: CITY_MARK } }), 'failed', false],
+    ['αποσύρθηκε', validOwnerProperty({ id: 'ownp_w', offers: [offerOf('sell', 1, 'withdrawn')] }), 'withdrawn', false],
+  ] as const)('%s ⇒ %s (δημόσια: %s)', (_label, property, kind, isPublic) => {
+    const presence = ownerMapPresence(property, AT);
+    expect(presence.kind).toBe(kind);
+    expect(isOwnerListingPublic(presence)).toBe(isPublic);
+  });
+
+  it('η διαμέριση και ο κριτής δεν διαφωνούν ποτέ', () => {
+    const all = [published('ownp_a', CITY_MARK), published('ownp_b', null), validOwnerProperty({ id: 'ownp_c' })];
+    const { mapped, unmapped } = partitionOwnerPortfolio(all, AT);
+    const fromPartition = [...mapped.map((m) => [m.property.id, 'marked']), ...unmapped.map((u) => [u.property.id, u.reason])];
+    expect(fromPartition.sort()).toEqual(all.map((p) => [p.id, ownerMapPresence(p, AT).kind]).sort());
   });
 });
 

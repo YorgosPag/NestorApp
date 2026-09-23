@@ -28,10 +28,10 @@
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
-    "src/i18n/generated/routes/offers.el.json": "2988b69f3dde04f634268eab241883f60b8bc18e4a9192e30ee53d679fa47c94",
+    "src/i18n/generated/routes/offers.el.json": "e5668061522adcd2b6ae3fdb3ed7a142a0123a683a69d1f39a0e65b7350a0989",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "220a5408b0f88948f3a02ad627fd68eeaedfea1e45825be2a71244d0317b49e1",
-    "src/i18n/generated/routes/offers__offerId.el.json": "ec8398af2c20377709c7dacafde37ab8a99b0596c307875465a763f86cfc05bd",
+    "src/i18n/generated/routes/offers__offerId.el.json": "cb8fd72eff97a7e9f82c0c4ecf0cf760c6d3e3632076061b818837baf9026a22",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -91,7 +91,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0d59e7d5e8e9faca53874e201fdc93137371a08fd0c9b1d1209311dc76b7cf2d",
+  "inputsSha256": "f306aceb3c6bc064b91f5bc1b7dddde8c998adaa95c0e1273b4f077d1129ebe7",
   "languages": [
     "el"
   ],
@@ -352,7 +352,7 @@
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
     "src/components/owner-property/OwnerPortfolio.tsx": "62ea8526563a716afd65376551f3f7362212d211ab415bc1c3567c90811035fc",
     "src/components/owner-property/OwnerPortfolioViewSwitch.tsx": "fead3b9b39717782c9748df2c5f32669e3e89cb45422f08ba28f8f33b108a959",
-    "src/components/owner-property/OwnerPropertyCard.tsx": "4ba31f829097d34387c43804b6b0ded68d1ab8e4cf261edbfba7c1e62416dd43",
+    "src/components/owner-property/OwnerPropertyCard.tsx": "9541a86d681dc7ca3f5816e4a67ce51106e6f91e631c275d3500f71081ed9a26",
     "src/components/owner-property/OwnerPropertyCardCover.tsx": "50257a0fd56c0d19fa80ae4659548e2b1cf01e1ccd155cca53923476d466384c",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "5df8038c8c881a149761999f161fdd19cbdde2dffb9ca447d8988bd8c2dd2c4a",
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "e7115969faacee540a07a4a61937620130651e0e4f72d3d68a5023ce9c53b96c",
@@ -4802,13 +4802,17 @@
             "offer.list.workspaceCta.body",
             "offer.list.workspaceCta.title",
             "offer.portfolio.map.loading",
-            "offer.portfolio.view.label"
+            "offer.portfolio.view.label",
+            "offer.publish.failed",
+            "offer.publish.public",
+            "offer.publish.published",
+            "offer.publish.unmarked",
+            "offer.publish.withdrawn"
           ],
           "prefixes": [
             "offer.lifecycle",
             "offer.offerKind",
-            "offer.portfolio.view",
-            "offer.publish"
+            "offer.portfolio.view"
           ],
           "whole": false
         }
@@ -5525,7 +5529,12 @@
             "offer.pets.maxPetsLabel",
             "offer.placeAnswer.help",
             "offer.placeAnswer.label",
+            "offer.publish.failed",
+            "offer.publish.public",
+            "offer.publish.published",
+            "offer.publish.unmarked",
             "offer.publish.view",
+            "offer.publish.withdrawn",
             "offer.stayCalendar.open"
           ],
           "prefixes": [
@@ -5537,8 +5546,7 @@
             "offer.form.placeRelaxed",
             "offer.lifecycle",
             "offer.offerKind",
-            "offer.placeAnswer",
-            "offer.publish"
+            "offer.placeAnswer"
           ],
           "whole": false
         },
@@ -8298,7 +8306,7 @@
     "matchedKeys": 180,
     "routeBoundaries": 0,
     "shellFiles": 785,
-    "sliceBytes": 557710
+    "sliceBytes": 558399
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -425,7 +425,8 @@
         "reason": {
           "withdrawn": "off the market",
           "failed": "publishing failed",
-          "noMark": "no location on the map"
+          "noMark": "public, no location on the map",
+          "unrecorded": "public — its map position shows here after the next save"
         }
       }
     },
@@ -713,6 +714,8 @@
     "publish": {
       "published": "The listing is on the public map.",
       "withdrawn": "The listing is not on the public map.",
+      "public": "The listing is public.",
+      "unmarked": "The listing is public but has no mark on the map — it only appears in the results list. Add at least the area; the exact address isn't needed.",
       "failed": "Saved, but the public listing was not updated. Save it again to retry.",
       "view": "View the public listing"
     },

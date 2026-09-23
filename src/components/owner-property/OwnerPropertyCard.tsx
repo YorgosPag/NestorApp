@@ -33,10 +33,12 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';
+import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import {
-  ownerListingVisibility,
-  projectableFromOwnerProperty,
-} from '@/lib/owner-property/owner-property-projection';
+  isOwnerListingPublic,
+  ownerMapPresence,
+  type OwnerMapPresence,
+} from '@/lib/owner-property/owner-portfolio-map';
 import { listingPriceReductionOf } from '@/services/listings/public-listing-projection';
 import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
@@ -57,6 +59,15 @@ const OwnerPropertyStatsRow = dynamic(
 
 const NS = 'property-market';
 const K = `${NS}:offer`;
+
+/** 🗺️ ADR-777 §8.73 — μία πρόταση ανά σκέλος του κριτή· το `no-mark` λέει ΚΑΙ τη θεραπεία. */
+const PRESENCE_KEY: Record<OwnerMapPresence['kind'], string> = {
+  marked: `${K}.publish.published`,
+  'no-mark': `${K}.publish.unmarked`,
+  unrecorded: `${K}.publish.public`,
+  withdrawn: `${K}.publish.withdrawn`,
+  failed: `${K}.publish.failed`,
+};
 
 export function OwnerPropertyCard({
   property,
@@ -79,10 +90,10 @@ export function OwnerPropertyCard({
   // ⚠️ **Μία ανάγνωση ρολογιού ανά απόδοση** (§8.33): η λήξη της εντολής κρίνεται με
   // την ίδια στιγμή για κάθε κάρτα της λίστας.
   const at = nowISO();
-  const visibility = ownerListingVisibility(property, at);
-  // 📊 §8.72 — μετρικές **μόνο** για αγγελία στην αγορά. Η μείωση ρωτά τον ΙΔΙΟ κριτή με την
-  //    προβολή, άρα ο κάτοχος βλέπει ακριβώς το «↓ 8%» που βλέπει ο αγοραστής.
-  const onMarket = visibility === 'published';
+  const presence = ownerMapPresence(property, at);
+  // 📊 §8.72 — μετρικές **μόνο** για αγγελία στην αγορά (με ή χωρίς σημάδι). Η μείωση ρωτά τον ΙΔΙΟ
+  //    κριτή με την προβολή, άρα ο κάτοχος βλέπει ακριβώς το «↓ 8%» που βλέπει ο αγοραστής.
+  const onMarket = isOwnerListingPublic(presence);
   const priceReduction = onMarket ? listingPriceReductionOf(projectableFromOwnerProperty(property, at)) : null;
   const kinds = ownerPropertyOfferKinds(property);
 
@@ -147,8 +158,12 @@ export function OwnerPropertyCard({
           κάθε φορά που η αγγελία **δικαιούνταν** να είναι, ακόμη κι όταν ο γραφέας της
           προβολής είχε αποτύχει. Το κλειδί `publish.failed` **υπήρχε ήδη γραμμένο και
           στις δύο γλώσσες** — και **κανείς δεν το ζητούσε ποτέ**.
+
+          🗺️ **ADR-777 §8.73 — ΚΑΙ ΤΕΤΑΡΤΟ ΣΚΕΛΟΣ.** «Δημόσια» ≠ «στον χάρτη»: αγγελία χωρίς θέση
+          είναι δημόσια αλλά **χωρίς πινέζα** (γραμμή «N ακόμη»). Ο ίδιος κριτής με τον χάρτη
+          χαρτοφυλακίου (`ownerMapPresence`), και η θεραπεία που δεν ζητά ακριβή διεύθυνση.
         */}
-        <p className="text-sm text-foreground">{t(`${K}.publish.${visibility}`)}</p>
+        <p className="text-sm text-foreground">{t(PRESENCE_KEY[presence.kind])}</p>
         {onMarket && (
           <OwnerPropertyStatsRow stats={stats} listedAt={property.listedAt} priceReduction={priceReduction} />
         )}

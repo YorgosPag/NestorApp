@@ -28,6 +28,7 @@ const REASON_KEY: Record<OwnerPortfolioUnmappedReason, string> = {
   withdrawn: `${K}.reason.withdrawn`,
   failed: `${K}.reason.failed`,
   'no-mark': `${K}.reason.noMark`,
+  unrecorded: `${K}.reason.unrecorded`,
 };
 
 export function OwnerPortfolioUnmappedRow({ unmapped }: { readonly unmapped: readonly UnmappedOwnerProperty[] }) {
