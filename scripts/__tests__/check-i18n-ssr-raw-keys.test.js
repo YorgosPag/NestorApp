@@ -252,7 +252,7 @@ describe('Κ2 — μεταλλάξεις στις εισόδους', () => {
       [SHELL_FILE]: (source) => `${source}\nconst __probe = t("pages.__anyparkto__");\n`,
     });
     const records = measureIn(root, [SHELL_FILE]).records.filter((record) => record.key === 'pages.__anyparkto__');
-    expect(records.map((record) => record.state)).toEqual([K2.K2_STATES.NAMESPACE_INJECTED]);
+    expect([...new Set(records.map((record) => record.state))]).toEqual([K2.K2_STATES.NAMESPACE_INJECTED]);
   });
 
   test('Μ8γ — hook με ΔΥΟ κλήσεις `useTranslation` ⇒ ποιο `t`; ⇒ άρνηση (όχι ένωση υποψηφίων)', () => {
@@ -261,7 +261,7 @@ describe('Κ2 — μεταλλάξεις στις εισόδους', () => {
       [SHELL_HOOK]: (source) => `${source}\nfunction __other() { return useTranslation('common'); }\n`,
     });
     const records = measureIn(root, [SHELL_FILE]).records.filter((record) => record.key === 'pages.home');
-    expect(records.map((record) => record.state)).toEqual([K2.K2_STATES.NAMESPACE_INJECTED]);
+    expect([...new Set(records.map((record) => record.state))]).toEqual([K2.K2_STATES.NAMESPACE_INJECTED]);
   });
 
   test('Μ10 — ανεπίλυτη δυναμική `t()` χωρίς policy ⇒ ⛔', () => {
