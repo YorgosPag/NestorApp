@@ -32,11 +32,24 @@ const X_STATES = Object.freeze({
   WITHHELD: 'route-withheld',
   BACKEND_UNAVAILABLE: 'backend-unavailable',
   REDIRECTED: 'route-redirected',
+  IDENTITY_UNPROVEN: 'identity-unproven',
   CLEAN: 'clean',
 });
 
-/** ⛔ ΠΟΤΕ σε baseline: ένας χρησμός που δεν απέδειξε ότι κοίταξε δεν έχει «πρόοδο». */
-const X_ZERO_TOLERANCE = Object.freeze([X_STATES.UNREACHABLE, X_STATES.PROBE_UNPROVEN]);
+/**
+ * ⛔ ΠΟΤΕ σε baseline: ένας χρησμός που δεν απέδειξε ότι κοίταξε δεν έχει «πρόοδο».
+ *
+ * 🔑 **`identity-unproven` (ADR-875)**: η διαδρομή κρίνεται **ως persona**, και είτε η
+ * συνεδρία δεν κόπηκε είτε η εικόνα **δεν την τίμησε** (ανακατεύθυνε στη σύνδεση). Και
+ * στα δύο ο χρησμός **ξανάγινε ανώνυμος χωρίς να το ξέρει** — δηλαδή ακριβώς η τύφλωση
+ * του ADR-781 §13 από άλλη πόρτα. Όχι 🔴: μια χαλασμένη πόρτα σύνδεσης θα έβαφε **όλες**
+ * τις 110 και η ξανασπορά θα τις ενέκρινε. Όχι 🔶: θα εξατμιζόταν (§13.2).
+ */
+const X_ZERO_TOLERANCE = Object.freeze([
+  X_STATES.UNREACHABLE,
+  X_STATES.PROBE_UNPROVEN,
+  X_STATES.IDENTITY_UNPROVEN,
+]);
 
 /**
  * 🔴 ratchet κατά ταυτότητα `διαδρομή|επιφάνεια|κλειδί` — ανταλλαγή ⇒ μπλοκ (ADR-749).

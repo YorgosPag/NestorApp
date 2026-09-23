@@ -29,10 +29,16 @@ import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firesto
 
 /** Πρέπει να ταυτίζεται με τον client (`NEXT_PUBLIC_FIREBASE_PROJECT_ID`), αλλιώς
  *  ο emulator κρατά τα δεδομένα σε **άλλο namespace** και η οθόνη βλέπει άδεια
- *  βάση ενώ ο σπορέας «πέτυχε». */
-export const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766';
-export const FIRESTORE_HOST = 'localhost:8080';
-export const AUTH_HOST = 'localhost:9099';
+ *  βάση ενώ ο σπορέας «πέτυχε».
+ *
+ *  🔑 ADR-875: τα **τυπικά** ονόματα του Firebase (`GCLOUD_PROJECT`,
+ *  `*_EMULATOR_HOST`) προηγούνται — έτσι ο χρησμός 3.51 σπέρνει τον **ίδιο**
+ *  κατάλογο σε hermetic `demo-*` project, χωρίς δεύτερο σπορέα. Χωρίς αυτά, τίποτα
+ *  δεν αλλάζει για το τοπικό `npm run emulator`. */
+export const PROJECT_ID =
+  process.env.GCLOUD_PROJECT ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766';
+export const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? 'localhost:8080';
+export const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? 'localhost:9099';
 
 /**
  * ⚠️ **ΔΕΝ γράφεται σκληρά.** Το CHECK 10 μπλοκάρει κάθε `password: '…'` και έχει

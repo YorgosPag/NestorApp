@@ -105,6 +105,8 @@ CI εδώ. Το `workflow_dispatch` δίνει εκτέλεση κατ᾽ απα
 CI. Μια διαδρομή που τα χρειάζεται βγαίνει `route-unreachable` ή `probe-unproven` — ⛔ και
 θορυβώδης, **ποτέ σιωπηλά «καθαρή»**.
 
+🔑 **ADR-875 (2026-09-23) — η ταυτότητα ΔΕΝ είναι μυστικό.** Ο χρησμός κρίνει πλέον τις `/o/[workspace]/**` με συνεδρία, **χωρίς** να παραβιάζει αυτό το όριο: η εικόνα τρέχει με `FIREBASE_AUTH_EMULATOR_HOST` / `FIRESTORE_EMULATOR_HOST` / `FIREBASE_PROJECT_ID=demo-nestor-oracle`. Είναι **διευθύνσεις emulator**, όχι διαπιστευτήρια (το Admin SDK μιλά στον emulator με token `owner`). Ο κανόνας «κρίνουμε την εικόνα που στάλθηκε» ισχύει ακέραιος: **κανένα** δεύτερο build, κανένα `-e` με μυστικό.
+
 ---
 
 ## 4. CHECK 3.57 — «χτίζουν όλοι τον ίδιο server;»
@@ -322,3 +324,4 @@ route.dynamic                    → surface-synthetic-id     🔶 μετριέ�
   Η εικόνα παραμένει ο server· απλώς ο server κρατά πλέον και τον κώδικα των προηγούμενων
   εκδόσεων. Επίσης `NEXT_PUBLIC_DEPLOYMENT_ID: ${{ github.sha }}` και στα δύο `build:ci`
   (`docker-build.yml` + `bundle-ratchet.yml`) — ισοτιμία `env:` κατά CHECK 3.57.
+* **2026-09-23** — **ADR-875**: ο χρησμός αποκτά ταυτότητα (golden tenant σε Firebase emulator, project `demo-*`). Το δηλωμένο όριο του §3 **ισχύει**: τα `-e` της εικόνας είναι διευθύνσεις emulator, όχι μυστικά· κανένα δεύτερο build.

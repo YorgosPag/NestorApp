@@ -21,6 +21,7 @@ const { anyControlRendered } = require('./controls');
 const { decodeEntities } = require('./html-entities');
 const { declaredSoftRedirect } = require('./redirect-contract');
 const { X_STATES, SYNTHETIC_SEGMENT } = require('./states');
+const { routeIdOf, isLoginRedirect } = require('./identity');
 
 // ---------------------------------------------------------------------------
 // 1. Η εξαγωγή — δύο επιφάνειες
@@ -282,6 +283,34 @@ function softRedirectOf(html, baseUrl) {
 }
 
 /**
+ * Η συνεδρία μιας διαδρομής persona (ADR-875). Διαδρομή χωρίς persona ⇒ ανώνυμη, όπως πάντα.
+ * ⚠️ Persona ΧΩΡΙΣ συνεδρία ⇒ ⛔, **ποτέ** ανώνυμο αίτημα στη θέση της: αυτό θα ήταν
+ *    ακριβώς η τύφλωση του §13 — 110 ανακατευθύνσεις με όνομα «κρίθηκε ως persona».
+ */
+function sessionFor(route, options) {
+  if (!route.persona) return {};
+  const cookie = options.sessions?.get(route.persona);
+  if (cookie) return { cookie };
+  const why = options.identityFailures?.get(route.persona) || `καμία συνεδρία για την κλάση ${route.persona}`;
+  return { refusal: { state: X_STATES.IDENTITY_UNPROVEN, status: null, keys: [], detail: why } };
+}
+
+/**
+ * Η ΜΙΑ μορφή εγγραφής. Η ταυτότητα (`route`) περιέχει την κλάση persona (`routeIdOf`)·
+ * το cookie **δεν** μπορεί να μπει εδώ, γιατί δεν υπάρχει ποτέ στο `route`.
+ *
+ * 🔴 Ανακατεύθυνση **στη σύνδεση** ενώ κρατούσαμε συνεδρία ⇒ ⛔ `identity-unproven`, ΟΧΙ
+ *    🔴 `route-redirected`: η εικόνα δεν τίμησε τη συνεδρία, άρα ο χρησμός είναι
+ *    ξανά ανώνυμος χωρίς να το ξέρει (ADR-875 §4).
+ */
+function settle(route, result, redirectTarget) {
+  const record = { ...route, route: routeIdOf(route), ...result };
+  const refused = route.persona && result.state === X_STATES.REDIRECTED && typeof redirectTarget === 'string' && isLoginRedirect(redirectTarget);
+  if (!refused) return record;
+  return { ...record, state: X_STATES.IDENTITY_UNPROVEN, detail: `η εικόνα ΔΕΝ τίμησε τη συνεδρία της κλάσης ${route.persona} (${result.detail})` };
+}
+
+/**
  * Χτυπάει ΜΙΑ διαδρομή. **Ποτέ δεν επιστρέφει «καθαρό» χωρίς απόδειξη.**
  *
  * @returns {{route: string, file: string, dynamic: boolean, state: string, status: number|null, keys: Array, detail?: string}}
@@ -289,12 +318,14 @@ function softRedirectOf(html, baseUrl) {
 async function probeRoute(route, options) {
   const { baseUrl, userAgent, oracle, timeoutMs = 120000 } = options;
   if (!userAgent) throw new Error('CHECK 3.51 Χ: το userAgent είναι ΥΠΟΧΡΕΩΤΙΚΟ (βλ. κεφαλίδα §1)');
+  const identity = sessionFor(route, options);
+  if (identity.refusal) return settle(route, identity.refusal);
 
   let response;
   let html;
   try {
     response = await fetch(`${baseUrl}${route.url}`, {
-      headers: { 'user-agent': userAgent, accept: 'text/html' },
+      headers: { 'user-agent': userAgent, accept: 'text/html', ...(identity.cookie ? { cookie: identity.cookie } : {}) },
       // 🔑 `manual`, ΠΟΤΕ `follow` — ADR-781 §13. Με `follow` ο χρησμός κρίνει τη
       //    σελίδα ΣΤΟΝ ΠΡΟΟΡΙΣΜΟ και καταγράφει το πόρισμα με το όνομα της
       //    διαδρομής ΠΟΥ ΖΗΤΗΣΕ — η ονομασμένη αστοχία του Lighthouse («audits
@@ -308,14 +339,14 @@ async function probeRoute(route, options) {
     });
     html = await response.text();
   } catch (error) {
-    return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: null, keys: [], detail: error.message };
+    return settle(route, { state: X_STATES.UNREACHABLE, status: null, keys: [], detail: error.message });
   }
 
   const declared = response.status >= 500 && options.backendContract
     ? declaredBackendUnavailable(html, options.backendContract)
     : null;
   if (declared !== null) {
-    return { ...route, route: route.url, state: X_STATES.BACKEND_UNAVAILABLE, status: response.status, keys: [], detail: `δηλωμένη αδυναμία backend: ${declared}` };
+    return settle(route, { state: X_STATES.BACKEND_UNAVAILABLE, status: response.status, keys: [], detail: `δηλωμένη αδυναμία backend: ${declared}` });
   }
 
   // 🔴 ΑΝΑΚΑΤΕΥΘΥΝΣΗ — ΠΡΙΝ από τον έλεγχο `!response.ok`, ΕΠΙΤΗΔΕΣ.
@@ -327,16 +358,10 @@ async function probeRoute(route, options) {
     // ⚠️ 3xx ΧΩΡΙΣ `Location` δεν είναι ανακατεύθυνση — είναι χαλασμένη απάντηση.
     //    Δεν μπορούμε καν να σχηματίσουμε ταυτότητα, άρα μένει ⛔.
     if (!location) {
-      return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: `HTTP ${response.status} ΧΩΡΙΣ κεφαλίδα Location` };
+      return settle(route, { state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: `HTTP ${response.status} ΧΩΡΙΣ κεφαλίδα Location` });
     }
-    return {
-      ...route,
-      route: route.url,
-      state: X_STATES.REDIRECTED,
-      status: response.status,
-      keys: [],
-      detail: redirectDetail(normaliseRedirectTarget(location, baseUrl)),
-    };
+    const target = normaliseRedirectTarget(location, baseUrl);
+    return settle(route, { state: X_STATES.REDIRECTED, status: response.status, keys: [], detail: redirectDetail(target) }, target);
   }
 
   if (!response.ok) {
@@ -346,15 +371,16 @@ async function probeRoute(route, options) {
     //    (`served-surface.js`) είναι ανεξάρτητος κανόνας, ποτέ ο ίδιος με «ή».
     const state = route.withheld ? X_STATES.WITHHELD : X_STATES.UNREACHABLE;
     const why = route.withheld ? ` — δηλωμένη εκτός παραγωγής (${route.withheld.mechanism})` : '';
-    return { ...route, route: route.url, state, status: response.status, keys: [], detail: `HTTP ${response.status}${html.trim() === '' ? ' (ΚΕΝΟ σώμα)' : ''}${why}` };
+    return settle(route, { state, status: response.status, keys: [], detail: `HTTP ${response.status}${html.trim() === '' ? ' (ΚΕΝΟ σώμα)' : ''}${why}` });
   }
   if (html.trim() === '') {
-    return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: 'ΚΕΝΟ σώμα με 200' };
+    return settle(route, { state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: 'ΚΕΝΟ σώμα με 200' });
   }
 
   const verdict = judgeHtml(html, oracle);
-  const { state, detail } = classifySurface(route, verdict, softRedirectOf(html, baseUrl));
-  return { ...route, route: route.url, state, status: response.status, keys: verdict.hits, ...(detail ? { detail } : {}) };
+  const soft = softRedirectOf(html, baseUrl);
+  const { state, detail } = classifySurface(route, verdict, soft);
+  return settle(route, { state, status: response.status, keys: verdict.hits, ...(detail ? { detail } : {}) }, soft?.target);
 }
 
 module.exports = {

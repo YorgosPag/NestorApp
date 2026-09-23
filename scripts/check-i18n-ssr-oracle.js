@@ -106,6 +106,7 @@ const { decorateWithholding, DECLARATIONS } = require('./lib/i18n-ssr/served-sur
 const { loadBackendContract } = require('./lib/i18n-ssr/backend-contract');
 const { runSetRatchetCli } = require('./lib/ratchet-baseline');
 const { countedBudgets } = require('./lib/i18n-ssr/counted-budget');
+const { prepareIdentity, routeIdOf } = require('./lib/i18n-ssr/identity');
 
 const CHECK = 'CHECK 3.51 Χ (ADR-781)';
 const BS = String.fromCharCode(92);
@@ -158,7 +159,7 @@ const VIOLATION_ID = (violation) => `${violation.line}|${violation.state.replace
  * «απουσία δεν είναι πρόοδος»).
  */
 const declarationOf = (route) =>
-  `${route.url}${route.dynamic ? ' (dynamic)' : ''}${route.withheld ? ` (withheld: ${route.withheld.mechanism})` : ''}`;
+  `${routeIdOf(route)}${route.dynamic ? ' (dynamic)' : ''}${route.withheld ? ` (withheld: ${route.withheld.mechanism})` : ''}`;
 
 /** Οι κάδοι που ratchet-άρονται, σε **λεπτομέρειες** — η μία πηγή. */
 function toViolations(records) {
@@ -215,10 +216,13 @@ function buildOracleInputs() {
 }
 
 /** Η σάρωση, με ζωντανή πρόοδο ανά διαδρομή (η μόνη ορατότητα σε ένα CI job). */
-function sweepRoutes(selected, universe, controls, verbose) {
+function sweepRoutes(selected, universe, controls, identity, verbose) {
   return O.sweep(selected, {
     baseUrl: baseUrl(),
     userAgent: USER_AGENT,
+    // ADR-875 — οι συνεδρίες ζουν ΜΟΝΟ εδώ, ποτέ στο αντικείμενο διαδρομής (βλ. identity.js §3).
+    sessions: identity.sessions,
+    identityFailures: identity.failures,
     oracle: { universe, shellControls: controls.shell, pageControls: controls.page },
     // ADR-781 — 5xx με digest του SSoT = δηλωμένη αδυναμία backend, όχι crash (backend-contract.js).
     backendContract: loadBackendContract(PROJECT_ROOT),
@@ -237,8 +241,11 @@ async function measure(args) {
   // ⚠️ Η ΠΑΡΑΚΡΑΤΗΣΗ ΜΠΑΙΝΕΙ ΠΡΙΝ ΤΗ ΣΑΡΩΣΗ, ΟΧΙ ΜΕΤΑ. Αν έμπαινε μετά, θα ήταν
   //    «συγχώρεση» ενός 404 που έχει ήδη κριθεί ⛔· εδώ είναι **ιδιότητα της
   //    διαδρομής**, διαβασμένη από την αυθεντία της (βλ. `served-surface.js`).
-  const routes = decorateWithholding(O.enumerateRoutes(posixRoot), PROJECT_ROOT);
-  if (routes.length === 0) throw new Error('δεν βρέθηκε καμία διαδρομή κάτω από src/app');
+  const enumerated = decorateWithholding(O.enumerateRoutes(posixRoot), PROJECT_ROOT);
+  if (enumerated.length === 0) throw new Error('δεν βρέθηκε καμία διαδρομή κάτω από src/app');
+  // ADR-875 — το `[workspace]` είναι ΤΑΥΤΟΤΗΤΑ: κάθε `/o/[workspace]/**` κρίνεται ανά κλάση persona.
+  const identity = await prepareIdentity(enumerated, { baseUrl: baseUrl(), userAgent: USER_AGENT });
+  const { routes } = identity;
 
   const { universe, controls } = buildOracleInputs();
 
@@ -246,12 +253,12 @@ async function measure(args) {
   const selected = only ? routes.filter((route) => route.url.includes(only.slice('--only='.length))) : routes;
   const skipped = routes.filter((route) => !selected.includes(route));
 
-  const records = await sweepRoutes(selected, universe, controls, !args.includes('--quiet'));
+  const records = await sweepRoutes(selected, universe, controls, identity, !args.includes('--quiet'));
 
   // ⚠️ Καμία σιωπηλή δειγματοληψία: ό,τι δεν χτυπήθηκε μπαίνει ΡΗΤΑ και
   // ratchet-άρεται — μια κάλυψη που συρρικνώνεται πρέπει να φαίνεται.
   for (const route of skipped) {
-    records.push({ ...route, route: route.url, state: O.X_STATES.SKIPPED, status: null, keys: [] });
+    records.push({ ...route, route: routeIdOf(route), state: O.X_STATES.SKIPPED, status: null, keys: [] });
   }
 
   const census = O.assertClosedX(records);
@@ -266,6 +273,7 @@ async function measure(args) {
     records,
     census,
     routes,
+    identityNotice: identity.notice,
     controlSizes: { shell: controls.shell.size, page: controls.page.size, corpus: controls.corpus },
     violationIds: violations.map(VIOLATION_ID).sort(),
     declarations: routes.map(declarationOf).sort(),
@@ -306,7 +314,9 @@ function buildPayload(measured) {
 }
 
 function printReport(measured) {
-  console.log(`\n${CHECK} — ο ΧΡΗΣΜΟΣ · ${measured.routes.length} διαδρομές έναντι ${baseUrl()}\n`);
+  console.log(`\n${CHECK} — ο ΧΡΗΣΜΟΣ · ${measured.routes.length} διαδρομές έναντι ${baseUrl()}`);
+  // ADR-875 — τυπώνεται ΚΑΙ όταν είναι ανώνυμος: ένα «ανώνυμα» που δεν λέγεται διαβάζεται ως «με ταυτότητα».
+  console.log(`  ${measured.identityNotice || 'ταυτότητα: —'}\n`);
   const mark = stateBadge;
   // Οι κάδοι τυπώνονται ΑΚΟΜΑ ΚΑΙ ΣΤΟ ΜΗΔΕΝ (μάθημα CHECK 3.48 Κ6).
   for (const [state, count] of Object.entries(measured.census)) {
