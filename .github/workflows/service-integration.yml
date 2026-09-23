@@ -76,6 +76,8 @@ on:
       - 'jest.config.service-integration.js'
       - 'firestore.rules'
       - '.github/workflows/service-integration.yml'
+      - '.github/actions/setup-firebase-emulators/**' # ADR-800: η εργαλειοθήκη του emulator
+      - 'scripts/lib/firestore-deploy/model.js' # ADR-800: FIREBASE_TOOLS_VERSION
   push:
     branches: [main]
     paths:
@@ -93,6 +95,8 @@ on:
       - 'jest.config.service-integration.js'
       - 'firestore.rules'
       - '.github/workflows/service-integration.yml'
+      - '.github/actions/setup-firebase-emulators/**' # ADR-800: η εργαλειοθήκη του emulator
+      - 'scripts/lib/firestore-deploy/model.js' # ADR-800: FIREBASE_TOOLS_VERSION
 
 concurrency:
   group: service-integration-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
@@ -122,22 +126,10 @@ jobs:
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: 📥 Cache Firebase emulator binaries
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/firebase/emulators
-          key: firebase-emulators-${{ runner.os }}-v1
-          restore-keys: |
-            firebase-emulators-${{ runner.os }}-
-
-      - name: ☕ Setup Java (required by the Firestore emulator)
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: 📥 Install firebase-tools CLI
-        run: npm install -g firebase-tools
+      # ADR-800 · ADR-875 §12 — cache + Java + firebase-tools στην ΕΚΔΟΣΗ ΤΟΥ DEPLOYER.
+      # ΠΟΤΕ inline εγκατάσταση firebase-tools εδώ: το μπλοκάρει το CHECK 3.65 (ci-tools).
+      - name: 🧰 Firebase emulator toolchain (μία έκδοση)
+        uses: ./.github/actions/setup-firebase-emulators
 
       # Through the package script, NEVER as an inline `firebase emulators:exec`
       # block. Two measured reasons:

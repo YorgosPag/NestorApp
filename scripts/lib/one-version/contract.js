@@ -58,6 +58,18 @@ const GATE_STATES = Object.freeze({
   REASONLESS_DECLARATION: 'reasonless-declaration',
   /** ✅ Δήλωση που όντως εξαιρεί κάτι, με λόγο. */
   DECLARATION_USED: 'declaration-used',
+
+  // ── ΣΤ · ΕΡΓΑΛΕΙΑ CI (ADR-875 §12) — ό,τι εγκαθίσταται ολικά και ΔΕΝ ζει στο lockfile ──
+  /** ⛔ Εγκατάσταση του εργαλείου σε workflow έξω από τον ιδιοκτήτη του. */
+  CI_TOOL_BYPASS: 'ci-tool-bypass',
+  /** ⛔ Γραμμένη έκδοση (`εργαλείο@1.2.3`) στο `.github/` — δεύτερη αλήθεια. */
+  CI_TOOL_VERSION_LITERAL: 'ci-tool-version-literal',
+  /** ⛔ Η αυθεντία δεν διαβάζεται, ο ιδιοκτήτης λείπει ή δεν τη διαβάζει, ή η δήλωση δεν έχει λόγο. */
+  CI_TOOL_OWNER_BROKEN: 'ci-tool-owner-broken',
+  /** ✅ Ο ιδιοκτήτης — το ΕΝΑ σημείο εγκατάστασης. */
+  CI_TOOL_OWNER: 'ci-tool-owner',
+  /** ✅ Workflow που ζητά τον ιδιοκτήτη. */
+  CI_TOOL_VIA_OWNER: 'ci-tool-via-owner',
 });
 
 /**

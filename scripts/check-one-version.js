@@ -94,6 +94,7 @@ const LEDGER_TITLES = {
   members: 'Γ · ΜΕΛΗ WORKSPACE',
   catalog: 'Δ · ΚΑΤΑΛΟΓΟΣ',
   exceptions: 'Ε · ΕΞΑΙΡΕΣΕΙΣ',
+  ciTools: 'ΣΤ · ΕΡΓΑΛΕΙΑ CI',
 };
 
 const ADVICE = [
@@ -104,6 +105,9 @@ const ADVICE = [
   '  lockfile-desync        → άλλαξε manifest χωρίς install· τρέξε pnpm install.',
   '  unlisted-manifest      → νέο package.json μέσα στα globs: είτε install, είτε δεν ανήκει εκεί.',
   '  unreferenced-catalog   → ή γράψε "catalog:" στο manifest, ή σβήσε την εγγραφή.',
+  '  ci-tool-bypass         → σβήσε την inline εγκατάσταση· γράψε uses: ./.github/actions/setup-firebase-emulators.',
+  '  ci-tool-version-literal→ σβήσε την έκδοση από το .github/· η αυθεντία είναι το FIREBASE_TOOLS_VERSION.',
+  '  ci-tool-owner-broken   → η αυθεντία/ο ιδιοκτήτης δεν συνδέονται πια — scripts/lib/one-version/ci-tools.js.',
   '',
   'Αν ΔΥΟ εσωτερικά μέλη ΠΡΕΠΕΙ να δηλώνουν το ίδιο πακέτο, δήλωσέ το στο',
   '.one-version.json — ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ.',
@@ -141,6 +145,9 @@ function affects(file) {
     rel === 'package.json' ||
     /(^|\/)package\.json$/.test(rel) ||
     rel.startsWith('scripts/lib/one-version/') ||
+    rel.startsWith('.github/workflows/') ||
+    rel.startsWith('.github/actions/') ||
+    rel === 'scripts/lib/firestore-deploy/model.js' ||
     rel === 'scripts/check-one-version.js'
   );
 }

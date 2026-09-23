@@ -29,6 +29,10 @@ const lockfile = require('../lib/one-version/lockfile.js');
 const workspace = require('../lib/one-version/workspace.js');
 const { BLOCKING, LEDGER_STATES, sweep } = require('../lib/one-version/gate.js');
 const cli = require('../check-one-version.js');
+const ciTools = require('../lib/one-version/ci-tools.js');
+
+const CI_OWNER = ciTools.CI_TOOLS['firebase-tools'].owner;
+const CI_AUTHORITY = ciTools.CI_TOOLS['firebase-tools'].authority;
 
 const S = contract.GATE_STATES;
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -96,6 +100,9 @@ function miniRepo(edits = {}, fromCommit = null) {
     'package.json': read('package.json'),
     'packages/core/package.json': read('packages/core/package.json'),
     'src/subapps/dxf-viewer/package.json': read('src/subapps/dxf-viewer/package.json'),
+    // ΣΤ · ΕΡΓΑΛΕΙΑ CI — πάντα από το ΤΡΕΧΟΝ δέντρο: είναι ορθογώνια στο pnpm ιστορικό των Π.
+    [CI_OWNER]: fs.readFileSync(path.join(REPO_ROOT, CI_OWNER), 'utf8'),
+    [CI_AUTHORITY]: fs.readFileSync(path.join(REPO_ROOT, CI_AUTHORITY), 'utf8'),
   };
   for (const [rel, mutate] of Object.entries(edits)) {
     const before = files[rel];
@@ -380,5 +387,106 @@ describe('Κ — κριτήριο', () => {
     const source = fs.readFileSync(path.join(REPO_ROOT, 'scripts/lib/one-version/gate.js'), 'utf8');
     expect(source).toMatch(/throw new Error\(`ΑΓΝΩΣΤΗ κατάσταση/);
     expect(LEDGER_STATES.catalog).not.toContain(S.VERSION_SPLIT);
+  });
+});
+
+// =============================================================================
+// ΣΤ — ΕΡΓΑΛΕΙΑ CI: μία έκδοση και για ό,τι ΔΕΝ ζει στο lockfile (ADR-875 §12)
+// =============================================================================
+
+describe('ΣΤ — εργαλεία CI', () => {
+  const PRE_FIX = '2aa205ef'; // οι 5 ροές ΠΡΙΝ από το composite action
+  const FLOWS = ['firestore-rules', 'storage-rules', 'functions-integration', 'service-integration', 'i18n-ssr-oracle'];
+
+  /** Ρίζα με αυθεντία + ιδιοκτήτη από το τρέχον δέντρο, και ό,τι άλλο δοθεί. */
+  function ciRepo(files = {}) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'citools-'));
+    const all = {
+      [CI_OWNER]: fs.readFileSync(path.join(REPO_ROOT, CI_OWNER), 'utf8'),
+      [CI_AUTHORITY]: fs.readFileSync(path.join(REPO_ROOT, CI_AUTHORITY), 'utf8'),
+      ...files,
+    };
+    for (const [rel, text] of Object.entries(all)) {
+      if (text === null) continue;
+      fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+      fs.writeFileSync(path.join(root, rel), text);
+    }
+    return root;
+  }
+  const judgeCi = (root, tools) => {
+    const rows = [];
+    ciTools.judgeCiTools(root, (state, id, detail) => rows.push({ state, id, detail }), tools);
+    return rows;
+  };
+  const statesOf = (rows) => rows.map((r) => r.state);
+  const S = contract.GATE_STATES;
+  const wf = (body) => `jobs:\n  t:\n    steps:\n${body}\n`;
+
+  it('ΣΤ1: το ΠΡΑΓΜΑΤΙΚΟ δέντρο — ένας ιδιοκτήτης, οι 5 ροές τον ζητούν, μηδέν παραβάσεις', () => {
+    const tally = sweep(REPO_ROOT).ledgers.ciTools.tally;
+    expect(tally[S.CI_TOOL_OWNER]).toBe(1);
+    expect(tally[S.CI_TOOL_VIA_OWNER]).toBeGreaterThanOrEqual(FLOWS.length);
+    expect(tally[S.CI_TOOL_BYPASS] + tally[S.CI_TOOL_VERSION_LITERAL] + tally[S.CI_TOOL_OWNER_BROKEN]).toBe(0);
+  });
+
+  it('ΣΤ2: 🔴 ΒΑΘΜΟΝΟΜΗΣΗ — οι ροές όπως ήταν ΠΡΙΝ κοκκινίζουν: 5 παρακάμψεις + 1 γραμμένη έκδοση', () => {
+    const files = Object.fromEntries(
+      FLOWS.map((f) => [`.github/workflows/${f}.yml`, gitShow(PRE_FIX, `.github/workflows/${f}.yml`)]),
+    );
+    const rows = judgeCi(ciRepo(files));
+    expect(statesOf(rows).filter((s) => s === S.CI_TOOL_BYPASS)).toHaveLength(5);
+    expect(rows.filter((r) => r.state === S.CI_TOOL_VERSION_LITERAL).map((r) => r.id)).toEqual([
+      expect.stringMatching(/^\.github\/workflows\/i18n-ssr-oracle\.yml:\d+$/),
+    ]);
+  });
+
+  it('ΣΤ3: `npx firebase-tools` σε workflow ΠΙΑΝΕΤΑΙ — όχι μόνο το `npm i -g`', () => {
+    const rows = judgeCi(ciRepo({ '.github/workflows/x.yml': wf('      - run: npx --yes firebase-tools deploy') }));
+    expect(statesOf(rows)).toContain(S.CI_TOOL_BYPASS);
+  });
+
+  it('ΣΤ4: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — σχόλιο που περιγράφει την εγκατάσταση ΔΕΝ είναι εντολή', () => {
+    const rows = judgeCi(ciRepo({ '.github/workflows/x.yml': wf('      # npm install -g firebase-tools@1.2.3\n      - run: echo ok') }));
+    expect(statesOf(rows)).toEqual([S.CI_TOOL_OWNER]);
+  });
+
+  it('ΣΤ5: γραμμένη έκδοση ΜΕΣΑ στον ιδιοκτήτη ⇒ ⛔ (δεύτερη αλήθεια, όποιος κι αν τη γράφει)', () => {
+    const owner = fs.readFileSync(path.join(REPO_ROOT, CI_OWNER), 'utf8').replace(
+      /"firebase-tools@\$\{\{ steps\.version\.outputs\.version \}\}"/,
+      'firebase-tools@15.13.0',
+    );
+    expect(owner).toContain('firebase-tools@15.13.0'); // η μετάλλαξη ΕΓΙΝΕ
+    expect(statesOf(judgeCi(ciRepo({ [CI_OWNER]: owner })))).toContain(S.CI_TOOL_VERSION_LITERAL);
+  });
+
+  it('ΣΤ6: ιδιοκτήτης που ΔΕΝ διαβάζει την αυθεντία ⇒ ⛔ owner-broken', () => {
+    const owner = fs.readFileSync(path.join(REPO_ROOT, CI_OWNER), 'utf8').split(CI_AUTHORITY).join('elsewhere.js');
+    expect(statesOf(judgeCi(ciRepo({ [CI_OWNER]: owner })))).toContain(S.CI_TOOL_OWNER_BROKEN);
+  });
+
+  it('ΣΤ7: αυθεντία που δίνει ΔΥΟ εκδόσεις ή καμία ακριβή ⇒ ⛔ owner-broken (ποτέ σιωπηλό)', () => {
+    const real = fs.readFileSync(path.join(REPO_ROOT, CI_AUTHORITY), 'utf8');
+    const twice = `${real}\nconst FIREBASE_TOOLS_VERSION = '1.0.0';\n`;
+    const range = real.replace(/const FIREBASE_TOOLS_VERSION = '[^']+';/, "const FIREBASE_TOOLS_VERSION = '^15';");
+    expect(range).not.toBe(real);
+    for (const text of [twice, range, null]) {
+      expect(statesOf(judgeCi(ciRepo({ [CI_AUTHORITY]: text })))).toContain(S.CI_TOOL_OWNER_BROKEN);
+    }
+  });
+
+  it('ΣΤ8: δήλωση εργαλείου ΧΩΡΙΣ λόγο ⇒ ⛔ owner-broken', () => {
+    const tools = { 'firebase-tools': { ...ciTools.CI_TOOLS['firebase-tools'], reason: 'ok' } };
+    expect(statesOf(judgeCi(ciRepo(), tools))).toEqual([S.CI_TOOL_OWNER_BROKEN]);
+  });
+
+  it('ΣΤ9: η αυθεντία που διαβάζει η πύλη ΕΙΝΑΙ η έκδοση του deployer', () => {
+    const model = require('../lib/firestore-deploy/model.js');
+    expect(ciTools.readAuthorityVersion(REPO_ROOT, ciTools.CI_TOOLS['firebase-tools'])).toBe(
+      model.FIREBASE_TOOLS_VERSION,
+    );
+  });
+
+  it('ΣΤ10: η σκανδάλη — αλλαγή σε workflow/action/αυθεντία ΞΥΠΝΑ την πύλη', () => {
+    for (const f of ['.github/workflows/x.yml', `${CI_OWNER}`, CI_AUTHORITY]) expect(cli.affects(f)).toBe(true);
   });
 });

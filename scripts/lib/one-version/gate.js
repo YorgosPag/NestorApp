@@ -10,6 +10,7 @@
 const { GATE_STATES: S, MIN_REASON_LENGTH, isDistributable, loadDeclarations } = require('./contract.js');
 const { readLockfile, bareVersion } = require('./lockfile.js');
 const { readWorkspace, declaredDependencies } = require('./workspace.js');
+const { judgeCiTools } = require('./ci-tools.js');
 
 const BLOCKING = Object.freeze([
   S.VERSION_SPLIT, S.REDECLARED,
@@ -17,6 +18,7 @@ const BLOCKING = Object.freeze([
   S.UNLISTED_MANIFEST, S.ORPHAN_IMPORTER, S.LOCKFILE_DESYNC,
   S.UNREFERENCED_CATALOG,
   S.ORPHAN_DECLARATION, S.REASONLESS_DECLARATION,
+  S.CI_TOOL_BYPASS, S.CI_TOOL_VERSION_LITERAL, S.CI_TOOL_OWNER_BROKEN,
 ]);
 
 const tallyOf = (states) => Object.fromEntries(states.map((s) => [s, 0]));
@@ -141,6 +143,7 @@ const LEDGER_STATES = Object.freeze({
   members: [S.UNLISTED_MANIFEST, S.ORPHAN_IMPORTER, S.LOCKFILE_DESYNC, S.IN_CENSUS],
   catalog: [S.UNREFERENCED_CATALOG, S.CATALOG_REFERENCED],
   exceptions: [S.ORPHAN_DECLARATION, S.REASONLESS_DECLARATION, S.DECLARATION_USED],
+  ciTools: [S.CI_TOOL_BYPASS, S.CI_TOOL_VERSION_LITERAL, S.CI_TOOL_OWNER_BROKEN, S.CI_TOOL_OWNER, S.CI_TOOL_VIA_OWNER],
 });
 
 function sweep(repoRoot) {
@@ -163,6 +166,7 @@ function sweep(repoRoot) {
   judgeNames(members, importers, declarations, pushTo('names'), used);
   judgeCatalog(members, catalog, pushTo('catalog'));
   judgeExceptions(declarations, used, pushTo('exceptions'));
+  judgeCiTools(repoRoot, pushTo('ciTools'));
 
   for (const [name, states] of Object.entries(LEDGER_STATES)) {
     ledgers[name].population = states.reduce((n, s) => n + ledgers[name].tally[s], 0);

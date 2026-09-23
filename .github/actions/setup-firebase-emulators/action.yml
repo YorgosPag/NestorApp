@@ -1,0 +1,54 @@
+name: Firebase emulator toolchain (one version)
+description: >
+  ADR-800 · ADR-875 §12 — Single source of truth for every CI job that boots Firebase
+  emulators: the emulator-binary cache, Java, and firebase-tools at THE version the production
+  deployer uses (scripts/lib/firestore-deploy/model.js → FIREBASE_TOOLS_VERSION). Never copy
+  these steps into a workflow — CHECK 3.65 (ci-tools ledger) blocks an install of firebase-tools
+  anywhere except here, and any literal firebase-tools@<version> in .github/.
+
+# WHY: before this action there were THREE versions of one tool — the deployer pinned 15.13.0
+# (its index semantics are copied verbatim by drift.js, ADR-865 §10.2), the oracle pinned
+# 15.30.2 with no recorded reason, and four workflows installed whatever "latest" was that day.
+# Rules were therefore tested on an emulator that was not the version that deploys them, and a
+# new firebase-tools release could turn a gate red (or green) without any commit.
+#
+# ⚠️ The version is READ, never written here: a second literal would be a second truth.
+# ⚠️ The emulator cache key carries the version and has NO prefix restore-keys: a prefix
+#    restore would hand one version the JARs of another.
+# ⚠️ Checkout MUST precede this action (it reads the model from the workspace). The model has
+#    no npm dependencies, so this works before `pnpm install` too.
+
+outputs:
+  version:
+    description: The firebase-tools version that was installed.
+    value: ${{ steps.version.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: 🔢 firebase-tools version (from the deployer's SSoT)
+      id: version
+      shell: bash
+      run: |
+        VERSION=$(node -p "require('./scripts/lib/firestore-deploy/model.js').FIREBASE_TOOLS_VERSION")
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error title=ADR-800::FIREBASE_TOOLS_VERSION is not an exact version: '${VERSION}'"
+          exit 1
+        fi
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+    - name: 📥 Cache Firebase emulator binaries
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/firebase/emulators
+        key: firebase-emulators-${{ runner.os }}-${{ steps.version.outputs.version }}
+
+    - name: ☕ Setup Java (Firestore / Storage emulators)
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: 📥 Install firebase-tools
+      shell: bash
+      run: npm install -g "firebase-tools@${{ steps.version.outputs.version }}"
