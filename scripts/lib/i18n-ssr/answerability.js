@@ -66,6 +66,8 @@ const { policyFor } = require('../i18n-shell-slice/config');
 const { loadNamespaceBundles, extractTCalls } = require('../i18n-namespace-extract');
 const { answersKey, lookupKey } = require('../i18n/locale-keys');
 const { assertClosedLedger } = require('./ledger');
+const { borrowedNamespaces } = require('./translator-provenance');
+const MG = require('../module-graph');
 
 /** Το `defaultNS` του `src/i18n/config.ts`. Ένα `t('x')` σε αρχείο χωρίς
  *  `useTranslation(...)` πέφτει εδώ — και το i18next το ίδιο. */
@@ -173,6 +175,18 @@ function candidatesFor(entryNamespace, declaredNamespaces) {
 }
 
 /**
+ * Τα namespaces με τα οποία ψάχνει το `t` ενός αρχείου — **αποδεδειγμένα**, ποτέ μαντεψιά.
+ * Άρνηση του `borrowedNamespaces` ⇒ `[]` ⇒ ο καλών γράφει `namespace-injected` (δηλωμένο κενό).
+ */
+function fileNamespaces(projectRoot, relFile, surface, context) {
+  if (surface.namespaces.length > 0) return surface.namespaces;
+  const borrowed = borrowedNamespaces({
+    projectRoot, relFile, content: surface.source, bundles: context.bundles, aliases: context.aliases,
+  });
+  return borrowed && borrowed.namespaces ? borrowed.namespaces : [];
+}
+
+/**
  * Η μέτρηση.
  *
  * @param {object} options
@@ -201,6 +215,7 @@ function measureAnswerability(options) {
     bundles: loadNamespaceBundles(projectRoot),
     keyConstants: KE.loadKeyConstants(projectRoot, config.keyConstants),
     excludeConsumers: config.excludeConsumers,
+    aliases: MG.readTsPathAliases(projectRoot),
   };
   const graphForSurfaces = options.graph || { modules: new Map(), projectRoot };
   const surfaces = P.collectSurfaces(projectRoot, { files: closureFiles }, graphForSurfaces, context);
@@ -216,6 +231,8 @@ function measureAnswerability(options) {
     }
     const resolved = P.resolveFileKeys(surface, context);
     const policy = policyFor(config, relFile);
+    // ADR-781 §16 — δικά του ns, αλλιώς του hook από το οποίο ΑΠΟΔΕΙΚΝΥΕΤΑΙ ότι δανείζεται το `t`.
+    const namespaces = fileNamespaces(projectRoot, relFile, surface, context);
 
     // Τα κλειδιά που είναι **κυριολεκτικά ορίσματα του `t()` σε αυτό το αρχείο**.
     // Ό,τι λύθηκε από τη συγκομιδή άλλων modules ΔΕΝ είναι εδώ — και αυτή
@@ -229,11 +246,11 @@ function measureAnswerability(options) {
         records.push({ state: K2_STATES.KEY_NOT_AT_CALL_SITE, file: relFile, key });
         return;
       }
-      if (!explicit && surface.namespaces.length === 0) {
+      if (!explicit && namespaces.length === 0) {
         records.push({ state: K2_STATES.NAMESPACE_INJECTED, file: relFile, key });
         return;
       }
-      const candidates = explicit ? [entry.ns] : surface.namespaces;
+      const candidates = explicit ? [entry.ns] : namespaces;
       records.push({
         state: candidates.some((namespace) => answers(namespace)) ? K2_STATES.ANSWERABLE : K2_STATES.UNANSWERABLE,
         file: relFile,
