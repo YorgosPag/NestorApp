@@ -3,7 +3,7 @@
 | Πεδίο | Τιμή |
 |---|---|
 | **Category** | Quality gates / CI / Identity |
-| **Status** | ACCEPTED — Φάση 1 committed `0d751982` · πρώτο run CI `35890283081`: **ταυτότητα ✅ αποδείχθηκε** · **σπορά ⛔ αρνήθηκε** (ταβάνι 67 > 60, §9) ⇒ η Φάση 2 §7.1 είναι πλέον **προαπαιτούμενο** της σποράς |
+| **Status** | ACCEPTED — Φάση 1 committed `0d751982` · πρώτο run CI `35890283081`: **ταυτότητα ✅ αποδείχθηκε** · **σπορά ⛔ αρνήθηκε** (ταβάνι 67 > 60, §9) · **Φάση 2.1 (golden δεδομένα) υλοποιημένη** (§10, χωρίς commit, αναμένει το πρώτο run) · 🔴 εύρημα παραγωγής: πύλη προμηθευτή απρόσιτη (§10.5) |
 | **Date** | 2026-09-23 |
 | **Πύλη** | **CHECK 3.51 Χ** — `docs/gates/3.51.md` · `node scripts/check-i18n-ssr-oracle.js` |
 | **Προηγούμενα** | ADR-781 §13-§16 *(ο χρησμός· το ανοιχτό Γ)* · ADR-788 *(κρίνουμε την εικόνα που στάλθηκε· μηδέν μυστικά)* · ADR-798 *(κατάλογος persona)* · ADR-787 *(πρόθεμα χώρου `/o/[workspace]`)* · ADR-800 *(μία έκδοση ανά όνομα)* |
@@ -57,7 +57,7 @@ staging project (νέα υποδομή και μυστικό, χωρίς καν�
 2. `pnpm install` **μόνο για τον σπορέα**
 3. `firebase-tools@15.30.2` + `tsx@4.21.0`, **καρφωμένα** (το `tsx` στην έκδοση του lockfile — ADR-800)
 4. `firebase emulators:start --only auth,firestore --project demo-nestor-oracle`
-5. **ο ίδιος** σπορέας με το τοπικό `npm run emulator:seed-personas` (ADR-798) + `--oracle-manifest=…`
+5. **ο ίδιος** σπορέας με το τοπικό `npm run emulator:seed-personas` (ADR-798). *(Φάση 2.1, §10.2: το manifest το γράφει πλέον το `emulator-seed-golden.ts`, **μετά** το βήμα 7, από το API της εικόνας)*
 6. 🔴 `rm -rf node_modules` — ο χρησμός **αποδεικνύει** ότι τρέχει χωρίς εξαρτήσεις. Δεν αρκεί να το δηλώνει
 7. `docker run --network host` με **μόνο** διευθύνσεις emulator + demo project. **Κανένα μυστικό**
 8. ο χρησμός με `I18N_SSR_ORACLE_PERSONAS` → κόβει συνεδρία ανά κλάση → κρίνει
@@ -72,7 +72,7 @@ staging project (νέα υποδομή και μυστικό, χωρίς καν�
 | `scripts/check-i18n-ssr-oracle.js` | `prepareIdentity` πριν τη σάρωση· δήλωση/ταυτότητα = `routeIdOf`· η αναφορά τυπώνει την ταυτότητα **και** όταν είναι ανώνυμη |
 | `scripts/lib/emulator/personas.ts` | `oracleClassOf` · `ORACLE_REPRESENTATIVES` (`int.architect` = `organization:internal_user`, `admin.civil` = `organization:company_admin`) |
 | `scripts/lib/emulator/identity.ts` | project/hosts από τα **τυπικά** env του Firebase (`GCLOUD_PROJECT`, `*_EMULATOR_HOST`)· προεπιλογές αμετάβλητες |
-| `scripts/emulator-seed-personas.ts` | `--oracle-manifest=<path>`: `{schema, projectId, authEmulatorHost, personas[{class, email, workspaceSegment}]}`. **Χωρίς** διαπιστευτήριο |
+| `scripts/emulator-seed-personas.ts` | ~~`--oracle-manifest=<path>`~~ → **μετακινήθηκε** στο `emulator-seed-golden.ts` (§10.2, manifest v2 με `golden`). **Χωρίς** διαπιστευτήριο |
 
 ### 4.3 Ταυτότητα ratchet
 
@@ -119,6 +119,7 @@ staging project (νέα υποδομή και μυστικό, χωρίς καν�
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-09-23 | Φάση 1: emulator + demo project · σπορέας ADR-798 με manifest · κοπή συνεδρίας από την εικόνα · `identity-unproven` ⛔ · άγκυρες Τ/Ε/Σ/Π |
+| 2026-09-23 | §10 Φάση 2.1: golden δεδομένα — κατάλογος 26 προτύπων σε 3 βαθμίδες (`api` από το API της εικόνας · `witness` · `value`) · manifest **v2** · σταθερή ταυτότητα έναντι `fetchUrl` · μάσκα ids στα `detail` · εφήμερα `VENDOR_PORTAL_SECRET`/`ATTENDANCE_QR_SECRET` · άγκυρες **Γ1-Γ9** (μεταλλάξεις 9/9 μετά την αυστηροποίηση της Γ3β) · η Γ9 έπιασε διαρροή `fetchUrl` στην εγγραφή · 🔴 εύρημα παραγωγής §10.5 (πύλη προμηθευτή → `/login`) |
 | 2026-09-23 | §9: πρώτο run CI (`35890283081`, εικόνα `main-0d75198`) — ταυτότητα ✅ · σπορά ⛔ ταβάνι 67 > 60 (δεν χαλαρώθηκε) · **διορθώθηκε η σιωπηλή άρνηση**: το artifact «υποψήφια» ήταν η ΠΑΛΙΑ baseline (`i18n-ssr-oracle.yml` κρατά κωδικό εξόδου + σβήνει το μπαγιάτικο) · η άρνηση τυπώνει την αναφορά της ίδιας μέτρησης (`ratchet-baseline.js`, άγκυρα **Β11**, μετάλλαξη 1/1) |
 
 ## 9. Πρώτο run στο CI — ευρήματα (2026-09-23)
@@ -161,3 +162,75 @@ Run `35890283081` · εικόνα `ghcr.io/yorgospag/nestor-app:main-0d75198` ·
 | `attendance/check-in/[id]` · `procurement/quotes/[id]/review` · `spaces/storage` | 2 η καθεμία |
 
 Τα **ονόματα** των κλειδιών θα τα τυπώσει το **επόμενο** run (§9.3α). Το σταθερό 17 σε τέσσερις σελίδες procurement δείχνει **ένα** κοινό σημείο (layout/tabs), όχι δεκαεπτά ανά σελίδα.
+
+**Επιβεβαιώθηκε στο run `35894034849` (εικόνα `main-804452a`)**: η §9.3 δουλεύει στο CI. Φάνηκαν το «⛔ Η ΣΠΟΡΑ ΑΡΝΗΘΗΚΕ», το `No files were found` (κανένα μπαγιάτικο artifact), η γραμμή `ταυτότητα: … project demo-nestor-oracle` και τα **ονόματα** των κλειδιών. Είναι **μία κλάση, όχι 17 σφάλματα ανά σελίδα**: σχεδόν όλα ανήκουν στο namespace **procurement** (`nav.rfqs` · `nav.purchaseOrders` · `nav.vendors` · `nav.quotes` · `nav.materials` · `nav.hub` · `nav.analytics` · `nav.agreements` · `filters.*` · `rfqs.*` · `quotes.*` · `hub.*` · `analytics.*`). Το `nav.*` σε **κάθε** σελίδα procurement δείχνει κοινό υπο-μενού που αποδίδεται στον server **χωρίς** το namespace στο SSR slice της διαδρομής. Άρα η θεραπεία ανήκει στο **ADR-744 (per-route slices)**, όχι ανά κλειδί. Για τα υπόλοιπα (`portfolio.refresh` · `validatingQr` · `unitsTitle` · `trash.viewTrash` · `spaceAvailability.ariaLabel`) τίθεται το ίδιο ερώτημα στις δικές τους σελίδες.
+
+## 10. Φάση 2.1 — golden δεδομένα (2026-09-23)
+
+### 10.1 Τι μετρήθηκε πριν από τον κώδικα — και άλλαξε το σχέδιο
+
+| Ερώτημα | Απάντηση | Συνέπεια |
+|---|---|---|
+| Πόσα δυναμικά πρότυπα `/o`; | **26** (όχι 23: το 46 του §9.2 μετρούσε μόνο τα 🔶) | ο κατάλογος καλύπτει 26 — άγκυρα Γ1 |
+| Ποια διαβάζουν την οντότητα **στον server**; | **3 αρχεία**: `projects/[id]/procurement/layout.tsx` (`requireProjectForPage` ⇒ `notFound()`, που αφορά **9** πρότυπα) · `procurement/purchase-orders/[id]` (`getPO`) · `vendor/quote/[token]` (HMAC + invite + RFQ) | μόνο αυτές οι οντότητες χρειάζονται **πραγματική** εγγραφή |
+| Τα υπόλοιπα 23; | client components (`'use client'`, `ssr:false`) ή σκέτα redirects· το SSR είναι **ίδιο** για κάθε id | αρκεί **μάρτυρας ύπαρξης** |
+| Μπορεί ένα `satisfies <Τύπος>` σε script να εγγυηθεί σχήμα; | **ΟΧΙ**: τα `scripts/` είναι **εκτός** tsconfig και το jest τρέχει `@swc/jest` (χωρίς τύπους) | το σχέδιο «typed εγγραφή» απορρίφθηκε ως **ψευδής εγγύηση** |
+| Εκθέτει το route γέννησης έργου καθαρή συνάρτηση; | **ΟΧΙ**: πολιτική ADR-284 · `projectCode` · `linkedCompanyId` ζουν στον handler | σπορά **μέσω του API** της εικόνας (Playwright/Cypress: «seed via API, not the DB») |
+| Τα ids των γραφέων; | **τυχαία** (`generateRfqId()`), και τα tokens λήγουν | δύο URL ανά διαδρομή (§10.2) |
+
+### 10.2 Η αρχιτεκτονική
+
+- **Κατάλογος** `scripts/lib/i18n-ssr/golden-catalog.js`: CommonJS χωρίς εξαρτήσεις, γιατί τον διαβάζουν ΚΑΙ ο χρησμός ΚΑΙ ο σπορέας. Περιέχει:
+  - τις οντότητες, με **βαθμίδα** (`api` · `witness` · `value`) και πρόθεμα id·
+  - το πρότυπο → οντότητες, **θεσιακά**·
+  - τα εφήμερα μυστικά·
+  - την τιμή του `[type]`.
+- **Δέσιμο** `golden-bindings.js`:
+  - `parseGolden`: κλειστό σύνολο, πρόθεμα από το SSoT, id ασφαλές για URL.
+  - `bindWorkspaceRoute`: **`url` = σταθερή ταυτότητα** (`…/rfqs/golden-rfq`) και **`fetchUrl` = το αίτημα** (`…/rfqs/rfq_8f…`).
+  - `maskGoldenIds`: κανένα `detail` δεν κρατά id. Έτσι π.χ. ο στόχος `?projectId=proj_…` δεν γίνεται «νέα» ταυτότητα σε κάθε run.
+  - `assertCatalogMatchesRoutes`: μπαγιάτικος κατάλογος ⇒ άρνηση. Ελέγχεται πάνω στην **πλήρη** απογραφή, πριν από κάθε `--only`.
+- **Manifest v2** (`i18n-ssr-personas/v2`): προστίθεται το `golden.entities`. Επειδή είναι υποχρεωτικό, κάνουμε **bump** σχήματος και όχι προαιρετικό πεδίο στο v1.
+- **Σπορέας** `scripts/emulator-seed-golden.ts`. Το manifest **μετακινήθηκε** εδώ από το `emulator-seed-personas.ts`.
+  - Βαθμίδα `api`: μέσω του **API της σταλμένης εικόνας**, ως `company_admin`:
+    - `/api/projects/list` → γέννηση έργου με ομάδα (CHECK 3.88)·
+    - `/api/rfqs`·
+    - `/api/rfqs/[id]/invites` με `copy_link`, οπότε **δεν στέλνεται email**·
+    - `/api/procurement`·
+    - `/api/attendance/qr/generate`.
+  - Βαθμίδα `witness`: ντετερμινιστικά ids `<πρόθεμα>_alpha_golden` (`lib/emulator/golden-witnesses.ts`).
+  - Η επαφή εταιρείας είναι μάρτυρας **και** είσοδος του API έργου. Οι επαφές γράφονται μόνο από τον client SDK· δεν υπάρχει route εγγραφής.
+- **Ροή**:
+  - εφήμερα `VENDOR_PORTAL_SECRET` + `ATTENDANCE_QR_SECRET` ανά run (`openssl rand` + `::add-mask::`), που τα παίρνει μόνο η εικόνα (`-e ΟΝΟΜΑ`)·
+  - σειρά: persona → εικόνα → **golden** → `rm -rf node_modules` → χρησμός.
+
+### 10.3 🔴 Εύρημα που το έπιασε η δική του άγκυρα (Γ9): το `fetchUrl` διέρρεε στην εγγραφή
+
+Η εγγραφή απλώνει τη διαδρομή (`...route`). Έτσι το `fetchUrl`, με τα **υπογεγραμμένα tokens**, θα ταξίδευε σε αναφορά και από εκεί σε artifact. Ισχύει η ίδια αρχή με το cookie (§3: «το cookie δεν γίνεται ποτέ δεδομένο»). Η θεραπεία μπήκε στο **ένα** σημείο που δίνει μορφή στην εγγραφή, το `settle()` του `probe.js`.
+
+### 10.4 Άγκυρες (`scripts/__tests__/i18n-ssr-golden.test.ts`)
+
+| Άγκυρα | Τι αποδεικνύει |
+|---|---|
+| **Γ1** | ο κατάλογος έχει ακριβώς τα 26 πρότυπα του `enumerateRoutes` |
+| **Γ1β** | μία οντότητα ανά δυναμικό τμήμα |
+| **Γ2** | τα προθέματα = `ENTERPRISE_ID_PREFIXES` |
+| **Γ2β** | η τιμή του `[type]` ∈ `ReportType` |
+| **Γ3 / Γ3β** | fail-closed, με μήνυμα που **ονομάζει** την αιτία |
+| **Γ4-Γ4δ** | το δέσιμο · πρότυπο εκτός καταλόγου ⇒ 🔶 · μπαγιάτικος κατάλογος ⇒ άρνηση · η μάσκα των ids |
+| **Γ5** | manifest v1 ⇒ άρνηση |
+| **Γ6** | ό,τι αποδομεί server αρχείο με πρόσβαση σε δεδομένα ⇒ βαθμίδα `api`. Ελέγχονται page **και layouts**, και ένα επίπεδο server components |
+| **Γ6β** | ο ανιχνευτής **βρίσκει** τα 3 γνωστά, άρα δεν είναι τυφλός |
+| **Γ7** | τα μυστικά είναι ονόματα του `environment-contract` **και** έχουν `-e` στο workflow |
+| **Γ8** | οι μάρτυρες = η βαθμίδα `witness` |
+| **Γ9** | ο probe ζητά το `fetchUrl`, καταγράφει την ταυτότητα, και **κανένα** id δεν μένει στην εγγραφή |
+
+Μεταλλάξεις: **8/9** κόκκινες με την πρώτη. Η 9η (Γ3β) ήταν **ισοδύναμη**, γιατί το επόμενο βήμα έπιανε το `undefined`. Γι' αυτό η άγκυρα έγινε αυστηρή ως προς το **μήνυμα**.
+
+### 10.5 🔴 ΕΥΡΗΜΑ ΠΑΡΑΓΩΓΗΣ — η πύλη προμηθευτή είναι απρόσιτη στον προμηθευτή
+
+- **Η αιτία**: το `vendorPortalUrl()` χτίζει `/vendor/quote/<token>`, χωρίς πρόθεμα χώρου. Η σελίδα όμως ζει **μόνο** στο `/o/[workspace]/vendor/quote/[token]`, πίσω από τον φρουρό χώρου. Μετακινήθηκε εκεί στο `5ff0baa2` (ADR-787 §5.3).
+- **Μετρημένο στην παραγωγή, ανώνυμα**: `https://nestorconstruct.gr/vendor/quote/abc` ⇒ `200` + `NEXT_REDIRECT;replace;/login?next=%2Fvendor%2Fquote%2Fabc;307;`.
+- **Συνέπεια**: ο προμηθευτής **δεν είναι χρήστης**, άρα **δεν μπορεί ποτέ να καταθέσει προσφορά**, και το γραφείο νομίζει ότι δεν απάντησε. Είναι ακριβώς η «συνέπεια» που γράφει το `environment-contract` για το `VENDOR_PORTAL_SECRET`.
+- **Θεραπεία**: δημόσια ομάδα διαδρομών (όπως το `(light)`), με δηλώσεις στις πύλες 3.52/3.60/3.63. Είναι **απόφαση Giorgio** και μένει εκτός Φ2.1.
+- Όταν η σελίδα μετακινηθεί, η Γ1 θα ζητήσει ενημέρωση του καταλόγου, σκόπιμα.

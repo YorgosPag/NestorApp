@@ -107,6 +107,7 @@ const { loadBackendContract } = require('./lib/i18n-ssr/backend-contract');
 const { runSetRatchetCli } = require('./lib/ratchet-baseline');
 const { countedBudgets } = require('./lib/i18n-ssr/counted-budget');
 const { prepareIdentity, routeIdOf } = require('./lib/i18n-ssr/identity');
+const { maskGoldenIds, assertCatalogMatchesRoutes } = require('./lib/i18n-ssr/golden-bindings');
 
 const CHECK = 'CHECK 3.51 Χ (ADR-781)';
 const BS = String.fromCharCode(92);
@@ -243,6 +244,8 @@ async function measure(args) {
   //    διαδρομής**, διαβασμένη από την αυθεντία της (βλ. `served-surface.js`).
   const enumerated = decorateWithholding(O.enumerateRoutes(posixRoot), PROJECT_ROOT);
   if (enumerated.length === 0) throw new Error('δεν βρέθηκε καμία διαδρομή κάτω από src/app');
+  // ADR-875 §10 — πάνω στην ΠΛΗΡΗ απογραφή (πριν από κάθε `--only`): μπαγιάτικος κατάλογος ⇒ άρνηση.
+  assertCatalogMatchesRoutes(enumerated);
   // ADR-875 — το `[workspace]` είναι ΤΑΥΤΟΤΗΤΑ: κάθε `/o/[workspace]/**` κρίνεται ανά κλάση persona.
   const identity = await prepareIdentity(enumerated, { baseUrl: baseUrl(), userAgent: USER_AGENT });
   const { routes } = identity;
@@ -253,7 +256,10 @@ async function measure(args) {
   const selected = only ? routes.filter((route) => route.url.includes(only.slice('--only='.length))) : routes;
   const skipped = routes.filter((route) => !selected.includes(route));
 
-  const records = await sweepRoutes(selected, universe, controls, identity, !args.includes('--quiet'));
+  // ADR-875 §10 — τα golden ids αλλάζουν ανά run (τυχαία ids, tokens που λήγουν): κανένα
+  //    `detail` δεν τα κρατά, αλλιώς π.χ. ο στόχος `?projectId=proj_…` θα ήταν «νέα» ταυτότητα.
+  const records = (await sweepRoutes(selected, universe, controls, identity, !args.includes('--quiet')))
+    .map((record) => ({ ...record, detail: maskGoldenIds(record.detail, identity.golden) }));
 
   // ⚠️ Καμία σιωπηλή δειγματοληψία: ό,τι δεν χτυπήθηκε μπαίνει ΡΗΤΑ και
   // ratchet-άρεται — μια κάλυψη που συρρικνώνεται πρέπει να φαίνεται.

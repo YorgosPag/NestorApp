@@ -161,7 +161,9 @@ function enumerateRoutes(projectRoot, appDir = path.join('src', 'app')) {
         .filter((segment) => segment !== '' && !/^\(.*\)$/.test(segment));
       const dynamic = segments.some((segment) => segment.startsWith('['));
       const url = `/${segments.map((segment) => (segment.startsWith('[') ? SYNTHETIC_SEGMENT : segment)).join('/')}`;
-      return { file: rel, url: url === '/' ? '/' : url.replace(/\/$/, ''), dynamic };
+      // ADR-875 §10 — το ΠΡΟΤΥΠΟ (με τα `[τμήματα]`) είναι το κλειδί του καταλόγου golden.
+      const template = `/${segments.join('/')}`;
+      return { file: rel, url: url === '/' ? '/' : url.replace(/\/$/, ''), template, dynamic };
     })
     .sort((a, b) => a.url.localeCompare(b.url));
 }

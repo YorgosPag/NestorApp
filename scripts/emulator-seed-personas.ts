@@ -39,28 +39,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-798-person-professional-identity.md
  */
 
-import { writeFileSync } from 'node:fs';
-
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
 
-import {
-  AUTH_HOST,
-  PROJECT_ID,
-  SEED_CREDENTIAL,
-  runSeeder,
-  seedIdentity,
-  type SeedIdentity,
-} from './lib/emulator/identity';
-import {
-  COMPANY_ALIAS,
-  COMPANY_ALIAS_KEY,
-  COMPANY_ID,
-  COMPANY_NAME,
-  ORACLE_REPRESENTATIVES,
-  PERSONAS,
-  oracleClassOf,
-} from './lib/emulator/personas';
+import { SEED_CREDENTIAL, runSeeder, seedIdentity, type SeedIdentity } from './lib/emulator/identity';
+import { COMPANY_ALIAS, COMPANY_ALIAS_KEY, COMPANY_ID, COMPANY_NAME, PERSONAS } from './lib/emulator/personas';
 
 /**
  * Ο χώρος στον οποίο δείχνουν οι τέσσερις `@alpha.local` — **με τη διεύθυνσή του**.
@@ -125,27 +108,8 @@ function printNextSteps(): void {
   console.log('');
 }
 
-/**
- * ADR-875 — το manifest του χρησμού 3.51: **ποιοι** κρίνουν τις `/o/[workspace]/**`.
- *
- * 🔑 Ο σπορέας είναι η **αυθεντία** (ξέρει ποιους έσπειρε και σε ποιο project)· ο
- * χρησμός μόνο **διαβάζει** — δεν ξέρει τον κατάλογο, γιατί δεν έχει `node_modules`
- * για να τον φορτώσει (ADR-788).
- * ⚠️ **ΚΑΝΕΝΑ ΔΙΑΠΙΣΤΕΥΤΗΡΙΟ ΜΕΣΑ**: το password ταξιδεύει μόνο ως env
- *    (`DEMO_SEED_PASSWORD`), ποτέ σε αρχείο που μπορεί να γίνει artifact.
- */
-function writeOracleManifest(file: string): void {
-  const personas = ORACLE_REPRESENTATIVES.map((email) => {
-    const person = PERSONAS.find((candidate) => candidate.email === email);
-    if (!person?.companyId) throw new Error(`ADR-875: ο εκπρόσωπος ${email} δεν είναι άνθρωπος οργανισμού του καταλόγου`);
-    return { class: oracleClassOf(person), email, workspaceSegment: COMPANY_ALIAS };
-  });
-  const manifest = { schema: 'i18n-ssr-personas/v1', projectId: PROJECT_ID, authEmulatorHost: AUTH_HOST, personas };
-  writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(`🔮 manifest χρησμού: ${file} (${personas.map((persona) => persona.class).join(', ')})`);
-}
-
-const ORACLE_MANIFEST_FLAG = '--oracle-manifest=';
+// ADR-875 §10 — το manifest του χρησμού ΜΕΤΑΚΙΝΗΘΗΚΕ στο `emulator-seed-golden.ts`: γράφεται
+// εκεί όπου είναι γνωστά ΚΑΙ τα golden ids (ποιοι + τι κρίνεται, σε ΕΝΑ αρχείο).
 
 async function main(auth: Auth, db: Firestore): Promise<void> {
   await ensureCompany(db);
@@ -156,9 +120,6 @@ async function main(auth: Auth, db: Firestore): Promise<void> {
     const uid = await seedIdentity(auth, db, person);
     console.log(`   ✚ ${person.email.padEnd(28)} ${describe(person)}  [${uid.slice(0, 8)}…]`);
   }
-
-  const manifestArg = process.argv.find((arg) => arg.startsWith(ORACLE_MANIFEST_FLAG));
-  if (manifestArg) writeOracleManifest(manifestArg.slice(ORACLE_MANIFEST_FLAG.length));
 
   printNextSteps();
 }

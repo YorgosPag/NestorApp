@@ -33,6 +33,8 @@ const ID = require('../lib/i18n-ssr/identity');
 const O = require('../lib/i18n-ssr/oracle');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { withServer } = require('./i18n-ssr-probe-fixture');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const GC = require('../lib/i18n-ssr/golden-catalog');
 
 interface ProbeRecord {
   route: string;
@@ -45,6 +47,8 @@ interface ProbeRecord {
 interface OracleRoute {
   file: string;
   url: string;
+  template?: string;
+  fetchUrl?: string;
   dynamic: boolean;
   withheld: null;
   persona?: string;
@@ -54,16 +58,26 @@ const UA = 'Mozilla/5.0 (test)';
 const ORG_ADMIN = 'organization:company_admin';
 const SECRET_COOKIE = '__session=SECRET-THAT-MUST-NOT-LEAK'; // ASCII: τιμή κεφαλίδας HTTP
 
+/** Ένα έγκυρο id ανά οντότητα του καταλόγου — με το πρόθεμά της, όπου έχει. */
+const GOLDEN_FIXTURE: Record<string, string> = Object.fromEntries(
+  Object.entries(GC.GOLDEN_ENTITIES as Record<string, { tier: string; prefix: string | null }>).map(([entity, spec]) => [
+    entity,
+    spec.prefix ? `${spec.prefix}_fixture${entity}` : spec.tier === 'value' ? 'profit_and_loss' : `tok-${entity}.sig_1`,
+  ]),
+);
+
 const MANIFEST = {
-  schema: 'i18n-ssr-personas/v1',
+  schema: 'i18n-ssr-personas/v2',
   projectId: 'demo-nestor-oracle',
   authEmulatorHost: '127.0.0.1:9099',
   personas: [{ class: ORG_ADMIN, email: 'admin.civil@alpha.local', workspaceSegment: 'alpha-techniki' }],
+  golden: { entities: GOLDEN_FIXTURE },
 };
 
 const WORKSPACE_ROUTE: OracleRoute = {
   file: 'src/app/(app)/o/[workspace]/projects/page.tsx',
   url: '/o/ssr-probe/projects',
+  template: '/o/[workspace]/projects',
   dynamic: true,
   withheld: null,
 };
@@ -242,7 +256,12 @@ describe('Σ — κοπή συνεδρίας', () => {
 
 describe('Π — ο χρησμός κρίνει ΩΣ persona', () => {
   test('Π1 — το [workspace] γεμίζει από το manifest· το dynamic ΞΑΝΑΫΠΟΛΟΓΙΖΕΤΑΙ', () => {
-    const nested = { ...WORKSPACE_ROUTE, file: 'src/app/(app)/o/[workspace]/projects/[id]/page.tsx', url: '/o/ssr-probe/projects/ssr-probe' };
+    const nested = {
+      ...WORKSPACE_ROUTE,
+      file: 'src/app/(app)/o/[workspace]/projects/[id]/page.tsx',
+      url: '/o/ssr-probe/projects/ssr-probe',
+      template: '/o/[workspace]/projects/[id]',
+    };
     const outside = { file: 'src/app/(light)/search/page.tsx', url: '/search', dynamic: false, withheld: null };
     const [flat, deep, untouched] = ID.expandForPersonas([WORKSPACE_ROUTE, nested, outside], MANIFEST.personas);
     expect([flat.url, flat.dynamic, flat.persona]).toEqual(['/o/alpha-techniki/projects', false, ORG_ADMIN]);

@@ -33,6 +33,7 @@
 const fs = require('node:fs');
 
 const { SYNTHETIC_SEGMENT } = require('./states');
+const { parseGolden, bindWorkspaceRoute } = require('./golden-bindings');
 
 /** Αντίγραφα αυθεντιών — ΕΛΕΓΧΟΝΤΑΙ στην άγκυρα Τ1, ποτέ θέμα εμπιστοσύνης. */
 const IDENTITY_CONTRACT = Object.freeze({
@@ -46,7 +47,8 @@ const IDENTITY_CONTRACT = Object.freeze({
   sessionEndpoint: '/api/auth/session',
 });
 
-const MANIFEST_SCHEMA = 'i18n-ssr-personas/v1';
+// v2 (ADR-875 §10): + `golden` — ΥΠΟΧΡΕΩΤΙΚΟ, άρα bump και όχι προαιρετικό πεδίο στο v1.
+const MANIFEST_SCHEMA = 'i18n-ssr-personas/v2';
 const HERMETIC_PROJECT = /^demo-[a-z0-9-]+$/;
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -92,7 +94,7 @@ function parsePersonaManifest(raw) {
   manifest.personas.forEach(assertPersona);
   const classes = manifest.personas.map((persona) => persona.class);
   if (new Set(classes).size !== classes.length) fail(`διπλή κλάση persona: ${classes.join(', ')}`);
-  return manifest;
+  return { ...manifest, golden: parseGolden(manifest.golden) };
 }
 
 /** Φρουρός hermetic — ΠΡΙΝ από οποιοδήποτε αίτημα. */
@@ -170,24 +172,20 @@ function routeIdOf(route) {
 }
 
 /**
- * Κάθε `/o/[workspace]/**` → μία διαδρομή **ανά κλάση**. Το `dynamic` ξαναϋπολογίζεται:
- * αν το `[workspace]` ήταν το μόνο δυναμικό τμήμα, η σελίδα πλέον κρίνεται ΚΑΝΟΝΙΚΑ.
+ * Κάθε `/o/[workspace]/**` → μία διαδρομή **ανά κλάση**. Το `[workspace]` γεμίζει με τον
+ * χώρο του persona, τα υπόλοιπα δυναμικά τμήματα με τα golden ids (ADR-875 §10). Το
+ * `dynamic` ξαναϋπολογίζεται: όσο μένει έστω ένα `ssr-probe`, η σελίδα μένει 🔶.
+ * `golden === null` ⇒ μόνο το `[workspace]` (τα υπόλοιπα μένουν συνθετικά, ορατά).
  */
-function expandForPersonas(routes, personas) {
+function expandForPersonas(routes, personas, golden = null) {
   const out = [];
   for (const route of routes) {
     if (!isWorkspaceRoute(route) || personas.length === 0) {
       out.push(route);
       continue;
     }
-    const rest = route.url.slice(WORKSPACE_ROOT.length);
     for (const persona of personas) {
-      out.push({
-        ...route,
-        url: `/${IDENTITY_CONTRACT.workspacePrefix}/${persona.workspaceSegment}${rest}`,
-        dynamic: rest.split('/').includes(SYNTHETIC_SEGMENT),
-        persona: persona.class,
-      });
+      out.push({ ...route, ...bindWorkspaceRoute(route, persona, golden), persona: persona.class });
     }
   }
   return out;
@@ -227,7 +225,13 @@ async function prepareIdentity(routes, { baseUrl, userAgent, env = process.env }
     }
   }
   const classes = manifest.personas.map((persona) => persona.class).join(', ');
-  return { routes: expandForPersonas(routes, manifest.personas), sessions, failures, notice: `ταυτότητα: ${classes} · project ${manifest.projectId}` };
+  return {
+    routes: expandForPersonas(routes, manifest.personas, manifest.golden),
+    sessions,
+    failures,
+    golden: manifest.golden,
+    notice: `ταυτότητα: ${classes} · project ${manifest.projectId} · golden: ${Object.keys(manifest.golden).length} οντότητες`,
+  };
 }
 
 module.exports = {
@@ -236,6 +240,7 @@ module.exports = {
   MANIFEST_SCHEMA,
   parsePersonaManifest,
   assertHermetic,
+  emulatorIdToken, // ADR-875 §10 — και ο σπορέας golden (ΜΙΑ είσοδος στον emulator, όχι κλώνος)
   mintSession,
   isWorkspaceRoute,
   routeIdOf,

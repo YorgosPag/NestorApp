@@ -304,7 +304,10 @@ function sessionFor(route, options) {
  *    ξανά ανώνυμος χωρίς να το ξέρει (ADR-875 §4).
  */
 function settle(route, result, redirectTarget) {
-  const record = { ...route, route: routeIdOf(route), ...result };
+  // ADR-875 §10 (άγκυρα Γ9) — το `fetchUrl` κουβαλά golden ids και ΥΠΟΓΕΓΡΑΜΜΕΝΑ tokens:
+  //    ΠΟΤΕ δεδομένο. Η εγγραφή ταξιδεύει σε αναφορά → artifact· ίδια αρχή με το cookie.
+  const { fetchUrl: _requestOnly, ...identityOnly } = route;
+  const record = { ...identityOnly, route: routeIdOf(route), ...result };
   const refused = route.persona && result.state === X_STATES.REDIRECTED && typeof redirectTarget === 'string' && isLoginRedirect(redirectTarget);
   if (!refused) return record;
   return { ...record, state: X_STATES.IDENTITY_UNPROVEN, detail: `η εικόνα ΔΕΝ τίμησε τη συνεδρία της κλάσης ${route.persona} (${result.detail})` };
@@ -324,7 +327,8 @@ async function probeRoute(route, options) {
   let response;
   let html;
   try {
-    response = await fetch(`${baseUrl}${route.url}`, {
+    // ADR-875 §10 — `fetchUrl` κουβαλά τα ΠΡΑΓΜΑΤΙΚΑ golden ids· το `url` είναι η σταθερή ταυτότητα.
+    response = await fetch(`${baseUrl}${route.fetchUrl ?? route.url}`, {
       headers: { 'user-agent': userAgent, accept: 'text/html', ...(identity.cookie ? { cookie: identity.cookie } : {}) },
       // 🔑 `manual`, ΠΟΤΕ `follow` — ADR-781 §13. Με `follow` ο χρησμός κρίνει τη
       //    σελίδα ΣΤΟΝ ΠΡΟΟΡΙΣΜΟ και καταγράφει το πόρισμα με το όνομα της
