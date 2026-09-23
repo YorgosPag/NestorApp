@@ -37,6 +37,7 @@ interface Route { file: string; url: string; template: string; dynamic: boolean 
 const ROOT = path.join(__dirname, '..', '..');
 const ENTITIES = GC.GOLDEN_ENTITIES as Record<string, EntitySpec>;
 const TEMPLATES = GC.GOLDEN_TEMPLATES as Record<string, string[]>;
+const PUBLIC = GC.GOLDEN_PUBLIC_TEMPLATES as readonly string[];
 const PERSONA = { class: 'organization:company_admin', email: 'a@b.local', workspaceSegment: 'alpha-techniki' };
 
 const validGolden = (): Record<string, string> =>
@@ -58,9 +59,29 @@ const workspaceDynamicTemplates = (): string[] =>
 // ===========================================================================
 
 describe('Γ — ο κατάλογος golden απέναντι στο src/', () => {
-  test('Γ1 — ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα /o του enumerateRoutes: κανένα άκριτο, κανένα μπαγιάτικο', () => {
-    expect(Object.keys(TEMPLATES).sort()).toEqual(workspaceDynamicTemplates());
+  test('Γ1 — ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα /o του enumerateRoutes + οι δημόσιες πόρτες: κανένα άκριτο, κανένα μπαγιάτικο', () => {
+    expect(Object.keys(TEMPLATES).sort()).toEqual([...workspaceDynamicTemplates(), ...PUBLIC].sort());
     expect(() => GB.assertCatalogMatchesRoutes(O.enumerateRoutes(ROOT))).not.toThrow();
+  });
+
+  test('Γ1γ — ADR-876: οι δημόσιες πόρτες με token είναι ΕΚΤΟΣ χώρου και κρίνονται ΑΝΩΝΥΜΑ', () => {
+    // 🔴 Η άγκυρα του ευρήματος: η πύλη προμηθευτή και το check-in ζούσαν στο `/o/[workspace]`
+    //    και ο χρησμός τα έκρινε με συνεδρία μέλους — θεατή που ο παραλήπτης ΔΕΝ είναι ποτέ.
+    expect([...PUBLIC].sort()).toEqual(['/attendance/check-in/[token]', '/vendor/quote/[token]']);
+    const expanded = ID.expandForPersonas(
+      (O.enumerateRoutes(ROOT) as Route[]).filter((route) => PUBLIC.includes(route.template)),
+      [PERSONA],
+      validGolden(),
+    ) as Array<Route & { persona?: string; fetchUrl?: string }>;
+    expect(expanded.map((route) => [route.url, route.persona, route.dynamic])).toEqual([
+      ['/attendance/check-in/golden-attendanceToken', undefined, false],
+      ['/vendor/quote/golden-vendorToken', undefined, false],
+    ]);
+    expect(expanded.every((route) => !route.fetchUrl?.includes('golden-'))).toBe(true);
+  });
+
+  test('Γ1δ — `[workspace]` χωρίς persona ⇒ άρνηση (δημόσια πόρτα δεν ζει σε χώρο)', () => {
+    expect(() => GB.bindRoute({ template: '/o/[workspace]/projects/[id]' }, null, validGolden())).toThrow(/χωρίς persona/);
   });
 
   test('Γ1β — κάθε πρότυπο δίνει ΜΙΑ οντότητα ανά δυναμικό τμήμα, και μόνο γνωστές οντότητες', () => {
@@ -138,7 +159,7 @@ describe('Γ — manifest golden + δέσιμο', () => {
   test('Γ4 — ΟΛΑ τα τμήματα γεμάτα ⇒ dynamic:false· ταυτότητα ΣΤΑΘΕΡΗ, αίτημα με τα ΠΡΑΓΜΑΤΙΚΑ ids', () => {
     const golden = validGolden();
     const route = { file: 'x', url: 'x', template: '/o/[workspace]/projects/[id]/procurement/po/[poId]', dynamic: true };
-    const bound = GB.bindWorkspaceRoute(route, PERSONA, golden);
+    const bound = GB.bindRoute(route, PERSONA, golden);
     expect(bound).toEqual({
       url: '/o/alpha-techniki/projects/golden-project/procurement/po/golden-purchaseOrder',
       fetchUrl: `/o/alpha-techniki/projects/${golden.project}/procurement/po/${golden.purchaseOrder}`,
@@ -148,7 +169,7 @@ describe('Γ — manifest golden + δέσιμο', () => {
 
   test('Γ4β — πρότυπο ΕΚΤΟΣ καταλόγου ⇒ μένει ssr-probe και 🔶 (φαίνεται, δεν κρύβεται)', () => {
     const route = { file: 'x', url: 'x', template: '/o/[workspace]/nowhere/[id]', dynamic: true };
-    expect(GB.bindWorkspaceRoute(route, PERSONA, validGolden())).toMatchObject({ url: '/o/alpha-techniki/nowhere/ssr-probe', dynamic: true });
+    expect(GB.bindRoute(route, PERSONA, validGolden())).toMatchObject({ url: '/o/alpha-techniki/nowhere/ssr-probe', dynamic: true });
   });
 
   test('Γ4γ — μπαγιάτικος κατάλογος (πρότυπο που δεν υπάρχει) ⇒ άρνηση', () => {
@@ -165,7 +186,7 @@ describe('Γ — manifest golden + δέσιμο', () => {
   test('Γ9 — ο probe ΖΗΤΑ το fetchUrl (πραγματικά ids) αλλά ΚΑΤΑΓΡΑΦΕΙ τη σταθερή ταυτότητα', async () => {
     const golden = validGolden();
     const template = '/o/[workspace]/procurement/rfqs/[id]';
-    const route = { file: 'x', url: 'x', template, dynamic: true, withheld: null, persona: PERSONA.class, ...GB.bindWorkspaceRoute({ template }, PERSONA, golden) };
+    const route = { file: 'x', url: 'x', template, dynamic: true, withheld: null, persona: PERSONA.class, ...GB.bindRoute({ template }, PERSONA, golden) };
     const requested: string[] = [];
     const record = await withServer(
       (request: IncomingMessage, response: ServerResponse) => {
@@ -280,7 +301,7 @@ describe('Γ6 — ό,τι διαβάζει ο SERVER σπέρνεται από �
       expect.arrayContaining([
         'src/app/(app)/o/[workspace]/projects/[id]/procurement/layout.tsx#id',
         'src/app/(app)/o/[workspace]/procurement/purchase-orders/[id]/page.tsx#id',
-        'src/app/(app)/o/[workspace]/vendor/quote/[token]/page.tsx#token',
+        'src/app/(auth)/vendor/quote/[token]/page.tsx#token',
       ]),
     );
   });

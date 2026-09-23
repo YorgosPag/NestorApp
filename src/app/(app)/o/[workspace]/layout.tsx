@@ -54,7 +54,7 @@ import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { readPageIdentity } from '@/server/auth/page-identity';
 import { workspacePath } from '@/lib/workspace/workspace-path';
 import { redirect } from '@/lib/workspace/server-navigation';
-import { AUTH_ROUTES } from '@/lib/routes';
+import { loginHrefForRequest } from '@/server/auth/login-return';
 import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 
 interface WorkspaceLayoutProps {
@@ -73,7 +73,9 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     //    γραφείο. Η απάντηση είναι η ίδια, και δεν αγγίζουμε τη βάση.
     // ⚠️ Από το σύνορο του διακομιστή, ΚΑΙ ΕΔΩ: η σύνδεση μένει ωμή επειδή το λέει ο
     //    κριτής (`OUTSIDE_WORKSPACE`), όχι επειδή το θυμήθηκε ο καλών (ADR-875 §11).
-    redirect(AUTH_ROUTES.login, workspace);
+    // 🔑 ADR-875 §14 — ΜΕ ΕΠΙΣΤΡΟΦΗ: ο σελιδοδείκτης γυρνά εδώ μετά τη σύνδεση, όχι στο
+    //    ταμπλό (ADR-848). Το layout δεν βλέπει τη διαδρομή· τη φέρνει το middleware.
+    redirect(await loginHrefForRequest(), workspace);
   }
 
   const resolution = await resolveWorkspaceFromPath(

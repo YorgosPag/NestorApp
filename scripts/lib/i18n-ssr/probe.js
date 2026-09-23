@@ -398,5 +398,9 @@ module.exports = {
   classifySurface,
   normaliseRedirectTarget,
   redirectDetail,
+  // ADR-875 §14 — ο δίδυμος (`guard-contract.js`) γράφει με την ΙΔΙΑ μορφή εγγραφής
+  //    και διαβάζει τον ΙΔΙΟ δείκτη DOM: δεύτερο αντίγραφο θα ήταν το σχήμα του ADR-749.
+  softRedirectOf,
+  settle,
   probeRoute,
 };

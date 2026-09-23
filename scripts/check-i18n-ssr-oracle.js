@@ -108,6 +108,8 @@ const { runSetRatchetCli } = require('./lib/ratchet-baseline');
 const { countedBudgets } = require('./lib/i18n-ssr/counted-budget');
 const { prepareIdentity, routeIdOf } = require('./lib/i18n-ssr/identity');
 const { maskGoldenIds, assertCatalogMatchesRoutes } = require('./lib/i18n-ssr/golden-bindings');
+const { G_STATES, G_ZERO_TOLERANCE, G_RATCHETED, assertClosedGuard } = require('./lib/i18n-ssr/states');
+const { guardTwinsOf, assertTwinCoverage, probeGuard } = require('./lib/i18n-ssr/guard-contract');
 
 const CHECK = 'CHECK 3.51 Χ (ADR-781)';
 const BS = String.fromCharCode(92);
@@ -170,7 +172,7 @@ function toViolations(records) {
       for (const hit of record.keys) {
         out.push({ file: record.file, line: record.route, state: `raw-key/${hit.surface}`, detail: hit.key });
       }
-    } else if (O.X_RATCHETED.includes(record.state)) {
+    } else if (O.X_RATCHETED.includes(record.state) || G_RATCHETED.includes(record.state)) {
       out.push({ file: record.file, line: record.route, state: record.state, detail: record.detail || '—' });
     }
   }
@@ -183,8 +185,8 @@ function toViolations(records) {
  * βλάβη, αν έμπαινε στο ✅ θα διαβαζόταν ως απόδειξη. Δεν είναι κανένα από τα δύο.
  */
 function stateBadge(state) {
-  if (O.X_ZERO_TOLERANCE.includes(state)) return '⛔';
-  if (O.X_RATCHETED.includes(state)) return '🔴';
+  if (O.X_ZERO_TOLERANCE.includes(state) || G_ZERO_TOLERANCE.includes(state)) return '⛔';
+  if (O.X_RATCHETED.includes(state) || G_RATCHETED.includes(state)) return '🔴';
   if (O.X_COUNTED.includes(state)) return '🔶';
   return '✅';
 }
@@ -217,7 +219,7 @@ function buildOracleInputs() {
 }
 
 /** Η σάρωση, με ζωντανή πρόοδο ανά διαδρομή (η μόνη ορατότητα σε ένα CI job). */
-function sweepRoutes(selected, universe, controls, identity, verbose) {
+function sweepRoutes(selected, universe, controls, identity, verbose, probe = O.probeRoute) {
   return O.sweep(selected, {
     baseUrl: baseUrl(),
     userAgent: USER_AGENT,
@@ -234,7 +236,22 @@ function sweepRoutes(selected, universe, controls, identity, verbose) {
           process.stderr.write(`${DIM}  [${String(done).padStart(3)}/${total}] ${stateBadge(record.state)} ${record.route} ${record.state}${record.keys.length ? ` (${record.keys.length})` : ''}${NC}\n`);
         }
       : undefined,
-  });
+  }, probe);
+}
+
+/**
+ * Φ — Ο ΔΙΔΥΜΟΣ (ADR-875 §14): κάθε `/o/**` ξανά, **χωρίς** συνεδρία. Χωριστή λογιστική —
+ * ΟΧΙ `declarations`, ώστε να μη φουσκώσει ο παρονομαστής του ταβανιού (βλ. `G_STATES`).
+ */
+async function measureGuard(enumerated, routes, run) {
+  const twins = guardTwinsOf(enumerated, routes);
+  assertTwinCoverage(twins, enumerated);
+  const records = await run(twins);
+  const census = assertClosedGuard(records);
+  // Ορατό ΚΑΙ σε πράσινο run: αλλιώς ο δίδυμος υπάρχει μόνο στο `--report`, που το CI δεν τρέχει.
+  const counts = Object.entries(census).map(([state, count]) => `${stateBadge(state)} ${state} ${count}`).join(' · ');
+  process.stderr.write(`  Φ ο δίδυμος: ${records.length} ανώνυμες κρίσεις /o/** — ${counts}\n`);
+  return { records, census };
 }
 
 async function measure(args) {
@@ -253,13 +270,18 @@ async function measure(args) {
   const { universe, controls } = buildOracleInputs();
 
   const only = args.find((arg) => arg.startsWith('--only='));
-  const selected = only ? routes.filter((route) => route.url.includes(only.slice('--only='.length))) : routes;
+  const matches = only ? (route) => route.url.includes(only.slice('--only='.length)) : () => true;
+  const selected = routes.filter(matches);
   const skipped = routes.filter((route) => !selected.includes(route));
 
   // ADR-875 §10 — τα golden ids αλλάζουν ανά run (τυχαία ids, tokens που λήγουν): κανένα
   //    `detail` δεν τα κρατά, αλλιώς π.χ. ο στόχος `?projectId=proj_…` θα ήταν «νέα» ταυτότητα.
-  const records = (await sweepRoutes(selected, universe, controls, identity, !args.includes('--quiet')))
-    .map((record) => ({ ...record, detail: maskGoldenIds(record.detail, identity.golden) }));
+  //    ⚠️ Και στον δίδυμο: το `?next=` ενός 🔴 κουβαλά την ΠΡΑΓΜΑΤΙΚΗ διαδρομή.
+  const verbose = !args.includes('--quiet');
+  const masked = (record) => ({ ...record, detail: maskGoldenIds(record.detail, identity.golden) });
+  const records = (await sweepRoutes(selected, universe, controls, identity, verbose)).map(masked);
+  const guard = await measureGuard(enumerated.filter(matches), routes, async (twins) =>
+    (await sweepRoutes(twins, universe, controls, identity, verbose, probeGuard)).map(masked));
 
   // ⚠️ Καμία σιωπηλή δειγματοληψία: ό,τι δεν χτυπήθηκε μπαίνει ΡΗΤΑ και
   // ratchet-άρεται — μια κάλυψη που συρρικνώνεται πρέπει να φαίνεται.
@@ -273,11 +295,13 @@ async function measure(args) {
   //    έχτιζαν ΔΥΟ βρόχοι με διαφορετικό κριτήριο, και το `route-skipped`
   //    έβγαζε ταυτότητα που καμία λεπτομέρεια δεν αντιστοιχούσε — δηλαδή το
   //    σχήμα του ADR-749 σε μικρογραφία, μέσα στην ίδια συνάρτηση.
-  const violations = toViolations(records);
+  const violations = toViolations(records.concat(guard.records));
 
   return {
     records,
     census,
+    guardRecords: guard.records,
+    guardCensus: guard.census,
     routes,
     identityNotice: identity.notice,
     controlSizes: { shell: controls.shell.size, page: controls.page.size, corpus: controls.corpus },
@@ -288,12 +312,22 @@ async function measure(args) {
 }
 
 /** ⛔ Οι zero-tolerance καταστάσεις ΔΕΝ γράφονται ΠΟΤΕ σε baseline. */
+/**
+ * ⛔ Χ **και** Φ, μία λίστα — ΜΙΑ πηγή για τη σπορά (`assertNoZeroTolerance`) ΚΑΙ για τη
+ * σύγκριση (`DESCRIPTOR.refusals`, ADR-875 §14.4). Ένα `guard-not-honored` είναι διαρροή
+ * ιδιωτικού χώρου: δεν γίνεται να μπλοκάρει μόνο όταν κάποιος ξανασπέρνει.
+ */
+function zeroToleranceLines(measured) {
+  const offenders = measured.records.filter((record) => O.X_ZERO_TOLERANCE.includes(record.state))
+    .concat((measured.guardRecords || []).filter((record) => G_ZERO_TOLERANCE.includes(record.state)));
+  return offenders.map((record) => `${record.state.padEnd(18)} ${record.route}  ${record.detail || ''}`);
+}
+
 function assertNoZeroTolerance(measured) {
-  const offenders = measured.records.filter((record) => O.X_ZERO_TOLERANCE.includes(record.state));
-  if (offenders.length === 0) return;
-  const lines = offenders.map((record) => `      ${record.state.padEnd(18)} ${record.route}  ${record.detail || ''}`);
+  const lines = zeroToleranceLines(measured).map((line) => `      ${line}`);
+  if (lines.length === 0) return;
   throw new Error(
-    `${offenders.length} διαδρομή/ές που ο χρησμός ΔΕΝ απέδειξε ότι κοίταξε — αυτό δεν είναι «καθαρό», είναι «δεν ξέρω»:\n${lines.join('\n')}\n` +
+    `${lines.length} διαδρομή/ές ΜΗΔΕΝΙΚΗΣ ΑΝΟΧΗΣ — ο χρησμός ΔΕΝ απέδειξε ότι κοίταξε («δεν ξέρω»), ή διαρροή ιδιωτικού χώρου στον ανώνυμο:\n${lines.join('\n')}\n` +
     '      Αυτές οι καταστάσεις ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline.'
   );
 }
@@ -327,6 +361,15 @@ function printReport(measured) {
   // Οι κάδοι τυπώνονται ΑΚΟΜΑ ΚΑΙ ΣΤΟ ΜΗΔΕΝ (μάθημα CHECK 3.48 Κ6).
   for (const [state, count] of Object.entries(measured.census)) {
     console.log(`    ${mark(state)} ${state.padEnd(20)}${String(count).padStart(6)}`);
+  }
+  // Φ — ο δίδυμος (ADR-875 §14): ΧΩΡΙΣΤΗ λογιστική, τυπωμένη ΚΑΙ στο μηδέν (CHECK 3.48 Κ6).
+  const twins = measured.guardRecords || [];
+  console.log(`\n  Φ ο δίδυμος — ${twins.length} ανώνυμες κρίσεις ιδιωτικού χώρου (μία ανά /o/**, χωρίς συνεδρία):`);
+  for (const [state, count] of Object.entries(measured.guardCensus || {})) {
+    console.log(`    ${mark(state)} ${state.padEnd(26)}${String(count).padStart(6)}`);
+  }
+  for (const record of twins.filter((twin) => twin.state !== G_STATES.HONORED)) {
+    console.log(`      ${mark(record.state)} ${record.route}  ${DIM}${record.detail || ''}${NC}`);
   }
   console.log(`\n  ωμά κλειδιά ανά διαδρομή:`);
   const dirty = measured.records.filter((record) => record.keys.length > 0).sort((a, b) => b.keys.length - a.keys.length);
@@ -377,6 +420,8 @@ const DESCRIPTOR = {
   violationId: VIOLATION_ID,
   // 🔶 ADR-781 §15 — ο αριθμός του `by_state` αποκτά αναγνώστη (πολιτική + ratchet).
   budgets: countedBudgets,
+  // ⛔ ADR-875 §14.4 — μηδενική ανοχή ΚΑΙ στη σύγκριση, όχι μόνο στη σπορά.
+  refusals: zeroToleranceLines,
   labels: { violations: 'ευρήματα στο SSR HTML', declarations: 'διαδρομές' },
   messages: {
     worse: 'ο server στέλνει ωμό i18n κλειδί εκεί που δεν το έστελνε',

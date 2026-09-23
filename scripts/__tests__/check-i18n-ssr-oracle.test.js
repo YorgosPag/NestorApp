@@ -662,8 +662,9 @@ describe('Β — 🔶 οι κάδοι που δεν κρίνονται ΕΧΟΥ�
   });
 
   test('Β7 — 🔴→🔶 που μοιάζει με «πρόοδο»: ίδιες διαδρομές, +1 🔶 ⇒ το ratchet κοκκινίζει', () => {
-    const baseline = { by_state: fullCensus({ 'surface-synthetic-id': 21, 'route-redirected': 112, clean: 61 }), declaration_count: 194 };
-    const measured = { census: fullCensus({ 'surface-synthetic-id': 22, 'route-redirected': 111, clean: 61 }), declarations: routes(194) };
+    // ⚠️ Κάτω από το ταβάνι της πολιτικής (7% × 304 = 21), ώστε να κοκκινίζει ΜΟΝΟ το ratchet.
+    const baseline = { by_state: fullCensus({ 'surface-synthetic-id': 10, 'route-redirected': 233, clean: 61 }), declaration_count: 304 };
+    const measured = { census: fullCensus({ 'surface-synthetic-id': 11, 'route-redirected': 232, clean: 61 }), declarations: routes(304) };
     const over = B.countedBudgets(measured, baseline).filter((b) => b.current > b.ceiling);
     expect(over.map((b) => b.id)).toEqual(['surface-synthetic-id · ratchet']);
   });
@@ -680,6 +681,16 @@ describe('Β — 🔶 οι κάδοι που δεν κρίνονται ΕΧΟΥ�
       .toThrow(/άγνωστη κατάσταση "φάντασμα"/);
     expect(() => B.readBaselineCensus({ by_state: fullCensus({ clean: 3 }), declaration_count: 4 })).toThrow(/3 ≠ 4/);
     expect(() => B.readBaselineCensus({ declaration_count: 4 })).toThrow(/by_state/);
+  });
+
+  test('Β12 — ΤΟ ΤΑΒΑΝΙ ΕΙΝΑΙ Η ΜΕΤΡΗΣΗ (ADR-875 §13): 21/304 χωρά, 22/304 ΚΟΚΚΙΝΙΖΕΙ ακόμα και στη σπορά', () => {
+    // Run 35903809402 · εικόνα main-2aa205e · μετά τα golden δεδομένα.
+    const seeded = { census: fullCensus({ 'surface-synthetic-id': 21, clean: 283 }), declarations: routes(304) };
+    expect(B.countedBudgets(seeded, null).filter((b) => b.current > b.ceiling)).toEqual([]);
+    const plusOne = { census: fullCensus({ 'surface-synthetic-id': 22, clean: 282 }), declarations: routes(304) };
+    expect(B.countedBudgets(plusOne, null).filter((b) => b.current > b.ceiling).map((b) => b.id)).toEqual([
+      'surface-synthetic-id · πολιτική',
+    ]);
   });
 
   test('Β10 — η πύλη ΟΝΤΩΣ ρωτά τον προϋπολογισμό (όχι σχόλιο)', () => {

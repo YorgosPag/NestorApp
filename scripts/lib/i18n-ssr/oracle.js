@@ -201,7 +201,11 @@ function violationId(record, hit) {
  * υπόλοιπες μπαίνουν ρητά ως `route-skipped` και **ratchet-άρονται** — μια
  * κάλυψη που συρρικνώνεται πρέπει να φαίνεται.
  */
-async function sweep(routes, options) {
+/**
+ * @param {Function} [probe] το χτύπημα ΜΙΑΣ διαδρομής — προεπιλογή ο Χ (`probeRoute`)· ο
+ *   δίδυμος (ADR-875 §14) περνά το `probeGuard`. ΜΙΑ δεξαμενή εργατών, όχι δεύτερη.
+ */
+async function sweep(routes, options, probe = probeRoute) {
   const { concurrency = 2, onProgress } = options;
   const results = new Array(routes.length);
   let cursor = 0;
@@ -211,7 +215,7 @@ async function sweep(routes, options) {
       const index = cursor;
       cursor += 1;
       if (index >= routes.length) return;
-      results[index] = await probeRoute(routes[index], options);
+      results[index] = await probe(routes[index], options);
       if (onProgress) onProgress(results[index], index + 1, routes.length);
     }
   };

@@ -61,11 +61,14 @@ function assertCatalogMatchesRoutes(routes) {
 }
 
 /**
- * Γεμίζει ΚΑΘΕ δυναμικό τμήμα μετά το `[workspace]` από τον κατάλογο. Πρότυπο εκτός
- * καταλόγου ⇒ τα τμήματά του μένουν `ssr-probe` και η διαδρομή μένει 🔶 — **φαίνεται**
- * (ratchet + ταβάνι), δεν κρύβεται.
+ * Γεμίζει ΚΑΘΕ δυναμικό τμήμα από τον κατάλογο — το `[workspace]` από τον χώρο του persona,
+ * τα υπόλοιπα από τα golden ids. Πρότυπο εκτός καταλόγου ⇒ τα τμήματά του μένουν
+ * `ssr-probe` και η διαδρομή μένει 🔶 — **φαίνεται** (ratchet + ταβάνι), δεν κρύβεται.
+ *
+ * `persona === null` ⇒ **δημόσια πόρτα** (ADR-876): δένεται ανώνυμα. Αν το πρότυπο έχει
+ * `[workspace]` χωρίς persona, είναι σφάλμα του καλούντος — fail-closed, ποτέ κενό τμήμα.
  */
-function bindWorkspaceRoute(route, persona, golden) {
+function bindRoute(route, persona, golden) {
   const segments = route.template.split('/');
   // Χωρίς golden (τοπικά, ή manifest μόνο ταυτότητας σε τεστ): μόνο το `[workspace]` γεμίζει.
   const bound = golden ? GOLDEN_TEMPLATES[route.template] || null : null;
@@ -74,6 +77,7 @@ function bindWorkspaceRoute(route, persona, golden) {
   const request = [];
   for (const segment of segments) {
     if (segment === '[workspace]') {
+      if (!persona) fail(`${route.template}: \`[workspace]\` χωρίς persona — δημόσια πόρτα δεν ζει σε χώρο`);
       identity.push(persona.workspaceSegment);
       request.push(persona.workspaceSegment);
     } else if (segment.startsWith('[')) {
@@ -108,6 +112,6 @@ function maskGoldenIds(text, golden) {
 module.exports = {
   parseGolden,
   assertCatalogMatchesRoutes,
-  bindWorkspaceRoute,
+  bindRoute,
   maskGoldenIds,
 };

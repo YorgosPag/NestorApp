@@ -328,6 +328,26 @@ function budgetsBreached(descriptor, measured, baseline) {
   return true;
 }
 
+/**
+ * ⛔ ΑΡΝΗΣΕΙΣ ΜΗΔΕΝΙΚΗΣ ΑΝΟΧΗΣ (ADR-875 §14.4) — προαιρετικό `descriptor.refusals(measured)`
+ * → `string[]`. Ισχύει **ΚΑΙ** στη σύγκριση, όχι μόνο στη σπορά.
+ *
+ * 🔴 Το κενό που κλείνει (μετρημένο στον κώδικα 2026-09-23): οι ⛔ καταστάσεις του CHECK 3.51
+ * δεν είναι ούτε `violations` ούτε `declarations`, και η σύγκριση κοιτά **μόνο** αυτά τα δύο.
+ * Άρα μια διαδρομή που γινόταν `route-unreachable` **έχανε** τα ευρήματά της και η πύλη
+ * περνούσε — με ανακοίνωση «προόδου». Το «μηδενική ανοχή» ίσχυε μόνο στο `--write-baseline`.
+ *
+ * @returns {boolean} `true` αν υπάρχει άρνηση (ήδη τυπωμένη)
+ */
+function zeroToleranceRefused(descriptor, measured) {
+  if (typeof descriptor.refusals !== 'function') return false;
+  const lines = descriptor.refusals(measured);
+  if (lines.length === 0) return false;
+  console.error(`❌ ${descriptor.adr} — ${lines.length} κατάσταση/εις ΜΗΔΕΝΙΚΗΣ ΑΝΟΧΗΣ (ΠΟΤΕ σε baseline)\n`);
+  for (const line of lines) console.error(`   ⛔ ${line}`);
+  return true;
+}
+
 async function runSetRatchetCli(descriptor, argv = process.argv) {
   if (descriptor.skipEnv && process.env[descriptor.skipEnv]) return process.exit(0);
   const args = argv.slice(2);
@@ -348,7 +368,7 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
   }
 
   if (args.includes('--write-baseline')) {
-    if (budgetsBreached(descriptor, measured, null)) {
+    if (zeroToleranceRefused(descriptor, measured) || budgetsBreached(descriptor, measured, null)) {
       // ADR-875 §9 — η άρνηση δείχνει ΤΙ αρνήθηκε, από την ΙΔΙΑ μέτρηση (καμία δεύτερη σάρωση).
       //    Χωρίς αυτό, ό,τι μετρήθηκε χανόταν: στο CI έμενε μόνο «67 > 60», και τα ωμά κλειδιά
       //    των νέων διαδρομών δεν τα έβλεπε κανείς.
@@ -369,6 +389,12 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
     console.error(`❌ ${descriptor.adr} — baseline ${why}: ${rel(file)}`);
     console.error(`   Δημιούργησε: ${descriptor.commands.seed}`);
     return process.exit(1); // fail-closed: χαλασμένη baseline ΠΟΤΕ δεν διαβάζεται ως «0»
+  }
+
+  // ⛔ ΠΡΙΝ από τη σύγκριση: μια ⛔ δεν είναι «λιγότερα ευρήματα», είναι «δεν ξέρω / διαρροή».
+  if (zeroToleranceRefused(descriptor, measured)) {
+    console.error(`\n   Αναφορά: ${descriptor.commands.report}`);
+    return process.exit(1);
   }
 
   const v = compareSets(measured.violationIds, baseline.violations);

@@ -118,15 +118,57 @@ const X_COUNTED = Object.freeze([X_STATES.SYNTHETIC_ID, X_STATES.WITHHELD]);
  *     Lighthouse CI `budget.json`) — ισχύει ΚΑΙ στο `--write-baseline`.
  *
  * `null` = ρητά χωρίς ταβάνι, με λόγο. ⚠️ Κλειστό: κάθε `X_COUNTED` έχει γραμμή (άγκυρα Β3).
- *   - `surface-synthetic-id` 20%: ιστορικά αποδεκτό 18,8% (29/154) πριν το ADR-787· το 68%
- *     θα είχε κοκκινίσει. Σφίγγεται μόνο με απόφαση του Giorgio.
+ *   - `surface-synthetic-id` **7%** (ADR-875 §13, απόφαση Giorgio): **μετρημένο** 21/304 = 6,9%
+ *     στο run `35903809402` (εικόνα `main-2aa205e`), μετά τα golden δεδομένα (§10). Το
+ *     `floor(0,07 × 304) = 21` ⇒ χωρά ΑΚΡΙΒΩΣ η σημερινή μέτρηση· ένα ακόμα 🔶 κοκκινίζει ΚΑΙ
+ *     στη σπορά. Ιστορικό: 20% (18,8% = 29/154 πριν το ADR-787· το 68% θα είχε κοκκινίσει).
+ *     Σφίγγεται ξανά μόνο με νέα μέτρηση και απόφαση του Giorgio — ΠΟΤΕ δεν χαλαρώνει για να περάσει σπορά.
  *   - `route-withheld`: `null` — κάθε μέλος του το γράφει άνθρωπος στο `.i18n-ssr-served.json`,
  *     άρα η αύξησή του είναι ήδη απόφαση· το ratchet έναντι baseline αρκεί.
  */
 const X_COUNTED_CEILING = Object.freeze({
-  [X_STATES.SYNTHETIC_ID]: 0.2,
+  [X_STATES.SYNTHETIC_ID]: 0.07,
   [X_STATES.WITHHELD]: null,
 });
+
+/**
+ * Φ — Ο ΔΙΔΥΜΟΣ: «ο ανώνυμος **δεν** μπαίνει στον ιδιωτικό χώρο» (ADR-875 §14 · ADR-781 §13.7).
+ *
+ * 🔑 **ΔΕΥΤΕΡΗ, ΧΩΡΙΣΤΗ λογιστική — όχι καταστάσεις του Χ** (απόφαση σχεδίου, §14.2): ο Χ
+ * απαντά «τι **ζωγράφισε** η σελίδα;», ο Φ «**άνοιξε** καθόλου η πόρτα;». Ένα ανώνυμο
+ * χτύπημα δεν κρίνει επιφάνεια, άρα αν έμπαινε στις `declarations` θα φούσκωνε τον
+ * παρονομαστή του `X_COUNTED_CEILING` (304 → ~414) και θα **χαλάρωνε σιωπηλά** το 7%
+ * (21 → 28 ανεκτά 🔶) — η σπορά θα ενέκρινε τον εαυτό της από άλλη πόρτα (§15.1).
+ * Πρότυπο Autorize (Burp): η ανώνυμη επανάληψη είναι **στήλη** δίπλα σε κάθε αίτημα
+ * (Enforced / Bypassed / Is enforced???), όχι νέα γραμμή στον χάρτη του ιστότοπου.
+ *
+ * ⚠️ Η κάλυψη ΔΕΝ δηλώνεται — **παράγεται**: ένας δίδυμος ανά `/o/**` της ίδιας
+ *    απογραφής, και ο `assertTwinCoverage` πετά αν λείπει έστω ένας («0» = «κανείς δεν
+ *    κοίταξε», όχι «καθαρό»). Μια νέα διαδρομή χώρου μπλοκάρει ήδη από τη **δήλωσή** της στον Χ.
+ */
+const G_STATES = Object.freeze({
+  /** ✅ ανακατεύθυνση στη σύνδεση **με** επιστροφή στη διαδρομή που ζητήθηκε. */
+  HONORED: 'guard-honored',
+  /** 🔴 στη σύνδεση, αλλά χωρίς (σωστό) `?next=` — πεπτωκός σύνδεσμος (ADR-848). */
+  RETURN_LOST: 'guard-return-lost',
+  /** 🔴 ανακατεύθυνση **αλλού** — ο φρουρός απάντησε κάτι άλλο από «ποιος είσαι;». */
+  REDIRECTED_ELSEWHERE: 'guard-redirected-elsewhere',
+  /** ⛔ 2xx **χωρίς** ανακατεύθυνση: ο ιδιωτικός χώρος σερβιρίστηκε σε ανώνυμο. */
+  NOT_HONORED: 'guard-not-honored',
+  /** ⛔ δεν μπορέσαμε να δούμε τι απάντησε ο φρουρός (Autorize «Is enforced???»). */
+  UNPROVEN: 'guard-unproven',
+});
+
+/** ⛔ ΠΟΤΕ σε baseline — διαρροή ιδιωτικού χώρου, ή «δεν ξέρω» για το αν διέρρευσε. */
+const G_ZERO_TOLERANCE = Object.freeze([G_STATES.NOT_HONORED, G_STATES.UNPROVEN]);
+
+/** 🔴 ratchet κατά ταυτότητα `διαδρομή@anonymous|κατάσταση|προορισμός`. */
+const G_RATCHETED = Object.freeze([G_STATES.RETURN_LOST, G_STATES.REDIRECTED_ELSEWHERE]);
+
+/** Κλειστή λογιστική του Φ — η ΙΔΙΑ υλοποίηση με τον Χ. */
+function assertClosedGuard(records) {
+  return assertClosedLedger('Φ', G_STATES, records, (record) => `δίδυμος ${record.route}`);
+}
 
 /** Το τμήμα που μπαίνει στη θέση ενός `[param]`. Σκόπιμα αναγνωρίσιμο στα logs. */
 const SYNTHETIC_SEGMENT = 'ssr-probe';
@@ -144,4 +186,8 @@ module.exports = {
   X_COUNTED_CEILING,
   SYNTHETIC_SEGMENT,
   assertClosedX,
+  G_STATES,
+  G_ZERO_TOLERANCE,
+  G_RATCHETED,
+  assertClosedGuard,
 };

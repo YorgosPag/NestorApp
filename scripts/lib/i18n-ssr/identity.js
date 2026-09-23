@@ -33,7 +33,8 @@
 const fs = require('node:fs');
 
 const { SYNTHETIC_SEGMENT } = require('./states');
-const { parseGolden, bindWorkspaceRoute } = require('./golden-bindings');
+const { parseGolden, bindRoute } = require('./golden-bindings');
+const { GOLDEN_PUBLIC_TEMPLATES } = require('./golden-catalog');
 
 /** Αντίγραφα αυθεντιών — ΕΛΕΓΧΟΝΤΑΙ στην άγκυρα Τ1, ποτέ θέμα εμπιστοσύνης. */
 const IDENTITY_CONTRACT = Object.freeze({
@@ -45,7 +46,15 @@ const IDENTITY_CONTRACT = Object.freeze({
   sessionCookie: '__session',
   /** `src/app/api/auth/session/route.ts` — η πόρτα σύνδεσης της εικόνας */
   sessionEndpoint: '/api/auth/session',
+  /** `RETURN_PATH_PARAM` — `src/lib/routes/return-path.ts` (ADR-848· ο δίδυμος, ADR-875 §14) */
+  returnParam: 'next',
 });
+
+/**
+ * Η «κλάση» του δίδυμου (ADR-875 §14): **καμία** συνεδρία. Ζει ΜΟΝΟ στην ταυτότητα
+ * (`διαδρομή@anonymous`) — ποτέ ως `persona`, που θα ζητούσε cookie από το `sessions`.
+ */
+const ANONYMOUS_AUDIENCE = 'anonymous';
 
 // v2 (ADR-875 §10): + `golden` — ΥΠΟΧΡΕΩΤΙΚΟ, άρα bump και όχι προαιρετικό πεδίο στο v1.
 const MANIFEST_SCHEMA = 'i18n-ssr-personas/v2';
@@ -166,9 +175,13 @@ function isWorkspaceRoute(route) {
   return route.url === WORKSPACE_ROOT || route.url.startsWith(`${WORKSPACE_ROOT}/`);
 }
 
-/** Η ταυτότητα ratchet: η διαδρομή + η κλάση (δύο persona στο ΙΔΙΟ URL είναι δύο γεγονότα). */
+/**
+ * Η ταυτότητα ratchet: η διαδρομή + η κλάση (δύο persona στο ΙΔΙΟ URL είναι δύο γεγονότα).
+ * Ο δίδυμος (`audience`) είναι τρίτο γεγονός στο ίδιο URL — `…@anonymous`.
+ */
 function routeIdOf(route) {
-  return route.persona ? `${route.url}@${route.persona}` : route.url;
+  const who = route.persona || route.audience;
+  return who ? `${route.url}@${who}` : route.url;
 }
 
 /**
@@ -176,16 +189,24 @@ function routeIdOf(route) {
  * χώρο του persona, τα υπόλοιπα δυναμικά τμήματα με τα golden ids (ADR-875 §10). Το
  * `dynamic` ξαναϋπολογίζεται: όσο μένει έστω ένα `ssr-probe`, η σελίδα μένει 🔶.
  * `golden === null` ⇒ μόνο το `[workspace]` (τα υπόλοιπα μένουν συνθετικά, ορατά).
+ *
+ * 🔑 **Δημόσια πόρτα του καταλόγου** (ADR-876, `GOLDEN_PUBLIC_TEMPLATES`) ⇒ ΜΙΑ διαδρομή,
+ * **χωρίς persona**, δεμένη με το πραγματικό token: ο παραλήπτης της δεν έχει λογαριασμό,
+ * άρα κάθε κρίση με συνεδρία θα έκρινε θεατή που δεν υπάρχει.
  */
 function expandForPersonas(routes, personas, golden = null) {
   const out = [];
   for (const route of routes) {
+    if (golden && GOLDEN_PUBLIC_TEMPLATES.includes(route.template)) {
+      out.push({ ...route, ...bindRoute(route, null, golden) });
+      continue;
+    }
     if (!isWorkspaceRoute(route) || personas.length === 0) {
       out.push(route);
       continue;
     }
     for (const persona of personas) {
-      out.push({ ...route, ...bindWorkspaceRoute(route, persona, golden), persona: persona.class });
+      out.push({ ...route, ...bindRoute(route, persona, golden), persona: persona.class });
     }
   }
   return out;
@@ -236,6 +257,7 @@ async function prepareIdentity(routes, { baseUrl, userAgent, env = process.env }
 
 module.exports = {
   IDENTITY_CONTRACT,
+  ANONYMOUS_AUDIENCE,
   IDENTITY_ENV,
   MANIFEST_SCHEMA,
   parsePersonaManifest,

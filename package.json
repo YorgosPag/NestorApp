@@ -423,7 +423,7 @@
     "i18n-ssr:check-full": "node scripts/check-i18n-ssr-raw-keys.js --all",
     "i18n-ssr-oracle:report": "node scripts/check-i18n-ssr-oracle.js --report",
     "i18n-ssr-oracle:baseline": "node scripts/check-i18n-ssr-oracle.js --write-baseline",
-    "test:i18n-ssr": "jest scripts/__tests__/check-i18n-ssr-raw-keys.test.js scripts/__tests__/check-i18n-ssr-oracle.test.js scripts/__tests__/i18n-ssr-identity.test.ts scripts/__tests__/i18n-ssr-golden.test.ts --verbose",
+    "test:i18n-ssr": "jest scripts/__tests__/check-i18n-ssr-raw-keys.test.js scripts/__tests__/check-i18n-ssr-oracle.test.js scripts/__tests__/i18n-ssr-identity.test.ts scripts/__tests__/i18n-ssr-golden.test.ts scripts/__tests__/i18n-ssr-guard-contract.test.js --verbose",
     "zindex-scale:report": "node scripts/check-zindex-scale.js --report",
     "zindex-scale:baseline": "node scripts/check-zindex-scale.js --write-baseline",
     "test:zindex-scale": "jest scripts/__tests__/check-zindex-scale.test.js --verbose",

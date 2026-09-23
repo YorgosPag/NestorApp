@@ -204,9 +204,11 @@ notification-email-render, notification-email-envelope, email-subscription, user
    και one-click εκκρεμούν στο Gmail (ADR-849 §9 #3, Β2–Β4).
 2. 🔶 **Κανένα περπάτημα στον φυλλομετρητή** του `/n` → login → επιστροφή. Η ροή κλειδώνεται από
    άγκυρες ανά κρίκο, **όχι** από ζωντανό πέρασμα.
-3. 🔶 **Το `o/[workspace]/layout.tsx` μένει σε σκέτο `/login`**: ο διακομιστής layout **δεν γνωρίζει**
-   τη διαδρομή του αιτήματος (το middleware δεν την προωθεί). Ο σύνδεσμος του email **δεν**
-   επηρεάζεται — το `/n` ξέρει τη δική του διαδρομή. Το **`ProtectedRoute`** επίσης αμετάβλητο.
+3. ✅ ~~**Το `o/[workspace]/layout.tsx` μένει σε σκέτο `/login`**~~ **Έκλεισε 2026-09-23 (ADR-875 §14.5)**:
+   το middleware προωθεί πλέον τη διαδρομή ως κεφαλίδα αιτήματος (`lib/http/request-path.ts`) και οι φρουροί
+   του διακομιστή ζητούν `loginHrefForRequest()` (`server/auth/login-return.ts`) — layout **και**
+   `procurement/analytics`. Τη μετρά ζωντανά ο δίδυμος του χρησμού (`guard-return-lost`). 🔶 Μένουν οι
+   φρουροί **πελάτη** (`ProtectedRoute` κ.ά., `router.replace(login)`) — `pending-ratchet-work.md`.
 4. 🟡 **Σίγαση ανά τύπο** («όχι email για ταιριάσματα αγγελιών») → **[ADR-849](./ADR-849-notification-preferences-type-by-channel.md)**.
    Α1 (μοντέλο + πύλες server) · Α2 (token/κεφαλίδα/σελίδα, ADR-849 §6α) · Α3 (οθόνη, ADR-849 §6β) ✅ 2026-09-10.
 5. ✅ ~~**Ειδοποίηση άλλου χώρου από τον ενεργό**: ανοίγει στον χώρο της **ταυτότητας**.~~ **Έκλεισε

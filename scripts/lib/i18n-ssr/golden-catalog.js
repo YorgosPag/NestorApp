@@ -54,14 +54,14 @@ const GOLDEN_ENTITIES = Object.freeze({
 });
 
 /**
- * Πρότυπο διαδρομής → οντότητες, **θεσιακά** ανά δυναμικό τμήμα μετά το `[workspace]`.
- * Κλειστό σύνολο: η άγκυρα Γ1 απαιτεί να είναι ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα του
- * `enumerateRoutes` — ούτε ένα λιγότερο (άκριτο), ούτε ένα περισσότερο (μπαγιάτικο).
+ * Πρότυπο διαδρομής → οντότητες, **θεσιακά** ανά δυναμικό τμήμα (πλην του `[workspace]`).
+ * Κλειστό σύνολο: η άγκυρα Γ1 απαιτεί να είναι ΑΚΡΙΒΩΣ τα δυναμικά πρότυπα `/o` του
+ * `enumerateRoutes` **συν** τις δημόσιες πόρτες του {@link GOLDEN_PUBLIC_TEMPLATES} —
+ * ούτε ένα λιγότερο (άκριτο), ούτε ένα περισσότερο (μπαγιάτικο).
  */
 const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/accounting/invoices/[id]/edit': ['invoice'],
   '/o/[workspace]/accounting/reports/[type]': ['reportType'],
-  '/o/[workspace]/attendance/check-in/[token]': ['attendanceToken'],
   '/o/[workspace]/buildings/[id]': ['building'],
   '/o/[workspace]/contacts/[id]': ['contact'],
   '/o/[workspace]/crm/leads/[id]': ['lead'],
@@ -84,8 +84,28 @@ const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/projects/[id]/procurement/rfq/[rfqId]': ['project', 'rfq'],
   '/o/[workspace]/properties/[id]': ['property'],
   '/o/[workspace]/storage/[id]': ['storage'],
-  '/o/[workspace]/vendor/quote/[token]': ['vendorToken'],
+  // ── Δημόσιες πόρτες με υπογεγραμμένο token (ADR-876) — κρίνονται ΑΝΩΝΥΜΑ ──
+  '/attendance/check-in/[token]': ['attendanceToken'],
+  '/vendor/quote/[token]': ['vendorToken'],
 });
+
+/**
+ * 🔑 **ΟΙ ΔΗΜΟΣΙΕΣ ΠΟΡΤΕΣ ΤΟΥ ΚΑΤΑΛΟΓΟΥ** (ADR-876) — πρότυπα ΕΚΤΟΣ `/o`, που ο χρησμός
+ * δένει με πραγματικό token και κρίνει **χωρίς συνεδρία**, όπως τα βλέπει ο παραλήπτης.
+ *
+ * 🔴 **Γιατί υπάρχει**: η πύλη προμηθευτή και το check-in παρουσιών ζούσαν κάτω από το
+ * `/o/[workspace]` (από το `5ff0baa2`) και ο χρησμός τις έκρινε **με συνεδρία μέλους** —
+ * δηλαδή ως άνθρωπο που ο πραγματικός παραλήπτης (προμηθευτής, εργάτης) **δεν είναι ποτέ**.
+ * Πράσινο για τον λάθος θεατή· `/login` για τον σωστό. Μια πόρτα χωρίς λογαριασμό κρίνεται
+ * μόνο ανώνυμα.
+ *
+ * ⚠️ **ΠΑΡΑΓΕΤΑΙ, δεν γράφεται**: μια δεύτερη χειρόγραφη λίστα θα επαναλάμβανε κλειδιά του
+ * `GOLDEN_TEMPLATES` και θα απέκλινε στην πρώτη νέα πόρτα (σχήμα ADR-749). Δημόσιο = κάθε
+ * πρότυπο του καταλόγου που **δεν** ζει κάτω από τον χώρο.
+ */
+const GOLDEN_PUBLIC_TEMPLATES = Object.freeze(
+  Object.keys(GOLDEN_TEMPLATES).filter((template) => !template.startsWith('/o/')),
+);
 
 /**
  * Τα εφήμερα μυστικά που χρειάζεται η εικόνα για να κόψει τα tokens της βαθμίδας `api`.
@@ -109,6 +129,7 @@ module.exports = {
   GOLDEN_TIERS,
   GOLDEN_ENTITIES,
   GOLDEN_TEMPLATES,
+  GOLDEN_PUBLIC_TEMPLATES,
   GOLDEN_EPHEMERAL_SECRETS,
   GOLDEN_VALUES,
   goldenSegment,

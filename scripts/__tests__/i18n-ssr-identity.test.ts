@@ -16,6 +16,7 @@
 
 import { WORKSPACE_PATH_PREFIX } from '@/lib/workspace/workspace-path';
 import { AUTH_ROUTES } from '@/lib/routes/authRoutes';
+import { RETURN_PATH_PARAM } from '@/lib/routes/return-path';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { classifyIdentityClaims } from '@/lib/auth/identity-claims';
 import { PERSONAL_WORKSPACE_SURFACE } from '@/lib/workspace/personal-workspace-surface';
@@ -117,6 +118,8 @@ describe('Τ — ο χρησμός κρατά αντίγραφα αυθεντι�
     expect(ID.IDENTITY_CONTRACT.workspacePrefix).toBe(WORKSPACE_PATH_PREFIX);
     expect(ID.IDENTITY_CONTRACT.loginPath).toBe(AUTH_ROUTES.login);
     expect(ID.IDENTITY_CONTRACT.sessionCookie).toBe(SESSION_COOKIE_CONFIG.NAME);
+    // ADR-875 §14 — ο δίδυμος κρίνει την επιστροφή με το ΙΔΙΟ όνομα που γράφει το `loginHref`.
+    expect(ID.IDENTITY_CONTRACT.returnParam).toBe(RETURN_PATH_PARAM);
     const endpoint = path.join(__dirname, '..', '..', 'src', 'app', ...ID.IDENTITY_CONTRACT.sessionEndpoint.split('/').filter(Boolean), 'route.ts');
     expect(fs.readFileSync(endpoint, 'utf8')).toMatch(/export const POST\b/);
   });

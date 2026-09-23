@@ -31,6 +31,7 @@ import { redirectFromMiddleware } from '@/lib/http/request-origin';
 //    δηλώνει ρητά «no Firestore/Firebase»).
 import { personalWorkspaceLanding } from '@/lib/workspace/personal-workspace-surface';
 import { EMAIL_SUBSCRIPTION_API } from '@/lib/notifications/email-subscription-routes';
+import { withRequestPath } from '@/lib/http/request-path';
 
 // ============================================================================
 // BOT & SCANNER DETECTION
@@ -277,7 +278,11 @@ export function middleware(request: NextRequest) {
   }
 
   // ── 3. Apply security headers + continue ──
-  const response = NextResponse.next();
+  // 🔑 ADR-848 §9 #3 · ADR-875 §14 — η διαδρομή ταξιδεύει ως κεφαλίδα ΑΙΤΗΜΑΤΟΣ, γιατί
+  //    το layout του `/o/[workspace]` δεν τη βλέπει και χωρίς αυτήν ο ανώνυμος χάνει
+  //    την επιστροφή του (`server/auth/login-return.ts`). `set` ⇒ πλαστή τιμή από έξω
+  //    δεν επιβιώνει.
+  const response = NextResponse.next({ request: { headers: withRequestPath(request) } });
 
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);

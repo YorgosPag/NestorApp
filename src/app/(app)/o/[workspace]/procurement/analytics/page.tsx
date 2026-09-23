@@ -13,7 +13,7 @@ import { cookies } from 'next/headers';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
 import { canViewSpendAnalytics } from '@/lib/auth/permissions/spend-analytics';
-import { AUTH_ROUTES } from '@/lib/routes';
+import { loginHrefForRequest } from '@/server/auth/login-return';
 import { redirect } from '@/lib/workspace/server-navigation';
 
 import { AnalyticsPageShell } from './_components/AnalyticsPageShell';
@@ -45,7 +45,8 @@ export default async function SpendAnalyticsPage({ params }: SpendAnalyticsPageP
   const { workspace } = await params;
   const role = await resolveGlobalRole();
 
-  if (role === null) redirect(AUTH_ROUTES.login, workspace);
+  // ADR-875 §14 — ο ΕΝΑΣ τρόπος για σύνδεση από φρουρό διακομιστή: με επιστροφή εδώ.
+  if (role === null) redirect(await loginHrefForRequest(), workspace);
   if (!canViewSpendAnalytics(role)) redirect(FORBIDDEN_REDIRECT, workspace);
 
   return <AnalyticsPageShell />;
