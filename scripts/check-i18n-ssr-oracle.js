@@ -105,6 +105,7 @@ const O = require('./lib/i18n-ssr/oracle');
 const { decorateWithholding, DECLARATIONS } = require('./lib/i18n-ssr/served-surface');
 const { loadBackendContract } = require('./lib/i18n-ssr/backend-contract');
 const { runSetRatchetCli } = require('./lib/ratchet-baseline');
+const { countedBudgets } = require('./lib/i18n-ssr/counted-budget');
 
 const CHECK = 'CHECK 3.51 Χ (ADR-781)';
 const BS = String.fromCharCode(92);
@@ -342,7 +343,12 @@ function printReport(measured) {
   //    σωστός για άλλη ερώτηση, δηλαδή ακριβώς ο τρόπος που παλιώνει ένας αριθμός.
   const unjudged = measured.records.filter((record) => record.state === O.X_STATES.SYNTHETIC_ID);
   console.log(`\n  🔶 επιφάνειες που ΔΕΝ κρίθηκαν: ${unjudged.length} (δυναμικές διαδρομές με συνθετικό «${O.SYNTHETIC_SEGMENT}»)`);
-  console.log(`  ${DIM}(μετριούνται, δεν απαριθμούνται — πρότυπο \`unanalyzable-heritage\`, CHECK 3.44)${NC}\n`);
+  console.log(`  ${DIM}(μετριούνται, δεν απαριθμούνται — πρότυπο \`unanalyzable-heritage\`, CHECK 3.44)${NC}`);
+  // 🔶 …αλλά ΟΧΙ χωρίς ταβάνι (ADR-781 §15): τυπώνεται ΚΑΙ όταν περνά, αλλιώς το ταβάνι είναι αόρατο.
+  for (const budget of countedBudgets(measured, null)) {
+    console.log(`  🔶 ταβάνι ${budget.id}: ${budget.current} / ${budget.ceiling}  ${DIM}(${budget.why})${NC}`);
+  }
+  console.log('');
 }
 
 const DESCRIPTOR = {
@@ -353,6 +359,8 @@ const DESCRIPTOR = {
   buildPayload,
   printReport,
   violationId: VIOLATION_ID,
+  // 🔶 ADR-781 §15 — ο αριθμός του `by_state` αποκτά αναγνώστη (πολιτική + ratchet).
+  budgets: countedBudgets,
   labels: { violations: 'ευρήματα στο SSR HTML', declarations: 'διαδρομές' },
   messages: {
     worse: 'ο server στέλνει ωμό i18n κλειδί εκεί που δεν το έστελνε',

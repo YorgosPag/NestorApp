@@ -638,3 +638,51 @@ describe('Σ — οι μηχανισμοί παρακράτησης, διαβα�
     for (const line of marked) expect(line).toMatch(/\(withheld: (middleware-scanner-path|in-page-production-guard)\)/);
   });
 });
+
+const B = require('../lib/i18n-ssr/counted-budget');
+const ST = require('../lib/i18n-ssr/states');
+
+/** Πλήρες `by_state` (κάθε κατάσταση, ακόμα και στο 0) — όπως το γράφει το `assertClosedX`. */
+function fullCensus(overrides) {
+  const census = {};
+  for (const state of Object.values(ST.X_STATES)) census[state] = 0;
+  return Object.assign(census, overrides);
+}
+const routes = (n) => Array.from({ length: n }, (_, i) => `/r${i}`);
+
+describe('Β — 🔶 οι κάδοι που δεν κρίνονται ΕΧΟΥΝ ταβάνι (ADR-781 §15)', () => {
+  test('Β5 — κλειστό: κάθε `X_COUNTED` έχει ΑΚΡΙΒΩΣ μία γραμμή στο `X_COUNTED_CEILING`', () => {
+    expect(Object.keys(ST.X_COUNTED_CEILING).sort()).toEqual([...ST.X_COUNTED].sort());
+  });
+
+  test('Β6 — το ΣΥΜΒΑΝ του §13: 132/194 ⇒ η πολιτική ΚΟΚΚΙΝΙΖΕΙ ακόμα και στη σπορά', () => {
+    const measured = { census: fullCensus({ 'surface-synthetic-id': 132, clean: 62 }), declarations: routes(194) };
+    const over = B.countedBudgets(measured, null).filter((b) => b.current > b.ceiling);
+    expect(over.map((b) => b.id)).toEqual(['surface-synthetic-id · πολιτική']);
+  });
+
+  test('Β7 — 🔴→🔶 που μοιάζει με «πρόοδο»: ίδιες διαδρομές, +1 🔶 ⇒ το ratchet κοκκινίζει', () => {
+    const baseline = { by_state: fullCensus({ 'surface-synthetic-id': 21, 'route-redirected': 112, clean: 61 }), declaration_count: 194 };
+    const measured = { census: fullCensus({ 'surface-synthetic-id': 22, 'route-redirected': 111, clean: 61 }), declarations: routes(194) };
+    const over = B.countedBudgets(measured, baseline).filter((b) => b.current > b.ceiling);
+    expect(over.map((b) => b.id)).toEqual(['surface-synthetic-id · ratchet']);
+  });
+
+  test('Β8 — `by_state` ΑΛΛΟΥ λεξιλογίου (η baseline του 2026-09-16) ⇒ throw, ποτέ «0»', () => {
+    const old = fullCensus({ 'surface-synthetic-id': 29, clean: 125 });
+    delete old['backend-unavailable'];
+    delete old['route-redirected'];
+    expect(() => B.readBaselineCensus({ by_state: old, declaration_count: 154 })).toThrow(/backend-unavailable, route-redirected/);
+  });
+
+  test('Β9 — άγνωστη κατάσταση ή άθροισμα ≠ διαδρομές ⇒ throw (μέσω `assertClosedLedger`)', () => {
+    expect(() => B.readBaselineCensus({ by_state: fullCensus({ clean: 3, 'φάντασμα': 1 }), declaration_count: 4 }))
+      .toThrow(/άγνωστη κατάσταση "φάντασμα"/);
+    expect(() => B.readBaselineCensus({ by_state: fullCensus({ clean: 3 }), declaration_count: 4 })).toThrow(/3 ≠ 4/);
+    expect(() => B.readBaselineCensus({ declaration_count: 4 })).toThrow(/by_state/);
+  });
+
+  test('Β10 — η πύλη ΟΝΤΩΣ ρωτά τον προϋπολογισμό (όχι σχόλιο)', () => {
+    expect(CLI.DESCRIPTOR.budgets).toBe(B.countedBudgets);
+  });
+});

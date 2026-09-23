@@ -93,6 +93,28 @@ const X_RATCHETED = Object.freeze([
  */
 const X_COUNTED = Object.freeze([X_STATES.SYNTHETIC_ID, X_STATES.WITHHELD]);
 
+/**
+ * 🔶 ΤΟ ΔΗΛΩΜΕΝΟ ΤΑΒΑΝΙ ΚΑΘΕ ΜΕΤΡΟΥΜΕΝΟΥ ΚΑΔΟΥ — ως **μερίδιο** των διαδρομών (ADR-781 §15).
+ *
+ * «Μετριέται, δεν απαριθμείται» ΔΕΝ σημαίνει «χωρίς όριο»: το 29 → 132 πέρασε επειδή το
+ * μόνο όριο ήταν η baseline — και η baseline **ξανασπάρθηκε** (οι 40 νέες δηλώσεις το
+ * απαιτούσαν), άρα η σπορά ενέκρινε σιωπηλά το 68%. Ένα όριο που γράφει το ίδιο το
+ * αποτέλεσμα δεν φυλάει την ίδια του τη σπορά. Γι' αυτό υπάρχουν **δύο** φράχτες:
+ *   - ratchet ανά πλήθος έναντι του `by_state` της baseline (πιάνει 🔴→🔶 που μοιάζει πρόοδος)
+ *   - αυτό εδώ: **πολιτική** που γράφει άνθρωπος, ανεξάρτητη από κάθε σπορά (πρότυπο
+ *     Lighthouse CI `budget.json`) — ισχύει ΚΑΙ στο `--write-baseline`.
+ *
+ * `null` = ρητά χωρίς ταβάνι, με λόγο. ⚠️ Κλειστό: κάθε `X_COUNTED` έχει γραμμή (άγκυρα Β3).
+ *   - `surface-synthetic-id` 20%: ιστορικά αποδεκτό 18,8% (29/154) πριν το ADR-787· το 68%
+ *     θα είχε κοκκινίσει. Σφίγγεται μόνο με απόφαση του Giorgio.
+ *   - `route-withheld`: `null` — κάθε μέλος του το γράφει άνθρωπος στο `.i18n-ssr-served.json`,
+ *     άρα η αύξησή του είναι ήδη απόφαση· το ratchet έναντι baseline αρκεί.
+ */
+const X_COUNTED_CEILING = Object.freeze({
+  [X_STATES.SYNTHETIC_ID]: 0.2,
+  [X_STATES.WITHHELD]: null,
+});
+
 /** Το τμήμα που μπαίνει στη θέση ενός `[param]`. Σκόπιμα αναγνωρίσιμο στα logs. */
 const SYNTHETIC_SEGMENT = 'ssr-probe';
 
@@ -106,6 +128,7 @@ module.exports = {
   X_ZERO_TOLERANCE,
   X_RATCHETED,
   X_COUNTED,
+  X_COUNTED_CEILING,
   SYNTHETIC_SEGMENT,
   assertClosedX,
 };

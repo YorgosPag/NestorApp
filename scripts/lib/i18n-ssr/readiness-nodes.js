@@ -68,25 +68,44 @@ function holdsTranslator(source) {
     if (holds) return;
     const name = calleeName(node);
     if (name && /^use[A-Z0-9_]?\w*Translation/i.test(name)) holds = true;
-    // const { t } = useSomething()
-    if (
-      !holds &&
-      ts.isVariableDeclaration(node) &&
-      node.name &&
-      ts.isObjectBindingPattern(node.name) &&
-      node.initializer &&
-      ts.isCallExpression(node.initializer) &&
-      /^use[A-Z]/.test(calleeName(node.initializer) || '')
-    ) {
-      for (const element of node.name.elements) {
-        const key = element.propertyName || element.name;
-        if (ts.isIdentifier(key) && key.text === 't') holds = true;
-      }
-    }
+    if (!holds && translatorBindingCallee(node)) holds = true;
     if (!holds) ts.forEachChild(node, visit);
   };
   ts.forEachChild(source, visit);
   return holds;
+}
+
+/**
+ * `const { t } = useSomething()` ⇒ `'useSomething'` · αλλιώς `null`.
+ *
+ * Εκτεθειμένο (ADR-781 §16): το ίδιο σχήμα που κάνει ένα αρχείο να «κρατά» το `t`
+ * (Κ1) είναι αυτό που ο Κ2 ακολουθεί για να βρει **από πού** το δανείζεται —
+ * δεύτερος ανιχνευτής θα ήταν δεύτερη αλήθεια.
+ */
+function translatorBindingCallee(node) {
+  if (
+    !ts.isVariableDeclaration(node) ||
+    !node.name ||
+    !ts.isObjectBindingPattern(node.name) ||
+    !node.initializer ||
+    !ts.isCallExpression(node.initializer)
+  ) return null;
+  const callee = calleeName(node.initializer) || '';
+  if (!/^use[A-Z]/.test(callee)) return null;
+  const bindsT = node.name.elements.some((element) => {
+    const key = element.propertyName || element.name;
+    return ts.isIdentifier(key) && key.text === 't';
+  });
+  return bindsT ? callee : null;
+}
+
+/** `return { t, … }` — το αντικείμενο που **παραδίδει** το `t` στον καλούντα. */
+function isTranslatorReturn(node) {
+  if (!ts.isObjectLiteralExpression(node) || !node.parent || !ts.isReturnStatement(node.parent)) return false;
+  return node.properties.some(
+    (property) => (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property))
+      && ts.isIdentifier(property.name) && property.name.text === 't'
+  );
 }
 
 /**
@@ -286,23 +305,18 @@ function collectTranslatorSurfaces(source) {
   };
 
   const visit = (node) => {
-    if (ts.isObjectLiteralExpression(node) && node.parent && ts.isReturnStatement(node.parent)) {
+    if (isTranslatorReturn(node)) {
       const properties = node.properties.filter(
         (property) => ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)
       );
-      const delivers = properties.some(
-        (property) => ts.isIdentifier(property.name) && property.name.text === 't'
-      );
-      if (delivers) {
-        for (const property of properties) {
-          if (!ts.isIdentifier(property.name) || property.name.text === 't') continue;
-          const valueNode = ts.isPropertyAssignment(property) ? property.initializer : property.name;
-          surfaces.push({
-            property: property.name.text,
-            names: namesIn(valueNode),
-            line: source.getLineAndCharacterOfPosition(property.getStart(source)).line + 1,
-          });
-        }
+      for (const property of properties) {
+        if (!ts.isIdentifier(property.name) || property.name.text === 't') continue;
+        const valueNode = ts.isPropertyAssignment(property) ? property.initializer : property.name;
+        surfaces.push({
+          property: property.name.text,
+          names: namesIn(valueNode),
+          line: source.getLineAndCharacterOfPosition(property.getStart(source)).line + 1,
+        });
       }
     }
     ts.forEachChild(node, visit);
@@ -330,6 +344,8 @@ module.exports = {
   EXEMPT_RE,
   calleeName,
   holdsTranslator,
+  translatorBindingCallee,
+  isTranslatorReturn,
   classifySeed,
   collectModuleLiterals,
   collectStateDeclarations,

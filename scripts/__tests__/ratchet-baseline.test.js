@@ -160,3 +160,73 @@ describe('ratchet-baseline — ο τζόγος του ταβανιού (PHPStan/
     expect(text).toContain('seed-set');
   });
 });
+
+/**
+ * 🔶 ADR-781 §15 — προϋπολογισμοί πλάι στο σύνολο. Ο κάδος που «μετριέται, δεν απαριθμείται»
+ * δεν είχε ΚΑΝΕΝΑΝ αναγνώστη: 29 → 132 χωρίς συναγερμό. Οι άγκυρες εκτελούν το CLI.
+ */
+describe('ratchet-baseline — προϋπολογισμοί κάδων που δεν κρίνονται (ADR-781 §15)', () => {
+  async function runSet(descriptor, argv = ['node', 'x']) {
+    const lines = [];
+    const log = console.log;
+    const err = console.error;
+    const exit = process.exit;
+    let code = null;
+    console.log = (...a) => lines.push(a.join(' '));
+    console.error = (...a) => lines.push(a.join(' '));
+    process.exit = (c) => { code = c; throw Object.assign(new Error('__exit__'), { __exit: true }); };
+    try {
+      await ratchet.runSetRatchetCli(descriptor, argv);
+    } catch (e) {
+      if (!e || !e.__exit) throw e;
+    } finally {
+      console.log = log;
+      console.error = err;
+      process.exit = exit;
+    }
+    return { code, text: lines.join('\n') };
+  }
+
+  const setGate = (budgets, file = baselineWith({ violations: [], declarations: ['d1'] })) => ({
+    adr: 'ADR-TEST-BUDGET',
+    baselineFile: file,
+    labels: { violations: 'π', declarations: 'δ' },
+    commands: { report: 'r', baseline: 'b', seed: 's' },
+    measure: () => ({ violationIds: [], declarations: ['d1'], violations: [] }),
+    buildPayload: (m) => m,
+    printReport: () => {},
+    violationId: (f) => f.id,
+    messages: { worse: 'w', newDeclLabel: 'n', newDeclAdvice: [] },
+    budgets,
+  });
+
+  test('Β1 — σύνολο ίδιο, μα ο 🔶 κάδος μεγάλωσε ⇒ ΜΠΛΟΚ (το 29 → 132)', async () => {
+    const { code, text } = await runSet(setGate(() => [{ id: 'κάδος', current: 132, ceiling: 29, why: 'baseline' }]));
+    expect(code).toBe(1);
+    expect(text).toContain('κάδος: 132 > 29');
+  });
+
+  test('Β2 — εντός ταβανιού ⇒ πέρασμα', async () => {
+    const { code } = await runSet(setGate(() => [{ id: 'κάδος', current: 29, ceiling: 29, why: 'baseline' }]));
+    expect(code).toBe(0);
+  });
+
+  test('Β3 — ο προϋπολογισμός που ΔΕΝ διαβάζει baseline ⇒ ΜΠΛΟΚ (fail-closed, ποτέ «0»)', async () => {
+    const { code, text } = await runSet(setGate(() => { throw new Error('άλλο λεξιλόγιο'); }));
+    expect(code).toBe(1);
+    expect(text).toContain('άλλο λεξιλόγιο');
+  });
+
+  test('Β4 — η ΣΠΟΡΑ δεν εγκρίνει τον εαυτό της: ταβάνι πολιτικής ⇒ ΑΡΝΗΣΗ εγγραφής', async () => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ratchet-')), 'b.json');
+    const seen = [];
+    const gate = setGate((m, baseline) => {
+      seen.push(baseline);
+      return [{ id: 'πολιτική', current: 132, ceiling: 38, why: '20%' }];
+    }, file);
+    const { code } = await runSet(gate, ['node', 'x', '--write-baseline']);
+    expect(code).toBe(1);
+    expect(fs.existsSync(file)).toBe(false);
+    expect(seen).toEqual([null]); // στη σπορά ΔΕΝ υπάρχει baseline για ratchet — μόνο πολιτική
+  });
+});

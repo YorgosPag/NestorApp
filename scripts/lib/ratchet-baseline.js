@@ -303,6 +303,31 @@ function printSetFailure(descriptor, { addedViolations, addedDeclarations, measu
   }
 }
 
+/**
+ * 🔶 ΠΡΟΫΠΟΛΟΓΙΣΜΟΙ ΠΛΑΪ ΣΤΟ ΣΥΝΟΛΟ (ADR-781 §15) — προαιρετικό `descriptor.budgets(measured, baseline|null)`
+ * → `[{ id, current, ceiling, why }]`. Για κάδους που «μετριούνται, δεν απαριθμούνται»: χωρίς
+ * αυτό, ο αριθμός τους γραφόταν στη baseline και **δεν τον ξαναδιάβαζε κανείς** — έτσι το
+ * `surface-synthetic-id` του CHECK 3.51 πήγε 29 → 132 αθόρυβα. `baseline === null` στη σπορά:
+ * εκεί ισχύουν μόνο τα δηλωμένα ταβάνια (η σπορά δεν εγκρίνει τον εαυτό της — Lighthouse CI budgets).
+ *
+ * @returns {boolean} `true` αν κάποιο ταβάνι ξεπεράστηκε ή η baseline δεν διαβάζεται (fail-closed)
+ */
+function budgetsBreached(descriptor, measured, baseline) {
+  if (typeof descriptor.budgets !== 'function') return false;
+  let budgets;
+  try {
+    budgets = descriptor.budgets(measured, baseline);
+  } catch (e) {
+    console.error(`❌ ${descriptor.adr} — αδύνατος ο έλεγχος προϋπολογισμού: ${e.message}`);
+    return true;
+  }
+  const over = budgets.filter((b) => b.current > b.ceiling);
+  if (over.length === 0) return false;
+  console.error(`❌ ${descriptor.adr} — κάδος που ΔΕΝ κρίνεται ξεπέρασε το ταβάνι του\n`);
+  for (const b of over) console.error(`   🚫 ${b.id}: ${b.current} > ${b.ceiling}  (${b.why})`);
+  return true;
+}
+
 async function runSetRatchetCli(descriptor, argv = process.argv) {
   if (descriptor.skipEnv && process.env[descriptor.skipEnv]) return process.exit(0);
   const args = argv.slice(2);
@@ -323,6 +348,7 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
   }
 
   if (args.includes('--write-baseline')) {
+    if (budgetsBreached(descriptor, measured, null)) return process.exit(1);
     writeBaselineFile(file, descriptor.buildPayload(measured));
     console.log(`✅ Baseline: ${rel(file)}`);
     console.log(`   ${measured.violationIds.length} ${L.violations} · ${measured.declarations.length} ${L.declarations}`);
@@ -349,6 +375,10 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
     if (descriptor.skipEnv) {
       console.error(`   Έμμεση διαφυγή (αιτιολόγησε στον Giorgio): ${descriptor.skipEnv}=1`);
     }
+    return process.exit(1);
+  }
+  if (budgetsBreached(descriptor, measured, baseline)) {
+    console.error(`\n   Αναφορά: ${descriptor.commands.report}`);
     return process.exit(1);
   }
 
