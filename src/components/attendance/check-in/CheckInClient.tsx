@@ -208,7 +208,10 @@ export function CheckInClient({ token }: CheckInClientProps) {
   // =========================================================================
 
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center px-4 py-8">
+    // ADR-876 — `<section>`, ΟΧΙ `<main className="min-h-screen px-4 py-8">`: η σελίδα ζει στο `(auth)`,
+    // όπου το `<main>`, το ύψος οθόνης και ο διάδρομος ανήκουν στο layout (`ShellSurface`, ADR-797).
+    // Διπλό `<main>` = άκυρη σημασιολογία· διπλό `min-h-screen` = 48px κύλιση (μετρημένο).
+    <section className="w-full self-start flex flex-col items-center">
       {/* Header */}
       <header className="w-full max-w-md text-center mb-6">
         <h1 className="text-xl font-bold text-foreground">
@@ -477,7 +480,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
           </div>
         )}
       </section>
-    </main>
+    </section>
   );
 }
 

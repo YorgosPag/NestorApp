@@ -7,7 +7,7 @@
  * `/api/vendor/quote/[token]` for GET (re-fetch on language switch) and
  * POST (submit / edit), and `/decline` for declines.
  *
- * @module app/vendor/quote/[token]/VendorPortalClient
+ * @module app/(auth)/vendor/quote/[token]/VendorPortalClient
  * @enterprise ADR-327 §7 — Phase 3 Vendor Portal
  */
 
@@ -18,26 +18,33 @@ import { VendorPortalForm } from './VendorPortalForm';
 import { DeclineDialog } from './DeclineDialog';
 import { SuccessState } from './SuccessState';
 import type { InitialData, QuoteLineDraft, QuoteSnapshot } from './types';
+import type { VendorPortalIntent } from '@/subapps/procurement/services/vendor-portal-links';
 
 interface Props {
   token: string;
   initialData: InitialData;
+  /** Από τον σύνδεσμο του email (`?intent=decline`) — ανοίγει διάλογο, ΔΕΝ αρνείται (ADR-876 Ε3). */
+  initialIntent: VendorPortalIntent | null;
 }
 
 type Phase = 'editing' | 'submitting' | 'submitted' | 'declined' | 'declining';
 
-export function VendorPortalClient({ token, initialData }: Props) {
+/**
+ * Η αρχική φάση. ⚠️ Η πρόθεση άρνησης τιμάται **μόνο** σε πρόσκληση που δεν έχει υποβληθεί:
+ * ένας παλιός σύνδεσμος «δεν ενδιαφέρομαι» δεν επιτρέπεται να ανοίξει διάλογο πάνω σε
+ * προσφορά που ο προμηθευτής ήδη έστειλε.
+ */
+function initialPhase(invite: InitialData['invite'], intent: VendorPortalIntent | null): Phase {
+  if (invite.status === 'submitted') return invite.editWindowOpen ? 'editing' : 'submitted';
+  return intent === 'decline' ? 'declining' : 'editing';
+}
+
+export function VendorPortalClient({ token, initialData, initialIntent }: Props) {
   const { t, i18n: instance } = useTranslation(['vendor-portal']);
   const [locale, setLocale] = useState<'el' | 'en'>(
     instance.language === 'en' ? 'en' : 'el',
   );
-  const [phase, setPhase] = useState<Phase>(
-    initialData.invite.status === 'submitted' && initialData.invite.editWindowOpen
-      ? 'editing'
-      : initialData.invite.status === 'submitted'
-        ? 'submitted'
-        : 'editing',
-  );
+  const [phase, setPhase] = useState<Phase>(() => initialPhase(initialData.invite, initialIntent));
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorReason, setErrorReason] = useState<string | null>(null);
   const [existingQuote, setExistingQuote] = useState<QuoteSnapshot | null>(null);
@@ -151,7 +158,10 @@ export function VendorPortalClient({ token, initialData }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-muted">
+    // ADR-876 — `<section>`, ΟΧΙ `<main className="min-h-screen">`: στο `(auth)` το `<main>` και το ύψος
+    // οθόνης τα κατέχει το layout (`ShellSurface`). `self-start`: η πύλη είναι μακριά φόρμα, όχι
+    // κεντραρισμένη κάρτα — ξεκινά από πάνω.
+    <section className="w-full self-start bg-muted">
       <header className="sticky top-0 z-10 border-b border-border bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
@@ -202,7 +212,7 @@ export function VendorPortalClient({ token, initialData }: Props) {
           onCancel={() => setPhase('editing')}
         />
       )}
-    </main>
+    </section>
   );
 }
 

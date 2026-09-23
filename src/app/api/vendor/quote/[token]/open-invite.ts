@@ -37,6 +37,8 @@ import 'server-only';
 
 import type { NextResponse } from 'next/server';
 
+import { decodeRouteParam } from '@/lib/routes/route-param';
+
 import type { VendorPortalTokenValidation } from '@/services/vendor-portal/vendor-portal-token-service';
 import { getVendorInviteByToken } from '@/subapps/procurement/services/vendor-invite-service';
 
@@ -78,7 +80,8 @@ export async function openVendorInvite(
   if (!context) return { ok: false, response: jsonError('missing_context', 500) };
 
   const { token: rawToken } = await context.params;
-  const token = decodeURIComponent(rawToken);
+  // ADR-876 — SSoT: ωμό `decodeURIComponent` πετά σε κακό `%` ⇒ 500 αντί για «άκυρος σύνδεσμος».
+  const token = decodeRouteParam(rawToken);
 
   // 🔴 **ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΑΝΑΓΝΩΣΗ FIRESTORE** (ADR-327 §11): πλαστό token δεν
   //    πληρώνει ποτέ διαδρομή βάσης.

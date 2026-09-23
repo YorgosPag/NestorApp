@@ -94,7 +94,11 @@
     "submitFailedBody": "Something went wrong. Please try again shortly.",
     "validationRequired": "Please fill in required fields",
     "validationLines": "Add at least one quote line",
-    "uploadFailed": "Upload failed for {name}"
+    "uploadFailed": "Upload failed for {name}",
+    "serverError": "Server error",
+    "serverErrorBody": "Please try again shortly.",
+    "inviteNotFound": "Invitation not found",
+    "inviteNotFoundBody": "The invitation does not exist or has been deleted."
   },
   "security": {
     "warning": "⚠️ This link is personal. Do not forward it.",

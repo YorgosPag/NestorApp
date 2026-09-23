@@ -2,7 +2,7 @@
 
 /**
  * DeclineDialog — modal for vendor to decline an invite (Q23).
- * @module app/vendor/quote/[token]/DeclineDialog
+ * @module app/(auth)/vendor/quote/[token]/DeclineDialog
  */
 
 import React, { useState } from 'react';

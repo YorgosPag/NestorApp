@@ -199,6 +199,7 @@ TimesheetTabContent
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-09-23 | 🔴 Η σελίδα check-in (`/attendance/check-in/[token]`) ζούσε στο `/o/[workspace]` από το `5ff0baa2` ⇒ ο εργάτης (χωρίς λογαριασμό) έπεφτε στο `/login` — το QR δεν δούλευε για κανέναν. Μετακινήθηκε στο `(auth)` + `force-dynamic` + metadata από το SSoT `credential-link-page`. Βλ. [ADR-876](./ADR-876-credential-link-surfaces.md) Ε2. | Claude |
 | 2026-04-11 | `attendance_events` create rule tightened with tenant guard + cross-doc project ownership check (defense-in-depth over Admin-SDK path). See ADR-298 §8 Phase B.2. | Claude |
 | 2026-02-22 | Live Worker Map: real-time dashboard with worker pins, geofence overlay, status badges, toast alerts | Claude |
 | 2026-02-22 | useAttendanceLiveEvents: Firestore onSnapshot hook for real-time attendance updates | Claude |

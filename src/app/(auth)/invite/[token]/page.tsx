@@ -42,6 +42,8 @@
 import 'server-only';
 
 import type { Metadata } from 'next';
+
+import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 
@@ -65,10 +67,8 @@ import type { WorkspaceInvitationLinkView } from '@/types/workspace-invitation-v
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-  referrer: 'no-referrer',
-};
+// ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT (άγκυρα `credential-link-page.test.ts`).
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 /**
  * **Η στένωση** — από την έκβαση της υπηρεσίας στο **ελάχιστο** που ζωγραφίζεται.

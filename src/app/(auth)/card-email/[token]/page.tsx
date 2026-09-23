@@ -20,26 +20,25 @@ import 'server-only';
 
 import type { Metadata } from 'next';
 
+import {
+  CREDENTIAL_LINK_PAGE_METADATA,
+  readCredentialLinkAnswerPage,
+  type CredentialLinkAnswerPageProps,
+} from '@/lib/tokens/credential-link-page';
+
 import { ShowcaseEmailConfirmationContent } from '@/components/mandate/ShowcaseEmailConfirmationContent';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { decodeRouteParam } from '@/lib/routes/route-param';
 import { readShowcaseEmailConfirmation } from '@/services/mandate/showcase-email-confirmation-decision';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+// ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT (άγκυρα `credential-link-page.test.ts`).
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
-export default async function ShowcaseEmailConfirmationPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ token: string }>;
-  searchParams: Promise<{ answer?: string | string[] }>;
-}): Promise<React.ReactElement> {
-  const [{ token: raw }, { answer }] = await Promise.all([params, searchParams]);
-  const token = decodeRouteParam(raw);
+export default async function ShowcaseEmailConfirmationPage(
+  props: CredentialLinkAnswerPageProps,
+): Promise<React.ReactElement> {
+  const { token, answer } = await readCredentialLinkAnswerPage(props);
   const lookup = await readShowcaseEmailConfirmation(getAdminFirestore(), token);
 
   return <ShowcaseEmailConfirmationContent token={token} lookup={lookup} disownFirst={answer === 'disown'} />;

@@ -33,7 +33,33 @@ export function vendorPortalUrl(token: string): string {
   return `${requirePublicOrigin(VENDOR_PORTAL_PURPOSE)}/vendor/quote/${encodeURIComponent(token)}`;
 }
 
-/** Η **άρνηση** — χωριστή διαδρομή, ώστε το «δεν ενδιαφέρομαι» να είναι ένα κλικ. */
+/**
+ * Η πρόθεση που κουβαλά ο σύνδεσμος — **μόνο προσυμπλήρωση**, ποτέ πράξη (ADR-876).
+ * Κατασκευαστής ({@link vendorDeclineUrl}) και αναγνώστης ({@link readVendorPortalIntent})
+ * ζουν εδώ μαζί, ώστε η λέξη να μην μπορεί να αποκλίνει ανάμεσα στο email και στη σελίδα.
+ */
+export const VENDOR_PORTAL_INTENTS = ['decline'] as const;
+export type VendorPortalIntent = (typeof VENDOR_PORTAL_INTENTS)[number];
+
+/**
+ * Η **άρνηση**: η ΙΔΙΑ σελίδα, με τον διάλογο άρνησης ανοιχτό.
+ *
+ * 🔴 **ΔΙΟΡΘΩΣΗ ΝΕΚΡΟΥ ΣΥΝΔΕΣΜΟΥ (ADR-876 Ε3).** Εδώ έγραφε `…/<token>/decline` — διαδρομή
+ * **χωρίς σελίδα** (υπάρχει μόνο το `POST /api/vendor/quote/<token>/decline`). Ο σύνδεσμος
+ * «δεν ενδιαφέρομαι» κάθε πρόσκλησης έβγαζε 404, σε κάθε περιβάλλον, από την πρώτη μέρα.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΟΧΙ «ΑΡΝΗΣΗ ΜΕ ΕΝΑ GET»**: το email του προμηθευτή καταλήγει συχνά πίσω από
+ * Microsoft Defender Safe Links / Mimecast / Proofpoint, που **ανοίγουν κάθε σύνδεσμο πριν
+ * τον άνθρωπο**. GET που αρνείται θα αρνιόταν για λογαριασμό του προμηθευτή χωρίς να το δει
+ * κανείς. Η πράξη φεύγει **μόνο** από το κουμπί του διαλόγου (POST) — πρότυπο του
+ * `hours-question/[token]` (`?answer=` = προσυμπλήρωση).
+ */
 export function vendorDeclineUrl(token: string): string {
-  return `${vendorPortalUrl(token)}/decline`;
+  const intent: VendorPortalIntent = 'decline';
+  return `${vendorPortalUrl(token)}?intent=${intent}`;
+}
+
+/** `?intent=` → γνωστή πρόθεση ή `null`. Πίνακας ή σκουπίδι ⇒ καμία (όπως το `?answer=`). */
+export function readVendorPortalIntent(raw: string | string[] | undefined): VendorPortalIntent | null {
+  return VENDOR_PORTAL_INTENTS.find((intent) => intent === raw) ?? null;
 }

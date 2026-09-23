@@ -31,6 +31,8 @@ import 'server-only';
 
 import type { Metadata } from 'next';
 
+import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
+
 import { MandateConsentContent } from '@/components/mandate/MandateConsentContent';
 import { MandateConsentRefusal } from '@/components/mandate/MandateConsentRefusal';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -46,9 +48,8 @@ import { PRIVATE_MARKETING_DOCUMENT } from '@/types/private-marketing-consent';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+// ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT (άγκυρα `credential-link-page.test.ts`).
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 export default async function MandateConsentPage({
   params,

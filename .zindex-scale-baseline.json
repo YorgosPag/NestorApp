@@ -19,7 +19,7 @@
   "violation_count": 40,
   "declaration_count": 42,
   "violations": [
-    "src/app/(app)/o/[workspace]/vendor/quote/[token]/DeclineDialog.tsx|global-by-structure|50",
+    "src/app/(auth)/vendor/quote/[token]/DeclineDialog.tsx|global-by-structure|50",
     "src/components/admin/layout/AdminSidebar.tsx|global-by-structure|40",
     "src/components/crm/inbox/attachment-parts.tsx|global-by-structure|50",
     "src/components/email/SendEmailModal.tsx|global-by-structure|50",

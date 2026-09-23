@@ -47,6 +47,9 @@
 import 'server-only';
 
 import type { Metadata } from 'next';
+
+import { decodeRouteParam } from '@/lib/routes/route-param';
+import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
 import { cookies } from 'next/headers';
 
 import { GuestContactContent } from '@/components/contact/GuestContactContent';
@@ -61,9 +64,8 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+// ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT (άγκυρα `credential-link-page.test.ts`).
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 /**
  * **Η στένωση** — από την πλήρη έκβαση στο ελάχιστο που ζωγραφίζεται.
@@ -108,9 +110,9 @@ export default async function GuestContactPage({
   params: Promise<{ token: string }>;
 }): Promise<React.ReactElement> {
   const { token: raw } = await params;
-  // ⚠️ `decodeURIComponent` όπως και το `mandate/[token]`: το Next δίνει το τμήμα
-  //    **κωδικοποιημένο**, και η υπογραφή δεν στέκει πάνω σε `%2F`.
-  const token = decodeURIComponent(raw);
+  // ⚠️ Αποκωδικοποίηση: το Next δίνει το τμήμα **κωδικοποιημένο**, και η υπογραφή δεν στέκει
+  //    πάνω σε `%2F`. Μέσω του SSoT (ADR-876): ωμό `decodeURIComponent` ΠΕΤΑ σε κακό `%` ⇒ 500.
+  const token = decodeRouteParam(raw);
 
   // 🔴 **ΜΙΑ ΚΛΗΣΗ, ΚΑΙ ΓΡΑΦΕΙ.** Δεν είναι ανάγνωση: εξαργυρώνει την πρόσκληση,
   //    γεννά ταυτότητα και γράφει την πράξη — όλα μέσα από τον **ΕΝΑΝ** γραφέα.

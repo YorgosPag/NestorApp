@@ -17,28 +17,26 @@ import 'server-only';
 
 import type { Metadata } from 'next';
 
+import {
+  CREDENTIAL_LINK_PAGE_METADATA,
+  readCredentialLinkAnswerPage,
+  type CredentialLinkAnswerPageProps,
+} from '@/lib/tokens/credential-link-page';
+
 import { HolidayQuestionContent } from '@/components/mandate/HolidayQuestionContent';
 import { HOLIDAY_ANSWER_KINDS } from '@/lib/calendar/holiday-question';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { decodeRouteParam } from '@/lib/routes/route-param';
 import { readHolidayQuestion } from '@/services/mandate/holiday-hours-question-decision';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-  referrer: 'no-referrer',
-};
+// ADR-876 — noindex · no-referrer από το ΕΝΑ SSoT (άγκυρα `credential-link-page.test.ts`).
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
-export default async function HolidayQuestionPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ token: string }>;
-  searchParams: Promise<{ answer?: string | string[] }>;
-}): Promise<React.ReactElement> {
-  const [{ token: raw }, { answer }] = await Promise.all([params, searchParams]);
-  const token = decodeRouteParam(raw);
+export default async function HolidayQuestionPage(
+  props: CredentialLinkAnswerPageProps,
+): Promise<React.ReactElement> {
+  const { token, answer } = await readCredentialLinkAnswerPage(props);
   const lookup = await readHolidayQuestion(getAdminFirestore(), token);
   // ⚠️ Μόνο γνωστή τιμή γίνεται προεπιλογή — πίνακας ή σκουπίδι ⇒ καμία.
   const preset = HOLIDAY_ANSWER_KINDS.find((kind) => kind === answer) ?? null;

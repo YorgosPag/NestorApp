@@ -7,35 +7,49 @@
  *
  * Token-bound credential. NO Firebase auth.
  *
- * @module app/vendor/quote/[token]/page
- * @enterprise ADR-327 §7 — Phase 3 Vendor Portal
+ * 🔴 **ΓΙΑΤΙ ΣΤΟ `(auth)` ΚΑΙ ΟΧΙ ΣΤΟ `/o/[workspace]` (ADR-876).** Το `5ff0baa2` (ADR-787 §5.3)
+ * την είχε βάλει κάτω από τον χώρο· ο φρουρός ταυτότητας του layout έστελνε **κάθε**
+ * προμηθευτή — που εξ ορισμού δεν έχει λογαριασμό — στο `/login`. Μετρημένο στην παραγωγή.
+ * Ίδια απάντηση με τα `contact/[token]` · `mandate/[token]`: η άδεια είναι το token.
+ *
+ * ⚠️ `force-dynamic` (CHECK 3.55) · metadata από το SSoT `credential-link-page` (noindex ·
+ * no-referrer) — η άγκυρα `credential-link-page.test.ts` το απαιτεί.
+ * ⚠️ `?intent=decline` = **μόνο** ανοιχτός διάλογος, ποτέ πράξη (Safe Links, ADR-876 Ε3).
+ *
+ * @module app/(auth)/vendor/quote/[token]/page
+ * @enterprise ADR-327 §7 — Phase 3 Vendor Portal · ADR-876
  */
 
 import 'server-only';
 
 import type { Metadata } from 'next';
+import { decodeRouteParam } from '@/lib/routes/route-param';
+import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
 import { validateVendorPortalTokenSignature } from '@/services/vendor-portal/vendor-portal-token-service';
 import { getVendorInviteByToken } from '@/subapps/procurement/services/vendor-invite-service';
 import { getRfq } from '@/subapps/procurement/services/rfq-service';
+import { readVendorPortalIntent } from '@/subapps/procurement/services/vendor-portal-links';
 import { VendorPortalErrorState } from './VendorPortalErrorState';
 import { VendorPortalClient } from './VendorPortalClient';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  // Το όνομα του προϊόντος το προσθέτει το `title.template` της ρίζας (ADR-857 Φ8α).
-  title: 'Υποβολή Προσφοράς',
-  description: 'Πύλη υποβολής προσφοράς προμηθευτή',
-  robots: { index: false, follow: false },
-};
+// ⚠️ Χωρίς `title`: εδώ ζούσε ωμό ελληνικό κείμενο (N.11). Όπως όλες οι σελίδες-διαπιστευτήρια,
+//    ο τίτλος της καρτέλας είναι το όνομα του προϊόντος (`title.template` της ρίζας, ADR-857 Φ8α).
+export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 interface PageProps {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ intent?: string | string[] }>;
 }
 
-export default async function VendorQuotePage({ params }: PageProps) {
+export default async function VendorQuotePage({ params, searchParams }: PageProps) {
+  // ⚠️ Δύο χωριστές αποδομήσεις, ΟΧΙ `Promise.all`: η άγκυρα Γ6 (ADR-875 §10) διαβάζει
+  //    `const { token… } = await params` για να αποδείξει ότι το token σπέρνεται από το API
+  //    της εικόνας — ένα `Promise.all` την τύφλωνε (μετρημένο: η Γ6β κοκκίνισε).
   const { token: rawToken } = await params;
-  const token = decodeURIComponent(rawToken);
+  const { intent } = await searchParams;
+  const token = decodeRouteParam(rawToken);
 
   const sig = validateVendorPortalTokenSignature(token);
   if (!sig.valid) {
@@ -58,6 +72,7 @@ export default async function VendorQuotePage({ params }: PageProps) {
   return (
     <VendorPortalClient
       token={token}
+      initialIntent={readVendorPortalIntent(intent)}
       initialData={{
         invite: {
           id: invite.id,

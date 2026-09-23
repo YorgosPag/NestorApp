@@ -4,7 +4,7 @@
  * VendorPortalForm — line items, terms, attachments, submit/decline buttons.
  * Pure form component — phase + submission lifecycle owned by parent client.
  *
- * @module app/vendor/quote/[token]/VendorPortalForm
+ * @module app/(auth)/vendor/quote/[token]/VendorPortalForm
  * @enterprise ADR-327 §7
  */
 

@@ -13,6 +13,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { decodeRouteParam } from '@/lib/routes/route-param';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { validateVendorPortalTokenSignature } from '@/services/vendor-portal/vendor-portal-token-service';
@@ -35,7 +36,7 @@ const basePOST = async (
       return NextResponse.json({ success: false, error: 'missing_context' }, { status: 500 });
     }
     const { token: rawToken } = await context.params;
-    const token = decodeURIComponent(rawToken);
+    const token = decodeRouteParam(rawToken); // ADR-876 — SSoT, κακό `%` ⇒ άκυρος σύνδεσμος, όχι 500
 
     const sig = validateVendorPortalTokenSignature(token);
     if (!sig.valid) {

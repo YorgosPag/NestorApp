@@ -1,6 +1,6 @@
 /**
  * Shared types for the public vendor portal page.
- * @module app/vendor/quote/[token]/types
+ * @module app/(auth)/vendor/quote/[token]/types
  */
 
 import type { TradeCode } from '@/subapps/procurement/types/trade';
