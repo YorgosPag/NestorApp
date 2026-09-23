@@ -4,6 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { clientIpOf } from '@/lib/http/client-ip';
 import { isValidEmail as isValidEmailFn, isValidUrl } from '@/lib/validation/email-validation';
 import type { EmailTemplateType } from '@/types/email-templates';
 
@@ -95,9 +96,7 @@ function isValidEmail(email: string): boolean {
 }
 
 export function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  return forwarded?.split(',')[0]?.trim() || realIP || 'unknown';
+  return clientIpOf(request.headers);
 }
 
 export function checkRateLimit(ip: string): boolean {

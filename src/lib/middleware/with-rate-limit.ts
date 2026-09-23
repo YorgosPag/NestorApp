@@ -30,6 +30,7 @@ import {
   getEndpointCategory,
   type RateLimitCategory,
 } from './rate-limit-config';
+import { clientIpOf } from '@/lib/http/client-ip';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCurrentSecurityPolicy } from '@/config/environment-security-config';
 
@@ -152,9 +153,7 @@ function extractSecureIdentifier(request: NextRequest): string {
   }
 
   // Anonymous request: use hashed IP
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const ip = forwardedFor?.split(',')[0]?.trim() || realIp || 'unknown';
+  const ip = clientIpOf(request.headers);
 
   // Hash the IP for privacy
   const hashedIp = hashIpAddress(ip);

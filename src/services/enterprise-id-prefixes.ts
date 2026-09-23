@@ -207,6 +207,14 @@ export const ENTERPRISE_ID_PREFIXES = {
                               // νύχτες, όχι οι νύχτες. Η ταυτότητά της ζει μέσα στο `channel.feedId` ΚΑΘΕ
                               // εξωτερικού block — κοινό πρόθεμα θα έκανε «σβήσε την πηγή» και «σβήσε τις
                               // νύχτες» να μοιάζουν ίδια πράξη.
+  LISTING_VIEW_SALT: 'lvsl',  // ADR-777 §8.72: ΤΟ ΗΜΕΡΗΣΙΟ ΑΛΑΤΙ των προβολών — ένα ανά ημέρα, σβήνεται μετά
+                              // από 2 μέρες ⇒ το hash επισκέπτη δεν ξαναϋπολογίζεται ποτέ (καμία PII).
+  LISTING_VIEW_MARK: 'lvmk',  // ADR-777 §8.72: «ΑΥΤΟΣ Ο ΕΠΙΣΚΕΠΤΗΣ ΜΕΤΡΗΘΗΚΕ ΣΗΜΕΡΑ» — ντετερμινιστικό από το
+                              // hash· το `create()` αποτυγχάνει αν υπάρχει ⇒ ο αποδυπλασιασμός είναι δομικός.
+  LISTING_VIEW_SHARD: 'lvsh', // ADR-777 §8.72: ΖΕΣΤΟΣ ΜΕΤΡΗΤΗΣ (ακίνητο, ημέρα, shard). ⚠️ ΞΕΧΩΡΙΣΤΟ από το
+                              // `lsta`: εκείνο είναι η ψυχρή σύνοψη που γράφει ΜΟΝΟ το cron.
+  LISTING_STATS: 'lsta',      // ADR-777 §8.72: Η ΣΥΝΟΨΗ ΠΡΟΒΟΛΩΝ ενός ακινήτου — μία ανά ακίνητο, όχι ανά
+                              // αγγελία: η απόσυρση σβήνει την προβολή, όχι την ιστορία (μάθημα §8.61).
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

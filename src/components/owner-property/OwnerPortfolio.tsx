@@ -24,6 +24,11 @@ import {
   partitionOwnerPortfolio,
 } from '@/lib/owner-property/owner-portfolio-map';
 import { useOwnerPortfolioView } from '@/hooks/owner-property/useOwnerPortfolioView';
+import {
+  listingStatsStateOf,
+  useOwnerPortfolioStats,
+  type OwnerPortfolioStatsState,
+} from '@/hooks/owner-property/useOwnerPortfolioStats';
 import type { OwnerProperty } from '@/types/owner-property';
 import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
 
@@ -45,14 +50,24 @@ const OwnerPortfolioMap = dynamic(() => import('./OwnerPortfolioMap'), { ssr: fa
 
 type Properties = readonly OwnerProperty[];
 
-function OwnerPropertyList({ properties }: { readonly properties: Properties }): React.ReactElement {
+interface OwnerPropertyListProps {
+  readonly properties: Properties;
+  /** 📊 ADR-777 §8.72 — το ΕΝΑ fetch της σελίδας, μοιρασμένο ανά κάρτα. */
+  readonly stats: OwnerPortfolioStatsState;
+}
+
+function OwnerPropertyList({ properties, stats }: OwnerPropertyListProps): React.ReactElement {
   return (
     <ListingMapSnapshotProvider>
       <ul className="flex list-none flex-col gap-3 p-0">
         {properties.map((property, index) => (
           <li key={property.id}>
             {/* 🖼️ ADR-777 §8.70 — μόνο η πρώτη μικρογραφία φορτώνεται με υψηλή προτεραιότητα. */}
-            <OwnerPropertyCard property={property} priority={index === 0} />
+            <OwnerPropertyCard
+              property={property}
+              priority={index === 0}
+              stats={listingStatsStateOf(stats, property.id)}
+            />
           </li>
         ))}
       </ul>
@@ -65,8 +80,10 @@ export function OwnerPortfolio({ properties }: { readonly properties: Properties
   const partition = useMemo(() => partitionOwnerPortfolio(properties, nowISO()), [properties]);
   const mapAvailable = hasOwnerPortfolioMap(partition);
   const { view, setView } = useOwnerPortfolioView(mapAvailable);
+  // 📊 ADR-777 §8.72 — **ΕΝΑ** fetch για όλες τις κάρτες, ποτέ ένα ανά κάρτα.
+  const stats = useOwnerPortfolioStats();
 
-  if (!mapAvailable) return <OwnerPropertyList properties={properties} />;
+  if (!mapAvailable) return <OwnerPropertyList properties={properties} stats={stats} />;
 
   return (
     <Tabs
@@ -78,7 +95,7 @@ export function OwnerPortfolio({ properties }: { readonly properties: Properties
     >
       <OwnerPortfolioViewSwitch value={view} />
       <TabsContent value="list" className="mt-0">
-        <OwnerPropertyList properties={properties} />
+        <OwnerPropertyList properties={properties} stats={stats} />
       </TabsContent>
       <TabsContent value="map" className="mt-0">
         <OwnerPortfolioMap mapped={partition.mapped} unmapped={partition.unmapped} />

@@ -25,6 +25,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { createHash } from 'crypto';
+import { clientIpOf } from '@/lib/http/client-ip';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateQuoteId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -56,11 +57,7 @@ export const maxDuration = 60;
 const EDIT_WINDOW_HOURS = 72;
 
 function getClientIpHash(request: NextRequest): string {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
-  return createHash('sha256').update(ip).digest('hex').slice(0, 16);
+  return createHash('sha256').update(clientIpOf(request.headers)).digest('hex').slice(0, 16);
 }
 
 // =============================================================================

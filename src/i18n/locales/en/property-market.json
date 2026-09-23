@@ -1029,6 +1029,71 @@
       },
       "feeHelp": "Leave empty if you don't charge. The fee cannot exceed the nightly rate.",
       "assistanceAnimals": "Assistance dogs (guide dogs and assistance dogs for people with disabilities) are not pets: they are always welcome, free of charge, whatever you choose here (Law 3868/2010, art. 16)."
+    },
+    "stats": {
+      "heading": "Listing performance",
+      "loading": "Loading statistics…",
+      "unavailable": "Statistics could not be loaded. This does not mean zero — please try again later.",
+      "unknown": "unavailable",
+      "countingSince": "Counting since {date}",
+      "countingSinceWhy": "A view is one visitor once per day. We do not count you or automated programs.",
+      "row": {
+        "label": "Listing statistics",
+        "views": "{count, plural, one {# view} other {# views}} in 7 days",
+        "viewsUnknown": "Views: unavailable",
+        "contacts": "{count, plural, one {# contact} other {# contacts}}",
+        "contactsUnknown": "Contacts: unavailable",
+        "days": "{count, plural, one {# day} other {# days}} on the market"
+      },
+      "trend": {
+        "up": "+{percent} vs the previous week",
+        "down": "−{percent} vs the previous week",
+        "flat": "Steady vs the previous week",
+        "new": "First views",
+        "none": "No views yet",
+        "partial": "New tracking — comparison available in a few days"
+      },
+      "kpi": {
+        "views": "Views",
+        "contacts": "Contacts",
+        "rate": "Contacts per 1,000 views",
+        "days": "Days on the market",
+        "inRange": "Last {days} days",
+        "rateDetail": "{contacts, plural, one {# contact} other {# contacts}} from {views} views",
+        "rateInsufficient": "Not enough views yet ({views} of the {min} the ratio needs)",
+        "daysUnknown": "The listing date has not been recorded"
+      },
+      "range": {
+        "30": "30 days",
+        "90": "90 days",
+        "label": "Chart range"
+      },
+      "chart": {
+        "day": "Day",
+        "viewsTitle": "Views per day",
+        "viewsSeries": "Views",
+        "contactsTitle": "Contacts per day",
+        "contactsSeries": "Contacts",
+        "caption": "The shaded area is days we were not counting yet. Vertical lines mark changes in price or availability.",
+        "empty": "No tracked days in this range yet.",
+        "notCounted": "Not tracked"
+      },
+      "price": {
+        "heading": "Price history",
+        "none": "No price history has been recorded yet.",
+        "date": "Date",
+        "event": "Event",
+        "amount": "Price",
+        "change": "Change",
+        "offMarket": "Off the market",
+        "kind": {
+          "listed": "Listed",
+          "reduced": "Price reduced",
+          "raised": "Price increased",
+          "withdrawn": "Withdrawn",
+          "relisted": "Relisted"
+        }
+      }
     }
   },
   "mandate": {

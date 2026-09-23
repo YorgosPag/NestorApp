@@ -28,15 +28,32 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';
-import { ownerListingVisibility } from '@/lib/owner-property/owner-property-projection';
+import {
+  ownerListingVisibility,
+  projectableFromOwnerProperty,
+} from '@/lib/owner-property/owner-property-projection';
+import { listingPriceReductionOf } from '@/services/listings/public-listing-projection';
+import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
 import { OwnerPropertyCardCover } from './OwnerPropertyCardCover';
+import { StatsRowPending } from './owner-property-stats-pending';
+
+/**
+ * 📊 ADR-777 §8.72 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): οι αριθμοί φτάνουν **μόνο** στον πελάτη (fetch
+ * μετά το mount), άρα τα κείμενά τους δεν ανήκουν στο route slice. Όσο φορτώνει, χώρος στο ίδιο ύψος.
+ * ⚠️ **Όχι `ssr: false`** (ADR-744 §14.3): το SSR αποδίδει το σκελετό χωρίς κείμενο — τίποτα δεν κρύβεται από το 3.51.
+ */
+const OwnerPropertyStatsRow = dynamic(
+  () => import('./OwnerPropertyStatsRow').then((mod) => mod.OwnerPropertyStatsRow),
+  { loading: StatsRowPending },
+);
 
 const NS = 'property-market';
 const K = `${NS}:offer`;
@@ -44,8 +61,15 @@ const K = `${NS}:offer`;
 export function OwnerPropertyCard({
   property,
   priority = false,
+  stats,
 }: {
   property: OwnerProperty;
+  /**
+   * 📊 ADR-777 §8.72 — τα στατιστικά **αυτής** της αγγελίας, από το ΕΝΑ fetch της σελίδας
+   * (`useOwnerPortfolioStats` + `listingStatsStateOf`). Υποχρεωτικό: η κάρτα **δεν** φέρνει
+   * δεδομένα μόνη της — N κάρτες δεν γίνονται ποτέ N κλήσεις.
+   */
+  stats: ListingStatsState;
   /** Μόνο η **πρώτη** κάρτα της λίστας φορτώνει τη μικρογραφία της με υψηλή προτεραιότητα. */
   priority?: boolean;
 }): React.ReactElement {
@@ -54,7 +78,12 @@ export function OwnerPropertyCard({
   // 🔴 Ο **ίδιος** κριτής με τον διακομιστή. Δες την επικεφαλίδα του αρχείου.
   // ⚠️ **Μία ανάγνωση ρολογιού ανά απόδοση** (§8.33): η λήξη της εντολής κρίνεται με
   // την ίδια στιγμή για κάθε κάρτα της λίστας.
-  const visibility = ownerListingVisibility(property, nowISO());
+  const at = nowISO();
+  const visibility = ownerListingVisibility(property, at);
+  // 📊 §8.72 — μετρικές **μόνο** για αγγελία στην αγορά. Η μείωση ρωτά τον ΙΔΙΟ κριτή με την
+  //    προβολή, άρα ο κάτοχος βλέπει ακριβώς το «↓ 8%» που βλέπει ο αγοραστής.
+  const onMarket = visibility === 'published';
+  const priceReduction = onMarket ? listingPriceReductionOf(projectableFromOwnerProperty(property, at)) : null;
   const kinds = ownerPropertyOfferKinds(property);
 
   return (
@@ -120,6 +149,9 @@ export function OwnerPropertyCard({
           στις δύο γλώσσες** — και **κανείς δεν το ζητούσε ποτέ**.
         */}
         <p className="text-sm text-foreground">{t(`${K}.publish.${visibility}`)}</p>
+        {onMarket && (
+          <OwnerPropertyStatsRow stats={stats} listedAt={property.listedAt} priceReduction={priceReduction} />
+        )}
         {/*
           🔑 **ADR-864 — ο ΛΟΓΟΣ, όταν ο λόγος είναι επιλογή του κατόχου.** Το «δεν είναι στον
           δημόσιο χάρτη» είναι αληθινό και για την κλειστή διάθεση· χωρίς αυτή τη γραμμή ο

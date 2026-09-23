@@ -58,6 +58,7 @@ import type { PublicListing, PublicListingExchange, PublicListingStay } from '@/
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { projectListingAttributes } from './public-listing-attributes';
 import { reductionForListing } from '@/lib/listings/price-history';
+import type { PriceReduction } from '@/types/price-history';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
 //    για το γιατί δεν ήταν απλώς «κόψιμο για να περάσει το όριο των 500 γραμμών».
 import { resolveListingPosition } from './public-listing-position';
@@ -270,6 +271,15 @@ function projectedOfferKinds(property: ProjectableProperty): OfferKind[] {
 }
 
 /**
+ * **Η μείωση τιμής που θα δείξει η αγγελία** — ο ΕΝΑΣ τρόπος να ρωτηθεί (ADR-777 §8.69 · §8.72).
+ * Την καλεί η προβολή **και** η κάρτα του κατόχου, ώστε ο κάτοχος να βλέπει το **ίδιο** «↓ 8%»
+ * που βλέπει ο αγοραστής — ποτέ μια δεύτερη σύνθεση `{ ...property, offerKinds }`.
+ */
+export function listingPriceReductionOf(property: ProjectableProperty): PriceReduction | null {
+  return reductionForListing(property.priceHistory, { ...property, offerKinds: projectedOfferKinds(property) });
+}
+
+/**
  * **Οι όροι διαμονής στη δημόσια προβολή** — ή `null`, δεμένο στο `offerKinds`.
  *
  * 🔴 **Ο ΔΕΣΜΟΣ ΕΙΝΑΙ ΜΟΝΟΜΕΡΗΣ ΚΑΙ ΣΚΟΠΙΜΟΣ: το `leaseShort` ΑΠΟΦΑΣΙΖΕΙ.** Το
@@ -461,7 +471,7 @@ export function projectListingShape(
     //    `lib/listings/price-history.ts`, εδώ μόνο καλείται. Η τιμή λύνεται από τον ΕΝΑ
     //    `price-resolver` πάνω στο **ίδιο** `offerKinds` που γράφει η αγγελία, ώστε η
     //    μείωση να λέει την τιμή που θα δει η οθόνη — αλλιώς `null`.
-    priceReduction: reductionForListing(property.priceHistory, { ...property, offerKinds }),
+    priceReduction: listingPriceReductionOf(property),
     projectedAt,
   };
 }

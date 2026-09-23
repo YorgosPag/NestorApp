@@ -40,6 +40,7 @@ import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { useUrlQuery } from '@/hooks/useUrlQuery';
+import { useListingViewBeacon } from '@/hooks/listings/useListingViewBeacon';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΟΘΟΝΗΣ 3.
 //
@@ -124,6 +125,8 @@ export function ListingDetailContent({ id }: ListingDetailContentProps) {
   const { t } = useTranslation(['search-results']);
   const urlQuery = useUrlQuery();
   const lookup = usePublicListing(id);
+  // 📊 ADR-777 §8.72 — μία προβολή, μόνο όταν η αγγελία ΥΠΑΡΧΕΙ και η σελίδα ΦΑΙΝΕΤΑΙ.
+  useListingViewBeacon('listing' in lookup ? lookup.listing.id : null);
 
   /**
    * Τα φίλτρα **κανονικοποιημένα**, όχι η ωμή διεύθυνση: ό,τι δεν αναγνωρίζει το

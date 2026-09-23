@@ -369,6 +369,33 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // 📊 ADR-777 §8.72 — ΟΙ ΠΡΟΒΟΛΕΙΣ ΑΓΓΕΛΙΑΣ, τέσσερα `deny_all` με τέσσερις πειρασμούς: ο κάτοχος
+    // «διαβάζει τα δικά του» (σύνοψη), ο ανώνυμος «μετρά μόνος του» (shard), κάποιος «σβήνει το σημάδι
+    // για να ξαναμετρηθεί» (σημάδι), κι ο διαχειριστής «κοιτά το αλάτι» (που θα έκανε το hash ξανά PII).
+    collection: 'listing_stats',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/listing-stats.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'listing_view_shards',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/listing-view-shards.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'listing_view_marks',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/listing-view-marks.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'listing_view_salts',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/listing-view-salts.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-844 — Η ΠΡΟΣΚΛΗΣΗ. **Τρίτο `deny_all` της οικογένειας, ΤΡΙΤΟΣ λόγος** — και
     // αυτός δεν είναι ούτε ιδιωτικότητα (`mreq`) ούτε αυθεντία γραφέα (`fcon`).
     //

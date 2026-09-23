@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 493,
+  "population": 494,
   "tally": {
     "undeclared": 55,
     "prefix-shadowed-by-declaration": 28,
     "declared-over-default": 72,
     "declared-agrees": 240,
-    "declared-via-factory": 98
+    "declared-via-factory": 99
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -136,6 +136,7 @@
     "createScanCronRoute::/api/cron/firebase-auth-config-drift",
     "createScanCronRoute::/api/cron/first-contact-invitation-expiry",
     "createScanCronRoute::/api/cron/holiday-hours-question",
+    "createScanCronRoute::/api/cron/listing-stats-rollup",
     "createScanCronRoute::/api/cron/mandate-evidence-retention",
     "createScanCronRoute::/api/cron/mandate-expiry",
     "createScanCronRoute::/api/cron/oauth-cleanup",

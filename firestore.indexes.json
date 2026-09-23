@@ -8399,6 +8399,24 @@
       "indexes": []
     },
     {
+      "collectionGroup": "listing_view_salts",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "listing_view_marks",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "listing_view_shards",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "search_documents",
       "fieldPath": "expiresAt",
       "ttl": true,

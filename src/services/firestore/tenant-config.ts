@@ -86,6 +86,14 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   NAVIGATION:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Δομή πλοήγησης της εφαρμογής — κοινή σε όλους.' },
   SETTINGS:         { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Ρυθμίσεις επιπέδου πλατφόρμας.' },
   COUNTERS:         { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Μετρητές ακολουθιών· το κλειδί εγγράφου φέρει ήδη την εμβέλεια.' },
+  // --- ADR-777 §8.72: ΟΙ ΠΡΟΒΟΛΕΙΣ ΑΓΓΕΛΙΑΣ — μηχανισμός μέτρησης, όχι δεδομένο μισθωτή -------------
+  // Κλειστές ΚΑΙ στις δύο πλευρές (`read/write: false`). Αλάτι/σημάδι δεν ανήκουν σε κανέναν· shard/σύνοψη
+  // φέρουν το ακίνητο στο κλειδί, και ο ΜΟΝΟΣ αναγνώστης ανθρώπου (`listing-stats.service`) ρωτά
+  // αποκλειστικά ταυτότητες που ο `mayAdminister` (CHECK 3.56) έχει ήδη αποδείξει δικές του.
+  LISTING_VIEW_SALTS:  { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — ημερήσιο τυχαίο αλάτι, ένα για όλη την πλατφόρμα· σβήνεται μετά από 2 ημέρες.' },
+  LISTING_VIEW_MARKS:  { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — σημάδι αποδυπλασιασμού (hash χωρίς PII)· γράφεται με create(), δεν διαβάζεται ποτέ.' },
+  LISTING_VIEW_SHARDS: { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — ζεστός μετρητής· το κλειδί φέρει το ακίνητο, οι αναγνώσεις ανθρώπου μόνο μετά από mayAdminister.' },
+  LISTING_STATS:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — ψυχρή σύνοψη ανά ακίνητο· γράφει μόνο το cron, διαβάζει μόνο ο κάτοχος μετά από mayAdminister.' },
   ESCO_CACHE:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κρυφή μνήμη δημόσιας ταξινομίας ESCO — δημόσιο δεδομένο τρίτου.' },
   ESCO_SKILLS_CACHE:{ mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κρυφή μνήμη δημόσιας ταξινομίας ESCO — δημόσιο δεδομένο τρίτου.' },
   AI_CHAT_HISTORY:  { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Το ιστορικό φέρει δική του εμβέλεια στο κλειδί εγγράφου.' },

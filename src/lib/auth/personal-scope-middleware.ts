@@ -46,7 +46,7 @@ import 'server-only';
 
 import type { NextRequest, NextResponse } from 'next/server';
 
-import { buildApiIdentity } from './auth-context';
+import { buildApiIdentity, type ApiIdentity } from './auth-context';
 import { createUnauthorizedResponse, type ErrorResponse } from './api-denial';
 import { executeHandler } from './handler-execution';
 import { runIdempotently } from '@/lib/api/idempotency/with-idempotency';
@@ -111,6 +111,37 @@ export function listingActorOf(actor: ApiActor): ListingActor {
 }
 
 /**
+ * **Η επιτυχής ταυτότητα ως δρων** — η **μία** μετάφραση `ApiIdentity` → `ApiActor`.
+ *
+ * ⚠️ **Ο δρων ΞΑΝΑΧΤΙΖΕΤΑΙ, δεν προωθείται το `ApiIdentity`.** Το `ok: true` είναι η ετυμηγορία του
+ * **συνόρου** — ο handler δεν έχει δουλειά να τη βλέπει, και αν τη δει, ο επόμενος θα γράψει
+ * `if (actor.ok)` σε τιμή που είναι **πάντα** αληθής: φρουρός που δεν μπορεί να πυροδοτήσει (ADR-749 §5).
+ */
+function apiActorOf(identity: Extract<ApiIdentity, { ok: true }>): ApiActor {
+  return identity.scope === 'organization'
+    ? { scope: 'organization', ctx: identity.ctx }
+    : { scope: 'personal', ctx: identity.ctx };
+}
+
+/**
+ * **Ποιος κοιτάζει αυτή τη ΔΗΜΟΣΙΑ σελίδα — αν έχει ταυτότητα** (ADR-777 §8.72).
+ *
+ * 🔑 **ΔΕΝ ΕΙΝΑΙ ΠΟΡΤΑ, ΚΑΙ ΓΙ' ΑΥΤΟ ΔΕΝ ΜΠΑΙΝΕΙ ΣΤΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ ΤΟΥ ADR-817 §5**: δεν ανοίγει
+ * καμία πράξη σε κανέναν. Η διαδρομή που το καλεί **δέχεται ήδη** ανώνυμους· η ταυτότητα εδώ
+ * χρησιμεύει **μόνο για να ΑΦΑΙΡΕΣΕΙ** — «είσαι ο κάτοχος; τότε η προβολή σου δεν μετρά».
+ *
+ * ⚠️ **Χωρίς το `withAuth` context, επίτηδες**: εκείνο απαντά «ανώνυμος» στον **πολίτη χωρίς
+ * οργανισμό** (ADR-817) — δηλαδή ακριβώς στον ιδιώτη ιδιοκτήτη, του οποίου οι προβολές θα
+ * μετρούσαν. Εδώ ρωτάμε την **ίδια** αυθεντία με το {@link withPersonalOrOrgAuth}.
+ *
+ * @returns `null` για ανώνυμο **ή** για άκυρη ταυτότητα — και τα δύο είναι «όχι ο κάτοχος».
+ */
+export async function optionalListingActorOf(request: NextRequest): Promise<ListingActor | null> {
+  const identity = await buildApiIdentity(request);
+  return identity.ok ? listingActorOf(apiActorOf(identity)) : null;
+}
+
+/**
  * Handler που δέχεται **και τα δύο** είδη χώρου.
  *
  * ⚠️ Δεν παίρνει `PermissionCache`: το μόνο που θα έκανε μαζί του είναι
@@ -151,14 +182,7 @@ export function withPersonalOrOrgAuth<T = unknown, R = unknown>(
       return createUnauthorizedResponse(identity.reason) as NextResponse<ErrorResponse>;
     }
 
-    // ⚠️ **Ο ΔΡΩΝ ΞΑΝΑΧΤΙΖΕΤΑΙ, ΔΕΝ ΠΡΟΩΘΕΙΤΑΙ ΤΟ `ApiIdentity`.** Το `ok: true` είναι
-    //    η ετυμηγορία του **συνόρου** — ο handler δεν έχει καμία δουλειά να τη βλέπει,
-    //    και αν τη δει, ο επόμενος θα γράψει `if (actor.ok)` σε τιμή που είναι **πάντα**
-    //    αληθής: φρουρός που δεν μπορεί να πυροδοτήσει (ADR-749 §5).
-    const actor: ApiActor =
-      identity.scope === 'organization'
-        ? { scope: 'organization', ctx: identity.ctx }
-        : { scope: 'personal', ctx: identity.ctx };
+    const actor = apiActorOf(identity);
 
     // 🔑 ADR-853 Ε3 Φάση 2 — το ΙΔΙΟ σύνορο ιδεμποτίας με το `withAuth`: μία εκτέλεση ανά `Idempotency-Key`.
     return (await runIdempotently(request, actor.ctx.uid, options.idempotency, () =>

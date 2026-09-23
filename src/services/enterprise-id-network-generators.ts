@@ -7,6 +7,8 @@
  *     ↑ extends
  *   NetworkIdGenerators          (this file — νήματα ανάμεσα σε χώρους)
  *     ↑ extends
+ *   ListingStatsIdGenerators     (ADR-777 §8.72 — προβολές αγγελίας)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (composite keys + pure readers)
  *
  * 🔑 **Ξεχωριστό αρχείο, όχι προσθήκη στο `access-generators`**: η κεφαλίδα εκείνου

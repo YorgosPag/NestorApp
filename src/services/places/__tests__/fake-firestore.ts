@@ -75,6 +75,33 @@ function isFieldDelete(value: unknown): boolean {
   return value instanceof FieldValue && value.isEqual(FieldValue.delete());
 }
 
+/**
+ * **Το βήμα ενός `FieldValue.increment(n)`**, ή `null` αν η τιμή δεν είναι αύξηση (ADR-777 §8.72).
+ *
+ * ⚠️ Το SDK κρατά το βήμα στο πεδίο `operand` χωρίς δημόσιο τύπο· το `isEqual` **επιβεβαιώνει** ότι η
+ * τιμή είναι όντως αύξηση με αυτό το βήμα, ώστε να μη διαβαστεί ποτέ ως αύξηση κάτι άλλο.
+ */
+function incrementOperand(value: unknown): number | null {
+  if (!(value instanceof FieldValue)) return null;
+  const operand = (value as unknown as { readonly operand?: unknown }).operand;
+  return typeof operand === 'number' && value.isEqual(FieldValue.increment(operand)) ? operand : null;
+}
+
+/**
+ * 🔴 **Ο ΠΛΑΣΤΟΣ ΑΠΟΘΗΚΕΥΕ ΤΟ ΣΥΜΒΟΛΟ ΑΥΞΗΣΗΣ ΩΣ ΤΙΜΗ** (ADR-777 §8.72). Ένας μετρητής με
+ * `FieldValue.increment(1)` γινόταν **αντικείμενο**, οπότε κάθε άγκυρα «μετρήθηκε μία φορά, όχι δύο»
+ * θα ήταν τυφλή. Εδώ εφαρμόζεται πάνω στην υπάρχουσα τιμή, όπως στο αληθινό.
+ */
+function applyIncrements(existing: Doc, doc: Doc): Doc {
+  const out: Doc = {};
+  for (const [key, value] of Object.entries(doc)) {
+    const step = incrementOperand(value);
+    const previous = existing[key];
+    out[key] = step === null ? value : (typeof previous === 'number' ? previous : 0) + step;
+  }
+  return out;
+}
+
 export class FakeFirestore {
   /** συλλογή → (id → έγγραφο) */
   private readonly store = new Map<string, Map<string, Doc>>();
@@ -475,9 +502,10 @@ export class FakeDocRef {
    * θα ήταν πλαστός **πιο συγχωρητικός** από την παραγωγή.
    */
   async set(doc: Doc, options?: { readonly merge?: boolean }): Promise<void> {
+    const existing = this.bucket.get(this.id) ?? {};
     const next = options?.merge === true
-      ? { ...(this.bucket.get(this.id) ?? {}), ...doc }
-      : doc;
+      ? { ...existing, ...applyIncrements(existing, doc) }
+      : applyIncrements({}, doc);
     this.bucket.set(this.id, next);
     this.db.countWrite();
   }
@@ -703,12 +731,24 @@ export class FakeCollection extends FakeQuery {
 export class FakeBatch {
   private readonly pending: { ref: FakeDocRef; doc: Doc }[] = [];
   private readonly pendingUpdates: { ref: FakeDocRef; patch: Doc }[] = [];
+  private readonly pendingSets: { ref: FakeDocRef; doc: Doc; merge: boolean }[] = [];
   private readonly pendingDeletes: FakeDocRef[] = [];
 
   constructor(private readonly db: FakeFirestore) {}
 
   create(ref: FakeDocRef, doc: Doc): void {
     this.pending.push({ ref, doc });
+  }
+
+  /**
+   * **`set` μέσα σε δέσμη** (ADR-777 §8.72 — σημάδι + μετρητής σε ένα batch · σύνοψη + διαγραφή shards).
+   *
+   * 🔑 **Καμία προϋπόθεση**, όπως το αληθινό· αλλά εφαρμόζεται **μόνο αν** περάσουν οι έλεγχοι των
+   * `create`/`update` — αλλιώς ο πλαστός θα αύξανε τον μετρητή ενώ το σημάδι «υπήρχε ήδη», δηλαδή
+   * ακριβώς τη διπλομέτρηση που το batch υπάρχει για να αποκλείει.
+   */
+  set(ref: FakeDocRef, doc: Doc, options?: { readonly merge?: boolean }): void {
+    this.pendingSets.push({ ref, doc, merge: options?.merge === true });
   }
 
   /**
@@ -758,6 +798,7 @@ export class FakeBatch {
     }
     for (const { ref, doc } of this.pending) await ref.create(doc);
     for (const { ref, patch } of this.pendingUpdates) await ref.update(patch);
+    for (const { ref, doc, merge } of this.pendingSets) await ref.set(doc, { merge });
     // ⚠️ **Οι διαγραφές ΤΕΛΕΥΤΑΙΕΣ και ΧΩΡΙΣ προέλεγχο** — δες {@link FakeBatch.delete}:
     //    η διαγραφή ανύπαρκτου εγγράφου είναι αθόρυβα επιτυχής στο πραγματικό Firestore.
     for (const ref of this.pendingDeletes) await ref.delete();

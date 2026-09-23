@@ -313,9 +313,14 @@ export async function readOffererInbox(
  * δύο** ερωτήματα, και χρειαζόταν χάρτης-φρουρός για να μην εμφανιστεί δύο φορές.)*
  * Ο χάρτης **μένει** ως ζώνη-και-τιράντες (N.7.2 #4), όχι ως αναγκαιότητα.
  *
+ * 🔑 **Εξάγεται για τα στατιστικά αγγελίας** (ADR-777 §8.72): εκείνα **μετρούν** επαφές και δεν
+ * επιτρέπεται να τις σημειώσουν ως «ειδωμένες» — γι' αυτό καλούν **αυτό**, όχι το
+ * {@link readOffererInbox} που κάνει και `stampSeen`. Μία ερώτηση «ποιες απευθύνονται σε εμένα;»,
+ * δύο αναγνώστες: η οθόνη εισερχομένων και ο μετρητής.
+ *
  * @returns `null` **μόνο** σε βλάβη — κενός πίνακας σημαίνει «κανείς» (N.12).
  */
-async function collectAddressedContacts(
+export async function collectAddressedContacts(
   adminDb: AdminFirestore,
   actor: ListingActor,
 ): Promise<readonly FirstContact[] | null> {

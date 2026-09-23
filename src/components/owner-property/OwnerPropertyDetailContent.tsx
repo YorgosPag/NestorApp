@@ -59,12 +59,14 @@ import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
+import { listingStatsStateOf, useOwnerPortfolioStats } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import { OwnerListingCompletion } from './OwnerListingCompletion';
 import { OwnerMandatePanel } from './OwnerMandatePanel';
 import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
 import { OwnerPropertyHistory } from './OwnerPropertyHistory';
+import { StatsPanelPending } from './owner-property-stats-pending';
 import { PrivateMarketingOwnerSection } from './PrivateMarketingOwnerSection';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers/[offerId]` (ADR-777 §8.39).
@@ -91,6 +93,15 @@ registerRouteSlice(routeSlice);
  */
 const OwnerMandateThreads = dynamic(() =>
   import('@/components/network-messaging/OwnerMandateThreads').then((mod) => mod.OwnerMandateThreads),
+);
+
+/**
+ * 📊 ADR-777 §8.72 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): ο πίνακας γεμίζει **μόνο** στον πελάτη, άρα
+ * δείκτες, γράφημα και εξέλιξη τιμής δεν ανήκουν στο route slice. ⚠️ Όχι `ssr: false` (ADR-744 §14.3).
+ */
+const OwnerPropertyStatsPanel = dynamic(
+  () => import('./OwnerPropertyStatsPanel').then((mod) => mod.OwnerPropertyStatsPanel),
+  { loading: StatsPanelPending },
 );
 
 const NS = 'property-market';
@@ -185,6 +196,9 @@ function OwnerPropertyView({
   // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
   // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.
   const interest = usePlaceInterest(property.id);
+  // 📊 ADR-777 §8.72 — **ΕΝΑ** fetch για κάρτα ΚΑΙ πίνακα (η ίδια διαδρομή με τη λίστα· κανένα
+  //    `propertyId` στο σύρμα — ο διακομιστής βρίσκει μόνος του τα ακίνητα του κατόχου).
+  const stats = listingStatsStateOf(useOwnerPortfolioStats(), property.id);
   // 🏆 **ADR-842 Φ5 — Η ΙΔΙΑ ΠΡΟΒΟΛΗ ΠΟΥ ΒΛΕΠΕΙ Ο ΑΓΟΡΑΣΤΗΣ, ΩΣ ΚΑΘΡΕΦΤΗΣ ΓΙΑ ΤΟΝ ΚΑΤΟΧΟ.**
   //    `projectListingShape` και **όχι** `buildPublicListing`: το σχήμα **χωρίς την
   //    πύλη**, ώστε ο δείκτης να υπάρχει **και πριν** τη δημοσίευση — εκεί που το
@@ -200,7 +214,7 @@ function OwnerPropertyView({
   return (
     <div className="flex flex-col gap-4">
       <ListingMapSnapshotProvider>
-        <OwnerPropertyCard property={property} priority />
+        <OwnerPropertyCard property={property} priority stats={stats} />
       </ListingMapSnapshotProvider>
 
       {/*
@@ -229,6 +243,16 @@ function OwnerPropertyView({
         μεγαλύτερη αξία. Το §12.6 το λέει: *«πολύ ισχυρότερο κάλεσμα από “ανεβάστε
         αγγελία”»*, δηλαδή απευθύνεται **εξ ορισμού** σε όποιον δεν έχει ανεβάσει.
       */}
+      {/*
+        📊 **ADR-777 §8.72 — «ΠΩΣ ΠΑΕΙ Η ΑΓΓΕΛΙΑ ΜΟΥ», ΠΡΙΝ ΤΟ «ΠΟΣΟΙ ΨΑΧΝΟΥΝ».** Η σειρά είναι
+        συμβόλαιο: πρώτα η απόδοση της **δικής** του αγγελίας, μετά η ζήτηση της περιοχής, μετά
+        τι λείπει. Μόνο για αγγελία **στην αγορά** — εκτός αγοράς οι μηδενικές ημέρες δεν
+        σημαίνουν «κανείς δεν ήρθε», σημαίνουν «δεν ήταν εκεί».
+      */}
+      {onMap && (
+        <OwnerPropertyStatsPanel stats={stats} listedAt={property.listedAt} priceHistory={property.priceHistory} />
+      )}
+
       <PlaceInterestPanel interest={interest} audience={property.marketingAudience} />
 
       {/*

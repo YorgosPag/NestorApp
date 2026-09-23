@@ -319,6 +319,30 @@ export const COLLECTIONS = {
    */
   FIRST_CONTACTS: process.env.NEXT_PUBLIC_FIRST_CONTACTS_COLLECTION || 'first_contacts',
   /**
+   * ADR-777 §8.72 — **ΟΙ ΠΡΟΒΟΛΕΙΣ ΜΙΑΣ ΑΓΓΕΛΙΑΣ**, σε τέσσερις συλλογές με τέσσερις ρόλους.
+   *
+   * | Συλλογή | Ρόλος | Ζωή |
+   * |---|---|---|
+   * | `listing_view_salts` | ημερήσιο τυχαίο αλάτι | 2 ημέρες |
+   * | `listing_view_marks` | «μετρήθηκε σήμερα» — αποδυπλασιασμός | 2 ημέρες |
+   * | `listing_view_shards` | ζεστός μετρητής (ακίνητο, ημέρα, shard) | 2 ημέρες |
+   * | `listing_stats` | ψυχρή σύνοψη ανά ακίνητο, γράφει **μόνο** το cron | για πάντα |
+   *
+   * 🔑 **Κλειδί = το ΑΚΙΝΗΤΟ, όχι η δημόσια αγγελία** (μάθημα `listedAt` §8.61): η απόσυρση
+   * σβήνει το `public_listings/{id}`· αν ζούσαν εκεί, απόσυρση + επαναδημοσίευση θα μηδένιζε
+   * την ιστορία.
+   *
+   * 🔒 **Καμία PII**: το σημάδι είναι hash με αλάτι ημέρας που σβήνεται μετά από 2 μέρες ⇒ κανείς,
+   * ούτε εμείς, δεν μπορεί να ξαναβρεί ποια IP το γέννησε (μοτίβο Plausible).
+   *
+   * ⛔ **ΚΛΕΙΣΤΕΣ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** (`read/write: false`) — ο κάτοχος διαβάζει **προβολή**
+   * από τον διακομιστή, με τον κριτή θεματοφυλακής (`mayAdminister`).
+   */
+  LISTING_VIEW_SALTS: process.env.NEXT_PUBLIC_LISTING_VIEW_SALTS_COLLECTION || 'listing_view_salts',
+  LISTING_VIEW_MARKS: process.env.NEXT_PUBLIC_LISTING_VIEW_MARKS_COLLECTION || 'listing_view_marks',
+  LISTING_VIEW_SHARDS: process.env.NEXT_PUBLIC_LISTING_VIEW_SHARDS_COLLECTION || 'listing_view_shards',
+  LISTING_STATS: process.env.NEXT_PUBLIC_LISTING_STATS_COLLECTION || 'listing_stats',
+  /**
    * ADR-867 §4.3 — **Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ** (`nteam_*`): ποιος του γραφείου απαντά σε μια πράξη
    * που **δεν έχει έργο** (π.χ. εντολή ιδιοκτήτη ↔ μεσιτικού) — ADR-834 §5 Β (ε) ①.
    *

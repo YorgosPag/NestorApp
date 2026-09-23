@@ -53,6 +53,7 @@ import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
 import { runHolidayHoursQuestion } from '@/lib/cron/jobs/holiday-hours-question.job';
+import { runListingStatsRollup } from '@/lib/cron/jobs/listing-stats-rollup.job';
 import { runMandateEvidenceRetention } from '@/lib/cron/jobs/mandate-evidence-retention.job';
 import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
@@ -432,6 +433,24 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runHolidayHoursQuestion,
+  },
+  {
+    slug: 'listing-stats-rollup',
+    path: '/api/cron/listing-stats-rollup',
+    description: 'Σύνοψη προβολών αγγελίας: ζεστά shards ⇒ ψυχρή σύνοψη ανά ακίνητο, διαγραφή αλάτων (ADR-777 §8.72)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί η μονάδα είναι η ΗΜΕΡΑ ΑΓΟΡΑΣ.** Η σύνοψη αφορά μόνο **κλειστές** ημέρες·
+    // ωριαία σάρωση θα ξαναδιάβαζε 24 φορές τα ίδια shards χωρίς τίποτα νέο να συνοψίσει. Οι ζωντανές
+    // ώρες τις διαβάζει ο αναγνώστης κατευθείαν από τα shards.
+    //
+    // ⚠️ **03:10**: μετά τα μεσάνυχτα Αθήνας (η χθεσινή είναι πλέον κλειστή) και σε λεπτό που δεν
+    // κατέχει κανείς (03:00 ×3 · 03:15 ωριαίο · 03:30 · 03:45 ×2).
+    schedule: '10 3 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runListingStatsRollup,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────

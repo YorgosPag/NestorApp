@@ -46,6 +46,12 @@ jest.mock('next/dynamic', () => () =>
   },
 );
 
+// 📊 §8.72 — τα στατιστικά δεν είναι το ερώτημα εδώ (δες owner-property-stats.test.tsx): «φορτώνει».
+jest.mock('@/hooks/owner-property/useOwnerPortfolioStats', () => ({
+  ...jest.requireActual('@/hooks/owner-property/useOwnerPortfolioStats'),
+  useOwnerPortfolioStats: () => ({ state: 'loading' }),
+}));
+
 const AT = '2026-09-23T10:00:00.000Z';
 const MARK: ListingMapMark = { shape: 'shaded-city', point: { lat: 40.63, lng: 22.95 } };
 

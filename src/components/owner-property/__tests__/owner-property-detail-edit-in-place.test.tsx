@@ -46,6 +46,10 @@ jest.mock('@/services/realtime/hooks/useMyOwnerProperties', () => {
 });
 
 jest.mock('@/hooks/demand/usePlaceInterest', () => ({ usePlaceInterest: () => ({ kind: 'idle' }) }));
+jest.mock('@/hooks/owner-property/useOwnerPortfolioStats', () => ({
+  useOwnerPortfolioStats: () => ({ state: 'loading' }),
+  listingStatsStateOf: () => ({ state: 'loading' }),
+}));
 
 /** Τα παιδιά-πάνελ δεν είναι το ερώτημα — απομονώνονται. */
 jest.mock('@/components/demand/PlaceInterestPanel', () => ({ PlaceInterestPanel: () => null }));
@@ -53,6 +57,7 @@ jest.mock('@/components/owner-property/OwnerListingCompletion', () => ({ OwnerLi
 jest.mock('@/components/owner-property/OwnerMandatePanel', () => ({ OwnerMandatePanel: () => null }));
 jest.mock('@/components/owner-property/OwnerPropertyCard', () => ({ OwnerPropertyCard: () => null }));
 jest.mock('@/components/owner-property/OwnerPropertyHistory', () => ({ OwnerPropertyHistory: () => null }));
+jest.mock('@/components/owner-property/OwnerPropertyStatsPanel', () => ({ OwnerPropertyStatsPanel: () => null }));
 jest.mock('@/components/owner-property/PrivateMarketingOwnerSection', () => ({ PrivateMarketingOwnerSection: () => null }));
 
 /** Στέλεχος φόρμας: «κλείνω» = καλώ ό,τι μου έδωσε η σελίδα (ή τίποτα, αν δεν μου έδωσε). */
