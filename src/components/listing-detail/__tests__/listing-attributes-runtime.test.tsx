@@ -32,11 +32,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import i18next from 'i18next';
-import ICU from 'i18next-icu';
-import { initReactI18next, I18nextProvider } from 'react-i18next';
+import type { i18n } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 
-import { getNamespaceLoader } from '@/i18n/namespace-loaders';
+import { createRealI18n } from '@/test-utils/real-i18n';
 import { LISTING_ATTRIBUTE_GROUPS } from '@/lib/listings/listing-attribute-groups';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
@@ -58,7 +57,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => {
   };
 });
 
-const instance = i18next.createInstance();
+let instance: i18n;
 
 /** Ακίνητο με **μερικώς** δηλωμένα στοιχεία — ώστε να ζωγραφιστούν και οι τρεις όψεις. */
 function listing(over: Partial<PublicListing> = {}): PublicListing {
@@ -97,39 +96,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
 }
 
 beforeAll(async () => {
-  // 🔑 **ΟΙ ΠΡΑΓΜΑΤΙΚΟΙ LOADERS, ΟΧΙ ΧΕΙΡΟΓΡΑΦΟΙ ΠΟΡΟΙ.** Ένα `resources: { … }`
-  //    γραμμένο εδώ θα ήταν **τρίτο** αντίγραφο του locale, και η άγκυρα θα
-  //    επιβεβαίωνε τον εαυτό της αντί για το wiring.
-  const namespaces = ['listing-detail', 'search-results', 'properties-enums'] as const;
-  const resources: Record<string, unknown> = {};
-
-  for (const ns of namespaces) {
-    const loader = getNamespaceLoader('el', ns as never);
-    // ⛔ `null` εδώ σημαίνει «λείπει `case` στο `namespace-loaders`» — ακριβώς το
-    //    κενό που καμία άλλη άγκυρα δεν εκτελεί.
-    expect(loader).not.toBeNull();
-    const mod = await loader!();
-    resources[ns] = (mod as { default?: unknown }).default ?? mod;
-  }
-
-  // 🔴 **ΤΟ ICU ΕΙΝΑΙ ΜΕΡΟΣ ΤΗΣ ΑΓΚΥΡΑΣ, ΟΧΙ ΛΕΠΤΟΜΕΡΕΙΑ ΣΤΗΣΙΜΑΤΟΣ.** Τα locale
-  //    του έργου γράφονται σε **μονό άγκιστρο** ICU (`{value}` · `{count, plural, …}`)
-  //    και το CHECK 3.9 το **επιβάλλει**. Ο προεπιλεγμένος interpolator του i18next
-  //    θέλει `{{ }}` ⇒ χωρίς το plugin, η λογιστική και οι πληθυντικοί θα
-  //    ζωγραφίζονταν **ωμοί** και η άγκυρα θα έλεγε ψέματα προς τη μία κατεύθυνση:
-  //    πράσινη για κείμενο που ο χρήστης δεν βλέπει ποτέ έτσι.
-  await instance
-    .use(new ICU({ bindI18n: 'languageChanged', bindI18nStore: 'added removed' }))
-    .use(initReactI18next)
-    .init({
-      lng: 'el',
-      fallbackLng: 'el',
-      resources: { el: resources as Record<string, Record<string, unknown>> },
-      ns: [...namespaces],
-      defaultNS: 'listing-detail',
-      react: { useSuspense: false },
-      interpolation: { escapeValue: false },
-    });
+  // 🔑 Πραγματικοί loaders + πραγματικό ICU: ο λόγος ζει στο `test-utils/real-i18n`.
+  instance = await createRealI18n(['listing-detail', 'search-results', 'properties-enums']);
 });
 
 function renderCard(over: Partial<PublicListing> = {}) {

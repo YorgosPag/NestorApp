@@ -408,6 +408,27 @@
         "action": "Create workspace"
       }
     },
+    "portfolio": {
+      "view": {
+        "label": "Property view",
+        "list": "List",
+        "map": "Map"
+      },
+      "map": {
+        "label": "Map of your properties",
+        "hint": "The map shows each property the way the public sees it — with the same location precision.",
+        "loading": "Loading map…"
+      },
+      "unmapped": {
+        "heading": "{count, plural, one {# property is not on the public map} other {# properties are not on the public map}}",
+        "hint": "Open each one to see what is missing.",
+        "reason": {
+          "withdrawn": "off the market",
+          "failed": "publishing failed",
+          "noMark": "no location on the map"
+        }
+      }
+    },
     "mandates": {
       "title": "Office mandates",
       "lead": "Every property you listed on behalf of a client, and what became of their approval. The ones waiting on you come first.",

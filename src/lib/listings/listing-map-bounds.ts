@@ -14,7 +14,7 @@
  * δεν κράτησε αντίγραφο.
  */
 
-import type { ListingFeatureProperties } from './listings-geojson';
+import type { ListingGeoJson } from './listings-geojson';
 
 /** `[[δυτικά, νότια], [ανατολικά, βόρεια]]` — η μορφή που δέχεται το `fitBounds`. */
 export type ListingBounds = [[number, number], [number, number]];
@@ -29,7 +29,7 @@ export type ListingBounds = [[number, number], [number, number]];
  * και το να μην πας εκεί που είναι, καταλήγουν στην ίδια εντύπωση.
  */
 export function listingBounds(
-  data: GeoJSON.FeatureCollection<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties>,
+  data: ListingGeoJson,
 ): ListingBounds | null {
   let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
 

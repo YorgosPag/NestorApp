@@ -15,11 +15,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import i18next from 'i18next';
-import ICU from 'i18next-icu';
-import { initReactI18next, I18nextProvider } from 'react-i18next';
+import type { i18n } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 
-import { getNamespaceLoader } from '@/i18n/namespace-loaders';
+import { createRealI18n } from '@/test-utils/real-i18n';
 import type { OwnerPropertyPublication } from '@/types/owner-property';
 import type { MapSnapshotState } from '@/lib/maps/map-snapshot-store';
 import {
@@ -42,7 +41,7 @@ jest.mock('@/lib/workspace/navigation', () => ({
   ),
 }));
 
-const instance = i18next.createInstance();
+let instance: i18n;
 
 const THUMBNAIL = {
   url: 'https://shelf/0-2560.webp',
@@ -81,23 +80,7 @@ function fixedStore(state: MapSnapshotState | undefined): ListingSnapshotStore &
 }
 
 beforeAll(async () => {
-  const loader = getNamespaceLoader('el', 'property-market' as never);
-  expect(loader).not.toBeNull();
-  const mod = await loader!();
-  const propertyMarket = (mod as { default?: unknown }).default ?? mod;
-
-  await instance
-    .use(new ICU({ bindI18n: 'languageChanged', bindI18nStore: 'added removed' }))
-    .use(initReactI18next)
-    .init({
-      lng: 'el',
-      fallbackLng: 'el',
-      resources: { el: { 'property-market': propertyMarket } as Record<string, Record<string, unknown>> },
-      ns: ['property-market'],
-      defaultNS: 'property-market',
-      react: { useSuspense: false },
-      interpolation: { escapeValue: false },
-    });
+  instance = await createRealI18n(['property-market']);
 });
 
 function renderCover(pub: OwnerPropertyPublication | undefined, priority = false, store?: ListingSnapshotStore) {

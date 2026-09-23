@@ -38,7 +38,7 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import type { ListingFeatureProperties } from './listings-geojson';
+import type { ListingGeoJson } from './listings-geojson';
 import { PRICE_ROLE_ORDER, resolveDisplayPrice, type PriceRole } from '@/lib/properties/price-resolver';
 
 /**
@@ -78,12 +78,6 @@ export interface ListingPriceMarker {
    */
   readonly role: PriceRole;
 }
-
-/** Το GeoJSON του ζωγράφου — **η μία** αυθεντία θέσης και σχήματος. */
-type ListingGeoJson = GeoJSON.FeatureCollection<
-  GeoJSON.Point | GeoJSON.Polygon,
-  ListingFeatureProperties
->;
 
 /**
  * Οι αγγελίες που **δικαιούνται** πινακίδα τιμής, με σειρά και φραγμό.

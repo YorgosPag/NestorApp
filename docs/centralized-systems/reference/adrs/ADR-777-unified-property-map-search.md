@@ -14238,7 +14238,7 @@ services/demand).
 #### 8.70.6 🔶 Ανοιχτά (ονομαστικά)
 
 1. ~~**Φάση 2 — μικρός χάρτης θέσης** όταν λείπει φωτογραφία.~~ ✅ **Έκλεισε 2026-09-23 — §8.70.7.**
-2. **Διακόπτης Λίστα/Χάρτης** για χρήστες με πολλά ακίνητα (μεσίτες, κατασκευαστές).
+2. ~~**Διακόπτης Λίστα/Χάρτης** για χρήστες με πολλά ακίνητα (μεσίτες, κατασκευαστές).~~ ✅ **Έκλεισε 2026-09-23 — §8.71.**
 3. **Στατιστικά ανά αγγελία** (προβολές · επαφές · μέρες στην αγορά), όπως Idealista/Zillow.
 4. **Μικρογραφίες μη δημοσιευμένων φωτογραφιών**. Απορρίφθηκε για τη Φάση 1: θέλει νέο βήμα
    επεξεργασίας εικόνων για τον ιδιωτικό κάδο.
@@ -14342,3 +14342,106 @@ DXF basemap · owner-property). Πύλες: 3.75 ✅ · 3.62 ✅ (0 αδήλωτ
 - Το URL `tile.openstreetmap.org` είναι γραμμένο σε **4** σημεία και οι IntersectionObserver σε
   **3** αντίγραφα μέσα στα subapps ⇒ `.claude-rules/pending-ratchet-work.md`.
 
+### 8.71 🗺️ **ΛΙΣΤΑ | ΧΑΡΤΗΣ ΣΤΟ «ΤΑ ΑΚΙΝΗΤΑ ΜΟΥ» — ΤΟ ΧΑΡΤΟΦΥΛΑΚΙΟ ΟΠΩΣ ΤΟ ΒΛΕΠΕΙ Ο ΚΟΣΜΟΣ** *(2026-09-23, Βήμα Β του §8.70.6)*
+
+#### 8.71.1 🔴 Η ερώτηση
+
+Το §8.70.6 #2 άφησε ανοιχτό τον διακόπτη Λίστα/Χάρτης για όσους έχουν **πολλά** ακίνητα (μεσίτες,
+κατασκευαστές). Το §8.70.2 είχε ήδη διαπιστώσει ότι **κανείς** δεν βάζει χάρτη στη διαχείριση των
+**δικών σου** αγγελιών.
+
+#### 8.71.2 🏆 Έρευνα *(2026-09-23)*
+
+- **Χάρτης των δικών σου αγγελιών στη διαχείριση**: **δεν τεκμηριώθηκε σε κανέναν** (Airbnb host
+  Listings, Zillow Rental Manager, AppFolio, Buildium: μη επιβεβαιωμένο· η εφαρμογή κινητού του
+  Buildium έχει χάρτη **πλοήγησης**, όχι χαρτοφυλακίου). Το Salesforce Maps δείχνει λίστα **μαζί** με
+  χάρτη εγγραφών. Πηγές: [Buildium owner portal](https://www.buildium.com/features/property-owner-portal/) ·
+  [Salesforce Maps List View](https://help.salesforce.com/s/articleView?id=000381362&language=en_US&type=1) ·
+  [Rightmove: αποθηκευμένες αναζητήσεις σε χάρτη](https://www.rightmove.co.uk/news/articles/property-news/you-can-now-see-saved-searches-in-map-view-on-my-rightmove/).
+- **Η πρακτική των μεγάλων στους χάρτες καταχωρίσεων** (Zillow · Airbnb · Idealista · Redfin): κλικ σε
+  σημάδι ⇒ **κάρτα-προεπισκόπηση**, όχι πλοήγηση· σε κινητό **διακόπτης** Χάρτης/Λίστα· η προβολή
+  **στο URL** (το Redfin κρατά και το κάδρο: [viewport param](https://medium.com/@life-is-short-so-enjoy-it/redfin-understadning-viewport-param-in-url-0c430b4ad2bf)).
+- **Διακόπτης προβολής**: segmented control / καρτέλες για «ίδια δεδομένα, άλλη όψη»
+  ([Primer](https://primer.style/product/components/segmented-control/accessibility/) ·
+  [Apple HIG](https://developer.apple.com/design/human-interface-guidelines/segmented-controls)).
+- **Όριο εμφάνισης**: κανένας δεν τεκμηριώνει. **Κατάσταση πάνω στον χάρτη**: ποτέ μόνο χρώμα (WCAG 1.4.1).
+
+⇒ **Εφόσον οι μεγάλοι δεν το κάνουν, ακολουθούμε την πρακτική τους**: η **λίστα μένει η προεπιλογή**
+και για τους περισσότερους η **μόνη** προβολή. Ο χάρτης προστίθεται **μόνο** όταν το χαρτοφυλάκιο
+έχει ≥2 σημάδια, και τότε μιλά το λεξιλόγιο των χαρτών καταχωρίσεων (φούσκα, URL, `Escape`).
+
+#### 8.71.3 ✅ Υλοποίηση
+
+**1. Ένας χάρτης — ο πυρήνας εξήχθη (extract, όχι αντίγραφο).** Ο `ResultsMap` ήταν **493/500**
+γραμμές. Ο γενικός πυρήνας (πηγές, καδράρισμα, κλικ/δείκτης, `ResizeObserver`, αναφορές χειριστών)
+μετακόμισε **με τα σχόλιά του αυτούσια** στο **`search-results/ListingMapCanvas.tsx`**. Δέχεται
+**έτοιμο** `ListingGeoJson` και `children` για επικαλύψεις. Ο `ResultsMap` έγινε λεπτό περιτύλιγμα
+(128 γραμμές) με **ίδιο** εξωτερικό API: οθόνη 2 και οθόνη 3 δεν άλλαξαν. Το `handleMapReady`
+(~125 γραμμές) σπάστηκε σε `watchMapSize` · `bindAreaReporting` · `bindSelection`, με την **ίδια**
+σειρά δεσίματος.
+
+**2. Πηγή θέσης = το σημάδι, ΠΟΤΕ το `place`.** `lib/owner-property/owner-portfolio-map.ts`:
+- `partitionOwnerPortfolio(properties, at)` → `{ mapped, unmapped }`. 🔴 **Ο κριτής κρίνει πρώτος**
+  (`ownerListingVisibility`): ένα `'published'` αποτύπωμα με σημάδι μπορεί να έχει **παλιώσει** (ο
+  κάτοχος απέσυρε τη διάθεση, έληξε η εντολή). Αιτίες: `withdrawn` · `failed` · `no-mark`.
+- `ownerPortfolioGeoJson(mapped)`: `listingFeature` — ο **ίδιος** ζωγράφος με τον δημόσιο χάρτη
+  και τη μικρογραφία της κάρτας. Τρεις επιφάνειες, ένα σχήμα.
+- `OWNER_PORTFOLIO_MAP_MIN_MARKED = 2` · `hasOwnerPortfolioMap`: η **μία** ερώτηση για τον διακόπτη
+  **και** την απόδοση.
+- `parse/writeOwnerPortfolioView` (`?view=map`· η λίστα **σβήνει** το κλειδί).
+
+**3. Προβολή στο URL.** `hooks/owner-property/useOwnerPortfolioView.ts`: `useUrlQuery` +
+`replaceUrlSearchParams` (το **ένα** σημείο κατάστασης στο query string). ⚠️ **Το URL ζητά, η σελίδα
+αποφασίζει**: `?view=map` με <2 σημάδια ⇒ λίστα, **χωρίς** να ξαναγραφτεί ο σύνδεσμος.
+
+**4. UI.**
+- `OwnerPortfolio`: χωρίς χάρτη ⇒ η λίστα σκέτη, **χωρίς** `Tabs` (ένα `tabpanel` χωρίς `tablist`
+  είναι σπασμένη δομή). Με χάρτη ⇒ Radix `Tabs`.
+- `OwnerPortfolioViewSwitch`: πρότυπο `LandingModeSwitch`, με εικονίδια `List`/`Map` και `aria-controls`
+  μόνο στην ενεργή καρτέλα.
+- `OwnerPortfolioMap`: `next/dynamic({ ssr:false })`. Ο κάτοχος που δεν ανοίγει τον χάρτη **δεν
+  κατεβάζει** τη MapLibre. Η κράτηση θέσης έχει το **ίδιο** ύψος (`owner-portfolio-layout.ts`, χωριστό
+  αρχείο ώστε να μην εισάγει στατικά τον χάρτη), άρα μηδέν CLS. `useListingFocus`: πέρασμα ⇒
+  επισήμανση, κλικ ⇒ φούσκα, `Escape` / κενό / `×` ⇒ ακύρωση.
+- `OwnerPropertyMapPopup`: φωτογραφία (χωρίς φωτογραφία ⇒ **τίποτα**, ο χάρτης είναι ήδη η εικόνα) ·
+  τίτλος · **τιμή όπως τη βλέπει ο κόσμος** (`projectableFromOwnerProperty` → `resolveDisplayPrice` →
+  `displayPriceLabel`) · «Άνοιγμα» → `offerDetailHref`.
+- 🏆 `OwnerPortfolioUnmappedRow`, **πάνω από τους μεγάλους**: ο δημόσιος χάρτης λέει «N ακόμη»· εδώ ο
+  κάτοχος μαθαίνει **γιατί** λείπει κάθε ακίνητο από τον κόσμο (εκτός αγοράς · η δημοσίευση απέτυχε ·
+  χωρίς θέση στον χάρτη), με τη θεραπεία ένα κλικ μακριά.
+
+**5. Εξαγωγές SSoT που προέκυψαν (N.0.2)** — κάθε μία είχε **δεύτερο καταναλωτή** σε αυτό το βήμα:
+
+| Νέο SSoT | Από πού | Καταναλωτές |
+|---|---|---|
+| `ListingGeoJson` (`listings-geojson.ts`) | inline σε 4 σημεία + τοπικός τύπος στο `listing-price-markers` | geojson · bounds · price markers · canvas · portfolio |
+| `ListingMapPopupFrame` | θέση/μύτη/`closeOnClick` του `ListingMapPopup` | δημόσια φούσκα · φούσκα κατόχου |
+| `UnmappedRow` + `UNMAPPED_ROW_LINK_CLASS` | κέλυφος του `UnmappedListingsRow` | αναζήτηση · χαρτοφυλάκιο (ο σύνδεσμος χτίζεται από τον καταναλωτή: μόνο εκείνος ξέρει τον τύπο `WorkspaceHref`) |
+| `OwnerPropertyPhoto` (`OwnerPropertyCardCover.tsx`) | το `<img>` της κάρτας | κάρτα · φούσκα |
+| `test-utils/real-i18n.ts` (`createRealI18n`) | πραγματικοί loaders + ICU, **3** αντίγραφα | 3 υπάρχοντα tests + το νέο |
+
+**i18n** (el + en): `property-market:offer.portfolio.{view.*, map.*, unmapped.*}`, με ICU πληθυντικό
+στο `unmapped.heading`.
+
+#### 8.71.4 🧪 Άγκυρες
+
+| Σουίτα | Τι ρωτά | Μετάλλαξη |
+|---|---|---|
+| `lib/owner-property/__tests__/owner-portfolio-map.test.ts` (11) | Κ1 ακριβής ιδιωτική πινέζα + σημάδι «πόλη» ⇒ **πόλη** στο σημείο του σημαδιού · Κ2 feature **ταυτόσημο** με του δημόσιου χάρτη · Κ3 διαμέριση + αιτίες + σειρά · αγγελία πριν το πεδίο ⇒ `no-mark` · Κ4 όριο (τα εκτός χάρτη δεν μετράνε) · Κ5 URL | πηγή = `place` ⇒ **5/11 κόκκινα** · κριτής μόνο για `failed` ⇒ **1 κόκκινο** · επαναφορά ✅ |
+| `components/owner-property/__tests__/owner-portfolio.test.tsx` | Υ1 κάτω από το όριο ⇒ κανένα `tablist` · Υ2 «Χάρτης» ⇒ `?view=map`, «Λίστα» ⇒ σβήνει · Υ3 `?view=map` + 1 σημάδι ⇒ λίστα, URL ανέγγιχτο · Υ4 φούσκα: σύνδεσμος + τιμή + κανένα `<img>` · Υ5 αιτία ανά ακίνητο | — |
+
+#### 8.71.5 🔶 Ανοιχτά (ονομαστικά — αποφάσεις Giorgio)
+
+1. 🔴 **Πλάτος: ο χάρτης ζει στον διάδρομο των 80ch.** Η πρακτική των μεγάλων στον υπολογιστή είναι
+   λίστα **και** χάρτης δίπλα-δίπλα σε όλο το πλάτος. Αυτό θέλει (α) `fullBleed["/offers"]` στο
+   `.shell-surface.json` με **μετρημένο** λόγο και (β) έξοδο από τον ρόλο `wide` του
+   `PrivateSpaceShell`, που ορίζεται για **όλη** τη γειτονιά `(me)`. Η πύλη 3.63 **μπλοκάρει κάθε νέα
+   δήλωση επίτηδες**, ώστε να τη δει άνθρωπος. Ως τότε: διακόπτης (το μοτίβο κινητού των μεγάλων) και
+   **όχι** συγχρονισμός hover λίστας↔χάρτη (δεν συνυπάρχουν στην οθόνη).
+2. Πινακίδες τιμής στον χάρτη του κατόχου (ο `ListingPriceMarkers` είναι δεμένος σε `PublicListing`).
+3. Επιλογή στο URL (`?selected=`): κοινοποιήσιμος σύνδεσμος «αυτό το ακίνητο στον χάρτη».
+4. Το `jest.mock('@/i18n/hooks/useTranslation', …)` μένει γραμμένο σε **κάθε** test με πραγματικό
+   i18n (4 σήμερα): ο factory του `jest.mock` δεν βλέπει imports, άρα δεν εξάγεται απλά. Η
+   τεκμηρίωση ζει στην κεφαλίδα του `test-utils/real-i18n.ts`.
+5. ⚠️ **Δεν επαληθεύτηκε σε πραγματικό περιηγητή** (jsdom χωρίς WebGL): `/offers?view=map` με ≥2
+   δημοσιευμένα μετά από επανασύνθεση.

@@ -59,7 +59,7 @@
  */
 
 import React from 'react';
-import { Popup } from '@/lib/maps/maplibre';
+import { ListingMapPopupFrame } from './ListingMapPopupFrame';
 
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -107,28 +107,7 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
   const { point } = listing.position;
 
   return (
-    <Popup
-      longitude={point.lng}
-      latitude={point.lat}
-      anchor="bottom"
-      /*
-        ⚠️ **Το `offset` ΔΕΝ είναι αισθητική απόσταση**: χωρίς αυτό η μύτη του popup
-        κάθεται πάνω στο κέντρο της πινέζας και **σκεπάζει το ίδιο το σχήμα** που μόλις
-        πατήθηκε — ο άνθρωπος χάνει την οπτική επιβεβαίωση του τι διάλεξε. Η τιμή είναι
-        η μεγαλύτερη ακτίνα σχήματος-σημείου (`RADIUS.pin + δακτύλιος επιλογής`).
-      */
-      offset={[0, -18]}
-      onClose={onClose}
-      /*
-        🔴 **`closeOnClick={false}` — ΥΠΟΧΡΕΩΤΙΚΟ.** Με την προεπιλογή (`true`), το ίδιο
-        το κλικ που **άνοιξε** το popup το κλείνει στον ίδιο κύκλο συμβάντων: το popup
-        αναβοσβήνει και ο άνθρωπος δεν καταλαβαίνει ποτέ γιατί. Το κλείσιμο ζει στο `×`,
-        στο `Escape` και στο κλικ σε **κενό** σημείο του χάρτη — τρεις ρητές διαδρομές.
-      */
-      closeOnClick={false}
-      className="listing-map-popup"
-      maxWidth="15rem"
-    >
+    <ListingMapPopupFrame point={point} onClose={onClose}>
       {/*
         🔴 **Η ΦΟΥΣΚΑ ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΜΕΣΑ ΣΕ `<a>` — ΚΑΙ ΕΙΝΑΙ ΑΠΑΙΤΗΣΗ, ΟΧΙ ΓΟΥΣΤΟ.**
 
@@ -231,6 +210,6 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
           {t('search-focus:popup.open')}
         </p>
       </article>
-    </Popup>
+    </ListingMapPopupFrame>
   );
 }

@@ -28,7 +28,7 @@ import { parseListingMapMark } from '@/lib/listings/listing-map-mark';
 import { publicationThumbnailOf } from '@/lib/owner-property/owner-listing-thumbnail';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
-import type { OwnerProperty } from '@/types/owner-property';
+import type { OwnerListingThumbnail, OwnerProperty } from '@/types/owner-property';
 import { ListingMapSnapshot } from '@/components/listing-map-snapshot/ListingMapSnapshot';
 
 const K = 'property-market:offer.card';
@@ -72,30 +72,53 @@ function NoPhotoCover({ property }: Pick<OwnerPropertyCardCoverProps, 'property'
   );
 }
 
+interface OwnerPropertyPhotoProps {
+  readonly thumbnail: OwnerListingThumbnail;
+  readonly title: string;
+  /** Το `sizes` του **πλαισίου** που τη φιλοξενεί (στήλη κάρτας · φούσκα χάρτη). */
+  readonly sizes: string;
+  readonly priority?: boolean;
+}
+
+/**
+ * **Η φωτογραφία που είδε ο κόσμος**: μία απόδοση για την κάρτα και για τη φούσκα του χάρτη
+ * χαρτοφυλακίου (ADR-777 §8.71). Ίδιο `srcset`, ίδιο alt με τον τίτλο.
+ */
+export function OwnerPropertyPhoto({
+  thumbnail,
+  title,
+  sizes,
+  priority = false,
+}: OwnerPropertyPhotoProps): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- δημόσιο ράφι με δικό του srcset (listingImageSrcSet), όπως το ListingCardGallery
+    <img
+      src={thumbnail.url}
+      srcSet={listingImageSrcSet(thumbnail)}
+      sizes={sizes}
+      width={thumbnail.width}
+      height={thumbnail.height}
+      alt={t(`${K}.coverAlt`, { title })}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
+      decoding="async"
+      className="h-full w-full object-cover"
+    />
+  );
+}
+
 export function OwnerPropertyCardCover({
   property,
   priority = false,
 }: OwnerPropertyCardCoverProps): React.ReactElement {
-  const { t } = useTranslation(['property-market']);
   const thumbnail = publicationThumbnailOf(property);
 
   if (thumbnail === null) return <NoPhotoCover property={property} />;
 
   return (
     <figure className={`${COVER_FRAME} m-0 border border-border`}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- δημόσιο ράφι με δικό του srcset (listingImageSrcSet), όπως το ListingCardGallery */}
-      <img
-        src={thumbnail.url}
-        srcSet={listingImageSrcSet(thumbnail)}
-        sizes={COVER_SIZES}
-        width={thumbnail.width}
-        height={thumbnail.height}
-        alt={t(`${K}.coverAlt`, { title: property.title })}
-        loading={priority ? 'eager' : 'lazy'}
-        fetchPriority={priority ? 'high' : 'auto'}
-        decoding="async"
-        className="h-full w-full object-cover"
-      />
+      <OwnerPropertyPhoto thumbnail={thumbnail} title={property.title} sizes={COVER_SIZES} priority={priority} />
     </figure>
   );
 }

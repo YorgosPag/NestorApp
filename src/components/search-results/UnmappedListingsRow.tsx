@@ -16,11 +16,12 @@
  * ιδιοκτήτης δεν δήλωσε» είναι **επιλογή του** και δεν ζητάμε διόρθωση.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing, UnknownPositionReason } from '@/types/public-listing';
+import { UNMAPPED_ROW_LINK_CLASS, UnmappedRow } from './UnmappedRow';
 
 interface UnmappedListingsRowProps {
   readonly listings: readonly PublicListing[];
@@ -37,56 +38,33 @@ function reasonOf(listing: PublicListing): UnknownPositionReason | null {
   return listing.position.kind === 'unknown' ? listing.position.reason : null;
 }
 
+/**
+ * Προσαρμογέας πάνω στο κοινό κέλυφος (`UnmappedRow`, ADR-777 §8.71).
+ *
+ * ⚠️ Στο μηδέν ΔΕΝ εμφανίζεται — και αυτό δεν αναιρεί τον κανόνα 27: το «0» το λέει
+ * ήδη ρητά η λογιστική (`ListingLedgerBar`), που τυπώνεται πάντα.
+ */
 export function UnmappedListingsRow({ listings, filterQuery }: UnmappedListingsRowProps) {
   const { t } = useTranslation(['search-results']);
-  const [expanded, setExpanded] = useState(false);
 
-  // ⚠️ Στο μηδέν ΔΕΝ εμφανίζεται — και αυτό δεν αναιρεί τον κανόνα 27: το «0» το λέει
-  // ήδη ρητά η λογιστική (`ListingLedgerBar`), που τυπώνεται πάντα. Εδώ θα ήταν
-  // κενή γραμμή που λέει «κανένα κρυμμένο», δηλαδή θόρυβος πάνω σε ήδη ειπωμένο.
-  if (listings.length === 0) return null;
+  const items = listings.map((listing) => {
+    const reason = reasonOf(listing);
+    return {
+      id: listing.id,
+      link: (
+        <Link href={listingDetailHref(listing.id, filterQuery)} className={UNMAPPED_ROW_LINK_CLASS}>
+          {listing.title}
+        </Link>
+      ),
+      note: reason ? t(`search-results:${REASON_KEY[reason]}`) : null,
+    };
+  });
 
   return (
-    <section className="border-t border-border bg-muted/40 p-3">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        className="text-left text-sm font-medium text-foreground underline-offset-2 hover:underline"
-      >
-        {t('search-results:unmapped.heading', { count: listings.length })}
-      </button>
-
-      <p className="mt-1 text-xs text-muted-foreground">{t('search-results:unmapped.hint')}</p>
-
-      {expanded && (
-        <ul className="mt-2 space-y-1">
-          {listings.map((listing) => {
-            const reason = reasonOf(listing);
-            return (
-              <li key={listing.id} className="text-sm text-foreground">
-                {/*
-                  🔑 **Και αυτές οδηγούν στην οθόνη 3.** Το ότι δεν ξέρουμε πού είναι
-                  ένα ακίνητο δεν το κάνει λιγότερο ακίνητο — αν ήταν απλό κείμενο,
-                  θα τιμωρούνταν στη διεπαφή για δικό ΜΑΣ κενό, που είναι ακριβώς ο
-                  ισχυρισμός που η Α5 §4.1 απαγορεύει.
-                */}
-                <Link
-                  href={listingDetailHref(listing.id, filterQuery)}
-                  className="font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {listing.title}
-                </Link>
-                {reason && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {t(`search-results:${REASON_KEY[reason]}`)}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+    <UnmappedRow
+      heading={t('search-results:unmapped.heading', { count: listings.length })}
+      hint={t('search-results:unmapped.hint')}
+      items={items}
+    />
   );
 }

@@ -23,11 +23,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import i18next from 'i18next';
-import ICU from 'i18next-icu';
-import { initReactI18next, I18nextProvider } from 'react-i18next';
+import type { i18n } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 
-import { getNamespaceLoader } from '@/i18n/namespace-loaders';
+import { createRealI18n } from '@/test-utils/real-i18n';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 import { OwnerListingCompletion } from '../OwnerListingCompletion';
@@ -40,7 +39,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => {
 });
 
 const AT = '2026-09-02T00:00:00.000Z';
-const instance = i18next.createInstance();
+let instance: i18n;
 
 function listing(over: Partial<PublicListing> = {}): PublicListing {
   return {
@@ -72,25 +71,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
 }
 
 beforeAll(async () => {
-  // 🔑 **Ο ΠΡΑΓΜΑΤΙΚΟΣ loader**: `null` εδώ σημαίνει «λείπει `case` στο
-  //    `namespace-loaders`» — το κενό που το CHECK 3.36 ελέγχει μόνο **στατικά**.
-  const loader = getNamespaceLoader('el', 'properties' as never);
-  expect(loader).not.toBeNull();
-  const mod = await loader!();
-  const properties = (mod as { default?: unknown }).default ?? mod;
-
-  await instance
-    .use(new ICU({ bindI18n: 'languageChanged', bindI18nStore: 'added removed' }))
-    .use(initReactI18next)
-    .init({
-      lng: 'el',
-      fallbackLng: 'el',
-      resources: { el: { properties } as Record<string, Record<string, unknown>> },
-      ns: ['properties'],
-      defaultNS: 'properties',
-      react: { useSuspense: false },
-      interpolation: { escapeValue: false },
-    });
+  instance = await createRealI18n(['properties']);
 });
 
 function renderMeter(over: Partial<PublicListing> = {}) {

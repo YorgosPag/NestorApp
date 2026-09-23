@@ -87,6 +87,9 @@ export const LISTING_FEATURE_KEY = {
 
 export type ListingFeature = GeoJSON.Feature<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties>;
 
+/** Το GeoJSON του ζωγράφου — **η μία** αυθεντία θέσης και σχήματος, για κάθε καταναλωτή του χάρτη. */
+export type ListingGeoJson = GeoJSON.FeatureCollection<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties>;
+
 /**
  * Αγγελίες → GeoJSON.
  *
@@ -96,7 +99,7 @@ export type ListingFeature = GeoJSON.Feature<GeoJSON.Point | GeoJSON.Polygon, Li
  */
 export function listingsToGeoJson(
   listings: readonly Pick<PublicListing, 'id' | 'title' | 'position'>[]
-): GeoJSON.FeatureCollection<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties> {
+): ListingGeoJson {
   const features: ListingFeature[] = [];
 
   for (const listing of listings) {
@@ -188,7 +191,7 @@ export interface SplitListingGeometry {
  * μέσα στο JSX θα ήταν δεύτερη δήλωση του *«τι είναι ομαδοποιήσιμο»*.
  */
 export function splitListingGeometry(
-  collection: GeoJSON.FeatureCollection<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties>
+  collection: ListingGeoJson
 ): SplitListingGeometry {
   const points: Array<GeoJSON.Feature<GeoJSON.Point, ListingFeatureProperties>> = [];
   const polygons: Array<GeoJSON.Feature<GeoJSON.Polygon, ListingFeatureProperties>> = [];
