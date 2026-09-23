@@ -204,6 +204,15 @@ describe('Κ1 — μεταλλάξεις στις εισόδους', () => {
 describe('Κ2 — μεταλλάξεις στις εισόδους', () => {
   /** Ένα πραγματικό shell module, μικρό αρκετά για μίνι-repo. */
   const SHELL_FILE = 'src/components/sidebar/sidebar-menu-item.tsx';
+  /**
+   * ⚠️ ADR-781 §16: από το `3a7699f1` το `SHELL_FILE` **δανείζεται** το `t` από
+   * `useSidebarLinkBehavior()` — η δήλωση `useTranslation('navigation')` ζει ΕΔΩ.
+   * Το mini-repo οφείλει να περιέχει το αρχείο της δήλωσης (+ τα aliases για να
+   * λυθεί το `@/…`)· χωρίς αυτό η πύλη ΣΩΣΤΑ αρνείται (Μ8β). Οι ισχυρισμοί των
+   * Μ8/Μ9 ΔΕΝ άλλαξαν.
+   */
+  const SHELL_HOOK = 'src/components/sidebar/sidebar-menu-shared.tsx';
+  const WITH_HOOK = [SHELL_FILE, SHELL_HOOK, 'tsconfig.base.json'];
 
   const measureIn = (root, files) =>
     K2.measureAnswerability({
@@ -214,11 +223,11 @@ describe('Κ2 — μεταλλάξεις στις εισόδους', () => {
     });
 
   test('Μ8 — κλειδί που το slice ΔΕΝ απαντά ⇒ ⛔ unanswerable, ΑΚΟΜΑ ΚΑΙ σε `whole` ns', () => {
-    // ⚠️ Το `sidebar-menu-item.tsx` δηλώνει `useTranslation('navigation')`, και
+    // ⚠️ Το `sidebar-menu-item.tsx` λύνεται σε `navigation` (μέσω του hook του, §16), και
     // το `navigation` είναι ΕΝΑ ΑΠΟ ΤΑ 9 `whole`. Η πρώτη γραφή του Κ2 έλεγε
     // «whole ⇒ απαντά οτιδήποτε» και ήταν ΤΥΦΛΗ ακριβώς εδώ — ίδιο σχήμα με το
     // `if (want.whole) continue` που άφησε τη βλάβη των 17 κλειδιών να ζήσει.
-    const root = miniRepo([SHELL_FILE], {
+    const root = miniRepo(WITH_HOOK, {
       [SHELL_FILE]: (source) => `${source}\nconst __probe = t("pages.__anyparkto__");\n`,
     });
     const bad = measureIn(root, [SHELL_FILE]).records.filter((record) => record.state === K2.K2_STATES.UNANSWERABLE);
@@ -228,13 +237,31 @@ describe('Κ2 — μεταλλάξεις στις εισόδους', () => {
   test('Μ9 — το ίδιο σχήμα με ΥΠΑΡΚΤΟ κλειδί ⇒ ✅ answerable (ο διαχωριστής δουλεύει)', () => {
     // ⚠️ Το ns-πρόθεμα ΔΕΝ είναι μέρος του κλειδιού: με `useTranslation('navigation')`
     // το i18next ψάχνει `pages.home` ΜΕΣΑ στο bundle `navigation`.
-    const root = miniRepo([SHELL_FILE], {
+    const root = miniRepo(WITH_HOOK, {
       [SHELL_FILE]: (source) => `${source}\nconst __probe = t("pages.home");\n`,
     });
     const measured = measureIn(root, [SHELL_FILE]);
     expect(measured.records.filter((record) => record.state === K2.K2_STATES.UNANSWERABLE)).toHaveLength(0);
     expect(measured.records.filter((record) => record.state === K2.K2_STATES.ANSWERABLE).map((record) => record.key))
       .toContain('pages.home');
+  });
+
+  test('Μ8β — δανεικό `t` χωρίς ΑΠΟΔΕΙΞΙΜΗ προέλευση ⇒ 🔶 namespace-injected, ΠΟΤΕ μαντεψιά', () => {
+    // Το hook ΔΕΝ υπάρχει στο mini-repo ⇒ η προέλευση δεν αποδεικνύεται ⇒ δηλωμένο κενό.
+    const root = miniRepo([SHELL_FILE, 'tsconfig.base.json'], {
+      [SHELL_FILE]: (source) => `${source}\nconst __probe = t("pages.__anyparkto__");\n`,
+    });
+    const records = measureIn(root, [SHELL_FILE]).records.filter((record) => record.key === 'pages.__anyparkto__');
+    expect(records.map((record) => record.state)).toEqual([K2.K2_STATES.NAMESPACE_INJECTED]);
+  });
+
+  test('Μ8γ — hook με ΔΥΟ κλήσεις `useTranslation` ⇒ ποιο `t`; ⇒ άρνηση (όχι ένωση υποψηφίων)', () => {
+    const root = miniRepo(WITH_HOOK, {
+      [SHELL_FILE]: (source) => `${source}\nconst __probe = t("pages.home");\n`,
+      [SHELL_HOOK]: (source) => `${source}\nfunction __other() { return useTranslation('common'); }\n`,
+    });
+    const records = measureIn(root, [SHELL_FILE]).records.filter((record) => record.key === 'pages.home');
+    expect(records.map((record) => record.state)).toEqual([K2.K2_STATES.NAMESPACE_INJECTED]);
   });
 
   test('Μ10 — ανεπίλυτη δυναμική `t()` χωρίς policy ⇒ ⛔', () => {
