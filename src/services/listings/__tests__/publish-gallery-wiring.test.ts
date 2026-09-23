@@ -129,7 +129,7 @@ describe('Κ1 — Η ΣΕΙΡΑ: το ράφι ρωτιέται ΠΡΙΝ τη γ
 
 describe('Κ2 — ΤΟ ΔΕΣΙΜΟ: το έγγραφο κουβαλά ό,τι ΕΙΔΕ το ράφι', () => {
   it('η συλλογή γράφεται με URL, διαστάσεις, παράγωγα και κλειδί i18n', async () => {
-    const outcome = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
+    const { outcome } = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
 
     expect(outcome).toBe('published');
     expect(written[0].gallery).toEqual([
@@ -173,7 +173,7 @@ describe('Κ2 — ΤΟ ΔΕΣΙΜΟ: το έγγραφο κουβαλά ό,τι 
       rejected: 0,
     });
 
-    const outcome = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
+    const { outcome } = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
 
     expect(outcome).toBe('published');
     expect(written[0].gallery).toEqual([]);
@@ -184,7 +184,7 @@ describe('Κ3 — Η ΑΠΟΣΥΡΣΗ ΚΑΙ Η ΑΝΤΙΣΤΑΘΜΙΣΗ', () =>
   it('μη δημοσιεύσιμο ⇒ `delete` + ράφι σε ΚΕΝΟ σύνολο', async () => {
     const withdrawn = { ...LISTED, commercialStatus: 'unavailable', offerKinds: [] };
 
-    const outcome = await writeListingProjection(adminDb, LISTING, withdrawn, NO_PLACE, AT);
+    const { outcome } = await writeListingProjection(adminDb, LISTING, withdrawn, NO_PLACE, AT);
 
     expect(outcome).toBe('withdrawn');
     expect(trace).toEqual(['delete', 'reconcile(0)']);
@@ -196,7 +196,7 @@ describe('Κ3 — Η ΑΠΟΣΥΡΣΗ ΚΑΙ Η ΑΝΤΙΣΤΑΘΜΙΣΗ', () =>
       throw new Error('Firestore unavailable');
     });
 
-    const outcome = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
+    const { outcome } = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
 
     expect(outcome).toBe('failed');
     expect(trace).toEqual(['reconcile(1)', 'set', 'reconcile(0)']);
@@ -215,5 +215,44 @@ describe('Κ3 — Η ΑΠΟΣΥΡΣΗ ΚΑΙ Η ΑΝΤΙΣΤΑΘΜΙΣΗ', () =>
     await writeListingProjection(adminDb, LISTING, { ...LISTED, publishedMedia: [] }, NO_PLACE, AT);
 
     expect(trace).toEqual(['reconcile(0)', 'set']);
+  });
+});
+
+describe('Κ4 — Η ΚΕΝΤΡΙΚΗ ΕΙΚΟΝΑ ΠΟΥ ΕΙΔΕ Ο ΚΟΣΜΟΣ (ADR-777 §8.70)', () => {
+  it('🔑 `published` ⇒ `lead` = η 1η εικόνα ΑΠΟ ΤΟ ΕΓΓΡΑΦΟ ΠΟΥ ΓΡΑΦΤΗΚΕ, ίδια ταυτότητα', async () => {
+    const { outcome, lead } = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
+
+    expect(outcome).toBe('published');
+    expect(lead).toEqual((written[0].gallery as unknown[])[0]);
+    expect(lead?.url).toBe('https://shelf/0-2560.webp');
+  });
+
+  it('δημοσιεύτηκε χωρίς φωτογραφία ⇒ `lead: null`, ποτέ μαντεψιά από τα ανεβάσματα', async () => {
+    reconcilePublicShelf.mockResolvedValueOnce({ outcome: 'reconciled', published: [], removed: 0, rejected: 1 });
+
+    const { outcome, lead } = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
+
+    expect(outcome).toBe('published');
+    expect(lead).toBeNull();
+  });
+
+  it('🔴 `withdrawn` ⇒ `lead: null` — το ράφι άδειασε, το URL θα ήταν νεκρό', async () => {
+    const withdrawn = { ...LISTED, commercialStatus: 'unavailable', offerKinds: [] };
+
+    expect(await writeListingProjection(adminDb, LISTING, withdrawn, NO_PLACE, AT)).toEqual({
+      outcome: 'withdrawn',
+      lead: null,
+    });
+  });
+
+  it('🔴 `failed` ⇒ `lead: null` — δεν ξέρουμε τι κάθεται στον κόσμο', async () => {
+    ref.set.mockImplementationOnce(async () => {
+      throw new Error('Firestore unavailable');
+    });
+
+    expect(await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT)).toEqual({
+      outcome: 'failed',
+      lead: null,
+    });
   });
 });

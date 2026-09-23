@@ -36,13 +36,18 @@ import { ownerListingVisibility } from '@/lib/owner-property/owner-property-proj
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
+import { OwnerPropertyCardCover } from './OwnerPropertyCardCover';
+
 const NS = 'property-market';
 const K = `${NS}:offer`;
 
 export function OwnerPropertyCard({
   property,
+  priority = false,
 }: {
   property: OwnerProperty;
+  /** Μόνο η **πρώτη** κάρτα της λίστας φορτώνει τη μικρογραφία της με υψηλή προτεραιότητα. */
+  priority?: boolean;
 }): React.ReactElement {
   const { t } = useTranslation([NS, 'properties-enums']);
 
@@ -53,81 +58,89 @@ export function OwnerPropertyCard({
   const kinds = ownerPropertyOfferKinds(property);
 
   return (
-    <article className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold text-foreground">{property.title}</h2>
-        <span className="text-sm text-muted-foreground">
-          {t(`${K}.lifecycle.${property.lifecycle}`)}
-        </span>
-      </header>
+    <article className="flex flex-col gap-4 rounded-md border border-border bg-card p-4 sm:flex-row">
+      {/*
+        🖼️ ADR-777 §8.70 — **ό,τι βλέπει ο κόσμος**, ή η δηλωμένη απουσία του. Στήλη αριστερά
+        από `sm`, πάνω από το κείμενο σε κινητό (πρότυπο Idealista «Tus anuncios»).
+      */}
+      <OwnerPropertyCardCover property={property} priority={priority} />
 
-      <p className="text-sm text-foreground">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <header className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-base font-semibold text-foreground">{property.title}</h2>
+          <span className="text-sm text-muted-foreground">
+            {t(`${K}.lifecycle.${property.lifecycle}`)}
+          </span>
+        </header>
+
+        <p className="text-sm text-foreground">
+          {/*
+            🔴 **ΤΟ ΣΚΕΛΟΣ ΤΟΥ «ΔΕΝ ΞΕΡΩ», ΚΑΙ ΕΙΝΑΙ Η ΟΘΟΝΗ ΠΟΥ ΤΟ ΔΕΙΧΝΕΙ** (ADR-842
+            §7.6.12 / §8 #11). Έγραφε `isCanonicalPropertyType(...) ? t(...) : property.type`
+            — δηλαδή για μη κανονική τιμή **τύπωνε την ωμή αποθηκευμένη συμβολοσειρά** στην
+            οθόνη του ανθρώπου (`'Διαμέρισμα 2Δ'`, `'Οικόπεδο'`). Πλέον ο τύπος **δεν
+            επιτρέπει** τέτοια τιμή: το σύνορο την κανονικοποίησε ή έδωσε `null`.
+
+            🔑 **Και το `null` ΕΜΦΑΝΙΖΕΤΑΙ, δεν κρύβεται.** Είναι η οθόνη του **κατόχου** —
+            ο μόνος που μπορεί να διορθώσει το είδος. Η δημόσια προβολή κάνει το αντίθετο
+            και **δεν δημοσιεύεται** (`isPubliclyListed`): δύο ακροατήρια, δύο σωστές
+            απαντήσεις στην ίδια κατάσταση.
+          */}
+          {property.type === null
+            ? t(`${K}.card.typeUnknown`)
+            : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[property.type]}`)}
+          {property.areaSqm !== null && ` · ${t(`${K}.card.area`, { area: property.areaSqm })}`}
+          {property.floor !== null && ` · ${t(`${K}.card.floor`, { floor: property.floor })}`}
+          {property.bedrooms !== null &&
+            ` · ${t(`${K}.card.bedrooms`, { count: property.bedrooms })}`}
+        </p>
+
+        {kinds.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {kinds.map((kind) => t(`${K}.offerKind.${kind}`)).join(' · ')}
+          </p>
+        )}
+
         {/*
-          🔴 **ΤΟ ΣΚΕΛΟΣ ΤΟΥ «ΔΕΝ ΞΕΡΩ», ΚΑΙ ΕΙΝΑΙ Η ΟΘΟΝΗ ΠΟΥ ΤΟ ΔΕΙΧΝΕΙ** (ADR-842
-          §7.6.12 / §8 #11). Έγραφε `isCanonicalPropertyType(...) ? t(...) : property.type`
-          — δηλαδή για μη κανονική τιμή **τύπωνε την ωμή αποθηκευμένη συμβολοσειρά** στην
-          οθόνη του ανθρώπου (`'Διαμέρισμα 2Δ'`, `'Οικόπεδο'`). Πλέον ο τύπος **δεν
-          επιτρέπει** τέτοια τιμή: το σύνορο την κανονικοποίησε ή έδωσε `null`.
-
-          🔑 **Και το `null` ΕΜΦΑΝΙΖΕΤΑΙ, δεν κρύβεται.** Είναι η οθόνη του **κατόχου** —
-          ο μόνος που μπορεί να διορθώσει το είδος. Η δημόσια προβολή κάνει το αντίθετο
-          και **δεν δημοσιεύεται** (`isPubliclyListed`): δύο ακροατήρια, δύο σωστές
-          απαντήσεις στην ίδια κατάσταση.
+          ⚠️ Η θέση **δεν σιωπά ποτέ** (Α5 §4.1). Και τα δύο μηνύματα είναι ουδέτερα:
+          το «χωρίς δηλωμένη θέση» δεν είναι επίπληξη — είναι **η κατάσταση**, με τη
+          θεραπεία ένα κλικ μακριά.
         */}
-        {property.type === null
-          ? t(`${K}.card.typeUnknown`)
-          : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[property.type]}`)}
-        {property.areaSqm !== null && ` · ${t(`${K}.card.area`, { area: property.areaSqm })}`}
-        {property.floor !== null && ` · ${t(`${K}.card.floor`, { floor: property.floor })}`}
-        {property.bedrooms !== null &&
-          ` · ${t(`${K}.card.bedrooms`, { count: property.bedrooms })}`}
-      </p>
+        {property.place.kind === 'declared' ? (
+          <p className="text-sm text-muted-foreground">{property.place.label}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t(`${K}.card.noPlace`)}</p>
+        )}
 
-      {kinds.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {kinds.map((kind) => t(`${K}.offerKind.${kind}`)).join(' · ')}
-        </p>
-      )}
+        {/*
+          🔴 **ΤΡΙΑ ΣΚΕΛΗ, ΟΧΙ ΔΥΟ.** Εδώ ζούσε ένα τριαδικό `onMap ? published :
+          withdrawn` — δηλαδή η οθόνη έλεγε «*είναι στον δημόσιο χάρτη*» **με βεβαιότητα**
+          κάθε φορά που η αγγελία **δικαιούνταν** να είναι, ακόμη κι όταν ο γραφέας της
+          προβολής είχε αποτύχει. Το κλειδί `publish.failed` **υπήρχε ήδη γραμμένο και
+          στις δύο γλώσσες** — και **κανείς δεν το ζητούσε ποτέ**.
+        */}
+        <p className="text-sm text-foreground">{t(`${K}.publish.${visibility}`)}</p>
+        {/*
+          🔑 **ADR-864 — ο ΛΟΓΟΣ, όταν ο λόγος είναι επιλογή του κατόχου.** Το «δεν είναι στον
+          δημόσιο χάρτη» είναι αληθινό και για την κλειστή διάθεση· χωρίς αυτή τη γραμμή ο
+          άνθρωπος δεν ξεχωρίζει «το επέλεξα» από «κάτι χάλασε». Ίδιος κατάλογος ετικετών με
+          τη διεπαφή επιλογής και το ίχνος.
+        */}
+        {property.marketingAudience !== 'public' && (
+          <p className="text-sm text-muted-foreground">
+            {t(`properties-enums:marketingAudience.${property.marketingAudience}`)}
+          </p>
+        )}
 
-      {/*
-        ⚠️ Η θέση **δεν σιωπά ποτέ** (Α5 §4.1). Και τα δύο μηνύματα είναι ουδέτερα:
-        το «χωρίς δηλωμένη θέση» δεν είναι επίπληξη — είναι **η κατάσταση**, με τη
-        θεραπεία ένα κλικ μακριά.
-      */}
-      {property.place.kind === 'declared' ? (
-        <p className="text-sm text-muted-foreground">{property.place.label}</p>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t(`${K}.card.noPlace`)}</p>
-      )}
-
-      {/*
-        🔴 **ΤΡΙΑ ΣΚΕΛΗ, ΟΧΙ ΔΥΟ.** Εδώ ζούσε ένα τριαδικό `onMap ? published :
-        withdrawn` — δηλαδή η οθόνη έλεγε «*είναι στον δημόσιο χάρτη*» **με βεβαιότητα**
-        κάθε φορά που η αγγελία **δικαιούνταν** να είναι, ακόμη κι όταν ο γραφέας της
-        προβολής είχε αποτύχει. Το κλειδί `publish.failed` **υπήρχε ήδη γραμμένο και
-        στις δύο γλώσσες** — και **κανείς δεν το ζητούσε ποτέ**.
-      */}
-      <p className="text-sm text-foreground">{t(`${K}.publish.${visibility}`)}</p>
-      {/*
-        🔑 **ADR-864 — ο ΛΟΓΟΣ, όταν ο λόγος είναι επιλογή του κατόχου.** Το «δεν είναι στον
-        δημόσιο χάρτη» είναι αληθινό και για την κλειστή διάθεση· χωρίς αυτή τη γραμμή ο
-        άνθρωπος δεν ξεχωρίζει «το επέλεξα» από «κάτι χάλασε». Ίδιος κατάλογος ετικετών με
-        τη διεπαφή επιλογής και το ίχνος.
-      */}
-      {property.marketingAudience !== 'public' && (
-        <p className="text-sm text-muted-foreground">
-          {t(`properties-enums:marketingAudience.${property.marketingAudience}`)}
-        </p>
-      )}
-
-      <nav>
-        <Link
-          href={offerDetailHref(property.id)}
-          className="inline-block rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
-        >
-          {t(`${K}.list.open`)}
-        </Link>
-      </nav>
+        <nav>
+          <Link
+            href={offerDetailHref(property.id)}
+            className="inline-block rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
+          >
+            {t(`${K}.list.open`)}
+          </Link>
+        </nav>
+      </div>
     </article>
   );
 }

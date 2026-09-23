@@ -35,9 +35,12 @@
     },
     "offer": {
       "card": {
+        "addPhotos": "Πρόσθεσε φωτογραφίες",
         "area": "{area} τ.μ.",
         "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}",
+        "coverAlt": "Φωτογραφία: {title}",
         "floor": "Όροφος {floor}",
+        "noCover": "Δεν έχει δημοσιευμένη φωτογραφία",
         "noPlace": "Χωρίς δηλωμένη θέση",
         "typeUnknown": "Άγνωστο είδος — χρειάζεται διόρθωση"
       },

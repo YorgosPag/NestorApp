@@ -86,7 +86,7 @@ import {
   nextMandateExpiry,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
-import type { ListedAt, ListingAuthorship } from '@/types/public-listing';
+import type { ListedAt, ListingAuthorship, ListingImage } from '@/types/public-listing';
 import type { ListingMaterialKind } from '@/lib/listings/listing-material';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
@@ -521,7 +521,33 @@ export interface OwnerPropertyPublication {
   readonly outcome: PublishOutcome;
   /** ISO — **η ίδια στιγμή** που έφερε το `projectedAt` της προβολής. */
   readonly at: string;
+  /**
+   * 🖼️ **Η ΕΙΚΟΝΑ ΠΟΥ ΕΙΔΕ Ο ΚΟΣΜΟΣ** — η μικρογραφία της κάρτας «Τα ακίνητά μου» (ADR-777 §8.70).
+   *
+   * 🔑 **Γράφεται στο ΙΔΙΟ αποτύπωμα με την έκβαση**, από τον **ένα** γραφέα που ξέρει τι
+   * δημοσιεύτηκε: έκβαση και εικόνα **δεν μπορούν να αποκλίνουν**, και η λίστα δεν κάνει
+   * **κανένα** δεύτερο ερώτημα ανά κάρτα (το πρότυπο Idealista/Zillow: η σύνοψη της αγγελίας
+   * κουβαλά την κύρια φωτογραφία της).
+   *
+   * ⚠️ **ΔΕΝ παραβιάζει τον κανόνα 31**: δεν είναι `coverImage` της δημόσιας αγγελίας — είναι
+   * **αντανάκλαση** του `listingLeadImage` (δηλαδή του `gallery[0]` σήμερα) στην οθόνη του
+   * κατόχου. Όταν η Φ4 παραγάγει καρέ από το μοντέλο, αλλάζει **αυτόματα** κι εδώ.
+   *
+   * ⚠️ **Απόν = γράφτηκε πριν υπάρξει το πεδίο** (διαβάζεται ως `null` μόνο μέσω του
+   * `publicationThumbnailOf`)· `null` = δεν δημοσιεύτηκε φωτογραφία, αποσύρθηκε ή απέτυχε.
+   */
+  readonly thumbnail?: OwnerListingThumbnail | null;
 }
+
+/**
+ * **Η μικρογραφία της κάρτας του κατόχου** — η δημόσια κεντρική εικόνα **χωρίς `altKey`**.
+ *
+ * 🔴 **Το `altKey` λείπει ΕΠΙΤΗΔΕΣ**: τα κλειδιά alt «παγώνουν» μέσα σε αποθηκευμένα έγγραφα και
+ * χρειάστηκε ήδη μετανάστευση στο `public-listing-schema` όταν ένα έπαψε να λύνεται. Η κάρτα
+ * του κατόχου έχει **δικό της** κείμενο alt (με τον τίτλο της αγγελίας), άρα δεν αποθηκεύουμε
+ * κλειδί που δεν θα διαβαστεί ποτέ.
+ */
+export type OwnerListingThumbnail = Omit<ListingImage, 'altKey'>;
 
 /**
  * 🔶 **ΔΗΛΩΜΕΝΑ ΚΕΝΑ, ΜΕ ΟΝΟΜΑ ΚΑΙ ΛΟΓΟ ΓΙΑ ΤΟ ΚΑΘΕΝΑ.**

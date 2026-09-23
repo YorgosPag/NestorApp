@@ -707,7 +707,10 @@
       "typeUnknown": "Άγνωστο είδος — χρειάζεται διόρθωση",
       "area": "{area} τ.μ.",
       "floor": "Όροφος {floor}",
-      "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}"
+      "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}",
+      "coverAlt": "Φωτογραφία: {title}",
+      "noCover": "Δεν έχει δημοσιευμένη φωτογραφία",
+      "addPhotos": "Πρόσθεσε φωτογραφίες"
     },
     "mandate": {
       "title": "Η ανάθεση αυτού του ακινήτου",

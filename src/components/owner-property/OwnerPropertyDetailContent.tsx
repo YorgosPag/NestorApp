@@ -198,7 +198,7 @@ function OwnerPropertyView({
 
   return (
     <div className="flex flex-col gap-4">
-      <OwnerPropertyCard property={property} />
+      <OwnerPropertyCard property={property} priority />
 
       {/*
         🏆 **ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΚΑΡΤΑ, ΚΑΙ ΠΡΙΝ ΤΟ ΔΟΛΩΜΑ** — σειρά-συμβόλαιο: *«ποιος

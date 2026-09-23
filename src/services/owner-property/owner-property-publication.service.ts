@@ -31,8 +31,10 @@ import {
 import {
   reportProjectionFailure,
   writeListingProjection,
+  type ListingProjectionResult,
   type PublishOutcome,
 } from '@/services/listings/publish-public-listing';
+import { thumbnailFromLead } from '@/lib/owner-property/owner-listing-thumbnail';
 import type { PublicAgencyIdentity } from '@/types/public-listing';
 import { readDossierMedia } from '@/services/property-dossier/dossier-media.reader';
 import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
@@ -85,7 +87,7 @@ async function readPublicationInputs(
 async function republishOwnerListing(
   adminDb: AdminFirestore,
   property: OwnerProperty,
-): Promise<PublishOutcome> {
+): Promise<ListingProjectionResult> {
   const at = nowISO();
 
   // 🔑 **Η ταυτότητα διαβάζεται ΕΔΩ, τη στιγμή της δημοσίευσης** (§8.33) — μία ανάγνωση
@@ -114,7 +116,7 @@ async function republishOwnerListing(
   try {
     inputs = await readPublicationInputs(adminDb, property);
   } catch (error) {
-    return reportProjectionFailure(property.id, error);
+    return { outcome: reportProjectionFailure(property.id, error), lead: null };
   }
   const projectable = projectableFromOwnerProperty(property, at, inputs.agency, inputs.dossierMedia);
 
@@ -167,13 +169,17 @@ async function republishOwnerListing(
  * ⚠️ **`update`, ΟΧΙ `set`** — μοναδική εξαίρεση στον κανόνα «ολόκληρο, ποτέ μερικό»
  * αυτού του αρχείου, και ο λόγος είναι ότι εδώ **δεν συνθέτουμε έγγραφο**: γράφουμε
  * **ένα** πεδίο πάνω σε έγγραφο που μόλις γράφτηκε ολόκληρο, δύο γραμμές πιο πάνω.
+ *
+ * 🖼️ **Και η μικρογραφία ταξιδεύει ΜΕΣΑ στο ίδιο πεδίο** (ADR-777 §8.70): έκβαση και εικόνα
+ * γράφονται στην **ίδια** `update`, άρα δεν μπορούν να αποκλίνουν. Το `lead` είναι ήδη `null`
+ * σε απόσυρση/αποτυχία — εδώ απλώς αφαιρείται το `altKey` ({@link thumbnailFromLead}).
  */
 async function stampPublication(
   adminDb: AdminFirestore,
   property: OwnerProperty,
-  outcome: PublishOutcome,
+  result: ListingProjectionResult,
 ): Promise<OwnerProperty> {
-  const publication = { outcome, at: nowISO() };
+  const publication = { outcome: result.outcome, at: nowISO(), thumbnail: thumbnailFromLead(result.lead) };
 
   try {
     await adminDb
@@ -210,6 +216,6 @@ export async function republishOwnerProperty(
   adminDb: AdminFirestore,
   property: OwnerProperty,
 ): Promise<{ readonly publish: PublishOutcome; readonly property: OwnerProperty }> {
-  const publish = await republishOwnerListing(adminDb, property);
-  return { publish, property: await stampPublication(adminDb, property, publish) };
+  const result = await republishOwnerListing(adminDb, property);
+  return { publish: result.outcome, property: await stampPublication(adminDb, property, result) };
 }

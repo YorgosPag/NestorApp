@@ -92,9 +92,10 @@ function OwnerPropertiesBody(): React.ReactElement {
           <EmptyState />
         ) : (
           <ul className="flex list-none flex-col gap-3 p-0">
-            {properties.map((property) => (
+            {properties.map((property, index) => (
               <li key={property.id}>
-                <OwnerPropertyCard property={property} />
+                {/* 🖼️ ADR-777 §8.70 — μόνο η πρώτη μικρογραφία φορτώνεται με υψηλή προτεραιότητα. */}
+                <OwnerPropertyCard property={property} priority={index === 0} />
               </li>
             ))}
           </ul>

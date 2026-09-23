@@ -707,7 +707,10 @@
       "typeUnknown": "Unknown type — needs correction",
       "area": "{area} sqm",
       "floor": "Floor {floor}",
-      "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}"
+      "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
+      "coverAlt": "Photo: {title}",
+      "noCover": "No published photo",
+      "addPhotos": "Add photos"
     },
     "mandate": {
       "title": "The mandate on this property",

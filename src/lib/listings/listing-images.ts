@@ -85,7 +85,7 @@ export function listingGalleryImages(listing: PublicListing): readonly ListingIm
  * 🔑 Ένα μόνο παράγωγο ⇒ **κανένα `srcset`**: δεν υπάρχει επιλογή να κάνει ο περιηγητής,
  * και ένα `srcset` με μία γραμμή απλώς μεγαλώνει το HTML.
  */
-export function listingImageSrcSet(image: ListingImage): string | undefined {
+export function listingImageSrcSet(image: Pick<ListingImage, 'sources'>): string | undefined {
   if (image.sources.length < 2) return undefined;
   return image.sources.map((source: ListingImageSource) => `${source.url} ${source.width}w`).join(', ');
 }

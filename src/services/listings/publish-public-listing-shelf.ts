@@ -232,13 +232,17 @@ export async function withdrawListingShelves(listingId: string): Promise<void> {
  * γράφτηκε ποτέ. Αν το `set` αποτύχει, το `catch` **αδειάζει ΚΑΙ ΤΑ ΔΥΟ ράφια**
  * *({@link withdrawListingShelves})*. Και ακόμη κι αν χαθεί κι εκείνη *(κατάρρευση διεργασίας)*,
  * η **επόμενη** συμφιλίωση της ίδιας αγγελίας τα σβήνει: ο σβήστης τρέχει **πάντα**.
+ *
+ * 🔑 **Επιστρέφει ΑΚΡΙΒΩΣ ό,τι γράφτηκε** (ADR-777 §8.70): ο καλών που θέλει να πει *«τι
+ * βλέπει ο κόσμος;»* (η μικρογραφία στην κάρτα του κατόχου) το διαβάζει από **αυτό** το
+ * αντικείμενο — ποτέ από δεύτερη ανάγνωση, ποτέ από τα ωμά ανεβάσματα.
  */
 export async function writeWithShelf(
   ref: DocumentReference,
   listingId: string,
   listing: PublicListing,
   sources: readonly PublicShelfSource<ListingMaterial>[]
-): Promise<void> {
+): Promise<PublicListing> {
   const { raster, model } = partitionListingSources(sources);
 
   const [images, models] = await Promise.all([
@@ -264,6 +268,7 @@ export async function writeWithShelf(
     const withModels = withPublishedModels(withGallery, models.published.map(toProjectedModel));
 
     await ref.set({ ...withModels, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
+    return withModels;
   } catch (error) {
     await withdrawShelvesAfterFailure(
       listingId,

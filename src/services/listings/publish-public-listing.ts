@@ -39,7 +39,8 @@ import { marketPriceOf } from '@/lib/listings/price-history';
 import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
 import type { PlaceRef } from '@/types/geo/public-place';
-import type { PublicListing } from '@/types/public-listing';
+import type { ListingImage, PublicListing } from '@/types/public-listing';
+import { listingLeadImage } from '@/lib/listings/listing-images';
 import {
   createAgencyIdentityResolver,
   type AgencyIdentityResolver,
@@ -56,6 +57,18 @@ const logger = createModuleLogger('publish-public-listing');
 
 /** Τι έκανε ο γραφέας — ρητά, ώστε η επανασύνθεση να μπορεί να **μετρήσει**. */
 export type PublishOutcome = 'published' | 'withdrawn' | 'failed';
+
+/**
+ * **Η έκβαση ΚΑΙ η εικόνα που είδε ο κόσμος** — ό,τι επιστρέφει ο πυρήνας (ADR-777 §8.70).
+ *
+ * 🔑 Το `lead` υπάρχει **μόνο** για `published`: στο `withdrawn` το ράφι άδειασε (το URL θα
+ * ήταν νεκρό), στο `failed` δεν ξέρουμε τι κάθεται στον κόσμο. Έτσι ο καλών **δεν μπορεί**
+ * να δείξει εικόνα που δεν ισχύει.
+ */
+export interface ListingProjectionResult {
+  readonly outcome: PublishOutcome;
+  readonly lead: ListingImage | null;
+}
 
 /**
  * **Το ωμό έγγραφο `properties/{id}` όσο το χρειάζεται ο γραφέας** — η προβολή, συν τα
@@ -272,13 +285,14 @@ export async function republishListing(
       ),
     ]);
 
-    return await writeListingProjection(
+    const { outcome } = await writeListingProjection(
       adminDb,
       propertyId,
       { ...property, agency, publishedMedia, listedAt, priceHistory },
       place,
       now
     );
+    return outcome;
   } catch (error) {
     return reportProjectionFailure(propertyId, error);
   }
@@ -314,7 +328,7 @@ export async function writeListingProjection(
   property: ProjectableProperty,
   place: PlaceKnowledge,
   projectedAt: string
-): Promise<PublishOutcome> {
+): Promise<ListingProjectionResult> {
   const ref = adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(listingId);
 
   // ── ADR-846 Φ5δ — Η ΠΡΟΣΦΟΡΑ ΑΛΛΑΞΕ, ΑΡΑ ΑΛΛΑΞΕ ΚΑΙ Η ΑΠΟΔΕΙΞΗ ──────────────
@@ -357,7 +371,7 @@ export async function writeListingProjection(
       //    τίποτε επιπλέον: ξαναπερνά από εδώ με μη-κενό σύνολο.
         await withdrawListingShelves(listingId);
       await refreshPresence();
-      return 'withdrawn';
+      return { outcome: 'withdrawn', lead: null };
     }
 
     // ── ADR-839 — Η ΣΦΡΑΓΙΔΑ ΕΚΔΟΣΗΣ ────────────────────────────────────────
@@ -372,12 +386,14 @@ export async function writeListingProjection(
     // ⚠️ **Ο αναγνώστης τη διαβάζει μέσω `storedSchemaVersion`**, που απαντά `1`
     //    όταν λείπει — άρα κάθε έγγραφο γραμμένο πριν από σήμερα έχει ήδη σωστή
     //    απάντηση χωρίς να το αγγίξει κανείς.
-    await writeWithShelf(ref, listingId, listing, property.publishedMedia ?? []);
+    const written = await writeWithShelf(ref, listingId, listing, property.publishedMedia ?? []);
     await refreshPresence();
 
-    return 'published';
+    // 🔑 Η κεντρική εικόνα από τον **ΕΝΑ** κριτή (`listingLeadImage`) πάνω σε ό,τι
+    //    **γράφτηκε** — ποτέ δεύτερο κριτήριο, ποτέ ωμά ανεβάσματα (ADR-777 §8.70).
+    return { outcome: 'published', lead: listingLeadImage(written) };
   } catch (error) {
-    return reportProjectionFailure(listingId, error);
+    return { outcome: reportProjectionFailure(listingId, error), lead: null };
   }
 }
 
