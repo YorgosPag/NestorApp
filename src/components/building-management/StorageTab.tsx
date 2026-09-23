@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TableCell } from '@/components/ui/table';
-import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X } from 'lucide-react';
+import { Warehouse, Plus, Link2, Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
@@ -38,7 +38,7 @@ import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { CommercialDraftCell } from '@/components/shared/commercial/CommercialDraftCell';
 import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn, BuildingSpaceViewSwitch } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
@@ -151,14 +151,7 @@ export function StorageTab({ building }: StorageTabProps) {
         <span className={cn('text-sm', colors.text.muted)}>
           {s.filteredUnits.length} {s.t('storageView.results')}
         </span>
-        <fieldset className="flex items-center gap-2">
-          <Button variant={s.viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => s.setViewMode('cards')}>
-            <Layers className="mr-1 h-4 w-4" /> {s.t('storageView.cards')}
-          </Button>
-          <Button variant={s.viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => s.setViewMode('table')}>
-            <TableIcon className="mr-1 h-4 w-4" /> {s.t('storageView.table')}
-          </Button>
-        </fieldset>
+        <BuildingSpaceViewSwitch value={s.viewMode} onChange={s.setViewMode} cardsLabel={s.t('storageView.cards')} tableLabel={s.t('storageView.table')} />
       </nav>
 
       {/* Content */}

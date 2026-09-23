@@ -38,8 +38,12 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Ο ενεργός χώρος διαβάζεται με hooks, άρα αυτό το module είναι `'use client'`.
  * Ένα **Server Component** έχει τον χώρο **αυτούσιο** στο `params.workspace` και
- * καλεί απευθείας το {@link workspacePath} — ίδια διάκριση που κάνει και το
- * next-intl, όπου το `redirect` απαιτεί **ρητό** locale.
+ * ζητά το **δίδυμο σύνορο του διακομιστή** ({@link module:lib/workspace/server-navigation}),
+ * που τον παίρνει **ρητά** — ίδια διάκριση που κάνει και το next-intl, όπου το
+ * `redirect` απαιτεί **ρητό** locale.
+ * 🔴 **ΠΑΛΙΑ ΕΛΕΓΕ «καλεί απευθείας το `workspacePath`» — ΚΑΙ ΑΠΕΤΥΧΕ 13 ΣΤΑ 14**
+ * (ADR-875 §11): κανόνας που πρέπει να θυμάσαι. Το ωμό `redirect` μέσα στον χώρο
+ * το καταγγέλλει πλέον το CHECK 3.61.
  * *(Μετρήθηκε ότι το κενό είναι ~μηδενικό: μόλις **2** αρχεία σε όλο το `src/`
  * εισάγουν `next/link` χωρίς `'use client'`, και το ένα είναι το `/debug`, που
  * ζει **εκτός** χώρου εξ ορισμού.)*
@@ -52,9 +56,9 @@ import { usePathname as useNextPathname, useRouter as useNextRouter } from 'next
 import type { AnchorHTMLAttributes, ReactElement, Ref } from 'react';
 import { useCallback, useMemo } from 'react';
 
-import { extractWorkspaceSegment, stripWorkspace, workspacePath } from './workspace-path';
+import { extractWorkspaceSegment, stripWorkspace } from './workspace-path';
 import type { WorkspaceHref } from './route-worlds';
-import { isInsideWorkspace } from './workspace-scope';
+import { workspaceHref } from './workspace-scope';
 
 // =============================================================================
 // 1. ΠΟΙΟΣ ΕΙΝΑΙ Ο ΕΝΕΡΓΟΣ ΧΩΡΟΣ
@@ -105,20 +109,12 @@ export function useWorkspaceAlias(): string | null {
 /**
  * **Βάζει τον χώρο σε μια διεύθυνση — αν και μόνο αν της ανήκει.**
  *
- * Καθαρή συνάρτηση: ο κριτής είναι το {@link isInsideWorkspace}, η πράξη το
- * {@link workspacePath}. Εδώ **δεν κρίνεται τίποτα** — γι' αυτό μπορεί να
- * δοκιμαστεί χωρίς React.
- *
- * ⚠️ **`alias === null` ⇒ ο σύνδεσμος μένει ΩΜΟΣ, επίτηδες.** Σημαίνει «η
- * τρέχουσα διεύθυνση δεν ονομάζει χώρο, άρα δεν ξέρω — και **δεν μαντεύω**».
- * Την απάντηση τη δίνει το **δίχτυ** στον διακομιστή, με κριμένη ταυτότητα.
- * Ένα `?? PERSONAL_WORKSPACE_ALIAS` εδώ θα έστελνε κάθε μέλος οργανισμού στον
- * **ιδιωτικό** του χώρο — σιωπηλά, και σε λάθος δεδομένα.
+ * ⚠️ **Η απόφαση ζει στο {@link module:lib/workspace/workspace-scope}**, όχι εδώ:
+ * τη χρειάζεται και το σύνορο του **διακομιστή** (`server-navigation.ts`), που δεν
+ * μπορεί να καλέσει κώδικα από module `'use client'` (ADR-875 §11). Εδώ μόνο
+ * ξαναβγαίνει, για όποιον μιλά με το σύνορο του πελάτη.
  */
-export function workspaceHref(href: string, alias: string | null): string {
-  if (alias === null) return href;
-  return isInsideWorkspace(href) ? workspacePath(alias, href) : href;
-}
+export { workspaceHref };
 
 /** Το {@link workspaceHref} με τον ενεργό χώρο ήδη λυμένο. */
 export function useWorkspaceHref(): (href: string) => string {

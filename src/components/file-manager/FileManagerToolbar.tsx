@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Badge } from '@/components/ui/badge';
 import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { SearchInput } from '@/components/ui/search';
 import type { ViewMode, ActiveTab } from './useFileManagerState';
@@ -106,39 +106,42 @@ export function FileManagerToolbar({
         <menu className="flex flex-wrap gap-2">
           {/* Tab switcher (Files/Inbox/Trash) */}
           <li className="flex gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
-            <Button
-              variant={activeTab === 'files' ? 'default' : 'ghost'}
+            <ToggleButton
+              pressed={activeTab === 'files'}
+              variant="ghost"
+              semantics="selected"
               size="sm"
               onClick={() => onTabChange('files')}
               role="tab"
-              aria-selected={activeTab === 'files'}
-              className={cn('px-3', activeTab === 'files' && 'bg-primary text-primary-foreground')}
+              className="px-3"
             >
               <FileText className={`${iconSizes.sm} mr-1`} />
               {t('manager.filesTitle')}
-            </Button>
-            <Button
-              variant={activeTab === 'inbox' ? 'default' : 'ghost'}
+            </ToggleButton>
+            <ToggleButton
+              pressed={activeTab === 'inbox'}
+              variant="ghost"
+              semantics="selected"
               size="sm"
               onClick={() => onTabChange('inbox')}
               role="tab"
-              aria-selected={activeTab === 'inbox'}
-              className={cn('px-3', activeTab === 'inbox' && 'bg-primary text-primary-foreground hover:bg-primary/90')}
+              className="px-3"
             >
               <Inbox className={`${iconSizes.sm} mr-1`} />
               {t('domains.ingestion')}
-            </Button>
-            <Button
-              variant={activeTab === 'trash' ? 'default' : 'ghost'}
+            </ToggleButton>
+            <ToggleButton
+              pressed={activeTab === 'trash'}
+              variant="ghost"
+              semantics="selected"
               size="sm"
               onClick={() => onTabChange('trash')}
               role="tab"
-              aria-selected={activeTab === 'trash'}
-              className={cn('px-3', activeTab === 'trash' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+              className="px-3"
             >
               <Trash2 className={`${iconSizes.sm} mr-1`} />
               {t('trash.title')}
-            </Button>
+            </ToggleButton>
           </li>
 
           {/* View mode toggles - Only on files tab */}
@@ -147,61 +150,61 @@ export function FileManagerToolbar({
               <li className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                    <ToggleButton
+                      pressed={viewMode === 'gallery'}
+                      variant="ghost"
                       size="sm"
                       onClick={() => onViewModeChange('gallery')}
                       aria-label={t('manager.viewGallery')}
-                      aria-pressed={viewMode === 'gallery'}
-                      className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
+                      className="px-2"
                     >
                       <Grid3X3 className={iconSizes.sm} />
-                    </Button>
+                    </ToggleButton>
                   </TooltipTrigger>
                   <TooltipContent>{t('manager.viewGallery')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    <ToggleButton
+                      pressed={viewMode === 'list'}
+                      variant="ghost"
                       size="sm"
                       onClick={() => onViewModeChange('list')}
                       aria-label={t('manager.listView')}
-                      aria-pressed={viewMode === 'list'}
-                      className={cn('px-2', viewMode === 'list' && 'bg-primary text-primary-foreground')}
+                      className="px-2"
                     >
                       <List className={iconSizes.sm} />
-                    </Button>
+                    </ToggleButton>
                   </TooltipTrigger>
                   <TooltipContent>{t('manager.listView')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'tree' ? 'default' : 'ghost'}
+                    <ToggleButton
+                      pressed={viewMode === 'tree'}
+                      variant="ghost"
                       size="sm"
                       onClick={() => onViewModeChange('tree')}
                       aria-label={t('manager.treeView')}
-                      aria-pressed={viewMode === 'tree'}
-                      className={cn('px-2', viewMode === 'tree' && 'bg-primary text-primary-foreground')}
+                      className="px-2"
                     >
                       <Network className={iconSizes.sm} />
-                    </Button>
+                    </ToggleButton>
                   </TooltipTrigger>
                   <TooltipContent>{t('manager.treeView')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'iso19650-tree' ? 'default' : 'ghost'}
+                    <ToggleButton
+                      pressed={viewMode === 'iso19650-tree'}
+                      variant="ghost"
                       size="sm"
                       onClick={() => onViewModeChange('iso19650-tree')}
                       aria-label={t('iso19650:virtualFolders.viewLabel')}
-                      aria-pressed={viewMode === 'iso19650-tree'}
-                      className={cn('px-2', viewMode === 'iso19650-tree' && 'bg-primary text-primary-foreground')}
+                      className="px-2"
                     >
                       <Layers className={iconSizes.sm} />
-                    </Button>
+                    </ToggleButton>
                   </TooltipTrigger>
                   <TooltipContent>{t('iso19650:virtualFolders.viewTooltip')}</TooltipContent>
                 </Tooltip>
@@ -212,31 +215,31 @@ export function FileManagerToolbar({
                 <li className="flex gap-1 border rounded-md p-1" role="group" aria-label="Tree view mode">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant={treeViewMode === 'business' ? 'default' : 'ghost'}
+                      <ToggleButton
+                        pressed={treeViewMode === 'business'}
+                        variant="ghost"
                         size="sm"
                         onClick={() => onTreeViewModeChange('business')}
                         aria-label={t('manager.businessView')}
-                        aria-pressed={treeViewMode === 'business'}
-                        className={cn('px-2', treeViewMode === 'business' && 'bg-primary text-primary-foreground')}
+                        className="px-2"
                       >
                         <Eye className={iconSizes.sm} />
-                      </Button>
+                      </ToggleButton>
                     </TooltipTrigger>
                     <TooltipContent>{t('manager.businessViewTooltip')}</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant={treeViewMode === 'technical' ? 'default' : 'ghost'}
+                      <ToggleButton
+                        pressed={treeViewMode === 'technical'}
+                        variant="ghost"
                         size="sm"
                         onClick={() => onTreeViewModeChange('technical')}
                         aria-label={t('manager.technicalView')}
-                        aria-pressed={treeViewMode === 'technical'}
-                        className={cn('px-2', treeViewMode === 'technical' && 'bg-primary text-primary-foreground')}
+                        className="px-2"
                       >
                         <Code className={iconSizes.sm} />
-                      </Button>
+                      </ToggleButton>
                     </TooltipTrigger>
                     <TooltipContent>{t('manager.technicalViewTooltip')}</TooltipContent>
                   </Tooltip>

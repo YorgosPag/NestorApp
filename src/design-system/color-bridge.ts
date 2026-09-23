@@ -320,6 +320,16 @@ export const COLOR_BRIDGE = {
      *  στο σκοτεινό ⇒ «26%» χωρίς ορατό «από πόσο». Ίδια οικογένεια με το `--control-outline`
      *  (M3 `outline`), σε 25% ώστε να διαβάζεται ως κενό, όχι ως δεύτερο γέμισμα. */
     track: 'bg-control-outline/25',
+    /**
+     * ADR-770 §19 — **ΠΑΤΗΜΕΝΟ ΚΟΥΜΠΙ** (Fluent `ToggleButton` checked · M3 segmented selected). Ήταν
+     * `variant={x ? 'default' : 'outline'}` σε 111 σημεία: `bg-primary`/`bg-secondary` ≡ `--card` στο σκοτεινό ⇒
+     * το πατημένο χανόταν. Μία σύνθεση για `ToggleButton` · `SegmentedControl` · `Toggle` — ποτέ χειρόγραφη.
+     */
+    pressed:
+      'border-control-accent bg-control-accent text-control-accent-foreground hover:bg-control-accent/90 hover:text-control-accent-foreground',
+    /** Το ίδιο για Radix Toggle/ToggleGroup, όπου την κατάσταση τη γράφει το `data-state`. */
+    pressedOn:
+      'data-[state=on]:border-control-accent data-[state=on]:bg-control-accent data-[state=on]:text-control-accent-foreground data-[state=on]:hover:bg-control-accent/90 data-[state=on]:hover:text-control-accent-foreground',
   },
 
   /**

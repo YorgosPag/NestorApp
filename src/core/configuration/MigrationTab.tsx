@@ -14,6 +14,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -79,22 +80,24 @@ export const MigrationTab: React.FC<MigrationTabProps> = ({
             <div className="space-y-2">
               <h4 className="font-medium">Migration Mode</h4>
               <div className="flex items-center gap-4">
-                <Button
-                  variant={isDryRun ? "default" : "outline"}
+                <ToggleButton
+                  pressed={isDryRun}
+                  variant="outline"
                   onClick={() => setIsDryRun(true)}
                   className="flex items-center gap-2"
                 >
                   <Eye className={iconSizes.sm} />
                   Dry Run (Preview)
-                </Button>
-                <Button
-                  variant={!isDryRun ? "default" : "outline"}
+                </ToggleButton>
+                <ToggleButton
+                  pressed={!isDryRun}
+                  variant="outline"
                   onClick={() => setIsDryRun(false)}
                   className="flex items-center gap-2"
                 >
                   <Database className={iconSizes.sm} />
                   Execute Migration
-                </Button>
+                </ToggleButton>
               </div>
             </div>
           </div>

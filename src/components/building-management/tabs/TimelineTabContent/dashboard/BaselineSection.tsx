@@ -11,6 +11,7 @@
 import { useState, useCallback } from "react";
 import { Save, Trash2, GitCompare, X, Clock, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ToggleButton } from "@/components/ui/toggle-button";
 import {
   Dialog,
   DialogContent,
@@ -197,8 +198,9 @@ export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <Button
-                    variant={isSelected ? "default" : "ghost"}
+                  <ToggleButton
+                    pressed={isSelected}
+                    variant="ghost"
                     size="sm"
                     onClick={() =>
                       baseline.setSelectedBaselineId(isSelected ? null : b.id)
@@ -216,7 +218,7 @@ export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
                         {t(`${tBase}.list.compare`)}
                       </>
                     )}
-                  </Button>
+                  </ToggleButton>
 
                   <Button
                     variant="ghost"

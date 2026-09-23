@@ -54,7 +54,7 @@
  * @module lib/workspace/workspace-scope
  */
 
-import { WORKSPACE_PATH_PREFIX } from './workspace-path';
+import { WORKSPACE_PATH_PREFIX, workspacePath } from './workspace-path';
 // 🎫 ADR-853 Φ6 — **η σταθερά, όχι σκέτο `'invite'`**: το τμήμα δηλώνεται **μία** φορά στο
 //    `workspace-routes.ts` και από εκεί χτίζεται ο σύνδεσμος του email
 //    (`workspaceInvitationHref`). Μια χειρόγραφη λέξη εδώ θα έμενε πίσω σιωπηλά την ημέρα
@@ -354,4 +354,31 @@ export function isInsideWorkspace(href: string): boolean {
   if (first === undefined) return false; // η ρίζα «/» (ή μη-εσωτερική) — ρητά εκτός
 
   return !(first in OUTSIDE_WORKSPACE);
+}
+
+/**
+ * **Βάζει τον χώρο σε μια διεύθυνση — αν και μόνο αν της ανήκει.**
+ *
+ * Καθαρή συνάρτηση: ο κριτής είναι το {@link isInsideWorkspace}, η πράξη το
+ * {@link workspacePath}. Εδώ **δεν κρίνεται τίποτα** — γι' αυτό μπορεί να
+ * δοκιμαστεί χωρίς React.
+ *
+ * 🔑 **ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΟ `navigation.tsx` (ADR-875 §11 · ADR-787 §5.3 ν).** Το σύνορο
+ * του πελάτη είναι `'use client'`: μια συνάρτηση που εξάγεται από εκεί φτάνει σε
+ * Server Component ως **αναφορά πελάτη**, όχι ως κώδικας — δεν καλείται. Το σύνορο
+ * του **διακομιστή** (`server-navigation.ts`) χρειάζεται την **ίδια** απόφαση, και
+ * ένα δεύτερο αντίγραφο της θα ήταν το σχήμα του ADR-749. Άρα η απόφαση ζει σε
+ * ουδέτερο module και την ξαναβγάζουν και τα δύο σύνορα.
+ * ⚠️ **ΟΧΙ στο `workspace-path.ts`**: εκείνο εισάγεται **από** αυτό εδώ — θα ήταν
+ * κύκλος εισαγωγών (CHECK 3.80).
+ *
+ * ⚠️ **`alias === null` ⇒ ο σύνδεσμος μένει ΩΜΟΣ, επίτηδες.** Σημαίνει «η
+ * τρέχουσα διεύθυνση δεν ονομάζει χώρο, άρα δεν ξέρω — και **δεν μαντεύω**».
+ * Την απάντηση τη δίνει το **δίχτυ** στον διακομιστή, με κριμένη ταυτότητα.
+ * Ένα `?? PERSONAL_WORKSPACE_ALIAS` εδώ θα έστελνε κάθε μέλος οργανισμού στον
+ * **ιδιωτικό** του χώρο — σιωπηλά, και σε λάθος δεδομένα.
+ */
+export function workspaceHref(href: string, alias: string | null): string {
+  if (alias === null) return href;
+  return isInsideWorkspace(href) ? workspacePath(alias, href) : href;
 }

@@ -2,22 +2,27 @@
  * /procurement/analytics — Enterprise Spend Analytics Page (ADR-331 Phase D).
  *
  * Server component: verifies session cookie + RBAC role (D10) before rendering
- * the client shell. Forbidden users redirect to `/projects`.
+ * the client shell. Forbidden users redirect to `/projects` **μέσα στον ίδιο χώρο**
+ * (ADR-875 §11: ωμό `/projects` έπεφτε στο δίχτυ ⇒ χώρος του θεατή, όχι αυτός της σελίδας).
  *
  * @see ADR-331 §2.2, §4 D10
  */
 
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
 import { canViewSpendAnalytics } from '@/lib/auth/permissions/spend-analytics';
+import { AUTH_ROUTES } from '@/lib/routes';
+import { redirect } from '@/lib/workspace/server-navigation';
 
 import { AnalyticsPageShell } from './_components/AnalyticsPageShell';
 
 const FORBIDDEN_REDIRECT = '/projects';
-const LOGIN_REDIRECT = '/login';
+
+interface SpendAnalyticsPageProps {
+  readonly params: Promise<{ readonly workspace: string }>;
+}
 
 async function resolveGlobalRole(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -36,11 +41,12 @@ async function resolveGlobalRole(): Promise<string | null> {
   return typeof claimed === 'string' ? claimed : '';
 }
 
-export default async function SpendAnalyticsPage() {
+export default async function SpendAnalyticsPage({ params }: SpendAnalyticsPageProps) {
+  const { workspace } = await params;
   const role = await resolveGlobalRole();
 
-  if (role === null) redirect(LOGIN_REDIRECT);
-  if (!canViewSpendAnalytics(role)) redirect(FORBIDDEN_REDIRECT);
+  if (role === null) redirect(AUTH_ROUTES.login, workspace);
+  if (!canViewSpendAnalytics(role)) redirect(FORBIDDEN_REDIRECT, workspace);
 
   return <AnalyticsPageShell />;
 }

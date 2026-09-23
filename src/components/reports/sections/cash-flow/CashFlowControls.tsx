@@ -10,6 +10,7 @@ import '@/lib/design-system';
 import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import {
   Select,
   SelectContent,
@@ -72,20 +73,18 @@ export function CashFlowControls({
       className="flex flex-wrap items-center gap-3"
     >
       {/* Scenario selector */}
-      <fieldset className="flex items-center gap-1 rounded-lg border p-1">
-        <legend className="sr-only">{t('scenario.label')}</legend>
+      <SegmentedControl
+        value={activeScenario}
+        onValueChange={onScenarioChange}
+        aria-label={t('scenario.label')}
+        className="rounded-lg border p-1"
+      >
         {SCENARIOS.map((s) => (
-          <Button
-            key={s.value}
-            variant={activeScenario === s.value ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => onScenarioChange(s.value)}
-            disabled={loading}
-          >
+          <SegmentedControlItem key={s.value} value={s.value} variant="ghost" disabled={loading}>
             {t(s.labelKey)}
-          </Button>
+          </SegmentedControlItem>
         ))}
-      </fieldset>
+      </SegmentedControl>
 
       {/* Project filter */}
       {projects && projects.length > 0 && (

@@ -23,6 +23,44 @@
 const BOUNDARY_MODULE = '@/lib/workspace/navigation';
 
 /**
+ * Ο ειδικευτής του **δίδυμου συνόρου του διακομιστή** (ADR-875 §11).
+ *
+ * ⚠️ **ΞΕΧΩΡΙΣΤΟ module, ΕΠΙΤΗΔΕΣ**: το σύνορο του πελάτη είναι `'use client'` και
+ * ό,τι εξάγει φτάνει σε Server Component ως **αναφορά πελάτη**, όχι ως κώδικας.
+ */
+const SERVER_BOUNDARY_MODULE = '@/lib/workspace/server-navigation';
+
+/**
+ * **Πού ο χώρος είναι ΓΝΩΣΤΟΣ στον διακομιστή** — το υποδέντρο όπου το
+ * `params.workspace` υπάρχει αυτούσιο (POSIX, σχετικό με τη ρίζα του repo).
+ *
+ * 🔑 Έξω από εδώ ο διακομιστής **δεν ξέρει** χώρο, και η ωμή ανακατεύθυνση προς το
+ * **δίχτυ** είναι η σωστή απάντηση (λύνει με κριμένη ταυτότητα). Μέσα, η ωμή
+ * ανακατεύθυνση **πετά** τον χώρο που ήδη έχεις.
+ */
+const WORKSPACE_ROUTE_ROOT = 'src/app/(app)/o/[workspace]/';
+
+/**
+ * **Τα σύμβολα του διακομιστή που ΠΡΕΠΕΙ να περνούν από το σύνορο — ΜΟΝΟ μέσα
+ * στο {@link WORKSPACE_ROUTE_ROOT}.** Ίδιο κριτήριο ένταξης με τα
+ * {@link MIGRATED_SYMBOLS}: *δέχεται διεύθυνση*.
+ *
+ * 🔴 Γεννήθηκε από **μέτρηση** (ADR-875 §11): ως τώρα το `redirect` ήταν «μένει
+ * ωμό» με λόγο *«εκεί καλείται το workspacePath ΑΠΕΥΘΕΙΑΣ»*, δηλαδή κανόνας που
+ * πρέπει να θυμάσαι. Τον θυμήθηκε **1 στα 14** σημεία. Τα άλλα 13 έστελναν τον
+ * άνθρωπο στο δίχτυ, που τον προσγείωνε στον **δικό του** χώρο, όχι σε αυτόν όπου
+ * δούλευε.
+ */
+const SERVER_MIGRATED_SYMBOLS = Object.freeze({
+  redirect:
+    'ΠΑΙΡΝΕΙ ΔΙΕΥΘΥΝΣΗ. Μέσα στον χώρο το ωμό `/projects` πέφτει στο δίχτυ, που λύνει τον ' +
+    'χώρο από την ΤΑΥΤΟΤΗΤΑ του θεατή ⇒ ξένο γραφείο → σιωπηλά στο δικό του, με άλλα δεδομένα.',
+  permanentRedirect:
+    'ΙΔΙΟΣ ΛΟΓΟΣ με το redirect — και χειρότερος: το 308 είναι cacheable, άρα ο λάθος χώρος ' +
+    'κλειδώνει στον φυλλομετρητή.',
+});
+
+/**
  * **Τα σύμβολα που ΠΡΕΠΕΙ να περνούν από το σύνορο**, με τον λόγο του καθενός.
  *
  * 🔑 Κριτήριο ένταξης, και είναι **μετρήσιμο, όχι γούστο**: *το σύμβολο δέχεται
@@ -57,10 +95,10 @@ const UNMIGRATED_SYMBOLS = Object.freeze({
   useParams: 'ΤΑ ΤΜΗΜΑΤΑ ΤΗΣ ΤΡΕΧΟΥΣΑΣ ΔΙΑΔΡΟΜΗΣ ως δεδομένα — δεν κατασκευάζει διεύθυνση.',
   notFound: 'ΔΕΝ ΠΑΙΡΝΕΙ ΔΙΕΥΘΥΝΣΗ. Πετά τον έλεγχο στο όριο σφάλματος.',
   redirect:
-    'ΔΙΑΚΟΜΙΣΤΗΣ. Και οι 16 κλήσεις ζουν ήδη ΚΑΤΩ από το o/[workspace]/**, όπου ο χώρος ' +
-    'είναι αυτούσιος στο params.workspace: εκεί καλείται το workspacePath ΑΠΕΥΘΕΙΑΣ. Ένα hook ' +
-    'δεν μπορεί να τρέξει εκεί — η ίδια διάκριση που κάνει το next-intl, όπου το redirect ' +
-    'απαιτεί ΡΗΤΟ locale.',
+    'ΔΙΑΚΟΜΙΣΤΗΣ, ΕΞΩ ΑΠΟ ΤΟΝ ΧΩΡΟ ΜΟΝΟ. Εκεί ο χώρος ΔΕΝ είναι γνωστός και η ωμή διεύθυνση ' +
+    'πρέπει να φτάσει στο δίχτυ, που κρίνει με ταυτότητα. ΜΕΣΑ στο o/[workspace]/** κρίνεται ' +
+    'από τα SERVER_MIGRATED_SYMBOLS (ADR-875 §11). Ο codemod ΔΕΝ το αγγίζει: η μετανάστευση ' +
+    'απαιτεί το params.workspace, δηλαδή δεν είναι μηχανική.',
   permanentRedirect: 'ΔΙΑΚΟΜΙΣΤΗΣ — ίδιος λόγος με το redirect.',
   ReadonlyURLSearchParams: 'ΤΥΠΟΣ, όχι τιμή. Σβήνεται στη μεταγλώττιση.',
   RedirectType: 'ΤΥΠΟΣ, όχι τιμή.',
@@ -139,6 +177,11 @@ function repoRelativePosix(absPath, root) {
   return absPath.replace(/\\/g, '/').replace(`${root.replace(/\\/g, '/')}/`, '');
 }
 
+/** Ζει αυτό το αρχείο εκεί όπου ο διακομιστής ΞΕΡΕΙ τον χώρο; */
+function isWorkspaceRouteFile(repoRelPath) {
+  return repoRelPath.startsWith(WORKSPACE_ROUTE_ROOT);
+}
+
 /** Είναι αυτό το αρχείο δηλωμένος ιδιοκτήτης του ωμού Next; */
 function isRawImportOwner(repoRelPath) {
   return Object.hasOwn(RAW_IMPORT_OWNERS, repoRelPath);
@@ -163,6 +206,10 @@ function classifySymbol(name) {
 
 module.exports = {
   BOUNDARY_MODULE,
+  SERVER_BOUNDARY_MODULE,
+  SERVER_MIGRATED_SYMBOLS,
+  WORKSPACE_ROUTE_ROOT,
+  isWorkspaceRouteFile,
   GATE_STATES,
   MIGRATED_SYMBOLS,
   LINK_SYMBOL,

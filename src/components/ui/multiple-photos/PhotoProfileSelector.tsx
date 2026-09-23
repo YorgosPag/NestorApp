@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Star } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -50,9 +50,10 @@ export function PhotoProfileSelector({
                   alt={t('photos.management.photoNumber', { number: index + 1 })}
                   className={`w-full h-20 object-cover ${quick.rounded} ${quick.input}`}
                 />
-                <Button
+                <ToggleButton
                   type="button"
-                  variant={selectedProfilePhotoIndex === index ? "default" : "outline"}
+                  pressed={selectedProfilePhotoIndex === index}
+                  variant="outline"
                   size="sm"
                   className={`absolute bottom-1 right-1 ${iconSizes.lg} p-0`}
                   onClick={() => {
@@ -62,7 +63,7 @@ export function PhotoProfileSelector({
                   }}
                 >
                   <Star className={`${iconSizes.xs} ${selectedProfilePhotoIndex === index ? 'fill-current' : ''}`} />
-                </Button>
+                </ToggleButton>
               </figure>
             ) : (
               <aside className={`w-full h-20 ${colors.bg.muted} ${quick.rounded} ${quick.input} flex items-center justify-center`} role="status" aria-label={t('photos.management.emptySlot')}>

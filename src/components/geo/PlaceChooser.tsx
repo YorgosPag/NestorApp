@@ -28,6 +28,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceIdentity, type PlaceIdentityState } from '@/hooks/geo/usePlaceIdentity';
@@ -200,20 +201,14 @@ export function PlaceChooser({
       ) : null}
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-foreground">{t('place.legend')}</legend>
-        <div className="flex flex-wrap gap-2">
+        {/* ADR-770 §19 — αποκλειστική επιλογή: το όνομα της ομάδας το δίνει το <legend> του fieldset. */}
+        <SegmentedControl value={gesture} onValueChange={switchGesture} className="gap-2">
           {MAP_GESTURES.map((option) => (
-            <Button
-              key={option}
-              type="button"
-              size="sm"
-              variant={gesture === option ? 'default' : 'outline'}
-              onClick={() => switchGesture(option)}
-              aria-pressed={gesture === option}
-            >
+            <SegmentedControlItem key={option} value={option}>
               {t(`place.mode.${option}`)}
-            </Button>
+            </SegmentedControlItem>
           ))}
-        </div>
+        </SegmentedControl>
         <p className="text-sm text-muted-foreground">{t(`place.modeHint.${gesture}`)}</p>
       </fieldset>
 

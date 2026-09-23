@@ -19,6 +19,7 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pipette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { cn } from '@/lib/utils';
 import { openEyedropper, hasNativeEyedropper } from '../../color/eyedropper';
 import { aciToRgb, dxfColorToHex, hexToAci, hexToDxfTrueColor, rgbToHex } from './aci-palette';
@@ -113,34 +114,37 @@ export function ColorPickerPopover({
         <div className={PANEL_LAYOUT.SPACING.SM}>
           <nav className="mb-2 flex gap-1" role="tablist" aria-label={t('textToolbar:color.tabsLabel')}>
             {trueColorSupported && (
-              <Button
-                variant={tab === 'true' ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={tab === 'true'}
+                variant="ghost"
+                semantics="selected"
                 size="sm"
                 role="tab"
-                aria-selected={tab === 'true'}
                 onClick={() => setTab('true')}
               >
                 {t('textToolbar:color.tab.true')}
-              </Button>
+              </ToggleButton>
             )}
-            <Button
-              variant={tab === 'aci' ? 'default' : 'ghost'}
+            <ToggleButton
+              pressed={tab === 'aci'}
+              variant="ghost"
+              semantics="selected"
               size="sm"
               role="tab"
-              aria-selected={tab === 'aci'}
               onClick={() => setTab('aci')}
             >
               {t('textToolbar:color.tab.aci')}
-            </Button>
-            <Button
-              variant={tab === 'inherited' ? 'default' : 'ghost'}
+            </ToggleButton>
+            <ToggleButton
+              pressed={tab === 'inherited'}
+              variant="ghost"
+              semantics="selected"
               size="sm"
               role="tab"
-              aria-selected={tab === 'inherited'}
               onClick={() => setTab('inherited')}
             >
               {t('textToolbar:color.tab.inherited')}
-            </Button>
+            </ToggleButton>
             {hasNativeEyedropper() && (
               <Button
                 variant="ghost"
@@ -204,18 +208,20 @@ export function ColorPickerPopover({
 
           {tab === 'inherited' && (
             <div role="tabpanel" className="flex flex-col gap-1">
-              <Button
-                variant={value?.kind === 'ByLayer' ? 'default' : 'outline'}
+              <ToggleButton
+                pressed={value?.kind === 'ByLayer'}
+                variant="outline"
                 onClick={() => onChange(DXF_COLOR_BY_LAYER)}
               >
                 {t('textToolbar:color.byLayer')}
-              </Button>
-              <Button
-                variant={value?.kind === 'ByBlock' ? 'default' : 'outline'}
+              </ToggleButton>
+              <ToggleButton
+                pressed={value?.kind === 'ByBlock'}
+                variant="outline"
                 onClick={() => onChange(DXF_COLOR_BY_BLOCK)}
               >
                 {t('textToolbar:color.byBlock')}
-              </Button>
+              </ToggleButton>
             </div>
           )}
         </div>

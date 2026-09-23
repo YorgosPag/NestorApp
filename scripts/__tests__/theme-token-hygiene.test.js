@@ -36,6 +36,7 @@ const { findGluedClasses } = require('../lib/contrast/glued-class');
 const { readThemes } = require('../lib/contrast/css-token-themes');
 const { loadTailwindColors } = require('../lib/contrast/tailwind-class-resolver');
 const role = require('../lib/contrast/selection-control-role');
+const pressed = require('../lib/contrast/pressed-variant-ternary');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -269,5 +270,70 @@ describe('Ο5 — ρόλος χειριστηρίου επιλογής: ορατ
     expect(role.roleAuthorityViolations(objects, palette)).toEqual([
       'switch.default.checked: data-[state=checked]:bg-primary ⇒ --primary',
     ]);
+  });
+});
+
+// ─── Ο5ε — η πατημένη κατάσταση ΔΕΝ γράφεται ως παραλλαγή επιφάνειας (ADR-770 §19) ──
+//
+// `<Button variant={x ? 'default' : 'outline'}>`: στο σκοτεινό `bg-primary` ≡ `--card` ⇒ το πατημένο χάνεται
+// (ADR-777 §8.72.8 #2, ζωντανή σελίδα). 101 σημεία σε 62 αρχεία πριν τη μετάβαση. Θεραπεία: ToggleButton /
+// SegmentedControl. Εξαίρεση μόνο η δηλωμένη έμφαση ενέργειας (ADR-770 §18.7 #1), ratchet κατά ταυτότητα.
+
+describe('Ο5ε — κανένα πατημένο κουμπί γραμμένο ως παραλλαγή επιφάνειας', () => {
+  test('Ο5ε — σε ΟΛΟ το src/ μόνο η δηλωμένη έμφαση, με ΑΚΡΙΒΕΣ πλήθος', () => {
+    const found = new Map();
+    for (const full of collectSourceFiles(path.join(REPO_ROOT, 'src'))) {
+      if (!full.endsWith('.tsx')) continue;
+      const hits = pressed.findPressedVariantTernaries(fs.readFileSync(full, 'utf8'), full);
+      if (hits.length > 0) found.set(path.relative(REPO_ROOT, full).replace(/\\/g, '/'), hits);
+    }
+    expect(pressed.ternaryRatchetViolations(found)).toEqual([]);
+  });
+
+  test('Ο5ε ΜΕΤΑΛΛΑΞΗ — μίας γραμμής, σε πολλές γραμμές, φωλιασμένο, ghost/secondary ⇒ πιάνονται', () => {
+    const src = [
+      "<Button variant={a ? 'default' : 'outline'} />",
+      '<Button',
+      '  variant={',
+      "    b ? 'default'",
+      "      : 'ghost'",
+      '  }',
+      '/>',
+      "<Button variant={c ? 'outline' : d ? 'default' : 'outline'} />",
+      "<Button variant={(e ? 'secondary' : 'ghost')} />",
+    ].join('\n');
+    expect(pressed.findPressedVariantTernaries(src).map((h) => h.line)).toEqual([1, 3, 8, 9]);
+  });
+
+  test('Ο5ε ΜΕΤΑΛΛΑΞΗ — ΟΧΙ: Badge, ίδιο φύλλο, μη επιφάνεια, μη σταθερό κείμενο', () => {
+    const src = [
+      "<Badge variant={a ? 'default' : 'outline'} />",
+      "<Button variant={b ? 'outline' : 'outline'} />",
+      "<Button variant={c ? 'destructive' : 'outline'} />",
+      "<Button variant={d ? v : 'outline'} />",
+      "<ToggleButton pressed={e} variant=\"outline\" />",
+    ].join('\n');
+    expect(pressed.findPressedVariantTernaries(src)).toEqual([]);
+  });
+
+  test('Ο5ε ΜΕΤΑΛΛΑΞΗ — δηλωμένο +1 ⇒ ⛔ · δηλωμένο −1 ⇒ «μίκρυνε τη δήλωση» · αδήλωτο ⇒ ⛔', () => {
+    const hit = { line: 1, text: "variant={x ? 'default' : 'outline'}" };
+    const declared = { 'src/a.tsx': 1, 'src/b.tsx': 2 };
+    const found = new Map([
+      ['src/a.tsx', [hit, hit]],
+      ['src/b.tsx', [hit]],
+      ['src/c.tsx', [hit]],
+    ]);
+    const out = pressed.ternaryRatchetViolations(found, declared).join('\n');
+    expect(out).toMatch(/src\/a\.tsx:1/);
+    expect(out).toMatch(/src\/b\.tsx: δηλωμένα 2, βρέθηκαν 1/);
+    expect(out).toMatch(/src\/c\.tsx:1/);
+  });
+
+  test('Ο5ε ΜΕΤΑΛΛΑΞΗ — το `toggle.tsx` πίσω σε `bg-accent` ⇒ το Ο5β το πιάνει (η εξαίρεση έφυγε)', () => {
+    const palette = loadTailwindColors(REPO_ROOT);
+    const hits = role.findSurfaceStateIndicators('cn("data-[state=on]:bg-accent")', palette);
+    expect(hits.map((h) => h.token)).toEqual(['data-[state=on]:bg-accent']);
+    expect(role.DECLARED_OPEN_STATES['src/components/ui/toggle.tsx']).toBeUndefined();
   });
 });

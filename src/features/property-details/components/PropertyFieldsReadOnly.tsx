@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { HelpCircle, Layers } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -219,26 +219,28 @@ export function LevelTabStrip({
     <nav aria-label="Level tabs" className="flex items-center gap-1 rounded-md bg-muted/50 p-1">
       <Layers className={cn("h-3.5 w-3.5 shrink-0", colors.text.muted)} />
       {sorted.map((level) => (
-        <Button
+        <ToggleButton
           key={level.floorId}
           type="button"
-          variant={activeLevelId === level.floorId ? 'default' : 'ghost'}
+          pressed={activeLevelId === level.floorId}
+          variant="ghost"
           size="sm"
           className="h-6 px-2 text-xs"
           onClick={() => onSelectLevel(level.floorId)}
         >
           {level.name}
-        </Button>
+        </ToggleButton>
       ))}
-      <Button
+      <ToggleButton
         type="button"
-        variant={activeLevelId === null ? 'default' : 'ghost'}
+        pressed={activeLevelId === null}
+        variant="ghost"
         size="sm"
         className="h-6 px-2 text-xs"
         onClick={() => onSelectLevel(null)}
       >
         {t('multiLevel.perLevel.tabTotals')} ✓
-      </Button>
+      </ToggleButton>
     </nav>
   );
 }

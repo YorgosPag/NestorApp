@@ -14,9 +14,10 @@
  */
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { PropertyDetailCardHeader } from './PropertyDetailCardHeader';
 import { SelectItem } from '@/components/ui/select';
 import { ClearableSelect } from '@/components/ui/clearable-select';
 import { cn } from '@/lib/utils';
@@ -36,14 +37,14 @@ import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 type Row2Props = Pick<PropertyFieldsEditFormProps,
   'formData' | 'setFormData' | 'isEditing' | 'isSoldOrRented' |
   'isMultiLevel' | 'activeLevelId' | 'currentLevelData' | 'aggregatedTotals' |
-  'toggleArrayItem' | 'updateLevelField' | 't' | 'typography' | 'iconSizes'
+  'toggleArrayItem' | 'updateLevelField' | 't' | 'iconSizes'
 >;
 
 export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
   const {
     formData, setFormData, isEditing, isSoldOrRented,
     isMultiLevel, activeLevelId, currentLevelData, aggregatedTotals,
-    toggleArrayItem, updateLevelField, t, typography, iconSizes,
+    toggleArrayItem, updateLevelField, t, iconSizes,
   } = props;
   const colors = useSemanticColors();
 
@@ -52,17 +53,13 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
       {/* ─── Systems Card ─── */}
       {/* ADR-287 Batch 28: id anchor for completion-meter click-to-jump. */}
       <Card id="field-systems" tabIndex={-1}>
-        <CardHeader className="p-2 pb-1">
-          <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-            <Thermometer className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.systems)} />
-            {t('systems.sectionTitle')}
-            {isMultiLevel && (
-              <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
-                {t('multiLevel.perLevel.sharedHint')}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
+        <PropertyDetailCardHeader
+          icon={{ icon: Thermometer, tone: PROPERTY_CARD_COLORS.systems }}
+          title={t('systems.sectionTitle')}
+          scope="shared"
+          isMultiLevel={isMultiLevel}
+          t={t}
+        />
         <CardContent className="p-2 pt-0">
           <div className="space-y-2">
             <fieldset className="space-y-1">
@@ -117,17 +114,13 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
       </Card>
       {/* ─── Finishes Card (level-aware) ─── */}
       <Card id="field-finishes" tabIndex={-1}>
-        <CardHeader className="p-2 pb-1">
-          <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-            <Home className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.finishes)} />
-            {t('finishes.sectionTitle')}
-            {isMultiLevel && (
-              <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
-                {t('multiLevel.perLevel.perFloorHint')}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
+        <PropertyDetailCardHeader
+          icon={{ icon: Home, tone: PROPERTY_CARD_COLORS.finishes }}
+          title={t('finishes.sectionTitle')}
+          scope="perFloor"
+          isMultiLevel={isMultiLevel}
+          t={t}
+        />
         <CardContent className="p-2 pt-0 space-y-2">
           {(() => {
             const levelFlooring = isMultiLevel && activeLevelId
@@ -147,8 +140,8 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                     {FLOORING_OPTIONS.map((floor) => {
                       const isSelected = levelFlooring.includes(floor);
                       return (
-                        <Button key={floor} type="button"
-                          variant={isSelected ? 'default' : 'outline'} size="sm"
+                        <ToggleButton key={floor} type="button"
+                          pressed={isSelected} variant="outline" size="sm"
                           className="h-6 px-1.5 text-xs"
                           disabled={!isEditing || isSoldOrRented}
                           onClick={() => {
@@ -165,7 +158,7 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
                             }
                           }}>
                           {t(`finishes.flooring.${floor}`)}
-                        </Button>
+                        </ToggleButton>
                       );
                     })}
                   </div>
@@ -249,17 +242,13 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
 
       {/* ─── Features Card ─── */}
       <Card id="field-features" tabIndex={-1}>
-        <CardHeader className="p-2 pb-1">
-          <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-            <Shield className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.features)} />
-            {t('features.sectionTitle')}
-            {isMultiLevel && (
-              <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
-                {t('multiLevel.perLevel.sharedHint')}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
+        <PropertyDetailCardHeader
+          icon={{ icon: Shield, tone: PROPERTY_CARD_COLORS.features }}
+          title={t('features.sectionTitle')}
+          scope="shared"
+          isMultiLevel={isMultiLevel}
+          t={t}
+        />
         <CardContent className="p-2 pt-0 space-y-2">
           <fieldset className="space-y-1">
             <Label className={cn("text-xs", colors.text.muted)}>{t('features.interior.label')}</Label>
@@ -267,13 +256,13 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
               {INTERIOR_FEATURE_OPTIONS.map((feature) => {
                 const isSelected = formData.interiorFeatures.includes(feature);
                 return (
-                  <Button key={feature} type="button"
-                    variant={isSelected ? 'default' : 'outline'} size="sm"
+                  <ToggleButton key={feature} type="button"
+                    pressed={isSelected} variant="outline" size="sm"
                     className="h-6 px-1.5 text-xs"
                     disabled={!isEditing || isSoldOrRented}
                     onClick={() => toggleArrayItem('interiorFeatures', feature)}>
                     {t(`features.interior.${feature}`)}
-                  </Button>
+                  </ToggleButton>
                 );
               })}
             </div>
@@ -284,13 +273,13 @@ export function PropertyFieldsDetailCardsRow2(props: Row2Props) {
               {SECURITY_FEATURE_OPTIONS.map((feature) => {
                 const isSelected = formData.securityFeatures.includes(feature);
                 return (
-                  <Button key={feature} type="button"
-                    variant={isSelected ? 'default' : 'outline'} size="sm"
+                  <ToggleButton key={feature} type="button"
+                    pressed={isSelected} variant="outline" size="sm"
                     className="h-6 px-1.5 text-xs"
                     disabled={!isEditing || isSoldOrRented}
                     onClick={() => toggleArrayItem('securityFeatures', feature)}>
                     {t(`features.security.${feature}`)}
-                  </Button>
+                  </ToggleButton>
                 );
               })}
             </div>

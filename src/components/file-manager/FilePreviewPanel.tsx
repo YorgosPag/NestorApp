@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
@@ -191,14 +192,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           {file.status === FILE_STATUS.READY && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant={showVersions ? 'secondary' : 'ghost'}
+                <ToggleButton
+                  pressed={showVersions}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowVersions(!showVersions)}
                   className="h-7 w-7 p-0"
                 >
                   <History className="h-3.5 w-3.5" />
-                </Button>
+                </ToggleButton>
               </TooltipTrigger>
               <TooltipContent>
                 {t('versions.title')}
@@ -227,14 +229,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant={showComments ? 'secondary' : 'ghost'}
+                <ToggleButton
+                  pressed={showComments}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowComments(!showComments)}
                   className="h-7 w-7 p-0"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
-                </Button>
+                </ToggleButton>
               </TooltipTrigger>
               <TooltipContent>
                 {t('comments.title')}
@@ -245,14 +248,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant={showApprovals ? 'secondary' : 'ghost'}
+                <ToggleButton
+                  pressed={showApprovals}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowApprovals(!showApprovals)}
                   className="h-7 w-7 p-0"
                 >
                   <UserCheck className="h-3.5 w-3.5" />
-                </Button>
+                </ToggleButton>
               </TooltipTrigger>
               <TooltipContent>
                 {t('approvals.title')}
@@ -264,14 +268,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           {owner !== null && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant={showAudit ? 'secondary' : 'ghost'}
+                <ToggleButton
+                  pressed={showAudit}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowAudit(!showAudit)}
                   className="h-7 w-7 p-0"
                 >
                   <ScrollText className="h-3.5 w-3.5" />
-                </Button>
+                </ToggleButton>
               </TooltipTrigger>
               <TooltipContent>
                 {t('audit.title')}
@@ -282,14 +287,15 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           {officeActions && currentUserId && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant={showIso19650 ? 'secondary' : 'ghost'}
+                <ToggleButton
+                  pressed={showIso19650}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowIso19650(!showIso19650)}
                   className="h-7 w-7 p-0"
                 >
                   <Tag className="h-3.5 w-3.5" />
-                </Button>
+                </ToggleButton>
               </TooltipTrigger>
               <TooltipContent>{t('iso19650:labels.sectionTitle')}</TooltipContent>
             </Tooltip>

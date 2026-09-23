@@ -9,6 +9,7 @@ import { ExtendedSnapType } from '../../snapping/extended-types';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Centralized Shadcn Button (same as CompactToolbar)
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
@@ -94,8 +95,9 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant={enabled ? 'default' : 'ghost'}
+        <ToggleButton
+          pressed={enabled}
+          variant="ghost"
           size="sm"
           onClick={onClick}
           className={`
@@ -106,7 +108,7 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
           <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
             {label}
           </span>
-        </Button>
+        </ToggleButton>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
@@ -279,8 +281,9 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
           <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={listeningDimOn ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={listeningDimOn}
+                variant="ghost"
                 size="sm"
                 onClick={onToggleListeningDim}
                 className={`${compact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'} ${listeningDimOn ? HOVER_TEXT_EFFECTS.CYAN : ''}`}
@@ -288,7 +291,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
                 <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
                   {t('dxf-viewer-panels:cadDock.statusBar.listeningDim')}
                 </span>
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{t('dxf-viewer-panels:cadDock.statusBar.listeningDimDesc')}</TooltipContent>
           </Tooltip>

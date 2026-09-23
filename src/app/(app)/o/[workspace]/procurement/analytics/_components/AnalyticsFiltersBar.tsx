@@ -14,6 +14,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiCombobox, type MultiComboboxOption } from '@/components/ui/multi-combobox';
@@ -101,15 +102,16 @@ function StatusPresetChips({ active, onApply }: StatusPresetChipsProps) {
       {(Object.keys(STATUS_PRESETS) as StatusPresetKey[]).map((key) => {
         const isActive = isPresetActive(key);
         return (
-          <Button
+          <ToggleButton
             key={key}
             type="button"
             size="xs"
-            variant={isActive ? 'default' : 'outline'}
+            pressed={isActive}
+            variant="outline"
             onClick={() => onApply(STATUS_PRESETS[key])}
           >
             {t(`analytics.filters.statusPresets.${key}`)}
-          </Button>
+          </ToggleButton>
         );
       })}
     </div>

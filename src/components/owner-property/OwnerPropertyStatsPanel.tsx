@@ -18,11 +18,9 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-import { Button } from '@/components/ui/button';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatNumber } from '@/lib/intl-formatting';
-import { cn } from '@/lib/utils';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { daysOnMarket, shiftMarketDay, windowSum } from '@/lib/listings/listing-stats';
 import {
   CONTACT_RATE_MIN_VIEWS,
@@ -93,32 +91,20 @@ function Kpi({ label, value, detail }: { readonly label: string; readonly value:
 
 function RangeSwitch({ value, onChange }: { readonly value: ListingStatsRange; readonly onChange: (next: ListingStatsRange) => void }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
+  // ☑️ ADR-770 §19 — αποκλειστική επιλογή ⇒ `SegmentedControl` (ρόλος χειριστηρίου, radio, βελάκια). Εδώ ζούσε η
+  //    ΠΡΩΤΗ χειρόγραφη σύνθεση του ρόλου (§8.72.8 #2)· έγινε το primitive και αυτή η γραμμή το ζητά.
+  const onValue = (raw: string) => {
+    const next = LISTING_STATS_RANGES.find((range) => String(range) === raw);
+    if (next !== undefined) onChange(next);
+  };
   return (
-    <fieldset className="m-0 flex gap-1 border-0 p-0">
-      <legend className="sr-only">{t(`${S}.range.label`)}</legend>
+    <SegmentedControl value={String(value)} onValueChange={onValue} aria-label={t(`${S}.range.label`)}>
       {LISTING_STATS_RANGES.map((range) => (
-        <Button
-          key={range}
-          type="button"
-          size="sm"
-          variant="outline"
-          // ☑️ ADR-770 §17 — επιλογή = ρόλος χειριστηρίου, ΟΧΙ `variant="default"` (`bg-primary` ≡ `--card`
-          //    στο σκοτεινό ⇒ το πατημένο κουμπί ήταν αόρατο· μετρημένο σε ζωντανή σελίδα, §8.72.8).
-          className={cn(
-            range === value && [
-              COLOR_BRIDGE.selectionControl.fill,
-              COLOR_BRIDGE.selectionControl.fillInk,
-              COLOR_BRIDGE.selectionControl.accentOutline,
-              'hover:bg-control-accent/90 hover:text-control-accent-foreground',
-            ],
-          )}
-          aria-pressed={range === value}
-          onClick={() => onChange(range)}
-        >
+        <SegmentedControlItem key={range} value={String(range)}>
           {t(`${S}.range.${range}`)}
-        </Button>
+        </SegmentedControlItem>
       ))}
-    </fieldset>
+    </SegmentedControl>
   );
 }
 

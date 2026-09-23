@@ -2,6 +2,7 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -68,24 +69,24 @@ function FieldRow({
       </span>
 
       <span className="flex gap-1">
-        <Button
+        <ToggleButton
           size="sm"
-          variant={decision === 'apply' ? 'default' : 'outline'}
+          pressed={decision === 'apply'}
+          variant="outline"
           className="h-6 px-2 text-xs"
           onClick={onApply}
-          aria-pressed={decision === 'apply'}
         >
           {t('editor.reconciliation.apply')}
-        </Button>
-        <Button
+        </ToggleButton>
+        <ToggleButton
           size="sm"
-          variant={decision === 'keep' ? 'secondary' : 'ghost'}
+          pressed={decision === 'keep'}
+          variant="ghost"
           className="h-6 px-2 text-xs"
           onClick={onKeep}
-          aria-pressed={decision === 'keep'}
         >
           {t('editor.reconciliation.keep')}
-        </Button>
+        </ToggleButton>
       </span>
     </li>
   );

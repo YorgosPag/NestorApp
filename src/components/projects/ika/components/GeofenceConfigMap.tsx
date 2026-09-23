@@ -32,6 +32,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { CardLoadingState } from '@/core/states';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Slider } from '@/components/ui/slider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -107,8 +108,9 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               {t('ika.attendance.geofence.description')}
             </CardDescription>
           </div>
-          <Button
-            variant={enabled ? 'default' : 'outline'}
+          <ToggleButton
+            pressed={enabled}
+            variant="outline"
             size="sm"
             onClick={handleToggleEnabled}
           >
@@ -116,7 +118,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               ? t('ika.attendance.geofence.enabled')
               : t('ika.attendance.geofence.disabled')
             }
-          </Button>
+          </ToggleButton>
         </div>
       </CardHeader>
 

@@ -11,6 +11,7 @@ import { Inbox, Filter, RefreshCw } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -92,17 +93,18 @@ export function AIInboxHeader({
             )}
             {t('aiInbox.refresh')}
           </Button>,
-          <Button
+          <ToggleButton
             key="mobile-filters"
             type="button"
-            variant={showFilters ? 'default' : 'outline'}
+            pressed={showFilters}
+            variant="outline"
             size="icon"
             className="md:hidden"
             onClick={() => setShowFilters(!showFilters)}
             aria-label={t('aiInbox.accessibility.toggleFilters')}
           >
             <Filter className={iconSizes.sm} />
-          </Button>
+          </ToggleButton>
         ].filter(Boolean) as React.ReactNode[]
       }}
     />

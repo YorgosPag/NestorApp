@@ -36,7 +36,10 @@ const {
   GATE_STATES: STATES,
   MIGRATED_SYMBOLS,
   RAW_IMPORT_OWNERS,
+  SERVER_BOUNDARY_MODULE,
+  SERVER_MIGRATED_SYMBOLS,
   isRawImportOwner,
+  isWorkspaceRouteFile,
   repoRelativePosix,
 } = require('./contract.js');
 
@@ -96,8 +99,13 @@ function mentionsRawNext(text) {
  *
  * ⚠️ Η προεπιλεγμένη εισαγωγή του `next/link` **είναι** το `Link`, όποιο κι αν
  * είναι το τοπικό της όνομα — γι' αυτό κρίνεται χωριστά από τα named.
+ *
+ * 🔑 **Τα σύμβολα του διακομιστή κρίνονται ΑΝΑ ΘΕΣΗ** (ADR-875 §11): το ίδιο
+ * `redirect` είναι σωστό έξω από τον χώρο (το δίχτυ κρίνει με ταυτότητα) και
+ * παράκαμψη μέσα (πετά τον χώρο που ήδη υπάρχει στο `params.workspace`).
  */
-function rawMigratableImports(sourceFile) {
+function rawMigratableImports(sourceFile, repoRelPath) {
+  const inWorkspace = isWorkspaceRouteFile(repoRelPath);
   const found = [];
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement)) continue;
@@ -116,7 +124,10 @@ function rawMigratableImports(sourceFile) {
     for (const element of bindings.elements) {
       if (element.isTypeOnly) continue;
       const imported = (element.propertyName ?? element.name).text;
-      if (Object.hasOwn(MIGRATED_SYMBOLS, imported)) {
+      const migrates =
+        Object.hasOwn(MIGRATED_SYMBOLS, imported) ||
+        (inWorkspace && Object.hasOwn(SERVER_MIGRATED_SYMBOLS, imported));
+      if (migrates) {
         found.push({ symbol: imported, line: lineOf(sourceFile, element) });
       }
     }
@@ -128,13 +139,14 @@ function lineOf(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 }
 
-/** Εισάγει από το σύνορο; */
+/** Εισάγει από κάποιο από τα δύο σύνορα (πελάτη ή διακομιστή); */
 function importsBoundary(sourceFile) {
   return sourceFile.statements.some(
     (s) =>
       ts.isImportDeclaration(s) &&
       ts.isStringLiteral(s.moduleSpecifier) &&
-      s.moduleSpecifier.text === BOUNDARY_MODULE,
+      (s.moduleSpecifier.text === BOUNDARY_MODULE ||
+        s.moduleSpecifier.text === SERVER_BOUNDARY_MODULE),
   );
 }
 
@@ -147,7 +159,7 @@ function judgeFile(repoRelPath, text) {
     return { state: STATES.NOT_A_NAVIGATION_FILE, hits: [] };
   }
   const sourceFile = ts.createSourceFile(repoRelPath, text, ts.ScriptTarget.Latest, true);
-  const raw = rawMigratableImports(sourceFile);
+  const raw = rawMigratableImports(sourceFile, repoRelPath);
 
   if (isRawImportOwner(repoRelPath)) {
     // ⚠️ ΤΟ ΚΡΙΤΗΡΙΟ ΟΡΦΑΝΟΤΗΤΑΣ ΕΙΝΑΙ «ΑΝΑΦΕΡΕΙ», ΟΧΙ «ΕΙΣΑΓΕΙ». Η άγκυρα του

@@ -119,3 +119,10 @@ export interface SpaceActionState {
   deletingId?: string | null;
   unlinkingId?: string | null;
 }
+
+// ============================================================================
+// VIEW MODE
+// ============================================================================
+
+/** Η προβολή μιας καρτέλας χώρων: κάρτες ή πίνακας (`BuildingSpaceViewSwitch`, ADR-770 §19). */
+export type BuildingSpaceViewMode = 'table' | 'cards';

@@ -70,6 +70,10 @@ const SELECTION_PRIMITIVES = Object.freeze({
   // ADR-866 §2.10.8 Β4 — η κάρτα τύπου εγγράφου (`role="radio"`) των επιλογέων μεταφόρτωσης: η επιλεγμένη ετικέτα
   // ήταν `text-primary` ⇒ αόρατη στο σκοτεινό θέμα (μετρημένο στην παραγωγή). Πρώτο primitive έξω από το `ui/`.
   'src/components/shared/files/entry-point-selector-shared.tsx': 'selectionControl',
+  // ADR-770 §19 — το ΠΑΤΗΜΕΝΟ κουμπί: εναλλαγή · αποκλειστική επιλογή · Radix Toggle (ήταν δηλωμένο ανοιχτό).
+  'src/components/ui/toggle-button.tsx': 'selectionControl.pressed',
+  'src/components/ui/segmented-control.tsx': 'selectionControl.pressedOn',
+  'src/components/ui/toggle.tsx': 'selectionControl.pressedOn',
 });
 
 /**
@@ -77,14 +81,14 @@ const SELECTION_PRIMITIVES = Object.freeze({
  * §17.6, δηλωμένα με μέτρηση, όχι ξεχασμένα. Κάθε εγγραφή πρέπει να **υπάρχει ακόμα**
  * (αλλιώς η άγκυρα κοκκινίζει: μπαγιάτικη εξαίρεση = σιωπηλή άδεια). Η λίστα **μόνο μικραίνει**.
  *
- *  · toggle ON / ημερολόγιο range-middle: ρόλος *container* (M3 `secondary-container`), όχι
- *    *indicator* — μετρημένο σκοτ. 1,00–1,18. Θεραπεία = νέο ζεύγος `container`, όχι αυτός ο ρόλος.
+ *  · ημερολόγιο range-middle: ρόλος *container* (M3 `secondary-container`), όχι *indicator* —
+ *    μετρημένο σκοτ. 1,00–1,18. Θεραπεία = νέο ζεύγος `container`, όχι αυτός ο ρόλος.
+ *    (Το toggle ON **έκλεισε** 2026-09-23, ADR-770 §19: πατημένο κουμπί = `selectionControl.pressedOn`.)
  *  · switch `destructive` ON: τροχιά `--destructive` σκοτ. **1,48:1** επί `--card`, λαβή 1,74:1 —
  *    κάτω από το 1.4.11. Το `--destructive` είναι επιφάνεια κουμπιού με λευκό από πάνω· η
  *    παραλλαγή ADR-128 θέλει δικό της token τροχιάς (απόφαση token, όχι αυτής της αλλαγής).
  */
 const DECLARED_OPEN_STATES = Object.freeze({
-  'src/components/ui/toggle.tsx': ['data-[state=on]:bg-accent'],
   'src/components/ui/calendar.tsx': ['aria-selected:bg-accent/50', 'aria-selected:bg-accent'],
   'src/design-system/color-bridge.ts': ['data-[state=checked]:bg-destructive'],
 });

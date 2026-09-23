@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import {
   Select,
   SelectContent,
@@ -243,26 +244,18 @@ export function MediaGallery({
       {showToolbar && (
         <header className="flex flex-wrap items-center gap-2 pb-2 border-b">
           {/* View Mode Toggle */}
-          <nav className="flex items-center gap-1" role="group" aria-label={t('media.viewMode')}>
-            <Button
-              variant={gallery.state.viewMode === 'grid' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => gallery.setViewMode('grid')}
-              aria-pressed={gallery.state.viewMode === 'grid'}
-              aria-label={t('media.gridView')}
-            >
+          <SegmentedControl
+            value={gallery.state.viewMode}
+            onValueChange={gallery.setViewMode}
+            aria-label={t('media.viewMode')}
+          >
+            <SegmentedControlItem value="grid" variant="ghost" aria-label={t('media.gridView')}>
               <Grid3X3 className={iconSizes.sm} />
-            </Button>
-            <Button
-              variant={gallery.state.viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => gallery.setViewMode('list')}
-              aria-pressed={gallery.state.viewMode === 'list'}
-              aria-label={t('media.listView')}
-            >
+            </SegmentedControlItem>
+            <SegmentedControlItem value="list" variant="ghost" aria-label={t('media.listView')}>
               <List className={iconSizes.sm} />
-            </Button>
-          </nav>
+            </SegmentedControlItem>
+          </SegmentedControl>
 
           {/* Separator */}
           <div className="w-px h-6 bg-border" aria-hidden="true" />

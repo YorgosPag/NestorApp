@@ -1,0 +1,76 @@
+'use client';
+
+/**
+ * @fileoverview **ΑΠΟΚΛΕΙΣΤΙΚΗ ΕΠΙΛΟΓΗ (ένα από Ν)** — M3 segmented button · Radix ToggleGroup `single`.
+ * @related ADR-770 §19 · ui/toggle-button (εναλλαγή on/off) · design-system/color-bridge (`selectionControl`)
+ * @module components/ui/segmented-control
+ *
+ * 🔑 **Τρία πράγματα που τα χειρόγραφα ζευγάρια κουμπιών δεν είχαν:**
+ *  1. **Ορατή επιλογή στο σκοτεινό** — ο ρόλος `selectionControl.pressedOn`, όχι `variant="default"` (≡ `--card`).
+ *  2. **Σημασιολογία radio + βελάκια** (roving tabindex του Radix): ο αναγνώστης οθόνης ακούει «2 από 3,
+ *     επιλεγμένο», και το Tab μπαίνει στην ομάδα **μία** φορά (WAI-ARIA radio group).
+ *  3. **Δεν αδειάζει ποτέ.** Το Radix `single` επιτρέπει αποεπιλογή (`''`)· μια προβολή «κάρτες | πίνακας»
+ *     χωρίς προβολή δεν υπάρχει. Το `''` αγνοείται εδώ, μία φορά — όχι σε κάθε καταναλωτή (M3: «single-select
+ *     segmented buttons always have one selected»).
+ */
+
+import * as React from 'react';
+import * as ToggleGroupPrimitive from '@radix-ui/react-toggle-group';
+
+import { Button, type ButtonVariantProps } from '@/components/ui/button';
+import type { ToggleButtonRestVariant } from '@/components/ui/toggle-button';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { cn } from '@/lib/utils';
+
+export interface SegmentedControlProps<T extends string>
+  extends Omit<
+    React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root>,
+    'type' | 'value' | 'defaultValue' | 'onValueChange'
+  > {
+  readonly value: T;
+  /** Καλείται μόνο με **μη κενή** τιμή — δες την επικεφαλίδα (#3). */
+  readonly onValueChange: (value: T) => void;
+  /** Όνομα της ομάδας για τον αναγνώστη οθόνης, όταν δεν υπάρχει ορατή ετικέτα. */
+  readonly 'aria-label'?: string;
+}
+
+function SegmentedControlInner<T extends string>(
+  { value, onValueChange, className, ...props }: SegmentedControlProps<T>,
+  ref: React.ForwardedRef<React.ElementRef<typeof ToggleGroupPrimitive.Root>>,
+): React.ReactElement {
+  return (
+    <ToggleGroupPrimitive.Root
+      ref={ref}
+      type="single"
+      value={value}
+      // Οι τιμές των items είναι τύπου T (βλ. `SegmentedControlItem`)· το Radix μιλά σε `string`.
+      onValueChange={(next) => {
+        if (next !== '') onValueChange(next as T);
+      }}
+      className={cn('inline-flex flex-wrap items-center gap-1', className)}
+      {...props}
+    />
+  );
+}
+
+export const SegmentedControl = React.forwardRef(SegmentedControlInner) as <T extends string>(
+  props: SegmentedControlProps<T> & { readonly ref?: React.ForwardedRef<HTMLDivElement> },
+) => React.ReactElement;
+
+export interface SegmentedControlItemProps
+  extends Omit<React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item>, 'asChild'> {
+  readonly variant?: ToggleButtonRestVariant;
+  readonly size?: ButtonVariantProps['size'];
+}
+
+export const SegmentedControlItem = React.forwardRef<
+  React.ElementRef<typeof ToggleGroupPrimitive.Item>,
+  SegmentedControlItemProps
+>(({ variant = 'outline', size = 'sm', className, children, ...props }, ref) => (
+  <ToggleGroupPrimitive.Item ref={ref} asChild {...props}>
+    <Button variant={variant} size={size} className={cn(className, COLOR_BRIDGE.selectionControl.pressedOn)}>
+      {children}
+    </Button>
+  </ToggleGroupPrimitive.Item>
+));
+SegmentedControlItem.displayName = 'SegmentedControlItem';

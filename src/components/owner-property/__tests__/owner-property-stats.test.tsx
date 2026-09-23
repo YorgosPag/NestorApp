@@ -135,9 +135,9 @@ describe('Π — ο πίνακας της λεπτομέρειας', () => {
   it('Π2 · 30 → 90 ημέρες: και οι ημέρες του γραφήματος και η ετικέτα των δεικτών', () => {
     renderWithI18n(<OwnerPropertyStatsPanel stats={ready(summary())} listedAt={LISTED} priceHistory={history} />);
     expect(screen.getByTestId('stats-chart')).toHaveTextContent('30:2');
-    fireEvent.click(screen.getByRole('button', { name: '90 ημέρες' }));
+    fireEvent.click(screen.getByRole('radio', { name: '90 ημέρες' }));
     expect(screen.getByTestId('stats-chart')).toHaveTextContent('90:3');
-    expect(screen.getByRole('button', { name: '90 ημέρες' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: '90 ημέρες' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getAllByText('Τελευταίες 90 ημέρες').length).toBeGreaterThan(0);
   });
 
@@ -161,12 +161,17 @@ describe('Π — ο πίνακας της λεπτομέρειας', () => {
     expect(within(contactsKpi).getByText('1')).toBeInTheDocument();
   });
 
-  it('Π5 · το πατημένο εύρος φορά τον ρόλο χειριστηρίου επιλογής', () => {
+  it('Π5 · το πατημένο εύρος φορά τον ρόλο χειριστηρίου επιλογής — και δεν αδειάζει (ADR-770 §19)', () => {
     renderWithI18n(<OwnerPropertyStatsPanel stats={ready(summary())} listedAt={LISTED} priceHistory={[]} />);
-    const pressed = screen.getByRole('button', { name: '30 ημέρες' });
-    expect(pressed).toHaveClass('bg-control-accent', 'text-control-accent-foreground');
+    expect(screen.getByRole('group', { name: 'Εύρος γραφήματος' })).toBeInTheDocument();
+    const pressed = screen.getByRole('radio', { name: '30 ημέρες' });
+    expect(pressed).toHaveAttribute('data-state', 'on');
+    expect(pressed).toHaveClass('data-[state=on]:bg-control-accent', 'data-[state=on]:text-control-accent-foreground');
     expect(pressed).not.toHaveClass('bg-primary');
-    expect(screen.getByRole('button', { name: '90 ημέρες' })).not.toHaveClass('bg-control-accent');
+    // Δεύτερο κλικ στο ήδη επιλεγμένο: το Radix θα το αποεπέλεγε — το primitive το αρνείται.
+    fireEvent.click(pressed);
+    expect(pressed).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('stats-chart')).toHaveTextContent('30:');
   });
 
   it('Π · βλάβη προβολών ⇒ κανένα γράφημα, μήνυμα «δεν φορτώθηκαν»', () => {

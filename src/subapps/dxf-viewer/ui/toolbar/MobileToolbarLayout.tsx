@@ -13,6 +13,7 @@
 import React, { useState, useCallback } from 'react';
 import { Menu, MoreHorizontal, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
   Sheet,
@@ -101,15 +102,16 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={activeTool === 'select' ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={activeTool === 'select'}
+                variant="ghost"
                 size="sm"
                 onClick={() => handleToolSelect('select')}
                 aria-label="Select tool"
                 className={`${iconSizes.xl} p-0`}
               >
                 <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>S</span>
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>Select</TooltipContent>
           </Tooltip>
@@ -119,15 +121,16 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={activeTool === 'pan' ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={activeTool === 'pan'}
+                variant="ghost"
                 size="sm"
                 onClick={() => handleToolSelect('pan')}
                 aria-label="Pan tool"
                 className={`${iconSizes.xl} p-0`}
               >
                 <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>P</span>
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>Pan</TooltipContent>
           </Tooltip>

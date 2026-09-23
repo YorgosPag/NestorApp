@@ -7,7 +7,7 @@ import { ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 // 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS, clean minimal look)
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -104,8 +104,9 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant={isActive ? 'default' : 'ghost'}
+            <ToggleButton
+              pressed={isActive}
+              variant="ghost"
               size="sm"
               onClick={onClick}
               disabled={disabled}
@@ -119,7 +120,7 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
                   {tool.label?.charAt(0) || '?'}
                 </span>
               )}
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>{`${t(tool.label)} (${tool.hotkey})`}</TooltipContent>
         </Tooltip>
@@ -135,8 +136,9 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
         <div className="flex">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={isActive ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={isActive}
+                variant="ghost"
                 size="sm"
                 onClick={handleMainClick}
                 disabled={disabled}
@@ -150,14 +152,15 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
                     {tool.label?.charAt(0) || '?'}
                   </span>
                 )}
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{`${t(tool.label)} (${tool.hotkey})`}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={isActive ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={isActive}
+                variant="ghost"
                 size="sm"
                 onClick={handleDropdownToggle}
                 disabled={disabled}
@@ -165,7 +168,7 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
                 className="rounded-l-none px-1"
               >
                 <ChevronDown className={`${iconSizes.xs} ${iconColorClass}`} />
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{t('entitiesSettings.moreOptions')}</TooltipContent>
           </Tooltip>
@@ -233,8 +236,9 @@ const ActionButtonInner: React.FC<ActionButtonProps> = ({ action }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant={action.active ? 'default' : 'ghost'}
+          <ToggleButton
+            pressed={action.active}
+            variant="ghost"
             size="sm"
             onClick={action.onClick}
             disabled={action.disabled ?? false}
@@ -248,7 +252,7 @@ const ActionButtonInner: React.FC<ActionButtonProps> = ({ action }) => {
                 {action.label?.charAt(0) || '?'}
               </span>
             )}
-          </Button>
+          </ToggleButton>
         </TooltipTrigger>
         <TooltipContent>{action.hotkey ? `${translatedLabel} (${action.hotkey})` : translatedLabel}</TooltipContent>
       </Tooltip>

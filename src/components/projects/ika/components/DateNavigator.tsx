@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { format, addDays, subDays, isToday } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import {
   Select,
   SelectContent,
@@ -73,14 +74,15 @@ export function DateNavigator({
       </Button>
 
       {/* Today button */}
-      <Button
-        variant={isTodaySelected ? 'default' : 'outline'}
+      <ToggleButton
+        pressed={isTodaySelected}
+        variant="outline"
         size="sm"
         onClick={handleToday}
       >
         <Calendar className={cn(iconSizes.xs, spacing.margin.right.xs)} />
         {t('ika.timesheetTab.today')}
-      </Button>
+      </ToggleButton>
 
       {/* Next day */}
       <Button

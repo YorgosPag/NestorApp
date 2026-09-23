@@ -1,11 +1,11 @@
-import { redirect } from 'next/navigation';
 import { getQuoteDetailUrl } from '@/lib/navigation/procurement-urls';
+import { redirect } from '@/lib/workspace/server-navigation';
 
 interface ProjectScopedQuotePageProps {
-  params: Promise<{ id: string; quoteId: string }>;
+  params: Promise<{ workspace: string; id: string; quoteId: string }>;
 }
 
 export default async function ProjectScopedQuotePage({ params }: ProjectScopedQuotePageProps) {
-  const { id, quoteId } = await params;
-  redirect(getQuoteDetailUrl(id, quoteId, { review: true }));
+  const { workspace, id, quoteId } = await params;
+  redirect(getQuoteDetailUrl(id, quoteId, { review: true }), workspace);
 }

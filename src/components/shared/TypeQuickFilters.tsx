@@ -17,7 +17,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
@@ -220,22 +220,22 @@ export function TypeQuickFilters({
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>
-              <Button
-                variant={active ? 'default' : 'outline'}
+              <ToggleButton
+                pressed={active}
+                variant="outline"
                 size="sm"
                 onClick={() => handleFilterClick(option.value)}
                 className={cn(
                   'h-7 px-2 text-xs font-medium transition-all',
                   compact ? 'px-1.5' : 'px-3',
                   active
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'shadow-sm'
                     : cn(
                         'bg-transparent hover:bg-muted/50',
                         colors.text.secondary,
                         'border-muted-foreground/20'
                       )
                 )}
-                aria-pressed={active}
                 aria-label={`${t('filters.filterBy')} ${translatedTooltip}`}
               >
                 <Icon
@@ -250,7 +250,7 @@ export function TypeQuickFilters({
                 {compact && option.value === 'all' && (
                   <span className="ml-1">{t('filters.all')}</span>
                 )}
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
               {translatedTooltip}

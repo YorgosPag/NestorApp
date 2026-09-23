@@ -46,13 +46,14 @@
  */
 
 import type { ReactNode } from 'react';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
 import { WorkspaceScopeBridge } from '@/components/workspace/WorkspaceScopeBridge';
 import { resolveWorkspaceFromPath } from '@/lib/auth/workspace-from-path';
 import { throwBackendUnavailable } from '@/lib/errors/backend-unavailable';
 import { readPageIdentity } from '@/server/auth/page-identity';
 import { workspacePath } from '@/lib/workspace/workspace-path';
+import { redirect } from '@/lib/workspace/server-navigation';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 
@@ -70,7 +71,9 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     // ⚠️ ΠΡΙΝ από κάθε αναζήτηση: ανώνυμος επισκέπτης δεν πρέπει να μπορεί να
     //    μετρήσει καν τη **διαφορά χρόνου** ανάμεσα σε υπαρκτό και ανύπαρκτο
     //    γραφείο. Η απάντηση είναι η ίδια, και δεν αγγίζουμε τη βάση.
-    redirect(AUTH_ROUTES.login);
+    // ⚠️ Από το σύνορο του διακομιστή, ΚΑΙ ΕΔΩ: η σύνδεση μένει ωμή επειδή το λέει ο
+    //    κριτής (`OUTSIDE_WORKSPACE`), όχι επειδή το θυμήθηκε ο καλών (ADR-875 §11).
+    redirect(AUTH_ROUTES.login, workspace);
   }
 
   const resolution = await resolveWorkspaceFromPath(

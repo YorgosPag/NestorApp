@@ -12,10 +12,11 @@
  */
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { PropertyAutoComputedNote, PropertyDetailCardHeader, levelAggregateOf } from './PropertyDetailCardHeader';
 import { SelectItem } from '@/components/ui/select';
 import { ClearableSelect } from '@/components/ui/clearable-select';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,7 @@ import { Bed, Bath, Compass, Wrench, Zap } from 'lucide-react';
 import type { OrientationType } from '@/constants/property-features-enterprise';
 import {
   ORIENTATION_OPTIONS, CONDITION_OPTIONS, ENERGY_CLASS_OPTIONS,
-  PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
+  PROPERTY_CARD_COLORS,
 } from './property-fields-constants';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
 import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
@@ -34,15 +35,17 @@ import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 type DetailCardsProps = Pick<PropertyFieldsEditFormProps,
   'formData' | 'setFormData' | 'isEditing' | 'isSoldOrRented' |
   'isMultiLevel' | 'activeLevelId' | 'currentLevelData' | 'aggregatedTotals' |
-  'toggleArrayItem' | 'updateLevelField' | 't' | 'typography' | 'iconSizes' | 'quick'
+  'toggleArrayItem' | 'updateLevelField' | 't' | 'iconSizes' | 'quick'
 >;
 
 export function PropertyFieldsDetailCards(props: DetailCardsProps) {
+  const { quick, ...row2Props } = props;
   const {
     formData, setFormData, isEditing, isSoldOrRented,
     isMultiLevel, activeLevelId, currentLevelData, aggregatedTotals,
-    toggleArrayItem, updateLevelField, t, typography, iconSizes, quick,
-  } = props;
+    toggleArrayItem, updateLevelField, t, iconSizes,
+  } = row2Props;
+  const aggregate = levelAggregateOf(isMultiLevel, activeLevelId, aggregatedTotals);
   const colors = useSemanticColors();
 
   return (
@@ -51,37 +54,33 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
         {/* ─── Layout Card (level-aware) ─── */}
         {/* ADR-287 Batch 28: id anchor for completion-meter click-to-jump. */}
         <Card id="field-layout" tabIndex={-1}>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Bed className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.layout)} />
-              {t('fields.layout.sectionTitle')}
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
-                  {t('multiLevel.perLevel.perFloorHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
+          <PropertyDetailCardHeader
+            icon={{ icon: Bed, tone: PROPERTY_CARD_COLORS.layout }}
+            title={t('fields.layout.sectionTitle')}
+            scope="perFloor"
+            isMultiLevel={isMultiLevel}
+            t={t}
+          />
           <CardContent className="p-2 pt-0">
-            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+            {aggregate ? (
               <div className="space-y-1.5">
-                <p className={cn("italic", PROPERTY_MICRO_TEXT.helper, colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
-                {aggregatedTotals.layout.bedrooms > 0 && (
+                <PropertyAutoComputedNote t={t} />
+                {aggregate.layout.bedrooms > 0 && (
                   <dl className="flex items-baseline gap-1.5">
                     <dt className={cn("text-xs", colors.text.muted)}>{t('card.stats.bedrooms')}:</dt>
-                    <dd className="text-xs font-semibold">{aggregatedTotals.layout.bedrooms}</dd>
+                    <dd className="text-xs font-semibold">{aggregate.layout.bedrooms}</dd>
                   </dl>
                 )}
-                {aggregatedTotals.layout.bathrooms > 0 && (
+                {aggregate.layout.bathrooms > 0 && (
                   <dl className="flex items-baseline gap-1.5">
                     <dt className={cn("text-xs", colors.text.muted)}>{t('card.stats.bathrooms')}:</dt>
-                    <dd className="text-xs font-semibold">{aggregatedTotals.layout.bathrooms}</dd>
+                    <dd className="text-xs font-semibold">{aggregate.layout.bathrooms}</dd>
                   </dl>
                 )}
-                {aggregatedTotals.layout.wc > 0 && (
+                {aggregate.layout.wc > 0 && (
                   <dl className="flex items-baseline gap-1.5">
                     <dt className={cn("text-xs", colors.text.muted)}>{t('fields.layout.wc')}:</dt>
-                    <dd className="text-xs font-semibold">{aggregatedTotals.layout.wc}</dd>
+                    <dd className="text-xs font-semibold">{aggregate.layout.wc}</dd>
                   </dl>
                 )}
               </div>
@@ -124,24 +123,20 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
 
         {/* ─── Orientation Card (level-aware) ─── */}
         <Card id="field-orientation" tabIndex={-1}>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Compass className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.orientation)} />
-              {t('orientation.sectionTitle')}
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
-                  {t('multiLevel.perLevel.perFloorHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
+          <PropertyDetailCardHeader
+            icon={{ icon: Compass, tone: PROPERTY_CARD_COLORS.orientation }}
+            title={t('orientation.sectionTitle')}
+            scope="perFloor"
+            isMultiLevel={isMultiLevel}
+            t={t}
+          />
           <CardContent className="p-2 pt-0 space-y-2">
-            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+            {aggregate ? (
               <div className="space-y-1.5">
-                <p className={cn("italic", PROPERTY_MICRO_TEXT.helper, colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
-                {aggregatedTotals.orientations.length > 0 && (
+                <PropertyAutoComputedNote t={t} />
+                {aggregate.orientations.length > 0 && (
                   <p className="text-xs font-medium">
-                    {aggregatedTotals.orientations.map(o => t(`orientation.short.${o}`, { defaultValue: o })).join(', ')}
+                    {aggregate.orientations.map(o => t(`orientation.short.${o}`, { defaultValue: o })).join(', ')}
                   </p>
                 )}
               </div>
@@ -157,8 +152,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                       : formData.orientations;
                     const isSelected = levelOrientations.includes(orientation);
                     return (
-                      <Button key={orientation} type="button"
-                        variant={isSelected ? 'default' : 'outline'} size="sm"
+                      <ToggleButton key={orientation} type="button"
+                        pressed={isSelected} variant="outline" size="sm"
                         className="h-6 px-1.5 text-xs"
                         disabled={!isEditing || isSoldOrRented}
                         onClick={() => {
@@ -173,7 +168,7 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
                           }
                         }}>
                         {t(`orientation.short.${orientation}`)}
-                      </Button>
+                      </ToggleButton>
                     );
                   })}
                 </div>
@@ -195,18 +190,14 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
 
         {/* ─── Condition & Energy Card ─── */}
         <Card id="field-condition-energy" tabIndex={-1}>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Wrench className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.condition)} />
-              {t('condition.sectionTitle')}
-              <Zap className={cn(iconSizes.sm, PROPERTY_CARD_COLORS.energy)} />
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.muted)}>
-                  {t('multiLevel.perLevel.sharedHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
+          <PropertyDetailCardHeader
+            icon={{ icon: Wrench, tone: PROPERTY_CARD_COLORS.condition }}
+            trailingIcon={{ icon: Zap, tone: PROPERTY_CARD_COLORS.energy }}
+            title={t('condition.sectionTitle')}
+            scope="shared"
+            isMultiLevel={isMultiLevel}
+            t={t}
+          />
           <CardContent className="p-2 pt-0">
             <div className="space-y-2">
               <fieldset className="space-y-1">
@@ -257,21 +248,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
 
       </section>
 
-      <PropertyFieldsDetailCardsRow2
-        formData={formData}
-        setFormData={setFormData}
-        isEditing={isEditing}
-        isSoldOrRented={isSoldOrRented}
-        isMultiLevel={isMultiLevel}
-        activeLevelId={activeLevelId}
-        currentLevelData={currentLevelData}
-        aggregatedTotals={aggregatedTotals}
-        toggleArrayItem={toggleArrayItem}
-        updateLevelField={updateLevelField}
-        t={t}
-        typography={typography}
-        iconSizes={iconSizes}
-      />
+      {/* Row2 takes exactly our props minus `quick` — passed through, not re-listed (CHECK 3.28). */}
+      <PropertyFieldsDetailCardsRow2 {...row2Props} />
     </>
   );
 }

@@ -12,7 +12,7 @@
 import '@/lib/design-system';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -163,14 +163,15 @@ export function ChartSection({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1" role="radiogroup" aria-label={t('chart.type')}>
           {CHART_TYPE_OPTIONS.map(({ type, icon: Icon, labelKey }) => (
-            <Button
+            <ToggleButton
               key={type}
-              variant={activeChartType === type ? 'default' : 'outline'}
+              pressed={activeChartType === type}
+              variant="outline"
               size="sm"
               className="h-8 gap-1.5"
               onClick={() => onChartTypeChange(type === suggestedChartType ? null : type)}
               role="radio"
-              aria-checked={activeChartType === type}
+              semantics="checked"
               aria-label={t(labelKey)}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -180,7 +181,7 @@ export function ChartSection({
                   {t('chart.suggested')}
                 </Badge>
               )}
-            </Button>
+            </ToggleButton>
           ))}
         </div>
 

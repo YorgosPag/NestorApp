@@ -16,8 +16,8 @@
 import { useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
-import { Car, Plus, Layers, Table as TableIcon, Link2 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Car, Plus, Link2 } from 'lucide-react';
+import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot } from '@/types/parking';
@@ -25,7 +25,7 @@ import { PARKING_TYPES } from '@/types/parking';
 import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBadges';
 import { useSpaceAvailabilityOptions } from '@/components/shared/unit-status/useSpaceAvailabilityOptions';
 import { spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField, buildPriceColumn, BuildingSpaceViewSwitch } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -86,23 +86,12 @@ export function ParkingTabContent({ building }: { building: Building }) {
   const spaceActionState = { unlinkingId: state.unlinkingId, deletingId: state.deletingId };
 
   if (state.loading) {
-    return (
-      <section className="flex items-center justify-center py-2">
-        <Spinner size="large" />
-      </section>
-    );
+    return <BuildingSpaceTabLoading />;
   }
 
   if (state.error) {
-    return (
-      <section className="flex flex-col items-center gap-2 py-2">
-        <p className="text-sm text-destructive">{state.error}</p>
-        {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-        <Button variant="outline" size="sm" onClick={state.fetchParkingSpots}>
-          Retry
-        </Button>
-      </section>
-    );
+    // eslint-disable-next-line custom/no-hardcoded-strings
+    return <BuildingSpaceTabError message={state.error} retryLabel="Retry" onRetry={state.fetchParkingSpots} />;
   }
 
   return (
@@ -166,14 +155,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
         <span className={cn("text-sm", colors.text.muted)}>
           {state.filteredSpots.length} {tBuilding('parkingStats.results')}
         </span>
-        <fieldset className="flex items-center gap-2">
-          <Button variant={state.viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => state.setViewMode('cards')}>
-            <Layers className="mr-1 h-4 w-4" /> {tBuilding('parkingStats.cards')}
-          </Button>
-          <Button variant={state.viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => state.setViewMode('table')}>
-            <TableIcon className="mr-1 h-4 w-4" /> {tBuilding('parkingStats.table')}
-          </Button>
-        </fieldset>
+        <BuildingSpaceViewSwitch value={state.viewMode} onChange={state.setViewMode} cardsLabel={tBuilding('parkingStats.cards')} tableLabel={tBuilding('parkingStats.table')} />
       </nav>
 
       {/* Content */}

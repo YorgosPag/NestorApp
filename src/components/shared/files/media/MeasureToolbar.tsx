@@ -20,6 +20,7 @@
 import React from 'react';
 import { Ruler, Square, Triangle, Eraser, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -59,15 +60,15 @@ export function MeasureToolbar({ mode, onModeChange, scopeKey }: MeasureToolbarP
         return (
           <Tooltip key={m}>
             <TooltipTrigger asChild>
-              <Button
-                variant={active ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={active}
+                variant="ghost"
                 size="sm"
                 aria-label={label}
-                aria-pressed={active}
                 onClick={() => onModeChange(active ? null : m)}
               >
                 <Icon className={iconSizes.sm} aria-hidden={true} />
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{label}</TooltipContent>
           </Tooltip>

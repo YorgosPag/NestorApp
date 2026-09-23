@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Home, Car, Package, Footprints } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
@@ -40,14 +40,15 @@ export const KindSelector: React.FC<KindSelectorProps> = ({
       {Object.entries(kindIcons).map(([kind, { icon: Icon, color, label }]) => (
         <Tooltip key={kind}>
           <TooltipTrigger asChild>
-            <Button
-              variant={currentKind === kind ? 'default' : 'ghost'}
+            <ToggleButton
+              pressed={currentKind === kind}
+              variant="ghost"
               size="icon-sm"
               onClick={() => onKindChange(kind as OverlayKind)}
               aria-label={label}
             >
               <Icon className={`${iconSizes.sm} ${currentKind !== kind ? color : ''}`} />
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>{label}</TooltipContent>
         </Tooltip>

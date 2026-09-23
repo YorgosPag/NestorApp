@@ -18,7 +18,7 @@ import React from 'react';
 import { LucideIcon, Settings } from 'lucide-react';
 import { SectionHeader } from '@/core/headers';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { SearchInput } from '@/components/ui/search'; // 🏢 Enterprise centralized search - Same as navigation modal
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -108,15 +108,16 @@ export function GenericListHeader({
             {onToolbarToggle && (
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button
+                        <ToggleButton
                             onClick={() => onToolbarToggle(!showToolbar)}
                             size="sm"
-                            variant={showToolbar ? "default" : "outline"}
+                            pressed={showToolbar}
+                            variant="outline"
                             className="h-8 px-2 flex-shrink-0 md:hidden"
                             aria-label="Toggle toolbar"
                         >
                             <Settings className={iconSizes.xs} />
-                        </Button>
+                        </ToggleButton>
                     </TooltipTrigger>
                     <TooltipContent>{t('tooltips.toolbar')}</TooltipContent>
                 </Tooltip>

@@ -12,6 +12,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -103,9 +104,9 @@ export default function OperatorInboxClient({ adminContext: _adminContext }: Ope
               {refreshing ? <Spinner size="small" className={layout.buttonIconSpacing} aria-label={t('operatorInbox.refresh')} /> : <RefreshCw className={`${iconSizes.sm} ${layout.buttonIconSpacing}`} />}
               {t('operatorInbox.refresh')}
             </Button>,
-            <Button key="mobile-filters" type="button" variant={showFilters ? 'default' : 'outline'} size="icon" className="md:hidden" onClick={() => setShowFilters(!showFilters)} aria-label={t('operatorInbox.accessibility.toggleFilters')}>
+            <ToggleButton key="mobile-filters" type="button" pressed={showFilters} variant="outline" size="icon" className="md:hidden" onClick={() => setShowFilters(!showFilters)} aria-label={t('operatorInbox.accessibility.toggleFilters')}>
               <Filter className={iconSizes.sm} />
-            </Button>,
+            </ToggleButton>,
           ].filter(Boolean) as React.ReactNode[],
         }}
       />

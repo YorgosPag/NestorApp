@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ListChecks, GanttChartSquare, LayoutDashboard } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -27,48 +27,51 @@ export function TimelineViewToggle({ activeView, onViewChange }: TimelineViewTog
     <nav role="tablist" aria-label={t('tabs.timeline.header.title')} className="flex gap-2">
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
+          <ToggleButton
             role="tab"
-            aria-selected={activeView === 'milestones'}
-            variant={activeView === 'milestones' ? 'default' : 'outline'}
+            pressed={activeView === 'milestones'}
+            variant="outline"
+            semantics="selected"
             size="sm"
             onClick={() => onViewChange('milestones')}
           >
             <ListChecks className={`${iconSizes.sm} mr-2`} />
             {t('tabs.timeline.views.milestones')}
-          </Button>
+          </ToggleButton>
         </TooltipTrigger>
         <TooltipContent>{t('tabs.timeline.views.milestones')}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
+          <ToggleButton
             role="tab"
-            aria-selected={activeView === 'gantt'}
-            variant={activeView === 'gantt' ? 'default' : 'outline'}
+            pressed={activeView === 'gantt'}
+            variant="outline"
+            semantics="selected"
             size="sm"
             onClick={() => onViewChange('gantt')}
           >
             <GanttChartSquare className={`${iconSizes.sm} mr-2`} />
             {t('tabs.timeline.views.gantt')}
-          </Button>
+          </ToggleButton>
         </TooltipTrigger>
         <TooltipContent>{t('tabs.timeline.views.gantt')}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
+          <ToggleButton
             role="tab"
-            aria-selected={activeView === 'dashboard'}
-            variant={activeView === 'dashboard' ? 'default' : 'outline'}
+            pressed={activeView === 'dashboard'}
+            variant="outline"
+            semantics="selected"
             size="sm"
             onClick={() => onViewChange('dashboard')}
           >
             <LayoutDashboard className={`${iconSizes.sm} mr-2`} />
             {t('tabs.timeline.views.dashboard')}
-          </Button>
+          </ToggleButton>
         </TooltipTrigger>
         <TooltipContent>{t('tabs.timeline.views.dashboard')}</TooltipContent>
       </Tooltip>

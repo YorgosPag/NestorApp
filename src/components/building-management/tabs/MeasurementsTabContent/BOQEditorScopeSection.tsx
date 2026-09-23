@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -109,16 +109,17 @@ export function BOQEditorScopeSection({
           <li key={opt}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
+                <ToggleButton
                   type="button"
-                  variant={scope === opt ? 'default' : 'outline'}
+                  pressed={scope === opt}
+                  variant="outline"
                   size="sm"
                   className="w-full justify-start whitespace-normal text-left leading-tight"
                   disabled={scopeLocked}
                   onClick={() => onScopeChange(opt)}
                 >
                   {t(`tabs.measurements.scope.${boqScopeKeySegment(opt)}`)}
-                </Button>
+                </ToggleButton>
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-xs text-xs">
                 {t(`tabs.measurements.scope.tooltips.${boqScopeKeySegment(opt)}`)}

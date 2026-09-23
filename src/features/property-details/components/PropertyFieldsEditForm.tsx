@@ -54,6 +54,7 @@ import {
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 import { PropertyFieldsDetailCards } from './PropertyFieldsDetailCards';
+import { PropertyAutoComputedNote, PropertyDetailCardHeader, levelAggregateOf } from './PropertyDetailCardHeader';
 import { PropertyDescriptionField } from './PropertyDescriptionField';
 
 export function PropertyFieldsEditForm({
@@ -93,6 +94,7 @@ export function PropertyFieldsEditForm({
   quick,
 }: PropertyFieldsEditFormProps) {
   const colors = useSemanticColors();
+  const aggregate = levelAggregateOf(isMultiLevel, activeLevelId, aggregatedTotals);
   return (
     <form
       id={isEditing ? 'property-fields-form' : undefined}
@@ -321,22 +323,18 @@ export function PropertyFieldsEditForm({
 
         {/* ─── Areas Card (level-aware) ─── */}
         <Card>
-          <CardHeader className="p-2 pb-1">
-            <CardTitle className={cn('flex items-center gap-1.5', typography.card.titleCompact)}>
-              <Ruler className={cn(iconSizes.sm, NAVIGATION_ENTITIES.area.color)} />
-              {t('fields.areas.sectionTitle')}
-              {isMultiLevel && (
-                <span className={cn("ml-auto font-normal", PROPERTY_MICRO_TEXT.micro, colors.text.success)}>
-                  {t('multiLevel.perLevel.perFloorHint')}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
+          <PropertyDetailCardHeader
+            icon={{ icon: Ruler, tone: NAVIGATION_ENTITIES.area.color }}
+            title={t('fields.areas.sectionTitle')}
+            scope="perFloor"
+            isMultiLevel={isMultiLevel}
+            t={t}
+          />
           <CardContent className="p-2 pt-0">
-            {isMultiLevel && activeLevelId === null && aggregatedTotals ? (
+            {aggregate ? (
               /* Read-only aggregated totals */
               <div className="space-y-1.5">
-                <p className={cn("italic", PROPERTY_MICRO_TEXT.helper, colors.text.muted)}>{t('multiLevel.perLevel.autoComputed')}</p>
+                <PropertyAutoComputedNote t={t} />
                 {([
                   ['gross', 'fields.areas.gross'],
                   ['net', 'fields.areas.net'],
@@ -344,17 +342,17 @@ export function PropertyFieldsEditForm({
                   ['terrace', 'fields.areas.terrace'],
                   ['garden', 'fields.areas.garden'],
                 ] as const).map(([key, labelKey]) => (
-                  aggregatedTotals.areas[key] > 0 ? (
+                  aggregate.areas[key] > 0 ? (
                     <dl key={key} className="flex items-baseline gap-1.5">
                       <dt className={cn("text-xs", colors.text.muted)}>{t(labelKey)}:</dt>
-                      <dd className="text-xs font-semibold">{aggregatedTotals.areas[key]} m²</dd>
+                      <dd className="text-xs font-semibold">{aggregate.areas[key]} m²</dd>
                     </dl>
                   ) : null
                 ))}
                 {/* UX guard: multi-level unit with no per-level area distributed.
                     The totals view shows nothing, so the user can't tell the
                     floors are empty. Prompt them to open each level tab. */}
-                {aggregatedTotals.areas.gross === 0 && (
+                {aggregate.areas.gross === 0 && (
                   <Alert className="py-2 px-3 border-border bg-[hsl(var(--bg-warning))]/20 text-[hsl(var(--text-warning))]">
                     <AlertTriangle className={iconSizes.sm} />
                     <AlertDescription className="text-xs">
@@ -454,7 +452,6 @@ export function PropertyFieldsEditForm({
         toggleArrayItem={toggleArrayItem}
         updateLevelField={updateLevelField}
         t={t}
-        typography={typography}
         iconSizes={iconSizes}
         quick={quick}
       />

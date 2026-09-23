@@ -15,6 +15,7 @@ export { BuildingSpaceLinkDialog } from './BuildingSpaceLinkDialog';
 export { SpaceFloorplanInline } from './SpaceFloorplanInline';
 export { BuildingSpaceWarningBanner } from './BuildingSpaceWarningBanner';
 export { BuildingSpaceFilterBar } from './BuildingSpaceFilterBar';
+export { BuildingSpaceViewSwitch } from './BuildingSpaceViewSwitch';
 export type { LinkableItem } from './BuildingSpaceLinkDialog';
 export type { SpaceFilterOption, SpaceSelectFilter } from './BuildingSpaceFilterBar';
 
@@ -26,4 +27,5 @@ export type {
   SpaceCardField,
   SpaceActions,
   SpaceActionState,
+  BuildingSpaceViewMode,
 } from './types';

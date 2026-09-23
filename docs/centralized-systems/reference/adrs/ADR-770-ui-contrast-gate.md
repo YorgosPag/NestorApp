@@ -9,6 +9,7 @@
 - ✅ **Στρώμα 3** (§15) — 2026-08-27: **η πρώτη φορά που άλλαξε τιμή token**, και είναι
   ο **διαχωρισμός ρόλου** του §9 #2 για την οικογένεια `destructive`.
 - ✅ **Στρώμα 5** (§18) — 2026-09-17: χρώμα = κατάσταση ή ενέργεια· βαθμονόμηση μελανιών κατάστασης στο φωτεινό· `COLOR_BRIDGE.action`.
+- ✅ **Στρώμα 4β** (§19) — 2026-09-23: το **πατημένο κουμπί** — `ToggleButton` · `SegmentedControl` · άγκυρα Ο5ε· 101 σημεία, codemod AST.
 - **Τα Στρώματα 1–2β δεν αλλάζουν κανένα token.** Ούτε το `--primary`, ούτε οι σύνδεσμοι.
 
 > 🔑 **Σε μία γραμμή**: το `--primary` του Νέστορα είναι χρώμα **επιφάνειας** που
@@ -299,6 +300,7 @@ package.json                                 +3 scripts
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-09-23 | **Στρώμα 4β — ΤΟ ΠΑΤΗΜΕΝΟ ΚΟΥΜΠΙ (§19).** Αφορμή ADR-777 §8.72.8 #2 (αόρατο «30 ημέρες» στο σκοτεινό). Το handoff μέτρησε 42 με `grep`· ο σαρωτής AST **101** `<Button variant={συνθήκη επιφανειών}>` σε 53 αρχεία, έξι σχήματα (και `secondary : ghost`, αφού `bg-secondary` ≡ `--card`). Ένας ρόλος (`selectionControl.pressed`/`pressedOn`, καμία νέα token), δύο primitives (`ToggleButton` με `semantics` pressed/selected/checked · `SegmentedControl` που δεν αδειάζει), ρίζα `ui/toggle.tsx` (έκλεισε το §17.6 #1). Codemod AST 93 σημεία/46 αρχεία + 6 ομάδες σε `SegmentedControl` + κλώνος 3 αρχείων ⇒ `BuildingSpaceViewSwitch`. Βρέθηκε `aria-pressed` πάνω σε `role="radio"` (ChartSection) ⇒ ο τύπος πλέον το αρνείται. Άγκυρα **Ο5ε** (AST, ratchet κατά ταυτότητα, 8 δηλωμένα σημεία έμφασης §18.7 #1). Μεταλλάξεις: Π3 · Π5 · Ο5ε ×4. |
 | 2026-09-21 (β) | **CI — ΙΔΙΑ ΚΛΑΣΗ, ΑΠΟ ΤΗΝ ΠΛΕΥΡΑ ΤΟΥ ACTION: το σιωπηρό cache του `setup-node@v5`.** Η μετάβαση των actions σε Node 24 (ADR-757, 2026-09-21) έφερε `actions/setup-node@v5`, που ενεργοποιεί cache **μόνο του** για όποιον package manager δηλώνει το `packageManager` του `package.json` (`getNameFromPackageManagerField`: npm, yarn **ή pnpm** — διαβασμένο στον κώδικα του action, όχι στο README, που είναι διφορούμενο). Εδώ δηλώνεται `pnpm@9.14.0` ⇒ κάθε `setup-node` χωρίς ρητό `cache:` θα έτρεχε `pnpm store path`, και στα **9** jobs που **σκόπιμα** δεν εγκαθιστούν τίποτα (ci-gate-tiers · ci-health-report · firestore-rules · i18n-governance ×2 · i18n-ssr-oracle · ssot-discover ×2 · storage-rules) το `pnpm` δεν υπάρχει ⇒ **9 νέα κόκκινα** στο πρώτο push. **Θεραπεία πριν συμβεί**: `package-manager-cache: false` στα 9 (συμπεριφορά ίδια με v4) **και** ο κανόνας έγινε μηχανή στον **ίδιο** φύλακα — `implicitCacheViolations` στο `preinstall-steps.js`: κάθε `setup-node` ≥ v5 δηλώνει **ρητά** `cache:` ή `package-manager-cache: false`. Για να τον διαβάσει, το `readWorkflowSteps` εκθέτει πλέον το `with` των βημάτων `uses:` (γενίκευση του `stepEnv` σε `stepMap`, μπλοκ **και** flow, μόνο άμεσα παιδιά). Μέτρηση: 67 βήματα `setup-node`, **0** ευρήματα. Μετάλλαξη στο ζωντανό δέντρο ⇒ κόκκινο. ⚠️ Όριο: τα composite actions δεν σαρώνονται (το μόνο, `firebase-identity`, έχει `cache: 'pnpm'`). Jest **181/181** σε όλους τους καταναλωτές του `workflow-meta`. |
 | 2026-09-21 | **CI — ΤΟ `ui-contrast-ratchet.yml` ΗΤΑΝ ΚΟΚΚΙΝΟ 37 ΦΟΡΕΣ ΓΙΑ ΛΟΓΟ ΥΠΟΔΟΜΗΣ, ΟΧΙ ΑΝΤΙΘΕΣΗΣ.** Πρώτο κόκκινο `699e88b1` (2026-08-27), ίδια μέρα με το `fcd8e094`, που έκανε το `surface-ink-tokens.js` να φορτώνει `tailwindcss/loadConfig` (μέσω `require.resolve` — αόρατο σε grep για `require('`). Το CHECK 3.38 όμως έτρεχε στο μπλοκ «dependency-free» **πριν** από το `pnpm install`, με σχόλιο «κανένα `require` πακέτου» ⇒ `Cannot find module 'tailwindcss/loadConfig'` (fail-closed) σε **κάθε** τρέξιμο, και **κανένα** από τα βήματα από κάτω (3.43 · 3.39 · 3.41 · 3.45 · 3.42 · 8 σουίτες jest) **δεν εκτελέστηκε** επί 3+ εβδομάδες. Δεύτερη εμφάνιση της **ίδιας κλάσης** με το περιστατικό 08/08 (`typescript`), που είχε «φυλαχτεί» με σχόλιο. **Θεραπεία**: (1) το βήμα 3.38 μετά το install· (2) ο κανόνας γίνεται **μηχανή** — `scripts/lib/ci/preinstall-steps.js` + `scripts/__tests__/ci-preinstall-steps.test.js`: στατική κλειστότητα των `require`/`require.resolve` κάθε `node scripts/…` βήματος **πριν** από το install, σε **όλα** τα 40 workflows· τα τοπικά composite actions που εγκαθιστούν (`firebase-identity`) μετρούν ως install μέσω του νέου `workflow-meta.readWorkflowSteps` (επέκταση του **ενός** αναγνώστη YAML, όχι δεύτερος). Μέτρηση: **1** εύρημα σε 40 workflows (το περιστατικό) → **0**. Μεταλλάξεις **5/5** (χωρίς `require.resolve` · composite δεν μετρά · χωρίς μεταβατικότητα · χωρίς σειρά · **επαναφορά του περιστατικού**). Τοπικά όλο το job: 3.38/3.39/3.41/3.42/3.43/3.45 ✓ · jest **332/332**. Το 3.38 δείχνει **6 βελτιώσεις** μη κλειδωμένες (όπως 2026-09-19). |
 | 2026-09-19 | **§17 — ΠΡΩΤΟ PRIMITIVE ΤΟΥ ΡΟΛΟΥ ΕΞΩ ΑΠΟ ΤΟ `ui/`** (ADR-866 §2.10.8 Β4). Ζωντανή επαλήθευση: επιλέγεις τύπο εγγράφου στον επιλογέα μεταφόρτωσης ⇒ **η ετικέτα του χάνεται** στο σκοτεινό θέμα (`text-primary` · μετρημένο `rgb(29,40,58)` σε `rgb(29,40,58)`) — η κάρτα είναι `role="radio"`, δηλαδή **χειριστήριο επιλογής**, αλλά ζωγραφιζόταν με `--primary`, και σε **δύο** χειρόγραφα αντίγραφα. Θεραπεία: **μία** κάρτα (`EntryCard`, `entry-point-selector-shared.tsx`) πάνω στο `COLOR_BRIDGE.selectionControl` — επιλεγμένη = περίγραμμα τονισμού + γεμάτο εικονίδιο + κουκκίδα, ετικέτα `text-foreground` και στις δύο καταστάσεις (WCAG 1.4.1), ανεπίλεκτη = `outline` (1.4.11). **Κανένα νέο token**· ένα νέο κλειδί, `accentOutline` (`border-control-accent`), το χωρίς-Radix αντίστοιχο του `checkedOutline` όπως `fill` ↔ `checkedFill` — το Ο5δ το έκρινε αυτόματα. Το αρχείο μπήκε στο `SELECTION_PRIMITIVES` ⇒ **το υπάρχον Ο5γ** το φυλάει (ADR-866 Α39.3, μεταλλάξεις 2/2). 3.38: **6 βελτιώσεις** (baseline όχι κλειδωμένη). ⚠️ Ανοιχτό: `GroupCard` `hover:border-primary/50` — ρόλος πλοήγησης, όχι επιλογής ⇒ **δεν** δανείστηκε το `control-*` (§18). |
@@ -1371,3 +1373,109 @@ muted · secondary · accent · bg-info · bg-warning · bg-success · bg-error`
 2. `PropertyDashboard` — 6 κάρτες σε 6 χρώματα (μπλε/γκρι/πράσινο/μωβ/κόκκινο/πορτοκαλί) — ίδια ασθένεια με §18.4, **εκτός εμβέλειας** αυτής της οθόνης.
 3. Το ενεργό chip φίλτρου στα **υπόλοιπα** χρονολόγια (εκτός audit) δεν ελέγχθηκε.
 4. **Δεν επαληθεύτηκε σε ζωντανό browser** — μόνο μηχανή WCAG + πύλες. Το CHECK 3.40 (runtime) τρέχει μόνο σε CI.
+
+---
+
+## 19. Στρώμα 4β — ΤΟ ΠΑΤΗΜΕΝΟ ΚΟΥΜΠΙ (`ToggleButton` · `SegmentedControl` · άγκυρα Ο5ε) *(2026-09-23)*
+
+### 19.1 Το μετρημένο γεγονός
+ADR-777 §8.72.8 #2, σε ζωντανή σελίδα: στο σκοτεινό θέμα το **πατημένο** «30 ημέρες» ήταν αόρατο, γιατί
+`variant="default"` = `bg-primary` ≡ `--card` (1,00:1). Το **μη** πατημένο (`outline` = `bg-background`) έμοιαζε
+επιλεγμένο. Το handoff μέτρησε **42** σημεία με `grep` ενός σχήματος (`? 'default' : 'outline'`).
+
+🔴 **Ο σαρωτής AST μέτρησε την ΚΛΑΣΗ, όχι το δείγμα:** **101** `<Button variant={συνθήκη ? A : B}>` με A, B ∈
+{default, secondary, outline, ghost}, σε **53** αρχεία. Έξι σχήματα:
+
+| Σχήμα | Σημεία |
+|---|---|
+| `default : ghost` | 47 |
+| `default : outline` | 42 |
+| `secondary : ghost` | 9 |
+| `default : secondary` | 7 |
+| `outline : default` | 4 |
+| `outline : secondary` | 2 |
+
+Υπάρχουν και σημεία σε πολλές γραμμές ή φωλιασμένα, που το `grep` δεν βλέπει. Και το `bg-secondary` ≡ `--card` στο
+σκοτεινό (§18), άρα το `secondary : ghost` έχει την ίδια ασθένεια. Άλλα **10** σημεία είναι `<Badge>`: κατάσταση
+οντότητας, όχι πατημένο χειριστήριο, άρα εκτός (§19.6 #2).
+
+### 19.2 Η λύση — ένας ρόλος, δύο primitives, καμία νέα token
+
+| Κομμάτι | Τι κάνει | Πρότυπο |
+|---|---|---|
+| `COLOR_BRIDGE.selectionControl.pressed` / `pressedOn` | η σύνθεση του ρόλου §17 (γέμισμα · μελάνι · περίγραμμα · hover)· `pressedOn` με `data-[state=on]:` για Radix | M3 selected · Fluent checked |
+| `ui/toggle-button.tsx` — `ToggleButton` | `Button` + `pressed` (υποχρεωτικό). Το `variant` ∈ outline/ghost/secondary είναι η **μη** πατημένη όψη. `semantics` = `pressed` / `selected` / `checked` ⇒ **ένα** από `aria-pressed` / `aria-selected` / `aria-checked`. Τα τρία λείπουν από τα props: δεύτερο δεν γράφεται. | Fluent 2 `ToggleButton` |
+| `ui/segmented-control.tsx` — `SegmentedControl<T>` | Radix ToggleGroup `single`: radio σημασιολογία, roving focus με βελάκια, **δεν αδειάζει ποτέ** (το `''` αγνοείται μία φορά, εδώ) | M3 segmented button · Radix ToggleGroup |
+| `ui/toggle.tsx` (ρίζα) | ON ήταν `data-[state=on]:bg-accent` (σκουρότερο από `--card`), δηλωμένο ανοιχτό §17.6 #1 ⇒ πλέον `pressedOn`. Η γραμμή του **έφυγε** από το `DECLARED_OPEN_STATES`. | — |
+
+🔑 **Κανόνας επιλογής primitive:**
+- απλή ομάδα αποκλειστικής επιλογής ⇒ `SegmentedControl`·
+- κουμπί εναλλαγής σε toolbar (με tooltip) ⇒ `ToggleButton` (το πρότυπο toolbar του WAI-ARIA)·
+- `role="tab"` ⇒ `semantics="selected"`·
+- `role="radio"` ⇒ `semantics="checked"`.
+
+### 19.3 Μετάβαση — codemod AST + χειρουργικές διορθώσεις
+- **Codemod** (AST, αλλάζει μόνο τα εύρη που αγγίζει, καμία επαναμορφοποίηση): **93 σημεία / 46 αρχεία** →
+  `ToggleButton pressed={…} variant="…"`. Αντεστραμμένα σχήματα ⇒ `pressed={!(…)}`. Αφαιρέθηκαν τα διπλά
+  `aria-pressed` / `aria-selected`.
+- **`SegmentedControl`** (αποκλειστική επιλογή):
+  - `RangeSwitch` 30/90 (§8.72.8 #2 — η πρώτη χειρόγραφη σύνθεση του ρόλου, πλέον ζητά το primitive)·
+  - `CashFlowControls` (σενάριο)·
+  - `PlaceChooser` (τρόπος χάρτη)·
+  - `AnalyticsTab Header` (το `as` cast έφυγε: ο τύπος ρέει από το `value`)·
+  - `MediaGallery` (πλέγμα/λίστα)·
+  - **νέο** `BuildingSpaceViewSwitch`.
+- 🧹 **N.0.2 — κλώνος τριών αρχείων:** το ζευγάρι «Κάρτες | Πίνακας» ζούσε αυτούσιο σε `StorageTab` ·
+  `ParkingTabContent` · `PropertiesTabContent` ⇒ `building-management/shared/BuildingSpaceViewSwitch` + τύπος
+  `BuildingSpaceViewMode` + κλειδί `building:viewMode.label` (el/en).
+- 🧹 **Νεκρά χειρόγραφα χρώματα:** `FileManagerToolbar` ×9 · `EntityFilesToolbar` ×7 · `TypeQuickFilters` έγραφαν
+  **ξανά** `x && 'bg-primary text-primary-foreground'` (ή `bg-destructive`) πάνω στο variant. Ο ρόλος τα νικούσε στο
+  `cn`, αλλά έμεναν ως θόρυβος ⇒ σβήστηκαν, μαζί με 2 αχρησιμοποίητα imports (`getStatusColor`, `cn`).
+- 🔴 **Σφάλμα ARIA που βρέθηκε στη μετάβαση:** το `ChartSection` είχε `role="radio"` + `aria-checked`, και ο codemod
+  πρόσθεσε και `aria-pressed` (απαγορεύεται σε radio). ⇒ `semantics="checked"`, και ο **τύπος** πλέον αρνείται
+  χειρόγραφο `aria-checked` / `aria-selected` / `aria-pressed`.
+
+### 19.4 Η άγκυρα Ο5ε — καμία νέα πύλη (όπως §17.4)
+Μπήκε στο υπάρχον `theme-token-hygiene.test.js`. Ο σαρωτής είναι το `scripts/lib/contrast/pressed-variant-ternary.js`
+(AST με `typescript`, **μόνο** `<Button>`, μετρά τα **φύλλα** φωλιασμένης συνθήκης).
+
+**Εξαιρέσεις:** μόνο το `DECLARED_EMPHASIS_TERNARIES` — **8** σημεία σε **7** αρχεία, όπου η συνθήκη διαλέγει ποιο
+κουμπί είναι το **κύριο**, όχι ποιο είναι πατημένο:
+- `ShowcaseDoor` · `ShowcaseEmailConfirmationContent` ×2 · `MandateInboxRow` · `QrCodePanel`·
+- `WorkspaceInviteContent` · `ComparisonPanel` · `FirstContactAwaitingProof`.
+
+Ανήκουν στο §18.7 #1. Ratchet κατά ταυτότητα, με **ακριβές** πλήθος: περισσότερα ⇒ ⛔, λιγότερα ⇒ «μίκρυνε τη δήλωση».
+
+Hook: οι triggers του area «Theme Token Hygiene» += `toggle` · `toggle-button` · `segmented-control` ·
+`pressed-variant-ternary.js`. ⚠️ Νέο ternary σε **άλλο** αρχείο το πιάνει το CI (`ui-contrast-ratchet.yml`), όχι το
+hook. Ίδια απόφαση με το Ο5β (§17.4), που επίσης σαρώνει όλο το `src/`.
+
+| Άγκυρα | Μετάλλαξη ⇒ αποτέλεσμα |
+|---|---|
+| Ο5ε σάρωση | 96 → **0** αδήλωτα |
+| Ο5ε σχήματα | μίας γραμμής · πολλών γραμμών · φωλιασμένο · `secondary:ghost` ⇒ πιάνονται |
+| Ο5ε αρνητικά | Badge · ίδιο φύλλο · `destructive` · μη σταθερό ⇒ **όχι** |
+| Ο5ε ratchet | +1 ⇒ ⛔ · −1 ⇒ μίκρυνε · αδήλωτο ⇒ ⛔ |
+| Ο5ε `toggle.tsx` | πίσω σε `bg-accent` ⇒ Ο5β κόκκινο |
+| primitives `pressed-state-primitives.test.tsx` (7) | σειρά στο `cn` ανάποδα ⇒ **Π3 κόκκινο** · αφαίρεση φραγμού `''` ⇒ **Π5 κόκκινο** |
+
+### 19.5 Αποτέλεσμα
+- `theme-token-hygiene` 27/27.
+- Primitives 7/7.
+- owner-property 12 σουίτες.
+- `owner-property-stats` Π2/Π5: `radio` + `aria-checked` + «δεν αδειάζει».
+- `SELECTION_PRIMITIVES` 7 → **10**.
+- `DECLARED_OPEN_STATES` 3 → **2** εγγραφές.
+
+### 19.6 Ανοιχτά — ρητά
+1. **§18.7 #1 παραμένει** (απόφαση Giorgio): τα 8 σημεία έμφασης, και γενικά το `<Button variant="default">` ως κύριο κουμπί.
+2. **`<Badge variant={x ? 'default' : 'outline'}>` ×10:** κατάσταση οντότητας με επιφάνεια ως σήμα. Ανήκει στο
+   κανάλι κατάστασης (CHECK 3.41 / §18.1), **όχι** σε αυτό το primitive.
+3. Ομάδες αποκλειστικής επιλογής που έμειναν `ToggleButton`, με σωστή όψη και `aria-pressed` αλλά χωρίς βελάκια:
+   - toolbars με tooltips: `FileManagerToolbar`, `EntityFilesToolbar`, `HeaderViewToggle`, DXF `OverlayModeButtons`,
+     `KindSelector`, `ColorPickerPopover`·
+   - λίστες με tooltip: `BOQEditor*`·
+   - `MigrationTab` (εργαλείο διαχειριστή, γεμάτο **hardcoded αγγλικά**, προϋπάρχον N.11).
+
+   Μετάβαση σε `SegmentedControl` όταν αγγιχτούν.
+4. 🔶 **N.11 προϋπάρχον:** το `OverlayModeButtons` έχει `aria-label="Draw Mode (…)"` στα αγγλικά χωρίς i18n.

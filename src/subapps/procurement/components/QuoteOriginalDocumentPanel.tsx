@@ -21,6 +21,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
 import {
   Download,
@@ -238,15 +239,16 @@ export function QuoteOriginalDocumentPanel({
             className="flex flex-wrap gap-1"
           >
             {files.map((f, i) => (
-              <Button
+              <ToggleButton
                 key={f.id}
-                variant={i === activeIndex ? 'default' : 'outline'}
+                pressed={i === activeIndex}
+                variant="outline"
                 size="sm"
                 onClick={() => setActiveIndex(i)}
                 className="h-7 text-xs"
               >
                 {f.displayName}
-              </Button>
+              </ToggleButton>
             ))}
           </nav>
         )}

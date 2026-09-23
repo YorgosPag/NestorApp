@@ -6,6 +6,7 @@ import { useRouter } from '@/lib/workspace/navigation';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, AlertTriangle, Calendar, ClipboardList, Filter, Folder, Home, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
 import { PageLoadingState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -277,17 +278,18 @@ export function TaskDetailPageContent() {
               <ArrowLeft className={`${iconSizes.sm} ${layout.buttonIconSpacing}`} />
               {t('detail.backToTasks')}
             </Button>,
-            <Button
+            <ToggleButton
               key="mobile-filters"
               type="button"
-              variant={showFilters ? 'default' : 'outline'}
+              pressed={showFilters}
+              variant="outline"
               size="icon"
               className={getResponsiveClass('md', 'hidden')}
               onClick={() => setShowFilters(!showFilters)}
               aria-label={tFilters('title')}
             >
               <Filter className={iconSizes.sm} />
-            </Button>
+            </ToggleButton>
           ].filter(Boolean) as ReactNode[]
         }}
       />

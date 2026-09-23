@@ -11,15 +11,15 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
-import { Home, Plus, CheckCircle, Euro, Ruler, Layers, Table as TableIcon, Link2 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { Home, Plus, CheckCircle, Euro, Ruler, Link2 } from 'lucide-react';
+import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, BuildingSpaceFilterBar, BuildingSpaceViewSwitch } from '../shared';
 import type { LinkableItem } from '../shared';
 import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -281,22 +281,11 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   const spaceActionState = { unlinkingId, deletingId };
 
   if (loading) {
-    return (
-      <section className="flex items-center justify-center py-2">
-        <Spinner size="large" />
-      </section>
-    );
+    return <BuildingSpaceTabLoading />;
   }
 
   if (error) {
-    return (
-      <section className="flex flex-col items-center gap-2 py-2">
-        <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" size="sm" onClick={fetchProperties}>
-          {t('unitStats.retry')}
-        </Button>
-      </section>
-    );
+    return <BuildingSpaceTabError message={error} retryLabel={t('unitStats.retry')} onRetry={fetchProperties} />;
   }
 
   return (
@@ -360,14 +349,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
         <span className={cn("text-sm", colors.text.muted)}>
           {filteredUnits.length} {t('unitStats.results')}
         </span>
-        <fieldset className="flex items-center gap-2">
-          <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
-            <Layers className="mr-1 h-4 w-4" /> {t('unitStats.cards')}
-          </Button>
-          <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
-            <TableIcon className="mr-1 h-4 w-4" /> {t('unitStats.table')}
-          </Button>
-        </fieldset>
+        <BuildingSpaceViewSwitch value={viewMode} onChange={setViewMode} cardsLabel={t('unitStats.cards')} tableLabel={t('unitStats.table')} />
       </nav>
 
       {/* Content — Centralized shared components */}

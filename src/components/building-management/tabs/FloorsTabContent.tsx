@@ -12,11 +12,13 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints, Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
+import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
@@ -144,21 +146,12 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
   const [showQuickSetup, setShowQuickSetup] = useState(false);
 
   if (loading) {
-    return (
-      <section className="flex items-center justify-center py-2">
-        <Spinner size="large" />
-      </section>
-    );
+    return <BuildingSpaceTabLoading />;
   }
 
   if (error) {
-    return (
-      <section className="flex flex-col items-center gap-2 py-2">
-        <p className="text-sm text-destructive">{error}</p>
-        {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-        <Button variant="outline" size="sm" onClick={fetchFloors}>Retry</Button>
-      </section>
-    );
+    // eslint-disable-next-line custom/no-hardcoded-strings
+    return <BuildingSpaceTabError message={error} retryLabel="Retry" onRetry={fetchFloors} />;
   }
 
   return (
@@ -356,14 +349,15 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                               <TooltipProvider delayDuration={300}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button
-                                      variant={isExpanded ? "default" : "ghost"}
+                                    <ToggleButton
+                                      pressed={isExpanded}
+                                      variant="ghost"
                                       size="icon"
                                       className="h-7 w-7"
                                       onClick={() => toggleFloorExpand(floor.id)}
                                     >
                                       <Map className="h-3.5 w-3.5" />
-                                    </Button>
+                                    </ToggleButton>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     {isExpanded ? t('tabs.floors.collapseFloor') : t('tabs.floors.uploadFloorplan')}

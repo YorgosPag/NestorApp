@@ -8,7 +8,7 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   List,
@@ -61,12 +61,12 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
         return (
           <Tooltip key={mode}>
             <TooltipTrigger asChild>
-              <Button
-                variant={viewMode === mode ? "default" : "ghost"}
+              <ToggleButton
+                pressed={viewMode === mode}
+                variant="ghost"
                 size="sm"
                 onClick={() => onViewModeChange(mode)}
                 aria-label={getViewLabel(mode)}
-                aria-pressed={viewMode === mode}
                 className={cn(
                   "h-8 border-0",
                   spacing.padding.x.sm,
@@ -75,7 +75,7 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
                 )}
               >
                 <Icon className={iconSizes.sm} />
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{getViewLabel(mode)}</TooltipContent>
           </Tooltip>

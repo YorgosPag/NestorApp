@@ -25,6 +25,7 @@ import { suggestionPresentation } from '@/components/shared/addresses/editor/hel
 import { AddressDiffSummary } from '@/components/shared/addresses/editor/components/AddressDiffSummary';
 import { AddressDragConfirmDialog } from '@/components/shared/addresses/editor/components/AddressDragConfirmDialog';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useAddressActivity } from '@/components/shared/addresses/editor/hooks/useAddressActivity';
 import { useAddressReconciliation } from '@/components/shared/addresses/editor/hooks/useAddressReconciliation';
 import type {
@@ -107,20 +108,22 @@ function AddressEditorDemo() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Button
+        <ToggleButton
           size="sm"
-          variant={viewMode ? 'outline' : 'default'}
+          pressed={!(viewMode)}
+          variant="outline"
           onClick={() => setViewMode(false)}
         >
           Edit mode
-        </Button>
-        <Button
+        </ToggleButton>
+        <ToggleButton
           size="sm"
-          variant={viewMode ? 'default' : 'outline'}
+          pressed={viewMode}
+          variant="outline"
           onClick={() => setViewMode(true)}
         >
           View mode
-        </Button>
+        </ToggleButton>
         <Button
           size="sm"
           variant="ghost"

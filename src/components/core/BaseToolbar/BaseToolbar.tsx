@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Input } from '@/components/ui/input';
 import { CommonBadge } from '@/core/badges';
 import { Search, X } from 'lucide-react';
@@ -311,8 +312,9 @@ function ToolbarFiltersComponent({
           // Dropdown filter
           <DropdownMenu key={filter.id}>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant={filter.active ? 'default' : 'outline'}
+              <ToggleButton
+                pressed={filter.active}
+                variant="outline"
                 size="sm"
                 className="relative"
               >
@@ -326,7 +328,7 @@ function ToolbarFiltersComponent({
                     className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
                   />
                 )}
-              </Button>
+              </ToggleButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {filter.children}
@@ -334,9 +336,10 @@ function ToolbarFiltersComponent({
           </DropdownMenu>
         ) : (
           // Simple filter button
-          <Button
+          <ToggleButton
             key={filter.id}
-            variant={filter.active ? 'default' : 'outline'}
+            pressed={filter.active}
+            variant="outline"
             size="sm"
           >
             {filter.icon && <filter.icon className={`${iconSizes.sm} mr-1`} />}
@@ -349,7 +352,7 @@ function ToolbarFiltersComponent({
                 className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
               />
             )}
-          </Button>
+          </ToggleButton>
         )
       ))}
       

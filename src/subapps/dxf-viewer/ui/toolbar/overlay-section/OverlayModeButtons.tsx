@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Pen, Edit } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
@@ -33,14 +33,15 @@ export const OverlayModeButtons: React.FC<OverlayModeButtonsProps> = ({
       {/* Draw Mode */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant={currentMode === 'draw' ? 'default' : 'ghost'}
+          <ToggleButton
+            pressed={currentMode === 'draw'}
+            variant="ghost"
             size="icon-sm"
             onClick={() => onModeChange('draw')}
             aria-label="Draw Mode (Create new polygons)"
           >
             <Pen className={`${iconSizes.sm} ${currentMode !== 'draw' ? OVERLAY_TOOLBAR_COLORS.draw : ''}`} />
-          </Button>
+          </ToggleButton>
         </TooltipTrigger>
         <TooltipContent>Draw Mode (Create new polygons)</TooltipContent>
       </Tooltip>
@@ -48,14 +49,15 @@ export const OverlayModeButtons: React.FC<OverlayModeButtonsProps> = ({
       {/* Edit Mode */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant={currentMode === 'edit' ? 'default' : 'ghost'}
+          <ToggleButton
+            pressed={currentMode === 'edit'}
+            variant="ghost"
             size="icon-sm"
             onClick={() => onModeChange('edit')}
             aria-label="Edit Mode (Modify existing polygons)"
           >
             <Edit className={`${iconSizes.sm} ${currentMode !== 'edit' ? OVERLAY_TOOLBAR_COLORS.edit : ''}`} />
-          </Button>
+          </ToggleButton>
         </TooltipTrigger>
         <TooltipContent>Edit Mode (Modify existing polygons)</TooltipContent>
       </Tooltip>

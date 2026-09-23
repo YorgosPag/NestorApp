@@ -17,7 +17,10 @@ const {
   GATE_STATES,
   MIGRATED_SYMBOLS,
   RAW_IMPORT_OWNERS,
+  SERVER_BOUNDARY_MODULE,
+  SERVER_MIGRATED_SYMBOLS,
   UNMIGRATED_SYMBOLS,
+  WORKSPACE_ROUTE_ROOT,
   classifySymbol,
   isRawImportOwner,
 } = require('../lib/navigation-boundary/contract.js');
@@ -255,5 +258,62 @@ describe('Ι — ο codemod και η πύλη ΔΕΝ επιτρέπεται ν�
     expect(gateSource).toContain("require('./contract.js')");
     // ⚠️ Καμία δική της λίστα συμβόλων ή ιδιοκτητών.
     expect(gateSource).not.toMatch(/const\s+(MIGRATED_SYMBOLS|RAW_IMPORT_OWNERS)\s*=/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Δ — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΔΙΑΚΟΜΙΣΤΗ (ADR-875 §11)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('Δ — το ωμό redirect κρίνεται ΑΝΑ ΘΕΣΗ', () => {
+  const IN_WORKSPACE = `${WORKSPACE_ROUTE_ROOT}projects/[id]/page.tsx`;
+  const OUTSIDE = 'src/app/(app)/[...unprefixed]/page.tsx';
+
+  it('Δ1: 🔴 ωμό `redirect` ΜΕΣΑ στον χώρο ΠΙΑΝΕΤΑΙ — πετά τον χώρο που ήδη υπάρχει', () => {
+    expect(judge("import { redirect } from 'next/navigation';", IN_WORKSPACE)).toBe(
+      GATE_STATES.BOUNDARY_BYPASS,
+    );
+  });
+
+  it('Δ2: ωμό `permanentRedirect` ΜΕΣΑ στον χώρο ΠΙΑΝΕΤΑΙ (και μετονομασμένο)', () => {
+    expect(
+      judge("import { permanentRedirect as go } from 'next/navigation';", IN_WORKSPACE),
+    ).toBe(GATE_STATES.BOUNDARY_BYPASS);
+  });
+
+  it('Δ3: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — το ΙΔΙΟ ωμό `redirect` ΕΞΩ από τον χώρο ΔΕΝ είναι παράβαση', () => {
+    // Εκεί ο χώρος δεν είναι γνωστός: η ωμή διεύθυνση ΠΡΕΠΕΙ να φτάσει στο δίχτυ.
+    expect(judge("import { redirect } from 'next/navigation';", OUTSIDE)).toBe(
+      GATE_STATES.UNMIGRATABLE_ONLY,
+    );
+  });
+
+  it('Δ4: μέσα στον χώρο, `notFound` (χωρίς διεύθυνση) ΔΕΝ είναι παράβαση', () => {
+    expect(judge("import { notFound } from 'next/navigation';", IN_WORKSPACE)).toBe(
+      GATE_STATES.UNMIGRATABLE_ONLY,
+    );
+  });
+
+  it('Δ5: εισαγωγή από το σύνορο του ΔΙΑΚΟΜΙΣΤΗ μετρά ως «στο σύνορο»', () => {
+    const text = [
+      "import { notFound } from 'next/navigation';",
+      `import { redirect } from '${SERVER_BOUNDARY_MODULE}';`,
+    ].join('\n');
+    expect(judge(text, IN_WORKSPACE)).toBe(GATE_STATES.AT_BOUNDARY);
+  });
+
+  it('Δ6: τα σύμβολα του διακομιστή είναι ΚΑΙ στα UNMIGRATED (έξω) — ο codemod δεν τα αγγίζει', () => {
+    // Η μετανάστευση απαιτεί το `params.workspace` ⇒ δεν είναι μηχανική.
+    for (const name of Object.keys(SERVER_MIGRATED_SYMBOLS)) {
+      expect(classifySymbol(name)).toBe('keep');
+    }
+  });
+
+  it('Δ7: το ζωντανό δέντρο — το ΣΥΝΟΡΟ του διακομιστή έχει καταναλωτές μέσα στον χώρο', () => {
+    const consumers = collectSourceFiles(path.join(REPO_ROOT, WORKSPACE_ROUTE_ROOT)).filter((f) =>
+      fs.readFileSync(f, 'utf8').includes(`from '${SERVER_BOUNDARY_MODULE}'`),
+    );
+    // ⚠️ Κάτω από αυτόν τον αριθμό, κάποιος γύρισε στο ωμό — ή η άγκυρα κοιτάζει λάθος δέντρο.
+    expect(consumers.length).toBeGreaterThanOrEqual(14);
   });
 });

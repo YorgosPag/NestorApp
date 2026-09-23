@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, DollarSign, TrendingUp, Scale } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -63,18 +64,14 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
                 </nav>
             </section>
 
-            <nav className="flex gap-2 mt-2">
+            {/* ADR-770 §19 — μία προβολή κάθε φορά ⇒ SegmentedControl (ο τύπος ρέει από το `analyticsView`, χωρίς cast). */}
+            <SegmentedControl value={analyticsView} onValueChange={setAnalyticsView} className="mt-2 gap-2">
                 {viewConfig.map((view) => (
-                    <Button
-                        key={view.id}
-                        variant={analyticsView === view.id ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setAnalyticsView(view.id as 'overview' | 'financial' | 'progress' | 'comparison')}
-                    >
+                    <SegmentedControlItem key={view.id} value={view.id}>
                         {view.icon} {t(view.labelKey)}
-                    </Button>
+                    </SegmentedControlItem>
                 ))}
-            </nav>
+            </SegmentedControl>
         </header>
     );
 }

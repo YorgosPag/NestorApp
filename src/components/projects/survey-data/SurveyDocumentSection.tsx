@@ -20,6 +20,7 @@
 
 import { CheckCircle2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { surveyRecordLabel } from '@/lib/survey-record/survey-record-label';
@@ -121,16 +122,17 @@ function SurveyRecordRow({
 
   return (
     <li className="flex flex-wrap items-center gap-2">
-      <Button
+      <ToggleButton
         type="button"
-        variant={isShown ? 'secondary' : 'ghost'}
+        pressed={isShown}
+        variant="ghost"
         size="sm"
         className="justify-start gap-1.5"
         onClick={() => onSelect(record.id)}
       >
         {isActive ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> : null}
         {surveyRecordDisplayName(surveyRecordLabel(record), t)}
-      </Button>
+      </ToggleButton>
 
       {isActive ? (
         <Badge variant="secondary">{t('card.activeBadge')}</Badge>

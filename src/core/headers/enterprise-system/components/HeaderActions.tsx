@@ -10,6 +10,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Eye,
@@ -65,15 +66,15 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
       {onDashboardToggle && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant={showDashboard ? "default" : "outline"}
+            <ToggleButton
+              pressed={showDashboard}
+              variant="outline"
               size="icon"
               onClick={onDashboardToggle}
               aria-label={showDashboard ? t('headerActions.hideDashboard') : t('headerActions.showDashboard')}
-              aria-pressed={showDashboard}
             >
               {showDashboard ? <EyeOff className={iconSizes.sm} /> : <Eye className={iconSizes.sm} />}
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>
             {showDashboard ? t('headerActions.hideDashboard') : t('headerActions.showDashboard')}

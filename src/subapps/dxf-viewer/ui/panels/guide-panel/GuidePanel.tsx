@@ -19,6 +19,7 @@ import { useSyncExternalStore } from 'react';
 import { Ruler, Eye, EyeOff, Trash2, Magnet, FolderPlus } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PanelPositionCalculator, PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -230,15 +231,16 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
           {/* Toggle all visibility */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={guidesVisible ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={guidesVisible}
+                variant="ghost"
                 size="sm"
                 className="h-7"
                 onClick={toggleVisibility}
               >
                 {guidesVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
                 <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.toggleAll')}</span>
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{t('guidePanel.toggleAll')}</TooltipContent>
           </Tooltip>
@@ -246,15 +248,16 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
           {/* Snap toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant={guideSnapEnabled ? 'default' : 'ghost'}
+              <ToggleButton
+                pressed={guideSnapEnabled}
+                variant="ghost"
                 size="sm"
                 className="h-7"
                 onClick={toggleSnap}
               >
                 <Magnet className={iconSizes.xs} />
                 <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.snapToGuides')}</span>
-              </Button>
+              </ToggleButton>
             </TooltipTrigger>
             <TooltipContent>{t('guidePanel.snapToGuides')}</TooltipContent>
           </Tooltip>

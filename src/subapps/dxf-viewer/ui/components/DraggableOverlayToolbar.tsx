@@ -42,6 +42,7 @@ import { useOverlayStore } from '../../overlays/overlay-store';
 import { getStatusColorButtonStyles } from '../DxfViewerComponents.styles';
 // 🏢 ENTERPRISE: Shadcn Button (same as main toolbar - consistent UI)
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 // 🏢 ENTERPRISE: Centralized spacing tokens + Panel Anchoring System
 import { PANEL_LAYOUT, PanelPositionCalculator, PANEL_ANCHORING } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
@@ -279,14 +280,15 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             {modeButtons.map(({ mode: btnMode, icon: Icon, label, key, color }) => (
               <Tooltip key={btnMode}>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant={props.mode === btnMode ? 'default' : 'ghost'}
+                  <ToggleButton
+                    pressed={props.mode === btnMode}
+                    variant="ghost"
                     size="icon-sm"
                     onClick={() => handleModeChange(btnMode)}
                   >
                     {/* 🎨 ENTERPRISE: Use centralized color when not active */}
                     <Icon className={`${iconSizes.sm} ${props.mode !== btnMode ? color : ''}`} />
-                  </Button>
+                  </ToggleButton>
                 </TooltipTrigger>
                 <TooltipContent>{`${label} (${key})`}</TooltipContent>
               </Tooltip>
@@ -371,13 +373,14 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               return (
                 <Tooltip key={kind}>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={props.currentKind === kind ? 'default' : 'ghost'}
+                    <ToggleButton
+                      pressed={props.currentKind === kind}
+                      variant="ghost"
                       size="icon-sm"
                       onClick={() => props.onKindChange(kind)}
                     >
                       <Icon className={`${iconSizes.sm} ${props.currentKind !== kind ? color : ''}`} />
-                    </Button>
+                    </ToggleButton>
                   </TooltipTrigger>
                   <TooltipContent>{t(KIND_LABELS[kind])}</TooltipContent>
                 </Tooltip>

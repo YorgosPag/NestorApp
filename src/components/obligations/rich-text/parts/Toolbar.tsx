@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ToggleButton } from '@/components/ui/toggle-button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   Bold, Italic, Underline, List, ListOrdered, Quote, Eye, Edit3, RotateCcw, RotateCw, Palette, X
@@ -73,52 +74,52 @@ export function Toolbar({
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
+            <ToggleButton
               type="button"
-              variant={activeBold ? "default" : "ghost"}
+              pressed={activeBold}
+              variant="ghost"
               size="sm"
               onClick={onBold}
               className={`${iconSizes.xl} p-0`}
               aria-label={t('richText.bold')}
-              aria-pressed={activeBold}
               disabled={isPreview || disabled}
             >
               <Bold className={iconSizes.sm} />
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>{t('richText.bold')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
+            <ToggleButton
               type="button"
-              variant={activeItalic ? "default" : "ghost"}
+              pressed={activeItalic}
+              variant="ghost"
               size="sm"
               onClick={onItalic}
               className={`${iconSizes.xl} p-0`}
               aria-label={t('richText.italic')}
-              aria-pressed={activeItalic}
               disabled={isPreview || disabled}
             >
               <Italic className={iconSizes.sm} />
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>{t('richText.italic')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
+            <ToggleButton
               type="button"
-              variant={activeUnderline ? "default" : "ghost"}
+              pressed={activeUnderline}
+              variant="ghost"
               size="sm"
               onClick={onUnderline}
               className={`${iconSizes.xl} p-0`}
               aria-label={t('richText.underline')}
-              aria-pressed={activeUnderline}
               disabled={isPreview || disabled}
             >
               <Underline className={iconSizes.sm} />
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>{t('richText.underline')}</TooltipContent>
         </Tooltip>
@@ -228,13 +229,13 @@ export function Toolbar({
       <div className="flex items-center gap-1 ml-auto">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" variant={isPreview ? "default" : "ghost"} size="sm" onClick={onTogglePreview} className="h-8 px-3" aria-pressed={isPreview} disabled={disabled}>
+            <ToggleButton type="button" pressed={isPreview} variant="ghost" size="sm" onClick={onTogglePreview} className="h-8 px-3" disabled={disabled}>
               {isPreview ? (
                 <><Edit3 className={`${iconSizes.sm} mr-1`} />{t('actions.edit')}</>
               ) : (
                 <><Eye className={`${iconSizes.sm} mr-1`} />{t('richText.preview')}</>
               )}
-            </Button>
+            </ToggleButton>
           </TooltipTrigger>
           <TooltipContent>{isPreview ? ariaLabels.edit : ariaLabels.preview}</TooltipContent>
         </Tooltip>
