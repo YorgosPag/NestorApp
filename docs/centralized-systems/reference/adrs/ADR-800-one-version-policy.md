@@ -274,10 +274,22 @@ CHECK 3.48 · 3.55 · 3.61).
 3. **Το knip (G15) δεν βλέπει τα workspace packages**: το `knip.json` δεν έχει κλειδί `workspaces`
    και το `project` του είναι `src/**`. Οι νεκρές εξαρτήσεις του subapp (`dockview` κ.λπ.) ήταν
    **αόρατες** σε αυτό — άλλη πύλη, άλλο ερώτημα, **N.13**.
+4. **Εργαλεία CI εκτός lockfile (κατάστιχο ΣΤ, ADR-875 §12).** Τα κατάστιχα Α-Ε διαβάζουν manifests +
+   lockfile, άρα ήταν **δομικά τυφλά** σε ό,τι εγκαθίσταται ολικά στο CI. Το κλειστό σύνολο `CI_TOOLS`
+   (`scripts/lib/one-version/ci-tools.js`) έχει σήμερα **ένα** μέλος, το `firebase-tools` (αυθεντία
+   `FIREBASE_TOOLS_VERSION` του deployer). Το inline `tsx@…` του χρησμού **δεν** ελέγχεται ακόμα.
 
 ---
 
 ## 9. Changelog
+
+* **2026-09-23** — **Κατάστιχο ΣΤ · ΕΡΓΑΛΕΙΑ CI (ADR-875 §12).** Μετρήθηκαν **τρεις** εκδόσεις του
+  `firebase-tools` (deployer 15.13.0 · χρησμός 15.30.2 · 4 ροές χωρίς έκδοση). Σύγκλιση στο **υπάρχον** SSoT
+  (`scripts/lib/firestore-deploy/model.js`) — όχι νέο αρχείο εκδόσεων· ιδιοκτήτης το composite
+  `.github/actions/setup-firebase-emulators` (cache με κλειδί την έκδοση · Java · εγκατάσταση)· 5 ροές τον
+  ζητούν. Τρεις νέες ⛔ (`ci-tool-bypass` · `ci-tool-version-literal` · `ci-tool-owner-broken`), η σκανδάλη
+  ξυπνά και σε `.github/` + `model.js`. Άγκυρες **ΣΤ1-ΣΤ10** (βαθμονόμηση σε ιστορικό: 5 παρακάμψεις + 1
+  γραμμένη έκδοση στο `2aa205ef`), μεταλλάξεις **2/2**.
 
 * **2026-08-25** — **Δημιουργία + υλοποίηση.** Manifest subapp **46 deps + 46 scripts → 3 + 0**·
   ρίζα: 3 δηλώσεις ευθυγραμμισμένες με τα overrides τους· `pnpm-workspace.yaml`: διαγραφή
