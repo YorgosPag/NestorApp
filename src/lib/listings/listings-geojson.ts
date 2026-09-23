@@ -32,12 +32,8 @@
 
 import { mercatorScaleAt } from '@/lib/maps/metric-size';
 import type { PublicListing } from '@/types/public-listing';
-import {
-  listingMapShape,
-  isMappedShape,
-  LISTING_UNCERTAINTY_KM,
-  type ListingMapShape,
-} from './listing-map-shape';
+import { LISTING_UNCERTAINTY_KM, type ListingMapShape } from './listing-map-shape';
+import { listingMapMark, type ListingMapMark } from './listing-map-mark';
 
 /** Χιλιόμετρα → μέτρα. Γραμμένο μία φορά ώστε το `1000` να μη γίνει μαγικός αριθμός. */
 const METRES_PER_KM = 1000;
@@ -99,71 +95,66 @@ export type ListingFeature = GeoJSON.Feature<GeoJSON.Point | GeoJSON.Polygon, Li
  * **λογιστική**. Το ότι λείπουν από τον χάρτη είναι **ειπωμένο**, όχι σιωπηλό.
  */
 export function listingsToGeoJson(
-  listings: readonly PublicListing[]
+  listings: readonly Pick<PublicListing, 'id' | 'title' | 'position'>[]
 ): GeoJSON.FeatureCollection<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties> {
   const features: ListingFeature[] = [];
 
   for (const listing of listings) {
-    const shape = listingMapShape(listing.position);
-    if (!isMappedShape(shape)) continue;
-    if (listing.position.kind !== 'known') continue;
-
-    // 🔑 **Το `?? 0` ΔΕΝ κρύβει κατάσταση.** Ο μόνος παραγωγός του `null` είναι το
-    //    σχήμα `'none'`, που το `isMappedShape` από πάνω έχει ήδη αποκλείσει — άρα ο
-    //    κλάδος είναι δομικά ανέφικτος και υπάρχει μόνο για τον τύπο. Το ίδιο σκεπτικό
-    //    με το `throw` του `listingSearchArea`, με αντίστροφο πρόσημο: εκεί ο κλάδος
-    //    ήταν **σιωπηλή σημασιολογία** (αγγελία που δεν φιλτράρεται ποτέ) και έπρεπε
-    //    να φωνάξει· εδώ είναι **μηδενική ακτίνα**, που είναι η αλήθεια για κάθε
-    //    σχήμα χωρίς αβεβαιότητα (`outline`, `pin`).
-    const uncertaintyM = (LISTING_UNCERTAINTY_KM[shape] ?? 0) * METRES_PER_KM;
-
-    features.push({
-      type: 'Feature',
-      id: listing.id,
-      geometry: geometryOf(listing, shape),
-      properties: {
-        id: listing.id,
-        shape,
-        title: listing.title,
-        uncertaintyM,
-        mercatorScale: mercatorScaleAt(listing.position.point.lat),
-      },
-    });
+    const mark = listingMapMark(listing.position);
+    if (mark === null) continue;
+    features.push(listingFeature(listing.id, listing.title, mark));
   }
 
   return { type: 'FeatureCollection', features };
 }
 
 /**
- * Η γεωμετρία που αντιστοιχεί στο σχήμα.
+ * **Ένα σημάδι → ένα feature** — ο ΕΝΑΣ ζωγράφος (ADR-777 §8.70 Φάση 2).
+ *
+ * 🔑 Τον καλούν **δύο**: ο δημόσιος χάρτης (μέσω {@link listingsToGeoJson}) και το στιγμιότυπο
+ * της κάρτας «Τα ακίνητά μου», που έχει μόνο το σημάδι της δημοσιευμένης αγγελίας. Αν η
+ * κάρτα έχτιζε δικό της feature, η «σκιασμένη πόλη» θα μπορούσε να αποκλίνει από τον χάρτη.
+ */
+export function listingFeature(id: string, title: string, mark: ListingMapMark): ListingFeature {
+  // 🔑 **Το `?? 0` ΔΕΝ κρύβει κατάσταση.** Ο μόνος παραγωγός του `null` είναι το σχήμα
+  //    `'none'`, που δεν έχει σημάδι — άρα ο κλάδος είναι δομικά ανέφικτος και υπάρχει
+  //    μόνο για τον τύπο. Η μηδενική ακτίνα είναι η αλήθεια για κάθε σχήμα χωρίς
+  //    αβεβαιότητα (`outline`, `pin`).
+  const uncertaintyM = (LISTING_UNCERTAINTY_KM[mark.shape] ?? 0) * METRES_PER_KM;
+
+  return {
+    type: 'Feature',
+    id,
+    geometry: geometryOf(mark),
+    properties: {
+      id,
+      shape: mark.shape,
+      title,
+      uncertaintyM,
+      mercatorScale: mercatorScaleAt(mark.point.lat),
+    },
+  };
+}
+
+/**
+ * Η γεωμετρία που αντιστοιχεί στο σημάδι.
  *
  * 🔑 **`[lng, lat]` — η ΑΝΤΙΣΤΡΟΦΗ σειρά από την ανθρώπινη ανάγνωση.** Είναι το
  * σύνορο εξόδου προς GeoJSON, και το `types/geo/coordinates.ts` δηλώνει ρητά γιατί ο
  * εσωτερικός τύπος **δεν** είναι GeoJSON: ένα μπερδεμένο ζεύγος τοποθετεί το κτίριο σε
  * άλλη ήπειρο χωρίς να το πει κανείς. Η μετατροπή γίνεται **εδώ και μόνο εδώ**.
  */
-function geometryOf(
-  listing: PublicListing,
-  shape: ListingMapShape
-): GeoJSON.Point | GeoJSON.Polygon {
-  if (listing.position.kind !== 'known') {
-    // Μήνυμα προγραμματιστή, όχι οθόνης (σύμβαση src/lib + N.11): αν φτάσει εδώ, το φίλτρο
-    // «έχει θέση;» έχει ήδη αποτύχει ανάντη — ο ζωγράφος δεν είναι το σημείο να το κρύψει.
-    throw new Error(`listingsToGeoJson: listing "${listing.id}" reached the painter without a position`);
-  }
-
-  const outline = shape === 'outline' ? listing.position.outline : undefined;
-  if (outline && outline.length > 0) {
+function geometryOf(mark: ListingMapMark): GeoJSON.Point | GeoJSON.Polygon {
+  if (mark.outline && mark.outline.length > 0) {
     // Το GeoJSON απαιτεί ΚΛΕΙΣΤΟ δακτύλιο (πρώτη κορυφή == τελευταία). Ο εσωτερικός
     // τύπος δεν την επαναλαμβάνει επίτηδες — το κλείσιμο γίνεται εδώ, μία φορά, αντί
     // να ζητείται από κάθε γραφέα να το θυμάται.
-    const ring = outline.map((p) => [p.lng, p.lat] as [number, number]);
+    const ring = mark.outline.map((p) => [p.lng, p.lat] as [number, number]);
     ring.push(ring[0]);
     return { type: 'Polygon', coordinates: [ring] };
   }
 
-  const { point } = listing.position;
-  return { type: 'Point', coordinates: [point.lng, point.lat] };
+  return { type: 'Point', coordinates: [mark.point.lng, mark.point.lat] };
 }
 
 // ============================================================================

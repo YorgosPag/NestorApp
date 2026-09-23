@@ -28,7 +28,6 @@ import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
-import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
 import { listingsToGeoJson, splitListingGeometry } from '@/lib/listings/listings-geojson';
 import { listingBounds } from '@/lib/listings/listing-map-bounds';
 import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
@@ -37,6 +36,7 @@ import { ListingMapPopup } from './ListingMapPopup';
 import { ListingPriceMarkers } from './ListingPriceMarkers';
 import { RADIUS } from './ResultsMapLayers';
 import { ResultsMapSources } from './ResultsMapSources';
+import { readListingMapPaint } from './listing-map-paint';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 import { readMapArea, sameMapArea } from './results-map-area';
@@ -199,9 +199,7 @@ export function ResultsMap({
    */
   const priceMarkers = useMemo(() => listingPriceMarkers(listings, data), [listings, data]);
 
-  // `hsl(var(--chart-1))` δεν το καταλαβαίνει το MapLibre — θέλει συγκεκριμένο χρώμα.
-  const mark = `hsl(${readRootCssVar('--chart-1', '210 80% 50%')})`;
-  const surface = `hsl(${readRootCssVar('--card', '0 0% 100%')})`;
+  const { mark, surface } = readListingMapPaint();
 
   const selectedListing = useMemo(
     () => (focus.selected === null ? null : (listings.find((l) => l.id === focus.selected) ?? null)),

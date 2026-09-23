@@ -41,6 +41,7 @@ import { addressToPositionCandidate, type AddressLike } from './public-listing-p
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 import { listingLeadImage } from '@/lib/listings/listing-images';
+import { listingMapMark, type ListingMapMark } from '@/lib/listings/listing-map-mark';
 import {
   createAgencyIdentityResolver,
   type AgencyIdentityResolver,
@@ -68,6 +69,12 @@ export type PublishOutcome = 'published' | 'withdrawn' | 'failed';
 export interface ListingProjectionResult {
   readonly outcome: PublishOutcome;
   readonly lead: ListingImage | null;
+  /**
+   * **Το σημάδι που ζωγραφίζει ο δημόσιος χάρτης** (ADR-777 §8.70 Φάση 2) — ίδιο συμβόλαιο με το
+   * `lead`: μόνο για `published`, από το έγγραφο που **γράφτηκε**. Σημάδι, όχι θέση, ώστε ο
+   * καλών να **μην μπορεί** να δείξει ακριβέστερη θέση από όση βλέπει ο κόσμος.
+   */
+  readonly mapMark: ListingMapMark | null;
 }
 
 /**
@@ -371,7 +378,7 @@ export async function writeListingProjection(
       //    τίποτε επιπλέον: ξαναπερνά από εδώ με μη-κενό σύνολο.
         await withdrawListingShelves(listingId);
       await refreshPresence();
-      return { outcome: 'withdrawn', lead: null };
+      return { outcome: 'withdrawn', lead: null, mapMark: null };
     }
 
     // ── ADR-839 — Η ΣΦΡΑΓΙΔΑ ΕΚΔΟΣΗΣ ────────────────────────────────────────
@@ -391,9 +398,9 @@ export async function writeListingProjection(
 
     // 🔑 Η κεντρική εικόνα από τον **ΕΝΑ** κριτή (`listingLeadImage`) πάνω σε ό,τι
     //    **γράφτηκε** — ποτέ δεύτερο κριτήριο, ποτέ ωμά ανεβάσματα (ADR-777 §8.70).
-    return { outcome: 'published', lead: listingLeadImage(written) };
+    return { outcome: 'published', lead: listingLeadImage(written), mapMark: listingMapMark(written.position) };
   } catch (error) {
-    return { outcome: reportProjectionFailure(listingId, error), lead: null };
+    return { outcome: reportProjectionFailure(listingId, error), lead: null, mapMark: null };
   }
 }
 

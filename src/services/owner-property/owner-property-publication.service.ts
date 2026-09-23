@@ -116,7 +116,7 @@ async function republishOwnerListing(
   try {
     inputs = await readPublicationInputs(adminDb, property);
   } catch (error) {
-    return { outcome: reportProjectionFailure(property.id, error), lead: null };
+    return { outcome: reportProjectionFailure(property.id, error), lead: null, mapMark: null };
   }
   const projectable = projectableFromOwnerProperty(property, at, inputs.agency, inputs.dossierMedia);
 
@@ -179,7 +179,14 @@ async function stampPublication(
   property: OwnerProperty,
   result: ListingProjectionResult,
 ): Promise<OwnerProperty> {
-  const publication = { outcome: result.outcome, at: nowISO(), thumbnail: thumbnailFromLead(result.lead) };
+  // 🔑 Εικόνα ΚΑΙ σημάδι χάρτη στην ΙΔΙΑ `update` με την έκβαση (ADR-777 §8.70): δεν μπορούν
+  //    να αποκλίνουν, και η απόσυρση τα μηδενίζει μαζί.
+  const publication = {
+    outcome: result.outcome,
+    at: nowISO(),
+    thumbnail: thumbnailFromLead(result.lead),
+    mapMark: result.mapMark,
+  };
 
   try {
     await adminDb

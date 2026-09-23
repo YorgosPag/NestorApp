@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { MapStyleType } from '../../services/map/MapStyleManager';
+import { INITIAL_MAP_STYLE, type MapStyleType } from '../../services/map/MapStyleManager';
 import type { GeoCoordinate } from '../../types';
 
 // ============================================================================
@@ -92,7 +92,7 @@ export interface MapStateReturn {
  */
 export const useMapState = (config: MapStateConfig = {}): MapStateReturn => {
   const {
-    initialStyle = 'greece',
+    initialStyle = INITIAL_MAP_STYLE,
     initialViewState = {
       longitude: 23.7275,
       latitude: 37.9755,

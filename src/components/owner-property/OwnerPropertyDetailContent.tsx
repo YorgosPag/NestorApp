@@ -61,6 +61,7 @@ import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { OwnerListingCompletion } from './OwnerListingCompletion';
 import { OwnerMandatePanel } from './OwnerMandatePanel';
+import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
 import { OwnerPropertyHistory } from './OwnerPropertyHistory';
@@ -198,7 +199,9 @@ function OwnerPropertyView({
 
   return (
     <div className="flex flex-col gap-4">
-      <OwnerPropertyCard property={property} priority />
+      <ListingMapSnapshotProvider>
+        <OwnerPropertyCard property={property} priority />
+      </ListingMapSnapshotProvider>
 
       {/*
         🏆 **ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΚΑΡΤΑ, ΚΑΙ ΠΡΙΝ ΤΟ ΔΟΛΩΜΑ** — σειρά-συμβόλαιο: *«ποιος

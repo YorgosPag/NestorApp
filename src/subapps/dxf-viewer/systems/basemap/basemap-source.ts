@@ -27,6 +27,8 @@
  * @see https://osmfoundation.org/wiki/Licence/Attribution_Guidelines — η οδηγία απόδοσης
  */
 
+import type { MapAttributionSegment } from '@/lib/maps/map-attribution';
+
 /** Τα αναγνωριστικά των παρόχων. Κλειστό σύνολο — νέος πάροχος = νέα γραμμή στον πίνακα. */
 export type BasemapSourceId = 'osm-standard';
 
@@ -47,11 +49,7 @@ export type BasemapImageryKind = 'street' | 'aerial' | 'topographic';
  * `subapps/geo-canvas/services/map/MapStyleManager.ts`). Καθένας τους δικαιούται **δικό του**
  * σύνδεσμο. Ως πίνακας κομματιών, ο δεύτερος πάροχος είναι γραμμή· ως συμβολοσειρά, είναι parser.
  */
-export interface BasemapAttributionSegment {
-  readonly text: string;
-  /** Όταν υπάρχει, το `text` αποδίδεται ως σύνδεσμος προς αυτή τη διεύθυνση. */
-  readonly href?: string;
-}
+export type BasemapAttributionSegment = MapAttributionSegment;
 
 export interface BasemapSource {
   readonly id: BasemapSourceId;

@@ -710,7 +710,9 @@
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
       "coverAlt": "Photo: {title}",
       "noCover": "No published photo",
-      "addPhotos": "Add photos"
+      "addPhotos": "Add photos",
+      "mapAlt": "Location on the map as the public sees it: {title}",
+      "mapLoading": "Loading location map"
     },
     "mandate": {
       "title": "The mandate on this property",

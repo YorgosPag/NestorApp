@@ -43,6 +43,14 @@ export const MAP_STYLES = [
 ] as const;
 
 export type MapStyleType = (typeof MAP_STYLES)[number];
+
+/**
+ * **Το υπόβαθρο με το οποίο ΑΝΟΙΓΕΙ κάθε χάρτης** — ό,τι βλέπει ο επισκέπτης πριν αγγίξει τον
+ * διακόπτη. Ένα όνομα και όχι κυριολεκτικό στο `useMapState`, επειδή έχει **δεύτερο** αναγνώστη:
+ * το στιγμιότυπο της κάρτας «Τα ακίνητά μου» (ADR-777 §8.70 Φάση 2) οφείλει να δείχνει **το
+ * ίδιο** υπόβαθρο με τον δημόσιο χάρτη.
+ */
+export const INITIAL_MAP_STYLE: MapStyleType = 'greece';
 export type MapStyleUrl = string | StyleSpecification;
 
 export interface MapStyleDefinition {
@@ -77,7 +85,8 @@ const createGreeceCustomStyle = (): StyleSpecification => ({
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
       maxzoom: 19,
-      attribution: '© OpenStreetMap contributors'
+      // Η λέξη «OpenStreetMap» ως σύνδεσμος: οδηγία απόδοσης του OSMF (ADR-777 §8.70 Φ2).
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }
   },
   layers: [

@@ -227,6 +227,13 @@ describe('Κ4 — Η ΚΕΝΤΡΙΚΗ ΕΙΚΟΝΑ ΠΟΥ ΕΙΔΕ Ο ΚΟΣΜΟ
     expect(lead?.url).toBe('https://shelf/0-2560.webp');
   });
 
+  it('🗺️ `published` χωρίς θέση ⇒ `mapMark: null` — το `none` δεν ζωγραφίζεται (§8.70 Φ2)', async () => {
+    const { mapMark } = await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
+
+    expect(written[0].position).toMatchObject({ kind: 'unknown' });
+    expect(mapMark).toBeNull();
+  });
+
   it('δημοσιεύτηκε χωρίς φωτογραφία ⇒ `lead: null`, ποτέ μαντεψιά από τα ανεβάσματα', async () => {
     reconcilePublicShelf.mockResolvedValueOnce({ outcome: 'reconciled', published: [], removed: 0, rejected: 1 });
 
@@ -242,6 +249,7 @@ describe('Κ4 — Η ΚΕΝΤΡΙΚΗ ΕΙΚΟΝΑ ΠΟΥ ΕΙΔΕ Ο ΚΟΣΜΟ
     expect(await writeListingProjection(adminDb, LISTING, withdrawn, NO_PLACE, AT)).toEqual({
       outcome: 'withdrawn',
       lead: null,
+      mapMark: null,
     });
   });
 
@@ -253,6 +261,7 @@ describe('Κ4 — Η ΚΕΝΤΡΙΚΗ ΕΙΚΟΝΑ ΠΟΥ ΕΙΔΕ Ο ΚΟΣΜΟ
     expect(await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT)).toEqual({
       outcome: 'failed',
       lead: null,
+      mapMark: null,
     });
   });
 });

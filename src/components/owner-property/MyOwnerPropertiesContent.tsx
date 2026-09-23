@@ -36,6 +36,7 @@ import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 
 import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
+import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers` (ADR-777 §8.39).
@@ -91,14 +92,17 @@ function OwnerPropertiesBody(): React.ReactElement {
         properties.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul className="flex list-none flex-col gap-3 p-0">
-            {properties.map((property, index) => (
-              <li key={property.id}>
-                {/* 🖼️ ADR-777 §8.70 — μόνο η πρώτη μικρογραφία φορτώνεται με υψηλή προτεραιότητα. */}
-                <OwnerPropertyCard property={property} priority={index === 0} />
-              </li>
-            ))}
-          </ul>
+          // 🗺️ ADR-777 §8.70 Φ2 — ΕΝΑΣ κρυφός χάρτης για όλη τη λίστα, ποτέ ένας ανά κάρτα.
+          <ListingMapSnapshotProvider>
+            <ul className="flex list-none flex-col gap-3 p-0">
+              {properties.map((property, index) => (
+                <li key={property.id}>
+                  {/* 🖼️ ADR-777 §8.70 — μόνο η πρώτη μικρογραφία φορτώνεται με υψηλή προτεραιότητα. */}
+                  <OwnerPropertyCard property={property} priority={index === 0} />
+                </li>
+              ))}
+            </ul>
+          </ListingMapSnapshotProvider>
         )
       }
     />

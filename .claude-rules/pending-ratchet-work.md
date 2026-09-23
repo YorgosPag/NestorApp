@@ -2,6 +2,21 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **23/09 — ΤΟ URL `tile.openstreetmap.org` ΓΡΑΜΜΕΝΟ ΣΕ ΤΕΣΣΕΡΑ ΣΗΜΕΙΑ** *(N.0.2 · ADR-777 §8.70.7)*
+
+  `components/projects/ika/map-shared/map-styles.ts` (`OSM_MAP_STYLE`, 5 καταναλωτές) · `geo-canvas/config/index.ts`
+  (`MAP_STYLES.DEVELOPMENT` — πιθανότατα νεκρό, 0 εισαγωγείς) · `geo-canvas/services/map/MapStyleManager.ts`
+  (`createGreeceCustomStyle` = **το υπόβαθρο που ανοίγει ο δημόσιος χάρτης**) · `dxf-viewer/systems/basemap/basemap-source.ts`
+  (`BASEMAP_SOURCES` — το μόνο με πολιτική OSMF + απόδοση ως πεδία). Διόρθωση: το `BASEMAP_SOURCES` σε `src/lib/maps/`
+  και ένα `rasterStyleOf(source)` που γεννά το MapLibre style για τους άλλους τρεις. ⚠️ Αγγίζει την πύλη 3.62.
+
+- 🟡 **23/09 — ΤΡΙΑ ΧΕΙΡΟΓΡΑΦΑ `IntersectionObserver` hooks** *(N.0.2 · ADR-777 §8.70.7)*
+
+  Νέο κοινό `src/hooks/useNearViewport.ts` (μανδαλωμένο, ref callback). Μένουν: `dxf-viewer/utils/performance.ts#useInView`
+  (`RefObject` + `useEffect([ref, options])` ⇒ κόμβος που εμφανίζεται αργότερα **δεν παρατηρείται ποτέ**, και νέο
+  `options` αντικείμενο σε κάθε απόδοση ξαναστήνει τον παρατηρητή) · `geo-canvas/ui/design-system/performance/PerformanceComponents.tsx`
+  (×2). Πρώτα grep καταναλωτών — μπορεί να είναι νεκρά.
+
 - 🟡 **22/09 — ΠΕΝΤΕ ΧΕΙΡΟΓΡΑΦΑ ΑΝΤΙΓΡΑΦΑ ΤΟΥ ΚΑΤΟΠΤΡΟΥ CLAIMS, ΠΛΕΟΝ ΠΛΕΟΝΑΣΜΟΣ** *(N.0.2 · ADR-853 §16)*
 
   Από 22/09 ο ΕΝΑΣ γραφέας (`setClaimsWithMirror`) γράφει `companyId`/`globalRole` στο `users/{uid}`. Ο

@@ -13,6 +13,8 @@
  * | το `stampPublication` ξεχνά τη μικρογραφία | `thumbnail` απόν ⇒ 🔴 |
  * | η μικρογραφία βγαίνει από τα **ανεβάσματα** αντί για το ράφι | άλλο url ⇒ 🔴 |
  * | η απόσυρση αφήνει την παλιά μικρογραφία | όχι `null` ⇒ 🔴 |
+ * | το `stampPublication` ξεχνά το σημάδι χάρτη (§8.70 Φ2) | `mapMark` απόν ⇒ 🔴 |
+ * | το σημάδι βγαίνει από το ιδιωτικό `place` αντί για τη δημοσιευμένη θέση | `label` / `accuracy` διαρρέουν ⇒ 🔴 |
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -115,5 +117,33 @@ describe('🖼️ η μικρογραφία γράφεται στο ΙΔΙΟ α�
 
     expect(publish).toBe('withdrawn');
     expect(await storedPublication(db, property.id)).toMatchObject({ outcome: 'withdrawn', thumbnail: null });
+  });
+});
+
+describe('🗺️ το σημάδι χάρτη γράφεται στο ΙΔΙΟ αποτύπωμα (ADR-777 §8.70 Φάση 2)', () => {
+  it('🔑 δημοσιεύτηκε ⇒ ΜΟΝΟ σχήμα + σημείο της δημόσιας αγγελίας — καμία διεύθυνση, καμία ακρίβεια', async () => {
+    const property = validOwnerProperty();
+    const db = new FakeFirestore();
+    db.seed(COLLECTIONS.OWNER_PROPERTIES, property.id, property);
+
+    const { property: stamped } = await republishOwnerProperty(db as unknown as AdminFirestore, property);
+
+    const expected = { shape: 'pin', point: { lat: 40.63, lng: 22.95 } };
+    expect((await storedPublication(db, property.id)) as { mapMark: unknown }).toMatchObject({ mapMark: expected });
+    expect(stamped.publication?.mapMark).toStrictEqual(expected);
+  });
+
+  it('🔴 απόσυρση ⇒ `mapMark: null` — η θέση φεύγει μαζί με την αγγελία', async () => {
+    const property = validOwnerProperty();
+    const db = new FakeFirestore();
+    db.seed(COLLECTIONS.OWNER_PROPERTIES, property.id, property);
+    const typedDb = db as unknown as AdminFirestore;
+    await republishOwnerProperty(typedDb, property);
+
+    const withdrawn = { ...property, lifecycle: 'withdrawn' as const };
+    db.seed(COLLECTIONS.OWNER_PROPERTIES, property.id, withdrawn);
+    await republishOwnerProperty(typedDb, withdrawn);
+
+    expect(await storedPublication(db, property.id)).toMatchObject({ outcome: 'withdrawn', mapMark: null });
   });
 });

@@ -89,6 +89,7 @@ import {
 import type { ListedAt, ListingAuthorship, ListingImage } from '@/types/public-listing';
 import type { ListingMaterialKind } from '@/lib/listings/listing-material';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
+import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
 // =============================================================================
@@ -537,6 +538,13 @@ export interface OwnerPropertyPublication {
    * `publicationThumbnailOf`)· `null` = δεν δημοσιεύτηκε φωτογραφία, αποσύρθηκε ή απέτυχε.
    */
   readonly thumbnail?: OwnerListingThumbnail | null;
+  /**
+   * **Το σημάδι της αγγελίας στον δημόσιο χάρτη** (ADR-777 §8.70 Φάση 2) — σχήμα + σημείο +
+   * αποθηκευμένο περίγραμμα, **όπως το ζωγραφίζει ο κόσμος**. Όχι η θέση: για μια «Θεσσαλονίκη»
+   * εδώ γράφεται `shaded-city`, και η κάρτα **δεν έχει** πεδίο από το οποίο να βγάλει πινέζα.
+   * Προαιρετικό: έγγραφα πριν το πεδίο ⇒ δηλωμένη απουσία μέχρι την επόμενη επανασύνθεση.
+   */
+  readonly mapMark?: ListingMapMark | null;
 }
 
 /**
