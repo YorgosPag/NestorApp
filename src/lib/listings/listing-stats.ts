@@ -205,11 +205,36 @@ export function listingViewPath(listingId: string): string {
 export const OWNER_PORTFOLIO_STATS_PATH = '/api/owner-properties/stats';
 
 /** Οι επαφές ενός ακινήτου — από το `first_contacts`, **ποτέ** δεύτερος μετρητής. */
-export interface ListingContactCounts {
+/**
+ * **Πράξεις ανθρώπων ανά ημέρα** — επαφές (`first_contacts`) ή αποθηκεύσεις (`saved_listings`).
+ * 🔑 **Ένα σχήμα, δύο πηγές**: και οι δύο μετρώνται από τα **ίδια τα έγγραφα της πράξης**, ποτέ από
+ * δεύτερο μετρητή (§8.72 · §8.74). Γι' αυτό μοιράζονται και τον **έναν** υπολογισμό, {@link dailyEventCounts}.
+ */
+export interface ListingEventCounts {
   readonly total: number;
   readonly lastWindow: number;
-  /** Επαφές ανά ημέρα αγοράς — για το γράφημα της λεπτομέρειας. */
+  /** Πράξεις ανά ημέρα αγοράς — για το γράφημα της λεπτομέρειας. */
   readonly daily: ListingViewDaily;
+}
+
+/**
+ * **Στιγμές πράξεων → μετρήσεις** — η ημέρα είναι ημέρα **αγοράς** (Αθήνα), όχι UTC.
+ * Άκυρη στιγμή ⇒ παραλείπεται (ποτέ «NaN-ημέρα» στο γράφημα).
+ */
+export function dailyEventCounts(instants: readonly string[], today: string): ListingEventCounts {
+  const daily: Record<string, number> = {};
+  for (const instant of instants) {
+    const ms = Date.parse(instant);
+    if (!Number.isFinite(ms)) continue;
+    const day = marketDayOf(ms);
+    daily[day] = (daily[day] ?? 0) + 1;
+  }
+  const windowStart = shiftMarketDay(today, -(LISTING_STATS_WINDOW_DAYS - 1));
+  return {
+    total: Object.values(daily).reduce((sum, n) => sum + n, 0),
+    lastWindow: windowSum(daily, windowStart, today),
+    daily: trimDaily(daily, shiftMarketDay(today, -LISTING_STATS_SERIES_DAYS)),
+  };
 }
 
 /** Ό,τι μαθαίνει ο κάτοχος για **ένα** ακίνητο. */
@@ -223,7 +248,12 @@ export interface ListingStatsSummary {
     readonly daily: ListingViewDaily;
   } | null;
   /** `null` = **δεν μπορέσαμε να ρωτήσουμε** (βλάβη) — ποτέ «0 επαφές». */
-  readonly contacts: ListingContactCounts | null;
+  readonly contacts: ListingEventCounts | null;
+  /**
+   * Οι αποθηκεύσεις που **ισχύουν σήμερα**, ανά ημέρα αποθήκευσης (§8.74) — όπως το «total saves» του
+   * Zillow. Η αφαίρεση σβήνει το έγγραφο, άρα φεύγει και από τη σειρά. `null` = βλάβη, ποτέ «0».
+   */
+  readonly saves: ListingEventCounts | null;
 }
 
 /** Η απάντηση της διαδρομής χαρτοφυλακίου — κλειδί το ακίνητο. */

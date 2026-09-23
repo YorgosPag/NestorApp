@@ -7,10 +7,16 @@ import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import type { FirstContact } from '@/types/first-contact';
+import type { SavedListing } from '@/types/saved-listing';
 
 const mockCollectAddressedContacts = jest.fn<Promise<readonly FirstContact[] | null>, [unknown, unknown]>();
 jest.mock('@/services/contact/first-contact-projection', () => ({
   collectAddressedContacts: (...args: [unknown, unknown]) => mockCollectAddressedContacts(...args),
+}));
+
+const mockReadSavesOfListings = jest.fn<Promise<readonly SavedListing[] | null>, [unknown, readonly string[]]>();
+jest.mock('@/services/listings/saved-listing.service', () => ({
+  readSavesOfListings: (...args: [unknown, readonly string[]]) => mockReadSavesOfListings(...args),
 }));
 
 // Ο αναγνώστης ζητά ΜΟΝΟ ταυτότητα, θεματοφυλακή και σφραγίδα — ο πλήρης αναγνώστης εγγράφου
@@ -19,7 +25,7 @@ jest.mock('@/lib/owner-property/owner-property-from-document', () => ({
   ownerPropertyFromDocument: (raw: Record<string, unknown>, id: string) => ({ ...raw, id }),
 }));
 
-import { contactCountsFor, readOwnerPortfolioStats } from '../listing-stats.service';
+import { contactCountsFor, readOwnerPortfolioStats, saveCountsFor } from '../listing-stats.service';
 
 const NOW = Date.parse('2026-10-10T09:00:00Z');
 const ME = { uid: 'uid-me', companyId: null } as const;
@@ -31,6 +37,10 @@ const db = fake as unknown as AdminFirestore;
 
 function contact(listingId: string, createdAt: string): FirstContact {
   return { id: `fcon_${createdAt}`, target: { kind: 'listing', listingId }, createdAt } as unknown as FirstContact;
+}
+
+function saved(listingId: string, savedAt: string): SavedListing {
+  return { id: `svls_${listingId}_${savedAt}`, saverUserId: 'uid-x', listingId, savedAt, priceAtSave: null };
 }
 
 beforeEach(() => {
@@ -46,6 +56,8 @@ beforeEach(() => {
   fake.seed(COLLECTIONS.LISTING_VIEW_SHARDS, enterpriseIdService.generateDeterministicListingViewShardId(MINE, '2026-10-10', 0), {
     propertyId: MINE, day: '2026-10-10', shard: 0, views: 2,
   });
+  mockReadSavesOfListings.mockReset();
+  mockReadSavesOfListings.mockResolvedValue([saved(MINE, '2026-10-09T21:30:00Z'), saved(MINE, '2026-09-01T10:00:00Z'), saved('ownp_other', '2026-10-09T10:00:00Z')]);
   mockCollectAddressedContacts.mockReset();
   mockCollectAddressedContacts.mockResolvedValue([contact(MINE, '2026-10-09T10:00:00Z'), contact('ownp_other', '2026-10-09T10:00:00Z')]);
 });
@@ -93,5 +105,26 @@ describe('Α4 — επαφές: από το first_contacts, ποτέ δεύτε�
     // 22:30 UTC 09/10 = 01:30 Αθήνας 10/10 ⇒ μέσα στο παράθυρο, στη σωστή μέρα.
     expect(counts).toMatchObject({ total: 2, lastWindow: 1 });
     expect(counts.daily['2026-10-10']).toBe(1);
+  });
+});
+
+describe('Α6 — οι αποθηκεύσεις: ίδια πηγή με την πράξη, ίδιος υπολογισμός με τις επαφές (§8.74)', () => {
+  it('μετρά ΜΟΝΟ της αγγελίας · ημέρα ΑΘΗΝΑΣ (21:30 UTC 09/10 = 10/10) · παράθυρο 7 ημερών', () => {
+    const counts = saveCountsFor([saved(MINE, '2026-10-09T21:30:00Z'), saved(MINE, '2026-09-01T10:00:00Z'), saved('ownp_other', '2026-10-09T10:00:00Z')], MINE, '2026-10-10');
+    expect(counts).toMatchObject({ total: 2, lastWindow: 1 });
+    expect(counts.daily['2026-10-10']).toBe(1);
+  });
+
+  it('ζητά τις αποθηκεύσεις ΜΟΝΟ για ό,τι πέρασε το mayAdminister', async () => {
+    await readOwnerPortfolioStats(db, ME, NOW);
+    expect(mockReadSavesOfListings).toHaveBeenCalledWith(expect.anything(), [MINE]);
+  });
+
+  it('🔴 βλάβη αποθηκεύσεων ⇒ saves: null, προβολές ΚΑΙ επαφές φαίνονται (ποτέ «0 αποθηκεύσεις»)', async () => {
+    mockReadSavesOfListings.mockResolvedValue(null);
+    const summary = (await readOwnerPortfolioStats(db, ME, NOW))?.byProperty[MINE];
+    expect(summary?.saves).toBeNull();
+    expect(summary?.views).not.toBeNull();
+    expect(summary?.contacts).not.toBeNull();
   });
 });

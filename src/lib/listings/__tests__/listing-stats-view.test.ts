@@ -35,6 +35,7 @@ function summary(over: Partial<ListingStatsSummary> = {}): ListingStatsSummary {
     countingSince: '2026-09-24',
     views: { lastWindow: 0, previousWindow: 0, total: 0, daily: {} },
     contacts: { total: 0, lastWindow: 0, daily: {} },
+    saves: { total: 0, lastWindow: 0, daily: {} },
     ...over,
   };
 }
@@ -95,14 +96,14 @@ describe('Γ — οι ημέρες του γραφήματος', () => {
     const s = summary({ countingSince: '2026-10-19', views: views(3, 0, { '2026-10-20': 3 }) });
     const days = listingStatsDays(s, TODAY, 30);
     expect(days).toHaveLength(30);
-    expect(days[0]).toEqual({ day: '2026-09-21', views: null, contacts: 0 });
-    expect(days[28]).toEqual({ day: '2026-10-19', views: 0, contacts: 0 });
-    expect(days[29]).toEqual({ day: '2026-10-20', views: 3, contacts: 0 });
+    expect(days[0]).toEqual({ day: '2026-09-21', views: null, contacts: 0, saves: 0 });
+    expect(days[28]).toEqual({ day: '2026-10-19', views: 0, contacts: 0, saves: 0 });
+    expect(days[29]).toEqual({ day: '2026-10-20', views: 3, contacts: 0, saves: 0 });
   });
 
   it('Γ1 · άγνωστη πηγή ⇒ null σε κάθε ημέρα της, η άλλη πηγή ανέγγιχτη', () => {
     const days = listingStatsDays(summary({ countingSince: '2026-10-01', contacts: null }), TODAY, 30);
-    expect(days[29]).toEqual({ day: TODAY, views: 0, contacts: null });
+    expect(days[29]).toEqual({ day: TODAY, views: 0, contacts: null, saves: 0 });
   });
 });
 
@@ -110,7 +111,17 @@ describe('Γ2 — οι επαφές είναι γνωστές πριν από τ
   it('Γ2 · επαφή πριν το countingSince ⇒ μετριέται στη ζώνη της', () => {
     const s = summary({ countingSince: '2026-10-19', contacts: { total: 1, lastWindow: 0, daily: { '2026-10-01': 1 } } });
     const day = listingStatsDays(s, TODAY, 30).find((d) => d.day === '2026-10-01');
-    expect(day).toEqual({ day: '2026-10-01', views: null, contacts: 1 });
+    expect(day).toEqual({ day: '2026-10-01', views: null, contacts: 1, saves: 0 });
+  });
+});
+
+describe('Γ3 — οι αποθηκεύσεις (§8.74): γνωστές κάθε ημέρα, άγνωστη πηγή ⇒ null', () => {
+  it('Γ3 · αποθήκευση πριν το countingSince ⇒ μετριέται· βλάβη ⇒ null παντού, οι άλλες πηγές ανέγγιχτες', () => {
+    const known = summary({ countingSince: '2026-10-19', saves: { total: 2, lastWindow: 0, daily: { '2026-10-01': 2 } } });
+    expect(listingStatsDays(known, TODAY, 30).find((d) => d.day === '2026-10-01')?.saves).toBe(2);
+    const failed = listingStatsDays(summary({ saves: null }), TODAY, 30);
+    expect(failed.every((d) => d.saves === null)).toBe(true);
+    expect(failed[29]?.contacts).toBe(0);
   });
 });
 

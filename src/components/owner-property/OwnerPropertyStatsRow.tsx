@@ -2,8 +2,8 @@
 
 /**
  * @fileoverview **Η ΓΡΑΜΜΗ ΜΕΤΡΙΚΩΝ ΤΗΣ ΚΑΡΤΑΣ** — «142 προβολές σε 7 ημέρες · +24% · 3 επαφές ·
- * 18 ημέρες στην αγορά · ↓ 8,3%». Πρότυπο idealista «Tus anuncios» / Rightmove «Property Performance».
- * @related ADR-777 §8.72 · lib/listings/listing-stats-view.ts · hooks/owner-property/useOwnerPortfolioStats.ts
+ * 5 αποθηκεύσεις · 18 ημέρες στην αγορά · ↓ 8,3%». Πρότυπο idealista «Tus anuncios» / Rightmove «Property Performance».
+ * @related ADR-777 §8.72 · §8.74 · lib/listings/listing-stats-view.ts · hooks/owner-property/useOwnerPortfolioStats.ts
  * @module components/owner-property/OwnerPropertyStatsRow
  *
  * 🔴 **Άγνωστο ≠ μηδέν, ανά πηγή** (N.12): βλάβη επαφών ⇒ οι προβολές φαίνονται και οι επαφές
@@ -15,7 +15,7 @@
  */
 
 import React, { useState } from 'react';
-import { CalendarDays, Eye, Mail, Minus, Sparkles, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Eye, Heart, Mail, Minus, Sparkles, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
 
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay, formatPercentage } from '@/lib/intl-formatting';
@@ -111,6 +111,9 @@ function ReadyRow({ stats, listedAt, priceReduction }: ReadyRowProps): React.Rea
       )}
       <Metric icon={Mail}>
         {summary.contacts === null ? t(`${S}.row.contactsUnknown`) : t(`${S}.row.contacts`, { count: summary.contacts.total })}
+      </Metric>
+      <Metric icon={Heart}>
+        {summary.saves === null ? t(`${S}.row.savesUnknown`) : t(`${S}.row.saves`, { count: summary.saves.total })}
       </Metric>
       {days !== null && <Metric icon={CalendarDays}>{t(`${S}.row.days`, { count: days })}</Metric>}
       {priceReduction !== null && (

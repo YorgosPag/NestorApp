@@ -17,6 +17,8 @@
  *     ↑ extends
  *   ListingStatsIdGenerators     (ADR-777 §8.72 — προβολές αγγελίας)
  *     ↑ extends
+ *   SavedListingIdGenerators     (ADR-777 §8.74 — αποθήκευση αγγελίας)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (this file)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engine: retry loop, cache, stats)
@@ -47,9 +49,9 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { ListingStatsIdGenerators } from './enterprise-id-listing-stats-generators';
+import { SavedListingIdGenerators } from './enterprise-id-saved-listing-generators';
 
-export abstract class CompositeKeyIdGenerators extends ListingStatsIdGenerators {
+export abstract class CompositeKeyIdGenerators extends SavedListingIdGenerators {
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
   // (N.7.1 — καμία κατάσταση εδώ: ο βρόχος επανάληψης, η μνήμη και τα στατιστικά

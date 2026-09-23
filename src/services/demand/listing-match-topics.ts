@@ -30,6 +30,11 @@ export interface ListingTopic {
   readonly reasons: AnnouncementReasons;
   /** **Ως τι** ταιριάζει — η ένωση ανά είδος από όλους τους λόγους ({@link mergeMetOn}). */
   readonly metOn: readonly DemandSeekMet[];
+  /**
+   * Πότε ο ίδιος άνθρωπος **κράτησε** αυτή την αγγελία (ADR-777 §8.74) — `null` αν δεν την κράτησε.
+   * Η αποθήκευση είναι **γνώση** της τιμής, όπως μια ανακοίνωση ταιριάσματος (`saved-listing-topics.ts`).
+   */
+  readonly savedAtMs: number | null;
 }
 
 /** Όλα τα θέματα **ενός** παραλήπτη, με το πλήθος ζευγών (ζήτηση, αγγελία) που τα γέννησαν. */
@@ -81,7 +86,7 @@ export function mergeMetOn(sorted: readonly TopicReason[]): readonly DemandSeekM
 
 function topicOf(draft: TopicDraft): ListingTopic {
   const sorted = sortedByDemand(draft.reasons);
-  return { listing: draft.listing, reasons: reasonsOf(sorted), metOn: mergeMetOn(sorted) };
+  return { listing: draft.listing, reasons: reasonsOf(sorted), metOn: mergeMetOn(sorted), savedAtMs: null };
 }
 
 /**

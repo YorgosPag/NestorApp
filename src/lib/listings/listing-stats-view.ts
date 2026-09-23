@@ -165,6 +165,8 @@ export interface ListingStatsDay {
   readonly day: string;
   readonly views: number | null;
   readonly contacts: number | null;
+  /** Αποθηκεύσεις που ισχύουν σήμερα, ανά ημέρα αποθήκευσης (§8.74) — γνωστές κάθε ημέρα, όπως οι επαφές. */
+  readonly saves: number | null;
 }
 
 function countOn(daily: ListingViewDaily | undefined, day: string, counted: boolean): number | null {
@@ -179,6 +181,7 @@ function countOn(daily: ListingViewDaily | undefined, day: string, counted: bool
  * που υπήρχε πριν από τη μέτρηση προβολών, και ο διακομιστής τις στέλνει για **όλη** τη σειρά —
  * άρα είναι γνωστές κάθε ημέρα. Αν σβήνονταν κι αυτές, ο δείκτης «Επαφές: 1» πάνω από το γράφημα
  * θα διαφωνούσε με μια άδεια ζώνη από κάτω (μετρημένο σε ζωντανή σελίδα, §8.72.8).
+ * Ίδιο και οι αποθηκεύσεις (§8.74): τα έγγραφά τους είναι η πηγή, για κάθε ημέρα.
  */
 export function listingStatsDays(
   summary: ListingStatsSummary,
@@ -190,6 +193,7 @@ export function listingStatsDays(
     day,
     views: countOn(summary.views?.daily, day, day >= summary.countingSince),
     contacts: countOn(summary.contacts?.daily, day, true),
+    saves: countOn(summary.saves?.daily, day, true),
   }));
 }
 

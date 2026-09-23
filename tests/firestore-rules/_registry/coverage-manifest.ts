@@ -396,6 +396,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ❤️ ADR-777 §8.74 — Η ΑΠΟΘΗΚΕΥΣΗ ΑΓΓΕΛΙΑΣ. Δύο πειρασμοί: ο αποθηκεύων «διαβάζει τη δική του
+    // λίστα» (είναι προβολή του διακομιστή) κι ο κάτοχος «βλέπει ποιοι κράτησαν την αγγελία του».
+    collection: 'saved_listings',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/saved-listings.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-844 — Η ΠΡΟΣΚΛΗΣΗ. **Τρίτο `deny_all` της οικογένειας, ΤΡΙΤΟΣ λόγος** — και
     // αυτός δεν είναι ούτε ιδιωτικότητα (`mreq`) ούτε αυθεντία γραφέα (`fcon`).
     //

@@ -776,7 +776,8 @@
   "demandPriceDrop": {
     "notificationTitle": "Price reduced on a listing matching your demand: “{title}”",
     "notificationTitleMany": "Price reduced on a listing matching {count} of your demands: “{title}”",
-    "intoBudgetTitle": "Now within your budget: “{title}”"
+    "intoBudgetTitle": "Now within your budget: “{title}”",
+    "savedTitle": "Price reduced on a listing you saved: “{title}”"
   },
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",

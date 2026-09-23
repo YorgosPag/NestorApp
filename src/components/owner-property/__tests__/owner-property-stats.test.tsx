@@ -59,6 +59,7 @@ function summary(over: Partial<ListingStatsSummary> = {}): ListingStatsSummary {
     countingSince: '2026-09-24',
     views: { lastWindow: 70, previousWindow: 50, total: 120, daily: { '2026-10-19': 40, '2026-10-20': 30 } },
     contacts: { total: 3, lastWindow: 1, daily: { '2026-10-20': 1 } },
+    saves: { total: 5, lastWindow: 2, daily: { '2026-09-01': 3, '2026-10-20': 2 } },
     ...over,
   };
 }
@@ -109,6 +110,17 @@ describe('Κ — η γραμμή της κάρτας', () => {
     expect(screen.getByText(/^Προβολές: μετράμε από/)).toBeInTheDocument();
     expect(screen.queryByText(/προβολές σε/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Νέα μέτρηση/)).not.toBeInTheDocument();
+  });
+
+  it('Κ5 · αποθηκεύσεις (§8.74): πλήθος σε λέξεις · βλάβη ⇒ «μη διαθέσιμες», ποτέ «0»', () => {
+    const { unmount } = renderWithI18n(<OwnerPropertyStatsRow stats={ready(summary())} listedAt={LISTED} priceReduction={null} />);
+    expect(screen.getByText('5 αποθηκεύσεις')).toBeInTheDocument();
+    unmount();
+    renderWithI18n(<OwnerPropertyStatsRow stats={ready(summary({ saves: null }))} listedAt={LISTED} priceReduction={null} />);
+    expect(screen.getByText('Αποθηκεύσεις: μη διαθέσιμες')).toBeInTheDocument();
+    expect(screen.queryByText(/0 αποθηκεύσεις/)).not.toBeInTheDocument();
+    // Οι άλλες πηγές φαίνονται — άγνωστο ≠ μηδέν ΑΝΑ ΠΗΓΗ.
+    expect(screen.getByText('3 επαφές')).toBeInTheDocument();
   });
 
   it('Κ3 · absent ⇒ τίποτα', () => {
@@ -172,6 +184,14 @@ describe('Π — ο πίνακας της λεπτομέρειας', () => {
     fireEvent.click(pressed);
     expect(pressed).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByTestId('stats-chart')).toHaveTextContent('30:');
+  });
+
+  it('Π6 · 5ος δείκτης (§8.74): σύνολο που ισχύει σήμερα + «νέες» στο ΕΥΡΟΣ του γραφήματος', () => {
+    renderWithI18n(<OwnerPropertyStatsPanel stats={ready(summary())} listedAt={LISTED} priceHistory={[]} />);
+    const term = screen.getByText('Αποθηκεύσεις', { selector: 'dt' });
+    const kpi = term.closest('dl') as HTMLElement;
+    expect(within(kpi).getByText('5')).toBeInTheDocument();
+    expect(within(kpi).getByText('2 νέες τις τελευταίες 30 ημέρες')).toBeInTheDocument();
   });
 
   it('Π · βλάβη προβολών ⇒ κανένα γράφημα, μήνυμα «δεν φορτώθηκαν»', () => {

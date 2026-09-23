@@ -45,17 +45,28 @@ function BandPending({ size, captioned = false }: { readonly size: ChartCardFigu
   );
 }
 
-/** Οι δύο ζώνες του `OwnerPropertyStatsChart` — `loading` του `next/dynamic` και μέρος του σκελετού του πίνακα. */
+/** Οι τρεις ζώνες του `OwnerPropertyStatsChart` — `loading` του `next/dynamic` και μέρος του σκελετού του πίνακα. */
 export function StatsChartPending(): React.ReactElement {
   return (
     <span aria-hidden className="flex flex-col gap-6">
       <BandPending size="sm" />
+      <BandPending size="strip" />
       <BandPending size="strip" captioned />
     </span>
   );
 }
 
-/** Το περιεχόμενο του πίνακα — κεφαλίδα · «Μετράμε από» · 4 δείκτες · γράφημα · εξέλιξη τιμής. */
+/**
+ * **Το πλέγμα των δεικτών — ΜΙΑ σταθερά για πίνακα ΚΑΙ σκελετό.** Όταν ήταν δύο αντίγραφα, ένας
+ * πέμπτος δείκτης (§8.74) θα άλλαζε το ένα και όχι το άλλο ⇒ ο σκελετός θα είχε άλλο ύψος από τον
+ * πίνακα, δηλαδή ακριβώς το CLS που μετρήθηκε και διορθώθηκε στο §8.72.8.
+ */
+export const STATS_KPI_GRID = 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5';
+
+/** Πόσοι δείκτες — προβολές · επαφές · επαφές/1.000 · αποθηκεύσεις · ημέρες στην αγορά. */
+export const STATS_KPI_COUNT = 5;
+
+/** Το περιεχόμενο του πίνακα — κεφαλίδα · «Μετράμε από» · 5 δείκτες · γράφημα · εξέλιξη τιμής. */
 export function StatsPanelSkeleton(): React.ReactElement {
   return (
     <>
@@ -64,8 +75,8 @@ export function StatsPanelSkeleton(): React.ReactElement {
         <span className={cn(BLOCK, 'h-9 w-44')} />
       </span>
       <span aria-hidden className={cn(BLOCK, 'h-10')} />
-      <span aria-hidden className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((index) => (
+      <span aria-hidden className={STATS_KPI_GRID}>
+        {Array.from({ length: STATS_KPI_COUNT }, (_, index) => (
           <span key={index} className={cn(BLOCK, 'h-40 rounded-md')} />
         ))}
       </span>

@@ -1112,5 +1112,13 @@
     "viewer": "Viewer",
     "internal_user": "Member",
     "external_user": "Guest"
+  },
+  "savedListing": {
+    "label": "Save listing",
+    "notice": {
+      "failed": "The change was not saved — please try again.",
+      "own-listing": "This is your own listing — it cannot be saved to your favourites.",
+      "not-in-market": "This listing is no longer on the market."
+    }
   }
 }

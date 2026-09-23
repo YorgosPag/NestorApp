@@ -215,6 +215,8 @@ export const ENTERPRISE_ID_PREFIXES = {
                               // `lsta`: εκείνο είναι η ψυχρή σύνοψη που γράφει ΜΟΝΟ το cron.
   LISTING_STATS: 'lsta',      // ADR-777 §8.72: Η ΣΥΝΟΨΗ ΠΡΟΒΟΛΩΝ ενός ακινήτου — μία ανά ακίνητο, όχι ανά
                               // αγγελία: η απόσυρση σβήνει την προβολή, όχι την ιστορία (μάθημα §8.61).
+  SAVED_LISTING: 'svls',      // ADR-777 §8.74: «ΤΗΝ ΚΡΑΤΗΣΑ» — μία ανά (άνθρωπο, αγγελία), ντετερμινιστική ⇒
+                              // το δεύτερο κλικ βρίσκει το ίδιο έγγραφο. Η αφαίρεση το ΣΒΗΝΕΙ (ελαχιστοποίηση).
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

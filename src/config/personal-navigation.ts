@@ -28,6 +28,7 @@ import {
   Building2,
   FolderArchive,
   Handshake,
+  Heart,
   House,
   MessagesSquare,
   Plus,
@@ -40,6 +41,7 @@ import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-ro
 import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
+import { MY_SAVED_LISTINGS_ROUTE } from '@/lib/listings/saved-listing-routes';
 import { MY_MESSAGES_ROUTE } from '@/lib/network-messaging/network-messaging-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
@@ -95,6 +97,8 @@ export const PERSONAL_NAVIGATION: readonly PersonalNavigationGroup[] = [
     entries: [
       { id: 'myOffers', navLabelKey: 'personal.items.myOffers', icon: House, href: MY_OFFERS_ROUTE, surfaces: SIDEBAR_ONLY },
       { id: 'myDemands', navLabelKey: 'personal.items.myDemands', icon: SearchCheck, href: MY_DEMANDS_ROUTE, surfaces: SIDEBAR_ONLY },
+      // ADR-777 §8.74 — «ό,τι κράτησα»: ιδιωτικό (`saverUserId`), άρα στον ιδιωτικό χώρο, δίπλα στις ζητήσεις.
+      { id: 'savedListings', navLabelKey: 'personal.items.savedListings', icon: Heart, href: MY_SAVED_LISTINGS_ROUTE, surfaces: SIDEBAR_ONLY },
     ],
   },
   {

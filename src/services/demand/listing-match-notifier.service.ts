@@ -69,9 +69,11 @@ import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { readLivePublicListings } from '@/services/listings/live-public-listings.reader';
 import type { PublicListing } from '@/types/public-listing';
 import type { PropertyDemand } from '@/types/property-demand';
+import type { SavedListing } from '@/types/saved-listing';
+import { readSavesOfListings } from '@/services/listings/saved-listing.service';
 
 import { readRecipientLedger, type RecipientLedger, type TopicKnowledge } from './demand-match-ledger';
-import { matchAnnouncementCopy } from './listing-announcement-copy';
+import { freshReductionOf, matchAnnouncementCopy } from './listing-announcement-copy';
 import {
   addPriceDropOutcome,
   announcePriceDrop,
@@ -86,6 +88,7 @@ import {
   type ListingTopic,
   type MatchTally,
 } from './listing-match-topics';
+import { isSavedOnly, knownSince, mergeSavedTopics } from './saved-listing-topics';
 
 const logger = createModuleLogger('demand/listing-match-notifier');
 
@@ -242,8 +245,12 @@ async function announceForRecipient(pass: RecipientPass): Promise<MatchTally> {
   let capped = false;
 
   for (const topic of pass.topics) {
-    const { match } = knowledgeOf(pass, topic);
-    if (match.kind === 'announced') {
+    // 🔑 ADR-777 §8.74 — η αποθήκευση είναι ΓΝΩΣΗ: ό,τι κράτησε ο άνθρωπος, το ξέρει από τότε.
+    const match = knownSince(knowledgeOf(pass, topic).match, topic.savedAtMs);
+    if (isSavedOnly(topic)) {
+      // Μόνο μείωση — ποτέ email ταιριάσματος, και εκτός της λογιστικής ταιριασμάτων.
+      tally = await withPriceDrop(tally, pass, topic, match);
+    } else if (match.kind === 'announced') {
       tally = countMatch(tally, 'already-known');
       tally = await withPriceDrop(tally, pass, topic, match);
     } else if (matchesSilenced) {
@@ -282,8 +289,14 @@ async function tallyMatches(
     .map((demand) => ({ demand, matched: matchedListings(demand, listings, knowledge, todayDate) }))
     .filter((entry) => entry.matched.length > 0);
 
+  const recipients = mergeSavedTopics(
+    groupTopicsByRecipient(matches),
+    await readSavesOfReduced(db, listings, nowMs),
+    listings,
+  );
+
   let tally = EMPTY_TALLY;
-  for (const { recipientId, topics, pairs } of groupTopicsByRecipient(matches)) {
+  for (const { recipientId, topics, pairs } of recipients) {
     const ledger = await readRecipientLedger(
       db,
       recipientId,
@@ -298,6 +311,22 @@ async function tallyMatches(
   }
 
   return tally;
+}
+
+/**
+ * **Όσοι κράτησαν αγγελία με φρέσκια μείωση** (ADR-777 §8.74) — μόνο αυτές μπορούν να γεννήσουν είδηση,
+ * άρα μόνο αυτές ρωτιούνται. Βλάβη ⇒ καμία (το «δεν ξέρουμε» πάει προς τη σιωπή, ποτέ προς διπλό email).
+ */
+async function readSavesOfReduced(
+  db: AdminFirestore,
+  listings: readonly PublicListing[],
+  nowMs: number,
+): Promise<readonly SavedListing[]> {
+  const reducedIds = listings.filter((listing) => freshReductionOf(listing, nowMs) !== null).map((listing) => listing.id);
+  if (reducedIds.length === 0) return [];
+  const saves = await readSavesOfListings(db, reducedIds);
+  if (saves === null) logger.warn('Οι αποθηκεύσεις δεν διαβάστηκαν — οι μειώσεις τους ΔΕΝ ανακοινώνονται σε αυτό το πέρασμα');
+  return saves ?? [];
 }
 
 /** Άγνωστη κατάσταση ⇒ σφάλμα **με όνομα**, ποτέ σιωπηλή απώλεια κάδου. */

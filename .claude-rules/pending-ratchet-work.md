@@ -2,6 +2,14 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **24/09 — ΤΟ FAVORITE API ΤΟΥ `BaseCard` ΔΕΝ ΤΟ ΚΑΛΕΙ ΚΑΝΕΙΣ** *(N.0.2 · ADR-777 §8.74.6 #2)*
+
+  `components/core/BaseCard/BaseCard.tsx` έχει **δύο** σχήματα props (`isFavorite`/`onFavoriteToggle` και
+  `onFavoriteChange`/`showFavorite`) και **τρία** σημεία απόδοσης καρδιάς (επικάλυψη εικόνας · εκτεταμένη κεφαλίδα ·
+  legacy κεφαλίδα)· **κανένας** καταναλωτής (contacts/tasks/users/buildings/projects/parking/storages) δεν περνά
+  `showFavorite`. Η αποθήκευση αγγελίας ζει πλέον στο `SaveListingToggle` (δημόσια αγγελία). Θεραπεία: grep όλων των
+  καταναλωτών, αφαίρεση των props + των τριών κλάδων + των κλειδιών τους. Η νεκρή καρδιά του `PropertyCard` σβήστηκε ήδη (§8.74).
+
 - 🟡 **23/09 — ΤΟ URL `tile.openstreetmap.org` ΓΡΑΜΜΕΝΟ ΣΕ ΤΕΣΣΕΡΑ ΣΗΜΕΙΑ** *(N.0.2 · ADR-777 §8.70.7)*
 
   `components/projects/ika/map-shared/map-styles.ts` (`OSM_MAP_STYLE`, 5 καταναλωτές) · `geo-canvas/config/index.ts`
@@ -3822,6 +3830,24 @@
 ---
 
 ## Pending tasks (priority order)
+
+### ⛔ Μηδενική ανοχή — ΕΝΑ άγκιστρο στη μηχανή, όχι ένα αντίγραφο ανά πύλη (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-23)
+
+**Τι**: το `scripts/lib/ratchet-baseline.js` απέκτησε `descriptor.refusals(measured)` (ADR-875 §14.4): οι ⛔
+μπλοκάρουν **και στη σύγκριση**, όχι μόνο στη σπορά. Πριν, το CHECK 3.51 **δεν** μπλόκαρε ⛔ στη σύγκριση.
+**Πού μένει διπλοτυπία**: `scripts/check-font-assets.js` (3.69) + `scripts/check-font-promise.js` (3.67) έχουν
+**η καθεμία** δικό της `enforceZeroTolerance`, που τρέχει το `measure()` **δεύτερη φορά** πριν από τη μηχανή.
+**Fix**: μεταφορά και των δύο στο `refusals` + ξαναγραφή των αγκυρών **Ζ1-Ζ5** (`font-assets.test.js`,
+`font-promise.test.js`) ώστε να οδηγούν το πραγματικό `runSetRatchetCli`, όπως η Φ8 του
+`i18n-ssr-guard-contract.test.js`. Μετά: grep για άλλες πύλες `runSetRatchetCli` με ⛔ εκτός συνόλων.
+
+### 🔐 Φρουροί ΠΕΛΑΤΗ στέλνουν σε σκέτο `/login` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-23)
+
+**Τι**: ο φρουρός του **διακομιστή** δίνει πλέον σύνδεση με επιστροφή (`loginHrefForRequest()`, ADR-875 §14.5).
+Οι φρουροί **πελάτη** όχι: `src/auth/components/ProtectedRoute.tsx` (`redirectTo = '/login'`),
+`o/[workspace]/dashboard/page.tsx`, `pending-approval/page.tsx`, `onboarding/organization/page.tsx`
+(`router.replace(login)`). **Fix**: ΕΝΑ hook πελάτη πάνω στο `loginHref(usePathname() + search)` — **όχι**
+τέσσερα inline. ADR-848 §9 #3.
 
 ### 🔤 CHECK 3.28 — η λέξη «new» είναι ψευδής (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-22)
 

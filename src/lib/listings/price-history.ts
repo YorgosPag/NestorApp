@@ -63,7 +63,11 @@ const isoInstant = z
   .min(1)
   .refine((value) => Number.isFinite(Date.parse(value)));
 
-const marketPriceShape = z.object({
+/**
+ * **Το σχήμα μιας τιμής αγοράς** (ρόλος + ποσό) — εξάγεται ώστε και η τιμή τη στιγμή της
+ * αποθήκευσης (ADR-777 §8.74) να κρίνεται από τον **ίδιο** κριτή μορφής, όχι από αντίγραφο.
+ */
+export const marketPriceShape = z.object({
   role: z.enum(PRICE_ROLES),
   amount: z.number().finite().positive(),
 });

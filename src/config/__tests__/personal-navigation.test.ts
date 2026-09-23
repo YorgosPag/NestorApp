@@ -70,9 +70,10 @@ describe('Ε — μία πηγή, δύο επιφάνειες', () => {
     expect(ids('comp_1', 'userMenu')).toEqual(['myMessages', 'myContacts', 'myDossiers', 'account']);
   });
 
-  it('Ε2: η στήλη έχει τους 7 κύριους προορισμούς + λογαριασμό (+ «Δημιουργώ χώρο» για ιδιώτη)', () => {
+  it('Ε2: η στήλη έχει τους 8 κύριους προορισμούς + λογαριασμό (+ «Δημιουργώ χώρο» για ιδιώτη)', () => {
+    // ADR-777 §8.74 — «Αποθηκευμένες αγγελίες», δίπλα στις ζητήσεις (ιδιωτικό, `saverUserId`).
     expect(ids(null, 'sidebar')).toEqual([
-      'myOffers', 'myDemands', 'myMessages', 'myContacts', 'myDossiers',
+      'myOffers', 'myDemands', 'savedListings', 'myMessages', 'myContacts', 'myDossiers',
       'searchListings', 'professionals', 'account', 'createWorkspace',
     ]);
   });

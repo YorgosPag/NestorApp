@@ -1047,7 +1047,9 @@
         "viewsUnknown": "Views: unavailable",
         "contacts": "{count, plural, one {# contact} other {# contacts}}",
         "contactsUnknown": "Contacts: unavailable",
-        "days": "{count, plural, one {# day} other {# days}} on the market"
+        "days": "{count, plural, one {# day} other {# days}} on the market",
+        "saves": "{count, plural, one {# save} other {# saves}}",
+        "savesUnknown": "Saves: unavailable"
       },
       "trend": {
         "up": "+{percent} vs the previous week",
@@ -1067,7 +1069,9 @@
         "viewsNotYet": "Counting from {date}",
         "rateDetail": "{contacts, plural, one {# contact} other {# contacts}} from {views} views",
         "rateInsufficient": "Not enough views yet ({views} of the {min} the ratio needs)",
-        "daysUnknown": "The listing date has not been recorded"
+        "daysUnknown": "The listing date has not been recorded",
+        "saves": "Saves",
+        "savesNew": "{count, plural, =0 {None new} one {# new} other {# new}} in the last {days} days"
       },
       "range": {
         "30": "30 days",
@@ -1080,9 +1084,11 @@
         "viewsSeries": "Views",
         "contactsTitle": "Contacts per day",
         "contactsSeries": "Contacts",
-        "caption": "The shaded area in views is days we were not counting them yet. Vertical lines mark changes in price or availability.",
+        "caption": "The shaded area in views is days we were not counting them yet. Saves are the ones still active today, on the day they were made. Vertical lines mark changes in price or availability.",
         "empty": "No tracked days in this range yet.",
-        "notCounted": "Not tracked"
+        "notCounted": "Not tracked",
+        "savesTitle": "Saves per day",
+        "savesSeries": "Saves"
       },
       "price": {
         "heading": "Price history",
@@ -2241,5 +2247,20 @@
     "history": {
       "lead": "Every change to the property file: what changed, when and by whom. Only you can see it."
     }
+  },
+  "savedListings": {
+    "title": "Saved listings",
+    "intro": "The listings you kept, with their current price. When the price of one of them drops, we will let you know.",
+    "loading": "Loading saved listings…",
+    "unavailable": "Your saved listings could not be loaded. Please try again shortly.",
+    "empty": "You have not saved any listing yet. Tap the heart on a listing to keep it here.",
+    "search": "Search properties",
+    "savedOn": "Saved {date}",
+    "reduced": "↓ {percent} since you saved it",
+    "raised": "↑ {percent} since you saved it",
+    "withdrawn": "No longer on the market",
+    "remove": "Remove",
+    "truncated": "Showing the {count} most recent saves.",
+    "listLabel": "Saved listings"
   }
 }

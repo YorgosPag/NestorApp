@@ -101,6 +101,7 @@ function mandateRequestHref(alias: string): string {
 // ένα `page.tsx` που είναι server component θα το εισήγαγε μόνο στον διακομιστή.
 import routeSlice from '@/i18n/generated/routes/pro__alias.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
+import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 
 registerRouteSlice(routeSlice);
 
@@ -237,6 +238,7 @@ function AgencyListings({
         // ⚠️ Οι αγγελίες φτάνουν **ήδη ταξινομημένες** από το hook
         //    (`orderShowcaseListings`) — καμία `sort()` σε αυτό το αρχείο, ίδιος
         //    κανόνας με τον αδελφό κατάλογο: η σειρά είναι **απόφαση με διεύθυνση**.
+        <SavedListingsProvider>
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {/* Η πρώτη κάρτα είναι το στοιχείο LCP **και εδώ** — δες ADR-841 §7 Α2.4. */}
           {listings.map((listing, index) => (
@@ -248,6 +250,7 @@ function AgencyListings({
             />
           ))}
         </ul>
+        </SavedListingsProvider>
       )}
     </section>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **ΠΡΟΒΟΛΕΣ ΚΑΙ ΕΠΑΦΕΣ ΑΝΑ ΗΜΕΡΑ — ΔΥΟ ΖΩΝΕΣ, ΕΝΑΣ ΧΡΟΝΟΣ** (ADR-777 §8.72 Φάση 2).
+ * @fileoverview **ΠΡΟΒΟΛΕΣ · ΕΠΑΦΕΣ · ΑΠΟΘΗΚΕΥΣΕΙΣ ΑΝΑ ΗΜΕΡΑ — ΤΡΕΙΣ ΖΩΝΕΣ, ΕΝΑΣ ΧΡΟΝΟΣ** (ADR-777 §8.72 Φάση 2 · §8.74).
  * @related components/ui/chart-card (ADR-710 — το ΕΝΑ κέλυφος γραφήματος) · lib/listings/listing-stats-view.ts
  * @module components/owner-property/OwnerPropertyStatsChart
  *
@@ -20,7 +20,7 @@
  *
  * ⚠️ **Πριν από το `countingSince` δεν υπάρχει μηδέν προβολών**: οι ημέρες έχουν `null` (το recharts
  * δεν σχεδιάζει ράβδο) και η περιοχή σκιάζεται με ετικέτα «Χωρίς μέτρηση» — **μόνο** στη ζώνη
- * προβολών· οι επαφές είναι γνωστές κάθε ημέρα. Ο πίνακας δεδομένων του κελύφους λέει το ίδιο με παύλα.
+ * προβολών· επαφές και αποθηκεύσεις είναι γνωστές κάθε ημέρα. Ο πίνακας δεδομένων του κελύφους λέει το ίδιο με παύλα.
  *
  * ⚡ Default export: φορτώνεται **μόνο** με `next/dynamic` από τον πίνακα — το recharts δεν μπαίνει
  * στο αρχικό bundle της σελίδας.
@@ -58,7 +58,7 @@ const NOT_COUNTED_OPACITY = 0.14;
 const formatCount = (value: number): string => formatNumber(value, { maximumFractionDigits: 0 });
 const formatDay = (value: unknown): string => formatCalendarDay(String(value));
 
-type SeriesKey = 'views' | 'contacts';
+type SeriesKey = 'views' | 'contacts' | 'saves';
 
 /**
  * Η τελευταία ημέρα του εύρους **χωρίς μέτρηση προβολών** — ή `null` αν μετράμε όλο το εύρος.
@@ -135,14 +135,15 @@ export interface OwnerPropertyStatsChartProps {
 
 export default function OwnerPropertyStatsChart({ days, events }: OwnerPropertyStatsChartProps): React.ReactElement {
   const { t } = useTranslation(['property-market']);
-  // Ένα `syncId` ανά ζεύγος: δύο πίνακες στην ίδια σελίδα δεν μοιράζονται ποτέ σταυρόνημα.
+  // Ένα `syncId` ανά πίνακα: δύο πίνακες στην ίδια σελίδα δεν μοιράζονται ποτέ σταυρόνημα.
   const syncId = `listing-stats-${useId().replace(/:/g, '')}`;
 
   return (
     <section className="flex flex-col gap-6">
       <StatsBand seriesKey="views" days={days} events={events} syncId={syncId} size="sm" />
+      <StatsBand seriesKey="contacts" days={days} events={events} syncId={syncId} size="strip" />
       <StatsBand
-        seriesKey="contacts"
+        seriesKey="saves"
         days={days}
         events={events}
         syncId={syncId}

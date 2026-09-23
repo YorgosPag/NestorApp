@@ -343,6 +343,15 @@ export const COLLECTIONS = {
   LISTING_VIEW_SHARDS: process.env.NEXT_PUBLIC_LISTING_VIEW_SHARDS_COLLECTION || 'listing_view_shards',
   LISTING_STATS: process.env.NEXT_PUBLIC_LISTING_STATS_COLLECTION || 'listing_stats',
   /**
+   * ADR-777 §8.74 — **«ΤΗΝ ΚΡΑΤΗΣΑ»** (`svls_*`): μία ανά (άνθρωπο, αγγελία), ντετερμινιστική.
+   *
+   * ⛔ **ΚΛΕΙΣΤΗ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** (`read/write: false`): γράφει **ένας** γραφέας
+   * (`saved-listing.service.ts`), που ρωτά «στην αγορά;» και «δική σου;» — ερωτήσεις που
+   * κανόνας δεν μπορεί να κάνει. Ο κάτοχος της αγγελίας βλέπει μόνο **πλήθος**, ποτέ ποιοι.
+   * Η αφαίρεση **σβήνει** το έγγραφο (ελαχιστοποίηση δεδομένων).
+   */
+  SAVED_LISTINGS: process.env.NEXT_PUBLIC_SAVED_LISTINGS_COLLECTION || 'saved_listings',
+  /**
    * ADR-867 §4.3 — **Η ΟΜΑΔΑ ΤΗΣ ΠΡΑΞΗΣ** (`nteam_*`): ποιος του γραφείου απαντά σε μια πράξη
    * που **δεν έχει έργο** (π.χ. εντολή ιδιοκτήτη ↔ μεσιτικού) — ADR-834 §5 Β (ε) ①.
    *

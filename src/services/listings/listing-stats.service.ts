@@ -33,12 +33,13 @@ import {
   LISTING_STATS_SERIES_DAYS,
   LISTING_STATS_WINDOW_DAYS,
   countingSinceOf,
+  dailyEventCounts,
   marketDayOf,
   mergeDaily,
   shiftMarketDay,
   trimDaily,
   windowSum,
-  type ListingContactCounts,
+  type ListingEventCounts,
   type ListingStatsSummary,
   type ListingViewDaily,
   type OwnerPortfolioStats,
@@ -48,6 +49,7 @@ import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-f
 import { createModuleLogger } from '@/lib/telemetry';
 import { collectAddressedContacts } from '@/services/contact/first-contact-projection';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { readSavesOfListings } from '@/services/listings/saved-listing.service';
 import {
   readStoredListingStats,
   readStoredListingViewShard,
@@ -56,6 +58,7 @@ import {
   type StoredListingViewShard,
 } from '@/services/listings/listing-stats-document';
 import type { FirstContact } from '@/types/first-contact';
+import type { SavedListing } from '@/types/saved-listing';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('listing-stats.service');
@@ -119,16 +122,16 @@ async function readViewSources(adminDb: AdminFirestore, ids: readonly string[]):
 }
 
 /** Οι επαφές **ενός** ακινήτου, από τις ήδη διαβασμένες του χαρτοφυλακίου. */
-export function contactCountsFor(contacts: readonly FirstContact[], propertyId: string, today: string): ListingContactCounts {
-  const windowStart = shiftMarketDay(today, -(LISTING_STATS_WINDOW_DAYS - 1));
-  const daily: Record<string, number> = {};
-  for (const contact of contacts) {
-    if (contact.target.kind !== 'listing' || contact.target.listingId !== propertyId) continue;
-    const day = marketDayOf(Date.parse(contact.createdAt));
-    daily[day] = (daily[day] ?? 0) + 1;
-  }
-  const total = Object.values(daily).reduce((sum, n) => sum + n, 0);
-  return { total, lastWindow: windowSum(daily, windowStart, today), daily: trimDaily(daily, shiftMarketDay(today, -LISTING_STATS_SERIES_DAYS)) };
+export function contactCountsFor(contacts: readonly FirstContact[], propertyId: string, today: string): ListingEventCounts {
+  const instants = contacts.flatMap((contact) =>
+    contact.target.kind === 'listing' && contact.target.listingId === propertyId ? [contact.createdAt] : [],
+  );
+  return dailyEventCounts(instants, today);
+}
+
+/** Οι αποθηκεύσεις **ενός** ακινήτου (§8.74) — ίδιος υπολογισμός με τις επαφές, άλλη πηγή. */
+export function saveCountsFor(saves: readonly SavedListing[], propertyId: string, today: string): ListingEventCounts {
+  return dailyEventCounts(saves.flatMap((saved) => (saved.listingId === propertyId ? [saved.savedAt] : [])), today);
 }
 
 function viewsFor(sources: ViewSources, propertyId: string, today: string): NonNullable<ListingStatsSummary['views']> {
@@ -162,12 +165,17 @@ export async function readOwnerPortfolioStats(
   }
   const today = marketDayOf(nowMs);
   const ids = properties.map((property) => property.id);
-  const [views, contacts] = await Promise.all([readViewSources(adminDb, ids), collectAddressedContacts(adminDb, actor)]);
+  const [views, contacts, saves] = await Promise.all([
+    readViewSources(adminDb, ids),
+    collectAddressedContacts(adminDb, actor),
+    readSavesOfListings(adminDb, ids),
+  ]);
   const byProperty = Object.fromEntries(properties.map((property): [string, ListingStatsSummary] => [property.id, {
     propertyId: property.id,
     countingSince: countingSinceOf(property.listedAt),
     views: views === null ? null : viewsFor(views, property.id, today),
     contacts: contacts === null ? null : contactCountsFor(contacts, property.id, today),
+    saves: saves === null ? null : saveCountsFor(saves, property.id, today),
   }]));
   return { today, byProperty };
 }

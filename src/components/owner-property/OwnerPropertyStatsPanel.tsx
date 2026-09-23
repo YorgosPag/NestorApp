@@ -6,7 +6,7 @@
  *   OwnerPropertyStatsRow.tsx (η συμπαγής εκδοχή της κάρτας)
  * @module components/owner-property/OwnerPropertyStatsPanel
  *
- * Τέσσερις δείκτες (προβολές · επαφές · επαφές / 1.000 προβολές · ημέρες στην αγορά), γράφημα
+ * Πέντε δείκτες (προβολές · επαφές · επαφές / 1.000 προβολές · αποθηκεύσεις · ημέρες στην αγορά), γράφημα
  * 30 / 90 ημερών και εξέλιξη τιμής. Πρότυπο: idealista «rendimiento del anuncio» + Rightmove
  * «Property Performance Report».
  *
@@ -38,7 +38,7 @@ import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolio
 import type { ListedAt } from '@/types/public-listing';
 
 import { OwnerPropertyPriceSteps } from './OwnerPropertyPriceSteps';
-import { StatsChartPending, StatsPanelPending, StatsPanelSkeleton } from './owner-property-stats-pending';
+import { STATS_KPI_GRID, StatsChartPending, StatsPanelPending, StatsPanelSkeleton } from './owner-property-stats-pending';
 
 const S = 'property-market:offer.stats';
 
@@ -122,7 +122,7 @@ function StatsKpis({ stats, range, listedAt }: { readonly stats: ReadyStats; rea
   const viewsShown = viewsKpiView(viewsIn(summary, from, today), range, t);
 
   return (
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section className={STATS_KPI_GRID}>
       <Kpi label={t(`${S}.kpi.views`)} value={viewsShown.value} detail={viewsShown.detail} />
       <Kpi
         label={t(`${S}.kpi.contacts`)}
@@ -130,6 +130,11 @@ function StatsKpis({ stats, range, listedAt }: { readonly stats: ReadyStats; rea
         detail={summary.contacts === null ? unknown : inRange}
       />
       <Kpi label={t(`${S}.kpi.rate`)} value={rateShown.value} detail={rateShown.detail} />
+      <Kpi
+        label={t(`${S}.kpi.saves`)}
+        value={summary.saves === null ? '—' : count(summary.saves.total)}
+        detail={summary.saves === null ? unknown : t(`${S}.kpi.savesNew`, { count: windowSum(summary.saves.daily, from, today), days: range })}
+      />
       <Kpi
         label={t(`${S}.kpi.days`)}
         value={days === null ? '—' : count(days)}

@@ -147,7 +147,7 @@
           "newBuilding": "New building",
           "demandInterest": "Someone is looking for a property like mine",
           "demandListingMatch": "A listing matching my demand was published",
-          "demandPriceDrop": "The price of a listing matching my demand dropped",
+          "demandPriceDrop": "The price of a listing I follow dropped (demand or saved)",
           "mandateDecided": "A client answered the mandate I sent them",
           "mandateRequestAnswered": "An agency answered your mandate request",
           "cardEmailReturned": "An email on your business card returned permanently",

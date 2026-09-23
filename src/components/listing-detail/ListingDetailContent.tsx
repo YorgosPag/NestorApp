@@ -78,6 +78,8 @@ import { ListingStay } from './ListingStay';
 import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
+import { SaveListingToggle } from '@/components/listings/SaveListingToggle';
+import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
 // οτιδήποτε, στον server και στον client, χωρίς κύκλο ζωής React να το καθυστερεί.
@@ -283,6 +285,10 @@ function ListingDetailBody({
           <ListingPriceBlock listing={listing} />
           {/* ADR-843 ΠΕ1 — το κουμπί που γράφει (ADR-827 §9.8), αμέσως μετά την τιμή. */}
           <FirstContactAction target={{ kind: 'listing', listingId: listing.id }} />
+          {/* ❤️ ADR-777 §8.74 — «κράτα την», δίπλα στην επαφή: οι δύο πράξεις του ανθρώπου που ενδιαφέρεται. */}
+          <SavedListingsProvider>
+            <SaveListingToggle listingId={listing.id} appearance="labeled" className="w-full" />
+          </SavedListingsProvider>
           <ListingOffers listing={listing} />
           <ListingAttributeList listing={listing} />
           {/* A17 (ADR-838) — i nomimotita einai pleon DEDOMENO, oxi dilomeno keno. */}

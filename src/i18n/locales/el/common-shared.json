@@ -776,7 +776,8 @@
   "demandPriceDrop": {
     "notificationTitle": "Μειώθηκε η τιμή αγγελίας της ζήτησής σας: «{title}»",
     "notificationTitleMany": "Μειώθηκε η τιμή αγγελίας που ταιριάζει σε {count} ζητήσεις σας: «{title}»",
-    "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»"
+    "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»",
+    "savedTitle": "Μειώθηκε η τιμή αγγελίας που αποθηκεύσατε: «{title}»"
   },
   "mandateDecision": {
     "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",

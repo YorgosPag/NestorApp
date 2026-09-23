@@ -71,7 +71,7 @@ interface Lead {
   readonly many: { readonly key: string; readonly lead: (count: number) => string } | null;
 }
 
-type LeadName = 'match' | 'matchReduced' | 'matchIntoBudget' | 'priceDrop' | 'priceDropIntoBudget';
+type LeadName = 'match' | 'matchReduced' | 'matchIntoBudget' | 'priceDrop' | 'priceDropIntoBudget' | 'priceDropSaved';
 
 const LEADS: Readonly<Record<LeadName, Lead>> = {
   match: {
@@ -100,6 +100,8 @@ const LEADS: Readonly<Record<LeadName, Lead>> = {
     },
   },
   priceDropIntoBudget: { key: 'demandPriceDrop.intoBudgetTitle', one: 'Μπήκε στον προϋπολογισμό σας', many: null },
+  // ADR-777 §8.74 — θέμα **μόνο** αποθήκευσης: καμία ζήτηση, άρα κανένα «της ζήτησής σας».
+  priceDropSaved: { key: 'demandPriceDrop.savedTitle', one: 'Μειώθηκε η τιμή αγγελίας που αποθηκεύσατε', many: null },
 };
 
 /**
@@ -251,7 +253,7 @@ export function freshReductionOf(listing: PublicListing, nowMs: number): PriceRe
  * τιμή λέγεται **μία** φορά, με τη μείωση μέσα. Ο ειδοποιητής μείωσης τη σιωπά μετά
  * (`predates-match`), γιατί ο ζητών την είδε **ήδη** μειωμένη.
  */
-export function matchAnnouncementCopy(topic: ListingTopic, nowMs: number): AnnouncementCopy {
+export function matchAnnouncementCopy(topic: Pick<ListingTopic, 'listing' | 'reasons' | 'metOn'>, nowMs: number): AnnouncementCopy {
   const { listing, reasons, metOn } = topic;
   // 🔑 §8.60.16 — **πρώτα** ως τι ταιριάζει, **μετά** η μείωση: η δεύτερη διαβάζεται μέσα στην πρώτη.
   const matchedAs = matchedAsSentence(metOn);
@@ -268,6 +270,16 @@ export function matchAnnouncementCopy(topic: ListingTopic, nowMs: number): Annou
 }
 
 /**
+ * Η κεφαλίδα της μείωσης: «μπήκε στον προϋπολογισμό» (μόνο με ζήτηση) · «της ζήτησής σας» · ή, για
+ * θέμα **μόνο** αποθήκευσης (§8.74), «που αποθηκεύσατε». Ζήτηση **και** αποθήκευση ⇒ λέγεται η ζήτηση:
+ * είναι ο πλουσιότερος λόγος (έχει όριο), και η είδηση είναι **μία**.
+ */
+function priceDropLead(verdict: BudgetVerdict, reasons: AnnouncementReasons): Lead {
+  if (verdict.kind === 'into-budget') return LEADS.priceDropIntoBudget;
+  return reasons.demandIds.length === 0 ? LEADS.priceDropSaved : LEADS.priceDrop;
+}
+
+/**
  * **Το email μείωσης** — για αγγελία που ο ζητών **ήδη** ξέρει.
  *
  * 🏆 §8.69.12 — και εδώ το `'into-budget'`: αγγελία που ταίριαζε (π.χ. με την υποχώρηση
@@ -279,6 +291,5 @@ export function priceDropCopy(
   reasons: AnnouncementReasons,
 ): AnnouncementCopy {
   const verdict = strongestBudgetVerdict(reasons.seeks, reduction);
-  const lead = verdict.kind === 'into-budget' ? LEADS.priceDropIntoBudget : LEADS.priceDrop;
-  return { ...headerOf(lead, listing, reasons), body: bodyOf(listing, reduction, verdict, reasons) };
+  return { ...headerOf(priceDropLead(verdict, reasons), listing, reasons), body: bodyOf(listing, reduction, verdict, reasons) };
 }

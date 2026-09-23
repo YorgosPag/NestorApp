@@ -40,6 +40,7 @@ import type { PublicListing } from '@/types/public-listing';
 import { formatList } from '@/lib/intl-formatting';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { ListingCardGallery } from '@/components/search-results/ListingCardGallery';
+import { SaveListingToggle } from '@/components/listings/SaveListingToggle';
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
@@ -178,6 +179,11 @@ interface ListingCardProps {
    * κείμενο. Το λεξιλόγιο μένει στην οθόνη 2, όπου και ανήκει.
    */
   readonly undeclaredLabels?: readonly string[];
+  /**
+   * Υποσημείωση της **οθόνης** κάτω από την κάρτα (ADR-777 §8.74: «αποθηκεύτηκε … · ↓ 5% από τότε»).
+   * Η κάρτα δεν ξέρει τι σημαίνει — τη ζωγραφίζει πάνω από τον σύνδεσμο (`relative z-10`), όπως την υπογραφή.
+   */
+  readonly annotation?: React.ReactNode;
 }
 
 export function ListingCard({
@@ -189,6 +195,7 @@ export function ListingCard({
   priority = false,
   imageSizes = CARD_IMAGE_SIZES,
   undeclaredLabels = [],
+  annotation,
 }: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
@@ -307,6 +314,13 @@ export function ListingCard({
               </Link>
             )}
           />
+
+          {/*
+            ❤️ ADR-777 §8.74 — η καρδιά στη γωνία της φωτογραφίας (πρότυπο Zillow/Airbnb). Αδελφό
+            **κουμπί**, όχι μέσα στον σύνδεσμο, και `z-10` πάνω από το `::after` του τίτλου — η ίδια
+            παγίδα με τα βελάκια της γκαλερί (§8.57.3). Χωρίς πάροχο στη σελίδα δεν αποδίδεται.
+          */}
+          <SaveListingToggle listingId={listing.id} appearance="icon" className="absolute right-5 top-5 z-10" />
 
           <h3 className="truncate text-sm font-medium text-foreground">
             <Link
@@ -434,6 +448,7 @@ export function ListingCard({
               className="relative z-10 mt-2 text-xs text-muted-foreground"
             />
           ) : null}
+          {annotation !== undefined && <p className="relative z-10 mt-2 text-xs text-muted-foreground">{annotation}</p>}
       </article>
     </li>
   );

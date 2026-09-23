@@ -59,6 +59,7 @@ import { ResultsList } from './ResultsList';
 import { ResultsMap } from './ResultsMap';
 import { ResultsSheet } from './ResultsSheet';
 import { StayTotalsProvider } from './StayTotalsContext';
+import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 
 export function SearchResultsContent() {
   const { t } = useTranslation(['search-results', 'search-filters', 'listing-detail']);
@@ -382,6 +383,8 @@ export function SearchResultsContent() {
         και η σειρά του DOM μόνη της θα το έθαβε κάτω από τον χάρτη.
       */}
       {/* ADR-777 §8.60.12 — «150 € · 3 νύχτες» σε κάρτα, φούσκα, δείκτη άκρης και πινακίδα. */}
+      {/* ❤️ ADR-777 §8.74 — ΕΝΑΣ πάροχος για όλες τις καρδιές της λίστας (ένα fetch, όχι N). */}
+      <SavedListingsProvider>
       <StayTotalsProvider totals={stayTotals}>
         <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,26rem)_1fr]">
           <ResultsSheet viewport={viewport}>
@@ -449,6 +452,7 @@ export function SearchResultsContent() {
           </section>
         </div>
       </StayTotalsProvider>
+      </SavedListingsProvider>
     </main>
   );
 }

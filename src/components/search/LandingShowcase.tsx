@@ -74,6 +74,7 @@ import {
 } from '@/lib/landing/landing-modes';
 import type { PublicListing } from '@/types/public-listing';
 import type { PublicShowcase } from '@/types/agency-profile';
+import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 
 /**
  * Το πλάτος της κάρτας **σε αυτή τη διάταξη** — δες το docblock παραπάνω.
@@ -174,6 +175,8 @@ export function LandingShowcase({
         ίδιας διάταξης *(N.18: ακριβώς το σχήμα που το `jscpd` πιάνει ανεξάρτητα
         ονόματος)*. Η **διάταξη** της βιτρίνας είναι μία· αλλάζει μόνο **η κάρτα**.
       */}
+      {/* ❤️ ADR-777 §8.74 — ένας πάροχος για τις καρδιές της βιτρίνας. */}
+      <SavedListingsProvider>
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4 p-0">
         {shownListings !== null
           ? /* Μόνο η πρώτη κάρτα είναι LCP (ADR-841 §7 Α2.4): πολλές «υψηλής
@@ -193,6 +196,7 @@ export function LandingShowcase({
               <AgencyCard key={profile.companyId} profile={profile} headingLevel={3} />
             ))}
       </ul>
+      </SavedListingsProvider>
     </section>
   );
 }

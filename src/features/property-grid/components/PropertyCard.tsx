@@ -1,5 +1,5 @@
 'use client';
-import { Eye, ArrowRight, Heart, Square, Bed, Bath } from 'lucide-react';
+import { Eye, ArrowRight, Square, Bed, Bath } from 'lucide-react';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 import { usePropertyThumbnail } from '../hooks/usePropertyThumbnail';
@@ -53,12 +53,11 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
             customLabel={t(labelKey, { ns: 'common' })}
           />
         </div>
-        <button
-          className={`absolute top-3 right-3 p-2 ${colors.bg.primary}/90 backdrop-blur ${radius.full} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-          aria-label={t('card.aria.favorite')}
-        >
-          <Heart className={`${iconSizes.sm} ${colors.text.muted}`} />
-        </button>
+        {/*
+          ADR-777 §8.74 — εδώ ζούσε μια καρδιά **χωρίς χειριστή**: κουμπί που ο αναγνώστης οθόνης εκφωνούσε
+          «Αγαπημένο» και δεν έκανε τίποτα. Η αποθήκευση αγγελίας ανήκει στον ΕΠΙΣΚΕΠΤΗ της δημόσιας αγγελίας
+          (`SaveListingToggle`), όχι στο εσωτερικό πλέγμα του γραφείου.
+        */}
       </header>
 
       <main className="p-5">
