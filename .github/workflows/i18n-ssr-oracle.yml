@@ -258,15 +258,31 @@ jobs:
           I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
         # ⚠️ ΜΙΑ σάρωση, όχι δύο: το artifact **είναι** η αναφορά (κρατά
         # `by_state` και ολόκληρη τη λίστα ταυτοτήτων).
+        # 🔴 ADR-875 §9 — Η ΑΡΝΗΣΗ ΠΡΕΠΕΙ ΝΑ ΑΚΟΥΓΕΤΑΙ. Το checkout ΠΕΡΙΕΧΕΙ ήδη τη
+        #    commit-αρισμένη baseline: με `|| true` μια σπορά που αρνήθηκε άφηνε το ΠΑΛΙΟ
+        #    αρχείο στη θέση του, και ανέβαινε ως «υποψήφια» με οδηγία «κάνε commit»
+        #    (run 35890283081: artifact byte-προς-byte ίδιο με το HEAD). Τώρα ο κωδικός
+        #    εξόδου κρατιέται, και η άρνηση ΣΒΗΝΕΙ το μπαγιάτικο αρχείο (μόνο στον runner)
+        #    ⇒ το upload λέει «δεν βρέθηκε αρχείο» αντί να ανεβάσει κάτι που δεν μετρήθηκε.
         run: |
-          node scripts/check-i18n-ssr-oracle.js --write-baseline --quiet 2>&1 | tee /tmp/seed.log || true
+          set +e
+          node scripts/check-i18n-ssr-oracle.js --write-baseline --quiet > /tmp/seed.log 2>&1
+          seed_rc=$?
+          set -e
+          cat /tmp/seed.log
           {
             echo '### CHECK 3.51 Χ — υποψήφια baseline από ΑΥΤΗ την εκτέλεση'
             echo ''
             echo "Εικόνα: \`${{ steps.image.outputs.ref }}\`"
             echo ''
-            echo 'Κατέβασε το artifact `i18n-ssr-oracle-baseline-candidate`, βάλε το'
-            echo 'στη ρίζα ως `.i18n-ssr-oracle-baseline.json` και κάνε commit.'
+            if [ "$seed_rc" -eq 0 ]; then
+              echo 'Κατέβασε το artifact `i18n-ssr-oracle-baseline-candidate`, βάλε το'
+              echo 'στη ρίζα ως `.i18n-ssr-oracle-baseline.json` και κάνε commit.'
+            else
+              rm -f .i18n-ssr-oracle-baseline.json
+              echo "⛔ **Η ΣΠΟΡΑ ΑΡΝΗΘΗΚΕ (κωδικός $seed_rc) — ΔΕΝ υπάρχει υποψήφια baseline.**"
+              echo 'Ό,τι ακολουθεί είναι η μέτρηση που αρνήθηκε — εύρημα, όχι κάτι προς έγκριση.'
+            fi
             echo ''
             echo '```'
             cat /tmp/seed.log
@@ -280,8 +296,9 @@ jobs:
           name: i18n-ssr-oracle-baseline-candidate
           path: .i18n-ssr-oracle-baseline.json
           include-hidden-files: true # dotfile baseline — το v4 τα κόβει by default
-          # ⚠️ `warn`, ΟΧΙ `ignore`: όταν το `--write-baseline` **αρνείται** (γιατί
-          #    υπάρχει ⛔ κατάσταση) το αρχείο δεν γράφεται, και μια σιωπηλή
+          # ⚠️ `warn`, ΟΧΙ `ignore`: όταν το `--write-baseline` **αρνείται** (⛔ κατάσταση
+          #    ή ταβάνι) το προηγούμενο βήμα ΣΒΗΝΕΙ το αρχείο του checkout (ADR-875 §9 —
+          #    αλλιώς ανέβαινε η ΠΑΛΙΑ baseline ως «υποψήφια»), και μια σιωπηλή
           #    απουσία artifact διαβάζεται ως «δεν χρειάστηκε». Η άρνηση πρέπει
           #    να ακούγεται — είναι η εγγύηση, όχι παράλειψη.
           if-no-files-found: warn

@@ -229,4 +229,20 @@ describe('ratchet-baseline — προϋπολογισμοί κάδων που δ
     expect(fs.existsSync(file)).toBe(false);
     expect(seen).toEqual([null]); // στη σπορά ΔΕΝ υπάρχει baseline για ratchet — μόνο πολιτική
   });
+
+  test('Β11 — η ΑΡΝΗΣΗ της σποράς δείχνει ΤΙ αρνήθηκε, από την ΙΔΙΑ μέτρηση (ADR-875 §9)', async () => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ratchet-')), 'b.json');
+    let measures = 0;
+    const gate = {
+      ...setGate(() => [{ id: 'πολιτική', current: 67, ceiling: 60, why: '20%' }], file),
+      measure: () => { measures += 1; return { violationIds: [], declarations: ['d1'], violations: [] }; },
+      printReport: (m) => console.log(`ΑΝΑΦΟΡΑ ${m.declarations.join(',')}`),
+    };
+    const { code, text } = await runSet(gate, ['node', 'x', '--write-baseline']);
+    expect(code).toBe(1);
+    expect(fs.existsSync(file)).toBe(false);
+    expect(text).toContain('πολιτική: 67 > 60');
+    expect(text).toContain('ΑΝΑΦΟΡΑ d1');
+    expect(measures).toBe(1); // καμία δεύτερη σάρωση
+  });
 });

@@ -348,7 +348,13 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
   }
 
   if (args.includes('--write-baseline')) {
-    if (budgetsBreached(descriptor, measured, null)) return process.exit(1);
+    if (budgetsBreached(descriptor, measured, null)) {
+      // ADR-875 §9 — η άρνηση δείχνει ΤΙ αρνήθηκε, από την ΙΔΙΑ μέτρηση (καμία δεύτερη σάρωση).
+      //    Χωρίς αυτό, ό,τι μετρήθηκε χανόταν: στο CI έμενε μόνο «67 > 60», και τα ωμά κλειδιά
+      //    των νέων διαδρομών δεν τα έβλεπε κανείς.
+      descriptor.printReport(measured);
+      return process.exit(1);
+    }
     writeBaselineFile(file, descriptor.buildPayload(measured));
     console.log(`✅ Baseline: ${rel(file)}`);
     console.log(`   ${measured.violationIds.length} ${L.violations} · ${measured.declarations.length} ${L.declarations}`);
