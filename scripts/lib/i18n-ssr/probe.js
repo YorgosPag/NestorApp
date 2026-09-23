@@ -18,6 +18,8 @@
 
 const { declaredBackendUnavailable } = require('./backend-contract');
 const { anyControlRendered } = require('./controls');
+const { decodeEntities } = require('./html-entities');
+const { declaredSoftRedirect } = require('./redirect-contract');
 const { X_STATES, SYNTHETIC_SEGMENT } = require('./states');
 
 // ---------------------------------------------------------------------------
@@ -26,17 +28,6 @@ const { X_STATES, SYNTHETIC_SEGMENT } = require('./states');
 
 /** Attributes που καταλήγουν σε ανθρώπινα μάτια ή σε αναγνώστη οθόνης. */
 const HUMAN_ATTRIBUTES = ['title', 'placeholder', 'aria-label', 'aria-description', 'alt', 'aria-placeholder'];
-
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'", '#x27': "'" };
-
-function decodeEntities(text) {
-  return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, name) => {
-    if (Object.prototype.hasOwnProperty.call(ENTITIES, name)) return ENTITIES[name];
-    if (/^#\d+$/.test(name)) return String.fromCodePoint(Number(name.slice(1)));
-    if (/^#x[0-9a-fA-F]+$/i.test(name)) return String.fromCodePoint(parseInt(name.slice(2), 16));
-    return match;
-  });
-}
 
 function stripScripts(html) {
   return html
@@ -151,9 +142,11 @@ function judgeHtml(html, oracle) {
  *
  * @param {{dynamic: boolean}} route
  * @param {{shellProven: boolean, pageProven: boolean, hits: Array}} verdict
+ * @param {null | {target: string} | {malformed: string}} [redirect] ο δείκτης του DOM
+ *   (`redirect-contract.js`), με τον προορισμό **ήδη κανονικοποιημένο**.
  * @returns {{state: string, detail?: string}}
  */
-function classifySurface(route, verdict) {
+function classifySurface(route, verdict, redirect = null) {
   // 🔴 1. ΩΜΟ ΚΛΕΙΔΙ ΠΡΩΤΑ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΔΙΟ Η ΑΠΟΔΕΙΞΗ (ADR-790).
   //    Ένα κλειδί του **δικού μας** κλειστού σύμπαντος, τυπωμένο σε κόμβο του
   //    HTML, δεν μπορεί να το βάλει εκεί τίποτε άλλο από τον δικό μας κώδικα.
@@ -181,7 +174,18 @@ function classifySurface(route, verdict) {
     };
   }
 
-  // ⛔/🔴 3. ΤΙΠΟΤΑ ΔΕΝ ΑΠΕΔΕΙΞΕ ΟΤΙ ΑΠΑΝΤΗΣΕ Η ΕΦΑΡΜΟΓΗ ΜΑΣ.
+  // 🔴 3. ΑΝΑΚΑΤΕΥΘΥΝΣΗ ΠΟΥ ΔΕΝ ΜΠΟΡΕΣΕ ΝΑ ΓΙΝΕΙ ΚΩΔΙΚΟΣ (ADR-781 §14) — ο δίδυμος
+  //    του 2: το `redirect()` ρίχτηκε ΜΕΤΑ την έναρξη της ροής. Ό,τι βάφτηκε είναι
+  //    κέλυφος + σκελετός φόρτωσης, ΟΧΙ η σελίδα ⇒ ΠΡΙΝ από τις καταστάσεις
+  //    επιφάνειας, αλλιώς πέφτει στο 🔶 και εξατμίζεται (§13.2). ΜΕΤΑ το raw-key:
+  //    κλειδί ζωγραφισμένο στο κέλυφος παραμένει αληθές.
+  //    ⚠️ Χαλασμένος δείκτης ⇒ ⛔: ξέρουμε ότι ανακατεύθυνε, όχι πού.
+  if (redirect && redirect.malformed !== undefined) {
+    return { state: X_STATES.PROBE_UNPROVEN, detail: `δείκτης ανακατεύθυνσης με άγνωστο σχήμα: ${redirect.malformed}` };
+  }
+  if (redirect) return { state: X_STATES.REDIRECTED, detail: redirectDetail(redirect.target) };
+
+  // ⛔/🔴 4. ΤΙΠΟΤΑ ΔΕΝ ΑΠΕΔΕΙΞΕ ΟΤΙ ΑΠΑΝΤΗΣΕ Η ΕΦΑΡΜΟΓΗ ΜΑΣ.
   //    ⚠️ ΔΥΟ ΠΟΛΥ ΔΙΑΦΟΡΕΤΙΚΕΣ ΑΙΤΙΕΣ, ΚΑΙ ΤΟ ΝΑ ΤΙΣ ΛΕΣ ΜΕ ΕΝΑ ΟΝΟΜΑ ΕΙΝΑΙ
   //    ΤΟ ΛΑΘΟΣ: (α) το σώμα έχει **μηδέν** αποδοθείσες επιφάνειες ⇒ η σελίδα
   //    δεν αποδίδει τίποτα στον server (client-only), γεγονός **για τη σελίδα**
@@ -200,7 +204,7 @@ function classifySurface(route, verdict) {
     return { state: X_STATES.PROBE_UNPROVEN, detail: 'καμία μεταφρασμένη τιμή στη σελίδα — ο χρησμός ΔΕΝ απέδειξε ότι κοίταξε' };
   }
 
-  // 🔶 4. Δυναμική διαδρομή με ΣΥΝΘΕΤΙΚΟ id: ό,τι κι αν βάφτηκε, δεν είναι η σελίδα.
+  // 🔶 5. Δυναμική διαδρομή με ΣΥΝΘΕΤΙΚΟ id: ό,τι κι αν βάφτηκε, δεν είναι η σελίδα.
   if (route.dynamic) {
     return {
       state: X_STATES.SYNTHETIC_ID,
@@ -208,7 +212,7 @@ function classifySurface(route, verdict) {
     };
   }
 
-  // 🔴 5. Στατική διαδρομή που έβαψε ΜΟΝΟ λεξιλόγιο κελύφους.
+  // 🔴 6. Στατική διαδρομή που έβαψε ΜΟΝΟ λεξιλόγιο κελύφους.
   //    ⚠️ «Λεξιλόγιο κελύφους», ΟΧΙ «το κέλυφος»: μια σελίδα του `(auth)`/`(light)`
   //    δεν φοράει κέλυφος (CHECK 3.52) και όμως προσγειώνεται εδώ, γιατί ό,τι
   //    βάφει ζει ολόκληρο μέσα στο αποστελλόμενο slice. Η κατάσταση λέει
@@ -261,6 +265,23 @@ function normaliseRedirectTarget(location, baseUrl) {
 }
 
 /**
+ * Η λεπτομέρεια — άρα η ταυτότητα — του `route-redirected`. **ΜΙΑ** μορφή για τις
+ * **δύο** μεταφορές (3xx + `Location` · 200 + δείκτης DOM): το ίδιο γεγονός από
+ * άλλο κανάλι πρέπει να δίνει **την ίδια** ταυτότητα, αλλιώς μια αλλαγή μεταφοράς
+ * (π.χ. αφαίρεση ενός `loading.tsx`) θα διαβαζόταν ως ανταλλαγή ευρημάτων.
+ */
+function redirectDetail(normalisedTarget) {
+  return `→ ${normalisedTarget}`;
+}
+
+/** Ο δείκτης του DOM, με τον προορισμό κανονικοποιημένο **όπως** το `Location`. */
+function softRedirectOf(html, baseUrl) {
+  const declared = declaredSoftRedirect(html);
+  if (!declared || declared.malformed !== undefined) return declared;
+  return { target: normaliseRedirectTarget(declared.target, baseUrl) };
+}
+
+/**
  * Χτυπάει ΜΙΑ διαδρομή. **Ποτέ δεν επιστρέφει «καθαρό» χωρίς απόδειξη.**
  *
  * @returns {{route: string, file: string, dynamic: boolean, state: string, status: number|null, keys: Array, detail?: string}}
@@ -274,14 +295,14 @@ async function probeRoute(route, options) {
   try {
     response = await fetch(`${baseUrl}${route.url}`, {
       headers: { 'user-agent': userAgent, accept: 'text/html' },
-      // 🔑 `manual`, ΠΟΤΕ `follow` — ADR-781 §13. Με `follow` ο χρησμός έκρινε τη
-      //    σελίδα ΣΤΟΝ ΠΡΟΟΡΙΣΜΟ και κατέγραφε το πόρισμα με το όνομα της
-      //    διαδρομής ΠΟΥ ΖΗΤΗΣΕ: 110 διαδρομές `/o/[workspace]/**` έδιναν το
-      //    πόρισμα της **σελίδας σύνδεσης**, με 110 διαφορετικά ονόματα.
-      //    Είναι η ονομασμένη αστοχία του Lighthouse («audits the login page
-      //    instead of the target») και η αρχή του Google Search Console: τα
-      //    δεδομένα **δεν αποδίδονται** στον προορισμό — η πηγή παίρνει **δική
-      //    της** κατάσταση, `Page with redirect`.
+      // 🔑 `manual`, ΠΟΤΕ `follow` — ADR-781 §13. Με `follow` ο χρησμός κρίνει τη
+      //    σελίδα ΣΤΟΝ ΠΡΟΟΡΙΣΜΟ και καταγράφει το πόρισμα με το όνομα της
+      //    διαδρομής ΠΟΥ ΖΗΤΗΣΕ — η ονομασμένη αστοχία του Lighthouse («audits
+      //    the login page instead of the target»)· αρχή του Google Search
+      //    Console: η πηγή παίρνει **δική της** κατάσταση, `Page with redirect`.
+      //    ⚠️ ΔΙΟΡΘΩΣΗ (ADR-781 §14): οι 110 `/o/[workspace]/**` ΔΕΝ έκριναν τη
+      //    σελίδα σύνδεσης — δεν ανακατευθύνουν με 3xx ΠΟΤΕ (streaming ⇒ 200).
+      //    Τις πιάνει ο δείκτης DOM (`softRedirectOf`), όχι αυτή η γραμμή.
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -314,7 +335,7 @@ async function probeRoute(route, options) {
       state: X_STATES.REDIRECTED,
       status: response.status,
       keys: [],
-      detail: `→ ${normaliseRedirectTarget(location, baseUrl)}`,
+      detail: redirectDetail(normaliseRedirectTarget(location, baseUrl)),
     };
   }
 
@@ -332,7 +353,7 @@ async function probeRoute(route, options) {
   }
 
   const verdict = judgeHtml(html, oracle);
-  const { state, detail } = classifySurface(route, verdict);
+  const { state, detail } = classifySurface(route, verdict, softRedirectOf(html, baseUrl));
   return { ...route, route: route.url, state, status: response.status, keys: verdict.hits, ...(detail ? { detail } : {}) };
 }
 
@@ -346,5 +367,6 @@ module.exports = {
   judgeHtml,
   classifySurface,
   normaliseRedirectTarget,
+  redirectDetail,
   probeRoute,
 };

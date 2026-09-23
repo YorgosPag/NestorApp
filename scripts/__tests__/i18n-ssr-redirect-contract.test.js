@@ -182,3 +182,144 @@ describe('Α — η ανακατεύθυνση είναι γεγονός ΤΗΣ 
     });
   });
 });
+
+// =============================================================================
+// Α-bis (ADR-781 §14) — Η ΔΕΥΤΕΡΗ ΜΕΤΑΦΟΡΑ: 200 + ΔΕΙΚΤΗΣ ΣΤΟ DOM
+// =============================================================================
+//
+// Το `(app)` έχει `loading.tsx` ⇒ streaming ⇒ το `redirect()` του layout ρίχνεται
+// αφού έχουν φύγει οι κεφαλίδες ⇒ **200**, και η ανακατεύθυνση ταξιδεύει ως δείκτης
+// του ορίου Suspense. Μετρημένο στην παραγωγή: 110 από τις 112 ανακατευθύνσεις.
+
+/** ⚠️ Το `REAL_BOUNDARY` ΔΕΝ είναι χειρόγραφο — βλ. Α16. */
+const REAL_BOUNDARY =
+  '<main data-shell-surface="" class="w-full flex-1 overflow-y-auto overflow-x-hidden bg-background/95 max-w-full">' +
+  '<!--$!--><template data-dgst="NEXT_REDIRECT;replace;/login;307;"></template>' +
+  '<section class="flex h-screen items-center justify-center" role="status" aria-live="polite">';
+/** Οι ΔΥΟ γραμμές του flight της ίδιας απάντησης: σελίδα (15) ΚΑΙ layout (12). */
+const REAL_FLIGHT =
+  '<script>self.__next_f.push([1,"\\n15:E{\\"digest\\":\\"NEXT_REDIRECT;replace;/account/profile;307;\\"}' +
+  '\\n12:E{\\"digest\\":\\"NEXT_REDIRECT;replace;/login;307;\\"}\\n"])</script>';
+
+/** Κέλυφος που ΑΠΟΔΕΙΚΝΥΕΙ τον εαυτό του — ώστε χωρίς τον δείκτη να πέφτει στο 🔶. */
+const SHELL_ORACLE = {
+  universe: new Set(['pages.home']),
+  shellControls: new Set(['Αλλαγή θέματος']),
+  pageControls: new Set(['Περιεχόμενο σελίδας']),
+};
+const streamed = (inner) =>
+  `<!DOCTYPE html><html><head><title>Nestor</title></head><body><header><span>Αλλαγή θέματος</span></header>${inner}</body></html>`;
+const boundary = (digest) => `<main><!--$!--><template data-dgst="${digest}"></template><section role="status">…</section></main>`;
+
+describe('Α-bis — το ΙΔΙΟ γεγονός από ΑΛΛΟ κανάλι: 200 + data-dgst', () => {
+  test('Α11 — 200 + NEXT_REDIRECT ⇒ route-redirected, → /login', async () => {
+    await serving(200, streamed(boundary('NEXT_REDIRECT;replace;/login;307;')), async (baseUrl) => {
+      const record = await probe(baseUrl, WORKSPACE_ROUTE, SHELL_ORACLE);
+      expect(record.status).toBe(200);
+      expect(record.state).toBe(O.X_STATES.REDIRECTED);
+      expect(identity(record)).toBe('/o/ssr-probe/account|route-redirected|→ /login');
+    });
+  });
+
+  test('Α12 — ο προορισμός ΜΕ query δίνει ΑΛΛΗ ταυτότητα (και οι οντότητες HTML λύνονται)', async () => {
+    const seen = [];
+    for (const digest of ['NEXT_REDIRECT;replace;/login;307;', 'NEXT_REDIRECT;replace;/login?next=%2Fdashboard&amp;x=1;307;']) {
+      await serving(200, streamed(boundary(digest)), async (baseUrl) => {
+        const record = await probe(baseUrl, WORKSPACE_ROUTE, SHELL_ORACLE);
+        expect(record.status).toBe(200);
+        seen.push(identity(record));
+      });
+    }
+    expect(seen).toEqual([
+      '/o/ssr-probe/account|route-redirected|→ /login',
+      '/o/ssr-probe/account|route-redirected|→ /login?next=%2Fdashboard&x=1',
+    ]);
+  });
+
+  test('Α13 — 🔑 Η ΜΕΤΑΛΛΑΞΗ: χωρίς τον δείκτη η ΙΔΙΑ απάντηση εξατμίζεται στο 🔶', async () => {
+    // Το αντιπαράδειγμα είναι ο ΙΔΙΟΣ κριτής χωρίς το τρίτο όρισμα — δηλαδή
+    // ακριβώς ο κώδικας πριν το Α-bis. Αν ο κλάδος σβηστεί από το probeRoute,
+    // το Α11 κοκκινίζει· αυτό εδώ αποδεικνύει ότι το fixture ΔΙΑΚΡΙΝΕΙ.
+    const html = streamed(boundary('NEXT_REDIRECT;replace;/login;307;'));
+    const verdict = O.judgeHtml(html, SHELL_ORACLE);
+    expect(verdict.shellProven).toBe(true);
+    expect(O.classifySurface(WORKSPACE_ROUTE, verdict).state).toBe(O.X_STATES.SYNTHETIC_ID);
+    expect(O.X_COUNTED).toContain(O.X_STATES.SYNTHETIC_ID);
+    expect(O.classifySurface(WORKSPACE_ROUTE, verdict, { target: '/login' }).state).toBe(O.X_STATES.REDIRECTED);
+  });
+
+  test('Α14 — ΜΗΔΕΝ παλινδρόμηση: 200 χωρίς δείκτη, ή με ΑΛΛΟ digest, κρίνεται όπως πάντα', async () => {
+    for (const inner of ['<main><section>…</section></main>', boundary('NEXT_HTTP_ERROR_FALLBACK;404'), boundary('1234567890')]) {
+      await serving(200, streamed(inner), async (baseUrl) => {
+        const record = await probe(baseUrl, WORKSPACE_ROUTE, SHELL_ORACLE);
+        expect(record.status).toBe(200);
+        expect(record.state).toBe(O.X_STATES.SYNTHETIC_ID);
+      });
+    }
+    // Και το ωμό κλειδί ΠΡΟΗΓΕΙΤΑΙ: ζωγραφίστηκε στο κέλυφος, άρα παραμένει αληθές.
+    await serving(200, streamed(`<span>pages.home</span>${boundary('NEXT_REDIRECT;replace;/login;307;')}`), async (baseUrl) => {
+      expect((await probe(baseUrl, WORKSPACE_ROUTE, SHELL_ORACLE)).state).toBe(O.X_STATES.RAW_KEY);
+    });
+  });
+
+  test('Α15 — χαλασμένο NEXT_REDIRECT ⇒ ⛔ probe-unproven, ΠΟΤΕ clean (fail-closed)', async () => {
+    const pageOracle = { ...SHELL_ORACLE, pageControls: new Set(['Αλλαγή θέματος']) };
+    for (const digest of ['NEXT_REDIRECT;replace;/login;302;', 'NEXT_REDIRECT;bogus;/login;307;', 'NEXT_REDIRECT']) {
+      await serving(200, streamed(boundary(digest)), async (baseUrl) => {
+        // Στατική διαδρομή με ΑΠΟΔΕΙΓΜΕΝΗ σελίδα: χωρίς fail-closed θα ήταν `clean`.
+        const record = await probe(baseUrl, STATIC_ROUTE, pageOracle);
+        expect(record.status).toBe(200);
+        expect(record.state).toBe(O.X_STATES.PROBE_UNPROVEN);
+        expect(O.X_ZERO_TOLERANCE).toContain(record.state);
+      });
+    }
+  });
+
+  test('Α16 — 🔬 ΠΡΑΓΜΑΤΙΚΟ fixture: παραγωγή, Next 15.5.22, /o/ssr-probe/account (2026-09-23)', async () => {
+    // Το flight φέρει ΔΥΟ ανακατευθύνσεις (σελίδα → /account/profile, layout → /login)·
+    // το DOM ΜΙΑ. Αν ο αναλυτής διάβαζε το flight, θα έπαιρνε τη σελίδα που ΔΕΝ
+    // αποδόθηκε. Αν αλλάξει το σχήμα του React/Next, αυτό κοκκινίζει ΠΡΩΤΟ.
+    await serving(200, streamed(`${REAL_BOUNDARY}</section></main>${REAL_FLIGHT}`), async (baseUrl) => {
+      const record = await probe(baseUrl, WORKSPACE_ROUTE, SHELL_ORACLE);
+      expect(record.status).toBe(200);
+      expect(record.state).toBe(O.X_STATES.REDIRECTED);
+      expect(record.detail).toBe('→ /login');
+    });
+  });
+
+  test('Α17 — ισοτιμία με τον αναλυτή του ΙΔΙΟΥ του Next.js (το CI του χρησμού δεν τον έχει)', () => {
+    const { isRedirectError } = require('next/dist/client/components/redirect-error');
+    const { getURLFromRedirectError } = require('next/dist/client/components/redirect');
+    const { parseRedirectDigest } = require('../lib/i18n-ssr/redirect-contract');
+    const corpus = [
+      'NEXT_REDIRECT;replace;/login;307;',
+      'NEXT_REDIRECT;push;/pro;308;',
+      'NEXT_REDIRECT;replace;/a;b?c=1;303;',
+      'NEXT_REDIRECT;replace;https://example.org/x;307;',
+      'NEXT_REDIRECT;replace;/x;302;',
+      'NEXT_REDIRECT;replace;/x;301;',
+      'NEXT_REDIRECT;bogus;/x;307;',
+      'NEXT_REDIRECT;replace;/x;307',
+      'NEXT_REDIRECT;replace;/x;abc;',
+      'NEXT_REDIRECT',
+      'NEXT_HTTP_ERROR_FALLBACK;404',
+    ];
+    for (const digest of corpus) {
+      const ours = parseRedirectDigest(digest);
+      const theirs = isRedirectError({ digest });
+      expect([digest, ours !== null]).toEqual([digest, theirs]);
+      if (theirs) expect(ours.target).toBe(getURLFromRedirectError({ digest }));
+    }
+  });
+
+  test('Α18 — ΜΙΑ ταυτότητα για ΔΥΟ μεταφορές: 307+Location ≡ 200+δείκτης', async () => {
+    const hard = await servingRoutes({ '/o/ssr-probe/account': { status: 307, headers: { location: '/login' } } }, async (baseUrl) =>
+      identity(await probe(baseUrl, WORKSPACE_ROUTE)),
+    );
+    const soft = await serving(200, streamed(boundary('NEXT_REDIRECT;replace;/login;307;')), async (baseUrl) =>
+      identity(await probe(baseUrl, WORKSPACE_ROUTE, SHELL_ORACLE)),
+    );
+    // Αφαίρεση ενός `loading.tsx` αλλάζει μεταφορά — ΟΧΙ εύρημα.
+    expect(soft).toBe(hard);
+  });
+});
