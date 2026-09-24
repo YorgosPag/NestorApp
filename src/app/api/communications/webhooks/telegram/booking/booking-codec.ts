@@ -8,6 +8,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { formatOperatorWeekdayDate } from '@/lib/operator-time-format';
 
 // =============================================================================
 // CALLBACK DATA CODEC
@@ -100,11 +101,12 @@ export async function resolveUnit(unitIdOrSuffix: string): Promise<PropertyInfo 
 // GREEK DATE HELPERS
 // =============================================================================
 
-const DAY_NAMES_FULL = ['Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'];
-
+/**
+ * «Πέμπτη 1/10» — ADR-877 §6: μέσω του SSoT `operator-time-format`, όχι `getDay()`/`getDate()`,
+ * που απαντούν στη ζώνη **του διακομιστή** (UTC) — και έχουν σκληροκωδικοποιημένα ονόματα ημερών.
+ */
 export function formatTelegramBookingDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${DAY_NAMES_FULL[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+  return formatOperatorWeekdayDate(dateStr, 'el');
 }
 
 // Back-compat alias — consumer migration pending (out of scope Boy Scout batch C.5.12)

@@ -9,6 +9,7 @@
  */
 
 import jsPDF from 'jspdf';
+import { formatEuro, formatPoDate } from './po-format';
 import autoTable from 'jspdf-autotable';
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';
@@ -139,24 +140,6 @@ const LAYOUT = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatPoDate(isoDate: string | null, lang: 'el' | 'en'): string {
-  if (!isoDate) return '—';
-  const locale = lang === 'el' ? 'el-GR' : 'en-GB';
-  return new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(isoDate));
-}
 
 function contentWidth(): number {
   return LAYOUT.pageWidth - LAYOUT.marginLeft - LAYOUT.marginRight;

@@ -11,6 +11,8 @@
 
 import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';
 import { PRODUCT_NAME } from '@/constants/product-identity';
+import { escapeHtml } from '@/lib/html/escape-html';
+import { formatEuro, formatPoDate } from './po-format';
 
 // ============================================================================
 // TYPES
@@ -21,36 +23,6 @@ export interface POEmailTemplateConfig {
   recipientName: string;
   companyName: string;
   language: 'el' | 'en';
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatPoDate(isoDate: string | null, lang: 'el' | 'en'): string {
-  if (!isoDate) return '—';
-  const locale = lang === 'el' ? 'el-GR' : 'en-GB';
-  return new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(isoDate));
 }
 
 // ============================================================================

@@ -10,6 +10,7 @@
  */
 
 import 'server-only';
+import { formatOperatorDate } from '@/lib/operator-time-format';
 
 import { getCompressedSchema } from '@/config/firestore-schema-map';
 import { generateTabMappingPrompt } from '@/config/ai-tab-mapping';
@@ -112,8 +113,9 @@ export function buildAgenticSystemPrompt(
   // ADR-174: Role-based access description (RBAC)
   const roleDescription = buildRoleDescription(ctx);
 
-  const now = new Date();
-  const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`; // DD/MM/YYYY
+  // DD/MM/YYYY — ADR-877 §6: στη ζώνη του φορέα· με `getDate()` (ζώνη διακομιστή = UTC) το AI πίστευε
+  // ότι είναι ΧΘΕΣ από τις 21:00/22:00 ώρα Ελλάδας ⇒ «αύριο»/«σήμερα» λάθος μέρα στις κρατήσεις.
+  const today = formatOperatorDate(new Date(), 'el');
 
   // Prepare shared context for all sections
   const sectionCtx: PromptSectionContext = {
