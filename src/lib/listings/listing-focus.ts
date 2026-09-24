@@ -88,6 +88,21 @@ export function carryListingSelection(from: URLSearchParams, to: URLSearchParams
   if (selected) to.set(LISTING_SELECTED_PARAM, selected);
 }
 
+/**
+ * **Ο σύνδεσμος «αυτό το ακίνητο, σε αυτή την αναζήτηση, στον χάρτη»** (ADR-777 §8.78) — η τρέχουσα
+ * διεύθυνση (κριτήρια, `?box=`, όψη) με το `?selected=` **αυτής** της αγγελίας.
+ *
+ * 🔑 Γράφει το κλειδί ρητά αντί να εμπιστευτεί ότι είναι ήδη στη διεύθυνση: ο πάγκος κρατά την
+ * επιλογή σε state (`useListingFocus`), και εκεί η γραμμή διεύθυνσης **δεν** την έχει. Ίδιο κλειδί,
+ * ίδιο σύμβολο — κανένας δεύτερος κωδικοποιητής.
+ */
+export function listingSelectionHref(currentHref: string, id: string): string {
+  const url = new URL(currentHref);
+  url.searchParams.set(LISTING_SELECTED_PARAM, id);
+  url.hash = '';
+  return url.toString();
+}
+
 /** Πόσο έντονα αφορά η εστίαση **αυτή** την αγγελία. */
 export function listingFocusStrength(focus: ListingFocus, id: string): ListingFocusStrength {
   if (focus.selected === id) return 'selected';

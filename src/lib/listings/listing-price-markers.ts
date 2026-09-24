@@ -221,3 +221,98 @@ function byAmountThenId(a: ListingPriceMarker, b: ListingPriceMarker): number {
   if (a.amount !== b.amount) return a.amount - b.amount;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
+
+// ============================================================================
+// ΚΑΝΟΝΑΣ 4 — Η ΠΙΝΑΚΙΔΑ ΑΚΟΛΟΥΘΕΙ ΤΟ ΣΗΜΕΙΟ ΠΟΥ ΖΩΓΡΑΦΙΣΤΗΚΕ (ADR-777 §8.78)
+// ============================================================================
+
+/**
+ * **Ποια σημεία ζωγράφισε ο χάρτης ΧΩΡΙΣΤΑ** — όχι μέσα σε ομάδα.
+ *
+ * - `'all'`     — δεν υπάρχει ομαδοποιητής (π.χ. πινακίδες έξω από τον πυρήνα χάρτη): κάθε
+ *                 σημείο ζωγραφίζεται μόνο του, άρα κάθε πινακίδα κάθεται σε κάτι.
+ * - `'unknown'` — υπάρχει ομαδοποιητής αλλά **δεν έχει απαντήσει ακόμη** (πριν το πρώτο `idle`).
+ * - `Set`       — οι ταυτότητες που ο ομαδοποιητής άφησε **έξω** από κάθε ομάδα.
+ */
+export type DrawnListingPoints = ReadonlySet<string> | 'all' | 'unknown';
+
+/**
+ * **Πινακίδα μόνο πάνω σε σημείο που ζωγραφίστηκε μόνο του.**
+ *
+ * 🔴 Ο κανόνας του `lib/maps/listing-clusters.ts` είναι *«η ομάδα λέει ΠΛΗΘΟΣ, ποτέ τιμή»*
+ * (Redfin · Zillow). Οι πινακίδες τον **παραβίαζαν από το πλάι**: ο κριτής δεν ήξερε την
+ * ομαδοποίηση, και πάνω από τη φούσκα «2» της Θεσσαλονίκης κάθονταν **δύο τιμές
+ * επικαλυπτόμενες** — δηλαδή τιμή πάνω σε ομάδα, και μάλιστα αδιάβαστη. Η τιμή μέσα σε ομάδα
+ * **δεν χάνεται**: κλικ ⇒ ζουμ ώσπου να χωρίσει, ή λίστα διαλέγματος με τιμές (§8.76).
+ *
+ * ⚠️ **`'unknown'` ⇒ καμία**, όχι όλες: μια πινακίδα που εμφανίζεται ένα καρέ αργότερα είναι
+ * καθυστέρηση· μια τιμή πάνω σε ομάδα, έστω για ένα καρέ, είναι ο ισχυρισμός που απαγορεύεται.
+ */
+export function plaquesOnDrawnPoints(
+  markers: readonly ListingPriceMarker[],
+  drawn: DrawnListingPoints,
+): readonly ListingPriceMarker[] {
+  if (drawn === 'all') return markers;
+  if (drawn === 'unknown') return [];
+  return markers.filter((marker) => drawn.has(marker.id));
+}
+
+/** Ίδιο σύνολο; — ώστε ο χάρτης να μην ξαναποδίδει πινακίδες σε κάθε `idle` χωρίς αλλαγή. */
+export function sameDrawnListingPoints(a: DrawnListingPoints, b: DrawnListingPoints): boolean {
+  if (typeof a === 'string' || typeof b === 'string') return a === b;
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
+// ============================================================================
+// ΚΑΝΟΝΑΣ 5 — ΔΥΟ ΠΙΝΑΚΙΔΕΣ ΔΕΝ ΚΑΘΟΝΤΑΙ Η ΜΙΑ ΠΑΝΩ ΣΤΗΝ ΑΛΛΗ (ADR-777 §8.78)
+// ============================================================================
+
+/** Το ορθογώνιο μιας πινακίδας στην οθόνη, σε pixel. */
+export interface PlaqueBox {
+  readonly id: string;
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+/** Ελάχιστο διάκενο ανάμεσα σε δύο πινακίδες — κάτω από αυτό διαβάζονται ως μία. */
+export const PLAQUE_GAP_PX = 2;
+
+/**
+ * **Ποιες πινακίδες μένουν ορατές όταν συγκρούονται** — πρότυπο **mini-pin** του Airbnb.
+ *
+ * 🔴 Πάνω από το `CLUSTER_MAX_ZOOM` δεν υπάρχει ομάδα να τις απορροφήσει: δύο αγγελίες του
+ * **ίδιου κτιρίου** (μετρημένο: 150.000 € και 165.000 € στο Κορδελιό, x 1349–1425) ζωγράφιζαν
+ * δύο τιμές η μία πάνω στην άλλη — καμία αναγνώσιμη. Το Airbnb: η χαμηλότερης κατάταξης γίνεται
+ * **κουκίδα χωρίς ετικέτα**, και η τιμή της φαίνεται με hover. Εδώ η κουκίδα **υπάρχει ήδη** (η
+ * πινέζα)· φεύγει μόνο η ετικέτα.
+ *
+ * 🔑 **Η κατάταξη ΔΕΝ είναι νέα απόφαση**: τα `boxes` έρχονται με τη σειρά του `fairOrder` — η
+ * **ίδια** που διαλέγει ποιες 40 παίρνουν πινακίδα. Ένας κανόνας προτεραιότητας, δύο χρήσεις.
+ * 🔑 **`pinned` (επιλεγμένη / υπό hover) νικά πάντα** — ό,τι κοιτάς φαίνεται, όπως στο Airbnb.
+ * ⚠️ Ορθογώνιο **μηδενικού εμβαδού** = δεν μετρήθηκε (εκτός διάταξης) ⇒ ορατή, ποτέ «σύγκρουση».
+ */
+export function resolvePlaqueCollisions(
+  boxes: readonly PlaqueBox[],
+  pinned: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const placed: PlaqueBox[] = [];
+  const visible = new Set<string>();
+  const ordered = [...boxes.filter((b) => pinned.has(b.id)), ...boxes.filter((b) => !pinned.has(b.id))];
+
+  for (const box of ordered) {
+    const measured = box.right > box.left && box.bottom > box.top;
+    if (measured && !pinned.has(box.id) && placed.some((other) => boxesOverlap(other, box))) continue;
+    if (measured) placed.push(box);
+    visible.add(box.id);
+  }
+  return visible;
+}
+
+function boxesOverlap(a: PlaqueBox, b: PlaqueBox): boolean {
+  return a.left < b.right + PLAQUE_GAP_PX && b.left < a.right + PLAQUE_GAP_PX
+    && a.top < b.bottom + PLAQUE_GAP_PX && b.top < a.bottom + PLAQUE_GAP_PX;
+}

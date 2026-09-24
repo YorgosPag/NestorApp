@@ -50,6 +50,41 @@ export async function shareContent(data: ShareData): Promise<boolean> {
   return copyToClipboard(data.url);
 }
 
+/** Τι έγινε με μια κοινοποίηση συνδέσμου — τέσσερα αποτελέσματα, το καθένα με άλλη απάντηση στην οθόνη. */
+export type LinkShareOutcome = 'shared' | 'copied' | 'cancelled' | 'failed';
+
+/**
+ * **Φύλλο κοινοποίησης στην αφή, αντιγραφή στο ποντίκι** (ADR-777 §8.78).
+ *
+ * 🏆 Google Maps (επιφάνεια εργασίας): «Share → **Copy link**». Κινητό (Airbnb, Zillow): το
+ * **φύλλο του λειτουργικού** — εκεί ζουν WhatsApp/Viber/Messages. Στην επιφάνεια εργασίας το
+ * `navigator.share` υπάρχει (Chrome/Edge σε Windows) αλλά ανοίγει τον διάλογο του λειτουργικού,
+ * που δεν είναι αυτό που ζητά κάποιος στο γραφείο — ζητά τον σύνδεσμο στο πρόχειρο, με **ένα** κλικ.
+ * Γι' αυτό η απόφαση ρωτά τον **δείκτη** (`pointer: coarse`), όχι την ύπαρξη του API.
+ *
+ * 🔴 **Η ακύρωση ΔΕΝ είναι αποτυχία**: `AbortError` ⇒ `'cancelled'`, **χωρίς** αντιγραφή
+ * (MDN: «User canceled the share operation»). Το `shareContent` πιο πάνω αντιγράφει και τότε — ο
+ * άνθρωπος πατά «Άκυρο» και του λέμε «αντιγράφηκε». Εδώ, **μόνο** άρνηση του φύλλου (όχι ακύρωση)
+ * πέφτει στην αντιγραφή.
+ */
+export async function shareOrCopyLink(data: { readonly title: string; readonly url: string }): Promise<LinkShareOutcome> {
+  if (prefersNativeShare(data)) {
+    try {
+      await navigator.share({ title: data.title, url: data.url });
+      return 'shared';
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+    }
+  }
+  return (await copyToClipboard(data.url)) ? 'copied' : 'failed';
+}
+
+function prefersNativeShare(data: { readonly title: string; readonly url: string }): boolean {
+  if (!isWebShareSupported() || typeof window.matchMedia !== 'function') return false;
+  if (!window.matchMedia('(pointer: coarse)').matches) return false;
+  return typeof navigator.canShare !== 'function' || navigator.canShare(data);
+}
+
 /**
  * Copy text to clipboard
  */

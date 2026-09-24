@@ -20,6 +20,10 @@
 
 import {
   listingPriceMarkers,
+  plaquesOnDrawnPoints,
+  resolvePlaqueCollisions,
+  PLAQUE_GAP_PX,
+  sameDrawnListingPoints,
   PLAQUE_MAX_UNCERTAINTY_M,
   PRICE_MARKER_LIMIT,
   type ListingPriceMarker,
@@ -383,5 +387,74 @@ describe('Κ7 — η πινακίδα ξέρει ΤΙ ΕΙΔΟΥΣ ποσό εί
     const stays = [nightly('c', 90), nightly('a', 30), nightly('b', 60)];
     expect(markersOf(stays).map((m) => m.id)).toEqual(['a', 'b', 'c']);
     expect(markersOf([...stays].reverse()).map((m) => m.id)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('Κ8 — πινακίδα μόνο πάνω σε σημείο που ζωγραφίστηκε ΧΩΡΙΣΤΑ (ADR-777 §8.78)', () => {
+  const two = markersOf([priced('a', 150_000), priced('b', 90_000)]);
+
+  it('μέσα σε ομάδα ⇒ καμία πινακίδα· έξω ⇒ η πινακίδα μένει (η ομάδα λέει ΠΛΗΘΟΣ, ποτέ τιμή)', () => {
+    expect(plaquesOnDrawnPoints(two, new Set(['b'])).map((m) => m.id)).toEqual(['b']);
+  });
+
+  it('ο ομαδοποιητής δεν απάντησε ακόμη ⇒ ΚΑΜΙΑ (ποτέ τιμή πάνω σε ομάδα, ούτε για ένα καρέ)', () => {
+    expect(plaquesOnDrawnPoints(two, 'unknown')).toEqual([]);
+  });
+
+  it('χωρίς ομαδοποιητή ⇒ όλες, με τη σειρά του κριτή', () => {
+    expect(plaquesOnDrawnPoints(two, 'all')).toBe(two);
+  });
+
+  it('ίδιο σύνολο ⇒ ίσο (καμία νέα απόδοση σε κάθε idle)· άλλο ⇒ άνισο', () => {
+    expect(sameDrawnListingPoints(new Set(['a', 'b']), new Set(['b', 'a']))).toBe(true);
+    expect(sameDrawnListingPoints(new Set(['a']), new Set(['b']))).toBe(false);
+    expect(sameDrawnListingPoints(new Set(['a']), new Set(['a', 'b']))).toBe(false);
+    expect(sameDrawnListingPoints('unknown', new Set())).toBe(false);
+    expect(sameDrawnListingPoints('unknown', 'unknown')).toBe(true);
+  });
+});
+
+describe('Κ9 — δύο πινακίδες δεν κάθονται η μία πάνω στην άλλη (Airbnb «mini-pin», ADR-777 §8.78)', () => {
+  const box = (id: string, left: number, top = 0, width = 70) => ({ id, left, top, right: left + width, bottom: top + 20 });
+  const none = new Set<string>();
+
+  it('επικάλυψη ⇒ κρατιέται η ΠΡΩΤΗ κατά τη σειρά του κριτή, η άλλη μένει κουκίδα', () => {
+    expect([...resolvePlaqueCollisions([box('a', 100), box('b', 104)], none)]).toEqual(['a']);
+  });
+
+  it('χωρίς επικάλυψη ⇒ όλες ορατές', () => {
+    expect([...resolvePlaqueCollisions([box('a', 0), box('b', 200), box('c', 0, 100)], none)]).toEqual(['a', 'b', 'c']);
+  });
+
+  it('το διάκενο μετρά: απόσταση κάτω από PLAQUE_GAP_PX συγκρούεται, ίση όχι', () => {
+    expect(resolvePlaqueCollisions([box('a', 0), box('b', 70 + PLAQUE_GAP_PX - 1)], none).has('b')).toBe(false);
+    expect(resolvePlaqueCollisions([box('a', 0), box('b', 70 + PLAQUE_GAP_PX)], none).has('b')).toBe(true);
+  });
+
+  it('το διάκενο μετρά ΚΑΙ από την άλλη πλευρά (η δεύτερη αριστερά της πρώτης)', () => {
+    expect(resolvePlaqueCollisions([box('a', 100), box('b', 100 - 70 - PLAQUE_GAP_PX + 1)], none).has('b')).toBe(false);
+  });
+
+  it('τρίτη που συγκρούεται με τη ΔΕΥΤΕΡΗ ορατή κρύβεται — κάθε ορατή πιάνει χώρο, όχι μόνο η πρώτη', () => {
+    expect([...resolvePlaqueCollisions([box('a', 0), box('b', 200), box('c', 204)], none)]).toEqual(['a', 'b']);
+  });
+
+  it('επιλεγμένη ΚΑΙ υπό hover που συγκρούονται μεταξύ τους ⇒ φαίνονται και οι δύο', () => {
+    expect([...resolvePlaqueCollisions([box('a', 100), box('b', 104)], new Set(['a', 'b']))]).toEqual(['a', 'b']);
+  });
+
+  it('η επιλεγμένη/υπό hover νικά ακόμη κι αν είναι δεύτερη — ό,τι κοιτάς φαίνεται', () => {
+    expect([...resolvePlaqueCollisions([box('a', 100), box('b', 104)], new Set(['b']))]).toEqual(['b']);
+  });
+
+  it('η κρυμμένη ΔΕΝ μπλοκάρει τρίτη: μόνο οι ορατές πιάνουν χώρο', () => {
+    expect([...resolvePlaqueCollisions([box('a', 0), box('b', 60), box('c', 120)], none)]).toEqual(['a', 'c']);
+  });
+
+  it('ορθογώνιο μηδενικού εμβαδού (δεν μετρήθηκε) ⇒ ορατό, ποτέ σύγκρουση', () => {
+    const zero = (id: string) => ({ id, left: 0, top: 0, right: 0, bottom: 0 });
+    expect([...resolvePlaqueCollisions([zero('a'), zero('b')], none)]).toEqual(['a', 'b']);
+    // …και ΔΕΝ πιάνει χώρο: μετρημένη πινακίδα στο ίδιο σημείο μένει ορατή.
+    expect([...resolvePlaqueCollisions([zero('a'), box('b', 0)], none)]).toEqual(['a', 'b']);
   });
 });

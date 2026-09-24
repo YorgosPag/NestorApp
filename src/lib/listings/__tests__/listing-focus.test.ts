@@ -11,6 +11,7 @@ import {
   focusedListingId,
   hasListingFocus,
   listingFocusStrength,
+  listingSelectionHref,
 } from '../listing-focus';
 import { useListingFocus } from '@/hooks/listings/useListingFocus';
 
@@ -132,5 +133,25 @@ describe('useListingFocus — οι μεταβάσεις', () => {
     act(() => result.current.peek('lst_same'));
 
     expect(result.current.focus).toBe(first);
+  });
+});
+
+describe('Σ — ο σύνδεσμος της επιλογής (ADR-777 §8.78)', () => {
+  it('Σ1: κρατά κριτήρια και κάδρο, προσθέτει ΑΥΤΗ την αγγελία', () => {
+    const href = listingSelectionHref('https://x.gr/search/results?bedsmin=1&box=1,2,3,4', 'pl_9');
+    const url = new URL(href);
+    expect(url.pathname).toBe('/search/results');
+    expect(url.searchParams.get('bedsmin')).toBe('1');
+    expect(url.searchParams.get('box')).toBe('1,2,3,4');
+    expect(url.searchParams.get('selected')).toBe('pl_9');
+  });
+
+  it('Σ2: άλλη επιλογή στη διεύθυνση ⇒ αντικαθίσταται, ποτέ δύο `selected`', () => {
+    const url = new URL(listingSelectionHref('https://x.gr/offers?selected=old', 'new'));
+    expect(url.searchParams.getAll('selected')).toEqual(['new']);
+  });
+
+  it('Σ3: το fragment δεν ταξιδεύει (εφήμερη κατάσταση της σελίδας)', () => {
+    expect(listingSelectionHref('https://x.gr/offers#photo-3', 'a')).toBe('https://x.gr/offers?selected=a');
   });
 });
