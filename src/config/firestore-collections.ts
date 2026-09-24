@@ -1230,6 +1230,9 @@ export const SUBCOLLECTIONS = {
 
   // BIM Animation render jobs (ADR-366 Phase 9 / C.1.a — subcollection under bim_animations/{id}, 30-day TTL post-completion)
   BIM_RENDER_JOBS: process.env.NEXT_PUBLIC_BIM_RENDER_JOBS_SUBCOL || 'render_jobs',
+
+  // Landing hero revisions (ADR-881 §4.2 — ΑΜΕΤΑΒΛΗΤΕΣ εκδόσεις, subcollection under settings/landing_heroes)
+  LANDING_HERO_REVISIONS: 'revisions',
 } as const;
 
 // ============================================================================
@@ -1302,6 +1305,11 @@ export const SYSTEM_DOCS = {
   // Path: config/ui_sync_signal — Written by Admin SDK, read by client onSnapshot
   // Allows server-side AI operations to notify the client UI of Firestore changes
   UI_SYNC_SIGNAL: 'ui_sync_signal',
+
+  // 🖼️ LANDING HEROES (ADR-881 §4.2) — Path: settings/landing_heroes
+  // Ο ΔΕΙΚΤΗΣ «ποια έκδοση ήρωα είναι ζωντανή ανά σελίδα». Μόνο Admin SDK: καμία γραμμή κανόνων
+  // για `settings` ⇒ το `match /{document=**}` αρνείται κάθε πελάτη (firestore.rules:35).
+  LANDING_HEROES: 'landing_heroes',
 } as const;
 
 // ============================================================================
@@ -1315,6 +1323,9 @@ export const SYSTEM_DOCS = {
  * @see adrs/ADR-313-enterprise-backup-restore.md
  */
 export const SUBCOLLECTION_PARENTS: Record<string, string> = {
+  // Settings subcollections → SETTINGS (ADR-881: settings/landing_heroes/revisions)
+  LANDING_HERO_REVISIONS: 'SETTINGS',
+
   // Contact subcollections → CONTACTS
   CONTACT_ACTIVITIES: 'CONTACTS',
   CONTACT_COMMUNICATIONS: 'CONTACTS',

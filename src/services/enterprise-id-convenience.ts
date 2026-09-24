@@ -159,6 +159,9 @@ export const generateShowcaseLocationId = () => enterpriseIdService.generateShow
 // ADR-841 §7 Α21.18 — ΑΙΤΗΜΑ ΕΠΙΒΕΒΑΙΩΣΗΣ EMAIL ΤΗΣ ΚΑΡΤΑΣ. Μαζί με τη μέθοδο (το μάθημα του `mreq`).
 export const generateShowcaseEmailConfirmationId = () =>
   enterpriseIdService.generateShowcaseEmailConfirmationId();
+// ADR-881 §4.2 — ΕΚΔΟΣΗ ΕΙΚΟΝΑΣ ΗΡΩΑ. Μαζί με τη μέθοδο (το μάθημα του `mreq`).
+export const generateLandingHeroRevisionId = () =>
+  enterpriseIdService.generateLandingHeroRevisionId();
 // ADR-844 — Η ΠΡΟΣΚΛΗΣΗ. Εξάγεται **μαζί** με τη μέθοδο, για τον λόγο ακριβώς από
 // πάνω: μια ταυτότητα άφταστη από το facade είναι μια ταυτότητα που ο επόμενος θα
 // γράψει με το χέρι (N.6).

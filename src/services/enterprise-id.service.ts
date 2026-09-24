@@ -64,6 +64,7 @@ export {
   generateFirstContactId,
   generateFirstContactInvitationId,
   generateShowcaseEmailConfirmationId,
+  generateLandingHeroRevisionId,
   generateDeterministicAuthReprovisionJournalId,
   generateDeterministicWorkspaceAccessRequestId,
   generateIdempotencyKey, generateDeterministicIdempotencyRecordId,

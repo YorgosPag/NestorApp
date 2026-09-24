@@ -187,6 +187,14 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   }
 
   /**
+   * ADR-881 §4.2 — **ΜΙΑ ΕΚΔΟΣΗ ΕΙΚΟΝΑΣ ΗΡΩΑ** (`lhrev_*`). Διακομιστής μόνο: η ταυτότητα γίνεται
+   * πρόθεμα στον **δημόσιο** κάδο, άρα δεν τη διαλέγει ποτέ ο πελάτης.
+   */
+  generateLandingHeroRevisionId(): string {
+    return this.generateId(P.LANDING_HERO_REVISION).id;
+  }
+
+  /**
    * **Η πρόσκληση** (ADR-844) — η δήλωση που περιμένει απόδειξη καναλιού.
    *
    * ⚠️ **Δεν είναι πράξη**, και γι' αυτό δεν είναι `fcon`: η πράξη μετριέται από
