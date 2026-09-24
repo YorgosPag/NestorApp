@@ -196,6 +196,13 @@
       "digest": "sha256:66085ee9335e145c3e18fb500ddbb7e721d18a746859521ed4c5f2fc9e5ddf02",
       "source": "storage.rules",
       "target": "storage"
+    },
+    {
+      "at": "2026-09-24",
+      "commit": "67ed0527",
+      "digest": "sha256:2eb8a5bd2721e8ec12ca835f814232d4c4342e90c436d0f385846c3ed683d8bf",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
     }
   ]
 }
