@@ -91,8 +91,16 @@ export const LANDING_MODE_OFFER: Record<Exclude<LandingMode, 'pros'>, OfferKind>
   stay: 'leaseShort',
 };
 
+/**
+ * Οι λειτουργίες που οδηγούν σε **αγγελίες**. 🔑 Με αυτό το όνομα ο
+ * {@link landingModeFilters} υπερφορτώνεται: μια ακτίνα που **ξέρει** ότι ζητά αγγελίες
+ * (`/stay`, ADR-777 §8.82) παίρνει `ListingFilters` χωρίς `null` να ελέγξει — ο τύπος
+ * το αποδεικνύει, όχι ένα `!`.
+ */
+export type ListingLandingMode = Exclude<LandingMode, 'pros'>;
+
 /** Είναι λειτουργία αγγελιών (άρα έχει `OfferKind`); — φρουρός τύπου, όχι ευκολία. */
-export function isListingMode(mode: LandingMode): mode is Exclude<LandingMode, 'pros'> {
+export function isListingMode(mode: LandingMode): mode is ListingLandingMode {
   return mode !== 'pros';
 }
 
@@ -221,6 +229,8 @@ export function landingSwitchIsVisible(available: readonly LandingMode[]): boole
  * τέσσερις. Μια δεύτερη τιμή εδώ θα σήμαινε ότι «κοντά μου» έχει **δύο** σημασίες
  * ανάλογα με το κουμπί που πάτησες — χωρίς ο επισκέπτης να το μάθει ποτέ.
  */
+export function landingModeFilters(mode: ListingLandingMode, center?: GeoPoint | null): ListingFilters;
+export function landingModeFilters(mode: LandingMode, center?: GeoPoint | null): ListingFilters | null;
 export function landingModeFilters(
   mode: LandingMode,
   center: GeoPoint | null = null,

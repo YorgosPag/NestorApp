@@ -104,3 +104,21 @@ export function searchResultsHref(query?: string | null) {
 export function searchLandingHref() {
   return typedHref(SEARCH_LANDING_ROUTE);
 }
+
+/**
+ * 🖼️ **Η ακτίνα της βραχυχρόνιας μίσθωσης** (ADR-777 §8.82) — δική της διεύθυνση, ήρωας
+ * και αναζήτηση, όπως το `/pro` για τους επαγγελματίες.
+ *
+ * 🔑 **Το όνομα είναι η λειτουργία `stay` του `landing-modes.ts`** — η ίδια λέξη που
+ *    λέει η καρτέλα της αρχικής. Όχι `/short-term-rentals`: μία λέξη για μία έννοια σε
+ *    διεύθυνση, κωδικό και καρτέλα.
+ *
+ * ⚠️ **ΔΕΝ είναι τέταρτη οθόνη της ροής αναζήτησης**: είναι **πόρτα** προς την οθόνη 2 με
+ *    το `offerKind=leaseShort` ήδη γραμμένο. Τα αποτελέσματα ζουν **μία** φορά, στο
+ *    {@link SEARCH_RESULTS_ROUTE} — εκεί ζουν και οι ημερομηνίες (`StayFilterFields`).
+ */
+export const SHORT_STAY_LANDING_ROUTE = '/stay' as const;
+
+export function shortStayLandingHref() {
+  return typedHref(SHORT_STAY_LANDING_ROUTE);
+}
