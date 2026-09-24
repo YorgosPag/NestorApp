@@ -25,6 +25,7 @@ import {
   type ListingPriceMarker,
 } from '../listing-price-markers';
 import { listingsToGeoJson, type ListingFeatureProperties } from '../listings-geojson';
+import { publicListingEntry } from '../listing-map-entry';
 import { LISTING_UNCERTAINTY_KM } from '../listing-map-shape';
 import { priceSortKey } from '@/lib/properties/price-resolver';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
@@ -72,7 +73,7 @@ function priced(id: string, amount: number, lng = 22.94, lat = 40.64): PublicLis
 
 /** Ο ζωγράφος και ο κριτής βλέπουν **τα ίδια** δεδομένα — όπως στην οθόνη. */
 function markersOf(listings: readonly PublicListing[], limit?: number): readonly ListingPriceMarker[] {
-  return listingPriceMarkers(listings, listingsToGeoJson(listings), limit);
+  return listingPriceMarkers(listings.map(publicListingEntry), listingsToGeoJson(listings), limit);
 }
 
 // ============================================================================
@@ -262,7 +263,7 @@ describe('Κ4 — η στένωση τύπου εκτελείται', () => {
       }],
     };
 
-    expect(listingPriceMarkers([priced('bad', 100)], malformed)).toEqual([]);
+    expect(listingPriceMarkers([publicListingEntry(priced('bad', 100))], malformed)).toEqual([]);
   });
 });
 
@@ -317,7 +318,7 @@ describe('Κ6 — καμία δεύτερη μετατροπή σε [lng, lat]',
     const geoJson = listingsToGeoJson([l]);
     const point = geoJson.features[0].geometry as GeoJSON.Point;
 
-    const [marker] = listingPriceMarkers([l], geoJson);
+    const [marker] = listingPriceMarkers([publicListingEntry(l)], geoJson);
     expect([marker.lng, marker.lat]).toEqual(point.coordinates);
     // ⚠️ Ρητά: το πλάτος μένει πλάτος. Αντιστροφή θα έστελνε το ακίνητο στη Σομαλία.
     expect(marker.lat).toBeCloseTo(40.6401, 6);

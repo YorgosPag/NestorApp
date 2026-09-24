@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η ΣΧΕΣΗ ΤΗΣ ΕΣΤΙΑΣΗΣ ΜΕ ΤΟ ΟΠΤΙΚΟ ΠΕΔΙΟ** — μία ερώτηση, δύο απαντήσεις.
- * @related ADR-777 §7 (Α3) · lib/a11y/reveal-in-scroll.ts · lib/listings/listing-focus.ts
+ * @related ADR-777 §7 (Α3) · §8.77 · lib/a11y/reveal-in-scroll.ts · lib/listings/listing-focus.ts
  * @module hooks/listings/useListingRevealTracking
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -30,101 +30,165 @@
  * αφήνοντας τον άνθρωπο να **μη μάθει ποτέ** ότι το επιλεγμένο είναι 200px πιο κάτω.
  * Υπάρχει **τρίτη**: *«μην κουνηθείς, **πες του πού είναι**»*. Αυτό είναι το
  * {@link ListingRevealTracking.focusVisibility} — και τροφοδοτεί τον δείκτη άκρης.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🗺️ ΔΥΟ ΚΑΔΡΑ, ΜΙΑ ΜΕΤΡΗΣΗ (ADR-777 §8.77)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * | κάδρο | πού | τι κυλά |
+ * |---|---|---|
+ * | `'container'` (προεπιλογή) | λίστα της οθόνης 2 | το **ίδιο** το δοχείο των καρτών |
+ * | `'viewport'` | χαρτοφυλάκιο κατόχου (`/offers`, λίστα ‖ χάρτης) | **ολόκληρη η σελίδα** |
+ *
+ * Και στα δύο το δοχείο **βρίσκει** τις κάρτες· αλλάζει μόνο το κάδρο της μέτρησης. Δεύτερο
+ * hook θα ήταν δεύτερη απάντηση στην ίδια ερώτηση.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { revealInScroll, visibilityWithinScroller, type ScrollVisibility } from '@/lib/a11y/reveal-in-scroll';
+import {
+  revealInScroll,
+  visibilityWithinScroller,
+  type ScrollFrame,
+  type ScrollVisibility,
+} from '@/lib/a11y/reveal-in-scroll';
 import { focusedListingId, type ListingFocus } from '@/lib/listings/listing-focus';
 
 /** Το γνώρισμα με το οποίο κάθε κάρτα δηλώνει **ποια αγγελία είναι**. */
 export const LISTING_CARD_ID_ATTRIBUTE = 'data-listing-id';
 
+/** Ως προς τι μετράμε το «ορατό» — δες τον πίνακα στην κεφαλίδα. */
+export type ListingRevealFrame = 'container' | 'viewport';
+
 export interface ListingRevealTracking {
-  /** Μπαίνει στο **δοχείο κύλισης** της λίστας. */
-  readonly scrollerRef: React.RefObject<HTMLDivElement | null>;
+  /**
+   * Μπαίνει στο στοιχείο που **περιέχει** τις κάρτες (με `'container'`: και κυλά).
+   *
+   * 🔑 **Callback ref, όχι `RefObject`**: το στοιχείο μπορεί να γεννηθεί **αργότερα** (το
+   * χαρτοφυλάκιο περνά από `tabs` σε `split` όταν φαρδύνει ο χώρος). Ένα `RefObject` δεν
+   * ειδοποιεί κανέναν· εδώ η άφιξη του στοιχείου **ξανατρέχει** μέτρηση και αποκάλυψη.
+   */
+  readonly containerRef: (element: HTMLElement | null) => void;
   /** Πού βρίσκεται η εστιασμένη αγγελία σε σχέση με ό,τι βλέπει ο άνθρωπος **τώρα**. */
   readonly focusVisibility: ScrollVisibility;
   /** «Πήγαινέ με εκεί» — η **ρητή** πράξη, δεμένη στον δείκτη άκρης. */
   readonly revealFocused: () => void;
 }
 
-function cardElement(scroller: HTMLElement | null, id: string | null): HTMLElement | null {
-  if (!scroller || !id) return null;
-  return scroller.querySelector<HTMLElement>(`[${LISTING_CARD_ID_ATTRIBUTE}="${CSS.escape(id)}"]`);
+function cardElement(container: HTMLElement | null, id: string | null): HTMLElement | null {
+  if (!container || !id) return null;
+  return container.querySelector<HTMLElement>(`[${LISTING_CARD_ID_ATTRIBUTE}="${CSS.escape(id)}"]`);
 }
 
 /**
- * **ΤΟ ΚΛΙΚ ΚΥΛΑ** — και μόνο αυτό. Εξάγεται γιατί έχει **δύο** καταναλωτές (ADR-777 §8.75):
- * τη λίστα της οθόνης 2 (δικό της δοχείο κύλισης) και το χαρτοφυλάκιο του κατόχου, όπου κυλά
- * **ολόκληρη η σελίδα** — το `scrollIntoView` ανεβαίνει ως τον πρώτο πρόγονο που κυλά, άρα η ίδια
- * γραμμή εξυπηρετεί και τα δύο. Το `rootRef` χρειάζεται μόνο για να **βρεθεί** η κάρτα.
+ * **ΤΟ ΚΛΙΚ ΚΥΛΑ** — και μόνο αυτό. Το `scrollIntoView` ανεβαίνει ως τον πρώτο πρόγονο που κυλά,
+ * άρα η ίδια γραμμή εξυπηρετεί και το δοχείο της οθόνης 2 και τη σελίδα του χαρτοφυλακίου.
  *
  * ⚠️ Η εξάρτηση είναι το `selected` **σκέτο**, ποτέ ολόκληρο το `focus`: με το αντικείμενο ως
  * εξάρτηση, κάθε κίνηση του ποντικιού πάνω από τον χάρτη θα ξανάτρεχε αυτό το effect — δηλαδή
  * θα **επανέφερε** το auto-scroll του hover από την πίσω πόρτα, ακριβώς αυτό που το αρχείο
  * υπάρχει για να αποτρέψει.
  */
-export function useRevealSelectedListing(
-  rootRef: React.RefObject<HTMLElement | null>,
-  selected: string | null,
-): void {
+function useRevealSelectedListing(container: HTMLElement | null, selected: string | null): void {
   useEffect(() => {
-    if (!selected) return;
-    revealInScroll(cardElement(rootRef.current, selected), {
+    if (!container || !selected) return;
+    const reveal = (card: HTMLElement): void => revealInScroll(card, {
       urgency: 'requested',
       // `'nearest'`: αν η κάρτα είναι ήδη ορατή — η **συνήθης** περίπτωση με 6-9
       // αποτελέσματα — δεν κουνιέται απολύτως τίποτα.
       block: 'nearest',
     });
-  }, [rootRef, selected]);
-}
 
-export function useListingRevealTracking(focus: ListingFocus): ListingRevealTracking {
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [focusVisibility, setFocusVisibility] = useState<ScrollVisibility>('unknown');
-
-  const focused = focusedListingId(focus);
-  useRevealSelectedListing(scrollerRef, focus.selected);
-
-  /**
-   * **Η ΠΑΡΑΚΟΛΟΥΘΗΣΗ ΟΡΑΤΟΤΗΤΑΣ** — η είσοδος του δείκτη άκρης.
-   *
-   * ⚠️ **Ακούει και την κύλιση**, όχι μόνο την αλλαγή εστίασης: ο άνθρωπος μπορεί να
-   * κυλήσει τη λίστα **ενώ** κρατά τον δείκτη πάνω σε πινέζα, και ένας δείκτης άκρης
-   * που δεν το προσέχει θα έλεγε «πιο πάνω» για κάτι που μόλις έγινε ορατό — δηλαδή θα
-   * έλεγε **ψέματα**, που είναι χειρότερο από το να σιωπά.
-   *
-   * 🔑 **`requestAnimationFrame`, όχι χρονόμετρο**: η μέτρηση είναι `getBoundingClientRect`,
-   * δηλαδή **επιβάλλει διάταξη**. Σε καρέ κύλισης πρέπει να συμβαίνει **μία** φορά ανά
-   * καρέ, αλλιώς είναι layout thrashing στο ίδιο νήμα που κυλά η οθόνη.
-   */
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller || !focused) {
-      setFocusVisibility('unknown');
+    const card = cardElement(container, selected);
+    if (card) {
+      reveal(card);
       return;
     }
+    /*
+      🔴 **«ΔΕΝ ΤΗ ΒΡΙΣΚΩ» ≠ «ΔΕΝ ΥΠΑΡΧΕΙ»** (μάθημα ADR-332 D20.1 · μετρημένο ζωντανά, §8.77.6):
+      ο σύνδεσμος `?selected=` φέρνει την επιλογή **πριν** φτάσουν οι κάρτες από το δίκτυο — και
+      τίποτα από τις εξαρτήσεις δεν αλλάζει όταν φτάσουν. Περιμένουμε λοιπόν την **άφιξη της
+      κάρτας** στο δοχείο, αποκαλύπτουμε **μία** φορά και σταματάμε να κοιτάμε.
+    */
+    const observer = new MutationObserver(() => {
+      const arrived = cardElement(container, selected);
+      if (!arrived) return;
+      observer.disconnect();
+      reveal(arrived);
+    });
+    observer.observe(container, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [container, selected]);
+}
 
-    let frame = 0;
+/**
+ * **Η ΠΑΡΑΚΟΛΟΥΘΗΣΗ ΟΡΑΤΟΤΗΤΑΣ** — η είσοδος του δείκτη άκρης.
+ *
+ * ⚠️ **Ακούει και την κύλιση**, όχι μόνο την αλλαγή εστίασης: ο άνθρωπος μπορεί να κυλήσει
+ * **ενώ** κρατά τον δείκτη πάνω σε πινέζα, και ένας δείκτης άκρης που δεν το προσέχει θα έλεγε
+ * «πιο πάνω» για κάτι που μόλις έγινε ορατό — δηλαδή θα έλεγε **ψέματα**.
+ *
+ * 🔑 **`scroll` στο `document` με `capture`**: τα `scroll` δεν αναδύονται, αλλά **περνούν** από το
+ * `document` στη φάση σύλληψης ⇒ **ένας** ακροατής ακούει το δοχείο, τη σελίδα **και** κάθε
+ * πρόγονο που κυλά (π.χ. το φύλλο της στενής οθόνης). Συν `resize`: στενότερο παράθυρο μετακινεί
+ * κάρτες χωρίς καμία κύλιση.
+ *
+ * ⛔ **Όχι `IntersectionObserver`** (απορρίφθηκε με λόγο): ειδοποιεί μόνο όταν **αλλάζει** η τομή.
+ * Πήδημα από «πιο πάνω» σε «πιο κάτω» χωρίς να περάσει από το ορατό (`End`, `Home`, άγκυρα) δεν
+ * διασχίζει κανένα κατώφλι ⇒ ο δείκτης θα έδειχνε **λάθος κατεύθυνση** ως την επόμενη κίνηση.
+ *
+ * 🔑 **`requestAnimationFrame`, όχι χρονόμετρο**: η μέτρηση **επιβάλλει διάταξη** — μία φορά ανά
+ * καρέ, αλλιώς layout thrashing στο νήμα που κυλά την οθόνη. Και τρέχει **μόνο** όσο κάτι είναι
+ * εστιασμένο.
+ */
+function useFocusVisibility(
+  container: HTMLElement | null,
+  focused: string | null,
+  frame: ListingRevealFrame,
+): ScrollVisibility {
+  const [visibility, setVisibility] = useState<ScrollVisibility>('unknown');
+
+  useEffect(() => {
+    if (!container || !focused) {
+      setVisibility('unknown');
+      return;
+    }
+    const scrollFrame: ScrollFrame = frame === 'viewport' ? 'viewport' : container;
+
+    let pending = 0;
     const measure = (): void => {
-      frame = 0;
-      setFocusVisibility(visibilityWithinScroller(cardElement(scroller, focused), scroller));
+      pending = 0;
+      setVisibility(visibilityWithinScroller(cardElement(container, focused), scrollFrame));
     };
     const schedule = (): void => {
-      if (frame === 0) frame = requestAnimationFrame(measure);
+      if (pending === 0) pending = requestAnimationFrame(measure);
     };
 
     measure();
-    scroller.addEventListener('scroll', schedule, { passive: true });
+    const listen = { capture: true, passive: true } as const;
+    document.addEventListener('scroll', schedule, listen);
+    window.addEventListener('resize', schedule, { passive: true });
     return () => {
-      scroller.removeEventListener('scroll', schedule);
-      if (frame !== 0) cancelAnimationFrame(frame);
+      document.removeEventListener('scroll', schedule, listen);
+      window.removeEventListener('resize', schedule);
+      if (pending !== 0) cancelAnimationFrame(pending);
     };
-  }, [focused]);
+  }, [container, focused, frame]);
+
+  return visibility;
+}
+
+export function useListingRevealTracking(
+  focus: ListingFocus,
+  frame: ListingRevealFrame = 'container',
+): ListingRevealTracking {
+  const [container, containerRef] = useState<HTMLElement | null>(null);
+
+  useRevealSelectedListing(container, focus.selected);
+  const focusVisibility = useFocusVisibility(container, focusedListingId(focus), frame);
 
   const revealFocused = useCallback(() => {
-    revealInScroll(cardElement(scrollerRef.current, focusedListingId(focus)), {
+    revealInScroll(cardElement(container, focusedListingId(focus)), {
       urgency: 'requested',
       // 🔑 **`'center'` ΕΔΩ, σε αντίθεση με το κλικ — και είναι το ίδιο σκεπτικό.**
       // Ο άνθρωπος πάτησε δείκτη που λέει «είναι πιο πάνω»: η πράξη του **είναι** «πήγαινέ
@@ -132,7 +196,7 @@ export function useListingRevealTracking(focus: ListingFocus): ListingRevealTrac
       // τυπικά και θα άφηνε τη ματιά να ψάχνει.
       block: 'center',
     });
-  }, [focus]);
+  }, [container, focus]);
 
-  return { scrollerRef, focusVisibility, revealFocused };
+  return { containerRef, focusVisibility, revealFocused };
 }

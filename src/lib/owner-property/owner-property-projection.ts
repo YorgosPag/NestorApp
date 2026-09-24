@@ -44,6 +44,7 @@ import {
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import { resolveDisplayPrice, type DisplayPrice } from '@/lib/properties/price-resolver';
+import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { ownerListingMediaSources } from '@/lib/owner-property/owner-media-publication';
 import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
@@ -344,4 +345,12 @@ export function ownerListingVisibility(
  */
 export function ownerPublicPrice(property: OwnerProperty, at: string): DisplayPrice {
   return resolveDisplayPrice(projectableFromOwnerProperty(property, at));
+}
+
+/**
+ * Η **μία γραμμή** του ακινήτου (ζευγάρι του `publicListingEntry`) — για λίστα διαλέγματος,
+ * δείκτη άκρης και πινακίδα τιμής (ADR-777 §8.77). Η τιμή περνά **πάντα** από το `ownerPublicPrice`.
+ */
+export function ownerListingEntry(property: OwnerProperty, at: string): ListingMapEntry {
+  return { id: property.id, title: property.title, price: ownerPublicPrice(property, at) };
 }

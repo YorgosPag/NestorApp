@@ -13,14 +13,29 @@
  * άφηναν κάθε καλούντα να αποφασίσει μόνος του αν το κλικ σβήνει το `peeked` — και η
  * απάντηση θα απέκλινε από τον δεύτερο καλούντα, όπως αποκλίνει **πάντα**. Εδώ οι
  * μεταβάσεις είναι **τέσσερις, ονομασμένες**, και το «τι σβήνει τι» γράφεται μία φορά.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔗 ΔΥΟ ΔΟΧΕΙΑ ΓΙΑ ΤΟ `selected`, ΜΙΑ ΣΕΙΡΑ ΜΕΤΑΒΑΣΕΩΝ (ADR-777 §8.77)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * | hook | πού ζει το `selected` | ποιος |
+ * |---|---|---|
+ * | `useUrlListingFocus` | **URL** (`?selected=`) — μοιράσιμο, επιβιώνει σε reload/πίσω | οθόνη 2 · χαρτοφυλάκιο |
+ * | `useListingFocus` | React state | πάγκος δοκιμών |
+ *
+ * 🔑 **Ένα δοχείο τη φορά, ποτέ δύο συγχρονισμένα** (μάθημα ADR-332 D20.1: state + δικλείδα =
+ * δύο αλήθειες που αποκλίνουν). Το URL γράφεται από το **υπάρχον** SSoT
+ * `useSelectedEntityUrlState` (ADR-332 D21, `history.replaceState` ⇒ χωρίς πλοήγηση, χωρίς
+ * remount, χωρίς εγγραφή στο ιστορικό ανά κλικ). Το `peeked` μένει **πάντα** σε state.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { isModalKeyboardScopeActive } from '@/lib/a11y/keyboard-scope';
+import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
 
 import {
-  NO_LISTING_FOCUS,
+  LISTING_SELECTED_PARAM,
   hasListingFocus,
   type ListingFocus,
 } from '@/lib/listings/listing-focus';
@@ -35,12 +50,29 @@ export interface ListingFocusController {
   readonly clear: () => void;
 }
 
-export function useListingFocus(): ListingFocusController {
-  const [focus, setFocus] = useState<ListingFocus>(NO_LISTING_FOCUS);
+/** Το επίμονο μισό της εστίασης: από πού διαβάζεται και πώς γράφεται. */
+interface SelectedSource {
+  readonly selected: string | null;
+  readonly setSelected: (id: string | null) => void;
+}
 
-  const peek = useCallback((id: string | null) => {
-    setFocus((current) => (current.peeked === id ? current : { ...current, peeked: id }));
-  }, []);
+/** Η εστίαση με το `selected` στο **URL** — ο σύνδεσμος ανοίγει τον χάρτη με το ακίνητο επιλεγμένο. */
+export function useUrlListingFocus(): ListingFocusController {
+  const { selectedId, setSelectedId } = useSelectedEntityUrlState(LISTING_SELECTED_PARAM);
+  return useFocusTransitions({ selected: selectedId, setSelected: setSelectedId });
+}
+
+/** Η εστίαση με το `selected` σε **state** — για επιφάνειες χωρίς δική τους διεύθυνση. */
+export function useListingFocus(): ListingFocusController {
+  const [selected, setSelected] = useState<string | null>(null);
+  return useFocusTransitions({ selected, setSelected });
+}
+
+function useFocusTransitions({ selected, setSelected }: SelectedSource): ListingFocusController {
+  const [peeked, setPeeked] = useState<string | null>(null);
+  const focus = useMemo<ListingFocus>(() => ({ peeked, selected }), [peeked, selected]);
+
+  const peek = useCallback((id: string | null) => setPeeked(id), []);
 
   /**
    * 🔴 **ΤΟ ΚΛΙΚ ΣΒΗΝΕΙ ΤΟ `peeked`, ΚΑΙ ΕΙΝΑΙ ΑΠΑΙΤΗΣΗ ΑΦΗΣ.**
@@ -52,19 +84,29 @@ export function useListingFocus(): ListingFocusController {
    * περισσότεροι**.
    */
   const select = useCallback((id: string) => {
-    setFocus({ peeked: null, selected: id });
-  }, []);
+    setPeeked(null);
+    setSelected(id);
+  }, [setSelected]);
 
-  const clear = useCallback(() => setFocus(NO_LISTING_FOCUS), []);
+  const clear = useCallback(() => {
+    setPeeked(null);
+    setSelected(null);
+  }, [setSelected]);
 
-  /**
-   * **`Escape` ακυρώνει την επιλογή** — η έξοδος που κάθε επίμονη κατάσταση οφείλει.
-   *
-   * ⚠️ **Δεν δεσμεύεται όταν δεν υπάρχει τι να ακυρωθεί**: ένας μόνιμος ακροατής
-   * `keydown` στο παράθυρο θα διεκδικούσε το `Escape` από κάθε διάλογο και μενού της
-   * σελίδας (μάθημα ADR-364/ADR-711 — το `inert` **δεν** σταματά το `window keydown`).
-   * Εδώ ο ακροατής **υπάρχει μόνο όσο υπάρχει εστίαση**.
-   */
+  useEscapeClearsFocus(focus, clear);
+
+  return useMemo(() => ({ focus, peek, select, clear }), [focus, peek, select, clear]);
+}
+
+/**
+ * **`Escape` ακυρώνει την επιλογή** — η έξοδος που κάθε επίμονη κατάσταση οφείλει.
+ *
+ * ⚠️ **Δεν δεσμεύεται όταν δεν υπάρχει τι να ακυρωθεί**: ένας μόνιμος ακροατής
+ * `keydown` στο παράθυρο θα διεκδικούσε το `Escape` από κάθε διάλογο και μενού της
+ * σελίδας (μάθημα ADR-364/ADR-711 — το `inert` **δεν** σταματά το `window keydown`).
+ * Εδώ ο ακροατής **υπάρχει μόνο όσο υπάρχει εστίαση**.
+ */
+function useEscapeClearsFocus(focus: ListingFocus, clear: () => void): void {
   useEffect(() => {
     if (!hasListingFocus(focus)) return;
 
@@ -91,6 +133,4 @@ export function useListingFocus(): ListingFocusController {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [focus, clear]);
-
-  return useMemo(() => ({ focus, peek, select, clear }), [focus, peek, select, clear]);
 }

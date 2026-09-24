@@ -37,9 +37,9 @@
  * διαβάζουν την ίδια συντεταγμένη, όχι δύο που «πρέπει» να συμφωνούν.
  */
 
-import type { PublicListing } from '@/types/public-listing';
 import type { ListingGeoJson } from './listings-geojson';
-import { PRICE_ROLE_ORDER, resolveDisplayPrice, type PriceRole } from '@/lib/properties/price-resolver';
+import type { ListingMapEntry } from './listing-map-entry';
+import { PRICE_ROLE_ORDER, type PriceRole } from '@/lib/properties/price-resolver';
 
 /**
  * **ΠΟΣΕΣ ΠΙΝΑΚΙΔΕΣ ΤΟ ΠΟΛΥ** — σχεδιαστική απόφαση, όχι όριο απόδοσης.
@@ -97,12 +97,15 @@ export interface ListingPriceMarker {
  * 3. **{@link PRICE_MARKER_LIMIT}** — φραγμένο πλήθος, ώστε ο DOM να μη μεγαλώνει με
  *    τα δεδομένα.
  *
- * @param listings Ο κατάλογος, με **όποια** σειρά τον έδωσε η αναζήτηση.
+ * @param entries  Ο κατάλογος ως **γραμμές** (`ListingMapEntry`), με **όποια** σειρά τον έδωσε η
+ *                 επιφάνεια. 🔑 Όχι `PublicListing` (ADR-777 §8.77): ο κριτής ρωτά μόνο «ποια,
+ *                 πόσο» — έτσι ο **ίδιος** κρίνει τη δημόσια αναζήτηση (`publicListingEntry`) και
+ *                 το χαρτοφυλάκιο του κατόχου (`ownerListingEntry`), χωρίς δεύτερο αντίγραφο.
  * @param geoJson  Η έξοδος του `listingsToGeoJson` — **η μία** πηγή θέσης/σχήματος.
  * @param limit    Ανώτατο πλήθος πινακίδων. `0` ή αρνητικό ⇒ **καμία**.
  */
 export function listingPriceMarkers(
-  listings: readonly PublicListing[],
+  entries: readonly ListingMapEntry[],
   geoJson: ListingGeoJson,
   limit: number = PRICE_MARKER_LIMIT,
 ): readonly ListingPriceMarker[] {
@@ -111,16 +114,14 @@ export function listingPriceMarkers(
   const anchors = plaqueAnchors(geoJson);
   const candidates: ListingPriceMarker[] = [];
 
-  for (const listing of listings) {
-    const anchor = anchors.get(listing.id);
+  for (const { id, title, price } of entries) {
+    const anchor = anchors.get(id);
     if (anchor === undefined) continue;              // κανόνας 1 — δεν ξέρουμε ΠΟΥ
-
-    const price = resolveDisplayPrice(listing);
     if (price.kind !== 'priced') continue;           // κανόνας 2 — δεν ξέρουμε ΠΟΣΟ
 
     candidates.push({
-      id: listing.id,
-      title: listing.title,
+      id,
+      title,
       lng: anchor[0],
       lat: anchor[1],
       amount: price.headline.amount,
