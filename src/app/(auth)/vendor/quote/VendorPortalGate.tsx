@@ -16,12 +16,19 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🔴 ADR-744 §18 · ADR-877 §6 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE. Μετρημένο στον
+// emulator: χωρίς αυτό το SSR έγραφε `vendor-portal:page.loading` σε προμηθευτή που μόλις ήρθε από email.
+// ⚠️ ΠΟΤΕ `import()` (κρύβει το ωμό κλειδί από το CHECK 3.51) · ΠΟΤΕ στο `page.tsx` (άλλος γράφος module).
+import routeSlice from '@/i18n/generated/routes/vendor__quote.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
 
 import type { VendorPortalView } from './types';
 import { useVendorPortalLink } from './useVendorPortalLink';
 import { VendorPortalClient } from './VendorPortalClient';
 import { VendorPortalErrorState } from './VendorPortalErrorState';
 import { vendorPortalFailureOf, vendorPortalFetch, type VendorPortalFailure } from './vendor-portal-api';
+
+registerRouteSlice(routeSlice);
 
 type LoadState =
   | { readonly phase: 'loading' }

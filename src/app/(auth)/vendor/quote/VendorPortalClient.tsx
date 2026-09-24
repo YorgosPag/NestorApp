@@ -17,7 +17,7 @@ import type { i18n } from 'i18next';
 import { VendorPortalForm } from './VendorPortalForm';
 import { DeclineDialog } from './DeclineDialog';
 import { SuccessState } from './SuccessState';
-import type { InitialData, QuoteLineDraft, QuoteSnapshot } from './types';
+import type { InitialData, QuoteLineDraft, QuoteSnapshot, VendorPortalActionError } from './types';
 import type { VendorPortalIntent } from '@/subapps/procurement/services/vendor-portal-links';
 import { vendorPortalAction, vendorPortalFetch } from './vendor-portal-api';
 
@@ -50,7 +50,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
     instance.language === 'en' ? 'en' : 'el',
   );
   const [phase, setPhase] = useState<Phase>(() => initialPhase(initialData.invite, initialIntent));
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<VendorPortalActionError | null>(null);
   const [errorReason, setErrorReason] = useState<string | null>(null);
   const existingQuote = initialQuote;
   const [submittedAt, setSubmittedAt] = useState<string | null>(
@@ -98,13 +98,13 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
 
   const onSubmit = async (formData: FormData) => {
     setPhase('submitting');
-    setErrorKey(null);
+    setActionError(null);
     setErrorReason(null);
     try {
       const res = await vendorPortalFetch(token, { method: 'POST', body: formData });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.success) {
-        setErrorKey('errors.submitFailed');
+        setActionError('submitFailed');
         setErrorReason(json?.error ?? `HTTP_${res.status}`);
         setPhase('editing');
         return;
@@ -113,7 +113,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
       setPhase('submitted');
       onSubmitted();
     } catch (err) {
-      setErrorKey('errors.submitFailed');
+      setActionError('submitFailed');
       setErrorReason(err instanceof Error ? err.message : 'unknown');
       setPhase('editing');
     }
@@ -121,17 +121,17 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
 
   const onDecline = async (reason: string | null) => {
     setPhase('declining');
-    setErrorKey(null);
+    setActionError(null);
     try {
       const res = await vendorPortalAction(token, '/decline', { reason });
       if (!res.ok) {
-        setErrorKey('errors.submitFailed');
+        setActionError('submitFailed');
         setPhase('editing');
         return;
       }
       setPhase('declined');
     } catch {
-      setErrorKey('errors.submitFailed');
+      setActionError('submitFailed');
       setPhase('editing');
     }
   };
@@ -176,7 +176,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
             initialLines={initialLines}
             existingQuote={existingQuote}
             phase={phase === 'submitting' ? 'submitting' : 'editing'}
-            errorKey={errorKey}
+            actionError={actionError}
             errorReason={errorReason}
             formattedExpiresAt={formattedExpiresAt}
             onSubmit={onSubmit}

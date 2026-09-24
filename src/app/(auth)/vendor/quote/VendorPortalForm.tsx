@@ -14,6 +14,7 @@ import type {
   InitialData,
   QuoteLineDraft,
   QuoteSnapshot,
+  VendorPortalActionError,
 } from './types';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -32,7 +33,7 @@ interface Props {
   initialLines: QuoteLineDraft[];
   existingQuote: QuoteSnapshot | null;
   phase: 'editing' | 'submitting';
-  errorKey: string | null;
+  actionError: VendorPortalActionError | null;
   errorReason: string | null;
   formattedExpiresAt: string;
   onSubmit: (formData: FormData) => Promise<void>;
@@ -45,13 +46,17 @@ export function VendorPortalForm({
   initialLines,
   existingQuote,
   phase,
-  errorKey,
+  actionError,
   errorReason,
   formattedExpiresAt,
   onSubmit,
   onDeclineRequest,
 }: Props) {
   const { t } = useTranslation(['vendor-portal']);
+  // ADR-877 §6 — κλειστό σύνολο ⇒ ΣΤΑΤΙΚΗ `t()` ανά μέλος ⇒ το route slice ξέρει τα κλειδιά του.
+  const actionErrorText: Readonly<Record<VendorPortalActionError, string>> = {
+    submitFailed: t('vendor-portal:errors.submitFailed'),
+  };
   const [lines, setLines] = useState<QuoteLineDraft[]>(initialLines);
   const [paymentTerms, setPaymentTerms] = useState(existingQuote?.paymentTerms ?? '');
   const [deliveryTerms, setDeliveryTerms] = useState(existingQuote?.deliveryTerms ?? '');
@@ -269,9 +274,9 @@ export function VendorPortalForm({
         )}
       </Section>
 
-      {(validationError || errorKey) && (
+      {(validationError || actionError) && (
         <div className="rounded-md border border-[hsl(var(--text-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm text-destructive">
-          {validationError ?? t(`vendor-portal:${errorKey}`)}
+          {validationError ?? (actionError && actionErrorText[actionError])}
           {errorReason && <span className="ml-2 text-xs text-destructive">[{errorReason}]</span>}
         </div>
       )}

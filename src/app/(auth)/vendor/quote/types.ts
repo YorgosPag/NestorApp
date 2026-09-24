@@ -67,3 +67,11 @@ export interface QuoteSnapshot {
 export interface VendorPortalView extends InitialData {
   quote: QuoteSnapshot | null;
 }
+
+/**
+ * Η αποτυχία πράξης που δείχνει η φόρμα — **κλειστό σύνολο**, ΠΟΤΕ ελεύθερο κλειδί i18n (ADR-877 §6).
+ * Ήταν `string` και αποδιδόταν με `` t(`vendor-portal:${errorKey}`) ``: δυναμική `t()` που το route
+ * slice δεν μπορεί να λύσει ⇒ η πύλη δεν είχε slice ⇒ ωμό κλειδί στο SSR, στη σελίδα που ανοίγει
+ * **από email** χωρίς λογαριασμό. Κάθε μέλος αντιστοιχεί σε **στατική** `t()` στη φόρμα (`Record`).
+ */
+export type VendorPortalActionError = 'submitFailed';
