@@ -9,9 +9,14 @@
 import 'server-only';
 
 import { DEFAULT_COMPANY_LOGO, NESTOR_APP_LOGO, type EmailImageAsset } from '@/config/email-assets';
+import { calendarDayOf } from '@/constants/platform-operator';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { emailAssetUrl } from '@/lib/http/public-origin';
 import { MAP_SEARCH_PROVIDER_BRANDS, MAP_SEARCH_PROVIDERS, MAP_SEARCH_URLS } from '@/lib/geo/map-links';
+import { escapeHtml } from '@/lib/html/escape-html';
+import { formatEuro } from '@/lib/number/greek-decimal';
+import { formatOperatorDate } from '@/lib/operator-time-format';
+import { baseEmailTexts } from './base-email-texts';
 
 // ============================================================================
 // BRAND CONSTANTS
@@ -251,7 +256,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
               </span>
               <br/>
               <span style="font-size:10px;color:${BRAND.border};">
-                &copy; ${new Date().getFullYear()} ${PRODUCT_NAME}. All rights reserved.
+                &copy; ${calendarDayOf(new Date()).slice(0, 4)} ${PRODUCT_NAME}. ${escapeHtml(baseEmailTexts(lang).rightsReserved)}
               </span>
             </td>
           </tr>
@@ -432,35 +437,15 @@ function renderEmailImage(
   return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" width="${asset.renderWidth}" height="${asset.renderHeight}" style="${style}" />`;
 }
 
-/** Escape HTML special chars to prevent XSS in dynamic content */
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+// ADR-877 §6 — καθαρά SSoT (χωρίς `server-only`)· επανεξάγονται για τους ~20 υπάρχοντες καταναλωτές.
+export { escapeHtml, formatEuro };
 
 /**
- * Server-safe Euro formatter — 2 decimal places, Greek locale.
- * Kept here to avoid importing react-i18next in server-only context.
+ * Server-safe date formatter — Greek locale, **στη ζώνη του φορέα** (ADR-877 §6: ο διακομιστής τρέχει
+ * σε UTC· χωρίς ζώνη, κάθε «σήμερα» μετά τις 21:00 UTC γραφόταν χθεσινό).
  */
-export function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-/** Server-safe date formatter — Greek locale */
 export function formatEmailDateGreek(date: Date): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
+  return formatOperatorDate(date, 'el');
 }
 
 // Back-compat alias — consumer migration deferred (email templates have pre-existing Greek UI strings, out of scope Boy Scout C.5.13)

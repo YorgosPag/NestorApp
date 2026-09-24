@@ -106,6 +106,22 @@ const mailto = \`mailto:\${identity.address}\`;
 const senderSource = identity.source === 'platform' ? 'fallback' : identity.source;`,
   },
 
+  // ADR-876 §5.8 Σ22 — ΜΙΑ πόρτα εξόδου ανά πάροχο email. Οι παγίδες του `shouldSkip` είναι οι
+  // ΝΟΜΙΜΕΣ χρήσεις: η κλήση της πόρτας, ο τύπος του αποτελέσματος, η λέξη «Mailgun» σε κείμενο/log.
+  'email-egress': {
+    shouldMatch: `const url = \`https://api.eu.mailgun.net/v3/\${domain}/messages\`;
+const region = 'api.mailgun.net';
+import { Resend } from 'resend';
+const { Resend: R } = await import('resend');
+const client = new Resend(apiKey);`,
+    shouldSkip: `import { mailgunSendMessage } from '@/server/comms/egress/mailgun-transport';
+import { resendSendMessage } from '@/server/comms/egress/resend-transport';
+const result = await mailgunSendMessage({ to, subject, text });
+logger.info('Email sent via Mailgun', { to });
+const provider = 'resend';
+const note = 'resend the invite';`,
+  },
+
   // ADR-832 — «ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;» απαντιέται σε ΕΝΑ σημείο.
   //
   // 🔴 Το σήμα είναι ο **ορισμός συνάρτησης**, όχι η κλήση, και δοκιμάστηκε το αντίθετο:

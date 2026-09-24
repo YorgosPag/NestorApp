@@ -228,3 +228,6 @@ firestore.rules.compiled
 # CHECK 3.64 — προσωρινά NDJSON ανά jest worker. Η ΥΠΟΓΕΓΡΑΜΜΕΝΗ απογραφή
 # (.text-measure-census.json) ΚΟΜΜΙΤΑΡΕΤΑΙ — αυτά εδώ όχι.
 .text-measure-census/
+
+# ADR-876 §5.8 Σ22 — τα email που ΚΡΑΤΗΣΕ η πόρτα εξόδου υπό emulator (.eml). Αγκυρωμένο: μόνο η ρίζα.
+/.emulator-outbox/

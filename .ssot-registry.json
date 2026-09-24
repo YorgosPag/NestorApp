@@ -5718,6 +5718,24 @@
         "src/services/company/__tests__/sender-identity.test.ts"
       ],
       "tier": 3
+    },
+    "email-egress": {
+      "addedDate": "2026-09-24",
+      "ssotFile": "src/server/comms/egress/mailgun-transport.ts",
+      "serviceFile": "src/server/comms/egress/resend-transport.ts",
+      "description": "ADR-876 §5.8 Σ22 — «ΦΕΥΓΕΙ ΑΥΤΟ ΤΟ EMAIL ΣΤΟ ΔΙΚΤΥΟ;» απαντιέται σε ΜΙΑ πόρτα εξόδου ανά πάροχο: `egress/mailgun-transport` (το ΜΟΝΟ αρχείο με `mailgun.net`) και `egress/resend-transport` (το ΜΟΝΟ που εισάγει το `resend` SDK). Πρώτη ερώτηση κάθε αποστολής: `emailDeliveryMode()` — αν ο server μιλά σε EMULATOR (`FIRESTORE_EMULATOR_HOST`/`FIREBASE_AUTH_EMULATOR_HOST`, γεγονός του Firebase SDK, όχι διακόπτης) το μήνυμα γράφεται ως `.eml` στο `/.emulator-outbox/` και ΠΟΤΕ στο δίκτυο. 🔴 ΜΕΤΡΗΜΕΝΟ 2026-09-24: 4 ανεξάρτητοι δρόμοι έφταναν στο δίκτυο (`sendReplyViaMailgun` ~20 καλούντες · `EmailAdapter` · `resendProvider` · χειρόγραφο δίδυμο της αλυσίδας στο procurement `email-channel`, που διάβαζε ως ΕΠΙΤΥΧΙΑ την απόρριψη του Resend) — και με `dev:emulator` έφυγε πραγματικό email. FORBIDDEN: `mailgun.net` ή εισαγωγή `resend` έξω από τις δύο πόρτες — νέος πάροχος = νέα πόρτα εδώ, με τον ίδιο φρουρό.",
+      "forbiddenPatterns": [
+        "api(\\.eu)?\\.mailgun\\.net",
+        "from ['\"]resend['\"]",
+        "import\\(['\"]resend['\"]\\)",
+        "new Resend\\("
+      ],
+      "allowlist": [
+        "src/server/comms/egress/mailgun-transport.ts",
+        "src/server/comms/egress/resend-transport.ts",
+        "src/server/comms/egress/__tests__/email-egress.test.ts"
+      ],
+      "tier": 3
     }
   }
 }
