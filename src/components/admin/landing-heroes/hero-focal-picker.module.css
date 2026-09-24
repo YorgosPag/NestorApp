@@ -1,0 +1,55 @@
+/**
+ * 🎯 Ο ΔΕΙΚΤΗΣ ΤΟΥ ΕΠΙΛΟΓΕΑ ΕΣΤΙΑΣΗΣ (ADR-881 §4.4) — ίδιο σχήμα με το `landing-hero-focal.module.css`:
+ * `data-fx`/`data-fy` σε βήμα 5% ⇒ `left`/`top`, ΚΑΝΕΝΑ inline style (N.3). Οι τιμές είναι ακριβώς τα
+ * πολλαπλάσια του `HERO_FOCAL_STEP` — η άγκυρα `hero-focal-attributes.test.ts` ελέγχει και αυτό το αρχείο.
+ */
+
+.marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.marker[data-fx="0"] { left: 0%; }
+.marker[data-fx="5"] { left: 5%; }
+.marker[data-fx="10"] { left: 10%; }
+.marker[data-fx="15"] { left: 15%; }
+.marker[data-fx="20"] { left: 20%; }
+.marker[data-fx="25"] { left: 25%; }
+.marker[data-fx="30"] { left: 30%; }
+.marker[data-fx="35"] { left: 35%; }
+.marker[data-fx="40"] { left: 40%; }
+.marker[data-fx="45"] { left: 45%; }
+.marker[data-fx="50"] { left: 50%; }
+.marker[data-fx="55"] { left: 55%; }
+.marker[data-fx="60"] { left: 60%; }
+.marker[data-fx="65"] { left: 65%; }
+.marker[data-fx="70"] { left: 70%; }
+.marker[data-fx="75"] { left: 75%; }
+.marker[data-fx="80"] { left: 80%; }
+.marker[data-fx="85"] { left: 85%; }
+.marker[data-fx="90"] { left: 90%; }
+.marker[data-fx="95"] { left: 95%; }
+.marker[data-fx="100"] { left: 100%; }
+
+.marker[data-fy="0"] { top: 0%; }
+.marker[data-fy="5"] { top: 5%; }
+.marker[data-fy="10"] { top: 10%; }
+.marker[data-fy="15"] { top: 15%; }
+.marker[data-fy="20"] { top: 20%; }
+.marker[data-fy="25"] { top: 25%; }
+.marker[data-fy="30"] { top: 30%; }
+.marker[data-fy="35"] { top: 35%; }
+.marker[data-fy="40"] { top: 40%; }
+.marker[data-fy="45"] { top: 45%; }
+.marker[data-fy="50"] { top: 50%; }
+.marker[data-fy="55"] { top: 55%; }
+.marker[data-fy="60"] { top: 60%; }
+.marker[data-fy="65"] { top: 65%; }
+.marker[data-fy="70"] { top: 70%; }
+.marker[data-fy="75"] { top: 75%; }
+.marker[data-fy="80"] { top: 80%; }
+.marker[data-fy="85"] { top: 85%; }
+.marker[data-fy="90"] { top: 90%; }
+.marker[data-fy="95"] { top: 95%; }
+.marker[data-fy="100"] { top: 100%; }

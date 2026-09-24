@@ -1,0 +1,64 @@
+/**
+ * 🎯 Η ΕΣΤΙΑΣΗ ΤΟΥ ΗΡΩΑ — ΔΥΟ ΑΝΕΞΑΡΤΗΤΟΙ ΑΞΟΝΕΣ (ADR-881 §4.4).
+ *
+ * Ο ήρωας είναι ρευστός: στο κινητό περισσεύει ΠΛΑΤΟΣ, σε μεγάλη οθόνη ΥΨΟΣ ⇒ το σημείο
+ * χρειάζεται ΚΑΙ τους δύο άξονες. Το `object-position` όμως είναι ΜΙΑ ιδιότητα, και
+ * το Tailwind δεν εκτελεί κώδικα: ένα 2D πλέγμα κλάσεων θα ήταν 21×21 = 441 literals.
+ *
+ * 🏆 Εδώ οι άξονες ΣΥΝΤΙΘΕΝΤΑΙ: κάθε `data-fx`/`data-fy` ορίζει μία custom property, και
+ * ΕΝΑΣ κανόνας τις διαβάζει ⇒ 21 + 21 = 42 κανόνες, βήμα 5%, ΚΑΝΕΝΑ inline style (N.3).
+ *
+ * ⚠️ ΠΑΡΑΓΟΜΕΝΟ ΣΧΗΜΑ: οι τιμές είναι ΑΚΡΙΒΩΣ τα πολλαπλάσια του `HERO_FOCAL_STEP`
+ *    (`hero-focal-attributes.ts`) — η άγκυρα `hero-focal-attributes.test.ts` το ελέγχει.
+ * ⚠️ ΑΥΤΟΥΣΙΟ, ΟΧΙ ΚΕΝΤΡΑΡΙΣΜΕΝΟ: ο ήρωας θέλει το θέμα εκεί όπου το έβαλε η σύνθεση
+ *    (δεξιά), όχι στο κέντρο κάτω από τον τίτλο.
+ */
+
+/* Προεπιλογή = η ιστορική `object-right` (θέμα στο δεξί τρίτο, κάθετο κέντρο). */
+.focal {
+  object-position: var(--hero-focal-x, 100%) var(--hero-focal-y, 50%);
+}
+
+.focal[data-fx="0"] { --hero-focal-x: 0%; }
+.focal[data-fx="5"] { --hero-focal-x: 5%; }
+.focal[data-fx="10"] { --hero-focal-x: 10%; }
+.focal[data-fx="15"] { --hero-focal-x: 15%; }
+.focal[data-fx="20"] { --hero-focal-x: 20%; }
+.focal[data-fx="25"] { --hero-focal-x: 25%; }
+.focal[data-fx="30"] { --hero-focal-x: 30%; }
+.focal[data-fx="35"] { --hero-focal-x: 35%; }
+.focal[data-fx="40"] { --hero-focal-x: 40%; }
+.focal[data-fx="45"] { --hero-focal-x: 45%; }
+.focal[data-fx="50"] { --hero-focal-x: 50%; }
+.focal[data-fx="55"] { --hero-focal-x: 55%; }
+.focal[data-fx="60"] { --hero-focal-x: 60%; }
+.focal[data-fx="65"] { --hero-focal-x: 65%; }
+.focal[data-fx="70"] { --hero-focal-x: 70%; }
+.focal[data-fx="75"] { --hero-focal-x: 75%; }
+.focal[data-fx="80"] { --hero-focal-x: 80%; }
+.focal[data-fx="85"] { --hero-focal-x: 85%; }
+.focal[data-fx="90"] { --hero-focal-x: 90%; }
+.focal[data-fx="95"] { --hero-focal-x: 95%; }
+.focal[data-fx="100"] { --hero-focal-x: 100%; }
+
+.focal[data-fy="0"] { --hero-focal-y: 0%; }
+.focal[data-fy="5"] { --hero-focal-y: 5%; }
+.focal[data-fy="10"] { --hero-focal-y: 10%; }
+.focal[data-fy="15"] { --hero-focal-y: 15%; }
+.focal[data-fy="20"] { --hero-focal-y: 20%; }
+.focal[data-fy="25"] { --hero-focal-y: 25%; }
+.focal[data-fy="30"] { --hero-focal-y: 30%; }
+.focal[data-fy="35"] { --hero-focal-y: 35%; }
+.focal[data-fy="40"] { --hero-focal-y: 40%; }
+.focal[data-fy="45"] { --hero-focal-y: 45%; }
+.focal[data-fy="50"] { --hero-focal-y: 50%; }
+.focal[data-fy="55"] { --hero-focal-y: 55%; }
+.focal[data-fy="60"] { --hero-focal-y: 60%; }
+.focal[data-fy="65"] { --hero-focal-y: 65%; }
+.focal[data-fy="70"] { --hero-focal-y: 70%; }
+.focal[data-fy="75"] { --hero-focal-y: 75%; }
+.focal[data-fy="80"] { --hero-focal-y: 80%; }
+.focal[data-fy="85"] { --hero-focal-y: 85%; }
+.focal[data-fy="90"] { --hero-focal-y: 90%; }
+.focal[data-fy="95"] { --hero-focal-y: 95%; }
+.focal[data-fy="100"] { --hero-focal-y: 100%; }

@@ -627,6 +627,10 @@ export const API_ROUTES = {
     AI_INBOX_TRIAGE: (communicationId: string) =>
       `/api/admin/ai-inbox/communications/${encodeURIComponent(communicationId)}/triage` as const,
     SEARCH_BACKFILL: '/api/admin/search-backfill',
+    /** ADR-881 — εικόνες ήρωα: `GET` κατάσταση + ιστορικό · `POST` νέα έκδοση (αρχεία ή μόνο εστίαση). */
+    LANDING_HEROES: '/api/admin/landing-heroes',
+    /** ADR-881 — δημοσίευση/επαναφορά (σώμα: `{ page, revisionId | null }`). */
+    LANDING_HEROES_PUBLISH: '/api/admin/landing-heroes/publish',
     SEED_PARKING: '/api/admin/seed-parking',
     SET_USER_CLAIMS: '/api/admin/set-user-claims',
     /** ADR-660 §6 — απόρριψη αιτήματος ένταξης (σώμα: `{ uid }`, περιορισμένη στον χώρο). */

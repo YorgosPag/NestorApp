@@ -25,6 +25,7 @@ import {
   Menu,
   Shield,
   Activity,
+  ImageIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -103,6 +104,13 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // ADR-881 — ό,τι βλέπει ο ΑΝΩΝΥΜΟΣ επισκέπτης και το αποφασίζει ο πάροχος, όχι κάποιος χώρος.
+    groupKey: 'publicSite',
+    items: [
+      { href: '/admin/landing-heroes', labelKey: 'landingHeroes', icon: ImageIcon, superAdminOnly: true },
+    ],
+  },
+  {
     groupKey: 'communications',
     items: [
       { href: '/admin/ai-inbox', labelKey: 'aiInbox', icon: Bot },
@@ -160,8 +168,10 @@ function SidebarContent({ isSuperAdmin, pathname, t }: SidebarContentProps) {
                         aria-current={isActive ? 'page' : undefined}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          // ADR-770 (CHECK 3.38): το `text-primary` στο σκοτεινό θέμα = το χρώμα της κάρτας ⇒ το
+                          // ενεργό στοιχείο ήταν ΑΟΡΑΤΟ (μετρημένο 2026-09-24). Το ζεύγος του hover διαβάζεται και στα δύο.
                           isActive
-                            ? 'bg-primary/10 text-primary'
+                            ? 'bg-accent text-accent-foreground'
                             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
                       >
@@ -169,7 +179,7 @@ function SidebarContent({ isSuperAdmin, pathname, t }: SidebarContentProps) {
                           aria-hidden="true"
                           className={cn(
                             'w-4 h-4 flex-shrink-0',
-                            isActive ? 'text-primary' : 'text-muted-foreground'
+                            isActive ? 'text-accent-foreground' : 'text-muted-foreground'
                           )}
                         />
                         <span>{t(`sidebar.nav.${item.labelKey}`)}</span>

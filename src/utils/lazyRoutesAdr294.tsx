@@ -270,6 +270,12 @@ export const lazyRoutesAdr294 = {
     { loadingType: 'dashboard', ssr: false }
   ),
 
+  // ADR-881 — εικόνες ήρωα των δημόσιων σελίδων (εργαλείο παρόχου).
+  AdminLandingHeroes: createLazyRoute(
+    () => import('@/components/admin/pages/LandingHeroesPageContent').then(mod => ({ default: mod.LandingHeroesPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
   AdminDatabaseUpdate: createLazyRoute(
     () => import('@/components/admin/pages/DatabaseUpdatePageContent').then(mod => ({ default: mod.DatabaseUpdatePageContent })),
     { loadingType: 'form', ssr: false }

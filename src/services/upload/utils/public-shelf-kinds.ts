@@ -32,7 +32,10 @@
 import type { ShowcaseMarkMaterial } from '@/lib/agency/showcase-mark-kind';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 
+import { isLandingHeroRevisionId } from '@/lib/landing/landing-hero-vocabulary';
+
 import { isValidPathSegment } from './storage-path-validation';
+import { LANDING_HERO_SHELF } from './public-shelf-landing-hero-kind';
 
 
 /**
@@ -282,6 +285,8 @@ export function isModelShelfKind<M>(kind: PublicShelfKind<M>): kind is ModelShel
  */
 export function isPublicShelfListingId(value: string): boolean {
   if (!isSafeSubjectSegment(value)) return false;
+  // 🖼️ ADR-881: ταυτότητα έκδοσης ήρωα ανήκει στη ΔΙΚΗ της ρίζα — «το πολύ μία ρίζα» (Κ2β).
+  if (isLandingHeroRevisionId(value)) return false;
   return !value.startsWith(TENANT_IDENTITY_PREFIX);
 }
 
@@ -457,4 +462,5 @@ export const PUBLIC_SHELF_KINDS: readonly AnyPublicShelfKind[] = [
   LISTING_SHELF,
   SHOWCASE_SHELF,
   LISTING_MODEL_SHELF,
+  LANDING_HERO_SHELF,
 ];

@@ -1,0 +1,64 @@
+/**
+ * 🖼️ Η ΠΡΟΣΟΜΟΙΩΣΗ ΤΟΥ ΚΑΔΡΟΥ (ADR-881 §5.3) — ο ήρωας σε μικρογραφία, στις ΣΩΣΤΕΣ αναλογίες.
+ *
+ * 🔑 CONTAINER UNITS (`cqw`), όχι transform/zoom με δυναμικό συντελεστή: ένα `scale(k)` θα ήθελε
+ *    inline style (N.3). Εδώ κάθε μέγεθος είναι «px του ήρωα ÷ πλάτος του ήρωα», δηλωμένο μία φορά
+ *    ανά κάδρο ⇒ η μικρογραφία κλιμακώνεται μόνη της σε οποιοδήποτε πλάτος πλακιδίου.
+ *
+ * 📏 Οι αριθμοί βγαίνουν από τις κλάσεις του `LandingHero` (`px-4/sm:px-8/lg:px-12` ·
+ *    `text-3xl/sm:text-4xl/lg:text-5xl` · `text-base/sm:text-lg` · `lg:w-3/5`) και τα πλάτη του
+ *    `hero-frames.ts`. Το lg είναι μετρημένο (τίτλος y≈0,27, πλαίσιο y 0,49–0,72).
+ */
+
+.tile {
+  container-type: inline-size;
+  position: relative;
+  overflow: hidden;
+}
+
+.text {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.panel {
+  position: absolute;
+  border-radius: 0.5cqw;
+}
+
+/* ── Κινητό: ήρωας 358 · περιθώριο 16 · τίτλος 30 · υπότιτλος 16 ── */
+.tile[data-frame='mobile'] .text { left: 4.47%; right: 4.47%; top: 9%; }
+.tile[data-frame='mobile'] .title { font-size: 8.38cqw; }
+.tile[data-frame='mobile'] .subtitle { font-size: 4.47cqw; }
+.tile[data-frame='mobile'] .panel { left: 4.47%; right: 4.47%; top: 44%; bottom: 9%; }
+
+/* ── Ταμπλέτα: ήρωας 704 · περιθώριο 32 · τίτλος 36 · υπότιτλος 18 ── */
+.tile[data-frame='tablet'] .text { left: 4.55%; right: 9.09%; top: 20%; }
+.tile[data-frame='tablet'] .title { font-size: 5.11cqw; }
+.tile[data-frame='tablet'] .subtitle { font-size: 2.56cqw; }
+.tile[data-frame='tablet'] .panel { left: 4.55%; right: 4.55%; top: 48%; bottom: 18%; }
+
+/* ── Laptop: ήρωας 1312 · περιθώριο 48 · τίτλος 48 · υπότιτλος 18 · πλαίσιο 3/5 ── */
+.tile[data-frame='laptop'] .text { left: 3.66%; right: 38.54%; top: 26%; }
+.tile[data-frame='laptop'] .title { font-size: 3.66cqw; }
+.tile[data-frame='laptop'] .subtitle { font-size: 1.37cqw; }
+.tile[data-frame='laptop'] .panel { left: 3.66%; right: 38.54%; top: 49%; bottom: 28%; }
+
+/* ── Οθόνη: ήρωας 1792 · περιθώριο 48 · τίτλος 48 · υπότιτλος 18 · πλαίσιο 3/5 ── */
+.tile[data-frame='desktop'] .text { left: 2.68%; right: 39.07%; top: 26%; }
+.tile[data-frame='desktop'] .title { font-size: 2.68cqw; }
+.tile[data-frame='desktop'] .subtitle { font-size: 1cqw; }
+.tile[data-frame='desktop'] .panel { left: 2.68%; right: 39.07%; top: 49%; bottom: 28%; }

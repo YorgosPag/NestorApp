@@ -37,6 +37,12 @@
  * ⚠️ **ΚΑΝΕΝΑ `z-index`**: η σειρά του DOM αρκεί (εικόνα → στρώμα → περιεχόμενο, όλα
  *    positioned). Ένα `z-*` εδώ θα ήταν στρώση έξω από την κλίμακα του ADR-780.
  *
+ * 🖼️ **ΔΥΟ ΠΗΓΕΣ, ΕΝΑ ΣΧΗΜΑ (ADR-881 §4.3).** Ο καταναλωτής δίνει την **ενσωματωμένη** εικόνα της
+ *    σελίδας του· ο ήρωας ρωτά τον provider αν υπάρχει **δημοσιευμένη** έκδοση (`useLandingHeroImage`).
+ *    Εκδοχή του ραφιού (`sources`) ⇒ `<img srcset>` πάνω στα έτοιμα παράγωγα· αρχείο του build ⇒
+ *    `next/image`. ⛔ Ποτέ ράφι μέσα από `next/image`: θα ήταν διπλή κωδικοποίηση.
+ * 🎯 **ΕΣΤΙΑΣΗ ΣΕ ΔΥΟ ΑΞΟΝΕΣ (ADR-881 §4.4)** — `data-fx`/`data-fy` + CSS Module, αυτούσια (όχι
+ *    κεντραρισμένη): το θέμα μένει εκεί όπου το έβαλε η σύνθεση.
  * ⚠️ **ΑΜΕΣΟ ΤΕΚΝΟ ΤΟΥ ΜΕΤΡΟΥ**: το `data-shell-span="full"` ισχύει **μόνο** όταν ο ήρωας
  *    κρέμεται κατευθείαν από το `[data-shell-measure]` της σελίδας — φωλιασμένος μένει
  *    σιωπηλά στη στήλη κειμένου. Το κλειδώνει η σύνθεση κάθε σελίδας στα τεστ της.
@@ -44,11 +50,17 @@
 
 import React, { useId } from 'react';
 import Image from 'next/image';
-import type { LandingHeroImage } from './landing-hero-images';
+
+import type { LandingHeroAsset, LandingHeroFallback, LandingHeroImage } from '@/lib/landing/landing-hero-vocabulary';
+import { listingImageSrcSet } from '@/lib/listings/listing-images';
+
+import { heroFocalAttributes, type HeroFocalAttributes } from './hero-focal-attributes';
+import { useLandingHeroImage } from './LandingHeroesProvider';
+import styles from './landing-hero-focal.module.css';
 
 interface LandingHeroProps {
-  /** Από το {@link LANDING_HERO_IMAGES} — ποτέ ωμή διαδρομή. */
-  readonly image: LandingHeroImage;
+  /** Η **ενσωματωμένη** εικόνα της σελίδας (`LANDING_HERO_IMAGES.x`) — ποτέ ωμή διαδρομή. */
+  readonly image: LandingHeroFallback;
   /** Ο **μοναδικός** `h1` της σελίδας. */
   readonly title: string;
   readonly subtitle?: string;
@@ -56,8 +68,9 @@ interface LandingHeroProps {
   readonly children?: React.ReactNode;
 }
 
-export function LandingHero({ image, title, subtitle, children }: LandingHeroProps) {
+export function LandingHero({ image: fallback, title, subtitle, children }: LandingHeroProps) {
   const headingId = useId();
+  const image = useLandingHeroImage(fallback);
 
   return (
     <section
@@ -87,41 +100,83 @@ export function LandingHero({ image, title, subtitle, children }: LandingHeroPro
   );
 }
 
-/** Οριζόντια πάντα δεξιά (το θέμα ζει στο δεξί τρίτο)· κάθετα, ό,τι δηλώνει η εικόνα. */
-const HERO_FOCUS_CLASS = {
-  center: 'object-cover object-right',
-  lower: 'object-cover object-[100%_85%]',
-} as const satisfies Record<NonNullable<LandingHeroImage['focus']>, string>;
-const HERO_SCRIM_CLASS =
+// ---------------------------------------------------------------------------
+// 🔑 ΟΙ ΣΤΑΘΕΡΕΣ ΤΟΥ ΚΑΔΡΟΥ — εξάγονται για την προσομοίωση του εργαλείου (ADR-881 §5.3)
+// ---------------------------------------------------------------------------
+
+/** Η κλάση της φωτογραφίας — `cover` + η εστίαση 2D του CSS Module. */
+export const HERO_IMAGE_CLASS = `object-cover ${styles.focal}`;
+export const HERO_SCRIM_CLASS =
   'pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10';
 /** Η γαλάζια ώρα είναι ήδη σκοτεινή: το πλήρες στρώμα θα την έκανε μαύρη μάζα. */
-const HERO_SCRIM_DUSK_CLASS = 'dark:from-black/60 dark:via-black/30 dark:to-transparent';
+export const HERO_SCRIM_DUSK_CLASS = 'dark:from-black/60 dark:via-black/30 dark:to-transparent';
+/**
+ * Το **ίδιο** στρώμα σούρουπου **χωρίς** `dark:`, **πλήρης** κλάση (όχι επικάλυψη πάνω στης μέρας: δύο
+ * αντικρουόμενες κλάσεις Tailwind κρίνονται από τη σειρά στο CSS, όχι στο `class`) — για την προσομοίωση του εργαλείου, που δείχνει το
+ * σκοτεινό κάδρο δίπλα στο φωτεινό ανεξάρτητα από το θέμα του διαχειριστή. Literal επειδή το Tailwind
+ * δεν παράγει κλάσεις από κώδικα· η άγκυρα `hero-legibility.test.ts` απαιτεί ίδιες στάσεις με το από πάνω.
+ */
+export const HERO_SCRIM_DUSK_FORCED_CLASS =
+  'pointer-events-none absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent';
+
+interface HeroPictureProps {
+  readonly asset: LandingHeroAsset;
+  readonly focal: HeroFocalAttributes;
+  /** Μόνο η **μονή** εικόνα είναι eager — στο ζεύγος θα κατέβαιναν και οι δύο (§8.81). */
+  readonly eager: boolean;
+  readonly themeClass?: string;
+}
 
 /**
- * Φωτογραφία + σκούρο στρώμα. Διακοσμητική: το νόημα το λέει ο τίτλος, όχι η φωτογραφία.
- *
- * ⚠️ Το `fetchPriority="high"` είναι ρητό: το `priority` του Next 15 προφορτώνει, αλλά **δεν**
- *    γράφει το χαρακτηριστικό στο `<img>` (μετρημένο 24/09: `fetchpriority = null`). Ο ήρωας
- *    είναι το LCP ⇒ όποια βιτρίνα ακολουθεί περνά `ownsLcp={false}`.
+ * **Μία εκδοχή** — από το ράφι ή από το build.
+ * ⚠️ Το `fetchPriority="high"` είναι ρητό και στις δύο: το `priority` του Next 15 προφορτώνει, αλλά
+ *    **δεν** γράφει το χαρακτηριστικό στο `<img>` (μετρημένο 24/09: `fetchpriority = null`).
  */
+function HeroPicture({ asset, focal, eager, themeClass = '' }: HeroPictureProps) {
+  const className = `${HERO_IMAGE_CLASS} ${themeClass}`.trim();
+
+  if (asset.sources !== undefined) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={asset.src}
+        srcSet={listingImageSrcSet({ sources: asset.sources })}
+        sizes="100vw"
+        width={asset.width}
+        height={asset.height}
+        alt=""
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority="high"
+        decoding="async"
+        className={`absolute inset-0 h-full w-full ${className}`}
+        {...focal}
+      />
+    );
+  }
+
+  return (
+    <Image src={asset.src} alt="" fill priority={eager} fetchPriority="high" sizes="100vw" className={className} {...focal} />
+  );
+}
+
+/** Φωτογραφία + σκούρο στρώμα. Διακοσμητική: το νόημα το λέει ο τίτλος, όχι η φωτογραφία. */
 function HeroBackdrop({ image }: { readonly image: LandingHeroImage }) {
-  const imageClass = HERO_FOCUS_CLASS[image.focus ?? 'center'];
-  const scrim = <span aria-hidden="true" className={HERO_SCRIM_CLASS} />;
+  const focal = heroFocalAttributes(image.focalPoint);
 
   if (image.dusk === undefined) {
     return (
       <>
-        <Image src={image.day} alt="" fill priority fetchPriority="high" sizes="100vw" className={imageClass} />
-        {scrim}
+        <HeroPicture asset={image.day} focal={focal} eager />
+        <span aria-hidden="true" className={HERO_SCRIM_CLASS} />
       </>
     );
   }
 
-  // 🔑 Lazy (προεπιλογή) ⇒ κατεβαίνει μόνο η ορατή — βλ. σχόλιο αρχείου, §8.81.
+  // 🔑 Lazy ⇒ κατεβαίνει μόνο η ορατή — βλ. σχόλιο αρχείου, §8.81.
   return (
     <>
-      <Image src={image.day} alt="" fill fetchPriority="high" sizes="100vw" className={`${imageClass} dark:hidden`} />
-      <Image src={image.dusk} alt="" fill fetchPriority="high" sizes="100vw" className={`hidden ${imageClass} dark:block`} />
+      <HeroPicture asset={image.day} focal={focal} eager={false} themeClass="dark:hidden" />
+      <HeroPicture asset={image.dusk} focal={focal} eager={false} themeClass="hidden dark:block" />
       <span aria-hidden="true" className={`${HERO_SCRIM_CLASS} ${HERO_SCRIM_DUSK_CLASS}`} />
     </>
   );

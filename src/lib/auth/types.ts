@@ -248,6 +248,11 @@ export const PERMISSIONS = {
   "performance_diagnostics:diagnostics:triage": true,
   "performance_diagnostics:diagnostics:update_status": true,
   "performance_diagnostics:diagnostics:assign": true,
+
+  // Landing hero images (ADR-881 §4.1) — ΕΠΙΦΑΝΕΙΑ ΠΛΑΤΦΟΡΜΑΣ, όχι μισθωτή. Σήμερα τη δίνει ΜΟΝΟ
+  // το isBypass (super_admin)· ονομασμένη ώστε αύριο ένας υπεύθυνος marketing της πλατφόρμας να
+  // πάρει ΑΥΤΗ και όχι πλήρη πρόσβαση συστήματος (Shopify custom roles / Webflow Designer≠Admin).
+  "platform_landing_heroes:heroes:publish": true,
 } as const;
 
 /** Permission ID derived from registry. */

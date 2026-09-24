@@ -35,12 +35,18 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
 import { LegalLinksNav } from '@/components/legal/LegalLinksNav';
+import { LandingHeroesProvider } from '@/components/shared/landing-hero/LandingHeroesProvider';
+import { readLandingHeroes } from '@/services/landing-hero/landing-hero-reader';
 
-export default function LightLayout({
+export default async function LightLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // 🖼️ ADR-881 §4.3 — οι δημοσιευμένοι ήρωες, διαβασμένοι ΕΔΩ (server) ώστε το URL να είναι μέσα
+  //    στο HTML (LCP). Μνήμη με tag + δίχτυ: ποτέ δεν πετά, κάθε αποτυχία ⇒ ενσωματωμένες εικόνες.
+  const heroes = await readLandingHeroes();
+
   return (
     <div data-shell-frame className={`w-full ${COLOR_BRIDGE.bg.primary}`}>
     <TooltipProvider delayDuration={300}>
@@ -79,7 +85,10 @@ export default function LightLayout({
         αποτελέσματα **χάρτης σε πλήρες παράθυρο**. Ένα ταβάνι για όλες θα ήταν
         λάθος στις τρεις από τις τέσσερις — γι' αυτό το δηλώνει **η σελίδα**.
       */}
-      <ShellSurface className="flex flex-1 flex-col">{children}</ShellSurface>
+      <ShellSurface className="flex flex-1 flex-col">
+        {/* ⚠️ Ο provider ΔΕΝ προσθέτει κόμβο DOM — η αλυσίδα `:has(> [data-shell-surface] > …)` μένει ανέπαφη. */}
+        <LandingHeroesProvider heroes={heroes}>{children}</LandingHeroesProvider>
+      </ShellSurface>
       {/*
         ⚖️ **ΤΟ ΥΠΟΣΕΛΙΔΟ ΤΟΥ ΔΗΜΟΣΙΟΥ ΙΣΤΟΤΟΠΟΥ** (ADR-861 Φ2, απόφαση Giorgio 2026-09-16).
 
