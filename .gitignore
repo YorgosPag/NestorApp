@@ -31,6 +31,9 @@ f661kuiq*.l
 # Screenshots - ignore Windows Greek screenshots
 Στιγμιότυπο*
 *.jpg
+# ...αλλά ΠΟΤΕ τα assets της εφαρμογής: ένα `*.jpg` στο `public/` που αγνοείται = εικόνα που
+# λείπει στην παραγωγή, σιωπηλά (ADR-777 §8.79: το `hero.jpg` της αρχικής).
+!public/**/*.jpg
 
 # SSoT ratchet (generated intermediary)
 
