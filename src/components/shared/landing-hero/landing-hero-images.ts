@@ -32,13 +32,23 @@ export interface LandingHeroImage {
   readonly day: string;
   /** Σκοτεινό θέμα — η ίδια σκηνή στη γαλάζια ώρα. */
   readonly dusk?: string;
+  /**
+   * Πού κάθεται **κάθετα** το θέμα (κοινό για `day`/`dusk` — ίδιο κάδρο). Ο ήρωας είναι
+   * φαρδύτερος από 2:1 σε μεγάλη οθόνη ⇒ το `object-cover` κόβει πάνω-κάτω· χωρίς δήλωση
+   * κρατά το κέντρο. `'lower'` όταν το νόημα ζει χαμηλά (π.χ. σχέδια στο τραπέζι του `/pro`).
+   */
+  readonly focus?: 'center' | 'lower';
 }
 
 export const LANDING_HERO_IMAGES = {
   /** Ο κόμβος — `/`. */
   home: { day: '/images/landing/hero-day.jpg', dusk: '/images/landing/hero-dusk.jpg' },
   /** Η ακτίνα των επαγγελματιών — `/pro`. */
-  pros: { day: '/images/landing/pros.jpg' },
+  pros: {
+    day: '/images/landing/pros-day.jpg',
+    dusk: '/images/landing/pros-dusk.jpg',
+    focus: 'lower',
+  },
   /** Η ακτίνα της βραχυχρόνιας μίσθωσης — `/stay`. */
-  stay: { day: '/images/landing/stay.jpg' },
+  stay: { day: '/images/landing/stay-day.jpg', dusk: '/images/landing/stay-dusk.jpg' },
 } as const satisfies Record<string, LandingHeroImage>;

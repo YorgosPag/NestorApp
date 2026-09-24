@@ -66,7 +66,9 @@ describe('LandingHero — ADR-777 §8.79 · §8.82', () => {
   });
 
   it('🌗 χωρίς βραδινή εκδοχή: ΜΙΑ εικόνα, eager (priority) — ίδια σε ΚΑΙ ΤΑ ΔΥΟ θέματα', () => {
-    const imgs = renderHero().querySelectorAll('img');
+    // ⚠️ Συνθετική εικόνα: όλες οι γραμμές του πίνακα έχουν σήμερα ζεύγος, αλλά ο κλάδος
+    //    μένει (νέα ακτίνα μπαίνει πρώτα με μόνο `day`).
+    const imgs = renderHero(undefined, { day: '/images/landing/solo.jpg' }).querySelectorAll('img');
     expect(imgs).toHaveLength(1);
     expect(imgs[0]).not.toHaveAttribute('loading', 'lazy');
     expect(imgs[0]).not.toHaveClass('dark:hidden');
@@ -88,6 +90,18 @@ describe('LandingHero — ADR-777 §8.79 · §8.82', () => {
       expect(hero.querySelectorAll('section')).toHaveLength(0);
       cleanup();
     }
+  });
+
+  it('🎯 σημείο εστίασης: `lower` κατεβάζει το κάδρο και στις ΔΥΟ εκδοχές· απόν = κέντρο', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: αγνόησε το `focus` ⇒ στο `/pro` κόβονται τα σχέδια (μετρημένο 24/09).
+    const lower = renderHero(undefined, { day: '/a.jpg', dusk: '/b.jpg', focus: 'lower' });
+    for (const img of Array.from(lower.querySelectorAll('img'))) {
+      expect(img).toHaveClass('object-[100%_85%]');
+      expect(img).not.toHaveClass('object-right');
+    }
+    cleanup();
+    const centered = renderHero(undefined, { day: '/a.jpg', dusk: '/b.jpg' });
+    for (const img of Array.from(centered.querySelectorAll('img'))) expect(img).toHaveClass('object-right');
   });
 
   it('🔑 ένας πίνακας εικόνων — ο κόμβος και οι δύο ακτίνες, καμία κοινή διαδρομή', () => {

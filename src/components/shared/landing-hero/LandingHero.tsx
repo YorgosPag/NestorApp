@@ -87,7 +87,11 @@ export function LandingHero({ image, title, subtitle, children }: LandingHeroPro
   );
 }
 
-const HERO_IMAGE_CLASS = 'object-cover object-right';
+/** Οριζόντια πάντα δεξιά (το θέμα ζει στο δεξί τρίτο)· κάθετα, ό,τι δηλώνει η εικόνα. */
+const HERO_FOCUS_CLASS = {
+  center: 'object-cover object-right',
+  lower: 'object-cover object-[100%_85%]',
+} as const satisfies Record<NonNullable<LandingHeroImage['focus']>, string>;
 const HERO_SCRIM_CLASS =
   'pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10';
 /** Η γαλάζια ώρα είναι ήδη σκοτεινή: το πλήρες στρώμα θα την έκανε μαύρη μάζα. */
@@ -101,12 +105,13 @@ const HERO_SCRIM_DUSK_CLASS = 'dark:from-black/60 dark:via-black/30 dark:to-tran
  *    είναι το LCP ⇒ όποια βιτρίνα ακολουθεί περνά `ownsLcp={false}`.
  */
 function HeroBackdrop({ image }: { readonly image: LandingHeroImage }) {
+  const imageClass = HERO_FOCUS_CLASS[image.focus ?? 'center'];
   const scrim = <span aria-hidden="true" className={HERO_SCRIM_CLASS} />;
 
   if (image.dusk === undefined) {
     return (
       <>
-        <Image src={image.day} alt="" fill priority fetchPriority="high" sizes="100vw" className={HERO_IMAGE_CLASS} />
+        <Image src={image.day} alt="" fill priority fetchPriority="high" sizes="100vw" className={imageClass} />
         {scrim}
       </>
     );
@@ -115,8 +120,8 @@ function HeroBackdrop({ image }: { readonly image: LandingHeroImage }) {
   // 🔑 Lazy (προεπιλογή) ⇒ κατεβαίνει μόνο η ορατή — βλ. σχόλιο αρχείου, §8.81.
   return (
     <>
-      <Image src={image.day} alt="" fill fetchPriority="high" sizes="100vw" className={`${HERO_IMAGE_CLASS} dark:hidden`} />
-      <Image src={image.dusk} alt="" fill fetchPriority="high" sizes="100vw" className={`hidden ${HERO_IMAGE_CLASS} dark:block`} />
+      <Image src={image.day} alt="" fill fetchPriority="high" sizes="100vw" className={`${imageClass} dark:hidden`} />
+      <Image src={image.dusk} alt="" fill fetchPriority="high" sizes="100vw" className={`hidden ${imageClass} dark:block`} />
       <span aria-hidden="true" className={`${HERO_SCRIM_CLASS} ${HERO_SCRIM_DUSK_CLASS}`} />
     </>
   );
