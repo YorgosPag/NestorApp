@@ -28,6 +28,8 @@ interface Props {
   initialQuote: QuoteSnapshot | null;
   /** Από τον σύνδεσμο του email (`#…&intent=decline`) — ανοίγει διάλογο, ΔΕΝ αρνείται (ADR-876 Ε3). */
   initialIntent: VendorPortalIntent | null;
+  /** Μετά από επιτυχή υποβολή: ο Gate ξαναδιαβάζει προσφορά + `permits` από τον server. */
+  onSubmitted: () => void;
 }
 
 type Phase = 'editing' | 'submitting' | 'submitted' | 'declined' | 'declining';
@@ -38,11 +40,11 @@ type Phase = 'editing' | 'submitting' | 'submitted' | 'declined' | 'declining';
  * προσφορά που ο προμηθευτής ήδη έστειλε.
  */
 function initialPhase(invite: InitialData['invite'], intent: VendorPortalIntent | null): Phase {
-  if (invite.status === 'submitted') return invite.editWindowOpen ? 'editing' : 'submitted';
-  return intent === 'decline' ? 'declining' : 'editing';
+  if (!invite.permits.submit) return 'submitted';
+  return intent === 'decline' && invite.permits.decline ? 'declining' : 'editing';
 }
 
-export function VendorPortalClient({ token, initialData, initialQuote, initialIntent }: Props) {
+export function VendorPortalClient({ token, initialData, initialQuote, initialIntent, onSubmitted }: Props) {
   const { t, i18n: instance } = useTranslation(['vendor-portal']);
   const [locale, setLocale] = useState<'el' | 'en'>(
     instance.language === 'en' ? 'en' : 'el',
@@ -109,6 +111,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
       }
       setSubmittedAt(json.data?.editWindowExpiresAt ?? null);
       setPhase('submitted');
+      onSubmitted();
     } catch (err) {
       setErrorKey('errors.submitFailed');
       setErrorReason(err instanceof Error ? err.message : 'unknown');
@@ -165,7 +168,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
           <SuccessState
             editWindowExpiresAt={submittedAt}
             locale={locale}
-            onEditAgain={() => setPhase('editing')}
+            onEditAgain={initialData.invite.permits.submit ? () => setPhase('editing') : null}
           />
         ) : (
           <VendorPortalForm
@@ -177,7 +180,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
             errorReason={errorReason}
             formattedExpiresAt={formattedExpiresAt}
             onSubmit={onSubmit}
-            onDeclineRequest={() => setPhase('declining')}
+            onDeclineRequest={initialData.invite.permits.decline ? () => setPhase('declining') : null}
           />
         )}
       </div>

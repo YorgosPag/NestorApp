@@ -13,6 +13,9 @@
  *  3. κρατιέται στο `sessionStorage` της **καρτέλας**, ώστε η ανανέωση της σελίδας να δουλεύει·
  *     σβήνει όταν κλείσει η καρτέλα. Κάθε πρόσβαση σε try/catch: ιδιωτικό παράθυρο ή μπλοκαρισμένα
  *     δεδομένα ⇒ απλώς καμία επιβίωση σε reload, ποτέ σφάλμα.
+ *  4. **και σε `hashchange`** (ADR-876 §5 Σ18): δεύτερος σύνδεσμος επικολλημένος στην ΙΔΙΑ καρτέλα
+ *     είναι πλοήγηση στο ίδιο έγγραφο — χωρίς mount. Επαληθευμένο στον browser: η σελίδα έδειχνε
+ *     την ΠΡΟΗΓΟΥΜΕΝΗ πρόσκληση και το νέο `#t=` έμενε ορατό στη γραμμή διευθύνσεων.
  *
  * @module app/(auth)/vendor/quote/useVendorPortalLink
  */
@@ -53,15 +56,24 @@ export function useVendorPortalLink(): VendorPortalLinkState {
   const [state, setState] = useState<VendorPortalLinkState>({ phase: 'reading' });
 
   useEffect(() => {
-    const fragment = readVendorPortalFragment(window.location.hash);
-    if (window.location.hash) clearUrlFragment();
-    if (fragment.token) {
-      remember(fragment.token);
-      setState({ phase: 'ready', token: fragment.token, intent: fragment.intent });
-      return;
-    }
-    const stored = recall();
-    setState(stored ? { phase: 'ready', token: stored, intent: null } : { phase: 'missing' });
+    const adopt = (): void => {
+      const fragment = readVendorPortalFragment(window.location.hash);
+      if (window.location.hash) clearUrlFragment();
+      if (fragment.token) {
+        remember(fragment.token);
+        setState({ phase: 'ready', token: fragment.token, intent: fragment.intent });
+        return;
+      }
+      // Κενό fragment μετά από `hashchange` (π.χ. το δικό μας σβήσιμο) ⇒ ό,τι ήδη ισχύει μένει.
+      setState((current) => {
+        if (current.phase === 'ready') return current;
+        const stored = recall();
+        return stored ? { phase: 'ready', token: stored, intent: null } : { phase: 'missing' };
+      });
+    };
+    adopt();
+    window.addEventListener('hashchange', adopt);
+    return () => window.removeEventListener('hashchange', adopt);
   }, []);
 
   return state;

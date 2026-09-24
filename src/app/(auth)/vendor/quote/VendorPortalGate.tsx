@@ -12,7 +12,7 @@
  * @enterprise ADR-876 §5
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -28,8 +28,26 @@ type LoadState =
   | { readonly phase: 'failed'; readonly reason: VendorPortalFailure }
   | { readonly phase: 'ready'; readonly view: VendorPortalView };
 
-function usePortalView(token: string | null): LoadState {
-  const [state, setState] = useState<LoadState>({ phase: 'loading' });
+interface PortalView {
+  readonly state: LoadState;
+  /**
+   * Ξαναδιάβασε την όψη **μετά από πράξη** (ADR-876 §5 Σ16): η υποβολή αλλάζει προσφορά και ρήματα,
+   * και ο client ΔΕΝ τα μαντεύει. Σιωπηλά — η τρέχουσα όψη μένει ώσπου να έρθει η νέα.
+   */
+  readonly revalidate: () => void;
+}
+
+const LOADING: LoadState = { phase: 'loading' };
+
+/** Η όψη **μαζί με τον σύνδεσμο που τη φόρτωσε** — άλλος σύνδεσμος ⇒ ποτέ η παλιά όψη (ADR-876 §5 Σ18). */
+interface LoadedView {
+  readonly token: string;
+  readonly state: LoadState;
+}
+
+function usePortalView(token: string | null): PortalView {
+  const [loaded, setLoaded] = useState<LoadedView | null>(null);
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -39,16 +57,18 @@ function usePortalView(token: string | null): LoadState {
         const next: LoadState = res.ok
           ? { phase: 'ready', view: ((await res.json()) as { data: VendorPortalView }).data }
           : { phase: 'failed', reason: await vendorPortalFailureOf(res) };
-        if (!cancelled) setState(next);
+        if (!cancelled) setLoaded({ token, state: next });
       } catch {
-        if (!cancelled) setState({ phase: 'failed', reason: 'server_error' });
+        if (!cancelled) setLoaded({ token, state: { phase: 'failed', reason: 'server_error' } });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [token]);
-  return state;
+  }, [token, revision]);
+  const revalidate = useCallback(() => setRevision((current) => current + 1), []);
+  const state = loaded && loaded.token === token ? loaded.state : LOADING;
+  return { state, revalidate };
 }
 
 function Loading() {
@@ -65,17 +85,19 @@ function Loading() {
 export function VendorPortalGate() {
   const link = useVendorPortalLink();
   const token = link.phase === 'ready' ? link.token : null;
-  const load = usePortalView(token);
+  const { state: load, revalidate } = usePortalView(token);
 
   if (link.phase === 'missing') return <VendorPortalErrorState reason="missing_link" token={null} />;
   if (link.phase === 'reading' || load.phase === 'loading') return <Loading />;
   if (load.phase === 'failed') return <VendorPortalErrorState reason={load.reason} token={token} />;
   return (
     <VendorPortalClient
+      key={link.token}
       token={link.token}
       initialData={{ invite: load.view.invite, rfq: load.view.rfq }}
       initialQuote={load.view.quote}
       initialIntent={link.intent}
+      onSubmitted={revalidate}
     />
   );
 }

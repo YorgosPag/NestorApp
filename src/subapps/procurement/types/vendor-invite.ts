@@ -42,6 +42,13 @@ export interface VendorInvite {
   /** Η λήξη του **νεότερου** ζωντανού συνδέσμου — ανανεώνεται σε κάθε νέα έκδοση. */
   expiresAt: Timestamp;
   editWindowExpiresAt: Timestamp | null;
+  /**
+   * **Η απάντηση ΑΥΤΗΣ της πρόσκλησης** — γράφεται στην πρώτη υποβολή (ADR-876 §5 Σ19).
+   * 🔴 Ήταν ερώτημα `(rfqId, vendorContactId)`: με χειροκίνητο email το `vendorContactId` είναι `''`,
+   * άρα ο δεύτερος προμηθευτής **έγραφε πάνω** στην προσφορά του πρώτου. Μία πρόσκληση = μία απάντηση.
+   * `undefined` σε έγγραφα προ-Σ19.
+   */
+  quoteId?: string | null;
   remindersSentAt: Timestamp[];
   lastReminderAt: Timestamp | null;
   createdAt: Timestamp;

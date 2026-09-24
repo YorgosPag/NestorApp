@@ -21,7 +21,7 @@ import 'server-only';
 import admin from 'firebase-admin';
 import { safeFirestoreOperation, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AuthContext } from '@/lib/auth';
@@ -47,7 +47,6 @@ import { recordVendorInviteAudit } from './vendor-invite-audit';
 
 const logger = createModuleLogger('VENDOR_INVITE_SERVICE');
 
-const EDIT_WINDOW_HOURS = 72; // ADR-327 Q8
 
 // =============================================================================
 // CONTACT LOOKUP
@@ -68,7 +67,8 @@ export async function fetchVendorContact(
     const snap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
     if (!snap.exists) return null;
     const data = snap.data() ?? {};
-    if (data.companyId && data.companyId !== companyId) return null;
+    // Επαφή χωρίς `companyId` δεν ανήκει σε κανέναν (ADR-742 §4 · ADR-876 §5 Σ15) — ήταν `data.companyId && …`.
+    if (!isPayloadOwnedByCompany(data, companyId)) return null;
     const supplierPersona = data.supplierPersona as { preferredChannel?: DeliveryChannel } | undefined;
     return {
       id: snap.id,
@@ -244,8 +244,8 @@ export async function getVendorInvite(
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId).get();
     if (!snap.exists) return null;
+    if (!isPayloadOwnedByCompany(snap.data(), companyId)) return null;
     const invite = { id: snap.id, ...snap.data() } as VendorInvite;
-    if (invite.companyId !== companyId) return null;
     return { ...invite, status: normalizeInviteStatus(invite.status) };
   }, null);
 }
@@ -329,16 +329,18 @@ export async function markInviteOpened(inviteId: string): Promise<void> {
 }
 
 /** Mark invite submitted. Opens 72h edit window per Q8. */
-export async function markInviteSubmitted(inviteId: string): Promise<void> {
-  const editWindowExpiresAt = adminTimestampFromDateAsClient(
-    new Date(Date.now() + EDIT_WINDOW_HOURS * 60 * 60 * 1000),
-  );
+/**
+ * Πρώτη υποβολή: κατάσταση + παράθυρο + **η απάντηση της πρόσκλησης** (`quoteId`, ADR-876 §5 Σ19).
+ * `editWindowEnd` από τον καλούντα (`vendorQuoteEditWindowEnd`) — η ΙΔΙΑ στιγμή με την προσφορά.
+ */
+export async function markInviteSubmitted(inviteId: string, editWindowEnd: Date, quoteId: string): Promise<void> {
   await patchInvite(inviteId, {
     status: 'submitted',
     submittedAt: adminTimestampAsClient(),
-    editWindowExpiresAt,
+    editWindowExpiresAt: adminTimestampFromDateAsClient(editWindowEnd),
+    quoteId,
   });
-  logger.info('Vendor invite submitted', { inviteId, editWindowHours: EDIT_WINDOW_HOURS });
+  logger.info('Vendor invite submitted', { inviteId, quoteId, editWindowExpiresAt: editWindowEnd.toISOString() });
 }
 
 export async function markInviteDeclined(inviteId: string, reason: string | null): Promise<void> {
@@ -368,6 +370,9 @@ export class VendorInviteStateError extends Error {
  *
  * ⚠️ Μόνο ζωντανή πρόσκληση (`pending|sent|opened`): υποβεβλημένη προσφορά **δεν** ακυρώνεται
  * από εδώ (το UI το έκρυβε ήδη· ο server δεν το έλεγχε — ADR-876 Σ5).
+ * **Ιδεμποτική** (ADR-876 §5 Σ20): ήδη ανακλημένη ⇒ επιτυχία χωρίς εγγραφή/audit — όπως η ανάκληση
+ * ενός συνδέσμου. Ήταν 409 `not_live`: δεύτερο μέλος που πατούσε «Απόσυρση» έβλεπε σφάλμα ενώ
+ * η κατάσταση που ζήτησε ίσχυε ήδη.
  */
 export async function revokeVendorInvite(ctx: AuthContext, rfqId: string, inviteId: string): Promise<void> {
   const db = getAdminFirestore();
@@ -376,15 +381,18 @@ export async function revokeVendorInvite(ctx: AuthContext, rfqId: string, invite
   const revokedLinks = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const data = snap.data() as VendorInvite | undefined;
-    if (!data || !isOwnedByCompany(data, ctx.companyId) || data.rfqId !== rfqId) {
+    if (!data || !isPayloadOwnedByCompany(data, ctx.companyId) || data.rfqId !== rfqId) {
       throw new VendorInviteStateError('not_found');
     }
+    // Η ΑΠΟΘΗΚΕΥΜΕΝΗ τιμή: ένα προ-migration `'expired'` δεν «περνά» σιωπηλά χωρίς ανάκληση συνδέσμων.
+    if (data.status === 'revoked') return null;
     if (!isLiveInviteStatus(normalizeInviteStatus(data.status))) throw new VendorInviteStateError('not_live');
     const liveRefs = await readLiveCredentialRefsTx(tx, db, ctx.companyId, inviteId);
     tx.update(ref, { status: 'revoked' satisfies InviteStatus, updatedAt: admin.firestore.Timestamp.now() });
     for (const credentialRef of liveRefs) tx.update(credentialRef, { revokedAt: nowIso, revokedBy: ctx.uid });
     return liveRefs.length;
   });
+  if (revokedLinks === null) return;
   recordVendorInviteAudit(ctx, inviteId, 'status_changed', [
     { field: 'status', oldValue: 'live', newValue: 'revoked' },
   ]);

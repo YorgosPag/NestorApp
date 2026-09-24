@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * SuccessState — shown after a successful submission (or edit) within the
- * 72h edit window. Vendor can re-open and edit until the window closes.
+ * SuccessState — shown after a successful submission (or edit). Re-opening for edit is offered
+ * ONLY when the server's `permits.submit` says so (ADR-876 §5 Σ16) — after the window closes the
+ * page says so instead of promising an edit the server would refuse.
  *
  * @module app/(auth)/vendor/quote/SuccessState
  */
@@ -13,7 +14,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 interface Props {
   editWindowExpiresAt: string | null;
   locale: 'el' | 'en';
-  onEditAgain: () => void;
+  /** `null` ⇒ το παράθυρο επεξεργασίας έκλεισε: κανένα κουμπί, άλλο κείμενο. */
+  onEditAgain: (() => void) | null;
 }
 
 export function SuccessState({ editWindowExpiresAt, locale, onEditAgain }: Props) {
@@ -29,15 +31,19 @@ export function SuccessState({ editWindowExpiresAt, locale, onEditAgain }: Props
       </div>
       <h2 className="text-lg font-semibold text-foreground">{t('vendor-portal:success.title')}</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        {t('vendor-portal:success.body', { editWindowExpiresAt: formatted })}
+        {t(onEditAgain ? 'vendor-portal:success.body' : 'vendor-portal:success.bodyClosed', {
+          editWindowExpiresAt: formatted,
+        })}
       </p>
-      <button
-        type="button"
-        onClick={onEditAgain}
-        className="mt-5 rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-      >
-        {t('vendor-portal:success.viewAgain')}
-      </button>
+      {onEditAgain && (
+        <button
+          type="button"
+          onClick={onEditAgain}
+          className="mt-5 rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+        >
+          {t('vendor-portal:success.viewAgain')}
+        </button>
+      )}
     </section>
   );
 }

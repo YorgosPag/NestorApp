@@ -5,6 +5,7 @@
 
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { QuoteAttachment, QuoteLine, QuoteStatus } from '@/subapps/procurement/types/quote';
+import type { VendorInvitePermits } from '@/subapps/procurement/services/vendor-invite-resolver';
 
 export interface InitialInvite {
   id: string;
@@ -13,7 +14,8 @@ export interface InitialInvite {
   vendorContactId: string;
   expiresAt: string;
   editWindowExpiresAt: string | null;
-  editWindowOpen: boolean;
+  /** Από τον server (`vendorInvitePermits`) — ο client ΔΕΝ κρίνει μόνος του τι επιτρέπεται. */
+  permits: VendorInvitePermits;
 }
 
 export interface InitialRfqLine {

@@ -79,7 +79,8 @@
   },
   "success": {
     "title": "Quote submitted",
-    "body": "We received your quote. You can edit it from the same link until {editWindowExpiresAt}.",
+    "body": "We received your quote. You can edit it from the same link until: {editWindowExpiresAt}",
+    "bodyClosed": "We received your quote. The editing period ended: {editWindowExpiresAt}",
     "viewAgain": "View Quote"
   },
   "errors": {

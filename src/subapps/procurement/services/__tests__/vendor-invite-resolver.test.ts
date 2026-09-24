@@ -4,7 +4,8 @@
  * @fileoverview **Ο ΑΝΑΛΥΤΗΣ ΠΡΟΣΚΛΗΣΗΣ** — ο πίνακας «σκοπός × κατάσταση» (ADR-876 §5 · Ε5 · Σ4 · Σ5).
  *
  * Α1 πολιτική (καθαρή) — κάθε κελί του πίνακα της κεφαλίδας του `vendor-invite-resolver.ts` ·
- * Α2 αλυσίδα — άρνηση διαπιστευτηρίου διαδίδεται αυτούσια, **χωρίς** ανάγνωση πρόσκλησης ·
+ * Α2 αλυσίδα — άρνηση διαπιστευτηρίου διαδίδεται αυτούσια, **χωρίς** ανάγνωση πρόσκλησης — εκτός από
+ *    τον ανακλημένο σύνδεσμο, που ρωτά την πρόσκληση ΓΙΑΤΙ (Σ21: «αποσύρθηκε» ≠ «ανακλήθηκε») ·
  * Α3 φράχτης μισθωτή — διαπιστευτήριο άλλης εταιρείας από την πρόσκληση ⇒ «δεν βρέθηκε» ·
  * Α4 έγγραφο προ-migration με `'expired'` ⇒ ανακλημένο (ήταν η μόνη πηγή του).
  */
@@ -24,7 +25,12 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   }),
 }));
 
-import { judgeVendorInvite, resolveVendorInvite, type VendorInvitePurpose } from '../vendor-invite-resolver';
+import {
+  judgeVendorInvite,
+  resolveVendorInvite,
+  vendorInvitePermits,
+  type VendorInvitePurpose,
+} from '../vendor-invite-resolver';
 
 const NOW = Date.parse('2026-09-24T10:00:00.000Z');
 const ts = (ms: number) => ({ toMillis: () => ms, toDate: () => new Date(ms) });
@@ -77,18 +83,56 @@ describe('Α1 — πολιτική', () => {
   });
 });
 
+describe('Α5 — τα ρήματα που ΠΡΟΣΦΕΡΕΙ η πύλη (ADR-876 §5 Σ16)', () => {
+  it.each([
+    ['ζωντανή', invite({ status: 'opened' }), { submit: true, decline: true }],
+    ['υποβεβλημένη, ανοιχτό παράθυρο — ΚΑΜΙΑ άρνηση', invite({ status: 'submitted', editWindowExpiresAt: ts(NOW + 1) }), { submit: true, decline: false }],
+    ['υποβεβλημένη, κλειστό παράθυρο — τίποτα', invite({ status: 'submitted', editWindowExpiresAt: ts(NOW - 1) }), { submit: false, decline: false }],
+  ])('%s', (_label, subject, expected) => {
+    expect(vendorInvitePermits(subject, NOW)).toEqual(expected);
+  });
+
+  it.each([
+    ['ζωντανή', invite({ status: 'opened' })],
+    ['υποβεβλημένη ανοιχτή', invite({ status: 'submitted', editWindowExpiresAt: ts(NOW + 1) })],
+    ['υποβεβλημένη κλειστή', invite({ status: 'submitted', editWindowExpiresAt: ts(NOW - 1) })],
+  ])('συμφωνεί με τον κριτή των αιτημάτων — %s (κανένα κουμπί που ο server θα απέρριπτε)', (_label, subject) => {
+    const permits = vendorInvitePermits(subject, NOW);
+    expect(permits.submit).toBe(judgeVendorInvite(subject, false, 'submit', NOW) === null);
+    expect(permits.decline).toBe(judgeVendorInvite(subject, false, 'decline', NOW) === null);
+  });
+});
+
 describe('Α2–Α4 — αλυσίδα', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('Α2 — ανακλημένος σύνδεσμος διαδίδεται, χωρίς ανάγνωση πρόσκλησης', async () => {
-    mockCheck.mockResolvedValue({ ok: false, reason: 'link_revoked' });
-    expect(await resolveVendorInvite('t', 'read', NOW)).toEqual({ ok: false, reason: 'link_revoked' });
+  it('Α2 — άκυρος/άγνωστος σύνδεσμος διαδίδεται, χωρίς ανάγνωση πρόσκλησης', async () => {
+    mockCheck.mockResolvedValue({ ok: false, reason: 'link_not_found' });
+    expect(await resolveVendorInvite('t', 'read', NOW)).toEqual({ ok: false, reason: 'link_not_found' });
     expect(mockInviteGet).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['ζωντανή πρόσκληση ⇒ ανακλήθηκε ΜΟΝΟ ο σύνδεσμος', 'sent', 'link_revoked'],
+    ['ανακλημένη πρόσκληση ⇒ «η πρόσκληση αποσύρθηκε»', 'revoked', 'invite_revoked'],
+  ])('Α2′ — ανακλημένος σύνδεσμος, %s (Σ21)', async (_label, status, reason) => {
+    mockCheck.mockResolvedValue({ ok: false, reason: 'link_revoked', credential });
+    mockInviteGet.mockResolvedValue({ exists: true, id: 'vi_1', data: () => invite({ status }) });
+    expect(await resolveVendorInvite('t', 'read', NOW)).toEqual({ ok: false, reason });
   });
 
   it('Α3 — πρόσκληση άλλης εταιρείας από το διαπιστευτήριο ⇒ link_not_found', async () => {
     mockCheck.mockResolvedValue({ ok: true, credential, expired: false });
     mockInviteGet.mockResolvedValue({ exists: true, id: 'vi_1', data: () => invite({ companyId: 'co_OTHER' }) });
+    expect(await resolveVendorInvite('t', 'read', NOW)).toEqual({ ok: false, reason: 'link_not_found' });
+  });
+
+  it.each([
+    ['πρόσκληση χωρίς companyId', { companyId: undefined }, credential],
+    ['κενό companyId και στα δύο (παγίδα `"" === ""`)', { companyId: '' }, { ...credential, companyId: '' }],
+  ])('Α3′ — %s ⇒ link_not_found (ADR-876 §5 Σ15)', async (_label, inviteOverride, cred) => {
+    mockCheck.mockResolvedValue({ ok: true, credential: cred, expired: false });
+    mockInviteGet.mockResolvedValue({ exists: true, id: 'vi_1', data: () => invite(inviteOverride) });
     expect(await resolveVendorInvite('t', 'read', NOW)).toEqual({ ok: false, reason: 'link_not_found' });
   });
 

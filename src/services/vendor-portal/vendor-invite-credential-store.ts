@@ -18,7 +18,7 @@ import 'server-only';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type {
   VendorInviteCredential,
@@ -30,10 +30,9 @@ import { credentialMatches, isCredentialExpired, parseVendorLink } from './vendo
 /** Το αποτέλεσμα της επαλήθευσης ενός συνδέσμου — κάθε άρνηση με το όνομά της. */
 export type VendorCredentialCheck =
   | { readonly ok: true; readonly credential: VendorInviteCredential; readonly expired: boolean }
-  | {
-      readonly ok: false;
-      readonly reason: 'invalid_link' | 'server_config_error' | 'link_not_found' | 'link_revoked';
-    };
+  | { readonly ok: false; readonly reason: 'invalid_link' | 'server_config_error' | 'link_not_found' }
+  /** Αυθεντικός αλλά ανακλημένος — κουβαλά το έγγραφο ώστε ο αναλυτής να πει ΓΙΑΤΙ (ADR-876 §5 Σ21). */
+  | { readonly ok: false; readonly reason: 'link_revoked'; readonly credential: VendorInviteCredential };
 
 function credentialsOf(db: Firestore) {
   return db.collection(COLLECTIONS.VENDOR_INVITE_CREDENTIALS);
@@ -53,7 +52,7 @@ export async function checkVendorCredential(token: string, nowMs: number): Promi
   const credential = snap.data() as VendorInviteCredential;
   // Ίδια απάντηση με το «δεν βρέθηκε»: ο σύνδεσμος δεν μαθαίνει αν το ID του υπάρχει.
   if (!credentialMatches(credential, parsed.nonceHash)) return { ok: false, reason: 'link_not_found' };
-  if (credential.revokedAt) return { ok: false, reason: 'link_revoked' };
+  if (credential.revokedAt) return { ok: false, reason: 'link_revoked', credential };
   return { ok: true, credential, expired: isCredentialExpired(credential, nowMs) };
 }
 
@@ -109,7 +108,7 @@ export async function revokeVendorCredential(
     const snap = await tx.get(ref);
     if (!snap.exists) return 'not_found';
     const c = snap.data() as VendorInviteCredential;
-    if (!isOwnedByCompany(c, input.companyId) || c.inviteId !== input.inviteId) return 'not_found';
+    if (!isPayloadOwnedByCompany(c, input.companyId) || c.inviteId !== input.inviteId) return 'not_found';
     if (c.revokedAt) return 'already';
     tx.update(ref, { revokedAt: input.nowIso, revokedBy: input.revokedBy });
     return 'revoked';

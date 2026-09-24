@@ -32,6 +32,8 @@ import {
   markInviteSubmitted,
 } from '@/subapps/procurement/services/vendor-invite-service';
 import { getRfq } from '@/subapps/procurement/services/rfq-service';
+import { vendorInvitePermits } from '@/subapps/procurement/services/vendor-invite-resolver';
+import { vendorQuoteEditWindowEnd } from '@/subapps/procurement/utils/vendor-invite-status';
 import {
   findExistingPortalQuote,
   persistVendorQuote,
@@ -52,7 +54,6 @@ const logger = createModuleLogger('VENDOR_PORTAL_API');
 
 export const maxDuration = 60;
 
-const EDIT_WINDOW_HOURS = 72;
 
 /** Παρενέργειες ανάγνωσης — **μετά** την απάντηση, ποτέ φραγμός (άνοιγμα + τελευταία χρήση συνδέσμου). */
 function recordPortalVisit(opened: OpenVendorInvite): void {
@@ -83,8 +84,8 @@ function inviteView(opened: OpenVendorInvite) {
     // Η λήξη ΑΥΤΟΥ του συνδέσμου — όχι της πρόσκλησης (άλλος σύνδεσμος μπορεί να ζει περισσότερο).
     expiresAt: opened.credential.expiresAt,
     editWindowExpiresAt: invite.editWindowExpiresAt?.toDate().toISOString() ?? null,
-    editWindowOpen:
-      invite.status === 'submitted' && !!invite.editWindowExpiresAt && invite.editWindowExpiresAt.toDate() > new Date(),
+    // Τα ρήματα από τον ΕΝΑ πίνακα πολιτικής — ο client δεν τα ξαναϋπολογίζει (ADR-876 §5 Σ16).
+    permits: vendorInvitePermits(invite, Date.now()),
   };
 }
 
@@ -127,7 +128,7 @@ const baseGET = withVendorLinkDoor({ purpose: 'read' }, async (_request, opened)
   recordPortalVisit(opened);
   const existing =
     invite.status === 'submitted'
-      ? await findExistingPortalQuote(invite.companyId, invite.rfqId, invite.vendorContactId)
+      ? await findExistingPortalQuote(invite)
       : null;
   return NextResponse.json({
     success: true,
@@ -179,9 +180,10 @@ async function saveSubmission(
   rfq: RFQ,
   submission: ParsedSubmission,
   files: PreparedFiles['files'],
+  editWindowEnd: Date,
 ): Promise<string> {
   const { invite } = opened;
-  const existing = await findExistingPortalQuote(invite.companyId, invite.rfqId, invite.vendorContactId);
+  const existing = await findExistingPortalQuote(invite);
   const quoteId = existing?.id ?? generateQuoteId();
   const newAttachments = await uploadVendorFiles(invite.companyId, quoteId, invite.id, invite.vendorContactId, files);
   // Multi-trade RFQs: tag with the dominant trade (first line); line-less RFQs → materials_general.
@@ -201,6 +203,7 @@ async function saveSubmission(
     payload: submission,
     newAttachments,
     existing,
+    editWindowEnd,
   });
   return quoteId;
 }
@@ -218,19 +221,17 @@ const basePOST = withVendorLinkDoor({ purpose: 'submit' }, async (request, opene
   const rfq = await getRfq(invite.companyId, invite.rfqId);
   if (!rfq) return vendorPortalError('rfq_not_found', 404);
 
-  const quoteId = await saveSubmission(request, opened, rfq, submission, filesResult.files);
-  if (isFirstSubmission) await markInviteSubmitted(invite.id);
+  // ΜΙΑ στιγμή λήξης για προσφορά + πρόσκληση + απάντηση (ADR-876 §5 Σ17). Σε επεξεργασία μένει η αρχική.
+  // (Επεξεργασία ⇒ ο αναλυτής εγγυάται ανοιχτό παράθυρο, άρα `editWindowExpiresAt` υπάρχει.)
+  const editWindowEnd =
+    (!isFirstSubmission && invite.editWindowExpiresAt?.toDate()) || vendorQuoteEditWindowEnd(Date.now());
+  const quoteId = await saveSubmission(request, opened, rfq, submission, filesResult.files, editWindowEnd);
+  if (isFirstSubmission) await markInviteSubmitted(invite.id, editWindowEnd, quoteId);
   notifyPm(opened, rfq, quoteId, isFirstSubmission);
 
   return NextResponse.json({
     success: true,
-    data: {
-      quoteId,
-      status: 'submitted',
-      editWindowExpiresAt: isFirstSubmission
-        ? new Date(Date.now() + EDIT_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
-        : invite.editWindowExpiresAt?.toDate().toISOString() ?? null,
-    },
+    data: { quoteId, status: 'submitted', editWindowExpiresAt: editWindowEnd.toISOString() },
   });
 });
 

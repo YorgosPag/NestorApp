@@ -8,7 +8,9 @@
 import {
   isLiveInviteStatus,
   normalizeInviteStatus,
+  VENDOR_QUOTE_EDIT_WINDOW_HOURS,
   vendorInviteDisplayStatus,
+  vendorQuoteEditWindowEnd,
 } from '../vendor-invite-status';
 
 const NOW = Date.parse('2026-09-24T10:00:00.000Z');
@@ -44,5 +46,10 @@ describe('vendor invite status', () => {
   it('ζωντανές = pending · sent · opened', () => {
     expect(['pending', 'sent', 'opened', 'submitted', 'declined', 'revoked'].map((s) => isLiveInviteStatus(normalizeInviteStatus(s))))
       .toEqual([true, true, true, false, false, false]);
+  });
+
+  it('Κ5 — ΕΝΑ παράθυρο επεξεργασίας (ADR-327 Q8 · ADR-876 §5 Σ17): 72 ώρες από τη ΔΟΣΜΕΝΗ στιγμή', () => {
+    expect(VENDOR_QUOTE_EDIT_WINDOW_HOURS).toBe(72);
+    expect(vendorQuoteEditWindowEnd(NOW).getTime() - NOW).toBe(72 * 60 * 60 * 1000);
   });
 });

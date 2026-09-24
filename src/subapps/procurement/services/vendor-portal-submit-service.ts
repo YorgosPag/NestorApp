@@ -17,6 +17,8 @@ import admin from 'firebase-admin';
 import type { Timestamp as ClientTimestamp } from 'firebase/firestore';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import type { VendorInvite } from '../types/vendor-invite';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { getNextQuoteNumber } from './quote-counters';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -34,8 +36,6 @@ import { computeQuoteTotals } from '../types/quote';
 
 const logger = createModuleLogger('VENDOR_PORTAL_SUBMIT_SERVICE');
 
-const EDIT_WINDOW_HOURS = 72;
-
 export interface SubmissionPayload {
   lines: QuoteLine[];
   paymentTerms: string | null;
@@ -50,11 +50,30 @@ export interface ExistingPortalQuote {
   data: Quote;
 }
 
-export async function findExistingPortalQuote(
-  companyId: string,
-  rfqId: string,
-  vendorContactId: string,
-): Promise<ExistingPortalQuote | null> {
+/** Ό,τι χρειάζεται για να βρεθεί η απάντηση μιας πρόσκλησης. */
+export type PortalQuoteOwner = Pick<VendorInvite, 'companyId' | 'rfqId' | 'vendorContactId' | 'quoteId'>;
+
+/**
+ * **Η απάντηση ΑΥΤΗΣ της πρόσκλησης** (ADR-876 §5 Σ19) — με ταυτότητα (`invite.quoteId`), όχι με ερώτημα.
+ * Φράχτης: ίδια εταιρεία (φύλακας payload) **και** ίδιο RFQ — αλλιώς «καμία».
+ */
+export async function findExistingPortalQuote(owner: PortalQuoteOwner): Promise<ExistingPortalQuote | null> {
+  if (owner.quoteId) return readOwnedPortalQuote(owner, owner.quoteId);
+  // ⏳ Φ7: έγγραφα προ-Σ19 χωρίς `quoteId`. ΜΟΝΟ με πραγματική επαφή — το `''` δεν ξεχωρίζει προμηθευτές.
+  return owner.vendorContactId ? findLegacyPortalQuote(owner) : null;
+}
+
+async function readOwnedPortalQuote(owner: PortalQuoteOwner, quoteId: string): Promise<ExistingPortalQuote | null> {
+  return safeFirestoreOperation(async (db) => {
+    const snap = await db.collection(COLLECTIONS.QUOTES).doc(quoteId).get();
+    const data = snap.data();
+    if (!data || !isPayloadOwnedByCompany(data, owner.companyId) || data.rfqId !== owner.rfqId) return null;
+    return { id: snap.id, data: { ...data, id: snap.id } as Quote };
+  }, null);
+}
+
+async function findLegacyPortalQuote(owner: PortalQuoteOwner): Promise<ExistingPortalQuote | null> {
+  const { companyId, rfqId, vendorContactId } = owner;
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.QUOTES)
@@ -102,6 +121,8 @@ export interface PersistArgs {
   payload: SubmissionPayload;
   newAttachments: QuoteAttachment[];
   existing: ExistingPortalQuote | null;
+  /** Η ΜΙΑ λήξη του παραθύρου αυτής της υποβολής (`vendorQuoteEditWindowEnd`) — χρησιμοποιείται μόνο στην πρώτη. */
+  editWindowEnd: Date;
 }
 
 export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: string }> {
@@ -133,9 +154,7 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
 
   if (!existing) {
     const displayNumber = await getNextQuoteNumber(companyId);
-    const editWindowExpiresAt = adminTimestampFromDateAsClient(
-      new Date(Date.now() + EDIT_WINDOW_HOURS * 60 * 60 * 1000),
-    );
+    const editWindowExpiresAt = adminTimestampFromDateAsClient(args.editWindowEnd);
     const quote: Quote = {
       id: quoteId,
       displayNumber,

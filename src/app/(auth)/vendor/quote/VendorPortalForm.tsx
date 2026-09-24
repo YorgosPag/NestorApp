@@ -36,7 +36,8 @@ interface Props {
   errorReason: string | null;
   formattedExpiresAt: string;
   onSubmit: (formData: FormData) => Promise<void>;
-  onDeclineRequest: () => void;
+  /** `null` ⇒ η άρνηση δεν επιτρέπεται (π.χ. υποβεβλημένη προσφορά) — κανένα κουμπί (ADR-876 §5 Σ16). */
+  onDeclineRequest: (() => void) | null;
 }
 
 export function VendorPortalForm({
@@ -232,6 +233,7 @@ export function VendorPortalForm({
         <p className="mb-2 text-xs text-muted-foreground">{t('vendor-portal:attachments.hint')}</p>
         <input
           type="file"
+          aria-label={t('vendor-portal:attachments.title')}
           accept={Array.from(ALLOWED_MIME).join(',')}
           onChange={onFilePick}
           multiple
@@ -275,18 +277,20 @@ export function VendorPortalForm({
       )}
 
       <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-between">
-        <button
-          type="button"
-          onClick={onDeclineRequest}
-          disabled={isSubmitting}
-          className="rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
-        >
-          {t('vendor-portal:actions.decline')}
-        </button>
+        {onDeclineRequest ? (
+          <button
+            type="button"
+            onClick={onDeclineRequest}
+            disabled={isSubmitting}
+            className="rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            {t('vendor-portal:actions.decline')}
+          </button>
+        ) : null}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 disabled:opacity-50 sm:ml-auto"
         >
           {isSubmitting ? t('vendor-portal:actions.submitting') : t('vendor-portal:actions.submit')}
         </button>
@@ -370,17 +374,17 @@ function LineRow({
   return (
     <li className="rounded-md border border-border p-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
-        <div className="sm:col-span-12">
-          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.description')}</label>
+        <label className="sm:col-span-12 block">
+          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.description')}</span>
           <input
             value={line.description}
             onChange={(e) => onChange({ description: e.target.value })}
             className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
-        </div>
-        <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.quantity')}</label>
+        </label>
+        <label className="sm:col-span-3 block">
+          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.quantity')}</span>
           <input
             type="number"
             min="0"
@@ -391,17 +395,17 @@ function LineRow({
             className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
-        </div>
-        <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.unit')}</label>
+        </label>
+        <label className="sm:col-span-3 block">
+          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.unit')}</span>
           <input
             value={line.unit}
             onChange={(e) => onChange({ unit: e.target.value })}
             className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
           />
-        </div>
-        <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.unitPrice')}</label>
+        </label>
+        <label className="sm:col-span-3 block">
+          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.unitPrice')}</span>
           <input
             type="number"
             min="0"
@@ -412,9 +416,9 @@ function LineRow({
             className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
-        </div>
-        <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.vatRate')}</label>
+        </label>
+        <label className="sm:col-span-3 block">
+          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.vatRate')}</span>
           <select
             value={line.vatRate}
             onChange={(e) => onChange({ vatRate: Number(e.target.value) as 0 | 6 | 13 | 24 })}
@@ -425,7 +429,7 @@ function LineRow({
             <option value={6}>6%</option>
             <option value={0}>0%</option>
           </select>
-        </div>
+        </label>
         <div className="sm:col-span-12 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {t('vendor-portal:form.lineTotal')}: <strong>{computeLineTotal(line).toFixed(2)} €</strong>

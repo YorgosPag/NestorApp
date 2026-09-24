@@ -17,6 +17,18 @@ import { normalizeToDate } from '@/lib/date-local';
 
 import type { InviteStatus } from '../types/vendor-invite';
 
+/**
+ * **Το παράθυρο επεξεργασίας** μετά την ΠΡΩΤΗ υποβολή (ADR-327 Q8). Ήταν γραμμένο `72` σε
+ * **τρία** αρχεία (route · `vendor-invite-service` · `vendor-portal-submit-service`), με τρία
+ * χωριστά `Date.now()` για την ΙΔΙΑ υποβολή (ADR-876 §5 Σ17).
+ */
+export const VENDOR_QUOTE_EDIT_WINDOW_HOURS = 72;
+
+/** Η ΜΙΑ στιγμή λήξης μιας υποβολής — υπολογίζεται μία φορά και μοιράζεται σε προσφορά + πρόσκληση. */
+export function vendorQuoteEditWindowEnd(nowMs: number): Date {
+  return new Date(nowMs + VENDOR_QUOTE_EDIT_WINDOW_HOURS * 60 * 60 * 1000);
+}
+
 /** Οι καταστάσεις όπου ο προμηθευτής **μπορεί ακόμη** να απαντήσει. */
 export const LIVE_INVITE_STATUSES = ['pending', 'sent', 'opened'] as const satisfies readonly InviteStatus[];
 

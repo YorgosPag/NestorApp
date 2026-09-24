@@ -119,6 +119,7 @@ function newInviteDoc(
     declineReason: null,
     expiresAt: adminTimestampAsClient(admin.firestore.Timestamp.fromMillis(expiresAtMs)),
     editWindowExpiresAt: null,
+    quoteId: null,
     remindersSentAt: [],
     lastReminderAt: null,
     createdAt: now,
