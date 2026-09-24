@@ -21,7 +21,13 @@ const LEAD: ListingImage = {
   ],
 };
 
-const THUMBNAIL = { url: LEAD.url, width: LEAD.width, height: LEAD.height, sources: LEAD.sources };
+const THUMBNAIL = {
+  url: LEAD.url,
+  width: LEAD.width,
+  height: LEAD.height,
+  sources: LEAD.sources,
+  focalPoint: null,
+};
 
 function withPublication(thumbnail: unknown): { publication: OwnerPropertyPublication } {
   return { publication: { outcome: 'published', at: '2026-09-23T10:00:00.000Z', thumbnail } as OwnerPropertyPublication };
@@ -37,6 +43,15 @@ describe('thumbnailFromLead — ο γραφέας', () => {
 
   it('καμία κεντρική εικόνα ⇒ null', () => {
     expect(thumbnailFromLead(null)).toBeNull();
+  });
+});
+
+describe('🎯 ADR-880 — το σημείο εστίασης επιβιώνει της μικρογραφίας', () => {
+  it('ο γραφέας το κρατά, ο αναγνώστης το ελέγχει', () => {
+    const focused = thumbnailFromLead({ ...LEAD, focalPoint: { x: 0.4, y: 0.2 } });
+    expect(focused?.focalPoint).toEqual({ x: 0.4, y: 0.2 });
+    expect(publicationThumbnailOf(withPublication(focused))?.focalPoint).toEqual({ x: 0.4, y: 0.2 });
+    expect(publicationThumbnailOf(withPublication({ ...THUMBNAIL, focalPoint: { x: 2 } }))?.focalPoint).toBeNull();
   });
 });
 

@@ -356,6 +356,7 @@ describe('Κ5 — η επιλογή «δημοσίευσε αυτό το αρχ�
       {
         privateStoragePath: 'owner_properties/u1/ownp_1/nai.jpg',
         material: { kind: 'photo' },
+        focalPoint: null,
       },
     ]);
   });
@@ -390,13 +391,34 @@ describe('Κ5 — η επιλογή «δημοσίευσε αυτό το αρχ�
       {
         privateStoragePath: 'owner_properties/u1/ownp_1/foto.jpg',
         material: { kind: 'photo' },
+        focalPoint: null,
       },
       {
         privateStoragePath: 'owner_properties/u1/ownp_1/katopsi.jpg',
         // ⚠️ Το `at` είναι το `uploadedAt` **του ανθρώπου**, ποτέ ρολόι του γραφέα.
         material: { kind: 'floorplan', at: AT },
+        focalPoint: null,
       },
     ]);
+  });
+
+  /**
+   * 🎯 **Η ΤΡΙΤΗ ΔΗΛΩΣΗ ΠΕΡΝΑ ΤΟ ΙΔΙΟ ΣΥΝΟΡΟ** (ADR-880) — προαιρετική όπως οι δύο από πάνω, άρα ο
+   * μεταγλωττιστής δεν βλέπει την κοπή. ⛔ **ΜΕΤΑΛΛΑΞΗ**: βγάλε το `focalPoint` από το zod ⇒ **κόκκινο**.
+   */
+  it('🎯 και το ΣΗΜΕΙΟ ΕΣΤΙΑΣΗΣ φτάνει ως ΠΗΓΗ ΤΟΥ ΡΑΦΙΟΥ', () => {
+    const parsed = draftFrom([{ ...fileAt('foto.jpg', true), focalPoint: { x: 0.25, y: 0.75 } }]);
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const [source] = projectableFromOwnerProperty(validOwnerProperty(parsed.draft), AT).publishedMedia ?? [];
+    expect(source?.focalPoint).toEqual({ x: 0.25, y: 0.75 });
+  });
+
+  it('🎯 σημείο ΕΚΤΟΣ εικόνας απορρίπτεται ονομαστικά στο σύνορο — ποτέ σιωπηλή σφήνωση', () => {
+    const parsed = draftFrom([{ ...fileAt('foto.jpg', true), focalPoint: { x: 1.5, y: 0.5 } }]);
+    expect(parsed.ok).toBe(false);
   });
 });
 

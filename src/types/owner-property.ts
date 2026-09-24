@@ -89,6 +89,7 @@ import {
 import type { ListedAt, ListingAuthorship, ListingImage } from '@/types/public-listing';
 import type { ListingMaterialKind } from '@/lib/listings/listing-material';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
@@ -229,6 +230,14 @@ export interface OwnerPropertyMedia {
    * αρχεία που ο κόσμος ήδη βλέπει — αλλαγή στην αγγελία που **κανείς άνθρωπος δεν ζήτησε**.
    */
   readonly kind?: ListingMaterialKind;
+  /**
+   * 🎯 **Η ΤΡΙΤΗ ΑΝΘΡΩΠΙΝΗ ΠΡΑΞΗ: «ΠΟΥ ΕΙΝΑΙ ΤΟ ΘΕΜΑ;»** (ADR-880).
+   *
+   * Το {@link published} απαντά *«να φύγει;»*, το {@link kind} *«τι είναι;»*, αυτό *«πώς κόβεται;»* —
+   * τρεις ανεξάρτητες ερωτήσεις, τρία πεδία. Απόν ⇒ **το αυτόματο του ραφιού** μιλά (όχι «κέντρο»):
+   * ο άνθρωπος διορθώνει μόνο ό,τι η μηχανή έκανε λάθος (πρότυπο Cloudinary).
+   */
+  readonly focalPoint?: PhotoFocalPoint;
 }
 
 // =============================================================================
@@ -435,6 +444,15 @@ export interface OwnerProperty {
    * 2028 δείχνουν άλλες φωτογραφίες από τον **ίδιο** φάκελο). Αρχείο εκτός δήλωσης **δεν φεύγει** (ADR-841 Α2.7).
    */
   readonly publishedFileIds?: DeclaredFileIds;
+
+  /**
+   * 🎯 **Πού είναι το θέμα κάθε δηλωμένης φωτογραφίας του φακέλου** — `FileRecord.id` → σημείο (ADR-880).
+   *
+   * ⚠️ Ζει **δίπλα στη δήλωση**, όχι στο `FileRecord` (πρότυπο Sanity: το hotspot ανήκει στη **χρήση**): η ίδια
+   * φωτογραφία του φακέλου μπορεί να κοπεί αλλιώς στην πώληση του 2026 και στην ενοικίαση του 2028. Όπως το
+   * `publishedFileIds`, **δεν δημοσιεύει τίποτα** — μόνο λέει πώς κόβεται ό,τι ήδη φεύγει.
+   */
+  readonly publishedFileFocalPoints?: Readonly<Record<string, PhotoFocalPoint>>;
 
   // ── ΤΙΤΛΟΣ ────────────────────────────────────────────────────────────────
   /** Κείμενο **του ανθρώπου** — όχι κλειδί i18n (N.11 εξαίρεση: δεδομένο, όχι διεπαφή). */
@@ -702,7 +720,8 @@ export function ownerPropertyOfferKinds(
 /** Τα πεδία που η φόρμα συντάσσει — **χωρίς** ταυτότητα, κάτοχο, ή χρόνο. */
 export type OwnerPropertyDraft = Pick<
   OwnerProperty,
-  'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'bedrooms' | 'media' | 'title' | 'publishedFileIds'
+  | 'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'bedrooms' | 'media' | 'title' | 'publishedFileIds'
+  | 'publishedFileFocalPoints'
 >;
 
 // =============================================================================

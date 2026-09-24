@@ -22,6 +22,7 @@
 
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
+import { resolvePhotoFocalPoint, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type {
   ListingFloorplan,
   ListingImage,
@@ -54,6 +55,10 @@ export interface ProjectedShelfImage {
   readonly sources: readonly ListingImageSource[];
   /** **Τι είναι αυτό** — δες `PublicShelfImage.material` (ADR-841 §7 Α17.4). */
   readonly material: ListingMaterial;
+  /** 🎯 Ό,τι **δήλωσε** ο άνθρωπος — δες `PublicShelfImage.declaredFocalPoint` (ADR-880). */
+  readonly declaredFocalPoint: PhotoFocalPoint | null;
+  /** 🎯 Ό,τι **βρήκε** το ράφι στα bytes — δες `PublicShelfImage.focalPoint` (ADR-880). */
+  readonly detectedFocalPoint: PhotoFocalPoint | null;
 }
 
 /**
@@ -71,6 +76,17 @@ function toListingImage(image: ProjectedShelfImage, altKey: string): ListingImag
     altKey,
     sources: image.sources,
   };
+}
+
+/**
+ * 🎯 **Η φωτογραφία, με το σημείο εστίασης ΑΠΟΦΑΣΙΣΜΕΝΟ** (ADR-880) — ο άνθρωπος υπερισχύει.
+ *
+ * ⚠️ Μόνο στον κλάδο της **φωτογραφίας**: η κάτοψη αποδίδεται **ολόκληρη** και δεν κόβεται ποτέ, άρα
+ * ένα σημείο εκεί θα ήταν απάντηση σε ερώτηση που κανείς δεν κάνει.
+ */
+function toListingPhoto(image: ProjectedShelfImage, altKey: string): ListingImage {
+  const focalPoint = resolvePhotoFocalPoint(image.declaredFocalPoint, image.detectedFocalPoint);
+  return { ...toListingImage(image, altKey), focalPoint };
 }
 
 /**
@@ -154,7 +170,7 @@ export function withPublishedGallery(
 
     switch (material.kind) {
       case 'photo':
-        gallery.push(toListingImage(image, keys.galleryAlt));
+        gallery.push(toListingPhoto(image, keys.galleryAlt));
         break;
 
       case 'floorplan':

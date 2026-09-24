@@ -9,6 +9,7 @@
 import {
   CENTER_FOCAL_POINT,
   coverObjectPosition,
+  coverVisibleRect,
   readDeclaredFocalPoints,
   readPhotoFocalPoint,
   resolvePhotoFocalPoint,
@@ -99,6 +100,21 @@ describe('coverObjectPosition — κεντράρισμα με σφήνωση', (
 
   it('το κέντρο μένει κέντρο', () => {
     expect(coverObjectPosition({ width: 1000, height: 1500 }, CARD, CENTER_FOCAL_POINT)).toEqual({ x: 50, y: 50 });
+  });
+
+  it('το ΟΡΑΤΟ ορθογώνιο περιέχει το θέμα στο κέντρο του (όταν δεν σφηνώνεται)', () => {
+    const image = { width: 1000, height: 1500 };
+    const point = { x: 0.5, y: 0.4 };
+    const rect = coverVisibleRect(image, CARD, coverObjectPosition(image, CARD, point));
+    expect(rect.w).toBe(1);
+    expect(rect.h).toBeCloseTo(4 / 9, 10); // (2/3)/1.5
+    expect(rect.y + rect.h / 2).toBeCloseTo(point.y, 10);
+  });
+
+  it('ορατό ορθογώνιο πανοραμικής: σφηνωμένο στη δεξιά άκρη', () => {
+    const rect = coverVisibleRect({ width: 3000, height: 1000 }, CARD, { x: 100, y: 50 });
+    expect(rect.x + rect.w).toBeCloseTo(1, 10);
+    expect(rect.h).toBe(1);
   });
 
   it('ίδια αναλογία ή εκφυλισμένες διαστάσεις ⇒ 50/50', () => {

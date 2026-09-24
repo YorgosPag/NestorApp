@@ -40,6 +40,7 @@ import {
   shelfExtension,
 } from '@/services/upload/utils/storage-path-public-shelf';
 import type { AnyRasterShelfKind } from '@/services/upload/utils/public-shelf-kinds';
+import { readPhotoFocalPoint, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 // ⚠️ **`import type`, και η καθαρότητα ΔΕΝ σπάει** — ίδια σύμβαση με το `File` από πάνω *(που
 //    σέρνει ολόκληρο το `@google-cloud/storage`)*: ο τύπος **σβήνεται** στη μεταγλώττιση, άρα
@@ -83,6 +84,14 @@ export interface PendingUpload {
    * λογότυπο και **δεν θα ξαναπαραγόταν ποτέ**.
    */
   readonly recipe: string;
+  /**
+   * 🎯 **Το αυτόματο σημείο εστίασης της ΠΗΓΗΣ** (ADR-880) — ίδιο σε όλα τα παράγωγά της.
+   *
+   * ⚠️ **Τρεις καταστάσεις, και η τρίτη μετρά**: σημείο · `null` *(«ψάχτηκε, κανένα σήμα»)* ·
+   * `undefined` *(«δεν ρωτήθηκε» — σήμα γραφείου, κάτοψη)*. Η απουσία δεν γράφεται στον κάδο, ώστε η
+   * αυτοθεραπεία να ξεχωρίζει *«δεν ρωτήθηκε ποτέ»* από *«ρωτήθηκε και δεν βρήκε»*.
+   */
+  readonly focalPoint: PhotoFocalPoint | null | undefined;
 }
 // ---------------------------------------------------------------------------
 // Μεταδεδομένα του ραφιού — τα ονόματα γράφονται **μία** φορά
@@ -93,6 +102,25 @@ export const META_RECIPE = 'shelfRecipe';
 export const META_REQUESTED_WIDTHS = 'shelfRequestedWidths';
 export const META_PIXEL_WIDTH = 'shelfPixelWidth';
 export const META_PIXEL_HEIGHT = 'shelfPixelHeight';
+/** ADR-880 — `"x,y"` ή {@link FOCAL_POINT_NONE}. Απόν ⇒ δεν υπολογίστηκε ποτέ. */
+export const META_FOCAL_POINT = 'shelfFocalPoint';
+const FOCAL_POINT_NONE = 'none';
+
+/** Σημείο → τιμή μεταδεδομένου. Ο **μόνος** γραφέας της μορφής. */
+export function encodeFocalPointMeta(point: PhotoFocalPoint | null): string {
+  return point === null ? FOCAL_POINT_NONE : `${point.x},${point.y}`;
+}
+
+/**
+ * Τιμή μεταδεδομένου → σημείο. Ο **μόνος** αναγνώστης· γείτονας του γραφέα.
+ * `undefined` ⇒ *«δεν υπολογίστηκε ποτέ»* (αντικείμενα γραμμένα πριν το ADR-880).
+ */
+export function decodeFocalPointMeta(raw: unknown): PhotoFocalPoint | null | undefined {
+  if (typeof raw !== 'string') return undefined;
+  if (raw === FOCAL_POINT_NONE) return null;
+  const [x, y] = raw.split(',').map(Number);
+  return readPhotoFocalPoint({ x, y }) ?? undefined;
+}
 // ---------------------------------------------------------------------------
 // Ταυτότητα — sha256, δύο ερωτήσεις
 // ---------------------------------------------------------------------------
@@ -162,6 +190,26 @@ export function cachedVariants(
 }
 
 /**
+ * 🎯 **Το αυτόματο σημείο εστίασης που ΘΥΜΑΤΑΙ ήδη το ράφι για αυτή την πηγή** (ADR-880).
+ *
+ * Ίδια ταύτιση με το {@link cachedVariants} (πηγή **και** συνταγή)· το σημείο είναι ιδιότητα
+ * της **πηγής**, άρα οποιοδήποτε παράγωγό της το λέει. `undefined` ⇒ κανένα δεν το ξέρει.
+ */
+export function cachedFocalPoint(
+  existing: readonly File[],
+  sourceRef: string,
+  recipe: string,
+): PhotoFocalPoint | null | undefined {
+  for (const file of existing) {
+    const custom = file.metadata.metadata;
+    if (custom?.[META_SOURCE_REF] !== sourceRef || custom[META_RECIPE] !== recipe) continue;
+    const point = decodeFocalPointMeta(custom[META_FOCAL_POINT]);
+    if (point !== undefined) return point;
+  }
+  return undefined;
+}
+
+/**
  * **Παράγωγα → αντικείμενα προς ανέβασμα**, με τα ταυτόσημα **συγχωνευμένα**.
  *
  * 🔑 Μια φωτογραφία 800px δίνει για τα 1280 **και** τα 2560 τα **ίδια bytes** ⇒ ίδιο
@@ -175,6 +223,7 @@ export function groupUploads(
   sourceRef: string,
   recipe: string,
   assets: readonly { bytes: Buffer; contentType: string; width: number; height: number }[],
+  focalPoint: PhotoFocalPoint | null | undefined,
 ): readonly PendingUpload[] {
   const byKey = new Map<string, PendingUpload>();
 
@@ -196,6 +245,7 @@ export function groupUploads(
       height: asset.height,
       requestedWidths: [...(already?.requestedWidths ?? []), requested],
       recipe,
+      focalPoint,
     });
   });
 
@@ -253,6 +303,10 @@ export function toShelfWrite(upload: PendingUpload): ShelfWrite {
       [META_REQUESTED_WIDTHS]: upload.requestedWidths.join(','),
       [META_PIXEL_WIDTH]: String(upload.width),
       [META_PIXEL_HEIGHT]: String(upload.height),
+      // ⚠️ «Δεν ρωτήθηκε» ΔΕΝ γράφεται — η απουσία είναι το περιεχόμενο (δες `PendingUpload.focalPoint`).
+      ...(upload.focalPoint === undefined
+        ? {}
+        : { [META_FOCAL_POINT]: encodeFocalPointMeta(upload.focalPoint) }),
     },
   };
 }

@@ -78,6 +78,7 @@ export class FakeShelfBucket {
   saveCalls = 0;
   deleteCalls = 0;
   downloadCalls = 0;
+  metadataCalls = 0;
 
   /** Γράφει ωμά, όπως ένα `gsutil cp` — **χωρίς** να περάσει από τον γραφέα μας. */
   put(name: string, bytes: Buffer): void {
@@ -119,6 +120,13 @@ export class FakeShelfBucket {
         bucket.deleteCalls += 1;
         bucket.objects.delete(name);
       },
+      // ADR-880 — ίδια σημασιολογία με το GCS: τα προσαρμοσμένα κλειδιά **συγχωνεύονται**.
+      setMetadata: async (patch: { metadata?: Record<string, string> }) => {
+        bucket.metadataCalls += 1;
+        const found = bucket.objects.get(name);
+        if (!found) throw new Error(`no such object: ${name}`);
+        bucket.objects.set(name, { ...found, custom: { ...found.custom, ...patch.metadata } });
+      },
       download: async (): Promise<[Buffer]> => {
         bucket.downloadCalls += 1;
         const found = bucket.objects.get(name);
@@ -150,5 +158,6 @@ export class FakeShelfBucket {
     this.saveCalls = 0;
     this.deleteCalls = 0;
     this.downloadCalls = 0;
+    this.metadataCalls = 0;
   }
 }

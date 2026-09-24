@@ -63,6 +63,7 @@
  */
 
 import type { LegalitySignal } from '@/lib/legality/legality-signal';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
@@ -227,6 +228,17 @@ export interface ListingImage {
    * παράγωγα παίρνουν το **ίδιο κλειδί** και συγχωνεύονται **μόνα τους**.
    */
   readonly sources: readonly ListingImageSource[];
+  /**
+   * 🎯 **ΠΟΥ ΕΙΝΑΙ ΤΟ ΘΕΜΑ** — ήδη **αποφασισμένο** (ADR-880): η δήλωση του ανθρώπου αν υπάρχει,
+   * αλλιώς το αυτόματο του ραφιού. `null`/απόν ⇒ κέντρο (η συμπεριφορά πριν το ADR-880).
+   *
+   * ⚠️ **ΠΡΟΑΙΡΕΤΙΚΟ ΕΠΙΤΗΔΕΣ — ο τύπος λέει την αλήθεια για τη ΒΑΣΗ** (μάθημα Α2.10 / CHECK 3.74):
+   * κάθε έγγραφο γραμμένο πριν το ADR-880 δεν το έχει. ⛔ **Μην το διαβάσεις απευθείας** — η **μία**
+   * ανάγνωση είναι το `listingPhotoPositionClass`, που το περνά από το `readPhotoFocalPoint` (σκουπίδι ⇒
+   * κέντρο). Γι' αυτό **δεν** χρειάστηκε κρίκος μετανάστευσης: θα έγραφε μόνο `null`, δηλαδή την
+   * απουσία που ο αναγνώστης ήδη χειρίζεται.
+   */
+  readonly focalPoint?: PhotoFocalPoint | null;
 }
 
 /**

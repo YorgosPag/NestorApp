@@ -14,11 +14,19 @@
 
 import type { ListingImage, ListingImageSource } from '@/types/public-listing';
 import type { OwnerListingThumbnail, OwnerProperty } from '@/types/owner-property';
+import { readPhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 /** **Γραφέας** — η δημόσια κεντρική εικόνα χωρίς `altKey` (δες `OwnerListingThumbnail`). */
 export function thumbnailFromLead(lead: ListingImage | null): OwnerListingThumbnail | null {
   if (lead === null) return null;
-  return { url: lead.url, width: lead.width, height: lead.height, sources: lead.sources };
+  // 🎯 ADR-880 — η κάρτα του κατόχου κόβει στο ΙΔΙΟ πλαίσιο με τη δημόσια: ίδιο σημείο εστίασης.
+  return {
+    url: lead.url,
+    width: lead.width,
+    height: lead.height,
+    sources: lead.sources,
+    focalPoint: readPhotoFocalPoint(lead.focalPoint),
+  };
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -52,5 +60,11 @@ export function publicationThumbnailOf(
   if (!isPositiveNumber(candidate.width) || !isPositiveNumber(candidate.height)) return null;
 
   const sources = Array.isArray(candidate.sources) ? candidate.sources.filter(isImageSource) : [];
-  return { url: candidate.url, width: candidate.width, height: candidate.height, sources };
+  return {
+    url: candidate.url,
+    width: candidate.width,
+    height: candidate.height,
+    sources,
+    focalPoint: readPhotoFocalPoint(candidate.focalPoint),
+  };
 }

@@ -334,20 +334,27 @@ describe('Φ6 — `agencyMediaDeclaration` ΔΙΑΒΑΖΕΙ ΚΑΙ ΤΑ ΔΥΟ',
         publishedMediaOrder: ['a', 'b'],
         publishedFloorplans: ['c'],
       }),
-    ).toEqual({ order: ['a', 'b'], floorplans: ['c'] });
+    ).toEqual({ order: ['a', 'b'], floorplans: ['c'], focalPoints: new Map() });
   });
 
   it('🔴 σκουπίδι σε ΟΠΟΙΟΔΗΠΟΤΕ από τα δύο ⇒ κενό ΕΚΕΙΝΟ, ποτέ και τα δύο', () => {
     expect(
       agencyMediaDeclaration({ publishedMediaOrder: 42, publishedFloorplans: ['c'] }),
-    ).toEqual({ order: [], floorplans: ['c'] });
+    ).toEqual({ order: [], floorplans: ['c'], focalPoints: new Map() });
 
     expect(
       agencyMediaDeclaration({ publishedMediaOrder: ['a'], publishedFloorplans: 'όχι' }),
-    ).toEqual({ order: ['a'], floorplans: [] });
+    ).toEqual({ order: ['a'], floorplans: [], focalPoints: new Map() });
   });
 
   it('🔴 ΚΕΝΟ έγγραφο ⇒ καμία δήλωση, καμία εξαίρεση', () => {
-    expect(agencyMediaDeclaration({})).toEqual({ order: [], floorplans: [] });
+    expect(agencyMediaDeclaration({})).toEqual({ order: [], floorplans: [], focalPoints: new Map() });
+  });
+
+  it('🎯 ADR-880 — τα σημεία εστίασης διαβάζονται από το ΙΔΙΟ έγγραφο, άκυρη γραμμή πέφτει μόνη της', () => {
+    const declaration = agencyMediaDeclaration({
+      publishedMediaFocalPoints: { a: { x: 0.2, y: 0.8 }, b: { x: 7, y: 0 } },
+    });
+    expect([...(declaration.focalPoints ?? new Map()).entries()]).toEqual([['a', { x: 0.2, y: 0.8 }]]);
   });
 });

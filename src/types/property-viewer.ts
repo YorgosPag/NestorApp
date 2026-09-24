@@ -114,6 +114,11 @@ export interface Property {
      * ⚠️ `unknown` για τον ίδιο λόγο με το πεδίο από πάνω — ωμό spread εγγράφου.
      */
     publishedFloorplans?: unknown;
+    /**
+     * 🎯 **Τα σημεία εστίασης που ΔΗΛΩΣΕ το γραφείο** (ADR-880) — `FileRecord.id` → `{x,y}`.
+     * ⚠️ `unknown` για τον ίδιο λόγο — ωμό spread εγγράφου· η μία ανάγνωση είναι το `readDeclaredFocalPoints`.
+     */
+    publishedMediaFocalPoints?: unknown;
     parentPropertyId?: string;
     features?: string[];
     attachments?: {

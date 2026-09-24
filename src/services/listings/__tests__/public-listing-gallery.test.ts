@@ -53,6 +53,8 @@ function shelfImage(name: string, widths: readonly number[]): ProjectedShelfImag
     //    και το ότι η κάτοψη **δεν** μπαίνει εδώ — έχει δική του άγκυρα:
     //    `lib/listings/__tests__/listing-floorplan-separation.test.ts`.
     material: { kind: 'photo' },
+    declaredFocalPoint: null,
+    detectedFocalPoint: null,
   };
 }
 

@@ -14,6 +14,7 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
+import { photoFocalPointSchema, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -73,6 +74,18 @@ export const PropertyPatchSchema = z.object({
    * (`republishPublicProjection`) είναι **ήδη** στη διαδρομή — Α2 χωρίς νέο κώδικα.
    */
   marketingAudience: z.enum(MARKETING_AUDIENCES).optional(),
+  /**
+   * 🎯 **Τα σημεία εστίασης του γραφείου** — `FileRecord.id` → `{x,y}` ∈ [0,1] (ADR-880).
+   *
+   * 🔴 **Ρητό επειδή το σχήμα είναι `.passthrough()`** — ίδιο σκεπτικό με το `publishedMediaOrder`:
+   * χωρίς τη γραμμή, ένα σημείο `{x: 7}` θα γραφόταν αυτούσιο. Όπως η σειρά, **δεν δημοσιεύει τίποτα**·
+   * το όριο είναι το **υπάρχον** `PUBLISHED_MEDIA_LIMIT` (σημεία για περισσότερα αρχεία απ' όσα φεύγουν
+   * δεν έχουν τι να κόψουν). Η επαναπροβολή είναι **ήδη** στη διαδρομή.
+   */
+  publishedMediaFocalPoints: z
+    .record(z.string().min(1).max(128), photoFocalPointSchema)
+    .refine((points) => Object.keys(points).length <= PUBLISHED_MEDIA_LIMIT)
+    .optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 
@@ -115,6 +128,8 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   publishedMediaOrder?: string[];
   /** ADR-841 §7 Α17.7 — οι δηλωμένες κατόψεις της αγγελίας. */
   publishedFloorplans?: string[];
+  /** ADR-880 — τα δηλωμένα σημεία εστίασης των φωτογραφιών της αγγελίας. */
+  publishedMediaFocalPoints?: Record<string, PhotoFocalPoint>;
 }
 
 // ============================================================================

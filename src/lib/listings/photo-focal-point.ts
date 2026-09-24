@@ -101,6 +101,33 @@ export function sameFocalPoint(a: PhotoFocalPoint | null, b: PhotoFocalPoint | n
   return a.x === b.x && a.y === b.y;
 }
 
+/** Ίδιες δηλώσεις σημείων; — ίδιο σύνολο αρχείων, ίδιο σημείο το καθένα (η σειρά αδιάφορη). */
+export function sameDeclaredFocalPoints(
+  a: ReadonlyMap<string, PhotoFocalPoint>,
+  b: ReadonlyMap<string, PhotoFocalPoint>,
+): boolean {
+  if (a.size !== b.size) return false;
+  for (const [id, point] of a) {
+    if (!sameFocalPoint(point, b.get(id) ?? null)) return false;
+  }
+  return true;
+}
+
+/**
+ * **Ένα σημείο αλλαγμένο μέσα στη δήλωση** — νέος χάρτης, ποτέ μετάλλαξη. `null` ⇒ η γραμμή **φεύγει**
+ * («άφησε το αυτόματο»), ώστε το έγγραφο να μην κρατά γραμμές που δεν λένε τίποτα.
+ */
+export function withDeclaredFocalPoint(
+  declared: ReadonlyMap<string, PhotoFocalPoint>,
+  id: string,
+  point: PhotoFocalPoint | null,
+): ReadonlyMap<string, PhotoFocalPoint> {
+  const next = new Map(declared);
+  if (point === null) next.delete(id);
+  else next.set(id, point);
+  return next;
+}
+
 // ============================================================================
 // 2. Η ΘΕΣΗ ΣΤΟ ΠΛΑΙΣΙΟ — `object-fit: cover`
 // ============================================================================
@@ -140,6 +167,36 @@ export function coverObjectPosition(
   return imageAspect > frameAspect
     ? { x: centred(point.x, imageAspect, frameAspect), y: 50 }
     : { x: 50, y: centred(point.y, 1 / imageAspect, 1 / frameAspect) };
+}
+
+/** Ορθογώνιο μέσα στην εικόνα, κανονικοποιημένο [0,1] — ό,τι μένει **ορατό** στο πλαίσιο. */
+export interface VisibleRect {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/**
+ * **Ποιο κομμάτι της εικόνας κρατά το πλαίσιο** για δεδομένη θέση `object-position` — η αντίστροφη ερώτηση
+ * του {@link coverObjectPosition}. Ο επεξεργαστής τη ζωγραφίζει πάνω στο πρωτότυπο, με τη θέση **μετά την
+ * κβάντιση**, ώστε ο άνθρωπος να βλέπει ό,τι θα δει ο επισκέπτης — όχι ό,τι «θα έπρεπε».
+ */
+export function coverVisibleRect(
+  image: { readonly width: number; readonly height: number },
+  frame: FrameAspect,
+  position: ObjectPosition,
+): VisibleRect {
+  const imageAspect = image.width / image.height;
+  const frameAspect = frame.w / frame.h;
+  if (!Number.isFinite(imageAspect) || imageAspect <= 0) return { x: 0, y: 0, w: 1, h: 1 };
+
+  if (imageAspect > frameAspect) {
+    const w = frameAspect / imageAspect;
+    return { x: (position.x / 100) * (1 - w), y: 0, w, h: 1 };
+  }
+  const h = imageAspect / frameAspect;
+  return { x: 0, y: (position.y / 100) * (1 - h), w: 1, h };
 }
 
 /** `clamp((f·S − B/2)/(S − B), 0, 1)` σε ποσοστό. `S > B` εγγυημένο από τον καλούντα. */

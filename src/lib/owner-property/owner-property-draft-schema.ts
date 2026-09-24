@@ -53,6 +53,7 @@ import { z } from 'zod';
 
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
+import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
 
 import { propertyTypeSchema } from '@/lib/property/property-type-schema';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
@@ -221,6 +222,11 @@ const media = z.object({
    * τύπο. Το φυλάει **μόνο** άγκυρα που περνά τιμή από το σύνορο.
    */
   kind: z.enum(LISTING_MATERIAL_KINDS).optional(),
+  /**
+   * 🎯 **«ΠΟΥ ΕΙΝΑΙ ΤΟ ΘΕΜΑ;» (ADR-880) — ρητό για τον ΙΔΙΟ λόγο με τα δύο από πάνω**: το `zod` κόβει
+   * σιωπηλά ό,τι δεν δηλώνεται, και η διόρθωση του ανθρώπου θα χανόταν στο σύνορο.
+   */
+  focalPoint: photoFocalPointSchema.optional(),
 });
 
 /** Το προσχέδιο, όπως φτάνει από το δίκτυο. */
@@ -270,6 +276,15 @@ export const ownerPropertyDraftSchema = z.object({
     .array(z.string().trim().min(1))
     .max(PUBLISHED_MEDIA_LIMIT)
     .refine((ids) => new Set(ids).size === ids.length)
+    .optional(),
+  /**
+   * 🎯 **Τα σημεία εστίασης των δηλωμένων αρχείων του φακέλου** (ADR-880) — `FileRecord.id` → σημείο.
+   * ⚠️ Το πλήθος φράσσεται από το **ίδιο** όριο με τη δήλωση: σημεία για περισσότερα αρχεία απ' όσα
+   * χωρούν στο ράφι δεν έχουν τι να κόψουν.
+   */
+  publishedFileFocalPoints: z
+    .record(z.string().trim().min(1), photoFocalPointSchema)
+    .refine((points) => Object.keys(points).length <= PUBLISHED_MEDIA_LIMIT)
     .optional(),
 });
 

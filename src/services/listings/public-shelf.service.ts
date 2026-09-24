@@ -58,12 +58,14 @@ import type { File } from '@google-cloud/storage';
 
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 import {
   isRasterShelfKind,
   shelfRecipe,
   type PublicShelfKind,
   type RasterShelfKind,
+  type ShelfFraming,
 } from '@/services/upload/utils/public-shelf-kinds';
 
 import {
@@ -74,17 +76,21 @@ import {
   uploadMissing,
 } from './public-shelf-bucket';
 import {
+  cachedFocalPoint,
   cachedVariants,
   distinctByKey,
+  encodeFocalPointMeta,
   fullCacheHit,
   groupUploads,
+  META_FOCAL_POINT,
   sourceReference,
   toObject,
   toShelfWrite,
   type PendingUpload,
   type PublicShelfObject,
 } from './public-shelf-plan';
-import { sanitiseImageVariants } from './public-shelf-sanitise';
+import { sanitiseShelfImage } from './public-shelf-sanitise';
+import { detectFocalPointInBytes } from './public-shelf-focal-point';
 
 /**
  * ⚠️ **Επανεξαγωγή, ΟΧΙ δεύτερη δήλωση** — ο τύπος μετακόμισε στο `public-shelf-plan`
@@ -132,6 +138,17 @@ export interface PublicShelfImage<M> {
    * επιτέλους αυτό που το σχόλιο υποσχόταν ήδη.
    */
   readonly material: M;
+  /**
+   * 🎯 **Το ΑΥΤΟΜΑΤΟ σημείο εστίασης** — γεννήθηκε από τα bytes (ADR-880). `null` ⇒ δεν ζητήθηκε
+   * από τη γραμμή ή δεν βρέθηκε σήμα.
+   */
+  readonly focalPoint: PhotoFocalPoint | null;
+  /**
+   * 🎯 **Το σημείο που ΔΗΛΩΣΕ ο άνθρωπος** — κουβαλιέται **αδιαφανώς** από την πηγή, όπως το
+   * {@link material}, και για τον **ίδιο** λόγο: το `published[i]` δεν είναι το `sources[i]`. Το ράφι
+   * δεν το ερμηνεύει· η απόφαση *«ποιο κερδίζει»* ζει στο `resolvePhotoFocalPoint`.
+   */
+  readonly declaredFocalPoint: PhotoFocalPoint | null;
 }
 
 /** Τι έκανε η συμφιλίωση — ρητά, ώστε ο καλών να **μετρήσει**. */
@@ -152,11 +169,45 @@ interface AddressedImage<M> {
   readonly uploads: readonly PendingUpload[];
   /** Δες {@link PublicShelfImage.material} — κουβαλιέται, δεν ερμηνεύεται. */
   readonly material: M;
+  /** Δες {@link PublicShelfImage.focalPoint}. */
+  readonly focalPoint: PhotoFocalPoint | null;
+  /** Δες {@link PublicShelfImage.declaredFocalPoint}. */
+  readonly declaredFocalPoint: PhotoFocalPoint | null;
 }
 
 // ---------------------------------------------------------------------------
 // Παραγωγή του επιθυμητού συνόλου
 // ---------------------------------------------------------------------------
+
+/** Η δημόσια όψη μιας διευθυνσιοδοτημένης εικόνας — το **μεγαλύτερο** πλάτος είναι το κανονικό. */
+function toPublishedImage<M>(image: AddressedImage<M>): PublicShelfImage<M> {
+  return {
+    canonical: image.variants[image.variants.length - 1],
+    variants: image.variants,
+    material: image.material,
+    focalPoint: image.focalPoint,
+    declaredFocalPoint: image.declaredFocalPoint,
+  };
+}
+
+/**
+ * **Η γρήγορη διαδρομή** — όλα τα πλάτη είναι ήδη στο ράφι· καμία αποκωδικοποίηση. Το σημείο εστίασης
+ * έρχεται από τη **μνήμη** του ραφιού (ή από την αυτοθεραπεία του `rememberedFocalPoint`). `null` ⇒ λείπει
+ * έστω ένα πλάτος, άρα φρέσκια κωδικοποίηση.
+ */
+async function fromCache<M>(
+  kind: RasterShelfKind<M>,
+  existing: readonly File[],
+  plan: Pick<ShelfPlanInputs, 'sourceRef' | 'recipe' | 'detects'>,
+): Promise<Omit<AddressedImage<M>, 'material' | 'declaredFocalPoint'> | null> {
+  const hit = fullCacheHit(kind, cachedVariants(existing, plan.sourceRef, plan.recipe));
+  if (hit === null) return null;
+  const variants = distinctByKey(hit);
+  const focalPoint = plan.detects
+    ? await rememberedFocalPoint(existing, plan.sourceRef, plan.recipe, variants)
+    : null;
+  return { variants, uploads: [], focalPoint };
+}
 
 /**
  * Διαβάζει ένα πρωτότυπο από τον **ιδιωτικό** κάδο, το καθαρίζει σε **όλα** τα πλάτη,
@@ -192,19 +243,83 @@ async function addressOne<M>(
     //    παρήχθησαν, αν κάποτε το `framingOf` πάψει να είναι καθαρή συνάρτηση.
     const framing = kind.framingOf(source.material);
     const recipe = shelfRecipe(kind.encoding, framing);
+    const detects = kind.detectsFocalPoint(source.material);
+    const carried = { material: source.material, declaredFocalPoint: source.focalPoint ?? null };
 
-    const hit = fullCacheHit(kind, cachedVariants(existing, sourceRef, recipe));
-    if (hit !== null) return { variants: distinctByKey(hit), uploads: [], material: source.material };
+    const cached = await fromCache(kind, existing, { sourceRef, recipe, detects });
+    if (cached !== null) return { ...cached, ...carried };
 
     const [raw] = await original.download();
-    const sanitised = [...(await sanitiseImageVariants(raw, kind.encoding, framing))];
-    const uploads = groupUploads(kind, subjectId, sourceRef, recipe, sanitised);
-    return { variants: distinctByKey(uploads.map(toObject)), uploads, material: source.material };
+    return { ...(await freshlyAddressed(kind, subjectId, raw, { sourceRef, recipe, framing, detects })), ...carried };
   } catch (error) {
     logger.warn('Πηγή δεν δημοσιεύεται — δεν διαβάστηκε ή δεν καθαρίστηκε', {
       subjectId,
       privateStoragePath: source.privateStoragePath,
       error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/** Ό,τι χρειάζεται η φρέσκια κωδικοποίηση — γεννιέται **μία** φορά στο {@link addressOne}. */
+interface ShelfPlanInputs {
+  readonly sourceRef: string;
+  readonly recipe: string;
+  readonly framing: ShelfFraming;
+  readonly detects: boolean;
+}
+
+/**
+ * **Η αργή διαδρομή**: καθαρισμός, διευθυνσιοδότηση, σημείο εστίασης — από **μία** αποκωδικοποίηση.
+ * ⚠️ «Δεν ρωτήθηκε» (`detects === false`) ⇒ `undefined` προς τον κάδο, ώστε να μη γραφτεί ψευδές «none».
+ */
+async function freshlyAddressed<M>(
+  kind: RasterShelfKind<M>,
+  subjectId: string,
+  raw: Buffer,
+  plan: ShelfPlanInputs,
+): Promise<Pick<AddressedImage<M>, 'variants' | 'uploads' | 'focalPoint'>> {
+  const sanitised = await sanitiseShelfImage(raw, kind.encoding, plan.framing, plan.detects);
+  const remembered = plan.detects ? sanitised.focalPoint : undefined;
+  const uploads = groupUploads(kind, subjectId, plan.sourceRef, plan.recipe, sanitised.variants, remembered);
+  return { variants: distinctByKey(uploads.map(toObject)), uploads, focalPoint: sanitised.focalPoint };
+}
+
+/**
+ * 🎯 **Το σημείο εστίασης μιας πηγής που ΔΕΝ αποκωδικοποιήθηκε** (γρήγορη διαδρομή, ADR-880).
+ *
+ * Το ράφι το θυμάται στα μεταδεδομένα των παραγώγων. 🩹 **Αυτοθεραπεία**: αντικείμενα γραμμένα πριν
+ * το ADR-880 δεν το έχουν ⇒ ανάλυση του **μικρότερου** δημόσιου παραγώγου (λίγα KB, ίδια εικόνα σε
+ * άλλο μέγεθος) και εγγραφή του μεταδεδομένου σε **όλα** τα παράγωγα — χωρίς επανακωδικοποίηση, χωρίς
+ * νέο κλειδί. Ιδιοδύναμο: δύο ταυτόχρονες συμφιλιώσεις γράφουν την **ίδια** τιμή.
+ *
+ * ⚠️ **Δεν πετά ποτέ**: αποτυχία ⇒ `null` (κέντρο) και η επόμενη συμφιλίωση ξαναδοκιμάζει.
+ */
+async function rememberedFocalPoint(
+  existing: readonly File[],
+  sourceRef: string,
+  recipe: string,
+  variants: readonly PublicShelfObject[],
+): Promise<PhotoFocalPoint | null> {
+  const remembered = cachedFocalPoint(existing, sourceRef, recipe);
+  if (remembered !== undefined) return remembered;
+
+  try {
+    const smallest = existing.find((file) => file.name === variants[0]?.key);
+    if (smallest === undefined) return null;
+    const [bytes] = await smallest.download();
+    const focalPoint = await detectFocalPointInBytes(bytes);
+    const keys = new Set(variants.map((variant) => variant.key));
+    await Promise.all(
+      existing
+        .filter((file) => keys.has(file.name))
+        .map((file) => file.setMetadata({ metadata: { [META_FOCAL_POINT]: encodeFocalPointMeta(focalPoint) } })),
+    );
+    return focalPoint;
+  } catch (error) {
+    logger.warn('Το σημείο εστίασης δεν αποκαταστάθηκε — η φωτογραφία μένει στο κέντρο', {
+      sourceRef,
+      error: asLogMessage(error),
     });
     return null;
   }
@@ -285,11 +400,7 @@ export async function reconcilePublicShelf<M>(
 
     return {
       outcome: 'reconciled',
-      published: desired.map((image) => ({
-        canonical: image.variants[image.variants.length - 1],
-        variants: image.variants,
-        material: image.material,
-      })),
+      published: desired.map(toPublishedImage),
       removed,
       rejected: addressed.length - desired.length,
     };

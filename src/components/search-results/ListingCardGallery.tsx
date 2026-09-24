@@ -53,7 +53,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import type { ListingImage } from '@/types/public-listing';
 
-import { LISTING_CARD_ASPECT_CLASS } from './listing-card-frame';
+import { LISTING_CARD_ASPECT, LISTING_CARD_ASPECT_CLASS } from './listing-card-frame';
+import { listingPhotoPositionClass } from './listing-photo-position-class';
 import { useGalleryScroller } from './use-gallery-scroller';
 
 interface ListingCardGalleryProps {
@@ -147,7 +148,7 @@ export function ListingCardGallery({
         fetchPriority={priority && position === 0 ? 'high' : 'auto'}
         decoding="async"
         draggable={false}
-        className={`${LISTING_CARD_ASPECT_CLASS} w-full object-cover`}
+        className={`${LISTING_CARD_ASPECT_CLASS} w-full object-cover ${listingPhotoPositionClass(image, LISTING_CARD_ASPECT)}`}
       />
     );
 

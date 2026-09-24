@@ -46,6 +46,7 @@ import {
   type DeclaredFileIds,
 } from '@/lib/listings/declared-file-ids';
 import type { FileRecord } from '@/types/file-record';
+import { readDeclaredFocalPoints, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 /**
  * **Το `FileRecord` όσο το χρειάζεται η απόφαση** — και ούτε πεδίο παραπάνω.
@@ -270,6 +271,7 @@ export function compareAgencyMediaForPublication(
  * |---|---|---|
  * | `order` | *«με ποια σειρά;»* — **ποτέ** «ποια;» | `properties/{id}.publishedMediaOrder` |
  * | `floorplans` | *«ποιες κατόψεις είναι υλικό **ΑΥΤΗΣ** της αγγελίας;» | `properties/{id}.publishedFloorplans` |
+ * | `focalPoints` | *«πού είναι το θέμα κάθε φωτογραφίας;»* (ADR-880) — **ποτέ** «ποια;» | `properties/{id}.publishedMediaFocalPoints` |
  *
  * 🔴 **ΟΙ ΔΥΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΕΙΔΟΣ ΔΗΛΩΣΗΣ, ΚΑΙ Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ Η ΑΣΦΑΛΕΙΑ.**
  * Η `order` **δεν μπορεί να δημοσιεύσει τίποτα** — μόνο να τακτοποιήσει ό,τι ήδη φεύγει *(Α14.7.2)*.
@@ -283,6 +285,11 @@ export interface AgencyMediaDeclaration {
   readonly order: DeclaredFileIds;
   /** Οι κατόψεις — ένας φρουρός ΕΠΙΠΛΕΟΝ, ποτέ αντί για. */
   readonly floorplans: DeclaredFileIds;
+  /**
+   * 🎯 Τα σημεία εστίασης ανά `FileRecord.id` (ADR-880) — όπως η `order`, **δεν δημοσιεύει τίποτα**·
+   * μόνο λέει πώς κόβεται ό,τι ήδη φεύγει. Προαιρετικό: απόν ⇒ κανένα δηλωμένο (το αυτόματο μιλά).
+   */
+  readonly focalPoints?: ReadonlyMap<string, PhotoFocalPoint>;
 }
 
 /** Καμία δήλωση — μοιράζεται, γιατί είναι αμετάβλητη και κενή. */
@@ -304,9 +311,11 @@ export const NO_AGENCY_DECLARATION: AgencyMediaDeclaration = {
 export function agencyMediaDeclaration(source: {
   readonly publishedMediaOrder?: unknown;
   readonly publishedFloorplans?: unknown;
+  readonly publishedMediaFocalPoints?: unknown;
 }): AgencyMediaDeclaration {
   return {
     order: declaredFileIds(source.publishedMediaOrder),
     floorplans: declaredFileIds(source.publishedFloorplans),
+    focalPoints: readDeclaredFocalPoints(source.publishedMediaFocalPoints),
   };
 }

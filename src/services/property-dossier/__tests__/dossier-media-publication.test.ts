@@ -62,6 +62,23 @@ describe('Α41.1 — η δήλωση ΕΙΝΑΙ η εξουσιοδότηση, �
     expect(paths(publishedDossierMediaSources(DOSSIER, [VIEW, PROGRESS], ['file_view']))).toEqual(['file_view.png']);
   });
 
+  it('🎯 ADR-880 — το σημείο εστίασης δένεται στο ΑΡΧΕΙΟ, όχι στη θέση (και μέσω της αγγελίας)', () => {
+    const points = new Map([['file_view', { x: 0.9, y: 0.1 }]]);
+    const sources = publishedDossierMediaSources(DOSSIER, [VIEW, PROGRESS], ['file_progress', 'file_view'], points);
+    expect(sources.map((source) => source.focalPoint)).toEqual([null, { x: 0.9, y: 0.1 }]);
+
+    const viaListing = ownerListingMediaSources(
+      {
+        media: [],
+        dossierId: DOSSIER.id,
+        publishedFileIds: ['file_view'],
+        publishedFileFocalPoints: { file_view: { x: 0.9, y: 0.1 } },
+      },
+      { dossier: DOSSIER, files: [VIEW] },
+    );
+    expect(viaListing[0]?.focalPoint).toEqual({ x: 0.9, y: 0.1 });
+  });
+
   it('η σειρά είναι της ΔΗΛΩΣΗΣ, όχι των αρχείων', () => {
     const sources = publishedDossierMediaSources(DOSSIER, [VIEW, PROGRESS], ['file_progress', 'file_view']);
     expect(paths(sources)).toEqual(['file_progress.png', 'file_view.png']);

@@ -297,6 +297,9 @@ function toProjectedImage(image: PublicShelfImage<ListingMaterial>): ProjectedSh
     //    μετάφραση τύπων, όχι σημασιολογία. Ο **ένας** τόπος που ρωτά «κάτοψη ή
     //    φωτογραφία;» είναι το `withPublishedGallery`.
     material: image.material,
+    // 🎯 ADR-880 — και τα δύο ταξιδεύουν **αυτούσια**· η απόφαση ζει στο `withPublishedGallery`.
+    declaredFocalPoint: image.declaredFocalPoint,
+    detectedFocalPoint: image.focalPoint,
   };
 }
 

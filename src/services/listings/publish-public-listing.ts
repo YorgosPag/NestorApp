@@ -118,6 +118,11 @@ export type ListingSourceProperty = ProjectableProperty & {
    * `agencyMediaDeclaration`.
    */
   readonly publishedFloorplans?: unknown;
+  /**
+   * 🎯 **Τα σημεία εστίασης που ΔΗΛΩΣΕ το γραφείο** — `FileRecord.id` → `{x,y}` (ADR-880).
+   * ⚠️ Ωμό `unknown`, ίδια πειθαρχία: η ανάγνωση είναι **αποκλειστικά** το `agencyMediaDeclaration`.
+   */
+  readonly publishedMediaFocalPoints?: unknown;
 };
 
 /**

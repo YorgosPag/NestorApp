@@ -26,6 +26,9 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
+import { PhotoFocalPointControl } from '@/components/listings/focal-point/PhotoFocalPointControl';
+import { ownerPropertyMediaUrl } from '@/hooks/owner-property/useOwnerPropertyMedia';
+import { readPhotoFocalPoint, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 const NS = 'property-market';
 const K = `${NS}:offer.media`;
@@ -53,6 +56,8 @@ interface OwnerPropertyMediaItemProps {
   readonly onToggleFloorplan: (storagePath: string, isFloorplan: boolean) => void;
   readonly onMakeFirst: (storagePath: string) => void;
   readonly onRemove: (storagePath: string) => void;
+  /** 🎯 ADR-880 — `null` ⇒ πίσω στο αυτόματο. */
+  readonly onFocalPoint: (storagePath: string, point: PhotoFocalPoint | null) => void;
 }
 
 export function OwnerPropertyMediaItem({
@@ -63,6 +68,7 @@ export function OwnerPropertyMediaItem({
   onToggleFloorplan,
   onMakeFirst,
   onRemove,
+  onFocalPoint,
 }: OwnerPropertyMediaItemProps): React.ReactElement {
   const { t } = useTranslation([NS]);
   const published = item.published === true;
@@ -123,6 +129,20 @@ export function OwnerPropertyMediaItem({
         ⚠️ Το κουμπί εμφανίζεται **μόνο** για δημοσιευμένο αρχείο που **δεν** είναι ήδη
         πρώτο: «κάνε πρώτο κάτι που δεν φεύγει» δεν σημαίνει τίποτα για τον χρήστη.
       */}
+      {/*
+        🎯 ADR-880 — **μόνο φωτογραφία** (η κάτοψη αποδίδεται ολόκληρη). Το παλιό `media[]` δεν έχει `FileRecord`,
+        άρα δεν υπάρχει πρόταση πριν τη δημοσίευση — το αυτόματο γεννιέται στο ράφι, και ο διάλογος το λέει.
+      */}
+      {!isFloorplan && (
+        <PhotoFocalPointControl
+          name={item.fileName}
+          resolveSrc={() => ownerPropertyMediaUrl(item.storagePath)}
+          declared={readPhotoFocalPoint(item.focalPoint)}
+          onApply={(next) => onFocalPoint(item.storagePath, next)}
+          suggestionTarget={null}
+        />
+      )}
+
       {published && !isLead && (
         <button
           type="button"

@@ -42,6 +42,17 @@ interface PhotosTabProps {
  * - Category: photos
  * - DisplayStyle: media-gallery
  * - Entry points: interior photos, exterior photos, etc.
+ *
+ * 🔴 **Η ΠΡΑΞΗ ΣΕΙΡΑΣ ΤΟΥ ΓΡΑΦΕΙΟΥ** (ADR-841 §7 Α14.7 — κλείνει το Ο-16).
+ *
+ * Μπαίνει **εδώ** και όχι μέσα στον `EntityFilesManager` επειδή εκείνος είναι
+ * **γενικός** *(επαφές · έργα · κτίρια · όροφοι)*, ενώ *«ποια φωτογραφία είναι πρώτη
+ * **στην αγγελία**;»* έχει νόημα μόνο για ακίνητο. Είναι **αδελφός**, όχι
+ * τροποποίηση κεντρικού εξαρτήματος.
+ *
+ * 🔑 Και μπαίνει **από κάτω**, όχι από πάνω: η ερώτηση της σειράς προϋποθέτει την
+ * απάντηση της εξουσιοδότησης *(«ποιες είναι δημόσιες;»)*, που δίνεται στη λίστα
+ * αρχείων ακριβώς από πάνω. Η οθόνη διαβάζεται με τη σειρά που ρωτιέται.
  */
 export function PhotosTab({
   selectedProperty,
@@ -62,23 +73,12 @@ export function PhotosTab({
         acceptedTypes={DEFAULT_PHOTO_ACCEPT}
       />
 
-      {/*
-        🔴 **Η ΠΡΑΞΗ ΣΕΙΡΑΣ ΤΟΥ ΓΡΑΦΕΙΟΥ** (ADR-841 §7 Α14.7 — κλείνει το Ο-16).
-
-        Μπαίνει **εδώ** και όχι μέσα στον `EntityFilesManager` επειδή εκείνος είναι
-        **γενικός** *(επαφές · έργα · κτίρια · όροφοι)*, ενώ *«ποια φωτογραφία είναι πρώτη
-        **στην αγγελία**;»* έχει νόημα μόνο για ακίνητο. Είναι **αδελφός**, όχι
-        τροποποίηση κεντρικού εξαρτήματος.
-
-        🔑 Και μπαίνει **από κάτω**, όχι από πάνω: η ερώτηση της σειράς προϋποθέτει την
-        απάντηση της εξουσιοδότησης *(«ποιες είναι δημόσιες;»)*, που δίνεται στη λίστα
-        αρχείων ακριβώς από πάνω. Η οθόνη διαβάζεται με τη σειρά που ρωτιέται.
-      */}
       <ListingMediaOrderPanel
         propertyId={String(selectedProperty.id)}
         companyId={companyId}
         storedOrder={selectedProperty.publishedMediaOrder}
         storedFloorplans={selectedProperty.publishedFloorplans}
+        storedFocalPoints={selectedProperty.publishedMediaFocalPoints}
       />
     </>
   );

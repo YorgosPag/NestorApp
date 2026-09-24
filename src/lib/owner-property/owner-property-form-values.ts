@@ -46,6 +46,7 @@ import { z } from 'zod';
 
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
+import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { isLandProperty } from '@/constants/property-classification';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
@@ -178,6 +179,11 @@ export const ownerPropertyFormSchema = z.object({
        * τύπο. Το φυλάει **μόνο** άγκυρα που περνά τιμή από το σύνορο.
        */
       kind: z.enum(LISTING_MATERIAL_KINDS).optional(),
+      /**
+       * 🎯 **«ΠΟΥ ΕΙΝΑΙ ΤΟ ΘΕΜΑ;» (ADR-880) — ρητό για τον ΙΔΙΟ λόγο με τα δύο από πάνω**: το `zod` κόβει
+       * σιωπηλά ό,τι δεν δηλώνεται, και η διόρθωση του ανθρώπου θα χανόταν στο σύνορο.
+       */
+      focalPoint: photoFocalPointSchema.optional(),
     }),
   ),
 
@@ -197,6 +203,8 @@ export const ownerPropertyFormSchema = z.object({
    * Μια τρίτη κρίση εδώ θα ήταν η πρώτη που θα χαλάρωνε.
    */
   publishedFileIds: z.array(z.string()).nullable().optional(),
+  /** 🎯 ADR-880 — ταξιδεύει **μαζί** με το `publishedFileIds` (μόνο φόρμα με φάκελο). */
+  publishedFileFocalPoints: z.record(z.string(), photoFocalPointSchema).optional(),
 });
 
 export type OwnerPropertyFormValues = z.input<typeof ownerPropertyFormSchema>;
@@ -373,6 +381,9 @@ export function ownerPropertyDraftFrom(
     //    σε αγγελία χωρίς φάκελο θα έγραφε πεδίο που κανείς δεν διαβάζει — ο διακόπτης dual-read είναι η **ύπαρξη
     //    φακέλου**, όχι η ύπαρξη δήλωσης (Δ4).
     ...(values.publishedFileIds ? { publishedFileIds: [...values.publishedFileIds] } : {}),
+    // 🎯 ADR-880 — δεμένο στον **ίδιο** διακόπτη (ύπαρξη φακέλου). Κενό `{}` ταξιδεύει: είναι ο μόνος τρόπος
+    //    να **αποσυρθεί** το τελευταίο σημείο, αφού το PATCH είναι `{...existing, ...draft}`.
+    ...(values.publishedFileIds ? { publishedFileFocalPoints: { ...(values.publishedFileFocalPoints ?? {}) } } : {}),
   };
 }
 
@@ -439,6 +450,7 @@ export function ownerPropertyFormFrom(
      * αποθήκευση θα παρέλειπε το πεδίο και το PATCH θα **ανάσταινε** ό,τι ο άνθρωπος μόλις ξεδιάλεξε.
      */
     publishedFileIds: property.dossierId === undefined ? null : [...(property.publishedFileIds ?? [])],
+    publishedFileFocalPoints: { ...(property.publishedFileFocalPoints ?? {}) },
   };
 }
 

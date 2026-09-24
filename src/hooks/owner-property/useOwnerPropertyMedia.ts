@@ -68,6 +68,16 @@ export function ownerPropertyMediaPath(
 }
 
 /**
+ * 🎯 **Το URL ενός ανεβασμένου αρχείου του κατόχου** — για τον επεξεργαστή σημείου εστίασης (ADR-880).
+ *
+ * ⚠️ Ζητείται **όταν** ο άνθρωπος ανοίξει τον επεξεργαστή, ποτέ για όλη τη λίστα: το `media[]` κρατά μόνο
+ * μονοπάτι, και ο **ίδιος κανόνας Storage** που επέτρεψε το ανέβασμα κρίνει και την ανάγνωση.
+ */
+export function ownerPropertyMediaUrl(storagePath: string): Promise<string> {
+  return getDownloadURL(ref(storage, storagePath));
+}
+
+/**
  * Τι έγινε με **ένα** αρχείο. Ρητές καταστάσεις, ποτέ `boolean` + `string`.
  *
  * 🔑 **Το `rejected` είναι ΞΕΧΩΡΙΣΤΟ από το `failed`**: το πρώτο σημαίνει *«αυτό το

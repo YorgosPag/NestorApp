@@ -41,6 +41,7 @@ import {
 } from '@/hooks/owner-property/useOwnerPropertyDossierFiles';
 
 import { OwnerPropertyDossierItem } from './OwnerPropertyDossierItem';
+import { useDossierFocalPointSlot } from './use-dossier-focal-point-slot';
 
 const NS = 'property-market';
 const K = `${NS}:offer.media`;
@@ -128,6 +129,8 @@ export function OwnerPropertyDossierPanel({
     declare(next ? [...current, fileId] : current.filter((id) => id !== fileId));
   }
 
+  const focalPointSlot = useDossierFocalPointSlot();
+
   function handleMakeFirst(fileId: string): void {
     declare(withDeclaredFirst(declaredFileIds(form.getValues('publishedFileIds')), fileId));
   }
@@ -176,21 +179,26 @@ export function OwnerPropertyDossierPanel({
       ) : (
         <>
           <ul className="m-0 flex list-none flex-col p-0">
-            {rows.map((file) => (
-              <OwnerPropertyDossierItem
-                key={file.id}
-                fileId={file.id}
-                name={file.displayName}
-                tab={propertyDossierFileTabOf(dossier, file, PUBLISHABLE_TABS)}
-                isLand={isLand}
-                deliverable={dossierMediaMaterial(dossier, file) !== null}
-                published={publishedIds.has(file.id)}
-                isLead={published[0]?.file.id === file.id}
-                canPublish={canPublish}
-                onTogglePublished={handleTogglePublished}
-                onMakeFirst={handleMakeFirst}
-              />
-            ))}
+            {rows.map((file) => {
+              // Η καρτέλα ρωτιέται ΜΙΑ φορά ανά γραμμή — τη χρειάζονται και η σήμανση και η εστίαση.
+              const tab = propertyDossierFileTabOf(dossier, file, PUBLISHABLE_TABS);
+              return (
+                <OwnerPropertyDossierItem
+                  key={file.id}
+                  fileId={file.id}
+                  name={file.displayName}
+                  tab={tab}
+                  isLand={isLand}
+                  deliverable={dossierMediaMaterial(dossier, file) !== null}
+                  published={publishedIds.has(file.id)}
+                  isLead={published[0]?.file.id === file.id}
+                  canPublish={canPublish}
+                  onTogglePublished={handleTogglePublished}
+                  onMakeFirst={handleMakeFirst}
+                  focalPointSlot={focalPointSlot(file, tab)}
+                />
+              );
+            })}
           </ul>
           <p aria-live="polite" className="text-xs text-muted-foreground">
             {/* 🔴 `published`, ΠΟΤΕ `count` — δεσμευμένο όνομα του i18next (δες το σκεπτικό στο `OwnerPropertyMediaField`). */}

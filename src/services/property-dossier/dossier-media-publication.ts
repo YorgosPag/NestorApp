@@ -33,6 +33,7 @@ import {
   type ListingFileCandidate,
 } from '@/lib/listings/listing-file-deliverability';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import {
   PUBLISHED_MEDIA_LIMIT,
   type PublicShelfSource,
@@ -41,6 +42,9 @@ import { propertyDossierFileTabOf } from '@/components/property-dossier/property
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { FileRecord } from '@/types/file-record';
 import type { PropertyDossier } from '@/types/property-dossier';
+
+/** Καμία δήλωση σημείων — μοιράζεται, αμετάβλητη και κενή. */
+const NO_DECLARED_FOCAL_POINTS: ReadonlyMap<string, PhotoFocalPoint> = new Map();
 
 /** Το `FileRecord` όσο το χρειάζεται η απόφαση: καταλληλότητα + εμβέλεια καρτέλας + κάτοχος. */
 export type DossierMediaCandidate = ListingFileCandidate &
@@ -135,9 +139,12 @@ export function publishedDossierMediaSources(
   dossier: DossierMediaOwner,
   files: readonly DossierMediaCandidate[],
   declared: DeclaredFileIds,
+  focalPoints: ReadonlyMap<string, PhotoFocalPoint> = NO_DECLARED_FOCAL_POINTS,
 ): readonly PublicShelfSource[] {
   return publishedDossierFiles(dossier, files, declared).map(({ file, material }) => ({
     privateStoragePath: file.storagePath,
     material,
+    // 🎯 ADR-880 — δεμένο στο **αρχείο**, ποτέ στη θέση.
+    focalPoint: focalPoints.get(file.id) ?? null,
   }));
 }

@@ -58,6 +58,7 @@
  */
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { AnyPublicShelfKind } from './public-shelf-kinds';
 import type {
   ModelShelfEncoding,
@@ -216,6 +217,15 @@ export interface PublicShelfSource<M = ListingMaterial> {
    * `SourcedAttribute` είναι υποχρεωμένος να δηλώσει.
    */
   readonly material: M;
+  /**
+   * 🎯 **Το σημείο εστίασης που ΔΗΛΩΣΕ ο άνθρωπος** (ADR-880) — κουβαλιέται όπως το {@link material},
+   * δεν ερμηνεύεται από το ράφι.
+   *
+   * ⚠️ **ΠΡΟΑΙΡΕΤΙΚΟ ΕΠΙΤΗΔΕΣ, σε αντίθεση με το `material`**: εκεί η σιωπή θα δημοσίευε κάτοψη ως
+   * φωτογραφία *(Ο-20)*· εδώ η σιωπή σημαίνει *«άφησε το αυτόματο»* — ακριβώς η σωστή προεπιλογή.
+   * Και οι παραγωγοί που **δεν** κόβονται ποτέ (σήματα γραφείων) δεν έχουν τι να απαντήσουν.
+   */
+  readonly focalPoint?: PhotoFocalPoint | null;
 }
 
 /** Τα τρία μέρη ενός κλειδιού ραφιού. */

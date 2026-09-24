@@ -84,7 +84,7 @@ export interface SanitisedShelfAsset {
  * **Ό,τι έμαθε ο καθαριστής από ΜΙΑ αποκωδικοποίηση** — τα παράγωγα και, όπου ζητήθηκε, το
  * σημείο εστίασης (ADR-880).
  */
-export interface SanitisedShelfImage {
+interface SanitisedShelfImage {
   readonly variants: readonly SanitisedShelfAsset[];
   /**
    * Το **αυτόματο** σημείο εστίασης — `null` όταν δεν ζητήθηκε ή δεν βρέθηκε σήμα.

@@ -81,7 +81,10 @@ function agencyFile(over: Partial<AgencyMediaCandidate> = {}): AgencyMediaCandid
 
 /** Ό,τι επιστρέφει το ράφι, στη γλώσσα του γραφέα. */
 function shelfImage(url: string, over: Partial<ProjectedShelfImage> = {}): ProjectedShelfImage {
-  return { url, width: 1280, height: 960, sources: [], material: PHOTO_MATERIAL, ...over };
+  return {
+    url, width: 1280, height: 960, sources: [], material: PHOTO_MATERIAL,
+    declaredFocalPoint: null, detectedFocalPoint: null, ...over,
+  };
 }
 
 function listing(over: Partial<PublicListing> = {}): PublicListing {

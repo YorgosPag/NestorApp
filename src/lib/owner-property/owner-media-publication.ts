@@ -23,6 +23,7 @@
 
 import { mediaOf, type OwnerProperty, type OwnerPropertyMedia } from '@/types/owner-property';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
+import { readDeclaredFocalPoints, readPhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import {
   publishedDossierMediaSources,
   type DossierMediaRead,
@@ -173,6 +174,8 @@ export function publishedOwnerMediaSources(
   return publishedOwnerMedia(media).map((item) => ({
     privateStoragePath: item.storagePath,
     material: ownerMediaMaterial(item),
+    // 🎯 ADR-880 — η δήλωση του ανθρώπου, **ελεγμένη**: το `media[]` είναι ιστορικό εγγράφου, όχι πόρτα.
+    focalPoint: readPhotoFocalPoint(item.focalPoint),
   }));
 }
 
@@ -189,7 +192,7 @@ export function publishedOwnerMediaSources(
  * @param dossierMedia — ό,τι διάβασε ο διακομιστής (`readDossierMedia`)· `null` όταν ο καλών δεν ρωτά τη βιτρίνα.
  */
 export function ownerListingMediaSources(
-  listing: Pick<OwnerProperty, 'media' | 'dossierId' | 'publishedFileIds'>,
+  listing: Pick<OwnerProperty, 'media' | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints'>,
   dossierMedia: DossierMediaRead | null,
 ): readonly PublicShelfSource[] {
   if (listing.dossierId === undefined) return publishedOwnerMediaSources(mediaOf(listing));
@@ -198,6 +201,7 @@ export function ownerListingMediaSources(
     dossierMedia.dossier,
     dossierMedia.files,
     declaredFileIds(listing.publishedFileIds),
+    readDeclaredFocalPoints(listing.publishedFileFocalPoints),
   );
 }
 

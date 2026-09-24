@@ -34,11 +34,14 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { Button } from '@/components/ui/button';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { useListingMediaOrder } from '@/hooks/listings/useListingMediaOrder';
+import { useListingFocalPoints, type ListingFocalPoints } from '@/hooks/listings/useListingFocalPoints';
+import { PhotoFocalPointControl } from './focal-point/PhotoFocalPointControl';
 import { companyReadCustodyOf } from '@/lib/files/file-custody';
 import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
+import type { FileRecord } from '@/types/file-record';
 
 const NS = 'property-market';
 const K = `${NS}:listing.mediaOrder`;
@@ -62,6 +65,58 @@ export interface ListingMediaOrderPanelProps {
    * κενό «οθόνη ⇄ ράφι» που αυτή η οικογένεια αρχείων υπάρχει για να κλείσει.
    */
   readonly storedFloorplans: unknown;
+  /** 🎯 ADR-880 — ωμό πεδίο εγγράφου· η μία ανάγνωση είναι το `readDeclaredFocalPoints`. */
+  readonly storedFocalPoints: unknown;
+}
+
+interface ListingMediaOrderRowProps {
+  readonly file: FileRecord;
+  /** Πρώτη στη σειρά ⇒ σήμα «1η» αντί για κουμπί. */
+  readonly first: boolean;
+  readonly saving: boolean;
+  readonly onMakeFirst: (fileId: string) => Promise<void>;
+  readonly focalPoints: ListingFocalPoints;
+}
+
+/** **Μία γραμμή της σειράς** — εστίαση (μόνο φωτογραφία) + «1η» ή «να μπει πρώτη». */
+function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }: ListingMediaOrderRowProps) {
+  const { t } = useTranslation([NS]);
+  return (
+    <ListingMaterialRow
+      contentType={file.contentType}
+      thumbnailUrl={file.thumbnailUrl}
+      downloadUrl={file.downloadUrl}
+      displayName={file.displayName}
+    >
+      {/*
+        🎯 ADR-880 — **μόνο φωτογραφία**: η κάτοψη αποδίδεται ολόκληρη, δεν κόβεται ποτέ. Η πρόταση
+        ζητείται στο διαμέρισμα της **εταιρείας** — ίδιο με την ανάγνωση των αρχείων από πάνω.
+      */}
+      {file.category === FILE_CATEGORIES.PHOTOS && file.downloadUrl !== undefined && (
+        <PhotoFocalPointControl
+          name={file.displayName}
+          src={file.downloadUrl}
+          declared={focalPoints.pointOf(file.id)}
+          onApply={(next) => void focalPoints.setPoint(file.id, next)}
+          suggestionTarget={{ fileId: file.id, custody: 'company' }}
+          disabled={focalPoints.saving}
+        />
+      )}
+      {/*
+        🔑 **Το σήμα «1η» και το κουμπί είναι ΑΜΟΙΒΑΙΑ ΑΠΟΚΛΕΙΟΜΕΝΑ**, ίδιο με του
+        ιδιώτη: *«κάνε πρώτο κάτι που είναι ήδη πρώτο»* δεν σημαίνει τίποτα.
+      */}
+      {first ? (
+        <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
+          {t(`${K}.firstBadge`)}
+        </span>
+      ) : (
+        <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => void onMakeFirst(file.id)}>
+          {t(`${K}.makeFirst`)}
+        </Button>
+      )}
+    </ListingMaterialRow>
+  );
 }
 
 /**
@@ -82,6 +137,7 @@ export function ListingMediaOrderPanel({
   companyId,
   storedOrder,
   storedFloorplans,
+  storedFocalPoints,
 }: ListingMediaOrderPanelProps) {
   const { t } = useTranslation([NS]);
 
@@ -104,44 +160,27 @@ export function ListingMediaOrderPanel({
     floorplans,
   );
 
+  const focalPoints = useListingFocalPoints(propertyId, storedFocalPoints);
+
   return (
     <ListingMaterialPanel
       titleId="listing-media-order-title"
       title={t(`${K}.title`)}
       help={t(`${K}.help`)}
       empty={t(`${K}.empty`)}
-      failure={failed ? t(`${K}.saveFailed`) : null}
+      failure={failed || focalPoints.failed ? t(`${K}.saveFailed`) : null}
       isEmpty={items.length === 0}
     >
       <ol className="flex flex-col gap-2">
         {items.map((file, index) => (
-          <ListingMaterialRow
+          <ListingMediaOrderRow
             key={file.id}
-            contentType={file.contentType}
-            thumbnailUrl={file.thumbnailUrl}
-            downloadUrl={file.downloadUrl}
-            displayName={file.displayName}
-          >
-            {/*
-              🔑 **Το σήμα «1η» και το κουμπί είναι ΑΜΟΙΒΑΙΑ ΑΠΟΚΛΕΙΟΜΕΝΑ**, ίδιο με του
-              ιδιώτη: *«κάνε πρώτο κάτι που είναι ήδη πρώτο»* δεν σημαίνει τίποτα.
-            */}
-            {index === 0 ? (
-              <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
-                {t(`${K}.firstBadge`)}
-              </span>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={saving}
-                onClick={() => void makeFirst(file.id)}
-              >
-                {t(`${K}.makeFirst`)}
-              </Button>
-            )}
-          </ListingMaterialRow>
+            file={file}
+            first={index === 0}
+            saving={saving}
+            onMakeFirst={makeFirst}
+            focalPoints={focalPoints}
+          />
         ))}
       </ol>
     </ListingMaterialPanel>

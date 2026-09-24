@@ -59,6 +59,7 @@
 import { readPropertyType } from '@/constants/property-type-aliases';
 import { mediaOf, type OwnerProperty } from '@/types/owner-property';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
+import { readDeclaredFocalPoints } from '@/lib/listings/photo-focal-point';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { marketingAudienceOf } from '@/constants/marketing-audiences';
 
@@ -114,7 +115,12 @@ export function readStoredOwnerProperty(
   const stored = raw as Readonly<Record<string, unknown>>;
   const { type, drift } = readPropertyType(stored.type);
   // ⚠️ Τα ωμά κλειδιά του δεσμού φακέλου **βγαίνουν** από το απλωμα και ξαναμπαίνουν **μόνο** κανονικοποιημένα.
-  const { dossierId: _rawDossierId, publishedFileIds: _rawPublishedFileIds, ...rest } = stored;
+  const {
+    dossierId: _rawDossierId,
+    publishedFileIds: _rawPublishedFileIds,
+    publishedFileFocalPoints: _rawFocalPoints,
+    ...rest
+  } = stored;
 
   return {
     // 🔴 Ο ΕΝΑΣ ισχυρισμός — δες την κεφαλίδα. Το CHECK 3.74 απαγορεύει
@@ -149,7 +155,7 @@ export function readStoredOwnerProperty(
  */
 function dossierLinkOf(
   stored: Readonly<Record<string, unknown>>,
-): Pick<OwnerProperty, 'dossierId' | 'publishedFileIds'> {
+): Pick<OwnerProperty, 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints'> {
   // 🔴 **Κλειδί που ΛΕΙΠΕΙ, ποτέ `dossierId: undefined`**: το Admin SDK δεν έχει `ignoreUndefinedProperties`
   //    ⇒ το `set` της επόμενης αποθήκευσης θα έσκαγε (`lib/audit/tracked-field-def.ts`).
   const { dossierId } = stored;
@@ -157,6 +163,10 @@ function dossierLinkOf(
     ...(typeof dossierId === 'string' && dossierId.trim() !== '' ? { dossierId } : {}),
     ...(stored.publishedFileIds !== undefined
       ? { publishedFileIds: declaredFileIds(stored.publishedFileIds) }
+      : {}),
+    // 🎯 ADR-880 — ίδια πειθαρχία: απόν μένει απόν, άκυρη γραμμή πέφτει μόνη της.
+    ...(stored.publishedFileFocalPoints !== undefined
+      ? { publishedFileFocalPoints: Object.fromEntries(readDeclaredFocalPoints(stored.publishedFileFocalPoints)) }
       : {}),
   };
 }

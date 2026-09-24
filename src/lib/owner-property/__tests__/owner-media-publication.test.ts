@@ -63,12 +63,23 @@ describe('Ε1 — OPT-IN: ό,τι δεν επιλέχθηκε ΔΕΝ φεύγε�
         // 🔑 **Η δήλωση ταξιδεύει μαζί με τα bytes** (ADR-841 §7 Α17.4). Αδήλωτο αρχείο
         //    μένει φωτογραφία — δες την άγκυρα `listing-floorplan-separation`.
         material: { kind: 'photo' },
+        focalPoint: null,
       },
     ]);
   });
 
   it('κανένα επιλεγμένο ⇒ ΚΕΝΟ σύνολο ⇒ το ράφι αδειάζει', () => {
     expect(publishedOwnerMediaSources([media('a.jpg', false), media('b.jpg', false)])).toEqual([]);
+  });
+
+  it('🎯 ADR-880 — το σημείο εστίασης ταξιδεύει ΜΕ το αρχείο· σκουπίδι στο έγγραφο ⇒ null', () => {
+    const [chosen] = publishedOwnerMediaSources([
+      { ...media('a.jpg', true), focalPoint: { x: 0.3, y: 0.1 } },
+    ]);
+    expect(chosen?.focalPoint).toEqual({ x: 0.3, y: 0.1 });
+
+    const garbage = { ...media('b.jpg', true), focalPoint: { x: 9, y: 0 } };
+    expect(publishedOwnerMediaSources([garbage])[0]?.focalPoint).toBeNull();
   });
 });
 

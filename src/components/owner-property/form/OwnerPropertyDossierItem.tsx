@@ -55,6 +55,8 @@ interface OwnerPropertyDossierItemProps {
   readonly canPublish: boolean;
   readonly onTogglePublished: (fileId: string, published: boolean) => void;
   readonly onMakeFirst: (fileId: string) => void;
+  /** 🎯 ADR-880 — το χειριστήριο σημείου εστίασης, όταν η γραμμή είναι φωτογραφία. */
+  readonly focalPointSlot?: React.ReactNode;
 }
 
 export function OwnerPropertyDossierItem({
@@ -68,6 +70,7 @@ export function OwnerPropertyDossierItem({
   canPublish,
   onTogglePublished,
   onMakeFirst,
+  focalPointSlot,
 }: OwnerPropertyDossierItemProps): React.ReactElement {
   const { t } = useTranslation([NS]);
   const checkboxId = React.useId();
@@ -119,6 +122,8 @@ export function OwnerPropertyDossierItem({
         **τη σειρά της δήλωσης**, που είναι η ίδια σειρά που φτάνει στη βιτρίνα (§2.7.4). Καμία δεύτερη λίστα να
         μείνει πίσω: ό,τι βλέπει ο κάτοχος **είναι** ό,τι φεύγει.
       */}
+      {focalPointSlot}
+
       {published && !isLead && (
         <button
           type="button"

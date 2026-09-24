@@ -179,6 +179,8 @@ describe('Κ4 — ο γραφέας είναι ΑΥΣΤΗΡΟΣ, ο αναγνώ
     const subjectOf: Record<string, string> = {
       listings: 'prop_9',
       showcases: 'comp_9c7c1a50',
+      // ADR-881: η έκδοση ήρωα — επίπεδο πλατφόρμας.
+      'landing-heroes': 'lhrev_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757',
     };
 
     for (const kind of PUBLIC_SHELF_KINDS) {
@@ -242,7 +244,9 @@ describe('🔴 Κ2β — ΟΙ ΔΥΟ ΡΙΖΕΣ ΔΕΝ ΜΠΟΡΟΥΝ ΝΑ ΤΑ�
     //    Ο κίνδυνος που φυλάει ΔΕΝ ήταν ποτέ «δύο γραμμές δέχονται το ίδιο id» — είναι
     //    **«η ταυτότητα του μισθωτή εμφανίζεται σε δημόσια διαδρομή αγγελίας»**, δηλαδή
     //    ερώτηση για **ρίζες**. Η υλοποίηση είχε αποκλίνει από τον δικό της τίτλο.
-    for (const candidate of ['comp_abc', 'ownp_1', 'prop_9', 'comp_', 'x', '..']) {
+    // ADR-881: το `lhrev_*` ΔΕΝ ξεκινά με `comp_`, άρα ο φρουρός των αγγελιών θα το δεχόταν αν
+    //    δεν το αρνιόταν ρητά — και η ιδιότητα θα ήταν ψευδής χωρίς να κοκκινίσει τίποτα.
+    for (const candidate of ['comp_abc', 'ownp_1', 'prop_9', 'comp_', 'x', '..', 'lhrev_abc-1']) {
       const roots = new Set(
         PUBLIC_SHELF_KINDS.filter((kind) => kind.acceptsSubject(candidate)).map((kind) => kind.root),
       );

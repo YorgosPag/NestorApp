@@ -82,7 +82,10 @@ export function publishedAgencyMediaSources(
     // ⚠️ Το `null` είναι **αδύνατο** εδώ — το ίδιο ερώτημα έκανε το φιλτράρισμα μια
     //    γραμμή πιο πάνω. Ο κλάδος υπάρχει για να **μη χρειαστεί `!`**: ένας ισχυρισμός
     //    εδώ θα ήταν ακριβώς ο τρόπος με τον οποίο οι δύο άκρες αρχίζουν να αποκλίνουν.
-    return material === null ? [] : [{ privateStoragePath: file.storagePath, material }];
+    if (material === null) return [];
+    // 🎯 ADR-880 — η δήλωση ταξιδεύει δεμένη στο **αρχείο**, ποτέ στη θέση (το ράφι πετά απορρίψεις).
+    const focalPoint = declaration.focalPoints?.get(file.id) ?? null;
+    return [{ privateStoragePath: file.storagePath, material, focalPoint }];
   });
 }
 

@@ -29,7 +29,7 @@ import sharp from 'sharp';
 
 import {
   ShelfSanitiseError,
-  sanitiseImageVariants,
+  sanitiseShelfImage,
 } from '../public-shelf-sanitise';
 import {
   FRAMING_AS_GIVEN,
@@ -47,7 +47,7 @@ import {
  *
  * Ως τη Φ4.1 η άγκυρα του Κ4 διέτρεχε **ολόκληρο** τον `PUBLIC_SHELF_KINDS` — σωστό όσο
  * κάθε γραμμή ήταν εικόνα. Με τη γραμμή του **μοντέλου** το ίδιο `it.each` θα τάιζε τον
- * `sanitiseImageVariants` με κωδικοποίηση **χωρίς `widths`**, δηλαδή θα έσκαγε σε
+ * `sanitiseShelfImage` με κωδικοποίηση **χωρίς `widths`**, δηλαδή θα έσκαγε σε
  * `undefined.length` — και το μήνυμα δεν θα έλεγε τίποτα για την αιτία.
  *
  * ⚠️ **Το φίλτρο ΔΕΝ αδυνατίζει την άγκυρα, γιατί το πλήθος ελέγχεται**: δες το test
@@ -102,6 +102,13 @@ describe('Κ0 — ΤΟ ΔΕΙΓΜΑ ΟΝΤΩΣ ΚΟΥΒΑΛΑΕΙ ΑΥΤΟ ΠΟ�
   });
 });
 
+/** Τα παράγωγα μόνο — η εστίαση έχει δική της άγκυρα (`public-shelf-focal-point.test`). */
+const variantsOf = async (
+  input: Buffer,
+  encoding: RasterShelfEncoding,
+  framing: Parameters<typeof sanitiseShelfImage>[2],
+) => (await sanitiseShelfImage(input, encoding, framing, false)).variants;
+
 /**
  * **Το ΚΑΝΟΝΙΚΟ παράγωγο** — το μεγαλύτερο, αυτό που γίνεται ο στόχος του `src`.
  *
@@ -114,7 +121,7 @@ async function sanitiseCanonical(
   input: Buffer,
   encoding: RasterShelfEncoding = LISTING_SHELF.encoding,
 ) {
-  const variants = await sanitiseImageVariants(input, encoding, FRAMING_AS_GIVEN);
+  const variants = await variantsOf(input, encoding, FRAMING_AS_GIVEN);
   return variants[variants.length - 1];
 }
 
@@ -206,8 +213,8 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
 
 describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά διεύθυνση', () => {
   it('απορρίπτει κενά bytes με ονομασμένη αιτία', async () => {
-    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toBeInstanceOf(ShelfSanitiseError);
-    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toMatchObject({
+    await expect(variantsOf(Buffer.alloc(0), LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toBeInstanceOf(ShelfSanitiseError);
+    await expect(variantsOf(Buffer.alloc(0), LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toMatchObject({
       failure: 'empty',
     });
   });
@@ -216,7 +223,7 @@ describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά δ�
     // 🔴 Χωρίς διεύθυνση δεν υπάρχει δημοσίευση (Α12.7): ένα PE header δεν μπορεί να
     // φτάσει ποτέ στο ράφι, γιατί δεν βγαίνει κλειδί για κάτι που δεν καθαρίστηκε.
     const fake = Buffer.concat([Buffer.from('MZ'), Buffer.alloc(2048, 0x41)]);
-    await expect(sanitiseImageVariants(fake, LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toMatchObject({ failure: 'undecodable' });
+    await expect(variantsOf(fake, LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toMatchObject({ failure: 'undecodable' });
   });
 });
 
@@ -244,7 +251,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       // Χωρίς αυτό, ένα μικρότερο παράγωγο θα μπορούσε να γεννηθεί από **άλλη** διαδρομή
       // που ξέχασε τον καθαρισμό — και θα δημοσιευόταν με GPS, ακυρώνοντας το
       // `locationDisclosure: 'declined'` της Α5 (ADR-841 §7 Α12.7).
-      const variants = await sanitiseImageVariants(await photoWithGps(3000, 2000), encoding, FRAMING_AS_GIVEN);
+      const variants = await variantsOf(await photoWithGps(3000, 2000), encoding, FRAMING_AS_GIVEN);
 
       expect(variants).toHaveLength(encoding.widths.length);
       for (const variant of variants) {
@@ -259,7 +266,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
   it('η γκαλερί εξακολουθεί να δίνει ΑΚΡΙΒΩΣ τα τρία μετρημένα πλάτη', async () => {
     // Το παραμετροποιημένο από πάνω ρωτά «συμφωνεί με τη ρύθμισή του;» — αληθές ακόμη
     // κι αν η ρύθμιση γίνει λάθος. Αυτό εδώ κρατά τις **τιμές** της Α2.2 δεμένες.
-    const variants = await sanitiseImageVariants(
+    const variants = await variantsOf(
       await photoWithGps(3000, 2000),
       LISTING_SHELF.encoding,
       FRAMING_AS_GIVEN,
@@ -271,8 +278,8 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
     // Το `lossless` δεν είναι γούστο: λογότυπο = επίπεδες περιοχές + αιχμηρές ακμές,
     // δηλαδή ΜΟΝΟ οι μεταβάσεις που θολώνει η lossy συμπίεση. Η απόδειξη είναι το ίδιο
     // το αρχείο: το WebP δηλώνει lossless με το chunk `VP8L`, το lossy με `VP8 `.
-    const [mark] = await sanitiseImageVariants(await photoWithGps(400, 400), SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN);
-    const [photo] = await sanitiseImageVariants(await photoWithGps(400, 400), LISTING_SHELF.encoding, FRAMING_AS_GIVEN);
+    const [mark] = await variantsOf(await photoWithGps(400, 400), SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN);
+    const [photo] = await variantsOf(await photoWithGps(400, 400), LISTING_SHELF.encoding, FRAMING_AS_GIVEN);
 
     expect(mark.bytes.includes(Buffer.from('VP8L'))).toBe(true);
     expect(photo.bytes.includes(Buffer.from('VP8L'))).toBe(false);
@@ -287,7 +294,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       .png()
       .toBuffer();
 
-    const [mark] = await sanitiseImageVariants(transparent, SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN);
+    const [mark] = await variantsOf(transparent, SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN);
     expect((await sharp(mark.bytes).metadata()).hasAlpha).toBe(true);
   });
 
@@ -299,7 +306,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       .toBuffer();
     const tagged = await sharp(upright).withMetadata({ orientation: 6 }).jpeg().toBuffer();
 
-    const variants = await sanitiseImageVariants(tagged, LISTING_SHELF.encoding, FRAMING_AS_GIVEN);
+    const variants = await variantsOf(tagged, LISTING_SHELF.encoding, FRAMING_AS_GIVEN);
 
     // Orientation 6 ⇒ 2000×1000 γίνεται 1000×2000: **κάθε** παράγωγο είναι όρθιο.
     for (const variant of variants) {
@@ -343,8 +350,8 @@ async function markWithMargin(marginFraction: number, background = { r: 0, g: 0,
     .toBuffer();
 }
 
-const canonicalOf = async (input: Buffer, framing: Parameters<typeof sanitiseImageVariants>[2]) => {
-  const variants = await sanitiseImageVariants(input, SHOWCASE_SHELF.encoding, framing);
+const canonicalOf = async (input: Buffer, framing: Parameters<typeof sanitiseShelfImage>[2]) => {
+  const variants = await variantsOf(input, SHOWCASE_SHELF.encoding, framing);
   return variants[variants.length - 1];
 };
 

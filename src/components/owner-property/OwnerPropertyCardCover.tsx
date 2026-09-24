@@ -30,7 +30,8 @@ import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
 import type { OwnerListingThumbnail, OwnerProperty } from '@/types/owner-property';
 import { MapOrAbsenceCover } from '@/components/listing-map-snapshot/MapOrAbsenceCover';
-import { LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
+import { LISTING_CARD_ASPECT, LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
+import { listingPhotoPositionClass } from '@/components/search-results/listing-photo-position-class';
 
 const K = 'property-market:offer.card';
 
@@ -101,7 +102,7 @@ export function OwnerPropertyPhoto({
       loading={priority ? 'eager' : 'lazy'}
       fetchPriority={priority ? 'high' : 'auto'}
       decoding="async"
-      className="h-full w-full object-cover"
+      className={`h-full w-full object-cover ${listingPhotoPositionClass(thumbnail, LISTING_CARD_ASPECT)}`}
     />
   );
 }

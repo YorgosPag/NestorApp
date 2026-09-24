@@ -60,6 +60,7 @@ import {
   withOwnerMediaFirst,
 } from '@/lib/owner-property/owner-media-publication';
 import { OwnerPropertyMediaItem } from './OwnerPropertyMediaItem';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 const NS = 'property-market';
 const K = `${NS}:offer.media`;
@@ -193,6 +194,20 @@ export function OwnerPropertyMediaField({
    * ⛔ **Κανένα πεδίο σειράς**: η σειρά που βλέπει ο κάτοχος **είναι** η σειρά που
    * φεύγει, και δεν υπάρχει δεύτερη λίστα να μείνει πίσω.
    */
+  // 🎯 ADR-880 — ίδιο ιδίωμα με `published`/`kind`: τρίτη ανθρώπινη πράξη στο ίδιο στοιχείο. `null` ⇒ το
+  //    πεδίο **φεύγει** (πίσω στο αυτόματο) — ποτέ `focalPoint: undefined` προς τη Firestore.
+  function handleFocalPoint(storagePath: string, point: PhotoFocalPoint | null): void {
+    form.setValue(
+      'media',
+      (form.getValues('media') ?? []).map((item) => {
+        if (item.storagePath !== storagePath) return item;
+        const { focalPoint: _previous, ...rest } = item;
+        return point === null ? rest : { ...rest, focalPoint: point };
+      }),
+      { shouldDirty: true },
+    );
+  }
+
   function handleMakeFirst(storagePath: string): void {
     form.setValue('media', [...withOwnerMediaFirst(form.getValues('media') ?? [], storagePath)], {
       shouldDirty: true,
@@ -277,6 +292,7 @@ export function OwnerPropertyMediaField({
                   onToggleFloorplan={handleToggleFloorplan}
                   onMakeFirst={handleMakeFirst}
                   onRemove={handleRemove}
+                  onFocalPoint={handleFocalPoint}
                 />
               ))}
             </ul>
