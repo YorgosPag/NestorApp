@@ -15,7 +15,6 @@
 
 import React from 'react';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNearViewport } from '@/hooks/useNearViewport';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import type { MapAttributionSegment } from '@/lib/maps/map-attribution';
@@ -29,6 +28,15 @@ interface ListingMapSnapshotProps {
   readonly className: string;
   /** Ό,τι δείχνεται όταν χάρτης δεν μπορεί να υπάρξει. */
   readonly fallback: React.ReactNode;
+  /**
+   * Το κείμενο φόρτωσης για αναγνώστη οθόνης — **το δίνει ο καταναλωτής** (§8.80).
+   *
+   * 🔴 Ως τότε το αρχείο καλούσε `t('property-market:…')` μόνο του. Με την κάρτα **αναζήτησης** ως
+   * καταναλωτή, αυτό θα έσερνε το namespace `property-market` στη στατική κλειστότητα του
+   * **κελύφους** (CHECK 3.34) — δηλαδή σε ~150 διαδρομές που δεν το διαβάζουν ποτέ. Η θεραπεία
+   * είναι να **κοπεί η εισαγωγή**, όχι να δηλωθεί το namespace.
+   */
+  readonly loadingLabel: string;
   /** Επικάλυψη πάνω στον χάρτη (π.χ. η θεραπεία «Πρόσθεσε φωτογραφίες»). */
   readonly children?: React.ReactNode;
 }
@@ -50,8 +58,7 @@ function Attribution({ segments }: { readonly segments: readonly MapAttributionS
   );
 }
 
-export function ListingMapSnapshot({ mark, alt, className, fallback, children }: ListingMapSnapshotProps): React.ReactElement {
-  const { t } = useTranslation(['property-market']);
+export function ListingMapSnapshot({ mark, alt, className, fallback, loadingLabel, children }: ListingMapSnapshotProps): React.ReactElement {
   const [ref, near] = useNearViewport<HTMLElement>();
   const view = useListingMapSnapshot(mark, near);
 
@@ -64,7 +71,7 @@ export function ListingMapSnapshot({ mark, alt, className, fallback, children }:
         // eslint-disable-next-line @next/next/no-img-element -- `blob:` URL τοπικού στιγμιοτύπου· το next/image δεν έχει τι να βελτιστοποιήσει
         <img src={view.url} alt={alt} decoding="async" className="h-full w-full object-cover" />
       ) : (
-        <span className="sr-only">{t('property-market:offer.card.mapLoading')}</span>
+        <span className="sr-only">{loadingLabel}</span>
       )}
       {ready ? <Attribution segments={view.attribution} /> : null}
       {children}

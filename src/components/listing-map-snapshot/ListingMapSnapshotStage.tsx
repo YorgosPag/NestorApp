@@ -30,8 +30,13 @@ import { getAllMapStyleUrls, INITIAL_MAP_STYLE } from '@/subapps/geo-canvas/serv
 import { SNAPSHOT_VIEWPORT, STAGE_FRAME } from './snapshot-frame';
 import type { ListingSnapshotPayload, ListingSnapshotStore } from './use-listing-map-snapshot';
 
-/** Πυκνότητα pixel της λήψης: ευκρινές και σε οθόνη 3× ή σε πλήρες πλάτος κινητού. */
-const SNAPSHOT_PIXEL_RATIO = 3;
+/**
+ * Πυκνότητα pixel της λήψης. Με κουτί 360×240 (§8.80) το 2× δίνει 720×480 pixel — ευκρινές στην
+ * κάρτα αποτελεσμάτων (~23rem) σε οθόνη 2× και στην κάρτα κατόχου (176px) ακόμη και σε 3×. Το
+ * παλιό 3× υπήρχε επειδή το κουτί ήταν 176px· με το διπλάσιο κουτί θα ήταν 2,25× τα bytes για
+ * καμία ορατή διαφορά.
+ */
+const SNAPSHOT_PIXEL_RATIO = 2;
 
 const SNAPSHOT_FEATURE_ID = 'owner-listing-snapshot';
 const INITIAL_VIEW = { longitude: 23.7275, latitude: 37.9755, zoom: 6 } as const;
