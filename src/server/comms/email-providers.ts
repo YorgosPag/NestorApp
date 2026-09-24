@@ -4,9 +4,9 @@
  * =============================================================================
  *
  * ⚠️ **ΚΑΝΕΝΑΣ ΝΕΟΣ ΠΕΛΑΤΗΣ.** Υπάρχουν ήδη **δύο** στο repo και αυτό το αρχείο
- * δεν προσθέτει τρίτο: ο κρίκος Mailgun καλεί τον υπάρχοντα `EmailAdapter`, ο
- * κρίκος Resend το υπάρχον `resend` SDK. Είναι **προσαρμογείς** — μεταφράζουν δύο
- * διαφορετικά σχήματα απάντησης σε ένα {@link ProviderAttempt}, τίποτα άλλο.
+ * δεν προσθέτει τρίτο: οι κρίκοι φτάνουν στις **πόρτες εξόδου** (`egress/mailgun-transport` μέσω
+ * `EmailAdapter` · `egress/resend-transport`, ADR-876 §5.8 Σ22 — τα ΜΟΝΑ αρχεία που μιλούν με πάροχο). Είναι
+ * **προσαρμογείς** — μεταφράζουν ένα {@link EgressResult} σε ένα {@link ProviderAttempt}, τίποτα άλλο.
  *
  * 🔑 **Γιατί εδώ και όχι μέσα στην αλυσίδα**: η αλυσίδα απαντά «τι κάνω όταν πέσει
  * ένας;» και είναι δοκιμάσιμη με πλαστούς κρίκους, **χωρίς δίκτυο**. Αν οι
@@ -23,58 +23,46 @@
 
 import 'server-only';
 
-import { EmailAdapter } from '@/server/comms/email-adapter';
 import {
   safeHeaderEntries,
   type EmailProvider,
   type OutboundEmail,
   type ProviderAttempt,
 } from '@/server/comms/email-provider-chain';
-import { resolveSenderHeader } from '@/services/company/sender-identity';
+import { EmailAdapter } from '@/server/comms/email-adapter';
+import { mailgunAvailable } from '@/server/comms/egress/mailgun-transport';
+import { resendAvailable, resendSendMessage } from '@/server/comms/egress/resend-transport';
+import type { EgressResult } from '@/server/comms/egress/egress-email';
 
-/** Το SDK του Resend, φορτωμένο **τεμπέλικα**. */
-type ResendSendResult = {
-  data?: { id?: string } | null;
-  error?: { message?: string } | null;
-};
+function asAttempt(result: EgressResult): ProviderAttempt {
+  return result.ok ? { kind: 'delivered', messageId: result.messageId } : { kind: 'rejected', error: result.error };
+}
 
 /**
- * Ο κρίκος Mailgun.
+ * Ο κρίκος Mailgun — μέσω του `EmailAdapter`, που αναθέτει στην **πόρτα εξόδου** (ADR-876 §5.8 Σ22).
  *
- * ⚠️ Ο `EmailAdapter` επιστρέφει `{ success:false }` **χωρίς να πετά** όταν λείπει
- * ρύθμιση — το ίδιο σχήμα σιωπηλής αποτυχίας που γέννησε ολόκληρο το §8.23. Εδώ
- * μεταφράζεται σε ρητή `rejected`, ώστε η αλυσίδα να **προχωρήσει** στον επόμενο
- * αντί να θεωρήσει ότι το email έφυγε.
+ * ⚠️ Ο έλεγχος έγχυσης κεφαλίδων γίνεται **πριν** την πόρτα — και στους δύο κρίκους.
+ * ⚠️ Το `configured` ρωτά την πόρτα: σε emulator **πάντα** διαθέσιμος (outbox, όχι δίκτυο).
+ * ⚠️ Ο adapter επιστρέφει `{ success:false }` **χωρίς να πετά** — εδώ γίνεται ρητή `rejected`,
+ *    ώστε η αλυσίδα να **προχωρήσει** στον επόμενο αντί να θεωρήσει ότι το email έφυγε.
  */
 export function mailgunProvider(): EmailProvider {
-  const configured = Boolean(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN);
-  const adapter = configured ? new EmailAdapter() : null;
-
   return {
     name: 'mailgun',
-    configured,
+    configured: mailgunAvailable(),
     async send(message: OutboundEmail): Promise<ProviderAttempt> {
-      if (!adapter) return { kind: 'rejected', error: 'mailgun: δεν είναι ρυθμισμένος' };
-
-      // ⚠️ Ο έλεγχος έγχυσης γίνεται **πριν** το δίκτυο — και στους δύο κρίκους.
       const headers = Object.fromEntries(safeHeaderEntries(message.headers));
-
-      const result = await adapter.sendEmail({
+      const result = await new EmailAdapter().sendEmail({
         id: `chain_${message.to}`,
         to: message.to,
         subject: message.subject,
         content: message.text,
         html: message.html,
-        // 🔑 ADR-857 Φ9 — **ο ίδιος αποστολέας και στους δύο κρίκους.** Πριν, ο Resend
-        //    έπαιρνε `defaultFrom()` (`FROM_NAME`/`FROM_EMAIL`) και ο Mailgun έπεφτε
-        //    στη δική του 4-βάθμια εφεδρεία μέσα στον `EmailAdapter` ⇒ **η γραμμή
-        //    `From:` άλλαζε ανάλογα με το ποιος πάροχος ήταν όρθιος εκείνη την ώρα**.
-        from: message.from ?? resolveSenderHeader(),
+        from: message.from,
         headers,
         attempts: 1,
         maxAttempts: 1,
       });
-
       return result.success
         ? { kind: 'delivered', messageId: result.messageId }
         : { kind: 'rejected', error: result.error ?? 'mailgun: άγνωστο σφάλμα' };
@@ -83,42 +71,16 @@ export function mailgunProvider(): EmailProvider {
 }
 
 /**
- * Ο κρίκος Resend.
- *
- * ⚠️ **Το SDK εισάγεται δυναμικά**, ώστε ένα περιβάλλον χωρίς `RESEND_API_KEY` να
- * μη φορτώνει καθόλου τη βιβλιοθήκη — και, το σημαντικότερο, ώστε οι άγκυρες της
- * αλυσίδας να τρέχουν χωρίς αυτήν.
- *
- * ⚠️ **Το Resend ΔΕΝ πετά σε σφάλμα API**: επιστρέφει `{ data:null, error:{...} }`.
- * Ένας έλεγχος μόνο με `try/catch` θα διάβαζε κάθε απόρριψη ως **επιτυχία** — και η
- * αλυσίδα δεν θα μετέπιπτε ποτέ, ακριβώς στην περίπτωση που υπάρχει γι' αυτήν.
+ * Ο κρίκος Resend — προσαρμογέας πάνω στην **πόρτα εξόδου**. Εκεί ζουν η δυναμική εισαγωγή του SDK
+ * και ο έλεγχος `result.error` (το Resend **δεν πετά** σε απόρριψη).
  */
 export function resendProvider(): EmailProvider {
-  const apiKey = process.env.RESEND_API_KEY;
-
   return {
     name: 'resend',
-    configured: Boolean(apiKey),
+    configured: resendAvailable(),
     async send(message: OutboundEmail): Promise<ProviderAttempt> {
-      if (!apiKey) return { kind: 'rejected', error: 'resend: δεν είναι ρυθμισμένος' };
-
-      const headers = safeHeaderEntries(message.headers);
-      const { Resend } = await import('resend');
-      const client = new Resend(apiKey);
-
-      const result = (await client.emails.send({
-        from: message.from ?? resolveSenderHeader(),
-        to: [message.to],
-        subject: message.subject,
-        text: message.text,
-        ...(message.html ? { html: message.html } : {}),
-        ...(headers.length > 0 ? { headers: Object.fromEntries(headers) } : {}),
-      })) as ResendSendResult;
-
-      if (result.error) {
-        return { kind: 'rejected', error: result.error.message ?? 'resend: άγνωστο σφάλμα' };
-      }
-      return { kind: 'delivered', messageId: result.data?.id };
+      const headers = Object.fromEntries(safeHeaderEntries(message.headers));
+      return asAttempt(await resendSendMessage({ ...message, headers }));
     },
   };
 }

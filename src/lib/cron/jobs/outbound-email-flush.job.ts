@@ -55,6 +55,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { brandedSubject } from '@/server/comms/email-texts';
 import {
+  chainFailureReasons,
   sendThroughChain,
   type ChainOutcome,
   type EmailProvider,
@@ -402,7 +403,7 @@ async function settleOne(
     return 'retrying';
   }
 
-  const error = outcome.attempts.map((a) => `${a.provider}: ${a.error}`).join(' | ');
+  const error = chainFailureReasons(outcome).join(' | ');
   const maxAttempts = asNumber((doc.data() ?? {}).maxAttempts, 3);
 
   if (attempts >= maxAttempts) {

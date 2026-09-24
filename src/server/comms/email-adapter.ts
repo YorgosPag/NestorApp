@@ -5,9 +5,9 @@ import { getFirestoreHelpers } from '../../app/api/communications/webhooks/teleg
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { mailgunSendMessage } from '@/server/comms/egress/mailgun-transport';
 import {
   adoptStoredSenderHeader,
-  resolveSenderHeader,
   type SenderHeader,
 } from '@/services/company/sender-identity';
 const logger = createModuleLogger('EmailAdapter');
@@ -38,20 +38,7 @@ interface SendResult {
 }
 
 export class EmailAdapter {
-  private apiKey: string;
-  private domain: string;
-
-  constructor() {
-    this.apiKey = process.env.MAILGUN_API_KEY || '';
-    this.domain = process.env.MAILGUN_DOMAIN || '';
-
-    if (!this.apiKey) {
-      logger.warn('⚠️ MAILGUN_API_KEY not found in environment');
-    }
-    if (!this.domain) {
-      logger.warn('⚠️ MAILGUN_DOMAIN not found in environment');
-    }
-  }
+  // ⚠️ Κανένα κλειδί εδώ (ADR-876 §5.8 Σ22): «είναι ρυθμισμένος;» = `mailgunAvailable()` της πόρτας εξόδου.
 
   /*
    * 🔴 ΕΔΩ ΖΟΥΣΕ ΤΟ `getFromEmail()` — ΤΕΣΣΕΡΑ ΣΚΑΛΙΑ ΕΦΕΔΡΕΙΑΣ, ΚΑΙ ΤΟ ΤΕΛΕΥΤΑΙΟ
@@ -71,68 +58,22 @@ export class EmailAdapter {
    */
 
   /**
-   * 🏢 ENTERPRISE: Send email via Mailgun API
-   * @see https://documentation.mailgun.com/docs/mailgun/api-reference/openapi-final/tag/Messages/
+   * Αποστολή μέσω της ΜΙΑΣ πόρτας εξόδου Mailgun (ADR-876 §5.8 Σ22).
+   *
+   * 🔴 Εδώ ζούσε **δεύτερο** αντίγραφο του URL περιοχής + Basic auth, **χωρίς** όριο χρόνου, και
+   * χωρίς ιδέα για emulator. Πλέον: περιοχή · auth · `PROVIDER_TIMEOUT_MS` · «σε emulator ⇒ outbox»
+   * ζουν ΜΙΑ φορά στο `egress/mailgun-transport`.
    */
   async sendEmail(job: EmailJob): Promise<SendResult> {
-    if (!this.apiKey || !this.domain) {
-      return {
-        success: false,
-        error: 'Mailgun API key or domain not configured'
-      };
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('from', job.from || resolveSenderHeader());
-      formData.append('to', job.to);
-      formData.append('subject', job.subject);
-      formData.append('text', job.content);
-      if (job.html) {
-        formData.append('html', job.html);
-      }
-      // Το Mailgun δέχεται δικές μας κεφαλίδες ως `h:<Όνομα>`. Ένα `List-Unsubscribe`
-      // που δίνουμε εμείς **υπερισχύει** του δικού του (Mailgun help 203306610).
-      for (const [name, value] of Object.entries(job.headers ?? {})) {
-        formData.append(`h:${name}`, value);
-      }
-
-      const region = process.env.MAILGUN_REGION === 'eu' ? 'api.eu.mailgun.net' : 'api.mailgun.net';
-      const url = `https://${region}/v3/${this.domain}/messages`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${Buffer.from(`api:${this.apiKey}`).toString('base64')}`,
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error('❌ Mailgun API error:', response.status, errorText);
-        return {
-          success: false,
-          error: `Mailgun API error: ${response.status}`
-        };
-      }
-
-      const result = await response.json() as { id?: string; message?: string };
-      const messageId = result.id || undefined;
-
-      logger.info(`✅ Email sent successfully via Mailgun. MessageId: ${messageId}`);
-      return {
-        success: true,
-        messageId
-      };
-
-    } catch (error) {
-      logger.error('❌ Error sending email:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    const result = await mailgunSendMessage({
+      to: job.to,
+      from: job.from,
+      subject: job.subject,
+      text: job.content,
+      html: job.html,
+      headers: job.headers,
+    });
+    return result.ok ? { success: true, messageId: result.messageId } : { success: false, error: result.error };
   }
 
   /**

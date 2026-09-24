@@ -18,7 +18,7 @@ import { resolveSenderHeader, resolveSenderIdentity } from '@/services/company/s
 import { brandedSubject } from '@/server/comms/email-texts';
 import { EmailTemplatesService } from './email-templates.service';
 import { buildPhotoShareEmail } from './email-templates/photo-share';
-import { describeChain, sendThroughChain } from '@/server/comms/email-provider-chain';
+import { chainFailureReasons, describeChain, sendThroughChain } from '@/server/comms/email-provider-chain';
 import { defaultEmailChain } from '@/server/comms/email-providers';
 import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
 
@@ -284,13 +284,7 @@ export class EmailService {
 function summarizeFailures(
   outcomes: readonly Awaited<ReturnType<typeof sendThroughChain>>[],
 ): string {
-  const reasons = outcomes.flatMap((outcome) => {
-    if (outcome.kind === 'no-provider') return ['κανένας πάροχος ρυθμισμένος'];
-    if (outcome.kind === 'all-failed') {
-      return outcome.attempts.map((attempt) => `${attempt.provider}: ${attempt.error}`);
-    }
-    return [];
-  });
+  const reasons = outcomes.flatMap((outcome) => chainFailureReasons(outcome));
   return [...new Set(reasons)].join(' | ') || 'άγνωστος λόγος';
 }
 

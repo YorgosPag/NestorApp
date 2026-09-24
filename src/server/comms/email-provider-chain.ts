@@ -260,3 +260,15 @@ export function describeChain(providers: readonly EmailProvider[]): {
   const missing = providers.filter((provider) => !provider.configured).map((p) => p.name);
   return { configured, missing, hasFailover: configured.length >= 2 };
 }
+
+/**
+ * **Γιατί δεν έφυγε** — οι λόγοι ονομαστικά ανά πάροχο, ΕΝΑ λεξιλόγιο.
+ *
+ * Ήταν γραμμένο **δύο** φορές (`email.service` · `outbound-email-flush.job`) και θα γινόταν τρίτη
+ * στο κανάλι πρόσκλησης προμηθευτή (ADR-876 §5.8 Σ22). `delivered` ⇒ κανένας λόγος.
+ */
+export function chainFailureReasons(outcome: ChainOutcome): readonly string[] {
+  if (outcome.kind === 'no-provider') return ['κανένας πάροχος ρυθμισμένος'];
+  if (outcome.kind === 'all-failed') return outcome.attempts.map((attempt) => `${attempt.provider}: ${attempt.error}`);
+  return [];
+}
