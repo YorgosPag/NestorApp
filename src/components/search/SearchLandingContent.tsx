@@ -62,6 +62,8 @@ import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { CoverageStatement } from './CoverageStatement';
 import { LandingDoors } from './LandingDoors';
+import { LandingMySpaces } from './LandingMySpaces';
+import { LandingProBand } from './LandingProBand';
 import { LandingHero } from '@/components/shared/landing-hero/LandingHero';
 import { LANDING_HERO_IMAGES } from '@/components/shared/landing-hero/landing-hero-images';
 import { LandingModeSwitch } from './LandingModeSwitch';
@@ -265,6 +267,14 @@ export function SearchLandingContent() {
           διακόπτης;» μένει **εδώ** (`panelMode`). Ο ήρωας είναι **κοινός** με τις
           ακτίνες `/pro` και `/stay` (§8.82) — δεν ξέρει τι ρωτά η σελίδα.
         */}
+        {/*
+          🧭 **ΟΙ ΧΩΡΟΙ ΜΟΥ (ADR-820 §5.4)** — μόνο για συνδεδεμένους, ΠΑΝΩ από τον ήρωα:
+          ο επαγγελματίας που μπαίνει για να δουλέψει φτάνει στο γραφείο του με **ένα**
+          κλικ, χωρίς η `/` να πάψει να είναι βιτρίνα για τον επισκέπτη (εκείνος δεν
+          βλέπει τίποτα). ⛔ Όχι πύλη επιλογής με δύο ισότιμα μπάνερ — βλ. το αρχείο.
+        */}
+        <LandingMySpaces />
+
         <LandingHero
           image={LANDING_HERO_IMAGES.home}
           title={t('search-results:landing.title')}
@@ -351,6 +361,13 @@ export function SearchLandingContent() {
             </Link>
           )}
         </p>
+
+        {/*
+          🏢 **Η ΔΕΥΤΕΡΗ ΠΟΡΤΑ, ΣΕ ΔΕΥΤΕΡΗ ΘΕΣΗ (ADR-820 §5.4)** — «Για επαγγελματίες», μόνο
+          για επισκέπτες. Κάτω από τη βιτρίνα, όπως Zillow · idealista: η αρχική ανήκει
+          στον καταναλωτή, ο επαγγελματίας βρίσκει τον δρόμο του χωρίς να τον επιβάλει.
+        */}
+        <LandingProBand />
       </main>
     </Tabs>
   );

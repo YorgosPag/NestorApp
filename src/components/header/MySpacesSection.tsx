@@ -82,8 +82,7 @@
  */
 
 import React from 'react';
-import { Building2, Check, UserRound } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 // 🔴 **`@/auth` ΚΑΙ ΟΧΙ `@/auth/hooks/useAuth` — ΤΟ ΒΡΗΚΕ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ, ΟΧΙ Η ΚΡΙΣΗ.**
 //    Η πρώτη γραφή εισήγαγε **βαθιά**, και **έσπασε υπάρχουσα άγκυρα**: το
@@ -104,59 +103,16 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Link, usePathname } from '@/lib/workspace/navigation';
-import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
-import { hasOrganization, PRIVATE_SPACE_HOME } from '@/lib/routes/landing';
-import { HOME_REDIRECT_ROUTE } from '@/lib/workspace/workspace-routes';
+import { spacesFor, type SpaceId } from '@/config/my-spaces';
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
 
 const K = 'common-account:userMenu.spaces';
 
 /**
- * Μία εγγραφή του κλειστού συνόλου.
- *
- * ⚠️ **Πίνακας και όχι δύο γραμμένα `DropdownMenuItem`**: οι δύο σειρές διαφέρουν σε
- * **τρία** πράγματα *(εικονίδιο · κλειδί · διεύθυνση)* και συμφωνούν σε όλα τα
- * υπόλοιπα. Γραμμένες δύο φορές θα ήταν **δίδυμο** — ακριβώς ό,τι πιάνει το
- * `jscpd:diff` **μέσα στο ίδιο diff** (N.18 / CHECK 3.28).
+ * 🔑 **Οι χώροι έρχονται από το `config/my-spaces.ts`** (ADR-820 §5.4) — τον ίδιο κατάλογο
+ * διαβάζει και η λωρίδα «Οι χώροι μου» της αρχικής. Εκεί ζουν ο κριτής
+ * `hasOrganization`, η σειρά του μοντέλου και ο φύλακας της άγκυρας Λ2.
  */
-interface SpaceEntry {
-  readonly id: 'personal' | 'organization';
-  readonly href: WorkspaceHref;
-  readonly Icon: LucideIcon;
-}
-
-/**
- * **Οι χώροι αυτού του ανθρώπου** — μία εγγραφή ή δύο, ποτέ τρεις.
- *
- * 🔑 **Ο κριτής είναι το {@link hasOrganization}, ΠΟΤΕ ωμό `user?.companyId`.** Το
- * ερώτημα *«ανήκω σε οργανισμό;»* το κατέχει το `lib/routes/landing.ts` (παγωμένο)
- * και χειρίζεται **ρητά την κενή συμβολοσειρά** — μια δεύτερη γραφή εδώ θα ήταν
- * ADR-749, και θα απέκλινε ακριβώς εκεί όπου η απάντηση δεν είναι προφανής.
- *
- * ⚠️ **Ο προσωπικός είναι ΠΑΝΤΑ πρώτος και ΠΑΝΤΑ παρών** — δεν είναι σειρά
- * εμφάνισης, είναι το μοντέλο: *«ο άνθρωπος έχει πάντα προσωπικό χώρο και ίσως
- * εταιρικό»* (ADR-820 §4). Το ίδιο λέει το `workspace-membership.ts` με την
- * ετυμηγορία `self`: *«υπάρχει ΠΑΝΤΑ, ΔΕΝ αποθηκεύεται»*.
- */
-function spacesFor(companyId: string | null | undefined): readonly SpaceEntry[] {
-  const personal: SpaceEntry = {
-    id: 'personal',
-    href: PRIVATE_SPACE_HOME,
-    Icon: UserRound,
-  };
-
-  if (!hasOrganization({ companyId })) return [personal];
-
-  return [
-    personal,
-    {
-      id: 'organization',
-      // 🔴 ΟΧΙ κατασκευασμένο `/o/<ψευδώνυμο>/…` — άγκυρα Λ2. Ο διακομιστής λύνει.
-      href: HOME_REDIRECT_ROUTE,
-      Icon: Building2,
-    },
-  ];
-}
 
 /**
  * **Ποιος χώρος είναι ο τρέχων.**
@@ -170,7 +126,7 @@ function spacesFor(companyId: string | null | undefined): readonly SpaceEntry[] 
  * που πέρασε από την αρχική στη ζήτησή του **δεν άλλαξε ιστότοπο**»*. Ο δημόσιος
  * κόσμος φοράει την **ίδια** κεφαλίδα με τον προσωπικό.
  */
-function currentSpaceId(pathname: string): SpaceEntry['id'] {
+function currentSpaceId(pathname: string): SpaceId {
   return isInsideWorkspace(pathname) ? 'organization' : 'personal';
 }
 

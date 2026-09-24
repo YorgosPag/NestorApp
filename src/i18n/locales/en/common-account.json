@@ -323,10 +323,10 @@
       "organization": "My office space",
       "current": "you are here",
         "hint": {
-          "personal": "Your properties, requests and saved listings.",
-          "organization": "Your office dashboard — listings, clients, team.",
-          "createWorkspace": "Listings, clients, dossiers and team in one professional space.",
-          "messages": "Your conversations with individuals and professionals."
+          "personal": "Properties, requests and saved listings",
+          "organization": "Your office's listings, clients and team",
+          "createWorkspace": "Listings, clients and team in one space",
+          "messages": "Conversations with individuals and professionals"
         }
     },
     "profile": "Profile",

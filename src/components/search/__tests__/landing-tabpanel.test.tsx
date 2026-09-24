@@ -236,9 +236,23 @@ describe('Π2 — 🔴 ΤΟ ΠΑΝΕΛ ΕΙΝΑΙ Η ΒΙΤΡΙΝΑ, ΚΑΙ ΚΑ
     const container = renderScreen(THREE_MODES, PROS);
 
     const measure = container.querySelector('[data-shell-measure]');
+    // 🔑 **ADR-820 §5.4.1**: τρίτο αδελφό breakout — οι πόρτες «Ζητώ · Προσφέρω» (`<nav>`).
+    //    (Η λωρίδα «Οι χώροι μου» δεν αποδίδεται εδώ: χωρίς συνδεδεμένο θεατή.)
     const spans = Array.from(container.querySelectorAll('[data-shell-span]'));
-    expect(spans).toHaveLength(2);
+    expect(spans).toHaveLength(3);
     for (const span of spans) expect(span.parentElement).toBe(measure);
+  });
+
+  it('🔴 οι πόρτες «Ζητώ · Προσφέρω» στοιχίζονται στον άξονα του ήρωα, όχι στο μέτρο της πρόζας', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: σβήσε το `data-shell-span="full"` από το `<nav>` του `LandingDoors`
+    //    ⇒ οι πόρτες ξαναγίνονται το μόνο στοιχείο με δικό του άξονα ⇒ κοκκινίζει.
+    const container = renderScreen(THREE_MODES, PROS);
+
+    const measure = container.querySelector('[data-shell-measure]');
+    const doors = container.querySelector('nav[data-shell-span="full"]');
+    expect(doors).not.toBeNull();
+    expect(doors?.parentElement).toBe(measure);
+    expect(doors?.querySelectorAll('li')).toHaveLength(2);
   });
 });
 
@@ -327,7 +341,8 @@ describe('Π4 — 🔴 ΧΩΡΙΣ ΔΙΑΚΟΠΤΗ ΔΕΝ ΥΠΑΡΧΕΙ ΠΑΝ�
     const measure = container.querySelector('[data-shell-measure]');
     // ⚠️ Ο ήρωας (§8.79) είναι κι αυτός `full` — η βιτρίνα είναι αυτή **χωρίς** τον
     //    τίτλο της σελίδας (φίλτρο σε JS: το `:has()` δεν είναι εγγυημένο στο jsdom).
-    const showcase = Array.from(container.querySelectorAll('[data-shell-span="full"]')).find(
+    //    Οι πόρτες (ADR-820 §5.4.1) είναι `<nav>` — η βιτρίνα είναι `<section>`.
+    const showcase = Array.from(container.querySelectorAll('section[data-shell-span="full"]')).find(
       (el) => el.querySelector('h1') === null,
     );
     expect(showcase).not.toBeNull();
