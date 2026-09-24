@@ -23,7 +23,7 @@ import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteracti
 import { splitListingGeometry, type ListingGeoJson } from '@/lib/listings/listings-geojson';
 import { listingBounds } from '@/lib/listings/listing-map-bounds';
 import { NO_LISTING_FOCUS, type ListingFocus } from '@/lib/listings/listing-focus';
-import { ResultsMapSources } from './ResultsMapSources';
+import { POINT_SOURCE_ID, ResultsMapSources } from './ResultsMapSources';
 import { readListingMapPaint } from './listing-map-paint';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 import { readMapArea, sameMapArea } from './results-map-area';
@@ -34,6 +34,12 @@ import {
 } from './results-map-contract';
 import { bindMapPick, type ListingMapStack } from './listing-map-pick';
 import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
+import { sameDrawnListingPoints } from '@/lib/listings/listing-price-markers';
+import {
+  bindDrawnListingPoints,
+  DrawnListingPointsProvider,
+  type DrawnListingSnapshot,
+} from './listing-map-drawn-points';
 import { ListingMapStackPopup } from './ListingMapStackPopup';
 import { useListingArrival } from './useListingArrival';
 
@@ -223,6 +229,16 @@ export function ListingMapCanvas({
    */
   const [stack, setStack] = useState<ListingMapStack | null>(null);
   const closeStack = useCallback(() => setStack(null), []);
+  /**
+   * §8.78 — ποια σημεία ζωγραφίστηκαν **χωριστά** (όχι μέσα σε ομάδα) και σε ποιο ζουμ: μόνο εκεί
+   * κάθεται πινακίδα, και οι συγκρούσεις ξαναμετριούνται μόνο όταν αλλάξει το ζουμ.
+   */
+  const [drawn, setDrawn] = useState<DrawnListingSnapshot>({ points: 'unknown', zoom: null });
+  const reportDrawn = useCallback((next: DrawnListingSnapshot) => {
+    setDrawn((previous) => (
+      previous.zoom === next.zoom && sameDrawnListingPoints(previous.points, next.points) ? previous : next
+    ));
+  }, []);
   const stackEntries = stack === null || describeListing === undefined ? [] : describeStack(stack, describeListing);
   /**
    * 🔴 **ΧΩΡΙΣΜΕΝΗ ΣΕ ΔΥΟ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΤΑΞΗ — ΕΙΝΑΙ ΠΕΡΙΟΡΙΣΜΟΣ** *(ADR-777 §8.66)*.
@@ -375,15 +391,16 @@ export function ListingMapCanvas({
     watchMapSize(target, mapObserverRef);
     bindAreaReporting(target, handlersRef);
     bindMapPick(target, handlersRef);
+    bindDrawnListingPoints(target, POINT_SOURCE_ID, reportDrawn);
     /*
       🔴 **ΚΕΝΟΣ ΠΙΝΑΚΑΣ ΕΞΑΡΤΗΣΕΩΝ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ.**
       Αυτή η συνάρτηση περνά ως `onMapReady` μέσα σε `useMemo` του
       `InteractiveMapContainer`: **κάθε** αλλαγή ταυτότητας ξαναστήνει τον χάρτη
       (*«new function every render caused Map re-init»*, γρ. 332). Ό,τι χρειάζεται
       διαβάζεται από αναφορά **τη στιγμή του συμβάντος** — κανόνας 2 του ADR-040.
-      (Το `frameData` είναι σταθερό — `useCallback([])` — άρα η εξάρτηση δεν αλλάζει ποτέ ταυτότητα.)
+      (Τα `frameData` / `reportDrawn` είναι σταθερά — `useCallback([])` — άρα οι εξαρτήσεις δεν αλλάζουν ποτέ ταυτότητα.)
     */
-  }, [frameData]);
+  }, [frameData, reportDrawn]);
 
   return (
     /*
@@ -414,7 +431,7 @@ export function ListingMapCanvas({
         Οι επικαλύψεις του καταναλωτή — **μετά** την πηγή, ώστε να κάθονται πάνω από τα
         σχήματα (πινακίδες τιμής, φούσκα της αναζήτησης· φούσκα του κατόχου).
       */}
-      {children}
+      <DrawnListingPointsProvider drawn={drawn.points} zoom={drawn.zoom}>{children}</DrawnListingPointsProvider>
 
       {stackEntries.length > 0 && stack !== null && onSelect !== undefined && (
         <ListingMapStackPopup

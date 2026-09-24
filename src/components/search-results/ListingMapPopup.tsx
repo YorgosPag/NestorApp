@@ -60,6 +60,7 @@
 
 import React from 'react';
 import { ListingMapPopupFrame } from './ListingMapPopupFrame';
+import { ListingMapPopupFooter } from './ListingMapPopupFooter';
 
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -206,9 +207,8 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
           <PriceReductionBadge reduction={listing.priceReduction} className="ml-2" />
         </p>
 
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t('search-focus:popup.open')}
-        </p>
+        {/* §8.78 — «Άνοιγμα» + σύνδεσμος «αυτό το ακίνητο, σε αυτή την αναζήτηση» (Google Maps «Copy link»). */}
+        <ListingMapPopupFooter listingId={listing.id} title={listing.title} />
       </article>
     </ListingMapPopupFrame>
   );

@@ -97,6 +97,10 @@ export interface MapEventTarget extends MapAreaSource {
     options?: { layers?: readonly string[] }
   ) => RenderedFeature[];
   getSource: (id: string) => unknown;
+  /** Ό,τι ζωγράφισε η πηγή στα φορτωμένα πλακίδια — ομάδες **και** μεμονωμένα σημεία (§8.78). */
+  querySourceFeatures: (sourceId: string) => RenderedFeature[];
+  /** Το τρέχον ζουμ — σήμα αλλαγής σχετικών θέσεων των πινακίδων (§8.78, κανόνας 5). */
+  getZoom: () => number;
   cameraForBounds: (
     b: [[number, number], [number, number]],
     o?: Record<string, unknown>

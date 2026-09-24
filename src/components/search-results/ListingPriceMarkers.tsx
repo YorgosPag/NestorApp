@@ -57,8 +57,10 @@ import {
   type ListingFocus,
   type ListingFocusStrength,
 } from '@/lib/listings/listing-focus';
-import type { ListingPriceMarker } from '@/lib/listings/listing-price-markers';
+import { plaquesOnDrawnPoints, type ListingPriceMarker } from '@/lib/listings/listing-price-markers';
 import { useStayTotal } from './StayTotalsContext';
+import { useDrawnListingPoints } from './listing-map-drawn-points';
+import { usePlaqueCollisions } from './usePlaqueCollisions';
 
 interface ListingPriceMarkersProps {
   /** Ποιες αγγελίες πήραν πινακίδα — **κρίση του `listingPriceMarkers`**, όχι εδώ. */
@@ -138,15 +140,22 @@ export function ListingPriceMarkers({
     () => [0, -(pinRadiusPx + PLAQUE_CLEARANCE_PX)],
     [pinRadiusPx],
   );
+  // §8.78 — κανόνας 4: πινακίδα μόνο πάνω σε σημείο που ο χάρτης ζωγράφισε ΧΩΡΙΣΤΑ (όχι σε ομάδα).
+  const drawn = useDrawnListingPoints();
+  const shown = useMemo(() => plaquesOnDrawnPoints(markers, drawn), [markers, drawn]);
+  // §8.78 — κανόνας 5: δύο πινακίδες δεν κάθονται η μία πάνω στην άλλη (Airbnb «mini-pin»).
+  const { refFor, isSuppressed } = usePlaqueCollisions(shown, focus);
 
   return (
     <>
-      {markers.map((marker) => (
+      {shown.map((marker) => (
         <PriceMarker
           key={marker.id}
           marker={marker}
           offset={offset}
           strength={listingFocusStrength(focus, marker.id)}
+          suppressed={isSuppressed(marker.id)}
+          buttonRef={refFor(marker.id)}
           onPeek={onPeek}
           onSelect={onSelect}
         />
@@ -159,6 +168,13 @@ interface PriceMarkerProps {
   readonly marker: ListingPriceMarker;
   readonly offset: readonly [number, number];
   readonly strength: ListingFocusStrength;
+  /**
+   * Χάνει τη σύγκρουση (κανόνας 5) ⇒ `invisible`: μένει η **πινέζα** από κάτω (κουκίδα), η ετικέτα
+   * κρατά τη θέση της στη διάταξη (μέτρηση + CLS 0) αλλά βγαίνει από εστίαση, κλικ και αναγνώστη
+   * οθόνης. Η αγγελία μένει προσβάσιμη από τη λίστα και από το κλικ στην πινέζα (§8.76).
+   */
+  readonly suppressed: boolean;
+  readonly buttonRef: (element: HTMLElement | null) => void;
   readonly onPeek?: (id: string | null) => void;
   readonly onSelect?: (id: string) => void;
 }
@@ -183,7 +199,7 @@ interface PriceMarkerProps {
  * (Και το `mousedown → preventDefault` που βάζει η MapLibre σε κάθε δείκτη είναι
  * **ευεργετικό** εδώ: το κλικ δεν σέρνει τον χάρτη και δεν αφήνει δαχτυλίδι εστίασης.)
  */
-function PriceMarker({ marker, offset, strength, onPeek, onSelect }: PriceMarkerProps) {
+function PriceMarker({ marker, offset, strength, suppressed, buttonRef, onPeek, onSelect }: PriceMarkerProps) {
   const { t } = useTranslation();
   const stayTotal = useStayTotal(marker.id);
   /*
@@ -199,7 +215,8 @@ function PriceMarker({ marker, offset, strength, onPeek, onSelect }: PriceMarker
       latitude={marker.lat}
       anchor="bottom"
       offset={offset as [number, number]}
-      className={MARKER_LAYER[strength]}
+      // ⚠️ Στο ΠΕΡΙΒΛΗΜΑ, όχι μόνο στο κουμπί: αλλιώς το αόρατο κουτί του δείκτη θα έπιανε κλικ.
+      className={suppressed ? `${MARKER_LAYER[strength]} invisible` : MARKER_LAYER[strength]}
       onClick={(event) => {
         event.originalEvent.stopPropagation();
         onSelect?.(marker.id);
@@ -207,6 +224,7 @@ function PriceMarker({ marker, offset, strength, onPeek, onSelect }: PriceMarker
     >
       <button
         type="button"
+        ref={buttonRef}
         data-listing-id={marker.id}
         /*
           🔑 **Το ορατό κείμενο περιέχεται στο προσβάσιμο όνομα** (WCAG 2.5.3, *Label in
