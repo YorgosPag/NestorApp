@@ -55,7 +55,7 @@
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Η προεπιλογή της κάρτας *(`22rem` πάνω από 1024px)* περιγράφει τη **στήλη**. Εδώ οι
- * στήλες είναι **όσες χωρέσουν**, με κάθε κάρτα μεταξύ `18rem` και ~`24rem` — άρα η
+ * στήλες είναι **όσες χωρέσουν**, με κάθε κάρτα μεταξύ `17rem` (`LISTING_CARD_MIN_REM`) και ~`24rem` — άρα η
  * προεπιλογή θα ήταν **ψευδής**, και ο περιηγητής θα κατέβαζε λάθος παράγωγο **χωρίς
  * κανένα ορατό σφάλμα**: θολό ή σπάταλο, σιωπηλά, χωρίς πύλη να ρωτήσει.
  *
@@ -75,6 +75,8 @@ import {
 import type { PublicListing } from '@/types/public-listing';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
+import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
+import { LISTING_CARD_GRID_CLASS, LISTING_GRID_CARD_IMAGE_SIZES } from '@/components/search-results/listing-card-frame';
 
 /**
  * Το πλάτος της κάρτας **σε αυτή τη διάταξη** — δες το docblock παραπάνω.
@@ -83,7 +85,7 @@ import { SavedListingsProvider } from '@/components/listings/SavedListingsProvid
  * όσο κι αν μεγαλώσει το παράθυρο *(προσθέτει **στήλες**, δεν φουσκώνει κάρτες)*. Ένα
  * breakpoint εδώ θα περιέγραφε διάταξη που **δεν συμβαίνει ποτέ**.
  */
-const SHOWCASE_IMAGE_SIZES = '(min-width: 40rem) 20rem, 100vw';
+const SHOWCASE_IMAGE_SIZES = LISTING_GRID_CARD_IMAGE_SIZES;
 
 /**
  * ⚠️ **ΚΛΗΡΟΝΟΜΕΙ ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ΜΙΑΣ `section`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** *(Α4.3.12)*.
@@ -114,6 +116,13 @@ interface LandingShowcaseProps extends React.ComponentPropsWithRef<'section'> {
   readonly agencies: readonly PublicShowcase[];
   readonly loading: boolean;
   readonly error: string | null;
+  /**
+   * **Ποιος κατέχει το LCP της οθόνης** (ADR-777 §8.79). Προεπιλογή `true`: η πρώτη κάρτα
+   * είναι η υποψήφια. ⚠️ Όταν από πάνω υπάρχει **ήρωας** με εικόνα, εκείνος είναι το LCP —
+   * και μια δεύτερη `fetchpriority="high"` κάτω από το δίπλωμα θα του έκλεβε εύρος
+   * (ADR-841 §7 Α2.4: «πολλές υψηλής προτεραιότητας εικόνες ακυρώνουν η μία την άλλη»).
+   */
+  readonly ownsLcp?: boolean;
 }
 
 /**
@@ -128,6 +137,7 @@ export function LandingShowcase({
   agencies,
   loading,
   error,
+  ownsLcp = true,
   // ⚠️ **Ρητά ξεχωριστό, ΟΧΙ μέσα στο `panelProps`**: όταν η βιτρίνα είναι `tabpanel`, το
   //    Radix δίνει ετικέτα **το ίδιο το κουμπί** του διακόπτη — που είναι ό,τι ζητά το
   //    APG, και σωστότερο από την `h2` («Δες τι υπάρχει ήδη» δεν λέει *ποιας*
@@ -176,8 +186,11 @@ export function LandingShowcase({
         ονόματος)*. Η **διάταξη** της βιτρίνας είναι μία· αλλάζει μόνο **η κάρτα**.
       */}
       {/* ❤️ ADR-777 §8.74 — ένας πάροχος για τις καρδιές της βιτρίνας. */}
+      {/* 🗺️ §8.80 — κάρτα χωρίς φωτογραφία ⇒ χάρτης θέσης· ο πάροχος κατεβάζει τη MapLibre μόνο αν ζητηθεί. */}
+      <ListingMapSnapshotProvider>
       <SavedListingsProvider>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4 p-0">
+      {/* 🖼️ §8.80 — το ΕΝΑ πλέγμα καρτών (`listing-card-frame.ts`), ίδιο με αποτελέσματα και αποθηκευμένες. */}
+      <ul className={LISTING_CARD_GRID_CLASS}>
         {shownListings !== null
           ? /* Μόνο η πρώτη κάρτα είναι LCP (ADR-841 §7 Α2.4): πολλές «υψηλής
                προτεραιότητας» εικόνες **ακυρώνουν η μία την άλλη**. */
@@ -185,7 +198,7 @@ export function LandingShowcase({
               <ListingCard
                 key={listing.id}
                 listing={listing}
-                priority={index === 0}
+                priority={ownsLcp && index === 0}
                 imageSizes={SHOWCASE_IMAGE_SIZES}
               />
             ))
@@ -197,6 +210,7 @@ export function LandingShowcase({
             ))}
       </ul>
       </SavedListingsProvider>
+      </ListingMapSnapshotProvider>
     </section>
   );
 }

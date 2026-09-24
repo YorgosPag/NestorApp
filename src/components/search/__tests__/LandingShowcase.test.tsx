@@ -30,6 +30,9 @@ jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
+  // ADR-777 §8.74 — το `SavedListingsProvider` της βιτρίνας ζητά router + διαδρομή.
+  useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => '/',
 }));
 
 function listing(id: string, title: string): PublicListing {

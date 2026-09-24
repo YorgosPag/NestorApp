@@ -36,6 +36,7 @@ import { SearchLandingContent } from '../SearchLandingContent';
 import type { PublicListing } from '@/types/public-listing';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { showcaseProfile } from './showcase-profile-fixture';
+import { landingListing } from './landing-listing-fixture';
 
 // =============================================================================
 // ΤΑ ΨΕΥΤΙΚΑ — μόνο οι ΠΗΓΕΣ
@@ -58,6 +59,8 @@ jest.mock('@/lib/workspace/navigation', () => ({
     <a href={href}>{children}</a>
   ),
   useRouter: () => ({ push: jest.fn() }),
+  // ADR-777 §8.74 — το `SavedListingsProvider` της βιτρίνας ζητά και διαδρομή.
+  usePathname: () => '/',
 }));
 
 jest.mock('@/lib/geocoding/geocoding-service', () => ({
@@ -87,36 +90,9 @@ jest.mock('@/services/realtime/hooks/usePublicAgencies', () => ({
 // Ο ΠΛΗΘΥΣΜΟΣ
 // =============================================================================
 
-type OfferKind = PublicListing['offerKinds'][number];
-
-/**
- * ⚠️ **Τουλάχιστον μία με ΓΝΩΣΤΗ θέση, αλλιώς η οθόνη δεν αποδίδει διακόπτη καθόλου**:
- * η κάλυψη θα ήταν `no-location` ⇒ `coverageAnswersWhere` ψευδές ⇒ `panelMode = null`.
- * *(Πιάστηκε γράφοντας τη σουίτα: με όλες τις θέσεις άγνωστες, μηδέν `role="tab"`.)*
- */
-function listing(id: string, offerKinds: readonly OfferKind[], mapped: boolean): PublicListing {
-  return {
-    id,
-    title: `Τ-${id}`,
-    gallery: [],
-    floorplans: [],
-    coverImage: null,
-    authorship: 'owner-declared',
-    commercial: { askingPrice: 100000, finalPrice: null, rentPrice: null, nightlyRate: null },
-    commercialStatus: 'for-sale',
-    offerKinds,
-    position: mapped
-      ? { kind: 'known', provenance: 'manual', point: { lat: 38, lng: 23 }, outline: null }
-      : { kind: 'unknown', reason: 'owner-declined' },
-    areaSqm: 90,
-    floor: null,
-    bedrooms: null,
-    legality: [],
-    agencyName: null,
-    agencyId: null,
-    priceReduction: null,
-  } as unknown as PublicListing;
-}
+// 🔑 Η ψεύτικη αγγελία ζει στο `landing-listing-fixture.ts` — κοινή με την ακτίνα `/stay`
+//    (ADR-777 §8.82). Εκεί και ο λόγος για τη «μία τουλάχιστον με γνωστή θέση».
+const listing = landingListing;
 
 /**
  * 🔴 **ΤΟ ΨΕΥΤΙΚΟ ΕΙΝΑΙ ΚΟΙΝΟ, ΚΑΙ Ο ΛΟΓΟΣ ΜΕΤΡΗΘΗΚΕ** *(ADR-777 §8.67.6)*: η ίδια
@@ -249,13 +225,53 @@ describe('Π2 — 🔴 ΤΟ ΠΑΝΕΛ ΕΙΝΑΙ Η ΒΙΤΡΙΝΑ, ΚΑΙ ΚΑ
     expect(container.firstElementChild).toBe(measure);
   });
 
-  it('🔴 ΜΙΑ μόνο δήλωση κατοχής του κενού σε ΟΛΗ την οθόνη', () => {
+  it('🔴 ΚΑΘΕ δήλωση κατοχής του κενού είναι ΑΜΕΣΟ τέκνο του μέτρου — καμία φωλιασμένη', () => {
     // ⛔ **ΤΟ ΡΗΤΟ «ΜΗΝ» ΤΗΣ Α4.3.12.δ**: `data-shell-span` και στο δοχείο και στη
     //    βιτρίνα θα ήταν **δύο** δηλώσεις για το ίδιο κενό — και η εσωτερική θα ήταν
     //    σιωπηλά ανενεργή, γιατί ο επιλογέας είναι `>`. Ακριβώς ό,τι κυνηγά η CHECK 3.63.
+    // 🔑 **ADR-777 §8.79**: ο ισχυρισμός ήταν «ΜΙΑ δήλωση» — σωστός όσο υπήρχε ένα
+    //    breakout. Ο ήρωας είναι **δεύτερο, ανεξάρτητο** breakout (αδελφό, όχι γονέας).
+    //    Η πρόθεση (καμία σιωπηλά ανενεργή δήλωση) κλειδώνεται πλέον **ευθέως**.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: τύλιξε ήρωα ή βιτρίνα σε δοχείο με `data-shell-span` ⇒ κοκκινίζει.
     const container = renderScreen(THREE_MODES, PROS);
 
-    expect(container.querySelectorAll('[data-shell-span]')).toHaveLength(1);
+    const measure = container.querySelector('[data-shell-measure]');
+    const spans = Array.from(container.querySelectorAll('[data-shell-span]'));
+    expect(spans).toHaveLength(2);
+    for (const span of spans) expect(span.parentElement).toBe(measure);
+  });
+});
+
+describe('Π6 — 🔴 ΕΝΑ LCP ΣΕ ΟΛΗ ΤΗΝ ΟΘΟΝΗ (ADR-777 §8.79)', () => {
+  it('🔴 ακριβώς μία `fetchpriority="high"` ΑΝΑ ΘΕΜΑ — και είναι του ήρωα, όχι της βιτρίνας', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: σβήσε το `ownsLcp={false}` στη σελίδα ⇒ η πρώτη κάρτα ξαναζητά
+    //    υψηλή προτεραιότητα κάτω από το δίπλωμα ⇒ δύο ⇒ κοκκινίζει.
+    // ⚠️ **Με φωτογραφίες**, αλλιώς οι κάρτες δεν έχουν `<img>` και το «ένα» είναι δωρεάν.
+    const withPhotos = THREE_MODES.map((l) => ({
+      ...l,
+      gallery: [
+        {
+          url: `https://shelf/${l.id}.webp`,
+          width: 1200,
+          height: 900,
+          altKey: 'search-results:detail.media.galleryAlt',
+          sources: [],
+        },
+      ],
+    })) as unknown as readonly PublicListing[];
+    const container = renderScreen(withPhotos, PROS);
+    expect(container.querySelectorAll('img').length).toBeGreaterThan(1);
+
+    const high = Array.from(container.querySelectorAll('img')).filter(
+      (img) => img.getAttribute('fetchpriority') === 'high',
+    );
+    // 🌗 §8.81: ο κόμβος έχει ζεύγος μέρα/γαλάζια ώρα ⇒ δύο `<img>` του ήρωα, από τα οποία
+    //    το CSS αφήνει ορατό (και άρα κατεβάζει, αφού είναι lazy) **ένα** ανά θέμα.
+    const inLight = high.filter((img) => !img.classList.contains('hidden'));
+    const inDark = high.filter((img) => !img.classList.contains('dark:hidden'));
+    expect(inLight).toHaveLength(1);
+    expect(inDark).toHaveLength(1);
+    for (const img of high) expect(img.closest('section')?.querySelector('h1')).not.toBeNull();
   });
 });
 
@@ -309,7 +325,11 @@ describe('Π4 — 🔴 ΧΩΡΙΣ ΔΙΑΚΟΠΤΗ ΔΕΝ ΥΠΑΡΧΕΙ ΠΑΝ�
     expect(screen.queryByRole('tabpanel')).not.toBeInTheDocument();
 
     const measure = container.querySelector('[data-shell-measure]');
-    const showcase = container.querySelector('[data-shell-span="full"]');
+    // ⚠️ Ο ήρωας (§8.79) είναι κι αυτός `full` — η βιτρίνα είναι αυτή **χωρίς** τον
+    //    τίτλο της σελίδας (φίλτρο σε JS: το `:has()` δεν είναι εγγυημένο στο jsdom).
+    const showcase = Array.from(container.querySelectorAll('[data-shell-span="full"]')).find(
+      (el) => el.querySelector('h1') === null,
+    );
     expect(showcase).not.toBeNull();
     expect(showcase?.parentElement).toBe(measure);
   });

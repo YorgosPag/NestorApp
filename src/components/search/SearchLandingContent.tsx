@@ -48,8 +48,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListings } from '@/services/realtime/hooks/usePublicListings';
 import { computeListingCoverage, coverageAnswersWhere } from '@/lib/listings/listing-coverage';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
-import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
-import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { usePublicAgencies } from '@/services/realtime/hooks/usePublicAgencies';
 import { occupationOptions, showcaseLocale } from '@/lib/agency/showcase-filter';
 import {
@@ -63,9 +61,12 @@ import {
 import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { CoverageStatement } from './CoverageStatement';
+import { LandingDoors } from './LandingDoors';
+import { LandingHero } from '@/components/shared/landing-hero/LandingHero';
+import { LANDING_HERO_IMAGES } from '@/components/shared/landing-hero/landing-hero-images';
 import { LandingModeSwitch } from './LandingModeSwitch';
-import { LandingShowcase } from './LandingShowcase';
 import { PlaceSearchBox } from './PlaceSearchBox';
+import { LandingShowcase } from './LandingShowcase';
 
 export function SearchLandingContent() {
   const { t, i18n } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
@@ -172,6 +173,8 @@ export function SearchLandingContent() {
       agencies={agencies}
       loading={loading}
       error={error}
+      // 🖼️ §8.79 — το LCP είναι ο ήρωας· καμία δεύτερη `fetchpriority="high"` εδώ.
+      ownsLcp={false}
     />
   );
 
@@ -253,52 +256,37 @@ export function SearchLandingContent() {
           panelMode === null ? '[align-content:safe_center]' : '[align-content:start]',
         )}
       >
-        <h1 className="text-3xl font-semibold text-foreground">
-          {t('search-results:landing.title')}
-        </h1>
+        {/*
+          🖼️ **Ο ΗΡΩΑΣ (ADR-777 §8.79)** — τίτλος, διακόπτης και πεδίο **μέσα** στην εικόνα,
+          όπως Zillow · idealista · Spitogatos. **Άμεσο τέκνο** του μέτρου, με δικό του
+          `data-shell-span="full"`: δεύτερο, **ανεξάρτητο** breakout δίπλα στη βιτρίνα —
+          όχι φωλιασμένο, άρα όχι σιωπηλά ανενεργό (Π2 του `landing-tabpanel.test`).
+          ⚠️ Ο διακόπτης **και** το πεδίο ζουν μέσα του ως `children`· η απόφαση «υπάρχει
+          διακόπτης;» μένει **εδώ** (`panelMode`). Ο ήρωας είναι **κοινός** με τις
+          ακτίνες `/pro` και `/stay` (§8.82) — δεν ξέρει τι ρωτά η σελίδα.
+        */}
+        <LandingHero
+          image={LANDING_HERO_IMAGES.home}
+          title={t('search-results:landing.title')}
+          subtitle={t('search-results:landing.hero.subtitle')}
+        >
+          {panelMode !== null && (
+            <>
+              {/* 🔑 **Ο ΔΙΑΚΟΠΤΗΣ ΠΑΝΩ ΑΠΟ ΤΟ ΠΕΔΙΟ** (ADR-841 §7 Α4) — ο άνθρωπος διαλέγει
+                  **τι** ψάχνει πριν πληκτρολογήσει. Με `panelMode = null` κανένα πλαίσιο (§8.10). */}
+              <LandingModeSwitch modes={modes} value={panelMode} />
+              <PlaceSearchBox mode={panelMode} occupations={occupations} locale={locale} />
+            </>
+          )}
+        </LandingHero>
 
         {/*
-          ⚠️ **ΤΟ `aria-label` ΕΦΥΓΕ ΑΠΟ ΤΟ `<section>` ΠΑΡΑΚΑΤΩ (Α4.5)**, και δεν είναι
-          παράλειψη: έλεγε «Περιοχή αναζήτησης» — αλήθεια όσο υπήρχε **ένα** πεδίο, **ψέμα**
-          από τη στιγμή που το tab «Επαγγελματίες» απέκτησε πεδίο **ειδικότητας**. Και ήταν
-          πλέον και **θόρυβος**: κάθε χειριστήριο μέσα κουβαλά τώρα **ορατή** δική του
-          ετικέτα, οπότε ο αναγνώστης οθόνης θα άκουγε το ίδιο κείμενο δύο φορές. Ένα
-          `<section>` χωρίς όνομα **δεν** εκτίθεται ως ορόσημο — που είναι το σωστό εδώ: η
-          ομάδα ζει ήδη μέσα στο `main`, κάτω από τον τίτλο `h1`.
-          ⚠️ Τα ονόματα των δύο στοιχείων γράφονται **χωρίς γωνιώδη άγκιστρα, επίτηδες**: ο
-          σαρωτής της N.11 δουλεύει **ανά γραμμή** και διαβάζει ελληνικά ανάμεσα σε `>` και
-          `<` ως κείμενο JSX — μπλόκαρε αυτό ακριβώς το σχόλιο, μετρημένα.
-
-          🔴 **ΚΑΙ ΤΟ ΣΧΟΛΙΟ ΖΕΙ ΕΞΩ ΑΠΟ ΤΟ `&&`, ΟΧΙ ΜΕΣΑ ΤΟΥ.** Ένα σχόλιο JSX ως **πρώτο
-          παιδί** μέσα στις παρενθέσεις του `panelMode !== null && ( … )` είναι **δεύτερη**
-          έκφραση δίπλα στο `<section>` ⇒ *«Expected slash, got className»* — **Build Error**,
-          λευκή σελίδα.
-
-          ⚠️ **ΚΑΙ ΜΗΝ ΓΡΑΨΕΙΣ ΤΗΝ ΑΚΟΛΟΥΘΙΑ ΚΛΕΙΣΙΜΑΤΟΣ ΣΧΟΛΙΟΥ ΜΕΣΑ ΣΕ ΣΧΟΛΙΟ.** Η
-          πρώτη διόρθωση αυτού εδώ **έδειχνε** τη σύνταξη κυριολεκτικά, άρα **τερμάτισε το
-          ίδιο της το μπλοκ** στη μέση: ο parser συνέχισε ως κείμενο JSX και κατήγγειλε το
-          **τελευταίο `}` του αρχείου**, 125 γραμμές πιο κάτω. Τρίτη φορά το ίδιο σχήμα σε
-          αυτό το ADR *(Α4.2: «το Build Error ΔΕΝ ήταν η μνήμη»)*: **η αναφερόμενη γραμμή δεν
-          είναι η αιτία**.
+          🚪 **ΟΙ ΠΟΡΤΕΣ «ΖΗΤΩ» · «ΠΡΟΣΦΕΡΩ» ΑΝΕΒΗΚΑΝ ΚΑΤΩ ΑΠΟ ΤΟΝ ΗΡΩΑ (§8.79).** Ήταν
+          στοιβαγμένα κουμπιά στο τέλος· με λίγες αγγελίες η ζήτηση αξίζει **περισσότερο**
+          από την αναζήτηση (§12.6), και η θέση της οφείλει να το λέει. Τα σχόλια του
+          §25.8 / Α14 μετακόμισαν μαζί τους στο `LandingDoors`.
         */}
-        {panelMode !== null && (
-          <section className="flex flex-col gap-3">
-            {/*
-              🔑 **Ο ΔΙΑΚΟΠΤΗΣ ΠΑΝΩ ΑΠΟ ΤΟ ΠΕΔΙΟ** (ADR-841 §7 Α4) — η θέση είναι η
-              μετρημένη πρακτική και των εννέα πλατφορμών του §4: ο άνθρωπος διαλέγει
-              **τι** ψάχνει **πριν** αρχίσει να πληκτρολογεί, ποτέ μετά.
-
-              🔴 **ΚΑΙ Ο ΔΙΑΚΟΠΤΗΣ ΑΛΛΑΖΕΙ ΠΛΕΟΝ ΚΑΙ ΤΟΝ ΑΡΙΘΜΟ ΤΩΝ ΠΕΔΙΩΝ** *(Α4.5)*.
-              Το σχόλιο εδώ έγραφε *«το πεδίο μένει ΕΝΑ, όπως το δεσμεύει το ADR-777 Α3»* —
-              **αναιρέθηκε ρητά**: ισχύει για «Αγορά · Ενοικίαση · Διαμονή», και **όχι** για
-              τους «Επαγγελματίες», που ρωτούν **ειδικότητα → περιοχή**. Οι ημερομηνίες της
-              «Διαμονής» μένουν στην οθόνη 2 *(`StayFilterFields`)*, γιατί εκείνη η φόρμα
-              είναι **ασύμβατη** με μία γραμμή — η ειδικότητα δεν είναι.
-            */}
-            <LandingModeSwitch modes={modes} value={panelMode} />
-            <PlaceSearchBox mode={panelMode} occupations={occupations} locale={locale} />
-          </section>
-        )}
+        <LandingDoors />
 
         {/*
           🔑 **Η ΑΠΟΔΕΙΞΗ ΠΡΙΝ ΤΗ ΛΟΓΙΣΤΙΚΗ, ΚΑΙ Η ΣΕΙΡΑ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (ADR-777 §8.49).
@@ -339,7 +327,7 @@ export function SearchLandingContent() {
           είναι ο ΜΟΝΟΣ δρόμος — και είναι πραγματικός: η οθόνη 2 δείχνει και τις 6,
           με ρητή εξήγηση γιατί καμία δεν είναι στον χάρτη.
         */}
-        <nav className="flex flex-col gap-3">
+        <p>
           {/*
             ⚠️ **ΔΥΟ ΚΛΑΔΟΙ, ΟΧΙ ternary ΜΕΣΑ ΣΤΟ `href`.** Το `listing-routes.ts:71` το
             γράφει ρητά: ένα ternary ανάμεσα σε δύο διευθύνσεις **φαρδαίνει τον τύπο σε
@@ -362,55 +350,7 @@ export function SearchLandingContent() {
               {t('search-results:landing.browseAll')}
             </Link>
           )}
-
-          {/*
-            🔑 **Η διέξοδος του §25.8 προς τη ΖΗΤΗΣΗ.** Το κείμενο βοήθειας δεν είναι
-            διακοσμητικό: χωρίς αυτό, το «Ζητώ» διαβάζεται ως «φόρμα επικοινωνίας» —
-            ακριβώς η ανάγνωση που το §12.2 απαγορεύει. Λέει **τι κερδίζει** ο άνθρωπος
-            («θα σου πούμε τι υπάρχει κοντά, ακόμη κι όταν δεν ταιριάζει τίποτα»), που
-            είναι ο **όρος επιβίωσης** του §12.6 δηλωμένος **πριν** επενδύσει χρόνο.
-          */}
-          <div className="flex flex-col gap-1">
-            <Link
-              href={MY_DEMANDS_ROUTE}
-              className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
-            >
-              {t('property-market:demand.door.label')}
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              {t('property-market:demand.door.hint')}
-            </p>
-          </div>
-
-          {/*
-            🔑 **Η ΤΡΙΤΗ ΠΟΡΤΑ — «ΠΡΟΣΦΕΡΩ» (Α14).** Μέχρι τις 2026-08-11 έλειπε, και ο
-            πίνακας του handoff το μετρούσε: αγορά ✅ · πώληση ❌ · ενοικίαση ❌ ·
-            αντιπαροχή ❌. Ακίνητο καταχωρούσε **μόνο ο επαγγελματίας**, από το
-            `(app)/properties` — πίσω από σύνδεση, με το κέλυφος έργων/λογιστικής/DXF.
-            **Ο απλός χρήστης του διαδικτύου δεν είχε καμία πόρτα.**
-
-            ⚠️ Δείχνει στον **κατάλογο** (`/offers`), όχι στη φόρμα — ίδιος λόγος με το
-            «Ζητώ»: ο `(me)/layout.tsx` ζητά ταυτότητα, οπότε ο ανώνυμος περνά από τη
-            σύνδεση **μία** φορά και προσγειώνεται εκεί που θέλει· ενώ σύνδεσμος προς
-            `/offers/new` θα τον έστελνε, σε κινητό, σε οθόνη που λέει «όχι εδώ» (Α8).
-
-            ⚠️ Και το κείμενο βοήθειας λέει το **§17.1** χωρίς ορολογία: *«με λίγα
-            δομημένα στοιχεία … θα το βρίσκουν όσοι το ψάχνουν»*. Χωρίς αυτό, το
-            «Προσφέρω» διαβάζεται ως «ανέβασε φωτογραφία και τηλέφωνο» — ακριβώς η
-            αγγελία που η Α14 απαγορεύει.
-          */}
-          <div className="flex flex-col gap-1">
-            <Link
-              href={MY_OFFERS_ROUTE}
-              className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
-            >
-              {t('property-market:offer.door.label')}
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              {t('property-market:offer.door.hint')}
-            </p>
-          </div>
-        </nav>
+        </p>
       </main>
     </Tabs>
   );
