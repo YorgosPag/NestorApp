@@ -24,6 +24,8 @@ jest.mock('@/core/containers/ShellUtilities', () => ({ ShellUtilities: () => nul
 import { SidebarProvider } from '@/components/ui/sidebar-context';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { SHORT_STAY_LANDING_ROUTE } from '@/lib/listings/listing-routes';
+import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
 
 import { PublicSiteHeader } from '../PublicSiteHeader';
 
@@ -47,5 +49,16 @@ describe('PublicSiteHeader — στήλη ή όχι', () => {
     // Η «Καταχώριση» μένει στο DOM για το κινητό, κρυμμένη από `md` (ζει στη στήλη).
     expect(document.querySelector(`a[href="${NEW_OFFER_ROUTE}"]`)?.className).toContain('md:hidden');
     expect(screen.getByText('buttons.toggleSidebar')).toBeTruthy();
+  });
+
+  it('Χ3 (ADR-777 §8.82): οι ΑΚΤΙΝΕΣ `/pro` και `/stay` φτάνονται από κάθε δημόσια σελίδα — από `md`', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: σβήσε τους συνδέσμους ⇒ οι ακτίνες γίνονται ορφανές, φτάνονται
+    //    μόνο από την καρτέλα της αρχικής.
+    render(<PublicSiteHeader />);
+    for (const route of [AGENCY_DIRECTORY_ROUTE, SHORT_STAY_LANDING_ROUTE]) {
+      const link = document.querySelector(`a[href="${route}"]`);
+      expect(link).not.toBeNull();
+      expect(link?.className).toContain('md:inline-flex');
+    }
   });
 });

@@ -58,10 +58,15 @@ import { SidebarTrigger } from '@/components/ui/sidebar-trigger';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
-import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
+import { SEARCH_LANDING_ROUTE, SHORT_STAY_LANDING_ROUTE } from '@/lib/listings/listing-routes';
+import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+
+/** Οι σύνδεσμοι των ακτίνων (§8.82) — πλοήγηση, όχι πράξη: χωρίς πλαίσιο, από `md` και πάνω. */
+const SPOKE_LINK_CLASS =
+  'hidden rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground md:inline-flex';
 
 export function PublicSiteHeader() {
   // ⚠️ Το `'search-results'` ήταν γραμμένο **τρεις φορές** στον ίδιο πίνακα — ο i18next
@@ -104,6 +109,31 @@ export function PublicSiteHeader() {
           */}
           {PRODUCT_NAME}
         </Link>
+        {/*
+          🖼️ **ΟΙ ΑΚΤΙΝΕΣ ΤΟΥ ΚΟΜΒΟΥ (ADR-777 §8.82).** Μια σελίδα-ακτίνα που φτάνεις μόνο
+          από την καρτέλα της αρχικής είναι **ορφανή**: ο επισκέπτης του `/listing/…` ή του
+          `/search/results` δεν τη βρίσκει ποτέ. Zillow («Find an agent») · Airbnb · idealista
+          τις κρατούν στην κεφαλίδα. Ετικέτες = τα **ίδια** κλειδιά με τις καρτέλες του κόμβου
+          ⇒ μία λέξη για μία έννοια, μηδέν νέα bytes στο κέλυφος (ADR-744).
+          ⚠️ Από `md` και πάνω: στο κινητό τις ανοίγουν οι καρτέλες της αρχικής, και πέντε
+          σύνδεσμοι + CTA σε 375px θα έσπαγαν τη γραμμή.
+        */}
+        {!hasSidebar && (
+          <>
+            <Link
+              href={AGENCY_DIRECTORY_ROUTE}
+              className={SPOKE_LINK_CLASS}
+            >
+              {t('search-results:landing.modes.pros')}
+            </Link>
+            <Link
+              href={SHORT_STAY_LANDING_ROUTE}
+              className={SPOKE_LINK_CLASS}
+            >
+              {t('search-results:landing.modes.stay')}
+            </Link>
+          </>
+        )}
         </div>
 
         <div className="flex items-center gap-2">
