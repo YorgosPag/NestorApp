@@ -144,7 +144,7 @@ export function writePreparedVendorInvite(
 
 export interface IssueAdditionalLinkInput {
   readonly invite: Pick<VendorInvite, 'id' | 'rfqId' | 'companyId'>;
-  readonly issuedVia: Exclude<VendorCredentialOrigin, 'invite_email' | 'rfq_fanout' | 'legacy'>;
+  readonly issuedVia: Exclude<VendorCredentialOrigin, 'invite_email' | 'rfq_fanout'>;
   readonly issuedBy: string | null;
   readonly expiresAtMs: number;
   readonly requesterIpHash?: string | null;

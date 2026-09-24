@@ -5796,11 +5796,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /vendor_invite_tokens/{tokenId} {
-      allow read: if false;
-      allow write: if false;
-    }
-
     // ADR-876 §5 — ένας σύνδεσμος πύλης = ένα διαπιστευτήριο (μόνο nonceHash).
     // Server-only: ο client ΔΕΝ μαθαίνει ούτε καν ποιοι σύνδεσμοι υπάρχουν — το γραφείο
     // παίρνει μεταδεδομένα από API με δικαίωμα, ποτέ από τη βάση.

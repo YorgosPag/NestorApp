@@ -15,9 +15,9 @@
  * ένα πλαστό token με νέο nonce **δεν ταιριάζει σε κανένα** έγγραφο — δεύτερος φραγμός που
  * το παλιό μοντέλο (ωμό token στο `vendor_invites`) δεν είχε.
  *
- * ⚠️ **Παλιά μορφή (4 πεδία: rfqId · vendorContactId · nonce · expiryMs)**: αναγνωρίζεται εδώ
- * και οδηγεί στο ντετερμινιστικό ID που γράφει η migration (`generateLegacyVendorInviteCredentialId`).
- * Αποσύρεται στη Φ7 του ADR-876 §5, μετά τη μέγιστη λήξη που αναφέρει η migration.
+ * 🔑 **ΜΙΑ γραμματική** (ADR-876 §5 Φ7): η παλιά μορφή 4 πεδίων (rfqId · vendorContactId · nonce ·
+ * expiryMs) αποσύρθηκε — τίποτα άλλο πέρα από 3 πεδία με πρόθεμα `vic_` δεν είναι σύνδεσμος. Ένα
+ * token παλιάς μορφής, **ακόμη και σωστά υπογεγραμμένο**, απαντά `invalid_link` πριν από κάθε βάση.
  *
  * @module services/vendor-portal/vendor-invite-credential
  * @enterprise ADR-876 §5 · ADR-327 §11
@@ -33,16 +33,13 @@ import {
   requireTokenSecret,
 } from '@/lib/tokens/signed-token';
 import { sha256HexOfText } from '@/lib/hash/sha256';
-import {
-  generateLegacyVendorInviteCredentialId,
-  generateVendorInviteCredentialId,
-} from '@/services/enterprise-id.service';
+import { generateVendorInviteCredentialId } from '@/services/enterprise-id.service';
 import type {
   VendorCredentialOrigin,
   VendorInviteCredential,
 } from '@/subapps/procurement/types/vendor-invite-credential';
 
-/** Το μυστικό υπογραφής — ίδιο env με πριν, ώστε οι σύνδεσμοι παλιάς μορφής να επαληθεύονται. */
+/** Το μυστικό υπογραφής της πύλης προμηθευτή. */
 export const VENDOR_PORTAL_SECRET_ENV = 'VENDOR_PORTAL_SECRET';
 
 /**
@@ -53,8 +50,11 @@ export const VENDOR_LINK_LIFETIME_DAYS = 7;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Πρόθεμα ID νέας μορφής — χωρίζει νέο από παλιό σύνδεσμο χωρίς να μαντεύει. */
+/** Πρόθεμα ID διαπιστευτηρίου — δεύτερος έλεγχος μορφής μετά την υπογραφή (όχι «μαντεψιά» τύπου). */
 const CREDENTIAL_ID_PREFIX = 'vic_';
+
+/** Πεδία συνδέσμου: `[credentialId, nonce, expiryMs]` — ΜΙΑ γραμματική (Φ7). */
+const LINK_FIELD_COUNT = 3;
 
 export function vendorLinkExpiryMs(nowMs: number, days: number = VENDOR_LINK_LIFETIME_DAYS): number {
   return nowMs + days * DAY_MS;
@@ -138,23 +138,17 @@ export async function parseVendorLink(token: string): Promise<ParsedVendorLink> 
   } catch {
     return { ok: false, reason: 'server_config_error' };
   }
-  const verdict = decodeSignedToken(secret, token, 3);
+  const verdict = decodeSignedToken(secret, token, LINK_FIELD_COUNT);
   if (!verdict.ok) {
     return { ok: false, reason: verdict.reason === 'server-config' ? 'server_config_error' : 'invalid_link' };
   }
-  const fields = verdict.fields;
-  const expiry = Number(fields[fields.length - 1]);
-  if (!Number.isFinite(expiry)) return { ok: false, reason: 'invalid_link' };
-
-  if (fields.length === 3 && fields[0].startsWith(CREDENTIAL_ID_PREFIX)) {
-    return { ok: true, credentialId: fields[0], nonceHash: await sha256HexOfText(fields[1]) };
+  // ⚠️ Το `decodeSignedToken` κρίνει «τουλάχιστον N» — η γραμματική εδώ είναι «ΑΚΡΙΒΩΣ N».
+  if (verdict.fields.length !== LINK_FIELD_COUNT) return { ok: false, reason: 'invalid_link' };
+  const [credentialId, nonce, expiryMs] = verdict.fields;
+  if (!credentialId.startsWith(CREDENTIAL_ID_PREFIX) || !Number.isFinite(Number(expiryMs))) {
+    return { ok: false, reason: 'invalid_link' };
   }
-  if (fields.length === 4) {
-    // Παλιά μορφή: [rfqId, vendorContactId, nonce, expiryMs] — ID από τη migration.
-    const nonceHash = await sha256HexOfText(fields[2]);
-    return { ok: true, credentialId: generateLegacyVendorInviteCredentialId(nonceHash), nonceHash };
-  }
-  return { ok: false, reason: 'invalid_link' };
+  return { ok: true, credentialId, nonceHash: await sha256HexOfText(nonce) };
 }
 
 /** Ταιριάζει το nonce του συνδέσμου με την έκδοση; — **σταθερός χρόνος**, πάντα. */

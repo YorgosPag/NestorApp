@@ -384,7 +384,7 @@ export async function revokeVendorInvite(ctx: AuthContext, rfqId: string, invite
     if (!data || !isPayloadOwnedByCompany(data, ctx.companyId) || data.rfqId !== rfqId) {
       throw new VendorInviteStateError('not_found');
     }
-    // Η ΑΠΟΘΗΚΕΥΜΕΝΗ τιμή: ένα προ-migration `'expired'` δεν «περνά» σιωπηλά χωρίς ανάκληση συνδέσμων.
+    // Η ΑΠΟΘΗΚΕΥΜΕΝΗ τιμή: μια άγνωστη τιμή (π.χ. `'expired'`, που είναι ΜΟΝΟ παράγωγη) δεν «περνά» σιωπηλά χωρίς ανάκληση συνδέσμων.
     if (data.status === 'revoked') return null;
     if (!isLiveInviteStatus(normalizeInviteStatus(data.status))) throw new VendorInviteStateError('not_live');
     const liveRefs = await readLiveCredentialRefsTx(tx, db, ctx.companyId, inviteId);

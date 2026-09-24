@@ -44,10 +44,11 @@ export const VENDOR_PORTAL_INTENTS = ['decline'] as const;
 export type VendorPortalIntent = (typeof VENDOR_PORTAL_INTENTS)[number];
 
 /**
- * Η **σχετική** θέση της πύλης (διαδρομή + fragment) — ο ΕΝΑΣ κατασκευαστής. Ο απόλυτος σύνδεσμος
- * του email ({@link vendorPortalUrl}) και η ανακατεύθυνση της παλιάς μορφής την καλούν και οι δύο.
+ * Η **σχετική** θέση της πύλης (διαδρομή + fragment) — ο ΕΝΑΣ κατασκευαστής, πίσω από τον απόλυτο
+ * σύνδεσμο ({@link vendorPortalUrl} · {@link vendorDeclineUrl}). Η ανακατεύθυνση της παλιάς μορφής
+ * (`/vendor/quote/<token>`) αποσύρθηκε στη Φ7 — ΜΙΑ μορφή διεύθυνσης.
  */
-export function vendorPortalLocation(token: string, intent: VendorPortalIntent | null): string {
+function vendorPortalLocation(token: string, intent: VendorPortalIntent | null): string {
   const fragment = new URLSearchParams({ [FRAGMENT_TOKEN_KEY]: token });
   if (intent) fragment.set(FRAGMENT_INTENT_KEY, intent);
   return `${VENDOR_PORTAL_PATH}#${fragment.toString()}`;
@@ -80,8 +81,8 @@ export function vendorDeclineUrl(token: string): string {
   return portalLink(token, 'decline');
 }
 
-/** Άγνωστη τιμή → γνωστή πρόθεση ή `null`. Πίνακας ή σκουπίδι ⇒ καμία (όπως το `?answer=`). */
-export function asVendorPortalIntent(raw: unknown): VendorPortalIntent | null {
+/** Άγνωστη τιμή → γνωστή πρόθεση ή `null`. Σκουπίδι ⇒ καμία (όπως το `?answer=`). Μόνη είσοδος: το fragment (Φ7). */
+function asVendorPortalIntent(raw: unknown): VendorPortalIntent | null {
   return VENDOR_PORTAL_INTENTS.find((known) => known === raw) ?? null;
 }
 

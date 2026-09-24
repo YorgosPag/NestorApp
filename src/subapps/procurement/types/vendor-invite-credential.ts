@@ -20,8 +20,8 @@
  * **Από πού γεννήθηκε ο σύνδεσμος** — κλειστό σύνολο, γιατί ο PM ανακαλεί **έναν** και
  * πρέπει να ξέρει ποιον.
  *
- * ⚠️ `legacy` = γράφτηκε από τη migration για σύνδεσμο της παλιάς μορφής (4 πεδία, ωμό
- * token στο `vendor_invites`). Αποσύρεται στη Φ7 του ADR-876 §5.
+ * ⚠️ Δεν υπάρχει προέλευση «παλιός σύνδεσμος»: η παλιά μορφή (4 πεδία, ωμό token στο
+ * `vendor_invites`) αποσύρθηκε ολόκληρη στη Φ7 του ADR-876 §5 — μία γραμματική συνδέσμου.
  */
 export const VENDOR_CREDENTIAL_ORIGINS = [
   'invite_email',
@@ -29,7 +29,6 @@ export const VENDOR_CREDENTIAL_ORIGINS = [
   'copy_link',
   'email_resend',
   'self_service',
-  'legacy',
 ] as const;
 
 export type VendorCredentialOrigin = (typeof VENDOR_CREDENTIAL_ORIGINS)[number];
@@ -44,7 +43,7 @@ export interface VendorInviteCredential {
   /** sha256(nonce) σε hex· συγκρίνεται **σε σταθερό χρόνο** (`equalsInConstantTime`). */
   nonceHash: string;
   issuedVia: VendorCredentialOrigin;
-  /** uid μέλους· `null` όταν ο σύνδεσμος ζητήθηκε από τον ίδιο τον προμηθευτή ή τη migration. */
+  /** uid μέλους· `null` όταν ο σύνδεσμος ζητήθηκε από τον ίδιο τον προμηθευτή. */
   issuedBy: string | null;
   issuedAt: string;
   expiresAt: string;

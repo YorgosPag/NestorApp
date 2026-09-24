@@ -33,7 +33,6 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { readVendorPortalFragment } from '@/subapps/procurement/services/vendor-portal-links';
 
 import { AUTH_HOST, PROJECT_ID, SEED_CREDENTIAL, runSeeder } from './lib/emulator/identity';
 import { COMPANY_ALIAS, COMPANY_ID, ORACLE_REPRESENTATIVES, PERSONAS, oracleClassOf } from './lib/emulator/personas';
@@ -134,20 +133,6 @@ async function createRfq(session: ApiSession, projectId: string): Promise<string
   return field(await post(session, route, { projectId, title: GOLDEN_MARK }), route, 'data', 'id');
 }
 
-/**
- * `copy_link`: κανένα email — ο σύνδεσμος βγαίνει από τον ΠΡΑΓΜΑΤΙΚΟ εκδότη διαπιστευτηρίων (ADR-876 §5).
- * ⚠️ Το διαπιστευτήριο ζει πλέον στο **fragment** (`/vendor/quote#t=…`), όχι στη διαδρομή — διαβάζεται
- * με τον ΙΔΙΟ αναγνώστη που χρησιμοποιεί η πύλη, ώστε σπορά και σελίδα να μην αποκλίνουν.
- */
-async function createVendorToken(session: ApiSession, rfqId: string): Promise<string> {
-  const route = `/api/rfqs/${rfqId}/invites`;
-  const body = { manualEmail: 'vendor@golden.local', manualName: GOLDEN_MARK, deliveryChannel: 'copy_link' };
-  const portalUrl = field(await post(session, route, body), route, 'data', 'portalUrl');
-  const { token } = readVendorPortalFragment(new URL(portalUrl).hash);
-  if (!token) throw new Error(`${route}: ο σύνδεσμος πύλης δεν κουβαλά διαπιστευτήριο στο fragment`);
-  return token;
-}
-
 async function createPurchaseOrder(session: ApiSession, projectId: string, supplierId: string): Promise<string> {
   const route = '/api/procurement';
   const item = { description: GOLDEN_MARK, quantity: 1, unit: 'τεμ', unitPrice: 100, total: 100, boqItemId: null, categoryCode: 'OIK-2' };
@@ -196,7 +181,6 @@ async function seedGolden(auth: Auth, db: Firestore): Promise<GoldenIds> {
     project: projectId,
     rfq: rfqId,
     purchaseOrder: await createPurchaseOrder(session, projectId, contactId),
-    vendorToken: await createVendorToken(session, rfqId),
     attendanceToken: await createAttendanceToken(session, projectId),
     reportType: GOLDEN_VALUES.reportType,
   } as GoldenIds;

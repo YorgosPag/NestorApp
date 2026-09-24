@@ -67,7 +67,9 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
   test('Γ1γ — ADR-876: οι δημόσιες πόρτες με token είναι ΕΚΤΟΣ χώρου και κρίνονται ΑΝΩΝΥΜΑ', () => {
     // 🔴 Η άγκυρα του ευρήματος: η πύλη προμηθευτή και το check-in ζούσαν στο `/o/[workspace]`
     //    και ο χρησμός τα έκρινε με συνεδρία μέλους — θεατή που ο παραλήπτης ΔΕΝ είναι ποτέ.
-    expect([...PUBLIC].sort()).toEqual(['/attendance/check-in/[token]', '/vendor/quote/[token]']);
+    // ADR-876 §5 Φ7: η πύλη προμηθευτή έφυγε από τον κατάλογο — ζει στο ΣΤΑΤΙΚΟ `/vendor/quote`, με το
+    //    διαπιστευτήριο στο fragment (ο server δεν το βλέπει ⇒ τίποτα να δεθεί με golden).
+    expect([...PUBLIC].sort()).toEqual(['/attendance/check-in/[token]']);
     const expanded = ID.expandForPersonas(
       (O.enumerateRoutes(ROOT) as Route[]).filter((route) => PUBLIC.includes(route.template)),
       [PERSONA],
@@ -75,7 +77,6 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
     ) as Array<Route & { persona?: string; fetchUrl?: string }>;
     expect(expanded.map((route) => [route.url, route.persona, route.dynamic])).toEqual([
       ['/attendance/check-in/golden-attendanceToken', undefined, false],
-      ['/vendor/quote/golden-vendorToken', undefined, false],
     ]);
     expect(expanded.every((route) => !route.fetchUrl?.includes('golden-'))).toBe(true);
   });
@@ -290,7 +291,7 @@ describe('Γ6 — ό,τι διαβάζει ο SERVER σπέρνεται από �
     expect(offenders).toEqual([]);
   });
 
-  test('Γ6β — ο ανιχνευτής ΔΕΝ είναι τυφλός: τα τρία γνωστά server reads ΤΑ ΒΡΙΣΚΕΙ', () => {
+  test('Γ6β — ο ανιχνευτής ΔΕΝ είναι τυφλός: τα γνωστά server reads ΤΑ ΒΡΙΣΚΕΙ', () => {
     const found = new Set<string>();
     for (const route of routes) {
       for (const file of serverChain(path.join(ROOT, route.file))) {
@@ -301,7 +302,6 @@ describe('Γ6 — ό,τι διαβάζει ο SERVER σπέρνεται από �
       expect.arrayContaining([
         'src/app/(app)/o/[workspace]/projects/[id]/procurement/layout.tsx#id',
         'src/app/(app)/o/[workspace]/procurement/purchase-orders/[id]/page.tsx#id',
-        'src/app/(auth)/vendor/quote/[token]/page.tsx#token',
       ]),
     );
   });

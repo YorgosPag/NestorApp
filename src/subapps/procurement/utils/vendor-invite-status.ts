@@ -38,9 +38,9 @@ export type LiveInviteStatus = (typeof LIVE_INVITE_STATUSES)[number];
 export type VendorInviteDisplayStatus = InviteStatus | 'expired';
 
 /**
- * Η αποθηκευμένη κατάσταση, **κανονικοποιημένη**. Έγγραφο προ-migration με `'expired'` =
- * ανάκληση (ήταν ο μόνος γραφέας του)· οτιδήποτε άγνωστο ⇒ `revoked` (κλειστό εξ ορισμού —
- * μια πύλη που «δεν ξέρει» δεν ανοίγει).
+ * Η αποθηκευμένη κατάσταση, **κανονικοποιημένη**. Οτιδήποτε άγνωστο ⇒ `revoked` (κλειστό εξ
+ * ορισμού — μια πύλη που «δεν ξέρει» δεν ανοίγει). Και το `'expired'`: είναι **μόνο** παράγωγη
+ * τιμή οθόνης ({@link vendorInviteDisplayStatus}), ποτέ αποθηκευμένη — αν βρεθεί στη βάση, είναι άγνωστη.
  */
 export function normalizeInviteStatus(raw: string): InviteStatus {
   switch (raw) {

@@ -37,7 +37,6 @@ const GOLDEN_ENTITIES = Object.freeze({
   project: { tier: GOLDEN_TIERS.API, prefix: 'proj' },
   rfq: { tier: GOLDEN_TIERS.API, prefix: 'rfq' },
   purchaseOrder: { tier: GOLDEN_TIERS.API, prefix: 'po' },
-  vendorToken: { tier: GOLDEN_TIERS.API, prefix: null },
   attendanceToken: { tier: GOLDEN_TIERS.API, prefix: null },
   contact: { tier: GOLDEN_TIERS.WITNESS, prefix: 'cont' },
   building: { tier: GOLDEN_TIERS.WITNESS, prefix: 'bldg' },
@@ -86,7 +85,8 @@ const GOLDEN_TEMPLATES = Object.freeze({
   '/o/[workspace]/storage/[id]': ['storage'],
   // ── Δημόσιες πόρτες με υπογεγραμμένο token (ADR-876) — κρίνονται ΑΝΩΝΥΜΑ ──
   '/attendance/check-in/[token]': ['attendanceToken'],
-  '/vendor/quote/[token]': ['vendorToken'],
+  // ⚠️ Η πύλη προμηθευτή ΔΕΝ είναι εδώ (ADR-876 §5 Φ7): ζει στο ΣΤΑΤΙΚΟ `/vendor/quote` και το
+  //    διαπιστευτήριο στο fragment — ο server δεν το βλέπει ποτέ, άρα δεν υπάρχει τίποτα να δεθεί.
 });
 
 /**
@@ -112,7 +112,7 @@ const GOLDEN_PUBLIC_TEMPLATES = Object.freeze(
  * Ονόματα από το `src/config/environment-contract.ts` (άγκυρα Γ7). Το workflow τα
  * γεννά **ανά run** (`openssl rand` + `::add-mask::`): κανένα μυστικό παραγωγής (ADR-788).
  */
-const GOLDEN_EPHEMERAL_SECRETS = Object.freeze(['VENDOR_PORTAL_SECRET', 'ATTENDANCE_QR_SECRET']);
+const GOLDEN_EPHEMERAL_SECRETS = Object.freeze(['ATTENDANCE_QR_SECRET']);
 
 /**
  * Οι τιμές της βαθμίδας `value` — μέλη κλειστού συνόλου τύπων (άγκυρα Γ2β: το

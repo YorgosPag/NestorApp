@@ -1,6 +1,6 @@
 /**
  * Vendor Portal Submit Service — encapsulates the Admin-SDK Quote write path
- * used by the public POST `/api/vendor/quote/[token]` route.
+ * used by the public POST `/api/vendor/quote` route (link in `Authorization: Bearer`, ADR-876 §5).
  *
  * Lives outside `quote-service.ts` because vendor portal has no `AuthContext` —
  * vendor identity is bound to the HMAC token, not Firebase auth. We therefore
@@ -51,16 +51,17 @@ export interface ExistingPortalQuote {
 }
 
 /** Ό,τι χρειάζεται για να βρεθεί η απάντηση μιας πρόσκλησης. */
-export type PortalQuoteOwner = Pick<VendorInvite, 'companyId' | 'rfqId' | 'vendorContactId' | 'quoteId'>;
+export type PortalQuoteOwner = Pick<VendorInvite, 'companyId' | 'rfqId' | 'quoteId'>;
 
 /**
  * **Η απάντηση ΑΥΤΗΣ της πρόσκλησης** (ADR-876 §5 Σ19) — με ταυτότητα (`invite.quoteId`), όχι με ερώτημα.
  * Φράχτης: ίδια εταιρεία (φύλακας payload) **και** ίδιο RFQ — αλλιώς «καμία».
+ *
+ * 🔴 **Κανένα ερώτημα, καμία εφεδρεία** (Φ7): χωρίς `quoteId` η πρόσκληση **δεν έχει** απάντηση.
+ * Ερώτημα με `vendorContactId` είναι ακριβώς το Σ19 (χειροκίνητο email ⇒ `''` ⇒ ξένη προσφορά).
  */
 export async function findExistingPortalQuote(owner: PortalQuoteOwner): Promise<ExistingPortalQuote | null> {
-  if (owner.quoteId) return readOwnedPortalQuote(owner, owner.quoteId);
-  // ⏳ Φ7: έγγραφα προ-Σ19 χωρίς `quoteId`. ΜΟΝΟ με πραγματική επαφή — το `''` δεν ξεχωρίζει προμηθευτές.
-  return owner.vendorContactId ? findLegacyPortalQuote(owner) : null;
+  return owner.quoteId ? readOwnedPortalQuote(owner, owner.quoteId) : null;
 }
 
 async function readOwnedPortalQuote(owner: PortalQuoteOwner, quoteId: string): Promise<ExistingPortalQuote | null> {
@@ -69,23 +70,6 @@ async function readOwnedPortalQuote(owner: PortalQuoteOwner, quoteId: string): P
     const data = snap.data();
     if (!data || !isPayloadOwnedByCompany(data, owner.companyId) || data.rfqId !== owner.rfqId) return null;
     return { id: snap.id, data: { ...data, id: snap.id } as Quote };
-  }, null);
-}
-
-async function findLegacyPortalQuote(owner: PortalQuoteOwner): Promise<ExistingPortalQuote | null> {
-  const { companyId, rfqId, vendorContactId } = owner;
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.QUOTES)
-      .where('companyId', '==', companyId)
-      .where('rfqId', '==', rfqId)
-      .where('vendorContactId', '==', vendorContactId)
-      .where('source', '==', 'portal')
-      .limit(1)
-      .get();
-    if (snap.empty) return null;
-    const doc = snap.docs[0];
-    return { id: doc.id, data: { id: doc.id, ...doc.data() } as Quote };
   }, null);
 }
 

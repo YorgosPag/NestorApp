@@ -52,9 +52,10 @@ describe('ADR-876 — σελίδες όπου η διεύθυνση είναι �
   test('Π0 — ο ανιχνευτής ΔΕΝ είναι τυφλός: βρίσκει τις γνωστές σελίδες', () => {
     const templates = tokenRoutes().map((route) => route.template);
     expect(templates).toEqual(
-      expect.arrayContaining(['/vendor/quote/[token]', '/attendance/check-in/[token]', '/shared/[token]', '/invite/[token]']),
+      expect.arrayContaining(['/mandate/[token]', '/attendance/check-in/[token]', '/shared/[token]', '/invite/[token]']),
     );
-    expect(templates.length).toBeGreaterThanOrEqual(11);
+    // 11 → 10: η `/vendor/quote/[token]` αποσύρθηκε στη Φ7 (ADR-876 §5) — το διαπιστευτήριο ζει στο fragment.
+    expect(templates.length).toBeGreaterThanOrEqual(10);
   });
 
   test('Π1 — 🔴 ΚΑΜΙΑ σελίδα με token ΜΕΣΑ στον χώρο: ο παραλήπτης δεν έχει λογαριασμό', () => {
@@ -114,23 +115,19 @@ describe('ADR-876 Ε3 — ο σύνδεσμος άρνησης οδηγεί σε
     expect(isInsideWorkspace('/vendor/quote')).toBe(false);
   });
 
+  // Φ7: η ΜΟΝΗ είσοδος πρόθεσης είναι το fragment (η ανακατεύθυνση `?intent=` της παλιάς σελίδας αποσύρθηκε).
   test.each([
-    ['πίνακας', ['decline', 'decline']],
-    ['σκουπίδι', 'delete'],
-    ['απουσία', undefined],
-  ])('Α3 — %s ⇒ καμία πρόθεση', (_label, raw) => {
-    expect(links().asVendorPortalIntent(raw)).toBeNull();
-    expect(links().readVendorPortalFragment('#t=x&intent=delete').intent).toBeNull();
+    ['σκουπίδι', '#t=x&intent=delete'],
+    ['κεφαλαία', '#t=x&intent=DECLINE'],
+    ['κενό', '#t=x&intent='],
+    ['απουσία', '#t=x'],
+  ])('Α3 — %s ⇒ καμία πρόθεση, το διαπιστευτήριο μένει', (_label, hash) => {
+    expect(links().readVendorPortalFragment(hash)).toEqual({ token: 'x', intent: null });
   });
 
   test('Α4 — οι σελίδες της πύλης ΔΕΝ γράφουν: η άρνηση φεύγει μόνο από POST (Safe Links ανοίγουν κάθε GET)', () => {
-    const pages = [
-      path.join(APP_DIR, '(auth)', 'vendor', 'quote', 'page.tsx'),
-      path.join(APP_DIR, '(auth)', 'vendor', 'quote', TOKEN_SEGMENT, 'page.tsx'),
-    ].map(read);
-    for (const page of pages) {
-      expect(page).not.toMatch(/markInvite|markUsed|revokeVendor|runTransaction|getAdminFirestore|resolveVendorInvite/);
-    }
+    const page = read(path.join(APP_DIR, '(auth)', 'vendor', 'quote', 'page.tsx'));
+    expect(page).not.toMatch(/markInvite|markUsed|revokeVendor|runTransaction|getAdminFirestore|resolveVendorInvite/);
   });
 });
 
@@ -141,7 +138,8 @@ describe('ADR-876 Ε3 — ο σύνδεσμος άρνησης οδηγεί σε
  * Κ-β ο σύνδεσμος του email κουβαλά το διαπιστευτήριο ΜΟΝΟ στο fragment (ποτέ σε διαδρομή/query) ·
  * Κ-γ κανένα αίτημα του client δεν βάζει το διαπιστευτήριο σε URL — μόνο `Authorization` ·
  * Κ-δ η σελίδα `/vendor/quote` (χωρίς `[token]`) φοράει κι αυτή τις δηλώσεις σελίδας-διαπιστευτηρίου ·
- * Κ-ε κανένα δημόσιο API της πύλης δεν ζει κάτω από `[token]`.
+ * Κ-ε κανένα δημόσιο API της πύλης δεν ζει κάτω από `[token]` ·
+ * Κ-ζ (Φ7) ΜΙΑ μορφή διεύθυνσης: καμία σελίδα της πύλης με το διαπιστευτήριο σε διαδρομή.
  */
 describe('ADR-876 §5 — το διαπιστευτήριο εκτός διεύθυνσης και εκτός εγγράφου πρόσκλησης', () => {
   const ORIGIN = 'https://nestor.example';
@@ -190,5 +188,11 @@ describe('ADR-876 §5 — το διαπιστευτήριο εκτός διεύ�
   test('Κ-ε — κανένα δημόσιο API της πύλης κάτω από `[token]`', () => {
     const apiTemplates = fs.existsSync(path.join(APP_DIR, 'api', 'vendor', 'quote', TOKEN_SEGMENT));
     expect(apiTemplates).toBe(false);
+  });
+
+  test('Κ-ζ — Φ7: η πύλη έχει ΜΙΑ διεύθυνση — καμία σελίδα κάτω από `/vendor/quote/<δυναμικό>`', () => {
+    const templates = oracle.enumerateRoutes(ROOT).map((route) => route.template);
+    expect(templates.filter((template) => template.startsWith('/vendor/quote/'))).toEqual([]);
+    expect(templates).toContain('/vendor/quote');
   });
 });

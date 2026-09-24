@@ -9,8 +9,9 @@
  *
  * Ο1 με `quoteId` ⇒ ανάγνωση με ταυτότητα, **κανένα** ερώτημα ·
  * Ο2 φράχτης: ξένη εταιρεία ή άλλο RFQ ⇒ καμία ·
- * Ο3 χωρίς `quoteId` και χωρίς επαφή (`''`) ⇒ καμία — **ποτέ** ερώτημα με κενό κλειδί ·
- * Ο4 προ-Σ19 με πραγματική επαφή ⇒ το παλιό ερώτημα (⏳ Φ7).
+ * Ο3 χωρίς `quoteId` (πριν την πρώτη υποβολή) ⇒ καμία, **καμία** ανάγνωση ·
+ * Ο4 (Φ7) ακόμη και με **πραγματική** επαφή ⇒ καμία — η εφεδρεία ερωτήματος αποσύρθηκε, η
+ *    ταυτότητα της απάντησης είναι **μόνο** το `quoteId` της πρόσκλησης.
  */
 
 jest.mock('server-only', () => ({}));
@@ -39,7 +40,6 @@ import { findExistingPortalQuote, type PortalQuoteOwner } from '../vendor-portal
 const owner = (over: Partial<PortalQuoteOwner> = {}): PortalQuoteOwner => ({
   companyId: 'co_1',
   rfqId: 'rfq_1',
-  vendorContactId: '',
   quoteId: 'qt_A',
   ...over,
 });
@@ -64,15 +64,21 @@ describe('findExistingPortalQuote', () => {
     expect(await findExistingPortalQuote(owner())).toBeNull();
   });
 
-  it("Ο3 — χωρίς quoteId και με vendorContactId '' ⇒ null, ΚΑΝΕΝΑ ερώτημα (δύο προμηθευτές ≠ μία προσφορά)", async () => {
-    expect(await findExistingPortalQuote(owner({ quoteId: undefined }))).toBeNull();
+  it('Ο3 — χωρίς quoteId ⇒ null, ΚΑΜΙΑ ανάγνωση (ούτε έγγραφο, ούτε ερώτημα)', async () => {
+    expect(await findExistingPortalQuote(owner({ quoteId: null }))).toBeNull();
+    expect(mockDocGet).not.toHaveBeenCalled();
     expect(mockWhere).not.toHaveBeenCalled();
-    expect(mockQueryGet).not.toHaveBeenCalled();
   });
 
-  it('Ο4 — προ-Σ19 με πραγματική επαφή ⇒ το ερώτημα της επαφής (⏳ Φ7)', async () => {
+  it.each([
+    ['χειροκίνητο email', ''],
+    ['πραγματική επαφή', 'cont_1'],
+  ])('Ο4 — Φ7: χωρίς quoteId, με %s ⇒ null — ΚΑΜΙΑ εφεδρεία ερωτήματος (Σ19)', async (_label, vendorContactId) => {
+    // Ο route περνά ολόκληρη την πρόσκληση: η επαφή ΥΠΑΡΧΕΙ στο αντικείμενο και ΠΡΕΠΕΙ να αγνοηθεί.
+    const invite = { ...owner({ quoteId: null }), vendorContactId };
     mockQueryGet.mockResolvedValue({ empty: false, docs: [doc({ companyId: 'co_1', rfqId: 'rfq_1' })] });
-    expect(await findExistingPortalQuote(owner({ quoteId: null, vendorContactId: 'cont_1' }))).toMatchObject({ id: 'qt_A' });
-    expect(mockWhere).toHaveBeenCalledWith('vendorContactId', '==', 'cont_1');
+    expect(await findExistingPortalQuote(invite)).toBeNull();
+    expect(mockWhere).not.toHaveBeenCalled();
+    expect(mockQueryGet).not.toHaveBeenCalled();
   });
 });

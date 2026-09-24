@@ -119,7 +119,7 @@ jobs:
       #    tokens του emulator, όχι της παραγωγής (ADR-788).
       - name: 🔐 Εφήμερα διαπιστευτήρια (persona + υπογραφή golden tokens)
         run: |
-          for NAME in DEMO_SEED_PASSWORD VENDOR_PORTAL_SECRET ATTENDANCE_QR_SECRET; do
+          for NAME in DEMO_SEED_PASSWORD ATTENDANCE_QR_SECRET; do
             VALUE="$(openssl rand -hex 32)"
             echo "::add-mask::${VALUE}"
             echo "${NAME}=${VALUE}" >> "$GITHUB_ENV"
@@ -203,7 +203,6 @@ jobs:
             -e FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
             -e FIREBASE_PROJECT_ID=demo-nestor-oracle \
             -e GCLOUD_PROJECT=demo-nestor-oracle \
-            -e VENDOR_PORTAL_SECRET \
             -e ATTENDANCE_QR_SECRET \
             "${{ steps.image.outputs.ref }}"
           for i in $(seq 1 90); do

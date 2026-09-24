@@ -1061,8 +1061,7 @@
         "rfq_fanout": "Invitation email (RFQ)",
         "copy_link": "Copy",
         "email_resend": "Resend",
-        "self_service": "Vendor request",
-        "legacy": "Legacy link"
+        "self_service": "Vendor request"
       },
       "state": {
         "active": "Active",

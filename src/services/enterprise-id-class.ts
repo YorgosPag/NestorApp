@@ -376,8 +376,6 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
   generateRfqId(): string { return this.generateId(P.RFQ).id; }
   generateVendorInviteId(): string { return this.generateId(P.VENDOR_INVITE).id; }
   generateVendorInviteCredentialId(): string { return this.generateId(P.VENDOR_INVITE_CREDENTIAL).id; }
-  /** ADR-876 §5 — σύνδεσμος παλιάς μορφής: seed = sha256(nonce), ώστε το ID να μη φανερώνει το nonce. */
-  generateLegacyVendorInviteCredentialId(nonceHash: string): string { return this.generateDeterministicId(P.VENDOR_INVITE_CREDENTIAL, nonceHash); }
   generateTradeId(): string { return this.generateId(P.TRADE).id; }
   generateSourcingEventId(): string { return this.generateId(P.SOURCING_EVENT).id; }
   generateRfqLineId(): string { return this.generateId(P.RFQ_LINE).id; }

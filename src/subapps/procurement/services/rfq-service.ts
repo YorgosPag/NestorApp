@@ -252,7 +252,7 @@ export async function listRfqs(
  * | Καλών | Τι δίνει ως `companyId` | Ταυτότητα |
  * |---|---|---|
  * | `api/rfqs/[id]` (και οι υπηρεσίες σύγκρισης/προσκλήσεων) | `ctx.companyId` | ταυτοποιημένος χρήστης |
- * | `api/vendor/quote/[token]`, `…/decline`, `app/vendor/quote/[token]` | `invite.companyId` — τιμή από **άλλο έγγραφο** | **δημόσιο HMAC token**, μηδέν `ctx`, μηδέν `globalRole` |
+ * | `api/vendor/quote`, `…/decline`, `…/renew` (σύνδεσμος σε `Authorization: Bearer`, ADR-876 §5) | `invite.companyId` — τιμή από **άλλο έγγραφο** | **δημόσιο HMAC token**, μηδέν `ctx`, μηδέν `globalRole` |
  *
  * ⚠️ Στο δημόσιο μονοπάτι **δεν υπάρχει ρόλος να ρωτηθεί**, άρα το
  * `concealCrossTenant` δεν έχει τι να κρίνει: ο κλάδος `reveal` προϋποθέτει

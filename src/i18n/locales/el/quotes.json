@@ -1061,8 +1061,7 @@
         "rfq_fanout": "Email πρόσκλησης (RFQ)",
         "copy_link": "Αντιγραφή",
         "email_resend": "Επαναποστολή",
-        "self_service": "Αίτημα προμηθευτή",
-        "legacy": "Παλιός σύνδεσμος"
+        "self_service": "Αίτημα προμηθευτή"
       },
       "state": {
         "active": "Ενεργός",

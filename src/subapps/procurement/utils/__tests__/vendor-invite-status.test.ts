@@ -2,7 +2,7 @@
  * @fileoverview Η κατάσταση πρόσκλησης — αποθηκευμένη και ΠΑΡΑΓΩΓΗ (ADR-876 §5 Σ5).
  *
  * Κ1 η λήξη είναι παράγωγη, μόνο για ζωντανή πρόσκληση · Κ2 `revoked` ≠ `expired` ·
- * Κ3 άγνωστη/προ-migration τιμή ⇒ κλειστό (`revoked`) · Κ4 άγνωστη λήξη ⇒ ΟΧΙ «έληξε».
+ * Κ3 άγνωστη τιμή (και το παράγωγο `expired` αν αποθηκευτεί) ⇒ κλειστό (`revoked`) · Κ4 άγνωστη λήξη ⇒ ΟΧΙ «έληξε».
  */
 
 import {
@@ -33,7 +33,7 @@ describe('vendor invite status', () => {
     expect(vendorInviteDisplayStatus({ status: 'revoked', expiresAt: future }, NOW)).toBe('revoked');
   });
 
-  it("Κ3 — 'expired' προ-migration και άγνωστες τιμές ⇒ revoked (κλειστό εξ ορισμού)", () => {
+  it("Κ3 — αποθηκευμένο 'expired' (τιμή ΜΟΝΟ οθόνης) και άγνωστες τιμές ⇒ revoked (κλειστό εξ ορισμού)", () => {
     expect(normalizeInviteStatus('expired')).toBe('revoked');
     expect(normalizeInviteStatus('whatever')).toBe('revoked');
     expect(isLiveInviteStatus(normalizeInviteStatus('expired'))).toBe(false);

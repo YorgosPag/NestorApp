@@ -29,7 +29,6 @@ module.exports = {
   // Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ χρήσεις: η σκέτη διαδρομή, το Bearer, η συλλογή προσκλήσεων.
   'vendor-portal': {
     shouldMatch: `const ref = collection(db, 'vendor_invites'); await addDoc(ref, invite);
-const t = collection(db, 'vendor_invite_tokens'); await addDoc(t, { nonce });
 await db.collection(COLLECTIONS.VENDOR_INVITE_CREDENTIALS).doc(id).set(credential);
 await fetch(\`/api/vendor/quote/\${encodeURIComponent(token)}\`);`,
     shouldSkip: `await fetch('/api/vendor/quote', { headers: { Authorization: \`Bearer \${token}\` } });

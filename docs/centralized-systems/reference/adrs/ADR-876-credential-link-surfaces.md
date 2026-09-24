@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ACCEPTED — Βήματα 1-3 υλοποιημένα (`f545dcb7`) · Βήμα 4 (σκλήρυνση, §5) `67ed0527` · επαλήθευση στον browser + διορθώσεις Σ15-Σ21 (§5.8) χωρίς commit · Φ7 (απόσυρση legacy) μετά τη migration |
+| **Status** | ACCEPTED — Βήματα 1-3 υλοποιημένα (`f545dcb7`) · Βήμα 4 (σκλήρυνση, §5) `67ed0527` · επαλήθευση στον browser + διορθώσεις Σ15-Σ21 (§5.8) `8a317580` · **Φ7 (απόσυρση παλιάς μορφής, §5.9) υλοποιήθηκε 2026-09-24, χωρίς commit** |
 | **Date** | 2026-09-23 |
 | **Προέλευση** | ADR-875 §10.5 *(εύρημα παραγωγής του χρησμού: η πύλη προμηθευτή → `/login`)* |
 | **Σχετικά** | ADR-327 §7/§11 *(πύλη προμηθευτή)* · ADR-170 *(QR παρουσιών)* · ADR-787 §5.3 *(πρόθεμα χώρου)* · ADR-777 §8.33 *(`signed-token`)* · ADR-841 Α21.18/Α21.21 · ADR-781/875 *(χρησμός 3.51)* |
@@ -114,7 +114,7 @@
 `const { … } = await params`. Η σελίδα γράφτηκε ξανά με δύο αποδομήσεις — **δεν** χαλαρώθηκε ο ανιχνευτής. Και η Π3
 έπιασε αρχικά `no-referrer` μέσα σε **σχόλιο** (ψευδώς θετικό) ⇒ κρίνει πλέον μόνο γραμμές κώδικα.
 
-## 5. Βήμα 4 — σκλήρυνση: «ένας σύνδεσμος = ένα διαπιστευτήριο» (ΥΛΟΠΟΙΗΘΗΚΕ 2026-09-24 · commit `67ed0527` · διορθώσεις επαλήθευσης §5.8 χωρίς commit)
+## 5. Βήμα 4 — σκλήρυνση: «ένας σύνδεσμος = ένα διαπιστευτήριο» (ΥΛΟΠΟΙΗΘΗΚΕ 2026-09-24 · commit `67ed0527` · διορθώσεις επαλήθευσης §5.8 `8a317580` · Φ7 §5.9)
 
 ### 5.1 Τι μέτρησε το SSoT audit (2026-09-23/24) — πέρα από τα Ε4/Ε5
 
@@ -156,11 +156,11 @@ HMAC **και** `nonceHash` της έκδοσης — διαρροή του `VEN
 | **Πόρτα** | `server/vendor-portal/vendor-link-door.ts` | Bearer (SSoT) → υπογραφή → **σύνορο ιδεμποτίας** (principal = `vendor-link:<credentialId>`, **όχι** `anon`: το αποτύπωμα δεν περιέχει την κεφαλίδα) → αναλυτής |
 | **Δημόσιο API** | `api/vendor/quote/{route,decline,renew}` | token **μόνο** σε `Authorization: Bearer` |
 | **Σελίδα** | `(auth)/vendor/quote/page.tsx` + `VendorPortalGate` + `useVendorPortalLink` | κέλυφος· ο client διαβάζει `#t=`, το σβήνει (`replaceState`), το κρατά σε `sessionStorage` της καρτέλας, φορτώνει με Bearer |
-| **Παλιά σελίδα** | `(auth)/vendor/quote/[token]/page.tsx` | **μόνο** ανακατεύθυνση σε `#t=` (καμία βάση — Α4) · διαγράφεται στη Φ7 |
+| ~~**Παλιά σελίδα**~~ | ~~`(auth)/vendor/quote/[token]/page.tsx`~~ | **ΔΙΑΓΡΑΦΗΚΕ στη Φ7 (§5.9)** — ΜΙΑ διεύθυνση: `/vendor/quote#t=…` |
 | **Γραφείο** | `…/vendor-invite-links-service.ts` · `api/rfqs/[id]/invites/[inviteId]/{links, links/[credentialId]/revoke, resend, revoke}` · `invite-route.ts` | αντιγραφή = **νέος** σύνδεσμος, URL μία φορά · λίστα μεταδεδομένων (ποτέ hash) · ανάκληση ενός · επαναποστολή = νέος σύνδεσμος · ίχνος `vendor_invite` (νέα οντότητα audit) · έλεγχος **και** του RFQ της διαδρομής |
-| **Κατάσταση** | `utils/vendor-invite-status.ts` | `revoked` αποθηκευμένη · **`expired` παράγωγη** του `expiresAt` · `'expired'` προ-migration ⇒ `revoked` |
+| **Κατάσταση** | `utils/vendor-invite-status.ts` | `revoked` αποθηκευμένη · **`expired` παράγωγη** του `expiresAt` (ΠΟΤΕ αποθηκευμένη) · άγνωστη τιμή ⇒ `revoked` (κλειστό εξ ορισμού) |
 | **Αυτοεξυπηρέτηση** | `…/vendor-link-renew.ts` | μόνο στο καταχωρημένο email · RFQ `draft/active` · λήξη = min(7 μέρες, προθεσμία) · `withinRecipientQuota` (3/24ω) + `withHeavyRateLimit` + ιδεμποτία · 202 ουδέτερο **πάντα** |
-| **Migration** | `…/vendor-invite-credential-migration.ts` (καθαρός) + `scripts/migrations/migrate-vendor-invite-credentials.ts` · `npm run migrate:vendor-invite-credentials [-- --apply]` | ωμό `token` → διαπιστευτήριο `legacy` με **ντετερμινιστικό ID από sha256(nonce)** ⇒ ο σύνδεσμος που ήδη κρατά ο προμηθευτής **συνεχίζει να ανοίγει** (άγκυρα Μ1) · ιδεμποτικό · αναφέρει τη **μέγιστη λήξη ζωντανού παλιού συνδέσμου** |
+| ~~**Migration**~~ | ~~`…/vendor-invite-credential-migration.ts` + `scripts/migrations/migrate-vendor-invite-credentials.ts`~~ | **ΔΙΑΓΡΑΦΗΚΕ στη Φ7 (§5.9)** χωρίς να τρέξει ποτέ: η παραγωγή είχε **0** προσκλήσεις. Ο κώδικάς της ζει στο git (`67ed0527`) |
 
 **Διαγράφηκαν**: `vendor-portal-token-service.ts` (τα timestamps → `admin-client-timestamp.ts`) · `api/vendor/quote/[token]/*` ·
 `open-invite.ts` · `readVendorPortalIntent` · `getVendorInviteByToken` · `VendorInvite.token`.
@@ -189,21 +189,23 @@ HMAC **και** `nonceHash` της έκδοσης — διαρροή του `VEN
 το επιβεβαιώνει μόνο ο Giorgio. Οι διορθώσεις της §5.8 είναι **νέο** commit· δεν αλλάζουν σχήμα που χρειάζεται migration
 (το `VendorInvite.quoteId` είναι προαιρετικό, με εφεδρεία για τα παλιά έγγραφα).
 
+**Κατάσταση Φ7 (2026-09-24)**: η παραγωγή μετρήθηκε με **0** προσκλήσεις ⇒ τα βήματα 1 και 3 δεν είχαν αντικείμενο και η Φ7 έγινε **αμέσως** (§5.9).
+
 ### 5.5 Άγκυρες (όλες πράσινες, μεταλλάξεις 4/4 κόκκινες)
 
 | Σουίτα | Τι κλειδώνει |
 |---|---|
-| `vendor-invite-credential.test.ts` (Δ1-Δ6) | κύκλος έκδοση→ανάγνωση με **πραγματική** κρυπτογραφία · **Δ3: διαρροή μυστικού δεν αρκεί** · παλιά μορφή → ID που δεν φανερώνει το nonce |
+| `vendor-invite-credential.test.ts` (Δ1-Δ6) | κύκλος έκδοση→ανάγνωση με **πραγματική** κρυπτογραφία · **Δ3: διαρροή μυστικού δεν αρκεί** · **Δ4 (Φ7): παλιά μορφή ⇒ `invalid_link`, ακριβώς 3 πεδία** |
 | `vendor-invite-resolver.test.ts` (Α1-Α4) | κάθε κελί του πίνακα σκοπός × κατάσταση · άρνηση ≠ ανάκληση · φράχτης μισθωτή |
 | `vendor-link-door.test.ts` (Π1-Π6) | 401 χωρίς Bearer · 400 πριν από βάση · **principal = σύνδεσμος** · token από διαδρομή αγνοείται |
 | `vendor-link-renew.test.ts` (Ρ1-Ρ5) | μόνο καταχωρημένος παραλήπτης · κλειστό RFQ · ποσόστωση · λήξη ≤ προθεσμία |
-| `vendor-invite-credential-migration.test.ts` (Μ1-Μ5) | **ο υπάρχων σύνδεσμος ανοίγει μετά τη migration** · ιδεμποτία · μέγιστη ζωντανή λήξη |
+| ~~`vendor-invite-credential-migration.test.ts` (Μ1-Μ5)~~ | **διαγράφηκε με το migration στη Φ7 (§5.9)** |
 | `vendor-invite-status.test.ts` (Κ1-Κ4) | η λήξη είναι παράγωγη · `revoked` ≠ `expired` · άγνωστο ⇒ κλειστό |
 | `credential-link-page.test.ts` (Α1-Α4 · **Κ-α..Κ-ε**) | fragment · καμία σελίδα γράφει · `VendorInvite` χωρίς `token` · κανένα fetch με token σε URL · κανένα API κάτω από `[token]` |
 | `rfq-service.test.ts` | fan-out: πρόσκληση **χωρίς** token + διαπιστευτήριο στο ίδιο batch |
 | `vendor-invite-resolver.test.ts` (**Α2′ · Α3′ · Α5**, §5.8) | ανακλημένος σύνδεσμος ρωτά την πρόσκληση «γιατί» (Σ21) · φράχτης payload (Σ15) · `permits` ≡ κριτής αιτημάτων (Σ16) |
 | `vendor-invite-service.test.ts` (Τ1-Τ3, §5.8) | επαφή/πρόσκληση χωρίς ή με κενό `companyId` ⇒ καμία (Σ15) · ανάκληση πρόσκλησης ιδεμποτική, `'expired'` ποτέ σιωπηλή επιτυχία (Σ20) |
-| `vendor-portal-quote-owner.test.ts` (Ο1-Ο4, §5.8) | **μία πρόσκληση = μία απάντηση**: ανάγνωση με `quoteId` · ποτέ ερώτημα με κενό `vendorContactId` (Σ19) |
+| `vendor-portal-quote-owner.test.ts` (Ο1-Ο4, §5.8) | **μία πρόσκληση = μία απάντηση**: ανάγνωση με `quoteId` · ποτέ ερώτημα με `vendorContactId` — ούτε κενό (Σ19) ούτε πραγματικό (Φ7) |
 | `vendor-invite-status.test.ts` (**Κ5**, §5.8) | ΕΝΑ παράθυρο επεξεργασίας, από τη δοσμένη στιγμή (Σ17) |
 
 Μεταλλάξεις: σύγκριση σε σταθερό χρόνο → πάντα αληθής · έλεγχος `revoked` αφαιρεμένος · ποσόστωση παρακαμπτόμενη ·
@@ -229,6 +231,8 @@ principal `anon` — **4/4 κοκκίνισαν**. §5.8: επιστροφή σ�
 χρησμός δεν μπορεί να την αποδώσει με δεδομένα στο SSR). Η σπορά (`emulator-seed-golden.ts`) διαβάζει πλέον το token
 από το fragment. Το `golden-catalog.js` και το `.i18n-ssr-oracle-baseline.json` **δεν αγγίχτηκαν** — η αναπροσαρμογή
 της πόρτας στον κατάλογο και η ξανασπορά είναι απόφαση Giorgio, **μετά** το push Φ2.2+Φ2.4 (§7).
+
+✅ **Αποφασίστηκε στη Φ7 (§5.9)**: η πόρτα βγαίνει από τον κατάλογο (δεν αντικαθίσταται — το `/vendor/quote` είναι στατικό)· η baseline μένει για το επόμενο τρέξιμο του χρησμού.
 
 ### 5.8 Επαλήθευση στον browser (2026-09-24, emulator) — και ό,τι βρήκε
 
@@ -264,6 +268,60 @@ principal `anon` — **4/4 κοκκίνισαν**. §5.8: επιστροφή σ�
 **Όχι στον browser**: το πάνελ «Σύνδεσμοι» του γραφείου (απαιτεί σύνδεση με κωδικό — δεν πληκτρολογείται από πράκτορα)·
 ελέγχθηκαν τα routes που καλεί. Οπτικός έλεγχος: Giorgio.
 
+### 5.9 Φ7 — απόσυρση της παλιάς μορφής: ΜΙΑ μορφή συνδέσμου (ΥΛΟΠΟΙΗΘΗΚΕ 2026-09-24, χωρίς commit)
+
+**Προϋπόθεση, μετρημένη** (Firestore παραγωγής μέσω MCP, 2026-09-24, με πραγματικά δεδομένα σε 73 συλλογές):
+`vendor_invites` **0** · `vendor_invite_credentials` **0** · `vendor_invite_tokens` **0** · `rfqs` **0**. Άρα το
+expand/contract της §5.4 **δεν είχε αντικείμενο**. Δεν κυκλοφορεί **κανένας** σύνδεσμος παλιάς μορφής, οπότε η Φ7 δεν
+περιμένει «μέγιστη λήξη».
+
+**SSoT audit (grep)**: `vendor_invite_tokens` · `VENDOR_INVITE_TOKENS` · `generateLegacyVendorInviteCredentialId` ·
+`findLegacyPortalQuote` · `vendor/quote/[token]` · `'legacy'` · `'expired'` · `migrate:vendor-invite-credentials`. Τι βρέθηκε
+και τι έγινε:
+
+| Σημείο | Πράξη |
+|---|---|
+| `parseVendorLink` — κλάδος 4 πεδίων | **σβήστηκε**. Εύρημα: το `decodeSignedToken(…, N)` κρίνει «**τουλάχιστον** N» (`minFields`) — η γραμματική εδώ είναι «**ακριβώς** 3» ⇒ ρητός έλεγχος `LINK_FIELD_COUNT`. Χωρίς αυτόν, ένας έγκυρος σύνδεσμος με **παραπανίσιο** πεδίο θα γινόταν δεκτός (μετάλλαξη Μ1) |
+| `generateLegacyVendorInviteCredentialId` (class · convenience · barrel) | **σβήστηκε** — καταναλωτές μόνο ο αναλυτής + η migration |
+| `(auth)/vendor/quote/[token]/page.tsx` | **σβήστηκε** · `vendorPortalLocation` **και** `asVendorPortalIntent` έμειναν **εσωτερικά** του `vendor-portal-links` (μοναδικός εξωτερικός καταναλωτής ήταν η σελίδα· τα tests είναι εκτός γραφήματος knip ⇒ αλλιώς νέο νεκρό export για το 3.22). Η άγκυρα Α3 περνά πια από τη **μόνη** είσοδο πρόθεσης, το fragment |
+| `vendor_invite_tokens` | κανόνας (`firestore.rules`) · `COLLECTIONS` · `coverage-manifest` · pattern του μητρώου `vendor-portal` + η απόδειξή του (`pattern-proofs.js`) — **σβήστηκαν**. Φρουρός για συλλογή που δεν υπάρχει = αδρανής φρουρός |
+| `findLegacyPortalQuote` + εφεδρεία | **σβήστηκε** · `PortalQuoteOwner` χωρίς `vendorContactId` · `VendorInvite.quoteId` **υποχρεωτικό** `string \| null` (ο ΜΟΝΟΣ κατασκευαστής, `vendor-invite-issue`, το γράφει ήδη `null`) |
+| προέλευση `'legacy'` (`VENDOR_CREDENTIAL_ORIGINS` · `Exclude<…>` · `quotes.json` el/en · `src/types/i18n.ts` ξαναπαραγμένο) | **σβήστηκε** |
+| migration (script · καθαρός σχεδιαστής · test Μ1-Μ5 · `npm run migrate:…`) | **σβήστηκε** — βλ. «Απόφαση» |
+| `normalizeInviteStatus` · Σ20 (`'expired'` ⇒ 409) | **ΚΡΑΤΗΘΗΚΑΝ, με νέο λόγο**: δεν είναι κώδικας μετάβασης αλλά **fail-closed**. Το `'expired'` είναι τιμή **μόνο οθόνης** (παράγωγη)· αν βρεθεί αποθηκευμένο, είναι άγνωστη τιμή ⇒ κλειστό |
+| χρησμός 3.51: `GOLDEN_TEMPLATES['/vendor/quote/[token]']` · οντότητα `vendorToken` · `createVendorToken` στη σπορά · εφήμερο `VENDOR_PORTAL_SECRET` (κατάλογος + workflow) | **σβήστηκαν** — βλ. «Απόφαση» |
+| σχόλια που περιέγραφαν την **τωρινή** κατάσταση (`rfq-service` πίνακας καλούντων · `first-contacts/guest` · `vendor-portal-submit-service`) | διορθώθηκαν. Τα σχόλια **ιστορικής** αφήγησης («ήταν γραμμένη τρεις φορές…») μένουν |
+
+**Απόφαση — το migration σβήνεται (όχι «μένει ως ιστορικό»)**. Έρευνα: ο κανόνας «μη σβήνεις ό,τι εφαρμόστηκε»
+(Flyway: checksum στο history table) αφορά **αλυσίδες σχήματος**. Αυτό εδώ ήταν **data backfill** μίας χρήσης. Το πρότυπο των
+μεγάλων για τέτοια είναι το Shopify [`maintenance_tasks`](https://github.com/Shopify/maintenance_tasks) (*«delete the Task code
+if you no longer need it»*) και το Strangler Fig της [Microsoft](https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig):
+μετά τη μετάβαση ο παλιός δρόμος **αφαιρείται**, αλλιώς μένει zombie code. **Πού πάμε παραπέρα**: το migration **ΔΕΝ ΜΠΟΡΟΥΣΕ** να
+μείνει χωρίς να κρατήσει ζωντανή τη γραμματική που σβήνει η Φ7 (`generateLegacy…` · ανάγνωση 4 πεδίων · `VENDOR_INVITE_TOKENS`).
+Ένα «ιστορικό» που χρειάζεται τον παλιό κώδικα για να μεταγλωττιστεί **δεν είναι** ιστορικό. Ιστορικό = το git (`67ed0527`) + αυτό το ADR.
+
+**Απόφαση — χρησμός 3.51**: η πόρτα `/vendor/quote/[token]` **βγαίνει** από τον κατάλογο golden (και η άγκυρα Γ1 δεν το αφήνει
+προαιρετικό: ο κατάλογος πρέπει να ταιριάζει ΑΚΡΙΒΩΣ με τις διαδρομές). **Δεν** αντικαθίσταται με `/vendor/quote`: είναι
+**στατική**, και το διαπιστευτήριο ζει στο fragment ⇒ ο server δεν το βλέπει ποτέ ⇒ δεν υπάρχει τίποτα να δεθεί με golden.
+⚠️ Η `.i18n-ssr-oracle-baseline.json` **δεν** αγγίχτηκε: είναι **παραγόμενο** artifact (`i18n-ssr-oracle:baseline`, με crawl) και
+χειρόγραφη επεξεργασία του θα ήταν «πράσινο που δεν μετρήθηκε». Οι 2 μπαγιάτικες γραμμές `/o/alpha-techniki/vendor/quote/golden-vendorToken@…`
+(ήδη μπαγιάτικες από το Βήμα 1) φεύγουν στο επόμενο τρέξιμο του χρησμού, με τη σειρά της §7.
+
+**Άγκυρες (πράσινες) + μεταλλάξεις 3/3 κόκκινες**:
+
+| Άγκυρα | Κλειδώνει |
+|---|---|
+| `vendor-invite-credential.test.ts` **Δ4** (ξαναγράφτηκε) | 🔴 παλιά μορφή 4 πεδίων, **σωστά υπογεγραμμένη** ⇒ `invalid_link` · νέα μορφή + παραπανίσιο πεδίο ⇒ `invalid_link` |
+| `vendor-portal-quote-owner.test.ts` **Ο3 · Ο4** (ξαναγράφτηκαν) | χωρίς `quoteId` ⇒ καμία ανάγνωση · ολόκληρη πρόσκληση με `''` **ή** με πραγματική επαφή ⇒ `null`, **κανένα** ερώτημα |
+| `credential-link-page.test.ts` **Κ-ζ** (νέα) · Π0 · Α4 | καμία σελίδα κάτω από `/vendor/quote/<δυναμικό>` · σελίδες με token 11 → 10 |
+| `i18n-ssr-golden.test.ts` Γ1γ · Γ6β | δημόσιες πόρτες = μόνο `/attendance/check-in/[token]` |
+
+Μεταλλάξεις: Μ1 χωρίς έλεγχο ακριβούς πλήθους (1 κόκκινο) · Μ2 επιστροφή της παλιάς μορφής (2 κόκκινα) · Μ3 επιστροφή της
+εφεδρείας ερωτήματος (3 κόκκινα). Επαναφορά στην ίδια εκτέλεση, αρχεία επαληθευμένα ακέραια (`cmp`).
+
+**Ανάπτυξη**: άλλαξε το `firestore.rules` (σβήστηκε ο κανόνας `vendor_invite_tokens`) ⇒ μετά το push ο Giorgio τρέχει
+`firebase deploy --only firestore:rules` + καταγραφή στο ledger (CHECK 3.86).
+
 ## 6. Ανοιχτά ερωτήματα (μετρώνται, δεν μαντεύονται)
 
 - **i18n στο `(auth)`**: οι δύο σελίδες έφυγαν από το `/o` layout. Αν το SSR βγάζει ωμά κλειδιά (`vendor-portal` ·
@@ -291,3 +349,4 @@ principal `anon` — **4/4 κοκκίνισαν**. §5.8: επιστροφή σ�
 | 2026-09-23 | CHECK 3.28: οι σελίδες `card-email` · `hours-question` είχαν δίδυμη ανάγνωση `params`+`searchParams` → ΕΝΑΣ αναγνώστης `readCredentialLinkAnswerPage` (+ τύπος `CredentialLinkAnswerPageProps`) στο `lib/tokens/credential-link-page.ts`. |
 | 2026-09-24 | **Βήμα 4 υλοποιήθηκε (§5)**: «ένας σύνδεσμος = ένα διαπιστευτήριο» (`vendor_invite_credentials`, μόνο `nonceHash`) · token στο **fragment** + `Authorization: Bearer` · ΕΝΑΣ αναλυτής (σκοπός × κατάσταση) πίσω από ΜΙΑ πόρτα-σύνορο ιδεμποτίας · κατάσταση `revoked` (λήξη = παράγωγη) · αντιγραφή/επαναποστολή = νέος σύνδεσμος, ανάκληση ανά σύνδεσμο, ίχνος `vendor_invite` · «στείλε μου νέο σύνδεσμο» (ουδέτερο 202, ποσόστωση παραλήπτη) · migration με ντετερμινιστικό ID (ο υπάρχων σύνδεσμος ανοίγει) · boy-scout Σ10 (email → πίνακας λόγων) · Σ12 (`clientIpFingerprint`) · Σ13 (`extractBearerToken` ένα) · Σ14. Άγκυρες §5.5, μεταλλάξεις 4/4. Εκκρεμούν αποφάσεις Giorgio §5.4 (σειρά ανάπτυξης) · §5.7 (χρησμός). |
 | 2026-09-24 | **§5.8 επαλήθευση στον browser** (emulator, 9 σενάρια): ευρήματα **Σ15-Σ22**. 🔴 Σ19: δύο προμηθευτές με χειροκίνητο email στο ίδιο RFQ μοιράζονταν **μία** προσφορά (ο Β έγραφε πάνω στον Α) → `VendorInvite.quoteId`, ανάγνωση με ταυτότητα · Σ15 φύλακας payload (5 σημεία) · Σ16 `permits` από τον ΕΝΑ κριτή + revalidate μετά την υποβολή · Σ17 ΕΝΑ παράθυρο επεξεργασίας (ήταν ×3) · Σ18 `hashchange` · Σ20 ιδεμποτική ανάκληση πρόσκλησης · Σ21 «αποσύρθηκε» ≠ «ανακλήθηκε» · Σ22 (Mailgun υπό emulator) → απόφαση Giorgio. Άγκυρες Α2′/Α3′/Α5 · Τ1-Τ3 · Ο1-Ο4 · Κ5, μεταλλάξεις 2/2. |
+| 2026-09-24 | **Φ7 (§5.9)**: απόσυρση της παλιάς μορφής — παραγωγή μετρημένη με 0 προσκλήσεις. Σβήστηκαν: κλάδος 4 πεδίων (+ έλεγχος **ακριβούς** πλήθους, το `decodeSignedToken` κρίνει «τουλάχιστον») · `generateLegacyVendorInviteCredentialId` · σελίδα `[token]` · `vendor_invite_tokens` (κανόνας · COLLECTIONS · manifest · pattern μητρώου) · `findLegacyPortalQuote` (`quoteId` υποχρεωτικό) · προέλευση `legacy` · migration (data backfill — πρότυπο Shopify maintenance_tasks / Strangler Fig) · πόρτα χρησμού + `vendorToken` + εφήμερο `VENDOR_PORTAL_SECRET`. Άγκυρες Δ4 · Ο3/Ο4 · Κ-ζ · Γ1γ/Γ6β, μεταλλάξεις 3/3. |

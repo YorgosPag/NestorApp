@@ -1791,7 +1791,6 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'quotes',                 // Admin SDK writes only; vendor portal path in P3
   'quote_counters',         // Admin SDK only — no client access
   'vendor_invites',         // Admin SDK writes only; read: auth + companyId
-  'vendor_invite_tokens',   // Admin SDK only — no client access
   'vendor_invite_credentials', // ADR-876 §5 — Admin SDK only; ο σύνδεσμος ΔΕΝ διαβάζεται από client
   'trades',                 // read: isAuthenticated(); write: Admin SDK only
   // — Multi-Vendor (ADR-327 §17 Q28-Q32 step b, 2026-04-29) —
