@@ -224,6 +224,18 @@ export type ContactAdmissionAnswer =
   | { readonly kind: 'unknown' };
 
 /**
+ * **«Ο θεατής είναι ο κάτοχος;»** — ανάγνωση της ετυμηγορίας, **όχι** κρίση (ADR-777 §8.74.7).
+ *
+ * 🔑 Το `contact-own-target` βγαίνει από τον **ΕΝΑ** κριτή θεματοφυλακής (`mayAdminister`, CHECK 3.56) —
+ * τον ίδιο που αρνείται την αποθήκευση (`own-listing`). Άρα όποια πράξη της σελίδας δεν έχει νόημα για
+ * τον κάτοχο διαβάζει **αυτή** την απάντηση, αντί να ξαναρωτήσει ή να συγκρίνει ταυτότητες.
+ * `null` / `open` / `unknown` ⇒ `false` (fail-open, όπως το κουμπί).
+ */
+export function isOwnTargetAnswer(answer: ContactAdmissionAnswer | null): boolean {
+  return answer?.kind === 'refused' && answer.reason === 'contact-own-target';
+}
+
+/**
  * **Ο στόχος, ως παράμετροι διαδρομής** — εξαντλητικά, με φρουρό στον μεταγλωττιστή.
  *
  * 🔑 **Είναι ο καθρέφτης του `firstContactTargetSchema`, όχι δεύτερος ορισμός**: εκείνο

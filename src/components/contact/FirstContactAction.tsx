@@ -95,12 +95,18 @@ export interface FirstContactActionProps {
   readonly demandId?: string | null;
   /** Ποιο κείμενο κουμπιού — η αγγελία λέει `cta`, η βιτρίνα λέει `ctaPro`. */
   readonly variant?: 'listing' | 'professional';
+  /**
+   * ADR-777 §8.74.7 — **αναφέρει** την ετυμηγορία της ήσυχης ερώτησης (και το `null` όταν σβήνει), ώστε μια
+   * γειτονική πράξη να τη **μοιραστεί** αντί να ξαναρωτήσει τον διακομιστή. Καμία κρίση εδώ.
+   */
+  readonly onAnswer?: (answer: ContactAdmissionAnswer | null) => void;
 }
 
 export function FirstContactAction({
   target,
   demandId = null,
   variant = 'listing',
+  onAnswer,
 }: FirstContactActionProps): React.JSX.Element {
   const { t } = useTranslation([FIRST_CONTACT_NS]);
 
@@ -149,6 +155,14 @@ export function FirstContactAction({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- δες τη σημείωση παραπάνω:
     // τα πεδία του στόχου καθορίζουν πλήρως το `target`, το αντικείμενο όχι.
   }, [uid, round, target.kind, target.listingId, target.agencyCompanyId]);
+
+  // ADR-777 §8.74.7 — ο καταναλωτής γράφει το `onAnswer` ενσωματωμένο (νέα ταυτότητα ανά απόδοση): ref, ώστε
+  // η αναφορά να ακολουθεί **μόνο** την ετυμηγορία και ποτέ να μην ξαναπυροδοτεί την ερώτηση.
+  const onAnswerRef = React.useRef(onAnswer);
+  onAnswerRef.current = onAnswer;
+  React.useEffect(() => {
+    onAnswerRef.current?.(answer);
+  }, [answer]);
 
   function handleOpen(): void {
     setMounted(true);

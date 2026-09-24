@@ -44,8 +44,12 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 //    ΣΥΝΟΡΟΥ (`@/lib/workspace/navigation`, ADR-787 §5.3 μ), και το σύνορο ρωτά την
 //    τρέχουσα διαδρομή για να βρει τον ενεργό χώρο. Μερικό mock ⇒ `usePathname is
 //    not a function` ΠΡΙΝ τρέξει η πρώτη προσδοκία.
+//    ADR-777 §8.74 — και το `useRouter`: η καρδιά (`useSavedListingsState`) οδηγεί τον ανώνυμο στη σύνδεση
+//    μέσω του ίδιου συνόρου. Χωρίς αυτό **22** tests έπεφταν με `useRouter is not a function` από το commit
+//    της §8.74 — κανένα gate δεν έτρεχε αυτή τη σουίτα (μετρημένο 2026-09-24, §8.74.7).
 jest.mock('next/navigation', () => ({
   usePathname: () => '/',
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn() }),
 }));
 
 /** Η διεύθυνση όπως τη βλέπει ο browser — ο σύνδεσμος επιστροφής διαβάζει ΑΥΤΗΝ (`useUrlQuery`). */
@@ -63,6 +67,12 @@ jest.mock('@/components/search-results/ResultsMap', () => ({
   ResultsMap: ({ listings }: { listings: readonly { id: string }[] }) => (
     <div data-testid="results-map" data-count={listings.length} data-ids={listings.map((l) => l.id).join(',')} />
   ),
+}));
+
+// ADR-777 §8.72 — ο φάρος προβολής στέλνει `POST …/view` και έχει δική του άγκυρα· εδώ θα έβγαινε στο δίκτυο
+// (το `jest.setup` το αρνείται ⇒ κόκκινο που το `useRouter` παραπάνω έκρυβε, μετρημένο 2026-09-24).
+jest.mock('@/hooks/listings/useListingViewBeacon', () => ({
+  useListingViewBeacon: () => undefined,
 }));
 
 const mockLookup = { value: { state: 'loading' } as PublicListingLookup };

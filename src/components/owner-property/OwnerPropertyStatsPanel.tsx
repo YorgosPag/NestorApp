@@ -32,15 +32,13 @@ import {
   viewsIn,
   type ContactRate,
   type ListingStatsRange,
-  type ViewsReading,
 } from '@/lib/listings/listing-stats-view';
 import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import type { ListedAt } from '@/types/public-listing';
 
 import { OwnerPropertyPriceSteps } from './OwnerPropertyPriceSteps';
+import { Kpi, STATS_KEYS as S, formatCount, viewsKpiView } from './owner-property-kpi';
 import { STATS_KPI_GRID, StatsChartPending, StatsPanelPending, StatsPanelSkeleton } from './owner-property-stats-pending';
-
-const S = 'property-market:offer.stats';
 
 const OwnerPropertyStatsChart = dynamic(() => import('./OwnerPropertyStatsChart'), {
   ssr: false,
@@ -49,44 +47,18 @@ const OwnerPropertyStatsChart = dynamic(() => import('./OwnerPropertyStatsChart'
 
 type ReadyStats = Extract<ListingStatsState, { state: 'ready' }>;
 
-const count = (value: number): string => formatNumber(value, { maximumFractionDigits: 0 });
-
 /** Η τιμή και η εξήγηση του λόγου — ο λόγος λέγεται **πάντα** με τον παρονομαστή του. */
 function rateView(rate: ContactRate, t: Translate): { readonly value: string; readonly detail: string } {
   if (rate.kind === 'rate') {
     return {
       value: formatNumber(rate.perThousand, { maximumFractionDigits: 1 }),
-      detail: t(`${S}.kpi.rateDetail`, { contacts: rate.contacts, views: count(rate.views) }),
+      detail: t(`${S}.kpi.rateDetail`, { contacts: rate.contacts, views: formatCount(rate.views) }),
     };
   }
   if (rate.kind === 'insufficient') {
-    return { value: '—', detail: t(`${S}.kpi.rateInsufficient`, { views: count(rate.views), min: count(CONTACT_RATE_MIN_VIEWS) }) };
+    return { value: '—', detail: t(`${S}.kpi.rateInsufficient`, { views: formatCount(rate.views), min: formatCount(CONTACT_RATE_MIN_VIEWS) }) };
   }
   return { value: '—', detail: t(`${S}.unknown`) };
-}
-
-/**
- * Οι προβολές του εύρους — ο αριθμός λέει **σε πόσες μετρημένες** ημέρες. Πριν αρχίσει η μέτρηση:
- * παύλα + «Μετράμε από …», ποτέ «0 · Τελευταίες 30 ημέρες» (ADR-777 §8.72.8).
- */
-function viewsKpiView(reading: ViewsReading, range: ListingStatsRange, t: Translate): { readonly value: string; readonly detail: string } {
-  if (reading.kind === 'unknown') return { value: '—', detail: t(`${S}.unknown`) };
-  if (reading.kind === 'not-yet') {
-    return { value: '—', detail: t(`${S}.kpi.viewsNotYet`, { date: formatCalendarDay(reading.countingSince) }) };
-  }
-  const detail = reading.days < range ? t(`${S}.kpi.viewsCounted`, { days: reading.days }) : t(`${S}.kpi.inRange`, { days: range });
-  return { value: count(reading.views), detail };
-}
-
-/** Ένας δείκτης: όρος · τιμή · (προαιρετικά) λεπτομέρεια. `<dl>` επειδή αυτό είναι. */
-function Kpi({ label, value, detail }: { readonly label: string; readonly value: string; readonly detail?: string }): React.ReactElement {
-  return (
-    <dl className="m-0 flex flex-col gap-1 rounded-md border border-border p-3">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="m-0 text-2xl font-semibold tabular-nums text-foreground">{value}</dd>
-      {detail !== undefined && <dd className="m-0 text-xs text-muted-foreground">{detail}</dd>}
-    </dl>
-  );
 }
 
 function RangeSwitch({ value, onChange }: { readonly value: ListingStatsRange; readonly onChange: (next: ListingStatsRange) => void }): React.ReactElement {
@@ -126,18 +98,18 @@ function StatsKpis({ stats, range, listedAt }: { readonly stats: ReadyStats; rea
       <Kpi label={t(`${S}.kpi.views`)} value={viewsShown.value} detail={viewsShown.detail} />
       <Kpi
         label={t(`${S}.kpi.contacts`)}
-        value={summary.contacts === null ? '—' : count(windowSum(summary.contacts.daily, from, today))}
+        value={summary.contacts === null ? '—' : formatCount(windowSum(summary.contacts.daily, from, today))}
         detail={summary.contacts === null ? unknown : inRange}
       />
       <Kpi label={t(`${S}.kpi.rate`)} value={rateShown.value} detail={rateShown.detail} />
       <Kpi
         label={t(`${S}.kpi.saves`)}
-        value={summary.saves === null ? '—' : count(summary.saves.total)}
+        value={summary.saves === null ? '—' : formatCount(summary.saves.total)}
         detail={summary.saves === null ? unknown : t(`${S}.kpi.savesNew`, { count: windowSum(summary.saves.daily, from, today), days: range })}
       />
       <Kpi
         label={t(`${S}.kpi.days`)}
-        value={days === null ? '—' : count(days)}
+        value={days === null ? '—' : formatCount(days)}
         detail={days === null ? t(`${S}.kpi.daysUnknown`) : undefined}
       />
     </section>

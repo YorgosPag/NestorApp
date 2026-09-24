@@ -3,10 +3,11 @@
  * @related components/owner-property/{OwnerPropertyStatsRow, OwnerPropertyStatsPanel, OwnerPropertyPriceSteps}.tsx
  *
  * Με πραγματικούς loaders + ICU (`test-utils/real-i18n`):
- *   Κ1 · κάρτα: προβολές 7 ημ. + τάση + επαφές + ημέρες στην αγορά, με κείμενο (όχι μόνο εικονίδιο).
- *   Κ2 · άγνωστο ≠ μηδέν: βλάβη επαφών ⇒ «μη διαθέσιμες», ΠΟΤΕ «0 επαφές»· αποτυχία fetch ⇒ «δεν φορτώθηκαν».
- *   Κ3 · νέα μέτρηση ⇒ «Νέα μέτρηση», ΚΑΝΕΝΑ ποσοστό, και οι προβολές λένε τις ΜΕΤΡΗΜΕΝΕΣ ημέρες· `absent` ⇒ τίποτα.
- *   Κ4 · πριν αρχίσει η μέτρηση ⇒ «μετράμε από …», ΠΟΤΕ «0 προβολές σε 7 ημέρες», καμία τάση (§8.72.8).
+ *   Κ1 · κάρτα (πλακίδια §8.74.7): προβολές 7 ημ. + τάση + επαφές + αποθηκεύσεις + ημέρες, όρος + τιμή.
+ *   Κ2 · άγνωστο ≠ μηδέν: βλάβη επαφών ⇒ «—» + «μη διαθέσιμο», ΠΟΤΕ «0»· αποτυχία fetch ⇒ «δεν φορτώθηκαν».
+ *   Κ3 · νέα μέτρηση ⇒ ΚΑΝΕΝΑ ποσοστό, και οι προβολές λένε τις ΜΕΤΡΗΜΕΝΕΣ ημέρες· `absent` ⇒ τίποτα.
+ *   Κ4 · πριν αρχίσει η μέτρηση ⇒ «—» + «Μετράμε από …», ΠΟΤΕ «0», καμία τάση (§8.72.8).
+ *   Κ6 · σκελετός = φόρτωση = βλάβη = τιμές σε γεωμετρία ⇒ CLS 0 εκ κατασκευής (§8.74.7, μετρημένο 0,0012 πριν).
  *   Π1 · πίνακας: «Μετράμε από …» · ο λόγος με λίγες προβολές λέει τους αριθμούς, όχι «0».
  *   Π2 · το εύρος 30 → 90 αλλάζει ΚΑΙ τους δείκτες ΚΑΙ τις ημέρες του γραφήματος.
  *   Π3 · εξέλιξη τιμής: νεότερο πρώτο, μείωση με ποσοστό, «Αποσύρθηκε» χωρίς ψεύτικο ποσό.
@@ -27,6 +28,7 @@ import type { ListedAt } from '@/types/public-listing';
 
 import { OwnerPropertyStatsRow } from '../OwnerPropertyStatsRow';
 import { OwnerPropertyStatsPanel } from '../OwnerPropertyStatsPanel';
+import { CARD_KPI_COUNT, CARD_KPI_GRID, StatsRowPending } from '../owner-property-stats-pending';
 
 jest.mock('@/i18n/hooks/useTranslation', () => {
   const reactI18next = jest.requireActual('react-i18next');
@@ -72,55 +74,101 @@ function renderWithI18n(node: React.ReactNode) {
   return render(<I18nextProvider i18n={instance}>{node}</I18nextProvider>);
 }
 
-describe('Κ — η γραμμή της κάρτας', () => {
-  it('Κ1 · προβολές + τάση + επαφές + ημέρες, σε λέξεις', () => {
+/** Το πλακίδιο ενός δείκτη, από τον όρο του — όπως το διαβάζει ο άνθρωπος. */
+function tile(label: string): HTMLElement {
+  const region = screen.getByRole('region', { name: 'Στατιστικά αγγελίας' });
+  const term = within(region).getByText(label);
+  const dl = term.closest('dl');
+  if (dl === null) throw new Error(`Κανένα πλακίδιο για «${label}»`);
+  return dl;
+}
+
+/** Το δηλωμένο ύψος μιας γραμμής πλακιδίου (`h-N`) — η γεωμετρία που κρατά το CLS στο 0. */
+function heightOf(line: Element): string {
+  return Array.from(line.classList).find((name) => /^h-\d+$/.test(name)) ?? '?';
+}
+
+describe('Κ — τα πλακίδια της κάρτας (§8.74.7)', () => {
+  it('Κ1 · προβολές + τάση + επαφές + αποθηκεύσεις + ημέρες, με όρο και τιμή', () => {
     renderWithI18n(<OwnerPropertyStatsRow stats={ready(summary())} listedAt={LISTED} priceReduction={null} />);
-    const row = screen.getByRole('list', { name: 'Στατιστικά αγγελίας' });
-    expect(within(row).getByText('70 προβολές σε 7 ημέρες')).toBeInTheDocument();
-    expect(within(row).getByText(/^\+40\s?% από την προηγούμενη εβδομάδα$/)).toBeInTheDocument();
-    expect(within(row).getByText('3 επαφές')).toBeInTheDocument();
-    expect(within(row).getByText(/ημέρες στην αγορά$/)).toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText('70')).toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText('Τελευταίες 7 ημέρες')).toBeInTheDocument();
+    // Συμπαγής τάση για το μάτι + ολόκληρη πρόταση για τον αναγνώστη οθόνης.
+    expect(within(tile('Προβολές')).getByText(/^\+40\s?%$/)).toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText(/^\+40\s?% από την προηγούμενη εβδομάδα$/)).toHaveClass('sr-only');
+    expect(within(tile('Επαφές')).getByText('1')).toBeInTheDocument();
+    expect(within(tile('Ημέρες στην αγορά')).queryByText('—')).not.toBeInTheDocument();
   });
 
-  it('Κ2 · βλάβη επαφών ⇒ «μη διαθέσιμες», ποτέ «0 επαφές»', () => {
+  it('Κ2 · βλάβη επαφών ⇒ «—» + «μη διαθέσιμο», ποτέ «0»', () => {
     renderWithI18n(<OwnerPropertyStatsRow stats={ready(summary({ contacts: null }))} listedAt={LISTED} priceReduction={null} />);
-    expect(screen.getByText('Επαφές: μη διαθέσιμες')).toBeInTheDocument();
-    expect(screen.queryByText(/0 επαφές/)).not.toBeInTheDocument();
+    expect(within(tile('Επαφές')).getByText('—')).toBeInTheDocument();
+    expect(within(tile('Επαφές')).getByText('μη διαθέσιμο')).toBeInTheDocument();
+    expect(within(tile('Επαφές')).queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('Κ2 · αποτυχία fetch ⇒ «δεν φορτώθηκαν», κανένας αριθμός', () => {
+  it('Κ2 · αποτυχία fetch ⇒ «δεν φορτώθηκαν», κανένας αριθμός — αλλά οι ημέρες στην αγορά μένουν', () => {
     renderWithI18n(<OwnerPropertyStatsRow stats={{ state: 'unavailable' }} listedAt={LISTED} priceReduction={null} />);
     expect(screen.getByText(/Τα στατιστικά δεν φορτώθηκαν/)).toBeInTheDocument();
-    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    for (const label of ['Προβολές', 'Επαφές', 'Αποθηκεύσεις']) {
+      expect(within(tile(label)).getByText('—')).toBeInTheDocument();
+    }
+    expect(within(tile('Ημέρες στην αγορά')).queryByText('—')).not.toBeInTheDocument();
   });
 
-  it('Κ3 · νέα μέτρηση ⇒ καμία ποσοστιαία τάση', () => {
+  it('Κ3 · νέα μέτρηση ⇒ ΚΑΝΕΝΑ ποσοστό, και οι προβολές λένε τις ΜΕΤΡΗΜΕΝΕΣ ημέρες', () => {
     renderWithI18n(
       <OwnerPropertyStatsRow stats={ready(summary({ countingSince: '2026-10-18' }))} listedAt={LISTED} priceReduction={null} />,
     );
-    expect(screen.getByText(/^Νέα μέτρηση/)).toBeInTheDocument();
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
-    expect(screen.getByText('70 προβολές σε 3 ημέρες')).toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText('70')).toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText('Σε 3 ημέρες μέτρησης')).toBeInTheDocument();
   });
 
-  it('Κ4 · πριν αρχίσει η μέτρηση ⇒ «μετράμε από», κανένα «0», καμία τάση', () => {
+  it('Κ4 · πριν αρχίσει η μέτρηση ⇒ «—» + «Μετράμε από», κανένα «0», καμία τάση', () => {
     renderWithI18n(
       <OwnerPropertyStatsRow stats={ready(summary({ countingSince: '2026-10-21' }))} listedAt={LISTED} priceReduction={null} />,
     );
-    expect(screen.getByText(/^Προβολές: μετράμε από/)).toBeInTheDocument();
-    expect(screen.queryByText(/προβολές σε/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Νέα μέτρηση/)).not.toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText('—')).toBeInTheDocument();
+    expect(within(tile('Προβολές')).getByText(/^Μετράμε από/)).toBeInTheDocument();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
 
-  it('Κ5 · αποθηκεύσεις (§8.74): πλήθος σε λέξεις · βλάβη ⇒ «μη διαθέσιμες», ποτέ «0»', () => {
+  it('Κ5 · αποθηκεύσεις (§8.74): πλήθος + νέες · βλάβη ⇒ «—», ποτέ «0», και οι άλλες πηγές φαίνονται', () => {
     const { unmount } = renderWithI18n(<OwnerPropertyStatsRow stats={ready(summary())} listedAt={LISTED} priceReduction={null} />);
-    expect(screen.getByText('5 αποθηκεύσεις')).toBeInTheDocument();
+    expect(within(tile('Αποθηκεύσεις')).getByText('5')).toBeInTheDocument();
+    expect(within(tile('Αποθηκεύσεις')).getByText('2 νέες τις τελευταίες 7 ημέρες')).toBeInTheDocument();
     unmount();
     renderWithI18n(<OwnerPropertyStatsRow stats={ready(summary({ saves: null }))} listedAt={LISTED} priceReduction={null} />);
-    expect(screen.getByText('Αποθηκεύσεις: μη διαθέσιμες')).toBeInTheDocument();
-    expect(screen.queryByText(/0 αποθηκεύσεις/)).not.toBeInTheDocument();
-    // Οι άλλες πηγές φαίνονται — άγνωστο ≠ μηδέν ΑΝΑ ΠΗΓΗ.
-    expect(screen.getByText('3 επαφές')).toBeInTheDocument();
+    expect(within(tile('Αποθηκεύσεις')).getByText('—')).toBeInTheDocument();
+    expect(within(tile('Αποθηκεύσεις')).queryByText('0')).not.toBeInTheDocument();
+    expect(within(tile('Επαφές')).getByText('1')).toBeInTheDocument();
+  });
+
+  /**
+   * 🔴 **CLS 0 ΕΚ ΚΑΤΑΣΚΕΥΗΣ** — μετρημένο 0,0012 σε browser όταν ο σκελετός ήταν μία γραμμή και οι τιμές τρεις.
+   * Το jsdom δεν έχει διάταξη, άρα ρωτάμε τη **γεωμετρία ως δήλωση**: ίδιο πλέγμα, ίδιος αριθμός πλακιδίων,
+   * ίδια κλάση ύψους σε κάθε γραμμή — σε σκελετό, φόρτωση, βλάβη και τιμές.
+   */
+  it('Κ6 · σκελετός, φόρτωση, βλάβη και τιμές έχουν ΤΗΝ ΙΔΙΑ γεωμετρία', () => {
+    const shapeOf = (root: HTMLElement): string => {
+      const grid = root.querySelector(`[class="${CARD_KPI_GRID}"]`);
+      if (grid === null) return 'no-grid';
+      const tiles = Array.from(grid.children).filter((child) => !child.classList.contains('sr-only'));
+      return tiles
+        .map((tileEl) => Array.from(tileEl.children).map(heightOf).join('/'))
+        .join(' | ');
+    };
+    const states: ListingStatsState[] = [{ state: 'loading' }, { state: 'unavailable' }, ready(summary()), ready(summary({ contacts: null, saves: null }))];
+    const pending = render(<StatsRowPending />);
+    const expected = shapeOf(pending.container);
+    pending.unmount();
+    expect(expected).toBe(Array.from({ length: CARD_KPI_COUNT }, () => 'h-4/h-6/h-4').join(' | '));
+    for (const state of states) {
+      const { container, unmount } = renderWithI18n(<OwnerPropertyStatsRow stats={state} listedAt={LISTED} priceReduction={null} />);
+      expect(shapeOf(container)).toBe(expected);
+      unmount();
+    }
   });
 
   it('Κ3 · absent ⇒ τίποτα', () => {

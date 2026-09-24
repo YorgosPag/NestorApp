@@ -24,12 +24,39 @@ import { cn } from '@/lib/utils';
 
 const BLOCK = 'block animate-pulse rounded bg-muted';
 
+/**
+ * 📐 **Η ΓΕΩΜΕΤΡΙΑ ΤΩΝ ΠΛΑΚΙΔΙΩΝ ΤΗΣ ΚΑΡΤΑΣ — ΜΙΑ, για σκελετό ΚΑΙ τιμές** (ADR-777 §8.74.7).
+ *
+ * 🔴 Μετρημένο σε browser (2026-09-24): η γραμμή ήταν κείμενο που **αναδιπλωνόταν** — 1 γραμμή ο σκελετός,
+ * **3** γραμμές οι τιμές (το «Νέα μέτρηση — …» + η 4η μετρική της §8.74) ⇒ CLS 0,0012 στο `/offers/[id]`.
+ * Κανένα «ύψος στο περίπου» δεν το λύνει, γιατί οι γραμμές εξαρτώνται από κείμενο **και** πλάτος.
+ * Θεραπεία = πλακίδια (Zillow «Views · Saves · Contacts», idealista «Visitas · Contactos · Favoritos»):
+ * **σταθερός** αριθμός πλακιδίων · **σταθερές** γραμμές, `truncate` · το **ίδιο** πλέγμα. Ό,τι στήλες κι αν
+ * χωρέσουν, τις ίδιες βλέπουν σκελετός και τιμές ⇒ **CLS 0 εκ κατασκευής**, σε κάθε πλάτος.
+ */
+export const CARD_KPI_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(6.5rem,1fr))] gap-2';
+/** Προβολές · επαφές · αποθηκεύσεις · ημέρες στην αγορά. */
+export const CARD_KPI_COUNT = 4;
+export const CARD_KPI_TILE = 'flex min-w-0 flex-col gap-0.5 rounded-md border border-border px-2 py-1.5';
+/** Κάθε γραμμή έχει **δηλωμένο** ύψος: το περιεχόμενο δεν μπορεί να το αλλάξει (`truncate`, όχι αναδίπλωση). */
+export const CARD_KPI_LINE = {
+  label: 'block h-4 truncate text-xs leading-4',
+  value: 'block h-6 truncate text-base leading-6',
+  detail: 'block h-4 truncate text-xs leading-4',
+} as const;
+
 /** Η γραμμή της κάρτας — `loading` του ορίου **και** κατάσταση «δεν γέμισε ακόμη το namespace». */
 export function StatsRowPending(): React.ReactElement {
   return (
-    <p aria-hidden className="m-0 h-5">
-      <span className={cn(BLOCK, 'h-4 w-48')} />
-    </p>
+    <span aria-hidden className={CARD_KPI_GRID}>
+      {Array.from({ length: CARD_KPI_COUNT }, (_, index) => (
+        <span key={index} className={CARD_KPI_TILE}>
+          <span className={CARD_KPI_LINE.label}><span className={cn(BLOCK, 'h-3 w-16')} /></span>
+          <span className={cn(CARD_KPI_LINE.value, 'py-1')}><span className={cn(BLOCK, 'h-4 w-10')} /></span>
+          <span className={CARD_KPI_LINE.detail}><span className={cn(BLOCK, 'h-3 w-20')} /></span>
+        </span>
+      ))}
+    </span>
   );
 }
 
