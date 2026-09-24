@@ -17,6 +17,7 @@ import '@/lib/design-system';
 
 import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
 import { ListingCard } from '@/components/search-results/ListingCard';
+import { LISTING_CARD_GRID_CLASS, LISTING_GRID_CARD_IMAGE_SIZES } from '@/components/search-results/listing-card-frame';
 import routeSlice from '@/i18n/generated/routes/saved-listings.el.json';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { registerRouteSlice } from '@/i18n/route-slice';
@@ -68,12 +69,17 @@ function SavedRows({ rows, truncated }: { readonly rows: readonly SavedListingRo
   }
   return (
     <>
-      <ul aria-label={t(`${P}.listLabel`)} className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4 p-0">
+      <ul aria-label={t(`${P}.listLabel`)} className={LISTING_CARD_GRID_CLASS}>
         {rows.map((row) =>
           row.kind === 'withdrawn' ? (
             <WithdrawnRow key={row.listingId} row={row} />
           ) : (
-            <ListingCard key={row.listingId} listing={row.listing} annotation={annotationOf(row.savedAt, row.priceSinceSave, t)} />
+            <ListingCard
+              key={row.listingId}
+              listing={row.listing}
+              imageSizes={LISTING_GRID_CARD_IMAGE_SIZES}
+              annotation={annotationOf(row.savedAt, row.priceSinceSave, t)}
+            />
           ),
         )}
       </ul>

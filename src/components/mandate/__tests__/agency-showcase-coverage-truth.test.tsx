@@ -60,6 +60,10 @@ jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
   ),
+  // ADR-777 §8.74: το `SavedListingsProvider` ζητά δρομολογητή + διαδρομή (για την
+  // επιστροφή μετά τη σύνδεση) — χωρίς αυτά η σουίτα κοκκίνιζε πριν κρίνει οτιδήποτε.
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => '/pro/test',
 }));
 
 jest.mock('@/services/realtime/hooks/usePublicPlace', () => ({

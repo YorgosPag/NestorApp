@@ -15,8 +15,9 @@
  * Ο δεσμός είναι **και προς τις δύο κατευθύνσεις**: hover στη λίστα → δακτύλιος στον
  * χάρτη· κλικ στον χάρτη → επιλογή στη λίστα.
  *
- * 🔑 **Η λογιστική είναι πάνω από ΚΑΙ ΤΑ ΔΥΟ**, όχι μέσα σε ένα από αυτά — γιατί
- * απαντά για το **σύνολο**, όχι για ό,τι τυχαίνει να χωρά σε ένα πλαίσιο.
+ * 🔑 **Η λογιστική απαντά για το ΣΥΝΟΛΟ**, όχι για ό,τι τυχαίνει να χωρά σε ένα πλαίσιο. Από
+ * §8.80 κάθεται στην κορυφή της **λίστας** (πρότυπο Zillow «60,721 results») και όχι πάνω από
+ * χάρτη και λίστα μαζί — δες `ResultsListHeader` για το γιατί ο κανόνας 27 δεν χαλαρώνει.
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -53,13 +54,15 @@ import {
 } from '@/lib/listings/listing-price-sections';
 
 import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
-import { StayFilterFields } from './StayFilterFields';
 import { StayLedgerBar } from './StayLedgerBar';
 import { ResultsList } from './ResultsList';
+import { ResultsListHeader } from './ResultsListHeader';
+import { ResultsOrderControl, ResultsOrderNote } from './filters/ResultsOrderControl';
 import { ResultsMap } from './ResultsMap';
 import { ResultsSheet } from './ResultsSheet';
 import { StayTotalsProvider } from './StayTotalsContext';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
+import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
 
 export function SearchResultsContent() {
   const { t } = useTranslation(['search-results', 'search-filters', 'listing-detail']);
@@ -143,7 +146,7 @@ export function SearchResultsContent() {
    * Γραμμένη μέσα σε αυτό το αρχείο, θα πρόσθετε τρίτη ευθύνη σε ένα συστατικό που
    * ήδη κρατά τη διάταξη και τις τέσσερις λογιστικές.
    */
-  const { commit } = useFilterCommit(filters);
+  const { commit, setOrder } = useFilterCommit(filters);
   const { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea } =
     useMapAreaSearch(filters, commit);
 
@@ -298,69 +301,22 @@ export function SearchResultsContent() {
       data-shell-viewport
       className="flex min-h-0 flex-1 flex-col bg-background"
     >
-      <header className="border-b border-border px-4 py-3">
-        <h1 className="text-lg font-semibold text-foreground">{t('search-results:page.title')}</h1>
-        {/* Η λογιστική τυπώνεται ΠΑΝΤΑ — ακόμη και στο μηδέν, ακόμη και στη φόρτωση. */}
-        <ListingLedgerBar ledger={ledger} rendered={renderedCount} className="mt-1" />
-        {/*
-          🔴 **ΔΥΟ ΓΡΑΜΜΕΣ, ΔΥΟ ΔΙΑΜΕΡΙΣΕΙΣ ΤΟΥ ΙΔΙΟΥ ΣΥΝΟΛΟΥ** (ADR-835 §4.6).
-          «Πού;» και «πότε;» δεν είναι κάδοι της ίδιας μέτρησης: ένα ακίνητο είναι
-          **ταυτόχρονα** στον χάρτη **και** κρατημένο. Η δεύτερη γραμμή ελέγχει ότι
-          κλείνουν **και οι δύο στο ίδιο σύνολο**, και φωνάζει αν όχι.
-        */}
-        <StayLedgerBar
-          stay={stayLedger}
-          position={ledger}
-          asked={stayQuery !== null}
-          pending={stayPending}
-          className="mt-1"
-        />
-        {/*
-          🔴 **Η ΤΡΙΤΗ ΔΙΑΜΕΡΙΣΗ** (ADR-777 §8.51): *«πού;»* · *«πότε;»* · **«ταιριάζει;»**.
-          Τυπώνεται μόνο όταν κάποιος ρώτησε κάτι — δες την κεφαλίδα του συστατικού για
-          το γιατί αυτό ΔΕΝ αναιρεί τον κανόνα 27.
-        */}
-        <CriteriaLedgerBar ledger={criteriaLedger} asked={criteriaAsked} className="mt-1" />
+      {/*
+        🖼️ §8.80 — **ΜΙΑ ΓΡΑΜΜΗ, ΟΠΩΣ Η ZILLOW.** Εδώ κάθονταν τίτλος, τέσσερις λογιστικές, δύο
+        γραμμές φίλτρων και δύο παράγραφοι διαμονής — ~425px πριν από τον χάρτη. Τώρα η κορυφή της
+        σελίδας κρατά **μόνο** τα τσιπ· τίτλος, σειρά και λογιστικές μετακόμισαν στην κορυφή της
+        λίστας (`ResultsListHeader`), όπου τα τοποθετεί και η Zillow.
 
-        {/*
-          🔴 **Η ΤΕΤΑΡΤΗ ΔΙΑΜΕΡΙΣΗ** (ADR-777 §8.63): *«πού;»* · *«πότε;»* ·
-          *«ταιριάζει;»* · **«είναι στην περιοχή που κοιτάω;»**.
-
-          🔑 Είναι η **μόνη** από τις τέσσερις που περιγράφει κάτι το οποίο η οθόνη
-          **πράγματι έκοψε** — και γι' αυτό η ύπαρξή της δεν είναι διακοσμητική: χωρίς
-          αυτήν, το φιλτράρισμα από τον χάρτη θα ήταν μια σιωπηλή εξαφάνιση, δηλαδή
-          ακριβώς το ελάττωμα που τα καταγεγραμμένα παράπονα για την Airbnb
-          περιγράφουν και που κανένας από τους μεγάλους δεν ανακοινώνει.
-        */}
-        <AreaLedgerBar
-          ledger={areaLedger}
-          asked={filters.near !== null}
-          visibleCount={visible.length}
-          coverage={coverage}
-          className="mt-1"
-        />
-
-        {/*
-          ⚠️ **Τα ΦΙΛΤΡΑ κάτω από τις ΛΟΓΙΣΤΙΚΕΣ, όχι από πάνω.** Ο άνθρωπος διαβάζει
-          πρώτα *τι υπάρχει* και μετά *τι μπορεί να ζητήσει* — και όταν πατήσει κάτι, η
-          απάντηση είναι **ήδη μπροστά στα μάτια του**, όχι κάτω από τα χειριστήρια.
-
-          🔑 **Παίρνει το `withinScope`, ΟΧΙ τον ωμό κατάλογο**: τα πλήθη ανά επιλογή
-          οφείλουν να σέβονται την **περιοχή** και τις **ημερομηνίες** που έχει ήδη
-          διαλέξει. Ο ίδιος ο άξονας αφαιρείται μέσα στο `criterionOptionTallies`.
-        */}
+        ⚠️ **Τα ΦΙΛΤΡΑ παίρνουν το `withinScope`, ΟΧΙ τον ωμό κατάλογο**: τα πλήθη ανά επιλογή
+        οφείλουν να σέβονται την **περιοχή** και τις **ημερομηνίες** που έχει ήδη διαλέξει.
+      */}
+      <header className="border-b border-border px-3 py-2">
         <PrimaryFilterBar
           filters={filters}
-          order={order}
           listings={withinScope}
           visibleCount={visible.length}
           viewport={viewport}
-          className="mt-2"
         />
-
-        <StayFilterFields filters={filters} className="mt-2" />
-        {loading && <p className="mt-1 text-sm text-muted-foreground">{t('search-results:page.loading')}</p>}
-        {error && <p role="alert" className="mt-1 text-sm text-destructive">{t('search-results:page.error')}</p>}
       </header>
 
       {/*
@@ -384,9 +340,11 @@ export function SearchResultsContent() {
       */}
       {/* ADR-777 §8.60.12 — «150 € · 3 νύχτες» σε κάρτα, φούσκα, δείκτη άκρης και πινακίδα. */}
       {/* ❤️ ADR-777 §8.74 — ΕΝΑΣ πάροχος για όλες τις καρδιές της λίστας (ένα fetch, όχι N). */}
+      {/* 🗺️ §8.80 — κάρτα χωρίς φωτογραφία ⇒ χάρτης θέσης (MapLibre μόνο αν ζητηθεί στιγμιότυπο). */}
+      <ListingMapSnapshotProvider>
       <SavedListingsProvider>
       <StayTotalsProvider totals={stayTotals}>
-        <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,26rem)_1fr]">
+        <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,min(46rem,45%))_1fr]">
           <ResultsSheet viewport={viewport}>
             <ResultsList
               sections={listView.sections}
@@ -395,6 +353,35 @@ export function SearchResultsContent() {
               onHover={peek}
               filterQuery={filterQuery}
               undeclaredLabelsFor={undeclaredLabelsFor}
+              header={
+                <ResultsListHeader
+                  order={<ResultsOrderControl order={order} onChange={setOrder} />}
+                  loading={loading}
+                  error={Boolean(error)}
+                >
+                  {/*
+                    Οι ΤΕΣΣΕΡΙΣ ΔΙΑΜΕΡΙΣΕΙΣ, αυτούσιες (κανόνας 27 · §4.6 · §8.51 · §8.63) — μόνο η
+                    θέση άλλαξε (§8.80). Η λογιστική τυπώνεται ΠΑΝΤΑ, ακόμη και στο μηδέν.
+                  */}
+                  <ListingLedgerBar ledger={ledger} rendered={renderedCount} className="text-xs" />
+                  <StayLedgerBar
+                    stay={stayLedger}
+                    position={ledger}
+                    asked={stayQuery !== null}
+                    pending={stayPending}
+                    className="text-xs"
+                  />
+                  <CriteriaLedgerBar ledger={criteriaLedger} asked={criteriaAsked} className="text-xs" />
+                  <AreaLedgerBar
+                    ledger={areaLedger}
+                    asked={filters.near !== null}
+                    visibleCount={visible.length}
+                    coverage={coverage}
+                    className="text-xs"
+                  />
+                  <ResultsOrderNote order={order} listings={withinScope} />
+                </ResultsListHeader>
+              }
             />
           </ResultsSheet>
 
@@ -453,6 +440,7 @@ export function SearchResultsContent() {
         </div>
       </StayTotalsProvider>
       </SavedListingsProvider>
+      </ListingMapSnapshotProvider>
     </main>
   );
 }

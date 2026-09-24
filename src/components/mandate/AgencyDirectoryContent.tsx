@@ -85,6 +85,8 @@ import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 import { useCircleAnchorName } from '@/hooks/useCircleAnchorName';
 import { showcaseWhereVoice } from '@/lib/agency/showcase-where-voice';
 import { DirectoryQueryState } from './DirectoryQueryState';
+import { LandingHero } from '@/components/shared/landing-hero/LandingHero';
+import { LANDING_HERO_IMAGES } from '@/components/shared/landing-hero/landing-hero-images';
 
 registerRouteSlice(routeSlice);
 
@@ -218,28 +220,40 @@ export function AgencyDirectoryContent(): React.JSX.Element {
 
   return (
     <ShellSurface as="main" measure="wide" className="gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="m-0 text-2xl font-semibold text-foreground">{t(DIRECTORY_KEYS.title)}</h1>
-        {/*
-          🔑 Η ΟΥΔΕΤΕΡΟΤΗΤΑ ΛΕΓΕΤΑΙ, ΔΕΝ ΥΠΟΝΟΕΙΤΑΙ. Ο επισκέπτης κάθε άλλου
-          καταλόγου έχει μάθει ότι η πρώτη θέση αγοράζεται· αν δεν του πούμε ότι εδώ
-          δεν αγοράζεται, θα το υποθέσει — και η υπόθεση είναι δωρεάν για εκείνον.
-        */}
-        <p className="m-0 text-muted-foreground">{t(DIRECTORY_KEYS.lead)}</p>
-      </header>
+      {/*
+        🖼️ **Η ΑΚΤΙΝΑ ΤΩΝ ΕΠΑΓΓΕΛΜΑΤΙΩΝ (ADR-777 §8.82)** — ο **κοινός** ήρωας του κόμβου,
+        με **τη δική του** εικόνα και **τη δική του** ερώτηση: ειδικότητα + περιοχή, όπως
+        Houzz / Zillow `/professionals`. **Άμεσο τέκνο** του μέτρου, αλλιώς το breakout
+        μένει σιωπηλά στη στήλη.
 
-      {/* ⚠️ Τα χειριστήρια εμφανίζονται **μόνο όταν υπάρχει πληθυσμός**: επιλογές
-          πάνω σε άδειο κατάλογο θα υπόσχονταν κόσμο που δεν υπάρχει. */}
-      {!loading && error === null && agencies.length > 0 && (
-        <AgencyDirectoryFilters
-          filters={filters}
-          options={options}
-          locale={locale}
-          onChange={apply}
-          onClear={filtering ? () => apply(EMPTY_SHOWCASE_FILTERS) : null}
-          whereVoice={whereVoice}
-        />
-      )}
+        🔑 **ΤΑ ΦΙΛΤΡΑ ΜΠΗΚΑΝ ΜΕΣΑ ΣΤΟΝ ΗΡΩΑ — ΔΕΝ ΓΡΑΦΤΗΚΕ ΔΕΥΤΕΡΟ ΠΕΔΙΟ.** Το
+        `PlaceSearchBox` της αρχικής **πλοηγεί** προς εδώ· εδώ ζει ήδη το χειριστήριο που
+        **είναι** η κατάσταση της διεύθυνσης. Δύο χειριστήρια για τα ίδια `?occupation` και
+        `?where` στην ίδια σελίδα θα διαφωνούσαν στην πρώτη αλλαγή.
+
+        🔑 Η ΟΥΔΕΤΕΡΟΤΗΤΑ ΛΕΓΕΤΑΙ, ΔΕΝ ΥΠΟΝΟΕΙΤΑΙ — ο υπότιτλος είναι το `lead`: ο επισκέπτης
+        κάθε άλλου καταλόγου έχει μάθει ότι η πρώτη θέση αγοράζεται· αν δεν του πούμε ότι εδώ
+        δεν αγοράζεται, θα το υποθέσει.
+
+        ⚠️ Τα χειριστήρια εμφανίζονται **μόνο όταν υπάρχει πληθυσμός**: επιλογές πάνω σε άδειο
+        κατάλογο θα υπόσχονταν κόσμο που δεν υπάρχει — τότε ο ήρωας δείχνει **μόνο** τίτλο.
+      */}
+      <LandingHero
+        image={LANDING_HERO_IMAGES.pros}
+        title={t(DIRECTORY_KEYS.title)}
+        subtitle={t(DIRECTORY_KEYS.lead)}
+      >
+        {!loading && error === null && agencies.length > 0 && (
+          <AgencyDirectoryFilters
+            filters={filters}
+            options={options}
+            locale={locale}
+            onChange={apply}
+            onClear={filtering ? () => apply(EMPTY_SHOWCASE_FILTERS) : null}
+            whereVoice={whereVoice}
+          />
+        )}
+      </LandingHero>
 
       {/*
         🔴 **Η ΚΑΤΑΣΤΑΣΗ ΤΟΥ ΕΡΩΤΗΜΑΤΟΣ ΑΝΕΒΗΚΕ ΠΑΝΩ ΑΠΟ ΤΟΥΣ ΚΛΑΔΟΥΣ** *(§9 #12)*, και

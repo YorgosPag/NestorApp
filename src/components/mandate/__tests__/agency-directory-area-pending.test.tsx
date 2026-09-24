@@ -231,3 +231,32 @@ describe('ADR-846 Π7 — αργή ιεραρχία: όλοι ορατοί, κα
     expect(screen.queryByText(DIRECTORY.areaLoading)).not.toBeInTheDocument();
   });
 });
+
+// ===========================================================================
+// 🖼️ ADR-777 §8.82 — Η ΑΚΤΙΝΑ `/pro`: ο κοινός ήρωας, με τα φίλτρα ΜΕΣΑ του.
+//
+//    Ζει σε αυτή τη σουίτα επίτηδες: τα mocks που αποδίδουν ολόκληρο το
+//    `AgencyDirectoryContent` είναι ~100 γραμμές, και ένα δεύτερο αρχείο θα τα
+//    αντέγραφε (N.18). Η σύνθεση κρίνεται εδώ· ο ίδιος ο ήρωας στο `LandingHero.test`.
+// ===========================================================================
+describe('ADR-777 §8.82 — η ακτίνα των επαγγελματιών', () => {
+  it('Η1 — ο ήρωας είναι ΑΜΕΣΟ τέκνο του μέτρου, και ο h1 της σελίδας είναι ο δικός του', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: τύλιξε τον ήρωα σε δοχείο ⇒ το breakout σβήνει σιωπηλά.
+    renderDirectory('', false);
+
+    const measure = document.querySelector('[data-shell-measure]') as HTMLElement;
+    const hero = measure.querySelector('[data-shell-span="full"]') as HTMLElement;
+    expect(hero.parentElement).toBe(measure);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(hero.contains(screen.getByRole('heading', { level: 1 }))).toBe(true);
+  });
+
+  it('Η2 — τα φίλτρα ειδικότητας + περιοχής ζουν ΜΕΣΑ στον ήρωα — ΕΝΑ χειριστήριο, όχι δύο', () => {
+    renderDirectory('', false);
+
+    const hero = document.querySelector('[data-shell-span="full"]') as HTMLElement;
+    const comboboxes = screen.getAllByRole('combobox');
+    expect(comboboxes.length).toBeGreaterThan(0);
+    for (const control of comboboxes) expect(hero.contains(control)).toBe(true);
+  });
+});

@@ -16,7 +16,10 @@ import React from 'react';
 import { listingFocusStrength, type ListingFocus } from '@/lib/listings/listing-focus';
 import type { ListingSection } from '@/lib/listings/listing-price-sections';
 import { PriceClassSection } from '@/components/shared/price-sections/PriceClassSection';
+import { cn } from '@/lib/utils';
+
 import { ListingCard } from './ListingCard';
+import { LISTING_CARD_GRID_CLASS, RESULTS_CARD_IMAGE_SIZES } from './listing-card-frame';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ResultsListSectionProps {
@@ -42,7 +45,7 @@ export function ResultsListSection({
   undeclaredLabelsFor,
 }: ResultsListSectionProps) {
   const cards = (
-    <ul className="space-y-2 p-3">
+    <ul className={cn(LISTING_CARD_GRID_CLASS, 'p-3')}>
       {section.items.map((listing) => (
         <ListingCard
           key={listing.id}
@@ -51,6 +54,7 @@ export function ResultsListSection({
           onHover={onHover}
           filterQuery={filterQuery}
           priority={listing.id === priorityId}
+          imageSizes={RESULTS_CARD_IMAGE_SIZES}
           undeclaredLabels={undeclaredLabelsFor(listing)}
         />
       ))}
