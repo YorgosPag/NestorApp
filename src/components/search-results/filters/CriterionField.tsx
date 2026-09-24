@@ -40,6 +40,7 @@ import type { PublicListing } from '@/types/public-listing';
 
 import { CriterionFlagField } from './CriterionFlagField';
 import { CriterionRangeField } from './CriterionRangeField';
+import { CriterionRangePopover } from './CriterionRangePopover';
 import { CriterionValueSetField } from './CriterionValueSetField';
 import { CriterionValueSetPopover } from './CriterionValueSetPopover';
 import type { FilterCommit } from './use-filter-commit';
@@ -70,8 +71,9 @@ interface CriterionFieldProps {
    * με `'panel'` στη γραμμή, το «Είδος» ξεδίπλωνε **14** τετραγωνίδια και η γραμμή
    * γινόταν ψηλότερη από τον χάρτη.
    *
-   * 🔑 Τα **αριθμητικά** και τα **ναι/όχι** δεν το χρειάζονται: ένα εύρος είναι δύο
-   * πεδία και μια σημαία ένα τετραγωνίδιο — χωρούν και στα δύο επίπεδα **αυτούσια**.
+   * 🔑 Τα **ναι/όχι** δεν το χρειάζονται: μια σημαία είναι ένα τετραγωνίδιο και χωρά αυτούσια.
+   * ⚠️ Τα **αριθμητικά** το χρειάζονται από §8.80: δύο ανοιχτά πεδία με ετικέτες ήταν τρεις
+   * σειρές ύψους στη γραμμή — στο `'bar'` γίνονται τσιπ ({@link CriterionRangePopover}).
    */
   readonly space?: 'panel' | 'bar';
 }
@@ -95,6 +97,16 @@ export function CriterionField({
 
   switch (shape) {
     case 'range':
+      // 🔑 §8.80 — στη γραμμή και τα εύρη γίνονται τσιπ: ίδια απόφαση, στον ΕΝΑ διανομέα.
+      if (space === 'bar') {
+        return (
+          <CriterionRangePopover
+            criteria={criteria}
+            criterionKey={criterionKey as RangeCriterionKey}
+            commit={commit}
+          />
+        );
+      }
       return (
         <CriterionRangeField
           criteria={criteria}
