@@ -77,6 +77,13 @@ function mount(storedOrder: unknown) {
   );
 }
 
+/**
+ * Το κουμπί «να μπει πρώτη» — **κατά όνομα**, ποτέ κατά θέση: η γραμμή φιλοξενεί και άλλα χειριστήρια (ADR-880
+ * «Εστίαση»), και ένα `getAllByRole('button')[1]` θα πατούσε ό,τι έτυχε να είναι δεύτερο.
+ */
+const MAKE_FIRST = { name: 'property-market:listing.mediaOrder.makeFirst' } as const;
+const makeFirstButtons = (): HTMLElement[] => screen.getAllByRole('button', MAKE_FIRST);
+
 /** Τα ονόματα των αρχείων **με τη σειρά που τα ζωγράφισε η οθόνη**. */
 function shownOrder(): string[] {
   return screen
@@ -152,6 +159,26 @@ describe('Ο1 — ΤΙ ΔΕΙΧΝΕΙ', () => {
 });
 
 // ============================================================================
+// Ο5 — ΣΗΜΕΙΟ ΕΣΤΙΑΣΗΣ (ADR-880 §5.2)
+// ============================================================================
+
+describe('Ο5 — «ΕΣΤΙΑΣΗ» ΣΕ ΚΑΘΕ ΔΗΜΟΣΙΑ ΦΩΤΟΓΡΑΦΙΑ', () => {
+  /**
+   * 🔴 **Μετρημένο ζωντανά 24/09**: η πρώτη εκδοχή έκρυβε το χειριστήριο όταν έλειπε το `downloadUrl` — και παλιές
+   * εγγραφές γραφείου δεν το έχουν, ενώ η φωτογραφία είναι **ήδη δημόσια**. Τα fixtures εδώ **δεν** έχουν
+   * `downloadUrl`, επίτηδες: τα bytes έρχονται από τον φρουρούμενο δρόμο του `fileId`.
+   */
+  it('🔴 κάθε γραμμή φωτογραφίας έχει «Εστίαση», ΚΑΙ χωρίς `downloadUrl`', () => {
+    filesFromFirestore = [A, B, C];
+    mount(undefined);
+
+    for (const item of screen.getAllByRole('listitem')) {
+      expect(within(item).getByRole('button', { name: 'property-market:photoFocalPoint.triggerAria' })).toBeInTheDocument();
+    }
+  });
+});
+
+// ============================================================================
 // Ο2 — Η ΠΡΑΞΗ
 // ============================================================================
 
@@ -164,16 +191,16 @@ describe('Ο2 — «ΝΑ ΜΠΕΙ ΠΡΩΤΗ»', () => {
     // ⚠️ Και ρωτιέται **ανά στοιχείο**, όχι ως πλήθος: πλήθος `2` μένει `2` και όταν το
     //    κουμπί λείπει από **λάθος** γραμμή (η μετάλλαξη Μ14 που επέζησε).
     const items = screen.getAllByRole('listitem');
-    expect(within(items[0]).queryByRole('button')).toBeNull();
-    expect(within(items[1]).getByRole('button')).toBeInTheDocument();
-    expect(within(items[2]).getByRole('button')).toBeInTheDocument();
+    expect(within(items[0]).queryByRole('button', MAKE_FIRST)).toBeNull();
+    expect(within(items[1]).getByRole('button', MAKE_FIRST)).toBeInTheDocument();
+    expect(within(items[2]).getByRole('button', MAKE_FIRST)).toBeInTheDocument();
   });
 
   it('🔴 κλικ ⇒ ΓΡΑΦΕΤΑΙ η νέα δήλωση, με το πατημένο ΜΠΡΟΣΤΑ', async () => {
     filesFromFirestore = [A, B, C];
     mount(undefined);
 
-    await userEvent.click(screen.getAllByRole('button')[1]); // το τρίτο στοιχείο = file_c
+    await userEvent.click(makeFirstButtons()[1]); // το τρίτο στοιχείο = file_c
 
     await waitFor(() => expect(updateProperty).toHaveBeenCalledTimes(1));
     expect(updateProperty).toHaveBeenCalledWith(PROPERTY_ID, {
@@ -185,7 +212,7 @@ describe('Ο2 — «ΝΑ ΜΠΕΙ ΠΡΩΤΗ»', () => {
     filesFromFirestore = [A, B, C];
     mount(undefined);
 
-    await userEvent.click(screen.getAllByRole('button')[1]);
+    await userEvent.click(makeFirstButtons()[1]);
 
     // Το `storedOrder` παρέμεινε `undefined` — η νέα σειρά είναι **αποκλειστικά** τοπική.
     await waitFor(() => expect(shownOrder()).toEqual(['file_c', 'file_a', 'file_b']));
@@ -195,10 +222,10 @@ describe('Ο2 — «ΝΑ ΜΠΕΙ ΠΡΩΤΗ»', () => {
     filesFromFirestore = [A, B, C];
     mount(undefined);
 
-    await userEvent.click(screen.getAllByRole('button')[1]); // file_c πρώτο
+    await userEvent.click(makeFirstButtons()[1]); // file_c πρώτο
     await waitFor(() => expect(shownOrder()).toEqual(['file_c', 'file_a', 'file_b']));
 
-    await userEvent.click(screen.getAllByRole('button')[1]); // τώρα το file_b
+    await userEvent.click(makeFirstButtons()[1]); // τώρα το file_b
     await waitFor(() => expect(updateProperty).toHaveBeenCalledTimes(2));
     expect(updateProperty.mock.calls[1][1]).toEqual({
       publishedMediaOrder: ['file_b', 'file_c'],
@@ -216,7 +243,7 @@ describe('Ο3 — ΟΤΑΝ Ο ΔΙΑΚΟΜΙΣΤΗΣ ΑΡΝΕΙΤΑΙ', () => {
     filesFromFirestore = [A, B, C];
     mount(undefined);
 
-    await userEvent.click(screen.getAllByRole('button')[1]);
+    await userEvent.click(makeFirstButtons()[1]);
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(
@@ -236,7 +263,7 @@ describe('Ο4 — ΣΥΜΦΙΛΙΩΣΗ ΜΕ ΤΟ ΑΠΟΘΗΚΕΥΜΕΝΟ ΕΓΓ
     filesFromFirestore = [A, B, C];
     const view = mount(undefined);
 
-    await userEvent.click(screen.getAllByRole('button')[1]);
+    await userEvent.click(makeFirstButtons()[1]);
     await waitFor(() => expect(shownOrder()).toEqual(['file_c', 'file_a', 'file_b']));
 
     // Το έγγραφο επιστρέφει **ταυτόσημο** με το αισιόδοξο ⇒ το αισιόδοξο αποσύρεται…

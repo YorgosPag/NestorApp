@@ -27,7 +27,6 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
 import { PhotoFocalPointControl } from '@/components/listings/focal-point/PhotoFocalPointControl';
-import { ownerPropertyMediaUrl } from '@/hooks/owner-property/useOwnerPropertyMedia';
 import { readPhotoFocalPoint, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 
 const NS = 'property-market';
@@ -136,10 +135,9 @@ export function OwnerPropertyMediaItem({
       {!isFloorplan && (
         <PhotoFocalPointControl
           name={item.fileName}
-          resolveSrc={() => ownerPropertyMediaUrl(item.storagePath)}
+          photo={{ kind: 'storage', storagePath: item.storagePath }}
           declared={readPhotoFocalPoint(item.focalPoint)}
           onApply={(next) => onFocalPoint(item.storagePath, next)}
-          suggestionTarget={null}
         />
       )}
 

@@ -96,7 +96,10 @@ export function FocalPointSurface(props: FocalPointSurfaceProps): React.ReactEle
   const showSuggestion = suggestion !== null && (suggestion.x !== point.x || suggestion.y !== point.y);
 
   return (
-    <figure className="relative m-0 mx-auto w-fit touch-none select-none">
+    // ⚠️ `self-start`: ως grid item το figure τεντωνόταν στο ύψος της στήλης προεπισκόπησης όταν η φωτογραφία
+    //    ήταν χαμηλή (μετρημένο 24/09, 889×365) — το SVG και το κουμπί κλικ (`inset-0`) κάλυπταν το ΤΕΝΤΩΜΕΝΟ κουτί
+    //    ⇒ ορθογώνιο κάτω από την εικόνα και κλικ σε λάθος y. Το κουτί πρέπει να είναι ΑΚΡΙΒΩΣ η εικόνα.
+    <figure className="relative m-0 mx-auto w-fit self-start touch-none select-none">
       {/* eslint-disable-next-line @next/next/no-img-element -- ιδιωτικό πρωτότυπο, εκτός optimizer */}
       <img
         src={src}

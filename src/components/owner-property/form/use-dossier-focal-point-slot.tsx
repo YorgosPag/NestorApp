@@ -39,15 +39,15 @@ export function useDossierFocalPointSlot(): DossierFocalPointSlot {
     [form],
   );
 
-  // Μόνο φωτογραφία με διαθέσιμο πρωτότυπο: η κάτοψη/το τοπογραφικό αποδίδονται ολόκληρα.
+  // Μόνο φωτογραφία: η κάτοψη/το τοπογραφικό αποδίδονται ολόκληρα. Τα bytes από τον φρουρούμενο δρόμο του
+  // `FileRecord` (διαμέρισμα κατόχου) — ποτέ από το `downloadUrl`.
   return (file, tab) =>
-    tab !== 'photos' || !file.downloadUrl ? null : (
+    tab !== 'photos' ? null : (
       <PhotoFocalPointControl
         name={file.displayName}
-        src={file.downloadUrl}
+        photo={{ kind: 'file', fileId: file.id, custody: 'personal' }}
         declared={declared.get(file.id) ?? null}
         onApply={(next) => apply(file.id, next)}
-        suggestionTarget={{ fileId: file.id, custody: 'personal' }}
       />
     );
 }

@@ -89,16 +89,16 @@ function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }:
       displayName={file.displayName}
     >
       {/*
-        🎯 ADR-880 — **μόνο φωτογραφία**: η κάτοψη αποδίδεται ολόκληρη, δεν κόβεται ποτέ. Η πρόταση
-        ζητείται στο διαμέρισμα της **εταιρείας** — ίδιο με την ανάγνωση των αρχείων από πάνω.
+        🎯 ADR-880 — **μόνο φωτογραφία**: η κάτοψη αποδίδεται ολόκληρη, δεν κόβεται ποτέ. Bytes και πρόταση
+        από το διαμέρισμα της **εταιρείας** (ίδιο με την ανάγνωση των αρχείων από πάνω) — **όχι** από το
+        `downloadUrl`, που λείπει από παλιές εγγραφές ενώ η φωτογραφία είναι ήδη δημόσια.
       */}
-      {file.category === FILE_CATEGORIES.PHOTOS && file.downloadUrl !== undefined && (
+      {file.category === FILE_CATEGORIES.PHOTOS && (
         <PhotoFocalPointControl
           name={file.displayName}
-          src={file.downloadUrl}
+          photo={{ kind: 'file', fileId: file.id, custody: 'company' }}
           declared={focalPoints.pointOf(file.id)}
           onApply={(next) => void focalPoints.setPoint(file.id, next)}
-          suggestionTarget={{ fileId: file.id, custody: 'company' }}
           disabled={focalPoints.saving}
         />
       )}

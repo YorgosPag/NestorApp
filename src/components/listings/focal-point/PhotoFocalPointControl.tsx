@@ -7,7 +7,8 @@
  * (`OwnerPropertyDossierItem`), παλιό `media[]` (`OwnerPropertyMediaItem`). Διαφέρουν **μόνο** στο πού
  * αποθηκεύεται η δήλωση — γι' αυτό το `onApply` είναι του φιλοξενούμενου και όλα τα άλλα ζουν εδώ.
  *
- * ⚠️ **Το URL επιλύεται ΟΚΝΗΡΑ** (`resolveSrc`) όταν ανοίξει ο διάλογος — βλ. `use-photo-source`.
+ * 🔑 **Μία δήλωση προέλευσης** (`photo`): από αυτήν βγαίνουν **και** τα bytes **και** η πρόταση του διακομιστή —
+ * δύο χωριστά props θα μπορούσαν να δείχνουν σε διαφορετικά αρχεία. Βλ. `use-photo-source`.
  */
 
 import React, { useState } from 'react';
@@ -18,7 +19,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { useFocalPointSuggestion, type FocalPointSuggestionTarget } from './use-focal-point-suggestion';
-import { usePhotoSource } from './use-photo-source';
+import { usePhotoSource, type FocalPointPhoto } from './use-photo-source';
 
 const NS = 'property-market';
 const K = `${NS}:photoFocalPoint`;
@@ -39,19 +40,20 @@ interface PhotoFocalPointControlProps {
   readonly name: string;
   readonly declared: PhotoFocalPoint | null;
   readonly onApply: (next: PhotoFocalPoint | null) => void;
-  /** Γνωστό URL (FileRecord), **ή** οκνηρή επίλυση (μονοπάτι Storage). */
-  readonly src?: string;
-  readonly resolveSrc?: () => Promise<string>;
-  /** Το αρχείο για την πρόταση του διακομιστή — `null` όταν δεν υπάρχει `FileRecord`. */
-  readonly suggestionTarget: FocalPointSuggestionTarget | null;
+  /** Από πού διαβάζεται η φωτογραφία — `file` (με πρόταση διακομιστή) ή `storage` (παλιό `media[]`). */
+  readonly photo: FocalPointPhoto;
   readonly disabled?: boolean;
 }
+
+/** Πρόταση υπάρχει μόνο όπου υπάρχει `FileRecord` — το παλιό `media[]` την παίρνει στο ράφι. */
+const suggestionTargetOf = (photo: FocalPointPhoto): FocalPointSuggestionTarget | null =>
+  photo.kind === 'file' ? { fileId: photo.fileId, custody: photo.custody } : null;
 
 export function PhotoFocalPointControl(props: PhotoFocalPointControlProps): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [open, setOpen] = useState(false);
-  const source = usePhotoSource(open, props.src, props.resolveSrc);
-  const suggestion = useFocalPointSuggestion(props.suggestionTarget, open);
+  const source = usePhotoSource(open, props.photo);
+  const suggestion = useFocalPointSuggestion(suggestionTargetOf(props.photo), open);
 
   return (
     <>

@@ -21,6 +21,21 @@ jest.mock('@/services/filesystem/focal-point-suggestion.client', () => ({
   fetchFocalPointSuggestion: (...args: unknown[]) => mockSuggestion(...args),
 }));
 
+const mockDownload = jest.fn();
+jest.mock('@/services/filesystem/file-mutation-gateway', () => ({
+  downloadFileByIdWithPolicy: (...args: unknown[]) => mockDownload(...args),
+}));
+
+const mockStorageUrl = jest.fn();
+jest.mock('@/hooks/owner-property/useOwnerPropertyMedia', () => ({
+  ownerPropertyMediaUrl: (...args: unknown[]) => mockStorageUrl(...args),
+}));
+
+// Το jsdom δεν έχει `URL.createObjectURL` — ορίζεται εδώ, και μετράμε την ανάκληση.
+const createObjectURL = jest.fn(() => 'blob:photo');
+const revokeObjectURL = jest.fn();
+Object.assign(URL, { createObjectURL, revokeObjectURL });
+
 const K = 'property-market:photoFocalPoint';
 
 function renderControl(over: Partial<React.ComponentProps<typeof PhotoFocalPointControl>> = {}) {
@@ -28,10 +43,9 @@ function renderControl(over: Partial<React.ComponentProps<typeof PhotoFocalPoint
   render(
     <PhotoFocalPointControl
       name="Σαλόνι"
-      src="https://example.test/salon.jpg"
+      photo={{ kind: 'storage', storagePath: 'companies/c/owner-properties/p/salon.jpg' }}
       declared={null}
       onApply={onApply}
-      suggestionTarget={null}
       {...over}
     />,
   );
@@ -43,7 +57,13 @@ async function openDialog(): Promise<HTMLElement> {
   return screen.findByRole('button', { name: `${K}.surfaceAria` });
 }
 
-beforeEach(() => mockSuggestion.mockReset());
+beforeEach(() => {
+  mockSuggestion.mockReset();
+  mockDownload.mockReset().mockResolvedValue(new Blob(['x'], { type: 'image/jpeg' }));
+  mockStorageUrl.mockReset().mockResolvedValue('https://example.test/salon.jpg');
+  createObjectURL.mockClear();
+  revokeObjectURL.mockClear();
+});
 
 describe('PhotoFocalPointControl', () => {
   it('πληκτρολόγιο: Shift+→ μετακινεί 10%, και η «Εφαρμογή» επιστρέφει το σημείο του ανθρώπου', async () => {
@@ -85,7 +105,7 @@ describe('PhotoFocalPointControl', () => {
 
   it('η πρόταση του διακομιστή ζητείται ΜΟΝΟ όταν ανοίξει ο διάλογος, με το σωστό διαμέρισμα', async () => {
     mockSuggestion.mockResolvedValue({ kind: 'ready', point: { x: 0.7, y: 0.2 } });
-    renderControl({ suggestionTarget: { fileId: 'file_a', custody: 'personal' } });
+    renderControl({ photo: { kind: 'file', fileId: 'file_a', custody: 'personal' } });
     expect(mockSuggestion).not.toHaveBeenCalled();
 
     await openDialog();
@@ -95,7 +115,7 @@ describe('PhotoFocalPointControl', () => {
 
   it('η πρόταση απομνημονεύεται ανά αρχείο: δεύτερο άνοιγμα ⇒ καμία δεύτερη κλήση', async () => {
     mockSuggestion.mockResolvedValue({ kind: 'ready', point: { x: 0.4, y: 0.6 } });
-    renderControl({ suggestionTarget: { fileId: 'file_memo', custody: 'company' } });
+    renderControl({ photo: { kind: 'file', fileId: 'file_memo', custody: 'company' } });
 
     await openDialog();
     expect(await screen.findByText(`${K}.suggestionReady`)).toBeTruthy();
@@ -105,23 +125,49 @@ describe('PhotoFocalPointControl', () => {
     expect(mockSuggestion).toHaveBeenCalledTimes(1);
   });
 
-  it('οκνηρό URL: επιλύεται ΜΟΝΟ στο άνοιγμα', async () => {
-    const resolveSrc = jest.fn().mockResolvedValue('https://example.test/lazy.jpg');
-    renderControl({ src: undefined, resolveSrc });
-    expect(resolveSrc).not.toHaveBeenCalled();
+  it('📷 `FileRecord`: bytes από τον ΦΡΟΥΡΟΥΜΕΝΟ δρόμο, ΜΟΝΟ στο άνοιγμα, ΜΙΑ φορά — ποτέ από `downloadUrl`', async () => {
+    renderControl({ photo: { kind: 'file', fileId: 'file_bytes', custody: 'company' } });
+    expect(mockDownload).not.toHaveBeenCalled();
 
     await openDialog();
-    expect(resolveSrc).toHaveBeenCalledTimes(1);
+    expect(mockDownload).toHaveBeenCalledWith('file_bytes', 'company');
+    await userEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    await openDialog();
+
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockStorageUrl).not.toHaveBeenCalled();
   });
 
-  it('🔴 αποτυχημένη επίλυση URL ⇒ μήνυμα αποτυχίας, ΟΧΙ ατέρμονο «φορτώνει»', async () => {
-    const resolveSrc = jest.fn().mockRejectedValue(new Error('storage/unauthorized'));
-    renderControl({ src: undefined, resolveSrc });
+  it('το `objectURL` ανακαλείται όταν φύγει το χειριστήριο', async () => {
+    const { unmount } = render(
+      <PhotoFocalPointControl
+        name="Σαλόνι" declared={null} onApply={jest.fn()}
+        photo={{ kind: 'file', fileId: 'file_revoke', custody: 'company' }}
+      />,
+    );
+    await openDialog();
+    unmount();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:photo');
+  });
+
+  it('παλιό `media[]`: URL από το μονοπάτι Storage, καμία πρόταση διακομιστή', async () => {
+    renderControl();
+    await openDialog();
+    expect(mockStorageUrl).toHaveBeenCalledWith('companies/c/owner-properties/p/salon.jpg');
+    expect(mockSuggestion).not.toHaveBeenCalled();
+  });
+
+  it('🔴 αποτυχημένη λήψη ⇒ μήνυμα αποτυχίας, ΟΧΙ ατέρμονο «φορτώνει» — και το επόμενο άνοιγμα ξαναδοκιμάζει', async () => {
+    mockDownload.mockRejectedValueOnce(new Error('404'));
+    renderControl({ photo: { kind: 'file', fileId: 'file_fail', custody: 'company' } });
 
     await userEvent.click(screen.getByRole('button', { name: `${K}.triggerAria` }));
-
     expect(await screen.findByText(`${K}.imageLoadFailed`)).toBeTruthy();
     expect(screen.queryByText(`${K}.imageLoading`)).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+    await openDialog();
+    expect(mockDownload).toHaveBeenCalledTimes(2);
   });
 
   it('η κατάσταση του κουμπιού λέει αν η εστίαση είναι αυτόματη ή δική σας', () => {
