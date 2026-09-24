@@ -1,4 +1,9 @@
 {
+  "proBand": {
+    "title": "Are you a real-estate professional?",
+    "body": "Agents, builders, engineers, lawyers: get your own office space — listings, clients, dossiers and team in one place.",
+    "cta": "Open your office space"
+  },
   "custody": {
     "personal": {
       "title": "You are posting in your personal space",
@@ -2262,5 +2267,27 @@
     "remove": "Remove",
     "truncated": "Showing the {count} most recent saves.",
     "listLabel": "Saved listings"
+  },
+  "photoFocalPoint": {
+    "trigger": "Focus",
+    "triggerAria": "Focal point for “{name}”",
+    "stateAuto": "Automatic",
+    "stateManual": "Yours",
+    "title": "Where is the subject of this photo?",
+    "description": "Tap or drag to the spot that must always stay visible. Every card crops the photo so that this spot stays centred.",
+    "surfaceAria": "Focal point. Arrow keys move by 1%, with Shift by 10%, Home: centre.",
+    "valueText": "Horizontal {x}%, vertical {y}%",
+    "xLabel": "Horizontal (%)",
+    "yLabel": "Vertical (%)",
+    "previewTitle": "This is how it will look",
+    "frameCard": "Listing card (3:2)",
+    "suggestionLoading": "Looking for the automatic point…",
+    "suggestionReady": "The dashed line shows the automatic point.",
+    "suggestionNone": "No clear subject found — without a correction the photo is centred.",
+    "suggestionUnavailable": "The automatic point is computed when the listing is published.",
+    "useAuto": "Automatic",
+    "apply": "Apply",
+    "imageLoading": "Loading the photo…",
+    "imageLoadFailed": "The photo could not be loaded."
   }
 }

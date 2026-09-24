@@ -1240,7 +1240,9 @@
       "communications": "Επικοινωνία",
       "aiInbox": "Εισερχόμενα AI",
       "operatorInbox": "Εισερχόμενα Χειριστή",
-      "bimDiagnostics": "Διαγνωστικά BIM"
+      "bimDiagnostics": "Διαγνωστικά BIM",
+      "publicSite": "Δημόσιος ιστότοπος",
+      "landingHeroes": "Εικόνες ήρωα"
     }
   },
   "bimDiagnostics": {

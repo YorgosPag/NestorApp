@@ -321,7 +321,13 @@
       "label": "My spaces",
       "personal": "My personal space",
       "organization": "My office space",
-      "current": "you are here"
+      "current": "you are here",
+        "hint": {
+          "personal": "Your properties, requests and saved listings.",
+          "organization": "Your office dashboard — listings, clients, team.",
+          "createWorkspace": "Listings, clients, dossiers and team in one professional space.",
+          "messages": "Your conversations with individuals and professionals."
+        }
     },
     "profile": "Profile",
     "settings": "Settings",

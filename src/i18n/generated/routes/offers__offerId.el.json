@@ -415,6 +415,12 @@
       "stayCalendar": {
         "open": "Ημερολόγιο κρατήσεων"
       }
+    },
+    "photoFocalPoint": {
+      "stateAuto": "Αυτόματη",
+      "stateManual": "Δική σας",
+      "trigger": "Εστίαση",
+      "triggerAria": "Σημείο εστίασης για «{name}»"
     }
   }
 }

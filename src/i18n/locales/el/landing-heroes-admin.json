@@ -1,0 +1,119 @@
+{
+  "title": "Εικόνες ήρωα",
+  "subtitle": "Η μεγάλη εικόνα στην κορυφή των σελίδων /, /pro και /stay — μέρα στο φωτεινό θέμα, γαλάζια ώρα στο σκοτεινό.",
+  "loading": "Φόρτωση…",
+  "loadError": "Δεν φορτώθηκαν οι εικόνες ήρωα.",
+  "retry": "Δοκιμή ξανά",
+  "pages": {
+    "home": "Αρχική (/)",
+    "pros": "Επαγγελματίες (/pro)",
+    "stay": "Βραχυχρόνια (/stay)"
+  },
+  "live": {
+    "title": "Ζωντανή τώρα",
+    "builtin": "Η ενσωματωμένη εικόνα (προεπιλογή). Δημοσίευσε μια έκδοση για να την αντικαταστήσεις.",
+    "revision": "Δημοσιευμένη έκδοση — {date}"
+  },
+  "composer": {
+    "title": "Νέα έκδοση",
+    "description": "Διάλεξε τις εικόνες. Όλα ελέγχονται εδώ, πριν ανέβει οτιδήποτε· η αποθήκευση δημιουργεί πρόχειρο που δεν φαίνεται στους επισκέπτες μέχρι να το δημοσιεύσεις.",
+    "day": "Μέρα — φωτεινό θέμα",
+    "dusk": "Γαλάζια ώρα — σκοτεινό θέμα",
+    "duskOptional": "Προαιρετική. Χωρίς αυτήν, η μέρα εμφανίζεται και στα δύο θέματα.",
+    "choose": "Επιλογή αρχείου",
+    "replace": "Αλλαγή",
+    "remove": "Αφαίρεση",
+    "dimensions": "{width} × {height} px",
+    "save": "Αποθήκευση ως πρόχειρο",
+    "saving": "Επεξεργασία εικόνων…",
+    "blocked": "Διόρθωσε τα σημεία με το κόκκινο εικονίδιο για να συνεχίσεις."
+  },
+  "issues": {
+    "typeNotAccepted": "Δεκτά μόνο JPEG, PNG ή WebP.",
+    "tooLarge": "Πάνω από 20 MB.",
+    "tooSmall": "Πολύ μικρή — χρειάζεται τουλάχιστον 1536 × 768 px.",
+    "aspectOutOfRange": "Λάθος αναλογία — χρειάζεται φαρδιά εικόνα, από 3:2 έως 2:1 περίπου.",
+    "belowTargetWidth": "Κάτω από 2400 px πλάτος: σε οθόνες υψηλής πυκνότητας θα φαίνεται ελαφρώς μαλακή.",
+    "aspectNotTarget": "Δεν είναι 2:1 — σε φαρδιές οθόνες θα κοπεί περισσότερο πάνω-κάτω. Έλεγξε την προεπισκόπηση.",
+    "pairSizeMismatch": "Μέρα και σούρουπο έχουν διαφορετική αναλογία — στην εναλλαγή θέματος η σκηνή θα μετακινηθεί."
+  },
+  "focal": {
+    "title": "Σημείο εστίασης",
+    "hint": "Κάνε κλικ πάνω στο θέμα. Σε φαρδιές οθόνες η εικόνα κόβεται πάνω-κάτω, στο κινητό αριστερά-δεξιά· το σημείο μένει πάντα ορατό.",
+    "auto": "Προεπιλογή σύνθεσης — θέμα δεξιά, κάθετο κέντρο",
+    "reset": "Επαναφορά στην προεπιλογή",
+    "position": "οριζόντια {x}% · κάθετα {y}%",
+    "label": "Σημείο εστίασης — κλικ ή βελάκια για μετακίνηση"
+  },
+  "preview": {
+    "title": "Προεπισκόπηση σε συσκευές",
+    "sampleTitle": "Βρες το επόμενο σπίτι σου",
+    "sampleSubtitle": "Αγγελίες από ιδιοκτήτες και γραφεία σε όλη την Ελλάδα.",
+    "frames": {
+      "mobile": "Κινητό",
+      "tablet": "Ταμπλέτα",
+      "laptop": "Laptop",
+      "desktop": "Οθόνη"
+    },
+    "themes": {
+      "day": "φωτεινό",
+      "dusk": "σκοτεινό"
+    }
+  },
+  "legibility": {
+    "pass": "Διαβάζεται ({ratio}:1)",
+    "largeOnly": "Οριακό — ο υπότιτλος δυσκολεύει ({ratio}:1)",
+    "fail": "Δεν διαβάζεται ({ratio}:1)",
+    "unknown": "Δεν μετρήθηκε"
+  },
+  "history": {
+    "title": "Ιστορικό εκδόσεων",
+    "empty": "Καμία έκδοση ακόμη — η σελίδα δείχνει την ενσωματωμένη εικόνα.",
+    "live": "Ζωντανή",
+    "draft": "Αδημοσίευτη",
+    "publish": "Δημοσίευση",
+    "refocus": "Νέα εστίαση",
+    "saveRefocus": "Αποθήκευση ως νέα έκδοση",
+    "revertBuiltin": "Επιστροφή στην ενσωματωμένη",
+    "focalDeclared": "Εστίαση: χειροκίνητη",
+    "focalDetected": "Εστίαση: αυτόματη",
+    "focalDefault": "Εστίαση: προεπιλογή σύνθεσης",
+    "noDusk": "μόνο μέρα"
+  },
+  "errors": {
+    "foreignSource": "Το αρχείο δεν ανήκει στον οργανισμό σου.",
+    "shelfFailed": "Η επεξεργασία των εικόνων απέτυχε. Δοκίμασε ξανά σε λίγο.",
+    "unreadableImage": "Μία από τις εικόνες δεν διαβάζεται — ανέβασέ την ξανά.",
+    "dimensionsRejected": "Οι διαστάσεις της εικόνας δεν επιτρέπονται.",
+    "revisionNotFound": "Η έκδοση δεν βρέθηκε.",
+    "invalidTarget": "Η έκδοση δεν ανήκει σε αυτή τη σελίδα.",
+    "uploadFailed": "Το ανέβασμα απέτυχε. Έλεγξε τη σύνδεση και δοκίμασε ξανά.",
+    "tooLarge": "Η εικόνα δεν χωρά ούτε μετά από συμπίεση.",
+    "noIdentity": "Δεν βρέθηκε ο οργανισμός του λογαριασμού σου.",
+    "network": "Δεν υπήρξε απάντηση από τον διακομιστή. Δοκίμασε ξανά."
+  },
+  "guide": {
+    "title": "Πώς φτιάχνω την εικόνα με AI",
+    "intro": "Δώσε στο AI (ChatGPT, Midjourney κ.ά.) τις δύο εντολές με τη σειρά, στην ίδια συνομιλία. Οι κανόνες:",
+    "rules": {
+      "aspect": "Φαρδιά εικόνα, ιδανικά 2:1 (2400 × 1200). Το ChatGPT βγάζει το πολύ 3:2 (1536 × 1024) — γίνεται δεκτό, απλώς κόβεται λίγο περισσότερο.",
+      "subjectRight": "Το θέμα μόνο στο δεξί τρίτο· αριστερά ήρεμο, γιατί εκεί κάθονται ο τίτλος και η αναζήτηση.",
+      "safeBands": "Τίποτα σημαντικό στο πάνω και στο κάτω 15% — κόβονται σε φαρδιές οθόνες.",
+      "noText": "Χωρίς κείμενο, λογότυπα, πινακίδες ή ανθρώπους.",
+      "greek": "Ελληνικό τοπίο χωρίς διάσημο ορόσημο (όχι Οία, μύλους, Ακρόπολη) και τίποτα που θυμίζει Κροατία, Ιταλία ή Ισπανία.",
+      "sameScene": "Το σούρουπο είναι η ΙΔΙΑ εικόνα στη γαλάζια ώρα — επεξεργασία της πρώτης, όχι νέα παραγωγή. Όχι μαύρη νύχτα.",
+      "resolution": "Ανέβασε το αρχείο όπως το έδωσε το AI· το εργαλείο το ελέγχει, το καθαρίζει και φτιάχνει μόνο του όλα τα μεγέθη."
+    },
+    "step1": "Βήμα 1 — Η μέρα",
+    "step2": "Βήμα 2 — Η γαλάζια ώρα (στην ίδια συνομιλία, πάνω στην εικόνα του βήματος 1)",
+    "copy": "Αντιγραφή εντολής",
+    "copied": "Αντιγράφηκε",
+    "chatgptNote": "Οι εντολές είναι στα αγγλικά επίτηδες: τα μοντέλα εικόνας τις ακολουθούν πιο πιστά. Αν το αποτέλεσμα δείχνει κάποιο διάσημο μέρος ή κείμενο, ζήτα «remove it, keep everything else identical».",
+    "prompts": {
+      "home": "Photorealistic wide landscape photograph for the hero banner of a Greek real-estate website. A contemporary Greek residence with clean white volumes, natural stone and large glass openings, set on a gentle hillside above a quiet coastal town and the Aegean sea, warm late-afternoon daylight. Composition rules: place the main subject ONLY in the right third of the frame. Keep the left two-thirds calm and uncluttered (open sky, soft sea or plain surfaces) because a white headline and a search box will sit there. Keep every important detail out of the top 15% and the bottom 15% of the image - they get cropped on wide screens. No text, no letters, no logos, no signs, no watermarks, no people. Greek setting, but NO famous landmark: not Santorini or Oia, no windmills, no Acropolis, nothing that looks like Croatia, Italy or Spain. Photorealistic, natural colours, not over-saturated, eye-level camera, 35mm lens, sharp and highly detailed. Output: the widest landscape format you support (ideally 2:1, at least 2400 px wide).",
+      "pros": "Photorealistic wide landscape photograph for the hero banner of a directory of architects, engineers, builders and craftsmen in Greece. On the right third: a sunlit terrace table with architectural drawings, a scale ruler, a pencil and material samples (stone, wood, ceramic tiles), with a soft-focus view over the rooftops of Athens towards the hills. It should feel like 'we design and build' - NOT a boardroom, no laptops dominating the scene. Keep the drawings in the middle band of the frame, not near the bottom edge. Composition rules: place the main subject ONLY in the right third of the frame. Keep the left two-thirds calm and uncluttered (open sky, soft sea or plain surfaces) because a white headline and a search box will sit there. Keep every important detail out of the top 15% and the bottom 15% of the image - they get cropped on wide screens. No text, no letters, no logos, no signs, no watermarks, no people. Greek setting, but NO famous landmark: not Santorini or Oia, no windmills, no Acropolis, nothing that looks like Croatia, Italy or Spain. Photorealistic, natural colours, not over-saturated, eye-level camera, 35mm lens, sharp and highly detailed. Output: the widest landscape format you support (ideally 2:1, at least 2400 px wide).",
+      "stay": "Photorealistic wide landscape photograph for the hero banner of a Greek short-stay rentals page. On the right third: the terrace of a whitewashed Cycladic house with stone paving, bougainvillea and an olive tree in a pot, overlooking a generic Cycladic village and a small fishing harbour, clear summer daylight. Composition rules: place the main subject ONLY in the right third of the frame. Keep the left two-thirds calm and uncluttered (open sky, soft sea or plain surfaces) because a white headline and a search box will sit there. Keep every important detail out of the top 15% and the bottom 15% of the image - they get cropped on wide screens. No text, no letters, no logos, no signs, no watermarks, no people. Greek setting, but NO famous landmark: not Santorini or Oia, no windmills, no Acropolis, nothing that looks like Croatia, Italy or Spain. Photorealistic, natural colours, not over-saturated, eye-level camera, 35mm lens, sharp and highly detailed. Output: the widest landscape format you support (ideally 2:1, at least 2400 px wide).",
+      "dusk": "Edit this exact same image. Keep the identical composition, camera position, framing, crop and every object exactly where it is - do not add, remove or move anything. Change ONLY the time of day to blue hour, about 20 minutes after sunset: deep blue sky with a soft warm glow on the horizon, warm interior lights and street lights switched on. It must NOT be black night - the sky stays clearly blue and the whole scene stays readable. No text, no people. Same output size as the original."
+    }
+  }
+}

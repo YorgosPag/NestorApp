@@ -1240,7 +1240,9 @@
       "communications": "Communications",
       "aiInbox": "AI Inbox",
       "operatorInbox": "Operator Inbox",
-      "bimDiagnostics": "BIM Diagnostics"
+      "bimDiagnostics": "BIM Diagnostics",
+      "publicSite": "Public site",
+      "landingHeroes": "Hero images"
     }
   },
   "bimDiagnostics": {

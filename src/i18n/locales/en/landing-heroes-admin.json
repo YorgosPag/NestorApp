@@ -1,0 +1,119 @@
+{
+  "title": "Hero images",
+  "subtitle": "The large image at the top of /, /pro and /stay — daylight in the light theme, blue hour in the dark theme.",
+  "loading": "Loading…",
+  "loadError": "The hero images could not be loaded.",
+  "retry": "Try again",
+  "pages": {
+    "home": "Home (/)",
+    "pros": "Professionals (/pro)",
+    "stay": "Short stays (/stay)"
+  },
+  "live": {
+    "title": "Live now",
+    "builtin": "The built-in image (default). Publish a revision to replace it.",
+    "revision": "Published revision — {date}"
+  },
+  "composer": {
+    "title": "New revision",
+    "description": "Pick the images. Everything is checked here before anything is uploaded; saving creates a draft that visitors do not see until you publish it.",
+    "day": "Daylight — light theme",
+    "dusk": "Blue hour — dark theme",
+    "duskOptional": "Optional. Without it, the daylight image is shown in both themes.",
+    "choose": "Choose file",
+    "replace": "Replace",
+    "remove": "Remove",
+    "dimensions": "{width} × {height} px",
+    "save": "Save as draft",
+    "saving": "Processing images…",
+    "blocked": "Fix the items marked with the red icon to continue."
+  },
+  "issues": {
+    "typeNotAccepted": "Only JPEG, PNG or WebP are accepted.",
+    "tooLarge": "Larger than 20 MB.",
+    "tooSmall": "Too small — at least 1536 × 768 px is needed.",
+    "aspectOutOfRange": "Wrong shape — a wide image is needed, roughly between 3:2 and 2:1.",
+    "belowTargetWidth": "Under 2400 px wide: slightly soft on high-density screens.",
+    "aspectNotTarget": "Not 2:1 — wide screens will crop more from top and bottom. Check the preview.",
+    "pairSizeMismatch": "Daylight and blue hour have different proportions — the scene will shift when the theme changes."
+  },
+  "focal": {
+    "title": "Focal point",
+    "hint": "Click on the subject. Wide screens crop top and bottom, phones crop left and right; the point always stays visible.",
+    "auto": "Composition default — subject on the right, vertically centred",
+    "reset": "Back to the default",
+    "position": "horizontal {x}% · vertical {y}%",
+    "label": "Focal point — click or use the arrow keys to move it"
+  },
+  "preview": {
+    "title": "Preview on devices",
+    "sampleTitle": "Find your next home",
+    "sampleSubtitle": "Listings from owners and agencies across Greece.",
+    "frames": {
+      "mobile": "Phone",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "desktop": "Desktop"
+    },
+    "themes": {
+      "day": "light",
+      "dusk": "dark"
+    }
+  },
+  "legibility": {
+    "pass": "Readable ({ratio}:1)",
+    "largeOnly": "Borderline — the subtitle struggles ({ratio}:1)",
+    "fail": "Not readable ({ratio}:1)",
+    "unknown": "Not measured"
+  },
+  "history": {
+    "title": "Revision history",
+    "empty": "No revisions yet — the page shows the built-in image.",
+    "live": "Live",
+    "draft": "Not published",
+    "publish": "Publish",
+    "refocus": "New focal point",
+    "saveRefocus": "Save as new revision",
+    "revertBuiltin": "Back to the built-in image",
+    "focalDeclared": "Focal point: manual",
+    "focalDetected": "Focal point: automatic",
+    "focalDefault": "Focal point: composition default",
+    "noDusk": "daylight only"
+  },
+  "errors": {
+    "foreignSource": "This file does not belong to your organisation.",
+    "shelfFailed": "Processing the images failed. Try again shortly.",
+    "unreadableImage": "One of the images cannot be read — upload it again.",
+    "dimensionsRejected": "The image dimensions are not allowed.",
+    "revisionNotFound": "The revision was not found.",
+    "invalidTarget": "The revision does not belong to this page.",
+    "uploadFailed": "The upload failed. Check your connection and try again.",
+    "tooLarge": "The image does not fit even after compression.",
+    "noIdentity": "Your account's organisation was not found.",
+    "network": "The server did not respond. Try again."
+  },
+  "guide": {
+    "title": "How to create the image with AI",
+    "intro": "Give the AI (ChatGPT, Midjourney, etc.) the two prompts in order, in the same conversation. The rules:",
+    "rules": {
+      "aspect": "A wide image, ideally 2:1 (2400 × 1200). ChatGPT produces at most 3:2 (1536 × 1024) — accepted, it just crops a little more.",
+      "subjectRight": "Subject only in the right third; keep the left calm, because the headline and search sit there.",
+      "safeBands": "Nothing important in the top and bottom 15% — they are cropped on wide screens.",
+      "noText": "No text, logos, signs or people.",
+      "greek": "A Greek landscape without any famous landmark (no Oia, windmills, Acropolis) and nothing that looks like Croatia, Italy or Spain.",
+      "sameScene": "Blue hour is the SAME image at dusk — an edit of the first one, not a new generation. Never black night.",
+      "resolution": "Upload the file exactly as the AI produced it; the tool checks it, cleans it and creates every size by itself."
+    },
+    "step1": "Step 1 — Daylight",
+    "step2": "Step 2 — Blue hour (same conversation, on the image from step 1)",
+    "copy": "Copy prompt",
+    "copied": "Copied",
+    "chatgptNote": "The prompts are in English on purpose: image models follow them more faithfully. If the result shows a famous place or any text, ask 'remove it, keep everything else identical'.",
+    "prompts": {
+      "home": "Photorealistic wide landscape photograph for the hero banner of a Greek real-estate website. A contemporary Greek residence with clean white volumes, natural stone and large glass openings, set on a gentle hillside above a quiet coastal town and the Aegean sea, warm late-afternoon daylight. Composition rules: place the main subject ONLY in the right third of the frame. Keep the left two-thirds calm and uncluttered (open sky, soft sea or plain surfaces) because a white headline and a search box will sit there. Keep every important detail out of the top 15% and the bottom 15% of the image - they get cropped on wide screens. No text, no letters, no logos, no signs, no watermarks, no people. Greek setting, but NO famous landmark: not Santorini or Oia, no windmills, no Acropolis, nothing that looks like Croatia, Italy or Spain. Photorealistic, natural colours, not over-saturated, eye-level camera, 35mm lens, sharp and highly detailed. Output: the widest landscape format you support (ideally 2:1, at least 2400 px wide).",
+      "pros": "Photorealistic wide landscape photograph for the hero banner of a directory of architects, engineers, builders and craftsmen in Greece. On the right third: a sunlit terrace table with architectural drawings, a scale ruler, a pencil and material samples (stone, wood, ceramic tiles), with a soft-focus view over the rooftops of Athens towards the hills. It should feel like 'we design and build' - NOT a boardroom, no laptops dominating the scene. Keep the drawings in the middle band of the frame, not near the bottom edge. Composition rules: place the main subject ONLY in the right third of the frame. Keep the left two-thirds calm and uncluttered (open sky, soft sea or plain surfaces) because a white headline and a search box will sit there. Keep every important detail out of the top 15% and the bottom 15% of the image - they get cropped on wide screens. No text, no letters, no logos, no signs, no watermarks, no people. Greek setting, but NO famous landmark: not Santorini or Oia, no windmills, no Acropolis, nothing that looks like Croatia, Italy or Spain. Photorealistic, natural colours, not over-saturated, eye-level camera, 35mm lens, sharp and highly detailed. Output: the widest landscape format you support (ideally 2:1, at least 2400 px wide).",
+      "stay": "Photorealistic wide landscape photograph for the hero banner of a Greek short-stay rentals page. On the right third: the terrace of a whitewashed Cycladic house with stone paving, bougainvillea and an olive tree in a pot, overlooking a generic Cycladic village and a small fishing harbour, clear summer daylight. Composition rules: place the main subject ONLY in the right third of the frame. Keep the left two-thirds calm and uncluttered (open sky, soft sea or plain surfaces) because a white headline and a search box will sit there. Keep every important detail out of the top 15% and the bottom 15% of the image - they get cropped on wide screens. No text, no letters, no logos, no signs, no watermarks, no people. Greek setting, but NO famous landmark: not Santorini or Oia, no windmills, no Acropolis, nothing that looks like Croatia, Italy or Spain. Photorealistic, natural colours, not over-saturated, eye-level camera, 35mm lens, sharp and highly detailed. Output: the widest landscape format you support (ideally 2:1, at least 2400 px wide).",
+      "dusk": "Edit this exact same image. Keep the identical composition, camera position, framing, crop and every object exactly where it is - do not add, remove or move anything. Change ONLY the time of day to blue hour, about 20 minutes after sunset: deep blue sky with a soft warm glow on the horizon, warm interior lights and street lights switched on. It must NOT be black night - the sky stays clearly blue and the whole scene stays readable. No text, no people. Same output size as the original."
+    }
+  }
+}
