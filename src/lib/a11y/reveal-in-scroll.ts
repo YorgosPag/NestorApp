@@ -100,9 +100,33 @@ export function revealInScroll(
  */
 export type ScrollVisibility = 'visible' | 'above' | 'below' | 'unknown';
 
+/**
+ * **Το κάδρο που βλέπει ο άνθρωπος**: ένα δοχείο κύλισης (η λίστα της οθόνης 2) ή το
+ * **παράθυρο** (`'viewport'` — σελίδα που κυλά ολόκληρη, όπως το χαρτοφυλάκιο, ADR-777 §8.77).
+ */
+export type ScrollFrame = Element | 'viewport';
+
+interface FrameEdges {
+  readonly top: number;
+  readonly bottom: number;
+  readonly height: number;
+}
+
+/**
+ * ⚠️ **`clientHeight` του `<html>`, ΟΧΙ `innerHeight`**: το `innerHeight` μετρά και την οριζόντια
+ * μπάρα κύλισης, δηλαδή λωρίδα που **δεν** δείχνει περιεχόμενο. Και στο jsdom το `clientHeight` είναι
+ * 0 ⇒ `'unknown'` — η ίδια ειλικρίνεια με τα μηδενικά ορθογώνια του δοχείου (το `innerHeight` του
+ * jsdom είναι 768 και θα έλεγε «ορατό» για κάτι που κανείς δεν μέτρησε).
+ */
+function frameEdges(frame: ScrollFrame): FrameEdges {
+  if (frame !== 'viewport') return frame.getBoundingClientRect();
+  const height = document.documentElement.clientHeight;
+  return { top: 0, bottom: height, height };
+}
+
 export function visibilityWithinScroller(
   element: Element | null | undefined,
-  scroller: Element | null | undefined
+  scroller: ScrollFrame | null | undefined
 ): ScrollVisibility {
   if (!element || !scroller) return 'unknown';
   // Το jsdom επιστρέφει παντού μηδενικά ορθογώνια. Ένας «ειλικρινής» υπολογισμός εκεί θα
@@ -110,7 +134,7 @@ export function visibilityWithinScroller(
   if (typeof element.getBoundingClientRect !== 'function') return 'unknown';
 
   const item = element.getBoundingClientRect();
-  const frame = scroller.getBoundingClientRect();
+  const frame = frameEdges(scroller);
   if (frame.height === 0) return 'unknown';
 
   if (item.bottom <= frame.top) return 'above';

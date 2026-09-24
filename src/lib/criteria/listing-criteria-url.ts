@@ -46,6 +46,7 @@ import {
   type ValueSetCriterionKey,
 } from './listing-criterion-asking';
 import { keepKnownValues } from './listing-criterion-values';
+import { LISTING_SELECTED_PARAM } from '@/lib/listings/listing-focus';
 import {
   EMPTY_LISTING_CRITERIA,
   withFlag,
@@ -134,7 +135,8 @@ export const CRITERION_PARAM: Record<CriterionKey, string> = {
  * η μία πλευρά θα διάβαζε σκουπίδια της άλλης, **σιωπηλά**, σε κοινοποιημένο σύνδεσμο.
  */
 // ADR-777 §8.60.21: `pets` — πόσα κατοικίδια (φίλτρο διαμονής, όπως το `guests`).
-export const RESERVED_SEARCH_PARAMS = ['lat', 'lng', 'r', 'box', 'in', 'out', 'guests', 'pets'] as const;
+// ADR-777 §8.77: η επιλεγμένη αγγελία — το ΙΔΙΟ σύμβολο με τον γραφέα του, όχι δεύτερο literal.
+export const RESERVED_SEARCH_PARAMS = ['lat', 'lng', 'r', 'box', 'in', 'out', 'guests', 'pets', LISTING_SELECTED_PARAM] as const;
 
 /** Τα δύο άκρα ενός αριθμητικού άξονα στη διεύθυνση. */
 export function rangeParams(key: RangeCriterionKey): { readonly min: string; readonly max: string } {

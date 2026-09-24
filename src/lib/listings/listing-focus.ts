@@ -60,6 +60,34 @@ export interface ListingFocus {
 
 export const NO_LISTING_FOCUS: ListingFocus = { peeked: null, selected: null };
 
+/**
+ * **Το κλειδί του URL για την ΕΠΙΛΟΓΗ** — `?selected=<id>` (ADR-777 §8.77).
+ *
+ * 🔑 **Μόνο το επίμονο μισό της εστίασης ζει στο URL.** Το `selected` είναι απόφαση του
+ * ανθρώπου, άρα **μοιράσιμη** («αυτό το ακίνητο, στον χάρτη»), και επιβιώνει σε reload και
+ * πίσω/μπροστά. Το `peeked` **ΠΟΤΕ**: αλλάζει δεκάδες φορές το δευτερόλεπτο και δεν σημαίνει
+ * τίποτα για όποιον ανοίξει τον σύνδεσμο.
+ * ⚠️ Δηλωμένο και στο `RESERVED_SEARCH_PARAMS` της οθόνης 2 — ώστε ο έλεγχος μοναδικότητας
+ * των κλειδιών να βλέπει σύγκρουση με κριτήριο αναζήτησης.
+ */
+export const LISTING_SELECTED_PARAM = 'selected';
+
+/**
+ * **Η επιλογή ΕΠΙΒΙΩΝΕΙ της νέας αναζήτησης** — μεταφέρει το `?selected=` από τη διεύθυνση που
+ * φεύγει στη διεύθυνση που γράφεται (ADR-777 §8.77).
+ *
+ * 🔴 Η έξοδος των φίλτρων (`use-filter-commit`) χτίζει τη διεύθυνση **από το μηδέν** — σωστά, για
+ * κανονικοποίηση. Χωρίς αυτή τη γραμμή, **κάθε** σύρσιμο με «Αναζήτηση καθώς μετακινώ» και κάθε
+ * φίλτρο θα έσβηνε σιωπηλά τη φούσκα που μόλις άνοιξε ο άνθρωπος — ενώ με την επιλογή σε state
+ * επιβίωνε. Πρότυπο Airbnb: η επιλογή μένει όσο κινείται ο χάρτης.
+ * ⚠️ Αν η αγγελία **φύγει** από τα αποτελέσματα, η φούσκα απλώς δεν ζωγραφίζεται (δεν βρίσκεται)· το
+ * κλειδί μένει — αν το φίλτρο χαλαρώσει ξανά, η επιλογή ξαναφαίνεται. Ο σύνδεσμος ζητά, η σελίδα αποφασίζει.
+ */
+export function carryListingSelection(from: URLSearchParams, to: URLSearchParams): void {
+  const selected = from.get(LISTING_SELECTED_PARAM);
+  if (selected) to.set(LISTING_SELECTED_PARAM, selected);
+}
+
 /** Πόσο έντονα αφορά η εστίαση **αυτή** την αγγελία. */
 export function listingFocusStrength(focus: ListingFocus, id: string): ListingFocusStrength {
   if (focus.selected === id) return 'selected';

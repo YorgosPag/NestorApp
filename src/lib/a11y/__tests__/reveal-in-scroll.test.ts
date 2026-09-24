@@ -195,4 +195,22 @@ describe('visibilityWithinScroller — η είσοδος του δείκτη ά�
   it('Α16: κάδρο μηδενικού ύψους δεν παράγει ψεύτικη βεβαιότητα', () => {
     expect(visibilityWithinScroller(node(0, 10), node(0, 0))).toBe('unknown');
   });
+
+  /**
+   * **Α17 — ΚΑΔΡΟ = ΤΟ ΠΑΡΑΘΥΡΟ** (ADR-777 §8.77, σελίδα που κυλά ολόκληρη). Μετρά με το
+   * `clientHeight` του `<html>` — **όχι** το `innerHeight`, που στο jsdom είναι 768 και θα
+   * έλεγε «ορατό» για κάτι που κανείς δεν μέτρησε.
+   */
+  it('Α17: παράθυρο 800px → above / below / visible· `clientHeight` 0 → unknown', () => {
+    const html = document.documentElement;
+    Object.defineProperty(html, 'clientHeight', { configurable: true, get: () => 800 });
+    try {
+      expect(visibilityWithinScroller(node(-90, -10), 'viewport')).toBe('above');
+      expect(visibilityWithinScroller(node(820, 900), 'viewport')).toBe('below');
+      expect(visibilityWithinScroller(node(780, 900), 'viewport')).toBe('visible');
+    } finally {
+      delete (html as { clientHeight?: number }).clientHeight;
+    }
+    expect(visibilityWithinScroller(node(820, 900), 'viewport')).toBe('unknown');
+  });
 });
