@@ -19,7 +19,7 @@
  * ανοίγει ποτέ δεν κατεβάζει τη MapLibre (πρότυπο `ListingMapSnapshotProvider`).
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ListingFocusController } from '@/hooks/listings/useListingFocus';
@@ -28,7 +28,10 @@ import {
   type MappedOwnerProperty,
   type UnmappedOwnerProperty,
 } from '@/lib/owner-property/owner-portfolio-map';
+import { nowISO } from '@/lib/date-local';
+import { ownerPublicPrice } from '@/lib/owner-property/owner-property-projection';
 import { ListingMapCanvas } from '@/components/search-results/ListingMapCanvas';
+import type { ListingMapEntry } from '@/components/search-results/ListingMapStackPopup';
 
 import { OwnerPortfolioUnmappedRow } from './OwnerPortfolioUnmappedRow';
 import { OwnerPropertyMapPopup } from './OwnerPropertyMapPopup';
@@ -47,16 +50,29 @@ export default function OwnerPortfolioMap({ mapped, unmapped, focusController }:
   const { focus, peek, select, clear } = focusController;
 
   const geojson = useMemo(() => ownerPortfolioGeoJson(mapped), [mapped]);
-  const selected = useMemo(
-    () => (focus.selected === null ? null : (mapped.find((m) => m.property.id === focus.selected) ?? null)),
-    [mapped, focus.selected],
-  );
+  const byId = useMemo(() => new Map(mapped.map((m) => [m.property.id, m])), [mapped]);
+  const selected = focus.selected === null ? null : (byId.get(focus.selected) ?? null);
+
+  /** Μία γραμμή για τη λίστα διαλέγματος (§8.76) — η τιμή **όπως τη βλέπει ο κόσμος**. */
+  const describeListing = useCallback((id: string): ListingMapEntry | null => {
+    const entry = byId.get(id);
+    return entry === undefined
+      ? null
+      : { id, title: entry.property.title, price: ownerPublicPrice(entry.property, nowISO()) };
+  }, [byId]);
 
   return (
     <section aria-label={t(`${K}.label`)} className="flex h-full flex-col overflow-hidden rounded-md border border-border">
       <p className="px-3 py-2 text-xs text-muted-foreground">{t(`${K}.hint`)}</p>
       <figure className="relative m-0 min-h-0 flex-1">
-        <ListingMapCanvas geojson={geojson} focus={focus} onPeek={peek} onSelect={select} onClear={clear}>
+        <ListingMapCanvas
+          geojson={geojson}
+          focus={focus}
+          onPeek={peek}
+          onSelect={select}
+          onClear={clear}
+          describeListing={describeListing}
+        >
           {/* Δεμένο στο `selected`, ΠΟΤΕ στο `peeked` (βλ. `ListingMapPopup`). */}
           {selected !== null && (
             <OwnerPropertyMapPopup property={selected.property} mark={selected.mark} onClose={clear} />

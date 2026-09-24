@@ -133,6 +133,23 @@ export function metersToPixels(meters: number, zoom: number, latitude: number): 
   return (meters * mercatorScaleAt(latitude) * 2 ** zoom) / METERS_PER_PIXEL_AT_ZOOM_0;
 }
 
+/**
+ * **Πού πέφτει ένα σημείο στον «κόσμο» του χάρτη στο ζουμ `zoom`**, σε pixel — η
+ * προβολή Web Mercator της MapLibre (πλάκα {@link MAPLIBRE_TILE_SIZE_PX}).
+ *
+ * 🔑 Απαντά **«πόσο μακριά θα φαίνονται δύο σημεία σε ζουμ που ο χάρτης ΔΕΝ δείχνει
+ * ακόμη»** — ερώτηση που το `map.project` δεν μπορεί να κάνει, γιατί ξέρει μόνο το
+ * τρέχον ζουμ (ADR-777 §8.76: «θα χωρίσει το ζουμ αυτή την ομάδα;»).
+ */
+export function lngLatToWorldPixel(lng: number, lat: number, zoom: number): readonly [number, number] {
+  const size = MAPLIBRE_TILE_SIZE_PX * 2 ** zoom;
+  const clamped = Math.min(WEB_MERCATOR_MAX_LATITUDE, Math.max(-WEB_MERCATOR_MAX_LATITUDE, lat));
+  const phi = (clamped * Math.PI) / 180;
+  const x = ((lng + 180) / 360) * size;
+  const y = (0.5 - Math.log((1 + Math.sin(phi)) / (1 - Math.sin(phi))) / (4 * Math.PI)) * size;
+  return [x, y];
+}
+
 interface MetricCircleRadiusOptions {
   /** Το πεδίο του feature που κρατά την ακτίνα σε **μέτρα**. */
   readonly metersProperty: string;

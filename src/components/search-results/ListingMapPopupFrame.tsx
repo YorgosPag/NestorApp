@@ -10,8 +10,28 @@
  */
 
 import React from 'react';
+import type { PositionAnchor } from 'maplibre-gl';
 import { Popup } from '@/lib/maps/maplibre';
 import type { GeoPoint } from '@/types/geo/coordinates';
+
+/**
+ * Η μεγαλύτερη ακτίνα σχήματος-σημείου (`RADIUS.pin + δακτύλιος επιλογής`) — πόσο μακριά
+ * από το κέντρο κάθεται η μύτη, **όποια πλευρά κι αν διαλέξει** η βιβλιοθήκη.
+ */
+const TIP_CLEARANCE_PX = 18;
+const TIP_DIAGONAL_PX = Math.round(TIP_CLEARANCE_PX / Math.SQRT2);
+
+const POPUP_TIP_OFFSET = {
+  center: [0, 0],
+  top: [0, TIP_CLEARANCE_PX],
+  bottom: [0, -TIP_CLEARANCE_PX],
+  left: [TIP_CLEARANCE_PX, 0],
+  right: [-TIP_CLEARANCE_PX, 0],
+  'top-left': [TIP_DIAGONAL_PX, TIP_DIAGONAL_PX],
+  'top-right': [-TIP_DIAGONAL_PX, TIP_DIAGONAL_PX],
+  'bottom-left': [TIP_DIAGONAL_PX, -TIP_DIAGONAL_PX],
+  'bottom-right': [-TIP_DIAGONAL_PX, -TIP_DIAGONAL_PX],
+} satisfies Record<PositionAnchor, [number, number]>;
 
 interface ListingMapPopupFrameProps {
   /** Το σημείο του **σχήματος που πατήθηκε**: η ίδια συντεταγμένη με τον ζωγράφο. */
@@ -25,14 +45,20 @@ export function ListingMapPopupFrame({ point, onClose, children }: ListingMapPop
     <Popup
       longitude={point.lng}
       latitude={point.lat}
-      anchor="bottom"
+      /*
+        🔴 **ΚΑΝΕΝΑ `anchor` — Η MapLibre ΔΙΑΛΕΓΕΙ ΤΗΝ ΠΛΕΥΡΑ ΠΟΥ ΧΩΡΑ** (ADR-777 §8.76).
+        Με `anchor="bottom"` καρφωμένο, πινέζα κοντά στην **πάνω** άκρη έδινε φούσκα
+        **κομμένη** — μετρημένο ζωντανά: η κεφαλίδα της λίστας διαλέγματος έξω από τον χάρτη.
+        Χωρίς `anchor` η βιβλιοθήκη προτιμά το `bottom` όταν χωρά (ίδια εικόνα με πριν) και
+        γυρίζει μόνο όταν δεν χωρά. ⛔ Όχι auto-pan (Google InfoWindow): θα κουνούσε τον
+        χάρτη κάτω από τον δείκτη **και** θα πυροδοτούσε το «Αναζήτηση καθώς μετακινώ».
+      */
       /*
         ⚠️ **Το `offset` ΔΕΝ είναι αισθητική απόσταση**: χωρίς αυτό η μύτη του popup
         κάθεται πάνω στο κέντρο της πινέζας και **σκεπάζει το ίδιο το σχήμα** που μόλις
-        πατήθηκε — ο άνθρωπος χάνει την οπτική επιβεβαίωση του τι διάλεξε. Η τιμή είναι
-        η μεγαλύτερη ακτίνα σχήματος-σημείου (`RADIUS.pin + δακτύλιος επιλογής`).
+        πατήθηκε. **Ανά πλευρά**, γιατί η πλευρά πια αλλάζει: η ίδια απόσταση από το κέντρο.
       */
-      offset={[0, -18]}
+      offset={POPUP_TIP_OFFSET}
       onClose={onClose}
       /*
         🔴 **`closeOnClick={false}` — ΥΠΟΧΡΕΩΤΙΚΟ.** Με την προεπιλογή (`true`), το ίδιο

@@ -10,8 +10,7 @@
  * ⚠️ **Θέση + μύτη + κλείσιμο από το ΚΟΙΝΟ πλαίσιο** (`ListingMapPopupFrame`), με άγκυρα το
  * σημείο του **σημαδιού**: την ίδια συντεταγμένη που ζωγράφισε ο ζωγράφος. Ποτέ το `place`.
  *
- * 🔑 **Η τιμή είναι όπως τη βλέπει ο κόσμος**: `projectableFromOwnerProperty` (ο ίδιος
- * μετασχηματισμός που τρέφει τη δημόσια προβολή) → `resolveDisplayPrice` → `displayPriceLabel`.
+ * 🔑 **Η τιμή είναι όπως τη βλέπει ο κόσμος**: `ownerPublicPrice` (SSoT, §8.76) → `displayPriceLabel`.
  * Κανένας δεύτερος αναγνώστης τιμής.
  */
 
@@ -22,9 +21,8 @@ import { nowISO } from '@/lib/date-local';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import { displayPriceLabel } from '@/lib/listings/listing-price-label';
 import { publicationThumbnailOf } from '@/lib/owner-property/owner-listing-thumbnail';
-import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
+import { ownerPublicPrice } from '@/lib/owner-property/owner-property-projection';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
-import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { Link } from '@/lib/workspace/navigation';
 import type { OwnerProperty } from '@/types/owner-property';
 import { ListingMapPopupFrame } from '@/components/search-results/ListingMapPopupFrame';
@@ -43,7 +41,7 @@ interface OwnerPropertyMapPopupProps {
 export function OwnerPropertyMapPopup({ property, mark, onClose }: OwnerPropertyMapPopupProps) {
   const { t } = useTranslation(['property-market', 'search-results', 'common']);
   const thumbnail = publicationThumbnailOf(property);
-  const price = resolveDisplayPrice(projectableFromOwnerProperty(property, nowISO()));
+  const price = ownerPublicPrice(property, nowISO());
   const href = offerDetailHref(property.id);
 
   return (

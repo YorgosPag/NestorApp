@@ -5,5 +5,8 @@
   "edge": {
     "above": "Higher up the list",
     "below": "Further down the list"
+  },
+  "stack": {
+    "heading": "{count, plural, one {# listing at this spot} other {# listings at this spot}}"
   }
 }

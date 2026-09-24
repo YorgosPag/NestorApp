@@ -15,7 +15,7 @@
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "195ef3ea03c5d4a096e852c96c6c363d76e382e74ce0bae02b69b710ddd9538e",
+    "src/i18n/generated/routes/listing__id.el.json": "e080f966658151048de42126fea782647e28b5984ee710e4ae894bc1d0670f07",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
     "src/i18n/generated/routes/n__notificationId.el.json": "54c30325c22b7621417b7afaddaee9ae92de5fc24ee61a784ca6ecfc66d74da5",
@@ -44,11 +44,11 @@
     "src/i18n/generated/routes/pro__alias.el.json": "27ab5d16fb217baec1093b5c4ab05aeecff6b549821b1d6ae7ecea354d0d81ce",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
-    "src/i18n/generated/routes/search__results.el.json": "8290cb704f1ed7634d02769f964e27c2b9b335fc7f81ba3ad778751f1ff227b9",
+    "src/i18n/generated/routes/search__results.el.json": "783c694fc37c6b56788a69c6e6e997807f85706ad7a533c3de9eaf4f3471ccd3",
     "src/i18n/generated/routes/terms.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/terms__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/terms__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
-    "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
+    "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "8814e8de5422eb7b43c31f7cbfa3c355a15ca7ebe91195f0a89b8b3339e76f3b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
     "src/i18n/generated/shell-slice.el.json": "a99bdef543a21e402d0fd3af79e4afbfaaefb33e7b1a36b4f33b83dea7b6f8f9",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
@@ -92,7 +92,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "036dec78321dc93f2628741b372fa399aeafd2a6035887eea52fc504f5260ce7",
+  "inputsSha256": "569804ff1bb7b199c898e0054509036efd32f3a5a4beed743ada887cf80ec838",
   "languages": [
     "el"
   ],
@@ -390,14 +390,15 @@
     "src/components/search-results/CriteriaLedgerBar.tsx": "f829859dad6a08df38fcea86128bda22c158af65b61f7d738f8b8b665e4c7cbd",
     "src/components/search-results/ListingEdgeIndicator.tsx": "69ed9648f9c63cfb99bd568f96256979e2429640420878d8abec5d65f3faf164",
     "src/components/search-results/ListingLedgerBar.tsx": "fe19b6ee40de7e137aa57dab65308b80f04872e4de13ddc20f41f4013db09e30",
-    "src/components/search-results/ListingMapCanvas.tsx": "ba6581886397185f07ffc8898973db7a7bf80d798e21c9b9a4d5000b9a29f084",
+    "src/components/search-results/ListingMapCanvas.tsx": "59256791e63cb57fe5c41191417a5c835629a5e5e72a069da4be0ae7222af851",
     "src/components/search-results/ListingMapPopup.tsx": "0aa216534db654c009c9fda225a9fa57806aad2a9dbe51e8e5a63487eb43920b",
-    "src/components/search-results/ListingMapPopupFrame.tsx": "6e7104262b8b9d396b95098a331d3bff8b7b8caaacc191547fef61d96ed856ae",
+    "src/components/search-results/ListingMapPopupFrame.tsx": "a70a835058e217941d32ee6275959efc794f6844e7e530fc6050d4c4d8020a29",
+    "src/components/search-results/ListingMapStackPopup.tsx": "9bab76edd7d4fcd07bdf3bf8d6ab77bed1f9a9d1ad0c986d46090c8ac2ba1710",
     "src/components/search-results/ListingPriceMarkers.tsx": "3e21364bd181e3fafd2b620d1dc9641dd66c84f6d2749fe652e74015cdd2d923",
     "src/components/search-results/MapAreaControl.tsx": "74e3601f1490e3611ba009298341aea66fde03e9f91256cdb425069165ec4e2d",
     "src/components/search-results/ResultsList.tsx": "3063c015aac3c07fbf37db1d44fcab7f5bb4cd905b9dafa50a41fcdfaa7b021a",
     "src/components/search-results/ResultsListSection.tsx": "733716cfedf335b80d9b001715822980d824b2ee796dc3976a6f8d84df873433",
-    "src/components/search-results/ResultsMap.tsx": "5707e0a64de66e6cedd949524111897c5e68d91b6eebf4c378e1842367f18beb",
+    "src/components/search-results/ResultsMap.tsx": "9db2c3a0cfc93658026c034f130a128fef75ee042f4fbe3057f05a22b38d83c2",
     "src/components/search-results/ResultsMapLayers.tsx": "2fe0c31ffa77d98e164ee170bc7aa9cfe6e839eb9e206b1f8dc1ba7a37fa4b09",
     "src/components/search-results/ResultsMapSources.tsx": "e0d5e988f4242c8b7e2e01750a2bef56fa1c126d4f73033cc272265ce6e746b6",
     "src/components/search-results/ResultsSheet.tsx": "4a98dea07a1dcf9a522a0d4841d27a63d5ad6d2c1335df9c72ad39385b56dc7d",
@@ -419,6 +420,7 @@
     "src/components/search-results/filters/use-filter-commit.ts": "e515bf1af66ae87e2178db4e92406edf02ca845b806bf7bb51de08001615606a",
     "src/components/search-results/filters/visible-price-axes.ts": "0e594d94ed5f1fa602542486124481b6aa5966105406b6bca39a39d7d787fa86",
     "src/components/search-results/listing-map-paint.ts": "74602117f234cd4f5115ebd2de8f97075a49a2f8714b37c567c6f52dcbd1121c",
+    "src/components/search-results/listing-map-pick.ts": "60eccda3ad0f7a527229ce823bef7f527d953af659348b16dde059a31e56b4fb",
     "src/components/search-results/results-map-area.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/components/search-results/results-map-contract.ts": "43b8bd6d5a3c2dd1e86017af623fb3342c2d7719279e4dd40a4413f8b080d572",
     "src/components/seo/JsonLdScript.tsx": "d6ebc0f4bf11cef68cb9d797ffad5990afb1ec76a3dc6930530cfdee4cd9a02e",
@@ -696,6 +698,7 @@
     "src/lib/mandate/private-marketing-standing.ts": "30405c5df816f829de8b512e7fa591b6c3e96ddc2e1107c27cdfbc5f6c8764fb",
     "src/lib/maps/listing-clusters.ts": "cfc65b9eedadb5598f0c8596b8d3112fe9a035f38316e3356c0b6349c5f72767",
     "src/lib/maps/map-attribution.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/maps/map-pick.ts": "ab85db7c4b531d5323a391314233e56416ba84947296c69b46d397c4ff3a897c",
     "src/lib/maps/map-snapshot-store.ts": "cc8756579dade3bb441e3fdced01c1c67fa94c9ae13bbc7c9f641631c1554bd3",
     "src/lib/maps/maplibre.ts": "eb9024e3e6f1a573b86b20235ca5b1c916bdcbacb4434617d0c8b9ae7c216b15",
     "src/lib/maps/metric-size.ts": "f5087eb2c1d67c1d57cff81b19d752bdf9b3f23b816c688edd5cfa99831a8f28",
@@ -723,7 +726,7 @@
     "src/lib/owner-property/owner-property-form-values.ts": "96f27cec288ac1bd7c07fc359c5203a9f0635471fc018a5bf71f6f83c0539faf",
     "src/lib/owner-property/owner-property-from-document.ts": "b0d556337c7fcb4b48c4e26b8d5c59104a40e6e7469b6e08f93f7ad3ef239094",
     "src/lib/owner-property/owner-property-pets-form.ts": "4481d5b4244abcd2bae6ec9b265dff1d18f797fa310485e22b6d2a5461aac4e4",
-    "src/lib/owner-property/owner-property-projection.ts": "f039a4d580e8826ca6e0f6c412639356827ce43ac918449f3664b99253c593c1",
+    "src/lib/owner-property/owner-property-projection.ts": "fecdaf10b1be7aada91f64dc68ba275d5d0f59f2fb4e609fc2482fb5827a3496",
     "src/lib/places/admin-identity.ts": "59a82c814985e68d9b0865a8299d7253a2b7b132e23692f3b35a8a133a162d5f",
     "src/lib/places/admin-name-index.ts": "333c35bedda0057a8b0d1d076a002694e17c7c7087b0165b07afd2e6e3a31d53",
     "src/lib/platform-operator/operator-presentation.ts": "d7c69ee0d8415c79fde51881b8ce0018ceb3d5e90c5f0e166cde1f229492b54e",
@@ -2880,7 +2883,8 @@
         },
         "search-focus": {
           "keys": [
-            "popup.open"
+            "popup.open",
+            "stack.heading"
           ],
           "prefixes": [],
           "whole": false
@@ -2935,6 +2939,7 @@
             "map.shape.pinWithRing",
             "map.shape.shadedCircle",
             "map.shape.shadedCity",
+            "stack.heading",
             "unmapped.reason.neverAsked",
             "unmapped.reason.ownerDeclined"
           ],
@@ -7230,7 +7235,8 @@
           "keys": [
             "edge.above",
             "edge.below",
-            "popup.open"
+            "popup.open",
+            "stack.heading"
           ],
           "prefixes": [],
           "whole": false
@@ -7270,6 +7276,7 @@
             "sheet.label",
             "sheet.moreList",
             "sheet.moreMap",
+            "stack.heading",
             "unmapped.heading",
             "unmapped.hint",
             "unmapped.reason.neverAsked",
@@ -7539,7 +7546,8 @@
         },
         "search-focus": {
           "keys": [
-            "popup.open"
+            "popup.open",
+            "stack.heading"
           ],
           "prefixes": [],
           "whole": false
@@ -7553,7 +7561,8 @@
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
             "listing.priceMissing.salePriceMissing",
-            "map.priceMarker.aria"
+            "map.priceMarker.aria",
+            "stack.heading"
           ],
           "prefixes": [
             "detail.media"
@@ -8422,7 +8431,7 @@
     "matchedKeys": 180,
     "routeBoundaries": 0,
     "shellFiles": 801,
-    "sliceBytes": 560506
+    "sliceBytes": 561022
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

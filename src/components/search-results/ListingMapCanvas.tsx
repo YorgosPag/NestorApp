@@ -16,7 +16,7 @@
  * στον χάρτη, ώστε να κάθεται πάνω από τις πηγές.
  */
 
-import React, { useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
@@ -30,24 +30,11 @@ import { readMapArea, sameMapArea } from './results-map-area';
 import {
   fitMapToArea,
   fitMapToBounds,
-  listingIdOf,
   type MapEventTarget,
   type MapMoveEvent,
-  type MapPointerEvent,
 } from './results-map-contract';
-
-/**
- * Τα επίπεδα που δέχονται κλικ. **Κάθε ορατό σχήμα**, όχι μόνο η πινέζα — αλλιώς οι
- * αγγελίες με σκιασμένη περιοχή θα ήταν ορατές αλλά **μη επιλέξιμες**, δηλαδή θα
- * τιμωρούνταν στη διεπαφή επειδή ξέρουμε λιγότερα γι' αυτές.
- */
-const CLICKABLE_LAYER_IDS = [
-  'listing-pin',
-  'listing-pin-ring',
-  'listing-neighbourhood',
-  'listing-city',
-  'listing-outline-fill',
-] as const;
+import { bindMapPick, type ListingMapStack } from './listing-map-pick';
+import { ListingMapStackPopup, type ListingMapEntry } from './ListingMapStackPopup';
 
 export interface ListingMapCanvasProps {
   /**
@@ -138,12 +125,23 @@ export interface ListingMapCanvasProps {
    * αργή**, όχι ανύπαρκτη *(μάθημα Βήματος 2: early cutoff αντί για ρολόι)*.
    */
   readonly searchArea?: GeoBoundingBox | null;
+  /**
+   * **Μία γραμμή ανά αγγελία** για τη λίστα διαλέγματος (ADR-777 §8.76) — ή `null` αν η
+   * ταυτότητα δεν είναι (πια) στον κατάλογο.
+   *
+   * 🔑 Ο πυρήνας **δεν** ξέρει τίτλους και τιμές (δες κεφαλίδα)· τους ρωτά **τη στιγμή της
+   * απόδοσης**, άρα μια ζωντανή ενημέρωση του καταλόγου φαίνεται και στη λίστα, και μια
+   * αγγελία που αποσύρθηκε **φεύγει** από αυτήν αντί να μείνει «φάντασμα».
+   */
+  readonly describeListing?: (id: string) => ListingMapEntry | null;
   /** Επικαλύψεις του καταναλωτή (πινακίδες, φούσκα) — αποδίδονται **μέσα** στον χάρτη. */
   readonly children?: React.ReactNode;
 }
 
 /** Οι χειριστές, διαβασμένοι **τη στιγμή του συμβάντος** (κανόνας 2 του ADR-040). */
-type MapHandlers = Pick<ListingMapCanvasProps, 'onPeek' | 'onSelect' | 'onClear' | 'onAreaChange'>;
+type MapHandlers = Pick<ListingMapCanvasProps, 'onPeek' | 'onSelect' | 'onClear' | 'onAreaChange'> & {
+  readonly onStack?: (stack: ListingMapStack | null) => void;
+};
 interface HandlersRef { readonly current: MapHandlers }
 
 /**
@@ -207,53 +205,6 @@ function bindAreaReporting(target: MapEventTarget, handlersRef: HandlersRef): vo
   });
 }
 
-/** Κλικ / πέρασμα δείκτη / κλικ στο κενό — **μόνο** αν υπάρχει καταναλωτής επιλογής. */
-function bindSelection(target: MapEventTarget, handlersRef: HandlersRef): void {
-  // ⚠️ Χωρίς καταναλωτή επιλογής **δεν δένεται τίποτα** — ούτε κλικ, ούτε δείκτης.
-  // Βλ. {@link ListingMapCanvasProps.onSelect}: δείκτης «χεράκι» χωρίς αποτέλεσμα είναι
-  // υπόσχεση που δεν τηρείται.
-  if (!handlersRef.current.onSelect) return;
-
-  for (const layerId of CLICKABLE_LAYER_IDS) {
-    target.on('click', layerId, (event) => {
-      const id = listingIdOf(event);
-      if (id !== null) handlersRef.current.onSelect?.(id);
-    });
-
-    /*
-      🔴 **`mousemove` ΚΑΙ ΟΧΙ ΜΟΝΟ `mouseenter` — Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ ΟΡΑΤΗ.**
-      Το `mouseenter` ενός επιπέδου πυροδοτείται όταν ο δείκτης μπαίνει **στο επίπεδο**,
-      όχι σε κάθε σχήμα του. Δύο γειτονικές πινέζες ζουν στο **ίδιο** `listing-pin`:
-      περνώντας από τη μία στην άλλη **δεν** υπάρχει νέο `mouseenter`, άρα η επισήμανση
-      θα κόλλαγε στην πρώτη. Το `mousemove` ρωτά **ποιο σχήμα** είναι από κάτω, κάθε
-      φορά — και ο έλεγχος ταυτότητας στον καταναλωτή (`useListingFocus.peek`) κόβει
-      την επανάληψη, ώστε να μην υπάρχει απόδοση χωρίς αλλαγή.
-    */
-    target.on('mousemove', layerId, (event) => {
-      target.getCanvas().style.cursor = 'pointer';
-      handlersRef.current.onPeek?.(listingIdOf(event));
-    });
-
-    target.on('mouseleave', layerId, () => {
-      target.getCanvas().style.cursor = '';
-      handlersRef.current.onPeek?.(null);
-    });
-  }
-
-  /*
-    **ΚΛΙΚ ΣΤΟ ΚΕΝΟ = ΑΚΥΡΩΣΗ.**
-
-    ⚠️ **Ο έλεγχος είναι υποχρεωτικός**: το καθολικό `click` πυροδοτείται **και** όταν
-    το κλικ έπεσε πάνω σε σχήμα — δηλαδή χωρίς αυτόν, κάθε επιλογή θα ακυρωνόταν από
-    το ίδιο της το κλικ, μέσα στον ίδιο κύκλο συμβάντων. Ρωτάμε τα **ίδια** επίπεδα
-    που δέχονται κλικ: μία λίστα, δύο χρήσεις, καμία ευκαιρία να αποκλίνουν.
-  */
-  target.on('click', (event: MapPointerEvent) => {
-    const hit = target.queryRenderedFeatures(event.point, { layers: CLICKABLE_LAYER_IDS });
-    if (hit.length === 0) handlersRef.current.onClear?.();
-  });
-}
-
 export function ListingMapCanvas({
   geojson,
   focus = NO_LISTING_FOCUS,
@@ -262,8 +213,16 @@ export function ListingMapCanvas({
   onClear,
   onAreaChange,
   searchArea = null,
+  describeListing,
   children,
 }: ListingMapCanvasProps) {
+  /**
+   * **Η ανοιχτή λίστα διαλέγματος** — εφήμερη κατάσταση του χάρτη, όχι εστίαση: δεν έχει
+   * «επιλεγμένη» αγγελία ακόμη, άρα **δεν** ανήκει στο `useListingFocus` (§8.76).
+   */
+  const [stack, setStack] = useState<ListingMapStack | null>(null);
+  const closeStack = useCallback(() => setStack(null), []);
+  const stackEntries = stack === null || describeListing === undefined ? [] : describeStack(stack, describeListing);
   /**
    * 🔴 **ΧΩΡΙΣΜΕΝΗ ΣΕ ΔΥΟ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΤΑΞΗ — ΕΙΝΑΙ ΠΕΡΙΟΡΙΣΜΟΣ** *(ADR-777 §8.66)*.
    * Το supercluster δέχεται **μόνο** `Point`/`MultiPoint`: μια πηγή με `cluster: true`
@@ -297,9 +256,9 @@ export function ListingMapCanvas({
    *    την ταυτότητα του `handleMapReady` — δηλαδή θα απειλούσε επαναρχικοποίηση του
    *    χάρτη στα 60fps. Το `useCallback([])` το κάνει **δομικά αδύνατο**.
    */
-  const handlersRef = useRef({ onPeek, onSelect, onClear, onAreaChange });
+  const handlersRef = useRef<MapHandlers>({ onPeek, onSelect, onClear, onAreaChange, onStack: setStack });
   useEffect(() => {
-    handlersRef.current = { onPeek, onSelect, onClear, onAreaChange };
+    handlersRef.current = { onPeek, onSelect, onClear, onAreaChange, onStack: setStack };
   }, [onPeek, onSelect, onClear, onAreaChange]);
 
   /**
@@ -412,7 +371,7 @@ export function ListingMapCanvas({
 
     watchMapSize(target, mapObserverRef);
     bindAreaReporting(target, handlersRef);
-    bindSelection(target, handlersRef);
+    bindMapPick(target, handlersRef);
     /*
       🔴 **ΚΕΝΟΣ ΠΙΝΑΚΑΣ ΕΞΑΡΤΗΣΕΩΝ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ.**
       Αυτή η συνάρτηση περνά ως `onMapReady` μέσα σε `useMemo` του
@@ -452,7 +411,25 @@ export function ListingMapCanvas({
         σχήματα (πινακίδες τιμής, φούσκα της αναζήτησης· φούσκα του κατόχου).
       */}
       {children}
+
+      {stackEntries.length > 0 && stack !== null && onSelect !== undefined && (
+        <ListingMapStackPopup
+          point={stack.point}
+          entries={stackEntries}
+          onPick={(id) => { closeStack(); onSelect(id); }}
+          onPeek={onPeek}
+          onClose={closeStack}
+        />
+      )}
     </InteractiveMap>
     </PolygonSystemProvider>
   );
+}
+
+/** Οι γραμμές της λίστας — **μόνο** όσες υπάρχουν ακόμη στον κατάλογο (δες `describeListing`). */
+function describeStack(
+  stack: ListingMapStack,
+  describe: (id: string) => ListingMapEntry | null,
+): readonly ListingMapEntry[] {
+  return stack.ids.map(describe).filter((entry): entry is ListingMapEntry => entry !== null);
 }

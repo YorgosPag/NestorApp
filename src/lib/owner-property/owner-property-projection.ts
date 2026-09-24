@@ -43,6 +43,7 @@ import {
 } from '@/services/listings/public-listing-projection';
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import { resolveDisplayPrice, type DisplayPrice } from '@/lib/properties/price-resolver';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { ownerListingMediaSources } from '@/lib/owner-property/owner-media-publication';
 import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
@@ -329,4 +330,18 @@ export function ownerListingVisibility(
   return isPubliclyListed(projectableFromOwnerProperty(property, at))
     ? 'published'
     : 'withdrawn';
+}
+
+/**
+ * **Η τιμή του ακινήτου ΟΠΩΣ ΤΗ ΒΛΕΠΕΙ Ο ΚΟΣΜΟΣ** — ο ίδιος μετασχηματισμός που τρέφει τη
+ * δημόσια προβολή, και ο ίδιος κριτής τιμής με τη δημόσια αγγελία (ADR-777 §8.76).
+ *
+ * 🔑 Ζούσε inline στη φούσκα του χάρτη χαρτοφυλακίου· με δεύτερο καταναλωτή (η λίστα
+ * διαλέγματος) και τρίτο στον ορίζοντα (πινακίδες τιμής, §8.71.5 #2) έγινε **ένα** σημείο:
+ * ο κάτοχος δεν πρέπει ποτέ να δει δύο τιμές για το ίδιο ακίνητο στην ίδια οθόνη.
+ *
+ * @param at — η στιγμή της κρίσης (οι διαθέσεις έχουν ημερομηνίες).
+ */
+export function ownerPublicPrice(property: OwnerProperty, at: string): DisplayPrice {
+  return resolveDisplayPrice(projectableFromOwnerProperty(property, at));
 }

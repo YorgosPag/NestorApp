@@ -70,6 +70,10 @@ export function useListingFocus(): ListingFocusController {
 
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
+      // 🔴 **ΕΝΑ Esc = ΕΝΑ ΠΛΑΙΣΙΟ** (ADR-777 §8.76): μια εσώτερη στρώση — π.χ. η λίστα
+      //    διαλέγματος του χάρτη (`useEscapeKey`, `document` bubble) — το κατανάλωσε ήδη
+      //    με `preventDefault()`. Ο `window` ακροατής τρέχει **μετά**, άρα ρωτά και σέβεται.
+      if (event.defaultPrevented) return;
 
       // 🔴 **ΤΟ MODAL ΕΧΕΙ ΠΡΟΤΕΡΑΙΟΤΗΤΑ ΣΤΟ `Escape`, ΚΑΙ ΤΟ ΡΩΤΑΜΕ** (ADR-711).
       //    Χωρίς αυτή τη γραμμή, ένα `Escape` που ο άνθρωπος εννοούσε «κλείσε τον

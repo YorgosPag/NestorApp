@@ -31,17 +31,19 @@
  * είναι **ίδιο** — οι δύο καταναλωτές (οθόνη 2, οθόνη 3) δεν άλλαξαν.
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { listingsToGeoJson } from '@/lib/listings/listings-geojson';
 import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
 import { NO_LISTING_FOCUS } from '@/lib/listings/listing-focus';
+import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
+import type { ListingMapEntry } from './ListingMapStackPopup';
 import { ListingMapPopup } from './ListingMapPopup';
 import { ListingPriceMarkers } from './ListingPriceMarkers';
 import { RADIUS } from './ResultsMapLayers';
 import { ListingMapCanvas, type ListingMapCanvasProps } from './ListingMapCanvas';
 import type { PublicListing } from '@/types/public-listing';
 
-interface ResultsMapProps extends Omit<ListingMapCanvasProps, 'geojson' | 'children'> {
+interface ResultsMapProps extends Omit<ListingMapCanvasProps, 'geojson' | 'children' | 'describeListing'> {
   readonly listings: readonly PublicListing[];
   /**
    * Τα ενεργά φίλτρα ως ερώτημα — **ταξιδεύουν και από το popup**.
@@ -81,9 +83,17 @@ export function ResultsMap({
    */
   const priceMarkers = useMemo(() => listingPriceMarkers(listings, data), [listings, data]);
 
+  const byId = useMemo(() => new Map(listings.map((l) => [l.id, l])), [listings]);
+
+  /** Μία γραμμή για τη λίστα διαλέγματος (§8.76) — τίτλος + τιμή **όπως τη βλέπει ο κόσμος**. */
+  const describeListing = useCallback((id: string): ListingMapEntry | null => {
+    const listing = byId.get(id);
+    return listing === undefined ? null : { id, title: listing.title, price: resolveDisplayPrice(listing) };
+  }, [byId]);
+
   const selectedListing = useMemo(
-    () => (focus.selected === null ? null : (listings.find((l) => l.id === focus.selected) ?? null)),
-    [listings, focus.selected]
+    () => (focus.selected === null ? null : (byId.get(focus.selected) ?? null)),
+    [byId, focus.selected]
   );
 
   return (
@@ -95,6 +105,7 @@ export function ResultsMap({
       onClear={onClear}
       onAreaChange={onAreaChange}
       searchArea={searchArea}
+      describeListing={describeListing}
     >
       {/*
         Οι πινακίδες τιμής — **μετά** την πηγή, ώστε να κάθονται πάνω από τα σχήματα,

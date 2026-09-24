@@ -31,6 +31,39 @@ import type { MapAreaSource } from './results-map-area';
 export interface MapPointerEvent {
   readonly features?: Array<{ properties?: Record<string, unknown> }>;
   readonly point: { x: number; y: number };
+  /** Πού πάτησε ο άνθρωπος, σε γεωγραφικές — η άγκυρα της λίστας διαλέγματος (§8.76). */
+  readonly lngLat?: { lng: number; lat: number };
+  /** Το συμβάν του περιηγητή — ταξιδεύει στην κίνηση που προκαλεί το κλικ (βλ. {@link MapMoveEvent}). */
+  readonly originalEvent?: unknown;
+}
+
+/** Ένα σχήμα κάτω από τον δείκτη — **και το επίπεδο** που το ζωγράφισε (ο κριτής του §8.76 το ρωτά). */
+export interface RenderedFeature {
+  readonly properties?: Record<string, unknown>;
+  readonly layer?: { readonly id: string };
+  readonly geometry?: { readonly type: string; readonly coordinates?: unknown };
+}
+
+/**
+ * **Η όψη μιας ομαδοποιημένης πηγής** που χρειάζεται το κλικ σε ομάδα (MapLibre 5: Promise).
+ *
+ * ⚠️ Ζητείται με `getSource`, που επιστρέφει **οποιαδήποτε** πηγή: ο έλεγχος
+ * {@link isClusterSource} είναι το σύνορο, όχι ένα `as`.
+ */
+export interface ClusterSource {
+  getClusterExpansionZoom: (clusterId: number) => Promise<number>;
+  getClusterLeaves: (clusterId: number, limit: number, offset: number) => Promise<RenderedFeature[]>;
+}
+
+export function isClusterSource(source: unknown): source is ClusterSource {
+  if (typeof source !== 'object' || source === null) return false;
+  return 'getClusterExpansionZoom' in source && 'getClusterLeaves' in source;
+}
+
+/** Τι απαντά το `cameraForBounds`: κέντρο + ζουμ, ή `undefined` αν το κάδρο δεν χωρά. */
+export interface CameraForBounds {
+  readonly center: { lng: number; lat: number };
+  readonly zoom: number;
 }
 
 /**
@@ -62,7 +95,14 @@ export interface MapEventTarget extends MapAreaSource {
   queryRenderedFeatures: (
     point: { x: number; y: number },
     options?: { layers?: readonly string[] }
-  ) => Array<{ properties?: Record<string, unknown> }>;
+  ) => RenderedFeature[];
+  getSource: (id: string) => unknown;
+  cameraForBounds: (
+    b: [[number, number], [number, number]],
+    o?: Record<string, unknown>
+  ) => CameraForBounds | undefined;
+  /** Το δεύτερο όρισμα (`eventData`) αντιγράφεται στα συμβάντα κίνησης — βλ. {@link MapMoveEvent}. */
+  flyTo: (options: Record<string, unknown>, eventData?: Record<string, unknown>) => void;
 }
 
 /** Η ταυτότητα της αγγελίας κάτω από τον δείκτη, ή `null` αν δεν είναι αγγελία. */

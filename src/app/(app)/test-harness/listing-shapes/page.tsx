@@ -112,6 +112,17 @@ const FIXTURES: readonly PublicListing[] = [
     kind: 'known', provenance: 'survey', point: P(40.6300, 22.9650), locatedAt: AT,
     outline: [P(40.6295, 22.9640), P(40.6295, 22.9665), P(40.6310, 22.9665), P(40.6310, 22.9640)],
   }),
+  /*
+    🔑 **ADR-777 §8.76 — δύο αγγελίες στο ΙΔΙΟ σημείο** (δύο διαμερίσματα του ίδιου κτιρίου).
+    Κανένα ζουμ δεν τις χωρίζει ⇒ το κλικ ανοίγει **λίστα διαλέγματος**, σε όποιο ζουμ κι αν
+    είναι: ως ομάδα (ζ ≤ 14) ή ως επικαλυπτόμενες πινέζες (ζ > 14). Ο κριτής: `lib/maps/map-pick.ts`.
+  */
+  fixture('same-building-a', '6α — Ίδιο κτίριο, 1ος όροφος', {
+    kind: 'known', provenance: 'geocoded', point: P(40.6400, 22.9380), locatedAt: AT, accuracy: 'exact',
+  }),
+  fixture('same-building-b', '6β — Ίδιο κτίριο, 3ος όροφος', {
+    kind: 'known', provenance: 'geocoded', point: P(40.6400, 22.9380), locatedAt: AT, accuracy: 'exact',
+  }),
   fixture('unknown-a', '7 — Χωρίς θέση: δεν ρωτήθηκε ποτέ', { kind: 'unknown', reason: 'never-asked' }),
   fixture('unknown-b', '8 — Χωρίς θέση: ο ιδιοκτήτης δεν δήλωσε', { kind: 'unknown', reason: 'owner-declined' }),
 ];
