@@ -68,6 +68,8 @@ import {
   type ListingOrder,
 } from '@/lib/listings/listing-results-order';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
+import { carryListingSelection } from '@/lib/listings/listing-focus';
+import { currentSearchParams } from '@/lib/url-query-state';
 
 /** Ό,τι μπορεί να ζητήσει ένα χειριστήριο από τη διεύθυνση. */
 export interface FilterCommit {
@@ -132,6 +134,8 @@ export function useFilterCommit(filters: ListingFilters): FilterCommit {
     (next: ListingFilters, order: ListingOrder): void => {
       const params = serializeListingFilters(next);
       writeListingOrder(order, params);
+      // 🔗 §8.77 — η επιλογή στον χάρτη επιβιώνει της νέας αναζήτησης (`carryListingSelection`).
+      carryListingSelection(currentSearchParams(), params);
       router.push(searchResultsHref(params.toString()));
     },
     [router]
