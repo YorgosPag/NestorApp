@@ -32,22 +32,24 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { displayPriceLabel } from '@/lib/listings/listing-price-label';
+import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
 import { useStayTotal } from './StayTotalsContext';
-import type { PublicListing } from '@/types/public-listing';
 
 interface ListingEdgeIndicatorProps {
-  readonly listing: PublicListing;
+  /**
+   * Η **μία γραμμή** της αγγελίας (`publicListingEntry` · `ownerListingEntry`) — ο δείκτης
+   * εξυπηρετεί και την οθόνη 2 και το χαρτοφυλάκιο του κατόχου (ADR-777 §8.77).
+   */
+  readonly entry: ListingMapEntry;
   /** Πού βρίσκεται σε σχέση με ό,τι φαίνεται — καθορίζει **άκρη και βέλος**. */
   readonly direction: 'above' | 'below';
   readonly onActivate: () => void;
 }
 
-export function ListingEdgeIndicator({ listing, direction, onActivate }: ListingEdgeIndicatorProps) {
+export function ListingEdgeIndicator({ entry, direction, onActivate }: ListingEdgeIndicatorProps) {
   const { t } = useTranslation(['search-results', 'search-focus']);
-  const price = resolveDisplayPrice(listing);
-  const stayTotal = useStayTotal(listing.id);
+  const stayTotal = useStayTotal(entry.id);
   const Arrow = direction === 'above' ? ChevronUp : ChevronDown;
 
   return (
@@ -73,11 +75,11 @@ export function ListingEdgeIndicator({ listing, direction, onActivate }: Listing
       <Arrow className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 
       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-        {listing.title}
+        {entry.title}
       </span>
 
       <span className="shrink-0 text-xs font-semibold text-foreground">
-        {displayPriceLabel(t, price, stayTotal)}
+        {displayPriceLabel(t, entry.price, stayTotal)}
       </span>
 
       {/*

@@ -33,7 +33,7 @@ import { criterionLabel } from '@/lib/criteria/listing-criterion-labels';
 import type { PublicListing } from '@/types/public-listing';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
-import { useListingFocus } from '@/hooks/listings/useListingFocus';
+import { useUrlListingFocus } from '@/hooks/listings/useListingFocus';
 import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
 import { useResultsLedgers } from '@/hooks/listings/useResultsLedgers';
 import { useFilterCommit } from './filters/use-filter-commit';
@@ -111,7 +111,7 @@ export function SearchResultsContent() {
    * δύο επίπεδα, η λίστα σε δύο βαθμίδες κάρτας. Καμία διαδρομή όπου το ένα πλαίσιο
    * ξέρει κάτι που το άλλο αγνοεί.
    */
-  const { focus, peek, select, clear } = useListingFocus();
+  const { focus, peek, select, clear } = useUrlListingFocus();
 
   const visible = useMemo(() => applyListingFilters(listings, filters), [listings, filters]);
 

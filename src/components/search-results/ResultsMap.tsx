@@ -35,8 +35,7 @@ import React, { useCallback, useMemo } from 'react';
 import { listingsToGeoJson } from '@/lib/listings/listings-geojson';
 import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
 import { NO_LISTING_FOCUS } from '@/lib/listings/listing-focus';
-import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import type { ListingMapEntry } from './ListingMapStackPopup';
+import { publicListingEntry, type ListingMapEntry } from '@/lib/listings/listing-map-entry';
 import { ListingMapPopup } from './ListingMapPopup';
 import { ListingPriceMarkers } from './ListingPriceMarkers';
 import { RADIUS } from './ResultsMapLayers';
@@ -81,14 +80,14 @@ export function ResultsMap({
    * είναι **η ίδια συντεταγμένη** με το σχήμα, όχι μια δεύτερη μετατροπή σε `[lng, lat]`
    * που «πρέπει» να συμφωνεί — δες την κεφαλίδα του `listings-geojson.ts`.
    */
-  const priceMarkers = useMemo(() => listingPriceMarkers(listings, data), [listings, data]);
+  const priceMarkers = useMemo(() => listingPriceMarkers(listings.map(publicListingEntry), data), [listings, data]);
 
   const byId = useMemo(() => new Map(listings.map((l) => [l.id, l])), [listings]);
 
   /** Μία γραμμή για τη λίστα διαλέγματος (§8.76) — τίτλος + τιμή **όπως τη βλέπει ο κόσμος**. */
   const describeListing = useCallback((id: string): ListingMapEntry | null => {
     const listing = byId.get(id);
-    return listing === undefined ? null : { id, title: listing.title, price: resolveDisplayPrice(listing) };
+    return listing === undefined ? null : publicListingEntry(listing);
   }, [byId]);
 
   const selectedListing = useMemo(

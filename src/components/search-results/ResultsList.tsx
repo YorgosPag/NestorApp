@@ -13,6 +13,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useListingRevealTracking } from '@/hooks/listings/useListingRevealTracking';
 import { focusedListingId, type ListingFocus } from '@/lib/listings/listing-focus';
+import { publicListingEntry } from '@/lib/listings/listing-map-entry';
 import { flattenListingSections, type ListingSections } from '@/lib/listings/listing-price-sections';
 import { ResultsListSection } from './ResultsListSection';
 import { ListingEdgeIndicator } from './ListingEdgeIndicator';
@@ -84,7 +85,7 @@ export function ResultsList({
    */
   const priorityId = mapped[0]?.id ?? null;
 
-  const { scrollerRef, focusVisibility, revealFocused } = useListingRevealTracking(focus);
+  const { containerRef, focusVisibility, revealFocused } = useListingRevealTracking(focus);
 
   /**
    * Η **εστιασμένη** αγγελία ως αντικείμενο — ή `null`.
@@ -116,7 +117,7 @@ export function ResultsList({
         */}
         {focusedListing !== null && edgeDirection !== null && (
           <ListingEdgeIndicator
-            listing={focusedListing}
+            entry={publicListingEntry(focusedListing)}
             direction={edgeDirection}
             onActivate={revealFocused}
           />
@@ -132,7 +133,7 @@ export function ResultsList({
           στο φύλλο, όχι στη λίστα. Ένα prop θα υποχρέωνε **κάθε** καταναλωτή της λίστας —
           και τη στήλη του desktop, που δεν έχει στάσεις — να έχει γνώμη γι' αυτόν.
         */}
-        <div ref={scrollerRef} data-list-scroll className="h-full overflow-y-auto">
+        <div ref={containerRef} data-list-scroll className="h-full overflow-y-auto">
           {isEmpty ? (
             <p className="p-4 text-sm text-muted-foreground">{t('search-results:list.empty')}</p>
           ) : (

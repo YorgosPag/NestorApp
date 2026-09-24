@@ -11,7 +11,8 @@
 
 import React from 'react';
 import type { PositionAnchor } from 'maplibre-gl';
-import { Popup } from '@/lib/maps/maplibre';
+import { Popup, type PopupEvent } from '@/lib/maps/maplibre';
+import { focusFirstWithin } from '@/lib/a11y/focus-first';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
 /**
@@ -38,6 +39,11 @@ interface ListingMapPopupFrameProps {
   readonly point: GeoPoint;
   readonly onClose: () => void;
   readonly children: React.ReactNode;
+}
+
+/** Το `open` της MapLibre κουβαλά την ίδια τη φούσκα (`target`): εκεί ζει το πρώτο εστιάσιμο. */
+function focusPopupContent(event: PopupEvent): void {
+  focusFirstWithin(event.target.getElement());
 }
 
 export function ListingMapPopupFrame({ point, onClose, children }: ListingMapPopupFrameProps) {
@@ -67,6 +73,14 @@ export function ListingMapPopupFrame({ point, onClose, children }: ListingMapPop
         στο `Escape` και στο κλικ σε **κενό** σημείο του χάρτη — τρεις ρητές διαδρομές.
       */
       closeOnClick={false}
+      /*
+        🔴 **Η ΕΣΤΙΑΣΗ ΜΕΝΕΙ — Η ΚΥΛΙΣΗ ΟΧΙ** (ADR-777 §8.77, μετρημένο: σελίδα 649 → 0 σε 11ms).
+        Το `focus()` της MapLibre δεν έχει `preventScroll`, και μέσα σε **sticky** πάνελ ο Chrome
+        κυλά τη σελίδα στη θέση του πάνελ χωρίς το κόλλημα. Εστιάζουμε **εμείς**, το ίδιο στοιχείο
+        τη στιγμή του `open`, χωρίς κύλιση — δες `lib/a11y/focus-first.ts`.
+      */
+      focusAfterOpen={false}
+      onOpen={focusPopupContent}
       className="listing-map-popup"
       maxWidth="15rem"
     >

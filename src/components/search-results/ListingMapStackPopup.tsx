@@ -21,25 +21,11 @@ import React, { useEffect, useId } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { displayPriceLabel } from '@/lib/listings/listing-price-label';
-import type { DisplayPrice } from '@/lib/properties/price-resolver';
+import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
 import { ListingMapPopupFrame } from './ListingMapPopupFrame';
 import { useStayTotal } from './StayTotalsContext';
-
-/** **Πώς περιγράφεται μια αγγελία σε μία γραμμή** — ο καταναλωτής ξέρει το πεδίο του. */
-export interface ListingMapEntry {
-  readonly id: string;
-  readonly title: string;
-  /**
-   * Η τιμή **όπως τη βλέπει ο κόσμος** (`resolveDisplayPrice`) — **ΟΧΙ** έτοιμη ετικέτα.
-   *
-   * 🔑 Η μορφοποίηση γίνεται στη γραμμή, με το **ίδιο** `displayPriceLabel` + `useStayTotal`
-   * της φούσκας: με ημερομηνίες διαμονής η λίστα λέει το **ίδιο σύνολο** με τη φούσκα και
-   * την πινακίδα, αντί για δεύτερη τιμή για το ίδιο ακίνητο.
-   */
-  readonly price: DisplayPrice;
-}
 
 interface StackRowProps {
   readonly entry: ListingMapEntry;

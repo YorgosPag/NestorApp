@@ -29,12 +29,13 @@ import type { GeoBoundingBox } from '@/types/geo/coordinates';
 import { readMapArea, sameMapArea } from './results-map-area';
 import {
   fitMapToArea,
-  fitMapToBounds,
   type MapEventTarget,
   type MapMoveEvent,
 } from './results-map-contract';
 import { bindMapPick, type ListingMapStack } from './listing-map-pick';
-import { ListingMapStackPopup, type ListingMapEntry } from './ListingMapStackPopup';
+import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
+import { ListingMapStackPopup } from './ListingMapStackPopup';
+import { useListingArrival } from './useListingArrival';
 
 export interface ListingMapCanvasProps {
   /**
@@ -276,6 +277,8 @@ export function ListingMapCanvas({
    */
   const boundsRef = useRef(bounds);
   useEffect(() => { boundsRef.current = bounds; }, [bounds]);
+  // 🔗 §8.77 — χάρτης που γεννιέται με επιλογή (`?selected=`) φτάνει **σε αυτήν**, μία φορά.
+  const frameData = useListingArrival(geojson, focus.selected, searchArea);
 
   /**
    * ⚠️ **ΑΝΑΦΟΡΑ, ΟΧΙ ΕΞΑΡΤΗΣΗ** — για τον λόγο που γράφεται από πάνω για τα `bounds`:
@@ -319,8 +322,8 @@ export function ListingMapCanvas({
     // ⚠️ Το περιθώριο, το ταβάνι ζουμ και η ακαριαία άφιξη **δεν γράφονται εδώ**: ήταν
     // αντιγραμμένα inline δύο φορές, δίπλα στο αρχείο που τα κρατούσε ήδη. Ο λόγος
     // κάθε μιας είναι γραμμένος στο `fitMapToBounds`.
-    fitMapToBounds(target, bounds);
-  }, [bounds]);
+    frameData(target, bounds);
+  }, [bounds, frameData]);
 
   /**
    * 🔴 **ΚΑΔΡΑΡΙΣΜΑ ΣΤΗΝ ΠΕΡΙΟΧΗ ΠΟΥ ΡΩΤΗΘΗΚΕ — ΜΙΑ ΦΟΡΑ ΑΝΑ ΠΕΡΙΟΧΗ.**
@@ -366,7 +369,7 @@ export function ListingMapCanvas({
       framedAreaRef.current = readyArea;
       fitMapToArea(target, readyArea);
     } else if (readyBounds) {
-      fitMapToBounds(target, readyBounds);
+      frameData(target, readyBounds);
     }
 
     watchMapSize(target, mapObserverRef);
@@ -378,8 +381,9 @@ export function ListingMapCanvas({
       `InteractiveMapContainer`: **κάθε** αλλαγή ταυτότητας ξαναστήνει τον χάρτη
       (*«new function every render caused Map re-init»*, γρ. 332). Ό,τι χρειάζεται
       διαβάζεται από αναφορά **τη στιγμή του συμβάντος** — κανόνας 2 του ADR-040.
+      (Το `frameData` είναι σταθερό — `useCallback([])` — άρα η εξάρτηση δεν αλλάζει ποτέ ταυτότητα.)
     */
-  }, []);
+  }, [frameData]);
 
   return (
     /*
