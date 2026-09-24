@@ -1,6 +1,9 @@
 {
   "landing": {
     "title": "Where are you looking?",
+    "hero": {
+      "subtitle": "Properties, requests and professionals — in one place."
+    },
     "search": {
       "label": "Search area",
       "placeholder": "City, area, or street with number",
@@ -15,7 +18,7 @@
       "error": "We could not measure coverage — so we declare none.",
       "noSupply": "There are no listings yet. We will not ask you to search for something that does not exist.",
       "noLocation": "{total, plural, one {# listing} other {# listings}} — none with a declared location yet. That is why we do not ask you «where»: the filter would have nothing to work on.",
-      "partial": "{total, plural, one {# listing} other {# listings}} · {mapped} with a declared location · {unmapped} without. Area search filters only the former — the rest always appear."
+      "partial": "{total, plural, one {# listing} other {# listings}} · {mapped} on the map · {unmapped} without a location, shown in every search."
     },
     "modes": {
       "label": "What are you looking for",
@@ -88,7 +91,6 @@
     "floor": "Floor {value}",
     "groundFloor": "Ground floor",
     "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
-    "noImage": "No photo",
     "priceMissing": {
       "notListed": "Not available",
       "salePriceMissing": "No sale price recorded",

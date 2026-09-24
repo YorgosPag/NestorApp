@@ -9,6 +9,8 @@
     "clickToChange": "Click to change"
   },
   "photos": {
+    "none": "No photo",
+    "locationMapAlt": "Location on the map: {title}",
     "addPhoto": "Add Photo",
     "galleryLabel": "Photo gallery",
     "uploadPlaceholder": "Drag and drop photos or click to select",

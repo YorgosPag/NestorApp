@@ -17,7 +17,11 @@
       "min": "From",
       "max": "To",
       "minLabel": "{axis} — from",
-      "maxLabel": "{axis} — to"
+      "maxLabel": "{axis} — to",
+      "summaryBoth": "{min} – {max}",
+      "summaryMin": "from {min}",
+      "summaryMax": "up to {max}",
+      "summaryAxis": "{axis}: {range}"
     },
     "option": {
       "undeclared": "{count} undeclared"
@@ -45,6 +49,7 @@
       "unknownLast": "Listings with no recorded date appear last."
     },
     "price": {
+      "label": "Price",
       "needOffer": "Choose an offer type first — price means something different in each.",
       "retired": "This link asked for a price without a unit ({min} – {max}). For which offer type?",
       "retiredDismiss": "Dismiss"
