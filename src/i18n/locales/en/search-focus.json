@@ -1,6 +1,9 @@
 {
   "popup": {
-    "open": "View property"
+    "open": "View property",
+    "link": "Link to this property on the map",
+    "linkCopied": "Link copied",
+    "linkCopyFailed": "Copy failed"
   },
   "edge": {
     "above": "Higher up the list",

@@ -8,6 +8,8 @@
  *   Φ4 · ΜΙΑ άφιξη: 1η κλήση ⇒ η αγγελία · 2η ⇒ τα δεδομένα.
  *   Φ5 · άγνωστο id ⇒ τα δεδομένα, και η άφιξη ΚΑΤΑΝΑΛΩΝΕΤΑΙ (όχι μελλοντικό τίναγμα).
  *   Φ6 · κάδρο αποστολέα (`?box=`) στη γέννηση ⇒ καμία άφιξη.
+ *   Φ7 · (§8.78) η επιλογή φτάνει ΜΕΤΑ την πρώτη απόδοση (SSR/hydration: server snapshot `null`), αλλά
+ *        ΠΡΙΝ από τα δεδομένα ⇒ η άφιξη γίνεται. Επιλογή ΜΕΤΑ τα πρώτα δεδομένα (κλικ) ⇒ καμία κίνηση.
  */
 
 import { renderHook } from '@testing-library/react';
@@ -83,5 +85,17 @@ describe('useListingArrival — μία άφιξη ανά χάρτη', () => {
     const frame = arrival('pin', { west: 1, south: 1, east: 2, north: 2 });
     frame(map, ALL);
     expect(map.calls).toEqual([ALL]);
+  });
+
+  it('Φ7 · επιλογή μετά την πρώτη απόδοση, πριν τα δεδομένα ⇒ άφιξη· μετά τα δεδομένα ⇒ καμία', () => {
+    const map = fakeMap();
+    const hook = renderHook(({ selected }) => useListingArrival(DATA, selected, null), {
+      initialProps: { selected: null as string | null },
+    });
+    hook.rerender({ selected: 'pin' });           // το URL διαβάστηκε μετά το hydration
+    hook.result.current(map, ALL);                // πρώτα δεδομένα
+    hook.rerender({ selected: 'city' });          // κλικ σε πινέζα
+    hook.result.current(map, ALL);
+    expect(map.calls).toEqual([[[22.94, 40.64], [22.94, 40.64]], ALL]);
   });
 });
