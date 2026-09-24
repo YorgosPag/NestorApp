@@ -44,3 +44,19 @@ export const OWNER_PORTFOLIO_SPLIT_GRID =
  */
 export const OWNER_PORTFOLIO_MAP_PANE =
   'sticky top-[var(--shell-block)] h-[calc(100svh_-_2_*_var(--shell-block))] min-h-80';
+
+/**
+ * **Οι ράγες του δείκτη άκρης** (ADR-777 §8.77): «η κάρτα που κοιτάς στον χάρτη είναι πιο πάνω /
+ * πιο κάτω». Στην οθόνη 2 ο δείκτης κάθεται στο πλαίσιο του δοχείου κύλισης· εδώ κυλά **η σελίδα**,
+ * άρα η άκρη είναι η άκρη του **παραθύρου** — μέσα στη στήλη της λίστας.
+ *
+ * 🔑 **Μηδενικό ύψος + `sticky`**: η ράγα κολλά στην άκρη του παραθύρου (στον **ίδιο** ρυθμό
+ * `--shell-block` με το πάνελ του χάρτη) και ο δείκτης κρέμεται από αυτήν (`absolute`). Καταλαμβάνει
+ * **μηδέν** χώρο στη ροή ⇒ η εμφάνισή του δεν μετακινεί καμία κάρτα (CLS 0), και το `sticky` τον
+ * κρατά **μέσα στη στήλη** — χωρίς `fixed`, χωρίς μέτρηση πλάτους σε JavaScript.
+ * `z-10`: η ίδια τοπική στρώση με τον δείκτη της οθόνης 2 — πάνω από τις κάρτες που ακολουθούν.
+ */
+export const OWNER_PORTFOLIO_EDGE_RAIL = {
+  above: 'sticky top-[var(--shell-block)] z-10 h-0',
+  below: 'sticky bottom-[var(--shell-block)] z-10 h-0',
+} as const satisfies Record<'above' | 'below', string>;

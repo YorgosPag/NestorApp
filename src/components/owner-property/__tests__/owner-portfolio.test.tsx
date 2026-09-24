@@ -12,6 +12,8 @@
  *   Υ7 · φαρδύς ΠΕΡΙΕΚΤΗΣ ⇒ λίστα ‖ χάρτης, ΚΑΝΕΝΑ tablist, το `?view` ούτε διαβάζεται ούτε γράφεται (§8.75).
  *   Υ8 · ΜΙΑ εστίαση: πέρασμα κάρτας ⇒ πινέζα · εστίαση πληκτρολογίου ⇒ πινέζα · κλικ πινέζας ⇒ κάρτα
  *        `selected` ΚΑΙ έρχεται στο οπτικό πεδίο (§8.75).
+ *   Υ9 · hover πινέζας με την κάρτα ΚΑΤΩ από το παράθυρο ⇒ δείκτης άκρης (τίτλος + τιμή), ΚΑΜΙΑ κύλιση·
+ *        πάτημα ⇒ κύλιση `center`· ορατή κάρτα ⇒ κανένας δείκτης (§8.77).
  */
 
 import React from 'react';
@@ -57,6 +59,7 @@ jest.mock('next/dynamic', () => () =>
       <section data-testid="portfolio-map" data-peeked={focusController?.focus.peeked ?? ''}>
         {props.mapped.length}
         <button type="button" onClick={() => focusController?.select('ownp_2')}>pin ownp_2</button>
+        <button type="button" onClick={() => focusController?.peek('ownp_2')}>hover ownp_2</button>
       </section>
     );
   },
@@ -77,7 +80,7 @@ const MARK: ListingMapMark = { shape: 'shaded-city', point: { lat: 40.63, lng: 2
 
 let instance: i18n;
 beforeAll(async () => {
-  instance = await createRealI18n(['property-market', 'search-results', 'common', 'properties-enums']);
+  instance = await createRealI18n(['property-market', 'search-results', 'search-focus', 'common', 'properties-enums']);
 });
 
 beforeEach(() => {
@@ -225,7 +228,7 @@ describe('Υ7–Υ8 — λίστα ‖ χάρτης σε φαρδύ περιέκ
     expect(map).toHaveAttribute('data-peeked', '');
   });
 
-  it('Υ8β · κλικ σε πινέζα ⇒ η κάρτα `selected` (δεύτερο κανάλι: δακτύλιος) ΚΑΙ έρχεται στο οπτικό πεδίο', () => {
+  it('Υ8β · κλικ σε πινέζα ⇒ η κάρτα `selected` (δεύτερο κανάλι: δακτύλιος) ΚΑΙ έρχεται στο οπτικό πεδίο', async () => {
     containerClass = 'wide';
     const scrolled: Element[] = [];
     const original = Element.prototype.scrollIntoView;
@@ -236,13 +239,67 @@ describe('Υ7–Υ8 — λίστα ‖ χάρτης σε φαρδύ περιέκ
       renderWithI18n(<Portfolio properties={[published('ownp_1'), published('ownp_2')]} />);
       expect(articleOf('Ακίνητο ownp_2')).not.toHaveClass('ring-2');
 
-      fireEvent.click(screen.getByRole('button', { name: 'pin ownp_2' }));
+      // §8.77: η επιλογή ζει στο URL — η ειδοποίηση του `url-query-state` είναι microtask.
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'pin ownp_2' }));
+      });
 
+      expect(window.location.search).toBe('?selected=ownp_2');
       expect(articleOf('Ακίνητο ownp_2')).toHaveClass('ring-2');
       expect(articleOf('Ακίνητο ownp_1')).not.toHaveClass('ring-2');
       expect(scrolled).toEqual([articleOf('Ακίνητο ownp_2').closest('li')]);
     } finally {
       Element.prototype.scrollIntoView = original;
     }
+  });
+});
+
+describe('Υ9 — δείκτης άκρης έναντι του ΠΑΡΑΘΥΡΟΥ (ADR-777 §8.77)', () => {
+  const originalRect = Element.prototype.getBoundingClientRect;
+  const originalScroll = Element.prototype.scrollIntoView;
+  const scrolled: Array<{ element: Element; block: ScrollLogicalPosition | undefined }> = [];
+  /** Πού «βρίσκεται» η κάρτα του ownp_2 — οι υπόλοιπες στην κορυφή του παραθύρου. */
+  let ownp2Top = 1500;
+
+  beforeEach(() => {
+    containerClass = 'wide';
+    scrolled.length = 0;
+    ownp2Top = 1500;
+    Object.defineProperty(document.documentElement, 'clientHeight', { configurable: true, get: () => 800 });
+    Element.prototype.getBoundingClientRect = function rect(this: Element): DOMRect {
+      const top = this.getAttribute('data-listing-id') === 'ownp_2' ? ownp2Top : 0;
+      return { top, bottom: top + 120, height: 120, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) } as DOMRect;
+    };
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element, arg?: boolean | ScrollIntoViewOptions) {
+      scrolled.push({ element: this, block: typeof arg === 'object' ? arg.block : undefined });
+    };
+  });
+
+  afterEach(() => {
+    Element.prototype.getBoundingClientRect = originalRect;
+    Element.prototype.scrollIntoView = originalScroll;
+    delete (document.documentElement as { clientHeight?: number }).clientHeight;
+  });
+
+  it('Υ9 · hover ⇒ «πιο κάτω» με τον τίτλο, ΧΩΡΙΣ κύλιση · πάτημα ⇒ `center` στη σωστή κάρτα', () => {
+    renderWithI18n(<Portfolio properties={[published('ownp_1'), published('ownp_2')]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'hover ownp_2' }));
+
+    const edge = screen.getByRole('button', { name: /Πιο κάτω στη λίστα/ });
+    expect(edge).toHaveTextContent('Ακίνητο ownp_2');
+    expect(scrolled).toEqual([]);
+
+    fireEvent.click(edge);
+    expect(scrolled).toEqual([{ element: screen.getByRole('heading', { name: 'Ακίνητο ownp_2' }).closest('li'), block: 'center' }]);
+  });
+
+  it('Υ9β · ορατή κάρτα ⇒ κανένας δείκτης (σιωπή, όχι θόρυβος)', () => {
+    ownp2Top = 300;
+    renderWithI18n(<Portfolio properties={[published('ownp_1'), published('ownp_2')]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'hover ownp_2' }));
+
+    expect(screen.queryByRole('button', { name: /στη λίστα/ })).not.toBeInTheDocument();
   });
 });

@@ -21,7 +21,7 @@
  * στενέψει ο χώρος.
  */
 
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -31,13 +31,13 @@ import {
   isOwnerPortfolioView,
   type OwnerPortfolioPartition,
 } from '@/lib/owner-property/owner-portfolio-map';
-import { listingFocusStrength } from '@/lib/listings/listing-focus';
+import { focusedListingId, listingFocusStrength } from '@/lib/listings/listing-focus';
+import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
+import { nowISO } from '@/lib/date-local';
+import { ownerListingEntry } from '@/lib/owner-property/owner-property-projection';
 import { useContainerClass } from '@/hooks/media/useContainerClass';
-import { useListingFocus, type ListingFocusController } from '@/hooks/listings/useListingFocus';
-import {
-  LISTING_CARD_ID_ATTRIBUTE,
-  useRevealSelectedListing,
-} from '@/hooks/listings/useListingRevealTracking';
+import { useUrlListingFocus, type ListingFocusController } from '@/hooks/listings/useListingFocus';
+import { LISTING_CARD_ID_ATTRIBUTE, useListingRevealTracking } from '@/hooks/listings/useListingRevealTracking';
 import { useOwnerPortfolioView } from '@/hooks/owner-property/useOwnerPortfolioView';
 import {
   listingStatsStateOf,
@@ -46,8 +46,10 @@ import {
 } from '@/hooks/owner-property/useOwnerPortfolioStats';
 import type { OwnerProperty } from '@/types/owner-property';
 import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
+import { ListingEdgeIndicator } from '@/components/search-results/ListingEdgeIndicator';
 
 import {
+  OWNER_PORTFOLIO_EDGE_RAIL,
   OWNER_PORTFOLIO_MAP_HEIGHT,
   OWNER_PORTFOLIO_MAP_PANE,
   OWNER_PORTFOLIO_SPLIT_GRID,
@@ -104,20 +106,59 @@ interface MappedLayoutProps extends Required<OwnerPropertyListProps> {
   readonly partition: OwnerPortfolioPartition;
 }
 
+/** «Η κάρτα που κοιτάς είναι πιο πάνω / πιο κάτω» — ή `null` όταν είναι ορατή ή δεν υπάρχει. */
+interface PortfolioEdge {
+  readonly entry: ListingMapEntry;
+  readonly direction: 'above' | 'below';
+  readonly onActivate: () => void;
+}
+
+/** Ο δείκτης άκρης κρέμεται από ράγα μηδενικού ύψους (`OWNER_PORTFOLIO_EDGE_RAIL`) ⇒ CLS 0. */
+function PortfolioEdgeRail({ edge }: { readonly edge: PortfolioEdge }): React.ReactElement {
+  return (
+    <div className={OWNER_PORTFOLIO_EDGE_RAIL[edge.direction]}>
+      <ListingEdgeIndicator entry={edge.entry} direction={edge.direction} onActivate={edge.onActivate} />
+    </div>
+  );
+}
+
+interface PortfolioColumnProps extends Required<OwnerPropertyListProps> {
+  /** Η στήλη της λίστας: εκεί **βρίσκονται** οι κάρτες (`useListingRevealTracking`). */
+  readonly columnRef: (element: HTMLElement | null) => void;
+  readonly edge: PortfolioEdge | null;
+}
+
+/**
+ * **Η στήλη της λίστας όταν υπάρχει χάρτης** (§8.77) — `split` και καρτέλα «Λίστα» του `tabs`.
+ * Εδώ η επιλογή **αποκαλύπτεται** (κλικ πινέζας · σύνδεσμος `?selected=`) και εδώ κρέμεται ο
+ * δείκτης άκρης. Χωρίς χάρτη (`list`) δεν υπάρχει εστίαση — άρα ούτε στήλη.
+ */
+function PortfolioListColumn({ columnRef, edge, ...list }: PortfolioColumnProps): React.ReactElement {
+  return (
+    <div ref={columnRef}>
+      {edge?.direction === 'above' && <PortfolioEdgeRail edge={edge} />}
+      <OwnerPropertyList {...list} />
+      {edge?.direction === 'below' && <PortfolioEdgeRail edge={edge} />}
+    </div>
+  );
+}
+
+type MappedColumnLayoutProps = MappedLayoutProps & Pick<PortfolioColumnProps, 'columnRef' | 'edge'>;
+
 /** `split` — λίστα ‖ χάρτης. Ο χάρτης κολλά στο παράθυρο ενώ κυλά η σελίδα. */
-function PortfolioSplit({ partition, ...list }: MappedLayoutProps): React.ReactElement {
+function PortfolioSplit({ partition, ...column }: MappedColumnLayoutProps): React.ReactElement {
   return (
     <div className={OWNER_PORTFOLIO_SPLIT_GRID}>
-      <OwnerPropertyList {...list} />
+      <PortfolioListColumn {...column} />
       <div className={OWNER_PORTFOLIO_MAP_PANE}>
-        <OwnerPortfolioMap mapped={partition.mapped} unmapped={partition.unmapped} focusController={list.focusController} />
+        <OwnerPortfolioMap mapped={partition.mapped} unmapped={partition.unmapped} focusController={column.focusController} />
       </div>
     </div>
   );
 }
 
 /** `tabs` — ο διακόπτης του στενού χώρου, με την προβολή στο URL (§8.71). */
-function PortfolioTabs({ partition, ...list }: MappedLayoutProps): React.ReactElement {
+function PortfolioTabs({ partition, ...column }: MappedColumnLayoutProps): React.ReactElement {
   const { view, setView } = useOwnerPortfolioView();
   return (
     <Tabs
@@ -129,10 +170,10 @@ function PortfolioTabs({ partition, ...list }: MappedLayoutProps): React.ReactEl
     >
       <OwnerPortfolioViewSwitch value={view} />
       <TabsContent value="list" className="mt-0">
-        <OwnerPropertyList {...list} />
+        <PortfolioListColumn {...column} />
       </TabsContent>
       <TabsContent value="map" className={`mt-0 ${OWNER_PORTFOLIO_MAP_HEIGHT}`}>
-        <OwnerPortfolioMap mapped={partition.mapped} unmapped={partition.unmapped} focusController={list.focusController} />
+        <OwnerPortfolioMap mapped={partition.mapped} unmapped={partition.unmapped} focusController={column.focusController} />
       </TabsContent>
     </Tabs>
   );
@@ -144,26 +185,59 @@ export interface OwnerPortfolioProps {
   readonly partition: OwnerPortfolioPartition;
 }
 
+/**
+ * **Πού είναι η κάρτα που κοιτάς** (ADR-777 §8.77) — το **ίδιο** `useListingRevealTracking` με την
+ * οθόνη 2, με κάδρο το **παράθυρο** (εδώ κυλά η σελίδα). Το κλικ στην πινέζα κυλά (`nearest`)· το
+ * hover **ποτέ** — το λέει ο δείκτης άκρης.
+ */
+function usePortfolioEdge(
+  properties: Properties,
+  focusController: ListingFocusController,
+): { readonly columnRef: (element: HTMLElement | null) => void; readonly edge: PortfolioEdge | null } {
+  const { containerRef, focusVisibility, revealFocused } = useListingRevealTracking(focusController.focus, 'viewport');
+  const byId = useMemo(() => new Map(properties.map((p) => [p.id, p])), [properties]);
+  const focusedId = focusedListingId(focusController.focus);
+  const property = focusedId === null ? undefined : byId.get(focusedId);
+  const edge = property !== undefined && (focusVisibility === 'above' || focusVisibility === 'below')
+    ? { entry: ownerListingEntry(property, nowISO()), direction: focusVisibility, onActivate: revealFocused }
+    : null;
+  return { columnRef: containerRef, edge };
+}
+
 export function OwnerPortfolio({ properties, partition }: OwnerPortfolioProps): React.ReactElement {
   const mapAvailable = hasOwnerPortfolioMap(partition);
   // 📊 ADR-777 §8.72 — **ΕΝΑ** fetch για όλες τις κάρτες, ποτέ ένα ανά κάρτα.
   const stats = useOwnerPortfolioStats();
-  const focusController = useListingFocus();
+  const focusController = useUrlListingFocus();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const room = useContainerClass(rootRef, OWNER_PORTFOLIO_SPLIT_MIN_REM);
   const layout = !mapAvailable ? 'list' : room === 'wide' ? 'split' : 'tabs';
-  // Το κλικ στην πινέζα φέρνει την κάρτα στο οπτικό πεδίο — μόνο όταν συνυπάρχουν.
-  useRevealSelectedListing(rootRef, layout === 'split' ? focusController.focus.selected : null);
+  // Η στήλη (άρα αποκάλυψη + δείκτης άκρης) υπάρχει μόνο όταν υπάρχει χάρτης: `split` και καρτέλα «Λίστα».
+  const { columnRef, edge } = usePortfolioEdge(properties, focusController);
 
   return (
     // Κουτί μέτρησης, όχι ορόσημο: το πλάτος του είναι ο χώρος που πραγματικά υπάρχει.
     <div ref={rootRef} data-portfolio-layout={layout}>
       {layout === 'list' && <OwnerPropertyList properties={properties} stats={stats} />}
       {layout === 'split' && (
-        <PortfolioSplit properties={properties} stats={stats} focusController={focusController} partition={partition} />
+        <PortfolioSplit
+          properties={properties}
+          stats={stats}
+          focusController={focusController}
+          partition={partition}
+          columnRef={columnRef}
+          edge={edge}
+        />
       )}
       {layout === 'tabs' && (
-        <PortfolioTabs properties={properties} stats={stats} focusController={focusController} partition={partition} />
+        <PortfolioTabs
+          properties={properties}
+          stats={stats}
+          focusController={focusController}
+          partition={partition}
+          columnRef={columnRef}
+          edge={edge}
+        />
       )}
     </div>
   );

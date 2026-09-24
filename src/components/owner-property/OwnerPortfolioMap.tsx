@@ -12,6 +12,11 @@
  * ⚠️ **Ο ελεγκτής έρχεται από τον ΓΟΝΕΑ** (§8.75): στη διάταξη δίπλα-δίπλα η λίστα και ο χάρτης
  * μοιράζονται **μία** εστίαση — δύο `useListingFocus` θα ήταν δύο αλήθειες για το «ποιο κοιτάζω».
  *
+ * 🏷️ **Πινακίδες τιμής** (ADR-777 §8.77): ο **ίδιος** κριτής (`listingPriceMarkers` — ξέρουμε ΠΟΥ,
+ * ξέρουμε ΠΟΣΟ, φραγμένο πλήθος) και ο **ίδιος** ζωγράφος (`ListingPriceMarkers`) με τη δημόσια
+ * αναζήτηση· η τιμή από το `ownerListingEntry` ⇒ `ownerPublicPrice`. Ο κάτοχος βλέπει τις πινακίδες
+ * **που βλέπει ο κόσμος** — ούτε περισσότερες, ούτε με άλλη τιμή.
+ *
  * 🔑 **Γεμίζει τον περιέκτη** (`h-full`): το ύψος το ορίζει η διάταξη (`owner-portfolio-layout.ts`),
  * ώστε κράτηση θέσης και χάρτης να πιάνουν το ίδιο κουτί.
  *
@@ -29,9 +34,12 @@ import {
   type UnmappedOwnerProperty,
 } from '@/lib/owner-property/owner-portfolio-map';
 import { nowISO } from '@/lib/date-local';
-import { ownerPublicPrice } from '@/lib/owner-property/owner-property-projection';
+import { ownerListingEntry } from '@/lib/owner-property/owner-property-projection';
+import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
 import { ListingMapCanvas } from '@/components/search-results/ListingMapCanvas';
-import type { ListingMapEntry } from '@/components/search-results/ListingMapStackPopup';
+import { ListingPriceMarkers } from '@/components/search-results/ListingPriceMarkers';
+import { RADIUS } from '@/components/search-results/ResultsMapLayers';
+import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
 
 import { OwnerPortfolioUnmappedRow } from './OwnerPortfolioUnmappedRow';
 import { OwnerPropertyMapPopup } from './OwnerPropertyMapPopup';
@@ -51,14 +59,17 @@ export default function OwnerPortfolioMap({ mapped, unmapped, focusController }:
 
   const geojson = useMemo(() => ownerPortfolioGeoJson(mapped), [mapped]);
   const byId = useMemo(() => new Map(mapped.map((m) => [m.property.id, m])), [mapped]);
+  // Η θέση από το **ίδιο** GeoJSON που ζωγραφίζει τα σημάδια — ποτέ δεύτερη μετατροπή σε `[lng, lat]`.
+  const priceMarkers = useMemo(() => {
+    const at = nowISO();
+    return listingPriceMarkers(mapped.map((m) => ownerListingEntry(m.property, at)), geojson);
+  }, [mapped, geojson]);
   const selected = focus.selected === null ? null : (byId.get(focus.selected) ?? null);
 
   /** Μία γραμμή για τη λίστα διαλέγματος (§8.76) — η τιμή **όπως τη βλέπει ο κόσμος**. */
   const describeListing = useCallback((id: string): ListingMapEntry | null => {
     const entry = byId.get(id);
-    return entry === undefined
-      ? null
-      : { id, title: entry.property.title, price: ownerPublicPrice(entry.property, nowISO()) };
+    return entry === undefined ? null : ownerListingEntry(entry.property, nowISO());
   }, [byId]);
 
   return (
@@ -73,6 +84,8 @@ export default function OwnerPortfolioMap({ mapped, unmapped, focusController }:
           onClear={clear}
           describeListing={describeListing}
         >
+          {/* Μετά την πηγή (πάνω από τα σχήματα), πριν από τη φούσκα (πάνω από όλα) — όπως στο `ResultsMap`. */}
+          <ListingPriceMarkers markers={priceMarkers} focus={focus} pinRadiusPx={RADIUS.pin} onPeek={peek} onSelect={select} />
           {/* Δεμένο στο `selected`, ΠΟΤΕ στο `peeked` (βλ. `ListingMapPopup`). */}
           {selected !== null && (
             <OwnerPropertyMapPopup property={selected.property} mark={selected.mark} onClose={clear} />
