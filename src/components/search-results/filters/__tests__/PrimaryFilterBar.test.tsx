@@ -69,11 +69,12 @@ describe('Α — ο πρώτος καρές δεν μεταπηδά', () => {
       // μετρήσει. Αν το πρώτο επίπεδο άλλαζε σχήμα μετά τη μέτρηση, η **πιο δημόσια**
       // οθόνη μας θα μεταπηδούσε μπροστά στον ανώνυμο επισκέπτη.
       bar({ viewport });
-      expect(screen.getByLabelText('search-filters:filters.axis.offerKind')).toBeInTheDocument();
-      expect(screen.getByLabelText(/filters\.range\.minLabel.*price/)).toBeInTheDocument();
-      expect(screen.getByLabelText('listing-detail:attributes.label.type')).toBeInTheDocument();
-      expect(screen.getByLabelText(/filters\.range\.minLabel.*bedrooms/)).toBeInTheDocument();
-      expect(screen.getByText(/filters\.moreActive/)).toBeInTheDocument();
+      // §8.80: κάθε ερώτηση είναι ΤΣΙΠ — το προσβάσιμο όνομα είναι ο άξονας, ό,τι κι αν γράφει.
+      expect(screen.getByRole('button', { name: 'search-filters:filters.axis.offerKind' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /attributes\.label\.priceSale|filters\.axis\.priceSale/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'listing-detail:attributes.label.type' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /bedrooms/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'search-filters:filters.more' })).toBeInTheDocument();
     }
   );
 });
@@ -119,6 +120,18 @@ describe('Γ — «Καθαρισμός» στη γραμμή', () => {
     expect(screen.queryByText('search-filters:filters.clearAll')).not.toBeInTheDocument();
   });
 
+  it('🔴 §8.80: το «Περισσότερα» μετρά ΜΟΝΟ ό,τι ΔΕΝ φαίνεται ήδη στη γραμμή', () => {
+    // Το στιγμιότυπο έδειχνε «Περισσότερα φίλτρα · 1 ενεργό 1» με μόνη ερώτηση τη «Πώληση»,
+    // που κάθεται ΗΔΗ ως τσιπ. Ο «Καθαρισμός» όμως μετρά όλα — εμφανίζεται.
+    bar();
+    expect(screen.queryByText(/filters\.moreActive/)).not.toBeInTheDocument();
+    expect(screen.getByText('search-filters:filters.clearAll')).toBeInTheDocument();
+
+    const hidden = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', ['sell']);
+    bar({ filters: { ...ASKING, criteria: { ...hidden, bathrooms: { min: 1, max: null } } } });
+    expect(screen.getByRole('button', { name: /filters\.moreActive.*"count":1/ })).toBeInTheDocument();
+  });
+
   it('χωρίς ερώτηση, το κουμπί λέει σκέτο «Περισσότερα φίλτρα» — χωρίς αριθμό', () => {
     bar({ filters: EMPTY_LISTING_FILTERS });
     expect(screen.getByText('search-filters:filters.more')).toBeInTheDocument();
@@ -140,5 +153,39 @@ describe('Δ — προσβασιμότητα των συμπαγών χειρι
     expect(trigger).toHaveAccessibleName('search-filters:filters.axis.offerKind');
     // …και η **όψη** έχει αλλάξει σε τιμή, όχι σε όνομα άξονα:
     expect(trigger).toHaveTextContent('search-results:listing.offer.sell');
+  });
+});
+
+// =============================================================================
+// Ε — §8.80: ΤΣΙΠ ΜΕ ΣΥΝΟΨΗ, ΔΙΑΜΟΝΗ ΜΟΝΟ ΟΠΟΥ ΕΧΕΙ ΝΟΗΜΑ, ΚΑΜΙΑ ΣΕΙΡΑ ΣΤΗ ΓΡΑΜΜΗ
+// =============================================================================
+
+describe('Ε — μία γραμμή, όπως η Zillow (§8.80)', () => {
+  it('🔴 σε «Πώληση» ΔΕΝ υπάρχει τσιπ διαμονής — ούτε ημερομηνίες, ούτε σκύλοι βοήθειας', () => {
+    bar();
+    expect(screen.queryByRole('button', { name: 'short-stay:legend' })).not.toBeInTheDocument();
+    expect(screen.queryByText('short-stay:pets.filterHint')).not.toBeInTheDocument();
+  });
+
+  it('χωρίς διάθεση, το τσιπ διαμονής υπάρχει (η αναζήτηση περιέχει και διαμονές)', () => {
+    bar({ filters: EMPTY_LISTING_FILTERS });
+    expect(screen.getByRole('button', { name: 'short-stay:legend' })).toBeInTheDocument();
+  });
+
+  it('🔴 ενεργή ερώτηση διαμονής ΔΕΝ κρύβεται ποτέ — ούτε σε «Πώληση»', () => {
+    bar({ filters: { ...ASKING, guests: 2 } });
+    expect(screen.getByRole('button', { name: 'short-stay:legend' })).toBeInTheDocument();
+  });
+
+  it('χωρίς διάθεση, το «Τιμή» υπάρχει ως τσιπ — όχι ολόκληρη γραμμή κειμένου', () => {
+    bar({ filters: EMPTY_LISTING_FILTERS });
+    expect(screen.getByRole('button', { name: 'search-filters:filters.price.label' })).toBeInTheDocument();
+    // Η εξήγηση ζει ΜΕΣΑ στο αναδυόμενο (κλειστό ⇒ εκτός DOM).
+    expect(screen.queryByText('search-filters:filters.price.needOffer')).not.toBeInTheDocument();
+  });
+
+  it('η σειρά ΔΕΝ είναι πια στη γραμμή — μετακόμισε στην κεφαλίδα της λίστας', () => {
+    bar();
+    expect(screen.queryByLabelText('search-filters:filters.sort.label')).not.toBeInTheDocument();
   });
 });

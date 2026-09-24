@@ -57,6 +57,12 @@ interface ResultsListProps {
    * από τον γονιό στην κάρτα· ο **κριτής** ζει στο `lib/criteria`, όπου και ανήκει.
    */
   readonly undeclaredLabelsFor: (listing: PublicListing) => readonly string[];
+  /**
+   * **Η κεφαλίδα της στήλης** (§8.80) — τίτλος, σειρά, λογιστικές. Μπαίνει **μέσα** στο δοχείο
+   * κύλισης, πρώτη: κυλά μαζί με τα αποτελέσματα (Zillow), και στο φύλλο του κινητού είναι αυτό
+   * που φαίνεται στη στάση `peek`.
+   */
+  readonly header?: React.ReactNode;
 }
 
 export function ResultsList({
@@ -66,6 +72,7 @@ export function ResultsList({
   onHover,
   filterQuery,
   undeclaredLabelsFor,
+  header,
 }: ResultsListProps) {
   const { t } = useTranslation(['search-results']);
 
@@ -134,6 +141,7 @@ export function ResultsList({
           και τη στήλη του desktop, που δεν έχει στάσεις — να έχει γνώμη γι' αυτόν.
         */}
         <div ref={containerRef} data-list-scroll className="h-full overflow-y-auto">
+          {header}
           {isEmpty ? (
             <p className="p-4 text-sm text-muted-foreground">{t('search-results:list.empty')}</p>
           ) : (
