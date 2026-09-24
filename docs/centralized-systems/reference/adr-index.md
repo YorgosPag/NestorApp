@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 826 ADRs | Last Updated: 2026-09-24
+**📊 Stats**: 828 ADRs | Last Updated: 2026-09-24
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 576 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 578 | [View](#uncategorized) |
 
 ---
 
@@ -861,6 +861,8 @@
 | **ADR-875** | Golden tenant: ο χρησμός 3.51 κρίνει **με ταυτότητα** | ✅ ACCEPTED — Φάση 1 committed `0d751982` · πρώτο run CI `35890283081`: **ταυτότητα ✅ αποδείχθηκε** · **σπορά ⛔ αρνήθηκε** (ταβάνι 67 > 60, §9) · **Φάση 2.1 (golden δεδομένα)** committed `792e0345` (§10) · **σπορά ✅** run `35903809402`: 0 ⛔ · 21/304 🔶 ⇒ ταβάνι **7%** (§13, baseline στη ρίζα χωρίς commit) · **Φάση 2.3 (σύνορο server redirect)** committed `5d26fab7`+`2aa205ef` (§11) · **Φάση 2.4 (μία έκδοση firebase-tools)** υλοποιημένη (§12, χωρίς commit) · **Φάση 2.2 (ο δίδυμος)** υλοποιημένη (§14, χωρίς commit· εκκρεμεί run CI) + εύρημα §11.6 λυμένο στην κλάση + ⛔ που δεν μπλόκαρε στη σύγκριση (§14.4) · 🔴 εύρημα παραγωγής: πύλη προμηθευτή απρόσιτη (§10.5) | 2026-09-23 | Quality gates / CI / Identity | [📄](./adrs/ADR-875-oracle-golden-tenant.md) |
 | **ADR-876** | Επιφάνειες όπου η διεύθυνση είναι διαπιστευτήριο (πύλη προμηθευτή · check-in · σύνδεσμοι token) | ✅ ACCEPTED — Βήματα 1-3 υλοποιημένα (`f545dcb7`) · Βήμα 4 (σκλήρυνση, §5) `67ed0527` · επαλήθευση στον browser + διορθώσεις Σ15-Σ21 (§5.8) `8a317580` · **Φ7 (απόσυρση παλιάς μορφής, §5.9) υλοποιήθηκε 2026-09-24, χωρίς commit** | 2026-09-23 | Uncategorized | [📄](./adrs/ADR-876-credential-link-surfaces.md) |
 | **ADR-877** | Μία πόρτα εξόδου email: το email ακολουθεί το επίπεδο δεδομένων | ✅ ACCEPTED — υλοποιήθηκε 2026-09-24 · **επαληθεύτηκε στον browser/emulator 2026-09-24 (§6)**, χωρίς commit | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-877-email-egress-door.md) |
+| **ADR-880** | Σημείο εστίασης ανά φωτογραφία αγγελίας: αυτόματο στο ράφι, διόρθωση με ένα κλικ, κεντράρισμα χωρίς inline style | ✅ IMPLEMENTED — 2026-09-24, χωρίς commit (commit/push μόνο ο Giorgio) | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-880-photo-focal-point.md) |
+| **ADR-881** | Εικόνες ήρωα ως επιμελημένο περιεχόμενο πλατφόρμας: ανέβασμα, εκδόσεις, δημοσίευση | ✅ IN PROGRESS — σχεδιασμός 2026-09-24 · υλοποίηση σε τρεις φάσεις (§7), χωρίς commit | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-881-landing-hero-curation.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1676,6 +1678,8 @@
 | **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ APPROVED | [View](./adrs/ADR-870-admin-sdk-index-coverage.md) |
 | **ADR-876** | Επιφάνειες όπου η διεύθυνση είναι διαπιστευτήριο (πύλη προμηθευτή · check-in · σύνδεσμοι token) | ✅ ACCEPTED — Βήματα 1-3 υλοποιημένα (`f545dcb7`) · Βήμα 4 (σκλήρυνση, §5) `67ed0527` · επαλήθευση στον browser + διορθώσεις Σ15-Σ21 (§5.8) `8a317580` · **Φ7 (απόσυρση παλιάς μορφής, §5.9) υλοποιήθηκε 2026-09-24, χωρίς commit** | [View](./adrs/ADR-876-credential-link-surfaces.md) |
 | **ADR-877** | Μία πόρτα εξόδου email: το email ακολουθεί το επίπεδο δεδομένων | ✅ ACCEPTED — υλοποιήθηκε 2026-09-24 · **επαληθεύτηκε στον browser/emulator 2026-09-24 (§6)**, χωρίς commit | [View](./adrs/ADR-877-email-egress-door.md) |
+| **ADR-880** | Σημείο εστίασης ανά φωτογραφία αγγελίας: αυτόματο στο ράφι, διόρθωση με ένα κλικ, κεντράρισμα χωρίς inline style | ✅ IMPLEMENTED — 2026-09-24, χωρίς commit (commit/push μόνο ο Giorgio) | [View](./adrs/ADR-880-photo-focal-point.md) |
+| **ADR-881** | Εικόνες ήρωα ως επιμελημένο περιεχόμενο πλατφόρμας: ανέβασμα, εκδόσεις, δημοσίευση | ✅ IN PROGRESS — σχεδιασμός 2026-09-24 · υλοποίηση σε τρεις φάσεις (§7), χωρίς commit | [View](./adrs/ADR-881-landing-hero-curation.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
