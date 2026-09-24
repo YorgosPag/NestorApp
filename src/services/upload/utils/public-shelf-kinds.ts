@@ -191,6 +191,15 @@ export interface RasterShelfKind<M> extends PublicShelfKind<M> {
    * 🔴 **ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ {@link PublicShelfKind} ΑΠΟ ΤΗ Φ4.2** — δες εκεί το γιατί.
    */
   readonly framingOf: (material: M) => ShelfFraming;
+  /**
+   * 🎯 **ΚΟΒΕΤΑΙ ΑΥΤΟ ΤΟ ΥΛΙΚΟ ΣΕ ΠΛΑΙΣΙΟ ΑΛΛΗΣ ΑΝΑΛΟΓΙΑΣ;** — αν ναι, το ράφι ψάχνει το σημείο
+   * εστίασης στα bytes (ADR-880).
+   *
+   * ⚠️ Ίδιο ιδίωμα με το {@link framingOf}: η **γραμμή** ξέρει τι είναι το υλικό, η μηχανή απλώς
+   * ρωτά. Μια φωτογραφία αγγελίας κόβεται σε κάρτα 3:2 ⇒ ναι. Μια κάτοψη αποδίδεται ολόκληρη και
+   * ένα σήμα γραφείου ποτέ δεν κόβεται ⇒ όχι — και η ερώτηση **δεν** πληρώνει ούτε μία ανάλυση.
+   */
+  readonly detectsFocalPoint: (material: M) => boolean;
 }
 
 /**
@@ -336,6 +345,8 @@ export const LISTING_SHELF: RasterShelfKind<ListingMaterial> = {
   //    περιγράμματος θα έλεγε «χαρτί» — και το σαλόνι θα δημοσιευόταν **κουρεμένο**.
   //    Η γραμμή απαντά «όχι» **μία φορά**, για κάθε φωτογραφία που θα υπάρξει ποτέ.
   framingOf: () => FRAMING_AS_GIVEN,
+  // 🎯 Μόνο η **φωτογραφία** κόβεται σε κάρτα (ADR-880)· η κάτοψη αποδίδεται ολόκληρη.
+  detectsFocalPoint: (material) => material.kind === 'photo',
 };
 
 /**
@@ -386,6 +397,8 @@ export const SHOWCASE_SHELF: RasterShelfKind<ShowcaseMarkMaterial> = {
   //    ⚠️ Το `preset` είναι **κοινό** και στα δύο — γι' αυτό δεν μπορούσε ποτέ να είναι
   //    αυτό το κριτήριο.
   framingOf: (material) => (material.kind === 'logo' ? FRAMING_INK_TIGHT : FRAMING_AS_GIVEN),
+  // 🎯 Το σήμα αποδίδεται **ολόκληρο** (`showcase-mark-box`) — δεν κόβεται ποτέ (ADR-880).
+  detectsFocalPoint: () => false,
 };
 
 /**

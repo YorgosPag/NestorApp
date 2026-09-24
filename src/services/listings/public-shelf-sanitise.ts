@@ -26,6 +26,8 @@
 import sharp from 'sharp';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
+import { detectFocalPoint } from '@/services/listings/public-shelf-focal-point';
 import type { PublicShelfExtension } from '@/services/upload/utils/storage-path-public-shelf';
 import type { RasterShelfEncoding, ShelfFraming } from '@/services/upload/utils/public-shelf-kinds';
 import {
@@ -76,6 +78,20 @@ export interface SanitisedShelfAsset {
   readonly contentType: string;
   readonly width: number;
   readonly height: number;
+}
+
+/**
+ * **Ό,τι έμαθε ο καθαριστής από ΜΙΑ αποκωδικοποίηση** — τα παράγωγα και, όπου ζητήθηκε, το
+ * σημείο εστίασης (ADR-880).
+ */
+export interface SanitisedShelfImage {
+  readonly variants: readonly SanitisedShelfAsset[];
+  /**
+   * Το **αυτόματο** σημείο εστίασης — `null` όταν δεν ζητήθηκε ή δεν βρέθηκε σήμα.
+   * 🔑 Υπολογίζεται στο **πλαισιωμένο** πρωτότυπο, άρα ισχύει για όλα τα παράγωγα
+   * (`fit: 'inside'` ⇒ καμία περικοπή, ίδιες αναλογίες).
+   */
+  readonly focalPoint: PhotoFocalPoint | null;
 }
 
 /** Γιατί ένα αρχείο **δεν** μπόρεσε να γίνει δημοσιεύσιμο. */
@@ -130,19 +146,26 @@ export class ShelfSanitiseError extends Error {
  * έσερνε μαζί του σε κάθε διαδρομή που τον φορτώνει, για μηδέν λόγο. Δύο υλικά με
  * **καμία** κοινή πράξη δεν μοιράζονται module επειδή απαντούν στην ίδια ερώτηση.
  *
+ * 🎯 **ΚΑΙ ΤΟ ΣΗΜΕΙΟ ΕΣΤΙΑΣΗΣ ΡΩΤΙΕΤΑΙ ΕΔΩ, ΣΤΟΝ ΙΔΙΟ ΑΓΩΓΟ** (ADR-880): η αποκωδικοποίηση είναι το
+ * ακριβότερο βήμα, και ο κινητήρας της προσοχής χρειάζεται ακριβώς αυτήν. Ένα δεύτερο
+ * `sharp(input)` αλλού θα την πλήρωνε **δύο** φορές. `detectFocalPoint === false` ⇒ μηδέν ανάλυση.
+ *
  * @throws {ShelfSanitiseError} όταν τα bytes δεν είναι αποκωδικοποιήσιμη εικόνα.
  */
-export async function sanitiseImageVariants(
+export async function sanitiseShelfImage(
   input: Buffer,
   encoding: RasterShelfEncoding,
   framing: ShelfFraming,
-): Promise<readonly SanitisedShelfAsset[]> {
+  detectsFocalPoint: boolean,
+): Promise<SanitisedShelfImage> {
   return decodableOrThrow(input, async (decoded) => {
     const framed = await frameContent(decoded, framing);
 
-    return Promise.all(
-      encoding.widths.map((width) => encodeOne(framed.clone(), width, encoding)),
-    );
+    const [variants, focalPoint] = await Promise.all([
+      Promise.all(encoding.widths.map((width) => encodeOne(framed.clone(), width, encoding))),
+      detectsFocalPoint ? detectFocalPoint(framed) : Promise.resolve(null),
+    ]);
+    return { variants, focalPoint };
   });
 }
 
