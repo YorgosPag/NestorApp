@@ -173,6 +173,20 @@ export function replaceUrlQueryString(query: string): void {
 }
 
 /**
+ * Σβήνει το **fragment** (`#…`) από τη διεύθυνση και την τρέχουσα καταχώριση ιστορικού,
+ * κρατώντας `pathname` + query — και το `history.state` αυτούσιο (App Router).
+ *
+ * Για fragment που **είναι διαπιστευτήριο** (ADR-876 §5, `/vendor/quote#t=…`): αφού διαβαστεί,
+ * δεν μένει ούτε στη γραμμή διεύθυνσης ούτε στο «πίσω».
+ */
+export function clearUrlFragment(): void {
+  if (typeof window === 'undefined') return;
+
+  const { pathname, search } = window.location;
+  window.history.replaceState(window.history.state, '', `${pathname}${search}`);
+}
+
+/**
  * Προσθέτει καταχώριση στην ουρά ιστορικού **χωρίς να αλλάξει η διεύθυνση**, με ένα
  * κλειδί-σημάδι απλωμένο **πάνω** στο υπάρχον `history.state`.
  *

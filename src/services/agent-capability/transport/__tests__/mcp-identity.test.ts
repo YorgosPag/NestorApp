@@ -19,9 +19,10 @@ import {
   buildInsufficientScopeChallenge,
   buildInvalidTokenChallenge,
   buildUnauthenticatedChallenge,
-  extractBearerToken,
   resolveMcpIdentity,
 } from '../mcp-identity';
+// Το MCP διαβάζει την κεφαλίδα με το SSoT (ADR-876 §5 · N.0.2: είχε δικό του αντίγραφο).
+import { extractBearerToken } from '@/lib/auth/token-credentials';
 
 const mockLookup = lookupToken as unknown as jest.Mock;
 const mockBuildContext = buildRequestContext as unknown as jest.Mock;

@@ -9,6 +9,7 @@ import type { QuoteComparisonResult } from '@/subapps/procurement/types/comparis
 import type { RFQ } from '@/subapps/procurement/types/rfq';
 import type { RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
 import type { TFunction } from 'i18next';
+import { vendorInviteDisplayStatus } from './vendor-invite-status';
 
 function formatEur(n: number): string {
   return new Intl.NumberFormat('el-GR', {
@@ -77,8 +78,10 @@ function setupTab(rfq: RFQ | null, invites: VendorInvite[], t: TFunction): Dashb
   const now          = Date.now();
   const deadlineMs   = toDeadlineMs(rfq);
 
+  // ADR-876 §5: η λήξη είναι ΠΑΡΑΓΩΓΗ (`vendorInviteDisplayStatus`), όχι αποθηκευμένη κατάσταση·
+  // η ανάκληση (`revoked`) είναι απόφαση του γραφείου — ΔΕΝ «χρειάζεται προσοχή».
   const attentionCount = invites.filter(
-    i => i.status === 'expired' || (i.status === 'pending' && deadlineMs !== null && now > deadlineMs),
+    i => vendorInviteDisplayStatus(i, now) === 'expired' || (i.status === 'pending' && deadlineMs !== null && now > deadlineMs),
   ).length;
 
   return [

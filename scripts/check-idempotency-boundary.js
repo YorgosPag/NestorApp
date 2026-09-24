@@ -40,6 +40,10 @@ const HTTP_METHOD_NAME = /^(GET|HEAD|OPTIONS|POST|PUT|PATCH|DELETE)$/;
 const ROOTS = [
   { name: 'withAuth', file: 'src/lib/auth/middleware.ts', calls: 2 },
   { name: 'withPersonalOrOrgAuth', file: 'src/lib/auth/personal-scope-middleware.ts', calls: 1 },
+  // ADR-876 §5 — η ΔΗΜΟΣΙΑ πόρτα της πύλης προμηθευτή: καμία ταυτότητα Firebase, ο καλών ΕΙΝΑΙ ο
+  // σύνδεσμός του. Καλεί το στρώμα απευθείας (principal = ο σύνδεσμος, όχι `anon`) — τρίτη ρίζα, όχι
+  // παράκαμψη: το Κ2 επιβεβαιώνει ότι το καλεί ακόμη.
+  { name: 'withVendorLinkDoor', file: 'src/server/vendor-portal/vendor-link-door.ts', calls: 1 },
 ];
 const LAYER = 'runIdempotently';
 

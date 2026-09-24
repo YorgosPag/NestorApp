@@ -2,7 +2,7 @@
  * Vendor portal file upload helper — Admin SDK Storage write.
  * Extracted from the route file per CLAUDE.md SOS N.7.1 (max 500 LOC).
  *
- * @module api/vendor/quote/[token]/upload
+ * @module api/vendor/quote/upload
  * @enterprise ADR-327 §7 + §11
  */
 
@@ -10,7 +10,7 @@ import 'server-only';
 
 import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { generateFileId } from '@/services/enterprise-id.service';
-import { adminTimestampAsClient } from '@/services/vendor-portal/vendor-portal-token-service';
+import { adminTimestampAsClient } from '@/services/vendor-portal/admin-client-timestamp';
 import type { QuoteAttachment } from '@/subapps/procurement/types/quote';
 
 function inferExtension(mimeType: string, fallbackName: string): string {

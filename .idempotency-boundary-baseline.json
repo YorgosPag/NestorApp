@@ -37,8 +37,6 @@
     "src/app/api/showcase-email-confirmations/[token]/route.ts",
     "src/app/api/storages/[id]/showcase/email/route.ts",
     "src/app/api/telemetry/bim-performance/erase/route.ts",
-    "src/app/api/telemetry/bim-performance/route.ts",
-    "src/app/api/vendor/quote/[token]/decline/route.ts",
-    "src/app/api/vendor/quote/[token]/route.ts"
+    "src/app/api/telemetry/bim-performance/route.ts"
   ]
 }

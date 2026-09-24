@@ -3,15 +3,15 @@
 /**
  * VendorPortalClient — Mobile-first vendor quote submission UI.
  *
- * Public, no auth. Token is bound on the URL. Uses internal API routes
- * `/api/vendor/quote/[token]` for GET (re-fetch on language switch) and
- * POST (submit / edit), and `/decline` for declines.
+ * Public, no auth. The link (from the URL fragment, ADR-876 §5) travels ONLY as
+ * `Authorization: Bearer` through `vendor-portal-api` — POST (submit / edit) and
+ * `/decline`. Initial data (incl. an existing quote) comes from `VendorPortalGate`.
  *
- * @module app/(auth)/vendor/quote/[token]/VendorPortalClient
+ * @module app/(auth)/vendor/quote/VendorPortalClient
  * @enterprise ADR-327 §7 — Phase 3 Vendor Portal
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { i18n } from 'i18next';
 import { VendorPortalForm } from './VendorPortalForm';
@@ -19,11 +19,14 @@ import { DeclineDialog } from './DeclineDialog';
 import { SuccessState } from './SuccessState';
 import type { InitialData, QuoteLineDraft, QuoteSnapshot } from './types';
 import type { VendorPortalIntent } from '@/subapps/procurement/services/vendor-portal-links';
+import { vendorPortalAction, vendorPortalFetch } from './vendor-portal-api';
 
 interface Props {
   token: string;
   initialData: InitialData;
-  /** Από τον σύνδεσμο του email (`?intent=decline`) — ανοίγει διάλογο, ΔΕΝ αρνείται (ADR-876 Ε3). */
+  /** Η υπάρχουσα προσφορά (λειτουργία επεξεργασίας) — έρχεται μαζί με τα αρχικά δεδομένα. */
+  initialQuote: QuoteSnapshot | null;
+  /** Από τον σύνδεσμο του email (`#…&intent=decline`) — ανοίγει διάλογο, ΔΕΝ αρνείται (ADR-876 Ε3). */
   initialIntent: VendorPortalIntent | null;
 }
 
@@ -39,7 +42,7 @@ function initialPhase(invite: InitialData['invite'], intent: VendorPortalIntent 
   return intent === 'decline' ? 'declining' : 'editing';
 }
 
-export function VendorPortalClient({ token, initialData, initialIntent }: Props) {
+export function VendorPortalClient({ token, initialData, initialQuote, initialIntent }: Props) {
   const { t, i18n: instance } = useTranslation(['vendor-portal']);
   const [locale, setLocale] = useState<'el' | 'en'>(
     instance.language === 'en' ? 'en' : 'el',
@@ -47,7 +50,7 @@ export function VendorPortalClient({ token, initialData, initialIntent }: Props)
   const [phase, setPhase] = useState<Phase>(() => initialPhase(initialData.invite, initialIntent));
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorReason, setErrorReason] = useState<string | null>(null);
-  const [existingQuote, setExistingQuote] = useState<QuoteSnapshot | null>(null);
+  const existingQuote = initialQuote;
   const [submittedAt, setSubmittedAt] = useState<string | null>(
     initialData.invite.editWindowExpiresAt ?? null,
   );
@@ -56,26 +59,6 @@ export function VendorPortalClient({ token, initialData, initialIntent }: Props)
     () => new Date(initialData.invite.expiresAt).toLocaleString(locale),
     [initialData.invite.expiresAt, locale],
   );
-
-  // Hydrate existing quote (edit mode) by calling the GET endpoint once.
-  useEffect(() => {
-    if (initialData.invite.status !== 'submitted') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/vendor/quote/${encodeURIComponent(token)}`);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (cancelled || !json?.success) return;
-        setExistingQuote(json.data?.quote ?? null);
-      } catch {
-        // Non-fatal; user can still re-enter data.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, initialData.invite.status]);
 
   const switchLanguage = async () => {
     const next: 'el' | 'en' = locale === 'el' ? 'en' : 'el';
@@ -116,10 +99,7 @@ export function VendorPortalClient({ token, initialData, initialIntent }: Props)
     setErrorKey(null);
     setErrorReason(null);
     try {
-      const res = await fetch(`/api/vendor/quote/${encodeURIComponent(token)}`, {
-        method: 'POST',
-        body: formData,
-      });
+      const res = await vendorPortalFetch(token, { method: 'POST', body: formData });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.success) {
         setErrorKey('errors.submitFailed');
@@ -140,11 +120,7 @@ export function VendorPortalClient({ token, initialData, initialIntent }: Props)
     setPhase('declining');
     setErrorKey(null);
     try {
-      const res = await fetch(`/api/vendor/quote/${encodeURIComponent(token)}/decline`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ reason }),
-      });
+      const res = await vendorPortalAction(token, '/decline', { reason });
       if (!res.ok) {
         setErrorKey('errors.submitFailed');
         setPhase('editing');

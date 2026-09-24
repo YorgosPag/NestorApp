@@ -436,6 +436,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   QUOTE: 'qt',
   RFQ: 'rfq',
   VENDOR_INVITE: 'vi',
+  VENDOR_INVITE_CREDENTIAL: 'vic', // ADR-876 §5: ένας σύνδεσμος πύλης = ένα διαπιστευτήριο
   TRADE: 'trd',
   VENDOR_LOGO: 'vlogo',       // ADR-327 §6: deterministic per-quote logo claim
 

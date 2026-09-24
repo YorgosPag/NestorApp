@@ -41,6 +41,7 @@ import 'server-only';
 import type { NextRequest } from 'next/server';
 
 import { buildRequestContext } from '@/lib/auth/auth-context';
+import { extractBearerToken } from '@/lib/auth/token-credentials';
 import { isAuthenticated } from '@/lib/auth/types';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import {
@@ -167,19 +168,6 @@ function insufficientScope(): McpIdentity {
     ok: false,
     failure: { kind: 'insufficient_scope', status: 403, challenge: buildInsufficientScopeChallenge() },
   };
-}
-
-// ============================================================================
-// ΕΞΑΓΩΓΗ TOKEN
-// ============================================================================
-
-export function extractBearerToken(request: NextRequest): string | null {
-  const header = request.headers.get('authorization');
-  if (!header) return null;
-
-  const parts = header.split(' ');
-  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') return null;
-  return parts[1] === '' ? null : parts[1];
 }
 
 // ============================================================================

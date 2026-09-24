@@ -1021,7 +1021,8 @@
       "opened": "Opened",
       "submitted": "Submitted",
       "declined": "Declined",
-      "expired": "Expired"
+      "expired": "Expired",
+      "revoked": "Withdrawn"
     },
     "copyLink": "Copy Link",
     "linkCopied": "Copied!",
@@ -1039,7 +1040,35 @@
       "invalidEmail": "Invalid email",
       "loadContactsFailed": "Failed to load vendors",
       "deliveryFailed": "Delivery failed",
-      "emailNotSent": "Email was not sent"
+      "emailNotSent": "Email was not sent",
+      "copyFailed": "Could not issue a link",
+      "linksFailed": "Could not load links"
+    },
+    "links": {
+      "toggle": "Links",
+      "title": "Invitation links",
+      "hint": "Each link is issued once and revoked on its own. Copying issues a new link — earlier links stay active.",
+      "loading": "Loading links…",
+      "empty": "No links",
+      "issuedAt": "Issued",
+      "expiresAt": "Expires",
+      "lastUsed": "Last used",
+      "never": "Never",
+      "revoke": "Revoke link",
+      "confirmRevoke": "Revoke this link? The other links of the invitation stay active.",
+      "origin": {
+        "invite_email": "Invitation email",
+        "rfq_fanout": "Invitation email (RFQ)",
+        "copy_link": "Copy",
+        "email_resend": "Resend",
+        "self_service": "Vendor request",
+        "legacy": "Legacy link"
+      },
+      "state": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      }
     }
   },
   "comparison": {

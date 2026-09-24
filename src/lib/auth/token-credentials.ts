@@ -53,7 +53,9 @@ export function extractBearerToken(request: NextRequest): string | null {
     return null;
   }
 
-  return parts[1];
+  // `Bearer ` με κενή τιμή δεν είναι διαπιστευτήριο. Το δεύτερο αντίγραφο αυτής της συνάρτησης
+  // (`mcp-identity.ts`, καταργήθηκε — ADR-876 §5, N.0.2) το ήξερε· το SSoT επέστρεφε `''`.
+  return parts[1] === '' ? null : parts[1];
 }
 
 // =============================================================================

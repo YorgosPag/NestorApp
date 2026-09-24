@@ -308,7 +308,7 @@
         "src/lib/firebaseAdmin-storage.ts",
         "src/app/api/upload/photo/route.ts",
         "src/app/api/communications/webhooks/telegram/telegram/media-download-storage.ts",
-        "src/app/api/vendor/quote/[token]/upload.ts",
+        "src/app/api/vendor/quote/upload.ts",
         "src/services/attendance/attendance-server-service.ts",
         "src/services/showcase-core/",
         "src/services/floorplans/",
@@ -3299,13 +3299,17 @@
     "vendor-portal": {
       "ssotFile": "src/subapps/procurement/types/vendor-invite.ts",
       "serviceFile": "src/subapps/procurement/services/vendor-invite-service.ts",
-      "description": "Vendor invite + portal token SSoT (ADR-327 §7, P3 fully implemented). createVendorInvite() is canonical — generates HMAC token, sends email/copy-link, writes to vendor_invites + vendor_invite_tokens. FORBIDDEN: direct addDoc on vendor_invites/vendor_invite_tokens, inline token generation outside vendor-invite-service.ts.",
+      "description": "Vendor invite + portal link SSoT (ADR-327 §7 · ADR-876 §5 «one link = one credential»). The invite document holds NO credential: every portal link is a separate hashed record in vendor_invite_credentials (server-only), minted by vendor-invite-credential.ts, written with the invite by vendor-invite-issue.ts (the ONE builder for both writers), read/revoked ONLY through vendor-invite-credential-store.ts, resolved by vendor-invite-resolver.ts behind server/vendor-portal/vendor-link-door.ts. The link travels in the URL FRAGMENT and as Authorization: Bearer — never in a path. FORBIDDEN: direct addDoc on vendor_invites/vendor_invite_tokens; touching the credentials collection outside its store/builder; client code putting a link into an /api/vendor/quote/<…> path.",
       "forbiddenPatterns": [
         "collection.*vendor_invites.*addDoc",
-        "collection.*vendor_invite_tokens.*addDoc"
+        "collection.*vendor_invite_tokens.*addDoc",
+        "COLLECTIONS\\.VENDOR_INVITE_CREDENTIALS",
+        "/api/vendor/quote/\\$\\{"
       ],
       "allowlist": [
         "src/subapps/procurement/types/vendor-invite.ts",
+        "src/services/vendor-portal/vendor-invite-credential-store.ts",
+        "src/subapps/procurement/services/vendor-invite-issue.ts",
         "src/subapps/procurement/services/vendor-invite-service.ts",
         "src/subapps/procurement/services/vendor-portal-submit-service.ts",
         "src/subapps/procurement/hooks/useVendorInvites.ts",

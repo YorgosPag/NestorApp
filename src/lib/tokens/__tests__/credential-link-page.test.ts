@@ -99,18 +99,19 @@ describe('ADR-876 Ε3 — ο σύνδεσμος άρνησης οδηγεί σε
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const links = (): typeof import('@/subapps/procurement/services/vendor-portal-links') => require('@/subapps/procurement/services/vendor-portal-links');
 
-  test('Α1 — η διαδρομή της άρνησης = η διαδρομή της πύλης (υπάρχει σελίδα), με πρόθεση στο query', () => {
+  test('Α1 — η άρνηση = η ΙΔΙΑ σελίδα της πύλης, με πρόθεση στο fragment', () => {
     const decline = new URL(links().vendorDeclineUrl('t.a-1_b'));
     const portal = new URL(links().vendorPortalUrl('t.a-1_b'));
     expect(decline.pathname).toBe(portal.pathname);
-    expect(decline.pathname).toBe('/vendor/quote/t.a-1_b');
-    expect(links().readVendorPortalIntent(decline.searchParams.get('intent') ?? undefined)).toBe('decline');
+    expect(decline.pathname).toBe('/vendor/quote');
+    expect(links().readVendorPortalFragment(decline.hash)).toEqual({ token: 't.a-1_b', intent: 'decline' });
   });
 
-  test('Α2 — η σελίδα της πύλης ΥΠΑΡΧΕΙ στον δίσκο, εκτός χώρου', () => {
+  test('Α2 — η σελίδα της πύλης ΥΠΑΡΧΕΙ στον δίσκο, εκτός χώρου· καμία σελίδα `…/decline`', () => {
     const templates = oracle.enumerateRoutes(ROOT).map((route) => route.template);
-    expect(templates).toContain('/vendor/quote/[token]');
+    expect(templates).toContain('/vendor/quote');
     expect(templates).not.toContain('/vendor/quote/[token]/decline');
+    expect(isInsideWorkspace('/vendor/quote')).toBe(false);
   });
 
   test.each([
@@ -118,11 +119,76 @@ describe('ADR-876 Ε3 — ο σύνδεσμος άρνησης οδηγεί σε
     ['σκουπίδι', 'delete'],
     ['απουσία', undefined],
   ])('Α3 — %s ⇒ καμία πρόθεση', (_label, raw) => {
-    expect(links().readVendorPortalIntent(raw as string | string[] | undefined)).toBeNull();
+    expect(links().asVendorPortalIntent(raw)).toBeNull();
+    expect(links().readVendorPortalFragment('#t=x&intent=delete').intent).toBeNull();
   });
 
-  test('Α4 — η σελίδα ΔΕΝ γράφει: η άρνηση φεύγει μόνο από POST (Safe Links ανοίγουν κάθε GET)', () => {
-    const page = read(path.join(APP_DIR, '(auth)', 'vendor', 'quote', TOKEN_SEGMENT, 'page.tsx'));
-    expect(page).not.toMatch(/markInvite|markUsed|revokeVendorPortalToken|runTransaction/);
+  test('Α4 — οι σελίδες της πύλης ΔΕΝ γράφουν: η άρνηση φεύγει μόνο από POST (Safe Links ανοίγουν κάθε GET)', () => {
+    const pages = [
+      path.join(APP_DIR, '(auth)', 'vendor', 'quote', 'page.tsx'),
+      path.join(APP_DIR, '(auth)', 'vendor', 'quote', TOKEN_SEGMENT, 'page.tsx'),
+    ].map(read);
+    for (const page of pages) {
+      expect(page).not.toMatch(/markInvite|markUsed|revokeVendor|runTransaction|getAdminFirestore|resolveVendorInvite/);
+    }
+  });
+});
+
+/**
+ * 🔑 **ADR-876 §5 — «ένας σύνδεσμος = ένα διαπιστευτήριο» και το διαπιστευτήριο ΕΚΤΟΣ διεύθυνσης.**
+ *
+ * Κ-α το έγγραφο πρόσκλησης (που διαβάζει κάθε μέλος) δεν έχει πεδίο `token` ·
+ * Κ-β ο σύνδεσμος του email κουβαλά το διαπιστευτήριο ΜΟΝΟ στο fragment (ποτέ σε διαδρομή/query) ·
+ * Κ-γ κανένα αίτημα του client δεν βάζει το διαπιστευτήριο σε URL — μόνο `Authorization` ·
+ * Κ-δ η σελίδα `/vendor/quote` (χωρίς `[token]`) φοράει κι αυτή τις δηλώσεις σελίδας-διαπιστευτηρίου ·
+ * Κ-ε κανένα δημόσιο API της πύλης δεν ζει κάτω από `[token]`.
+ */
+describe('ADR-876 §5 — το διαπιστευτήριο εκτός διεύθυνσης και εκτός εγγράφου πρόσκλησης', () => {
+  const ORIGIN = 'https://nestor.example';
+  const saved = process.env.NEXT_PUBLIC_APP_URL;
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_APP_URL = ORIGIN;
+  });
+  afterAll(() => {
+    if (saved === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+    else process.env.NEXT_PUBLIC_APP_URL = saved;
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const links = (): typeof import('@/subapps/procurement/services/vendor-portal-links') => require('@/subapps/procurement/services/vendor-portal-links');
+  const PORTAL_DIR = path.join(APP_DIR, '(auth)', 'vendor', 'quote');
+
+  test('Κ-α — το `VendorInvite` ΔΕΝ δηλώνει πεδίο `token`', () => {
+    const source = read(path.join(ROOT, 'src', 'subapps', 'procurement', 'types', 'vendor-invite.ts'));
+    const body = source.slice(source.indexOf('export interface VendorInvite {'));
+    expect(body.slice(0, body.indexOf('\n}'))).not.toMatch(/^\s*token\s*:/m);
+  });
+
+  test('Κ-β — το διαπιστευτήριο ΜΟΝΟ στο fragment', () => {
+    const SECRET_LIKE = 'CRED.value-1_x';
+    const url = new URL(links().vendorDeclineUrl(SECRET_LIKE));
+    expect(url.pathname).not.toContain(SECRET_LIKE);
+    expect(url.search).toBe('');
+    expect(links().readVendorPortalFragment(url.hash).token).toBe(SECRET_LIKE);
+  });
+
+  test('Κ-γ — κανένα αίτημα του client με το διαπιστευτήριο σε URL', () => {
+    const clientFiles = fs.readdirSync(PORTAL_DIR).filter((f) => /\.tsx?$/.test(f)).map((f) => read(path.join(PORTAL_DIR, f)));
+    for (const source of clientFiles) {
+      expect(source).not.toMatch(/\/api\/vendor\/quote\/\$\{/);
+      expect(source).not.toMatch(/encodeURIComponent\(token\)/);
+    }
+    expect(read(path.join(PORTAL_DIR, 'vendor-portal-api.ts'))).toMatch(/Authorization: `Bearer \$\{token\}`/);
+  });
+
+  test('Κ-δ — η `/vendor/quote` φοράει SSoT metadata + force-dynamic', () => {
+    const page = read(path.join(PORTAL_DIR, 'page.tsx'));
+    expect(page).toMatch(USES_SSOT);
+    expect(page).toMatch(FORCE_DYNAMIC);
+  });
+
+  test('Κ-ε — κανένα δημόσιο API της πύλης κάτω από `[token]`', () => {
+    const apiTemplates = fs.existsSync(path.join(APP_DIR, 'api', 'vendor', 'quote', TOKEN_SEGMENT));
+    expect(apiTemplates).toBe(false);
   });
 });

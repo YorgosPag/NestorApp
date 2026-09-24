@@ -5801,6 +5801,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ADR-876 §5 — ένας σύνδεσμος πύλης = ένα διαπιστευτήριο (μόνο nonceHash).
+    // Server-only: ο client ΔΕΝ μαθαίνει ούτε καν ποιοι σύνδεσμοι υπάρχουν — το γραφείο
+    // παίρνει μεταδεδομένα από API με δικαίωμα, ποτέ από τη βάση.
+    match /vendor_invite_credentials/{credentialId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     // ADR-327 §17 Q31 — Multi-Vendor sourcing_events parent (HYBRID A-Enhanced)
     // Optional umbrella grouping N atomic single-trade RFQs into one logical
     // procurement package. Tenant-scoped reads via companyId; all writes go

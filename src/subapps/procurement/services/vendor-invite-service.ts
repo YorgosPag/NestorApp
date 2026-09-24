@@ -3,34 +3,34 @@
  * Vendor Invite Service — RFQ vendor invite lifecycle
  * =============================================================================
  *
- * Owns vendor_invites collection writes (Admin SDK). Generates HMAC tokens via
- * `vendor-portal-token-service`, dispatches the invite through a `MessageChannel`
- * driver (email/copy_link in P3 day-1), and tracks delivery + lifecycle status.
+ * Owns vendor_invites collection writes (Admin SDK). The invite document holds
+ * **no credential** (ADR-876 §5): every portal link is a separate hashed record in
+ * `vendor_invite_credentials`, issued through `vendor-invite-issue` and read through
+ * `vendor-invite-credential-store`. Office-side link operations (copy · resend ·
+ * revoke one link) live in `vendor-invite-links-service`.
  *
- * Status machine: pending → sent → opened → submitted | declined | expired
+ * Status machine: pending → sent → opened → submitted | declined | revoked
+ * («έληξε» is DERIVED from `expiresAt`, never stored — see `utils/vendor-invite-status`).
  *
  * @module subapps/procurement/services/vendor-invite-service
- * @enterprise ADR-327 §7 — Phase 3 Vendor Portal
+ * @enterprise ADR-327 §7 — Phase 3 Vendor Portal · ADR-876 §5
  */
 
 import 'server-only';
 
 import admin from 'firebase-admin';
-import { vendorPortalUrl, vendorDeclineUrl } from './vendor-portal-links';
 import { safeFirestoreOperation, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
-import { generateVendorInviteId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import type { AuthContext } from '@/lib/auth';
 import {
-  generateVendorPortalToken,
-  revokeVendorPortalToken,
   adminTimestampAsClient,
   adminTimestampFromDateAsClient,
-  type GeneratedVendorPortalToken,
-} from '@/services/vendor-portal/vendor-portal-token-service';
+} from '@/services/vendor-portal/admin-client-timestamp';
+import { readLiveCredentialRefsTx } from '@/services/vendor-portal/vendor-invite-credential-store';
+import { nowISO } from '@/lib/date-local';
 import { resolveChannel } from './channels';
 import { pickContactDisplayName } from './vendor-name-resolver';
 import type {
@@ -41,24 +41,26 @@ import type {
 } from '../types/vendor-invite';
 import { getRfq } from './rfq-service';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
+import { isLiveInviteStatus, normalizeInviteStatus } from '../utils/vendor-invite-status';
+import { prepareVendorInvite, writePreparedVendorInvite } from './vendor-invite-issue';
+import { recordVendorInviteAudit } from './vendor-invite-audit';
 
 const logger = createModuleLogger('VENDOR_INVITE_SERVICE');
 
-const DEFAULT_EXPIRY_DAYS = 7;
 const EDIT_WINDOW_HOURS = 72; // ADR-327 Q8
 
 // =============================================================================
 // CONTACT LOOKUP
 // =============================================================================
 
-interface VendorContactSnapshot {
+export interface VendorContactSnapshot {
   id: string;
   displayName: string;
   email: string | null;
   preferredChannel: DeliveryChannel | null;
 }
 
-async function fetchVendorContact(
+export async function fetchVendorContact(
   companyId: string,
   contactId: string,
 ): Promise<VendorContactSnapshot | null> {
@@ -78,15 +80,12 @@ async function fetchVendorContact(
 }
 
 // =============================================================================
-// PORTAL URL
-// =============================================================================
-
-// =============================================================================
 // CREATE
 // =============================================================================
 
 export interface CreateInviteResult {
   invite: VendorInvite;
+  /** Ο σύνδεσμος — επιστρέφεται **μία φορά**, στη δημιουργία. Δεν αποθηκεύεται πουθενά. */
   portalUrl: string;
   delivery: {
     success: boolean;
@@ -95,11 +94,6 @@ export interface CreateInviteResult {
   };
 }
 
-/**
- * Create a new vendor invite for an RFQ. Persists invite doc, registers the
- * vendor on `RFQ.invitedVendorIds`, and dispatches the configured channel
- * (default `email`, falls back to `copy_link` if email is unavailable).
- */
 interface ResolvedRecipient {
   vendorContactId: string;
   displayName: string;
@@ -125,14 +119,63 @@ async function resolveRecipient(
   const name = dto.manualName.trim();
   if (!email) throw new Error('manualEmail is required');
   if (!name) throw new Error('manualName is required');
-  return {
-    vendorContactId: '',
-    displayName: name,
-    email,
-    preferredChannel: null,
-  };
+  return { vendorContactId: '', displayName: name, email, preferredChannel: null };
 }
 
+type PreparedInvite = Awaited<ReturnType<typeof prepareVendorInvite>>;
+type ChannelDriver = NonNullable<ReturnType<typeof resolveChannel>>;
+
+/** Η πρώτη αποστολή — email στον παραλήπτη, ή (copy_link) ο ίδιος ο σύνδεσμος ως «παραλήπτης». */
+async function dispatchNewInvite(
+  channelDriver: ChannelDriver,
+  prepared: PreparedInvite,
+  recipient: ResolvedRecipient,
+  rfqTitle: string,
+  locale: 'el' | 'en',
+) {
+  const isEmail = channelDriver.id === 'email';
+  if (isEmail && !recipient.email) {
+    return { success: false, providerMessageId: null, errorReason: 'Recipient has no email address' };
+  }
+  const { link } = prepared;
+  return channelDriver.send({
+    inviteId: prepared.invite.id,
+    vendorName: recipient.displayName,
+    recipient: isEmail && recipient.email ? recipient.email : link.portalUrl,
+    rfqTitle,
+    projectName: null,
+    portalUrl: link.portalUrl,
+    expiresAt: link.expiresAtIso,
+    locale,
+    declineUrl: link.declineUrl,
+  });
+}
+
+/** Πρόσκληση + διαπιστευτήριο + εγγραφή του προμηθευτή στο RFQ — **ένα** batch. */
+async function persistNewInvite(
+  invite: VendorInvite,
+  link: PreparedInvite['link'],
+  vendorContactId: string,
+  invitedVendorIds: readonly string[],
+): Promise<void> {
+  await safeFirestoreOperation<void>(async (db) => {
+    const batch = db.batch();
+    writePreparedVendorInvite(batch, db, { invite, link });
+    if (vendorContactId && !invitedVendorIds.includes(vendorContactId)) {
+      batch.update(db.collection(COLLECTIONS.RFQS).doc(invite.rfqId), {
+        invitedVendorIds: FieldValue.arrayUnion(vendorContactId),
+        updatedAt: invite.createdAt,
+      });
+    }
+    await batch.commit();
+  }, undefined);
+}
+
+/**
+ * Create a new vendor invite for an RFQ. Persists invite + first credential, registers
+ * the vendor on `RFQ.invitedVendorIds`, and dispatches the configured channel (default
+ * `email`, falls back to `copy_link` if email is unavailable).
+ */
 export async function createVendorInvite(
   ctx: AuthContext,
   dto: CreateVendorInviteDTO,
@@ -143,94 +186,36 @@ export async function createVendorInvite(
   if (rfq.status === 'archived') throw new Error('Cannot invite vendor on archived RFQ');
 
   const recipient = await resolveRecipient(ctx, dto);
-
-  const expiresInDays = dto.expiresInDays ?? DEFAULT_EXPIRY_DAYS;
-  const generated: GeneratedVendorPortalToken = generateVendorPortalToken(
-    dto.rfqId,
-    recipient.vendorContactId,
-    expiresInDays,
-  );
-  const portalUrl = vendorPortalUrl(generated.token);
-  const declineUrl = vendorDeclineUrl(generated.token);
-
-  const requestedChannel: DeliveryChannel = dto.deliveryChannel;
-  const channelDriver =
-    resolveChannel(requestedChannel) ?? resolveChannel('copy_link');
+  const channelDriver = resolveChannel(dto.deliveryChannel) ?? resolveChannel('copy_link');
   if (!channelDriver) throw new Error('No delivery channel available');
   const effectiveChannel: DeliveryChannel = channelDriver.id;
 
-  const inviteId = generateVendorInviteId();
-  const now = adminTimestampAsClient();
-  const expiresAt = adminTimestampFromDateAsClient(new Date(generated.expiresAt));
-
-  const invite: VendorInvite = {
-    id: inviteId,
+  const prepared = await prepareVendorInvite({
+    companyId: ctx.companyId,
     rfqId: dto.rfqId,
     vendorContactId: recipient.vendorContactId,
-    companyId: ctx.companyId,
-    token: generated.token,
     deliveryChannel: effectiveChannel,
     preferredChannel: recipient.preferredChannel,
     status: 'pending',
-    deliveredAt: null,
-    openedAt: null,
-    submittedAt: null,
-    declinedAt: null,
-    declineReason: null,
-    expiresAt,
-    editWindowExpiresAt: null,
-    remindersSentAt: [],
-    lastReminderAt: null,
-    createdAt: now,
-    updatedAt: now,
     recipientEmail: recipient.email,
     recipientName: recipient.displayName,
+    issuedVia: effectiveChannel === 'email' ? 'invite_email' : 'copy_link',
+    issuedBy: ctx.uid,
+    expiresInDays: dto.expiresInDays,
+  });
+  const { link } = prepared;
+  const dispatch = await dispatchNewInvite(channelDriver, prepared, recipient, rfq.title, options.locale ?? 'el');
+
+  const status: InviteStatus = effectiveChannel === 'copy_link' || !dispatch.success ? 'pending' : 'sent';
+  const invite: VendorInvite = {
+    ...prepared.invite,
+    status,
+    deliveredAt: dispatch.success ? prepared.invite.createdAt : null,
   };
-
-  const dispatch =
-    effectiveChannel === 'email' && !recipient.email
-      ? {
-          success: false,
-          providerMessageId: null,
-          errorReason: 'Recipient has no email address',
-          channel: 'email' as DeliveryChannel,
-        }
-      : await channelDriver.send({
-          inviteId,
-          vendorName: recipient.displayName,
-          recipient: effectiveChannel === 'email' ? recipient.email! : portalUrl,
-          rfqTitle: rfq.title,
-          projectName: null,
-          portalUrl,
-          expiresAt: generated.expiresAt,
-          locale: options.locale ?? 'el',
-          declineUrl,
-        });
-
-  const persistedStatus: InviteStatus =
-    effectiveChannel === 'copy_link' ? 'pending' : (dispatch.success ? 'sent' : 'pending');
-
-  await safeFirestoreOperation<void>(async (db) => {
-    const batch = db.batch();
-    batch.set(
-      db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId),
-      sanitizeForFirestore({
-        ...invite,
-        status: persistedStatus,
-        deliveredAt: dispatch.success ? now : null,
-      }),
-    );
-    if (recipient.vendorContactId && !rfq.invitedVendorIds.includes(recipient.vendorContactId)) {
-      batch.update(db.collection(COLLECTIONS.RFQS).doc(dto.rfqId), {
-        invitedVendorIds: FieldValue.arrayUnion(recipient.vendorContactId),
-        updatedAt: now,
-      });
-    }
-    await batch.commit();
-  }, undefined);
+  await persistNewInvite(invite, link, recipient.vendorContactId, rfq.invitedVendorIds);
 
   logger.info('Vendor invite created', {
-    inviteId,
+    inviteId: invite.id,
     rfqId: dto.rfqId,
     vendorContactId: recipient.vendorContactId || '<manual>',
     channel: effectiveChannel,
@@ -238,8 +223,8 @@ export async function createVendorInvite(
   });
 
   return {
-    invite: { ...invite, status: persistedStatus, deliveredAt: dispatch.success ? now : null },
-    portalUrl,
+    invite,
+    portalUrl: link.portalUrl,
     delivery: {
       success: dispatch.success,
       providerMessageId: dispatch.providerMessageId,
@@ -261,34 +246,28 @@ export async function getVendorInvite(
     if (!snap.exists) return null;
     const invite = { id: snap.id, ...snap.data() } as VendorInvite;
     if (invite.companyId !== companyId) return null;
-    return invite;
+    return { ...invite, status: normalizeInviteStatus(invite.status) };
   }, null);
 }
 
 /**
- * Resolve invite by token (used by public vendor portal page — no auth).
- * Caller MUST validate the token via `validateVendorPortalTokenSignature`
- * BEFORE invoking this to avoid Firestore lookups on forged tokens.
+ * Η πρόσκληση **αυτού του RFQ** — ξένη εταιρεία ή άλλο RFQ ⇒ `null`. Οι διαδρομές του
+ * γραφείου (`/api/rfqs/[id]/invites/[inviteId]/…`) αγνοούσαν το `[id]`.
  */
-export async function getVendorInviteByToken(token: string): Promise<VendorInvite | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.VENDOR_INVITES)
-      .where('token', '==', token)
-      .limit(1)
-      .get();
-    if (snap.empty) return null;
-    const doc = snap.docs[0];
-    return { id: doc.id, ...doc.data() } as VendorInvite;
-  }, null);
+export async function getVendorInviteOfRfq(
+  companyId: string,
+  rfqId: string,
+  inviteId: string,
+): Promise<VendorInvite | null> {
+  const invite = await getVendorInvite(companyId, inviteId);
+  return invite && invite.rfqId === rfqId ? invite : null;
 }
 
 /**
  * Οι προσκλήσεις μιας εταιρείας, **φιλτραρισμένες σε ένα ακόμη πεδίο**, νεότερες πρώτα.
  *
  * ⚠️ **Το `companyId` μένει ΠΡΩΤΟ και δεν είναι παράμετρος**: είναι ο φράχτης μισθωτή
- * (CHECK 3.10/3.35), όχι κριτήριο αναζήτησης. Παραμετροποιώντας **και** αυτόν, το επόμενο
- * κάλεσμα θα μπορούσε να τον παραλείψει — ακριβώς η διαρροή που η πύλη υπάρχει για να κόψει.
+ * (CHECK 3.10/3.35), όχι κριτήριο αναζήτησης.
  */
 function listInvitesWhere(
   companyId: string,
@@ -306,10 +285,7 @@ function listInvitesWhere(
   }, []);
 }
 
-export function listVendorInvitesByRfq(
-  companyId: string,
-  rfqId: string,
-): Promise<VendorInvite[]> {
+export function listVendorInvitesByRfq(companyId: string, rfqId: string): Promise<VendorInvite[]> {
   return listInvitesWhere(companyId, 'rfqId', rfqId);
 }
 
@@ -324,22 +300,16 @@ export function listVendorInvitesByVendor(
 // STATUS TRANSITIONS
 // =============================================================================
 
-async function patchInvite(
-  inviteId: string,
-  updates: Partial<VendorInvite>,
-): Promise<void> {
+async function patchInvite(inviteId: string, updates: Partial<VendorInvite>): Promise<void> {
   await safeFirestoreOperation<void>(async (db) => {
     await db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId).update(
-      sanitizeForFirestore({
-        ...updates,
-        updatedAt: adminTimestampAsClient(),
-      }),
+      sanitizeForFirestore({ ...updates, updatedAt: adminTimestampAsClient() }),
     );
   }, undefined);
 }
 
 /**
- * Mark invite as `opened` the first time the vendor visits the portal page.
+ * Mark invite as `opened` the first time the vendor visits the portal.
  * No-op if status has progressed beyond `opened` (e.g. already submitted).
  */
 export async function markInviteOpened(inviteId: string): Promise<void> {
@@ -351,40 +321,27 @@ export async function markInviteOpened(inviteId: string): Promise<void> {
     const data = snap.data() as VendorInvite;
     const now = admin.firestore.Timestamp.now();
     if (data.status === 'pending' || data.status === 'sent') {
-      tx.update(ref, {
-        status: 'opened' satisfies InviteStatus,
-        openedAt: now,
-        updatedAt: now,
-      });
+      tx.update(ref, { status: 'opened' satisfies InviteStatus, openedAt: now, updatedAt: now });
     } else if (!data.openedAt) {
-      tx.update(ref, {
-        openedAt: now,
-        updatedAt: now,
-      });
+      tx.update(ref, { openedAt: now, updatedAt: now });
     }
   });
 }
 
-/**
- * Mark invite submitted. Opens 72h edit window per Q8.
- */
+/** Mark invite submitted. Opens 72h edit window per Q8. */
 export async function markInviteSubmitted(inviteId: string): Promise<void> {
-  const submittedAt = adminTimestampAsClient();
   const editWindowExpiresAt = adminTimestampFromDateAsClient(
     new Date(Date.now() + EDIT_WINDOW_HOURS * 60 * 60 * 1000),
   );
   await patchInvite(inviteId, {
     status: 'submitted',
-    submittedAt,
+    submittedAt: adminTimestampAsClient(),
     editWindowExpiresAt,
   });
   logger.info('Vendor invite submitted', { inviteId, editWindowHours: EDIT_WINDOW_HOURS });
 }
 
-export async function markInviteDeclined(
-  inviteId: string,
-  reason: string | null,
-): Promise<void> {
+export async function markInviteDeclined(inviteId: string, reason: string | null): Promise<void> {
   await patchInvite(inviteId, {
     status: 'declined',
     declinedAt: adminTimestampAsClient(),
@@ -393,94 +350,43 @@ export async function markInviteDeclined(
   logger.info('Vendor invite declined', { inviteId, hasReason: !!reason });
 }
 
-/**
- * Revoke invite (PM action) — invalidates token + stops reminders.
- */
 // =============================================================================
-// RESEND
+// REVOKE (whole invite)
 // =============================================================================
 
-/**
- * Re-send the invite email for an existing invite. Always uses email channel.
- * Used by the UnifiedShareDialog email button (ADR-327 Phase H).
- */
-export async function resendVendorInvite(
-  ctx: AuthContext,
-  inviteId: string,
-  options: { locale?: 'el' | 'en' } = {},
-): Promise<{ success: boolean; errorReason: string | null }> {
-  const invite = await getVendorInvite(ctx.companyId, inviteId);
-  if (!invite) throw new Error(`Vendor invite ${inviteId} not found`);
-  if (invite.status === 'expired' || invite.status === 'declined') {
-    throw new Error(`Cannot resend invite with status '${invite.status}'`);
+/** Γιατί δεν ανακλήθηκε — ονομασμένο, ώστε η διαδρομή να απαντήσει 404 ή 409 σωστά. */
+export class VendorInviteStateError extends Error {
+  constructor(readonly code: 'not_found' | 'not_live') {
+    super(code === 'not_found' ? 'Vendor invite not found' : 'Vendor invite is no longer live');
+    this.name = 'VendorInviteStateError';
   }
-
-  // Prefer the snapshot stored on the invite document (works for both contact
-  // and manual-email modes). Falls back to the live contact lookup for legacy
-  // invites created before the snapshot fields were introduced.
-  let recipientEmail = invite.recipientEmail;
-  let recipientName = invite.recipientName;
-  if ((!recipientEmail || !recipientName) && invite.vendorContactId) {
-    const vendor = await fetchVendorContact(ctx.companyId, invite.vendorContactId);
-    if (!vendor) throw new Error(`Vendor contact ${invite.vendorContactId} not found`);
-    recipientEmail = recipientEmail ?? vendor.email;
-    recipientName = recipientName ?? vendor.displayName;
-  }
-  if (!recipientEmail) throw new Error('Recipient has no email address');
-  if (!recipientName) throw new Error('Recipient has no display name');
-
-  const rfq = await getRfq(ctx.companyId, invite.rfqId);
-  if (!rfq) throw new Error(`RFQ ${invite.rfqId} not found`);
-
-  const emailChannel = resolveChannel('email');
-  if (!emailChannel) throw new Error('Email channel not available');
-
-  const expiresTs = invite.expiresAt as unknown as { toDate?: () => Date; seconds?: number };
-  const expiresDate = expiresTs.toDate?.() ?? new Date((expiresTs.seconds ?? 0) * 1000);
-
-  const dispatch = await emailChannel.send({
-    inviteId,
-    vendorName: recipientName,
-    recipient: recipientEmail,
-    rfqTitle: rfq.title,
-    projectName: null,
-    portalUrl: vendorPortalUrl(invite.token),
-    expiresAt: expiresDate.toISOString(),
-    locale: options.locale ?? 'el',
-    declineUrl: vendorDeclineUrl(invite.token),
-  });
-
-  if (dispatch.success && invite.status === 'pending') {
-    await patchInvite(inviteId, {
-      status: 'sent',
-      deliveredAt: adminTimestampAsClient(),
-    });
-  }
-
-  logger.info('Vendor invite resent', { inviteId, success: dispatch.success });
-  return { success: dispatch.success, errorReason: dispatch.errorReason };
 }
 
-export async function revokeVendorInvite(
-  ctx: AuthContext,
-  inviteId: string,
-): Promise<void> {
-  const invite = await getVendorInvite(ctx.companyId, inviteId);
-  if (!invite) throw new Error(`Vendor invite ${inviteId} not found`);
-
-  try {
-    const decoded = await import('@/services/vendor-portal/vendor-portal-token-service').then((m) =>
-      m.validateVendorPortalTokenSignature(invite.token),
-    );
-    if (decoded.valid) {
-      await revokeVendorPortalToken(decoded.payload.nonce, ctx.uid);
+/**
+ * **Ανάκληση πρόσκλησης** (DocuSign «Void»): `status: 'revoked'` + ανάκληση **όλων** των ζωντανών
+ * συνδέσμων της, σε **μία** transaction — ποτέ πρόσκληση ανακλημένη με σύνδεσμο που ακόμη ανοίγει.
+ *
+ * ⚠️ Μόνο ζωντανή πρόσκληση (`pending|sent|opened`): υποβεβλημένη προσφορά **δεν** ακυρώνεται
+ * από εδώ (το UI το έκρυβε ήδη· ο server δεν το έλεγχε — ADR-876 Σ5).
+ */
+export async function revokeVendorInvite(ctx: AuthContext, rfqId: string, inviteId: string): Promise<void> {
+  const db = getAdminFirestore();
+  const ref = db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId);
+  const nowIso = nowISO();
+  const revokedLinks = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.data() as VendorInvite | undefined;
+    if (!data || !isOwnedByCompany(data, ctx.companyId) || data.rfqId !== rfqId) {
+      throw new VendorInviteStateError('not_found');
     }
-  } catch (err) {
-    logger.warn('Token revoke skipped — could not parse', {
-      inviteId,
-      error: getErrorMessage(err, 'unknown'),
-    });
-  }
-
-  await patchInvite(inviteId, { status: 'expired' });
+    if (!isLiveInviteStatus(normalizeInviteStatus(data.status))) throw new VendorInviteStateError('not_live');
+    const liveRefs = await readLiveCredentialRefsTx(tx, db, ctx.companyId, inviteId);
+    tx.update(ref, { status: 'revoked' satisfies InviteStatus, updatedAt: admin.firestore.Timestamp.now() });
+    for (const credentialRef of liveRefs) tx.update(credentialRef, { revokedAt: nowIso, revokedBy: ctx.uid });
+    return liveRefs.length;
+  });
+  recordVendorInviteAudit(ctx, inviteId, 'status_changed', [
+    { field: 'status', oldValue: 'live', newValue: 'revoked' },
+  ]);
+  logger.info('Vendor invite revoked', { inviteId, revokedLinks });
 }

@@ -18,6 +18,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { resolveSenderHeader, resolveSenderIdentity } from '@/services/company/sender-identity';
 import { wrapInBrandedTemplate, escapeHtml, BRAND } from '@/services/email-templates/base-email-template';
 import type { ChannelDeliveryResult, MessageChannel, VendorInviteMessage } from './types';
+import { vendorInviteEmailTexts } from './vendor-invite-email-texts';
 
 const logger = createModuleLogger('VENDOR_PORTAL_EMAIL_CHANNEL');
 
@@ -55,39 +56,28 @@ interface ComposedEmail {
 }
 
 function compose(message: VendorInviteMessage): ComposedEmail {
-  const isEl = message.locale === 'el';
+  // N.11 · ADR-876 §5 — τα λόγια ζουν σε πίνακα ανά γλώσσα, ποτέ σε `isEl ? '…' : '…'`.
+  const texts = vendorInviteEmailTexts(message.locale);
   const projectLine = message.projectName ? ` — ${message.projectName}` : '';
 
-  const subject = isEl
-    ? `Πρόσκληση Προσφοράς: ${message.rfqTitle}${projectLine}`
-    : `Quote Request: ${message.rfqTitle}${projectLine}`;
-
-  const greeting = isEl ? `Γεια σας ${message.vendorName},` : `Hello ${message.vendorName},`;
-  const intro = isEl
-    ? `Σας έχει σταλεί αίτημα προσφοράς για το έργο <strong>${escapeHtml(message.rfqTitle)}</strong>.`
-    : `You have been invited to submit a quote for project <strong>${escapeHtml(message.rfqTitle)}</strong>.`;
-  const cta = isEl ? 'Υποβολή Προσφοράς' : 'Submit Quote';
-  const expiresLabel = isEl ? 'Ο σύνδεσμος λήγει στις' : 'Link expires on';
-  const warning = isEl
-    ? '⚠️ Αυτός ο σύνδεσμος είναι προσωπικός. Μην τον προωθήσετε σε τρίτους.'
-    : '⚠️ This link is personal. Do not forward it to anyone else.';
-  const declineQuestion = isEl ? 'Δεν μπορείτε να συμμετάσχετε;' : 'Cannot participate?';
-  const declineCta = isEl ? 'Δηλώστε άρνηση εδώ' : 'Decline here';
+  const subject = texts.subject(message.rfqTitle, projectLine);
+  const greeting = texts.greeting(message.vendorName);
   const declineLine = message.declineUrl
-    ? `<p style="font-size:13px;color:#666;">${escapeHtml(declineQuestion)} <a href="${message.declineUrl}" style="color:#888;">${escapeHtml(declineCta)}</a>.</p>`
+    ? `<p style="font-size:13px;color:#666;">${escapeHtml(texts.declineQuestion)} <a href="${escapeHtml(message.declineUrl)}" style="color:#888;">${escapeHtml(texts.declineCta)}</a>.</p>`
     : '';
 
   const contentHtml = `
 <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:${BRAND.navyDark};">${escapeHtml(greeting)}</p>
-<p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">${intro}</p>
+<p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">${texts.introHtml(`<strong>${escapeHtml(message.rfqTitle)}</strong>`)}</p>
 <p style="margin:0 0 32px;text-align:center;">
-  <a href="${escapeHtml(message.portalUrl)}" style="display:inline-block;padding:14px 32px;background:${BRAND.accent};color:${BRAND.white};text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">${escapeHtml(cta)}</a>
+  <a href="${escapeHtml(message.portalUrl)}" style="display:inline-block;padding:14px 32px;background:${BRAND.accent};color:${BRAND.white};text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">${escapeHtml(texts.cta)}</a>
 </p>
 <p style="margin:0 0 8px;font-size:13px;color:${BRAND.grayLight};">
-  ${escapeHtml(expiresLabel)}: <strong style="color:${BRAND.navyDark};">${new Date(message.expiresAt).toLocaleString(message.locale)}</strong>
+  ${escapeHtml(texts.expiresLabel)}: <strong style="color:${BRAND.navyDark};">${new Date(message.expiresAt).toLocaleString(message.locale)}</strong>
 </p>
+<p style="margin:0 0 8px;font-size:13px;color:${BRAND.grayLight};">${escapeHtml(texts.renewHint)}</p>
 <p style="margin:24px 0 0;padding:12px 16px;background:#fff7e6;border-left:3px solid #fa8c16;font-size:13px;color:#8a4b00;">
-  ${escapeHtml(warning)}
+  ${escapeHtml(texts.warning)}
 </p>
 ${declineLine}`;
 
@@ -101,13 +91,7 @@ ${declineLine}`;
     companyEmail: sender.address,
   });
 
-  const text = `${greeting}\n\n${
-    isEl ? 'Αίτημα προσφοράς:' : 'Quote request:'
-  } ${message.rfqTitle}\n${
-    isEl ? 'Σύνδεσμος:' : 'Link:'
-  } ${message.portalUrl}\n${
-    isEl ? 'Λήγει:' : 'Expires:'
-  } ${message.expiresAt}\n\n${warning}\n`;
+  const text = `${greeting}\n\n${texts.textRequest} ${message.rfqTitle}\n${texts.textLink} ${message.portalUrl}\n${texts.textExpires} ${message.expiresAt}\n\n${texts.renewHint}\n\n${texts.warning}\n`;
 
   return { subject, html, text };
 }

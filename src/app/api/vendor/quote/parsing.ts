@@ -3,15 +3,16 @@
  * Pure functions, no I/O. Kept out of the route file to respect Google file
  * size standards (max 500 LOC per code file — CLAUDE.md SOS N.7.1).
  *
- * @module api/vendor/quote/[token]/parsing
+ * @module api/vendor/quote/parsing
  * @enterprise ADR-327 §7
  */
 
 import 'server-only';
 
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
+import { vendorPortalError } from '@/server/vendor-portal/vendor-link-door';
 import type { Timestamp as ClientTimestamp } from 'firebase/firestore';
-import { adminTimestampFromDateAsClient } from '@/services/vendor-portal/vendor-portal-token-service';
+import { adminTimestampFromDateAsClient } from '@/services/vendor-portal/admin-client-timestamp';
 import type { QuoteLine } from '@/subapps/procurement/types/quote';
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB per Q25
@@ -24,10 +25,6 @@ export const ALLOWED_MIME = new Set([
   'image/webp',
   'application/pdf',
 ]);
-
-export function jsonError(reason: string, status: number, extra: Record<string, unknown> = {}) {
-  return NextResponse.json({ success: false, error: reason, ...extra }, { status });
-}
 
 export function parseQuoteLines(raw: unknown): QuoteLine[] | null {
   if (!Array.isArray(raw)) return null;
@@ -70,16 +67,16 @@ export interface ParsedSubmission {
 
 export function readSubmission(formData: FormData): ParsedSubmission | { error: NextResponse } {
   const linesRaw = formData.get('lines');
-  if (typeof linesRaw !== 'string') return { error: jsonError('lines_required', 400) };
+  if (typeof linesRaw !== 'string') return { error: vendorPortalError('lines_required', 400) };
 
   let parsedLinesInput: unknown;
   try {
     parsedLinesInput = JSON.parse(linesRaw);
   } catch {
-    return { error: jsonError('lines_invalid_json', 400) };
+    return { error: vendorPortalError('lines_invalid_json', 400) };
   }
   const lines = parseQuoteLines(parsedLinesInput);
-  if (!lines || lines.length === 0) return { error: jsonError('validationLines', 400) };
+  if (!lines || lines.length === 0) return { error: vendorPortalError('validationLines', 400) };
 
   const validUntilStr = formData.get('validUntil')?.toString().trim() || null;
   const validUntil = validUntilStr
@@ -108,15 +105,15 @@ export function readFiles(formData: FormData): PreparedFiles | { error: NextResp
   let pdfCount = 0;
   for (const file of files) {
     if (!ALLOWED_MIME.has(file.type)) {
-      return { error: jsonError(`unsupported_type:${file.name}`, 415) };
+      return { error: vendorPortalError(`unsupported_type:${file.name}`, 415) };
     }
     if (file.size > MAX_FILE_BYTES) {
-      return { error: jsonError(`file_too_large:${file.name}`, 413) };
+      return { error: vendorPortalError(`file_too_large:${file.name}`, 413) };
     }
     if (file.type === 'application/pdf') pdfCount++;
     else imageCount++;
   }
-  if (imageCount > MAX_IMAGES) return { error: jsonError('too_many_images', 413) };
-  if (pdfCount > MAX_PDFS) return { error: jsonError('too_many_pdfs', 413) };
+  if (imageCount > MAX_IMAGES) return { error: vendorPortalError('too_many_images', 413) };
+  if (pdfCount > MAX_PDFS) return { error: vendorPortalError('too_many_pdfs', 413) };
   return { files, imageCount, pdfCount };
 }

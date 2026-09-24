@@ -807,6 +807,7 @@
       "storage": "Storage",
       "floor": "Floor",
       "purchase_order": "Purchase Order",
+      "vendor_invite": "Vendor invite",
       "owner_property": "Listing",
       "network_act_team": "Act team",
       "property_dossier": "Property dossier"

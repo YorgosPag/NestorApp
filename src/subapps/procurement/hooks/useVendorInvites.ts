@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { VendorInvite } from '../types/vendor-invite';
+import type { VendorInviteCredentialSummary } from '../types/vendor-invite-credential';
 
 export interface VendorContactOption {
   id: string;
@@ -20,6 +21,26 @@ interface UseVendorInvitesResult {
   refetch: () => Promise<void>;
   createInvite: (dto: CreateInviteInput) => Promise<CreateInviteOutput>;
   revokeInvite: (inviteId: string) => Promise<void>;
+  /** ADR-876 §5 — **νέος** σύνδεσμος για αντιγραφή· το URL επιστρέφεται μία φορά. */
+  issueCopyLink: (inviteId: string) => Promise<string>;
+  /** Οι σύνδεσμοι μιας πρόσκλησης — μόνο μεταδεδομένα, ποτέ υλικό που φτιάχνει σύνδεσμο. */
+  listLinks: (inviteId: string) => Promise<VendorInviteCredentialSummary[]>;
+  revokeLink: (inviteId: string, credentialId: string) => Promise<void>;
+}
+
+/**
+ * Ένα αίτημα προς τα API προσκλήσεων — `{ success, data }` ή σφάλμα με το μήνυμα του server.
+ * Ζούσε αντιγραμμένο σε κάθε πράξη του hook (fetch → json → έλεγχος `ok`).
+ */
+async function inviteRequest<T = unknown>(url: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const json: { data?: T; error?: string } = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+  return json.data as T;
 }
 
 interface CreateInviteBaseInput {
@@ -95,18 +116,11 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
 
   const createInvite = useCallback(
     async (dto: CreateInviteInput): Promise<CreateInviteOutput> => {
-      const res = await fetch(`/api/rfqs/${rfqId}/invites`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dto),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-      const data = json.data as {
+      const data = await inviteRequest<{
         invite: { id: string };
         portalUrl: string;
         delivery: CreateInviteOutput['delivery'];
-      };
+      }>(`/api/rfqs/${rfqId}/invites`, 'POST', dto);
       return { inviteId: data.invite.id, portalUrl: data.portalUrl, delivery: data.delivery };
     },
     [rfqId],
@@ -114,14 +128,43 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
 
   const revokeInvite = useCallback(
     async (inviteId: string): Promise<void> => {
-      const res = await fetch(`/api/rfqs/${rfqId}/invites/${inviteId}/revoke`, {
-        method: 'POST',
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+      await inviteRequest(`/api/rfqs/${rfqId}/invites/${inviteId}/revoke`, 'POST');
     },
     [rfqId],
   );
 
-  return { invites, vendorContacts, loading, contactsLoading, error, refetch, createInvite, revokeInvite };
+  const issueCopyLink = useCallback(
+    async (inviteId: string): Promise<string> => {
+      const data = await inviteRequest<{ portalUrl: string }>(`/api/rfqs/${rfqId}/invites/${inviteId}/links`, 'POST');
+      return data.portalUrl;
+    },
+    [rfqId],
+  );
+
+  const listLinks = useCallback(
+    (inviteId: string): Promise<VendorInviteCredentialSummary[]> =>
+      inviteRequest<VendorInviteCredentialSummary[]>(`/api/rfqs/${rfqId}/invites/${inviteId}/links`, 'GET'),
+    [rfqId],
+  );
+
+  const revokeLink = useCallback(
+    async (inviteId: string, credentialId: string): Promise<void> => {
+      await inviteRequest(`/api/rfqs/${rfqId}/invites/${inviteId}/links/${credentialId}/revoke`, 'POST');
+    },
+    [rfqId],
+  );
+
+  return {
+    invites,
+    vendorContacts,
+    loading,
+    contactsLoading,
+    error,
+    refetch,
+    createInvite,
+    revokeInvite,
+    issueCopyLink,
+    listLinks,
+    revokeLink,
+  };
 }

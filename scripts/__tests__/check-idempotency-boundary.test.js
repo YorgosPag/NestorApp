@@ -19,12 +19,15 @@ export function withAuth(handler, options) {
   };
 }`;
 const PERSONAL = `export function withPersonalOrOrgAuth(handler) { return (r) => runIdempotently(r, u, undefined, () => handler(r)); }`;
+// ADR-876 §5 — η δημόσια πόρτα της πύλης προμηθευτή: τρίτη ρίζα (principal = ο σύνδεσμος).
+const VENDOR_DOOR = `export function withVendorLinkDoor(options, handler) { return (r) => runIdempotently(r, link, options.idempotency, () => handler(r)); }`;
 
 function tree(files) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'idem-gate-'));
   const all = {
     'src/lib/auth/middleware.ts': MIDDLEWARE,
     'src/lib/auth/personal-scope-middleware.ts': PERSONAL,
+    'src/server/vendor-portal/vendor-link-door.ts': VENDOR_DOOR,
     ...files,
   };
   for (const [file, text] of Object.entries(all)) {
@@ -106,6 +109,9 @@ describe('CHECK 3.92 — το πραγματικό δέντρο', () => {
     expect(m.zeroTol).toStrictEqual([]);
     expect(m.boundaries.length).toBeGreaterThanOrEqual(10);
     expect(m.boundaries).toEqual(expect.arrayContaining(['withAuth', 'withPersonalOrOrgAuth', 'withNetworkDoor', 'runGuarded']));
+    // ADR-876 §5 — η δημόσια πόρτα της πύλης προμηθευτή είναι ρίζα, και τα τρία routes της είναι ΜΕΣΑ.
+    expect(m.boundaries).toContain('withVendorLinkDoor');
+    expect(m.outside.filter((f) => f.startsWith('src/app/api/vendor/'))).toEqual([]);
   });
 
   it('Δ2 η baseline ταιριάζει ΑΚΡΙΒΩΣ με τη μέτρηση (το ratchet δεν κρύβει ανταλλαγή)', () => {

@@ -1435,7 +1435,8 @@
         "property": "Ακίνητο",
         "property_dossier": "Φάκελος ακινήτου",
         "purchase_order": "Παραγγελία",
-        "storage": "Αποθήκη"
+        "storage": "Αποθήκη",
+        "vendor_invite": "Πρόσκληση προμηθευτή"
       },
       "filters": {
         "all": "Όλα",

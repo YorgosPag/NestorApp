@@ -151,7 +151,7 @@ export const RATE_LIMIT_POLICY = {
     //    αυτό διαβάζεται ως hardcoded path. Το `· ` μπαίνει μπροστά ώστε ο έλεγχος να
     //    βλέπει αυτό που είναι: **αιτιολογία**, όχι διαδρομή.
     why:
-      'Δημόσιες πόρτες χωρίς ταυτότητα (vendor/quote/[token] · first-contacts/guest/confirm'
+      'Δημόσιες πόρτες χωρίς ταυτότητα (vendor/quote · vendor/quote/decline · vendor/quote/renew · first-contacts/guest/confirm'
       + ' · attendance/qr/validate) και ακριβές πράξεις. Εκεί το όριο ΕΙΝΑΙ ο φρουρός — '
       + 'το ADR-844 §13 και το ADR-170 στηρίζονται ονομαστικά σε αυτό.',
   },
@@ -351,6 +351,15 @@ export const AUTH_MAIL_RECIPIENT_QUOTA = { limit: 3, windowMs: 15 * 60 * 1000 } 
  * όπλο βομβαρδισμού **ξένου** γραμματοκιβωτίου (OWASP: ≤10/ημέρα ανά παραλήπτη).
  */
 export const SHOWCASE_EMAIL_CONFIRMATION_RECIPIENT_QUOTA = { limit: 3, windowMs: 24 * 60 * 60 * 1000 } as const;
+
+/**
+ * **«Στείλε μου νέο σύνδεσμο» της πύλης προμηθευτή ανά ΠΑΡΑΛΗΠΤΗ** (ADR-876 §5) — ίδιο δόγμα.
+ *
+ * 🔑 Ο αιτών **δεν** είναι ταυτοποιημένος — κρατά μόνο έναν (ληγμένο) σύνδεσμο. Το μήνυμα φεύγει
+ * **μόνο** στο καταχωρημένο email της πρόσκλησης, άρα ο βομβαρδισμός στοχεύει τον ίδιο τον
+ * προμηθευτή· 3 ανά 24ω καλύπτουν «δεν το βρήκα / ξαναέληξε» και κόβουν τον βρόχο.
+ */
+export const VENDOR_LINK_RENEW_RECIPIENT_QUOTA = { limit: 3, windowMs: 24 * 60 * 60 * 1000 } as const;
 
 /**
  * Get category for an endpoint path.

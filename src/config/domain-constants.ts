@@ -116,6 +116,8 @@ export const ENTITY_TYPES = {
   CONVERSATION: 'conversation',
   /** Quote entity (procurement quote — ADR-327) */
   QUOTE: 'quote',
+  /** Vendor invite (procurement portal invite — ADR-876 §5: link issue/revoke audit) */
+  VENDOR_INVITE: 'vendor_invite',
   /** Material entity (procurement material catalog — ADR-330 Phase 4) */
   MATERIAL: 'material',
   /** Framework agreement entity (procurement multi-project vendor contract — ADR-330 Phase 5) */

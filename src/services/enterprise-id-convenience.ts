@@ -265,6 +265,9 @@ export const generatePOAttachmentId = () => enterpriseIdService.generatePOAttach
 export const generateQuoteId = () => enterpriseIdService.generateQuoteId();
 export const generateRfqId = () => enterpriseIdService.generateRfqId();
 export const generateVendorInviteId = () => enterpriseIdService.generateVendorInviteId();
+export const generateVendorInviteCredentialId = () => enterpriseIdService.generateVendorInviteCredentialId();
+export const generateLegacyVendorInviteCredentialId = (nonceHash: string) =>
+  enterpriseIdService.generateLegacyVendorInviteCredentialId(nonceHash);
 export const generateTradeId = () => enterpriseIdService.generateTradeId();
 export const generateVendorLogoFileId = (quoteId: string) =>
   enterpriseIdService.generateVendorLogoFileId(quoteId);

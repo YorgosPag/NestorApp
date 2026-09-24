@@ -23,7 +23,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   adminTimestampAsClient,
   adminTimestampFromDateAsClient,
-} from '@/services/vendor-portal/vendor-portal-token-service';
+} from '@/services/vendor-portal/admin-client-timestamp';
 import type {
   Quote,
   QuoteAttachment,

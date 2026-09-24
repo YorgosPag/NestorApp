@@ -4,7 +4,8 @@
     "subtitle": "Vendor Invitation",
     "languageToggle": "EL",
     "expiresOn": "Link expires on {date}",
-    "editWindow": "Edit window expires on {date}"
+    "editWindow": "Edit window expires on {date}",
+    "loading": "Loading invitation…"
   },
   "intro": {
     "greeting": "Hello {vendorName}",
@@ -85,7 +86,7 @@
     "tokenInvalid": "Invalid link",
     "tokenInvalidBody": "The link is invalid or has been tampered with. Please contact the project manager.",
     "tokenExpired": "Link expired",
-    "tokenExpiredBody": "The submission deadline has passed.",
+    "tokenExpiredBody": "This link is no longer valid. If the invitation is still open, you can request a new link by email.",
     "tokenRevoked": "Link revoked",
     "tokenRevokedBody": "This link is no longer active.",
     "tokenAlreadyUsed": "Already submitted",
@@ -98,10 +99,24 @@
     "serverError": "Server error",
     "serverErrorBody": "Please try again shortly.",
     "inviteNotFound": "Invitation not found",
-    "inviteNotFoundBody": "The invitation does not exist or has been deleted."
+    "inviteNotFoundBody": "The invitation does not exist or has been deleted.",
+    "inviteRevoked": "Invitation withdrawn",
+    "inviteRevokedBody": "The project manager withdrew this invitation. Please contact them if you need clarification.",
+    "inviteDeclined": "You declined this invitation",
+    "inviteDeclinedBody": "You have already indicated that you are not interested in this request for quotation.",
+    "editWindowClosed": "Editing closed",
+    "editWindowClosedBody": "The editing period for your quote has ended. Please contact the project manager for changes.",
+    "linkMissing": "Open the link from your email",
+    "linkMissingBody": "This page only opens from the personal link in your invitation."
   },
   "security": {
     "warning": "⚠️ This link is personal. Do not forward it.",
     "company": "{companyName} — Official quote submission portal"
+  },
+  "renew": {
+    "action": "Send me a new link",
+    "sending": "Sending…",
+    "sentTitle": "Check your email",
+    "sentBody": "If the invitation is still active, we sent a new link to the address where you received the original invitation."
   }
 }

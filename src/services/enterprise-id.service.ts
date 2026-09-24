@@ -93,6 +93,7 @@ export {
   generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
   generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,
+  generateVendorInviteCredentialId, generateLegacyVendorInviteCredentialId,
   generateVendorLogoFileId,
   generateSourcingEventId, generateRfqLineId,
   generateMaterialId,

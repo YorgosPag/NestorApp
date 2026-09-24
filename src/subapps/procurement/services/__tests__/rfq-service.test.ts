@@ -23,6 +23,7 @@ jest.mock('firebase-admin', () => ({
     Timestamp: {
       now: jest.fn(() => mockTimestamp()),
       fromDate: jest.fn((d: Date) => mockTimestamp()),
+      fromMillis: jest.fn(() => mockTimestamp()),
     },
     FieldPath: { documentId: jest.fn(() => '__name__') },
   }),
@@ -34,14 +35,27 @@ jest.mock('@/utils/firestore-sanitize', () => ({
 
 jest.mock('@/services/enterprise-id.service', () => ({
   generateRfqId: jest.fn(() => 'rfq_test123'),
-  generateVendorInviteId: jest.fn(() => 'vinv_test123'),
+  generateVendorInviteId: (() => {
+    let n = 0;
+    return jest.fn(() => `vinv_${++n}`);
+  })(),
 }));
 
-jest.mock('@/services/vendor-portal/vendor-portal-token-service', () => ({
-  generateVendorPortalToken: jest.fn((rfqId: string, vendorId: string) => ({
-    token: `tok_${vendorId}`,
-    expiresAt: '2026-12-31T00:00:00.000Z',
+/**
+ * ADR-876 §5 — ο **πραγματικός** κατασκευαστής (`vendor-invite-issue`) τρέχει· mock μόνο η
+ * έκδοση του διαπιστευτηρίου (τυχαιότητα + μυστικό) και οι απόλυτοι σύνδεσμοι (origin).
+ */
+jest.mock('@/services/vendor-portal/vendor-invite-credential', () => ({
+  vendorLinkExpiryMs: jest.fn((nowMs: number) => nowMs + 7 * 24 * 60 * 60 * 1000),
+  mintVendorInviteCredential: jest.fn(async (input: { inviteId: string; rfqId: string; companyId: string }) => ({
+    credential: { id: `vic_${input.inviteId}`, inviteId: input.inviteId, rfqId: input.rfqId, companyId: input.companyId, nonceHash: 'hash', expiresAt: '2026-12-31T00:00:00.000Z' },
+    token: `tok_${input.inviteId}`,
   })),
+}));
+
+jest.mock('../vendor-portal-links', () => ({
+  vendorPortalUrl: jest.fn((token: string) => `https://app.test/vendor/quote#t=${token}`),
+  vendorDeclineUrl: jest.fn((token: string) => `https://app.test/vendor/quote#t=${token}&intent=decline`),
 }));
 
 jest.mock('@/lib/telemetry', () => ({
@@ -174,10 +188,11 @@ describe('createRfq — Q28 atomic fan-out', () => {
     await createRfq(ctx, dto);
 
     expect(mockBatch.commit).toHaveBeenCalledTimes(1);
-    expect(mockBatch.set).toHaveBeenCalledTimes(3); // 1 RFQ + 2 invites
+    // 1 RFQ + ανά προμηθευτή {πρόσκληση + διαπιστευτήριο} — ΣΤΟ ΙΔΙΟ batch (ADR-876 §5)
+    expect(mockBatch.set).toHaveBeenCalledTimes(5);
   });
 
-  it('creates vendor invite stubs with generated token per vendor', async () => {
+  it('🔴 ADR-876 §5: η πρόσκληση γράφεται ΧΩΡΙΣ token· ο σύνδεσμος ζει μόνο ως διαπιστευτήριο', async () => {
     const dto: CreateRfqDTO = {
       projectId: 'proj1',
       title: 'RFQ',
@@ -185,11 +200,18 @@ describe('createRfq — Q28 atomic fan-out', () => {
     };
     await createRfq(ctx, dto);
 
-    const batchSetCalls = mockBatch.set.mock.calls as Array<[unknown, Record<string, unknown>]>;
-    const inviteStubs = batchSetCalls.slice(1).map(([, data]) => data);
+    const written = (mockBatch.set.mock.calls as Array<[unknown, Record<string, unknown>]>).map(([, data]) => data);
+    const invites = written.filter((d) => 'vendorContactId' in d);
+    const credentials = written.filter((d) => 'nonceHash' in d);
 
-    expect(inviteStubs[0]).toMatchObject({ vendorContactId: 'v1', token: 'tok_v1', status: 'sent', companyId: 'co1' });
-    expect(inviteStubs[1]).toMatchObject({ vendorContactId: 'v2', token: 'tok_v2', status: 'sent', companyId: 'co1' });
+    expect(invites).toHaveLength(2);
+    expect(invites[0]).toMatchObject({ vendorContactId: 'v1', status: 'sent', companyId: 'co1' });
+    expect(invites[1]).toMatchObject({ vendorContactId: 'v2', status: 'sent', companyId: 'co1' });
+    for (const invite of invites) expect(invite).not.toHaveProperty('token');
+    // ένα διαπιστευτήριο ανά πρόσκληση, δεμένο με το ID της
+    expect(credentials.map((c) => c.inviteId)).toEqual(invites.map((i) => i.id));
+    expect(new Set(invites.map((i) => i.id)).size).toBe(2);
+    expect(JSON.stringify(written)).not.toContain('tok_');
   });
 
   it('links to sourcing event in same batch when sourcingEventId provided', async () => {

@@ -10,7 +10,14 @@ export type DeliveryChannel = 'email' | 'whatsapp' | 'sms' | 'copy_link';
 // INVITE STATUS — ADR-327 §17 Q23 (decline button)
 // ============================================================================
 
-export type InviteStatus = 'pending' | 'sent' | 'opened' | 'submitted' | 'declined' | 'expired';
+/**
+ * ⚠️ **`revoked` ≠ λήξη (ADR-876 §5 Σ5).** Η ανάκληση έγραφε `'expired'`, οπότε «ο PM το
+ * απέσυρε» και «πέρασε ο χρόνος» ήταν αδιάκριτα — και μια αυτοεξυπηρέτηση λήξης θα ξανάνοιγε
+ * ανακληθείσα πρόσκληση. Η **λήξη δεν αποθηκεύεται πια ως κατάσταση**: είναι παράγωγη του
+ * `expiresAt` (βλ. `vendorInviteDisplayStatus`). Έγγραφα με `'expired'` προ-migration
+ * διαβάζονται ως ανακλημένα (ήταν η μόνη πηγή τους).
+ */
+export type InviteStatus = 'pending' | 'sent' | 'opened' | 'submitted' | 'declined' | 'revoked';
 
 // ============================================================================
 // VENDOR INVITE ENTITY
@@ -22,7 +29,8 @@ export interface VendorInvite {
   /** Empty string when invite was created via manual email entry (no contact). */
   vendorContactId: string;
   companyId: string;
-  token: string;
+  // 🔴 ΚΑΝΕΝΑ `token` ΕΔΩ (ADR-876 §5 Ε4): το έγγραφο διαβάζεται από κάθε μέλος της εταιρείας.
+  //    Οι σύνδεσμοι ζουν ως hash στο server-only `vendor_invite_credentials`.
   deliveryChannel: DeliveryChannel;
   preferredChannel: DeliveryChannel | null;
   status: InviteStatus;
@@ -31,6 +39,7 @@ export interface VendorInvite {
   submittedAt: Timestamp | null;
   declinedAt: Timestamp | null;
   declineReason: string | null;
+  /** Η λήξη του **νεότερου** ζωντανού συνδέσμου — ανανεώνεται σε κάθε νέα έκδοση. */
   expiresAt: Timestamp;
   editWindowExpiresAt: Timestamp | null;
   remindersSentAt: Timestamp[];

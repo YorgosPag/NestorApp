@@ -1,16 +1,23 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { Copy, Link, Mail, Plus, RotateCcw } from 'lucide-react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight, Copy, Link, Mail, Plus, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { normalizeToDate } from '@/lib/date-local';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
-import type { InviteStatus, DeliveryChannel } from '../types/vendor-invite';
+import type { DeliveryChannel } from '../types/vendor-invite';
+import {
+  isLiveInviteStatus,
+  normalizeInviteStatus,
+  vendorInviteDisplayStatus,
+  type VendorInviteDisplayStatus,
+} from '../utils/vendor-invite-status';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { useVendorInvites } from '../hooks/useVendorInvites';
 import { VendorInviteDialog } from './VendorInviteDialog';
+import { VendorInviteLinksPanel } from './VendorInviteLinksPanel';
 import type { RFQ } from '../types/rfq';
 
 // ============================================================================
@@ -27,16 +34,18 @@ function formatExpiry(ts: unknown): string {
 // STATUS BADGE
 // ============================================================================
 
-const STATUS_VARIANTS: Record<InviteStatus, BadgeVariantProps['variant']> = {
+// ADR-876 §5: `revoked` = απόφαση του γραφείου (αποθηκευμένη)· `expired` = παράγωγη από το `expiresAt`.
+const STATUS_VARIANTS: Record<VendorInviteDisplayStatus, BadgeVariantProps['variant']> = {
   pending: 'outline',
   sent: 'secondary',
   opened: 'info',
   submitted: 'success',
   declined: 'destructive',
-  expired: 'muted',
+  revoked: 'muted',
+  expired: 'warning',
 };
 
-function StatusBadge({ status }: { status: InviteStatus }) {
+function StatusBadge({ status }: { status: VendorInviteDisplayStatus }) {
   const { t } = useTranslation('quotes');
   return (
     <Badge variant={STATUS_VARIANTS[status]}>
@@ -58,63 +67,107 @@ function ChannelIcon({ channel }: { channel: DeliveryChannel }) {
 // INVITE ROW
 // ============================================================================
 
+type InviteLinkActions = Pick<
+  ReturnType<typeof useVendorInvites>,
+  'revokeInvite' | 'issueCopyLink' | 'listLinks' | 'revokeLink'
+>;
+
 interface InviteRowProps {
   invite: ReturnType<typeof useVendorInvites>['invites'][number];
   vendorName: string;
-  onRevoke: (id: string) => Promise<void>;
+  actions: InviteLinkActions;
   lockState: SetupLockState;
 }
 
-function InviteRow({ invite, vendorName, onRevoke, lockState }: InviteRowProps) {
+const INVITE_COLUMNS = 5;
+const COPIED_FEEDBACK_MS = 2000;
+
+type CopyState = 'idle' | 'copying' | 'copied' | 'failed';
+
+const COPY_LABEL_KEYS: Record<CopyState, string> = {
+  idle: 'invites.copyLink',
+  copying: 'invites.copyLink',
+  copied: 'invites.linkCopied',
+  failed: 'invites.errors.copyFailed',
+};
+
+function InviteRow({ invite, vendorName, actions, lockState }: InviteRowProps) {
   const { t } = useTranslation('quotes');
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
   const [revoking, setRevoking] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
+  const [linksRevision, setLinksRevision] = useState(0);
 
-  const statusCanRevoke = invite.status === 'pending' || invite.status === 'sent' || invite.status === 'opened';
+  const live = isLiveInviteStatus(normalizeInviteStatus(invite.status));
   // awardLocked: cancel still allowed (housekeeping). poLocked: full lock (§5.G.1)
-  const canRevoke = statusCanRevoke && lockState !== 'poLocked';
+  const canRevoke = live && lockState !== 'poLocked';
 
-  const handleCopy = useCallback(() => {
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? '';
-    const url = `${base}/vendor/quote/${encodeURIComponent(invite.token)}`;
-    void navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [invite.token]);
+  // ADR-876 §5: ΝΕΟΣ σύνδεσμος ανά αντιγραφή (το URL επιστρέφεται μία φορά)· ο browser δεν διαβάζει
+  // πια token από το έγγραφο της πρόσκλησης, ούτε χτίζει μόνος του το URL.
+  const handleCopy = useCallback(async () => {
+    setCopyState('copying');
+    try {
+      await navigator.clipboard.writeText(await actions.issueCopyLink(invite.id));
+      setCopyState('copied');
+      setLinksRevision((n) => n + 1);
+      setTimeout(() => setCopyState('idle'), COPIED_FEEDBACK_MS);
+    } catch {
+      setCopyState('failed');
+    }
+  }, [actions, invite.id]);
 
   const handleRevoke = useCallback(async () => {
     if (!confirm(t('invites.confirmRevoke'))) return;
     setRevoking(true);
-    try { await onRevoke(invite.id); } finally { setRevoking(false); }
-  }, [invite.id, onRevoke, t]);
+    try { await actions.revokeInvite(invite.id); } finally { setRevoking(false); }
+  }, [actions, invite.id, t]);
 
   return (
-    <tr className="border-b last:border-0">
-      <td className="py-2 pr-4 text-sm">{vendorName}</td>
-      <td className="py-2 pr-4">
-        <ChannelIcon channel={invite.deliveryChannel} />
-      </td>
-      <td className="py-2 pr-4">
-        <StatusBadge status={invite.status} />
-      </td>
-      <td className="py-2 pr-4 text-sm tabular-nums">
-        {formatExpiry(invite.expiresAt)}
-      </td>
-      <td className="py-2">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleCopy} title={t('invites.copyLink')}>
-            <Copy className="h-3.5 w-3.5" />
-            <span className="ml-1 text-xs">{copied ? t('invites.linkCopied') : t('invites.copyLink')}</span>
-          </Button>
-          {canRevoke && (
-            <Button variant="ghost" size="sm" onClick={handleRevoke} disabled={revoking} title={t('invites.revoke')}>
-              <RotateCcw className="h-3.5 w-3.5" />
+    <Fragment>
+      <tr className="border-b last:border-0">
+        <td className="py-2 pr-4 text-sm">{vendorName}</td>
+        <td className="py-2 pr-4">
+          <ChannelIcon channel={invite.deliveryChannel} />
+        </td>
+        <td className="py-2 pr-4">
+          <StatusBadge status={vendorInviteDisplayStatus(invite, Date.now())} />
+        </td>
+        <td className="py-2 pr-4 text-sm tabular-nums">
+          {formatExpiry(invite.expiresAt)}
+        </td>
+        <td className="py-2">
+          <div className="flex items-center gap-2">
+            {live && (
+              <Button variant="ghost" size="sm" onClick={handleCopy} disabled={copyState === 'copying'}>
+                <Copy className="h-3.5 w-3.5" />
+                <span className="ml-1 text-xs">{t(COPY_LABEL_KEYS[copyState])}</span>
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setLinksOpen((open) => !open)} aria-expanded={linksOpen}>
+              {linksOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              <span className="ml-1 text-xs">{t('invites.links.toggle')}</span>
             </Button>
-          )}
-        </div>
-      </td>
-    </tr>
+            {canRevoke && (
+              <Button variant="ghost" size="sm" onClick={handleRevoke} disabled={revoking} aria-label={t('invites.revoke')}>
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        </td>
+      </tr>
+      {linksOpen && (
+        <tr className="border-b bg-muted/40">
+          <td colSpan={INVITE_COLUMNS} className="px-2 py-2">
+            <VendorInviteLinksPanel
+              inviteId={invite.id}
+              listLinks={actions.listLinks}
+              revokeLink={actions.revokeLink}
+              revision={linksRevision}
+            />
+          </td>
+        </tr>
+      )}
+    </Fragment>
   );
 }
 
@@ -131,12 +184,24 @@ interface VendorInviteSectionProps {
 
 export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onViewInvites }: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
-  const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite, refetch } =
-    useVendorInvites(rfqId);
+  const {
+    invites, vendorContacts, loading, contactsLoading,
+    createInvite, revokeInvite, issueCopyLink, listLinks, revokeLink, refetch,
+  } = useVendorInvites(rfqId);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const actions = useMemo<InviteLinkActions>(
+    () => ({ revokeInvite, issueCopyLink, listLinks, revokeLink }),
+    [revokeInvite, issueCopyLink, listLinks, revokeLink],
+  );
+
   const alreadyInvitedIds = useMemo(
-    () => new Set(invites.filter((i) => i.status === 'pending' || i.status === 'sent' || i.status === 'opened').map((i) => i.vendorContactId).filter(Boolean) as string[]),
+    () => new Set(
+      invites
+        .filter((i) => isLiveInviteStatus(normalizeInviteStatus(i.status)))
+        .map((i) => i.vendorContactId)
+        .filter(Boolean) as string[],
+    ),
     [invites],
   );
 
@@ -187,7 +252,7 @@ export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onView
                   key={invite.id}
                   invite={invite}
                   vendorName={resolveVendorName(invite)}
-                  onRevoke={revokeInvite}
+                  actions={actions}
                   lockState={lockState}
                 />
               ))}

@@ -39,6 +39,7 @@
     "backfill:workspace-membership": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-workspace-membership.ts",
     "migrate:network-audience-private": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-network-audience-private.ts",
     "migrate:network-inbox": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/reconcile-network-inbox.ts",
+    "migrate:vendor-invite-credentials": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/migrate-vendor-invite-credentials.ts",
     "backfill:first-contact-offerer": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/migrations/backfill-first-contact-offerer.ts",
     "notifications:replay": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/notifications/replay-notification.ts",
     "notifications:destination-drift": "cross-env NODE_OPTIONS=--conditions=react-server tsx scripts/notifications/destination-drift.ts",

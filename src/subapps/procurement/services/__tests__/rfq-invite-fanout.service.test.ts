@@ -25,6 +25,7 @@ jest.mock('firebase-admin', () => ({
     Timestamp: {
       now: jest.fn(() => mockTimestamp()),
       fromDate: jest.fn(() => mockTimestamp()),
+      fromMillis: jest.fn(() => mockTimestamp()),
     },
     FieldPath: { documentId: jest.fn(() => '__name__') },
   }),
@@ -39,11 +40,21 @@ jest.mock('@/services/enterprise-id.service', () => ({
   generateVendorInviteId: jest.fn(() => 'inv_1'),
 }));
 
-jest.mock('@/services/vendor-portal/vendor-portal-token-service', () => ({
-  generateVendorPortalToken: jest.fn(() => ({
-    token: 'TOKEN_THAT_OPENS_THE_RFQ',
-    expiresAt: '2026-09-01T00:00:00.000Z',
+/**
+ * ADR-876 §5 — ο **πραγματικός** κατασκευαστής (`vendor-invite-issue`) τρέχει· mock μόνο η
+ * έκδοση του διαπιστευτηρίου (τυχαιότητα + μυστικό) και οι απόλυτοι σύνδεσμοι (origin).
+ */
+jest.mock('@/services/vendor-portal/vendor-invite-credential', () => ({
+  vendorLinkExpiryMs: jest.fn((nowMs: number) => nowMs + 7 * 24 * 60 * 60 * 1000),
+  mintVendorInviteCredential: jest.fn(async (input: { inviteId: string; rfqId: string; companyId: string }) => ({
+    credential: { id: `vic_${input.inviteId}`, inviteId: input.inviteId, rfqId: input.rfqId, companyId: input.companyId, nonceHash: 'hash', expiresAt: '2026-12-31T00:00:00.000Z' },
+    token: `tok_${input.inviteId}`,
   })),
+}));
+
+jest.mock('../vendor-portal-links', () => ({
+  vendorPortalUrl: jest.fn((token: string) => `https://app.test/vendor/quote#t=${token}`),
+  vendorDeclineUrl: jest.fn((token: string) => `https://app.test/vendor/quote#t=${token}&intent=decline`),
 }));
 
 jest.mock('@/lib/telemetry', () => ({

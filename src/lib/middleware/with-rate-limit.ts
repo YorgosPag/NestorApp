@@ -30,7 +30,7 @@ import {
   getEndpointCategory,
   type RateLimitCategory,
 } from './rate-limit-config';
-import { clientIpOf } from '@/lib/http/client-ip';
+import { clientIpFingerprint, clientIpOf } from '@/lib/http/client-ip';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCurrentSecurityPolicy } from '@/config/environment-security-config';
 
@@ -95,15 +95,6 @@ export interface WithRateLimitOptions {
 // =============================================================================
 
 /**
- * Hash an IP address for privacy-safe storage.
- * Uses SHA-256 with a salt to prevent rainbow table attacks.
- */
-function hashIpAddress(ip: string): string {
-  const salt = process.env.RATE_LIMIT_IP_SALT || 'nestor-default-salt';
-  return createHash('sha256').update(`${salt}:${ip}`).digest('hex').substring(0, 16);
-}
-
-/**
  * Extract user identity from Firebase auth header.
  * This assumes the request has been processed by withAuth middleware.
  *
@@ -156,7 +147,7 @@ function extractSecureIdentifier(request: NextRequest): string {
   const ip = clientIpOf(request.headers);
 
   // Hash the IP for privacy
-  const hashedIp = hashIpAddress(ip);
+  const hashedIp = clientIpFingerprint(ip);
   return `anon:${hashedIp}`;
 }
 

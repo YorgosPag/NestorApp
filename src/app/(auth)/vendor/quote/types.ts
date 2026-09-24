@@ -1,6 +1,6 @@
 /**
  * Shared types for the public vendor portal page.
- * @module app/(auth)/vendor/quote/[token]/types
+ * @module app/(auth)/vendor/quote/types
  */
 
 import type { TradeCode } from '@/subapps/procurement/types/trade';
@@ -59,4 +59,9 @@ export interface QuoteSnapshot {
   validUntil: string | null;
   attachments: QuoteAttachment[];
   status: QuoteStatus;
+}
+
+/** Ό,τι επιστρέφει το `GET /api/vendor/quote` — η πύλη φορτώνει **από τον client** (το token ζει στο fragment). */
+export interface VendorPortalView extends InitialData {
+  quote: QuoteSnapshot | null;
 }

@@ -165,7 +165,7 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consequence:
       'Ο προμηθευτής ανοίγει τον σύνδεσμο της προσφοράς και βλέπει «άκυρος σύνδεσμος». ' +
       'Η προσφορά δεν κατατίθεται ποτέ και το γραφείο νομίζει ότι δεν απάντησε.',
-    consumer: 'src/services/vendor-portal/vendor-portal-token-service.ts',
+    consumer: 'src/services/vendor-portal/vendor-invite-credential.ts',
   },
   {
     name: 'FIRST_CONTACT_INVITE_SECRET',

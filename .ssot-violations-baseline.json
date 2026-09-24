@@ -13,7 +13,7 @@
     "src/app/api/financial-intelligence/query/route.ts": {
       "openai-provider": 1
     },
-    "src/app/api/vendor/quote/[token]/upload.ts": {
+    "src/app/api/vendor/quote/upload.ts": {
       "storage-path-construction": 1
     },
     "src/app/api/voice/polish/route.ts": {

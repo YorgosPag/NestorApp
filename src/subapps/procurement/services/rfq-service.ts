@@ -3,10 +3,7 @@ import 'server-only';
 import { safeFirestoreOperation, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
-import { generateRfqId, generateVendorInviteId } from '@/services/enterprise-id.service';
-import {
-  generateVendorPortalToken,
-} from '@/services/vendor-portal/vendor-portal-token-service';
+import { generateRfqId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
 import { normalizeToDate } from '@/lib/date-local';
@@ -23,18 +20,22 @@ import { snapshotFromBoq, addRfqLinesBulk } from './rfq-line-service';
 import { recomputeSourcingEventStatus } from './sourcing-event-service';
 import { emailVendorInviteChannel } from './channels/email-channel';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
-
-import { vendorPortalUrl, vendorDeclineUrl } from './vendor-portal-links';
+import { prepareVendorInvite, writePreparedVendorInvite } from './vendor-invite-issue';
 const logger = createModuleLogger('RFQ_SERVICE');
 
 // ============================================================================
 // EMAIL DISPATCH HELPERS — post-create invite fan-out (ADR-327 §7 step h)
 // ============================================================================
 
+/**
+ * Ό,τι χρειάζεται η αποστολή — **οι σύνδεσμοι έτοιμοι**, ποτέ το ωμό token (ADR-876 §5):
+ * ζουν μόνο στη μνήμη αυτής της ροής και φεύγουν μόνο μέσα στο email.
+ */
 interface InviteMeta {
   inviteId: string;
   vendorId: string;
-  token: string;
+  portalUrl: string;
+  declineUrl: string;
   expiresAt: string;
 }
 
@@ -61,22 +62,24 @@ async function dispatchRfqInviteEmails(
       const email = getContactEmail(data as Parameters<typeof getContactEmail>[0]);
       if (!email) return;
       const vendorName = String(data.displayName ?? data.companyName ?? data.fullName ?? meta.vendorId);
-      const portalUrl = vendorPortalUrl(meta.token);
       const result = await emailVendorInviteChannel.send({
         inviteId: meta.inviteId,
         vendorName,
         recipient: email,
         rfqTitle: rfq.title,
         projectName: null,
-        portalUrl,
+        portalUrl: meta.portalUrl,
         expiresAt: meta.expiresAt,
         locale: 'el',
-        declineUrl: vendorDeclineUrl(meta.token),
+        declineUrl: meta.declineUrl,
       });
       if (result.success) {
+        // Στιγμιότυπο παραλήπτη (ADR-876 §5): η αυτοεξυπηρέτηση λήξης στέλνει ΜΟΝΟ εδώ.
         await db.collection(COLLECTIONS.VENDOR_INVITES).doc(meta.inviteId).update({
           deliveredAt: admin.firestore.Timestamp.now(),
           updatedAt: admin.firestore.Timestamp.now(),
+          recipientEmail: email,
+          recipientName: vendorName,
         });
       }
     }),
@@ -87,8 +90,6 @@ async function dispatchRfqInviteEmails(
     }
   });
 }
-
-const DEFAULT_INVITE_EXPIRY_DAYS = 7;
 
 // ============================================================================
 // CREATE
@@ -148,36 +149,28 @@ export async function createRfq(
       const batch = db.batch();
       batch.set(db.collection(COLLECTIONS.RFQS).doc(id), sanitizeForFirestore(newRfq));
 
-      // Q28 fan-out: create vendor invite stubs atomically with the RFQ
+      // Q28 fan-out: πρόσκληση + πρώτος σύνδεσμος, ατομικά με το RFQ (ΕΝΑΣ κατασκευαστής, ADR-876 §5 Σ3)
       for (const vendorId of invitedVendorIds) {
-        const inviteId = generateVendorInviteId();
-        const generated = generateVendorPortalToken(id, vendorId, DEFAULT_INVITE_EXPIRY_DAYS);
-        inviteMeta.push({ inviteId, vendorId, token: generated.token, expiresAt: generated.expiresAt });
-        const inviteStub = {
-          id: inviteId,
+        const prepared = await prepareVendorInvite({
+          companyId: ctx.companyId,
           rfqId: id,
           vendorContactId: vendorId,
-          companyId: ctx.companyId,
-          token: generated.token,
           deliveryChannel: 'email',
           preferredChannel: null,
           status: 'sent',
-          deliveredAt: null,
-          openedAt: null,
-          submittedAt: null,
-          declinedAt: null,
-          declineReason: null,
-          expiresAt: admin.firestore.Timestamp.fromDate(normalizeToDate(generated.expiresAt) ?? new Date()),
-          editWindowExpiresAt: null,
-          remindersSentAt: [],
-          lastReminderAt: null,
-          createdAt: now,
-          updatedAt: now,
-        };
-        batch.set(
-          db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId),
-          sanitizeForFirestore(inviteStub),
-        );
+          recipientEmail: null,
+          recipientName: null,
+          issuedVia: 'rfq_fanout',
+          issuedBy: ctx.uid,
+        });
+        writePreparedVendorInvite(batch, db, prepared);
+        inviteMeta.push({
+          inviteId: prepared.invite.id,
+          vendorId,
+          portalUrl: prepared.link.portalUrl,
+          declineUrl: prepared.link.declineUrl,
+          expiresAt: prepared.link.expiresAtIso,
+        });
       }
 
       // Q31: link to parent sourcing event atomically

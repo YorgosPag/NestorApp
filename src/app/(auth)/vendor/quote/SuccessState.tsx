@@ -4,7 +4,7 @@
  * SuccessState — shown after a successful submission (or edit) within the
  * 72h edit window. Vendor can re-open and edit until the window closes.
  *
- * @module app/(auth)/vendor/quote/[token]/SuccessState
+ * @module app/(auth)/vendor/quote/SuccessState
  */
 
 import React from 'react';

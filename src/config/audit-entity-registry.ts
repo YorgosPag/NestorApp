@@ -220,6 +220,8 @@ export const AUDIT_ENTITIES = {
   // ── Προμήθειες (ADR-332 / procurement) ────────────────────────────────────
   purchase_order: { collectionKey: 'PURCHASE_ORDERS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   quote: { collectionKey: 'QUOTES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
+  /** ADR-876 §5 Σ9 — πρόσκληση προμηθευτή: έκδοση/ανάκληση συνδέσμων + ανάκληση πρόσκλησης, με ίχνος (ΠΟΤΕ το token). */
+  vendor_invite: { collectionKey: 'VENDOR_INVITES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   material: { collectionKey: 'MATERIALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   framework_agreement: { collectionKey: 'FRAMEWORK_AGREEMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
 

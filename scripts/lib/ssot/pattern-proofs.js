@@ -24,6 +24,19 @@
 'use strict';
 
 module.exports = {
+  // ADR-876 §5 — «ένας σύνδεσμος = ένα διαπιστευτήριο». Η συλλογή των διαπιστευτηρίων έχει ΕΝΑΝ
+  // αναγνώστη/γραφέα (store) και ΕΝΑΝ κατασκευαστή· ο client δεν βάζει ΠΟΤΕ σύνδεσμο σε διαδρομή API.
+  // Οι παγίδες του `shouldSkip` είναι οι ΝΟΜΙΜΕΣ χρήσεις: η σκέτη διαδρομή, το Bearer, η συλλογή προσκλήσεων.
+  'vendor-portal': {
+    shouldMatch: `const ref = collection(db, 'vendor_invites'); await addDoc(ref, invite);
+const t = collection(db, 'vendor_invite_tokens'); await addDoc(t, { nonce });
+await db.collection(COLLECTIONS.VENDOR_INVITE_CREDENTIALS).doc(id).set(credential);
+await fetch(\`/api/vendor/quote/\${encodeURIComponent(token)}\`);`,
+    shouldSkip: `await fetch('/api/vendor/quote', { headers: { Authorization: \`Bearer \${token}\` } });
+await fetch(\`\${VENDOR_PORTAL_API}\${endpoint}\`, { method: 'POST' });
+const snap = await db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId).get();
+await touchVendorCredential(credential.id, nowIso);`,
+  },
   // ADR-860 §Ε3γ — ΕΝΑΣ native `beforeunload`. Οι πηγές δηλώνουν στο μητρώο, δεν κρεμούν δικό τους.
   'unsaved-work-guard': {
     shouldMatch: `window.addEventListener('beforeunload', handler);
