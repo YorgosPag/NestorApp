@@ -2,13 +2,16 @@
  * @fileoverview Shared helpers for sales-accounting email notifications (ADR-198)
  * @description HTML builders, formatters, and config used by both
  *              accounting-office and buyer notification modules.
- * @note Server-safe: formatEuro/formatNotificationDate kept local intentionally
- *       (cannot import @/lib/intl-utils → react-i18next → createContext)
+ * @note Server-safe: ποσό = `lib/number/greek-decimal` · ημερομηνία = `lib/operator-time-format`
+ *       (ζώνη του φορέα — ο διακομιστής τρέχει σε UTC, ADR-877 §6). Ποτέ `@/lib/intl-utils`
+ *       (react-i18next → createContext).
  */
 
 import 'server-only';
 
 import { publicUrl } from '@/lib/http/public-origin';
+import { formatEuro } from '@/lib/number/greek-decimal';
+import { formatOperatorDate } from '@/lib/operator-time-format';
 import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
 import { BRAND, escapeHtml } from '@/services/email-templates';
 import { resolveTenantNotificationEmail } from '@/services/org-structure/org-routing-resolver';
@@ -147,7 +150,7 @@ export interface NotificationDocumentRef {
 }
 
 function metaLine(doc: NotificationDocumentRef | null, separator: string, value: string): string {
-  const date = `Ημερομηνία: ${formatNotificationDate(new Date())}`;
+  const date = `Ημερομηνία: ${formatOperatorDate(new Date(), 'el')}`;
   return doc === null ? date : `${date}${separator}${doc.label}: ${value}`;
 }
 
@@ -243,21 +246,10 @@ export function textInvoiceLink(url: string | null): readonly string[] {
 // ============================================================================
 
 /**
- * Server-safe currency formatter — kept local intentionally.
- * Cannot import @/lib/intl-utils (pulls react-i18next → createContext in server-only context).
- * Uses minimumFractionDigits: 2 (financial emails always show cents), unlike formatCurrency(0-2).
- * @see @/lib/intl-utils formatCurrency — client-side equivalent
+ * Server-safe currency formatter — το ΚΑΘΑΡΟ SSoT `lib/number/greek-decimal` (όχι `intl-utils`, που τραβά
+ * react-i18next). Πάντα 2 δεκαδικά (τα οικονομικά email δείχνουν λεπτά). ADR-877 §6: ήταν ο 5ος δίδυμος.
  */
-export function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
-}
-
-
-function formatNotificationDate(date: Date): string {
-  return date.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-export { formatNotificationDate as formatDate };
+export { formatEuro };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   bank_transfer: 'Τραπεζική κατάθεση',

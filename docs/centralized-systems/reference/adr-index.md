@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 825 ADRs | Last Updated: 2026-09-23
+**📊 Stats**: 826 ADRs | Last Updated: 2026-09-24
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 575 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 576 | [View](#uncategorized) |
 
 ---
 
@@ -859,7 +859,8 @@
 | **ADR-873** | Αναβάθμιση πλατφόρμας Cloud Functions: **ίδια ονόματα, ίδια γενιά — πρώτα η βάση, μετά η μετακόμιση** | ✅ ACCEPTED — **Φάση 0 ΥΛΟΠΟΙΗΜΕΝΗ + COMMITTED** (`06da345f` κώδικας · `499e1c85` ADR/lockfile/mirror), **όχι ακόμη deployed** · Φάση 1 = **ΣΧΕΔΙΟ** (§9, κώδικας όχι) · Φάση 2 **ΔΕΝ** εγκρίθηκε | 2026-09-22 | Infrastructure | [📄](./adrs/ADR-873-cloud-functions-platform-upgrade.md) |
 | **ADR-874** | Προβολή του SSoT στο Cloud Functions: **ο κώδικας παράγεται, τα κλειδιά υπολογίζονται** | ✅ ACCEPTED — υλοποιημένο 2026-09-22 (όχι ακόμη committed, **όχι ακόμη deployed**) | 2026-09-22 | Infrastructure / SSoT | [📄](./adrs/ADR-874-functions-projection.md) |
 | **ADR-875** | Golden tenant: ο χρησμός 3.51 κρίνει **με ταυτότητα** | ✅ ACCEPTED — Φάση 1 committed `0d751982` · πρώτο run CI `35890283081`: **ταυτότητα ✅ αποδείχθηκε** · **σπορά ⛔ αρνήθηκε** (ταβάνι 67 > 60, §9) · **Φάση 2.1 (golden δεδομένα)** committed `792e0345` (§10) · **σπορά ✅** run `35903809402`: 0 ⛔ · 21/304 🔶 ⇒ ταβάνι **7%** (§13, baseline στη ρίζα χωρίς commit) · **Φάση 2.3 (σύνορο server redirect)** committed `5d26fab7`+`2aa205ef` (§11) · **Φάση 2.4 (μία έκδοση firebase-tools)** υλοποιημένη (§12, χωρίς commit) · **Φάση 2.2 (ο δίδυμος)** υλοποιημένη (§14, χωρίς commit· εκκρεμεί run CI) + εύρημα §11.6 λυμένο στην κλάση + ⛔ που δεν μπλόκαρε στη σύγκριση (§14.4) · 🔴 εύρημα παραγωγής: πύλη προμηθευτή απρόσιτη (§10.5) | 2026-09-23 | Quality gates / CI / Identity | [📄](./adrs/ADR-875-oracle-golden-tenant.md) |
-| **ADR-876** | Επιφάνειες όπου η διεύθυνση είναι διαπιστευτήριο (πύλη προμηθευτή · check-in · σύνδεσμοι token) | ✅ ACCEPTED — Βήματα 1-3 υλοποιημένα (2026-09-23, χωρίς commit) · Βήμα 4 (σκλήρυνση) εγκρίθηκε, εκκρεμεί | 2026-09-23 | Uncategorized | [📄](./adrs/ADR-876-credential-link-surfaces.md) |
+| **ADR-876** | Επιφάνειες όπου η διεύθυνση είναι διαπιστευτήριο (πύλη προμηθευτή · check-in · σύνδεσμοι token) | ✅ ACCEPTED — Βήματα 1-3 υλοποιημένα (`f545dcb7`) · Βήμα 4 (σκλήρυνση, §5) `67ed0527` · επαλήθευση στον browser + διορθώσεις Σ15-Σ21 (§5.8) `8a317580` · **Φ7 (απόσυρση παλιάς μορφής, §5.9) υλοποιήθηκε 2026-09-24, χωρίς commit** | 2026-09-23 | Uncategorized | [📄](./adrs/ADR-876-credential-link-surfaces.md) |
+| **ADR-877** | Μία πόρτα εξόδου email: το email ακολουθεί το επίπεδο δεδομένων | ✅ ACCEPTED — υλοποιήθηκε 2026-09-24 · **επαληθεύτηκε στον browser/emulator 2026-09-24 (§6)**, χωρίς commit | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-877-email-egress-door.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1673,7 +1674,8 @@
 | **ADR-863** | Η ΑΠΟΔΟΣΗ ΑΔΕΙΩΝ ΓΙΑ Ο,ΤΙ ΔΙΑΝΕΜΕΤΑΙ | ✅ APPROVED | [View](./adrs/ADR-863-third-party-attribution.md) |
 | **ADR-865** | Η ΑΠΟΔΕΙΞΗ ΑΝΑΠΤΥΞΗΣ: «γραμμένο» δεν σημαίνει «ανεπτυγμένο» | ✅ APPROVED | [View](./adrs/ADR-865-deploy-proof-firebase.md) |
 | **ADR-870** | Δείκτες Firestore **έξω** από το SSoT: ο κριτής που είχε **καταργημένο κανόνα** | ✅ APPROVED | [View](./adrs/ADR-870-admin-sdk-index-coverage.md) |
-| **ADR-876** | Επιφάνειες όπου η διεύθυνση είναι διαπιστευτήριο (πύλη προμηθευτή · check-in · σύνδεσμοι token) | ✅ ACCEPTED — Βήματα 1-3 υλοποιημένα (2026-09-23, χωρίς commit) · Βήμα 4 (σκλήρυνση) εγκρίθηκε, εκκρεμεί | [View](./adrs/ADR-876-credential-link-surfaces.md) |
+| **ADR-876** | Επιφάνειες όπου η διεύθυνση είναι διαπιστευτήριο (πύλη προμηθευτή · check-in · σύνδεσμοι token) | ✅ ACCEPTED — Βήματα 1-3 υλοποιημένα (`f545dcb7`) · Βήμα 4 (σκλήρυνση, §5) `67ed0527` · επαλήθευση στον browser + διορθώσεις Σ15-Σ21 (§5.8) `8a317580` · **Φ7 (απόσυρση παλιάς μορφής, §5.9) υλοποιήθηκε 2026-09-24, χωρίς commit** | [View](./adrs/ADR-876-credential-link-surfaces.md) |
+| **ADR-877** | Μία πόρτα εξόδου email: το email ακολουθεί το επίπεδο δεδομένων | ✅ ACCEPTED — υλοποιήθηκε 2026-09-24 · **επαληθεύτηκε στον browser/emulator 2026-09-24 (§6)**, χωρίς commit | [View](./adrs/ADR-877-email-egress-door.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

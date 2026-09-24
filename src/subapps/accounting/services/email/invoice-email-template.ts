@@ -17,39 +17,14 @@
  * The API route (send-email/route.ts) is server-only.
  */
 
+import { escapeHtml } from '@/lib/html/escape-html';
+import { formatEuro } from '@/lib/number/greek-decimal';
+import { formatOperatorDate } from '@/lib/operator-time-format';
 import type { Invoice, InvoiceType } from '../../types';
 
 // ============================================================================
-// SHARED UTILITIES (inlined — avoid server-only base-email-template import)
+// SHARED UTILITIES — καθαρά SSoT (χωρίς `server-only`), ADR-877 §6 · CHECK 3.28
 // ============================================================================
-
-/** Escape HTML special chars to prevent XSS in dynamic content */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/** Server/client-safe Euro formatter — 2 decimal places, Greek locale */
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-/** Date formatter — DD/MM/YYYY */
-function formatInvoiceDateGreek(date: Date): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
-}
 
 /** Pagonis brand colors (subset needed for email content block) */
 const BRAND = {
@@ -146,6 +121,32 @@ export function buildInvoiceEmailSubject(
 }
 
 // ============================================================================
+// ΤΑ ΓΕΓΟΝΟΤΑ ΤΟΥ ΤΙΜΟΛΟΓΙΟΥ — ΚΟΙΝΑ για κείμενο και HTML (ήταν δίδυμα, CHECK 3.28)
+// ============================================================================
+
+interface InvoiceEmailFacts {
+  readonly L: (typeof LABELS)[InvoiceEmailLanguage];
+  readonly invoiceRef: string;
+  readonly typeLabel: string;
+  readonly dueDateText: string;
+  readonly issueDateText: string;
+  readonly amountText: string;
+}
+
+/** Μία ανάγνωση των πεδίων ⇒ το κείμενο και το HTML γράφουν ΠΑΝΤΑ τις ίδιες τιμές (ώρα φορέα, ADR-877 §6). */
+function invoiceEmailFacts(invoice: Invoice, language: InvoiceEmailLanguage): InvoiceEmailFacts {
+  const L = LABELS[language];
+  return {
+    L,
+    invoiceRef: `${invoice.series}-${invoice.number}`,
+    typeLabel: INVOICE_TYPE_LABELS[invoice.type][language],
+    dueDateText: invoice.dueDate ? formatOperatorDate(invoice.dueDate, language) : L.noDueDate,
+    issueDateText: formatOperatorDate(invoice.issueDate, language),
+    amountText: formatEuro(invoice.totalGrossAmount),
+  };
+}
+
+// ============================================================================
 // PLAIN TEXT BODY
 // ============================================================================
 
@@ -157,12 +158,7 @@ export function buildInvoiceEmailPlainText(
   invoice: Invoice,
   language: InvoiceEmailLanguage
 ): string {
-  const L = LABELS[language];
-  const invoiceRef = `${invoice.series}-${invoice.number}`;
-  const typeLabel = INVOICE_TYPE_LABELS[invoice.type][language];
-  const dueDateText = invoice.dueDate
-    ? formatInvoiceDateGreek(new Date(invoice.dueDate))
-    : L.noDueDate;
+  const { L, invoiceRef, typeLabel, dueDateText, issueDateText, amountText } = invoiceEmailFacts(invoice, language);
 
   return [
     `${L.greeting} ${invoice.customer.name},`,
@@ -171,9 +167,9 @@ export function buildInvoiceEmailPlainText(
     '',
     `${L.number}: ${invoiceRef}`,
     `${L.type}: ${typeLabel}`,
-    `${L.issueDate}: ${formatInvoiceDateGreek(new Date(invoice.issueDate))}`,
+    `${L.issueDate}: ${issueDateText}`,
     `${L.dueDate}: ${dueDateText}`,
-    `${L.amount}: ${formatEuro(invoice.totalGrossAmount)}`,
+    `${L.amount}: ${amountText}`,
     '',
     L.pdfAttached,
     '',
@@ -197,14 +193,7 @@ export function buildInvoiceEmailContent(
   invoice: Invoice,
   language: InvoiceEmailLanguage
 ): string {
-  const L = LABELS[language];
-  const invoiceRef = `${invoice.series}-${invoice.number}`;
-  const typeLabel = INVOICE_TYPE_LABELS[invoice.type][language];
-  const dueDateText = invoice.dueDate
-    ? formatInvoiceDateGreek(new Date(invoice.dueDate))
-    : L.noDueDate;
-  const issueDateText = formatInvoiceDateGreek(new Date(invoice.issueDate));
-  const amountText = formatEuro(invoice.totalGrossAmount);
+  const { L, invoiceRef, typeLabel, dueDateText, issueDateText, amountText } = invoiceEmailFacts(invoice, language);
 
   const rowStyle = `font-size:14px;color:${BRAND.gray};line-height:1.8;`;
   const labelStyle = `padding:6px 16px 6px 0;font-size:13px;color:${BRAND.grayLight};white-space:nowrap;`;
