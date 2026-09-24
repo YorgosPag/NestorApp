@@ -26,6 +26,7 @@ import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
 import type { OwnerProperty } from '@/types/owner-property';
 import { ListingMapPopupFrame } from '@/components/search-results/ListingMapPopupFrame';
+import { LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
 
 import { OwnerPropertyPhoto } from './OwnerPropertyCardCover';
 
@@ -49,7 +50,7 @@ export function OwnerPropertyMapPopup({ property, mark, onClose }: OwnerProperty
       <article className="relative w-44">
         {/* Χωρίς φωτογραφία ⇒ τίποτα: ο χάρτης είναι ήδη η εικόνα της θέσης. */}
         {thumbnail !== null && (
-          <figure className="m-0 mb-1.5 aspect-[4/3] overflow-hidden rounded">
+          <figure className={`m-0 mb-1.5 ${LISTING_CARD_ASPECT_CLASS} overflow-hidden rounded`}>
             <OwnerPropertyPhoto thumbnail={thumbnail} title={property.title} sizes={POPUP_IMAGE_SIZES} />
           </figure>
         )}

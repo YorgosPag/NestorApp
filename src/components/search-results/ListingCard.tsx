@@ -40,6 +40,7 @@ import type { PublicListing } from '@/types/public-listing';
 import { formatList } from '@/lib/intl-formatting';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { ListingCardGallery } from '@/components/search-results/ListingCardGallery';
+import { ListingCardNoPhotoCover } from '@/components/search-results/ListingCardNoPhotoCover';
 import { SaveListingToggle } from '@/components/listings/SaveListingToggle';
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
@@ -267,12 +268,17 @@ export function ListingCard({
             μια κάρτα με ξένη εικόνα διαβάζεται ως **αληθινή φωτογραφία που δεν δείχνει
             αυτό το ακίνητο** (§25.5.2). Χωρίς εικόνα, η κάρτα μένει αυτό που ήταν.
 
-            🔑 **`aspect-[4/3]` + `width`/`height` μαζί**: το πρώτο δίνει στη θήκη
-            **σταθερό ύψος πριν φορτώσει τίποτα** *(το CLS της λίστας, όπου ο χρήστης
-            σαρώνει και πατά)*· τα δεύτερα λένε στον περιηγητή τον **λόγο** των bytes.
-            Το `object-cover` κόβει τη διαφορά — όπως ακριβώς κάνει η Zillow στα
-            thumbnails των αποτελεσμάτων (~4:3).
+            🔑 **Πλαίσιο `LISTING_CARD_ASPECT_CLASS` + `width`/`height` μαζί**: το πρώτο
+            δίνει στη θήκη **σταθερό ύψος πριν φορτώσει τίποτα** *(το CLS της λίστας, όπου ο
+            χρήστης σαρώνει και πατά)*· τα δεύτερα λένε στον περιηγητή τον **λόγο** των bytes.
+            Το `object-cover` κόβει τη διαφορά. ⚠️ Εδώ έγραφε «όπως η Zillow (~4:3)» —
+            **ψευδές**: μετρήθηκε 1,85:1. Ο λόγος και η απόδειξή του: `listing-card-frame.ts`.
           */}
+          {/*
+            🗺️ **Χωρίς φωτογραφία: ο χάρτης της θέσης, στο ΙΔΙΟ πλαίσιο** (§8.80) — η κάρτα
+            κρατά το ύψος της, και το πλέγμα δεν γίνεται σκαλοπάτια.
+          */}
+          {images.length === 0 ? <ListingCardNoPhotoCover listing={listing} className="mb-2" /> : null}
           <ListingCardGallery
             images={images}
             sizes={imageSizes}

@@ -53,6 +53,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import type { ListingImage } from '@/types/public-listing';
 
+import { LISTING_CARD_ASPECT_CLASS } from './listing-card-frame';
 import { useGalleryScroller } from './use-gallery-scroller';
 
 interface ListingCardGalleryProps {
@@ -146,7 +147,7 @@ export function ListingCardGallery({
         fetchPriority={priority && position === 0 ? 'high' : 'auto'}
         decoding="async"
         draggable={false}
-        className="aspect-[4/3] w-full object-cover"
+        className={`${LISTING_CARD_ASPECT_CLASS} w-full object-cover`}
       />
     );
 

@@ -29,13 +29,14 @@ import { publicationThumbnailOf } from '@/lib/owner-property/owner-listing-thumb
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
 import type { OwnerListingThumbnail, OwnerProperty } from '@/types/owner-property';
-import { ListingMapSnapshot } from '@/components/listing-map-snapshot/ListingMapSnapshot';
+import { MapOrAbsenceCover } from '@/components/listing-map-snapshot/MapOrAbsenceCover';
+import { LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
 
 const K = 'property-market:offer.card';
 
 /** Η στήλη της μικρογραφίας: πλήρες πλάτος σε κινητό, σταθερή στήλη από `sm` και πάνω. */
 const COVER_SIZES = '(min-width: 640px) 176px, 100vw';
-const COVER_FRAME = 'aspect-[4/3] w-full shrink-0 overflow-hidden rounded-md sm:w-44';
+const COVER_FRAME = `${LISTING_CARD_ASPECT_CLASS} w-full shrink-0 overflow-hidden rounded-md sm:w-44`;
 
 interface OwnerPropertyCardCoverProps {
   readonly property: Pick<OwnerProperty, 'id' | 'title' | 'publication'>;
@@ -49,26 +50,23 @@ interface OwnerPropertyCardCoverProps {
  */
 function NoPhotoCover({ property }: Pick<OwnerPropertyCardCoverProps, 'property'>): React.ReactElement {
   const { t } = useTranslation(['property-market']);
-  const absence = (
-    <figure className={`${COVER_FRAME} m-0 flex flex-col items-center justify-center gap-2 border border-dashed border-border p-3 text-center`}>
-      <figcaption className="text-xs text-muted-foreground">{t(`${K}.noCover`)}</figcaption>
-      <Link href={offerDetailHref(property.id)} className="text-xs font-medium text-foreground underline">
-        {t(`${K}.addPhotos`)}
-      </Link>
-    </figure>
+  const addPhotos = (className: string) => (
+    <Link href={offerDetailHref(property.id)} className={className}>
+      {t(`${K}.addPhotos`)}
+    </Link>
   );
-  const mark = parseListingMapMark(property.publication?.mapMark);
-  if (mark === null) return absence;
-
   return (
-    <ListingMapSnapshot mark={mark} alt={t(`${K}.mapAlt`, { title: property.title })} className={COVER_FRAME} fallback={absence}>
-      <Link
-        href={offerDetailHref(property.id)}
-        className="absolute left-1 top-1 rounded bg-card px-1.5 py-0.5 text-xs font-medium text-card-foreground underline"
-      >
-        {t(`${K}.addPhotos`)}
-      </Link>
-    </ListingMapSnapshot>
+    <MapOrAbsenceCover
+      mark={parseListingMapMark(property.publication?.mapMark)}
+      frameClassName={COVER_FRAME}
+      mapAlt={t(`${K}.mapAlt`, { title: property.title })}
+      mapLoadingLabel={t(`${K}.mapLoading`)}
+      absenceLabel={t(`${K}.noCover`)}
+      absenceAction={addPhotos('text-xs font-medium text-foreground underline')}
+      mapOverlay={addPhotos(
+        'absolute left-1 top-1 rounded bg-card px-1.5 py-0.5 text-xs font-medium text-card-foreground underline',
+      )}
+    />
   );
 }
 
