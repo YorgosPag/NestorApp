@@ -10,7 +10,10 @@
   --ribbon-panel-label: #D8D8D8;
   --ribbon-separator: rgba(0, 0, 0, 0.14);
   --ribbon-btn-hover: rgba(0, 0, 0, 0.08);
-  --ribbon-btn-active: #1464A0;
+  /* ADR-770 §19.7 — ο ΙΔΙΟΣ ρόλος «πατημένο» με το `ToggleButton` (§19), όχι δεύτερο μπλε. Το #1464A0
+     πάνω στο navy #1D283A έδινε 2,37:1 (μετρημένο σε browser 2026-09-24, WCAG 1.4.11 ζητά 3:1). */
+  --ribbon-btn-active: hsl(var(--control-accent));
+  --ribbon-btn-active-foreground: hsl(var(--control-accent-foreground));
   --ribbon-text: #1A1A1A;
   --ribbon-text-muted: #4A4A4A;
   --ribbon-tab-text-active: #000000;
@@ -57,7 +60,10 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   --ribbon-panel-label: #363636;
   --ribbon-separator: rgba(255, 255, 255, 0.12);
   --ribbon-btn-hover: rgba(255, 255, 255, 0.10);
-  --ribbon-btn-active: #1464A0;
+  /* ADR-770 §19.7 — ο ΙΔΙΟΣ ρόλος «πατημένο» με το `ToggleButton` (§19), όχι δεύτερο μπλε. Το #1464A0
+     πάνω στο navy #1D283A έδινε 2,37:1 (μετρημένο σε browser 2026-09-24, WCAG 1.4.11 ζητά 3:1). */
+  --ribbon-btn-active: hsl(var(--control-accent));
+  --ribbon-btn-active-foreground: hsl(var(--control-accent-foreground));
   --ribbon-text: #CCCCCC;
   --ribbon-text-muted: #888888;
   --ribbon-tab-text-active: #FFFFFF;
@@ -489,7 +495,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
    and toggle-button `data-pressed` for visual consistency. */
 .dxf-ribbon-btn[data-active="true"] {
   background: var(--ribbon-btn-active);
-  color: #FFFFFF;
+  color: var(--ribbon-btn-active-foreground);
 }
 
 .dxf-ribbon-btn[data-active="true"]:hover {
@@ -561,13 +567,13 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
    activeTool. Paints the whole split (top+arrow) with the accent. */
 .dxf-ribbon-btn-split[data-active="true"] {
   background: var(--ribbon-btn-active);
-  color: #FFFFFF;
+  color: var(--ribbon-btn-active-foreground);
   border-color: var(--ribbon-btn-active);
 }
 
 .dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-top,
 .dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-arrow {
-  color: #FFFFFF;
+  color: var(--ribbon-btn-active-foreground);
 }
 
 .dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-top:hover,
@@ -777,7 +783,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 
 .dxf-status-bar-item[data-on="true"] {
   background: var(--ribbon-btn-active);
-  color: #FFFFFF;
+  color: var(--ribbon-btn-active-foreground);
 }
 
 .dxf-status-bar-item[data-static="true"] {
@@ -837,7 +843,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 
 .dxf-ribbon-btn-toggle[data-pressed="true"] {
   background: var(--ribbon-btn-active);
-  color: #FFFFFF;
+  color: var(--ribbon-btn-active-foreground);
 }
 
 .dxf-ribbon-btn-toggle[data-pressed="true"]:hover {
