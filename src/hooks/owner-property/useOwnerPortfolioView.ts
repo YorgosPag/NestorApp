@@ -10,6 +10,9 @@
  * ⚠️ **Το URL ζητά· η σελίδα αποφασίζει.** Αν ο σύνδεσμος λέει `?view=map` αλλά το χαρτοφυλάκιο
  * δεν έχει αρκετά σημάδια, αποδίδεται λίστα **χωρίς** γραφή στο URL: ο σύνδεσμος μένει όπως
  * τον έστειλε ο άνθρωπος, και ξαναγίνεται χάρτης μόλις δημοσιευτεί το επόμενο ακίνητο.
+ * 🔑 Από την §8.75 η απόφαση είναι **δομική**: το hook καλείται **μόνο** από τη διάταξη `tabs`,
+ * που υπάρχει μόνο όταν υπάρχει χάρτης (`OwnerPortfolio`). Στις `list` / `split` το URL ούτε
+ * διαβάζεται ούτε γράφεται — γι' αυτό η παλιά παράμετρος `mapAvailable` έφυγε (θα ήταν πάντα `true`).
  */
 
 import { useCallback, useMemo } from 'react';
@@ -28,8 +31,7 @@ export interface OwnerPortfolioViewState {
   readonly setView: (view: OwnerPortfolioView) => void;
 }
 
-/** @param mapAvailable Η απάντηση του `hasOwnerPortfolioMap`: η **μία** ερώτηση για το όριο. */
-export function useOwnerPortfolioView(mapAvailable: boolean): OwnerPortfolioViewState {
+export function useOwnerPortfolioView(): OwnerPortfolioViewState {
   const query = useUrlQuery();
   const requested = useMemo(() => parseOwnerPortfolioView(new URLSearchParams(query)), [query]);
 
@@ -37,5 +39,5 @@ export function useOwnerPortfolioView(mapAvailable: boolean): OwnerPortfolioView
     replaceUrlSearchParams((params) => writeOwnerPortfolioView(view, params));
   }, []);
 
-  return { view: mapAvailable ? requested : 'list', setView };
+  return { view: requested, setView };
 }

@@ -54,30 +54,38 @@ function cardElement(scroller: HTMLElement | null, id: string | null): HTMLEleme
   return scroller.querySelector<HTMLElement>(`[${LISTING_CARD_ID_ATTRIBUTE}="${CSS.escape(id)}"]`);
 }
 
-export function useListingRevealTracking(focus: ListingFocus): ListingRevealTracking {
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [focusVisibility, setFocusVisibility] = useState<ScrollVisibility>('unknown');
-
-  const focused = focusedListingId(focus);
-  const { selected } = focus;
-
-  /**
-   * **ΤΟ ΚΛΙΚ ΚΥΛΑ** — και μόνο αυτό.
-   *
-   * ⚠️ Η εξάρτηση είναι το `focus.selected` **σκέτο**, ποτέ ολόκληρο το `focus`: με το
-   * αντικείμενο ως εξάρτηση, κάθε κίνηση του ποντικιού πάνω από τον χάρτη θα ξανάτρεχε
-   * αυτό το effect — δηλαδή θα **επανέφερε** το auto-scroll του hover από την πίσω πόρτα,
-   * ακριβώς αυτό που το αρχείο υπάρχει για να αποτρέψει.
-   */
+/**
+ * **ΤΟ ΚΛΙΚ ΚΥΛΑ** — και μόνο αυτό. Εξάγεται γιατί έχει **δύο** καταναλωτές (ADR-777 §8.75):
+ * τη λίστα της οθόνης 2 (δικό της δοχείο κύλισης) και το χαρτοφυλάκιο του κατόχου, όπου κυλά
+ * **ολόκληρη η σελίδα** — το `scrollIntoView` ανεβαίνει ως τον πρώτο πρόγονο που κυλά, άρα η ίδια
+ * γραμμή εξυπηρετεί και τα δύο. Το `rootRef` χρειάζεται μόνο για να **βρεθεί** η κάρτα.
+ *
+ * ⚠️ Η εξάρτηση είναι το `selected` **σκέτο**, ποτέ ολόκληρο το `focus`: με το αντικείμενο ως
+ * εξάρτηση, κάθε κίνηση του ποντικιού πάνω από τον χάρτη θα ξανάτρεχε αυτό το effect — δηλαδή
+ * θα **επανέφερε** το auto-scroll του hover από την πίσω πόρτα, ακριβώς αυτό που το αρχείο
+ * υπάρχει για να αποτρέψει.
+ */
+export function useRevealSelectedListing(
+  rootRef: React.RefObject<HTMLElement | null>,
+  selected: string | null,
+): void {
   useEffect(() => {
     if (!selected) return;
-    revealInScroll(cardElement(scrollerRef.current, selected), {
+    revealInScroll(cardElement(rootRef.current, selected), {
       urgency: 'requested',
       // `'nearest'`: αν η κάρτα είναι ήδη ορατή — η **συνήθης** περίπτωση με 6-9
       // αποτελέσματα — δεν κουνιέται απολύτως τίποτα.
       block: 'nearest',
     });
-  }, [selected]);
+  }, [rootRef, selected]);
+}
+
+export function useListingRevealTracking(focus: ListingFocus): ListingRevealTracking {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [focusVisibility, setFocusVisibility] = useState<ScrollVisibility>('unknown');
+
+  const focused = focusedListingId(focus);
+  useRevealSelectedListing(scrollerRef, focus.selected);
 
   /**
    * **Η ΠΑΡΑΚΟΛΟΥΘΗΣΗ ΟΡΑΤΟΤΗΤΑΣ** — η είσοδος του δείκτη άκρης.

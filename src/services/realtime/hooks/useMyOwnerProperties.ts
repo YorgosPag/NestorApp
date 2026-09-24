@@ -27,6 +27,7 @@
  * **δημόσιο παράγωγο** (`public_listings`). Δες `owner-property.service.ts`.
  */
 
+import { useMemo } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -86,8 +87,13 @@ export type MyOwnerPropertiesState =
  */
 export function useMyOwnerProperties(userId: string | null): MyOwnerPropertiesState {
   const state = useOwnedList<OwnerProperty>(OWNER_PROPERTIES, userId);
-  if (state.state !== 'ready') return state;
-  return { state: 'ready', properties: state.items.filter(isPersonalCustody) };
+  // 🔑 ADR-777 §8.75 — **σταθερή ταυτότητα ανά στιγμιότυπο**: χωρίς το `useMemo` κάθε απόδοση
+  //    έδινε **νέο** πίνακα, και κάθε `useMemo([properties])` από κάτω (διαμέριση, GeoJSON του
+  //    χάρτη) ξανάτρεχε σε **κάθε** απόδοση — δηλαδή ήταν διακοσμητικό.
+  const items = state.state === 'ready' ? state.items : null;
+  const properties = useMemo(() => (items === null ? null : items.filter(isPersonalCustody)), [items]);
+  if (state.state !== 'ready' || properties === null) return state;
+  return { state: 'ready', properties };
 }
 
 /** Οι πέντε καταστάσεις της μίας αγγελίας. */

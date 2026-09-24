@@ -43,6 +43,7 @@ import { ListingCardGallery } from '@/components/search-results/ListingCardGalle
 import { SaveListingToggle } from '@/components/listings/SaveListingToggle';
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
+import { LISTING_CARD_FOCUS_VISIBLE_CLASS, LISTING_FOCUS_CARD_CLASS } from './listing-focus-card';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import styles from './ListingCard.module.css';
 
@@ -243,12 +244,8 @@ export function ListingCard({
         onMouseEnter={() => onHover?.(listing.id)}
         onMouseLeave={() => onHover?.(null)}
         /*
-          🔴 **ΔΥΟ ΒΑΘΜΙΔΕΣ ΕΝΤΑΣΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΜΟΝΟ ΧΡΩΜΑ** (CHECK 3.41 /
-          WCAG 1.4.1). Το `peeked` αλλάζει **μόνο** το περίγραμμα· το `selected`
-          προσθέτει **δεύτερο κανάλι** — γέμισμα **και** δακτύλιο. Αν η διαφορά ήταν
-          δύο αποχρώσεις του ίδιου χρώματος, θα ήταν αδιάκριτη για όποιον δεν τις
-          ξεχωρίζει, και θα εξαφανιζόταν σε ασπρόμαυρη εκτύπωση — το ίδιο σκεπτικό
-          που κάνει τα πέντε σχήματα του χάρτη να διαφέρουν σε **μέγεθος**.
+          🔴 **ΔΥΟ ΒΑΘΜΙΔΕΣ ΕΝΤΑΣΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΜΟΝΟ ΧΡΩΜΑ** — το «γιατί» ζει στο
+          `listing-focus-card.ts`, κοινό με την κάρτα του κατόχου (ADR-777 §8.75).
         */
         className={[
           // 🔑 `group/card`: τα βελάκια της γκαλερί αποκαλύπτονται με hover **οπουδήποτε
@@ -258,12 +255,8 @@ export function ListingCard({
           // Ο δακτύλιος εστίασης ήταν στο `<Link>` που τύλιγε τα πάντα· τώρα ο
           // σύνδεσμος είναι μικρός (ο τίτλος) και **αόρατος** ως περίγραμμα, οπότε
           // τον δακτύλιο τον φοράει η κάρτα όταν κάποιο παιδί της έχει εστίαση.
-          'has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-1 has-[a:focus-visible]:ring-offset-background',
-          focusStrength === 'selected'
-            ? 'border-ring bg-accent ring-2 ring-ring ring-offset-1 ring-offset-background'
-            : focusStrength === 'peeked'
-              ? 'border-ring bg-accent/40'
-              : 'border-border',
+          LISTING_CARD_FOCUS_VISIBLE_CLASS,
+          LISTING_FOCUS_CARD_CLASS[focusStrength],
         ].join(' ')}
       >
           {/*

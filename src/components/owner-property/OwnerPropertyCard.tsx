@@ -41,6 +41,11 @@ import {
 } from '@/lib/owner-property/owner-portfolio-map';
 import { listingPriceReductionOf } from '@/services/listings/public-listing-projection';
 import type { ListingStatsState } from '@/hooks/owner-property/useOwnerPortfolioStats';
+import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
+import {
+  LISTING_CARD_FOCUS_VISIBLE_CLASS,
+  LISTING_FOCUS_CARD_CLASS,
+} from '@/components/search-results/listing-focus-card';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
@@ -73,6 +78,8 @@ export function OwnerPropertyCard({
   property,
   priority = false,
   stats,
+  focusStrength = 'none',
+  onHover,
 }: {
   property: OwnerProperty;
   /**
@@ -83,6 +90,13 @@ export function OwnerPropertyCard({
   stats: ListingStatsState;
   /** Μόνο η **πρώτη** κάρτα της λίστας φορτώνει τη μικρογραφία της με υψηλή προτεραιότητα. */
   priority?: boolean;
+  /**
+   * 🗺️ ADR-777 §8.75 — η ένταση της κάρτας όταν λίστα και χάρτης **συνυπάρχουν**: πινέζα κάτω από
+   * τον δείκτη ⇒ `peeked`, κλικ ⇒ `selected`. Ίδιες βαθμίδες με την κάρτα της αναζήτησης.
+   */
+  focusStrength?: ListingFocusStrength;
+  /** «Ο άνθρωπος κοιτάζει αυτή την κάρτα» — δείκτης **ή** εστίαση πληκτρολογίου (ισοτιμία). */
+  onHover?: (id: string | null) => void;
 }): React.ReactElement {
   const { t } = useTranslation([NS, 'properties-enums']);
 
@@ -98,7 +112,11 @@ export function OwnerPropertyCard({
   const kinds = ownerPropertyOfferKinds(property);
 
   return (
-    <article className="flex flex-col gap-4 rounded-md border border-border bg-card p-4 sm:flex-row">
+    <article
+      onMouseEnter={onHover && (() => onHover(property.id))}
+      onMouseLeave={onHover && (() => onHover(null))}
+      className={`flex flex-col gap-4 rounded-md border bg-card p-4 transition-colors sm:flex-row ${LISTING_CARD_FOCUS_VISIBLE_CLASS} ${LISTING_FOCUS_CARD_CLASS[focusStrength]}`}
+    >
       {/*
         🖼️ ADR-777 §8.70 — **ό,τι βλέπει ο κόσμος**, ή η δηλωμένη απουσία του. Στήλη αριστερά
         από `sm`, πάνω από το κείμενο σε κινητό (πρότυπο Idealista «Tus anuncios»).
@@ -182,6 +200,10 @@ export function OwnerPropertyCard({
         <nav>
           <Link
             href={offerDetailHref(property.id)}
+            // ⌨️ Ισοτιμία πληκτρολογίου (§8.75): η εστίαση του συνδέσμου επισημαίνει την πινέζα,
+            //    όπως το πέρασμα του δείκτη — ο χάρτης δεν είναι προνόμιο του ποντικιού.
+            onFocus={onHover && (() => onHover(property.id))}
+            onBlur={onHover && (() => onHover(null))}
             className="inline-block rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
           >
             {t(`${K}.list.open`)}

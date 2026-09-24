@@ -23,7 +23,7 @@
  * συνάρτηση** πάνω στα ίδια δεδομένα (δες {@link OwnerPropertyCard}).
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import '@/lib/design-system';
 import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -33,7 +33,16 @@ import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-route
 // ADR-820 §5.3 — Ο ΕΝΑΣ κριτής του «ανήκω σε οργανισμό;», ποτέ ωμό `user?.companyId`.
 import { hasOrganization } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
-import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
+import { nowISO } from '@/lib/date-local';
+import {
+  hasOwnerPortfolioMap,
+  partitionOwnerPortfolio,
+  type OwnerPortfolioPartition,
+} from '@/lib/owner-property/owner-portfolio-map';
+import {
+  useMyOwnerProperties,
+  type MyOwnerPropertiesState,
+} from '@/services/realtime/hooks/useMyOwnerProperties';
 
 import { OwnedListStatus } from '@/components/private-space/OwnedListStatus';
 import { OwnerPortfolio } from './OwnerPortfolio';
@@ -76,10 +85,14 @@ function EmptyState(): React.ReactElement {
  * κόβει), αλλά **καλύπτεται**: το `switch` πάνω σε κλειστό σύνολο δεν επιτρέπει
  * σιωπηλή παράλειψη, και μια κατάσταση χωρίς κλάδο θα ζωγράφιζε **λευκή οθόνη**.
  */
-function OwnerPropertiesBody(): React.ReactElement {
+function OwnerPropertiesBody({
+  state,
+  partition,
+}: {
+  readonly state: MyOwnerPropertiesState;
+  readonly partition: OwnerPortfolioPartition | null;
+}): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const { user } = useAuth();
-  const state = useMyOwnerProperties(user?.uid ?? null);
 
   // 🔑 Οι τρεις «μη έτοιμες» καταστάσεις ζουν στο ΕΝΑ `OwnedListStatus` (ADR-866 Φ1.2 — τρίτο δίδυμο, CHECK 3.28).
   return (
@@ -88,26 +101,47 @@ function OwnerPropertiesBody(): React.ReactElement {
       loadingText={t(`${K}.loading`)}
       errorText={t(`${K}.error`)}
       renderReady={({ properties }) =>
-        properties.length === 0 ? (
+        properties.length === 0 || partition === null ? (
           <EmptyState />
         ) : (
           // 🗺️ ADR-777 §8.71 — Λίστα | Χάρτης χαρτοφυλακίου. Η λίστα κρατά τον ΕΝΑ κρυφό
           // χάρτη στιγμιοτύπων της §8.70 Φ2 (ποτέ ένας ανά κάρτα).
-          <OwnerPortfolio properties={properties} />
+          <OwnerPortfolio properties={properties} partition={partition} />
         )
       }
     />
   );
 }
 
+/**
+ * 🗺️ ADR-777 §8.75 — **η διαμέριση του ΕΝΟΣ κριτή, μία φορά ανά απόδοση**. Τη χρειάζονται δύο:
+ * η σελίδα (ζητά πλάτος από το κέλυφος **μόνο** όταν υπάρχει χάρτης) και το χαρτοφυλάκιο (ποια
+ * πάνε στον χάρτη). ⚠️ **Μία ανάγνωση ρολογιού ανά λίστα** (§8.33), όπως στις κάρτες.
+ */
+function usePortfolioPartition(state: MyOwnerPropertiesState): OwnerPortfolioPartition | null {
+  const properties = state.state === 'ready' ? state.properties : null;
+  return useMemo(() => (properties === null ? null : partitionOwnerPortfolio(properties, nowISO())), [properties]);
+}
+
 export function MyOwnerPropertiesContent(): React.ReactElement {
   const { t } = useTranslation([NS]);
+  const { user } = useAuth();
+  const state = useMyOwnerProperties(user?.uid ?? null);
+  const partition = usePortfolioPartition(state);
+  const wantsFullWidth = partition !== null && hasOwnerPortfolioMap(partition);
 
   return (
     // ΚΑΜΙΑ κλάση ύψους εδώ (ούτε `min-h-screen`, ούτε `flex-1`): το ύψος το δίνει
     // το **stretch της γραμμής** του grid του `ShellSurface`, και την κεφαλίδα τη
     // φιλοξενεί το `(me)/layout.tsx` — ίδια σύμβαση με το `(light)`.
-    <main className="flex w-full flex-col gap-6">
+    //
+    // 🗺️ ADR-777 §8.75 — `data-shell-span="full"`: λίστα ‖ χάρτης **δεν είναι πρόζα**. Το πλάτος
+    // ζητιέται από το κέλυφος **με όνομα** (`shell-surface.css`: «ένας χάρτης μέσα σε σελίδα πρόζας
+    // ζητά ολόκληρο το πλάτος»), όπως στο `NetworkThreadScreen` — ο διάδρομος (κενό στις άκρες)
+    // **μένει**: η σελίδα δεν είναι καμβάς, άρα **δεν** δηλώνει `bleed` στο `.shell-surface.json`.
+    // ⚠️ **Μόνο όταν υπάρχει χάρτης**: χωρίς αυτόν η λίστα κρατά το μέτρο των 80ch. Το αν θα γίνει
+    // δίπλα-δίπλα το αποφασίζει μετά το χαρτοφυλάκιο, **μετρώντας** τον χώρο που του δόθηκε.
+    <main data-shell-span={wantsFullWidth ? 'full' : undefined} className="flex w-full flex-col gap-6">
       {/*
         ⚠️ ΚΑΝΕΝΑ `mx-auto max-w-3xl p-6` εδώ (ADR-797 ΦΑΣΗ Β). Και τα τρία τα κατέχει
         πλέον ο ΕΝΑΣ ιδιοκτήτης, το `ShellSurface` του `PrivateSpaceShell`:
@@ -150,7 +184,7 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
         </Link>
       </nav>
 
-      <OwnerPropertiesBody />
+      <OwnerPropertiesBody state={state} partition={partition} />
 
       <WorkspaceInvitation />
     </main>

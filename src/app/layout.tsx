@@ -111,7 +111,15 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: densityBootScript() }}
         />
       </head>
-      <body className={cn("font-sans overflow-x-hidden", roboto.variable)}>
+      {/*
+        🔴 ADR-777 §8.75 — `overflow-x-clip`, ΟΧΙ `overflow-x-hidden`, στο <body>. Επειδή το <html>
+        έχει ήδη μη-ορατό overflow (που μεταδίδεται στο viewport), το `hidden` του body ΔΕΝ μεταδίδεται:
+        κάνει το body **scroll container** (το `overflow-y` υπολογίζεται σε `auto`) που δεν κυλά ποτέ —
+        και κάθε `position: sticky` σε σελίδα που κυλά το έγγραφο αγκυρωνόταν εκεί και ΔΕΝ κολλούσε
+        (μετρημένο: πάνελ χάρτη στο −359px μετά από κύλιση 600px). Το `clip` κόβει το ίδιο, χωρίς
+        να φτιάχνει scroll container. Η οριζόντια κύλιση μένει απαγορευμένη από το <html>.
+      */}
+      <body className={cn("font-sans overflow-x-clip", roboto.variable)}>
         {/* 🏢 ENTERPRISE: Minimal provider stack - essential providers only */}
         <ThemeProvider
           attribute="class"
