@@ -155,7 +155,7 @@ export function DemandPlaceField(): React.ReactElement {
   const { watch, setValue } = useFormContext<DemandFormValues>();
   const placeKind = watch('placeKind');
   const placeRef = watch('placeRef');
-  const placeOutline = watch('placeOutline');
+  const placeShapes = watch('placeShapes');
 
   return (
     <DemandFieldset legend={t(`${NS}:demand.form.place.legend`)}>
@@ -187,8 +187,10 @@ export function DemandPlaceField(): React.ReactElement {
       */}
       {placeKind === 'area' && (
         <DemandAreaOutline
-          outline={placeOutline}
-          onDrawn={(outline) => setValue('placeOutline', outline, { shouldDirty: true })}
+          shapes={placeShapes}
+          onShapesChange={(shapes) =>
+            setValue('placeShapes', shapes.map((shape) => shape.map((vertex) => ({ ...vertex }))), { shouldDirty: true })
+          }
         />
       )}
 

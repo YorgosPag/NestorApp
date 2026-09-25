@@ -51,7 +51,7 @@ function placeSegment(t: PriceLabelT, place: DemandPlace, placeLabel: string | n
   return matchDemandPlace<string | null>(place, {
     anywhere: () => null,
     near: ({ radiusKm }) => shortPlaceLabel(placeLabel) ?? t(`${K}.near`, { radiusKm }),
-    area: () => t(`${K}.area`),
+    area: ({ shapes }) => t(`${K}.area`, { count: shapes.length }),
     place: () => t(`${K}.place`),
     frontage: ({ streetName }) => (streetName === null ? t(`${K}.frontage`) : t(`${K}.frontageNamed`, { street: streetName })),
   });

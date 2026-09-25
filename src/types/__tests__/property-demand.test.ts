@@ -16,6 +16,23 @@
 
 import { MANDATE_CONFIRMATIONS } from '@/types/mandate';
 import { DEMAND_TITLE_MAX_LENGTH } from '@/lib/demand/demand-title';
+import { MAX_DRAWN_SHAPES } from '@/lib/listings/listing-drawn-area';
+
+/** Μικρό έγκυρο τετράγωνο στο γεωγραφικό πλάτος `lat`. */
+function squareAt(lat: number) {
+  return [
+    { lat, lng: 22 },
+    { lat, lng: 22.02 },
+    { lat: lat + 0.02, lng: 22.02 },
+    { lat: lat + 0.02, lng: 22 },
+  ];
+}
+
+/** Δακτύλιος με τόσες κορυφές που δεν χωρά στο `MAX_DRAWN_URL_CHARS` του χάρτη. */
+const JAGGED_RING = Array.from({ length: 600 }, (_, i) => ({
+  lat: 40.6 + 0.05 * Math.sin((i / 600) * 2 * Math.PI) + (i % 7) * 1e-4,
+  lng: 22.9 + 0.05 * Math.cos((i / 600) * 2 * Math.PI) + (i % 5) * 1e-4,
+}));
 import {
   DEMAND_INVARIANTS,
   DEMAND_LIFECYCLES,
@@ -104,12 +121,12 @@ describe('🔴 Ζ1–Ζ8 — οκτώ μορφές, ΜΙΑ οντότητα, τ�
     const z4 = demand({
       place: {
         kind: 'area',
-        outline: [
+        shapes: [[
           { lat: 40.62, lng: 22.94 },
           { lat: 40.62, lng: 22.96 },
           { lat: 40.63, lng: 22.96 },
           { lat: 40.63, lng: 22.94 },
-        ],
+        ]],
       },
     });
     expect(demandInvariantViolations(z4)).toEqual([]);
@@ -235,13 +252,20 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
       {
         place: {
           kind: 'area',
-          outline: [
+          shapes: [[
             { lat: 40, lng: 22 },
             { lat: 41, lng: 23 },
-          ],
+          ]],
         },
       },
     ],
+    // ADR-888 — η περιοχή με πολλά σχήματα: τα όρια του χάρτη (ADR-885).
+    ['area-empty', { place: { kind: 'area', shapes: [] } }],
+    [
+      'area-too-many',
+      { place: { kind: 'area', shapes: Array.from({ length: MAX_DRAWN_SHAPES + 1 }, (_, i) => squareAt(40 + i * 0.05)) } },
+    ],
+    ['area-too-large', { place: { kind: 'area', shapes: [JAGGED_RING] } }],
     [
       'axis-degenerate',
       {

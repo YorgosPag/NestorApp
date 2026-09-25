@@ -69,7 +69,7 @@
         "title": "Οι ζητήσεις μου"
       },
       "name": {
-        "area": "Σχεδιασμένη περιοχή",
+        "area": "{count, plural, one {Σχεδιασμένη περιοχή} other {# σχεδιασμένες περιοχές}}",
         "bedroomsMin": "{count}+ υπν.",
         "frontage": "Πρόσοψη σε δρόμο",
         "frontageNamed": "Οδός {street}",
@@ -83,7 +83,7 @@
       "summary": {
         "anyType": "Κάθε είδος",
         "anywhere": "Οπουδήποτε",
-        "area": "Σε σχεδιασμένη περιοχή",
+        "area": "{count, plural, one {Σε σχεδιασμένη περιοχή} other {Σε # σχεδιασμένες περιοχές}}",
         "exchangeShare": "Αντιπαροχή: έως {share} στον οικοπεδούχο",
         "frontage": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} του δρόμου",
         "frontageNamed": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} της οδού {street}",

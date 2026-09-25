@@ -49,6 +49,8 @@ interface MapAreaControlProps {
    * σχεδιασμένο) το chip παίρνει τη θέση του· η σχεδίαση ξανανοίγει από εκεί («Επεξεργασία»).
    */
   readonly drawButton?: React.ReactNode;
+  /** ADR-888 — «Αποθήκευση αναζήτησης». Ορατό **και** με σχεδιασμένη περιοχή — εκεί είναι η κύρια χρήση. */
+  readonly saveButton?: React.ReactNode;
   readonly className?: string;
 }
 
@@ -61,6 +63,7 @@ export function MapAreaControl({
   onSearchHere,
   regionChip,
   drawButton,
+  saveButton,
   className,
 }: MapAreaControlProps) {
   const { t } = useTranslation(['search-results']);
@@ -112,6 +115,8 @@ export function MapAreaControl({
       )}
 
       {!regionChip && drawButton}
+
+      {saveButton}
     </nav>
   );
 }

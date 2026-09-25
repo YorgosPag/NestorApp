@@ -213,7 +213,8 @@ export const demandFormSchema = z.object({
     .object({ landId: z.string(), buildingId: z.string().nullable() })
     .nullable(),
   /** **Ζ4** — το σχεδιασμένο περίγραμμα. `null` = δεν έχει σχεδιαστεί ακόμη. */
-  placeOutline: z.array(z.object({ lat: z.number(), lng: z.number() })).nullable(),
+  // ADR-888 — ΠΟΛΛΑ σχήματα (ίδια γεωμετρία με το `GeoDrawnArea.shapes` του χάρτη). `[]` = δεν σχεδιάστηκε.
+  placeShapes: z.array(z.array(z.object({ lat: z.number(), lng: z.number() }))),
   /**
    * **Ζ4 δομημένη** — το όνομα του δρόμου όπως το είπε ο άνθρωπος. Ποτέ αυθεντία
    * (βλ. {@link DemandPlace}, κλάδος `frontage`) — κενό = δεν το έδωσε.
@@ -222,7 +223,7 @@ export const demandFormSchema = z.object({
   /**
    * **Ζ4 δομημένη** — ο άξονας του τμήματος. `null` = δεν έχει σχεδιαστεί ακόμη.
    *
-   * ⚠️ **Ίδιο σχήμα με το `placeOutline`, ΟΧΙ το `geoPointSchema`.** Το
+   * ⚠️ **Ίδιο σχήμα με ένα στοιχείο του `placeShapes`, ΟΧΙ το `geoPointSchema`.** Το
    * `geoPointSchema` απαντά «*ένα σημείο, ή κανένα*» (μία πινέζα) — εδώ η ερώτηση
    * είναι «*λίστα κορυφών, ή καμία λίστα ακόμη*», που είναι το ίδιο σχήμα με το
    * περίγραμμα της Ζ4, όχι με μια μεμονωμένη πινέζα.
@@ -300,7 +301,7 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   placeLabel: null,
   radiusKm: DEFAULT_SEARCH_RADIUS_KM,
   placeRef: null,
-  placeOutline: null,
+  placeShapes: [],
   frontageStreetName: '',
   frontageAxis: null,
   frontageSide: 'both',
@@ -367,9 +368,10 @@ function placeFrom(values: DemandFormParsed): DemandPlace {
 
   // **Ζ4** — σχεδιασμένη περιοχή. Προέλευση **πάντα ανθρώπινη**, άρα επιτρέπεται σχήμα
   // (ODbL, §13.4): περίγραμμα αντλημένο από OSM **δεν** φτάνει ποτέ εδώ, γιατί ο
-  // επιλογέας κτιρίου παράγει `placeRef`, όχι `placeOutline`.
-  if (values.placeKind === 'area' && values.placeOutline !== null && values.placeOutline.length >= 3) {
-    return { kind: 'area', outline: values.placeOutline };
+  // επιλογέας κτιρίου παράγει `placeRef`, όχι `placeShapes`. Τα όρια (πλήθος · κορυφές · μήκος URL) τα κρίνουν τα invariants
+  // της οντότητας (`lib/demand/demand-area.ts`), όχι δεύτερος κριτής εδώ.
+  if (values.placeKind === 'area' && values.placeShapes.length > 0) {
+    return { kind: 'area', shapes: values.placeShapes };
   }
 
   // **Ζ4 δομημένη** — άξονας δρόμου. Προέλευση **πάντα ανθρώπινη**, ίδιο σκεπτικό με
@@ -464,72 +466,8 @@ function placeLabelFrom(values: DemandFormParsed): string | null {
 // για `demandFormFrom` / `DemandFormLoad`.
 
 // =============================================================================
-// 5. ΤΙ ΕΜΠΟΔΙΖΕΙ ΤΗΝ ΥΠΟΒΟΛΗ — πέρα από τα invariants της οντότητας
+// 5. ΤΙ ΕΜΠΟΔΙΖΕΙ ΤΗΝ ΥΠΟΒΟΛΗ — εξήχθη στο `demand-form-blockers.ts` (N.7.1, ADR-888)
 // =============================================================================
-
-/**
- * Τα εμπόδια που είναι **της φόρμας**, όχι της οντότητας. Κλειστό σύνολο.
- *
- * ⚠️ **Δεν επικαλύπτονται με τα `DEMAND_INVARIANTS`, και ο διαχωρισμός είναι
- * σημασιολογικός**: εκείνα λένε «αυτή η ζήτηση δεν είναι έγκυρη ζήτηση»· αυτά λένε
- * «αυτή η φόρμα δεν έχει ακόμη αρκετά για να **φτιάξει** ζήτηση». Ένα κείμενο
- * περιοχής που δεν έχει λυθεί σε σημείο δεν είναι **άκυρη** ζήτηση — δεν είναι
- * ζήτηση **ακόμη**.
- */
-export const DEMAND_FORM_BLOCKERS = [
-  /** Διάλεξε «σε αυτή την περιοχή» αλλά η περιοχή δεν έχει λυθεί σε σημείο. */
-  'place-unresolved',
-  /**
-   * **Ζ3/Ζ5** — διάλεξε «αυτό το κτίριο» αλλά **δεν έχει δείξει** ποιο.
-   *
-   * ⚠️ **Ξεχωριστό εμπόδιο από το `place-unresolved`, επίτηδες.** Εκείνο σημαίνει
-   * «*το κείμενό σου δεν έγινε σημείο*» και θεραπεύεται με **ξαναγράψιμο**· αυτό
-   * σημαίνει «*δεν έδειξες τόπο*» και θεραπεύεται με **κλικ στον χάρτη**. Κοινός
-   * κωδικός θα έστελνε τον άνθρωπο να διορθώσει πεδίο που δεν υπάρχει στην οθόνη του.
-   */
-  'place-not-identified',
-  /** **Ζ4** — διάλεξε «αυτή την περιοχή» αλλά το σχήμα δεν έχει τρεις κορυφές. */
-  'area-not-drawn',
-  /**
-   * **Ζ4 δομημένη** — διάλεξε «μέτωπο δρόμου» αλλά ο άξονας έχει λιγότερα από 2 σημεία.
-   *
-   * ⚠️ **Δεν είναι το `axis-degenerate` της οντότητας.** Εκείνο κρίνει *«έχουν
-   * διεύθυνση αυτά τα σημεία;»* — ερώτηση που προϋποθέτει ήδη 2 σημεία (ο τύπος
-   * {@link GeoPolyline} το εγγυάται). Αυτό εδώ κρίνει *«υπάρχουν καν αρκετά σημεία;»*
-   * — ερώτηση της **φόρμας**, πριν φτάσει καν στην πύλη της οντότητας.
-   */
-  'frontage-axis-missing',
-  /** Διάλεξε παράθυρο αλλά λείπει άκρο. */
-  'window-incomplete',
-] as const;
-
-export type DemandFormBlocker = (typeof DEMAND_FORM_BLOCKERS)[number];
-
-/** Τι λείπει **από τη φόρμα** για να μπορεί να συντεθεί ζήτηση. Όλα, ποτέ το πρώτο. */
-export function demandFormBlockers(values: DemandFormParsed): DemandFormBlocker[] {
-  const found: DemandFormBlocker[] = [];
-
-  if (values.placeKind === 'near' && values.placeCenter === null) {
-    found.push('place-unresolved');
-  }
-  if (values.placeKind === 'place' && values.placeRef === null) {
-    found.push('place-not-identified');
-  }
-  if (values.placeKind === 'area' && (values.placeOutline === null || values.placeOutline.length < 3)) {
-    found.push('area-not-drawn');
-  }
-  if (
-    values.placeKind === 'frontage' &&
-    (values.frontageAxis === null || values.frontageAxis.length < 2)
-  ) {
-    found.push('frontage-axis-missing');
-  }
-  if (values.timingKind === 'window' && (values.fromDate === '' || values.toDate === '')) {
-    found.push('window-incomplete');
-  }
-
-  return found;
-}
 
 /** Η ουδέτερη τιμή των χαρακτηριστικών, ξαναεξαγόμενη ώστε η φόρμα να μη την ξαναγράψει. */
 export { NO_DEMAND_FEATURES };

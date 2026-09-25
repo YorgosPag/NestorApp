@@ -101,7 +101,10 @@ function rangesIntersect(
  */
 function areasIntersect(a: GeoArea | null, b: GeoArea | null): boolean {
   if (a === null || b === null) return true;
-  return areasOverlap(a, b);
+  // 🔴 ADR-888 — με σχεδιασμένη περιοχή το `areaRelation` ΔΕΝ είναι συμμετρικό (το υποκείμενο κρίνεται με το
+  //    ορθογώνιό του, το ερώτημα με τα σχήματά του). Και οι δύο φορές ⇒ η συμμετρία της κεφαλίδας μένει
+  //    αληθής, με τη γενναιοδωρία της («μετράμε περισσότερους, ποτέ λιγότερους»).
+  return areasOverlap(a, b) || areasOverlap(b, a);
 }
 
 // =============================================================================

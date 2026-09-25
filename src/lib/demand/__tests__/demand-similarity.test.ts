@@ -42,6 +42,24 @@ describe('🔴 Σ — συμμετρία', () => {
       expect(demandsAreSimilar(a, b)).toBe(demandsAreSimilar(b, a));
     },
   );
+
+  /**
+   * 🔴 ADR-888 — με σχεδιασμένες περιοχές το `areaRelation` ΔΕΝ είναι συμμετρικό: το ορθογώνιο της Β καλύπτει
+   * την Α, ενώ κανένα σχήμα της Β δεν την αγγίζει. Χωρίς τον έλεγχο και των δύο φορών, (a,b) ≠ (b,a).
+   */
+  it('δύο σχεδιασμένες περιοχές: ίδια απάντηση από τις δύο πλευρές', () => {
+    const square = (lat: number, lng: number, d: number) => [
+      { lat, lng },
+      { lat, lng: lng + d },
+      { lat: lat + d, lng: lng + d },
+      { lat: lat + d, lng },
+    ];
+    const inner = demand({ place: { kind: 'area', shapes: [square(40.6, 22.9, 0.01)] } });
+    const around = demand({
+      place: { kind: 'area', shapes: [square(40.5, 22.8, 0.02), square(40.7, 23.0, 0.02)] },
+    });
+    expect(demandsAreSimilar(inner, around)).toBe(demandsAreSimilar(around, inner));
+  });
 });
 
 describe('🔴 Δ — το κριτήριο ΟΝΤΩΣ απορρίπτει', () => {

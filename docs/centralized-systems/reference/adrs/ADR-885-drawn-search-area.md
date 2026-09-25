@@ -124,7 +124,8 @@ type GeoArea = GeoCircle | GeoBoundingBox | GeoRegion | GeoDrawnArea;
 - **Αφή σε πραγματική συσκευή** (ο κώδικας είναι Pointer Events + `touch-action:none`, αλλά δεν δοκιμάστηκε με δάχτυλο).
 - Στο κινητό το φύλλο αποτελεσμάτων **δεν** κατεβαίνει αυτόματα σε `peek` κατά τη σχεδίαση — σχεδιάζεται στο ορατό μέρος.
 - Κατά τη σχεδίαση ο τροχός/τσίμπημα **δεν** κάνει zoom (η επικάλυψη πιάνει τα γεγονότα — ίδια συμπεριφορά με Zillow).
-- Επόμενο ADR: λαβές κορυφών μετά τη σχεδίαση · «σχήμα → Ζήτηση/ειδοποίηση» μέσω `DemandAreaOutline`.
+- Επόμενο ADR: λαβές κορυφών μετά τη σχεδίαση.
+- ✅ «σχήμα → Ζήτηση/ειδοποίηση» — **ADR-888**: κουμπί «Αποθήκευση αναζήτησης» στον χάρτη· η ζήτηση κρατά τα **ίδια** `shapes`.
 
 ## 9. Changelog
 
@@ -132,3 +133,4 @@ type GeoArea = GeoCircle | GeoBoundingBox | GeoRegion | GeoDrawnArea;
   επεξεργασία, ✕ ανά σχήμα. jest: `geo-drawn-relation` · `listing-drawn-area` · `geo-freehand` · `listing-drawn-preview` ·
   `useDrawAreaSession` (μεταλλάξεις: even–odd αντί ένωσης ⇒ κόκκινο· χωρίς διάσπαση ⇒ κόκκινο).
 - **2026-09-25** — Επαλήθευση στον browser (§8) · διορθώθηκαν προεπισκόπηση (αγγελίες χωρίς θέση) και `source id changed`.
+- **2026-09-25** — ADR-888: το `GeoDrawnArea.shapes` είναι πλέον **και** η γεωμετρία της ζήτησης (`DemandPlace.area.shapes`)· ο κριτής `areaRelation` κρίνει και τις ειδοποιήσεις. Κουμπί «Αποθήκευση αναζήτησης» στο `MapAreaControl` (`saveButton`).

@@ -108,7 +108,7 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
         identified === null
           ? null
           : { landId: identified.landId, buildingId: identified.buildingId },
-      placeOutline: drawn === null ? null : drawn.outline.map((vertex) => ({ ...vertex })),
+      placeShapes: drawn === null ? [] : drawn.shapes.map((shape) => shape.map((vertex) => ({ ...vertex }))),
       frontageStreetName: frontage?.streetName ?? '',
       frontageAxis: frontage === null ? null : frontage.axis.map((vertex) => ({ ...vertex })),
       frontageSide: frontage?.side ?? 'both',

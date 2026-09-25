@@ -70,6 +70,7 @@ import {
   type PropertyDemand,
 } from '@/types/property-demand';
 
+import { withAreaShapes } from './demand-area';
 import { featuresWithoutLegacyPrice, readStoredSeeks } from './demand-seeks-read';
 import { normalizeDemandLabel } from './demand-title';
 
@@ -191,6 +192,8 @@ export function readStoredDemand(raw: unknown, id: string): StoredDemandRead | n
       id,
       // 🔑 ADR-777 §8.60.15 — πάντα το **νέο** σχήμα στη μνήμη, όποιο κι αν είναι στον δίσκο.
       seeks: seeks.seeks,
+      // 🔑 ADR-888 — πάντα `area.shapes` στη μνήμη· το παλιό `area.outline` γίνεται `[outline]`.
+      place: withAreaShapes(stored.place) as PropertyDemand['place'],
       // ── Οι ΔΗΛΩΜΕΝΕΣ ουδέτερες τιμές (Avro), ποτέ εφευρημένες ──────────────
       features:
         (featuresWithoutLegacyPrice(stored.features) as PropertyDemand['features'] | undefined) ??

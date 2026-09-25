@@ -12,6 +12,17 @@
     }
   },
   "demand": {
+    "saveSearch": {
+      "lead": "We will let you know when a matching property appears.",
+      "notCarried": "These filters are not kept in the saved search: {list}.",
+      "region": "the map area boundary",
+      "saved": "Search saved.",
+      "view": "View",
+      "close": "Close",
+      "moreSettings": "More settings",
+      "signIn": "Sign in to save this search.",
+      "signInLink": "Sign in"
+    },
     "door": {
       "label": "I am looking",
       "hint": "Tell us what you are looking for — and we will tell you what exists nearby, even when nothing matches."
@@ -213,6 +224,9 @@
       "stay-party-invalid": "The party needs at least one adult, and people are counted in whole numbers.",
       "radius-not-positive": "The radius must be greater than zero.",
       "outline-degenerate": "The drawn area encloses nothing.",
+      "area-empty": "Draw at least one shape on the map.",
+      "area-too-many": "Too many shapes for one search — remove one.",
+      "area-too-large": "The shapes have too many corners — simplify them or remove one.",
       "proximity-not-positive": "A neighbourhood distance is zero or negative.",
       "proximity-duplicated": "The same kind of neighbourhood requirement was declared twice.",
       "axis-degenerate": "The frontage axis has no direction — all its points are the same, so there is no “left” or “right”. Draw it again, with a start and an end at different points.",
@@ -346,7 +360,7 @@
     },
     "name": {
       "near": "{radiusKm} km around a point",
-      "area": "Drawn area",
+      "area": "{count, plural, one {Drawn area} other {# drawn areas}}",
       "place": "Specific property",
       "frontage": "Street frontage",
       "frontageNamed": "{street}",
@@ -366,7 +380,7 @@
     "summary": {
       "anywhere": "Anywhere",
       "near": "Within {radiusKm} km",
-      "area": "In a drawn area",
+      "area": "{count, plural, one {In a drawn area} other {In # drawn areas}}",
       "place": "At a specific property",
       "frontage": "{side, select, left {Left side} right {Right side} both {Both sides} other {Side}} of the street",
       "frontageNamed": "{side, select, left {Left side} right {Right side} both {Both sides} other {Side}} of {street}",

@@ -23,7 +23,7 @@
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormSlot, DraftFormText } from '@/lib/forms/draft-form-labels';
-import type { DemandFormBlocker } from '@/lib/demand/demand-form-values';
+import type { DemandFormBlocker } from '@/lib/demand/demand-form-blockers';
 import type { DemandInvariant } from '@/types/property-demand';
 
 const NS = 'property-market';
@@ -58,6 +58,10 @@ export const TEXT_KEYS: Record<DraftFormSlot | DemandFormBlocker | DemandInvaria
   'title-too-long': 'property-market:demand.invariant.title-too-long',
   'radius-not-positive': 'property-market:demand.invariant.radius-not-positive',
   'outline-degenerate': 'property-market:demand.invariant.outline-degenerate',
+  // ADR-888 — η περιοχή με πολλά σχήματα.
+  'area-empty': 'property-market:demand.invariant.area-empty',
+  'area-too-many': 'property-market:demand.invariant.area-too-many',
+  'area-too-large': 'property-market:demand.invariant.area-too-large',
   'axis-degenerate': 'property-market:demand.invariant.axis-degenerate',
   'depth-not-positive': 'property-market:demand.invariant.depth-not-positive',
   'proximity-not-positive': 'property-market:demand.invariant.proximity-not-positive',

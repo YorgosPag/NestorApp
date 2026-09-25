@@ -16,10 +16,10 @@ import {
   FORM_PLACE_KINDS,
   PLACE_KINDS_NOT_IN_FORM,
   demandDraftFrom,
-  demandFormBlockers,
   demandFormSchema,
   type DemandFormValues,
 } from '../demand-form-values';
+import { demandFormBlockers } from '../demand-form-blockers';
 import { demandFormFrom } from '../demand-form-load';
 import { validateDemandForm } from '../demand-form-validation';
 import { DEMAND_LIFE_PRESETS, applyLifePreset } from '../demand-life-presets';
@@ -130,7 +130,7 @@ describe('🔴 Ρ — ζήτηση → φόρμα → ζήτηση είναι Τ
       { kind: 'anywhere' },
       { kind: 'near', center: { lat: 40.64, lng: 22.94 }, radiusKm: 7 },
       { kind: 'place', landId: 'land_1', buildingId: 'pbld_1' },
-      { kind: 'area', outline },
+      { kind: 'area', shapes: [outline] },
       { kind: 'frontage', streetName: 'Εγνατίας', axis, side: 'right', depthMetres: 25 },
     ] as const satisfies readonly PropertyDemand['place'][];
 

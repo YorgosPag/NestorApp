@@ -127,6 +127,11 @@ export interface PlaceMapProps {
   readonly onPick?: (point: GeoPoint) => void;
   /** Κλειστό σχήμα προς εμφάνιση — κτίριο OSM (**ζωντανά**) ή ολοκληρωμένο σχέδιο. */
   readonly outline?: GeoOutline | null;
+  /**
+   * ADR-888 — **ήδη ολοκληρωμένα** σχήματα (ζήτηση με πολλές περιοχές). Ζωγραφίζονται στην **ίδια** πηγή με
+   * το `outline`: ένα στυλ για «κλειστό σχήμα», όσα κι αν είναι.
+   */
+  readonly shapes?: readonly GeoOutline[];
   /** Οι κορυφές που **σχεδιάζονται τώρα** — ανοιχτή γραμμή, όχι σχήμα. */
   readonly trace?: readonly GeoPoint[];
   /** Πινέζα. */
@@ -228,16 +233,19 @@ function halosOf(focus: PlaceFocus | null): GeoOutline | null {
 function PlaceMapLayers({
   halo,
   outline,
+  shapes,
   trace,
   pin,
   focus,
 }: {
   readonly halo: GeoOutline | null;
   readonly outline: GeoOutline | null;
+  readonly shapes: readonly GeoOutline[];
   readonly trace: readonly GeoPoint[];
   readonly pin: GeoPoint | null;
   readonly focus: PlaceFocus | null;
 }): React.ReactElement {
+  const closed = closedShapesGeoJson(shapes, outline);
   return (
     <>
       {halo !== null && (
@@ -247,8 +255,8 @@ function PlaceMapLayers({
         </Source>
       )}
 
-      {outline !== null && outline.length >= 3 && (
-        <Source id={SHAPE_SOURCE} type="geojson" data={outlineToGeoJson(outline)}>
+      {closed !== null && (
+        <Source id={SHAPE_SOURCE} type="geojson" data={closed}>
           <Layer {...SHAPE_FILL} />
           <Layer {...SHAPE_LINE} />
         </Source>
@@ -295,10 +303,23 @@ function PlaceMapLayers({
   );
 }
 
+const NO_SHAPES: readonly GeoOutline[] = [];
+
+/** Όλα τα **κλειστά** σχήματα (`shapes` + `outline`) ως μία συλλογή, ή `null` όταν δεν υπάρχει κανένα. */
+function closedShapesGeoJson(
+  shapes: readonly GeoOutline[],
+  outline: GeoOutline | null,
+): GeoJSON.FeatureCollection<GeoJSON.Polygon> | null {
+  const closed = [...shapes, ...(outline === null ? [] : [outline])].filter((shape) => shape.length >= 3);
+  if (closed.length === 0) return null;
+  return { type: 'FeatureCollection', features: closed.map(outlineToGeoJson) };
+}
+
 export function PlaceMap({
   center,
   onPick,
   outline = null,
+  shapes = NO_SHAPES,
   trace = [],
   pin = null,
   focus = null,
@@ -343,7 +364,7 @@ export function PlaceMap({
         cursor={interactive ? 'crosshair' : 'default'}
         attributionControl={false}
       >
-        <PlaceMapLayers halo={halo} outline={outline} trace={trace} pin={pin} focus={focus} />
+        <PlaceMapLayers halo={halo} outline={outline} shapes={shapes} trace={trace} pin={pin} focus={focus} />
       </Map>
 
       {/*

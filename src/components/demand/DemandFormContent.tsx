@@ -51,7 +51,7 @@ import {
 } from '@/lib/demand/demand-form-values';
 import { validateDemandForm } from '@/lib/demand/demand-form-validation';
 import { demandDetailHref, MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
-import { createDemand, updateDemand } from '@/services/demand/property-demand.service';
+import { createPersonalDemand, updateDemand } from '@/services/demand/property-demand.service';
 import type { PropertyDemand } from '@/types/property-demand';
 import {
   DemandFeaturesField,
@@ -73,22 +73,6 @@ const DemandTitleField = dynamic(
   () => import('./form/DemandTitleField').then((m) => ({ default: m.DemandTitleField })),
   { ssr: false, loading: () => <span aria-hidden className="block min-h-[7rem]" /> },
 );
-
-/**
- * Δημιουργία → η ταυτότητα που γεννήθηκε, ή `null` σε αποτυχία.
- *
- * ⚠️ Το `authorCompanyId: null` σημαίνει **ιδιώτης**. Η απόδοση σε γραφείο
- * (`mandate: 'brokered'`) είναι **άλλη ροή**, με **έγκριση πελάτη** — και ο μεσίτης
- * δεν καταχωρεί από αυτή την οθόνη (ADR-777 §8.15.7 #2).
- */
-async function createNew(draft: DemandDraft, authorUserId: string): Promise<string | null> {
-  const outcome = await createDemand(draft, {
-    authorUserId,
-    authorCompanyId: null,
-    mandate: { kind: 'self' },
-  });
-  return outcome.kind === 'saved' ? outcome.demand.id : null;
-}
 
 /** Επεξεργασία → **η ταυτότητα που ήδη ξέραμε**, ή `null` σε αποτυχία. */
 async function saveExisting(demandId: string, draft: DemandDraft): Promise<string | null> {
@@ -136,7 +120,7 @@ export function DemandFormContent({
     // σταματά να ελέγχει επειδή του το ζητήσαμε.
     const saved =
       editingId === null
-        ? await createNew(validation.draft, user.uid)
+        ? await createPersonalDemand(validation.draft, user.uid)
         : await saveExisting(editingId, validation.draft);
 
     // `invalid` **δεν φτάνει εδώ** — το κουμπί είναι ανενεργό όσο υπάρχουν

@@ -16,7 +16,7 @@
  *
  * 🔑 **Τα κοινά πρωτόγονα έρχονται από τους υπάρχοντες SSoT, ποτέ ξαναγραμμένα:**
  * `readNumericAnswer` (`lib/criteria/`) · `withinRange` (`listing-filters.ts`) ·
- * `distanceMeters` (`lib/geo/geo-distance.ts`) · `isPointInGeoOutline` (`geo-ring.ts`).
+ * `distanceMeters` (`lib/geo/geo-distance.ts`) · `isPointInDemandArea` (`lib/demand/demand-area.ts`, ADR-888).
  * Έτσι ο χάρτης, η λίστα και η μηχανή **δεν μπορούν** να διαφωνήσουν για το ίδιο ερώτημα.
  *
  * ⚠️ **Ο `getEffectivePrice` ΕΦΥΓΕ από αυτό το αρχείο, και είναι διόρθωση** (ADR-777
@@ -33,7 +33,7 @@ import { withinRange } from '@/lib/listings/listing-filters';
 import { readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
 import type { PriceRole } from '@/lib/properties/price-resolver';
 import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
-import { isPointInGeoOutline } from '@/lib/geo/geo-ring';
+import { isPointInDemandArea } from '@/lib/demand/demand-area';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { metresOutsideFrontage, sideOfPolyline } from '@/lib/geo/geo-line';
 import type { LocationProvenance } from '@/lib/location/location-provenance';
@@ -261,7 +261,7 @@ export function spatialOutcome(
   }
 
   if (place.kind === 'area') {
-    const inside = isPointInGeoOutline(position.point, place.outline);
+    const inside = isPointInDemandArea(position.point, place.shapes);
     return { blockers: inside ? [] : ['outside-area'], distanceOverMetres: null };
   }
 

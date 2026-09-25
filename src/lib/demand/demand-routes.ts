@@ -65,3 +65,24 @@ export const DEMAND_DETAIL_ROUTE_BASE = '/demands';
 export function demandDetailHref(demandId: string) {
   return typedHref(`${DEMAND_DETAIL_ROUTE_BASE}/${encodeURIComponent(demandId)}`);
 }
+
+/**
+ * ADR-888 — η παράμετρος που κουβαλά την **αναζήτηση** (το query του χάρτη αποτελεσμάτων) προς τη φόρμα.
+ *
+ * 🔑 **Ο σύνδεσμος είναι ο φορέας, όχι sessionStorage**: ανανέωση, νέα καρτέλα ή αποστολή του συνδέσμου
+ * ανοίγουν την **ίδια** προσυμπληρωμένη φόρμα. Το περιεχόμενο είναι ακριβώς το `serializeListingFilters`.
+ */
+export const NEW_DEMAND_FROM_SEARCH_PARAM = 'from' as const;
+
+/** «Περισσότερες ρυθμίσεις» από το παράθυρο αποθήκευσης — η φόρμα, προσυμπληρωμένη από την αναζήτηση. */
+export function newDemandFromSearchHref(searchQuery: string) {
+  const params = new URLSearchParams({ [NEW_DEMAND_FROM_SEARCH_PARAM]: searchQuery });
+  return typedHref(`${NEW_DEMAND_ROUTE}?${params.toString()}`);
+}
+
+/**
+ * ADR-888 — «άνοιξε το παράθυρο αποθήκευσης» στη σελίδα αποτελεσμάτων. Επιβιώνει τη διαδρομή σύνδεσης
+ * (`loginHref` κρατά το query), ώστε ο ανώνυμος που πάτησε «Αποθήκευση» να επιστρέψει **με ανοιχτό** το
+ * παράθυρο. Δεν είναι φίλτρο: αφαιρείται πριν η αναζήτηση γίνει ζήτηση.
+ */
+export const SAVE_SEARCH_INTENT_PARAM = 'save' as const;

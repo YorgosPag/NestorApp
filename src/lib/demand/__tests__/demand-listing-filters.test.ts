@@ -72,6 +72,21 @@ const SQUARE = [
   { lat: 40.65, lng: 22.93 },
 ];
 
+const SQUARE2 = [
+  { lat: 40.68, lng: 22.98 },
+  { lat: 40.68, lng: 23.0 },
+  { lat: 40.7, lng: 23.0 },
+  { lat: 40.7, lng: 22.98 },
+];
+
+/** Αυτοτεμνόμενο («παπιγιόν») — ο χάρτης το απορρίπτει (`outlineDefect`)· υπάρχει μόνο σε παλιά έγγραφα. */
+const BOWTIE = [
+  { lat: 40.63, lng: 22.93 },
+  { lat: 40.65, lng: 22.95 },
+  { lat: 40.63, lng: 22.95 },
+  { lat: 40.65, lng: 22.93 },
+];
+
 // =============================================================================
 // Τ — Ο ΑΞΟΝΑΣ ΣΥΝΑΛΛΑΓΗΣ ΕΙΝΑΙ ΤΑΥΤΟΤΗΤΑ
 // =============================================================================
@@ -99,11 +114,19 @@ describe('🔴 Χ — ο κύκλος ΠΕΡΙΚΛΕΙΕΙ το πολύγωνο
     expect(filters.near).toEqual({ center: { lat: 40.6, lng: 22.9 }, radiusKm: 3 });
   });
 
-  it('🔑 `area` → κύκλος που περιέχει ΚΑΘΕ κορυφή του πολυγώνου', () => {
-    const filters = listingFiltersFromDemand(demand({ place: { kind: 'area', outline: SQUARE } }));
-    expect(filters.near).not.toBeNull();
+  it('🔑 ADR-888 — `area` → τα ΙΔΙΑ σχήματα ως `?draw=`, όχι κύκλος', () => {
+    const filters = listingFiltersFromDemand(demand({ place: { kind: 'area', shapes: [SQUARE, SQUARE2] } }));
+    expect(filters.near).toEqual({
+      shapes: [SQUARE, SQUARE2],
+      bbox: { south: 40.63, west: 22.93, north: 40.7, east: 23.0 },
+    });
+  });
 
-    const { center, radiusKm } = filters.near!;
+  it('⚠️ παλιό σχήμα που ο χάρτης απορρίπτει → κύκλος που περιέχει ΚΑΘΕ κορυφή', () => {
+    const filters = listingFiltersFromDemand(demand({ place: { kind: 'area', shapes: [BOWTIE] } }));
+    const near = filters.near;
+    if (near === null || !('radiusKm' in near)) throw new Error('αναμενόταν κύκλος');
+    const { center, radiusKm } = near;
     // Δεύτερη φωνή: **σφαιρικός νόμος συνημιτόνων**, όχι haversine — άλλος τύπος,
     // ίδια τάξη ακρίβειας. Δεν καλείται ξανά η `geoOutlineBoundingCircle` για να
     // «επιβεβαιώσει τον εαυτό της».
@@ -120,7 +143,7 @@ describe('🔴 Χ — ο κύκλος ΠΕΡΙΚΛΕΙΕΙ το πολύγωνο
     // αποστάσεων που ξαναμετρώνται)· αυτό που δοκιμάζεται είναι ότι **δεν διάλεξε
     // λάθος κέντρο ή λάθος κορυφή**, και για αυτό το χιλιοστό είναι έξι τάξεις
     // μεγέθους αυστηρότερο απ' όσο χρειάζεται.
-    for (const vertex of SQUARE) {
+    for (const vertex of BOWTIE) {
       expect(greatCircleKm(center, vertex)).toBeLessThanOrEqual(radiusKm + 1e-6);
     }
   });
@@ -177,7 +200,7 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
 
   const CASES: ReadonlyArray<readonly [string, Partial<PropertyDemand>]> = [
     ['timing', { timing: { kind: 'whenever' } }],
-    ['area-outline', { place: { kind: 'area', outline: SQUARE } }],
+    ['area-outline', { place: { kind: 'area', shapes: [BOWTIE] } }],
     [
       'frontage-axis',
       {

@@ -26,6 +26,11 @@
     "full": "You have reached the shape limit.",
     "rejected": "That shape does not enclose an area — try again.",
     "edit": "Edit",
-    "removeShape": "Remove shape {index}"
+    "removeShape": "Remove shape {index}",
+    "addShape": "New shape"
+  },
+  "saveSearch": {
+    "button": "Save search",
+    "saved": "Saved search"
   }
 }

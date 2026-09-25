@@ -113,6 +113,7 @@ import type { OfferKind } from '@/types/property-offers';
 import { isLandownerShareInRange, isWholePetCount, isWholeStayCount } from '@/lib/offers/offer-amount';
 import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
 import { isDemandLabelTooLong } from '@/lib/demand/demand-title';
+import { demandAreaInvariants } from '@/lib/demand/demand-area';
 import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
 
 // =============================================================================
@@ -154,8 +155,12 @@ export type DemandPlace =
    * ⚠️ Προέλευση **πάντα** ανθρώπινη ⇒ επιτρέπεται αποθήκευση σχήματος. Περίγραμμα
    * **αντλημένο από OSM δεν επιτρέπεται να καταλήξει εδώ** (ODbL, SPEC-777A §13.4):
    * ο τύπος δεν μπορεί να το εμποδίσει, ο **γραφέας** οφείλει.
+   *
+   * 🔑 **ADR-888 — ΠΟΛΛΑ σχήματα, η ΙΔΙΑ γεωμετρία με το `GeoDrawnArea.shapes` (ADR-885).** Μέσα σε
+   * **οποιοδήποτε** σχήμα = μέσα (ένωση). Κρίσεις και όρια: `lib/demand/demand-area.ts`. Παλιά έγγραφα
+   * με `outline` διαβάζονται ως `shapes:[outline]` στο σύνορο ανάγνωσης.
    */
-  | { readonly kind: 'area'; readonly outline: GeoOutline }
+  | { readonly kind: 'area'; readonly shapes: readonly GeoOutline[] }
   /**
    * **Ζ3/Ζ5** — «*αυτή η πολυκατοικία*» / «*το κατάστημα στη γωνία*».
    *
@@ -941,6 +946,12 @@ export const DEMAND_INVARIANTS = [
   'radius-not-positive',
   /** Πολύγωνο με λιγότερες από 3 κορυφές — δεν περικλείει τίποτα. */
   'outline-degenerate',
+  /** ADR-888 — «σχεδιασμένη περιοχή» χωρίς κανένα σχήμα. */
+  'area-empty',
+  /** ADR-888 — περισσότερα σχήματα από όσα χωρά ο χάρτης (`MAX_DRAWN_SHAPES`). */
+  'area-too-many',
+  /** ADR-888 — τα σχήματα δεν χωρούν στον σύνδεσμο του χάρτη (`MAX_DRAWN_URL_CHARS`). */
+  'area-too-large',
   /**
    * **Ζ4 δομημένη** — άξονας με **όλες** τις κορυφές στο ίδιο σημείο.
    *
@@ -997,7 +1008,7 @@ function rangeInverted(min: number | null, max: number | null): boolean {
 /** Οι παραβιάσεις εγκυρότητας του χωρικού άξονα. */
 function placeInvariants(place: DemandPlace): DemandInvariant[] {
   if (place.kind === 'near' && !(place.radiusKm > 0)) return ['radius-not-positive'];
-  if (place.kind === 'area' && place.outline.length < 3) return ['outline-degenerate'];
+  if (place.kind === 'area') return demandAreaInvariants(place.shapes);
   if (place.kind === 'frontage') return frontageInvariants(place);
   return [];
 }

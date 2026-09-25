@@ -61,7 +61,7 @@ describe('demandAutoName — όνομα από τα κριτήρια, ποτέ �
   });
 
   it.each([
-    [{ kind: 'area', outline: [{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }, { lat: 1, lng: 1 }] }, 'Σχεδιασμένη περιοχή'],
+    [{ kind: 'area', shapes: [[{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }, { lat: 1, lng: 1 }]] }, 'Σχεδιασμένη περιοχή'],
     [{ kind: 'place', landId: 'land_1', buildingId: null }, 'Συγκεκριμένο ακίνητο'],
     [{ kind: 'frontage', streetName: 'Εγνατία', axis: [{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }], side: 'both', depthMetres: 40 }, 'Οδός Εγνατία'],
     [{ kind: 'frontage', streetName: null, axis: [{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }], side: 'left', depthMetres: 40 }, 'Πρόσοψη σε δρόμο'],
@@ -72,7 +72,7 @@ describe('demandAutoName — όνομα από τα κριτήρια, ποτέ �
   it('🔴 ετικέτα τόπου ΔΕΝ λέγεται όταν ο τόπος δεν είναι `near` (θα ψευδόταν)', () => {
     const name = demandAutoName(
       demand({
-        place: { kind: 'area', outline: [{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }, { lat: 1, lng: 1 }] },
+        place: { kind: 'area', shapes: [[{ lat: 0, lng: 0 }, { lat: 0, lng: 1 }, { lat: 1, lng: 1 }]] },
         placeLabel: 'Καλαμαριά',
       }),
       tEl,

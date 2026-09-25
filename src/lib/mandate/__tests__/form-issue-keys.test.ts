@@ -48,7 +48,7 @@ import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 import { TEXT_KEYS as OFFER_TEXT_KEYS } from '@/components/owner-property/offer-form-labels';
 import { TEXT_KEYS as DEMAND_TEXT_KEYS } from '@/components/demand/demand-form-labels';
 import { DRAFT_FORM_SLOTS } from '@/lib/forms/draft-form-labels';
-import { DEMAND_FORM_BLOCKERS } from '@/lib/demand/demand-form-values';
+import { DEMAND_FORM_BLOCKERS } from '@/lib/demand/demand-form-blockers';
 import { DEMAND_INVARIANTS } from '@/types/property-demand';
 // ⚠️ Το κλειστό σύνολο εισάγεται από τη **ΜΙΑ** πηγή του (SSoT): μια αντιγραφή της
 //    λίστας εδώ θα έμενε πράσινη ενώ ο κώδικας θα είχε αποκτήσει τέταρτο λόγο.

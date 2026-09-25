@@ -36,12 +36,11 @@ import {
 } from '@/types/property-demand';
 import {
   demandDraftFrom,
-  demandFormBlockers,
   demandFormSchema,
   type DemandDraft,
-  type DemandFormBlocker,
   type DemandFormValues,
 } from './demand-form-values';
+import { demandFormBlockers, type DemandFormBlocker } from './demand-form-blockers';
 
 /**
  * Η πλήρης εικόνα της φόρμας ζήτησης.

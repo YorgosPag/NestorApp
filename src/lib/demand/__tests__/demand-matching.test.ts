@@ -111,12 +111,12 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
     demand({
       place: {
         kind: 'area',
-        outline: [
+        shapes: [[
           { lat: 40.63, lng: 22.93 },
           { lat: 40.63, lng: 22.95 },
           { lat: 40.65, lng: 22.95 },
           { lat: 40.65, lng: 22.93 },
-        ],
+        ]],
       },
     }),
     demand({ place: { kind: 'place', landId: 'land_1', buildingId: null } }),
@@ -307,12 +307,12 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
       demand({
         place: {
           kind: 'area',
-          outline: [
+          shapes: [[
             { lat: 37.9, lng: 23.7 },
             { lat: 37.9, lng: 23.8 },
             { lat: 38.0, lng: 23.8 },
             { lat: 38.0, lng: 23.7 },
-          ],
+          ]],
         },
       }),
       facts(),

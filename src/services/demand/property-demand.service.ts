@@ -44,8 +44,10 @@ import {
   demandInvariantViolations,
   type DemandInvariant,
   type DemandLifecycle,
+  type DemandPlace,
   type PropertyDemand,
 } from '@/types/property-demand';
+import { demandPlaceForStorage } from '@/lib/demand/demand-area';
 import type { DemandDraft } from '@/lib/demand/demand-form-values';
 import { isDemandLabelTooLong, normalizeDemandLabel } from '@/lib/demand/demand-title';
 
@@ -121,11 +123,23 @@ export async function createDemand(
   };
 
   try {
-    await setDoc(doc(db, COLLECTIONS.PROPERTY_DEMANDS, demand.id), demand);
+    await setDoc(doc(db, COLLECTIONS.PROPERTY_DEMANDS, demand.id), forStorage(demand));
     return { kind: 'saved', demand };
   } catch (error) {
     return failure('Η ζήτηση δεν αποθηκεύτηκε', { demandId: demand.id }, error);
   }
+}
+
+/**
+ * **Νέα ζήτηση του ίδιου του ανθρώπου** → η ταυτότητα που γεννήθηκε, ή `null` σε αποτυχία.
+ *
+ * ⚠️ Το `authorCompanyId: null` σημαίνει **ιδιώτης**. Η απόδοση σε γραφείο (`mandate: 'brokered'`) είναι
+ * **άλλη ροή**, με **έγκριση πελάτη** (ADR-777 §8.15.7 #2). Ένα σημείο για τις **δύο** πόρτες δημιουργίας:
+ * τη φόρμα και το «Αποθήκευση αναζήτησης» του χάρτη (ADR-888).
+ */
+export async function createPersonalDemand(draft: DemandDraft, authorUserId: string): Promise<string | null> {
+  const outcome = await createDemand(draft, { authorUserId, authorCompanyId: null, mandate: { kind: 'self' } });
+  return outcome.kind === 'saved' ? outcome.demand.id : null;
 }
 
 // =============================================================================
@@ -149,7 +163,7 @@ export async function updateDemand(
 
   try {
     await updateDoc(doc(db, COLLECTIONS.PROPERTY_DEMANDS, demandId), {
-      ...clean,
+      ...forStorage(clean),
       updatedAt: nowISO(),
     });
     // ⚠️ **Δεν επιστρέφεται έγγραφο, επίτηδες.** Το `updateDoc` δεν διαβάζει πίσω, και
@@ -252,6 +266,14 @@ export async function renameDemand(demandId: string, title: string | null): Prom
   } catch (error) {
     return failure('Η ζήτηση δεν μετονομάστηκε', { demandId }, error);
   }
+}
+
+/**
+ * ADR-888 — το σχήμα **του εγγράφου**: η περιοχή τυλίγεται (`{ring}`), γιατί το Firestore δεν δέχεται πίνακα μέσα
+ * σε πίνακα. Ο αναγνώστης (`readStoredDemand` → `withAreaShapes`) το ξετυλίγει. Ένα σημείο εγγραφής, όχι δύο.
+ */
+function forStorage<T extends { readonly place: DemandPlace }>(value: T) {
+  return { ...value, place: demandPlaceForStorage(value.place) };
 }
 
 /** Η **ίδια** κανονικοποίηση ονόματος/ετικέτας με το σύνορο ανάγνωσης — η πύλη δεν εμπιστεύεται φόρμα. */

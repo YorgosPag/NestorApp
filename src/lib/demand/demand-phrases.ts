@@ -45,7 +45,7 @@ export function demandPlacePhrase(t: PriceLabelT, place: DemandPlace): string {
   return matchDemandPlace<string>(place, {
     anywhere: () => t(`${K}.anywhere`),
     near: ({ radiusKm }) => t(`${K}.near`, { radiusKm }),
-    area: () => t(`${K}.area`),
+    area: ({ shapes }) => t(`${K}.area`, { count: shapes.length }),
     place: () => t(`${K}.place`),
     // 🔑 **ΔΥΟ ΚΛΕΙΔΙΑ, ΟΧΙ ΕΝΑ ΜΕ ΚΕΝΗ ΠΑΡΑΜΕΤΡΟ.** Το ICU `select` **δεν** ξεχωρίζει το κενό
     // string ως περίπτωση, οπότε ένα μοναδικό κλειδί θα απαιτούσε από **εδώ** να χτίσει την ουρά

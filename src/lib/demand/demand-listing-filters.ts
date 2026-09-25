@@ -63,7 +63,8 @@ import { priceAxisOfSeek } from '@/lib/criteria/listing-criterion-reading';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { geoOutlineBoundingCircle } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
-import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoDrawnArea, GeoPoint } from '@/types/geo/coordinates';
+import { demandAreaAsDrawn } from './demand-area';
 import {
   boundedPricedSeeks,
   isExchangeSeek,
@@ -94,7 +95,10 @@ import {
 export const DEMAND_AXES_LOST_IN_FILTERS = [
   /** **Ζ2/Ζ3** — τα φίλτρα ρωτούν «τι υπάρχει», ποτέ «τι θα υπάρχει τότε». */
   'timing',
-  /** **Ζ4** — το σχήμα γίνεται κύκλος· ο κύκλος περισσεύει. */
+  /**
+   * **Ζ4** — ADR-888: η περιοχή ταξιδεύει πλέον **αυτούσια** ως `?draw=` και **δεν** χάνεται. Μένει μόνο για
+   * παλιό έγγραφο με σχήμα που ο χάρτης απορρίπτει (`outlineDefect`): τότε γίνεται κύκλος και το λέμε.
+   */
   'area-outline',
   /** **Ζ3/Ζ5** — «αυτό το κτίριο». Καμία παράμετρος διεύθυνσης δεν το εκφράζει. */
   'place-identity',
@@ -174,7 +178,7 @@ export function axesLostProjectingDemand(
   const lost: DemandAxisLostInFilters[] = [];
 
   if (demand.timing.kind !== 'now') lost.push('timing');
-  if (demand.place.kind === 'area') lost.push('area-outline');
+  if (demand.place.kind === 'area' && demandAreaAsDrawn(demand.place.shapes) === null) lost.push('area-outline');
   if (demand.place.kind === 'frontage') lost.push('frontage-axis');
   if (demand.place.kind === 'place') lost.push('place-identity');
   // ✅ Ο **όροφος** δεν χάνεται πια — ταξιδεύει ως κριτήριο. Δες τη σημείωση πάνω από
@@ -203,7 +207,7 @@ export function axesLostProjectingDemand(
  * Τώρα και οι δύο πλευρές μιλούν το ίδιο {@link GeoCircle} του Shared Kernel, και η
  * εξάρτηση δείχνει προς **τη γεωμετρία**, όχι προς τις αγγελίες.
  */
-type ProjectedGeo = GeoCircle | null;
+type ProjectedGeo = GeoCircle | GeoDrawnArea | null;
 
 /** Απόσταση σε μέτρα, μέσω του **μοναδικού** SSoT απόστασης του έργου. */
 function metresBetween(a: GeoPoint, b: GeoPoint): number {
@@ -221,7 +225,7 @@ function metresBetween(a: GeoPoint, b: GeoPoint): number {
  * ακριβώς η σιωπηλή απώλεια που το συμβόλαιο «υπερσύνολο» απαγορεύει. Η ταυτότητα του
  * ακινήτου κρίνεται στη **μηχανή**, όπου η λίστα απωλειών τη στέλνει.
  *
- * 🔑 **Το `frontage` γίνεται κύκλος, όπως το `area` — και ο κύκλος πρέπει να
+ * 🔑 **Το `frontage` γίνεται κύκλος (το `area` όχι πια — ADR-888) — και ο κύκλος πρέπει να
  * ΠΕΡΙΕΧΕΙ ολόκληρο το μέτωπο, όχι μόνο τον άξονα.** Ο περικλείων κύκλος των κορυφών
  * του άξονα ({@link geoOutlineBoundingCircle}) αγνοεί το `depthMetres` — ένα σημείο
  * ακριβώς πάνω στο επιτρεπτό βάθος, δίπλα σε μια άκρη του τμήματος, θα έμενε **εκτός**
@@ -236,7 +240,11 @@ function projectPlace(place: DemandPlace): ProjectedGeo {
     case 'near':
       return { center: place.center, radiusKm: place.radiusKm };
     case 'area':
-      return geoOutlineBoundingCircle(place.outline, metresBetween);
+      // ADR-888 — τα ΙΔΙΑ σχήματα με τον χάρτη· κύκλος μόνο όταν ο χάρτης απορρίπτει σχήμα (δηλωμένη απώλεια).
+      return (
+        demandAreaAsDrawn(place.shapes) ??
+        geoOutlineBoundingCircle(place.shapes.flat(), metresBetween)
+      );
     case 'frontage': {
       // Ο άξονας (`GeoPolyline`) είναι δομικά ένας δακτύλιος με ≥2 κορυφές —
       // `geoOutlineBoundingCircle` δεν ξέρει τη διαφορά, και δεν τη χρειάζεται: εδώ
