@@ -26,8 +26,16 @@
 
 import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeForSearch, transliterateGreekToLatin } from '@/utils/greek-text';
 import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex, type AdminArea } from './admin-area-index-file';
+import {
+  LEVEL_WORDS,
+  formsOf,
+  greekWords,
+  nameWordForms,
+  nameWords,
+  sameWordAny,
+  wordMatches,
+} from './admin-area-words';
 
 const logger = createModuleLogger('admin-area-search');
 
@@ -47,82 +55,20 @@ export interface AdminAreaIndex {
   readonly entries: readonly SearchEntry[];
 }
 
-/**
- * Λέξεις που **ονομάζουν βαθμίδα**, όχι τόπο — ποτέ δεν ψάχνονται ως όνομα.
- * Η τιμή είναι η βαθμίδα που υπονοούν (`null` = μέρος σύνθετου όρου, χωρίς δική του).
- */
-const LEVEL_WORDS: ReadonlyMap<string, number | null> = new Map([
-  ['περιφερεια', 3], ['περιφερειασ', 3], ['perifereia', 3], ['region', 3],
-  ['περιφερειακη', 4], ['νομοσ', 4], ['νομου', 4], ['πε', 4], ['nomos', 4],
-  ['δημοσ', 5], ['δημου', 5], ['dimos', 5], ['dhmos', 5], ['municipality', 5],
-  ['δημοτικη', 6], ['δε', 6], ['ενοτητα', null], ['ενοτητασ', null],
-  ['κοινοτητα', 7], ['τοπικη', 7], ['κοινοτητασ', 7], ['koinotita', 7],
-]);
-
-/**
- * Ελληνικό κείμενο → λέξεις σύγκρισης: χωρίς τόνους, πεζά, `ς`→`σ`, χωρίς στίξη.
- * ⚠️ Η παύλα **χωρίζει** λέξεις *πριν* την κανονικοποίηση — το `normalizeForSearch` τη
- * σβήνει, και το «ΕΛΕΥΘΕΡΙΟΥ-ΚΟΡΔΕΛΙΟΥ» θα γινόταν **μία** λέξη που δεν ταιριάζει ποτέ.
- */
-function greekWords(text: string): string[] {
-  return normalizeForSearch(text.replace(/[-–—/]/g, ' '))
-    .replace(/ς/g, 'σ')
-    .split(/[\s,·]+/)
-    .filter((word) => word.length > 0);
-}
-
-/**
- * **Φωνητικό δίπλωμα λατινικών** — δύο διαφορετικές γραφές του ίδιου ήχου γίνονται ίδιες.
- * ⚠️ Εφαρμόζεται **και στις δύο πλευρές**: η μεταγραφή της πηγής και το greeklish του
- * ανθρώπου διπλώνονται με τον **ίδιο** κανόνα, αλλιώς δεν συναντιούνται ποτέ.
- */
-function foldLatin(word: string): string {
-  return word
-    .replace(/ch/g, 'h')
-    .replace(/ph/g, 'f')
-    .replace(/ks/g, 'x')
-    .replace(/ou/g, 'u')
-    .replace(/e[uf]/g, 'ev')
-    .replace(/a[uf]/g, 'av')
-    .replace(/[eo]i/g, 'i')
-    .replace(/ai/g, 'e')
-    .replace(/y/g, 'i')
-    .replace(/w/g, 'o')
-    .replace(/(.)\1/g, '$1');
-}
-
-/** Όλες οι μορφές μιας λέξης που αξίζει να συγκριθούν: η ελληνική και η λατινική της. */
-function formsOf(word: string): string[] {
-  const latin = foldLatin(transliterateGreekToLatin(word));
-  return latin === word ? [word] : [word, latin];
-}
-
-function nameWordForms(name: string): string[][] {
-  return greekWords(name)
-    .filter((word) => !LEVEL_WORDS.has(word))
-    .map(formsOf);
-}
-
-function nameWords(name: string): string[] {
-  return nameWordForms(name).flat();
-}
-
-/** Ταιριάζει η λέξη του ανθρώπου σε λέξη της πηγής; Πρόθεμα, ή πρόθεμα **θέματος** (κλίση). */
-function wordMatches(asked: string, known: string): boolean {
-  if (known.startsWith(asked)) return true;
-  return asked.length >= 5 && known.startsWith(asked.slice(0, -2));
+function lineageWords(area: AdminArea, areas: ReadonlyMap<string, AdminArea>): string[] {
+  const lineage: string[] = [];
+  let parent = area.parentId === null ? undefined : areas.get(area.parentId);
+  for (let guard = 8; parent !== undefined && guard > 0; guard -= 1) {
+    lineage.push(...nameWords(parent.name));
+    parent = parent.parentId === null ? undefined : areas.get(parent.parentId);
+  }
+  return lineage;
 }
 
 function buildEntries(areas: ReadonlyMap<string, AdminArea>): SearchEntry[] {
   return [...areas.values()].map((area) => {
-    const lineage: string[] = [];
-    let parent = area.parentId === null ? undefined : areas.get(area.parentId);
-    for (let guard = 8; parent !== undefined && guard > 0; guard -= 1) {
-      lineage.push(...nameWords(parent.name));
-      parent = parent.parentId === null ? undefined : areas.get(parent.parentId);
-    }
     const ownWords = nameWordForms(area.name);
-    return { area, own: ownWords.flat(), ownWords, lineage };
+    return { area, own: ownWords.flat(), ownWords, lineage: lineageWords(area, areas) };
   });
 }
 
@@ -167,8 +113,12 @@ function parseQuery(query: string): ParsedQuery {
 
 /** Βάρη της κατάταξης — δες την κεφαλίδα για τον λόγο καθενός. */
 const WEIGHT = { covered: 100, own: 20, level: 40, tightness: 0.5 } as const;
-/** Όταν δεν δηλώθηκε βαθμίδα: ο δήμος είναι αυτό που εννοεί συνήθως ο κόσμος (πρότυπο Zillow: πόλη πρώτα). */
-const LEVEL_PREFERENCE: Readonly<Record<number, number>> = { 5: 4, 6: 3, 4: 2, 3: 1, 7: 0 };
+/**
+ * Όταν δεν δηλώθηκε βαθμίδα: ο δήμος είναι αυτό που εννοεί συνήθως ο κόσμος (πρότυπο Zillow: πόλη πρώτα).
+ * Ο **οικισμός τελευταίος** (§5.10): «Λαγκαδάς» είναι ο Δήμος, όχι το ομώνυμο χωριό — όποιος θέλει το
+ * χωριό το βρίσκει στη λίστα, ή γράφει «οικισμός».
+ */
+const LEVEL_PREFERENCE: Readonly<Record<number, number>> = { 5: 4, 6: 3, 4: 2, 3: 1, 7: 0, 8: -1 };
 
 function score(entry: SearchEntry, query: ParsedQuery): number | null {
   const has = (pool: readonly string[], forms: readonly string[]) =>
@@ -232,19 +182,6 @@ const NO_AREA: TypedAreaResolution = { kind: 'none' };
 
 /** Αριθμός στο κείμενο ⇒ οδός με αριθμό ή Τ.Κ. — δουλειά του geocoder, όχι των ορίων. */
 const ADDRESS_MARK = /\d/;
-
-/**
- * **Ίδια λέξη**, όχι πρόθεμα: ίση, ή ίδιο θέμα με διαφορά κατάληξης ≤ 2 γράμματα
- * (Θεσσαλονίκη↔Θεσσαλονίκης, Κορδελιό↔Κορδελιού). Το «Θεσ» **δεν** είναι Θεσσαλονίκη.
- */
-function sameWord(asked: string, known: string): boolean {
-  if (asked === known) return true;
-  return asked.length >= 5 && Math.abs(known.length - asked.length) <= 2 && known.startsWith(asked.slice(0, -2));
-}
-
-function sameWordAny(asked: readonly string[], known: readonly string[]): boolean {
-  return asked.some((form) => known.some((word) => sameWord(form, word)));
-}
 
 /** Κάθε λέξη του ονόματος ειπώθηκε, και κάθε λέξη του ανθρώπου είναι του ονόματος **ή** γονέα του. */
 function namesExactly(entry: SearchEntry, query: ParsedQuery): boolean {

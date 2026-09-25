@@ -39,7 +39,15 @@
 
 import { distanceMeters, EARTH_RADIUS_METERS } from '@/lib/geo/geo-distance';
 import { geoRingsNearestEdgeMetres, isPointInGeoRings } from '@/lib/geo/geo-ring';
-import type { GeoArea, GeoBoundingBox, GeoCircle, GeoPoint, GeoRegion } from '@/types/geo/coordinates';
+import type {
+  GeoArea,
+  GeoBoundingBox,
+  GeoCircle,
+  GeoDrawnArea,
+  GeoOutline,
+  GeoPoint,
+  GeoRegion,
+} from '@/types/geo/coordinates';
 
 /**
  * **ΝΑΙ · ΙΣΩΣ · ΟΧΙ** — η σχέση ενός *υποκειμένου* προς μια *περιοχή ερωτήματος*.
@@ -53,7 +61,7 @@ import type { GeoArea, GeoBoundingBox, GeoCircle, GeoPoint, GeoRegion } from '@/
  */
 export type AreaRelation = 'within' | 'intersects' | 'disjoint';
 
-/** Ορθογώνιο ή κύκλος; Διάκριση με **παρουσία πεδίου** — τα τρία μέλη δεν μοιράζονται κανένα. */
+/** Ορθογώνιο; Διάκριση με **παρουσία πεδίου** — τα τέσσερα μέλη δεν μοιράζονται κανένα. */
 export function isBoundingBox(area: GeoArea): area is GeoBoundingBox {
   return 'south' in area;
 }
@@ -61,6 +69,34 @@ export function isBoundingBox(area: GeoArea): area is GeoBoundingBox {
 /** Όριο διοικητικής περιοχής (ADR-883); Το μόνο μέλος με δακτυλίους. */
 export function isGeoRegion(area: GeoArea): area is GeoRegion {
   return 'rings' in area;
+}
+
+/** Σχεδιασμένη περιοχή (ADR-885); Το μόνο μέλος με σχήματα. */
+export function isGeoDrawnArea(area: GeoArea): area is GeoDrawnArea {
+  return 'shapes' in area;
+}
+
+/** Ένας χειριστής ανά μέλος της {@link GeoArea} — κανένα δεν παραλείπεται. */
+export interface GeoAreaCases<T> {
+  readonly circle: (area: GeoCircle) => T;
+  readonly box: (area: GeoBoundingBox) => T;
+  readonly region: (area: GeoRegion) => T;
+  readonly drawn: (area: GeoDrawnArea) => T;
+}
+
+/**
+ * **Ποιο από τα τέσσερα;** — ο ΕΝΑΣ εξαντλητικός διακριτής *(ADR-885)*.
+ *
+ * 🔴 **Υπάρχει επειδή το «αν δεν είναι ορθογώνιο, είναι κύκλος» ΗΤΑΝ ΑΛΗΘΕΣ ΜΕΧΡΙ ΝΑ ΜΗΝ
+ * ΕΙΝΑΙ.** Με δύο μέλη η άρνηση του ενός ήταν το άλλο· με τέσσερα, ένας τέτοιος κλάδος
+ * στέλνει **σιωπηλά** όριο ή σχέδιο στη γεωμετρία του κύκλου. Εδώ ο μεταγλωττιστής
+ * απαιτεί χειριστή για **κάθε** μέλος — και ένα πέμπτο μέλος θα σπάσει κάθε καταναλωτή.
+ */
+export function matchGeoArea<T>(area: GeoArea, cases: GeoAreaCases<T>): T {
+  if (isBoundingBox(area)) return cases.box(area);
+  if (isGeoRegion(area)) return cases.region(area);
+  if (isGeoDrawnArea(area)) return cases.drawn(area);
+  return cases.circle(area);
 }
 
 /** Το **πλησιέστερο** σημείο ενός ορθογωνίου προς ένα σημείο — clamp σε κάθε άξονα. */
@@ -177,8 +213,9 @@ function boxToBox(subject: GeoBoundingBox, query: GeoBoundingBox): AreaRelation 
 export function areaRelation(subject: GeoArea, query: GeoArea): AreaRelation {
   // 🔑 Όριο ως **υποκείμενο** ⇒ το ορθογώνιό του, που το περιέχει: `within`/`disjoint`
   //    του ορθογωνίου ισχύουν **και** για το όριο· το `intersects` σημαίνει «ίσως».
-  const known = isGeoRegion(subject) ? subject.bbox : subject;
+  const known = isGeoRegion(subject) || isGeoDrawnArea(subject) ? subject.bbox : subject;
   if (isGeoRegion(query)) return areaToRegion(known, query);
+  if (isGeoDrawnArea(query)) return areaToDrawn(known, query);
   if (isBoundingBox(known)) {
     return isBoundingBox(query) ? boxToBox(known, query) : boxToCircle(known, query);
   }
@@ -206,11 +243,15 @@ export function areaRelation(subject: GeoArea, query: GeoArea): AreaRelation {
  * ⚠️ Το «μέσα;» στο απλοποιημένο σχήμα είναι αξιόπιστο **μόνο** όταν `d ≥ ανοχή` — και η
  * συνθήκη το εξασφαλίζει, αφού `ακτίνα ≥ 0`.
  */
-function circleToRegion(subject: GeoCircle, query: GeoRegion): AreaRelation {
-  const marginM = subject.radiusKm * 1000 + query.toleranceM;
-  const edgeM = geoRingsNearestEdgeMetres(subject.center, query.rings);
+function circleToRings(
+  subject: GeoCircle,
+  rings: readonly GeoOutline[],
+  toleranceM: number
+): AreaRelation {
+  const marginM = subject.radiusKm * 1000 + toleranceM;
+  const edgeM = geoRingsNearestEdgeMetres(subject.center, rings);
   if (edgeM < marginM) return 'intersects';
-  return isPointInGeoRings(subject.center, query.rings) ? 'within' : 'disjoint';
+  return isPointInGeoRings(subject.center, rings) ? 'within' : 'disjoint';
 }
 
 /**
@@ -221,7 +262,66 @@ function circleToRegion(subject: GeoCircle, query: GeoRegion): AreaRelation {
 function areaToRegion(subject: GeoCircle | GeoBoundingBox, query: GeoRegion): AreaRelation {
   const subjectBox = isBoundingBox(subject) ? subject : areaBoundingBox(subject);
   if (boxToBox(subjectBox, query.bbox) === 'disjoint') return 'disjoint';
-  return circleToRegion(isBoundingBox(subject) ? boxBoundingCircle(subject) : subject, query);
+  return circleToRings(asCircle(subject), query.rings, query.toleranceM);
+}
+
+/** Ορθογώνιο ⇒ ο περιγεγραμμένος κύκλος του· κύκλος ⇒ ο ίδιος. */
+function asCircle(subject: GeoCircle | GeoBoundingBox): GeoCircle {
+  return isBoundingBox(subject) ? boxBoundingCircle(subject) : subject;
+}
+
+// ============================================================================
+// ΚΥΚΛΟΣ ΠΡΟΣ ΣΧΕΔΙΑΣΜΕΝΗ ΠΕΡΙΟΧΗ — ΕΝΩΣΗ, ΟΧΙ ΠΕΡΙΤΤΟ ΠΛΗΘΟΣ (ADR-885)
+// ============================================================================
+
+/** Η σχεδιασμένη περιοχή **είναι** ο ορισμός της — καμία απόκλιση από «αληθινό» σύνορο. */
+const DRAWN_AREA_TOLERANCE_M = 0;
+
+/**
+ * **Μέσα σε ΕΝΑ σχήμα ⇒ μέσα· έξω από ΟΛΑ ⇒ έξω· αλλιώς «ίσως».**
+ *
+ * 🔴 **Κάθε σχήμα κρίνεται ΧΩΡΙΣΤΑ και οι απαντήσεις συνδυάζονται — ΠΟΤΕ όλα μαζί ως
+ * δακτύλιοι.** Ο {@link circleToRings} με όλα τα σχήματα θα έκρινε με περιττό πλήθος:
+ * σημείο μέσα σε δύο επικαλυπτόμενα σχήματα μετρά **δύο** ⇒ «έξω». Δηλαδή η περιοχή
+ * που ο άνθρωπος τόνισε δύο φορές θα ήταν η **μόνη** που δεν ψάχνεται.
+ *
+ * ⚠️ **Κύκλος που απλώνεται πάνω σε δύο επικαλυπτόμενα σχήματα χωρίς να χωρά σε κανένα
+ * λέγεται «ίσως»** — ενώ είναι μέσα στην ένωση. Είναι το **συντηρητικό** σφάλμα: ο κριτής
+ * δεν αποκλείει ποτέ αγγελία που ανήκει, απλώς δεν την ορκίζεται. Η ακριβής απάντηση θα
+ * ήθελε ένωση πολυγώνων για μια σπάνια περίπτωση.
+ */
+function areaToDrawn(subject: GeoCircle | GeoBoundingBox, query: GeoDrawnArea): AreaRelation {
+  const subjectBox = isBoundingBox(subject) ? subject : areaBoundingBox(subject);
+  if (boxToBox(subjectBox, query.bbox) === 'disjoint') return 'disjoint';
+  const circle = asCircle(subject);
+
+  let touches = false;
+  for (const shape of query.shapes) {
+    const relation = circleToRings(circle, [shape], DRAWN_AREA_TOLERANCE_M);
+    if (relation === 'within') return 'within';
+    if (relation === 'intersects') touches = true;
+  }
+  return touches ? 'intersects' : 'disjoint';
+}
+
+/**
+ * **Το ορθογώνιο μιας σειράς σχημάτων** — ποτέ μικρότερο από αυτά. `null` όταν δεν
+ * υπάρχει ούτε μία κορυφή: το άδειο ορθογώνιο δεν εκφράζεται.
+ */
+export function outlinesBoundingBox(outlines: readonly GeoOutline[]): GeoBoundingBox | null {
+  let south = Infinity;
+  let west = Infinity;
+  let north = -Infinity;
+  let east = -Infinity;
+  for (const outline of outlines) {
+    for (const { lat, lng } of outline) {
+      south = Math.min(south, lat);
+      north = Math.max(north, lat);
+      west = Math.min(west, lng);
+      east = Math.max(east, lng);
+    }
+  }
+  return south === Infinity ? null : { south, west, north, east };
 }
 
 function boxBoundingCircle(box: GeoBoundingBox): GeoCircle {
@@ -270,7 +370,7 @@ function toRadians(degrees: number): number {
  */
 export function areaBoundingBox(area: GeoArea): GeoBoundingBox {
   if (isBoundingBox(area)) return area;
-  if (isGeoRegion(area)) return area.bbox;
+  if (isGeoRegion(area) || isGeoDrawnArea(area)) return area.bbox;
 
   const latitudeSpan = (area.radiusKm * 1000) / METRES_PER_DEGREE_LATITUDE;
   const north = area.center.lat + latitudeSpan;

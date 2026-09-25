@@ -5,6 +5,27 @@
     "loading": "Loading boundary…",
     "unavailable": "The boundary didn't load — press “Remove boundary” to search the map.",
     "widen": "Search the wider area: {name}",
-    "attribution": "Boundaries: © geodata.gov.gr (CC BY 3.0)"
+    "attribution": "Boundaries and village locations: © geodata.gov.gr (CC BY 3.0)",
+    "settlementWithin": "Village · results within: {name}",
+    "settlementMarker": "Village location: {name}"
+  },
+  "draw": {
+    "label": "Drawn area",
+    "start": "Draw",
+    "startLabel": "Draw your search area on the map",
+    "toolbar": "Draw area",
+    "instruction": "Drag around the areas you are interested in — or tap points one by one.",
+    "surface": "Drawing surface: drag to draw a shape",
+    "cancel": "Cancel",
+    "undo": "Undo",
+    "apply": "Apply",
+    "closeShape": "Close shape",
+    "shapes": "{count, plural, one {# shape} other {# shapes}}",
+    "matches": "{count, plural, one {# listing inside} other {# listings inside}}",
+    "matchesAtLeast": "at least {count} listings inside",
+    "full": "You have reached the shape limit.",
+    "rejected": "That shape does not enclose an area — try again.",
+    "edit": "Edit",
+    "removeShape": "Remove shape {index}"
   }
 }

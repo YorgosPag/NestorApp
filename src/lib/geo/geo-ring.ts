@@ -46,7 +46,7 @@ import type { GeoCircle, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 // άξονας δρόμου (`geo-line.ts`) τη χρειάζεται με άλλο origin (αρχή, όχι κέντρο
 // βάρους) και η αντιγραφή θα έφτιαχνε δίδυμο (CHECK 3.28). Ο δακτύλιος περνά πάντα
 // {@link vertexCentroid} ως origin — αυτό ήταν η προηγούμενη (ιδιωτική) συμπεριφορά.
-import { distanceToLocalSegment, fromLocalMetres, toLocalMetres } from './geo-local-frame';
+import { distanceToLocalSegment, fromLocalMetres, localSegmentCrossing, toLocalMetres } from './geo-local-frame';
 
 /**
  * Είναι το σημείο **μέσα** στον δακτύλιο;
@@ -241,36 +241,6 @@ export function geoOutlineAreaSqm(outline: GeoOutline): number {
 }
 
 /**
- * Προσανατολισμός τριάδας: θετικό αριστερόστροφα, αρνητικό δεξιόστροφα, μηδέν συνευθειακά.
- *
- * ⚠️ Το πρόσημο γράφεται με **λέξεις** επίτηδες: ο σαρωτής ωμών συμβολοσειρών (N.11) διαβάζει
- * ένα `<` που προηγείται ελληνικών ως κείμενο JSX, οπότε το προφανές «μικρότερο του μηδενός»
- * σε backticks έμπαινε ως ψευδώς θετικό — και η θεραπεία δεν είναι εξαίρεση, είναι πεζός λόγος.
- */
-function cross(o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }): number {
-  return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-}
-
-/** Τέμνονται **γνησίως** τα ευθύγραμμα τμήματα `p1p2` και `p3p4`; */
-function segmentsProperlyCross(
-  p1: { x: number; y: number },
-  p2: { x: number; y: number },
-  p3: { x: number; y: number },
-  p4: { x: number; y: number },
-): boolean {
-  const d1 = cross(p3, p4, p1);
-  const d2 = cross(p3, p4, p2);
-  const d3 = cross(p1, p2, p3);
-  const d4 = cross(p1, p2, p4);
-
-  // ⚠️ **Γνήσια** τομή μόνο: τα πρόσημα πρέπει να είναι αυστηρά αντίθετα και στα δύο
-  // ζεύγη. Οι συνευθειακές/εφαπτόμενες περιπτώσεις αφήνονται ρητά έξω, γιατί ένας
-  // άνθρωπος που ξαναπατά **ακριβώς** πάνω σε προηγούμενη κορυφή δεν έφτιαξε
-  // παπιγιόν — έκανε ό,τι κάνει κάθε εργαλείο σχεδίασης όταν «κουμπώνει».
-  return d1 * d2 < 0 && d3 * d4 < 0;
-}
-
-/**
  * Είναι ο δακτύλιος **απλός** — δηλαδή δεν τέμνει τον εαυτό του;
  *
  * 🔴 **Ο λόγος που υπάρχει είναι ότι ένα «παπιγιόν» ΔΕΝ φαίνεται λάθος — φαίνεται
@@ -331,7 +301,7 @@ export function isSimpleGeoOutline(outline: GeoOutline): boolean {
     // είναι αυτοτομή.
     for (let j = i + 2; j < n; j++) {
       if (i === 0 && j === n - 1) continue;
-      if (segmentsProperlyCross(a1, a2, points[j], points[(j + 1) % n])) return false;
+      if (localSegmentCrossing(a1, a2, points[j], points[(j + 1) % n]) !== null) return false;
     }
   }
 

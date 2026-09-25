@@ -67,7 +67,7 @@ import {
 import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
 import { OccupationSelect } from '@/components/mandate/OccupationSelect';
 import type { GeoPoint, GeoRegionRef } from '@/types/geo/coordinates';
-import type { AdminArea } from '@/lib/geo/admin-area-index-file';
+import { boundaryOwnerId, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import { resolveTypedAdminAreaWhenReady } from '@/lib/geo/admin-area-search';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -236,7 +236,9 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
     requestSeq.current += 1;
     setQuery(area.name);
     setState(IDLE);
-    router.push(destinationFor(mode, null, occupation, { adminId: area.id }));
+    // §5.10 — οι επαγγελματίες καλύπτουν ΠΕΡΙΟΧΕΣ, όχι σημεία: για οικισμό, το όριο που τον περιέχει.
+    const adminId = landingModeSeeksPeople(mode) ? boundaryOwnerId(area) : area.id;
+    router.push(destinationFor(mode, null, occupation, { adminId }));
   }, [router, mode, occupation]);
 
   const recall = usePlaceRecall({

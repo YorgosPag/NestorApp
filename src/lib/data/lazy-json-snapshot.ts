@@ -75,15 +75,23 @@ export interface LazyJsonSnapshotSpec<TSnapshot> {
 }
 
 /**
- * Φτιάχνει τον τεμπέλη αναγνώστη ενός παράγωγου JSON.
+ * Η **ίδια μηχανή** για στιγμιότυπο που δεν είναι ένα αρχείο — π.χ. σύνθεση από δύο άλλα
+ * (ADR-883 §5.10: το όριο ενός οικισμού = ευρετήριο → όριο του γονέα). Το `produce` **πετά**
+ * για «δεν ξέρω»· cache, single-flight και επανάληψη μετά από αποτυχία μένουν ΕΔΩ, μία φορά.
+ */
+export interface LazySnapshotSpec<TSnapshot> {
+  readonly produce: () => Promise<TSnapshot>;
+  readonly onFailure: (error: unknown) => void;
+}
+
+/**
+ * Φτιάχνει τεμπέλη αναγνώστη από οποιαδήποτε ασύγχρονη παραγωγή.
  *
  * 🔑 **Η κατάσταση ζει σε ΚΛΕΙΣΤΗ (closure), όχι σε μεταβλητές module.** Έτσι δύο
- * διαφορετικά αρχεία δεν μπορούν να μοιραστούν κατά λάθος cache, και η ίδια μηχανή
+ * διαφορετικές πηγές δεν μπορούν να μοιραστούν κατά λάθος cache, και η ίδια μηχανή
  * μπορεί να στηθεί δεύτερη φορά σε test χωρίς να «θυμάται» την προηγούμενη.
  */
-export function createLazyJsonSnapshot<TSnapshot>(
-  spec: LazyJsonSnapshotSpec<TSnapshot>,
-): LazyJsonSnapshot<TSnapshot> {
+export function createLazySnapshot<TSnapshot>(spec: LazySnapshotSpec<TSnapshot>): LazyJsonSnapshot<TSnapshot> {
   let cached: TSnapshot | null = null;
   let inFlight: Promise<void> | null = null;
 
@@ -96,8 +104,7 @@ export function createLazyJsonSnapshot<TSnapshot>(
 
     inFlight = (async () => {
       try {
-        const response = await fetch(spec.url);
-        cached = spec.build(await response.json());
+        cached = await spec.produce();
       } catch (error) {
         // ⚠️ **Δεν γράφεται ΤΙΠΟΤΑ στο cache.** Έτσι μια επόμενη προσάρτηση
         //    **ξαναρωτά**, αντί να κληρονομήσει την αποτυχία για όλη τη ζωή της σελίδας.
@@ -113,4 +120,17 @@ export function createLazyJsonSnapshot<TSnapshot>(
   }
 
   return { peek: () => cached, load };
+}
+
+/** Φτιάχνει τον τεμπέλη αναγνώστη ενός παράγωγου JSON — η συνηθισμένη περίπτωση. */
+export function createLazyJsonSnapshot<TSnapshot>(
+  spec: LazyJsonSnapshotSpec<TSnapshot>,
+): LazyJsonSnapshot<TSnapshot> {
+  return createLazySnapshot({
+    produce: async () => {
+      const response = await fetch(spec.url);
+      return spec.build(await response.json());
+    },
+    onFailure: spec.onFailure,
+  });
 }

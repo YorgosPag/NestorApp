@@ -36,7 +36,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { sameMapArea } from '@/components/search-results/results-map-area';
 import { searchRegionId, type ListingSearch } from '@/lib/listings/listing-filters';
-import type { GeoBoundingBox } from '@/types/geo/coordinates';
+import { drawnAreaKey, searchDrawnArea } from '@/lib/listings/listing-drawn-area';
+import type { GeoBoundingBox, GeoDrawnArea } from '@/types/geo/coordinates';
 
 /**
  * ⚠️ **Το πρόθεμα `nestor.` είναι σύμβαση, όχι διακόσμηση**: το `localStorage` είναι
@@ -78,6 +79,12 @@ export interface MapAreaSearch {
   readonly removeRegion: (framed: GeoBoundingBox | null) => void;
   /** Ζήτα **άλλη** διοικητική περιοχή — π.χ. ανέβασμα στον γονέα από τη γραμμή γενεαλογίας. */
   readonly selectRegion: (adminId: string) => void;
+  /**
+   * **«Εφαρμογή»** της σχεδίασης *(ADR-885)* — η περιοχή που σχεδίασε ο επισκέπτης γίνεται
+   * το `near`. Από εδώ και πέρα συμπεριφέρεται **ακριβώς** όπως το όριο: η κίνηση του
+   * χάρτη δεν την αντικαθιστά, και η «Αφαίρεση ορίου» ({@link removeRegion}) τη βγάζει.
+   */
+  readonly applyDrawnArea: (area: GeoDrawnArea) => void;
 }
 
 /**
@@ -94,13 +101,15 @@ export function useMapAreaSearch(
   // Το τελευταίο κάδρο που ανέφερε ο χάρτης — το χρειάζεται μόνο η «Αφαίρεση ορίου».
   // Ref, όχι state: κάθε σύρσιμο θα ξανα-απέδιδε την οθόνη για τιμή που δεν δείχνει κανείς.
   const viewportRef = useRef<GeoBoundingBox | null>(null);
-  const regionId = searchRegionId(filters.near);
-  const regionActive = regionId !== null;
+  // ADR-885: το σχέδιο **κλειδώνει** την περιοχή όπως το όριο — δύο πηγές, ένα κλείδωμα.
+  const drawn = searchDrawnArea(filters.near);
+  const boundaryKey = searchRegionId(filters.near) ?? (drawn === null ? null : drawnAreaKey(drawn));
+  const boundaryActive = boundaryKey !== null;
   // Νέα περιοχή ⇒ ο χάρτης πλαισιώνεται ξανά **μόνος του** (δεν αναφέρεται)· το κάδρο που
   // είχε αναφερθεί πριν ανήκει σε **άλλη** ερώτηση και δεν επιτρέπεται να επιβιώσει.
   useEffect(() => {
     viewportRef.current = null;
-  }, [regionId]);
+  }, [boundaryKey]);
 
   /**
    * ⚠️ **Η ανάγνωση ζει σε `useEffect`, ΠΟΤΕ στην αρχική τιμή του `useState`.** Το
@@ -147,7 +156,7 @@ export function useMapAreaSearch(
       // 🔑 ADR-883: **το όριο δεν αντικαθίσταται από κίνηση**. Είναι ρητή επιλογή από
       //    λίστα — ισχυρότερη δήλωση από ένα σύρσιμο — και το πλαισίωμα στο όριο είναι
       //    ο ίδιος ο χάρτης που **κινείται μόνος του**. Έξοδος: «Αφαίρεση ορίου».
-      if (regionActive) return;
+      if (boundaryActive) return;
 
       const current = filters.near;
       const alreadyAsked =
@@ -157,7 +166,7 @@ export function useMapAreaSearch(
       if (followMap) applyArea(area);
       else setPendingArea(area);
     },
-    [filters.near, regionActive, followMap, applyArea]
+    [filters.near, boundaryActive, followMap, applyArea]
   );
 
   const removeRegion = useCallback(
@@ -172,6 +181,14 @@ export function useMapAreaSearch(
     (adminId: string): void => {
       setPendingArea(null);
       commit({ ...filters, near: { adminId } });
+    },
+    [commit, filters]
+  );
+
+  const applyDrawnArea = useCallback(
+    (area: GeoDrawnArea): void => {
+      setPendingArea(null);
+      commit({ ...filters, near: area });
     },
     [commit, filters]
   );
@@ -199,5 +216,14 @@ export function useMapAreaSearch(
     if (pendingArea !== null) applyArea(pendingArea);
   }, [pendingArea, applyArea]);
 
-  return { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea, removeRegion, selectRegion };
+  return {
+    followMap,
+    setFollowMap,
+    pendingArea,
+    onAreaChange,
+    applyPendingArea,
+    removeRegion,
+    selectRegion,
+    applyDrawnArea,
+  };
 }

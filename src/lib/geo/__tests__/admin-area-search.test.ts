@@ -120,3 +120,36 @@ describe('resolveTypedAdminArea — «Θεσσαλονίκη» + Enter (ADR-883 
     expect(count(narrowed)).toBeLessThan(count(all));
   });
 });
+
+describe('οικισμοί (ADR-883 §5.10) — πάνω στο πραγματικό ευρετήριο', () => {
+  const DORKADA = 'settlement:0709060202';
+  const resolve = (query: string) => resolveTypedAdminArea(index, query);
+
+  it.each([
+    ['όνομα ιεραρχίας', 'Δορκάδα'],
+    ['γραφή ΕΛΣΤΑΤ (άλλη κατάληξη)', 'Δορκάς'],
+    ['χωρίς τόνους', 'δορκαδα'],
+    ['greeklish', 'dorkada'],
+  ])('🔑 σύμπτωμα Giorgio — %s ⇒ η Δορκάδα πρώτη πρόταση', (_, query) => {
+    expect(topIds(query, 1)).toEqual([DORKADA]);
+  });
+
+  it.each(['Δορκάδα', 'Δορκάς', 'οικισμός Δορκάδα'])('Enter «%s» ⇒ ο οικισμός', (query) => {
+    expect(resolve(query)).toEqual({ kind: 'area', area: expect.objectContaining({ id: DORKADA }) });
+  });
+
+  it('«Λαγκαδάς» + Enter ⇒ ο ΔΗΜΟΣ, όχι ο ομώνυμος οικισμός (ο οικισμός τελευταίος)', () => {
+    const outcome = resolve('Λαγκαδάς');
+    expect(outcome.kind === 'area' && outcome.area.id).toBe('municipality:0709');
+  });
+
+  it('«οικισμός Λαγκάδα» ⇒ η δηλωμένη βαθμίδα φιλτράρει: ΜΟΝΟ οικισμοί, και ρωτάμε ανάμεσά τους', () => {
+    const outcome = resolve('οικισμός Λαγκάδα');
+    expect(outcome.kind).toBe('ambiguous');
+    expect(outcome.kind === 'ambiguous' && outcome.areas.every((area) => area.level === 8)).toBe(true);
+  });
+
+  it('η γενεαλογία του οικισμού ανεβαίνει από την κοινότητα ως την Περιφέρεια', () => {
+    expect(adminAreaLineage(index, DORKADA).map((area) => area.level)).toEqual([7, 6, 5, 4, 3]);
+  });
+});

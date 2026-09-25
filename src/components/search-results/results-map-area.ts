@@ -14,7 +14,8 @@
  * σχήμα ADR-749.
  */
 
-import type { GeoBoundingBox } from '@/types/geo/coordinates';
+import { matchGeoArea } from '@/lib/geo/geo-area';
+import type { GeoArea, GeoBoundingBox } from '@/types/geo/coordinates';
 
 /**
  * Η όψη του MapLibre που χρειάζεται **αυτό** το ερώτημα, και τίποτα άλλο.
@@ -67,4 +68,22 @@ export function sameMapArea(a: GeoBoundingBox | null, b: GeoBoundingBox | null):
   return (
     a.south === b.south && a.west === b.west && a.north === b.north && a.east === b.east
   );
+}
+
+/**
+ * **Ποιο ορθογώνιο καδράρει ο χάρτης για αυτή την ερώτηση** — ή `null` *(ADR-885)*.
+ *
+ * 🔑 Ορθογώνιο, όριο και σχέδιο καδράρονται στο δικό τους ορθογώνιο, ώστε ένας
+ * κοινοποιημένος σύνδεσμος να **δείχνει** την περιοχή που φιλτράρει. Ο **κύκλος** όχι: εκείνον
+ * τον καδράρει ήδη ο μηχανισμός των δεδομένων. Εξαντλητικό — κανένα σχήμα δεν πέφτει
+ * σιωπηλά σε λάθος κλάδο.
+ */
+export function framedSearchArea(near: GeoArea | null): GeoBoundingBox | null {
+  if (near === null) return null;
+  return matchGeoArea<GeoBoundingBox | null>(near, {
+    box: (box) => box,
+    region: (region) => region.bbox,
+    drawn: (drawn) => drawn.bbox,
+    circle: () => null,
+  });
 }

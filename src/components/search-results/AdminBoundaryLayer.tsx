@@ -25,21 +25,15 @@ import React, { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Layer, Source } from '@/lib/maps/maplibre';
 import { regionMaskGeometry } from '@/lib/geo/geo-region-mask';
-import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
-
-/** Το πρώτο επίπεδο των αγγελιών — το όριο ζωγραφίζεται **πριν** από αυτό (δες `ResultsMapSources`). */
-const BELOW_LISTINGS = 'listing-outline-fill';
+import {
+  BELOW_LISTINGS,
+  BOUNDARY_HALO_WIDTH,
+  BOUNDARY_LINE_WIDTH,
+  readBoundaryPaint,
+} from './boundary-paint';
 
 interface AdminBoundaryLayerProps {
   readonly geometry: GeoJSON.MultiPolygon;
-}
-
-function readBoundaryPaint(): { readonly line: string; readonly halo: string; readonly mask: string } {
-  return {
-    line: `hsl(${readRootCssVar('--foreground', '222 47% 11%')})`,
-    halo: `hsl(${readRootCssVar('--card', '0 0% 100%')})`,
-    mask: `hsl(${readRootCssVar('--bg-overlay', '220 26% 14%')})`,
-  };
 }
 
 export function AdminBoundaryLayer({ geometry }: AdminBoundaryLayerProps) {
@@ -68,14 +62,14 @@ export function AdminBoundaryLayer({ geometry }: AdminBoundaryLayerProps) {
           type="line"
           beforeId={BELOW_LISTINGS}
           layout={{ 'line-join': 'round' }}
-          paint={{ 'line-color': paint.halo, 'line-width': 6, 'line-opacity': 0.85 }}
+          paint={{ 'line-color': paint.halo, 'line-width': BOUNDARY_HALO_WIDTH, 'line-opacity': 0.85 }}
         />
         <Layer
           id="admin-boundary-line"
           type="line"
           beforeId={BELOW_LISTINGS}
           layout={{ 'line-join': 'round' }}
-          paint={{ 'line-color': paint.line, 'line-width': 2.5 }}
+          paint={{ 'line-color': paint.line, 'line-width': BOUNDARY_LINE_WIDTH }}
         />
       </Source>
     </>

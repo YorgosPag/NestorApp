@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 830 ADRs | Last Updated: 2026-09-24
+**📊 Stats**: 832 ADRs | Last Updated: 2026-09-25
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 580 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 581 | [View](#uncategorized) |
 
 ---
 
@@ -864,7 +864,9 @@
 | **ADR-880** | Σημείο εστίασης ανά φωτογραφία αγγελίας: αυτόματο στο ράφι, διόρθωση με ένα κλικ, κεντράρισμα χωρίς inline style | ✅ IMPLEMENTED + VERIFIED LIVE — 2026-09-24 (υλοποίηση `16aa6c09` · επαλήθευση §5.2) | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-880-photo-focal-point.md) |
 | **ADR-881** | Εικόνες ήρωα ως επιμελημένο περιεχόμενο πλατφόρμας: ανέβασμα, εκδόσεις, δημοσίευση | ✅ IMPLEMENTED — Φάσεις Α+Β+Γ 2026-09-24 · **επαληθεύτηκε από άκρη σε άκρη (§8.3, §8.6)**, χωρίς commit | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-881-landing-hero-curation.md) |
 | **ADR-882** | Ανάκληση τόπου στο πεδίο αναζήτησης: «Τρέχουσα τοποθεσία» + «Ιστορικό αναζητήσεων» | ✅ IMPLEMENTED — Φάση 1 (ιστορικό ανά συσκευή) 2026-09-25, χωρίς commit | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-882-place-search-recall.md) |
-| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–4 2026-09-25 · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, χωρίς commit | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-883-admin-area-boundary-search.md) |
+| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–6 2026-09-25 (Φ6 = οικισμοί, §5.10) · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, και σε κινητό + φωτεινό θέμα | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-883-admin-area-boundary-search.md) |
+| **ADR-884** | Χωρική περιήγηση ακινήτου: πανοράματα 360° **και** μοντέλο BIM σε **ΕΝΑ** χώρο | 📋 📋 **PLANNING** — έρευνα + αρχιτεκτονική· η κατεύθυνση συμφωνήθηκε με τον Giorgio (2026-09-25)· διευκρινίσεις **Δ1–Δ6 κλειστές** (§12)· **SSoT audit με grep (§4) + αναλυτικό σχέδιο Φ0 (§8.1) γραμμένα**· **καμία γραμμή κώδικα ακόμη**. Ε9–Ε11 **αποφασίστηκαν** με έρευνα (§8.1 Φ0.12–Φ0.14)· N.8 = **Plan Mode σε κύματα** (§8.1 Φ0.11). Επόμενο: υλοποίηση — 🔴 προτείνεται **πρώτο** το Κ4 (κενό ασφαλείας στο `shares`) | 2026-09-25 | Marketplace / Public listing / 3D / Reality capture | [📄](./adrs/ADR-884-spatial-tour-panorama-bim.md) |
+| **ADR-885** | «Σχεδίαση περιοχής» στον χάρτη αποτελεσμάτων (ελεύθερη χειρονομία + κορυφές, πολλά σχήματα) | ✅ IMPLEMENTED — Φάσεις 1–4 2026-09-25 · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (desktop, ποντίκι)** — §8 · αφή σε πραγματική συσκευή: εκκρεμεί | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-885-drawn-search-area.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1683,7 +1685,8 @@
 | **ADR-880** | Σημείο εστίασης ανά φωτογραφία αγγελίας: αυτόματο στο ράφι, διόρθωση με ένα κλικ, κεντράρισμα χωρίς inline style | ✅ IMPLEMENTED + VERIFIED LIVE — 2026-09-24 (υλοποίηση `16aa6c09` · επαλήθευση §5.2) | [View](./adrs/ADR-880-photo-focal-point.md) |
 | **ADR-881** | Εικόνες ήρωα ως επιμελημένο περιεχόμενο πλατφόρμας: ανέβασμα, εκδόσεις, δημοσίευση | ✅ IMPLEMENTED — Φάσεις Α+Β+Γ 2026-09-24 · **επαληθεύτηκε από άκρη σε άκρη (§8.3, §8.6)**, χωρίς commit | [View](./adrs/ADR-881-landing-hero-curation.md) |
 | **ADR-882** | Ανάκληση τόπου στο πεδίο αναζήτησης: «Τρέχουσα τοποθεσία» + «Ιστορικό αναζητήσεων» | ✅ IMPLEMENTED — Φάση 1 (ιστορικό ανά συσκευή) 2026-09-25, χωρίς commit | [View](./adrs/ADR-882-place-search-recall.md) |
-| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–4 2026-09-25 · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, χωρίς commit | [View](./adrs/ADR-883-admin-area-boundary-search.md) |
+| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–6 2026-09-25 (Φ6 = οικισμοί, §5.10) · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, και σε κινητό + φωτεινό θέμα | [View](./adrs/ADR-883-admin-area-boundary-search.md) |
+| **ADR-885** | «Σχεδίαση περιοχής» στον χάρτη αποτελεσμάτων (ελεύθερη χειρονομία + κορυφές, πολλά σχήματα) | ✅ IMPLEMENTED — Φάσεις 1–4 2026-09-25 · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (desktop, ποντίκι)** — §8 · αφή σε πραγματική συσκευή: εκκρεμεί | [View](./adrs/ADR-885-drawn-search-area.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

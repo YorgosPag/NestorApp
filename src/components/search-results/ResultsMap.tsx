@@ -41,6 +41,8 @@ import { ListingPriceMarkers } from './ListingPriceMarkers';
 import { RADIUS } from './ResultsMapLayers';
 import { ListingMapCanvas, type ListingMapCanvasProps } from './ListingMapCanvas';
 import { AdminBoundaryLayer } from './AdminBoundaryLayer';
+import { AdminPlaceMarker } from './AdminPlaceMarker';
+import type { AdminPlace } from '@/lib/geo/admin-boundaries';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ResultsMapProps extends Omit<ListingMapCanvasProps, 'geojson' | 'children' | 'describeListing'> {
@@ -59,6 +61,14 @@ interface ResultsMapProps extends Omit<ListingMapCanvasProps, 'geojson' | 'child
    * γίνεται από το `searchArea` (το ορθογώνιό του)· εδώ έρχεται μόνο το **σχήμα**.
    */
   readonly boundary?: GeoJSON.MultiPolygon | null;
+  /** ADR-883 §5.10 — ο οικισμός που ζητήθηκε, μέσα στο όριο (πινέζα με όνομα). */
+  readonly boundaryPlace?: AdminPlace | null;
+  /**
+   * Ό,τι ζει **μέσα** στον χάρτη επειδή χρειάζεται την προβολή του — η σχεδιασμένη περιοχή
+   * και η επιφάνεια σχεδίασης *(ADR-885)*. Χειριστήρια (κουμπιά, chip) **δεν** μπαίνουν εδώ:
+   * εκείνα είναι αδέλφια του χάρτη (`MapAreaControl`).
+   */
+  readonly children?: React.ReactNode;
 }
 
 export function ResultsMap({
@@ -71,6 +81,8 @@ export function ResultsMap({
   onAreaChange,
   searchArea = null,
   boundary = null,
+  boundaryPlace = null,
+  children,
 }: ResultsMapProps) {
   /** Αγγελίες → GeoJSON, από τον **έναν** ζωγράφο· ο πυρήνας δέχεται μόνο το αποτέλεσμα. */
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
@@ -115,6 +127,8 @@ export function ResultsMap({
     >
       {/* ADR-883 — πρώτο παιδί: το όριο ζωγραφίζεται ΚΑΤΩ από πινακίδες και φούσκα (`beforeId`). */}
       {boundary !== null && <AdminBoundaryLayer geometry={boundary} />}
+      {boundaryPlace !== null && <AdminPlaceMarker place={boundaryPlace} />}
+      {children}
 
       {/*
         Οι πινακίδες τιμής — **μετά** την πηγή, ώστε να κάθονται πάνω από τα σχήματα,

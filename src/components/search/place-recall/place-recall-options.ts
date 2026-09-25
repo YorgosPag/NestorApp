@@ -23,14 +23,29 @@ import {
   type RecentPlaceSearch,
 } from '@/lib/geo/recent-place-searches';
 import { adminAreaLineage, searchAdminAreas, type AdminAreaIndex } from '@/lib/geo/admin-area-search';
-import type { AdminArea } from '@/lib/geo/admin-area-index-file';
+import { SETTLEMENT_LEVEL, type AdminArea } from '@/lib/geo/admin-area-index-file';
 
 export type PlaceRecallOption =
   | { readonly kind: 'current-location' }
   | { readonly kind: 'recent'; readonly place: RecentPlaceSearch }
-  /** ADR-883 — διοικητική περιοχή με όριο· `within` = ο άμεσος γονέας, για να ξεχωρίζουν ομώνυμες. */
+  /**
+   * ADR-883 — διοικητική περιοχή με όριο (ή οικισμός, §5.10)· `within` = ο άμεσος γονέας, για να
+   * ξεχωρίζουν ομώνυμες — για οικισμό **και ο δήμος**: υπάρχουν δεκάδες «Καλοχώρι».
+   */
   | { readonly kind: 'area'; readonly area: AdminArea; readonly within: string | null }
   | { readonly kind: 'clear-history' };
+
+/** Η βαθμίδα του δήμου — ο τόπος που αναγνωρίζει ο κόσμος πάνω από ένα χωριό. */
+const MUNICIPALITY_LEVEL = 5;
+
+function withinOf(areas: AdminAreaIndex, area: AdminArea): string | null {
+  const lineage = adminAreaLineage(areas, area.id);
+  if (area.level !== SETTLEMENT_LEVEL) return lineage[0]?.name ?? null;
+  const shown = [lineage[0], lineage.find((ancestor) => ancestor.level === MUNICIPALITY_LEVEL)]
+    .filter((ancestor): ancestor is AdminArea => ancestor !== undefined);
+  const names = [...new Set(shown.map((ancestor) => ancestor.name))];
+  return names.length === 0 ? null : names.join(' · ');
+}
 
 /** Πόσες περιοχές προτείνονται — αρκετές για ομώνυμες σε άλλες βαθμίδες, όχι λίστα καταλόγου. */
 const AREA_SUGGESTIONS = 5;
@@ -44,7 +59,7 @@ export function buildPlaceRecallOptions(
     const recents: PlaceRecallOption[] = matchRecentPlaceSearches(history, query).map((place) => ({ kind: 'recent', place }));
     if (areas === null) return recents;
     const found = searchAdminAreas(areas, query, AREA_SUGGESTIONS).map(
-      (area): PlaceRecallOption => ({ kind: 'area', area, within: adminAreaLineage(areas, area.id)[0]?.name ?? null }),
+      (area): PlaceRecallOption => ({ kind: 'area', area, within: withinOf(areas, area) }),
     );
     return [...recents, ...found];
   }

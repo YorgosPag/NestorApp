@@ -41,7 +41,7 @@
  */
 
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
-import type { GeoArea, GeoOutline } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoOutline } from '@/types/geo/coordinates';
 import type { ListingPosition } from '@/types/public-listing';
 
 /**
@@ -252,7 +252,10 @@ export const LISTING_UNCERTAINTY_KM: Readonly<Record<ListingMapShape, number | n
 export function listingSearchArea(
   position: ListingPosition,
   liveOutline?: GeoOutline | null
-): GeoArea | null {
+): GeoCircle | null {
+  // ADR-885: ο τύπος λέει την αλήθεια — **πάντα κύκλος**. Ως `GeoArea` οι καταναλωτές
+  //    (`coverage-agreement`, `showcase-presence`) φρουρούσαν «όχι ορθογώνιο ⇒ κύκλος»,
+  //    που με τέσσερα μέλη θα άφηνε όριο ή σχέδιο να περάσει ως κύκλος.
   if (position.kind === 'unknown') return null;
 
   const shape = listingMapShape(position, liveOutline);

@@ -3,11 +3,11 @@
  * παραγόμενων αρχείων: ό,τι προτείνει το ευρετήριο, υπάρχει ως όριο και διαβάζεται.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { adminBoundaryFileName, adminBoundaryPath, readAdminBoundary } from '../admin-boundary-file';
-import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex } from '../admin-area-index-file';
+import { adminBoundaryFileName, adminBoundaryPath, placeWithinBoundary, readAdminBoundary } from '../admin-boundary-file';
+import { ADMIN_AREA_INDEX_FILE, SETTLEMENT_LEVEL, boundaryOwnerId, readAdminAreaIndex } from '../admin-area-index-file';
 import { geoJsonRings } from '../geo-geojson';
 import { isPointInGeoRings } from '../geo-ring';
 
@@ -51,15 +51,52 @@ describe('readAdminBoundary', () => {
 describe('τα παραγόμενα αρχεία (npm run build:admin-boundaries)', () => {
   const index = readAdminAreaIndex(readPublic(ADMIN_AREA_INDEX_FILE));
 
-  it('το ευρετήριο καλύπτει όλες τις βαθμίδες 3–7', () => {
+  it('το ευρετήριο καλύπτει όλες τις βαθμίδες 3–7 και τους οικισμούς (8, §5.10)', () => {
     const levels = new Set([...index.values()].map((area) => area.level));
-    expect([...levels].sort()).toEqual([3, 4, 5, 6, 7]);
-    expect(index.size).toBeGreaterThan(7000);
+    expect([...levels].sort()).toEqual([3, 4, 5, 6, 7, SETTLEMENT_LEVEL]);
+    expect(index.size).toBeGreaterThan(14000);
   });
 
-  it('🔒 ΚΑΘΕ περιοχή του ευρετηρίου έχει αρχείο ορίου — καμία πρόταση δεν οδηγεί σε «μη διαθέσιμο»', () => {
-    const missing = [...index.keys()].filter((id) => !existsSync(join(PUBLIC, adminBoundaryPath(id))));
+  it('🔒 ΚΑΘΕ περιοχή του ευρετηρίου καταλήγει σε αρχείο ορίου — καμία πρόταση δεν οδηγεί σε «μη διαθέσιμο»', () => {
+    const missing = [...index.values()]
+      .map(boundaryOwnerId)
+      .filter((id) => !existsSync(join(PUBLIC, adminBoundaryPath(id))));
     expect(missing).toEqual([]);
+  });
+
+  it('🔒 ο οικισμός δείχνει όριο ΑΛΛΗΣ περιοχής του ευρετηρίου (ποτέ δικό του, ποτέ άλλου οικισμού)', () => {
+    const settlements = [...index.values()].filter((area) => area.level === SETTLEMENT_LEVEL);
+    const orphans = settlements.filter((area) => {
+      const owner = index.get(boundaryOwnerId(area));
+      return owner === undefined || owner.level === SETTLEMENT_LEVEL || owner.id === area.id;
+    });
+    expect(orphans.map((area) => area.id)).toEqual([]);
+  });
+
+  it('η Δορκάδα (σύμπτωμα Giorgio): υπάρχει, στο όριο της Τ.Κ. Καρτερών, με πινέζα μέσα', () => {
+    const dorkada = index.get('settlement:0709060202');
+    expect(dorkada).toEqual({ id: 'settlement:0709060202', name: 'Δορκάδα', level: 8, parentId: 'community:07090602' });
+    const owner = readAdminBoundary(readPublic(adminBoundaryPath('community:07090602')), 'community:07090602');
+    const point = owner?.places.get('settlement:0709060202');
+    expect(point).toBeDefined();
+    expect(isPointInGeoRings(point!, geoJsonRings(owner!.geometry))).toBe(true);
+  });
+
+  it('🔒 ΚΑΘΕ πινέζα οικισμού: ανήκει σε οικισμό αυτού του ορίου και πέφτει μέσα του (± ανοχή απλοποίησης)', () => {
+    const bad: string[] = [];
+    for (const file of readdirSync(join(PUBLIC, 'data', 'admin-boundaries'))) {
+      const payload = readPublic(join('data', 'admin-boundaries', file)) as { id: string };
+      const boundary = readAdminBoundary(payload, payload.id);
+      if (boundary === null || boundary.places.size === 0) continue;
+      const rings = geoJsonRings(boundary.geometry);
+      for (const [id, point] of boundary.places) {
+        const area = index.get(id);
+        const belongs = area !== undefined && area.level === SETTLEMENT_LEVEL && boundaryOwnerId(area) === boundary.id;
+        const inside = placeWithinBoundary(point, rings, boundary.toleranceM);
+        if (!belongs || !inside) bad.push(`${boundary.id} → ${id}`);
+      }
+    }
+    expect(bad).toEqual([]);
   });
 
   it('ο Δήμος Κορδελιού-Ευόσμου: διαβάζεται, και το κέντρο του Ευόσμου είναι μέσα', () => {

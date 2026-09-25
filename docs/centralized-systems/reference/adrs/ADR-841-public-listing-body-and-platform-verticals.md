@@ -216,6 +216,10 @@ ADR-835 §18 το μέτρησε: `public_listings` = **8 έγγραφα**, `lea
 | **Archilogic** | SaaS: CAD/PDF → embeddable viewer | 🔶 Πλησιέστερο, αλλά **εξωτερικός** ιδιοκτήτης της μετατροπής |
 | **«3D sales platform»** (R2U κ.ά.) | Off-plan πωλήσεις **από BIM** | ✅ Ίδια κατηγορία — αλλά **κανείς δεν δημοσιεύει μηχανισμό ανωνυμοποίησης** |
 
+> ⚠️ **Αναθεωρήθηκε 2026-09-25 από το [ADR-884](./ADR-884-spatial-tour-panorama-bim.md) §3**: η κρίση «❌ απαιτεί φυσική
+> επίσκεψη» ισχύει για τον **εργολάβο** (ακίνητο πριν χτιστεί), **όχι** για τον **μεσίτη** (υπάρχον ακίνητο χωρίς BIM).
+> Πανοράματα 360° και BIM γίνονται **στρώσεις του ίδιου χώρου** — δες ADR-884.
+
 Πηγές: [open-homes.com](https://www.open-homes.com/blog/are-matterport-and-zillow-3d-home-the-same-thing-which-should-i-use-for-my-listing/) ·
 [redfin.com](https://www.redfin.com/guides/virtual-walkthrough-tour) ·
 [zillow.com/news](https://www.zillow.com/news/behind-zillow-3d-home-backend-algorithms/) ·

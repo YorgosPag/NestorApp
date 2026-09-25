@@ -26,6 +26,8 @@ export type AdminBoundaryState =
 const UNAVAILABLE: LoadedAdminBoundary = {
   geometry: { type: 'MultiPolygon', coordinates: [] },
   level: 0,
+  places: new Map(),
+  place: null,
   region: { adminId: '', rings: [], bbox: { south: 0, west: 0, north: 0, east: 0 }, toleranceM: 0 },
 };
 

@@ -55,7 +55,8 @@ import {
   SEARCH_AREA_PARAM,
   SEARCH_REGION_PARAM,
 } from '@/lib/listings/listing-search-area';
-import { isBoundingBox } from '@/lib/geo/geo-area';
+import { readSearchDrawnArea, writeSearchDrawnArea } from '@/lib/listings/listing-drawn-area';
+import { isBoundingBox, isGeoDrawnArea } from '@/lib/geo/geo-area';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import {
   readListingGuests,
@@ -265,7 +266,12 @@ export function parseListingFilters(params: URLSearchParams): ListingSearch {
     // 🔑 ADR-883: η **περιοχή** προηγείται — είναι ρητή επιλογή από λίστα, όχι ερμηνεία
     //    κειμένου. Ο σειριοποιητής γράφει πάντα **ένα** σχήμα, οπότε κι εδώ η σειρά
     //    κρίνει μόνο χειρόγραφες διευθύνσεις.
-    near: readSearchRegion(params) ?? readSearchAreaBox(params) ?? readGeoFilter(params),
+    // 🔑 ADR-885: το **σχέδιο** μετά την περιοχή και πριν το ορθογώνιο — ρητή χειρονομία.
+    near:
+      readSearchRegion(params) ??
+      readSearchDrawnArea(params) ??
+      readSearchAreaBox(params) ??
+      readGeoFilter(params),
     stayWindow: readListingStayWindow(params),
     guests: readListingGuests(params),
     pets: readListingPets(params),
@@ -300,6 +306,9 @@ export function serializeListingFilters(filters: ListingSearch): URLSearchParams
   } else if ('adminId' in near) {
     // ADR-883: επιλυμένο ή όχι, το όριο γράφεται ως **ταυτότητα** — ποτέ ως πολύγωνα.
     params.set(SEARCH_REGION_PARAM, near.adminId);
+  } else if (isGeoDrawnArea(near)) {
+    // ADR-885: το σχέδιο **ΕΙΝΑΙ** η ταυτότητά του — γράφεται ως σχήματα.
+    writeSearchDrawnArea(near, params);
   } else if (isBoundingBox(near)) {
     params.set(SEARCH_AREA_PARAM, writeSearchAreaBox(near));
   } else {

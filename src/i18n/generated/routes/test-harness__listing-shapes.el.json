@@ -100,7 +100,8 @@
   },
   "search-region": {
     "boundary": {
-      "attribution": "Όρια: © geodata.gov.gr (CC BY 3.0)"
+      "attribution": "Όρια και θέσεις οικισμών: © geodata.gov.gr (CC BY 3.0)",
+      "settlementMarker": "Θέση οικισμού: {name}"
     }
   }
 }

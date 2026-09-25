@@ -46,7 +46,13 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, **καμία** εξάρτηση από Firestore.
  */
 
-import { areaBoundingBox, expandBoundingBox, isBoundingBox, isGeoRegion } from '@/lib/geo/geo-area';
+import {
+  areaBoundingBox,
+  expandBoundingBox,
+  isBoundingBox,
+  matchGeoArea,
+} from '@/lib/geo/geo-area';
+import { drawnAreaKey } from '@/lib/listings/listing-drawn-area';
 import type { GeoArea, GeoBoundingBox } from '@/types/geo/coordinates';
 
 import { LISTING_UNCERTAINTY_KM } from './listing-map-shape';
@@ -225,10 +231,12 @@ export function listingCountBox(area: GeoArea): GeoBoundingBox {
  */
 export function listingAreaKey(area: GeoArea | null): string {
   if (area === null) return 'everywhere';
-  // ADR-883: η ταυτότητα του ορίου **είναι** η γεωγραφία του — ίδιος δήμος, ίδια ανάγνωση.
-  if (isGeoRegion(area)) return `region:${area.adminId}`;
-  if (isBoundingBox(area)) {
-    return `box:${area.south}:${area.west}:${area.north}:${area.east}`;
-  }
-  return `circle:${area.center.lat}:${area.center.lng}:${area.radiusKm}`;
+  return matchGeoArea(area, {
+    // ADR-883: η ταυτότητα του ορίου **είναι** η γεωγραφία του — ίδιος δήμος, ίδια ανάγνωση.
+    region: (region) => `region:${region.adminId}`,
+    // ADR-885: η ταυτότητα του σχεδίου είναι το κείμενο του συνδέσμου του.
+    drawn: (drawn) => `drawn:${drawnAreaKey(drawn)}`,
+    box: (box) => `box:${box.south}:${box.west}:${box.north}:${box.east}`,
+    circle: (circle) => `circle:${circle.center.lat}:${circle.center.lng}:${circle.radiusKm}`,
+  });
 }

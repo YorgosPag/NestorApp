@@ -852,6 +852,7 @@
     "locationBlocked": "Turned off — enable it in your browser settings",
     "historyHeading": "Search history",
     "areasHeading": "Areas",
+    "settlement": "Village",
     "clearHistory": "Clear history",
     "chooseArea": "More than one area has this name — pick one from the list"
   }

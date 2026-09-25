@@ -44,6 +44,11 @@ interface MapAreaControlProps {
    * κάτι που δεν κάνει. Ένα χειριστήριο που δεν κάνει τίποτα δεν δείχνεται.
    */
   readonly regionChip?: React.ReactNode;
+  /**
+   * **«Σχεδίαση»** *(ADR-885)* — δίπλα στον διακόπτη, όσο δεν υπάρχει όριο. Με όριο (δήμου ή
+   * σχεδιασμένο) το chip παίρνει τη θέση του· η σχεδίαση ξανανοίγει από εκεί («Επεξεργασία»).
+   */
+  readonly drawButton?: React.ReactNode;
   readonly className?: string;
 }
 
@@ -55,6 +60,7 @@ export function MapAreaControl({
   hasPendingArea,
   onSearchHere,
   regionChip,
+  drawButton,
   className,
 }: MapAreaControlProps) {
   const { t } = useTranslation(['search-results']);
@@ -104,6 +110,8 @@ export function MapAreaControl({
           </label>
         </div>
       )}
+
+      {!regionChip && drawButton}
     </nav>
   );
 }

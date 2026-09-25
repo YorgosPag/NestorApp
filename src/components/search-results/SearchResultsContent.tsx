@@ -39,12 +39,14 @@ import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
 import { useResultsLedgers } from '@/hooks/listings/useResultsLedgers';
 import { useResolvedListingSearch } from '@/hooks/listings/useResolvedListingSearch';
 import { useFilterCommit } from './filters/use-filter-commit';
-import { isBoundingBox, isGeoRegion } from '@/lib/geo/geo-area';
+import { useDrawAreaSession } from '@/hooks/listings/useDrawAreaSession';
+import { searchDrawnArea } from '@/lib/listings/listing-drawn-area';
+import { framedSearchArea } from './results-map-area';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
 import { AreaLedgerBar } from './AreaLedgerBar';
-import { MapAreaControl } from './MapAreaControl';
-import { RegionBoundaryChip } from './RegionBoundaryChip';
+import { MapAreaChrome } from './MapAreaChrome';
+import { SearchAreaMapLayer } from './draw/SearchAreaMapLayer';
 import {
   orderResultsListings,
   parseListingOrder,
@@ -156,8 +158,9 @@ export function SearchResultsContent() {
    * ήδη κρατά τη διάταξη και τις τέσσερις λογιστικές.
    */
   const { commit, setOrder } = useFilterCommit(search);
-  const { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea, removeRegion, selectRegion } =
-    useMapAreaSearch(search, commit);
+  const mapArea = useMapAreaSearch(search, commit);
+  // ADR-885 — η σχεδίαση περιοχής: μία συνεδρία, δύο καταναλωτές (στρώση χάρτη + χειριστήρια).
+  const draw = useDrawAreaSession();
 
   /**
    * **Ποιους άξονες σιωπά μια συγκεκριμένη αγγελία** — η ερώτηση που κατεβαίνει στη λίστα.
@@ -417,25 +420,23 @@ export function SearchResultsContent() {
               onPeek={peek}
               onSelect={select}
               onClear={clear}
-              onAreaChange={onAreaChange}
+              onAreaChange={mapArea.onAreaChange}
               /*
                 🔴 **Η ΠΕΡΙΟΧΗ ΚΑΝΕΙ ΔΥΟ ΔΟΥΛΕΙΕΣ** — δες `ResultsMapProps.searchArea`:
                 (α) σπάει την ανάδραση *(ο χάρτης δεν ξανακαδράρει στα αποτελέσματα, άρα
                 δεν πηδά κάτω από τα δάχτυλα του ανθρώπου)*· (β) **καδράρει εκεί**, ώστε
                 ένας κοινοποιημένος σύνδεσμος να **δείχνει** την περιοχή που φιλτράρει.
 
-                ⚠️ **Μόνο ορθογώνιο**: το `near` μπορεί να είναι και **κύκλος** *(από
-                κείμενο που έγραψε ο επισκέπτης)*, και εκείνον τον καδράρει ήδη ο
-                υπάρχων μηχανισμός των δεδομένων. Το `null` εδώ σημαίνει ρητά *«καμία
-                ορθογώνια περιοχή»*, όχι «καμία ερώτηση».
+                ⚠️ **Κάθε σχήμα εκτός κύκλου** καδράρεται στο ορθογώνιό του (`framedSearchArea`,
+                εξαντλητικό — ADR-885)· τον **κύκλο** τον καδράρει ήδη ο μηχανισμός των δεδομένων.
+                Το `null` σημαίνει ρητά *«τίποτα να καδραριστεί»*, όχι «καμία ερώτηση».
               */
-              searchArea={
-                filters.near === null ? null
-                  : isGeoRegion(filters.near) ? filters.near.bbox
-                  : isBoundingBox(filters.near) ? filters.near : null
-              }
+              searchArea={framedSearchArea(filters.near)}
               boundary={region.status === 'ready' ? region.boundary.geometry : null}
-            />
+              boundaryPlace={region.status === 'ready' ? region.boundary.place : null}
+            >
+              <SearchAreaMapLayer session={draw} applied={searchDrawnArea(filters.near)} />
+            </ResultsMap>
 
             {/*
               ⚠️ **ΑΔΕΛΦΟΣ ΤΟΥ ΧΑΡΤΗ, ΠΟΤΕ ΠΑΙΔΙ ΤΟΥ.** Ο `ResultsMap` αποδίδει τον
@@ -444,21 +445,13 @@ export function SearchResultsContent() {
               κάθεται πάνω από τον χάρτη μέσα στο **ίδιο** `isolate`, άρα η στρώση του
               είναι τοπική και δεν ανταγωνίζεται καμία καθολική κλίμακα (CHECK 3.50).
             */}
-            <MapAreaControl
-              followMap={followMap}
-              onFollowMapChange={setFollowMap}
-              hasPendingArea={pendingArea !== null}
-              onSearchHere={applyPendingArea}
-              regionChip={
-                region.status === 'none' ? undefined
-                  : (
-                    <RegionBoundaryChip
-                      region={region}
-                      onRemove={() => removeRegion(region.status === 'ready' ? region.boundary.region.bbox : null)}
-                      onWiden={selectRegion}
-                    />
-                  )
-              }
+            <MapAreaChrome
+              mapArea={mapArea}
+              region={region}
+              session={draw}
+              filters={filters}
+              listings={listings}
+              coverage={coverage}
             />
           </section>
         </div>

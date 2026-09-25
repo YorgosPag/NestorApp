@@ -24,6 +24,7 @@ import { optionDomId } from '@/components/ui/searchable-combobox-listbox';
 import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
 import type { GeolocationPermission } from '@/lib/geo/current-position';
 import type { RecentPlaceSearch } from '@/lib/geo/recent-place-searches';
+import { SETTLEMENT_LEVEL } from '@/lib/geo/admin-area-index-file';
 import { placeRecallOptionKey, type PlaceRecallOption } from './place-recall-options';
 import '@/lib/design-system';
 
@@ -208,8 +209,13 @@ function RecallRowBody({ option, context }: { option: PlaceRecallOption; context
         <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="flex min-w-0 flex-col">
           <span className="truncate">{option.area.name}</span>
-          {option.within !== null && (
-            <span className={`${dropdown.item.fontSizeSecondary} truncate text-muted-foreground`}>{option.within}</span>
+          {(option.within !== null || option.area.level === SETTLEMENT_LEVEL) && (
+            <span className={`${dropdown.item.fontSizeSecondary} truncate text-muted-foreground`}>
+              {/* ADR-883 §5.10 — ο οικισμός λέει ΤΙ είναι: αλλιώς «Καρτερός» μοιάζει με δήμο ή κοινότητα. */}
+              {[option.area.level === SETTLEMENT_LEVEL ? t('common-shared:placeRecall.settlement') : null, option.within]
+                .filter((part): part is string => part !== null)
+                .join(' · ')}
+            </span>
           )}
         </span>
       </>
