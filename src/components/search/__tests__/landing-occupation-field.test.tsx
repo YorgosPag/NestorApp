@@ -125,7 +125,7 @@ function submitButton(): HTMLButtonElement {
 }
 
 function typePlace(text: string): void {
-  fireEvent.change(screen.getByRole('searchbox'), { target: { value: text } });
+  fireEvent.change(screen.getByRole('combobox', { name: AREA_LABEL_KEY }), { target: { value: text } });
 }
 
 function chooseOccupation(escoUri: string): void {
@@ -135,7 +135,7 @@ function chooseOccupation(escoUri: string): void {
   const option = OPTIONS.find((candidate) => candidate.escoUri === escoUri);
   if (!option) throw new Error(`Ο πληθυσμός δεν περιέχει ${escoUri}`);
 
-  fireEvent.focus(screen.getByRole('combobox'));
+  fireEvent.focus(screen.getByRole('combobox', { name: OCCUPATION_LABEL_KEY }));
   // ⚠️ `mouseDown` και όχι `click`: το `SearchableCombobox` διαλέγει στο **mousedown**,
   //    ώστε να προλάβει το `blur` του πεδίου (δες `handleBlur`, καθυστέρηση 200ms).
   fireEvent.mouseDown(screen.getByRole('option', { name: option.label.el }));
@@ -195,7 +195,7 @@ describe('ADR-841 §7 Α4.5 — ο αριθμός των πεδίων ανήκε
         // ⚠️ **Το χειριστήριο, όχι ένα `testid` δικής μας επινόησης**: η προηγούμενη γραφή
         //    ζητούσε `queryByTestId('occupation-select')` — στοιχείο που υπήρχε **μόνο
         //    μέσα στο ψεύτικο**, άρα «απουσίαζε» και όταν το πεδίο ήταν παρόν.
-        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+        expect(screen.queryByRole('combobox', { name: OCCUPATION_LABEL_KEY })).not.toBeInTheDocument();
         expect(screen.getByText(AREA_LABEL_KEY)).toBeInTheDocument();
       },
     );

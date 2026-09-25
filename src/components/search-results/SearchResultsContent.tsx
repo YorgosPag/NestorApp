@@ -37,12 +37,14 @@ import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useUrlListingFocus } from '@/hooks/listings/useListingFocus';
 import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
 import { useResultsLedgers } from '@/hooks/listings/useResultsLedgers';
+import { useResolvedListingSearch } from '@/hooks/listings/useResolvedListingSearch';
 import { useFilterCommit } from './filters/use-filter-commit';
-import { isBoundingBox } from '@/lib/geo/geo-area';
+import { isBoundingBox, isGeoRegion } from '@/lib/geo/geo-area';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
 import { AreaLedgerBar } from './AreaLedgerBar';
 import { MapAreaControl } from './MapAreaControl';
+import { RegionBoundaryChip } from './RegionBoundaryChip';
 import {
   orderResultsListings,
   parseListingOrder,
@@ -84,10 +86,17 @@ export function SearchResultsContent() {
    * έτρεχαν μετά, στη μνήμη. Τώρα η **περιοχή είναι μέρος του ερωτήματος** — άρα
    * πρέπει να είναι γνωστή τη στιγμή που ρωτάμε.
    */
-  const filters = useMemo(
+  const search = useMemo(
     () => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')),
     [searchParams]
   );
+
+  /**
+   * 🔑 **ADR-883 — η διεύθυνση λέει «ποιος δήμος», ο κριτής χρειάζεται «ποιο σχήμα».** Το
+   * `search` γράφει πίσω στη διεύθυνση (φίλτρα, χάρτης)· το `filters` **κρίνει** (ανάγνωση,
+   * λογιστικές). Όσο φορτώνει το όριο, `hold`: καμία ανάγνωση, κανένα αναβόσβημα.
+   */
+  const { filters, hold, region } = useResolvedListingSearch(search);
 
   /**
    * ⚠️ **Το `near` ταξιδεύει ΣΤΟ ΕΡΩΤΗΜΑ, όχι μόνο στο φίλτρο μνήμης** (§8.65). Το ίδιο
@@ -95,7 +104,7 @@ export function SearchResultsContent() {
    * δύο **δεν** είναι διπλότυπο: το ερώτημα είναι **φθηνό ορθογώνιο** *(διευρυμένο,
    * ώστε να μη χαθεί η «τρίτη κατηγορία»)*, ο κριτής είναι **ακριβής**.
    */
-  const { listings, loading, error, coverage } = usePublicListings(filters.near);
+  const { listings, loading, error, coverage } = usePublicListings(filters.near, hold);
 
   /**
    * 🔴 **ΔΥΟ ΕΡΩΤΗΣΕΙΣ, ΟΧΙ ΜΙΑ** *(2026-09-06)*.
@@ -146,9 +155,9 @@ export function SearchResultsContent() {
    * Γραμμένη μέσα σε αυτό το αρχείο, θα πρόσθετε τρίτη ευθύνη σε ένα συστατικό που
    * ήδη κρατά τη διάταξη και τις τέσσερις λογιστικές.
    */
-  const { commit, setOrder } = useFilterCommit(filters);
-  const { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea } =
-    useMapAreaSearch(filters, commit);
+  const { commit, setOrder } = useFilterCommit(search);
+  const { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea, removeRegion, selectRegion } =
+    useMapAreaSearch(search, commit);
 
   /**
    * **Ποιους άξονες σιωπά μια συγκεκριμένη αγγελία** — η ερώτηση που κατεβαίνει στη λίστα.
@@ -172,7 +181,7 @@ export function SearchResultsContent() {
    * διεύθυνση αυτούσια, ένας κοινοποιημένος σύνδεσμος με σκουπίδια θα τα κουβαλούσε
    * σε **κάθε** επόμενη σελίδα — και θα ήταν **δύο** αλήθειες για το τι ζητήθηκε.
    */
-  const filterQuery = useMemo(() => serializeListingFilters(filters).toString(), [filters]);
+  const filterQuery = useMemo(() => serializeListingFilters(search).toString(), [search]);
 
   // ⚠️ Η διαίρεση γίνεται ΜΙΑ φορά και τα δύο μέρη προκύπτουν από την ΙΔΙΑ κρίση —
   // αλλιώς μια αγγελία θα μπορούσε να λείπει και από τα δύο, ή να είναι και στα δύο.
@@ -312,7 +321,7 @@ export function SearchResultsContent() {
       */}
       <header className="border-b border-border px-3 py-2">
         <PrimaryFilterBar
-          filters={filters}
+          filters={search}
           listings={withinScope}
           visibleCount={visible.length}
           viewport={viewport}
@@ -357,7 +366,7 @@ export function SearchResultsContent() {
                 <ResultsListHeader
                   order={<ResultsOrderControl order={order} onChange={setOrder} />}
                   loading={loading}
-                  error={Boolean(error)}
+                  error={Boolean(error) || region.status === 'unavailable'}
                 >
                   {/*
                     Οι ΤΕΣΣΕΡΙΣ ΔΙΑΜΕΡΙΣΕΙΣ, αυτούσιες (κανόνας 27 · §4.6 · §8.51 · §8.63) — μόνο η
@@ -374,7 +383,7 @@ export function SearchResultsContent() {
                   <CriteriaLedgerBar ledger={criteriaLedger} asked={criteriaAsked} className="text-xs" />
                   <AreaLedgerBar
                     ledger={areaLedger}
-                    asked={filters.near !== null}
+                    asked={search.near !== null}
                     visibleCount={visible.length}
                     coverage={coverage}
                     className="text-xs"
@@ -420,7 +429,12 @@ export function SearchResultsContent() {
                 υπάρχων μηχανισμός των δεδομένων. Το `null` εδώ σημαίνει ρητά *«καμία
                 ορθογώνια περιοχή»*, όχι «καμία ερώτηση».
               */
-              searchArea={filters.near !== null && isBoundingBox(filters.near) ? filters.near : null}
+              searchArea={
+                filters.near === null ? null
+                  : isGeoRegion(filters.near) ? filters.near.bbox
+                  : isBoundingBox(filters.near) ? filters.near : null
+              }
+              boundary={region.status === 'ready' ? region.boundary.geometry : null}
             />
 
             {/*
@@ -435,6 +449,16 @@ export function SearchResultsContent() {
               onFollowMapChange={setFollowMap}
               hasPendingArea={pendingArea !== null}
               onSearchHere={applyPendingArea}
+              regionChip={
+                region.status === 'none' ? undefined
+                  : (
+                    <RegionBoundaryChip
+                      region={region}
+                      onRemove={() => removeRegion(region.status === 'ready' ? region.boundary.region.bbox : null)}
+                      onWiden={selectRegion}
+                    />
+                  )
+              }
             />
           </section>
         </div>

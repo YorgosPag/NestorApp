@@ -17,17 +17,17 @@
  *   3. **Επιλεγμένες διαθέσεις ⇒ ορατή μόνο αν κάποια είναι βραχυχρόνια.**
  */
 import { valuesOf } from '@/lib/criteria/listing-criteria';
-import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { OfferKind } from '@/types/property-offers';
 
 const STAY_OFFER_KIND: OfferKind = 'leaseShort';
 
 /** Πόσες ερωτήσεις διαμονής είναι ενεργές (παράθυρο · άτομα · κατοικίδια). */
-export function askedStayCount(filters: Pick<ListingFilters, 'stayWindow' | 'guests' | 'pets'>): number {
+export function askedStayCount(filters: Pick<ListingSearch, 'stayWindow' | 'guests' | 'pets'>): number {
   return [filters.stayWindow, filters.guests, filters.pets].filter((value) => value !== null).length;
 }
 
-export function staySearchRelevant(filters: ListingFilters): boolean {
+export function staySearchRelevant(filters: ListingSearch): boolean {
   if (askedStayCount(filters) > 0) return true;
   const offerKinds = valuesOf(filters.criteria, 'offerKind') ?? [];
   return offerKinds.length === 0 || offerKinds.includes(STAY_OFFER_KIND);

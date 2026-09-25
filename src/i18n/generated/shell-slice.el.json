@@ -2709,6 +2709,12 @@
     }
   },
   "common-shared": {
+    "geolocation": {
+      "denied": "Η πρόσβαση στην τοποθεσία απορρίφθηκε.",
+      "timeout": "Ο εντοπισμός θέσης άργησε. Δοκίμασε ξανά.",
+      "unavailable": "Η τοποθεσία δεν είναι διαθέσιμη αυτή τη στιγμή.",
+      "unsupported": "Ο browser σου δεν υποστηρίζει εντοπισμό θέσης."
+    },
     "iconCountBadge": {
       "items": "{count, plural, one {# στοιχείο} other {# στοιχεία}}"
     },
@@ -2717,6 +2723,15 @@
       "label": "Προσωπικό Μήνυμα",
       "optional": "προαιρετικό",
       "placeholder": "Γράψτε ένα μήνυμα για τον παραλήπτη..."
+    },
+    "placeRecall": {
+      "areasHeading": "Περιοχές",
+      "clearHistory": "Καθαρισμός ιστορικού",
+      "currentLocation": "Τρέχουσα τοποθεσία",
+      "historyHeading": "Ιστορικό αναζητήσεων",
+      "label": "Προτάσεις αναζήτησης",
+      "locating": "Εντοπίζουμε τη θέση σου…",
+      "locationBlocked": "Απενεργοποιημένη — ενεργοποίησέ την από τις ρυθμίσεις του browser"
     },
     "productTour": {
       "dontShowAgain": "Να μην εμφανιστεί ξανά",

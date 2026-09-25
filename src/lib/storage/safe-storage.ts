@@ -62,6 +62,12 @@ export const STORAGE_KEYS = {
   // it is acceptable here but would not be for anything already owned.
   OWNER_PROPERTY_DRAFT: 'nestor_owner_property_draft',
 
+  // ADR-882 — το ιστορικό αναζητήσεων τόπου («Ιστορικό αναζητήσεων» κάτω από το πεδίο).
+  // Ανά **συσκευή**, όχι ανά uid: ο επισκέπτης της οθόνης 1 είναι συνήθως ανώνυμος (όπως το
+  // Zillow χωρίς σύνδεση). Ο συγχρονισμός στον λογαριασμό είναι δηλωμένη επόμενη φάση.
+  // Σχήμα με `version` — βλ. `lib/geo/recent-place-searches.ts`.
+  RECENT_PLACE_SEARCHES: 'nestor_recent_place_searches',
+
   // ADR-860 §Ε3 — **sessionStorage**, όχι localStorage: «ανανέωσα ήδη αυτή την καρτέλα για την
   // έκδοση X». Ανά καρτέλα επίτηδες — μια άλλη καρτέλα που αποτυγχάνει έχει δικό της δικαίωμα
   // σε ΜΙΑ ανανέωση. Η τιμή είναι το deploymentId του server ⇒ βρόχος δομικά αδύνατος.

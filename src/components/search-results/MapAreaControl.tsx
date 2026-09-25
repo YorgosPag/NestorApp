@@ -38,6 +38,12 @@ interface MapAreaControlProps {
   /** Υπάρχει κάδρο που δεν έχει ζητηθεί ακόμη; Ορίζει **αν** εμφανίζεται το κουμπί. */
   readonly hasPendingArea: boolean;
   readonly onSearchHere: () => void;
+  /**
+   * **Το όριο διοικητικής περιοχής, αν ζητήθηκε** *(ADR-883)* — παίρνει τη θέση του διακόπτη.
+   * Όσο υπάρχει όριο η κίνηση του χάρτη δεν αλλάζει την περιοχή, άρα ο διακόπτης θα υποσχόταν
+   * κάτι που δεν κάνει. Ένα χειριστήριο που δεν κάνει τίποτα δεν δείχνεται.
+   */
+  readonly regionChip?: React.ReactNode;
   readonly className?: string;
 }
 
@@ -48,6 +54,7 @@ export function MapAreaControl({
   onFollowMapChange,
   hasPendingArea,
   onSearchHere,
+  regionChip,
   className,
 }: MapAreaControlProps) {
   const { t } = useTranslation(['search-results']);
@@ -71,7 +78,9 @@ export function MapAreaControl({
         κάτι που μόλις έκανε ο άνθρωπος — ενώ ο διακόπτης είναι ρύθμιση που ζει για
         πάντα. Το εφήμερο μπροστά, το μόνιμο πίσω.
       */}
-      {hasPendingArea && (
+      {regionChip}
+
+      {!regionChip && hasPendingArea && (
         <Button
           type="button"
           size="sm"
@@ -82,17 +91,19 @@ export function MapAreaControl({
         </Button>
       )}
 
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">
-        <Switch id={SWITCH_ID} checked={followMap} onCheckedChange={onFollowMapChange} />
-        {/*
-          ⚠️ **`<label htmlFor>` και όχι `<span>`**: κάνει το ίδιο το κείμενο στόχο
-          κλικ — που στα δάχτυλα είναι η διαφορά ανάμεσα σε χειριστήριο που πιάνεται
-          και σε ένα που αστοχεί (WCAG 2.5.5, μέγεθος στόχου).
-        */}
-        <label htmlFor={SWITCH_ID} className="cursor-pointer text-sm text-foreground">
-          {t('search-results:area.followMap')}
-        </label>
-      </div>
+      {!regionChip && (
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">
+          <Switch id={SWITCH_ID} checked={followMap} onCheckedChange={onFollowMapChange} />
+          {/*
+            ⚠️ **`<label htmlFor>` και όχι `<span>`**: κάνει το ίδιο το κείμενο στόχο
+            κλικ — που στα δάχτυλα είναι η διαφορά ανάμεσα σε χειριστήριο που πιάνεται
+            και σε ένα που αστοχεί (WCAG 2.5.5, μέγεθος στόχου).
+          */}
+          <label htmlFor={SWITCH_ID} className="cursor-pointer text-sm text-foreground">
+            {t('search-results:area.followMap')}
+          </label>
+        </div>
+      )}
     </nav>
   );
 }

@@ -30,21 +30,30 @@ import type { LazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
  * απαντούν *«δεν ξέρω»* με κενό. Το cache του {@link LazyJsonSnapshot} μένει `null`,
  * ώστε η **επόμενη** προσάρτηση να ξαναδοκιμάσει.
  *
- * @param source — ο τεμπέλης αναγνώστης· **σταθερής ταυτότητας** (module-level singleton)
+ * 🔑 **ΑΛΛΑΓΗ ΠΗΓΗΣ = ΝΕΑ ΕΡΩΤΗΣΗ** *(ADR-883)*. Ως τις 2026-09-25 η πηγή έπρεπε να είναι
+ * σταθερής ταυτότητας: η κατάσταση κρατούσε το στιγμιότυπο της **πρώτης**, οπότε ένας
+ * καλών με πηγή **ανά κλειδί** *(το όριο ενός δήμου: άλλος δήμος, άλλη πηγή)* θα έβλεπε το
+ * **παλιό** όριο για πάντα. Τώρα η κατάσταση θυμάται **σε ποια πηγή** απαντά, και μια
+ * απάντηση άλλης πηγής αγνοείται. Για σταθερή πηγή η συμπεριφορά είναι **ταυτόσημη**.
+ *
+ * @param source — ο τεμπέλης αναγνώστης (singleton, ή ένας ανά κλειδί)
  * @param emptySnapshot — η ονομασμένη κατάσταση «ρώτησα και δεν έμαθα»
  */
 export function useLazySnapshot<TSnapshot>(
   source: LazyJsonSnapshot<TSnapshot>,
   emptySnapshot: TSnapshot,
 ): TSnapshot | null {
-  const [snapshot, setSnapshot] = useState<TSnapshot | null>(() => source.peek());
+  const [answer, setAnswer] = useState<{ source: LazyJsonSnapshot<TSnapshot>; snapshot: TSnapshot | null }>(
+    () => ({ source, snapshot: source.peek() }),
+  );
+  const snapshot = answer.source === source ? answer.snapshot : source.peek();
 
   useEffect(() => {
     if (snapshot !== null) return;
 
     let alive = true;
     void source.load().then(() => {
-      if (alive) setSnapshot(source.peek() ?? emptySnapshot);
+      if (alive) setAnswer({ source, snapshot: source.peek() ?? emptySnapshot });
     });
 
     return () => {

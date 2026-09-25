@@ -46,7 +46,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, **καμία** εξάρτηση από Firestore.
  */
 
-import { areaBoundingBox, expandBoundingBox } from '@/lib/geo/geo-area';
+import { areaBoundingBox, expandBoundingBox, isBoundingBox, isGeoRegion } from '@/lib/geo/geo-area';
 import type { GeoArea, GeoBoundingBox } from '@/types/geo/coordinates';
 
 import { LISTING_UNCERTAINTY_KM } from './listing-map-shape';
@@ -180,10 +180,11 @@ export function capListingReads<T>(
  *
  * 🔑 Ναι όταν το ερώτημα καταμέτρησης ρωτά **ακριβώς** ό,τι ρωτά ο άνθρωπος: καθόλου
  * περιοχή *(όλη η αγορά)*, ή ορθογώνιο *(το ορθογώνιο **είναι** η ερώτηση)*. Όχι για
- * κύκλο — δες {@link ListingReadCoverage}.
+ * κύκλο — δες {@link ListingReadCoverage}. Ούτε για **όριο** *(ADR-883)*: το ερώτημα
+ * καταμέτρησης μετρά το **ορθογώνιό** του, που περιέχει και γειτονικούς δήμους.
  */
 export function countIsExactFor(near: GeoArea | null): boolean {
-  return near === null || 'south' in near;
+  return near === null || isBoundingBox(near);
 }
 
 /**
@@ -224,7 +225,9 @@ export function listingCountBox(area: GeoArea): GeoBoundingBox {
  */
 export function listingAreaKey(area: GeoArea | null): string {
   if (area === null) return 'everywhere';
-  if ('south' in area) {
+  // ADR-883: η ταυτότητα του ορίου **είναι** η γεωγραφία του — ίδιος δήμος, ίδια ανάγνωση.
+  if (isGeoRegion(area)) return `region:${area.adminId}`;
+  if (isBoundingBox(area)) {
     return `box:${area.south}:${area.west}:${area.north}:${area.east}`;
   }
   return `circle:${area.center.lat}:${area.center.lng}:${area.radiusKm}`;

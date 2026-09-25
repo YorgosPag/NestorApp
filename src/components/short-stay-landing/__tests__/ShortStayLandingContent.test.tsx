@@ -72,7 +72,7 @@ describe('ADR-777 §8.82 — η ακτίνα της βραχυχρόνιας μ�
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `canAskWhere` ⇒ πεδίο που δίνει μηδέν σε κάθε είσοδο.
     const hero = renderStay([landingListing('s1', ['leaseShort'], false)]);
 
-    expect(within(hero).queryByRole('searchbox')).toBeNull();
+    expect(within(hero).queryByRole('combobox', { name: 'search-results:landing.search.label' })).toBeNull();
     expect(screen.getByText('Τ-s1')).toBeInTheDocument();
     expect(screen.getByText('search-results:landing.coverage.heading')).toBeInTheDocument();
   });
@@ -83,7 +83,7 @@ describe('ADR-777 §8.82 — η ακτίνα της βραχυχρόνιας μ�
       landingListing('s2', ['leaseShort'], false),
     ]);
 
-    expect(within(hero).getByRole('searchbox')).toBeInTheDocument();
+    expect(within(hero).getByRole('combobox', { name: 'search-results:landing.search.label' })).toBeInTheDocument();
   });
 
   it('🔴 Σ4 — η κάλυψη κρίνεται στο ΥΠΟΣΥΝΟΛΟ: πωλήσεις στον χάρτη δεν δίνουν «πού;» στη διαμονή', () => {
@@ -94,7 +94,7 @@ describe('ADR-777 §8.82 — η ακτίνα της βραχυχρόνιας μ�
       landingListing('s1', ['leaseShort'], false),
     ]);
 
-    expect(within(hero).queryByRole('searchbox')).toBeNull();
+    expect(within(hero).queryByRole('combobox', { name: 'search-results:landing.search.label' })).toBeNull();
     // …και η βιτρίνα δείχνει ΜΟΝΟ τη διαμονή — όχι τις πωλήσεις.
     expect(screen.getByText('Τ-s1')).toBeInTheDocument();
     expect(screen.queryByText('Τ-p1')).toBeNull();

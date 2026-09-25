@@ -22,7 +22,7 @@
 
 import { areaRelation } from '@/lib/geo/geo-area';
 import { listingSearchArea } from '@/lib/listings/listing-map-shape';
-import type { GeoArea, GeoBoundingBox } from '@/types/geo/coordinates';
+import type { GeoArea, GeoBoundingBox, GeoRegionRef } from '@/types/geo/coordinates';
 import type { PublicListing } from '@/types/public-listing';
 
 /**
@@ -88,6 +88,31 @@ export function writeSearchAreaBox(box: GeoBoundingBox): string {
   return [box.south, box.west, box.north, box.east]
     .map((value) => Number(value.toFixed(BOX_PRECISION)))
     .join(',');
+}
+
+// ============================================================================
+// ΤΟ ΟΡΙΟ ΔΙΟΙΚΗΤΙΚΗΣ ΠΕΡΙΟΧΗΣ ΣΤΗ ΔΙΕΥΘΥΝΣΗ (ADR-883)
+// ============================================================================
+
+/**
+ * `?area=municipality:0708` — **ποια** περιοχή, ποτέ τα πολύγωνά της.
+ *
+ * 🔑 **Ίδιο όνομα με τον κατάλογο επαγγελματιών** (`showcase-filter.ts`, ADR-846): στις δύο
+ * οθόνες σημαίνει το ίδιο πράγμα — *«σε αυτή τη διοικητική περιοχή»*. Δύο ονόματα για
+ * την ίδια έννοια θα έκαναν τον σύνδεσμο από τη μία οθόνη στην άλλη να χάνει τον τόπο.
+ */
+export const SEARCH_REGION_PARAM = 'area';
+
+/**
+ * Σχήμα `id` της ιεραρχίας: `<βαθμίδα>:<κωδικός>` (`municipality:0708`). Ό,τι άλλο
+ * αγνοείται — ο αναγνώστης δεν ζητά αρχείο με αυθαίρετο όνομα από τη διεύθυνση.
+ */
+const REGION_ID = /^[a-z_]+:[0-9]+$/;
+
+/** Διεύθυνση → αναφορά σε περιοχή, ή `null`. **Η γεωμετρία επιλύεται αλλού** (`useAdminBoundary`). */
+export function readSearchRegion(params: URLSearchParams): GeoRegionRef | null {
+  const raw = params.get(SEARCH_REGION_PARAM)?.trim() ?? '';
+  return REGION_ID.test(raw) ? { adminId: raw } : null;
 }
 
 /**

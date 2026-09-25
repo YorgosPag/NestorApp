@@ -838,5 +838,20 @@
   },
   "iconCountBadge": {
     "items": "{count, plural, one {# item} other {# items}}"
+  },
+  "geolocation": {
+    "unsupported": "Your browser does not support location.",
+    "denied": "Location access was denied.",
+    "unavailable": "Your location is not available right now.",
+    "timeout": "Finding your location took too long. Please try again."
+  },
+  "placeRecall": {
+    "label": "Search suggestions",
+    "currentLocation": "Current location",
+    "locating": "Finding your location…",
+    "locationBlocked": "Turned off — enable it in your browser settings",
+    "historyHeading": "Search history",
+    "areasHeading": "Areas",
+    "clearHistory": "Clear history"
   }
 }

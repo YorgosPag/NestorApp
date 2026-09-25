@@ -46,12 +46,14 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import type { GeoArea, GeoCircle, GeoPoint } from '@/types/geo/coordinates';
+import type { GeoArea, GeoCircle, GeoPoint, GeoRegion, GeoRegionRef } from '@/types/geo/coordinates';
 import {
   listingAreaVerdict,
   readSearchAreaBox,
+  readSearchRegion,
   writeSearchAreaBox,
   SEARCH_AREA_PARAM,
+  SEARCH_REGION_PARAM,
 } from '@/lib/listings/listing-search-area';
 import { isBoundingBox } from '@/lib/geo/geo-area';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
@@ -92,7 +94,7 @@ import {
  * ημερών, και χωρητικότητα που κρίνεται αλλού. Ο λόγος καθενός γράφεται στο
  * `AXES_OUTSIDE_THE_CRITERIA_MAP` — **ονομασμένη εξαίρεση, ποτέ σιωπηλή**.
  */
-export interface ListingFilters {
+export interface ListingFilters<TArea extends ListingSearchArea = GeoArea> {
   /** Κάθε ομοιόμορφος άξονας. **Άξονας που λείπει = δεν ρωτήθηκε.** */
   readonly criteria: ListingCriteria;
   /**
@@ -117,7 +119,7 @@ export interface ListingFilters {
    * λίστα και χάρτης να δείχνουν άλλα πράγματα. Με **ένα** πεδίο κλειστής ένωσης,
    * το σύρσιμο του χάρτη **αντικαθιστά** την περιοχή αντί να την ανταγωνίζεται.
    */
-  readonly near: GeoArea | null;
+  readonly near: TArea | null;
   /** `null` = «οποτεδήποτε» — καμία χρονική ερώτηση. Δες {@link ListingStayWindow}. */
   readonly stayWindow: ListingStayWindow | null;
   /**
@@ -137,6 +139,48 @@ export interface ListingFilters {
    * ⛔ Ο σκύλος βοήθειας **δεν** δηλώνεται εδώ — δεν είναι κατοικίδιο.
    */
   readonly pets: number | null;
+}
+
+/**
+ * **Ό,τι μπορεί να γράφει η διεύθυνση για το «πού»** — γεωμετρία, **ή** αναφορά σε διοικητική
+ * περιοχή της οποίας το όριο δεν έχει φορτώσει ακόμη *(ADR-883)*.
+ */
+export type ListingSearchArea = GeoArea | GeoRegionRef;
+
+/**
+ * **Τα φίλτρα όπως τα γράφει η διεύθυνση** — ίσως με ανεπίλυτη περιοχή.
+ *
+ * 🔑 **Γιατί δύο ονόματα και όχι ένα**: ο κριτής (`matchesListingFilters`) είναι καθαρή,
+ * σύγχρονη συνάρτηση και **δεν μπορεί** να κρίνει «μέσα στον δήμο» χωρίς το όριο του δήμου,
+ * που φορτώνει ασύγχρονα. Αντί να κοιτάζει κρυφά σε cache module *(η παγίδα που το
+ * `useAdministrativeHierarchy` πλήρωσε με άδειο επιλογέα)*, ο τύπος **απαγορεύει** να του
+ * δοθεί ανεπίλυτη περιοχή: ό,τι έρχεται από τη διεύθυνση περνά από το
+ * {@link resolveListingSearch} πρώτα. Οι υπόλοιποι καταναλωτές (ζήτηση, αρχική σελίδα)
+ * φτιάχνουν ήδη γεωμετρία και **δεν αλλάζουν** σε τίποτα.
+ */
+export type ListingSearch = ListingFilters<ListingSearchArea>;
+
+/** Αναφορά σε περιοχή **χωρίς** το όριό της; */
+export function isUnresolvedRegion(area: ListingSearchArea): area is GeoRegionRef {
+  return 'adminId' in area && !('rings' in area);
+}
+
+/**
+ * **Διεύθυνση → κρίσιμα φίλτρα.** Ό,τι δεν χρειάζεται επίλυση περνά αυτούσιο· η αναφορά σε
+ * περιοχή γίνεται το όριό της — **μόνο** αν δόθηκε το όριο της **ίδιας** περιοχής.
+ *
+ * @returns `null` όσο το όριο λείπει — ο καλών **περιμένει**, δεν κρίνει με τίποτα.
+ */
+export function resolveListingSearch(search: ListingSearch, region: GeoRegion | null): ListingFilters | null {
+  const { near } = search;
+  if (near === null || !isUnresolvedRegion(near)) return { ...search, near };
+  if (region === null || region.adminId !== near.adminId) return null;
+  return { ...search, near: region };
+}
+
+/** Η διοικητική περιοχή που ζητά η διεύθυνση, αν ζητά — επιλυμένη ή όχι. */
+export function searchRegionId(near: ListingSearchArea | null): string | null {
+  return near !== null && 'adminId' in near ? near.adminId : null;
 }
 
 /** Προεπιλεγμένη ακτίνα όταν η διεύθυνση δεν τη δηλώνει. Πόλη-κλίμακα. */
@@ -210,7 +254,7 @@ export function readGeoFilter(params: URLSearchParams): GeoCircle | null {
 }
 
 /** Διεύθυνση → φίλτρα. **Άγνωστη τιμή αγνοείται**, ποτέ δεν σκάει η οθόνη. */
-export function parseListingFilters(params: URLSearchParams): ListingFilters {
+export function parseListingFilters(params: URLSearchParams): ListingSearch {
   return {
     criteria: parseListingCriteria(params),
     // 🔑 **Το ορθογώνιο ΠΡΟΗΓΕΙΤΑΙ του κύκλου, και η σειρά είναι σημασία, όχι τύχη.**
@@ -218,7 +262,10 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
     // **κίνηση** που έκανε ο ίδιος πάνω στον χάρτη — δηλαδή είναι η **νεότερη** και
     // πιο ρητή δήλωση για το πού κοιτάει. Ο σειριοποιητής γράφει πάντα **ένα** από
     // τα δύο, οπότε αυτή η προτεραιότητα κρίνει μόνο χειρόγραφες διευθύνσεις.
-    near: readSearchAreaBox(params) ?? readGeoFilter(params),
+    // 🔑 ADR-883: η **περιοχή** προηγείται — είναι ρητή επιλογή από λίστα, όχι ερμηνεία
+    //    κειμένου. Ο σειριοποιητής γράφει πάντα **ένα** σχήμα, οπότε κι εδώ η σειρά
+    //    κρίνει μόνο χειρόγραφες διευθύνσεις.
+    near: readSearchRegion(params) ?? readSearchAreaBox(params) ?? readGeoFilter(params),
     stayWindow: readListingStayWindow(params),
     guests: readListingGuests(params),
     pets: readListingPets(params),
@@ -237,7 +284,7 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
  * αντικείμενο: μια συγχώνευση δύο `URLSearchParams` θα ήταν η θέση όπου κάποιος θα
  * ξεχνούσε ότι τα κλειδιά λεξιλογίου **επαναλαμβάνονται** (`append` ⇄ `set`).
  */
-export function serializeListingFilters(filters: ListingFilters): URLSearchParams {
+export function serializeListingFilters(filters: ListingSearch): URLSearchParams {
   const params = new URLSearchParams();
   writeListingCriteria(filters.criteria, params);
 
@@ -247,14 +294,18 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
   // ⚠️ **Ένα σχήμα ή το άλλο, ΠΟΤΕ και τα δύο.** Δύο γεωγραφικές δηλώσεις στην ίδια
   // διεύθυνση θα ήταν δύο απαντήσεις στο «πού ψάχνω;» — και ο αναγνώστης θα έπρεπε να
   // διαλέξει, δηλαδή κάποιος θα διάλεγε **αλλιώς**.
-  if (filters.near !== null) {
-    if (isBoundingBox(filters.near)) {
-      params.set(SEARCH_AREA_PARAM, writeSearchAreaBox(filters.near));
-    } else {
-      params.set(PARAM.lat, String(filters.near.center.lat));
-      params.set(PARAM.lng, String(filters.near.center.lng));
-      params.set(PARAM.radiusKm, String(filters.near.radiusKm));
-    }
+  const { near } = filters;
+  if (near === null) {
+    // Κανένα «πού» — τίποτα να γραφτεί.
+  } else if ('adminId' in near) {
+    // ADR-883: επιλυμένο ή όχι, το όριο γράφεται ως **ταυτότητα** — ποτέ ως πολύγωνα.
+    params.set(SEARCH_REGION_PARAM, near.adminId);
+  } else if (isBoundingBox(near)) {
+    params.set(SEARCH_AREA_PARAM, writeSearchAreaBox(near));
+  } else {
+    params.set(PARAM.lat, String(near.center.lat));
+    params.set(PARAM.lng, String(near.center.lng));
+    params.set(PARAM.radiusKm, String(near.radiusKm));
   }
   // 🔑 Η ερώτηση διαμονής γράφεται από τους **καθρέφτες** των αναγνωστών της (ADR-777 §8.60.21.7):
   //    ό,τι δεν θα διαβαζόταν πίσω, δεν γράφεται. Ως τις 2026-09-22 εδώ ζούσε `guests !== null`,
@@ -278,7 +329,7 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
  * ⚠️ **Χωρίς παράθυρο δεν υπάρχει ερώτημα, όσα άτομα κι αν δηλώθηκαν.** Η
  * διαθεσιμότητα είναι **ερώτηση χρόνου**· η χωρητικότητα μόνη της δεν την κάνει.
  */
-export function stayQueryOf(filters: ListingFilters): StayQuery | null {
+export function stayQueryOf(filters: ListingSearch): StayQuery | null {
   if (filters.stayWindow === null) return null;
   return {
     checkIn: filters.stayWindow.checkIn,

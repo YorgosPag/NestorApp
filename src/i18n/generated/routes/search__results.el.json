@@ -320,6 +320,16 @@
       "heading": "{count, plural, one {# αγγελία σε αυτό το σημείο} other {# αγγελίες σε αυτό το σημείο}}"
     }
   },
+  "search-region": {
+    "boundary": {
+      "attribution": "Όρια: © geodata.gov.gr (CC BY 3.0)",
+      "label": "Όριο περιοχής",
+      "loading": "Φόρτωση ορίου…",
+      "remove": "Αφαίρεση ορίου",
+      "unavailable": "Το όριο δεν φορτώθηκε — πατήστε «Αφαίρεση ορίου» για αναζήτηση στον χάρτη.",
+      "widen": "Αναζήτηση σε όλη την περιοχή: {name}"
+    }
+  },
   "short-stay": {
     "checkIn": "Άφιξη",
     "checkOut": "Αναχώρηση",

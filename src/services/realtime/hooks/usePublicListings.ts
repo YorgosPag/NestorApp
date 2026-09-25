@@ -170,11 +170,17 @@ function usePublicListingsSubscriptionState(): {
  * @param near Η δηλωμένη περιοχή, ή `null` για ολόκληρη την αγορά. **Και στις δύο
  *   περιπτώσεις ισχύει το {@link LISTING_READ_CAP}**: το ελάττωμα δεν ήταν η απουσία
  *   περιοχής — ήταν η απουσία **οποιουδήποτε** ορίου.
+ * @param hold **Περίμενε — η περιοχή δεν είναι ακόμη γνωστή** *(ADR-883)*. Το όριο ενός
+ *   δήμου φορτώνει ασύγχρονα· ως τότε το `near` είναι `null`, που εδώ θα σήμαινε *«όλη η
+ *   αγορά»*. Χωρίς αυτή τη σημαία η λίστα θα έδειχνε για μια στιγμή αγγελίες όλης της
+ *   Ελλάδας και θα αναβόσβηνε στον δήμο. Όσο ισχύει: `loading`, καμία ανάγνωση.
  */
-export function usePublicListings(near: GeoArea | null): PublicListingsState {
+export function usePublicListings(near: GeoArea | null, hold = false): PublicListingsState {
   const { state, begin, deliver, fail } = usePublicListingsSubscriptionState();
 
-  const areaKey = listingAreaKey(near);
+  const areaKey = hold ? 'hold' : listingAreaKey(near);
+  const holdRef = useRef(hold);
+  holdRef.current = hold;
   const nearRef = useRef(near);
   nearRef.current = near;
 
@@ -195,6 +201,7 @@ export function usePublicListings(near: GeoArea | null): PublicListingsState {
 
     begin();
     knownTotalRef.current = null;
+    if (holdRef.current) return undefined;
 
     // (1) ΕΦΑΠΑΞ — και η καταμέτρηση μαζί, ώστε η ομολογία να έρθει με τα δεδομένα.
     void Promise.all([getDocs(publicListingsQuery(area)), countPublicListings(area)])
@@ -278,7 +285,7 @@ export function usePublicListing(id: string): PublicListingLookup {
 
     setLookup({ state: 'loading' });
 
-    // tenant-scope-exempt: `public_listings` είναι δηλωμένη `published-projection` στο
+    // `public_listings` είναι δηλωμένη `published-projection` στο
     // `services/firestore/tenant-config.ts` — κλειστό σχήμα ΧΩΡΙΣ ταυτότητα πελάτη.
     // Ανάγνωση **ενός** εγγράφου κατά ταυτότητα: δεν υπάρχει ερώτημα να φιλτραριστεί,
     // και ο κανόνας `read: if true` το επιτρέπει ρητά (άγκυρα: `public-listings.rules.test.ts`).

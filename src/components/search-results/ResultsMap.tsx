@@ -40,6 +40,7 @@ import { ListingMapPopup } from './ListingMapPopup';
 import { ListingPriceMarkers } from './ListingPriceMarkers';
 import { RADIUS } from './ResultsMapLayers';
 import { ListingMapCanvas, type ListingMapCanvasProps } from './ListingMapCanvas';
+import { AdminBoundaryLayer } from './AdminBoundaryLayer';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ResultsMapProps extends Omit<ListingMapCanvasProps, 'geojson' | 'children' | 'describeListing'> {
@@ -53,6 +54,11 @@ interface ResultsMapProps extends Omit<ListingMapCanvasProps, 'geojson' | 'child
    * η Α3 μέτρησε στο **75%**.
    */
   readonly filterQuery?: string;
+  /**
+   * **Το όριο της διοικητικής περιοχής που ζητήθηκε** *(ADR-883)* — ή `null`. Το πλαισίωμα
+   * γίνεται από το `searchArea` (το ορθογώνιό του)· εδώ έρχεται μόνο το **σχήμα**.
+   */
+  readonly boundary?: GeoJSON.MultiPolygon | null;
 }
 
 export function ResultsMap({
@@ -64,6 +70,7 @@ export function ResultsMap({
   onClear,
   onAreaChange,
   searchArea = null,
+  boundary = null,
 }: ResultsMapProps) {
   /** Αγγελίες → GeoJSON, από τον **έναν** ζωγράφο· ο πυρήνας δέχεται μόνο το αποτέλεσμα. */
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
@@ -106,6 +113,9 @@ export function ResultsMap({
       searchArea={searchArea}
       describeListing={describeListing}
     >
+      {/* ADR-883 — πρώτο παιδί: το όριο ζωγραφίζεται ΚΑΤΩ από πινακίδες και φούσκα (`beforeId`). */}
+      {boundary !== null && <AdminBoundaryLayer geometry={boundary} />}
+
       {/*
         Οι πινακίδες τιμής — **μετά** την πηγή, ώστε να κάθονται πάνω από τα σχήματα,
         και **πριν** τη φούσκα, που πρέπει να μένει πάνω από όλα.

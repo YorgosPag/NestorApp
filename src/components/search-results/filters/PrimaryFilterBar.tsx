@@ -54,7 +54,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import type { ViewportClass } from '@/hooks/media/useViewportClass';
 import { askedCriterionKeys } from '@/lib/criteria/listing-criteria';
-import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { PublicListing } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
 
@@ -70,7 +70,7 @@ import { staySearchRelevant } from './stay-search-relevance';
 import { useFilterCommit } from './use-filter-commit';
 
 interface PrimaryFilterBarProps {
-  readonly filters: ListingFilters;
+  readonly filters: ListingSearch;
   /** Ο κατάλογος **εντός εμβέλειας** (`withinScope`) — δες {@link CriterionField}. */
   readonly listings: readonly PublicListing[];
   /** Πόσα βλέπει **αυτή τη στιγμή** ο άνθρωπος — ο αριθμός μέσα στο «Δείξε N». */

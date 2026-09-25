@@ -38,7 +38,8 @@
  */
 
 import { distanceMeters, EARTH_RADIUS_METERS } from '@/lib/geo/geo-distance';
-import type { GeoArea, GeoBoundingBox, GeoCircle, GeoPoint } from '@/types/geo/coordinates';
+import { geoRingsNearestEdgeMetres, isPointInGeoRings } from '@/lib/geo/geo-ring';
+import type { GeoArea, GeoBoundingBox, GeoCircle, GeoPoint, GeoRegion } from '@/types/geo/coordinates';
 
 /**
  * **ΝΑΙ · ΙΣΩΣ · ΟΧΙ** — η σχέση ενός *υποκειμένου* προς μια *περιοχή ερωτήματος*.
@@ -52,9 +53,14 @@ import type { GeoArea, GeoBoundingBox, GeoCircle, GeoPoint } from '@/types/geo/c
  */
 export type AreaRelation = 'within' | 'intersects' | 'disjoint';
 
-/** Ορθογώνιο ή κύκλος; Διάκριση με **παρουσία πεδίου** — τα δύο μέλη δεν μοιράζονται κανένα. */
+/** Ορθογώνιο ή κύκλος; Διάκριση με **παρουσία πεδίου** — τα τρία μέλη δεν μοιράζονται κανένα. */
 export function isBoundingBox(area: GeoArea): area is GeoBoundingBox {
   return 'south' in area;
+}
+
+/** Όριο διοικητικής περιοχής (ADR-883); Το μόνο μέλος με δακτυλίους. */
+export function isGeoRegion(area: GeoArea): area is GeoRegion {
+  return 'rings' in area;
 }
 
 /** Το **πλησιέστερο** σημείο ενός ορθογωνίου προς ένα σημείο — clamp σε κάθε άξονα. */
@@ -169,10 +175,59 @@ function boxToBox(subject: GeoBoundingBox, query: GeoBoundingBox): AreaRelation 
  * έγραψε `if`.
  */
 export function areaRelation(subject: GeoArea, query: GeoArea): AreaRelation {
-  if (isBoundingBox(subject)) {
-    return isBoundingBox(query) ? boxToBox(subject, query) : boxToCircle(subject, query);
+  // 🔑 Όριο ως **υποκείμενο** ⇒ το ορθογώνιό του, που το περιέχει: `within`/`disjoint`
+  //    του ορθογωνίου ισχύουν **και** για το όριο· το `intersects` σημαίνει «ίσως».
+  const known = isGeoRegion(subject) ? subject.bbox : subject;
+  if (isGeoRegion(query)) return areaToRegion(known, query);
+  if (isBoundingBox(known)) {
+    return isBoundingBox(query) ? boxToBox(known, query) : boxToCircle(known, query);
   }
-  return isBoundingBox(query) ? circleToBox(subject, query) : circleToCircle(subject, query);
+  return isBoundingBox(query) ? circleToBox(known, query) : circleToCircle(known, query);
+}
+
+// ============================================================================
+// ΚΥΚΛΟΣ ΠΡΟΣ ΟΡΙΟ — ΜΕ ΑΠΟΔΕΙΞΗ, ΟΧΙ ΕΚΤΙΜΗΣΗ (ADR-883)
+// ============================================================================
+
+/**
+ * **Είναι ο κύκλος μέσα στο όριο, έξω, ή στο σύνορο;**
+ *
+ * 🔒 **Δύο αβεβαιότητες προστίθενται, καμία δεν αγνοείται**: η ακτίνα του κύκλου (πόσο
+ * καλά ξέρουμε πού είναι η αγγελία) **και** η ανοχή του ορίου (πόσο απλοποιήθηκε το
+ * σύνορο). Με `d` = απόσταση του κέντρου από το απλοποιημένο σύνορο, το αληθινό σύνορο
+ * απέχει τουλάχιστον `d − ανοχή`. Άρα:
+ *
+ * | Συνθήκη | Απάντηση |
+ * |---|---|
+ * | κέντρο μέσα **και** `d ≥ ακτίνα + ανοχή` | `within` — ολόκληρος ο κύκλος μέσα στο αληθινό όριο |
+ * | κέντρο έξω **και** `d ≥ ακτίνα + ανοχή` | `disjoint` |
+ * | αλλιώς | `intersects` — **«ίσως»**, και η οθόνη το λέει |
+ *
+ * ⚠️ Το «μέσα;» στο απλοποιημένο σχήμα είναι αξιόπιστο **μόνο** όταν `d ≥ ανοχή` — και η
+ * συνθήκη το εξασφαλίζει, αφού `ακτίνα ≥ 0`.
+ */
+function circleToRegion(subject: GeoCircle, query: GeoRegion): AreaRelation {
+  const marginM = subject.radiusKm * 1000 + query.toleranceM;
+  const edgeM = geoRingsNearestEdgeMetres(subject.center, query.rings);
+  if (edgeM < marginM) return 'intersects';
+  return isPointInGeoRings(subject.center, query.rings) ? 'within' : 'disjoint';
+}
+
+/**
+ * Ορθογώνιο ή κύκλος προς όριο. Το ορθογώνιο κρίνεται με τον **περιγεγραμμένο κύκλο**
+ * του — συντηρητικά: `within`/`disjoint` του κύκλου ισχύουν και για το ορθογώνιο.
+ * 🔑 Φτηνός αποκλεισμός πρώτα: υποκείμενο έξω από το ορθογώνιο του ορίου = `disjoint`.
+ */
+function areaToRegion(subject: GeoCircle | GeoBoundingBox, query: GeoRegion): AreaRelation {
+  const subjectBox = isBoundingBox(subject) ? subject : areaBoundingBox(subject);
+  if (boxToBox(subjectBox, query.bbox) === 'disjoint') return 'disjoint';
+  return circleToRegion(isBoundingBox(subject) ? boxBoundingCircle(subject) : subject, query);
+}
+
+function boxBoundingCircle(box: GeoBoundingBox): GeoCircle {
+  const center = { lat: (box.south + box.north) / 2, lng: (box.west + box.east) / 2 };
+  const radiusM = Math.max(...boxCorners(box).map((corner) => distanceMeters(center, corner)));
+  return { center, radiusKm: radiusM / 1000 };
 }
 
 /**
@@ -215,6 +270,7 @@ function toRadians(degrees: number): number {
  */
 export function areaBoundingBox(area: GeoArea): GeoBoundingBox {
   if (isBoundingBox(area)) return area;
+  if (isGeoRegion(area)) return area.bbox;
 
   const latitudeSpan = (area.radiusKm * 1000) / METRES_PER_DEGREE_LATITUDE;
   const north = area.center.lat + latitudeSpan;

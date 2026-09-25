@@ -26,7 +26,7 @@
 import React from 'react';
 
 import { useUrlQuery } from '@/hooks/useUrlQuery';
-import { parseListingFilters, stayQueryOf, type ListingFilters } from '@/lib/listings/listing-filters';
+import { parseListingFilters, stayQueryOf, type ListingSearch } from '@/lib/listings/listing-filters';
 import { writeListingGuests, writeListingPets, writeListingStayWindow } from '@/lib/listings/listing-stay-url';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 import { staySelectionOf, type StayPublicSelection } from '@/lib/stay/stay-public-selection';
@@ -56,7 +56,7 @@ export interface ListingStayQuestion {
   readonly query: StayQuery | null;
 }
 
-function useUrlFilters(): ListingFilters {
+function useUrlFilters(): ListingSearch {
   const query = useUrlQuery();
   return React.useMemo(() => parseListingFilters(new URLSearchParams(query)), [query]);
 }

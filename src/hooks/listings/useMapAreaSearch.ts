@@ -32,10 +32,10 @@
  *    χωρίς να έχει αγγίξει τίποτα.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { sameMapArea } from '@/components/search-results/results-map-area';
-import type { ListingFilters } from '@/lib/listings/listing-filters';
+import { searchRegionId, type ListingSearch } from '@/lib/listings/listing-filters';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
 /**
@@ -62,6 +62,22 @@ export interface MapAreaSearch {
   readonly onAreaChange: (area: GeoBoundingBox) => void;
   /** Ο άνθρωπος πάτησε «Αναζήτηση σε αυτή την περιοχή». */
   readonly applyPendingArea: () => void;
+  /**
+   * **«Αφαίρεση ορίου»** *(ADR-883)* — το όριο δίνει τη θέση του στο **ορατό κάδρο**.
+   *
+   * 🔑 **Όχι σε «καμία περιοχή»**: ο επισκέπτης που βγάζει το όριο του Ευόσμου κοιτάει
+   * ακόμη τον Εύοσμο. Αν η λίστα γινόταν ξαφνικά *«όλη η Ελλάδα»*, η οθόνη θα άλλαζε
+   * κάτι που **δεν ζήτησε**. Έτσι το κάνει και το Zillow: τα αποτελέσματα μένουν, το
+   * περίγραμμα φεύγει.
+   *
+   * ⚠️ **`framed` = το ορθογώνιο του ορίου, ως εφεδρεία**: ο χάρτης αναφέρει μόνο κινήσεις
+   * **του ανθρώπου** (`originalEvent`) — το αυτόματο πλαισίωμα στο όριο **δεν** αναφέρεται.
+   * Όποιος πατά «Αφαίρεση» χωρίς να έχει αγγίξει τον χάρτη κοιτάει **ακριβώς** το ορθογώνιο
+   * του ορίου· χωρίς εφεδρεία η περιοχή θα γινόταν σιωπηλά «όλη η Ελλάδα».
+   */
+  readonly removeRegion: (framed: GeoBoundingBox | null) => void;
+  /** Ζήτα **άλλη** διοικητική περιοχή — π.χ. ανέβασμα στον γονέα από τη γραμμή γενεαλογίας. */
+  readonly selectRegion: (adminId: string) => void;
 }
 
 /**
@@ -70,11 +86,21 @@ export interface MapAreaSearch {
  *   γραφέας εδώ θα παρήγαγε διαφορετικό σύνδεσμο για την ίδια ερώτηση.
  */
 export function useMapAreaSearch(
-  filters: ListingFilters,
-  commit: (next: ListingFilters) => void
+  filters: ListingSearch,
+  commit: (next: ListingSearch) => void
 ): MapAreaSearch {
   const [followMap, setFollowMapState] = useState(false);
   const [pendingArea, setPendingArea] = useState<GeoBoundingBox | null>(null);
+  // Το τελευταίο κάδρο που ανέφερε ο χάρτης — το χρειάζεται μόνο η «Αφαίρεση ορίου».
+  // Ref, όχι state: κάθε σύρσιμο θα ξανα-απέδιδε την οθόνη για τιμή που δεν δείχνει κανείς.
+  const viewportRef = useRef<GeoBoundingBox | null>(null);
+  const regionId = searchRegionId(filters.near);
+  const regionActive = regionId !== null;
+  // Νέα περιοχή ⇒ ο χάρτης πλαισιώνεται ξανά **μόνος του** (δεν αναφέρεται)· το κάδρο που
+  // είχε αναφερθεί πριν ανήκει σε **άλλη** ερώτηση και δεν επιτρέπεται να επιβιώσει.
+  useEffect(() => {
+    viewportRef.current = null;
+  }, [regionId]);
 
   /**
    * ⚠️ **Η ανάγνωση ζει σε `useEffect`, ΠΟΤΕ στην αρχική τιμή του `useState`.** Το
@@ -117,6 +143,12 @@ export function useMapAreaSearch(
    */
   const onAreaChange = useCallback(
     (area: GeoBoundingBox): void => {
+      viewportRef.current = area;
+      // 🔑 ADR-883: **το όριο δεν αντικαθίσταται από κίνηση**. Είναι ρητή επιλογή από
+      //    λίστα — ισχυρότερη δήλωση από ένα σύρσιμο — και το πλαισίωμα στο όριο είναι
+      //    ο ίδιος ο χάρτης που **κινείται μόνος του**. Έξοδος: «Αφαίρεση ορίου».
+      if (regionActive) return;
+
       const current = filters.near;
       const alreadyAsked =
         current !== null && 'south' in current && sameMapArea(current, area);
@@ -125,7 +157,23 @@ export function useMapAreaSearch(
       if (followMap) applyArea(area);
       else setPendingArea(area);
     },
-    [filters.near, followMap, applyArea]
+    [filters.near, regionActive, followMap, applyArea]
+  );
+
+  const removeRegion = useCallback(
+    (framed: GeoBoundingBox | null): void => {
+      setPendingArea(null);
+      commit({ ...filters, near: viewportRef.current ?? framed });
+    },
+    [commit, filters]
+  );
+
+  const selectRegion = useCallback(
+    (adminId: string): void => {
+      setPendingArea(null);
+      commit({ ...filters, near: { adminId } });
+    },
+    [commit, filters]
   );
 
   /**
@@ -151,5 +199,5 @@ export function useMapAreaSearch(
     if (pendingArea !== null) applyArea(pendingArea);
   }, [pendingArea, applyArea]);
 
-  return { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea };
+  return { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea, removeRegion, selectRegion };
 }

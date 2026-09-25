@@ -19,14 +19,14 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCalendarDay } from '@/lib/intl-formatting';
-import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { ListingSearch } from '@/lib/listings/listing-filters';
 
 import { StayFilterFields } from '../StayFilterFields';
 import { CriterionBarPopover } from './CriterionBarPopover';
 import { askedStayCount } from './stay-search-relevance';
 
 interface StayFilterChipProps {
-  readonly filters: ListingFilters;
+  readonly filters: ListingSearch;
 }
 
 export function StayFilterChip({ filters }: StayFilterChipProps) {

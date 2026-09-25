@@ -97,5 +97,10 @@
     "stack": {
       "heading": "{count, plural, one {# αγγελία σε αυτό το σημείο} other {# αγγελίες σε αυτό το σημείο}}"
     }
+  },
+  "search-region": {
+    "boundary": {
+      "attribution": "Όρια: © geodata.gov.gr (CC BY 3.0)"
+    }
   }
 }

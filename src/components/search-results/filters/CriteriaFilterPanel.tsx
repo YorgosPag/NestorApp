@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/accordion';
 import { askedCriterionKeys } from '@/lib/criteria/listing-criteria';
 import { criteriaGroupLabel } from '@/lib/criteria/listing-criterion-labels';
-import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { ListingSearch } from '@/lib/listings/listing-filters';
 import type { PublicListing } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,7 @@ import { CriterionField } from './CriterionField';
 import type { FilterCommit } from './use-filter-commit';
 
 interface CriteriaFilterPanelProps {
-  readonly filters: ListingFilters;
+  readonly filters: ListingSearch;
   /** Ο κατάλογος **εντός εμβέλειας** (`withinScope`) — δες {@link CriterionField}. */
   readonly listings: readonly PublicListing[];
   readonly commit: FilterCommit;

@@ -47,6 +47,7 @@ import {
 } from './listing-criterion-asking';
 import { keepKnownValues } from './listing-criterion-values';
 import { LISTING_SELECTED_PARAM } from '@/lib/listings/listing-focus';
+import { SEARCH_REGION_PARAM } from '@/lib/listings/listing-search-area';
 import {
   EMPTY_LISTING_CRITERIA,
   withFlag,
@@ -136,7 +137,10 @@ export const CRITERION_PARAM: Record<CriterionKey, string> = {
  */
 // ADR-777 §8.60.21: `pets` — πόσα κατοικίδια (φίλτρο διαμονής, όπως το `guests`).
 // ADR-777 §8.77: η επιλεγμένη αγγελία — το ΙΔΙΟ σύμβολο με τον γραφέα του, όχι δεύτερο literal.
-export const RESERVED_SEARCH_PARAMS = ['lat', 'lng', 'r', 'box', 'in', 'out', 'guests', 'pets', LISTING_SELECTED_PARAM] as const;
+// ADR-883: το όριο διοικητικής περιοχής (`area`) — επίσης το ΙΔΙΟ σύμβολο με τον αναγνώστη του.
+export const RESERVED_SEARCH_PARAMS = [
+  'lat', 'lng', 'r', 'box', SEARCH_REGION_PARAM, 'in', 'out', 'guests', 'pets', LISTING_SELECTED_PARAM,
+] as const;
 
 /** Τα δύο άκρα ενός αριθμητικού άξονα στη διεύθυνση. */
 export function rangeParams(key: RangeCriterionKey): { readonly min: string; readonly max: string } {

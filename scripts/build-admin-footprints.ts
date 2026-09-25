@@ -48,57 +48,32 @@
  * `@/`-εισαγωγή μέσα στο `lib/geo` είναι **type-only**, άρα σβήνεται στη μεταγλώττιση.)*
  */
 
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { ringsFootprint } from '../src/lib/geo/geo-footprint';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
 import { DEFAULT_INTERIOR_COVER, interiorCircleCover } from '../src/lib/geo/geo-interior-cover';
 import type { GeoCircle, GeoOutline } from '../src/types/geo/coordinates';
 import type { GeoFootprint } from '../src/types/geo/admin-footprint';
+import {
+  ATTRIBUTION,
+  LAYERS,
+  MUNICIPAL_UNIT_LEVEL,
+  REPO_ROOT,
+  buildIdIndex,
+  composeMunicipalitiesFromUnits,
+  loadLayer,
+  matchFeature,
+  readHierarchyRows,
+  type HierarchyRow,
+} from './lib/admin-boundaries/admin-boundary-source';
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const CACHE_DIR = join(REPO_ROOT, 'node_modules', '.cache', 'admin-boundaries');
-const HIERARCHY_PATH = join(REPO_ROOT, 'public', 'data', 'administrative-hierarchy.json');
+// 🔑 ADR-883: η φόρτωση του WFS, η αντιστοίχιση κωδικού → `id` και η σύνθεση των δήμων
+//    του Κλεισθένη μετακόμισαν στο `lib/admin-boundaries/admin-boundary-source.ts` — τις
+//    χρειάζεται **και** ο γεννήτορας των ορίων του χάρτη, και δεύτερο αντίγραφο θα ήταν
+//    δύο απαντήσεις στο «ποιο σχήμα ανήκει σε ποια οντότητα;» (N.18).
 const OUTPUT_PATH = join(REPO_ROOT, 'public', 'data', 'admin-footprints.json');
-
-const WFS_BASE = 'https://wfdservices.ypeka.gr/geoserver/WFD_geodata_50K/wfs';
-
-/** Η αναφορά πηγής που **απαιτεί** η CC-BY. Ταξιδεύει μέσα στο παραγόμενο αρχείο. */
-const ATTRIBUTION = {
-  source: 'geodata.gov.gr — «Όρια Δήμων (Καλλικράτης)» (ΟΚΧΕ/ΕΚΧΑ)',
-  sourceId: '63786e9f-7be9-4d1e-99c9-48ff45d0962f',
-  license: 'CC-BY 3.0',
-  licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
-  via: 'data.gov.gr — ΥΠΕΝ «gis-ypen-wfd-wms» (WFS), δηλώνει «Πηγή: geodata.gov.gr»',
-} as const;
-
-/**
- * Ποιο επίπεδο της ιεραρχίας δίνει ποιο layer του WFS.
- *
- * ⚠️ **Το επίπεδο 8 (οικισμοί) λείπει σκόπιμα**: είναι **σημεία**, όχι πολύγωνα — δεν
- * έχει «εγγεγραμμένη ακτίνα» ένα σημείο. Το επίπεδο 1 (μεγάλες γεωγραφικές ενότητες)
- * δεν υπάρχει καθόλου στην πηγή. Και για τα δύο ο `FootprintResolver` επιστρέφει `null`
- * και ο κριτής απαντά **`unknown`** — που είναι ήδη η σωστή απάντηση.
- */
-const LAYERS: readonly { readonly layer: string; readonly level: number }[] = [
-  { layer: 'apokentromenes_dioikiseis', level: 2 },
-  { layer: 'perifereies', level: 3 },
-  { layer: 'perifereiakes_enotites', level: 4 },
-  { layer: 'kallikratikoi_dimoi', level: 5 },
-  { layer: 'dimotikes_enotites', level: 6 },
-  { layer: 'dimotikes_topikes_koinotites', level: 7 },
-];
-
-interface HierarchyRow {
-  readonly id: string;
-  readonly n: string;
-  readonly c: string;
-  readonly l: number;
-  /** Ο γονέας — τον χρειάζεται η **σύνθεση** αποτυπώματος από δημοτικές ενότητες (Φ4). */
-  readonly p: string | null;
-}
 
 /** Ό,τι κρατάμε από μια σάρωση ενός layer — για την αναφορά, όχι για το αρχείο. */
 interface LayerReport {
@@ -110,72 +85,6 @@ interface LayerReport {
   readonly ambiguous: number;
   readonly degenerate: number;
   readonly innerZero: number;
-}
-
-function wfsUrl(layer: string): string {
-  const params = new URLSearchParams({
-    service: 'WFS',
-    version: '2.0.0',
-    request: 'GetFeature',
-    typeNames: `WFD_geodata_50K:${layer}`,
-    outputFormat: 'application/json',
-    srsName: 'EPSG:4326',
-  });
-  return `${WFS_BASE}?${params.toString()}`;
-}
-
-/**
- * Κατεβάζει το layer **μία φορά** και το κρατά σε cache **εκτός παρακολούθησης**.
- *
- * ⚠️ Η cache ζει στο `node_modules/.cache` επίτηδες: είναι ο ένας φάκελος που **καμία**
- * διαδρομή του git δεν βλέπει, άρα τα ~120 MB πολυγώνων δεν μπορούν να μπουν κατά λάθος
- * σε commit — ούτε με `git add -A`.
- */
-async function loadLayer(layer: string): Promise<GeoJSON.FeatureCollection> {
-  mkdirSync(CACHE_DIR, { recursive: true });
-  const cached = join(CACHE_DIR, `${layer}.geojson`);
-
-  if (!existsSync(cached)) {
-    process.stdout.write(`  ↓ ${layer} … `);
-    const response = await fetch(wfsUrl(layer));
-    if (!response.ok) throw new Error(`WFS ${layer}: HTTP ${response.status}`);
-    const body = await response.text();
-    writeFileSync(cached, body);
-    process.stdout.write(`${(body.length / 1e6).toFixed(1)} MB\n`);
-  }
-
-  return JSON.parse(readFileSync(cached, 'utf8')) as GeoJSON.FeatureCollection;
-}
-
-/**
- * `<επίπεδο>:<κωδικός Καλλικράτη>` → το `id` της ιεραρχίας.
- *
- * 🔴 **Οι διφορούμενοι κωδικοί ΑΦΑΙΡΟΥΝΤΑΙ, δεν επιλύονται.** Στο σημερινό
- * `administrative-hierarchy.json` υπάρχουν **τρία** `id` που ανήκουν σε **δύο
- * διαφορετικούς δήμους** *(`municipality:0502` = ΝΕΣΤΟΥ **και** ΝΟΤΙΩΝ ΤΖΟΥΜΕΡΚΩΝ ·
- * `:1502` = ΔΕΣΚΑΤΗΣ/ΒΕΛΒΕΝΤΟΥ · `:3202` = ΠΑΞΩΝ/ΒΟΡΕΙΑΣ ΚΕΡΚΥΡΑΣ)*. Το να δώσουμε
- * αποτύπωμα σε τέτοιο `id` σημαίνει να αποδώσουμε τη γεωμετρία **του ενός δήμου στον
- * άλλο** — ψέμα, και μάλιστα αόρατο. Η απουσία δίνει `unknown`· η εικασία θα έδινε
- * λάθος απάντηση με σιγουριά.
- */
-function buildIdIndex(rows: readonly HierarchyRow[]): {
-  readonly index: ReadonlyMap<string, string>;
-  readonly ambiguous: ReadonlySet<string>;
-} {
-  const index = new Map<string, string>();
-  const ambiguous = new Set<string>();
-
-  for (const row of rows) {
-    const key = `${row.l}:${row.c}`;
-    if (index.has(key)) {
-      ambiguous.add(key);
-      index.delete(key);
-      continue;
-    }
-    if (!ambiguous.has(key)) index.set(key, row.id);
-  }
-
-  return { index, ambiguous };
 }
 
 /**
@@ -351,27 +260,22 @@ function collectLayer(
   let innerZero = 0;
 
   for (const feature of collection.features) {
-    const code = String(feature.properties?.kalcode ?? '');
-    const key = `${level}:${code}`;
-
-    if (ambiguous.has(key)) {
-      ambiguousHits += 1;
-      continue;
-    }
-    const id = index.get(key);
-    if (id === undefined) {
-      unmatched += 1;
+    const match = matchFeature(feature, level, index, ambiguous);
+    if (match.kind === 'skipped') {
+      if (match.reason === 'ambiguous') ambiguousHits += 1;
+      else if (match.reason === 'unmatched') unmatched += 1;
+      else degenerate += 1;
       continue;
     }
 
-    const footprint = footprintOf(feature.geometry, level);
+    const footprint = footprintOf(match.geometry, level);
     if (footprint === null) {
       degenerate += 1;
       continue;
     }
 
     if (footprint.innerKm === 0) innerZero += 1;
-    into.set(id, footprint);
+    into.set(match.id, footprint);
     written += 1;
   }
 
@@ -388,57 +292,29 @@ function collectLayer(
 }
 
 /**
- * 🔴 **ΟΙ ΔΗΜΟΙ ΠΟΥ Η ΠΗΓΗ ΔΕΝ ΞΕΡΕΙ** — ADR-846 Φ4.
+ * 🔴 **ΟΙ ΔΗΜΟΙ ΠΟΥ Η ΠΗΓΗ ΔΕΝ ΞΕΡΕΙ** — ADR-846 Φ4. Η **σύνθεση** ζει στην κοινή πηγή
+ * (`composeMunicipalitiesFromUnits`)· εδώ μένει μόνο το αποτύπωμα.
  *
- * Το layer `kallikratikoi_dimoi` έχει **326** πολύγωνα: είναι ο Καλλικράτης του 2011,
- * και **τελείωσε εκεί**. Οι επτά δήμοι που γέννησε ο Κλεισθένης *(ν.4600/2019)* δεν
- * υπάρχουν σε αυτό, και **δεν πρόκειται να υπάρξουν** — το geodata.gov.gr δεν έχει
- * δημοσιεύσει όρια μετά-Κλεισθένη *(ελεγμένο 2026-09-08)*.
- *
- * 🔑 **Και όμως το έδαφός τους ΤΟ ΕΧΟΥΜΕ ΗΔΗ.** Ο νόμος δεν χάραξε νέα σύνορα: **μοίρασε
- * δημοτικές ενότητες**, και το layer `dimotikes_enotites` τις έχει **όλες** — από την
- * **ίδια** πηγή, με την **ίδια** άδεια CC-BY. Άρα το αποτύπωμα ενός νέου δήμου είναι
- * ακριβώς το αποτύπωμα της **ένωσης των παιδιών του**, χωρίς νέα εξάρτηση και χωρίς
- * καμία εικασία για το πού περνά μια γραμμή.
- *
- * ⚠️ **Τα δαχτυλίδια ΕΝΩΝΟΝΤΑΙ, δεν μέσο-ποιούνται**: ο `ringsFootprint` δέχεται
- * **όλα** τα δαχτυλίδια μαζί, οπότε ο περικλείων κύκλος βγαίνει από το σύνολο και ο
- * εγγεγραμμένος **περνιέται** από αυτόν — η σχέση `εσωτερικός ⊆ σχήμα ⊆ εξωτερικός`
- * μένει ακέραιη. Δύο χωριστά αποτυπώματα μέσο-ποιημένα θα την έσπαγαν σιωπηλά.
+ * ⚠️ **Τα δαχτυλίδια ΕΝΩΝΟΝΤΑΙ, δεν μέσο-ποιούνται**: ο `ringsFootprint` δέχεται **όλα**
+ * τα δαχτυλίδια μαζί, οπότε ο περικλείων κύκλος βγαίνει από το σύνολο και ο εγγεγραμμένος
+ * **περνιέται** από αυτόν — η σχέση `εσωτερικός ⊆ σχήμα ⊆ εξωτερικός` μένει ακέραιη.
  */
 function composeFromMunicipalUnits(
   rows: readonly HierarchyRow[],
   units: GeoJSON.FeatureCollection,
   into: Map<string, GeoFootprint>,
 ): readonly string[] {
-  const ringsByCode = new Map<string, readonly GeoOutline[]>();
-  for (const feature of units.features) {
-    const code = String(feature.properties?.kalcode ?? '');
-    const { geometry } = feature;
-    if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue;
-    ringsByCode.set(code, geoJsonRings(geometry));
-  }
-
-  const childCodes = new Map<string, string[]>();
-  for (const row of rows) {
-    if (row.l !== 6 || row.p === null) continue;
-    const siblings = childCodes.get(row.p);
-    if (siblings) siblings.push(row.c);
-    else childCodes.set(row.p, [row.c]);
-  }
-
   const composed: string[] = [];
-  for (const row of rows) {
-    if (row.l !== 5 || into.has(row.id)) continue;
-    const rings = (childCodes.get(row.id) ?? []).flatMap((code) => ringsByCode.get(code) ?? []);
-    const footprint = rings.length === 0 ? null : ringsFootprint(rings);
+  const nameOf = new Map(rows.map((row) => [row.id, row.n]));
+  for (const [id, { geometry, children }] of composeMunicipalitiesFromUnits(rows, units, new Set(into.keys()))) {
+    const footprint = ringsFootprint(geoJsonRings(geometry));
     if (footprint === null) continue;
-    into.set(row.id, {
+    into.set(id, {
       center: round(footprint.center),
       outerKm: roundKm(footprint.outerKm),
       innerKm: roundKm(footprint.innerKm),
     });
-    composed.push(`${row.n} ← ${childCodes.get(row.id)?.length} δημ. ενότητες`);
+    composed.push(`${nameOf.get(id)} ← ${children} δημ. ενότητες`);
   }
   return composed;
 }
@@ -483,8 +359,8 @@ function assertContainment(footprints: ReadonlyMap<string, GeoFootprint>): void 
 }
 
 async function main(): Promise<void> {
-  const hierarchy = JSON.parse(readFileSync(HIERARCHY_PATH, 'utf8')) as { data: HierarchyRow[] };
-  const { index, ambiguous } = buildIdIndex(hierarchy.data);
+  const rows = readHierarchyRows();
+  const { index, ambiguous } = buildIdIndex(rows);
 
   console.log(`🗺️  ADR-846 Φ2.5 — αποτυπώματα από ${LAYERS.length} επίπεδα`);
   if (ambiguous.size > 0) {
@@ -496,19 +372,19 @@ async function main(): Promise<void> {
   let municipalUnits: GeoJSON.FeatureCollection | null = null;
   for (const { layer, level } of LAYERS) {
     const collection = await loadLayer(layer);
-    if (level === 6) municipalUnits = collection;
+    if (level === MUNICIPAL_UNIT_LEVEL) municipalUnits = collection;
     reports.push(collectLayer(collection, level, layer, index, ambiguous, footprints));
   }
 
   if (municipalUnits !== null) {
-    const composed = composeFromMunicipalUnits(hierarchy.data, municipalUnits, footprints);
+    const composed = composeFromMunicipalUnits(rows, municipalUnits, footprints);
     if (composed.length > 0) {
       console.log(`\n🧩 ${composed.length} δήμοι με ΣΥΝΘΕΤΟ αποτύπωμα (η πηγή τους δεν ξέρει):`);
       for (const line of composed) console.log(`   • ${line}`);
     }
   }
 
-  reportMunicipalitiesWithoutFootprint(hierarchy.data, footprints);
+  reportMunicipalitiesWithoutFootprint(rows, footprints);
   assertContainment(footprints);
 
   const payload = {

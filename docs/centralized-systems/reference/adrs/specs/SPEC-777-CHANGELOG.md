@@ -5,7 +5,7 @@ parent: ADR-777
 title: Το ημερολόγιο του ADR-777 — τι άλλαξε, πότε, με ποια μέτρηση
 status: accepted
 date: 2026-08-08
-last-updated: 2026-09-24
+last-updated: 2026-09-25
 sections: ["§9"]
 links:
   - kind: records
@@ -39,6 +39,7 @@ links:
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| **2026-09-25** | 🗺️ **ΟΡΙΟ ΔΙΟΙΚΗΤΙΚΗΣ ΠΕΡΙΟΧΗΣ ΣΤΟΝ ΧΑΡΤΗ — ADR-883** (αίτημα Giorgio, πρότυπο Zillow «Remove boundary»). Τρίτο σκέλος `GeoRegion` στην κλειστή ένωση `GeoArea` (§8.63)· `ListingFilters<TArea>` ⇒ `ListingSearch` (διεύθυνση) / `ListingFilters` (κριτής)· `?area=<id>`· `usePublicListings(near, hold)`· μάσκα + περίγραμμα + chip «Αφαίρεση ορίου» με γενεαλογία· όσο υπάρχει όριο η κίνηση χάρτη δεν αντικαθιστά την περιοχή. Λεπτομέρειες, μετρήσεις και browser: **ADR-883**. |
 | **2026-09-24** | 🧭 **§8.82 — ΚΟΜΒΟΣ ΚΑΙ ΑΚΤΙΝΕΣ** (αίτημα Giorgio, πρακτική Houzz/Zillow `/professionals` · Airbnb · Rightmove). `LandingHero` → **κοινό** (`components/shared/landing-hero/`, props `image`·`title`·`subtitle?`·`children?`, κανένα `t()`). **`/pro`**: ήρωας με τα **υπάρχοντα** `AgencyDirectoryFilters` (ειδικότητα + περιοχή) μέσα του — κανένα δεύτερο πεδίο. **`/stay`** νέα ακτίνα (`SHORT_STAY_LANDING_ROUTE`, `OUTSIDE_WORKSPACE.stay`): ήρωας → πόρτες → βιτρίνα `stay` → `CoverageStatement` → «Δες όλα» (`leaseShort`)· η κάλυψη κρίνεται στο **υποσύνολο** ⇒ με 1 αγγελία κανένα πεδίο «πού;». `landingModeFilters` υπερφόρτωση (`ListingLandingMode`). Κεφαλίδα: σύνδεσμοι ακτίνων από `md` (υπάρχοντα κλειδιά). ADR-744: νέο namespace `stay-landing` (όχι `short-stay`, που θα φούσκωνε το `/search/results`), route slice `/stay` 254 bytes. Boy Scout: 11 κόκκινα tests `agency-showcase-*` (mock χωρίς `useRouter`). Κοινό `landing-listing-fixture.ts`. 96 σουίτες / 1.522 ✅ · CHECK 3.28 · 3.34 · 3.52 · 3.55 · 3.60 · 3.61 · 3.63 ✅ · μετάλλαξη Σ4 ✅. Γράφτηκε ως §8.80 ⇒ **§8.82** (τα 8.80/8.81 πιάστηκαν παράλληλα). Εκκρεμούν εικόνες `pros`/`stay` + browser. |
 | **2026-09-24** | 🇬🇷 **§8.81.7 — `/stay` ΕΛΛΗΝΙΚΟ ΤΟΠΙΟ**: κυκλαδίτικη βεράντα χωρίς διάσημο ορόσημο αντικαθιστά το Ντουμπρόβνικ (`stay-cyclades-day/dusk.jpg`). Εύρημα: αντικατάσταση στην ίδια διαδρομή = παλιά εικόνα από cache ⇒ κανόνας «νέο περιεχόμενο ⇒ νέο όνομα». |
 | **2026-09-24** | 🖼️ **§8.81.6 — `/pro` + `/stay` ΜΕΡΑ/ΣΟΥΡΟΥΠΟ · ΣΗΜΕΙΟ ΕΣΤΙΑΣΗΣ**: `/pro` = τραπέζι με σχέδια/υλικά (όχι αίθουσα συσκέψεων — η σελίδα καλύπτει και τεχνίτες)· `/stay` προσωρινά (🔴 Ντουμπρόβνικ ⇒ αντικατάσταση με ελληνικό τοπίο πριν το λανσάρισμα). Browser: ήρωας ~2,9:1 έναντι εικόνας 2:1 ⇒ τα σχέδια κόβονταν ⇒ `focus?: 'center' | 'lower'` στον πίνακα (`object-[100%_85%]`), επαληθευμένο ζωντανά + άγκυρα. |

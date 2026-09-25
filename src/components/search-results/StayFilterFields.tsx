@@ -32,14 +32,14 @@
 
 import React, { useId } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { ListingSearch } from '@/lib/listings/listing-filters';
 import { intervalShape } from '@/lib/date-local';
 import { StayCountSelect, STAY_PET_CHOICES } from '@/components/shared/stay/StayCountSelect';
 import { cn } from '@/lib/utils';
 import { useFilterCommit } from './filters/use-filter-commit';
 
 interface StayFilterFieldsProps {
-  readonly filters: ListingFilters;
+  readonly filters: ListingSearch;
   readonly className?: string;
 }
 

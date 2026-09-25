@@ -60,7 +60,7 @@ import {
 import { EMPTY_LISTING_CRITERIA } from '@/lib/criteria/listing-criteria';
 import {
   serializeListingFilters,
-  type ListingFilters,
+  type ListingSearch,
 } from '@/lib/listings/listing-filters';
 import {
   parseListingOrder,
@@ -74,7 +74,7 @@ import { currentSearchParams } from '@/lib/url-query-state';
 /** Ό,τι μπορεί να ζητήσει ένα χειριστήριο από τη διεύθυνση. */
 export interface FilterCommit {
   /** Γράψε **ολόκληρα** τα φίλτρα. Η χαμηλότερη βαθμίδα — τη χρειάζεται η διαμονή. */
-  readonly commit: (next: ListingFilters) => void;
+  readonly commit: (next: ListingSearch) => void;
   readonly setRange: (key: RangeCriterionKey, range: CriterionRange) => void;
   readonly setValues: (key: ValueSetCriterionKey, values: readonly string[]) => void;
   readonly setFlag: (key: FlagCriterionKey, value: boolean | undefined) => void;
@@ -93,7 +93,7 @@ export interface FilterCommit {
   /**
    * **Άλλαξε τη ΣΕΙΡΑ**, αφήνοντας κάθε φίλτρο ανέγγιχτο.
    *
-   * ⚠️ **Η σειρά ΔΕΝ είναι φίλτρο** και γι' αυτό δεν ζει μέσα στο {@link ListingFilters}:
+   * ⚠️ **Η σειρά ΔΕΝ είναι φίλτρο** και γι' αυτό δεν ζει μέσα στο {@link ListingSearch}:
    * κάθε πεδίο εκεί απαντά *«τι ρώτησε ο επισκέπτης για τα ακίνητα;»*, ενώ αυτό απαντά
    * *«πώς θέλει να τα δει;»*. Ζει όμως στην **ίδια** διεύθυνση, γιατί η Α3 το απαιτεί:
    * ο κοινοποιημένος σύνδεσμος οφείλει να δείχνει ό,τι άφησε ο αποστολέας.
@@ -101,7 +101,7 @@ export interface FilterCommit {
   readonly setOrder: (order: ListingOrder) => void;
 }
 
-export function useFilterCommit(filters: ListingFilters): FilterCommit {
+export function useFilterCommit(filters: ListingSearch): FilterCommit {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -131,7 +131,7 @@ export function useFilterCommit(filters: ListingFilters): FilterCommit {
    * ειδικούς μαζί: μια συγχώνευση δύο `URLSearchParams` είναι η θέση όπου χάνεται το ένα.
    */
   const write = useCallback(
-    (next: ListingFilters, order: ListingOrder): void => {
+    (next: ListingSearch, order: ListingOrder): void => {
       const params = serializeListingFilters(next);
       writeListingOrder(order, params);
       // 🔗 §8.77 — η επιλογή στον χάρτη επιβιώνει της νέας αναζήτησης (`carryListingSelection`).
@@ -142,13 +142,13 @@ export function useFilterCommit(filters: ListingFilters): FilterCommit {
   );
 
   const commit = useCallback(
-    (next: ListingFilters): void => write(next, currentOrder),
+    (next: ListingSearch): void => write(next, currentOrder),
     [write, currentOrder]
   );
 
   return useMemo(() => {
     /** Γράψε **έναν** άξονα του χάρτη, αφήνοντας τους τρεις ειδικούς ανέγγιχτους. */
-    const commitCriteria = (criteria: ListingFilters['criteria']): void =>
+    const commitCriteria = (criteria: ListingSearch['criteria']): void =>
       commit({ ...filters, criteria });
 
     return {

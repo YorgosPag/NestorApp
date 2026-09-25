@@ -45,7 +45,7 @@
  * ακριβώς η διάκριση για την οποία γράφτηκε (ADR-332 D11).
  */
 
-import React, { useId, useState } from 'react';
+import React, { useCallback, useId, useRef, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
@@ -66,20 +66,48 @@ import {
 } from '@/lib/agency/showcase-filter';
 import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
 import { OccupationSelect } from '@/components/mandate/OccupationSelect';
-import type { GeoPoint } from '@/types/geo/coordinates';
+import type { GeoPoint, GeoRegionRef } from '@/types/geo/coordinates';
+import type { AdminArea } from '@/lib/geo/admin-area-index-file';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  requestCurrentPosition,
+  GEOLOCATION_FAILURE_I18N_KEYS,
+  type CurrentPositionFailure,
+} from '@/lib/geo/current-position';
+import { rememberPlaceSearch, type RecentPlaceSearch } from '@/lib/geo/recent-place-searches';
+import { PlaceRecallListbox } from './place-recall/PlaceRecallListbox';
+import { usePlaceRecall } from './place-recall/usePlaceRecall';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 const logger = createModuleLogger('PlaceSearchBox');
 
 /**
- * Οι τρεις καταστάσεις υποβολής — **ρητές**, ποτέ ένα `boolean` + ένα `string`.
+ * Οι καταστάσεις υποβολής — **ρητές**, ποτέ ένα `boolean` + ένα `string`.
  *
  * Το `not-found` και το `error` έχουν **διαφορετική θεραπεία** για τον επισκέπτη:
  * το πρώτο του λέει να ξαναγράψει, το δεύτερο να ξαναδοκιμάσει. Ένα κοινό «κάτι
  * πήγε στραβά» θα τον έστελνε να διορθώσει κείμενο που ήταν ήδη σωστό.
+ *
+ * ADR-882: το `locating` και το `location-failed` είναι η «Τρέχουσα τοποθεσία» — με την
+ * **αιτία** της αποτυχίας, γιατί η άρνηση θέλει ρύθμιση browser ενώ το «χωρίς σήμα» νέα
+ * προσπάθεια.
  */
-type SubmitState = 'idle' | 'searching' | 'not-found' | 'error';
+type SubmitState =
+  | { readonly kind: 'idle' | 'searching' | 'locating' | 'not-found' | 'error' }
+  | { readonly kind: 'location-failed'; readonly reason: CurrentPositionFailure };
+
+const IDLE: SubmitState = { kind: 'idle' };
+
+/**
+ * Για «πού ψάχνεις;» αρκεί η θέση **γειτονιάς**, όχι GPS υψηλής ακρίβειας: η χαμηλή ακρίβεια
+ * απαντά σε δευτερόλεπτα (Wi-Fi/κεραίες) αντί για δεκάδες, και μια θέση λίγων λεπτών είναι
+ * ακόμη αληθινή για κύκλο αναζήτησης χιλιομέτρων.
+ */
+const AREA_POSITION_OPTIONS = {
+  enableHighAccuracy: false,
+  maximumAge: 5 * 60_000,
+  timeout: 10_000,
+} as const;
 
 interface PlaceSearchBoxProps {
   /**
@@ -128,6 +156,7 @@ function destinationFor(
   mode: LandingMode,
   center: GeoPoint | null,
   occupation: string | null,
+  region: GeoRegionRef | null = null,
 ) {
   const filters = landingModeFilters(mode, center);
 
@@ -137,20 +166,27 @@ function destinationFor(
     //    `!== null` του σειριοποιητή ⇒ `isAdministrativeWhere(undefined)` ⇒ TypeError στην υποβολή.
     const params = serializeShowcaseFilters({
       occupation,
-      where: center === null ? null : { circle: { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM } },
+      // ADR-883: η περιοχή που διαλέχτηκε από τη λίστα ταξιδεύει ως ίδια — ο κατάλογος την ξέρει ήδη (ADR-846).
+      where: region ?? (center === null ? null : { circle: { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM } }),
     });
     return agencyDirectoryHref(params.toString());
   }
 
-  return searchResultsHref(serializeListingFilters(filters).toString());
+  // ADR-883: με περιοχή, το «πού» είναι το ΟΡΙΟ της — ο κύκλος του landing δεν έχει θέση.
+  return searchResultsHref(serializeListingFilters(region === null ? filters : { ...filters, near: region }).toString());
 }
 
 export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProps) {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['search-results', 'common-shared']);
   const router = useRouter();
   const inputId = useId();
   const [query, setQuery] = useState('');
-  const [state, setState] = useState<SubmitState>('idle');
+  const [state, setState] = useState<SubmitState>(IDLE);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
+  // 🔑 **Μόνο η ΤΕΛΕΥΤΑΙΑ πράξη πλοηγεί** — μια αργή θέση GPS ή ένας αργός geocoder δεν
+  //    πετούν τον άνθρωπο σε αποτελέσματα που ζήτησε πριν αλλάξει γνώμη.
+  const requestSeq = useRef(0);
   const [chosenOccupation, setChosenOccupation] = useState<string | null>(null);
 
   // 🔴 **Η ΜΙΑ ΔΙΑΤΥΠΩΣΗ ΤΟΥ ΚΑΝΟΝΑ ΤΗΣ Α5** — ⛔ ποτέ `mode === 'pros'` εδώ: θα ήταν η
@@ -170,6 +206,45 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
       : null;
 
   const trimmedQuery = query.trim();
+
+  const pickLocation = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    setState({ kind: 'locating' });
+    const outcome = await requestCurrentPosition(AREA_POSITION_OPTIONS);
+    if (seq !== requestSeq.current) return;
+    if (outcome.kind === 'failed') {
+      setState({ kind: 'location-failed', reason: outcome.reason });
+      return;
+    }
+    // 🔒 Η θέση του ανθρώπου **δεν** γράφεται στο ιστορικό (ADR-882) — μόνο ταξιδεύει στη διεύθυνση.
+    router.push(destinationFor(mode, outcome.point, occupation));
+  }, [router, mode, occupation]);
+
+  // 🏆 Χωρίς geocoder: το κέντρο εντοπίστηκε ήδη όταν γράφτηκε η εγγραφή.
+  const pickRecent = useCallback((place: RecentPlaceSearch) => {
+    requestSeq.current += 1;
+    setQuery(place.label);
+    setState(IDLE);
+    rememberPlaceSearch(place.label, place.center, Date.now());
+    router.push(destinationFor(mode, place.center, occupation));
+  }, [router, mode, occupation]);
+
+  // ADR-883 — περιοχή από τη λίστα: καμία γεωκωδικοποίηση, το όριό της είναι ήδη γνωστό.
+  const pickArea = useCallback((area: AdminArea) => {
+    requestSeq.current += 1;
+    setQuery(area.name);
+    setState(IDLE);
+    router.push(destinationFor(mode, null, occupation, { adminId: area.id }));
+  }, [router, mode, occupation]);
+
+  const recall = usePlaceRecall({
+    listboxId,
+    query,
+    disabled: state.kind === 'searching' || state.kind === 'locating',
+    onPickLocation: () => void pickLocation(),
+    onPickRecent: pickRecent,
+    onPickArea: pickArea,
+  });
 
   // 🔴 **ΥΠΟΒΑΛΛΕΙΣ ΟΤΑΝ ΕΧΕΙΣ ΔΗΛΩΣΕΙ ΕΣΤΩ ΕΝΑΝ ΑΞΟΝΑ (ADR-841 §7 Α4.5.δ).**
   //
@@ -195,34 +270,34 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
       return;
     }
 
-    setState('searching');
+    const seq = ++requestSeq.current;
+    recall.close();
+    setState({ kind: 'searching' });
     // ⚠️ **Ένας μεταφραστής για τα τρία σημεία** (2026-09-02): το «ελεύθερο κείμενο →
     // `city`» ήταν γραμμένο εδώ, στο `usePlaceResolver` και στο
     // `place-source-verification`. Δες `lib/geocoding/address-line-query`.
     const outcome = await geocodeAddressDetailed(addressLineToQuery(trimmedQuery));
+    if (seq !== requestSeq.current) return;
 
     if (outcome.kind === 'found') {
+      const center = { lat: outcome.result.lat, lng: outcome.result.lng };
+      // ADR-882: στο ιστορικό μπαίνει **μόνο** ό,τι εντοπίστηκε — ποτέ τυπογραφικό λάθος.
+      rememberPlaceSearch(trimmedQuery, center, Date.now());
       // Η οθόνη προορισμού διαβάζει **τη διεύθυνση**, ποτέ κατάσταση σε μνήμη.
-      router.push(
-        destinationFor(
-          mode,
-          { lat: outcome.result.lat, lng: outcome.result.lng },
-          occupation,
-        ),
-      );
+      router.push(destinationFor(mode, center, occupation));
       return;
     }
 
     if (outcome.kind === 'not-found') {
-      setState('not-found');
+      setState({ kind: 'not-found' });
       return;
     }
 
     logger.warn('Ο εντοπισμός περιοχής απέτυχε', { data: { reason: outcome.reason } });
-    setState('error');
+    setState({ kind: 'error' });
   }
 
-  const busy = state === 'searching';
+  const busy = state.kind === 'searching' || state.kind === 'locating';
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
@@ -255,20 +330,37 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
           <span className="font-medium text-foreground">
             {t('search-results:landing.search.label')}
           </span>
-          <input
-            id={inputId}
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              // Το μήνυμα αστοχίας αφορά το **προηγούμενο** κείμενο· μόλις ο επισκέπτης
-              // αρχίσει να γράφει, παύει να είναι αλήθεια.
-              if (state !== 'idle') setState('idle');
-            }}
-            placeholder={t('search-results:landing.search.placeholder')}
-            disabled={busy}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
-          />
+          {/* ADR-882 — «Τρέχουσα τοποθεσία» + «Ιστορικό αναζητήσεων» στην εστίαση (Zillow/Idealista). */}
+          <PlaceRecallListbox
+            listboxId={listboxId}
+            anchorRef={inputRef}
+            expanded={recall.expanded}
+            options={recall.options}
+            highlightedIndex={recall.highlightedIndex}
+            permission={recall.permission}
+            onPick={recall.pick}
+            onRemove={recall.remove}
+            onHighlight={recall.setHighlighted}
+            onClose={recall.close}
+          >
+            <input
+              ref={inputRef}
+              id={inputId}
+              type="search"
+              value={query}
+              {...recall.inputProps}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                recall.onQueryChange();
+                // Το μήνυμα αστοχίας αφορά το **προηγούμενο** κείμενο· μόλις ο επισκέπτης
+                // αρχίσει να γράφει, παύει να είναι αλήθεια.
+                if (state.kind !== 'idle') setState(IDLE);
+              }}
+              placeholder={t('search-results:landing.search.placeholder')}
+              disabled={busy}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+            />
+          </PlaceRecallListbox>
         </label>
         {/*
           🔴 **ΗΤΑΝ `bg-card` — ΔΗΛΑΔΗ ΤΟ ΧΡΩΜΑ ΤΟΥ ΠΕΔΙΟΥ ΤΟΥ** (ADR-777 §8.49 Φ4).
@@ -301,9 +393,11 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
 
       {/* Κάθε κατάσταση λέει ΤΟ ΔΙΚΟ ΤΗΣ — καμία δεν σιωπά, καμία δεν δανείζεται ξένο. */}
       <p aria-live="polite" className="mt-2 min-h-5 text-sm text-muted-foreground">
-        {state === 'searching' && t('search-results:landing.search.searching')}
-        {state === 'not-found' && t('search-results:landing.search.notFound')}
-        {state === 'error' && t('search-results:landing.search.failed')}
+        {state.kind === 'searching' && t('search-results:landing.search.searching')}
+        {state.kind === 'locating' && t('common-shared:placeRecall.locating')}
+        {state.kind === 'not-found' && t('search-results:landing.search.notFound')}
+        {state.kind === 'error' && t('search-results:landing.search.failed')}
+        {state.kind === 'location-failed' && t(GEOLOCATION_FAILURE_I18N_KEYS[state.reason])}
       </p>
     </form>
   );

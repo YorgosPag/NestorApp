@@ -34,6 +34,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { GEOLOCATION_FAILURE_I18N_KEYS } from '@/lib/geo/current-position';
 import { usePhotoCapture } from '@/hooks/usePhotoCapture';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { QrCheckInResponse } from '@/components/projects/ika/contracts';
@@ -67,7 +68,7 @@ interface CheckInClientProps {
 // =============================================================================
 
 export function CheckInClient({ token }: CheckInClientProps) {
-  const { t } = useTranslation('attendance');
+  const { t } = useTranslation(['attendance', 'common-shared']);
 
   // Token validation state
   const [pageStatus, setPageStatus] = useState<PageStatus>('validating');
@@ -84,7 +85,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
   const [submitError, setSubmitError] = useState<string>('');
 
   // GPS
-  const { position, status: gpsStatus, error: gpsError, requestPosition } = useGeolocation();
+  const { position, status: gpsStatus, errorReason: gpsErrorReason, requestPosition } = useGeolocation();
 
   // Photo
   const {
@@ -284,7 +285,9 @@ export function CheckInClient({ token }: CheckInClientProps) {
                     </p>
                   )}
                   {(gpsStatus === 'denied' || gpsStatus === 'error') && (
-                    <p className={cn('text-xs', STATUS_CLASSES.warning.body)}>{gpsError}</p>
+                    <p className={cn('text-xs', STATUS_CLASSES.warning.body)}>
+                      {gpsErrorReason && t(GEOLOCATION_FAILURE_I18N_KEYS[gpsErrorReason])}
+                    </p>
                   )}
                 </div>
               </div>

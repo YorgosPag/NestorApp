@@ -1,0 +1,10 @@
+{
+  "boundary": {
+    "label": "Area boundary",
+    "remove": "Remove boundary",
+    "loading": "Loading boundary…",
+    "unavailable": "The boundary didn't load — press “Remove boundary” to search the map.",
+    "widen": "Search the wider area: {name}",
+    "attribution": "Boundaries: © geodata.gov.gr (CC BY 3.0)"
+  }
+}

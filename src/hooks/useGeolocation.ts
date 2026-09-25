@@ -5,8 +5,8 @@
  * useGeolocation — Browser GPS Position Hook
  * =============================================================================
  *
- * Wraps `navigator.geolocation.getCurrentPosition` with React state management.
- * Used for attendance QR check-in to capture worker GPS position.
+ * React state around the ONE geolocation request (`lib/geo/current-position`).
+ * Used for attendance QR check-in and the address map «find my position».
  *
  * Features:
  * - State machine: idle → requesting → granted / denied / error
@@ -14,11 +14,18 @@
  * - Timeout protection (15 seconds)
  * - Manual trigger (not auto-request — respects user privacy)
  *
+ * 🔴 ADR-882: the error is a **reason code**, never a sentence. It used to be hardcoded Greek
+ * (N.11) — callers translate with `common-shared:geolocation.<errorReason>`.
+ *
  * @module hooks/useGeolocation
  * @enterprise ADR-170 — QR Code + GPS Geofencing + Photo Verification
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  requestCurrentPosition,
+  type CurrentPositionFailure,
+} from '@/lib/geo/current-position';
 
 // =============================================================================
 // TYPES
@@ -46,8 +53,8 @@ export interface UseGeolocationReturn {
   position: GeolocationPosition | null;
   /** Current status of the geolocation request */
   status: GeolocationStatus;
-  /** Error message (null if no error) */
-  error: string | null;
+  /** Why the request failed (null if no error) — translate via `common-shared:geolocation.*` */
+  errorReason: CurrentPositionFailure | null;
   /** Request the current position (manual trigger) */
   requestPosition: () => void;
   /** Reset state back to idle */
@@ -67,76 +74,43 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
 
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [status, setStatus] = useState<GeolocationStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<CurrentPositionFailure | null>(null);
 
   // Track mounted state to avoid state updates after unmount
   const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
   const requestPosition = useCallback(() => {
-    // Check browser support
-    if (!navigator.geolocation) {
-      setStatus('error');
-      setError('Geolocation is not supported by this browser');
-      return;
-    }
-
     setStatus('requesting');
-    setError(null);
+    setErrorReason(null);
 
-    navigator.geolocation.getCurrentPosition(
-      // Success
-      (pos) => {
-        if (!mountedRef.current) return;
+    void requestCurrentPosition({ enableHighAccuracy, maximumAge, timeout }).then((outcome) => {
+      if (!mountedRef.current) return;
+      if (outcome.kind === 'found') {
         setPosition({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
+          latitude: outcome.point.lat,
+          longitude: outcome.point.lng,
+          accuracy: outcome.accuracyMeters,
         });
         setStatus('granted');
-        setError(null);
-      },
-      // Error
-      (err) => {
-        if (!mountedRef.current) return;
-
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            setStatus('denied');
-            setError('Η πρόσβαση στην τοποθεσία απορρίφθηκε');
-            break;
-          case err.POSITION_UNAVAILABLE:
-            setStatus('error');
-            setError('Η τοποθεσία δεν είναι διαθέσιμη');
-            break;
-          case err.TIMEOUT:
-            setStatus('error');
-            setError('Λήξη χρόνου αναμονής τοποθεσίας');
-            break;
-          default:
-            setStatus('error');
-            setError('Σφάλμα κατά τη λήψη τοποθεσίας');
-        }
-      },
-      // Options
-      {
-        enableHighAccuracy,
-        maximumAge,
-        timeout,
+        return;
       }
-    );
+      setStatus(outcome.reason === 'denied' ? 'denied' : 'error');
+      setErrorReason(outcome.reason);
+    });
   }, [enableHighAccuracy, maximumAge, timeout]);
 
   const reset = useCallback(() => {
     setPosition(null);
     setStatus('idle');
-    setError(null);
+    setErrorReason(null);
   }, []);
 
-  return { position, status, error, requestPosition, reset };
+  return { position, status, errorReason, requestPosition, reset };
 }
