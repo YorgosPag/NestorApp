@@ -45,7 +45,7 @@
  * ακριβώς η διάκριση για την οποία γράφτηκε (ADR-332 D11).
  */
 
-import React, { useCallback, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
@@ -68,6 +68,7 @@ import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route
 import { OccupationSelect } from '@/components/mandate/OccupationSelect';
 import type { GeoPoint, GeoRegionRef } from '@/types/geo/coordinates';
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
+import { resolveTypedAdminAreaWhenReady } from '@/lib/geo/admin-area-search';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   requestCurrentPosition,
@@ -93,7 +94,8 @@ const logger = createModuleLogger('PlaceSearchBox');
  * προσπάθεια.
  */
 type SubmitState =
-  | { readonly kind: 'idle' | 'searching' | 'locating' | 'not-found' | 'error' }
+  // ADR-883 §5.8: `ambiguous-area` = το κείμενο ονομάζει ΠΟΛΛΕΣ ισότιμες περιοχές ⇒ η λίστα μένει ανοιχτή.
+  | { readonly kind: 'idle' | 'searching' | 'locating' | 'not-found' | 'error' | 'ambiguous-area' }
   | { readonly kind: 'location-failed'; readonly reason: CurrentPositionFailure };
 
 const IDLE: SubmitState = { kind: 'idle' };
@@ -273,6 +275,24 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
     const seq = ++requestSeq.current;
     recall.close();
     setState({ kind: 'searching' });
+    // 🔑 ADR-883 §5.8 — πρότυπο Zillow «NY»: κείμενο που ονομάζει ΚΑΘΑΡΑ περιοχή ⇒ το ΟΡΙΟ της,
+    //    όχι κύκλος γύρω από ένα σημείο. Περιμένει το ευρετήριο αν δεν πρόλαβε — ποτέ σιωπηλή πτώση.
+    const typed = await resolveTypedAdminAreaWhenReady(trimmedQuery);
+    if (seq !== requestSeq.current) return;
+    if (typed.kind === 'area') {
+      pickArea(typed.area);
+      return;
+    }
+    // Ομώνυμες ισότιμες περιοχές ⇒ ρωτάμε (Rightmove «did you mean»), δεν μαντεύουμε.
+    if (typed.kind === 'ambiguous') {
+      setState({ kind: 'ambiguous-area' });
+      return;
+    }
+    await geocodeTyped(seq);
+  }
+
+  /** Ελεύθερο κείμενο που ΔΕΝ είναι περιοχή (οδός, POI) ⇒ ο geocoder, όπως πάντα. */
+  async function geocodeTyped(seq: number) {
     // ⚠️ **Ένας μεταφραστής για τα τρία σημεία** (2026-09-02): το «ελεύθερο κείμενο →
     // `city`» ήταν γραμμένο εδώ, στο `usePlaceResolver` και στο
     // `place-source-verification`. Δες `lib/geocoding/address-line-query`.
@@ -296,6 +316,15 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
     logger.warn('Ο εντοπισμός περιοχής απέτυχε', { data: { reason: outcome.reason } });
     setState({ kind: 'error' });
   }
+
+  // ADR-883 §5.8 — μετά το render (το πεδίο δεν είναι πια `disabled`): εστίαση + λίστα ανοιχτή
+  // με τις ομώνυμες περιοχές, ώστε ο άνθρωπος να διαλέξει με ένα άγγιγμα ή με τα βέλη.
+  const { reveal } = recall;
+  useEffect(() => {
+    if (state.kind !== 'ambiguous-area') return;
+    inputRef.current?.focus();
+    reveal();
+  }, [state.kind, reveal]);
 
   const busy = state.kind === 'searching' || state.kind === 'locating';
 
@@ -397,6 +426,7 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
         {state.kind === 'locating' && t('common-shared:placeRecall.locating')}
         {state.kind === 'not-found' && t('search-results:landing.search.notFound')}
         {state.kind === 'error' && t('search-results:landing.search.failed')}
+        {state.kind === 'ambiguous-area' && t('common-shared:placeRecall.chooseArea')}
         {state.kind === 'location-failed' && t(GEOLOCATION_FAILURE_I18N_KEYS[state.reason])}
       </p>
     </form>

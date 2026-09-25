@@ -21,6 +21,7 @@ import { X } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
+import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAdminAreaIndex } from '@/hooks/geo/useAdminAreaIndex';
 import { adminAreaLineage } from '@/lib/geo/admin-area-search';
@@ -74,7 +75,8 @@ export function RegionBoundaryChip({ region, onRemove, onWiden }: RegionBoundary
                 type="button"
                 onClick={() => onWiden(area.id)}
                 aria-label={t('search-region:boundary.widen', { name: area.name })}
-                className="underline-offset-2 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline"
+                // WCAG 2.5.8: σε κινητό οι βαθμίδες στοιβάζονται — 16 px ύψος ήταν στόχοι που εφάπτονται.
+                className={`${TOUCH_TARGET_MIN} underline-offset-2 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline`}
               >
                 <span aria-hidden="true">› </span>
                 {area.name}

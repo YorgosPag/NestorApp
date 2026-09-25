@@ -131,6 +131,8 @@ export function usePlaceRecall(args: UsePlaceRecallArgs) {
     remove: forgetPlaceSearch,
     setHighlighted,
     onQueryChange: state.onQueryChange,
+    /** ADR-883 §5.8 — ανοίγει τη λίστα χωρίς επισήμανση: ο άνθρωπος διαλέγει ανάμεσα σε ομώνυμες περιοχές. */
+    reveal: state.onQueryChange,
     close,
   };
 }

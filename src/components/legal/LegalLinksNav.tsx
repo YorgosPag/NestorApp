@@ -19,6 +19,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LEGAL_LINK_ORDER, LEGAL_ROUTES, type LegalRouteId } from '@/lib/routes/legalRoutes';
 import { Link } from '@/lib/workspace/navigation';
+import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 
 /**
  * Ρητός χάρτης ετικετών — ο γεννήτορας του slice λύνει τις τιμές του.
@@ -36,19 +37,17 @@ const LABEL_KEYS = {
   privateMarketingDisclosure: 'legal.privateMarketingDisclosure',
 } as const;
 
-const TOUCH_TARGET = 'inline-flex min-h-[24px] min-w-[24px] items-center px-0.5 py-0.5 transition-colors';
-
 /** Η **όψη** ανά επιφάνεια — η λίστα, η σειρά και οι ετικέτες μένουν κοινές. */
 const VARIANTS = {
   sidebar: {
     nav: 'px-2 py-1.5 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden',
     list: 'm-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0',
-    link: `${TOUCH_TARGET} hover:text-sidebar-foreground hover:underline`,
+    link: `${TOUCH_TARGET_MIN} hover:text-sidebar-foreground hover:underline`,
   },
   standalone: {
     nav: 'text-xs text-muted-foreground',
     list: 'm-0 flex list-none flex-wrap justify-center gap-x-4 gap-y-1 p-0',
-    link: `${TOUCH_TARGET} hover:text-foreground hover:underline`,
+    link: `${TOUCH_TARGET_MIN} hover:text-foreground hover:underline`,
   },
   prose: {
     nav: '',

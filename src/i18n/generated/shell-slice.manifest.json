@@ -52,7 +52,7 @@
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9c39c3c8d688bfe43f231ebd07d7af0a8efbfd868c7a55c11c62d489be7796c3",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "c29e04e899647b4a6cdbd388fa79b0f05e04169b317841f83b0eccd0fd596a7d",
+    "src/i18n/generated/shell-slice.el.json": "66564793eb78c1533dcf492456c7325c505b6196058d986ad5d621b2a6eb566b",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -95,7 +95,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d4df4b8f7ce2679448d14880c622c4a2a86ab1f8e3d69b879f3f20dace5f54ce",
+  "inputsSha256": "e2fd080bbf26fa3d2d24b0aeb3c59ca316208040ca18833591ee4a8d34be1bc7",
   "languages": [
     "el"
   ],
@@ -413,7 +413,7 @@
     "src/components/search-results/ListingMapStackPopup.tsx": "e215cd4bd3f470dff8d6cf07fda6f9165898570c919b5a8a8a101897d7a70385",
     "src/components/search-results/ListingPriceMarkers.tsx": "d688857943a67100666e2b45e07c956a8c7d59cef3ba2fb68402ebab9daef6c9",
     "src/components/search-results/MapAreaControl.tsx": "74e3601f1490e3611ba009298341aea66fde03e9f91256cdb425069165ec4e2d",
-    "src/components/search-results/RegionBoundaryChip.tsx": "e2b6bd406ec80e78eff9e56deb6893468a3338a5f1a4912589129bb9342081e1",
+    "src/components/search-results/RegionBoundaryChip.tsx": "8c54c3865b171c28352e9c343c27bb59c3cf7a6499d9cdabbd391c0f115ade9b",
     "src/components/search-results/ResultsList.tsx": "57705ea2e5db8600f7b2b353fccc31998a7ff7bad9cbdc3ab30d3477f1e4f2db",
     "src/components/search-results/ResultsListHeader.tsx": "7136941f2d77bddab10e5d4ad911bf1ee19b7e17f382a62c738fc04032c65595",
     "src/components/search-results/ResultsListSection.tsx": "1487e66c29d62a914f14af00a29b6dfbc66e1c09c9cc8863db9b42c35466c0c7",
@@ -7518,6 +7518,7 @@
             "geolocation.unavailable",
             "geolocation.unsupported",
             "placeRecall.areasHeading",
+            "placeRecall.chooseArea",
             "placeRecall.clearHistory",
             "placeRecall.currentLocation",
             "placeRecall.historyHeading",
@@ -8052,7 +8053,7 @@
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "87f665a53cb0f2fe310d251c86e83f9d01954287893a5348d1bb05fb37548cd9",
     "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
-    "src/components/legal/LegalLinksNav.tsx": "5b8e59da8d3e8e8ad3604715e6d195e7d960ebdf246a93b54302f4d5d4938808",
+    "src/components/legal/LegalLinksNav.tsx": "56490c410d8b314511e1bd398fe72dab9ad68a35937d1fcc91ce40689c5da98d",
     "src/components/listing-map-snapshot/ListingMapSnapshot.tsx": "92484043116dc18683afa386a0f2460bbad4261acc463612384c3ca94c7fd4ea",
     "src/components/listing-map-snapshot/ListingMapSnapshotProvider.tsx": "c5d7c4f1091dbd7576957b0f28d4ec2a0b7d911739527490ab1566afd8d09872",
     "src/components/listing-map-snapshot/MapOrAbsenceCover.tsx": "d4c63f05b00482bcaab077423ebd24dfcc2f81a298dc7e1c968545ef016e8566",
@@ -8106,7 +8107,7 @@
     "src/components/search/LandingMySpaces.tsx": "0f8bf46e418fb301bc9ffdb1b3f711887173e5d1d2799d6cecdd59e328456915",
     "src/components/search/LandingProBand.tsx": "09be039cf7823cdf488319c18dc1c584b815246bdb1dff1a084f278a028c051f",
     "src/components/search/LandingShowcase.tsx": "de15a58d0dab6e06995018a170ca79ac118dd705a339adb6162aec90c897e65a",
-    "src/components/search/PlaceSearchBox.tsx": "8c5b16ad2abdecb9b13cc88c80d8fb265b6a0f62ef22f05642fc5def76f45fc9",
+    "src/components/search/PlaceSearchBox.tsx": "72158c1476137882cc4b908a84ac6c580d92998763b1f6b0fe12940e5185fc9f",
     "src/components/search/SearchLandingContent.tsx": "4a4ce9fa3460d19ed29c975697d56f196b080b3ff5f4b22e25c0d23af66484e8",
     "src/components/search/SearchResultItem.tsx": "24dfb53fd88b80a36f48acfdb0b4b00ac2e3d3d63154e0ccd4e396246bff4595",
     "src/components/search/global-search-config.ts": "098d196bbb7b3b2c493d3a6dbe47e0b818ba6ef06267665da1c90d88a561efb2",
@@ -8297,6 +8298,7 @@
     "src/design-system/primitives/Card/useCardInteraction.ts": "bebb73d260ba69911635145efc90882bbe0c8bd1a7b7d450fb825328a4cc312b",
     "src/design-system/primitives/Card/useCardShell.ts": "948f4a27a50db0655e055832bf9d4c9b61a99d2dbf4d4897013a21410b9eadf5",
     "src/design-system/tokens/colors.ts": "e856f257d1fdc9f620a2f71966ebf1e15957da57b13a3cabfe266b7ad718e8be",
+    "src/design-system/touch-target.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/hooks/geo/useAdminAreaIndex.ts": "508d54f6c63a43887192389cb060a24a6fcefb39b36dcd855a455841b0fd8956",
     "src/hooks/geo/useRecentPlaceSearches.ts": "86bcb24fbe8ca5a159dface8c36fb848b3c1aa1cdcca0d8f7ba222bcf046d785",
     "src/hooks/listings/useListingRevealTracking.ts": "97d27cea59969423cd57d2f92448e9ef774d8458c7f3cb2ac28dd43a7c80524c",
@@ -8464,7 +8466,7 @@
     "src/lib/firestore/trashed-status.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/firestore/utils.ts": "af6d371b2ca638535e40bf36a5d686df2027d9a06f5415419d76de5b2fc84e33",
     "src/lib/geo/admin-area-index-file.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/geo/admin-area-search.ts": "a52ee7dd675bab25723d57aa3f608c94b760f09225960f19191591aecab5f6a1",
+    "src/lib/geo/admin-area-search.ts": "b536860e17fab63630982ffffadce47eae0070d43dd3dfdf9fea2243016cf9bd",
     "src/lib/geo/admin-footprints.ts": "1ab02b03c1616552e103401c30ea50926d605f7efb63db65584b35e823232392",
     "src/lib/geo/current-position.ts": "3b91de3f2be2e09c8d2ffca460e2fcee9390aed091965150e6ee5cf7d95ff525",
     "src/lib/geo/geo-area.ts": "4b3e5227e251d1e28e6040578df1d1fbe6e92829f6bbde8bdeef7d2f8e6e9437",
@@ -8854,10 +8856,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 22,
-    "matchedKeys": 196,
+    "matchedKeys": 197,
     "routeBoundaries": 0,
-    "shellFiles": 837,
-    "sliceBytes": 572208
+    "shellFiles": 838,
+    "sliceBytes": 572369
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -12629,6 +12631,7 @@
         "photoPreview.zoom.label",
         "photoPreview.zoom.out",
         "placeRecall.areasHeading",
+        "placeRecall.chooseArea",
         "placeRecall.clearHistory",
         "placeRecall.currentLocation",
         "placeRecall.historyHeading",

@@ -36,6 +36,8 @@ interface SearchEntry {
   readonly area: AdminArea;
   /** Οι λέξεις του **ίδιου** του ονόματος, σε ελληνική και σε λατινική μορφή. */
   readonly own: readonly string[];
+  /** Οι ίδιες λέξεις **ανά λέξη ονόματος** (ελληνική + λατινική μορφή) — για την «καθαρή» αντιστοίχιση. */
+  readonly ownWords: readonly (readonly string[])[];
   /** Οι λέξεις των **προγόνων** — επιτρέπουν «Ελευθερίου … Ευόσμου». */
   readonly lineage: readonly string[];
 }
@@ -95,10 +97,14 @@ function formsOf(word: string): string[] {
   return latin === word ? [word] : [word, latin];
 }
 
-function nameWords(name: string): string[] {
+function nameWordForms(name: string): string[][] {
   return greekWords(name)
     .filter((word) => !LEVEL_WORDS.has(word))
-    .flatMap(formsOf);
+    .map(formsOf);
+}
+
+function nameWords(name: string): string[] {
+  return nameWordForms(name).flat();
 }
 
 /** Ταιριάζει η λέξη του ανθρώπου σε λέξη της πηγής; Πρόθεμα, ή πρόθεμα **θέματος** (κλίση). */
@@ -115,7 +121,8 @@ function buildEntries(areas: ReadonlyMap<string, AdminArea>): SearchEntry[] {
       lineage.push(...nameWords(parent.name));
       parent = parent.parentId === null ? undefined : areas.get(parent.parentId);
     }
-    return { area, own: nameWords(area.name), lineage };
+    const ownWords = nameWordForms(area.name);
+    return { area, own: ownWords.flat(), ownWords, lineage };
   });
 }
 
@@ -196,6 +203,84 @@ export function searchAdminAreas(index: AdminAreaIndex, query: string, limit = 6
   }
   ranked.sort((a, b) => b.score - a.score || a.area.name.localeCompare(b.area.name, 'el'));
   return ranked.slice(0, limit).map(({ area }) => area);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔑 «ΘΕΣΣΑΛΟΝΙΚΗ» + ENTER — ΠΟΤΕ ΤΟ ΚΕΙΜΕΝΟ ΕΙΝΑΙ ΚΑΘΑΡΑ ΠΕΡΙΟΧΗ (ADR-883 §5.8)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Το Zillow στο Enter παίρνει την **πρώτη πρόταση** — δηλαδή μαντεύει ακόμα και από πρόθεμα
+// («Kordel» ⇒ περιοχή). Εδώ η ερώτηση είναι αυστηρότερη: **ονόμασε ο άνθρωπος ΟΛΟΚΛΗΡΟ το όνομα
+// μιας περιοχής, και ΤΙΠΟΤΑ ΑΛΛΟ** εκτός από βαθμίδα ή γονέα; Αλλιώς ο geocoder (οδός, POI).
+//
+// | Ερώτηση | Απόφαση | Γιατί |
+// |---|---|---|
+// | «Θεσσαλονίκη» | Δήμος Θεσσαλονίκης | Π.Ε./Δ.Ε. ίδιου ονόματος = ίδιος τόπος σε άλλη βαθμίδα ⇒ προτίμηση βαθμίδας |
+// | «Π.Ε. Θεσσαλονίκης» | η Π.Ε. | η δηλωμένη βαθμίδα **φιλτράρει** |
+// | «Καλλιθέα Χαλκιδικής» | ο τόπος μέσα στη Χαλκιδική | ο γονέας **ξεχωρίζει** ομώνυμα (λέξη προγόνου) |
+// | δύο ομώνυμα ίδιας βαθμίδας | **ρωτάμε** (λίστα ανοιχτή) | Rightmove «did you mean» — ποτέ τυφλή μαντεψιά |
+// | «Τσιμισκή 45» | geocoder | ψηφίο ⇒ διεύθυνση/Τ.Κ., ποτέ περιοχή |
+// | «Θεσ» / «Αγίου» | geocoder | πρόθεμα ή μέρος ονόματος δεν είναι «καθαρό» |
+
+export type TypedAreaResolution =
+  | { readonly kind: 'area'; readonly area: AdminArea }
+  /** Ίσα καλές περιοχές ίδιας βαθμίδας — ο άνθρωπος διαλέγει, εμείς δεν μαντεύουμε. */
+  | { readonly kind: 'ambiguous'; readonly areas: readonly AdminArea[] }
+  | { readonly kind: 'none' };
+
+const NO_AREA: TypedAreaResolution = { kind: 'none' };
+
+/** Αριθμός στο κείμενο ⇒ οδός με αριθμό ή Τ.Κ. — δουλειά του geocoder, όχι των ορίων. */
+const ADDRESS_MARK = /\d/;
+
+/**
+ * **Ίδια λέξη**, όχι πρόθεμα: ίση, ή ίδιο θέμα με διαφορά κατάληξης ≤ 2 γράμματα
+ * (Θεσσαλονίκη↔Θεσσαλονίκης, Κορδελιό↔Κορδελιού). Το «Θεσ» **δεν** είναι Θεσσαλονίκη.
+ */
+function sameWord(asked: string, known: string): boolean {
+  if (asked === known) return true;
+  return asked.length >= 5 && Math.abs(known.length - asked.length) <= 2 && known.startsWith(asked.slice(0, -2));
+}
+
+function sameWordAny(asked: readonly string[], known: readonly string[]): boolean {
+  return asked.some((form) => known.some((word) => sameWord(form, word)));
+}
+
+/** Κάθε λέξη του ονόματος ειπώθηκε, και κάθε λέξη του ανθρώπου είναι του ονόματος **ή** γονέα του. */
+function namesExactly(entry: SearchEntry, query: ParsedQuery): boolean {
+  const ownSaid = entry.ownWords.every((known) => query.words.some((asked) => sameWordAny(asked, known)));
+  if (!ownSaid || entry.ownWords.length === 0) return false;
+  return query.words.every(
+    (asked) => entry.ownWords.some((known) => sameWordAny(asked, known)) || sameWordAny(asked, entry.lineage),
+  );
+}
+
+/** **Η απόφαση του Enter** — καθαρή συνάρτηση, χωρίς δίκτυο. */
+export function resolveTypedAdminArea(index: AdminAreaIndex, query: string): TypedAreaResolution {
+  if (ADDRESS_MARK.test(query)) return NO_AREA;
+  const parsed = parseQuery(query);
+  if (parsed.words.length === 0) return NO_AREA;
+
+  const exact = index.entries.filter((entry) => namesExactly(entry, parsed)).map((entry) => entry.area);
+  const eligible = parsed.level === null ? exact : exact.filter((area) => area.level === parsed.level);
+  if (eligible.length === 0) return NO_AREA;
+
+  const preference = (area: AdminArea) => LEVEL_PREFERENCE[area.level] ?? 0;
+  const best = Math.max(...eligible.map(preference));
+  const top = eligible.filter((area) => preference(area) === best);
+  return top.length === 1 ? { kind: 'area', area: top[0] } : { kind: 'ambiguous', areas: top };
+}
+
+/**
+ * Η ίδια απόφαση όταν το ευρετήριο **ίσως δεν έχει φορτώσει ακόμη**: το περιμένει (single-flight)
+ * αντί να πέσει σιωπηλά σε κύκλο. `none` μόνο αν η φόρτωση **απέτυχε** (ήδη καταγεγραμμένο).
+ * Διευθύνσεις με αριθμό δεν κατεβάζουν καν το ευρετήριο.
+ */
+export async function resolveTypedAdminAreaWhenReady(query: string): Promise<TypedAreaResolution> {
+  if (ADDRESS_MARK.test(query)) return NO_AREA;
+  await ADMIN_AREA_INDEX_SOURCE.load();
+  const index = ADMIN_AREA_INDEX_SOURCE.peek();
+  return index === null ? NO_AREA : resolveTypedAdminArea(index, query);
 }
 
 /** Οι πρόγονοι μιας περιοχής, από τον **άμεσο γονέα** προς τα πάνω — για τη γραμμή γενεαλογίας. */
