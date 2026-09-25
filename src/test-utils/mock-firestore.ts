@@ -67,7 +67,8 @@ class MockQuery {
     return q;
   }
 
-  orderBy(field: string): MockQuery {
+  /** Η κατεύθυνση γίνεται δεκτή (υπογραφή Admin SDK) — ο mock **δεν** ταξινομεί. */
+  orderBy(field: string, _direction?: 'asc' | 'desc'): MockQuery {
     const q = this.clone();
     q._orderByField = field;
     return q;
@@ -172,6 +173,20 @@ class MockDocRef {
     return this.docId;
   }
 
+  /**
+   * **Υποσυλλογή** — κλειδί αποθήκευσης η πλήρης διαδρομή (`γονέας/id/όνομα`), όπως στον Firestore:
+   * ίδιο όνομα κάτω από άλλον γονέα είναι **άλλη** συλλογή (ADR-884 Κ2 — οι λήψεις ζουν κάτω από
+   * δύο διαμερίσματα). Το `seedCollection`/`getAllDocs` δέχονται την ίδια διαδρομή.
+   */
+  collection(name: string): MockCollectionRef {
+    return new MockCollectionRef(this.store, `${this.collectionName}/${this.docId}/${name}`, this.journal);
+  }
+
+  /** Η συλλογή του εγγράφου — όπως `DocumentReference.parent` (ADR-884 Κ2β: άδεια δίπλα στην πρόσκληση). */
+  get parent(): MockCollectionRef {
+    return new MockCollectionRef(this.store, this.collectionName, this.journal);
+  }
+
   async get(): Promise<MockDocSnap> {
     const col = this.store.get(this.collectionName);
     const data = col?.get(this.docId) ?? null;
@@ -222,6 +237,16 @@ class MockDocRef {
 class MockCollectionRef extends MockQuery {
   doc(id: string): MockDocRef {
     return new MockDocRef(this.store, this.collectionName, id, this.journal);
+  }
+
+  /**
+   * Το έγγραφο-γονέας μιας **υποσυλλογής** (`γονέας/id/όνομα`) — `null` για κορυφαία συλλογή, όπως
+   * `CollectionReference.parent` στον Firestore.
+   */
+  get parent(): MockDocRef | null {
+    const parts = this.collectionName.split('/');
+    if (parts.length < 3) return null;
+    return new MockDocRef(this.store, parts.slice(0, -2).join('/'), parts[parts.length - 2] ?? '', this.journal);
   }
 }
 

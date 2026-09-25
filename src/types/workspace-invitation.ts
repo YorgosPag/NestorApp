@@ -34,6 +34,14 @@
  */
 
 import type { GlobalRole } from '@/lib/auth/types';
+import {
+  CORE_INVITATION_REFUSALS,
+  INVITATION_STATES,
+  isInvitationState,
+  type InvitationDocumentCore,
+  type InvitationRecordCore,
+  type InvitationState,
+} from '@/types/invitation-core';
 
 // =============================================================================
 // 1. Ο ΡΟΛΟΣ ΠΟΥ ΜΠΟΡΕΙ ΝΑ ΔΟΘΕΙ
@@ -69,64 +77,18 @@ export function isInvitableRole(value: unknown): value is InvitableRole {
 // =============================================================================
 
 /**
- * ⚠️ **Ο ΠΙΝΑΚΑΣ ΕΙΝΑΙ Η ΑΥΘΕΝΤΙΑ, Ο ΤΥΠΟΣ ΠΑΡΑΓΕΤΑΙ** — ίδιο μοτίβο με τα
- * `WORKSPACE_ACCESS_REQUEST_STATUSES`, `FIRST_CONTACT_INVITATION_STATES`, `GLOBAL_ROLES`.
+ * 🔑 **ΟΙ ΚΑΤΑΣΤΑΣΕΙΣ ΖΟΥΝ ΣΤΟΝ ΚΟΙΝΟ ΠΥΡΗΝΑ** (`types/invitation-core.ts`, ADR-853 §20) — ίδιες τιμές,
+ * ίδια σειρά, ίδια fail-closed ανάγνωση (`readStoredInvitationState` → `expired`). Εδώ μένουν τα ονόματα που
+ * διαβάζουν οι οθόνες του χώρου, ως **ψευδώνυμα**, όχι ως δεύτερος πίνακας.
  *
- * ```
- * pending ──accept──► accepted
- *    │ ├──decline──► declined
- *    │ ├──revoke───► revoked
- *    │ └──(χρόνος)─► expired
- * ```
- *
- * ⛔ **ΚΑΜΙΑ ΓΕΝΙΚΗ ΕΝΗΜΕΡΩΣΗ ΔΕΝ ΑΓΓΙΖΕΙ ΤΟ `state`** (AIP-216: *«APIs should not allow a
- * State enum to be directly updated»*). Μόνο ονομασμένες πράξεις, και **μόνο** πάνω σε
- * `pending` — άκυρη μετάβαση δίνει **ονομασμένη άρνηση**, ποτέ σιωπηλή επανεγγραφή. Ίδιο
- * δόγμα με το `decideAccessRequest`.
+ * ⛔ **ΚΑΜΙΑ ΓΕΝΙΚΗ ΕΝΗΜΕΡΩΣΗ ΔΕΝ ΑΓΓΙΖΕΙ ΤΟ `state`** (AIP-216) — μόνο ονομασμένες πράξεις, μόνο πάνω σε
+ * `pending`. Το `revoked` καλύπτει **και** την αντικατάσταση από νεότερη: για τον παραλήπτη είναι το ίδιο γεγονός.
  */
-export const WORKSPACE_INVITATION_STATES = [
-  /** Στάλθηκε· περιμένει τον άνθρωπο. Η **μόνη** κατάσταση που εξαργυρώνεται. */
-  'pending',
-  /** Ο παραλήπτης δέχτηκε — γράφτηκε μέλος. **Τελική.** */
-  'accepted',
-  /** Ο παραλήπτης αρνήθηκε ρητά. **Τελική.** */
-  'declined',
-  /**
-   * Ο χώρος την ανακάλεσε — **ή** αντικαταστάθηκε από νεότερη προς τον **ίδιο** άνθρωπο.
-   *
-   * 🔑 Οι δύο περιπτώσεις μοιράζονται κατάσταση **επίτηδες**: για τον παραλήπτη είναι το
-   * ίδιο γεγονός *(«αυτός ο σύνδεσμος δεν ισχύει πια»)*, και μια ξεχωριστή `superseded`
-   * θα του ζητούσε να καταλάβει τη διαφορά ανάμεσα σε «σε ακύρωσαν» και «σου ξαναέστειλαν».
-   */
-  'revoked',
-  /** Πέρασε η ώρα της χωρίς να πατηθεί. **Τελική.** */
-  'expired',
-] as const;
+export const WORKSPACE_INVITATION_STATES = INVITATION_STATES;
 
-export type WorkspaceInvitationState = (typeof WORKSPACE_INVITATION_STATES)[number];
+export type WorkspaceInvitationState = InvitationState;
 
-export function isWorkspaceInvitationState(value: unknown): value is WorkspaceInvitationState {
-  return typeof value === 'string'
-    && (WORKSPACE_INVITATION_STATES as readonly string[]).includes(value);
-}
-
-/**
- * **Ανάγνωση αποθηκευμένης κατάστασης — fail-closed προς `expired`.**
- *
- * 🔴 **Η ΚΑΤΕΥΘΥΝΣΗ ΤΗΣ ΑΣΤΟΧΙΑΣ ΖΥΓΙΣΤΗΚΕ** (ίδιο ιδίωμα με το
- * `readStoredInvitationState` του ADR-844):
- *
- * | Αν διαβαστεί ως | Το λάθος είναι |
- * |---|---|
- * | `pending` | **γίνεται μέλος ξένου χώρου** από έγγραφο που δεν καταλάβαμε |
- * | `expired` | ο διαχειριστής πατά «επαναποστολή» και ο άνθρωπος παίρνει **νέα** πρόσκληση |
- *
- * ⇒ Διαβάζεται **`expired`**: ένταξη σε χώρο εναντίον **μιας επιπλέον αποστολής**. Δεν
- * είναι ισοπαλία.
- */
-export function readStoredInvitationState(value: unknown): WorkspaceInvitationState {
-  return isWorkspaceInvitationState(value) ? value : 'expired';
-}
+export const isWorkspaceInvitationState = isInvitationState;
 
 // =============================================================================
 // 3. ΤΟ ΕΓΓΡΑΦΟ
@@ -135,67 +97,22 @@ export function readStoredInvitationState(value: unknown): WorkspaceInvitationSt
 /**
  * **Η πρόσκληση, ολόκληρη.** ⛔ **Δεν φτάνει ποτέ σε πελάτη** — `firestore.rules` λέει
  * `read: false` **και** `write: false`, όπως το `workspace_access_requests`.
+ *
+ * Τα κοινά πεδία (παραλήπτης · `nonceHash` · κατάσταση · χρόνοι · `mailboxProvenAt`) και η τεκμηρίωσή τους
+ * ζουν στο {@link InvitationRecordCore}. 🔑 Ο παραλήπτης είναι **ταυτόχρονα** κλειδί ιδεμποτησίας *(ένα ζωντανό
+ * ανά (χώρος, email))* και **δέσμευση**: προωθημένο email **δεν λειτουργεί** — εκεί σπάει το Figma (§5 #2).
+ * 🔴 Το `nonceHash` είναι το σημείο όπου ξεπερνάμε το ADR-844 (§5 #1): διαρροή της βάσης δεν δίνει τίποτα.
  */
-export interface WorkspaceInvitation {
-  /** `winv_*` — από το `enterprise-id.service`, **ποτέ** χειρόγραφο (N.6). */
+export interface WorkspaceInvitation extends InvitationRecordCore {
+  /** `winv_*`. */
   readonly id: string;
   /**
    * **Ο χώρος που προσκαλεί** — και το έγγραφο τον **ΦΕΡΝΕΙ**, δεν τον διαβάζει από
    * τον πελάτη (ADR-853 Κ7 · CHECK 3.58).
    */
   readonly companyId: string;
-  /**
-   * **Ο παραλήπτης, κανονικοποιημένος** (πεζά, χωρίς κενά) — από το
-   * `normaliseChannelEmail`, ποτέ χειρόγραφο `trim().toLowerCase()`.
-   *
-   * 🔑 Είναι **ταυτόχρονα** το κλειδί ιδεμποτησίας *(ένα ζωντανό ανά (χώρος, email))* και
-   * η **δέσμευση παραλήπτη**: η αποδοχή απαιτεί το email του συνδεδεμένου λογαριασμού
-   * **στο Auth** να ταιριάζει εδώ — και τότε η ίδια η πρόσκληση το επιβεβαιώνει (§15). Προωθημένο email **δεν λειτουργεί** — εκεί ακριβώς σπάει το
-   * Figma, που δηλώνει ρητά ότι **δεν** δεσμεύει (ADR-853 §5 #2).
-   */
-  readonly inviteeEmail: string;
   /** Ο ρόλος που θα πάρει **στην αποδοχή** — με ταβάνι τον προσκαλούντα (Α3). */
   readonly role: InvitableRole;
-  readonly invitedByUid: string;
-  /**
-   * **ΜΟΝΟ το αποτύπωμα του nonce** — `sha256`, ποτέ το ίδιο το nonce.
-   *
-   * 🔴 **ΕΙΝΑΙ ΤΟ ΣΗΜΕΙΟ ΟΠΟΥ ΞΕΠΕΡΝΑΜΕ ΚΑΙ ΤΟ ΔΙΚΟ ΜΑΣ ADR-844** (§5 #1): εκείνο κρατά
-   * το nonce **ωμό** στη βάση, άρα μια ανάγνωση της βάσης δίνει **χρησιμοποιήσιμη**
-   * πρόσκληση. Εδώ η ίδια διαρροή δίνει **τίποτα**: ο επιτιθέμενος θα χρειαζόταν και το
-   * μυστικό του διακομιστή για να παραγάγει έγκυρη υπογραφή, και το nonce δεν
-   * ανακατασκευάζεται από το `sha256` του.
-   *
-   * ⚠️ **Όχι bcrypt/argon2**: εκείνα προστατεύουν μυστικά **χαμηλής** εντροπίας. Σε
-   * 128-bit τυχαίο nonce είναι μόνο κόστος CPU (ADR-853 §11).
-   */
-  readonly nonceHash: string;
-  readonly state: WorkspaceInvitationState;
-  readonly createdAt: string;
-  readonly expiresAt: string;
-  /**
-   * Πότε **ανοίχτηκε** ο σύνδεσμος — για την κατάσταση παράδοσης (§5 #5).
-   *
-   * ⚠️ **ΕΝΔΕΙΞΗ, ΟΧΙ ΑΠΟΔΕΙΞΗ** (§6 #3): οι πελάτες email μπλοκάρουν εικόνες και
-   * **προ-φορτώνουν συνδέσμους**, οπότε ένα `openedAt` μπορεί να γράφτηκε από σαρωτή και
-   * ποτέ από άνθρωπο. Η οθόνη το λέει με λέξεις — δεν το παρουσιάζει ως «το είδε».
-   */
-  readonly openedAt: string | null;
-  /** Πότε έπαψε να είναι `pending` — για **κάθε** τελική κατάσταση. */
-  readonly resolvedAt: string | null;
-  /**
-   * Ποιος την έκλεισε: ο προσκεκλημένος (αποδοχή/άρνηση) ή ο διαχειριστής (ανάκληση).
-   * `null` όταν την έκλεισε **ο χρόνος** — η λήξη δεν έχει δράστη.
-   */
-  readonly resolvedByUid: string | null;
-  /**
-   * 🔑 **Πότε ΑΥΤΗ η πρόσκληση επιβεβαίωσε το email του λογαριασμού** (ADR-853 §15) — `null`
-   * αν ο λογαριασμός ήταν ήδη επιβεβαιωμένος ή αν η πρόσκληση δεν έγινε δεκτή.
-   *
-   * Είναι το **ίχνος** μιας αλλαγής ορίου ασφαλείας: «γιατί είναι επιβεβαιωμένο αυτό το
-   * email;» απαντιέται από το έγγραφο που το απέδειξε, όχι από ημερολόγιο που λήγει.
-   */
-  readonly mailboxProvenAt: string | null;
 }
 
 /**
@@ -213,13 +130,10 @@ export interface WorkspaceInvitation {
  * εγγράφου**. Ο καταναλωτής ξαναρωτά με {@link isInvitableRole}· η εγγύηση είναι
  * **έλεγχος**, ποτέ τύπος.
  */
-export type WorkspaceInvitationDocument =
-  Omit<WorkspaceInvitation, 'state' | 'role' | 'mailboxProvenAt'> & {
-    readonly state: string;
-    readonly role: string;
-    /** ⚠️ Προαιρετικό **στην ανάγνωση**: οι προσκλήσεις πριν το §15 (2026-09-21) δεν το έχουν. */
-    readonly mailboxProvenAt?: string | null;
-  };
+export type WorkspaceInvitationDocument = InvitationDocumentCore & {
+  readonly companyId: string;
+  readonly role: string;
+};
 
 // =============================================================================
 // 4. ΓΙΑΤΙ ΔΕΝ ΠΡΟΧΩΡΗΣΕ — ονομασμένοι λόγοι, ΠΟΤΕ `boolean`
@@ -231,28 +145,8 @@ export type WorkspaceInvitationDocument =
  * κάθε άρνηση ξέρει τι να πει.
  */
 export const WORKSPACE_INVITATION_REFUSALS = [
-  /** Η υπογραφή δεν στέκει, ή το κείμενο δεν είναι σύνδεσμός μας. */
-  'link-invalid',
-  /**
-   * Σύνδεσμός μας, υπογεγραμμένος από **άλλο κλειδί** — άλλο περιβάλλον (δοκιμών ↔ παραγωγής) ή μυστικό που
-   * αντικαταστάθηκε (`foreign-key`, ADR-853 §15.7 Ε-5). **Όχι** πλαστός: ο άνθρωπος χρειάζεται νέα πρόσκληση.
-   */
-  'link-foreign',
-  /** Ο σύνδεσμος είναι έγκυρος αλλά το έγγραφο δεν υπάρχει — σβήστηκε ή δεν γράφτηκε ποτέ. */
-  'invitation-unknown',
-  /** ⚠️ Κρίνεται **δύο φορές**: στο token **και** στο έγγραφο (ο χρόνος ζει σε δύο μέρη). */
-  'expired',
-  /** **Επιτυχία στο παρελθόν**, όχι αποτυχία τώρα. Η οθόνη το λέει ήρεμα. */
-  'already-used',
-  /** Ανακλήθηκε από τον χώρο, ή αντικαταστάθηκε από νεότερη. */
-  'revoked',
-  /**
-   * 🔴 Ο συνδεδεμένος άνθρωπος **δεν είναι** ο παραλήπτης.
-   *
-   * Χωρίς αυτό, ένα προωθημένο email θα έδινε σε **τρίτον** τη θέση που προοριζόταν για
-   * άλλον — και το γραφείο δεν θα το μάθαινε ποτέ.
-   */
-  'wrong-recipient',
+  // Οι επτά κοινές (`link-invalid` … `wrong-recipient`) — τεκμηρίωση στο `types/invitation-core.ts`.
+  ...CORE_INVITATION_REFUSALS,
   // ⛔ **`email-unverified` ΚΑΤΑΡΓΗΘΗΚΕ (ADR-853 §15, 2026-09-21)** — η πρόσκληση **είναι**
   //    απόδειξη γραμματοκιβωτίου: ο σωστός άνθρωπος με ανεπιβεβαίωτο email επιβεβαιώνεται
   //    στην αποδοχή αντί να αποκλειστεί. Λόγος που κανείς δεν μπορεί να παραγάγει θα ήταν

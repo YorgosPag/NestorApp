@@ -26,8 +26,6 @@ import 'server-only';
  * ρητά ως άμυνα σε race condition). Το ADR-853 §7.3 το απαιτεί ονομαστικά.
  */
 
-import type { Transaction } from 'firebase-admin/firestore';
-
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { compareRoleLevels } from '@/lib/auth';
 // 🔑 ADR-742 — ο ΕΝΑΣ κριτής του «ανήκει ΑΥΤΟ το έγγραφο στον μισθωτή μου;».
@@ -38,13 +36,17 @@ import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO as clockNowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { sha256HexOfText } from '@/lib/hash/sha256';
 import { createModuleLogger } from '@/lib/telemetry';
-import { encodeSignedToken, newTokenNonce, requireTokenSecret } from '@/lib/tokens/signed-token';
+import {
+  presentedInvitationState,
+  revokeInvitationAt,
+  writeInvitationWithSupersede,
+  type RevokeInvitationOutcome,
+} from '@/server/invitations/invitation-lifecycle';
+import { defaultInvitationExpiryMs, mintInvitationToken } from '@/server/invitations/invitation-token';
 import { generateWorkspaceInvitationId } from '@/services/enterprise-id.service';
 import {
   isInvitableRole,
-  readStoredInvitationState,
   type InvitableRole,
   type WorkspaceInvitation,
   type WorkspaceInvitationDocument,
@@ -57,15 +59,10 @@ const logger = createModuleLogger('workspace-invitation');
  * ⚠️ **Δικό του μυστικό, ΠΟΤΕ κοινό με τις άλλες πύλες.** Τα πεδία ενός υπογεγραμμένου
  * συνδέσμου είναι απλό κείμενο και η υπογραφή **δεν ξέρει σε ποια πύλη ανήκει**: με κοινό
  * μυστικό, σύνδεσμος πρώτης επαφής με τα σωστά πεδία θα περνούσε για **πρόσκληση σε
- * γραφείο**. Ξεχωριστά μυστικά κάνουν τη σύγχυση **αδύνατη**.
+ * γραφείο**. Ξεχωριστά μυστικά κάνουν τη σύγχυση **αδύνατη**. ⚠️ Ένα όνομα για έκδοση,
+ * εξαργύρωση **και** όψη.
  */
-const SECRET_ENV = 'WORKSPACE_INVITE_SECRET';
-
-/** GitHub 7 · Autodesk 7 · Auth0 default 7 (ADR-853 §5). Το 30 του Slack αφορά κοινόχρηστο σύνδεσμο. */
-const LIFETIME_DAYS = 7;
-
-/** Πόσες ζωντανές προσκλήσεις διαβάζονται για supersede — ένα ζευγάρι δεν έχει ποτέ 20. */
-const LIVE_SCAN_LIMIT = 20;
+export const WORKSPACE_INVITE_SECRET_ENV = 'WORKSPACE_INVITE_SECRET';
 
 // =============================================================================
 // 1. ΕΚΔΟΣΗ
@@ -118,19 +115,18 @@ export async function issueWorkspaceInvitation(
     return { kind: 'refused', reason: 'role-above-inviter' };
   }
 
-  const secret = requireTokenSecret(SECRET_ENV);
   const nowValue = input.nowISOValue ?? clockNowISO();
   const inviteeEmail = normaliseChannelEmail(input.inviteeEmailRaw);
 
   const id = generateWorkspaceInvitationId();
-  const nonce = newTokenNonce();
-  const expiresAtMs = Date.parse(nowValue) + LIFETIME_DAYS * 24 * 60 * 60 * 1000;
-
-  // ⚠️ **ΧΙΛΙΟΣΤΑ, ΠΟΤΕ ISO** (ADR-853 §7.4): το ISO κουβαλά άνω-κάτω τελείες — τον ίδιο
-  //    χαρακτήρα που χωρίζει τα πεδία. Είναι το ελάττωμα που κρατούσε **κάθε** σύνδεσμο
-  //    προμηθευτή νεκρό από την πρώτη μέρα, και το `encodeSignedToken` πλέον **αρνείται**
-  //    να υπογράψει πεδίο με `:`.
-  const token = encodeSignedToken(secret, [id, nonce, String(expiresAtMs)]);
+  // ⚠️ Η ζωή (7 μέρες) και η διάταξη του συνδέσμου ζουν στον **κοινό πυρήνα** (ADR-853 §20)· χωρίς
+  //    locator, τα bytes του συνδέσμου είναι ίδια με πριν την εξαγωγή.
+  const expiresAtMs = defaultInvitationExpiryMs(nowValue);
+  const { token, nonceHash } = await mintInvitationToken(WORKSPACE_INVITE_SECRET_ENV, {
+    id,
+    expiresAtMs,
+    locator: [],
+  });
 
   const invitation: WorkspaceInvitation = {
     id,
@@ -138,7 +134,7 @@ export async function issueWorkspaceInvitation(
     inviteeEmail,
     role: input.role as InvitableRole,
     invitedByUid: input.inviterUid,
-    nonceHash: await sha256HexOfText(nonce),
+    nonceHash,
     state: 'pending',
     createdAt: nowValue,
     expiresAt: new Date(expiresAtMs).toISOString(),
@@ -160,14 +156,10 @@ export async function issueWorkspaceInvitation(
 }
 
 /**
- * **Γράψε τη νέα και σβήσε τις παλιές — ΜΕΣΑ σε μία συναλλαγή** (§7.3).
- *
- * 🔴 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ**: το Firestore απαιτεί **όλες** τις αναγνώσεις μιας
- * συναλλαγής **πριν** από κάθε γραφή. Το ερώτημα τρέχει πρώτο, οι γραφές ακολουθούν.
+ * **Γράψε τη νέα και σβήσε τις παλιές — ΜΕΣΑ σε μία συναλλαγή** (§7.3), μέσω του κοινού πυρήνα.
  *
  * ⚠️ **Ερώτημα με ΤΡΕΙΣ ισότητες και καμία διάταξη** — εξυπηρετείται από τη συγχώνευση
- * μονοπεδιακών ευρετηρίων της Firestore, χωρίς δηλωμένο σύνθετο ευρετήριο. *(Τα σύνθετα
- * του `vendor_invites` υπάρχουν επειδή εκείνα τα ερωτήματα έχουν διάταξη/εύρος.)*
+ * μονοπεδιακών ευρετηρίων της Firestore, χωρίς δηλωμένο σύνθετο ευρετήριο.
  * ⚠️ Και περιλαμβάνει `companyId`, άρα δεν ζητά γραμμένη εξαίρεση tenant-scope (CHECK 3.10).
  */
 async function writeWithSupersede(
@@ -177,45 +169,16 @@ async function writeWithSupersede(
 ): Promise<number> {
   const db = getAdminFirestore();
   const collection = db.collection(COLLECTIONS.WORKSPACE_INVITATIONS);
-
-  return db.runTransaction(async (tx: Transaction) => {
-    const live = await tx.get(
-      collection
-        .where('companyId', '==', invitation.companyId)
-        .where('inviteeEmail', '==', invitation.inviteeEmail)
-        .where('state', '==', 'pending')
-        .limit(LIVE_SCAN_LIMIT),
-    );
-
-    // ⚠️ Η κατάσταση ξαναδιαβάζεται **fail-closed** και δεν εμπιστευόμαστε το `where`:
-    //    ένα έγγραφο με χαλασμένο `state` δεν πρέπει να μετρηθεί ως ζωντανό.
-    const stale = live.docs.filter(
-      (doc) => readStoredInvitationState((doc.data() as WorkspaceInvitationDocument).state) === 'pending',
-    );
-
-    for (const doc of stale) {
-      tx.update(collection.doc(doc.id), {
-        state: 'revoked',
-        resolvedAt: nowValue,
-        resolvedByUid: actorUid,
-      });
-    }
-
-    tx.set(collection.doc(invitation.id), invitation);
-    return stale.length;
-  });
+  const liveQuery = collection
+    .where('companyId', '==', invitation.companyId)
+    .where('inviteeEmail', '==', invitation.inviteeEmail)
+    .where('state', '==', 'pending');
+  return writeInvitationWithSupersede(db, { collection, invitation, liveQuery, actorUid, nowValue });
 }
 
 // =============================================================================
 // 2. ΑΝΑΚΛΗΣΗ
 // =============================================================================
-
-export type RevokeInvitationOutcome =
-  | { readonly kind: 'revoked' }
-  /** Δεν υπάρχει τέτοια πρόσκληση **σε αυτόν τον χώρο** — ποτέ «υπάρχει αλλού». */
-  | { readonly kind: 'absent' }
-  /** Ήδη κλειστή — **καμία** γραφή (ιδεμποτησία· ποτέ σιωπηλή ανατροπή). */
-  | { readonly kind: 'already'; readonly state: string };
 
 /**
  * **Ανάκληση** — μόνο πάνω σε `pending`, μέσα σε συναλλαγή.
@@ -233,22 +196,11 @@ export async function revokeWorkspaceInvitation(input: {
 }): Promise<RevokeInvitationOutcome> {
   const db = getAdminFirestore();
   const ref = db.collection(COLLECTIONS.WORKSPACE_INVITATIONS).doc(input.invitationId);
-  const nowValue = input.nowISOValue ?? clockNowISO();
-
-  return db.runTransaction(async (tx: Transaction) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) return { kind: 'absent' };
-
-    const stored = snap.data() as WorkspaceInvitationDocument;
-    // Πολιτική «σιωπηλή» (ADR-742): ξένο = **αδιάκριτο από ανύπαρκτο**, ποτέ «υπάρχει
-    // αλλά δεν επιτρέπεσαι» — αλλιώς η διαδρομή γίνεται όργανο απαρίθμησης.
-    if (!isPayloadOwnedByCompany(stored, input.companyId)) return { kind: 'absent' };
-
-    const state = readStoredInvitationState(stored.state);
-    if (state !== 'pending') return { kind: 'already', state };
-
-    tx.update(ref, { state: 'revoked', resolvedAt: nowValue, resolvedByUid: input.revokedByUid });
-    return { kind: 'revoked' };
+  return revokeInvitationAt(db, ref, {
+    // Πολιτική «σιωπηλή» (ADR-742): ξένο = **αδιάκριτο από ανύπαρκτο**.
+    isOwned: (stored) => isPayloadOwnedByCompany(stored, input.companyId),
+    revokedByUid: input.revokedByUid,
+    nowValue: input.nowISOValue ?? clockNowISO(),
   });
 }
 
@@ -303,15 +255,12 @@ function toInvitationView(
   if (!isInvitableRole(stored.role)) return null;
   if (typeof stored.inviteeEmail !== 'string' || stored.inviteeEmail.length === 0) return null;
 
-  const stateOnDisk = readStoredInvitationState(stored.state);
-  const expired = stateOnDisk === 'pending' && Date.parse(stored.expiresAt) <= Date.parse(nowValue);
-
   return {
     id,
     companyId: stored.companyId,
     inviteeEmail: stored.inviteeEmail,
     role: stored.role,
-    state: expired ? 'expired' : stateOnDisk,
+    state: presentedInvitationState(stored, nowValue),
     invitedByUid: stored.invitedByUid,
     createdAt: stored.createdAt,
     expiresAt: stored.expiresAt,

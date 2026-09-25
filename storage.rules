@@ -729,5 +729,25 @@ service firebase.storage {
       allow read, write: if false;
     }
 
+    // =========================================================================
+    // 🧭 ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ — καραντίνα + ιδιωτικά πλακίδια (ADR-884 Φ0.8 · Φ0.9)
+    // =========================================================================
+    // Path: /tour-ingest/{tourId}/{captureId}/{file}   — τα bytes ΠΡΙΝ τον έλεγχο (EXIF/GPS, τύπος)
+    // Path: /tour-tiles/{tourId}/{captureId}/{level}/{tile} — πλακίδια `on-request` / `link-only`
+    //
+    // ΚΑΝΕΝΑΣ client — ούτε ο super_admin. Γράφει ΜΟΝΟ ο διακομιστής (καραντίνα → κανονικό)·
+    // σερβίρει ΜΟΝΟ η διαδρομή που επαληθεύει κουπόνι θέασης (Φ0.4). Τα δημόσια πλακίδια ζουν
+    // στο ΔΗΜΟΣΙΟ ράφι (ξεχωριστό bucket, ADR-845) — ποτέ εδώ.
+    // =========================================================================
+    // @pathId: tour_ingest
+    match /tour-ingest/{ingestFile=**} {
+      allow read, write: if false;
+    }
+
+    // @pathId: tour_tiles
+    match /tour-tiles/{tileFile=**} {
+      allow read, write: if false;
+    }
+
   }
 }

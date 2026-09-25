@@ -36,20 +36,34 @@ const BLOCK_COMMENT = new RegExp(String.raw`/\*[\s\S]*?\*/`, 'g');
 interface CssRule {
   readonly selector: string;
   readonly body: string;
+  /** Το `@layer` που περικλείει τον κανόνα, ή `null` αν ζει εκτός layer (Υ4). */
+  readonly layer: string | null;
 }
 
 /**
- * Οι κανόνες ενός stylesheet **χωρίς σχόλια**, ως ζεύγη επιλογέα / σώματος. Τα at-rules (`@media`, `@layer`)
- * ξεδιπλώνονται: ο επιλογέας ενός εσωτερικού κανόνα είναι το κείμενο αμέσως πριν από το δικό του `{`.
+ * Οι κανόνες ενός stylesheet **χωρίς σχόλια**, ως επιλογέας / σώμα / layer. Σάρωση με στοίβα αγκίστρων:
+ * κάθε `{` ανοίγει το κείμενο που προηγείται (επιλογέας ή at-rule), κάθε `}` το κλείνει· τα at-rules
+ * (`@media`, `@layer`) ξεδιπλώνονται και μένουν ως πλαίσιο.
  */
 function rulesOf(file: string): readonly CssRule[] {
   const css = fs.readFileSync(file, 'utf8').replace(BLOCK_COMMENT, '');
+  const stack: string[] = [];
   const rules: CssRule[] = [];
-  const pattern = /([^{}]+)\{([^{}]*)\}/g;
-  let match: RegExpExecArray | null = pattern.exec(css);
-  while (match !== null) {
-    rules.push({ selector: match[1].trim(), body: match[2] });
-    match = pattern.exec(css);
+  let text = '';
+  for (const ch of css) {
+    if (ch === '{') {
+      stack.push(text.trim());
+      text = '';
+    } else if (ch === '}') {
+      const selector = stack.pop() ?? '';
+      if (!selector.startsWith('@')) {
+        const layer = [...stack].reverse().find((s) => s.startsWith('@layer'));
+        rules.push({ selector, body: text, layer: layer ? layer.replace('@layer', '').trim() : null });
+      }
+      text = '';
+    } else {
+      text += ch;
+    }
   }
   return rules;
 }
@@ -101,6 +115,29 @@ describe('Υ2 — ο κανόνας κινητού σε .flex / .grid δεν α�
     const value = overflowXOf(rule?.body ?? '') ?? '';
     expect(value).toBe('clip');
     expect(selector.startsWith(':where(')).toBe(true);
+  });
+});
+
+describe('Υ4 — οι καθολικοί κανόνες ζουν ΕΞΩ από κάθε `@layer` (εκεί το Tailwind δεν τους παράγει παραλλαγές)', () => {
+  // 🔴 2026-09-25 (ADR-797 §Φ.Ρ.1): στο `@layer utilities` το Tailwind v3 διάβασε το `if (!container)` του
+  // κώδικα JS ως important modifier και παρήγαγε `:where(.\!container, …, header, main, section)
+  // { overflow-x: clip !important }` — ακύρωνε ΚΑΘΕ `overflow-x-auto`. Υ1/Υ2 έμεναν πράσινες: κρίνουν τη
+  // δήλωση, και η δήλωση ήταν σωστή. Αυτό που ψεύδεται είναι η θέση της.
+  // ⚠️ ΟΥΤΕ `@layer base`: μετρήθηκε ότι ο `.\!grid` παραγόταν και από εκεί — το Tailwind v3 καταχωρεί
+  // τις κλάσεις ΚΑΘΕ layer. Μόνο το CSS εκτός layer στέλνεται όπως γράφτηκε.
+  const global = rulesOf(GLOBALS_CSS).filter(
+    (r) =>
+      overflowXOf(r.body) !== null &&
+      (GLOBAL_TARGETS.some((el) => targetsBareElement(r.selector, el)) ||
+        /(^|[\s,(])\.(flex|grid)(?=$|[\s,)])/.test(r.selector)),
+  );
+
+  test('βρέθηκαν οι κανόνες (Υ1 + Υ2)', () => {
+    expect(global.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test.each(global.map((r) => [r.selector, r.layer]))('`%s` → εκτός layer (βρέθηκε: %s)', (_selector, layer) => {
+    expect(layer).toBeNull();
   });
 });
 

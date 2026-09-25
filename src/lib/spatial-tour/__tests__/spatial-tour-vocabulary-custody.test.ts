@@ -33,7 +33,7 @@ describe('διαμερίσματα περιήγησης', () => {
     for (const key of Object.values(SPATIAL_TOUR_COLLECTION)) expect(COLLECTIONS[key]).toBeTruthy();
   });
 
-  it.each(['TOUR_CAPTURES', 'TOUR_ACCESS_REQUESTS', 'TOUR_CAPTURE_GRANTS'] as const)(
+  it.each(['TOUR_CAPTURES', 'TOUR_ACCESS_REQUESTS', 'TOUR_CAPTURE_GRANTS', 'TOUR_CAPTURE_INVITATIONS'] as const)(
     '%s: γονείς στο backup ≡ τα διαμερίσματα (αλλιώς το ένα βιβλίο ΔΕΝ μπαίνει στο αντίγραφο ασφαλείας)',
     (subKey) => {
       expect(SUBCOLLECTIONS[subKey]).toMatch(/^tour_/);

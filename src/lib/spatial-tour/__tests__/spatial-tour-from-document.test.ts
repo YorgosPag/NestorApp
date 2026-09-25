@@ -9,7 +9,12 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 
-import { spatialTourFromDocument, tourCaptureFromDocument } from '../spatial-tour-from-document';
+import {
+  spatialTourFromDocument,
+  tourAccessRequestFromDocument,
+  tourCaptureFromDocument,
+  tourCaptureGrantFromDocument,
+} from '../spatial-tour-from-document';
 import { CAPTURE_DOC, TOUR_DOC } from './spatial-tour-fixtures';
 
 describe('spatialTourFromDocument', () => {
@@ -77,5 +82,68 @@ describe('tourCaptureFromDocument', () => {
     ['χωρίς ημερομηνία λήψης', { capturedAt: 'χθες' }],
   ])('🔴 αρνείται λήψη με %s', (_label, patch) => {
     expect(tourCaptureFromDocument({ ...CAPTURE_DOC, ...patch }, 'tcap_1')).toBeNull();
+  });
+});
+
+const REQUEST_DOC = {
+  tourId: 'stour_1',
+  requesterUid: 'buyer',
+  message: 'Θα ήθελα να δω το διαμέρισμα',
+  state: 'approved',
+  requestedAt: '2026-09-20T10:00:00.000Z',
+  requestCount: 2,
+  decidedAt: '2026-09-21T10:00:00.000Z',
+  decidedBy: 'anna',
+  expiresAt: Timestamp.fromMillis(Date.parse('2026-10-21T10:00:00.000Z')),
+  revokedAt: null,
+  revokedBy: null,
+};
+
+describe('tourAccessRequestFromDocument (Φ0.13)', () => {
+  it('✅ διαβάζει έγκυρο αίτημα — Timestamp λήξης γίνεται ISO', () => {
+    expect(tourAccessRequestFromDocument(REQUEST_DOC, 'tacr_1')).toMatchObject({
+      id: 'tacr_1', state: 'approved', requestCount: 2, expiresAt: '2026-10-21T10:00:00.000Z', revokedAt: null,
+    });
+  });
+
+  it('✅ εκκρεμές χωρίς λήξη διαβάζεται (η λήξη μπαίνει στην έγκριση)', () => {
+    const pending = { ...REQUEST_DOC, state: 'pending', expiresAt: undefined, decidedAt: undefined, decidedBy: undefined };
+    expect(tourAccessRequestFromDocument(pending, 'tacr_1')).toMatchObject({ state: 'pending', expiresAt: null });
+  });
+
+  it.each([
+    ['αποθηκευμένο expired (παράγεται, δεν γράφεται)', { state: 'expired' }],
+    ['χωρίς αιτούντα', { requesterUid: '' }],
+    ['μηδενικές υποβολές', { requestCount: 0 }],
+    ['🔴 ανάκληση που υπάρχει αλλά δεν διαβάζεται — ΔΕΝ γίνεται «δεν ανακλήθηκε»', { revokedAt: 'κάποτε' }],
+  ])('🔴 αρνείται αίτημα με %s', (_label, patch) => {
+    expect(tourAccessRequestFromDocument({ ...REQUEST_DOC, ...patch }, 'tacr_1')).toBeNull();
+  });
+});
+
+const GRANT_DOC = {
+  tourId: 'stour_1',
+  scopes: ['tour:capture:upload'],
+  expiresAt: '2026-10-21T10:00:00.000Z',
+  createdAt: '2026-09-21T10:00:00.000Z',
+  createdBy: 'anna',
+  reason: 'λήψη πριν τη δημοσίευση',
+  invitationId: 'tcin_1',
+};
+
+describe('tourCaptureGrantFromDocument (Φ0.5)', () => {
+  it('✅ διαβάζει έγκυρη άδεια — ο δικαιούχος έρχεται από το id του εγγράφου', () => {
+    expect(tourCaptureGrantFromDocument(GRANT_DOC, 'photo')).toMatchObject({
+      granteeUid: 'photo', scopes: ['tour:capture:upload'], revokedAt: null, invitationId: 'tcin_1',
+    });
+  });
+
+  it.each([
+    ['χωρίς λήξη', { expiresAt: undefined }],
+    ['άγνωστο εύρος', { scopes: ['tour:capture:upload', 'tour:admin'] }],
+    ['χωρίς λόγο', { reason: '' }],
+    ['🔴 ανάκληση που δεν διαβάζεται', { revokedAt: { garbage: true } }],
+  ])('🔴 αρνείται άδεια %s (fail-closed ⇒ κανένα ανέβασμα)', (_label, patch) => {
+    expect(tourCaptureGrantFromDocument({ ...GRANT_DOC, ...patch }, 'photo')).toBeNull();
   });
 });

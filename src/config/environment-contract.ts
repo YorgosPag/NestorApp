@@ -220,6 +220,17 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/auth/workspace-invitation.ts',
   },
   {
+    name: 'TOUR_CAPTURE_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Πρόσκληση φωτογράφου σε χωρική περιήγηση (ADR-884 Φ0.5)',
+    consequence:
+      'Ο υπεύθυνος της αγγελίας δεν μπορεί να προσκαλέσει φωτογράφο: η έκδοση αποτυγχάνει και '
+      + 'κάθε υπάρχων σύνδεσμος απαντά «δεν μπόρεσα» — άρα ΚΑΝΕΙΣ εκτός του υπευθύνου δεν ανεβάζει '
+      + 'πανοράματα. ⚠️ ΔΙΚΟ του μυστικό: με κοινό με τις προσκλήσεις χώρου, σύνδεσμος φωτογράφου '
+      + 'θα μπορούσε να διαβαστεί ως πρόσκληση σε γραφείο.',
+    consumer: 'src/server/spatial-tour/tour-capture-invitation.ts',
+  },
+  {
     name: 'STAY_ICAL_FEED_SECRET',
     severity: 'feature',
     feature: 'Συγχρονισμός ημερολογίου καταλύματος με τα κανάλια (ADR-835 §22, Στάδιο Γ)',

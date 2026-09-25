@@ -89,6 +89,13 @@ describe('🔴 Κ1 — Η ΚΑΡΔΙΑ ΤΟΥ ADR-827: ο συγγραφέας �
     expect(p.endMandate).toBe(true);
   });
 
+  it('ADR-884 Φ0.3 — η περιήγηση: ο ιδιοκτήτης ΚΑΙ το γραφείο, κανείς ξένος', () => {
+    expect(mayPerform(ASSIGNED, actor(ANNA, null), 'manageTour')).toBe(true);
+    expect(mayPerform(ASSIGNED, actor(BORIS, AGENCY), 'manageTour')).toBe(true);
+    expect(mayPerform(ASSIGNED, actor(CARL, RIVAL), 'manageTour')).toBe(false);
+    expect(mayPerform(PERSONAL, actor(BORIS, AGENCY), 'manageTour')).toBe(false);
+  });
+
   it('🔴 ΤΟ ΠΡΙΝ: το `mayAdminister` τής έλεγε «όχι» — γι΄ αυτό υπάρχει αυτό το αρχείο', () => {
     // Δεν είναι ελάττωμα εκείνου: απαντά «ο **χώρος** είναι δικός σου;» — και δεν είναι.
     expect(mayAdminister(custodyOf(ASSIGNED), actor(ANNA, null))).toBe(false);

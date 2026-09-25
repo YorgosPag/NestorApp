@@ -226,7 +226,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   TOUR_NODE: 'tnod',          // σημείο στον χώρο — σταθερό στον χρόνο
   TOUR_CAPTURE: 'tcap',       // μία λήψη του σημείου, σε μία ημερομηνία (χρονολόγιο)
   TOUR_ACCESS_REQUEST: 'tacr', // ντετερμινιστικό από (περιήγηση, άνθρωπο) ⇒ ένα αίτημα θέασης ανά άνθρωπο
-  TOUR_CAPTURE_INVITATION: 'tcin', // πρόσκληση φωτογράφου· επαναποστολή = νέο id, το παλιό `superseded`
+  TOUR_CAPTURE_INVITATION: 'tcin', // πρόσκληση φωτογράφου· επαναποστολή = νέο id, το παλιό `revoked` (ADR-853 §20)
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

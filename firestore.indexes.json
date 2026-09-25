@@ -2100,6 +2100,20 @@
       ]
     },
     {
+      "collectionGroup": "tour_access_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "shares",
       "queryScope": "COLLECTION",
       "fields": [

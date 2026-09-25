@@ -2,10 +2,13 @@ import 'server-only';
 
 /**
  * @fileoverview **ΟΙ ΕΛΕΓΧΟΙ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ, ΜΙΑ ΦΟΡΑ — ΚΑΙ Η ΠΡΟΣΚΛΗΣΗ ΩΣ ΑΠΟΔΕΙΞΗ
- * ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟΥ** (ADR-853 §15 · ADR-844 §13).
- * @related server/auth/workspace-invitation-redeem.ts (ο καλών) ·
+ * ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟΥ** (ADR-853 §15 · §20 · ADR-844 §13).
+ * @related server/invitations/invitation-redeem.ts (ο καλών) ·
  *          server/auth/mailbox-proof-custody.ts (το SSoT της απόδειξης)
- * @module server/auth/workspace-invitation-redeem-guards
+ * @module server/invitations/invitation-guards
+ *
+ * ⚠️ Μετακινήθηκε από το `server/auth/workspace-invitation-redeem-guards.ts` (ADR-853 §20): οι έλεγχοι
+ * **δεν** εξαρτώνται από το τι δίνει η αποδοχή, άρα ισχύουν για **κάθε** είδος πρόσκλησης.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔑 ΓΙΑΤΙ Ο ΣΥΝΔΕΣΜΟΣ ΑΠΟΔΕΙΚΝΥΕΙ ΤΟ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟ
@@ -26,7 +29,7 @@ import 'server-only';
  * 🔴 ΤΑ ΤΡΙΑ ΣΥΝΟΡΑ ΠΟΥ ΤΗΝ ΚΑΝΟΥΝ ΑΣΦΑΛΗ
  * ─────────────────────────────────────────────────────────────────────────────
  * 1. **Αφού περάσουν ΟΛΟΙ οι έλεγχοι** — υπογραφή, λήξη, `pending`, nonce, παραλήπτης,
- *    μέλος. Σύνδεσμος που θα απορριφθεί δεν αποδεικνύει τίποτα.
+ *    και ό,τι ζητά το είδος (π.χ. «ήδη μέλος»). Σύνδεσμος που θα απορριφθεί δεν αποδεικνύει τίποτα.
  * 2. **Ο παραλήπτης είναι το email του λογαριασμού στο Auth**, όχι του ID token: το token
  *    ζει έως μία ώρα, και ένα email που άλλαξε στο μεταξύ θα επιβεβαιωνόταν σε λογαριασμό
  *    που δεν το κατέχει πια (ο καλών το εγγυάται — δες το `route.ts`).
@@ -35,42 +38,34 @@ import 'server-only';
  * ⚠️ **ΤΟ `claimed` ΕΙΝΑΙ ΔΟΜΙΚΑ ΑΝΕΦΙΚΤΟ ΕΔΩ**: ο λογαριασμός είναι **ο ίδιος** ο
  * συνδεδεμένος (όχι αποτέλεσμα `getUserByEmail`), άρα ο κάτοχος της συνεδρίας είναι πάντα ο
  * λογαριασμός ⇒ `verified-by-holder`. Και **δεν δίνουμε συνεδρία** — ο άνθρωπος μπήκε ήδη
- * από τη δική του πόρτα, με τον 2ο παράγοντά του αν έχει ⇒ το `mailboxProofMaySignIn` δεν
- * έχει τι να κρίνει.
+ * από τη δική του πόρτα, με τον 2ο παράγοντά του αν έχει.
  */
 
 import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { equalsInConstantTime, type SignedTokenRejection } from '@/lib/tokens/signed-token';
+import { settleProvenMailbox, type ProvenMailboxAccount } from '@/server/auth/mailbox-proof-custody';
 import {
   readStoredInvitationState,
-  type WorkspaceInvitationDocument,
-  type WorkspaceInvitationRefusal,
-  type WorkspaceInvitationState,
-} from '@/types/workspace-invitation';
+  type InvitationCoreRefusal,
+  type InvitationDocumentCore,
+  type InvitationState,
+} from '@/types/invitation-core';
 
-import { settleProvenMailbox, type ProvenMailboxAccount } from './mailbox-proof-custody';
-
-const logger = createModuleLogger('workspace-invitation-redeem-guards');
+const logger = createModuleLogger('invitation-guards');
 
 /**
- * Το μυστικό των συνδέσμων — **ένα** όνομα για εξαργύρωση **και** όψη.
- * ⚠️ Ίδιο με του εκδότη — και **ποτέ** κοινό με άλλη πύλη (δες `workspace-invitation.ts`).
- */
-export const WORKSPACE_INVITE_SECRET_ENV = 'WORKSPACE_INVITE_SECRET';
-
-/**
- * **Ο λόγος απόρριψης του συνδέσμου → η άρνηση που βλέπει ο άνθρωπος** — ένα σημείο για όψη **και** εξαργύρωση.
+ * **Ο λόγος απόρριψης του συνδέσμου → η άρνηση που βλέπει ο άνθρωπος.**
  * 🔑 Το ξένο κλειδί λέγεται **ονομαστικά** (ADR-853 §15.7 Ε-5): «δεν είναι έγκυρος» θα έλεγε «πλαστός» για
  * σύνδεσμο που απλώς εκδόθηκε από άλλο περιβάλλον.
  */
-export function invitationRefusalOfToken(reason: SignedTokenRejection): WorkspaceInvitationRefusal {
+export function invitationRefusalOfToken(reason: SignedTokenRejection): 'link-foreign' | 'link-invalid' {
   return reason === 'foreign-key' ? 'link-foreign' : 'link-invalid';
 }
 
 /** Η αποθηκευμένη κατάσταση → ο λόγος που βλέπει ο άνθρωπος. */
-const REFUSAL_BY_STATE: Readonly<Record<Exclude<WorkspaceInvitationState, 'pending'>, WorkspaceInvitationRefusal>> = {
+const REFUSAL_BY_STATE: Readonly<Record<Exclude<InvitationState, 'pending'>, InvitationCoreRefusal>> = {
   accepted: 'already-used',
   declined: 'already-used',
   revoked: 'revoked',
@@ -81,7 +76,7 @@ const REFUSAL_BY_STATE: Readonly<Record<Exclude<WorkspaceInvitationState, 'pendi
 // 1. ΟΙ ΕΛΕΓΧΟΙ ΤΟΥ ΕΓΓΡΑΦΟΥ — μία συνάρτηση, τρεις αναγνώστες
 // =============================================================================
 
-export interface StoredInvitationCheck {
+interface StoredInvitationCheck {
   readonly nowValue: string;
   readonly nonceHash: string;
   /**
@@ -94,18 +89,16 @@ export interface StoredInvitationCheck {
 /**
  * **Γιατί αυτό το έγγραφο ΔΕΝ εξαργυρώνεται;** — ή `null` αν εξαργυρώνεται.
  *
- * 🔑 **Ένας ορισμός για την όψη, τον προέλεγχο και τη συναλλαγή.** Ήταν δύο αντίγραφα
- * (όψη + συναλλαγή), και η απόδειξη γραμματοκιβωτίου θα πρόσθετε τρίτο: αν ένα από τα τρία
- * ξεχνούσε έναν έλεγχο, ο λογαριασμός θα επιβεβαιωνόταν από σύνδεσμο που η συναλλαγή
+ * 🔑 **Ένας ορισμός για την όψη, τον προέλεγχο και τη συναλλαγή** — και για **κάθε** είδος πρόσκλησης.
+ * Αν ένα από τα τρία ξεχνούσε έναν έλεγχο, ο λογαριασμός θα επιβεβαιωνόταν από σύνδεσμο που η συναλλαγή
  * **απορρίπτει**.
  *
- * ⚠️ **Η σειρά είναι συμβόλαιο**: κατάσταση → λήξη → nonce → παραλήπτης. Ίδια με ό,τι
- * έλεγαν πάντα τα δύο αντίγραφα, άρα καμία άρνηση δεν αλλάζει όνομα.
+ * ⚠️ **Η σειρά είναι συμβόλαιο**: κατάσταση → λήξη → nonce → παραλήπτης.
  */
 export function refusalOfStoredInvitation(
-  stored: WorkspaceInvitationDocument,
+  stored: InvitationDocumentCore,
   check: StoredInvitationCheck,
-): WorkspaceInvitationRefusal | null {
+): InvitationCoreRefusal | null {
   const state = readStoredInvitationState(stored.state);
   if (state !== 'pending') return REFUSAL_BY_STATE[state];
 
@@ -133,10 +126,9 @@ export function refusalOfStoredInvitation(
  *   στο έγγραφό της ως `mailboxProvenAt`).
  * - `already-proven` — ήταν ήδη επιβεβαιωμένος· καμία γραφή.
  * - `unknown` — το Auth δεν απάντησε. ⚠️ **Όχι** άρνηση: ο καλών απαντά «δεν μπόρεσα»,
- *   και η αποδοχή **δεν** γράφεται — μέλος με ανεπιβεβαίωτο email θα ήταν ακριβώς η
- *   κατάσταση που ο §7.5 απαγορεύει.
+ *   και η αποδοχή **δεν** γράφεται.
  */
-export type InvitationMailboxProof = 'proven-now' | 'already-proven' | 'unknown';
+type InvitationMailboxProof = 'proven-now' | 'already-proven' | 'unknown';
 
 /**
  * **Η πρόσκληση ως απόδειξη γραμματοκιβωτίου** — μέσω του **ΕΝΟΣ** SSoT (ADR-844 §13).

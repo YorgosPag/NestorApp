@@ -472,6 +472,27 @@ export function bimAuthoringMatrix(): CoverageDefinition {
 }
 
 /**
+ * ADR-884 Φ0.9 — **εταιρικό έγγραφο που διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του μισθωτή και γράφει ΜΟΝΟ ο
+ * διακομιστής** (`spatial_tours`). Ανάγνωση = `isInternalUserOfCompany(cid)` — ακριβώς η πύλη ανάγνωσης του
+ * {@link bimAuthoringMatrix} — και **κάθε** εγγραφή `if false`, ακόμη και για τον super admin (`server_only`).
+ *
+ * Δέλτα πάνω στο authoring (όχι 35 κλωνοποιημένα κελιά): τα διασταυρούμενα και ανώνυμα κελιά είναι ήδη άρνηση
+ * με τον σωστό λόγο· αλλάζουν **μόνο** οι εγγραφές όσων θα περνούσαν την πύλη ρόλου.
+ */
+export function serverWrittenTenantInternalMatrix(): CoverageDefinition {
+  const writers = ['super_admin', 'same_tenant_admin', 'same_tenant_user', 'external_user'] as const;
+  return overrideDefinition(
+    bimAuthoringMatrix(),
+    writers.flatMap((persona) => [
+      cell(persona, 'create', 'deny', 'server_only'),
+      cell(persona, 'update', 'deny', 'server_only'),
+      cell(persona, 'delete', 'deny', 'server_only'),
+    ]),
+    'serverWrittenTenantInternalMatrix',
+  );
+}
+
+/**
  * ADR-657 legacy-container matrix — the 5 pre-tier floorplan containers
  * (`floorplans` + `project_`/`building_`/`floor_`/`unit_floorplans`). They sit
  * in the PRESENTATION tier and, for the canonical fixture (a doc that DOES

@@ -9,14 +9,12 @@ import 'server-only';
  * έλεγχοι του εγγράφου είναι οι **ΙΔΙΟΙ** με την εξαργύρωση — `refusalOfStoredInvitation`.
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { sameChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO as clockNowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { sha256HexOfText } from '@/lib/hash/sha256';
 import { createModuleLogger } from '@/lib/telemetry';
-import { decodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
+import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
 import {
   isInvitableRole,
   type WorkspaceInvitationDocument,
@@ -24,11 +22,7 @@ import {
   type WorkspaceInvitationRefusal,
 } from '@/types/workspace-invitation';
 
-import {
-  invitationRefusalOfToken,
-  refusalOfStoredInvitation,
-  WORKSPACE_INVITE_SECRET_ENV as SECRET_ENV,
-} from './workspace-invitation-redeem-guards';
+import { WORKSPACE_INVITATION_LOCATOR } from './workspace-invitation-redeem';
 
 const logger = createModuleLogger('workspace-invitation-preview');
 
@@ -94,41 +88,20 @@ export async function previewWorkspaceInvitation(input: {
   readonly viewerEmail?: string | null;
   readonly nowISOValue?: string;
 }): Promise<InvitationPreviewOutcome> {
-  const nowValue = input.nowISOValue ?? clockNowISO();
-
-  let secret: string;
-  try {
-    secret = requireTokenSecret(SECRET_ENV);
-  } catch {
+  // 🔑 Ο **ΙΔΙΟΣ** δρόμος με την εξαργύρωση (υπογραφή → λήξη → έγγραφο → κατάσταση · λήξη Τ2 · nonce),
+  //    χωρίς παραλήπτη: εδώ δεν υπάρχει ακόμη ταυτότητα — δες την κεφαλίδα.
+  const db = getAdminFirestore();
+  const found = await readInvitationByToken<WorkspaceInvitationDocument>(db, WORKSPACE_INVITATION_LOCATOR, {
+    token: input.token,
+    nowValue: input.nowISOValue ?? clockNowISO(),
+    recipientEmail: null,
+  });
+  if (found.kind === 'secret-missing') {
     logger.error('Λείπει το μυστικό των προσκλήσεων — καμία όψη δεν μπορεί να δοθεί');
     return { kind: 'unavailable' };
   }
-
-  const verdict = decodeSignedToken(secret, input.token, 3);
-  if (!verdict.ok) return previewRefuse(invitationRefusalOfToken(verdict.reason));
-  if (verdict.fields.length !== 3) return previewRefuse('link-invalid');
-
-  const [invitationId, nonce, expiresAtMs] = verdict.fields as [string, string, string];
-  const expiryMs = Number(expiresAtMs);
-  if (!Number.isFinite(expiryMs)) return previewRefuse('link-invalid');
-  if (expiryMs <= Date.parse(nowValue)) return previewRefuse('expired');
-
-  const snap = await getAdminFirestore()
-    .collection(COLLECTIONS.WORKSPACE_INVITATIONS)
-    .doc(invitationId)
-    .get();
-  if (!snap.exists) return previewRefuse('invitation-unknown');
-
-  const stored = snap.data() as WorkspaceInvitationDocument;
-
-  // 🔑 Ο **ΙΔΙΟΣ** έλεγχος με την εξαργύρωση (κατάσταση · λήξη Τ2 · nonce), χωρίς
-  //    παραλήπτη: εδώ δεν υπάρχει ακόμη ταυτότητα — δες την κεφαλίδα.
-  const refusal = refusalOfStoredInvitation(stored, {
-    nowValue,
-    nonceHash: await sha256HexOfText(nonce),
-    recipientEmail: null,
-  });
-  if (refusal !== null) return previewRefuse(refusal);
+  if (found.kind === 'refused') return previewRefuse(found.reason);
+  const { stored, invitationId } = found;
 
   // ⚠️ Ίδιος φρουρός με την εξαργύρωση (Μ3) και για τον **ίδιο** λόγο: ο τύπος του
   //    εγγράφου δηλώνει τον ρόλο `string` επίτηδες. Εδώ δεν γράφεται τίποτα — αλλά μια

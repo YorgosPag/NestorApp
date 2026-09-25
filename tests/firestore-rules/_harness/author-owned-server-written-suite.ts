@@ -23,6 +23,12 @@ export { useDenyAllEmulator as useAuthorOwnedEmulator } from './deny-all-suite';
 
 export type AuthorOwnedPayload = (authorUserId: string) => Record<string, unknown>;
 
+/**
+ * Το πεδίο κατόχου που ρωτά ο κανόνας. `authorUserId` για τις αγγελίες και τα παράγωγά τους· `userId` για τα
+ * διαμερίσματα `*_personal` (`CustodyScope`, ADR-884 Φ0.9). Το ίδιο πεδίο οδηγεί το φίλτρο της λίστας.
+ */
+export type OwnerField = 'authorUserId' | 'userId';
+
 const OWNER_UID = PERSONA_CLAIMS.same_tenant_user.uid;
 
 const docIdOf = (collection: string): string => `${collection}-owned-1`;
@@ -39,6 +45,7 @@ export function defineAuthorOwnedCell(
   cell: CoverageCell,
   collection: string,
   payload: AuthorOwnedPayload,
+  ownerField: OwnerField = 'authorUserId',
 ): void {
   describe(`${cell.persona} × ${cell.operation}`, () => {
     it(`should ${cell.outcome}${cell.reason ? ` (${cell.reason})` : ''}`, async () => {
@@ -48,7 +55,7 @@ export function defineAuthorOwnedCell(
         docId: docIdOf(collection),
         data: { updatedAt: '2030-01-01T00:00:00.000Z' },
         createData: payload(OWNER_UID),
-        listFilter: { field: 'authorUserId', op: '==', value: OWNER_UID },
+        listFilter: { field: ownerField, op: '==', value: OWNER_UID },
       };
       await assertCell(getContext(env(), cell.persona), cell, target);
     });
@@ -56,7 +63,12 @@ export function defineAuthorOwnedCell(
 }
 
 /** Οι δύο άγκυρες που ισχύουν για **κάθε** τέτοια συλλογή. */
-export function defineAuthorOwnedAnchors(env: EnvAccessor, collection: string, payload: AuthorOwnedPayload): void {
+export function defineAuthorOwnedAnchors(
+  env: EnvAccessor,
+  collection: string,
+  payload: AuthorOwnedPayload,
+  ownerField: OwnerField = 'authorUserId',
+): void {
   const docId = docIdOf(collection);
 
   it('🔴 ούτε ο ΙΔΙΟΣ ο συντάκτης γράφει — ο κριτής κατάληψης τρέχει μόνο στον διακομιστή', async () => {
@@ -72,7 +84,7 @@ export function defineAuthorOwnedAnchors(env: EnvAccessor, collection: string, p
     await seed(env, collection, `${collection}-other`, payload(PERSONA_CLAIMS.cross_tenant_user.uid));
     const owner = getContext(env(), 'same_tenant_user').firestore().collection(collection);
     await assertFails(owner.get());
-    const snap = await assertSucceeds(owner.where('authorUserId', '==', OWNER_UID).get());
+    const snap = await assertSucceeds(owner.where(ownerField, '==', OWNER_UID).get());
     expect(snap.docs.map((doc) => doc.id)).toEqual([docId]);
   });
 }

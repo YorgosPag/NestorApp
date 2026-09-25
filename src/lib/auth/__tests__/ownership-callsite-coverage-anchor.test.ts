@@ -152,6 +152,11 @@ const PROVEN_AFTER_PHASE_C: Readonly<Record<string, Classification>> = {
     kind: 'empty-pair',
     suite: 'src/server/auth/__tests__/workspace-invitation.test.ts',
   },
+  // ADR-884 Κ2α — ο κριτής μισθωτή της περιήγησης εταιρικής αγγελίας (`mayManageTour`).
+  'lib/spatial-tour/tour-authority.ts': {
+    kind: 'empty-pair',
+    suite: 'src/lib/spatial-tour/__tests__/tour-authority.test.ts',
+  },
   // ADR-884 Φ0.12 — η ανάκληση κοινοποίησης μετακόμισε στον διακομιστή (ADR-315).
   'server/sharing/share-revoke.ts': {
     kind: 'empty-pair',

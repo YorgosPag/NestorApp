@@ -174,6 +174,16 @@ function denyAll(
   ] as const;
 }
 
+/** `server_only_sealed` για **και τους έξι** — κανείς πελάτης, ούτε ο super_admin, ούτε ο `external_user`. */
+const SEALED_FOR_EVERYONE: readonly StorageCoverageCell[] = [
+  ...denyAll('super_admin', 'server_only'),
+  ...denyAll('same_tenant_admin', 'server_only'),
+  ...denyAll('same_tenant_user', 'server_only'),
+  ...denyAll('cross_tenant_user', 'server_only'),
+  ...denyAll('external_user', 'server_only'),
+  ...denyAll('anonymous', 'server_only'),
+];
+
 // ---------------------------------------------------------------------------
 // Company-scoped matrix builders (reused for with-project + no-project)
 // ---------------------------------------------------------------------------
@@ -539,6 +549,23 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
       ...denyAll('cross_tenant_user', 'server_only'),
       ...denyAll('anonymous', 'server_only'),
     ] as const,
+  },
+  // -------------------------------------------------------------------------
+  // ADR-884 Φ0.9 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ: καραντίνα ανεβάσματος + ιδιωτικά πλακίδια. Γράφει και διαβάζει ΜΟΝΟ ο
+  // διακομιστής: το ανέβασμα περνά από καραντίνα (Φ0.8), τα πλακίδια `on-request`/`link-only` σερβίρονται
+  // μόνο μετά από κουπόνι θέασης (Φ0.4). Ούτε ο super_admin — αλλιώς η ορατότητα θα ήταν ζήτημα URL.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'tour_ingest',
+    pattern: 'server_only_sealed',
+    testFile: 'tests/storage-rules/suites/tour-ingest.storage.test.ts',
+    matrix: SEALED_FOR_EVERYONE,
+  },
+  {
+    pathId: 'tour_tiles',
+    pattern: 'server_only_sealed',
+    testFile: 'tests/storage-rules/suites/tour-tiles.storage.test.ts',
+    matrix: SEALED_FOR_EVERYONE,
   },
 ] as const;
 

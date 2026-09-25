@@ -25,9 +25,11 @@ import {
   isFloorPlanSource,
   isSpatialTourLifecycle,
   isSpatialTourVisibility,
+  isTourAccessRequestState,
   isTourCaptureAudience,
   isTourCaptureProvenance,
   isTourCaptureSource,
+  isTourGrantScope,
   isTourLinkVia,
   isTourMilestone,
   isTourTilesetState,
@@ -38,11 +40,15 @@ import { readSignatory } from '@/lib/listings/model-declaration-metadata';
 import { readMediaRights } from '@/lib/media-rights/media-rights-read';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
 import { isRecord } from '@/lib/type-guards';
-import { custodyScopeFromData } from '@/lib/workspace/custody-scope';
+import { custodyOnly, custodyScopeFromData } from '@/lib/workspace/custody-scope';
+import { isInvitationState } from '@/types/invitation-core';
 import type {
   FloorPlanRecord,
   SpatialTour,
+  TourAccessRequest,
   TourCapture,
+  TourCaptureGrant,
+  TourCaptureInvitation,
   TourCaptureSignatory,
   TourCaptureTileset,
   TourLevel,
@@ -187,5 +193,95 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
     ...vocabulary,
     headingRad: raw.headingRad,
     baseCaptureId: text(raw.baseCaptureId),
+  };
+}
+
+// =============================================================================
+// ΑΔΕΙΕΣ (υποσυλλογές `tour_access_requests` · `tour_capture_grants`)
+// =============================================================================
+
+/**
+ * Προαιρετική στιγμή (ανάκληση · επίλυση · άνοιγμα): `null` = δεν συνέβη· `undefined` = **υπάρχει αλλά δεν
+ * διαβάζεται**. 🔴 Το δεύτερο **δεν** γίνεται «δεν συνέβη» — μια ανάκληση που δεν διαβάζεται θα άνοιγε άδεια
+ * που κάποιος έκλεισε (ίδια παγίδα με το `new Date(Timestamp)` του `scoped-grant`). Ο καλών απορρίπτει όλο το έγγραφο.
+ */
+function readOptionalInstant(raw: unknown): string | null | undefined {
+  if (raw === undefined || raw === null) return null;
+  return normalizeToISO(raw) ?? undefined;
+}
+
+/**
+ * **Διαβάζει ένα αίτημα θέασης.** Εγκεκριμένο αίτημα **χωρίς** αναγνώσιμη λήξη **δεν** είναι `null` — το
+ * κρατάμε, και ο κριτής αδειών το λέει `unreadable` (άρνηση με όνομα, ορατή στον υπεύθυνο), αντί να
+ * εξαφανίζεται σιωπηλά από τη λίστα του.
+ */
+export function tourAccessRequestFromDocument(raw: unknown, id: string): TourAccessRequest | null {
+  if (!isRecord(raw) || !isTourAccessRequestState(raw.state)) return null;
+  const [tourId, requesterUid] = [text(raw.tourId), text(raw.requesterUid)];
+  const requestedAt = normalizeToISO(raw.requestedAt);
+  const requestCount = raw.requestCount;
+  const revokedAt = readOptionalInstant(raw.revokedAt);
+  if (tourId === null || requesterUid === null || requestedAt === null || revokedAt === undefined) return null;
+  if (!Number.isInteger(requestCount) || (requestCount as number) < 1) return null;
+  return {
+    id, tourId, requesterUid, requestedAt,
+    state: raw.state,
+    message: text(raw.message),
+    requestCount: requestCount as number,
+    decidedAt: normalizeToISO(raw.decidedAt),
+    decidedBy: text(raw.decidedBy),
+    expiresAt: normalizeToISO(raw.expiresAt),
+    revokedAt,
+    revokedBy: text(raw.revokedBy),
+  };
+}
+
+/**
+ * **Διαβάζει μια άδεια λήψης.** Άδεια χωρίς αναγνώσιμη λήξη ⇒ `null`: **κανένα** ανέβασμα (fail-closed) —
+ * εδώ, αντίθετα με το αίτημα, το «σβήσιμο» σημαίνει **άρνηση**, και αυτή είναι η ασφαλής κατεύθυνση.
+ */
+export function tourCaptureGrantFromDocument(raw: unknown, granteeUid: string): TourCaptureGrant | null {
+  if (!isRecord(raw)) return null;
+  const scopes = readAll(raw.scopes, (item) => (isTourGrantScope(item) ? item : null));
+  const [tourId, createdBy, reason] = [text(raw.tourId), text(raw.createdBy), text(raw.reason)];
+  const [expiresAt, createdAt] = [normalizeToISO(raw.expiresAt), normalizeToISO(raw.createdAt)];
+  const revokedAt = readOptionalInstant(raw.revokedAt);
+  if (scopes === null || tourId === null || createdBy === null || reason === null) return null;
+  if (expiresAt === null || createdAt === null || revokedAt === undefined) return null;
+  return {
+    granteeUid, tourId, scopes, expiresAt, createdAt, createdBy, reason, revokedAt,
+    revokedBy: text(raw.revokedBy),
+    invitationId: text(raw.invitationId),
+  };
+}
+
+/** Οι προαιρετικές στιγμές της πρόσκλησης — `undefined` αν **οποιαδήποτε** υπάρχει αλλά δεν διαβάζεται. */
+function readInvitationInstants(raw: Record<string, unknown>) {
+  const [openedAt, resolvedAt, mailboxProvenAt] = [raw.openedAt, raw.resolvedAt, raw.mailboxProvenAt].map(readOptionalInstant);
+  if (openedAt === undefined || resolvedAt === undefined || mailboxProvenAt === undefined) return undefined;
+  return { openedAt, resolvedAt, mailboxProvenAt };
+}
+
+/**
+ * **Διαβάζει μια πρόσκληση φωτογράφου** (Κ2β). Ό,τι δεν διαβάζεται ⇒ `null`, και ο πυρήνας το λέει
+ * `invitation-corrupt` — **καμία** άδεια δεν γεννιέται από έγγραφο που δεν καταλάβαμε. Η κατάσταση ελέγχεται
+ * εδώ **αυστηρά**· τη fail-closed ανάγνωσή της για τις αρνήσεις την κάνει ο πυρήνας (`readStoredInvitationState`).
+ */
+export function tourCaptureInvitationFromDocument(raw: unknown, id: string): TourCaptureInvitation | null {
+  if (!isRecord(raw) || !isInvitationState(raw.state)) return null;
+  const [tourId, inviteeEmail, invitedByUid, nonceHash, reason] =
+    [raw.tourId, raw.inviteeEmail, raw.invitedByUid, raw.nonceHash, raw.reason].map(text);
+  const [createdAt, expiresAt, grantExpiresAt] = [raw.createdAt, raw.expiresAt, raw.grantExpiresAt].map(normalizeToISO);
+  const subject = readSubject(raw.subject);
+  const custody = custodyScopeFromData(raw);
+  const instants = readInvitationInstants(raw);
+  if (!tourId || !inviteeEmail || !invitedByUid || !nonceHash || !reason || subject === null) return null;
+  if (!createdAt || !expiresAt || !grantExpiresAt || instants === undefined || custody === null) return null;
+  return {
+    ...custodyOnly(custody),
+    id, tourId, subject, inviteeEmail, invitedByUid, nonceHash, reason, createdAt, expiresAt, grantExpiresAt,
+    state: raw.state,
+    resolvedByUid: text(raw.resolvedByUid),
+    ...instants,
   };
 }

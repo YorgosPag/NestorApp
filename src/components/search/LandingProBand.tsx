@@ -56,7 +56,14 @@ export function LandingProBand(): React.ReactElement | null {
       </header>
       <Link
         href={CREATE_WORKSPACE_ROUTE}
-        className={cn(buttonVariants({ size: 'lg' }), 'shrink-0')}
+        // 📱 Κάτω από `sm`: πλήρες πλάτος ΚΑΙ αναδίπλωση (GOV.UK · Material) — μετρημένο 2026-09-25 στα
+        //    320 px (WCAG 1.4.10): το `whitespace-nowrap` του Button κρατούσε τις 6 λέξεις σε μία γραμμή
+        //    290 px μέσα σε 240 ⇒ 41→331. `min-h-11` = στόχος αφής 44 px όταν το ύψος γίνεται αυτόματο.
+        //    Το `w-full sm:w-auto` είναι το ίδιο μοτίβο με την «Αναζήτηση» (`PlaceSearchBox`).
+        className={cn(
+          buttonVariants({ size: 'lg' }),
+          'h-auto min-h-11 w-full shrink-0 whitespace-normal py-2 text-center sm:w-auto sm:whitespace-nowrap',
+        )}
       >
         {t('property-market:proBand.cta')}
       </Link>

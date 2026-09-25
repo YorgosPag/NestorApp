@@ -64,6 +64,7 @@ import {
   fileTenantFullMatrix,
   legacyFloorplanMatrix,
   photoSharesMatrix,
+  serverWrittenTenantInternalMatrix,
   textTemplateMatrix,
 } from './coverage-matrices-dxf';
 import {
@@ -504,6 +505,25 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'property_dossiers',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/property-dossiers.rules.test.ts',
+    ...serverWrittenAuthorOwnedMatrix(),
+  },
+  {
+    // ADR-884 Φ0.9 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ, εταιρικό διαμέρισμα. Διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του
+    // μισθωτή (ζωντανός επεξεργαστής)· ΚΑΘΕ άλλο κοινό περνά από διαδρομή διακομιστή. Γράφει ΜΟΝΟ ο
+    // διακομιστής. ⚠️ Τα μπλοκ των υποσυλλογών (`tour_captures` · `tour_access_requests` ·
+    // `tour_capture_grants`) ο parser τα μετρά ως `spatial_tours` — οι άγκυρές τους ζουν ρητά στη σουίτα.
+    collection: 'spatial_tours',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/spatial-tours.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    // ADR-884 Φ0.9 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ, προσωπικό διαμέρισμα (ιδιώτης χωρίς companyId, `CustodyScope`).
+    // Ίδιο σύνορο με τον φάκελο ακινήτου: διαβάζει ΜΟΝΟ ο κάτοχος `userId`, γράφει ΜΟΝΟ ο διακομιστής ⇒
+    // ίδια μήτρα, ΚΑΜΙΑ νέα. Υποσυλλογές: όπως στο εταιρικό — άγκυρες στη σουίτα.
+    collection: 'spatial_tours_personal',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/spatial-tours-personal.rules.test.ts',
     ...serverWrittenAuthorOwnedMatrix(),
   },
   // ADR-835 §20 (Στάδιο Α) — ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ. Ίδιο σύνορο με την αγγελία: ο

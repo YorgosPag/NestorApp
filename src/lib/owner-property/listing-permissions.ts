@@ -72,6 +72,12 @@ export const LISTING_ACTIONS = [
   'endMandate',
   /** Ξαναστείλε / ακύρωσε τον σύνδεσμο συγκατάθεσης (ADR-777 §8.34). */
   'manageConsentLink',
+  /**
+   * Χωρική περιήγηση (ADR-884 Φ0.3): γράφος, ορατότητα, δημοσίευση, έγκριση αιτημάτων θέασης,
+   * πρόσκληση φωτογράφου. **Ξεχωριστό από το `editContent`** ώστε η μέρα που θα αποκλίνουν (π.χ.
+   * περιήγηση μόνο από το γραφείο) να είναι αλλαγή **μίας** γραμμής, όχι νέο δόγμα.
+   */
+  'manageTour',
 ] as const;
 
 export type ListingAction = (typeof LISTING_ACTIONS)[number];
@@ -99,6 +105,7 @@ const NOTHING: ListingPermissions = {
   withdraw: false,
   endMandate: false,
   manageConsentLink: false,
+  manageTour: false,
 };
 
 /**
@@ -115,6 +122,7 @@ const OWNER: ListingPermissions = {
   withdraw: true,
   endMandate: true,
   manageConsentLink: false,
+  manageTour: true,
 };
 
 /**
@@ -131,6 +139,7 @@ const AGENCY: ListingPermissions = {
   withdraw: true,
   endMandate: true,
   manageConsentLink: true,
+  manageTour: true,
 };
 
 // =============================================================================
@@ -146,6 +155,7 @@ function union(a: ListingPermissions, b: ListingPermissions): ListingPermissions
     withdraw: a.withdraw || b.withdraw,
     endMandate: a.endMandate || b.endMandate,
     manageConsentLink: a.manageConsentLink || b.manageConsentLink,
+    manageTour: a.manageTour || b.manageTour,
   };
 }
 

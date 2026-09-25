@@ -2,6 +2,25 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **25/09 — CHECK 3.16 ΤΥΦΛΟ ΣΤΑ ΜΠΛΟΚ ΥΠΟΣΥΛΛΟΓΩΝ** *(ADR-884 §4.3 · ADR-298)*
+
+  Ο `parseFirestoreRules()` (`scripts/_shared/firestore-rules-parser.js`) κρατά μόνο το **πρώτο** τμήμα της διαδρομής
+  (`^ {4}match \/([a-zA-Z_]+)\/\{`) ⇒ `match /spatial_tours/{id}/tour_access_requests/{r}` μετρά ως `spatial_tours`.
+  Κάθε μπλοκ υποσυλλογής είναι «καλυμμένο» από τη μήτρα του γονέα, που **δεν** το εκτελεί: ένα `allow read: if true` σε
+  υποσυλλογή περνά **πράσινο** (ίδια οικογένεια με το «0 = κανείς δεν κοίταξε»). Σήμερα το καλύπτουν μόνο ρητές άγκυρες
+  όπου κάποιος θυμήθηκε (`_harness/spatial-tour-subcollections.ts`· `rfqs/{id}/lines` είναι στο PENDING). Θεραπεία:
+  ταυτότητα μπλοκ = **πλήρες** `matchPath` (το Validation F ήδη το κρατά), γραμμή manifest ανά υποσυλλογή· ratchet στα
+  υπάρχοντα. ⚠️ Μέτρα πρώτα πόσα μπλοκ υποσυλλογών υπάρχουν (`grep -c "^    match /[a-z_]*/{[a-zA-Z]*}/"`).
+
+- 🟡 **25/09 — ΤΡΕΙΣ ΜΗΧΑΝΙΣΜΟΙ ΠΡΟΣΚΛΗΣΗΣ ΑΚΟΜΗ ΕΚΤΟΣ ΤΟΥ ΚΟΙΝΟΥ ΠΥΡΗΝΑ** *(N.0.2 · N.18 · ADR-853 §20 · ADR-884 §4.4)*
+
+  ✅ Ο πυρήνας **υπάρχει** (Κ2β, 25/09): `types/invitation-core.ts` + `server/invitations/*` — δύο είδη πάνω του (χώρου ·
+  φωτογράφου). Μένουν: ADR-844 πρώτης επαφής (`services/contact/first-contact-invitation*.ts` — 🔴 κρατά **ωμό** nonce στη
+  βάση, άρα η μεταφορά είναι και **διόρθωση ασφαλείας**· έχει και δικό του `readStoredInvitationState`) · ADR-327 vendor
+  (`subapps/procurement/services/vendor-invite-*.ts`) · εντολής (`services/mandate/mandate-invitation.service.ts`).
+  Μέθοδος: ένα `InvitationKind` ανά μηχανισμό (`locate`/`belongs` · `prepareAcceptance?` · `recordOf` · `onAccept(tx)`),
+  **ένας ανά commit**, με τις υπάρχουσες σουίτες του **αμετάβλητες και πράσινες** (το πρότυπο: ADR-853 §20.4-§20.5).
+
 - 🟡 **24/09 — ΤΟ FAVORITE API ΤΟΥ `BaseCard` ΔΕΝ ΤΟ ΚΑΛΕΙ ΚΑΝΕΙΣ** *(N.0.2 · ADR-777 §8.74.6 #2)*
 
   `components/core/BaseCard/BaseCard.tsx` έχει **δύο** σχήματα props (`isFavorite`/`onFavoriteToggle` και

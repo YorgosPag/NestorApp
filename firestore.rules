@@ -3954,6 +3954,68 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🧭 SPATIAL TOURS — χωρική περιήγηση 360° + BIM (ADR-884 Φ0.9)
+    // =========================================================================
+    // 📅 Added: 2026-09-25 (Κύμα Κ2α)
+    // 🔑 ΑΝΑΓΝΩΣΗ ΜΟΝΟ Ο ΚΑΤΟΧΟΣ (ζωντανός επεξεργαστής με onSnapshot)· ΕΓΓΡΑΦΗ ΜΟΝΟ Ο ΔΙΑΚΟΜΙΣΤΗΣ.
+    //    Κάθε άλλο κοινό (δημόσιο, αίτημα θέασης, σύνδεσμος, φωτογράφος, ομάδα έργου, αγοραστής) περνά
+    //    ΜΟΝΟ από διαδρομές διακομιστή — δεν υπάρχει δεύτερο σκέλος `allow read` που «ίσως φιλτράρει».
+    // 🔑 ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ (CustodyPartition, όπως `files`/`files_personal`): ο ιδιώτης δεν έχει companyId.
+    // ⚠️ `tour_access_requests` / `tour_capture_grants` / `tour_capture_invitations` = κανείς: κρατούν ταυτότητες αιτούντων και
+    //    άδειες τρίτων· τα διαβάζει ο υπεύθυνος μέσω διακομιστή (server/spatial-tour/*), ποτέ ο πελάτης.
+    // ⚠️ CHECK 3.16 μετρά τα μπλοκ υποσυλλογών ως τον ΓΟΝΕΑ — οι άγκυρες τους ζουν ρητά μέσα
+    //    στις σουίτες `spatial-tours*.rules.test.ts`.
+    match /spatial_tours/{tourId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+
+    match /spatial_tours/{tourId}/tour_captures/{captureId} {
+      allow read: if isAuthenticated()
+                  && isInternalUserOfCompany(
+                       get(/databases/$(database)/documents/spatial_tours/$(tourId)).data.companyId
+                     );
+      allow write: if false;
+    }
+
+    match /spatial_tours/{tourId}/tour_access_requests/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /spatial_tours/{tourId}/tour_capture_grants/{granteeUid} {
+      allow read, write: if false;
+    }
+
+    // ADR-884 Κ2β — προσκλήσεις φωτογράφου: κρατούν email παραλήπτη + nonceHash ⇒ κανείς, ούτε ο κάτοχος.
+    match /spatial_tours/{tourId}/tour_capture_invitations/{invitationId} {
+      allow read, write: if false;
+    }
+
+    match /spatial_tours_personal/{tourId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /spatial_tours_personal/{tourId}/tour_captures/{captureId} {
+      allow read: if isAuthenticated()
+                  && get(/databases/$(database)/documents/spatial_tours_personal/$(tourId)).data.userId
+                     == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /spatial_tours_personal/{tourId}/tour_access_requests/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /spatial_tours_personal/{tourId}/tour_capture_grants/{granteeUid} {
+      allow read, write: if false;
+    }
+
+    match /spatial_tours_personal/{tourId}/tour_capture_invitations/{invitationId} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
     // 📮 SHARE_DISPATCHES — Unified Share Dispatch Audit Log (ADR-315)
     // =========================================================================
     // 📅 Added: 2026-04-18

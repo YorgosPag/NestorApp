@@ -1216,6 +1216,8 @@ export const SUBCOLLECTIONS = {
   TOUR_CAPTURES: process.env.NEXT_PUBLIC_TOUR_CAPTURES_SUBCOL || 'tour_captures',
   TOUR_ACCESS_REQUESTS: process.env.NEXT_PUBLIC_TOUR_ACCESS_REQUESTS_SUBCOL || 'tour_access_requests',
   TOUR_CAPTURE_GRANTS: process.env.NEXT_PUBLIC_TOUR_CAPTURE_GRANTS_SUBCOL || 'tour_capture_grants',
+  // ADR-884 Κ2β — προσκλήσεις φωτογράφου (`tcin`)· η αποδοχή γεννά την άδεια λήψης στην ίδια συναλλαγή.
+  TOUR_CAPTURE_INVITATIONS: process.env.NEXT_PUBLIC_TOUR_CAPTURE_INVITATIONS_SUBCOL || 'tour_capture_invitations',
 
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
@@ -1393,6 +1395,7 @@ export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly st
   TOUR_CAPTURES: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
   TOUR_ACCESS_REQUESTS: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
   TOUR_CAPTURE_GRANTS: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
+  TOUR_CAPTURE_INVITATIONS: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
 } as const;
 
 // ============================================================================

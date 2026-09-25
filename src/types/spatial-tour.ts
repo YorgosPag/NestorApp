@@ -24,13 +24,17 @@ import type {
   SpatialTourVisibility,
   TourCaptureAudience,
   TourCaptureProvenance,
+  TourAccessRequestState,
   TourCaptureSource,
+  TourGrantScope,
   TourLinkVia,
   TourMilestone,
   TourTilesetState,
 } from '@/constants/spatial-tour-vocabulary';
+import type { ScopedGrant } from '@/lib/auth/scoped-grant';
 import type { ModelSignatory } from '@/lib/listings/listing-model-declaration';
 import type { CustodyScope } from '@/lib/workspace/custody-scope';
+import type { InvitationRecordCore } from '@/types/invitation-core';
 import type { MediaRights } from '@/types/media-rights';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 
@@ -143,3 +147,74 @@ export interface TourCapture {
   readonly uploadedBy: string;
   readonly createdAt: string;
 }
+
+// =============================================================================
+// ΠΡΟΣΒΑΣΗ — περιορισμένες άδειες πάνω σε ΜΙΑ περιήγηση (Φ0.5 · Φ0.13)
+// =============================================================================
+
+/**
+ * **Αίτημα θέασης** (υποσυλλογή `tour_access_requests`, id `tacr` ντετερμινιστικό ανά (περιήγηση, άνθρωπο)).
+ *
+ * 🔑 **Ένα εγκεκριμένο αίτημα ΕΙΝΑΙ άδεια** `tour:view`: `expiresAt` (υποχρεωτικό στην έγκριση) + `revokedAt`.
+ * Το «ισχύει ακόμη;» το απαντά **μόνο** το `evaluateScopedGrant` — βλ. `tourAccessStanding`. Η έγκριση δένεται
+ * στον **λογαριασμό** (`requesterUid`), όχι σε σύνδεσμο (πρότυπο Google Drive, Φ0.13).
+ */
+export interface TourAccessRequest {
+  readonly id: string;
+  readonly tourId: string;
+  readonly requesterUid: string;
+  /** Το προαιρετικό μήνυμα του αιτούντος προς τον υπεύθυνο. */
+  readonly message: string | null;
+  readonly state: TourAccessRequestState;
+  /** Η **τελευταία** υποβολή — ξανα-αίτημα μετά από απόρριψη/απόσυρση/λήξη ανανεώνει το ίδιο έγγραφο. */
+  readonly requestedAt: string;
+  /** Πόσες φορές υποβλήθηκε — σήμα για τον υπεύθυνο, όχι όριο (το όριο είναι του ρυθμού, Κ3). */
+  readonly requestCount: number;
+  readonly decidedAt: string | null;
+  readonly decidedBy: string | null;
+  /** `null` μέχρι την έγκριση· **μετά** υποχρεωτικό. */
+  readonly expiresAt: string | null;
+  readonly revokedAt: string | null;
+  readonly revokedBy: string | null;
+}
+
+/**
+ * **Άδεια λήψης φωτογράφου** (υποσυλλογή `tour_capture_grants/{granteeUid}`, Φ0.5) — όχι ρόλος, όχι μέλος χώρου.
+ * Τη **γεννά** η αποδοχή πρόσκλησης (Κ2β)· κρίνεται **μόνο** με `evaluateScopedGrant`.
+ */
+export interface TourCaptureGrant extends ScopedGrant<TourGrantScope> {
+  readonly granteeUid: string;
+  readonly tourId: string;
+  readonly scopes: readonly TourGrantScope[];
+  readonly expiresAt: string;
+  readonly revokedAt: string | null;
+  /** Ποιος την ανακάλεσε — ο υπεύθυνος (`revokeTourCaptureGrant`)· `null` όσο δεν ανακλήθηκε. */
+  readonly revokedBy: string | null;
+  readonly createdAt: string;
+  /** Ο **προσκαλών** υπεύθυνος — όχι ο φωτογράφος που δέχτηκε (ίδιο δόγμα με ADR-853 Ε4). */
+  readonly createdBy: string;
+  readonly reason: string;
+  /** Η πρόσκληση που τη γέννησε — `null` αν δόθηκε απευθείας από τον υπεύθυνο. */
+  readonly invitationId: string | null;
+}
+
+/**
+ * **Πρόσκληση φωτογράφου** (υποσυλλογή `tour_capture_invitations`, id `tcin`, Φ0.5 · Κ2β) — πάνω στον
+ * **κοινό πυρήνα** πρόσκλησης (ADR-853 §20): token με μόνο `sha256(nonce)` στη βάση, ονομασμένες αρνήσεις,
+ * δέσμευση παραλήπτη, supersede ανά (περιήγηση, email). Η αποδοχή **γεννά** την {@link TourCaptureGrant}
+ * στην ίδια συναλλαγή.
+ *
+ * 🔑 Κουβαλά τους **όρους της άδειας** (λήξη · λόγος) — ο υπεύθυνος τους ορίζει στην έκδοση, ο φωτογράφος
+ * τους δέχεται ή όχι· η αποδοχή δεν διαπραγματεύεται τίποτα.
+ * 🔴 Κουβαλά και τον **κάτοχο της περιήγησης τη στιγμή της έκδοσης** (`companyId` **ή** `userId`, επίπεδα όπως
+ * στην περιήγηση): αν η αγγελία αλλάξει κάτοχο, η περιήγηση μένει στην **ίδια** διαδρομή (ντετερμινιστικό id)
+ * — χωρίς αυτό, η πρόσκληση του παλιού υπευθύνου θα έδινε άδεια λήψης στον χώρο του **νέου**.
+ */
+export type TourCaptureInvitation = InvitationRecordCore & CustodyScope & {
+  readonly tourId: string;
+  /** Η ρίζα — από εδώ ξαναβρίσκεται η περιήγηση στην αποδοχή, ποτέ από `tourId` του πελάτη. */
+  readonly subject: TourSubject;
+  /** Η λήξη της άδειας που θα γεννηθεί — **υποχρεωτική** (Φ0.5)· η πρόσκληση λήγει το αργότερο τότε. */
+  readonly grantExpiresAt: string;
+  readonly reason: string;
+};

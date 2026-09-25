@@ -18,7 +18,8 @@
  *   (α) απόγονοι **δηλωμένης** κύλισης (`overflow-x: auto | scroll`) — εκεί το «πέρα από την
  *       άκρη» είναι σχεδιασμός, και ο χρήστης το φτάνει σύροντας (λωρίδα καρτελών, πίνακες)·
  *   (β) απόγονοι ενός **κλειστού** συνόλου επιφανειών που τοποθετούν παιδιά έξω από το πλαίσιο
- *       **εκ κατασκευής** (χάρτες) — δηλωμένο στο spec με λόγο, ποτέ μαντεμένο εδώ.
+ *       **εκ κατασκευής** (χάρτες) — δηλωμένο στο spec με λόγο, ποτέ μαντεμένο εδώ·
+ *   (γ) σκηνές **ολόκληρες** εκτός οθόνης που ο συγγραφέας δήλωσε `inert` + `aria-hidden` (βλ. παρακάτω).
  * Ο ίδιος ο κυλιόμενος/χάρτης **ΜΕΤΡΑΕΙ**: αν η λωρίδα είναι φαρδύτερη από την οθόνη, είναι βλάβη.
  */
 
@@ -50,6 +51,21 @@ export function collectHorizontalOverflow(allowedSurfaces: readonly string[]): O
     }
     return false;
   };
+  /**
+   * (γ) **Σκηνή εκτός οθόνης, δηλωμένη από τον συγγραφέα** — π.χ. ο κρυφός χάρτης των στιγμιοτύπων
+   * (`ListingMapSnapshotStage`, `fixed -left-[10000px]`): το WebGL θέλει πραγματικό μέγεθος, άρα ούτε
+   * `display: none` ούτε μηδενικό κουτί. ΔΥΟ όροι, και οι δύο αναγκαίοι:
+   *   · `inert` ΚΑΙ `aria-hidden="true"` (στο ίδιο ή σε πρόγονο) — «ούτε το αγγίζεις ούτε το αντιλαμβάνεσαι».
+   *     Ένα μόνο δεν αρκεί: το Radix βάζει `aria-hidden` στο φόντο κάθε διαλόγου, κι εκείνο το φόντο ΜΕΤΡΑ.
+   *   · το κουτί είναι **ΟΛΟ** έξω από την οθόνη. Κάτι μισοκομμένο είναι βλάβη αναδιάταξης, όποια δήλωση κι αν φέρει.
+   */
+  const declaredOffscreenStage = (el: Element, rect: DOMRect): boolean => {
+    if (rect.right > TOLERANCE && rect.left < viewport - TOLERANCE) return false;
+    for (let p: Element | null = el; p !== null && p !== document.body; p = p.parentElement) {
+      if (p.hasAttribute('inert') && p.getAttribute('aria-hidden') === 'true') return true;
+    }
+    return false;
+  };
   const invisible = (el: Element, rect: DOMRect): boolean => {
     if (rect.width === 0 || rect.height === 0) return true;
     const style = getComputedStyle(el);
@@ -72,7 +88,7 @@ export function collectHorizontalOverflow(allowedSurfaces: readonly string[]): O
     const rect = el.getBoundingClientRect();
     if (invisible(el, rect)) continue;
     if (rect.right <= viewport + TOLERANCE && rect.left >= -TOLERANCE) continue;
-    if (exempt(el)) continue;
+    if (exempt(el) || declaredOffscreenStage(el, rect)) continue;
     offending.add(el);
   }
 

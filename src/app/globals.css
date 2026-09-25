@@ -1242,67 +1242,85 @@
   :is(.dark) .doc-text-purple { color: #D8B4FE; }
   :is(.dark) .doc-text-orange { color: #FDBA74; }
   :is(.dark) .doc-text-gray { color: #9CA3AF; }
+}
 
-  /* Force all containers to respect viewport boundaries */
-  * {
-    box-sizing: border-box;
+/*
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΚΑΘΟΛΙΚΕΣ ΕΠΑΝΑΦΟΡΕΣ — ΕΞΩ ΑΠΟ ΚΑΘΕ `@layer` (ADR-797 §Φ.Ρ.1 · 2026-09-25)
+ * ════════════════════════════════════════════════════════════════════════════
+ * Ό,τι μπαίνει στο `@layer utilities` το Tailwind v3 το θεωρεί **utility** και του παράγει παραλλαγές
+ * όταν βρει υποψήφιο token στο περιεχόμενο — ΚΑΙ στον κώδικα JS: το `if (!container)` / `(!grid)`
+ * διαβάζεται ως important modifier. Σε κανόνα με ΛΙΣΤΑ επιλογέων μεταγράφεται μόνο το ταιριαστό μέλος:
+ *   `:where(.\!container, [class*="container"], header, main, section) { overflow-x: clip !important }`
+ *   `:where(.flex, .\!grid) { overflow-x: clip !important }`
+ * ⇒ το `!important` έφτανε σε ΚΑΘΕ header/main/section/.flex και ακύρωνε κάθε `overflow-x-auto`
+ * (μετρημένο: η λωρίδα καρτελών της αρχικής `overflow-x: clip`, «Επαγγελματίες» απρόσιτο στα 390).
+ * Το `:where(...)` χωρίς `!important` της πηγής ήταν σωστό — το ψέμα γεννιόταν στη μεταγλώττιση.
+ * ⚠️ ΟΥΤΕ `@layer base`: ΜΕΤΡΗΘΗΚΕ ότι το Tailwind καταχωρεί ως υποψήφιες τις κλάσεις ΚΑΘΕ layer — ο
+ * `.\!grid` παραγόταν και από εκεί. Μόνο το CSS εκτός layer το αφήνει ανέγγιχτο: αυτό που γράφεται εδώ
+ * είναι ΑΚΡΙΒΩΣ αυτό που στέλνεται. Εκπέμπεται μετά τις utilities, αλλά το `:where(...)` (ειδικότητα 0)
+ * αφήνει κάθε ρητή utility `overflow-*` να νικά — όπως ήταν πάντα η πρόθεση.
+ * Άγκυρα: src/app/__tests__/global-overflow-contract.test.ts (Υ4) · ζωντανά: CHECK 3.94.
+ */
+/* Force all containers to respect viewport boundaries */
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent horizontal overflow on mobile */
+/* 🏢 ENTERPRISE FIX: Removed 'div' from selector - it was overriding
+   Tailwind max-w-[...] classes and causing EntityListColumn to be full-width.
+   @see local_4.log analysis for details */
+/*
+ * ADR-750 §21.10 · ADR-780 §5quater.5 #6 — `clip`, ΟΧΙ `hidden`, και μηδενική ειδικότητα.
+ *
+ * Με `overflow-x: hidden` η προδιαγραφή (CSS Overflow 3) κάνει τον ΑΛΛΟ άξονα `auto` ⇒ κάθε header / main /
+ * section της εφαρμογής γινόταν scroll container: (α) έκοβε τους absolute απογόνους του (το popup χρωμάτων,
+ * ψαλιδισμένο στο μηδέν — ADR-750 §21.10), (β) ως στοιχείο flex το ελάχιστο ύψος του γινόταν 0, οπότε
+ * συρρικνωνόταν ως το μηδέν σε στήλη που ξεχειλίζει (η κεφαλίδα της πλήρους οθόνης — ADR-332 D27 Ζ8, 36px → 0).
+ * Το `clip` κόβει οριζόντια όπως πριν, ΧΩΡΙΣ scroll container και χωρίς να αγγίζει τον κάθετο άξονα.
+ * Το `:where(...)` αφήνει κάθε ρητή utility `overflow-*` του ίδιου του στοιχείου να νικά.
+ * Μετρημένο εύρος πριν την αλλαγή: ό,τι κυλούσε ΜΟΝΟ χάρη σε αυτόν τον κανόνα δηλώνει πλέον ρητά το δικό του
+ * overflow (`.dxf-ribbon-panel`)· ο τυχαίος ένθετος scroller του Χρονοδιαγράμματος περνά στον σχεδιασμένο πρόγονο.
+ * Άγκυρα: src/app/__tests__/global-overflow-contract.test.ts
+ */
+:where(.container, [class*="container"], header, main, section) {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Mobile-specific fixes */
+@media (max-width: 640px) {
+  /* Force all flex containers to wrap and constrain */
+  .flex {
+    max-width: 100% !important;
   }
 
-  /* Prevent horizontal overflow on mobile */
-  /* 🏢 ENTERPRISE FIX: Removed 'div' from selector - it was overriding
-     Tailwind max-w-[...] classes and causing EntityListColumn to be full-width.
-     @see local_4.log analysis for details */
+  /* Force all grid containers to fit viewport */
+  .grid {
+    max-width: 100% !important;
+  }
+
   /*
-   * ADR-750 §21.10 · ADR-780 §5quater.5 #6 — `clip`, ΟΧΙ `hidden`, και μηδενική ειδικότητα.
-   *
-   * Με `overflow-x: hidden` η προδιαγραφή (CSS Overflow 3) κάνει τον ΑΛΛΟ άξονα `auto` ⇒ κάθε header / main /
-   * section της εφαρμογής γινόταν scroll container: (α) έκοβε τους absolute απογόνους του (το popup χρωμάτων,
-   * ψαλιδισμένο στο μηδέν — ADR-750 §21.10), (β) ως στοιχείο flex το ελάχιστο ύψος του γινόταν 0, οπότε
-   * συρρικνωνόταν ως το μηδέν σε στήλη που ξεχειλίζει (η κεφαλίδα της πλήρους οθόνης — ADR-332 D27 Ζ8, 36px → 0).
-   * Το `clip` κόβει οριζόντια όπως πριν, ΧΩΡΙΣ scroll container και χωρίς να αγγίζει τον κάθετο άξονα.
-   * Το `:where(...)` αφήνει κάθε ρητή utility `overflow-*` του ίδιου του στοιχείου να νικά.
-   * Μετρημένο εύρος πριν την αλλαγή: ό,τι κυλούσε ΜΟΝΟ χάρη σε αυτόν τον κανόνα δηλώνει πλέον ρητά το δικό του
-   * overflow (`.dxf-ribbon-panel`)· ο τυχαίος ένθετος scroller του Χρονοδιαγράμματος περνά στον σχεδιασμένο πρόγονο.
-   * Άγκυρα: src/app/__tests__/global-overflow-contract.test.ts
+   * Ίδια θεραπεία με τον κανόνα παραπάνω: `clip` (όχι scroll container) και ΧΩΡΙΣ `!important` μέσα σε
+   * `:where(...)` — το `overflow-x: hidden !important` ακύρωνε κάθε `overflow-x-auto` scroller στο κινητό
+   * (πίνακες, λωρίδες καρτελών), δηλαδή οριζόντια κύλιση που ο συγγραφέας είχε ζητήσει ρητά.
    */
-  :where(.container, [class*="container"], header, main, section) {
-    max-width: 100%;
+  :where(.flex, .grid) {
     overflow-x: clip;
   }
 
-  /* Mobile-specific fixes */
-  @media (max-width: 640px) {
-    /* Force all flex containers to wrap and constrain */
-    .flex {
-      max-width: 100% !important;
-    }
+  /* Constrain all text elements */
+  /* 🏢 ENTERPRISE FIX: Removed 'div' - it overrides Tailwind max-w-[...] classes */
+  h1, h2, h3, h4, h5, h6, p, span {
+    max-width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
 
-    /* Force all grid containers to fit viewport */
-    .grid {
-      max-width: 100% !important;
-    }
-
-    /*
-     * Ίδια θεραπεία με τον κανόνα παραπάνω: `clip` (όχι scroll container) και ΧΩΡΙΣ `!important` μέσα σε
-     * `:where(...)` — το `overflow-x: hidden !important` ακύρωνε κάθε `overflow-x-auto` scroller στο κινητό
-     * (πίνακες, λωρίδες καρτελών), δηλαδή οριζόντια κύλιση που ο συγγραφέας είχε ζητήσει ρητά.
-     */
-    :where(.flex, .grid) {
-      overflow-x: clip;
-    }
-
-    /* Constrain all text elements */
-    /* 🏢 ENTERPRISE FIX: Removed 'div' - it overrides Tailwind max-w-[...] classes */
-    h1, h2, h3, h4, h5, h6, p, span {
-      max-width: 100% !important;
-      word-wrap: break-word !important;
-      overflow-wrap: break-word !important;
-    }
-
-    /* Force sidebar to hide on mobile if needed */
-    [data-sidebar] {
-      max-width: 100vw !important;
-    }
+  /* Force sidebar to hide on mobile if needed */
+  [data-sidebar] {
+    max-width: 100vw !important;
   }
 }
 

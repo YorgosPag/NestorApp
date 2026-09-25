@@ -71,6 +71,40 @@ export const TOUR_TILESET_STATES = ['pending', 'ready', 'failed'] as const;
 export type TourTilesetState = (typeof TOUR_TILESET_STATES)[number];
 
 // =============================================================================
+// 2α. ΠΡΟΣΒΑΣΗ — περιορισμένες άδειες πάνω σε ΜΙΑ περιήγηση (Φ0.5 · Φ0.13)
+// =============================================================================
+
+/**
+ * Τα εύρη των αδειών περιήγησης — κρίνονται **μόνο** από το `evaluateScopedGrant` (`lib/auth/scoped-grant`).
+ * - `tour:view`           — θέαση περιήγησης `on-request`, από εγκεκριμένο αίτημα (Φ0.13)
+ * - `tour:capture:upload` — ανέβασμα λήψεων από φωτογράφο, **χωρίς** διαχείριση (Φ0.5)
+ *
+ * Ξεχωριστά από το `GRANT_SCOPES` του ακινήτου (`lib/auth/types`): εκείνα δίνονται σε **μονάδα**, αυτά σε
+ * **περιήγηση** — άλλος πόρος, άλλο έγγραφο, ίδιος κριτής.
+ */
+export const TOUR_GRANT_SCOPES = ['tour:view', 'tour:capture:upload'] as const;
+export type TourGrantScope = (typeof TOUR_GRANT_SCOPES)[number];
+
+/**
+ * Οι **αποθηκευμένες** καταστάσεις ενός αιτήματος θέασης — **μόνο αποφάσεις ανθρώπου**.
+ *
+ * 🔑 **`revoked` και `expired` ΔΕΝ αποθηκεύονται.** Ένα εγκεκριμένο αίτημα **είναι** άδεια
+ * (`expiresAt` + `revokedAt?`), και το «ισχύει ακόμη;» το απαντά ο **ένας** κριτής αδειών. Αποθηκευμένο
+ * `expired` θα χρειαζόταν cron που το γράφει — και ως τότε ένα `approved` θα ίσχυε μετά τη λήξη του.
+ */
+export const TOUR_ACCESS_REQUEST_STATES = ['pending', 'approved', 'declined', 'withdrawn'] as const;
+export type TourAccessRequestState = (typeof TOUR_ACCESS_REQUEST_STATES)[number];
+
+/**
+ * Η **παράγωγη** θέση ενός αιτήματος τώρα (`tourAccessStanding`): οι αποφάσεις ανθρώπου + ό,τι λέει ο
+ * κριτής αδειών για ένα `approved`. `unreadable` = έγκριση με λήξη που δεν διαβάζεται — **άρνηση**.
+ */
+export const TOUR_ACCESS_STANDINGS = [
+  'pending', 'active', 'declined', 'withdrawn', 'revoked', 'expired', 'unreadable',
+] as const;
+export type TourAccessStanding = (typeof TOUR_ACCESS_STANDINGS)[number];
+
+// =============================================================================
 // 3. Η ΚΑΤΟΨΗ — ιεραρχία αξιοπιστίας (§12 Δ5)
 // =============================================================================
 
@@ -121,5 +155,8 @@ export const isTourCaptureProvenance = (v: unknown): v is TourCaptureProvenance 
 export const isTourCaptureAudience = (v: unknown): v is TourCaptureAudience => includes(TOUR_CAPTURE_AUDIENCES, v);
 export const isTourMilestone = (v: unknown): v is TourMilestone => includes(TOUR_MILESTONES, v);
 export const isTourTilesetState = (v: unknown): v is TourTilesetState => includes(TOUR_TILESET_STATES, v);
-export const isFloorPlanSource = (v: unknown): v is FloorPlanSource => includes(FLOOR_PLAN_SOURCES, v);
+export const isTourGrantScope = (v: unknown): v is TourGrantScope => includes(TOUR_GRANT_SCOPES, v);
+export const isTourAccessRequestState = (v: unknown): v is TourAccessRequestState =>
+  includes(TOUR_ACCESS_REQUEST_STATES, v);
+export const isFloorPlanSource =(v: unknown): v is FloorPlanSource => includes(FLOOR_PLAN_SOURCES, v);
 export const isFloorPlanRecordState = (v: unknown): v is FloorPlanRecordState => includes(FLOOR_PLAN_RECORD_STATES, v);

@@ -85,6 +85,7 @@ import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-fi
 import { streamPdfFromStorage } from '@/app/api/showcase/shared-pdf-proxy-helpers';
 import { approveCommunication, rejectCommunication } from '@/services/communications-triage-actions';
 import { createUnifiedPublicShowcasePdfRoute } from '@/services/showcase-core/api/create-unified-public-pdf-route';
+import { hashShareToken } from '@/lib/sharing/share-token';
 import type { AuthContext } from '@/lib/auth/types';
 
 const COMM_ID = 'msg_target_001';
@@ -166,10 +167,12 @@ describe('ADR-742 — ανάντη φύλακας: δημόσια διαδρομ
 
   const request = () => new NextRequest('https://nestorconstruct.gr/api/x/pdf');
 
-  function seedShare(shareCompanyId: string | undefined, entityCompanyId: string | undefined): void {
+  // 🔑 ADR-315 (Κ4): η αναζήτηση γίνεται με `tokenHash` — ωμό `token` στο έγγραφο δεν βρίσκεται ποτέ, και
+  //    τα «404» παρακάτω θα περνούσαν για ΛΑΘΟΣ λόγο (share αόρατο, όχι φύλακας μισθωτή).
+  async function seedShare(shareCompanyId: string | undefined, entityCompanyId: string | undefined): Promise<void> {
     kit.seedCollection(COLLECTIONS.SHARES, {
       shr_1: {
-        token: TOKEN,
+        tokenHash: await hashShareToken(TOKEN),
         isActive: true,
         entityType: 'building_showcase',
         entityId: ENTITY_ID,
@@ -188,7 +191,7 @@ describe('ADR-742 — ανάντη φύλακας: δημόσια διαδρομ
   }
 
   test('🔴 share με ΚΕΝΟ μισθωτή → 404 στην ανάλυση, το PDF δεν ρέει ΠΟΤΕ', async () => {
-    seedShare('', '');
+    await seedShare('', '');
 
     const response = await route.handle(request(), TOKEN);
 
@@ -197,7 +200,7 @@ describe('ADR-742 — ανάντη φύλακας: δημόσια διαδρομ
   });
 
   test('🔴 share ΧΩΡΙΣ πεδίο μισθωτή → 404, το PDF δεν ρέει ΠΟΤΕ', async () => {
-    seedShare(undefined, undefined);
+    await seedShare(undefined, undefined);
 
     const response = await route.handle(request(), TOKEN);
 
@@ -206,7 +209,7 @@ describe('ADR-742 — ανάντη φύλακας: δημόσια διαδρομ
   });
 
   test('🔴 οντότητα ΧΩΡΙΣ μισθωτή απέναντι σε κανονικό share → 403, το PDF δεν ρέει', async () => {
-    seedShare('comp_001', undefined);
+    await seedShare('comp_001', undefined);
 
     const response = await route.handle(request(), TOKEN);
 
@@ -215,7 +218,7 @@ describe('ADR-742 — ανάντη φύλακας: δημόσια διαδρομ
   });
 
   test('✅ μάρτυρας: ταιριαστός μισθωτής και στις δύο πλευρές → 200, το PDF ρέει', async () => {
-    seedShare('comp_001', 'comp_001');
+    await seedShare('comp_001', 'comp_001');
 
     const response = await route.handle(request(), TOKEN);
 
