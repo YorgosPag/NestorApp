@@ -771,13 +771,21 @@
     "notificationTitleMany": "A new listing matches {count} of your demands: “{title}”",
     "reducedTitle": "A new listing with a reduced price matches your demand: “{title}”",
     "reducedTitleMany": "A new listing with a reduced price matches {count} of your demands: “{title}”",
-    "intoBudgetTitle": "Now within your budget: “{title}”"
+    "intoBudgetTitle": "Now within your budget: “{title}”",
+    "namedTitle": "New listing for your demand “{demand}”: “{title}”",
+    "namedTitleMany": "New listing for “{demand}” and {others, plural, one {# other demand} other {# other demands}}: “{title}”",
+    "reducedNamedTitle": "New reduced-price listing for your demand “{demand}”: “{title}”",
+    "reducedNamedTitleMany": "New reduced-price listing for “{demand}” and {others, plural, one {# other demand} other {# other demands}}: “{title}”",
+    "intoBudgetNamedTitle": "Now within the budget of your demand “{demand}”: “{title}”"
   },
   "demandPriceDrop": {
     "notificationTitle": "Price reduced on a listing matching your demand: “{title}”",
     "notificationTitleMany": "Price reduced on a listing matching {count} of your demands: “{title}”",
     "intoBudgetTitle": "Now within your budget: “{title}”",
-    "savedTitle": "Price reduced on a listing you saved: “{title}”"
+    "savedTitle": "Price reduced on a listing you saved: “{title}”",
+    "namedTitle": "Price reduced on a listing for your demand “{demand}”: “{title}”",
+    "namedTitleMany": "Price reduced on a listing for “{demand}” and {others, plural, one {# other demand} other {# other demands}}: “{title}”",
+    "intoBudgetNamedTitle": "Now within the budget of your demand “{demand}”: “{title}”"
   },
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",

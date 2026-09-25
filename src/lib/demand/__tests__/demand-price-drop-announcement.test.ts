@@ -90,18 +90,20 @@ describe('Θ — §8.69.12: η ταυτότητα είναι ΘΕΜΑ (παρα�
 
 describe('Β — ο ΕΝΑΣ κριτής προϋπολογισμού πάνω σε όλους τους λόγους', () => {
   it('🏆 Β1 — into-budget για ΜΙΑ από τις ζητήσεις ⇒ into-budget', () => {
-    expect(strongestBudgetVerdict(saleCaps(4_000_000, 3_300_000), REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
+    expect(strongestBudgetVerdict(saleCaps(4_000_000, 3_300_000), REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000, reasonIndex: 1 });
   });
 
   it('🔴 Β2 — πολλά into-budget ⇒ το ΑΥΣΤΗΡΟΤΕΡΟ όριο (ποτέ υπόσχεση μεγαλύτερου περιθωρίου)', () => {
     expect(strongestBudgetVerdict(saleCaps(3_400_000, 3_250_000, 3_300_000), REDUCTION)).toEqual({
       kind: 'into-budget',
       priceMax: 3_250_000,
+      // ADR-887 — ο δείκτης της ζήτησης με το αυστηρότερο όριο: το όνομά ΤΗΣ λέγεται στον τίτλο.
+      reasonIndex: 1,
     });
   });
 
   it('Β3 — όριο κάτω από τη νέα τιμή ΔΕΝ κερδίζει (δεν είναι into-budget για εκείνη)', () => {
-    expect(strongestBudgetVerdict(saleCaps(3_000_000, 3_300_000), REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000 });
+    expect(strongestBudgetVerdict(saleCaps(3_000_000, 3_300_000), REDUCTION)).toEqual({ kind: 'into-budget', priceMax: 3_300_000, reasonIndex: 1 });
   });
 
   it('Β4 — καμία into-budget / κανένα όριο ⇒ within-budget', () => {
@@ -113,7 +115,7 @@ describe('Β — ο ΕΝΑΣ κριτής προϋπολογισμού πάνω 
     const rentDrop: PriceReduction = { ...REDUCTION, role: 'rent', from: 1_100, to: 950 };
     // Ζήτηση «αγορά έως 250.000 € ή ενοικίαση έως 1.000 €/μήνα».
     const both = [[seek('sell', { max: 250_000 }), seek('leaseOut', { max: 1_000 })]];
-    expect(strongestBudgetVerdict(both, rentDrop)).toEqual({ kind: 'into-budget', priceMax: 1_000 });
+    expect(strongestBudgetVerdict(both, rentDrop)).toEqual({ kind: 'into-budget', priceMax: 1_000, reasonIndex: 0 });
     // Μόνο όριο **πώλησης** ⇒ η μείωση ενοικίου δεν «μπαίνει» σε κανέναν προϋπολογισμό.
     // (Πριν: το αμονάδιστο 250.000 έκανε κάθε ενοίκιο «εντός».)
     expect(strongestBudgetVerdict([[seek('sell', { max: 250_000 })]], rentDrop)).toEqual({

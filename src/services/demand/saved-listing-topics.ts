@@ -43,7 +43,7 @@ export function isSavedOnly(topic: ListingTopic): boolean {
 }
 
 function savedOnlyTopic(listing: PublicListing, savedAtMs: number): ListingTopic {
-  return { listing, reasons: { demandIds: [], seeks: [] }, metOn: [], savedAtMs };
+  return { listing, reasons: { demandIds: [], seeks: [], names: [] }, metOn: [], savedAtMs };
 }
 
 /** `παραλήπτης → (αγγελία → στιγμή αποθήκευσης)` — μόνο για αγγελίες που είναι στη δεξαμενή. */

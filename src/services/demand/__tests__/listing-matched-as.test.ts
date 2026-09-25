@@ -76,11 +76,12 @@ describe('mergeMetOn — πολλές ζητήσεις του ίδιου ανθ�
 
 describe('matchAnnouncementCopy — το «ως τι» ζει στο σώμα, πριν από κάθε μείωση', () => {
   const listing = listingFixture({ title: 'Δυάρι', priceReduction: null });
-  const reasons = { demandIds: ['dmnd_a'], seeks: [[]] };
+  const reasons = { demandIds: ['dmnd_a'], seeks: [[]], names: ['Ενοικίαση · Κορδελιό'] };
 
   it('χωρίς μείωση ⇒ σώμα = η πρόταση «ως τι»', () => {
     const copy = matchAnnouncementCopy({ listing, reasons, metOn: [RENT] }, 0);
-    expect(copy.titleKey).toBe('demandListingMatch.notificationTitle');
+    expect(copy.titleKey).toBe('demandListingMatch.namedTitle');
+    expect(copy.title).toBe('Νέα αγγελία για τη ζήτηση «Ενοικίαση · Κορδελιό»: «Δυάρι»');
     expect(plain(copy.body)).toBe('Ταιριάζει ως ενοικίαση (850,00 €/μήνα, 50,00 €/μήνα κάτω από το όριό σας).');
   });
 

@@ -60,10 +60,14 @@ function sortedByDemand(reasons: readonly TopicReason[]): TopicReason[] {
   return [...reasons].sort((a, b) => (a.demand.id < b.demand.id ? -1 : a.demand.id > b.demand.id ? 1 : 0));
 }
 
-function reasonsOf(sorted: readonly TopicReason[]): AnnouncementReasons {
+/** `ζήτηση → όνομα` για τον παραλήπτη — εγχέεται, ώστε η ομαδοποίηση να μένει καθαρή (ADR-887). */
+export type DemandNameOf = (demand: PropertyDemand) => string;
+
+function reasonsOf(sorted: readonly TopicReason[], nameOf: DemandNameOf): AnnouncementReasons {
   return {
     demandIds: sorted.map((reason) => reason.demand.id),
     seeks: sorted.map((reason) => reason.demand.seeks),
+    names: sorted.map((reason) => nameOf(reason.demand)),
   };
 }
 
@@ -84,16 +88,19 @@ export function mergeMetOn(sorted: readonly TopicReason[]): readonly DemandSeekM
   return sorted.length > 1 ? merged.map((met) => ({ ...met, headroomBy: null })) : merged;
 }
 
-function topicOf(draft: TopicDraft): ListingTopic {
+function topicOf(draft: TopicDraft, nameOf: DemandNameOf): ListingTopic {
   const sorted = sortedByDemand(draft.reasons);
-  return { listing: draft.listing, reasons: reasonsOf(sorted), metOn: mergeMetOn(sorted), savedAtMs: null };
+  return { listing: draft.listing, reasons: reasonsOf(sorted, nameOf), metOn: mergeMetOn(sorted), savedAtMs: null };
 }
 
 /**
  * **Ανά παραλήπτη → ανά αγγελία.** Η σειρά είναι της πρώτης εμφάνισης (ζήτηση, μετά αγγελία),
  * ώστε το όριο νέων ανακοινώσεων να κόβει με την **ίδια** σειρά που έκοβε πριν.
  */
-export function groupTopicsByRecipient(matches: readonly DemandMatches[]): readonly RecipientTopics[] {
+export function groupTopicsByRecipient(
+  matches: readonly DemandMatches[],
+  nameOf: DemandNameOf,
+): readonly RecipientTopics[] {
   const byRecipient = new Map<string, { drafts: Map<string, TopicDraft>; pairs: number }>();
 
   for (const { demand, matched } of matches) {
@@ -111,7 +118,7 @@ export function groupTopicsByRecipient(matches: readonly DemandMatches[]): reado
 
   return [...byRecipient].map(([recipientId, group]) => ({
     recipientId,
-    topics: [...group.drafts.values()].map(topicOf),
+    topics: [...group.drafts.values()].map((draft) => topicOf(draft, nameOf)),
     pairs: group.pairs,
   }));
 }

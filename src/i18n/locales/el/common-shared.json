@@ -771,13 +771,21 @@
     "notificationTitleMany": "Νέα αγγελία ταιριάζει σε {count} ζητήσεις σας: «{title}»",
     "reducedTitle": "Νέα αγγελία με μειωμένη τιμή ταιριάζει στη ζήτησή σας: «{title}»",
     "reducedTitleMany": "Νέα αγγελία με μειωμένη τιμή ταιριάζει σε {count} ζητήσεις σας: «{title}»",
-    "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»"
+    "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»",
+    "namedTitle": "Νέα αγγελία για τη ζήτηση «{demand}»: «{title}»",
+    "namedTitleMany": "Νέα αγγελία για «{demand}» και {others, plural, one {# ακόμη ζήτηση} other {# ακόμη ζητήσεις}}: «{title}»",
+    "reducedNamedTitle": "Νέα αγγελία με μειωμένη τιμή για τη ζήτηση «{demand}»: «{title}»",
+    "reducedNamedTitleMany": "Νέα αγγελία με μειωμένη τιμή για «{demand}» και {others, plural, one {# ακόμη ζήτηση} other {# ακόμη ζητήσεις}}: «{title}»",
+    "intoBudgetNamedTitle": "Μπήκε στον προϋπολογισμό της ζήτησης «{demand}»: «{title}»"
   },
   "demandPriceDrop": {
     "notificationTitle": "Μειώθηκε η τιμή αγγελίας της ζήτησής σας: «{title}»",
     "notificationTitleMany": "Μειώθηκε η τιμή αγγελίας που ταιριάζει σε {count} ζητήσεις σας: «{title}»",
     "intoBudgetTitle": "Μπήκε στον προϋπολογισμό σας: «{title}»",
-    "savedTitle": "Μειώθηκε η τιμή αγγελίας που αποθηκεύσατε: «{title}»"
+    "savedTitle": "Μειώθηκε η τιμή αγγελίας που αποθηκεύσατε: «{title}»",
+    "namedTitle": "Μειώθηκε η τιμή αγγελίας για τη ζήτηση «{demand}»: «{title}»",
+    "namedTitleMany": "Μειώθηκε η τιμή αγγελίας για «{demand}» και {others, plural, one {# ακόμη ζήτηση} other {# ακόμη ζητήσεις}}: «{title}»",
+    "intoBudgetNamedTitle": "Μπήκε στον προϋπολογισμό της ζήτησης «{demand}»: «{title}»"
   },
   "mandateDecision": {
     "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",

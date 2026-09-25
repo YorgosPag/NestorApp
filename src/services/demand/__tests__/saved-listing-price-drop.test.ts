@@ -33,6 +33,10 @@ jest.mock('@/lib/demand/demand-matching', () => ({
 jest.mock('@/server/notifications/notification-orchestrator', () => ({
   dispatchNotification: (...args: unknown[]) => dispatchNotification(...args),
 }));
+// ADR-887 — οι γλώσσες των παραληπτών: καμία δήλωση ⇒ προεπιλογή (el).
+jest.mock('@/server/notifications/user-notification-settings-store', () => ({
+  loadUserNotificationSettingsMany: async () => new Map(),
+}));
 jest.mock('@/services/demand/demand-match-ledger', () => ({
   readRecipientLedger: (...args: unknown[]) => readRecipientLedger(...args),
 }));
@@ -118,19 +122,19 @@ describe('Σ — η αποθήκευση ως ΓΝΩΣΗ της τιμής', () 
   });
 
   it('🏆 Σ3 — ζήτηση ΚΑΙ αποθήκευση στην ίδια αγγελία ⇒ ΕΝΑ email, με τη διατύπωση της ζήτησης', async () => {
-    givenPass([{ id: 'd1', authorUserId: SAVER, seeks: [] }], [listing('l1')], [saved('l1', SINCE_MS - MS_PER_DAY)]);
+    givenPass([{ id: 'd1', authorUserId: SAVER, seeks: [], title: 'Ζήτηση d1' }], [listing('l1')], [saved('l1', SINCE_MS - MS_PER_DAY)]);
 
     await announceListingMatchesToDemandAuthors({} as never);
 
     // Η αποθήκευση είναι ΓΝΩΣΗ: ο άνθρωπος ξέρει ήδη την αγγελία ⇒ κανένα «νέα αγγελία ταιριάζει».
     expect(callsOfType(MATCH)).toHaveLength(0);
     expect(callsOfType(DROP)).toEqual([
-      expect.objectContaining({ recipientId: SAVER, titleKey: 'demandPriceDrop.notificationTitle', reasons: ['d1'] }),
+      expect.objectContaining({ recipientId: SAVER, titleKey: 'demandPriceDrop.namedTitle', reasons: ['d1'] }),
     ]);
   });
 
   it('Σ4 — ξένη αποθήκευση δεν αγγίζει τον ζητούντα · ο καθένας τη δική του είδηση', async () => {
-    givenPass([{ id: 'd1', authorUserId: 'usr_other', seeks: [] }], [listing('l1', null)], [saved('l2', SINCE_MS - MS_PER_DAY)]);
+    givenPass([{ id: 'd1', authorUserId: 'usr_other', seeks: [], title: 'Ζήτηση d1' }], [listing('l1', null)], [saved('l2', SINCE_MS - MS_PER_DAY)]);
     readLivePublicListings.mockResolvedValue({ listings: [listing('l1', null), listing('l2')], truncated: false });
 
     await announceListingMatchesToDemandAuthors({} as never);

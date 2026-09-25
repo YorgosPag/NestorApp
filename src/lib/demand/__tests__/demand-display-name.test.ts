@@ -5,6 +5,8 @@
  * ωμό κλειδί μέσα στο όνομα — το ίδιο που θα έβλεπε ο άνθρωπος.
  */
 
+// ADR-887 — ο ΕΝΑΣ μεταφραστής πάνω σε locale JSON (ήταν τοπικό τρίτο αντίγραφο).
+import { createBundleTranslate } from '@/i18n/bundle-translate';
 import type { PriceLabelT } from '@/lib/listings/listing-price-label';
 import elMarket from '@/i18n/locales/el/property-market.json';
 import elEnums from '@/i18n/locales/el/properties-enums.json';
@@ -20,22 +22,8 @@ jest.mock('@/lib/intl-formatting', () => ({
   formatCurrency: (amount: number) => `${amount} €`,
 }));
 
-type Locale = Record<string, unknown>;
-
-/** `ns:a.b.c` → τιμή του locale, με απλή αντικατάσταση `{param}`. */
-function translator(namespaces: Record<string, Locale>): PriceLabelT {
-  return (key, params) => {
-    const [ns, path] = key.split(':');
-    const value = path
-      .split('.')
-      .reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], namespaces[ns]);
-    if (typeof value !== 'string') return key;
-    return value.replace(/\{(\w+)\}/g, (_m, name: string) => String(params?.[name] ?? `{${name}}`));
-  };
-}
-
-const tEl = translator({ 'property-market': elMarket, 'properties-enums': elEnums, common: elCommon });
-const tEn = translator({ 'property-market': enMarket, 'properties-enums': enEnums, common: enCommon });
+const tEl: PriceLabelT = createBundleTranslate({ 'property-market': elMarket, 'properties-enums': elEnums, common: elCommon }, 'property-market');
+const tEn: PriceLabelT = createBundleTranslate({ 'property-market': enMarket, 'properties-enums': enEnums, common: enCommon }, 'property-market');
 
 describe('demandAutoName — όνομα από τα κριτήρια, ποτέ αποθηκευμένο', () => {
   it('συναλλαγή · τόπος · είδος · υπνοδωμάτια · ταβάνι — με τη σειρά', () => {

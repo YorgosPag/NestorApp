@@ -39,6 +39,10 @@ jest.mock('@/lib/date-local', () => ({
   todayLocalDate: () => '2026-09-01',
 }));
 const readRecipientLedger = jest.fn();
+// ADR-887 — οι γλώσσες των παραληπτών: καμία δήλωση ⇒ προεπιλογή (el).
+jest.mock('@/server/notifications/user-notification-settings-store', () => ({
+  loadUserNotificationSettingsMany: async () => new Map(),
+}));
 jest.mock('@/services/demand/demand-match-ledger', () => ({
   readRecipientLedger: (...args: unknown[]) => readRecipientLedger(...args),
 }));
@@ -55,7 +59,7 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 
 function demand(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   // ADR-777 §8.60.15 — η τιμή ζει στις εναλλακτικές· χωρίς όριο ποσού = καμία εναλλακτική με τιμή.
-  return { id, authorUserId: `usr_${id}`, seeks: [], ...overrides };
+  return { id, authorUserId: `usr_${id}`, seeks: [], title: `Ζήτηση ${id}`, ...overrides };
 }
 
 function listing(id: string, title = `Αγγελία ${id}`): Record<string, unknown> {

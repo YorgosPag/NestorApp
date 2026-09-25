@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 833 ADRs | Last Updated: 2026-09-25
+**📊 Stats**: 835 ADRs | Last Updated: 2026-09-25
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 4 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 582 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 583 | [View](#uncategorized) |
 
 ---
 
@@ -318,6 +318,7 @@
 | **ADR-296** | File-Type Classification SSoT Unification | ✅ ✅ IMPLEMENTED | 2026-04-21 | File Management / Architectural Integrity | [📄](./adrs/ADR-296-file-type-classification-ssot.md) |
 | **ADR-297** | HQ Address Clear + Undo — Google-level Single-Click UX | ✅ ✅ IMPLEMENTED | 2026-04-21 | Frontend UX / Contacts Form | [📄](./adrs/ADR-297-hq-clear-undo-pattern.md) |
 | **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
+| **ADR-315** | Ενιαίοι σύνδεσμοι κοινοποίησης (Unified Sharing) | ✅ ✅ **ACCEPTED** — ο κύκλος ζωής τρέχει **ολόκληρος στον διακομιστή** από τις 2026-09-25 (ADR-884 Φ0.12, κύμα Κ4) | 2026-04-18 (M1, κώδικας) · **έγγραφο 2026-09-25** | Sharing / Security / Public surface | [📄](./adrs/ADR-315-unified-sharing.md) |
 | **ADR-316** | Project Showcase (Επίδειξη Έργου) | ✅ 📋 In Progress | 2026-04-22 | Uncategorized | [📄](./adrs/ADR-316-project-showcase.md) |
 | **ADR-320** | Building Showcase (SSoT Composition) | ✅ ✅ IMPLEMENTED (Phase 6 landed — public `/shared/[token]` viewer for `building_showcase`. All 6 phases green.) | 2026-04-23 | Buildings / Public Share Surfaces | [📄](./adrs/ADR-320-building-showcase.md) |
 | **ADR-327** | Quote Management & Comparison System (Hybrid Scan + Vendor Portal) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-327-quote-management-comparison-system.md) |
@@ -864,10 +865,11 @@
 | **ADR-880** | Σημείο εστίασης ανά φωτογραφία αγγελίας: αυτόματο στο ράφι, διόρθωση με ένα κλικ, κεντράρισμα χωρίς inline style | ✅ IMPLEMENTED + VERIFIED LIVE — 2026-09-24 (υλοποίηση `16aa6c09` · επαλήθευση §5.2) | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-880-photo-focal-point.md) |
 | **ADR-881** | Εικόνες ήρωα ως επιμελημένο περιεχόμενο πλατφόρμας: ανέβασμα, εκδόσεις, δημοσίευση | ✅ IMPLEMENTED — Φάσεις Α+Β+Γ 2026-09-24 · **επαληθεύτηκε από άκρη σε άκρη (§8.3, §8.6)**, χωρίς commit | 2026-09-24 | Uncategorized | [📄](./adrs/ADR-881-landing-hero-curation.md) |
 | **ADR-882** | Ανάκληση τόπου στο πεδίο αναζήτησης: «Τρέχουσα τοποθεσία» + «Ιστορικό αναζητήσεων» | ✅ IMPLEMENTED — Φάση 1 (ιστορικό ανά συσκευή) 2026-09-25, χωρίς commit | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-882-place-search-recall.md) |
-| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–6 2026-09-25 (Φ6 = οικισμοί, §5.10) · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, και σε κινητό + φωτεινό θέμα | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-883-admin-area-boundary-search.md) |
-| **ADR-884** | Χωρική περιήγηση ακινήτου: πανοράματα 360° **και** μοντέλο BIM σε **ΕΝΑ** χώρο | 📋 📋 **PLANNING** — έρευνα + αρχιτεκτονική· η κατεύθυνση συμφωνήθηκε με τον Giorgio (2026-09-25)· διευκρινίσεις **Δ1–Δ6 κλειστές** (§12)· **SSoT audit με grep (§4) + αναλυτικό σχέδιο Φ0 (§8.1) γραμμένα**· **καμία γραμμή κώδικα ακόμη**. Ε9–Ε11 **αποφασίστηκαν** με έρευνα (§8.1 Φ0.12–Φ0.14)· N.8 = **Plan Mode σε κύματα** (§8.1 Φ0.11). Επόμενο: υλοποίηση — 🔴 προτείνεται **πρώτο** το Κ4 (κενό ασφαλείας στο `shares`) | 2026-09-25 | Marketplace / Public listing / 3D / Reality capture | [📄](./adrs/ADR-884-spatial-tour-panorama-bim.md) |
+| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–7 2026-09-25 (Φ6 = οικισμοί, §5.10 · **Φ7 = κατάταξη προθέματος + ανοχή ορθογραφίας, §5.11**) · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, και σε κινητό + φωτεινό θέμα | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-883-admin-area-boundary-search.md) |
+| **ADR-884** | Χωρική περιήγηση ακινήτου: πανοράματα 360° **και** μοντέλο BIM σε **ΕΝΑ** χώρο | ✅ 🚧 **Φ0 ΣΕ ΥΛΟΠΟΙΗΣΗ** — διευκρινίσεις **Δ1–Δ6 κλειστές** (§12)· SSoT audit (§4.1) + σχέδιο Φ0 (§8.1)· Ε9–Ε11 αποφασισμένα. ✅ **Κύμα Κ4 ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-25 — σκλήρυνση κοινοποιήσεων, §8.1 Φ0.12, ADR-315)· ⏳ ανάπτυξη κατά τη σειρά του ADR-315 §4. Επόμενο: **Κ1** (θεμέλια) | 2026-09-25 | Marketplace / Public listing / 3D / Reality capture | [📄](./adrs/ADR-884-spatial-tour-panorama-bim.md) |
 | **ADR-885** | «Σχεδίαση περιοχής» στον χάρτη αποτελεσμάτων (ελεύθερη χειρονομία + κορυφές, πολλά σχήματα) | ✅ IMPLEMENTED — Φάσεις 1–4 2026-09-25 · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (desktop, ποντίκι)** — §8 · αφή σε πραγματική συσκευή: εκκρεμεί | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-885-drawn-search-area.md) |
 | **ADR-886** | Το όνομα της αποθηκευμένης αναζήτησης (Ζήτηση): αυτόματο, δικό σου, σήματα είδους | ✅ IMPLEMENTED — 2026-09-25 · jest: δες §7 · ζωντανή επαλήθευση στον browser: **εκκρεμεί** | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-886-demand-saved-search-naming.md) |
+| **ADR-887** | Το όνομα της ζήτησης μέσα στις ειδοποιήσεις και στα email | ✅ IMPLEMENTED — 2026-09-25 · jest: δες §7 · ζωντανή επαλήθευση (πραγματικό email + κουδούνι): **εκκρεμεί** | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-887-demand-name-in-notifications.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1686,9 +1688,10 @@
 | **ADR-880** | Σημείο εστίασης ανά φωτογραφία αγγελίας: αυτόματο στο ράφι, διόρθωση με ένα κλικ, κεντράρισμα χωρίς inline style | ✅ IMPLEMENTED + VERIFIED LIVE — 2026-09-24 (υλοποίηση `16aa6c09` · επαλήθευση §5.2) | [View](./adrs/ADR-880-photo-focal-point.md) |
 | **ADR-881** | Εικόνες ήρωα ως επιμελημένο περιεχόμενο πλατφόρμας: ανέβασμα, εκδόσεις, δημοσίευση | ✅ IMPLEMENTED — Φάσεις Α+Β+Γ 2026-09-24 · **επαληθεύτηκε από άκρη σε άκρη (§8.3, §8.6)**, χωρίς commit | [View](./adrs/ADR-881-landing-hero-curation.md) |
 | **ADR-882** | Ανάκληση τόπου στο πεδίο αναζήτησης: «Τρέχουσα τοποθεσία» + «Ιστορικό αναζητήσεων» | ✅ IMPLEMENTED — Φάση 1 (ιστορικό ανά συσκευή) 2026-09-25, χωρίς commit | [View](./adrs/ADR-882-place-search-recall.md) |
-| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–6 2026-09-25 (Φ6 = οικισμοί, §5.10) · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, και σε κινητό + φωτεινό θέμα | [View](./adrs/ADR-883-admin-area-boundary-search.md) |
+| **ADR-883** | Αναζήτηση με όριο διοικητικής περιοχής στον χάρτη («Αφαίρεση ορίου») | ✅ IMPLEMENTED — Φάσεις 1–7 2026-09-25 (Φ6 = οικισμοί, §5.10 · **Φ7 = κατάταξη προθέματος + ανοχή ορθογραφίας, §5.11**) · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (§7)**, και σε κινητό + φωτεινό θέμα | [View](./adrs/ADR-883-admin-area-boundary-search.md) |
 | **ADR-885** | «Σχεδίαση περιοχής» στον χάρτη αποτελεσμάτων (ελεύθερη χειρονομία + κορυφές, πολλά σχήματα) | ✅ IMPLEMENTED — Φάσεις 1–4 2026-09-25 · jest πράσινο · **επαληθεύτηκε ζωντανά στον browser (desktop, ποντίκι)** — §8 · αφή σε πραγματική συσκευή: εκκρεμεί | [View](./adrs/ADR-885-drawn-search-area.md) |
 | **ADR-886** | Το όνομα της αποθηκευμένης αναζήτησης (Ζήτηση): αυτόματο, δικό σου, σήματα είδους | ✅ IMPLEMENTED — 2026-09-25 · jest: δες §7 · ζωντανή επαλήθευση στον browser: **εκκρεμεί** | [View](./adrs/ADR-886-demand-saved-search-naming.md) |
+| **ADR-887** | Το όνομα της ζήτησης μέσα στις ειδοποιήσεις και στα email | ✅ IMPLEMENTED — 2026-09-25 · jest: δες §7 · ζωντανή επαλήθευση (πραγματικό email + κουδούνι): **εκκρεμεί** | [View](./adrs/ADR-887-demand-name-in-notifications.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

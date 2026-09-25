@@ -29,9 +29,10 @@
  *
  * ⚠️ **ΔΕΝ ΕΙΝΑΙ i18next.** Καλύπτει **ό,τι χρησιμοποιεί ο κατάλογος** — απλή παρεμβολή
  * `{name}` και **ένα** σκέλος `plural`. Αν μια οθόνη αποκτήσει `select` ή ένθετο ICU, το
- * σωστό είναι να **επεκταθεί εδώ**, όχι να γεννηθεί τέταρτο αντίγραφο δίπλα της.
+ * σωστό είναι να **επεκταθεί το `@/i18n/bundle-translate`**, όχι να γεννηθεί αντίγραφο δίπλα του.
  */
 
+import { createBundleTranslate, type BundleTranslate } from '@/i18n/bundle-translate';
 import bundle from '@/i18n/locales/el/property-market.json';
 
 /** Το υποδέντρο κειμένων του **δημόσιου καταλόγου** — για άγκυρες που συγκρίνουν προτάσεις. */
@@ -40,42 +41,9 @@ export const EL_DIRECTORY: Record<string, string> = (
 ).mandate.directory;
 
 /**
- * Επιλύει `{name, plural, one {…} other {…}}` — **μονά** άγκιστρα *(CHECK 3.9)*.
- *
- * 🔑 **Το `#` είναι μέρος του ICU, όχι διακοσμητικό**: αντικαθίσταται από τον **ίδιο** τον
- * αριθμό. Ένα mock που το αφήνει ανέπαφο θα ζωγράφιζε `# επαγγελματίες`, δηλαδή θα
- * **περνούσε** μια άγκυρα που ψάχνει τη λέξη και θα έχανε τον αριθμό.
- *
- * ⚠️ **Κανόνας μιας γλώσσας**: τα ελληνικά έχουν `one`/`other`, και **μόνο** αυτά
- * υπάρχουν στα locale μας. Δεν μιμούμαστε `few`/`many` που κανένα κλειδί δεν δηλώνει.
- */
-function resolvePlural(text: string, params: Readonly<Record<string, unknown>>): string {
-  return text.replace(
-    /\{(\w+),\s*plural,\s*one\s*\{([^}]*)\}\s*other\s*\{([^}]*)\}\s*\}/g,
-    (_match, name: string, one: string, other: string) => {
-      const value = Number(params[name]);
-      return (value === 1 ? one : other).replaceAll('#', String(value));
-    },
-  );
-}
-
-/**
  * **Ο `t` της άγκυρας** — διαβάζει το πραγματικό `el/property-market.json`.
  *
- * ⚠️ **Κλειδί που ΔΕΝ βρίσκεται επιστρέφει τον εαυτό του**, όπως το i18next. Έτσι η
- * απουσία κειμένου γίνεται **ορατή στην οθόνη της άγκυρας** *(λατινικά με `:` στο
- * namespace)* αντί να πετάξει και να μοιάζει με σφάλμα υποδομής.
+ * 🔑 ADR-887: η απόδοση (παρεμβολή, `plural` με `#`, ωμό κλειδί όταν λείπει) ζει πλέον στο SSoT
+ * `@/i18n/bundle-translate` — το ίδιο που χρησιμοποιεί ο server. Εδώ μένει μόνο **ποιο** bundle.
  */
-export function elTranslate(key: string, params?: Readonly<Record<string, unknown>>): string {
-  let node: unknown = bundle as unknown as Record<string, unknown>;
-  for (const segment of key.replace(/^property-market:/, '').split('.')) {
-    node = (node as Record<string, unknown> | undefined)?.[segment];
-  }
-  if (typeof node !== 'string') return key;
-
-  const safe = params ?? {};
-  return Object.entries(safe).reduce(
-    (text, [name, replacement]) => text.replaceAll(`{${name}}`, String(replacement)),
-    resolvePlural(node, safe),
-  );
-}
+export const elTranslate: BundleTranslate = createBundleTranslate({ 'property-market': bundle }, 'property-market');

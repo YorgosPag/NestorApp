@@ -88,6 +88,7 @@ import {
   type ListingTopic,
   type MatchTally,
 } from './listing-match-topics';
+import { loadDemandNamer } from './demand-name-server';
 import { isSavedOnly, knownSince, mergeSavedTopics } from './saved-listing-topics';
 
 const logger = createModuleLogger('demand/listing-match-notifier');
@@ -290,7 +291,8 @@ async function tallyMatches(
     .filter((entry) => entry.matched.length > 0);
 
   const recipients = mergeSavedTopics(
-    groupTopicsByRecipient(matches),
+    // 🏆 ADR-887 — κάθε ζήτηση ονομάζεται στη γλώσσα του παραλήπτη της, πριν γίνει λόγος.
+    groupTopicsByRecipient(matches, await loadDemandNamer(matches.map(({ demand }) => demand.authorUserId))),
     await readSavesOfReduced(db, listings, nowMs),
     listings,
   );

@@ -33,6 +33,10 @@ jest.mock('@/lib/demand/demand-matching', () => ({
 jest.mock('@/server/notifications/notification-orchestrator', () => ({
   dispatchNotification: (...args: unknown[]) => dispatchNotification(...args),
 }));
+// ADR-887 — οι γλώσσες των παραληπτών: καμία δήλωση ⇒ προεπιλογή (el).
+jest.mock('@/server/notifications/user-notification-settings-store', () => ({
+  loadUserNotificationSettingsMany: async () => new Map(),
+}));
 jest.mock('@/services/demand/demand-match-ledger', () => ({
   readRecipientLedger: (...args: unknown[]) => readRecipientLedger(...args),
 }));
@@ -68,7 +72,7 @@ const REDUCTION: PriceReduction = {
  */
 function demand(id: string, priceMax: number | null = null, author = `usr_${id}`): Record<string, unknown> {
   const seeks = priceMax === null ? [] : [{ kind: 'sell', price: { min: null, max: priceMax } }];
-  return { id, authorUserId: author, seeks };
+  return { id, authorUserId: author, seeks, title: `Ζήτηση ${id}` };
 }
 
 function listing(id: string, priceReduction: PriceReduction | null = null): Record<string, unknown> {
@@ -115,7 +119,7 @@ describe('Μ — η μείωση τιμής σε αγγελία που ο ζητ
     expect(drop).toMatchObject({
       eventId: recipientPriceDropEventId('l1', REDUCTION),
       recipientId: 'usr_d1',
-      titleKey: 'demandPriceDrop.notificationTitle',
+      titleKey: 'demandPriceDrop.namedTitle',
       reasons: ['d1'],
       entityId: 'l1',
     });
@@ -168,7 +172,7 @@ describe('Ν — νέο ταίριασμα που ΗΔΗ κουβαλά μείω
 
     expect(callsOfType(DROP)).toHaveLength(0);
     const [match] = callsOfType(MATCH);
-    expect(match.titleKey).toBe('demandListingMatch.reducedTitle');
+    expect(match.titleKey).toBe('demandListingMatch.reducedNamedTitle');
     expect(match.body).toContain(formatEuro(3_200_000));
     expect(report.announced).toBe(1);
   });
@@ -179,8 +183,8 @@ describe('Ν — νέο ταίριασμα που ΗΔΗ κουβαλά μείω
     await announceListingMatchesToDemandAuthors({} as never);
 
     const [match] = callsOfType(MATCH);
-    expect(match.titleKey).toBe('demandListingMatch.intoBudgetTitle');
-    expect(match.title).toContain('Μπήκε στον προϋπολογισμό σας');
+    expect(match.titleKey).toBe('demandListingMatch.intoBudgetNamedTitle');
+    expect(match.title).toBe('Μπήκε στον προϋπολογισμό της ζήτησης «Ζήτηση d1»: «Αγγελία l1»');
     expect(match.body).toContain(formatEuro(100_000));
   });
 
@@ -190,7 +194,7 @@ describe('Ν — νέο ταίριασμα που ΗΔΗ κουβαλά μείω
     await announceListingMatchesToDemandAuthors({} as never);
 
     const [match] = callsOfType(MATCH);
-    expect(match.titleKey).toBe('demandListingMatch.notificationTitle');
+    expect(match.titleKey).toBe('demandListingMatch.namedTitle');
     expect(match.body).toBeUndefined();
   });
 });
@@ -284,10 +288,12 @@ describe('Σ — §8.69.12: ΕΝΑΣ άνθρωπος, ΜΙΑ αγγελία, Μ
       recipientId: 'usr_x',
       eventId: recipientListingMatchEventId('l1'),
       reasons: ['d1', 'd2'],
-      titleKey: 'demandListingMatch.notificationTitleMany',
-      titleParams: { title: 'Αγγελία l1', count: '2' },
+      titleKey: 'demandListingMatch.namedTitleMany',
+      titleParams: { title: 'Αγγελία l1', count: '2', others: '1', demand: 'Ζήτηση d1' },
     });
-    expect(matches[0].title).toContain('σε 2 ζητήσεις σας');
+    expect(matches[0].title).toBe('Νέα αγγελία για «Ζήτηση d1» και 1 ακόμη ζήτηση: «Αγγελία l1»');
+    // 🏆 ADR-887 — το σώμα ονομάζει ΟΛΕΣ τις ζητήσεις, όχι «2 ζητήσεις σας».
+    expect(matches[0].body).toBe('Ταιριάζει στις ζητήσεις σας «Ζήτηση d1» και «Ζήτηση d2».');
     expect(report.considered).toBe(1);
     expect(report.collapsedReasons).toBe(1);
     expect(listingMatchReportBalances(report)).toBe(true);
@@ -307,7 +313,7 @@ describe('Σ — §8.69.12: ΕΝΑΣ άνθρωπος, ΜΙΑ αγγελία, Μ
     expect(drops[0]).toMatchObject({
       eventId: recipientPriceDropEventId('l1', REDUCTION),
       reasons: ['d1', 'd2'],
-      titleKey: 'demandPriceDrop.notificationTitleMany',
+      titleKey: 'demandPriceDrop.namedTitleMany',
     });
     expect(report.priceDrops.announced).toBe(1);
   });
@@ -335,8 +341,10 @@ describe('Σ — §8.69.12: ΕΝΑΣ άνθρωπος, ΜΙΑ αγγελία, Μ
     await announceListingMatchesToDemandAuthors({} as never);
 
     const [drop] = callsOfType(DROP);
-    expect(drop.titleKey).toBe('demandPriceDrop.intoBudgetTitle');
-    expect(drop.title).toContain('Μπήκε στον προϋπολογισμό σας');
+    expect(drop.titleKey).toBe('demandPriceDrop.intoBudgetNamedTitle');
+    // 🏆 ADR-887 — ονομάζεται η ζήτηση του ΑΥΣΤΗΡΟΤΕΡΟΥ ορίου (d3), όχι η πρώτη (d1).
+    expect(drop.title).toBe('Μπήκε στον προϋπολογισμό της ζήτησης «Ζήτηση d3»: «Αγγελία l1»');
+    expect(drop.body).toContain('της ζήτησης «Ζήτηση d3»');
     // 3.250.000 − 3.200.000 — ποτέ το 100.000 του χαλαρότερου ορίου.
     expect(drop.body).toContain(formatEuro(50_000));
     expect(drop.body).toContain(formatEuro(3_250_000));

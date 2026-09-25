@@ -208,7 +208,11 @@ export function priceDropKind(
  * ειδοποιήσεων (Knock, Novu) λέει το αντίθετο: **το θέμα είναι η ταυτότητα, οι αιτίες είναι
  * περιεχόμενο**. Εδώ οι ζητήσεις γίνονται **λόγοι μέσα** στην ειδοποίηση.
  *
- * ⚠️ `demandIds` και `seeks` είναι **παράλληλοι** πίνακες, ταξινομημένοι κατά ζήτηση.
+ * ⚠️ `demandIds`, `seeks` και `names` είναι **παράλληλοι** πίνακες, ταξινομημένοι κατά ζήτηση.
+ *
+ * 🏆 **ADR-887 — `names`**: το όνομα κάθε ζήτησης (`demandDisplayName`), αποδοσμένο **τη στιγμή της
+ * αποστολής** στη γλώσσα του παραλήπτη. Στιγμιότυπο, όπως ο τίτλος της αγγελίας: η ειδοποίηση είναι
+ * ιστορικό γεγονός («ταίριαξε στο Χ τότε»). Κενός για θέμα **μόνο** αποθήκευσης (§8.74).
  *
  * 🔴 **ADR-777 §8.60.15 — ήταν `priceMaxes: (number | null)[]`**: ένα αμονάδιστο όριο ανά
  * ζήτηση ⇒ μείωση **ενοικίου** από 1.100 σε 950 €/μήνα κρινόταν απέναντι σε όριο **πώλησης**
@@ -218,6 +222,7 @@ export function priceDropKind(
 export interface AnnouncementReasons {
   readonly demandIds: readonly string[];
   readonly seeks: readonly (readonly DemandSeek[])[];
+  readonly names: readonly string[];
 }
 
 /**
@@ -241,7 +246,8 @@ export function recipientPriceDropEventId(
 
 /** Η ετυμηγορία προϋπολογισμού για **όλους** τους λόγους μαζί. */
 export type BudgetVerdict =
-  | { readonly kind: 'into-budget'; readonly priceMax: number }
+  /** `reasonIndex` — **ποιας** ζήτησης είναι το όριο (δείκτης στους παράλληλους πίνακες των λόγων, ADR-887). */
+  | { readonly kind: 'into-budget'; readonly priceMax: number; readonly reasonIndex: number }
   | { readonly kind: 'within-budget' };
 
 /**
@@ -254,14 +260,15 @@ export function strongestBudgetVerdict(
   seeksPerDemand: readonly (readonly DemandSeek[])[],
   reduction: Pick<PriceReduction, 'from' | 'to' | 'role'>,
 ): BudgetVerdict {
-  let strictest: number | null = null;
-  for (const seeks of seeksPerDemand) {
+  let strictest: { priceMax: number; reasonIndex: number } | null = null;
+  for (let reasonIndex = 0; reasonIndex < seeksPerDemand.length; reasonIndex += 1) {
     // 🔑 Το όριο **του ρόλου της μείωσης** — ζήτηση χωρίς εναλλακτική σε αυτή τη μονάδα δεν έχει όριο εδώ.
-    const priceMax = amountRangeOfRole(seeks, reduction.role)?.max ?? null;
+    const priceMax = amountRangeOfRole(seeksPerDemand[reasonIndex], reduction.role)?.max ?? null;
     if (priceMax === null || priceDropKind(priceMax, reduction) !== 'into-budget') continue;
-    if (strictest === null || priceMax < strictest) strictest = priceMax;
+    // Ισοπαλία ⇒ η πρώτη κατά σειρά λόγων: ντετερμινιστικό όνομα για ίδια είσοδο.
+    if (strictest === null || priceMax < strictest.priceMax) strictest = { priceMax, reasonIndex };
   }
-  return strictest === null ? { kind: 'within-budget' } : { kind: 'into-budget', priceMax: strictest };
+  return strictest === null ? { kind: 'within-budget' } : { kind: 'into-budget', ...strictest };
 }
 
 /**
