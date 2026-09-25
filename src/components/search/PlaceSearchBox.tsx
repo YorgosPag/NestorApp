@@ -96,8 +96,10 @@ const logger = createModuleLogger('PlaceSearchBox');
 type SubmitState =
   // ADR-883 §5.8: `ambiguous-area` = το κείμενο ονομάζει ΠΟΛΛΕΣ ισότιμες περιοχές ⇒ η λίστα μένει ανοιχτή.
   // ADR-883 §5.11: `suggest-area` = το κείμενο ΜΟΙΑΖΕΙ με περιοχή (λάθος) ⇒ «μήπως εννοούσατε;».
+  // ADR-777 §8.79 (2026-09-25): `empty` = πατήθηκε «Αναζήτηση» χωρίς κανέναν άξονα ⇒ λέμε ΤΙ λείπει.
   | {
-      readonly kind: 'idle' | 'searching' | 'locating' | 'not-found' | 'error' | 'ambiguous-area' | 'suggest-area';
+      readonly kind:
+        | 'idle' | 'searching' | 'locating' | 'not-found' | 'error' | 'ambiguous-area' | 'suggest-area' | 'empty';
     }
   | { readonly kind: 'location-failed'; readonly reason: CurrentPositionFailure };
 
@@ -267,7 +269,15 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit) return;
+    // 🔑 **ΚΟΥΜΠΙ ΠΑΝΤΑ ΕΝΕΡΓΟ, ΕΞΗΓΗΣΗ ΣΤΟ ΠΑΤΗΜΑ** (2026-09-25). Ήταν `disabled` με
+    //    `opacity-50`: γκρι κουμπί που δεν λέει ΓΙΑΤΙ, και που ο αναγνώστης οθόνης
+    //    προσπερνά. Baymard: ορατή, ρητή υποβολή· GOV.UK: όχι ανενεργά κουμπιά — εξήγηση
+    //    στο σημείο. Το «τίποτα-τίποτα» ΜΕΝΕΙ νεκρό (δες από πάνω) — απλώς πλέον μιλά.
+    if (!canSubmit) {
+      setState({ kind: 'empty' });
+      inputRef.current?.focus();
+      return;
+    }
 
     // 🔑 **ΧΩΡΙΣ ΤΟΠΟ ΔΕΝ ΚΑΛΕΙΤΑΙ Ο ΓΕΩΚΩΔΙΚΟΠΟΙΗΤΗΣ** — και δεν είναι βελτιστοποίηση:
     //    μια κλήση με κενό κείμενο θα επέστρεφε `not-found`, και ο επισκέπτης θα διάβαζε
@@ -372,7 +382,11 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
             value={occupation}
             options={occupations}
             locale={locale}
-            onChange={setChosenOccupation}
+            onChange={(next) => {
+              setChosenOccupation(next);
+              // Το «λείπει άξονας» παύει να είναι αλήθεια μόλις δηλωθεί ειδικότητα.
+              if (state.kind === 'empty') setState(IDLE);
+            }}
           />
         )}
 
@@ -434,8 +448,10 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
         */}
         <button
           type="submit"
-          disabled={busy || !canSubmit}
-          className={`rounded-md px-4 py-2 font-semibold disabled:opacity-50 ${COLOR_BRIDGE.action.primary}`}
+          disabled={busy}
+          // 📱 Πλήρους πλάτους στο κινητό: στόχος αφής σε όλη τη ζώνη του αντίχειρα, όχι
+          //    ένα κουμπάκι κολλημένο αριστερά κάτω από το πεδίο (Zillow · idealista).
+          className={`w-full rounded-md px-4 py-2 font-semibold disabled:opacity-50 sm:w-auto ${COLOR_BRIDGE.action.primary}`}
         >
           {t('search-results:landing.search.submit')}
         </button>
@@ -447,6 +463,8 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
         {state.kind === 'locating' && t('common-shared:placeRecall.locating')}
         {state.kind === 'not-found' && t('search-results:landing.search.notFound')}
         {state.kind === 'error' && t('search-results:landing.search.failed')}
+        {state.kind === 'empty' &&
+          t(asksOccupation ? 'common-shared:placeRecall.emptyQueryOrSpecialty' : 'common-shared:placeRecall.emptyQuery')}
         {state.kind === 'ambiguous-area' && t('common-shared:placeRecall.chooseArea')}
         {state.kind === 'suggest-area' && t('common-shared:placeRecall.didYouMeanArea')}
         {state.kind === 'location-failed' && t(GEOLOCATION_FAILURE_I18N_KEYS[state.reason])}

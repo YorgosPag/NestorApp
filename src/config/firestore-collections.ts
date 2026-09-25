@@ -111,6 +111,14 @@ export const COLLECTIONS = {
   PROPERTY_DOSSIERS: process.env.NEXT_PUBLIC_PROPERTY_DOSSIERS_COLLECTION || 'property_dossiers',
 
   /**
+   * 🧭 ADR-884 Φ0.1–Φ0.2 — **Η ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ** (`stour_*`, μία ανά ρίζα αγγελίας). **Δύο διαμερίσματα**,
+   * όπως τα αρχεία: επιλογή **μόνο** μέσω `SPATIAL_TOUR_COLLECTION[kind]` (`lib/spatial-tour/spatial-tour-custody`).
+   * Γράφει **μόνο** ο διακομιστής· ο κάτοχος διαβάζει (ζωντανός επεξεργαστής), κάθε άλλο κοινό από διαδρομές (Φ0.9).
+   */
+  SPATIAL_TOURS: process.env.NEXT_PUBLIC_SPATIAL_TOURS_COLLECTION || 'spatial_tours',
+  SPATIAL_TOURS_PERSONAL: process.env.NEXT_PUBLIC_SPATIAL_TOURS_PERSONAL_COLLECTION || 'spatial_tours_personal',
+
+  /**
    * 🎯 ADR-835 §20 (Στάδιο Α) — **Η ΚΕΦΑΛΗ ΤΟΥ ΗΜΕΡΟΛΟΓΙΟΥ ΚΑΤΑΛΥΜΑΤΟΣ**. Κλειδί: το
    * `propertyId`. «Δηλώθηκε;» + το `version` που σειριοποιεί κάθε εγγραφή (phantom insert).
    * Γράφει μόνο ο διακομιστής· διαβάζει ο συντάκτης της αγγελίας.
@@ -1203,6 +1211,12 @@ export const SUBCOLLECTIONS = {
   // μετρά ως αδιάβαστη· το badge «Μηνύματα» = πλήθος γραμμών. ⛔ Όχι σκέτο 'unread': ίδιος λόγος με τα από πάνω.
   NETWORK_INBOX_UNREAD: process.env.NEXT_PUBLIC_NETWORK_INBOX_UNREAD_SUBCOL || 'network_inbox_unread',
 
+  // 🧭 ADR-884 Φ0.2 — υποσυλλογές της περιήγησης. ⛔ Πρόθεμα `tour_` ΠΑΝΤΑ: σκέτο `captures`/`requests`/`grants`
+  // θα συγκρουόταν σε collection-group ερωτήματα (μάθημα `NETWORK_THREAD_MESSAGES`) — και το `grants` είναι ήδη πιασμένο.
+  TOUR_CAPTURES: process.env.NEXT_PUBLIC_TOUR_CAPTURES_SUBCOL || 'tour_captures',
+  TOUR_ACCESS_REQUESTS: process.env.NEXT_PUBLIC_TOUR_ACCESS_REQUESTS_SUBCOL || 'tour_access_requests',
+  TOUR_CAPTURE_GRANTS: process.env.NEXT_PUBLIC_TOUR_CAPTURE_GRANTS_SUBCOL || 'tour_capture_grants',
+
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
 
@@ -1317,12 +1331,13 @@ export const SYSTEM_DOCS = {
 // ============================================================================
 
 /**
- * Maps each SUBCOLLECTIONS key to its parent COLLECTIONS key.
- * Used by BackupService to traverse subcollections during export.
+ * Maps each SUBCOLLECTIONS key to its parent COLLECTIONS key — or to **several**, when the same
+ * subcollection lives under both custody partitions (company · personal, ADR-884 Φ0.2).
+ * Used by BackupService to traverse subcollections during export (one pass per parent).
  *
  * @see adrs/ADR-313-enterprise-backup-restore.md
  */
-export const SUBCOLLECTION_PARENTS: Record<string, string> = {
+export const SUBCOLLECTION_PARENTS: Readonly<Record<string, string | readonly string[]>> = {
   // Settings subcollections → SETTINGS (ADR-881: settings/landing_heroes/revisions)
   LANDING_HERO_REVISIONS: 'SETTINGS',
 
@@ -1372,6 +1387,12 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
 
   // Network inbox subcollection → NETWORK_INBOX (ADR-867 §4.5 Β10)
   NETWORK_INBOX_UNREAD: 'NETWORK_INBOX',
+
+  // Spatial tour subcollections → ΚΑΙ ΤΑ ΔΥΟ διαμερίσματα (ADR-884 Φ0.2). Ίδια σειρά με το
+  // `SPATIAL_TOUR_COLLECTION` (company → personal) — την κλειδώνει άγκυρα jest (το config δεν εισάγει από lib).
+  TOUR_CAPTURES: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
+  TOUR_ACCESS_REQUESTS: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
+  TOUR_CAPTURE_GRANTS: ['SPATIAL_TOURS', 'SPATIAL_TOURS_PERSONAL'],
 } as const;
 
 // ============================================================================

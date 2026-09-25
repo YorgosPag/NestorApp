@@ -484,8 +484,11 @@ describe('Β-Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ', () => {
   it('Β-Μ4: γειτονιά χάνει τον διάδρομό της ⇒ ΚΟΚΚΙΝΟ', () => {
     withMutation(
       path.join(REPO, 'src', 'app', '(light)', 'layout.tsx'),
-      '<ShellSurface className="flex flex-1 flex-col">{children}</ShellSurface>',
-      '<div className="flex flex-1 flex-col">{children}</div>',
+      // ⚠️ 2026-09-25: μόνο η ετικέτα ΑΝΟΙΓΜΑΤΟΣ — από το ADR-881 τα children τυλίγονται σε
+      //    `LandingHeroesProvider` και ο παλιός στόχος μιας γραμμής δεν υπήρχε πια (0 εμφανίσεις).
+      //    Ο σαρωτής ψάχνει `<ShellSurface`, οπότε το `</ShellSurface>` που μένει δεν μετρά.
+      '<ShellSurface className="flex flex-1 flex-col">',
+      '<div className="flex flex-1 flex-col">',
       (r) => {
         expect(r.code).not.toBe(0);
         expect(r.out).toContain('group-without-corridor');
@@ -1008,5 +1011,47 @@ describe('Δ — η αφαίρεση σχολίων δεν καταπίνει κ
     const raw = fs.readFileSync(page, 'utf8');
     expect(LEGACY(raw)).not.toContain('export default');   // ΤΟΤΕ
     expect(stripComments(raw)).toContain('export default'); // ΤΩΡΑ
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Κ6 — Η ΣΤΗΛΗ ΤΟΥ ΜΕΤΡΟΥ ΔΕΝ ΔΕΧΕΤΑΙ ΟΡΙΖΟΝΤΙΟ ΚΕΝΟ (ADR-797 §Φ.Κ6, 2026-09-25)
+// Περιστατικό: `gap-6` στο <main data-shell-measure> της αρχικής ⇒ 358 + 2×24 = 406 px
+// σε κινητό 390 px, κομμένο σιωπηλά από τον καθολικό `overflow-x: clip`.
+// ═══════════════════════════════════════════════════════════════════════════
+const { measureGapsInSource, findMeasureColumnGaps } = require('../lib/shell-surface/measure-gap');
+
+describe('Κ6 — measure-column-gap', () => {
+  const klasses = (src) => measureGapsInSource(src).map((h) => h.klass);
+
+  it('Κ6-1: το ΠΕΡΙΣΤΑΤΙΚΟ — `gap-6` μέσα σε cn() πάνω σε ωμό data-shell-measure ⇒ πιάνεται', () => {
+    const src = `<main data-shell-measure="wide" className={cn('w-full flex-1 gap-6', a ? 'x' : 'y')}>`;
+    expect(klasses(src)).toEqual(['gap-6']);
+  });
+
+  it('Κ6-2: `ShellSurface measure` με gap-x / προθεματικό / αυθαίρετο ⇒ πιάνεται', () => {
+    expect(klasses('<ShellSurface as="main" measure="wide" className="md:gap-x-4">')).toEqual(['md:gap-x-4']);
+    expect(klasses('<ShellSurface measure="prose" className="gap-[1rem]">')).toEqual(['gap-[1rem]']);
+    expect(klasses('<ShellSurface measure="prose" className="gap-px">')).toEqual(['gap-px']);
+  });
+
+  it('Κ6-3 (ΑΡΝΗΤΙΚΟΙ ΜΑΡΤΥΡΕΣ): gap-y, χωρίς μέτρο, ή ΠΑΙΔΙ του μέτρου ⇒ σιωπή', () => {
+    expect(klasses('<ShellSurface as="main" measure="wide" className="gap-y-6 content-start">')).toEqual([]);
+    expect(klasses('<ShellSurface as="main" className="gap-6">')).toEqual([]);
+    expect(klasses('<main data-shell-measure="wide" className="gap-y-6"><div className="flex gap-6">x</div></main>')).toEqual([]);
+  });
+
+  it('Κ6-4: `>` μέσα σε έκφραση ΔΕΝ κλείνει πρόωρα την ετικέτα', () => {
+    const src = `<main data-shell-measure="wide" className={cn(n > 1 ? 'a' : 'b', 'gap-4')}>`;
+    expect(klasses(src)).toEqual(['gap-4']);
+  });
+
+  it('Κ6-5: σχόλιο που αναφέρει `gap-6` δεν μετρά', () => {
+    const src = `<main data-shell-measure="wide" /* ήταν gap-6 */ className="gap-y-6">`;
+    expect(klasses(src)).toEqual([]);
+  });
+
+  it('Κ6-6 (ΖΩΝΤΑΝΟ): το πραγματικό δέντρο έχει ΜΗΔΕΝ — και οι 7 σελίδες διορθώθηκαν', () => {
+    expect(findMeasureColumnGaps(REPO)).toEqual([]);
   });
 });

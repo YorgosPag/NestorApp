@@ -67,7 +67,14 @@
     "searchBar": {
       "placeholder": "Αναζήτηση επαφών... (⌘K)"
     },
-    "changeLanguage": "Αλλαγή γλώσσας - {language}"
+    "changeLanguage": "Αλλαγή γλώσσας - {language}",
+    "language": "Γλώσσα",
+    "menu": {
+      "label": "Μενού",
+      "description": "Πλοήγηση, οι καταχωρίσεις μου και προτιμήσεις",
+      "explore": "Εξερεύνηση",
+      "mine": "Ο χώρος μου"
+    }
   },
   "storage": {
     "title": "Χώρος Αποθήκευσης",

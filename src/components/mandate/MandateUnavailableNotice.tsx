@@ -77,7 +77,7 @@ export function MandateUnavailableNotice({
     //    κοντά παιδιά μετρήθηκε **504px ύψος για μια ειδοποίηση 3 γραμμών**.
     //    ⛔ ΟΧΙ `h-*` ούτε `max-h-*`: το ύψος δεν είναι το πρόβλημα — η **κατανομή**
     //    είναι. Ίδιος κανόνας με το «μην ξαναγράψεις `mx-auto`» του `shell-surface.css`.
-    <ShellSurface as="main" measure="prose" className="gap-4 content-start">
+    <ShellSurface as="main" measure="prose" className="gap-y-4 content-start">
       <MandateRequestOutcomeNotice reason={reason} />
       <nav>
         <Link

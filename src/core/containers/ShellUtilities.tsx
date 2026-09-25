@@ -77,10 +77,12 @@
  * είσοδο στη λίστα του αναγνώστη οθόνης για την **ίδια** ομάδα χειριστηρίων.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 
-import { LanguageSwitcher } from '@/components/header/language-switcher';
-import { ThemeToggle } from '@/components/header/theme-toggle';
+import { LanguageOptions, LanguageSwitcher } from '@/components/header/language-switcher';
+import { ThemeOptions, ThemeToggle } from '@/components/header/theme-toggle';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { NotificationBell } from '@/components/NotificationBell.enterprise';
 import { UserMenu } from '@/components/header/user-menu';
 
@@ -88,13 +90,18 @@ import { UserMenu } from '@/components/header/user-menu';
  * @param signedOutAction Τι μπαίνει στη θέση του λογαριασμού όταν **δεν**
  *   υπάρχει ταυτότητα. Παραλείπεται όπου δεν έχει νόημα (`(auth)`, `(app)`).
  * @param className Επιπλέον κλάσεις **διάταξης** του καλούντος — ποτέ χρώματος.
+ * @param collapsePreferences Κάτω από `lg` η γλώσσα και το θέμα **μετακομίζουν** στο
+ *   μενού του καλούντος ({@link ShellPreferences}) — ΜΟΝΟ όταν ο καλών το αποδίδει.
+ *   Ταυτότητα (καμπανάκι · λογαριασμός) μένει **πάντα** ορατή (ADR-809 §9).
  */
 export function ShellUtilities({
   signedOutAction,
   className,
+  collapsePreferences = false,
 }: Readonly<{
   signedOutAction?: React.ReactNode;
   className?: string;
+  collapsePreferences?: boolean;
 }>): React.ReactElement {
   return (
     <div className={className ? `flex items-center gap-2 ${className}` : 'flex items-center gap-2'}>
@@ -113,8 +120,24 @@ export function ShellUtilities({
         ⚠️ **Άρα ΜΗΝ επικαλεστείς το WCAG ως λόγο ύπαρξης αυτού του αρχείου.**
         Η παρουσία είναι **απόφαση προϊόντος**· εδώ γίνεται μηχανικά ελέγξιμη.
       */}
-      <LanguageSwitcher />
-      <ThemeToggle />
+      {/*
+        📱 **ΣΤΟ ΚΙΝΗΤΟ ΜΕΤΑΚΟΜΙΖΟΥΝ, ΔΕΝ ΧΑΝΟΝΤΑΙ** (ADR-809 §9, 2026-09-25). Μετρημένο
+        στα 390 px: οκτώ χειριστήρια σε μία γραμμή = **470 px** δεξιάς ομάδας σε 358 διαθέσιμα
+        ⇒ το 🌐 κομμένο στη μέση, θέμα και λογαριασμός **εκτός οθόνης**. Κάτω από `lg` τα δύο
+        πάνε στο `ShellPreferences` του μενού (Google: θέμα στις Ρυθμίσεις). Μόνο CSS
+        (`display: contents` από `lg`) — καμία ερώτηση πλάτους σε JS ⇒ κανένα hydration mismatch.
+      */}
+      {collapsePreferences ? (
+        <span className="hidden lg:contents">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </span>
+      ) : (
+        <>
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </>
+      )}
       {/*
         🔴 **Η ΤΕΤΑΡΤΗ ΚΑΘΟΛΙΚΗ ΔΥΝΑΤΟΤΗΤΑ** (ADR-834 §6 Φάση Α).
 
@@ -157,6 +180,36 @@ export function ShellUtilities({
         Μία ανάγνωση, δύο κλάδοι, μηδέν πιθανότητα απόκλισης.
       */}
       <UserMenu signedOut={signedOutAction} />
+    </div>
+  );
+}
+
+/**
+ * **Οι προτιμήσεις ως ορατές επιλογές** — γλώσσα και θέμα για το μενού κινητού.
+ *
+ * ⚠️ **ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΟ ΜΕΝΟΥ**: το CHECK 3.72 (Κ3) επιτρέπει εισαγωγή των καθολικών
+ * δυνατοτήτων **μόνο** από αυτό το αρχείο. Ένα μενού που τις εισήγαγε μόνο του θα ήταν
+ * δεύτερος συναρμολογητής — το σχήμα που γέννησε την πύλη.
+ */
+export function ShellPreferences(): React.ReactElement {
+  const { t } = useTranslation(COMMON_NAMESPACES);
+  const languageId = useId();
+  const themeId = useId();
+
+  return (
+    <div className="flex flex-col gap-4">
+      <section aria-labelledby={languageId} className="flex flex-col gap-2">
+        <h3 id={languageId} className="m-0 text-sm font-medium text-muted-foreground">
+          {t('header.language')}
+        </h3>
+        <LanguageOptions labelledBy={languageId} />
+      </section>
+      <section aria-labelledby={themeId} className="flex flex-col gap-2">
+        <h3 id={themeId} className="m-0 text-sm font-medium text-muted-foreground">
+          {t('theme.title')}
+        </h3>
+        <ThemeOptions labelledBy={themeId} />
+      </section>
     </div>
   );
 }

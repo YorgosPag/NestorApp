@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { useTranslation } from '@/i18n';
 import { useLanguagePreference } from '@/i18n/hooks/useLanguagePreference';
 import { type Namespace } from '@/i18n/lazy-config';
@@ -60,9 +61,12 @@ const languages = (IS_DEV ? SUPPORTED_LANGUAGES : HUMAN_LANGUAGES).map((code) =>
   ...LANGUAGE_DISPLAY[code],
 }));
 
-export function LanguageSwitcher() {
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
+/**
+ * 🔑 **Η ΑΛΛΑΓΗ ΓΛΩΣΣΑΣ, ΜΙΑ ΦΟΡΑ** (ADR-809 §9). Το αναπτυσσόμενο της μπάρας και η
+ * ορατή σειρά επιλογών του μενού κινητού μοιράζονται **αυτό** το hook — δύο αντίγραφα
+ * της ακολουθίας θα ξαναγεννούσαν το ελάττωμα του §8.29 (ένα που ξεχνά τη βάση).
+ */
+function useLanguageChoice() {
   const { i18n, t } = useTranslation(COMMON_NAMESPACES);
   const [isChanging, setIsChanging] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
@@ -109,6 +113,14 @@ export function LanguageSwitcher() {
     }
   };
 
+  return { t, languages, currentLanguage, isChanging, handleLanguageChange };
+}
+
+export function LanguageSwitcher() {
+  const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { t, currentLanguage, isChanging, handleLanguageChange } = useLanguageChoice();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -144,5 +156,30 @@ export function LanguageSwitcher() {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * **Η γλώσσα ως ορατή σειρά επιλογών** — για το μενού κινητού, όπου ένα αναπτυσσόμενο
+ * μέσα σε συρτάρι θα ήταν δεύτερο επίπεδο κρυψίματος. Τα ονόματα μένουν ενδώνυμα.
+ */
+export function LanguageOptions({ labelledBy }: Readonly<{ labelledBy: string }>) {
+  const { languages, currentLanguage, isChanging, handleLanguageChange } = useLanguageChoice();
+
+  return (
+    <SegmentedControl<Language>
+      aria-labelledby={labelledBy}
+      value={currentLanguage.code}
+      onValueChange={(code) => void handleLanguageChange(code)}
+      disabled={isChanging}
+      className={`grid w-full ${languages.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}
+    >
+      {languages.map((language) => (
+        <SegmentedControlItem key={language.code} value={language.code} className="min-h-11 w-full gap-2">
+          <span aria-hidden="true">{language.flag}</span>
+          <span lang={language.code}>{language.name}</span>
+        </SegmentedControlItem>
+      ))}
+    </SegmentedControl>
   );
 }

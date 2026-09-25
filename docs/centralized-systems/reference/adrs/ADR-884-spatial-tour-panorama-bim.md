@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🚧 **Φ0 ΣΕ ΥΛΟΠΟΙΗΣΗ** — διευκρινίσεις **Δ1–Δ6 κλειστές** (§12)· SSoT audit (§4.1) + σχέδιο Φ0 (§8.1)· Ε9–Ε11 αποφασισμένα. ✅ **Κύμα Κ4 ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-25 — σκλήρυνση κοινοποιήσεων, §8.1 Φ0.12, ADR-315)· ⏳ ανάπτυξη κατά τη σειρά του ADR-315 §4. Επόμενο: **Κ1** (θεμέλια) |
+| **Status** | 🚧 **Φ0 ΣΕ ΥΛΟΠΟΙΗΣΗ** — διευκρινίσεις **Δ1–Δ6 κλειστές** (§12)· SSoT audit (§4.1) + σχέδιο Φ0 (§8.1)· Ε9–Ε11 αποφασισμένα. ✅ **Κύμα Κ4 ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-25 — σκλήρυνση κοινοποιήσεων, §8.1 Φ0.12, ADR-315)· ανάπτυξη ✅ εκτός `SHARE_ACCESS_SECRET`. ✅ **Κύμα Κ1 ΥΛΟΠΟΙΗΘΗΚΕ** (2026-09-25 — θεμέλια, §4.2). Επόμενο: **Κ2** (εξουσία + κανόνες) |
 | **Date** | 2026-09-25 |
 | **Category** | Marketplace / Public listing / 3D / Reality capture |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -138,6 +138,25 @@
 **Τι ΔΕΝ υπάρχει** (grep σε όλο το `src/`, 0 ευρήματα): `panorama` / `360` / `equirect` / `cubemap` / `tour` ως λεξιλόγιο· προθέματα `stour`/`tnod`/`tcap`/`tacr`/`tcin`
 (ελεύθερα)· ρόλος «φωτογράφος / συνεργάτης λήψης»· γενικό «γονικό αρχείο ↔ παράγωγα» στο `FileRecord` (το μόνο προηγούμενο παραγώγων είναι το **ράφι**, με `sourceRef` + `recipe`).
 
+### 4.2 Audit του Κ1 — ο κώδικας διόρθωσε το σχέδιο (2026-09-25, grep **πριν** από κάθε γραμμή)
+
+| Σχέδιο έλεγε | Κώδικας λέει | Τι έγινε |
+|---|---|---|
+| `TourSubject.kind: 'property' \| 'owner-property'` | υπάρχει **ήδη** `PLACE_SOURCES = ['owner-property','company-property']` (10 καταναλωτές, μέσα στο `services/demand/place-interest.service.ts`) | **επαναχρήση** `PlaceSource`· η ρίζα μετακόμισε σε φύλλο `constants/place-sources.ts` και η υπηρεσία την επανεξάγει (κανένας εισαγωγέας δεν άλλαξε) |
+| #2: «`signatory` με attestation ΤΕΕ» | το `ModelSignatory` έχει **μόνο** όνομα/ειδικότητα/ημερομηνία | `TourCaptureSignatory = { person: ModelSignatory; attestation: ProfessionalAttestation }` — σύνθεση δύο **υπαρχόντων** τύπων· ο ιδιωτικός `readAttestation` του `showcase-read.ts` **εξάχθηκε** στο `lib/professional/professional-attestation.ts` (+ `attestsNationalRegistry`)· ο ιδιωτικός `readSignatory` **εξάγεται** |
+| γραμμές `BOUNDARIES` (3.74) στο Κ1 | ο Κ2 της 3.74 **κοκκινίζει** σύνορο με 0 παραγωγικούς καταναλωτές | το σύνορο γράφτηκε και ελέγχεται με jest· **οι γραμμές μπαίνουν με τον πρώτο αναγνώστη (Κ3)** — τεχνητός καταναλωτής θα ήταν «πράσινο που δεν κοίταξε» |
+| `SUBCOLLECTION_PARENTS`: μία γραμμή | `Record<string,string>` = **ένας** γονέας· οι λήψεις ζουν κάτω από **δύο** διαμερίσματα | τιμή `string \| readonly string[]`· το `BackupService.exportAllSubcollections` κάνει ένα πέρασμα ανά (υποσυλλογή, γονέα)· το restore δουλεύει ήδη ανά εγγραφή manifest |
+| γεννήτριες στο convenience | πρακτική `saved-listing`: κρίκος στην αλυσίδα | `SpatialTourIdGenerators` ανάμεσα σε `SavedListing` και `CompositeKey` |
+| «test μοναδικότητας προθεμάτων» | **ήδη** ένα διπλότυπο: `MESSAGE` ≡ `MESSAGE_DOC` ≡ `msg` (ζωντανά δεδομένα) | κλειστή λίστα ψευδωνύμων (1 εγγραφή), αμφίδρομη |
+| τοπικοί βοηθοί | `lib/type-guards.isRecord` · `lib/date-local` (`normalizeToMillisOrNull`, `normalizeToISO`) | επαναχρήση — κανένας νέος βοηθός χρόνου |
+| προεπιλογή ορατότητας `public` στη ρίζα | η ανάγνωση **δεν** πρέπει να έχει προεπιλογή (απούσα ορατότητα = βλάβη) | η προεπιλογή μπαίνει στη **δημιουργία** (Κ2)· στο Κ1 δεν εξάγεται (αχρησιμοποίητο export) |
+
+**Ευρήματα πέρα από το σχέδιο:**
+- 🔴 **Ασφάλεια (λανθάνον)**: το `checkPermission` έκανε `new Date(grant.expiresAt)`. Σε Firestore `Timestamp` αυτό δίνει `Invalid Date`, και `Invalid Date < now` = `false` ⇒ **το grant ακινήτου δεν έληγε ποτέ** (επαληθεύτηκε με node). Κανένας γραφέας `grants` σήμερα ⇒ καμία έκθεση. Κλείνει με το `evaluateScopedGrant` (fail-closed, `unreadable-expiry`)· η ανάκληση απέκτησε **δικό της** λόγο `grant_revoked` (ήταν `grant_expired`). Μετάλλαξη πίσω στο `new Date(x)` ⇒ **5 κόκκινα**.
+- 🔶 **Χρέος σουίτας**: 7 ντετερμινιστικές γεννήτριες (ListingStats ×4 · SavedListing · Stay ×2) είχαν μπει **χωρίς** δήλωση στο συμβόλαιο απαρίθμησης του `enterprise-id.service.test.ts` ⇒ η σουίτα ήταν κόκκινη. Δηλώθηκαν, με golden ids **καταγεγραμμένα** από τους ίδιους τους γεννήτορες.
+- ℹ️ Το backup διαβάζει `properties/*/grants`, το lookup `companies/*/properties/*/grants` — ασυμφωνία, **όχι** διόρθωση εδώ (`.claude-rules/pending-ratchet-work.md`).
+- ℹ️ Το CHECK 3.22 (knip) **δεν** μετρά τις νέες μονάδες ως νεκρές: το plugin Jest του knip κάνει τα αρχεία test entries. Τα 2 αχρησιμοποίητα exports που βρέθηκαν (`DEFAULT_*`) αφαιρέθηκαν.
+
 ---
 
 ## 5. Η αρχιτεκτονική
@@ -256,7 +275,7 @@ interface TourCapture {             // ΜΙΑ λήψη του σημείου, σ
 
 ```ts
 type TourSubject =
-  | { kind: 'property'; id: string }          // agency μονάδα (`properties`) → κάτοχος εταιρεία
+  | { kind: 'company-property'; id: string }  // agency μονάδα (`properties`) → κάτοχος εταιρεία — `PlaceSource` (§4.2)
   | { kind: 'owner-property'; id: string };   // αγγελία ιδιώτη/μεσίτη (`owner_properties`) → custodyOf(...)
 ```
 
@@ -327,7 +346,7 @@ interface TourCapture {                         // υποσυλλογή
   source: 'camera-360' | 'phone' | 'bim-render';
   provenance: 'as-built' | 'virtual-staging' | 'design-study';
   baseCaptureId: string | null;                 // ΥΠΟΧΡΕΩΤΙΚΟ για virtual-staging/design-study → η as-built που «ντύνει» (Σύγκριση)
-  signatory: ModelSignatory | null;             // ΥΠΟΧΡΕΩΤΙΚΟ για design-study (ΤΕΕ) — επαναχρήση ADR-845/841 Α10
+  signatory: { person: ModelSignatory; attestation: ProfessionalAttestation } | null; // ΥΠΟΧΡΕΩΤΙΚΟ για design-study (ΤΕΕ) — §4.2
   audience: 'public-listing' | 'project-team' | 'unit-owner';
   milestone: TourMilestone | null;              // λεξιλόγιο Φ0.6
   originalFileId: string;                       // FileRecord του πανοράματος (κατηγορία 'panoramas')
@@ -530,7 +549,7 @@ interface TourCapture {                         // υποσυλλογή
 
 | Κύμα | Περιεχόμενο | Εξάρτηση |
 |---|---|---|
-| **Κ1 — θεμέλια** | Boy Scout: test μοναδικότητας τιμών `ENTERPRISE_ID_PREFIXES` · εξαγωγή `ScopedGrant`/`evaluateScopedGrant` από `PropertyGrant` · `MediaRights` (Φ0.14) · λεξιλόγια (Φ0.6) · τύποι + όρια ανάγνωσης + 6 αναλλοίωτα (καθαρές συναρτήσεις, jest) · προθέματα/γεννήτριες (Φ0.7) · `COLLECTIONS`/`SUBCOLLECTIONS`/`SUBCOLLECTION_PARENTS` · `SPATIAL_TOUR_COLLECTION` | — |
+| ✅ **Κ1 — θεμέλια** | Boy Scout: test μοναδικότητας τιμών `ENTERPRISE_ID_PREFIXES` · εξαγωγή `ScopedGrant`/`evaluateScopedGrant` από `PropertyGrant` · `MediaRights` (Φ0.14) · λεξιλόγια (Φ0.6) · τύποι + όρια ανάγνωσης + 6 αναλλοίωτα (καθαρές συναρτήσεις, jest) · προθέματα/γεννήτριες (Φ0.7) · `COLLECTIONS`/`SUBCOLLECTIONS`/`SUBCOLLECTION_PARENTS` · `SPATIAL_TOUR_COLLECTION` | **ΥΛΟΠΟΙΗΘΗΚΕ 2026-09-25** (§4.2) — οι γραμμές `BOUNDARIES` της 3.74 μεταφέρθηκαν στο **Κ3** |
 | **Κ2 — εξουσία + κανόνες** | `mayManageTour` + `LISTING_ACTIONS.manageTour` · άδεια λήψης + πρόσκληση (Φ0.5) · αίτημα θέασης (Φ0.13) · κανόνες Firestore/Storage + 8 σουίτες + ευρετήρια (Φ0.9) | Κ1 |
 | **Κ3 — αρχεία + διαδρομές** | `FileType`/κατηγορία/σημείο εισόδου · διαδρομές ανεβάσματος (καραντίνα → κανονικό) · πυρήνας κουπονιού θέασης HMAC · i18n (Φ0.10) | Κ2 |
 | ✅ **Κ4 — σκλήρυνση κοινοποιήσεων** | Φ0.12 (κανόνες `shares` **+ `file_shares`**, `tokenHash`, μετάπτωση, επικύρωση στον διακομιστή) + ADR-315 | **ΥΛΟΠΟΙΗΘΗΚΕ 2026-09-25** — ανάπτυξη κατά ADR-315 §4 |
@@ -731,3 +750,4 @@ interface TourCapture {                         // υποσυλλογή
 | 2026-09-25 | **Σχέδιο Φ0.** (1) **§4.1 SSoT audit με grep**: 9 διορθώσεις στον χάρτη — κυριότερες: η αγγελία έχει **δύο** ρίζες (`properties` / `owner_properties`) ⇒ περιήγηση σε **ρίζα με είδος** και **δύο διαμερίσματα** (`CustodyPartition`)· τύπος/μέγεθος αρχείων **όχι** στα σημεία εισόδου· `floorId` και όχι `Level.id`· καμία πύλη μοναδικότητας προθεμάτων ID. (2) **§8.1 αναλυτικό σχέδιο Φ0** (Φ0.1–Φ0.11): ντετερμινιστικό id ανά ρίζα · **Ε6 απαντήθηκε** (κόμβοι πίνακας, λήψεις υποσυλλογή) · 6 αναλλοίωτα διακομιστή · `mayManageTour` που διανέμει σε `mayPerform`/`decideCapability` · ορατότητα με νέο είδος ραφιού (`public`) ή **κουπόνι θέασης HMAC** (`on-request`/`link-only`) · φωτογράφος = **άδεια ανά περιήγηση** με εξαγωγή `ScopedGrant` από `PropertyGrant` (Boy Scout) · ανέβασμα μόνο μέσω καραντίνας του διακομιστή · κανόνες: ανάγνωση **μόνο** για τον κάτοχο, εγγραφή **μόνο** από τον διακομιστή. (3) **Έρευνα με πηγές**: ορατότητα Matterport επαληθεύτηκε (4 επιλογές)· λήψη «πριν κλείσουν οι τοίχοι» επαληθεύτηκε **και διόρθωσε** τον ισχυρισμό του Δ6 (το OpenSpace **παραδίδει** στον κύριο του έργου)· `KHR_gaussian_splatting` **κυρωμένο** (Ε3 έκλεισε). (4) Νέα ανοιχτά **Ε9** (σύνδεσμοι: σκλήρυνση `UnifiedSharingService`) · **Ε10** (κοινός τύπος δικαιωμάτων με ADR-866) · **Ε11** (αίτημα χωρίς λογαριασμό). Καμία αλλαγή κώδικα. |
 | 2026-09-25 | **Αποφάσεις Ε9–Ε11 + N.8** (Giorgio: «όπως οι μεγάλοι, χωρίς εκπτώσεις, και πιο έξυπνα»· νέα έρευνα με πηγές σε Figma, Google Drive, OWASP, Zillow, IPTC, C2PA, EU AI Act άρθρο 50). **Φ0.12**: σκλήρυνση του **ενός** SSoT κοινοποιήσεων + σύνδεσμοι ανά παραλήπτη με υποχρεωτική λήξη, χωρίς κοινό κωδικό — 🔴 κατά την έρευνα βρέθηκε **κενό ασφαλείας που υπάρχει ήδη**: `shares` → `allow read: if true` επιτρέπει ανώνυμη **απαρίθμηση** όλων των διακριτικών· ανώνυμη εγγραφή αυθαίρετου `accessCount`· επικύρωση στον browser· πιθανό διπλότυπο `FileShareService`. **Φ0.13**: αίτημα θέασης με υποχρεωτικό λογαριασμό (πρότυπο Google Drive) + ίχνος θέασης + αίτημα→επαφή CRM. **Φ0.14**: κοινός τύπος `MediaRights` (IPTC) με το ADR-866 + υπογραφή **C2PA** της προέλευσης στη Φ2 (συμμόρφωση άρθρου 50 για μελλοντική ΤΝ διακόσμηση). **Φ0.11**: Plan Mode σε 4 κύματα (Κ1 θεμέλια · Κ2 εξουσία+κανόνες · Κ3 αρχεία+διαδρομές · Κ4 σκλήρυνση κοινοποιήσεων, ανεξάρτητο — προτείνεται πρώτο). Νέο **Ε12** (άδεια βιβλιοθήκης C2PA). Καμία αλλαγή κώδικα. |
 | 2026-09-25 | **Κύμα Κ4 ΥΛΟΠΟΙΗΘΗΚΕ (Φ0.12).** Όλος ο κύκλος ζωής των συνδέσμων κοινοποίησης στον διακομιστή (`src/server/sharing/*` — πύλη · lookup · μετρητής σε συναλλαγή · scrypt + rehash-on-verify + κλείδωμα ανά σύνδεσμο · κουπόνι HMAC · δημιουργία · ανάκληση · επίλυση · λήψη V4 15′) + 4 διαδρομές `/api/shares/*`· κανόνες `read, write: if false` σε `shares` **και** `file_shares`· δείκτες `[tokenHash, isActive]`· μετάπτωση `scripts/migrate-share-token-hash.ts`· resolvers → καθαρό `project()` (ADR-699)· οι δημόσιες διαδρομές showcase περνούν από την **ίδια** πύλη (ADR-698)· διαγραφή `FileShareService` + νεκρού `ShareDialog`· `SHARE_ACCESS_SECRET` στο συμβόλαιο περιβάλλοντος· σουίτες κανόνων με `shareLinksMatrix` (μετρά το `anonymous × list`). **Νέο ADR-315** (έλειπε). Ευρήματα πέρα από το audit και αποκλίσεις: §8.1 Φ0.12. |
+| 2026-09-25 | **Κύμα Κ1 ΥΛΟΠΟΙΗΘΗΚΕ (θεμέλια Φ0).** Νέα: `constants/{place-sources,spatial-tour-vocabulary,media-rights-vocabulary}.ts` · `types/{spatial-tour,media-rights}.ts` · `lib/auth/scoped-grant.ts` (`ScopedGrant` + `evaluateScopedGrant`, ο **ένας** έλεγχος λήξης/ανάκλησης/εύρους — το `PropertyGrant` τον κληρονομεί, το `checkPermission` τον καλεί) · `lib/professional/professional-attestation.ts` · `lib/media-rights/{media-rights-read,media-license-standing}.ts` (άδεια «όσο ισχύει η εντολή» **χωρίς** αποθηκευμένη ημερομηνία) · `lib/spatial-tour/{spatial-tour-from-document,spatial-tour-graph,tour-capture-invariants,spatial-tour-custody}.ts` (σύνορο χωρίς προεπιλογή ορατότητας· αναλλοίωτα #1–#5 ως καθαρές συναρτήσεις με ονομασμένες παραβάσεις· `removeTourNode`· `selectShelfCaptures` = μόνο η πιο πρόσφατη ανά κόμβο) · `services/enterprise-id-spatial-tour-generators.ts` (`stour`/`tnod`/`tcap`/`tacr`/`tcin`) · `COLLECTIONS.SPATIAL_TOURS{,_PERSONAL}` + 3 υποσυλλογές `tour_*` με **δύο** γονείς. Boy Scout: test μοναδικότητας προθεμάτων · εξαγωγή `readProfessionalAttestation` από το `showcase-read` · 7 αδήλωτες γεννήτριες στο συμβόλαιο απαρίθμησης. 🔴 Λανθάνον σφάλμα: grant με `Timestamp` δεν έληγε ποτέ — κλειστό. Αποκλίσεις από το σχέδιο: §4.2. jest: 82 σουίτες / 1715 tests πράσινα· πύλες 3.22 · 3.28 · 3.47 · 3.68 · 3.74 πράσινες. |

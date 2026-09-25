@@ -3831,6 +3831,30 @@
 
 ## Pending tasks (priority order)
 
+### 🔤 Καθολικό 404 — ωμά κλειδιά `errors:notFound.*` (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-25, ADR-744 · CHECK 3.34/3.51)
+
+- **Τι**: το `src/app/not-found.tsx` καλεί `useTranslation('errors')`, αλλά το `errors` **δεν** είναι στο
+  `shell-slice.el.json` και η σελίδα δεν έχει route slice ⇒ ο χρήστης βλέπει `notFound.title` / `notFound.message` /
+  `notFound.backHome`. **Μετρημένο** στο log του dev server 2026-09-25 17:34Z: `i18n: raw key reached the UI →
+  errors:notFound.title {"bundles":["errors=absent"]}` (σε `GET /demands 404`).
+- **Διόρθωση**: το `not-found.tsx` είναι **καθολικό όριο** (όπως το `ProtectedRoute`), όχι route boundary ⇒ στο
+  `extraShellRoots` του `.i18n-shell-slice.json` + εγγραφή `errors` στο `shellNamespaces` (dragger + λόγος) +
+  `npm run generate:i18n-shell-slice` (κλειστότητα κομμένη στο κλειδί ⇒ μόνο τα 3 κλειδιά) + νέα σφράγιση με
+  μετρημένο λόγο. Έλεγχος: CHECK 3.34 + 3.51.
+- **Γιατί δεν έγινε επιτόπου**: ο άλλος agent ξαναπαρήγαγε το `shell-slice.el.json` την ίδια ώρα (3 full reloads
+  στο log) — κοινό παραγόμενο αρχείο σε κοινό working tree.
+
+### 🔶 Grants ακινήτου — δύο διαδρομές για το ίδιο έγγραφο (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-25, ADR-884 §4.2)
+
+- **Τι**: το `getPropertyGrant` (`src/lib/auth/permissions/resource-lookups.ts`) διαβάζει
+  `companies/{cid}/properties/{pid}/grants/{uid}`, ενώ το `SUBCOLLECTION_PARENTS.PROPERTY_GRANTS = 'PROPERTIES'`
+  (`src/config/firestore-collections.ts`) λέει στο backup `properties/*/grants`. Το σχόλιο του `PropertyGrant` λέει
+  `/properties/{pid}/grants`. Τρεις δηλώσεις, δύο διαδρομές.
+- **Γιατί δεν διορθώθηκε**: κανένας γραφέας `grants` σήμερα (0 έγγραφα)· η σωστή διαδρομή είναι **απόφαση** (Giorgio),
+  όχι Boy Scout. Όποιος γράψει πρώτος grant ακινήτου αποφασίζει και ευθυγραμμίζει και τα τρία.
+- **Σχετικό (κλειστό)**: η λήξη των grants κρίνεται πλέον από το `evaluateScopedGrant` (`lib/auth/scoped-grant.ts`) — πριν,
+  grant με Firestore `Timestamp` δεν έληγε ποτέ.
+
 ### ⛔ Μηδενική ανοχή — ΕΝΑ άγκιστρο στη μηχανή, όχι ένα αντίγραφο ανά πύλη (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-23)
 
 **Τι**: το `scripts/lib/ratchet-baseline.js` απέκτησε `descriptor.refusals(measured)` (ADR-875 §14.4): οι ⛔

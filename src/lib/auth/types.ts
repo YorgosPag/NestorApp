@@ -13,6 +13,7 @@ import type { MembershipVerdict, RequestedWorkspace } from "@/types/workspace-me
 //    ακριβώς τον κύκλο που **σκάει** σε αρχικοποίηση (μάθημα `role-catalogue.ts`).
 import type { CdeAudience } from "@/types/container-access";
 import type { ProjectMemberEnrollment } from "@/types/project-member-enrollment";
+import type { ScopedGrant } from "./scoped-grant";
 
 // =============================================================================
 // GLOBAL ROLES (Coarse-grained, stored in Custom Claims)
@@ -569,8 +570,11 @@ export interface PropertyOwner {
   notes?: string;
 }
 
-/** Property grant document (stored in /properties/{pid}/grants/{granteeUid}). */
-export interface PropertyGrant {
+/**
+ * Property grant document (stored in /properties/{pid}/grants/{granteeUid}).
+ * Λήξη/ανάκληση/εύρος τα κρίνει ΜΟΝΟ το `evaluateScopedGrant` (ADR-884 Φ0.5).
+ */
+export interface PropertyGrant extends ScopedGrant<GrantScope> {
   /** Duplicated for rules validation */
   companyId: string;
   /** Duplicated for rules validation */

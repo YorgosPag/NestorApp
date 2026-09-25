@@ -44,10 +44,29 @@
  * ανήκε το *«ποια λειτουργία είναι ενεργή»*.
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { landingSwitchIsVisible, type LandingMode } from '@/lib/landing/landing-modes';
+import { useScrollEdges } from '@/hooks/useScrollEdges';
+// Σχετική διαδρομή, όπως κάθε CSS module του repo: το jest λύνει το `@/` ΠΡΙΝ το stub των `.css`.
+import fadeStyles from '../ui/scroll-edge-fade.module.css';
+
+/** Όσο το σβήσιμο της άκρης — η ενεργή καρτέλα δεν σταματά ΜΕΣΑ στη μάσκα. */
+const ACTIVE_TAB_INSET_PX = 40;
+
+/**
+ * Φέρνει την ενεργή καρτέλα μέσα στη λωρίδα — **μόνο οριζόντια**. ⛔ Όχι `scrollIntoView`:
+ * κυλά και τους **προγόνους**, δηλαδή θα τίναζε τη σελίδα κάθετα όταν ο ήρωας είναι μισός.
+ */
+function revealActiveTab(list: HTMLElement): void {
+  const active = list.querySelector<HTMLElement>('[data-state="active"]');
+  if (active === null) return;
+  const box = list.getBoundingClientRect();
+  const tab = active.getBoundingClientRect();
+  if (tab.left < box.left) list.scrollLeft -= box.left - tab.left + ACTIVE_TAB_INSET_PX;
+  else if (tab.right > box.right) list.scrollLeft += tab.right - box.right + ACTIVE_TAB_INSET_PX;
+}
 
 /**
  * **Κλειδί i18n ανά λειτουργία** — `Record` πάνω στο union, ποτέ συνάρτηση με `switch`.
@@ -124,11 +143,34 @@ const SUPPRESS_ARIA_CONTROLS = { 'aria-controls': undefined } as const;
  */
 export function LandingModeSwitch({ modes, value }: LandingModeSwitchProps) {
   const { t } = useTranslation(['search-results']);
+  const { ref: edgesRef, edges } = useScrollEdges<HTMLDivElement>();
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const setListRef = useCallback((node: HTMLDivElement | null) => {
+    listRef.current = node;
+    edgesRef(node);
+  }, [edgesRef]);
+
+  // Η επιλογή μπορεί να έρθει ΚΑΙ από το πληκτρολόγιο ή από τη σελίδα — πάντα ορατή.
+  useEffect(() => {
+    if (listRef.current !== null) revealActiveTab(listRef.current);
+  }, [value]);
 
   if (!landingSwitchIsVisible(modes)) return null;
 
   return (
-    <TabsList aria-label={t('search-results:landing.modes.label')}>
+    // 📱 **ΚΥΛΙΣΗ, ΟΧΙ ΑΝΑΔΙΠΛΩΣΗ** (ADR-777 §8.79 · 2026-09-25). Μετρημένο στα 390 px: οι τέσσερις
+    //    ετικέτες δεν χωρούν στα ~294 px της κάρτας και το προεπιλεγμένο `flex-wrap` του `TabsList`
+    //    έστελνε το «Επαγγελματίες» ΜΟΝΟ του σε δεύτερη γραμμή — ένα κουμπί που μοιάζει με άλλη
+    //    ομάδα. Material 3: καρτέλες **σταθερές** όταν χωρούν, **με κύλιση** όταν όχι — ποτέ δύο
+    //    γραμμές. Η μισοκομμένη τελευταία καρτέλα ΕΙΝΑΙ το σήμα ότι η λωρίδα συνεχίζει.
+    //    Και η άκρη ΣΒΗΝΕΙ μόνο όταν συνεχίζει (`useScrollEdges`): το απότομο «Επαγ|» διαβάστηκε
+    //    ως σφάλμα, όχι ως «σύρε» (στιγμιότυπο 2026-09-25 19:58).
+    <TabsList
+      ref={setListRef}
+      data-scroll-edges={edges}
+      aria-label={t('search-results:landing.modes.label')}
+      className={`w-full flex-nowrap justify-start overflow-x-auto overscroll-x-contain [scrollbar-width:none] ${fadeStyles.fade}`}
+    >
       {modes.map((mode) => (
         <TabsTrigger
           key={mode}

@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:a92ab144fb50bfeedf55801960a4d6b206fb9f277ce985fe067579b6540e6302 -->
+     fingerprint: sha256:569e0ab6fb62bc216f13d6318bcc39eb9d61c9f81ea12298f317fe343804702f -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -385,6 +385,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.91** | **Πύλη δεικτών του Admin SDK** (ADR-870) — «έχει δείκτη **και** το ερώτημα που **ΔΕΝ** περνά από το SSoT; — cron και API routes, όπου κανένα UI δεν θα δείξει ποτέ το `FAILED_PRECONDITION`» · `npm run test:firestore-admin-index` · `SKIP_FIRESTORE_ADMIN_INDEX=1` · 📘 `docs/gates/3.91.md` | ⛔ ZERO-TOL (Κ1: με εύρος) + 🔴 RATCHET (Κ2: χωρίς εύρος) | `.firestore-admin-index-baseline.json` |
 | **3.92** | **Πύλη του συνόρου ιδεμποτίας** (ADR-872) — «εκτελείται κάθε πράξη **ΜΙΑ** φορά ανά `Idempotency-Key` — και όποιος το παρακάμπτει, το είπε **με λόγο**; — η αυτόματη επανάληψη του πελάτη είναι ασ…» · `npm run test:idempotency-boundary` · `SKIP_IDEMPOTENCY_BOUNDARY=1` · 📘 `docs/gates/3.92.md` | ⛔ ZERO-TOL (Κ1+Κ2) + 🔴 RATCHET κατά ταυτότητα (Κ3) | `.idempotency-boundary-baseline.json` |
 | **3.93** | **Πύλη της προβολής του Cloud Functions** (ADR-874) — «μεταγλωττίζει το functions build **ΑΚΡΙΒΩΣ** ό,τι λέει το SSoT της εφαρμογής — ή ένα χειρόγραφο αντίγραφο που κάποτε του έμοιαζε;» · `npm run test:functions-projection` · `SKIP_FUNCTIONS_PROJECTION=1` · 📘 `docs/gates/3.93.md` | ⛔ ZERO TOL | — |
+| **3.94** | **Πύλη αναδιάταξης δημόσιων σελίδων** (ADR-797) — «χωράει κάθε στοιχείο στην οθόνη — ή κάτι κόβεται σιωπηλά στη δεξιά άκρη; (το `scrollWidth` ΜΕΤΡΗΘΗΚΕ ψευδές: 390 = «όλα καλά» με πέντε μπλοκ κομμένα)» · `npm run test:public-reflow` · 📘 `docs/gates/3.94.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -399,7 +400,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **86** (εκτελεστής 78 + hook 21) ·
-γραμμές εδώ: **75** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **76** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

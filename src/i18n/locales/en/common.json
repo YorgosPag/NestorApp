@@ -67,7 +67,14 @@
     "searchBar": {
       "placeholder": "Search contacts... (⌘K)"
     },
-    "changeLanguage": "Change language - {language}"
+    "changeLanguage": "Change language - {language}",
+    "language": "Language",
+    "menu": {
+      "label": "Menu",
+      "description": "Navigation, my listings and preferences",
+      "explore": "Explore",
+      "mine": "My space"
+    }
   },
   "storage": {
     "title": "Storage Space",

@@ -254,7 +254,7 @@ export function SearchLandingContent() {
         */
         data-shell-measure="wide"
         className={cn(
-          'w-full flex-1 gap-6',
+          'w-full flex-1 gap-y-6',
           panelMode === null ? '[align-content:safe_center]' : '[align-content:start]',
         )}
       >

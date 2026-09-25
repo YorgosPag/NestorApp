@@ -187,7 +187,7 @@ function readVec3(value: unknown): Vec3M | null {
   return [x, y, z];
 }
 
-function readSignatory(value: unknown): ModelSignatory | null {
+export function readSignatory(value: unknown): ModelSignatory | null {
   if (!isRecord(value)) return null;
   const { name, discipline, studiedAt } = value;
 

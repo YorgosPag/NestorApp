@@ -41,6 +41,11 @@
  *      σύνολο που εγκρίνει σιωπηλά τις σωστές πράξεις δεν θα έβλεπε ποτέ τη
  *      **δεύτερη** σωστή πράξη να γίνεται **τρίτη**, και μετά κανόνας.
  *
+ *  **Κ6** ⛔ `measure-column-gap` — ετικέτα μέτρου (`data-shell-measure` /
+ *      `ShellSurface measure`) με `gap-N`/`gap-x-N`. Τρεις στήλες ⇒ δύο
+ *      column-gaps που στο κινητό **προστίθενται** στο 100% (390 px → 406).
+ *      Μόνο `gap-y-*`. Λογική: `lib/shell-surface/measure-gap.js`.
+ *
  * Ένας κανόνας με «ή» θα έμενε **πράσινος πάνω στο ελάττωμα**: ο ιδιοκτήτης
  * μπορεί να είναι καθαρός ενώ 40 σελίδες διπλασιάζουν, και το αντίστροφο.
  *
@@ -94,6 +99,7 @@ const {
   VIEWPORT_MARKER,
   OUT_OF_FLOW,
 } = require('./lib/shell-surface/scan');
+const { findMeasureColumnGaps } = require('./lib/shell-surface/measure-gap');
 
 const REPO = path.resolve(__dirname, '..');
 const BASELINE = path.join(REPO, '.shell-surface-baseline.json');
@@ -248,6 +254,24 @@ function routeGroups() {
  * διάδρομο» ενώ το layout δίνει διάδρομο δεν είναι «εντάξει επειδή το ένα από τα
  * δύο περνά» — είναι δύο αλήθειες που διαφωνούν (ADR-749).
  */
+/**
+ * **ΕΝΑ άλμα από το layout** — το κοινό συμβόλαιο των Κ4 · Υ1 · Υ3: ό,τι ζητείται γράφεται
+ * στο ίδιο το layout ή στο κέλυφος που αυτό εισάγει **και αποδίδει** άμεσα.
+ * ⚠️ Ήταν γραμμένο ΤΡΕΙΣ φορές (CHECK 3.28 το έπιασε 2026-09-25) — τρεις γραφές του ίδιου
+ * κανόνα είναι τρεις ευκαιρίες να αποκλίνουν στο βάθος του άλματος.
+ */
+function layoutReaches(src, pattern) {
+  if (pattern.test(src)) return true;
+  for (const imp of namedImports(src)) {
+    const target = resolveAlias(imp.spec, REPO);
+    if (!target) continue;
+    if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
+    const child = readClean(target);
+    if (child && pattern.test(child)) return true;
+  }
+  return false;
+}
+
 function judgeGroupCorridor(group, withoutCorridor) {
   const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
   const src = readClean(layoutFile);
@@ -255,19 +279,7 @@ function judgeGroupCorridor(group, withoutCorridor) {
     return { state: 'group-without-layout', detail: `η γειτονιά ${group} δεν έχει layout.tsx` };
   }
 
-  let found = /<\s*ShellSurface\b/.test(src);
-  if (!found) {
-    for (const imp of namedImports(src)) {
-      const target = resolveAlias(imp.spec, REPO);
-      if (!target) continue;
-      if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
-      const child = readClean(target);
-      if (child && /<\s*ShellSurface\b/.test(child)) {
-        found = true;
-        break;
-      }
-    }
-  }
+  const found = layoutReaches(src, /<\s*ShellSurface\b/);
 
   const declared = Object.prototype.hasOwnProperty.call(withoutCorridor, group);
   if (found && declared) {
@@ -311,16 +323,7 @@ function judgeGroupFrame(group, withoutFrame) {
 
   // ΕΝΑ άλμα, ίδιο συμβόλαιο με τον διάδρομο: το κάδρο γράφεται στο layout ή στο
   // κέλυφος που αυτό εισάγει άμεσα.
-  let found = /data-shell-frame/.test(src);
-  if (!found) {
-    for (const imp of namedImports(src)) {
-      const target = resolveAlias(imp.spec, REPO);
-      if (!target) continue;
-      if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
-      const child = readClean(target);
-      if (child && /data-shell-frame/.test(child)) { found = true; break; }
-    }
-  }
+  const found = layoutReaches(src, /data-shell-frame/);
 
   const declared = Object.prototype.hasOwnProperty.call(withoutFrame, group);
   if (found && declared) {
@@ -342,15 +345,7 @@ function groupDeclaresMeasure(group) {
   const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
   const src = readClean(layoutFile);
   if (src === null) return false;
-  if (/<\s*ShellSurface\b[^>]*measure\s*=/.test(src)) return true;
-  for (const imp of namedImports(src)) {
-    const target = resolveAlias(imp.spec, REPO);
-    if (!target) continue;
-    if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
-    const child = readClean(target);
-    if (child && /<\s*ShellSurface\b[^>]*measure\s*=/.test(child)) return true;
-  }
-  return false;
+  return layoutReaches(src, /<\s*ShellSurface\b[^>]*measure\s*=/);
 }
 
 function measure() {
@@ -534,6 +529,12 @@ function measure() {
     }
   }
 
+  // ⛔ Κ6 — η στήλη του μέτρου δεν δέχεται οριζόντιο κενό (ADR-797 §Φ.Κ6).
+  for (const hit of findMeasureColumnGaps(REPO)) {
+    flag(`${hit.file}:${hit.line}`, 'measure-column-gap', hit.file,
+      `«${hit.klass}» σε πλέγμα μέτρου — τρεις στήλες ⇒ δύο column-gaps που στο κινητό ΞΕΠΕΡΝΟΥΝ την οθόνη· γράψε gap-y-*`);
+  }
+
   // fail-closed: κλειστή λογιστική, ΔΥΟ κατάστιχα. Άγνωστη κατάσταση δεν χάνεται
   // σιωπηλά — και τα δύο μεγέθη μετρώνται ανεξάρτητα από τα ευρήματα.
   const counted = Object.values(tally).reduce((a, b) => a + b, 0);
@@ -608,6 +609,8 @@ const ZERO_TOL = new Set([
   'orphan-viewport-declaration',
   'viewport-marker-not-at-root',
   'viewport-with-measure',
+  // Κ6 — ADR-797 §Φ.Κ6: μετρημένα 7 → 0 στο ίδιο commit, άρα τίποτα για ratchet.
+  'measure-column-gap',
 ]);
 
 /** Οι ratcheted — **εκστρατείες που τελειώνουν στο μηδέν**, όχι δείκτες υγείας. */

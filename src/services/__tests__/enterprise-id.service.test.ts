@@ -262,6 +262,19 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicNetworkAwayId',
       'generateDeterministicNetworkBlockId',
       'generateDeterministicNetworkRelationshipThreadId',
+      // ADR-777 §8.72/§8.74 · ADR-835 §21/§22 — προστέθηκαν ΧΩΡΙΣ δήλωση και κοκκίνιζαν αυτή τη σουίτα
+      // (βρέθηκε 2026-09-25, ADR-884 Κ1). Όλα «ένα ανά κλειδί»: στατιστικά/σημάδι/αλάτι/θραύσμα ανά
+      // (αγγελία, ημέρα), αποθήκευση ανά (άνθρωπο, αγγελία), μήνας/εξωτερική φραγή ανά πηγή.
+      'generateDeterministicListingStatsId',
+      'generateDeterministicListingViewMarkId',
+      'generateDeterministicListingViewSaltId',
+      'generateDeterministicListingViewShardId',
+      'generateDeterministicSavedListingId',
+      'generateDeterministicStayCalendarMonthId',
+      'generateDeterministicStayExternalBlockId',
+      // ADR-884 Φ0.7 — ΜΙΑ περιήγηση ανά ρίζα αγγελίας, ΕΝΑ αίτημα θέασης ανά (περιήγηση, άνθρωπο).
+      'generateDeterministicSpatialTourId',
+      'generateDeterministicTourAccessRequestId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -351,6 +364,17 @@ describe('EnterpriseIdService', () => {
       //    ίδιο σχήμα με το `wacr`). Καταγεγραμμένο από τον ίδιο τον γεννήτορα, 2026-09-19.
       generateDeterministicNetworkMessageId: 'nmsg_4e71aa59-cb50-4751-803e-556f9c4a46d0',
       generateDeterministicNetworkRelationshipThreadId: 'nthr_6b688050-cdbb-459e-850d-70f955dfb818',
+      // Καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-09-25 (ADR-884 Κ1). Όπου ο γεννήτορας παίρνει
+      //    δύο παραμέτρους, ο σπόρος είναι `'anchor-seed:undefined'` — ίδιο uuid με το `wacr` (βλ. πάνω).
+      generateDeterministicListingStatsId: 'lsta_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicListingViewMarkId: 'lvmk_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicListingViewSaltId: 'lvsl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicListingViewShardId: 'lvsh_e31c49a5-a538-4f0c-8e0c-016178fda0f3',
+      generateDeterministicSavedListingId: 'svls_aa044400-10b9-4583-865f-97901fb1d075',
+      generateDeterministicSpatialTourId: 'stour_aa044400-10b9-4583-865f-97901fb1d075',
+      generateDeterministicStayCalendarMonthId: 'scmo_aa044400-10b9-4583-865f-97901fb1d075',
+      generateDeterministicStayExternalBlockId: 'sblk_aa044400-10b9-4583-865f-97901fb1d075',
+      generateDeterministicTourAccessRequestId: 'tacr_aa044400-10b9-4583-865f-97901fb1d075',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

@@ -17,6 +17,7 @@ import 'server-only';
 import type { AuthContext, PermissionId, GrantScope } from './types';
 import { isValidPermission, isValidGrantScope } from './types';
 import { isRoleBypass, getRolePermissions } from './roles';
+import { evaluateScopedGrant, type ScopedGrantVerdict } from './scoped-grant';
 import { getPermissionSetPermissions, requiresMfaEnrollment } from './permission-sets';
 // ADR-801 §2.8 — το «πού ψάχνω» ζει χωριστά από το «τι αποφασίζω».
 import {
@@ -71,6 +72,7 @@ export type PermissionDeniedReason =
   | 'permission_not_in_role'
   | 'mfa_required'
   | 'grant_expired'
+  | 'grant_revoked'
   | 'grant_not_found';
 
 /**
@@ -183,28 +185,11 @@ export async function checkPermission(
       return { granted: false, reason: 'grant_not_found' };
     }
 
-    // Check if grant is expired
-    const now = new Date();
-    const expiresAt = grant.expiresAt instanceof Date
-      ? grant.expiresAt
-      : new Date(grant.expiresAt);
-
-    if (expiresAt < now) {
-      return { granted: false, reason: 'grant_expired' };
-    }
-
-    // Check if grant was revoked
-    if (grant.revokedAt) {
-      return { granted: false, reason: 'grant_expired' };
-    }
-
-    // Map permission to grant scope
+    // Ο ΕΝΑΣ έλεγχος «ανακλήθηκε; έληξε; καλύπτει το εύρος;» (ADR-884 Φ0.5) — διαβάζει
+    // Timestamp/ISO/Date και αρνείται ό,τι δεν διαβάζεται (πριν: `new Date(Timestamp)` ⇒ ποτέ λήξη).
     const grantScope = permissionToGrantScope(permission);
-    if (grantScope && grant.scopes.includes(grantScope)) {
-      return { granted: true, reason: null, source: 'unit_grant' };
-    }
-
-    return { granted: false, reason: 'permission_not_in_role' };
+    if (!grantScope) return { granted: false, reason: 'permission_not_in_role' };
+    return grantVerdictToResult(evaluateScopedGrant(grant, grantScope, Date.now()));
   }
 
   // ===========================================================================
@@ -258,6 +243,19 @@ export async function checkPermission(
  * @param permission - Permission ID
  * @returns Grant scope or null
  */
+/** Ετυμηγορία άδειας → αποτέλεσμα ελέγχου. Η ανάκληση κρατά **δικό της** λόγο — δεν είναι λήξη. */
+const GRANT_VERDICT_RESULT: Readonly<Record<ScopedGrantVerdict, PermissionCheckResult>> = {
+  granted: { granted: true, reason: null, source: 'unit_grant' },
+  revoked: { granted: false, reason: 'grant_revoked' },
+  expired: { granted: false, reason: 'grant_expired' },
+  'unreadable-expiry': { granted: false, reason: 'grant_expired' },
+  'scope-missing': { granted: false, reason: 'permission_not_in_role' },
+};
+
+function grantVerdictToResult(verdict: ScopedGrantVerdict): PermissionCheckResult {
+  return { ...GRANT_VERDICT_RESULT[verdict] };
+}
+
 function permissionToGrantScope(permission: PermissionId): GrantScope | null {
   // Map common permissions to grant scopes
   const mapping: Partial<Record<PermissionId, GrantScope>> = {

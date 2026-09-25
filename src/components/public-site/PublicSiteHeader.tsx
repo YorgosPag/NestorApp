@@ -58,15 +58,17 @@ import { SidebarTrigger } from '@/components/ui/sidebar-trigger';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
-import { SEARCH_LANDING_ROUTE, SHORT_STAY_LANDING_ROUTE } from '@/lib/listings/listing-routes';
-import { AGENCY_DIRECTORY_ROUTE } from '@/components/mandate/agency-directory-route';
-import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
-import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { PublicSiteMenu } from './PublicSiteMenu';
+import { PUBLIC_SITE_DOORS, PUBLIC_SITE_PRIMARY_ACTION, PUBLIC_SITE_SPOKES } from './public-site-nav';
 
-/** Οι σύνδεσμοι των ακτίνων (§8.82) — πλοήγηση, όχι πράξη: χωρίς πλαίσιο, από `md` και πάνω. */
+/** Οι σύνδεσμοι των ακτίνων (§8.82) — πλοήγηση, όχι πράξη: χωρίς πλαίσιο, από `lg` και πάνω. */
 const SPOKE_LINK_CLASS =
-  'hidden rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground md:inline-flex';
+  'hidden rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground lg:inline-flex';
+/** Οι πόρτες του ιδιώτη — από `lg`· κάτω από αυτό ζουν στο συρτάρι (ADR-809 §9). */
+const DOOR_LINK_CLASS =
+  'hidden whitespace-nowrap rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground lg:inline-flex';
 
 export function PublicSiteHeader() {
   // ⚠️ Το `'search-results'` ήταν γραμμένο **τρεις φορές** στον ίδιο πίνακα — ο i18next
@@ -90,13 +92,17 @@ export function PublicSiteHeader() {
         aria-label={t('search-results:site.nav')}
         // Με στήλη η κεφαλίδα απλώνεται σε όλο το inset, όπως στο γραφείο: αλλιώς το ☰
         // κάθεται στη μέση της οθόνης, μακριά από τη στήλη που ελέγχει (ADR-871 §11).
-        className={`flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6${hasSidebar ? '' : ' mx-auto max-w-5xl'}`}
+        className={`flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6 md:gap-4${hasSidebar ? '' : ' mx-auto max-w-5xl'}`}
       >
-        <div className="flex items-center gap-2">
-        {hasSidebar && <SidebarTrigger />}
+        <div className="flex min-w-0 items-center gap-2">
+        {/*
+          📱 **ΜΙΑ ΘΕΣΗ ☰ ΣΕ ΟΛΗ ΤΗΝ ΕΦΑΡΜΟΓΗ** (ADR-809 §9): με στήλη, το ☰ της στήλης·
+          χωρίς, το «☰ Μενού» του δημόσιου ιστότοπου — και τα δύο **αριστερά**, πριν το λογότυπο.
+        */}
+        {hasSidebar ? <SidebarTrigger /> : <PublicSiteMenu />}
         <Link
           href={SEARCH_LANDING_ROUTE}
-          className={`text-base font-semibold tracking-tight text-foreground${hasSidebar ? ' md:hidden' : ''}`}
+          className={`shrink-0 whitespace-nowrap text-base font-semibold tracking-tight text-foreground${hasSidebar ? ' md:hidden' : ''}`}
           aria-label={t('search-results:site.home')}
         >
           {/*
@@ -118,25 +124,15 @@ export function PublicSiteHeader() {
           ⚠️ Από `md` και πάνω: στο κινητό τις ανοίγουν οι καρτέλες της αρχικής, και πέντε
           σύνδεσμοι + CTA σε 375px θα έσπαγαν τη γραμμή.
         */}
-        {!hasSidebar && (
-          <>
-            <Link
-              href={AGENCY_DIRECTORY_ROUTE}
-              className={SPOKE_LINK_CLASS}
-            >
-              {t('search-results:landing.modes.pros')}
+        {!hasSidebar &&
+          PUBLIC_SITE_SPOKES.map((spoke) => (
+            <Link key={spoke.id} href={spoke.href} className={SPOKE_LINK_CLASS}>
+              {t(spoke.labelKey)}
             </Link>
-            <Link
-              href={SHORT_STAY_LANDING_ROUTE}
-              className={SPOKE_LINK_CLASS}
-            >
-              {t('search-results:landing.modes.stay')}
-            </Link>
-          </>
-        )}
+          ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {/*
             🔑 **Η πόρτα του ιδιώτη.** Δείχνει στον **κατάλογο** (`/demands`), όχι στη
             φόρμα: ο `(me)/layout.tsx` ζητά ταυτότητα, οπότε ο ανώνυμος περνά από τη
@@ -144,15 +140,6 @@ export function PublicSiteHeader() {
             προς `/demands/new` θα τον έστελνε, σε κινητό, σε οθόνη που λέει «όχι εδώ»
             (Α8). Η πόρτα οφείλει να ανοίγει σε **κάθε** συσκευή.
           */}
-          {!hasSidebar && (
-          <Link
-            href={MY_DEMANDS_ROUTE}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
-          >
-            {t('property-market:demand.door.label')}
-          </Link>
-          )}
-
           {/*
             ✅ **Η ΤΡΙΤΗ ΠΟΡΤΑ — «ΠΡΟΣΦΕΡΩ» (2026-08-11, Α14).** Η δεύτερη προϋπόθεση
             εκπληρώθηκε: υπάρχουν πλέον **και διαδρομή** (`/offers`) **και οντότητα**
@@ -164,14 +151,16 @@ export function PublicSiteHeader() {
             **αποκλειστικά desktop** (Α8), ενώ η πόρτα οφείλει να ανοίγει σε **κάθε**
             συσκευή.
           */}
-          {!hasSidebar && (
-          <Link
-            href={MY_OFFERS_ROUTE}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
-          >
-            {t('property-market:offer.door.label')}
-          </Link>
-          )}
+          {/*
+            📱 **ΑΠΟ `lg` ΚΑΙ ΠΑΝΩ** (ADR-809 §9): κάτω από αυτό οι πόρτες ζουν στο συρτάρι
+            του «☰ Μενού» — ίδια λίστα (`PUBLIC_SITE_DOORS`), ίδιες ετικέτες, ίδιοι προορισμοί.
+          */}
+          {!hasSidebar &&
+            PUBLIC_SITE_DOORS.map((door) => (
+              <Link key={door.id} href={door.href} className={DOOR_LINK_CLASS}>
+                {t(door.labelKey)}
+              </Link>
+            ))}
 
           {/*
             ✅ **ΤΟ CTA — Η ΚΥΡΙΑ ΠΡΑΞΗ (2026-08-23, ADR-660 §5.11 / §5.8 κενό Β).**
@@ -200,11 +189,13 @@ export function PublicSiteHeader() {
           {/* ADR-871 §11 (Giorgio 2026-09-21): με στήλη, από `md` και πάνω η πράξη ζει ήδη
               στην κορυφή της στήλης — δεύτερη φορά στην ίδια οθόνη θα ήταν θόρυβος. Στο
               κινητό η στήλη είναι συρτάρι, οπότε εδώ μένει η μόνη ορατή πόρτα. */}
+          {/* 📱 Χωρίς στήλη, κάτω από `lg` η πράξη ζει στο συρτάρι: εκεί η φόρμα είναι ούτως ή
+              άλλως desktop-only (Α8), και η μπάρα κρατά χώρο για την ταυτότητα (ADR-809 §9). */}
           <Link
-            href={NEW_OFFER_ROUTE}
-            className={`rounded-md px-3 py-1.5 text-sm font-semibold ${COLOR_BRIDGE.action.primary}${hasSidebar ? ' md:hidden' : ''}`}
+            href={PUBLIC_SITE_PRIMARY_ACTION.href}
+            className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-semibold ${COLOR_BRIDGE.action.primary}${hasSidebar ? ' md:hidden' : ' hidden lg:inline-flex'}`}
           >
-            {t('property-market:offer.door.cta')}
+            {t(PUBLIC_SITE_PRIMARY_ACTION.labelKey)}
           </Link>
 
           {/*
@@ -243,10 +234,11 @@ export function PublicSiteHeader() {
             αφορά τους **9 βαρείς providers + sidebar** — που δεν αγγίζονται.
           */}
           <ShellUtilities
+            collapsePreferences={!hasSidebar}
             signedOutAction={
               <Link
                 href={AUTH_ROUTES.login}
-                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
+                className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
               >
                 {t('search-results:site.signIn')}
               </Link>

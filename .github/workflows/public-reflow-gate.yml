@@ -1,0 +1,132 @@
+# CHECK 3.94 — Πύλη αναδιάταξης δημόσιων σελίδων (ADR-797 §Φ.Ρ · WCAG 2.2 SC 1.4.10)
+#
+# «Χωράει κάθε στοιχείο στην οθόνη — ή κάτι κόβεται σιωπηλά στη δεξιά άκρη;»
+#
+# Μετρημένο 2026-09-25 στα 390 px: η αρχική έκοβε ΠΕΝΤΕ μπλοκ (ως τα 436 px) ενώ
+# `scrollWidth` = 390 — ο καθολικός `overflow-x: clip` του globals.css το έκρυβε.
+# Κανένα jest δεν μπορεί να το δει (το jsdom δεν έχει διάταξη) → dev server + Chromium.
+name: T2 📱 Public Reflow Gate (CHECK 3.94)
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/public-site/**'
+      - 'src/components/search/**'
+      - 'src/components/shared/landing-hero/**'
+      - 'src/components/mandate/**'
+      - 'src/components/short-stay-landing/**'
+      - 'src/core/containers/ShellUtilities.tsx'
+      - 'src/core/containers/ShellSurface.tsx'
+      - 'src/components/header/**'
+      - 'src/components/ui/tabs.tsx'
+      - 'src/components/ui/sheet.tsx'
+      - 'src/app/(light)/**'
+      - 'src/app/shell-surface.css'
+      - 'src/app/globals.css'
+      - 'src/i18n/locales/el/**'
+      - 'tailwind.config.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/public-reflow-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/public-site/**'
+      - 'src/components/search/**'
+      - 'src/components/shared/landing-hero/**'
+      - 'src/components/mandate/**'
+      - 'src/components/short-stay-landing/**'
+      - 'src/core/containers/ShellUtilities.tsx'
+      - 'src/core/containers/ShellSurface.tsx'
+      - 'src/components/header/**'
+      - 'src/components/ui/tabs.tsx'
+      - 'src/components/ui/sheet.tsx'
+      - 'src/app/(light)/**'
+      - 'src/app/shell-surface.css'
+      - 'src/app/globals.css'
+      - 'src/i18n/locales/el/**'
+      - 'tailwind.config.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/public-reflow-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-reflow-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  reflow:
+    name: 📱 CHECK 3.94 — χωράει κάθε στοιχείο στην οθόνη; (4 σελίδες × 6 πλάτη × 2 θέματα)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # Ίδια ψεύτικα κλειδιά με το 3.82: οι σελίδες αποδίδονται ανώνυμες, χωρίς δίκτυο προς
+    # Firebase — η πύλη κρίνει τη ΔΙΑΤΑΞΗ του κελύφους/ήρωα/πορτών, όχι δεδομένα.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-public-reflow-no-network
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-public-reflow
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-public-reflow.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🌐 Install chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 🚀 Start dev server
+        run: pnpm run dev > /tmp/dev-server.log 2>&1 &
+
+      - name: ⏳ Wait for the landing page
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" http://localhost:3000/ || echo 000)
+            [ "$code" = "200" ] && echo "η αρχική έτοιμη μετά ${i}0s" && exit 0
+            sleep 10
+          done
+          echo "::error::η αρχική δεν απάντησε 200 σε 600s (τελευταίος κώδικας $code)"
+          tail -80 /tmp/dev-server.log
+          exit 1
+
+      - name: 📱 CHECK 3.94 — η πύλη αναδιάταξης
+        env:
+          PLAYWRIGHT_WEB_SERVER_URL: http://localhost:3000/
+        run: pnpm run test:public-reflow
+
+      - name: 📤 Upload playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-reflow-report
+          path: |
+            playwright-report/
+            reports/junit/playwright.xml
+          if-no-files-found: warn
+
+      - name: 📤 Upload dev server log
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-reflow-dev-server-log
+          path: /tmp/dev-server.log
+          if-no-files-found: warn

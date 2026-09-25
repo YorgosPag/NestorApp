@@ -135,7 +135,7 @@ function Notice({
   readonly action: string;
 }): React.JSX.Element {
   return (
-    <ShellSurface as="main" measure="prose" className="gap-3">
+    <ShellSurface as="main" measure="prose" className="gap-y-3">
       <h1 className="m-0 text-2xl font-semibold text-foreground">{title}</h1>
       <p className="m-0 text-muted-foreground">{body}</p>
       <nav className="mt-2">
@@ -335,7 +335,7 @@ function ShowcaseView({
   const closure = registryClosureOf(profile);
 
   return (
-    <ShellSurface as="main" measure="prose" className="gap-6">
+    <ShellSurface as="main" measure="prose" className="gap-y-6">
       {/*
         🔴 ADR-841 Α21 — ΤΟ **ΙΔΙΟ** ΣΗΜΑ ΜΕ ΤΗΝ ΚΑΡΤΑ, ΣΕ ΑΛΛΟ ΜΕΓΕΘΟΣ.
         Ίδια συνάρτηση (`lettermarkOf`), ίδιο component — άρα ο ίδιος επαγγελματίας

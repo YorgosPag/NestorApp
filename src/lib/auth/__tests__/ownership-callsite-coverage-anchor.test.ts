@@ -152,6 +152,11 @@ const PROVEN_AFTER_PHASE_C: Readonly<Record<string, Classification>> = {
     kind: 'empty-pair',
     suite: 'src/server/auth/__tests__/workspace-invitation.test.ts',
   },
+  // ADR-884 Φ0.12 — η ανάκληση κοινοποίησης μετακόμισε στον διακομιστή (ADR-315).
+  'server/sharing/share-revoke.ts': {
+    kind: 'empty-pair',
+    suite: 'src/server/sharing/__tests__/share-create-revoke.test.ts',
+  },
 };
 
 /** Κάθε σημείο με **απόδειξη** — ό,τι ελέγχει ο πίνακας «η σουίτα ονομάζει τη διαδρομή». */
@@ -329,10 +334,17 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
       expect(doubled).toEqual([]);
     });
 
-    test('και τα τρία αποδεικνύονται με ζεύγος κενό/κενό (μετάλλαξη 3/3)', () => {
-      const kinds = Object.values(PROVEN_AFTER_PHASE_C).map(c => c.kind);
+    /**
+     * Όλα — όχι «τα τρία»: ο αριθμός μεγαλώνει με κάθε νέο σημείο (4ο: `share-revoke`,
+     * ADR-884 Φ0.12), το δόγμα όχι. Ο «ανάντη φύλακας» ανήκει στην ιστορική περίμετρο.
+     */
+    test('ΟΛΑ αποδεικνύονται με ζεύγος κενό/κενό — κανένα «upstream-guarded»', () => {
+      const notEmptyPair = Object.entries(PROVEN_AFTER_PHASE_C)
+        .filter(([, c]) => c.kind !== 'empty-pair')
+        .map(([file]) => file);
 
-      expect(kinds).toEqual(['empty-pair', 'empty-pair', 'empty-pair']);
+      expect(Object.keys(PROVEN_AFTER_PHASE_C).length).toBeGreaterThan(0);
+      expect(notEmptyPair).toEqual([]);
     });
   });
 });

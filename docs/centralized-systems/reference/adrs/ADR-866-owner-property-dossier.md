@@ -1563,6 +1563,8 @@ FILE_COLLECTION = { company: 'FILES', personal: 'FILES_PERSONAL' } satisfies Cus
 ακινήτου, όσο ισχύει η εντολή»*. Τα πεδία ακολουθούν το διεθνές πρότυπο **IPTC Photo Metadata** (Creator ·
 Copyright Notice · Licensor) ώστε να ταξιδεύουν και μέσα στο αρχείο κατά την εξαγωγή.
 
+> 🔗 **Ο τύπος υπάρχει ήδη** (ADR-884 Κ1, 2026-09-25): `MediaRights` στο `src/types/media-rights.ts` — δημιουργός · έως 3 δικαιούχοι · δήλωση πνευματικών δικαιωμάτων · άδεια = σκοπός (`listing-marketing` / `owner-reuse` / `unrestricted`) + διάρκεια (`mandate` — **όσο ισχύει η εντολή**, χωρίς αποθηκευμένη ημερομηνία · `date` · `perpetual`). Ανάγνωση: `readMediaRights` · ισχύς: `mediaLicenseStanding` (`src/lib/media-rights/`). Η Φ3 αυτού του ADR **τον εισάγει** — δεν γράφει δεύτερο.
+
 🏆 **Πέρα από τους μεγάλους:**
 
 | # | Δυνατότητα | Τι λύνει |

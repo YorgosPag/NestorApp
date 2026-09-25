@@ -220,7 +220,11 @@ export class BackupService {
   async exportAllSubcollections(
     onProgress?: StatusCallback,
   ): Promise<SubcollectionExportResult[]> {
-    const subcollectionEntries = Object.entries(SUBCOLLECTION_PARENTS) as [string, string][];
+    // Μία υποσυλλογή μπορεί να ζει κάτω από ΔΥΟ γονείς (διαμερίσματα κατόχου, ADR-884 Φ0.2) ⇒ ένα
+    // πέρασμα ανά (υποσυλλογή, γονέα). Το restore δουλεύει ήδη ανά εγγραφή του manifest.
+    const subcollectionEntries = Object.entries(SUBCOLLECTION_PARENTS).flatMap(([subKey, parents]) =>
+      (typeof parents === 'string' ? [parents] : parents).map((parentKey) => [subKey, parentKey] as const),
+    );
     const results: SubcollectionExportResult[] = [];
 
     for (const [subKey, parentKey] of subcollectionEntries) {

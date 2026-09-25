@@ -1,0 +1,30 @@
+/**
+ * **Σβήσιμο της άκρης όπου η λωρίδα ΣΥΝΕΧΙΖΕΙ** — ζευγάρι του `useScrollEdges` (ADR-777 §8.79).
+ *
+ * ⚠️ Μάσκα, όχι επικάλυψη χρώματος: μια διαβάθμιση `from-card` πάνω στις καρτέλες θα έπρεπε να
+ * ξέρει το χρώμα του γονέα σε ΚΑΙ ΤΑ ΔΥΟ θέματα (και θα έσπαγε όταν η λωρίδα ζει σε άλλη
+ * επιφάνεια). Η μάσκα διαβάζει μόνο ΔΙΑΦΑΝΕΙΑ ⇒ ουδέτερη θέματος — το `black` εδώ σημαίνει
+ * «πλήρως ορατό», δεν βάφει τίποτα.
+ */
+
+.fade {
+  --scroll-edge-fade: 2.5rem;
+}
+
+.fade[data-scroll-edges='end'] {
+  mask-image: linear-gradient(to right, black calc(100% - var(--scroll-edge-fade)), transparent);
+}
+
+.fade[data-scroll-edges='start'] {
+  mask-image: linear-gradient(to left, black calc(100% - var(--scroll-edge-fade)), transparent);
+}
+
+.fade[data-scroll-edges='both'] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--scroll-edge-fade),
+    black calc(100% - var(--scroll-edge-fade)),
+    transparent
+  );
+}

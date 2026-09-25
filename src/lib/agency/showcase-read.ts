@@ -63,7 +63,7 @@ import { readPlace, readWebsite, text } from '@/lib/agency/showcase-read-primiti
 import { readLocations } from '@/lib/agency/showcase-read-locations';
 import { readLegalIdentity } from '@/lib/agency/showcase-read-legal-identity';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
-import { isRegistryAuthority, isChapteredRegistry } from '@/constants/professional-registries';
+import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
 
 /**
  * Η **κανονική** ειδικότητα του μεσίτη — για τη μετανάστευση των παλιών εγγράφων.
@@ -141,30 +141,6 @@ function readOccupation(raw: unknown): ClassifiedOccupation | null {
   //    είναι ακριβώς η βλάβη που ο τύπος `EscoBilingualText` υπάρχει να κλείσει.
   if (escoUri === null || iscoCode === null || el === null || en === null) return null;
   return { escoUri, iscoCode, label: { el, en } };
-}
-
-/** Διαβάζει την απόδειξη. Η **απουσία** είναι έγκυρη — είναι το `unknown`. */
-function readAttestation(raw: unknown): ProfessionalAttestation | null {
-  if (raw === undefined || raw === null) return { state: 'unknown' };
-  if (typeof raw !== 'object') return null;
-  const source = raw as Record<string, unknown>;
-
-  const state = source.state;
-  if (state === 'unknown') return { state: 'unknown' };
-  if (state !== 'declared' && state !== 'verified') return null;
-
-  const registration = source.registration as Record<string, unknown> | undefined;
-  const authority = text(registration?.authority);
-  const number = text(registration?.number);
-  if (authority === null || number === null || !isRegistryAuthority(authority)) return null;
-
-  if (isChapteredRegistry(authority)) {
-    const chapter = text(registration?.chapter);
-    // 🔒 Η Α9.1 στο σύνορο: «1234» χωρίς «ΔΣΘ» δεν επαληθεύεται από κανέναν.
-    if (chapter === null) return null;
-    return { state, registration: { authorityKind: 'chapter', authority, chapter, number } };
-  }
-  return { state, registration: { authorityKind: 'national', authority, number } };
 }
 
 /**
@@ -301,7 +277,7 @@ function readCredentials(source: Record<string, unknown>): readonly ShowcaseCred
       if (typeof entry !== 'object' || entry === null) continue;
       const row = entry as Record<string, unknown>;
       const occupation = readOccupation(row.occupation);
-      const attestation = readAttestation(row.attestation);
+      const attestation = readProfessionalAttestation(row.attestation);
       if (occupation === null || attestation === null) continue;
       const credential = asCredential(occupation, attestation);
       if (credential !== null) read.push(credential);

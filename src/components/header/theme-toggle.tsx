@@ -17,7 +17,21 @@ import { Moon, Sun, Monitor } from "lucide-react"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useTranslation } from '@/i18n/hooks/useTranslation'
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control'
 import '@/lib/design-system';
+
+/**
+ * 🔑 **ΟΙ ΕΠΙΛΟΓΕΣ ΘΕΜΑΤΟΣ — ΜΙΑ ΛΙΣΤΑ, ΔΥΟ ΠΑΡΟΥΣΙΑΣΕΙΣ** (ADR-809 §9).
+ * Το αναπτυσσόμενο της μπάρας και η σειρά κουμπιών του μενού κινητού διαβάζουν την
+ * **ίδια** λίστα — δεύτερη χειρόγραφη λίστα θα απέκλινε στην πρώτη νέα επιλογή.
+ */
+const THEME_OPTIONS = [
+  { value: 'light', icon: Sun, labelKey: 'theme.light' },
+  { value: 'dark', icon: Moon, labelKey: 'theme.dark' },
+  { value: 'system', icon: Monitor, labelKey: 'theme.system' },
+] as const;
+
+type ThemeChoice = (typeof THEME_OPTIONS)[number]['value'];
 
 export function ThemeToggle() {
   const iconSizes = useIconSizes();
@@ -43,20 +57,44 @@ export function ThemeToggle() {
         <DropdownMenuLabel>{t('theme.title')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light">
-            <Sun className={`mr-2 ${iconSizes.sm}`} />
-            <span>{t('theme.light')}</span>
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">
-            <Moon className={`mr-2 ${iconSizes.sm}`} />
-            <span>{t('theme.dark')}</span>
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">
-            <Monitor className={`mr-2 ${iconSizes.sm}`} />
-            <span>{t('theme.system')}</span>
-          </DropdownMenuRadioItem>
+          {THEME_OPTIONS.map((option) => (
+            <DropdownMenuRadioItem key={option.value} value={option.value}>
+              <option.icon className={`mr-2 ${iconSizes.sm}`} />
+              <span>{t(option.labelKey)}</span>
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+/**
+ * **Το θέμα ως ορατή σειρά επιλογών** — για επιφάνειες όπου ένα αναπτυσσόμενο μέσα σε
+ * συρτάρι θα ήταν δεύτερο επίπεδο κρυψίματος (μενού κινητού, ADR-809 §9).
+ * Ίδιος ιδιοκτήτης κατάστασης (`useHydratedTheme`, ADR-815), ίδια λίστα επιλογών.
+ */
+export function ThemeOptions({ labelledBy }: Readonly<{ labelledBy: string }>) {
+  const iconSizes = useIconSizes();
+  const { theme, setTheme } = useHydratedTheme()
+  const { t } = useTranslation(COMMON_NAMESPACES);
+  // Πριν την ενυδάτωση το `theme` είναι `undefined` (ADR-815) ⇒ «Σύστημα», η προεπιλογή του next-themes.
+  const current: ThemeChoice = THEME_OPTIONS.find((option) => option.value === theme)?.value ?? 'system';
+
+  return (
+    <SegmentedControl<ThemeChoice>
+      aria-labelledby={labelledBy}
+      value={current}
+      onValueChange={setTheme}
+      className="grid w-full grid-cols-3"
+    >
+      {THEME_OPTIONS.map((option) => (
+        <SegmentedControlItem key={option.value} value={option.value} className="min-h-11 w-full gap-2">
+          <option.icon className={iconSizes.sm} aria-hidden="true" />
+          {/* Πρόσβαση ιδιότητας, όχι αποδόμηση: τη λύνει ο generator του κελύφους (ADR-744 §2). */}
+          <span>{t(option.labelKey)}</span>
+        </SegmentedControlItem>
+      ))}
+    </SegmentedControl>
   )
 }

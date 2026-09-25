@@ -19,6 +19,8 @@
  *     ↑ extends
  *   SavedListingIdGenerators     (ADR-777 §8.74 — αποθήκευση αγγελίας)
  *     ↑ extends
+ *   SpatialTourIdGenerators      (ADR-884 Φ0.7 — χωρική περιήγηση)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (this file)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engine: retry loop, cache, stats)
@@ -49,9 +51,9 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { SavedListingIdGenerators } from './enterprise-id-saved-listing-generators';
+import { SpatialTourIdGenerators } from './enterprise-id-spatial-tour-generators';
 
-export abstract class CompositeKeyIdGenerators extends SavedListingIdGenerators {
+export abstract class CompositeKeyIdGenerators extends SpatialTourIdGenerators {
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
   // (N.7.1 — καμία κατάσταση εδώ: ο βρόχος επανάληψης, η μνήμη και τα στατιστικά

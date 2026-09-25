@@ -221,6 +221,12 @@ export const ENTERPRISE_ID_PREFIXES = {
                               // αγγελία: η απόσυρση σβήνει την προβολή, όχι την ιστορία (μάθημα §8.61).
   SAVED_LISTING: 'svls',      // ADR-777 §8.74: «ΤΗΝ ΚΡΑΤΗΣΑ» — μία ανά (άνθρωπο, αγγελία), ντετερμινιστική ⇒
                               // το δεύτερο κλικ βρίσκει το ίδιο έγγραφο. Η αφαίρεση το ΣΒΗΝΕΙ (ελαχιστοποίηση).
+  // ADR-884 Φ0.7 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ (πανοράματα 360° + BIM σε ΕΝΑ χώρο).
+  SPATIAL_TOUR: 'stour',      // ντετερμινιστικό από (είδος ρίζας, id) ⇒ ΜΙΑ περιήγηση ανά αγγελία
+  TOUR_NODE: 'tnod',          // σημείο στον χώρο — σταθερό στον χρόνο
+  TOUR_CAPTURE: 'tcap',       // μία λήψη του σημείου, σε μία ημερομηνία (χρονολόγιο)
+  TOUR_ACCESS_REQUEST: 'tacr', // ντετερμινιστικό από (περιήγηση, άνθρωπο) ⇒ ένα αίτημα θέασης ανά άνθρωπο
+  TOUR_CAPTURE_INVITATION: 'tcin', // πρόσκληση φωτογράφου· επαναποστολή = νέο id, το παλιό `superseded`
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
   PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο

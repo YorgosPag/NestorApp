@@ -466,7 +466,7 @@ function readOutcome(status: number, body: unknown): SubmitOutcome {
 function Outcome({ title, body }: { title: string; body: string }): React.JSX.Element {
   const { t } = useTranslation([MANDATE_REQUEST_NS]);
   return (
-    <ShellSurface as="main" measure="prose" className="gap-4">
+    <ShellSurface as="main" measure="prose" className="gap-y-4">
       <h1 className="m-0 text-2xl font-semibold text-foreground">{title}</h1>
       <p className="m-0 text-sm text-muted-foreground">{body}</p>
       <nav>

@@ -27,6 +27,7 @@ const DEDICATED_SPECS = {
   visualBim3d: '**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts',
   cameraMotion: '**/test-harness/camera-motion/camera-motion.e2e.spec.ts',
   addressFieldWidth: '**/test-harness/address-field-width/address-field-width.e2e.spec.ts',
+  publicReflow: '**/public-site/reflow/public-reflow.e2e.spec.ts',
 } as const;
 
 /** Ό,τι ανήκει σε ειδικό project, ΔΕΝ ανήκει στα γενικά. Παράγεται — ποτέ δεύτερη λίστα. */
@@ -221,6 +222,27 @@ export default defineConfig({
       },
       testMatch: [DEDICATED_SPECS.addressFieldWidth],
       timeout: 300000,
+    },
+    {
+      /*
+        📱 CHECK 3.94 (ADR-797 §Φ.Ρ) — «χωράει κάθε στοιχείο στην οθόνη;» στις ΠΡΑΓΜΑΤΙΚΕΣ
+        δημόσιες σελίδες, σε 320–1024 px, σε δύο θέματα. Το πλάτος το ορίζει το ίδιο το spec
+        (`setViewportSize`) ανά περίπτωση· εδώ μόνο ό,τι είναι κοινό.
+
+        🔑 `el-GR`, για τον ίδιο λόγο με το 3.82: το πλάτος εξαρτάται από το ΜΗΚΟΣ του κειμένου,
+        και τα ελληνικά είναι το χειρότερο σενάριο («Επαγγελματίες» 13 χαρακτήρες έναντι
+        «Professionals»). Μέτρηση στα αγγλικά θα ήταν πράσινη πάνω στην ελληνική παραγωγή.
+        ⚠️ Καμία `snapshotPathTemplate`: κρίνει ΑΡΙΘΜΟΥΣ (ορθογώνια), όχι εικόνες.
+      */
+      name: 'public-reflow',
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+        navigationTimeout: 120000,
+        locale: 'el-GR',
+      },
+      testMatch: [DEDICATED_SPECS.publicReflow],
+      timeout: 180000,
     },
   ],
   webServer: {

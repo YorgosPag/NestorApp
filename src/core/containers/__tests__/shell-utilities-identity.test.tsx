@@ -20,7 +20,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
-import { ShellUtilities } from '@/core/containers/ShellUtilities';
+import { ShellPreferences, ShellUtilities } from '@/core/containers/ShellUtilities';
 
 // ---------------------------------------------------------------------------
 // Η ΜΟΝΗ είσοδος που μεταλλάσσεται: υπάρχει άνθρωπος;
@@ -39,6 +39,16 @@ jest.mock('@/hooks/useFirestoreNotifications', () => ({
 
 jest.mock('@/auth', () => ({
   useAuth: () => ({ user: currentUser, signOut: jest.fn() }),
+}));
+
+// ⚠️ 2026-09-25: από το ADR-871 Π5 (09-22) το `user-menu` → `menu-count-badge` → `useNetworkUnreadCount`
+//    εισάγει το `useAuth` από την ΑΜΕΣΗ διαδρομή του, όχι από το `@/auth` ⇒ φόρτωνε το πραγματικό
+//    `AuthContext` + i18n config και το suite ΔΕΝ ΕΤΡΕΧΕ ΚΑΘΟΛΟΥ. Ίδια απάντηση ταυτότητας, δεύτερη διαδρομή.
+jest.mock('@/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: currentUser, signOut: jest.fn() }),
+}));
+jest.mock('@/hooks/network-messaging/useNetworkUnreadCount', () => ({
+  useNetworkUnreadCount: () => null,
 }));
 
 jest.mock('@/lib/workspace/navigation', () => ({
@@ -170,5 +180,51 @@ describe('ADR-809 — η γωνία της ταυτότητας', () => {
     currentUser = ANONYMOUS;
     render(<ShellUtilities />);
     expect(screen.queryByText(SIGNED_OUT_DOOR)).not.toBeInTheDocument();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADR-809 §9 (2026-09-25) — στα 390 px η δεξιά ομάδα ήθελε 470 px σε 358.
+// Γλώσσα + θέμα ΜΕΤΑΚΟΜΙΖΟΥΝ στο μενού κάτω από `lg`· η ΤΑΥΤΟΤΗΤΑ μένει ορατή.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('ADR-809 §9 — οι προτιμήσεις μετακομίζουν, η ταυτότητα μένει', () => {
+  const wrapperOf = (container: HTMLElement, needle: string) =>
+    [...container.querySelectorAll('button')]
+      .find((b) => (b.textContent ?? '').includes(needle))
+      ?.closest('span.hidden');
+
+  test('Μ1 — collapsePreferences: γλώσσα ΚΑΙ θέμα κρύβονται κάτω από `lg` (μόνο CSS)', () => {
+    currentUser = SIGNED_IN;
+    const { container } = render(<ShellUtilities collapsePreferences />);
+    const lang = wrapperOf(container, 'header.changeLanguage');
+    expect(lang?.className).toBe('hidden lg:contents');
+    expect(wrapperOf(container, 'theme.toggle')).toBe(lang);
+  });
+
+  test('Μ2 — ...αλλά ο λογαριασμός ΔΕΝ μετακομίζει (μικτή πλοήγηση, NN/g)', () => {
+    currentUser = SIGNED_IN;
+    const { container } = render(<ShellUtilities collapsePreferences />);
+    const account = [...container.querySelectorAll('button')].find((b) =>
+      `${b.getAttribute('aria-label') ?? ''}${b.textContent ?? ''}`.includes('userMenu.menuLabel'));
+    expect(account).toBeDefined();
+    expect(account?.closest('span.hidden')).toBeNull();
+  });
+
+  test('Μ3 — ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς τη σημαία, τίποτα δεν κρύβεται (το `(me)` και το `(app)`)', () => {
+    currentUser = SIGNED_IN;
+    const { container } = render(<ShellUtilities />);
+    expect(container.querySelector('span.hidden')).toBeNull();
+  });
+
+  test('Μ4 — ShellPreferences: γλώσσα ΚΑΙ θέμα ως ΟΡΑΤΕΣ επιλογές, με ονομασμένη ομάδα', () => {
+    render(<ShellPreferences />);
+    const language = screen.getByRole('group', { name: 'header.language' });
+    const theme = screen.getByRole('group', { name: 'theme.title' });
+    expect(language.querySelectorAll('[role="radio"]').length).toBeGreaterThanOrEqual(2);
+    expect([...theme.querySelectorAll('[role="radio"]')].map((b) => b.textContent)).toEqual([
+      'theme.light', 'theme.dark', 'theme.system',
+    ]);
+    // Το mock του next-themes λέει «dark» ⇒ ΑΥΤΟ είναι πατημένο, όχι η προεπιλογή.
+    expect(theme.querySelector('[aria-checked="true"]')?.textContent).toBe('theme.dark');
   });
 });

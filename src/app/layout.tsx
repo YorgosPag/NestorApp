@@ -13,6 +13,7 @@ import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { AppUpdateBanner } from '@/components/app-update/AppUpdateBanner';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { PRODUCT_NAME } from '@/constants/product-identity';
+import { THEME_STORAGE_KEY } from '@/lib/appearance/theme-storage-key';
 
 /**
  * =============================================================================
@@ -126,7 +127,7 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
-          storageKey="theme-preference"
+          storageKey={THEME_STORAGE_KEY}
         >
           <I18nProvider>
             {/* 🏢 ENTERPRISE: TourProvider needed by ErrorBoundary's useTour() */}

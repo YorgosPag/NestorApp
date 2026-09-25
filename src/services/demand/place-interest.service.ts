@@ -53,15 +53,14 @@ import {
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
+import type { PlaceSource } from '@/constants/place-sources';
 
 // =============================================================================
 // 1. ΤΟ ΑΠΟΤΕΛΕΣΜΑ — ονομασμένο, κλειστό
 // =============================================================================
 
-/** Από ποια πλευρά ήρθε το ακίνητο. **Ονομασμένο**, ώστε η αναφορά να μη μαντεύει. */
-export const PLACE_SOURCES = ['owner-property', 'company-property'] as const;
-
-export type PlaceSource = (typeof PLACE_SOURCES)[number];
+// Η ρίζα του λεξιλογίου ζει σε φύλλο (ADR-884 Κ1)· επανεξάγεται ώστε οι καταναλωτές να μην αλλάξουν.
+export { PLACE_SOURCES, type PlaceSource } from '@/constants/place-sources';
 
 /**
  * **Το ακίνητο του αιτούντος, προβεβλημένο** — ή τίποτα.

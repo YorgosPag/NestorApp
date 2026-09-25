@@ -206,9 +206,25 @@ describe('ADR-841 §7 Α4.5 — ο αριθμός των πεδίων ανήκε
   // ===========================================================================
 
   describe('Κ2 — υποβάλλεις με ΕΣΤΩ ΕΝΑΝ άξονα', () => {
-    it('τίποτα-τίποτα ⇒ η υποβολή είναι ΝΕΚΡΗ (η πόρτα της Α4.4.2 το καλύπτει ήδη)', () => {
+    /**
+     * 🔑 **ΝΕΚΡΗ = ΔΕΝ ΠΛΟΗΓΕΙ, ΟΧΙ «ΓΚΡΙ ΚΟΥΜΠΙ»** (ADR-777 §8.79, 2026-09-25). Ήταν
+     * `toBeDisabled()`: ανενεργό κουμπί με `opacity-50` που δεν έλεγε ΓΙΑΤΙ και που ο
+     * αναγνώστης οθόνης προσπερνούσε. Το συμβόλαιο της Α4.5 μένει ΑΥΤΟΥΣΙΟ — τίποτα-τίποτα
+     * ΔΕΝ είναι αναζήτηση — απλώς πλέον το λέει: ορατό μήνυμα με ΤΙ λείπει.
+     */
+    it('τίποτα-τίποτα ⇒ η υποβολή είναι ΝΕΚΡΗ — και λέει ΤΙ λείπει (η πόρτα της Α4.4.2 το καλύπτει ήδη)', () => {
       render(<PlaceSearchBox mode="pros" occupations={OPTIONS} locale="el" />);
-      expect(submitButton()).toBeDisabled();
+      expect(submitButton()).toBeEnabled();
+      fireEvent.click(submitButton());
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(screen.getByText('common-shared:placeRecall.emptyQueryOrSpecialty')).toBeInTheDocument();
+    });
+
+    it('...και το μήνυμα ΣΒΗΝΕΙ μόλις δηλωθεί ειδικότητα (παύει να είναι αλήθεια)', () => {
+      render(<PlaceSearchBox mode="pros" occupations={OPTIONS} locale="el" />);
+      fireEvent.click(submitButton());
+      chooseOccupation(PAINTER_URI);
+      expect(screen.queryByText('common-shared:placeRecall.emptyQueryOrSpecialty')).not.toBeInTheDocument();
     });
 
     it('ΜΟΝΟ ειδικότητα ⇒ η υποβολή ζωντανεύει', () => {
@@ -307,7 +323,8 @@ describe('ADR-841 §7 Α4.5 — ο αριθμός των πεδίων ανήκε
       const remaining = occupationOptions([AGENCIES[1]], 'el');
       rerender(<PlaceSearchBox mode="pros" occupations={remaining} locale="el" />);
 
-      expect(submitButton()).toBeDisabled();
+      fireEvent.click(submitButton());
+      expect(pushSpy).not.toHaveBeenCalled();
     });
   });
 });
