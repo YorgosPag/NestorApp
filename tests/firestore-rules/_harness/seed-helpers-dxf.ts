@@ -236,19 +236,27 @@ export async function seedFileAuditLog(
 }
 
 /**
- * file_shares — public read, creator-only delete.
- * Seed: createdBy = same_tenant_user.uid so same_tenant_user can delete.
+ * Share links — `file_shares` and `shares` (ADR-884 Φ0.12: server-only).
+ * Seeded with the fields a client would want most: the token fingerprint, the
+ * password hash and the access counter — owned by the **same** tenant, so the
+ * suite proves that not even the owner reads or writes them from a client.
  */
-export async function seedFileShare(
+export async function seedShareLink(
   env: RulesTestEnvironment,
+  collection: 'file_shares' | 'shares',
   docId: string,
   opts?: SeedOptions,
 ): Promise<void> {
   await withSeedContext(env, async (ctx) => {
-    await ctx.firestore().collection('file_shares').doc(docId).set({
-      shareToken: `token-${docId}`,
-      fileId: `file-${docId}`,
-      downloadCount: 0,
+    await ctx.firestore().collection(collection).doc(docId).set({
+      tokenHash: `hash-${docId}`,
+      passwordHash: 'scrypt$1$65536,8,2$c2FsdA$a2V5',
+      requiresPassword: true,
+      isActive: true,
+      accessCount: 0,
+      maxAccesses: 5,
+      entityType: 'file',
+      entityId: `file-${docId}`,
       companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
       createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
       createdAt: new Date(),

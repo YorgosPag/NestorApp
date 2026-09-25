@@ -37,12 +37,12 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import type { ShareEntityType } from '@/types/sharing';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createPublicShowcasePayloadRoute,
   type PublicShowcasePayloadHandler,
 } from './create-public-payload-route';
-import { lookupPublicShowcaseShare } from './public-share-lookup';
 import { loadShowcaseMediaBuckets } from '../public-media';
 import {
   assembleUnifiedShowcasePayload,
@@ -55,7 +55,7 @@ export interface UnifiedPublicPayloadRouteConfig<
   TEntityKey extends Exclude<keyof TSnapshot, 'company'>,
 > {
   /** Share discriminator, e.g. `'building_showcase'`. */
-  shareEntityType: string;
+  shareEntityType: ShareEntityType;
   /**
    * The snapshot's entity key — `'building'`, `'project'`, `'parking'`,
    * `'storage'`. Doubles as the public payload key and, suffixed with `Id`, as
@@ -120,8 +120,7 @@ export function createUnifiedPublicShowcasePayloadRoute<
     shareNotFoundMessage,
     pdfUrlPath,
 
-    resolveShare: (token, adminDb) =>
-      lookupPublicShowcaseShare({ token, entityType: shareEntityType, adminDb, logger }),
+    shareEntityType,
 
     buildPayload: async ({ entityId, companyId, locale, expiresAt, pdfUrl, adminDb }) => {
       const snapshot = await buildSnapshot(entityId, locale, adminDb, companyId);

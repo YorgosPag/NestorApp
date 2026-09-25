@@ -243,6 +243,17 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/notifications/email-subscription-token.service.ts',
   },
   {
+    name: 'SHARE_ACCESS_SECRET',
+    severity: 'feature',
+    feature: 'Σύνδεσμοι κοινοποίησης με κωδικό (ADR-884 Φ0.12)',
+    consequence:
+      'Ο παραλήπτης συνδέσμου ΜΕ κωδικό γράφει τον σωστό κωδικό και διαβάζει «η κοινοποίηση δεν ' +
+      'είναι διαθέσιμη»: δεν εκδίδεται κουπόνι πρόσβασης, άρα κανένα showcase/αρχείο με κωδικό δεν ' +
+      'ανοίγει. Οι σύνδεσμοι ΧΩΡΙΣ κωδικό δεν επηρεάζονται — γι\' αυτό η βλάβη φαίνεται μόνο σε ' +
+      'όποιον προστάτεψε τον σύνδεσμό του, δηλαδή στους πιο ευαίσθητους.',
+    consumer: 'src/server/sharing/share-access-grant.ts',
+  },
+  {
     name: 'GEMI_OPENDATA_API_KEY',
     severity: 'feature',
     feature: 'Επαλήθευση επωνυμίας από το ΓΕΜΗ (ADR-841 Α23)',

@@ -4,8 +4,9 @@
  * =============================================================================
  *
  * Resolves `entityType: 'contact'` shares. The shared policy (projection, base
- * validation, tenant ownership, entity read) comes from
- * `sharing/resolver-core`; what stays here is the field-level consent rule that
+ * validation) comes from `sharing/resolver-core`, the entity read and tenant
+ * ownership from the server (`server/sharing/share-entity-access.ts`, ADR-884
+ * Φ0.12); what stays here is the field-level consent rule that
  * makes contact shares different from every other surface:
  *
  *   **nothing is published unless the sharer listed it in `includedFields`.**
@@ -21,11 +22,6 @@
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createModuleLogger } from '@/lib/telemetry';
-import {
-  createTenantOwnershipGuard,
-  loadSharedEntityDoc,
-} from '@/services/sharing/resolver-core/share-entity-access';
 import {
   buildSafePublicProjection,
   validateShareBaseInput,
@@ -34,11 +30,9 @@ import type {
   ContactShareMeta,
   CreateShareInput,
   ShareEntityDefinition,
-  ShareRecord,
+  ShareProjectionInput,
   ValidationResult,
 } from '@/types/sharing';
-
-const logger = createModuleLogger('ContactShareResolver');
 
 type IncludedField = ContactShareMeta['includedFields'][number];
 
@@ -91,18 +85,11 @@ function readFullName(data: Record<string, unknown> | null): string | null {
   );
 }
 
-async function resolveContact(share: ShareRecord): Promise<ContactShareResolvedData> {
+function projectContact({ share, entity: data, token }: ShareProjectionInput): ContactShareResolvedData {
   const included = share.contactMeta?.includedFields ?? [];
-  const data = await loadSharedEntityDoc({
-    collection: COLLECTIONS.CONTACTS,
-    share,
-    logger,
-    missingMessage: 'Contact share points to missing contact',
-  });
-
   return {
     shareId: share.id,
-    token: share.token,
+    token,
     contactId: share.entityId,
     name: pickIfIncluded(readFullName(data), 'name', included),
     emails: pickIfIncluded(asStringArray(data?.emails), 'emails', included),
@@ -130,9 +117,9 @@ function validateCreateInput(input: CreateShareInput): ValidationResult {
 }
 
 export const contactShareResolver: ShareEntityDefinition<ContactShareResolvedData> = {
-  resolve: resolveContact,
+  entityCollection: COLLECTIONS.CONTACTS,
+  project: projectContact,
   safePublicProjection: share => buildSafePublicProjection(share, 'contactMeta'),
   validateCreateInput,
-  canShare: createTenantOwnershipGuard(COLLECTIONS.CONTACTS),
   renderPublic: () => null, // Wired in Step D (public route dispatcher)
 };

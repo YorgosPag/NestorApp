@@ -4,6 +4,7 @@
  * ADR-883 §5.8 — «Θεσσαλονίκη» + Enter χωρίς επιλογή από τη λίστα, όπως το «NY» του Zillow:
  * κείμενο που ονομάζει ΚΑΘΑΡΑ περιοχή ⇒ `area=` με όριο· ομώνυμες ⇒ ρωτάμε· αλλιώς geocoder.
  * Το ευρετήριο σερβίρεται από ψεύτικο `fetch` ΜΕ ΚΑΘΥΣΤΕΡΗΣΗ — η υποβολή πρέπει να το ΠΕΡΙΜΕΝΕΙ.
+ * §5.11 — λάθος που μοιάζει με περιοχή ⇒ «μήπως εννοούσατε;», ΠΟΤΕ πλοήγηση· δεύτερο Enter ⇒ geocoder.
  */
 
 import React from 'react';
@@ -28,7 +29,7 @@ jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ warn: jest.fn(), error: jest.fn(), info: jest.fn() }),
 }));
 
-/** Μικρό ευρετήριο με ό,τι χρειάζεται: ίδιος τόπος σε 3 βαθμίδες + δύο ομώνυμες κοινότητες. */
+/** Μικρό ευρετήριο: ίδιος τόπος σε 3 βαθμίδες + δύο ομώνυμες κοινότητες + μία για την ανοχή ορθογραφίας. */
 const INDEX = {
   data: [
     ['region:3', 'ΠΕΡΙΦΕΡΕΙΑ ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ', 3, null],
@@ -37,6 +38,7 @@ const INDEX = {
     ['municipal_unit:1', 'ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΘΕΣΣΑΛΟΝΙΚΗΣ', 6, 'municipality:0701'],
     ['community:1', 'ΤΟΠΙΚΗ ΚΟΙΝΟΤΗΤΑ ΜΥΡΤΙΑΣ', 7, 'municipal_unit:1'],
     ['community:2', 'ΤΟΠΙΚΗ ΚΟΙΝΟΤΗΤΑ ΜΥΡΤΙΑΣ', 7, 'regional_unit:4'],
+    ['community:07090601', 'Τοπική Κοινότητα Ξυλοπόλεως', 7, 'municipal_unit:1'],
   ],
 };
 
@@ -105,6 +107,29 @@ describe('Enter χωρίς επιλογή', () => {
     expect(field()).toHaveFocus();
     expect(pushSpy).not.toHaveBeenCalled();
     expect(geocodeSpy).not.toHaveBeenCalled();
+  });
+
+  it('🔑 λάθος («Ξυλούπολη») ⇒ «ΜΗΠΩΣ ΕΝΝΟΟΥΣΑΤΕ;»: λίστα ανοιχτή, μήνυμα — ΚΑΜΙΑ πλοήγηση, κανένας geocoder', async () => {
+    releaseIndex();
+    render(<PlaceSearchBox mode="buy" occupations={[]} locale="el" />);
+    submit('Ξυλούπολη');
+    await screen.findByText('common-shared:placeRecall.didYouMeanArea');
+    await waitFor(() => expect(field()).toHaveAttribute('aria-expanded', 'true'));
+    expect(field()).toHaveFocus();
+    expect(pushSpy).not.toHaveBeenCalled();
+    expect(geocodeSpy).not.toHaveBeenCalled();
+  });
+
+  it('…και ΔΕΥΤΕΡΟ Enter με το ίδιο κείμενο ⇒ ο geocoder (μπορεί να ήταν οδός που μοιάζει με χωριό)', async () => {
+    releaseIndex();
+    geocodeSpy.mockResolvedValueOnce({ kind: 'found', result: { lat: 40.78, lng: 23.03 } });
+    render(<PlaceSearchBox mode="buy" occupations={[]} locale="el" />);
+    submit('Ξυλούπολη');
+    await screen.findByText('common-shared:placeRecall.didYouMeanArea');
+    fireEvent.submit(field().form as HTMLFormElement);
+    await waitFor(() => expect(pushSpy).toHaveBeenCalledTimes(1));
+    expect(geocodeSpy).toHaveBeenCalledTimes(1);
+    expect(pushSpy.mock.calls[0][0]).not.toContain('area=');
   });
 
   it('οδός με αριθμό ⇒ ο geocoder, όπως πάντα', async () => {

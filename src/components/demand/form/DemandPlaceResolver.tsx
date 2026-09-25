@@ -27,7 +27,7 @@
  */
 
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, type UseFormReturn } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceResolver } from '@/hooks/geo/usePlaceResolver';
@@ -36,6 +36,12 @@ import { DemandNumberField } from './demand-field-primitives';
 
 const NS = 'property-market';
 
+/** Σβήνει τη λύση του τόπου — σημείο **και** όνομα, ποτέ το ένα. */
+function clearResolved(form: UseFormReturn<DemandFormValues>): void {
+  form.setValue('placeCenter', null, { shouldDirty: true });
+  form.setValue('placeLabel', null, { shouldDirty: true });
+}
+
 export function DemandPlaceResolver(): React.ReactElement {
   const { t } = useTranslation([NS]);
   const form = useFormContext<DemandFormValues>();
@@ -43,25 +49,23 @@ export function DemandPlaceResolver(): React.ReactElement {
 
   const query = form.watch('placeQuery');
   const center = form.watch('placeCenter');
+  const placeLabel = form.watch('placeLabel');
 
   // 🔑 **Η ζήτηση κρατά ΜΟΝΟ το σημείο** — η ακρίβεια δεν την αφορά: το ερώτημα είναι
   // «γύρω από πού ψάχνεις;», και η ακτίνα το απαντά ούτως ή άλλως κατά προσέγγιση.
   // ⚠️ Και το **κείμενο δεν αποθηκεύεται**: ένα «Θεσσαλονίκη» θα έπρεπε να ξαναλυθεί
   // σε κάθε ταίριασμα, με αποτέλεσμα που αλλάζει όταν αλλάξει ο πάροχος.
   const { state, resolve, reset } = usePlaceResolver({
+    // ADR-886 — σημείο **και** όνομα γράφονται μαζί και σβήνονται μαζί: μια ετικέτα χωρίς το
+    // σημείο της (ή το αντίστροφο) θα έδινε αυτόματο όνομα ζήτησης που λέει άλλο τόπο.
     onFound: React.useCallback(
-      (place) =>
-        form.setValue(
-          'placeCenter',
-          { lat: place.lat, lng: place.lng },
-          { shouldDirty: true },
-        ),
+      (place) => {
+        form.setValue('placeCenter', { lat: place.lat, lng: place.lng }, { shouldDirty: true });
+        form.setValue('placeLabel', place.label, { shouldDirty: true });
+      },
       [form],
     ),
-    onCleared: React.useCallback(
-      () => form.setValue('placeCenter', null, { shouldDirty: true }),
-      [form],
-    ),
+    onCleared: React.useCallback(() => clearResolved(form), [form]),
   });
 
   const busy = state === 'resolving';
@@ -82,7 +86,7 @@ export function DemandPlaceResolver(): React.ReactElement {
             // παύει να είναι αλήθεια. Χωρίς αυτό, η φόρμα θα δεχόταν υποβολή με
             // συντεταγμένες που δεν αντιστοιχούν σε ό,τι διαβάζει ο άνθρωπος.
             onChange: () => {
-              if (center !== null) form.setValue('placeCenter', null, { shouldDirty: true });
+              if (center !== null) clearResolved(form);
               if (state !== 'idle') reset();
             },
           })}
@@ -102,7 +106,7 @@ export function DemandPlaceResolver(): React.ReactElement {
 
       {center !== null && (
         <p className="text-sm text-muted-foreground">
-          {t(`${K}.resolved`, { label: `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}` })}
+          {t(`${K}.resolved`, { label: placeLabel ?? `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}` })}
         </p>
       )}
       {state === 'not-found' && <p className="text-sm text-foreground">{t(`${K}.notFound`)}</p>}

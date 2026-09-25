@@ -1,11 +1,14 @@
 /**
  * =============================================================================
- * useSharedFilePageState — state + IO controller for SharedFilePageContent
+ * useSharedFilePageState — the `/shared/[token]` page as a state machine
  * =============================================================================
  *
- * SRP split from SharedFilePageContent.tsx: owns the public-share validation
- * flow, password gate, file-info loading and download counter writes. The
- * component becomes a pure presentation shell over the hook output (ADR-315).
+ * ADR-884 Φ0.12: this hook no longer validates anything. It asks the server
+ * (`UnifiedSharingService.resolve` → `POST /api/shares/resolve`) **once** and
+ * renders the named outcome. Before Κ4 it queried a world-readable collection,
+ * compared password hashes and bumped counters **in the browser**, with every
+ * branch written twice (open + after password) — and its contact/file reads were
+ * denied by the rules for the very visitor the link was for.
  *
  * @module components/shared/pages/useSharedFilePageState
  */
@@ -14,338 +17,96 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { FileShareService, type FileShareRecord } from '@/services/file-share.service';
-import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
-import type { ShareRecord } from '@/types/sharing';
-// Side-effect import: registers resolvers with ShareEntityRegistry
-import {
-  contactShareResolver,
-  propertyShowcaseShareResolver,
-  type ContactShareResolvedData,
-  type PropertyShowcaseResolvedData,
-} from '@/services/sharing/resolvers';
+
+import { ApiClientError } from '@/lib/api/api-client-types';
 import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
+import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
+import type {
+  ResolvedSharePayload,
+  ShareResolveOutcome,
+  ShareResolveRefusal,
+} from '@/services/sharing/share-resolve-contract';
 
-export interface FileInfo {
-  displayName: string;
-  originalFilename: string;
-  contentType: string;
-  sizeBytes: number;
-  downloadUrl: string;
-  ext: string;
-}
-
-export type PageState =
-  | 'loading'
-  | 'password'
-  | 'ready'
-  | 'error'
-  | 'expired'
-  | 'contact'
-  | 'showcase'
-  | 'project_showcase'
-  | 'building_showcase'
-  | 'storage_showcase'
-  | 'parking_showcase';
+/** What the page shows. `wrong-password` never reaches `refused` — it stays on the gate. */
+export type SharedPageView =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'password'; readonly wrongPassword: boolean }
+  | { readonly kind: 'refused'; readonly reason: Exclude<ShareResolveRefusal, 'wrong-password'> }
+  | { readonly kind: 'resolved'; readonly share: ResolvedSharePayload; readonly expiresAt: string };
 
 export interface SharedFilePageState {
-  token: string;
-  state: PageState;
-  share: FileShareRecord | null;
-  fileInfo: FileInfo | null;
-  errorMessage: string;
-  password: string;
-  passwordError: boolean;
-  downloading: boolean;
-  contactData: ContactShareResolvedData | null;
-  contactExpiresAt: string;
-  showcaseData: PropertyShowcaseResolvedData | null;
-  showcaseExpiresAt: string;
-  pendingUnifiedShare: ShareRecord | null;
-  setPassword: (v: string) => void;
-  setPasswordError: (v: boolean) => void;
-  handlePasswordSubmit: (e: React.FormEvent) => Promise<void>;
+  readonly token: string;
+  readonly view: SharedPageView;
+  readonly password: string;
+  readonly submitting: boolean;
+  readonly downloading: boolean;
+  setPassword: (value: string) => void;
+  handlePasswordSubmit: (event: React.FormEvent) => Promise<void>;
   handleDownload: () => Promise<void>;
+}
+
+/** Server outcome → view. */
+function viewOf(outcome: ShareResolveOutcome): SharedPageView {
+  switch (outcome.status) {
+    case 'password-required':
+      return { kind: 'password', wrongPassword: false };
+    case 'resolved':
+      return { kind: 'resolved', share: outcome.share, expiresAt: outcome.expiresAt };
+    case 'refused':
+      return outcome.reason === 'wrong-password'
+        ? { kind: 'password', wrongPassword: true }
+        : { kind: 'refused', reason: outcome.reason };
+  }
+}
+
+/** Transport failure → view: 404 is a verdict («no such link»); anything else is ours. */
+function viewOfFailure(error: unknown): SharedPageView {
+  const notFound = error instanceof ApiClientError && error.statusCode === 404;
+  return { kind: 'refused', reason: notFound ? 'not-found' : 'unavailable' };
 }
 
 export function useSharedFilePageState(): SharedFilePageState {
   const params = useParams();
-  const token = params.token as string;
+  const token = typeof params.token === 'string' ? params.token : '';
 
-  const [state, setState] = useState<PageState>('loading');
-  const [share, setShare] = useState<FileShareRecord | null>(null);
-  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [view, setView] = useState<SharedPageView>({ kind: 'loading' });
   const [password, setPassword] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  // ADR-315: unified contact share data (null unless entityType=contact)
-  const [contactData, setContactData] = useState<ContactShareResolvedData | null>(null);
-  const [contactExpiresAt, setContactExpiresAt] = useState<string>('');
-  // ADR-315: unified showcase share data (null unless entityType=property_showcase)
-  const [showcaseData, setShowcaseData] = useState<PropertyShowcaseResolvedData | null>(null);
-  const [showcaseExpiresAt, setShowcaseExpiresAt] = useState<string>('');
-  // ADR-315: when non-null, share was resolved via unified `shares` collection
-  // and access/revoke operations must go through UnifiedSharingService.
-  const [unifiedShareId, setUnifiedShareId] = useState<string | null>(null);
-  // ADR-315: held across password gate so post-verify we can resolve the
-  // appropriate entity type (contact / showcase) from the unified ShareRecord.
-  const [pendingUnifiedShare, setPendingUnifiedShare] = useState<ShareRecord | null>(null);
 
-  const loadFileInfo = useCallback(async (fileId: string) => {
-    const { doc, getDoc } = await import('firebase/firestore');
-    const { db } = await import('@/lib/firebase');
-    const { COLLECTIONS } = await import('@/config/firestore-collections');
-
-    const fileDoc = await getDoc(doc(db, COLLECTIONS.FILES, fileId));
-    if (!fileDoc.exists()) {
-      setState('error');
-      setErrorMessage('File not found');
-      return;
-    }
-
-    const data = fileDoc.data();
-    setFileInfo({
-      displayName: data.displayName ?? data.originalFilename ?? 'File',
-      originalFilename: data.originalFilename ?? 'file',
-      contentType: data.contentType ?? '',
-      sizeBytes: data.sizeBytes ?? 0,
-      downloadUrl: data.downloadUrl ?? '',
-      ext: data.ext ?? '',
-    });
-    setState('ready');
-  }, []);
-
-  // Validate share token
   useEffect(() => {
-    async function validate() {
-      try {
-        // ADR-315: unified dispatcher — try new `shares` collection first
-        const unified = await UnifiedSharingService.validateShare(token);
-        if (unified.valid && unified.share) {
-          const u = unified.share;
-          // ADR-315: universal password gate — applies to every entityType.
-          // Hold the ShareRecord until verification, then resolve per type.
-          if (u.requiresPassword) {
-            setPendingUnifiedShare(u);
-            setState('password');
-            return;
-          }
-          if (u.entityType === 'property_showcase') {
-            setShowcaseExpiresAt(u.expiresAt);
-            const data = await propertyShowcaseShareResolver.resolve(u);
-            setShowcaseData(data);
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('showcase');
-            return;
-          }
-          if (u.entityType === 'project_showcase') {
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('project_showcase');
-            return;
-          }
-          if (u.entityType === 'building_showcase') {
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('building_showcase');
-            return;
-          }
-          if (u.entityType === 'storage_showcase') {
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('storage_showcase');
-            return;
-          }
-          if (u.entityType === 'parking_showcase') {
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('parking_showcase');
-            return;
-          }
-          if (u.entityType === 'contact') {
-            setContactExpiresAt(u.expiresAt);
-            // Resolve contact via registered resolver (respects includedFields)
-            const data = await contactShareResolver.resolve(u);
-            setContactData(data);
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('contact');
-            return;
-          }
-          // entityType === 'file' — adapt unified ShareRecord → FileShareRecord shape
-          const adapted: FileShareRecord = {
-            id: u.id,
-            fileId: u.entityId,
-            token: u.token,
-            createdBy: u.createdBy,
-            createdAt: u.createdAt as string,
-            expiresAt: u.expiresAt,
-            isActive: u.isActive,
-            passwordHash: u.passwordHash ?? undefined,
-            requiresPassword: u.requiresPassword,
-            downloadCount: u.accessCount,
-            maxDownloads: u.maxAccesses,
-            note: u.note ?? undefined,
-            companyId: u.companyId,
-          };
-          setShare(adapted);
-          setUnifiedShareId(u.id);
-          if (u.requiresPassword) {
-            setState('password');
-            return;
-          }
-          await loadFileInfo(u.entityId);
-          await UnifiedSharingService.incrementAccessCount(u.id);
-          return;
-        }
+    let cancelled = false;
+    UnifiedSharingService.resolve(token)
+      .then((outcome) => { if (!cancelled) setView(viewOf(outcome)); })
+      .catch((error: unknown) => { if (!cancelled) setView(viewOfFailure(error)); });
+    return () => { cancelled = true; };
+  }, [token]);
 
-        // Legacy fallback — `file_shares` collection (FileShareService)
-        const validation = await FileShareService.validateShare(token);
-
-        if (!validation.valid || !validation.share) {
-          setState(validation.reason?.includes('expired') ? 'expired' : 'error');
-          setErrorMessage(validation.reason ?? 'Invalid share link');
-          return;
-        }
-
-        setShare(validation.share);
-
-        if (validation.share.requiresPassword) {
-          setState('password');
-          return;
-        }
-
-        await loadFileInfo(validation.share.fileId);
-      } catch (err) {
-        setState('error');
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to load');
-      }
+  const handlePasswordSubmit = useCallback(async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      setView(viewOf(await UnifiedSharingService.resolve(token, password)));
+    } catch (error: unknown) {
+      setView(viewOfFailure(error));
+    } finally {
+      setSubmitting(false);
     }
-
-    validate();
-  }, [token, loadFileInfo]);
-
-  const handlePasswordSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // ADR-315: unified path — verify via UnifiedSharingService, then resolve
-    // per entityType (file adapter / contact / showcase). Falls back to the
-    // legacy FileShareService.verifyPassword for `file_shares`-only shares.
-    if (pendingUnifiedShare) {
-      const valid = await UnifiedSharingService.verifyPassword(pendingUnifiedShare, password);
-      if (!valid) {
-        setPasswordError(true);
-        return;
-      }
-      setPasswordError(false);
-      const u = pendingUnifiedShare;
-      if (u.entityType === 'property_showcase') {
-        setShowcaseExpiresAt(u.expiresAt);
-        const data = await propertyShowcaseShareResolver.resolve(u);
-        setShowcaseData(data);
-        await UnifiedSharingService.incrementAccessCount(u.id);
-        setPendingUnifiedShare(null);
-        setState('showcase');
-        return;
-      }
-      if (u.entityType === 'project_showcase') {
-        await UnifiedSharingService.incrementAccessCount(u.id);
-        setPendingUnifiedShare(null);
-        setState('project_showcase');
-        return;
-      }
-      if (u.entityType === 'building_showcase') {
-        await UnifiedSharingService.incrementAccessCount(u.id);
-        setPendingUnifiedShare(null);
-        setState('building_showcase');
-        return;
-      }
-      if (u.entityType === 'storage_showcase') {
-        await UnifiedSharingService.incrementAccessCount(u.id);
-        setPendingUnifiedShare(null);
-        setState('storage_showcase');
-        return;
-      }
-      if (u.entityType === 'parking_showcase') {
-        await UnifiedSharingService.incrementAccessCount(u.id);
-        setPendingUnifiedShare(null);
-        setState('parking_showcase');
-        return;
-      }
-      if (u.entityType === 'contact') {
-        setContactExpiresAt(u.expiresAt);
-        const data = await contactShareResolver.resolve(u);
-        setContactData(data);
-        await UnifiedSharingService.incrementAccessCount(u.id);
-        setPendingUnifiedShare(null);
-        setState('contact');
-        return;
-      }
-      // entityType === 'file'
-      const adapted: FileShareRecord = {
-        id: u.id,
-        fileId: u.entityId,
-        token: u.token,
-        createdBy: u.createdBy,
-        createdAt: u.createdAt as string,
-        expiresAt: u.expiresAt,
-        isActive: u.isActive,
-        passwordHash: u.passwordHash ?? undefined,
-        requiresPassword: u.requiresPassword,
-        downloadCount: u.accessCount,
-        maxDownloads: u.maxAccesses,
-        note: u.note ?? undefined,
-        companyId: u.companyId,
-      };
-      setShare(adapted);
-      setUnifiedShareId(u.id);
-      setPendingUnifiedShare(null);
-      await loadFileInfo(u.entityId);
-      await UnifiedSharingService.incrementAccessCount(u.id);
-      return;
-    }
-
-    if (!share) return;
-    const valid = await FileShareService.verifyPassword(share, password);
-    if (!valid) {
-      setPasswordError(true);
-      return;
-    }
-
-    setPasswordError(false);
-    await loadFileInfo(share.fileId);
-  }, [pendingUnifiedShare, share, password, loadFileInfo]);
+  }, [token, password]);
 
   const handleDownload = useCallback(async () => {
-    if (!fileInfo?.downloadUrl || !share) return;
-
     setDownloading(true);
     try {
-      // ADR-315: route counter write to the collection the share actually lives in
-      if (unifiedShareId) {
-        await UnifiedSharingService.incrementAccessCount(unifiedShareId);
-      } else {
-        await FileShareService.incrementDownloadCount(share.id);
-      }
-      openRemoteUrlInNewTab(fileInfo.downloadUrl);
+      const outcome = await UnifiedSharingService.requestDownload(token);
+      if (outcome.status === 'signed') openRemoteUrlInNewTab(outcome.url);
+      else if (outcome.reason === 'password-required') setView({ kind: 'password', wrongPassword: false });
+      else setView(viewOf({ status: 'refused', reason: outcome.reason }));
+    } catch (error: unknown) {
+      setView(viewOfFailure(error));
     } finally {
       setDownloading(false);
     }
-  }, [fileInfo, share, unifiedShareId]);
+  }, [token]);
 
-  return {
-    token,
-    state,
-    share,
-    fileInfo,
-    errorMessage,
-    password,
-    passwordError,
-    downloading,
-    contactData,
-    contactExpiresAt,
-    showcaseData,
-    showcaseExpiresAt,
-    pendingUnifiedShare,
-    setPassword,
-    setPasswordError,
-    handlePasswordSubmit,
-    handleDownload,
-  };
+  return { token, view, password, submitting, downloading, setPassword, handlePasswordSubmit, handleDownload };
 }

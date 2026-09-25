@@ -404,7 +404,6 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           entityType="file"
           entityId={file.id}
           entityTitle={displayName}
-          userId={currentUserId}
           companyId={companyId}
           fileMeta={{
             mimeType: file.contentType ?? 'application/octet-stream',

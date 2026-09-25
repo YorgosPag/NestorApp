@@ -26,7 +26,6 @@ jest.mock('@/services/document-template.service', () => ({ DocumentTemplateServi
 jest.mock('@/services/file-comment.service', () => ({ FileCommentService: {} }));
 jest.mock('@/services/file-approval.service', () => ({ FileApprovalService: {} }));
 jest.mock('@/services/file-record.service', () => ({ FileRecordService: {} }));
-jest.mock('@/services/file-share.service', () => ({ FileShareService: {} }));
 jest.mock('firebase/auth', () => ({
   onAuthStateChanged: jest.fn(),
   getAuth: jest.fn(() => ({ currentUser: null })),

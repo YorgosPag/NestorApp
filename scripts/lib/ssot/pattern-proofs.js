@@ -45,6 +45,22 @@ markUnsavedWork('dirty-form-provider:r1');
 window.addEventListener('pagehide', flush);
 window.removeEventListener('beforeunload', handler);`,
   },
+  // ADR-884 Φ0.12 — οι σύνδεσμοι κοινοποίησης ζουν ΜΟΝΟ στον διακομιστή. Κανείς πελάτης δεν
+  // αγγίζει `shares`/`file_shares` (οι κανόνες είναι `if false`). Οι παγίδες του `shouldSkip`
+  // είναι οι ΝΟΜΙΜΕΣ μορφές: Admin SDK (`adminDb.collection(...)`), η πρόσοψη, άσχετη συλλογή
+  // με όμοιο όνομα (`SHARE_DISPATCHES`, `photo_shares`).
+  'unified-sharing-service': {
+    shouldMatch: `const q = query(collection(db, COLLECTIONS.SHARES), where('token', '==', token));
+const legacy = collection(db, 'shares');
+await updateDoc(doc(db, COLLECTIONS.SHARES, shareId), { accessCount: 0 });
+const files = query(collection(db, COLLECTIONS.FILE_SHARES), where('token', '==', token));
+await setDoc(doc(db, COLLECTIONS.FILE_SHARES, id), record);`,
+    shouldSkip: `const snap = await adminDb.collection(COLLECTIONS.SHARES).where('tokenHash', '==', hash).get();
+await UnifiedSharingService.createShare({ entityType: 'file', entityId });
+const dispatches = collection(db, COLLECTIONS.SHARE_DISPATCHES);
+const photos = collection(db, 'photo_shares');
+import { COLLECTIONS } from '@/config/firestore-collections';`,
+  },
   // ADR-871 §10.6 — ΕΝΑΣ κατάλογος της στήλης του γραφείου, ΜΙΑ μηχανή. Αντικατέστησε το
   // `smart-navigation-factory` + `config/navigation`: δεύτερη συνάρτηση που χτίζει τα μενού θα
   // ήταν δεύτερη αλήθεια για το «τι βλέπει ο χρήστης». Οι παγίδες του `shouldSkip` είναι οι

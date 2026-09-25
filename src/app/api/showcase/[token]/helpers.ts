@@ -3,15 +3,13 @@
  * GET /api/showcase/[token] — helpers (ADR-312 Phase 4)
  * =============================================================================
  *
- * SRP split from route.ts: share lookup, media mapping, DXF self-heal, linked
+ * SRP split from route.ts: media mapping, DXF self-heal, linked
  * space floorplan aggregation, base-URL resolution. Route owns the handler
  * flow; helpers own the pure I/O + mapping primitives.
  *
  * @module app/api/showcase/[token]/helpers
  */
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_CATEGORIES, type FileCategory } from '@/config/domain-constants';
 import {
   listEntityMedia,
@@ -33,50 +31,6 @@ import type {
 } from '@/components/property-showcase/types';
 
 const logger = createModuleLogger('ShowcasePublicApiHelpers');
-
-export async function loadShareByToken(token: string) {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return null;
-
-  // ADR-315 dual-read: try the unified `shares` collection first — new
-  // showcases created via UnifiedSharingService land here with a
-  // first-class `entityType: 'property_showcase'` + `showcaseMeta` pair.
-  const unifiedSnap = await adminDb
-    .collection(COLLECTIONS.SHARES)
-    .where('token', '==', token)
-    .where('isActive', '==', true)
-    .limit(1)
-    .get();
-  if (!unifiedSnap.empty) {
-    const doc = unifiedSnap.docs[0];
-    const d = doc.data() as Record<string, unknown>;
-    if (d.entityType === 'property_showcase') {
-      const showcaseMeta = (d.showcaseMeta ?? {}) as { pdfStoragePath?: string };
-      return {
-        id: doc.id,
-        token: d.token,
-        companyId: d.companyId,
-        isActive: d.isActive,
-        expiresAt: d.expiresAt,
-        showcaseMode: true,
-        showcasePropertyId: d.entityId,
-        pdfStoragePath: showcaseMeta.pdfStoragePath,
-        note: d.note,
-      } as Record<string, unknown> & { id: string };
-    }
-  }
-
-  // Legacy fallback — `file_shares` collection (ADR-312).
-  const snap = await adminDb
-    .collection(COLLECTIONS.FILE_SHARES)
-    .where('token', '==', token)
-    .where('isActive', '==', true)
-    .limit(1)
-    .get();
-  if (snap.empty) return null;
-  const doc = snap.docs[0];
-  return { id: doc.id, ...doc.data() } as Record<string, unknown> & { id: string };
-}
 
 export function toShowcaseMedia(metas: PropertyMediaItem[]): ShowcaseMedia[] {
   const items: ShowcaseMedia[] = [];

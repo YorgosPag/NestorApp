@@ -52,11 +52,31 @@ const FULL: DemandFormValues = {
   floorMax: 4,
   proximity: [{ kind: 'school', maxMetres: 800 }],
   lifeContext: 'family',
+  // ADR-886 — όνομα του ανθρώπου + ετικέτα του geocoder: ταξιδεύουν και επιστρέφουν ακέραια.
+  placeLabel: 'Θεσσαλονίκη, Ελλάδα',
+  title: 'Για τη Μαρία',
 };
 
 // =============================================================================
 // Ρ — ΓΥΡΟΣ ΜΕΤ' ΕΠΙΣΤΡΟΦΗΣ
 // =============================================================================
+
+describe('ADR-886 — όνομα και ετικέτα τόπου', () => {
+  it('η ετικέτα του geocoder ξαναγεμίζει το πεδίο τόπου στην επεξεργασία (ως τότε άνοιγε κενό)', () => {
+    const load = demandFormFrom({ ...demand(), ...demandDraftFrom(parse(FULL)) });
+    if (load.kind !== 'editable') throw new Error('αναμενόταν editable');
+    expect(load.values.placeQuery).toBe('Θεσσαλονίκη, Ελλάδα');
+    expect(load.values.title).toBe('Για τη Μαρία');
+  });
+
+  it('🔴 η ετικέτα ΔΕΝ ταξιδεύει όταν ο τόπος δεν είναι `near` — θα ονόμαζε λάθος περιοχή', () => {
+    expect(demandDraftFrom(parse({ ...FULL, placeKind: 'anywhere' })).placeLabel).toBeNull();
+  });
+
+  it('κενό ή μόνο-κενά όνομα ⇒ `null` (το αυτόματο), ποτέ κενό κείμενο', () => {
+    expect(demandDraftFrom(parse({ ...FULL, title: '   ' })).title).toBeNull();
+  });
+});
 
 describe('🔴 Ρ — ζήτηση → φόρμα → ζήτηση είναι ΤΑΥΤΟΤΗΤΑ στους άξονες', () => {
   it('γεμάτη ζήτηση επιβιώνει ακέραιη', () => {

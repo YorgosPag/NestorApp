@@ -4,129 +4,229 @@
  * =============================================================================
  *
  * Resolving `?token=` to a live share was written **six times** across the
- * public showcase routes (4 payload + 2 PDF): same `shares` query, same field
- * plucking, same null-guards, differing only in an `entityType` string.
+ * public showcase routes (4 payload + 2 PDF), and later a seventh and eighth
+ * time in the property routes (`api/showcase/[token]/*`). ADR-698 collapsed the
+ * unified surfaces onto this module; ADR-884 Φ0.12 collapses **everything**
+ * onto the one share gate (`server/sharing/share-gate.ts`), property included.
  *
- * ## Two query shapes existed — this module picks the indexed one
+ * ## What changed with ADR-884 Φ0.12
  *
- * | route family | query |
+ * | before | after |
  * |---|---|
- * | payload (building/project/parking/storage) | `token == ` + `isActive == `, then `entityType` checked in code |
- * | PDF (building/project) | `token == ` + `entityType == ` + `isActive == ` |
+ * | `token == ` query on a world-readable collection | `tokenHash == ` (raw `token` only for not-yet-migrated docs), server-only |
+ * | password **never checked** by the API — only the `/shared` page asked | the gate demands the access grant cookie issued after the right password (**401** otherwise) |
+ * | expiry checked by each route, limit never | expiry **and** limit judged by the gate (**410**) |
+ * | raw token written to logs | never — `shareId` only |
  *
- * `firestore.indexes.json` declares **`[token + isActive]`** and **no**
- * `[token + entityType + isActive]`. The PDF variant survives only on
- * Firestore's zigzag merge join for equality-only conjunctions — an
- * optimisation, not a declared guarantee. This module therefore queries the
- * **explicitly indexed** pair and discriminates `entityType` in code, so no
- * public link can ever start answering `FAILED_PRECONDITION` because a merge
- * join was not chosen.
- *
- * ## Why `limit(2)` and not `limit(1)`
- *
- * Both originals took `docs[0]`. With `limit(1)` and no `entityType` filter,
- * the payload routes would hand back the *wrong* share if a token ever
- * resolved to two active shares — a data bug that would surface as one tenant's
- * showcase served under another's link. Fetching two lets us pick by
- * `entityType` **and** log the anomaly instead of silently mis-serving. Tokens
- * are unique in practice, so this costs one extra document read on a path that
- * already reads several.
+ * The anomaly guard (two active shares for one token) and the required-field
+ * guard (no `entityId` / `companyId` / `expiresAt` ⇒ not served) now live in
+ * `server/sharing/share-token-lookup.ts` (`normalizeUnifiedShare` /
+ * `normalizeLegacyFileShare`), where **every** caller gets them.
  *
  * @module services/showcase-core/api/public-share-lookup
  * @enterprise ADR-698 — Public Showcase Token Surface SSoT
- * @see ADR-315 Unified Sharing · ADR-321 Showcase Core
+ * @see ADR-315 Unified Sharing · ADR-321 Showcase Core · ADR-884 §8.1 Φ0.12
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
-import { FieldValue } from 'firebase-admin/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import type { Logger } from '@/lib/telemetry/Logger';
+import 'server-only';
 
-/** A live share resolved from a public token. */
+import type { Firestore } from 'firebase-admin/firestore';
+import { NextResponse, type NextRequest } from 'next/server';
+
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { createModuleLogger, type Logger } from '@/lib/telemetry/Logger';
+import { requestHasShareAccessGrant } from '@/server/sharing/share-access-grant';
+import { passShareGate } from '@/server/sharing/share-gate';
+import type { StoredShare } from '@/server/sharing/share-token-lookup';
+import type { ShareResolveRefusal } from '@/services/sharing/share-resolve-contract';
+import type { ShareEntityType } from '@/types/sharing';
+
+/** A live share resolved from a public token, and cleared by the gate. */
 export interface PublicShowcaseShare {
-  /** Share document id — needed to increment the access counter. */
+  /** Share document id. */
   id: string;
   entityId: string;
   companyId: string;
   expiresAt: string;
   /** Present only when the showcase has a generated PDF. */
   pdfStoragePath?: string;
+  /** Free-text note (property: legacy video URL). */
+  note: string | null;
+  /** The normalised record — the PDF route hands it to `recordShareAccess`. */
+  stored: StoredShare;
 }
+
+/** Why a public showcase request is not served — each maps to one HTTP status. */
+export type PublicShowcaseRefusal = 'not-found' | 'password-required' | 'expired' | 'unavailable';
+
+export type PublicShowcaseLookup =
+  | { readonly ok: true; readonly share: PublicShowcaseShare }
+  | { readonly ok: false; readonly refusal: PublicShowcaseRefusal };
 
 export interface LookupPublicShowcaseShareParams {
   token: string;
   /** Share discriminator, e.g. `'building_showcase'`. */
-  entityType: string;
+  entityType: ShareEntityType;
   adminDb: Firestore;
-  logger: Logger;
-  /** When true, a share without `showcaseMeta.pdfStoragePath` resolves to `null`. */
+  /** The incoming request — carries the access grant cookie of password-protected shares. */
+  request: NextRequest;
+  /** When true, a share without `showcaseMeta.pdfStoragePath` is not served. */
   requirePdfPath?: boolean;
 }
 
+/** HTTP status + body per refusal — one table, shared by payload and PDF routes. */
+const REFUSAL_RESPONSES: Readonly<Record<Exclude<PublicShowcaseRefusal, 'not-found'>, { status: number; error: string }>> = {
+  'password-required': { status: 401, error: 'Password required' },
+  expired: { status: 410, error: 'Showcase link has expired' },
+  unavailable: { status: 503, error: 'Showcase link is temporarily unavailable' },
+};
+
 /**
- * Resolve a public showcase token to its share, or `null`.
+ * Refusal → response. Bodies are **wire contract** (the showcase pages branch on
+ * the status), in English like every other public-route error body. `not-found`
+ * keeps each surface's own 404 message, which older clients match on.
+ */
+export function publicShowcaseRefusalResponse(
+  refusal: PublicShowcaseRefusal,
+  shareNotFoundMessage: string,
+): NextResponse {
+  if (refusal === 'not-found') {
+    return NextResponse.json({ error: shareNotFoundMessage }, { status: 404 });
+  }
+  const { status, error } = REFUSAL_RESPONSES[refusal];
+  return NextResponse.json({ error }, { status });
+}
+
+/**
+ * Gate refusal → public refusal. An exhausted share answers like an expired one
+ * (410 Gone — the link no longer serves); `wrong-password` / `locked` cannot
+ * occur here (these routes never receive a password) and fold into 404.
+ */
+function toPublicRefusal(reason: ShareResolveRefusal | 'password-required'): PublicShowcaseRefusal {
+  switch (reason) {
+    case 'password-required':
+    case 'unavailable':
+    case 'expired':
+      return reason;
+    case 'exhausted':
+      return 'expired';
+    default:
+      return 'not-found';
+  }
+}
+
+type OpenPublicShowcaseResult =
+  | { readonly ok: true; readonly share: PublicShowcaseShare; readonly adminDb: Firestore }
+  | { readonly ok: false; readonly response: NextResponse };
+
+interface OpenPublicShowcaseParams {
+  request: NextRequest;
+  token: string;
+  entityType: ShareEntityType;
+  /** Each surface's own 404 body — see `publicShowcaseRefusalResponse`. */
+  shareNotFoundMessage: string;
+}
+
+/**
+ * The one preamble of every public showcase route (payload **and** PDF):
+ * empty token → 400 · no Admin SDK → 503 · gate refusal → its status.
+ * Written once so the two route factories cannot drift apart (CHECK 3.28).
+ */
+async function openPublicShowcaseShare({
+  request,
+  token,
+  entityType,
+  shareNotFoundMessage,
+}: OpenPublicShowcaseParams): Promise<OpenPublicShowcaseResult> {
+  if (!token || token.trim().length === 0) {
+    return { ok: false, response: NextResponse.json({ error: 'Token is required' }, { status: 400 }) };
+  }
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    return { ok: false, response: NextResponse.json({ error: 'Database connection not available' }, { status: 503 }) };
+  }
+  const lookup = await lookupPublicShowcaseShare({ token, entityType, adminDb, request });
+  if (!lookup.ok) {
+    return { ok: false, response: publicShowcaseRefusalResponse(lookup.refusal, shareNotFoundMessage) };
+  }
+  return { ok: true, share: lookup.share, adminDb };
+}
+
+/** What a route serves with, once the preamble has cleared the request. */
+export interface PublicShowcaseContext {
+  readonly request: NextRequest;
+  readonly token: string;
+  readonly share: PublicShowcaseShare;
+  readonly adminDb: Firestore;
+  readonly logger: Logger;
+}
+
+export interface PublicShowcaseHandlerConfig {
+  loggerName: string;
+  shareEntityType: ShareEntityType;
+  shareNotFoundMessage: string;
+}
+
+export interface PublicShowcaseHandler {
+  handle(request: NextRequest, token: string): Promise<NextResponse>;
+}
+
+/**
+ * The skeleton of every public showcase route factory: one logger, the one
+ * preamble, then the surface's own `serve`. Payload and PDF differ **only** in `serve`.
+ */
+export function createPublicShowcaseHandler(
+  config: PublicShowcaseHandlerConfig,
+  serve: (ctx: PublicShowcaseContext) => Promise<NextResponse>,
+): PublicShowcaseHandler {
+  const logger = createModuleLogger(config.loggerName);
+  return {
+    async handle(request, token) {
+      const opened = await openPublicShowcaseShare({
+        request, token, entityType: config.shareEntityType, shareNotFoundMessage: config.shareNotFoundMessage,
+      });
+      if (!opened.ok) return opened.response;
+      return serve({ request, token, share: opened.share, adminDb: opened.adminDb, logger });
+    },
+  };
+}
+
+/**
+ * Resolve a public showcase token through the share gate.
  *
- * `null` covers every "no usable share" case — wrong entity type, missing
- * required field, no match — because all six originals collapsed those into the
- * same 404. Expiry is **not** checked here: the callers answer 410 for that and
- * need the `expiresAt` value to do it.
+ * A wrong entity type answers `not-found` — the same 404 as a missing token, so
+ * the endpoint does not confirm that a token exists under another surface.
  */
 export async function lookupPublicShowcaseShare({
   token,
   entityType,
   adminDb,
-  logger,
+  request,
   requirePdfPath = false,
-}: LookupPublicShowcaseShareParams): Promise<PublicShowcaseShare | null> {
-  const snap = await adminDb
-    .collection(COLLECTIONS.SHARES)
-    .where('token', '==', token)
-    .where('isActive', '==', true)
-    .limit(2)
-    .get();
+}: LookupPublicShowcaseShareParams): Promise<PublicShowcaseLookup> {
+  const verdict = await passShareGate({
+    adminDb,
+    token,
+    hasGrant: (shareId) => requestHasShareAccessGrant(request, shareId),
+  });
+  if (!verdict.pass) return { ok: false, refusal: toPublicRefusal(verdict.reason) };
 
-  if (snap.empty) return null;
-
-  if (snap.size > 1) {
-    logger.warn('Public showcase token resolved to more than one active share', {
-      token,
-      entityType,
-      shareIds: snap.docs.map(doc => doc.id),
-    });
+  const stored = verdict.share;
+  const pdfStoragePath = stored.showcaseMeta?.pdfStoragePath || undefined;
+  if (stored.entityType !== entityType || (requirePdfPath && !pdfStoragePath)) {
+    return { ok: false, refusal: 'not-found' };
   }
 
-  const match = snap.docs.find(doc => doc.data().entityType === entityType);
-  if (!match) return null;
-
-  const data = match.data() as Record<string, unknown>;
-  const entityId = data.entityId as string | undefined;
-  const companyId = data.companyId as string | undefined;
-  const expiresAt = data.expiresAt as string | undefined;
-
-  if (!entityId || !companyId || !expiresAt) return null;
-
-  const showcaseMeta = (data.showcaseMeta ?? {}) as { pdfStoragePath?: string };
-  const pdfStoragePath = showcaseMeta.pdfStoragePath;
-
-  if (requirePdfPath && !pdfStoragePath) return null;
-
-  return { id: match.id, entityId, companyId, expiresAt, pdfStoragePath };
-}
-
-/**
- * Bump a unified share's access counter.
- *
- * `FieldValue.increment` rather than read-then-write: the counter is touched
- * from anonymous traffic, so two concurrent viewers must not lose a count.
- * (The property surface keeps its own read-then-write dual-write against the
- * legacy `file_shares` collection — see ADR-698 §4.)
- */
-export async function incrementPublicShareAccess(
-  shareId: string,
-  adminDb: Firestore,
-): Promise<void> {
-  await adminDb
-    .collection(COLLECTIONS.SHARES)
-    .doc(shareId)
-    .update({ accessCount: FieldValue.increment(1) });
+  return {
+    ok: true,
+    share: {
+      id: stored.id,
+      entityId: stored.entityId,
+      companyId: stored.companyId,
+      expiresAt: stored.expiresAt,
+      pdfStoragePath,
+      note: stored.note,
+      stored,
+    },
+  };
 }

@@ -4,8 +4,9 @@
  * =============================================================================
  *
  * Resolves `entityType: 'file'` shares. Everything shared with the other
- * resolvers — public projection, base input validation, tenant ownership, the
- * entity read — comes from `sharing/resolver-core`. What stays here is the only
+ * resolvers — public projection, base input validation — comes from
+ * `sharing/resolver-core`; the entity read and tenant ownership live on the
+ * server (`server/sharing/share-entity-access.ts`, ADR-884 Φ0.12). What stays here is the only
  * genuinely file-specific rule: the resolved shape prefers the share's own
  * `fileMeta` over the document, and falls back to the id when the file has no
  * name (a missing file must still render a download page).
@@ -16,53 +17,58 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createModuleLogger } from '@/lib/telemetry';
-import {
-  createTenantOwnershipGuard,
-  loadSharedEntityDoc,
-} from '@/services/sharing/resolver-core/share-entity-access';
 import {
   buildSafePublicProjection,
+  pickFirstStringField,
   validateShareBaseInput,
 } from '@/services/sharing/resolver-core/share-resolver-primitives';
-import type { ShareEntityDefinition, ShareRecord } from '@/types/sharing';
-
-const logger = createModuleLogger('FileShareResolver');
+import type { ShareEntityDefinition, ShareProjectionInput } from '@/types/sharing';
 
 export interface FileShareResolvedData {
   shareId: string;
   token: string;
   fileId: string;
-  fileName: string;
-  mimeType: string | null;
+  displayName: string;
+  originalFilename: string;
+  contentType: string | null;
   sizeBytes: number | null;
+  ext: string | null;
   note: string | null;
+  /**
+   * Short-lived signed URL for the inline preview — filled **by the server** after
+   * the access is recorded (`server/sharing/share-resolve.ts`); the pure projection
+   * leaves it `null`. Never the file's permanent `downloadUrl`.
+   */
+  previewUrl: string | null;
 }
 
-async function resolveFile(share: ShareRecord): Promise<FileShareResolvedData> {
-  const data = await loadSharedEntityDoc({
-    collection: COLLECTIONS.FILES,
-    share,
-    logger,
-    missingMessage: 'File share points to missing file',
-  });
-
+/**
+ * ⚠️ Διαβάζει τα **κανονικά** πεδία του `FileRecord` (`displayName` · `originalFilename` ·
+ * `contentType` · `sizeBytes` · `ext`, `types/file-record.ts`). Μέχρι το ADR-884 Φ0.12 εδώ
+ * διαβάζονταν `name` / `mimeType` — πεδία που το `FileRecord` **δεν έχει** — οπότε κάθε
+ * αρχείο εμφανιζόταν με το id του αντί για το όνομά του.
+ */
+function projectFile({ share, entity: data, token }: ShareProjectionInput): FileShareResolvedData {
+  const sizeFromDoc = typeof data?.sizeBytes === 'number' ? data.sizeBytes : null;
   return {
     shareId: share.id,
-    token: share.token,
+    token,
     fileId: share.entityId,
-    fileName: (data?.name as string | undefined) ?? share.entityId,
-    mimeType: share.fileMeta?.mimeType ?? (data?.mimeType as string | undefined) ?? null,
-    sizeBytes: share.fileMeta?.sizeBytes ?? (data?.sizeBytes as number | undefined) ?? null,
+    displayName: pickFirstStringField(data, ['displayName', 'originalFilename']) ?? share.entityId,
+    originalFilename: pickFirstStringField(data, ['originalFilename']) ?? share.entityId,
+    contentType: share.fileMeta?.mimeType ?? pickFirstStringField(data, ['contentType']),
+    sizeBytes: share.fileMeta?.sizeBytes ?? sizeFromDoc,
+    ext: pickFirstStringField(data, ['ext']),
     note: share.note ?? null,
+    previewUrl: null,
   };
 }
 
 export const fileShareResolver: ShareEntityDefinition<FileShareResolvedData> = {
-  resolve: resolveFile,
+  entityCollection: COLLECTIONS.FILES,
+  project: projectFile,
   safePublicProjection: share => buildSafePublicProjection(share, 'fileMeta'),
   validateCreateInput: input =>
     validateShareBaseInput(input, { entityType: 'file', entityIdLabel: 'fileId' }),
-  canShare: createTenantOwnershipGuard(COLLECTIONS.FILES),
   renderPublic: () => null, // Wired in Step D (public route dispatcher)
 };

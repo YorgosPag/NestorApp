@@ -135,14 +135,12 @@ export type {
   BuildPublicPayloadParams,
   CreatePublicPayloadRouteConfig,
   PublicShowcasePayloadHandler,
-  ResolvedShowcaseShare,
 } from './api/create-public-payload-route';
 
 export { createPublicShowcasePdfRoute } from './api/create-public-pdf-route';
 export type {
   CreatePublicPdfRouteConfig,
   PublicShowcasePdfHandler,
-  ResolvedPublicPdfShare,
 } from './api/create-public-pdf-route';
 
 // =============================================================================
@@ -171,11 +169,13 @@ export type {
 } from './api/create-token-route-export';
 
 export {
-  incrementPublicShareAccess,
   lookupPublicShowcaseShare,
+  publicShowcaseRefusalResponse,
 } from './api/public-share-lookup';
 export type {
   LookupPublicShowcaseShareParams,
+  PublicShowcaseLookup,
+  PublicShowcaseRefusal,
   PublicShowcaseShare,
 } from './api/public-share-lookup';
 

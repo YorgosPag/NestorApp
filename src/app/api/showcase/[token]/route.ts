@@ -4,13 +4,10 @@
  * =============================================================================
  *
  * Thin forward to `createPublicShowcasePayloadRoute` (showcase-core). Public
- * (anonymous) — resolves the share via dual-read (unified `shares` first, then
- * legacy `file_shares` for backward compat) and delegates payload assembly to
- * the surface-specific `buildPayload` hook.
- *
- * Token lookup: unified `shares` (entityType='property_showcase') first,
- * then legacy `file_shares.showcaseMode=true` for older tokens.
- * videoUrl lives in legacy `file_shares.note` — surfaced via `extra.note`.
+ * (anonymous) — the share gate (ADR-884 Φ0.12) resolves the token over unified
+ * `shares` and legacy `file_shares.showcaseMode=true`, and payload assembly is
+ * delegated to the surface-specific `buildPayload` hook.
+ * videoUrl lives in the share `note` — surfaced via `extra.note`.
  *
  * @module app/api/showcase/[token]/route
  */
@@ -43,47 +40,10 @@ const route = createPublicShowcasePayloadRoute<ShowcasePayload, PropertyShareExt
   shareNotFoundMessage: 'Showcase link not found or deactivated',
   pdfUrlPath: (token) => `/api/showcase/${token}/pdf`,
 
-  resolveShare: async (token, adminDb) => {
-    // 1. Unified shares (entityType='property_showcase') — ADR-315 M3+.
-    const unifiedSnap = await adminDb
-      .collection(COLLECTIONS.SHARES)
-      .where('token', '==', token)
-      .where('isActive', '==', true)
-      .limit(1)
-      .get();
-    if (!unifiedSnap.empty) {
-      const d = unifiedSnap.docs[0].data() as Record<string, unknown>;
-      if (d.entityType === 'property_showcase') {
-        const entityId = d.entityId as string | undefined;
-        const companyId = d.companyId as string | undefined;
-        const expiresAt = d.expiresAt as string | undefined;
-        if (!entityId || !companyId || !expiresAt) return null;
-        const showcaseMeta = (d.showcaseMeta ?? {}) as { pdfStoragePath?: string };
-        return { entityId, companyId, expiresAt, pdfStoragePath: showcaseMeta.pdfStoragePath };
-      }
-    }
-
-    // 2. Legacy file_shares fallback — older tokens before ADR-315 M3.
-    const legacySnap = await adminDb
-      .collection(COLLECTIONS.FILE_SHARES)
-      .where('token', '==', token)
-      .where('isActive', '==', true)
-      .limit(1)
-      .get();
-    if (legacySnap.empty) return null;
-    const d = legacySnap.docs[0].data() as Record<string, unknown>;
-    const entityId = d.showcasePropertyId as string | undefined;
-    const companyId = d.companyId as string | undefined;
-    const expiresAt = d.expiresAt as string | undefined;
-    if (!d.showcaseMode || !entityId || !companyId || !expiresAt) return null;
-    return {
-      entityId,
-      companyId,
-      expiresAt,
-      pdfStoragePath: d.pdfStoragePath as string | undefined,
-      extra: { note: d.note as string | undefined },
-    };
-  },
+  // ADR-884 Φ0.12 — the one share gate resolves `shares` AND legacy `file_shares`
+  // (`showcaseMode` ⇒ property_showcase), checks expiry, limit and password grant.
+  shareEntityType: 'property_showcase',
+  extraOf: (share) => ({ note: share.note ?? undefined }),
 
   buildPayload: async ({
     entityId, companyId, locale, expiresAt, pdfUrl, extra, adminDb, logger,

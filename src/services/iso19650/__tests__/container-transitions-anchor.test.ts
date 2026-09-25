@@ -151,7 +151,7 @@ describe('Α17 — παράδοση (WIP → SHARED)', () => {
     seedFile();
     await transitionContainer({ fileId: FILE_ID, act: 'share', actor: author });
 
-    // ⚠️ Το `'share'` σημαίνει **σύνδεσμο κοινοποίησης** (`file-share.service`). Αν η
+    // ⚠️ Το `'share'` σημαίνει **σύνδεσμο κοινοποίησης** (`server/sharing/share-create.ts`). Αν η
     //    πράξη CDE το χρησιμοποιούσε, το AuditLogPanel θα έδειχνε **δύο εντελώς
     //    διαφορετικά γεγονότα** στην ίδια γραμμή.
     expect(recordFileAudit).toHaveBeenCalledWith(

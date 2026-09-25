@@ -43,6 +43,8 @@ import {
   type StoredDemandRead,
 } from '@/lib/demand/property-demand-from-document';
 import { DEMAND_AFFIRMATION_TTL_DAYS, type PropertyDemand } from '@/types/property-demand';
+import { useDemandName } from '@/hooks/demand/useDemandName';
+import { DemandSeekBadges } from './DemandSeekBadges';
 import { DemandSummary } from './DemandSummary';
 
 /** Οι τρεις καταστάσεις του κουμπιού. **Ποτέ** `boolean` + `string`. */
@@ -144,22 +146,28 @@ export function DemandCard({ read }: { read: StoredDemandRead }): React.ReactEle
   return <CompleteDemandCard demand={read.demand} />;
 }
 
-/** Η κάρτα όπως ήταν — **αμετάβλητη**, και πλέον με τον τύπο να λέει αλήθεια. */
+/**
+ * Η πλήρης κάρτα. **ADR-886**: τίτλος = το **όνομα** της ζήτησης (δικό του ή αυτόματο), και από κάτω
+ * τα σήματα είδους + κατάστασης. Ως τότε ο τίτλος ήταν η κατάσταση («Ψάχνω») — πέντε ζητήσεις, πέντε
+ * ίδιοι τίτλοι, και ο άνθρωπος έπρεπε να διαβάσει τον πίνακα για να βρει ποια είναι ποια.
+ */
 function CompleteDemandCard({ demand }: { demand: PropertyDemand }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
+  const { displayName } = useDemandName();
 
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">
-          {t(`property-market:demand.lifecycle.${demand.lifecycle}`)}
-        </h3>
-        <Link
-          href={demandDetailHref(demand.id)}
-          className="text-sm font-medium text-foreground underline"
-        >
-          {t('property-market:demand.list.open')}
-        </Link>
+      <header className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-base font-semibold text-foreground">{displayName(demand)}</h3>
+          <Link
+            href={demandDetailHref(demand.id)}
+            className="text-sm font-medium text-foreground underline"
+          >
+            {t('property-market:demand.list.open')}
+          </Link>
+        </div>
+        <DemandSeekBadges demand={demand} />
       </header>
 
       <DemandSummary demand={demand} />

@@ -126,7 +126,11 @@ describe('🔴 Σ — ο κατάλογος ΔΕΝ εξαφανίζει (Α5 §4
 
     // Η μετάλλαξη που πιάνει: ένα `filter(r => r.kind === 'complete')` στον κατάλογο
     // θα άφηνε **ένα** στοιχείο — και ο άνθρωπος δεν θα μάθαινε ποτέ γιατί.
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    // ADR-886: κάθε κάρτα έχει πλέον **δική της** λίστα σημάτων — μετρώνται μόνο τα στοιχεία του
+    // **καταλόγου** (η εξωτερική λίστα), όχι τα σήματα μέσα στις κάρτες.
+    const [catalogue] = screen.getAllByRole('list');
+    const entries = screen.getAllByRole('listitem').filter((item) => item.parentElement === catalogue);
+    expect(entries).toHaveLength(2);
     expect(screen.getByText(`${K}.badge`)).toBeInTheDocument();
     expect(screen.getByText('property-market:demand.lifecycle.active')).toBeInTheDocument();
   });

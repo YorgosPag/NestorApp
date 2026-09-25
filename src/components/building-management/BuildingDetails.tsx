@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 // [ENTERPRISE] Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
@@ -11,8 +11,9 @@ import { BuildingTabs } from './BuildingDetails/BuildingTabs';
 import { DetailsContainer } from '@/core/containers';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
-import { nowISO } from '@/lib/date-local';
-import type { CreateShareInput } from '@/types/sharing';
+import { createShowcasePdfPreSubmit } from '@/components/sharing/showcase-pdf-pre-submit';
+import { useDelegatedSave } from '@/hooks/useDelegatedSave';
+import { useShowcaseDialog } from '@/hooks/useShowcaseDialog';
 
 
 interface BuildingDetailsProps {
@@ -64,47 +65,18 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   const [localIsEditing, setLocalIsEditing] = useState(false);
   const isEditing = externalIsEditing ?? localIsEditing;
   const setIsEditing = onSetEditing ?? setLocalIsEditing;
-  const [isSaving, setIsSaving] = useState(false);
-  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
-
-  // Save delegation ref — GeneralTabContent registers its handleSave here
-  const saveRef = useRef<(() => Promise<boolean>) | null>(null);
+  // Save delegation — GeneralTabContent registers its handleSave in saveRef
+  const { saveRef, isSaving, handleSave } = useDelegatedSave();
+  const showcase = useShowcaseDialog();
 
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
   }, []);
 
-  const handleShowcaseBuilding = useCallback(() => {
-    setShowcaseDialogOpen(true);
-  }, []);
-
-  const buildingShowcasePdfPreSubmit = useCallback(async (): Promise<
-    Pick<CreateShareInput, 'showcaseMeta'>
-  > => {
-    const res = await fetch(`/api/buildings/${building?.id}/showcase/pdf`, { method: 'POST' });
-    if (!res.ok) throw new Error('PDF generation failed');
-    const body = (await res.json()) as {
-      data?: { pdfStoragePath?: string | null; pdfRegeneratedAt?: string | null };
-    };
-    const pdfStoragePath = body.data?.pdfStoragePath?.trim();
-    if (!pdfStoragePath) throw new Error('PDF generation returned no storage path');
-    return {
-      showcaseMeta: {
-        pdfStoragePath,
-        pdfRegeneratedAt: body.data?.pdfRegeneratedAt ?? nowISO(),
-      },
-    };
-  }, [building?.id]);
-
-  const handleSave = useCallback(async () => {
-    if (!saveRef.current) return;
-    setIsSaving(true);
-    try {
-      await saveRef.current();
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+  const buildingShowcasePdfPreSubmit = useMemo(
+    () => createShowcasePdfPreSubmit(`/api/buildings/${building?.id}/showcase/pdf`),
+    [building?.id],
+  );
 
   const handleCancel = useCallback(() => {
     if (isCreateMode) {
@@ -134,7 +106,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
             onCancel={handleCancel}
             onNewBuilding={isTrashMode ? undefined : onNewBuilding}
             onDeleteBuilding={isTrashMode ? undefined : onDeleteBuilding}
-            onShowcaseBuilding={isTrashMode || !building?.id ? undefined : handleShowcaseBuilding}
+            onShowcaseBuilding={isTrashMode || !building?.id ? undefined : showcase.openDialog}
           />
         }
         tabsRenderer={
@@ -157,13 +129,12 @@ export const BuildingDetails = React.memo(function BuildingDetails({
       />
       {building?.id && user?.companyId && user?.uid && (
         <UnifiedShareDialog
-          open={showcaseDialogOpen}
-          onOpenChange={setShowcaseDialogOpen}
+          open={showcase.open}
+          onOpenChange={showcase.setOpen}
           entityType="building_showcase"
           entityId={building.id}
           entityTitle={building.name}
           companyId={user.companyId}
-          userId={user.uid}
           preSubmit={buildingShowcasePdfPreSubmit}
         />
       )}

@@ -188,7 +188,6 @@ export function PropertyDetailSurface({
           entityId={property.id}
           entityTitle={t('properties-detail:showcase.title')}
           entitySubtitle={property.name ?? ''}
-          userId={user.uid}
           companyId={user.companyId}
           preSubmit={showcase.preSubmit}
           contactShareContent={{

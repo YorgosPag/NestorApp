@@ -1613,15 +1613,30 @@ service cloud.firestore {
     // ⚠️ ΚΑΜΙΑ ΔΙΑΓΡΑΦΗ ΑΠΟ ΤΟΝ ΠΕΛΑΤΗ: η απόσυρση είναι `lifecycle: 'withdrawn'`,
     // όχι `delete`. Μια σβησμένη ζήτηση δεν μπορεί να αποδείξει ότι μετρήθηκε ποτέ
     // σωστά στο άθροισμα — και το άθροισμα είναι προϊόν που πουλάμε.
+    // 🔑 ADR-886 — ΤΟ ΟΝΟΜΑ ΚΑΙ Η ΕΤΙΚΕΤΑ ΤΟΠΟΥ ΕΧΟΥΝ ΟΡΙΟ ΚΑΙ ΕΔΩ. Η ζήτηση γράφεται απευθείας από
+    // τον browser, άρα ΑΥΤΟΙ οι κανόνες είναι ο server: η φόρμα και η πύλη γραφής
+    // (`lib/demand/demand-title.ts`) κόβουν στο 80/160, αλλά ένας πελάτης που τις παρακάμπτει θα
+    // έγραφε ένα όνομα-μυθιστόρημα που θα έσπαγε κάθε κάρτα και κάθε email. Οι αριθμοί ΠΡΕΠΕΙ να
+    // συμφωνούν με το `demand-title.ts` — τους ελέγχει η σουίτα `property-demands.rules.test.ts`.
+    // Απουσία πεδίου = έγγραφο πριν το ADR-886, και είναι έγκυρο.
+    function isValidDemandLabels(data) {
+      return (!('title' in data) || data.title == null
+                || (data.title is string && data.title.size() <= 80))
+          && (!('placeLabel' in data) || data.placeLabel == null
+                || (data.placeLabel is string && data.placeLabel.size() <= 160));
+    }
+
     match /property_demands/{demandId} {
       allow read: if isAuthenticated() && resource.data.authorUserId == request.auth.uid;
 
       allow create: if isAuthenticated()
-                    && request.resource.data.authorUserId == request.auth.uid;
+                    && request.resource.data.authorUserId == request.auth.uid
+                    && isValidDemandLabels(request.resource.data);
 
       allow update: if isAuthenticated()
                     && resource.data.authorUserId == request.auth.uid
-                    && request.resource.data.authorUserId == resource.data.authorUserId;
+                    && request.resource.data.authorUserId == resource.data.authorUserId
+                    && isValidDemandLabels(request.resource.data);
 
       allow delete: if false;
     }
@@ -3908,63 +3923,34 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🔗 FILE_SHARES - ENTERPRISE SHAREABLE LINKS (ADR-191 Phase 4.2)
+    // 🔗 FILE_SHARES + SHARES — ΣΥΝΔΕΣΜΟΙ ΚΟΙΝΟΠΟΙΗΣΗΣ: ΜΟΝΟ Ο ΔΙΑΚΟΜΙΣΤΗΣ (ADR-884 Φ0.12 · ADR-315)
     // =========================================================================
-    // 📅 Added: 2026-03-09 (ADR-191 - Enterprise Document Management)
-    // 📅 Updated: 2026-03-20 (ADR-252 FR-C2 — tenant isolation on write)
-    // 🏢 ENTERPRISE: Shareable file links with expiration and password
-    // 🔒 READ: Public (for share token validation on /shared/[token] page)
-    // ✏️ WRITE: Tenant-scoped (companyId required)
+    // 🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΚΛΕΙΝΕΙ (2026-09-25): εδώ ήταν `allow read: if true` **και στις δύο**.
+    //    Στους κανόνες το `read` = `get` **+ `list`**: ένας ΑΝΩΝΥΜΟΣ απαριθμούσε ολόκληρη τη
+    //    συλλογή και μάζευε ΚΑΘΕ διακριτικό (σε καθαρό κείμενο) μαζί με τον hash του κωδικού
+    //    (SHA-256 χωρίς salt) — η «εντροπία 190 bit» του σχολίου δεν προστάτευε τίποτα, αφού
+    //    το διακριτικό ΔΙΑΒΑΖΟΤΑΝ αντί να μαντεύεται. Και ο ανώνυμος έγραφε ΟΠΟΙΑΔΗΠΟΤΕ τιμή
+    //    στο `accessCount`/`downloadCount` (ο κανόνας έλεγχε ΠΟΙΑ πεδία, όχι ΠΩΣ) — δηλαδή
+    //    ξαναγέμιζε ένα εξαντλημένο όριο.
+    //
+    // ✅ ΤΩΡΑ: ΚΑΝΕΝΑΣ πελάτης δεν διαβάζει ούτε γράφει (μετρημένο: κανένα αρχείο πελάτη δεν
+    //    αγγίζει τις δύο συλλογές). Ολόκληρος ο κύκλος ζωής είναι στον διακομιστή (Admin SDK):
+    //      δημιουργία  POST /api/shares            (server/sharing/share-create.ts)
+    //      επίλυση     POST /api/shares/resolve    (share-resolve.ts — μόνο `tokenHash`)
+    //      λήψη        POST /api/shares/download   (share-download.ts — V4 URL 15′)
+    //      ανάκληση    POST /api/shares/[id]/revoke (share-revoke.ts)
+    //    και οι δημόσιες διαδρομές showcase περνούν από την ΙΔΙΑ πύλη (share-gate.ts).
+    //
+    // ⚠️ ΜΗΝ ανοίξεις ανάγνωση «μόνο για τον μισθωτή» χωρίς αναγνώστη: τα έγγραφα κρατούν
+    //    `tokenHash` και `passwordHash`· ελάχιστο προνόμιο = κανένας. Αν χρειαστεί λίστα
+    //    συνδέσμων στο UI, έρχεται από διαδρομή διακομιστή που ΔΕΝ επιστρέφει hash.
+    // ⚠️ ΣΕΙΡΑ ΑΝΑΠΤΥΞΗΣ (ADR-884 §8.1 Φ0.12): δείκτες → push κώδικα → μετάπτωση → ΑΥΤΟΙ.
     match /file_shares/{shareId} {
-      // 📖 READ: Public (for share token validation on /shared/[token] page)
-      // 🔒 SECURITY: Share links must remain publicly readable for anonymous access
-      allow read: if true;
-      // ✍️ CREATE: Authenticated users with companyId enforcement
-      // 🔒 SECURITY (ADR-252 FR-C2): Was `isAuthenticated()` → now enforces companyId
-      allow create: if isAuthenticated()
-                    && request.resource.data.keys().hasAll(['companyId', 'createdBy'])
-                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
-      // 📝 UPDATE: Authenticated tenant member OR public download counter
-      // SECURITY: Public can ONLY increment downloadCount and lastDownloadedAt
-      allow update: if (isAuthenticated()
-                        && (isSuperAdminOnly()
-                            || belongsToCompany(resource.data.companyId)))
-                    || (
-                         // Public can only increment download counter
-                         request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['downloadCount', 'lastDownloadedAt'])
-                       );
-      // 🗑️ DELETE: Creator only
-      allow delete: if isAuthenticated()
-                    && resource.data.createdBy == request.auth.uid;
+      allow read, write: if false;
     }
 
-    // =========================================================================
-    // 🔗 SHARES - UNIFIED POLYMORPHIC SHARES (ADR-315 Phase M1+)
-    // =========================================================================
-    // 📅 Added: 2026-04-18 (ADR-315 - Unified Sharing)
-    // 🏢 ENTERPRISE: Polymorphic shares for file / contact / property_showcase
-    // 🔒 READ: Public (token validation on /shared/[token] — any entityType)
-    // ✏️ WRITE: Tenant-scoped (companyId + entityType + createdBy required)
     match /shares/{shareId} {
-      // 📖 READ: Public — token is 190-bit entropy, acts as capability
-      allow read: if true;
-      // ✍️ CREATE: Authenticated users with tenant enforcement
-      allow create: if isAuthenticated()
-                    && request.resource.data.keys().hasAll(['companyId', 'createdBy', 'entityType', 'entityId', 'token'])
-                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
-      // 📝 UPDATE: Authenticated tenant member OR public access counter increment
-      // SECURITY: Public can ONLY bump accessCount + lastAccessedAt (no revoke)
-      allow update: if (isAuthenticated()
-                        && (isSuperAdminOnly()
-                            || belongsToCompany(resource.data.companyId)))
-                    || (
-                         request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['accessCount', 'lastAccessedAt'])
-                       );
-      // 🗑️ DELETE: Creator only — prefer revoke (isActive=false) over delete
-      allow delete: if isAuthenticated()
-                    && resource.data.createdBy == request.auth.uid;
+      allow read, write: if false;
     }
 
     // =========================================================================

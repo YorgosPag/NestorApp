@@ -410,7 +410,6 @@ export function ContactsList({
           entityId={shareContactId}
           entityTitle={t('list.share.modalTitle')}
           entitySubtitle={shareData.title}
-          userId={user.uid}
           companyId={user.companyId}
           contactMeta={shareContactMeta}
           contactShareContent={{

@@ -11,7 +11,7 @@
  *   - unit_floorplans / doc_templates / file_folders → fileTenantFullMatrix()
  *   - cad_files                       → cadFilesMatrix() (permissive write)
  *   - file_audit_log                  → fileAuditLogMatrix() (no super on read)
- *   - file_shares                     → fileSharesMatrix() (public read)
+ *   - file_shares, shares             → shareLinksMatrix() (server-only, ADR-884 Φ0.12)
  *   - photo_shares                    → photoSharesMatrix() (super-only delete)
  *   - file_comments                   → fileCommentsMatrix() (author delete)
  *   - file_approvals                  → fileApprovalsMatrix() (delete deny)
@@ -195,53 +195,35 @@ export function fileAuditLogMatrix(): CoverageDefinition {
 }
 
 /**
- * Matrix for `file_shares` — shareable file links with public read.
+ * Matrix for the share-link collections — `file_shares` **and** `shares`
+ * (ADR-884 Φ0.12 · ADR-315). Server-only: `allow read, write: if false`.
  *
- * Rule shape:
- *   - read/list: `if true` — public, including anonymous
- *   - create: `isAuthenticated() && (isSuperAdminOnly || companyId==getUserCompanyId())`
- *   - update: `(isAuthenticated && (isSuperAdminOnly || belongsToCompany))
- *              || (public download counter — only downloadCount/lastDownloadedAt)`
- *             Matrix tests use a non-counter update → only tenant members allowed.
- *   - delete: `isAuthenticated() && resource.data.createdBy == request.auth.uid`
- *             Seed doc: createdBy = same_tenant_user.uid → only same_tenant_user can delete.
- *
- * See ADR-298 §4 Phase C.3 (2026-04-14).
+ * 🔴 Why not `denyAllMatrix`: that matrix leaves **`anonymous × list`** and
+ * **`anonymous × update`** unmeasured — and those are exactly the two cells of
+ * the hole this closes. Until 2026-09-25 both collections were `allow read: if
+ * true` (anonymous enumeration of every token) with an anonymous counter write
+ * (`accessCount` / `downloadCount`, any value). Every persona × every operation
+ * the harness can reach is therefore **measured** here, the anonymous ones first.
  */
-export function fileSharesMatrix(): CoverageDefinition {
-  return defineMatrix('fileSharesMatrix', [
-    // Read: if true — public access for share token validation
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('cross_tenant_admin', 'read', 'allow'),  // if true — no tenant gate
-    cell('cross_tenant_admin', 'list', 'allow'),
-    cell('anonymous', 'read', 'allow'),   // public read for share token pages
-    cell('anonymous', 'list', 'allow'),
-    // Create: tenant-scoped (isSuperAdminOnly || companyId match)
-    cell('super_admin', 'create', 'allow'),
-    cell('same_tenant_admin', 'create', 'allow'),
-    cell('same_tenant_user', 'create', 'allow'),
-    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
-    cell('anonymous', 'create', 'deny', 'missing_claim'),
-    // Update (general, non-counter): isSuperAdminOnly || belongsToCompany
-    cell('super_admin', 'update', 'allow'),
-    cell('same_tenant_admin', 'update', 'allow'),
-    cell('same_tenant_user', 'update', 'allow'),
-    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
-    cell('anonymous', 'update', 'deny', 'missing_claim'),
-    // Delete: createdBy == request.auth.uid (seed: createdBy=same_tenant_user.uid)
-    cell('super_admin', 'delete', 'deny', 'server_only'),    // uid mismatch
-    cell('same_tenant_admin', 'delete', 'deny', 'server_only'), // uid mismatch
-    cell('same_tenant_user', 'delete', 'allow'),            // uid == createdBy
-    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
-    cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ], [
-    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
-    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+export function shareLinksMatrix(): CoverageDefinition {
+  return defineMatrix('shareLinksMatrix', [
+    // 🔴 The hole: anonymous enumeration + anonymous counter write.
+    cell('anonymous', 'list', 'deny', 'server_only'),
+    cell('anonymous', 'read', 'deny', 'server_only'),
+    cell('anonymous', 'update', 'deny', 'server_only'),
+    cell('anonymous', 'create', 'deny', 'server_only'),
+    cell('anonymous', 'delete', 'deny', 'server_only'),
+    // Not even the owning tenant: the documents hold `tokenHash` + `passwordHash`.
+    // `cross_tenant_user` + `external_user` are MEASURED too, not exempted: with
+    // `if false` there is no open decision to defer — every persona is denied.
+    ...([
+      'super_admin', 'same_tenant_admin', 'same_tenant_user',
+      'cross_tenant_admin', 'cross_tenant_user', 'external_user',
+    ] as const).flatMap(
+      (persona) => (['read', 'list', 'create', 'update', 'delete'] as const).map(
+        (operation) => cell(persona, operation, 'deny', 'server_only'),
+      ),
+    ),
   ]);
 }
 

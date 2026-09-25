@@ -60,7 +60,7 @@ import {
   fileApprovalsMatrix,
   fileAuditLogMatrix,
   fileCommentsMatrix,
-  fileSharesMatrix,
+  shareLinksMatrix,
   fileTenantFullMatrix,
   legacyFloorplanMatrix,
   photoSharesMatrix,
@@ -1166,12 +1166,21 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...fileAuditLogMatrix(),
   },
   {
+    // ADR-884 Φ0.12 — server-only since 2026-09-25 (was `read: if true` = anonymous
+    // enumeration of every token). Same matrix as `shares`, one lifecycle on the server.
     collection: 'file_shares',
-    pattern: 'tenant_direct',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/file-shares.rules.test.ts',
-    // Read: if true — public (anonymous allowed for share token validation pages).
-    // Delete: createdBy==uid only — super_admin and admin denied.
-    ...fileSharesMatrix(),
+    ...shareLinksMatrix(),
+  },
+  {
+    // ADR-884 Φ0.12 · ADR-315 — the unified share links. Was UNCOVERED (`TODO(ADR-298
+    // Phase D)` below) while its rule was `read: if true`: the one collection whose hole
+    // a suite would have shown was the one without a suite.
+    collection: 'shares',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/shares.rules.test.ts',
+    ...shareLinksMatrix(),
   },
   {
     collection: 'photo_shares',
@@ -1730,8 +1739,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'dxf_viewer_pen_tables',       // lines 3519-3534 — ADR-375 Phase C.1 per-company pen table singleton
   'dxf_dimension_styles',        // ADR-362 Phase F4 — per-company custom DIMSTYLE + isDefault pointer (view_templates rule shape)
   // — Sharing (ADR-312 Phase 2 Property Showcase + ADR-315 Unified Sharing) —
-  // TODO(ADR-298 Phase D): write full matrix for shares + share_dispatches
-  'shares',               // lines 2428-2447 — ADR-312/315 unified sharing link tokens
+  // shares → moved to COVERAGE (ADR-884 Φ0.12, 2026-09-25 — server-only)
+  // TODO(ADR-298 Phase D): write full matrix for share_dispatches
   'share_dispatches',     // lines 2454-2463 — ADR-312/315 share dispatch events
   // dxf_overlay_levels → moved to COVERAGE (renamed from camelCase, 2026-04-16)
   // — Navigation / notifications / tasks —

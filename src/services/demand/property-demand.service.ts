@@ -47,6 +47,7 @@ import {
   type PropertyDemand,
 } from '@/types/property-demand';
 import type { DemandDraft } from '@/lib/demand/demand-form-values';
+import { isDemandLabelTooLong, normalizeDemandLabel } from '@/lib/demand/demand-title';
 
 const logger = createModuleLogger('property-demand.service');
 
@@ -102,7 +103,8 @@ export async function createDemand(
   draft: DemandDraft,
   authorship: DemandAuthorship,
 ): Promise<DemandWriteResult> {
-  const violations = demandInvariantViolations(draft);
+  const clean = withNormalizedLabels(draft);
+  const violations = demandInvariantViolations(clean);
   if (violations.length > 0) return { kind: 'invalid', violations };
 
   const now = nowISO();
@@ -111,7 +113,7 @@ export async function createDemand(
     authorUserId: authorship.authorUserId,
     authorCompanyId: authorship.authorCompanyId,
     mandate: authorship.mandate,
-    ...draft,
+    ...clean,
     lifecycle: 'active',
     affirmedAt: now,
     createdAt: now,
@@ -141,12 +143,13 @@ export async function updateDemand(
   demandId: string,
   draft: DemandDraft,
 ): Promise<DemandEditResult> {
-  const violations = demandInvariantViolations(draft);
+  const clean = withNormalizedLabels(draft);
+  const violations = demandInvariantViolations(clean);
   if (violations.length > 0) return { kind: 'invalid', violations };
 
   try {
     await updateDoc(doc(db, COLLECTIONS.PROPERTY_DEMANDS, demandId), {
-      ...draft,
+      ...clean,
       updatedAt: nowISO(),
     });
     // ⚠️ **Δεν επιστρέφεται έγγραφο, επίτηδες.** Το `updateDoc` δεν διαβάζει πίσω, και
@@ -230,6 +233,35 @@ export async function setDemandLifecycle(
 // =============================================================================
 // 5. ΑΣΤΟΧΙΑ — μία διατύπωση, ώστε το μήνυμα να μη γράφεται τέσσερις φορές
 // =============================================================================
+
+/**
+ * **Μετονομασία** (ADR-886) — `null` ή κενό ⇒ επιστροφή στο **αυτόματο** όνομα.
+ *
+ * ⚠️ **Δεν αγγίζει το `updatedAt`.** Το `updatedAt` λέει «άλλαξαν τα κριτήρια»· ένα νέο όνομα δεν
+ * αλλάζει τι ζητείται — ίδια λογική με το `affirmedAt`: δύο ερωτήσεις, δύο πεδία. Ούτε το
+ * `affirmedAt`: η μετονομασία **δεν** είναι «ψάχνω ακόμη».
+ */
+export async function renameDemand(demandId: string, title: string | null): Promise<DemandEditResult> {
+  const normalized = normalizeDemandLabel(title);
+  if (isDemandLabelTooLong({ title: normalized })) {
+    return { kind: 'invalid', violations: ['title-too-long'] };
+  }
+  try {
+    await updateDoc(doc(db, COLLECTIONS.PROPERTY_DEMANDS, demandId), { title: normalized });
+    return { kind: 'done' };
+  } catch (error) {
+    return failure('Η ζήτηση δεν μετονομάστηκε', { demandId }, error);
+  }
+}
+
+/** Η **ίδια** κανονικοποίηση ονόματος/ετικέτας με το σύνορο ανάγνωσης — η πύλη δεν εμπιστεύεται φόρμα. */
+function withNormalizedLabels(draft: DemandDraft): DemandDraft {
+  return {
+    ...draft,
+    title: normalizeDemandLabel(draft.title),
+    placeLabel: normalizeDemandLabel(draft.placeLabel),
+  };
+}
 
 /** Το μήνυμα ενός `unknown` σφάλματος, χωρίς `as any`. */
 function messageOf(error: unknown): string {

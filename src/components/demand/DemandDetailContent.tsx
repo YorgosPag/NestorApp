@@ -34,7 +34,9 @@ import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import type { PropertyDemand } from '@/types/property-demand';
 import { DemandAnswerPanel } from './DemandAnswerPanel';
 import { DemandLifecycleActions } from './DemandLifecycleActions';
+import { DemandSeekBadges } from './DemandSeekBadges';
 import { DemandSummary } from './DemandSummary';
+import { DemandTitleEditor } from './DemandTitleEditor';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/demands/[demandId]` (ADR-777 §8.39).
 //
@@ -63,6 +65,10 @@ function DemandBody({ demand }: { demand: PropertyDemand }): React.ReactElement 
 
   return (
     <>
+      {/* ADR-886 — το όνομα της ζήτησης ως τίτλος της σελίδας, μετονομάσιμο επιτόπου. */}
+      <DemandTitleEditor demand={demand} />
+      <DemandSeekBadges demand={demand} />
+
       <section className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">
           {t(`${NS}:demand.detail.criteria`)}

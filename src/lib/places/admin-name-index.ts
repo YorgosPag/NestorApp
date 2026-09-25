@@ -31,6 +31,7 @@
  * ονομάτων. Ο λόγος και η μέτρηση ζουν στο {@link foldPlaceIdentity}.
  */
 
+import { editDistance } from '@/lib/string/edit-distance';
 import { foldPlaceIdentity } from '@/utils/address/place-name';
 
 /**
@@ -117,51 +118,14 @@ export function exactNameMatches(
 /**
  * **Απόσταση Damerau-Levenshtein ≤ 1** — ένα πρόσθεση/διαγραφή/αντικατάσταση/μετάθεση.
  *
- * 🔑 Φραγμένος έλεγχος, **όχι** πίνακας δυναμικού προγραμματισμού: η ερώτηση είναι «≤1;»,
- * και η απάντηση βγαίνει σε **ένα** πέρασμα. Η πλήρης απόσταση θα ήταν υπολογισμός που
- * κανείς δεν ζήτησε — και θα καλούσε κάποιον να ανεβάσει το κατώφλι *(δες την
- * προειδοποίηση του `admin-identity`)*.
+ * 🔑 Φραγμένος έλεγχος: η ερώτηση είναι «≤1;» — η κοινή μηχανή σταματά μόλις η γραμμή ξεπεράσει
+ * το 1 (ADR-883 §5.11: μία υλοποίηση απόστασης). ⚠️ Το κατώφλι μένει **1** — δες την
+ * προειδοποίηση του `admin-identity` πριν σκεφτείς να το ανεβάσεις.
  *
  * ⚠️ **Και τα δύο ορίσματα οφείλουν να είναι ΗΔΗ διπλωμένα** *(`foldPlaceIdentity`)*.
  */
 export function withinOneEdit(a: string, b: string): boolean {
-  if (a === b) return true;
-  const la = a.length;
-  const lb = b.length;
-  if (Math.abs(la - lb) > 1) return false;
-
-  if (la === lb) return differsByOneOrTransposition(a, b, la);
-
-  // Διαφορά μήκους 1 ⇒ μία παράλειψη: περπάτα μαζί, επιτρέπεται **ένα** πήδημα.
-  const [short, long] = la < lb ? [a, b] : [b, a];
-  let i = 0;
-  let j = 0;
-  let skipped = false;
-  while (i < short.length && j < long.length) {
-    if (short[i] === long[j]) {
-      i += 1;
-      j += 1;
-      continue;
-    }
-    if (skipped) return false;
-    skipped = true;
-    j += 1;
-  }
-  return true;
-}
-
-/** Ίδιο μήκος: το πολύ **μία** διαφορά, ή **δύο γειτονικές** που είναι μετάθεση. */
-function differsByOneOrTransposition(a: string, b: string, length: number): boolean {
-  const differing: number[] = [];
-  for (let i = 0; i < length; i += 1) {
-    if (a[i] !== b[i]) {
-      differing.push(i);
-      if (differing.length > 2) return false;
-    }
-  }
-  if (differing.length <= 1) return true;
-  const [first, second] = differing;
-  return second === first + 1 && a[first] === b[second] && a[second] === b[first];
+  return editDistance(a, b, { transpositions: true, max: 1 }) <= 1;
 }
 
 /**

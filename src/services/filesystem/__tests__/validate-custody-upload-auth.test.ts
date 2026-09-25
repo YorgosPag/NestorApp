@@ -13,7 +13,6 @@ jest.mock('@/services/document-template.service', () => ({ DocumentTemplateServi
 jest.mock('@/services/file-comment.service', () => ({ FileCommentService: {} }));
 jest.mock('@/services/file-approval.service', () => ({ FileApprovalService: {} }));
 jest.mock('@/services/file-record.service', () => ({ FileRecordService: {} }));
-jest.mock('@/services/file-share.service', () => ({ FileShareService: {} }));
 jest.mock('@/lib/api/enterprise-api-client', () => ({ apiClient: { request: jest.fn() } }));
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),

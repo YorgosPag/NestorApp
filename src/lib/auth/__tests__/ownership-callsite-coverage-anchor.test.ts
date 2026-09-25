@@ -117,12 +117,12 @@ const PHASE_C_PERIMETER: Readonly<Record<string, Classification>> = {
   'services/showcase-core/api/create-unified-public-pdf-route.ts': {
     kind: 'upstream-guarded',
     suite: 'src/services/__tests__/ownership-upstream-guarded.test.ts',
-    why: '`lookupPublicShowcaseShare` επιστρέφει `null` σε share χωρίς `companyId`',
+    why: 'η πύλη κοινοποίησης (`normalizeUnifiedShare`, ADR-884 Φ0.12) επιστρέφει `null` σε share χωρίς `companyId`',
   },
   'app/api/showcase/[token]/pdf/route.ts': {
     kind: 'upstream-guarded',
     suite: 'src/services/__tests__/ownership-upstream-guarded.test.ts',
-    why: '`resolveShare` ΚΑΙ `loadEntityHeader` επιστρέφουν `null` σε κενό `companyId`',
+    why: 'η πύλη κοινοποίησης ΚΑΙ το `loadEntityHeader` επιστρέφουν `null` σε κενό `companyId`',
   },
 };
 
@@ -200,7 +200,9 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   //    **Α34.4/Α34.5** + `container-supersession-anchor` Α20.4 + `container-transitions-anchor` Α17.12.
   // 🔶 Όταν το `isOwnedByCustody` αποκτήσει **δικό του** μητρώο σημείων κλήσης, οι τρεις γραμμές
   //    μετακινούνται εκεί — δεν ξαναγράφονται εδώ.
-  'services/sharing/resolver-core/share-entity-access.ts',
+  // ADR-884 Φ0.12 — ο έλεγχος «μπορεί ο μισθωτής να κοινοποιήσει;» μετακόμισε από τον browser
+  // (`services/sharing/resolver-core/share-entity-access.ts`, διαγράφηκε) στον διακομιστή.
+  'server/sharing/share-entity-access.ts',
   'subapps/procurement/services/rfq-service.ts',
 ];
 

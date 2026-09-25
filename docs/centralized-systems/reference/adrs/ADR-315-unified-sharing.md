@@ -1,4 +1,126 @@
-# ADR-315 — Unified Sharing (Contact + File + Property Showcase)
+# ADR-315 — Ενιαίοι σύνδεσμοι κοινοποίησης (Unified Sharing)
+
+| | |
+|---|---|
+| **Status** | ✅ **ACCEPTED** — ο κύκλος ζωής τρέχει **ολόκληρος στον διακομιστή** από τις 2026-09-25 (ADR-884 Φ0.12, κύμα Κ4) |
+| **Date** | 2026-04-18 (M1, κώδικας) · **έγγραφο 2026-09-25** |
+| **Category** | Sharing / Security / Public surface |
+| **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
+| **Σχετικά** | ADR-147 (επιφάνεια κοινοποίησης, UI) · ADR-312/316/320 (showcase ιδιοκτησίας/έργου/κτιρίου) · ADR-698 (δημόσια διαδρομή showcase) · ADR-699 (resolvers ως δηλώσεις) · **ADR-884 §8.1 Φ0.12** (σκλήρυνση) · ADR-853 (`nonceHash`) · ADR-876 (σελίδες-διαπιστευτήρια) |
+| **Αυθεντία** | ο κώδικας (`src/server/sharing/*`, `src/services/sharing/*`) |
+
+> ⚠️ **Δύο σπίτια, ένα έγγραφο (διορθώθηκε 2026-09-25).** Η αρχική πρόταση M1–M4 (2026-04-18) ζούσε στο
+> `adrs/ADR-315-unified-sharing.md` στη **ρίζα** του repo, έξω από το σπίτι των ADR, και γι' αυτό
+> διαβάστηκε ως «ανύπαρκτη» (και από το ADR-699). Η πύλη 3.49 έπιασε τη διπλή
+> διεκδίκηση του αριθμού. Το αρχικό κείμενο μεταφέρθηκε **αυτούσιο** στο **Παράρτημα Α** — είναι ιστορικό
+> σχεδίου, όχι περιγραφή του κώδικα. Οι §1–§6 περιγράφουν τον κώδικα **όπως είναι** μετά το Κ4.
+
+---
+
+## 1. Τι είναι
+
+Ένας μηχανισμός για συνδέσμους «όποιος έχει τον σύνδεσμο, βλέπει» σε **επτά** είδη οντοτήτων:
+`file` · `contact` · `property_showcase` · `project_showcase` · `building_showcase` · `storage_showcase` ·
+`parking_showcase`. Το `vendor_rfq_invite` **δεν** μπαίνει εδώ επίτηδες: φέρει δικό του υπογεγραμμένο URL
+(ADR-327) και δεν έχει κύκλο ζωής διακριτικού.
+
+| Κομμάτι | Αρχείο | Ρόλος |
+|---|---|---|
+| Πρόσοψη πελάτη | `services/sharing/unified-sharing.service.ts` | **η μόνη** είσοδος του browser — `createShare` · `revoke` · `resolve` · `requestDownload` (fetch, τίποτε άλλο) |
+| Συμβόλαιο σύρματος | `services/sharing/share-resolve-contract.ts` | ονομασμένες αρνήσεις, αποτέλεσμα ανά είδος |
+| Resolvers | `services/sharing/resolvers/*` + `showcase-core/share-resolver-factory.ts` | **καθαρή** προβολή `project({ share, entity, token })` + `entityCollection` + `validateCreateInput` (ADR-699) |
+| Μητρώο | `services/sharing/share-entity-registry.ts` | είδος → resolver |
+| Γραμματική διακριτικού | `lib/sharing/share-token.ts` | 256 bit base64url · `hashShareToken` = SHA-256 |
+| **Πύλη** | `server/sharing/share-gate.ts` | διακριτικό → ενεργό → λήξη → όριο → κωδικός/κουπόνι — **μία** κρίση για κάθε πόρτα |
+| Αναζήτηση | `server/sharing/share-token-lookup.ts` | `tokenHash` (+ μεταβατικά `token`) σε `shares` **και** `file_shares`, κανονικοποίηση σε ένα σχήμα |
+| Μετρητής | `server/sharing/share-access.ts` | **ο μόνος** γραφέας — συναλλαγή, όριο πάνω σε φρέσκο ανάγνωσμα |
+| Κωδικός | `server/sharing/share-password.ts` + `share-password-attempt.ts` | scrypt (OWASP) · rehash-on-verify · κλείδωμα ανά σύνδεσμο |
+| Κουπόνι | `server/sharing/share-access-grant.ts` | HMAC (`lib/tokens/signed-token`), 15′, cookie `HttpOnly` |
+| Δημιουργία / ανάκληση | `server/sharing/share-create.ts` · `share-revoke.ts` | μισθωτής + συντάκτης από τη συνεδρία |
+| Επίλυση / λήψη | `server/sharing/share-resolve.ts` · `share-download.ts` | προβολή + V4 υπογεγραμμένα URL |
+| Διαδρομές | `app/api/shares/{route, resolve, download, [shareId]/revoke}` | `withAuth` (+ `allowUnauthenticated` στις δημόσιες) |
+
+## 2. Το κενό που έκλεισε (2026-09-25)
+
+Βρέθηκε στο SSoT audit του ADR-884 και **επαληθεύτηκε στον κώδικα**:
+
+1. **`shares` και `file_shares`: `allow read: if true`.** Στους κανόνες το `read` = `get` **+ `list`**:
+   ένας ανώνυμος απαριθμούσε όλη τη συλλογή και μάζευε **κάθε** διακριτικό (σε καθαρό κείμενο) μαζί με τον hash
+   του κωδικού. Η «εντροπία 190 bit» δεν προστάτευε τίποτα, αφού το διακριτικό **διαβαζόταν**.
+2. **Ανώνυμη εγγραφή αυθαίρετου μετρητή** (`accessCount` / `downloadCount`): ο κανόνας έλεγχε **ποια** πεδία
+   αλλάζουν, όχι **πώς** — ένα εξαντλημένο όριο ξαναγέμιζε με `0`.
+3. **Κωδικός SHA-256 χωρίς salt**, υπολογισμένος και συγκρινόμενος **στον browser**.
+4. **Οι δημόσιες διαδρομές showcase δεν έλεγχαν ποτέ τον κωδικό**: ο κωδικός ζούσε μόνο στη σελίδα
+   `/shared/[token]` — ένα `curl` στο `/api/*-showcase/[token]` άνοιγε σύνδεσμο «με κωδικό».
+5. **Οι σύνδεσμοι επαφής και αρχείου δεν άνοιγαν για ανώνυμο παραλήπτη**: οι resolvers διάβαζαν
+   `contacts`/`files` από τον browser, και οι κανόνες (σωστά) αρνούνταν τον ανώνυμο.
+6. Το αρχείο δινόταν με το **μόνιμο** `downloadUrl` του `FileRecord` — πέρα από λήξη, όριο και ανάκληση.
+7. Όριο προσβάσεων κρινόταν στον browser **πριν** την αύξηση (read-then-write) — δύο ταυτόχρονοι περνούσαν.
+8. Το lookup διακριτικού ήταν γραμμένο **5 φορές** στον διακομιστή (+2 στον browser), και κατέγραφε το ωμό
+   διακριτικό σε logs. Διπλότυπο `FileShareService` (ζωντανό μόνο μέσω νεκρού `ShareDialog`).
+9. Οι σύνδεσμοι αρχείων από το `UnifiedShareDialog` **δεν** άφηναν συμβάν `share` στο ίχνος του αρχείου.
+
+## 3. Αποφάσεις
+
+- **Α1 — Ολόκληρος ο κύκλος ζωής στον διακομιστή.** Κανόνες `read, write: if false` και στις δύο συλλογές —
+  **ούτε ο μισθωτής** διαβάζει από πελάτη (τα έγγραφα κρατούν `tokenHash` + `passwordHash`· ελάχιστο προνόμιο).
+- **Α2 — Αποθηκεύεται μόνο το αποτύπωμα** (`tokenHash` = SHA-256 διακριτικού 256 bit — πρότυπο OWASP για
+  διακριτικά υψηλής εντροπίας, ίδιο με το `nonceHash` του ADR-853). Το ωμό διακριτικό επιστρέφεται **μία** φορά.
+- **Α3 — Κωδικός: scrypt N=2^16, r=8, p=2** (OWASP· Argon2id δεν υπάρχει στη Node 20 — μετρημένο), σε
+  **αυτοπεριγραφική** μορφή `scrypt$1$N,r,p$salt$key`. Ο παλιός SHA-256 αναβαθμίζεται **στην πρώτη σωστή είσοδο**.
+- **Α4 — Κλείδωμα ανά σύνδεσμο**: 10 λάθη / 15′ ⇒ 15′ κλείδωμα, **πέρα από** το όριο ρυθμού ανά IP. Το κλείδωμα
+  δεν ανακαλεί (αλλιώς κάθε επιτιθέμενος θα είχε κουμπί «σβήσε τον σύνδεσμο»).
+- **Α5 — Μία πύλη για κάθε πόρτα**: επίλυση, λήψη **και** οι δημόσιες διαδρομές showcase (payload + PDF) περνούν
+  από το `passShareGate`. Με κωδικό: απαιτείται **κουπόνι** HMAC (401 αλλιώς).
+- **Α6 — Ένα άνοιγμα = μία πρόσβαση** (πρότυπο Google Drive). Το άνοιγμα εκδίδει κουπόνι **επίσκεψης** 15′·
+  μέσα σε αυτό επαναφόρτωση, προεπισκόπηση, PDF και λήψη **δεν** ξαναμετρούν (αλλιώς σύνδεσμος «1 πρόσβαση»
+  θα εξαντλούνταν με το πάτημα «Λήψη»). Λήψη **χωρίς** επίσκεψη μετρά — δεν υπάρχει δρόμος προς τα bytes που
+  δεν ξοδεύει όριο. Ο μετρητής είναι **συναλλαγή**.
+- **Α7 — Bytes μόνο με V4 υπογεγραμμένο URL 15′** (`lib/storage/signed-download-url.ts`): `inline` για
+  προεπισκόπηση, `attachment` για λήψη.
+- **Α8 — Λήξη υποχρεωτική**: 1 ώρα … 30 ημέρες (ίδιο εύρος με τον διάλογο).
+- **Α9 — Διακριτικό σε σώμα**, ποτέ σε διεύθυνση API (RFC 6819 §5.1.5)· **ποτέ** σε log — μόνο `shareId`.
+- **Α10 — `not-found` καλύπτει και «ανακλήθηκε» και «δεν υπήρξε»**: η διάκριση θα έλεγε σε όποιον μαντεύει
+  ποια διακριτικά **υπήρξαν**.
+
+## 4. Σειρά ανάπτυξης (την εκτελεί ο Giorgio)
+
+1. `firebase deploy --only firestore:indexes` — `[tokenHash, isActive]` σε `shares` + `file_shares`.
+2. Μεταβλητή **`SHARE_ACCESS_SECRET`** στο Netcup (δηλωμένη στο `config/environment-contract.ts`· χωρίς αυτήν,
+   σύνδεσμος **με** κωδικό απαντά «μη διαθέσιμο»).
+3. Push → Netcup. Ο κώδικας διαβάζει παλιά **και** νέα έγγραφα.
+4. `npx tsx scripts/migrate-share-token-hash.ts` (dry-run) → `--execute`.
+5. `firebase deploy --only firestore:rules`.
+6. ⏳ **Επόμενο commit**: αφαίρεση του μεταβατικού fallback `token` από το `share-token-lookup.ts` (και των
+   δεικτών `[token, isActive]`), αφού η μετάπτωση μετρήσει `0 προς εγγραφή`.
+
+## 5. Ανοιχτά
+
+- ⏳ Λίστα ενεργών συνδέσμων στο UI (ανάκληση ανά παραλήπτη) — μέσω διαδρομής που **δεν** επιστρέφει hash.
+  Προαπαιτούμενο των συνδέσμων «ανά παραλήπτη» του ADR-884 Φ0.12.
+- ⏳ Ίχνος θέασης ανά σύνδεσμο («ποιος σύνδεσμος άνοιξε πότε») — σήμερα μόνο μετρητής + `lastAccessedAt`.
+- ⏳ Argon2id όταν η παραγωγή περάσει σε Node με `crypto.argon2` — μία γραμμή χάρη στην αυτοπεριγραφική μορφή.
+- ⏳ **Αρχεία σε προσωπική φύλαξη** (`files_personal`, ADR-787): ο `file` resolver δηλώνει `COLLECTIONS.FILES`, οπότε
+  η δημιουργία συνδέσμου για προσωπικό αρχείο απαντά **403**. Πριν το Κ4 η δημιουργία «περνούσε» (ο έλεγχος ιδιοκτησίας
+  δεν καλούνταν ποτέ στη δημιουργία) αλλά ο σύνδεσμος **δεν άνοιγε ποτέ**. Χρειάζεται `entityCollection` ανά διαμέρισμα
+  (`FILE_COLLECTION`) + κάτοχος `userId` — δική του εργασία.
+- ⏳ Η σελίδα `/shared/[token]` είναι `'use client'` και **δεν** εξάγει metadata (`noindex` / `no-referrer`) —
+  δηλωμένο ανοιχτό του ADR-876.
+
+## 6. Changelog
+
+| Ημερομηνία | Αλλαγή |
+|---|---|
+| 2026-09-25 | **Ενοποίηση με την αρχική πρόταση** (CHECK 3.49): το `adrs/ADR-315-unified-sharing.md` της ρίζας μεταφέρθηκε στο Παράρτημα Α και αφαιρέθηκε — ένας αριθμός, ένα έγγραφο. |
+| 2026-09-25 | **Δημιουργία εγγράφου + σκλήρυνση (ADR-884 Φ0.12, κύμα Κ4).** Όλος ο κύκλος ζωής στον διακομιστή (`src/server/sharing/*`, 4 διαδρομές `/api/shares/*`)· κανόνες `if false` σε `shares` + `file_shares`· μόνο `tokenHash`· scrypt + rehash-on-verify + κλείδωμα ανά σύνδεσμο· κουπόνι HMAC που κλείνει και το κενό «η διαδρομή showcase δεν ελέγχει κωδικό»· ένα άνοιγμα = μία πρόσβαση, μετρητής σε συναλλαγή· V4 URL 15′ για κάθε byte· resolvers → καθαρό `project()`, ανάγνωση οντότητας + `canShare` στον διακομιστή (διορθώθηκαν οι σύνδεσμοι επαφής/αρχείου για ανώνυμο)· 5 αντίγραφα lookup → 1· διαγραφή `FileShareService` + νεκρού `ShareDialog`· συμβάν `share` στο ίχνος αρχείου· μετάπτωση `scripts/migrate-share-token-hash.ts`· σουίτες κανόνων `shares` (πρώτη φορά) + `file_shares` με `shareLinksMatrix` που **μετρά** το `anonymous × list`. |
+
+---
+
+## Παράρτημα Α — Αρχική πρόταση M1–M4 (2026-04-18, ιστορικό)
+
+> Μεταφέρθηκε αυτούσιο από το `adrs/ADR-315-unified-sharing.md` (ρίζα, 2026-09-25). Οι αριθμοί ενοτήτων
+> φέρουν πρόθεμα `Α.` — η παλιά «§3.3» είναι πλέον **§Α.3.3**. Όπου διαφωνεί με τις §1–§6, **ισχύουν οι §1–§6**.
+
 
 | Field | Value |
 |-------|-------|
@@ -11,11 +133,11 @@
 
 ---
 
-## 1. Problem
+### Α.1 Problem
 
 Three share flows exist today, partially centralized, with overlapping responsibilities and diverging capabilities:
 
-### 1.1 Contact share (`Κοινοποίηση επαφής`)
+#### Α.1.1 Contact share (`Κοινοποίηση επαφής`)
 
 - **Entry**: `src/components/ui/ShareModal.tsx` → `src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx`
 - **APIs**: `POST /api/communications/email/property-share`, `POST /api/communications/share-to-channel`, `GET /api/contacts/search-for-share`
@@ -26,7 +148,7 @@ Three share flows exist today, partially centralized, with overlapping responsib
   - Copy-link button copies an empty string: the dialog receives `shareData.url` as *input* from the caller, but no token is ever generated, so the URL is either blank or a non-authenticated client-side placeholder
   - No revocation surface (dispatch cannot be revoked post-send — expected — but there is also no persistent link to revoke)
 
-### 1.2 File share (`Κοινοποίηση αρχείου`)
+#### Α.1.2 File share (`Κοινοποίηση αρχείου`)
 
 - **Entry**: `src/components/shared/files/ShareDialog.tsx` → `src/components/ui/sharing/panels/link-token/LinkTokenPermissionPanel.tsx`
 - **Service SSoT**: `src/services/file-share.service.ts` — `FileShareService.{createShare, validateShare, verifyPassword, incrementDownloadCount, deactivateShare, getSharesForFile}`
@@ -34,13 +156,13 @@ Three share flows exist today, partially centralized, with overlapping responsib
 - **Public route**: `src/app/shared/[token]/page.tsx` (via `SharedFilePageContent`)
 - **Form draft**: `LinkTokenDraft { expiresInHours, password, maxDownloads, note }` — 4 canonical fields
 
-### 1.3 Property showcase (ADR-312)
+#### Α.1.3 Property showcase (ADR-312)
 
 - Reuses `file_shares` collection with **inline discriminators** (`showcaseMode: boolean`, `showcasePropertyId: string`, `pdfStoragePath`, `pdfRegeneratedAt`)
 - Public route: `src/app/shared/po/[token]/page.tsx` (separate path due to different render target)
 - `FileShareRecord.fileId` is semantically unused for showcase (debt: field is `string` non-optional but showcase populates a proxy value)
 
-### 1.4 Structural problems
+#### Α.1.4 Structural problems
 
 1. **No SSoT for sharing**. Three partially-overlapping systems, each re-implementing its own surface.
 2. **Contact share has no token lifecycle**. Cannot be revoked, cannot be expired, cannot be password-protected, cannot be rate-limited per link.
@@ -51,7 +173,7 @@ Three share flows exist today, partially centralized, with overlapping responsib
 
 ---
 
-## 2. Decision
+### Α.2 Decision
 
 **Introduce a single unified sharing system** composed of:
 
@@ -67,9 +189,9 @@ The `file_shares` collection is **renamed to `shares`** with a dual-read alias d
 
 ---
 
-## 3. Architecture
+### Α.3 Architecture
 
-### 3.1 Layers
+#### Α.3.1 Layers
 
 | Layer | Path (target) | Responsibility |
 |-------|---------------|----------------|
@@ -86,7 +208,7 @@ The `file_shares` collection is **renamed to `shares`** with a dual-read alias d
 | Legacy redirect | `src/app/shared/po/[token]/page.tsx` | 301 → `/shared/[token]` |
 | SSoT registry entry | `.ssot-registry.json` | Tier 2 module `unified-sharing-service` — forbids direct `shares` collection writes, forbids re-implementation of `FileShareService`, forbids new inline share schema definitions |
 
-### 3.2 Schema
+#### Α.3.2 Schema
 
 ```ts
 // src/types/sharing/share-record.ts
@@ -154,7 +276,7 @@ export interface ShareDispatchLog {
 
 **Public projection** (served by `/api/shares/[token]`): only `{ entityType, entityId, requiresPassword, expiresAt, isActive, accessCount, maxAccesses, note, <entityType-specific safe subset> }`. `companyId`, `createdBy`, `passwordHash`, full `externalUserId`s are never exposed.
 
-### 3.3 Entity registry pattern
+#### Α.3.3 Entity registry pattern
 
 ```ts
 // src/services/sharing/share-entity-registry.ts
@@ -175,7 +297,7 @@ ShareEntityRegistry.register('property_showcase', propertyShowcaseDefinition);
 
 Adding a 4th type (e.g. `listing`, `document_bundle`) requires only a new resolver file + one `.register()` call. Core service stays agnostic.
 
-### 3.4 UI — `UnifiedShareDialog`
+#### Α.3.4 UI — `UnifiedShareDialog`
 
 Built on ADR-147 `ShareSurfaceShell`:
 
@@ -187,7 +309,7 @@ Built on ADR-147 `ShareSurfaceShell`:
 
 The dialog **produces** the link (output); it does not consume a pre-built URL as input. This fixes the contact-share copy-link bug (`shareData.url` was empty because no token existed).
 
-### 3.5 Public route dispatch
+#### Α.3.5 Public route dispatch
 
 ```ts
 // src/app/shared/[token]/page.tsx (simplified)
@@ -205,7 +327,7 @@ async function PublicSharePage({ params: { token } }) {
 }
 ```
 
-### 3.6 Firestore security
+#### Α.3.6 Firestore security
 
 - Public read on `shares/{id}` must return **only the safe projection**. Implemented via a dedicated `/api/shares/[token]` Admin-SDK resolver — direct client reads on `shares` are forbidden by rules.
 - Write rules on `shares`: only via Admin SDK (`withAuth` + tenant check).
@@ -217,9 +339,9 @@ async function PublicSharePage({ params: { token } }) {
 
 ---
 
-## 4. Data Flow
+### Α.4 Data Flow
 
-### 4.1 Generate share link (all entity types)
+#### Α.4.1 Generate share link (all entity types)
 
 ```
 User → UnifiedShareDialog
@@ -235,7 +357,7 @@ User → UnifiedShareDialog
 User copies / shares URL
 ```
 
-### 4.2 Channel dispatch WITH generated link
+#### Α.4.2 Channel dispatch WITH generated link
 
 ```
 User → UnifiedShareDialog tab "Απευθείας αποστολή" (contact only)
@@ -248,7 +370,7 @@ User → UnifiedShareDialog tab "Απευθείας αποστολή" (contact o
       → UI confirms dispatch + shows permanent link for copy
 ```
 
-### 4.3 Channel dispatch WITHOUT link (preserves legacy "send email directly")
+#### Α.4.3 Channel dispatch WITHOUT link (preserves legacy "send email directly")
 
 ```
 User → tab "Απευθείας αποστολή" → picks "Just send content, no link"
@@ -261,7 +383,7 @@ User → tab "Απευθείας αποστολή" → picks "Just send content,
 
 This preserves the current `POST /api/communications/email/property-share` behavior (email with photos, no persistent link) during and after migration.
 
-### 4.4 Public access
+#### Α.4.4 Public access
 
 ```
 Anonymous visitor → /shared/{token}
@@ -276,9 +398,9 @@ Anonymous visitor → /shared/{token}
 
 ---
 
-## 5. Migration
+### Α.5 Migration
 
-### 5.1 Phases
+#### Α.5.1 Phases
 
 **Phase M1 — Skeleton** (zero user-visible change — ✅ COMMITTED 2026-04-18)
 1. Types: `src/types/sharing/share-record.ts` + barrel.
@@ -320,7 +442,7 @@ Anonymous visitor → /shared/{token}
 4. Remove legacy fields (`maxDownloads`, `downloadCount`, `showcaseMode`, `showcasePropertyId`, `pdfStoragePath`, `pdfRegeneratedAt` at root) from `ShareRecord`.
 5. Update `firestore-rules` tests and `seed-helpers` to reference `shares` / `share_dispatches` only.
 
-### 5.4 Scope reduction (2026-04-18)
+#### Α.5.4 Scope reduction (2026-04-18)
 
 The original §5.1 phase plan modeled a **production-grade migration** with dual-write windows, bcrypt Cloud Function + 90-day re-hash cycle, 301 redirects, and feature flags — estimating **2–3 weeks** of focused work (§6.2 original). Giorgio challenged the estimate during implementation; the honest answer is that almost all of that cost is **amortization against real production data and real users**, neither of which exists in this project yet (per `.claude-rules` memory: all Firestore data is test, dropped before go-live; no live password-protected shares).
 
@@ -337,13 +459,13 @@ Reduced plan (this PR):
 
 Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the user-visible unification (most of M3) are what Giorgio actually asked for; the rest was enterprise-migration ceremony designed for a production with real users. It will be revisited when the data stops being test data.
 
-### 5.2 Rollback strategy
+#### Α.5.2 Rollback strategy
 
 - Each phase gated by a feature flag in `system/settings.sharing` (`shares.v2.enabled`, `shares.v2.dialog`, `shares.v2.bcrypt`).
 - Dual-write window in M1 lets us flip back to `file_shares` reads without data loss.
 - Bcrypt migration is append-only (SHA-256 record is preserved until successful bcrypt re-hash).
 
-### 5.3 Test coverage
+#### Α.5.3 Test coverage
 
 - Unit tests: `UnifiedSharingService`, `ChannelDispatchService`, each resolver (`file`, `contact`, `property_showcase`).
 - Integration tests: full flow for each entity type (generate → access → password gate → revoke).
@@ -352,9 +474,9 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 
 ---
 
-## 6. Consequences
+### Α.6 Consequences
 
-### 6.1 Positive
+#### Α.6.1 Positive
 
 - **True SSoT for sharing**. One service, one collection, one dialog, one public route.
 - **Contact share gains security parity**: expiration, password (bcrypt), max accesses, revocation.
@@ -365,7 +487,7 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 - **Extensibility**: 4th entity type (listing, document bundle, etc.) costs one resolver file, zero core changes.
 - **Auditability**: all dispatches captured in `share_dispatches` with channel, status, recipient, regardless of whether a persistent link was used.
 
-### 6.2 Negative / risks
+#### Α.6.2 Negative / risks
 
 - **Migration complexity**: 5 phases, dual-write window, bcrypt re-hash — non-trivial effort. ~2-3 weeks of focused work.
 - **Breaking change for unverified password shares**: after 90-day bcrypt migration window, legacy SHA-256 shares with an unused password hash cannot be recovered; users must regenerate. Mitigation: announce in release notes; no production user impact expected (test data only pre-production — per project memory).
@@ -373,7 +495,7 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 - **Firestore composite indexes** require explicit declaration — one-time deployment step.
 - **Temporary API surface bloat** during M3 (legacy wrappers + new dispatch service coexist for one release cycle).
 
-### 6.3 Non-goals
+#### Α.6.3 Non-goals
 
 - **Admin analytics dashboard** for share usage — deferred to follow-up ADR.
 - **Cross-tenant shares** — explicitly not supported; `companyId` remains a hard partition.
@@ -381,7 +503,7 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 
 ---
 
-## 7. Relation to existing ADRs
+### Α.7 Relation to existing ADRs
 
 | ADR | Relationship |
 |-----|--------------|
@@ -393,7 +515,7 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 
 ---
 
-## 8. Open questions (to resolve in implementation phase)
+### Α.8 Open questions (to resolve in implementation phase)
 
 1. **Public route strategy for showcase**: keep `/showcase/[token]` path for SEO/brand reasons and redirect `/shared/[token]?entityType=property_showcase` → `/showcase/[token]`? Or fully unify under `/shared/[token]`?
 2. **Contact public card rendering**: do we ship a minimal HTML contact card (vCard-like), or only support download of a `.vcf` file? (Out of scope for this ADR — decided at implementation time.)
@@ -402,7 +524,7 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 
 ---
 
-## 9. Implementation checklist (for future execution PR)
+### Α.9 Implementation checklist (for future execution PR)
 
 - [x] Phase M1 — skeleton (types + service SSoT + registry + tests) ✅ 2026-04-18
 - [~] Phase M1b — backfill script + dual-write — **SKIPPED** (test data pre-production; no real records to migrate — see §5.4)
@@ -419,7 +541,7 @@ Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the u
 
 ---
 
-## 10. Changelog
+### Α.10 Changelog
 
 | Date | Change |
 |------|--------|

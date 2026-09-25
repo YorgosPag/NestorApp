@@ -12,7 +12,7 @@ import type React from 'react';
  * (allowlisted στο escape-command-bus module) ώστε να μην αντιγράφεται σε κάθε card.
  *
  * Καταναλωτές: FrameProfileCard · EntityCard (layers panel) · TableNameBox · useSliderValueEditing
- * (DXF viewer) · PropertyDossierTitle (ADR-866 Φ1.2). Μετακινήθηκε από το
+ * (DXF viewer) · PropertyDossierTitle (ADR-866 Φ1.2) · DemandTitleEditor (ADR-886). Μετακινήθηκε από το
  * `dxf-viewer/ui/utils/` στο `lib/ui/` (2026-09-18) όταν απέκτησε τον πρώτο καταναλωτή
  * έξω από το subapp — αλλιώς ο φάκελος θα ξανάγραφε το `'Escape'` literal (CHECK 3.7).
  */

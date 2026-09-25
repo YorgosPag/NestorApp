@@ -287,7 +287,9 @@ describe('Κάλυψη αποδείξεων', () => {
   // στο `13d15291` (καθαρό worktree), δηλαδή κόκκινο στο main. Διαγράφηκαν τα
   // `smart-navigation-factory` (1) και `navigation-config` (2) — patterns χωρίς απόδειξη — και
   // μπήκαν τα `office-navigation` + `menu-item-contract` **με** την απόδειξή τους: 602 − 3 = 599.
-  const UNPROVEN_CEILING = 599;
+  // 2026-09-25 (ADR-884 Φ0.12): 599 → 596. Το `unified-sharing-service` απέκτησε 2 patterns
+  // (πρόσβαση πελάτη στο `file_shares`) **και** απόδειξη και για τα πέντε: +2 −5 = −3.
+  const UNPROVEN_CEILING = 596;
 
   it(`τα patterns χωρίς δηλωμένη απόδειξη δεν ξεπερνούν τα ${UNPROVEN_CEILING}`, () => {
     const proven = provenPatternKeys(modules);

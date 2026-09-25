@@ -25,8 +25,8 @@
  * | σημείο | ο ανάντη φύλακας |
  * |---|---|
  * | `services/communications-triage-actions.ts` | `if (!companyId \|\| !adminUid)` στην ίδια συνάρτηση — **και από το ADR-868 ανάντη του, το `withAuth`**: ο καλών είναι `AuthContext`, όχι ορίσματα |
- * | `services/showcase-core/api/create-unified-public-pdf-route.ts` | `lookupPublicShowcaseShare`: `if (!entityId \|\| !companyId \|\| !expiresAt) return null` |
- * | `app/api/showcase/[token]/pdf/route.ts` | `resolveShare` **και** `loadEntityHeader`: `if (!companyId) return null` |
+ * | `services/showcase-core/api/create-unified-public-pdf-route.ts` | η πύλη κοινοποίησης (ADR-884 Φ0.12): `normalizeUnifiedShare` στο `server/sharing/share-token-lookup.ts` — `if (!entityType \|\| !entityId \|\| !companyId \|\| !expiresAt) return null` |
+ * | `app/api/showcase/[token]/pdf/route.ts` | η **ίδια** πύλη (το δικό του `resolveShare` καταργήθηκε, ADR-884 Φ0.12) **και** `loadEntityHeader`: `if (!companyId) return null` |
  *
  * ⇒ Για κάθε **προσιτή** είσοδο ο SSoT είναι εκεί **αποδεδειγμένα ισοδύναμος**
  * με το `===`. Καμία μετάλλαξη του SSoT δεν μπορεί να τα κοκκινίσει — και αυτό
@@ -88,7 +88,9 @@ import { createUnifiedPublicShowcasePdfRoute } from '@/services/showcase-core/ap
 import type { AuthContext } from '@/lib/auth/types';
 
 const COMM_ID = 'msg_target_001';
-const TOKEN = 'tok_public_001';
+// Διακριτικό με το ΣΧΗΜΑ πραγματικού (32 αλφαριθμητικά, πριν το Κ4) — η πύλη απορρίπτει
+// σκουπίδια πριν διαβάσει, και ένα `tok_1` θα έδινε 404 για τον ΛΑΘΟΣ λόγο.
+const TOKEN = 'PublicToken0123456789abcdefghijk';
 const ENTITY_ID = 'bld_target_001';
 const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 

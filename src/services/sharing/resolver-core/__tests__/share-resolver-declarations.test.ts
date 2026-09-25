@@ -18,32 +18,9 @@
 import fs from 'fs';
 import path from 'path';
 
-// ---------------------------------------------------------------------------
-// Firestore mock
-// ---------------------------------------------------------------------------
-
-type StoreKey = string;
-const store = new Map<StoreKey, Record<string, unknown>>();
-
-jest.mock('firebase/firestore', () => ({
-  doc: jest.fn((_db: unknown, collection: string, id: string) => ({ collection, id })),
-  getDoc: jest.fn(async (ref: { collection: string; id: string }) => {
-    const data = store.get(`${ref.collection}/${ref.id}`);
-    return { exists: () => data !== undefined, data: () => data ?? {} };
-  }),
-}));
-
-jest.mock('@/lib/firebase', () => ({ db: { __mockDb: true } }));
-
-const warnings: Array<{ message: string; context: unknown }> = [];
-jest.mock('@/lib/telemetry', () => ({
-  createModuleLogger: () => ({
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: (message: string, context: unknown) => { warnings.push({ message, context }); },
-  }),
-}));
+// ADR-884 Φ0.12: resolvers are pure projections now — no Firestore mock needed.
+// The entity read and `canShare` moved to the server
+// (`server/sharing/__tests__/share-entity-access.test.ts`).
 
 // ---------------------------------------------------------------------------
 // SUT
@@ -73,7 +50,6 @@ import type { CreateShareInput, ShareRecord } from '@/types/sharing';
 
 const FULL_SHARE: ShareRecord = {
   id: 'share_1',
-  token: 'tok_1',
   entityType: 'property_showcase',
   entityId: 'prop_1',
   companyId: 'comp_1',
@@ -82,7 +58,6 @@ const FULL_SHARE: ShareRecord = {
   expiresAt: '2099-01-01T00:00:00.000Z',
   isActive: true,
   requiresPassword: false,
-  passwordHash: 'HASHED-SECRET',
   maxAccesses: 10,
   accessCount: 3,
   note: 'hello',
@@ -99,10 +74,16 @@ const BASE_INPUT: CreateShareInput = {
   showcaseMeta: { pdfStoragePath: 'companies/comp_1/x.pdf', pdfRegeneratedAt: null },
 };
 
-beforeEach(() => {
-  store.clear();
-  warnings.length = 0;
-});
+/**
+ * A stored document carries more than `ShareRecord` admits (`tokenHash`,
+ * `passwordHash`, legacy `token`) — the projection must not echo any of it.
+ */
+const LEAKY_SHARE = {
+  ...FULL_SHARE,
+  token: 'tok_1',
+  tokenHash: 'HASHED-TOKEN',
+  passwordHash: 'HASHED-SECRET',
+};
 
 // ===========================================================================
 // buildSafePublicProjection
@@ -124,15 +105,16 @@ describe('buildSafePublicProjection', () => {
     },
   );
 
-  it('never carries tenant identity, the token or the password hash', () => {
-    const projection = buildSafePublicProjection(FULL_SHARE, 'showcaseMeta');
+  it('never carries tenant identity, the token or any hash', () => {
+    const projection = buildSafePublicProjection(LEAKY_SHARE, 'showcaseMeta');
 
-    for (const field of ['companyId', 'createdBy', 'passwordHash', 'token', 'id']) {
+    for (const field of ['companyId', 'createdBy', 'passwordHash', 'tokenHash', 'token', 'id']) {
       expect(field in projection).toBe(false);
     }
     // The storage path is published on purpose (the PDF proxy needs it) and it
     // embeds the company id — so assert on keys, not on the serialised blob.
     expect(JSON.stringify(projection)).not.toContain('HASHED-SECRET');
+    expect(JSON.stringify(projection)).not.toContain('HASHED-TOKEN');
     expect(JSON.stringify(projection)).not.toContain('usr_1');
   });
 
@@ -304,10 +286,15 @@ describe.each(SURFACES)('$name showcase resolver', (surface) => {
     entityId: 'ent_1',
   };
 
-  it('resolves exactly the five shared facts plus its two declared keys', async () => {
-    store.set(`${surface.collection}/ent_1`, surface.titleDoc);
+  const project = (entity: Record<string, unknown> | null) =>
+    surface.resolver.project({ share, entity, token: 'tok_visitor' }) as Record<string, unknown>;
 
-    const resolved = await surface.resolver.resolve(share);
+  it('declares the collection its entity lives in (the server reads it)', () => {
+    expect(surface.resolver.entityCollection).toBe(surface.collection);
+  });
+
+  it('projects exactly the five shared facts plus its two declared keys', () => {
+    const resolved = project(surface.titleDoc);
 
     expect(Object.keys(resolved).sort()).toEqual(
       [
@@ -315,24 +302,22 @@ describe.each(SURFACES)('$name showcase resolver', (surface) => {
         surface.idField, surface.titleField,
       ].sort(),
     );
-    expect((resolved as Record<string, unknown>)[surface.idField]).toBe('ent_1');
+    expect(resolved[surface.idField]).toBe('ent_1');
   });
 
-  it('reads its title from its own document fields, in its own order', async () => {
-    store.set(`${surface.collection}/ent_1`, surface.titleDoc);
-
-    const resolved = await surface.resolver.resolve(share);
-
-    expect((resolved as Record<string, unknown>)[surface.titleField])
-      .toBe(surface.expectedTitle);
+  it('echoes the token the VISITOR presented — the database no longer holds one', () => {
+    expect(project(surface.titleDoc).token).toBe('tok_visitor');
   });
 
-  it('survives a share whose entity was deleted, and warns', async () => {
-    const resolved = await surface.resolver.resolve(share);
+  it('reads its title from its own document fields, in its own order', () => {
+    expect(project(surface.titleDoc)[surface.titleField]).toBe(surface.expectedTitle);
+  });
 
-    expect((resolved as Record<string, unknown>)[surface.titleField]).toBeNull();
-    expect((resolved as Record<string, unknown>)[surface.idField]).toBe('ent_1');
-    expect(warnings).toHaveLength(1);
+  it('survives a share whose entity was deleted', () => {
+    const resolved = project(null);
+
+    expect(resolved[surface.titleField]).toBeNull();
+    expect(resolved[surface.idField]).toBe('ent_1');
   });
 
   it('publishes showcaseMeta only — never the contact or file bag', () => {
@@ -366,13 +351,6 @@ describe.each(SURFACES)('$name showcase resolver', (surface) => {
     );
   });
 
-  it('grants canShare only inside the entity’s own company', async () => {
-    store.set(`${surface.collection}/ent_1`, { companyId: 'comp_1' });
-
-    expect(await surface.resolver.canShare({ uid: 'u', companyId: 'comp_1' }, 'ent_1')).toBe(true);
-    expect(await surface.resolver.canShare({ uid: 'u', companyId: 'comp_2' }, 'ent_1')).toBe(false);
-    expect(await surface.resolver.canShare({ uid: 'u', companyId: 'comp_1' }, 'missing')).toBe(false);
-  });
 });
 
 // ===========================================================================
@@ -426,6 +404,7 @@ describe('share resolvers ↔ ShareEntityType (anchor)', () => {
       /=== user\.companyId/,                    // hand-rolled tenant ownership
       /Wrong resolver — expected entityType=/,  // hand-rolled base validation
       /snap\.exists\(\)/,                       // hand-rolled entity read
+      /from 'firebase\/firestore'/,             // a resolver reading the DB again (ADR-884 Φ0.12)
     ];
 
     const files = fs.readdirSync(RESOLVERS_DIR).filter(f => f.endsWith('.ts'));

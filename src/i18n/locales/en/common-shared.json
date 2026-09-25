@@ -854,6 +854,7 @@
     "areasHeading": "Areas",
     "settlement": "Village",
     "clearHistory": "Clear history",
-    "chooseArea": "More than one area has this name — pick one from the list"
+    "chooseArea": "More than one area has this name — pick one from the list",
+    "didYouMeanArea": "No area has exactly this name — did you mean one from the list? Press Enter again to search it as an address"
   }
 }

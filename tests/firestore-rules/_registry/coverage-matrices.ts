@@ -561,9 +561,9 @@ export {
   fileApprovalsMatrix,
   fileAuditLogMatrix,
   fileCommentsMatrix,
-  fileSharesMatrix,
   fileTenantFullMatrix,
   photoSharesMatrix,
+  shareLinksMatrix,
 } from './coverage-matrices-dxf';
 
 // Phase C.4 BoQ/commissions/ownership matrix functions live in coverage-matrices-boq.ts

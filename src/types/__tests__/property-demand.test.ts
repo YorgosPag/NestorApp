@@ -15,6 +15,7 @@
  */
 
 import { MANDATE_CONFIRMATIONS } from '@/types/mandate';
+import { DEMAND_TITLE_MAX_LENGTH } from '@/lib/demand/demand-title';
 import {
   DEMAND_INVARIANTS,
   DEMAND_LIFECYCLES,
@@ -56,6 +57,8 @@ function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
     features: NO_DEMAND_FEATURES,
     proximity: [],
     lifeContext: null,
+    title: null,
+    placeLabel: null,
     lifecycle: 'active',
     affirmedAt: '2026-08-11T00:00:00.000Z',
     createdAt: '2026-08-11T00:00:00.000Z',
@@ -272,6 +275,8 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
       },
     ],
     ['proximity-not-positive', { proximity: [{ kind: 'school', maxMetres: 0 }] }],
+    // ADR-886 — ένα όνομα πάνω από το όριο (ίδια σταθερά με φόρμα και κανόνες).
+    ['title-too-long', { title: 'α'.repeat(DEMAND_TITLE_MAX_LENGTH + 1) }],
     [
       'proximity-duplicated',
       {

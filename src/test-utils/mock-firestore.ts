@@ -3,7 +3,7 @@
  *
  * Replaces `getAdminFirestore()` with a fully in-memory data store.
  * Supports: `collection().doc().get/set/update/delete`, `where().limit().get()`,
- * `count().get()`.
+ * `count().get()`, `runTransaction(tx => …)` (σειριακό — βλ. `MockTransaction`).
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ΓΙΑΤΙ ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `ai-pipeline` (μετακίνηση 2026-08-01, ADR-742)
@@ -228,8 +228,30 @@ class MockCollectionRef extends MockQuery {
 // FACTORY
 // ============================================================================
 
+/**
+ * **Σειριακή** συναλλαγή: `get` διαβάζει, `update`/`set` γράφουν αμέσως (και μπαίνουν στο
+ * ημερολόγιο). Αρκεί για τη **λογική** μιας συναλλαγής (τι κρίνει πάνω στο ανάγνωσμα, τι
+ * γράφει)· **δεν** προσομοιώνει ανταγωνισμό — αυτό το εγγυάται ο Firestore, όχι ο κώδικας μας.
+ */
+class MockTransaction {
+  get(ref: MockDocRef): Promise<MockDocSnap> {
+    return ref.get();
+  }
+
+  update(ref: MockDocRef, data: DocData): MockTransaction {
+    void ref.update(data);
+    return this;
+  }
+
+  set(ref: MockDocRef, data: DocData, options?: { merge?: boolean }): MockTransaction {
+    void ref.set(data, options);
+    return this;
+  }
+}
+
 export interface MockFirestoreInstance {
   collection(name: string): MockCollectionRef;
+  runTransaction<T>(fn: (tx: MockTransaction) => Promise<T>): Promise<T>;
 }
 
 export interface MockFirestoreKit {
@@ -255,6 +277,9 @@ export function createMockFirestore(): MockFirestoreKit {
       return new MockCollectionRef(store, name, journal);
     },
 
+    runTransaction<T>(fn: (tx: MockTransaction) => Promise<T>): Promise<T> {
+      return fn(new MockTransaction());
+    },
   };
 
   return {

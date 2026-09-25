@@ -112,6 +112,7 @@ import { isMandateAttributable, type MandateLike } from '@/types/mandate';
 import type { OfferKind } from '@/types/property-offers';
 import { isLandownerShareInRange, isWholePetCount, isWholeStayCount } from '@/lib/offers/offer-amount';
 import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
+import { isDemandLabelTooLong } from '@/lib/demand/demand-title';
 import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
 
 // =============================================================================
@@ -230,6 +231,31 @@ export type DemandPlace =
        */
       readonly depthMetres: number;
     };
+
+/** Μία απάντηση ανά είδος τόπου — ο τύπος απαιτεί **όλα** τα είδη (νέο είδος ⇒ κάθε καλών δεν μεταγλωττίζεται). */
+export type DemandPlaceCases<R> = {
+  readonly [K in DemandPlace['kind']]: (place: Extract<DemandPlace, { kind: K }>) => R;
+};
+
+/**
+ * **Η ΜΙΑ διακλάδωση πάνω στο `DemandPlace.kind`** για όσους λένε τον τόπο με λέξεις (περίληψη, όνομα).
+ * Το `switch` γράφεται **εδώ**· ο καλών δίνει μόνο τις δικές του φράσεις, με **ρητά** κλειδιά i18n στο
+ * δικό του αρχείο (CHECK 3.34: τα κλειδιά μένουν στατικά ορατά στον καταναλωτή τους).
+ */
+export function matchDemandPlace<R>(place: DemandPlace, cases: DemandPlaceCases<R>): R {
+  switch (place.kind) {
+    case 'anywhere':
+      return cases.anywhere(place);
+    case 'near':
+      return cases.near(place);
+    case 'area':
+      return cases.area(place);
+    case 'place':
+      return cases.place(place);
+    case 'frontage':
+      return cases.frontage(place);
+  }
+}
 
 /**
  * Ποια πλευρά του άξονα ζητά ο άνθρωπος.
@@ -733,6 +759,23 @@ export interface PropertyDemand {
   // ── Ζ7 — ΔΗΛΩΜΕΝΟ, ΠΟΤΕ ΚΡΙΤΗΡΙΟ ──────────────────────────────────────────
   readonly lifeContext: DemandLifeContext | null;
 
+  // ── ΟΝΟΜΑ ΚΑΙ ΕΤΙΚΕΤΑ — ΓΙΑ ΤΟΝ ΑΝΘΡΩΠΟ, ΠΟΤΕ ΚΡΙΤΗΡΙΟ (ADR-886) ─────────────
+  /**
+   * Το όνομα που **έδωσε ο ίδιος** («Για τη Μαρία — φοιτητικό»). `null` = δεν έδωσε, και η οθόνη
+   * δείχνει το **αυτόματο** όνομα (`lib/demand/demand-display-name.ts`).
+   *
+   * 🔑 **Το αυτόματο όνομα ΔΕΝ αποθηκεύεται ποτέ εδώ.** Ένα αποθηκευμένο «Αγορά · έως 200.000 €» θα
+   * έλεγε ψέματα την πρώτη φορά που ο άνθρωπος ανέβαζε το ποσό — γι' αυτό παράγεται σε κάθε ανάγνωση.
+   * Όρια και καθαρισμός: **ένα** SSoT, `lib/demand/demand-title.ts`.
+   */
+  readonly title: string | null;
+  /**
+   * Το όνομα του τόπου όπως το έλυσε ο geocoder («Κορδελιό, Θεσσαλονίκη»). **Ετικέτα, ποτέ αυθεντία**
+   * — ίδιο δόγμα με το `frontage.streetName`: ο άξονας/κύκλος κρίνει, το όνομα εξηγεί. `null` όταν
+   * δεν υπάρχει (οπουδήποτε · σχεδιασμένη περιοχή · έγγραφο πριν το ADR-886).
+   */
+  readonly placeLabel: string | null;
+
   // ── ΚΑΤΑΣΤΑΣΗ ──────────────────────────────────────────────────────────────
   readonly lifecycle: DemandLifecycle;
   /**
@@ -940,6 +983,8 @@ export const DEMAND_INVARIANTS = [
   'stay-nights-exceed-window',
   /** **Παρέα που δεν είναι παρέα** — χωρίς ενήλικα, ή μη ακέραιοι / αρνητικοί αριθμοί ανθρώπων. */
   'stay-party-invalid',
+  /** ADR-886 — όνομα ή ετικέτα τόπου πάνω από το όριο του `lib/demand/demand-title.ts`. */
+  'title-too-long',
 ] as const;
 
 export type DemandInvariant = (typeof DEMAND_INVARIANTS)[number];
@@ -1011,9 +1056,14 @@ function proximityInvariants(proximity: readonly DemandProximity[]): DemandInvar
  * να ξέρει πόσο κοντά είναι αν του λέμε ένα-ένα.
  */
 export function demandInvariantViolations(
-  demand: Pick<PropertyDemand, 'seeks' | 'place' | 'timing' | 'features' | 'proximity'>,
+  demand: Pick<PropertyDemand, 'seeks' | 'place' | 'timing' | 'features' | 'proximity'> & {
+    // ADR-886 — προαιρετικά στην είσοδο: απουσία = «δεν δόθηκε», που είναι πάντα έγκυρο.
+    readonly title?: string | null;
+    readonly placeLabel?: string | null;
+  },
 ): DemandInvariant[] {
   const found: DemandInvariant[] = [];
+  if (isDemandLabelTooLong(demand)) found.push('title-too-long');
 
   if (demand.seeks.length === 0) found.push('seeks-empty');
   // 🔴 Σύνολο πάνω στα **ΕΙΔΗ**, ποτέ στα στοιχεία: με αντικείμενα κάθε `Set` είναι μοναδικό

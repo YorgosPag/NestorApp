@@ -1,7 +1,7 @@
 /**
  * @fileoverview **ΤΑ ΟΝΟΜΑΤΑ ΤΩΝ ΣΥΝΑΛΛΑΓΩΝ ΑΠΟ ΤΗ ΜΕΡΙΑ ΤΟΥ ΖΗΤΟΥΝΤΟΣ** — ένας πίνακας, όχι παρεμβολή.
  * @related ADR-777 §8.60.15 · §8.60.16 · components/mandate/offer-kind-labels.ts (το πρότυπο) · CHECK 3.8
- * @module components/demand/seek-kind-labels
+ * @module lib/demand/seek-kind-labels
  *
  * 🔴 **ΠΙΝΑΚΑΣ ΚΑΙ ΟΧΙ ΠΑΡΕΜΒΟΛΗ, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΜΕ ΤΟ `offer-kind-labels.ts`.** Το
  * `t(\`${K}.seekKind.${kind}\`)` είναι **δυναμικό κλειδί**: η **CHECK 3.8** δεν το βλέπει, άρα διαγραφή

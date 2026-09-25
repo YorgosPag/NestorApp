@@ -55,8 +55,6 @@ import {
   findShowcaseSurface,
   showcasePdfHref,
 } from '@/services/sharing/showcase-surfaces';
-// Side-effect import: registers file / contact / property_showcase resolvers
-import '@/services/sharing/resolvers';
 import type {
   ContactShareMeta,
   CreateShareInput,
@@ -78,7 +76,6 @@ export interface UnifiedShareDialogProps {
   entityTitle: string;
   /** Display subtitle for the dialog header (optional). */
   entitySubtitle?: string;
-  userId: string;
   companyId: string;
   /** Per-entity metadata (required for contact.includedFields). Showcase uses `preSubmit`. */
   showcaseMeta?: ShowcaseShareMeta;
@@ -133,7 +130,6 @@ export function UnifiedShareDialog({
   entityId,
   entityTitle,
   entitySubtitle,
-  userId,
   companyId,
   showcaseMeta,
   contactMeta,
@@ -171,11 +167,10 @@ export function UnifiedShareDialog({
       const extra = preSubmit
         ? (preSubmitCacheRef.current ??= await preSubmit())
         : undefined;
+      // ADR-884 Φ0.12 — tenant + author are taken from the session on the server.
       const result = await UnifiedSharingService.createShare({
         entityType,
         entityId,
-        companyId,
-        createdBy: userId,
         expiresInHours: parseInt(currentDraft.expiresInHours, 10) || 72,
         password: currentDraft.password.trim() || undefined,
         maxAccesses,
@@ -193,8 +188,6 @@ export function UnifiedShareDialog({
     [
       entityType,
       entityId,
-      companyId,
-      userId,
       showcaseMeta,
       contactMeta,
       fileMeta,
@@ -209,9 +202,7 @@ export function UnifiedShareDialog({
       try {
         const next = await createShare(currentDraft);
         if (revokePrevious && previousShareIdRef.current) {
-          void UnifiedSharingService.revoke(previousShareIdRef.current, userId).catch(
-            () => undefined,
-          );
+          void UnifiedSharingService.revoke(previousShareIdRef.current).catch(() => undefined);
         }
         previousShareIdRef.current = next.shareId;
         appliedDraftRef.current = currentDraft;
@@ -222,7 +213,7 @@ export function UnifiedShareDialog({
         setCreating(false);
       }
     },
-    [createShare, userId],
+    [createShare],
   );
 
   // Auto-create on open (ADR-312 Phase 9.7). When `shareUrl` is pre-provided

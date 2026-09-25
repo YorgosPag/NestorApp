@@ -6,7 +6,6 @@ import { FileCommentService, type CreateCommentInput } from '@/services/file-com
 import { FileApprovalService, type CreateApprovalInput } from '@/services/file-approval.service';
 import { FileRecordService } from '@/services/file-record.service';
 import type { Iso19650MetadataUpdate } from '@/services/file-record.service';
-import { FileShareService, type CreateShareInput } from '@/services/file-share.service';
 import { API_ROUTES, type EntityType } from '@/config/domain-constants';
 import type { FileClassification } from '@/config/domain-constants';
 import type { AuditEntityType } from '@/types/audit-trail';
@@ -245,10 +244,6 @@ export async function updateIso19650MetadataWithPolicy(
 }
 
 export type { Iso19650MetadataUpdate };
-
-export async function createFileShareWithPolicy(input: CreateShareInput): Promise<string> {
-  return FileShareService.createShare(input);
-}
 
 
 export async function createPendingFileRecordWithPolicy(

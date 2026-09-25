@@ -295,6 +295,12 @@ docs/centralized-systems/reference/adrs/
 αυτού του κύκλου δείχνουν πλέον **εδώ**. **Χρειάζεται απόφαση Giorgio**: ανασύνθεση των
 τριών, ή ρητή απόσυρση με redirect στα 698/699.
 
+> ⚠️ **ΔΙΟΡΘΩΣΗ 2026-09-25 — δεν ήταν φαντάσματα, ήταν σε δεύτερο σπίτι.** Και τα τρία ζούσαν
+> από τον Απρίλιο στο `adrs/` της **ρίζας** (έξω από το `docs/.../adrs/`): `ADR-312-property-showcase.md`,
+> `ADR-315-unified-sharing.md`, `ADR-321-showcase-core-unification.md`. Ο πίνακας παραπάνω έψαξε μόνο
+> σε ένα σπίτι. Το **ADR-315** ενοποιήθηκε πλέον στο `docs/.../adrs/` (αρχική πρόταση = Παράρτημα Α,
+> η παλιά «§3.3» = **§Α.3.3**)· τα **312** και **321** μένουν ακόμη στη ρίζα.
+
 ### 8.3 🟡 Τρία clones που **απομένουν** στο δέντρο (προϋπάρχοντα, εκτός εύρους)
 ```
 88t  showcase-core/api/create-pdf-route.ts:102 ↔ create-public-payload-route.ts:94
@@ -332,3 +338,4 @@ meta-bag διατηρήθηκε ρητά αντί να χαθεί σε spread, �
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-07-25 | **Δημιουργία (κύκλος #5).** Νέο `sharing/resolver-core/` (primitives + entity access). `createShowcaseShareResolver` → data-driven (κατάργηση `buildResolvedData`, `loggerName`· προσθήκη `idField`/`titleField`/`titleSourceFields`/`requiresPdfPath`). 5 × `*-showcase.resolver.ts` → ένα `showcase-surfaces.resolvers.ts`. `file`/`contact` σε primitives. 59 tests. Registry: `share-resolver-core`. Clones 338t + 128t εξαλείφθηκαν. |
+| 2026-09-25 | **ADR-884 Φ0.12 (Κ4) — `resolve()` → καθαρό `project({ share, entity, token })`.** Ο resolver διάβαζε την οντότητα **από τον browser**, και οι κανόνες `contacts`/`files` αρνούνταν (σωστά) τον ανώνυμο παραλήπτη ⇒ οι σύνδεσμοι επαφής/αρχείου **δεν άνοιγαν** για όποιον δεν είχε ήδη πρόσβαση. Το `ShareEntityDefinition` δηλώνει πλέον `entityCollection`· η ανάγνωση (`readSharedEntity`) και το `canShare` (`mayShareEntity`, ακόμη μέσω `lib/auth/tenant-ownership`) ζουν στο `server/sharing/share-entity-access.ts`· το `resolver-core/share-entity-access.ts` διαγράφηκε. Το `ShareRecord` δεν φέρει πια `token`/`passwordHash`. Διορθώθηκε και το `file.resolver`: διάβαζε `name`/`mimeType` (πεδία που το `FileRecord` δεν έχει) ⇒ έδειχνε το id αντί για όνομα. Νέο πεδίο `previewUrl` (V4 URL, γεμίζει ο διακομιστής). Άγκυρα: κανένας resolver δεν εισάγει `firebase/firestore`. |

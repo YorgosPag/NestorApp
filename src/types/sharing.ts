@@ -51,9 +51,15 @@ export interface FileShareMeta {
   sizeBytes: number;
 }
 
+/**
+ * A share as the **owning tenant** sees it (list / revoke UI).
+ *
+ * ⚠️ ADR-884 Φ0.12: carries **neither** the token **nor** any hash. The raw token
+ * exists only in the link (returned once by `POST /api/shares`); the database holds
+ * only `tokenHash`, and `passwordHash` never leaves the server.
+ */
 export interface ShareRecord {
   id: string;
-  token: string;
   entityType: ShareEntityType;
   entityId: string;
   companyId: string;
@@ -66,7 +72,6 @@ export interface ShareRecord {
   revokedBy?: string | null;
 
   requiresPassword: boolean;
-  passwordHash?: string | null;
   maxAccesses: number;
   accessCount: number;
   lastAccessedAt?: Timestamp | string | null;
@@ -78,6 +83,14 @@ export interface ShareRecord {
   fileMeta?: FileShareMeta | null;
 }
 
+/**
+ * What the browser sends to `POST /api/shares`. The tenant and the author are
+ * **not** part of it: the server takes both from the verified session — a client
+ * that could name them could create shares in another company's name.
+ */
+export type CreateShareRequest = Omit<CreateShareInput, 'companyId' | 'createdBy'>;
+
+/** Full create input — assembled **on the server** from the request + session. */
 export interface CreateShareInput {
   entityType: ShareEntityType;
   entityId: string;
@@ -96,12 +109,6 @@ export interface CreateShareResult {
   shareId: string;
   token: string;
   expiresAt: string;
-}
-
-export interface ShareValidation {
-  valid: boolean;
-  reason?: string;
-  share?: ShareRecord;
 }
 
 export interface PublicShareData {
@@ -123,16 +130,37 @@ export interface ValidationResult {
   reason?: string;
 }
 
-export interface AuthorizedUser {
-  uid: string;
-  companyId: string;
+/** The share facts a resolver may read when projecting — never the tenant, never a hash. */
+export type ShareProjectionSource = Pick<
+  ShareRecord,
+  'id' | 'entityType' | 'entityId' | 'note' | 'showcaseMeta' | 'contactMeta' | 'fileMeta'
+>;
+
+/** Input of `ShareEntityDefinition.project` — assembled by the server resolver. */
+export interface ShareProjectionInput {
+  share: ShareProjectionSource;
+  /** The shared entity, read by the server (Admin SDK); `null` when it no longer exists. */
+  entity: Record<string, unknown> | null;
+  /** The raw token the visitor presented — the page needs it to build follow-up URLs. */
+  token: string;
 }
 
+/**
+ * Per-entity share policy (ADR-315 / ADR-699).
+ *
+ * ADR-884 Φ0.12: `resolve()` (a browser read of the entity) became `project()` — a
+ * **pure** function over a document the **server** reads. The browser could never
+ * read it anyway: `contacts` / `files` rules deny the anonymous visitor, so contact
+ * and file links did not open for recipients without an account. Likewise
+ * `canShare` moved to the server (`server/sharing/share-entity-access.ts`), driven
+ * by `entityCollection`.
+ */
 export interface ShareEntityDefinition<T = unknown> {
-  resolve(share: ShareRecord): Promise<T>;
+  /** Firestore collection holding the shared entity. */
+  entityCollection: string;
+  project(input: ShareProjectionInput): T;
   safePublicProjection(share: ShareRecord): PublicShareData;
   renderPublic(data: T): ReactNode;
-  canShare(user: AuthorizedUser, entityId: string): Promise<boolean>;
   validateCreateInput(input: CreateShareInput): ValidationResult;
 }
 

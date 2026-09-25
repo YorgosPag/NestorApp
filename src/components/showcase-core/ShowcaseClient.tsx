@@ -128,6 +128,14 @@ export function ShowcaseClient<TPayload>({
         if (cancelled) return;
         if (res.status === 410) { setState({ kind: 'expired' }); return; }
         if (res.status === 404) { setState({ kind: 'notfound' }); return; }
+        // ADR-884 Φ0.12 — password-protected link opened outside `/shared/[token]` (e.g. the
+        // legacy `/showcase/[token]`): send it to the ONE page that holds the password gate.
+        // Already there ⇒ the access grant cookie is missing (blocked cookies) — fall through
+        // to the error state instead of looping.
+        if (res.status === 401 && !window.location.pathname.startsWith('/shared/')) {
+          window.location.replace(`/shared/${encodeURIComponent(token)}`);
+          return;
+        }
         if (!res.ok) {
           const body = await res.json().catch(() => ({ error: 'Unknown error' }));
           setState({

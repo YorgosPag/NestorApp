@@ -95,7 +95,10 @@ const logger = createModuleLogger('PlaceSearchBox');
  */
 type SubmitState =
   // ADR-883 §5.8: `ambiguous-area` = το κείμενο ονομάζει ΠΟΛΛΕΣ ισότιμες περιοχές ⇒ η λίστα μένει ανοιχτή.
-  | { readonly kind: 'idle' | 'searching' | 'locating' | 'not-found' | 'error' | 'ambiguous-area' }
+  // ADR-883 §5.11: `suggest-area` = το κείμενο ΜΟΙΑΖΕΙ με περιοχή (λάθος) ⇒ «μήπως εννοούσατε;».
+  | {
+      readonly kind: 'idle' | 'searching' | 'locating' | 'not-found' | 'error' | 'ambiguous-area' | 'suggest-area';
+    }
   | { readonly kind: 'location-failed'; readonly reason: CurrentPositionFailure };
 
 const IDLE: SubmitState = { kind: 'idle' };
@@ -274,23 +277,39 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
       return;
     }
 
+    // ADR-883 §5.11 — δεύτερο Enter μετά το «μήπως εννοούσατε;» (κάθε πληκτρολόγηση ξαναγυρίζει σε
+    // `idle`, άρα είναι το ΙΔΙΟ κείμενο): ο άνθρωπος εννοεί ό,τι έγραψε — οδό, POI ⇒ geocoder.
+    const insisted = state.kind === 'suggest-area';
     const seq = ++requestSeq.current;
     recall.close();
     setState({ kind: 'searching' });
-    // 🔑 ADR-883 §5.8 — πρότυπο Zillow «NY»: κείμενο που ονομάζει ΚΑΘΑΡΑ περιοχή ⇒ το ΟΡΙΟ της,
-    //    όχι κύκλος γύρω από ένα σημείο. Περιμένει το ευρετήριο αν δεν πρόλαβε — ποτέ σιωπηλή πτώση.
+    if (!insisted && (await answeredByArea(seq))) return;
+    await geocodeTyped(seq);
+  }
+
+  /**
+   * 🔑 ADR-883 §5.8 — πρότυπο Zillow «NY»: κείμενο που ονομάζει ΚΑΘΑΡΑ περιοχή ⇒ το ΟΡΙΟ της, όχι
+   * κύκλος γύρω από ένα σημείο. Περιμένει το ευρετήριο αν δεν πρόλαβε — ποτέ σιωπηλή πτώση.
+   * `true` = η απάντηση δόθηκε (πλοήγηση ή ερώτηση)· `false` = δεν είναι περιοχή ⇒ geocoder.
+   */
+  async function answeredByArea(seq: number): Promise<boolean> {
     const typed = await resolveTypedAdminAreaWhenReady(trimmedQuery);
-    if (seq !== requestSeq.current) return;
+    if (seq !== requestSeq.current) return true;
     if (typed.kind === 'area') {
       pickArea(typed.area);
-      return;
+      return true;
     }
     // Ομώνυμες ισότιμες περιοχές ⇒ ρωτάμε (Rightmove «did you mean»), δεν μαντεύουμε.
     if (typed.kind === 'ambiguous') {
       setState({ kind: 'ambiguous-area' });
-      return;
+      return true;
     }
-    await geocodeTyped(seq);
+    // Λάθος που μοιάζει με περιοχή (§5.11) ⇒ ρωτάμε· η διόρθωση δεν πλοηγεί ποτέ μόνη της.
+    if (typed.kind === 'suggest') {
+      setState({ kind: 'suggest-area' });
+      return true;
+    }
+    return false;
   }
 
   /** Ελεύθερο κείμενο που ΔΕΝ είναι περιοχή (οδός, POI) ⇒ ο geocoder, όπως πάντα. */
@@ -323,7 +342,7 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
   // με τις ομώνυμες περιοχές, ώστε ο άνθρωπος να διαλέξει με ένα άγγιγμα ή με τα βέλη.
   const { reveal } = recall;
   useEffect(() => {
-    if (state.kind !== 'ambiguous-area') return;
+    if (state.kind !== 'ambiguous-area' && state.kind !== 'suggest-area') return;
     inputRef.current?.focus();
     reveal();
   }, [state.kind, reveal]);
@@ -429,6 +448,7 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
         {state.kind === 'not-found' && t('search-results:landing.search.notFound')}
         {state.kind === 'error' && t('search-results:landing.search.failed')}
         {state.kind === 'ambiguous-area' && t('common-shared:placeRecall.chooseArea')}
+        {state.kind === 'suggest-area' && t('common-shared:placeRecall.didYouMeanArea')}
         {state.kind === 'location-failed' && t(GEOLOCATION_FAILURE_I18N_KEYS[state.reason])}
       </p>
     </form>

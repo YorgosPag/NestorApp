@@ -27,11 +27,6 @@
  * @see adrs/ADR-699-share-resolver-declarations.md
  */
 
-import { createModuleLogger } from '@/lib/telemetry';
-import {
-  createTenantOwnershipGuard,
-  loadSharedEntityDoc,
-} from '@/services/sharing/resolver-core/share-entity-access';
 import {
   buildSafePublicProjection,
   normalizeRegenTimestamp,
@@ -42,7 +37,7 @@ import type {
   CreateShareInput,
   ShareEntityDefinition,
   ShareEntityType,
-  ShareRecord,
+  ShareProjectionInput,
   ValidationResult,
 } from '@/types/sharing';
 
@@ -92,15 +87,6 @@ export interface ShowcaseShareResolverConfig<
 // FACTORY
 // ============================================================================
 
-/** `'building_showcase'` → `'BuildingShowcaseShareResolver'`. */
-function loggerNameFor(entityType: ShareEntityType): string {
-  const pascal = entityType
-    .split('_')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
-  return `${pascal}ShareResolver`;
-}
-
 /**
  * Attach the two declared keys to the shared facts.
  *
@@ -134,22 +120,15 @@ export function createShowcaseShareResolver<
 >(
   config: ShowcaseShareResolverConfig<TIdKey, TTitleKey>,
 ): ShareEntityDefinition<ShowcaseResolvedData<TIdKey, TTitleKey>> {
-  const logger = createModuleLogger(loggerNameFor(config.entityType));
-
-  async function resolve(
-    share: ShareRecord,
-  ): Promise<ShowcaseResolvedData<TIdKey, TTitleKey>> {
-    const data = await loadSharedEntityDoc({
-      collection: config.collection,
-      share,
-      logger,
-      missingMessage: 'Showcase share points to missing entity',
-    });
-
+  function project({
+    share,
+    entity: data,
+    token,
+  }: ShareProjectionInput): ShowcaseResolvedData<TIdKey, TTitleKey> {
     return withDeclaredKeys(
       {
         shareId: share.id,
-        token: share.token,
+        token,
         pdfStoragePath: share.showcaseMeta?.pdfStoragePath ?? null,
         pdfRegeneratedAt: normalizeRegenTimestamp(share.showcaseMeta?.pdfRegeneratedAt),
         note: share.note ?? null,
@@ -175,10 +154,10 @@ export function createShowcaseShareResolver<
   }
 
   return {
-    resolve,
+    entityCollection: config.collection,
+    project,
     safePublicProjection: share => buildSafePublicProjection(share, 'showcaseMeta'),
     validateCreateInput,
-    canShare: createTenantOwnershipGuard(config.collection),
     renderPublic: () => null,
   };
 }

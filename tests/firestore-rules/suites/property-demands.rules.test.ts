@@ -47,6 +47,10 @@ import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { ALL_PERSONAS, PERSONA_CLAIMS, isAuthenticatedPersona } from '../_registry/personas';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import {
+  DEMAND_PLACE_LABEL_MAX_LENGTH,
+  DEMAND_TITLE_MAX_LENGTH,
+} from '@/lib/demand/demand-title';
 
 export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'property_demands',
@@ -214,6 +218,50 @@ describe('property_demands.rules — η ζήτηση ανήκει σε ΑΝΘΡ�
 
       await assertFails(ref.delete());
       await assertSucceeds(ref.update({ lifecycle: 'withdrawn' }));
+    });
+  });
+
+  // ==========================================================================
+  // Α5 — ΤΟ ΟΝΟΜΑ ΕΧΕΙ ΟΡΙΟ ΚΑΙ ΣΤΟΝ SERVER (ADR-886)
+  // ==========================================================================
+
+  describe('🔴 Α5 — όνομα & ετικέτα τόπου: το ΙΔΙΟ όριο με το `demand-title.ts`', () => {
+    const docId = 'demand-owned-1';
+    const ref = () => getContext(env, 'same_tenant_user').firestore().collection('property_demands').doc(docId);
+
+    beforeEach(async () => {
+      await seedPropertyDemand(env, docId, OWNER_UID);
+    });
+
+    it(`όνομα ${DEMAND_TITLE_MAX_LENGTH} χαρακτήρων → allow (το όριο ανήκει στο επιτρεπτό)`, async () => {
+      await assertSucceeds(ref().update({ title: 'α'.repeat(DEMAND_TITLE_MAX_LENGTH) }));
+    });
+
+    it(`όνομα ${DEMAND_TITLE_MAX_LENGTH + 1} χαρακτήρων → deny`, async () => {
+      await assertFails(ref().update({ title: 'α'.repeat(DEMAND_TITLE_MAX_LENGTH + 1) }));
+    });
+
+    it('`title: null` → allow (πίσω στο αυτόματο όνομα)', async () => {
+      await assertSucceeds(ref().update({ title: null }));
+    });
+
+    it('όνομα που δεν είναι κείμενο → deny', async () => {
+      await assertFails(ref().update({ title: 42 }));
+    });
+
+    it(`ετικέτα τόπου ${DEMAND_PLACE_LABEL_MAX_LENGTH + 1} χαρακτήρων → deny`, async () => {
+      await assertFails(ref().update({ placeLabel: 'α'.repeat(DEMAND_PLACE_LABEL_MAX_LENGTH + 1) }));
+    });
+
+    it('και στη ΓΕΝΝΗΣΗ: create με υπερμεγέθες όνομα → deny', async () => {
+      const owner = getContext(env, 'same_tenant_user');
+      await assertFails(
+        owner
+          .firestore()
+          .collection('property_demands')
+          .doc('demand-long-name')
+          .set({ ...propertyDemandCreatePayload(OWNER_UID), title: 'α'.repeat(DEMAND_TITLE_MAX_LENGTH + 1) }),
+      );
     });
   });
 });

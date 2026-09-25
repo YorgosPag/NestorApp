@@ -8,8 +8,11 @@
  * building) which share the same public contract:
  *
  *   1. Validate token is non-empty (400).
- *   2. Resolve the share via the surface-specific `resolveShare` hook.
- *   3. Return 404 when the share is missing, 410 when expired.
+ *   2. Pass the **one** share gate (`lookupPublicShowcaseShare` →
+ *      `server/sharing/share-gate.ts`, ADR-884 Φ0.12) for the declared
+ *      `shareEntityType`.
+ *   3. 404 missing / wrong surface · 401 password-protected without the access
+ *      grant cookie · 410 expired or exhausted · 503 grant secret missing.
  *   4. Parse `locale` from the query string (`el` / `en`, default `el`).
  *   5. Build the surface-specific payload via `buildPayload` (which owns the
  *      snapshot + media loading; builders already enforce tenant isolation
@@ -28,23 +31,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { Firestore } from 'firebase-admin/firestore';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createModuleLogger, type Logger } from '@/lib/telemetry/Logger';
+import type { Logger } from '@/lib/telemetry/Logger';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import { requestOriginOrThrow } from '@/lib/http/request-origin';
+import type { ShareEntityType } from '@/types/sharing';
+import { jsonError } from '@/app/api/showcase/shared-pdf-proxy-helpers';
+import { createPublicShowcaseHandler, type PublicShowcaseShare } from './public-share-lookup';
 
 // =============================================================================
 // Public contracts
 // =============================================================================
-
-export interface ResolvedShowcaseShare<TExtra = Record<string, unknown>> {
-  entityId: string;
-  companyId: string;
-  expiresAt: string;
-  pdfStoragePath?: string;
-  /** Surface-specific extras (e.g. property's videoUrl note). */
-  extra?: TExtra;
-}
 
 export interface BuildPublicPayloadParams<TExtra = Record<string, unknown>> {
   entityId: string;
@@ -64,16 +60,10 @@ export interface CreatePublicPayloadRouteConfig<TPayload, TExtra = Record<string
   loggerName: string;
   /** Human message shown when the share is missing / deactivated (404). */
   shareNotFoundMessage: string;
-  /**
-   * Resolve the share document by token. Returning `null` → 404.
-   * Surface-specific because property uses the legacy `FILE_SHARES`
-   * collection while project/building use the unified `shares` with
-   * `entityType === '{entity}_showcase'`.
-   */
-  resolveShare: (
-    token: string,
-    adminDb: Firestore,
-  ) => Promise<ResolvedShowcaseShare<TExtra> | null>;
+  /** Share discriminator served by this route, e.g. `'building_showcase'`. */
+  shareEntityType: ShareEntityType;
+  /** Surface-specific extras read off the resolved share (property: video URL note). */
+  extraOf?: (share: PublicShowcaseShare) => TExtra;
   /**
    * Build the surface-specific public payload. Owns snapshot + media loading
    * + tenant check (snapshot builders already enforce it per Phase 1.1).
@@ -91,10 +81,6 @@ export interface PublicShowcasePayloadHandler {
 // Internal helpers
 // =============================================================================
 
-function jsonError(status: number, message: string): NextResponse {
-  return NextResponse.json({ error: message }, { status });
-}
-
 function resolveLocale(request: NextRequest): EnumLocale {
   const localeParam = request.nextUrl.searchParams.get('locale');
   return localeParam === 'en' ? 'en' : 'el';
@@ -107,57 +93,39 @@ function resolveLocale(request: NextRequest): EnumLocale {
 export function createPublicShowcasePayloadRoute<TPayload, TExtra = Record<string, unknown>>(
   config: CreatePublicPayloadRouteConfig<TPayload, TExtra>,
 ): PublicShowcasePayloadHandler {
-  const logger = createModuleLogger(config.loggerName);
+  return createPublicShowcaseHandler(config, async ({ request, token, share, adminDb, logger }) => {
+    const locale = resolveLocale(request);
+    const pdfPath = share.pdfStoragePath ? config.pdfUrlPath(token) : null;
+    const pdfUrl = pdfPath ? `${requestOriginOrThrow(request)}${pdfPath}` : undefined;
 
-  return {
-    async handle(request: NextRequest, token: string): Promise<NextResponse> {
-      if (!token || token.trim().length === 0) {
-        return jsonError(400, 'Token is required');
-      }
-
-      const adminDb = getAdminFirestore();
-      if (!adminDb) return jsonError(503, 'Database connection not available');
-
-      const share = await config.resolveShare(token, adminDb);
-      if (!share) return jsonError(404, config.shareNotFoundMessage);
-
-      if (new Date(share.expiresAt).getTime() < Date.now()) {
-        return jsonError(410, 'Showcase link has expired');
-      }
-
-      const locale = resolveLocale(request);
-      const pdfPath = share.pdfStoragePath ? config.pdfUrlPath(token) : null;
-      const pdfUrl = pdfPath ? `${requestOriginOrThrow(request)}${pdfPath}` : undefined;
-
-      let payload: TPayload;
-      try {
-        payload = await config.buildPayload({
-          entityId: share.entityId,
-          companyId: share.companyId,
-          locale,
-          expiresAt: share.expiresAt,
-          pdfStoragePath: share.pdfStoragePath,
-          pdfUrl,
-          extra: share.extra,
-          adminDb,
-          logger,
-          token,
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        logger.error('Public showcase payload build failed', {
-          token, entityId: share.entityId, companyId: share.companyId, error: msg,
-        });
-        if (msg.includes('not found')) return jsonError(404, 'Entity not found');
-        if (msg.toLowerCase().includes('tenant')) return jsonError(403, 'Access denied');
-        return jsonError(500, 'Failed to load showcase data');
-      }
-
-      logger.info('Public showcase resolved', {
-        token, entityId: share.entityId, companyId: share.companyId,
+    let payload: TPayload;
+    try {
+      payload = await config.buildPayload({
+        entityId: share.entityId,
+        companyId: share.companyId,
+        locale,
+        expiresAt: share.expiresAt,
+        pdfStoragePath: share.pdfStoragePath,
+        pdfUrl,
+        extra: config.extraOf?.(share),
+        adminDb,
+        logger,
+        token,
       });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error('Public showcase payload build failed', {
+        shareId: share.id, entityId: share.entityId, companyId: share.companyId, error: msg,
+      });
+      if (msg.includes('not found')) return jsonError(404, 'Entity not found');
+      if (msg.toLowerCase().includes('tenant')) return jsonError(403, 'Access denied');
+      return jsonError(500, 'Failed to load showcase data');
+    }
 
-      return NextResponse.json(payload);
-    },
-  };
+    logger.info('Public showcase resolved', {
+      shareId: share.id, entityId: share.entityId, companyId: share.companyId,
+    });
+
+    return NextResponse.json(payload);
+  });
 }

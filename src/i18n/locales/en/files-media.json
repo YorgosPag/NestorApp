@@ -278,6 +278,12 @@
     "unlimitedDownloads": "Unlimited downloads",
     "preview": "Preview",
     "previewUnavailable": "Preview is not available for this file type.",
+    "exhausted": "This link has been used up",
+    "exhaustedDescription": "The link has been opened the maximum number of times the sender allowed. Request a new link.",
+    "locked": "This link is temporarily locked",
+    "lockedDescription": "Too many wrong passwords were entered. Try again in 15 minutes.",
+    "unavailable": "This share is not available",
+    "unavailableDescription": "A temporary problem on our side. Please try again shortly.",
     "fileType": {
       "word": "Word Document",
       "excel": "Excel Spreadsheet",

@@ -55,6 +55,8 @@ export function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand 
     features: NO_DEMAND_FEATURES,
     proximity: [],
     lifeContext: null,
+    title: null,
+    placeLabel: null,
     lifecycle: 'active',
     affirmedAt: NOW_ISO,
     createdAt: NOW_ISO,

@@ -98,8 +98,11 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
       // «οπουδήποτε» — δηλαδή θα **έσβηνε τον τόπο** κάθε φορά που κάποιος άνοιγε τη
       // ζήτησή του για επεξεργασία.
       placeKind: demand.place.kind,
-      placeQuery: '',
+      // ADR-886 — το κείμενο που έλυσε τον τόπο **ξαναδείχνεται** (ως τότε το πεδίο άνοιγε κενό,
+      // και ο άνθρωπος έβλεπε μόνο συντεταγμένες για κάτι που είχε ονομάσει ο ίδιος).
+      placeQuery: near === null ? '' : (demand.placeLabel ?? ''),
       placeCenter: near?.center ?? null,
+      placeLabel: near === null ? null : demand.placeLabel,
       radiusKm: near?.radiusKm ?? DEFAULT_SEARCH_RADIUS_KM,
       placeRef:
         identified === null
@@ -121,6 +124,7 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
       floorMax: demand.features.floorMax,
       proximity: demand.proximity.map((p) => ({ ...p })),
       lifeContext: demand.lifeContext,
+      title: demand.title ?? '',
     },
   };
 }

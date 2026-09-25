@@ -74,6 +74,11 @@
       "failed": "The request was not saved. Please try again shortly.",
       "optional": "optional",
       "notEditableHere": "This request defines its area in a way this screen does not yet compose ({placeKind}). Its remaining details are shown normally.",
+      "name": {
+        "label": "Request name",
+        "hint": "Leave it empty and the name is built from your criteria — and changes with them, so it never says something out of date.",
+        "counter": "{count}/{max}"
+      },
       "seeks": {
         "legend": "What kind of transaction?",
         "help": "Pick at least one. Without it, the request would match everything.",
@@ -211,7 +216,8 @@
       "proximity-not-positive": "A neighbourhood distance is zero or negative.",
       "proximity-duplicated": "The same kind of neighbourhood requirement was declared twice.",
       "axis-degenerate": "The frontage axis has no direction — all its points are the same, so there is no “left” or “right”. Draw it again, with a start and an end at different points.",
-      "depth-not-positive": "The depth must be greater than zero."
+      "depth-not-positive": "The depth must be greater than zero.",
+      "title-too-long": "The request name is too long — please shorten it."
     },
     "formBlocker": {
       "place-unresolved": "Press “Locate” so the area resolves to a point on the map.",
@@ -337,6 +343,25 @@
       "error": "The request could not be loaded. Please try again shortly.",
       "criteria": "Your criteria",
       "edit": "Edit"
+    },
+    "name": {
+      "near": "{radiusKm} km around a point",
+      "area": "Drawn area",
+      "place": "Specific property",
+      "frontage": "Street frontage",
+      "frontageNamed": "{street}",
+      "typesMore": "{first} +{count}",
+      "bedroomsMin": "{count}+ bd",
+      "autoNote": "Automatic name — built from your criteria and changes with them."
+    },
+    "rename": {
+      "action": "Rename",
+      "inputLabel": "Request name",
+      "save": "Save",
+      "cancel": "Cancel",
+      "useAuto": "Use automatic name",
+      "failed": "The name was not saved. Please try again.",
+      "tooLong": "Up to {max} characters."
     },
     "summary": {
       "anywhere": "Anywhere",

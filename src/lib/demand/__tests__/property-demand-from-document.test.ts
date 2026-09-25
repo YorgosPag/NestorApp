@@ -105,6 +105,22 @@ describe('Κ3 — AIP-216: άγνωστη τιμή ΔΕΝ βαφτίζεται, 
   });
 });
 
+describe('ADR-886 — έγγραφα πριν το όνομα διαβάζονται, χωρίς εφεύρεση', () => {
+  it('χωρίς `title`/`placeLabel` ⇒ πλήρης, με `null` (δηλαδή «αυτόματο όνομα»)', () => {
+    const body = storedDoc();
+    delete body.title;
+    delete body.placeLabel;
+    const read = readStoredDemand(body, 'dmnd_a');
+    expect(read?.kind).toBe('complete');
+    expect(read?.kind === 'complete' && [read.demand.title, read.demand.placeLabel]).toEqual([null, null]);
+  });
+
+  it('μη-κείμενο ή μόνο κενά (χειρόγραφη εγγραφή) ⇒ `null`, ποτέ ωμή τιμή στην οθόνη', () => {
+    const read = readStoredDemand(storedDoc({ title: 42, placeLabel: '   ' }), 'dmnd_a');
+    expect(read?.kind === 'complete' && [read.demand.title, read.demand.placeLabel]).toEqual([null, null]);
+  });
+});
+
 describe('Κ4 — Avro: ΔΗΛΩΜΕΝΗ ουδέτερη τιμή επιτρέπεται, εφευρημένη όχι', () => {
   it('χωρίς `features` ⇒ πλήρης, με τη σταθερά του σχήματος', () => {
     const read = readStoredDemand(withoutField('features'), 'dmnd_a');

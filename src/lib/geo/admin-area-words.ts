@@ -1,6 +1,7 @@
 /**
  * @fileoverview **ΛΕΞΕΙΣ ΟΝΟΜΑΤΩΝ ΠΕΡΙΟΧΩΝ** — κανονικοποίηση, κλίση, greeklish, «ίδια λέξη».
- * @related ADR-883 §5.5 · §5.10 · `admin-area-search.ts` (αναζήτηση) · `scripts/lib/admin-boundaries/settlement-points.ts` (γεννήτορας)
+ * @related ADR-883 §5.5 · §5.10 · §5.11 (κλιτικά παραδείγματα) · `admin-area-search.ts` (αναζήτηση) ·
+ *          `admin-area-vocabulary.ts` (ανοχή ορθογραφίας) · `scripts/lib/admin-boundaries/settlement-points.ts` (γεννήτορας)
  * @module lib/geo/admin-area-words
  *
  * 🔑 **ΓΙΑΤΙ ΕΞΗΧΘΗ (ADR-883 §5.10)**: η ερώτηση *«είναι αυτές οι δύο γραφές το ΙΔΙΟ όνομα;»*
@@ -69,29 +70,172 @@ export function formsOf(word: string): string[] {
 }
 
 /** Οι λέξεις **τόπου** ενός ονόματος (χωρίς λέξεις βαθμίδας), η καθεμία με τις μορφές της. */
-export function nameWordForms(name: string): string[][] {
+export function nameWordForms(name: string, forms: (word: string) => string[] = formsOf): string[][] {
   return greekWords(name)
     .filter((word) => !LEVEL_WORDS.has(word))
-    .map(formsOf);
+    .map((word) => forms(word));
 }
 
-export function nameWords(name: string): string[] {
-  return nameWordForms(name).flat();
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔑 ΚΛΙΣΗ = ΙΔΙΟ ΘΕΜΑ + ΚΑΤΑΛΗΞΕΙΣ ΤΟΥ ΙΔΙΟΥ ΚΛΙΤΙΚΟΥ ΠΑΡΑΔΕΙΓΜΑΤΟΣ (ADR-883 §5.11)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Ο προηγούμενος κανόνας ήταν «κόψε ΟΠΟΙΑ δύο γράμματα, |Δμήκους| ≤ 2». Μετρημένο στο λεξιλόγιο
+// του ευρετηρίου (9.979 λέξεις, 2026-09-25): ταύτιζε **6.129** ζεύγη που ΔΕΝ είναι η ίδια λέξη —
+// Λευκάδας≈Λευκός · Καλαμάτας≈Κάλαμος · Βάρης≈Βάρκα · Αγίου≈Αγίας — και το «Ξυλοπ» (μισή λέξη)
+// γινόταν «Ξυλ» ⇒ ΚΑΘΕ «Ξυλ-», με το Ξυλόκαστρο πρώτο. Και το ίδιο κριτήριο ταίριαζε οικισμούς
+// ΕΛΣΤΑΤ στον γεννήτορα.
+//
+// Μια επίπεδη λίστα καταλήξεων κάνει το αντίθετο λάθος: ενώνει γένη (Νέα≈Νέος, Καλή≈Καλό — ΑΛΛΑ
+// ονόματα). Το σωστό μοντέλο είναι της γραμματικής (και του Lucene GreekStemmer): δύο μορφές είναι
+// η ίδια λέξη όταν έχουν **ίδιο θέμα** και καταλήξεις από το **ίδιο** κλιτικό παράδειγμα.
+// Μισή λέξη («Ξυλοπ») δεν τελειώνει σε κατάληξη ⇒ ταιριάζει ΜΟΝΟ ως πρόθεμα.
+//
+// ⚠️ Μορφή: χωρίς τόνους, πεζά, `ς`→`σ` (όπως το `greekWords`). Οι λατινικές καταλήξεις
+//    ΠΑΡΑΓΟΝΤΑΙ από τις ελληνικές με το ίδιο δίπλωμα — καμία δεύτερη λίστα με το χέρι.
+
+/** Ένα κλιτικό παράδειγμα: οι καταλήξεις ΜΙΑΣ λέξης, και (όπου χρειάζεται) το ελάχιστο θέμα του. */
+interface Paradigm {
+  readonly endings: readonly string[];
+  /** Μακρύτερο θέμα όπου το ζεύγος θα ένωνε γένη σε κοντές λέξεις («Νέας»/«Νέου»). Προεπιλογή: `MIN_STEM`. */
+  readonly minStem?: number;
 }
 
-/** Ταιριάζει η λέξη του ανθρώπου σε λέξη της πηγής; Πρόθεμα, ή πρόθεμα **θέματος** (κλίση). */
-export function wordMatches(asked: string, known: string): boolean {
-  if (known.startsWith(asked)) return true;
-  return asked.length >= 5 && known.startsWith(asked.slice(0, -2));
+/** Τα κλιτικά παραδείγματα των ονομάτων τόπων — κάθε γραμμή: οι καταλήξεις ΜΙΑΣ λέξης. */
+const GREEK_PARADIGMS: readonly Paradigm[] = [
+  { endings: ['οσ', 'ου', 'ο', 'ε', 'οι', 'ων', 'ουσ'] }, // Ρόδος/Ρόδου · Εύοσμος/Ευόσμου · Δελφοί/Δελφών
+  { endings: ['ο', 'ου', 'ων'] }, // Κορδελιό/Κορδελιού · Ηράκλειο/Ηρακλείου
+  { endings: ['ον', 'ου', 'α', 'ων'], minStem: 4 }, // Λέπρεον/Λεπρέου («Νέα»/«Αγία» ≠ «Νέου»/«Αγίου»: ο πληθυντικός -α μοιάζει με θηλυκό)
+  { endings: ['ι', 'ιου', 'ια', 'ιων'], minStem: 3 }, // Μεσολόγγι/Μεσολογγίου · Χαλάνδρι/Χαλανδρίου («Αγ-ία» ≠ «Αγ-ίου»)
+  { endings: ['ιον', 'ιου', 'ια', 'ιων', 'ι'], minStem: 3 }, // αρχαΐζον ουδέτερο: Χαλάνδριον = Χαλάνδρι
+  { endings: ['α', 'ασ', 'ησ', 'εσ', 'ων'] }, // Καλαμάτα/Καλαμάτας · Έδεσσα/Εδέσσης · Χανιά/Χανίων
+  { endings: ['η', 'ησ', 'εσ', 'ων'] }, // Κατερίνη/Κατερίνης · Καρτερές/Καρτερών
+  { endings: ['εσ', 'ων', 'εων'] }, // Θεσπιές/Θεσπιών/Θεσπιέων
+  { endings: ['εσ', 'ε'] }, // κρητικά: Δαφνές/Δαφνέ · Πρινές/Πρινέ
+  { endings: ['η', 'ησ', 'ισ', 'εωσ', 'εισ', 'εων'] }, // Ξυλόπολη/Ξυλόπολις/Ξυλοπόλεως
+  { endings: ['εια', 'ειασ', 'εων'] }, // Λεβάδεια/Λεβαδέων
+  { endings: ['ασ', 'αδα', 'αδασ', 'αδοσ', 'αδεσ', 'αδων'] }, // Δορκάς/Δορκάδα · Λευκάδα/Λευκάδος
+  { endings: ['ισ', 'ιδα', 'ιδασ', 'ιδοσ', 'ιδεσ', 'ιδων'] }, // Στυλίδα/Στυλίδος · Αρτέμιδα/Αρτέμιδος
+  { endings: ['ασ', 'α', 'εσ', 'ων', 'αδεσ', 'αδων'] }, // Λαγκαδάς/Λαγκαδά
+  { endings: ['ησ', 'η', 'εσ', 'ων', 'ηδεσ', 'ηδων'] }, // Χορτιάτης/Χορτιάτη
+  { endings: ['ησ', 'η', 'ου'], minStem: 3 }, // Ιωάννης/Ιωάννη/Ιωάννου
+  { endings: ['ασ', 'α', 'ου'], minStem: 4 }, // Ανδρέας/Ανδρέου · Παγώνδας/Παγώνδου («Αγίας» ≠ «Αγίου», «Νέας» ≠ «Νέου» — γι' αυτό όχι Ηλίας/Ηλιού)
+  { endings: ['ησ', 'ουσ'], minStem: 3 }, // Αριστομένης/Αριστομένους
+  { endings: ['ων', 'ονα', 'ονασ', 'ονοσ'] }, // Ελασσόνα/Ελασσόνος · Χαλκηδών/Χαλκηδόνος
+  { endings: ['ων', 'ωνα', 'ωνασ', 'ωνοσ'] }, // Μαραθώνας/Μαραθώνος/Μαραθών
+  { endings: ['ισ', 'ινα', 'ινασ', 'ινοσ'] }, // Ελευσίς/Ελευσίνα/Ελευσίνος · Σαλαμίς/Σαλαμίνος
+  { endings: ['ην', 'ενοσ', 'ενα'] }, // Λιμήν/Λιμένος · Γερολιμήν/Γερολιμένος
+  { endings: ['ην', 'ηνοσ', 'ηνα'] }, // Τροιζήν/Τροιζήνος
+  { endings: ['αξ', 'ακοσ', 'ακα', 'ακεσ', 'ακων'] }, // Βώλαξ/Βώλακος · Χάραξ/Χάρακος
+  { endings: ['ιξ', 'ικοσ', 'ικα'] }, // Φοίνιξ/Φοίνικος
+  { endings: ['ωσ', 'ωτοσ', 'ωτα'] }, // Λυκόφως/Λυκόφωτος
+  { endings: ['ηρ', 'ηροσ', 'ηρα'] }, // Σωτήρ/Σωτήρος
+  { endings: ['ωρ', 'οροσ', 'ορα'] }, // Νικάνωρ/Νικάνορος · Παντοκράτωρ/Παντοκράτορος
+  { endings: ['ουσ', 'ουντοσ', 'ουντα', 'ουντασ'] }, // Σελινούς/Σελινούντος · Πτερούντα/Πτερούντος
+  { endings: ['ευσ', 'εωσ', 'ωσ', 'εα', 'εισ', 'εων'] }, // Πειραιεύς/Πειραιώς
+  { endings: ['αι', 'ων', 'εων'] }, // αρχαΐζον πληθυντικό: Σέρραι/Σερρών · Πάτραι/Πατρέων
+  { endings: ['ασ', 'ωσ'] }, // Πειραιάς/Πειραιώς
+  { endings: ['ασ', 'αλου', 'αλη', 'αλησ', 'αλο', 'αλα', 'αλων'], minStem: 3 }, // ανώμαλο: Μέγας/Μεγάλου
+  // Δήμοι με όνομα ΚΑΤΟΙΚΩΝ σε γενική πληθυντικού — ο κόσμος γράφει την πόλη. Ανά γένος,
+  // αλλιώς ενώνονται «Νέα»/«Νέο», «Καλή»/«Καλό» (μετρημένο: ήταν το μισό ψευδώς θετικό).
+  { endings: ['α', 'ασ', 'ησ', 'αιων', 'εων'] }, // Λάρισα/Λαρισαίων · Κέρκυρα/Κερκυραίων · Πάτρα/Πατρέων
+  { endings: ['η', 'ησ', 'αιων', 'εων'] }, // Θήβη/Θηβαίων
+  { endings: ['ο', 'ου', 'εων'] }, // Ναύπλιο/Ναυπλιέων
+  { endings: ['οσ', 'ου', 'ιων'] }, // Κόρινθος/Κορινθίων · Ζάκυνθος/Ζακυνθίων · Μύκονος/Μυκονίων
+  { endings: ['ινα', 'ιτων'] }, // Ιωάννινα/Ιωαννιτών (το θέμα αλλάζει — ζεύγος, όχι γενική κατάληξη)
+];
+
+/** Το ελάχιστο κοινό θέμα — «Χίος/Χίου» έχει θέμα δύο γραμμάτων. */
+const MIN_STEM = 2;
+
+const latinOf = (ending: string): string => foldLatin(transliterateGreekToLatin(ending));
+
+/**
+ * Οι λατινικές μορφές των **μονογράμματων** καταλήξεων (α, ε, η, ι, ο, ω …). Δίψηφο που διπλώνεται
+ * σε μία από αυτές (`οι`→`i` = `η`/`ι` · `αι`→`e` = `ε`) **δεν** δίνει λατινική κατάληξη: θα
+ * ένωνε γένη (μετρημένο: «Σάμος» = «Σάμη» μέσω του `οι` του αρσενικού). Το `ου`→`u` μένει —
+ * κανένα μονόγραμμο δεν γίνεται `u`.
+ */
+const SINGLE_LETTER_LATIN = new Set(
+  GREEK_PARADIGMS.flatMap(({ endings }) => endings)
+    .filter((ending) => ending.length === 1)
+    .map(latinOf),
+);
+
+/** Κατάληξη → τα παραδείγματα (δείκτες) όπου ανήκει. Ελληνικές **και** παραγόμενες λατινικές. */
+const ENDING_PARADIGMS: ReadonlyMap<string, readonly number[]> = (() => {
+  const index = new Map<string, number[]>();
+  const add = (ending: string, paradigm: number) => {
+    const list = index.get(ending) ?? [];
+    if (!list.includes(paradigm)) list.push(paradigm);
+    index.set(ending, list);
+  };
+  GREEK_PARADIGMS.forEach(({ endings }, paradigm) => {
+    for (const ending of endings) {
+      add(ending, paradigm);
+      const latin = latinOf(ending);
+      const collapsedDigraph = ending.length > 1 && SINGLE_LETTER_LATIN.has(latin);
+      if (!collapsedDigraph) add(latin, GREEK_PARADIGMS.length + paradigm);
+    }
+  });
+  return index;
+})();
+
+/** Η μακρύτερη γνωστή κατάληξη — πόση «ουρά» μιας λέξης μπορεί να είναι κλίση (και για την ανοχή). */
+export const LONGEST_ENDING = Math.max(...[...ENDING_PARADIGMS.keys()].map((ending) => ending.length));
+
+/** Οι τρόποι να χωριστεί η λέξη σε θέμα + γνωστή κατάληξη (το πολύ ένας ανά μήκος κατάληξης). */
+/** Το ελάχιστο θέμα ενός παραδείγματος (ελληνικού ή του λατινικού του διδύμου). */
+const minStemOf = (paradigm: number): number =>
+  GREEK_PARADIGMS[paradigm % GREEK_PARADIGMS.length].minStem ?? MIN_STEM;
+
+function splits(word: string): { readonly stem: string; readonly paradigms: readonly number[] }[] {
+  const found: { stem: string; paradigms: readonly number[] }[] = [];
+  for (let cut = 1; cut <= LONGEST_ENDING && word.length - cut >= MIN_STEM; cut += 1) {
+    const stemLength = word.length - cut;
+    const paradigms = ENDING_PARADIGMS.get(word.slice(stemLength))?.filter((p) => stemLength >= minStemOf(p));
+    if (paradigms !== undefined && paradigms.length > 0) found.push({ stem: word.slice(0, stemLength), paradigms });
+  }
+  return found;
 }
 
 /**
- * **Ίδια λέξη**, όχι πρόθεμα: ίση, ή ίδιο θέμα με διαφορά κατάληξης ≤ 2 γράμματα
- * (Θεσσαλονίκη↔Θεσσαλονίκης, Κορδελιό↔Κορδελιού, Δορκάς↔Δορκάδα). Το «Θεσ» **δεν** είναι Θεσσαλονίκη.
+ * Τα **θέματα** μιας λέξης που τελειώνει σε γνωστή κατάληξη — για την ανοχή ορθογραφίας
+ * (`admin-area-vocabulary.ts`): «Ξυλούπολη» ⇒ «ξυλουπολ», που απέχει ένα λάθος από το «ξυλοπολ-εωσ».
  */
+export function inflectionStems(word: string): readonly string[] {
+  return splits(word).map(({ stem }) => stem);
+}
+
+/**
+ * **Ο ταιριαστής ΜΙΑΣ λέξης του ανθρώπου**, με τα θέματά της υπολογισμένα **μία** φορά — η
+ * αναζήτηση τον ρωτά για κάθε λέξη ~15.000 ονομάτων σε κάθε πάτημα πλήκτρου.
+ *
+ * - `word`: ίδια λέξη — ίση, ή ίδιο θέμα με καταλήξεις του **ίδιου** κλιτικού παραδείγματος
+ *   (Θεσσαλονίκη↔Θεσσαλονίκης, Ρόδος↔Ρόδου, Δορκάς↔Δορκάδα). Το «Νέα» **δεν** είναι «Νέος».
+ * - `prefix`: η λέξη της πηγής **αρχίζει** με ό,τι γράφτηκε («Ξυλοπ» ⇒ Ξυλοπόλεως) — μισή λέξη
+ *   δεν τελειώνει σε κατάληξη, άρα δεν γίνεται ποτέ «θέμα» που ταιριάζει με το Ξυλόκαστρο.
+ */
+export function wordMatcher(asked: string): (known: string) => WordMatch {
+  const stems = splits(asked);
+  return (known) => {
+    if (asked === known) return 'word';
+    if (asked[0] !== known[0]) return null;
+    for (const { stem, paradigms } of stems) {
+      if (!known.startsWith(stem)) continue;
+      const other = ENDING_PARADIGMS.get(known.slice(stem.length));
+      if (other !== undefined && other.some((paradigm) => paradigms.includes(paradigm))) return 'word';
+    }
+    return known.startsWith(asked) ? 'prefix' : null;
+  };
+}
+
+/** Πώς ταιριάζει η λέξη του ανθρώπου σε λέξη της πηγής: ολόκληρη (με κλίση), ως πρόθεμα, ή καθόλου. */
+export type WordMatch = 'word' | 'prefix' | null;
+
+/** **Ίδια λέξη**, όχι πρόθεμα — δες το {@link wordMatcher}. Το «Θεσ» **δεν** είναι Θεσσαλονίκη. */
 export function sameWord(asked: string, known: string): boolean {
-  if (asked === known) return true;
-  return asked.length >= 5 && Math.abs(known.length - asked.length) <= 2 && known.startsWith(asked.slice(0, -2));
+  return wordMatcher(asked)(known) === 'word';
 }
 
 export function sameWordAny(asked: readonly string[], known: readonly string[]): boolean {

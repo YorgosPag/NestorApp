@@ -36,8 +36,8 @@ export { VersionHistory } from './VersionHistory';
 // Audit log (ADR-191 Phase 3.1)
 export { AuditLogPanel } from './AuditLogPanel';
 
-// Share dialog (ADR-191 Phase 4.2)
-export { ShareDialog } from './ShareDialog';
+// Share dialog — ADR-884 Φ0.12: removed (no caller); file shares go through
+// `components/sharing/UnifiedShareDialog` → `UnifiedSharingService`.
 
 // Comments panel (ADR-191 Phase 4.3)
 export { CommentsPanel } from './CommentsPanel';

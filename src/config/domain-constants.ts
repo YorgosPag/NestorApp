@@ -767,6 +767,14 @@ export const API_ROUTES = {
     LIST: '/api/cad-files',
   },
 
+  // ── Share links (ADR-315 · ADR-884 Φ0.12 — whole lifecycle on the server) ──
+  SHARES: {
+    CREATE: '/api/shares',
+    RESOLVE: '/api/shares/resolve',
+    DOWNLOAD: '/api/shares/download',
+    REVOKE: (shareId: string) => `/api/shares/${encodeURIComponent(shareId)}/revoke`,
+  },
+
   // ── DXF Overlay Items (ADR-289) ───────────────────────────────────────
   DXF_OVERLAY_ITEMS: {
     LIST: '/api/dxf-overlay-items',

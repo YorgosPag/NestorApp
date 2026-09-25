@@ -23,7 +23,6 @@ import type { ProjectStatus } from '@/constants/project-statuses';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
-import { nowISO } from '@/lib/date-local';
 import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/projectMappings';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
@@ -32,7 +31,7 @@ import { useProjectDetail } from '@/hooks/useProjectDetail';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useIkaTabWarnings } from './ika/hooks/useIkaTabWarnings';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
-import type { CreateShareInput } from '@/types/sharing';
+import { createShowcasePdfPreSubmit } from '@/components/sharing/showcase-pdf-pre-submit';
 
 // ============================================================================
 // TYPES
@@ -182,23 +181,10 @@ export function ProjectDetails({
     && /not found|404/i.test(hydrationError.message);
   const displayProject = is404 ? null : effectiveProject;
 
-  const projectShowcasePdfPreSubmit = useCallback(async (): Promise<
-    Pick<CreateShareInput, 'showcaseMeta'>
-  > => {
-    const res = await fetch(`/api/projects/${displayProject?.id}/showcase/pdf`, { method: 'POST' });
-    if (!res.ok) throw new Error('PDF generation failed');
-    const body = (await res.json()) as {
-      data?: { pdfStoragePath?: string | null; pdfRegeneratedAt?: string | null };
-    };
-    const pdfStoragePath = body.data?.pdfStoragePath?.trim();
-    if (!pdfStoragePath) throw new Error('PDF generation returned no storage path');
-    return {
-      showcaseMeta: {
-        pdfStoragePath,
-        pdfRegeneratedAt: body.data?.pdfRegeneratedAt ?? nowISO(),
-      },
-    };
-  }, [displayProject?.id]);
+  const projectShowcasePdfPreSubmit = useMemo(
+    () => createShowcasePdfPreSubmit(`/api/projects/${displayProject?.id}/showcase/pdf`),
+    [displayProject?.id],
+  );
 
   return (
     <>
@@ -253,7 +239,6 @@ export function ProjectDetails({
         entityId={displayProject.id}
         entityTitle={displayProject.name}
         companyId={user.companyId}
-        userId={user.uid}
         preSubmit={projectShowcasePdfPreSubmit}
       />
     )}

@@ -33,6 +33,7 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useForm } from 'react-hook-form';
 
@@ -60,6 +61,18 @@ import {
   DemandTimingField,
 } from './form/DemandAxisFields';
 import { DemandLifeContextField } from './form/DemandLifeContextField';
+
+/**
+ * 🔑 **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ (CHECK 3.34, ADR-744 / ADR-886).** Το πεδίο ονόματος δείχνει ως placeholder το
+ * **αυτόματο** όνομα — και γι' αυτό κουβαλά τους όρους της ζήτησης (όλες οι ετικέτες ειδών ακινήτου +
+ * μορφοποίηση τιμής). Στατικά, αυτά ανέβαζαν το σύγχρονο slice της `/demands/new` πάνω από το ταβάνι
+ * (13.969 > 13.446 bytes). Το πεδίο δεν χρειάζεται στην πρώτη ζωγραφική· φορτώνει αμέσως μετά, σε
+ * δεσμευμένο ύψος (καμία μετατόπιση διάταξης).
+ */
+const DemandTitleField = dynamic(
+  () => import('./form/DemandTitleField').then((m) => ({ default: m.DemandTitleField })),
+  { ssr: false, loading: () => <span aria-hidden className="block min-h-[7rem]" /> },
+);
 
 /**
  * Δημιουργία → η ταυτότητα που γεννήθηκε, ή `null` σε αποτυχία.
@@ -158,6 +171,8 @@ export function DemandFormContent({
       <DemandFeaturesField />
       <DemandNeighbourhoodField />
       <DemandLifeContextField />
+      {/* ADR-886 — ονομασία ΚΑΤΑ την αποθήκευση, δίπλα στο κουμπί· κενό = ζωντανό αυτόματο όνομα. */}
+      <DemandTitleField />
     </DraftFormShell>
   );
 }

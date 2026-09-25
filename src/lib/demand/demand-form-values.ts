@@ -77,6 +77,7 @@ import {
 import type { GeoPoint, GeoPolyline } from '@/types/geo/coordinates';
 import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
 import { isGeoPolyline } from '@/lib/geo/geo-line';
+import { normalizeDemandLabel } from './demand-title';
 
 // =============================================================================
 // 1. ΟΙ ΜΟΡΦΕΣ ΧΩΡΟΥ ΠΟΥ Η ΦΟΡΜΑ ΜΠΟΡΕΙ ΝΑ ΕΚΦΡΑΣΕΙ **ΣΗΜΕΡΑ**
@@ -194,6 +195,12 @@ export const demandFormSchema = z.object({
   placeQuery: z.string(),
   /** Το λυμένο σημείο. `null` = δεν έχει γεωκωδικοποιηθεί **ακόμη**. */
   placeCenter: geoPoint,
+  /**
+   * ADR-886 — το όνομα που **επέστρεψε ο geocoder** μαζί με το σημείο («Κορδελιό, Θεσσαλονίκη»).
+   * Γράφεται **μαζί** με το `placeCenter` και σβήνεται **μαζί** του — ποτέ ένα χωρίς το άλλο.
+   * Ταξιδεύει ως `PropertyDemand.placeLabel`, **μόνο** για `near`.
+   */
+  placeLabel: z.string().nullable(),
   radiusKm: optionalNumber,
   /**
    * **Ζ3/Ζ5** — η ταυτότητα του τόπου στο **επίπεδο Α**. `null` = δεν έχει δειχθεί ακόμη.
@@ -249,6 +256,11 @@ export const demandFormSchema = z.object({
 
   // ── Ζ7 — δηλώνεται, ποτέ κριτήριο ──────────────────────────────────────
   lifeContext: z.enum(DEMAND_LIFE_CONTEXTS).nullable(),
+
+  // ── ADR-886 — το όνομα του ανθρώπου· κενό = το αυτόματο ─────────────────
+  // ⚠️ Χωρίς `.max()` εδώ: το μήκος το κρίνει το invariant `title-too-long` (ίδιος κριτής με
+  // την πύλη γραφής), ώστε το μήνυμα να είναι **το δικό του**, όχι ένα γενικό σφάλμα zod.
+  title: z.string(),
 });
 
 export type DemandFormValues = z.input<typeof demandFormSchema>;
@@ -285,6 +297,7 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   placeKind: 'anywhere',
   placeQuery: '',
   placeCenter: null,
+  placeLabel: null,
   radiusKm: DEFAULT_SEARCH_RADIUS_KM,
   placeRef: null,
   placeOutline: null,
@@ -303,6 +316,7 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   floorMax: null,
   proximity: [],
   lifeContext: null,
+  title: '',
 };
 
 // =============================================================================
@@ -319,7 +333,7 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
  */
 export type DemandDraft = Pick<
   PropertyDemand,
-  'seeks' | 'place' | 'timing' | 'features' | 'proximity' | 'lifeContext'
+  'seeks' | 'place' | 'timing' | 'features' | 'proximity' | 'lifeContext' | 'title' | 'placeLabel'
 >;
 
 
@@ -424,7 +438,19 @@ export function demandDraftFrom(values: DemandFormParsed): DemandDraft {
     features: featuresFrom(values),
     proximity: values.proximity as readonly DemandProximity[],
     lifeContext: values.lifeContext,
+    title: normalizeDemandLabel(values.title),
+    placeLabel: placeLabelFrom(values),
   };
+}
+
+/**
+ * ADR-886 — η ετικέτα τόπου ταξιδεύει **μόνο** με τη μορφή που την παρήγαγε (`near`). Αλλιώς θα
+ * έμενε κρεμασμένη μια παλιά ετικέτα πάνω σε σχεδιασμένη περιοχή — δηλαδή όνομα που **ψεύδεται**.
+ */
+function placeLabelFrom(values: DemandFormParsed): string | null {
+  return values.placeKind === 'near' && values.placeCenter !== null
+    ? normalizeDemandLabel(values.placeLabel)
+    : null;
 }
 
 // =============================================================================

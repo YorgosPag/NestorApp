@@ -246,11 +246,11 @@ Manual testing on `localhost:3000` μετά από κάθε Phase B commit:
 - `src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx`
 - `src/components/ui/sharing/panels/user-auth/PlatformShareController.tsx`
 - `src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx`
-- `src/components/ui/sharing/panels/LinkTokenPermissionPanel.tsx`
+- ~~`src/components/ui/sharing/panels/LinkTokenPermissionPanel.tsx`~~ — διαγράφηκε 2026-09-25 (ADR-315 Κ4)
 - `src/components/ui/sharing/panels/link-token/LinkTokenForm.tsx`
-- `src/components/ui/sharing/panels/link-token/LinkTokenResult.tsx`
+- ~~`src/components/ui/sharing/panels/link-token/LinkTokenResult.tsx`~~ — διαγράφηκε 2026-09-25 (ADR-315 Κ4)
 - `src/components/ui/ShareModal.tsx` — reduced to thin wrapper (~80 γρ.)
-- `src/components/shared/files/ShareDialog.tsx` — reduced to thin wrapper (~90 γρ.)
+- ~~`src/components/shared/files/ShareDialog.tsx`~~ — διαγράφηκε 2026-09-25 (ADR-315 Κ4)
 
 ---
 
@@ -278,3 +278,4 @@ Manual testing on `localhost:3000` μετά από κάθε Phase B commit:
   - Reuses as-is: `ShareModal`, `ShareSurfaceShell`, `UserAuthPermissionPanel`, `CompactToolbar` (`onShare` prop already existed, config already had `share: true` for projects).
   - **Pattern established**: Each new shareable entity (buildings, services, properties) = 1 formatter file + 2-line wiring. No new panels, services, dialogs, or Firestore collections.
   - Multi-select support: if >1 project selected, formatter emits a compact list (1 line per project with name — address — progress — status).
+- **2026-09-25**: **Αφαίρεση του κλάδου link-token (ADR-315 Κ4 / ADR-884 Φ0.12).** Ο νεκρός `ShareDialog.tsx` διαγράφηκε· μαζί του έμειναν χωρίς καταναλωτή το `LinkTokenPermissionPanel.tsx` και το `link-token/LinkTokenResult.tsx` (CHECK 3.19) και διαγράφηκαν. Το `LinkTokenForm` + `link-token/types` μένουν — τα χρησιμοποιεί το `UnifiedShareDialog`.

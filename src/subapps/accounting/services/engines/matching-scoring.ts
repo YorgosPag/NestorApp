@@ -10,6 +10,7 @@
 
 import type { MatchingConfig } from '../../types/matching-config';
 import type { MatchTier } from '../../types/bank';
+import { editDistance } from '@/lib/string/edit-distance';
 
 // ============================================================================
 // SCORING INPUT / OUTPUT TYPES
@@ -79,39 +80,11 @@ export function tokenize(text: string): string[] {
  * Levenshtein edit distance between two strings
  *
  * Returns Infinity if either string exceeds maxLen (performance safeguard).
- * Iterative DP implementation — O(n*m) time, O(min(n,m)) space.
+ * Η απόσταση ζει στο `lib/string/edit-distance` (ADR-883 §5.11) — εδώ μόνο το όριο μήκους.
  */
 export function levenshtein(a: string, b: string, maxLen = 50): number {
   if (a.length > maxLen || b.length > maxLen) return Infinity;
-  if (a === b) return 0;
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
-
-  // Use shorter string as the "column" for space optimization
-  const short = a.length <= b.length ? a : b;
-  const long = a.length <= b.length ? b : a;
-
-  const prevRow = new Array<number>(short.length + 1);
-  for (let j = 0; j <= short.length; j++) {
-    prevRow[j] = j;
-  }
-
-  for (let i = 1; i <= long.length; i++) {
-    let prev = i;
-    for (let j = 1; j <= short.length; j++) {
-      const cost = long[i - 1] === short[j - 1] ? 0 : 1;
-      const current = Math.min(
-        (prevRow[j] ?? 0) + 1,        // deletion
-        prev + 1,                       // insertion
-        (prevRow[j - 1] ?? 0) + cost   // substitution
-      );
-      prevRow[j - 1] = prev;
-      prev = current;
-    }
-    prevRow[short.length] = prev;
-  }
-
-  return prevRow[short.length] ?? Infinity;
+  return editDistance(a, b);
 }
 
 // ============================================================================

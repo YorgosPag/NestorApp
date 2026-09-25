@@ -17,22 +17,22 @@
  * incrementCounter  -> byte-identical
  * ```
  *
- * This factory supplies all five from data. It deliberately covers only the
- * **unified-`shares`** surfaces; the property surface keeps its own hooks
- * because it genuinely differs (legacy `file_shares` dual-read, code+name
- * filename, dual-write counter) — see ADR-698 §4.
+ * This factory supplies them from data. ADR-884 Φ0.12 removed two of the five
+ * outright: share resolution and the access counter now belong to the base
+ * factory (one share gate, one transactional counter) for **every** surface,
+ * property included. The property surface still keeps its own entity header
+ * and code+name filename — see ADR-698 §4.
  *
  * @module services/showcase-core/api/create-unified-public-pdf-route
  * @enterprise ADR-698 — Public Showcase Token Surface SSoT
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   createPublicShowcasePdfRoute,
   type PublicShowcasePdfHandler,
 } from './create-public-pdf-route';
-import { incrementPublicShareAccess, lookupPublicShowcaseShare } from './public-share-lookup';
+import type { ShareEntityType } from '@/types/sharing';
 import { sanitizeShowcaseFilenameStem } from '../showcase-filename';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
@@ -44,7 +44,7 @@ interface ShowcasePdfEntityHeader {
 
 export interface UnifiedPublicPdfRouteConfig {
   /** Share discriminator, e.g. `'building_showcase'`. */
-  shareEntityType: string;
+  shareEntityType: ShareEntityType;
   /** Firestore collection holding the entity, e.g. `COLLECTIONS.BUILDINGS`. */
   entityCollection: string;
   /** Module logger name — kept per surface so server logs stay greppable. */
@@ -86,24 +86,12 @@ export function createUnifiedPublicShowcasePdfRoute(
     filenameFallback,
   } = config;
 
-  const logger = createModuleLogger(loggerName);
-
   return createPublicShowcasePdfRoute<ShowcasePdfEntityHeader>({
     loggerName,
     shareNotFoundMessage,
     entityNotFoundMessage,
 
-    resolveShare: async (token, adminDb) => {
-      const share = await lookupPublicShowcaseShare({
-        token,
-        entityType: shareEntityType,
-        adminDb,
-        logger,
-        requirePdfPath: true,
-      });
-      // `requirePdfPath` guarantees the path; restate it for the narrower type.
-      return share?.pdfStoragePath ? { ...share, pdfStoragePath: share.pdfStoragePath } : null;
-    },
+    shareEntityType,
 
     loadEntityHeader: (entityId, adminDb) =>
       loadEntityHeader(entityCollection, entityId, adminDb, filenameFallback),
@@ -118,7 +106,6 @@ export function createUnifiedPublicShowcasePdfRoute(
       return `${stem || filenameFallback}-showcase.pdf`;
     },
 
-    incrementCounter: incrementPublicShareAccess,
   });
 }
 

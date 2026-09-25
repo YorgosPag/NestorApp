@@ -54,6 +54,8 @@ export const TEXT_KEYS: Record<DraftFormSlot | DemandFormBlocker | DemandInvaria
   'stay-nights-invalid': 'property-market:demand.invariant.stay-nights-invalid',
   'stay-nights-exceed-window': 'property-market:demand.invariant.stay-nights-exceed-window',
   'stay-party-invalid': 'property-market:demand.invariant.stay-party-invalid',
+  // ADR-886 — όνομα ζήτησης πάνω από το όριο του `lib/demand/demand-title.ts`.
+  'title-too-long': 'property-market:demand.invariant.title-too-long',
   'radius-not-positive': 'property-market:demand.invariant.radius-not-positive',
   'outline-degenerate': 'property-market:demand.invariant.outline-degenerate',
   'axis-degenerate': 'property-market:demand.invariant.axis-degenerate',

@@ -71,6 +71,7 @@ import {
 } from '@/types/property-demand';
 
 import { featuresWithoutLegacyPrice, readStoredSeeks } from './demand-seeks-read';
+import { normalizeDemandLabel } from './demand-title';
 
 // =============================================================================
 // 1. ΤΙ ΔΙΑΒΑΣΤΗΚΕ
@@ -197,6 +198,10 @@ export function readStoredDemand(raw: unknown, id: string): StoredDemandRead | n
       proximity: (stored.proximity as PropertyDemand['proximity']) ?? [],
       // `lifeContext` είναι ήδη `| null` στον τύπο: η απουσία **είναι** η τιμή.
       lifeContext: (stored.lifeContext as PropertyDemand['lifeContext']) ?? null,
+      // ADR-886 — έγγραφα πριν τα πεδία ονόματος: η απουσία **είναι** το «δεν δόθηκε». Ό,τι δεν
+      // είναι string (χειρόγραφη εγγραφή στην κονσόλα) διαβάζεται επίσης ως «δεν δόθηκε».
+      title: normalizeDemandLabel(stored.title),
+      placeLabel: normalizeDemandLabel(stored.placeLabel),
     },
   };
 }

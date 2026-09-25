@@ -40,7 +40,7 @@ import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { Link } from '@/lib/workspace/navigation';
 
-import { SEEK_KIND_I18N_KEYS } from './seek-kind-labels';
+import { SEEK_KIND_I18N_KEYS } from '@/lib/demand/seek-kind-labels';
 
 const K = 'property-market:demand.answer.matchedList';
 
