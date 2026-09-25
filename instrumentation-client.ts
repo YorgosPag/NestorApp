@@ -32,6 +32,7 @@
  *    επανάληψη για προσωρινό δίκτυο → έλεγχος αλλαγής έκδοσης → **μία** ασφαλής ανανέωση,
  *    ποτέ πάνω σε μη αποθηκευμένη δουλειά. Δες `src/lib/app-version/chunk-recovery/`.
  *    Μπαίνει **μετά** το Sentry, ώστε μια αποτυχία της ίδιας της εγκατάστασης να καταγραφεί.
+ *    §Ε6: και το **module που λείπει** από τον runtime (RSC άλλου build) οδηγεί στην ίδια κρίση.
  *
  * ⚠️ Το `__webpack_require__` είναι παράμετρος που ο webpack δίνει σε **κάθε** module — δεν
  *    εισάγεται. Σε Turbopack dev δεν υπάρχει· το `typeof` το κάνει ασφαλές (no-op).
@@ -55,6 +56,7 @@ import {
   installChunkRecovery,
   type WebpackChunkRuntime,
 } from '@/lib/app-version/chunk-recovery/install-chunk-recovery';
+import { installModuleSkewRecovery } from '@/lib/app-version/chunk-recovery/install-module-skew-recovery';
 import { installUnsavedWorkGuard } from '@/lib/app-version/unsaved-work-guard';
 
 declare const __webpack_require__: WebpackChunkRuntime | undefined;
@@ -82,6 +84,9 @@ Sentry.init({
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
 installChunkRecovery(typeof __webpack_require__ === 'undefined' ? undefined : __webpack_require__);
+
+// ADR-860 §Ε6 — module που λείπει από τον runtime (RSC άλλου build) ⇒ ερώτηση έκδοσης.
+installModuleSkewRecovery();
 
 // ADR-860 §Ε3γ — ο ΕΝΑΣ native `beforeunload`, οδηγούμενος από το `unsaved-work-registry`.
 installUnsavedWorkGuard();

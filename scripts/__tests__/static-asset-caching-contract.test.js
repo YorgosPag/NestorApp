@@ -15,6 +15,8 @@
  *   Κ3  κανένας κανόνας `headers()` με `immutable` δεν ταιριάζει σε `/_next/static/*`,
  *       `*.js` ή `*.css`·
  *   Κ4  ο προορισμός υπάρχει και απαντά `404` + `no-store` + `nosniff`.
+ *   Κ5  (§Ε5, 2026-09-25) καμία σελίδα δεν φεύγει με `stale-while-revalidate`: ο browser
+ *       σέρβιρε RSC **προηγούμενου build** από τη δική του cache μέσα στον νέο runtime.
  *
  * ═════════════════════════════════════════════════════════════════════════════
  * 🔑 ΕΚΤΕΛΕΙ ΤΟ CONFIG — ΔΕΝ ΤΟ ΔΙΑΒΑΖΕΙ
@@ -39,6 +41,14 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { getPathMatch } = require('next/dist/shared/lib/router/utils/path-match');
+const { getCacheControlHeader } = require('next/dist/server/lib/cache-control');
+const { CACHE_ONE_YEAR } = require('next/dist/lib/constants');
+
+/**
+ * `revalidate` που δίνει το Next σε σελίδες: 1s (ελάχιστο), 1 ώρα (μετρημένο στην παραγωγή
+ * 2026-09-25) και 1 έτος (στατική σελίδα χωρίς revalidate).
+ */
+const PAGE_REVALIDATE_SECONDS = [1, 3600, CACHE_ONE_YEAR];
 
 const ROOT = path.join(__dirname, '..', '..');
 const CONFIG_PATH = path.join(ROOT, 'next.config.js');
@@ -60,7 +70,7 @@ function resolveProductionRouting() {
     'const c = require(process.argv[1]);',
     'const cfg = typeof c === "function" ? c("phase-production-server", {}) : (c && c.default ? c.default : c);',
     'Promise.all([cfg.headers(), cfg.rewrites()])',
-    '  .then(([headers, rewrites]) => process.stdout.write(JSON.stringify({ headers, rewrites })))',
+    '  .then(([headers, rewrites]) => process.stdout.write(JSON.stringify({ headers, rewrites, expireTime: cfg.expireTime ?? null })))',
     '  .catch((e) => { process.stderr.write(String(e && e.stack || e)); process.exit(1); });',
   ].join('\n');
 
@@ -128,5 +138,24 @@ describe('ADR-860 §Ε2 — static asset miss: αληθινό 404, ποτέ σφ
     expect(source).toMatch(/'Cache-Control':\s*'no-store'/);
     expect(source).toMatch(/'X-Content-Type-Options':\s*'nosniff'/);
     expect(source).toMatch(/export const GET\s*=/);
+  });
+});
+
+describe('ADR-860 §Ε5 — σελίδα: κανένα stale-while-revalidate προς τον browser', () => {
+  let routing;
+
+  beforeAll(() => {
+    routing = resolveProductionRouting();
+  });
+
+  test('Λ2 — παρονομαστής: το config δηλώνει expireTime (αλλιώς ισχύει η προεπιλογή του 1 έτους)', () => {
+    expect(typeof routing.expireTime).toBe('number');
+  });
+
+  test('Κ5 — ο header που θα έγραφε το ΙΔΙΟ το Next δεν έχει stale-while-revalidate', () => {
+    const offenders = PAGE_REVALIDATE_SECONDS
+      .map((revalidate) => getCacheControlHeader({ revalidate, expire: routing.expireTime }))
+      .filter((header) => /stale-while-revalidate/.test(header));
+    expect(offenders).toEqual([]);
   });
 });

@@ -6,7 +6,8 @@
 // @pattern Google — Custom hook for shared stateful logic
 // ============================================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { offerToSkewRecovery } from '@/lib/app-version/chunk-recovery/install-module-skew-recovery';
 import { copyToClipboard } from '@/lib/share-utils';
 import { errorTracker } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
@@ -18,6 +19,19 @@ import { reportErrorNotificationWithPolicy } from '@/services/notification/notif
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useErrorActions');
+
+/** Το email προς τον διαχειριστή — ίδιο στην αποτυχία του API και στην άμεση επιλογή email. */
+function buildAdminEmailDraft(
+  error: Error,
+  componentName: string,
+  details: Parameters<typeof formatErrorForEmail>[0],
+): EmailComposeOptions {
+  return {
+    to: notificationConfig.channels.adminEmail,
+    subject: `🚨 ${getErrorSeverity(error).toUpperCase()} Error - ${componentName}`,
+    body: formatErrorForEmail(details),
+  };
+}
 
 interface UseErrorActionsParams {
   error: Error;
@@ -38,6 +52,12 @@ export function useErrorActions(params: UseErrorActionsParams): ErrorActionState
   const [copySuccess, setCopySuccess] = useState(false);
   const [showEmailOptions, setShowEmailOptions] = useState(false);
   const [pendingEmailData, setPendingEmailData] = useState<EmailComposeOptions | null>(null);
+
+  // ADR-860 §Ε6 — ο React 19 δεν στέλνει στο `window` ό,τι πιάνει boundary: αν λείπει module
+  // από τον runtime (RSC άλλου build), ρώτα την έκδοση. Ίδια έκδοση ⇒ η οθόνη μένει ως έχει.
+  useEffect(() => {
+    offerToSkewRecovery(error);
+  }, [error]);
 
   const buildErrorDetails = useCallback(() => ({
     errorId,
@@ -105,11 +125,7 @@ export function useErrorActions(params: UseErrorActionsParams): ErrorActionState
     } catch (sendError) {
       logger.error('Failed to send error via API, falling back to email', { error: sendError });
 
-      const adminEmail = notificationConfig.channels.adminEmail;
-      const subject = `🚨 ${getErrorSeverity(error).toUpperCase()} Error - ${componentName}`;
-      const body = formatErrorForEmail(details);
-
-      setPendingEmailData({ to: adminEmail, subject, body });
+      setPendingEmailData(buildAdminEmailDraft(error, componentName, details));
       setShowEmailOptions(true);
     } finally {
       setIsSendingToAdmin(false);
@@ -141,12 +157,7 @@ export function useErrorActions(params: UseErrorActionsParams): ErrorActionState
   }, [pendingEmailData]);
 
   const handleShowEmailOptions = useCallback(() => {
-    const details = buildErrorDetails();
-    const adminEmail = notificationConfig.channels.adminEmail;
-    const subject = `🚨 ${getErrorSeverity(error).toUpperCase()} Error - ${componentName}`;
-    const body = formatErrorForEmail(details);
-
-    setPendingEmailData({ to: adminEmail, subject, body });
+    setPendingEmailData(buildAdminEmailDraft(error, componentName, buildErrorDetails()));
     setShowEmailOptions(true);
   }, [error, componentName, buildErrorDetails]);
 

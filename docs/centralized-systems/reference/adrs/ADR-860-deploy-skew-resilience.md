@@ -50,6 +50,9 @@ ChunkLoadError: Loading chunk 84130 failed.
    άλλο `buildId` ⇒ MPA). Οι φορτώσεις **μέσα** στη σελίδα όχι: το `next/dynamic` είναι
    `React.lazy` (`lazy-dynamic/loadable.js:30`), που **κρατά μόνιμα** την απόρριψη ⇒ κανένα
    `reset()` του error boundary δεν μπορεί να ξαναφορτώσει.
+   ⚠️ **Η πρώτη πρόταση ΔΙΑΨΕΥΣΤΗΚΕ 2026-09-25 (Ε5/Ε6)**: ο έλεγχος `buildId` (`:140`) τρέχει
+   **αφού** ο Flight client έχει ήδη **εκτελέσει** τα modules του payload· ένα RSC άλλου build
+   σκάει μέσα στον `__webpack_require__` **πριν** φτάσει η MPA.
 4. **Τυφλή τηλεμετρία.** Το `config/error-reporting.ts` αγνοούσε το `'Loading chunk'`. Και οι
    `NEXT_PUBLIC_BUILD_VERSION` / `NEXT_PUBLIC_APP_VERSION` που διάβαζαν `ErrorTracker` και
    `EnterpriseSessionService` **δεν οριζόταν πουθενά** ⇒ καμία αναφορά δεν ήξερε την έκδοσή της.
@@ -188,15 +191,75 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
   `reloaded-for-skew` επιβιώνει της ανανέωσης.
 - Server: κάθε `/api/static-asset-miss` = γραμμή `warn` στο log.
 
+### Ε5 — Κανένα `stale-while-revalidate` προς τον browser (2026-09-25)
+
+**Περιστατικό** (παραγωγή, 06:58 UTC, ~20′ μετά το deploy του `cfa83ac0`): αρχική → «Πού
+ψάχνεις;» → κοινότητα → `/search/results` ⇒ οθόνη σφάλματος `TypeError: Cannot read properties of
+undefined (reading 'call')`, άδειος χάρτης. **Αναπαράχθηκε** σε καθαρή καρτέλα, **ίδιο** build.
+
+**Αλυσίδα (μετρημένη, όχι υποθετική):**
+1. Κάθε ISR/στατική σελίδα — HTML **και** RSC — έφευγε με
+   `Cache-Control: s-maxage=3600, stale-while-revalidate=31532400`: προεπιλογή του Next
+   (`expireTime` = 1 έτος, `config-shared.js:88`), που η τεκμηρίωση ορίζει «for CDNs to consume».
+2. Δεν έχουμε CDN μπροστά από το Netcup ⇒ την «καταναλώνει» ο **browser**: αγνοεί το `s-maxage`
+   (RFC 9111), **τηρεί** όμως το SWR ⇒ σερβίρει την αποθηκευμένη απάντηση αμέσως, για έως ένα χρόνο.
+3. Το κλειδί `_rsc` είναι hash **μόνο** των headers πλοήγησης (`cache-busting-search-param.js`),
+   **όχι** της έκδοσης ⇒ ίδιο URL από build σε build.
+4. Το prefetch του `/pro` (σύνδεσμος στην κεφαλίδα) πήρε από την cache δίσκου του browser (`transferSize: 0`)
+   RSC του **προηγούμενου** build, που ζητούσε `pro/page-301c…js` (ο server σερβίρει
+   `page-8a8f…js`). Το Ε1 το κράτησε διαθέσιμο ⇒ φορτώθηκε μέσα στον **νέο** runtime ⇒ το module
+   `100777` δεν υπήρχε ⇒ `undefined.call`. Επιβεβαιωμένο στον browser: **μόνο** αυτό λείπει.
+
+**Απόφαση:** `expireTime: 0` στο `next.config.js`. Το Next γράφει SWR μόνο όταν
+`revalidate < expire` (`server/lib/cache-control.js`) ⇒ πλέον `s-maxage=N` σκέτο, που ο browser
+δεν μπορεί να σερβίρει χωρίς ερώτηση. **Η ISR cache του server δεν αλλάζει**: κρίνει παλαιότητα
+μόνο με το `revalidate` (`incremental-cache/index.js:355`)· το `expire` διαβάζεται αλλού μόνο για
+τον header και για προφίλ `use cache` (δεν χρησιμοποιούμε).
+
+⛔ **Απορρίφθηκαν:**
+- *Override του `Cache-Control` από `headers()`/middleware* — το Next τον ξαναγράφει για ISR σελίδες.
+- *`deploymentId` του Next* — ήδη απορριφθέν στο Ε0, **και** δεν μπαίνει στο `_rsc` ⇒ δεν θα έλυνε.
+- *Κανόνας στο Traefik του Coolify* — ζει έξω από το repo, άρα χωρίς άγκυρα· η ρίζα είναι το config.
+
+### Ε6 — Module που λείπει από τον runtime ⇒ ερώτηση έκδοσης (2026-09-25)
+
+Το Ε5 κλείνει τη **δική μας** αιτία. Μένει το κλασικό skew: καρτέλα ανοιχτή **πριν** το deploy
+παίρνει RSC του **νέου** server ⇒ ίδιο σφάλμα, ίδιο σημείο (§3 σημείο 3). Κανένας φορτωτής δεν αποτυγχάνει
+⇒ το Ε3 δεν το έβλεπε.
+
+- `missing-module-error.ts` — ταξινόμηση με **τόπο**: `TypeError`, μήνυμα με `call`, **και** πρώτο
+  frame μέσα στο `/_next/static/chunks/webpack-*.js` (εκεί η μόνη `.call` σε κάτι που λείπει είναι
+  το εργοστάσιο module). Ίδιο μήνυμα από δικό μας κώδικα ⇒ **όχι**.
+- `recovery-coordinator.ts` — η κρίση «probe ⇒ skewed ⇒ μία ανανέωση» έγινε το εξαγόμενο
+  `resolveBySkew(error, SkewDeps)`· το `recoverChunkLoad` την καλεί μετά τις επαναλήψεις. **Μία** κρίση
+  για δύο σήματα, **ένα** σύνολο εξαρτήσεων παραγωγής (`production-skew-deps.ts`) ⇒ το φρένο «μία
+  ανανέωση ανά έκδοση» δεν παρακάμπτεται από δεύτερο δρόμο.
+- `install-module-skew-recovery.ts` — δύο είσοδοι: `error`/`unhandledrejection` (prefetch, έξω από
+  το React) και το `useErrorActions` (κοινό hook **και των δύο** fallback· ο React 19 δεν στέλνει
+  στο `window` ό,τι πιάνει boundary).
+- ⛔ **ADR-858**: **ποτέ** ανανέωση χωρίς `skewed` από τον server. `same` ⇒ η οθόνη μένει όπως πριν,
+  καταγράφεται ως `failed-same-version` — που είναι **ακριβώς** η υπογραφή του Ε5 αν ποτέ ξαναγίνει.
+
 ## 5. Επαλήθευση
 
 | Τι | Πώς | Αποτέλεσμα |
 |---|---|---|
 | Ε2 άγκυρα | `scripts/__tests__/static-asset-caching-contract.test.js` — **εκτελεί** το `next.config.js` σε ξεχωριστή διεργασία (`NODE_ENV=production`, μέσα από `withSentryConfig`) και ταιριάζει με τον `getPathMatch` **του ίδιου του Next** | 5/5 · **μετάλλαξη**: επαναφορά κανόνα `/(.*).js` immutable ⇒ Κ3 κόκκινο |
 | Ε3 μηχανή | `src/lib/app-version/chunk-recovery/__tests__/` (coordinator + primitives) | 28/28 |
+| Ε5 άγκυρα | ίδιο αρχείο με το Ε2, Λ2 + Κ5: εκτελεί το config και ρωτά τον `getCacheControlHeader` **του ίδιου του Next** για revalidate 1s / 1h / 1 έτος | 7/7 · **μετάλλαξη**: `expireTime: 31536000` ⇒ Κ5 κόκκινο |
+| Ε6 σήμα | `__tests__/missing-module-skew.test.ts` — η **αυτούσια** στοίβα του περιστατικού ως δεδομένο· αρνητικά: ίδιο μήνυμα έξω από τον runtime, ReferenceError ADR-858 | 11/11 (σύνολο φακέλου 39/39) · **μετάλλαξη**: αφαίρεση ελέγχου τόπου ⇒ κόκκινο |
 | Ε1 διατήρηση | `scripts/__tests__/static-retention.test.js` (καθαρή λογική + CLI σε πραγματικό δίσκο) | 13/13 |
 
 ## 6. Δηλωμένα όρια
+
+- 🔶 **Ε5 — υπόλοιπο μίας φοράς.** Όσοι browsers έχουν **ήδη** αποθηκευμένες απαντήσεις με το παλιό
+  SWR του ενός έτους θα σερβίρουν την καθεμία **άλλη μία** φορά (το SWR σερβίρει και ανανεώνει στο
+  παρασκήνιο· η νέα εγγραφή δεν έχει SWR). Δεν υπάρχει καθαρός τρόπος να αδειάσει ο server cache
+  συγκεκριμένων URL του browser (το `Clear-Site-Data` σβήνει **όλα** τα δεδομένα του origin). Αν
+  συμβεί σε καρτέλα **ίδιου** build, το Ε6 δεν ανανεώνει (σωστά) — φαίνεται ως `failed-same-version`.
+- 🔶 **Ε5 — ζωντανή επιβεβαίωση μετά το push**:
+  `curl -s -o /dev/null -D - -A "<UA browser>" https://nestorconstruct.gr/pro | grep -i cache-control`
+  ⇒ `s-maxage=…` **χωρίς** `stale-while-revalidate`.
 
 - 🔶 **Η ζωντανή επιβεβαίωση απαιτεί δύο deploys** και γίνεται μόνο στην παραγωγή: το τοπικό
   `next build` είναι αδύνατο σε αυτό το μηχάνημα (ADR-858 §6). Έλεγχοι μετά το push:
@@ -230,3 +293,4 @@ JS και CSS, χωρίς να αγγιχτεί κανένα από τα 111 σ�
 | 2026-09-14 | **Το `instrumentation-client.ts` αναλαμβάνει και το Sentry του browser.** Αφορμή: `ACTION REQUIRED: onRouterTransitionStart` σε κάθε `npm run dev`. Μετρημένο στο `@sentry/nextjs` 10.45: το `sentry.client.config.ts` εισάγεται **μόνο** μέσω του webpack entry (`config/webpack.js`) ⇒ στο `next dev --turbopack` ο client **δεν είχε ποτέ Sentry**, και στο `next build` έβγαινε `DEPRECATION WARNING`. Το `Sentry.init` μεταφέρθηκε **αυτούσιο** (τιμές από το SSoT `config/sentry-config.ts`, ίδιο φίλτρο `selectNode`) μέσα στο αρχείο — όχι σε εισαγόμενο module, γιατί η έγχυση τιμών του SDK στοχεύει `**/instrumentation-client.*`. Προστέθηκε `export const onRouterTransitionStart = Sentry.captureRouterTransitionStart` (επίσημη οδηγία Sentry). Σειρά: Sentry **πριν** το `installChunkRecovery`. Διαγράφηκε το `sentry.client.config.ts`· ενημερώθηκαν `knip.json` (entry) και η άγκυρα `Σ17` του CHECK 3.50, που πλέον **απαιτεί** να υπάρχει το αρχείο αντί να το προσπερνά (αλλιώς η μετακίνηση θα την άφηνε να περνά κενή). Στο dev το SDK μένει `enabled: false` (`SENTRY_ENABLED` = μόνο production) ⇒ κανένας θόρυβος τοπικά. |
 | 2026-09-22 | **Ε3γ — ΕΝΑΣ `beforeunload` από το μητρώο.** Νέο `unsaved-work-guard.ts` (εγκατάσταση στο `instrumentation-client.ts`, listener μόνο όσο υπάρχει δουλειά). Ο `DirtyFormProvider` έχασε τον δικό του listener. Δεύτερος ιδιοκτήτης: `firestore:pending-writes` (ADR-367 §2.6). Tests: `unsaved-work-guard.test.ts` 4 + `firestore-pending-writes.test.ts` 7. |
 | 2026-09-22 | Νέο `hasUnsavedWorkFrom(ownerId)` στο μητρώο — το διαβάζει η ορατή ένδειξη αποθήκευσης της κεφαλίδας (ADR-367 §2.7). |
+| 2026-09-25 | **Ε5 + Ε6 — το RSC άλλου build.** Περιστατικό `TypeError … reading 'call'` στο `/search/results` (αναπαραγμένο, ίδιο build): ο browser σέρβιρε από τη δική του cache RSC του **προηγούμενου** build, λόγω της προεπιλογής του Next `stale-while-revalidate` ενός έτους σε **κάθε** σελίδα. Διαψεύστηκε η υπόθεση του §3 σημείο 3. Ε5: `expireTime: 0` (+ άγκυρα Κ5, μετάλλαξη ✅). Ε6: `missing-module-error` + `resolveBySkew` (μία κρίση για δύο σήματα) + `production-skew-deps` + `install-module-skew-recovery` (window + `useErrorActions`). Tests 7/7 + 39/39, `jscpd:diff` καθαρό. |

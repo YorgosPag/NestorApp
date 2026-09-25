@@ -70,6 +70,25 @@ const nextConfig = {
   // Creates .next/standalone with only necessary files — smaller image, no full node_modules.
   output: 'standalone',
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // ADR-860 §Ε5 — ΚΑΝΕΝΑ `stale-while-revalidate` ΠΡΟΣ ΤΟΝ BROWSER
+  //
+  // Προεπιλογή του Next: `expireTime` = 1 έτος ⇒ κάθε ISR/στατική σελίδα (HTML **και** RSC)
+  // φεύγει με `s-maxage=N, stale-while-revalidate=31536000-N`. Είναι οδηγία **για CDN**
+  // (docs: «for CDNs to consume»). Εμείς δεν έχουμε CDN μπροστά από το Netcup ⇒ τη
+  // «καταναλώνει» ο **browser**: αγνοεί το `s-maxage`, τηρεί όμως το SWR και σερβίρει
+  // απάντηση **προηγούμενου build** για έως ένα χρόνο. Το κλειδί `_rsc` δεν περιέχει
+  // έκδοση ⇒ το παλιό RSC εκτελείται μέσα στον **νέο** webpack runtime ⇒ `Cannot read
+  // properties of undefined (reading 'call')` (μετρημένο 2026-09-25: prefetch `/pro`).
+  //
+  // `0` ⇒ `revalidate < expire` ψευδές για κάθε σελίδα ⇒ το Next **δεν** γράφει SWR
+  // (`server/lib/cache-control.js`). Η ISR cache του server **δεν** επηρεάζεται: κρίνει
+  // παλαιότητα μόνο με το `revalidate` (`incremental-cache/index.js`).
+  //
+  // ⛔ ΜΗΝ το αφαιρέσεις «για απόδοση». Άγκυρα: `static-asset-caching-contract.test.js` Κ5.
+  // ══════════════════════════════════════════════════════════════════════════
+  expireTime: 0,
+
   distDir: resolveDistDir(),
 
   // [FAST] FAST DEV MODE - Skip checks για άμεσο startup

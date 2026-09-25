@@ -22,7 +22,7 @@ import { errorTracker } from '@/services/ErrorTracker';
 
 import { getDeploymentId } from '@/lib/app-version/deployment-identity';
 
-import { chunkRequestOf, type ChunkLoadError } from './chunk-load-error';
+import { chunkRequestOf, isChunkLoadError } from './chunk-load-error';
 import type { RecoveryOutcome } from './recovery-coordinator';
 import type { SkewVerdict } from './skew-probe';
 
@@ -32,7 +32,7 @@ function serverIdOf(verdict: SkewVerdict | null): string | null {
 
 export function reportChunkRecovery(
   outcome: RecoveryOutcome,
-  error: ChunkLoadError,
+  error: Error,
   verdict: SkewVerdict | null,
 ): void {
   errorTracker.captureError(error, 'warning', 'network', {
@@ -40,7 +40,8 @@ export function reportChunkRecovery(
     action: outcome,
     metadata: {
       chunkOutcome: outcome,
-      chunkUrl: chunkRequestOf(error),
+      // §Ε6: module που λείπει από τον runtime δεν έχει URL — το σήμα φαίνεται από το `null`.
+      chunkUrl: isChunkLoadError(error) ? chunkRequestOf(error) : null,
       skewVerdict: verdict?.kind ?? null,
       clientDeploymentId: getDeploymentId(),
       serverDeploymentId: serverIdOf(verdict),

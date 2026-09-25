@@ -34,19 +34,26 @@ export type RecoveryOutcome =
   | 'failed-same-version'
   | 'failed-network';
 
-export interface RecoveryDeps<T> {
-  /** Ξαναζητά το **ίδιο** chunk (νέο `<script>`). */
-  readonly load: () => Promise<T>;
-  readonly maxRetries: number;
-  readonly delayFor: (attempt: number) => number;
-  readonly sleep: (ms: number) => Promise<void>;
+/**
+ * Ό,τι χρειάζεται η κρίση «άλλαξε η έκδοση; ⇒ ανανέωση;» — κοινό για **κάθε** σήμα skew
+ * (αποτυχία φόρτωσης chunk **και** module που λείπει από τον runtime, §Ε6).
+ */
+export interface SkewDeps {
   readonly probe: () => Promise<SkewVerdict>;
   readonly hasUnsavedWork: () => boolean;
   readonly claimReloadFor: (serverDeploymentId: string) => boolean;
   readonly isReloadPending: () => boolean;
   readonly reload: () => void;
   readonly announceUpdate: (serverDeploymentId: string) => void;
-  readonly report: (outcome: RecoveryOutcome, error: ChunkLoadError, verdict: SkewVerdict | null) => void;
+  readonly report: (outcome: RecoveryOutcome, error: Error, verdict: SkewVerdict | null) => void;
+}
+
+export interface RecoveryDeps<T> extends SkewDeps {
+  /** Ξαναζητά το **ίδιο** chunk (νέο `<script>`). */
+  readonly load: () => Promise<T>;
+  readonly maxRetries: number;
+  readonly delayFor: (attempt: number) => number;
+  readonly sleep: (ms: number) => Promise<void>;
 }
 
 /** Υπόσχεση που δεν τελειώνει ποτέ: η σελίδα φεύγει — καμία οθόνη σφάλματος στο ενδιάμεσο. */
@@ -71,7 +78,12 @@ async function retryLoad<T>(initial: ChunkLoadError, deps: RecoveryDeps<T>): Pro
   return { ok: false, error: last };
 }
 
-async function resolveExhausted<T>(error: ChunkLoadError, deps: RecoveryDeps<T>): Promise<T> {
+/**
+ * Η κρίση **μετά** από κάθε τοπική προσπάθεια: ρωτά την έκδοση και αποφασίζει. Πετά το
+ * `error` αυτούσιο, ή δεν τελειώνει ποτέ (η σελίδα φεύγει). **Ποτέ** δεν ανανεώνει χωρίς
+ * `skewed` από τον server — άρα ένα πραγματικό σφάλμα του ίδιου build (ADR-858) φτάνει ακέραιο.
+ */
+export async function resolveBySkew<T>(error: Error, deps: SkewDeps): Promise<T> {
   if (deps.isReloadPending()) return awaitPageUnload<T>();
   const verdict = await deps.probe();
 
@@ -108,5 +120,5 @@ export async function recoverChunkLoad<T>(firstError: ChunkLoadError, deps: Reco
     deps.report('recovered-by-retry', firstError, null);
     return retried.value;
   }
-  return resolveExhausted(retried.error, deps);
+  return resolveBySkew<T>(retried.error, deps);
 }

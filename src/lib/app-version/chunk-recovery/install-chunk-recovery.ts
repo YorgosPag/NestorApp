@@ -25,15 +25,10 @@
 
 import { sleep } from '@/lib/async-utils';
 
-import { announceAppUpdate } from '@/lib/app-version/app-update-state';
-import { hasUnsavedWork } from '@/lib/app-version/unsaved-work-registry';
-
 import { isChunkLoadError, type ChunkLoadError } from './chunk-load-error';
-import { reportChunkRecovery } from './chunk-recovery-telemetry';
+import { productionSkewDeps } from './production-skew-deps';
 import { recoverChunkLoad, type RecoveryDeps } from './recovery-coordinator';
-import { claimReloadFor, isReloadPending } from './reload-guard';
 import { CHUNK_RETRY_POLICY, retryDelayMs } from './retry-policy';
-import { probeDeploymentSkew } from './skew-probe';
 
 type ChunkId = string | number;
 type EnsureChunk = (chunkId: ChunkId) => Promise<unknown>;
@@ -49,17 +44,11 @@ type MarkedEnsureChunk = EnsureChunk & { [INSTALLED_MARK]?: true };
 
 function productionDeps(load: () => Promise<unknown>): RecoveryDeps<unknown> {
   return {
+    ...productionSkewDeps(),
     load,
     maxRetries: CHUNK_RETRY_POLICY.maxRetries,
     delayFor: (attempt) => retryDelayMs(attempt),
     sleep,
-    probe: probeDeploymentSkew,
-    hasUnsavedWork,
-    claimReloadFor,
-    isReloadPending,
-    reload: () => window.location.reload(),
-    announceUpdate: announceAppUpdate,
-    report: reportChunkRecovery,
   };
 }
 
