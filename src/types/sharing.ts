@@ -100,6 +100,12 @@ export interface CreateShareInput {
   password?: string;
   maxAccesses?: number;
   note?: string;
+  /**
+   * ADR-315 Α14 — **εσωτερική** ετικέτα «για ποιον» (πρότυπο DocSend). Τη βλέπει μόνο ο
+   * μισθωτής στη λίστα συνδέσμων· **δεν** περνά ποτέ στην προβολή του παραλήπτη — γι' αυτό
+   * **δεν** υπάρχει στο `ShareRecord`, που τροφοδοτεί τους resolvers.
+   */
+  label?: string;
   showcaseMeta?: ShowcaseShareMeta;
   contactMeta?: ContactShareMeta;
   fileMeta?: FileShareMeta;
@@ -109,6 +115,66 @@ export interface CreateShareResult {
   shareId: string;
   token: string;
   expiresAt: string;
+}
+
+// =============================================================================
+// ΔΙΑΧΕΙΡΙΣΗ ΕΝΕΡΓΩΝ ΣΥΝΔΕΣΜΩΝ (ADR-315 §5 · Α11–Α14)
+// =============================================================================
+
+/**
+ * Κατάσταση ενός **ενεργού** (μη ανακληθέντος, μη ληγμένου) συνδέσμου, όπως τη χρειάζεται ο κάτοχος:
+ * `exhausted` = εξάντλησε το όριο ανοιγμάτων · `locked` = κλειδωμένος από λάθος κωδικούς (Α4).
+ */
+export type ShareLinkState = 'active' | 'exhausted' | 'locked';
+
+/**
+ * Ένας σύνδεσμος στη λίστα του κατόχου — η **μόνη** προβολή που φεύγει από τη διαδρομή λίστας.
+ *
+ * ⛔ Χτίζεται **μόνο** από το `toShareLinkSummary` (ρητή λίστα πεδίων). Κανένα hash, κανένα
+ * διακριτικό, κανένας μετρητής αποτυχιών κωδικού — ο σύνδεσμος **δεν** ξαναδείχνεται μετά τη
+ * δημιουργία (πρότυπο GitHub PAT).
+ */
+export interface ShareLinkSummary {
+  readonly shareId: string;
+  readonly label: string | null;
+  readonly note: string | null;
+  readonly createdAt: string | null;
+  readonly createdBy: { readonly uid: string; readonly name: string | null };
+  readonly expiresAt: string;
+  readonly requiresPassword: boolean;
+  readonly maxAccesses: number;
+  readonly accessCount: number;
+  readonly lastAccessedAt: string | null;
+  readonly lockedUntil: string | null;
+  readonly state: ShareLinkState;
+}
+
+export interface ShareLinksListResult {
+  readonly links: readonly ShareLinkSummary[];
+  /** Υπάρχουν περισσότεροι από όσους επιστράφηκαν (όριο σελίδας). */
+  readonly hasMore: boolean;
+}
+
+/**
+ * Αλλαγή ρυθμίσεων **χωρίς αλλαγή URL** (Α13, πρότυπο Dropbox/Box). Απόν πεδίο = αμετάβλητο.
+ * `password: null` = αφαίρεση κωδικού · `label: null` = αφαίρεση ετικέτας.
+ */
+export interface UpdateShareRequest {
+  readonly label?: string | null;
+  readonly expiresInHours?: number;
+  readonly password?: string | null;
+  readonly maxAccesses?: number;
+}
+
+export interface RevokeAllSharesRequest {
+  readonly entityType: ShareEntityType;
+  readonly entityId: string;
+  /** «Ανάκληση όλων **εκτός από αυτόν**». */
+  readonly exceptShareId?: string;
+}
+
+export interface RevokeAllSharesResult {
+  readonly revoked: number;
 }
 
 export interface PublicShareData {

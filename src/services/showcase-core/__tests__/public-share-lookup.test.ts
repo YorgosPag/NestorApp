@@ -119,7 +119,7 @@ describe('lookupPublicShowcaseShare', () => {
   it('serves a legacy file_shares property showcase through the same gate', async () => {
     kit.seedCollection(COLLECTIONS.FILE_SHARES, {
       fs_1: {
-        token: LEGACY_TOKEN, isActive: true, showcaseMode: true, showcasePropertyId: 'prop_1',
+        tokenHash: await hashShareToken(LEGACY_TOKEN), isActive: true, showcaseMode: true, showcasePropertyId: 'prop_1',
         companyId: 'comp_1', expiresAt: FUTURE, pdfStoragePath: 'p.pdf', note: 'https://video',
       },
     });

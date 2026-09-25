@@ -111,6 +111,40 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 }
 
 /**
+ * Αντιγραφή κειμένου που **δεν υπάρχει ακόμη** — π.χ. «Δημιουργία & αντιγραφή συνδέσμου»
+ * (ADR-315 Α11, πρότυπο Dropbox «Copy link» / Box «Create and Copy Shared Link»).
+ *
+ * 🔑 **Γιατί όχι `await` και μετά `copyToClipboard`**: το πρόχειρο απαιτεί **φρέσκια** χειρονομία
+ * χρήστη· ένα `await` δικτύου πριν από το `writeText` την «καταναλώνει» — στο Safari **πάντα**
+ * (`NotAllowedError`), στον Chromium όταν αργήσει. Η λύση του προτύπου: `clipboard.write()`
+ * καλείται **συγχρόνως** μέσα στη χειρονομία, με `ClipboardItem` που δέχεται **Promise**
+ * (Chromium 121+ · Safari 16.4+). Όπου δεν υποστηρίζεται (Firefox), πέφτουμε στο
+ * `await` + `copyToClipboard` — ο Firefox κρατά την ενεργοποίηση για ~5″.
+ *
+ * Η απόρριψη του `text` **διαδίδεται** (ο καλών πρέπει να δείξει «απέτυχε η δημιουργία»,
+ * όχι «απέτυχε η αντιγραφή»)· το `false` σημαίνει «ο σύνδεσμος υπάρχει, το πρόχειρο αρνήθηκε».
+ *
+ * ⚠️ Καλείται **συγχρόνως** από τον χειριστή του κλικ — όχι μετά από άλλο `await`.
+ */
+export async function copyDeferredText(text: Promise<string>): Promise<boolean> {
+  const canWritePromise = typeof ClipboardItem !== 'undefined'
+    && typeof navigator !== 'undefined'
+    && typeof navigator.clipboard?.write === 'function'
+    && window.isSecureContext
+    && (typeof ClipboardItem.supports !== 'function' || ClipboardItem.supports('text/plain'));
+  if (canWritePromise) {
+    const blob = text.then((value) => new Blob([value], { type: 'text/plain' }));
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+      return true;
+    } catch {
+      // Ο browser αρνήθηκε το Promise-ClipboardItem — δοκίμασε την παλιά οδό πιο κάτω.
+    }
+  }
+  return copyToClipboard(await text);
+}
+
+/**
  * Copy an image from URL to clipboard as PNG.
  * Uses blob URL to avoid canvas CORS taint.
  */

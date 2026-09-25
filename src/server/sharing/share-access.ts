@@ -38,9 +38,10 @@ export type ShareAccessOutcome = 'recorded' | 'gone' | 'expired' | 'exhausted';
 
 /**
  * Τα ονόματα πεδίων διαφέρουν ανά συλλογή: το παλιό `file_shares` μετρά «λήψεις».
- * Διαβάζεται **εδώ και μόνο εδώ** — ο καλών δεν ξέρει ότι υπάρχουν δύο λεξιλόγια.
+ * **Ένας** χάρτης: τον γράφει εδώ ο μετρητής και τον διαβάζει η λίστα συνδέσμων
+ * (`share-links-list.ts`, ADR-315 §5) — κανείς άλλος δεν ξέρει ότι υπάρχουν δύο λεξιλόγια.
  */
-const COUNTER_FIELDS = {
+export const SHARE_COUNTER_FIELDS = {
   shares: { count: 'accessCount', max: 'maxAccesses', last: 'lastAccessedAt' },
   file_shares: { count: 'downloadCount', max: 'maxDownloads', last: 'lastDownloadedAt' },
 } as const;
@@ -48,7 +49,7 @@ const COUNTER_FIELDS = {
 /** Καθαρή κρίση πάνω σε φρέσκο ανάγνωσμα — δοκιμάσιμη χωρίς βάση. */
 export function judgeShareAccess(
   data: Record<string, unknown> | undefined,
-  fields: (typeof COUNTER_FIELDS)[keyof typeof COUNTER_FIELDS],
+  fields: (typeof SHARE_COUNTER_FIELDS)[keyof typeof SHARE_COUNTER_FIELDS],
   nowMs: number,
 ): ShareAccessOutcome {
   if (!data || data.isActive !== true) return 'gone';
@@ -67,7 +68,7 @@ export function judgeShareAccess(
  * σερβιριστεί οτιδήποτε.
  */
 export async function recordShareAccess(adminDb: Firestore, share: StoredShare): Promise<ShareAccessOutcome> {
-  const fields = COUNTER_FIELDS[share.source];
+  const fields = SHARE_COUNTER_FIELDS[share.source];
   const ref = adminDb.collection(collectionOfShareSource(share.source)).doc(share.id);
 
   const outcome = await adminDb.runTransaction(async (tx) => {

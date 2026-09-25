@@ -23,6 +23,11 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { hashShareToken } from '@/lib/sharing/share-token';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
+import {
+  describeOwnershipCallSites,
+  withOwner,
+  writeJournalProbe,
+} from '@/lib/auth/__tests__/_harness/ownership-callsite-contract';
 
 import { createShareOnServer, parseCreateShareRequest, SHARE_MAX_EXPIRY_HOURS } from '../share-create';
 import { revokeShareOnServer } from '../share-revoke';
@@ -145,3 +150,25 @@ describe('revokeShareOnServer', () => {
     expect(kit.writes()).toEqual([]);
   });
 });
+
+/**
+ * ADR-742 — the empty/empty pair is the ONLY input where `isPayloadOwnedByCompany`
+ * differs from a bare `===`; the cross-tenant test above cannot tell them apart.
+ */
+const OWNED_SHARE_ID = 'share_owned';
+
+describeOwnershipCallSites('revokeShareOnServer — share ownership (ADR-742)', [
+  {
+    file: 'server/sharing/share-revoke.ts',
+    name: 'revokeShareOnServer',
+    arrange: owner => {
+      kit.seedCollection(COLLECTIONS.SHARES, {
+        [OWNED_SHARE_ID]: withOwner({ companyId: 'placeholder', isActive: true }, owner),
+      });
+      kit.clearWrites();
+      return writeJournalProbe(() => kit.writes());
+    },
+    act: callerCompanyId => revokeShareOnServer(db(), { uid: 'usr_1', companyId: callerCompanyId }, OWNED_SHARE_ID),
+    refused: result => result === 'not-found',
+  },
+]);

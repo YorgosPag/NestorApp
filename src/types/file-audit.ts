@@ -96,6 +96,8 @@ export type FileAuditAction =
   | 'batch_classify'
   /** ⚠️ **Σύνδεσμος κοινοποίησης** (`server/sharing/share-create.ts`) — ΟΧΙ η παράδοση του CDE. */
   | 'share'
+  /** 🔗 **Ανάκληση** συνδέσμου κοινοποίησης (`server/sharing/share-revoke.ts`, ADR-315 §5) — το ζεύγος του `'share'`. */
+  | 'share_revoke'
   | 'hold_place'
   | 'hold_release'
   | 'approval_request'

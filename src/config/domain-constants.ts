@@ -773,6 +773,11 @@ export const API_ROUTES = {
     RESOLVE: '/api/shares/resolve',
     DOWNLOAD: '/api/shares/download',
     REVOKE: (shareId: string) => `/api/shares/${encodeURIComponent(shareId)}/revoke`,
+    // ADR-315 §5 — διαχείριση ενεργών συνδέσμων
+    LIST: (entityType: string, entityId: string) =>
+      `/api/shares?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`,
+    REVOKE_ALL: '/api/shares/revoke-all',
+    UPDATE: (shareId: string) => `/api/shares/${encodeURIComponent(shareId)}`,
   },
 
   // ── DXF Overlay Items (ADR-289) ───────────────────────────────────────

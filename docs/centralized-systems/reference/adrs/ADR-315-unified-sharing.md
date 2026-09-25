@@ -26,7 +26,7 @@
 
 | Κομμάτι | Αρχείο | Ρόλος |
 |---|---|---|
-| Πρόσοψη πελάτη | `services/sharing/unified-sharing.service.ts` | **η μόνη** είσοδος του browser — `createShare` · `revoke` · `resolve` · `requestDownload` (fetch, τίποτε άλλο) |
+| Πρόσοψη πελάτη | `services/sharing/unified-sharing.service.ts` | **η μόνη** είσοδος του browser — `createShare` · `revoke` · `resolve` · `requestDownload` · `listActive` · `revokeAll` · `update` (fetch, τίποτε άλλο) |
 | Συμβόλαιο σύρματος | `services/sharing/share-resolve-contract.ts` | ονομασμένες αρνήσεις, αποτέλεσμα ανά είδος |
 | Resolvers | `services/sharing/resolvers/*` + `showcase-core/share-resolver-factory.ts` | **καθαρή** προβολή `project({ share, entity, token })` + `entityCollection` + `validateCreateInput` (ADR-699) |
 | Μητρώο | `services/sharing/share-entity-registry.ts` | είδος → resolver |
@@ -39,6 +39,10 @@
 | Δημιουργία / ανάκληση | `server/sharing/share-create.ts` · `share-revoke.ts` | μισθωτής + συντάκτης από τη συνεδρία |
 | Επίλυση / λήψη | `server/sharing/share-resolve.ts` · `share-download.ts` | προβολή + V4 υπογεγραμμένα URL |
 | Διαδρομές | `app/api/shares/{route, resolve, download, [shareId]/revoke}` | `withAuth` (+ `allowUnauthenticated` στις δημόσιες) |
+| **Λίστα ενεργών** (§5, Α12) | `server/sharing/share-links-list.ts` · `GET /api/shares?entityType&entityId` | `mayShareEntity` + **ρητή** προβολή `toShareLinkSummary` — ποτέ hash/διακριτικό |
+| **Ρυθμίσεις, ίδιο URL** (Α13) | `server/sharing/share-update.ts` · `PATCH /api/shares/[shareId]` | ετικέτα · λήξη · κωδικός set/clear · όριο — **ίδιο** έγγραφο |
+| **Ανάκληση όλων** | `share-revoke.ts` `revokeAllShareLinks` · `POST /api/shares/revoke-all` | παρτίδες, ιδεμποτική, «εκτός από αυτόν» |
+| UI διαχείρισης | `components/sharing/link-management/*` | δημιουργία στο κλικ (Α11) · λίστα · ρυθμίσεις · ανάκληση |
 
 ## 2. Το κενό που έκλεισε (2026-09-25)
 
@@ -82,22 +86,57 @@
 - **Α9 — Διακριτικό σε σώμα**, ποτέ σε διεύθυνση API (RFC 6819 §5.1.5)· **ποτέ** σε log — μόνο `shareId`.
 - **Α10 — `not-found` καλύπτει και «ανακλήθηκε» και «δεν υπήρξε»**: η διάκριση θα έλεγε σε όποιον μαντεύει
   ποια διακριτικά **υπήρξαν**.
+- **Α11 — Ο σύνδεσμος γεννιέται στο κλικ, όχι στο άνοιγμα του διαλόγου** (2026-09-25). Μέχρι τότε **κάθε** άνοιγμα
+  του `UnifiedShareDialog` γεννούσε ενεργό σύνδεσμο 72 ωρών, ακόμη κι αν δεν στελνόταν ποτέ — ορφανά ζωντανά
+  διαπιστευτήρια, που με ορατή λίστα θα γέμιζαν την οθόνη. Πρότυπο Dropbox «Copy link» / Box «Create and Copy
+  Shared Link»: **ένα** κουμπί «Δημιουργία & αντιγραφή συνδέσμου», και η αντιγραφή γίνεται στην **ίδια** χειρονομία
+  με `ClipboardItem` που δέχεται Promise (`lib/share-utils.ts` `copyDeferredText` — Chromium 121+ · Safari 16.4+·
+  αλλιώς `await` + `writeText`). Single-flight: δύο κλικ = ένας σύνδεσμος. Ο ωμός σύνδεσμος φαίνεται **μία** φορά
+  (πρότυπο GitHub PAT) · «Νέος σύνδεσμος για άλλον παραλήπτη» αφήνει τον προηγούμενο ενεργό.
+- **Α12 — Λίστα ενεργών συνδέσμων μόνο μέσω διακομιστή, με ρητή προβολή.** Ίδια ερώτηση εξουσιοδότησης με τη
+  δημιουργία (`mayShareEntity`)· ξένη οντότητα ⇒ 404. `toShareLinkSummary` = **λίστα επιτρεπόμενων πεδίων**, ποτέ
+  spread εγγράφου (μετάλλαξη σε spread ⇒ 2 κόκκινα, μετρημένο). Δείχνει δημιουργό, λήξη, κωδικό ναι/όχι,
+  ανοίγματα/όριο, τελευταίο άνοιγμα, **εξαντλημένο** και **κλειδωμένο από λάθος κωδικούς** — το τελευταίο δεν το
+  δείχνει στον κάτοχο κανένας από Drive/Dropbox/DocSend. Ληγμένοι έξω· σελίδα 50 + `hasMore`.
+- **Α13 — Αλλαγή ρυθμίσεων χωρίς αλλαγή URL** (πρότυπο Dropbox/Box «Link settings»). Μέχρι τότε «αλλαγή πολιτικής»
+  = ανάκληση + νέος σύνδεσμος, που **έσπαγε σιωπηλά** το URL που είχε ήδη σταλεί. Κοινός ορισμός πεδίων
+  (`SHARE_POLICY_FIELDS`) με τη δημιουργία· όριο κάτω από τα ήδη ανοίγματα ⇒ 422 `max-below-count`· νέος ή
+  αφαιρεμένος κωδικός μηδενίζει το κλείδωμα· ανακληθείς ⇒ 404 (οι ρυθμίσεις δεν είναι πίσω πόρτα επαναφοράς).
+  ⚠️ Κουπόνια επίσκεψης 15′ (Α6) που εκδόθηκαν πριν την προσθήκη κωδικού ισχύουν ως τη λήξη τους.
+- **Α14 — Εσωτερική ετικέτα «Για ποιον;»** (πρότυπο DocSend named links). Αποθηκεύεται στο έγγραφο (`label`), **δεν**
+  υπάρχει στο `ShareRecord` που τροφοδοτεί τους resolvers ⇒ δομικά δεν φτάνει στον παραλήπτη. Κάνει την ανάκληση
+  **ανά παραλήπτη** αναγνωρίσιμη — προαπαιτούμενο του ADR-884 Φ0.12.
+- **Ανάκληση χωρίς «αναίρεση»**: άμεση, με επιβεβαίωση (Dropbox: «you won't be able to re-enable it»). Αναβαλλόμενη
+  ανάκληση τύπου Gmail θα χανόταν με το κλείσιμο της καρτέλας, αφήνοντας τον άνθρωπο να πιστεύει ότι έκοψε πρόσβαση.
+  Ίχνος: `share_revoke` στο ίχνος αρχείου (ζεύγος του `share`)· το ίχνος δεν ακυρώνει ποτέ την ανάκληση.
 
 ## 4. Σειρά ανάπτυξης (την εκτελεί ο Giorgio)
 
-1. `firebase deploy --only firestore:indexes` — `[tokenHash, isActive]` σε `shares` + `file_shares`.
-2. Μεταβλητή **`SHARE_ACCESS_SECRET`** στο Netcup (δηλωμένη στο `config/environment-contract.ts`· χωρίς αυτήν,
-   σύνδεσμος **με** κωδικό απαντά «μη διαθέσιμο»).
-3. Push → Netcup. Ο κώδικας διαβάζει παλιά **και** νέα έγγραφα.
-4. `npx tsx scripts/migrate-share-token-hash.ts` (dry-run) → `--execute`.
-5. `firebase deploy --only firestore:rules`.
-6. ⏳ **Επόμενο commit**: αφαίρεση του μεταβατικού fallback `token` από το `share-token-lookup.ts` (και των
-   δεικτών `[token, isActive]`), αφού η μετάπτωση μετρήσει `0 προς εγγραφή`.
+1. ✅ `firebase deploy --only firestore:indexes` — `[tokenHash, isActive]` σε `shares` + `file_shares` (ledger `a2675ba7`).
+2. ⏳ Μεταβλητή **`SHARE_ACCESS_SECRET`** στο Netcup (Coolify → Environment Variables, runtime· μετά **Restart** —
+   ADR-740 §9.1). Δηλωμένη στο `config/environment-contract.ts`· χωρίς αυτήν, σύνδεσμος **με** κωδικό απαντά
+   «μη διαθέσιμο». **2026-09-25: ανεπιβεβαίωτο** (ο Giorgio δεν γνωρίζει). Έλεγχος χωρίς αποκάλυψη τιμής: ως
+   **συνδεδεμένος** χρήστης άνοιγμα `https://nestorconstruct.gr/api/health/config` — η λίστα `features` ονομάζει κάθε
+   ρύθμιση που λείπει (ανώνυμα φεύγουν μόνο αριθμοί· από `curl` χωρίς browser απαντά 403).
+3. ✅ Push → Netcup.
+4. ✅ `npx tsx scripts/migrate-share-token-hash.ts --execute` (2026-09-25, `pagonis-87766`): 1 έγγραφο `shares`
+   γράφτηκε, 0 συγκρούσεις· το επόμενο dry-run μέτρησε **0 προς εγγραφή** σε `shares` **και** `file_shares`.
+5. ✅ `firebase deploy --only firestore:rules` (επιβεβαιωμένο στην παραγωγή από τον Giorgio).
+6. ✅ Αφαίρεση του μεταβατικού fallback `token` από το `share-token-lookup.ts` + των δεικτών `[token, isActive]`
+   (`shares`, `file_shares`). Οι δείκτες φεύγουν από την παραγωγή στο πλάνο → έγκριση του push (CHECK 3.86).
 
 ## 5. Ανοιχτά
 
-- ⏳ Λίστα ενεργών συνδέσμων στο UI (ανάκληση ανά παραλήπτη) — μέσω διαδρομής που **δεν** επιστρέφει hash.
-  Προαπαιτούμενο των συνδέσμων «ανά παραλήπτη» του ADR-884 Φ0.12.
+- ✅ ~~Λίστα ενεργών συνδέσμων στο UI (ανάκληση ανά παραλήπτη)~~ — **έκλεισε 2026-09-25** (Α11–Α14). Μένει στην
+  παραγωγή: deploy του δείκτη `shares [companyId, entityType, entityId, isActive, createdAt↓]` (CHECK 3.86 στο push).
+- ⏳ **Ίχνος οντότητας για μη-αρχεία**: δημιουργία/ανάκληση συνδέσμου επαφής ή showcase **δεν** γράφεται στο
+  `entity_audit_trail` — το λεξιλόγιο `AuditAction` δεν έχει πράξη συνδέσμου. Τα αρχεία έχουν `share`/`share_revoke`.
+- ⏳ **Νεκρός δείκτης** `shares [companyId, entityType, entityId, isActive]`: κανένας καλών (ο browser δεν διαβάζει πια
+  `shares`· η λίστα χρησιμοποιεί το υπερσύνολο με `createdAt↓`). Η διαγραφή του είναι αλλαγή παραγωγής — απόφαση Giorgio.
+- ⏳ **Απόσυρση `file_shares`**: 1 έγγραφο στην παραγωγή (μετρημένο 2026-09-25). Μεταφορά του στο `shares` (ίδιο
+  `tokenHash` ⇒ ο σύνδεσμος συνεχίζει να ανοίγει) θα έσβηνε το δεύτερο λεξιλόγιο από lookup/μετρητή/λίστα/ανάκληση.
+- ⏳ Ετικέτες `audit.action.*` στο `AuditLogPanel`: **κανένα** κλειδί δεν υπάρχει στα locales — το πάνελ δείχνει τον
+  ωμό κωδικό πράξης (προϋπάρχον, όχι μόνο για `share_revoke`).
 - ⏳ Ίχνος θέασης ανά σύνδεσμο («ποιος σύνδεσμος άνοιξε πότε») — σήμερα μόνο μετρητής + `lastAccessedAt`.
 - ⏳ Argon2id όταν η παραγωγή περάσει σε Node με `crypto.argon2` — μία γραμμή χάρη στην αυτοπεριγραφική μορφή.
 - ⏳ **Αρχεία σε προσωπική φύλαξη** (`files_personal`, ADR-787): ο `file` resolver δηλώνει `COLLECTIONS.FILES`, οπότε
@@ -111,6 +150,9 @@
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-09-25 | **Διαχείριση ενεργών συνδέσμων (§5 — Α11–Α14).** Διακομιστής: `share-links-list.ts` (λίστα + ρητή προβολή + parsers), `share-update.ts` (ρυθμίσεις χωρίς αλλαγή URL), `share-revoke.ts` (`findOwnedShare` = το **ένα** σημείο ιδιοκτησίας για ανάκληση **και** ρυθμίσεις · `revokeAllShareLinks` σε παρτίδες με φρένο 50 γύρων · ίχνος `share_revoke`), `share-create.ts` (`label`, κοινό `SHARE_POLICY_FIELDS`, `shareExpiryFromNow`), `share-access.ts` (ο χάρτης μετρητών εξάγεται ως `SHARE_COUNTER_FIELDS` — ένα λεξιλόγιο). Διαδρομές: `GET /api/shares`, `PATCH /api/shares/[shareId]`, `POST /api/shares/revoke-all` · κοινή απάντηση άρνησης `share-refusal-response.ts` (το `jscpd:diff` έπιασε κλώνο 8 γραμμών ανάμεσα σε δημιουργία και ρυθμίσεις). UI: `components/sharing/link-management/*` + `UnifiedShareDialog` χωρίς αυτόματη δημιουργία· `LinkTokenForm` → `LinkLabelField` + `LinkTokenFields` + φόρμα ρυθμίσεων· `draft-mapping.ts` (τριαδικός κωδικός, «μόνο ό,τι άλλαξε», φρουρός `keep` αντί `''` — CHECK 3.48). `mock-firestore` απέκτησε αναβαλλόμενο `batch()`. Δείκτης: **ένας** νέος (`shares … createdAt↓`)· δύο προτεινόμενοι `file_shares` αφαιρέθηκαν αφού η 3.91 έδειξε ότι ερωτήματα μόνο-ισοτήτων δεν τους χρειάζονται, ενώ μετάλλαξη του `shares` ⇒ **κόκκινο** (μετρημένο). Το legacy ερώτημα έγινε δύο ρητά (με δυναμικό πεδίο η 3.91 το έγραφε «μη αναλύσιμο»). jest: `share-links-manage` 19 · `copy-deferred-text` 4 · `link-management` 7 · σουίτες κοινοποίησης πράσινες· πύλες 3.35/3.47/3.48/3.78/3.91/3.92 πράσινες. |
+| 2026-09-25 | **Καθαρισμός μετάπτωσης (§4 βήμα 6).** Μετά το `--execute` (1 έγγραφο, 0 συγκρούσεις) και dry-run `0 προς εγγραφή` σε `shares` + `file_shares`: το `findActiveShareByToken` ψάχνει **μόνο** `tokenHash` (`queryActiveByHash`)· αφαιρέθηκαν οι δείκτες `[token, isActive]` των δύο συλλογών (κανένας άλλος καλών — τα `po_shares`/`attendance_qr_tokens` έχουν δικούς τους). Το test «still opens a not-yet-migrated document» έγινε «🔴 δεν ανοίγει πια έγγραφο με μόνο ωμό token»· τα seed των παλιών `file_shares` φέρουν πλέον `tokenHash` (το μεταπεσμένο σχήμα). jest κοινοποίησης 255/255 · πύλες 3.15/3.91 πράσινες · 3.86: `firestore:indexes` ⏳ έγκριση στο push. |
+| 2026-09-25 | **Επαλήθευση Κ4 — ένα εύρημα, διορθωμένο.** Ο anchor ADR-742 (`ownership-callsite-coverage-anchor`) έπιασε το `server/sharing/share-revoke.ts` ως **αταξινόμητο** σημείο του `isPayloadOwnedByCompany`: το cross-tenant test της ανάκλησης (`comp_2`) **δεν** διακρίνει τον SSoT από σκέτο `!==`. Προστέθηκε το τριπλό συμβόλαιο `describeOwnershipCallSites` (κενό/κενό · χωρίς μισθωτή · θετικός μάρτυρας) στο `share-create-revoke.test.ts` και γραμμή `empty-pair` στο `PROVEN_AFTER_PHASE_C`· μετάλλαξη σε `data.companyId !== actor.companyId` ⇒ **κόκκινο**, μετρημένο. Ο έλεγχος «και τα τρία» του anchor γενικεύτηκε σε «**όλα** empty-pair» (ο αριθμός μεγαλώνει, το δόγμα όχι). Αποτέλεσμα: jest 23 σουίτες — πράσινα όλα του Κ4 (μένουν 2 **προϋπάρχουσες**: `STAY_ICAL_FEED_SECRET` στο `.env.example` · 4 αρχεία vendor-invite)· `test:rules-coverage-completeness` 18/18· `jscpd:diff` 0 κλώνοι σε 39 αρχεία· emulator `shares` + `file_shares` **78/78**. |
 | 2026-09-25 | **Ενοποίηση με την αρχική πρόταση** (CHECK 3.49): το `adrs/ADR-315-unified-sharing.md` της ρίζας μεταφέρθηκε στο Παράρτημα Α και αφαιρέθηκε — ένας αριθμός, ένα έγγραφο. |
 | 2026-09-25 | **Δημιουργία εγγράφου + σκλήρυνση (ADR-884 Φ0.12, κύμα Κ4).** Όλος ο κύκλος ζωής στον διακομιστή (`src/server/sharing/*`, 4 διαδρομές `/api/shares/*`)· κανόνες `if false` σε `shares` + `file_shares`· μόνο `tokenHash`· scrypt + rehash-on-verify + κλείδωμα ανά σύνδεσμο· κουπόνι HMAC που κλείνει και το κενό «η διαδρομή showcase δεν ελέγχει κωδικό»· ένα άνοιγμα = μία πρόσβαση, μετρητής σε συναλλαγή· V4 URL 15′ για κάθε byte· resolvers → καθαρό `project()`, ανάγνωση οντότητας + `canShare` στον διακομιστή (διορθώθηκαν οι σύνδεσμοι επαφής/αρχείου για ανώνυμο)· 5 αντίγραφα lookup → 1· διαγραφή `FileShareService` + νεκρού `ShareDialog`· συμβάν `share` στο ίχνος αρχείου· μετάπτωση `scripts/migrate-share-token-hash.ts`· σουίτες κανόνων `shares` (πρώτη φορά) + `file_shares` με `shareLinksMatrix` που **μετρά** το `anonymous × list`. |
 

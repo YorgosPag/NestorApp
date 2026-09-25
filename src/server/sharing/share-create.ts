@@ -31,6 +31,7 @@ import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import '@/services/sharing/resolvers';
 import {
   isResolvableShareKind,
+  SHARE_LABEL_MAX_LENGTH,
   SHARE_PASSWORD_MAX_LENGTH,
 } from '@/services/sharing/share-resolve-contract';
 import type { CreateShareInput, CreateShareRequest, CreateShareResult } from '@/types/sharing';
@@ -44,14 +45,26 @@ export const SHARE_MIN_EXPIRY_HOURS = 1;
 export const SHARE_MAX_EXPIRY_HOURS = 720;
 const DEFAULT_EXPIRY_HOURS = 72;
 const NOTE_MAX_LENGTH = 1000;
+/**
+ * Οι κανόνες των πεδίων **πολιτικής** — **ένας** ορισμός για τη δημιουργία (`share-create`)
+ * **και** την αλλαγή ρυθμίσεων (`share-update`, Α13). Δύο αντίγραφα θα απέκλιναν στο πρώτο
+ * «ας ανεβάσουμε το όριο σε 60 ημέρες».
+ */
+export const SHARE_POLICY_FIELDS = {
+  expiresInHours: z.number().int().min(SHARE_MIN_EXPIRY_HOURS).max(SHARE_MAX_EXPIRY_HOURS),
+  password: z.string().min(1).max(SHARE_PASSWORD_MAX_LENGTH),
+  maxAccesses: z.number().int().min(0).max(10_000),
+  label: z.string().trim().min(1).max(SHARE_LABEL_MAX_LENGTH),
+} as const;
 
 const CREATE_REQUEST = z.object({
   entityType: z.string().refine(isResolvableShareKind),
   entityId: z.string().trim().min(1).max(200),
-  expiresInHours: z.number().int().min(SHARE_MIN_EXPIRY_HOURS).max(SHARE_MAX_EXPIRY_HOURS).optional(),
-  password: z.string().min(1).max(SHARE_PASSWORD_MAX_LENGTH).optional(),
-  maxAccesses: z.number().int().min(0).max(10_000).optional(),
+  expiresInHours: SHARE_POLICY_FIELDS.expiresInHours.optional(),
+  password: SHARE_POLICY_FIELDS.password.optional(),
+  maxAccesses: SHARE_POLICY_FIELDS.maxAccesses.optional(),
   note: z.string().max(NOTE_MAX_LENGTH).optional(),
+  label: SHARE_POLICY_FIELDS.label.optional(),
   showcaseMeta: z.object({
     pdfStoragePath: z.string().max(1024),
     pdfRegeneratedAt: z.union([z.string(), z.null()]).optional(),
@@ -87,8 +100,13 @@ export function parseCreateShareRequest(body: unknown): CreateShareRequest | nul
   };
 }
 
+/** Λήξη από **τώρα** — κοινή για δημιουργία και αλλαγή ρυθμίσεων (Α8 · Α13). */
+export function shareExpiryFromNow(hours: number, nowMs: number = Date.now()): string {
+  return new Date(nowMs + hours * 3_600_000).toISOString();
+}
+
 async function buildShareDocument(input: CreateShareInput, tokenHash: string) {
-  const expiresAt = new Date(Date.now() + (input.expiresInHours ?? DEFAULT_EXPIRY_HOURS) * 3_600_000).toISOString();
+  const expiresAt = shareExpiryFromNow(input.expiresInHours ?? DEFAULT_EXPIRY_HOURS);
   return {
     tokenHash,
     entityType: input.entityType,
@@ -103,6 +121,7 @@ async function buildShareDocument(input: CreateShareInput, tokenHash: string) {
     maxAccesses: input.maxAccesses ?? 0,
     accessCount: 0,
     note: input.note ?? null,
+    label: input.label ?? null,
     ...(input.showcaseMeta ? { showcaseMeta: input.showcaseMeta } : {}),
     ...(input.contactMeta ? { contactMeta: input.contactMeta } : {}),
     ...(input.fileMeta ? { fileMeta: input.fileMeta } : {}),

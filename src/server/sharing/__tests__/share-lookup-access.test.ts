@@ -66,17 +66,17 @@ describe('findActiveShareByToken', () => {
     expect(share).toMatchObject({ id: 'share_1', source: 'shares', entityType: 'building_showcase' });
   });
 
-  it('still opens a not-yet-migrated document that holds the raw token (transitional)', async () => {
+  it('🔴 no longer opens a document that holds only the RAW token (fallback removed after migration)', async () => {
     const { tokenHash: _dropped, ...rest } = await unifiedDoc();
     kit.seedCollection(COLLECTIONS.SHARES, { share_1: { ...rest, token: LEGACY_TOKEN } });
 
-    expect(await findActiveShareByToken(db(), LEGACY_TOKEN)).toMatchObject({ id: 'share_1' });
+    expect(await findActiveShareByToken(db(), LEGACY_TOKEN)).toBeNull();
   });
 
   it('normalises a legacy file_shares showcase into the one shape', async () => {
     kit.seedCollection(COLLECTIONS.FILE_SHARES, {
       fs_1: {
-        token: LEGACY_TOKEN, isActive: true, showcaseMode: true, showcasePropertyId: 'prop_1',
+        tokenHash: await hashShareToken(LEGACY_TOKEN), isActive: true, showcaseMode: true, showcasePropertyId: 'prop_1',
         companyId: 'comp_1', expiresAt: FUTURE, pdfStoragePath: 'p.pdf', downloadCount: 2, maxDownloads: 5,
       },
     });
@@ -146,7 +146,7 @@ describe('recordShareAccess', () => {
 
   it('writes the legacy vocabulary on a legacy share', async () => {
     kit.seedCollection(COLLECTIONS.FILE_SHARES, {
-      fs_1: { token: LEGACY_TOKEN, isActive: true, fileId: 'f_1', companyId: 'comp_1', expiresAt: FUTURE, downloadCount: 4 },
+      fs_1: { tokenHash: await hashShareToken(LEGACY_TOKEN), isActive: true, fileId: 'f_1', companyId: 'comp_1', expiresAt: FUTURE, downloadCount: 4 },
     });
     const share = (await findActiveShareByToken(db(), LEGACY_TOKEN)) as StoredShare;
 

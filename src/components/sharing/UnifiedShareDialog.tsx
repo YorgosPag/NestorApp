@@ -3,53 +3,53 @@
  * UNIFIED SHARE DIALOG (ADR-315 — unified entry)
  * =============================================================================
  *
- * Single adaptive dialog for file / contact / property_showcase shares, with
- * one identical entry point across all entity types:
+ * Single adaptive dialog for file / contact / showcase shares:
  *
  *   ┌────────────────────────────────────────────┐
- *   │ [5 social circles]                         │  ← UserAuthPermissionPanel
- *   │ [Copy link] [Copy text] [Send to contact]  │
- *   │                                            │
- *   │ ▸ Ρυθμίσεις συνδέσμου (collapsible)        │  ← LinkTokenForm
- *   │                                            │
- *   │ [Download PDF]   — only property_showcase  │
+ *   │ Για ποιον; [___________]                   │  ← ShareLinkCreatePanel (Α11 · Α14)
+ *   │ ▸ Ρυθμίσεις συνδέσμου                      │
+ *   │ [ Δημιουργία & αντιγραφή συνδέσμου ]        │
+ *   │   — μετά: URL + «δεν θα ξαναεμφανιστεί»     │  ← MintedLinkCard
+ *   │   [5 social circles] [Copy] [Send…]        │  ← UserAuthPermissionPanel
+ *   │   [Download PDF] — μόνο showcase           │
+ *   │ Ενεργοί σύνδεσμοι (N)                      │  ← ActiveShareLinksList (ADR-315 §5)
  *   └────────────────────────────────────────────┘
  *
- * Behavior:
- *  - On open, the token is auto-created with defaults (72h, no password, 0 max
- *    accesses, no note). This keeps the channel surface functional from first
- *    paint — copy-link and social dispatch always receive a real URL.
- *  - The "Ρυθμίσεις συνδέσμου" accordion (closed by default) exposes the four
- *    canonical policy fields. Editing + applying triggers a fresh
- *    `createShare` with the new policy; the old share is revoked so only the
- *    latest URL is valid.
- *  - For property_showcase the accordion's submit also re-uses a cached
- *    `showcaseMeta` from the first `preSubmit` so policy edits don't re-run
- *    the expensive PDF generation.
+ * Behavior (ADR-315 §5, 2026-09-25):
+ *  - 🔴 **No link on open.** Until then every open minted an active 72h link, even if it was
+ *    never sent — orphan credentials. Like Dropbox «Copy link» / Box «Create and Copy Shared
+ *    Link», the link is minted **on click** and copied in the **same** gesture
+ *    (`copyDeferredText` — a Promise-valued `ClipboardItem`).
+ *  - The raw link is shown **once** (the server keeps only its fingerprint). «New link» mints
+ *    another for another recipient; the previous one **stays** active.
+ *  - Settings of an existing link change **in place** (same URL) from the list — no more
+ *    revoke + recreate that silently broke already-sent URLs (Α13).
+ *  - `shareUrl` (vendor_rfq_invite) bypasses all of this: pre-built URL, no list.
  *
- * Persistence: delegates to `UnifiedSharingService` (Tier 2 SSoT).
+ * Persistence: `UnifiedSharingService` (Tier 2 SSoT) only.
  *
  * @module components/sharing/UnifiedShareDialog
- * @see adrs/ADR-315-unified-sharing.md §3.4
+ * @see docs/centralized-systems/reference/adrs/ADR-315-unified-sharing.md §3 Α11–Α14, §5
  */
 
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import React, { useCallback, useMemo } from 'react';
+import { Download } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ShareSurfaceShell } from '@/components/ui/sharing';
-import { LinkTokenForm } from '@/components/ui/sharing/panels/link-token/LinkTokenForm';
-import {
-  INITIAL_LINK_TOKEN_DRAFT,
-  type LinkTokenDraft,
-} from '@/components/ui/sharing/panels/link-token/types';
 import { UserAuthPermissionPanel } from '@/components/ui/sharing/panels/UserAuthPermissionPanel';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
-import { cn } from '@/lib/utils';
-import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
+import { ActiveShareLinksList } from '@/components/sharing/link-management/ActiveShareLinksList';
+import {
+  MintedLinkCard,
+  ShareLinkCreatePanel,
+} from '@/components/sharing/link-management/ShareLinkCreatePanel';
+import {
+  useShareDialogLinks,
+  type UseShareDialogLinksResult,
+} from '@/components/sharing/link-management/useShareDialogLinks';
 import {
   buildShowcaseContext,
   findShowcaseSurface,
@@ -91,7 +91,7 @@ export interface UnifiedShareDialogProps {
    * Optional pre-submit hook. Invoked BEFORE `UnifiedSharingService.createShare`
    * to produce entity-specific metadata that must be generated at submit time
    * (e.g. Property Showcase PDF upload). Called ONCE per dialog open — the
-   * result is cached and reused across policy changes.
+   * result is cached and reused for every link minted while the dialog is open.
    */
   preSubmit?: () => Promise<
     Pick<CreateShareInput, 'showcaseMeta' | 'contactMeta' | 'fileMeta'>
@@ -101,7 +101,7 @@ export interface UnifiedShareDialogProps {
   onCopySuccess?: () => void;
   /**
    * Pre-built share URL. When provided, bypasses `UnifiedSharingService.createShare`
-   * entirely and uses this URL directly. The policy accordion is hidden.
+   * entirely and uses this URL directly. No link panel, no link list.
    * Used for vendor_rfq_invite where the HMAC token URL is pre-generated.
    */
   shareUrl?: string;
@@ -117,10 +117,26 @@ export interface UnifiedShareDialogProps {
 // COMPONENT
 // ============================================================================
 
-interface CreatedShare {
-  shareId: string;
-  token: string;
-  url: string;
+/** Τα δεδομένα των καναλιών αποστολής για τον τρέχοντα σύνδεσμο. */
+function channelShareData(
+  content: Omit<ShareData, 'url'> | undefined,
+  entityTitle: string,
+  url: string | null,
+  propertyId: string | undefined,
+): ShareData & { isPhoto?: boolean } {
+  return {
+    title: content?.title ?? entityTitle,
+    text: content?.text ?? '',
+    url: url ?? '',
+    isPhoto: content?.isPhoto,
+    photoUrl: content?.photoUrl,
+    galleryPhotos: content?.galleryPhotos,
+    // ADR-312 Phase 9.18 — the route uses this to load the showcase snapshot
+    // and append a text digest after the photo dispatch. Only set for the
+    // `property_showcase` entity type; other shares keep `propertyId`
+    // undefined so the digest step is skipped.
+    propertyId,
+  };
 }
 
 export function UnifiedShareDialog({
@@ -144,122 +160,19 @@ export function UnifiedShareDialog({
 }: UnifiedShareDialogProps): React.ReactElement {
   const { t } = useTranslation(['files', 'common', 'common-shared', 'properties-detail']);
   const { t: tShell } = useTranslation('common-shared');
-
-  const [draft, setDraft] = useState<LinkTokenDraft>(INITIAL_LINK_TOKEN_DRAFT);
-  const [share, setShare] = useState<CreatedShare | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [policyOpen, setPolicyOpen] = useState(false);
-  // Cache preSubmit result so policy changes don't re-run expensive PDF gen.
-  const preSubmitCacheRef = useRef<
-    Pick<CreateShareInput, 'showcaseMeta' | 'contactMeta' | 'fileMeta'> | null
-  >(null);
-  // Track previous shareId so editing the policy revokes the stale one.
-  const previousShareIdRef = useRef<string | null>(null);
-  // Snapshot of the draft currently applied to the active token. Used to
-  // disable the accordion submit when the user has not changed any field
-  // (ADR-312 Phase 9.8 — no-op revoke+recreate suppression).
-  const appliedDraftRef = useRef<LinkTokenDraft>(INITIAL_LINK_TOKEN_DRAFT);
-
-  const createShare = useCallback(
-    async (currentDraft: LinkTokenDraft): Promise<CreatedShare> => {
-      const maxAccesses = parseInt(currentDraft.maxDownloads, 10) || 0;
-      const extra = preSubmit
-        ? (preSubmitCacheRef.current ??= await preSubmit())
-        : undefined;
-      // ADR-884 Φ0.12 — tenant + author are taken from the session on the server.
-      const result = await UnifiedSharingService.createShare({
-        entityType,
-        entityId,
-        expiresInHours: parseInt(currentDraft.expiresInHours, 10) || 72,
-        password: currentDraft.password.trim() || undefined,
-        maxAccesses,
-        note: currentDraft.note.trim() || undefined,
-        showcaseMeta: extra?.showcaseMeta ?? showcaseMeta,
-        contactMeta: extra?.contactMeta ?? contactMeta,
-        fileMeta: extra?.fileMeta ?? fileMeta,
-      });
-      return {
-        shareId: result.shareId,
-        token: result.token,
-        url: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/shared/${result.token}`,
-      };
-    },
-    [
-      entityType,
-      entityId,
-      showcaseMeta,
-      contactMeta,
-      fileMeta,
-      preSubmit,
-    ],
-  );
-
-  const ensureShare = useCallback(
-    async (currentDraft: LinkTokenDraft, { revokePrevious }: { revokePrevious: boolean }) => {
-      setCreating(true);
-      setError(null);
-      try {
-        const next = await createShare(currentDraft);
-        if (revokePrevious && previousShareIdRef.current) {
-          void UnifiedSharingService.revoke(previousShareIdRef.current).catch(() => undefined);
-        }
-        previousShareIdRef.current = next.shareId;
-        appliedDraftRef.current = currentDraft;
-        setShare(next);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setCreating(false);
-      }
-    },
-    [createShare],
-  );
-
-  // Auto-create on open (ADR-312 Phase 9.7). When `shareUrl` is pre-provided
-  // (vendor_rfq_invite), skip createShare and use the URL directly.
-  useEffect(() => {
-    if (!open) return;
-    if (share || creating) return;
-    if (shareUrl) {
-      setShare({ shareId: '', token: '', url: shareUrl });
-      return;
-    }
-    void ensureShare(INITIAL_LINK_TOKEN_DRAFT, { revokePrevious: false });
-  }, [open, share, creating, ensureShare, shareUrl]);
+  const flow = useShareDialogLinks({
+    entityType, entityId, preSubmit, showcaseMeta, contactMeta, fileMeta, onCopySuccess,
+    enabled: open && !shareUrl,
+  });
+  const { reset } = flow;
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
-    setTimeout(() => {
-      setShare(null);
-      setDraft(INITIAL_LINK_TOKEN_DRAFT);
-      setPolicyOpen(false);
-      setError(null);
-      preSubmitCacheRef.current = null;
-      previousShareIdRef.current = null;
-      appliedDraftRef.current = INITIAL_LINK_TOKEN_DRAFT;
-    }, 200);
-  }, [onOpenChange]);
-
-  const handleApplyPolicy = useCallback(() => {
-    void ensureShare(draft, { revokePrevious: true });
-    setPolicyOpen(false);
-  }, [ensureShare, draft]);
-
-  const isDirty =
-    draft.expiresInHours !== appliedDraftRef.current.expiresInHours ||
-    draft.password !== appliedDraftRef.current.password ||
-    draft.maxDownloads !== appliedDraftRef.current.maxDownloads ||
-    draft.note !== appliedDraftRef.current.note;
+    setTimeout(reset, 200);
+  }, [onOpenChange, reset]);
 
   const entity = useMemo(
-    () => ({
-      kind: entityType,
-      id: entityId,
-      title: entityTitle,
-      subtitle: entitySubtitle,
-      companyId,
-    }),
+    () => ({ kind: entityType, id: entityId, title: entityTitle, subtitle: entitySubtitle, companyId }),
     [entityType, entityId, entityTitle, entitySubtitle, companyId],
   );
 
@@ -279,23 +192,27 @@ export function UnifiedShareDialog({
    * που αποκλίναν ήδη (5 κλάδοι context vs 3 κλάδοι PDF, ADR-742 §7quaterdecies).
    */
   const showcaseSurface = findShowcaseSurface(entityType);
+  const liveUrl = shareUrl ?? flow.minted?.url ?? null;
+  /** `null` = δεν είναι showcase, ή η επιφάνεια δεν έχει γεννήτρια PDF, ή δεν γεννήθηκε ακόμη σύνδεσμος. */
+  const pdfHref = flow.minted === null ? null : showcasePdfHref(entityType, flow.minted.token);
 
-  /** `null` = ή δεν είναι showcase, ή η επιφάνεια δεν έχει γεννήτρια PDF. */
-  const pdfHref = share === null ? null : showcasePdfHref(entityType, share.token);
+  const shareDataForChannel = channelShareData(
+    contactShareContent, entityTitle, liveUrl, showcaseSurface?.kind === 'property' ? entityId : undefined,
+  );
 
-  const shareDataForChannel: ShareData & { isPhoto?: boolean } = {
-    title: contactShareContent?.title ?? entityTitle,
-    text: contactShareContent?.text ?? '',
-    url: share?.url ?? '',
-    isPhoto: contactShareContent?.isPhoto,
-    photoUrl: contactShareContent?.photoUrl,
-    galleryPhotos: contactShareContent?.galleryPhotos,
-    // ADR-312 Phase 9.18 — the route uses this to load the showcase snapshot
-    // and append a text digest after the photo dispatch. Only set for the
-    // `property_showcase` entity type; other shares keep `propertyId`
-    // undefined so the digest step is skipped.
-    propertyId: showcaseSurface?.kind === 'property' ? entityId : undefined,
-  };
+  const channels = liveUrl !== null && (
+    <UserAuthPermissionPanel
+      shareData={shareDataForChannel}
+      isOpen={open}
+      onClose={handleClose}
+      onCopySuccess={onCopySuccess}
+      onShareSuccess={onShareSuccess}
+      onShareError={onShareError}
+      showcaseContext={buildShowcaseContext(entityType, entityId)}
+      initialPersonalMessage={flow.minted?.note}
+      onDirectEmailShare={onDirectEmailShare}
+    />
+  );
 
   return (
     <ShareSurfaceShell
@@ -304,87 +221,51 @@ export function UnifiedShareDialog({
       entity={entity}
       labels={labels}
       status="idle"
-      error={error}
+      error={flow.error}
     >
-      {!share ? (
-        <section
-          className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-          aria-busy="true"
-        >
-          <Spinner size="medium" color="inherit" />
-          <span>{t('common-shared:share.creatingLink')}</span>
-        </section>
+      {shareUrl ? (
+        <section className="flex flex-col gap-4">{channels}</section>
       ) : (
-        <section className="flex flex-col gap-4">
-          <UserAuthPermissionPanel
-            shareData={shareDataForChannel}
-            isOpen={open}
-            onClose={handleClose}
-            onCopySuccess={onCopySuccess}
-            onShareSuccess={onShareSuccess}
-            onShareError={onShareError}
-            showcaseContext={buildShowcaseContext(entityType, entityId)}
-            initialPersonalMessage={draft.note.trim() || undefined}
-            dirtyPolicy={isDirty}
-            onDirectEmailShare={onDirectEmailShare}
-          />
+        <ManagedLinksBody flow={flow} channels={channels} pdfHref={pdfHref} pdfLabel={t('properties-detail:showcase.downloadPdf')} />
+      )}
+    </ShareSurfaceShell>
+  );
+}
 
+interface ManagedLinksBodyProps {
+  readonly flow: UseShareDialogLinksResult;
+  readonly channels: React.ReactNode;
+  readonly pdfHref: string | null;
+  readonly pdfLabel: string;
+}
+
+/** Νέος σύνδεσμος (ή ο μόλις δημιουργημένος + κανάλια) και η λίστα ενεργών συνδέσμων. */
+function ManagedLinksBody({ flow, channels, pdfHref, pdfLabel }: ManagedLinksBodyProps): React.ReactElement {
+  return (
+    <section className="flex flex-col gap-4">
+      {flow.minted === null ? (
+        <ShareLinkCreatePanel
+          draft={flow.draft}
+          onDraftChange={flow.setDraft}
+          onCreateAndCopy={flow.createAndCopy}
+          minting={flow.minting}
+        />
+      ) : (
+        <>
+          <MintedLinkCard minted={flow.minted} onCopy={flow.copyAgain} onStartOver={flow.startOver} />
+          {channels}
           {pdfHref !== null && (
-            <Button
-              asChild
-              variant="outline"
-              className={cn('w-full', isDirty && 'pointer-events-none opacity-50')}
-              aria-disabled={isDirty}
-            >
-              <a
-                href={pdfHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                tabIndex={isDirty ? -1 : undefined}
-              >
+            <Button asChild variant="outline" className="w-full">
+              <a href={pdfHref} target="_blank" rel="noopener noreferrer">
                 <Download className="mr-2 h-4 w-4" />
-                {t('properties-detail:showcase.downloadPdf')}
+                {pdfLabel}
               </a>
             </Button>
           )}
-
-          {!shareUrl && (
-            <section
-              className={cn(
-                'border rounded-lg overflow-hidden',
-                policyOpen && 'border-primary/40',
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => setPolicyOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
-                aria-expanded={policyOpen}
-              >
-                <span>{t('common:share.linkSettings')}</span>
-                {policyOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
-              {policyOpen && (
-                <div className="p-3 border-t bg-muted/20">
-                  <LinkTokenForm
-                    draft={draft}
-                    onDraftChange={setDraft}
-                    onSubmit={handleApplyPolicy}
-                    onCancel={() => setPolicyOpen(false)}
-                    submitting={creating}
-                    disabled={!isDirty}
-                  />
-                </div>
-              )}
-            </section>
-          )}
-        </section>
+        </>
       )}
-    </ShareSurfaceShell>
+      <ActiveShareLinksList state={flow.links} currentShareId={flow.minted?.shareId ?? null} />
+    </section>
   );
 }
 

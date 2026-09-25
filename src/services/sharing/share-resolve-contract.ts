@@ -71,6 +71,9 @@ export interface ShareResolveRequestBody {
 /** Όριο μήκους κωδικού: το scrypt δεν πρέπει να γίνει εργαλείο άρνησης υπηρεσίας. */
 export const SHARE_PASSWORD_MAX_LENGTH = 256;
 
+/** ADR-315 Α14 — όριο της εσωτερικής ετικέτας «για ποιον». Ένας ορισμός για φόρμα **και** διακομιστή. */
+export const SHARE_LABEL_MAX_LENGTH = 80;
+
 /** Είναι το είδος επιλύσιμο μέσω συνδέσμου; */
 export function isResolvableShareKind(kind: string): kind is ResolvableShareKind {
   return (RESOLVABLE_SHARE_KINDS as readonly string[]).includes(kind);

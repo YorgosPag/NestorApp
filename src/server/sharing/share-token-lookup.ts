@@ -20,11 +20,12 @@ import 'server-only';
  * Ο καλών **δεν** ξέρει και δεν νοιάζεται από πού ήρθε· το `source` υπάρχει μόνο για
  * να ξέρει **ο γραφέας** (`share-access.ts`, `share-password-attempt.ts`) πού να γράψει.
  *
- * ## Μετάπτωση (μεταβατικό — αφαιρείται μετά το `migrate-share-token-hash --execute`)
+ * ## Μόνο το αποτύπωμα
  *
- * Πρώτα `tokenHash` (η νέα αλήθεια)· αν δεν βρεθεί, **και** ωμό `token` (έγγραφα που δεν
- * έχουν ακόμη μεταπέσει). Έτσι ο κώδικας αναπτύσσεται **πριν** τη μετάπτωση χωρίς να
- * σπάσει κανένας παλιός σύνδεσμος — και η μετάπτωση μπορεί να τρέξει οποτεδήποτε.
+ * Η αναζήτηση γίνεται **αποκλειστικά** με `tokenHash`. Το μεταβατικό fallback σε ωμό `token`
+ * αφαιρέθηκε 2026-09-25, αφού η `migrate-share-token-hash --execute` μέτρησε `0 προς εγγραφή`
+ * στην παραγωγή (ADR-315 §4 βήμα 6). Έγγραφο με ωμό `token` **δεν** ανοίγει πια — το σημερινό
+ * dry-run είναι ο έλεγχος ότι δεν υπάρχει κανένα.
  *
  * ⚠️ **ΚΑΝΕΝΑ ωμό διακριτικό σε log**, ποτέ. Μόνο `shareId`.
  *
@@ -170,16 +171,15 @@ export function collectionOfShareSource(source: StoredShareSource): string {
 // ΑΝΑΖΗΤΗΣΗ
 // =============================================================================
 
-/** Ψάχνει ένα πεδίο σε μία συλλογή· `limit(2)` ώστε η ανωμαλία «δύο ενεργά» να φαίνεται. */
-async function queryActive(
+/** Ψάχνει το αποτύπωμα σε μία συλλογή· `limit(2)` ώστε η ανωμαλία «δύο ενεργά» να φαίνεται. */
+async function queryActiveByHash(
   adminDb: Firestore,
   source: StoredShareSource,
-  field: 'tokenHash' | 'token',
-  value: string,
+  tokenHash: string,
 ): Promise<DocumentSnapshot | null> {
   const snap = await adminDb
     .collection(COLLECTION_OF[source])
-    .where(field, '==', value) // companyId: N/A — ανώνυμη επίλυση διακριτικού, πριν υπάρξει μισθωτής
+    .where('tokenHash', '==', tokenHash) // companyId: N/A — ανώνυμη επίλυση διακριτικού, πριν υπάρξει μισθωτής
     .where('isActive', '==', true)
     .limit(2)
     .get();
@@ -196,8 +196,7 @@ async function queryActive(
 /**
  * Διακριτικό → ενεργή κοινοποίηση, ή `null`.
  *
- * Σειρά: `shares` πριν από `file_shares` (το ενιαίο SSoT κερδίζει), `tokenHash` πριν από
- * `token` (η νέα αλήθεια κερδίζει). **Δεν** κρίνει λήξη/όριο/κωδικό — αυτά είναι
+ * Σειρά: `shares` πριν από `file_shares` (το ενιαίο SSoT κερδίζει). **Δεν** κρίνει λήξη/όριο/κωδικό — αυτά είναι
  * πολιτική του καλούντα (`share-resolve.ts`), που χρειάζεται να πει **ποιο** από αυτά.
  */
 export async function findActiveShareByToken(adminDb: Firestore, token: string): Promise<StoredShare | null> {
@@ -205,9 +204,7 @@ export async function findActiveShareByToken(adminDb: Firestore, token: string):
   const tokenHash = await hashShareToken(token);
 
   for (const source of ['shares', 'file_shares'] as const) {
-    const byHash = await queryActive(adminDb, source, 'tokenHash', tokenHash);
-    // Μεταβατικό: έγγραφα πριν τη μετάπτωση φέρουν ακόμη ωμό `token`.
-    const doc = byHash ?? (await queryActive(adminDb, source, 'token', token));
+    const doc = await queryActiveByHash(adminDb, source, tokenHash);
     if (!doc) continue;
     const share = NORMALIZERS[source](doc.id, (doc.data() ?? {}) as Record<string, unknown>);
     if (share === null) {

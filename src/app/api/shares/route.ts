@@ -2,6 +2,8 @@ import 'server-only';
 
 /**
  * **POST /api/shares** — γέννηση συνδέσμου κοινοποίησης (ADR-884 Φ0.12 · ADR-315).
+ * **GET /api/shares?entityType&entityId** — οι ενεργοί σύνδεσμοι μιας οντότητας (ADR-315 §5 · Α12):
+ * μόνο η ρητή προβολή `ShareLinkSummary` — ποτέ hash, ποτέ διακριτικό. Ξένη οντότητα ⇒ 404.
  *
  * 🔴 Μέχρι το Κ4 ο browser έγραφε το έγγραφο μόνος του (διακριτικό σε καθαρό κείμενο,
  * κωδικός SHA-256 χωρίς salt, έλεγχος ιδιοκτησίας στον browser). Τώρα όλα γίνονται εδώ,
@@ -18,9 +20,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import type { AuthContext } from '@/lib/auth/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createShareOnServer, parseCreateShareRequest } from '@/server/sharing/share-create';
-import type { CreateShareResult } from '@/types/sharing';
+import { listActiveShareLinks, parseShareEntityRef } from '@/server/sharing/share-links-list';
+import { shareRefusalResponse } from '@/server/sharing/share-refusal-response';
+import type { CreateShareResult, ShareLinksListResult } from '@/types/sharing';
 
 interface ShareCreateError {
   readonly error: 'malformed' | 'invalid' | 'forbidden';
@@ -38,13 +42,24 @@ async function handler(
   if (parsed === null) return NextResponse.json({ error: 'malformed' }, { status: STATUS_OF.malformed });
 
   const outcome = await createShareOnServer(getAdminFirestore(), { uid: ctx.uid, companyId: ctx.companyId }, parsed);
-  if (!outcome.ok) {
-    return NextResponse.json(
-      { error: outcome.refusal, ...(outcome.reason ? { reason: outcome.reason } : {}) },
-      { status: STATUS_OF[outcome.refusal] },
-    );
-  }
+  if (!outcome.ok) return shareRefusalResponse(outcome.refusal, outcome.reason, STATUS_OF);
   return NextResponse.json(outcome.result, { status: 201, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export const POST = withSensitiveRateLimit(withAuth(handler));
+
+type ShareListError = { readonly error: 'malformed' | 'not-found' };
+
+async function listHandler(
+  request: NextRequest,
+  ctx: AuthContext,
+): Promise<NextResponse<ShareLinksListResult | ShareListError>> {
+  const params = request.nextUrl.searchParams;
+  const ref = parseShareEntityRef({ entityType: params.get('entityType'), entityId: params.get('entityId') });
+  if (ref === null) return NextResponse.json({ error: 'malformed' }, { status: 400 });
+  const result = await listActiveShareLinks(getAdminFirestore(), ctx.companyId, ref);
+  if (result === null) return NextResponse.json({ error: 'not-found' }, { status: 404 });
+  return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+export const GET = withStandardRateLimit(withAuth(listHandler));

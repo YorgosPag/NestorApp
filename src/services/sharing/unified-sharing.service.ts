@@ -14,6 +14,9 @@
  * | open | `POST /api/shares/resolve` (`share-resolve.ts`) | browser query on a world-readable collection |
  * | download | `POST /api/shares/download` (`share-download.ts`) | permanent `downloadUrl` read in the browser |
  * | revoke | `POST /api/shares/[id]/revoke` (`share-revoke.ts`) | browser `updateDoc` |
+ * | list (ADR-315 §5) | `GET /api/shares?entityType&entityId` (`share-links-list.ts`) | — (did not exist) |
+ * | revoke all | `POST /api/shares/revoke-all` (`share-revoke.ts`) | — |
+ * | settings, same URL (Α13) | `PATCH /api/shares/[id]` (`share-update.ts`) | revoke + recreate (broke sent URLs) |
  *
  * This module is SSoT-locked (see `.ssot-registry.json` → `unified-sharing-service`):
  * no other module talks to `shares` / `file_shares` from the browser.
@@ -25,7 +28,16 @@
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import type { CreateShareRequest, CreateShareResult } from '@/types/sharing';
+import type {
+  CreateShareRequest,
+  CreateShareResult,
+  RevokeAllSharesRequest,
+  RevokeAllSharesResult,
+  ShareEntityType,
+  ShareLinkSummary,
+  ShareLinksListResult,
+  UpdateShareRequest,
+} from '@/types/sharing';
 import type {
   ShareDownloadOutcome,
   ShareResolveOutcome,
@@ -45,6 +57,25 @@ export class UnifiedSharingService {
   /** Revoke a share of the caller's company. One-way and idempotent. */
   static async revoke(shareId: string): Promise<void> {
     await apiClient.post(API_ROUTES.SHARES.REVOKE(shareId));
+  }
+
+  /**
+   * The active links of one entity, for its owner (ADR-315 §5). A safe projection only —
+   * no hash, no token: a link is shown **once**, at creation.
+   */
+  static listActive(entityType: ShareEntityType, entityId: string): Promise<ShareLinksListResult> {
+    return apiClient.get<ShareLinksListResult>(API_ROUTES.SHARES.LIST(entityType, entityId));
+  }
+
+  /** Revoke every active link of an entity (optionally all but one). Idempotent. */
+  static revokeAll(request: RevokeAllSharesRequest): Promise<RevokeAllSharesResult> {
+    return apiClient.post<RevokeAllSharesResult>(API_ROUTES.SHARES.REVOKE_ALL, request);
+  }
+
+  /** Change a link's settings **without changing its URL** (Α13). Returns the new summary. */
+  static async update(shareId: string, request: UpdateShareRequest): Promise<ShareLinkSummary> {
+    const { link } = await apiClient.patch<{ link: ShareLinkSummary }>(API_ROUTES.SHARES.UPDATE(shareId), request);
+    return link;
   }
 
   /**

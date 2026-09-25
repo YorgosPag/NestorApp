@@ -3,7 +3,8 @@
  *
  * Replaces `getAdminFirestore()` with a fully in-memory data store.
  * Supports: `collection().doc().get/set/update/delete`, `where().limit().get()`,
- * `count().get()`, `runTransaction(tx => …)` (σειριακό — βλ. `MockTransaction`).
+ * `count().get()`, `runTransaction(tx => …)` (σειριακό — βλ. `MockTransaction`),
+ * `batch()` (αναβαλλόμενο ως το `commit` — βλ. `MockWriteBatch`).
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ΓΙΑΤΙ ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `ai-pipeline` (μετακίνηση 2026-08-01, ADR-742)
@@ -249,9 +250,38 @@ class MockTransaction {
   }
 }
 
+/**
+ * **Αναβαλλόμενη** παρτίδα: οι εγγραφές μαζεύονται και εφαρμόζονται **μόνο** στο `commit()` —
+ * ίδια σημασιολογία με τον Firestore (παρτίδα χωρίς `commit` = καμία εγγραφή), ώστε ένα test να
+ * μπορεί να πιάσει τον κώδικα που ξεχνά το `commit`.
+ */
+class MockWriteBatch {
+  private readonly ops: Array<() => Promise<void>> = [];
+
+  update(ref: MockDocRef, data: DocData): MockWriteBatch {
+    this.ops.push(() => ref.update(data));
+    return this;
+  }
+
+  set(ref: MockDocRef, data: DocData, options?: { merge?: boolean }): MockWriteBatch {
+    this.ops.push(() => ref.set(data, options));
+    return this;
+  }
+
+  delete(ref: MockDocRef): MockWriteBatch {
+    this.ops.push(() => ref.delete());
+    return this;
+  }
+
+  async commit(): Promise<void> {
+    for (const op of this.ops.splice(0)) await op();
+  }
+}
+
 export interface MockFirestoreInstance {
   collection(name: string): MockCollectionRef;
   runTransaction<T>(fn: (tx: MockTransaction) => Promise<T>): Promise<T>;
+  batch(): MockWriteBatch;
 }
 
 export interface MockFirestoreKit {
@@ -279,6 +309,10 @@ export function createMockFirestore(): MockFirestoreKit {
 
     runTransaction<T>(fn: (tx: MockTransaction) => Promise<T>): Promise<T> {
       return fn(new MockTransaction());
+    },
+
+    batch(): MockWriteBatch {
+      return new MockWriteBatch();
     },
   };
 
