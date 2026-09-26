@@ -27,7 +27,12 @@
  * ⛔ **ΔΕΝ ΕΞΑΙΡΕΙΤΑΙ ό,τι ψαλιδίζεται από πρόγονο με `clip`/`hidden`** — αυτή η εξαίρεση θα ήταν
  * ακριβώς το κάλυμμα που έκρυψε το ελάττωμα. Το **ΚΛΕΙΣΤΟ** σύνολο εξαιρέσεων, κοινό στις δύο:
  *   (α) απόγονοι **δηλωμένης** κύλισης (`overflow-x: auto | scroll`) — εκεί το «πέρα από την
- *       άκρη» είναι σχεδιασμός, και ο χρήστης το φτάνει σύροντας (λωρίδα καρτελών, πίνακες)·
+ *       άκρη» είναι σχεδιασμός, και ο χρήστης το φτάνει σύροντας (λωρίδα καρτελών, πίνακες).
+ *       ⚠️ Στη **δεύτερη** ερώτηση η κύλιση εξαιρεί **μόνο ΑΝΑΜΕΣΑ** στο κομμένο και σε όποιον το
+ *       ψαλιδίζει (μέσα στην αλυσίδα του `recordClip`), **ποτέ «κάπου από πάνω»**. Μετρημένο 2026-09-26
+ *       (μετάλλαξη Μ3): όλη η λίστα του `/search/results` ζει σε `overflow-y-auto` — και κατά το CSS το
+ *       `overflow-x` υπολογίζεται τότε σε `auto` — άρα ήταν **ΤΥΦΛΗ**. Ο τίτλος που κόβεται από το ΔΙΚΟ
+ *       του κουτί δεν αποκαλύπτεται από καμία κύλιση προγόνου·
  *   (β) απόγονοι ενός **κλειστού** συνόλου επιφανειών που τοποθετούν παιδιά έξω από το πλαίσιο
  *       **εκ κατασκευής** (χάρτες) — δηλωμένο στο spec με λόγο, ποτέ μαντεμένο εδώ·
  *   (γ) σκηνές **ολόκληρες** εκτός οθόνης που ο συγγραφέας δήλωσε `inert` + `aria-hidden` (βλ. παρακάτω)·
@@ -86,10 +91,13 @@ export function collectReflowFindings(allowedSurfaces: readonly string[]): Reflo
     const overflowX = getComputedStyle(el).overflowX;
     return overflowX === 'hidden' || overflowX === 'clip';
   };
-  /** (α) + (β): κάποιος πρόγονος ΑΥΣΤΗΡΑ πάνω από το `el` κυλά, ή είναι επιφάνεια χάρτη. */
-  const exempt = (el: Element): boolean => {
+  /**
+   * (α) + (β) όταν `viaScroll`, αλλιώς μόνο (β): κάποιος πρόγονος ΑΥΣΤΗΡΑ πάνω από το `el` κυλά, ή είναι
+   * επιφάνεια χάρτη. Η δεύτερη ερώτηση περνά `false`: εκεί η κύλιση κρίνεται στη ΘΕΣΗ της στην αλυσίδα.
+   */
+  const exempt = (el: Element, viaScroll = true): boolean => {
     for (let p = el.parentElement; p !== null && p !== document.body; p = p.parentElement) {
-      if (scrollsX(p)) return true;
+      if (viaScroll && scrollsX(p)) return true;
       if (allowedSurfaces.some((selector) => p.matches(selector))) return true;
     }
     return false;
@@ -228,7 +236,7 @@ export function collectReflowFindings(allowedSurfaces: readonly string[]): Reflo
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
     const host = node.parentElement;
     const text = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
-    if (host === null || text === '' || exempt(host) || outOfScope(host)) continue;
+    if (host === null || text === '' || exempt(host, false) || outOfScope(host)) continue;
     // (στ) Το κείμενο ενός πεδίου κυλά μέσα στο πεδίο· το ΙΔΙΟ το πεδίο μετρά στο 2β.
     if (host.closest('input, textarea, select, option')) continue;
     const range = document.createRange();
@@ -243,7 +251,7 @@ export function collectReflowFindings(allowedSurfaces: readonly string[]): Reflo
   // 2β. Χειριστήρια · γραφικά · κουτιά με ορατό όριο — το ΠΕΡΙΓΡΑΜΜΑ τους.
   for (const el of Array.from(document.body.querySelectorAll('*'))) {
     const rect = el.getBoundingClientRect();
-    if (invisible(el, rect) || exempt(el) || outOfScope(el) || !visibleThing(el)) continue;
+    if (invisible(el, rect) || exempt(el, false) || outOfScope(el) || !visibleThing(el)) continue;
     // Ένα inline `<a>` μέσα σε `truncate` ΕΙΝΑΙ το κείμενο που αποκόπηκε δηλωμένα (ε) — όχι κουτί που χάθηκε.
     const inline = getComputedStyle(el).display === 'inline';
     recordClip(containingBlockOf(el), rect.left, rect.right, `<${el.tagName.toLowerCase()}> ${labelOf(el)}`.trim(), inline);
