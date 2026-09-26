@@ -84,6 +84,8 @@
     "test:isco-sentinel": "jest scripts/__tests__/isco-sentinel.test.ts --verbose",
     "firebase-storage:cors:apply": "gcloud storage buckets update gs://pagonis-87766.firebasestorage.app --cors-file=infrastructure/firebase-storage/cors.json",
     "firebase-storage:cors:verify": "gcloud storage buckets describe gs://pagonis-87766.firebasestorage.app --format=\"value(cors_config)\"",
+    "firebase-storage:lifecycle:apply": "gcloud storage buckets update gs://pagonis-87766.firebasestorage.app --lifecycle-file=infrastructure/firebase-storage/lifecycle.json",
+    "firebase-storage:lifecycle:verify": "gcloud storage buckets describe gs://pagonis-87766.firebasestorage.app --format=\"value(lifecycle_config)\"",
     "audit-coverage:audit": "node scripts/check-entity-audit-coverage.js --all --verbose",
     "audit-coverage:baseline": "node scripts/check-entity-audit-coverage.js --write-baseline",
     "nav:audit": "node scripts/check-navigation-labels.js",

@@ -11,7 +11,15 @@ This directory holds **config-as-code** for the Firebase Storage bucket
 
 | File | Purpose |
 |------|---------|
-| `cors.json` | CORS policy applied to the bucket — controls which web origins may read/write storage objects |
+| `cors.json` | CORS policy applied to the bucket — controls which web origins may read/write storage objects. `Range` · `Content-Range` · `X-Goog-Resumable` let a browser send chunks and **resume** an interrupted resumable upload (GCS uses `responseHeader` for both allowed and exposed headers) (ADR-884 Κ3α: 360° panoramas) |
+| `lifecycle.json` | Object lifecycle rules — deletes the **quarantine** `tour-ingest/` after 1 day (abandoned or rejected panorama uploads, ADR-884 Φ0.8). ⚠️ `--lifecycle-file` **replaces the whole** lifecycle config: add new rules **here**, never by hand in the console. Verified empty before the first apply (2026-09-26) |
+
+### Apply / Verify lifecycle
+
+```bash
+pnpm firebase-storage:lifecycle:apply
+pnpm firebase-storage:lifecycle:verify
+```
 
 The bucket also has two more pieces of config that live elsewhere in the repo:
 

@@ -993,6 +993,10 @@
         "decline": "Decline"
       }
     },
+    "tour": {
+      "open": "360° tour",
+      "back": "Back to the listing"
+    },
     "stayChannels": {
       "title": "Channel sync (iCal)",
       "lead": "Send your bookings to the channels and pull in theirs — so the calendar says the same thing everywhere.",

@@ -176,6 +176,15 @@ function readCaptureVocabulary(raw: Record<string, unknown>) {
   return { source, provenance, audience, milestone };
 }
 
+/**
+ * Ο κόμβος: `null` **δηλωμένο** ⇒ ατοποθέτητη· `undefined` ⇒ απόν ή αδιάβαστο. 🔴 Το απόν **δεν** γίνεται
+ * «ατοποθέτητη»: ο διακομιστής γράφει πάντα το πεδίο, άρα απουσία = έγγραφο που δεν καταλάβαμε.
+ */
+function readPlacement(raw: unknown): string | null | undefined {
+  if (raw === null) return null;
+  return text(raw) ?? undefined;
+}
+
 /** **Διαβάζει ένα αποθηκευμένο έγγραφο ως λήψη.** Λήψη χωρίς αναγνώσιμα δικαιώματα ⇒ `null` (Φ0.14). */
 export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture | null {
   if (!isRecord(raw)) return null;
@@ -183,10 +192,11 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   const signatory = readCaptureSignatory(raw.signatory);
   const rights = readMediaRights(raw.rights);
   const tileset = readTileset(raw.tileset);
-  const [tourId, nodeId, originalFileId, uploadedBy] = [raw.tourId, raw.nodeId, raw.originalFileId, raw.uploadedBy].map(text);
+  const nodeId = readPlacement(raw.nodeId);
+  const [tourId, originalFileId, uploadedBy] = [raw.tourId, raw.originalFileId, raw.uploadedBy].map(text);
   const [capturedAt, createdAt] = [normalizeToISO(raw.capturedAt), normalizeToISO(raw.createdAt)];
   if (vocabulary === null || signatory === undefined || rights === null || tileset === null) return null;
-  if (tourId === null || nodeId === null || originalFileId === null || uploadedBy === null) return null;
+  if (tourId === null || nodeId === undefined || originalFileId === null || uploadedBy === null) return null;
   if (capturedAt === null || createdAt === null || !isFiniteNumber(raw.headingRad)) return null;
   return {
     id, tourId, nodeId, capturedAt, createdAt, originalFileId, uploadedBy, rights, tileset, signatory,

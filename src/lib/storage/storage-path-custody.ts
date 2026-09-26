@@ -122,7 +122,7 @@ export type StorageCustodyGap =
 // =============================================================================
 
 /**
- * Πώς κρίνεται κάθε ρίζα. **Οι δώδεκα ρίζες των 23 μπλοκ** του `storage.rules` (ADR-864 §19 πρόσθεσε το `mandate-evidence`).
+ * Πώς κρίνεται κάθε ρίζα — **κάτοπτρο** των μπλοκ του `storage.rules` (ADR-864 §19 `mandate-evidence` · ADR-884 `tour-ingest`/`tour-tiles`).
  *
  * 🔑 `'company'`/`'user'` σημαίνει **«ο μισθωτής είναι το 2ο τμήμα»**· `'shared'`
  * και `'server-only'` δεν έχουν μισθωτή στη διαδρομή.
@@ -163,6 +163,12 @@ const STORAGE_ROOT_CUSTODY: Readonly<Record<string, StorageCustodyKind>> = {
   'asset-packs': 'server-only',
   // ADR-864 §19 — το παγωμένο αποδεικτικό ανήκει στη σχέση: `allow read, write: if false` για ΚΑΘΕ client.
   'mandate-evidence': 'server-only',
+  // ADR-884 Φ0.8 — η ΚΑΡΑΝΤΙΝΑ των πανοραμάτων (`tour-ingest/{tourId}/{uploadId}`): γράφεται μόνο μέσω συνεδρίας που
+  //   άνοιξε ο διακομιστής αφού έκρινε, διαβάζεται μόνο από την ολοκλήρωση· `read, write: if false` για κάθε client.
+  //   Χρέος του Κ2α (οι κανόνες μπήκαν χωρίς γραμμή εδώ) — κλείστηκε στο Κ3α, όταν η καραντίνα απέκτησε καταναλωτή.
+  'tour-ingest': 'server-only',
+  // ADR-884 Φ0.4 — τα ιδιωτικά πλακίδια (`on-request`/`link-only`): μόνο πίσω από κουπόνι θέασης του διακομιστή (Κ3β).
+  'tour-tiles': 'server-only',
 };
 
 /**

@@ -91,3 +91,11 @@ export function offerThreadHref(ownerPropertyId: string, threadId: string) {
 export function offerStayCalendarHref(ownerPropertyId: string) {
   return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}/calendar`);
 }
+
+/**
+ * ADR-884 Κ3α — η **περιήγηση 360°** της αγγελίας (φωτογράφοι + εισερχόμενα λήψεων). Χωριστή σελίδα, ίδιο δόγμα με το
+ * ημερολόγιο: το slice της καρτέλας (η μεγαλύτερη του `(me)`) δεν κουβαλά το λεξιλόγιο της περιήγησης.
+ */
+export function offerTourHref(ownerPropertyId: string) {
+  return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}/tour`);
+}

@@ -33,6 +33,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 import {
   issueTourCaptureInvitation,
   listPendingTourCaptureInvitations,
+  listTourCaptureGrants,
   revokeTourCaptureGrant,
   revokeTourCaptureInvitation,
   type IssueTourCaptureInvitationInput,
@@ -281,6 +282,23 @@ describe('Υ — ο υπεύθυνος', () => {
     const states = Object.fromEntries(listed.invitations.map((i) => [i.id, i.state]));
     expect(states).toEqual({ [live.invitation.id]: 'pending', [stale.invitation.id]: 'expired' });
     expect(kit.writes()).toHaveLength(0);
+  });
+
+  it('Υ9 — λίστα αδειών: ενεργή ⇒ `active`, ανακλημένη ⇒ `revoked` (ορατή για ξαναπρόσκληση)· ξένος ⇒ `not-manager`', async () => {
+    const first = await issue();
+    await acceptTourCaptureInvitation(db, { token: first.token, identity: photographer() });
+    const second = await issue({ inviteeEmailRaw: 'b@example.com' });
+    await acceptTourCaptureInvitation(db, { token: second.token, identity: photographer({ email: 'b@example.com', uid: 'u2' }) });
+    await revokeTourCaptureGrant(db, { subject: SUBJECT, actor: MANAGER, granteeUid: 'u2' });
+
+    const listed = await listTourCaptureGrants(db, { subject: SUBJECT, actor: MANAGER });
+    if (listed.kind !== 'listed') throw new Error('αναμενόταν λίστα');
+    expect(Object.fromEntries(listed.grants.map((g) => [g.granteeUid, g.standing])))
+      .toEqual({ [PHOTOGRAPHER_UID]: 'active', u2: 'revoked' });
+    // Ο υπεύθυνος βλέπει ΑΝΘΡΩΠΟ (το email που έγραψε ο ίδιος), ποτέ ωμό uid.
+    expect(Object.fromEntries(listed.grants.map((g) => [g.granteeUid, g.inviteeEmail])))
+      .toEqual({ [PHOTOGRAPHER_UID]: EMAIL, u2: 'b@example.com' });
+    expect(await listTourCaptureGrants(db, { subject: SUBJECT, actor: STRANGER })).toEqual({ kind: 'refused', reason: 'not-manager' });
   });
 });
 

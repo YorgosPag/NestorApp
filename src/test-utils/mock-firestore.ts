@@ -61,6 +61,12 @@ class MockQuery {
     protected journal: MockWriteRecord[],
   ) {}
 
+  static group(store: Store, name: string, journal: MockWriteRecord[]): MockQuery {
+    const q = new MockQuery(store, name, journal);
+    q.group = true;
+    return q;
+  }
+
   where(field: string, op: string, value: unknown): MockQuery {
     const q = this.clone();
     q.clauses.push({ field, op, value });
@@ -80,13 +86,24 @@ class MockQuery {
     return q;
   }
 
+  /** `true` ⇒ ερώτημα **collectionGroup**: κάθε συλλογή με αυτό το τελικό όνομα, κάτω από οποιονδήποτε γονέα. */
+  protected group = false;
+
+  /** Οι εγγραφές που βλέπει το ερώτημα — `[συλλογή, id, δεδομένα]`, ώστε κάθε `ref` να κρατά τη **δική του** διαδρομή. */
+  private scannedEntries(): Array<[string, string, DocData]> {
+    const collections = this.group
+      ? [...this.store.keys()].filter((key) => key === this.collectionName || key.endsWith(`/${this.collectionName}`))
+      : [this.collectionName];
+    return collections.flatMap((name) =>
+      [...(this.store.get(name) ?? new Map<string, DocData>()).entries()].map(([id, data]): [string, string, DocData] => [name, id, data]));
+  }
+
   async get(): Promise<{ docs: MockDocSnap[]; empty: boolean; size: number }> {
-    const col = this.store.get(this.collectionName) ?? new Map<string, DocData>();
-    let entries = [...col.entries()];
+    let entries = this.scannedEntries();
 
     // Apply filters
     for (const clause of this.clauses) {
-      entries = entries.filter(([id, data]) => {
+      entries = entries.filter(([, id, data]) => {
         const fieldValue = clause.field === 'id' ? id : data[clause.field];
         switch (clause.op) {
           case '==': return fieldValue === clause.value;
@@ -106,7 +123,7 @@ class MockQuery {
     entries = entries.slice(0, this._limit);
 
     const docs = entries.map(
-      ([id, data]) => new MockDocSnap(id, data, true, this.collectionName, this.store, this.journal),
+      ([name, id, data]) => new MockDocSnap(id, data, true, name, this.store, this.journal),
     );
     return { docs, empty: docs.length === 0, size: docs.length };
   }
@@ -125,6 +142,7 @@ class MockQuery {
     q.clauses = [...this.clauses];
     q._limit = this._limit;
     q._orderByField = this._orderByField;
+    q.group = this.group;
     return q;
   }
 }
@@ -173,6 +191,16 @@ class MockDocRef {
     return this.docId;
   }
 
+  /** Η πλήρης διαδρομή — όπως `DocumentReference.path`. */
+  get path(): string {
+    return `${this.collectionName}/${this.docId}`;
+  }
+
+  /** Σύγχρονη ερώτηση ύπαρξης — για το `create` της σειριακής συναλλαγής (όχι API του Firestore). */
+  exists(): boolean {
+    return this.store.get(this.collectionName)?.has(this.docId) ?? false;
+  }
+
   /**
    * **Υποσυλλογή** — κλειδί αποθήκευσης η πλήρης διαδρομή (`γονέας/id/όνομα`), όπως στον Firestore:
    * ίδιο όνομα κάτω από άλλον γονέα είναι **άλλη** συλλογή (ADR-884 Κ2 — οι λήψεις ζουν κάτω από
@@ -212,6 +240,18 @@ class MockDocRef {
       col.set(this.docId, { ...data });
     }
     this.journal.push({ kind: 'set', collection: this.collectionName, docId: this.docId, data });
+  }
+
+  /**
+   * **Δημιουργία που αποτυγχάνει αν υπάρχει** — όπως `DocumentReference.create` (ALREADY_EXISTS). Ο κώδικας
+   * «γέννα αν λείπει» (ADR-884 Κ3α) στηρίζεται ακριβώς σε αυτή τη διάκριση· ένα `set` θα σκέπαζε το υπάρχον.
+   * Στο ημερολόγιο γράφεται ως `set` — η διάκριση ζει στη ρίψη, όχι στο είδος της εγγραφής.
+   */
+  async create(data: DocData): Promise<void> {
+    if (this.store.get(this.collectionName)?.has(this.docId)) {
+      throw new Error(`ALREADY_EXISTS: ${this.collectionName}/${this.docId}`);
+    }
+    await this.set(data);
   }
 
   async update(data: DocData): Promise<void> {
@@ -273,6 +313,13 @@ class MockTransaction {
     void ref.set(data, options);
     return this;
   }
+
+  /** Σύγχρονη ρίψη, ώστε το `ALREADY_EXISTS` να απορρίπτει τη συναλλαγή όπως στον Firestore. */
+  create(ref: MockDocRef, data: DocData): MockTransaction {
+    if (ref.exists()) throw new Error(`ALREADY_EXISTS: ${ref.path}`);
+    void ref.set(data);
+    return this;
+  }
 }
 
 /**
@@ -305,6 +352,7 @@ class MockWriteBatch {
 
 export interface MockFirestoreInstance {
   collection(name: string): MockCollectionRef;
+  collectionGroup(name: string): MockQuery;
   runTransaction<T>(fn: (tx: MockTransaction) => Promise<T>): Promise<T>;
   batch(): MockWriteBatch;
 }
@@ -330,6 +378,11 @@ export function createMockFirestore(): MockFirestoreKit {
   const instance: MockFirestoreInstance = {
     collection(name: string): MockCollectionRef {
       return new MockCollectionRef(store, name, journal);
+    },
+
+    /** Όπως `Firestore.collectionGroup` — κάθε υποσυλλογή με αυτό το όνομα (ADR-884 Κ3α: «οι λήψεις μου»). */
+    collectionGroup(name: string): MockQuery {
+      return MockQuery.group(store, name, journal);
     },
 
     runTransaction<T>(fn: (tx: MockTransaction) => Promise<T>): Promise<T> {

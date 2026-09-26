@@ -127,7 +127,12 @@ export interface TourCaptureTileset {
 export interface TourCapture {
   readonly id: string;
   readonly tourId: string;
-  readonly nodeId: string;
+  /**
+   * Ο κόμβος του γράφου — `null` ⇒ **ατοποθέτητη** («εισερχόμενα»): ανέβηκε, δεν τοποθετήθηκε ακόμη στην κάτοψη
+   * (πρότυπο Matterport «Unplaced 360° Views», ADR-884 §4.5). Η τοποθέτηση είναι πράξη του υπευθύνου (Φ2)·
+   * ο γράφος **δεν** γεμίζει με κόμβους που δεν αποφάσισε κανείς.
+   */
+  readonly nodeId: string | null;
   /** Ο άξονας του χρονολογίου. */
   readonly capturedAt: string;
   readonly headingRad: number;
@@ -210,6 +215,26 @@ export interface TourCaptureGrant extends ScopedGrant<TourGrantScope> {
  * στην περιήγηση): αν η αγγελία αλλάξει κάτοχο, η περιήγηση μένει στην **ίδια** διαδρομή (ντετερμινιστικό id)
  * — χωρίς αυτό, η πρόσκληση του παλιού υπευθύνου θα έδινε άδεια λήψης στον χώρο του **νέου**.
  */
+/**
+ * **Η όψη μιας πρόσκλησης φωτογράφου πριν την απόφαση** (Κ3α) — ό,τι βλέπει όποιος κρατά τον σύνδεσμο, **πριν**
+ * από κάθε σύνδεση. Ίδιο δόγμα με το `WorkspaceInvitationPreview` (ADR-853 §5 #4): **κανένα** προσωπικό δεδομένο —
+ * ούτε το email του παραλήπτη, ούτε id. Τα κενά (`null`) τα ονομάζει η οθόνη από τα locales (N.11).
+ */
+export interface TourCaptureInvitationPreview {
+  /** Το ακίνητο (τίτλος αγγελίας · όνομα μονάδας) — `null` αν δεν έχει δηλωθεί. */
+  readonly propertyLabel: string | null;
+  /** Το γραφείο που προσκαλεί — `null` για αγγελία **ιδιώτη** (η οθόνη λέει «ιδιοκτήτης»). */
+  readonly hostName: string | null;
+  /** Ο λόγος που έγραψε ο υπεύθυνος — ο φωτογράφος ξέρει **για ποια δουλειά** καλείται. */
+  readonly reason: string;
+  /** Ως πότε θα μπορεί να ανεβάζει, αν δεχτεί. */
+  readonly grantExpiresAt: string;
+  /** Ως πότε ισχύει ο σύνδεσμος. */
+  readonly expiresAt: string;
+  /** «Δηλωμένη, όχι επαληθευμένη» ταυτότητα του προσκαλούντος — ίδιο πεδίο με την όψη χώρου. */
+  readonly identityAssurance: 'declared';
+}
+
 export type TourCaptureInvitation = InvitationRecordCore & CustodyScope & {
   readonly tourId: string;
   /** Η ρίζα — από εδώ ξαναβρίσκεται η περιήγηση στην αποδοχή, ποτέ από `tourId` του πελάτη. */

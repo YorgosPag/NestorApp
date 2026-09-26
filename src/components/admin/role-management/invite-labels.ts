@@ -31,14 +31,14 @@
  */
 
 // ⚠️ **TYPE-ONLY ΠΕΡΑ ΑΠΟ ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΔΙΑΚΟΜΙΣΤΗ, ΚΑΙ ΕΙΝΑΙ ΖΩΝΤΑΝΟ ΙΔΙΩΜΑ ΕΔΩ.**
-//    Το `workspace-invitation-notice.ts` ξεκινά με `import 'server-only'`, αλλά ένα
+//    Το `server/invitations/invitation-notice.ts` ξεκινά με `import 'server-only'`, αλλά ένα
 //    `import type` **σβήνεται στη μεταγλώττιση** — δεν φτάνει τίποτα στο bundle του
 //    φυλλομετρητή. Τρεις πελατειακές επιφάνειες το κάνουν ήδη από το
 //    `@/server/admin/admin-guards` (`OperatorInboxClient` · `AIInboxClient` ·
 //    `useAIInboxState`). 🔑 Η εναλλακτική — **αντιγραφή** των τριών εκβάσεων εδώ — θα ήταν
 //    **δεύτερο λεξιλόγιο** ελεύθερο να αποκλίνει την πρώτη φορά που ο πάροχος αποκτήσει
 //    τέταρτη έκβαση (N.0.2 · ADR-749).
-import type { InvitationNoticeOutcome } from '@/server/auth/workspace-invitation-notice';
+import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 // ⚠️ Ο αναγνώστης ζει στο `services/workspace/`, **δίπλα στον καλούντα του** — το ίδιο
 //    ζευγάρι που έχει ήδη το `services/contact/` (`first-contact.client.ts` +
 //    `first-contact-failure-readers.ts`). Εδώ μένουν **μόνο οι λέξεις**.

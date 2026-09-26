@@ -35,7 +35,7 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 //    δεν φτάνει στο bundle. Ζωντανό ιδίωμα του έργου (`OperatorInboxClient` ·
 //    `AIInboxClient` · `useAIInboxState`, όλα από `@/server/admin/admin-guards`).
 //    Η εναλλακτική — αντιγραφή των τριών εκβάσεων — θα ήταν **δεύτερο λεξιλόγιο** (N.0.2).
-import type { InvitationNoticeOutcome } from '@/server/auth/workspace-invitation-notice';
+import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import type { InvitableRole } from '@/types/workspace-invitation';
 
 import type { WorkspaceInvitationRefusal } from '@/types/workspace-invitation';

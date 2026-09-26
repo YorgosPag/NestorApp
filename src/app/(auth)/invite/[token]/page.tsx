@@ -54,8 +54,8 @@ import {
   EXIT_BY_REFUSAL,
   REFUSAL_IS_NOT_FOUND,
 } from '@/components/workspace-invite/workspace-invite-labels';
+import { invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
 import { decodeRouteParam } from '@/lib/routes/route-param';
-import { loginHref } from '@/lib/routes/return-path';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
 import { readPageIdentity } from '@/server/auth/page-identity';
 import {
@@ -85,16 +85,14 @@ function viewOf(
   viewerEmail: string | null,
 ): WorkspaceInvitationLinkView {
   switch (outcome.kind) {
-    case 'preview': {
-      const returnHere = loginHref(workspaceInvitationHref(token));
-      return {
-        kind: 'preview',
+    case 'preview':
+      return invitationPreviewViewOf({
         preview: outcome.preview,
+        addressedToViewer: outcome.addressedToViewer,
         token,
-        respond: respondOf(outcome.addressedToViewer, viewerEmail, returnHere),
-        switchAccountHref: returnHere,
-      };
-    }
+        viewerEmail,
+        invitationHref: workspaceInvitationHref(token),
+      });
     case 'refused':
       return { kind: 'refused', reason: outcome.reason, exit: EXIT_BY_REFUSAL[outcome.reason] };
     case 'unavailable':
@@ -102,19 +100,6 @@ function viewOf(
   }
 }
 
-/**
- * **Μπορεί να απαντήσει τώρα;** — ανώνυμος ⇒ σύνδεση· **άλλος λογαριασμός ⇒ το λέμε ΠΡΙΝ**
- * το κλικ (ADR-853 §13 ε.δ, πρότυπο Google/Slack «signed in as…»)· αλλιώς έτοιμος.
- */
-function respondOf(
-  addressedToViewer: boolean | null,
-  viewerEmail: string | null,
-  signInHref: string,
-): Extract<WorkspaceInvitationLinkView, { kind: 'preview' }>['respond'] {
-  if (viewerEmail === null) return { kind: 'sign-in', href: signInHref };
-  if (addressedToViewer === false) return { kind: 'other-account', signedInAs: viewerEmail };
-  return { kind: 'ready' };
-}
 
 export default async function WorkspaceInvitePage({
   params,

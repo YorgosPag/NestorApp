@@ -136,6 +136,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'bim-3d-aria': return () => import('./locales/el/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/el/bim-materials.json');
     case 'iso19650': return () => import('./locales/el/iso19650.json');
+    case 'spatial-tour': return () => import('./locales/el/spatial-tour.json');
     default: return null;
   }
 }
@@ -261,6 +262,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'bim-3d-aria': return () => import('./locales/en/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/en/bim-materials.json');
     case 'iso19650': return () => import('./locales/en/iso19650.json');
+    case 'spatial-tour': return () => import('./locales/en/spatial-tour.json');
     default: return null;
   }
 }

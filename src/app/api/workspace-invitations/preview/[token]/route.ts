@@ -45,6 +45,7 @@ import 'server-only';
 import { after, NextResponse, type NextRequest } from 'next/server';
 
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { INVITATION_PREVIEW_STATUS } from '@/server/invitations/invitation-http';
 import {
   previewWorkspaceInvitation,
   type InvitationPreviewOutcome,
@@ -82,20 +83,9 @@ type Segment = { params: Promise<{ token: string }> };
  * λεξιλογίου**, όχι λίστα του τι συμβαίνει σήμερα.
  */
 const STATUS_BY_REFUSAL: Readonly<Record<WorkspaceInvitationRefusal, number>> = {
-  /** Το κείμενο δεν είναι σύνδεσμός μας — **σφάλμα αιτήματος**, όχι κατάσταση πόρου. */
-  'link-invalid': 400,
-  /**
-   * RFC 9110 §15.5.20 **421 Misdirected Request** — ο σύνδεσμος εκδόθηκε για **άλλον** server (άλλο
-   * περιβάλλον/κλειδί)· αυτός εδώ δεν μπορεί να απαντήσει με κύρος.
-   */
-  'link-foreign': 421,
-  /** Έγκυρη υπογραφή, ανύπαρκτο έγγραφο: ο πόρος δεν βρίσκεται. */
-  'invitation-unknown': 404,
-  'expired': 410,
-  'already-used': 410,
-  'revoked': 410,
-  // ── Άφταστα από αυτή την πόρτα (θέλουν ταυτότητα) ─────────────────────────
-  'wrong-recipient': 403,
+  // 🔑 Οι αρνήσεις του **πυρήνα** έχουν **μία** σημασία στο δίκτυο για κάθε είδος πρόσκλησης (ADR-853 §20).
+  ...INVITATION_PREVIEW_STATUS,
+  // ── Άφταστα από αυτή την πόρτα (θέλουν ταυτότητα) — μόνο του χώρου ──────────
   'already-member': 409,
   'role-above-inviter': 422,
 };

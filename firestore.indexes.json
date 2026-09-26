@@ -8427,6 +8427,16 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "tour_capture_grants",
+      "fieldPath": "granteeUid",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
       "collectionGroup": "idempotency_records",
       "fieldPath": "expiresAt",
       "ttl": true,

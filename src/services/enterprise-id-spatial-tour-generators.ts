@@ -12,11 +12,13 @@
  * Προσθέτει **ονοματοδοσία, ποτέ λογική γέννησης**: οι μηχανές (`generateId`,
  * `mintDeterministicV4Id`) ζουν στην `EnterpriseIdService`.
  *
- * 🔑 **Δύο ντετερμινιστικές, τρεις τυχαίες** — και η διάκριση είναι το συμβόλαιο:
+ * 🔑 **Τρεις ντετερμινιστικές, τέσσερις τυχαίες** — και η διάκριση είναι το συμβόλαιο:
  * - `stour` από (είδος ρίζας, id): δύο ταυτόχρονες «δημιουργίες» γράφουν το **ίδιο** έγγραφο
  *   (idempotent, N.7.2 #3) — ίδιο ιδίωμα με το `PublicListing.id ≡ id ρίζας`.
  * - `tacr` από (περιήγηση, άνθρωπο): **ένα** αίτημα θέασης ανά άνθρωπο — ίδιο με το `wacr`.
- * - `tnod` / `tcap` / `tcin`: τυχαία. Η πρόσκληση **δεν** είναι ντετερμινιστική επίτηδες:
+ * - `tcap` από (ανέβασμα) όταν γεννιέται από **ολοκλήρωση ανεβάσματος** (Κ3α): διπλό κλικ ή επανάληψη
+ *   δικτύου στο «ολοκλήρωσε» γράφει την **ίδια** λήψη — ποτέ δύο λήψεις από ένα αρχείο.
+ * - `tnod` / `tcap` (λήψη χωρίς ανέβασμα, π.χ. απόδοση BIM της Φ3) / `tupl` / `tcin`: τυχαία. Η πρόσκληση **δεν** είναι ντετερμινιστική επίτηδες:
  *   επαναποστολή = νέο διακριτικό, το παλιό γίνεται `revoked` μέσα στην ίδια συναλλαγή (κοινός πυρήνας, ADR-853 §20).
  *
  * @module services/enterprise-id-spatial-tour-generators
@@ -50,5 +52,15 @@ export abstract class SpatialTourIdGenerators extends SavedListingIdGenerators {
 
   generateTourCaptureInvitationId(): string {
     return this.generateId(P.TOUR_CAPTURE_INVITATION).id;
+  }
+
+  /** Ένα ανέβασμα σε καραντίνα — τυχαίο: κάθε «ξεκίνα» είναι νέα συνεδρία. */
+  generateTourUploadId(): string {
+    return this.generateId(P.TOUR_UPLOAD).id;
+  }
+
+  /** Η **μία** λήψη που γεννά ένα ανέβασμα — η ολοκλήρωση είναι ιδεμπότητη επειδή το id **παράγεται**. */
+  generateDeterministicTourCaptureIdForUpload(uploadId: string): string {
+    return this.mintDeterministicV4Id(P.TOUR_CAPTURE, `upload:${uploadId}`);
   }
 }

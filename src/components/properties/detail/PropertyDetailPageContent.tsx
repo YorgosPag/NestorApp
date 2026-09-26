@@ -49,6 +49,7 @@ import '@/lib/design-system';
 
 import { PropertyIdentityHeader } from './PropertyIdentityHeader';
 import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
+import { SpatialTourPanel } from '@/components/spatial-tour/SpatialTourPanel';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
 import { updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
 import type { Property } from '@/types/property';
@@ -222,6 +223,9 @@ export function PropertyDetailPageContent({
             interest={interest}
             audience={marketingAudienceOf(state.property.marketingAudience)}
           />
+
+          {/* 📷 ADR-884 Κ3α — ίδιο πάνελ με την πλευρά ιδιώτη· διαχειρίζεται όποιος έχει `listings:listings:publish` στον μισθωτή. */}
+          <SpatialTourPanel subject={{ kind: 'company-property', id: state.property.id }} />
 
           <section className="flex min-h-0 flex-1 flex-col">
             <PropertyDetailSurface

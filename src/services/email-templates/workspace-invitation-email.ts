@@ -30,23 +30,25 @@ import 'server-only';
 
 import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import { globalRoleName } from '@/constants/global-role-text';
-import { deadlineDaysLeft } from '@/lib/date-local';
 import { publicUrl } from '@/lib/http/public-origin';
 import { workspaceInvitationHref } from '@/lib/workspace/workspace-routes';
-import { brandedSubject } from '@/server/comms/email-texts';
 import { INVITABLE_ROLES, type InvitableRole } from '@/types/workspace-invitation';
 
-import { BRAND, escapeHtml } from './base-email-template';
-import { wrapInAppFrame } from './app-message-email';
+import { escapeHtml } from './base-email-template';
 import type { ConfirmationEmailResult } from './confirmation-email-shared';
-import { renderShareCta } from './showcase-email-shared';
+import {
+  composeInvitationEmail,
+  invitationDaysRemaining,
+  invitationDetailLine,
+  type InvitationEmailCoreWording,
+} from './invitation-email-shared';
 
 // =============================================================================
 // 1. ΤΑ ΛΟΓΙΑ — ΑΝΑ ΓΛΩΣΣΑ
 // =============================================================================
 
-/** Τα λόγια μιας πρόσκλησης, σε **μία** γλώσσα. */
-interface InvitationWording {
+/** Τα λόγια μιας πρόσκλησης χώρου, σε **μία** γλώσσα — τα κοινά (κουμπί · δέσμευση · υποσημείωση) από τον σκελετό. */
+interface InvitationWording extends InvitationEmailCoreWording {
   /** ⚠️ Παίρνει το όνομα του χώρου: τα εισερχόμενα διαβάζονται **χωρίς** να ανοιχτεί το μήνυμα. */
   readonly subject: (workspace: string) => string;
   readonly heading: string;
@@ -56,23 +58,7 @@ interface InvitationWording {
   readonly roleLabel: string;
   /** ⚠️ Πληθυντικός/ενικός **ρητά**: «1 ημέρα» ≠ «1 ημέρες». */
   readonly expiry: (days: number) => string;
-  readonly cta: string;
-  /**
-   * 🔒 **Η γραμμή που κάνει το προωθημένο email ακίνδυνο** (§7.5): ο σύνδεσμος
-   * λειτουργεί **μόνο** για αυτή τη διεύθυνση. Λέγεται **πριν** ο άνθρωπος
-   * προωθήσει, όχι αφού αποτύχει.
-   *
-   * ⚠️ **Η ΔΙΑΤΥΠΩΣΗ ΚΡΑΤΑ ΛΕΞΕΙΣ, Ο RENDERER ΚΡΑΤΑ ΣΗΜΑΝΣΗ** — ίδιο ιδίωμα με το
-   * {@link intro} παραπάνω και με το `addressHtml` του `workspace-access-decision-email`.
-   * Ωμό `<strong>Ελληνικά</strong>` μέσα σε `.ts` το μπλοκάρει η πύλη N.11 *(το μοτίβο
-   * «κείμενο ανάμεσα σε ετικέτες» δεν ξεχωρίζει JSX από HTML προτύπου email)*, και η
-   * θεραπεία **δεν** είναι εξαίρεση: είναι να μη γράφεται η σήμανση δίπλα στη λέξη.
-   */
-  readonly boundToAddress: (onlyHtml: string) => string;
-  /** Η **λέξη** που τονίζεται στο {@link boundToAddress}. Τη σήμανση τη βάζει ο renderer. */
-  readonly onlyWord: string;
-  /** «Δεν το περίμενα» — η έξοδος χωρίς ενοχή, πρότυπο κάθε email ασφαλείας μας. */
-  readonly footnote: string;
+  // `cta` · `boundToAddress` · `onlyWord` · `footnote`: από το `InvitationEmailCoreWording` (κοινός σκελετός).
   /**
    * 🔴 **ΤΟ `roles` ΕΦΥΓΕ ΑΠΟ ΕΔΩ — ΚΑΙ Η ΠΡΟΗΓΟΥΜΕΝΗ ΓΡΑΦΗ ΤΟ ΑΠΑΓΟΡΕΥΕ ΡΗΤΑ** (ADR-853 §17).
    *
@@ -144,31 +130,7 @@ const INVITATION_TEXTS: Readonly<Record<HumanLanguage, InvitationWording>> = {
 };
 
 // =============================================================================
-// 2. Ο ΧΡΟΝΟΣ ΠΟΥ ΑΠΟΜΕΝΕΙ
-// =============================================================================
-
-/**
- * **Πόσες ημέρες μένουν** — ο κανόνας του SSoT (`deadlineDaysLeft`), με δάπεδο το 1.
- *
- * 🔑 **Η οθόνη ρωτά τον ΙΔΙΟ κανόνα** (ADR-853 §13 ε.γ): πριν, εδώ ζούσε δικό του
- * `Math.ceil` ενώ η οθόνη έκοβε ⇒ «7» στο email, «6» στην οθόνη για την ίδια λήξη.
- *
- * 🔑 **Γιατί «σε Ν ημέρες» επιτρέπεται ΕΔΩ, ενώ απαγορεύεται στην όψη**
- * (`WorkspaceInvitationView`: *«στιγμιότυπο που παλιώνει στο σύρμα»*): το email
- * **γράφεται μία φορά** και διαβάζεται λίγο μετά — είναι **στιγμιότυπο εξ ορισμού**.
- * Η οθόνη αντίθετα μένει ανοιχτή και ξαναζωγραφίζει, γι' αυτό εκείνη παίρνει
- * `expiresAt` και υπολογίζει μόνη της.
- *
- * ⚠️ **Στρογγυλοποίηση προς τα ΠΑΝΩ**: «λήγει σε 0 ημέρες» δεν λέει τίποτα σε άνθρωπο,
- * και «σε 6 ημέρες» για πρόσκληση 6 ημερών και 20 ωρών θα ήταν **μικρότερη** από την
- * αλήθεια — σε ό,τι αφορά προθεσμία, ποτέ δεν υποσχόμαστε λιγότερα από όσα δίνουμε.
- */
-function daysRemaining(expiresAt: string, nowValue: string): number {
-  return deadlineDaysLeft(expiresAt, Date.parse(nowValue)) ?? 1;
-}
-
-// =============================================================================
-// 3. Η ΣΥΝΑΡΜΟΛΟΓΗΣΗ
+// 2. Η ΣΥΝΑΡΜΟΛΟΓΗΣΗ — πάνω στον ΚΟΙΝΟ σκελετό (`invitation-email-shared`)
 // =============================================================================
 
 export interface WorkspaceInvitationEmailInput {
@@ -185,21 +147,13 @@ export interface WorkspaceInvitationEmailInput {
   readonly nowISOValue: string;
 }
 
-/** Τα στοιχεία της θέσης — **πριν** από το κουμπί, ποτέ μετά. */
-function renderDetails(wording: InvitationWording, roleName: string, days: number): string {
-  return `<p style="margin:0 0 4px;font-size:15px;color:${BRAND.gray};line-height:1.6;">`
-    + `${escapeHtml(wording.roleLabel)}: <strong>${escapeHtml(roleName)}</strong></p>`
-    + `<p style="margin:0 0 8px;font-size:15px;color:${BRAND.gray};line-height:1.6;">`
-    + `${wording.expiry(days)}</p>`;
-}
-
 /**
- * **Το email της πρόσκλησης, στη γλώσσα του παραλήπτη.**
+ * **Το email της πρόσκλησης, στη γλώσσα του παραλήπτη.** Η σειρά (στοιχεία **πριν** το κουμπί · «μόνο για αυτή
+ * τη διεύθυνση» πριν την προώθηση) ζει στον κοινό σκελετό — εδώ μένουν τα λόγια του χώρου.
  *
- * @returns `null` **χωρίς δημόσια διεύθυνση** — ποτέ email με σύνδεσμο που δεν ξέρουμε
- *   πού οδηγεί (ίδιο ιδίωμα με το `buildWorkspaceAccessDecisionEmail`). Ένα σχετικό
- *   `/invite/…` μέσα σε email **δεν ανοίγει πουθενά**, και ένα μαντεμένο `localhost`
- *   μοιάζει έγκυρο και δεν ανοίγει **ποτέ**.
+ * 🔑 **Οι ημέρες από τον ΙΔΙΟ κανόνα με την οθόνη** (ADR-853 §13 ε.γ) — `invitationDaysRemaining`.
+ *
+ * @returns `null` **χωρίς δημόσια διεύθυνση** — ποτέ email με σύνδεσμο που δεν ξέρουμε πού οδηγεί.
  */
 export function buildWorkspaceInvitationEmail(
   input: WorkspaceInvitationEmailInput,
@@ -209,61 +163,28 @@ export function buildWorkspaceInvitationEmail(
 
   const language = resolveHumanLanguage(input.language);
   const wording = INVITATION_TEXTS[language];
-
-  const workspace = input.workspaceName.trim().length > 0
-    ? input.workspaceName.trim()
-    : wording.unnamedWorkspace;
-  // 🔑 ADR-853 §17 — **ο ίδιος κατάλογος με την οθόνη**: το email έλεγε «Εσωτερικός χρήστης»
-  //    για τον ρόλο που η σελίδα προορισμού ονόμαζε αλλιώς. Το `??` δεν είναι μαντεψιά:
-  //    ο έλεγχος πληρότητας τρέχει ως άγκυρα, και εδώ μένει η τίμια εφεδρεία.
+  const workspace = input.workspaceName.trim().length > 0 ? input.workspaceName.trim() : wording.unnamedWorkspace;
+  // 🔑 ADR-853 §17 — **ο ίδιος κατάλογος με την οθόνη**. Το `??` είναι η τίμια εφεδρεία (η πληρότητα είναι άγκυρα).
   const roleName = globalRoleName(language, input.role) ?? input.role;
-  const days = daysRemaining(input.expiresAt, input.nowISOValue);
+  const expiry = wording.expiry(invitationDaysRemaining(input.expiresAt, input.nowISOValue));
 
-  const contentHtml =
-    `<div style="margin:0 0 24px;">`
-    + `<h2 style="margin:0 0 12px;font-size:20px;color:${BRAND.navyDark};">${escapeHtml(wording.heading)}</h2>`
-    + `<p style="margin:0 0 12px;font-size:15px;color:${BRAND.gray};line-height:1.6;">`
-    + `${wording.intro(`<strong>${escapeHtml(workspace)}</strong>`)}</p>`
-    + renderDetails(wording, roleName, days)
-    + renderShareCta(link, wording.cta)
-    + `<p style="margin:16px 0 0;font-size:13px;color:${BRAND.grayLight};line-height:1.6;">`
-    + `${wording.boundToAddress(`<strong>${escapeHtml(wording.onlyWord)}</strong>`)}</p>`
-    + `<p style="margin:8px 0 0;font-size:13px;color:${BRAND.grayLight};line-height:1.6;">`
-    + `${escapeHtml(wording.footnote)}</p>`
-    + `</div>`;
-
-  return {
-    subject: brandedSubject(wording.subject(workspace)),
-    html: wrapInAppFrame(contentHtml, language),
-    text: plainText(wording, workspace, roleName, days, link),
-  };
-}
-
-/** Το απλό κείμενο — **ίδια σειρά** με το HTML, χωρίς ετικέτες. */
-function plainText(
-  wording: InvitationWording,
-  workspace: string,
-  roleName: string,
-  days: number,
-  link: string,
-): string {
-  const strip = (html: string): string => html.replace(/<[^>]+>/g, '');
-  return [
-    wording.heading,
-    '',
-    strip(wording.intro(workspace)),
-    `${wording.roleLabel}: ${roleName}`,
-    strip(wording.expiry(days)),
-    '',
-    `${wording.cta}: ${link}`,
-    '',
-    strip(wording.boundToAddress(wording.onlyWord)),
-    wording.footnote,
-  ].join('\n');
+  return composeInvitationEmail({
+    language,
+    subject: wording.subject(workspace),
+    heading: wording.heading,
+    intro: { html: wording.intro(`<strong>${escapeHtml(workspace)}</strong>`), text: wording.intro(workspace) },
+    details: [
+      invitationDetailLine(wording.roleLabel, roleName),
+      // Το `expiry` δεν περιέχει τιμή ανθρώπου — μόνο αριθμό — άρα το κείμενο είναι ασφαλές χωρίς ετικέτες.
+      { html: expiry, text: expiry.replace(/<[^>]+>/g, '') },
+    ],
+    link,
+    core: wording,
+  });
 }
 
 // =============================================================================
-// 4. Η ΑΓΚΥΡΑ ΠΛΗΡΟΤΗΤΑΣ
+// 3. Η ΑΓΚΥΡΑ ΠΛΗΡΟΤΗΤΑΣ
 // =============================================================================
 
 /**

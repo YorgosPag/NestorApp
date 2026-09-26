@@ -15,14 +15,14 @@ import 'server-only';
  * γίνει δεκτή πρόσκληση που γεννά ήδη ληγμένη άδεια (το «ναι» του φωτογράφου δεν καταλήγει ποτέ σε «δεν μπορείς»).
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { evaluateScopedGrant } from '@/lib/auth/scoped-grant';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO } from '@/lib/date-local';
 import { tourCaptureGrantFromDocument, tourCaptureInvitationFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
-import type { TourActor } from '@/lib/spatial-tour/tour-authority';
+import { tourGrantStanding, type TourActor, type TourGrantStanding } from '@/lib/spatial-tour/tour-authority';
 import { createModuleLogger } from '@/lib/telemetry';
 import { custodyOnly, type CustodyScope } from '@/lib/workspace/custody-scope';
 import {
@@ -33,7 +33,7 @@ import {
 } from '@/server/invitations/invitation-lifecycle';
 import { defaultInvitationExpiryMs, mintInvitationToken } from '@/server/invitations/invitation-token';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
-import type { TourCaptureInvitation, TourSubject } from '@/types/spatial-tour';
+import type { TourCaptureGrant, TourCaptureInvitation, TourSubject } from '@/types/spatial-tour';
 
 import {
   checkTourGrantExpiry,
@@ -41,6 +41,7 @@ import {
   refuseTourAccess,
   type TourAccessRefused,
 } from './tour-access-shared';
+import { ensureManagedTour } from './tour-genesis';
 
 const logger = createModuleLogger('tour-capture-invitation');
 
@@ -96,7 +97,8 @@ export async function issueTourCaptureInvitation(
   const reason = input.reason.trim();
   if (reason.length === 0) return refuseTourAccess('reason-required');
 
-  const managed = await locateManagedTour(db, input.subject, input.actor);
+  // 🔑 Η πρώτη πρόσκληση **γεννά** την περιήγηση (Κ3α) — ο φωτογράφος χρειάζεται κάπου να ανεβάσει.
+  const managed = await ensureManagedTour(db, input.subject, input.actor);
   if (managed.kind === 'refused') return managed;
 
   const { invitation, token } = await mintTourCaptureInvitation({
@@ -213,8 +215,51 @@ export async function listPendingTourCaptureInvitations(
 }
 
 // =============================================================================
-// 3. ΑΝΑΚΛΗΣΗ ΑΔΕΙΑΣ ΛΗΨΗΣ — πράξη ανθρώπου, νικά τη λήξη
+// 3. ΟΙ ΑΔΕΙΕΣ ΛΗΨΗΣ — λίστα · ανάκληση (πράξη ανθρώπου, νικά τη λήξη)
 // =============================================================================
+
+/**
+ * Μια άδεια όπως τη βλέπει ο υπεύθυνος — με τη θέση της **τώρα** (παράγεται, δεν αποθηκεύεται) και **ποιος** είναι:
+ * το email της πρόσκλησης που τη γέννησε — το έγραψε ο **ίδιος** ο υπεύθυνος, άρα δεν αποκαλύπτει τίποτα νέο.
+ * `null` ⇒ άδεια χωρίς πρόσκληση (ή πρόσκληση που δεν διαβάζεται) — η οθόνη δεν δείχνει ποτέ ωμό uid.
+ */
+export type TourCaptureGrantView = TourCaptureGrant & {
+  readonly standing: TourGrantStanding;
+  readonly inviteeEmail: string | null;
+};
+
+/** Το email της πρόσκλησης που γέννησε την άδεια — ίδια υποσυλλογή, ίδια περιήγηση. */
+async function inviteeEmailOf(tourRef: DocumentReference, invitationId: string | null): Promise<string | null> {
+  if (invitationId === null) return null;
+  const snap = await tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURE_INVITATIONS).doc(invitationId).get();
+  return snap.exists ? tourCaptureInvitationFromDocument(snap.data(), invitationId)?.inviteeEmail ?? null : null;
+}
+
+/**
+ * **Ποιοι φωτογράφοι έχουν (ή είχαν) άδεια σε αυτή την περιήγηση.** Και οι ληγμένες/ανακλημένες: ο υπεύθυνος
+ * πρέπει να δει «έληξε» για να ξαναπροσκαλέσει. Άδεια που δεν διαβάζεται **παραλείπεται** — ο κριτής
+ * ανεβάσματος την αρνείται ούτως ή άλλως (fail-closed).
+ */
+export async function listTourCaptureGrants(
+  db: Firestore,
+  input: ManagerInput,
+): Promise<{ readonly kind: 'listed'; readonly grants: readonly TourCaptureGrantView[] } | TourAccessRefused> {
+  const managed = await locateManagedTour(db, input.subject, input.actor);
+  if (managed.kind === 'refused') return managed;
+  const nowMs = Date.parse(nowISO());
+  // tenant-scope-exempt: υποσυλλογή ΚΑΤΩ από ΜΙΑ περιήγηση, κριμένη με `mayManageTour` (ADR-884 Φ0.9).
+  const snap = await managed.tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURE_GRANTS).limit(LIST_LIMIT).get();
+  const read = snap.docs.flatMap((doc) => {
+    const grant = tourCaptureGrantFromDocument(doc.data(), doc.id);
+    return grant === null ? [] : [grant];
+  });
+  const grants = await Promise.all(read.map(async (grant) => ({
+    ...grant,
+    standing: tourGrantStanding(grant, 'tour:capture:upload', nowMs),
+    inviteeEmail: await inviteeEmailOf(managed.tourRef, grant.invitationId),
+  })));
+  return { kind: 'listed', grants };
+}
 
 /**
  * **Ανάκληση της άδειας ενός φωτογράφου** — κόβει το ανέβασμα αμέσως (`mayUploadTourCapture` ⇒ `revoked`).

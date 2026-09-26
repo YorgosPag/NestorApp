@@ -13,7 +13,7 @@ import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
-import type { CustodyScope } from '@/lib/workspace/custody-scope';
+import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type { SpatialTour, TourSubject } from '@/types/spatial-tour';
 
@@ -33,7 +33,14 @@ export type TourAccessRefusal =
   /** Πρόσκληση φωτογράφου χωρίς λόγο — ο φωτογράφος και το ίχνος πρέπει να ξέρουν **γιατί** (Φ0.5). */
   | 'reason-required'
   /** Ανάκληση άδειας λήψης που δεν υπάρχει (ή δεν διαβάζεται). */
-  | 'grant-absent';
+  | 'grant-absent'
+  /**
+   * Η περιήγηση ανήκει σε **προηγούμενο** κάτοχο της αγγελίας (id ντετερμινιστικό ⇒ ίδια διαδρομή μετά από
+   * μεταβίβαση, §4.4). Ποτέ σιωπηλή «υιοθεσία»: οι λήψεις και οι άδειες είναι του παλιού υπευθύνου.
+   */
+  | 'tour-custody-mismatch'
+  /** Υπάρχει έγγραφο περιήγησης που **δεν διαβάζεται** — ποτέ αντικατάσταση από πάνω του. */
+  | 'tour-unreadable';
 
 export type TourAccessRefused = { readonly kind: 'refused'; readonly reason: TourAccessRefusal };
 
@@ -88,5 +95,8 @@ export async function locateManagedTour(
   const location = await locateSpatialTour(db, subject);
   if (location.kind !== 'found' || location.tour === null) return refuseTourAccess('tour-absent');
   if (mayManageTour(location.record, actor) !== 'granted') return refuseTourAccess('not-manager');
+  // 🔴 Ο υπεύθυνος της ρίζας **τώρα** δεν διαχειρίζεται περιήγηση του **προηγούμενου** κατόχου (§4.4 — ίδια
+  //    διαδρομή μετά από μεταβίβαση). Ίδιος κριτής με τη γέννηση (`tour-genesis.ts`).
+  if (!isOwnedByCustody(location.tour.custody, location.custody)) return refuseTourAccess('tour-custody-mismatch');
   return { kind: 'managed', tourRef: location.tourRef, custody: location.custody };
 }

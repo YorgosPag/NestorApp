@@ -264,6 +264,14 @@ export const FILE_CATEGORIES = {
    * *(`lib/listings/listing-material.ts`)*. Δύο λεξιλόγια, δύο ερωτήσεις, καμία αντιστοίχιση 1:1.
    */
   MODELS: 'models',
+  /**
+   * **Πανοράματα 360° (equirectangular JPEG)** — ADR-884 Φ0.8.
+   *
+   * 🔑 **Ξεχωριστό από το `PHOTOS`, για τον ίδιο λόγο με το `MODELS`**: το πανόραμα είναι το **πρωτότυπο** μιας
+   * λήψης περιήγησης (`TourCapture.originalFileId`), όχι φωτογραφία της γκαλερί. Σε κοινό κάδο, κάθε ερώτημα
+   * «οι φωτογραφίες της αγγελίας» θα κατέβαζε 40 MB σφαίρες για να τις δείξει τεντωμένες.
+   */
+  PANORAMAS: 'panoramas',
 } as const;
 
 export type FileCategory = typeof FILE_CATEGORIES[keyof typeof FILE_CATEGORIES];
@@ -368,6 +376,8 @@ export const TRASH_RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
   // 🔑 90 = η ζώνη των **παραδοτέων μελέτης** (`DRAWINGS`/`FLOORPLANS`), όχι των φωτογραφιών:
   //    ένα `.glb` παράγεται από την ίδια μελέτη και η ανάκτησή του κοστίζει το ίδιο.
   [FILE_CATEGORIES.MODELS]: 90,
+  // Ίδια με τις φωτογραφίες: μια λήψη ξαναγίνεται — ένα παραδοτέο μελέτης όχι.
+  [FILE_CATEGORIES.PANORAMAS]: 30,
 };
 
 /**
@@ -389,6 +399,9 @@ export const ARCHIVE_RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
   // 🔑 10 χρόνια = **ίδια με τα `DRAWINGS`/`FLOORPLANS`**: το μοντέλο είναι η τρισδιάστατη
   //    έκφραση της **ίδιας** μελέτης, με το ίδιο βάρος τεκμηρίωσης (ADR-845 §6.3, Ε-3).
   [FILE_CATEGORIES.MODELS]: 365 * 10,
+  // Ίδια με τις φωτογραφίες — **εκτός** από τη λήψη «πριν κλείσουν οι τοίχοι» (Φ7, ψηφιακό βιβλίο του σπιτιού),
+  //   που θα κρατηθεί με δέσμευση (`hold`), όχι με μεγαλύτερη προεπιλογή για όλες.
+  [FILE_CATEGORIES.PANORAMAS]: 365 * 3,
 };
 
 /**
@@ -701,6 +714,28 @@ export const API_ROUTES = {
      */
     PREVIEW: (token: string) =>
       `/api/workspace-invitations/preview/${encodeURIComponent(token)}` as const,
+  },
+
+  // ── Χωρική περιήγηση — ροή φωτογράφου (ADR-884 Κ3α) ─────────────────────
+  // 🔑 Η περιήγηση βρίσκεται από τη **ρίζα** (είδος + id αγγελίας), **ποτέ** από `tourId` του πελάτη (Φ0.1).
+  //    Κάθε τμήμα κωδικοποιείται — ο κατασκευαστής δεν εξαρτάται από το αλφάβητο των ids.
+  SPATIAL_TOURS: {
+    CAPTURE_INVITATIONS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/capture-invitations` as const,
+    CAPTURE_INVITATION_REVOKE: (kind: string, subjectId: string, invitationId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/capture-invitations/${encodeURIComponent(invitationId)}/revoke` as const,
+    CAPTURE_GRANTS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/capture-grants` as const,
+    CAPTURE_GRANT_REVOKE: (kind: string, subjectId: string, granteeUid: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/capture-grants/${encodeURIComponent(granteeUid)}/revoke` as const,
+    UPLOADS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/uploads` as const,
+    UPLOADS_FINALIZE: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/uploads/finalize` as const,
+    CAPTURES: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/captures` as const,
+    /** Η πράξη του φωτογράφου· το token ταξιδεύει στο **σώμα** (RFC 6819 §5.1.5). */
+    REDEEM: '/api/spatial-tours/capture-invitations/redeem',
   },
 
   // ── Projects ──────────────────────────────────────────────────────────

@@ -53,6 +53,8 @@ const CATEGORY_ORDER: Readonly<Record<string, number>> = {
   [FILE_CATEGORIES.FLOORPLANS]: 7,
   [FILE_CATEGORIES.AUDIO]: 8,
   [FILE_CATEGORIES.VIDEOS]: 9,
+  [FILE_CATEGORIES.PANORAMAS]: 10,
+  [FILE_CATEGORIES.MODELS]: 11,
 };
 
 // ============================================================================

@@ -12,7 +12,10 @@
       "Content-Type",
       "Content-Length",
       "Authorization",
-      "x-goog-meta-*"
+      "x-goog-meta-*",
+      "Range",
+      "Content-Range",
+      "X-Goog-Resumable"
     ],
     "maxAgeSeconds": 3600
   }

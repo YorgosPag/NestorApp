@@ -287,6 +287,45 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       + 'γραφέας ρωτά «στην αγορά;» και τον ΕΝΑ κριτή mayAdminister (CHECK 3.56): ο κάτοχος δεν κρατά τη '
       + 'δική του αγγελία, αλλιώς θα φούσκωνε τη μετρική που βλέπει ο ίδιος. Ο αποθηκεύων είναι πάντα '
       + 'ο actor.ctx.uid — δεν έρχεται ποτέ από το σώμα.',
+  },  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/capture-invitations/route.ts',
+    why:
+      'ΔΙΑΧΕΙΡΙΣΗ ΧΩΡΙΚΗΣ ΠΕΡΙΗΓΗΣΗΣ (ADR-884 Φ0.3 · Κ3α). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (αγγελία owner-property, Α14): το withAuth θα του απαντούσε 401 για την ΔΙΚΗ του αγγελία. Η εξουσιοδότηση ΔΕΝ είναι του συνόρου: την κρίνει ο mayManageTour πάνω στη ΡΙΖΑ (κάτοχος ιδιώτη ⇒ mayPerform· εταιρική ⇒ decideCapability + ίδιος μισθωτής) — ποτέ tourId από τον πελάτη. Έκδοση/λίστα προσκλήσεων φωτογράφου.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/capture-invitations/[invitationId]/revoke/route.ts',
+    why:
+      'ΔΙΑΧΕΙΡΙΣΗ ΧΩΡΙΚΗΣ ΠΕΡΙΗΓΗΣΗΣ (ADR-884 Φ0.3 · Κ3α). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (αγγελία owner-property, Α14): το withAuth θα του απαντούσε 401 για την ΔΙΚΗ του αγγελία. Η εξουσιοδότηση ΔΕΝ είναι του συνόρου: την κρίνει ο mayManageTour πάνω στη ΡΙΖΑ (κάτοχος ιδιώτη ⇒ mayPerform· εταιρική ⇒ decideCapability + ίδιος μισθωτής) — ποτέ tourId από τον πελάτη. Ανάκληση πρόσκλησης: αναζήτηση ΚΑΤΩ από τη διαχειριζόμενη περιήγηση.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/capture-grants/route.ts',
+    why:
+      'ΔΙΑΧΕΙΡΙΣΗ ΧΩΡΙΚΗΣ ΠΕΡΙΗΓΗΣΗΣ (ADR-884 Φ0.3 · Κ3α). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (αγγελία owner-property, Α14): το withAuth θα του απαντούσε 401 για την ΔΙΚΗ του αγγελία. Η εξουσιοδότηση ΔΕΝ είναι του συνόρου: την κρίνει ο mayManageTour πάνω στη ΡΙΖΑ (κάτοχος ιδιώτη ⇒ mayPerform· εταιρική ⇒ decideCapability + ίδιος μισθωτής) — ποτέ tourId από τον πελάτη. Λίστα αδειών λήψης.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/capture-grants/[granteeUid]/revoke/route.ts',
+    why:
+      'ΔΙΑΧΕΙΡΙΣΗ ΧΩΡΙΚΗΣ ΠΕΡΙΗΓΗΣΗΣ (ADR-884 Φ0.3 · Κ3α). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (αγγελία owner-property, Α14): το withAuth θα του απαντούσε 401 για την ΔΙΚΗ του αγγελία. Η εξουσιοδότηση ΔΕΝ είναι του συνόρου: την κρίνει ο mayManageTour πάνω στη ΡΙΖΑ (κάτοχος ιδιώτη ⇒ mayPerform· εταιρική ⇒ decideCapability + ίδιος μισθωτής) — ποτέ tourId από τον πελάτη. Ανάκληση άδειας λήψης.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/uploads/route.ts',
+    why:
+      'ΑΝΕΒΑΣΜΑ ΛΗΨΗΣ 360° (ADR-884 Φ0.8 · Κ3α). ΜΙΑ πόρτα για υπεύθυνο ΚΑΙ φωτογράφο: ο φωτογράφος ΔΕΝ είναι μέλος κανενός χώρου (Φ0.5), άρα το withAuth θα τον απέκλειε. Κρίνει ο ΕΝΑΣ κριτής mayUploadTourCapture (υπεύθυνος Ή ενεργή άδεια λήψης tour_capture_grants/{uid}), και η ολοκλήρωση τον ΞΑΝΑΚΡΙΝΕΙ. Έναρξη: εισιτήριο + συνεδρία καραντίνας.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/uploads/finalize/route.ts',
+    why:
+      'ΑΝΕΒΑΣΜΑ ΛΗΨΗΣ 360° (ADR-884 Φ0.8 · Κ3α). ΜΙΑ πόρτα για υπεύθυνο ΚΑΙ φωτογράφο: ο φωτογράφος ΔΕΝ είναι μέλος κανενός χώρου (Φ0.5), άρα το withAuth θα τον απέκλειε. Κρίνει ο ΕΝΑΣ κριτής mayUploadTourCapture (υπεύθυνος Ή ενεργή άδεια λήψης tour_capture_grants/{uid}), και η ολοκλήρωση τον ΞΑΝΑΚΡΙΝΕΙ. Ολοκλήρωση: bytes → FileRecord → λήψη, ιδεμπότητη.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/captures/route.ts',
+    why:
+      'ΟΙ ΛΗΨΕΙΣ ΤΗΣ ΠΕΡΙΗΓΗΣΗΣ (ADR-884 Κ3α). Υπεύθυνος (ίσως ιδιώτης) ⇒ όλες· φωτογράφος (μέλος κανενός χώρου, Φ0.5) ⇒ ΜΟΝΟ όσες ανέβασε ο ίδιος, και μόνο με άδεια — η κρίση στην υπηρεσία, όχι στο σύνορο.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/capture-invitations/redeem/route.ts',
+    why:
+      'Η ΠΟΡΤΑ ΤΟΥ ΦΩΤΟΓΡΑΦΟΥ (ADR-884 Φ0.5 · ADR-853 §20). Η πρόσκληση φτάνει σε EMAIL· ο φωτογράφος ΔΕΝ είναι και ΔΕΝ γίνεται ποτέ μέλος χώρου — το withAuth θα απαντούσε 401 σε ακριβώς αυτόν. Η εξουσιοδότηση είναι το ΥΠΟΓΕΓΡΑΜΜΕΝΟ token ΚΑΙ το email ΤΟΥ Auth (κοινός πυρήνας, §7.5 · §15)· καμία γραφή claim.',
   },
 ];
 

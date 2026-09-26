@@ -17,6 +17,7 @@ import 'server-only';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { text } from '@/lib/agency/showcase-read-primitives';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { SPATIAL_TOUR_COLLECTION } from '@/lib/spatial-tour/spatial-tour-custody';
@@ -29,6 +30,8 @@ export type TourLocation =
   | {
       readonly kind: 'found';
       readonly record: TourSubjectRecord;
+      /** Πώς λέγεται το ακίνητο (τίτλος αγγελίας ιδιώτη · όνομα μονάδας γραφείου) — `null` αν λείπει. */
+      readonly label: string | null;
       readonly custody: CustodyScope;
       readonly tourRef: DocumentReference;
       /** `null` ⇒ δεν έχει φτιαχτεί ακόμη περιήγηση (ή το έγγραφο δεν διαβάζεται — βλάβη, όχι «δημόσια»). */
@@ -40,21 +43,26 @@ export type TourLocation =
   | { readonly kind: 'unscoped' };
 
 /** Η ρίζα, φορτωμένη **μέσα από το σύνορό της** — ποτέ ωμό `data()` για ιδιώτη (CHECK 3.74). */
-async function readSubjectRecord(db: Firestore, subject: TourSubject): Promise<TourSubjectRecord | null> {
+async function readSubjectRecord(
+  db: Firestore,
+  subject: TourSubject,
+): Promise<{ readonly record: TourSubjectRecord; readonly label: string | null } | null> {
   if (subject.kind === 'owner-property') {
     const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(subject.id).get();
     const property = ownerPropertyFromDocument(snap.data(), subject.id);
-    return property === null ? null : { kind: 'owner-property', property };
+    return property === null ? null : { record: { kind: 'owner-property', property }, label: text(property.title) };
   }
   const snap = await db.collection(COLLECTIONS.PROPERTIES).doc(subject.id).get();
   const data = snap.data();
-  return data === undefined ? null : { kind: 'company-property', property: { companyId: data.companyId } };
+  if (data === undefined) return null;
+  return { record: { kind: 'company-property', property: { companyId: data.companyId } }, label: text(data.name) };
 }
 
 /** **Βρες την περιήγηση μιας αγγελίας** — και τον κάτοχό της, όπως τον λέει η ρίζα **τώρα**. */
 export async function locateSpatialTour(db: Firestore, subject: TourSubject): Promise<TourLocation> {
-  const record = await readSubjectRecord(db, subject);
-  if (record === null) return { kind: 'absent' };
+  const subjectRead = await readSubjectRecord(db, subject);
+  if (subjectRead === null) return { kind: 'absent' };
+  const { record, label } = subjectRead;
   const custody = tourCustodyOf(record);
   if (custody === null) return { kind: 'unscoped' };
 
@@ -62,5 +70,5 @@ export async function locateSpatialTour(db: Firestore, subject: TourSubject): Pr
   const tourRef = db.collection(COLLECTIONS[SPATIAL_TOUR_COLLECTION[custodyKindOfScope(custody)]]).doc(tourId);
   const snap = await tourRef.get();
   const tour = snap.exists ? spatialTourFromDocument(snap.data(), tourId) : null;
-  return { kind: 'found', record, custody, tourRef, tour };
+  return { kind: 'found', record, label, custody, tourRef, tour };
 }

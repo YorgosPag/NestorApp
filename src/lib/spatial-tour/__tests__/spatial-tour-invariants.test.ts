@@ -91,6 +91,14 @@ describe('#1/#2 — checkTourCapture', () => {
     expect(kinds(checkTourCapture({ ...CAPTURE, baseCaptureId: 'x' }, null))).toEqual(['base-capture-unexpected']);
   });
 
+  it('🔴 #1 ατοποθέτητη παράγωγη ή βάση ⇒ ονομασμένη άρνηση (το null === null ΔΕΝ είναι «ίδιος κόμβος»)', () => {
+    expect(kinds(checkTourCapture({ ...staging, nodeId: null }, { ...base, nodeId: null }))).toEqual(['derived-capture-unplaced']);
+    expect(kinds(checkTourCapture({ ...staging, nodeId: null }, base))).toEqual(['derived-capture-unplaced']);
+    expect(kinds(checkTourCapture(staging, { ...base, nodeId: null }))).toEqual(['derived-capture-unplaced']);
+    // ✅ Μάρτυρας: η ατοποθέτητη as-built (το ανέβασμα του φωτογράφου) είναι έγκυρη.
+    expect(checkTourCapture({ ...CAPTURE, nodeId: null }, null)).toEqual([]);
+  });
+
   it('🔴 #1 το έγγραφο βάσης πρέπει να είναι ΑΥΤΟ που δηλώνει το baseCaptureId', () => {
     expect(kinds(checkTourCapture(staging, { ...base, id: 'άλλη' }))).toEqual(['base-capture-missing']);
   });
@@ -126,6 +134,12 @@ describe('#3 — δημόσιο ράφι και κοινό', () => {
     const other = { ...CAPTURE, id: 'b', nodeId: 'tnod_b' };
 
     expect(selectShelfCaptures([newer, broken, team, older, other], TOUR).map((c) => c.id)).toEqual(['new', 'b']);
+  });
+
+  it('🔴 ατοποθέτητη λήψη ΔΕΝ φτάνει στο ράφι, όσο νέα κι αν είναι', () => {
+    const placed = { ...CAPTURE, id: 'placed', capturedAt: '2026-01-01T00:00:00.000Z' };
+    const unplaced = { ...CAPTURE, id: 'inbox', nodeId: null, capturedAt: '2026-09-01T00:00:00.000Z' };
+    expect(selectShelfCaptures([unplaced, placed], TOUR).map((c) => c.id)).toEqual(['placed']);
   });
 
   it('προς public-listing μόνο με ρητή πράξη· στένεμα επιτρέπεται', () => {

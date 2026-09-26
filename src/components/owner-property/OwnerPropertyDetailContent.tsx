@@ -43,7 +43,7 @@ import {
 } from '@/lib/owner-property/owner-property-projection';
 import { projectListingShape } from '@/services/listings/public-listing-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
-import { MY_OFFERS_ROUTE, offerStayCalendarHref } from '@/lib/owner-property/owner-property-routes';
+import { MY_OFFERS_ROUTE, offerStayCalendarHref, offerTourHref } from '@/lib/owner-property/owner-property-routes';
 import {
   setOwnerListingAudience,
   setOwnerListingLifecycle,
@@ -300,6 +300,16 @@ function OwnerPropertyView({
             {t('property-market:offer.stayCalendar.open')}
           </Link>
         )}
+        {/*
+          📷 ADR-884 Κ3α — η **περιήγηση 360°** (φωτογράφοι + εισερχόμενα λήψεων) σε ΔΙΚΗ της σελίδα: ίδιο δόγμα με
+          το ημερολόγιο — το slice αυτής της καρτέλας δεν κουβαλά το λεξιλόγιο της περιήγησης (ADR-744 §20).
+        */}
+        <Link
+          href={offerTourHref(property.id)}
+          className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
+        >
+          {t('property-market:offer.tour.open')}
+        </Link>
       </nav>
 
       {/*

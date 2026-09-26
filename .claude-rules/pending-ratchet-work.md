@@ -2,6 +2,15 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **26/09 — CHECK 3.91 ΤΥΦΛΟ ΣΤΑ collectionGroup ΜΟΝΟΥ ΠΕΔΙΟΥ** *(ADR-884 §4.5 · ADR-870)*
+
+  Ο Firestore φτιάχνει **αυτόματα** δείκτη μονού πεδίου **μόνο** σε εμβέλεια `COLLECTION`. Ένα
+  `db.collectionGroup(X).where('f','==',v)` χρειάζεται **εξαίρεση πεδίου** με `queryScope: COLLECTION_GROUP` στο
+  `firestore.indexes.json` — αλλιώς `FAILED_PRECONDITION` στην παραγωγή. Η 3.91 έμεινε **πράσινη** πάνω στο
+  `listMyTourCaptureGrants` (`tour-capture-list.ts`) χωρίς την εξαίρεση (μπήκε χειροκίνητα). Θεραπεία: ο αναλυτής να
+  αναγνωρίζει `collectionGroup(...)` ως ξεχωριστό είδος ερωτήματος και να απαιτεί `fieldOverrides` ανά πεδίο ισότητας·
+  άγκυρα με μετάλλαξη (σβήσε την εξαίρεση ⇒ ΚΟΚΚΙΝΟ). Ίδια οικογένεια με το «0 = κανείς δεν κοίταξε».
+
 - 🟠 **25/09 — CHECK 3.16 ΤΥΦΛΟ ΣΤΑ ΜΠΛΟΚ ΥΠΟΣΥΛΛΟΓΩΝ** *(ADR-884 §4.3 · ADR-298)*
 
   Ο `parseFirestoreRules()` (`scripts/_shared/firestore-rules-parser.js`) κρατά μόνο το **πρώτο** τμήμα της διαδρομής

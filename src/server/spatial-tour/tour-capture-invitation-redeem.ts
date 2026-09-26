@@ -29,6 +29,7 @@ import {
   redeemInvitation,
   type InvitationKind,
   type InvitationLocation,
+  type InvitationLocator,
   type InvitationRedeemer,
   type InvitationRedeemOutcome,
   type InvitationResolution,
@@ -115,6 +116,16 @@ function grantOf(record: TourCaptureInvitation, granteeUid: string): TourCapture
   };
 }
 
+/**
+ * **Πού ζει μια πρόσκληση φωτογράφου** — ο **ίδιος** εντοπισμός για όψη (`tour-capture-invitation-preview`)
+ * και εξαργύρωση· δύο εντοπισμοί θα μπορούσαν να διαφωνήσουν για το «ανήκει ακόμη εδώ;».
+ */
+export const TOUR_CAPTURE_INVITATION_LOCATOR: InvitationLocator = {
+  secretEnv: TOUR_CAPTURE_INVITE_SECRET_ENV,
+  locatorCount: 2,
+  locate: locateTourCaptureInvitation,
+};
+
 const TOUR_CAPTURE_INVITATION_KIND: InvitationKind<
   InvitationDocumentCore,
   TourCaptureInvitation,
@@ -122,10 +133,8 @@ const TOUR_CAPTURE_INVITATION_KIND: InvitationKind<
   never,
   'secret-missing'
 > = {
-  secretEnv: TOUR_CAPTURE_INVITE_SECRET_ENV,
+  ...TOUR_CAPTURE_INVITATION_LOCATOR,
   secretMissing: 'secret-missing',
-  locatorCount: 2,
-  locate: locateTourCaptureInvitation,
   recordOf: tourCaptureInvitationRecord,
   onAccept: (tx, { ref, record, identity }) => {
     // Η άδεια ζει **δίπλα** στην πρόσκληση: ίδια περιήγηση, ίδιο διαμέρισμα — καμία δεύτερη αναζήτηση.

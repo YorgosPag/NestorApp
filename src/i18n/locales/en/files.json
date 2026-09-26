@@ -19,7 +19,9 @@
     "reports": "Report",
     "permits": "Permit",
     "audio": "Audio",
-    "videos": "Video"
+    "videos": "Video",
+    "models": "3D Model",
+    "panoramas": "360° Panorama"
   },
   "entityTypes": {
     "contact": "Contact",

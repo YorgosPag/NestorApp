@@ -22,9 +22,9 @@
  */
 
 import type { PlaceSource } from '@/constants/place-sources';
-import type { TourAccessStanding } from '@/constants/spatial-tour-vocabulary';
+import type { TourAccessStanding, TourGrantScope } from '@/constants/spatial-tour-vocabulary';
 import { decideCapability } from '@/lib/auth/authority';
-import { evaluateScopedGrant, type ScopedGrantVerdict } from '@/lib/auth/scoped-grant';
+import { evaluateScopedGrant, type ScopedGrant, type ScopedGrantVerdict } from '@/lib/auth/scoped-grant';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { custodyOf, custodyWorkspace, type ListingActor } from '@/lib/owner-property/listing-custody';
 import { mayPerform } from '@/lib/owner-property/listing-permissions';
@@ -139,7 +139,10 @@ export function mayUploadTourCapture(
 /** Το εύρος που δίνει ένα εγκεκριμένο αίτημα θέασης — σταθερό, άρα **δεν** αποθηκεύεται στο έγγραφο. */
 const VIEW_SCOPES = ['tour:view'] as const;
 
-const STANDING_OF_GRANT: Readonly<Record<ScopedGrantVerdict, TourAccessStanding>> = {
+/** Η θέση μιας **άδειας** — το υποσύνολο του λεξιλογίου που παράγει ο κριτής αδειών (όχι οι αποφάσεις ανθρώπου). */
+export type TourGrantStanding = Extract<TourAccessStanding, 'active' | 'revoked' | 'expired' | 'unreadable'>;
+
+const STANDING_OF_GRANT: Readonly<Record<ScopedGrantVerdict, TourGrantStanding>> = {
   granted: 'active',
   revoked: 'revoked',
   expired: 'expired',
@@ -149,11 +152,22 @@ const STANDING_OF_GRANT: Readonly<Record<ScopedGrantVerdict, TourAccessStanding>
 };
 
 /**
+ * **Πού βρίσκεται μια άδεια πάνω σε περιήγηση ΤΩΡΑ;** — η ετυμηγορία του **ενός** κριτή αδειών, στο λεξιλόγιο
+ * της οθόνης (`active · revoked · expired · unreadable`). Κοινή για θέαση **και** λήψη.
+ */
+export function tourGrantStanding(
+  grant: Pick<ScopedGrant<TourGrantScope>, 'scopes' | 'expiresAt' | 'revokedAt'>,
+  scope: TourGrantScope,
+  nowMs: number,
+): TourGrantStanding {
+  return STANDING_OF_GRANT[evaluateScopedGrant(grant, scope, nowMs)];
+}
+
+/**
  * **Πού βρίσκεται αυτό το αίτημα θέασης ΤΩΡΑ;** — οι αποφάσεις ανθρώπου αυτούσιες· για το `approved`, ό,τι
  * λέει ο κριτής αδειών. Το `expired` **δεν** γράφεται ποτέ: παράγεται, άρα δεν αργεί ποτέ.
  */
 export function tourAccessStanding(request: TourAccessRequest, nowMs: number): TourAccessStanding {
   if (request.state !== 'approved') return request.state;
-  const grant = { scopes: VIEW_SCOPES, expiresAt: request.expiresAt, revokedAt: request.revokedAt };
-  return STANDING_OF_GRANT[evaluateScopedGrant(grant, 'tour:view', nowMs)];
+  return tourGrantStanding({ scopes: VIEW_SCOPES, expiresAt: request.expiresAt, revokedAt: request.revokedAt }, 'tour:view', nowMs);
 }

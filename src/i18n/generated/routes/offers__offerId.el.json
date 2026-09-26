@@ -414,6 +414,9 @@
       },
       "stayCalendar": {
         "open": "Ημερολόγιο κρατήσεων"
+      },
+      "tour": {
+        "open": "Περιήγηση 360°"
       }
     },
     "photoFocalPoint": {

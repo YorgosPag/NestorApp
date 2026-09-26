@@ -156,6 +156,7 @@ export const SUPPORTED_NAMESPACES = [
   'bim-3d-aria',            // 🏢 BIM 3D ARIA entity descriptions (ADR-366 Phase 8.1)
   'bim-materials',          // 🏢 BIM Material Library editor UI (ADR-363 Phase 6.5)
   'iso19650',               // 🏢 ISO 19650 metadata labels — discipline/series/CDE/suitability (ADR-373 Phase 2)
+  'spatial-tour',           // 🏢 Χωρική περιήγηση 360° — πρόσκληση/ανέβασμα φωτογράφου (ADR-884 Κ3α), ΕΚΤΟΣ δημόσιου κελύφους
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

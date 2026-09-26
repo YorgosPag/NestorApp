@@ -36,7 +36,6 @@ import 'server-only';
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import { readJsonBody } from '@/lib/api/json-body';
 import { checkClaimFits, composeClaimPayload } from '@/lib/auth/claim-payload';
@@ -48,6 +47,12 @@ import {
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
+import {
+  INVITATION_REDEEM_BODY,
+  readInvitationRedeemer,
+  type InvitationLinkRefusedBody,
+  type InvitationRedeemUnavailableBody,
+} from '@/server/invitations/invitation-http';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -56,40 +61,17 @@ import {
   type RedeemingIdentity,
   type RedeemOutcome,
 } from '@/server/auth/workspace-invitation-redeem';
-import { provenMailboxAccountOf, type ProvenMailboxAccount } from '@/server/auth/mailbox-proof-custody';
 import type { InvitableRole, WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
 
 const logger = createModuleLogger('WORKSPACE_INVITATION_REDEEM');
 
-const redeemBodySchema = z.object({
-  token: z.string().min(8).max(4096),
-  /** ⚠️ **Καμία προεπιλογή** — δες την κεφαλίδα. */
-  action: z.enum(['accept', 'decline']),
-});
 
 type RedeemResponse =
   | { readonly status: 'accepted'; readonly companyId: string; readonly activeWorkspaceChanged: boolean }
   | { readonly status: 'declined' }
-  /** Ονομασμένη άρνηση — κάθε μία στέλνει τον άνθρωπο σε **άλλη** ενέργεια (§5 #7). */
-  | { readonly error: 'LINK_REFUSED'; readonly reason: WorkspaceInvitationRefusal }
-  /** «Δεν μπόρεσα να ρωτήσω» — ποτέ ονομασμένη άρνηση (N.12 · ADR-787 Ε-5 §4 #3). */
-  | { readonly error: 'REDEEM_UNAVAILABLE' };
+  | InvitationLinkRefusedBody<WorkspaceInvitationRefusal>
+  | InvitationRedeemUnavailableBody;
 
-/**
- * **Ο λογαριασμός όπως τον ξέρει ο ΙΔΙΟΚΤΗΤΗΣ του** — email, `emailVerified`, 2ος παράγοντας.
- *
- * 🔴 **ΤΟ TOKEN ΔΕΝ ΑΡΚΕΙ.** Ζει **έως μία ώρα**: ένα `email_verified` ή ένα `email` από
- * εκεί μπορεί να είναι μπαγιάτικο. Και από τον ADR-853 §15 το email **επιβεβαιώνεται** από
- * την πρόσκληση — αν ήταν του token, ένα email που άλλαξε μέσα στην ώρα θα επιβεβαιωνόταν
- * σε λογαριασμό που δεν το κατέχει πια.
- *
- * ⛔ Και **ποτέ** custom claim `emailVerified`: ο ιδιοκτήτης είναι το Firebase Auth, και
- *    ένα claim θα ήταν **δεύτερη αυθεντία** (ADR-749· γραμμένο ήδη στο `workspace-provisioning.ts`).
- */
-async function readAuthAccount(uid: string): Promise<{ readonly email: string; readonly account: ProvenMailboxAccount }> {
-  const record = await getAdminAuth().getUser(uid);
-  return { email: record.email ?? '', account: provenMailboxAccountOf(record) };
-}
 
 /**
  * **Ο νέος χώρος γίνεται ΕΝΕΡΓΟΣ — μόνο για όποιον δεν είχε κανέναν** (Α2 · Μ1).
@@ -142,12 +124,14 @@ async function activateWorkspaceIfHomeless(
 }
 
 async function handler(request: NextRequest, actor: ApiActor): Promise<NextResponse<RedeemResponse>> {
-  const parsed = await readJsonBody(request, redeemBodySchema);
+  // ⚠️ **Καμία προεπιλογή πράξης** — δες την κεφαλίδα· το σχήμα είναι το ΚΟΙΝΟ κάθε εξαργύρωσης.
+  const parsed = await readJsonBody(request, INVITATION_REDEEM_BODY);
   if ('rejected' in parsed) return parsed.rejected;
 
-  let authAccount: Awaited<ReturnType<typeof readAuthAccount>>;
+  let redeemer: Awaited<ReturnType<typeof readInvitationRedeemer>>;
   try {
-    authAccount = await readAuthAccount(actor.ctx.uid);
+    // 🔴 §15 — ο λογαριασμός **από το Auth** (email · επιβεβαίωση · 2ος παράγοντας), ποτέ από το token.
+    redeemer = await readInvitationRedeemer(actor.ctx.uid);
   } catch (error: unknown) {
     // ⚠️ **ΟΧΙ ονομασμένη άρνηση**: δεν ξέρουμε — ο ιδιοκτήτης δεν απάντησε.
     logger.error('Το Firebase Auth δεν απάντησε για τον λογαριασμό', {
@@ -157,9 +141,7 @@ async function handler(request: NextRequest, actor: ApiActor): Promise<NextRespo
   }
 
   const identity: RedeemingIdentity = {
-    ...authAccount.account,
-    // 🔴 §15 — το email **του Auth**, όχι του token: αυτό κρίνεται και αυτό επιβεβαιώνεται.
-    email: authAccount.email,
+    ...redeemer,
     // 🔑 **ΤΟ `?? ''` ΕΙΝΑΙ ΣΩΣΤΟ ΕΔΩ — ΚΑΙ ΜΟΙΑΖΕΙ ΜΕ ΤΟ ΑΠΑΓΟΡΕΥΜΕΝΟ, ΓΙ' ΑΥΤΟ ΓΡΑΦΕΤΑΙ.**
     //
     // Το JSDoc του `actorWorkspace` απαγορεύει ρητά το `?? ''` — αλλά για **άλλο ερώτημα**:

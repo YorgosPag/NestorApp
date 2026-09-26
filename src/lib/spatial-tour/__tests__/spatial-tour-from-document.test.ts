@@ -80,8 +80,15 @@ describe('tourCaptureFromDocument', () => {
     ['άγνωστο ορόσημο', { milestone: 'roof' }],
     ['χωρίς κατεύθυνση', { headingRad: undefined }],
     ['χωρίς ημερομηνία λήψης', { capturedAt: 'χθες' }],
+    // 🔴 Απόν ≠ ατοποθέτητη: ο διακομιστής γράφει πάντα το πεδίο.
+    ['χωρίς πεδίο κόμβου', { nodeId: undefined }],
+    ['κόμβο που δεν είναι κείμενο', { nodeId: 42 }],
   ])('🔴 αρνείται λήψη με %s', (_label, patch) => {
     expect(tourCaptureFromDocument({ ...CAPTURE_DOC, ...patch }, 'tcap_1')).toBeNull();
+  });
+
+  it('✅ δηλωμένα ατοποθέτητη (nodeId: null) ⇒ «εισερχόμενα», όχι άρνηση', () => {
+    expect(tourCaptureFromDocument({ ...CAPTURE_DOC, nodeId: null }, 'tcap_1')).toMatchObject({ nodeId: null });
   });
 });
 

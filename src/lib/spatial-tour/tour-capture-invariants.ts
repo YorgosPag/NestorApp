@@ -28,6 +28,11 @@ export type TourCaptureViolation =
   | { readonly kind: 'base-capture-unexpected'; readonly captureId: string }
   | { readonly kind: 'base-capture-not-as-built'; readonly captureId: string }
   | { readonly kind: 'base-capture-other-node'; readonly captureId: string }
+  /**
+   * Παράγωγη λήψη (ή η βάση της) **ατοποθέτητη**: το «ίδιος κόμβος» (#1) δεν μπορεί να κριθεί — το `null === null`
+   * θα περνούσε δύο φωτογραφίες που **κανείς** δεν έβαλε στο ίδιο σημείο. Πρώτα τοποθέτηση (Φ2), μετά «ντύσιμο».
+   */
+  | { readonly kind: 'derived-capture-unplaced'; readonly captureId: string }
   | { readonly kind: 'design-study-unsigned'; readonly captureId: string }
   | { readonly kind: 'design-study-unregistered'; readonly captureId: string };
 
@@ -43,7 +48,8 @@ function baseViolations(capture: TourCapture, base: BaseCapture | null): TourCap
   }
   const out: TourCaptureViolation[] = [];
   if (base.provenance !== 'as-built') out.push({ kind: 'base-capture-not-as-built', captureId });
-  if (base.nodeId !== capture.nodeId) out.push({ kind: 'base-capture-other-node', captureId });
+  if (capture.nodeId === null || base.nodeId === null) out.push({ kind: 'derived-capture-unplaced', captureId });
+  else if (base.nodeId !== capture.nodeId) out.push({ kind: 'base-capture-other-node', captureId });
   return out;
 }
 
@@ -73,6 +79,7 @@ export function mayEnterPublicShelf(
 /**
  * **Για κάθε κόμβο, μόνο η πιο πρόσφατη** δημόσια λήψη (§12 Δ6) — ό,τι βλέπει ο αγοραστής. Ισοπαλία
  * στην ημερομηνία ⇒ το μεγαλύτερο id, ώστε το ράφι να μην εξαρτάται από τη σειρά ανάγνωσης.
+ * Ατοποθέτητη λήψη **δεν** φτάνει ποτέ στο ράφι: δεν ανήκει σε κόμβο, άρα ο αγοραστής δεν θα ήξερε **πού** στέκεται.
  */
 export function selectShelfCaptures<C extends Pick<TourCapture, 'id' | 'nodeId' | 'capturedAt' | 'audience'>>(
   captures: readonly C[],
@@ -82,10 +89,11 @@ export function selectShelfCaptures<C extends Pick<TourCapture, 'id' | 'nodeId' 
   for (const capture of captures) {
     const atMs = normalizeToMillisOrNull(capture.capturedAt);
     // Λήψη χωρίς αναγνώσιμη ημερομηνία δεν «κερδίζει» ποτέ το ράφι — δεν ξέρουμε αν είναι η τελευταία.
-    if (atMs === null || !mayEnterPublicShelf(capture, tour)) continue;
-    const current = latest.get(capture.nodeId);
+    const { nodeId } = capture;
+    if (atMs === null || nodeId === null || !mayEnterPublicShelf(capture, tour)) continue;
+    const current = latest.get(nodeId);
     const newer = !current || atMs > current.atMs || (atMs === current.atMs && capture.id > current.capture.id);
-    if (newer) latest.set(capture.nodeId, { capture, atMs });
+    if (newer) latest.set(nodeId, { capture, atMs });
   }
   return [...latest.values()].map((entry) => entry.capture);
 }

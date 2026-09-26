@@ -231,6 +231,16 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/spatial-tour/tour-capture-invitation.ts',
   },
   {
+    name: 'TOUR_UPLOAD_SECRET',
+    severity: 'feature',
+    feature: 'Ανέβασμα λήψης 360° σε χωρική περιήγηση (ADR-884 Φ0.8 · Κ3α)',
+    consequence:
+      'Κανείς δεν ανεβάζει πανόραμα — ούτε ο υπεύθυνος ούτε ο φωτογράφος: η έναρξη ανεβάσματος απαντά '
+      + '«δεν μπόρεσα» πριν ανοίξει συνεδρία. ⚠️ ΔΙΚΟ του μυστικό: με κοινό με την πρόσκληση φωτογράφου, '
+      + 'ένα εισιτήριο ανεβάσματος θα μπορούσε να διαβαστεί ως κάτι άλλο.',
+    consumer: 'src/server/spatial-tour/tour-upload-ticket.ts',
+  },
+  {
     name: 'STAY_ICAL_FEED_SECRET',
     severity: 'feature',
     feature: 'Συγχρονισμός ημερολογίου καταλύματος με τα κανάλια (ADR-835 §22, Στάδιο Γ)',

@@ -19,7 +19,9 @@
     "reports": "Αναφορές",
     "permits": "Άδειες",
     "audio": "Ήχος",
-    "videos": "Βίντεο"
+    "videos": "Βίντεο",
+    "models": "Μοντέλα 3D",
+    "panoramas": "Πανοράματα 360°"
   },
   "entityTypes": {
     "contact": "Επαφές",

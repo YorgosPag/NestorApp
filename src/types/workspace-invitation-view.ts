@@ -25,6 +25,7 @@
  * *«τι πήγε στραβά;»* — και θα απέκλινε στην πρώτη προσθήκη (ADR-749).
  */
 
+import type { InvitationRespond } from '@/lib/invitations/invitation-respond';
 import type {
   WorkspaceInvitationPreview,
   WorkspaceInvitationRefusal,
@@ -107,21 +108,7 @@ export type WorkspaceInvitationLinkView =
        * επέτρεπε κουμπί «Σύνδεση» που χάνει τη διαδρομή πίσω, δηλαδή ακριβώς το αδιέξοδο
        * του ADR-844 με άλλο πρόσωπο.
        */
-      readonly respond:
-        | { readonly kind: 'ready' }
-        | {
-            readonly kind: 'sign-in';
-            /** `loginHref(...)` **από τον διακομιστή** — περνά από τον φρουρό `safeReturnPath`. */
-            readonly href: string;
-          }
-        /**
-         * 🔑 **ΣΥΝΔΕΔΕΜΕΝΟΣ ΜΕ ΑΛΛΟΝ ΛΟΓΑΡΙΑΣΜΟ** (ADR-853 §13 ε.δ) — λέγεται **πριν** το
-         * κλικ, όχι ως άρνηση μετά (Google/Slack: «signed in as…» + «αλλαγή λογαριασμού»).
-         *
-         * ⚠️ Το `signedInAs` είναι το email του **θεατή** — δικό του, όχι του παραλήπτη, που
-         * δεν ταξιδεύει ποτέ. ⚠️ **Υπόδειξη**: η δέσμευση κρίνεται ξανά στην εξαργύρωση.
-         */
-        | { readonly kind: 'other-account'; readonly signedInAs: string };
+      readonly respond: InvitationRespond;
       /**
        * **Η σύνδεση με επιστροφή σε ΑΥΤΗ την πρόσκληση** — `loginHref(...)` από τον διακομιστή.
        * Το χρειάζεται η «Αλλαγή λογαριασμού», και στην όψη **και** όταν το `wrong-recipient`

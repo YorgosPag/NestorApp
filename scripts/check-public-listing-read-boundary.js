@@ -234,6 +234,24 @@ const BOUNDARIES = [
   // ADR-835 §20 — το ημερολόγιο καταλύματος. ΑΥΣΤΗΡΟ σύνορο: ό,τι δεν διαβάζεται ΔΕΝ
   // μπορεί να γίνει «ελεύθερο» — ωμό `as StayBooking` θα έβαζε στον κριτή διάστημα που
   // δεν ελέγχθηκε, δηλαδή σιωπηλό overbooking (§6.4).
+  // ADR-884 Κ3α — η χωρική περιήγηση. Οι γραμμές μπήκαν ΜΑΖΙ με τους πρώτους παραγωγικούς αναγνώστες
+  // (`tour-locate` · `tour-genesis` · `tour-capture-list` · `tour-capture-finalize`) — σύνορο χωρίς καταναλωτή
+  // θα κοκκίνιζε τον Κ2. ΑΥΣΤΗΡΟ: ορατότητα = ασφάλεια (άγνωστη `visibility` ως `public` θα έβγαζε στο ράφι
+  // περιήγηση κλειστή σε `on-request`) και λήψη χωρίς αναγνώσιμα δικαιώματα δεν σερβίρεται ποτέ (Φ0.14).
+  {
+    adr: 'ADR-884 Κ3α',
+    typeName: 'SpatialTour',
+    custodian: 'src/lib/spatial-tour/spatial-tour-from-document.ts',
+    module: 'spatial-tour-from-document',
+    remedy: '«spatialTourFromDocument(raw, id)»',
+  },
+  {
+    adr: 'ADR-884 Κ3α',
+    typeName: 'TourCapture',
+    custodian: 'src/lib/spatial-tour/spatial-tour-from-document.ts',
+    module: 'spatial-tour-from-document',
+    remedy: '«tourCaptureFromDocument(raw, id)»',
+  },
   {
     adr: 'ADR-835 §20',
     typeName: 'StayBooking',
