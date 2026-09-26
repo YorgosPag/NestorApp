@@ -61,6 +61,7 @@ import {
   vocabularyLabel,
   type AttributeVocabulary,
 } from '@/lib/listings/listing-attribute-vocabulary';
+import type { PublicRecordRegistry } from '@/lib/property/attribute-provenance';
 import type { PublicListing } from '@/types/public-listing';
 
 // ============================================================================
@@ -134,6 +135,7 @@ const ATTRIBUTE_VALUE_KIND: {
   energyClass: { kind: 'verbatim' },
   condition: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.condition },
   renovationYear: { kind: 'verbatim' },
+  constructionYear: { kind: 'custom', render: renderConstructionYear },
 
   bathrooms: { kind: 'verbatim' },
   wc: { kind: 'verbatim' },
@@ -196,6 +198,35 @@ function renderBedrooms(t: TFunction, listing: PublicListing): string {
  */
 function renderLevels(_t: TFunction, listing: PublicListing): string {
   return String(listing.levels?.value);
+}
+
+/** Το όνομα του μητρώου στον άνθρωπο. Εξαντλητικό: νέο μητρώο χωρίς όνομα = σφάλμα μεταγλώττισης. */
+function registryName(t: TFunction, registry: PublicRecordRegistry): string {
+  switch (registry) {
+    case 'osm':
+      return t('listing-detail:attributes.registry.osm');
+  }
+}
+
+/**
+ * **Το έτος κατασκευής — με την πηγή του όταν ΔΕΝ είναι δήλωση** (ADR-890 Φ0).
+ *
+ * 🏆 **Εδώ ξεπερνάμε τα portals, και είναι το `YearBuiltSource` του RESO σε οθόνη**: το Zillow
+ * δείχνει το έτος χωρίς να λέει αν το δήλωσε ο πωλητής ή ήρθε από δημόσια εγγραφή — δύο πολύ
+ * διαφορετικές υποσχέσεις. Η δήλωση του αγγελιοδότη διαβάζεται όπως κάθε άλλη ιδιότητα (σκέτη
+ * τιμή, ίδια με τις υπόλοιπες δηλωμένες)· η **δημόσια εγγραφή** λέει το μητρώο της.
+ *
+ * ⚠️ Το έτος περνά ως **συμβολοσειρά**: αριθμός στο ICU θα γινόταν «1.978».
+ */
+function renderConstructionYear(t: TFunction, listing: PublicListing): string {
+  const fact = listing.constructionYear;
+  if (fact?.provenance === 'public-record') {
+    return t('listing-detail:attributes.publicRecord', {
+      year: String(fact.value),
+      registry: registryName(t, fact.registry),
+    });
+  }
+  return String(fact?.value);
 }
 
 /**

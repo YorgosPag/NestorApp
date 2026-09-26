@@ -44,6 +44,11 @@ export interface BuildingUpdatePayload {
   totalValue?: number;
   startDate?: string;
   completionDate?: string;
+  /**
+   * ADR-890 Φ0 — έτος κατασκευής του κτιρίου (`null` = «δεν ξέρουμε», ρητά). Η **μία** δήλωση που
+   * κληρονομούν όλες οι αγγελίες του κτιρίου· κρίνεται από το `lib/listings/construction-year.ts`.
+   */
+  constructionYear?: number | null;
   /** 🏢 LEGACY: μονή διεύθυνση — διατηρείται για μετανάστευση (ADR-167). */
   address?: string;
   city?: string;

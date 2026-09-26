@@ -25,7 +25,8 @@
  * Αρχείο χωρίς ανοχή **απορρίπτεται** — δεν μαντεύουμε πόσο θολό είναι.
  */
 
-import type { GeoBoundingBox, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
+import type { GeoBoundingBox, GeoOutline, GeoPoint, GeoRegion } from '@/types/geo/coordinates';
+import { geoJsonRings } from './geo-geojson';
 import { geoRingsNearestEdgeMetres, isPointInGeoRings } from './geo-ring';
 
 /** Όπου ζουν τα αρχεία ορίων — κάτω από `public/`, άρα σερβίρονται στατικά. */
@@ -69,6 +70,23 @@ export type AdminBoundaryPlacesFile = Readonly<Record<string, readonly [number, 
  */
 export function placeWithinBoundary(point: GeoPoint, rings: readonly GeoOutline[], toleranceM: number): boolean {
   return isPointInGeoRings(point, rings) || geoRingsNearestEdgeMetres(point, rings) <= toleranceM;
+}
+
+/**
+ * **Το όριο ως περιοχή που κρίνεται** — δακτύλιοι + bbox + ανοχή.
+ *
+ * 🔑 **Μία μετατροπή, δύο πλευρές** (ADR-890 Φ0): ο χάρτης του επισκέπτη (`admin-boundaries.ts`)
+ * και η απόδοση περιοχής κατά τη δημοσίευση (`admin-area-of-point.ts`) κρίνουν **τους ίδιους**
+ * δακτυλίους. Δύο μετατροπές θα σήμαιναν ότι μια αγγελία μπορεί να «ανήκει» στον δήμο που ο
+ * χάρτης της δείχνει **έξω** από το περίγραμμα.
+ */
+export function adminBoundaryRegion(boundary: AdminBoundary): GeoRegion {
+  return {
+    adminId: boundary.id,
+    rings: geoJsonRings(boundary.geometry),
+    bbox: boundary.bbox,
+    toleranceM: boundary.toleranceM,
+  };
 }
 
 /**

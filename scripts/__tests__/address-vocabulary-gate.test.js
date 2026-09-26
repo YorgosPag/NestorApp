@@ -48,6 +48,8 @@ const FIXTURE_FILES = [
   // ADR-332 D27 Β-ΙΙ: η ΚΟΙΝΗ βάση θέσης των τριών δοχείων (`extends StoredAddressPosition`).
   // Χωρίς αυτήν ο σαρωτής βλέπει «ανεπίλυτο ειδικευτή» ⇒ unanalyzable-container ×3.
   'src/types/address-position.ts',
+  // ADR-890 Φ0: το έκτο δοχείο — η διοικητική περιοχή της αγγελίας (`AdminAreaAssignment`).
+  'src/lib/geo/admin-area-of-point.ts',
 ];
 
 /**
@@ -120,7 +122,8 @@ describe('Μ0 — το ζωντανό δέντρο', () => {
     const total = Object.values(m.byState).reduce((a, b) => a + b, 0);
     const declared = m.declarationCount;
     expect(total).toBe(declared);
-    expect(m.byState['registered-vocabulary']).toBe(5);
+    // ADR-890 Φ0: πέντε → έξι (`listingAdminArea`).
+    expect(m.byState['registered-vocabulary']).toBe(6);
   });
 
   it('η βάση του μίνι-repo είναι ΓΝΩΣΤΗ ονομαστικά — όχι «ό,τι βγει»', () => {
@@ -256,13 +259,14 @@ describe('Π1..Π7 — ο ζωντανός πίνακας, ελεγμένος α
     ]);
   });
 
-  it('Π2: πέντε δοχεία, ονομαστικά', () => {
+  it('Π2: έξι δοχεία, ονομαστικά (ADR-890 Φ0: +`listingAdminArea`)', () => {
     expect(table.containers.map((c) => `${c.key}:${c.typeName}`)).toEqual([
       'form:AddressWithHierarchyValue',
       'projectAddress:ProjectAddress',
       'companyAddress:CompanyAddress',
       'addressInfo:AddressInfo',
       'contactFlat:FlatAddressFormFields',
+      'listingAdminArea:AdminAreaAssignment',
     ]);
   });
 

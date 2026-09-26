@@ -75,6 +75,8 @@ const ATTRIBUTE_ASKING = {
   energyClass: 'enum-any',
   condition: 'enum-any',
   renovationYear: 'range',
+  /** ADR-890 Φ0 — «χτισμένο μετά το 2000»: εύρος, όπως η ανακαίνιση. */
+  constructionYear: 'range',
 
   // ── roomsAreas ────────────────────────────────────────────────────────────
   bathrooms: 'range',
@@ -301,6 +303,7 @@ export const LAND_CANNOT_ANSWER = [
   'energyClass',
   'condition',
   'renovationYear',
+  'constructionYear',
   'bathrooms',
   'wc',
   'totalRooms',

@@ -44,6 +44,7 @@ import type { AddressWithHierarchyValue } from '@/components/shared/addresses/ad
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { AddressInfo } from '@/types/contacts';
+import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 
 // =============================================================================
 // ΚΛΕΙΔΙΑ
@@ -113,6 +114,14 @@ interface VocabularyContainers {
   addressInfo: AddressInfo;
   /** Τα επίπεδα πεδία της φόρμας επαφής. */
   contactFlat: FlatAddressFormFields;
+  /**
+   * **Η διοικητική περιοχή της αγγελίας** (ADR-890 Φ0) — `PublicListing.adminArea`.
+   *
+   * 🔑 **Μόνο ταυτότητες, βαθμίδες 3–7** — όσες έχουν όριο στο ADR-883. Τα ονόματα δεν
+   * αποθηκεύονται (τα δίνει το ευρετήριο περιοχών, ένα SSoT), ούτε ο οικισμός (δεν έχει όριο)
+   * ούτε Αποκεντρωμένη/Μείζων γεωγραφική (εκτός ευρετηρίου). Κάθε τέτοιο κελί είναι `NOT_STORED`.
+   */
+  listingAdminArea: AdminAreaAssignment;
 }
 
 export type AddressVocabulary = keyof VocabularyContainers;
@@ -179,6 +188,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['city'], id: ['settlementId'] },
     addressInfo: { name: ['settlement', 'city'], id: ['settlementId'] },
     contactFlat: { name: ['settlement', 'city'], id: ['settlementId'] },
+    listingAdminArea: { name: NOT_STORED, id: NOT_STORED },
   },
   community: {
     form: { name: ['communityName'], id: ['communityId'] },
@@ -187,6 +197,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['communityName'], id: NOT_STORED },
     addressInfo: { name: ['community'], id: NOT_STORED },
     contactFlat: { name: ['community'], id: NOT_STORED },
+    listingAdminArea: { name: NOT_STORED, id: ['communityId'] },
   },
   municipalUnit: {
     form: { name: ['municipalUnitName'], id: ['municipalUnitId'] },
@@ -194,6 +205,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['municipalUnitName'], id: NOT_STORED },
     addressInfo: { name: ['municipalUnit'], id: NOT_STORED },
     contactFlat: { name: ['municipalUnit'], id: NOT_STORED },
+    listingAdminArea: { name: NOT_STORED, id: ['municipalUnitId'] },
   },
   municipality: {
     form: { name: ['municipalityName'], id: ['municipalityId'] },
@@ -201,6 +213,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['municipalityName'], id: ['municipalityId'] },
     addressInfo: { name: ['municipality'], id: ['municipalityId'] },
     contactFlat: { name: ['municipality'], id: ['municipalityId'] },
+    listingAdminArea: { name: NOT_STORED, id: ['municipalityId'] },
   },
   regionalUnit: {
     form: { name: ['regionalUnitName'], id: ['regionalUnitId'] },
@@ -208,6 +221,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['regionalUnitName'], id: NOT_STORED },
     addressInfo: { name: ['regionalUnit'], id: NOT_STORED },
     contactFlat: { name: ['regionalUnit'], id: NOT_STORED },
+    listingAdminArea: { name: NOT_STORED, id: ['regionalUnitId'] },
   },
   region: {
     form: { name: ['regionName'], id: ['regionId'] },
@@ -217,6 +231,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['regionName', 'region'], id: NOT_STORED },
     addressInfo: { name: ['region'], id: NOT_STORED },
     contactFlat: { name: ['region'], id: NOT_STORED },
+    listingAdminArea: { name: NOT_STORED, id: ['regionId'] },
   },
   decentAdmin: {
     form: { name: ['decentAdminName'], id: ['decentAdminId'] },
@@ -226,6 +241,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['decentAdminName'], id: NOT_STORED },
     addressInfo: { name: ['decentAdmin'], id: NOT_STORED },
     contactFlat: { name: ['decentAdmin'], id: NOT_STORED },
+    listingAdminArea: { name: NOT_STORED, id: NOT_STORED },
   },
   majorGeo: {
     form: { name: ['majorGeoName'], id: ['majorGeoId'] },
@@ -233,6 +249,7 @@ export const ADMIN_LEVEL_VOCABULARY: Readonly<Record<AdminLevelKey, LevelBinding
     companyAddress: { name: ['majorGeoName'], id: NOT_STORED },
     addressInfo: { name: ['majorGeo'], id: NOT_STORED },
     contactFlat: { name: ['majorGeo'], id: NOT_STORED },
+    listingAdminArea: { name: NOT_STORED, id: NOT_STORED },
   },
 };
 
@@ -255,6 +272,7 @@ export const POSTAL_FIELD_VOCABULARY: Readonly<Record<PostalFieldKey, PostalBind
     companyAddress: ['street'],
     addressInfo: ['street'],
     contactFlat: ['street'],
+    listingAdminArea: NOT_STORED,
   },
   number: {
     form: ['number'],
@@ -262,6 +280,7 @@ export const POSTAL_FIELD_VOCABULARY: Readonly<Record<PostalFieldKey, PostalBind
     companyAddress: ['number'],
     addressInfo: ['number'],
     contactFlat: ['streetNumber'],
+    listingAdminArea: NOT_STORED,
   },
   postalCode: {
     form: ['postalCode'],
@@ -269,6 +288,7 @@ export const POSTAL_FIELD_VOCABULARY: Readonly<Record<PostalFieldKey, PostalBind
     companyAddress: ['postalCode'],
     addressInfo: ['postalCode'],
     contactFlat: ['postalCode'],
+    listingAdminArea: NOT_STORED,
   },
   country: {
     form: ['country'],
@@ -276,6 +296,7 @@ export const POSTAL_FIELD_VOCABULARY: Readonly<Record<PostalFieldKey, PostalBind
     companyAddress: ['country'],
     addressInfo: ['country'],
     contactFlat: NOT_STORED,
+    listingAdminArea: NOT_STORED,
   },
 };
 
@@ -298,5 +319,6 @@ export const HIERARCHY_ADJACENT_VOCABULARY: Readonly<
     companyAddress: ['neighborhood'],
     addressInfo: ['neighborhood'],
     contactFlat: ['neighborhood'],
+    listingAdminArea: NOT_STORED,
   },
 };

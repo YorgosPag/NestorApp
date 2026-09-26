@@ -234,7 +234,8 @@
     "areaPositive": "Area must be greater than 0",
     "builtAreaExceeds": "Built area cannot exceed total area",
     "floorsMinimum": "Floors must be at least 1",
-    "unitsMinimum": "Units must be at least 1"
+    "unitsMinimum": "Units must be at least 1",
+    "constructionYearRange": "Year built must be a whole year from {min} to {max}"
   },
   "policyErrors": {
     "nameRequired": "Name is required.",

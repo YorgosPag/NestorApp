@@ -37,6 +37,7 @@ import { resolveListedAt } from './listed-at-stamp';
 import { resolvePriceHistory } from './price-history-stamp';
 import { marketPriceOf } from '@/lib/listings/price-history';
 import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
+import { resolvePublicationFacts, withPublicationFacts } from './listing-publication-facts';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
@@ -171,24 +172,28 @@ export async function collectPlaceKnowledge(
   const building = await readBuildingDoc(adminDb, property.buildingId ?? null);
   const ref = building?.placeRef ?? null;
 
+  const buildingConstructionYear = building?.constructionYear ?? null;
+
   const projectId = property.projectId ?? building?.projectId ?? null;
-  if (!projectId) return { candidates: [], ref };
+  if (!projectId) return { candidates: [], ref, buildingConstructionYear };
 
   const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-  if (!snap.exists) return { candidates: [], ref };
+  if (!snap.exists) return { candidates: [], ref, buildingConstructionYear };
 
   const addresses = (snap.data()?.addresses ?? []) as AddressLike[];
   const candidates = addresses
     .map((address) => addressToPositionCandidate(address, locatedAt))
     .filter((c): c is ListingPositionCandidate => c !== null);
 
-  return { candidates, ref };
+  return { candidates, ref, buildingConstructionYear };
 }
 
-/** Ό,τι χρειάζεται η αλυσίδα από το κτίριο — **δύο** πεδία, όχι ολόκληρο το έγγραφο. */
+/** Ό,τι χρειάζεται η αλυσίδα από το κτίριο — **τρία** πεδία, όχι ολόκληρο το έγγραφο. */
 interface BuildingChainFacts {
   readonly projectId: string | null;
   readonly placeRef: PlaceRef | null;
+  /** Ωμή δήλωση έτους κατασκευής (ADR-890 Φ0) — την κρίνει η προβολή, όχι ο αναγνώστης. */
+  readonly constructionYear: unknown;
 }
 
 /** Το έγγραφο του κτιρίου, **μία φορά** — ή `null` αν δεν υπάρχει κτίριο να ρωτηθεί. */
@@ -205,6 +210,7 @@ async function readBuildingDoc(
   return {
     projectId: (data.projectId as string | undefined) ?? null,
     placeRef: (data.placeRef as PlaceRef | undefined) ?? null,
+    constructionYear: data.constructionYear ?? null,
   };
 }
 
@@ -398,7 +404,9 @@ export async function writeListingProjection(
     // ⚠️ **Ο αναγνώστης τη διαβάζει μέσω `storedSchemaVersion`**, που απαντά `1`
     //    όταν λείπει — άρα κάθε έγγραφο γραμμένο πριν από σήμερα έχει ήδη σωστή
     //    απάντηση χωρίς να το αγγίξει κανείς.
-    const written = await writeWithShelf(ref, listingId, listing, property.publishedMedia ?? []);
+    // ADR-890 Φ0 — περιοχή + έτος κατασκευής: γεγονότα της δημοσίευσης, δεμένα ΠΡΙΝ το `set()`.
+    const located = withPublicationFacts(listing, await resolvePublicationFacts(adminDb, listing, place));
+    const written = await writeWithShelf(ref, listingId, located, property.publishedMedia ?? []);
     await refreshPresence();
 
     // 🔑 Η κεντρική εικόνα από τον **ΕΝΑ** κριτή (`listingLeadImage`) πάνω σε ό,τι

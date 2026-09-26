@@ -30,6 +30,12 @@ import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { createBuildingWithCodeRetry, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import { useBuildingNotifications } from '@/hooks/notifications/useBuildingNotifications';
+import {
+  CONSTRUCTION_YEAR_BOUNDS,
+  constructionYearUpdate,
+  maxConstructionYear,
+  readConstructionYearInput,
+} from '@/lib/listings/construction-year';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralTabContent');
@@ -43,6 +49,8 @@ function buildFormData(building: Building) {
     description: building.description || '',
     startDate: building.startDate || '',
     completionDate: building.completionDate || '',
+    // ADR-890 Φ0 — κείμενο πεδίου· σε αριθμό μόνο μέσω `constructionYearUpdate` (μία κρίση).
+    constructionYear: building.constructionYear != null ? String(building.constructionYear) : '',
     address: building.address || '',
     city: building.city || '',
     category: (building.category as 'mixed' | 'residential' | 'commercial' | 'industrial' | '') || '',
@@ -246,6 +254,7 @@ export function GeneralTabContent({
         description: data.description,
         startDate: data.startDate,
         completionDate: data.completionDate,
+        ...constructionYearUpdate(data.constructionYear, new Date().getFullYear()),
         address: data.address,
         city: data.city,
         _v: data._v,
@@ -288,6 +297,13 @@ export function GeneralTabContent({
     if (!formData.name.trim()) {
       newErrors.name = t('validation.nameRequired');
     }
+    if (readConstructionYearInput(formData.constructionYear, new Date().getFullYear()).kind === 'invalid') {
+      newErrors.constructionYear = t('validation.constructionYearRange', {
+        // Συμβολοσειρές: ως αριθμούς το ICU θα τα έγραφε «1.000».
+        min: String(CONSTRUCTION_YEAR_BOUNDS.min),
+        max: String(maxConstructionYear(new Date().getFullYear())),
+      });
+    }
     if (isCreateMode) {
       const projectPayloadForValidation = projectLink.getPayload();
       const projectIdValue = projectPayloadForValidation.projectId;
@@ -315,6 +331,7 @@ export function GeneralTabContent({
         description: formData.description,
         startDate: formData.startDate,
         completionDate: formData.completionDate,
+        ...constructionYearUpdate(formData.constructionYear, new Date().getFullYear()),
         address: formData.address,
         city: formData.city,
         ...(formData.category ? { category: formData.category as 'mixed' | 'residential' | 'commercial' | 'industrial' } : {}),

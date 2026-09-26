@@ -42,9 +42,27 @@ const inferredRaw: SourcedAttribute<number> = {
 const inferredConfirmed: SourcedAttribute<number> = { ...inferredRaw, confirmedAt: AT };
 
 describe('ADR-842 Α6 · το λεξιλόγιο προέλευσης', () => {
-  it('έχει ακριβώς τρεις προελεύσεις, χωρίς διπλότυπα', () => {
-    expect(ATTRIBUTE_PROVENANCES).toHaveLength(3);
-    expect([...new Set(ATTRIBUTE_PROVENANCES)]).toHaveLength(3);
+  // ADR-890 Φ0: +`public-record` (δημόσια εγγραφή του επιπέδου Α — π.χ. έτος κατασκευής από OSM).
+  it('έχει ακριβώς τέσσερις προελεύσεις, χωρίς διπλότυπα', () => {
+    expect(ATTRIBUTE_PROVENANCES).toHaveLength(4);
+    expect([...new Set(ATTRIBUTE_PROVENANCES)]).toHaveLength(4);
+  });
+
+  it('🔑 ADR-890 Φ0 · δήλωση > δημόσια εγγραφή > συμπέρασμα (RESO/MLS: η αγγελία φέρει τη δήλωση)', () => {
+    expect(outranksForAttribute('public-record', 'declared')).toBe(false);
+    expect(outranksForAttribute('declared', 'public-record')).toBe(true);
+    expect(outranksForAttribute('public-record', 'inferred')).toBe(true);
+  });
+
+  it('η δημόσια εγγραφή φεύγει δημόσια — με το μητρώο της', () => {
+    const record: SourcedAttribute<number> = {
+      provenance: 'public-record',
+      value: 1978,
+      at: AT,
+      registry: 'osm',
+      sourceRef: 'pbld_x',
+    };
+    expect(isPubliclyPresentable(record)).toBe(true);
   });
 
   it('ο κατάλογος είναι ΠΑΡΑΓΟΜΕΝΟΣ — κάθε τιμή έχει βαθμίδα', () => {

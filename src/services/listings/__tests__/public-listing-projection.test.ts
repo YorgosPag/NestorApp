@@ -172,6 +172,11 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // `firestore.rules` δίνει **ήδη** σε ανώνυμο αναγνώστη ως κλειδί του
       // `agency_profiles/{companyId}`. Δεν ανοίγει πόρτα — δίνει **συνδεσιμότητα**,
       // και είναι ό,τι κάνει την επωνυμία **επαληθεύσιμη** αντί για ανεπιβεβαίωτη.
+      // 🔴 **ΚΟΚΚΙΝΙΣΕ ΞΑΝΑ (ADR-890 Φ0, 2026-09-26)** — και πάλι έκανε τη δουλειά της. Το
+      // `adminArea` πέρασε από **γραμμένη** απόφαση (Giorgio): ταυτότητες ADR-883, βαθμίδες 3–7,
+      // **παράγωγο της ήδη δημόσιας θέσης** και ποτέ πιο ακριβές από αυτήν. **Μόνο ταυτότητες** —
+      // κανένα όνομα, καμία ταυτότητα πελάτη.
+      'adminArea',
       'agencyId',
       'agencyName',
       // 🔴 **ΕΚΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ — ΚΑΙ Η ΜΕΓΑΛΥΤΕΡΗ (ADR-842 Φ3,
@@ -186,7 +191,8 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       'amenities',
       'areaSqm', 'authorship',
       'balconies', 'balconyAreaSqm', 'bathrooms', 'bedrooms',
-      'commercial', 'commercialStatus', 'condition', 'coolingType', 'coverImage',
+      // ADR-890 Φ0: `constructionYear` — έτος του **κτιρίου** με την πηγή του (RESO `YearBuiltSource`).
+      'commercial', 'commercialStatus', 'condition', 'constructionYear', 'coolingType', 'coverImage',
       'energyClass',
       // 🔴 **ΚΟΚΚΙΝΙΣΕ ΞΑΝΑ (ADR-777 §8.60.17, 2026-09-18)** — και πάλι έκανε τη δουλειά της. Το
       // `exchange` πέρασε από **γραμμένη** απόφαση (Giorgio: «όπως οι μεγάλοι»): το xe.gr γράφει το

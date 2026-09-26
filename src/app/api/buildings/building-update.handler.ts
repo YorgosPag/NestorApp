@@ -33,6 +33,7 @@ import { verifyPlaceRef } from '@/services/places/public-place-read.service';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import { extractLegacyFields } from '@/types/project/address-helpers';
 import type { PlaceRef } from '@/types/geo/public-place';
+import { isPlausibleConstructionYear } from '@/lib/listings/construction-year';
 // 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,
 // και τα δύο αντίγραφα **είχαν ήδη αποκλίνει** (`addresses` · `category`). Το εντόπισε
 // το CHECK 3.28, όχι άνθρωπος.
@@ -167,6 +168,12 @@ export const PATCH = withStandardRateLimit(
         db: adminDb,
       });
 
+      // ADR-890 Φ0 — η φόρμα κρίνει το έτος με την ΙΔΙΑ σταθερά· εδώ η πόρτα για όποιον την παρακάμψει.
+      const year = updates.constructionYear;
+      if (year !== undefined && year !== null && !isPlausibleConstructionYear(year, new Date().getFullYear())) {
+        throw new ApiError(400, 'constructionYear out of range');
+      }
+
       const IMMUTABLE_FIELDS = ['companyId'];
       const cleanUpdates = Object.fromEntries(
         Object.entries(updates).filter(([key, value]) =>
@@ -265,7 +272,13 @@ export const PATCH = withStandardRateLimit(
       // `republishListingsForProject` είναι το SSoT και είναι **idempotent**, οπότε ένα
       // υπερσύνολο είναι σωστό. Δεύτερη συνάρτηση «ανά κτίριο» θα ήταν δεύτερη μηχανή
       // για την ίδια ερώτηση (ADR-749).
-      if ('placeRef' in cleanUpdates || 'projectId' in cleanUpdates) {
+      // ADR-890 Φ0 — το ΕΤΟΣ ΚΑΤΑΣΚΕΥΗΣ ζει κι αυτό στο κτίριο, και το κληρονομεί κάθε αγγελία του.
+      // ⚠️ Μόνο όταν **άλλαξε**: η αυτόματη αποθήκευση το στέλνει σε κάθε κύκλο, και ένα σκέτο
+      //    `in` θα ξαναπρόβαλλε όλο το έργο σε κάθε πληκτρολόγηση του ονόματος.
+      const constructionYearChanged =
+        'constructionYear' in cleanUpdates &&
+        (cleanUpdates.constructionYear ?? null) !== (buildingData?.constructionYear ?? null);
+      if ('placeRef' in cleanUpdates || 'projectId' in cleanUpdates || constructionYearChanged) {
         const affectedProjectId =
           (cleanUpdates.projectId as string | undefined) ??
           (buildingData?.projectId as string | undefined) ??

@@ -435,7 +435,10 @@
         "descriptionPlaceholder": "Describe the building...",
         "charactersCount": "{count}/500 characters",
         "category": "Building Category",
-        "categoryPlaceholder": "Select category..."
+        "categoryPlaceholder": "Select category...",
+        "constructionYear": "Year built",
+        "constructionYearPlaceholder": "e.g. 1978",
+        "constructionYearHint": "For a building under construction, the delivery year. Shown on every listing in this building."
       },
       "technicalSpecs": {
         "title": "Technical Specifications",

@@ -95,6 +95,7 @@ export const CRITERION_PARAM: Record<CriterionKey, string> = {
   floor: 'fl',
   bedrooms: 'beds',
   renovationYear: 'reno',
+  constructionYear: 'built',
   bathrooms: 'bath',
   wc: 'wc',
   totalRooms: 'rooms',

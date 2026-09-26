@@ -55,6 +55,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,
+    adminArea: null,
     authorship: 'owner-declared',
     agencyName: null,
     agencyId: null,

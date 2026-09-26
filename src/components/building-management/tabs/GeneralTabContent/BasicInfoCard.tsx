@@ -21,13 +21,14 @@ import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { CONSTRUCTION_YEAR_BOUNDS, maxConstructionYear } from '@/lib/listings/construction-year';
 import '@/lib/design-system';
 
 const BUILDING_CATEGORIES = ['residential', 'commercial', 'mixed', 'industrial'] as const;
 
 interface BasicInfoCardProps {
     /** ADR-233 §3.4: `code` is the locked building identifier ("Κτήριο Α"). Read-only. */
-    formData: { code?: string; name: string; description: string; category?: string };
+    formData: { code?: string; name: string; description: string; category?: string; constructionYear: string };
     updateField: (field: string, value: string | number) => void;
     isEditing: boolean;
     errors: { [key: string]: string };
@@ -89,6 +90,30 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* ADR-890 Φ0 — η ΜΙΑ δήλωση ανά κτίριο· την κληρονομούν όλες οι αγγελίες του. */}
+        <div className="space-y-2">
+          <Label htmlFor="building-construction-year">{t('tabs.general.basicInfo.constructionYear')}</Label>
+          <Input
+            id="building-construction-year"
+            type="number"
+            inputMode="numeric"
+            min={CONSTRUCTION_YEAR_BOUNDS.min}
+            max={maxConstructionYear(new Date().getFullYear())}
+            step={1}
+            value={formData.constructionYear}
+            onChange={(e) => updateField('constructionYear', e.target.value)}
+            disabled={!isEditing}
+            aria-invalid={Boolean(errors.constructionYear)}
+            aria-describedby="building-construction-year-hint"
+            placeholder={t('tabs.general.basicInfo.constructionYearPlaceholder')}
+            className={cn(!isEditing && 'bg-muted', errors.constructionYear && getStatusBorder('error'))}
+          />
+          <p id="building-construction-year-hint" className={cn('text-xs', colors.text.muted)}>
+            {t('tabs.general.basicInfo.constructionYearHint')}
+          </p>
+          {errors.constructionYear && <p className="text-sm text-destructive">{errors.constructionYear}</p>}
         </div>
 
         <div className="space-y-2">

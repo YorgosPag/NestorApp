@@ -435,7 +435,10 @@
         "descriptionPlaceholder": "Περιγράψτε το κτίριο...",
         "charactersCount": "{count}/500 χαρακτήρες",
         "category": "Κατηγορία Κτιρίου",
-        "categoryPlaceholder": "Επιλέξτε κατηγορία..."
+        "categoryPlaceholder": "Επιλέξτε κατηγορία...",
+        "constructionYear": "Έτος κατασκευής",
+        "constructionYearPlaceholder": "π.χ. 1978",
+        "constructionYearHint": "Για κτίριο υπό κατασκευή, το έτος παράδοσης. Εμφανίζεται σε όλες τις αγγελίες του κτιρίου."
       },
       "technicalSpecs": {
         "title": "Τεχνικά Χαρακτηριστικά",

@@ -872,7 +872,7 @@
 | **ADR-887** | Το όνομα της ζήτησης μέσα στις ειδοποιήσεις και στα email | ✅ IMPLEMENTED — 2026-09-25 · jest: δες §7 · ζωντανή επαλήθευση (πραγματικό email + κουδούνι): **εκκρεμεί** — δεν υπήρχε νέο ταίριασμα για ανακοίνωση (δες Changelog) | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-887-demand-name-in-notifications.md) |
 | **ADR-888** | «Αποθήκευση αναζήτησης» από τον χάρτη αποτελεσμάτων: η ζήτηση με πολλά σχήματα | ✅ IMPLEMENTED — 2026-09-25 · ζωντανά επαληθευμένο (§6) · εκκρεμούν: ανώνυμη ροή, κινητό, μετάπτωση | 2026-09-25 | Uncategorized | [📄](./adrs/ADR-888-demand-save-search-from-map.md) |
 | **ADR-889** | Πραγματικές τιμές συμβολαίων από το Μητρώο Αξιών Μεταβιβάσεων Ακινήτων (ΜΑΜΑ) | ✅ PROPOSED — 2026-09-26 · καμία γραμμή κώδικα ακόμη · τα νούμερα του §3 **μετρήθηκαν** στα πραγματικά αρχεία 2025 + 2026 | 2026-09-26 | Uncategorized | [📄](./adrs/ADR-889-real-estate-transfer-values-registry.md) |
-| **ADR-890** | Ανάλυση Περιοχής: δημόσια σελίδα αγοράς ανά δήμο / δημοτική ενότητα | ✅ PROPOSED — 2026-09-26 · καμία γραμμή κώδικα ακόμη | 2026-09-26 | Uncategorized | [📄](./adrs/ADR-890-area-market-analysis.md) |
+| **ADR-890** | Ανάλυση Περιοχής: δημόσια σελίδα αγοράς ανά δήμο / δημοτική ενότητα | ✅ IN PROGRESS — **Φ0 IMPLEMENTED** 2026-09-26 (§9) · Φ1–Φ6 PROPOSED | 2026-09-26 | Uncategorized | [📄](./adrs/ADR-890-area-market-analysis.md) |
 | **ADR-891** | Αυτοφιλοξενούμενος χάρτης φόντου (PMTiles): μηδέν συνδρομές, μηδέν όρια τρίτων | ✅ PROPOSED — 2026-09-26 · καμία γραμμή κώδικα ακόμη | 2026-09-26 | Uncategorized | [📄](./adrs/ADR-891-self-hosted-basemap.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
@@ -1698,7 +1698,7 @@
 | **ADR-887** | Το όνομα της ζήτησης μέσα στις ειδοποιήσεις και στα email | ✅ IMPLEMENTED — 2026-09-25 · jest: δες §7 · ζωντανή επαλήθευση (πραγματικό email + κουδούνι): **εκκρεμεί** — δεν υπήρχε νέο ταίριασμα για ανακοίνωση (δες Changelog) | [View](./adrs/ADR-887-demand-name-in-notifications.md) |
 | **ADR-888** | «Αποθήκευση αναζήτησης» από τον χάρτη αποτελεσμάτων: η ζήτηση με πολλά σχήματα | ✅ IMPLEMENTED — 2026-09-25 · ζωντανά επαληθευμένο (§6) · εκκρεμούν: ανώνυμη ροή, κινητό, μετάπτωση | [View](./adrs/ADR-888-demand-save-search-from-map.md) |
 | **ADR-889** | Πραγματικές τιμές συμβολαίων από το Μητρώο Αξιών Μεταβιβάσεων Ακινήτων (ΜΑΜΑ) | ✅ PROPOSED — 2026-09-26 · καμία γραμμή κώδικα ακόμη · τα νούμερα του §3 **μετρήθηκαν** στα πραγματικά αρχεία 2025 + 2026 | [View](./adrs/ADR-889-real-estate-transfer-values-registry.md) |
-| **ADR-890** | Ανάλυση Περιοχής: δημόσια σελίδα αγοράς ανά δήμο / δημοτική ενότητα | ✅ PROPOSED — 2026-09-26 · καμία γραμμή κώδικα ακόμη | [View](./adrs/ADR-890-area-market-analysis.md) |
+| **ADR-890** | Ανάλυση Περιοχής: δημόσια σελίδα αγοράς ανά δήμο / δημοτική ενότητα | ✅ IN PROGRESS — **Φ0 IMPLEMENTED** 2026-09-26 (§9) · Φ1–Φ6 PROPOSED | [View](./adrs/ADR-890-area-market-analysis.md) |
 | **ADR-891** | Αυτοφιλοξενούμενος χάρτης φόντου (PMTiles): μηδέν συνδρομές, μηδέν όρια τρίτων | ✅ PROPOSED — 2026-09-26 · καμία γραμμή κώδικα ακόμη | [View](./adrs/ADR-891-self-hosted-basemap.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 

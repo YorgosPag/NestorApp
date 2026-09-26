@@ -64,6 +64,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     //    και έβγαινε πράσινη. Ο **παρονομαστής** πρέπει να είναι πλήρης, αλλιώς δεν
     //    είναι παρονομαστής.
     place: null,
+    // ✅ **ADR-890 Φ0** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει (έκτη φορά).
+    adminArea: null,
     authorship: 'agency',
     agencyName: null,
     // ✅ **ADR-841 §7 (Α1)** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει: ο παρονομαστής
@@ -77,6 +79,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     energyClass: 'B',
     condition: 'good',
     renovationYear: 2015,
+    // ADR-890 Φ0 — δεύτερο πεδίο με προέλευση: δήλωση στο κτίριο.
+    constructionYear: { provenance: 'declared', value: 1978, at: '2026-09-02T00:00:00.000Z' },
     bathrooms: 1,
     wc: 1,
     totalRooms: 4,

@@ -34,6 +34,8 @@
  * Γι' αυτό: **διακριτή ένωση**, όπου ο τύπος **επιβάλλει** τα πεδία κάθε σκέλους.
  */
 
+import type { PlaceFactSource } from '@/lib/location/location-provenance';
+
 // ============================================================================
 // 1. ΤΟ ΛΕΞΙΛΟΓΙΟ — η κατάταξη είναι ο ΟΡΙΣΜΟΣ, ποτέ δεύτερη λίστα
 // ============================================================================
@@ -43,7 +45,7 @@
  *
  * 🔑 **Η κατάταξη ΕΙΝΑΙ ο κανόνας, γραμμένος μία φορά:**
  *
- *     μετρημένο από σχέδιο  >  δηλωμένο από άνθρωπο  >  συμπερασμένο από μοντέλο
+ *     μετρημένο από σχέδιο  >  δηλωμένο από άνθρωπο  >  δημόσια εγγραφή  >  συμπερασμένο από μοντέλο
  *
  * ⚠️ **Οι αριθμοί δεν έχουν νόημα από μόνοι τους και ΔΕΝ αποθηκεύονται ποτέ** — μόνο
  * η **σύγκρισή** τους. Ίδια προειδοποίηση, ίδιος λόγος με το
@@ -56,8 +58,19 @@
  * σβήνει πινέζα ανθρώπου.
  */
 const ATTRIBUTE_PROVENANCE_RANK = {
-  measured: 3,
-  declared: 2,
+  measured: 4,
+  declared: 3,
+  /**
+   * **Δημόσια εγγραφή** (ADR-890 Φ0) — γεγονός του κοινού επιπέδου Α (π.χ. `start_date` του
+   * OpenStreetMap για το έτος κατασκευής), **όχι** δήλωση του αγγελιοδότη.
+   *
+   * 🔑 **ΚΑΤΩ από το `declared`, και είναι η πρακτική του κλάδου**: στο RESO/MLS η αγγελία
+   * φέρει ό,τι **δηλώνει ο αγγελιοδότης** (`YearBuilt` + `YearBuiltSource`), και το Zillow
+   * δείχνει τα δημόσια μητρώα ως **προσυμπλήρωση** που ο ιδιοκτήτης διορθώνει — ποτέ ως
+   * κάτι που σβήνει τη δήλωσή του. **ΠΑΝΩ από το `inferred`**: μια δημόσια εγγραφή δεν
+   * είναι μάντεμα μοντέλου.
+   */
+  'public-record': 2,
   inferred: 1,
 } as const satisfies Readonly<Record<string, number>>;
 
@@ -74,6 +87,24 @@ const ATTRIBUTE_PROVENANCE_RANK = {
  * βαθμίδα — ίδιο ιδίωμα με το ADR-842 Α4 (η λίστα είναι η πηγή, ο τύπος παράγεται).
  */
 export type AttributeProvenance = keyof typeof ATTRIBUTE_PROVENANCE_RANK;
+
+/**
+ * **Τα δημόσια μητρώα που δεχόμαστε ως `public-record`** (ADR-890 Φ0).
+ *
+ * 🔑 **Υποσύνολο του `PlaceFactSource`, κλειστό επίτηδες**: από τις πηγές του επιπέδου Α, μόνο όσες
+ * είναι **μητρώα** με όνομα που ο αγοραστής μπορεί να ελέγξει. Το `declared` είναι δήλωση **άλλου**
+ * χρήστη (ισχυρισμός, όχι εγγραφή)· τα `manual`/`drawn`/`geocoded` είναι χειρονομίες θέσης. Νέο
+ * μητρώο (π.χ. Κτηματολόγιο) μπαίνει **εδώ**, και η οθόνη το μαθαίνει από τον εξαντλητικό πίνακα
+ * ετικετών της.
+ */
+const PUBLIC_RECORD_REGISTRIES = ['osm'] as const satisfies readonly PlaceFactSource[];
+
+export type PublicRecordRegistry = (typeof PUBLIC_RECORD_REGISTRIES)[number];
+
+/** Είναι αυτή η πηγή του επιπέδου Α δημόσιο μητρώο; */
+export function isPublicRecordRegistry(source: PlaceFactSource): source is PublicRecordRegistry {
+  return (PUBLIC_RECORD_REGISTRIES as readonly PlaceFactSource[]).includes(source);
+}
 
 /** Ο κατάλογος των προελεύσεων — **παράγεται**, δεν ξαναγράφεται. */
 export const ATTRIBUTE_PROVENANCES: readonly AttributeProvenance[] = Object.keys(
@@ -145,6 +176,17 @@ export type SourcedAttribute<T> =
       readonly value: T;
     })
   | (AttributeFactBase & {
+      readonly provenance: 'public-record';
+      readonly value: T;
+      /**
+       * **Ποιο μητρώο** το λέει — ο αγοραστής βλέπει το όνομά του (το `YearBuiltSource` του
+       * RESO). Δες {@link PUBLIC_RECORD_REGISTRIES}.
+       */
+      readonly registry: PublicRecordRegistry;
+      /** Δείκτης στην εγγραφή — η ταυτότητα του δημόσιου τόπου (`pbld_*`). */
+      readonly sourceRef: string;
+    })
+  | (AttributeFactBase & {
       readonly provenance: 'inferred';
       readonly value: T;
       /** 0..1 — πόσο σίγουρο είναι το μοντέλο. */
@@ -187,6 +229,9 @@ export function isPubliclyPresentable<T>(fact: SourcedAttribute<T>): boolean {
       return true;
     case 'declared':
       // Το είπε άνθρωπος και το υπογράφει· ο αγοραστής βλέπει ποιος δήλωσε.
+      return true;
+    case 'public-record':
+      // Δημόσια εγγραφή — φεύγει ΜΕ το όνομα του μητρώου της, ποτέ ως δήλωση του αγγελιοδότη.
       return true;
     case 'inferred':
       // 🔑 Ο πυρήνας του Α7: μάντεμα χωρίς ανθρώπινη έγκριση ΔΕΝ είναι γεγονός.

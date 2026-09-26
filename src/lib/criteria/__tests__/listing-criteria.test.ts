@@ -67,6 +67,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     title: 'Δοκιμή',
     ...UNASKED_LISTING_ATTRIBUTES,
     place: null,
+    adminArea: null,
     authorship: 'agency',
     agencyName: null,
     agencyId: null,

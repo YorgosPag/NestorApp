@@ -11,6 +11,11 @@
     "heading": "Στοιχεία ακινήτου",
     "ledger": "{declared} από {total} στοιχεία δηλωμένα",
     "undeclared": "Δεν έχει δηλωθεί",
+    "publicRecord": "{year} · δημόσια εγγραφή: {registry}",
+    "registry": {
+      "osm": "OpenStreetMap"
+    },
+    "publicRecordSource": "Από δημόσιο μητρώο",
     "label": {
       "type": "Είδος",
       "areaSqm": "Εμβαδόν",
@@ -19,6 +24,7 @@
       "energyClass": "Ενεργειακή κλάση",
       "condition": "Κατάσταση",
       "renovationYear": "Έτος ανακαίνισης",
+      "constructionYear": "Έτος κατασκευής",
       "bathrooms": "Μπάνια",
       "wc": "Ξεχωριστό WC",
       "totalRooms": "Συνολικά δωμάτια",

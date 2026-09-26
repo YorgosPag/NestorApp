@@ -17,8 +17,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { GeoPoint, GeoRegion } from '@/types/geo/coordinates';
 import { boundaryOwnerId } from './admin-area-index-file';
 import { ADMIN_AREA_INDEX_SOURCE } from './admin-area-search';
-import { adminBoundaryPath, readAdminBoundary } from './admin-boundary-file';
-import { geoJsonRings } from './geo-geojson';
+import { adminBoundaryPath, adminBoundaryRegion, readAdminBoundary } from './admin-boundary-file';
 
 const logger = createModuleLogger('admin-boundaries');
 
@@ -68,12 +67,7 @@ function ownBoundarySource(adminId: string): LazyJsonSnapshot<LoadedAdminBoundar
         level: boundary.level,
         places: boundary.places,
         place: null,
-        region: {
-          adminId,
-          rings: geoJsonRings(boundary.geometry),
-          bbox: boundary.bbox,
-          toleranceM: boundary.toleranceM,
-        },
+        region: adminBoundaryRegion(boundary),
       };
     },
     onFailure: logFailure(adminId),

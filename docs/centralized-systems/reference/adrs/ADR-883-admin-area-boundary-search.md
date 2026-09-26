@@ -336,3 +336,9 @@
   σχήμα ως ένωση)· νέος εξαντλητικός `matchGeoArea`· τα χρώματα του `AdminBoundaryLayer` εξήχθησαν σε `boundary-paint.ts`·
   το πλαίσιο του `RegionBoundaryChip` σε `BoundaryChipFrame` (ίδιο chip για όριο και σχέδιο)· το `regionActive` του
   `useMapAreaSearch` έγινε `boundaryActive` (όριο **ή** σχέδιο κλειδώνουν την περιοχή). Η συμπεριφορά του ορίου **δεν** άλλαξε.
+- **2026-09-26** — **Πρώτος καταναλωτής στον server** (ADR-890 Φ0): η αγγελία αποκτά `adminArea` κατά τη δημοσίευση,
+  με σημείο-σε-πολύγωνο πάνω στα **ίδια** αρχεία ορίων. Η μετατροπή «όριο → `GeoRegion`» **εξήχθη** σε
+  `adminBoundaryRegion` (`admin-boundary-file.ts`) και την καλούν πλέον **και** ο φορτωτής του browser (`admin-boundaries.ts`)
+  **και** ο κριτής `lib/geo/admin-area-of-point.ts`, ώστε η αγγελία να μην ανήκει ποτέ σε δήμο που ο χάρτης τη δείχνει έξω.
+  Αναγνώστης server `services/places/admin-boundaries.reader.ts` (`createServerJsonFile`, LRU 1.024). Μετρημένο: 87 δήμοι
+  χωρίς Δ.Ε., 176 κοινότητες κατευθείαν κάτω από δήμο ⇒ η κάθοδος γίνεται **μέσω `parentId`**, ποτέ με σταθερό βήμα.

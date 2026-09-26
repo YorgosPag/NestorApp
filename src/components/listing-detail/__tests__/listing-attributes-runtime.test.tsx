@@ -74,6 +74,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,
+    adminArea: null,
     authorship: 'agency',
     agencyName: null,
     agencyId: null,
@@ -126,9 +127,9 @@ describe('Ρ1 — η κάρτα ζωγραφίζει ελληνικά, όχι κ
   it('η επικεφαλίδα και η λογιστική είναι μεταφρασμένες', () => {
     renderCard();
     expect(screen.getByText('Στοιχεία ακινήτου')).toBeInTheDocument();
-    // 27 στοιχεία, 6 δηλωμένα: type · areaSqm · floor(0) · bedrooms · condition ·
-    // heatingType, συν 2 σύνολα (`interiorFeatures` με τιμή, `amenities` **άδειο**).
-    expect(screen.getByText('8 από 27 στοιχεία δηλωμένα')).toBeInTheDocument();
+    // 28 στοιχεία (ADR-890 Φ0: +`constructionYear`), 6 δηλωμένα: type · areaSqm · floor(0) ·
+    // bedrooms · condition · heatingType, συν 2 σύνολα (`interiorFeatures` με τιμή, `amenities` **άδειο**).
+    expect(screen.getByText('8 από 28 στοιχεία δηλωμένα')).toBeInTheDocument();
   });
 
   it('κάθε ομάδα έχει ελληνική κεφαλίδα — καμία δεν έμεινε ωμή', () => {
@@ -184,12 +185,16 @@ describe('Ρ3 — «δηλώθηκε ότι δεν υπάρχουν» ≠ «δε
     renderCard();
     // Δωμάτια & εμβαδά: 9 στοιχεία, κανένα δηλωμένο.
     expect(screen.getByText('9 δεν έχουν δηλωθεί')).toBeInTheDocument();
-    // Ενέργεια & κατάσταση: 3 στοιχεία, 1 δηλωμένο (`condition`).
-    expect(screen.getByText('2 δεν έχουν δηλωθεί')).toBeInTheDocument();
+    // Ενέργεια & κατάσταση: 4 στοιχεία (ADR-890 Φ0: +`constructionYear`), 1 δηλωμένο (`condition`).
+    expect(screen.getByText('3 δεν έχουν δηλωθεί')).toBeInTheDocument();
   });
 
   it('ο ενικός του ICU δουλεύει — μία μόνο έλλειψη λέει «δεν έχει δηλωθεί»', () => {
-    renderCard({ energyClass: 'B', renovationYear: 2015 });
+    renderCard({
+      energyClass: 'B',
+      renovationYear: 2015,
+      constructionYear: { provenance: 'declared', value: 1978, at: AT },
+    });
     expect(screen.getByText('1 δεν έχει δηλωθεί')).toBeInTheDocument();
   });
 });

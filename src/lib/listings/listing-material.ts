@@ -223,6 +223,9 @@ export const LISTING_FLOORPLAN_PROVENANCE_KEYS: Readonly<Record<AttributeProvena
   declared: 'search-results:detail.media.floorplanProvenance.declared',
   measured: 'search-results:detail.media.floorplanProvenance.measured',
   inferred: 'search-results:detail.media.floorplanProvenance.inferred',
+  // ADR-890 Φ0 — ΜΙΑ ετικέτα για κάτοψη και μοντέλο, στο `listing-detail` (per-route): στο
+  // `search-results` θα πλήρωνε το κέλυφος κάθε σελίδας (CHECK 3.34, προϋπολογισμός 15.200).
+  'public-record': 'listing-detail:attributes.publicRecordSource',
 } as const;
 
 /**
@@ -249,4 +252,5 @@ export const LISTING_MODEL_PROVENANCE_KEYS: Readonly<Record<AttributeProvenance,
   declared: 'listing-detail:model.provenance.declared',
   measured: 'listing-detail:model.provenance.measured',
   inferred: 'listing-detail:model.provenance.inferred',
+  'public-record': 'listing-detail:attributes.publicRecordSource',
 } as const;

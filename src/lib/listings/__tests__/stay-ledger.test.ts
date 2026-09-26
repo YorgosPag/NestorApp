@@ -47,6 +47,7 @@ function listing(id: string, mapped: boolean): PublicListing {
       ? { kind: 'known', provenance: 'manual', point: { lat: 40.6, lng: 22.9 }, locatedAt: '2026-08-01T00:00:00.000Z' }
       : { kind: 'unknown', reason: 'never-asked' },
     place: null,
+    adminArea: null,
     floor: 1,
     bedrooms: 2,
     authorship: 'owner-declared',

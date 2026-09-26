@@ -74,7 +74,7 @@ import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 13;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 14;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**
@@ -705,6 +705,25 @@ export const LISTING_MIGRATIONS: readonly ListingMigration[] = [
      * 🔑 **Ιδιοδύναμο (Κ3)**: έγκυρη πολιτική περνά αυτούσια· αγγελία χωρίς `stay` μένει `null`.
      */
     apply: (doc) => ({ ...doc, stay: storedStayWithPets(doc) }),
+  },
+  {
+    to: 14,
+    adr: 'ADR-890 Φ0',
+    adds: ['constructionYear', 'adminArea'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΕΤΟΣ ΚΑΤΑΣΚΕΥΗΣ ΚΑΙ ΔΙΟΙΚΗΤΙΚΗ ΠΕΡΙΟΧΗ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΑ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΛΥΘΗΚΕ»** (`null`), ποτέ μαντεψιά: ο κρίκος είναι
+     * καθαρή συνάρτηση πάνω σε **ένα** έγγραφο (κρίκος 3) — δεν ανοίγει όρια ούτε το κτίριο. Την αλήθεια
+     * τη γράφει η **επαναπροβολή** (`rebuild-public-listings`), που περνά από τον ένα γραφέα.
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο.
+     */
+    apply: (doc) => ({
+      ...doc,
+      constructionYear: doc.constructionYear ?? null,
+      adminArea: doc.adminArea ?? null,
+    }),
   },
 ];
 

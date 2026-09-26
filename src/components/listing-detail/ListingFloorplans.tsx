@@ -37,7 +37,8 @@ import type { ListingFloorplan, PublicListing } from '@/types/public-listing';
 const FLOORPLAN_SIZES = '(min-width: 1024px) 31vw, 100vw';
 
 export function ListingFloorplans({ listing }: { readonly listing: PublicListing }) {
-  const { t } = useTranslation(['search-results']);
+  // `listing-detail`: η ετικέτα `public-record` ζει εκεί (ADR-890 Φ0 · CHECK 3.34).
+  const { t } = useTranslation(['search-results', 'listing-detail']);
 
   // 🔴 **Ο ΚΡΙΤΗΣ ΤΟΥ ADR-842 Α7, ΞΑΝΑΧΡΗΣΙΜΟΠΟΙΗΜΕΝΟΣ — ΟΧΙ ΞΑΝΑΓΡΑΜΜΕΝΟΣ.**
   //    Κάτοψη που **μάντεψε μοντέλο** και **δεν ενέκρινε άνθρωπος** δεν φτάνει στον

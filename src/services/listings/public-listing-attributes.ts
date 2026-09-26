@@ -185,10 +185,10 @@ function projectLevels(
 // Η ΧΑΡΤΟΓΡΑΦΗΣΗ — μία οικογένεια ανά συνάρτηση (N.7.1)
 // ============================================================================
 
-/** Ενεργειακή κλάση · κατάσταση · ανακαίνιση. */
+/** Ενεργειακή κλάση · κατάσταση · ανακαίνιση · (κατασκευή: από τον γραφέα). */
 function projectEnergyAndCondition(
   property: ProjectableProperty
-): Pick<ListingAttributeFields, 'energyClass' | 'condition' | 'renovationYear'> {
+): Pick<ListingAttributeFields, 'energyClass' | 'condition' | 'renovationYear' | 'constructionYear'> {
   return {
     // ⛔ **ΜΟΝΟ Η ΚΛΑΣΗ.** Το `Property.energy` κουβαλά `certificateId` ·
     //    `certificateDate` · `validUntil` — ταυτότητα και ημερομηνίες **μητρώου**.
@@ -197,6 +197,9 @@ function projectEnergyAndCondition(
     energyClass: vocabularyValue(ENERGY_CLASSES, property.energy?.class),
     condition: vocabularyValue(CONDITIONS, property.condition),
     renovationYear: numberOrNull(property.renovationYear),
+    // ADR-890 Φ0 — γεγονός του ΚΤΙΡΙΟΥ, όχι του ακινήτου: δεν ζει στο `ProjectableProperty`.
+    //    Το λύνει και το δένει ο γραφέας (`withPublicationFacts`: δήλωση κτιρίου ή δημόσια εγγραφή).
+    constructionYear: null,
   };
 }
 

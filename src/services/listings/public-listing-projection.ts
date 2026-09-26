@@ -443,6 +443,9 @@ export function projectListingShape(
     // δεσμό στο **δικό του** έγγραφο, ο επαγγελματίας τον κληρονομεί από το **κτίριο**
     // (επίπεδο Β). Δύο πηγές, **ένα** πεδίο εισόδου — δες {@link PlaceKnowledge.ref}.
     place: place.ref,
+    // ADR-890 Φ0 — γεγονός της ΔΗΜΟΣΙΕΥΣΗΣ (όρια): το δένει ο γραφέας με το `withPublicationFacts`,
+    // όπως τη συλλογή. Η καθαρή προβολή δεν ανοίγει αρχεία. Ίδιο για το `constructionYear`.
+    adminArea: null,
     floor: numberOrNull(property.floor),
     bedrooms: numberOrNull(property.layout?.bedrooms),
     // 🔴 **ADR-842 Φ3 — ΤΟ ΦΡΑΓΜΑ ΠΟΥ ΕΣΠΑΣΕ.** Η εταιρεία κατείχε ~60 πεδία και

@@ -116,6 +116,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     energyClass: 'B',
     condition: 'good',
     renovationYear: 2015,
+    constructionYear: null,
     bathrooms: 1,
     wc: 1,
     totalRooms: 4,
@@ -144,6 +145,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     //    θα διάβαζε `authorship: undefined`, θα έπεφτε στον τελευταίο κλάδο και η
     //    άγκυρα θα ήταν **πράσινη σε λάθος οθόνη** — το ακριβές σχήμα της Α2.10.
     place: null,
+    adminArea: null,
     authorship: 'agency',
     agencyName: 'ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α.Ε.',
     agencyId: 'comp_a0000001',

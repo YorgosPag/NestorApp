@@ -65,6 +65,7 @@
 import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
+import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import type { OfferKind, StayPetPolicy } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
@@ -631,6 +632,22 @@ export interface PublicListing {
    */
   readonly place: PlaceRef | null;
 
+  /**
+   * **ΣΕ ΠΟΙΑ ΔΙΟΙΚΗΤΙΚΗ ΠΕΡΙΟΧΗ ΠΕΦΤΕΙ** (ADR-890 Φ0) — ταυτότητες ADR-883, βαθμίδες 3–7, ή
+   * `null` όταν η θέση είναι άγνωστη ή δεν πέφτει σε κανένα όριο.
+   *
+   * 🔑 **Γράφεται ΚΑΤΑ ΤΗ ΔΗΜΟΣΙΕΥΣΗ**, με σημείο-σε-πολύγωνο πάνω στην {@link position}, ώστε η
+   * σελίδα περιοχής και η σύνοψη αγοράς να **διαβάζουν** αντί να υπολογίζουν κάθε νύχτα. Το δένει
+   * ο **γραφέας** (`withPublicationFacts`), όπως τη συλλογή· η καθαρή προβολή γράφει `null`.
+   *
+   * ⚠️ **Το βάθος το ορίζει η ακρίβεια της θέσης**: «κέντρο δήμου» από τον geocoder σταματά στον
+   * δήμο — θα έπεφτε σε **τυχαία** κοινότητα. Κενή βαθμίδα = «δεν αποδόθηκε», ποτέ «δεν υπάρχει».
+   *
+   * ✅ **Ασφαλές ως αποκάλυψη**: παράγωγο της **ήδη δημόσιας** θέσης, και **ποτέ πιο ακριβές** από
+   * αυτήν. Μόνο ταυτότητες — τα ονόματα ζουν στο ευρετήριο (ένα SSoT).
+   */
+  readonly adminArea: AdminAreaAssignment | null;
+
   // ── +2 ΕΙΔΙΚΑ ─────────────────────────────────────────────────────────────
   /**
    * **Ο ΟΡΟΦΟΣ** — το ένα πράγμα που προσθέτει το ακίνητο πάνω στο κτίριο (Α1).
@@ -672,6 +689,19 @@ export interface PublicListing {
   readonly condition: ConditionType | null;
   /** Έτος τελευταίας ανακαίνισης. `null` = δεν δηλώθηκε. */
   readonly renovationYear: number | null;
+  /**
+   * **ΕΤΟΣ ΚΑΤΑΣΚΕΥΗΣ ΤΟΥ ΚΤΙΡΙΟΥ** (ADR-890 Φ0) — **με την πηγή του**, όπως το RESO `YearBuilt`
+   * + `YearBuiltSource`. `null` = καμία πηγή δεν το ξέρει.
+   *
+   * 🔑 **Δεύτερο πεδίο με προέλευση μετά το {@link levels}, για τον ίδιο λόγο**: έχει **δύο**
+   * πηγές που μπορούν να διαφωνήσουν — τη δήλωση του επαγγελματία στο **κτίριο** (`declared`) και
+   * τη **δημόσια εγγραφή** του κοινού επιπέδου Α (`public-record`, π.χ. OpenStreetMap). Νικά η
+   * δήλωση· η δημόσια εγγραφή είναι εφεδρεία (ποτέ δεν σβήνει δήλωση). Δες `lib/listings/construction-year.ts`.
+   *
+   * ⚠️ **ΧΩΡΙΣΤΟ από το {@link renovationYear}** (RESO `YearBuiltEffective`): μια ανακαίνιση δεν
+   * κάνει νεόδμητο ένα κτίριο του 1975. Το δένει ο **γραφέας** (`withPublicationFacts`).
+   */
+  readonly constructionYear: SourcedAttribute<number> | null;
 
   /** Μπάνια. `null` = δεν δηλώθηκε· `0` = **υπαρκτό μηδέν**. */
   readonly bathrooms: number | null;
@@ -986,7 +1016,7 @@ export const NO_AGENCY_IDENTITY: PublicAgencyIdentity = { id: null, name: null }
 // ============================================================================
 
 /**
- * Τα είκοσι τρία πεδία που άνοιξε η Φ3.
+ * Τα είκοσι τρία πεδία που άνοιξε η Φ3 — και το `constructionYear` της ADR-890 Φ0 (είκοσι τέσσερα).
  *
  * 🔑 **`Pick` και όχι χειρόγραφη διεπαφή** — αν το σχήμα αποκτήσει ή χάσει πεδίο, ο
  * τύπος το μαθαίνει στην ίδια στιγμή. Μια χειρόγραφη λίστα εδώ θα ήταν *«χειρόγραφη
@@ -998,6 +1028,7 @@ export type ListingAttributeFields = Pick<
   | 'energyClass'
   | 'condition'
   | 'renovationYear'
+  | 'constructionYear'
   | 'bathrooms'
   | 'wc'
   | 'totalRooms'
@@ -1042,6 +1073,7 @@ export const UNASKED_LISTING_ATTRIBUTES: ListingAttributeFields = {
   energyClass: null,
   condition: null,
   renovationYear: null,
+  constructionYear: null,
   bathrooms: null,
   wc: null,
   totalRooms: null,

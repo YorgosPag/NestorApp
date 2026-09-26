@@ -11,6 +11,11 @@
     "heading": "Property details",
     "ledger": "{declared} of {total} details declared",
     "undeclared": "Not declared",
+    "publicRecord": "{year} · public record: {registry}",
+    "registry": {
+      "osm": "OpenStreetMap"
+    },
+    "publicRecordSource": "From a public registry",
     "label": {
       "type": "Type",
       "areaSqm": "Area",
@@ -19,6 +24,7 @@
       "energyClass": "Energy class",
       "condition": "Condition",
       "renovationYear": "Renovation year",
+      "constructionYear": "Year built",
       "bathrooms": "Bathrooms",
       "wc": "Separate WC",
       "totalRooms": "Total rooms",

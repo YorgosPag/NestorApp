@@ -119,6 +119,7 @@ function listingOf(id: string, title: string): PublicListing {
     offerKinds: ['sell'],
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,
+    adminArea: null,
     floor: null,
     bedrooms: null,
     // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.

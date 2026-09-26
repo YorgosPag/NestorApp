@@ -73,6 +73,28 @@ export async function readPlaceOsmRef(
     : null;
 }
 
+/**
+ * **Το έτος κατασκευής ενός δημόσιου κτιρίου** (επίπεδο Α), με την πηγή του — ή `null`.
+ *
+ * 🔑 Εφεδρεία της αγγελίας (ADR-890 Φ0): όταν ο αγγελιοδότης δεν το δήλωσε, η αγγελία δείχνει τη
+ * **δημόσια εγγραφή** με το όνομα του μητρώου — όπως το Zillow προσυμπληρώνει από δημόσια μητρώα.
+ *
+ * ⚠️ `null` = κανείς δεν το ξέρει **ή** ο δεσμός δεν είναι κτίριο (`land_*`). Και τα δύο δίνουν
+ * την ίδια απάντηση στον μόνο καταναλωτή: «καμία δημόσια εγγραφή».
+ */
+export async function readPublicBuildingConstructionYear(
+  adminDb: AdminFirestore,
+  placeId: string,
+): Promise<PublicBuilding['constructionYear']> {
+  if (placeKindOf(placeId) !== 'building') return null;
+
+  const building = (
+    await adminDb.collection(COLLECTIONS.PUBLIC_BUILDINGS).doc(placeId).get()
+  ).data() as PublicBuilding | undefined;
+
+  return building?.constructionYear ?? null;
+}
+
 // ============================================================================
 // ΕΠΑΛΗΘΕΥΣΗ ΔΕΣΜΟΥ — «δείχνει αυτός ο δεσμός κάπου;»
 // ============================================================================

@@ -109,6 +109,9 @@ const ATTRIBUTE_DECLARED: Record<ListingAttributeKey, AttributeDeclaredRule> = {
    * του αγοραστή είναι το λάθος σημείο για να το ανακαλύψουμε.
    */
   levels: (listing) => listing.levels !== null && isPubliclyPresentable(listing.levels),
+  /** ADR-890 Φ0 — ίδιος κανόνας με το `levels`: δοχείο με προέλευση, ο **ένας** κριτής του Α7. */
+  constructionYear: (listing) =>
+    listing.constructionYear !== null && isPubliclyPresentable(listing.constructionYear),
 
   balconies: 'value-present',
   netAreaSqm: 'value-present',

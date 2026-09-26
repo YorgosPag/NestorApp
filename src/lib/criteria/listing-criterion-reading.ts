@@ -194,6 +194,8 @@ const NUMERIC_READERS: Record<RangeCriterionKey, NumericReader> = {
   floor: plainNumber('floor', (l) => l.floor),
   bedrooms: plainNumber('bedrooms', (l) => l.bedrooms),
   renovationYear: plainNumber('renovationYear', (l) => l.renovationYear),
+  /** Δοχείο με προέλευση, όπως το `levels` — την άδεια την κρίνει ο `ATTRIBUTE_DECLARED`. */
+  constructionYear: plainNumber('constructionYear', (l) => l.constructionYear?.value ?? null),
   bathrooms: plainNumber('bathrooms', (l) => l.bathrooms),
   wc: plainNumber('wc', (l) => l.wc),
   totalRooms: plainNumber('totalRooms', (l) => l.totalRooms),

@@ -52,6 +52,7 @@ function listingOf(
     offerKinds,
     position: { kind: 'unknown', reason: 'never-asked' },
     place: null,
+    adminArea: null,
     floor: 1,
     bedrooms: 2,
     authorship: 'owner-declared',

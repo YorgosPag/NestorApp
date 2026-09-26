@@ -124,6 +124,7 @@ export const LISTING_ATTRIBUTE_GROUP: Record<
   energyClass: 'energyCondition',
   condition: 'energyCondition',
   renovationYear: 'energyCondition',
+  constructionYear: 'energyCondition',
 
   bathrooms: 'roomsAreas',
   wc: 'roomsAreas',

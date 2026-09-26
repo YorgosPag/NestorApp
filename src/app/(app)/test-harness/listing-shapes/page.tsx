@@ -68,6 +68,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     //    και **κανείς δεν το είδε** επειδή ο πράκτορας δεν τρέχει `tsc` (N.17) και η
     //    σελίδα δεν έχει άγκυρα. Ίδιο σχήμα με το fixture της οθόνης 3 (ADR-841 Α13).
     place: null,
+    adminArea: null,
     authorship: 'agency',
     agencyName: null,
     agencyId: null,
