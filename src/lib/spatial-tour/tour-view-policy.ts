@@ -19,7 +19,14 @@
  * σιωπηλά δεκάδες ανθρώπους που ο μεσίτης επέλεξε ονομαστικά.
  */
 
-import type { SpatialTourLifecycle, SpatialTourVisibility, TourAccessStanding, TourViewBasis } from '@/constants/spatial-tour-vocabulary';
+import {
+  SPATIAL_TOUR_VISIBILITIES,
+  type SpatialTourLifecycle,
+  type SpatialTourVisibility,
+  type TourAccessStanding,
+  type TourViewBasis,
+} from '@/constants/spatial-tour-vocabulary';
+import type { CustodyScope } from '@/lib/workspace/custody-scope';
 
 /** Ό,τι έμαθε ο καλών από τους κριτές — **κανένα** έγγραφο, μόνο απαντήσεις. */
 export interface TourViewFacts {
@@ -78,12 +85,23 @@ export function judgeTourView(facts: TourViewFacts): TourViewVerdict {
 
 /**
  * **Φαίνεται η περιήγηση στη δημόσια αγγελία;** — δημοσιευμένη, όχι `link-only` (αόρατη ex definitione, Δ3),
- * **και** με κάτι να δείξει (τουλάχιστον ένα έτοιμο tileset). Χωρίς σημαία: η κάρτα εμφανίζεται μόνη της όταν
- * ο ψήστης της Φ2 παραδώσει το πρώτο tileset.
+ * **και** με κάτι να δείξει — τουλάχιστον μία **στάση θεατή** (`server/spatial-tour/tour-viewer-stops.ts`: ο ίδιος
+ * κριτής με το μανιφέστο). Χωρίς σημαία: η κάρτα εμφανίζεται μόνη της όταν υπάρξει η πρώτη στάση.
  */
 export function isTourListed(tour: {
   readonly lifecycle: SpatialTourLifecycle;
   readonly visibility: SpatialTourVisibility;
-}, hasReadyTileset: boolean): boolean {
-  return tour.lifecycle === 'published' && tour.visibility !== 'link-only' && hasReadyTileset;
+}, hasViewerStop: boolean): boolean {
+  return tour.lifecycle === 'published' && tour.visibility !== 'link-only' && hasViewerStop;
+}
+
+/**
+ * **Ποιες ορατότητες επιτρέπει αυτή η θεματοφυλακή** — ο ΕΝΑΣ κριτής: αρνείται στην εγγραφή (`visibility-unsupported`)
+ * **και** ταξιδεύει στην οθόνη, ώστε η επιλογή που θα απορριφθεί να φαίνεται απενεργή **πριν** πατηθεί.
+ * `link-only` θέλει συνδέσμους ADR-315, που είναι εμβέλειας μισθωτή — ο ιδιώτης δεν έχει (§9 Ε14).
+ */
+export function supportedTourVisibilities(custody: CustodyScope): readonly SpatialTourVisibility[] {
+  return custody.companyId !== undefined
+    ? SPATIAL_TOUR_VISIBILITIES
+    : SPATIAL_TOUR_VISIBILITIES.filter((visibility) => visibility !== 'link-only');
 }

@@ -13,8 +13,9 @@ import 'server-only';
  * 🔐 **Τι υπογράφεται**: `[tour-view, tourId, basis, basisId, λήξη]`. Η **βάση** ταξιδεύει ώστε το ίχνος και τα
  * αρχεία καταγραφής να λένε **γιατί** είδε κάποιος — ο κοινός κωδικός του Matterport δεν μπορεί να το πει.
  *
- * 🍪 Cookie **ανά περιήγηση** (`nestor_tour_{tourId}`), οριοθετημένο στη διαδρομή μέσων **αυτής** της ρίζας: δεν
- * ταξιδεύει σε κανένα άλλο αίτημα του ιστότοπου.
+ * 🍪 Cookie **ανά περιήγηση** (`nestor_tour_{tourId}`), οριοθετημένο στη ρίζα API **αυτής** της περιήγησης: φτάνει
+ * στα μέσα **και** στις δύο πόρτες `view-session` (αλλιώς η συνεδρία δεν αναγνωρίζει ποτέ «ίδια επίσκεψη» —
+ * μετρημένο 2026-09-26: κάθε reload μετρούσε), σε κανένα αίτημα άλλης περιήγησης ή του υπόλοιπου ιστότοπου.
  */
 
 import type { NextRequest, NextResponse } from 'next/server';
@@ -24,6 +25,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import {
   ACCESS_GRANT_TTL_SECONDS,
   attachAccessGrant,
+  clearAccessGrant,
   issueAccessGrant,
   readAccessGrant,
   requestAccessGrant,
@@ -67,6 +69,16 @@ export function requestTourViewGrant(request: NextRequest, tourId: string): Tour
   return token === null ? null : readTourViewGrant(token, tourId);
 }
 
+/** Το `Path` του cookie — η ρίζα της περιήγησης, κοινός πρόγονος μέσων και συνεδρίας θέασης. */
+export function tourViewCookiePath(subject: TourSubject): string {
+  return API_ROUTES.SPATIAL_TOURS.ROOT(subject.kind, subject.id);
+}
+
 export function attachTourViewGrant(response: NextResponse, subject: TourSubject, tourId: string, token: string): void {
-  attachAccessGrant(response, { name: tourViewCookieName(tourId), path: API_ROUTES.SPATIAL_TOURS.MEDIA_ROOT(subject.kind, subject.id) }, token);
+  attachAccessGrant(response, { name: tourViewCookieName(tourId), path: tourViewCookiePath(subject) }, token);
+}
+
+/** Η συνεδρία αρνήθηκε ⇒ ο browser παύει **τώρα** να φέρνει πλακίδια (π.χ. μόλις ανακλήθηκε η πρόσβασή του). */
+export function clearTourViewGrant(response: NextResponse, subject: TourSubject, tourId: string): void {
+  clearAccessGrant(response, { name: tourViewCookieName(tourId), path: tourViewCookiePath(subject) });
 }

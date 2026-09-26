@@ -15,7 +15,7 @@ import { readJsonBody } from '@/lib/api/json-body';
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { readManagedTourSettings, updateTourSettings, type TourSettings } from '@/server/spatial-tour/tour-settings';
+import { readManagedTourSettings, updateTourSettings, type TourSettings, type TourSettingsView } from '@/server/spatial-tour/tour-settings';
 
 import {
   readTourSubject,
@@ -36,11 +36,13 @@ const settingsSchema = z.object({
 });
 
 type Failure = TourBadSubjectBody | TourRefusedBody;
-type ReadResponse = { readonly tourId: string; readonly settings: TourSettings; readonly exists: boolean } | Failure;
+type ReadResponse = TourSettingsView | Failure;
 type UpdateResponse = { readonly settings: TourSettings; readonly changed: boolean } | Failure;
 
 function readHandler(_request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<ReadResponse>> {
-  return tourSubjectResponse(segment, actor, readManagedTourSettings, (read) => ({ tourId: read.tourId, settings: read.settings, exists: read.exists }));
+  return tourSubjectResponse(segment, actor, readManagedTourSettings, (read) => ({
+    tourId: read.tourId, settings: read.settings, exists: read.exists, supportedVisibilities: read.supportedVisibilities,
+  }));
 }
 
 async function updateHandler(request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<UpdateResponse>> {

@@ -13,7 +13,7 @@
 
 import { useCallback, useState } from 'react';
 
-import type { TourAccessRequestState } from '@/constants/spatial-tour-vocabulary';
+import type { SpatialTourVisibility, TourAccessRequestState } from '@/constants/spatial-tour-vocabulary';
 import { useReconciledResource } from '@/hooks/useReconciledResource';
 import type { TourAccessInboxRow } from '@/server/spatial-tour/tour-access-inbox';
 import type { TourSettings } from '@/server/spatial-tour/tour-settings';
@@ -43,13 +43,17 @@ function noticeOf<T>(result: TourCallResult<T>): TourViewingNotice | null {
 export interface TourSettingsState {
   readonly tourId: string;
   readonly settings: TourSettings;
+  /** Ό,τι δέχεται ο διακομιστής — τα υπόλοιπα φαίνονται απενεργά (ίδιος κριτής, `supportedTourVisibilities`). */
+  readonly supportedVisibilities: readonly SpatialTourVisibility[];
 }
 
 export function useTourSettings(subject: TourSubject) {
   const [notice, setNotice] = useState<TourViewingNotice | null>(null);
   const load = useCallback(async (): Promise<TourSettingsState | null> => {
     const result = await readTourSettingsFromScreen(subject);
-    return result.kind === 'ok' ? { tourId: result.value.tourId, settings: result.value.settings } : null;
+    if (result.kind !== 'ok') return null;
+    const { tourId, settings, supportedVisibilities } = result.value;
+    return { tourId, settings, supportedVisibilities };
   }, [subject]);
   const { data, status, refresh, optimistic } = useReconciledResource(load);
 

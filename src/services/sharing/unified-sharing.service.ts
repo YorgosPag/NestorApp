@@ -27,7 +27,7 @@
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, PUBLIC_REQUEST } from '@/lib/api/enterprise-api-client';
 import type {
   CreateShareRequest,
   CreateShareResult,
@@ -85,12 +85,12 @@ export class UnifiedSharingService {
    */
   static resolve(token: string, password?: string): Promise<ShareResolveOutcome> {
     const body: ShareResolveRequestBody = password === undefined ? { token } : { token, password };
-    return apiClient.post<ShareResolveOutcome>(API_ROUTES.SHARES.RESOLVE, body, { skipAuth: true });
+    return apiClient.post<ShareResolveOutcome>(API_ROUTES.SHARES.RESOLVE, body, PUBLIC_REQUEST);
   }
 
   /** A short-lived signed download URL for a shared file — counted, limit enforced. */
   static requestDownload(token: string): Promise<ShareDownloadOutcome> {
     const body: ShareResolveRequestBody = { token };
-    return apiClient.post<ShareDownloadOutcome>(API_ROUTES.SHARES.DOWNLOAD, body, { skipAuth: true });
+    return apiClient.post<ShareDownloadOutcome>(API_ROUTES.SHARES.DOWNLOAD, body, PUBLIC_REQUEST);
   }
 }

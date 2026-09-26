@@ -747,7 +747,16 @@ export const API_ROUTES = {
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/my-access` as const,
     VIEW_SESSION: (kind: string, subjectId: string) =>
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/view-session` as const,
-    /** Η ρίζα των μέσων — και το `Path` του cookie θέασης: το κουπόνι δεν ταξιδεύει πουθενά αλλού. */
+    /** Η πόρτα **χωρίς ταυτότητα** (μόνο `public`/σύνδεσμος) — καλείται πάντα με `PUBLIC_REQUEST`. */
+    VIEW_SESSION_PUBLIC: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/view-session/public` as const,
+    /**
+     * Η ρίζα **μίας** περιήγησης — το `Path` του cookie θέασης. ⚠️ ΟΧΙ η ρίζα μέσων: τότε ο browser δεν το έστελνε
+     * στο αδελφό `…/view-session`, η συνεδρία δεν έβλεπε ποτέ «ίδια επίσκεψη» και κάθε reload μετρούσε (2026-09-26).
+     */
+    ROOT: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}` as const,
+    /** Η ρίζα των μέσων — κάθε πλακίδιο ελέγχει **μόνο** την υπογραφή του κουπονιού. */
     MEDIA_ROOT: (kind: string, subjectId: string) =>
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/media` as const,
     /** Δημόσιο: «έχει αυτή η αγγελία περιήγηση που φαίνεται, και πού βρίσκομαι εγώ;» */

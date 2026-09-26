@@ -8,14 +8,14 @@
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, PUBLIC_REQUEST } from '@/lib/api/enterprise-api-client';
 // ⚠️ **TYPE-ONLY πέρα από το σύνορο του διακομιστή** — σβήνεται στη μεταγλώττιση (ζωντανό ιδίωμα του έργου).
 import type { MyTourAccessView } from '@/app/api/spatial-tours/[kind]/[subjectId]/my-access/route';
 import type { TourViewSessionView } from '@/app/api/spatial-tours/_shared/tour-view-route';
 import type { TourAccessContactOutcome } from '@/server/spatial-tour/tour-access-contact';
 import type { TourAccessInboxRow } from '@/server/spatial-tour/tour-access-inbox';
 import type { TourPresence } from '@/server/spatial-tour/tour-presence';
-import type { TourSettings } from '@/server/spatial-tour/tour-settings';
+import type { TourSettings, TourSettingsView } from '@/server/spatial-tour/tour-settings';
 import type { TourAccessRequestState } from '@/constants/spatial-tour-vocabulary';
 import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import type { TourSubject } from '@/types/spatial-tour';
@@ -28,8 +28,8 @@ const routes = API_ROUTES.SPATIAL_TOURS;
 
 export function readTourSettingsFromScreen(
   subject: TourSubject,
-): Promise<TourCallResult<{ readonly tourId: string; readonly settings: TourSettings; readonly exists: boolean }>> {
-  return tourCall(() => apiClient.get<{ tourId: string; settings: TourSettings; exists: boolean }>(routes.SETTINGS(subject.kind, subject.id)));
+): Promise<TourCallResult<TourSettingsView>> {
+  return tourCall(() => apiClient.get<TourSettingsView>(routes.SETTINGS(subject.kind, subject.id)));
 }
 
 export function updateTourSettingsFromScreen(
@@ -91,16 +91,25 @@ export function withdrawTourAccessFromScreen(subject: TourSubject): Promise<Tour
 /**
  * **Άνοιξε επίσκεψη** — `signedIn` διαλέγει πόρτα (με λογαριασμό: υπεύθυνος/εγκεκριμένος· χωρίς: δημόσιο/σύνδεσμος).
  * `shareId` μόνο από τη σελίδα `/shared/[token]` — μετρά αν ο browser φέρει το κουπόνι επίσκεψης του συνδέσμου.
+ * 🔴 Η πόρτα **χωρίς ταυτότητα** καλείται **ανώνυμα** (`PUBLIC_REQUEST`): αλλιώς ο μεταφορέας ζητά `getIdToken()` από
+ *    ανύπαρκτο χρήστη και πετά 401 **πριν** φύγει το αίτημα — ο ανώνυμος παραλήπτης συνδέσμου δεν θα έβλεπε ποτέ τίποτα.
  */
 export function openTourViewSessionFromScreen(
   subject: TourSubject,
   input: { readonly signedIn: boolean; readonly shareId: string | null },
 ): Promise<TourCallResult<TourViewSessionView>> {
-  const base = routes.VIEW_SESSION(subject.kind, subject.id);
-  return tourCall(() => apiClient.post<TourViewSessionView>(input.signedIn ? base : `${base}/public`, { shareId: input.shareId }));
+  const body = { shareId: input.shareId };
+  return tourCall(() => input.signedIn
+    ? apiClient.post<TourViewSessionView>(routes.VIEW_SESSION(subject.kind, subject.id), body)
+    : apiClient.post<TourViewSessionView>(routes.VIEW_SESSION_PUBLIC(subject.kind, subject.id), body, PUBLIC_REQUEST));
 }
 
-/** Δημόσιο: έχει η αγγελία περιήγηση που φαίνεται; */
+/**
+ * Δημόσιο: έχει η αγγελία περιήγηση που φαίνεται; — **ανώνυμα** (`PUBLIC_REQUEST`): η απάντηση δεν εξαρτάται από
+ * ταυτότητα, και χωρίς τη σταθερά ο **ανώνυμος** επισκέπτης (το κύριο κοινό της κάρτας) δεν τη ρωτούσε ποτέ
+ * (μετρημένο 2026-09-26, ADR-884 Κ3β ζωντανή επαλήθευση).
+ */
 export function readTourPresenceFromScreen(listingId: string): Promise<TourCallResult<TourPresence | null>> {
-  return tourCall(async () => (await apiClient.get<{ tour: TourPresence | null }>(routes.LISTING_PRESENCE(listingId))).tour);
+  return tourCall(async () =>
+    (await apiClient.get<{ tour: TourPresence | null }>(routes.LISTING_PRESENCE(listingId), PUBLIC_REQUEST)).tour);
 }

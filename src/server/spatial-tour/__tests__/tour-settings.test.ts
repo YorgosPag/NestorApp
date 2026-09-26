@@ -4,7 +4,9 @@
  * @fileoverview **ΡΥΘΜΙΣΕΙΣ + ΠΑΡΟΥΣΙΑ ΣΤΗΝ ΑΓΓΕΛΙΑ** (ADR-884 Κ3β) — άγκυρες.
  *
  * - **Ρ** — μόνο ο υπεύθυνος · ιδεμπότητο · δημοσίευση μόνο με λήψη για το κοινό · η επιλογή γεννά περιήγηση.
- * - **Π** — η κάρτα της αγγελίας: μόνο δημοσιευμένη, όχι `link-only`, με έτοιμο tileset — αλλιώς **καμία**.
+ * - **Π** — η κάρτα της αγγελίας: μόνο δημοσιευμένη, όχι `link-only`, με **στάση θεατή** (τοποθετημένη λήψη, η πιο
+ *   πρόσφατη του κόμβου, έτοιμο tileset) — αλλιώς **καμία**. Π7/Π8 = ζωντανή επαλήθευση 2026-09-26: η κάρτα
+ *   υποσχόταν περιήγηση που η θέαση έλεγε «ετοιμάζεται» (δύο κριτές → ένας, `tour-viewer-stops.ts`).
  */
 
 jest.mock('server-only', () => ({}));
@@ -14,6 +16,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { CAPTURE_DOC } from '@/lib/spatial-tour/__tests__/spatial-tour-fixtures';
 import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 import type { TourSubject } from '@/types/spatial-tour';
 
@@ -40,7 +43,7 @@ const tourDoc = (overrides: Record<string, unknown> = {}) => ({
   createdAt: '2026-09-01T10:00:00.000Z', createdBy: 'boris', updatedAt: '2026-09-01T10:00:00.000Z', updatedBy: 'boris',
   ...overrides,
 });
-const capture = (overrides: Record<string, unknown> = {}) => ({ audience: 'public-listing', tileset: { state: 'ready', contentHash: 'h' }, ...overrides });
+const capture = (overrides: Record<string, unknown> = {}) => ({ ...CAPTURE_DOC, tourId: TOUR_ID, ...overrides });
 
 let kit: MockFirestoreKit;
 let db: Firestore;
@@ -95,12 +98,19 @@ describe('Ρ — οι ρυθμίσεις', () => {
       .toEqual({ kind: 'refused', reason: 'visibility-unsupported' });
     expect(await updateTourSettings(db, { subject: personal, actor: anna, settings: settings('on-request', 'draft') }))
       .toMatchObject({ kind: 'updated' });
+    // 🔴 Ρ6′ (ζωντανή επαλήθευση 2026-09-26) — η οθόνη ΠΡΟΣΕΦΕΡΕ το `link-only` στον ιδιώτη και μετά το απέρριπτε.
+    //    Η ανάγνωση λέει πλέον ό,τι θα δεχτεί η εγγραφή — ΙΔΙΟΣ κριτής, άρα ίσες απαντήσεις.
+    expect(await readManagedTourSettings(db, { subject: personal, actor: anna }))
+      .toMatchObject({ kind: 'read', supportedVisibilities: ['public', 'on-request'] });
   });
 
   it('Ρ5 — η ανάγνωση αγέννητης περιήγησης δίνει τις ρυθμίσεις γέννησης ΧΩΡΙΣ εγγραφή', async () => {
     kit.clearWrites();
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: MANAGER }))
-      .toEqual({ kind: 'read', tourId: TOUR_ID, settings: { visibility: 'public', lifecycle: 'draft' }, exists: false });
+      .toEqual({
+        kind: 'read', tourId: TOUR_ID, settings: { visibility: 'public', lifecycle: 'draft' }, exists: false,
+        supportedVisibilities: ['public', 'on-request', 'link-only'],
+      });
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: STRANGER })).toEqual({ kind: 'refused', reason: 'not-manager' });
     expect(kit.writes()).toEqual([]);
   });
@@ -119,6 +129,21 @@ describe('Π — η παρουσία στην αγγελία', () => {
     kit.seedCollection(CAPTURES, { tcap_1: captureDoc });
     const presence = await readTourPresence(db, 'prop_1');
     expect(presence?.visibility ?? null).toBe(visibility);
+  });
+
+  it('🔴 Π7 — ατοποθέτητη λήψη με έτοιμο tileset ⇒ καμία κάρτα (η θέαση δεν έχει στάση να δείξει)', async () => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ lifecycle: 'published', visibility: 'on-request' }) });
+    kit.seedCollection(CAPTURES, { tcap_1: capture({ nodeId: null }) });
+    expect(await readTourPresence(db, 'prop_1')).toBeNull();
+  });
+
+  it('🔴 Π8 — η ΝΕΟΤΕΡΗ λήψη του κόμβου χωρίς tileset κρύβει την παλιότερη έτοιμη (ίδιος κανόνας με το μανιφέστο)', async () => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc({ lifecycle: 'published' }) });
+    kit.seedCollection(CAPTURES, {
+      tcap_old: capture(),
+      tcap_new: capture({ capturedAt: '2026-09-20T09:00:00.000Z', tileset: { state: 'pending', contentHash: 'n' } }),
+    });
+    expect(await readTourPresence(db, 'prop_1')).toBeNull();
   });
 
   it('ταυτότητα που δεν είναι αγγελίας ⇒ καμία κάρτα, χωρίς ανάγνωση', async () => {

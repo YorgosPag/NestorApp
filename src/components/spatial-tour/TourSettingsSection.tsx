@@ -19,8 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { isSpatialTourVisibility, SPATIAL_TOUR_VISIBILITIES } from '@/constants/spatial-tour-vocabulary';
+import { isSpatialTourVisibility, SPATIAL_TOUR_VISIBILITIES, type SpatialTourVisibility } from '@/constants/spatial-tour-vocabulary';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { TourSettings } from '@/server/spatial-tour/tour-settings';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { TOUR_FAILURE_KEYS, TOUR_REFUSAL_KEY } from './spatial-tour-labels';
@@ -46,20 +47,8 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
     <section className="space-y-3" aria-labelledby="tour-settings-heading">
       <h3 id="tour-settings-heading" className="text-base font-semibold">{t(VIEWING_KEYS.settingsTitle)}</h3>
       <section className="grid gap-3 sm:grid-cols-2">
-        <section className="space-y-1">
-          <Label htmlFor="tour-visibility">{t(VIEWING_KEYS.visibility)}</Label>
-          <Select value={settings.visibility} onValueChange={(value) => {
-            if (isSpatialTourVisibility(value)) void update({ ...settings, visibility: value });
-          }}>
-            <SelectTrigger id="tour-visibility"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {SPATIAL_TOUR_VISIBILITIES.map((visibility) => (
-                <SelectItem key={visibility} value={visibility}>{t(VISIBILITY_KEY[visibility])}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">{t(VISIBILITY_HINT_KEY[settings.visibility])}</p>
-        </section>
+        <VisibilityField settings={settings} supported={state.supportedVisibilities}
+          onChange={(visibility) => void update({ ...settings, visibility })} />
         <section className="space-y-1">
           <Label>{t(VIEWING_KEYS.lifecycle)}</Label>
           <p className="flex flex-wrap items-center gap-2">
@@ -82,6 +71,36 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
       <p className="text-xs text-muted-foreground">{t(VIEWING_KEYS.explicitGrantsNote)}</p>
       <SettingsNotice notice={notice} />
       {companyId !== null && <PersonalLinks tourId={state.tourId} companyId={companyId} />}
+    </section>
+  );
+}
+
+/** Η ορατότητα — ό,τι θα απέρριπτε ο διακομιστής φαίνεται απενεργό **πριν** πατηθεί (ίδιος κριτής, `supportedVisibilities`). */
+function VisibilityField({ settings, supported, onChange }: {
+  readonly settings: TourSettings;
+  readonly supported: readonly SpatialTourVisibility[];
+  readonly onChange: (visibility: SpatialTourVisibility) => void;
+}) {
+  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  return (
+    <section className="space-y-1">
+      <Label htmlFor="tour-visibility">{t(VIEWING_KEYS.visibility)}</Label>
+      <Select value={settings.visibility} onValueChange={(value) => {
+        if (isSpatialTourVisibility(value)) onChange(value);
+      }}>
+        <SelectTrigger id="tour-visibility"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {SPATIAL_TOUR_VISIBILITIES.map((visibility) => (
+            <SelectItem key={visibility} value={visibility} disabled={!supported.includes(visibility)}>
+              {t(VISIBILITY_KEY[visibility])}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">{t(VISIBILITY_HINT_KEY[settings.visibility])}</p>
+      {supported.length < SPATIAL_TOUR_VISIBILITIES.length && (
+        <p className="text-xs text-muted-foreground">{t(TOUR_REFUSAL_KEY['visibility-unsupported'])}</p>
+      )}
     </section>
   );
 }

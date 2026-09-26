@@ -18,7 +18,7 @@ import { readJsonBody } from '@/lib/api/json-body';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { requestHasShareAccessGrant } from '@/server/sharing/share-access-grant';
-import { attachTourViewGrant, requestTourViewGrant } from '@/server/spatial-tour/tour-view-grant';
+import { attachTourViewGrant, clearTourViewGrant, requestTourViewGrant } from '@/server/spatial-tour/tour-view-grant';
 import { openTourViewSession, type TourManifest } from '@/server/spatial-tour/tour-view-session';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type { TourViewBasis } from '@/constants/spatial-tour-vocabulary';
@@ -58,10 +58,16 @@ export async function respondTourViewSession(
   const claimedShareId = parsed.data.shareId ?? null;
   const openedShareId = claimedShareId !== null && requestHasShareAccessGrant(request, claimedShareId) ? claimedShareId : null;
   const tourId = enterpriseIdService.generateDeterministicSpatialTourId(subject.kind, subject.id);
+  const presentedGrant = requestTourViewGrant(request, tourId);
   const outcome = await openTourViewSession(getAdminFirestore(), {
-    subject, actor, openedShareId, presentedGrant: requestTourViewGrant(request, tourId), nowMs: Date.now(),
+    subject, actor, openedShareId, presentedGrant, nowMs: Date.now(),
   });
-  if (outcome.kind === 'refused') return tourRefusedResponse(outcome.reason);
+  if (outcome.kind === 'refused') {
+    const refused = tourRefusedResponse(outcome.reason);
+    // Ο browser που μόλις άκουσε «όχι» δεν κρατά ζωντανό κουπόνι ως τη λήξη του (ανάκληση ⇒ και τα πλακίδια σταματούν).
+    if (presentedGrant !== null) clearTourViewGrant(refused, subject, tourId);
+    return refused;
+  }
   if (outcome.token === null) return tourUnavailableResponse();
 
   const response = NextResponse.json<TourViewSessionResponse>(

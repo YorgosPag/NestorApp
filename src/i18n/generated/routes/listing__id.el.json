@@ -139,6 +139,7 @@
         "bathrooms": "Μπάνια",
         "bedrooms": "Υπνοδωμάτια",
         "condition": "Κατάσταση",
+        "constructionYear": "Έτος κατασκευής",
         "coolingType": "Ψύξη",
         "energyClass": "Ενεργειακή κλάση",
         "floor": "Όροφος",
@@ -161,6 +162,11 @@
         "windowFrames": "Κουφώματα"
       },
       "ledger": "{declared} από {total} στοιχεία δηλωμένα",
+      "publicRecord": "{year} · δημόσια εγγραφή: {registry}",
+      "publicRecordSource": "Από δημόσιο μητρώο",
+      "registry": {
+        "osm": "OpenStreetMap"
+      },
       "reveal": "{count, plural, one {# δεν έχει δηλωθεί} other {# δεν έχουν δηλωθεί}}",
       "undeclared": "Δεν έχει δηλωθεί"
     },

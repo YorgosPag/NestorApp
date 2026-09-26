@@ -27,6 +27,7 @@ import type { SpatialTourLifecycle, SpatialTourVisibility } from '@/constants/sp
 import { nowISO } from '@/lib/date-local';
 import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
+import { supportedTourVisibilities } from '@/lib/spatial-tour/tour-view-policy';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
@@ -44,7 +45,12 @@ export interface TourSettingsReading {
   readonly tourId: string;
   readonly settings: TourSettings;
   readonly exists: boolean;
+  /** Ό,τι δέχεται η εγγραφή — η οθόνη απενεργοποιεί τα υπόλοιπα **πριν** πατηθούν (ίδιος κριτής, ποτέ εικασία). */
+  readonly supportedVisibilities: readonly SpatialTourVisibility[];
 }
+
+/** Ό,τι ταξιδεύει στην οθόνη — ένα σχήμα για διαδρομή **και** πελάτη. */
+export type TourSettingsView = Omit<TourSettingsReading, 'kind'>;
 
 export type TourSettingsOutcome =
   | { readonly kind: 'updated' | 'unchanged'; readonly settings: TourSettings }
@@ -73,7 +79,10 @@ export async function readManagedTourSettings(
   const snap = await managed.tourRef.get();
   const tour = snap.exists ? spatialTourFromDocument(snap.data(), managed.tourRef.id) : null;
   if (tour === null) return refuseTourAccess('tour-unreadable');
-  return { kind: 'read', tourId: tour.id, settings: { visibility: tour.visibility, lifecycle: tour.lifecycle }, exists: true };
+  return {
+    kind: 'read', tourId: tour.id, settings: { visibility: tour.visibility, lifecycle: tour.lifecycle }, exists: true,
+    supportedVisibilities: supportedTourVisibilities(tour.custody),
+  };
 }
 
 /** `tour-absent` σημαίνει **ή** «δεν υπάρχει αγγελία» **ή** «δεν γεννήθηκε περιήγηση» — τα ξεχωρίζει ο κριτής. */
@@ -84,7 +93,10 @@ async function readUnbornSettings(
   const location = await locateSpatialTour(db, input.subject);
   if (location.kind !== 'found') return refuseTourAccess('tour-absent');
   if (mayManageTour(location.record, input.actor) !== 'granted') return refuseTourAccess('not-manager');
-  return { kind: 'read', tourId: location.tourRef.id, settings: TOUR_GENESIS_SETTINGS, exists: false };
+  return {
+    kind: 'read', tourId: location.tourRef.id, settings: TOUR_GENESIS_SETTINGS, exists: false,
+    supportedVisibilities: supportedTourVisibilities(location.custody),
+  };
 }
 
 /**
@@ -105,8 +117,8 @@ export async function updateTourSettings(
     const tour = snap.exists ? spatialTourFromDocument(snap.data(), tourRef.id) : null;
     if (tour === null) return refuseTourAccess(snap.exists ? 'tour-unreadable' : 'tour-absent');
     const before: TourSettings = { visibility: tour.visibility, lifecycle: tour.lifecycle };
-    // 🔑 `link-only` θέλει συνδέσμους ADR-315 — εμβέλειας μισθωτή· ο ιδιώτης δεν έχει (βλ. `visibility-unsupported`).
-    if (next.visibility === 'link-only' && tour.custody.companyId === undefined) return refuseTourAccess('visibility-unsupported');
+    // 🔑 Ο ΙΔΙΟΣ κριτής με την οθόνη (`supportedVisibilities` της ανάγνωσης) — π.χ. `link-only` μόνο για γραφείο.
+    if (!supportedTourVisibilities(tour.custody).includes(next.visibility)) return refuseTourAccess('visibility-unsupported');
     if (before.visibility === next.visibility && before.lifecycle === next.lifecycle) {
       return { kind: 'unchanged', settings: before };
     }

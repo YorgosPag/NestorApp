@@ -104,6 +104,7 @@
         "bathrooms": "Μπάνια",
         "bedrooms": "Υπνοδωμάτια",
         "condition": "Κατάσταση",
+        "constructionYear": "Έτος κατασκευής",
         "coolingType": "Ψύξη",
         "energyClass": "Ενεργειακή κλάση",
         "floor": "Όροφος",

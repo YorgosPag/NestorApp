@@ -11,7 +11,10 @@ import fs from 'fs';
 import path from 'path';
 
 const post = jest.fn();
-jest.mock('@/lib/api/enterprise-api-client', () => ({ apiClient: { post: (...args: unknown[]) => post(...args) } }));
+jest.mock('@/lib/api/enterprise-api-client', () => ({
+  PUBLIC_REQUEST: jest.requireActual('@/lib/api/api-client-types').PUBLIC_REQUEST,
+  apiClient: { post: (...args: unknown[]) => post(...args) },
+}));
 
 import { UnifiedSharingService } from '../unified-sharing.service';
 

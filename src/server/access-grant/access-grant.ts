@@ -106,13 +106,26 @@ export function requestAccessGrant(request: NextRequest, cookieName: string): st
   return typeof grant === 'string' && grant !== '' ? grant : null;
 }
 
-/** Γράφει το κουπόνι στην απάντηση — `HttpOnly` · `SameSite=Lax` · `Secure` σε παραγωγή. */
-export function attachAccessGrant(response: NextResponse, cookie: AccessGrantCookie, grant: string): void {
-  response.cookies.set(cookie.name, grant, {
+/** Τα χαρακτηριστικά του cookie — **ένα** σημείο, ώστε η διαγραφή να ταιριάζει ακριβώς με την εγγραφή (ίδιο `Path`). */
+function grantCookieOptions(cookie: AccessGrantCookie, maxAge: number) {
+  return {
     httpOnly: true,
     secure: getCurrentRuntimeEnvironment() === 'production',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     path: cookie.path,
-    maxAge: ACCESS_GRANT_TTL_SECONDS,
-  });
+    maxAge,
+  };
+}
+
+/** Γράφει το κουπόνι στην απάντηση — `HttpOnly` · `SameSite=Lax` · `Secure` σε παραγωγή. */
+export function attachAccessGrant(response: NextResponse, cookie: AccessGrantCookie, grant: string): void {
+  response.cookies.set(cookie.name, grant, grantCookieOptions(cookie, ACCESS_GRANT_TTL_SECONDS));
+}
+
+/**
+ * **Σβήνει** το κουπόνι — όταν η κρίση είπε «όχι», ο browser δεν κρατά ζωντανό κουπόνι ως τη λήξη του. ⚠️ Δεν
+ * αντικαθιστά τη λήξη (όποιος αντέγραψε το cookie το κρατά ως 15′ — δηλωμένο όριο), κλείνει το παράθυρο του ίδιου browser.
+ */
+export function clearAccessGrant(response: NextResponse, cookie: AccessGrantCookie): void {
+  response.cookies.set(cookie.name, '', grantCookieOptions(cookie, 0));
 }
