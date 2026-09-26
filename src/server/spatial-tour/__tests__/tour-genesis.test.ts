@@ -99,7 +99,7 @@ describe('Γ — η γέννηση', () => {
   it('Γ5 — η ΠΡΩΤΗ πρόσκληση φωτογράφου γεννά την περιήγηση (όχι πια `tour-absent`)', async () => {
     const outcome = await issueTourCaptureInvitation(db, {
       subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: 'photo@example.com',
-      grantExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), reason: 'λήψη πριν τους σοβάδες',
+      grantExpiresOn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), reason: 'λήψη πριν τους σοβάδες',
     });
     expect(outcome.kind).toBe('issued');
     expect(kit.getData(TOURS, TOUR_ID)).toMatchObject({ lifecycle: 'draft' });

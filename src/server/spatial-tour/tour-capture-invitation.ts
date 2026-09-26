@@ -67,7 +67,7 @@ export interface IssueTourCaptureInvitationInput extends ManagerInput {
   /** Ωμό όπως το πληκτρολόγησε ο υπεύθυνος — κανονικοποιείται **εδώ**. */
   readonly inviteeEmailRaw: string;
   /** Η λήξη της **άδειας** — υποχρεωτική, μελλοντική, εντός ορίζοντα (`checkTourGrantExpiry`). */
-  readonly grantExpiresAt: string | null;
+  readonly grantExpiresOn: string | null;
   /** Γιατί δίνεται η άδεια — το βλέπει ο φωτογράφος και μένει στο ίχνος. */
   readonly reason: string;
 }
@@ -92,7 +92,7 @@ export async function issueTourCaptureInvitation(
   input: IssueTourCaptureInvitationInput,
 ): Promise<IssueTourCaptureInvitationOutcome> {
   const nowValue = nowISO();
-  const expiry = checkTourGrantExpiry(input.grantExpiresAt, Date.parse(nowValue));
+  const expiry = checkTourGrantExpiry(input.grantExpiresOn, Date.parse(nowValue));
   if (!expiry.ok) return refuseTourAccess(expiry.reason);
   const reason = input.reason.trim();
   if (reason.length === 0) return refuseTourAccess('reason-required');

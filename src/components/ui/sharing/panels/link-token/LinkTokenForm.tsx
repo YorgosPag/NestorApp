@@ -170,7 +170,8 @@ export function LinkTokenFields(props: LinkTokenFieldsProps): React.ReactElement
 
       {props.policy?.password !== false && <PasswordField {...props} mode={mode} />}
 
-      <fieldset className="space-y-1.5">
+      {/* ADR-884 §9.1 Α3 — όριο ΜΟΝΟ σε ό,τι κατεβαίνει· ένας παλιός σύνδεσμος προβολής με όριο το δείχνει ώστε να αφαιρεθεί. */}
+      {(props.policy?.accessLimit !== false || draft.maxDownloads !== '0') && <fieldset className="space-y-1.5">
         <label className="text-sm font-medium flex items-center gap-1.5">
           <Download className={cn('h-3.5 w-3.5', colors.text.muted)} />
           {t('share.maxDownloads')}
@@ -179,10 +180,11 @@ export function LinkTokenFields(props: LinkTokenFieldsProps): React.ReactElement
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="0">{t('share.unlimited')}</SelectItem>
-            {maxOptions.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+            {props.policy?.accessLimit !== false && maxOptions.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+            {props.policy?.accessLimit === false && draft.maxDownloads !== '0' && <SelectItem value={draft.maxDownloads}>{draft.maxDownloads}</SelectItem>}
           </SelectContent>
         </Select>
-      </fieldset>
+      </fieldset>}
 
       {mode === 'create' && (
         <PersonalMessageField

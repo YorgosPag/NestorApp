@@ -56,7 +56,7 @@ export type TourDecisionRow =
 
 export function decideTourAccessFromScreen(
   subject: TourSubject,
-  input: { readonly requesterUids: readonly string[]; readonly decision: 'approved' | 'declined'; readonly expiresAt: string | null },
+  input: { readonly requesterUids: readonly string[]; readonly decision: 'approved' | 'declined'; readonly expiresOn: string | null },
 ): Promise<TourCallResult<readonly TourDecisionRow[]>> {
   return tourCall(async () =>
     (await apiClient.post<{ results: readonly TourDecisionRow[] }>(routes.ACCESS_REQUESTS(subject.kind, subject.id), input)).results);

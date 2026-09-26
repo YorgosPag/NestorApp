@@ -143,6 +143,14 @@ describe('Γ — κείμενο χρήστη και URL δεν σπάνε ποτ
     expect(html).not.toMatch(/<script/i);
   });
 
+  it('Γ1β 🔒 — `<a>`/`<script>` στο ΣΩΜΑ (μήνυμα αιτούντος, ADR-884 §9.1 Α2) ⇒ escaped, κανένας ενεργός σύνδεσμος', () => {
+    const hostile: RenderableMessage = { ...MATCH, content: 'Δείτε <a href="https://evil.example">εδώ</a><script>alert(1)</script>' };
+    const html = renderSoloHtml(hostile, 'el', hostile.subject, LINKS);
+    expect(html).toContain('&lt;a href=');
+    expect(html).not.toContain('href="https://evil.example"');
+    expect(html).not.toMatch(/<script/i);
+  });
+
   it('Γ2 🔴 — εισαγωγικό μέσα σε URL ΔΕΝ βγαίνει από το href', () => {
     const hostileLinks: EmailLinks = {
       ...LINKS,

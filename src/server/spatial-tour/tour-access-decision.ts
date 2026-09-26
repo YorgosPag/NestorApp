@@ -133,11 +133,11 @@ export async function decideTourAccessRequests(
   input: ManagerInput & {
     readonly requesterUids: readonly string[];
     readonly decision: TourAccessDecision;
-    readonly expiresAt: string | null;
+    readonly expiresOn: string | null;
   },
 ): Promise<{ readonly kind: 'decided'; readonly results: readonly TourAccessDecisionResult[] } | TourAccessRefused> {
   const at = nowISO();
-  const expiry = input.decision === 'approved' ? checkTourGrantExpiry(input.expiresAt, Date.parse(at)) : null;
+  const expiry = input.decision === 'approved' ? checkTourGrantExpiry(input.expiresOn, Date.parse(at)) : null;
   if (expiry !== null && !expiry.ok) return refuseTourAccess(expiry.reason);
 
   const managed = await locateManagedTour(db, input.subject, input.actor);

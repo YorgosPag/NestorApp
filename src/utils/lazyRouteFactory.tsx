@@ -40,6 +40,7 @@
 
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
+import { loadNamespace, type Namespace } from '@/i18n/lazy-config';
 import {
   PageLoadingSpinner,
   DashboardLoadingSkeleton,
@@ -55,6 +56,16 @@ export interface LazyRouteOptions {
   loadingType?: LoadingType;
   /** Προεπιλογή `false`: οι σελίδες-περιεχόμενο είναι client-only. SEO ⇒ `true`. */
   ssr?: boolean;
+  /**
+   * Namespaces που το chunk **περιμένει** πριν αποδώσει (ADR-884 §9.1 Α4).
+   *
+   * 🔑 Μια σελίδα `ssr: false` είναι **εκτός** route slice (ADR-744: η κλειστότητα κόβεται στο
+   * δυναμικό όριο — μετρημένο: `/shared/[token]` = 0 ns). Chunk και namespace είναι δύο
+   * ανεξάρτητα αιτήματα· αν φτάσει πρώτο το chunk, ένα καρέ δείχνει ωμά κλειδιά. Εδώ το
+   * fallback του `dynamic` μένει ώσπου να φτάσουν **και τα δύο** — χωρίς φραγμό
+   * `isNamespaceReady` μέσα στη σελίδα (CHECK 3.25: κενό καρέ σε κάθε επαναφόρτωση).
+   */
+  namespaces?: readonly Namespace[];
 }
 
 /** Module σχήματος `{ default }` — επιτρεπτικό, ώστε να δέχεται named **και** default exports. */
@@ -94,10 +105,13 @@ export function createLazyRoute(
   importFn: () => Promise<LazyComponentModule>,
   options: LazyRouteOptions = {}
 ) {
-  const { loadingType = 'spinner', ssr = false } = options;
+  const { loadingType = 'spinner', ssr = false, namespaces = [] } = options;
   const LoadingComponent = resolveLoadingComponent(loadingType);
+  const load = namespaces.length === 0
+    ? importFn
+    : () => Promise.all([importFn(), ...namespaces.map((ns) => loadNamespace(ns))]).then(([mod]) => mod);
 
-  return dynamic(importFn, {
+  return dynamic(load, {
     loading: () => <LoadingComponent />,
     ssr,
   });

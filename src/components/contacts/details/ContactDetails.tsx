@@ -10,6 +10,7 @@ import { DetailsContainer } from '@/core/containers';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { AddPropertyToContactDialog } from './AddPropertyToContactDialog';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
+import { ContactNameReviewNotice } from './ContactNameReviewNotice';
 import { ContactDetailsMobileActions } from './contact-details/ContactDetailsMobileActions';
 import { useContactDetailsController } from './contact-details/useContactDetailsController';
 import { ContactEditFocusProvider } from './contact-details/ContactEditFocusContext';
@@ -105,6 +106,9 @@ export function ContactDetails({
             hideEditControls={isSubcollectionTab}
           />
         )}
+
+        {/* ADR-884 §9.1 Α1 — ενιαίο όνομα από λογαριασμό: επιβεβαίωση από άνθρωπο, ποτέ μαντεψιά. */}
+        {!readOnly && !isEditing && contact && <ContactNameReviewNotice contact={contact} onConfirmed={onContactUpdated} />}
 
         <UnifiedContactTabbedSection
           contactType={contact?.type || 'individual'}

@@ -27,6 +27,7 @@ import { generateShareToken, hashShareToken } from '@/lib/sharing/share-token';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateShareId } from '@/services/enterprise-id-convenience';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
+import { validateAgainstLinkPolicy } from '@/services/sharing/resolver-core/share-resolver-primitives';
 import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import '@/services/sharing/resolvers';
 import {
@@ -152,6 +153,9 @@ export async function createShareOnServer(
 
   const validation = definition.validateCreateInput(input);
   if (!validation.valid) return { ok: false, refusal: 'invalid', reason: validation.reason };
+  // ADR-884 §9.1 Α3 — η πολιτική του ΕΙΔΟΥΣ, μία φορά, για όλα τα είδη (κωδικός · «για ποιον» · όριο λήψεων).
+  const policyCheck = validateAgainstLinkPolicy(input);
+  if (!policyCheck.valid) return { ok: false, refusal: 'invalid', reason: policyCheck.reason };
   if (!isResolvableShareKind(input.entityType)) return { ok: false, refusal: 'invalid', reason: 'unsupported entityType' };
   // ADR-884 Κ3β: ο κριτής είναι **ανά είδος** — η περιήγηση ζητά τον υπεύθυνο, όχι σκέτο μισθωτή.
   if (!(await mayCreateShare(adminDb, input.entityType, creator, input.entityId))) {

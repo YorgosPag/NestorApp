@@ -1,6 +1,7 @@
 // Type definitions for contacts, decoupled from Firebase SDK.
 import type { StoredAddressPosition } from '@/types/address-position';
 import type { DeclaredOccupation } from '@/types/professional-identity';
+import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
 
 export type FirestoreishTimestamp = Date | { toDate: () => Date };
 
@@ -96,6 +97,11 @@ export interface IndividualContact extends BaseContact, DeclaredOccupation {
   // 👤 Βασικά Στοιχεία
   firstName: string;
   lastName: string;
+  /**
+   * ADR-884 §9.1 Α1 — το όνομα ήρθε **ενιαίο** από λογαριασμό και δεν διασπάστηκε με υπόθεση. Υπάρχει μόνο όσο δεν το
+   * επιβεβαίωσε άνθρωπος (`ContactNameReviewNotice`)· `null` στην ενημέρωση ⇒ διαγραφή πεδίου.
+   */
+  nameReview?: ContactNameReview | null;
   fatherName?: string;        // Πατρώνυμο
   motherName?: string;        // Μητρώνυμο
   middleName?: string;        // Μεσαίο όνομα (legacy)

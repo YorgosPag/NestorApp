@@ -3897,6 +3897,15 @@
 
 ## Pending tasks (priority order)
 
+### 🔤 Τεμπέλικες σελίδες `ssr: false` ΕΚΤΟΣ route slice — ωμά κλειδιά στο πρώτο καρέ (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-26, ADR-884 Κ3γ §4.7 Α4 · ADR-744)
+
+- **Τι**: σελίδα `page.tsx` που επιστρέφει `<LazyRoutes.X />` (`createLazyRoute`, `ssr: false`) ⇒ η κλειστότητα του route slice κόβεται στο
+  δυναμικό όριο (**μετρημένο: `/shared/[token]` = 0 ns**)· το chunk φτάνει συχνά **πριν** το namespace ⇒ ωμό κλειδί ένα καρέ. Το σχόλιο του
+  `shell-closure.js` («το chunk δεν ζωγραφίζει πριν το δικό του round-trip») **δεν** ισχύει: chunk και namespace είναι δύο ανεξάρτητα αιτήματα.
+- **Πού**: όλα τα `LazyRoutes.*` του `src/utils/lazyRoutes*.tsx` (ADR-294 — δεκάδες σελίδες). ✅ **Ο μηχανισμός υπάρχει** (2026-09-26): `createLazyRoute({ namespaces })` — το chunk περιμένει `loadNamespace` (άγκυρα `utils/__tests__/lazyRouteFactory-namespaces.test.tsx`, μετάλλαξη 2 κόκκινα)· δηλωμένο **μόνο** στο `SharedFile` (`spatial-tour`). Ο φραγμός `isNamespaceReady` της `SharedTourPageContent` αφαιρέθηκε (CHECK 3.7/3.25).
+- **Fix (υπόλοιπο)**: δήλωση `namespaces` σε κάθε `LazyRoutes.*` — ιδανικά από τον γεννήτορα του slice ανά lazy module, ώστε να μη γράφεται με το χέρι.
+  Άγκυρα κλάσης: κάθε `createLazyRoute(…, { ssr: false })` είτε δηλώνει `namespaces` είτε δηλωμένη εξαίρεση με λόγο.
+
 ### 🔓 Δημόσια διαδρομή ⇔ ανώνυμη κλήση — πύλη ΚΛΑΣΗΣ (προτεραιότητα ΜΕΣΑΙΑ, 2026-09-26, ADR-884 Κ3β · ADR-777 §8.60.21.7)
 
 - **Τι**: route με `withAuth(…, { allowUnauthenticated: true })` (ή χωρίς `withAuth`) που ο πελάτης καλεί **χωρίς** `PUBLIC_REQUEST` ⇒ ο

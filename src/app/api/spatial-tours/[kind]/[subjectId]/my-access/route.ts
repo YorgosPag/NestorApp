@@ -86,7 +86,9 @@ async function announce(subject: TourSubject, request: TourAccessRequest, uid: s
   const db = getAdminFirestore();
   const identity = (await readAccountIdentities(db, [uid])).get(uid);
   const requesterName = identity?.displayName ?? identity?.email ?? uid;
-  await announceTourAccessRequested(db, { subject, requestId: request.id, requestCount: request.requestCount, requesterName });
+  await announceTourAccessRequested(db, {
+    subject, requestId: request.id, requestCount: request.requestCount, requesterName, message: request.message,
+  });
 }
 
 async function requestHandler(request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<RequestResponse>> {

@@ -11,13 +11,13 @@
  * ειδοποίηση. Κάθε κατάσταση (εκκρεμεί · εγκρίθηκε έως · απορρίφθηκε · έληξε · ανακλήθηκε) λέει **τι να κάνει** ο άνθρωπος.
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDate } from '@/lib/intl-formatting';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { loginHref } from '@/lib/routes/return-path';
 import { tourViewHref } from '@/lib/spatial-tour/tour-routes';
 import { Link } from '@/lib/workspace/navigation';
@@ -28,10 +28,16 @@ import { useTourAccessCard, type TourAccessCardState } from './useTourAccessCard
 
 const MESSAGE_MAX = 1000;
 
-export default function TourAccessCard({ listingId, returnPath }: { readonly listingId: string; readonly returnPath: string }) {
+/**
+ * `whenHidden` — τι δείχνει η **σελίδα θέασης** όταν η κάρτα δεν έχει τίποτα να προσφέρει (περιήγηση αόρατη): εκεί η
+ * κάρτα είναι η απάντηση σε άρνηση (ADR-884 §9.1 Α5), και «τίποτα» θα άφηνε τον άνθρωπο χωρίς λόγο και χωρίς δρόμο.
+ */
+export default function TourAccessCard({ listingId, returnPath, whenHidden = null }: {
+  readonly listingId: string; readonly returnPath: string; readonly whenHidden?: ReactNode;
+}) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const card = useTourAccessCard(listingId);
-  if (card.state.kind === 'hidden') return null;
+  if (card.state.kind === 'hidden') return <>{whenHidden}</>;
   return (
     <section aria-labelledby="listing-tour-heading" className="space-y-2 rounded-lg border p-4">
       <h2 id="listing-tour-heading" className="text-lg font-semibold">{t(ACCESS_KEYS.cardTitle)}</h2>
@@ -57,12 +63,12 @@ function CardBody({ state, listingId, returnPath, busy, onRequest, onWithdraw }:
   readonly onRequest: (message: string | null) => Promise<void>;
   readonly onWithdraw: () => Promise<void>;
 }) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const { t, currentLanguage } = useTranslation(SPATIAL_TOUR_NS);
   switch (state.kind) {
     case 'open':
       return <><p className="text-sm">{t(ACCESS_KEYS.cardPublic)}</p><OpenLink listingId={listingId} /></>;
     case 'approved':
-      return <><p className="text-sm" role="status">{t(ACCESS_KEYS.approved, { date: formatDate(state.expiresAt) })}</p><OpenLink listingId={listingId} /></>;
+      return <><p className="text-sm" role="status">{t(ACCESS_KEYS.approved, { date: formatOperatorDateTime(state.expiresAt, currentLanguage) })}</p><OpenLink listingId={listingId} /></>;
     case 'sign-in':
       return (
         <>
@@ -91,13 +97,13 @@ function RequestForm({ previous, busy, onRequest }: {
 }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const [message, setMessage] = useState('');
-  const previousKey = previous === null ? null : ACCESS_KEYS[previous];
   return (
     <form className="space-y-2" onSubmit={(event) => {
       event.preventDefault();
       void onRequest(message.trim() === '' ? null : message);
     }}>
-      <p className="text-sm">{previousKey === null ? t(ACCESS_KEYS.cardOnRequest) : t(previousKey)}</p>
+      {/* Ευρετήριο ΠΑΝΩ στον σταθερό πίνακα — επιλύσιμο από το i18n slice (ADR-744), ποτέ μέσω ενδιάμεσης μεταβλητής. */}
+      <p className="text-sm">{previous === null ? t(ACCESS_KEYS.cardOnRequest) : t(ACCESS_KEYS[previous])}</p>
       <Label htmlFor="tour-access-message">{t(ACCESS_KEYS.messageLabel)}</Label>
       <Textarea id="tour-access-message" value={message} maxLength={MESSAGE_MAX}
         placeholder={t(ACCESS_KEYS.messagePlaceholder)} onChange={(event) => setMessage(event.target.value)} />

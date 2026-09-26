@@ -74,7 +74,7 @@ export function useTourPhotographers(subject: TourSubject) {
     ? { kind: 'loaded', invitations: data.invitations, grants: data.grants }
     : status === 'error' ? { kind: 'failed' } : { kind: 'loading' };
 
-  const issue = useCallback(async (input: { readonly email: string; readonly grantExpiresAt: string; readonly reason: string }) => {
+  const issue = useCallback(async (input: { readonly email: string; readonly grantExpiresOn: string; readonly reason: string }) => {
     setBusy(true);
     const result = await optimistic((current) => current, () => issueTourCaptureInvitationFromScreen(subject, input), { reconcile: 'always' });
     setLast(result.kind === 'ok' ? { kind: 'issued', issued: result.value } : actOf(result));

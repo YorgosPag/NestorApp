@@ -9,6 +9,8 @@
  * @see ADR-080, ADR-145
  */
 
+import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
+
 /** Result of a successful contact match */
 export interface ContactMatch {
   contactId: string;
@@ -68,6 +70,11 @@ export interface CreateContactParams {
    * επινοησουν τιμη. `undefined` ⇒ γραφεται `null`, οπως πριν.
    */
   vatNumber?: string | null;
+  /**
+   * ADR-884 §9.1 Α1 — το όνομα ήρθε **ενιαίο** από λογαριασμό και δεν διασπάστηκε με υπόθεση· η καρτέλα ζητά
+   * επιβεβαίωση. Προαιρετικό για τον ίδιο λόγο με το `vatNumber` — `undefined` ⇒ κανένα σήμα.
+   */
+  nameReview?: ContactNameReview | null;
 }
 
 /** Result of a successful contact creation */

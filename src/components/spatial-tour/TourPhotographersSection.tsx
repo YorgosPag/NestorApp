@@ -19,7 +19,9 @@ import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDate } from '@/lib/intl-formatting';
+import { calendarDayOf } from '@/constants/platform-operator';
+import { localDateOf } from '@/lib/date-local';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import type { TourCaptureInvitationView } from '@/app/api/spatial-tours/[kind]/[subjectId]/capture-invitations/route';
 import type { TourCaptureGrantView } from '@/server/spatial-tour/tour-capture-invitation';
 import type { TourSubject } from '@/types/spatial-tour';
@@ -51,7 +53,7 @@ export function TourPhotographersSection({ subject }: { readonly subject: TourSu
       {load.kind === 'loaded' && (
         <>
           <PendingInvitations invitations={load.invitations} busy={photographers.busy}
-            onResend={(i) => photographers.issue({ email: i.inviteeEmail, grantExpiresAt: i.grantExpiresAt, reason: i.reason })}
+            onResend={(i) => photographers.issue({ email: i.inviteeEmail, grantExpiresOn: calendarDayOf(new Date(i.grantExpiresAt)), reason: i.reason })}
             onRevoke={(i) => photographers.revokeInvitation(i.id)} />
           <Grants grants={load.grants} busy={photographers.busy} onRevoke={(g) => photographers.revokeGrant(g.granteeUid)} />
         </>
@@ -62,7 +64,7 @@ export function TourPhotographersSection({ subject }: { readonly subject: TourSu
 
 function InviteForm({ busy, onIssue }: {
   readonly busy: boolean;
-  readonly onIssue: (input: { email: string; grantExpiresAt: string; reason: string }) => Promise<void>;
+  readonly onIssue: (input: { email: string; grantExpiresOn: string; reason: string }) => Promise<void>;
 }) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const [email, setEmail] = useState('');
@@ -73,7 +75,7 @@ function InviteForm({ busy, onIssue }: {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!ready || until === undefined) return;
-    await onIssue({ email, grantExpiresAt: until.toISOString(), reason });
+    await onIssue({ email, grantExpiresOn: localDateOf(until), reason });
     setEmail('');
     setReason('');
   };
@@ -117,7 +119,7 @@ function PendingInvitations({ invitations, busy, onResend, onRevoke }: {
   readonly onResend: (invitation: TourCaptureInvitationView) => void;
   readonly onRevoke: (invitation: TourCaptureInvitationView) => void;
 }) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const { t, currentLanguage } = useTranslation(SPATIAL_TOUR_NS);
   return (
     <section aria-labelledby="tour-pending-heading" className="space-y-2">
       <h4 id="tour-pending-heading" className="text-sm font-medium">{t(PANEL_KEYS.pendingInvitations)}</h4>
@@ -126,7 +128,7 @@ function PendingInvitations({ invitations, busy, onResend, onRevoke }: {
           {invitations.map((invitation) => (
             <li key={invitation.id} className="flex flex-wrap items-center gap-2 p-2 text-sm">
               <span className="font-medium">{invitation.inviteeEmail}</span>
-              <span className="text-muted-foreground">{t(PANEL_KEYS.invitationUntil, { date: formatDate(invitation.expiresAt) })}</span>
+              <span className="text-muted-foreground">{t(PANEL_KEYS.invitationUntil, { date: formatOperatorDateTime(invitation.expiresAt, currentLanguage) })}</span>
               {invitation.openedAt !== null && <Badge variant="secondary">{t(PANEL_KEYS.opened)}</Badge>}
               {invitation.state === 'expired' && <Badge variant="outline">{t(STANDING_KEY.expired)}</Badge>}
               <span className="ms-auto flex gap-1">
@@ -146,7 +148,7 @@ function Grants({ grants, busy, onRevoke }: {
   readonly busy: boolean;
   readonly onRevoke: (grant: TourCaptureGrantView) => void;
 }) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const { t, currentLanguage } = useTranslation(SPATIAL_TOUR_NS);
   return (
     <section aria-labelledby="tour-grants-heading" className="space-y-2">
       <h4 id="tour-grants-heading" className="text-sm font-medium">{t(PANEL_KEYS.grants)}</h4>
@@ -156,7 +158,7 @@ function Grants({ grants, busy, onRevoke }: {
             <li key={grant.granteeUid} className="flex flex-wrap items-center gap-2 p-2 text-sm">
               <span className="font-medium">{grant.inviteeEmail ?? t(PANEL_KEYS.photographers)}</span>
               <Badge variant={grant.standing === 'active' ? 'default' : 'outline'}>{t(STANDING_KEY[grant.standing])}</Badge>
-              <span className="text-muted-foreground">{t(PANEL_KEYS.grantUntil, { date: formatDate(grant.expiresAt) })}</span>
+              <span className="text-muted-foreground">{t(PANEL_KEYS.grantUntil, { date: formatOperatorDateTime(grant.expiresAt, currentLanguage) })}</span>
               {grant.standing === 'active' && (
                 <Button type="button" size="sm" variant="ghost" className="ms-auto" disabled={busy} onClick={() => onRevoke(grant)}>
                   {t(PANEL_KEYS.revoke)}

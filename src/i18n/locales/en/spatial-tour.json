@@ -237,6 +237,7 @@
     "basisPublic": "Public tour",
     "stops": "{count, plural, one {# viewpoint} other {# viewpoints}}",
     "backToListing": "Back to the listing",
-    "unavailable": "The tour is not available right now."
+    "unavailable": "The tour is not available right now.",
+    "signedInAs": "You are signed in as {email}. If access was granted to another of your accounts, switch account."
   }
 }

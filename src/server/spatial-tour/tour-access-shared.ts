@@ -12,6 +12,8 @@ import 'server-only';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { endOfCalendarDay } from '@/constants/platform-operator';
+import { normalizeCalendarDay } from '@/lib/date-local';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
 import type { TourViewRefusal } from '@/lib/spatial-tour/tour-view-policy';
 import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
@@ -68,9 +70,14 @@ type ExpiryCheck = { readonly ok: true; readonly expiresAt: string } | { readonl
 /**
  * **Η λήξη μιας άδειας** (έγκριση αιτήματος θέασης · πρόσκληση φωτογράφου): ρητή, μελλοντική, εντός ορίζοντα —
  * αλλιώς ονομασμένη άρνηση. 🔑 **Ποτέ προεπιλογή εδώ**· ένας έλεγχος για όλες τις άδειες, όχι ένας ανά ροή.
+ *
+ * 🔑 **Ο άνθρωπος διαλέγει ΜΕΡΑ, ο διακομιστής ορίζει ΣΤΙΓΜΗ** (ADR-884 §9.1 Α6): «έως 30/9» = τέλος της 30/9 στη ζώνη
+ * του φορέα (`endOfCalendarDay`). Ως τις 2026-09-26 ο πελάτης έστελνε `toISOString()` των τοπικών μεσανύχτων του
+ * browser ⇒ η άδεια έληγε στην **αρχή** της μέρας που έγραφε η οθόνη, και ό,τι έλεγε ο browser για τη ζώνη του.
  */
-export function checkTourGrantExpiry(expiresAt: string | null, nowMs: number): ExpiryCheck {
-  const ms = expiresAt === null ? Number.NaN : Date.parse(expiresAt);
+export function checkTourGrantExpiry(expiresOn: string | null, nowMs: number): ExpiryCheck {
+  const day = normalizeCalendarDay(expiresOn);
+  const ms = day === null ? Number.NaN : endOfCalendarDay(day).getTime();
   if (!Number.isFinite(ms)) return { ok: false, reason: 'expiry-required' };
   if (ms <= nowMs) return { ok: false, reason: 'expiry-past' };
   if (ms - nowMs > TOUR_ACCESS_MAX_DAYS * DAY_MS) return { ok: false, reason: 'expiry-too-far' };

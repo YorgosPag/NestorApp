@@ -45,6 +45,11 @@ export interface TourViewSurfaceProps {
   readonly shareId: string | null;
   /** Η υποδοχή του θεατή (Φ1) — παίρνει το μανιφέστο μόνο όταν `ready`. */
   readonly renderViewer?: (manifest: TourManifest) => ReactNode;
+  /**
+   * Η απάντηση σε άρνηση **με δρόμο** (ADR-884 §9.1 Α5) — η σελίδα αγγελίας δίνει την κάρτα αιτήματος («γιατί» + «τι να
+   * κάνω»). Χωρίς αυτήν (προσωπικός σύνδεσμος): το ονομασμένο μήνυμα της άρνησης.
+   */
+  readonly renderRefusal?: (reason: TourRefusalName) => ReactNode;
 }
 
 function useTourViewSession(subject: TourSubject, shareId: string | null): SurfaceState {
@@ -67,10 +72,11 @@ function useTourViewSession(subject: TourSubject, shareId: string | null): Surfa
   return state;
 }
 
-export function TourViewSurface({ subject, shareId, renderViewer }: TourViewSurfaceProps) {
+export function TourViewSurface({ subject, shareId, renderViewer, renderRefusal }: TourViewSurfaceProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const state = useTourViewSession(subject, shareId);
   if (state.kind === 'loading') return <p className="text-sm text-muted-foreground" aria-busy>{t(VIEWER_KEYS.title)}</p>;
+  if (state.kind === 'refused' && renderRefusal) return <>{renderRefusal(state.reason)}</>;
   if (state.kind !== 'granted') {
     return (
       <p className="text-sm text-destructive" role="alert">

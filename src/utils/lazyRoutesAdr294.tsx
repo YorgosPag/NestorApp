@@ -326,7 +326,8 @@ export const lazyRoutesAdr294 = {
 
   SharedFile: createLazyRoute(
     () => import('@/components/shared/pages/SharedFilePageContent').then(mod => ({ default: mod.SharedFilePageContent })),
-    { loadingType: 'spinner', ssr: false }
+    // ADR-884 §9.1 Α4 — η περιήγηση (`spatial_tour`) δεν ζωγραφίζει πριν φτάσει το namespace της.
+    { loadingType: 'spinner', ssr: false, namespaces: ['spatial-tour'] }
   ),
 
   PhotoShare: createLazyRoute(

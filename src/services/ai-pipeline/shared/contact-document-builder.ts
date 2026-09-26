@@ -148,6 +148,8 @@ export function buildContactDocument(params: CreateContactParams): BuiltContact 
       // ADR-827 §8.3 — the imprint, copied by the server at the moment of engagement.
       // Absent for every other creation path, exactly as it was before.
       vatNumber: params.vatNumber ?? null,
+      // ADR-884 §9.1 Α1 — μόνο όταν ο δημιουργός το ξέρει· απουσία = τίποτα να επιβεβαιωθεί.
+      ...(params.nameReview ? { nameReview: params.nameReview } : {}),
       taxOffice: null,
       profession: null,
     },

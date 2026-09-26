@@ -47,8 +47,8 @@ export const dynamic = 'force-dynamic';
 
 const issueBodySchema = z.object({
   email: z.string().min(3).max(254),
-  /** Η λήξη της **άδειας** — υποχρεωτική· την κρίνει το `checkTourGrantExpiry` (ποτέ προεπιλογή εδώ). */
-  grantExpiresAt: z.string().min(10).max(40),
+  /** Η **μέρα** λήξης της άδειας (`YYYY-MM-DD`) — υποχρεωτική· τη στιγμή την ορίζει το `checkTourGrantExpiry` (ADR-884 §9.1 Α6). */
+  grantExpiresOn: z.string().min(10).max(10),
   reason: z.string().max(500),
 });
 
@@ -85,7 +85,7 @@ async function issueHandler(request: NextRequest, actor: ApiActor, segment?: Tou
   try {
     const outcome = await issueTourCaptureInvitation(db, {
       subject, actor: tourActorOf(actor), inviteeEmailRaw: parsed.data.email,
-      grantExpiresAt: parsed.data.grantExpiresAt, reason: parsed.data.reason,
+      grantExpiresOn: parsed.data.grantExpiresOn, reason: parsed.data.reason,
     });
     if (outcome.kind === 'refused') return tourRefusedResponse(outcome.reason);
     const delivery = await notifyTourCaptureInvitation(db, { invitation: outcome.invitation, token: outcome.token });

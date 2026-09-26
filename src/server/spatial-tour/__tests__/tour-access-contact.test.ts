@@ -34,7 +34,7 @@ const TOUR_ID = enterpriseIdService.generateDeterministicSpatialTourId('company-
 const TOURS = COLLECTIONS.SPATIAL_TOURS;
 const REQUESTS = `${TOURS}/${TOUR_ID}/${SUBCOLLECTIONS.TOUR_ACCESS_REQUESTS}`;
 const requestIdOf = (uid: string) => enterpriseIdService.generateDeterministicTourAccessRequestId(TOUR_ID, uid);
-const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // ημερολογιακή μέρα, όπως τη στέλνει ο επιλογέας (ADR-884 §9.1 Α6)
 
 const MANAGER: TourActor = {
   listing: { uid: 'boris', companyId: AGENCY },
@@ -65,7 +65,7 @@ function seed(tourOverrides: Record<string, unknown> = {}) {
 }
 
 const decide = (decision: 'approved' | 'declined') =>
-  decideTourAccessRequests(db, { subject: SUBJECT, actor: MANAGER, requesterUids: ['dora'], decision, expiresAt: decision === 'approved' ? inDays(30) : null });
+  decideTourAccessRequests(db, { subject: SUBJECT, actor: MANAGER, requesterUids: ['dora'], decision, expiresOn: decision === 'approved' ? inDays(30) : null });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -84,7 +84,22 @@ it('Ε1 — νέος άνθρωπος ⇒ καρτέλα στην ίδια συ�
   const contactId = kit.getData(REQUESTS, requestIdOf('dora'))?.contactId as string;
   expect(contactId).toBeTruthy();
   expect(kit.getData(COLLECTIONS.CONTACTS, contactId)).toMatchObject({ companyId: AGENCY, firstName: 'Δώρα', lastName: 'Αγοράστρια' });
+  expect(kit.getData(COLLECTIONS.CONTACTS, contactId)).not.toHaveProperty('nameReview');
   expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({ entityId: contactId, action: 'created' }));
+});
+
+it('Ε1β — 🔴 λογαριασμός ΜΟΝΟ με ενιαίο όνομα ⇒ ακέραιο στο «Όνομα» + σήμα επιβεβαίωσης, καμία μαντεψιά (ADR-884 §9.1 Α1)', async () => {
+  seed();
+  kit.seedCollection(REQUESTS, { [requestIdOf('dora')]: pending('dora') });
+  (findContactByEmail as jest.Mock).mockResolvedValue(null);
+  (readAccountIdentities as jest.Mock).mockResolvedValue(new Map([['dora', { ...identity('dora'), givenName: null, familyName: null }]]));
+
+  await decide('approved');
+  const contactId = kit.getData(REQUESTS, requestIdOf('dora'))?.contactId as string;
+  expect(kit.getData(COLLECTIONS.CONTACTS, contactId)).toMatchObject({
+    firstName: 'Δώρα Αγοράστρια', lastName: '', displayName: 'Δώρα Αγοράστρια',
+    nameReview: { source: 'account-display-name', raw: 'Δώρα Αγοράστρια' },
+  });
 });
 
 it('Ε2 — υπάρχουσα καρτέλα ⇒ σύνδεση, καμία δεύτερη, κανένα ίχνος γέννησης', async () => {

@@ -36,14 +36,14 @@ const MANAGER: TourActor = {
   listing: { uid: 'boris', companyId: 'comp_agency' },
   capability: { globalRole: 'internal_user', permissions: ['listings:listings:publish'] },
 };
-const grantExpiresAt = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+const grantExpiresOn = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 let kit: MockFirestoreKit;
 let db: Firestore;
 
 async function issue(subject: TourSubject = SUBJECT, actor: TourActor = MANAGER) {
   const outcome = await issueTourCaptureInvitation(db, {
-    subject, actor, inviteeEmailRaw: EMAIL, grantExpiresAt: grantExpiresAt(), reason: 'λήψη πριν τους σοβάδες',
+    subject, actor, inviteeEmailRaw: EMAIL, grantExpiresOn: grantExpiresOn(), reason: 'λήψη πριν τους σοβάδες',
   });
   if (outcome.kind !== 'issued') throw new Error(`αναμενόταν έκδοση, ήρθε ${JSON.stringify(outcome)}`);
   return outcome;

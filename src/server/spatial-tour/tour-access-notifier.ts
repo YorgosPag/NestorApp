@@ -28,7 +28,7 @@ import {
   NOTIFICATION_EVENT_TYPES,
   SOURCE_SERVICES,
 } from '@/config/notification-events';
-import { formatOperatorDate } from '@/lib/operator-time-format';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { listingNoticeTitle } from '@/lib/listings/listing-notice-title';
 import { viewDestination, type NotificationDestination } from '@/lib/notifications/notification-destination';
 import { custodyOf, custodyWorkspace } from '@/lib/owner-property/listing-custody';
@@ -81,10 +81,19 @@ export async function readTourHost(db: Firestore, subject: TourSubject): Promise
   return { userId: createdBy, workspace: orgWorkspace(companyId), fallbackTitle: typeof data?.name === 'string' ? data.name : undefined };
 }
 
-/** **«Ο Χ ζήτησε να δει την περιήγηση»** — προς τον υπεύθυνο. */
+/**
+ * **«Ο Χ ζήτησε να δει την περιήγηση»** — προς τον υπεύθυνο.
+ *
+ * 🔑 **Το μήνυμα του αιτούντος ταξιδεύει ως σώμα** (ADR-884 §9.1 Α2 — πρότυπο Google Drive «Request access»): ο υπεύθυνος
+ * κρίνει από το email χωρίς να ανοίξει την εφαρμογή. Ήδη κομμένο στο `TOUR_ACCESS_MESSAGE_MAX` κατά την αποθήκευση· η
+ * απόδοση email το περνά από `escapeHtml` (`notification-email-render.ts`) — ποτέ ως HTML.
+ */
 export async function announceTourAccessRequested(
   db: Firestore,
-  input: { readonly subject: TourSubject; readonly requestId: string; readonly requestCount: number; readonly requesterName: string },
+  input: {
+    readonly subject: TourSubject; readonly requestId: string; readonly requestCount: number;
+    readonly requesterName: string; readonly message: string | null;
+  },
 ): Promise<void> {
   try {
     const host = await readTourHost(db, input.subject);
@@ -97,6 +106,7 @@ export async function announceTourAccessRequested(
       title: `Αίτημα θέασης περιήγησης για «${title}» από ${input.requesterName}`,
       titleKey: 'tourAccessRequested.title',
       titleParams: { title, who: input.requesterName },
+      ...(input.message === null ? {} : { body: input.message }),
       eventId: `tour-access:${input.requestId}:${input.requestCount}:request`,
       entityId: input.subject.id,
       entityType: NOTIFICATION_ENTITY_TYPES.PROPERTY,
@@ -124,7 +134,7 @@ export async function announceTourAccessAnswered(
 ): Promise<void> {
   try {
     const title = await listingNoticeTitle(db, input.subject.id);
-    const until = input.expiresAt === null ? '' : formatOperatorDate(input.expiresAt, EMAIL_LOCALE);
+    const until = input.expiresAt === null ? '' : formatOperatorDateTime(input.expiresAt, EMAIL_LOCALE);
     const approved = input.decision === 'approved';
     await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_ANSWERED,

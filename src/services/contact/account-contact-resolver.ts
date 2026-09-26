@@ -26,6 +26,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-document-builder';
 import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
 import { generateContactId } from '@/services/enterprise-id-convenience';
+import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
 
 const logger = createModuleLogger('account-contact-resolver');
 
@@ -36,6 +37,8 @@ export interface AccountContactIdentity {
   readonly email: string;
   /** Μόνο όπου το ζητά νομικό κείμενο (εντολή) — `null` αλλού. */
   readonly vatNumber: string | null;
+  /** Ενιαίο όνομα προς επιβεβαίωση (ADR-884 §9.1 Α1) — η εντολή έχει πάντα δομημένα, άρα εκεί απουσιάζει. */
+  readonly nameReview?: ContactNameReview | null;
 }
 
 export interface ResolvedAccountContact {
@@ -77,6 +80,7 @@ export async function resolveAccountContact(input: {
     // Ο έλεγχος διπλοτύπου έγινε **ήδη**, με το σωστό ερώτημα — η σημαία δηλώνει την πρόθεση.
     skipDuplicateCheck: true,
     vatNumber: identity.vatNumber,
+    nameReview: identity.nameReview ?? null,
   });
   return { contactId: generateContactId(), doc: built.doc, displayName: built.displayName };
 }

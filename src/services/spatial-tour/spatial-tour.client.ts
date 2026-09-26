@@ -67,7 +67,7 @@ export interface IssuedTourCaptureInvitation {
 /** Έκδοση **και** επαναποστολή (ίδια πράξη — η παλιά ανακαλείται στην ίδια συναλλαγή). */
 export function issueTourCaptureInvitationFromScreen(
   subject: TourSubject,
-  input: { readonly email: string; readonly grantExpiresAt: string; readonly reason: string },
+  input: { readonly email: string; readonly grantExpiresOn: string; readonly reason: string },
 ): Promise<TourCallResult<IssuedTourCaptureInvitation>> {
   return tourCall(() => apiClient.post<IssuedTourCaptureInvitation>(routes.CAPTURE_INVITATIONS(subject.kind, subject.id), input));
 }

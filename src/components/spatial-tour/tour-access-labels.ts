@@ -38,6 +38,7 @@ export const VIEWER_KEYS = {
   stops: 'spatial-tour:viewer.stops',
   backToListing: 'spatial-tour:viewer.backToListing',
   unavailable: 'spatial-tour:viewer.unavailable',
+  signedInAs: 'spatial-tour:viewer.signedInAs',
   signInRequired: 'spatial-tour:refusal.signInRequired',
   notViewable: 'spatial-tour:refusal.notViewable',
 } as const;

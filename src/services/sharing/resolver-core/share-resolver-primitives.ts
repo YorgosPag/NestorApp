@@ -122,12 +122,16 @@ export function validateShareBaseInput(
 
 /**
  * ADR-884 Κ3β — η **πολιτική συνδέσμου** του είδους (`SHARE_KIND_LINK_POLICY`): κωδικός επιτρέπεται; «για ποιον»
- * υποχρεωτικό; Κάθε resolver την καλεί με τον ίδιο τρόπο — η δήλωση είναι μία.
+ * υποχρεωτικό; όριο λήψεων (§9.1 Α3); 🔑 Την καλεί **ο ΕΝΑΣ** δημιουργός (`server/sharing/share-create.ts`) για
+ * **κάθε** είδος — όχι ο κάθε resolver (ως 2026-09-26 την καλούσε μόνο η περιήγηση ⇒ οι βιτρίνες δεν την ρωτούσαν).
  */
-export function validateAgainstLinkPolicy(input: Pick<CreateShareInput, 'entityType' | 'label' | 'password'>): ValidationResult {
+export function validateAgainstLinkPolicy(
+  input: Pick<CreateShareInput, 'entityType' | 'label' | 'password' | 'maxAccesses'>,
+): ValidationResult {
   const policy = linkPolicyOf(input.entityType);
   if (policy.labelRequired && !input.label?.trim()) return { valid: false, reason: 'label (recipient) required' };
   if (!policy.password && input.password !== undefined) return { valid: false, reason: 'password not allowed for this kind' };
+  if (!policy.accessLimit && (input.maxAccesses ?? 0) > 0) return { valid: false, reason: 'access limit not allowed for this kind' };
   return { valid: true };
 }
 

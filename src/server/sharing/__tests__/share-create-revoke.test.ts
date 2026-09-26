@@ -32,6 +32,8 @@ import {
 import { createShareOnServer, parseCreateShareRequest, SHARE_MAX_EXPIRY_HOURS } from '../share-create';
 import { revokeShareOnServer } from '../share-revoke';
 import { verifySharePassword } from '../share-password';
+import { validateAgainstLinkPolicy } from '@/services/sharing/resolver-core/share-resolver-primitives';
+import { SHARE_KIND_LINK_POLICY } from '@/services/sharing/share-resolve-contract';
 
 const CREATOR = { uid: 'usr_1', companyId: 'comp_1' };
 let kit: MockFirestoreKit;
@@ -99,6 +101,21 @@ describe('createShareOnServer', () => {
     const request = parseCreateShareRequest({ entityType: 'contact', entityId: 'ct_1' })!;
 
     await expect(createShareOnServer(db(), CREATOR, request)).resolves.toMatchObject({ ok: false, refusal: 'invalid' });
+  });
+
+  it('🔴 ADR-884 §9.1 Α3 — access limit: allowed on what is DOWNLOADED (contact), refused on what is VIEWED, for EVERY kind', async () => {
+    // Μετάλλαξη (2026-09-26): αφαίρεση του κεντρικού `validateAgainstLinkPolicy` ⇒ η άρνηση της βιτρίνας χάνεται.
+    await expect(createShareOnServer(db(), CREATOR, contactRequest({ maxAccesses: 5 })!)).resolves.toMatchObject({ ok: true });
+    for (const kind of Object.keys(SHARE_KIND_LINK_POLICY) as (keyof typeof SHARE_KIND_LINK_POLICY)[]) {
+      expect([kind, SHARE_KIND_LINK_POLICY[kind].accessLimit]).toEqual([kind, kind === 'file' || kind === 'contact']);
+    }
+    const showcase = parseCreateShareRequest({
+      entityType: 'property_showcase', entityId: 'p_1', maxAccesses: 5, showcaseMeta: { pdfStoragePath: 'showcases/p_1.pdf' },
+    });
+    await expect(createShareOnServer(db(), CREATOR, showcase!)).resolves.toEqual({
+      ok: false, refusal: 'invalid', reason: 'access limit not allowed for this kind',
+    });
+    expect(validateAgainstLinkPolicy({ entityType: 'property_showcase', maxAccesses: 0 })).toEqual({ valid: true });
   });
 
   it('bounds the expiry — the default is 72 hours', async () => {

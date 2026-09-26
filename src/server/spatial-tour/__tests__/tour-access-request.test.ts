@@ -16,6 +16,7 @@ jest.mock('server-only', () => ({}));
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { endOfCalendarDay } from '@/constants/platform-operator';
 import type { TourActor } from '@/lib/spatial-tour/tour-authority';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
@@ -43,7 +44,7 @@ const STRANGER: TourActor = {
   capability: { globalRole: 'internal_user', permissions: ['listings:listings:publish'] },
 };
 
-const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+const inDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // ημερολογιακή μέρα, όπως τη στέλνει ο επιλογέας (ADR-884 §9.1 Α6)
 
 function tourDoc(overrides: Record<string, unknown> = {}) {
   return {
@@ -150,8 +151,8 @@ describe('Υ — ο υπεύθυνος', () => {
     kit.clearWrites();
   });
 
-  const approve = (actor: TourActor, expiresAt: string | null, uids = ['buyer']) =>
-    decideTourAccessRequests(db, { subject: COMPANY_SUBJECT, actor, requesterUids: uids, decision: 'approved', expiresAt });
+  const approve = (actor: TourActor, expiresOn: string | null, uids = ['buyer']) =>
+    decideTourAccessRequests(db, { subject: COMPANY_SUBJECT, actor, requesterUids: uids, decision: 'approved', expiresOn });
 
   it('Υ1 — 🔴 ξένος μισθωτής ⇒ not-manager, καμία εγγραφή', async () => {
     expect(await approve(STRANGER, inDays(30))).toEqual({ kind: 'refused', reason: 'not-manager' });
@@ -163,8 +164,18 @@ describe('Υ — ο υπεύθυνος', () => {
     ['άκυρη λήξη', 'αύριο', 'expiry-required'],
     ['λήξη στο παρελθόν', inDays(-1), 'expiry-past'],
     ['λήξη πέρα από τον ορίζοντα', inDays(TOUR_ACCESS_MAX_DAYS + 1), 'expiry-too-far'],
-  ])('Υ2 — 🔴 έγκριση %s ⇒ %s, καμία εγγραφή', async (_label, expiresAt, reason) => {
-    expect(await approve(MANAGER, expiresAt)).toEqual({ kind: 'refused', reason });
+  ])('Υ2 — 🔴 έγκριση %s ⇒ %s, καμία εγγραφή', async (_label, expiresOn, reason) => {
+    expect(await approve(MANAGER, expiresOn)).toEqual({ kind: 'refused', reason });
+    expect(kit.writes()).toHaveLength(0);
+  });
+
+  it('Υ2β — 🔴 «έως μέρα Χ» ⇒ η άδεια λήγει στο ΤΕΛΟΣ της Χ, ώρα Ελλάδας· στιγμή αντί για μέρα ⇒ άρνηση (ADR-884 §9.1 Α6)', async () => {
+    const day = inDays(30);
+    await approve(MANAGER, day);
+    expect(kit.getData(REQUESTS, requestId('buyer'))).toMatchObject({ state: 'approved', expiresAt: endOfCalendarDay(day).toISOString() });
+    kit.clearWrites();
+    expect(await approve(MANAGER, new Date(Date.now() + 30 * 86_400_000).toISOString(), ['buyer2']))
+      .toEqual({ kind: 'refused', reason: 'expiry-required' });
     expect(kit.writes()).toHaveLength(0);
   });
 
@@ -185,14 +196,14 @@ describe('Υ — ο υπεύθυνος', () => {
   it('Υ4 — ποτέ ανατροπή: απόφαση πάνω σε αποφασισμένο ⇒ not-pending', async () => {
     await approve(MANAGER, inDays(30));
     const again = await decideTourAccessRequests(db, {
-      subject: COMPANY_SUBJECT, actor: MANAGER, requesterUids: ['buyer'], decision: 'declined', expiresAt: null,
+      subject: COMPANY_SUBJECT, actor: MANAGER, requesterUids: ['buyer'], decision: 'declined', expiresOn: null,
     });
     expect(again).toEqual({ kind: 'decided', results: [{ requesterUid: 'buyer', kind: 'refused', reason: 'not-pending' }] });
   });
 
   it('Υ5 — απόρριψη δεν χρειάζεται λήξη και δεν γράφει λήξη', async () => {
     await decideTourAccessRequests(db, {
-      subject: COMPANY_SUBJECT, actor: MANAGER, requesterUids: ['buyer'], decision: 'declined', expiresAt: inDays(30),
+      subject: COMPANY_SUBJECT, actor: MANAGER, requesterUids: ['buyer'], decision: 'declined', expiresOn: inDays(30),
     });
     expect(kit.getData(REQUESTS, requestId('buyer'))).toMatchObject({ state: 'declined', expiresAt: null, decidedBy: 'boris' });
   });

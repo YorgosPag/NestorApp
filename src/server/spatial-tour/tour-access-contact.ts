@@ -22,6 +22,7 @@ import 'server-only';
 
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
+import { accountContactName } from '@/lib/contacts/contact-name-review';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { readAccountIdentities, type AccountIdentity } from '@/server/auth/account-identities';
 import {
@@ -42,11 +43,14 @@ export type PreparedTourContact =
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'none' };
 
-/** Λογαριασμός → ό,τι ζητά η καρτέλα. Χωρίς email **δεν** γίνεται επαφή (δεν θα τη βρίσκαμε ποτέ ξανά). */
+/**
+ * Λογαριασμός → ό,τι ζητά η καρτέλα. Χωρίς email **δεν** γίνεται επαφή (δεν θα τη βρίσκαμε ποτέ ξανά).
+ * 🔑 Το όνομα **δεν μαντεύεται** (ADR-884 §9.1 Α1): ενιαίο ⇒ ακέραιο + σήμα επιβεβαίωσης (`accountContactName`).
+ */
 function contactIdentityOf(account: AccountIdentity | undefined): AccountContactIdentity | null {
   if (account === undefined || account.email === null) return null;
-  const givenName = account.givenName ?? account.displayName ?? account.email;
-  return { givenName, familyName: account.familyName ?? '', email: account.email, vatNumber: null };
+  const name = accountContactName({ ...account, email: account.email });
+  return { givenName: name.givenName, familyName: name.familyName, email: account.email, vatNumber: null, nameReview: name.nameReview };
 }
 
 async function alreadyLinked(tourRef: DocumentReference, uid: string): Promise<boolean> {

@@ -42,8 +42,8 @@ const BULK_LIMIT = 100;
 const decisionSchema = z.object({
   requesterUids: z.array(z.string().min(1).max(128)).min(1).max(BULK_LIMIT),
   decision: z.enum(['approved', 'declined']),
-  /** Υποχρεωτικό στην έγκριση — το κρίνει το `checkTourGrantExpiry` (ποτέ προεπιλογή στον διακομιστή). */
-  expiresAt: z.string().min(10).max(40).nullable(),
+  /** Η **μέρα** λήξης (`YYYY-MM-DD`) — υποχρεωτική στην έγκριση· τη στιγμή την ορίζει το `checkTourGrantExpiry` (ADR-884 §9.1 Α6). */
+  expiresOn: z.string().min(10).max(10).nullable(),
 });
 
 type Failure = TourBadSubjectBody | TourRefusedBody;

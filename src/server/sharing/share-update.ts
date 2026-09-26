@@ -94,6 +94,8 @@ export async function updateShareOnServer(
   // ADR-884 Κ3β — ίδια πολιτική με τη δημιουργία: η αλλαγή ρυθμίσεων δεν είναι πίσω πόρτα για κωδικό/κενό «για ποιον».
   const policy = linkPolicyOf(String(owned.data.entityType ?? ''));
   if (!policy.password && typeof request.password === 'string') return { ok: false, refusal: 'invalid', reason: 'password-not-allowed' };
+  // ADR-884 §9.1 Α3 — νέο όριο σε είδος προβολής ⇒ άρνηση· η ΑΦΑΙΡΕΣΗ ορίου (0) επιτρέπεται πάντα (παλιοί σύνδεσμοι).
+  if (!policy.accessLimit && (request.maxAccesses ?? 0) > 0) return { ok: false, refusal: 'invalid', reason: 'access-limit-not-allowed' };
   if (policy.labelRequired && request.label !== undefined && !request.label?.trim()) {
     return { ok: false, refusal: 'invalid', reason: 'label-required' };
   }

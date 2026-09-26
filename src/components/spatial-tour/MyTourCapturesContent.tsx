@@ -13,7 +13,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDate } from '@/lib/intl-formatting';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import type { MyTourCaptureGrant } from '@/server/spatial-tour/tour-capture-list';
 
 import { MY_CAPTURES_KEYS, STANDING_KEY } from './spatial-tour-labels';
@@ -43,7 +43,7 @@ export function MyTourCapturesContent({ grants }: { readonly grants: readonly My
 }
 
 function GrantCard({ grant }: { readonly grant: MyTourCaptureGrant }) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const { t, currentLanguage } = useTranslation(SPATIAL_TOUR_NS);
   return (
     <Card>
       <CardHeader>
@@ -52,7 +52,7 @@ function GrantCard({ grant }: { readonly grant: MyTourCaptureGrant }) {
           <Badge variant={grant.standing === 'active' ? 'default' : 'outline'}>{t(STANDING_KEY[grant.standing])}</Badge>
         </CardTitle>
         <CardDescription>
-          {t(MY_CAPTURES_KEYS.until, { date: formatDate(grant.expiresAt) })} · {t(MY_CAPTURES_KEYS.for, { reason: grant.reason })}
+          {t(MY_CAPTURES_KEYS.until, { date: formatOperatorDateTime(grant.expiresAt, currentLanguage) })} · {t(MY_CAPTURES_KEYS.for, { reason: grant.reason })}
         </CardDescription>
       </CardHeader>
       {grant.standing === 'active' && (

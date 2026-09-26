@@ -66,7 +66,7 @@ const PHOTOGRAPHER_ACTOR: TourActor = {
   capability: { globalRole: 'external_user', permissions: [] },
 };
 
-const inDays = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString();
+const inDays = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString().slice(0, 10); // ημερολογιακή μέρα, όπως τη στέλνει ο επιλογέας (ADR-884 §9.1 Α6)
 
 /** Ο φωτογράφος, **σωστός σε όλα** — κάθε άρνηση αλλάζει ΕΝΑ πεδίο. */
 const photographer = (overrides: Record<string, unknown> = {}) => ({
@@ -93,7 +93,7 @@ function seed() {
 
 async function issue(overrides: Partial<IssueTourCaptureInvitationInput> = {}) {
   const outcome = await issueTourCaptureInvitation(db, {
-    subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresAt: inDays(30),
+    subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresOn: inDays(30),
     reason: 'λήψη πριν κλείσουν οι τοίχοι', ...overrides,
   });
   if (outcome.kind !== 'issued') throw new Error(`αναμενόταν έκδοση, ήρθε ${JSON.stringify(outcome)}`);
@@ -195,7 +195,7 @@ describe('Φ — ο φωτογράφος', () => {
 describe('Υ — ο υπεύθυνος', () => {
   it('🔴 Υ1 — όποιος ΔΕΝ διαχειρίζεται την περιήγηση ⇒ `not-manager`, ΚΑΜΙΑ γραφή', async () => {
     const outcome = await issueTourCaptureInvitation(db, {
-      subject: SUBJECT, actor: STRANGER, inviteeEmailRaw: EMAIL, grantExpiresAt: inDays(30), reason: 'x',
+      subject: SUBJECT, actor: STRANGER, inviteeEmailRaw: EMAIL, grantExpiresOn: inDays(30), reason: 'x',
     });
     expect(outcome).toEqual({ kind: 'refused', reason: 'not-manager' });
     expect(kit.writes()).toHaveLength(0);
@@ -203,11 +203,11 @@ describe('Υ — ο υπεύθυνος', () => {
 
   it.each([
     ['χωρίς λήξη', null, 'expiry-required'],
-    ['παρελθόν', new Date(Date.now() - DAY_MS).toISOString(), 'expiry-past'],
+    ['παρελθόν', inDays(-1), 'expiry-past'],
     ['πέρα από τον ορίζοντα', inDays(400), 'expiry-too-far'],
-  ] as const)('🔴 Υ2 — λήξη άδειας %s ⇒ `%s`, ΚΑΜΙΑ γραφή', async (_label, grantExpiresAt, reason) => {
+  ] as const)('🔴 Υ2 — λήξη άδειας %s ⇒ `%s`, ΚΑΜΙΑ γραφή', async (_label, grantExpiresOn, reason) => {
     const outcome = await issueTourCaptureInvitation(db, {
-      subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresAt, reason: 'x',
+      subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresOn, reason: 'x',
     });
     expect(outcome).toEqual({ kind: 'refused', reason });
     expect(kit.writes()).toHaveLength(0);
@@ -215,14 +215,14 @@ describe('Υ — ο υπεύθυνος', () => {
 
   it('Υ3 — κενός λόγος ⇒ `reason-required`', async () => {
     expect(await issueTourCaptureInvitation(db, {
-      subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresAt: inDays(30), reason: '   ',
+      subject: SUBJECT, actor: MANAGER, inviteeEmailRaw: EMAIL, grantExpiresOn: inDays(30), reason: '   ',
     })).toEqual({ kind: 'refused', reason: 'reason-required' });
   });
 
   it('🏆 Υ4 — η πρόσκληση λήγει το ΑΡΓΟΤΕΡΟ όταν θα έληγε η άδεια — ποτέ «ναι» που γεννά νεκρή άδεια', async () => {
-    const short = await issue({ grantExpiresAt: inDays(2) });
+    const short = await issue({ grantExpiresOn: inDays(2) });
     expect(short.invitation.expiresAt).toBe(short.invitation.grantExpiresAt);
-    const long = await issue({ inviteeEmailRaw: 'other@example.com', grantExpiresAt: inDays(60) });
+    const long = await issue({ inviteeEmailRaw: 'other@example.com', grantExpiresOn: inDays(60) });
     expect(Date.parse(long.invitation.expiresAt)).toBeLessThan(Date.parse(long.invitation.grantExpiresAt));
     expect(Date.parse(long.invitation.expiresAt) - Date.now()).toBeLessThanOrEqual(7 * DAY_MS + 1000);
   });

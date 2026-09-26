@@ -157,6 +157,36 @@ export function calendarDayOf(instant: Date, timeZone: string = OPERATOR_TIME_ZO
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
+/** Πόσο μπροστά από το UTC είναι η ζώνη **εκείνη τη στιγμή** (ms) — από το Intl, ποτέ σταθερό +2/+3. */
+function zoneOffsetMs(instantMs: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(instantMs));
+  const n = (type: Intl.DateTimeFormatPartTypes): number => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const wall = Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second'));
+  return wall - Math.floor(instantMs / 1000) * 1000;
+}
+
+/** Τα μεσάνυχτα **έναρξης** μιας ημερολογιακής μέρας στη ζώνη — δύο περάσματα, ώστε η αλλαγή ώρας να μη ξεγελά. */
+function startOfCalendarDayMs(day: CalendarDay, timeZone: string): number {
+  const [year, month, date] = day.split('-').map(Number);
+  const wallMidnight = Date.UTC(year, month - 1, date);
+  const guess = wallMidnight - zoneOffsetMs(wallMidnight, timeZone);
+  return wallMidnight - zoneOffsetMs(guess, timeZone);
+}
+
+/**
+ * **Η τελευταία στιγμή μιας ημερολογιακής μέρας, στη ζώνη του φορέα** — «έως 30/9» σημαίνει **ολόκληρη** την 30/9
+ * (συμπεριληπτικά, όπως συμβόλαια και κρατήσεις· ADR-884 §9.1 Α6). = έναρξη της **επόμενης** μέρας − 1 ms, άρα
+ * σωστή και τη μέρα αλλαγής ώρας (23 ή 25 ωρών). Το `day` είναι ήδη κανονικό `YYYY-MM-DD` (`normalizeCalendarDay`).
+ */
+export function endOfCalendarDay(day: CalendarDay, timeZone: string = OPERATOR_TIME_ZONE): Date {
+  const [year, month, date] = day.split('-').map(Number);
+  const next = new Date(Date.UTC(year, month - 1, date + 1)).toISOString().slice(0, 10);
+  return new Date(startOfCalendarDayMs(next, timeZone) - 1);
+}
+
 /**
  * **Ποιος ήταν ο φορέας εκείνη τη μέρα;** — η γραμμή με το **μεγαλύτερο** `effectiveFrom ≤ day`.
  *

@@ -136,5 +136,15 @@
   "notifications": {
     "contactTrashed": "Contact moved to trash: {contactName}",
     "contactPermanentlyDeleted": "Contact permanently deleted: {contactName}"
+  },
+  "nameReview": {
+    "title": "Confirm the name",
+    "fromAccount": "The name came as a single field from the person's account: \"{raw}\". We did not split it ourselves, because the order of given and family name varies.",
+    "fromEmail": "The account had no name — the email \"{raw}\" was kept. Add the given and family name with \"Edit\".",
+    "proposal": "Suggestion: Given name \"{given}\" · Family name \"{family}\"",
+    "swap": "Swap",
+    "apply": "Apply",
+    "keep": "Keep as is",
+    "failed": "Saving failed. Please try again."
   }
 }

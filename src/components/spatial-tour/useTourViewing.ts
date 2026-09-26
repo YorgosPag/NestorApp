@@ -74,11 +74,11 @@ export function useTourAccessRequests(subject: TourSubject, state: TourAccessReq
   const load = useCallback(async () => tourListOrEmpty(await listTourAccessRequestsFromScreen(subject, state)), [subject, state]);
   const { data, status, refresh, optimistic } = useReconciledResource<readonly TourAccessInboxRow[]>(load);
 
-  const decide = useCallback(async (requesterUids: readonly string[], decision: 'approved' | 'declined', expiresAt: string | null) => {
+  const decide = useCallback(async (requesterUids: readonly string[], decision: 'approved' | 'declined', expiresOn: string | null) => {
     const chosen = new Set(requesterUids);
     const result = await optimistic(
       (rows) => rows.filter((row) => !chosen.has(row.requesterUid)),
-      () => decideTourAccessFromScreen(subject, { requesterUids, decision, expiresAt }),
+      () => decideTourAccessFromScreen(subject, { requesterUids, decision, expiresOn }),
       { reconcile: 'always' },
     );
     setNotice(result.kind === 'ok' ? { kind: 'decided', rows: result.value } : noticeOf(result));

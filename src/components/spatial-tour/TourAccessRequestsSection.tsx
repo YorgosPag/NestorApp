@@ -19,7 +19,9 @@ import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { localDateOf } from '@/lib/date-local';
 import { formatDate } from '@/lib/intl-formatting';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import type { TourAccessInboxRow } from '@/server/spatial-tour/tour-access-inbox';
 import type { TourSubject } from '@/types/spatial-tour';
 
@@ -77,7 +79,7 @@ function PendingRequests({ subject }: { readonly subject: TourSubject }) {
     return next;
   });
   const act = async (decision: 'approved' | 'declined') => {
-    await decide(chosen, decision, decision === 'approved' ? until?.toISOString() ?? null : null);
+    await decide(chosen, decision, decision === 'approved' && until !== undefined ? localDateOf(until) : null);
     setSelected(new Set());
   };
   return (
@@ -142,7 +144,7 @@ function DecisionBar({ count, until, onUntil, onApprove, onDecline, allSelected,
 }
 
 function ApprovedViewers({ subject }: { readonly subject: TourSubject }) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const { t, currentLanguage } = useTranslation(SPATIAL_TOUR_NS);
   const { rows, revoke, notice } = useTourAccessRequests(subject, 'approved');
   if (rows === null) return null;
   const active = rows.filter((row) => row.standing === 'active');
@@ -156,7 +158,7 @@ function ApprovedViewers({ subject }: { readonly subject: TourSubject }) {
               <Who row={row} />
               {row.hasContact && <Badge variant="secondary">{t(VIEWING_KEYS.inCrm)}</Badge>}
               <span className="text-muted-foreground">
-                {row.expiresAt !== null && t(VIEWING_KEYS.accessUntil, { date: formatDate(row.expiresAt) })}
+                {row.expiresAt !== null && t(VIEWING_KEYS.accessUntil, { date: formatOperatorDateTime(row.expiresAt, currentLanguage) })}
                 {' · '}{t(VIEWING_KEYS.viewTrace, { count: row.viewCount })}
                 {row.lastViewedAt !== null && ` · ${t(VIEWING_KEYS.lastViewed, { date: formatDate(row.lastViewedAt) })}`}
               </span>

@@ -19,7 +19,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { InvitationRespond } from '@/lib/invitations/invitation-respond';
-import { formatDate, formatDateTime } from '@/lib/intl-formatting';
+import { formatDateTime } from '@/lib/intl-formatting';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { myTourCapturesHref } from '@/lib/spatial-tour/tour-routes';
 import { Link } from '@/lib/workspace/navigation';
 import {
@@ -79,7 +80,7 @@ export function TourCaptureInviteContent({ view }: { readonly view: TourCaptureI
 }
 
 function Preview({ view, pending, onRespond }: PreviewProps) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
+  const { t, currentLanguage } = useTranslation(SPATIAL_TOUR_NS);
   const layout = useLayoutClasses();
   const { preview } = view;
   return (
@@ -98,7 +99,7 @@ function Preview({ view, pending, onRespond }: PreviewProps) {
           <dt className="text-muted-foreground">{t(INVITE_KEYS.reason)}</dt>
           <dd>{preview.reason}</dd>
           <dt className="text-muted-foreground">{t(INVITE_KEYS.uploadUntil)}</dt>
-          <dd>{formatDate(preview.grantExpiresAt)}</dd>
+          <dd>{formatOperatorDateTime(preview.grantExpiresAt, currentLanguage)}</dd>
           <dt className="text-muted-foreground">{t(INVITE_KEYS.linkExpires)}</dt>
           <dd>{formatDateTime(preview.expiresAt, { dateStyle: 'long', timeStyle: 'short' })}</dd>
         </dl>

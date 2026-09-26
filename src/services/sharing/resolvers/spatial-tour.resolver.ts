@@ -24,7 +24,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { isPlaceSource, type PlaceSource } from '@/constants/place-sources';
 import {
   buildSafePublicProjection,
-  validateAgainstLinkPolicy,
   validateShareBaseInput,
 } from '@/services/sharing/resolver-core/share-resolver-primitives';
 import type {
@@ -52,10 +51,9 @@ function projectSpatialTour({ share, entity }: ShareProjectionInput): SpatialTou
   return { shareId: share.id, tourId: share.entityId, subject: subjectOf(entity) };
 }
 
+/** Η πολιτική συνδέσμου (κωδικός · «για ποιον» · όριο) την κρίνει ο ΕΝΑΣ δημιουργός για κάθε είδος (`share-create.ts`). */
 function validateCreateInput(input: CreateShareInput): ValidationResult {
-  const base = validateShareBaseInput(input, { entityType: 'spatial_tour', entityIdLabel: 'tourId' });
-  if (!base.valid) return base;
-  return validateAgainstLinkPolicy(input);
+  return validateShareBaseInput(input, { entityType: 'spatial_tour', entityIdLabel: 'tourId' });
 }
 
 export const spatialTourShareResolver: ShareEntityDefinition<SpatialTourShareResolvedData> = {

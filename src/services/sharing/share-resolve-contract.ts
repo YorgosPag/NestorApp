@@ -83,29 +83,37 @@ export const SHARE_LABEL_MAX_LENGTH = 80;
  * - `password` — κοινός κωδικός. Ο σύνδεσμος **περιήγησης** είναι ανά παραλήπτη: ο κωδικός είναι κοινό μυστικό που
  *   δεν ανακαλείται ανά άνθρωπο (απόφαση Ε9) ⇒ `false`.
  * - `labelRequired` — «για ποιον». Χωρίς όνομα, το ίχνος δεν λέει **ποιος** άνοιξε ⇒ υποχρεωτικό για περιήγηση.
+ * - `accessLimit` — όριο **λήψεων** (ADR-884 §9.1 Α3). Έχει νόημα μόνο για ό,τι **κατεβαίνει** (αρχείο, κάρτα επαφής).
+ *   Στα είδη **προβολής** (βιτρίνες, περιήγηση) οι μεγάλοι **δεν** βάζουν όριο ανοιγμάτων (DocSend: μόνο λήξη ·
+ *   επιβεβαίωση email · ανάκληση· Matterport: ιδιωτικό · κωδικός)· ένα «όριο 5» θα το έκαιγε το refresh της σελίδας.
+ *   Αντί για όριο: μετρητής + «τελευταίο άνοιγμα» στη λίστα συνδέσμων.
  */
 export interface ShareKindLinkPolicy {
   readonly password: boolean;
   readonly labelRequired: boolean;
+  readonly accessLimit: boolean;
 }
 
-const DEFAULT_LINK_POLICY: ShareKindLinkPolicy = { password: true, labelRequired: false };
+/** Ό,τι κατεβαίνει: κωδικός και όριο λήψεων επιτρέπονται. */
+const DOWNLOAD_LINK_POLICY: ShareKindLinkPolicy = { password: true, labelRequired: false, accessLimit: true };
+/** Ό,τι προβάλλεται: κωδικός ναι, όριο ανοιγμάτων όχι. */
+const VIEW_LINK_POLICY: ShareKindLinkPolicy = { password: true, labelRequired: false, accessLimit: false };
 
 /** ⚠️ `Record<ResolvableShareKind, …>` — νέο είδος **δεν μεταγλωττίζεται** χωρίς να δηλώσει την πολιτική του. */
 export const SHARE_KIND_LINK_POLICY: Readonly<Record<ResolvableShareKind, ShareKindLinkPolicy>> = {
-  file: DEFAULT_LINK_POLICY,
-  contact: DEFAULT_LINK_POLICY,
-  property_showcase: DEFAULT_LINK_POLICY,
-  project_showcase: DEFAULT_LINK_POLICY,
-  building_showcase: DEFAULT_LINK_POLICY,
-  storage_showcase: DEFAULT_LINK_POLICY,
-  parking_showcase: DEFAULT_LINK_POLICY,
-  spatial_tour: { password: false, labelRequired: true },
+  file: DOWNLOAD_LINK_POLICY,
+  contact: DOWNLOAD_LINK_POLICY,
+  property_showcase: VIEW_LINK_POLICY,
+  project_showcase: VIEW_LINK_POLICY,
+  building_showcase: VIEW_LINK_POLICY,
+  storage_showcase: VIEW_LINK_POLICY,
+  parking_showcase: VIEW_LINK_POLICY,
+  spatial_tour: { password: false, labelRequired: true, accessLimit: false },
 };
 
 /** Η πολιτική ενός είδους — μη επιλύσιμο είδος ⇒ η προεπιλογή (δεν περνά ποτέ από σύνδεσμο). */
 export function linkPolicyOf(kind: string): ShareKindLinkPolicy {
-  return isResolvableShareKind(kind) ? SHARE_KIND_LINK_POLICY[kind] : DEFAULT_LINK_POLICY;
+  return isResolvableShareKind(kind) ? SHARE_KIND_LINK_POLICY[kind] : DOWNLOAD_LINK_POLICY;
 }
 
 /** Είναι το είδος επιλύσιμο μέσω συνδέσμου; */
