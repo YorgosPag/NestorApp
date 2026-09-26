@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { compareSets } = require('./lib/ratchet-baseline');
-const { readUnusedFiles } = require('./lib/knip/file-scope');
+const { readUnusedFiles, readUntrackedFiles, partitionByIndex } = require('./lib/knip/file-scope');
 
 const BASELINE_FILE = path.join(__dirname, '..', '.deadcode-baseline.json');
 const ROOT = path.join(__dirname, '..');
@@ -21,11 +21,20 @@ const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
 const baselineSet = new Set(baseline.files ?? []);
 
 let currentFilesArr;
+let outsideIndex;
 try {
-  currentFilesArr = readUnusedFiles(ROOT, { cache: true });
+  // Κρίνεται ό,τι θα περιέχει το commit — untracked WIP εκτός index δεν μπλοκάρει.
+  ({ committed: currentFilesArr, outsideIndex } = partitionByIndex(
+    readUnusedFiles(ROOT, { cache: true }),
+    readUntrackedFiles(ROOT),
+  ));
 } catch (error) {
   console.error(`❌ ${error.message}`);
   process.exit(1);
+}
+
+if (outsideIndex.length > 0) {
+  console.log(`ℹ️  ${outsideIndex.length} untracked αρχείο(α) χωρίς καταναλωτή, εκτός commit — δεν κρίνονται (git add τα κάνει ορατά).`);
 }
 
 const currentFiles = new Set(currentFilesArr);

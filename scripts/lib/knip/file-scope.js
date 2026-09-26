@@ -76,4 +76,43 @@ function readUnusedFiles(root, { cache = false } = {}) {
     .sort();
 }
 
-module.exports = { fileScopeArgs, readUnusedFiles };
+/**
+ * Τα untracked (μη-gitignored) αρχεία — δηλαδή ό,τι **δεν** θα περιέχει το commit.
+ * `-z`: ονόματα με μη-ASCII χαρακτήρες έρχονται ωμά, όχι σε εισαγωγικά `core.quotepath`.
+ */
+function readUntrackedFiles(root) {
+  const result = spawnSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 50 * 1024 * 1024,
+  });
+  if (result.status !== 0) throw new Error('git ls-files --others: αποτυχία.');
+  return result.stdout.split('\0').filter(Boolean);
+}
+
+/**
+ * 🔴 Η ΠΥΛΗ ΚΡΙΝΕΙ ΤΟ COMMIT, ΟΧΙ ΤΟ ΔΕΝΤΡΟ ΕΡΓΑΣΙΑΣ (2026-09-26).
+ *
+ * Το knip διαβάζει τον δίσκο. Σε κοινό δέντρο με πολλούς πράκτορες, ένα untracked WIP
+ * αρχείο που **δεν έχει ακόμη καταναλωτή** (χτίζεται από κάτω προς τα πάνω) φαινόταν
+ * «νέος νεκρός κώδικας» και μπλόκαρε **κάθε** commit — και των άσχετων — ωθώντας σε
+ * `SKIP_DEADCODE_CHECK=1`. Μετρημένο: 2 → 10 τέτοια αρχεία ADR-890 μέσα σε 10′.
+ *
+ * Ό,τι είναι untracked **και** εκτός index δεν μπαίνει στο commit, άρα δεν μπορεί να
+ * προσγειώσει νεκρό κώδικα· το αποκλείουμε από τα **μπλοκάροντα** (όχι σιωπηλά — ο
+ * καλών το αναφέρει). Ένα `git add` το κάνει αμέσως ξανά ορατό. Ίδιο σκεπτικό με
+ * `scripts/lib/adr-identity/scan.js` («το index είναι ό,τι θα περιέχει το commit»).
+ *
+ * ⚠️ ΜΟΝΟ στην πύλη — **ποτέ** στον γεννήτορα της baseline (θα άλλαζε ανά πράκτορα).
+ * ⚠️ Τυφλό σημείο που **δεν** κλείνει εδώ: staged αρχείο με μοναδικό εισαγωγέα ένα
+ *    untracked αρχείο φαίνεται ζωντανό. Το πιάνει το Layer 2 (CI, καθαρό checkout).
+ */
+function partitionByIndex(unusedFiles, untrackedFiles) {
+  const untracked = new Set(untrackedFiles);
+  const committed = [];
+  const outsideIndex = [];
+  for (const file of unusedFiles) (untracked.has(file) ? outsideIndex : committed).push(file);
+  return { committed, outsideIndex };
+}
+
+module.exports = { fileScopeArgs, readUnusedFiles, readUntrackedFiles, partitionByIndex };
