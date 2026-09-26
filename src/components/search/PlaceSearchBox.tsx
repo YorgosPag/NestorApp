@@ -50,32 +50,25 @@ import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
 import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
-import {
-  serializeListingFilters,
-  DEFAULT_SEARCH_RADIUS_KM,
-} from '@/lib/listings/listing-filters';
-import { searchResultsHref } from '@/lib/listings/listing-routes';
-import {
-  landingModeFilters,
-  landingModeSeeksPeople,
-  type LandingMode,
-} from '@/lib/landing/landing-modes';
-import {
-  serializeShowcaseFilters,
-  type OccupationOption,
-} from '@/lib/agency/showcase-filter';
-import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
+import { landingModeSeeksPeople, type LandingMode } from '@/lib/landing/landing-modes';
+import type { OccupationOption } from '@/lib/agency/showcase-filter';
 import { OccupationSelect } from '@/components/mandate/OccupationSelect';
-import type { GeoPoint, GeoRegionRef } from '@/types/geo/coordinates';
 import { boundaryOwnerId, type AdminArea } from '@/lib/geo/admin-area-index-file';
-import { resolveTypedAdminAreaWhenReady } from '@/lib/geo/admin-area-search';
+import { lookupAdminAreaWhenReady, resolveTypedAdminAreaWhenReady } from '@/lib/geo/admin-area-search';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   requestCurrentPosition,
   GEOLOCATION_FAILURE_I18N_KEYS,
   type CurrentPositionFailure,
 } from '@/lib/geo/current-position';
-import { rememberPlaceSearch, type RecentPlaceSearch } from '@/lib/geo/recent-place-searches';
+import {
+  forgetPlaceSearch,
+  rememberAreaSearch,
+  rememberPlaceSearch,
+  type RecentAreaSearch,
+  type RecentPlaceSearch,
+} from '@/lib/geo/recent-place-searches';
+import { destinationFor } from './place-search-destination';
 import { PlaceRecallListbox } from './place-recall/PlaceRecallListbox';
 import { usePlaceRecall } from './place-recall/usePlaceRecall';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
@@ -139,50 +132,6 @@ interface PlaceSearchBoxProps {
   readonly locale: 'el' | 'en';
 }
 
-/**
- * **Πού πάει ο επισκέπτης** — και **με τι** φτάνει εκεί.
- *
- * 🔴 **Η διακλάδωση είναι ΤΥΠΟΥ, όχι συνθήκης**: το {@link landingModeFilters}
- * επιστρέφει `null` **μόνο** για τους επαγγελματίες, γιατί η **Α5** το λέει ρητά —
- * *«οι επαγγελματίες δεν είναι τύπος αγγελίας»*. Ένα `if (mode === 'pros')` εδώ θα
- * ήταν **δεύτερη διατύπωση** του ίδιου κανόνα, ελεύθερη να αποκλίνει από το SSoT.
- *
- * ⚠️ **ΔΥΟ ΚΛΑΔΟΙ ΜΕ `return`, ΠΟΤΕ ternary**: ένα ternary ανάμεσα σε δύο διευθύνσεις
- * **φαρδαίνει τον τύπο σε `string`** *(`listing-routes.ts:71`)* και τυφλώνει τον φρουρό
- * του συνόρου *(CHECK 3.61)*. Κάθε κλάδος καλεί **τον δικό του** helper.
- *
- * ✅ **Η ΕΙΔΙΚΟΤΗΤΑ ΠΛΕΟΝ ΤΑΞΙΔΕΥΕΙ (Α4.5)** — η προηγούμενη γραφή έστελνε
- * `occupation: null` **επίτηδες**, γιατί η ρίζα δεν τη ρωτούσε. Τώρα τη ρωτά, και το
- * `serializeShowcaseFilters` την υποστήριζε **ήδη**: **καμία νέα μηχανή**.
- *
- * 🔴 **ΚΑΙ ΤΟ ΚΕΝΤΡΟ ΕΙΝΑΙ ΠΛΕΟΝ `null`-άβλε (Α4.5.δ)**: *«υδραυλικός **οπουδήποτε**»*
- * είναι νόμιμη ερώτηση μόλις υπάρξει δεύτερος άξονας. Το `landingModeFilters` δέχεται
- * ήδη `null` κέντρο· το `serializeShowcaseFilters` **δεν γράφει** κενά φίλτρα *(Φ2)*.
- */
-function destinationFor(
-  mode: LandingMode,
-  center: GeoPoint | null,
-  occupation: string | null,
-  region: GeoRegionRef | null = null,
-) {
-  const filters = landingModeFilters(mode, center);
-
-  if (filters === null) {
-    // 🔴 ADR-846 Φ2 μετονόμασε τον άξονα `near` → `where` (κλειστή ένωση κύκλος | διοικητική
-    //    περιοχή). Αυτός ο καλών έμεινε στο `near` ⇒ `filters.where === undefined` περνούσε το
-    //    `!== null` του σειριοποιητή ⇒ `isAdministrativeWhere(undefined)` ⇒ TypeError στην υποβολή.
-    const params = serializeShowcaseFilters({
-      occupation,
-      // ADR-883: η περιοχή που διαλέχτηκε από τη λίστα ταξιδεύει ως ίδια — ο κατάλογος την ξέρει ήδη (ADR-846).
-      where: region ?? (center === null ? null : { circle: { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM } }),
-    });
-    return agencyDirectoryHref(params.toString());
-  }
-
-  // ADR-883: με περιοχή, το «πού» είναι το ΟΡΙΟ της — ο κύκλος του landing δεν έχει θέση.
-  return searchResultsHref(serializeListingFilters(region === null ? filters : { ...filters, near: region }).toString());
-}
-
 export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProps) {
   const { t } = useTranslation(['search-results', 'common-shared']);
   const router = useRouter();
@@ -227,24 +176,55 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
     router.push(destinationFor(mode, outcome.point, occupation));
   }, [router, mode, occupation]);
 
-  // 🏆 Χωρίς geocoder: το κέντρο εντοπίστηκε ήδη όταν γράφτηκε η εγγραφή.
-  const pickRecent = useCallback((place: RecentPlaceSearch) => {
+  /**
+   * ADR-883 — περιοχή (από τη λίστα, από το Enter ή από το ιστορικό): καμία γεωκωδικοποίηση, το
+   * όριό της είναι ήδη γνωστό. ADR-882 §3.7 — **ο ΕΝΑΣ γραφέας περιοχών στο ιστορικό**: κάθε
+   * δρόμος προς περιοχή περνά από εδώ, άρα κανένας δεν μπορεί να ξεχάσει να τη θυμηθεί.
+   * `typed` = το κείμενο του Enter — το παλιό σημείο με τις ίδιες λέξεις αναβαθμίζεται.
+   */
+  const pickArea = useCallback((area: AdminArea, typed?: string) => {
+    requestSeq.current += 1;
+    setQuery(area.name);
+    setState(IDLE);
+    rememberAreaSearch(area, Date.now(), typed);
+    // §5.10 — οι επαγγελματίες καλύπτουν ΠΕΡΙΟΧΕΣ, όχι σημεία: για οικισμό, το όριο που τον περιέχει.
+    const adminId = landingModeSeeksPeople(mode) ? boundaryOwnerId(area) : area.id;
+    router.push(destinationFor(mode, null, occupation, { adminId }));
+  }, [router, mode, occupation]);
+
+  // 🏆 Σημείο: χωρίς geocoder — το κέντρο εντοπίστηκε ήδη. Περιοχή: το ΦΡΕΣΚΟ όριο (§3.7).
+  function pickRecent(place: RecentPlaceSearch) {
+    if (place.kind === 'area') {
+      void replayArea(place);
+      return;
+    }
     requestSeq.current += 1;
     setQuery(place.label);
     setState(IDLE);
     rememberPlaceSearch(place.label, place.center, Date.now());
     router.push(destinationFor(mode, place.center, occupation));
-  }, [router, mode, occupation]);
+  }
 
-  // ADR-883 — περιοχή από τη λίστα: καμία γεωκωδικοποίηση, το όριό της είναι ήδη γνωστό.
-  const pickArea = useCallback((area: AdminArea) => {
-    requestSeq.current += 1;
-    setQuery(area.name);
-    setState(IDLE);
-    // §5.10 — οι επαγγελματίες καλύπτουν ΠΕΡΙΟΧΕΣ, όχι σημεία: για οικισμό, το όριο που τον περιέχει.
-    const adminId = landingModeSeeksPeople(mode) ? boundaryOwnerId(area) : area.id;
-    router.push(destinationFor(mode, null, occupation, { adminId }));
-  }, [router, mode, occupation]);
+  /**
+   * ADR-882 §3.7 — **η ταυτότητα λύνεται ξανά, η γεωμετρία δεν ξαναπαίζεται** (Google Place ID):
+   * ίδιος δρόμος με την επιλογή περιοχής (`pickArea`), άρα ίδιο όριο και ίδιος κανόνας ανά
+   * λειτουργία. Περιοχή που **καταργήθηκε** ⇒ φεύγει από το ιστορικό και ξαναστέλνεται το
+   * **αρχικό αίτημα** (το όνομα, σαν να πληκτρολογήθηκε — μοτίβο NOT_FOUND της Google)· ποτέ
+   * «όριο μη διαθέσιμο».
+   */
+  async function replayArea(place: RecentAreaSearch) {
+    const seq = ++requestSeq.current;
+    setQuery(place.label);
+    setState({ kind: 'searching' });
+    const lookup = await lookupAdminAreaWhenReady(place.areaId);
+    if (seq !== requestSeq.current) return;
+    if (lookup.kind === 'found') {
+      pickArea(lookup.area);
+      return;
+    }
+    if (lookup.kind === 'gone') forgetPlaceSearch(place);
+    await searchTyped(seq, place.label, false);
+  }
 
   const recall = usePlaceRecall({
     listboxId,
@@ -252,7 +232,8 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
     disabled: state.kind === 'searching' || state.kind === 'locating',
     onPickLocation: () => void pickLocation(),
     onPickRecent: pickRecent,
-    onPickArea: pickArea,
+    // Το κείμενο του πεδίου ταξιδεύει μαζί: «Καλλιθέα» + επιλογή ομώνυμης ⇒ το παλιό σημείο αναβαθμίζεται.
+    onPickArea: (area) => pickArea(area, trimmedQuery),
   });
 
   // 🔴 **ΥΠΟΒΑΛΛΕΙΣ ΟΤΑΝ ΕΧΕΙΣ ΔΗΛΩΣΕΙ ΕΣΤΩ ΕΝΑΝ ΑΞΟΝΑ (ADR-841 §7 Α4.5.δ).**
@@ -293,8 +274,13 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
     const seq = ++requestSeq.current;
     recall.close();
     setState({ kind: 'searching' });
-    if (!insisted && (await answeredByArea(seq))) return;
-    await geocodeTyped(seq);
+    await searchTyped(seq, trimmedQuery, insisted);
+  }
+
+  /** Κείμενο ⇒ πρώτα περιοχή (ADR-883 §5.8), αλλιώς geocoder. `insisted` = παράκαμψη της περιοχής. */
+  async function searchTyped(seq: number, text: string, insisted: boolean) {
+    if (!insisted && (await answeredByArea(seq, text))) return;
+    await geocodeTyped(seq, text);
   }
 
   /**
@@ -302,11 +288,11 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
    * κύκλος γύρω από ένα σημείο. Περιμένει το ευρετήριο αν δεν πρόλαβε — ποτέ σιωπηλή πτώση.
    * `true` = η απάντηση δόθηκε (πλοήγηση ή ερώτηση)· `false` = δεν είναι περιοχή ⇒ geocoder.
    */
-  async function answeredByArea(seq: number): Promise<boolean> {
-    const typed = await resolveTypedAdminAreaWhenReady(trimmedQuery);
+  async function answeredByArea(seq: number, text: string): Promise<boolean> {
+    const typed = await resolveTypedAdminAreaWhenReady(text);
     if (seq !== requestSeq.current) return true;
     if (typed.kind === 'area') {
-      pickArea(typed.area);
+      pickArea(typed.area, text);
       return true;
     }
     // Ομώνυμες ισότιμες περιοχές ⇒ ρωτάμε (Rightmove «did you mean»), δεν μαντεύουμε.
@@ -323,17 +309,17 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
   }
 
   /** Ελεύθερο κείμενο που ΔΕΝ είναι περιοχή (οδός, POI) ⇒ ο geocoder, όπως πάντα. */
-  async function geocodeTyped(seq: number) {
+  async function geocodeTyped(seq: number, text: string) {
     // ⚠️ **Ένας μεταφραστής για τα τρία σημεία** (2026-09-02): το «ελεύθερο κείμενο →
     // `city`» ήταν γραμμένο εδώ, στο `usePlaceResolver` και στο
     // `place-source-verification`. Δες `lib/geocoding/address-line-query`.
-    const outcome = await geocodeAddressDetailed(addressLineToQuery(trimmedQuery));
+    const outcome = await geocodeAddressDetailed(addressLineToQuery(text));
     if (seq !== requestSeq.current) return;
 
     if (outcome.kind === 'found') {
       const center = { lat: outcome.result.lat, lng: outcome.result.lng };
       // ADR-882: στο ιστορικό μπαίνει **μόνο** ό,τι εντοπίστηκε — ποτέ τυπογραφικό λάθος.
-      rememberPlaceSearch(trimmedQuery, center, Date.now());
+      rememberPlaceSearch(text, center, Date.now());
       // Η οθόνη προορισμού διαβάζει **τη διεύθυνση**, ποτέ κατάσταση σε μνήμη.
       router.push(destinationFor(mode, center, occupation));
       return;

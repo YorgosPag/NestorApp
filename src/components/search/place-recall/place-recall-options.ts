@@ -9,6 +9,11 @@
  * 🔑 **Οι περιοχές έρχονται ΜΕΤΑ το ιστορικό**: ό,τι έψαξε ο ίδιος ο άνθρωπος είναι η πιο
  * πιθανή του πρόθεση. Μια περιοχή δεν προτείνεται ποτέ **χωρίς** κείμενο — θα ήταν 7.432.
  *
+ * 🔑 **Μια περιοχή του ιστορικού ΔΕΝ ξαναπροτείνεται** από κάτω (ADR-882 §3.7): ο ίδιος τόπος σε
+ * δύο ομάδες θα ήταν θόρυβος — μένει εκεί που έχει προτεραιότητα, στο ιστορικό. Και μια περιοχή
+ * του ιστορικού που το ευρετήριο **δεν έχει πια** (καταργήθηκε) **δεν δείχνεται**: θα ήταν
+ * υπόσχεση για όριο που δεν υπάρχει.
+ *
  * 🔑 **Η «Τρέχουσα τοποθεσία» μόνο με κενό πεδίο** — όπως Zillow/Google Maps: μόλις ο
  * άνθρωπος γράψει, δήλωσε ότι ψάχνει **εκεί**, όχι «εδώ».
  *
@@ -20,6 +25,7 @@
 
 import {
   matchRecentPlaceSearches,
+  recentPlaceKey,
   type RecentPlaceSearch,
 } from '@/lib/geo/recent-place-searches';
 import { adminAreaLineage, searchAdminAreas, type AdminAreaIndex } from '@/lib/geo/admin-area-search';
@@ -27,7 +33,16 @@ import { SETTLEMENT_LEVEL, type AdminArea } from '@/lib/geo/admin-area-index-fil
 
 export type PlaceRecallOption =
   | { readonly kind: 'current-location' }
-  | { readonly kind: 'recent'; readonly place: RecentPlaceSearch }
+  /**
+   * `area` + `within` = για αναζήτηση **περιοχής** (§3.7), λυμένη από το ευρετήριο — ίδια γραμμή
+   * γενεαλογίας με τις προτάσεις, ώστε οι ομώνυμες να ξεχωρίζουν και στο ιστορικό.
+   */
+  | {
+      readonly kind: 'recent';
+      readonly place: RecentPlaceSearch;
+      readonly area: AdminArea | null;
+      readonly within: string | null;
+    }
   /**
    * ADR-883 — διοικητική περιοχή με όριο (ή οικισμός, §5.10)· `within` = ο άμεσος γονέας, για να
    * ξεχωρίζουν ομώνυμες — για οικισμό **και ο δήμος**: υπάρχουν δεκάδες «Καλοχώρι».
@@ -50,28 +65,43 @@ function withinOf(areas: AdminAreaIndex, area: AdminArea): string | null {
 /** Πόσες περιοχές προτείνονται — αρκετές για ομώνυμες σε άλλες βαθμίδες, όχι λίστα καταλόγου. */
 const AREA_SUGGESTIONS = 5;
 
+/** Η εγγραφή του ιστορικού ως επιλογή — ή `null` όταν η περιοχή της **δεν υπάρχει πια**. */
+function recentOption(place: RecentPlaceSearch, areas: AdminAreaIndex | null): PlaceRecallOption | null {
+  if (place.kind !== 'area' || areas === null) return { kind: 'recent', place, area: null, within: null };
+  const area = areas.areas.get(place.areaId);
+  if (area === undefined) return null;
+  return { kind: 'recent', place, area, within: withinOf(areas, area) };
+}
+
+function recentOptions(history: readonly RecentPlaceSearch[], areas: AdminAreaIndex | null): PlaceRecallOption[] {
+  return history
+    .map((place) => recentOption(place, areas))
+    .filter((option): option is PlaceRecallOption => option !== null);
+}
+
 export function buildPlaceRecallOptions(
   query: string,
   history: readonly RecentPlaceSearch[],
   areas: AdminAreaIndex | null = null,
 ): readonly PlaceRecallOption[] {
   if (query.trim() !== '') {
-    const recents: PlaceRecallOption[] = matchRecentPlaceSearches(history, query).map((place) => ({ kind: 'recent', place }));
+    const matched = matchRecentPlaceSearches(history, query);
+    const recents = recentOptions(matched, areas);
     if (areas === null) return recents;
-    const found = searchAdminAreas(areas, query, AREA_SUGGESTIONS).map(
-      (area): PlaceRecallOption => ({ kind: 'area', area, within: withinOf(areas, area) }),
-    );
+    const remembered = new Set(matched.flatMap((place) => (place.kind === 'area' ? [place.areaId] : [])));
+    const found = searchAdminAreas(areas, query, AREA_SUGGESTIONS)
+      .filter((area) => !remembered.has(area.id))
+      .map((area): PlaceRecallOption => ({ kind: 'area', area, within: withinOf(areas, area) }));
     return [...recents, ...found];
   }
-  const options: PlaceRecallOption[] = [{ kind: 'current-location' }];
-  for (const place of history) options.push({ kind: 'recent', place });
+  const options: PlaceRecallOption[] = [{ kind: 'current-location' }, ...recentOptions(history, areas)];
   if (history.length > 0) options.push({ kind: 'clear-history' });
   return options;
 }
 
-/** Σταθερό κλειδί React ανά επιλογή — η ετικέτα είναι ήδη μοναδική στο ιστορικό. */
+/** Σταθερό κλειδί React ανά επιλογή — η ταυτότητα (`recentPlaceKey`) είναι μοναδική στο ιστορικό. */
 export function placeRecallOptionKey(option: PlaceRecallOption): string {
-  if (option.kind === 'recent') return `recent:${option.place.label}`;
+  if (option.kind === 'recent') return `recent:${recentPlaceKey(option.place)}`;
   if (option.kind === 'area') return `area:${option.area.id}`;
   return option.kind;
 }

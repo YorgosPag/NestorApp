@@ -24,7 +24,7 @@ import { optionDomId } from '@/components/ui/searchable-combobox-listbox';
 import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
 import type { GeolocationPermission } from '@/lib/geo/current-position';
 import type { RecentPlaceSearch } from '@/lib/geo/recent-place-searches';
-import { SETTLEMENT_LEVEL } from '@/lib/geo/admin-area-index-file';
+import { SETTLEMENT_LEVEL, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import { placeRecallOptionKey, type PlaceRecallOption } from './place-recall-options';
 import '@/lib/design-system';
 
@@ -40,7 +40,8 @@ interface PlaceRecallListboxProps {
   readonly highlightedIndex: number;
   readonly permission: GeolocationPermission;
   readonly onPick: (option: PlaceRecallOption) => void;
-  readonly onRemove: (label: string) => void;
+  /** Αφαίρεση με την **εγγραφή** (ταυτότητα), όχι με την ετικέτα — δύο «Καλλιθέα» είναι δύο. */
+  readonly onRemove: (place: RecentPlaceSearch) => void;
   readonly onHighlight: (index: number) => void;
   readonly onClose: () => void;
 }
@@ -167,7 +168,7 @@ function RecallRow({ option, index, context }: RecallRowProps) {
         event.preventDefault();
         const removing =
           event.target instanceof Element && event.target.closest(`[${REMOVE_HANDLE}]`) !== null;
-        if (recent && removing) onRemove(recent.label);
+        if (recent && removing) onRemove(recent);
         else onPick(option);
       }}
       onMouseEnter={() => onHighlight(index)}
@@ -209,26 +210,47 @@ function RecallRowBody({ option, context }: { option: PlaceRecallOption; context
         <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="flex min-w-0 flex-col">
           <span className="truncate">{option.area.name}</span>
-          {(option.within !== null || option.area.level === SETTLEMENT_LEVEL) && (
-            <span className={`${dropdown.item.fontSizeSecondary} truncate text-muted-foreground`}>
-              {/* ADR-883 §5.10 — ο οικισμός λέει ΤΙ είναι: αλλιώς «Καρτερός» μοιάζει με δήμο ή κοινότητα. */}
-              {[option.area.level === SETTLEMENT_LEVEL ? t('common-shared:placeRecall.settlement') : null, option.within]
-                .filter((part): part is string => part !== null)
-                .join(' · ')}
-            </span>
-          )}
+          <AreaLineage area={option.area} within={option.within} />
         </span>
       </>
     );
   }
-  return <RecentRowBody place={option.place} />;
+  return <RecentRowBody place={option.place} area={option.area} within={option.within} />;
 }
 
-function RecentRowBody({ place }: { place: RecentPlaceSearch }) {
+/**
+ * **Η γραμμή «τι είναι / πού είναι»** μιας περιοχής — ΜΙΑ, για τις προτάσεις (ADR-883) **και**
+ * για τις περιοχές του ιστορικού (ADR-882 §3.7): αλλιώς οι δύο ομάδες θα περιέγραφαν τον ίδιο
+ * τόπο διαφορετικά.
+ */
+function AreaLineage({ area, within }: { area: AdminArea; within: string | null }) {
+  const { t } = useTranslation(['common-shared']);
+  const dropdown = useDropdownTokens();
+  if (within === null && area.level !== SETTLEMENT_LEVEL) return null;
+  return (
+    <span className={`${dropdown.item.fontSizeSecondary} truncate text-muted-foreground`}>
+      {/* ADR-883 §5.10 — ο οικισμός λέει ΤΙ είναι: αλλιώς «Καρτερός» μοιάζει με δήμο ή κοινότητα. */}
+      {[area.level === SETTLEMENT_LEVEL ? t('common-shared:placeRecall.settlement') : null, within]
+        .filter((part): part is string => part !== null)
+        .join(' · ')}
+    </span>
+  );
+}
+
+interface RecentRowBodyProps {
+  readonly place: RecentPlaceSearch;
+  readonly area: AdminArea | null;
+  readonly within: string | null;
+}
+
+function RecentRowBody({ place, area, within }: RecentRowBodyProps) {
   return (
     <>
       <Clock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate">{place.label}</span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate">{place.label}</span>
+        {area !== null && <AreaLineage area={area} within={within} />}
+      </span>
       {/* Λαβή ΜΟΝΟ για το ποντίκι, κρυμμένη από την προσβασιμότητα: ένα κείμενο εδώ θα γινόταν
           μέρος του ΟΝΟΜΑΤΟΣ της επιλογής («Αθήνα Αφαίρεση…»). Το πληκτρολόγιο/ο αναγνώστης
           οθόνης έχουν το `Shift+Delete` της επιλογής (`aria-keyshortcuts`). */}

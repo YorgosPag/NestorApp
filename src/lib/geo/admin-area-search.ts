@@ -373,6 +373,24 @@ export async function resolveTypedAdminAreaWhenReady(query: string): Promise<Typ
   return index === null ? NO_AREA : resolveTypedAdminArea(index, query);
 }
 
+/**
+ * **Η περιοχή ΜΕ ΤΗΝ ΤΑΥΤΟΤΗΤΑ της** — για την επανεπιλογή από το ιστορικό (ADR-882 §3.7).
+ * Τρεις απαντήσεις, όχι δύο: `gone` = το ευρετήριο **φόρτωσε** και δεν την έχει πια (καταργήθηκε
+ * — μοτίβο NOT_FOUND της Google)· `unknown` = το ευρετήριο **δεν** φόρτωσε, άρα δεν ξέρουμε.
+ */
+export type AdminAreaLookup =
+  | { readonly kind: 'found'; readonly area: AdminArea }
+  | { readonly kind: 'gone' }
+  | { readonly kind: 'unknown' };
+
+export async function lookupAdminAreaWhenReady(areaId: string): Promise<AdminAreaLookup> {
+  await ADMIN_AREA_INDEX_SOURCE.load();
+  const index = ADMIN_AREA_INDEX_SOURCE.peek();
+  if (index === null) return { kind: 'unknown' };
+  const area = index.areas.get(areaId);
+  return area === undefined ? { kind: 'gone' } : { kind: 'found', area };
+}
+
 /** Οι πρόγονοι μιας περιοχής, από τον **άμεσο γονέα** προς τα πάνω — για τη γραμμή γενεαλογίας. */
 export function adminAreaLineage(index: AdminAreaIndex, adminId: string): readonly AdminArea[] {
   const lineage: AdminArea[] = [];
