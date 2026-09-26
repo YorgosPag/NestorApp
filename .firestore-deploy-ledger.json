@@ -245,6 +245,13 @@
       "digest": "sha256:58c19bf30bb425bee45a2c0a1300928c9e2248c63f2de981dc870e014709f09a",
       "source": "storage.rules",
       "target": "storage"
+    },
+    {
+      "at": "2026-09-25",
+      "commit": "378a8aba",
+      "digest": "sha256:975aeac8057369ab1ac5955f7a2da53c0808672c54db728c1797199c81c4c528",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
     }
   ]
 }

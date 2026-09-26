@@ -103,6 +103,16 @@ export async function seedSystem(
   });
 }
 
+/** Seeds a document at an arbitrary `system/...` path (subcollections, e.g. ESCO cache). */
+export async function seedSystemDoc(
+  env: RulesTestEnvironment,
+  docPath: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().doc(docPath).set({ label: 'seed', updatedAt: new Date() });
+  });
+}
+
 export async function seedCounter(
   env: RulesTestEnvironment,
   docId: string,

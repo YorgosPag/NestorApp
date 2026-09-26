@@ -3128,8 +3128,15 @@ service cloud.firestore {
       allow write: if false; // Admin/server only
 
       // 📁 Subcollections (e.g., project-templates)
+      // 📅 2026-09-26: ESCO taxonomy exception — `system/esco_cache/{occupations,skills}`
+      // is PUBLIC EU reference data (no tenant, no secrets), read by the occupation /
+      // skill pickers of EVERY authenticated user (profile, contacts). Admin-only read
+      // made the picker fail with permission-denied for non-admins.
       match /{subcollection}/{subDocId} {
-        allow read: if isAuthenticated() && isCompanyAdmin();
+        allow read: if isAuthenticated() && (
+          isCompanyAdmin()
+          || (docId == 'esco_cache' && subcollection in ['occupations', 'skills'])
+        );
         allow write: if false; // Admin/server only
       }
     }

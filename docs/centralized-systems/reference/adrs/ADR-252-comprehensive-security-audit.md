@@ -140,6 +140,7 @@
 | **Issue** | Broad read access may expose internal configuration |
 | **Impact** | Internal routing rules, feature flags visible to all users |
 | **Fix** | Restrict to admin-only or split public/private config |
+| **Exception (2026-09-26)** | `system/esco_cache/{occupations,skills}` = public EU ESCO taxonomy (no tenant, no secrets) → readable by every authenticated user. Scoped by `docId == 'esco_cache' && subcollection in [...]`; all other `system/**` stays admin-only. |
 
 #### FR-M2: boq_items CREATE Without companyId
 
@@ -463,3 +464,4 @@ Test: Malformed requests, expired webhooks, NaN parameters
 | | **5. Cloud Function onStorageFinalize (MEDIUM):** New Cloud Function in `functions/src/storage/orphan-cleanup.ts` — triggered on Storage upload, verifies FileRecord exists in Firestore, deletes orphan files + writes audit log. Scope: enterprise paths only (companies/...). Added `functions` config to `firebase.json`. |
 | | **CLAUDE.md updated:** Security section rewritten from outdated 2025-12-15 → current 2026-04-08 status. All 3 original blockers marked as resolved. |
 | | **Files changed (10):** `storage.rules`, `firestore.rules`, `firebase.json`, `CLAUDE.md`, `src/lib/security/path-sanitizer.ts`, `src/services/notificationService.ts`, `src/app/api/notifications/seed/route.ts`, `src/components/crm/pages/CrmNotificationsPageContent.tsx`, `src/services/upload-handlers/defaultUploadHandler.ts`, `functions/src/storage/orphan-cleanup.ts` (NEW) |
+| 2026-09-26 | **FR-M1 ESCO exception** — Το admin-only read του `system/**` έκοβε το `EscoOccupationPicker` (Προφίλ / Επαφές) για κάθε μη-διαχειριστή (`permission-denied` σε `system/esco_cache/occupations`). Ο κανόνας υποσυλλογών του `system/{docId}` επιτρέπει πλέον read σε κάθε αυθεντικοποιημένο χρήστη **μόνο** για `esco_cache/occupations` + `esco_cache/skills` (δημόσια ταξινομία ΕΕ)· write παραμένει `false`, τα υπόλοιπα `system/**` μένουν admin-only. Χωρίς νέο μπλοκ `match` (Validation F της 3.16). Tests: `system.rules.test.ts` — 11 νέα (read/list ανά persona, anonymous deny, write deny, μη-διαρροή σε αδελφές υποσυλλογές). **Απαιτεί `firebase deploy --only firestore:rules`.** Αρχεία: `firestore.rules`, `tests/firestore-rules/suites/system.rules.test.ts`, `tests/firestore-rules/_harness/seed-helpers-system.ts`. |
