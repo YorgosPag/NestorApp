@@ -43,6 +43,8 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
   if (state === null) return null;
   const { settings } = state;
   const published = settings.lifecycle === 'published';
+  // ADR-884 §4.7 Α8 — ο ΙΔΙΟΣ κριτής με τον θεατή και τον διακομιστή: ό,τι θα αρνιόταν, φαίνεται κλειστό πριν πατηθεί.
+  const showsSomething = state.viewerStopCount > 0;
   return (
     <section className="space-y-3" aria-labelledby="tour-settings-heading">
       <h3 id="tour-settings-heading" className="text-base font-semibold">{t(VIEWING_KEYS.settingsTitle)}</h3>
@@ -60,7 +62,7 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
                 {t(VIEWING_KEYS.withdraw)}
               </Button>
             ) : (
-              <Button type="button" size="sm"
+              <Button type="button" size="sm" disabled={!showsSomething}
                 onClick={() => void update({ ...settings, lifecycle: 'published' })}>
                 {t(VIEWING_KEYS.publish)}
               </Button>
@@ -69,8 +71,9 @@ export function TourSettingsSection({ subject, companyId }: { readonly subject: 
         </section>
       </section>
       <p className="text-xs text-muted-foreground">{t(VIEWING_KEYS.explicitGrantsNote)}</p>
+      {!showsSomething && <p className="text-sm text-muted-foreground" role="note">{t(VIEWING_KEYS.needsStop)}</p>}
       <SettingsNotice notice={notice} />
-      {companyId !== null && <PersonalLinks tourId={state.tourId} companyId={companyId} />}
+      {companyId !== null && <PersonalLinks tourId={state.tourId} companyId={companyId} ready={showsSomething} />}
     </section>
   );
 }
@@ -117,14 +120,21 @@ function SettingsNotice({ notice }: { readonly notice: TourViewingNotice | null 
 }
 
 /** Προσωπικοί σύνδεσμοι — ο διάλογος κοινοποίησης της πλατφόρμας, για το είδος `spatial_tour`. */
-function PersonalLinks({ tourId, companyId }: { readonly tourId: string; readonly companyId: string }) {
+function PersonalLinks({ tourId, companyId, ready }: {
+  readonly tourId: string;
+  readonly companyId: string;
+  /** `false` ⇒ κανένας σύνδεσμος: ο παραλήπτης θα έβλεπε «ετοιμάζεται» (πρότυπο Matterport — §4.7 Α8). */
+  readonly ready: boolean;
+}) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const [open, setOpen] = useState(false);
   return (
     <section className="space-y-2" aria-labelledby="tour-links-heading">
       <h4 id="tour-links-heading" className="text-sm font-medium">{t(VIEWING_KEYS.linksTitle)}</h4>
       <p className="text-sm text-muted-foreground">{t(VIEWING_KEYS.linksDescription)}</p>
-      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>{t(VIEWING_KEYS.linksManage)}</Button>
+      <Button type="button" size="sm" variant="outline" disabled={!ready} onClick={() => setOpen(true)}>
+        {t(VIEWING_KEYS.linksManage)}
+      </Button>
       {open && (
         <UnifiedShareDialog open={open} onOpenChange={setOpen} entityType="spatial_tour" entityId={tourId}
           entityTitle={t(VIEWING_KEYS.linksTitle)} companyId={companyId} />

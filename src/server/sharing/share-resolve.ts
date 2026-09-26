@@ -28,11 +28,14 @@ import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import '@/services/sharing/resolvers';
 import {
   isResolvableShareKind,
+  linkPolicyOf,
   type ResolvedSharePayload,
   type ShareResolveOutcome,
 } from '@/services/sharing/share-resolve-contract';
 import { recordShareAccess, type ShareAccessOutcome } from './share-access';
 import { issueShareAccessGrant } from './share-access-grant';
+import { shareDeviceOrNew } from './share-device';
+import { noteShareOpened } from './share-open-notice';
 import { signSharedFileUrl } from './share-download';
 import { readSharedEntity } from './share-entity-access';
 import { passShareGate, type ShareGateInput } from './share-gate';
@@ -42,6 +45,13 @@ export interface ShareResolveResult {
   readonly outcome: ShareResolveOutcome;
   /** Νέο κουπόνι πρόσβασης προς εγγραφή σε cookie (μόνο μετά από σωστό κωδικό). */
   readonly grant: { readonly shareId: string; readonly value: string } | null;
+  /** Νέα συσκευή προς εγγραφή σε cookie (ADR-884 §9.1 Α3′) — μόνο για είδη με `openNotice` και μόνο όταν γεννήθηκε. */
+  readonly device: { readonly shareId: string; readonly value: string; readonly expiresAt: string } | null;
+}
+
+export interface ShareResolveInput extends ShareGateInput {
+  /** Η συσκευή που δηλώνει το αίτημα για αυτή την κοινοποίηση (`requestShareDevice`), ή `null`. */
+  readonly readDevice: (shareId: string) => string | null;
 }
 
 /** Αποτέλεσμα καταγραφής → άρνηση προς τον επισκέπτη. */
@@ -83,26 +93,37 @@ function grantToWrite(shareId: string, fromPassword: string | null, inVisit: boo
 }
 
 /** Επίλυση συνδέσμου για τη σελίδα `/shared/[token]`. */
-export async function resolvePublicShare(input: ShareGateInput): Promise<ShareResolveResult> {
+export async function resolvePublicShare(input: ShareResolveInput): Promise<ShareResolveResult> {
   const verdict = await passShareGate(input);
   if (!verdict.pass) {
     const outcome: ShareResolveOutcome =
       verdict.reason === 'password-required'
         ? { status: 'password-required' }
         : { status: 'refused', reason: verdict.reason };
-    return { outcome, grant: null };
+    return { outcome, grant: null, device: null };
   }
 
   const { share, newGrant } = verdict;
   const inVisit = input.hasGrant(share.id);
   if (!inVisit) {
     const access = await recordShareAccess(input.adminDb, share);
-    if (access !== 'recorded') return { outcome: refusalOfAccess(access), grant: null };
+    if (access !== 'recorded') return { outcome: refusalOfAccess(access), grant: null, device: null };
   }
 
   const grant = grantToWrite(share.id, newGrant, inVisit);
   const payload = await projectShare(input.adminDb, share, input.token);
-  if (payload === null) return { outcome: { status: 'refused', reason: 'not-found' }, grant };
+  if (payload === null) return { outcome: { status: 'refused', reason: 'not-found' }, grant, device: null };
+  const device = deviceOfVisit(share, input.readDevice(share.id));
+  if (!inVisit && device !== null) await noteShareOpened(input.adminDb, { share, payload, device: device.value });
   const served = await withPreviewUrl(input.adminDb, payload);
-  return { outcome: { status: 'resolved', share: served, expiresAt: share.expiresAt }, grant };
+  return {
+    outcome: { status: 'resolved', share: served, expiresAt: share.expiresAt },
+    grant,
+    device: device?.minted ? { shareId: share.id, value: device.value, expiresAt: share.expiresAt } : null,
+  };
+}
+
+/** Η συσκευή αυτής της επίσκεψης — μόνο για είδη που ειδοποιούν στο άνοιγμα (κανένα cookie χωρίς λόγο). */
+function deviceOfVisit(share: StoredShare, declared: string | null): ReturnType<typeof shareDeviceOrNew> | null {
+  return linkPolicyOf(share.entityType).openNotice ? shareDeviceOrNew(declared) : null;
 }

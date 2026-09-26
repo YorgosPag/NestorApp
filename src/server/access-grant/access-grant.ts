@@ -106,8 +106,11 @@ export function requestAccessGrant(request: NextRequest, cookieName: string): st
   return typeof grant === 'string' && grant !== '' ? grant : null;
 }
 
-/** Τα χαρακτηριστικά του cookie — **ένα** σημείο, ώστε η διαγραφή να ταιριάζει ακριβώς με την εγγραφή (ίδιο `Path`). */
-function grantCookieOptions(cookie: AccessGrantCookie, maxAge: number) {
+/**
+ * Τα χαρακτηριστικά του cookie — **ένα** σημείο, ώστε η διαγραφή να ταιριάζει ακριβώς με την εγγραφή (ίδιο `Path`).
+ * Εξάγεται για το cookie **συσκευής** κοινοποίησης (`share-device.ts`, ADR-884 §9.1 Α3′): ίδιες σημαίες, άλλη διάρκεια.
+ */
+export function grantCookieOptions(cookie: AccessGrantCookie, maxAge: number) {
   return {
     httpOnly: true,
     secure: getCurrentRuntimeEnvironment() === 'production',

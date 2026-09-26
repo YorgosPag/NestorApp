@@ -25,6 +25,7 @@ import { withAuth } from '@/lib/auth/middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { attachShareAccessGrant, requestHasShareAccessGrant } from '@/server/sharing/share-access-grant';
+import { attachShareDevice, requestShareDevice } from '@/server/sharing/share-device';
 import { readShareRequestBody } from '@/server/sharing/share-request-body';
 import { resolvePublicShare } from '@/server/sharing/share-resolve';
 import type { ShareResolveOutcome } from '@/services/sharing/share-resolve-contract';
@@ -37,17 +38,20 @@ async function handler(request: NextRequest): Promise<NextResponse<ShareResolveO
     return NextResponse.json({ status: 'refused', reason: 'not-found' }, { status: 404, headers: NO_STORE });
   }
 
-  const { outcome, grant } = await resolvePublicShare({
+  const { outcome, grant, device } = await resolvePublicShare({
     adminDb: getAdminFirestore(),
     token: body.token,
     password: body.password,
     hasGrant: (shareId) => requestHasShareAccessGrant(request, shareId),
+    // ADR-884 §9.1 Α3′ — «ίδια συσκευή;» για την ειδοποίηση ανοίγματος (πρώτο · νέα συσκευή).
+    readDevice: (shareId) => requestShareDevice(request, shareId),
   });
 
   // 200 για κάθε **απάντηση** της ροής (και για τις αρνήσεις): η σελίδα διακλαδώνεται στο
   // `status`/`reason` — ένα 4xx θα την έστελνε σε γενικό «σφάλμα δικτύου».
   const response = NextResponse.json(outcome, { status: 200, headers: NO_STORE });
   if (grant !== null) attachShareAccessGrant(response, grant.shareId, grant.value);
+  if (device !== null) attachShareDevice(response, device);
   return response;
 }
 

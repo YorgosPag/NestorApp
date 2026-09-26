@@ -214,6 +214,11 @@ export interface PropertiesNotificationSettings {
    */
   tourAccessAnswered: boolean;
   /**
+   * 🎯 ADR-884 §9.1 Α3′ — «**ο Χ άνοιξε την περιήγηση**» (πρώτο άνοιγμα · νέα συσκευή), προς τον αποστολέα του
+   * προσωπικού συνδέσμου. Προεπιλογή `true`: είναι ο λόγος ύπαρξης του ονομαστικού συνδέσμου (DocSend).
+   */
+  tourLinkOpened: boolean;
+  /**
    * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»** (ερώτηση + μία υπενθύμιση ανά περίοδο).
    *
    * ⚠️ **Προεπιλογή `true`**: χωρίς απάντηση η δημόσια κάρτα λέει «το ωράριο ίσως διαφέρει» σε κάθε αργία — ο
@@ -445,6 +450,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   stayRequestAnswered: true,
   tourAccessRequested: true,
   tourAccessAnswered: true,
+  tourLinkOpened: true,
 };
 
 /**

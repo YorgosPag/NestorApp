@@ -10,12 +10,15 @@ import 'server-only';
  * έτοιμο tileset;» ενώ το μανιφέστο ρωτούσε «υπάρχει **τοποθετημένη** λήψη, η πιο πρόσφατη του κόμβου της, με έτοιμο
  * tileset;». Με μία ατοποθέτητη λήψη η αγγελία **υποσχόταν** περιήγηση, ο άνθρωπος ζητούσε, εγκρινόταν — και έβλεπε
  * «η περιήγηση ετοιμάζεται». Δύο κριτές για την ίδια ερώτηση ⇒ πλέον **ένας**, και τον ρωτούν και οι δύο.
+ * 🔴 **Ξανά, ζωντανά 2026-09-26 (§4.7 Α8)**: η **δημοσίευση** ρωτούσε «υπάρχει λήψη για το κοινό;» (χωρίς tileset/κόμβο)
+ * και ο **προσωπικός σύνδεσμος** δεν ρωτούσε τίποτα — προσφερόταν και για αγέννητη περιήγηση ⇒ 403/404. Πλέον τον
+ * ΙΔΙΟ κριτή ρωτούν: μανιφέστο · κάρτα · δημοσίευση · δημιουργία συνδέσμου · οθόνη του υπευθύνου (`viewerStopCount`).
  *
  * ⏳ Διαβάζεται την ώρα της ερώτησης επειδή οι γραφείς της ετοιμότητας (ψήστης tileset · τοποθέτηση στον γράφο)
  * είναι Φ2. Όταν υπάρξουν, η απάντηση υλοποιείται **πάνω** στην περιήγηση από αυτούς — με αυτόν τον κριτή.
  */
 
-import type { DocumentReference } from 'firebase-admin/firestore';
+import type { DocumentReference, Query, QuerySnapshot, Transaction } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { tourCaptureFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
@@ -49,15 +52,30 @@ export function viewerStops(captures: readonly TourCapture[]): TourManifestStop[
       : []);
 }
 
-/** **Ο αναγνώστης** — οι στάσεις μιας περιήγησης που **ήδη** εντοπίστηκε από τη ρίζα της. */
-export async function readViewerStops(tourRef: DocumentReference): Promise<TourManifestStop[]> {
+/** Το ερώτημα των υποψήφιων στάσεων — ΕΝΑ, για ανάγνωση **και** για συναλλαγή. */
+function viewerCapturesQuery(tourRef: DocumentReference): Query {
   // tenant-scope-exempt: υποσυλλογή ΚΑΤΩ από ΜΙΑ περιήγηση εντοπισμένη από τη ρίζα της (ADR-884 Φ0.9).
-  const snap = await tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURES)
+  return tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURES)
     .where('audience', '==', 'public-listing')
-    .limit(CAPTURE_READ_LIMIT)
-    .get();
+    .limit(CAPTURE_READ_LIMIT);
+}
+
+function stopsOfSnapshot(snap: QuerySnapshot): TourManifestStop[] {
   return viewerStops(snap.docs.flatMap((doc) => {
     const capture = tourCaptureFromDocument(doc.data(), doc.id);
     return capture === null ? [] : [capture];
   }));
+}
+
+/** **Ο αναγνώστης** — οι στάσεις μιας περιήγησης που **ήδη** εντοπίστηκε από τη ρίζα της. */
+export async function readViewerStops(tourRef: DocumentReference): Promise<TourManifestStop[]> {
+  return stopsOfSnapshot(await viewerCapturesQuery(tourRef).get());
+}
+
+/**
+ * Ο **ίδιος** αναγνώστης μέσα σε συναλλαγή — για γραφέα που κρίνει «έχει κάτι να δείξει;» και γράφει **ατομικά**
+ * (η δημοσίευση: ADR-884 §4.7 Α8 — ως τότε ρωτούσε δικό της, χαλαρότερο κριτή).
+ */
+export async function readViewerStopsInTransaction(tx: Transaction, tourRef: DocumentReference): Promise<TourManifestStop[]> {
+  return stopsOfSnapshot(await tx.get(viewerCapturesQuery(tourRef)));
 }

@@ -13,6 +13,11 @@ import 'server-only';
  * του γραφείου. Άρα το είδος `spatial_tour` ρωτά τον **υπάρχοντα** κριτή (`locateManagedTour` →
  * `mayManageTour` + ίδιος κάτοχος), πάνω στη **ρίζα** που γράφει το ίδιο το έγγραφο της περιήγησης.
  *
+ * 🔴 **Και για περιήγηση που δεν έχει ΤΙ να δείξει** (ζωντανά 2026-09-26, ADR-884 §4.7 Α8): σύνδεσμος προς
+ * περιήγηση χωρίς στάση θεατή = ο παραλήπτης βλέπει «ετοιμάζεται». Πρότυπο Matterport: ο σύνδεσμος ανοίγει **αφού**
+ * ο χώρος επεξεργαστεί. Ρωτά τον **ΕΝΑ** κριτή του θεατή (`readViewerStops`) ⇒ `nothing-to-share` — **όχι**
+ * `forbidden`: ο καλών **έχει** δικαίωμα· η οντότητα δεν είναι ακόμη έτοιμη (422, όχι 403).
+ *
  * 🔑 `Record<ResolvableShareKind, …>`: νέο είδος **δεν μεταγλωττίζεται** μέχρι να απαντήσει ποιος το
  * δημιουργεί. Ο κριτής είναι **ένας** ανά είδος και ζει εδώ — ο γραφέας (`createShareOnServer`) τον ρωτά.
  *
@@ -25,6 +30,7 @@ import { isPlaceSource } from '@/constants/place-sources';
 import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import type { ResolvableShareKind } from '@/services/sharing/share-resolve-contract';
 import { locateManagedTour } from '@/server/spatial-tour/tour-access-shared';
+import { readViewerStops } from '@/server/spatial-tour/tour-viewer-stops';
 import type { CapabilitySubject } from '@/types/capability-authority';
 
 import { mayShareEntity } from './share-entity-access';
@@ -40,30 +46,36 @@ export interface ShareCreator {
   readonly capability?: CapabilitySubject;
 }
 
-type ShareCreateAuthority = (adminDb: Firestore, creator: ShareCreator, entityId: string) => Promise<boolean>;
+/** Η απόφαση — ονομασμένη, ποτέ boolean: «δεν επιτρέπεται» ≠ «δεν έχει ακόμη τι να δείξει». */
+export type ShareCreateVerdict = 'granted' | 'forbidden' | 'nothing-to-share';
+
+type ShareCreateAuthority = (adminDb: Firestore, creator: ShareCreator, entityId: string) => Promise<ShareCreateVerdict>;
 
 /** Ο κριτής των περισσότερων: «ανήκει η οντότητα στον μισθωτή σου;». */
 function tenantAuthority(kind: ResolvableShareKind): ShareCreateAuthority {
   return async (adminDb, creator, entityId) => {
     const definition = ShareEntityRegistry.get(kind);
-    return definition !== null && mayShareEntity(adminDb, definition, creator.companyId, entityId);
+    const granted = definition !== null && await mayShareEntity(adminDb, definition, creator.companyId, entityId);
+    return granted ? 'granted' : 'forbidden';
   };
 }
 
 /** Περιήγηση: η ρίζα διαβάζεται από το **έγγραφο της περιήγησης**, και κρίνει ο υπεύθυνός της. */
-async function tourManagerAuthority(adminDb: Firestore, creator: ShareCreator, tourId: string): Promise<boolean> {
-  if (creator.capability === undefined) return false;
+async function tourManagerAuthority(adminDb: Firestore, creator: ShareCreator, tourId: string): Promise<ShareCreateVerdict> {
+  if (creator.capability === undefined) return 'forbidden';
   const definition = ShareEntityRegistry.get('spatial_tour');
-  if (definition === null) return false;
+  if (definition === null) return 'forbidden';
   const snap = await adminDb.collection(definition.entityCollection).doc(tourId).get();
   const subject = (snap.data() ?? {}).subject as { kind?: unknown; id?: unknown } | undefined;
-  if (!isPlaceSource(subject?.kind) || typeof subject?.id !== 'string') return false;
+  if (!isPlaceSource(subject?.kind) || typeof subject?.id !== 'string') return 'forbidden';
   const managed = await locateManagedTour(adminDb, { kind: subject.kind, id: subject.id }, {
     listing: { uid: creator.uid, companyId: creator.companyId },
     capability: creator.capability,
   });
   // 🔴 Η ρίζα οδηγεί στην **ίδια** περιήγηση — ποτέ σύνδεσμος για id που δεν είναι η περιήγηση της ρίζας.
-  return managed.kind === 'managed' && managed.tourRef.id === tourId;
+  if (managed.kind !== 'managed' || managed.tourRef.id !== tourId) return 'forbidden';
+  // Κρίνεται ΜΕΤΑ την εξουσία: σε ξένο δεν λέμε ποτέ «υπάρχει, αλλά είναι άδεια».
+  return (await readViewerStops(managed.tourRef)).length > 0 ? 'granted' : 'nothing-to-share';
 }
 
 const AUTHORITY: Readonly<Record<ResolvableShareKind, ShareCreateAuthority>> = {
@@ -83,7 +95,7 @@ export function mayCreateShare(
   kind: ResolvableShareKind,
   creator: ShareCreator,
   entityId: string,
-): Promise<boolean> {
-  if (!creator.companyId || !entityId) return Promise.resolve(false);
+): Promise<ShareCreateVerdict> {
+  if (!creator.companyId || !entityId) return Promise.resolve('forbidden');
   return AUTHORITY[kind](adminDb, creator, entityId);
 }

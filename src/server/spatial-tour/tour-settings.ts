@@ -9,8 +9,10 @@ import 'server-only';
  * γράφει `draft` + `public` και εκεί έμενε. Άρα καμία περιήγηση δεν μπορούσε να γίνει `on-request`, και το αίτημα
  * θέασης (Κ2α) ήταν **απρόσιτο**.
  *
- * 🔑 **Δημοσίευση μόνο με κάτι να δει ο επισκέπτης**: τουλάχιστον μία λήψη με κοινό `public-listing`
- * (`publish-needs-capture`). Ο Matterport επιτρέπει «Public» σε άδειο χώρο — ο επισκέπτης βλέπει μαύρη οθόνη.
+ * 🔑 **Δημοσίευση μόνο με κάτι να δει ο επισκέπτης**: τουλάχιστον μία **στάση θεατή** — ο ΕΝΑΣ κριτής
+ * `tour-viewer-stops.ts` (`publish-needs-capture`). Ο Matterport επιτρέπει «Public» σε άδειο χώρο — ο επισκέπτης βλέπει
+ * μαύρη οθόνη. ⚠️ Ως το §4.7 Α8 η πύλη ρωτούσε δικό της κριτή («υπάρχει λήψη για το κοινό;», χωρίς tileset/κόμβο) ⇒
+ * δημοσίευε περιήγηση που ο θεατής έδειχνε «ετοιμάζεται».
  *
  * 🔑 **Ιδεμπότητο**: ίδιες τιμές ⇒ `unchanged`, **καμία** εγγραφή (ούτε `updatedAt`) — διπλό κλικ δεν αφήνει ίχνος.
  * Το `revision` **δεν** αυξάνεται: είναι το CAS του **γράφου** (κόμβοι), όχι των ρυθμίσεων.
@@ -22,7 +24,6 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { SpatialTourLifecycle, SpatialTourVisibility } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { spatialTourFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
@@ -33,6 +34,7 @@ import type { TourSubject } from '@/types/spatial-tour';
 import { locateManagedTour, refuseTourAccess, type TourAccessRefused } from './tour-access-shared';
 import { ensureManagedTour, TOUR_GENESIS_SETTINGS } from './tour-genesis';
 import { locateSpatialTour } from './tour-locate';
+import { readViewerStops, readViewerStopsInTransaction } from './tour-viewer-stops';
 
 export interface TourSettings {
   readonly visibility: SpatialTourVisibility;
@@ -45,6 +47,11 @@ export interface TourSettingsReading {
   readonly tourId: string;
   readonly settings: TourSettings;
   readonly exists: boolean;
+  /**
+   * Πόσες στάσεις έχει να δείξει ο θεατής (ο ΕΝΑΣ κριτής, `tour-viewer-stops.ts`). `0` ⇒ η οθόνη κρατά απενεργά τη
+   * δημοσίευση **και** τους προσωπικούς συνδέσμους, με την εξήγηση — ποτέ κουμπί που ο διακομιστής θα αρνηθεί.
+   */
+  readonly viewerStopCount: number;
   /** Ό,τι δέχεται η εγγραφή — η οθόνη απενεργοποιεί τα υπόλοιπα **πριν** πατηθούν (ίδιος κριτής, ποτέ εικασία). */
   readonly supportedVisibilities: readonly SpatialTourVisibility[];
 }
@@ -81,6 +88,7 @@ export async function readManagedTourSettings(
   if (tour === null) return refuseTourAccess('tour-unreadable');
   return {
     kind: 'read', tourId: tour.id, settings: { visibility: tour.visibility, lifecycle: tour.lifecycle }, exists: true,
+    viewerStopCount: (await readViewerStops(managed.tourRef)).length,
     supportedVisibilities: supportedTourVisibilities(tour.custody),
   };
 }
@@ -94,7 +102,7 @@ async function readUnbornSettings(
   if (location.kind !== 'found') return refuseTourAccess('tour-absent');
   if (mayManageTour(location.record, input.actor) !== 'granted') return refuseTourAccess('not-manager');
   return {
-    kind: 'read', tourId: location.tourRef.id, settings: TOUR_GENESIS_SETTINGS, exists: false,
+    kind: 'read', tourId: location.tourRef.id, settings: TOUR_GENESIS_SETTINGS, exists: false, viewerStopCount: 0,
     supportedVisibilities: supportedTourVisibilities(location.custody),
   };
 }
@@ -123,11 +131,8 @@ export async function updateTourSettings(
       return { kind: 'unchanged', settings: before };
     }
     if (next.lifecycle === 'published' && before.lifecycle !== 'published') {
-      const shown = await tx.get(
-        // tenant-scope-exempt: υποσυλλογή ΚΑΤΩ από ΜΙΑ περιήγηση, κριμένη με `ensureManagedTour` (ADR-884 Κ3β).
-        tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURES).where('audience', '==', 'public-listing').limit(1),
-      );
-      if (shown.empty) return refuseTourAccess('publish-needs-capture');
+      // 🔑 Ο ΙΔΙΟΣ κριτής με τον θεατή (§4.7 Α8), μέσα στη συναλλαγή: ό,τι δημοσιεύεται, **δείχνεται**.
+      if ((await readViewerStopsInTransaction(tx, tourRef)).length === 0) return refuseTourAccess('publish-needs-capture');
     }
     tx.update(tourRef, {
       visibility: next.visibility,

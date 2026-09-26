@@ -45,6 +45,8 @@ export interface TourSettingsState {
   readonly settings: TourSettings;
   /** Ό,τι δέχεται ο διακομιστής — τα υπόλοιπα φαίνονται απενεργά (ίδιος κριτής, `supportedTourVisibilities`). */
   readonly supportedVisibilities: readonly SpatialTourVisibility[];
+  /** Ο ΕΝΑΣ κριτής του θεατή (`tour-viewer-stops.ts`): `0` ⇒ δημοσίευση + σύνδεσμοι κλειστοί **πριν** πατηθούν (§4.7 Α8). */
+  readonly viewerStopCount: number;
 }
 
 export function useTourSettings(subject: TourSubject) {
@@ -52,8 +54,8 @@ export function useTourSettings(subject: TourSubject) {
   const load = useCallback(async (): Promise<TourSettingsState | null> => {
     const result = await readTourSettingsFromScreen(subject);
     if (result.kind !== 'ok') return null;
-    const { tourId, settings, supportedVisibilities } = result.value;
-    return { tourId, settings, supportedVisibilities };
+    const { tourId, settings, supportedVisibilities, viewerStopCount } = result.value;
+    return { tourId, settings, supportedVisibilities, viewerStopCount };
   }, [subject]);
   const { data, status, refresh, optimistic } = useReconciledResource(load);
 

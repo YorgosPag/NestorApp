@@ -82,6 +82,19 @@ export async function readTourHost(db: Firestore, subject: TourSubject): Promise
 }
 
 /**
+ * Ό,τι χρειάζεται **κάθε** ειδοποίηση που ανοίγει στον χώρο της θεματοφυλακής: ο υπεύθυνος (χώρος · εφεδρικός τίτλος)
+ * και ο τίτλος της αγγελίας. `null` ⇒ η ρίζα δεν υπάρχει πια — καμία ειδοποίηση.
+ */
+async function readHostNotice(
+  db: Firestore,
+  subject: TourSubject,
+): Promise<{ readonly host: TourHost; readonly title: string } | null> {
+  const host = await readTourHost(db, subject);
+  if (host === null) return null;
+  return { host, title: await listingNoticeTitle(db, subject.id, host.fallbackTitle) };
+}
+
+/**
  * **«Ο Χ ζήτησε να δει την περιήγηση»** — προς τον υπεύθυνο.
  *
  * 🔑 **Το μήνυμα του αιτούντος ταξιδεύει ως σώμα** (ADR-884 §9.1 Α2 — πρότυπο Google Drive «Request access»): ο υπεύθυνος
@@ -96,9 +109,9 @@ export async function announceTourAccessRequested(
   },
 ): Promise<void> {
   try {
-    const host = await readTourHost(db, input.subject);
-    if (host === null) return;
-    const title = await listingNoticeTitle(db, input.subject.id, host.fallbackTitle);
+    const context = await readHostNotice(db, input.subject);
+    if (context === null) return;
+    const { host, title } = context;
     await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_REQUESTED,
       recipientId: host.userId,
@@ -116,6 +129,49 @@ export async function announceTourAccessRequested(
   } catch (error) {
     logger.error('Η ειδοποίηση νέου αιτήματος θέασης δεν στάλθηκε', {
       requestId: input.requestId, error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * **«Ο Χ άνοιξε την περιήγηση»** — προς τον **αποστολέα** του προσωπικού συνδέσμου (ADR-884 §9.1 Α3′).
+ *
+ * 🔑 **Παραλήπτης = όποιος έφτιαξε τον σύνδεσμο** (DocSend: «your link was viewed»), όχι ο υπεύθυνος της ρίζας: στο
+ * γραφείο μπορεί να είναι άλλος υπάλληλος από αυτόν που καταχώρησε το ακίνητο. Ο **χώρος** όμως είναι της
+ * θεματοφυλακής — εκεί ζει το πάνελ με τους συνδέσμους, άρα ο **ίδιος** προορισμός με το «νέο αίτημα».
+ *
+ * 🔑 **Ταυτότητα = σύνδεσμος + αύξων αριθμός συσκευής** (`registerShareDevice`): ιδεμποτία κατά μετάβαση.
+ */
+export async function announceTourLinkOpened(
+  db: Firestore,
+  input: {
+    readonly subject: TourSubject; readonly shareId: string; readonly senderUid: string;
+    readonly who: string; readonly deviceOrdinal: number;
+  },
+): Promise<void> {
+  try {
+    const context = await readHostNotice(db, input.subject);
+    if (context === null) return;
+    const { host, title } = context;
+    const first = input.deviceOrdinal === 1;
+    await dispatchNotification({
+      eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_LINK_OPENED,
+      recipientId: input.senderUid,
+      tenantId: workspaceTenantId(host.workspace),
+      title: first
+        ? `${input.who}: άνοιξε την περιήγηση του «${title}»`
+        : `${input.who}: άνοιξε την περιήγηση του «${title}» από νέα συσκευή`,
+      titleKey: first ? 'tourLinkOpened.firstTitle' : 'tourLinkOpened.newDeviceTitle',
+      titleParams: { title, who: input.who },
+      eventId: `tour-link-open:${input.shareId}:${input.deviceOrdinal}`,
+      entityId: input.subject.id,
+      entityType: NOTIFICATION_ENTITY_TYPES.PROPERTY,
+      ...tourAccessReceivedDestination(input.subject, host.workspace),
+      source: { service: SOURCE_SERVICES.PROPERTIES, feature: 'tour-link', env: getCurrentEnvironment() },
+    });
+  } catch (error) {
+    logger.error('Η ειδοποίηση ανοίγματος συνδέσμου περιήγησης δεν στάλθηκε', {
+      shareId: input.shareId, error: error instanceof Error ? error.message : String(error),
     });
   }
 }

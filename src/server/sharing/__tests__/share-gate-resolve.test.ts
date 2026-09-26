@@ -39,6 +39,7 @@ const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 let kit: MockFirestoreKit;
 const db = (): Firestore => kit.instance as unknown as Firestore;
 const noGrant = () => false;
+const noDevice = (): string | null => null;
 
 async function seedShare(extra: Record<string, unknown>): Promise<void> {
   kit.seedCollection(COLLECTIONS.SHARES, {
@@ -108,7 +109,7 @@ describe('resolvePublicShare — contact', () => {
   it('✅ opens for an ANONYMOUS visitor, publishing only the consented fields', async () => {
     await seedShare({ entityType: 'contact', entityId: 'ct_1', contactMeta: { includedFields: ['name', 'emails'] } });
 
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toMatchObject({
       status: 'resolved',
@@ -119,7 +120,7 @@ describe('resolvePublicShare — contact', () => {
   it('never sends tenant identity or hashes to the visitor', async () => {
     await seedShare({ entityType: 'contact', entityId: 'ct_1', contactMeta: { includedFields: ['name'] } });
 
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
     const wire = JSON.stringify(outcome);
 
     for (const secret of ['comp_1', 'usr_1', 'tokenHash', 'passwordHash']) expect(wire).not.toContain(secret);
@@ -128,7 +129,7 @@ describe('resolvePublicShare — contact', () => {
   it('counts the opening', async () => {
     await seedShare({ entityType: 'contact', entityId: 'ct_1', contactMeta: { includedFields: ['name'] } });
 
-    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
     expect(kit.getData(COLLECTIONS.SHARES, 'share_1')).toMatchObject({ accessCount: 1 });
   });
@@ -144,20 +145,20 @@ describe('resolvePublicShare — password', () => {
   });
 
   it('🔴 asks for the password and reveals NOTHING — and spends no access', async () => {
-    const result = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    const result = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
-    expect(result).toEqual({ outcome: { status: 'password-required' }, grant: null });
+    expect(result).toEqual({ outcome: { status: 'password-required' }, grant: null, device: null });
     expect(kit.getData(COLLECTIONS.SHARES, 'share_1')).toMatchObject({ accessCount: 0 });
   });
 
   it('refuses a wrong password by name', async () => {
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, password: 'x', hasGrant: noGrant });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, password: 'x', hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toEqual({ status: 'refused', reason: 'wrong-password' });
   });
 
   it('resolves with the right password and issues a grant for THIS share', async () => {
-    const { outcome, grant } = await resolvePublicShare({ adminDb: db(), token: TOKEN, password: 'right', hasGrant: noGrant });
+    const { outcome, grant } = await resolvePublicShare({ adminDb: db(), token: TOKEN, password: 'right', hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toMatchObject({ status: 'resolved', share: { kind: 'building_showcase' } });
     expect(grant?.shareId).toBe('share_1');
@@ -165,7 +166,7 @@ describe('resolvePublicShare — password', () => {
   });
 
   it('a valid grant stands in for the password (reload, PDF link)', async () => {
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: (id) => id === 'share_1' });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: (id) => id === 'share_1', readDevice: noDevice });
 
     expect(outcome).toMatchObject({ status: 'resolved' });
   });
@@ -173,7 +174,7 @@ describe('resolvePublicShare — password', () => {
   it('answers «unavailable», never «wrong password», when our grant secret is missing', async () => {
     delete process.env.SHARE_ACCESS_SECRET;
 
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, password: 'right', hasGrant: noGrant });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, password: 'right', hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toEqual({ status: 'refused', reason: 'unavailable' });
   });
@@ -188,7 +189,7 @@ describe('resolvePublicShare — refusals', () => {
   ])('%s', async (_label, extra, reason, token) => {
     await seedShare({ entityType: 'contact', entityId: 'ct_1', contactMeta: { includedFields: ['name'] }, ...extra });
 
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token, hasGrant: noGrant });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token, hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toEqual({ status: 'refused', reason });
   });
@@ -207,7 +208,7 @@ describe('file links — one opening = one access (Google Drive model)', () => {
   });
 
   it('opening counts once, issues a visit grant and a signed INLINE preview URL', async () => {
-    const { outcome, grant } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    const { outcome, grant } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toMatchObject({ status: 'resolved', share: { kind: 'file', data: { previewUrl: 'https://signed.example/x' } } });
     expect(signedDownloadUrl).toHaveBeenCalledWith({ storagePath: 'companies/comp_1/f_1.pdf' });
@@ -216,7 +217,7 @@ describe('file links — one opening = one access (Google Drive model)', () => {
   });
 
   it('✅ downloading INSIDE the visit does not spend the limit of 1', async () => {
-    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
     await expect(issueShareDownload({ adminDb: db(), token: TOKEN, hasGrant: (id) => id === 'share_1' }))
       .resolves.toEqual({ status: 'signed', url: 'https://signed.example/x' });
@@ -227,9 +228,9 @@ describe('file links — one opening = one access (Google Drive model)', () => {
   });
 
   it('a reload inside the visit is not a second access', async () => {
-    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
-    const again = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: (id) => id === 'share_1' });
+    const again = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: (id) => id === 'share_1', readDevice: noDevice });
 
     expect(again.outcome).toMatchObject({ status: 'resolved' });
     expect(kit.getData(COLLECTIONS.SHARES, 'share_1')).toMatchObject({ accessCount: 1 });
@@ -244,9 +245,9 @@ describe('file links — one opening = one access (Google Drive model)', () => {
   });
 
   it('a new visit after the limit is refused by name', async () => {
-    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
-    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant });
+    const { outcome } = await resolvePublicShare({ adminDb: db(), token: TOKEN, hasGrant: noGrant, readDevice: noDevice });
 
     expect(outcome).toEqual({ status: 'refused', reason: 'exhausted' });
   });

@@ -19,7 +19,8 @@ jest.mock('@/services/enterprise-id-convenience', () => ({ generateShareId: () =
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { CAPTURE_DOC } from '@/lib/spatial-tour/__tests__/spatial-tour-fixtures';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 
@@ -28,6 +29,7 @@ import { updateShareOnServer } from '../share-update';
 
 const AGENCY = 'comp_agency';
 const TOUR_ID = enterpriseIdService.generateDeterministicSpatialTourId('company-property', 'prop_1');
+const CAPTURES = `${COLLECTIONS.SPATIAL_TOURS}/${TOUR_ID}/${SUBCOLLECTIONS.TOUR_CAPTURES}`;
 const PUBLISHER = { globalRole: 'internal_user', permissions: ['listings:listings:publish'], companyId: AGENCY };
 
 let kit: MockFirestoreKit;
@@ -43,6 +45,7 @@ beforeEach(() => {
       updatedAt: '2026-09-01T10:00:00.000Z', updatedBy: 'boris',
     },
   });
+  kit.seedCollection(CAPTURES, { tcap_1: { ...CAPTURE_DOC, tourId: TOUR_ID } });
 });
 
 const tourRequest = (extra: Record<string, unknown> = {}) =>
@@ -66,6 +69,26 @@ describe('spatial_tour — ο υπεύθυνος δίνει σύνδεσμο', (
     kit.clearWrites();
     expect(await createShareOnServer(db(), creator, tourRequest())).toMatchObject({ ok: false, refusal: 'forbidden' });
     expect(kit.writes()).toEqual([]);
+  });
+
+  // 🔴 ζωντανά 2026-09-26 (ADR-884 §4.7 Α8): σύνδεσμος για περιήγηση χωρίς στάση θεατή = ο παραλήπτης βλέπει
+  //    «ετοιμάζεται». Ο ΕΝΑΣ κριτής του θεατή ⇒ 422 με λόγο (ο υπεύθυνος ΕΧΕΙ δικαίωμα — δεν είναι 403).
+  it.each([
+    ['λήψη μόνο για την ομάδα', { audience: 'project-team' }],
+    ['λήψη χωρίς έτοιμο tileset', { tileset: { state: 'pending', contentHash: null } }],
+    ['ατοποθέτητη λήψη', { nodeId: null }],
+  ])('%s ⇒ invalid nothing-to-share, καμία εγγραφή', async (_name, overrides) => {
+    kit.seedCollection(CAPTURES, { tcap_1: { ...CAPTURE_DOC, tourId: TOUR_ID, ...overrides } });
+    kit.clearWrites();
+    const outcome = await createShareOnServer(db(), { uid: 'boris', companyId: AGENCY, capability: PUBLISHER }, tourRequest());
+    expect(outcome).toEqual({ ok: false, refusal: 'invalid', reason: 'nothing-to-share' });
+    expect(kit.writes()).toEqual([]);
+  });
+
+  it('ξένος σε άδεια περιήγηση ⇒ forbidden (ποτέ «υπάρχει, αλλά είναι άδεια»)', async () => {
+    kit.seedCollection(CAPTURES, { tcap_1: { ...CAPTURE_DOC, tourId: TOUR_ID, nodeId: null } });
+    const rival = { uid: 'carl', companyId: 'comp_rival', capability: { ...PUBLISHER, companyId: 'comp_rival' } };
+    expect(await createShareOnServer(db(), rival, tourRequest())).toMatchObject({ ok: false, refusal: 'forbidden' });
   });
 
   it('id που δεν είναι η περιήγηση της ρίζας του ⇒ forbidden', async () => {

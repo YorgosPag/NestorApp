@@ -38,6 +38,8 @@ export const VIEWING_KEYS = {
   linksTitle: 'spatial-tour:viewing.linksTitle',
   linksDescription: 'spatial-tour:viewing.linksDescription',
   linksManage: 'spatial-tour:viewing.linksManage',
+  /** ADR-884 §4.7 Α8 — ο κριτής του θεατή λέει «καμία στάση»: γιατί η δημοσίευση και οι σύνδεσμοι είναι κλειστοί. */
+  needsStop: 'spatial-tour:viewing.needsStop',
   requestsTitle: 'spatial-tour:viewing.requestsTitle',
   tabPending: 'spatial-tour:viewing.tabPending',
   tabApproved: 'spatial-tour:viewing.tabApproved',

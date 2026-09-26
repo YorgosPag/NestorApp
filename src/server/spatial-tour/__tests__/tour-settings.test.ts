@@ -104,12 +104,33 @@ describe('Ρ — οι ρυθμίσεις', () => {
       .toMatchObject({ kind: 'read', supportedVisibilities: ['public', 'on-request'] });
   });
 
+  // 🔴 Ρ7 (ζωντανά 2026-09-26, §4.7 Α8) — η πύλη δημοσίευσης ρωτούσε ΔΙΚΟ της κριτή («υπάρχει λήψη για το κοινό;»):
+  //    λήψη για το κοινό χωρίς έτοιμο tileset ή χωρίς κόμβο ΔΗΜΟΣΙΕΥΟΤΑΝ, και ο θεατής έδειχνε «ετοιμάζεται».
+  it.each([
+    ['χωρίς έτοιμο tileset', capture({ tileset: { state: 'pending', contentHash: null } })],
+    ['ατοποθέτητη', capture({ nodeId: null })],
+  ])('Ρ7 — λήψη για το κοινό %s ⇒ publish-needs-capture, καμία εγγραφή (ο κριτής του θεατή)', async (_name, doc) => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
+    kit.seedCollection(CAPTURES, { tcap_1: doc });
+    kit.clearWrites();
+    expect(await updateTourSettings(db, { subject: SUBJECT, actor: MANAGER, settings: settings('on-request', 'published') }))
+      .toEqual({ kind: 'refused', reason: 'publish-needs-capture' });
+    expect(kit.writes()).toEqual([]);
+  });
+
+  it('Ρ8 — η ανάγνωση λέει στην οθόνη πόσες στάσεις έχει ο θεατής (ίδιος κριτής με δημοσίευση + σύνδεσμο)', async () => {
+    kit.seedCollection(TOURS, { [TOUR_ID]: tourDoc() });
+    kit.seedCollection(CAPTURES, { tcap_1: capture(), tcap_2: capture({ nodeId: null }) });
+    expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: MANAGER }))
+      .toMatchObject({ kind: 'read', exists: true, viewerStopCount: 1 });
+  });
+
   it('Ρ5 — η ανάγνωση αγέννητης περιήγησης δίνει τις ρυθμίσεις γέννησης ΧΩΡΙΣ εγγραφή', async () => {
     kit.clearWrites();
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: MANAGER }))
       .toEqual({
         kind: 'read', tourId: TOUR_ID, settings: { visibility: 'public', lifecycle: 'draft' }, exists: false,
-        supportedVisibilities: ['public', 'on-request', 'link-only'],
+        viewerStopCount: 0, supportedVisibilities: ['public', 'on-request', 'link-only'],
       });
     expect(await readManagedTourSettings(db, { subject: SUBJECT, actor: STRANGER })).toEqual({ kind: 'refused', reason: 'not-manager' });
     expect(kit.writes()).toEqual([]);

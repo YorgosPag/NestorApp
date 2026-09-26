@@ -81,6 +81,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       // ADR-884 Κ3β — αιτήματα θέασης περιήγησης 360° (υπεύθυνος · αιτών).
       { key: 'tourAccessRequested', labelKey: 'common-account:account.notificationSettings.categories.properties.tourAccessRequested' },
       { key: 'tourAccessAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.tourAccessAnswered' },
+      // ADR-884 §9.1 Α3′ — ανοίγματα προσωπικών συνδέσμων περιήγησης (πρώτο · νέα συσκευή).
+      { key: 'tourLinkOpened', labelKey: 'common-account:account.notificationSettings.categories.properties.tourLinkOpened' },
     ],
   },
   {

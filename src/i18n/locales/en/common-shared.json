@@ -820,6 +820,10 @@
     "approvedTitle": "You can view the tour of “{title}” until {until}",
     "declinedTitle": "Your viewing request for “{title}” was not approved"
   },
+  "tourLinkOpened": {
+    "firstTitle": "{who} opened the tour of “{title}”",
+    "newDeviceTitle": "{who} opened the tour of “{title}” on a new device"
+  },
   "mandateRequestAnswered": {
     "acceptedTitle": "{agency} took on the listing \"{title}\"",
     "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",

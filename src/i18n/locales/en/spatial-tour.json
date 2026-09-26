@@ -63,7 +63,7 @@
     "unavailable": "Something went wrong. Try again shortly.",
     "signInRequired": "Sign in to view this tour.",
     "notViewable": "You do not have access to this tour.",
-    "publishNeedsCapture": "Upload at least one panorama for the listing audience first.",
+    "publishNeedsCapture": "The tour has nothing to show yet: it needs at least one ready panorama for the listing audience, placed on the floor plan.",
     "visibilityUnsupported": "Personal links are available for agency listings only. Choose “On request”."
   },
   "panel": {
@@ -183,6 +183,7 @@
     "linksTitle": "Personal links",
     "linksDescription": "One link per recipient, with a name and an expiry. See when it was opened and revoke it on its own.",
     "linksManage": "Links and sending",
+    "needsStop": "Publishing and personal links open once the tour has something to show: at least one ready panorama for the listing audience, placed on the floor plan.",
     "requestsTitle": "Viewing requests",
     "tabPending": "Pending",
     "tabApproved": "With access",

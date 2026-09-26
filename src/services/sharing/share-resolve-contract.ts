@@ -87,17 +87,25 @@ export const SHARE_LABEL_MAX_LENGTH = 80;
  *   Στα είδη **προβολής** (βιτρίνες, περιήγηση) οι μεγάλοι **δεν** βάζουν όριο ανοιγμάτων (DocSend: μόνο λήξη ·
  *   επιβεβαίωση email · ανάκληση· Matterport: ιδιωτικό · κωδικός)· ένα «όριο 5» θα το έκαιγε το refresh της σελίδας.
  *   Αντί για όριο: μετρητής + «τελευταίο άνοιγμα» στη λίστα συνδέσμων.
+ * - `openNotice` — ειδοποίηση του αποστολέα όταν ανοίγει ο σύνδεσμος (ADR-884 §9.1 Α3′): **μόνο** στο **πρώτο**
+ *   άνοιγμα και από **νέα** συσκευή. Έχει νόημα μόνο όπου ο σύνδεσμος είναι **ονομαστικός** (`labelRequired`) — αλλιώς
+ *   η ειδοποίηση δεν λέει **ποιος**. Είδος με `true` χρειάζεται αναγγελέα (`share-open-notice.ts`· άγκυρα).
  */
 export interface ShareKindLinkPolicy {
   readonly password: boolean;
   readonly labelRequired: boolean;
   readonly accessLimit: boolean;
+  readonly openNotice: boolean;
 }
 
 /** Ό,τι κατεβαίνει: κωδικός και όριο λήψεων επιτρέπονται. */
-const DOWNLOAD_LINK_POLICY: ShareKindLinkPolicy = { password: true, labelRequired: false, accessLimit: true };
+const DOWNLOAD_LINK_POLICY: ShareKindLinkPolicy = {
+  password: true, labelRequired: false, accessLimit: true, openNotice: false,
+};
 /** Ό,τι προβάλλεται: κωδικός ναι, όριο ανοιγμάτων όχι. */
-const VIEW_LINK_POLICY: ShareKindLinkPolicy = { password: true, labelRequired: false, accessLimit: false };
+const VIEW_LINK_POLICY: ShareKindLinkPolicy = {
+  password: true, labelRequired: false, accessLimit: false, openNotice: false,
+};
 
 /** ⚠️ `Record<ResolvableShareKind, …>` — νέο είδος **δεν μεταγλωττίζεται** χωρίς να δηλώσει την πολιτική του. */
 export const SHARE_KIND_LINK_POLICY: Readonly<Record<ResolvableShareKind, ShareKindLinkPolicy>> = {
@@ -108,7 +116,7 @@ export const SHARE_KIND_LINK_POLICY: Readonly<Record<ResolvableShareKind, ShareK
   building_showcase: VIEW_LINK_POLICY,
   storage_showcase: VIEW_LINK_POLICY,
   parking_showcase: VIEW_LINK_POLICY,
-  spatial_tour: { password: false, labelRequired: true, accessLimit: false },
+  spatial_tour: { password: false, labelRequired: true, accessLimit: false, openNotice: true },
 };
 
 /** Η πολιτική ενός είδους — μη επιλύσιμο είδος ⇒ η προεπιλογή (δεν περνά ποτέ από σύνδεσμο). */

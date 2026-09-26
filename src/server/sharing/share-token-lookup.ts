@@ -64,6 +64,12 @@ export interface StoredShare {
   readonly maxAccesses: number;
   readonly accessCount: number;
   readonly note: string | null;
+  /**
+   * Το «για ποιον» (ADR-315 Α14) — **εσωτερικό** του αποστολέα, ≠ `note` (το μήνυμα **προς** τον παραλήπτη). Ζει
+   * μόνο στον διακομιστή: οι προβολές (`buildSafePublicProjection`) χτίζουν νέο αντικείμενο από ρητά πεδία, άρα δεν
+   * φτάνει ποτέ στον παραλήπτη. 🔴 ADR-884 §4.7 Α3′′: ως τότε **δεν διαβαζόταν** — η ειδοποίηση ανοίγματος ρωτούσε το `note`.
+   */
+  readonly label: string | null;
   readonly showcaseMeta: ShowcaseShareMeta | null;
   readonly contactMeta: ContactShareMeta | null;
   readonly fileMeta: FileShareMeta | null;
@@ -113,6 +119,7 @@ export function normalizeUnifiedShare(id: string, d: Record<string, unknown>): S
     maxAccesses: num(d.maxAccesses),
     accessCount: num(d.accessCount),
     note: str(d.note),
+    label: str(d.label),
     showcaseMeta: (d.showcaseMeta as ShowcaseShareMeta | undefined) ?? null,
     contactMeta: (d.contactMeta as ContactShareMeta | undefined) ?? null,
     fileMeta: (d.fileMeta as FileShareMeta | undefined) ?? null,
@@ -145,6 +152,7 @@ export function normalizeLegacyFileShare(id: string, d: Record<string, unknown>)
     maxAccesses: num(d.maxDownloads),
     accessCount: num(d.downloadCount),
     note: str(d.note),
+    label: str(d.label),
     showcaseMeta: isShowcase && pdfStoragePath ? { pdfStoragePath, pdfRegeneratedAt: null } : null,
     contactMeta: null,
     fileMeta: null,

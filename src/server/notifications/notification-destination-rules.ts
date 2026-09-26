@@ -17,6 +17,7 @@
  * | `properties.stayRequestAnswered` | `stayRequestAnsweredDestination` | `announceStayBookingNotice` |
  * | `properties.tourAccessRequested` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourAccessRequested` |
  * | `properties.tourAccessAnswered` | `tourAccessAnsweredDestination` | `announceTourAccessAnswered` |
+ * | `properties.tourLinkOpened` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourLinkOpened` |
  * | `network.threadMessage` | `readThreadTopic` + `threadDestination` | `announceNetworkMessage` |
  * | `network.teamJoined` | `actTeamRefById` + `threadDestination` | `announceTeamArrivals` |
  *
@@ -164,6 +165,8 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(stayRequestAnsweredDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_REQUESTED]: tourAccessRequestedRule,
+  // ADR-884 §9.1 Α3′ — το άνοιγμα συνδέσμου οδηγεί στο ΙΔΙΟ πάνελ (εκεί ζουν οι σύνδεσμοι), με τον ΙΔΙΟ κανόνα.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_LINK_OPENED]: tourAccessRequestedRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_ANSWERED]: async (_db, notification, entityId) =>
     expected(tourAccessAnsweredDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE]: networkThreadMessageRule,

@@ -102,7 +102,11 @@ export function shareExpiryFromNow(hours: number, nowMs: number = Date.now()): s
   return new Date(nowMs + hours * 3_600_000).toISOString();
 }
 
-async function buildShareDocument(input: CreateShareInput, tokenHash: string) {
+/**
+ * Το σχήμα του εγγράφου — ο ΕΝΑΣ γραφέας. Εξάγεται ώστε οι άγκυρες να σπέρνουν **ό,τι γράφει πραγματικά** (ADR-884
+ * §4.7 Α3′′: άγκυρα με χειροποίητο έγγραφο `note: 'για ποιον'` έμεινε πράσινη ενώ ο γραφέας γράφει `label`).
+ */
+export async function buildShareDocument(input: CreateShareInput, tokenHash: string) {
   const expiresAt = shareExpiryFromNow(input.expiresInHours ?? DEFAULT_EXPIRY_HOURS);
   return {
     tokenHash,
@@ -158,9 +162,10 @@ export async function createShareOnServer(
   if (!policyCheck.valid) return { ok: false, refusal: 'invalid', reason: policyCheck.reason };
   if (!isResolvableShareKind(input.entityType)) return { ok: false, refusal: 'invalid', reason: 'unsupported entityType' };
   // ADR-884 Κ3β: ο κριτής είναι **ανά είδος** — η περιήγηση ζητά τον υπεύθυνο, όχι σκέτο μισθωτή.
-  if (!(await mayCreateShare(adminDb, input.entityType, creator, input.entityId))) {
-    return { ok: false, refusal: 'forbidden' };
-  }
+  // ADR-884 §4.7 Α8: «δεν έχει ακόμη τι να δείξει» ≠ «δεν επιτρέπεται» — 422 με λόγο, όχι 403.
+  const verdict = await mayCreateShare(adminDb, input.entityType, creator, input.entityId);
+  if (verdict === 'forbidden') return { ok: false, refusal: 'forbidden' };
+  if (verdict === 'nothing-to-share') return { ok: false, refusal: 'invalid', reason: 'nothing-to-share' };
 
   const token = generateShareToken();
   const shareId = generateShareId();

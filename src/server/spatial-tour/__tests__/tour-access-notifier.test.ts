@@ -18,7 +18,7 @@ jest.mock('@/lib/listings/listing-notice-title', () => ({
   listingNoticeTitle: async () => 'Διαμέρισμα Κυψέλη',
 }));
 
-import { announceTourAccessRequested } from '../tour-access-notifier';
+import { announceTourAccessRequested, announceTourLinkOpened } from '../tour-access-notifier';
 
 const companyProperty = { createdBy: 'boris', companyId: 'comp_1', name: 'Διαμέρισμα Κυψέλη' };
 const db = {
@@ -49,5 +49,32 @@ describe('announceTourAccessRequested — το μήνυμα του αιτούν�
   it('Ν2 — χωρίς μήνυμα ⇒ κανένα σώμα', async () => {
     await announceTourAccessRequested(db, { ...base, subject: { ...base.subject }, message: null });
     expect(sent()).not.toHaveProperty('body');
+  });
+});
+
+/**
+ * ADR-884 §9.1 Α3′ — «ο Χ άνοιξε την περιήγηση». Παραλήπτης = ο **αποστολέας** του συνδέσμου (όχι ο υπεύθυνος της
+ * ρίζας)· χώρος + πόρτα = της θεματοφυλακής (ίδια με το «νέο αίτημα»)· ταυτότητα = σύνδεσμος + αύξων συσκευής.
+ */
+describe('announceTourLinkOpened — ειδοποίηση ανοίγματος προσωπικού συνδέσμου', () => {
+  beforeEach(() => dispatchNotification.mockClear());
+
+  const opened = { subject: { kind: 'property', id: 'prop_1' }, shareId: 'share_9', senderUid: 'eleni', who: 'Γιάννης Π.' } as const;
+
+  it('Ο1 🔴 — πρώτο άνοιγμα ⇒ προς τον ΑΠΟΣΤΟΛΕΑ, κλειδί «firstTitle», ταυτότητα σύνδεσμος:1', async () => {
+    await announceTourLinkOpened(db, { ...opened, subject: { ...opened.subject }, deviceOrdinal: 1 });
+    expect(sent()).toMatchObject({
+      eventType: 'properties.tourLinkOpened',
+      recipientId: 'eleni',
+      tenantId: 'comp_1',
+      titleKey: 'tourLinkOpened.firstTitle',
+      titleParams: { who: 'Γιάννης Π.', title: 'Διαμέρισμα Κυψέλη' },
+      eventId: 'tour-link-open:share_9:1',
+    });
+  });
+
+  it('Ο2 — νέα συσκευή ⇒ κλειδί «newDeviceTitle», ταυτότητα σύνδεσμος:2', async () => {
+    await announceTourLinkOpened(db, { ...opened, subject: { ...opened.subject }, deviceOrdinal: 2 });
+    expect(sent()).toMatchObject({ titleKey: 'tourLinkOpened.newDeviceTitle', eventId: 'tour-link-open:share_9:2' });
   });
 });

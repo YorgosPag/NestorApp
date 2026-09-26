@@ -41,7 +41,8 @@ type UpdateResponse = { readonly settings: TourSettings; readonly changed: boole
 
 function readHandler(_request: NextRequest, actor: ApiActor, segment?: TourSegment): Promise<NextResponse<ReadResponse>> {
   return tourSubjectResponse(segment, actor, readManagedTourSettings, (read) => ({
-    tourId: read.tourId, settings: read.settings, exists: read.exists, supportedVisibilities: read.supportedVisibilities,
+    tourId: read.tourId, settings: read.settings, exists: read.exists,
+    viewerStopCount: read.viewerStopCount, supportedVisibilities: read.supportedVisibilities,
   }));
 }
 

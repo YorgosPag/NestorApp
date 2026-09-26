@@ -134,6 +134,11 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROPERTIES_TOUR_ACCESS_REQUESTED: 'properties.tourAccessRequested',
   /** ADR-884 Κ3β — **προς τον αιτούντα**: «εγκρίθηκε έως …» · «δεν εγκρίθηκε». Δύο ακροατήρια ⇒ δύο διακόπτες. */
   PROPERTIES_TOUR_ACCESS_ANSWERED: 'properties.tourAccessAnswered',
+  /**
+   * ADR-884 §9.1 Α3′ — **προς τον αποστολέα** προσωπικού συνδέσμου περιήγησης: «ο Χ άνοιξε την περιήγηση» — **μόνο** στο
+   * πρώτο άνοιγμα και από **νέα** συσκευή (όχι σε κάθε άνοιγμα = θόρυβος). Ταυτότητα = σύνδεσμος + συσκευή.
+   */
+  PROPERTIES_TOUR_LINK_OPENED: 'properties.tourLinkOpened',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -326,6 +331,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_ANSWERED]: {
     category: 'properties',
     settingKey: 'tourAccessAnswered',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-884 §9.1 Α3′ — ΟΧΙ υποχρεωτικό: ο αποστολέας το κλείνει από τις ρυθμίσεις (DocSend/Papermark: διακόπτης).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_LINK_OPENED]: {
+    category: 'properties',
+    settingKey: 'tourLinkOpened',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
