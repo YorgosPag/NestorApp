@@ -221,6 +221,14 @@ export interface CreateOptions {
 export interface UpdateOptions {
   /** Auto-touch updatedAt with serverTimestamp. Default: true */
   readonly touchUpdatedAt?: boolean;
+  /**
+   * `setDoc(…, { merge: true })` instead of `updateDoc`: **creates the doc if missing** and
+   * deep-merges nested maps, so a write touches ONLY the leaves it names — two writers of
+   * different leaves never clobber each other, and the first write needs no create/update race.
+   * ⚠️ Nested OBJECTS, not dotted paths: under merge a key `'a.b'` is a literal field name.
+   * `deleteField()` leaves are honoured. Default: false.
+   */
+  readonly merge?: boolean;
 }
 
 // ============================================================================

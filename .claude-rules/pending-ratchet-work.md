@@ -2,6 +2,21 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **26/09 — ΚΑΝΕΝΑΣ ΜΗΧΑΝΙΣΜΟΣ ΔΙΑΓΡΑΦΗΣ ΛΟΓΑΡΙΑΣΜΟΥ / ΠΡΟΣΩΠΙΚΩΝ ΔΕΔΟΜΕΝΩΝ ΑΝΑ uid** *(ΓΚΠΔ άρθ. 17 · ADR-882 §3.6)*
+
+  Το μόνο «GDPR» είναι του τομέα αρχείων (`app/api/files/gdpr-delete`). Κανείς δεν σβήνει τα προσωπικά έγγραφα
+  ενός ανθρώπου: `user_place_searches` (ADR-882) · `saved_listings` · `property_demands` · `user_preferences` ·
+  `bim_3d_preferences` · `user_notification_settings` · `notifications` κ.ά. (`tenant-config.ts` `mode:'userId'` είναι
+  καλή αφετηρία απογραφής). Θεραπεία: **μητρώο** «προσωπικά δεδομένα ανά uid» (συλλογή → πεδίο/κλειδί ιδιοκτήτη →
+  πολιτική: σβήσε / ανωνυμοποίησε / κράτα με νόμιμη βάση) + ένας σαρωτής + πύλη ότι κάθε νέα συλλογή `mode:'userId'`
+  δηλώνεται εκεί. Δικό του ADR.
+
+- 🟡 **26/09 — `user_preferences`: ΔΥΟ ΓΡΑΦΕΙΣ, ΔΥΟ ΚΑΝΟΝΕΣ ΚΛΕΙΔΙΟΥ** *(N.0.2 · ADR-341)*
+
+  `services/user-settings/user-settings-repository.ts` γράφει `{uid}_{companyId}` (και ρίχνει χωρίς εταιρεία), ενώ
+  `services/user/EnterpriseUserPreferencesService.ts` γράφει `{uid}_{tenantId || 'default'}` με `merge:true` στην
+  **ίδια** συλλογή. Θεραπεία: grep καταναλωτών του δεύτερου· μετάβαση στο repository ή σαφής διαχωρισμός συλλογής.
+
 - 🟠 **26/09 — CHECK 3.91 ΤΥΦΛΟ ΣΤΑ collectionGroup ΜΟΝΟΥ ΠΕΔΙΟΥ** *(ADR-884 §4.5 · ADR-870)*
 
   Ο Firestore φτιάχνει **αυτόματα** δείκτη μονού πεδίου **μόνο** σε εμβέλεια `COLLECTION`. Ένα

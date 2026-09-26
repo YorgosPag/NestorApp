@@ -259,6 +259,13 @@
       "digest": "sha256:5acce7cde036e82572a9ac5bdabc3380606bf9fd0edaccaf530bb96716c22cb0",
       "source": "firestore.indexes.json",
       "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-09-26",
+      "commit": "e497315c",
+      "digest": "sha256:4f9bfaa7cf10c5aeb4dbaa77d4030edf1254e79e8d11a851ca092901ffd22208",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
     }
   ]
 }

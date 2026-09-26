@@ -107,6 +107,31 @@ export async function seedUser2faSettings(
 }
 
 /**
+ * Seed a `user_place_searches` document (ADR-882 Φάση 2).
+ *
+ * Rule: docId == 'uplsrch_' + auth.uid, and the final doc must pass
+ * `isValidUserPlaceSearches` (hasOnly · userId == uid · bounded maps).
+ */
+export async function seedUserPlaceSearches(
+  env: RulesTestEnvironment,
+  docId: string,
+  userId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('user_place_searches').doc(docId).set({
+      userId,
+      schemaVersion: 1,
+      entries: {
+        'αθηνα': { label: 'Αθήνα', center: { lat: 37.98, lng: 23.73 }, savedAt: 1 },
+      },
+      clearedAt: 0,
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
  * Seed a `user_notification_settings` document.
  *
  * Rule: `allow read, write: if isOwner(userId)` = `request.auth.uid == userId`.

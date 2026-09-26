@@ -1331,6 +1331,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...ownerOnlyMatrix(),
   },
   {
+    collection: 'user_place_searches',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/user-place-searches.rules.test.ts',
+    // ADR-882 Φάση 2: docId == 'uplsrch_' + auth.uid (prefixed ownership) + shape validation
+    // (hasOnly · userId == uid · bounded maps). Seed docId = uplsrch_<same_tenant_user.uid>.
+    // List + create: deny for all (path-var rule; harness fresh-docId constraint).
+    // Own-uid create (merge write) + shape refusals exercised in the suite's regression block.
+    ...ownerOnlyMatrix(),
+  },
+  {
     collection: 'user_notification_settings',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/user-notification-settings.rules.test.ts',

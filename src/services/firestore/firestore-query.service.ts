@@ -340,7 +340,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
       payload.updatedAt = serverTimestamp();
     }
 
-    await updateDoc(ref, payload);
+    await (options.merge ? setDoc(ref, payload, { merge: true }) : updateDoc(ref, payload));
   }
 
   // --- WRITE: Delete -----------------------------------------------------------

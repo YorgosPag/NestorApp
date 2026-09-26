@@ -5391,6 +5391,37 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🔎 USER_PLACE_SEARCHES — ADR-882 Φάση 2 (ιστορικό αναζητήσεων τόπου)
+    // =========================================================================
+    // ΕΝΑ έγγραφο ανά άνθρωπο: `uplsrch_{uid}` — ίδιο κλειδί με το
+    // `userPlaceSearchesKey()` (αλλάζουν ΜΑΖΙ ή καθόλου). Κανένας άξονας εταιρείας:
+    // ο ιδιώτης δεν έχει, και το ιστορικό του δεν ανήκει σε καμία.
+    // Ο πελάτης γράφει με `merge` (μόνο τα φύλλα του), άρα create ΚΑΙ update κρίνουν
+    // το ίδιο ΤΕΛΙΚΟ σχήμα. Οι τιμές των χαρτών δεν ελέγχονται ανά στοιχείο (οι
+    // κανόνες δεν διατρέχουν χάρτη)· το εύρος τους κόβεται εδώ, το περιεχόμενο το
+    // φιλτράρει ο αμυντικός parser, και το έγγραφο το βλέπει ΜΟΝΟ ο ιδιοκτήτης.
+    // Όριο 24 (όχι 8): δύο συσκευές μπορεί να ξεπεράσουν στιγμιαία το 8 πριν το
+    // νοικοκυριό της επόμενης γραφής.
+    function isValidUserPlaceSearches(data) {
+      return data.keys().hasOnly(['userId', 'schemaVersion', 'entries', 'tombstones',
+                                  'clearedAt', 'updatedAt', 'createdAt'])
+          && data.userId == request.auth.uid
+          && data.schemaVersion is int
+          && (!('entries' in data) || (data.entries is map && data.entries.size() <= 24))
+          && (!('tombstones' in data) || (data.tombstones is map && data.tombstones.size() <= 24))
+          && (!('clearedAt' in data) || data.clearedAt is number);
+    }
+
+    match /user_place_searches/{docId} {
+      allow read, delete: if isAuthenticated()
+                          && docId == ('uplsrch_' + request.auth.uid);
+
+      allow create, update: if isAuthenticated()
+                            && docId == ('uplsrch_' + request.auth.uid)
+                            && isValidUserPlaceSearches(request.resource.data);
+    }
+
+    // =========================================================================
     // 📏 BIM_DIMENSIONS_3D COLLECTION - ADR-366 Phase 9 / C.3
     // =========================================================================
     // Manual 3D dimensions per project. Company-scoped via companyId.

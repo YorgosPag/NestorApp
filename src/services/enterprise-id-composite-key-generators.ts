@@ -43,6 +43,7 @@ import {
   ownershipRevisionKey,
   ownershipTableKey,
   queryStrategyDocKey,
+  userPlaceSearchesKey,
   userPreferencesKey,
   vendorLogoFileKey,
 } from './enterprise-id-composite-keys';
@@ -77,6 +78,10 @@ export abstract class CompositeKeyIdGenerators extends SpatialTourIdGenerators {
 
   generateUserPreferencesId(userId: string, companyId: string): string {
     return userPreferencesKey(userId, companyId);
+  }
+
+  generateUserPlaceSearchesId(userId: string): string {
+    return userPlaceSearchesKey(userId);
   }
 
   generateOwnershipRevisionId(version: number): string {

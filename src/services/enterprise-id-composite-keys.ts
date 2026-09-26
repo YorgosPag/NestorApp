@@ -135,6 +135,16 @@ export function userPreferencesKey(userId: string, companyId: string): string {
 }
 
 /**
+ * ADR-882 Φάση 2: deterministic 1:1 key for `user_place_searches/{id}` — ONE account-synced
+ * place-search history per person (no tenant axis: a private person has no company).
+ * ⚠️ The rules rebuild the same string (`'uplsrch_' + request.auth.uid`) — change both or neither.
+ */
+export function userPlaceSearchesKey(userId: string): string {
+  if (!userId) throw new Error('userPlaceSearchesKey: userId is required');
+  return `${P.USER_PLACE_SEARCHES}_${userId}`;
+}
+
+/**
  * ADR-327 §6: Deterministic vendor-logo file key — one logo claim per quote.
  * Replaces the legacy literal `'vendor-logo'` shared-claim id which produced
  * a single mutable Firestore doc serving N quotes (race-prone).

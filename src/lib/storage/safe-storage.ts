@@ -63,9 +63,9 @@ export const STORAGE_KEYS = {
   OWNER_PROPERTY_DRAFT: 'nestor_owner_property_draft',
 
   // ADR-882 — το ιστορικό αναζητήσεων τόπου («Ιστορικό αναζητήσεων» κάτω από το πεδίο).
-  // Ανά **συσκευή**, όχι ανά uid: ο επισκέπτης της οθόνης 1 είναι συνήθως ανώνυμος (όπως το
-  // Zillow χωρίς σύνδεση). Ο συγχρονισμός στον λογαριασμό είναι δηλωμένη επόμενη φάση.
-  // Σχήμα με `version` — βλ. `lib/geo/recent-place-searches.ts`.
+  // Ανά **συσκευή**, όχι ανά uid — και ΜΟΝΟ του ανώνυμου: ο συνδεδεμένος κρατά το ιστορικό
+  // στον λογαριασμό (Φάση 2, Firestore) και ΠΟΤΕ εδώ, ώστε μετά την αποσύνδεση ο επόμενος
+  // στην ίδια συσκευή να μη το βλέπει. Σχήμα με `version` — `lib/geo/recent-place-searches-device.ts`.
   RECENT_PLACE_SEARCHES: 'nestor_recent_place_searches',
 
   // ADR-860 §Ε3 — **sessionStorage**, όχι localStorage: «ανανέωσα ήδη αυτή την καρτέλα για την

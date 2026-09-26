@@ -90,7 +90,7 @@ export {
   generateCommentId, generateApprovalId, generateBankAccountId,
   generateDebtMaturityId, generateBudgetVarianceId, generateQueryStrategyDocId,
   generateChatHistoryDocId, generateOwnershipTableId, generateOwnershipRevisionId,
-  generateUserPreferencesId,
+  generateUserPreferencesId, generateUserPlaceSearchesId,
   generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
   generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,

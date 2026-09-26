@@ -259,6 +259,10 @@ export const generateOwnershipRevisionId = (version: number) =>
 export const generateUserPreferencesId = (userId: string, companyId: string) =>
   enterpriseIdService.generateUserPreferencesId(userId, companyId);
 
+// ADR-882 Φάση 2 — το ιστορικό αναζητήσεων τόπου του λογαριασμού (ένα ανά άνθρωπο)
+export const generateUserPlaceSearchesId = (userId: string) =>
+  enterpriseIdService.generateUserPlaceSearchesId(userId);
+
 // Procurement (ADR-267)
 export const generatePurchaseOrderId = () => enterpriseIdService.generatePurchaseOrderId();
 export const generatePOItemId = () => enterpriseIdService.generatePOItemId();

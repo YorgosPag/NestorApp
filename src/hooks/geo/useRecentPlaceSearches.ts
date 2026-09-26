@@ -3,16 +3,23 @@
 /**
  * **Η React όψη του ιστορικού αναζητήσεων τόπου** (ADR-882).
  *
- * Καμία κατάσταση React — ο δίσκος είναι η ΜΙΑ πηγή και το `useSyncExternalStore` τη
+ * Καμία κατάσταση React — η αποθήκη είναι η ΜΙΑ πηγή και το `useSyncExternalStore` τη
  * διαβάζει. Έτσι δύο κουτιά (ή δύο καρτέλες) δεν μπορούν να διαφωνήσουν, και η διαγραφή μιας
- * γραμμής φαίνεται **αμέσως** (οπτιμιστικά, γιατί η εγγραφή στο `localStorage` είναι σύγχρονη).
+ * γραμμής φαίνεται **αμέσως** (οπτιμιστικά).
  *
- * ⚠️ Στον server και στην πρώτη ενυδάτωση επιστρέφει **άδειο**: το `localStorage` δεν υπάρχει
- * εκεί, και ένα ιστορικό στο HTML του server θα ήταν hydration mismatch.
+ * 🔑 **Φάση 2 — ο δεσμός με τον λογαριασμό ζει ΕΔΩ, ΜΙΑ φορά**: το hook λέει στην αποθήκη
+ * ποιος είναι συνδεδεμένος (`bindAccountPlaceSearches`, ιδεμποτικό — δέκα κουτιά ⇒ ένας
+ * δεσμός). Όσο η ταυτότητα **φορτώνει**, ο δεσμός δεν αλλάζει: αλλιώς ο συνδεδεμένος θα
+ * έβλεπε για μια στιγμή το ιστορικό της συσκευής.
+ *
+ * ⚠️ Στον server και στην πρώτη ενυδάτωση επιστρέφει **άδειο**: ιστορικό στο HTML του server
+ * θα ήταν hydration mismatch.
  */
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { useAuthOptional } from '@/auth/contexts/AuthContext';
 import {
+  bindAccountPlaceSearches,
   getRecentPlaceSearchesSnapshot,
   subscribeRecentPlaceSearches,
   NO_RECENT_PLACE_SEARCHES,
@@ -24,6 +31,14 @@ function getServerSnapshot(): readonly RecentPlaceSearch[] {
 }
 
 export function useRecentPlaceSearches(): readonly RecentPlaceSearch[] {
+  const auth = useAuthOptional();
+  const uid = auth?.user?.uid ?? null;
+  const authLoading = auth?.loading ?? false;
+
+  useEffect(() => {
+    if (!authLoading) bindAccountPlaceSearches(uid);
+  }, [uid, authLoading]);
+
   return useSyncExternalStore(
     subscribeRecentPlaceSearches,
     getRecentPlaceSearchesSnapshot,

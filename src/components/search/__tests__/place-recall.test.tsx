@@ -28,6 +28,10 @@ jest.mock('@/lib/geocoding/geocoding-service', () => ({
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ warn: jest.fn(), error: jest.fn(), info: jest.fn() }),
 }));
+// Ανώνυμος επισκέπτης (ADR-882 Φάση 2): χωρίς AuthProvider το ιστορικό μένει στη συσκευή.
+jest.mock('@/auth/contexts/AuthContext', () => ({
+  useAuthOptional: () => null,
+}));
 
 const K = 'search-results:landing.search';
 const ATHENS = { lat: 37.98, lng: 23.73 };
