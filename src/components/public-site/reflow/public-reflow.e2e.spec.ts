@@ -24,7 +24,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { THEME_STORAGE_KEY } from '@/lib/appearance/theme-storage-key';
-import { collectHorizontalOverflow, type OverflowOffender } from './measure-horizontal-overflow';
+import { collectReflowFindings, type ReflowFindings } from './measure-horizontal-overflow';
 import { settleLayout } from './settle-layout';
 import {
   REFLOW_ALLOWED_SURFACES,
@@ -42,22 +42,31 @@ const SAMPLE_INTERVAL_MS = 500;
 const MAX_SAMPLES = 20;
 
 /**
- * Οι παραβάτες **αφού ηρεμήσει η διάταξη** (ADR-797 §Φ.Ρ.2). ⛔ Αν δεν ηρεμήσει ποτέ, η πύλη
- * **ΑΠΟΤΥΓΧΑΝΕΙ** ρητά — ποτέ «πήρα το τελευταίο δείγμα και πέρασα».
+ * Τα ευρήματα **αφού ηρεμήσει η διάταξη** (ADR-797 §Φ.Ρ.2) — και οι δύο ερωτήσεις από το ΙΔΙΟ δείγμα.
+ * ⛔ Αν δεν ηρεμήσει ποτέ, η πύλη **ΑΠΟΤΥΓΧΑΝΕΙ** ρητά — ποτέ «πήρα το τελευταίο δείγμα και πέρασα».
  */
-async function overflowOf(page: Page): Promise<OverflowOffender[]> {
+async function findingsOf(page: Page): Promise<ReflowFindings> {
   let previous = '';
   let agreeing = 0;
   for (let sample = 0; sample < MAX_SAMPLES; sample += 1) {
     await page.evaluate(settleLayout);
-    const offenders = await page.evaluate(collectHorizontalOverflow, [...REFLOW_ALLOWED_SURFACES]);
-    const key = JSON.stringify(offenders);
+    const findings = await page.evaluate(collectReflowFindings, [...REFLOW_ALLOWED_SURFACES]);
+    const key = JSON.stringify(findings);
     agreeing = key === previous ? agreeing + 1 : 1;
-    if (agreeing >= STABLE_SAMPLES) return offenders;
+    if (agreeing >= STABLE_SAMPLES) return findings;
     previous = key;
     await page.waitForTimeout(SAMPLE_INTERVAL_MS);
   }
   throw new Error(`η διάταξη δεν ηρέμησε σε ${MAX_SAMPLES} δείγματα — τελευταίο: ${previous}`);
+}
+
+/**
+ * Οι δύο ερωτήσεις (ADR-797 §Φ.Ρ.3) ως **χωριστές** αποτυχίες — το μήνυμα λέει ΠΟΙΑ απαντήθηκε «όχι».
+ * `expect.soft`: μια σελίδα που κόβει και τα δύο δείχνει και τα δύο σε ένα run.
+ */
+function expectFits(findings: ReflowFindings, where: string): void {
+  expect.soft(findings.offscreen, `${where} — στοιχείο πέρα από την οθόνη`).toEqual([]);
+  expect.soft(findings.clipped, `${where} — κείμενο ψαλιδισμένο από το κουτί του`).toEqual([]);
 }
 
 async function openRoute(page: Page, route: string) {
@@ -65,6 +74,12 @@ async function openRoute(page: Page, route: string) {
   expect(response?.ok(), `${route}: η σελίδα δεν αποδόθηκε (HTTP ${response?.status()})`).toBe(true);
   // Αρνητικός μάρτυρας ζωής: χωρίς ορατή κεφαλίδα, «μηδέν παραβάτες» δεν σημαίνει τίποτα.
   await expect(page.locator('header nav').first()).toBeVisible({ timeout: 60_000 });
+  // 🔑 ΜΑΡΤΥΡΑΣ ΕΤΟΙΜΟΤΗΤΑΣ (ADR-797 §Φ.Ρ.3): κάθε σελίδα του εύρους φορτώνει δεδομένα και το ΔΗΛΩΝΕΙ
+  //    (`<main aria-busy>` — `ShellSurface.busy`). Μετρημένο 2026-09-26: για ~3 s το `/stay` δεν είχε ούτε
+  //    πεδίο ούτε κάρτες, και «3 δείγματα που συμφωνούν» έκριναν ήρεμη μια ΑΔΕΙΑ σελίδα. ⛔ Σελίδα που δεν
+  //    δηλώνει `aria-busy` ή δεν βγαίνει ποτέ από τη φόρτωση ΑΠΟΤΥΓΧΑΝΕΙ — κι αυτό είναι βλάβη, όχι θόρυβος.
+  await expect(page.locator('main').first(), `${route}: η σελίδα δεν βγήκε από τη φόρτωση (<main aria-busy>)`)
+    .toHaveAttribute('aria-busy', 'false', { timeout: 60_000 });
 }
 
 for (const theme of REFLOW_THEMES) {
@@ -78,12 +93,12 @@ for (const theme of REFLOW_THEMES) {
 
     for (const width of REFLOW_WIDTHS) {
       for (const route of REFLOW_ROUTES) {
-        test(`${route} @ ${width}px — κανένα στοιχείο πέρα από την οθόνη`, async ({ page }) => {
+        test(`${route} @ ${width}px — χωρά στην οθόνη και κάθε κείμενο στο κουτί του`, async ({ page }) => {
           await page.setViewportSize({ width, height: 844 });
           await openRoute(page, route);
           expect(await page.evaluate(() => document.documentElement.classList.contains('dark')))
             .toBe(theme === 'dark');
-          expect(await overflowOf(page), `${route} @ ${width}px`).toEqual([]);
+          expectFits(await findingsOf(page), `${route} @ ${width}px`);
         });
       }
 
@@ -105,7 +120,7 @@ for (const theme of REFLOW_THEMES) {
           // Γλώσσες (≥ 2) + θέματα (3) ως ΟΡΑΤΕΣ επιλογές — όχι αναπτυσσόμενα κρυμμένα σε δεύτερο επίπεδο.
           // `expect.poll`, όχι στιγμιαίο `count()`: το περιεχόμενο του συρταριού φορτώνεται lazy (μετρημένο: 0).
           await expect.poll(() => dialog.getByRole('radio').count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(5);
-          expect(await overflowOf(page), `συρτάρι @ ${width}px`).toEqual([]);
+          expectFits(await findingsOf(page), `συρτάρι @ ${width}px`);
         });
       }
     }

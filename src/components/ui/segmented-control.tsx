@@ -12,6 +12,11 @@
  *  3. **Δεν αδειάζει ποτέ.** Το Radix `single` επιτρέπει αποεπιλογή (`''`)· μια προβολή «κάρτες | πίνακας»
  *     χωρίς προβολή δεν υπάρχει. Το `''` αγνοείται εδώ, μία φορά — όχι σε κάθε καταναλωτή (M3: «single-select
  *     segmented buttons always have one selected»).
+ *  4. **Η διάταξη ακολουθεί το `orientation`** — εδώ, μία φορά (ADR-809 §9.5 · ADR-797 §Φ.Ρ.3). Το `vertical`
+ *     δεν είναι μόνο βελάκια ↑/↓ (Radix): είναι **λίστα** πλήρους πλάτους, με ετικέτες στοιχισμένες αριστερά.
+ *     Μετρημένο 2026-09-26: σε 3 σταθερές στήλες το «Σκοτεινό»/«Σύστημα» και το «Ελληνικά» **κόβονταν** στο
+ *     συρτάρι (320–390 px). Ετικέτες άγνωστου μήκους × μεταφράσεις δεν χωρούν σε στήλες — iOS Settings,
+ *     GOV.UK radios: οι προτιμήσεις είναι **λίστα**. Ο καταναλωτής δηλώνει `orientation`, **όχι** κλάσεις διάταξης.
  */
 
 import * as React from 'react';
@@ -35,7 +40,7 @@ export interface SegmentedControlProps<T extends string>
 }
 
 function SegmentedControlInner<T extends string>(
-  { value, onValueChange, className, ...props }: SegmentedControlProps<T>,
+  { value, onValueChange, className, orientation, ...props }: SegmentedControlProps<T>,
   ref: React.ForwardedRef<React.ElementRef<typeof ToggleGroupPrimitive.Root>>,
 ): React.ReactElement {
   return (
@@ -47,7 +52,11 @@ function SegmentedControlInner<T extends string>(
       onValueChange={(next) => {
         if (next !== '') onValueChange(next as T);
       }}
-      className={cn('inline-flex flex-wrap items-center gap-1', className)}
+      orientation={orientation}
+      className={cn(
+        orientation === 'vertical' ? 'flex w-full flex-col items-stretch gap-1' : 'inline-flex flex-wrap items-center gap-1',
+        className,
+      )}
       {...props}
     />
   );
@@ -68,7 +77,12 @@ export const SegmentedControlItem = React.forwardRef<
   SegmentedControlItemProps
 >(({ variant = 'outline', size = 'sm', className, children, ...props }, ref) => (
   <ToggleGroupPrimitive.Item ref={ref} asChild {...props}>
-    <Button variant={variant} size={size} className={cn(className, COLOR_BRIDGE.selectionControl.pressedOn)}>
+    <Button
+      variant={variant}
+      size={size}
+      // Το Radix σημαδεύει κάθε item με `data-orientation` — η λίστα (#4) στοιχίζει αριστερά, όπως κάθε λίστα.
+      className={cn('data-[orientation=vertical]:justify-start', className, COLOR_BRIDGE.selectionControl.pressedOn)}
+    >
       {children}
     </Button>
   </ToggleGroupPrimitive.Item>

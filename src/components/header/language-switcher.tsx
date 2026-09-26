@@ -170,17 +170,16 @@ export function LanguageOptions({ labelledBy }: Readonly<{ labelledBy: string }>
     // 📱 ΚΑΘΕΤΗ ΛΙΣΤΑ, όχι στήλες (ADR-809 §9 · μετρημένο 2026-09-26 στα 390 px): το `grid-cols-3` έδινε
     //    ~85 px ανά γλώσσα ⇒ «Ελληνικ|», «Pseudo (|» κομμένα. Ονόματα άγνωστου μήκους × πλήθος που μεγαλώνει
     //    δεν χωρούν σε σταθερές στήλες· Apple Settings · Airbnb · GOV.UK: η γλώσσα είναι ΛΙΣΤΑ. Το
-    //    `orientation` κάνει και τα βελάκια του radio group ↑/↓ (Radix), ώστε να ταιριάζουν με ό,τι φαίνεται.
+    //    `orientation` φέρνει τη διάταξη λίστας ΑΠΟ ΤΟ SSoT (`segmented-control` #4) και τα βελάκια ↑/↓ (Radix).
     <SegmentedControl<Language>
       aria-labelledby={labelledBy}
       orientation="vertical"
       value={currentLanguage.code}
       onValueChange={(code) => void handleLanguageChange(code)}
       disabled={isChanging}
-      className="flex w-full flex-col items-stretch"
     >
       {languages.map((language) => (
-        <SegmentedControlItem key={language.code} value={language.code} className="min-h-11 w-full justify-start gap-2">
+        <SegmentedControlItem key={language.code} value={language.code} className="min-h-11 gap-2">
           <span aria-hidden="true">{language.flag}</span>
           <span lang={language.code}>{language.name}</span>
         </SegmentedControlItem>

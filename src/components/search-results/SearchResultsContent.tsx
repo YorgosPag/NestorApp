@@ -288,6 +288,8 @@ export function SearchResultsContent() {
         καταγράφεται με λόγο στο `.shell-surface.json` — δεν λύνεται με `-mx-*`.
       */
       data-shell-surface="bleed"
+      // Φορτώνει ακόμη τα αρχικά δεδομένα; — ίδιο σήμα με το `ShellSurface.busy` (ADR-797 §Φ.Ρ.3).
+      aria-busy={loading}
       /*
         📐 ΤΟ ΥΨΟΣ ΤΟΥ ΚΑΔΡΟΥ — Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ (ADR-797 ΦΑΣΗ Γ).
         ΔΕΥΤΕΡΗ, ΑΝΕΞΑΡΤΗΤΗ δήλωση από το `bleed`: εκείνο λέει «μηδέν οριζόντιο

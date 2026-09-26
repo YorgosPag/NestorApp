@@ -390,7 +390,7 @@ export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProp
           />
         )}
 
-        <label htmlFor={inputId} className="flex min-w-56 flex-1 flex-col gap-1 text-sm">
+        <label htmlFor={inputId} className="flex min-w-field flex-1 flex-col gap-1 text-sm">
           <span className="font-medium text-foreground">
             {t('search-results:landing.search.label')}
           </span>

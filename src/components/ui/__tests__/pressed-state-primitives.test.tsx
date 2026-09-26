@@ -6,6 +6,7 @@
  *   Π3 · ο ρόλος νικά τα χειρόγραφα χρώματα του καταναλωτή (η σειρά στο `cn`).
  *   Π4 · SegmentedControl: radio σημασιολογία, ονομασμένη ομάδα, βελάκια μετακινούν την εστίαση.
  *   Π5 · SegmentedControl: ΔΕΝ αδειάζει ποτέ (το Radix `single` θα αποεπέλεγε).
+ *   Π5β · SegmentedControl `vertical`: η ΔΙΑΤΑΞΗ λίστας ζει στο SSoT (ADR-809 §9.5), και τα βελάκια ↑/↓.
  *   Π6 · Toggle (Radix): ON = ρόλος, όχι `bg-accent`.
  */
 
@@ -111,6 +112,34 @@ describe('SegmentedControl', () => {
     fireEvent.click(cards);
     expect(cards).toHaveAttribute('aria-checked', 'true');
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('SegmentedControl — orientation="vertical" (ADR-809 §9.5 · CHECK 3.94)', () => {
+  it('Π5β · λίστα πλήρους πλάτους από το SSoT, ετικέτες αριστερά, ↓ μετακινεί την εστίαση', async () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε τον κλάδο `vertical` από το `segmented-control` ⇒ κοκκινίζει. Χωρίς αυτόν
+    //    κάθε καταναλωτής ξαναγράφει κλάσεις διάταξης — και οι 3 στήλες ξαναέκοβαν το «Σύστημα» στα 320 px.
+    render(
+      <SegmentedControl<View> orientation="vertical" value="cards" onValueChange={() => undefined} aria-label="Θέμα">
+        <SegmentedControlItem value="cards">Κάρτες</SegmentedControlItem>
+        <SegmentedControlItem value="table">Πίνακας</SegmentedControlItem>
+      </SegmentedControl>,
+    );
+    const group = screen.getByRole('group', { name: 'Θέμα' });
+    expect(group).toHaveClass('flex-col', 'w-full', 'items-stretch');
+    expect(group).not.toHaveClass('inline-flex');
+    const cards = screen.getByRole('radio', { name: 'Κάρτες' });
+    expect(cards).toHaveAttribute('data-orientation', 'vertical');
+    expect(cards).toHaveClass('data-[orientation=vertical]:justify-start');
+
+    cards.focus();
+    fireEvent.keyDown(cards, { key: 'ArrowDown' });
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Πίνακας' })).toHaveFocus());
+  });
+
+  it('Π5γ · η προεπιλογή (οριζόντια) ΔΕΝ άλλαξε — 5 καταναλωτές τη χρησιμοποιούν', () => {
+    render(<Harness />);
+    expect(screen.getByRole('group', { name: 'Προβολή' })).toHaveClass('inline-flex', 'flex-wrap');
   });
 });
 

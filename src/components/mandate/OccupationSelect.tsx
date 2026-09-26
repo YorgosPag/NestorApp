@@ -157,9 +157,13 @@ export function OccupationSelect({
    * περιτύλιξη ονόμαζε σωστά (μετρημένο), αλλά **σιωπηρά**: ο τύπος `FieldAccessibleName`
    * ζητά **δηλωμένο** όνομα, και η σιωπηρή σύνδεση δεν δηλώνεται πουθενά. Το κουτί (και το
    * ταβάνι πλάτους) μένει εδώ· η ετικέτα δείχνει με `id`, όπως σε κάθε άλλο combobox.
+   *
+   * 📐 **Και το ΠΑΤΩΜΑ δεν νικά ποτέ τον γονέα** *(2026-09-26, CHECK 3.94 · ADR-797 §Φ.Ρ.3)*:
+   * `min-w-field` = `min(14rem, 100%)`. Με σκέτο `min-w-56` το πεδίο έμενε 224 px μέσα σε
+   * γραμμή 192 px στα 320 — το δεξί του άκρο και το ▾ **ψαλιδίζονταν** σιωπηλά.
    */
   return (
-    <div className="flex min-w-56 max-w-72 flex-col gap-1 text-sm">
+    <div className="flex min-w-field max-w-72 flex-col gap-1 text-sm">
       <label htmlFor={fieldId} className="font-medium text-foreground">
         {t(DIRECTORY_KEYS.occupationFilterLabel)}
       </label>

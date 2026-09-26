@@ -200,6 +200,18 @@ export default {
         'performance-md': 'var(--spacing-component-gap-md)',
         'performance-lg': 'var(--spacing-component-gap-lg)',
       },
+      /*
+        📐 ΤΟ ΠΑΤΩΜΑ ΠΟΥ ΔΕΝ ΝΙΚΑ ΠΟΤΕ ΤΟΝ ΓΟΝΕΑ (ADR-797 §Φ.Ρ.3 · CHECK 3.94).
+        `min-w-field` = «ελάχιστο πλάτος πεδίου σε γραμμή που αναδιπλώνεται». Σκέτο `min-w-56`
+        (224 px) μέσα σε `flex-wrap` στενότερο από το πάτωμα (192 px στα 320) **ξεπερνά** τον
+        γονέα, και ο καθολικός `overflow-x: clip` το ψαλιδίζει σιωπηλά — μετρημένο στα
+        `/pro` (32 px του πεδίου «Ειδικότητα», μαζί με το ▾) και `/stay` (το πεδίο «Περιοχή»).
+        Το `min(…, 100%)` είναι το intrinsic σχήμα (Every Layout): πάτωμα όπου υπάρχει χώρος,
+        πλήρες πλάτος όπου δεν υπάρχει — χωρίς breakpoint.
+      */
+      minWidth: {
+        field: 'min(14rem, 100%)',
+      },
       // 🏢 ENTERPRISE TYPOGRAPHY SYSTEM - CSS Variables Integration
       fontSize: {
         'performance-xs': ['var(--font-size-xs)', { lineHeight: '1.25' }],

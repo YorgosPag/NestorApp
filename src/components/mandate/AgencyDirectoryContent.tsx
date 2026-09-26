@@ -219,7 +219,7 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   );
 
   return (
-    <ShellSurface as="main" measure="wide" className="gap-y-6">
+    <ShellSurface as="main" measure="wide" busy={loading} className="gap-y-6">
       {/*
         🖼️ **Η ΑΚΤΙΝΑ ΤΩΝ ΕΠΑΓΓΕΛΜΑΤΙΩΝ (ADR-777 §8.82)** — ο **κοινός** ήρωας του κόμβου,
         με **τη δική του** εικόνα και **τη δική του** ερώτηση: ειδικότητα + περιοχή, όπως

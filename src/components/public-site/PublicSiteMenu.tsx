@@ -57,7 +57,7 @@ export function PublicSiteMenu(): React.ReactElement {
         onFocus={prefetch}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="-ml-2 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+        className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
       >
         <Menu className={iconSizes.md} aria-hidden="true" />
         <span>{t('common:header.menu.label')}</span>

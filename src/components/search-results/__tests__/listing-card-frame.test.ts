@@ -35,7 +35,8 @@ describe('listing-card-frame', () => {
   });
 
   it('το πλέγμα χρησιμοποιεί το δηλωμένο ελάχιστο πλάτος κελιού', () => {
-    expect(LISTING_CARD_GRID_CLASS).toContain(`minmax(${LISTING_CARD_MIN_REM}rem,1fr)`);
+    // Το πάτωμα ΔΕΝ νικά ποτέ τον περιέκτη (CHECK 3.94 · ADR-797 §Φ.Ρ.3): σκέτο `17rem` έκοβε 16 px στα 320.
+    expect(LISTING_CARD_GRID_CLASS).toContain(`minmax(min(${LISTING_CARD_MIN_REM}rem,100%),1fr)`);
     expect(LISTING_CARD_GRID_CLASS).toContain('auto-fill');
   });
 

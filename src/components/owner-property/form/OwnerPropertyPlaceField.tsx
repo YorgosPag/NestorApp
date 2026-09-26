@@ -253,7 +253,7 @@ export function OwnerPropertyPlaceField({
               })}
               placeholder={t(`${K}.form.placeQueryPlaceholder`)}
               disabled={busy}
-              className="min-w-56 flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+              className="min-w-field flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
             />
             <button
               type="button"

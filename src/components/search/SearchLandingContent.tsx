@@ -200,6 +200,8 @@ export function SearchLandingContent() {
       onValueChange={(next) => setChosen(next as LandingMode)}
     >
       <main
+        // Φορτώνει ακόμη τα αρχικά δεδομένα; — ίδιο σήμα με το `ShellSurface.busy` (ADR-797 §Φ.Ρ.3).
+        aria-busy={loading}
         /*
           ⚠️ ΤΟ ΜΕΤΡΟ ΔΗΛΩΝΕΤΑΙ ΑΠΟ ΤΗ ΣΕΛΙΔΑ, ΟΧΙ ΑΠΟ ΤΗ ΓΕΙΤΟΝΙΑ (ADR-797 ΦΑΣΗ Β).
           Το `(light)` είναι **ετερογενές**, μετρημένα: αυτή είναι κεντραρισμένο μενού,

@@ -78,7 +78,7 @@ export function ShortStayLandingContent() {
   const canAskWhere = !loading && error === null && coverageAnswersWhere(coverage);
 
   return (
-    <ShellSurface as="main" measure="wide" className="gap-y-6 [align-content:start]">
+    <ShellSurface as="main" measure="wide" busy={loading} className="gap-y-6 [align-content:start]">
       <LandingHero
         image={LANDING_HERO_IMAGES.stay}
         title={t('stay-landing:title')}

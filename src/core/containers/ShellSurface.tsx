@@ -107,6 +107,16 @@ export interface ShellSurfaceProps {
    * `aria-label` χωρίς ρόλο δεν ανακοινώνεται πουθενά.
    */
   readonly ariaLabel?: string;
+  /**
+   * **Φορτώνει ακόμη τα αρχικά δεδομένα της σελίδας;** → `aria-busy` — έχει νόημα **μόνο** με `as="main"`.
+   *
+   * 🔑 ΔΥΟ αναγνώστες, ΕΝΑ σήμα (ADR-797 §Φ.Ρ.3): ο αναγνώστης οθόνης μαθαίνει ότι το περιεχόμενο
+   * αλλάζει ακόμη (WAI-ARIA), και η πύλη **CHECK 3.94** περιμένει `aria-busy="false"` πριν μετρήσει.
+   * 🔴 Μετρημένο 2026-09-26: για ~3 s το `/stay` δεν είχε ούτε πεδίο ούτε κάρτες, και «3 δείγματα
+   * που συμφωνούν» έκριναν ήρεμη μια **άδεια** σελίδα ⇒ πράσινο που σήμαινε «κανείς δεν κοίταξε».
+   * Παραλείπεται όταν η σελίδα δεν φορτώνει δεδομένα.
+   */
+  readonly busy?: boolean;
 }
 
 export function ShellSurface({
@@ -115,6 +125,7 @@ export function ShellSurface({
   measure,
   className,
   ariaLabel,
+  busy,
 }: ShellSurfaceProps): React.ReactElement {
   const Tag = as;
 
@@ -123,6 +134,7 @@ export function ShellSurface({
       data-shell-surface=""
       data-shell-measure={measure}
       aria-label={as === 'main' ? ariaLabel : undefined}
+      aria-busy={as === 'main' ? busy : undefined}
       className={cn('w-full', className)}
     >
       {children}

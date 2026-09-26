@@ -82,14 +82,16 @@ export function ThemeOptions({ labelledBy }: Readonly<{ labelledBy: string }>) {
   const current: ThemeChoice = THEME_OPTIONS.find((option) => option.value === theme)?.value ?? 'system';
 
   return (
+    // 📱 ΚΑΘΕΤΗ ΛΙΣΤΑ, όπως η γλώσσα (ADR-809 §9.5): σε 3 στήλες το «Σύστημα» κοβόταν 8 px στα 320 και το
+    //    «Σκοτεινό» 4 px στα 390 (CHECK 3.94 · μετρημένο 2026-09-26). Δύο προτιμήσεις, ΕΝΑ σχήμα.
     <SegmentedControl<ThemeChoice>
       aria-labelledby={labelledBy}
+      orientation="vertical"
       value={current}
       onValueChange={setTheme}
-      className="grid w-full grid-cols-3"
     >
       {THEME_OPTIONS.map((option) => (
-        <SegmentedControlItem key={option.value} value={option.value} className="min-h-11 w-full gap-2">
+        <SegmentedControlItem key={option.value} value={option.value} className="min-h-11 gap-2">
           <option.icon className={iconSizes.sm} aria-hidden="true" />
           {/* Πρόσβαση ιδιότητας, όχι αποδόμηση: τη λύνει ο generator του κελύφους (ADR-744 §2). */}
           <span>{t(option.labelKey)}</span>
