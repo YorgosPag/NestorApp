@@ -64,6 +64,8 @@ export const MUNICIPAL_UNIT_LEVEL = 6;
 export interface HierarchyRow {
   readonly id: string;
   readonly n: string;
+  /** Σύντομο όνομα χωρίς πρόθεμα βαθμίδας, σε γενική («ΚΟΜΟΤΗΝΗΣ») — το διαβάζει ο κριτής του ADR-889. */
+  readonly sn?: string;
   readonly c: string;
   readonly l: number;
   /** Ο γονέας — τον χρειάζεται η **σύνθεση** δήμου από δημοτικές ενότητες (ADR-846 Φ4). */
