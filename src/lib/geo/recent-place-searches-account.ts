@@ -24,7 +24,7 @@ import { createExternalStore } from '@/lib/state/createExternalStore';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   NO_RECENT_PLACE_SEARCHES,
-  placeSearchKey,
+  recentPlaceKey,
   type RecentPlaceSearch,
 } from './recent-place-searches-model';
 import { readDevicePlaceSearches, writeDevicePlaceSearches } from './recent-place-searches-device';
@@ -105,11 +105,11 @@ function adoptGuestSearches(target: Binding): void {
   target.adopted = true;
   const now = Date.now();
   const guest = readDevicePlaceSearches();
-  const adopted = new Set(guestEntriesToAdopt(guest, now).map((place) => placeSearchKey(place.label)));
+  const adopted = new Set(guestEntriesToAdopt(guest, now).map(recentPlaceKey));
   if (adopted.size === 0) return;
   const forgetOnDevice = () => {
     if (binding !== target) return;
-    writeDevicePlaceSearches(readDevicePlaceSearches().filter((p) => !adopted.has(placeSearchKey(p.label))));
+    writeDevicePlaceSearches(readDevicePlaceSearches().filter((p) => !adopted.has(recentPlaceKey(p))));
   };
   commit(guestMergePatch(target.state, guest, now)).then(forgetOnDevice, report('adopt'));
 }
@@ -159,14 +159,15 @@ export function bindAccountPlaceSearches(uid: string | null): void {
   notify();
 }
 
-export function rememberAccountPlaceSearch(entry: RecentPlaceSearch): void {
+export function rememberAccountPlaceSearch(entry: RecentPlaceSearch, superseded: readonly string[] = []): void {
   if (binding === null) return;
-  commit(rememberAccountPatch(binding.state, entry)).catch(report('remember'));
+  commit(rememberAccountPatch(binding.state, entry, superseded)).catch(report('remember'));
 }
 
-export function forgetAccountPlaceSearch(label: string): void {
+/** `key` = `recentPlaceKey` της εγγραφής. */
+export function forgetAccountPlaceSearch(key: string): void {
   if (binding === null) return;
-  commit(forgetAccountPatch(binding.state, label, Date.now())).catch(report('forget'));
+  commit(forgetAccountPatch(binding.state, key, Date.now())).catch(report('forget'));
 }
 
 export function clearAccountPlaceSearches(): void {

@@ -93,7 +93,7 @@ describe('Ι/Ο', () => {
     rememberPlaceSearch('Θεσσαλονίκη', THESSALONIKI, 2);
     expect(readRecentPlaceSearches().map((p) => p.label)).toEqual(['Θεσσαλονίκη', 'Αθήνα']);
 
-    forgetPlaceSearch('ΑΘΗΝΑ');
+    forgetPlaceSearch({ label: 'ΑΘΗΝΑ', center: ATHENS, savedAt: 0 });
     expect(readRecentPlaceSearches().map((p) => p.label)).toEqual(['Θεσσαλονίκη']);
 
     clearPlaceSearches();

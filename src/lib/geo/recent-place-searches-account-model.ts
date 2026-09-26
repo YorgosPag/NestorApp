@@ -26,6 +26,7 @@
 import {
   RECENT_PLACE_SEARCHES_LIMIT,
   placeSearchKey,
+  recentPlaceKey,
   toRecentPlace,
   type RecentPlaceSearch,
 } from './recent-place-searches-model';
@@ -71,9 +72,12 @@ export interface AccountPatch {
   readonly clearedAt?: number;
 }
 
-/** Η ταυτότητα ως όνομα πεδίου — ή `null` όταν το κείμενο δεν μπορεί να γίνει πεδίο. */
-export function accountKeyOf(label: string): string | null {
-  const key = placeSearchKey(label);
+/**
+ * Η ταυτότητα ως όνομα πεδίου — ή `null` όταν δεν μπορεί να γίνει πεδίο. Δέχεται κλειδί
+ * (`recentPlaceKey`) **ή** ετικέτα σημείου: η κανονικοποίηση είναι ιδεμποτική.
+ */
+export function accountKeyOf(keyOrLabel: string): string | null {
+  const key = placeSearchKey(keyOrLabel);
   if (key === '' || key.length > ACCOUNT_KEY_MAX_LENGTH || RESERVED_FIELD_NAME.test(key)) return null;
   return key;
 }
@@ -88,7 +92,7 @@ function parseEntries(raw: unknown): Record<string, RecentPlaceSearch> {
   for (const [key, value] of Object.entries(raw)) {
     const place = toRecentPlace(value);
     // Ακεραιότητα: το κλειδί ΠΡΕΠΕΙ να είναι η ταυτότητα της ετικέτας του.
-    if (place !== null && accountKeyOf(place.label) === key) entries[key] = place;
+    if (place !== null && accountKeyOf(recentPlaceKey(place)) === key) entries[key] = place;
   }
   return entries;
 }
@@ -177,23 +181,44 @@ export function isEmptyAccountPatch(patch: AccountPatch): boolean {
     && Object.keys(patch.tomb).length === 0 && patch.untomb.length === 0;
 }
 
+/**
+ * Τα σημεία που αντικαθιστά η νέα εγγραφή (§3.7) — **με διαγραφή**, όχι μόνο αφαίρεση: αλλιώς
+ * μια άλλη συσκευή που τα κρατά ακόμη θα τα ανέβαζε ξανά στην υιοθεσία.
+ */
+function supersededTombs(
+  state: AccountPlaceSearchState,
+  superseded: readonly string[],
+  at: number,
+): Record<string, number> {
+  const tomb: Record<string, number> = {};
+  for (const raw of superseded) {
+    const key = accountKeyOf(raw);
+    const place = key === null ? undefined : state.entries[key];
+    if (key !== null && place !== undefined && place.kind !== 'area') tomb[key] = at;
+  }
+  return tomb;
+}
+
 /** Νέα αναζήτηση: ζωντανεύει ακόμη κι αν είχε διαγραφεί (νεότερο `savedAt` από τη διαγραφή). */
 export function rememberAccountPatch(
   state: AccountPlaceSearchState,
   entry: RecentPlaceSearch,
+  superseded: readonly string[] = [],
 ): AccountPatch | null {
-  const key = accountKeyOf(entry.label);
+  const key = accountKeyOf(recentPlaceKey(entry));
   if (key === null) return null;
   const untomb = key in state.tombstones ? [key] : [];
-  return withHousekeeping(state, { put: { [key]: entry }, drop: [], tomb: {}, untomb });
+  const tomb = supersededTombs(state, superseded, entry.savedAt);
+  return withHousekeeping(state, { put: { [key]: entry }, drop: Object.keys(tomb), tomb, untomb });
 }
 
+/** `keyOrLabel` = `recentPlaceKey` της εγγραφής (ή ετικέτα σημείου — ίδια κανονικοποίηση). */
 export function forgetAccountPatch(
   state: AccountPlaceSearchState,
-  label: string,
+  keyOrLabel: string,
   now: number,
 ): AccountPatch | null {
-  const key = accountKeyOf(label);
+  const key = accountKeyOf(keyOrLabel);
   if (key === null) return null;
   const drop = key in state.entries ? [key] : [];
   return withHousekeeping(state, { put: {}, drop, tomb: { [key]: now }, untomb: [] });
@@ -208,7 +233,9 @@ export function guestEntriesToAdopt(
   guest: readonly RecentPlaceSearch[],
   now: number,
 ): RecentPlaceSearch[] {
-  return guest.filter((place) => place.savedAt >= now - GUEST_MERGE_WINDOW_MS && accountKeyOf(place.label) !== null);
+  return guest.filter(
+    (place) => place.savedAt >= now - GUEST_MERGE_WINDOW_MS && accountKeyOf(recentPlaceKey(place)) !== null,
+  );
 }
 
 /**
@@ -222,7 +249,7 @@ export function guestMergePatch(
 ): AccountPatch | null {
   const put: Record<string, RecentPlaceSearch> = {};
   for (const place of guestEntriesToAdopt(guest, now)) {
-    const key = accountKeyOf(place.label) as string;
+    const key = accountKeyOf(recentPlaceKey(place)) as string;
     const current = put[key]?.savedAt ?? state.entries[key]?.savedAt ?? Number.NEGATIVE_INFINITY;
     if (place.savedAt > current && place.savedAt > horizonOf(state, key)) put[key] = place;
   }

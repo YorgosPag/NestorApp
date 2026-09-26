@@ -15,7 +15,7 @@ import { createExternalStore } from '@/lib/state/createExternalStore';
 import {
   NO_RECENT_PLACE_SEARCHES,
   RECENT_PLACE_SEARCHES_LIMIT,
-  placeSearchKey,
+  recentPlaceKey,
   toRecentPlace,
   withRecentPlaceSearch,
   withoutRecentPlaceSearch,
@@ -43,7 +43,7 @@ export function parseRecentPlaceSearches(raw: unknown): RecentPlaceSearch[] {
   for (const entry of entries) {
     const place = toRecentPlace(entry);
     if (place === null) continue;
-    const key = placeSearchKey(place.label);
+    const key = recentPlaceKey(place);
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(place);
@@ -109,10 +109,11 @@ export function writeDevicePlaceSearches(entries: readonly RecentPlaceSearch[]):
 }
 
 /** Διαβάζει **φρέσκο** από τον δίσκο πριν γράψει — άλλη καρτέλα μπορεί να έγραψε ενδιάμεσα. */
-export function rememberDevicePlaceSearch(entry: RecentPlaceSearch): void {
-  writeDevicePlaceSearches(withRecentPlaceSearch(readDevicePlaceSearches(), entry));
+export function rememberDevicePlaceSearch(entry: RecentPlaceSearch, superseded: readonly string[] = []): void {
+  writeDevicePlaceSearches(withRecentPlaceSearch(readDevicePlaceSearches(), entry, superseded));
 }
 
-export function forgetDevicePlaceSearch(label: string): void {
-  writeDevicePlaceSearches(withoutRecentPlaceSearch(readDevicePlaceSearches(), label));
+/** `key` = `recentPlaceKey` της εγγραφής. */
+export function forgetDevicePlaceSearch(key: string): void {
+  writeDevicePlaceSearches(withoutRecentPlaceSearch(readDevicePlaceSearches(), key));
 }

@@ -31,16 +31,24 @@ import {
   rememberAccountPlaceSearch,
   subscribeAccountPlaceSearches,
 } from './recent-place-searches-account';
-import type { RecentPlaceSearch } from './recent-place-searches-model';
+import {
+  recentPlaceKey,
+  supersededPointKeys,
+  type RecentAreaSearch,
+  type RecentPlaceSearch,
+} from './recent-place-searches-model';
 
 export {
   NO_RECENT_PLACE_SEARCHES,
   RECENT_PLACE_SEARCHES_LIMIT,
   matchRecentPlaceSearches,
   placeSearchKey,
+  recentPlaceKey,
   withRecentPlaceSearch,
   withoutRecentPlaceSearch,
+  type RecentAreaSearch,
   type RecentPlaceSearch,
+  type RecentPointSearch,
 } from './recent-place-searches-model';
 export { parseRecentPlaceSearches } from './recent-place-searches-device';
 export { bindAccountPlaceSearches } from './recent-place-searches-account';
@@ -68,17 +76,35 @@ export function subscribeRecentPlaceSearches(listener: () => void): () => void {
   };
 }
 
+/** Ο ΕΝΑΣ δρόμος εγγραφής — συσκευή ή λογαριασμός, με τα σημεία που η εγγραφή αντικαθιστά. */
+function rememberEntry(entry: RecentPlaceSearch, superseded: readonly string[]): void {
+  if (isAccountPlaceSearchesActive()) rememberAccountPlaceSearch(entry, superseded);
+  else rememberDevicePlaceSearch(entry, superseded);
+}
+
 export function rememberPlaceSearch(label: string, center: GeoPoint, now: number): void {
   const trimmed = label.trim();
   if (trimmed === '') return;
-  const entry: RecentPlaceSearch = { label: trimmed, center, savedAt: now };
-  if (isAccountPlaceSearchesActive()) rememberAccountPlaceSearch(entry);
-  else rememberDevicePlaceSearch(entry);
+  rememberEntry({ label: trimmed, center, savedAt: now }, []);
 }
 
-export function forgetPlaceSearch(label: string): void {
-  if (isAccountPlaceSearchesActive()) forgetAccountPlaceSearch(label);
-  else forgetDevicePlaceSearch(label);
+/**
+ * ADR-882 §3.7 — **η περιοχή μπαίνει με την ταυτότητά της**, όχι με σημείο. `typed` = ό,τι
+ * πληκτρολόγησε ο άνθρωπος (όταν η περιοχή ήρθε από το Enter): το παλιό σημείο με το ίδιο
+ * κείμενο **αναβαθμίζεται** σε αυτήν την εγγραφή — ένας τόπος, μία γραμμή.
+ */
+export function rememberAreaSearch(area: { readonly id: string; readonly name: string }, now: number, typed?: string): void {
+  const label = area.name.trim();
+  if (label === '' || area.id === '') return;
+  const entry: RecentAreaSearch = { kind: 'area', label, areaId: area.id, savedAt: now };
+  rememberEntry(entry, supersededPointKeys(entry, typed));
+}
+
+/** Αφαίρεση μίας εγγραφής — με την **ταυτότητά** της, ώστε δύο ομώνυμες περιοχές να μη σβήνουν μαζί. */
+export function forgetPlaceSearch(place: RecentPlaceSearch): void {
+  const key = recentPlaceKey(place);
+  if (isAccountPlaceSearchesActive()) forgetAccountPlaceSearch(key);
+  else forgetDevicePlaceSearch(key);
 }
 
 /** «Καθαρισμός ιστορικού» — στον λογαριασμό σβήνει **και** στον server, σε κάθε συσκευή. */

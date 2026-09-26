@@ -181,6 +181,6 @@ function handleListKey(
   }
   if (event.key === 'Delete' && event.shiftKey && active.kind === 'recent') {
     event.preventDefault();
-    forgetPlaceSearch(active.place.label);
+    forgetPlaceSearch(active.place);
   }
 }
