@@ -379,6 +379,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-890 §5.2 — η σύνοψη αγοράς ανά περιοχή. Δημόσια ΣΕΛΙΔΑ δεν σημαίνει δημόσια ΣΥΛΛΟΓΗ:
+    // η σελίδα αποδίδεται στον διακομιστή, άρα ο πελάτης δεν χρειάζεται καμία πρόσβαση.
+    collection: 'area_market_snapshots',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/area-market-snapshots.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'area_market_runs',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/area-market-runs.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     collection: 'listing_view_shards',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/listing-view-shards.rules.test.ts',

@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 494,
+  "population": 531,
   "tally": {
     "undeclared": 55,
     "prefix-shadowed-by-declaration": 28,
-    "declared-over-default": 72,
-    "declared-agrees": 240,
-    "declared-via-factory": 99
+    "declared-over-default": 92,
+    "declared-agrees": 256,
+    "declared-via-factory": 100
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -22,7 +22,7 @@
     "STANDARD→HIGH": 1
   },
   "violation_count": 83,
-  "declaration_count": 98,
+  "declaration_count": 100,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -129,6 +129,7 @@
     "createQueueCronRoute::/api/cron/ai-pipeline",
     "createQueueCronRoute::/api/cron/email-ingestion",
     "createScanCronRoute::/api/cron/ai-learning",
+    "createScanCronRoute::/api/cron/area-market-rollup",
     "createScanCronRoute::/api/cron/backup",
     "createScanCronRoute::/api/cron/demand-interest-announce",
     "createScanCronRoute::/api/cron/demand-listing-match-announce",

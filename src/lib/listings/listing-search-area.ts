@@ -21,6 +21,7 @@
  */
 
 import { areaRelation } from '@/lib/geo/geo-area';
+import { isAdminAreaId } from '@/lib/geo/admin-area-index-file';
 import { listingSearchArea } from '@/lib/listings/listing-map-shape';
 import type { GeoArea, GeoBoundingBox, GeoRegionRef } from '@/types/geo/coordinates';
 import type { PublicListing } from '@/types/public-listing';
@@ -104,15 +105,12 @@ export function writeSearchAreaBox(box: GeoBoundingBox): string {
 export const SEARCH_REGION_PARAM = 'area';
 
 /**
- * Σχήμα `id` της ιεραρχίας: `<βαθμίδα>:<κωδικός>` (`municipality:0708`). Ό,τι άλλο
- * αγνοείται — ο αναγνώστης δεν ζητά αρχείο με αυθαίρετο όνομα από τη διεύθυνση.
+ * Διεύθυνση → αναφορά σε περιοχή, ή `null`. **Η γεωμετρία επιλύεται αλλού** (`useAdminBoundary`).
+ * Το σχήμα της ταυτότητας το κρίνει το `isAdminAreaId` — το ίδιο με τη σελίδα `/area/[id]` (ADR-890).
  */
-const REGION_ID = /^[a-z_]+:[0-9]+$/;
-
-/** Διεύθυνση → αναφορά σε περιοχή, ή `null`. **Η γεωμετρία επιλύεται αλλού** (`useAdminBoundary`). */
 export function readSearchRegion(params: URLSearchParams): GeoRegionRef | null {
   const raw = params.get(SEARCH_REGION_PARAM)?.trim() ?? '';
-  return REGION_ID.test(raw) ? { adminId: raw } : null;
+  return isAdminAreaId(raw) ? { adminId: raw } : null;
 }
 
 /**

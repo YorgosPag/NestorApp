@@ -275,6 +275,10 @@ describe('EnterpriseIdService', () => {
       // ADR-884 Φ0.7 — ΜΙΑ περιήγηση ανά ρίζα αγγελίας, ΕΝΑ αίτημα θέασης ανά (περιήγηση, άνθρωπο).
       'generateDeterministicSpatialTourId',
       'generateDeterministicTourAccessRequestId',
+      // ADR-890 §5.2 — ΜΙΑ σύνοψη ανά (περιοχή, ημέρα) και ΕΝΑ σημάδι ανά ημέρα: η επανεκτέλεση του cron
+      // ξαναγράφει τα ίδια έγγραφα, και η σελίδα τα βρίσκει με `doc(id)` χωρίς ερώτημα.
+      'generateDeterministicAreaMarketRunId',
+      'generateDeterministicAreaMarketSnapshotId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -375,6 +379,10 @@ describe('EnterpriseIdService', () => {
       generateDeterministicStayCalendarMonthId: 'scmo_aa044400-10b9-4583-865f-97901fb1d075',
       generateDeterministicStayExternalBlockId: 'sblk_aa044400-10b9-4583-865f-97901fb1d075',
       generateDeterministicTourAccessRequestId: 'tacr_aa044400-10b9-4583-865f-97901fb1d075',
+      // ADR-890 §5.2 — καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-09-26. Το `amks` παίρνει δύο
+      //    παραμέτρους με διαχωριστή `@` ⇒ σπόρος `'anchor-seed@undefined'`.
+      generateDeterministicAreaMarketRunId: 'amkr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicAreaMarketSnapshotId: 'amks_a3465a29-77be-4408-8a03-69ee02783a05',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

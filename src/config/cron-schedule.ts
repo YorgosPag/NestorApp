@@ -44,6 +44,7 @@
  */
 
 import { runAiLearning } from '@/lib/cron/jobs/ai-learning.job';
+import { runAreaMarketRollup } from '@/lib/cron/jobs/area-market-rollup.job';
 import { runBackup } from '@/lib/cron/jobs/backup.job';
 import { runDemandInterestAnnounce } from '@/lib/cron/jobs/demand-interest-announce.job';
 import { runDemandListingMatchAnnounce } from '@/lib/cron/jobs/demand-listing-match-announce.job';
@@ -451,6 +452,23 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runListingStatsRollup,
+  },
+  {
+    slug: 'area-market-rollup',
+    path: '/api/cron/area-market-rollup',
+    description: 'Σύνοψη ζητούμενων τιμών ανά δήμο / Δ.Ε.: ένα έγγραφο ανά (περιοχή, ημέρα) + σημάδι ολοκλήρωσης (ADR-890 §5.2)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί η μονάδα είναι η ΗΜΕΡΑ ΑΓΟΡΑΣ** — και τα ημερήσια στιγμιότυπα είναι η πρώτη ύλη της
+    // τάσης (ADR-890 Φ3). Μια εκτέλεση που χάνεται αφήνει τρύπα μιας μέρας στην τάση, όχι λάθος αριθμό.
+    //
+    // ⚠️ **03:25**: μετά τα μεσάνυχτα Αθήνας και σε λεπτό που δεν κατέχει κανείς (03:00 ×3 · 03:10 ·
+    // 03:15 ωριαίο · 03:30 · 03:45 ×2· τα */5 και */10 πέφτουν σε 03:22/03:24/03:27/03:30).
+    schedule: '25 3 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runAreaMarketRollup,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────

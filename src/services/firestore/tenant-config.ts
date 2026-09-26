@@ -94,6 +94,8 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   LISTING_VIEW_MARKS:  { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — σημάδι αποδυπλασιασμού (hash χωρίς PII)· γράφεται με create(), δεν διαβάζεται ποτέ.' },
   LISTING_VIEW_SHARDS: { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — ζεστός μετρητής· το κλειδί φέρει το ακίνητο, οι αναγνώσεις ανθρώπου μόνο μετά από mayAdminister.' },
   LISTING_STATS:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-777 §8.72 — ψυχρή σύνοψη ανά ακίνητο· γράφει μόνο το cron, διαβάζει μόνο ο κάτοχος μετά από mayAdminister.' },
+  AREA_MARKET_SNAPSHOTS: { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-890 §5.2 — σύνοψη ΖΗΤΟΥΜΕΝΩΝ τιμών ανά διοικητική περιοχή (όλοι οι μισθωτές μαζί, μόνο πλήθη/διάμεσοι, καμία ταυτότητα αγγελίας ή πελάτη)· γράφει μόνο το cron, διαβάζει μόνο ο διακομιστής της σελίδας περιοχής.' },
+  AREA_MARKET_RUNS:      { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'ADR-890 §5.2 — σημάδι ολοκλήρωσης της νυχτερινής σύνοψης περιοχών (ημέρα + πλήθη)· γράφει μόνο το cron.' },
   ESCO_CACHE:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κρυφή μνήμη δημόσιας ταξινομίας ESCO — δημόσιο δεδομένο τρίτου.' },
   ESCO_SKILLS_CACHE:{ mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κρυφή μνήμη δημόσιας ταξινομίας ESCO — δημόσιο δεδομένο τρίτου.' },
   AI_CHAT_HISTORY:  { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Το ιστορικό φέρει δική του εμβέλεια στο κλειδί εγγράφου.' },

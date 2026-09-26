@@ -74,6 +74,18 @@ function isBoundaryLevel(level: number): level is AdminBoundaryLevel {
   return level in FIELD_OF_LEVEL;
 }
 
+/** Το πεδίο της απόδοσης που κρατά μια βαθμίδα. */
+export type AdminAreaField = (typeof FIELD_OF_LEVEL)[AdminBoundaryLevel];
+
+/**
+ * **Σε ποιο πεδίο του `adminArea` ζει η ταυτότητα μιας περιοχής αυτής της βαθμίδας** — ή `null` για
+ * βαθμίδα που δεν αποδίδεται (οικισμός, Αποκεντρωμένη). Ο ΕΝΑΣ πίνακας, και για τον κριτή και για κάθε
+ * ερώτημα `where('adminArea.<πεδίο>', '==', id)` (ADR-890 Φ1).
+ */
+export function adminAreaFieldOfLevel(level: number): AdminAreaField | null {
+  return isBoundaryLevel(level) ? FIELD_OF_LEVEL[level] : null;
+}
+
 // ============================================================================
 // ΠΟΣΟ ΒΑΘΙΑ ΔΙΚΑΙΟΛΟΓΕΙ Η ΘΕΣΗ — ποτέ ψευδής ακρίβεια
 // ============================================================================

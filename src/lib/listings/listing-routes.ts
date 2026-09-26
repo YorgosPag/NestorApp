@@ -88,6 +88,19 @@ export function searchResultsHref(query?: string | null) {
   return typedHref(SEARCH_RESULTS_ROUTE);
 }
 
+/** ADR-890 Φ1 — η σελίδα αγοράς μιας περιοχής (`app/(light)/area/[id]`). */
+export const AREA_MARKET_ROUTE_BASE = '/area';
+
+/**
+ * `/area/<ταυτότητα ADR-883>` — αναγνώσιμη διεύθυνση (`/area/municipality:0701`).
+ * ⚠️ **Χωρίς `encodeURIComponent`, επίτηδες**: το `:` επιτρέπεται σε τμήμα διαδρομής (RFC 3986 §3.3, `pchar`)
+ * και η ταυτότητα έχει κλειστό αλφάβητο (`isAdminAreaId`: `[a-z_]` · `:` · ψηφία). Η σελίδα δέχεται και την
+ * κωδικοποιημένη μορφή (`%3A`), για συνδέσμους που την κωδικοποίησαν αλλού.
+ */
+export function areaMarketHref(areaId: string) {
+  return typedHref(`${AREA_MARKET_ROUTE_BASE}/${areaId}`);
+}
+
 /**
  * **Η γενική διέξοδος** — η οθόνη 1, τυποποιημένη για `<Link>` και `router`.
  *

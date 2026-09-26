@@ -30,7 +30,13 @@
 
 import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
 import { createModuleLogger } from '@/lib/telemetry';
-import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex, type AdminArea } from './admin-area-index-file';
+import {
+  ADMIN_AREA_ANCESTOR_DEPTH,
+  ADMIN_AREA_INDEX_FILE,
+  adminAreaAncestors,
+  readAdminAreaIndex,
+  type AdminArea,
+} from './admin-area-index-file';
 import {
   NO_GRADE,
   buildAdminAreaVocabulary,
@@ -73,9 +79,6 @@ export interface AdminAreaIndex {
   readonly vocabulary: AdminAreaVocabulary;
 }
 
-/** Όσα βήματα ανεβαίνει η γενεαλογία το πολύ — φρουρός απέναντι σε κύκλο στα δεδομένα. */
-const LINEAGE_DEPTH = 8;
-
 const NO_IDS = new Int32Array(0);
 
 function concatIds(a: Int32Array, b: Int32Array): Int32Array {
@@ -100,7 +103,7 @@ function lineageBuilder(
     built.set(area.id, lineage);
     return lineage;
   };
-  return (area) => lineageOf(area, LINEAGE_DEPTH);
+  return (area) => lineageOf(area, ADMIN_AREA_ANCESTOR_DEPTH);
 }
 
 /**
@@ -393,13 +396,5 @@ export async function lookupAdminAreaWhenReady(areaId: string): Promise<AdminAre
 
 /** Οι πρόγονοι μιας περιοχής, από τον **άμεσο γονέα** προς τα πάνω — για τη γραμμή γενεαλογίας. */
 export function adminAreaLineage(index: AdminAreaIndex, adminId: string): readonly AdminArea[] {
-  const lineage: AdminArea[] = [];
-  let current = index.areas.get(adminId);
-  for (let guard = 8; current?.parentId && guard > 0; guard -= 1) {
-    const parent = index.areas.get(current.parentId);
-    if (parent === undefined) break;
-    lineage.push(parent);
-    current = parent;
-  }
-  return lineage;
+  return adminAreaAncestors(index.areas, adminId);
 }

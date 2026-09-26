@@ -15,7 +15,7 @@ import 'server-only';
  */
 
 import { createServerJsonFile, type ServerJsonFile } from '@/lib/data/server-json-file';
-import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex } from '@/lib/geo/admin-area-index-file';
+import { ADMIN_AREA_INDEX_FILE, readAdminAreaIndex, type AdminArea } from '@/lib/geo/admin-area-index-file';
 import type { AdminAreaChild, AdminAreaLookup } from '@/lib/geo/admin-area-of-point';
 import {
   ADMIN_BOUNDARIES_DIR,
@@ -35,8 +35,14 @@ const ROOT_KEY = '';
 
 type ChildrenIndex = ReadonlyMap<string, readonly AdminAreaChild[]>;
 
+/** Το ευρετήριο διαβασμένο **μία** φορά: οι περιοχές με ονόματα **και** τα παιδιά ανά γονέα. */
+interface ServerAreaIndex {
+  readonly areas: ReadonlyMap<string, AdminArea>;
+  readonly children: ChildrenIndex;
+}
+
 /** Ευρετήριο → «παιδιά ανά γονέα». Ρίζα = γονέας εκτός ευρετηρίου (Αποκεντρωμένη, βαθμίδα 2). */
-function buildChildrenIndex(payload: unknown): ChildrenIndex {
+function buildServerAreaIndex(payload: unknown): ServerAreaIndex {
   const areas = readAdminAreaIndex(payload);
   const children = new Map<string, AdminAreaChild[]>();
   for (const area of areas.values()) {
@@ -45,12 +51,12 @@ function buildChildrenIndex(payload: unknown): ChildrenIndex {
     siblings.push({ id: area.id, level: area.level });
     children.set(key, siblings);
   }
-  return children;
+  return { areas, children };
 }
 
-const INDEX_FILE = createServerJsonFile<ChildrenIndex>({
+const INDEX_FILE = createServerJsonFile<ServerAreaIndex>({
   publicPath: ADMIN_AREA_INDEX_FILE.split('/'),
-  build: buildChildrenIndex,
+  build: buildServerAreaIndex,
   onFailure: (error) => {
     logger.error('Δεν διαβάστηκε το ευρετήριο περιοχών', {
       error: error instanceof Error ? error.message : String(error),
@@ -99,10 +105,35 @@ function boundaryFile(adminId: string): ServerJsonFile<GeoRegion> {
  * δημοσίευση: μια αγγελία δεν χάνεται επειδή έλειψε ένα παράγωγο αρχείο.
  */
 export async function readAdminAreaLookup(): Promise<AdminAreaLookup | null> {
-  const children = await INDEX_FILE.read();
-  if (children === null) return null;
+  const index = await INDEX_FILE.read();
+  if (index === null) return null;
+  const { children } = index;
   return {
     childrenOf: (parentId) => children.get(parentId ?? ROOT_KEY) ?? [],
     regionOf: (adminId) => boundaryFile(adminId).read(),
+  };
+}
+
+/** Ο κατάλογος περιοχών για τη σελίδα περιοχής: όνομα/βαθμίδα/γονέας ανά ταυτότητα, και τα παιδιά κάθε γονέα. */
+export interface AdminAreaDirectory {
+  readonly areas: ReadonlyMap<string, AdminArea>;
+  readonly childrenOf: (parentId: string) => readonly AdminArea[];
+}
+
+/**
+ * **Το ευρετήριο ως κατάλογος** (ADR-890 Φ1) — ίδιο αρχείο, ίδια ανάγνωση με τον κριτή περιοχής.
+ * `null` = «δεν μπόρεσα να ρωτήσω» (ο καλών το αποδίδει ως 5xx, ποτέ ως 404).
+ */
+export async function readAdminAreaDirectory(): Promise<AdminAreaDirectory | null> {
+  const index = await INDEX_FILE.read();
+  if (index === null) return null;
+  const { areas, children } = index;
+  return {
+    areas,
+    childrenOf: (parentId) =>
+      (children.get(parentId) ?? []).flatMap((child) => {
+        const area = areas.get(child.id);
+        return area === undefined ? [] : [area];
+      }),
   };
 }

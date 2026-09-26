@@ -351,6 +351,20 @@ export const COLLECTIONS = {
   LISTING_VIEW_SHARDS: process.env.NEXT_PUBLIC_LISTING_VIEW_SHARDS_COLLECTION || 'listing_view_shards',
   LISTING_STATS: process.env.NEXT_PUBLIC_LISTING_STATS_COLLECTION || 'listing_stats',
   /**
+   * ADR-890 §5.2 — **Η ΣΥΝΟΨΗ ΖΗΤΟΥΜΕΝΩΝ ΤΙΜΩΝ ΑΝΑ ΠΕΡΙΟΧΗ**, σε δύο συλλογές.
+   *
+   * | Συλλογή | Ρόλος | Ζωή |
+   * |---|---|---|
+   * | `area_market_snapshots` (`amks_*`) | μία περιοχή × μία ημέρα — πλήθη, διάμεσοι, κάδοι | για πάντα (η τάση της Φ3) |
+   * | `area_market_runs` (`amkr_*`) | σημάδι ολοκλήρωσης της νύχτας, γράφεται **τελευταίο** | για πάντα |
+   *
+   * ⛔ **ΚΛΕΙΣΤΕΣ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** (`read/write: false`): γράφει **μόνο** το cron, και η σελίδα
+   * `/area/[id]` αποδίδεται στον **διακομιστή** (SEO, ADR-890 §5.5), άρα κανένας πελάτης δεν χρειάζεται
+   * ανάγνωση. Ελάχιστο προνόμιο, όχι «δημόσιο επειδή είναι δημόσια δεδομένα».
+   */
+  AREA_MARKET_SNAPSHOTS: process.env.NEXT_PUBLIC_AREA_MARKET_SNAPSHOTS_COLLECTION || 'area_market_snapshots',
+  AREA_MARKET_RUNS: process.env.NEXT_PUBLIC_AREA_MARKET_RUNS_COLLECTION || 'area_market_runs',
+  /**
    * ADR-777 §8.74 — **«ΤΗΝ ΚΡΑΤΗΣΑ»** (`svls_*`): μία ανά (άνθρωπο, αγγελία), ντετερμινιστική.
    *
    * ⛔ **ΚΛΕΙΣΤΗ ΚΑΙ ΣΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ** (`read/write: false`): γράφει **ένας** γραφέας

@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Property prices in {name}: asking prices for sale and rent",
+    "description": "Median asking prices per m² for sale and rent in {name}, from published listings, with the sample size behind every number.",
+    "descriptionEmpty": "Property market in {name}: listings, the area boundary on the map, and asking prices once there are enough listings."
+  },
+  "level": {
+    "municipality": "Municipality",
+    "municipalUnit": "Municipal unit"
+  },
+  "header": {
+    "eyebrow": "Property market",
+    "lineage": "Administrative location",
+    "asOf": "Asking prices: data as of {date}",
+    "noRun": "The price summary is computed every night and there is no recent one yet.",
+    "listingsNow": "{count, plural, one {# published listing} other {# published listings}}"
+  },
+  "offer": {
+    "sale": "Sale",
+    "rent": "Rent"
+  },
+  "offerHeading": {
+    "sale": "Asking prices for sale",
+    "rent": "Asking rents"
+  },
+  "segment": {
+    "apartment": "Apartments",
+    "house": "Houses",
+    "commercial": "Commercial spaces",
+    "land": "Plots and land",
+    "storage": "Storage units",
+    "parking": "Parking spaces"
+  },
+  "card": {
+    "medianPerArea": "Median asking price per m²",
+    "range": "Half of the listings ask between {low} and {high}",
+    "sample": "{count, plural, one {from # listing} other {from # listings}}",
+    "medianPrice": "Median asking price {price}",
+    "medianSize": "Median size {size} m²",
+    "suppressed": "{count, plural, one {# listing} other {# listings}}: at least {min} are needed for a reliable median.",
+    "parentFallback": "All of {name}: {price} ({count, plural, one {# listing} other {# listings}})"
+  },
+  "offerEmpty": {
+    "sale": "No priced listing for sale in this area.",
+    "rent": "No priced listing for rent in this area."
+  },
+  "breakdown": {
+    "size": "By size",
+    "bedrooms": "By bedrooms",
+    "floor": "By floor",
+    "columnBucket": "Category",
+    "columnMedian": "Median per m²",
+    "columnRange": "Middle 50%",
+    "columnCount": "Listings",
+    "belowThreshold": "fewer than {min}",
+    "undeclared": "{count, plural, one {# listing did not state this} other {# listings did not state this}}"
+  },
+  "bucket": {
+    "size": {
+      "lt50": "Up to 49 m²",
+      "50-79": "50–79 m²",
+      "80-119": "80–119 m²",
+      "120-199": "120–199 m²",
+      "gte200": "200 m² and over",
+      "lt500": "Up to 499 m²",
+      "500-999": "500–999 m²",
+      "1000-3999": "1,000–3,999 m²",
+      "gte4000": "4,000 m² and over"
+    },
+    "bedrooms": {
+      "0": "Studio",
+      "1": "1 bedroom",
+      "2": "2 bedrooms",
+      "3": "3 bedrooms",
+      "gte4": "4 or more"
+    },
+    "floor": {
+      "basement": "Basement",
+      "ground": "Ground floor",
+      "1-2": "1st–2nd",
+      "3-4": "3rd–4th",
+      "gte5": "5th and above"
+    }
+  },
+  "excluded": {
+    "title": "{count, plural, one {# listing was not counted} other {# listings were not counted}}",
+    "noPrice": "{count, plural, one {# without a price} other {# without a price}}",
+    "noSize": "{count, plural, one {# without a size} other {# without a size}}",
+    "noSegment": "{count, plural, one {# without a property type} other {# without a property type}}",
+    "implausible": "{count, plural, one {# with a price outside plausible bounds (likely a typo)} other {# with prices outside plausible bounds (likely typos)}}"
+  },
+  "map": {
+    "title": "The area boundary",
+    "loading": "Loading the boundary…",
+    "unavailable": "The boundary is not available right now."
+  },
+  "listings": {
+    "title": "Listings in the area",
+    "seeAll": "{count, plural, one {See the listing on the map} other {See all # listings on the map}}",
+    "empty": "There is no published listing in this area right now."
+  },
+  "children": {
+    "title": "Municipal units"
+  },
+  "method": {
+    "title": "How the numbers are computed",
+    "asking": "Every price on this page is an asking price: what sellers and landlords ask in their listings. These are not contract prices or valuations, and the final price of a transaction may differ.",
+    "median": "We show the median, not the average, so a single extreme listing does not change the picture. The “middle 50%” is the range from the 25th to the 75th percentile.",
+    "threshold": "A number is shown only when there are at least {min} listings, the same minimum the UK Office for National Statistics (ONS) uses for a reliable median. Below that we show the count only.",
+    "exclusions": "Listings without a price or a size, or with a price outside plausible bounds, are left out of the numbers. We still count them and show them, so you know how many listings each number comes from.",
+    "cadence": "The price summary is recomputed every night. The list and count of listings refresh every 15 minutes."
+  }
+}

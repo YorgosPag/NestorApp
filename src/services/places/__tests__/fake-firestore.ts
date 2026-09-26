@@ -709,6 +709,19 @@ export class FakeQuery {
       size: hits.length,
     };
   }
+
+  /**
+   * ADR-890 Φ1 — **συγκεντρωτική καταμέτρηση** (`query.count().get()` του Admin SDK). Ίδια σημασιολογία με
+   * το Firestore: μετρά ό,τι θα επέστρεφε το ερώτημα, **με** το `limit` του (το `count()` το σέβεται).
+   */
+  count(): { get: () => Promise<{ data: () => { count: number } }> } {
+    return {
+      get: async () => {
+        const { size } = await this.get();
+        return { data: () => ({ count: size }) };
+      },
+    };
+  }
 }
 
 export class FakeCollection extends FakeQuery {

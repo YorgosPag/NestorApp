@@ -21,6 +21,8 @@
  *     ↑ extends
  *   SpatialTourIdGenerators      (ADR-884 Φ0.7 — χωρική περιήγηση)
  *     ↑ extends
+ *   AreaMarketIdGenerators       (ADR-890 §5.2 — σύνοψη αγοράς ανά περιοχή)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (this file)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engine: retry loop, cache, stats)
@@ -52,9 +54,9 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { SpatialTourIdGenerators } from './enterprise-id-spatial-tour-generators';
+import { AreaMarketIdGenerators } from './enterprise-id-area-market-generators';
 
-export abstract class CompositeKeyIdGenerators extends SpatialTourIdGenerators {
+export abstract class CompositeKeyIdGenerators extends AreaMarketIdGenerators {
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
   // (N.7.1 — καμία κατάσταση εδώ: ο βρόχος επανάληψης, η μνήμη και τα στατιστικά

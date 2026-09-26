@@ -41,7 +41,7 @@ import type { PropertyTypeCanonical } from '@/constants/property-types';
 import { toPositiveNumber } from '@/constants/plausibility-input';
 
 // =============================================================================
-// 1. PROPERTY TYPE CLASSIFICATION — 3 groups για range lookup
+// 1. PROPERTY TYPE CLASSIFICATION — 4 groups για range lookup
 // =============================================================================
 
 /**
@@ -49,13 +49,20 @@ import { toPositiveNumber } from '@/constants/plausibility-input';
  * ριζικά διαφορετικά €/τ.μ. ranges — π.χ. auxiliary (storage) ~100€/τ.μ. sale,
  * commercial (shop high street) μπορεί να φτάσει 10000€/τ.μ.
  */
-export type PropertyPriceClass = 'residential' | 'commercial' | 'auxiliary';
+export type PropertyPriceClass = 'residential' | 'commercial' | 'auxiliary' | 'land';
 
 const COMMERCIAL_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
   'shop',
   'office',
   'hall',
 ]);
+
+/**
+ * ADR-890 Φ1 — **η γη ΔΕΝ είναι κατοικία.** Μέχρι 2026-09-26 το οικόπεδο έπεφτε στην προεπιλογή
+ * `residential` (≥ 300 €/τ.μ.), άρα ένα οικόπεδο 100.000 € / 500 τ.μ. = 200 €/τ.μ. έβγαινε
+ * «ύποπτα χαμηλό» (μετρημένο στη βάση: `ownp_cef8a729…`), και ένα αγροτεμάχιο 5 €/τ.μ. πάντα.
+ */
+const LAND_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>(['plot', 'parcel']);
 
 const AUXILIARY_TYPES: ReadonlySet<string> = new Set<string>([
   'storage',
@@ -66,7 +73,7 @@ const AUXILIARY_TYPES: ReadonlySet<string> = new Set<string>([
 ]);
 
 /**
- * Classify a property type into one of 3 price classes.
+ * Classify a property type into one of 4 price classes.
  *
  * Unknown / empty / legacy values → `'residential'` (safest default —
  * residential has the widest plausibility band, so we avoid false positives
@@ -78,6 +85,7 @@ export function classifyPropertyTypeForPricing(
   if (typeof type !== 'string' || type.length === 0) return 'residential';
   if (COMMERCIAL_TYPES.has(type)) return 'commercial';
   if (AUXILIARY_TYPES.has(type)) return 'auxiliary';
+  if (LAND_TYPES.has(type)) return 'land';
   return 'residential';
 }
 
@@ -129,11 +137,16 @@ export const PLAUSIBILITY_RANGES: Readonly<
     residential: { minPerSqm: 300, maxPerSqm: 8000, absoluteFloor: 1000 },
     commercial: { minPerSqm: 400, maxPerSqm: 10000, absoluteFloor: 1000 },
     auxiliary: { minPerSqm: 100, maxPerSqm: 3000, absoluteFloor: 500 },
+    // ⚠️ Ζώνη **τάξης μεγέθους**, όχι αγοράς: από αγροτεμάχιο (~1–15 €/τ.μ.) έως οικόπεδο κέντρου Αθήνας
+    // (χιλιάδες €/τ.μ.). Πιάνει μόνο τυπογραφικά λάθη (μηδενικά που έλειψαν ή περίσσεψαν).
+    land: { minPerSqm: 0.5, maxPerSqm: 15000, absoluteFloor: 500 },
   },
   rent: {
     residential: { minPerSqm: 2, maxPerSqm: 40, absoluteFloor: 50 },
     commercial: { minPerSqm: 5, maxPerSqm: 80, absoluteFloor: 50 },
     auxiliary: { minPerSqm: 0.5, maxPerSqm: 15, absoluteFloor: 10 },
+    // Αγροτική μίσθωση ~50–300 €/στρέμμα/έτος ≈ 0,004–0,025 €/τ.μ./μήνα· ίδια λογική τάξης μεγέθους.
+    land: { minPerSqm: 0.002, maxPerSqm: 20, absoluteFloor: 10 },
   },
 };
 
@@ -186,23 +199,44 @@ export function assessPricePlausibility(
     return emptyVerdict('ok');
   }
 
+  return assessModePricePlausibility({
+    mode: listingModeOf(commercialStatus),
+    propertyType,
+    askingPrice,
+    grossArea,
+  });
+}
+
+/** Ρητός τρόπος προσφοράς, αντί για την εμπορική κατάσταση — βλ. {@link assessModePricePlausibility}. */
+export interface AssessModePricePlausibilityArgs {
+  readonly mode: ListingPriceMode;
+  readonly propertyType: PropertyTypeCanonical | string | undefined | null;
+  readonly askingPrice: number | string | undefined | null;
+  readonly grossArea: number | string | undefined | null;
+}
+
+/**
+ * **Η κρίση με ρητό τρόπο προσφοράς** (ADR-890 Φ1) — βήματα 2–5 του {@link assessPricePlausibility}.
+ *
+ * 🔑 Γιατί υπάρχει: μια αγγελία `for-sale-and-rent` έχει **δύο** τιμές. Η εμπορική κατάσταση δίνει
+ * μόνο τον τρόπο `sale`, άρα το ενοίκιό της δεν κρινόταν ποτέ. Η σύνοψη αγοράς περιοχής κρίνει
+ * **κάθε** ζητούμενη τιμή με τη δική της ζώνη.
+ */
+export function assessModePricePlausibility(
+  args: AssessModePricePlausibilityArgs,
+): PlausibilityAssessment {
+  const { mode, propertyType, askingPrice, grossArea } = args;
+
   const price = toPositiveNumber(askingPrice);
   if (price === null) {
     return emptyVerdict('insufficientData');
   }
 
-  const mode = listingModeOf(commercialStatus);
   const priceClass = classifyPropertyTypeForPricing(propertyType);
   const range = PLAUSIBILITY_RANGES[mode][priceClass];
 
   if (price < range.absoluteFloor) {
-    return {
-      verdict: 'hardFloor',
-      mode,
-      priceClass,
-      pricePerSqm: null,
-      expected: range,
-    };
+    return { verdict: 'hardFloor', mode, priceClass, pricePerSqm: null, expected: range };
   }
 
   const area = toPositiveNumber(grossArea);
@@ -212,22 +246,10 @@ export function assessPricePlausibility(
 
   const pricePerSqm = price / area;
   if (pricePerSqm < range.minPerSqm) {
-    return {
-      verdict: 'suspiciousLow',
-      mode,
-      priceClass,
-      pricePerSqm,
-      expected: range,
-    };
+    return { verdict: 'suspiciousLow', mode, priceClass, pricePerSqm, expected: range };
   }
   if (pricePerSqm > range.maxPerSqm) {
-    return {
-      verdict: 'suspiciousHigh',
-      mode,
-      priceClass,
-      pricePerSqm,
-      expected: range,
-    };
+    return { verdict: 'suspiciousHigh', mode, priceClass, pricePerSqm, expected: range };
   }
   return { verdict: 'ok', mode, priceClass, pricePerSqm, expected: range };
 }

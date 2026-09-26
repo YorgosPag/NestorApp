@@ -38,7 +38,7 @@
 export const BACKEND_UNAVAILABLE_DIGEST_PREFIX = 'NESTOR_BACKEND_UNAVAILABLE';
 
 /** Ποια ερώτηση προς τη βάση δεν απαντήθηκε — κλειστό σύνολο, ένα όνομα ανά εξάρτηση. */
-export const BACKEND_DEPENDENCIES = ['workspace-lookup', 'agency-alias-lookup', 'agency-profile'] as const;
+export const BACKEND_DEPENDENCIES = ['workspace-lookup', 'agency-alias-lookup', 'agency-profile', 'area-market'] as const;
 
 export type BackendDependency = (typeof BACKEND_DEPENDENCIES)[number];
 

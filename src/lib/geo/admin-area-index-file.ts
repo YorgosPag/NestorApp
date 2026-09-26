@@ -80,3 +80,36 @@ export function readAdminAreaIndex(payload: unknown): ReadonlyMap<string, AdminA
   }
   return areas;
 }
+
+/**
+ * Σχήμα `id` της ιεραρχίας: `<βαθμίδα>:<κωδικός>` (`municipality:0708`). Ό,τι άλλο απορρίπτεται, ώστε
+ * κανένας αναγνώστης να μη ζητά αρχείο με αυθαίρετο όνομα από τη διεύθυνση (`?area=`, `/area/[id]`).
+ */
+const ADMIN_AREA_ID = /^[a-z_]+:[0-9]+$/;
+
+export function isAdminAreaId(value: string): boolean {
+  return ADMIN_AREA_ID.test(value);
+}
+
+/**
+ * Όσα βήματα ανεβαίνει η γενεαλογία το πολύ — φρουρός απέναντι σε κύκλο στα δεδομένα. Ένας αριθμός για
+ * κάθε αναρρίχηση γονέων (και για τη γενεαλογία λέξεων του `admin-area-search.ts`).
+ */
+export const ADMIN_AREA_ANCESTOR_DEPTH = 8;
+
+/**
+ * **Οι πρόγονοι μιας περιοχής**, από τον άμεσο γονέα προς τα πάνω — πάνω στον σκέτο χάρτη του ευρετηρίου,
+ * ώστε να τη ρωτά και ο διακομιστής (σελίδα περιοχής, ADR-890 Φ1) χωρίς το ευρετήριο αναζήτησης.
+ * Η **μία** υλοποίηση: το `adminAreaLineage` του `admin-area-search.ts` αναθέτει εδώ (ADR-890 §10.6).
+ */
+export function adminAreaAncestors(areas: ReadonlyMap<string, AdminArea>, adminId: string): readonly AdminArea[] {
+  const ancestors: AdminArea[] = [];
+  let current = areas.get(adminId);
+  for (let guard = ADMIN_AREA_ANCESTOR_DEPTH; current?.parentId && guard > 0; guard -= 1) {
+    const parent = areas.get(current.parentId);
+    if (parent === undefined) break;
+    ancestors.push(parent);
+    current = parent;
+  }
+  return ancestors;
+}
