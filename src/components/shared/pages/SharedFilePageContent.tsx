@@ -26,6 +26,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SharedContactPageContent } from '@/components/shared/pages/SharedContactPageContent';
+import { SharedTourPageContent } from '@/components/shared/pages/SharedTourPageContent';
 import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
 import { SharedProjectShowcasePageContent } from '@/components/shared/pages/SharedProjectShowcasePageContent';
 import { SharedBuildingShowcasePageContent } from '@/components/shared/pages/SharedBuildingShowcasePageContent';
@@ -161,6 +162,7 @@ function renderEntityPage(share: ResolvedSharePayload, expiresAt: string, token:
     case 'building_showcase': return <SharedBuildingShowcasePageContent token={token} />;
     case 'storage_showcase': return <SharedStorageShowcasePageContent token={token} />;
     case 'parking_showcase': return <SharedParkingShowcasePageContent token={token} />;
+    case 'spatial_tour': return <SharedTourPageContent data={share.data} />;
     case 'file': return null;
   }
 }

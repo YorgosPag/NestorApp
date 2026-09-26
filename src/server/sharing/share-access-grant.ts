@@ -28,25 +28,31 @@ import 'server-only';
  * ώστε μέσα στα 15′ της επίσκεψης επαναφόρτωση, προεπισκόπηση, PDF και λήψη να **μη**
  * ξαναμετρούν πρόσβαση (πρότυπο Google Drive: μετρά το άνοιγμα, όχι κάθε byte).
  *
- * ♻️ Αυτός είναι και ο πυρήνας του **κουπονιού θέασης** των πλακιδίων περιήγησης
- * (ADR-884 §8.1 Φ0.4) — ίδια γραμματική (`lib/tokens/signed-token`), ίδια λήξη.
+ * ♻️ Ο πυρήνας ζει στο `server/access-grant/access-grant.ts` (ADR-884 Κ3β): αυτό το αρχείο
+ * είναι ο καταναλωτής **κοινοποίησης**, το `server/spatial-tour/tour-view-grant.ts` ο
+ * καταναλωτής **θέασης περιήγησης** — ίδια λήξη, ίδιες σημαίες, άλλος υπογεγραμμένος σκοπός.
  *
  * @module server/sharing/share-access-grant
  */
 
 import type { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
-import { createModuleLogger } from '@/lib/telemetry';
-import { decodeSignedToken, encodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
-
-const logger = createModuleLogger('ShareAccessGrant');
+import {
+  ACCESS_GRANT_SECRET_ENV,
+  ACCESS_GRANT_TTL_SECONDS,
+  attachAccessGrant,
+  issueAccessGrant,
+  readAccessGrant,
+  requestAccessGrant,
+  type AccessGrantKind,
+} from '@/server/access-grant/access-grant';
 
 /** Το μυστικό — δηλωμένο στο `config/environment-contract.ts`. */
-export const SHARE_ACCESS_SECRET_ENV = 'SHARE_ACCESS_SECRET';
+export const SHARE_ACCESS_SECRET_ENV = ACCESS_GRANT_SECRET_ENV;
 
-const GRANT_PURPOSE = 'share-access';
-export const SHARE_ACCESS_GRANT_TTL_SECONDS = 15 * 60;
+export const SHARE_ACCESS_GRANT_TTL_SECONDS = ACCESS_GRANT_TTL_SECONDS;
+
+const SHARE_GRANT: AccessGrantKind = { purpose: 'share-access', subjectFieldCount: 1 };
 const COOKIE_PREFIX = 'nestor_share_';
 const COOKIE_PATH = '/api';
 
@@ -55,51 +61,27 @@ export function shareAccessCookieName(shareId: string): string {
   return `${COOKIE_PREFIX}${shareId}`;
 }
 
-function readSecret(): string | null {
-  try {
-    return requireTokenSecret(SHARE_ACCESS_SECRET_ENV);
-  } catch {
-    logger.error('Share access grant secret is not configured', { envVar: SHARE_ACCESS_SECRET_ENV });
-    return null;
-  }
-}
-
 /**
  * Εκδίδει κουπόνι για `shareId`. `null` ⇒ λείπει το μυστικό **από εμάς** — ο καλών
  * απαντά «μη διαθέσιμο», **ποτέ** «λάθος κωδικός» (ο άνθρωπος έδωσε τον σωστό).
  */
 export function issueShareAccessGrant(shareId: string, nowMs: number = Date.now()): string | null {
-  const secret = readSecret();
-  if (secret === null) return null;
-  const expiresAt = Math.floor(nowMs / 1000) + SHARE_ACCESS_GRANT_TTL_SECONDS;
-  return encodeSignedToken(secret, [GRANT_PURPOSE, shareId, String(expiresAt)]);
+  return issueAccessGrant(SHARE_GRANT, [shareId], nowMs);
 }
 
 /** Καθαρή επαλήθευση κουπονιού για **αυτό** το `shareId`. */
 export function isShareAccessGrantValid(grant: string, shareId: string, nowMs: number = Date.now()): boolean {
-  const secret = readSecret();
-  if (secret === null) return false;
-  const verdict = decodeSignedToken(secret, grant, 3);
-  if (!verdict.ok) return false;
-  const [purpose, grantedShareId, expiresAt] = verdict.fields;
-  if (purpose !== GRANT_PURPOSE || grantedShareId !== shareId) return false;
-  const expiresAtSeconds = Number(expiresAt);
-  return Number.isFinite(expiresAtSeconds) && expiresAtSeconds * 1000 > nowMs;
+  const subject = readAccessGrant(SHARE_GRANT, grant, nowMs);
+  return subject !== null && subject[0] === shareId;
 }
 
 /** Έχει το αίτημα έγκυρο κουπόνι για αυτή την κοινοποίηση; */
 export function requestHasShareAccessGrant(request: NextRequest, shareId: string): boolean {
-  const grant = request.cookies.get(shareAccessCookieName(shareId))?.value;
-  return typeof grant === 'string' && grant !== '' && isShareAccessGrantValid(grant, shareId);
+  const grant = requestAccessGrant(request, shareAccessCookieName(shareId));
+  return grant !== null && isShareAccessGrantValid(grant, shareId);
 }
 
 /** Γράφει το κουπόνι στην απάντηση. */
 export function attachShareAccessGrant(response: NextResponse, shareId: string, grant: string): void {
-  response.cookies.set(shareAccessCookieName(shareId), grant, {
-    httpOnly: true,
-    secure: getCurrentRuntimeEnvironment() === 'production',
-    sameSite: 'lax',
-    path: COOKIE_PATH,
-    maxAge: SHARE_ACCESS_GRANT_TTL_SECONDS,
-  });
+  attachAccessGrant(response, { name: shareAccessCookieName(shareId), path: COOKIE_PATH }, grant);
 }

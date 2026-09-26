@@ -41,6 +41,7 @@ import {
 } from '@/components/sharing/fields/PersonalMessageField';
 import { LINK_EXPIRY_OPTION_HOURS, LINK_EXPIRY_UNCHANGED } from './draft-mapping';
 import type { LinkTokenDraft } from './types';
+import type { ShareKindLinkPolicy } from '@/services/sharing/share-resolve-contract';
 
 const MAX_ACCESS_OPTIONS = ['1', '5', '10', '25', '100'] as const;
 const EXPIRY_LABEL_KEY: Record<(typeof LINK_EXPIRY_OPTION_HOURS)[number], string> = {
@@ -56,31 +57,39 @@ export type LinkTokenFormMode = 'create' | 'edit';
 interface DraftProps {
   draft: LinkTokenDraft;
   onDraftChange: (next: LinkTokenDraft) => void;
+  /**
+   * ADR-884 Κ3β — η πολιτική συνδέσμου του είδους (`SHARE_KIND_LINK_POLICY`): η **ίδια** δήλωση που επιβάλλει ο
+   * διακομιστής. Απούσα ⇒ η προεπιλογή (κωδικός επιτρέπεται, «για ποιον» προαιρετικό).
+   */
+  policy?: ShareKindLinkPolicy;
 }
 
 // ============================================================================
 // LABEL
 // ============================================================================
 
-export function LinkLabelField({ draft, onDraftChange }: DraftProps): React.ReactElement {
+export function LinkLabelField({ draft, onDraftChange, policy }: DraftProps): React.ReactElement {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
+  const required = policy?.labelRequired === true;
   return (
     <fieldset className="space-y-1.5">
       <label htmlFor="share-link-label" className="text-sm font-medium flex items-center gap-1.5">
         <Tag className={cn('h-3.5 w-3.5', colors.text.muted)} />
         {t('share.label')}
-        <span className={cn('text-xs font-normal', colors.text.muted)}>({t('share.optional')})</span>
+        <span className={cn('text-xs font-normal', colors.text.muted)}>({t(required ? 'share.required' : 'share.optional')})</span>
       </label>
       <Input
         id="share-link-label"
+        required={required}
+        aria-required={required}
         value={draft.label}
         maxLength={SHARE_LABEL_MAX_LENGTH}
         onChange={(e) => onDraftChange({ ...draft, label: e.target.value })}
         placeholder={t('share.labelPlaceholder')}
         autoComplete="off"
       />
-      <p className={cn('text-xs', colors.text.muted)}>{t('share.labelHint')}</p>
+      <p className={cn('text-xs', colors.text.muted)}>{t(required ? 'share.labelRequiredHint' : 'share.labelHint')}</p>
     </fieldset>
   );
 }
@@ -159,7 +168,7 @@ export function LinkTokenFields(props: LinkTokenFieldsProps): React.ReactElement
         </Select>
       </fieldset>
 
-      <PasswordField {...props} mode={mode} />
+      {props.policy?.password !== false && <PasswordField {...props} mode={mode} />}
 
       <fieldset className="space-y-1.5">
         <label className="text-sm font-medium flex items-center gap-1.5">
@@ -213,7 +222,7 @@ export function LinkTokenForm({
       }}
       className="flex flex-col gap-4"
     >
-      <LinkLabelField draft={fields.draft} onDraftChange={fields.onDraftChange} />
+      <LinkLabelField draft={fields.draft} onDraftChange={fields.onDraftChange} policy={fields.policy} />
       <LinkTokenFields {...fields} />
       <nav className="flex items-center justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>

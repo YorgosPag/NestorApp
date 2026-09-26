@@ -106,6 +106,12 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   'tour-custody-mismatch': 409,
   /** Έγγραφο που δεν καταλάβαμε — **δικό μας** πρόβλημα, όχι του ανθρώπου. */
   'tour-unreadable': 503,
+  // ── Η πύλη θέασης και οι ρυθμίσεις (Κ3β) ───────────────────────────────────
+  /** Ανώνυμος μπροστά σε περιήγηση κατ' αίτηση — «συνδεθείτε», όχι «απαγορεύεται». */
+  'sign-in-required': 401,
+  'not-viewable': 403,
+  'publish-needs-capture': 409,
+  'visibility-unsupported': 409,
   // ── Ο κριτής ανεβάσματος: ο φωτογράφος ξέρει αν ζητήσει ΝΕΑ πρόσκληση ──────
   'no-capture-grant': 403,
   'revoked': 403,

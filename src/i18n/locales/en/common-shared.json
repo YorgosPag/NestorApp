@@ -813,6 +813,13 @@
     "expiredTitle": "Your request for \"{title}\" ({range}) got no reply — try again",
     "cancelledTitle": "The host cancelled your stay at \"{title}\" ({range})"
   },
+  "tourAccessRequested": {
+    "title": "Tour viewing request for “{title}” from {who}"
+  },
+  "tourAccessAnswered": {
+    "approvedTitle": "You can view the tour of “{title}” until {until}",
+    "declinedTitle": "Your viewing request for “{title}” was not approved"
+  },
   "mandateRequestAnswered": {
     "acceptedTitle": "{agency} took on the listing \"{title}\"",
     "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",

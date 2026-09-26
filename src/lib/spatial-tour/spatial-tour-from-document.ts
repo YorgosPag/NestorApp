@@ -233,6 +233,9 @@ export function tourAccessRequestFromDocument(raw: unknown, id: string): TourAcc
   const revokedAt = readOptionalInstant(raw.revokedAt);
   if (tourId === null || requesterUid === null || requestedAt === null || revokedAt === undefined) return null;
   if (!Number.isInteger(requestCount) || (requestCount as number) < 1) return null;
+  const viewCount = readViewCount(raw.viewCount);
+  const lastViewedAt = readOptionalInstant(raw.lastViewedAt);
+  if (viewCount === null || lastViewedAt === undefined) return null;
   return {
     id, tourId, requesterUid, requestedAt,
     state: raw.state,
@@ -243,7 +246,19 @@ export function tourAccessRequestFromDocument(raw: unknown, id: string): TourAcc
     expiresAt: normalizeToISO(raw.expiresAt),
     revokedAt,
     revokedBy: text(raw.revokedBy),
+    viewCount,
+    lastViewedAt,
+    contactId: text(raw.contactId),
   };
+}
+
+/**
+ * Ο μετρητής επισκέψεων: **απών** ⇒ `0` (έγγραφα πριν το Κ3β — ιστορικά σωστό: τότε δεν υπήρχε θέαση)·
+ * **παρών αλλά άκυρος** ⇒ `null` (βλάβη, όχι «καμία επίσκεψη»).
+ */
+function readViewCount(raw: unknown): number | null {
+  if (raw === undefined || raw === null) return 0;
+  return Number.isInteger(raw) && (raw as number) >= 0 ? (raw as number) : null;
 }
 
 /**

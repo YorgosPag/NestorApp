@@ -14,12 +14,21 @@ import 'server-only';
 
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
-import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { TourAccessRequestState } from '@/constants/spatial-tour-vocabulary';
 import { nowISO } from '@/lib/date-local';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { tourAccessStanding, type TourActor } from '@/lib/spatial-tour/tour-authority';
+import type { CustodyScope } from '@/lib/workspace/custody-scope';
+import { recordAccountContactBirth } from '@/services/contact/account-contact-resolver';
 import type { TourAccessRequest, TourSubject } from '@/types/spatial-tour';
+
+import {
+  contactOutcomeOf,
+  prepareTourAccessContacts,
+  type PreparedTourContact,
+  type TourAccessContactOutcome,
+} from './tour-access-contact';
 
 import {
   checkTourGrantExpiry,
@@ -45,24 +54,74 @@ interface ManagerInput {
 export type TourAccessDecision = 'approved' | 'declined';
 
 export type TourAccessDecisionResult =
-  | { readonly requesterUid: string; readonly kind: 'decided'; readonly state: TourAccessDecision }
+  | {
+      readonly requesterUid: string;
+      readonly kind: 'decided';
+      readonly state: TourAccessDecision;
+      /** Τι απέγινε η επαφή CRM (Φ0.13β) — `none` σε απόρριψη ή ιδιώτη κάτοχο. */
+      readonly contact: TourAccessContactOutcome;
+      /** Η υποβολή που κρίθηκε — ταυτότητα της **μετάβασης** για την ειδοποίηση (ιδεμποτία). */
+      readonly requestId: string;
+      readonly requestCount: number;
+      readonly expiresAt: string | null;
+    }
   | { readonly requesterUid: string; readonly kind: 'refused'; readonly reason: TourAccessRefusal };
 
+type DecisionSeal = { readonly state: TourAccessDecision; readonly expiresAt: string | null; readonly by: string; readonly at: string };
+
+/**
+ * Η απόφαση για **έναν** — και, σε έγκριση, η επαφή CRM **στην ίδια** συναλλαγή: ή γράφονται και τα δύο, ή κανένα.
+ * Επιστρέφει την άρνηση **ή** τον αριθμό της υποβολής που κρίθηκε.
+ */
 async function decideOne(
   db: Firestore,
   ref: DocumentReference,
-  seal: { readonly state: TourAccessDecision; readonly expiresAt: string | null; readonly by: string; readonly at: string },
-): Promise<TourAccessRefusal | null> {
-  return db.runTransaction<TourAccessRefusal | null>(async (tx) => {
+  seal: DecisionSeal,
+  prepared: PreparedTourContact | undefined,
+): Promise<TourAccessRefusal | { readonly requestCount: number }> {
+  return db.runTransaction<TourAccessRefusal | { readonly requestCount: number }>(async (tx) => {
     const snap = await tx.get(ref);
     const stored = snap.exists ? tourAccessRequestFromDocument(snap.data(), ref.id) : null;
     if (stored === null) return 'request-absent';
     // 🔴 Μόνο πάνω σε εκκρεμές — ποτέ σιωπηλή ανατροπή απόφασης (ιδεμποτία · ADR-853).
     if (stored.state !== 'pending') return 'not-pending';
     const expiresAt = seal.state === 'approved' ? seal.expiresAt : null;
-    tx.update(ref, { state: seal.state, decidedAt: seal.at, decidedBy: seal.by, expiresAt });
-    return null;
+    const contact = seal.state === 'approved' && prepared?.kind === 'resolved' ? prepared.contact : null;
+    if (contact?.doc) tx.set(db.collection(COLLECTIONS.CONTACTS).doc(contact.contactId), contact.doc);
+    tx.update(ref, {
+      state: seal.state, decidedAt: seal.at, decidedBy: seal.by, expiresAt,
+      ...(contact ? { contactId: contact.contactId } : {}),
+    });
+    return { requestCount: stored.requestCount };
   });
+}
+
+/** Οι επαφές της έγκρισης — μόνο για **εταιρικό** κάτοχο (ο ιδιώτης δεν έχει CRM). */
+function contactsFor(
+  db: Firestore,
+  input: { readonly decision: TourAccessDecision; readonly custody: CustodyScope; readonly tourRef: DocumentReference; readonly uids: readonly string[]; readonly by: string },
+): Promise<ReadonlyMap<string, PreparedTourContact>> {
+  const { companyId } = input.custody;
+  if (input.decision !== 'approved' || companyId === undefined) return Promise.resolve(new Map());
+  return prepareTourAccessContacts(db, { tourRef: input.tourRef, uids: input.uids, companyId, deciderUid: input.by });
+}
+
+/** Το ίχνος ADR-195 για κάθε επαφή που **γεννήθηκε** — μετά τη συναλλαγή, ποτέ μέσα της. */
+async function recordContactBirths(
+  results: readonly TourAccessDecisionResult[],
+  prepared: ReadonlyMap<string, PreparedTourContact>,
+  companyId: string | undefined,
+  by: string,
+): Promise<void> {
+  if (companyId === undefined) return;
+  await Promise.all(results.map((result) => {
+    const entry = prepared.get(result.requesterUid);
+    if (result.kind !== 'decided' || result.contact !== 'created' || entry?.kind !== 'resolved') return undefined;
+    return recordAccountContactBirth({
+      contactId: entry.contact.contactId, displayName: entry.contact.displayName, companyId, performedBy: by,
+      origin: { field: 'tourAccessRequestUid', value: result.requesterUid, label: 'Αίτημα θέασης περιήγησης' },
+    });
+  }));
 }
 
 /**
@@ -83,14 +142,22 @@ export async function decideTourAccessRequests(
 
   const managed = await locateManagedTour(db, input.subject, input.actor);
   if (managed.kind === 'refused') return managed;
-  const seal = { state: input.decision, expiresAt: expiry?.ok ? expiry.expiresAt : null, by: input.actor.listing.uid, at };
+  const by = input.actor.listing.uid;
+  const seal: DecisionSeal = { state: input.decision, expiresAt: expiry?.ok ? expiry.expiresAt : null, by, at };
   const uids = [...new Set(input.requesterUids)];
+  const prepared = await contactsFor(db, { decision: input.decision, custody: managed.custody, tourRef: managed.tourRef, uids, by });
   const results = await Promise.all(uids.map(async (requesterUid): Promise<TourAccessDecisionResult> => {
-    const reason = await decideOne(db, tourAccessRequestRef(managed.tourRef, requesterUid), seal);
-    return reason === null
-      ? { requesterUid, kind: 'decided', state: input.decision }
-      : { requesterUid, kind: 'refused', reason };
+    const contact = prepared.get(requesterUid);
+    const ref = tourAccessRequestRef(managed.tourRef, requesterUid);
+    const decided = await decideOne(db, ref, seal, contact);
+    return typeof decided === 'string'
+      ? { requesterUid, kind: 'refused', reason: decided }
+      : {
+          requesterUid, kind: 'decided', state: input.decision, contact: contactOutcomeOf(contact),
+          requestId: ref.id, requestCount: decided.requestCount, expiresAt: seal.expiresAt,
+        };
   }));
+  await recordContactBirths(results, prepared, managed.custody.companyId, by);
   return { kind: 'decided', results };
 }
 

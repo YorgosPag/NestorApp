@@ -35,7 +35,7 @@ import {
   SHARE_PASSWORD_MAX_LENGTH,
 } from '@/services/sharing/share-resolve-contract';
 import type { CreateShareInput, CreateShareRequest, CreateShareResult } from '@/types/sharing';
-import { mayShareEntity } from './share-entity-access';
+import { mayCreateShare, type ShareCreator } from './share-create-authority';
 import { hashSharePassword } from './share-password';
 
 const logger = createModuleLogger('ShareCreate');
@@ -82,11 +82,7 @@ export type ShareCreateOutcome =
   | { readonly ok: true; readonly result: CreateShareResult }
   | { readonly ok: false; readonly refusal: ShareCreateRefusal; readonly reason?: string };
 
-/** Ο καλών — από την επαληθευμένη συνεδρία, ποτέ από το σώμα. */
-export interface ShareCreator {
-  readonly uid: string;
-  readonly companyId: string;
-}
+export type { ShareCreator };
 
 /** Σώμα → αίτημα, ή `null`. */
 export function parseCreateShareRequest(body: unknown): CreateShareRequest | null {
@@ -156,7 +152,9 @@ export async function createShareOnServer(
 
   const validation = definition.validateCreateInput(input);
   if (!validation.valid) return { ok: false, refusal: 'invalid', reason: validation.reason };
-  if (!(await mayShareEntity(adminDb, definition, creator.companyId, input.entityId))) {
+  if (!isResolvableShareKind(input.entityType)) return { ok: false, refusal: 'invalid', reason: 'unsupported entityType' };
+  // ADR-884 Κ3β: ο κριτής είναι **ανά είδος** — η περιήγηση ζητά τον υπεύθυνο, όχι σκέτο μισθωτή.
+  if (!(await mayCreateShare(adminDb, input.entityType, creator, input.entityId))) {
     return { ok: false, refusal: 'forbidden' };
   }
 

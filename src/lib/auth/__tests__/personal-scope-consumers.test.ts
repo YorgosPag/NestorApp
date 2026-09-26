@@ -327,6 +327,31 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
     why:
       'Η ΠΟΡΤΑ ΤΟΥ ΦΩΤΟΓΡΑΦΟΥ (ADR-884 Φ0.5 · ADR-853 §20). Η πρόσκληση φτάνει σε EMAIL· ο φωτογράφος ΔΕΝ είναι και ΔΕΝ γίνεται ποτέ μέλος χώρου — το withAuth θα απαντούσε 401 σε ακριβώς αυτόν. Η εξουσιοδότηση είναι το ΥΠΟΓΕΓΡΑΜΜΕΝΟ token ΚΑΙ το email ΤΟΥ Auth (κοινός πυρήνας, §7.5 · §15)· καμία γραφή claim.',
   },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/settings/route.ts',
+    why:
+      'ΡΥΘΜΙΣΕΙΣ ΘΕΑΣΗΣ (ADR-884 Κ3β · §12 Δ3). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (αγγελία owner-property, Α14): το withAuth θα του απαντούσε 401 για την ΔΙΚΗ του αγγελία. Κρίνει ο mayManageTour πάνω στη ΡΙΖΑ (ensureManagedTour/locateManagedTour) — ποτέ tourId από τον πελάτη.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/access-requests/route.ts',
+    why:
+      'ΑΙΤΗΜΑΤΑ ΘΕΑΣΗΣ — ο υπεύθυνος (ADR-884 Φ0.13 · Κ3β). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (Α14). Λίστα + μαζική απόφαση· κρίνει ο locateManagedTour (mayManageTour + ίδιος κάτοχος) στην υπηρεσία.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/access-requests/[requesterUid]/revoke/route.ts',
+    why:
+      'ΑΝΑΚΛΗΣΗ ΘΕΑΣΗΣ — ο υπεύθυνος (ADR-884 Φ0.13 · Κ3β). Ο υπεύθυνος μπορεί να είναι ΙΔΙΩΤΗΣ χωρίς εταιρεία (Α14). Κρίνει ο locateManagedTour στην υπηρεσία· μόνο ενεργή άδεια ανακαλείται.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/my-access/route.ts',
+    why:
+      'Ο ΑΙΤΩΝ ΘΕΑΣΗΣ (ADR-884 Φ0.13 · Κ3β, πρότυπο Google Drive «Request access»). Ο αγοραστής είναι ΠΟΛΙΤΗΣ χωρίς οργανισμό — το withAuth θα του απαντούσε 401 ακριβώς εκεί που ζητά πρόσβαση. Ο αιτών είναι ΠΑΝΤΑ ο actor.ctx.uid (ντετερμινιστικό έγγραφο ανά άνθρωπο), ποτέ από το σώμα.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/view-session/route.ts',
+    why:
+      'ΣΥΝΕΔΡΙΑ ΘΕΑΣΗΣ ΜΕ ΛΟΓΑΡΙΑΣΜΟ (ADR-884 Φ0.4 · Κ3β). Ο εγκεκριμένος αιτών είναι ΠΟΛΙΤΗΣ χωρίς οργανισμό· ο υπεύθυνος μπορεί να είναι ιδιώτης (Α14). Η βάση (manager · request · link · public) την κρίνει ο judgeTourView πάνω σε mayManageTour + tourAccessStanding — η ταυτότητα μόνο ΤΡΟΦΟΔΟΤΕΙ τους κριτές. Η δημόσια πόρτα (`view-session/public`) δεν ρωτά ποτέ ταυτότητα.',
+  },
 ];
 
 /**

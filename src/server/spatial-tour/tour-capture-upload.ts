@@ -65,6 +65,8 @@ export function tourIngestPath(tourId: string, uploadId: string): string {
 export interface UploaderStanding {
   readonly tourRef: DocumentReference;
   readonly custody: CustodyScope;
+  /** Πώς λέγεται το ακίνητο — ετικέτα του `FileRecord` του πανοράματος (Κ3β). `null` αν λείπει. */
+  readonly label: string | null;
 }
 
 /**
@@ -81,7 +83,7 @@ export async function judgeUploader(
   if (location.kind !== 'found') return refuseTourAccess('tour-absent');
   if (allowGenesis && mayManageTour(location.record, actor) === 'granted') {
     const ensured = await ensureManagedTour(db, subject, actor);
-    return ensured.kind === 'refused' ? ensured : { tourRef: ensured.tourRef, custody: ensured.custody };
+    return ensured.kind === 'refused' ? ensured : { tourRef: ensured.tourRef, custody: ensured.custody, label: location.label };
   }
   if (location.tour === null) return refuseTourAccess('tour-absent');
   if (!isOwnedByCustody(location.tour.custody, location.custody)) return refuseTourAccess('tour-custody-mismatch');
@@ -90,7 +92,7 @@ export async function judgeUploader(
   const grant = grantSnap.exists ? tourCaptureGrantFromDocument(grantSnap.data(), actor.listing.uid) : null;
   const verdict = mayUploadTourCapture(location.record, actor, grant, Date.now());
   if (verdict === 'granted-as-manager' || verdict === 'granted-by-capture-grant') {
-    return { tourRef: location.tourRef, custody: location.custody };
+    return { tourRef: location.tourRef, custody: location.custody, label: location.label };
   }
   return refuse(verdict);
 }

@@ -163,6 +163,9 @@ describe('Ο/Ι — η ολοκλήρωση', () => {
     expect(outcome.capture.capturedAt).toMatch(/^2026-08-14T/);
     const file = kit.getData(COLLECTIONS.FILES, outcome.capture.originalFileId);
     expect(file).toMatchObject({ companyId: AGENCY, category: 'panoramas', status: 'ready', entityType: 'property', entityId: 'prop_1' });
+    // 🔴 Κ3β — ήταν «panoramas panorama» (ωμό `purpose` που ο διακομιστής δεν μεταφράζει). Τώρα: κατηγορία + ακίνητο.
+    expect(file).not.toHaveProperty('purpose');
+    expect(file?.displayName).toBe('panoramas - Διαμέρισμα Α2');
     expect(objects.has(tourIngestPath(TOUR_ID, uploadId))).toBe(false);
     expect(objects.has(String(file?.storagePath))).toBe(true);
     expect(audits).toEqual([expect.objectContaining({ action: 'upload', fileId: outcome.capture.originalFileId, companyId: AGENCY })]);

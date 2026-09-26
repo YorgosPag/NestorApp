@@ -13,6 +13,7 @@ import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { mayManageTour, type TourActor } from '@/lib/spatial-tour/tour-authority';
+import type { TourViewRefusal } from '@/lib/spatial-tour/tour-view-policy';
 import { isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type { SpatialTour, TourSubject } from '@/types/spatial-tour';
@@ -40,7 +41,16 @@ export type TourAccessRefusal =
    */
   | 'tour-custody-mismatch'
   /** Υπάρχει έγγραφο περιήγησης που **δεν διαβάζεται** — ποτέ αντικατάσταση από πάνω του. */
-  | 'tour-unreadable';
+  | 'tour-unreadable'
+  /** Η πύλη θέασης (`judgeTourView`) — «συνδεθείτε» · «καμία βάση» (Κ3β). */
+  | TourViewRefusal
+  /** Δημοσίευση χωρίς ούτε μία λήψη για το κοινό — τίποτα να δει ο επισκέπτης (Κ3β). */
+  | 'publish-needs-capture'
+  /**
+   * `link-only` σε περιήγηση **ιδιώτη** — οι σύνδεσμοι ανά παραλήπτη (ADR-315) είναι εμβέλειας μισθωτή, άρα θα ήταν
+   * ορατότητα που **κανείς** δεν μπορεί να χρησιμοποιήσει. Ο ιδιώτης έχει το `on-request` (ανά άνθρωπο, Κ3β).
+   */
+  | 'visibility-unsupported';
 
 export type TourAccessRefused = { readonly kind: 'refused'; readonly reason: TourAccessRefusal };
 

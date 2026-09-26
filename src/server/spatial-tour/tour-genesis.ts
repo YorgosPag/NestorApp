@@ -42,6 +42,9 @@ export type EnsuredTour = {
   readonly created: boolean;
 };
 
+/** Οι ρυθμίσεις με τις οποίες γεννιέται **κάθε** περιήγηση — μία τιμή, για τον γραφέα **και** την οθόνη (Κ3β). */
+export const TOUR_GENESIS_SETTINGS = { visibility: 'public', lifecycle: 'draft' } as const;
+
 /** Το έγγραφο μιας νέας περιήγησης — κενός γράφος, `draft`, ο κάτοχος **παράγεται** από τη ρίζα (Φ0.1). */
 function newTourDocument(input: {
   readonly custody: CustodyScope;
@@ -52,8 +55,7 @@ function newTourDocument(input: {
   return {
     ...custodyOnly(input.custody),
     subject: { kind: input.subject.kind, id: input.subject.id },
-    visibility: 'public',
-    lifecycle: 'draft',
+    ...TOUR_GENESIS_SETTINGS,
     levels: [],
     nodes: [],
     revision: 0,

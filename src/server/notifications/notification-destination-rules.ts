@@ -15,6 +15,8 @@
  * | `properties.mandateDecided` | `custodyOf` + `mandateDecisionDestination` | `announceMandateDecision` |
  * | `properties.stayRequestReceived` | `custodyOf` + `stayRequestReceivedDestination` | `announceStayBookingNotice` |
  * | `properties.stayRequestAnswered` | `stayRequestAnsweredDestination` | `announceStayBookingNotice` |
+ * | `properties.tourAccessRequested` | `readTourHost` + `tourAccessReceivedDestination` | `announceTourAccessRequested` |
+ * | `properties.tourAccessAnswered` | `tourAccessAnsweredDestination` | `announceTourAccessAnswered` |
  * | `network.threadMessage` | `readThreadTopic` + `threadDestination` | `announceNetworkMessage` |
  * | `network.teamJoined` | `actTeamRefById` + `threadDestination` | `announceTeamArrivals` |
  *
@@ -58,6 +60,12 @@ import {
 import { generateDeterministicNetworkActThreadId } from '@/services/enterprise-id.service';
 import { actTeamRefById } from '@/services/network-messaging/act-team-writer';
 import { threadDestination } from '@/services/network-messaging/network-destination';
+import { tourSubjectOfListing } from '@/lib/spatial-tour/tour-subject-of-listing';
+import {
+  readTourHost,
+  tourAccessAnsweredDestination,
+  tourAccessReceivedDestination,
+} from '@/server/spatial-tour/tour-access-notifier';
 import { readThreadTopic } from '@/services/network-messaging/thread-reader';
 import type { NetworkActTeam } from '@/types/network-thread';
 
@@ -127,6 +135,15 @@ const networkTeamJoinedRule: DestinationRule = async (db, notification, entityId
   return expected(threadDestination(generateDeterministicNetworkActThreadId(team.actSeed), notification.userId));
 };
 
+/** ADR-884 Κ3β — νέο αίτημα θέασης προς τον υπεύθυνο: ο χώρος είναι η θεματοφυλακή της **ρίζας**. */
+const tourAccessRequestedRule: DestinationRule = async (db, _notification, entityId) => {
+  const subject = tourSubjectOfListing(entityId);
+  if (subject === null) return unresolvable('entity-absent');
+  const host = await readTourHost(db, subject);
+  if (host === null) return unresolvable('entity-absent');
+  return expected(tourAccessReceivedDestination(subject, host.workspace));
+};
+
 const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> = {
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST]: demandInterestRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH]: async (_db, notification, entityId) =>
@@ -146,6 +163,9 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_RECEIVED]: stayRequestReceivedRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_STAY_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(stayRequestAnsweredDestination(entityId, notification.userId)),
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_REQUESTED]: tourAccessRequestedRule,
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_ANSWERED]: async (_db, notification, entityId) =>
+    expected(tourAccessAnsweredDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.NETWORK_THREAD_MESSAGE]: networkThreadMessageRule,
   [NOTIFICATION_EVENT_TYPES.NETWORK_TEAM_JOINED]: networkTeamJoinedRule,
 };

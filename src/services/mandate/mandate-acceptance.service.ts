@@ -77,9 +77,8 @@ import {
   mandateWriteVerdict,
   nextMandateExpiry,
 } from '@/types/owner-property-mandate';
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityAuditService } from '@/services/entity-audit.service';
+import { recordAccountContactBirth } from '@/services/contact/account-contact-resolver';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import type { MandateRequest } from '@/types/mandate-request';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
@@ -343,46 +342,15 @@ async function announceToTheWorld(
 }
 
 /**
- * **Το ίχνος ελέγχου της νέας επαφής** (ADR-195, CHECK 3.17).
- *
- * 🔑 Γράφεται **μόνο** για επαφή που όντως γεννήθηκε: μια υπάρχουσα καρτέλα δεν
- * «δημιουργήθηκε» επειδή την αναγνωρίσαμε, και ένα `created` πάνω της θα έλεγε ψέματα
- * στο ιστορικό της.
- *
- * ⚠️ **Δεν πετά** — ίδιο συμβόλαιο με κάθε παρενέργεια αυτής της φάσης.
+ * **Το ίχνος ελέγχου της νέας επαφής** (ADR-195, CHECK 3.17) — ο ΕΝΑΣ γραφέας ζει στο
+ * `services/contact/account-contact-resolver` (ADR-884 Κ3β). Γράφεται **μόνο** για επαφή που όντως γεννήθηκε.
  */
-async function recordContactBirth(
-  input: AcceptanceInput,
-  prepared: Prepared,
-): Promise<void> {
-  try {
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: prepared.clientContactId,
-      entityName: prepared.contactName,
-      action: 'created',
-      changes: [
-        {
-          field: 'displayName',
-          oldValue: null,
-          newValue: prepared.contactName,
-          label: 'Όνομα',
-        },
-        {
-          field: 'mandateRequestId',
-          oldValue: null,
-          newValue: input.request.id,
-          label: 'Αίτημα ανάθεσης',
-        },
-      ],
-      performedBy: input.deciderUid,
-      performedByName: input.deciderUid,
-      companyId: input.agencyCompanyId,
-    });
-  } catch (error) {
-    logger.error('[MANDATE-ACCEPT] Το ίχνος ελέγχου της επαφής δεν γράφτηκε', {
-      contactId: prepared.clientContactId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
+function recordContactBirth(input: AcceptanceInput, prepared: Prepared): Promise<void> {
+  return recordAccountContactBirth({
+    contactId: prepared.clientContactId,
+    displayName: prepared.contactName,
+    companyId: input.agencyCompanyId,
+    performedBy: input.deciderUid,
+    origin: { field: 'mandateRequestId', value: input.request.id, label: 'Αίτημα ανάθεσης' },
+  });
 }

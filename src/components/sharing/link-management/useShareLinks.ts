@@ -18,12 +18,14 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
+
+import { useReconciledResource, type ReconciledStatus } from '@/hooks/useReconciledResource';
 
 import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
 import type { ShareEntityType, ShareLinkSummary, UpdateShareRequest } from '@/types/sharing';
 
-export type ShareLinksStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type ShareLinksStatus = ReconciledStatus;
 
 export interface UseShareLinksOptions {
   readonly entityType: ShareEntityType;
@@ -43,72 +45,53 @@ export interface UseShareLinksResult {
   readonly update: (shareId: string, request: UpdateShareRequest) => Promise<ShareLinkSummary>;
 }
 
+interface ShareLinksSnapshot {
+  readonly links: readonly ShareLinkSummary[];
+  readonly hasMore: boolean;
+}
+
 export function useShareLinks({ entityType, entityId, enabled }: UseShareLinksOptions): UseShareLinksResult {
-  const [links, setLinks] = useState<readonly ShareLinkSummary[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [status, setStatus] = useState<ShareLinksStatus>('idle');
-  const seq = useRef(0);
-
-  const refresh = useCallback(async () => {
-    const mine = ++seq.current;
-    setStatus((prev) => (prev === 'ready' ? prev : 'loading'));
-    try {
-      const result = await UnifiedSharingService.listActive(entityType, entityId);
-      if (mine !== seq.current) return;
-      setLinks(result.links);
-      setHasMore(result.hasMore);
-      setStatus('ready');
-    } catch {
-      if (mine === seq.current) setStatus('error');
-    }
-  }, [entityType, entityId]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    void refresh();
-  }, [enabled, refresh]);
-
-  /** Αισιόδοξη αλλαγή + συμφιλίωση σε αποτυχία. */
-  const optimistic = useCallback(
-    async <T,>(apply: (rows: readonly ShareLinkSummary[]) => readonly ShareLinkSummary[], call: () => Promise<T>) => {
-      seq.current++; // ακύρωσε κάθε ανάγνωση σε πτήση — θα έφερνε την προ-αλλαγής εικόνα
-      setLinks(apply);
-      try {
-        return await call();
-      } catch (error) {
-        void refresh();
-        throw error;
-      }
-    },
-    [refresh],
+  // ♻️ Αισιόδοξη αλλαγή + συμφιλίωση + ακύρωση πτήσης: ο ΕΝΑΣ τρόπος (`hooks/useReconciledResource`, ADR-884 Κ3β).
+  const load = useCallback(
+    (): Promise<ShareLinksSnapshot> => UnifiedSharingService.listActive(entityType, entityId),
+    [entityType, entityId],
   );
+  const { data, status, refresh, optimistic } = useReconciledResource(load, enabled);
 
   const revoke = useCallback(
-    (shareId: string) =>
-      optimistic((rows) => rows.filter((row) => row.shareId !== shareId), () => UnifiedSharingService.revoke(shareId)),
+    async (shareId: string) => {
+      await optimistic(
+        (current) => ({ ...current, links: current.links.filter((row) => row.shareId !== shareId) }),
+        () => UnifiedSharingService.revoke(shareId),
+      );
+    },
     [optimistic],
   );
 
   const revokeAll = useCallback(
     async (exceptShareId?: string) => {
       const result = await optimistic(
-        (rows) => rows.filter((row) => row.shareId === exceptShareId),
+        (current) => ({ ...current, links: current.links.filter((row) => row.shareId === exceptShareId) }),
         () => UnifiedSharingService.revokeAll({ entityType, entityId, ...(exceptShareId ? { exceptShareId } : {}) }),
+        // «ανάκληση όλων» αγγίζει και ό,τι δεν χωρούσε στη σελίδα
+        { reconcile: 'always' },
       );
-      void refresh(); // «ανάκληση όλων» αγγίζει και ό,τι δεν χωρούσε στη σελίδα
       return result.revoked;
     },
-    [optimistic, refresh, entityType, entityId],
+    [optimistic, entityType, entityId],
   );
 
   const update = useCallback(
     async (shareId: string, request: UpdateShareRequest) => {
       const link = await UnifiedSharingService.update(shareId, request);
-      setLinks((rows) => rows.map((row) => (row.shareId === shareId ? link : row)));
+      await optimistic(
+        (current) => ({ ...current, links: current.links.map((row) => (row.shareId === shareId ? link : row)) }),
+        () => Promise.resolve(link),
+      );
       return link;
     },
-    [],
+    [optimistic],
   );
 
-  return { links, hasMore, status, refresh, revoke, revokeAll, update };
+  return { links: data?.links ?? [], hasMore: data?.hasMore ?? false, status, refresh, revoke, revokeAll, update };
 }

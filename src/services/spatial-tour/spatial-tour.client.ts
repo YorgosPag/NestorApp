@@ -34,13 +34,23 @@ function isInvitationCoreRefusal(value: unknown): value is InvitationCoreRefusal
   return typeof value === 'string' && (CORE_INVITATION_REFUSALS as readonly string[]).includes(value);
 }
 
-async function call<T>(request: () => Promise<T>): Promise<TourCallResult<T>> {
+/** **Η ΜΙΑ περιτύλιξη κλήσης** — την μοιράζονται η ροή φωτογράφου και η θέαση (`spatial-tour-viewing.client.ts`). */
+export async function tourCall<T>(request: () => Promise<T>): Promise<TourCallResult<T>> {
   try {
     return { kind: 'ok', value: await request() };
   } catch (cause: unknown) {
     const reason = refusalOf(cause);
     return reason === null ? { kind: 'failed' } : { kind: 'refused', reason };
   }
+}
+
+/**
+ * **Λίστα, ή «δεν υπάρχει ακόμη περιήγηση» = κενό** — `tour-absent` σε λίστα **δεν** είναι σφάλμα (η περιήγηση
+ * γεννιέται με την πρώτη πράξη)· `null` ⇒ πραγματική αποτυχία (η οθόνη λέει «δεν φορτώθηκε», ποτέ κενή λίστα).
+ */
+export function tourListOrEmpty<T>(result: TourCallResult<readonly T[]>): readonly T[] | null {
+  if (result.kind === 'ok') return result.value;
+  return result.kind === 'refused' && result.reason === 'tour-absent' ? [] : null;
 }
 
 const routes = API_ROUTES.SPATIAL_TOURS;
@@ -59,29 +69,29 @@ export function issueTourCaptureInvitationFromScreen(
   subject: TourSubject,
   input: { readonly email: string; readonly grantExpiresAt: string; readonly reason: string },
 ): Promise<TourCallResult<IssuedTourCaptureInvitation>> {
-  return call(() => apiClient.post<IssuedTourCaptureInvitation>(routes.CAPTURE_INVITATIONS(subject.kind, subject.id), input));
+  return tourCall(() => apiClient.post<IssuedTourCaptureInvitation>(routes.CAPTURE_INVITATIONS(subject.kind, subject.id), input));
 }
 
 export function listTourCaptureInvitationsFromScreen(subject: TourSubject): Promise<TourCallResult<readonly TourCaptureInvitationView[]>> {
-  return call(async () =>
+  return tourCall(async () =>
     (await apiClient.get<{ invitations: readonly TourCaptureInvitationView[] }>(routes.CAPTURE_INVITATIONS(subject.kind, subject.id))).invitations);
 }
 
 /** Ανάκληση πρόσκλησης. Ήδη λυμένη ή ξένη ⇒ `failed` με ανανέωση λίστας (η οθόνη δείχνει την αλήθεια). */
 export function revokeTourCaptureInvitationFromScreen(subject: TourSubject, invitationId: string): Promise<TourCallResult<null>> {
-  return call(async () => {
+  return tourCall(async () => {
     await apiClient.post(routes.CAPTURE_INVITATION_REVOKE(subject.kind, subject.id, invitationId), {});
     return null;
   });
 }
 
 export function listTourCaptureGrantsFromScreen(subject: TourSubject): Promise<TourCallResult<readonly TourCaptureGrantView[]>> {
-  return call(async () =>
+  return tourCall(async () =>
     (await apiClient.get<{ grants: readonly TourCaptureGrantView[] }>(routes.CAPTURE_GRANTS(subject.kind, subject.id))).grants);
 }
 
 export function revokeTourCaptureGrantFromScreen(subject: TourSubject, granteeUid: string): Promise<TourCallResult<null>> {
-  return call(async () => {
+  return tourCall(async () => {
     await apiClient.post(routes.CAPTURE_GRANT_REVOKE(subject.kind, subject.id, granteeUid), {});
     return null;
   });
@@ -90,7 +100,7 @@ export function revokeTourCaptureGrantFromScreen(subject: TourSubject, granteeUi
 export function listTourCapturesFromScreen(
   subject: TourSubject,
 ): Promise<TourCallResult<{ readonly captures: readonly TourCapture[]; readonly asManager: boolean }>> {
-  return call(() => apiClient.get<{ captures: readonly TourCapture[]; asManager: boolean }>(routes.CAPTURES(subject.kind, subject.id)));
+  return tourCall(() => apiClient.get<{ captures: readonly TourCapture[]; asManager: boolean }>(routes.CAPTURES(subject.kind, subject.id)));
 }
 
 // ── Το ανέβασμα (υπεύθυνος ΚΑΙ φωτογράφος) ─────────────────────────────────
@@ -107,14 +117,14 @@ export function startTourUploadFromScreen(
   subject: TourSubject,
   input: { readonly contentType: string; readonly contentLength: number },
 ): Promise<TourCallResult<StartedTourUpload>> {
-  return call(() => apiClient.post<StartedTourUpload>(routes.UPLOADS(subject.kind, subject.id), input));
+  return tourCall(() => apiClient.post<StartedTourUpload>(routes.UPLOADS(subject.kind, subject.id), input));
 }
 
 export function finalizeTourUploadFromScreen(
   subject: TourSubject,
   input: { readonly ticket: string; readonly declaration: unknown },
 ): Promise<TourCallResult<{ readonly capture: TourCapture; readonly replayed: boolean }>> {
-  return call(() => apiClient.post<{ capture: TourCapture; replayed: boolean }>(routes.UPLOADS_FINALIZE(subject.kind, subject.id), input));
+  return tourCall(() => apiClient.post<{ capture: TourCapture; replayed: boolean }>(routes.UPLOADS_FINALIZE(subject.kind, subject.id), input));
 }
 
 // ── Ο φωτογράφος: η απάντηση στην πρόσκληση ────────────────────────────────

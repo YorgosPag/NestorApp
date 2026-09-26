@@ -736,6 +736,23 @@ export const API_ROUTES = {
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/captures` as const,
     /** Η πράξη του φωτογράφου· το token ταξιδεύει στο **σώμα** (RFC 6819 §5.1.5). */
     REDEEM: '/api/spatial-tours/capture-invitations/redeem',
+    // ── Θέαση (ADR-884 Κ3β) ──
+    SETTINGS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/settings` as const,
+    ACCESS_REQUESTS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/access-requests` as const,
+    ACCESS_REQUEST_REVOKE: (kind: string, subjectId: string, requesterUid: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/access-requests/${encodeURIComponent(requesterUid)}/revoke` as const,
+    MY_ACCESS: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/my-access` as const,
+    VIEW_SESSION: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/view-session` as const,
+    /** Η ρίζα των μέσων — και το `Path` του cookie θέασης: το κουπόνι δεν ταξιδεύει πουθενά αλλού. */
+    MEDIA_ROOT: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/media` as const,
+    /** Δημόσιο: «έχει αυτή η αγγελία περιήγηση που φαίνεται, και πού βρίσκομαι εγώ;» */
+    LISTING_PRESENCE: (listingId: string) =>
+      `/api/spatial-tours/listings/${encodeURIComponent(listingId)}/presence` as const,
   },
 
   // ── Projects ──────────────────────────────────────────────────────────

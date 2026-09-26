@@ -26,6 +26,7 @@ import type { LinkTokenDraft } from '@/components/ui/sharing/panels/link-token/t
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import type { ShareKindLinkPolicy } from '@/services/sharing/share-resolve-contract';
 import type { MintedShare } from './useLinkMint';
 
 export interface ShareLinkCreatePanelProps {
@@ -34,18 +35,21 @@ export interface ShareLinkCreatePanelProps {
   /** Καλείται **συγχρόνως** από το κλικ — η αντιγραφή χρειάζεται φρέσκια χειρονομία. */
   readonly onCreateAndCopy: () => void;
   readonly minting: boolean;
+  /** ADR-884 Κ3β — η πολιτική συνδέσμου του είδους (κρύβει κωδικό · απαιτεί «για ποιον»). */
+  readonly policy?: ShareKindLinkPolicy;
 }
 
 export function ShareLinkCreatePanel({
-  draft, onDraftChange, onCreateAndCopy, minting,
+  draft, onDraftChange, onCreateAndCopy, minting, policy,
 }: ShareLinkCreatePanelProps): React.ReactElement {
+  const missingLabel = policy?.labelRequired === true && draft.label.trim() === '';
   const { t } = useTranslation(['files', 'common', 'files-media']);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="share-link-create-title">
       <h3 id="share-link-create-title" className="sr-only">{t('share.createAndCopy')}</h3>
-      <LinkLabelField draft={draft} onDraftChange={onDraftChange} />
+      <LinkLabelField draft={draft} onDraftChange={onDraftChange} policy={policy} />
       <section className={cn('border rounded-lg overflow-hidden', settingsOpen && 'border-primary/40')}>
         <button
           type="button"
@@ -58,11 +62,11 @@ export function ShareLinkCreatePanel({
         </button>
         {settingsOpen && (
           <fieldset className="flex flex-col gap-4 p-3 border-t bg-muted/20">
-            <LinkTokenFields draft={draft} onDraftChange={onDraftChange} mode="create" />
+            <LinkTokenFields draft={draft} onDraftChange={onDraftChange} mode="create" policy={policy} />
           </fieldset>
         )}
       </section>
-      <Button type="button" onClick={onCreateAndCopy} disabled={minting} className="w-full">
+      <Button type="button" onClick={onCreateAndCopy} disabled={minting || missingLabel} className="w-full">
         {minting ? <Spinner size="small" color="inherit" className="mr-2" /> : <Link2 className="h-4 w-4 mr-2" />}
         {t('share.createAndCopy')}
       </Button>

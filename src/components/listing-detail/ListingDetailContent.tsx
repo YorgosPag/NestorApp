@@ -74,6 +74,7 @@ import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingGallery } from './ListingGallery';
 import { ListingFloorplans } from './ListingFloorplans';
 import { ListingModels } from './ListingModels';
+import { ListingTour } from './ListingTour';
 import { ListingStay } from './ListingStay';
 import { ListingExchangeTerm } from './ListingExchangeTerm';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
@@ -270,6 +271,11 @@ function ListingDetailBody({
             απουσία του δεν ονομάζεται.
           */}
           <ListingModels listing={listing} />
+          {/*
+            ADR-884 Κ3β — **η περιήγηση 360°**, στην ίδια οικογένεια μέσων (φωτογραφία → κάτοψη → μοντέλο →
+            περιήγηση). Αποδίδει **τίποτα** όταν δεν υπάρχει περιήγηση που φαίνεται (`presence`).
+          */}
+          <ListingTour listingId={listing.id} />
           <ListingPositionSection listing={listing} />
           {/*
             ADR-835 §21 — **ο ΧΡΟΝΟΣ μετά τον ΤΟΠΟ** (η σειρά «τόπος → χρόνος» του §4.6).

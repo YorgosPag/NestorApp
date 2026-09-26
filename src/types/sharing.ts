@@ -26,6 +26,8 @@ export type ShareEntityType =
   | 'building_showcase'
   | 'storage_showcase'
   | 'parking_showcase'
+  /** ADR-884 Φ0.12 — προσωπικός σύνδεσμος θέασης περιήγησης 360° (`link-only`), ανά παραλήπτη. */
+  | 'spatial_tour'
   | 'vendor_rfq_invite';
 
 export type ShareDispatchChannel =

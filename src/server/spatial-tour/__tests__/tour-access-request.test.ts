@@ -173,8 +173,9 @@ describe('Υ — ο υπεύθυνος', () => {
     expect(outcome).toEqual({
       kind: 'decided',
       results: [
-        { requesterUid: 'buyer', kind: 'decided', state: 'approved' },
-        { requesterUid: 'buyer2', kind: 'decided', state: 'approved' },
+        // `contact: 'none'`: εδώ κανένας λογαριασμός δεν διαβάζεται (Auth) — η επαφή CRM δοκιμάζεται στο `tour-access-contact.test.ts`.
+        expect.objectContaining({ requesterUid: 'buyer', kind: 'decided', state: 'approved', contact: 'none', requestCount: 1 }),
+        expect.objectContaining({ requesterUid: 'buyer2', kind: 'decided', state: 'approved', contact: 'none', requestCount: 1 }),
         { requesterUid: 'ghost', kind: 'refused', reason: 'request-absent' },
       ],
     });

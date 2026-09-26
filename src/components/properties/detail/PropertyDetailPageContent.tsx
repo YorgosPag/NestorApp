@@ -224,8 +224,9 @@ export function PropertyDetailPageContent({
             audience={marketingAudienceOf(state.property.marketingAudience)}
           />
 
-          {/* 📷 ADR-884 Κ3α — ίδιο πάνελ με την πλευρά ιδιώτη· διαχειρίζεται όποιος έχει `listings:listings:publish` στον μισθωτή. */}
-          <SpatialTourPanel subject={{ kind: 'company-property', id: state.property.id }} />
+          {/* 📷 ADR-884 Κ3α — ίδιο πάνελ με την πλευρά ιδιώτη· διαχειρίζεται όποιος έχει `listings:listings:publish` στον μισθωτή.
+              Κ3β: το `companyId` ανοίγει τους προσωπικούς συνδέσμους θέασης (ADR-315, εμβέλεια μισθωτή). */}
+          <SpatialTourPanel subject={{ kind: 'company-property', id: state.property.id }} companyId={state.property.companyId ?? null} />
 
           <section className="flex min-h-0 flex-1 flex-col">
             <PropertyDetailSurface

@@ -181,6 +181,14 @@ export interface TourAccessRequest {
   readonly expiresAt: string | null;
   readonly revokedAt: string | null;
   readonly revokedBy: string | null;
+  /**
+   * **Ίχνος θέασης** (Φ0.13α, Κ3β) — πόσες **επισκέψεις** (όχι πλακίδια: ένα κουπόνι 15′ = μία επίσκεψη). Επιζεί
+   * ξανα-αιτήματος: η ιστορία ενδιαφέροντος του ανθρώπου δεν σβήνει επειδή ζήτησε ξανά.
+   */
+  readonly viewCount: number;
+  readonly lastViewedAt: string | null;
+  /** Η επαφή CRM του υπευθύνου (Φ0.13β) — `null` για ιδιώτη χωρίς CRM ή αν δεν δέθηκε ακόμη. */
+  readonly contactId: string | null;
 }
 
 /**

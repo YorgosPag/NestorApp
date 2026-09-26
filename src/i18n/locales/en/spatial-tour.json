@@ -60,7 +60,11 @@
     "uploadMissing": "The file did not arrive. Start the upload again.",
     "uploadIncomplete": "The file was not uploaded completely. Start it again.",
     "declarationInvalid": "Fill in the capture details correctly.",
-    "unavailable": "Something went wrong. Try again shortly."
+    "unavailable": "Something went wrong. Try again shortly.",
+    "signInRequired": "Sign in to view this tour.",
+    "notViewable": "You do not have access to this tour.",
+    "publishNeedsCapture": "Upload at least one panorama for the listing audience first.",
+    "visibilityUnsupported": "Personal links are available for agency listings only. Choose “On request”."
   },
   "panel": {
     "title": "360° tour",
@@ -152,5 +156,87 @@
   "licenseTerm": {
     "perpetual": "Perpetual",
     "date": "Until a date"
+  },
+  "visibility": {
+    "public": "Everyone",
+    "onRequest": "On request",
+    "linkOnly": "Personal link only"
+  },
+  "visibilityHint": {
+    "public": "Anyone who sees the listing sees the tour too.",
+    "onRequest": "Visitors request access with their account; you approve, with an expiry.",
+    "linkOnly": "Hidden from the listing — only people who receive a personal link."
+  },
+  "lifecycle": {
+    "draft": "Draft",
+    "published": "Published",
+    "withdrawn": "Withdrawn"
+  },
+  "viewing": {
+    "settingsTitle": "Who sees the tour",
+    "visibility": "Visibility",
+    "lifecycle": "Status",
+    "publish": "Publish",
+    "withdraw": "Withdraw",
+    "saved": "Settings saved.",
+    "explicitGrantsNote": "People with an approved request or a personal link keep access until it expires or you revoke it.",
+    "linksTitle": "Personal links",
+    "linksDescription": "One link per recipient, with a name and an expiry. See when it was opened and revoke it on its own.",
+    "linksManage": "Links and sending",
+    "requestsTitle": "Viewing requests",
+    "tabPending": "Pending",
+    "tabApproved": "With access",
+    "noPending": "No pending requests.",
+    "noApproved": "Nobody has access yet.",
+    "selectAll": "Select all",
+    "selectRequest": "Select request from {name}",
+    "approveUntil": "Access until",
+    "approveSelected": "Approve ({count})",
+    "declineSelected": "Decline ({count})",
+    "requestedAt": "Requested {date}",
+    "requestedTimes": "{count, plural, one {# request} other {# requests}}",
+    "verifiedEmail": "Verified email",
+    "unverifiedEmail": "Unverified email",
+    "unknownAccount": "Unknown account",
+    "viewTrace": "{count, plural, =0 {Has not viewed it yet} one {Viewed it # time} other {Viewed it # times}}",
+    "lastViewed": "last {date}",
+    "accessUntil": "Access until {date}",
+    "inCrm": "CRM contact",
+    "revokeAccess": "Revoke access",
+    "decidedApproved": "{count, plural, one {# request approved.} other {# requests approved.}}",
+    "decidedDeclined": "{count, plural, one {# request declined.} other {# requests declined.}}",
+    "decidedSkipped": "{count, plural, one {# request did not change — it was answered or withdrawn meanwhile.} other {# requests did not change — they were answered or withdrawn meanwhile.}}",
+    "contactUnavailable": "The CRM contact was not created this time — access was granted normally."
+  },
+  "access": {
+    "cardTitle": "360° tour",
+    "cardPublic": "Walk through the property in 360°, room by room.",
+    "cardOnRequest": "The listing manager shows the tour on request.",
+    "open": "Open the tour",
+    "request": "Request access",
+    "messageLabel": "Message to the manager (optional)",
+    "messagePlaceholder": "e.g. I am interested in buying — when can we talk?",
+    "send": "Send request",
+    "cancel": "Cancel",
+    "pending": "Your request was sent — you will be notified when it is answered.",
+    "withdraw": "Withdraw request",
+    "approved": "You have access until {date}.",
+    "declined": "Your request was not approved.",
+    "expired": "Your access has expired.",
+    "revoked": "Your access was revoked.",
+    "requestAgain": "Request again",
+    "signIn": "Sign in to request access",
+    "signInHint": "Access is bound to your account — so the manager knows who is viewing the home."
+  },
+  "viewer": {
+    "title": "360° tour",
+    "preparing": "The tour is being prepared — the panoramas are being processed for viewing. Try again shortly.",
+    "basisManager": "Manager preview",
+    "basisLink": "Personal link",
+    "basisRequest": "Approved access",
+    "basisPublic": "Public tour",
+    "stops": "{count, plural, one {# viewpoint} other {# viewpoints}}",
+    "backToListing": "Back to the listing",
+    "unavailable": "The tour is not available right now."
   }
 }

@@ -49,12 +49,30 @@ function normalizePhone(phone: string): string {
 // HELPER: Extract contact display fields from Firestore doc data
 // ============================================================================
 
-function extractContactFields(data: FirebaseFirestore.DocumentData, docId: string): ContactNameSearchResult {
+/** Τα ονόματα μιας επαφής — ΕΝΑΣ αναγνώστης για την προβολή **και** την ασαφή αναζήτηση (Boy Scout, ADR-884 Κ3β). */
+function contactNameParts(data: FirebaseFirestore.DocumentData) {
   const displayName = (data.displayName as string) ?? '';
   const firstName = (data.firstName as string) ?? '';
   const lastName = (data.lastName as string) ?? '';
   const companyName = (data.companyName as string) ?? '';
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
+  return { displayName, firstName, lastName, companyName, fullName };
+}
+
+/** Οι επαφές μιας εταιρείας για σάρωση στη μνήμη — ΕΝΑ ερώτημα για αναζήτηση ονόματος **και** λίστα. */
+async function readCompanyContacts(companyId: string, scanLimit: number) {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.CONTACTS)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .limit(scanLimit)
+    .get();
+}
+
+/** Πόσες επαφές σαρώνουν η αναζήτηση ονόματος και η λίστα (πριν το φίλτρο στη μνήμη). */
+const NAME_SCAN_LIMIT = 200;
+
+function extractContactFields(data: FirebaseFirestore.DocumentData, docId: string): ContactNameSearchResult {
+  const { displayName, firstName, lastName, companyName, fullName } = contactNameParts(data);
 
   // Extract primary email
   let email: string | null = null;
@@ -88,6 +106,23 @@ function extractContactFields(data: FirebaseFirestore.DocumentData, docId: strin
 // CONTACT LOOKUP BY EMAIL
 // ============================================================================
 
+/** Μέγεθος σελίδας της σάρωσης email — κάθε σελίδα, μέχρι το τέλος (ορθότητα πριν από το κόστος). */
+const EMAIL_SCAN_PAGE_SIZE = 500;
+
+/** Ταιριάζει αυτή η επαφή στο email; (πίνακας `emails[]` **ή** επίπεδο `email`) */
+function contactMatchByEmail(normalizedEmail: string) {
+  return (doc: FirebaseFirestore.QueryDocumentSnapshot): ContactMatch | null => {
+    const data = doc.data();
+    const emails = data.emails as Array<{ email?: string }> | undefined;
+    const flatEmail = data.email as string | undefined;
+    const hit = emails?.some((e) => e.email?.toLowerCase().trim() === normalizedEmail)
+      || flatEmail?.toLowerCase().trim() === normalizedEmail;
+    return hit
+      ? { contactId: doc.id, name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string }
+      : null;
+  };
+}
+
 /**
  * Server-side contact lookup by email using Admin SDK.
  *
@@ -103,35 +138,23 @@ export async function findContactByEmail(
   companyId: string
 ): Promise<ContactMatch | null> {
   const adminDb = getAdminFirestore();
-
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .where(FIELDS.COMPANY_ID, '==', companyId)
-    .limit(50)
-    .get();
-
   const normalizedEmail = email.toLowerCase().trim();
 
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
-
-    // Check emails array (common pattern: [{ email: "...", label: "work" }])
-    const emails = data.emails as Array<{ email?: string }> | undefined;
-    if (emails?.some(e => e.email?.toLowerCase().trim() === normalizedEmail)) {
-      return {
-        contactId: doc.id,
-        name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string,
-      };
-    }
-
-    // Check flat email field
-    const flatEmail = data.email as string | undefined;
-    if (flatEmail?.toLowerCase().trim() === normalizedEmail) {
-      return {
-        contactId: doc.id,
-        name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string,
-      };
-    }
+  // 🔴 ADR-884 Κ3β: ήταν `.limit(50)` ΧΩΡΙΣ σελιδοποίηση — σε γραφείο με >50 επαφές η υπάρχουσα καρτέλα
+  //    δεν βρισκόταν και ο καλών (αποδοχή εντολής ADR-827 · έγκριση θέασης ADR-884) έφτιαχνε ΔΕΥΤΕΡΗ για
+  //    τον ίδιο άνθρωπο. Πλέον σαρώνονται ΟΛΕΣ οι σελίδες. ⏳ Δείκτης κανονικοποιημένων email: pending-ratchet.
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+  for (;;) {
+    let page = adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .where(FIELDS.COMPANY_ID, '==', companyId)
+      .limit(EMAIL_SCAN_PAGE_SIZE);
+    if (cursor !== null) page = page.startAfter(cursor);
+    const snapshot = await page.get();
+    const match = snapshot.docs.map(contactMatchByEmail(normalizedEmail)).find((found) => found !== null);
+    if (match) return match;
+    if (snapshot.docs.length < EMAIL_SCAN_PAGE_SIZE) break;
+    cursor = snapshot.docs[snapshot.docs.length - 1] ?? null;
   }
 
   logger.debug('Contact not found by email', { email: normalizedEmail, companyId });
@@ -203,13 +226,7 @@ export async function findContactByName(
   companyId: string,
   limit: number = 10
 ): Promise<ContactNameSearchResult[]> {
-  const adminDb = getAdminFirestore();
-
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .where(FIELDS.COMPANY_ID, '==', companyId)
-    .limit(200)
-    .get();
+  const snapshot = await readCompanyContacts(companyId, NAME_SCAN_LIMIT);
 
   if (snapshot.empty) return [];
 
@@ -219,12 +236,7 @@ export async function findContactByName(
   for (const doc of snapshot.docs) {
     const data = doc.data();
 
-    const displayName = (data.displayName as string) ?? '';
-    const firstName = (data.firstName as string) ?? '';
-    const lastName = (data.lastName as string) ?? '';
-    const companyName = (data.companyName as string) ?? '';
-    const fullName = [firstName, lastName].filter(Boolean).join(' ');
-
+    const { displayName, firstName, lastName, companyName, fullName } = contactNameParts(data);
     const namesToCheck = [displayName, firstName, lastName, companyName, fullName];
     const matches = namesToCheck.some(name =>
       name.length > 0 && fuzzyGreekMatch(name, normalizedSearch)
@@ -261,13 +273,7 @@ export async function listContacts(
   typeFilter: ContactTypeFilter = 'all',
   limit: number = 20
 ): Promise<ContactNameSearchResult[]> {
-  const adminDb = getAdminFirestore();
-
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .where(FIELDS.COMPANY_ID, '==', companyId)
-    .limit(200)
-    .get();
+  const snapshot = await readCompanyContacts(companyId, NAME_SCAN_LIMIT);
 
   if (snapshot.empty) return [];
 

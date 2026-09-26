@@ -2,6 +2,29 @@
 
 **STATUS: ACTIVE**
 
+- 🟠 **26/09 — `findContactByEmail`: ΣΩΣΤΟ ΤΩΡΑ, ΑΛΛΑ O(n) ΑΝΑΓΝΩΣΕΙΣ ΑΝΑ ΕΛΕΓΧΟ** *(ADR-884 §4.6 · ADR-827)*
+
+  Ήταν `.limit(50)` χωρίς σελιδοποίηση ⇒ σε γραφείο με >50 επαφές δεύτερη καρτέλα για τον ίδιο άνθρωπο (διορθώθηκε:
+  πλήρης σελιδοποίηση, σελίδα 500). Μένει το **κόστος**: κάθε αποδοχή εντολής / έγκριση θέασης σαρώνει **όλες** τις
+  επαφές του γραφείου. Θεραπεία: πεδίο `emailKeys: string[]` (πεζά, trim) σε **κάθε** γραφέα επαφής (`contact-document-builder`
+  + πελατικός γραφέας + αλλαγές email) + backfill + `where('emailKeys','array-contains',email)` + δείκτης. Μέτρα πρώτα
+  πόσοι γραφείς γράφουν `emails` (`grep -rn "emails:" src/services src/server`).
+
+- 🟡 **26/09 — ΤΡΙΑ ΜΟΤΙΒΑ ΑΙΣΙΟΔΟΞΗΣ ΑΛΛΑΓΗΣ, ΕΝΑ ΚΟΙΝΟ HOOK** *(N.0.2 · ADR-884 §4.6)*
+
+  Το `hooks/useReconciledResource.ts` (εξαγμένο από το `useShareLinks`, 3 καταναλωτές) είναι πλέον ο **ένας** τρόπος.
+  Εκτός μένουν: `lib/stay/stay-calendar-optimistic.ts` (+`useStayCalendar`) · `services/entity-linking/utils/optimistic.ts`
+  (`OptimisticUpdateManager`) · `components/demand/DemandTitleEditor.tsx` (`useOptimisticRename`). Θεραπεία: μετάβαση όπου το
+  σχήμα ταιριάζει (στιγμιότυπο → εφαρμογή → διακομιστής → συμφιλίωση)· όπου όχι, γραπτός λόγος.
+
+- 🟡 **26/09 — `displayName` ΑΡΧΕΙΟΥ ΑΠΟ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ = ΩΜΑ ΚΛΕΙΔΙΑ** *(ADR-884 §4.6 · file-display-name SSoT)*
+
+  Το `getFileTranslation` (`services/upload/utils/file-display-name-i18n.ts`) επιστρέφει **σκέτο fallback** σε server context ⇒
+  κάθε `buildPendingFileRecordData` από διακομιστή με `purpose` εκτός `STUDY_ENTRIES` αποθηκεύει «κατηγορία purpose» ωμά
+  (το πανόραμα έγραφε «panoramas panorama» — διορθώθηκε αφαιρώντας το `purpose`). Δεύτερος γνωστός καλών:
+  `app/api/floorplan-backgrounds/floorplan-backgrounds.handlers.ts` (`FLOORPLAN_PURPOSES.FLOOR`). Θεραπεία: αποδότης i18n
+  διακομιστή για το `files` (ίδιο κενό με ADR-777 §8.22 #2) **ή** κανόνας «ο διακομιστής δεν γράφει `purpose` εκτός σπουδών» + πύλη.
+
 - 🟠 **26/09 — ΚΑΝΕΝΑΣ ΜΗΧΑΝΙΣΜΟΣ ΔΙΑΓΡΑΦΗΣ ΛΟΓΑΡΙΑΣΜΟΥ / ΠΡΟΣΩΠΙΚΩΝ ΔΕΔΟΜΕΝΩΝ ΑΝΑ uid** *(ΓΚΠΔ άρθ. 17 · ADR-882 §3.6)*
 
   Το μόνο «GDPR» είναι του τομέα αρχείων (`app/api/files/gdpr-delete`). Κανείς δεν σβήνει τα προσωπικά έγγραφα

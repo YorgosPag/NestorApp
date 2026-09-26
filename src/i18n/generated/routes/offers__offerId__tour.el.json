@@ -26,6 +26,11 @@
       "date": "Μέχρι ημερομηνία",
       "perpetual": "Αόριστη"
     },
+    "lifecycle": {
+      "draft": "Πρόχειρη",
+      "published": "Δημοσιευμένη",
+      "withdrawn": "Αποσυρμένη"
+    },
     "milestone": {
       "finishes": "Τελειώματα",
       "handover": "Παράδοση",
@@ -122,6 +127,52 @@
       "submit": "Ανέβασμα",
       "title": "Ανέβασμα πανοράματος 360°",
       "verifying": "Έλεγχος πανοράματος…"
+    },
+    "viewing": {
+      "accessUntil": "Πρόσβαση έως {date}",
+      "approveSelected": "Έγκριση ({count})",
+      "approveUntil": "Πρόσβαση έως",
+      "contactUnavailable": "Η επαφή CRM δεν δημιουργήθηκε αυτή τη φορά — η πρόσβαση δόθηκε κανονικά.",
+      "decidedApproved": "{count, plural, one {Εγκρίθηκε # αίτημα.} other {Εγκρίθηκαν # αιτήματα.}}",
+      "decidedDeclined": "{count, plural, one {Απορρίφθηκε # αίτημα.} other {Απορρίφθηκαν # αιτήματα.}}",
+      "decidedSkipped": "{count, plural, one {# αίτημα δεν άλλαξε — απαντήθηκε ή αποσύρθηκε στο μεταξύ.} other {# αιτήματα δεν άλλαξαν — απαντήθηκαν ή αποσύρθηκαν στο μεταξύ.}}",
+      "declineSelected": "Απόρριψη ({count})",
+      "explicitGrantsNote": "Όσοι έχουν ήδη εγκεκριμένη πρόσβαση ή προσωπικό σύνδεσμο τη διατηρούν μέχρι να λήξει ή να την ανακαλέσετε.",
+      "inCrm": "Επαφή στο CRM",
+      "lastViewed": "τελευταία {date}",
+      "lifecycle": "Κατάσταση",
+      "linksDescription": "Ένας σύνδεσμος ανά παραλήπτη, με όνομα και λήξη. Βλέπετε πότε άνοιξε και τον ανακαλείτε μόνο του.",
+      "linksManage": "Σύνδεσμοι και αποστολή",
+      "linksTitle": "Προσωπικοί σύνδεσμοι",
+      "noApproved": "Κανείς δεν έχει πρόσβαση ακόμη.",
+      "noPending": "Κανένα εκκρεμές αίτημα.",
+      "publish": "Δημοσίευση",
+      "requestedAt": "Ζήτησε {date}",
+      "requestedTimes": "{count, plural, one {# αίτημα} other {# αιτήματα}}",
+      "requestsTitle": "Αιτήματα θέασης",
+      "revokeAccess": "Ανάκληση πρόσβασης",
+      "saved": "Οι ρυθμίσεις αποθηκεύτηκαν.",
+      "selectAll": "Επιλογή όλων",
+      "selectRequest": "Επιλογή αιτήματος από {name}",
+      "settingsTitle": "Ποιος βλέπει την περιήγηση",
+      "tabApproved": "Με πρόσβαση",
+      "tabPending": "Εκκρεμή",
+      "unknownAccount": "Άγνωστος λογαριασμός",
+      "unverifiedEmail": "Μη επαληθευμένο email",
+      "verifiedEmail": "Επαληθευμένο email",
+      "viewTrace": "{count, plural, =0 {Δεν την έχει δει ακόμη} one {Την είδε # φορά} other {Την είδε # φορές}}",
+      "visibility": "Ορατότητα",
+      "withdraw": "Απόσυρση"
+    },
+    "visibility": {
+      "linkOnly": "Μόνο με προσωπικό σύνδεσμο",
+      "onRequest": "Κατόπιν αιτήματος",
+      "public": "Όλοι"
+    },
+    "visibilityHint": {
+      "linkOnly": "Αόρατη στην αγγελία — μόνο όσοι λάβουν προσωπικό σύνδεσμο.",
+      "onRequest": "Ο επισκέπτης ζητά πρόσβαση με τον λογαριασμό του· εσείς εγκρίνετε, με λήξη.",
+      "public": "Όποιος βλέπει την αγγελία βλέπει και την περιήγηση."
     }
   }
 }

@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { openStorageObject } from '@/lib/storage/storage-object-stream';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -39,45 +39,21 @@ async function handleGet(
       }
 
       try {
-        const fileRef = getAdminBucket().file(storagePath);
-
-        // file.exists() is unreliable on .firebasestorage.app buckets; getMetadata
-        // throws a structured 404 we can distinguish from other failures.
-        let metadata: Awaited<ReturnType<typeof fileRef.getMetadata>>[0];
-        try {
-          [metadata] = await fileRef.getMetadata();
-        } catch (metaErr) {
-          if ((metaErr as { code?: number }).code === 404) {
-            return NextResponse.json({ error: 'Not found' }, { status: 404 });
-          }
-          throw metaErr;
+        // Ο ΕΝΑΣ τρόπος ροής αντικειμένου (N.0.2 — `lib/storage/storage-object-stream`).
+        const opened = await openStorageObject(storagePath);
+        if (opened.kind !== 'found') {
+          return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
-
-        const contentType = (metadata.contentType as string | undefined) ?? 'application/octet-stream';
-        const cacheControl = (metadata.cacheControl as string | undefined) ?? 'private, max-age=86400';
-        const sizeRaw = metadata.size;
-        const size = typeof sizeRaw === 'string' ? Number(sizeRaw) : (sizeRaw as number | undefined);
-
-        const nodeStream = fileRef.createReadStream();
-        const stream = new ReadableStream<Uint8Array>({
-          start(controller) {
-            nodeStream.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-            nodeStream.on('end', () => controller.close());
-            nodeStream.on('error', (err) => controller.error(err));
-          },
-          cancel() {
-            nodeStream.destroy();
-          },
-        });
 
         const headers = new Headers({
-          'Content-Type': contentType,
-          'Cache-Control': cacheControl,
+          'Content-Type': opened.contentType,
+          'Cache-Control': opened.storedCacheControl ?? 'private, max-age=86400',
         });
-        if (typeof size === 'number' && Number.isFinite(size)) {
-          headers.set('Content-Length', String(size));
+        if (opened.contentLength !== null) {
+          headers.set('Content-Length', String(opened.contentLength));
         }
 
+        const { stream } = opened;
         return new NextResponse(stream, { status: 200, headers });
       } catch (err) {
         const message = getErrorMessage(err, 'Failed to fetch file');

@@ -120,7 +120,9 @@ export async function finalizeTourCaptureUpload(
   const replay = await readExistingCapture(captureRef);
   if (replay !== null) return { kind: 'finalized', capture: replay, replayed: true };
 
-  return finalizeFromQuarantine(db, { ticket, declaration, custody: standing.custody, tourRef: standing.tourRef, captureRef });
+  return finalizeFromQuarantine(db, {
+    ticket, declaration, custody: standing.custody, tourRef: standing.tourRef, captureRef, label: standing.label,
+  });
 }
 
 async function readExistingCapture(captureRef: DocumentReference): Promise<TourCapture | null> {
@@ -134,6 +136,8 @@ interface FinalizeContext {
   readonly custody: CustodyScope;
   readonly tourRef: DocumentReference;
   readonly captureRef: DocumentReference;
+  /** Η ετικέτα του ακινήτου — στο όνομα του αρχείου. */
+  readonly label: string | null;
 }
 
 /** Τα bytes της καραντίνας — ακριβώς όσα δηλώθηκαν, αλλιώς ονομασμένη άρνηση. */
@@ -187,7 +191,10 @@ async function persistOriginal(db: Firestore, ctx: FinalizeContext, sizeBytes: n
     contentType: PANORAMA_CONTENT_TYPE,
     createdBy: ticket.uploaderUid,
     ext: 'jpg',
-    purpose: 'panorama',
+    // 🔴 Κ3β: ΧΩΡΙΣ `purpose` — δεν είναι είδος σπουδής (`STUDY_ENTRIES`), και ο διακομιστής δεν έχει μεταφραστή:
+    //    το `purpose: 'panorama'` έγραφε «panoramas panorama». Σύμβαση `model-file-record` / `version-promotion`:
+    //    μόνο κατηγορία (την μεταφράζει η οθόνη, `useFileDisplayName`) + η ετικέτα του ακινήτου.
+    ...(ctx.label !== null ? { entityLabel: ctx.label } : {}),
     fileId: enterpriseIdService.generateDeterministicFileId(`tour-upload:${ticket.uploadId}`),
   });
   const fileRef = db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]]).doc(fileId);

@@ -153,7 +153,9 @@
           "cardEmailReturned": "An email on your business card returned permanently",
           "holidayHoursQuestion": "Question about your opening hours before public holidays",
           "stayRequestReceived": "Booking requests for my stays (required)",
-          "stayRequestAnswered": "Replies to my booking requests (required)"
+          "stayRequestAnswered": "Replies to my booking requests (required)",
+          "tourAccessRequested": "Viewing requests for my 360° tours",
+          "tourAccessAnswered": "Answers to my tour viewing requests"
         },
         "tasks": {
           "title": "Tasks",

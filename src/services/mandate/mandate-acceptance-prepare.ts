@@ -26,9 +26,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
-import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-document-builder';
-import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
-import { generateContactId } from '@/services/enterprise-id-convenience';
+import { resolveAccountContact } from '@/services/contact/account-contact-resolver';
 import {
   readOwnerIdentity,
   type OwnerIdentity,
@@ -80,7 +78,11 @@ export async function prepare(
   const identity = await ownerIdentityFor(adminDb, input.request.requestedByUserId);
   if ('kind' in identity) return identity;
 
-  const contact = await resolveClientContact(adminDb, input, identity);
+  // ♻️ Υπάρχουσα καρτέλα ή καινούρια — ο ΕΝΑΣ κριτής (`services/contact/account-contact-resolver`, ADR-884 Κ3β):
+  //    `findContactByEmail`, ποτέ ασαφής ταύτιση ονόματος· αποτυχία ανάγνωσης = άρνηση, όχι «γράψε καινούρια».
+  const contact = await resolveAccountContact({
+    identity, companyId: input.agencyCompanyId, createdBy: input.deciderUid,
+  });
   if ('kind' in contact) return contact;
 
   const mandate = brokeredMandateFrom(input.request, contact.contactId);
@@ -175,73 +177,6 @@ async function ownerIdentityFor(
     case 'unavailable':
       return { kind: 'unavailable' };
   }
-}
-
-interface ResolvedContact {
-  readonly contactId: string;
-  readonly doc: Record<string, unknown> | null;
-  readonly displayName: string;
-}
-
-/**
- * **Υπάρχουσα καρτέλα, ή καινούρια** — ποτέ δεύτερη για τον ίδιο άνθρωπο (§8.4).
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 Ο ΚΡΙΤΗΣ ΕΙΝΑΙ ΤΟ `findContactByEmail`, ΟΧΙ ΤΟ `checkContactDuplicates`
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Το ADR §8.4 ονομάζει το `DuplicatePreventionService`. **Μετρήθηκε ότι ο δείκτης
- * είναι λάθος**: εκείνο εισάγει `firebase/firestore` + `@/lib/firebase` — είναι
- * **πελατικό** και δεν μπορεί να κληθεί από διακομιστή.
- *
- * ⛔ **Και ο προφανής αντικαταστάτης, το `checkContactDuplicates`, είναι ΕΠΙΚΙΝΔΥΝΟΣ
- * εδώ**: κάνει **ασαφή ταύτιση ονόματος** όταν δεν βρει email/τηλέφωνο. Σε αυτή τη
- * διαδρομή μια «κοντινή» ταύτιση θα κόλλαγε το ΑΦΜ ενός ανθρώπου στην καρτέλα
- * **άλλου** — σε **νομικό** κείμενο.
- *
- * 🔑 Εδώ η ερώτηση είναι **ακριβής, όχι πιθανολογική**: ο ιδιώτης έχει λογαριασμό, με
- * **πιστοποιημένο** email. *«Είναι αυτό το email ήδη επαφή ΜΟΥ;»* έχει μία σωστή
- * απάντηση, και το `findContactByEmail` τη δίνει με το `companyId` του γραφείου.
- */
-async function resolveClientContact(
-  adminDb: AdminFirestore,
-  input: AcceptanceInput,
-  identity: OwnerIdentity,
-): Promise<ResolvedContact | Refusal> {
-  try {
-    const existing = await findContactByEmail(identity.email, input.agencyCompanyId);
-    if (existing !== null) {
-      return { contactId: existing.contactId, doc: null, displayName: existing.name };
-    }
-  } catch (error) {
-    logger.error('[MANDATE-ACCEPT] Ο έλεγχος διπλότυπης επαφής απέτυχε', {
-      agencyCompanyId: input.agencyCompanyId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    // 🔴 **ΑΡΝΗΣΗ, ΟΧΙ «ΓΡΑΨΕ ΚΑΙΝΟΥΡΙΑ»**: μια αποτυχία εδώ διαβασμένη ως «δεν
-    //    υπάρχει» παράγει **δεύτερη καρτέλα για τον ίδιο άνθρωπο** — και μαζί δεύτερο
-    //    αντίγραφο προσωπικών δεδομένων, που το §8.4 απαγορεύει ονομαστικά.
-    return { kind: 'unavailable' };
-  }
-
-  // 🔴 `setDoc` + γεννήτορας του `enterprise-id` (N.6) — **ΠΟΤΕ** `addDoc`. Η ταυτότητα
-  //    γεννιέται **εδώ**, ώστε η συναλλαγή να ξέρει σε ποιο έγγραφο γράφει.
-  const built = buildContactDocument({
-    firstName: identity.givenName,
-    lastName: identity.familyName,
-    email: identity.email,
-    phone: null,
-    type: 'individual',
-    companyId: input.agencyCompanyId,
-    createdBy: input.deciderUid,
-    // ⚠️ Ο έλεγχος διπλότυπου έγινε **ήδη**, με το σωστό ερώτημα. Ένας δεύτερος μέσα
-    //    στον δομητή δεν υπάρχει — αυτός είναι καθαρός — αλλά η σημαία δηλώνεται ρητά
-    //    ώστε η πρόθεση να διαβάζεται.
-    skipDuplicateCheck: true,
-    vatNumber: identity.vatNumber,
-  });
-
-  return { contactId: generateContactId(), doc: built.doc, displayName: built.displayName };
 }
 
 /**

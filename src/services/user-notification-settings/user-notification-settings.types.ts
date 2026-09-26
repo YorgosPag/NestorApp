@@ -204,6 +204,16 @@ export interface PropertiesNotificationSettings {
   /** 🎯 ADR-835 §23.6 — «**η κράτησή σου επιβεβαιώθηκε / δεν έγινε δεκτή / δεν απαντήθηκε**». Υποχρεωτική. */
   stayRequestAnswered: boolean;
   /**
+   * 🎯 ADR-884 Κ3β — «**ο Χ ζήτησε να δει την περιήγηση 360°**». ⚠️ Προεπιλογή `true`: ο υπεύθυνος δεν έχει άλλο
+   * τρόπο να μάθει ότι κάποιος περιμένει έγκριση.
+   */
+  tourAccessRequested: boolean;
+  /**
+   * 🎯 ADR-884 Κ3β — «**εγκρίθηκε έως … / δεν εγκρίθηκε**». ⚠️ Προεπιλογή `true`: ο αιτών **δομικά δεν μπορεί** να
+   * διαβάσει το αίτημά του (κανόνες `false`) — χωρίς ειδοποίηση δεν θα μάθαινε ποτέ την απάντηση.
+   */
+  tourAccessAnswered: boolean;
+  /**
    * ADR-841 §7 Α21.21 Φάση Β — **«Θα είστε ανοιχτά στις αργίες;»** (ερώτηση + μία υπενθύμιση ανά περίοδο).
    *
    * ⚠️ **Προεπιλογή `true`**: χωρίς απάντηση η δημόσια κάρτα λέει «το ωράριο ίσως διαφέρει» σε κάθε αργία — ο
@@ -433,6 +443,8 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   holidayHoursQuestion: true,
   stayRequestReceived: true,
   stayRequestAnswered: true,
+  tourAccessRequested: true,
+  tourAccessAnswered: true,
 };
 
 /**

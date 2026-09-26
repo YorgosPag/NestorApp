@@ -128,6 +128,12 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROPERTIES_STAY_REQUEST_RECEIVED: 'properties.stayRequestReceived',
   /** ADR-835 §23.6 — **προς τον επισκέπτη**: αποδοχή · άρνηση · λήξη («ρώτα ξανά» — ΔΕΝ είναι «όχι»). */
   PROPERTIES_STAY_REQUEST_ANSWERED: 'properties.stayRequestAnswered',
+  /**
+   * ADR-884 Κ3β (Φ0.13) — **προς τον υπεύθυνο**: «ο Χ ζήτησε να δει την περιήγηση 360°». Ταυτότητα = αίτημα + υποβολή.
+   */
+  PROPERTIES_TOUR_ACCESS_REQUESTED: 'properties.tourAccessRequested',
+  /** ADR-884 Κ3β — **προς τον αιτούντα**: «εγκρίθηκε έως …» · «δεν εγκρίθηκε». Δύο ακροατήρια ⇒ δύο διακόπτες. */
+  PROPERTIES_TOUR_ACCESS_ANSWERED: 'properties.tourAccessAnswered',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -308,6 +314,19 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     category: 'properties',
     settingKey: 'stayRequestAnswered',
     isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-884 Κ3β — ΟΧΙ υποχρεωτικά (το αίτημα θέασης δεν λήγει σιωπηλά όπως μια κράτηση)· προεπιλογή `true`.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_REQUESTED]: {
+    category: 'properties',
+    settingKey: 'tourAccessRequested',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_TOUR_ACCESS_ANSWERED]: {
+    category: 'properties',
+    settingKey: 'tourAccessAnswered',
+    isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: {

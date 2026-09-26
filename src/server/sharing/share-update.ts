@@ -30,6 +30,7 @@ import { z } from 'zod';
 
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { linkPolicyOf } from '@/services/sharing/share-resolve-contract';
 import type { ShareLinkSummary, UpdateShareRequest } from '@/types/sharing';
 import { SHARE_COUNTER_FIELDS } from './share-access';
 import { SHARE_POLICY_FIELDS, shareExpiryFromNow, type ShareCreator } from './share-create';
@@ -90,6 +91,12 @@ export async function updateShareOnServer(
   const owned = await findOwnedShare(adminDb, actor.companyId, shareId);
   if (owned === null || owned.data.isActive !== true) return { ok: false, refusal: 'not-found' };
   if (limitBelowCount(request, owned)) return { ok: false, refusal: 'invalid', reason: 'max-below-count' };
+  // ADR-884 Κ3β — ίδια πολιτική με τη δημιουργία: η αλλαγή ρυθμίσεων δεν είναι πίσω πόρτα για κωδικό/κενό «για ποιον».
+  const policy = linkPolicyOf(String(owned.data.entityType ?? ''));
+  if (!policy.password && typeof request.password === 'string') return { ok: false, refusal: 'invalid', reason: 'password-not-allowed' };
+  if (policy.labelRequired && request.label !== undefined && !request.label?.trim()) {
+    return { ok: false, refusal: 'invalid', reason: 'label-required' };
+  }
 
   const patch = await patchOf(request, owned);
   await owned.ref.update({ ...patch, updatedAt: nowISO(), updatedBy: actor.uid });

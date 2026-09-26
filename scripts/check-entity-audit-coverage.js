@@ -163,6 +163,14 @@ const HARD_EXEMPT_PATTERNS = [
   //   · agency-listings-sweep: σάρωση συστήματος `mandate.agencyRevokedAt` όταν ανακαλείται
   //     γραφείο — το βιβλίο της εντολής είναι το ADR-861 (έκδοση συναίνεσης), όχι το ADR-195
   /[\\/]services[\\/]mandate[\\/]agency-listings-sweep\.service\.ts$/,
+  // ADR-884 Κ3β — η ΓΕΝΝΗΣΗ ΕΠΑΦΗΣ ΛΟΓΑΡΙΑΣΜΟΥ: η επαφή γράφεται μέσα στη συναλλαγή της πράξης
+  // (αποδοχή εντολής · έγκριση θέασης), και το ίχνος το γράφει ο ΕΝΑΣ γραφέας
+  // `services/contact/account-contact-resolver.ts` (`recordAccountContactBirth` →
+  // `EntityAuditService.recordChange`) μετά το commit — μόνο για επαφή που όντως γεννήθηκε.
+  // Άγκυρες: `server/spatial-tour/__tests__/tour-access-contact.test.ts` ·
+  // `services/mandate/__tests__/mandate-decision.test.ts`.
+  /[\\/]server[\\/]spatial-tour[\\/]tour-access-decision\.ts$/,
+  /[\\/]services[\\/]mandate[\\/]mandate-acceptance\.service\.ts$/,
 ];
 /**
  * Write operations to detect.

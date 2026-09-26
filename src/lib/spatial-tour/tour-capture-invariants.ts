@@ -76,26 +76,42 @@ export function mayEnterPublicShelf(
   return capture.audience === 'public-listing' && tour.lifecycle === 'published' && tour.visibility === 'public';
 }
 
+type NodeCapture = Pick<TourCapture, 'id' | 'nodeId' | 'capturedAt' | 'audience'>;
+
 /**
- * **Για κάθε κόμβο, μόνο η πιο πρόσφατη** δημόσια λήψη (§12 Δ6) — ό,τι βλέπει ο αγοραστής. Ισοπαλία
- * στην ημερομηνία ⇒ το μεγαλύτερο id, ώστε το ράφι να μην εξαρτάται από τη σειρά ανάγνωσης.
- * Ατοποθέτητη λήψη **δεν** φτάνει ποτέ στο ράφι: δεν ανήκει σε κόμβο, άρα ο αγοραστής δεν θα ήξερε **πού** στέκεται.
+ * **Για κάθε κόμβο, μόνο η πιο πρόσφατη** λήψη που περνά το `admits` (§12 Δ6). Ισοπαλία στην ημερομηνία ⇒ το
+ * μεγαλύτερο id, ώστε η επιλογή να μην εξαρτάται από τη σειρά ανάγνωσης. Ατοποθέτητη λήψη **δεν** επιλέγεται ποτέ:
+ * δεν ανήκει σε κόμβο, άρα ο θεατής δεν θα ήξερε **πού** στέκεται.
  */
-export function selectShelfCaptures<C extends Pick<TourCapture, 'id' | 'nodeId' | 'capturedAt' | 'audience'>>(
-  captures: readonly C[],
-  tour: Pick<SpatialTour, 'lifecycle' | 'visibility'>,
-): C[] {
+function latestPerNode<C extends NodeCapture>(captures: readonly C[], admits: (capture: C) => boolean): C[] {
   const latest = new Map<string, { readonly capture: C; readonly atMs: number }>();
   for (const capture of captures) {
     const atMs = normalizeToMillisOrNull(capture.capturedAt);
-    // Λήψη χωρίς αναγνώσιμη ημερομηνία δεν «κερδίζει» ποτέ το ράφι — δεν ξέρουμε αν είναι η τελευταία.
+    // Λήψη χωρίς αναγνώσιμη ημερομηνία δεν «κερδίζει» ποτέ — δεν ξέρουμε αν είναι η τελευταία.
     const { nodeId } = capture;
-    if (atMs === null || nodeId === null || !mayEnterPublicShelf(capture, tour)) continue;
+    if (atMs === null || nodeId === null || !admits(capture)) continue;
     const current = latest.get(nodeId);
     const newer = !current || atMs > current.atMs || (atMs === current.atMs && capture.id > current.capture.id);
     if (newer) latest.set(nodeId, { capture, atMs });
   }
   return [...latest.values()].map((entry) => entry.capture);
+}
+
+/** Το **δημόσιο ράφι** (Φ0.4): μόνο ό,τι επιτρέπεται να φτάσει στο κοινό **χωρίς** κουπόνι. */
+export function selectShelfCaptures<C extends NodeCapture>(
+  captures: readonly C[],
+  tour: Pick<SpatialTour, 'lifecycle' | 'visibility'>,
+): C[] {
+  return latestPerNode(captures, (capture) => mayEnterPublicShelf(capture, tour));
+}
+
+/**
+ * **Ό,τι βλέπει ένας κριμένος θεατής** (Κ3β): λήψεις για το κοινό της αγγελίας, πιο πρόσφατη ανά κόμβο. Η
+ * ορατότητα **δεν** ρωτιέται εδώ — την έκρινε ήδη η πύλη θέασης (`judgeTourView`). Ίδιος κανόνας επιλογής με
+ * το ράφι: ο εγκεκριμένος αγοραστής και ο ανώνυμος επισκέπτης βλέπουν το **ίδιο** σπίτι.
+ */
+export function selectViewerCaptures<C extends NodeCapture>(captures: readonly C[]): C[] {
+  return latestPerNode(captures, (capture) => capture.audience === 'public-listing');
 }
 
 /** Αλλαγή κοινού μιας λήψης: προς `public-listing` **μόνο** με ρητή πράξη του υπευθύνου (#3, §12 Δ6). */

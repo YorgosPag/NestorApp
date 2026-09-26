@@ -180,6 +180,18 @@ describe('contact-lookup', () => {
       expect(result!.name).toBe('Flat Contact');
     });
 
+    it('finds a contact BEYOND the first page (was: silent miss after 50 → duplicate card)', async () => {
+      const crowd: Record<string, Record<string, unknown>> = {};
+      for (let i = 0; i < 1200; i += 1) {
+        crowd[`cont_${String(i).padStart(4, '0')}`] = { companyId: COMPANY_ID, displayName: `Άνθρωπος ${i}` };
+      }
+      crowd.cont_last = { ...DIMITRIS, emails: [{ email: 'late@example.com' }] };
+      setupFirestore(crowd);
+
+      const result = await findContactByEmail('late@example.com', COMPANY_ID);
+      expect(result?.contactId).toBe('cont_last');
+    });
+
     it('should return null when email not found', async () => {
       setupFirestore({ cont_001: DIMITRIS });
 

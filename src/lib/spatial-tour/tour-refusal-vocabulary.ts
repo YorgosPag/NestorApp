@@ -16,6 +16,8 @@ export const TOUR_REFUSALS = [
   'tour-absent', 'not-requestable', 'not-manager', 'expiry-required', 'expiry-past', 'expiry-too-far',
   'request-absent', 'not-pending', 'not-active', 'reason-required', 'grant-absent', 'tour-custody-mismatch',
   'tour-unreadable',
+  // ── Η πύλη θέασης και οι ρυθμίσεις (Κ3β) ──
+  'sign-in-required', 'not-viewable', 'publish-needs-capture', 'visibility-unsupported',
   // ── Ο κριτής ανεβάσματος ──
   'no-capture-grant', 'revoked', 'expired', 'unreadable-expiry', 'scope-missing',
   // ── Τα bytes ──

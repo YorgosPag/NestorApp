@@ -50,10 +50,20 @@ interface WhereClause {
   value: unknown;
 }
 
+/** Διαδρομή πεδίου με τελείες (`tileset.state`) — όπως ο Firestore, όχι σκέτο κλειδί. */
+function readFieldPath(data: DocData, field: string): unknown {
+  return field.split('.').reduce<unknown>(
+    (value, key) => (value !== null && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined),
+    data,
+  );
+}
+
 class MockQuery {
   private clauses: WhereClause[] = [];
   private _limit = 100;
   private _orderByField: string | null = null;
+  /** Δρομέας σελιδοποίησης — η σειρά είναι η σειρά εισαγωγής (ο mock δεν ταξινομεί). */
+  private _startAfterId: string | null = null;
 
   constructor(
     protected store: Store,
@@ -86,6 +96,13 @@ class MockQuery {
     return q;
   }
 
+  /** Σελιδοποίηση με δρομέα-έγγραφο (υπογραφή Admin SDK). */
+  startAfter(snap: { readonly id: string }): MockQuery {
+    const q = this.clone();
+    q._startAfterId = snap.id;
+    return q;
+  }
+
   /** `true` ⇒ ερώτημα **collectionGroup**: κάθε συλλογή με αυτό το τελικό όνομα, κάτω από οποιονδήποτε γονέα. */
   protected group = false;
 
@@ -104,7 +121,7 @@ class MockQuery {
     // Apply filters
     for (const clause of this.clauses) {
       entries = entries.filter(([, id, data]) => {
-        const fieldValue = clause.field === 'id' ? id : data[clause.field];
+        const fieldValue = clause.field === 'id' ? id : readFieldPath(data, clause.field);
         switch (clause.op) {
           case '==': return fieldValue === clause.value;
           case '!=': return fieldValue !== clause.value;
@@ -117,6 +134,12 @@ class MockQuery {
           default: return true;
         }
       });
+    }
+
+    // Cursor
+    if (this._startAfterId !== null) {
+      const at = entries.findIndex(([, id]) => id === this._startAfterId);
+      entries = at === -1 ? [] : entries.slice(at + 1);
     }
 
     // Limit
@@ -142,6 +165,7 @@ class MockQuery {
     q.clauses = [...this.clauses];
     q._limit = this._limit;
     q._orderByField = this._orderByField;
+    q._startAfterId = this._startAfterId;
     q.group = this.group;
     return q;
   }

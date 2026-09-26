@@ -15,8 +15,8 @@ import 'server-only';
  * 🔑 **Ντετερμινιστικό έγγραφο ανά (περιήγηση, άνθρωπο)**: το δεύτερο αίτημα **είναι** το πρώτο — idempotent,
  * και ο υπεύθυνος δεν βλέπει ποτέ δέκα αιτήματα του ίδιου ανθρώπου (βλέπει `requestCount`).
  *
- * 🔴 **Εγγραφή μόνο στον διακομιστή** — οι κανόνες είναι `read, write: if false` (Φ0.9). Οι διαδρομές API,
- * το ίχνος θέασης και η επαφή CRM ζουν στο Κ3.
+ * 🔴 **Εγγραφή μόνο στον διακομιστή** — οι κανόνες είναι `read, write: if false` (Φ0.9). Διαδρομές:
+ * `app/api/spatial-tours/[kind]/[subjectId]/my-access` (Κ3β)· ίχνος: `tour-view-trace.ts`· επαφή: `tour-access-decision.ts`.
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
@@ -46,11 +46,18 @@ export type TourAccessRequestOutcome =
   | { readonly kind: 'requested' | 'already-pending' | 'already-active'; readonly request: TourAccessRequest }
   | TourAccessRefused;
 
-/** Το νέο/ανανεωμένο εκκρεμές — ό,τι αποφασίστηκε πριν **σβήνει**, η ιστορία μένει στο `requestCount`. */
-function pendingDocument(tourId: string, uid: string, message: string | null, count: number, at: string) {
+/**
+ * Το νέο/ανανεωμένο εκκρεμές — ό,τι αποφασίστηκε πριν **σβήνει**· η ιστορία μένει στο `requestCount`, στο
+ * **ίχνος θέασης** και στην **επαφή CRM** (ο άνθρωπος είναι ο ίδιος, Κ3β).
+ */
+function pendingDocument(
+  tourId: string, uid: string, message: string | null, at: string, stored: TourAccessRequest | null,
+) {
   return {
-    tourId, requesterUid: uid, message, state: 'pending' as const, requestedAt: at, requestCount: count,
+    tourId, requesterUid: uid, message, state: 'pending' as const, requestedAt: at,
+    requestCount: (stored?.requestCount ?? 0) + 1,
     decidedAt: null, decidedBy: null, expiresAt: null, revokedAt: null, revokedBy: null,
+    viewCount: stored?.viewCount ?? 0, lastViewedAt: stored?.lastViewedAt ?? null, contactId: stored?.contactId ?? null,
   };
 }
 
@@ -83,7 +90,7 @@ export async function requestTourAccess(
     if (stored !== null && standing === 'pending') return { kind: 'already-pending', request: stored };
     if (stored !== null && standing === 'active') return { kind: 'already-active', request: stored };
 
-    const doc = pendingDocument(tour.id, input.requesterUid, message, (stored?.requestCount ?? 0) + 1, at);
+    const doc = pendingDocument(tour.id, input.requesterUid, message, at, stored);
     tx.set(ref, doc);
     return { kind: 'requested', request: { id: ref.id, ...doc } };
   });
@@ -107,14 +114,27 @@ export async function withdrawTourAccessRequest(
   });
 }
 
-/** **Πού βρίσκεται το αίτημά μου;** — `none` όταν δεν ζήτησε ποτέ. Αυτό ρωτά και η πύλη θέασης (Κ3). */
+/** Η θέση **και** το αίτημα του ανθρώπου — ό,τι χρειάζονται η οθόνη του (λήξη, μήνυμα) και η πύλη θέασης (id). */
+export interface MyTourAccess {
+  readonly standing: TourAccessStanding | 'none';
+  readonly request: TourAccessRequest | null;
+}
+
+/** **Πού βρίσκεται το αίτημά μου;** — `none` όταν δεν ζήτησε ποτέ (ή η περιήγηση δεν υπάρχει). */
+export async function readMyTourAccess(db: Firestore, input: RequesterInput): Promise<MyTourAccess> {
+  const located = await locateExistingTour(db, input.subject);
+  if (located.kind === 'refused') return { standing: 'none', request: null };
+  const snap = await tourAccessRequestRef(located.tourRef, input.requesterUid).get();
+  const stored = snap.exists ? tourAccessRequestFromDocument(snap.data(), snap.id) : null;
+  return stored === null
+    ? { standing: 'none', request: null }
+    : { standing: tourAccessStanding(stored, Date.now()), request: stored };
+}
+
+/** Μόνο η θέση — ο στενός δρόμος του {@link readMyTourAccess}. */
 export async function readTourViewStanding(
   db: Firestore,
   input: RequesterInput,
 ): Promise<TourAccessStanding | 'none'> {
-  const located = await locateExistingTour(db, input.subject);
-  if (located.kind === 'refused') return 'none';
-  const snap = await tourAccessRequestRef(located.tourRef, input.requesterUid).get();
-  const stored = snap.exists ? tourAccessRequestFromDocument(snap.data(), snap.id) : null;
-  return stored === null ? 'none' : tourAccessStanding(stored, Date.now());
+  return (await readMyTourAccess(db, input)).standing;
 }

@@ -41,7 +41,12 @@ async function handler(
   const parsed = parseCreateShareRequest(body);
   if (parsed === null) return NextResponse.json({ error: 'malformed' }, { status: STATUS_OF.malformed });
 
-  const outcome = await createShareOnServer(getAdminFirestore(), { uid: ctx.uid, companyId: ctx.companyId }, parsed);
+  const outcome = await createShareOnServer(getAdminFirestore(), {
+    uid: ctx.uid,
+    companyId: ctx.companyId,
+    // ADR-884 Κ3β: είδη που κρίνουν δυνατότητα (σύνδεσμος περιήγησης) χρειάζονται την όψη ρόλου.
+    capability: { globalRole: ctx.globalRole, permissions: ctx.permissions ?? null, companyId: ctx.companyId },
+  }, parsed);
   if (!outcome.ok) return shareRefusalResponse(outcome.refusal, outcome.reason, STATUS_OF);
   return NextResponse.json(outcome.result, { status: 201, headers: { 'Cache-Control': 'no-store' } });
 }

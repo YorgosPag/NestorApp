@@ -104,6 +104,17 @@ export const TOUR_ACCESS_STANDINGS = [
 ] as const;
 export type TourAccessStanding = (typeof TOUR_ACCESS_STANDINGS)[number];
 
+/**
+ * **Με ποια βάση βλέπει κάποιος την περιήγηση** (ADR-884 Κ3β) — υπογράφεται μέσα στο κουπόνι θέασης και
+ * οδηγεί το ίχνος (ποιος μετρητής αυξάνεται). Σειρά = προτεραιότητα της κρίσης (`judgeTourView`):
+ * - `manager` — ο υπεύθυνος (καμία μέτρηση — δεν είναι ενδιαφέρον αγοραστή)
+ * - `link`    — προσωπικός σύνδεσμος ανά παραλήπτη (Φ0.12)
+ * - `request` — εγκεκριμένο αίτημα θέασης, δεμένο στον λογαριασμό (Φ0.13)
+ * - `public`  — δημοσιευμένη περιήγηση ορατότητας `public`
+ */
+export const TOUR_VIEW_BASES = ['manager', 'link', 'request', 'public'] as const;
+export type TourViewBasis = (typeof TOUR_VIEW_BASES)[number];
+
 // =============================================================================
 // 3. Η ΚΑΤΟΨΗ — ιεραρχία αξιοπιστίας (§12 Δ5)
 // =============================================================================
@@ -158,5 +169,6 @@ export const isTourTilesetState = (v: unknown): v is TourTilesetState => include
 export const isTourGrantScope = (v: unknown): v is TourGrantScope => includes(TOUR_GRANT_SCOPES, v);
 export const isTourAccessRequestState = (v: unknown): v is TourAccessRequestState =>
   includes(TOUR_ACCESS_REQUEST_STATES, v);
+export const isTourViewBasis = (v: unknown): v is TourViewBasis => includes(TOUR_VIEW_BASES, v);
 export const isFloorPlanSource =(v: unknown): v is FloorPlanSource => includes(FLOOR_PLAN_SOURCES, v);
 export const isFloorPlanRecordState = (v: unknown): v is FloorPlanRecordState => includes(FLOOR_PLAN_RECORD_STATES, v);

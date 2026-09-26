@@ -78,6 +78,9 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       // ADR-835 §23.6 — τα αιτήματα κράτησης (υποχρεωτικά, όπως οι ειδοποιήσεις ασφαλείας).
       { key: 'stayRequestReceived', labelKey: 'common-account:account.notificationSettings.categories.properties.stayRequestReceived' },
       { key: 'stayRequestAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.stayRequestAnswered' },
+      // ADR-884 Κ3β — αιτήματα θέασης περιήγησης 360° (υπεύθυνος · αιτών).
+      { key: 'tourAccessRequested', labelKey: 'common-account:account.notificationSettings.categories.properties.tourAccessRequested' },
+      { key: 'tourAccessAnswered', labelKey: 'common-account:account.notificationSettings.categories.properties.tourAccessAnswered' },
     ],
   },
   {

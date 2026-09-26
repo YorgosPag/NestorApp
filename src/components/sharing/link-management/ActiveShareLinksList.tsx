@@ -29,6 +29,7 @@ import type { LinkTokenDraft } from '@/components/ui/sharing/panels/link-token/t
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ApiClientError } from '@/lib/api/api-client-types';
 import { useNotifications } from '@/providers/NotificationProvider';
+import type { ShareKindLinkPolicy } from '@/services/sharing/share-resolve-contract';
 import type { ShareLinkSummary } from '@/types/sharing';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ActiveShareLinkRow } from './ActiveShareLinkRow';
@@ -38,6 +39,8 @@ export interface ActiveShareLinksListProps {
   readonly state: UseShareLinksResult;
   /** Ο σύνδεσμος που μόλις γεννήθηκε σε αυτή τη συνεδρία — σημαίνεται και εξαιρείται από το «όλων εκτός». */
   readonly currentShareId: string | null;
+  /** ADR-884 Κ3β — η πολιτική συνδέσμου του είδους, για τη φόρμα ρυθμίσεων. */
+  readonly policy?: ShareKindLinkPolicy;
 }
 
 type RevokeTarget = { readonly kind: 'one'; readonly link: ShareLinkSummary } | { readonly kind: 'all' };
@@ -106,7 +109,7 @@ function useRevocation(state: UseShareLinksResult, currentShareId: string | null
   return { target, setTarget, busy, confirm };
 }
 
-export function ActiveShareLinksList({ state, currentShareId }: ActiveShareLinksListProps): React.ReactElement {
+export function ActiveShareLinksList({ state, currentShareId, policy }: ActiveShareLinksListProps): React.ReactElement {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
   const editor = useLinkEditor(state);
@@ -156,6 +159,7 @@ export function ActiveShareLinksList({ state, currentShareId }: ActiveShareLinks
               {editor.editing?.link.shareId === link.shareId && (
                 <LinkTokenForm
                   mode="edit"
+                  policy={policy}
                   hasPassword={link.requiresPassword}
                   draft={editor.editing.draft}
                   onDraftChange={editor.setDraft}

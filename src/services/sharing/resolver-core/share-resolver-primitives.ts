@@ -27,6 +27,7 @@
  * @see adrs/ADR-699-share-resolver-declarations.md
  */
 
+import { linkPolicyOf } from '@/services/sharing/share-resolve-contract';
 import type {
   CreateShareInput,
   PublicShareData,
@@ -39,8 +40,8 @@ import type {
 // PUBLIC PROJECTION
 // ============================================================================
 
-/** The `ShareRecord` meta bag a surface is allowed to publish. */
-export type ShareMetaField = 'showcaseMeta' | 'contactMeta' | 'fileMeta';
+/** The `ShareRecord` meta bag a surface is allowed to publish — `null` ⇒ the surface publishes none. */
+export type ShareMetaField = 'showcaseMeta' | 'contactMeta' | 'fileMeta' | null;
 
 /**
  * Project a share record down to what an anonymous holder of the token may see.
@@ -68,6 +69,8 @@ export function buildSafePublicProjection(
   };
 
   switch (metaField) {
+    case null:
+      return projection;
     case 'showcaseMeta':
       projection.showcaseMeta = share.showcaseMeta ?? null;
       return projection;
@@ -114,6 +117,17 @@ export function validateShareBaseInput(
   }
   if (!input.companyId?.trim()) return { valid: false, reason: 'companyId required' };
   if (!input.createdBy?.trim()) return { valid: false, reason: 'createdBy required' };
+  return { valid: true };
+}
+
+/**
+ * ADR-884 Κ3β — η **πολιτική συνδέσμου** του είδους (`SHARE_KIND_LINK_POLICY`): κωδικός επιτρέπεται; «για ποιον»
+ * υποχρεωτικό; Κάθε resolver την καλεί με τον ίδιο τρόπο — η δήλωση είναι μία.
+ */
+export function validateAgainstLinkPolicy(input: Pick<CreateShareInput, 'entityType' | 'label' | 'password'>): ValidationResult {
+  const policy = linkPolicyOf(input.entityType);
+  if (policy.labelRequired && !input.label?.trim()) return { valid: false, reason: 'label (recipient) required' };
+  if (!policy.password && input.password !== undefined) return { valid: false, reason: 'password not allowed for this kind' };
   return { valid: true };
 }
 

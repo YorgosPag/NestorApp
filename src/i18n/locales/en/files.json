@@ -604,6 +604,8 @@
     "title": "Share file",
     "expiration": "Expiration",
     "password": "Password",
+    "required": "required",
+    "labelRequiredHint": "The recipient’s name — the link is personal and the trail will say who opened it. The recipient never sees it.",
     "optional": "optional",
     "passwordPlaceholder": "Enter password...",
     "maxDownloads": "Max downloads",

@@ -167,6 +167,9 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       // ο επισκέπτης στη δημόσια αγγελία (ίδιος κανόνας με την αντιστοίχιση ζήτησης).
       'properties.stayRequestAnswered',
       'properties.stayRequestReceived',
+      // ADR-884 Κ3β — ο υπεύθυνος στο πάνελ περιήγησης (χώρος = θεματοφυλακή της ρίζας), ο αιτών στη σελίδα θέασης.
+      'properties.tourAccessAnswered',
+      'properties.tourAccessRequested',
     ]);
   });
 });

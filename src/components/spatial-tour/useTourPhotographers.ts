@@ -5,13 +5,15 @@
  * @related ADR-884 Φ0.5 · §4.5 (Κ3α) · `services/spatial-tour/spatial-tour.client.ts`
  * @module components/spatial-tour/useTourPhotographers
  *
- * 🔑 **Μετά από κάθε πράξη ξαναδιαβάζει από τον διακομιστή** (όχι αισιόδοξη εικασία): η έκδοση ανακαλεί **σιωπηλά** την
- * προηγούμενη πρόσκληση προς τον ίδιο άνθρωπο (supersede) — μόνο ο διακομιστής ξέρει το αποτέλεσμα. Οι λίστες
- * είναι μικρές (φραγμένες) και η πράξη σπάνια, άρα η ακρίβεια κοστίζει ένα αίτημα.
+ * 🔑 **Ανάκληση = αισιόδοξη** (η γραμμή φεύγει αμέσως· σε άρνηση ξαναδιαβάζεται η αλήθεια — Κ3β, `useReconciledResource`).
+ * **Έκδοση = πάντα συμφιλίωση**: ανακαλεί **σιωπηλά** την προηγούμενη πρόσκληση προς τον ίδιο άνθρωπο (supersede) —
+ * μόνο ο διακομιστής ξέρει το αποτέλεσμα.
  * 🔑 Η **περιήγηση που δεν υπάρχει ακόμη** δεν είναι σφάλμα: `tour-absent` ⇒ κενές λίστες (η πρώτη πρόσκληση τη γεννά).
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+
+import { useReconciledResource } from '@/hooks/useReconciledResource';
 
 import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import {
@@ -20,6 +22,7 @@ import {
   listTourCaptureInvitationsFromScreen,
   revokeTourCaptureGrantFromScreen,
   revokeTourCaptureInvitationFromScreen,
+  tourListOrEmpty,
   type IssuedTourCaptureInvitation,
   type TourCallResult,
 } from '@/services/spatial-tour/spatial-tour.client';
@@ -38,19 +41,13 @@ export type PhotographerActResult =
   | { readonly kind: 'refused'; readonly reason: TourRefusalName }
   | { readonly kind: 'failed' };
 
-/** `tour-absent` ⇒ «δεν υπάρχει ακόμη περιήγηση» = κενό, όχι σφάλμα. */
-function listOf<T>(result: TourCallResult<readonly T[]>): readonly T[] | null {
-  if (result.kind === 'ok') return result.value;
-  return result.kind === 'refused' && result.reason === 'tour-absent' ? [] : null;
-}
-
 async function loadPhotographers(subject: TourSubject): Promise<PhotographersLoad> {
   const [invitations, grants] = await Promise.all([
     listTourCaptureInvitationsFromScreen(subject),
     listTourCaptureGrantsFromScreen(subject),
   ]);
-  const i = listOf(invitations);
-  const g = listOf(grants);
+  const i = tourListOrEmpty(invitations);
+  const g = tourListOrEmpty(grants);
   return i === null || g === null ? { kind: 'failed' } : { kind: 'loaded', invitations: i, grants: g };
 }
 
@@ -59,33 +56,48 @@ function actOf<T>(result: TourCallResult<T>): PhotographerActResult | null {
   return result.kind === 'refused' ? result : { kind: 'failed' };
 }
 
+interface PhotographersSnapshot {
+  readonly invitations: readonly TourCaptureInvitationView[];
+  readonly grants: readonly TourCaptureGrantView[];
+}
+
 export function useTourPhotographers(subject: TourSubject) {
-  const [load, setLoad] = useState<PhotographersLoad>({ kind: 'loading' });
   const [last, setLast] = useState<PhotographerActResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const loader = useCallback(async (): Promise<PhotographersSnapshot | null> => {
+    const loaded = await loadPhotographers(subject);
+    return loaded.kind === 'loaded' ? { invitations: loaded.invitations, grants: loaded.grants } : null;
+  }, [subject]);
+  const { data, status, refresh, optimistic } = useReconciledResource(loader);
 
-  const refresh = useCallback(async () => setLoad(await loadPhotographers(subject)), [subject]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  const load: PhotographersLoad = data !== null
+    ? { kind: 'loaded', invitations: data.invitations, grants: data.grants }
+    : status === 'error' ? { kind: 'failed' } : { kind: 'loading' };
 
-  /** Κάθε πράξη: busy → κλήση → μήνυμα → ανάγνωση της αλήθειας από τον διακομιστή. */
-  const act = useCallback(async (run: () => Promise<PhotographerActResult | null>) => {
+  const issue = useCallback(async (input: { readonly email: string; readonly grantExpiresAt: string; readonly reason: string }) => {
     setBusy(true);
-    setLast(await run());
-    await refresh();
+    const result = await optimistic((current) => current, () => issueTourCaptureInvitationFromScreen(subject, input), { reconcile: 'always' });
+    setLast(result.kind === 'ok' ? { kind: 'issued', issued: result.value } : actOf(result));
     setBusy(false);
-  }, [refresh]);
+  }, [optimistic, subject]);
 
-  const issue = useCallback((input: { readonly email: string; readonly grantExpiresAt: string; readonly reason: string }) =>
-    act(async () => {
-      const result = await issueTourCaptureInvitationFromScreen(subject, input);
-      return result.kind === 'ok' ? { kind: 'issued', issued: result.value } : actOf(result);
-    }), [act, subject]);
+  const revokeInvitation = useCallback(async (invitationId: string) => {
+    const result = await optimistic(
+      (current) => ({ ...current, invitations: current.invitations.filter((row) => row.id !== invitationId) }),
+      () => revokeTourCaptureInvitationFromScreen(subject, invitationId),
+      { failed: (outcome) => outcome.kind !== 'ok' },
+    );
+    setLast(actOf(result));
+  }, [optimistic, subject]);
 
-  const revokeInvitation = useCallback((invitationId: string) =>
-    act(async () => actOf(await revokeTourCaptureInvitationFromScreen(subject, invitationId))), [act, subject]);
-
-  const revokeGrant = useCallback((granteeUid: string) =>
-    act(async () => actOf(await revokeTourCaptureGrantFromScreen(subject, granteeUid))), [act, subject]);
+  const revokeGrant = useCallback(async (granteeUid: string) => {
+    const result = await optimistic(
+      (current) => ({ ...current, grants: current.grants.filter((row) => row.granteeUid !== granteeUid) }),
+      () => revokeTourCaptureGrantFromScreen(subject, granteeUid),
+      { failed: (outcome) => outcome.kind !== 'ok' },
+    );
+    setLast(actOf(result));
+  }, [optimistic, subject]);
 
   return { load, last, busy, refresh, issue, revokeInvitation, revokeGrant };
 }

@@ -41,6 +41,7 @@ import { ShareSurfaceShell } from '@/components/ui/sharing';
 import { UserAuthPermissionPanel } from '@/components/ui/sharing/panels/UserAuthPermissionPanel';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import { Button } from '@/components/ui/button';
+import { linkPolicyOf, type ShareKindLinkPolicy } from '@/services/sharing/share-resolve-contract';
 import { ActiveShareLinksList } from '@/components/sharing/link-management/ActiveShareLinksList';
 import {
   MintedLinkCard,
@@ -226,7 +227,13 @@ export function UnifiedShareDialog({
       {shareUrl ? (
         <section className="flex flex-col gap-4">{channels}</section>
       ) : (
-        <ManagedLinksBody flow={flow} channels={channels} pdfHref={pdfHref} pdfLabel={t('properties-detail:showcase.downloadPdf')} />
+        <ManagedLinksBody
+          flow={flow}
+          channels={channels}
+          pdfHref={pdfHref}
+          pdfLabel={t('properties-detail:showcase.downloadPdf')}
+          policy={linkPolicyOf(entityType)}
+        />
       )}
     </ShareSurfaceShell>
   );
@@ -237,10 +244,12 @@ interface ManagedLinksBodyProps {
   readonly channels: React.ReactNode;
   readonly pdfHref: string | null;
   readonly pdfLabel: string;
+  /** ADR-884 Κ3β — η **ίδια** δήλωση με τον διακομιστή (`SHARE_KIND_LINK_POLICY`). */
+  readonly policy: ShareKindLinkPolicy;
 }
 
 /** Νέος σύνδεσμος (ή ο μόλις δημιουργημένος + κανάλια) και η λίστα ενεργών συνδέσμων. */
-function ManagedLinksBody({ flow, channels, pdfHref, pdfLabel }: ManagedLinksBodyProps): React.ReactElement {
+function ManagedLinksBody({ flow, channels, pdfHref, pdfLabel, policy }: ManagedLinksBodyProps): React.ReactElement {
   return (
     <section className="flex flex-col gap-4">
       {flow.minted === null ? (
@@ -249,6 +258,7 @@ function ManagedLinksBody({ flow, channels, pdfHref, pdfLabel }: ManagedLinksBod
           onDraftChange={flow.setDraft}
           onCreateAndCopy={flow.createAndCopy}
           minting={flow.minting}
+          policy={policy}
         />
       ) : (
         <>
@@ -264,7 +274,7 @@ function ManagedLinksBody({ flow, channels, pdfHref, pdfLabel }: ManagedLinksBod
           )}
         </>
       )}
-      <ActiveShareLinksList state={flow.links} currentShareId={flow.minted?.shareId ?? null} />
+      <ActiveShareLinksList state={flow.links} currentShareId={flow.minted?.shareId ?? null} policy={policy} />
     </section>
   );
 }
