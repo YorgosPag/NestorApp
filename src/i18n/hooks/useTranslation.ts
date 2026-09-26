@@ -166,7 +166,16 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
       );
       if (crossNs !== undefined) return crossNs;
 
-      warnUnresolvedKey(fullKey, i18n, allNamespacesToLoad);
+      // 🔴 ADR-884 §9.1 Α7 — «ανεπίλυτο» ΠΡΙΝ τελειώσει η φόρτωση ΔΕΝ είναι «λείπει».
+      // Ο διάλογος διαγραφής ακινήτου υπολογίζει τα κείμενά του σε κάθε render, και
+      // **κλειστός**· στο πρώτο render το `properties` είναι `absent`, οπότε το ίχνος
+      // κατήγγελλε `properties:deletionGuard.*` που **ποτέ** δεν ζωγραφίστηκαν — και
+      // σφράγιζε το κλειδί (`warnedUnresolvedKeys`), άρα ένα κλειδί που θα έλειπε
+      // **πραγματικά** μετά τη φόρτωση δεν θα αναφερόταν ποτέ. Ο hook ξανα-αποδίδει όταν
+      // κλείσει η φόρτωση (επιτυχία **ή** αποτυχία), και τότε ρωτά ξανά.
+      // ⚠️ ΜΗΝ το κάνεις `isBundleComplete`: ένα bundle που δεν ολοκληρώνεται ποτέ
+      //    (ADR-744 §11) θα σώπαινε για πάντα — ακριβώς η κλάση που το ίχνος υπάρχει να δείξει.
+      if (namespaceLoaded) warnUnresolvedKey(fullKey, i18n, allNamespacesToLoad);
       return result;
     };
     return wrapped as unknown as typeof rawT;
