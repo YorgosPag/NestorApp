@@ -653,6 +653,8 @@ export const API_ROUTES = {
       USER_STATUS: (uid: string) => `/api/admin/role-management/users/${uid}/status` as const,
       USER_ROLE: (uid: string) => `/api/admin/role-management/users/${uid}/role` as const,
       USER_PERMISSION_SETS: (uid: string) => `/api/admin/role-management/users/${uid}/permission-sets` as const,
+      /** ADR-892 — `GET` προεπισκόπηση · `POST` αφαίρεση από το γραφείο (ο λογαριασμός μένει). */
+      USER_MEMBERSHIP: (uid: string) => `/api/admin/role-management/users/${uid}/membership` as const,
       PROJECT_MEMBERS: '/api/admin/role-management/project-members',
       AUDIT_LOG: '/api/admin/role-management/audit-log',
       AUDIT_LOG_EXPORT: '/api/admin/role-management/audit-log/export',
@@ -686,6 +688,11 @@ export const API_ROUTES = {
   //    απαρίθμηση, που το ADR-787 Ε-5 §4 #1 απαγορεύει ρητά.
   WORKSPACES: {
     MINE: '/api/workspaces',
+    /**
+     * ADR-892 Φ3 — «η ΔΙΚΗ μου θέση σε ΑΥΤΟ το γραφείο»: `GET` προεπισκόπηση · `POST` αποχώρηση.
+     * Ο χώρος είναι ο ζητούμενος (κεφαλίδα, κριμένη στο σύνορο), ο στόχος ο ίδιος ο καλών — ποτέ το σώμα.
+     */
+    MY_MEMBERSHIP: '/api/workspaces/membership',
   },
 
   // ── Προσκλήσεις χώρου εργασίας (ADR-853) ──────────────────────────────
@@ -734,6 +741,9 @@ export const API_ROUTES = {
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/uploads/finalize` as const,
     CAPTURES: (kind: string, subjectId: string) =>
       `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/captures` as const,
+    /** ADR-884 Φ2β/Φ2δ — τοποθέτηση/αφαίρεση λήψης, βελάκι, αποσύνδεση (μόνο ο υπεύθυνος). */
+    GRAPH: (kind: string, subjectId: string) =>
+      `/api/spatial-tours/${encodeURIComponent(kind)}/${encodeURIComponent(subjectId)}/graph` as const,
     /** Η πράξη του φωτογράφου· το token ταξιδεύει στο **σώμα** (RFC 6819 §5.1.5). */
     REDEEM: '/api/spatial-tours/capture-invitations/redeem',
     // ── Θέαση (ADR-884 Κ3β) ──

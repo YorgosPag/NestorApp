@@ -130,6 +130,17 @@ export const STATUS_BY_TOUR_REFUSAL: Readonly<Record<TourUploadRefusal, number>>
   'upload-missing': 409,
   'upload-incomplete': 409,
   'declaration-invalid': 400,
+  // ── Ο γράφος (Φ2β) ─────────────────────────────────────────────────────────
+  'capture-absent': 404,
+  /** Ήδη σε σημείο — η μετακίνηση είναι ρητή (αφαίρεση → τοποθέτηση), ποτέ σιωπηλή. */
+  'capture-placed': 409,
+  'capture-unplaced': 409,
+  /** Χωρίς πλακίδια ακόμη — η τοποθέτηση θα έκρυβε ορατό σημείο (§4.10). */
+  'capture-not-ready': 409,
+  'node-absent': 404,
+  /** Όροφος BIM που η περιήγηση δεν γνωρίζει — δεν επινοείται. */
+  'level-absent': 422,
+  'graph-full': 409,
 };
 
 export type TourRefusedBody = { readonly error: 'TOUR_REFUSED'; readonly reason: TourUploadRefusal };
