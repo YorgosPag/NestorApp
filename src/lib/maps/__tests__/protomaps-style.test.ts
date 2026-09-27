@@ -39,6 +39,20 @@ describe('Α — δύο θέματα, ίδια δεδομένα', () => {
   it('ελληνικά ονόματα: το στυλ ζητά το name:el', () => {
     expect(JSON.stringify(light.layers)).toContain('name:el');
   });
+
+  it('κανένα uppercase από τη μηχανή: το toLocaleUpperCase() χωρίς γλώσσα δίνει «ΑΛΒΑΝΊΑ» εκτός ελληνικού locale', () => {
+    // Η πηγή του λάθους είναι πραγματική — αν ποτέ αλλάξει η συμπεριφορά του runtime, το test το λέει.
+    expect('Αλβανία'.toUpperCase()).toBe('ΑΛΒΑΝΊΑ');
+    for (const style of [light, dark]) {
+      const upper = style.layers.filter((l) => l.type === 'symbol' && l.layout?.['text-transform'] === 'uppercase');
+      expect(upper.map((l) => l.id)).toEqual([]);
+    }
+  });
+
+  it('τα στρώματα που ήταν κεφαλαία (χώρες, θάλασσες) ΥΠΑΡΧΟΥΝ ακόμη — αλλάζει η γραφή, όχι το περιεχόμενο', () => {
+    const ids = light.layers.map((l) => l.id);
+    expect(ids).toEqual(expect.arrayContaining(['places_country', 'places_region', 'water_label_ocean']));
+  });
 });
 
 describe('Β — η πηγή και η απόδοση έρχονται από τον κατάλογο', () => {

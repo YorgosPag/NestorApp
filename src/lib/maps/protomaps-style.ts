@@ -45,6 +45,21 @@ function sharedSources(id: VectorArchiveBasemapSourceId): Record<string, SourceS
 }
 
 /**
+ * **Κανένα `text-transform: uppercase` — η κεφαλαιοποίηση ΔΕΝ ανατίθεται στη μηχανή.** Η MapLibre (5.15,
+ * `transform_text.ts`) καλεί `toLocaleUpperCase()` **χωρίς γλώσσα** ⇒ αποτέλεσμα κατά το locale του **browser**:
+ * με `el` το ICU αφαιρεί τους τόνους (`ΑΛΒΑΝΙΑ`, κρατά το `Ϊ`), με κάθε άλλο δίνει `ΑΛΒΑΝΊΑ` — ορθογραφικό λάθος,
+ * μετρημένο σε στιγμιότυπο (χώρες, θάλασσες). Καμία έκφραση δεν αφαιρεί τόνους ⇒ τα στρώματα γράφονται ως έχουν
+ * (`Αλβανία`), όπως ο ελληνικός χάρτης της Google. Ντετερμινιστικό για κάθε θεατή.
+ */
+function withoutEngineUppercase(styleLayers: StyleSpecification['layers']): StyleSpecification['layers'] {
+  return styleLayers.map((layer) =>
+    layer.type === 'symbol' && layer.layout?.['text-transform'] === 'uppercase'
+      ? { ...layer, layout: { ...layer.layout, 'text-transform': 'none' } }
+      : layer,
+  );
+}
+
+/**
  * Το στυλ MapLibre της πηγής για το θέμα. Ίδια είσοδος ⇒ **ίδιο** αντικείμενο: τα `useMemo`/props των χαρτών
  * δεν βλέπουν «νέο στυλ» σε κάθε render.
  */
@@ -60,7 +75,7 @@ export function protomapsStyle(id: VectorArchiveBasemapSourceId, scheme: Basemap
     glyphs: source.glyphsUrl,
     sprite: `${source.spriteBaseUrl}/${flavor}`,
     sources: sharedSources(id),
-    layers: layers(id, namedFlavor(flavor), { lang: source.lang }),
+    layers: withoutEngineUppercase(layers(id, namedFlavor(flavor), { lang: source.lang })),
   };
   styleCache.set(key, style);
   return style;
