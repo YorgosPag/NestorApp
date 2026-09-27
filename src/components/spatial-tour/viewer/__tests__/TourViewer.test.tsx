@@ -10,7 +10,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import type { TourPanoramaEngine } from '../tour-panorama-engine';
-import type { TourCubeFaceImages, TourPanoramaSource } from '../tour-panorama-source';
+import type { TourCubeFaceImages, TourFaceImage, TourPanoramaSource } from '../tour-panorama-source';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -24,9 +24,11 @@ jest.mock('@/lib/browser/webgl-support', () => ({ isWebGLAvailable: () => webgl 
 jest.mock('@/lib/a11y/reduced-motion', () => ({ prefersReducedMotion: () => true }));
 
 const engine: jest.Mocked<TourPanoramaEngine> = {
-  maxFaceSize: 512,
   setView: jest.fn(),
   resize: jest.fn(),
+  viewportHeightDevicePx: jest.fn(() => 400),
+  hasTile: jest.fn(() => false),
+  putTile: jest.fn(),
   showNow: jest.fn(),
   setIncoming: jest.fn(),
   setIncomingOpacity: jest.fn(),
@@ -42,12 +44,14 @@ import { DEMO_TOUR_MANIFEST } from '../demo/demo-tour';
 import { TourViewer } from '../TourViewer';
 
 const FACES = {} as TourCubeFaceImages;
+const TILE = { width: 512, height: 512 } as TourFaceImage;
 let failing = new Set<string>();
 const source: TourPanoramaSource = {
-  load: jest.fn(async (stop) => {
+  base: jest.fn(async (stop) => {
     if (failing.has(stop.nodeId)) throw new Error('offline');
     return FACES;
   }),
+  tiles: { levels: () => [512], tile: jest.fn(async () => TILE) },
 };
 
 beforeAll(() => {
@@ -68,7 +72,7 @@ const nearby = () => within(screen.getByRole('navigation', { name: 'spatial-tour
 describe('TourViewer — πρώτη εικόνα και προσφορές', () => {
   it('ξεκινά στο χαμηλότερο όροφο, πρώτο σημείο, με την κατεύθυνση ΑΥΤΗΣ της λήψης', async () => {
     await renderViewer();
-    await waitFor(() => expect(engine.showNow).toHaveBeenCalledWith(FACES, 0));
+    await waitFor(() => expect(engine.showNow).toHaveBeenCalledWith(FACES, 0, expect.any(String)));
     expect(screen.getByText('spatial-tour:viewer.youAreHere:1')).toBeInTheDocument();
   });
 
@@ -101,7 +105,7 @@ describe('TourViewer — πλοήγηση', () => {
     await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'spatial-tour:viewer.floorNumbered:1' })); });
     await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:1')).toBeInTheDocument());
-    await waitFor(() => expect(engine.showNow).toHaveBeenLastCalledWith(FACES, expect.closeTo(Math.PI / 4, 6)));
+    await waitFor(() => expect(engine.showNow).toHaveBeenLastCalledWith(FACES, expect.closeTo(Math.PI / 4, 6), expect.any(String)));
     expect(screen.queryByRole('complementary', { name: 'spatial-tour:viewer.plan' })).toBeNull();
     expect(nearby().getAllByRole('button').map((b) => b.textContent)).toEqual([
       'spatial-tour:viewer.pointOnFloor:2|spatial-tour:viewer.floorNumbered:0',
@@ -119,9 +123,9 @@ describe('TourViewer — πλοήγηση', () => {
 
   it('αργή ΠΡΩΤΗ εικόνα που φτάνει μετά τη μετάβαση ⇒ ΔΕΝ ζωγραφίζεται πάνω στο νέο σημείο (ζωντανά, ADR-884 Φ2δ)', async () => {
     const LATE = { late: true } as unknown as TourCubeFaceImages;
-    const original = (source.load as jest.Mock).getMockImplementation();
+    const original = (source.base as jest.Mock).getMockImplementation();
     let releaseFirst: () => void = () => undefined;
-    (source.load as jest.Mock).mockImplementation(async (stop: { nodeId: string }) => {
+    (source.base as jest.Mock).mockImplementation(async (stop: { nodeId: string }) => {
       if (stop.nodeId !== 'g1') return FACES;
       await new Promise<void>((resolve) => { releaseFirst = resolve; });
       return LATE;
@@ -131,33 +135,33 @@ describe('TourViewer — πλοήγηση', () => {
       await act(async () => { fireEvent.click(nearby().getByRole('button', { name: 'spatial-tour:viewer.goTo:2' })); });
       await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:2')).toBeInTheDocument());
       await act(async () => { releaseFirst(); await new Promise((r) => setTimeout(r, 0)); });
-      expect(engine.showNow).not.toHaveBeenCalledWith(LATE, expect.anything());
+      expect(engine.showNow).not.toHaveBeenCalledWith(LATE, expect.anything(), expect.anything());
     } finally {
-      (source.load as jest.Mock).mockImplementation(original);
+      (source.base as jest.Mock).mockImplementation(original);
     }
   });
 
-  it('η άφιξη ΔΕΝ περιμένει τα καθαρά πλακίδια — «είστε εδώ» με την προεπισκόπηση, καθάρισμα μετά (ζωντανά, Φ2δ)', async () => {
-    const PREVIEW = { preview: true } as unknown as TourCubeFaceImages;
-    const SHARP = { sharp: true } as unknown as TourCubeFaceImages;
-    const original = (source.load as jest.Mock).getMockImplementation();
-    let releaseSharp: () => void = () => undefined;
-    (source.load as jest.Mock).mockImplementation(async (stop: { nodeId: string }, options: { onPreview?: (f: TourCubeFaceImages) => void }) => {
-      if (stop.nodeId !== 'g2') return FACES;
-      options.onPreview?.(PREVIEW);
-      await new Promise<void>((resolve) => { releaseSharp = resolve; });
-      return SHARP;
+  it('η άφιξη ΔΕΝ περιμένει τα πλακίδια — «είστε εδώ» με τη βάση, πλακίδια μετά ΣΤΗ ΝΕΑ στάση (ζωντανά Φ2δ · Φ2ε)', async () => {
+    const tile = source.tiles?.tile as jest.Mock;
+    const original = tile.getMockImplementation();
+    let releaseTiles: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { releaseTiles = resolve; });
+    tile.mockImplementation(async (stop: { nodeId: string }) => {
+      if (stop.nodeId === 'g2') await gate;
+      return TILE;
     });
     try {
       await renderViewer();
       await waitFor(() => expect(engine.showNow).toHaveBeenCalledTimes(1));
+      engine.putTile.mockClear();
       await act(async () => { fireEvent.click(nearby().getByRole('button', { name: 'spatial-tour:viewer.goTo:2' })); });
       await waitFor(() => expect(screen.getByText('spatial-tour:viewer.youAreHere:2')).toBeInTheDocument());
-      expect(engine.showNow).not.toHaveBeenCalledWith(SHARP, expect.anything());
-      await act(async () => { releaseSharp(); await new Promise((r) => setTimeout(r, 0)); });
-      expect(engine.showNow).toHaveBeenLastCalledWith(SHARP, expect.any(Number));
+      const arrivedKey = engine.showNow.mock.calls.at(-1)?.[2];
+      expect(engine.putTile.mock.calls.filter((c) => c[0] === arrivedKey)).toHaveLength(0);
+      await act(async () => { releaseTiles(); await new Promise((r) => setTimeout(r, 0)); });
+      await waitFor(() => expect(engine.putTile.mock.calls.some((c) => c[0] === arrivedKey)).toBe(true));
     } finally {
-      (source.load as jest.Mock).mockImplementation(original);
+      tile.mockImplementation(original);
     }
   });
 

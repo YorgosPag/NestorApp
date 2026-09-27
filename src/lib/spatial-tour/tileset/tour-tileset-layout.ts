@@ -47,14 +47,21 @@ export function tilesPerSide(levelSize: number): number {
   return Math.ceil(levelSize / TOUR_TILE_SIZE);
 }
 
-/** Το μεγαλύτερο επίπεδο που χωρά στο όριο της συσκευής — ποτέ κάτω από το πρώτο. */
-export function levelIndexFor(faceSize: number, maxFaceSize: number): number {
-  const levels = tilesetLevels(faceSize);
-  let chosen = 0;
-  levels.forEach((size, index) => {
-    if (size <= maxFaceSize) chosen = index;
-  });
-  return chosen;
+/** Το ορθογώνιο `(u, v)` ενός πλακιδίου στην όψη του — ο ΕΝΑΣ ορισμός για ψήστη, πηγή και μηχανή (ADR-884 Φ2ε · §4.11). */
+export interface TileUvRect {
+  readonly u0: number;
+  readonly u1: number;
+  readonly v0: number;
+  readonly v1: number;
+}
+
+/**
+ * Πού πέφτει το πλακίδιο `(row, col)` ενός επιπέδου πλευράς `levelSize`. Γραμμή 0 = **πάνω** άκρη της εικόνας (`v = 1`),
+ * όπως τη γράφει ο ψήστης και τη ζωγραφίζει ο καμβάς (`y` προς τα κάτω)· στήλη 0 = αριστερά (`u = 0`).
+ */
+export function tileUvRect(levelSize: number, row: number, col: number): TileUvRect {
+  const edge = (index: number) => Math.min(levelSize, index * TOUR_TILE_SIZE) / levelSize;
+  return { u0: edge(col), u1: edge(col + 1), v0: 1 - edge(row + 1), v1: 1 - edge(row) };
 }
 
 /** Τμήματα διαδρομής ενός πλακιδίου (μετά το `tour-tiles/{tourId}/`). */

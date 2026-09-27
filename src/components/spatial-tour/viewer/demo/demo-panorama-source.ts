@@ -117,13 +117,14 @@ function paintFace(face: TourCubeFace, size: number, stop: TourManifestStop, num
 /** Εικονική πηγή — `numberOf` δίνει τον αριθμό του σημείου (ό,τι δείχνει και ο θεατής), ώστε εικόνα και UI να συμφωνούν. */
 export function createDemoPanoramaSource(numberOf: (nodeId: string) => number): TourPanoramaSource {
   return {
-    async load(stop, { signal, maxFaceSize }) {
+    async base(stop, signal) {
       if (signal.aborted) throw signal.reason;
-      const size = Math.min(DEMO_FACE_SIZE, maxFaceSize);
       const faces = Object.fromEntries(
-        TOUR_CUBE_FACES.map((face) => [face, paintFace(face, size, stop, numberOf(stop.nodeId))]),
+        TOUR_CUBE_FACES.map((face) => [face, paintFace(face, DEMO_FACE_SIZE, stop, numberOf(stop.nodeId))]),
       ) as Record<TourCubeFace, HTMLCanvasElement>;
       return faces satisfies TourCubeFaceImages;
     },
+    // Οι εικονικές όψεις είναι ήδη η τελική εικόνα — κανένα πλακίδιο.
+    tiles: null,
   };
 }

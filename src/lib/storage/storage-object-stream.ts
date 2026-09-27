@@ -11,6 +11,14 @@ import 'server-only';
  *   `.firebasestorage.app` — το `getMetadata` δίνει δομημένο 404)·
  * - **`Range: bytes=a-b`** (RFC 9110 §14): ένα εύρος, `206` + `Content-Range`· άκυρο/ανικανοποίητο ⇒ `416`·
  * - **`ETag`** από τη γενιά του αντικειμένου — ο browser επαναχρησιμοποιεί ό,τι έχει.
+ *
+ * ⚡ **Ένα αίτημα αντί για δύο** (`singleRequest`, ADR-884 Φ2ε · §4.11): ο κανονικός δρόμος κάνει `getMetadata` και μετά
+ * ανάγνωση — **δύο** ταξίδια ως τον κάδο (US-EAST1): **~820 ms ανά πλακίδιο, μετρημένο** (2026-09-27). Χωρίς `Range`, η
+ * ίδια η απάντηση `alt=media` φέρνει τύπο · μέγεθος · γενιά (`x-goog-generation`) — **μετρημένο** στο `@google-cloud/storage`
+ * 7.18. ⚠️ **ΟΧΙ** το αποθηκευμένο `Cache-Control`: η απάντηση λέει `no-cache, no-store` (όχι αυτό του αντικειμένου)
+ * ⇒ ο γρήγορος δρόμος είναι **επιλογή του καλούντος** που ορίζει δική του πολιτική κρυφής μνήμης (τα πλακίδια), ποτέ
+ * προεπιλογή (το `storage/file/[...path]` σερβίρει το αποθηκευμένο). ⚠️ Το `'response'` εκπέμπεται **και** στο 404 —
+ * ο κωδικός ελέγχεται εκεί.
  */
 
 import { getAdminBucket } from '@/lib/firebaseAdmin';
@@ -70,9 +78,77 @@ function sizeOf(raw: unknown): number | null {
   return typeof size === 'number' && Number.isFinite(size) ? size : null;
 }
 
+export interface OpenStorageObjectOptions {
+  /**
+   * Ένα αίτημα ως τον κάδο όταν **δεν** ζητείται `Range` — με τίμημα `storedCacheControl: null` (βλ. κεφαλίδα).
+   * Μόνο για καλούντες που στέλνουν δική τους πολιτική κρυφής μνήμης.
+   */
+  readonly singleRequest?: boolean;
+}
+
+/** Τα πεδία της απάντησης `alt=media` που διαβάζουμε — ό,τι χρειάζεται, χωρίς να δεθούμε στον τύπο του `request`. */
+interface MediaResponse {
+  readonly statusCode?: number;
+  readonly headers: Readonly<Record<string, string | string[] | undefined>>;
+}
+
+const headerOf = (res: MediaResponse, name: string): string | null => {
+  const value = res.headers[name];
+  return typeof value === 'string' ? value : null;
+};
+
+/** Τα γεγονότα μιας απάντησης `alt=media` 2xx → `found` (ολόκληρο, χωρίς εύρος). */
+function foundFromResponse(res: MediaResponse, stream: ReadableStream<Uint8Array>): StorageObjectStream {
+  // Συμπιεσμένη μεταφορά ⇒ το `content-length` είναι της συμπίεσης, όχι όσων θα φτάσουν: άγνωστο, όχι λάθος.
+  const size = headerOf(res, 'content-encoding') === null ? sizeOf(headerOf(res, 'content-length')) : null;
+  const generation = headerOf(res, 'x-goog-generation');
+  return {
+    kind: 'found',
+    stream,
+    contentType: headerOf(res, 'content-type') ?? 'application/octet-stream',
+    contentLength: size,
+    totalSize: size,
+    range: null,
+    etag: generation === null ? null : `"${generation}"`,
+    storedCacheControl: null,
+  };
+}
+
+/** **Ένα ταξίδι**: η ανάγνωση ξεκινά αμέσως, και η απάντηση λέει «υπάρχει;» και «τι είναι;». */
+function openInOneRequest(file: ReturnType<ReturnType<typeof getAdminBucket>['file']>): Promise<StorageObjectStream> {
+  return new Promise((resolve, reject) => {
+    const node = file.createReadStream();
+    let settled = false;
+    node.once('response', (res: MediaResponse) => {
+      settled = true;
+      if (res.statusCode === 404) {
+        node.destroy();
+        resolve({ kind: 'absent' });
+      } else if ((res.statusCode ?? 200) >= 400) {
+        reject(new Error(`storage ${res.statusCode}`));
+      } else {
+        resolve(foundFromResponse(res, stream));
+      }
+    });
+    node.once('error', (error: { code?: number }) => {
+      if (settled) return;
+      settled = true;
+      if (error.code === 404) resolve({ kind: 'absent' });
+      else reject(error);
+    });
+    // Η ροή του GCS ξεκινά το αίτημα μόνο όταν κάποιος διαβάσει — η μετατροπή σε web stream το κάνει τώρα.
+    const stream = toWebStream(node);
+  });
+}
+
 /** **Άνοιξε το αντικείμενο** — προαιρετικά με κεφαλίδα `Range`. Πετά μόνο σε βλάβη (όχι σε απουσία). */
-export async function openStorageObject(path: string, rangeHeader: string | null = null): Promise<StorageObjectStream> {
+export async function openStorageObject(
+  path: string,
+  rangeHeader: string | null = null,
+  options: OpenStorageObjectOptions = {},
+): Promise<StorageObjectStream> {
   const file = getAdminBucket().file(path);
+  if (options.singleRequest === true && rangeHeader === null) return openInOneRequest(file);
   let metadata: Awaited<ReturnType<typeof file.getMetadata>>[0];
   try {
     [metadata] = await file.getMetadata();

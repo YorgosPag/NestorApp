@@ -1,8 +1,7 @@
 /**
  * @fileoverview **Η ΔΙΑΤΑΞΗ ΚΑΙ Η ΓΕΩΜΕΤΡΙΑ ΤΟΥ TILESET** (ADR-884 Φ2α · §4.9).
  *
- * - **Δ** — διάταξη: μέγεθος όψης από το πλάτος (Pannellum `width/π`, πολλαπλάσιο 512, ταβάνι 4096), επίπεδα, επιλογή
- *   επιπέδου ≤ όριο συσκευής, διαδρομές που **δέχεται** το `tourMediaObjectPath`.
+ * - **Δ** — διάταξη: μέγεθος όψης από το πλάτος (Pannellum `width/π`, πολλαπλάσιο 512, ταβάνι 4096), επίπεδα, διαδρομές που **δέχεται** το `tourMediaObjectPath`.
  * - **Γ** — γεωμετρία: ένα σημάδι σε γνωστό yaw/κλίση του equirect καταλήγει στην όψη/θέση που λέει η **ίδια** σύμβαση
  *   (`directionToCubeFace`) — ο ψήστης και ο θεατής δεν μπορούν να διαφωνήσουν χωρίς να κοκκινίσει αυτό.
  * - **Ρ** — ραφή: η αναδίπλωση στις 180° δεν αφήνει γραμμή.
@@ -12,7 +11,6 @@ import { renderCubeFace, type RawImage } from '../equirect-to-cube';
 import {
   TOUR_FACE_SIZE_CEILING,
   faceSizeForEquirect,
-  levelIndexFor,
   previewSegments,
   tileSegments,
   tilesPerSide,
@@ -39,11 +37,6 @@ describe('Δ — διάταξη', () => {
     expect(tilesPerSide(2560)).toBe(5);
   });
 
-  it('επιλογή επιπέδου: το μεγαλύτερο που χωρά — ποτέ κάτω από το πρώτο', () => {
-    expect(levelIndexFor(2560, 2048)).toBe(2);
-    expect(levelIndexFor(2560, 4096)).toBe(3);
-    expect(levelIndexFor(2560, 256)).toBe(0);
-  });
 
   it('κάθε διαδρομή περνά από τα επιτρεπτά τμήματα του media route', () => {
     for (const face of TOUR_CUBE_FACES) expect(tourMediaObjectPath('stour_1', tileSegments(HASH, 3, face, 4, 4))).not.toBeNull();

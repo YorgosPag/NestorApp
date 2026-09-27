@@ -8,6 +8,8 @@
  *
  * 🔑 **Πραγματικό `<button>`** (Tab · Enter · `aria-label`) και στις δύο χρήσεις. Χωριστό στοιχείο επειδή το σύρσιμο
  *   κρατά κατάσταση ανά κουμπί — hook μέσα σε `map` δεν επιτρέπεται.
+ * 🔑 **Πρόθεση** (`onIntent`, ADR-884 Φ2ε · §4.11): δείκτης πάνω στο βελάκι **ή** εστίαση πληκτρολογίου ⇒ ο θεατής
+ *   προφορτώνει τα πλακίδια της άφιξης (πρότυπο instant.page: το hover προηγείται του κλικ κατά ~300 ms).
  */
 
 import { usePointerDragRelease } from './usePointerDragRelease';
@@ -21,12 +23,14 @@ interface TourLinkButtonProps {
   /** Παρόν μόνο στην οθόνη τοποθέτησης: πού αφέθηκε το βελάκι (συντεταγμένες οθόνης). */
   readonly onDrop?: (clientX: number, clientY: number) => void;
   readonly register: (el: HTMLButtonElement | null) => void;
+  /** Ο επισκέπτης **μάλλον** θα πάει εκεί — ώρα για προφόρτωση. */
+  readonly onIntent?: () => void;
 }
 
-function DraggableLinkButton({ label, onGo, onDrop, register }: TourLinkButtonProps & { readonly onDrop: (x: number, y: number) => void }) {
+function DraggableLinkButton({ label, onGo, onDrop, register, onIntent }: TourLinkButtonProps & { readonly onDrop: (x: number, y: number) => void }) {
   const drag = usePointerDragRelease(onDrop);
   return (
-    <button type="button" hidden ref={register} aria-label={label.aria} onClick={onGo} {...drag}
+    <button type="button" hidden ref={register} aria-label={label.aria} onClick={onGo} onPointerEnter={onIntent} onFocus={onIntent} {...drag}
       className={`${BUTTON_CLASS} cursor-grab touch-none active:cursor-grabbing`}>
       {label.text}
     </button>
@@ -34,10 +38,10 @@ function DraggableLinkButton({ label, onGo, onDrop, register }: TourLinkButtonPr
 }
 
 export function TourLinkButton(props: TourLinkButtonProps) {
-  const { label, onGo, onDrop, register } = props;
+  const { label, onGo, onDrop, register, onIntent } = props;
   if (onDrop !== undefined) return <DraggableLinkButton {...props} onDrop={onDrop} />;
   return (
-    <button type="button" hidden ref={register} aria-label={label.aria} onClick={onGo} className={BUTTON_CLASS}>
+    <button type="button" hidden ref={register} aria-label={label.aria} onClick={onGo} onPointerEnter={onIntent} onFocus={onIntent} className={BUTTON_CLASS}>
       {label.text}
     </button>
   );

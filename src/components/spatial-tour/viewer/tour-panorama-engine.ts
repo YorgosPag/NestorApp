@@ -15,36 +15,51 @@
  * 🔑 **Η κάμερα ζει στον κόσμο, κάθε κύβος στρέφεται κατά τη ΔΙΚΗ του κατεύθυνση λήψης** (`mesh.rotation.y = -heading`):
  *   δύο λήψεις με διαφορετικό «βορρά» σβήνουν η μία μέσα στην άλλη **ευθυγραμμισμένες** — ο επισκέπτης δεν βλέπει τον
  *   κόσμο να «πηδά» στη μέση της μετάβασης. Το `TourView.yaw` μένει σχετικό με τον **τρέχοντα** κύβο.
+ * 🔑 **Βάση + πλακίδια** (ADR-884 Φ2ε · §4.11): κάθε κύβος = η βάση (6 υφές χαμηλής ανάλυσης, ο shader παρακάτω) + η στρώση
+ *   πλακιδίων του (`tour-tile-layer.ts`), που ξέρει **ποια στάση** δείχνει. Η μηχανή δεν ξέρει από δίκτυο — τα πλακίδια
+ *   της τα φέρνει ο `tour-tile-streamer.ts`. Κανένα όριο «μέγιστης όψης»: με υφές των 512 δεν υπάρχει λόγος.
  */
 
 import {
-  BackSide, BoxGeometry, CanvasTexture, LinearFilter, Mesh, PerspectiveCamera, SRGBColorSpace, Scene, ShaderMaterial, Texture,
-  Vector3, WebGLRenderer,
+  BackSide, BoxGeometry, Mesh, PerspectiveCamera, Scene, ShaderMaterial, Texture, Vector3, WebGLRenderer,
 } from 'three';
 
 import { normalizeAngleDiff, radToDeg } from '@/lib/geometry/angle';
 import { createExternalStore } from '@/lib/state/createExternalStore';
 import {
-  directionToYawPitch, TOUR_CUBE_FACES, type TourCubeFace, yawPitchToDirection,
+  directionToYawPitch, TOUR_CUBE_FACES, yawPitchToDirection,
 } from '@/lib/spatial-tour/viewer/tour-cube-faces';
+import type { TourTileAddress } from '@/lib/spatial-tour/viewer/tour-tile-visibility';
 import type { TourView } from '@/lib/spatial-tour/viewer/tour-viewer-view';
 
-import type { TourCubeFaceImages } from './tour-panorama-source';
+import type { TourCubeFaceImages, TourFaceImage } from './tour-panorama-source';
 import { TOUR_FACE_UNIFORM, TOUR_PANORAMA_FRAGMENT_SHADER, TOUR_PANORAMA_VERTEX_SHADER } from './tour-panorama-shader';
+import { createTileLayer, panoramaTexture, type TileLayer } from './tour-tile-layer';
 
 /** Θέση στην οθόνη ενός σημείου του πανοράματος — `null` όταν είναι πίσω από τον θεατή ή εκτός κάδρου. */
 export type ScreenPoint = { readonly x: number; readonly y: number } | null;
 
 export interface TourPanoramaEngine {
-  readonly maxFaceSize: number;
   setView(view: TourView): void;
   resize(widthCss: number, heightCss: number, pixelRatio: number): void;
-  /** Αντικαθιστά ακαριαία τον τρέχοντα κύβο (`headingRad` = διόπτευση του κέντρου του πανοράματος). */
-  showNow(faces: TourCubeFaceImages, headingRad: number): void;
+  /** Ύψος του καμβά σε εικονοστοιχεία **συσκευής** — από αυτό κρίνεται το επίπεδο πλακιδίων. */
+  viewportHeightDevicePx(): number;
+  /**
+   * Αντικαθιστά ακαριαία τον τρέχοντα κύβο με τη **βάση** της στάσης `stopKey` (`headingRad` = διόπτευση του κέντρου του
+   * πανοράματος). Πλακίδια άλλης στάσης φεύγουν.
+   */
+  showNow(faces: TourCubeFaceImages, headingRad: number, stopKey: string): void;
   /** Ανάβει τον επόμενο κύβο πάνω από τον τρέχοντα με `opacity` 0‥1· στο 1 γίνεται ο τρέχων. */
-  setIncoming(faces: TourCubeFaceImages, headingRad: number): void;
+  setIncoming(faces: TourCubeFaceImages, headingRad: number, stopKey: string): void;
   setIncomingOpacity(opacity: number): void;
   commitIncoming(): void;
+  /** Έχει ήδη ο κύβος της στάσης `stopKey` αυτό το πλακίδιο; (`false` αν κανένας κύβος δεν δείχνει τη στάση) */
+  hasTile(stopKey: string, tileKey: string): boolean;
+  /**
+   * Βάζει ένα πλακίδιο στον κύβο που δείχνει τη στάση `stopKey` — **αγνοείται** αν κανένας δεν τη δείχνει πια (ο
+   * επισκέπτης προχώρησε: ποτέ «εικόνα του Α πάνω στο Β», M11).
+   */
+  putTile(stopKey: string, tileKey: string, address: TourTileAddress, levelSize: number, image: TourFaceImage): void;
   /** Θέση στην οθόνη (CSS px) ενός yaw/κλίσης **του τρέχοντος κύβου** — για τα κουμπιά συνδέσμων πάνω από τον καμβά. */
   project(yaw: number, pitch: number): ScreenPoint;
   /** Το αντίστροφο: σημείο οθόνης (CSS px) → yaw/κλίση **του τρέχοντος κύβου** — το σύρσιμο βελακιού (Φ2δ, §4.10). */
@@ -56,46 +71,51 @@ export interface TourPanoramaEngine {
 
 interface Cube {
   readonly mesh: Mesh<BoxGeometry, ShaderMaterial>;
+  /** Τα πλακίδια πάνω από τη βάση — παιδί του `mesh`, άρα στρέφεται και κρύβεται μαζί του. */
+  readonly tiles: TileLayer;
   textures: Texture[];
   heading: number;
 }
 
-function makeCube(renderOrder: number): Cube {
-  const uniforms: Record<string, { value: Texture | number | null }> = { opacity: { value: 1 } };
+/**
+ * Σειρά σχεδίασης ανά στρώση: βάση στο `layer × LAYER_ORDER_STRIDE`, τα πλακίδια της από πάνω κατά επίπεδο
+ * (`+1 + επίπεδο`). Το βήμα αφήνει χώρο σε κάθε επίπεδο (≤ 5) ώστε ο επόμενος κύβος να ζωγραφίζεται **ολόκληρος** πάνω από
+ * τον τρέχοντα.
+ */
+const LAYER_ORDER_STRIDE = 10;
+
+function makeCube(layer: 0 | 1): Cube {
+  const opacity = { value: 1 };
+  const uniforms: Record<string, { value: Texture | number | null }> = { opacity };
   for (const face of TOUR_CUBE_FACES) uniforms[TOUR_FACE_UNIFORM[face]] = { value: null };
   const material = new ShaderMaterial({
     uniforms,
     vertexShader: TOUR_PANORAMA_VERTEX_SHADER,
     fragmentShader: TOUR_PANORAMA_FRAGMENT_SHADER,
-    transparent: renderOrder > 0,
     depthTest: false,
     depthWrite: false,
     side: BackSide, // ο θεατής είναι ΜΕΣΑ στον κύβο
   });
   const mesh = new Mesh(new BoxGeometry(2, 2, 2), material);
-  mesh.renderOrder = renderOrder;
   mesh.visible = false;
   mesh.frustumCulled = false;
-  return { mesh, textures: [], heading: 0 };
+  const tiles = createTileLayer(opacity);
+  mesh.add(tiles.group);
+  const cube: Cube = { mesh, tiles, textures: [], heading: 0 };
+  setLayer(cube, layer);
+  return cube;
 }
 
-function faceTexture(image: TourCubeFaceImages[TourCubeFace]): Texture {
-  const texture = new CanvasTexture(image);
-  texture.colorSpace = SRGBColorSpace;
-  texture.minFilter = LinearFilter;
-  texture.generateMipmaps = false;
-  return texture;
-}
-
-function loadCube(cube: Cube, faces: TourCubeFaceImages | null, headingRad = 0): void {
+function loadCube(cube: Cube, faces: TourCubeFaceImages | null, headingRad = 0, stopKey: string | null = null): void {
   cube.heading = headingRad;
   cube.mesh.rotation.y = -headingRad;
+  cube.tiles.setStop(faces === null ? null : stopKey);
   for (const texture of cube.textures) texture.dispose();
   cube.textures = [];
   cube.mesh.visible = faces !== null;
   if (faces === null) return;
   for (const face of TOUR_CUBE_FACES) {
-    const texture = faceTexture(faces[face]);
+    const texture = panoramaTexture(faces[face]);
     cube.textures.push(texture);
     cube.mesh.material.uniforms[TOUR_FACE_UNIFORM[face]].value = texture;
   }
@@ -103,15 +123,12 @@ function loadCube(cube: Cube, faces: TourCubeFaceImages | null, headingRad = 0):
 
 function disposeCube(cube: Cube): void {
   loadCube(cube, null);
+  cube.tiles.dispose();
   cube.mesh.geometry.dispose();
   cube.mesh.material.dispose();
 }
 
-/** Όριο όψης: το όριο υφής της συσκευής, ποτέ πάνω από 2048 (περιθώριο για κινητά — ADR-884 §4.8). */
-const FACE_SIZE_CEILING = 2048;
-
 class ThreeTourPanoramaEngine implements TourPanoramaEngine {
-  readonly maxFaceSize: number;
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(65, 1, 0.1, 10);
@@ -125,7 +142,6 @@ class ThreeTourPanoramaEngine implements TourPanoramaEngine {
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'low-power' });
-    this.maxFaceSize = Math.min(FACE_SIZE_CEILING, this.renderer.capabilities.maxTextureSize);
     this.camera.rotation.order = 'YXZ';
     this.scene.add(this.current.mesh, this.incoming.mesh);
   }
@@ -156,14 +172,18 @@ class ThreeTourPanoramaEngine implements TourPanoramaEngine {
     this.request();
   }
 
-  showNow(faces: TourCubeFaceImages, headingRad: number): void {
-    loadCube(this.current, faces, headingRad);
+  viewportHeightDevicePx(): number {
+    return this.size.height * this.renderer.getPixelRatio();
+  }
+
+  showNow(faces: TourCubeFaceImages, headingRad: number, stopKey: string): void {
+    loadCube(this.current, faces, headingRad, stopKey);
     loadCube(this.incoming, null);
     this.request();
   }
 
-  setIncoming(faces: TourCubeFaceImages, headingRad: number): void {
-    loadCube(this.incoming, faces, headingRad);
+  setIncoming(faces: TourCubeFaceImages, headingRad: number, stopKey: string): void {
+    loadCube(this.incoming, faces, headingRad, stopKey);
     this.incoming.mesh.material.uniforms.opacity.value = 0;
     this.request();
   }
@@ -179,6 +199,19 @@ class ThreeTourPanoramaEngine implements TourPanoramaEngine {
     setLayer(this.incoming, 1);
     loadCube(this.incoming, null);
     this.request();
+  }
+
+  private cubeShowing(stopKey: string): Cube | null {
+    if (this.current.tiles.stopKey === stopKey) return this.current;
+    return this.incoming.tiles.stopKey === stopKey ? this.incoming : null;
+  }
+
+  hasTile(stopKey: string, tileKey: string): boolean {
+    return this.cubeShowing(stopKey)?.tiles.has(tileKey) ?? false;
+  }
+
+  putTile(stopKey: string, tileKey: string, address: TourTileAddress, levelSize: number, image: TourFaceImage): void {
+    if (this.cubeShowing(stopKey)?.tiles.put(stopKey, tileKey, address, levelSize, image)) this.request();
   }
 
   project(yaw: number, pitch: number): ScreenPoint {
@@ -209,9 +242,10 @@ class ThreeTourPanoramaEngine implements TourPanoramaEngine {
   }
 }
 
-/** Στρώση κύβου: 0 = τρέχων (αδιαφανής), 1 = επόμενος (σβήνει-ανάβει από πάνω). */
+/** Στρώση κύβου: 0 = τρέχων (αδιαφανής), 1 = επόμενος (σβήνει-ανάβει από πάνω) — τα πλακίδια ακολουθούν τη βάση τους. */
 function setLayer(cube: Cube, layer: 0 | 1): void {
-  cube.mesh.renderOrder = layer;
+  cube.mesh.renderOrder = layer * LAYER_ORDER_STRIDE;
+  cube.tiles.setBaseOrder(layer * LAYER_ORDER_STRIDE);
   cube.mesh.material.transparent = layer === 1;
   cube.mesh.material.uniforms.opacity.value = layer === 0 ? 1 : 0;
 }

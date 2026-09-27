@@ -63,7 +63,8 @@ async function handleGet(request: NextRequest, segment?: Segment): Promise<NextR
   if (objectPath === null) return status(400);
 
   try {
-    const opened = await openStorageObject(objectPath, request.headers.get('range'));
+    // Ένα ταξίδι ως τον κάδο (Φ2ε · §4.11): η κρυφή μνήμη των μέσων είναι ΔΙΚΗ μας (`CACHE_CONTROL`), όχι η αποθηκευμένη.
+    const opened = await openStorageObject(objectPath, request.headers.get('range'), { singleRequest: true });
     if (opened.kind === 'absent') return status(404);
     if (opened.kind === 'range-unsatisfiable') {
       return new NextResponse(null, { status: 416, headers: { 'Content-Range': `bytes */${opened.totalSize}` } });

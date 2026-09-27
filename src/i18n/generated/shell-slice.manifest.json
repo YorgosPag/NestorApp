@@ -103,7 +103,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "63c9dd1451f044b0d0a5b5a1edac2cddf799130652a1e0ef44ea7e300302c554",
+  "inputsSha256": "75c14ab1be3d15305404202d3bf051bcf9fcd4794fb0facbf70442e72636863f",
   "languages": [
     "el"
   ],
@@ -536,8 +536,8 @@
     "src/components/spatial-tour/useTourPhotographers.ts": "71e58561ee875df48092369249b5394c68fad7893a44380724227909d0d8539a",
     "src/components/spatial-tour/useTourViewing.ts": "1e219b8247aaa249022796ecf9bf6689c11c6f67171053d1006dd91a151cd5ab",
     "src/components/spatial-tour/viewer/TourViewerLoader.tsx": "e19725f95bedbe7eda1fc66ff8ef79281a66ca7c100a41810651972e7ea473d1",
-    "src/components/spatial-tour/viewer/tile-panorama-source.ts": "58ed944fab21b55fe33f44186caac3cf5e90e96d7bd7aec093f151df6c343290",
-    "src/components/spatial-tour/viewer/tour-panorama-source.ts": "05723b7d3923e5106b23aa9d0c5d5819ec09f5c5f65f09b40648660ff0397417",
+    "src/components/spatial-tour/viewer/tile-panorama-source.ts": "e5901302cef0ab9e9e8e8d6684fed7e96f91d6c1e46be28c3ab2ea8b9c989509",
+    "src/components/spatial-tour/viewer/tour-panorama-source.ts": "e63550fee2dfdf246a64462a7b6de11404759ba5d42014af12f9aa2e5c78632b",
     "src/components/stay-calendar/StayCalendarChrome.tsx": "c4e1561b946c84e3d5081d5375bffb4385fc218a45475410b5f490decae83501",
     "src/components/stay-calendar/StayCalendarContent.tsx": "6acbc4d497c3443aa87984206e4d869dd13a7a4e97b4b1a5931d25e5cd683ed4",
     "src/components/stay-calendar/StayCalendarForms.tsx": "a4acede44e398790c1460e280fe7f72385bf7e5c888f5f932fe5658b7ed40253",
@@ -699,6 +699,7 @@
     "src/lib/auth/identity-materialisation.ts": "4662a06e6b480936dbb054045fb9f8fed9274e81517a8a4740d4aa457df7d50d",
     "src/lib/auth/set-claims-with-mirror.ts": "631a6993b455490b5be929040c3f1e1bebd2eb37a99307a30f2061ba73125d83",
     "src/lib/browser/document-navigation.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/cache/bounded-lru.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/calendar/holiday-question.ts": "010e08d4d2d577529653efb949c0aee25c95b3a7a05e1f9a51d73d48c1adff8a",
     "src/lib/communications/email-delivery/recipient-standing.ts": "d521b1c657ee4f28b3d5d397ecfbb22fbe90de7446fbea5c27003be1285cd090",
     "src/lib/company/legal-name-match.ts": "9440355b13b2c6dff2d9c94259cf05d05e2fb0b1bfc81e97ee7de0b8f427bb67",
@@ -878,8 +879,10 @@
     "src/lib/spatial-tour/tour-subject-of-listing.ts": "7dd1cafeb7301b33108a447ba0ac867b63ad8ad77f92e9d5745c9141c760f56e",
     "src/lib/spatial-tour/tour-view-policy.ts": "261089b01d4b1014cca446bfd464d4c871fff61294a71e381c6e66ee2495f0ce",
     "src/lib/spatial-tour/viewer/tour-cube-faces.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/spatial-tour/viewer/tour-tile-visibility.ts": "9b245b71b7a4e9e30f1b466d8ef00a1b5c341415871055d0de99992cd354c46c",
     "src/lib/spatial-tour/viewer/tour-viewer-bearing.ts": "461b4436749b3f5ebc6f5dd58bcc9f1b5134f4012a24256c787418a5369a85c2",
     "src/lib/spatial-tour/viewer/tour-viewer-graph.ts": "59924bf46c695961148aa43e461b8610c5f86787cf665dbe06a11c0cdbce479c",
+    "src/lib/spatial-tour/viewer/tour-viewer-view.ts": "998e65588eaf7064a8bd32f4308be0d5b5e0f524d91087aed5c169b5366c0a26",
     "src/lib/stay/stay-calendar-month.ts": "f453e4470590e1206b044537df02f6cd95154c981f2bf6a7ffb51c13971e7960",
     "src/lib/stay/stay-calendar-optimistic.ts": "d196279aa4d1f91425474a1a42f7253fbe89fcc651ad5d39e21993918ac244cd",
     "src/lib/stay/stay-calendar-view.ts": "f6b2f72a69d8128639bdaa982d21ea063586b2551d051710980901775b92c45f",

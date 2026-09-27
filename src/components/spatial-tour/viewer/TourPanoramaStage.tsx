@@ -13,6 +13,8 @@
  * ✏️ **Οθόνη τοποθέτησης** (Φ2δ · §4.10): με `editing` τα βελάκια **σέρνονται** και ένα στόχαστρο δείχνει το κέντρο· τα
  *   εργαλεία του υπευθύνου παίρνουν ένα {@link TourStageAim} — «ποια διόπτευση είναι κάτω από αυτό το σημείο;». Η ΙΔΙΑ
  *   σκηνή, όχι αντίγραφο.
+ * 🧩 **Ροή πλακιδίων** (Φ2ε · §4.11): η σκηνή κατέχει τον streamer (`useTourTileStreamer`) και τον δίνει στην πλοήγηση·
+ *   πρόθεση στο βελάκι (hover/focus) ⇒ προφόρτωση των πλακιδίων της **θέασης άφιξης** (`arrivalFrameOf`).
  */
 
 import { type Dispatch, type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -33,6 +35,7 @@ import type { TourPanoramaEngine } from './tour-panorama-engine';
 import type { TourPanoramaSource } from './tour-panorama-source';
 import { TourLinkButton } from './TourLinkButton';
 import { useTourNavigation, type TourPanoramaStatus } from './useTourNavigation';
+import { useArrivalPrefetch, usePrefetchNeighbourBases, useTourTileStreamer } from './useTourTileStreamer';
 import { useTourPanoramaEngine } from './useTourPanoramaEngine';
 import { useTourPanoramaInput } from './useTourPanoramaInput';
 import { useNeighbourLabels } from './TourViewerNavigation';
@@ -134,10 +137,12 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const buttons = useRef(new Map<string, HTMLButtonElement>()).current;
   const engine = useTourPanoramaEngine(canvasRef, camera);
-  const ctx = useMemo(() => (engine === null ? null : { engine, camera, source }), [engine, camera, source]);
+  const { streamer, ctx } = useTourTileStreamer(engine, camera, source);
   const status = useTourNavigation(ctx, graph, state, dispatch);
   useTourPanoramaInput(canvasRef, camera);
   const current = state.nodeId === null ? undefined : graph.stops.get(state.nodeId);
+  usePrefetchNeighbourBases(streamer, graph, neighbours, status === 'ready' && state.targetNodeId === null);
+  const intentOf = useArrivalPrefetch(streamer, graph, current, camera);
   const headingRad = current?.stop.headingRad ?? 0;
   usePlaceLinkButtons(engine, buttons, neighbours, headingRad);
   const aim = useStageAim(engine, canvasRef, camera, headingRad);
@@ -157,7 +162,7 @@ export function TourPanoramaStage({ graph, state, dispatch, camera, source, neig
           className="absolute inset-0 h-full w-full cursor-grab touch-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing" />
         {neighbours.filter((n) => n.bearing !== null).map((n) => (
           <TourLinkButton key={n.nodeId} label={labelsOf(n)} register={register(n.nodeId)}
-            onGo={() => dispatch({ kind: 'go', nodeId: n.nodeId })} onDrop={dropOf(n.nodeId)} />
+            onGo={() => dispatch({ kind: 'go', nodeId: n.nodeId })} onDrop={dropOf(n.nodeId)} onIntent={intentOf(n.nodeId)} />
         ))}
         {editing !== undefined && <EditingReticle />}
         <StageStatus status={status} />

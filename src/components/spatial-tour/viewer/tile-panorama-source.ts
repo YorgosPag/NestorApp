@@ -1,36 +1,36 @@
 /**
- * @fileoverview **Η ΠΗΓΗ ΠΛΑΚΙΔΙΩΝ** — η πραγματική υλοποίηση του `TourPanoramaSource`: διαλέγει επίπεδο που χωρά στη συσκευή,
- * κατεβάζει τα πλακίδια του από το `GET …/media/…` (με το κουπόνι-cookie) και τα συνθέτει σε έξι όψεις (ADR-884 Φ2γ · §4.9).
+ * @fileoverview **Η ΠΗΓΗ ΠΛΑΚΙΔΙΩΝ** — η πραγματική υλοποίηση του `TourPanoramaSource`: η **βάση** είναι η προεπισκόπηση
+ * (ένα αίτημα, όλη η σφαίρα), και κάθε **πλακίδιο** ζητείται μόνο του, όταν το ζητήσει ο streamer (ADR-884 Φ2γ · Φ2ε ·
+ * §4.9 · §4.11). Όλα μέσω `GET …/media/…` με το κουπόνι-cookie.
  * @related `lib/spatial-tour/tileset/tour-tileset-layout.ts` (**η** διάταξη — ίδια με τον ψήστη) · `tour-panorama-source.ts`
- *   (η διεπαφή) · `app/api/spatial-tours/[kind]/[subjectId]/media/[...path]/route.ts` (ο σερβιτόρος)
+ *   (η διεπαφή) · `tour-tile-streamer.ts` (ποια πλακίδια, πότε) · `app/api/spatial-tours/[kind]/[subjectId]/media/[...path]/route.ts`
  * @module components/spatial-tour/viewer/tile-panorama-source
  *
- * 🔑 **Προεπισκόπηση πρώτα** (Marzipano `cubeMapPreviewUrl` · Pannellum fallback): **ένα** αίτημα, έξι όψεις 256², ώστε η
- * οθόνη να δείξει τον χώρο αμέσως· τα καθαρά πλακίδια ακολουθούν. Η προεπισκόπηση είναι **βοήθεια**, όχι προϋπόθεση:
- * αποτυχία της δεν ρίχνει τη φόρτωση.
- * 🔑 **Η μπροστινή όψη ζητείται πρώτη** (το κέντρο της λήψης, εκεί που προσγειώνεται συνήθως το βλέμμα) — ο browser
- * εξυπηρετεί με τη σειρά που ζητήθηκαν.
- * 🔑 **Ποτέ υποβάθμιση**: προεπισκόπηση που φτάνει **μετά** τα καθαρά πλακίδια δεν παραδίδεται.
- * 🔑 **Ακύρωση** (`signal`): κάθε `fetch` τη σέβεται — τρία κλικ στη σειρά δεν κατεβάζουν τρία πανοράματα.
+ * 🔑 **Βάση = προεπισκόπηση** (Marzipano `cubeMapPreviewUrl` · Pannellum fallback): έξι όψεις 256² σε **ένα** αίτημα. Αν
+ *   αποτύχει, η βάση πέφτει στο επίπεδο 0 (έξι πλακίδια των 512) — ο επισκέπτης δεν μένει ποτέ σε μαύρο εξαιτίας της.
+ * 🔑 **Κάθε πλακίδιο περνά από καμβά**, όπως οι όψεις: ποτέ `ImageBitmap` (το three αγνοεί το `flipY` ⇒ ανάποδα, Φ2δ).
+ * 🔑 **Κρυφή μνήμη αποκωδικοποιημένων πλακιδίων** (LRU με όριο bytes): η επιστροφή στο προηγούμενο δωμάτιο είναι
+ *   ακαριαία, και η προφόρτωση λειτουργεί ακόμη κι όταν ο browser δεν κρατά (`no-store` του dev, `next.config.js`).
+ * 🔑 **Ακύρωση** (`signal`): κάθε `fetch` τη σέβεται — ο streamer ακυρώνει ό,τι δεν χρειάζεται πια.
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { calculateBackoff } from '@/lib/api/api-client-transport';
+import { createBoundedLru } from '@/lib/cache/bounded-lru';
 import {
   TOUR_PREVIEW_FACE_SIZE,
   TOUR_TILE_SIZE,
-  levelIndexFor,
   previewRowOf,
   previewSegments,
   tileSegments,
-  tilesPerSide,
   tilesetLevels,
 } from '@/lib/spatial-tour/tileset/tour-tileset-layout';
 import { TOUR_CUBE_FACES, type TourCubeFace } from '@/lib/spatial-tour/viewer/tour-cube-faces';
+import type { TourTileAddress } from '@/lib/spatial-tour/viewer/tour-tile-visibility';
 import type { TourManifestStop } from '@/lib/spatial-tour/tour-manifest-stop';
 import type { TourSubject } from '@/types/spatial-tour';
 
-import type { TourCubeFaceImages, TourPanoramaLoadOptions, TourPanoramaSource } from './tour-panorama-source';
+import type { TourCubeFaceImages, TourFaceImage, TourPanoramaSource, TourTileProvider } from './tour-panorama-source';
 
 /** Ό,τι χρειάζεται από τον browser — ώστε το test να δώσει δικό του, χωρίς δίκτυο και χωρίς καμβά. */
 export interface TileSourceRuntime {
@@ -41,6 +41,12 @@ export interface TileSourceRuntime {
 
 /** Πόσες φορές ζητείται ένα πλακίδιο: 1 + 2 επαναλήψεις (οι PSV/Marzipano ξαναζητούν το πλακίδιο που χάθηκε). */
 export const TILE_FETCH_ATTEMPTS = 3;
+
+/**
+ * Όριο της κρυφής μνήμης πλακιδίων: 64 MiB ≈ 64 πλακίδια 512² RGBA — περίπου ένα κάδρο στο ανώτερο επίπεδο και το
+ * προηγούμενο δωμάτιο. Πάνω από αυτό φεύγουν τα λιγότερο πρόσφατα.
+ */
+export const TILE_CACHE_MAX_BYTES = 64 * 1024 * 1024;
 
 export interface TileFetchDeps {
   readonly fetch: typeof fetch;
@@ -95,12 +101,7 @@ const BROWSER_RUNTIME: TileSourceRuntime = {
   createFace,
 };
 
-/** Η σειρά των όψεων: πρώτα αυτή που κοιτάζει ο θεατής (μπροστά = το κέντρο της λήψης), μετά οι υπόλοιπες. */
-function faceOrder(first: TourCubeFace = 'front'): readonly TourCubeFace[] {
-  return [first, ...TOUR_CUBE_FACES.filter((face) => face !== first)];
-}
-
-/** Η προεπισκόπηση: κάθε όψη κόβεται από τη λωρίδα και **ζωγραφίζεται σε καμβά** — ο ΙΔΙΟΣ δρόμος με τις καθαρές όψεις. */
+/** Η προεπισκόπηση: κάθε όψη κόβεται από τη λωρίδα και **ζωγραφίζεται σε καμβά** — ο ΙΔΙΟΣ δρόμος με τα πλακίδια. */
 async function loadPreview(runtime: TileSourceRuntime, url: string, signal: AbortSignal): Promise<TourCubeFaceImages> {
   const blob = await runtime.fetchBlob(url, signal);
   const entries = await Promise.all(TOUR_CUBE_FACES.map(async (face) => {
@@ -112,39 +113,61 @@ async function loadPreview(runtime: TileSourceRuntime, url: string, signal: Abor
   return Object.fromEntries(entries) as Record<TourCubeFace, HTMLCanvasElement>;
 }
 
-async function loadFace(runtime: TileSourceRuntime, urlOf: (row: number, col: number) => string, size: number, signal: AbortSignal) {
-  const face = runtime.createFace(size);
-  const side = tilesPerSide(size);
-  const cells = Array.from({ length: side * side }, (_, i) => ({ row: Math.floor(i / side), col: i % side }));
-  await Promise.all(cells.map(async ({ row, col }) => {
-    const image = await runtime.decode(await runtime.fetchBlob(urlOf(row, col), signal));
-    face.draw(image, col * TOUR_TILE_SIZE, row * TOUR_TILE_SIZE);
-  }));
-  return face.canvas;
+/** Βάρος ενός αποκωδικοποιημένου πλακιδίου στη μνήμη (RGBA). */
+const bytesOf = (image: TourFaceImage) => image.width * image.height * 4;
+
+/** Τα πλακίδια μιας περιήγησης — ένα-ένα, με κρυφή μνήμη και σταθερό κλειδί = η διαδρομή. */
+function createTileProvider(runtime: TileSourceRuntime, url: (segments: readonly string[]) => string): TourTileProvider {
+  const cache = createBoundedLru<TourFaceImage>({ maxWeight: TILE_CACHE_MAX_BYTES, weigh: bytesOf });
+  return {
+    levels: (stop) => tilesetLevels(stop.faceSize),
+    async tile(stop: TourManifestStop, address: TourTileAddress, signal: AbortSignal): Promise<TourFaceImage> {
+      const key = url(tileSegments(stop.tilesetHash, address.level, address.face, address.row, address.col));
+      const cached = cache.get(key);
+      if (cached !== undefined) return cached;
+      const image = await runtime.decode(await runtime.fetchBlob(key, signal));
+      const face = runtime.createFace(TOUR_TILE_SIZE);
+      face.draw(image, 0, 0);
+      cache.set(key, face.canvas);
+      return face.canvas;
+    },
+  };
 }
+
+/** Βάση χωρίς προεπισκόπηση: το επίπεδο 0 είναι ένα πλακίδιο ανά όψη — έξι αιτήματα, όλη η σφαίρα στα 512. */
+async function baseFromFirstLevel(tiles: TourTileProvider, stop: TourManifestStop, signal: AbortSignal): Promise<TourCubeFaceImages> {
+  const entries = await Promise.all(TOUR_CUBE_FACES.map(async (face) => [face, await tiles.tile(stop, { level: 0, face, row: 0, col: 0 }, signal)] as const));
+  return Object.fromEntries(entries) as Record<TourCubeFace, TourFaceImage>;
+}
+
+/** Όριο της κρυφής μνήμης βάσεων: ~10 στάσεις (έξι όψεις 256² RGBA ≈ 1,5 MiB η καθεμία) — οι γείτονες του σημείου. */
+export const BASE_CACHE_MAX_BYTES = 16 * 1024 * 1024;
+
+const baseBytes = (faces: TourCubeFaceImages) => TOUR_CUBE_FACES.reduce((sum, face) => sum + bytesOf(faces[face]), 0);
 
 /** **Η πηγή πλακιδίων μιας περιήγησης** — η ρίζα της (είδος + id αγγελίας) δίνει τη διαδρομή των μέσων. */
 export function createTilePanoramaSource(subject: TourSubject, runtime: TileSourceRuntime = BROWSER_RUNTIME): TourPanoramaSource {
   const root = API_ROUTES.SPATIAL_TOURS.MEDIA_ROOT(subject.kind, subject.id);
   const url = (segments: readonly string[]) => `${root}/${segments.map(encodeURIComponent).join('/')}`;
+  const tiles = createTileProvider(runtime, url);
+  // Η βάση που προφόρτωσε ο streamer για έναν γείτονα είναι ΑΥΤΗ που θα δει η άφιξη — ένα αίτημα, όχι δύο.
+  const bases = createBoundedLru<TourCubeFaceImages>({ maxWeight: BASE_CACHE_MAX_BYTES, weigh: baseBytes });
+  async function loadBase(stop: TourManifestStop, signal: AbortSignal): Promise<TourCubeFaceImages> {
+    try {
+      return await loadPreview(runtime, url(previewSegments(stop.tilesetHash)), signal);
+    } catch (error: unknown) {
+      if (signal.aborted) throw error;
+      return baseFromFirstLevel(tiles, stop, signal);
+    }
+  }
   return {
-    async load(stop: TourManifestStop, options: TourPanoramaLoadOptions): Promise<TourCubeFaceImages> {
-      const { signal, onPreview } = options;
-      let settled = false;
-      if (onPreview !== undefined) {
-        loadPreview(runtime, url(previewSegments(stop.tilesetHash)), signal).then(
-          (preview) => { if (!settled && !signal.aborted) onPreview(preview); },
-          () => undefined,
-        );
-      }
-      const level = levelIndexFor(stop.faceSize, options.maxFaceSize);
-      const size = tilesetLevels(stop.faceSize)[level];
-      const faces: Partial<Record<TourCubeFace, HTMLCanvasElement>> = {};
-      await Promise.all(faceOrder().map(async (face) => {
-        faces[face] = await loadFace(runtime, (row, col) => url(tileSegments(stop.tilesetHash, level, face, row, col)), size, signal);
-      }));
-      settled = true;
-      return faces as Record<TourCubeFace, HTMLCanvasElement>;
+    tiles,
+    async base(stop: TourManifestStop, signal: AbortSignal): Promise<TourCubeFaceImages> {
+      const cached = bases.get(stop.tilesetHash);
+      if (cached !== undefined) return cached;
+      const faces = await loadBase(stop, signal);
+      bases.set(stop.tilesetHash, faces);
+      return faces;
     },
   };
 }

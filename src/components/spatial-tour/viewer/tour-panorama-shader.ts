@@ -50,6 +50,30 @@ void main() {
 }
 `;
 
+/**
+ * **Ένα πλακίδιο** (ADR-884 Φ2ε · §4.11): quad πάνω στην όψη του κύβου, με γωνίες από την ΙΔΙΑ σύμβαση
+ * (`cubeFaceUvToDirection`) — εδώ καμία επιλογή όψης, το `uv` είναι ήδη το σωστό. Ίδιο κόλπο βάθους (`xyww`) και ίδια
+ * αδιαφάνεια με τη βάση, ώστε το σβήσιμο να παίρνει μαζί του και τα πλακίδια.
+ */
+export const TOUR_TILE_VERTEX_SHADER = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  gl_Position = clip.xyww;
+}
+`;
+
+export const TOUR_TILE_FRAGMENT_SHADER = /* glsl */ `
+uniform sampler2D map;
+uniform float opacity;
+varying vec2 vUv;
+void main() {
+  gl_FragColor = vec4(texture2D(map, vUv).rgb, opacity);
+  #include <colorspace_fragment>
+}
+`;
+
 /** Όψη → όνομα uniform (μία αντιστοίχιση, τη διαβάζει και ο μηχανισμός και η άγκυρα). */
 export const TOUR_FACE_UNIFORM = {
   front: 'faceFront',
