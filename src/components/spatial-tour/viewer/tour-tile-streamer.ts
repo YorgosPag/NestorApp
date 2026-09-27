@@ -29,7 +29,7 @@ import type { TourPanoramaSource } from './tour-panorama-source';
  * Πόσα αιτήματα πλακιδίων ταυτόχρονα: 6 = ό,τι ανοίγει ο browser ανά προέλευση σε HTTP/1.1 (localhost)· σε HTTP/2-3
  * (παραγωγή, `Alt-Svc: h3`) κρατά την ουρά **αναδιατάξιμη** — ό,τι δεν ξεκίνησε μπορεί ακόμη να αλλάξει σειρά ή να φύγει.
  */
-export const TILE_CONCURRENCY = 6;
+const TILE_CONCURRENCY = 6;
 
 /** Προτεραιότητα προφόρτωσης: πάντα πίσω από κάθε πλακίδιο του κάδρου (η γωνία + περιθώριο είναι < 4π). */
 const PREFETCH_PRIORITY_OFFSET = 100;

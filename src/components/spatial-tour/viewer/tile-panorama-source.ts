@@ -46,7 +46,7 @@ export const TILE_FETCH_ATTEMPTS = 3;
  * Όριο της κρυφής μνήμης πλακιδίων: 64 MiB ≈ 64 πλακίδια 512² RGBA — περίπου ένα κάδρο στο ανώτερο επίπεδο και το
  * προηγούμενο δωμάτιο. Πάνω από αυτό φεύγουν τα λιγότερο πρόσφατα.
  */
-export const TILE_CACHE_MAX_BYTES = 64 * 1024 * 1024;
+const TILE_CACHE_MAX_BYTES = 64 * 1024 * 1024;
 
 export interface TileFetchDeps {
   readonly fetch: typeof fetch;
@@ -141,7 +141,7 @@ async function baseFromFirstLevel(tiles: TourTileProvider, stop: TourManifestSto
 }
 
 /** Όριο της κρυφής μνήμης βάσεων: ~10 στάσεις (έξι όψεις 256² RGBA ≈ 1,5 MiB η καθεμία) — οι γείτονες του σημείου. */
-export const BASE_CACHE_MAX_BYTES = 16 * 1024 * 1024;
+const BASE_CACHE_MAX_BYTES = 16 * 1024 * 1024;
 
 const baseBytes = (faces: TourCubeFaceImages) => TOUR_CUBE_FACES.reduce((sum, face) => sum + bytesOf(faces[face]), 0);
 

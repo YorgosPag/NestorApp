@@ -45,7 +45,7 @@ export interface TourTileFrame {
  * Περιθώριο γύρω από το κάδρο: πλακίδια που **θα** φανούν με μια μικρή στροφή, ζητούνται μετά από τα ορατά — ώστε το
  * σύρσιμο να μη βρίσκει θολή λωρίδα στην άκρη.
  */
-export const TILE_VIEW_MARGIN_RAD = (15 * Math.PI) / 180;
+const TILE_VIEW_MARGIN_RAD = (15 * Math.PI) / 180;
 
 /** Η τιμή προτεραιότητας του περιθωρίου — πάντα πίσω από κάθε ορατό (η γωνία από το κέντρο είναι ≤ π). */
 const MARGIN_PRIORITY_OFFSET = 2 * Math.PI;
