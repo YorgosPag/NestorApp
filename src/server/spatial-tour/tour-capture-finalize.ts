@@ -92,7 +92,13 @@ export interface FinalizeTourCaptureUploadInput {
 }
 
 export type FinalizeTourCaptureUploadOutcome =
-  | { readonly kind: 'finalized'; readonly capture: TourCapture; readonly replayed: boolean }
+  | {
+      readonly kind: 'finalized';
+      readonly capture: TourCapture;
+      readonly replayed: boolean;
+      /** Η διεύθυνση της λήψης — για τον ψήστη (ADR-884 Φ2α), που τρέχει **μετά** την απάντηση. */
+      readonly captureRef: DocumentReference;
+    }
   | TourUploadRefused
   | TourUploadUnavailable;
 
@@ -118,7 +124,7 @@ export async function finalizeTourCaptureUpload(
   const captureRef = standing.tourRef.collection(SUBCOLLECTIONS.TOUR_CAPTURES)
     .doc(enterpriseIdService.generateDeterministicTourCaptureIdForUpload(ticket.uploadId));
   const replay = await readExistingCapture(captureRef);
-  if (replay !== null) return { kind: 'finalized', capture: replay, replayed: true };
+  if (replay !== null) return { kind: 'finalized', capture: replay, replayed: true, captureRef };
 
   return finalizeFromQuarantine(db, {
     ticket, declaration, custody: standing.custody, tourRef: standing.tourRef, captureRef, label: standing.label,
@@ -175,7 +181,7 @@ async function finalizeFromQuarantine(db: Firestore, ctx: FinalizeContext): Prom
     metadata: { tourId: ctx.tourRef.id, captureId: ctx.captureRef.id },
   });
   logger.info('Λήψη 360° ολοκληρώθηκε', { tourId: ctx.tourRef.id, captureId: ctx.captureRef.id, fileId, bytes: bytes.byteLength });
-  return { kind: 'finalized', capture: written, replayed: false };
+  return { kind: 'finalized', capture: written, replayed: false, captureRef: ctx.captureRef };
 }
 
 /** Το `FileRecord` του πρωτοτύπου — PENDING (claim) → αντιγραφή → READY. Επιστρέφει το (παραγόμενο) id. */
@@ -229,7 +235,7 @@ function captureDocument(
     milestone: ctx.declaration.milestone,
     originalFileId: from.fileId,
     rights: ctx.declaration.rights,
-    tileset: { state: 'pending', contentHash: from.contentHash },
+    tileset: { state: 'pending', contentHash: from.contentHash, faceSize: null },
     uploadedBy: ctx.ticket.uploaderUid,
     createdAt: at,
   };

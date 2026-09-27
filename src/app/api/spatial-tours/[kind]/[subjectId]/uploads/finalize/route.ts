@@ -8,7 +8,7 @@
  * απλώς ελέγχει ότι συμφωνούν, ώστε ένα λάθος στον πελάτη να μη γίνει ποτέ «ανέβηκε αλλού».
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, after, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { readJsonBody } from '@/lib/api/json-body';
@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { finalizeTourCaptureUpload } from '@/server/spatial-tour/tour-capture-finalize';
+import { bakeTourTileset } from '@/server/spatial-tour/tour-tileset-baker';
 import { readTourUploadTicket } from '@/server/spatial-tour/tour-upload-ticket';
 import type { TourCapture } from '@/types/spatial-tour';
 
@@ -70,6 +71,12 @@ async function handler(request: NextRequest, actor: ApiActor, segment?: TourSegm
     if (outcome.kind === 'unavailable') {
       logger.error('Η λήψη δεν ολοκληρώθηκε', { reason: outcome.reason });
       return tourUnavailableResponse();
+    }
+    // ADR-884 Φ2α: το ψήσιμο ΜΕΤΑ την απάντηση — ο φωτογράφος δεν περιμένει δευτερόλεπτα υπολογισμού. Και σε
+    // επανάληψη: αν η πρώτη φορά κόπηκε πριν ψηθεί, αυτή το ξαναπιάνει (ιδεμπότητο — ο ψήστης ελέγχει `pending`).
+    if (outcome.capture.tileset.state === 'pending') {
+      const { captureRef } = outcome;
+      after(() => bakeTourTileset(getAdminFirestore(), captureRef));
     }
     return NextResponse.json({ capture: outcome.capture, replayed: outcome.replayed }, { status: outcome.replayed ? 200 : 201 });
   } catch (error: unknown) {
