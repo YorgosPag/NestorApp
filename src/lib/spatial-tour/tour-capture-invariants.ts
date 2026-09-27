@@ -23,6 +23,8 @@ import { hasSignatory } from '@/lib/listings/listing-model-declaration';
 import { attestsNationalRegistry } from '@/lib/professional/professional-attestation';
 import type { SpatialTour, TourCapture } from '@/types/spatial-tour';
 
+import { isCaptureViewable } from './tour-manifest-stop';
+
 export type TourCaptureViolation =
   | { readonly kind: 'base-capture-missing'; readonly captureId: string }
   | { readonly kind: 'base-capture-unexpected'; readonly captureId: string }
@@ -112,6 +114,15 @@ export function selectShelfCaptures<C extends NodeCapture>(
  */
 export function selectViewerCaptures<C extends NodeCapture>(captures: readonly C[]): C[] {
   return latestPerNode(captures, (capture) => capture.audience === 'public-listing');
+}
+
+/**
+ * **Ό,τι βλέπει ο υπεύθυνος στην οθόνη τοποθέτησης** (Φ2δ · §4.10): κάθε κοινό, πιο πρόσφατη **έτοιμη** λήψη ανά κόμβο —
+ * ίδιος κανόνας επιλογής με το ράφι και τον θεατή. Η ετοιμότητα ρωτιέται **εδώ**, όχι μετά: ο υπεύθυνος πρέπει να
+ * βλέπει φωτογραφία σε κάθε σημείο για να βάλει βελάκι.
+ */
+export function selectEditorCaptures<C extends NodeCapture & Pick<TourCapture, 'tileset'>>(captures: readonly C[]): C[] {
+  return latestPerNode(captures, isCaptureViewable);
 }
 
 /** Αλλαγή κοινού μιας λήψης: προς `public-listing` **μόνο** με ρητή πράξη του υπευθύνου (#3, §12 Δ6). */

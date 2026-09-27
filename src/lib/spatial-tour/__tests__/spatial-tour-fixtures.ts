@@ -26,8 +26,8 @@ export const TOUR_DOC = {
     },
   ],
   nodes: [
-    { id: 'tnod_a', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: { x: 1, y: 2, z: 1.6 }, links: [{ toNodeId: 'tnod_b', via: 'bim-opening' }] },
-    { id: 'tnod_b', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: { x: 4, y: 2, z: 1.6 }, links: [{ toNodeId: 'tnod_a', via: 'manual' }] },
+    { id: 'tnod_a', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: { x: 1, y: 2, z: 1.6 }, links: [{ toNodeId: 'tnod_b', via: 'bim-opening', bearingRad: null }] },
+    { id: 'tnod_b', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: { x: 4, y: 2, z: 1.6 }, links: [{ toNodeId: 'tnod_a', via: 'manual', bearingRad: null }] },
   ],
   revision: 3,
   createdAt: '2026-09-01T10:00:00.000Z',
@@ -49,7 +49,7 @@ export const CAPTURE_DOC = {
   milestone: null,
   originalFileId: 'file_pano',
   rights: RIGHTS,
-  tileset: { state: 'ready', contentHash: 'abc' },
+  tileset: { state: 'ready', contentHash: 'abc', faceSize: 2048 },
   uploadedBy: 'usr_photo',
   createdAt: '2026-09-01T09:05:00.000Z',
 };
@@ -68,8 +68,8 @@ export const TOUR: SpatialTour = {
     },
   ],
   nodes: [
-    { id: 'tnod_a', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: { x: 1, y: 2, z: 1.6 }, links: [{ toNodeId: 'tnod_b', via: 'manual' }] },
-    { id: 'tnod_b', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: null, links: [{ toNodeId: 'tnod_a', via: 'manual' }] },
+    { id: 'tnod_a', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: { x: 1, y: 2, z: 1.6 }, links: [{ toNodeId: 'tnod_b', via: 'manual', bearingRad: null }] },
+    { id: 'tnod_b', levelKey: { kind: 'floor', floorId: 'flr_1' }, position: null, links: [{ toNodeId: 'tnod_a', via: 'manual', bearingRad: null }] },
   ],
   revision: 0,
   createdAt: '2026-09-01T10:00:00.000Z',
@@ -92,7 +92,7 @@ export const CAPTURE: TourCapture = {
   milestone: null,
   originalFileId: 'file_pano',
   rights: RIGHTS,
-  tileset: { state: 'ready', contentHash: 'abc' },
+  tileset: { state: 'ready', contentHash: 'abc', faceSize: 2048 },
   uploadedBy: 'usr_photo',
   createdAt: '2026-09-01T09:05:00.000Z',
 };

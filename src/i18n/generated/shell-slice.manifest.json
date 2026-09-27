@@ -102,7 +102,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dc6d590a3f598d3eefbf31ae806335f78e4febb20a91bd855a05e0f3f99e607f",
+  "inputsSha256": "ec207f5d373989c405a3be713b26cfc282925c1f24e5a094f844208f20be5dc9",
   "languages": [
     "el"
   ],
@@ -864,7 +864,8 @@
     "src/lib/spatial-tour/spatial-tour-custody.ts": "15c05506114759c3a687676db3e490528db2f34c32e281774a89e0eb5f54fe19",
     "src/lib/spatial-tour/spatial-tour-from-document.ts": "b576594c1c50105f1211149bd939be3267a6e2c18a8cae149e93b6bde5530ebb",
     "src/lib/spatial-tour/tour-authority.ts": "a8e574b09e370d000753c41c367d54caa981f4208674a4e0604ede00dee9d57e",
-    "src/lib/spatial-tour/tour-capture-invariants.ts": "281b8aebd769129ccc7f641418bf74152cd35350b245655d9d69406381532e35",
+    "src/lib/spatial-tour/tour-capture-invariants.ts": "fc315d23e8d3ab32d08846f112cee0e1176412b03b95895dd0982ead86f8849f",
+    "src/lib/spatial-tour/tour-manifest-stop.ts": "1415f3051729968b45b449a43e667fcd6c896e37f64cf0c9eb3d62b484615b60",
     "src/lib/spatial-tour/tour-refusal-vocabulary.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/spatial-tour/tour-subject-of-listing.ts": "7dd1cafeb7301b33108a447ba0ac867b63ad8ad77f92e9d5745c9141c760f56e",
     "src/lib/spatial-tour/tour-view-policy.ts": "261089b01d4b1014cca446bfd464d4c871fff61294a71e381c6e66ee2495f0ce",

@@ -20,7 +20,7 @@ const node = (id: string, links: string[] = []): TourNode => ({
   id,
   levelKey: { kind: 'floor', floorId: 'flr_1' },
   position: null,
-  links: links.map((toNodeId) => ({ toNodeId, via: 'manual' })),
+  links: links.map((toNodeId) => ({ toNodeId, via: 'manual', bearingRad: null })),
 });
 
 describe('#4/#5 — checkTourGraph', () => {
