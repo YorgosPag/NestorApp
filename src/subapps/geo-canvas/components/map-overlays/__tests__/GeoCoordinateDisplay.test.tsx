@@ -73,20 +73,50 @@ function renderPanel(
 // Κ1 — 🔴 ΤΟ ΔΗΜΟΣΙΟ ΠΑΝΕΛ
 // =============================================================================
 
-describe('Κ1 — showcase: δύο κουμπιά με λέξεις, και τίποτα άλλο', () => {
-  it('ακριβώς ΔΥΟ κουμπιά', () => {
+describe('Κ0 — showcase: ΕΝΑ υπόβαθρο ⇒ κανένας διακόπτης (ADR-891 Φ1)', () => {
+  it('κανένα κουμπί, καμία ομάδα διακόπτη', () => {
     renderPanel('showcase');
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByRole('group', { name: 'map.styleSelector.quickSwitcher' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Η **λεκτική** λειτουργία δεν τη φορά σήμερα κανένα ακροατήριο — επιστρέφει όταν το δημόσιο αποκτήσει
+ * δεύτερο **πραγματικό** υπόβαθρο (ADR-891 §5: αεροφωτογραφία). Κλειδώνεται με δικό της σενάριο, ώστε η
+ * Α8 (κουμπιά με λέξεις, όχι tooltip) να μη σαπίσει αόρατα μέχρι τότε.
+ */
+function renderLabelled() {
+  return render(
+    <GeoCoordinateDisplay
+      hoveredCoordinate={HOVERED}
+      currentMapStyle="greece"
+      onMapStyleChange={() => {}}
+      clickMode="off"
+      basemaps={[
+        { style: 'greece', labelKey: 'map.basemap.map' },
+        { style: 'voyager', labelKey: 'map.controls.voyager' },
+      ]}
+      basemapSwitcher="labels"
+      coordinateReadout={false}
+    />
+  );
+}
+
+describe('Κ1 — λεκτικός διακόπτης: κουμπιά με λέξεις, και τίποτα άλλο', () => {
+  it('ακριβώς ΔΥΟ κουμπιά', () => {
+    renderLabelled();
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 
   it('τα κουμπιά ΛΕΝΕ τι είναι — ορατό κείμενο, όχι μόνο tooltip (Α8)', () => {
-    renderPanel('showcase');
+    renderLabelled();
     expect(screen.getByRole('button', { name: 'map.basemap.map' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'map.basemap.satellite' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'map.controls.voyager' })).toBeInTheDocument();
   });
 
   it('🔴 ΚΑΜΙΑ συντεταγμένη, ΚΑΝΕΝΑ υψόμετρο — ακόμη και με ενεργό hover', () => {
-    renderPanel('showcase', { hoveredCoordinate: HOVERED });
+    renderLabelled();
     expect(screen.queryByText(/map\.coordinate\.longitude/)).not.toBeInTheDocument();
     expect(screen.queryByText(/map\.coordinate\.latitude/)).not.toBeInTheDocument();
     expect(screen.queryByText(/map\.coordinate\.altitude/)).not.toBeInTheDocument();
@@ -98,24 +128,24 @@ describe('Κ1 — showcase: δύο κουμπιά με λέξεις, και τί
   });
 
   it('καμία επικεφαλίδα «Στυλ:» — τα κουμπιά ήδη λένε τι είναι', () => {
-    renderPanel('showcase');
+    renderLabelled();
     expect(screen.queryByText('map.styleSelector.style')).not.toBeInTheDocument();
   });
 
   it('🔑 η ομάδα κρατά ετικέτα για τον αναγνώστη οθόνης', () => {
-    renderPanel('showcase');
+    renderLabelled();
     expect(screen.getByRole('group', { name: 'map.styleSelector.quickSwitcher' })).toBeInTheDocument();
   });
 
   it('το ενεργό υπόβαθρο δηλώνεται με `aria-pressed`, όχι μόνο με χρώμα (WCAG 1.4.1)', () => {
-    renderPanel('showcase');
+    renderLabelled();
     expect(screen.getByRole('button', { name: 'map.basemap.map' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'map.basemap.satellite' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'map.controls.voyager' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('🔴 και το ενεργό ξεχωρίζει με ΜΗ-ΧΡΩΜΑΤΙΚΟ κανάλι (βάρος + δακτύλιος)', () => {
     // Στο σκοτεινό θέμα `--primary` == `--card` ⇒ μόνο-χρωματική σήμανση θα ήταν 1,00:1.
-    renderPanel('showcase');
+    renderLabelled();
     const active = screen.getByRole('button', { name: 'map.basemap.map' });
     expect(active.className).toContain('font-semibold');
     expect(active.className).toContain('ring-1');
@@ -128,9 +158,9 @@ describe('Κ1 — showcase: δύο κουμπιά με λέξεις, και τί
 // =============================================================================
 
 describe('Κ2 — embedded / workspace: το εργαλείο μένει εργαλείο', () => {
-  it.each(['workspace', 'embedded'] as const)('%s κρατά και τα 7 υπόβαθρα', (preset) => {
+  it.each(['workspace', 'embedded'] as const)('%s κρατά και τα 4 υπόβαθρα', (preset) => {
     renderPanel(preset);
-    expect(screen.getAllByRole('button')).toHaveLength(7);
+    expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 
   it.each(['workspace', 'embedded'] as const)('%s κρατά τις συντεταγμένες', (preset) => {

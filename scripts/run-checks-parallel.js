@@ -941,6 +941,20 @@ if (!process.env.SKIP_MAP_BOUNDARY && allFiles.length > 0)
 if (!process.env.SKIP_LISTING_MODEL_CUSTODY && allFiles.length > 0)
   addThread('3.76', 'Listing model custody', 'scripts/check-listing-model-custody.js', allFiles);
 
+// CHECK 3.95 — ΟΙ ΠΗΓΕΣ ΥΠΟΒΑΘΡΟΥ (ADR-891 Φ1). «Δηλώνεται κάθε πηγή πλακιδίων χάρτη ΣΤΟ ΜΗΤΡΩΟ —
+// ή τη γράφει κάποιος αλλού, χωρίς όρους χρήσης;»
+// 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-09-27): πηγές σε ΠΕΝΤΕ αρχεία (δύο νεκρά), ΤΡΕΙΣ πανομοιότυποι χτίστες στυλ,
+// και ΤΡΙΑ υπόβαθρα του χάρτη εργασίας με άδεια που ΑΠΑΓΟΡΕΥΕΙ εμπορική χρήση (Stadia · OpenTopoMap)
+// — επειδή οι όροι δεν ήταν γραμμένοι πουθενά. Ο δημόσιος «Δορυφόρος» ήταν οδικός χάρτης.
+// 🔑 ΔΟΜΙΚΑ ΜΟΤΙΒΑ ({z}/{x}/{y} · style.json · .pmtiles · mapbox:// · tile(s)./basemap(s).), ΟΧΙ λίστα
+// διακομιστών: λίστα θα ήταν δεύτερο αντίγραφο του μητρώου, τυφλό στον ΕΠΟΜΕΝΟ αδήλωτο πάροχο.
+// ⚠️ AST, ΟΧΙ REGEX: μόνο κυριολεκτικές συμβολοσειρές — η πρόζα της θεραπείας δεν μετρά (μάθημα 3.75).
+// ⚠️ Το ΔΕΥΤΕΡΟ στρώμα ζει στην εκτέλεση (`basemap-request-sentinel.ts`): ό,τι φορτώνει ένα style.json
+// τρίτου δεν το βλέπει καμία στατική ανάλυση.
+// ⛔ ZERO-TOLERANCE, καμία baseline.
+if (!process.env.SKIP_BASEMAP_SOURCES && allFiles.length > 0)
+  addThread('3.95', 'Basemap sources', 'scripts/check-basemap-sources.js', allFiles);
+
 // CHECK 3.64 — ΠΥΛΗ ΤΗΣ ΒΑΘΜΙΔΑΣ ΜΕΤΡΗΣΗΣ ΚΕΙΜΕΝΟΥ (ADR-799 Φάση 2). «Μέτρησε αυτή η σουίτα
 // κείμενο σε βαθμίδα που ΔΕΝ ΒΛΕΠΕΙ ό,τι της ζητήθηκε — και αν ναι, το ξέρει κάποιος;»
 // 🔴 ΤΟ ΓΕΓΟΝΟΣ: το `jsdom>canvas: '-'` (19fbc2cc, ΣΩΣΤΟ — αλυσίδα CVE του tar) εξαφάνισε το

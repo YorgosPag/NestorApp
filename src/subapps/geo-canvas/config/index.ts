@@ -27,43 +27,9 @@ export const DEFAULT_MAP_CONFIG: MapViewState = {
   pitch: 0,
 };
 
-/**
- * Map Style Options για MapLibre GL JS
- */
-export const MAP_STYLES = {
-  // Open source styles
-  OSM_BRIGHT: 'https://tiles.versatiles.org/assets/styles/osm-bright.json',
-  OSM_LIBERTY: 'https://tiles.versatiles.org/assets/styles/osm-liberty.json',
-
-  // Local development style
-  DEVELOPMENT: {
-    version: 8,
-    name: 'Development Style',
-    sources: {
-      'osm': {
-        type: 'raster',
-        tiles: [
-          'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-        ],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      }
-    },
-    layers: [
-      {
-        id: 'osm-raster',
-        type: 'raster',
-        source: 'osm'
-      }
-    ]
-  }
-} as const;
-
-/**
- * Default map style για development
- */
-export const DEFAULT_MAP_STYLE = MAP_STYLES.DEVELOPMENT;
+// ⚠️ Τα στυλ χάρτη ΔΕΝ ζουν εδώ: υπόβαθρα = `services/map/MapStyleManager.ts` (λεξιλόγιο διεπαφής) πάνω στο
+// `@/lib/maps/basemap-catalog` (πηγές + όροι). Το παλιό `MAP_STYLES` (VersaTiles + OSM) δεν το διάβαζε
+// κανείς — αφαιρέθηκε στο ADR-891 Φ1, μαζί με τη σύγκρουση ονόματος με το `MAP_STYLES` του MapStyleManager.
 
 // ============================================================================
 // COORDINATE REFERENCE SYSTEMS
@@ -325,7 +291,6 @@ export const VALIDATION_RULES = {
  */
 export const GEO_CANVAS_CONFIG = {
   map: DEFAULT_MAP_CONFIG,
-  mapStyle: DEFAULT_MAP_STYLE,
   crs: DEFAULT_CRS_CONFIG,
   transformation: TRANSFORMATION_CONFIG,
   alerts: ALERT_ENGINE_CONFIG,

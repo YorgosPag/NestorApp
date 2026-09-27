@@ -28,8 +28,7 @@
     },
     "map": {
       "basemap": {
-        "map": "Χάρτης",
-        "satellite": "Δορυφόρος"
+        "map": "Χάρτης"
       },
       "controls": {
         "cancelPicking": "Ακύρωση Επιλογής",
@@ -41,11 +40,8 @@
         "mapStyle": "Στυλ Χάρτη",
         "openStreetMap": "OpenStreetMap",
         "pickGeographicPoint": "Επιλογή Γεωγραφικού Σημείου",
-        "satellite": "Δορυφορικός",
         "selectMapStyle": "Επιλογή στυλ χάρτη",
-        "terrain": "Τοπογραφικός",
-        "toner": "Ασπρόμαυρο",
-        "watercolor": "Ζωγραφική"
+        "voyager": "Αναλυτικός"
       },
       "coordinate": {
         "altitude": "Υψόμετρο",

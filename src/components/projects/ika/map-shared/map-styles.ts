@@ -11,7 +11,8 @@
  * @enterprise ADR-170 — QR Code + GPS Geofencing + Photo Verification
  */
 
-import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl';
+import type { FillLayerSpecification, LineLayerSpecification, StyleSpecification } from 'maplibre-gl';
+import { rasterStyleSpecification } from '@/lib/maps/basemap-catalog';
 
 // =============================================================================
 // MAP BASE STYLE
@@ -21,29 +22,10 @@ import type { FillLayerSpecification, LineLayerSpecification } from 'maplibre-gl
 export const MAP_ZOOM = 15;
 
 /**
- * OSM raster tile style for MapLibre GL.
- * Same tile source used by geo-canvas DEVELOPMENT style.
+ * Το OSM raster του μητρώου υποβάθρων (ADR-891 Φ1) — πηγή, όροι και απόδοση ζουν στο
+ * `@/lib/maps/basemap-catalog`, όχι εδώ.
  */
-export const OSM_MAP_STYLE = {
-  version: 8 as const,
-  name: 'OSM Raster',
-  sources: {
-    osm: {
-      type: 'raster' as const,
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      // eslint-disable-next-line custom/no-hardcoded-strings
-      attribution: '&copy; OpenStreetMap contributors',
-    },
-  },
-  layers: [
-    {
-      id: 'osm-raster',
-      type: 'raster' as const,
-      source: 'osm',
-    },
-  ],
-};
+export const OSM_MAP_STYLE: StyleSpecification = rasterStyleSpecification('osm-raster');
 
 // =============================================================================
 // GEOFENCE CIRCLE LAYER STYLES

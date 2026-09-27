@@ -33,8 +33,8 @@
  * **δύο** άξονες: ούτε διαρροή, ούτε παράλειψη.
  */
 
-import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite, type LucideIcon } from 'lucide-react';
-import { MAP_STYLES, type MapStyleType } from '../services/map/MapStyleManager';
+import { Map, Moon, Flag, Route, type LucideIcon } from 'lucide-react';
+import { INITIAL_MAP_STYLE, MAP_STYLES, type MapStyleType } from '../services/map/MapStyleManager';
 
 // ============================================================================
 // 1. Ο ΚΑΤΑΛΟΓΟΣ ΤΩΝ ΥΠΟΒΑΘΡΩΝ — εικονίδιο + τεχνικό όνομα, μία φορά
@@ -53,12 +53,9 @@ export interface MapStyleCatalogEntry {
  */
 export const MAP_STYLE_CATALOG: Readonly<Record<MapStyleType, MapStyleCatalogEntry>> = {
   osm: { icon: Map, labelKey: 'map.controls.openStreetMap' },
-  satellite: { icon: Satellite, labelKey: 'map.controls.satellite' },
-  terrain: { icon: Mountain, labelKey: 'map.controls.terrain' },
+  voyager: { icon: Route, labelKey: 'map.controls.voyager' },
   dark: { icon: Moon, labelKey: 'map.controls.darkMode' },
   greece: { icon: Flag, labelKey: 'map.controls.greece' },
-  watercolor: { icon: Palette, labelKey: 'map.controls.watercolor' },
-  toner: { icon: Circle, labelKey: 'map.controls.toner' },
 };
 
 // ============================================================================
@@ -100,8 +97,11 @@ export interface MapChromeCapabilities {
    * μόνο με **tooltip**, και το tooltip **δεν υπάρχει στην αφή**: σε κινητό ο
    * επισκέπτης βλέπει επτά ανώνυμα τετράγωνα. Η Α8 απαιτεί η **θέαση** να δουλεύει
    * υποχρεωτικά και σε κινητό, άρα η εικονική εκδοχή είναι εκεί **δομικά ακατάλληλη**.
+   *
+   * `none` — ένα μόνο υπόβαθρο, άρα **κανένας** διακόπτης: ένα κουμπί που δεν αλλάζει τίποτα
+   * είναι θόρυβος (Zillow · Idealista δεν δείχνουν διακόπτη χωρίς πραγματική εναλλακτική).
    */
-  readonly basemapSwitcher: 'icons' | 'labels';
+  readonly basemapSwitcher: 'icons' | 'labels' | 'none';
   /** Ζωντανή ένδειξη γεωγρ. μήκους/πλάτους/υψομέτρου. */
   readonly coordinateReadout: boolean;
   /** Τα εργαλεία επιλογής σημείου + ο πλήρης επιλογέας στυλ (`GeoMapControls`). */
@@ -126,17 +126,20 @@ const ALL_BASEMAPS: readonly BasemapChoice[] = MAP_STYLES.map((style) => ({
 }));
 
 /**
- * 🔑 **Τα δύο υπόβαθρα του δημόσιου, με ΑΠΛΗ ετικέτα.**
+ * 🔑 **Το ΕΝΑ υπόβαθρο του δημόσιου — αυτό με το οποίο ανοίγει** (ADR-891 Φ1, απόφαση Giorgio).
  *
- * Η ίδια πηγή πλακιδίων, **άλλο ερώτημα**: ο επαγγελματίας ρωτά *«ποια πηγή;»* και
- * παίρνει «OpenStreetMap»· ο επισκέπτης ρωτά *«τι βλέπω;»* και παίρνει «Χάρτης».
- * Google Maps · Apple Maps · Bing δίνουν **ακριβώς αυτά τα δύο**, με **αυτές** τις
- * λέξεις — δεν επινοήθηκε λεξιλόγιο εκεί που υπάρχει καθιερωμένο.
+ * Μέχρι τις 2026-09-27 εδώ υπήρχαν «Χάρτης» + «Δορυφόρος», με **δύο** ψεύδη: ο «Δορυφόρος» ήταν
+ * το CARTO Voyager (οδικός χάρτης), και ο «Χάρτης» ήταν το CARTO Positron — **άλλος** χάρτης από
+ * εκείνον με τον οποίο άνοιγε η σελίδα (`INITIAL_MAP_STYLE`), οπότε κατά το άνοιγμα **κανένα**
+ * κουμπί δεν ήταν πατημένο. Δωρεάν αεροφωτογραφία για εμπορική χρήση δεν υπάρχει (ADR-891 §5)·
+ * όταν υπάρξει, μπαίνει εδώ ως δεύτερη γραμμή και ο διακόπτης επιστρέφει.
  */
-const SHOWCASE_BASEMAPS: readonly BasemapChoice[] = [
-  { style: 'osm', labelKey: 'map.basemap.map' },
-  { style: 'satellite', labelKey: 'map.basemap.satellite' },
-];
+const SHOWCASE_BASEMAPS: readonly BasemapChoice[] = [{ style: INITIAL_MAP_STYLE, labelKey: 'map.basemap.map' }];
+
+/** Έχει το πάνελ υποβάθρου κάτι να δείξει; Ούτε διακόπτη ούτε συντεταγμένες ⇒ δεν αποδίδεται καθόλου. */
+export function showsBasemapPanel(capabilities: MapChromeCapabilities): boolean {
+  return capabilities.basemapSwitcher !== 'none' || capabilities.coordinateReadout;
+}
 
 export const MAP_CHROME: Readonly<Record<MapChromePreset, MapChromeCapabilities>> = {
   workspace: {
@@ -157,7 +160,7 @@ export const MAP_CHROME: Readonly<Record<MapChromePreset, MapChromeCapabilities>
   },
   showcase: {
     basemaps: SHOWCASE_BASEMAPS,
-    basemapSwitcher: 'labels',
+    basemapSwitcher: 'none',
     coordinateReadout: false,
     pickerControls: false,
     statusBar: false,

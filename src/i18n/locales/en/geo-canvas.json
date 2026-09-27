@@ -448,20 +448,16 @@
       "currentStyle": "Current Style",
       "clickOnMap": "Click on map...",
       "openStreetMap": "OpenStreetMap",
-      "satellite": "Satellite",
-      "terrain": "Terrain",
+      "voyager": "Detailed",
       "darkMode": "Dark Mode",
       "greece": "Greece",
-      "watercolor": "Watercolor",
-      "toner": "Black & White",
       "coordinatePicking": "Coordinate Picking",
       "pickGeographicPointBtn": "Pick Geographic Point",
       "selectMapStyle": "Select map style",
       "mapControls": "Map controls"
     },
     "basemap": {
-      "map": "Map",
-      "satellite": "Satellite"
+      "map": "Map"
     },
     "status": {
       "mapLoaded": "Map Loaded",

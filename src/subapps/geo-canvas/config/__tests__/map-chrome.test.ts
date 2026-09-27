@@ -20,9 +20,10 @@ import {
   MAP_CHROME,
   MAP_CHROME_PRESETS,
   MAP_STYLE_CATALOG,
+  showsBasemapPanel,
   type MapChromePreset,
 } from '../map-chrome';
-import { MAP_STYLES, type MapStyleType } from '../../services/map/MapStyleManager';
+import { INITIAL_MAP_STYLE, MAP_STYLES, type MapStyleType } from '../../services/map/MapStyleManager';
 
 // =============================================================================
 // ΒΟΗΘΗΤΙΚΑ — τα πραγματικά locale αρχεία, όχι πλαστά
@@ -46,10 +47,8 @@ function resolveKey(tree: Record<string, unknown>, dotted: string): unknown {
 // =============================================================================
 
 describe('Μ0 — το λεξιλόγιο των υποβάθρων είναι ΕΝΑ', () => {
-  it('τα MAP_STYLES είναι τα επτά γνωστά, με σειρά', () => {
-    expect([...MAP_STYLES]).toEqual([
-      'osm', 'satellite', 'terrain', 'dark', 'greece', 'watercolor', 'toner',
-    ]);
+  it('τα MAP_STYLES είναι τα τέσσερα γνωστά, με σειρά (ADR-891 Φ1: έφυγαν τα μη εμπορικά)', () => {
+    expect([...MAP_STYLES]).toEqual(['osm', 'voyager', 'dark', 'greece']);
   });
 
   it('ο κατάλογος καλύπτει ΚΑΘΕ υπόβαθρο — κλειστή λογιστική', () => {
@@ -73,7 +72,7 @@ describe('Μ0 — το λεξιλόγιο των υποβάθρων είναι �
 describe('Κ1 — τι δίνει ο χάρτης σε κάθε ακροατήριο', () => {
   interface Expected {
     readonly basemapCount: number;
-    readonly basemapSwitcher: 'icons' | 'labels';
+    readonly basemapSwitcher: 'icons' | 'labels' | 'none';
     readonly coordinateReadout: boolean;
     readonly pickerControls: boolean;
     readonly statusBar: boolean;
@@ -81,9 +80,9 @@ describe('Κ1 — τι δίνει ο χάρτης σε κάθε ακροατήρ
   }
 
   const TABLE: ReadonlyArray<readonly [MapChromePreset, Expected]> = [
-    ['workspace', { basemapCount: 7, basemapSwitcher: 'icons',  coordinateReadout: true,  pickerControls: true,  statusBar: true,  accuracyLegend: true }],
-    ['embedded',  { basemapCount: 7, basemapSwitcher: 'icons',  coordinateReadout: true,  pickerControls: false, statusBar: false, accuracyLegend: false }],
-    ['showcase',  { basemapCount: 2, basemapSwitcher: 'labels', coordinateReadout: false, pickerControls: false, statusBar: false, accuracyLegend: false }],
+    ['workspace', { basemapCount: 4, basemapSwitcher: 'icons', coordinateReadout: true,  pickerControls: true,  statusBar: true,  accuracyLegend: true }],
+    ['embedded',  { basemapCount: 4, basemapSwitcher: 'icons', coordinateReadout: true,  pickerControls: false, statusBar: false, accuracyLegend: false }],
+    ['showcase',  { basemapCount: 1, basemapSwitcher: 'none',  coordinateReadout: false, pickerControls: false, statusBar: false, accuracyLegend: false }],
   ];
 
   it.each(TABLE)('%s', (preset, expected) => {
@@ -102,12 +101,24 @@ describe('Κ1 — τι δίνει ο χάρτης σε κάθε ακροατήρ
 });
 
 // =============================================================================
-// Κ2 — 🔴 ΤΟ ΔΗΜΟΣΙΟ: ΑΚΡΙΒΩΣ ΔΥΟ ΥΠΟΒΑΘΡΑ, ΤΙΠΟΤΑ ΑΛΛΟ
+// Κ2 — 🔴 ΤΟ ΔΗΜΟΣΙΟ: ΕΝΑ ΥΠΟΒΑΘΡΟ, ΚΑΝΕΝΑΣ ΔΙΑΚΟΠΤΗΣ
 // =============================================================================
 
 describe('Κ2 — το `showcase` είναι η απόφαση του Giorgio, γραμμένη', () => {
-  it('ακριβώς «Χάρτης» και «Δορυφόρος», με αυτή τη σειρά', () => {
-    expect(MAP_CHROME.showcase.basemaps.map((b) => b.style)).toEqual(['osm', 'satellite']);
+  it('ΕΝΑ υπόβαθρο: εκείνο με το οποίο ΑΝΟΙΓΕΙ ο χάρτης (ADR-891 Φ1)', () => {
+    // Πριν: «Χάρτης» = CARTO Positron, ενώ η σελίδα άνοιγε σε OSM ⇒ κανένα κουμπί πατημένο.
+    expect(MAP_CHROME.showcase.basemaps.map((b) => b.style)).toEqual([INITIAL_MAP_STYLE]);
+  });
+
+  it('🔴 ΚΑΝΕΝΑΣ «Δορυφόρος» — ήταν οδικός χάρτης (CARTO Voyager) με όνομα δορυφόρου', () => {
+    expect(MAP_CHROME.showcase.basemaps.map((b) => b.labelKey)).not.toContain('map.basemap.satellite');
+  });
+
+  it('με ένα υπόβαθρο δεν υπάρχει διακόπτης — ούτε πάνελ, αφού δεν υπάρχουν και συντεταγμένες', () => {
+    expect(MAP_CHROME.showcase.basemapSwitcher).toBe('none');
+    expect(showsBasemapPanel(MAP_CHROME.showcase)).toBe(false);
+    expect(showsBasemapPanel(MAP_CHROME.workspace)).toBe(true);
+    expect(showsBasemapPanel(MAP_CHROME.embedded)).toBe(true);
   });
 
   it('🔴 ΚΑΜΙΑ συντεταγμένη, ΚΑΝΕΝΑ υψόμετρο — ο επισκέπτης ψάχνει σπίτι', () => {
@@ -120,15 +131,11 @@ describe('Κ2 — το `showcase` είναι η απόφαση του Giorgio, �
     expect(MAP_CHROME.showcase.accuracyLegend).toBe(false);
   });
 
-  it('λεκτικά κουμπιά, ΟΧΙ εικονίδια — το tooltip δεν υπάρχει στην αφή (Α8)', () => {
-    expect(MAP_CHROME.showcase.basemapSwitcher).toBe('labels');
-  });
-
-  it('οι ετικέτες του είναι ΑΠΛΕΣ, όχι οι τεχνικές του καταλόγου', () => {
+  it('η ετικέτα του είναι ΑΠΛΗ, όχι η τεχνική του καταλόγου', () => {
     // «OpenStreetMap» ονομάζει την **πηγή πλακιδίων** — λέξη που ο επισκέπτης δεν ξέρει.
     const showcaseKeys = MAP_CHROME.showcase.basemaps.map((b) => b.labelKey);
-    expect(showcaseKeys).toEqual(['map.basemap.map', 'map.basemap.satellite']);
-    expect(showcaseKeys).not.toContain(MAP_STYLE_CATALOG.osm.labelKey);
+    expect(showcaseKeys).toEqual(['map.basemap.map']);
+    expect(showcaseKeys).not.toContain(MAP_STYLE_CATALOG[INITIAL_MAP_STYLE].labelKey);
   });
 });
 
@@ -169,8 +176,8 @@ describe('Κ4 — κάθε ετικέτα υποβάθρου υπάρχει σε
 
   const UNIQUE_KEYS = [...new Set(ALL_LABEL_KEYS)].sort();
 
-  it('ο παρονομαστής δηλώνεται: 9 διακριτά κλειδιά (7 τεχνικά + 2 απλά)', () => {
-    expect(UNIQUE_KEYS).toHaveLength(9);
+  it('ο παρονομαστής δηλώνεται: 5 διακριτά κλειδιά (4 τεχνικά + 1 απλό)', () => {
+    expect(UNIQUE_KEYS).toHaveLength(5);
   });
 
   it.each(['el', 'en'] as const)('%s', (language) => {

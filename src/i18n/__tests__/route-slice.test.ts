@@ -25,7 +25,6 @@ import { registerRouteSlice } from '../route-slice';
 /** Τα κλειδιά που ο ΧΡΗΣΜΟΣ βρήκε ωμά ζωντανά (CHECK 3.51, 2026-08-20). */
 const LIVE_RAW_KEYS = [
   'map.basemap.map',
-  'map.basemap.satellite',
   'map.coordinate.displayLabel',
   'map.styleSelector.quickSwitcher',
 ] as const;

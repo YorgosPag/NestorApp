@@ -1,6 +1,9 @@
 /**
- * SSoT των **παρόχων υποβάθρου**: ποιος μας δίνει πλακίδια, με ποιους όρους, και τι οφείλουμε
- * να δείχνουμε ως απόδοση.
+ * Οι **πάροχοι υποβάθρου του καμβά DXF**: ποιους προσφέρει η διεπαφή του DXF και με ποιον ρυθμό αιτημάτων.
+ *
+ * 🔑 **Από 2026-09-27 (ADR-891 Φ1) η αυθεντία είναι το `@/lib/maps/basemap-catalog`** — URL, zoom, απόδοση
+ * και όροι χρήσης κάθε πηγής ζουν εκεί, για **όλους** τους χάρτες της εφαρμογής. Αυτό το αρχείο ήταν το
+ * πρότυπο εκείνου του μητρώου (οι όροι ως πεδία), και πλέον **διαβάζει** από αυτό.
  *
  * ## Γιατί ο πάροχος είναι ΔΗΛΩΣΗ και όχι κώδικας
  * Η αλλαγή παρόχου είναι **βέβαιη**, όχι πιθανή: το `tile.openstreetmap.org` είναι εθελοντική
@@ -28,12 +31,18 @@
  */
 
 import type { MapAttributionSegment } from '@/lib/maps/map-attribution';
+import {
+  basemapProviderOf,
+  rasterBasemapSource,
+  type BasemapImageryKind,
+  type RasterBasemapSourceId,
+} from '@/lib/maps/basemap-catalog';
 
 /** Τα αναγνωριστικά των παρόχων. Κλειστό σύνολο — νέος πάροχος = νέα γραμμή στον πίνακα. */
 export type BasemapSourceId = 'osm-standard';
 
-/** Τι είδους περιεχόμενο δείχνει ένας πάροχος — ο χρήστης επιλέγει με βάση αυτό. */
-export type BasemapImageryKind = 'street' | 'aerial' | 'topographic';
+/** Τι είδους περιεχόμενο δείχνει ένας πάροχος — ο χρήστης επιλέγει με βάση αυτό. Ο τύπος ζει στο μητρώο. */
+export type { BasemapImageryKind };
 
 /**
  * Ένα κομμάτι της απόδοσης: κείμενο, και **προαιρετικά** ο σύνδεσμος που του αναλογεί.
@@ -44,10 +53,9 @@ export type BasemapImageryKind = 'street' | 'aerial' | 'topographic';
  * των δεδομένων. Με μία συμβολοσειρά, ο ζωγράφος θα έπρεπε να **μαντέψει** ποιο υποσύνολο του
  * κειμένου γίνεται σύνδεσμος — δηλαδή να ξαναγράψει την πολιτική του παρόχου σε regex.
  *
- * Και δεν είναι υποθετικό: μέσα σε αυτό το αποθετήριο υπάρχει ήδη πάροχος με **τρεις** δικαιούχους
- * σε μία γραμμή (`© Stadia Maps, Stamen Design, OpenMapTiles © OpenStreetMap contributors`, δες
- * `subapps/geo-canvas/services/map/MapStyleManager.ts`). Καθένας τους δικαιούται **δικό του**
- * σύνδεσμο. Ως πίνακας κομματιών, ο δεύτερος πάροχος είναι γραμμή· ως συμβολοσειρά, είναι parser.
+ * Και δεν είναι υποθετικό: η CARTO δηλώνει **δύο** δικαιούχους σε μία γραμμή («© CARTO © OpenStreetMap
+ * contributors», δες `@/lib/maps/basemap-catalog`), και καθένας τους δικαιούται **δικό του** σύνδεσμο.
+ * Ως πίνακας κομματιών, ο δεύτερος πάροχος είναι γραμμή· ως συμβολοσειρά, είναι parser.
  */
 export type BasemapAttributionSegment = MapAttributionSegment;
 
@@ -88,26 +96,37 @@ export interface BasemapSource {
  * {@link BasemapImageryKind} υπάρχει ήδη ώστε ένας πάροχος με `kind: 'aerial'` να μπαίνει ως
  * **γραμμή**, χωρίς να αγγιχτεί ζωγράφος, προβολή ή διεπαφή.
  */
+/**
+ * Δακτύλιοι προληπτικών πλακιδίων όταν ο πάροχος το **επιτρέπει**. Ένας δακτύλιος = οι άμεσοι γείτονες
+ * του ορατού — αρκεί για ομαλό pan χωρίς να διπλασιάζει την κίνηση.
+ */
+const PREFETCH_RING_WHEN_ALLOWED = 1;
+
 export const BASEMAP_SOURCES: Readonly<Record<BasemapSourceId, BasemapSource>> = {
-  'osm-standard': {
-    id: 'osm-standard',
-    labelKey: 'basemap.sources.osmStandard',
-    kind: 'street',
-    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    tileSizePx: 256,
-    maxZoom: 19,
-    // Η οδηγία του OSMF δέχεται ρητά την ιστορική μορφή «© OpenStreetMap contributors» και ζητά
-    // η λέξη «OpenStreetMap» να είναι σύνδεσμος προς τη σελίδα πνευματικών δικαιωμάτων.
-    attribution: [
-      { text: '© ' },
-      { text: 'OpenStreetMap', href: 'https://www.openstreetmap.org/copyright' },
-      { text: ' contributors' },
-    ],
-    // Η πολιτική του OSMF απαγορεύει ΚΑΘΕ προληπτικό αίτημα. Δες την επικεφαλίδα.
-    maxPrefetchRing: 0,
-    hasServiceLevelAgreement: false,
-  },
+  'osm-standard': fromCatalog('osm-standard', 'basemap.sources.osmStandard', 'osm-raster'),
 };
+
+/**
+ * Γραμμή του πίνακα **από το μητρώο της εφαρμογής** (ADR-891 Φ1): URL, zoom, απόδοση και όροι ζουν στο
+ * `@/lib/maps/basemap-catalog`. Εδώ μένει μόνο ό,τι είναι του καμβά — το όνομα στη διεπαφή του DXF, και
+ * η **μετάφραση** του όρου «prefetch επιτρέπεται;» σε δακτυλίους πλακιδίων του προγραμματιστή αιτημάτων.
+ */
+function fromCatalog(id: BasemapSourceId, labelKey: string, catalogId: RasterBasemapSourceId): BasemapSource {
+  const source = rasterBasemapSource(catalogId);
+  const provider = basemapProviderOf(source);
+  return {
+    id,
+    labelKey,
+    kind: source.kind,
+    urlTemplate: source.urlTemplate,
+    tileSizePx: source.tileSizePx,
+    maxZoom: source.maxZoom,
+    attribution: provider.attribution,
+    // Όρος χωρίς prefetch (OSMF) ⇒ 0 δακτύλιοι: μόνο ό,τι βλέπει ο χρήστης. Δες την επικεφαλίδα.
+    maxPrefetchRing: provider.terms.prefetchAllowed ? PREFETCH_RING_WHEN_ALLOWED : 0,
+    hasServiceLevelAgreement: provider.terms.hasServiceLevelAgreement,
+  };
+}
 
 /** Ο προεπιλεγμένος πάροχος όταν ο χρήστης δεν έχει επιλέξει. */
 export const DEFAULT_BASEMAP_SOURCE_ID: BasemapSourceId = 'osm-standard';

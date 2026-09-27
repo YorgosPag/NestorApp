@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:963adf50ef977b68ef18c9d3fcc66d602015edae90084fbacdd98a8cd23376db -->
+     fingerprint: sha256:5ee7ef25cd58bdc827b1e21cb4e16c26c25baa771d6d2a7413e98bfa1739e2ae -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -386,6 +386,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.92** | **Πύλη του συνόρου ιδεμποτίας** (ADR-872) — «εκτελείται κάθε πράξη **ΜΙΑ** φορά ανά `Idempotency-Key` — και όποιος το παρακάμπτει, το είπε **με λόγο**; — η αυτόματη επανάληψη του πελάτη είναι ασ…» · `npm run test:idempotency-boundary` · `SKIP_IDEMPOTENCY_BOUNDARY=1` · 📘 `docs/gates/3.92.md` | ⛔ ZERO-TOL (Κ1+Κ2) + 🔴 RATCHET κατά ταυτότητα (Κ3) | `.idempotency-boundary-baseline.json` |
 | **3.93** | **Πύλη της προβολής του Cloud Functions** (ADR-874) — «μεταγλωττίζει το functions build **ΑΚΡΙΒΩΣ** ό,τι λέει το SSoT της εφαρμογής — ή ένα χειρόγραφο αντίγραφο που κάποτε του έμοιαζε;» · `npm run test:functions-projection` · `SKIP_FUNCTIONS_PROJECTION=1` · 📘 `docs/gates/3.93.md` | ⛔ ZERO TOL | — |
 | **3.94** | **Πύλη αναδιάταξης δημόσιων σελίδων** (ADR-797) — «χωράει κάθε στοιχείο στην οθόνη — και ό,τι βλέπει ή πατά ο άνθρωπος στο ΔΙΚΟ του κουτί; (το `scrollWidth` ΜΕΤΡΗΘΗΚΕ ψευδές: 390 = «όλα καλά» με πέντε…» · `npm run test:public-reflow` · 📘 `docs/gates/3.94.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
+| **3.95** | **Πύλη των πηγών υποβάθρου** (ADR-891) — «δηλώνεται κάθε πηγή πλακιδίων χάρτη **στο μητρώο, με τους όρους χρήσης της** — ή τη γράφει κάποιος αλλού, εκεί όπου κανείς δεν ρωτά αν επιτρέπεται;» · `npm run test:basemap-sources` · `SKIP_BASEMAP_SOURCES=1` · 📘 `docs/gates/3.95.md` | ⛔ ZERO TOL | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -399,8 +400,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **86** (εκτελεστής 78 + hook 21) ·
-γραμμές εδώ: **76** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **87** (εκτελεστής 79 + hook 21) ·
+γραμμές εδώ: **77** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

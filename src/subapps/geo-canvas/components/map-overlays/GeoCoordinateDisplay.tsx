@@ -165,6 +165,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
       aria-label={t('map.coordinate.displayLabel')}
     >
       <div className="space-y-1 text-sm">
+        {basemapSwitcher !== 'none' && (
         <header className={`flex items-center gap-3 ${coordinateReadout ? 'mb-2' : ''}`}>
           {showStyleHeading && (
             <span className="text-xs text-muted-foreground">{t('map.styleSelector.style')}</span>
@@ -198,6 +199,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
             })}
           </div>
         </header>
+        )}
 
         {coordinateReadout && hoveredCoordinate && (
           <div className="space-y-1" role="region" aria-label={t('map.coordinate.currentPosition')}>

@@ -32,7 +32,7 @@ import { InteractiveMapPresentation } from './InteractiveMapPresentation';
 // Configuration
 import { GEOGRAPHIC_CONFIG } from '../../../config/geographic-config';
 // Το ακροατήριο του χάρτη — ΕΝΑ όνομα, όχι Ν σημαίες (ADR-777 §2.2)
-import { MAP_CHROME, type MapChromePreset } from '../config/map-chrome';
+import { MAP_CHROME, showsBasemapPanel, type MapChromePreset } from '../config/map-chrome';
 
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 export interface InteractiveMapContainerProps {
@@ -404,6 +404,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
       />
       )}
 
+      {showsBasemapPanel(capabilities) && (
       <GeoCoordinateDisplay
         hoveredCoordinate={mapState.hoveredCoordinate}
         currentMapStyle={mapState.currentMapStyle}
@@ -413,6 +414,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         basemapSwitcher={capabilities.basemapSwitcher}
         coordinateReadout={capabilities.coordinateReadout}
       />
+      )}
 
       {capabilities.pickerControls && (
         <GeoMapControls

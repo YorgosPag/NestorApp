@@ -73,6 +73,10 @@
  */
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+import { createElement, forwardRef } from 'react';
+import { Map as ReactMapLibreMap, type MapProps, type MapRef } from 'react-map-gl/maplibre';
+import { withMapRequestSentinel } from './basemap-request-sentinel';
+
 /**
  * Η **δηλωτική** επιφάνεια (React): `Map`, `Source`, `Layer`, `Marker`, `Popup`,
  * τα controls, το `useMap`/`useControl`/`MapProvider` — και **όλοι** οι τύποι τους.
@@ -88,6 +92,25 @@ import 'maplibre-gl/dist/maplibre-gl.css';
  * tree-shaking σε σχέση με σήμερα.
  */
 export * from 'react-map-gl/maplibre';
+
+/**
+ * 🔑 **Ο ΕΝΑΣ ΧΑΡΤΗΣ ΦΟΡΑ ΤΟΝ ΦΥΛΑΚΑ ΤΟΥ ΜΗΤΡΩΟΥ ΥΠΟΒΑΘΡΩΝ** (ADR-891 Φ1).
+ *
+ * Το `Map` της βιβλιοθήκης, με `transformRequest` που περνά **κάθε** αίτημα (style, πλακίδιο, glyph,
+ * sprite) από τον `basemap-request-sentinel`. Επειδή κάθε χάρτης της εφαρμογής ζητά το `Map` **από εδώ**
+ * (CHECK 3.75), ο φύλακας δεν είναι κάτι που ο καταναλωτής πρέπει να θυμηθεί.
+ *
+ * ⚠️ Η ρητή εξαγωγή **σκιάζει** το `Map` του `export *` πιο πάνω (κανόνας ES modules: η τοπική εξαγωγή
+ * προηγείται της αστερίσκου). Ό,τι άλλο εξάγει η βιβλιοθήκη μένει ανέγγιχτο. `createElement` αντί για JSX
+ * ώστε το σύνορο να μείνει `.ts` — είναι το αρχείο που δηλώνει το CHECK 3.75.
+ */
+export const Map = forwardRef<MapRef, MapProps>(function SentinelMap(props, ref) {
+  return createElement(ReactMapLibreMap, {
+    ...props,
+    ref,
+    transformRequest: withMapRequestSentinel(props.transformRequest),
+  });
+});
 
 /**
  * Η **προστακτική** επιφάνεια (η ίδια η `maplibre-gl`) — μόνο ό,τι επιβιώνει ως
