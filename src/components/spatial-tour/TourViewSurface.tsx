@@ -10,8 +10,10 @@
  * σύνδεσμος (`shareId`) ανοίγουν την **ίδια** συνεδρία — η πύλη του διακομιστή λέει τι βλέπει ο καθένας.
  * 🔑 **Το κουπόνι ανανεώνεται πριν λήξει** (κάθε 10′ < 15′): μια μακριά επίσκεψη δεν «σπάει» στη μέση· η ανανέωση
  * **δεν** ξαναμετρά (ίδια βάση ⇒ ίδια επίσκεψη) — και μια ανάκληση στο μεταξύ κόβει στην επόμενη ανανέωση.
- * 🔌 **Ο θεατής είναι υποδοχή** (`renderViewer`) — τον φέρνει η Φ1 (δική μας μηχανή three.js). Μέχρι να υπάρξουν
- * πλακίδια (Φ2) το μανιφέστο λέει `ready: false` και η οθόνη λέει «ετοιμάζεται», ποτέ μαύρη σφαίρα.
+ * 🔌 **Ο θεατής** (ADR-884 Φ2γ): εξ ορισμού ο `TourViewerLoader` — δική μας μηχανή three.js πίσω από `next/dynamic`, με την
+ * πηγή πλακιδίων — **εδώ, μία φορά**, ώστε σελίδα αγγελίας και προσωπικός σύνδεσμος να μη μπορούν να αποκλίνουν (η
+ * υποδοχή `renderViewer` της Φ1 καταργήθηκε — δεν την γέμισε ποτέ κανείς). Χωρίς έτοιμη στάση (`ready: false`) η οθόνη
+ * λέει «ετοιμάζεται», ποτέ μαύρη σφαίρα.
  */
 
 import type { ReactNode } from 'react';
@@ -22,16 +24,16 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import type { TourViewSessionView } from '@/app/api/spatial-tours/_shared/tour-view-route';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TourRefusalName } from '@/lib/spatial-tour/tour-refusal-vocabulary';
-import type { TourManifest } from '@/server/spatial-tour/tour-view-session';
 import { openTourViewSessionFromScreen } from '@/services/spatial-tour/spatial-tour-viewing.client';
 import type { TourSubject } from '@/types/spatial-tour';
 
 import { TOUR_REFUSAL_KEY } from './spatial-tour-labels';
 import { SPATIAL_TOUR_NS } from './spatial-tour-namespace';
 import { VIEW_BASIS_KEY, VIEWER_KEYS } from './tour-access-labels';
+import { TourViewerLoader } from './viewer/TourViewerLoader';
 
 /** Ανανέωση του κουπονιού — αρκετά πριν τα 15′ του διακομιστή, ώστε μια αργή απάντηση να μη βρει κενό. */
-const RENEW_EVERY_MS = 10 * 60 * 1000;
+export const TOUR_VIEW_RENEW_EVERY_MS = 10 * 60 * 1000;
 
 type SurfaceState =
   | { readonly kind: 'loading' }
@@ -43,8 +45,6 @@ export interface TourViewSurfaceProps {
   readonly subject: TourSubject;
   /** Μόνο από τον προσωπικό σύνδεσμο (`/shared/[token]`). */
   readonly shareId: string | null;
-  /** Η υποδοχή του θεατή (Φ1) — παίρνει το μανιφέστο μόνο όταν `ready`. */
-  readonly renderViewer?: (manifest: TourManifest) => ReactNode;
   /**
    * Η απάντηση σε άρνηση **με δρόμο** (ADR-884 §9.1 Α5) — η σελίδα αγγελίας δίνει την κάρτα αιτήματος («γιατί» + «τι να
    * κάνω»). Χωρίς αυτήν (προσωπικός σύνδεσμος): το ονομασμένο μήνυμα της άρνησης.
@@ -66,13 +66,13 @@ function useTourViewSession(subject: TourSubject, shareId: string | null): Surfa
       else setState(result.kind === 'refused' ? { kind: 'refused', reason: result.reason } : { kind: 'failed' });
     };
     void open();
-    const timer = setInterval(() => void open(), RENEW_EVERY_MS);
+    const timer = setInterval(() => void open(), TOUR_VIEW_RENEW_EVERY_MS);
     return () => { live = false; clearInterval(timer); };
   }, [subject, shareId, signedIn, loading]);
   return state;
 }
 
-export function TourViewSurface({ subject, shareId, renderViewer, renderRefusal }: TourViewSurfaceProps) {
+export function TourViewSurface({ subject, shareId, renderRefusal }: TourViewSurfaceProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
   const state = useTourViewSession(subject, shareId);
   if (state.kind === 'loading') return <p className="text-sm text-muted-foreground" aria-busy>{t(VIEWER_KEYS.title)}</p>;
@@ -92,8 +92,8 @@ export function TourViewSurface({ subject, shareId, renderViewer, renderRefusal 
         <Badge variant="secondary">{t(VIEW_BASIS_KEY[basis])}</Badge>
         {manifest.ready && <span className="text-sm text-muted-foreground">{t(VIEWER_KEYS.stops, { count: manifest.stops.length })}</span>}
       </header>
-      {manifest.ready && renderViewer
-        ? renderViewer(manifest)
+      {manifest.ready
+        ? <TourViewerLoader subject={subject} manifest={manifest} />
         : <p className="text-sm text-muted-foreground" role="status">{t(VIEWER_KEYS.preparing)}</p>}
     </section>
   );
