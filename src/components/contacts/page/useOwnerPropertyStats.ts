@@ -14,12 +14,18 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useCapability } from '@/auth/hooks/useCapability';
+import { isGranted } from '@/types/capability-authority';
+import type { PermissionId } from '@/lib/auth/types';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { OwnerPropertyStatsByContact } from '@/lib/contacts/owner-property-stats';
 
 const logger = createModuleLogger('useOwnerPropertyStats');
+
+/** Η **ίδια** άδεια που απαιτεί η διαδρομή (`withAuth` · `crm:contacts:view`). */
+const OWNER_STATS_PERMISSION: PermissionId = 'crm:contacts:view';
 
 /**
  * Τι κατέχει κάθε επαφή — **συναθροισμένο στον διακομιστή**.
@@ -41,16 +47,24 @@ const logger = createModuleLogger('useOwnerPropertyStats');
  * τρία φίλτρα ιδιοκτησίας δεν εφαρμόζονται και η λίστα μένει πλήρης. *«Δεν μπόρεσα να
  * μετρήσω»* δεν δικαιολογεί *«δεν σου δείχνω κανέναν»*.
  *
+ * 🔒 **Ρωτά τον κριτή ΠΡΙΝ ρωτήσει τον server** (ADR-801): χρήστης χωρίς
+ * `crm:contacts:view` (π.χ. `external_user` σε ξένο χώρο) έπαιρνε **403 σε κάθε**
+ * tab-visibility / AI-sync ανανέωση — θόρυβος στα logs και χαμένο round-trip για
+ * απάντηση γνωστή εκ των προτέρων. Ο client PDP είναι ισοδύναμος με τον server
+ * (`pdp-equivalence.test.ts`)· ο server μένει η αυθεντία, αυτό είναι μόνο φίλτρο.
+ *
  * @param refreshTrigger Η σκανδάλη ανανέωσης της σελίδας (`subscriptionRetry`).
  */
 export function useOwnerPropertyStats(
   refreshTrigger: number,
 ): OwnerPropertyStatsByContact | undefined {
   const { user, loading: authLoading } = useAuth();
+  const gate = useCapability(OWNER_STATS_PERMISSION);
+  const canView = !gate.pending && isGranted(gate.verdict);
   const [ownerStats, setOwnerStats] = useState<OwnerPropertyStatsByContact | undefined>();
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading || !user || !canView) return;
 
     let cancelled = false;
 
@@ -69,7 +83,7 @@ export function useOwnerPropertyStats(
       });
 
     return () => { cancelled = true; };
-  }, [user, authLoading, refreshTrigger]);
+  }, [user, authLoading, canView, refreshTrigger]);
 
   return ownerStats;
 }

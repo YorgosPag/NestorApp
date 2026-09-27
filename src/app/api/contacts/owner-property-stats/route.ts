@@ -5,7 +5,7 @@
  * @see ADR-842 §7.6.13 — τα τρία φίλτρα που η οθόνη πρόσφερε χωρίς να τα κάνει
  *
  * 🔒 SECURITY:
- * - Permission: `contacts:contacts:view` (ίδιο με τη διαδρομή «ιδιοκτησίες επαφής»)
+ * - Permission: `crm:contacts:view` (ίδιο με τη διαδρομή «ιδιοκτησίες επαφής»)
  * - Tenant isolation: `tenantScopedCollection` — η **ίδια** πόρτα εμβέλειας με το
  *   `/api/properties` (ADR-702 · ADR-214), ποτέ χειρόγραφο `where('companyId')`
  *
