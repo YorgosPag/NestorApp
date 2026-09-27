@@ -277,8 +277,32 @@ function main() {
   logInfo(`Generated namespaces: ${Object.keys(data).sort().join(', ')}`);
 }
 
+/**
+ * `--index` (CHECK 3.33 `--index`, 2026-09-27): γεννά από τα locales του **ευρετηρίου** και γράφει το
+ * `i18n.ts` **μόνο στο ευρετήριο**. Σε δέντρο με παράλληλους πράκτορες το `i18n.ts` του δίσκου κουβαλά
+ * τύπους για ξένα, αστάδιοποίητα κλειδιά — η εγγραφή του θα τους έσβηνε.
+ */
+function mainOnIndex() {
+  const { materializeIndex, writeIndexBlob } = require('./lib/git-index-snapshot');
+  const repoRoot = path.resolve(__dirname, '..');
+  const relLocales = path.relative(repoRoot, DEFAULT_LOCALE_DIR).replace(/\\/g, '/');
+  const relTypes = path.relative(repoRoot, TYPES_OUTPUT_FILE).replace(/\\/g, '/');
+  const snapshot = materializeIndex({ repoRoot, pathspecs: [relLocales] });
+  try {
+    const { data, failures } = collectTranslationData(path.join(snapshot.root, relLocales));
+    if (failures.length > 0) process.exitCode = 1;
+    else {
+      writeIndexBlob({ repoRoot, relPath: relTypes, content: generateTypeDefinitions(data) });
+      logSuccess(`${relTypes} γράφτηκε ΜΟΝΟ στο ευρετήριο (ο δίσκος ανέγγιχτος)`);
+    }
+  } finally {
+    snapshot.dispose();
+  }
+}
+
 if (require.main === module) {
-  main();
+  if (process.argv.includes('--index')) mainOnIndex();
+  else main();
 }
 
 module.exports = {

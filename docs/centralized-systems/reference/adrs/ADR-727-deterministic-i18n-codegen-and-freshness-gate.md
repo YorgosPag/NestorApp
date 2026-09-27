@@ -258,6 +258,12 @@ grep για `checksum`/`md5`/`sha256`/`stale`/`regenerate` στο `scripts/` κ�
 
 ## 9. Changelog
 
+### 2026-09-27 — Η πύλη κρίνει το COMMIT (`--index`)
+- Σε δέντρο με παράλληλους πράκτορες το `i18n.ts` του δίσκου κουβαλά τύπους για **ξένα, αστάδιοποίητα** κλειδιά ⇒ η πύλη κοκκίνιζε σε commit του οποίου τα locales + `i18n.ts` ήταν συνεπή, και η θεραπεία (`generate:i18n-types`) θα **έσβηνε** ξένη δουλειά.
+- `check-i18n-types-freshness.js --index`: locales + `i18n.ts` από το **ευρετήριο** (`scripts/lib/git-index-snapshot.js`)· ο δρομολογητής Phase 1 το καλεί έτσι.
+- `generate-i18n-types.js --index` (`npm run generate:i18n-types:index`): γεννά από τα locales του ευρετηρίου και γράφει **μόνο στο ευρετήριο** (`hash-object` + `update-index`) — ο δίσκος ανέγγιχτος. Μετρημένο στο commit `977b2be7`: στο ευρετήριο μπήκαν 3 γραμμές (η δική του αλλαγή), ο δίσκος κράτησε 100 ξένες.
+- Το `runCheck` δέχεται `{ localeDir, typesFile, root }` με προεπιλογές ⇒ οι υπάρχουσες σουίτες αμετάβλητες.
+
 ### 2026-07-29 — Αρχική υλοποίηση
 - Ο γεννήτορας έγινε ντετερμινιστικός: `new Date().toISOString()` → `sha256` των εισόδων (§2.1).
 - `generateTypeDefinitions` σπασμένη σε 4 συναρτήσεις ≤40 γραμμών (N.7.1)· ισοδυναμία εξόδου αποδεδειγμένη byte-προς-byte.

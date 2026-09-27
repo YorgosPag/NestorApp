@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const { materializeIndex } = require('../lib/git-index-snapshot');
+const { materializeIndex, writeIndexBlob, readIndexText } = require('../lib/git-index-snapshot');
 
 function git(cwd, ...args) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -66,6 +66,30 @@ describe('materializeIndex', () => {
     expect(fs.existsSync(path.join(snapshot.root, 'other.txt'))).toBe(false);
     snapshot.dispose();
     expect(fs.existsSync(snapshot.root)).toBe(false);
+  });
+
+  it('φάκελος-pathspec ≠ πρόθεμα ονόματος: `locales` δεν πιάνει το `locales-old/`', () => {
+    fs.mkdirSync(path.join(repo, 'locales-old'));
+    fs.writeFileSync(path.join(repo, 'locales-old', 'b.json'), 'x');
+    git(repo, 'add', 'locales-old/b.json');
+    const snapshot = materializeIndex({ repoRoot: repo, pathspecs: ['locales/'] });
+    try {
+      expect(snapshot.files).toEqual(['locales/a.json']);
+    } finally {
+      snapshot.dispose();
+    }
+  });
+
+  it('writeIndexBlob γράφει ΜΟΝΟ στο ευρετήριο — ο δίσκος (ξένη δουλειά) μένει ανέγγιχτος', () => {
+    const file = path.join(repo, 'locales', 'a.json');
+    fs.writeFileSync(file, 'foreign unstaged work');
+    writeIndexBlob({ repoRoot: repo, relPath: 'locales/a.json', content: 'generated for the commit' });
+    expect(readIndexText({ repoRoot: repo, relPath: 'locales/a.json' })).toBe('generated for the commit');
+    expect(fs.readFileSync(file, 'utf8')).toBe('foreign unstaged work');
+  });
+
+  it('readIndexText: αρχείο εκτός ευρετηρίου ⇒ null', () => {
+    expect(readIndexText({ repoRoot: repo, relPath: 'nope.json' })).toBeNull();
   });
 
   it('σταδιοποιημένη διαγραφή ⇒ λείπει από το στιγμιότυπο', () => {

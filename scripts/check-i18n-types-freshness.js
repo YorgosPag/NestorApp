@@ -44,6 +44,7 @@
  * CLI:
  *   node scripts/check-i18n-types-freshness.js            # check (default)
  *   node scripts/check-i18n-types-freshness.js --check
+ *   node scripts/check-i18n-types-freshness.js --index    # judge the git INDEX (the hook)
  *   node scripts/check-i18n-types-freshness.js --help
  *
  * Env:
@@ -66,6 +67,7 @@ const {
   DEFAULT_LOCALE_DIR,
   TYPES_OUTPUT_FILE,
 } = require('./generate-i18n-types');
+const { materializeIndex } = require('./lib/git-index-snapshot');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const REGENERATE_COMMAND = 'npm run generate:i18n-types';
@@ -83,8 +85,8 @@ function getTypesFile() {
     : TYPES_OUTPUT_FILE;
 }
 
-function rel(filePath) {
-  return path.relative(PROJECT_ROOT, filePath).replace(/\\/g, '/');
+function rel(filePath, root = PROJECT_ROOT) {
+  return path.relative(root, filePath).replace(/\\/g, '/');
 }
 
 // CRLF↔LF, BOM and trailing-blank-line differences are checkout artefacts, not
@@ -182,9 +184,9 @@ function reportDiff(diff) {
 }
 
 function reportFailure(result, context) {
-  console.error(`❌ CHECK 3.33 FAIL — ${rel(context.typesFile)} is not in sync with the locale files.`);
+  console.error(`❌ CHECK 3.33 FAIL — ${rel(context.typesFile, context.root)} is not in sync with the locale files.`);
   console.error(`   Reason: ${VERDICT_MESSAGES[result.verdict]}`);
-  console.error(`   Inputs: ${context.fileCount} JSON file(s) in ${rel(context.localeDir)}`);
+  console.error(`   Inputs: ${context.fileCount} JSON file(s) in ${rel(context.localeDir, context.root)}`);
   console.error(`   Expected fingerprint: sha256:${context.expectedFingerprint}`);
 
   if (result.actualFingerprint) {
@@ -195,18 +197,16 @@ function reportFailure(result, context) {
   console.error('');
   console.error('Remediation:');
   console.error(`  1) Regenerate: ${REGENERATE_COMMAND}`);
-  console.error(`  2) Stage the result together with your locale change: git add ${rel(context.typesFile)}`);
+  console.error(`  2) Stage the result together with your locale change: git add ${rel(context.typesFile, context.root)}`);
   console.error('  3) Never hand-edit that file — it is machine output (ADR-727).');
   console.error('');
   console.error('Emergency skip (justify to Giorgio): SKIP_I18N_TYPES=1 git commit ...');
 }
 
-function runCheck() {
-  const localeDir = getLocaleDir();
-  const typesFile = getTypesFile();
+function runCheck({ localeDir = getLocaleDir(), typesFile = getTypesFile(), root = PROJECT_ROOT } = {}) {
 
   if (!fs.existsSync(localeDir)) {
-    console.error(`❌ CHECK 3.33 — locale directory not found: ${rel(localeDir)}`);
+    console.error(`❌ CHECK 3.33 — locale directory not found: ${rel(localeDir, root)}`);
     process.exit(1);
   }
 
@@ -225,13 +225,13 @@ function runCheck() {
 
   if (result.verdict === 'fresh') {
     console.log(
-      `✅ CHECK 3.33 OK — ${rel(typesFile)} matches ${fileCount} locale file(s) ` +
+      `✅ CHECK 3.33 OK — ${rel(typesFile, root)} matches ${fileCount} locale file(s) ` +
       `(sha256:${expectedFingerprint.slice(0, 12)}…)`
     );
     process.exit(0);
   }
 
-  reportFailure(result, { typesFile, localeDir, fileCount, expectedFingerprint });
+  reportFailure(result, { typesFile, localeDir, fileCount, expectedFingerprint, root });
   process.exit(1);
 }
 
@@ -240,6 +240,7 @@ function parseArgs(argv) {
 
   for (const arg of argv.slice(2)) {
     if (arg === '--check') out.check = true;
+    else if (arg === '--index') out.index = true;
     else if (arg === '--help' || arg === '-h') out.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -253,6 +254,7 @@ function printHelp() {
 Usage:
   node scripts/check-i18n-types-freshness.js            # check (default)
   node scripts/check-i18n-types-freshness.js --check
+  node scripts/check-i18n-types-freshness.js --index    # judge the git INDEX (the hook)
   node scripts/check-i18n-types-freshness.js --help
 
 Verifies that ${rel(TYPES_OUTPUT_FILE)} is what the generator would produce
@@ -281,7 +283,27 @@ function main() {
     return;
   }
 
-  runCheck();
+  if (args.index) runCheckOnIndex();
+  else runCheck();
+}
+
+/**
+ * 🔴 **Κρίνε το COMMIT, όχι τον δίσκο** (2026-09-27, ίδια αιτία με CHECK 3.34 `--index`): σε δέντρο με
+ * παράλληλους πράκτορες, ξένες αστάδιοποίητες αλλαγές locale έκαναν κόκκινο commit που τα δικά του
+ * `locales` + `i18n.ts` ήταν συνεπή. Εδώ και τα δύο διαβάζονται από το ευρετήριο.
+ * Ο `runCheck` κάνει `process.exit` ⇒ ο καθαρισμός δένεται στο `exit`.
+ */
+function runCheckOnIndex() {
+  const snapshot = materializeIndex({
+    repoRoot: PROJECT_ROOT,
+    pathspecs: [rel(DEFAULT_LOCALE_DIR), rel(TYPES_OUTPUT_FILE)],
+  });
+  process.on('exit', snapshot.dispose);
+  runCheck({
+    localeDir: path.join(snapshot.root, rel(DEFAULT_LOCALE_DIR)),
+    typesFile: path.join(snapshot.root, rel(TYPES_OUTPUT_FILE)),
+    root: snapshot.root,
+  });
 }
 
 // Exported for scripts/__tests__/check-i18n-types-freshness.test.js.
@@ -292,6 +314,7 @@ module.exports = {
   classify,
   reportFailure,
   runCheck,
+  runCheckOnIndex,
   parseArgs,
   printHelp,
   main,
