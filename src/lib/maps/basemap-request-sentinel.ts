@@ -15,7 +15,7 @@
 
 import type { RequestParameters, RequestTransformFunction, ResourceType } from 'maplibre-gl';
 import { createModuleLogger } from '@/lib/telemetry';
-import { basemapProviderOfHost } from './basemap-catalog';
+import { basemapProviderOfHost, unwrapArchiveUrl } from './basemap-catalog';
 
 const logger = createModuleLogger('MAP_REQUEST_SENTINEL');
 
@@ -34,12 +34,15 @@ export interface MapRequestClassification {
 
 const LOCAL_SCHEME = /^(data|blob):/i;
 
-/** Καθαρή κρίση ενός αιτήματος — `origin` = η προέλευση της σελίδας (`null` εκτός περιηγητή). */
+/**
+ * Καθαρή κρίση ενός αιτήματος — `origin` = η προέλευση της σελίδας (`null` εκτός περιηγητή).
+ * Το `pmtiles://https://…` κρίνεται με τον διακομιστή που **πράγματι** θα χτυπηθεί, όχι με το σχήμα.
+ */
 export function classifyMapRequest(url: string, origin: string | null): MapRequestClassification {
   if (LOCAL_SCHEME.test(url)) return { verdict: 'local', host: null };
   let parsed: URL;
   try {
-    parsed = new URL(url, origin ?? undefined);
+    parsed = new URL(unwrapArchiveUrl(url), origin ?? undefined);
   } catch {
     return { verdict: 'undeclared', host: null };
   }

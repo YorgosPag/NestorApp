@@ -38,7 +38,7 @@ import type { MapAttributionSegment } from './map-attribution';
 // 1. ΠΑΡΟΧΟΙ — ποιος, από πού, με ποιους όρους
 // ============================================================================
 
-export type BasemapProviderId = 'osmf' | 'carto';
+export type BasemapProviderId = 'osmf' | 'carto' | 'nestor';
 
 /**
  * Οι όροι χρήσης, όπως τους δηλώνει ο πάροχος.
@@ -71,6 +71,20 @@ export interface BasemapProvider {
    * Κενός πίνακας σημαίνει «κανείς δεν την έγραψε»· η άγκυρα το απαγορεύει για κάθε πάροχο.
    */
   readonly attribution: readonly MapAttributionSegment[];
+  /**
+   * Ό,τι **διανέμουμε εμείς** στον browser από αυτόν τον πάροχο (γραμματοσειρές, εικονίδια), με την άδειά του.
+   * Κενός πίνακας = δεν διανέμουμε τίποτα (τα πλακίδια τα σερβίρει ο τρίτος). Για αυτοφιλοξενούμενο πάροχο είναι
+   * **η μόνη δήλωση**: τα `.pbf` ζουν εκτός git, άρα το CHECK 3.69 δομικά δεν τα βλέπει (ADR-891 §9).
+   */
+  readonly distributedAssets: readonly BasemapDistributedAsset[];
+}
+
+/** Ένα κομμάτι που σερβίρουμε εμείς, και ο όρος της άδειας που το συνοδεύει. */
+export interface BasemapDistributedAsset {
+  readonly asset: string;
+  readonly spdx: 'OFL-1.1' | 'MIT';
+  /** Πού ταξιδεύει το κείμενο της άδειας μαζί με τα αντίγραφα (διαδρομή μέσα στον φάκελο assets του bundle). */
+  readonly licenseFile: string;
 }
 
 /** Η λέξη «OpenStreetMap» ως σύνδεσμος προς τη σελίδα της άδειας — οδηγία απόδοσης του OSMF. */
@@ -79,6 +93,53 @@ const OSM_LINK: MapAttributionSegment = { text: 'OpenStreetMap', href: 'https://
 // ⚠️ Κανονική μορφή: ποτέ δύο διαδοχικά κομμάτια κειμένου — ό,τι δίνει και το `attributionSegmentsFromHtml`,
 // ώστε ο κύκλος πίνακας → HTML → κομμάτια να επιστρέφει τον ίδιο πίνακα (άγκυρα Δ).
 const OSM_ATTRIBUTION: readonly MapAttributionSegment[] = [{ text: '© ' }, OSM_LINK, { text: ' contributors' }];
+
+// ── Ο ΔΙΚΟΣ ΜΑΣ ΔΙΑΚΟΜΙΣΤΗΣ ΥΠΟΒΑΘΡΟΥ (ADR-891 §9) ─────────────────────────────────────────────────────────────
+// Ένα bundle, σερβιρισμένο στατικά με HTTP Range (Caddy στο Netcup, `infra/basemap/`). Τα ονόματα φέρουν την
+// έκδοση ⇒ `Cache-Control: immutable`: νέο build = νέο όνομα, ποτέ αντικατάσταση στη θέση του. Ο γεννήτορας
+// (`npm run build:basemap`) διαβάζει ΑΥΤΕΣ τις σταθερές, άρα ο κατάλογος και το bundle δεν αποκλίνουν σιωπηλά.
+
+/** Ο διακομιστής της παραγωγής. Υποτομέας και όχι διαδρομή: οι διαδρομές του Coolify v4 έχουν γνωστά σφάλματα. */
+const PRODUCTION_BASEMAP_ORIGIN = 'https://maps.nestorconstruct.gr';
+
+/**
+ * Από πού σερβίρεται το bundle. Το `NEXT_PUBLIC_BASEMAP_ORIGIN` υπάρχει **μόνο** για τον τοπικό έλεγχο
+ * (`npm run basemap:serve`) — η παραγωγή δεν το ορίζει.
+ */
+export const BASEMAP_BUNDLE_ORIGIN = (process.env.NEXT_PUBLIC_BASEMAP_ORIGIN ?? PRODUCTION_BASEMAP_ORIGIN).replace(/\/+$/, '');
+
+/** Το build Protomaps του αρχείου που σερβίρεται (`YYYYMMDD`). Το αλλάζει η ανανέωση (Φ5). */
+export const BASEMAP_ARCHIVE_BUILD = '20260926';
+
+/** Το commit του `protomaps/basemaps-assets` (γραμματοσειρές + sprites) — καρφωμένο με sha256 στον γεννήτορα. */
+export const BASEMAP_ASSETS_REVISION = '028c18f713baecad011301ff7a69acc39bcc2ae7';
+
+/** Το όνομα του αρχείου ενός build μέσα στο bundle (`YYYYMMDD` → `greece-YYYYMMDD.pmtiles`). */
+export function basemapArchiveFileName(build: string): string {
+  return `greece-${build}.pmtiles`;
+}
+
+/** Διαδρομές **μέσα** στο bundle — τις ίδιες γράφει ο γεννήτορας και ζητά ο χάρτης. */
+export const BASEMAP_BUNDLE_PATHS = {
+  archive: basemapArchiveFileName(BASEMAP_ARCHIVE_BUILD),
+  assets: `assets/${BASEMAP_ASSETS_REVISION.slice(0, 12)}`,
+} as const;
+
+/** Το σχήμα του πρωτοκόλλου που καταχωρίζει το σύνορο (`pmtiles-protocol.ts`). */
+export const PMTILES_URL_SCHEME = 'pmtiles://';
+
+/** `pmtiles://https://…` → `https://…` — ό,τι θα ζητηθεί πραγματικά από το δίκτυο. */
+export function unwrapArchiveUrl(url: string): string {
+  return url.startsWith(PMTILES_URL_SCHEME) ? url.slice(PMTILES_URL_SCHEME.length) : url;
+}
+
+function hostOf(origin: string): string {
+  try {
+    return new URL(origin).hostname.toLowerCase();
+  } catch {
+    return origin;
+  }
+}
 
 export const BASEMAP_PROVIDERS: Readonly<Record<BasemapProviderId, BasemapProvider>> = {
   osmf: {
@@ -95,6 +156,7 @@ export const BASEMAP_PROVIDERS: Readonly<Record<BasemapProviderId, BasemapProvid
       termsUrl: 'https://operations.osmfoundation.org/policies/tiles/',
     },
     attribution: OSM_ATTRIBUTION,
+    distributedAssets: [],
   },
   carto: {
     id: 'carto',
@@ -114,6 +176,26 @@ export const BASEMAP_PROVIDERS: Readonly<Record<BasemapProviderId, BasemapProvid
       { text: ' © ' },
       OSM_LINK,
       { text: ' contributors' },
+    ],
+    distributedAssets: [],
+  },
+  nestor: {
+    id: 'nestor',
+    // Ο τοπικός διακομιστής ελέγχου δηλώνεται μόνο όταν τον ορίζει ρητά το περιβάλλον.
+    hosts: [...new Set([hostOf(PRODUCTION_BASEMAP_ORIGIN), hostOf(BASEMAP_BUNDLE_ORIGIN)])],
+    terms: {
+      // Δικά μας αντίγραφα δεδομένων ODbL: μόνος όρος η απόδοση, κανένα όριο, καμία εξάρτηση από τρίτο.
+      commercialUse: 'allowed',
+      freeMonthlyRequests: null,
+      hasServiceLevelAgreement: false,
+      prefetchAllowed: true,
+      offlineAllowed: true,
+      termsUrl: 'https://www.openstreetmap.org/copyright',
+    },
+    attribution: OSM_ATTRIBUTION,
+    distributedAssets: [
+      { asset: 'Γραμματοσειρές χάρτη Noto Sans (glyphs .pbf)', spdx: 'OFL-1.1', licenseFile: 'fonts/OFL.txt' },
+      { asset: 'Εικονίδια χάρτη Protomaps (sprites, από tangrams/icons)', spdx: 'MIT', licenseFile: 'sprites/LICENSE.md' },
     ],
   },
 };
@@ -145,7 +227,29 @@ export interface StyleBasemapSource extends BasemapSourceBase {
   readonly styleUrl: string;
 }
 
-export type BasemapSource = RasterBasemapSource | StyleBasemapSource;
+/** Τα δύο θέματα της εφαρμογής — ο χάρτης φόντου ακολουθεί όποιο βάφει (ADR-891 §9). */
+export type BasemapScheme = 'light' | 'dark';
+
+/**
+ * Αρχείο PMTiles (vector) + γραμματοσειρές + sprites από **ένα** bundle. Το στυλ το χτίζει ο χτίστης του client
+ * (`protomaps-style.ts`), γιατί ο κατάλογος μένει φύλλο χωρίς εξαρτήσεις εκτέλεσης.
+ */
+export interface VectorArchiveBasemapSource extends BasemapSourceBase {
+  readonly format: 'vector-archive';
+  /** `pmtiles://https://…/greece-YYYYMMDD.pmtiles` — ό,τι δέχεται το `source.url` της MapLibre. */
+  readonly archiveUrl: string;
+  /** Πρότυπο glyphs της MapLibre (`{fontstack}/{range}.pbf`). */
+  readonly glyphsUrl: string;
+  /** Βάση των sprites· το όνομα του flavor μπαίνει στο τέλος. */
+  readonly spriteBaseUrl: string;
+  /** Όνομα flavor του `@protomaps/basemaps` ανά θέμα. */
+  readonly flavors: Readonly<Record<BasemapScheme, string>>;
+  /** Γλώσσα ονομάτων (`name:el`, με υποχώρηση στο τοπικό `name`). */
+  readonly lang: string;
+  readonly maxZoom: number;
+}
+
+export type BasemapSource = RasterBasemapSource | StyleBasemapSource | VectorArchiveBasemapSource;
 
 const BASEMAP_SOURCE_TABLE = {
   'osm-raster': {
@@ -174,6 +278,18 @@ const BASEMAP_SOURCE_TABLE = {
     kind: 'street',
     styleUrl: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
   },
+  'protomaps-greece': {
+    format: 'vector-archive',
+    provider: 'nestor',
+    kind: 'street',
+    archiveUrl: `${PMTILES_URL_SCHEME}${BASEMAP_BUNDLE_ORIGIN}/${BASEMAP_BUNDLE_PATHS.archive}`,
+    glyphsUrl: `${BASEMAP_BUNDLE_ORIGIN}/${BASEMAP_BUNDLE_PATHS.assets}/fonts/{fontstack}/{range}.pbf`,
+    spriteBaseUrl: `${BASEMAP_BUNDLE_ORIGIN}/${BASEMAP_BUNDLE_PATHS.assets}/sprites/v4`,
+    flavors: { light: 'light', dark: 'dark' },
+    lang: 'el',
+    // Η βαθύτερη ζώνη του γεννήτορα (ADR-891 §7.2)· πέρα από αυτή η MapLibre μεγεθύνει τα z15 (overzoom).
+    maxZoom: 15,
+  },
 } as const satisfies Record<string, BasemapSource>;
 
 export type BasemapSourceId = keyof typeof BASEMAP_SOURCE_TABLE;
@@ -183,10 +299,26 @@ export type RasterBasemapSourceId = {
   [K in BasemapSourceId]: (typeof BASEMAP_SOURCE_TABLE)[K]['format'] extends 'raster' ? K : never;
 }[BasemapSourceId];
 
+/** Οι πηγές αρχείου vector — το στυλ τους εξαρτάται από το θέμα και το χτίζει το `protomaps-style.ts`. */
+export type VectorArchiveBasemapSourceId = {
+  [K in BasemapSourceId]: (typeof BASEMAP_SOURCE_TABLE)[K]['format'] extends 'vector-archive' ? K : never;
+}[BasemapSourceId];
+
+/** Οι πηγές με **ένα** στυλ, ανεξάρτητο από το θέμα (raster ή έτοιμο style.json τρίτου). */
+export type StaticBasemapSourceId = Exclude<BasemapSourceId, VectorArchiveBasemapSourceId>;
+
 export const BASEMAP_SOURCES: Readonly<Record<BasemapSourceId, BasemapSource>> = BASEMAP_SOURCE_TABLE;
 
 export function rasterBasemapSource(id: RasterBasemapSourceId): RasterBasemapSource {
   return BASEMAP_SOURCE_TABLE[id];
+}
+
+export function vectorArchiveBasemapSource(id: VectorArchiveBasemapSourceId): VectorArchiveBasemapSource {
+  return BASEMAP_SOURCE_TABLE[id];
+}
+
+export function isVectorArchiveSourceId(id: BasemapSourceId): id is VectorArchiveBasemapSourceId {
+  return BASEMAP_SOURCE_TABLE[id].format === 'vector-archive';
 }
 
 export function basemapProviderOf(source: BasemapSource): BasemapProvider {
@@ -247,9 +379,13 @@ function buildRasterStyle(id: BasemapSourceId, source: RasterBasemapSource, opti
   };
 }
 
-/** Ό,τι δέχεται το `mapStyle` της MapLibre για αυτή την πηγή: URL στυλ, ή στυλ που χτίσαμε. */
-export function basemapStyle(id: BasemapSourceId): string | StyleSpecification {
+/**
+ * Ό,τι δέχεται το `mapStyle` της MapLibre για πηγή **με ένα στυλ**: URL στυλ, ή στυλ raster που χτίσαμε.
+ * Οι πηγές αρχείου vector ζητούν θέμα ⇒ `protomapsStyle` (`protomaps-style.ts`).
+ */
+export function basemapStyle(id: StaticBasemapSourceId): string | StyleSpecification {
   const source = BASEMAP_SOURCES[id];
+  if (source.format === 'vector-archive') throw new Error(`${id}: vector-archive source — build it with protomapsStyle`);
   return source.format === 'style' ? source.styleUrl : buildRasterStyle(id, source, {});
 }
 
