@@ -3,7 +3,7 @@
  */
 
 import * as THREE from 'three';
-import { easeInOutCubic } from '../viewport/easing-functions';
+import { easeInOutCubic } from '@/lib/motion/easing';
 import { createAnimationManager } from '../viewport/animation-manager';
 import type { ManagedTickCallback } from '../viewport/animation-manager';
 import { PROJECTION_SWITCH_DURATION_MS } from '../viewport/viewport-constants';

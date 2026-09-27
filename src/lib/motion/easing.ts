@@ -1,6 +1,12 @@
 /**
- * Pure easing math for BIM 3D camera transitions.
- * ADR-366 Phase 4.2 — extracted for DRY reuse across animation systems.
+ * Pure easing math — η ΜΙΑ δήλωση των καμπυλών κίνησης (ADR-366 Phase 4.2 · §C.1.Q4).
+ *
+ * 🔑 Μετακόμισε από το `subapps/dxf-viewer/bim-3d/viewport/easing-functions.ts` (ADR-884 §4.8, 2026-09-27): ήταν ήδη
+ * χωρίς εισαγωγές, αλλά ζούσε **πίσω από το σύνορο** του subapp (CHECK 3.62) — ο δημόσιος θεατής περιήγησης χρειάζεται
+ * την ίδια καμπύλη με την κάμερα BIM. Το παλιό αρχείο **επανεξάγει** από εδώ· οι εισαγωγείς του μένουν αμετάβλητοι.
+ * ⚠️ ΜΗΝ προσθέσεις εισαγωγή εδώ.
+ *
+ * @module lib/motion/easing
  */
 
 /** Cubic ease-in-out. f(0)=0, f(0.5)=0.5, f(1)=1. A.4.Q1 canonical curve. */

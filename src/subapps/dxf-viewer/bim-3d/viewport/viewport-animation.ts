@@ -4,12 +4,12 @@
  *
  * Phase 4.2 adaptation:
  *   - No internal requestAnimationFrame — caller drives via tick(nowMs).
- *   - Easing extracted to easing-functions.ts (DRY).
+ *   - Easing extracted to `@/lib/motion/easing` (DRY).
  *   - startTime set on first tick (not in start()).
  */
 
 import * as THREE from 'three';
-import { easeInOutCubic } from './easing-functions';
+import { easeInOutCubic } from '@/lib/motion/easing';
 import type { CameraKeyframe, AnimationTickCallback } from './viewport-types';
 
 export interface ViewportAnimation {

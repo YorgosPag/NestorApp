@@ -36,7 +36,7 @@
  */
 
 import type * as THREE from 'three';
-import { easeOutCubic } from '../viewport/easing-functions';
+import { easeOutCubic } from '@/lib/motion/easing';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 /**

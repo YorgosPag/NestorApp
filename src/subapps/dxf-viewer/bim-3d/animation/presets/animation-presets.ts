@@ -6,7 +6,7 @@
  *  2. Turntable defaults (industry convention 8s/30fps/CCW Y-axis)
  *  3. AnimationConfig factory defaults
  *
- * Reuses `viewport/easing-functions.ts` SSoT — no duplication.
+ * Reuses `@/lib/motion/easing` SSoT — no duplication.
  */
 
 import { cubicBezier } from '../../viewport/bezier-easing';
@@ -19,7 +19,7 @@ import {
   easeOutQuart,
   smoothStep,
   easeOutElastic,
-} from '../../viewport/easing-functions';
+} from '@/lib/motion/easing';
 import type {
   AnimationAxis,
   AnimationConfig,

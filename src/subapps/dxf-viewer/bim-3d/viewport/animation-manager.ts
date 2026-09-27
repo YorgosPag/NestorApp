@@ -15,7 +15,7 @@
  */
 
 import * as THREE from 'three';
-import { easeInOutCubic } from './easing-functions';
+import { easeInOutCubic } from '@/lib/motion/easing';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
