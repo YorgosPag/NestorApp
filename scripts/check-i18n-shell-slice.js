@@ -60,6 +60,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { bootstrap } = require('./lib/i18n-shell-slice/cli');
+const { loadConfig, CONFIG_FILE } = require('./lib/i18n-shell-slice/config');
+const { materializeIndex } = require('./lib/git-index-snapshot');
 const {
   analyseFile,
   buildModuleGraph,
@@ -105,8 +107,8 @@ function normalize(text) {
   return text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\s*$/, '\n');
 }
 
-function readManifest(config) {
-  const file = path.join(PROJECT_ROOT, manifestPath(config));
+function readManifest(config, root = PROJECT_ROOT) {
+  const file = path.join(root, manifestPath(config));
   if (!fs.existsSync(file)) return null;
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -136,9 +138,9 @@ function fail(reason, remedy = REGENERATE) {
  * `stableStringify` output is already normalized, so hashing the normalized
  * working-tree copy is an apples-to-apples comparison on any platform.
  */
-function checkArtifactIntegrity(manifest) {
+function checkArtifactIntegrity(manifest, root = PROJECT_ROOT) {
   for (const [relPath, expected] of Object.entries(manifest.artifacts)) {
-    const file = path.join(PROJECT_ROOT, relPath);
+    const file = path.join(root, relPath);
     if (!fs.existsSync(file)) return `${relPath} is missing.`;
     if (sha256(normalize(fs.readFileSync(file, 'utf8'))) !== expected) {
       return `${relPath} does not match the sha256 recorded in the manifest — it was hand-edited or half-regenerated.`;
@@ -148,16 +150,16 @@ function checkArtifactIntegrity(manifest) {
 }
 
 /** B. the recorded key set, re-pruned out of the locales that are on disk right now. */
-function checkLocaleDrift(config, manifest) {
+function checkLocaleDrift(config, manifest, root = PROJECT_ROOT) {
   const slices = buildSlices({
     wants: hydrateWants(manifest.wants),
     languages: manifest.languages,
-    readNamespace: makeNamespaceReader(PROJECT_ROOT, config),
+    readNamespace: makeNamespaceReader(root, config),
   });
   for (const language of manifest.languages) {
     const relPath = toPosix(path.join(config.outputDir, `shell-slice.${language}.json`));
     const expected = stableStringify(slices.resources[language] || {});
-    const file = path.join(PROJECT_ROOT, relPath);
+    const file = path.join(root, relPath);
     if (!fs.existsSync(file)) return `${relPath} is missing.`;
     if (normalize(expected) !== normalize(fs.readFileSync(file, 'utf8'))) {
       return `${relPath} no longer matches the locale files — a translation the shell ships was edited without regenerating.`;
@@ -173,9 +175,9 @@ function checkLocaleDrift(config, manifest) {
  * χωρίς κόστος. Ο λόγος που δεν αρκεί το άθροισμα είναι μετρημένος: ένα σύνολο που
  * ξεχειλίζει **δεν λέει ποια εγγραφή** φούσκωσε — και το `search-results` φούσκωσε 30×.
  */
-function checkLedgerBudget(config, manifest) {
+function checkLedgerBudget(config, manifest, root = PROJECT_ROOT) {
   const [language] = manifest.languages;
-  const file = path.join(PROJECT_ROOT, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
+  const file = path.join(root, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
   if (!fs.existsSync(file)) return null;   // το checkArtifactIntegrity το λέει καλύτερα
   let resources;
   try {
@@ -208,9 +210,9 @@ function checkLedgerBudget(config, manifest) {
  * περιέχει καμία. Νέο κλειδί σε υπάρχον namespace είναι **θεραπεία** ωμού κλειδιού και
  * περνά ελεύθερα· νέο **namespace** είναι νέα οικογένεια κειμένου σε ~150 διαδρομές.
  */
-function checkShellCensus(config, manifest) {
+function checkShellCensus(config, manifest, root = PROJECT_ROOT) {
   const [language] = manifest.languages;
-  const file = path.join(PROJECT_ROOT, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
+  const file = path.join(root, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
   if (!fs.existsSync(file)) return [];   // το checkArtifactIntegrity το λέει καλύτερα
   let resources;
   try {
@@ -245,9 +247,9 @@ function checkShellCensus(config, manifest) {
  * Το `checkArtifactIntegrity` δεν το βλέπει: διατρέχει το `manifest.artifacts`, όπου η
  * σβησμένη διαδρομή **δεν υπάρχει πια**.
  */
-function checkRouteLedger(config, manifest) {
+function checkRouteLedger(config, manifest, root = PROJECT_ROOT) {
   const [language] = manifest.languages;
-  const shellFile = path.join(PROJECT_ROOT, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
+  const shellFile = path.join(root, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
   if (!fs.existsSync(shellFile)) return null;   // το checkArtifactIntegrity το λέει καλύτερα
   const bytesOf = file => Buffer.byteLength(JSON.stringify(JSON.parse(fs.readFileSync(file, 'utf8'))), 'utf8');
 
@@ -259,7 +261,7 @@ function checkRouteLedger(config, manifest) {
   }
 
   const suffix = `.${language}.json`;
-  const dir = path.join(PROJECT_ROOT, config.outputDir, ROUTES_DIR);
+  const dir = path.join(root, config.outputDir, ROUTES_DIR);
   const pageById = new Map(Object.keys(config.routeSlices).map(page => [routeIdFor(page), page]));
   const observed = [];
   if (fs.existsSync(dir)) {
@@ -298,13 +300,13 @@ function checkRouteLedger(config, manifest) {
  * δίσκος είναι μπαγιάτικος, το λένε ήδη τα Α/Β με καλύτερο μήνυμα, και τώρα πλέον
  * **και τα δύο** αναφέρονται στο ίδιο πέρασμα (καμία πρόωρη έξοδος).
  */
-function checkRouteLocaleDrift(config, manifest) {
+function checkRouteLocaleDrift(config, manifest, root = PROJECT_ROOT) {
   const declared = manifest.routes;
   if (!declared || Object.keys(declared).length === 0) return null;
 
   const [language] = manifest.languages;
   const shellRel = toPosix(path.join(config.outputDir, `shell-slice.${language}.json`));
-  const shellFile = path.join(PROJECT_ROOT, shellRel);
+  const shellFile = path.join(root, shellRel);
   if (!fs.existsSync(shellFile)) return null;   // το checkArtifactIntegrity το λέει καλύτερα
   let shellResources;
   try {
@@ -316,7 +318,7 @@ function checkRouteLocaleDrift(config, manifest) {
   const whole = Object.entries(manifest.wants || {})
     .filter(([, want]) => want && want.whole === true)
     .map(([namespace]) => namespace);
-  const readNamespace = makeNamespaceReader(PROJECT_ROOT, config);
+  const readNamespace = makeNamespaceReader(root, config);
 
   for (const [id, entry] of Object.entries(declared)) {
     const slices = buildSlices({
@@ -328,7 +330,7 @@ function checkRouteLocaleDrift(config, manifest) {
       RS.subtractShell(slices.resources[language] || {}, shellResources, whole),
     );
     const relPath = toPosix(path.join(config.outputDir, ROUTES_DIR, `${id}.${language}.json`));
-    const file = path.join(PROJECT_ROOT, relPath);
+    const file = path.join(root, relPath);
     if (!fs.existsSync(file)) return `${relPath} is missing.`;
     if (normalize(expected) !== normalize(fs.readFileSync(file, 'utf8'))) {
       return `${relPath} no longer matches the locale files — a translation ${entry.page} ships was edited without regenerating.`;
@@ -353,13 +355,13 @@ function checkRouteLocaleDrift(config, manifest) {
  * είναι ήδη κέλυφος (220 από τα 509), γιατί το αποτύπωμα είναι **τοπικό στο αρχείο** —
  * διπλή εγγραφή θα ήταν διπλότυπο που μπορεί να **αποκλίνει**.
  */
-function checkStagedShellFiles(config, manifest, stagedFiles) {
+function checkStagedShellFiles(config, manifest, stagedFiles, root = PROJECT_ROOT) {
   const context = {
-    bundles: loadNamespaceBundles(PROJECT_ROOT),
-    keyConstants: loadKeyConstants(PROJECT_ROOT, config.keyConstants),
+    bundles: loadNamespaceBundles(root),
+    keyConstants: loadKeyConstants(root, config.keyConstants),
     excludeConsumers: config.excludeConsumers,
   };
-  const graph = { modules: new Map(), projectRoot: PROJECT_ROOT };
+  const graph = { modules: new Map(), projectRoot: root };
   const routeFiles = manifest.routeFiles || {};
 
   for (const relFile of stagedFiles) {
@@ -367,14 +369,14 @@ function checkStagedShellFiles(config, manifest, stagedFiles) {
     const recorded = inShell ? manifest.shellFiles[relFile] : routeFiles[relFile];
     if (recorded === undefined) continue;
     const role = inShell ? 'shell module' : 'module a declared route slice is built from';
-    const abs = toPosix(path.join(PROJECT_ROOT, relFile));
+    const abs = toPosix(path.join(root, relFile));
     if (!fs.existsSync(abs)) return `${relFile} is a ${role} in the manifest but no longer exists.`;
     try {
       graph.modules.set(abs, parseModule(abs, fs.readFileSync(abs, 'utf8')));
     } catch {
       return `${relFile} could not be parsed; the shell slice cannot be judged.`;
     }
-    const analysis = analyseFile(PROJECT_ROOT, relFile, graph, context);
+    const analysis = analyseFile(root, relFile, graph, context);
     if (fingerprintShellFile(analysis) !== recorded) {
       return `${relFile} is a ${role} and its i18n surface or its imports changed — the slice may no longer cover it.`;
     }
@@ -403,17 +405,17 @@ function checkStagedShellFiles(config, manifest, stagedFiles) {
  * μπαίνουν επίτηδες, για **άλλο** κριτήριο (locale drift, Α/Β). Το στενό σημείο είναι
  * εδώ, και μόνο εδώ.
  */
-function checkNewlyResolvableSpecs(manifest, stagedFiles) {
+function checkNewlyResolvableSpecs(manifest, stagedFiles, root = PROJECT_ROOT) {
   if (manifest.unresolvedSpecs.length === 0 || stagedFiles.length === 0) return null;
   const modules = stagedFiles.filter(f => CANDIDATE_EXTENSIONS.some(ext => f.endsWith(ext)));
   if (modules.length === 0) return null;
-  const added = new Set(modules.map(f => toPosix(path.join(PROJECT_ROOT, f))));
-  const aliases = readTsPathAliases(PROJECT_ROOT);
+  const added = new Set(modules.map(f => toPosix(path.join(root, f))));
+  const aliases = readTsPathAliases(root);
   for (const entry of manifest.unresolvedSpecs) {
     const [fromRel, spec] = entry.split(' → ');
     if (!spec) continue;
-    const resolved = resolveSpecifier(spec, toPosix(path.join(PROJECT_ROOT, fromRel)), {
-      projectRoot: PROJECT_ROOT, aliases, fileSet: added,
+    const resolved = resolveSpecifier(spec, toPosix(path.join(root, fromRel)), {
+      projectRoot: root, aliases, fileSet: added,
     });
     if (resolved.kind === 'internal') {
       return `a new file now satisfies '${spec}' (from ${fromRel}), which the shell walk had recorded as unresolved — the closure may have grown.`;
@@ -422,8 +424,8 @@ function checkNewlyResolvableSpecs(manifest, stagedFiles) {
   return null;
 }
 
-function runLayerOne(config, stagedFiles) {
-  const manifest = readManifest(config);
+function runLayerOne(config, stagedFiles, root = PROJECT_ROOT) {
+  const manifest = readManifest(config, root);
   if (manifest === null) {
     fail(`${manifestPath(config)} is missing or unreadable — the shell slice has never been generated.`);
     return;
@@ -434,14 +436,14 @@ function runLayerOne(config, stagedFiles) {
   // μια διαδρομή ήταν εκτός ταβανιού. Ο άνθρωπος διόρθωνε, ξανάτρεχε, έβρισκε το
   // επόμενο — ένα σφάλμα ανά κύκλο. Τώρα τρέχουν ΟΛΑ και αναφέρονται ΟΛΑ.
   const reasons = [
-    checkArtifactIntegrity(manifest),
-    checkLedgerBudget(config, manifest),
-    checkRouteLedger(config, manifest),
-    ...checkShellCensus(config, manifest),
-    checkLocaleDrift(config, manifest),
-    checkRouteLocaleDrift(config, manifest),
-    checkStagedShellFiles(config, manifest, stagedFiles),
-    checkNewlyResolvableSpecs(manifest, stagedFiles),
+    checkArtifactIntegrity(manifest, root),
+    checkLedgerBudget(config, manifest, root),
+    checkRouteLedger(config, manifest, root),
+    ...checkShellCensus(config, manifest, root),
+    checkLocaleDrift(config, manifest, root),
+    checkRouteLocaleDrift(config, manifest, root),
+    checkStagedShellFiles(config, manifest, stagedFiles, root),
+    checkNewlyResolvableSpecs(manifest, stagedFiles, root),
   ].filter(reason => reason !== null && reason !== undefined);
 
   if (reasons.length > 0) {
@@ -510,9 +512,10 @@ function runFull(config) {
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const out = { full: false, help: false, files: [] };
+  const out = { full: false, help: false, index: false, files: [] };
   for (const arg of argv.slice(2)) {
     if (arg === '--full') out.full = true;
+    else if (arg === '--index') out.index = true;
     else if (arg === '--help' || arg === '-h') out.help = true;
     else if (arg.startsWith('--')) throw new Error(`Unknown argument: ${arg}`);
     else out.files.push(arg.replace(/\\/g, '/'));
@@ -525,7 +528,8 @@ function printHelp() {
 
 Usage:
   node scripts/check-i18n-shell-slice.js [staged files…]   Layer 1 (pre-commit, no module graph)
-  node scripts/check-i18n-shell-slice.js --full            Layer 2 (CI, rebuilds and regenerates)
+  node scripts/check-i18n-shell-slice.js --index [staged files…]   Layer 1 on the git INDEX (the hook)
+  node scripts/check-i18n-shell-slice.js --full           Layer 2 (CI, rebuilds and regenerates)
 
 Zero tolerance, no baseline file. Fix a failure with: ${REGENERATE}
 Skip (justify to Giorgio): SKIP_I18N_SHELL_SLICE=1
@@ -553,8 +557,40 @@ function main() {
   const { args, config } = started;
 
   if (args.full) runFull(config);
+  else if (args.index) runLayerOneOnIndex(config, args.files);
   else runLayerOne(config, args.files);
   process.exit(0);
+}
+
+/**
+ * 🔴 **ΚΡΙΝΕ ΤΟ COMMIT, ΟΧΙ ΤΟΝ ΔΙΣΚΟ** (2026-09-27). Σε δέντρο με παράλληλους πράκτορες,
+ * ξένες **αστάδιοποίητες** αλλαγές σε locale μπλόκαραν commit που δεν άγγιζε κανένα locale —
+ * και αντίστροφα, ένα commit με μπαγιάτικο slice θα περνούσε αν τύχαινε ο δίσκος να είναι
+ * φρέσκος. Εδώ ΚΑΘΕ είσοδος του Layer 1 (config · `src/i18n/**` · key constants · τα
+ * σταδιοποιημένα modules) διαβάζεται από το **ευρετήριο**, υλοποιημένο σε προσωρινό φάκελο.
+ * Ο `fail()` κάνει `process.exit` ⇒ ο καθαρισμός δένεται στο `exit`, όχι σε `finally`.
+ */
+function runLayerOneOnIndex(workingConfig, stagedFiles) {
+  const snapshot = materializeIndex({
+    repoRoot: PROJECT_ROOT,
+    pathspecs: [
+      CONFIG_FILE,
+      'tsconfig.base.json',
+      path.posix.dirname(workingConfig.localesDir),
+      workingConfig.outputDir,
+      ...workingConfig.keyConstants.map(entry => entry.file),
+      ...stagedFiles,
+    ],
+  });
+  process.on('exit', snapshot.dispose);
+  let config;
+  try {
+    config = loadConfig(snapshot.root);
+  } catch (error) {
+    fail(error.message, 'fix .i18n-shell-slice.json');
+    return;
+  }
+  runLayerOne(config, stagedFiles, snapshot.root);
 }
 
 module.exports = {
@@ -569,6 +605,7 @@ module.exports = {
   checkStagedShellFiles,
   checkNewlyResolvableSpecs,
   runLayerOne,
+  runLayerOneOnIndex,
   runFull,
   parseArgs,
   printHelp,

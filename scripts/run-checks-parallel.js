@@ -158,7 +158,7 @@ const shellSliceTriggers = [
   ...allFiles.filter(f => f.startsWith('src/i18n/generated/') || f === '.i18n-shell-slice.json'),
 ];
 if (!skipShellSlice && shellSliceTriggers.length > 0)
-  addThread('3.34', 'i18n shell slice', 'scripts/check-i18n-shell-slice.js', tsFiles);
+  addThread('3.34', 'i18n shell slice', 'scripts/check-i18n-shell-slice.js', ['--index', ...tsFiles]);
 
 // CHECK 3.36 (ADR-752) — «φορτώνεται» το namespace; Έξι namespaces είχαν αρχεία
 // locale, τύπους και καταναλωτές αλλά κανένα `case` στο namespace-loaders.ts:

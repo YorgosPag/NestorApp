@@ -310,7 +310,7 @@ if [[ -z "${SKIP_I18N_SHELL_SLICE:-}" ]] && [[ -f "scripts/check-i18n-shell-slic
     SHELL_SLICE_TRIGGERS=$(echo "$SHELL_SLICE_STAGED" \
         | grep -E '^(src/.*\.(ts|tsx)|src/i18n/locales/(el|en)/.*\.json|src/i18n/generated/.*|\.i18n-shell-slice\.json)$' || true)
     if [[ -n "$SHELL_SLICE_TRIGGERS" ]]; then
-        node scripts/check-i18n-shell-slice.js $SHELL_SLICE_TRIGGERS
+        node scripts/check-i18n-shell-slice.js --index $SHELL_SLICE_TRIGGERS
         if [[ $? -ne 0 ]]; then
             echo ""
             echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.34 i18n shell slice (ADR-744)${NC}"
