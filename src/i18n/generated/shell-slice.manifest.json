@@ -102,7 +102,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e7b2737f9e3e639586c08c10914ec76f366fd873215b127c94cff79fbf92f65c",
+  "inputsSha256": "d669e19ebde5d70c0a0b56f7585239f6f9c7be97fe2f652f93653486726224f8",
   "languages": [
     "el"
   ],
@@ -318,7 +318,7 @@
     "src/components/mandate/ChannelReveal.tsx": "60696fc4a30fc20d1e22fc759dd994c7308f9fd81c71960828e02eb5d0325a52",
     "src/components/mandate/CoverageAgreementNotice.tsx": "03639f093a5ba29b1c846b19e7949b2049620bfe14d1d6a7a1dc686b1413b3cb",
     "src/components/mandate/CoverageAreaPicker.tsx": "bce2e7fba716985f38b5290271743fb0caac2da72e4a92fdf44741f1687ff49c",
-    "src/components/mandate/CoverageOutlineMap.tsx": "1527436a0f6fec85ce32fac4e892a30f26832ce2ded6ce746e63b1a7955f75b5",
+    "src/components/mandate/CoverageOutlineMap.tsx": "4d4794b3f39fa910eb4085617da26f7da90a67f4e529f902c4272fd303f9212d",
     "src/components/mandate/CoverageOutlinePicker.tsx": "84f39f2cc8925dcb851d36fc46f2645b7dd528e97c57c14d05bd09d4b9e828ae",
     "src/components/mandate/CoverageRadiusPicker.tsx": "e7980160f4bf016c9874b80a1c72da57895b36caf09d612294687682de8ff2f0",
     "src/components/mandate/DailyIntervalsEditor.tsx": "af004adbaf4cf96f966ff2886353f093bf279fc32dfe95dfddaf3bcbb358e935",
@@ -805,11 +805,12 @@
     "src/lib/maps/basemap-catalog.ts": "6fe6a4048a41636ee94f6a4216f8b9f2c19d01b3d894c99d8c098b5b5cd5cd80",
     "src/lib/maps/basemap-request-sentinel.ts": "f4eeedb17d7049e613ee01041efd19d6e06292c97abab52e9f7d3432616e90c3",
     "src/lib/maps/listing-clusters.ts": "cfc65b9eedadb5598f0c8596b8d3112fe9a035f38316e3356c0b6349c5f72767",
-    "src/lib/maps/map-attribution-view.tsx": "e9211f34e36fc91bf9a0a0e5313dd5352e725239c1324989b1f733bbbfc79eb6",
     "src/lib/maps/map-pick.ts": "ab85db7c4b531d5323a391314233e56416ba84947296c69b46d397c4ff3a897c",
     "src/lib/maps/maplibre.ts": "e9796d3c8eeff43495b87042894f9bae6bf958461cb61c964f2954226341fe48",
     "src/lib/maps/metric-size.ts": "f5087eb2c1d67c1d57cff81b19d752bdf9b3f23b816c688edd5cfa99831a8f28",
     "src/lib/maps/pmtiles-protocol.ts": "5f5390ed1aa471e4193e2ede9deaee40ed1b66778d12c89712dede10cd8d6e0f",
+    "src/lib/maps/protomaps-style.ts": "23321a4a4650dd632c922a93c9c0fc90c74828d033b778d28e5279a7fadf5b31",
+    "src/lib/maps/use-basemap-scheme.ts": "8fbb51148ab393788246b08204cb66f8d68355be6a903b93330160797d1fc41a",
     "src/lib/market/area-market-document.ts": "185ea85934c7fdd0c3fa674c3c0e795edfc70d370384a310fe9c5792712f3db6",
     "src/lib/market/market-breakdowns.ts": "92f9c54eefadc44c719c33dce1b35091c17afda68c6d3b9aa9605ae159cd63c2",
     "src/lib/market/market-segments.ts": "c1439abda46a3a5b297419ca3bf139997fae084abf136fb0910daa4d0e9299d9",
@@ -1382,7 +1383,7 @@
     "src/subapps/dxf-viewer/utils/text-node-utils.ts": "696e75f88b31d592078f87a1be099127d1b3837b11623d4245a4a8835c1eed2e",
     "src/subapps/geo-canvas/components/InteractiveMap.styles.ts": "04119d889baae41740f0626120edff54be66e5f8afb8b96920d05b4c5f10c9e7",
     "src/subapps/geo-canvas/components/InteractiveMap.tsx": "e1f1768358fd46fbbe1765ac6aa00ea62118d14ff86f0ec49fea76660d0da2e9",
-    "src/subapps/geo-canvas/components/InteractiveMapContainer.tsx": "257dfaca87b670cd894fe70b585360d7cf8641a984a9f555ff1cc85f9837f9b0",
+    "src/subapps/geo-canvas/components/InteractiveMapContainer.tsx": "d989ea45ef2778bfa6d7be5333ed40910f13430ea0542b428a859366fc3d2b56",
     "src/subapps/geo-canvas/components/InteractiveMapPresentation.tsx": "f21e770b9a09e5863e1861bd38152014f951544c69061d3af6e7bb0c4911c2e0",
     "src/subapps/geo-canvas/components/map-layers/AccuracyVisualizationLayer.tsx": "aad4b7dcfd420b9540c642466b9e71c67bf17f07eb847885606a3a3d602fb4d6",
     "src/subapps/geo-canvas/components/map-layers/ControlPointLayer.tsx": "24411c8eef99d35f4ec8509d9df03a02bc849f16232f8531e6d4d211185045f9",
@@ -1407,7 +1408,7 @@
     "src/subapps/geo-canvas/hooks/map/useMapInteractions.ts": "0f181084fc8964bb72b7fb02df08202bd2681c6a50a4f2787b8e758327e5fc59",
     "src/subapps/geo-canvas/hooks/map/useMapState.ts": "d121026e501e2bbee30aebe40b8256300ca6cfb93d3dd9cf6c0fb0ad88d32a09",
     "src/subapps/geo-canvas/services/map/ElevationService.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
-    "src/subapps/geo-canvas/services/map/MapStyleManager.ts": "dd2f84e9d720cbbafa3d9e7fb6bb3eb8c281d02b9a7a587e6de0394422dfd554",
+    "src/subapps/geo-canvas/services/map/MapStyleManager.ts": "0ab4013642f03e1d014bf0d7352ee0693e46907bb7ff2be41a84e470c6ec8aa4",
     "src/subapps/geo-canvas/systems/polygon-system/hooks/useCentralizedPolygonSystem.ts": "2f12cc12bb9224532ded1ef39208438c6a977d61d965e226109a376f256c6738",
     "src/subapps/geo-canvas/systems/polygon-system/hooks/usePolygonSystemContext.ts": "42b9e010064fb7a8dc765f924ffcf72c158fda6186b00abd8272c7e62d63252a",
     "src/subapps/geo-canvas/systems/polygon-system/providers/PolygonSystemProvider.tsx": "80f425cd88c44e95d95c1a3abecffb513d9a89e9f2cc360eaaae5dc7606da241",
@@ -7135,8 +7136,7 @@
             "listing.priceMissing.notListed",
             "listing.priceMissing.rentPriceMissing",
             "listing.priceMissing.salePriceMissing",
-            "listing.undeclaredOn",
-            "place.attribution"
+            "listing.undeclaredOn"
           ],
           "prefixes": [
             "detail.media",
@@ -8875,7 +8875,7 @@
     "src/components/layout/MainContentBridge.tsx": "87f665a53cb0f2fe310d251c86e83f9d01954287893a5348d1bb05fb37548cd9",
     "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
     "src/components/legal/LegalLinksNav.tsx": "56490c410d8b314511e1bd398fe72dab9ad68a35937d1fcc91ce40689c5da98d",
-    "src/components/listing-map-snapshot/ListingMapSnapshot.tsx": "92484043116dc18683afa386a0f2460bbad4261acc463612384c3ca94c7fd4ea",
+    "src/components/listing-map-snapshot/ListingMapSnapshot.tsx": "06fe3d3541d215d18a1219fa21a288a6d9330ca818dd830672c0a790f7c0c587",
     "src/components/listing-map-snapshot/ListingMapSnapshotProvider.tsx": "c5d7c4f1091dbd7576957b0f28d4ec2a0b7d911739527490ab1566afd8d09872",
     "src/components/listing-map-snapshot/MapOrAbsenceCover.tsx": "d4c63f05b00482bcaab077423ebd24dfcc2f81a298dc7e1c968545ef016e8566",
     "src/components/listing-map-snapshot/use-listing-map-snapshot.ts": "f440979b5f9db4d358b6ef24f9c058756a4dc5359a33ceb08f88e1b64c10c00a",
@@ -9369,6 +9369,7 @@
     "src/lib/mandate/mandate-conflict.ts": "e8b2654967f10965431ea208a967ad8fcd3a11c16556d4f4820692b871ae795a",
     "src/lib/mandate/mandate-routes.ts": "84a13892759c76fc054fe5b5089d9d6572d327b21141f091016aafb336ff1da4",
     "src/lib/mandate/mandate-term-window.ts": "b0862fc1c7339be12ae58f95e05f5fb2901b13a5be45f6128627ebde587622af",
+    "src/lib/maps/map-attribution-view.tsx": "e9211f34e36fc91bf9a0a0e5313dd5352e725239c1324989b1f733bbbfc79eb6",
     "src/lib/maps/map-attribution.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/maps/map-snapshot-store.ts": "cc8756579dade3bb441e3fdced01c1c67fa94c9ae13bbc7c9f641631c1554bd3",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -9706,7 +9707,7 @@
     "dynamicBoundaries": 24,
     "matchedKeys": 201,
     "routeBoundaries": 0,
-    "shellFiles": 865,
+    "shellFiles": 866,
     "sliceBytes": 612723
   },
   "unresolvableKeys": [

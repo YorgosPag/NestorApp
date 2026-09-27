@@ -15,6 +15,7 @@ import type { PolygonType, UniversalPolygon } from '@geo-alert/core/polygon-syst
 type LocalPolygonType = PolygonType | 'complex';
 // Enterprise Services & Hooks
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
+import { useBasemapScheme } from '@/lib/maps/use-basemap-scheme';
 import { useHoveredElevation } from '../hooks/map/useHoveredElevation';
 import { useMapInteractions, type TransformState, type DrawingData, type MapInstance, type GeoPolygon } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
@@ -301,8 +302,9 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   }, [systemIsDrawing, mapState.setForceUpdate]);
 
   // 🎯 BUSINESS LOGIC: MAP STYLE MANAGEMENT
-  // 🔧 FIX: Memoize to prevent new object reference every render
-  const mapStyleUrls = React.useMemo(() => getAllMapStyleUrls(), []);
+  // Ο χάρτης φόντου ακολουθεί το θέμα (ADR-891 §9)· ίδιο θέμα ⇒ ίδιο αντικείμενο στυλ, κανένα re-init.
+  const basemapScheme = useBasemapScheme();
+  const mapStyleUrls = getAllMapStyleUrls(basemapScheme);
   const geoPolygons = React.useMemo<GeoPolygon[]>(() => {
     return polygons
       .map((polygon) => {

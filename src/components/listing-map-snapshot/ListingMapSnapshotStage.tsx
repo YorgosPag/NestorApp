@@ -25,10 +25,13 @@ import { listingFeature, splitListingGeometry } from '@/lib/listings/listings-ge
 import { NO_LISTING_FOCUS } from '@/lib/listings/listing-focus';
 import { ResultsMapSources } from '@/components/search-results/ResultsMapSources';
 import { readListingMapPaint } from '@/components/search-results/listing-map-paint';
-import { getAllMapStyleUrls, INITIAL_MAP_STYLE } from '@/subapps/geo-canvas/services/map/MapStyleManager';
-
+import { INITIAL_MAP_STYLE, mapStyleManager } from '@/subapps/geo-canvas/services/map/MapStyleManager';
+import type { BasemapScheme } from '@/lib/maps/basemap-catalog';
 import { SNAPSHOT_VIEWPORT, STAGE_FRAME } from './snapshot-frame';
 import type { ListingSnapshotPayload, ListingSnapshotStore } from './use-listing-map-snapshot';
+
+/** Το θέμα του χάρτη φόντου στη λήψη — σταθερό, όχι του συντάκτη (βλ. `mapStyle` πιο κάτω). */
+const SNAPSHOT_BASEMAP_SCHEME: BasemapScheme = 'light';
 
 /**
  * Πυκνότητα pixel της λήψης. Με κουτί 360×240 (§8.80) το 2× δίνει 720×480 pixel — ευκρινές στην
@@ -66,7 +69,9 @@ export default function ListingMapSnapshotStage({ store }: ListingMapSnapshotSta
   const mapRef = useRef<MapRef>(null);
   const [loaded, setLoaded] = useState(false);
   const [job, setJob] = useNextJob(store, loaded);
-  const mapStyle = useMemo(() => getAllMapStyleUrls()[INITIAL_MAP_STYLE], []);
+  // 🔑 ΠΑΝΤΑ φωτεινό (ADR-891 §9): το στιγμιότυπο είναι αποθηκευμένη εικόνα για το κοινό — δεν μπορεί να
+  // ακολουθεί το θέμα του θεατή, και δεν πρέπει να εξαρτάται από το θέμα του συντάκτη τη στιγμή της λήψης.
+  const mapStyle = mapStyleManager.getStyleUrl(INITIAL_MAP_STYLE, SNAPSHOT_BASEMAP_SCHEME);
   const idlePaint = useMemo(() => readListingMapPaint(), []);
 
   useEffect(() => {
@@ -96,7 +101,6 @@ export default function ListingMapSnapshotStage({ store }: ListingMapSnapshotSta
         mapStyle={mapStyle}
         initialViewState={INITIAL_VIEW}
         interactive={false}
-        attributionControl={false}
         fadeDuration={0}
         pixelRatio={SNAPSHOT_PIXEL_RATIO}
         canvasContextAttributes={CANVAS_ATTRIBUTES}

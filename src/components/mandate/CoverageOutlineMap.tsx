@@ -22,17 +22,15 @@
  * `onPick={() => {}}` θα ήταν χειριστήριο που δέχεται κλικ και τα πετά»*. Χωρίς αυτό, ο
  * δείκτης μένει προεπιλεγμένος και **δεν προσκαλείται κανείς να πατήσει**.
  *
- * ⚠️ **Η ΑΝΑΦΟΡΑ ΠΗΓΗΣ ΤΩΝ ΠΛΑΚΙΔΙΩΝ ΕΙΝΑΙ ΥΠΟΧΡΕΩΣΗ ΑΔΕΙΑΣ, ΟΧΙ ΔΙΑΚΟΣΜΗΣΗ**: το
- * `PlaceMap` ορίζει `attributionControl={false}` και **κάθε** καταναλωτής γράφει τη
- * γραμμή ο ίδιος *(`PlaceChooser` · `PlaceSummary` · `DemandAreaOutline`)*. Παράλειψή
- * της εδώ θα ήταν παράβαση σε **δημόσια** σελίδα — τη μόνη που βλέπουν ανώνυμοι.
+ * ⚠️ **Η ΑΝΑΦΟΡΑ ΠΗΓΗΣ ΤΩΝ ΠΛΑΚΙΔΙΩΝ ΕΙΝΑΙ ΥΠΟΧΡΕΩΣΗ ΑΔΕΙΑΣ, ΟΧΙ ΔΙΑΚΟΣΜΗΣΗ** — και **δεν** τη γράφει
+ * πια κανένας καταναλωτής: τη ζωγραφίζει το σύνορο `@/lib/maps/maplibre` σε **κάθε** χάρτη, από τις πηγές
+ * του στυλ (ADR-891 §8). Ο κανόνας «κάθε καταναλωτής τη γράφει μόνος του» μετρήθηκε: **πέντε** χάρτες την ξέχασαν.
  */
 
 import React from 'react';
 
 import { PlaceMap } from '@/components/geo/PlaceMap';
 import { COVERAGE_MAP_HEIGHT_CLASS, COVERAGE_MAP_HEIGHT_PX } from '@/lib/agency/coverage-camera';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ringsFootprint } from '@/lib/geo/geo-footprint';
 import { mapZoomForRadiusKm } from '@/lib/geo/geo-map-zoom';
 import { vertexCentroid } from '@/lib/geo/geo-ring';
@@ -41,16 +39,11 @@ import type { GeoOutline } from '@/types/geo/coordinates';
 /** Δεμένο με το `h-64` παρακάτω — δες `lib/geo/geo-map-zoom.ts`. */
 
 
-/** Το namespace της χάραξης — **εγγυημένο κέλυφος**, άρα το route slice δεν μεγαλώνει. */
-const DRAW_NS = 'search-results';
-
 export interface CoverageOutlineMapProps {
   readonly outline: GeoOutline;
 }
 
 export function CoverageOutlineMap({ outline }: CoverageOutlineMapProps): React.ReactElement {
-  const { t } = useTranslation([DRAW_NS]);
-
   /**
    * 🔑 **Το ΙΔΙΟ αποτύπωμα που κρίνει ο κριτής δίνει και το ζουμ.** Το `center` του
    * αποτυπώματος **δεν υπόσχεται ότι είναι μέσα** στο σχήμα *(κοίλο σχήμα)*, αλλά για
@@ -61,12 +54,5 @@ export function CoverageOutlineMap({ outline }: CoverageOutlineMapProps): React.
   const centre = footprint?.center ?? vertexCentroid(outline);
   const zoom = mapZoomForRadiusKm(footprint?.outerKm ?? 0, COVERAGE_MAP_HEIGHT_PX);
 
-  return (
-    <figure className="m-0 flex flex-col gap-1">
-      <PlaceMap center={centre} outline={outline} heightClass={COVERAGE_MAP_HEIGHT_CLASS} initialZoom={zoom} />
-      <figcaption className="text-xs text-muted-foreground">
-        {t(`${DRAW_NS}:place.attribution`)}
-      </figcaption>
-    </figure>
-  );
+  return <PlaceMap center={centre} outline={outline} heightClass={COVERAGE_MAP_HEIGHT_CLASS} initialZoom={zoom} />;
 }

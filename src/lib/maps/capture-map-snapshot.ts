@@ -18,7 +18,7 @@
 
 import type { Map as MapLibreMap } from 'maplibre-gl';
 
-import { mergeAttributions } from './map-attribution';
+import { mapAttribution } from './map-attribution';
 import type { SnapshotCamera } from './map-snapshot-camera';
 import type { MapSnapshotResult } from './map-snapshot-store';
 
@@ -26,10 +26,9 @@ export const SNAPSHOT_TIMEOUT_MS = 10_000;
 const SNAPSHOT_MIME = 'image/webp';
 const SNAPSHOT_QUALITY = 0.9;
 
-/** Η απόδοση όπως τη δηλώνουν οι πηγές του φορτωμένου στυλ (TileJSON / `attribution`). */
+/** Η απόδοση όπως τη δηλώνουν οι πηγές του φορτωμένου στυλ — η ΜΙΑ ανάγνωση του `map-attribution.ts`. */
 function readAttribution(map: MapLibreMap): MapSnapshotResult['attribution'] {
-  const ids = Object.keys(map.getStyle().sources);
-  return mergeAttributions(ids.map((id) => map.getSource(id)?.attribution ?? ''));
+  return mapAttribution(map);
 }
 
 /**

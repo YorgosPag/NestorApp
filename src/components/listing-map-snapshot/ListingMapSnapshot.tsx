@@ -17,7 +17,7 @@ import React from 'react';
 
 import { useNearViewport } from '@/hooks/useNearViewport';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
-import type { MapAttributionSegment } from '@/lib/maps/map-attribution';
+import { MapAttributionText } from '@/lib/maps/map-attribution-view';
 
 import { useListingMapSnapshot } from './use-listing-map-snapshot';
 
@@ -41,23 +41,6 @@ interface ListingMapSnapshotProps {
   readonly children?: React.ReactNode;
 }
 
-function Attribution({ segments }: { readonly segments: readonly MapAttributionSegment[] }): React.ReactElement | null {
-  if (segments.length === 0) return null;
-  return (
-    <figcaption className="absolute bottom-0 right-0 rounded-tl bg-card px-1 text-[0.625rem] leading-tight text-card-foreground">
-      {segments.map((segment, i) =>
-        segment.href === undefined ? (
-          <React.Fragment key={i}>{segment.text}</React.Fragment>
-        ) : (
-          <a key={i} href={segment.href} target="_blank" rel="noopener noreferrer" className="underline">
-            {segment.text}
-          </a>
-        ),
-      )}
-    </figcaption>
-  );
-}
-
 export function ListingMapSnapshot({ mark, alt, className, fallback, loadingLabel, children }: ListingMapSnapshotProps): React.ReactElement {
   const [ref, near] = useNearViewport<HTMLElement>();
   const view = useListingMapSnapshot(mark, near);
@@ -73,7 +56,7 @@ export function ListingMapSnapshot({ mark, alt, className, fallback, loadingLabe
       ) : (
         <span className="sr-only">{loadingLabel}</span>
       )}
-      {ready ? <Attribution segments={view.attribution} /> : null}
+      {ready ? <MapAttributionText segments={view.attribution} as="figcaption" /> : null}
       {children}
     </figure>
   );

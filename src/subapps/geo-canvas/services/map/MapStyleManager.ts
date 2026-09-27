@@ -14,8 +14,13 @@
  */
 
 import type { StyleSpecification } from 'maplibre-gl';
-import { GEOGRAPHIC_CONFIG } from '../../../../config/geographic-config';
-import { basemapStyle, rasterStyleSpecification, type BasemapSourceId } from '@/lib/maps/basemap-catalog';
+import {
+  basemapStyle,
+  isVectorArchiveSourceId,
+  type BasemapScheme,
+  type BasemapSourceId,
+} from '@/lib/maps/basemap-catalog';
+import { protomapsStyle } from '@/lib/maps/protomaps-style';
 
 // ============================================================================
 // 🎯 ΤΟ ΛΕΞΙΛΟΓΙΟ
@@ -42,12 +47,17 @@ export const INITIAL_MAP_STYLE: MapStyleType = 'greece';
 
 export type MapStyleUrl = string | StyleSpecification;
 
-/** Ποια πηγή του μητρώου ζωγραφίζει κάθε υπόβαθρο. */
+/**
+ * Ποια πηγή του μητρώου ζωγραφίζει κάθε υπόβαθρο.
+ *
+ * 🔑 `greece` = ο **δικός μας** χάρτης (PMTiles, ADR-891 §9): ακολουθεί το θέμα και δεν εξαρτάται από τρίτο.
+ * Αν ο διακομιστής μας δεν απαντήσει, ο καταρράκτης του {@link DEFAULT_CONFIG} πέφτει στη CARTO.
+ */
 const MAP_STYLE_SOURCE: Readonly<Record<MapStyleType, BasemapSourceId>> = {
   osm: 'carto-positron',
   voyager: 'carto-voyager',
   dark: 'carto-dark-matter',
-  greece: 'osm-raster',
+  greece: 'protomaps-greece',
 };
 
 export interface MapStyleConfig {
@@ -58,7 +68,7 @@ export interface MapStyleConfig {
 
 const DEFAULT_CONFIG: MapStyleConfig = {
   fallbackCascade: {
-    greece: 'osm', // OSM raster → CARTO Positron
+    greece: 'osm', // ο δικός μας διακομιστής → CARTO Positron
     voyager: 'osm',
     dark: 'osm',
     osm: null,
@@ -72,24 +82,21 @@ const DEFAULT_CONFIG: MapStyleConfig = {
 };
 
 /**
- * Το προεπιλεγμένο υπόβαθρο: το OSM raster του μητρώου, ελαφρά αποκορεσμένο για να διαβάζονται οι δείκτες
- * από πάνω του, με αρχική θέαση την Ελλάδα.
+ * Το στυλ ενός υποβάθρου για το θέμα. Οι πηγές με ένα στυλ (CARTO) αγνοούν το θέμα· ο δικός μας χάρτης το
+ * ακολουθεί (ίδιες πηγές, άλλα χρώματα ⇒ καμία νέα λήψη πλακιδίων στην αλλαγή θέματος).
  */
-function greeceStyle(): StyleSpecification {
-  return {
-    ...rasterStyleSpecification('osm-raster', {
-      name: 'Greece Focused',
-      paint: { 'raster-saturation': 0.1, 'raster-contrast': 0.2 },
-    }),
-    center: [GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE],
-    zoom: 6.5,
-    bearing: 0,
-    pitch: 0,
-  };
+function styleOf(styleType: MapStyleType, scheme: BasemapScheme): MapStyleUrl {
+  const id = MAP_STYLE_SOURCE[styleType];
+  return isVectorArchiveSourceId(id) ? protomapsStyle(id, scheme) : basemapStyle(id);
 }
 
-function styleOf(styleType: MapStyleType): MapStyleUrl {
-  return styleType === 'greece' ? greeceStyle() : basemapStyle(MAP_STYLE_SOURCE[styleType]);
+type StylesByScheme = Readonly<Record<MapStyleType, MapStyleUrl>>;
+
+function stylesFor(scheme: BasemapScheme): StylesByScheme {
+  return Object.fromEntries(MAP_STYLES.map((style) => [style, styleOf(style, scheme)])) as Record<
+    MapStyleType,
+    MapStyleUrl
+  >;
 }
 
 // ============================================================================
@@ -98,24 +105,24 @@ function styleOf(styleType: MapStyleType): MapStyleUrl {
 
 export class MapStyleManager {
   private readonly config: MapStyleConfig;
-  private readonly styles: Readonly<Record<MapStyleType, MapStyleUrl>>;
+  private readonly styles: Readonly<Record<BasemapScheme, StylesByScheme>>;
 
   constructor(config?: Partial<MapStyleConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.styles = Object.fromEntries(MAP_STYLES.map((style) => [style, styleOf(style)])) as Record<
-      MapStyleType,
-      MapStyleUrl
-    >;
+    this.styles = { light: stylesFor('light'), dark: stylesFor('dark') };
   }
 
-  /** Το στυλ/URL που δέχεται το `mapStyle` της MapLibre. */
-  getStyleUrl(styleType: MapStyleType): MapStyleUrl {
-    return this.styles[styleType];
+  /** Το στυλ/URL που δέχεται το `mapStyle` της MapLibre, για το θέμα που βάφει. */
+  getStyleUrl(styleType: MapStyleType, scheme: BasemapScheme): MapStyleUrl {
+    return this.styles[scheme][styleType];
   }
 
-  /** Όλα τα υπόβαθρα, για όποιον κρατά τον διακόπτη. */
-  getStyleUrls(): Record<MapStyleType, MapStyleUrl> {
-    return { ...this.styles };
+  /**
+   * Όλα τα υπόβαθρα του θέματος, για όποιον κρατά τον διακόπτη. Ίδιο θέμα ⇒ **ίδιο** αντικείμενο, ώστε ένα
+   * `useMemo` με εξάρτηση το θέμα να μη βλέπει «νέα στυλ» σε κάθε render.
+   */
+  getStyleUrls(scheme: BasemapScheme): StylesByScheme {
+    return this.styles[scheme];
   }
 
   /** Το επόμενο υπόβαθρο της αλυσίδας ανάκαμψης. */
@@ -131,5 +138,6 @@ export class MapStyleManager {
 /** Το κοινό στιγμιότυπο. */
 export const mapStyleManager = new MapStyleManager();
 
-/** Όλα τα στυλ, με κλειδί το υπόβαθρο. */
-export const getAllMapStyleUrls = (): Record<MapStyleType, MapStyleUrl> => mapStyleManager.getStyleUrls();
+/** Όλα τα στυλ του θέματος, με κλειδί το υπόβαθρο. */
+export const getAllMapStyleUrls = (scheme: BasemapScheme): Readonly<Record<MapStyleType, MapStyleUrl>> =>
+  mapStyleManager.getStyleUrls(scheme);
